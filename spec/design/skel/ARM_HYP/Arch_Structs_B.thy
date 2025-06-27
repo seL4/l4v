@@ -4,12 +4,15 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(* Architecture-specific data types shared by spec and abstract. *)
+(* Architecture-specific data types shared by design and abstract specs. *)
 
 chapter "Common, Architecture-Specific Data Types"
 
 theory Arch_Structs_B
-imports Main Setup_Locale
+imports
+  Setup_Locale
+  Lib.HaskellLib_H
+  MachineExports
 begin
 context Arch begin arch_global_naming (H)
 

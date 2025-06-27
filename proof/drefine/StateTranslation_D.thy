@@ -310,6 +310,7 @@ definition
     | GenInvocationLabel TCBBindNotification \<Rightarrow> Some (TcbIntent TcbBindNTFNIntent)
     | GenInvocationLabel TCBUnbindNotification \<Rightarrow> Some (TcbIntent TcbUnbindNTFNIntent)
     | GenInvocationLabel TCBSetTLSBase \<Rightarrow> Some (TcbIntent TcbSetTLSBaseIntent)
+    | GenInvocationLabel TCBSetFlags \<Rightarrow> Some (TcbIntent TcbSetFlagsIntent)
     | GenInvocationLabel CNodeRevoke \<Rightarrow>
           map_option CNodeIntent
                    (transform_cnode_index_and_depth CNodeRevokeIntent args)
@@ -534,7 +535,8 @@ lemma transform_intent_isnot_TcbIntent:
           (label \<noteq> GenInvocationLabel TCBResume) \<and>
           (label \<noteq> GenInvocationLabel TCBBindNotification) \<and>
           (label \<noteq> GenInvocationLabel TCBUnbindNotification) \<and>
-          (label \<noteq> GenInvocationLabel TCBSetTLSBase))"
+          (label \<noteq> GenInvocationLabel TCBSetTLSBase) \<and>
+          (label \<noteq> GenInvocationLabel TCBSetFlags))"
   apply(rule iffI)
     subgoal
       apply(erule contrapos_np)

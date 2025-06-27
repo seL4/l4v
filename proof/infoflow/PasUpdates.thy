@@ -140,6 +140,10 @@ locale PasUpdates_2 = PasUpdates_1 +
   and state_asids_to_policy_pasMayEditReadyQueues_update:
     "state_asids_to_policy (aag\<lparr>pasMayEditReadyQueues := b\<rparr>) s =
      state_asids_to_policy aag s"
+  and arch_prepare_set_domain_domain_fields[wp]:
+    "arch_prepare_set_domain t new_dom \<lbrace>domain_fields P\<rbrace>"
+  and arch_post_set_flags_domain_fields[wp]:
+    "arch_post_set_flags t flags \<lbrace>domain_fields P\<rbrace>"
 begin
 
 crunch

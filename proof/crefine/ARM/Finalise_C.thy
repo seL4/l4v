@@ -2128,7 +2128,7 @@ lemma ccap_relation_IRQHandler_mask:
   apply (simp add: c_valid_cap_def cap_irq_handler_cap_lift cl_valid_cap_def)
   done
 
-lemma prepare_thread_delete_ccorres:
+lemma prepareThreadDelete_ccorres:
   "ccorres dc xfdc \<top> UNIV []
    (prepareThreadDelete thread) (Call Arch_prepareThreadDelete_'proc)"
   unfolding prepareThreadDelete_def
@@ -2237,7 +2237,7 @@ lemma finaliseCap_ccorres:
     apply csymbr
     apply (ctac(no_vcg) add: unbindNotification_ccorres)
      apply (ctac(no_vcg) add: suspend_ccorres[OF cteDeleteOne_ccorres])
-     apply (ctac(no_vcg) add: prepare_thread_delete_ccorres)
+     apply (ctac(no_vcg) add: prepareThreadDelete_ccorres)
       apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
       apply (rule allI, rule conseqPre, vcg)
       apply (clarsimp simp: word_sle_def return_def)

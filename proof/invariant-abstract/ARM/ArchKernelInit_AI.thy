@@ -249,7 +249,6 @@ lemma cap_refs_respects_device_region_init[simp]:
 
 lemma invs_A:
   "invs init_A_st"
-
   apply (simp add: invs_def)
   apply (rule conjI)
    prefer 2
@@ -281,7 +280,8 @@ lemma invs_A:
    apply (rule conjI)
     apply (simp add:pspace_distinct_init_A)
    apply (rule conjI)
-    apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def state_defs live_def hyp_live_def)
+    apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def state_defs live_def hyp_live_def
+                          arch_tcb_live_def)
    apply (rule conjI)
     apply (clarsimp simp: zombies_final_def cte_wp_at_cases state_defs
                           tcb_cap_cases_def is_zombie_def)
@@ -327,6 +327,7 @@ lemma invs_A:
    apply (rule conjI)
     apply (simp add: valid_global_pts_def state_defs)
    apply (simp add: state_defs is_inv_def)
+  apply (rule conjI, clarsimp simp: valid_cur_fpu_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_irq_node_def obj_at_def state_defs
                          is_cap_table_def wf_empty_bits

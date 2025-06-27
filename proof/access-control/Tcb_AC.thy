@@ -25,7 +25,8 @@ definition authorised_tcb_inv :: "'a PAS \<Rightarrow> tcb_invocation \<Rightarr
   | ReadRegisters src susp n arch \<Rightarrow> is_subject aag src
   | WriteRegisters dest res values arch \<Rightarrow> is_subject aag dest
   | CopyRegisters dest src susp res frame int_regs arch \<Rightarrow> is_subject aag src \<and> is_subject aag dest
-  | SetTLSBase tcb tls_base \<Rightarrow> is_subject aag tcb"
+  | SetTLSBase tcb tls_base \<Rightarrow> is_subject aag tcb
+  | SetFlags tcb clearFlags setFlags \<Rightarrow> is_subject aag tcb"
 
 subsection\<open>invoke\<close>
 
@@ -288,6 +289,12 @@ locale Tcb_AC_1 =
     "\<lbrace>integrity aag X st and K (is_subject aag t)\<rbrace>
      arch_post_modify_registers cur t
      \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
+  and arch_post_set_flags_respects[wp]:
+    "\<lbrace>integrity aag X st and K (is_subject aag t)\<rbrace>
+     arch_post_set_flags t flags
+     \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
+  assumes arch_post_set_flags_pas_refined[wp]:
+    "arch_post_set_flags t flags \<lbrace>pas_refined aag\<rbrace>"
   and arch_get_sanitise_register_info_inv[wp]:
     "arch_get_sanitise_register_info t \<lbrace>\<lambda>s :: det_ext state. P s\<rbrace>"
   and invoke_tcb_tc_respects_aag:
@@ -297,6 +304,17 @@ locale Tcb_AC_1 =
      invoke_tcb (ThreadControl t sl ep mcp priority croot vroot buf)
      \<lbrace>\<lambda>rv. integrity aag X st and pas_refined aag\<rbrace>"
 begin
+
+crunch set_flags
+  for integrity_autarch[wp]: "integrity aag X st"
+
+lemma invoke_tcb_set_flags_respects[wp]:
+  "\<lbrace>integrity aag X st and pas_refined aag and einvs and simple_sched_action
+                       and tcb_inv_wf (SetFlags tcb clearFlags setFlags)
+                       and K (authorised_tcb_inv aag (SetFlags tcb clearFlags setFlags))\<rbrace>
+   invoke_tcb (SetFlags tcb clearFlags setFlags)
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  by (wpsimp simp: authorised_tcb_inv_def)
 
 lemma invoke_tcb_respects:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and simple_sched_action
@@ -345,6 +363,16 @@ lemma invoke_tcb_ntfn_control_pas_refined[wp]:
   done
 
 context Tcb_AC_1 begin
+
+crunch set_flags
+  for pas_refined[wp]: "pas_refined aag"
+
+lemma invoke_tcb_set_flags_pas_refined[wp]:
+  "\<lbrace>pas_refined aag and tcb_inv_wf (SetFlags tcb clearFlags setFlags) and einvs and simple_sched_action
+                    and K (authorised_tcb_inv aag (SetFlags tcb clearFlags setFlags))\<rbrace>
+   invoke_tcb (SetFlags tcb clearFlags setFlags)
+   \<lbrace>\<lambda>_. pas_refined aag \<rbrace>"
+  by wpsimp
 
 lemma invoke_tcb_pas_refined:
   "\<lbrace>pas_refined aag and tcb_inv_wf ti and einvs and simple_sched_action
@@ -512,6 +540,14 @@ lemma decode_set_tls_base_authorised:
   apply (wpsimp wp: gbn_wp)
   done
 
+lemma decode_set_flags_authorised:
+  "\<lbrace>K (is_subject aag t)\<rbrace>
+   decode_set_flags args (ThreadCap t)
+   \<lbrace>\<lambda>rv _. authorised_tcb_inv aag rv\<rbrace>, -"
+  unfolding decode_set_flags_def authorised_tcb_inv_def
+  apply wpsimp
+  done
+
 lemma decode_tcb_invocation_authorised:
   "\<lbrace>invs and pas_refined aag
          and K (is_subject aag t \<and> (\<forall>x \<in> set excaps. is_subject aag (fst (snd x)))
@@ -527,7 +563,7 @@ lemma decode_tcb_invocation_authorised:
             decode_set_ipc_buffer_authorised decode_set_space_authorised
             decode_bind_notification_authorised
             decode_unbind_notification_authorised
-            decode_set_tls_base_authorised)+
+            decode_set_tls_base_authorised decode_set_flags_authorised)+
   by (auto iff: authorised_tcb_inv_def)
 
 text\<open>

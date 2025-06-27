@@ -1788,7 +1788,7 @@ proof -
   apply (rule hoare_pre)
    apply (rule_tac P'="is_aligned ptr bits \<and> 3 \<le> bits \<and> bits \<le> word_bits" in hoare_grab_asm)
    apply (clarsimp simp add: deleteObjects_def2)
-   apply (simp add: freeMemory_def bind_assoc doMachineOp_bind ef_storeWord)
+   apply (simp add: freeMemory_def bind_assoc doMachineOp_bind)
    apply (simp add: bind_assoc[where f="\<lambda>_. modify f" for f, symmetric])
    apply (simp add: mapM_x_storeWord_step[simplified word_size_bits_def]
                     doMachineOp_modify modify_modify)

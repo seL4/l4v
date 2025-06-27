@@ -222,9 +222,7 @@ lemma cancelSignal_ccorres_helper:
          apply (simp add: cnotification_relation_def Let_def NtfnState_Idle_def)
          apply (simp add: carch_state_relation_def carch_globals_def)
         apply (clarsimp simp: carch_state_relation_def carch_globals_def
-                              typ_heap_simps' packed_heap_update_collapse_hrs
-                              fpu_null_state_heap_update_tag_disj_simps
-                       elim!: fpu_null_state_typ_heap_preservation)
+                              typ_heap_simps' packed_heap_update_collapse_hrs)
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
      apply (simp add: objBits_simps')
@@ -269,9 +267,7 @@ lemma cancelSignal_ccorres_helper:
          apply simp
         apply simp
        subgoal by (clarsimp simp: carch_state_relation_def carch_globals_def
-                                  fpu_null_state_heap_update_tag_disj_simps
-                                  global_ioport_bitmap_heap_update_tag_disj_simps
-                           elim!: fpu_null_state_typ_heap_preservation)
+                                  global_ioport_bitmap_heap_update_tag_disj_simps)
       subgoal by (simp add: cmachine_state_relation_def)
      subgoal by (simp add: h_t_valid_clift_Some_iff)
     subgoal by (simp add: objBits_simps')
@@ -2609,10 +2605,8 @@ lemma cancelIPC_ccorres_helper:
          apply (erule (1) map_to_ko_atI')
         apply (simp add: heap_to_user_data_def Let_def)
         subgoal by (clarsimp simp: carch_state_relation_def carch_globals_def
-                                   fpu_null_state_heap_update_tag_disj_simps
                                    global_ioport_bitmap_heap_update_tag_disj_simps
-                                   packed_heap_update_collapse_hrs
-                             elim!: fpu_null_state_typ_heap_preservation)
+                                   packed_heap_update_collapse_hrs)
        subgoal by (simp add: cmachine_state_relation_def)
       subgoal by (simp add: h_t_valid_clift_Some_iff)
      subgoal by (simp add: objBits_simps')
@@ -2671,10 +2665,8 @@ lemma cancelIPC_ccorres_helper:
         apply simp
         apply (erule (1) map_to_ko_atI')
        subgoal by (clarsimp simp: carch_state_relation_def carch_globals_def
-                                  fpu_null_state_heap_update_tag_disj_simps
                                   global_ioport_bitmap_heap_update_tag_disj_simps
-                                  packed_heap_update_collapse_hrs
-                            elim!: fpu_null_state_typ_heap_preservation)
+                                  packed_heap_update_collapse_hrs)
       subgoal by (simp add: cmachine_state_relation_def)
      subgoal by (simp add: h_t_valid_clift_Some_iff)
     subgoal by (simp add: objBits_simps')

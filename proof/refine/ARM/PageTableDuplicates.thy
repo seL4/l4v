@@ -2086,7 +2086,7 @@ lemma tc_valid_duplicates':
                         tcbIPCBufferSlot_def)
   by (auto dest!: isCapDs isReplyCapD isValidVTableRootD simp: isCap_simps)
 
-crunch performTransfer, unbindNotification, bindNotification, setDomain
+crunch performTransfer, unbindNotification, bindNotification, setDomain, prepareSetDomain,postSetFlags, setFlags
   for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (ignore: threadSet wp: setObject_ksInterrupt updateObject_default_inv
      simp: crunch_simps)
@@ -2109,7 +2109,7 @@ lemma invokeTCB_valid_duplicates'[wp]:
      apply (clarsimp split:option.splits)
      apply (rename_tac option)
      apply (case_tac option, simp_all)
-    apply (simp add:invokeTCB_def | wp mapM_x_wp' | intro impI conjI | wpc)+
+    apply (simp add:invokeTCB_def invokeSetFlags_def | wp mapM_x_wp' | intro impI conjI | wpc)+
   done
 
 lemma performInvocation_valid_duplicates'[wp]:

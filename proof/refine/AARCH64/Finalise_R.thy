@@ -3183,24 +3183,20 @@ lemma dissociateVCPUTCB_hyp_unlive[wp]:
   unfolding dissociateVCPUTCB_def
   by (cases "v = t"; wpsimp wp: unset_tcb_hyp_unlive unset_vcpu_hyp_unlive[simplified comp_def])
 
+crunch fpuRelease
+  for hyp_unlive[wp]: "ko_wp_at' (Not \<circ> hyp_live') ptr"
+  (simp: ko_wp_at'_not_comp_fold)
+
 lemma prepareThreadDelete_hyp_unlive[wp]:
   "\<lbrace>\<top>\<rbrace> prepareThreadDelete t \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> hyp_live') t\<rbrace>"
-  unfolding prepareThreadDelete_def archThreadGet_def fpuThreadDelete_def
+  unfolding prepareThreadDelete_def archThreadGet_def
   apply (wpsimp wp: getObject_tcb_wp hoare_vcg_imp_lift' hoare_vcg_ex_lift)
   apply (auto simp: ko_wp_at'_def obj_at'_def hyp_live'_def)
   done
 
-lemma fpuThreadDeleteOp_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (fpuThreadDeleteOp t) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_fpuThreadDeleteOp no_irq)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-    apply wpsimp+
-  done
-
 crunch prepareThreadDelete
-  for invs[wp]: "invs'" (ignore: doMachineOp)
+  for invs[wp]: "invs'"
+  (ignore: doMachineOp)
 
 end
 

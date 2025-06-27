@@ -12,6 +12,7 @@ imports
   ArchVSpaceDecls_H
   Hardware_H
   KI_Decls_H
+  FPU_H
 begin
 
 context Arch begin arch_global_naming (H)

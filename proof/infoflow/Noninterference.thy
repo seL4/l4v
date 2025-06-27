@@ -2249,7 +2249,7 @@ lemma schedule_choose_new_thread_reads_respects_g:
   apply (subst gets_app_rewrite[where y=domain_time and f="\<lambda>x. x = 0"])+
   apply (wp gets_domain_time_zero_ev set_scheduler_action_reads_respects_g
             choose_thread_reads_respects_g ev_pre_cont[where f=next_domain]
-            hoare_pre_cont[where f=next_domain] when_ev)
+            arch_prepare_next_domain_ev hoare_pre_cont[where f=next_domain] when_ev)
   apply (clarsimp simp: valid_sched_def word_neq_0_conv)
   done
 

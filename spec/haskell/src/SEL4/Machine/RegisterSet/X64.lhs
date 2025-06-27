@@ -82,11 +82,12 @@ This module defines the x86 64-bit register set.
 On X64 the representation of the user-level context of a thread is an array
 of machine words, indexed by register name for the user registers, plus the
 state of the FPU, which we represent as a function from machine word to bytes
-with the convention that all unused entries map to 0. There are no operations
-on the FPU state apart from save and restore at kernel entry and exit.
+with the convention that all unused entries map to 0.
+
+> type FPUState = Array Word Data.Word.Word8
 
 > data UserContext = UC { fromUC :: Array Register Word,
->                         fpuState :: Array Word Data.Word.Word8 }
+>                         userFpuState :: FPUState }
 >   deriving Show
 
 
@@ -98,9 +99,13 @@ initialised to 0.
 > newContext :: UserContext
 > newContext = UC ((funArray $ const 0)//initContext) (funPartialArray (const 0) (0,575))
 
-Functions are provided to get and set a single register.
+Functions are provided to get and set a single register, or to get and set the FPU state.
 
 > getRegister r = gets $ (! r) . fromUC
 
-> setRegister r v = modify (\ uc -> UC (fromUC uc //[(r, v)]) (fpuState uc))
+> setRegister r v = modify (\ uc -> UC (fromUC uc //[(r, v)]) (userFpuState uc))
 
+> getFPUState :: State UserContext FPUState
+> getFPUState = gets userFpuState
+
+> setFPUState fc = modify (\ uc -> UC (fromUC uc) fc)

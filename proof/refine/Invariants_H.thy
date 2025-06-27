@@ -360,6 +360,7 @@ definition valid_tcb' :: "tcb \<Rightarrow> kernel_state \<Rightarrow> bool" whe
                   \<and> tcbMCP t \<le> maxPriority
                   \<and> opt_tcb_at' (tcbSchedPrev t) s
                   \<and> opt_tcb_at' (tcbSchedNext t) s
+                  \<and> tcbFlags t && ~~ tcbFlagMask = 0
                   \<and> valid_arch_tcb' (tcbArch t) s"
 
 definition valid_ep' :: "Structures_H.endpoint \<Rightarrow> kernel_state \<Rightarrow> bool" where
@@ -2694,6 +2695,14 @@ lemma not_pred_tcb_at'_strengthen:
 lemma obj_at'_ko_at'_prop:
   "ko_at' ko t s \<Longrightarrow> obj_at' P t s = P ko"
   by (drule obj_at_ko_at', clarsimp simp: obj_at'_def)
+
+lemma ko_wp_at'_not_comp_fold:
+  "ko_wp_at' (\<lambda>a. \<not> P a) t s = ko_wp_at' (Not \<circ> P) t s"
+  by (simp add: ko_wp_at'_def)
+
+lemma obj_at'_not_comp_fold:
+  "obj_at' (\<lambda>a. \<not> P a) t s =  obj_at' (Not \<circ> P) t s"
+  by (simp add: obj_at'_def)
 
 lemma valid_refs'_cteCaps:
   "valid_refs' S (ctes_of s) = (\<forall>c \<in> ran (cteCaps_of s). S \<inter> capRange c = {})"

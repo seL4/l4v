@@ -1032,19 +1032,19 @@ lemma msgRegisters_ccorres:
   apply (simp add: Arrays.update_def n_msgRegisters_def nth_Cons' split: if_split)
   done
 
-(* usually when we call setMR directly, we mean to only set a registers, which will
-   fit in actual registers *)
+(* usually when we call setMR directly, we mean to only set a single message register
+   which will fit in actual registers *)
 lemma setMR_as_setRegister_ccorres:
   "ccorres (\<lambda>rv rv'. rv' = of_nat offset + 1) ret__unsigned_'
       (tcb_at' thread and K (TCB_H.msgRegisters ! offset = reg \<and> offset < length msgRegisters))
-      (UNIV \<inter> \<lbrace>\<acute>reg___unsigned_long = val\<rbrace>
-            \<inter> \<lbrace>\<acute>offset = of_nat offset\<rbrace>
-            \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
+      (\<lbrace>\<acute>reg___unsigned_long = val\<rbrace>
+       \<inter> \<lbrace>\<acute>offset = of_nat offset\<rbrace>
+       \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
     (asUser thread (setRegister reg val))
     (Call setMR_'proc)"
   apply (rule ccorres_grab_asm)
-  apply (cinit' lift:  reg___unsigned_long_' offset_' receiver_')
-   apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters)
+  apply (cinit' lift: reg___unsigned_long_' offset_' receiver_')
+   apply (clarsimp simp: length_msgRegisters)
    apply (rule ccorres_cond_false)
    apply (rule ccorres_move_const_guards)
    apply (rule ccorres_add_return2)
@@ -1054,9 +1054,9 @@ lemma setMR_as_setRegister_ccorres:
      apply (clarsimp simp: return_def)
     apply (rule hoare_TrueI[of \<top>])
    apply (vcg exspec=setRegister_modifies)
-  apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters not_le conj_commute)
+  apply (clarsimp simp: length_msgRegisters n_msgRegisters_def not_le conj_commute)
   apply (subst msgRegisters_ccorres[symmetric])
-   apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters unat_of_nat_eq)
+   apply (clarsimp simp: n_msgRegisters_def unat_of_nat_eq)
   apply (clarsimp simp: word_less_nat_alt word_le_nat_alt unat_of_nat_eq not_le[symmetric])
   done
 

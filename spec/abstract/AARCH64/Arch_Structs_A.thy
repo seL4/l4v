@@ -9,7 +9,7 @@ chapter "AARCH64-Specific Data Types"
 
 theory Arch_Structs_A
 imports
-  "ExecSpec.Arch_Structs_B"
+  ExecSpec.Arch_Structs_B
   ExceptionTypes_A
   VMRights_A
   ExecSpec.Arch_Kernel_Config_Lemmas
@@ -333,6 +333,7 @@ record arch_state =
   arm_us_global_vspace :: "obj_ref"
   arm_current_vcpu    :: "(obj_ref \<times> bool) option"
   arm_gicvcpu_numlistregs :: nat
+  arm_current_fpu_owner :: "obj_ref option"
 
 
 end_qualify
@@ -364,17 +365,22 @@ section "Arch-specific TCB"
 
 qualify AARCH64_A (in Arch)
 
-text \<open> Arch-specific part of a TCB: this must have at least a field for user context. \<close>
+text \<open>
+  Arch-specific part of a TCB: this must have at least a field for user context.
+  @{text tcb_cur_fpu} is a ghost variable used to used to track within the tcb whether it is the
+  current fpu owner, so that we are able to determine whether a tcb is live without needing to look
+  at global state.\<close>
 record arch_tcb =
   tcb_context :: user_context
   tcb_vcpu    :: "obj_ref option"
+  tcb_cur_fpu :: bool
 
 end_qualify
 
 context Arch begin arch_global_naming (A)
 
 definition default_arch_tcb :: arch_tcb where
-  "default_arch_tcb \<equiv> \<lparr>tcb_context = new_context, tcb_vcpu = None\<rparr>"
+  "default_arch_tcb \<equiv> \<lparr>tcb_context = new_context, tcb_vcpu = None, tcb_cur_fpu = False\<rparr>"
 
 text \<open>
   Accessors for @{text "tcb_context"} inside @{text "arch_tcb"}. These are later used to
@@ -392,7 +398,7 @@ text \<open>
 \<close>
 definition arch_tcb_set_registers :: "(register \<Rightarrow> machine_word) \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb" where
   "arch_tcb_set_registers regs a_tcb \<equiv>
-    a_tcb \<lparr> tcb_context := UserContext (fpu_state (tcb_context a_tcb)) regs \<rparr>"
+    a_tcb \<lparr> tcb_context := UserContext (user_fpu_state (tcb_context a_tcb)) regs \<rparr>"
 
 definition arch_tcb_get_registers :: "arch_tcb \<Rightarrow> register \<Rightarrow> machine_word" where
   "arch_tcb_get_registers a_tcb \<equiv> user_regs (tcb_context a_tcb)"

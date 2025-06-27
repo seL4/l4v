@@ -582,14 +582,6 @@ lemma no_fail_getMRs:
   apply (rule det_wp_getMRs)
   done
 
-lemma msgRegisters_ccorres:
-  "n < unat n_msgRegisters \<Longrightarrow>
-  register_from_H (ARM_H.msgRegisters ! n) = (index msgRegistersC n)"
-  apply (simp add: msgRegistersC_def msgRegisters_unfold fupdate_def)
-  apply (simp add: Arrays.update_def n_msgRegisters_def fcp_beta nth_Cons' split: if_split)
-  done
-
-
 lemma asUser_cur_obj_at':
   assumes f: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   shows "\<lbrace>\<lambda>s. obj_at' (\<lambda>tcb. P (atcbContextGet (tcbArch tcb))) (ksCurThread s) s \<and> t = ksCurThread s\<rbrace>

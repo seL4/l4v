@@ -135,7 +135,8 @@ definition tcb_relation :: "Structures_A.tcb \<Rightarrow> Structures_H.tcb \<Ri
    \<and> tcb_mcpriority tcb = tcbMCP tcb'
    \<and> tcb_priority tcb = tcbPriority tcb'
    \<and> tcb_time_slice tcb = tcbTimeSlice tcb'
-   \<and> tcb_domain tcb = tcbDomain tcb'"
+   \<and> tcb_domain tcb = tcbDomain tcb'
+   \<and> tcb_flags tcb = word_to_tcb_flags (tcbFlags tcb')"
 
 \<comment> \<open>
   A pair of objects @{term "(obj, obj')"} should satisfy the following relation when, under further

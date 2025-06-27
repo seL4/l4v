@@ -26,7 +26,7 @@ text \<open>
 
 section "Types"
 
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet/AARCH64.hs CONTEXT AARCH64 decls_only NOT UserContext UserMonad Word getRegister setRegister newContext FPUState newFPUState
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet/AARCH64.hs CONTEXT AARCH64 decls_only NOT UserContext UserMonad Word getRegister setRegister getFPUState setFPUState newContext FPUState newFPUState
 
 #INCLUDE_HASKELL SEL4/Object/Structures/AARCH64.hs CONTEXT AARCH64 ONLY VPPIEventIRQ VirtTimer
 (*<*)
@@ -40,7 +40,7 @@ context Arch begin arch_global_naming
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/AARCH64.hs CONTEXT AARCH64 instanceproofs
 #INCLUDE_HASKELL SEL4/Object/Structures/AARCH64.hs CONTEXT AARCH64 instanceproofs ONLY VPPIEventIRQ VirtTimer
 (*>*)
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet/AARCH64.hs CONTEXT AARCH64 bodies_only NOT getRegister setRegister newContext newFPUState
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet/AARCH64.hs CONTEXT AARCH64 bodies_only NOT getRegister setRegister getFPUState setFPUState newContext newFPUState
 
 section "Machine State"
 
@@ -62,6 +62,7 @@ record
   irq_state :: nat
   underlying_memory :: "machine_word \<Rightarrow> word8"
   device_state :: "machine_word \<Rightarrow> word8 option"
+  fpu_enabled :: bool
   machine_state_rest :: AARCH64.machine_state_rest
 
 axiomatization
@@ -109,6 +110,7 @@ definition
                          irq_state = 0,
                          underlying_memory = init_underlying_memory,
                          device_state = Map.empty,
+                         fpu_enabled = False,
                          machine_state_rest = undefined \<rparr>"
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64 ONLY \

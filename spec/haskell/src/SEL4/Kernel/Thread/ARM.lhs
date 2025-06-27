@@ -65,3 +65,7 @@ There is nothing special about idle thread activation on ARM.
 > activateIdleThread :: PPtr TCB -> Kernel ()
 > activateIdleThread _ = return ()
 
+There is nothing special that needs to be done before calling nextDomain on ARM.
+
+> prepareNextDomain :: Kernel ()
+> prepareNextDomain = return ()

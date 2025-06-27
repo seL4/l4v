@@ -37,23 +37,6 @@ assumes ioapicMapPinToVector_ccorres:
      (doMachineOp (ioapicMapPinToVector ioapic pin level polarity vector))
      (Call ioapic_map_pin_to_vector_'proc)"
 
-(* FIXME: x64: Currently don't verify FPU lazy state switching (VER-951) *)
-assumes nativeThreadUsingFPU_ccorres:
-  "ccorres (\<lambda>rv rv'. rv' = from_bool rv) ret__unsigned_long_'
-     (tcb_at' thread)
-     (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>)
-     []
-     (doMachineOp (nativeThreadUsingFPU thread))
-     (Call nativeThreadUsingFPU_'proc)"
-
-assumes switchFpuOwner_ccorres:
-  "ccorres dc xfdc \<top>
-     (UNIV \<inter> \<lbrace>\<acute>new_owner = Ptr new_owner\<rbrace>
-           \<inter> \<lbrace>\<acute>cpu = cpu\<rbrace>)
-     []
-     (doMachineOp (switchFpuOwner new_owner cpu))
-     (Call switchFpuOwner_'proc)"
-
 (* FIXME x64: double-check this, assumption is ccorres holds regardless of in_kernel *)
 (* FIXME x64: accessor function relation was complicated on ARM, testing if you don't
               need it to be that way *)
@@ -94,6 +77,26 @@ assumes invalidateLocalPageStructureCacheASID_ccorres:
   "ccorres dc xfdc \<top> (UNIV \<inter> \<lbrace>\<acute>root = vspace\<rbrace> \<inter> \<lbrace>\<acute>asid = asid\<rbrace>) []
            (doMachineOp (invalidateLocalPageStructureCacheASID vspace asid))
            (Call invalidateLocalPageStructureCacheASID_'proc)"
+
+
+(* FPU-related machine ops *)
+
+assumes saveFpuState_ccorres:
+  "ccorres dc xfdc (tcb_at' t) (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr t \<rbrace>) []
+     (saveFpuState t) (Call saveFpuState_'proc)"
+
+assumes loadFpuState_ccorres:
+  "ccorres dc xfdc (tcb_at' t) (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr t \<rbrace>) []
+     (loadFpuState t) (Call loadFpuState_'proc)"
+
+assumes enableFpu_ccorres:
+  "ccorres dc xfdc \<top> UNIV []
+     (doMachineOp enableFpu) (Call enableFpu_'proc)"
+
+assumes disableFpu_ccorres:
+  "ccorres dc xfdc \<top> UNIV []
+     (doMachineOp disableFpu) (Call disableFpu_'proc)"
+
 
 (* The following are fastpath specific assumptions.
    We might want to move them somewhere else. *)

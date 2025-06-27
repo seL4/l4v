@@ -529,141 +529,50 @@ lemma handleUserLevelFault_ccorres':
   apply (simp add: is_cap_fault_def)
   done
 
-(* ignore FPU status, but deal with UNKNOWN_FAULT *)
+(* deal with UNKNOWN_FAULT *)
 lemma armv_handleVCPUFault_unknown_fault_ccorres:
   "ccorres (\<lambda>rv rv'. rv' = from_bool True) ret__unsigned_long_'
            (invs' and sch_act_simple and ct_running' and
             (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and K (hsr = 0x2000000))
      (\<lbrace> \<acute>hsr___unsigned_long = hsr \<rbrace>) hs
-     (do fpu_enabled <- doMachineOp isFpuEnable;
-         (do esr <- doMachineOp getESR;
-              curThread <- getCurThread;
-              handleFault curThread (Fault_H.fault.UserException (esr AND mask 32) 0);
-              ThreadDecls_H.schedule;
-              activateThread;
-              stateAssert kernelExitAssertions []
-          od)
+     (do esr <- doMachineOp getESR;
+         curThread <- getCurThread;
+         handleFault curThread (Fault_H.fault.UserException (esr AND mask 32) 0);
+         ThreadDecls_H.schedule;
+         activateThread;
+         stateAssert kernelExitAssertions []
       od)
      (Call armv_handleVCPUFault_'proc)"
   supply Collect_const[simp del]
   apply (rule ccorres_grab_asm)
   apply (cinit' lift: hsr___unsigned_long_')
-   apply simp
    apply ccorres_rewrite
-   (* we are discarding the entire FPU-fault handling IF calculation because we know isFpuEnable
-      is abstracted to return True until the FPU model is updated, and so the Haskell side does not
-      even feature the HSR calculation for the FPU fault *)
-   apply (rule ccorres_rhs_assoc2)
-   apply (rule ccorres_rhs_assoc2)
-   apply (rule_tac xf'=ret__int_'  and r'="\<lambda>rv rv'. rv = True \<and> rv' = from_bool (\<not>rv)"
-                   in ccorres_split_nothrow[where P=\<top> and P'=UNIV])
-       (* now we have to go through all the IF branches on the C side, because some will result in
-          false  without calling isFpuEnable *)
-       apply (rule ccorres_cond_seq2[THEN iffD1])
-       apply ccorres_rewrite
-       apply (rule ccorres_guard_imp)
-         apply csymbr
-         apply simp
-         apply ccorres_rewrite
-         apply csymbr
-         apply simp
-         apply ccorres_rewrite
-         apply (simp add: isFpuEnable_def)
-         apply (rule ccorres_inst[where P=\<top> and P'="\<lbrace>\<acute>ret__int = false\<rbrace>"])
-         apply (rule_tac ccorres_from_vcg)
-         apply (clarsimp, rule conseqPre, vcg)
-         apply (clarsimp simp: return_def)
-        apply clarsimp
-       apply clarsimp
-      apply ceqv
+   apply (rule ccorres_rhs_assoc)+
+   apply (ctac (no_vcg) add: getESR_ccorres)
+    apply clarsimp
+    apply (rule ccorres_add_return2)
+    apply (ctac (no_vcg) add: handleUserLevelFault_ccorres'[where ?word2.0=0, simplified])
      apply simp
-     apply ccorres_rewrite
-     apply (rule ccorres_rhs_assoc)
-     apply (ctac (no_vcg) add: getESR_ccorres)
-      apply clarsimp
-      apply (rule ccorres_add_return2)
-      apply (ctac (no_vcg) add: handleUserLevelFault_ccorres'[where ?word2.0=0, simplified])
-       apply simp
-       apply (rule ccorres_return_C)
-         apply clarsimp
-        apply clarsimp
+     apply (rule ccorres_return_C)
        apply clarsimp
-      apply wpsimp+
-    apply (simp add: isFpuEnable_def)
-    apply wpsimp
-   apply clarsimp
-   apply (vcg exspec=isFpuEnable_modifies)
-  apply clarsimp
+      apply clarsimp
+     apply clarsimp
+    apply wpsimp+
   done
 
-(* ignore FPU status, no UNKNOWN_FAULT *)
+(* no UNKNOWN_FAULT *)
 lemma armv_handleVCPUFault_no_op_ccorres:
   "ccorres (\<lambda>rv rv'. rv' = from_bool False) ret__unsigned_long_'
            (invs' and sch_act_simple and ct_running' and
             (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and K (hsr \<noteq> 0x2000000))
      (\<lbrace> \<acute>hsr___unsigned_long = hsr \<rbrace>) hs
-     (do fpu_enabled <- doMachineOp isFpuEnable;
-         return ()
-      od)
+     (return ())
      (Call armv_handleVCPUFault_'proc)"
   supply Collect_const[simp del]
   apply (rule ccorres_grab_asm)
   apply (cinit' lift: hsr___unsigned_long_')
-   apply simp
    apply ccorres_rewrite
-   (* we are discarding the entire FPU-fault handling IF calculation because we know isFpuEnable
-      is abstracted to return True until the FPU model is updated, and so the Haskell side does not
-      even feature the HSR calculation for the FPU fault *)
-   apply (rule ccorres_rhs_assoc2)
-   apply (rule ccorres_rhs_assoc2)
-   apply (rule_tac xf'=ret__int_'  and r'="\<lambda>rv rv'. rv = True \<and> rv' = from_bool (\<not>rv)"
-                   in ccorres_split_nothrow[where P=\<top> and P'=UNIV])
-       (* now we have to go through all the IF branches on the C side, because some will result in
-          false  without calling isFpuEnable *)
-       apply (rule ccorres_cond_seq2[THEN iffD1])
-       apply ccorres_rewrite
-       apply (rule ccorres_guard_imp)
-         apply csymbr
-         apply simp
-         apply (rule ccorres_Cond_rhs)
-          apply (rule ccorres_Cond_rhs)
-           apply (rule ccorres_add_return2)
-           apply (ctac (no_vcg) add: isFpuEnable_ccorres)
-            apply (rule_tac P="rv" in ccorres_gen_asm)
-            apply (simp add: from_bool_0 true_def)
-            apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
-            apply (clarsimp, rule conseqPre, vcg)
-            apply (clarsimp simp: return_def)
-           apply (wpsimp simp: isFpuEnable_def)
-          apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
-          apply (simp add: isFpuEnable_def)
-         apply csymbr
-         apply simp
-         apply (rule ccorres_Cond_rhs)
-          apply (rule ccorres_add_return2)
-          apply (ctac (no_vcg) add: isFpuEnable_ccorres)
-           apply (rule_tac P="rv" in ccorres_gen_asm)
-           apply (simp add: from_bool_0 true_def)
-           apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
-           apply (clarsimp, rule conseqPre, vcg)
-           apply (clarsimp simp: return_def)
-          apply (wpsimp simp: isFpuEnable_def)
-         apply (rule ccorres_inst[where P=\<top> and P'="\<lbrace>\<acute>ret__int = false\<rbrace>"])
-         apply (simp add: isFpuEnable_def)
-         apply (rule ccorres_inst[where P=\<top> and P'="\<lbrace>\<acute>ret__int = false\<rbrace>"])
-         apply (rule_tac ccorres_from_vcg)
-         apply (clarsimp, rule conseqPre, vcg)
-         apply (clarsimp simp: return_def)
-        apply clarsimp
-       apply clarsimp
-      apply ceqv
-     apply simp
-     apply ccorres_rewrite
-     apply (rule ccorres_return_C; clarsimp)
-    apply wpsimp+
-    apply (wpsimp simp: isFpuEnable_def)
-   apply clarsimp
-   apply (vcg exspec=isFpuEnable_modifies)
+   apply (rule ccorres_return_C; clarsimp)
   apply clarsimp
   done
 
@@ -700,22 +609,18 @@ lemma handleVCPUFault_ccorres:
    apply (simp add: liftE_def bind_assoc)
    apply (rule ccorres_cases[where P="hsr = 0x2000000"]; simp cong: if_cong)
     (* UNKNOWN_FAULT case, armv_handleVCPUFault handles fault and returns true, ending operations *)
-    apply (simp add: isFpuEnable_def bind_assoc) (* isFpuEnable always true *)
+    apply (simp add: bind_assoc)
     apply (rule monadic_rewrite_ccorres_assemble[OF _ handleVCPUFault_ccorres_getCurThread_helper])
     apply (rule ccorres_add_return2)
-    apply (ctac (no_vcg) add: armv_handleVCPUFault_unknown_fault_ccorres[simplified isFpuEnable_def,
-                                                                         simplified,
+    apply (ctac (no_vcg) add: armv_handleVCPUFault_unknown_fault_ccorres[simplified,
                                                                          where hsr="ucast hsr"])
      apply simp
      apply ccorres_rewrite
      apply (rule ccorres_return_void_C)
     apply wpsimp
    (* not UNKNOWN_FAULT case, armv_handleVCPUFault won't do anything *)
-   apply (simp add: isFpuEnable_def bind_assoc)
    apply (rule ccorres_add_return)
-   apply (ctac (no_vcg) add: armv_handleVCPUFault_no_op_ccorres[simplified isFpuEnable_def,
-                                                                simplified,
-                                                                where hsr="ucast hsr"])
+   apply (ctac (no_vcg) add: armv_handleVCPUFault_no_op_ccorres[where hsr="ucast hsr"])
     apply simp
     apply (rule ccorres_pre_getCurThread, rename_tac curThread)
     apply (rule ccorres_symb_exec_r)

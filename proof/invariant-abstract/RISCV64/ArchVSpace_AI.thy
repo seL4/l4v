@@ -297,7 +297,7 @@ lemma set_vm_root_invs[wp]:
   by (wpsimp simp: if_distribR wp: get_cap_wp)
 
 crunch set_vm_root
-  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
+  for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
   (simp: crunch_simps)
 
 lemmas set_vm_root_typ_ats [wp] = abs_typ_at_lifts [OF set_vm_root_typ_at]
@@ -1645,13 +1645,6 @@ lemma set_asid_pool_arch_objs_map:
   apply (rule conjI; clarsimp)
   apply (frule asid_pool_map.valid_pool)
   apply (fastforce simp: obj_at_def)
-  done
-
-lemma caps_of_state_fun_upd:
-  "obj_at (same_caps val) p s \<Longrightarrow>
-   (caps_of_state (s\<lparr>kheap := (kheap s) (p \<mapsto> val)\<rparr>)) = caps_of_state s"
-  apply (drule caps_of_state_after_update)
-  apply (simp add: fun_upd_def)
   done
 
 lemma set_asid_pool_valid_arch_caps_map:

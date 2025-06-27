@@ -1156,15 +1156,6 @@ lemma tcb_at'_non_kernel_data_ref:
 lemmas tcb_at'_non_kernel_data_ref'
   = tcb_at'_non_kernel_data_ref[OF invs'_pspace_domain_valid]
 
-(* FIXME: move. Wants to go in SR_lemmas_C, but dependencies make this hard. *)
-lemma fpu_null_state_heap_update_span_disjoint:
-  assumes "ptr_span p \<inter> kernel_data_refs = {}"
-  shows "fpu_null_state_relation (hrs_mem_update (heap_update p v) h) = fpu_null_state_relation h"
-  by (cases "ptr_span (fpu_state_Ptr (symbol_table ''x86KSnullFpuState'')) \<subseteq> kernel_data_refs";
-      clarsimp simp: fpu_null_state_relation_def lift_t_Some_iff hrs_mem_update
-                     h_val_update_regions_disjoint
-              dest!: disjoint_subset2[OF _ assms])
-
 (* FIXME: move near tag_disj_via_td_name *)
 lemma tag_not_less_via_td_name:
   assumes ta: "typ_name (typ_info_t TYPE('a)) \<noteq> pad_typ_name"
@@ -1399,10 +1390,6 @@ lemma fpu_state_preservation:
   apply (simp add: unat_eq_0)
   done
 
-lemma fpu_null_state_preservation:
-  shows "fpu_null_state_relation u = fpu_null_state_relation h"
-  by (simp add: fpu_null_state_relation_def fpu_state_preservation)
-
 end
 
 lemma rf_sr_tcb_update_no_queue:
@@ -1439,7 +1426,7 @@ lemma rf_sr_tcb_update_no_queue:
      apply (rule cnotification_relation_upd_tcb_no_queues, assumption+)
       subgoal by (clarsimp intro!: ext)
      subgoal by (clarsimp intro!: ext)
-   subgoal by (clarsimp simp: carch_state_relation_def fpu_null_state_preservation typ_heap_simps')
+   subgoal by (clarsimp simp: carch_state_relation_def typ_heap_simps')
   by (simp add: cmachine_state_relation_def)
 
 lemmas rf_sr_tcb_update_no_queue2 =
@@ -1493,8 +1480,7 @@ lemma rf_sr_tcb_update_not_in_queue:
      subgoal by blast
     apply (clarsimp simp: Let_def)
    apply (simp add: carch_state_relation_def)
-   subgoal by (clarsimp simp: fpu_null_state_heap_update_span_disjoint[OF tcb_at'_non_kernel_data_ref']
-                              global_ioport_bitmap_heap_update_tag_disj_simps obj_at'_def projectKOs)
+   subgoal by (clarsimp simp: global_ioport_bitmap_heap_update_tag_disj_simps obj_at'_def projectKOs)
   by (simp add: cmachine_state_relation_def)
 
 end

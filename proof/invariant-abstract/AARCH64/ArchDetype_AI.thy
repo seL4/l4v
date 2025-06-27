@@ -183,7 +183,7 @@ lemma tcb_arch_detype[detype_invs_proofs]:
   apply rotate_tac (* do not pick typ_at *)
   apply (drule live_okE)
    apply (clarsimp simp: live_def hyp_live_def arch_live_def obj_at_def hyp_refs_of_def
-                         refs_of_ao_def vcpu_tcb_refs_def
+                         refs_of_ao_def vcpu_tcb_refs_def tcb_vcpu_refs_def
                   split: kernel_object.splits arch_kernel_obj.splits option.splits)
   apply clarsimp
   done
@@ -339,6 +339,11 @@ lemma valid_arch_state_detype[detype_invs_proofs]:
         cur_vcpu_detype vmid_inv_detype valid_global_arch_objs valid_global_tables
   unfolding valid_arch_state_def pred_conj_def
   by (simp only: valid_asid_table) simp
+
+lemma valid_cur_fpu[detype_invs_proofs]:
+  "valid_cur_fpu (detype (untyped_range cap) s)"
+  using valid_cur_fpu
+  by (auto simp: valid_cur_fpu_def is_tcb_cur_fpu_def live_def arch_tcb_live_def elim!: live_okE)
 
 lemma vs_lookup_asid_pool_level:
   assumes lookup: "vs_lookup_table level asid vref s = Some (level, p)" "vref \<in> user_region"

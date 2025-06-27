@@ -126,9 +126,9 @@ definition
 
 definition (in state_rel) to_user_context_C :: "user_context \<Rightarrow> user_context_C" where
   "to_user_context_C uc \<equiv>
-     user_context_C (ARRAY r. user_regs uc (register_to_H (of_nat r)))
-                    (user_fpu_state_C (ARRAY r. fpuRegs (fpu_state uc) (of_nat r))
-                                      (fpuSr (fpu_state uc)) (fpuCr (fpu_state uc)))"
+     user_context_C (ARRAY r. user_regs uc (register_to_H (of_nat r))) 0
+                    (user_fpu_state_C (ARRAY r. fpuRegs (user_fpu_state uc) (of_nat r))
+                                      (fpuSr (user_fpu_state uc)) (fpuCr (user_fpu_state uc)))"
 
 (* FIXME ARMHYP is this useful in any other file? *)
 (* Note: depends on vcpuactive being false when vcpuptr is NULL! *)
@@ -139,6 +139,12 @@ where
     if vcpuptr = NULL
     then None
     else Some (ptr_val vcpuptr, to_bool vcpuactive)"
+
+definition ccur_fpu_to_H :: "tcb_C ptr \<Rightarrow> machine_word option" where
+  "ccur_fpu_to_H cur_fpu_owner \<equiv>
+    if cur_fpu_owner = NULL
+    then None
+    else Some (ctcb_ptr_to_tcb_ptr cur_fpu_owner)"
 
 lemma (in kernel_m) ccontext_rel_to_C:
   "ccontext_relation uc (to_user_context_C uc)"
@@ -572,7 +578,8 @@ definition
       (symbol_table ''armKSGlobalUserVSpace'')
       (ccur_vcpu_to_H (armHSCurVCPU_' cstate) (armHSVCPUActive_' cstate))
       (unat (gic_vcpu_num_list_regs_' cstate))
-      (fst (snd (snd (ghost'state_' cstate))))"
+      (fst (snd (snd (ghost'state_' cstate))))
+      (ccur_fpu_to_H (ksCurFPUOwner_' cstate))"
 
 lemma eq_option_to_ptr_rev:
   "Some 0 \<notin> A \<Longrightarrow>
@@ -589,6 +596,16 @@ lemma ccur_vcpu_to_H_correct:
   using valid rel
   by (clarsimp simp: valid_arch_state'_def carch_state_relation_def
                         ccur_vcpu_to_H_def cur_vcpu_relation_def
+                 split: option.splits)
+
+lemma ccur_fpu_to_H_correct:
+  assumes valid: "valid_arch_state' astate"
+  assumes rel: "carch_state_relation (ksArchState astate) cstate"
+  shows
+    "ccur_fpu_to_H (ksCurFPUOwner_' cstate) = armKSCurFPUOwner (ksArchState astate)"
+  using valid rel
+  by (clarsimp simp: valid_arch_state'_def carch_state_relation_def ccur_fpu_to_H_def cur_fpu_relation_def
+                     kernel.ctcb_ptr_to_ctcb_ptr \<comment> \<open>FIXME: move this lemma somewhere so it's not in kernel context\<close>
                  split: option.splits)
 
 lemma carch_state_to_H_correct:
@@ -620,7 +637,10 @@ lemma carch_state_to_H_correct:
   apply (rule conjI)
   using valid[simplified valid_arch_state'_def]
    apply (clarsimp simp: max_armKSGICVCPUNumListRegs_val unat_of_nat_eq)
-  apply (simp add: pt_t)
+  apply (rule conjI)
+   apply (simp add: pt_t)
+  using valid rel
+  apply (simp add: ccur_fpu_to_H_correct)
   done
 
 end
@@ -1481,9 +1501,7 @@ lemma mk_gsUntypedZeroRanges_correct:
   done
 
 
-definition
-  cstate_to_H :: "globals \<Rightarrow> kernel_state"
-where
+definition cstate_to_H :: "globals \<Rightarrow> kernel_state" where
   "cstate_to_H s \<equiv>
    \<lparr>ksPSpace = cstate_to_pspace_H s,
     gsUserPages = fst (ghost'state_' s), gsCNodes = fst (snd (ghost'state_' s)),

@@ -761,13 +761,13 @@ next
                           get_index_def transform_cap_list_def
                           dc_def[symmetric]
                    split: cap.split arch_cap.split option.split)
-              (* 45 subgoals, most are irrelevant invocations *)
+              (* 46 subgoals, most are irrelevant invocations *)
                apply (clarsimp simp: gets_bind_alternative gets_the_def bind_assoc
                                      corres_symb_exec_in_gets assert_opt_def)
                apply ((clarsimp simp: neq_Nil_conv valid_cap_simps obj_at_def
                                       opt_object_page_directory invs_valid_idle
                                       label_to_flush_type_def isPageFlushLabel_def
-                               dest!: a_type_pdD)+)[35]
+                               dest!: a_type_pdD)+)[36]
              (* 10 subgoals *)
              (* PageMap *)
              apply (clarsimp simp: transform_mapping_def)

@@ -124,6 +124,10 @@ locale Scheduler_IF_1 =
     "\<And>P. arch_activate_idle_thread t \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   and arch_activate_idle_thread_domain_fields[wp]:
     "\<And>P. arch_activate_idle_thread t \<lbrace>domain_fields P\<rbrace>"
+  and arch_prepare_next_domain_kheap[wp]:
+    "\<And>P. arch_prepare_next_domain \<lbrace>\<lambda>s :: det_state. P (kheap s)\<rbrace>"
+  and arch_prepare_next_domain_idle_thread[wp]:
+    "\<And>P. arch_prepare_next_domain \<lbrace>\<lambda>s :: det_state. P (idle_thread s)\<rbrace>"
 begin
 
 definition globals_equiv_scheduler :: "det_state \<Rightarrow> det_state \<Rightarrow> bool" where
@@ -1002,6 +1006,8 @@ locale Scheduler_IF_2 = Scheduler_IF_1 +
   and next_domain_midstrength_equiv_scheduler:
     "equiv_valid (scheduler_equiv aag) (weak_scheduler_affects_equiv aag l)
                  (midstrength_scheduler_affects_equiv aag l) \<top> next_domain"
+  and arch_prepare_next_domain_ev:
+    "equiv_valid_inv (I :: det_state \<Rightarrow> det_state \<Rightarrow> bool) A \<top> arch_prepare_next_domain"
   and dmo_resetTimer_reads_respects_scheduler:
     "reads_respects_scheduler aag l \<top> (do_machine_op resetTimer)"
   and ackInterrupt_reads_respects_scheduler:
@@ -1019,6 +1025,8 @@ locale Scheduler_IF_2 = Scheduler_IF_1 +
     "arch_activate_idle_thread t \<lbrace>silc_dom_equiv aag st\<rbrace>"
   and arch_activate_idle_thread_scheduler_affects_equiv[wp]:
     "arch_activate_idle_thread t \<lbrace>scheduler_affects_equiv aag l s\<rbrace>"
+  and arch_prepare_next_domain_globals_equiv_scheduler[wp]:
+    "arch_prepare_next_domain \<lbrace>\<lambda>s:: det_state. globals_equiv_scheduler st s\<rbrace>"
 begin
 
 lemma switch_to_thread_midstrength_reads_respects_scheduler[wp]:
@@ -1328,18 +1336,21 @@ lemma next_domain_snippit:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows "reads_respects_scheduler aag l (invs and pas_refined aag and valid_queues)
            (do dom_time \<leftarrow> gets domain_time;
-               y \<leftarrow> when (dom_time = 0) next_domain;
+               y \<leftarrow> when (dom_time = 0) (do y <- arch_prepare_next_domain;
+                                            next_domain
+                                         od);
                y \<leftarrow> choose_thread;
                set_scheduler_action resume_cur_thread
             od)"
   apply (simp add: when_def)
   apply (rule bind_ev_pre)
      apply (rule bind_ev_general)
-       apply (simp add: when_def)
        apply (rule choose_thread_reads_respects_scheduler[OF domains_distinct])
-      apply (wp next_domain_midstrength_equiv_scheduler)
-       apply (rule ev_weaken_pre_relation)
-        apply (rule next_domain_midstrength_equiv_scheduler)
+      apply (rule ev_weaken_pre_relation[THEN if_ev])
+        apply (rule bind_ev_general)
+          apply (rule next_domain_midstrength_equiv_scheduler)
+         apply (rule arch_prepare_next_domain_ev)
+        apply wp
        apply fastforce
       apply (rule ev_weaken_pre_relation)
        apply wp
@@ -1352,8 +1363,8 @@ lemma schedule_choose_new_thread_read_respects_scheduler:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows "reads_respects_scheduler aag l (invs and pas_refined aag and valid_queues)
                                   schedule_choose_new_thread"
-  unfolding schedule_choose_new_thread_def
-  by (simp add: next_domain_snippit[OF domains_distinct])
+  unfolding schedule_choose_new_thread_def K_bind_def fun_app_def
+  by (rule next_domain_snippit[OF domains_distinct])
 
 end
 
