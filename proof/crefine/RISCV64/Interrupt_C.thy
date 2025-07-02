@@ -445,16 +445,16 @@ lemma maxIRQ_ucast_toEnum_eq:
   "x \<le> ucast maxIRQ \<Longrightarrow> toEnum (unat x) = x" for x::machine_word
   by (simp add: word_le_nat_alt maxIRQ_def)
 
-lemma maxIRQ_ucast_toEnum_irq_t:
+lemma toEnum_unat_irq_t_leq_scast:
   "x \<le> ucast maxIRQ \<Longrightarrow> (toEnum (unat x)::irq) \<le> scast Kernel_C.maxIRQ" for x::machine_word
   by (simp add: word_le_nat_alt maxIRQ_def Kernel_C.maxIRQ_def ucast_nat_def unat_ucast)
 
-lemma maxIRQ_ucast_toEnum_irq_t2:
+lemma ucast_toEnum_unat_irq_t_leq_ucast:
   "x \<le> ucast maxIRQ \<Longrightarrow> UCAST(_ \<rightarrow> machine_word_len) (toEnum (unat x)::irq) \<le> ucast Kernel_C.maxIRQ"
   for x::machine_word
   by (simp add: word_le_nat_alt maxIRQ_def Kernel_C.maxIRQ_def ucast_nat_def unat_ucast)
 
-lemma maxIRQ_ucast_toEnum_irq_t3:
+lemma ucast_toEnum_unat_irq_t_leq_scast:
   "x \<le> ucast maxIRQ \<Longrightarrow> UCAST(_ \<rightarrow> machine_word_len) (toEnum (unat x)::irq) \<le> scast Kernel_C.maxIRQ"
   for x::machine_word
   by (simp add: word_le_nat_alt maxIRQ_def Kernel_C.maxIRQ_def ucast_nat_def unat_ucast)
@@ -471,8 +471,8 @@ lemma maxIRQ_irqInvalid:
   apply assumption
   done
 
-lemmas maxIRQ_casts = maxIRQ_irqInvalid maxIRQ_ucast_toEnum_irq_t maxIRQ_ucast_toEnum_irq_t2
-                      maxIRQ_ucast_toEnum_eq maxIRQ_ucast_toEnum_irq_t3
+lemmas maxIRQ_casts = maxIRQ_irqInvalid toEnum_unat_irq_t_leq_scast ucast_toEnum_unat_irq_t_leq_ucast
+                      maxIRQ_ucast_toEnum_eq ucast_toEnum_unat_irq_t_leq_scast
 
 lemma Arch_decodeIRQControlInvocation_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
@@ -670,8 +670,7 @@ lemma decodeIRQControlInvocation_ccorres:
             >>= invocationCatch thread isBlocking isCall InvokeIRQControl)
      (Call decodeIRQControlInvocation_'proc)"
   supply gen_invocation_type_eq[simp] if_cong[cong] Collect_const[simp del]
-  supply maxIRQ_ucast_toEnum_eq[simp] maxIRQ_ucast_toEnum_irq_t[simp] maxIRQ_irqInvalid[simp]
-  supply maxIRQ_ucast_toEnum_irq_t2[simp]
+  supply maxIRQ_casts[simp]
   apply (cinit' lift: invLabel_' srcSlot_' length___unsigned_long_' current_extra_caps_' buffer_')
    apply (simp add: decodeIRQControlInvocation_def invocation_eq_use_types
               cong: StateSpace.state.fold_congs globals.fold_congs)
