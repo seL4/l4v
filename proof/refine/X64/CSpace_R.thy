@@ -4539,16 +4539,13 @@ lemma arch_update_setCTE_invs:
 
 definition
   "safe_parent_for' m p cap \<equiv>
-  \<exists>parent node. m p = Some (CTE parent node) \<and>
-  sameRegionAs parent cap \<and>
-  ((\<exists>irq. cap = IRQHandlerCap irq) \<and>
-   parent = IRQControlCap \<and>
-   (\<forall>p n'. m p \<noteq> Some (CTE cap n'))
-  \<or>
-   isUntypedCap parent \<and> descendants_of' p m = {} \<and> capRange cap \<noteq> {}
-      \<and> capBits cap \<le> capBits parent
-  \<or> isArchIOPortCap cap \<and> isIOPortControlCap' parent \<and>
-    (\<forall>p n'. m p \<noteq> Some (CTE cap n')))"
+     \<exists>parent node. m p = Some (CTE parent node) \<and> sameRegionAs parent cap \<and>
+                   ((\<exists>irq. cap = IRQHandlerCap irq) \<and> parent = IRQControlCap \<and>
+                           (\<forall>p n'. m p \<noteq> Some (CTE cap n'))
+                    \<or> isUntypedCap parent \<and> descendants_of' p m = {} \<and> capRange cap \<noteq> {} \<and>
+                      capBits cap \<le> capBits parent
+                    \<or> isArchIOPortCap cap \<and> isIOPortControlCap' parent \<and>
+                      (\<forall>p n'. m p \<noteq> Some (CTE cap n')))"
 
 definition
   "is_simple_cap' cap \<equiv>
