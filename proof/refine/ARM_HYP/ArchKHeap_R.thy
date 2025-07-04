@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-theory KHeap_R
+theory ArchKHeap_R
 imports
   "AInvs.ArchDetSchedSchedule_AI"
-  ArchMachine_R
+  KHeap_R
 begin
 
 lemma lookupAround2_known1:
@@ -28,8 +28,9 @@ lemma setObject_modify_variable_size:
   "\<lbrakk>obj_at' (P :: 'a \<Rightarrow> bool) p s; updateObject v = updateObject_default v;
     (1 :: machine_word) < 2 ^ objBits v; obj_at' (\<lambda>obj. objBits v = objBits obj) p s\<rbrakk>
    \<Longrightarrow> setObject p v s = modify (ksPSpace_update (\<lambda>ps. ps (p \<mapsto> injectKO v))) s"
-  apply (clarsimp simp: setObject_def split_def exec_gets obj_at'_def projectKOs
-                        lookupAround2_known1 assert_opt_def updateObject_default_def bind_assoc)
+  supply projectKOs[simp]
+  apply (clarsimp simp: setObject_def split_def exec_gets obj_at'_def lookupAround2_known1
+                        assert_opt_def updateObject_default_def bind_assoc)
   apply (simp add: projectKO_def alignCheck_assert)
   apply (simp add: project_inject objBits_def)
   apply (clarsimp simp only: koTypeOf_injectKO)
@@ -76,6 +77,12 @@ lemma getObject_inv:
   assumes x: "\<And>p q n ko. \<lbrace>P\<rbrace> loadObject p q n ko \<lbrace>\<lambda>(rv :: 'a :: pspace_storable). P\<rbrace>"
   shows      "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>(rv :: 'a :: pspace_storable). P\<rbrace>"
   by (simp add: getObject_def split_def | wp x)+
+
+lemma getObject_inv_vcpu [wp]: "\<lbrace>P\<rbrace> getObject l \<lbrace>\<lambda>(rv :: ArchStructures_H.vcpu). P\<rbrace>"
+  apply (rule getObject_inv)
+  apply simp
+  apply (rule loadObject_default_inv)
+  done
 
 lemma getObject_inv_tcb [wp]: "\<lbrace>P\<rbrace> getObject l \<lbrace>\<lambda>(rv :: Structures_H.tcb). P\<rbrace>"
   apply (rule getObject_inv)
@@ -131,10 +138,39 @@ lemmas typ_at_to_obj_at_arches
     typ_at_to_obj_at'[where 'a=asidpool, simplified]
     typ_at_to_obj_at'[where 'a=user_data, simplified]
     typ_at_to_obj_at'[where 'a=user_data_device, simplified]
+    typ_at_to_obj_at'[where 'a=vcpu, simplified]
 
 lemmas page_table_at_obj_at'
   = page_table_at'_def[unfolded typ_at_to_obj_at_arches]
 
+
+lemma no_fail_getPDE [wp]:
+  "no_fail (pde_at' p) (getObject p :: pde kernel)"
+  apply (simp add: getObject_def split_def)
+  apply (rule no_fail_pre)
+   apply wp
+  apply (clarsimp simp: obj_at'_def projectKOs objBits_simps typ_at_to_obj_at_arches
+                  cong: conj_cong option.case_cong)
+  apply (rule ps_clear_lookupAround2, assumption+)
+    apply simp
+   apply (erule is_aligned_no_overflow)
+  apply clarsimp
+  done
+
+lemma no_fail_getObject_vcpu[wp]: "no_fail (vcpu_at' vcpu) (getObject vcpu :: vcpu kernel)"
+  apply (simp add: getObject_def split_def)
+  apply (rule no_fail_pre)
+   apply wp
+  apply (clarsimp simp: obj_at'_def projectKOs objBits_simps typ_at_to_obj_at_arches
+                  cong: conj_cong option.case_cong)
+  apply (rule ps_clear_lookupAround2, assumption+)
+    apply simp
+   apply (erule is_aligned_no_overflow)
+  apply clarsimp
+  done
+
+lemma vcpu_at_ko: "typ_at (AArch AVCPU) p s \<Longrightarrow> \<exists>vcpu. ko_at (ArchObj (arch_kernel_obj.VCPU vcpu)) p s "
+  by (clarsimp simp add: obj_at_def)
 
 lemma corres_get_tcb [corres]:
   "corres (tcb_relation \<circ> the) (tcb_at t) (tcb_at' t) (gets (get_tcb t)) (getObject t)"
@@ -163,6 +199,39 @@ lemma lookupAround2_same1[simp]:
   apply (simp add: lookupAround2_known1)
   done
 
+lemma getObject_vcpu_corres:
+  "corres vcpu_relation (vcpu_at vcpu) (vcpu_at' vcpu)
+                        (get_vcpu vcpu) (getObject vcpu)"
+  apply (simp add: getObject_def get_vcpu_def get_object_def split_def)
+  apply (rule corres_no_failI)
+   apply (rule no_fail_pre, wp)
+    apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
+   apply (case_tac ko; simp)
+   apply (rename_tac arch_kernel_object)
+   apply (case_tac arch_kernel_object, simp_all)[1]
+   apply (clarsimp simp: lookupAround2_known1
+                         projectKOs)
+   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps
+                         archObjSize_def)
+   apply (erule (1) ps_clear_lookupAround2)
+     apply simp
+    apply (erule is_aligned_no_overflow)
+   apply simp
+   apply (clarsimp simp add: objBits_simps archObjSize_def
+                      split: option.split)
+  apply (clarsimp simp: in_monad loadObject_default_def projectKOs)
+  apply (simp add: bind_assoc exec_gets)
+  apply (drule vcpu_at_ko)
+  apply (clarsimp simp: obj_at_def)
+  apply (simp add: return_def)
+  apply (simp add: in_magnitude_check objBits_simps
+                   archObjSize_def pageBits_def)
+  apply (frule in_inv_by_hoareD [OF magnitudeCheck_inv])
+  apply (clarsimp simp: state_relation_def pspace_relation_def)
+  apply (drule bspec, blast)
+  apply (clarsimp simp: other_aobj_relation_def)
+  done
+
 lemma getObject_tcb_at':
   "\<lbrace> \<top> \<rbrace> getObject t \<lbrace>\<lambda>r::tcb. tcb_at' t\<rbrace>"
   by (clarsimp simp: valid_def getObject_def in_monad
@@ -175,7 +244,7 @@ lemma koType_objBitsKO:
   "koTypeOf k = koTypeOf k' \<Longrightarrow> objBitsKO k = objBitsKO k'"
   by (auto simp: objBitsKO_def archObjSize_def
           split: Structures_H.kernel_object.splits
-                 ARM_H.arch_kernel_object.splits)
+                 ARM_HYP_H.arch_kernel_object.splits)
 
 lemma updateObject_objBitsKO:
     "(ko', t') \<in> fst (updateObject (val :: 'a :: pspace_storable) ko p q n t)
@@ -195,17 +264,17 @@ lemma updateObject_cte_is_tcb_or_cte:
         \<and> p = q \<and> is_aligned p cte_level_bits \<and> ps_clear p cte_level_bits s)"
   supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (clarsimp simp: updateObject_cte typeError_def alignError_def
-               tcbVTableSlot_def tcbCTableSlot_def to_bl_1 rev_take objBits_simps'
+               tcbVTableSlot_def tcbCTableSlot_def to_bl_1 rev_take  objBits_simps'
                in_monad map_bits_to_bl cte_level_bits_def in_magnitude_check
                lookupAround2_char1
          split: kernel_object.splits)
-  apply (subst(asm) in_magnitude_check3, simp+)
+   apply (subst(asm) in_magnitude_check3; simp?)
+    apply (simp add: in_monad tcbCTableSlot_def tcbVTableSlot_def
+                     tcbReplySlot_def tcbCallerSlot_def tcbIPCBufferSlot_def
+              split: if_split_asm)
    apply (simp add: in_monad tcbCTableSlot_def tcbVTableSlot_def
                     tcbReplySlot_def tcbCallerSlot_def tcbIPCBufferSlot_def
              split: if_split_asm)
-  apply (simp add: in_monad tcbCTableSlot_def tcbVTableSlot_def
-                   tcbReplySlot_def tcbCallerSlot_def tcbIPCBufferSlot_def
-            split: if_split_asm)
   done
 
 declare plus_1_less[simp]
@@ -305,7 +374,7 @@ lemma setObject_typ_at_not:
   apply fastforce
   done
 
-lemma setObject_typ_at'[wp]:
+lemma setObject_typ_at':
   "\<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace> setObject p v \<lbrace>\<lambda>r s. P (typ_at' T p' s)\<rbrace>"
   by (blast intro: P_bool_lift setObject_typ_at_inv setObject_typ_at_not)
 
@@ -391,6 +460,15 @@ lemma setObject_tcb_pre:
   apply (clarsimp simp: in_monad projectKOs in_magnitude_check)
   done
 
+lemma setObject_tcb_ep_at:
+  shows
+  "\<lbrace> ep_at' t \<rbrace>
+   setObject p (x::tcb)
+  \<lbrace> \<lambda>rv. ep_at' t \<rbrace>"
+  apply (rule obj_at_setObject2)
+  apply (auto dest: updateObject_default_result)
+  done
+
 lemma obj_at_setObject3:
   fixes Q::"'a::pspace_storable \<Rightarrow> bool"
   fixes P::"'a::pspace_storable \<Rightarrow> bool"
@@ -427,7 +505,7 @@ method setObject_easy_cases =
   clarsimp simp: setObject_def in_monad split_def valid_def lookupAround2_char1,
   erule rsubst[where P=P'], rule ext,
   clarsimp simp: updateObject_cte updateObject_default_def in_monad
-                 typeError_def opt_map_def opt_pred_def projectKO_opts_defs projectKOs projectKO_eq
+                 typeError_def opt_map_def opt_pred_def projectKO_opts_defs projectKOs
           split: if_split_asm
                  Structures_H.kernel_object.split_asm
 
@@ -632,6 +710,12 @@ lemma setNotification_cte_wp_at':
                      intro!: set_eqI)+
   done
 
+lemma setObject_ep_tcb':
+  "\<lbrace>tcb_at' t\<rbrace> setObject p (e::endpoint) \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
+  apply (rule obj_at_setObject2)
+  apply (clarsimp simp: updateObject_default_def in_monad)
+  done
+
 lemma setObject_ntfn_tcb':
   "\<lbrace>tcb_at' t\<rbrace> setObject p (e::Structures_H.notification) \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
   apply (rule obj_at_setObject2)
@@ -731,15 +815,15 @@ declare overflow_plus_one_self[simp]
 
 lemma map_to_ctes_upd_tcb:
   "\<lbrakk> s p = Some (KOTCB tcb'); is_aligned p tcbBlockSizeBits;
-     {p + 1..p + mask tcbBlockSizeBits} \<inter> dom s = {} \<rbrakk> \<Longrightarrow>
+    {p + 1..p + mask tcbBlockSizeBits} \<inter> dom s = {} \<rbrakk> \<Longrightarrow>
      map_to_ctes (s (p \<mapsto> (KOTCB tcb))) =
       (\<lambda>x. if \<exists>getF setF. tcb_cte_cases (x - p) = Some (getF, setF)
                   \<and> getF tcb \<noteq> getF tcb'
            then (case tcb_cte_cases (x - p) of Some (getF, setF) \<Rightarrow> Some (getF tcb))
            else map_to_ctes s x)"
   supply
-    is_aligned_neg_mask_eq[simp del]
-    is_aligned_neg_mask_weaken[simp del]
+   is_aligned_neg_mask_eq[simp del]
+   is_aligned_neg_mask_weaken[simp del]
   apply (subgoal_tac "p && ~~ (mask tcbBlockSizeBits) = p")
    apply (rule ext)
    apply (simp    add: map_to_ctes_def Let_def dom_fun_upd2
@@ -773,8 +857,8 @@ lemma map_to_ctes_upd_tcb:
      apply (simp only: field_simps)
      apply (erule is_aligned_no_overflow)
     apply (simp add: objBits_simps field_simps)
-   apply (clarsimp simp: tcb_cte_cases_def objBits_simps'
-                  split: if_split_asm)
+   apply (clarsimp simp: tcb_cte_cases_def objBits_simps' field_simps
+     split: if_split_asm)
   apply (subst mask_in_range, assumption)
   apply (simp only: atLeastAtMost_iff order_refl simp_thms)
   apply (erule is_aligned_no_overflow)
@@ -897,6 +981,12 @@ lemma setObject_it_inv:
   apply (wp updateObject_default_inv | simp)+
   done
 
+lemma setObject_sa_inv:
+"\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
+  apply (simp add: setObject_def split_def)
+  apply (wp updateObject_default_inv | simp)+
+  done
+
 lemma setObject_ksDomSchedule_inv:
   "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
   apply (simp add: setObject_def split_def)
@@ -942,14 +1032,15 @@ lemma obj_relation_cut_same_type:
     (y', P') \<in> obj_relation_cuts ko' x'; P' ko' z \<rbrakk>
      \<Longrightarrow> (a_type ko = a_type ko') \<or> (\<exists>n n'. a_type ko = ACapTable n \<and> a_type ko' = ACapTable n')
          \<or> (\<exists>sz sz'. a_type ko = AArch (AUserData sz) \<and> a_type ko' = AArch (AUserData sz'))
-         \<or> (\<exists>sz sz'. a_type ko = AArch (ADeviceData sz) \<and> a_type ko' = AArch (ADeviceData sz'))"
+         \<or> (\<exists>sz sz'. a_type ko = AArch (ADeviceData sz) \<and> a_type ko' = AArch (ADeviceData sz'))
+         \<or> (a_type ko = AArch AVCPU \<and> a_type ko' = AArch AVCPU)"
   apply (rule ccontr)
   apply (simp add: obj_relation_cuts_def2 a_type_def)
   apply (auto simp: other_obj_relation_def tcb_relation_cut_def cte_relation_def
                     pte_relation_def pde_relation_def other_aobj_relation_def
              split: Structures_A.kernel_object.split_asm if_split_asm
                     Structures_H.kernel_object.split_asm
-                    ARM_A.arch_kernel_obj.split_asm)
+                    ARM_HYP_A.arch_kernel_obj.split_asm arch_kernel_object.split_asm)
   done
 
 lemma tcbs_of'_non_tcb_update:
@@ -971,12 +1062,12 @@ lemma setObject_other_corres:
                \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO ob')) = map_to_ctes (ksPSpace s)"
   assumes t: "is_other_obj_relation_type (a_type ob)"
   assumes b: "\<And>ko. P ko \<Longrightarrow> objBits ko = objBits ob'"
-  assumes P: "\<And>(v::'a::pspace_storable). (1 :: word32) < 2 ^ (objBits v)"
+  assumes P: "\<And>v::'a::pspace_storable. (1 :: machine_word) < 2 ^ objBits v"
   shows      "other_obj_relation ob (injectKO (ob' :: 'a :: pspace_storable)) \<Longrightarrow>
   corres dc (obj_at (\<lambda>ko. a_type ko = a_type ob) ptr and obj_at (same_caps ob) ptr)
             (obj_at' (P :: 'a \<Rightarrow> bool) ptr)
             (set_object ptr ob) (setObject ptr ob')"
-  supply image_cong_simp [cong del]
+  supply image_cong_simp [cong del] projectKOs[simp del]
   apply (rule corres_no_failI)
    apply (rule no_fail_pre)
     apply wp
@@ -1193,7 +1284,7 @@ lemma typ_at'_valid_obj'_lift:
       apply (case_tac endpoint; simp add: valid_ep'_def, wp)
      apply (rename_tac notification)
      apply (case_tac "ntfnObj notification";
-             simp add: valid_ntfn'_def valid_bound_tcb'_def split: option.splits,
+             simp add: valid_ntfn'_def split: option.splits,
              (wpsimp|rule conjI)+)
     apply (rename_tac tcb)
     apply (case_tac "tcbState tcb";
@@ -1341,7 +1432,7 @@ lemma setObject_no_0_obj' [wp]:
 
 lemma valid_updateCapDataI:
   "s \<turnstile>' c \<Longrightarrow> s \<turnstile>' updateCapData b x c"
-  apply (unfold updateCapData_def Let_def ARM_H.updateCapData_def)
+  apply (unfold updateCapData_def Let_def ARM_HYP_H.updateCapData_def)
   apply (cases c)
   apply (simp_all add: isCap_defs valid_cap'_def capUntypedPtr_def isCap_simps
                        capAligned_def word_size word_bits_def word_bw_assocs)
@@ -1618,6 +1709,72 @@ lemma set_ep_state_refs_of'[wp]:
   by (wp setObject_state_refs_of',
       simp_all add: objBits_simps' fun_upd_def[symmetric])
 
+lemma setObject_state_hyp_refs_of':
+  assumes x: "updateObject val = updateObject_default val"
+  assumes y: "(1 :: word32) < 2 ^ objBits val"
+  shows
+  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s) (ptr := hyp_refs_of' (injectKO val)))\<rbrace>
+     setObject ptr val
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  apply (clarsimp simp: setObject_def valid_def in_monad split_def
+                        updateObject_default_def x in_magnitude_check
+                        projectKOs y
+                 elim!: rsubst[where P=P] intro!: ext
+             split del: if_split cong: option.case_cong if_cong)
+  apply (clarsimp simp: state_hyp_refs_of'_def objBits_def[symmetric]
+                        ps_clear_upd
+                  cong: if_cong option.case_cong)
+  done
+
+lemma setObject_state_hyp_refs_of_eq:
+  assumes x: "\<And>s s' obj obj' ptr' ptr''.
+                  (obj', s') \<in> fst (updateObject val obj ptr ptr' ptr'' s)
+                    \<Longrightarrow> hyp_refs_of' obj' = hyp_refs_of' obj"
+  shows
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>
+     setObject ptr val
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  apply (clarsimp simp: setObject_def valid_def in_monad split_def
+                        updateObject_default_def in_magnitude_check
+                        projectKOs lookupAround2_char1
+                 elim!: rsubst[where P=P] intro!: ext
+             split del: if_split cong: option.case_cong if_cong)
+  apply (frule x, drule updateObject_objBitsKO)
+  apply (simp add: state_hyp_refs_of'_def ps_clear_upd
+             cong: option.case_cong if_cong)
+  done
+
+
+lemma setObject_gen_obj_at:
+  fixes v :: "'a :: pspace_storable"
+  assumes R: "\<And>ko s y n. (updateObject v ko p y n s) = (updateObject_default v ko p y n s)"
+  assumes n: "\<And>v' :: 'a. objBits v' = n"
+  assumes m: "(1 :: word32) < 2 ^ n"
+  assumes o: "\<lbrace>\<lambda>s. obj_at' (\<lambda>x :: 'a. True) p s \<and> P s\<rbrace> setObject p v \<lbrace>Q\<rbrace>"
+  shows      "\<lbrace>P\<rbrace> setObject p v \<lbrace>Q\<rbrace>"
+  using o
+  apply (clarsimp simp: setObject_def valid_def in_monad
+                        split_def split_paired_Ball
+                        R updateObject_default_def projectKOs)
+  apply (clarsimp simp: project_inject objBits_def[symmetric] n
+                        in_magnitude_check [OF _ m])
+  apply (erule_tac x=s in allE, erule impE)
+   apply (fastforce simp: obj_at'_def projectKOs objBits_def[symmetric] n project_inject)
+  apply (auto simp: project_inject objBits_def[symmetric] n
+                    in_magnitude_check [OF _ m])
+  done
+
+lemma state_hyp_refs_of'_ep:
+  "ep_at' epptr s \<Longrightarrow> (state_hyp_refs_of' s)(epptr := {}) = state_hyp_refs_of' s"
+  by (rule ext) (clarsimp simp: state_hyp_refs_of'_def obj_at'_def projectKOs)
+
+lemma set_ep_state_hyp_refs_of'[wp]:
+  "setEndpoint epptr ep \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
+  unfolding setEndpoint_def
+  apply (rule setObject_gen_obj_at, simp, simp add: objBits_simps', simp)
+  apply (wp setObject_state_hyp_refs_of'; simp add: objBits_simps' state_hyp_refs_of'_ep)
+  done
+
 lemma set_ntfn_ctes_of[wp]:
   "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> setNotification p val \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   apply (simp add: setNotification_def)
@@ -1689,37 +1846,16 @@ lemma set_ntfn_state_refs_of'[wp]:
   by (wp setObject_state_refs_of',
       simp_all add: objBits_simps' fun_upd_def)
 
-(* FIXME arch-split: temporary fix for this arch *)
-lemma non_hyp_state_hyp_refs_of'[simp]:
-  "state_hyp_refs_of' s = (\<lambda>p. {})"
-  unfolding state_hyp_refs_of'_def
-  apply (rule ext)
-  by (clarsimp split: option.splits kernel_object.split
-               simp: hyp_refs_of'_def tcb_hyp_refs'_def)
-
-(* FIXME arch-split: temporary fix for this arch *)
-lemma non_hyp_hyp_refs_of'[simp]:
-  "hyp_refs_of' p = {}"
-  unfolding state_hyp_refs_of'_def
-  by (clarsimp split: option.splits kernel_object.split
-               simp: hyp_refs_of'_def tcb_hyp_refs'_def)
-
-lemma setObject_state_hyp_refs_of':
-  assumes x: "updateObject val = updateObject_default val"
-  assumes y: "(1 :: machine_word) < 2 ^ objBits val"
-  shows
-  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s) (ptr := hyp_refs_of' (injectKO val)))\<rbrace>
-     setObject ptr val
-   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
-  apply (clarsimp simp: setObject_def valid_def in_monad split_def
-                        updateObject_default_def x in_magnitude_check y
-                 elim!: rsubst[where P=P] intro!: ext
-             split del: if_split cong: option.case_cong if_cong)
-  done
+lemma state_hyp_refs_of'_ntfn:
+  "ntfn_at' ntfn s \<Longrightarrow> (state_hyp_refs_of' s) (ntfn := {}) = state_hyp_refs_of' s"
+  by (rule ext) (clarsimp simp: state_hyp_refs_of'_def obj_at'_def projectKOs)
 
 lemma set_ntfn_state_hyp_refs_of'[wp]:
   "setNotification epptr ntfn \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
-  by wpsimp
+  unfolding setNotification_def
+  apply (rule setObject_gen_obj_at, simp, simp add: objBits_simps', simp)
+  apply (wp setObject_state_hyp_refs_of'; simp add: objBits_simps' state_hyp_refs_of'_ntfn)
+  done
 
 lemma setNotification_pred_tcb_at'[wp]:
   "\<lbrace>pred_tcb_at' proj P t\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv. pred_tcb_at' proj P t\<rbrace>"
@@ -1903,24 +2039,27 @@ lemma valid_global_refs_lift':
   done
 
 lemma valid_pde_mappings'_lift':
-  assumes pds: "\<And>(pd::ARM_H.pde) p P. f \<lbrace>\<lambda>s. P (ko_at' pd p s) \<rbrace>"
+  assumes pds: "\<And>(pd::pde) p P. f \<lbrace>\<lambda>s. P (ko_at' pd p s) \<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_pde_mappings' s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pde_mappings' s\<rbrace>"
   unfolding valid_pde_mappings'_def valid_pde_mapping'_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' pds)
+
 
 (* FIXME arch-split: no interface lemma prospects due to valid_pde_mappings', meaning interface
    lemmas will be limited to preserving valid_arch_state' in most cases *)
 lemma valid_arch_state_lift':
   assumes typs: "\<And>T p P. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
-  assumes pds: "\<And>(pd::ARM_H.pde) p P. f \<lbrace>\<lambda>s. P (ko_at' pd p s) \<rbrace>"
+  assumes pds: "\<And>(pd::pde) p P. f \<lbrace>\<lambda>s. P (ko_at' pd p s) \<rbrace>"
   assumes arch: "\<And>P. \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
+  assumes vcpu: "\<And>P p. \<lbrace>\<lambda>s. P (ko_wp_at' (is_vcpu' and hyp_live') p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ko_wp_at' (is_vcpu' and hyp_live') p s)\<rbrace>"
   shows "\<lbrace>valid_arch_state'\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  apply (simp add: valid_arch_state'_def valid_asid_table'_def
-                   valid_global_pts'_def page_directory_at'_def
-                   page_table_at'_def
-                   All_less_Ball)
-  apply (rule hoare_lift_Pf [where f="ksArchState"])
-   apply (wp typs pds valid_pde_mappings'_lift' hoare_vcg_const_Ball_lift arch typ_at_lifts)+
+  supply option.case_cong_weak[cong]
+  apply (simp add: valid_arch_state'_def valid_asid_table'_def)
+  apply (rule hoare_lift_Pf [where f="ksArchState"]; (rule arch)?)
+  including no_pre
+  apply (wp hoare_vcg_const_Ball_lift)
+  apply (case_tac "armHSCurVCPU x"; simp add: split_def; wp?)
+  apply (wpsimp wp: vcpu typ_at_lifts typs pds valid_pde_mappings'_lift')+
   done
 
 lemma valid_arch_state_lift'_valid_pde_mappings':
@@ -1928,6 +2067,7 @@ lemma valid_arch_state_lift'_valid_pde_mappings':
   assumes typs: "\<And>T p P. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
   assumes valid_pde_mappings': "\<lbrace> Ppde \<rbrace> f \<lbrace>\<lambda>_. valid_pde_mappings' \<rbrace>"
   assumes arch: "\<And>P. \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
+  assumes vcpu: "\<And>P p. \<lbrace>\<lambda>s. P (ko_wp_at' (is_vcpu' and hyp_live') p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ko_wp_at' (is_vcpu' and hyp_live') p s)\<rbrace>"
   shows "\<lbrace>valid_arch_state' and Ppde \<rbrace> f \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   apply (simp add: valid_arch_state'_def pred_conj_def)
   apply (simp add: valid_arch_state'_def valid_asid_table'_def
@@ -1939,7 +2079,26 @@ lemma valid_arch_state_lift'_valid_pde_mappings':
   apply (solves \<open>wpsimp wp: valid_pde_mappings'\<close>)
   (* the rest are trivial once arch_state is lifted out *)
   apply (rule hoare_lift_Pf2[where f="\<lambda>s. ksArchState s", OF _ arch],
-         solves \<open>wp typs hoare_vcg_conj_lift hoare_vcg_const_Ball_lift\<close>)+
+         solves \<open>wpsimp wp: typs vcpu[simplified pred_conj_def] hoare_vcg_conj_lift
+                            hoare_vcg_const_Ball_lift hoare_vcg_conj_lift hoare_vcg_all_lift
+                            hoare_vcg_imp_lift'
+                        split: option.splits\<close>)+
+  done
+
+lemma setEndpoint_ko_at'_pde[wp]:
+  "setEndpoint ep p \<lbrace> \<lambda>s. P (ko_at' (pde::pde) p' s) \<rbrace>"
+  unfolding setEndpoint_def
+  by (clarsimp intro!: obj_at_setObject2 simp: updateObject_default_def in_monad)
+
+lemma set_ep_valid_arch' [wp]:
+  "\<lbrace>valid_arch_state'\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  apply (rule valid_arch_state_lift'; wp?)
+  apply (simp add: setEndpoint_def)
+  apply (wpsimp wp: setObject_ko_wp_at simp: objBits_simps', rule refl, simp)
+  apply (clarsimp; rule conjI)
+   prefer 2
+   apply (clarsimp simp: pred_conj_def)
+  apply (clarsimp simp: is_vcpu'_def ko_wp_at'_def obj_at'_def projectKOs)
   done
 
 lemma setObject_ep_ct:
@@ -2037,16 +2196,23 @@ lemma set_ntfn_global_refs' [wp]:
   by (rule valid_global_refs_lift'; wp)
 
 crunch setNotification
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)" (ignore_del: setObject)
 
 lemma setNotification_ko_at'_pde[wp]:
-  "setNotification ntfn p \<lbrace> \<lambda>s. P (ko_at' (pde::ARM_H.pde) p' s) \<rbrace>"
+  "setNotification ntfn p \<lbrace> \<lambda>s. P (ko_at' (pde::pde) p' s) \<rbrace>"
   unfolding setNotification_def
   by (clarsimp intro!: obj_at_setObject2 simp: updateObject_default_def in_monad)
 
 lemma set_ntfn_valid_arch' [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setNotification ptr val \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  by (rule valid_arch_state_lift'; wp)
+  apply (rule valid_arch_state_lift'; wp?)
+  apply (simp add: setNotification_def)
+  apply (wpsimp wp: setObject_ko_wp_at simp: objBits_simps', rule refl, simp)
+  apply (clarsimp; rule conjI)
+   prefer 2
+   apply (clarsimp simp: pred_conj_def)
+  apply (clarsimp simp: is_vcpu'_def ko_wp_at'_def obj_at'_def projectKOs)
+  done
 
 lemmas valid_irq_node_lift =
     hoare_use_eq_irq_node' [OF _ typ_at_lift_valid_irq_node']
@@ -2226,8 +2392,7 @@ lemma ep_redux_simps':
   "ntfn_q_refs_of' (case xs of [] \<Rightarrow> IdleNtfn | y # ys \<Rightarrow> WaitingNtfn xs)
         = (set xs \<times> {NTFNSignal})"
   by (fastforce split: list.splits
-                simp: valid_ep_def valid_ntfn_def
-              intro!: ext)+
+                simp: valid_ep_def valid_ntfn_def)+
 
 
 (* There are two wp rules for preserving valid_ioc over set_object.
@@ -2240,6 +2405,30 @@ lemma valid_refs'_def2:
 lemma idle_is_global [intro!]:
   "ksIdleThread s \<in> global_refs' s"
   by (simp add: global_refs'_def)
+
+lemma aligned_distinct_obj_atI':
+  "\<lbrakk> ksPSpace s x = Some ko; pspace_aligned' s; pspace_distinct' s; ko = injectKO v \<rbrakk>
+   \<Longrightarrow> ko_at' v x s"
+  supply projectKOs[simp]
+  apply (simp add: obj_at'_def project_inject pspace_distinct'_def pspace_aligned'_def)
+  apply (drule bspec, erule domI)+
+  apply (clarsimp simp: objBits_simps' word_bits_def
+                 split: kernel_object.splits arch_kernel_object.splits)
+  done
+
+lemma aligned'_distinct'_ko_wp_at'I:
+  "\<lbrakk>ksPSpace s' x = Some ko; P ko; pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
+   \<Longrightarrow> ko_wp_at' P x s'"
+  apply (simp add: ko_wp_at'_def pspace_distinct'_def pspace_aligned'_def)
+  apply (drule bspec, erule domI)+
+  apply (cases ko; force)
+  done
+
+lemma aligned'_distinct'_ko_at'I:
+  "\<lbrakk>ksPSpace s' x = Some ko;  pspace_aligned' s'; pspace_distinct' s';
+    ko = injectKO (v:: 'a :: pspace_storable)\<rbrakk>
+   \<Longrightarrow> ko_at' v x s'"
+  by (fastforce elim: aligned'_distinct'_ko_wp_at'I simp: obj_at'_real_def project_inject)
 
 lemma valid_globals_cte_wpD':
   "\<lbrakk> valid_global_refs' s; cte_wp_at' P p s \<rbrakk>
@@ -2291,15 +2480,14 @@ lemma doMachineOp_invs_bits[wp]:
   "doMachineOp m \<lbrace>valid_bitmaps\<rbrace>"
   "doMachineOp m \<lbrace>valid_sched_pointers\<rbrace>"
   "doMachineOp m \<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>"
+  "doMachineOp m \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
   "doMachineOp m \<lbrace>if_live_then_nonz_cap'\<rbrace>"
   "doMachineOp m \<lbrace>cur_tcb'\<rbrace>"
   "doMachineOp m \<lbrace>if_unsafe_then_cap'\<rbrace>"
-  by (simp add: doMachineOp_def split_def
-      | wp
-      | fastforce elim: state_refs_of'_pspaceI)+
+   by (simp add: doMachineOp_def split_def
+       | wp
+       | fastforce elim: state_refs_of'_pspaceI)+
 
-crunch doMachineOp
-  for cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
 crunch doMachineOp
   for obj_at'[wp]: "\<lambda>s. P (obj_at' P' p s)"
 
@@ -2323,29 +2511,6 @@ lemma setEndpoint_ct':
   apply (simp add: setEndpoint_def setObject_def split_def)
   apply (wp updateObject_default_inv | simp)+
   done
-
-lemma aligned_distinct_obj_atI':
-  "\<lbrakk> ksPSpace s x = Some ko; pspace_aligned' s; pspace_distinct' s; ko = injectKO v \<rbrakk>
-   \<Longrightarrow> ko_at' v x s"
-  apply (simp add: obj_at'_def projectKOs project_inject pspace_distinct'_def pspace_aligned'_def)
-  apply (drule bspec, erule domI)+
-  apply (clarsimp simp: bit_simps objBits_simps' word_bits_def
-                 split: kernel_object.splits arch_kernel_object.splits)
-  done
-
-lemma aligned'_distinct'_ko_wp_at'I:
-  "\<lbrakk>ksPSpace s' x = Some ko; P ko; pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
-   \<Longrightarrow> ko_wp_at' P x s'"
-  apply (simp add: ko_wp_at'_def pspace_distinct'_def pspace_aligned'_def)
-  apply (drule bspec, erule domI)+
-  apply (cases ko; force)
-  done
-
-lemma aligned'_distinct'_ko_at'I:
-  "\<lbrakk>ksPSpace s' x = Some ko;  pspace_aligned' s'; pspace_distinct' s';
-    ko = injectKO (v:: 'a :: pspace_storable)\<rbrakk>
-   \<Longrightarrow> ko_at' v x s'"
-  by (fastforce elim: aligned'_distinct'_ko_wp_at'I simp: obj_at'_real_def project_inject)
 
 lemmas setEndpoint_valid_globals[wp]
     = valid_global_refs_lift' [OF set_ep_ctes_of set_ep_arch'
