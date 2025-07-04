@@ -41,6 +41,8 @@ primrec acap_relation :: "arch_cap \<Rightarrow> arch_capability \<Rightarrow> b
      (c = PageTableCap p pt_t (mdata_map data))"
 | "acap_relation (arch_cap.VCPUCap vcpu) c  = (c =
         arch_capability.VCPUCap vcpu)"
+| "acap_relation (arch_cap.SGISignalCap irq target) c  = (c =
+        arch_capability.SGISignalCap (ucast irq) (ucast target))"
 
 definition abs_asid_entry :: "asidpool_entry \<Rightarrow> asid_pool_entry" where
   "abs_asid_entry ap = AARCH64_A.ASIDPoolVSpace (apVMID ap) (apVSpace ap)"

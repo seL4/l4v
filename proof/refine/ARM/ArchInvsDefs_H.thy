@@ -79,12 +79,16 @@ lemmas [simp] = refs_of_a'_def azobj_refs'_def
 
 section "Valid caps and objects (design spec)"
 
+definition isArchSGISignalCap :: "capability \<Rightarrow> bool" where
+  "isArchSGISignalCap cap \<equiv> \<exists>irq target. cap = ArchObjectCap (SGISignalCap irq target)"
+
 primrec acapBits :: "arch_capability \<Rightarrow> nat" where
   "acapBits (ASIDPoolCap _ _)       = asidLowBits + word_size_bits"
 | "acapBits ASIDControlCap          = asidHighBits + word_size_bits"
 | "acapBits (PageCap _ _ _ sz _)   = pageBitsForSize sz"
 | "acapBits (PageTableCap x y) = 10"
 | "acapBits (PageDirectoryCap x y) = 14"
+| "acapBits (SGISignalCap _ _)      = 0"
 
 definition page_table_at' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool" where
  "page_table_at' x \<equiv> \<lambda>s. is_aligned x ptBits
@@ -119,7 +123,8 @@ definition valid_arch_cap' :: "arch_capability \<Rightarrow> kernel_state \<Righ
               0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < pptrBase)
     | PageDirectoryCap ref mapdata \<Rightarrow>
       page_directory_at' ref s \<and>
-      case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata"
+      case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata
+    | SGISignalCap _ _ \<Rightarrow> True"
 
 lemmas valid_arch_cap'_simps[simp] =
   valid_arch_cap'_def[split_simps arch_capability.split, simplified]
@@ -164,6 +169,14 @@ primrec acapClass :: "arch_capability \<Rightarrow> capclass" where
 | "acapClass (PageCap d x y sz z)   = PhysicalClass"
 | "acapClass (PageTableCap x y)     = PhysicalClass"
 | "acapClass (PageDirectoryCap x y) = PhysicalClass"
+| "acapClass (SGISignalCap _ _ )    = IRQClass"
+
+definition valid_arch_badges :: "capability \<Rightarrow> capability \<Rightarrow> mdbnode \<Rightarrow> bool" where
+  "valid_arch_badges cap cap' node' \<equiv>
+     isArchSGISignalCap cap' \<longrightarrow> cap \<noteq> cap' \<longrightarrow> mdbFirstBadged node'"
+
+definition mdb_chunked_arch_assms :: "capability \<Rightarrow> bool" where
+  "mdb_chunked_arch_assms cap \<equiv> \<not>isArchSGISignalCap cap"
 
 definition isArchFrameCap :: "capability \<Rightarrow> bool" where
  "isArchFrameCap cap \<equiv> case cap of ArchObjectCap (PageCap _ _ _ _ _) \<Rightarrow> True | _ \<Rightarrow> False"

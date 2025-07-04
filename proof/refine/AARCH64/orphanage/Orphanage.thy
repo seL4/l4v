@@ -1823,7 +1823,7 @@ lemma arch_performInvocation_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> valid_arch_inv' i s \<and> ct_active' s \<rbrace>
    Arch.performInvocation i
    \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
-  unfolding AARCH64_H.performInvocation_def performARMMMUInvocation_def
+  unfolding AARCH64_H.performInvocation_def performARMMMUInvocation_def performSGISignalGenerate_def
   by (wpsimp simp: valid_arch_inv'_def)
 
 lemma setDomain_no_orphans [wp]:

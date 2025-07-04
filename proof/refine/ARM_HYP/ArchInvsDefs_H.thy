@@ -95,6 +95,7 @@ primrec azobj_refs' :: "arch_capability \<Rightarrow> obj_ref set" where
 | "azobj_refs' (PageTableCap _ _) = {}"
 | "azobj_refs' (PageDirectoryCap _ _) = {}"
 | "azobj_refs' (VCPUCap v) = {v}"
+| "azobj_refs' (SGISignalCap _ _) = {}"
 
 lemma azobj_refs'_only_vcpu:
   "(x \<in> azobj_refs' acap) = (acap = VCPUCap x)"
@@ -103,6 +104,9 @@ lemma azobj_refs'_only_vcpu:
 
 section "Valid caps and objects (design spec)"
 
+definition isArchSGISignalCap :: "capability \<Rightarrow> bool" where
+  "isArchSGISignalCap cap \<equiv> \<exists>irq target. cap = ArchObjectCap (SGISignalCap irq target)"
+
 primrec acapBits :: "arch_capability \<Rightarrow> nat" where
   "acapBits (ASIDPoolCap x y) = asidLowBits + 2"
 | "acapBits ASIDControlCap = asidHighBits + 2"
@@ -110,6 +114,7 @@ primrec acapBits :: "arch_capability \<Rightarrow> nat" where
 | "acapBits (PageTableCap x y) = 12"
 | "acapBits (PageDirectoryCap x y) = 14"
 | "acapBits (VCPUCap v) = 12"
+| "acapBits (SGISignalCap _ _) = 0"
 
 definition page_table_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "page_table_at' x \<equiv> \<lambda>s. is_aligned x ptBits
@@ -146,7 +151,8 @@ definition valid_arch_cap' :: "arch_capability \<Rightarrow> kernel_state \<Righ
     | PageDirectoryCap ref mapdata \<Rightarrow>
       page_directory_at' ref s \<and>
       case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata
-    | VCPUCap v \<Rightarrow> vcpu_at' v s"
+    | VCPUCap v \<Rightarrow> vcpu_at' v s
+    | SGISignalCap _ _ \<Rightarrow> True"
 
 lemmas valid_arch_cap'_simps[simp] =
   valid_arch_cap'_def[split_simps arch_capability.split, simplified]
@@ -201,7 +207,15 @@ primrec acapClass :: "arch_capability \<Rightarrow> capclass" where
 | "acapClass (PageCap d x y sz z)   = PhysicalClass"
 | "acapClass (PageTableCap x y)     = PhysicalClass"
 | "acapClass (PageDirectoryCap x y) = PhysicalClass"
-| "acapClass (VCPUCap x) = PhysicalClass"
+| "acapClass (VCPUCap x)            = PhysicalClass"
+| "acapClass (SGISignalCap _ _ )    = IRQClass"
+
+definition valid_arch_badges :: "capability \<Rightarrow> capability \<Rightarrow> mdbnode \<Rightarrow> bool" where
+  "valid_arch_badges cap cap' node' \<equiv>
+     isArchSGISignalCap cap' \<longrightarrow> cap \<noteq> cap' \<longrightarrow> mdbFirstBadged node'"
+
+definition mdb_chunked_arch_assms :: "capability \<Rightarrow> bool" where
+  "mdb_chunked_arch_assms cap \<equiv> \<not>isArchSGISignalCap cap"
 
 definition isArchFrameCap :: "capability \<Rightarrow> bool" where
  "isArchFrameCap cap \<equiv> case cap of ArchObjectCap (PageCap _ _ _ _ _) \<Rightarrow> True | _ \<Rightarrow> False"

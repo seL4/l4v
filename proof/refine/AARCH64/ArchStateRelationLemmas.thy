@@ -131,6 +131,7 @@ lemmas isCap_defs =
   isFrameCap_def isPageTableCap_def
   isASIDControlCap_def isASIDPoolCap_def
   isDomainCap_def isArchFrameCap_def isVCPUCap_def
+  isSGISignalCap_def
 
 lemma is_other_obj_relation_type:
   "is_other_obj_relation_type (a_type ko)

@@ -1486,7 +1486,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     done
 
   from badges show "valid_badges ?ctes'"
-    by (simp add: valid_badges_def tree_to_ctes next_unfold')
+    by (clarsimp simp: valid_badges_def tree_to_ctes next_unfold')
 
   from contained show "caps_contained' ?ctes'"
     by (simp add: caps_contained'_def tree_to_ctes)

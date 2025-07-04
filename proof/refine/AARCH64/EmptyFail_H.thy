@@ -101,10 +101,9 @@ lemma constOnFailure_empty_fail[intro!, wp, simp]:
   by (simp add: constOnFailure_def const_def empty_fail_catch)
 
 lemma ArchRetypeDecls_H_deriveCap_empty_fail[intro!, wp, simp]:
-  "isPageTableCap y \<or> isFrameCap y \<or> isASIDControlCap y \<or> isASIDPoolCap y \<or> isVCPUCap y
-   \<Longrightarrow> empty_fail (Arch.deriveCap x y)"
-  apply (simp add: AARCH64_H.deriveCap_def)
-  by (auto simp: isCap_simps)
+  "empty_fail (Arch.deriveCap x y)"
+  unfolding AARCH64_H.deriveCap_def
+  by (cases y, auto simp: isCap_simps)
 
 crunch ensureNoChildren
   for (empty_fail) empty_fail[intro!, wp, simp]
@@ -113,8 +112,6 @@ lemma deriveCap_empty_fail[intro!, wp, simp]:
   "empty_fail (RetypeDecls_H.deriveCap slot y)"
   apply (simp add: Retype_H.deriveCap_def)
   apply (clarsimp simp: empty_fail_bindE)
-  apply (case_tac "capCap y")
-      apply (simp_all add: isCap_simps)
   done
 
 crunch setExtraBadge, cteInsert
@@ -168,7 +165,7 @@ qed
    which are hand-held at present  *)
 lemma empty_fail_arch_cap_exhausted:
   "\<lbrakk>\<not> isFrameCap cap; \<not> isPageTableCap cap; \<not> isASIDControlCap cap; \<not> isASIDPoolCap cap;
-    \<not> isVCPUCap cap\<rbrakk>
+    \<not> isVCPUCap cap; \<not> isSGISignalCap cap\<rbrakk>
    \<Longrightarrow> empty_fail undefined"
   by (cases cap; simp add: isCap_simps)
 

@@ -189,6 +189,9 @@ fun
 | "CapabilityMap (capability.ArchObjectCap
                     (arch_capability.VCPUCap v)) =
   cap.ArchObjectCap (arch_cap.VCPUCap v)"
+| "CapabilityMap (capability.ArchObjectCap
+                    (arch_capability.SGISignalCap irq target)) =
+  cap.ArchObjectCap (arch_cap.SGISignalCap (ucast irq) (ucast target))"
 
 (* FIXME: wellformed_cap_simps has lots of duplicates. *)
 lemma cap_relation_imp_CapabilityMap:
@@ -205,7 +208,7 @@ lemma cap_relation_imp_CapabilityMap:
    apply (simp add: zbits_map_def split: option.splits)
   apply (rename_tac arch_cap)
   apply clarsimp
-  apply (case_tac arch_cap, simp_all add: wellformed_cap_simps)
+  apply (case_tac arch_cap; simp add: wellformed_cap_simps ucast_down_ucast_id is_down)
   done
 
 primrec

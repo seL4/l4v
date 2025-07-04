@@ -21,6 +21,17 @@ lemma setCTE_pred_tcb_at':
    apply (simp add: tcb_to_itcb'_def)+
   done
 
+context Arch begin arch_global_naming
+
+(* does not work well as simp rule *)
+lemma capMasterCap_isArchSGISignalCap:
+  "capMasterCap cap = capMasterCap cap' \<Longrightarrow> isArchSGISignalCap cap' = isArchSGISignalCap cap"
+  by (auto simp: capMasterCap_def isCap_simps split: capability.splits arch_capability.splits)
+
+end
+
+arch_requalify_facts capMasterCap_isArchSGISignalCap (*FIXME: arch-split*)
+
 locale mdb_move =
   mdb_ptr m _ _ src src_cap src_node
     for m src src_cap src_node +
@@ -221,6 +232,11 @@ lemma parent_preserved:
   apply (cases cte')
   apply (simp add: isMDBParentOf_CTE sameRegionAs_def2)
   done
+
+lemma capMasterCap_isArchSGISignalCap[simp]:
+  "isArchSGISignalCap cap' = isArchSGISignalCap src_cap"
+  using parency unfolding weak_derived'_def
+  by (blast intro!: capMasterCap_isArchSGISignalCap)
 
 lemma children_preserved:
   "isMDBParentOf (CTE cap' src_node) cte' =
@@ -1241,6 +1257,11 @@ lemma derived_region2 [simp]:
   sameRegionAs cap c' = sameRegionAs cap src_cap"
   by (clarsimp simp add: badge_derived'_def sameRegionAs_def2)
 
+lemma derived_mdb_chunked_arch_assms[simp]:
+  "badge_derived' c' src_cap \<Longrightarrow> mdb_chunked_arch_assms c' = mdb_chunked_arch_assms src_cap"
+  by (clarsimp simp: badge_derived'_def mdb_chunked_arch_assms_def
+               intro!: capMasterCap_isArchSGISignalCap)
+
 lemma chunked_n:
   assumes b: "badge_derived' c' src_cap"
   shows "mdb_chunked n"
@@ -1311,8 +1332,9 @@ lemma chunked_n:
     apply (rule conjI)
      apply clarsimp
      apply (erule sameRegionAsE, simp_all add: sameRegionAs_def3)[1]
+        apply blast
        apply blast
-      apply blast
+      apply (clarsimp simp: isCap_simps)
      apply (clarsimp simp: isCap_simps)
     apply fastforce
    apply clarsimp
@@ -2136,6 +2158,22 @@ lemma cteInsert_valid_dlist:
   apply clarsimp+
   done
 
+lemma valid_arch_badges_mdbPrev_update[simp]:
+  "valid_arch_badges cap cap' (mdbPrev_update f node) = valid_arch_badges cap cap' node"
+  by (simp add: valid_arch_badges_def)
+
+lemma valid_arch_badges_master_eq:
+  "capMasterCap src_cap = capMasterCap cap \<Longrightarrow>
+   valid_arch_badges src_cap cap' node = valid_arch_badges cap cap' node"
+  by (auto simp: valid_arch_badges_def isCap_simps)
+
+lemmas valid_arch_badges_master = valid_arch_badges_master_eq[THEN iffD1]
+
+lemma valid_arch_badges_firstBadged:
+  "\<lbrakk> valid_arch_badges cap cap' node; mdbFirstBadged node = mdbFirstBadged node' \<rbrakk> \<Longrightarrow>
+   valid_arch_badges cap cap' node'"
+  by (simp add: valid_arch_badges_def)
+
 lemma cteInsert_mdb' [wp]:
   "\<lbrace>valid_mdb' and pspace_aligned' and pspace_distinct' and (\<lambda>s. src \<noteq> dest) and K (capAligned cap) and valid_objs' and
    (\<lambda>s. cte_wp_at' (is_derived' (ctes_of s) src cap \<circ> cteCap) src s) \<rbrace>
@@ -2312,32 +2350,41 @@ proof -
 
 
   show "valid_badges ?C"
-  using srcdest badge cofs badges cofd
-  unfolding valid_badges_def
-  apply (intro impI allI)
-  apply (drule mdb_next_disj)
-  apply (elim disjE)
-    defer
-    apply (clarsimp simp:modify_map_cases dest0 src0)
-    apply (clarsimp simp:revokable'_def badge_derived'_def)
-    subgoal by (case_tac src_cap,auto simp:isCap_simps sameRegionAs_def)
-  apply (clarsimp simp:modify_map_cases valid_badges_def)
-    apply (frule_tac x=src in spec, erule_tac x=word1 in allE, erule allE, erule impE)
-    apply fastforce
-    apply simp
-    apply (clarsimp simp:mdb_next_unfold badge_derived'_def split: if_split_asm)
-    apply (thin_tac "All P" for P)
-    subgoal by (cases src_cap,
-       auto simp:mdb_next_unfold isCap_simps sameRegionAs_def Let_def split: if_splits)
-  apply (case_tac "word1 = p'")
+    using srcdest badge cofs badges cofd
+    unfolding valid_badges_def
+    apply (intro impI allI)
+    apply (drule mdb_next_disj)
+    apply (elim disjE)
+      defer
+      apply (clarsimp simp: modify_map_cases dest0 src0)
+      apply (clarsimp simp: Retype_H.isCapRevocable_def isCapRevocable_def badge_derived'_def)
+      apply (rule conjI, clarsimp)
+       apply (rule conjI; clarsimp simp: isCap_simps)
+       apply (clarsimp simp: isCap_simps valid_arch_badges_def)
+     apply (clarsimp simp:modify_map_cases valid_badges_def)
+     apply (frule_tac x=src in spec, erule_tac x=word1 in allE, erule allE, erule impE)
+      apply fastforce
+     apply simp
+     apply (clarsimp simp:mdb_next_unfold badge_derived'_def split: if_split_asm)
+     apply (thin_tac "All P" for P)
+     apply (rule conjI, clarsimp)
+      (* clarsimp first for speed *)
+      apply (rule conjI; clarsimp simp: isCap_simps; fastforce simp: isCap_simps sameRegionAs_def)
+     apply (erule (1) valid_arch_badges_master)
+    apply (case_tac "word1 = p'")
      apply (clarsimp simp:modify_map_cases valid_badges_def mdb_next_unfold src0 dest0 no0)+
-  apply (case_tac "p = dest")
-   apply (clarsimp simp:dest0 src0 no0)+
-  apply (case_tac z)
-  apply (rename_tac capability mdbnode)
-  apply clarsimp
-  apply (drule_tac x = p in spec,drule_tac x = "mdbNext mdbnode" in spec)
-  by (auto simp:isCap_simps sameRegionAs_def)
+    apply (case_tac "p = dest")
+     apply (clarsimp simp:dest0 src0 no0)+
+    apply (case_tac z)
+    apply (rename_tac capability mdbnode)
+    apply clarsimp
+    apply (drule_tac x = p in spec, drule_tac x = "mdbNext mdbnode" in spec)
+    apply (rule conjI, clarsimp)
+     subgoal by (auto simp: isCap_simps sameRegionAs_def) (* slowish *)
+    apply clarsimp
+    apply (case_tac "src \<noteq> mdbNext mdbnode", fastforce)
+    apply (case_tac "word1 = p "; clarsimp; erule valid_arch_badges_firstBadged; simp)
+    done
 
   from badge
   have isUntyped_eq: "isUntypedCap cap = isUntypedCap src_cap"
@@ -2677,7 +2724,7 @@ lemma updateMDB_cteCaps_of:
   "\<lbrace>\<lambda>s. P (cteCaps_of s)\<rbrace> updateMDB ptr f \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
   apply (simp add: cteCaps_of_def)
   apply (wp updateMDB_ctes_of_wp)
-  apply (safe elim!: rsubst [where P=P] intro!: ext)
+  apply (safe elim!: rsubst [where P=P] del: ext intro!: ext)
   apply (case_tac "ctes_of s x")
    apply (clarsimp simp: modify_map_def)+
   done
@@ -4132,6 +4179,7 @@ lemma setupReplyMaster_global_refs[wp]:
   apply (case_tac prev_cte, simp)
   apply (frule(1) ctes_of_valid_cap')
   apply (drule(1) valid_global_refsD_with_objSize)+
+  apply clarsimp
   apply (clarsimp simp: valid_cap'_def objBits_simps' obj_at'_def projectKOs
                  split: capability.split_asm)
   done
@@ -4330,16 +4378,16 @@ lemma arch_update_setCTE_mdb:
    apply (clarsimp simp: valid_badges_def mdb_next_pres simp del: fun_upd_apply)
    apply (clarsimp simp: is_arch_update'_def)
    apply (clarsimp split: if_split_asm)
-     apply (clarsimp simp: isCap_simps)
-    prefer 2
-    subgoal by fastforce
+     apply (clarsimp simp: isCap_simps valid_arch_badges_def)
+    prefer 3
+  subgoal by fastforce
+    apply (fastforce simp: isCap_simps valid_arch_badges_def)
    apply (erule_tac x=pa in allE)
    apply (erule_tac x=p in allE)
    apply simp
-   apply (simp add: sameRegionAs_def3)
-   apply (rule conjI)
-    apply (clarsimp simp: isCap_simps)
-   apply (clarsimp simp: isCap_simps)
+   apply (simp add: sameRegionAs_def3 isCap_simps valid_arch_badges_def)
+   apply (rule conjI, clarsimp, (rule conjI; solves clarsimp))+ (* fastforce takes too long *)
+   apply (solves clarsimp)
   apply (rule conjI)
    apply (clarsimp simp: caps_contained'_def simp del: fun_upd_apply)
    apply (cases oldcte)
@@ -4368,7 +4416,7 @@ lemma arch_update_setCTE_mdb:
      apply (erule_tac x=p' in allE)
      apply (clarsimp simp: masterCap.sameRegionAs)
      apply (simp add: masterCap.sameRegionAs is_chunk_def mdb_next_trans_next_pres
-                      mdb_next_rtrans_next_pres)
+                      mdb_next_rtrans_next_pres mdb_chunked_arch_assms_def masterCap.isArchSGISignalCap)
      subgoal by fastforce
     apply (erule_tac x=pa in allE)
     apply (erule_tac x=p in allE)
@@ -4523,14 +4571,12 @@ lemma arch_update_setCTE_invs:
 
 definition
   "safe_parent_for' m p cap \<equiv>
-  \<exists>parent node. m p = Some (CTE parent node) \<and>
-  sameRegionAs parent cap \<and>
-  ((\<exists>irq. cap = IRQHandlerCap irq) \<and>
-   parent = IRQControlCap \<and>
-   (\<forall>p n'. m p \<noteq> Some (CTE cap n'))
-  \<or>
-   isUntypedCap parent \<and> descendants_of' p m = {} \<and> capRange cap \<noteq> {}
-      \<and> capBits cap \<le> capBits parent)"
+     \<exists>parent node. m p = Some (CTE parent node) \<and> sameRegionAs parent cap \<and>
+                   ((\<exists>irq. cap = IRQHandlerCap irq) \<and>  parent = IRQControlCap \<and>
+                           (\<forall>p n'. m p \<noteq> Some (CTE cap n'))
+                    \<or> parent = IRQControlCap \<and> isArchSGISignalCap cap
+                    \<or> isUntypedCap parent \<and> descendants_of' p m = {} \<and> capRange cap \<noteq> {} \<and>
+                      capBits cap \<le> capBits parent)"
 
 definition
   "is_simple_cap' cap \<equiv>
@@ -4544,6 +4590,16 @@ definition
   \<not> isCNodeCap cap \<and>
   \<not> isZombie cap \<and>
   \<not> isArchPageCap cap"
+
+lemma valid_badges_IRQControlD:
+  "\<lbrakk> valid_badges m;
+     m p = Some (CTE IRQControlCap n);
+     m p' = Some (CTE (ArchObjectCap (SGISignalCap irq target)) n');
+     m \<turnstile> p \<leadsto> p' \<rbrakk> \<Longrightarrow>
+   mdbFirstBadged n'"
+  unfolding valid_badges_def
+  by (fastforce simp: isCap_simps valid_arch_badges_def)
+
 end
 
 (* FIXME: duplicated *)
@@ -4555,7 +4611,7 @@ begin
 interpretation Arch . (*FIXME: arch-split*)
 lemma dest_no_parent_n:
   "n \<turnstile> dest \<rightarrow> p = False"
-  using src simple safe_parent
+  using src simple safe_parent valid_badges
   apply clarsimp
   apply (erule subtree.induct)
    prefer 2
@@ -4567,27 +4623,31 @@ lemma dest_no_parent_n:
    apply (subst mdb_next_unfold)
    apply (simp add: src)
   apply (clarsimp simp: isMDBParentOf_CTE)
-  apply (clarsimp simp: is_simple_cap'_def revokable'_def)
-  apply (cases c', auto simp: isCap_simps)
-  apply (clarsimp simp add: sameRegionAs_def2)
+  apply (clarsimp simp: is_simple_cap'_def Retype_H.isCapRevocable_def
+                  split: capability.splits arch_capability.splits)
+     apply (clarsimp simp: isCap_simps)
+    apply (clarsimp simp add: sameRegionAs_def2)
+    apply (clarsimp simp: isCap_simps)
+    apply (clarsimp simp: safe_parent_for'_def isCap_simps)
+   apply (clarsimp simp: isCap_simps)
   apply (clarsimp simp: isCap_simps)
-  apply (clarsimp simp: safe_parent_for'_def isCap_simps)
+  apply (fastforce dest: valid_badges_IRQControlD)
   done
 
 lemma src_node_revokable [simp]:
   "mdbRevocable src_node"
-  using safe_parent ut_rev src
+  using safe_parent ut_rev src irq_control
   apply (clarsimp simp add: safe_parent_for'_def)
   apply (erule disjE)
    apply clarsimp
    apply (erule irq_revocable, rule irq_control)
-  apply (clarsimp simp: ut_revocable'_def)
+  apply (fastforce simp: ut_revocable'_def irq_control_def)
   done
 
 lemma new_child [simp]:
   "isMDBParentOf new_src new_dest"
   using safe_parent ut_rev src
-  apply (simp add: new_src_def new_dest_def isMDBParentOf_def)
+  apply (simp add: new_src_def new_dest_def isMDBParentOf_def isArchMDBParentOf_def)
   apply (clarsimp simp: safe_parent_for'_def)
   apply (auto simp: isCap_simps)
   done
@@ -4737,10 +4797,10 @@ lemma maskedAsFull_revokable_safe_parent:
   "\<lbrakk>is_simple_cap' c'; safe_parent_for' m p c'; m p = Some cte;
     cteCap cte = (maskedAsFull src_cap' a)\<rbrakk>
    \<Longrightarrow> revokable' (maskedAsFull src_cap' a) c' = revokable' src_cap' c'"
-   apply (clarsimp simp:revokable'_def maskedAsFull_def split:if_splits capability.splits)
-   apply (intro allI impI conjI)
-     apply (clarsimp simp:isCap_simps is_simple_cap'_def)+
-done
+  apply (clarsimp simp: isCapRevocable_def maskedAsFull_def
+                  split: if_splits capability.splits)
+  apply (auto simp: isCap_simps is_simple_cap'_def)
+  done
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
@@ -5038,12 +5098,9 @@ declare if_split [split]
 
 lemma sameRegion_capRange_sub:
   "sameRegionAs cap cap' \<Longrightarrow> capRange cap' \<subseteq> capRange cap"
-  apply (clarsimp simp: sameRegionAs_def2 isCap_Master capRange_Master)
-  apply (erule disjE)
-   apply (clarsimp dest!: capMaster_capRange)
-  apply (erule disjE)
-   apply fastforce
-  apply (clarsimp simp: isCap_simps capRange_def)
+  apply (clarsimp simp: sameRegionAs_def2 isCap_Master capRange_Master cong: conj_cong)
+  apply (erule disjE, fastforce dest!: capMaster_capRange)
+  apply (fastforce simp: isCap_simps capRange_def split: if_split_asm)
   done
 
 lemma safe_parent_for_capRange_capBits:
@@ -5068,7 +5125,9 @@ lemma safe_parent_for_untypedRange:
   "\<lbrakk> safe_parent_for' m p cap; m p = Some cte \<rbrakk> \<Longrightarrow> untypedRange cap \<subseteq> untypedRange (cteCap cte)"
   apply (clarsimp simp: safe_parent_for'_def)
   apply (erule disjE)
-   apply clarsimp
+   apply (fastforce simp: isCap_simps)
+  apply (erule disjE)
+   apply (fastforce simp: isCap_simps)
   apply clarsimp
   apply (simp add: sameRegionAs_def2)
   apply (erule disjE)
@@ -5089,7 +5148,9 @@ lemma safe_parent_for_capUntypedRange:
   "\<lbrakk> safe_parent_for' m p cap; m p = Some cte \<rbrakk> \<Longrightarrow> capRange cap \<subseteq> untypedRange (cteCap cte)"
   apply (clarsimp simp: safe_parent_for'_def)
   apply (erule disjE)
-   apply (clarsimp simp: capRange_def)
+   apply (fastforce simp: capRange_def isCap_simps)
+  apply (erule disjE)
+   apply (fastforce simp: capRange_def isCap_simps)
   apply clarsimp
   apply (simp add: sameRegionAs_def2)
   apply (erule disjE)
@@ -5414,15 +5475,29 @@ lemma c_not_ntfn [simp]:
 
 lemma valid_badges' [simp]:
   "valid_badges n'"
-  using simple src dest
+  using simple src dest safe_parent
   apply (clarsimp simp: valid_badges_def)
   apply (simp add: n_direct_eq')
   apply (frule_tac p=p in n'_badge)
   apply (frule_tac p=p' in n'_badge)
   apply (drule n'_cap)+
-  apply (clarsimp split: if_split_asm)
-  apply (insert valid_badges)
-  apply (simp add: valid_badges_def)
+  apply (rule conjI)
+   apply (clarsimp simp: is_simple_cap'_def split: if_split_asm)
+   apply (insert valid_badges)[1]
+   apply (simp add: valid_badges_def)
+   apply blast
+  (* valid_arch_badges *)
+  apply (clarsimp simp: split: if_split_asm)
+    apply (clarsimp simp: Retype_H.isCapRevocable_def isCapRevocable_def safe_parent_for'_def
+                          isCap_simps valid_badges_def valid_arch_badges_def)
+   apply (insert valid_badges)[1]
+   apply (simp add: valid_badges_def)
+   apply (erule_tac x=src in allE)
+   apply simp
+   apply (erule_tac x=p' in allE)
+   apply (clarsimp simp: safe_parent_for'_def isCap_simps valid_arch_badges_def)
+  apply (insert valid_badges)[1]
+  apply (simp add: valid_badges_def valid_arch_badges_def)
   apply blast
   done
 
@@ -5500,26 +5575,23 @@ lemma sameRegion_src [simp]:
 lemma sameRegion_src_c':
   "sameRegionAs cap src_cap \<Longrightarrow> sameRegionAs cap c'"
   using safe_parent simple src capRange_c'
-  apply (simp add: safe_parent_for'_def)
+  apply (simp add: safe_parent_for'_def is_simple_cap'_def)
   apply (erule disjE)
-   apply (clarsimp simp: sameRegionAs_def2 isCap_simps capRange_def)
+   apply (fastforce simp: sameRegionAs_def2 isCap_simps capRange_def)
   apply clarsimp
   apply (simp add: sameRegionAs_def2 isCap_Master capRange_Master)
-  apply (erule disjE)
-   prefer 2
-   apply (clarsimp simp: isCap_simps)
-  apply (elim conjE)
-  apply (erule disjE)
-   prefer 2
-   apply (clarsimp simp: isCap_simps)
-  apply simp
-  apply blast
+  (* these take too long if combined: *)
+  apply (erule disjE, clarsimp simp: isCap_simps)
+  apply (erule disjE, clarsimp simp: isCap_simps capRange_def)
+  apply (erule disjE; clarsimp simp: isCap_simps)
+  apply fastforce
   done
 
-lemma irq_c'_new:
-  assumes irq_src: "isIRQControlCap src_cap"
+lemma irq_c'_new_handler:
+  assumes "isIRQControlCap src_cap"
+  assumes "isIRQHandlerCap c'"
   shows "m p = Some (CTE cap node) \<Longrightarrow> \<not> sameRegionAs c' cap"
-  using safe_parent irq_src src
+  using safe_parent src assms
   apply (clarsimp simp: safe_parent_for'_def isCap_simps)
   apply (clarsimp simp: sameRegionAs_def2 isCap_simps)
   done
@@ -5535,7 +5607,6 @@ lemma ut_sameRegion_non_empty:
   apply (clarsimp simp: is_simple_cap'_def sameRegionAs_def2 isCap_Master)
   apply (erule disjE)
    apply (clarsimp simp: ut_capRange_non_empty dest!: capMaster_capRange)
-  apply clarsimp
   apply (clarsimp simp: safe_parent_for'_def)
   apply (erule disjE, clarsimp simp: isCap_simps)
   apply (clarsimp simp: isCap_simps capRange_def)
@@ -5558,11 +5629,12 @@ lemma ut_c'_new:
   done
 
 lemma c'_new:
-  "m p = Some (CTE cap node) \<Longrightarrow> \<not> sameRegionAs c' cap"
+  "\<lbrakk> m p = Some (CTE cap node); \<not>isArchSGISignalCap c' \<rbrakk>  \<Longrightarrow> \<not> sameRegionAs c' cap"
   using safe_parent src unfolding safe_parent_for'_def
   apply (elim exE conjE)
   apply (erule disjE)
-   apply (erule irq_c'_new [rotated])
+   apply (erule irq_c'_new_handler [rotated -1])
+    apply (clarsimp simp: isCap_simps)
    apply (clarsimp simp: isCap_simps)
   apply clarsimp
   apply (drule (1) ut_c'_new)
@@ -5570,7 +5642,7 @@ lemma c'_new:
   done
 
 lemma irq_control_src:
-  "\<lbrakk> isIRQControlCap src_cap;
+  "\<lbrakk> isIRQControlCap src_cap; \<not>isArchSGISignalCap c';
      m p = Some (CTE cap node);
      sameRegionAs cap c' \<rbrakk> \<Longrightarrow> p = src"
   using safe_parent src unfolding safe_parent_for'_def
@@ -5594,6 +5666,7 @@ lemma ut_src_only_ut_c_parents:
   "\<lbrakk> isUntypedCap src_cap; sameRegionAs cap c'; m p = Some (CTE cap node) \<rbrakk> \<Longrightarrow> isUntypedCap cap"
   using safe_parent src unfolding safe_parent_for'_def
   apply clarsimp
+  apply (erule disjE, clarsimp simp: isCap_simps)
   apply (erule disjE, clarsimp simp: isCap_simps)
   apply clarsimp
   apply (rule ccontr)
@@ -5621,12 +5694,13 @@ lemma ut_src:
 lemma chunked' [simp]:
   "mdb_chunked n'"
   using src dest
+  using src dest
   apply (clarsimp simp: mdb_chunked_def)
   apply (drule n'_cap)+
   apply (clarsimp simp: n'_trancl_eq)
   apply (clarsimp split: if_split_asm)
     prefer 3
-    apply (frule (3) mdb_chunkedD, rule chunked)
+    apply (frule (4) mdb_chunkedD, rule chunked)
     apply clarsimp
     apply (rule conjI, clarsimp)
      apply (clarsimp simp: is_chunk_def n'_trancl_eq n_rtrancl_eq' n_dest' new_dest_def)
@@ -5663,8 +5737,8 @@ lemma chunked' [simp]:
     apply clarsimp
     apply (drule (1) trancl_rtrancl_trancl)
     apply simp
-   apply clarsimp
-   apply (drule c'_new)
+   apply (clarsimp simp: mdb_chunked_arch_assms_def)
+   apply (drule (1) c'_new)
    apply (erule (1) notE)
   apply (case_tac "p=src")
    apply clarsimp
@@ -5675,9 +5749,13 @@ lemma chunked' [simp]:
    apply clarsimp
    apply (drule (1) trancl_rtrancl_trancl)
    apply simp
-  apply (case_tac "isIRQControlCap src_cap")
-   apply (drule (2) irq_control_src)
-   apply simp
+   apply (cases "isIRQControlCap src_cap")
+    apply (cases "isArchSGISignalCap c'")
+     prefer 2
+     apply (drule (3) irq_control_src)
+     apply simp
+    apply (clarsimp simp: isCap_simps mdb_chunked_arch_assms_def)
+    apply (drule (1) irq_controlD, rule irq_control, erule (1) notE)
   apply (drule not_irq_parentD)
   apply clarsimp
   apply (frule (2) ut_src)
@@ -5688,10 +5766,11 @@ lemma chunked' [simp]:
    apply clarsimp
    apply fastforce
   apply (frule_tac m=m and p=p and p'=src in mdb_chunkedD, assumption+)
-     apply (clarsimp simp: descendants_of'_def)
-     apply (drule subtree_parent)
-     apply (clarsimp simp: parentOf_def isMDBParentOf_def split: if_split_asm)
-    apply simp
+      apply (clarsimp simp: descendants_of'_def)
+      apply (drule subtree_parent)
+      apply (clarsimp simp: parentOf_def isMDBParentOf_def split: if_split_asm)
+     apply simp
+    apply (clarsimp simp: isCap_simps)
    apply (rule chunked)
   apply clarsimp
   apply (erule disjE)
@@ -5761,12 +5840,11 @@ lemma distinct_zombies[simp]:
    apply (frule(3) untyped_rangefree)
    apply (simp add: capRange_def)
   apply (rule sameRegionAsE [OF sameRegion_src], simp_all)
-    apply (erule distinct_zombies_copyMasterE, rule src)
-     apply simp
-    apply (simp add: notZomb)
-   apply (simp add: notArchPage)
-  apply (erule distinct_zombies_sameMasterE, rule dest)
-  apply (clarsimp simp: isCap_simps)
+     apply (erule distinct_zombies_copyMasterE, rule src)
+      apply simp
+     apply (simp add: notZomb)
+    apply (simp add: notArchPage)
+   apply (fastforce simp: isCap_simps elim: distinct_zombies_sameMasterE)+
   done
 
 lemma irq' [simp]:
