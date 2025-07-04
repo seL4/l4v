@@ -178,6 +178,18 @@ where
        cdl_intent_extras = [croot],
        cdl_intent_recv_slot = None\<rparr> True"
 
+definition seL4_IssueSGISignal ::
+  "cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> bool u_monad"
+  where
+  "seL4_IssueSGISignal control_cap irq target croot node_index node_depth \<equiv>
+    do_kernel_op $ call_kernel_with_intent
+      \<lparr>cdl_intent_op = Some $ IrqControlIntent $ ArchIrqControlIssueIrqHandlerIntent $
+                         ARMIssueSGISignalIntent irq target node_index node_depth,
+       cdl_intent_error = False,
+       cdl_intent_cap = control_cap,
+       cdl_intent_extras = [croot],
+       cdl_intent_recv_slot = None\<rparr> True"
+
 definition seL4_IRQHandler_SetEndpoint :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> bool u_monad"
 where
   "seL4_IRQHandler_SetEndpoint handler_cap endpoint_cap \<equiv>

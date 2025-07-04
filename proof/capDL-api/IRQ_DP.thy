@@ -97,6 +97,29 @@ lemma decode_irq_control_issue_irq_rv:
   apply sep_solve
   done
 
+lemma invoke_irq_control_issue_sgi_wp:
+  "\<lbrace> <dest_slot \<mapsto>c cap \<and>* R> \<rbrace>
+  invoke_irq_control (ArchIssueIrqHandler (ARMIssueSGISignal irq target control_slot dest_slot))
+  \<lbrace>\<lambda>_. <dest_slot \<mapsto>c SGISignalCap irq target \<and>* R> \<rbrace>"
+  by (clarsimp simp: invoke_irq_control_def arch_invoke_irq_control_def cap_type_def |
+      wp sep_wp: insert_cap_child_wp | sep_solve)+
+
+lemma decode_irq_control_issue_sgi_rv:
+  "\<lbrace>\<lambda>s. P (ArchIssueIrqHandler
+             (ARMIssueSGISignal (ucast irq) (ucast cpus) target_ref
+                                (cap_object root_cap, offset index r))) s \<and>
+        caps = (root_cap, root_ptr) # xs \<and> unat depth \<le> word_bits \<and> 0 < unat depth \<and>
+        <\<box> (r, (unat depth)) : root_cap index \<mapsto>u cap \<and>* R> s\<rbrace>
+   decode_irq_control_invocation target target_ref caps
+                                 (ArchIrqControlIssueIrqHandlerIntent
+                                    (ARMIssueSGISignalIntent irq cpus index depth))
+   \<lbrace>P\<rbrace>, -"
+  apply (clarsimp simp: decode_irq_control_invocation_def arch_decode_irq_control_invocation_def)
+  apply (wp lookup_slot_for_cnode_op_rvu'[where cap=cap and r=r] throw_on_none_rv)
+  apply (clarsimp simp: get_index_def)
+  apply sep_solve
+  done
+
 schematic_goal lookup_extra_caps_once_wp:
   "\<lbrace>?P\<rbrace> lookup_extra_caps root_tcb_id [endpoint_cptr] \<lbrace>Q\<rbrace>, \<lbrace>Q'\<rbrace>"
   apply (clarsimp simp: lookup_extra_caps_def mapME_def sequenceE_def, wp)
@@ -250,6 +273,140 @@ lemma seL4_IRQHandler_IRQControl_Get:
     (cnode_id, target_index) \<mapsto>c IrqHandlerCap irq \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm, elim conjE)
   apply (sep_wp seL4_IRQHandler_IRQControl_Get_helper [where t="obj_tcb root_tcb"])
+   apply fastforce
+  apply clarsimp
+  apply (rule conjI, sep_solve)
+  apply (clarsimp simp: is_irqcontrol_cap_def ep_related_cap_def)
+  done
+
+lemma seL4_IssueSGISignal_helper:
+  assumes unify: "irq_cap = SGISignalCap (ucast irq) (ucast target) \<and>
+                  target_index = offset node_index root_size \<and>
+                  root_index = offset croot root_size \<and>
+                  control_index = offset control_cap root_size \<and>
+                  target_ptr = (cap_object root_cap, target_index) \<and>
+                  control_ptr = (cap_object root_cap, control_index) \<and>
+                  root_ptr = (cap_object root_cap, root_index) \<and>
+                  root_tcb  = Tcb t"
+  shows
+    "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>* (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
+       cap_object root_cap \<mapsto>f CNode (empty_cnode root_size) \<and>*
+       (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cap \<and>* control_ptr \<mapsto>c c_cap \<and>*
+       target_ptr \<mapsto>c target_cap \<and>* root_ptr \<mapsto>c root_cap \<and>* R\<guillemotright> and
+      K (\<not> ep_related_cap c_cap \<and> one_lvl_lookup root_cap word_bits root_size \<and>
+         one_lvl_lookup root_cap (unat node_depth) root_size \<and>
+         guard_equal root_cap node_index (unat node_depth) \<and>
+         guard_equal root_cap croot word_bits  \<and>
+         guard_equal root_cap control_cap word_bits \<and>
+         guard_equal root_cap node_index word_bits \<and>
+         unat node_depth \<le> word_bits \<and> 0 < unat node_depth \<and>
+         is_irqcontrol_cap c_cap \<and> is_cnode_cap root_cap \<and> is_cnode_cap root_cap)\<rbrace>
+     seL4_IssueSGISignal control_cap irq target croot node_index node_depth
+     \<lbrace>\<lambda>fail. \<guillemotleft>root_tcb_id \<mapsto>f root_tcb \<and>*
+              (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
+              \<comment> \<open>Root CNode\<close>
+              cap_object root_cap \<mapsto>f CNode (empty_cnode root_size) \<and>*
+              \<comment> \<open>Cap to the root CNode\<close>
+              (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cap \<and>*
+              control_ptr \<mapsto>c c_cap \<and>* target_ptr \<mapsto>c irq_cap \<and>*
+              root_ptr \<mapsto>c root_cap \<and>* R\<guillemotright>\<rbrace>"
+  apply (simp add: seL4_IssueSGISignal_def sep_state_projection2_def)
+  apply (wp do_kernel_op_pull_back)
+   apply (rule call_kernel_with_intent_allow_error_helper[where
+                 check = True and
+                 Perror = \<top> and
+                 intent_op = "IrqControlIntent
+                                (ArchIrqControlIssueIrqHandlerIntent
+                                   (ARMIssueSGISignalIntent irq target node_index node_depth))" and
+                 tcb = t and
+                 intent_cptr = control_cap and
+                 intent_extra = "[croot]", simplified])
+               apply clarsimp
+              apply (rule set_cap_wp[sep_wand_wp])
+             apply (rule mark_tcb_intent_error_sep_inv)
+            apply (wp corrupt_ipc_buffer_sep_inv)+
+         apply (rule_tac P = "iv = InvokeIrqControl
+                                     (ArchIssueIrqHandler
+                                        (ARMIssueSGISignal (ucast irq) (ucast target) control_ptr
+                                                           (cap_object root_cap,
+                                                            offset node_index root_size)))"
+                         in hoare_gen_asmEx)
+         apply (clarsimp simp: unify)
+         apply (wp invoke_irq_control_issue_sgi_wp[sep_wand_wp])
+        apply (wp set_cap_wp[sep_wand_wp])
+       apply (rule_tac P = "c=IrqControlCap" in hoare_gen_asmEx, simp)
+       apply (simp add: decode_invocation_def, wp)
+        apply (rule_tac P = "irq_control_intent =
+                             ArchIrqControlIssueIrqHandlerIntent
+                               (ARMIssueSGISignalIntent irq target node_index node_depth)"
+                        in hoare_gen_asmE, simp)
+        apply (wp decode_irq_control_issue_sgi_rv[where root_cap = root_cap and
+                                                        root_ptr = root_ptr and
+                                                        xs = "[]" and r = root_size, simplified])
+       apply (simp add: throw_opt_def get_irq_control_intent_def)
+       apply wp
+      apply (rule lookup_extra_caps_once_wp[where cap'=root_cap and r=root_size, simplified user_pointer_at_def])
+     apply (rule lookup_cap_and_slot_rvu[where cap'=c_cap and r=root_size, simplified user_pointer_at_def])
+    apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift update_thread_intent_update)
+   apply clarsimp
+   apply (rule conjI, fastforce)+
+   apply sep_solve
+  apply (intro impI conjI allI; clarsimp)
+    apply (intro impI conjI allI; clarsimp simp: unify)
+            apply sep_solve
+           apply sep_cancel+
+           apply (intro impI conjI allI; sep_solve)
+          apply fastforce
+         apply (metis is_cnode_cap_not_memory_cap not_memory_cap_reset_asid')
+        apply fastforce
+       apply (clarsimp simp: user_pointer_at_def Let_def)
+       apply sep_solve
+      apply (drule (1) reset_cap_asid_control, clarsimp simp: is_irqcontrol_cap_def)
+     apply (clarsimp simp: user_pointer_at_def Let_def)
+     apply sep_solve
+    apply (drule reset_cap_asid_ep_related_cap)
+    apply clarsimp
+   apply (clarsimp simp: user_pointer_at_def Let_def unify)
+   apply sep_solve
+  apply (clarsimp simp: unify)
+  apply sep_solve
+  done
+
+lemma seL4_IssueSGISignal_Get:
+  "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>*
+    (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
+    (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap \<and>*
+     cnode_id  \<mapsto>f CNode (empty_cnode root_size) \<and>*
+    (cnode_id, control_index) \<mapsto>c IrqControlCap \<and>*
+    (cnode_id, root_index) \<mapsto>c cnode_cap \<and>*
+    (cnode_id, target_index) \<mapsto>c target_cap \<and>* R\<guillemotright>
+     and K (is_tcb root_tcb \<and>
+            is_cnode_cap cnode_cap \<and>
+            is_cnode_cap cnode_cap \<and>
+            cnode_id      = cap_object cnode_cap \<and>
+            target_index  = offset node_index root_size \<and>
+            root_index    = offset croot root_size \<and>
+            control_index = offset control_cap root_size \<and>
+            one_lvl_lookup cnode_cap word_bits root_size \<and>
+            one_lvl_lookup cnode_cap (unat node_depth) root_size \<and>
+            guard_equal cnode_cap node_index (unat node_depth) \<and>
+            guard_equal cnode_cap croot word_bits  \<and>
+            guard_equal cnode_cap control_cap word_bits \<and>
+            guard_equal cnode_cap node_index word_bits \<and>
+            unat node_depth \<le> word_bits \<and> 0 < unat node_depth)\<rbrace>
+  seL4_IssueSGISignal control_cap irq target croot node_index node_depth
+  \<lbrace>\<lambda>fail.
+    \<guillemotleft>root_tcb_id \<mapsto>f root_tcb \<and>*
+    (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
+    \<comment> \<open>Cap to the root CNode\<close>
+    (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap \<and>*
+    \<comment> \<open>Root CNode\<close>
+     cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*
+    (cnode_id, control_index) \<mapsto>c IrqControlCap \<and>*
+    (cnode_id, root_index) \<mapsto>c cnode_cap \<and>*
+    (cnode_id, target_index) \<mapsto>c SGISignalCap (ucast irq) (ucast target) \<and>* R\<guillemotright>\<rbrace>"
+  apply (rule hoare_gen_asm, elim conjE)
+  apply (sep_wp seL4_IssueSGISignal_helper [where t="obj_tcb root_tcb"])
    apply fastforce
   apply clarsimp
   apply (rule conjI, sep_solve)
