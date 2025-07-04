@@ -34,8 +34,6 @@ lemma rights_mask_map_UNIV [simp]:
   "rights_mask_map UNIV = allRights"
   by (simp add: rights_mask_map_def allRights_def)
 
-declare insert_UNIV[simp]
-
 lemma maskCapRights_allRights [simp]:
   "maskCapRights allRights c = c"
   unfolding maskCapRights_def isCap_defs allRights_def
@@ -44,14 +42,6 @@ lemma maskCapRights_allRights [simp]:
 
 lemma getCTE_inv [wp]: "\<lbrace>P\<rbrace> getCTE addr \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: getCTE_def) wp
-
-lemma getEndpoint_inv [wp]:
-  "\<lbrace>P\<rbrace> getEndpoint ptr \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (simp add: getEndpoint_def getObject_inv loadObject_default_inv)
-
-lemma getNotification_inv [wp]:
-  "\<lbrace>P\<rbrace> getNotification ptr \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (simp add: getNotification_def getObject_inv loadObject_default_inv)
 
 lemma getSlotCap_inv [wp]: "\<lbrace>P\<rbrace> getSlotCap addr \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: getSlotCap_def, wp)
@@ -292,7 +282,9 @@ proof (cases rule: next_rtrancl_tranclE)
   case eq thus ?thesis by simp
 next
   case trancl thus ?thesis
-    by (auto intro: trancl_into_rtrancl elim: mdb_trancl_update_other [OF _ nopath])
+    by (auto del: trancl_into_rtrancl
+             intro: trancl_into_rtrancl
+             elim: mdb_trancl_update_other [OF _ nopath])
 qed
 
 lemma mdb_trancl_other_update:
@@ -328,7 +320,9 @@ proof (cases rule: next_rtrancl_tranclE)
   case eq thus ?thesis by simp
 next
   case trancl thus ?thesis
-    by (auto intro: trancl_into_rtrancl elim: mdb_trancl_other_update [OF _ nopath])
+    by (auto del: trancl_into_rtrancl
+             intro: trancl_into_rtrancl
+             elim: mdb_trancl_other_update [OF _ nopath])
 qed
 
 lemma mdb_chain_0_update:
@@ -411,7 +405,6 @@ proof (unfold valid_badges_def, clarify)
   assume c: "(m(p \<mapsto> cte)) c = Some (CTE cap n)"
   assume c': "(m(p \<mapsto> cte)) c' = Some (CTE cap' n')"
   assume nxt: "m(p \<mapsto> cte) \<turnstile> c \<leadsto> c'"
-  assume r: "sameRegionAs cap cap'"
 
   from p 0 have p0: "p \<noteq> 0" by (clarsimp simp: no_0_def)
 
@@ -431,15 +424,17 @@ proof (unfold valid_badges_def, clarify)
   with nxt c c' cp
   have "m \<turnstile> c \<leadsto> c'" by (simp add: mdb_next_unfold)
   ultimately
-  show "(isEndpointCap cap \<longrightarrow>
-            capEPBadge cap \<noteq> capEPBadge cap' \<longrightarrow>
-            capEPBadge cap' \<noteq> 0 \<longrightarrow>
-            mdbFirstBadged n') \<and>
-        (isNotificationCap cap \<longrightarrow>
-            capNtfnBadge cap \<noteq> capNtfnBadge cap' \<longrightarrow>
-            capNtfnBadge cap' \<noteq> 0 \<longrightarrow>
-            mdbFirstBadged n')"
-    using r c c' v by (fastforce simp: valid_badges_def)
+  show "(sameRegionAs cap cap' \<longrightarrow>
+          (isEndpointCap cap \<longrightarrow>
+              capEPBadge cap \<noteq> capEPBadge cap' \<longrightarrow>
+              capEPBadge cap' \<noteq> 0 \<longrightarrow>
+              mdbFirstBadged n') \<and>
+          (isNotificationCap cap \<longrightarrow>
+              capNtfnBadge cap \<noteq> capNtfnBadge cap' \<longrightarrow>
+              capNtfnBadge cap' \<noteq> 0 \<longrightarrow>
+              mdbFirstBadged n')) \<and>
+        valid_arch_badges cap cap' n'"
+    using c c' v by (fastforce simp: valid_badges_def)
 qed
 
 definition
@@ -562,6 +557,8 @@ lemma capMasterCap_simps[simp]:
             capability.ArchObjectCap (arch_capability.PageTableCap word None)"
   "capMasterCap (capability.ArchObjectCap (arch_capability.PageDirectoryCap word pddata)) =
             capability.ArchObjectCap (arch_capability.PageDirectoryCap word None)"
+  "capMasterCap (capability.ArchObjectCap (arch_capability.SGISignalCap s_irq target)) =
+            capability.ArchObjectCap (arch_capability.SGISignalCap s_irq target)"
   "capMasterCap (capability.UntypedCap d word n f) = capability.UntypedCap d word n 0"
   "capMasterCap capability.IRQControlCap = capability.IRQControlCap"
   "capMasterCap (capability.ReplyCap word m g) = capability.ReplyCap word True True"
@@ -658,8 +655,10 @@ lemma isCap_Master:
   "isNullCap (capMasterCap cap) = isNullCap cap"
   "isDomainCap (capMasterCap cap) = isDomainCap cap"
   "isArchPageCap (capMasterCap cap) = isArchPageCap cap"
-  by (simp add: isCap_simps capMasterCap_def
-         split: capability.split arch_capability.split)+
+  "isArchObjectCap cap \<Longrightarrow> isSGISignalCap (capCap (capMasterCap cap)) = isSGISignalCap (capCap cap)"
+  "isArchSGISignalCap (capMasterCap cap) = isArchSGISignalCap cap"
+  by (auto simp: isCap_simps capMasterCap_def
+           split: capability.split arch_capability.split)
 
 lemma capUntypedSize_capBits:
   "capClass cap = PhysicalClass \<Longrightarrow> capUntypedSize cap = 2 ^ (capBits cap)"
@@ -682,7 +681,8 @@ lemma sameRegionAs_def2:
               \<and> \<not> isUntypedCap cap' \<and> \<not> isArchPageCap cap'))
       \<or> (capRange cap' \<noteq> {} \<and> capRange cap' \<subseteq> capRange cap
                  \<and> (isUntypedCap cap \<or> (isArchPageCap cap \<and> isArchPageCap cap')))
-      \<or> (isIRQControlCap cap \<and> isIRQHandlerCap cap'))
+      \<or> (isIRQControlCap cap \<and> isIRQHandlerCap cap')
+      \<or> (isIRQControlCap cap \<and> isArchSGISignalCap cap'))
            (capMasterCap cap) (capMasterCap cap')"
   apply (cases "isUntypedCap cap")
    apply (clarsimp simp: sameRegionAs_def Let_def
@@ -703,7 +703,7 @@ lemma sameRegionAs_def2:
            split del: if_split cong: if_cong)
   apply (clarsimp simp: capRange_def Let_def)
   apply (simp add: range_subset_eq2 cong: conj_cong)
-  by (simp add: conj_comms)
+  by (simp add: conj_comms isIRQControlCapDescendant_def)
 
 lemma sameObjectAs_def2:
  "sameObjectAs cap cap' = (\<lambda>cap cap'.
@@ -713,7 +713,9 @@ lemma sameObjectAs_def2:
           \<and> (\<not> isNullCap cap' \<and> \<not> isZombie cap'
               \<and> \<not> isUntypedCap cap')
           \<and> (isArchPageCap cap \<longrightarrow> capRange cap \<noteq> {})
-          \<and> (isArchPageCap cap' \<longrightarrow> capRange cap' \<noteq> {})))
+          \<and> (isArchPageCap cap' \<longrightarrow> capRange cap' \<noteq> {})
+          \<and> \<not>isIRQControlCap cap
+          \<and> \<not>isArchSGISignalCap cap))
            (capMasterCap cap) (capMasterCap cap')"
   apply (simp add: sameObjectAs_def sameRegionAs_def2
                    isCap_simps capMasterCap_def
@@ -723,8 +725,7 @@ lemma sameObjectAs_def2:
   apply (clarsimp simp: ARM_H.sameRegionAs_def isCap_simps
              split del: if_split cong: if_cong)
   apply (simp add: capRange_def)
-  apply fastforce
-  done
+  by fastforce
 
 lemmas sameRegionAs_def3 =
   sameRegionAs_def2 [simplified capClass_Master capRange_Master isCap_Master]
@@ -739,9 +740,10 @@ lemma sameRegionAsE:
      \<lbrakk> capRange cap' \<noteq> {}; capRange cap' \<subseteq> capRange cap; isUntypedCap cap \<rbrakk> \<Longrightarrow> R;
      \<lbrakk> capRange cap' \<noteq> {}; capRange cap' \<subseteq> capRange cap; isArchPageCap cap;
           isArchPageCap cap' \<rbrakk> \<Longrightarrow> R;
-     \<lbrakk> isIRQControlCap cap; isIRQHandlerCap cap' \<rbrakk> \<Longrightarrow> R
+     \<lbrakk> isIRQControlCap cap; isIRQHandlerCap cap' \<rbrakk> \<Longrightarrow> R;
+     \<lbrakk> isIRQControlCap cap; isArchSGISignalCap cap' \<rbrakk> \<Longrightarrow> R
       \<rbrakk> \<Longrightarrow> R"
-  by (simp add: sameRegionAs_def3, fastforce)
+  by  (simp add: sameRegionAs_def3, fastforce simp: isCap_Master)
 
 lemma sameObjectAsE:
   "\<lbrakk> sameObjectAs cap cap';
@@ -756,7 +758,7 @@ lemma sameObjectAs_sameRegionAs:
 
 lemma sameObjectAs_sym:
   "sameObjectAs c d = sameObjectAs d c"
-  by (simp add: sameObjectAs_def2 eq_commute conj_comms)
+  by (auto simp: sameObjectAs_def2)
 
 lemma untypedRange_Master:
   "untypedRange (capMasterCap cap) = untypedRange cap"
@@ -796,6 +798,7 @@ lemma sameRegionAs_classes:
      apply (simp add: capRange_def split: if_split_asm)
     apply (clarsimp simp: isCap_simps)
    apply (clarsimp simp: isCap_simps)
+  apply (clarsimp simp: isCap_simps)
   done
 
 lemma capAligned_capUntypedPtr:
@@ -816,14 +819,18 @@ lemma sameRegionAs_capRange_Int:
      apply blast
     apply blast
    apply (clarsimp simp: isCap_simps)
+  apply (clarsimp simp: isCap_simps)
   done
+
+lemma capRange_empty_simps[simp]:
+  "capRange IRQControlCap = {}"
+  "capRange (ArchObjectCap (SGISignalCap irq target)) = {}"
+  by (auto simp: capRange_def)
 
 lemma sameRegionAs_trans:
   "\<lbrakk> sameRegionAs a b; sameRegionAs b c \<rbrakk> \<Longrightarrow> sameRegionAs a c"
-  apply (simp add: sameRegionAs_def2, elim conjE disjE, simp_all)
-         apply (auto simp: isCap_simps)
-    apply (auto simp: capRange_def)
-  done
+  unfolding sameRegionAs_def2
+  by (elim conjE disjE, auto simp: isCap_simps)
 
 lemma capMasterCap_maskCapRights[simp]:
   "capMasterCap (maskCapRights msk cap)
@@ -952,6 +959,7 @@ proof clarify
   assume p': "m' p' = Some (CTE c' n')"
   assume r: "sameRegionAs c c'"
   assume neq: "p \<noteq> p'"
+  assume arch_assm: "mdb_chunked_arch_assms c"
 
   note no_region = caps_no_overlap'_no_region [OF no_c valid no_v]
 
@@ -992,7 +1000,7 @@ proof clarify
    "(m \<turnstile> p \<leadsto>\<^sup>+ p' \<or> m \<turnstile> p' \<leadsto>\<^sup>+ p) \<and>
     (m \<turnstile> p \<leadsto>\<^sup>+ p' \<longrightarrow> is_chunk m c p p') \<and>
     (m \<turnstile> p' \<leadsto>\<^sup>+ p \<longrightarrow> is_chunk m c' p' p)"
-    using chunked p p' neq r
+    using chunked p p' neq r arch_assm
     unfolding mdb_chunked_def m'_def
     by simp
 
@@ -2017,10 +2025,6 @@ lemma setCTE_no_0_obj' [wp]:
   by (simp add: setCTE_def) wp
 
 declare mresults_fail[simp]
-
-crunch get_object
-  for idle[wp]: "valid_idle"
-  (wp: crunch_wps simp: crunch_simps)
 
 end
 

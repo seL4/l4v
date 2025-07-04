@@ -353,6 +353,11 @@ definition
     | AARCH64_A.VSpaceFlush ty start end pstart space asid \<Rightarrow>
         vsi' = VSpaceFlush ty start end pstart space (ucast asid)"
 
+definition sgi_invocation_map :: "sgi_signal_invocation \<Rightarrow> sgisignal_invocation" where
+  "sgi_invocation_map sgii \<equiv>
+     case sgii of AARCH64_A.SGISignalGenerate irq target \<Rightarrow>
+       SGISignalGenerate (ucast irq) (ucast target)"
+
 (* FIXME AARCH64: move to VSpace_R where valid_psi is *)
 definition
   "valid_vsi' vsi \<equiv>
@@ -375,7 +380,9 @@ where
    | arch_invocation.InvokeASIDPool ap \<Rightarrow>
        \<exists>ap'. ai' = InvokeASIDPool ap' \<and>  ap' = asid_pool_invocation_map ap
    | arch_invocation.InvokeVCPU vcpui \<Rightarrow>
-       \<exists>vcpui'. ai' = InvokeVCPU vcpui' \<and> vcpui' = vcpu_invocation_map vcpui"
+       \<exists>vcpui'. ai' = InvokeVCPU vcpui' \<and> vcpui' = vcpu_invocation_map vcpui
+   | arch_invocation.InvokeSGISignal sgii \<Rightarrow>
+       ai' = InvokeSGISignal (sgi_invocation_map sgii)"
 
 definition
   valid_arch_inv' :: "Arch.invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -386,7 +393,8 @@ where
    | InvokePage pgi \<Rightarrow> valid_page_inv' pgi
    | InvokeASIDControl aci \<Rightarrow> valid_aci' aci
    | InvokeASIDPool ap \<Rightarrow> valid_apinv' ap
-   | InvokeVCPU v \<Rightarrow> valid_vcpuinv' v"
+   | InvokeVCPU v \<Rightarrow> valid_vcpuinv' v
+   | InvokeSGISignal _ \<Rightarrow> \<top>"
 
 lemma mask_vmrights_corres:
   "maskVMRights (vmrights_map R) (rightsFromWord d) =
@@ -434,6 +442,7 @@ lemma ARMMMU_improve_cases:
     else if isASIDControlCap cap then T
     else if isASIDPoolCap cap then U
     else if isVCPUCap cap then V
+    else if isSGISignalCap cap then W
     else undefined)
     =
    (if isFrameCap cap then Q
@@ -441,7 +450,8 @@ lemma ARMMMU_improve_cases:
     else if isPageTableCap cap \<and> capPTType cap = VSRootPT_T then S
     else if isASIDControlCap cap then T
     else if isASIDPoolCap cap then U
-    else V)"
+    else if isVCPUCap cap then V
+    else W)"
   apply (cases cap; simp add: isCap_simps)
   apply (rename_tac pt_t m)
   apply (case_tac pt_t; simp)
@@ -1085,158 +1095,165 @@ lemma arch_decodeInvocation_corres:
                    decodeARMMMUInvocation_def
               split del: if_split)
   apply (cases arch_cap)
-      \<comment> \<open>ASIDPoolCap\<close>
-      apply (simp add: isCap_simps decodeARMMMUInvocation_def decode_asid_pool_invocation_def
-                       decodeARMASIDPoolInvocation_def Let_def
-                  split del: if_split)
-      apply (cases "invocation_type (mi_label mi) \<noteq> ArchInvocationLabel ARMASIDPoolAssign")
-       apply (simp split: invocation_label.split arch_invocation_label.split)
-      apply (rename_tac ap asid)
-      apply (cases "excaps", simp)
-      apply (cases "excaps'", simp)
-      apply clarsimp
-      apply (rename_tac excap0 exslot0 excaps0 excap0' exslot0' excaps0')
-      apply (case_tac excap0; simp)
-      apply (rename_tac exarch_cap)
-      apply (case_tac exarch_cap; simp)
-      apply (rename_tac pt pt_t map_data)
-      apply (case_tac "map_data \<noteq> None")
-       apply (clarsimp simp add: mdata_map_def split: pt_type.splits)
-      apply clarsimp
-      apply (case_tac pt_t; simp add: mdata_map_def isVTableRoot_def cong: pt_type.case_cong)
-      apply (corres term_simp: lookup_failure_map_def)
-          apply (rule_tac F="is_aligned asid asid_low_bits" in corres_gen_asm)
-          apply (corres' \<open>fastforce\<close> simp: liftME_def bind_bindE_assoc)
-             apply (clarsimp simp: asid_pool_relation_def)
-             apply (subst conj_assoc [symmetric])
-             apply (subst assocs_empty_dom_comp [symmetric])
-             apply (case_tac rv, simp)
-             apply (clarsimp simp: o_def dom_ucast_eq)
-            apply (frule dom_hd_assocsD)
-            apply (simp add: select_ext_fap[simplified free_asid_pool_select_def]
-                             free_asid_pool_select_def cong: corres_weaker_cong)
-            apply (simp add: returnOk_liftE[symmetric])
-            apply (rule corres_returnOkTT)
-            apply (simp add: archinv_relation_def asid_pool_invocation_map_def)
-            apply (case_tac rv, simp add: asid_pool_relation_def)
-            apply (subst ucast_fst_hd_assocs)
-              apply (clarsimp simp: o_def dom_map_option)
-             apply simp
-            apply (simp add: o_def assocs_map_option filter_map split_def)
-            apply (subst fst_hd_map_eq; simp?)
-            apply (clarsimp simp: dom_map_option)
-            apply (drule arg_cong[where f="map fst" and y="[]"])
-            apply (drule arg_cong[where f=set and y="map fst []"])
-            apply (subst (asm) assocs_dom_comp_split)
-            apply (clarsimp simp: split_def)
-           apply wpsimp+
-       apply (fastforce simp: valid_cap_def)
-      apply simp
-    \<comment> \<open>ASIDControlCap\<close>
-     apply (simp add: isCap_simps decodeARMMMUInvocation_def decode_asid_control_invocation_def
-                      Let_def decodeARMASIDControlInvocation_def
-                 split del: if_split)
-     apply (cases "invocation_type (mi_label mi) \<noteq> ArchInvocationLabel ARMASIDControlMakePool")
-      apply (simp split: invocation_label.split arch_invocation_label.split)
-     apply (subgoal_tac "length excaps' = length excaps")
-      prefer 2
-      apply (simp add: list_all2_iff)
-     apply (cases args, simp)
-     apply (rename_tac a0 as)
-     apply (case_tac as, simp)
-     apply (rename_tac a1 as')
-     apply (cases excaps, simp)
-     apply (rename_tac excap0 exs)
-     apply (case_tac exs)
-      apply (auto split: list.split)[1]
-     apply (rename_tac excap1 exss)
-     apply (case_tac excap0)
-     apply (rename_tac c0 slot0)
-     apply (case_tac excap1)
-     apply (rename_tac c1 slot1)
-     apply (clarsimp simp: Let_def split del: if_split)
-     apply (cases excaps', simp)
-     apply (case_tac list, simp)
-     apply (rename_tac c0' exs' c1'  exss')
-     apply (clarsimp split del: if_split)
-     apply (rule corres_guard_imp)
-       apply (rule corres_splitEE[where r'="\<lambda>p p'. p = p' o ucast"])
-          apply (rule corres_trivial)
-          apply (clarsimp simp: state_relation_def arch_state_relation_def)
-         apply (rule corres_splitEE)
-            apply (rule corres_whenE)
+       \<comment> \<open>ASIDPoolCap\<close>
+       apply (simp add: isCap_simps decodeARMMMUInvocation_def decode_asid_pool_invocation_def
+                        decodeARMASIDPoolInvocation_def Let_def
+                   split del: if_split)
+       apply (cases "invocation_type (mi_label mi) \<noteq> ArchInvocationLabel ARMASIDPoolAssign")
+        apply (simp split: invocation_label.split arch_invocation_label.split)
+       apply (rename_tac ap asid)
+       apply (cases "excaps", simp)
+       apply (cases "excaps'", simp)
+       apply clarsimp
+       apply (rename_tac excap0 exslot0 excaps0 excap0' exslot0' excaps0')
+       apply (case_tac excap0; simp)
+       apply (rename_tac exarch_cap)
+       apply (case_tac exarch_cap; simp)
+       apply (rename_tac pt pt_t map_data)
+       apply (case_tac "map_data \<noteq> None")
+        apply (clarsimp simp add: mdata_map_def split: pt_type.splits)
+       apply clarsimp
+       apply (case_tac pt_t; simp add: mdata_map_def isVTableRoot_def cong: pt_type.case_cong)
+       apply (corres term_simp: lookup_failure_map_def)
+           apply (rule_tac F="is_aligned asid asid_low_bits" in corres_gen_asm)
+           apply (corres' \<open>fastforce\<close> simp: liftME_def bind_bindE_assoc)
+              apply (clarsimp simp: asid_pool_relation_def)
+              apply (subst conj_assoc [symmetric])
               apply (subst assocs_empty_dom_comp [symmetric])
-              apply (simp add: o_def)
-              apply (rule dom_ucast_eq_8)
-             apply (rule corres_trivial, simp, simp)
-           apply (simp split del: if_split)
-           apply (rule_tac F="- dom (asidTable \<circ> ucast) \<inter> {x. x \<le> 2 ^ asid_high_bits - 1} \<noteq> {}" in corres_gen_asm)
-           apply (drule dom_hd_assocsD)
-           apply (simp add: select_ext_fa[simplified free_asid_select_def]
-                      free_asid_select_def o_def returnOk_liftE[symmetric] split del: if_split)
-           apply (thin_tac "fst a \<notin> b \<and> P" for a b P)
-           apply (case_tac "isUntypedCap a \<and> capBlockSize a = objBits (makeObject::asidpool) \<and> \<not> capIsDevice a")
-            prefer 2
-            apply (rule corres_guard_imp)
-              apply (rule corres_trivial)
-              apply (case_tac ad; simp add: isCap_simps split del: if_split)
-               apply (case_tac x21; simp split del: if_split)
-               apply (clarsimp simp: objBits_simps split del: if_split)
-              apply clarsimp
-             apply (rule TrueI)+
-           apply (clarsimp simp: isCap_simps cap_relation_Untyped_eq lookupTargetSlot_def
-                                 objBits_simps bindE_assoc split_def)
-           apply (rule corres_splitEE)
-              apply (rule ensureNoChildren_corres, rule refl)
-             apply (rule corres_splitEE)
-                apply (erule lookupSlotForCNodeOp_corres, rule refl)
-               apply (rule corres_splitEE)
-                  apply (rule ensureEmptySlot_corres)
-                  apply clarsimp
-                 apply (rule corres_returnOk[where P="\<top>"])
-                 apply (clarsimp simp add: archinv_relation_def asid_ci_map_def split_def)
-                 apply (clarsimp simp add: ucast_assocs[unfolded o_def] split_def
-                                           filter_map asid_high_bits_def)
-                 apply (simp add: ord_le_eq_trans [OF word_n1_ge])
-                apply (wp hoare_drop_imps)+
-      apply (simp add: o_def validE_R_def)
-      apply clarsimp
+              apply (case_tac rv, simp)
+              apply (clarsimp simp: o_def dom_ucast_eq)
+             apply (frule dom_hd_assocsD)
+             apply (simp add: select_ext_fap[simplified free_asid_pool_select_def]
+                              free_asid_pool_select_def cong: corres_weaker_cong)
+             apply (simp add: returnOk_liftE[symmetric])
+             apply (rule corres_returnOkTT)
+             apply (simp add: archinv_relation_def asid_pool_invocation_map_def)
+             apply (case_tac rv, simp add: asid_pool_relation_def)
+             apply (subst ucast_fst_hd_assocs)
+               apply (clarsimp simp: o_def dom_map_option)
+              apply simp
+             apply (simp add: o_def assocs_map_option filter_map split_def)
+             apply (subst fst_hd_map_eq; simp?)
+             apply (clarsimp simp: dom_map_option)
+             apply (drule arg_cong[where f="map fst" and y="[]"])
+             apply (drule arg_cong[where f=set and y="map fst []"])
+             apply (subst (asm) assocs_dom_comp_split)
+             apply (clarsimp simp: split_def)
+            apply wpsimp+
+        apply (fastforce simp: valid_cap_def)
+       apply simp
+      \<comment> \<open>ASIDControlCap\<close>
+      apply (simp add: isCap_simps decodeARMMMUInvocation_def decode_asid_control_invocation_def
+                       Let_def decodeARMASIDControlInvocation_def
+                  split del: if_split)
+      apply (cases "invocation_type (mi_label mi) \<noteq> ArchInvocationLabel ARMASIDControlMakePool")
+       apply (simp split: invocation_label.split arch_invocation_label.split)
+      apply (subgoal_tac "length excaps' = length excaps")
+       prefer 2
+       apply (simp add: list_all2_iff)
+      apply (cases args, simp)
+      apply (rename_tac a0 as)
+      apply (case_tac as, simp)
+      apply (rename_tac a1 as')
+      apply (cases excaps, simp)
+      apply (rename_tac excap0 exs)
+      apply (case_tac exs)
+       apply (auto split: list.split)[1]
+      apply (rename_tac excap1 exss)
+      apply (case_tac excap0)
+      apply (rename_tac c0 slot0)
+      apply (case_tac excap1)
+      apply (rename_tac c1 slot1)
+      apply (clarsimp simp: Let_def split del: if_split)
+      apply (cases excaps', simp)
+      apply (case_tac list, simp)
+      apply (rename_tac c0' exs' c1'  exss')
+      apply (clarsimp split del: if_split)
+      apply (rule corres_guard_imp)
+        apply (rule corres_splitEE[where r'="\<lambda>p p'. p = p' o ucast"])
+           apply (rule corres_trivial)
+           apply (clarsimp simp: state_relation_def arch_state_relation_def)
+          apply (rule corres_splitEE)
+             apply (rule corres_whenE)
+               apply (subst assocs_empty_dom_comp [symmetric])
+               apply (simp add: o_def)
+               apply (rule dom_ucast_eq_8)
+              apply (rule corres_trivial, simp, simp)
+            apply (simp split del: if_split)
+            apply (rule_tac F="- dom (asidTable \<circ> ucast) \<inter> {x. x \<le> 2 ^ asid_high_bits - 1} \<noteq> {}"
+                            in corres_gen_asm)
+            apply (drule dom_hd_assocsD)
+            apply (simp add: select_ext_fa[simplified free_asid_select_def]
+                       free_asid_select_def o_def returnOk_liftE[symmetric] split del: if_split)
+            apply (thin_tac "fst a \<notin> b \<and> P" for a b P)
+            apply (case_tac "isUntypedCap a \<and> capBlockSize a = objBits (makeObject::asidpool) \<and>
+                             \<not>capIsDevice a")
+             prefer 2
+             apply (rule corres_guard_imp)
+               apply (rule corres_trivial)
+               apply (case_tac ad; simp add: isCap_simps split del: if_split)
+                apply (case_tac x21; simp split del: if_split)
+                apply (clarsimp simp: objBits_simps split del: if_split)
+               apply clarsimp
+              apply (rule TrueI)+
+            apply (clarsimp simp: isCap_simps cap_relation_Untyped_eq lookupTargetSlot_def
+                                  objBits_simps bindE_assoc split_def)
+            apply (rule corres_splitEE)
+               apply (rule ensureNoChildren_corres, rule refl)
+              apply (rule corres_splitEE)
+                 apply (erule lookupSlotForCNodeOp_corres, rule refl)
+                apply (rule corres_splitEE)
+                   apply (rule ensureEmptySlot_corres)
+                   apply clarsimp
+                  apply (rule corres_returnOk[where P="\<top>"])
+                  apply (clarsimp simp add: archinv_relation_def asid_ci_map_def split_def)
+                  apply (clarsimp simp add: ucast_assocs[unfolded o_def] split_def
+                                            filter_map asid_high_bits_def)
+                  apply (simp add: ord_le_eq_trans [OF word_n1_ge])
+                 apply (wp hoare_drop_imps)+
+       apply (simp add: o_def validE_R_def)
+       apply clarsimp
       (* for some reason it takes significantly longer if we don't split off the first conjuncts *)
-      apply (rule conjI, fastforce)+
-      apply (fastforce simp: asid_high_bits_def)
-     apply clarsimp
-     apply (simp add: null_def split_def asid_high_bits_def  word_le_make_less)
-     apply (subst hd_map, assumption)
-     (* need abstract guard to show list nonempty *)
-     apply (simp add: word_le_make_less)
-     apply (simp add: ucast_ucast_mask2 is_down)
-     apply (frule hd_in_set)
-     apply clarsimp
-     apply (prop_tac "\<forall>x::machine_word. x < 2^asid_high_bits \<longrightarrow> x && mask asid_high_bits = x")
-      apply (clarsimp simp: and_mask_eq_iff_le_mask le_mask_iff_lt_2n[THEN iffD1] asid_high_bits_def)
-     apply (simp add: asid_high_bits_def)
-     apply (erule allE, erule (1) impE)
-     apply (simp add: ucast_shiftl)
-     apply (subst ucast_ucast_len)
-      apply (drule hd_in_set)
-      apply (rule shiftl_less_t2n; simp add: asid_low_bits_def)
-     apply (fastforce)
+       apply (rule conjI, fastforce)+
+       apply (fastforce simp: asid_high_bits_def)
+      apply clarsimp
+      apply (simp add: null_def split_def asid_high_bits_def  word_le_make_less)
+      apply (subst hd_map, assumption)
+      (* need abstract guard to show list nonempty *)
+      apply (simp add: word_le_make_less)
+      apply (simp add: ucast_ucast_mask2 is_down)
+      apply (frule hd_in_set)
+      apply clarsimp
+      apply (prop_tac "\<forall>x::machine_word. x < 2^asid_high_bits \<longrightarrow> x && mask asid_high_bits = x")
+       apply (clarsimp simp: and_mask_eq_iff_le_mask le_mask_iff_lt_2n[THEN iffD1] asid_high_bits_def)
+      apply (simp add: asid_high_bits_def)
+      apply (erule allE, erule (1) impE)
+      apply (simp add: ucast_shiftl)
+      apply (subst ucast_ucast_len)
+       apply (drule hd_in_set)
+       apply (rule shiftl_less_t2n; simp add: asid_low_bits_def)
+      apply (fastforce)
 
-    \<comment> \<open>FrameCap\<close>
-    apply (rename_tac word cap_rights vmpage_size option)
+     \<comment> \<open>FrameCap\<close>
+     apply (rename_tac word cap_rights vmpage_size option)
+     apply (simp add: isCap_simps decodeARMMMUInvocation_def Let_def split del: if_split)
+     apply (rule decodeARMFrameInvocation_corres; simp)
+
+    \<comment> \<open>PageTableCap\<close>
+    apply (rename_tac pt_t map_data)
     apply (simp add: isCap_simps decodeARMMMUInvocation_def Let_def split del: if_split)
-    apply (rule decodeARMFrameInvocation_corres; simp)
+    apply (case_tac pt_t; clarsimp simp: isCap_simps)
+     apply (rule decodeARMVSpaceInvocation_corres; simp)
+    apply (rule decodeARMPageTableInvocation_corres; simp)
 
-   \<comment> \<open>PageTableCap\<close>
-   apply (rename_tac pt_t map_data)
-   apply (simp add: isCap_simps decodeARMMMUInvocation_def Let_def split del: if_split)
-   apply (case_tac pt_t; clarsimp simp: isCap_simps)
-    apply (rule decodeARMVSpaceInvocation_corres; simp)
-   apply (rule decodeARMPageTableInvocation_corres; simp)
+   \<comment> \<open>VCPU\<close>
+   apply (simp add: isCap_simps)
+   apply (rule corres_guard_imp[OF decodeARMVCPUInvocation_corres]; simp)
 
-  \<comment> \<open>VCPU\<close>
-  apply (simp add: isCap_simps acap_relation_def)
-  apply (rule corres_guard_imp[OF decodeARMVCPUInvocation_corres]; simp)
+  \<comment> \<open>SGISignal\<close>
+  apply (simp add: isCap_simps decode_sgi_signal_invocation_def decodeSGISignalInvocation_def)
+  apply (rule corres_returnOk)
+  apply (simp add: archinv_relation_def sgi_invocation_map_def)
   done
 
 lemma invokeVCPUInjectIRQ_corres:
@@ -1367,56 +1384,61 @@ lemma arch_performInvocation_corres:
   apply (clarsimp simp: archinv_relation_def)
   apply (cases ai)
 
-       \<comment> \<open>InvokeVSpace\<close>
-       apply (clarsimp simp: performARMMMUInvocation_def perform_vspace_invocation_def
-                             performVSpaceInvocation_def)
-       apply ((corres simp: perform_flush_def do_flush_def doFlush_def
-                      corres: corres_machine_op_Id_dc
-                      term_simp: vspace_invocation_map_def
-               | corres_cases_both simp: vspace_invocation_map_def)+)[1]
+        \<comment> \<open>InvokeVSpace\<close>
+        apply (clarsimp simp: performARMMMUInvocation_def perform_vspace_invocation_def
+                              performVSpaceInvocation_def)
+        apply ((corres simp: perform_flush_def do_flush_def doFlush_def
+                       corres: corres_machine_op_Id_dc
+                       term_simp: vspace_invocation_map_def
+                | corres_cases_both simp: vspace_invocation_map_def)+)[1]
 
-      \<comment> \<open>InvokePageTable\<close>
-      apply (clarsimp simp: archinv_relation_def performARMMMUInvocation_def)
-      apply (rule corres_guard_imp, rule corres_split_nor)
-           apply (rule performPageTableInvocation_corres; wpsimp)
-          apply (rule corres_trivial, simp)
-         apply wpsimp+
+       \<comment> \<open>InvokePageTable\<close>
+       apply (clarsimp simp: performARMMMUInvocation_def)
+       apply (rule corres_guard_imp, rule corres_split_nor)
+            apply (rule performPageTableInvocation_corres; wpsimp)
+           apply (rule corres_trivial, simp)
+          apply wpsimp+
+        apply (fastforce simp: valid_arch_inv_def)
+       apply (fastforce simp: valid_arch_inv'_def)
+
+      \<comment> \<open>InvokePage\<close>
+      apply (clarsimp simp: performARMMMUInvocation_def)
+      apply (rule corres_guard_imp)
+        apply (rule performPageInvocation_corres)
+        apply (simp add: page_invocation_map_def)
        apply (fastforce simp: valid_arch_inv_def)
       apply (fastforce simp: valid_arch_inv'_def)
 
-     \<comment> \<open>InvokePage\<close>
+     \<comment> \<open>InvokeASIDControl\<close>
      apply (clarsimp simp: archinv_relation_def performARMMMUInvocation_def)
      apply (rule corres_guard_imp)
-       apply (rule performPageInvocation_corres)
-       apply (simp add: page_invocation_map_def)
+       apply (rule corres_split)
+          apply (rule performASIDControlInvocation_corres; wpsimp)
+         apply (rule corres_trivial, simp)
+        apply wpsimp+
       apply (fastforce simp: valid_arch_inv_def)
      apply (fastforce simp: valid_arch_inv'_def)
 
-   \<comment> \<open>InvokeASIDControl\<close>
-    apply (clarsimp simp: archinv_relation_def performARMMMUInvocation_def)
+    \<comment> \<open>InvokeASIDPool\<close>
+    apply (clarsimp simp: performARMMMUInvocation_def)
     apply (rule corres_guard_imp)
       apply (rule corres_split)
-         apply (rule performASIDControlInvocation_corres; wpsimp)
+         apply (rule performASIDPoolInvocation_corres; wpsimp)
         apply (rule corres_trivial, simp)
        apply wpsimp+
      apply (fastforce simp: valid_arch_inv_def)
     apply (fastforce simp: valid_arch_inv'_def)
-   apply (clarsimp simp: archinv_relation_def)
 
-   \<comment> \<open>InvokeASIDPool\<close>
-   apply (clarsimp simp: archinv_relation_def performARMMMUInvocation_def)
-   apply (rule corres_guard_imp)
-     apply (rule corres_split)
-        apply (rule performASIDPoolInvocation_corres; wpsimp)
-       apply (rule corres_trivial, simp)
-      apply wpsimp+
-    apply (fastforce simp: valid_arch_inv_def)
-   apply (fastforce simp: valid_arch_inv'_def)
+   \<comment> \<open>InvokeVCPU\<close>
+   apply clarsimp
+   apply (rule corres_guard_imp[OF performARMVCPUInvocation_corres];
+          clarsimp simp: valid_arch_inv_def valid_arch_inv'_def)+
 
-  \<comment> \<open>InvokeVCPU\<close>
-  apply (clarsimp simp: archinv_relation_def)
-  apply (rule corres_guard_imp[OF performARMVCPUInvocation_corres];
-         clarsimp simp: valid_arch_inv_def valid_arch_inv'_def)+
+  \<comment> \<open>InvokeSGISignal\<close>
+  apply (clarsimp simp: perform_sgi_invocation_def performSGISignalGenerate_def
+                        sgi_invocation_map_def ucast_ucast_b is_up
+                  split: sgi_signal_invocation.splits)
+  apply corres
   done
 
 lemma asid_pool_typ_at_ext':
@@ -1467,7 +1489,7 @@ lemma performASIDControlInvocation_tcb_at':
   apply clarsimp
   done
 
-crunch performVSpaceInvocation, performARMVCPUInvocation
+crunch performVSpaceInvocation, performARMVCPUInvocation, performSGISignalGenerate
   for tcb_at'[wp]: "\<lambda>s. tcb_at' p s"
 
 lemma invokeArch_tcb_at':
@@ -1491,25 +1513,26 @@ lemma sts_cte_cap_to'[wp]:
 lemma sts_valid_arch_inv': (* FIXME AARCH64 cleanup *)
   "\<lbrace>valid_arch_inv' ai\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_arch_inv' ai\<rbrace>"
   apply (cases ai, simp_all add: valid_arch_inv'_def)
-       apply (clarsimp simp: valid_vsi'_def split: vspace_invocation.splits)
+        apply (clarsimp simp: valid_vsi'_def split: vspace_invocation.splits)
+        apply (rule conjI|clarsimp|wpsimp)+
+       apply (clarsimp simp: valid_pti'_def split: page_table_invocation.splits)
        apply (rule conjI|clarsimp|wpsimp)+
-      apply (clarsimp simp: valid_pti'_def split: page_table_invocation.splits)
-      apply (rule conjI|clarsimp|wpsimp)+
-     apply (rename_tac page_invocation)
-     apply (case_tac page_invocation, simp_all add: valid_page_inv'_def)[1]
-        apply ((wp|simp)+)[2]
-      apply (clarsimp simp: isCap_simps pred_conj_def)
+      apply (rename_tac page_invocation)
+      apply (case_tac page_invocation, simp_all add: valid_page_inv'_def)[1]
+         apply ((wp|simp)+)[2]
+       apply (clarsimp simp: isCap_simps pred_conj_def)
+       apply wpsimp
       apply wpsimp
-     apply wpsimp
-    apply (clarsimp simp: valid_aci'_def split: asidcontrol_invocation.splits)
-    apply (clarsimp simp: cte_wp_at_ctes_of)
+     apply (clarsimp simp: valid_aci'_def split: asidcontrol_invocation.splits)
+     apply (clarsimp simp: cte_wp_at_ctes_of)
+     apply (rule hoare_pre, wp)
+     apply clarsimp
+    apply (clarsimp simp: valid_apinv'_def split: asidpool_invocation.splits)
     apply (rule hoare_pre, wp)
-    apply clarsimp
-   apply (clarsimp simp: valid_apinv'_def split: asidpool_invocation.splits)
-   apply (rule hoare_pre, wp)
-   apply simp
-  apply (rename_tac vcpui)
-  apply (case_tac vcpui; wpsimp simp: valid_vcpuinv'_def)
+    apply simp
+   apply (rename_tac vcpui)
+   apply (case_tac vcpui; wpsimp simp: valid_vcpuinv'_def)
+  apply wp
   done
 
 lemma inv_ASIDPool:
@@ -1668,79 +1691,84 @@ lemma arch_decodeInvocation_wf[wp]:
    Arch.decodeInvocation label args cap_index slot arch_cap excaps
    \<lbrace>valid_arch_inv'\<rbrace>,-"
   apply (cases arch_cap)
-      apply (simp add: decodeARMMMUInvocation_def AARCH64_H.decodeInvocation_def
-                        Let_def split_def isCap_simps  decodeARMASIDControlInvocation_def
-                   cong: if_cong invocation_label.case_cong arch_invocation_label.case_cong list.case_cong prod.case_cong
-                   split del: if_split)
-      apply (rule hoare_pre)
-       apply ((wp whenE_throwError_wp ensureEmptySlot_stronger|
-               wpc|
-               simp add: valid_arch_inv'_def valid_aci'_def is_aligned_shiftl_self
-                            split del: if_split)+)[1]
-                 apply (rule_tac Q'=
-                             "\<lambda>rv. K (fst (hd [p\<leftarrow>assocs asidTable . fst p \<le> 2 ^ asid_high_bits - 1 \<and> snd p = None])
-                                      << asid_low_bits \<le> 2 ^ asid_bits - 1) and
-                                   real_cte_at' rv and
-                                   ex_cte_cap_to' rv and
-                                   cte_wp_at' (\<lambda>cte. \<exists>idx. cteCap cte = (UntypedCap False frame pageBits idx)) (snd (excaps!0)) and
-                                   sch_act_simple and
-                                   (\<lambda>s. descendants_of' (snd (excaps!0)) (ctes_of s) = {}) "
-                                   in hoare_strengthen_postE_R)
-                  apply (simp add: lookupTargetSlot_def)
-                  apply wp
-                 apply (clarsimp simp: cte_wp_at_ctes_of asid_wf_def mask_def)
-                apply (simp split del: if_split)
-                apply (wp ensureNoChildren_sp whenE_throwError_wp|wpc)+
-      apply clarsimp
-      apply (rule conjI)
-       apply (clarsimp simp: null_def neq_Nil_conv)
-       apply (drule filter_eq_ConsD)
+       apply (simp add: decodeARMMMUInvocation_def AARCH64_H.decodeInvocation_def
+                         Let_def split_def isCap_simps  decodeARMASIDControlInvocation_def
+                    cong: if_cong invocation_label.case_cong arch_invocation_label.case_cong
+                          list.case_cong prod.case_cong
+                    split del: if_split)
+       apply (rule hoare_pre)
+        apply ((wp whenE_throwError_wp ensureEmptySlot_stronger|
+                wpc|
+                simp add: valid_arch_inv'_def valid_aci'_def is_aligned_shiftl_self
+                             split del: if_split)+)[1]
+                   apply (rule_tac Q'=
+                               "\<lambda>rv. K (fst (hd [p\<leftarrow>assocs asidTable . fst p \<le> 2 ^ asid_high_bits - 1 \<and> snd p = None])
+                                        << asid_low_bits \<le> 2 ^ asid_bits - 1) and
+                                     real_cte_at' rv and
+                                     ex_cte_cap_to' rv and
+                                     cte_wp_at' (\<lambda>cte. \<exists>idx. cteCap cte = (UntypedCap False frame pageBits idx)) (snd (excaps!0)) and
+                                     sch_act_simple and
+                                     (\<lambda>s. descendants_of' (snd (excaps!0)) (ctes_of s) = {}) "
+                                     in hoare_strengthen_postE_R)
+                    apply (simp add: lookupTargetSlot_def)
+                    apply wp
+                   apply (clarsimp simp: cte_wp_at_ctes_of asid_wf_def mask_def)
+                  apply (simp split del: if_split)
+                  apply (wp ensureNoChildren_sp whenE_throwError_wp|wpc)+
        apply clarsimp
-       apply (rule shiftl_less_t2n)
-        apply (simp add: asid_bits_def asid_low_bits_def asid_high_bits_def)
-        apply unat_arith
-       apply (simp add: asid_bits_def)
-      apply clarsimp
-      apply (rule conjI, fastforce)
-      apply (clarsimp simp: cte_wp_at_ctes_of objBits_simps)
+       apply (rule conjI)
+        apply (clarsimp simp: null_def neq_Nil_conv)
+        apply (drule filter_eq_ConsD)
+        apply clarsimp
+        apply (rule shiftl_less_t2n)
+         apply (simp add: asid_bits_def asid_low_bits_def asid_high_bits_def)
+         apply unat_arith
+        apply (simp add: asid_bits_def)
+       apply clarsimp
+       apply (rule conjI, fastforce)
+       apply (clarsimp simp: cte_wp_at_ctes_of objBits_simps)
 
-     \<comment> \<open>ASIDPool cap\<close>
-     apply (simp add: decodeARMMMUInvocation_def AARCH64_H.decodeInvocation_def
-                      Let_def split_def isCap_simps decodeARMASIDPoolInvocation_def
+      \<comment> \<open>ASIDPool cap\<close>
+      apply (simp add: decodeARMMMUInvocation_def AARCH64_H.decodeInvocation_def
+                       Let_def split_def isCap_simps decodeARMASIDPoolInvocation_def
+                 cong: if_cong split del: if_split)
+      apply (wpsimp simp: valid_arch_inv'_def valid_apinv'_def wp: getASID_wp cong: if_cong)
+      apply (clarsimp simp: word_neq_0_conv valid_cap'_def valid_arch_inv'_def valid_apinv'_def)
+      apply (rule conjI)
+       apply (erule cte_wp_at_weakenE')
+       apply (simp, drule_tac t="cteCap c" in sym, simp add: isCap_simps)
+      apply (subst (asm) conj_assoc [symmetric])
+      apply (subst (asm) assocs_empty_dom_comp [symmetric])
+      apply (drule dom_hd_assocsD)
+      apply (simp add: capAligned_def asid_wf_def mask_def)
+      apply (elim conjE)
+      apply (subst field_simps, erule is_aligned_add_less_t2n)
+        apply assumption
+       apply (simp add: asid_low_bits_def asid_bits_def)
+      apply assumption
+
+     \<comment> \<open>PageCap\<close>
+     apply (simp add: decodeARMMMUInvocation_def isCap_simps AARCH64_H.decodeInvocation_def
                 cong: if_cong split del: if_split)
-     apply (wpsimp simp: valid_arch_inv'_def valid_apinv'_def wp: getASID_wp cong: if_cong)
-     apply (clarsimp simp: word_neq_0_conv valid_cap'_def valid_arch_inv'_def valid_apinv'_def)
-     apply (rule conjI)
-      apply (erule cte_wp_at_weakenE')
-      apply (simp, drule_tac t="cteCap c" in sym, simp add: isCap_simps)
-     apply (subst (asm) conj_assoc [symmetric])
-     apply (subst (asm) assocs_empty_dom_comp [symmetric])
-     apply (drule dom_hd_assocsD)
-     apply (simp add: capAligned_def asid_wf_def mask_def)
-     apply (elim conjE)
-     apply (subst field_simps, erule is_aligned_add_less_t2n)
-       apply assumption
-      apply (simp add: asid_low_bits_def asid_bits_def)
-     apply assumption
+     apply (wp decode_page_inv_wf, rule refl)
+     apply clarsimp
 
-    \<comment> \<open>PageCap\<close>
+    \<comment> \<open>PageTableCap\<close>
     apply (simp add: decodeARMMMUInvocation_def isCap_simps AARCH64_H.decodeInvocation_def
                cong: if_cong split del: if_split)
-    apply (wp decode_page_inv_wf, rule refl)
+    apply (rename_tac pt_t map_data)
+    apply (case_tac pt_t; clarsimp)
+     apply wp
+    apply (wp decode_page_table_inv_wf, rule refl)
     apply clarsimp
 
-   \<comment> \<open>PageTableCap\<close>
-   apply (simp add: decodeARMMMUInvocation_def isCap_simps AARCH64_H.decodeInvocation_def
-              cong: if_cong split del: if_split)
-   apply (rename_tac pt_t map_data)
-   apply (case_tac pt_t; clarsimp)
-    apply wp
-   apply (wp decode_page_table_inv_wf, rule refl)
-   apply clarsimp
+   \<comment> \<open>VCPUCap\<close>
+   apply (clarsimp simp: AARCH64_H.decodeInvocation_def)
+   apply wp
 
-  \<comment> \<open>VCPUCap\<close>
-  apply (clarsimp simp: AARCH64_H.decodeInvocation_def)
-  apply wp
+  \<comment> \<open>SGISignalCap\<close>
+  apply (clarsimp simp: AARCH64_H.decodeInvocation_def decodeSGISignalInvocation_def)
+  apply (wpsimp simp: valid_arch_inv'_def)
   done
 
 crunch setMRs
@@ -2104,6 +2132,11 @@ lemma performVSpaceInvocation_invs[wp]:
   "performVSpaceInvocation vspace \<lbrace>invs'\<rbrace>"
   unfolding performVSpaceInvocation_def
   by wpsimp
+
+lemma performSGISignalInvocation_invs[wp]:
+  "performSGISignalGenerate sgi \<lbrace>invs'\<rbrace>"
+  unfolding performSGISignalGenerate_def
+  by (wpsimp wp: dmo_invs_lift')
 
 lemma arch_performInvocation_invs':
   "\<lbrace>invs' and ct_active' and valid_arch_inv' invocation\<rbrace>

@@ -79,5 +79,10 @@ lemma getActiveIRQ_le_maxIRQ:
   apply (simp add: irqs_masked'_def valid_irq_states'_def)
   done
 
+lemma sendSGI_underlying_memory[wp]:
+  "sendSGI irq target \<lbrace>\<lambda>ms. P (underlying_memory ms)\<rbrace>"
+  unfolding sendSGI_def
+  by wp
+
 end
 end

@@ -35,9 +35,9 @@ lemma withoutFailure_wp [wp]:
 
 lemma no_fail_typeError [simp, wp]:
   "no_fail \<bottom> (typeError xs ko)"
-  by (simp add: typeError_def)
+  by (rule no_fail_False)
 
-lemma isCap_simps:
+lemma isCap_simps':
   "isZombie v = (\<exists>v0 v1 v2. v = Zombie v0 v1 v2)"
   "isArchObjectCap v = (\<exists>v0. v = ArchObjectCap v0)"
   "isThreadCap v = (\<exists>v0. v = ThreadCap v0)"
@@ -56,7 +56,12 @@ lemma isCap_simps:
   "isASIDControlCap w = (w = ASIDControlCap)"
   "isASIDPoolCap w = (\<exists>v0 v1. w = ASIDPoolCap v0 v1)"
   "isVCPUCap w = (\<exists>v. w = VCPUCap v)"
+  "isSGISignalCap w = (\<exists>irq target. w = SGISignalCap irq target)"
   by (auto simp: isCap_defs split: capability.splits arch_capability.splits)
+
+(* isArchSGISignalCap_def is already in expanded exists form, so no need to spell it out. *)
+(* FIXME arch-split: isArchSGISignalCap_def should go into the arch part *)
+lemmas isCap_simps = isCap_simps' isArchSGISignalCap_def
 
 lemma untyped_not_null [simp]:
   "\<not> isUntypedCap NullCap" by (simp add: isCap_simps)

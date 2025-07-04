@@ -387,13 +387,14 @@ lemmas valid_cap_simps' =
 
 lemma is_physical_cases:
  "(capClass cap = PhysicalClass) =
-  (case cap of NullCap                         \<Rightarrow> False
-             | DomainCap                       \<Rightarrow> False
-             | IRQControlCap                   \<Rightarrow> False
-             | IRQHandlerCap irq               \<Rightarrow> False
-             | ReplyCap r m cr                 \<Rightarrow> False
-             | ArchObjectCap ASIDControlCap    \<Rightarrow> False
-             | _                               \<Rightarrow> True)"
+  (case cap of NullCap                          \<Rightarrow> False
+             | DomainCap                        \<Rightarrow> False
+             | IRQControlCap                    \<Rightarrow> False
+             | IRQHandlerCap irq                \<Rightarrow> False
+             | ReplyCap r m cr                  \<Rightarrow> False
+             | ArchObjectCap ASIDControlCap     \<Rightarrow> False
+             | ArchObjectCap (SGISignalCap _ _) \<Rightarrow> False
+             | _                                \<Rightarrow> True)"
   by (simp split: capability.splits arch_capability.splits zombie_type.splits)
 
 lemma typ_at_lift_page_table_at':

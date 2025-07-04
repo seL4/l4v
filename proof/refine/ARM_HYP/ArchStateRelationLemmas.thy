@@ -133,7 +133,7 @@ lemmas isCap_defs =
   isIRQHandlerCap_def isIRQControlCap_def isReplyCap_def
   isPageCap_def isPageTableCap_def isPageDirectoryCap_def
   isASIDControlCap_def isASIDPoolCap_def isArchPageCap_def
-  isDomainCap_def isVCPUCap_def
+  isDomainCap_def isVCPUCap_def isSGISignalCap_def
 
 lemma is_other_obj_relation_type:
   "is_other_obj_relation_type (a_type ko)

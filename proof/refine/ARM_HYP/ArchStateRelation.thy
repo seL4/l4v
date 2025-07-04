@@ -40,6 +40,8 @@ primrec acap_relation :: "arch_cap \<Rightarrow> arch_capability \<Rightarrow> b
         arch_capability.PageDirectoryCap word data)"
 | "acap_relation (arch_cap.VCPUCap vcpu) c  = (c =
         arch_capability.VCPUCap vcpu)"
+| "acap_relation (arch_cap.SGISignalCap irq target) c  = (c =
+        arch_capability.SGISignalCap (ucast irq) (ucast target))"
 
 definition asid_pool_relation :: "(10 word \<rightharpoonup> word32) \<Rightarrow> asidpool \<Rightarrow> bool" where
   "asid_pool_relation \<equiv> \<lambda>p p'. p = inv ASIDPool p' o ucast"
