@@ -74,6 +74,38 @@ lemmas gen_projectKOs[simp] =
   projectKO_ntfn projectKO_ep projectKO_cte projectKO_tcb
   projectKO_eq projectKO_eq2
 
+(* true on all arches *)
+lemma zero_less_tcbBlockSizeBits[simp]:
+  "0 < tcbBlockSizeBits"
+  unfolding tcbBlockSizeBits_def by simp
+
+(* same derivation on all architectures; some duplication for convenience in simpset *)
+lemma (in Arch) tcb_slots_less_2p_tcbBlockSizeBits:
+  "0 < (2::machine_word) ^ tcbBlockSizeBits"
+  "1 < (2::machine_word) ^ tcbBlockSizeBits"
+  "1 << cteSizeBits < (2::machine_word) ^ tcbBlockSizeBits"
+  "2 << cteSizeBits < (2::machine_word) ^ tcbBlockSizeBits"
+  "3 << cteSizeBits < (2::machine_word) ^ tcbBlockSizeBits"
+  "4 << cteSizeBits < (2::machine_word) ^ tcbBlockSizeBits"
+  "(2::machine_word) ^ cteSizeBits < 2 ^ tcbBlockSizeBits"
+  unfolding tcbBlockSizeBits_def by (auto simp: objBits_simps')
+
+requalify_facts Arch.tcb_slots_less_2p_tcbBlockSizeBits
+declare tcb_slots_less_2p_tcbBlockSizeBits[simp]
+
+(* same derivation on all architectures *)
+lemma (in Arch) zero_one_less_2p_SizeBits[simp]:
+  "(0::machine_word) < 2 ^ cteSizeBits"
+  "(1::machine_word) < 2 ^ cteSizeBits"
+  "(0::machine_word) < 2 ^ epSizeBits"
+  "(1::machine_word) < 2 ^ epSizeBits"
+  "(0::machine_word) < 2 ^ ntfnSizeBits"
+  "(1::machine_word) < 2 ^ ntfnSizeBits"
+  by (auto simp: objBits_simps')
+
+requalify_facts Arch.zero_one_less_2p_SizeBits
+declare zero_one_less_2p_SizeBits[simp]
+
 (* same derivation on all architectures, since all objects fit inside address space *)
 lemma (in Arch) obj_sizeBits_less_word_bits:
   "epSizeBits < word_bits"
