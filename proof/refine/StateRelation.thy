@@ -442,9 +442,11 @@ locale StateRelation_R =
     "\<And>s s' ss ss'.
        ghost_relation_wrapper (s\<lparr>machine_state := ss\<rparr>) (s'\<lparr>ksMachineState := ss'\<rparr>)
        = ghost_relation_wrapper s s'"
-  assumes is_other_obj_relation_type_CapTable:
+  assumes is_other_obj_relation_type_gen[simp]:
     "\<And>n. \<not> is_other_obj_relation_type (ACapTable n)"
-  assumes is_other_obj_relation_type_TCB:
     "\<not> is_other_obj_relation_type ATCB"
+    "is_other_obj_relation_type AEndpoint"
+    "is_other_obj_relation_type ANTFN"
+    "\<And>n. \<not> is_other_obj_relation_type (AGarbage n)"
 
 end

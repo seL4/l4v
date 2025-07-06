@@ -70,13 +70,13 @@ lemma obj_relation_cutsE:
             split: Structures_A.kernel_object.splits kernel_object.splits if_splits
                    RISCV64_A.arch_kernel_obj.splits)
 
-lemma is_other_obj_relation_type_CapTable[StateRelation_R_assms]:
-  "\<not> is_other_obj_relation_type (ACapTable n)"
-  by (simp add: is_other_obj_relation_type_def)
-
-lemma is_other_obj_relation_type_TCB[StateRelation_R_assms]:
+lemma is_other_obj_relation_type_gen[simp, StateRelation_R_assms]:
+  "\<And>n. \<not> is_other_obj_relation_type (ACapTable n)"
   "\<not> is_other_obj_relation_type ATCB"
-  by (simp add: is_other_obj_relation_type_def)
+  "is_other_obj_relation_type AEndpoint"
+  "is_other_obj_relation_type ANTFN"
+  "\<And>n. \<not> is_other_obj_relation_type (AGarbage n)"
+  by (auto simp: is_other_obj_relation_type_def)
 
 lemma is_other_obj_relation_type_PageTable:
   "\<not> is_other_obj_relation_type (AArch APageTable)"
@@ -157,6 +157,14 @@ lemma ghost_relation_wrapper_machine_state_upd_id[StateRelation_R_assms,simp]:
   "ghost_relation_wrapper (s\<lparr>machine_state := ss\<rparr>) (s'\<lparr>ksMachineState := ss'\<rparr>)
    = ghost_relation_wrapper s s'"
   by simp
+
+(* interface lemma, can't be used in locale assumptions due to free type variable *)
+lemma valid_arch_obj'_valid[wp]:
+  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
+  notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_const_Ball_lift typ_at_lifts[OF P]
+  shows "\<lbrace>valid_arch_obj' ako\<rbrace> f \<lbrace>\<lambda>rv. valid_arch_obj' ako\<rbrace>"
+  unfolding valid_arch_obj'_def
+  by (case_tac ako; wpsimp)
 
 end
 
