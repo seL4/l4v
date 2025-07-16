@@ -227,7 +227,7 @@ lemma setObject_ASIDPool_corres [corres]:
   apply (corresKsimp search: setObject_other_arch_corres[where P="\<lambda>_. True"]
                         wp: get_object_ret get_object_wp)
   apply (simp add: other_aobj_relation_def asid_pool_relation_def)
-  apply (clarsimp simp: obj_at_simps )
+  apply (clarsimp simp: gen_obj_at_simps aa_type_def)
   by (auto simp: obj_at_simps typ_at_to_obj_at_arches
           split: Structures_A.kernel_object.splits if_splits arch_kernel_obj.splits)
 

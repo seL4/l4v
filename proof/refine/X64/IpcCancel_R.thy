@@ -9,6 +9,10 @@ imports
   Schedule_R
   "Lib.SimpStrategy"
 begin
+
+arch_requalify_facts
+  valid_global_refs_lift'
+
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch cancelAllIPC
@@ -734,9 +738,6 @@ lemma cancelSignal_invs':
       done
   qed
 
-lemmas setEndpoint_valid_arch[wp]
-    = valid_arch_state_lift' [OF setEndpoint_typ_at' set_ep_arch']
-
 lemma ep_redux_simps3:
   "ep_q_refs_of' (case xs of [] \<Rightarrow> IdleEP | y # ys \<Rightarrow> RecvEP (y # ys))
         = (set xs \<times> {EPRecv})"
@@ -784,7 +785,7 @@ lemma setEndpoint_ct_not_inQ[wp]:
   apply (rule hoare_weaken_pre)
    apply (wps setObject_ep_ct)
    apply (wp obj_at_setObject2)
-   apply (clarsimp simp: updateObject_default_def in_monad)+
+   apply (clarsimp simp: updateObject_default_def in_monad comp_def)+
   done
 
 lemma setEndpoint_ksDomScheduleIdx[wp]:
@@ -806,6 +807,20 @@ lemma sym_refs_empty[simp]:
   "sym_refs (\<lambda>p. {}) = True"
   unfolding sym_refs_def
   by simp
+
+context Arch begin arch_global_naming
+
+crunch setThreadState, rescheduleRequired
+  for state_hyp_refs_of': "\<lambda>s. P (state_hyp_refs_of' s)"
+
+end
+
+(* FIXME arch-split: interface candidates *)
+arch_requalify_facts
+  setThreadState_state_hyp_refs_of'
+  rescheduleRequired_state_hyp_refs_of'
+
+lemmas [wp] = setThreadState_state_hyp_refs_of' rescheduleRequired_state_hyp_refs_of'
 
 lemma (in delete_one_conc) cancelIPC_invs[wp]:
   shows "\<lbrace>tcb_at' t and invs'\<rbrace> cancelIPC t \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -871,6 +886,7 @@ proof -
     apply (rule conjI)
      apply (clarsimp elim!: if_live_state_refsE split: Structures_H.endpoint.split_asm)
     apply (drule st_tcb_at_state_refs_ofD')
+    apply (thin_tac "sym_refs (state_hyp_refs_of' s)") (* FIXME arch-split: unclear what this triggers *)
     apply (clarsimp simp: ep_redux_simps3 valid_ep'_def sym_refs_empty
                    split: Structures_H.endpoint.split_asm
                     cong: list.case_cong)
@@ -1452,6 +1468,14 @@ lemma sts_sch_act_not_ct[wp]:
 
 text \<open>Cancelling all IPC in an endpoint or notification object\<close>
 
+(* FIXME arch-split: these cross cross lemmas are in ArchKHeap_R on X64 as opposed to ArchAcc_R,
+   meaning they aren't visible here. These should become interface lemmas once ArchAcc_R is
+   arch-split *)
+arch_requalify_facts
+  pspace_aligned_cross
+  pspace_distinct_cross
+  tcb_at_cross
+
 lemma ep_cancel_corres_helper:
   "corres dc ((\<lambda>s. \<forall>t \<in> set list. tcb_at t s) and valid_queues
                                               and pspace_aligned and pspace_distinct)
@@ -1653,7 +1677,8 @@ lemma cancel_all_invs'_helper:
                  od) q
    \<lbrace>\<lambda>rv. all_invs_but_ct_not_inQ'\<rbrace>"
   apply (rule mapM_x_inv_wp2)
-   apply clarsimp
+   (* FIXME arch-split: this helper lemma has different definition on hyp platforms *)
+   apply (clarsimp simp: X64.non_hyp_state_hyp_refs_of')
   apply (rule hoare_pre)
    apply (wp valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
              hoare_vcg_const_Ball_lift untyped_ranges_zero_lift sts_st_tcb'
@@ -1823,7 +1848,7 @@ lemma cancelAllIPC_invs'[wp]:
   apply (rule bind_wp[OF _ stateAssert_sp])
   apply (wp rescheduleRequired_all_invs_but_ct_not_inQ
             cancel_all_invs'_helper hoare_vcg_const_Ball_lift
-            valid_global_refs_lift' valid_arch_state_lift'
+            valid_global_refs_lift'
             valid_irq_node_lift ssa_invs' sts_sch_act'
             irqs_masked_lift
          | simp only: sch_act_wf.simps forM_x_def | simp)+

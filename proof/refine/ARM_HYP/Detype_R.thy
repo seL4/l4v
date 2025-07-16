@@ -2024,7 +2024,7 @@ proof -
     apply (clarsimp simp:valid_def pspace_no_overlap'_def)
     apply (drule_tac x = x in spec)
     apply (subgoal_tac "\<exists>ko'. ksPSpace s x = Some ko' \<and> koTypeOf ko = koTypeOf ko'")
-     apply (clarsimp dest!:objBits_type)
+     apply (clarsimp dest!: koType_objBitsKO)
     apply (rule ccontr)
     apply clarsimp
     apply (frule_tac slot1 = x and Q1 = "koTypeOf ko" and P1 = "\<lambda>a. \<not> a" in use_valid[OF _ typ_at])
