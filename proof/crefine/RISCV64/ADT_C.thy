@@ -718,8 +718,8 @@ lemma map_to_ctes_tcb_ctes:
   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKO_opt_tcb
                  split: kernel_object.splits)
   apply (case_tac ko, simp_all, clarsimp)
-  apply (clarsimp simp: objBits_type[of "KOTCB tcb" "KOTCB undefined"]
-                        objBits_type[of "KOTCB tcb'" "KOTCB undefined"])
+  apply (clarsimp simp: koType_objBitsKO[of "KOTCB tcb" "KOTCB undefined"]
+                        koType_objBitsKO[of "KOTCB tcb'" "KOTCB undefined"])
   apply (rule conjI)
    apply (drule ps_clear_def3[THEN iffD1,rotated 2],
           assumption, simp add: objBits_simps')+

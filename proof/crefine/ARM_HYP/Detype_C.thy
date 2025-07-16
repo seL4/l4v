@@ -317,7 +317,7 @@ proof -
   proof (rule disjoint_subset [rotated])
     have "objBits (undefined :: 'a) = objBitsKO ko" using po
       apply (simp add: objBits_def)
-      apply (rule objBits_type)
+      apply (rule koType_objBitsKO)
       apply (subst iffD1 [OF project_koType])
       apply (fastforce simp add: project_inject)
       apply (erule tp)
