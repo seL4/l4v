@@ -874,7 +874,7 @@ lemma storePTE_ct_not_inQ[wp]:
   apply (simp add: storePTE_def)
   apply (wp_pre, wps)
   apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_default_def in_monad)+
+  apply (clarsimp simp: updateObject_default_def in_monad comp_def)+
   done
 
 lemma setObject_pte_cur_domain[wp]:
@@ -1064,7 +1064,7 @@ lemma setASIDPool_ct_not_inQ[wp]:
   apply (rule hoare_weaken_pre)
    apply (wps setObject_ASID_ct)
   apply (rule obj_at_setObject2)
-   apply (clarsimp simp: updateObject_default_def in_monad)+
+   apply (clarsimp simp: updateObject_default_def in_monad comp_def)+
   done
 
 lemma setObject_asidpool_cur'[wp]:

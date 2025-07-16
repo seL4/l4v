@@ -10,6 +10,9 @@ imports
   Schedule_R
 begin
 
+arch_requalify_facts
+  valid_global_refs_lift'
+
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch cancelAllIPC
@@ -724,9 +727,6 @@ lemma cancelSignal_invs':
       done
   qed
 
-lemmas setEndpoint_valid_arch[wp]
-    = valid_arch_state_lift' [OF setEndpoint_typ_at' set_ep_arch']
-
 lemma ep_redux_simps3:
   "ep_q_refs_of' (case xs of [] \<Rightarrow> IdleEP | y # ys \<Rightarrow> RecvEP (y # ys))
         = (set xs \<times> {EPRecv})"
@@ -771,7 +771,7 @@ lemma setEndpoint_ct_not_inQ[wp]:
   apply (rule hoare_weaken_pre)
    apply (wps setObject_ep_ct)
    apply (wp obj_at_setObject2)
-   apply (clarsimp simp: updateObject_default_def in_monad)+
+   apply (clarsimp simp: updateObject_default_def in_monad comp_def)+
   done
 
 lemma setEndpoint_ksDomScheduleIdx[wp]:
@@ -1679,10 +1679,17 @@ proof -
   done
 qed
 
+context Arch begin arch_global_naming
+
 lemma tcbSchedEnqueue_valid_pspace'[wp]:
   "tcbSchedEnqueue tcbPtr \<lbrace>valid_pspace'\<rbrace>"
   unfolding valid_pspace'_def
   by wpsimp
+
+end
+
+arch_requalify_facts tcbSchedEnqueue_valid_pspace' (* FIXME arch-split: interface *)
+lemmas [wp] = tcbSchedEnqueue_valid_pspace'
 
 lemma cancel_all_invs'_helper:
   "\<lbrace>all_invs_but_sym_refs_ct_not_inQ' and (\<lambda>s. \<forall>x \<in> set q. tcb_at' x s)
@@ -1866,7 +1873,7 @@ lemma cancelAllIPC_invs'[wp]:
   apply (rule bind_wp[OF _ stateAssert_sp])
   apply (wp rescheduleRequired_all_invs_but_ct_not_inQ
             cancel_all_invs'_helper hoare_vcg_const_Ball_lift
-            valid_global_refs_lift' valid_arch_state_lift'
+            valid_global_refs_lift'
             valid_irq_node_lift ssa_invs' sts_sch_act'
             irqs_masked_lift
          | simp only: sch_act_wf.simps forM_x_def | simp)+
