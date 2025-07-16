@@ -173,7 +173,7 @@ lemma pspace_distinct_cross:
       apply (rule_tac n=pte_bits in is_aligned_add_step_le'; assumption?)
      apply (simp add: objBitsKO_Data)
      apply (rule_tac n=pageBits in is_aligned_add_step_le'; assumption?)
-    apply (case_tac ko; simp split: if_split_asm add: is_other_obj_relation_type_CapTable)
+    apply (case_tac ko; simp split: if_split_asm)
     apply (rename_tac ako, case_tac ako; simp add: is_other_obj_relation_type_def split: if_split_asm)
    apply (case_tac ako; simp add: is_other_obj_relation_type_def split: if_split_asm)
   apply (frule (1) obj_relation_cuts_obj_bits)

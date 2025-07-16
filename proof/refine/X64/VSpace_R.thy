@@ -1982,7 +1982,7 @@ lemma storePDE_ct_not_inQ[wp]:
   apply (rule hoare_weaken_pre)
    apply (wps setObject_PDE_ct)
   apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_default_def in_monad)+
+  apply (clarsimp simp: updateObject_default_def in_monad comp_def)+
   done
 
 lemma setObject_pde_cur_domain[wp]:
@@ -2035,7 +2035,7 @@ lemma storePDPTE_ct_not_inQ[wp]:
   apply (rule hoare_weaken_pre)
    apply (wps setObject_PDPTE_ct)
   apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_default_def in_monad)+
+  apply (clarsimp simp: updateObject_default_def in_monad comp_def)+
   done
 
 lemma setObject_pdpte_cur_domain[wp]:
@@ -2084,7 +2084,7 @@ lemma storePML4E_ct_not_inQ[wp]:
   apply (rule hoare_weaken_pre)
    apply (wps setObject_PML4E_ct)
   apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_default_def in_monad)+
+  apply (clarsimp simp: updateObject_default_def in_monad comp_def)+
   done
 
 lemma setObject_pml4e_cur_domain[wp]:
@@ -2300,7 +2300,7 @@ lemma storePTE_ct_not_inQ[wp]:
   apply (rule hoare_weaken_pre)
    apply (wps setObject_pte_ct)
   apply (rule obj_at_setObject2)
-   apply (clarsimp simp: updateObject_default_def in_monad)+
+   apply (clarsimp simp: updateObject_default_def in_monad comp_def)+
   done
 
 lemma setObject_pte_cur_domain[wp]:
@@ -2457,7 +2457,7 @@ lemma setASIDPool_ct_not_inQ[wp]:
   apply (rule hoare_weaken_pre)
    apply (wps setObject_ASID_ct)
   apply (rule obj_at_setObject2)
-   apply (clarsimp simp: updateObject_default_def in_monad)+
+   apply (clarsimp simp: updateObject_default_def in_monad comp_def)+
   done
 
 lemma setObject_asidpool_cur'[wp]:

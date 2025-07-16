@@ -1464,14 +1464,16 @@ lemma asUser_corres':
   assumes y: "corres_underlying Id False True r \<top> \<top> f g"
   shows      "corres r (tcb_at t and pspace_aligned and pspace_distinct) \<top>
                        (as_user t f) (asUser t g)"
-  proof -
+proof -
   note arch_tcb_context_get_def[simp]
   note atcbContextGet_def[simp]
   note arch_tcb_context_set_def[simp]
   note atcbContextSet_def[simp]
   have L1: "corres (\<lambda>tcb con. (arch_tcb_context_get o tcb_arch) tcb = con)
-             (tcb_at t and pspace_aligned and pspace_distinct) \<top>
-             (gets_the (get_tcb t)) (threadGet (atcbContextGet o tcbArch) t)"
+              (tcb_at t and pspace_aligned and pspace_distinct) \<top>
+              (gets_the (get_tcb t)) (threadGet (atcbContextGet o tcbArch) t)"
+    apply (rule corres_cross_over_guard[where Q="tcb_at' t"])
+     apply (fastforce simp: tcb_at_cross state_relation_def)
     apply (rule corres_guard_imp)
       apply (rule corres_gets_the)
       apply (simp add: threadGet_def)

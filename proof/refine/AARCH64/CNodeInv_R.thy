@@ -4962,6 +4962,26 @@ lemmas tcbSlots =
   tcbCTableSlot_def tcbVTableSlot_def
   tcbReplySlot_def tcbCallerSlot_def tcbIPCBufferSlot_def
 
+context Arch begin arch_global_naming
+
+lemma updateMDB_pspace_in_kernel_mappings'[wp]:
+  "updateMDB next prev \<lbrace>pspace_in_kernel_mappings'\<rbrace>"
+  by wpsimp
+
+lemma updateCap_pspace_in_kernel_mappings'[wp]:
+  "updateCap next prev \<lbrace>pspace_in_kernel_mappings'\<rbrace>"
+  by wpsimp
+
+end
+
+(* FIXME arch-split: interface (these are only interesting on ARM/ARM_HYP *)
+arch_requalify_facts
+  updateMDB_pspace_in_kernel_mappings'
+  updateCap_pspace_in_kernel_mappings'
+lemmas [wp] =
+  updateMDB_pspace_in_kernel_mappings'
+  updateCap_pspace_in_kernel_mappings'
+
 lemma cteSwap_valid_pspace'[wp]:
   "\<lbrace>valid_pspace' and
     cte_wp_at' (weak_derived' c o cteCap) c1 and

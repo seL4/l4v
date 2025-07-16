@@ -194,7 +194,7 @@ lemma setObject_ASIDPool_corres [corres]:
   apply (corresKsimp search: setObject_other_arch_corres[where P="\<lambda>_. True"]
                         wp: get_object_ret get_object_wp)
   apply (simp add: other_aobj_relation_def asid_pool_relation_def)
-  apply (clarsimp simp: obj_at_simps )
+  apply (clarsimp simp: obj_at_simps aa_type_def)
   by (auto simp: obj_at_simps typ_at_to_obj_at_arches
           split: Structures_A.kernel_object.splits if_splits arch_kernel_obj.splits)
 
@@ -1024,11 +1024,11 @@ declare in_set_zip_refl[simp]
 
 crunch storePDE
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
+  (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
 
 crunch storePTE
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
+  (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
 
 lemmas storePDE_typ_ats[wp] = typ_at_lifts [OF storePDE_typ_at']
 lemmas storePTE_typ_ats[wp] = typ_at_lifts [OF storePTE_typ_at']
@@ -1567,12 +1567,8 @@ lemma pspace_distinct_cross:
       apply (rule_tac n=pdeBits in is_aligned_add_step_le'; assumption?)
      apply (simp add: objBitsKO_Data)
      apply (rule_tac n=pageBits in is_aligned_add_step_le'; assumption?)
-    apply (case_tac ko;
-           simp split: if_split_asm
-                  add: is_other_obj_relation_type_CapTable a_type_def)
-    apply (rename_tac ako,
-           case_tac ako;
-           simp add: is_other_obj_relation_type_def a_type_def split: if_split_asm)
+    apply (case_tac ko;  simp split: if_split_asm)
+    apply (rename_tac ako, case_tac ako; simp add: is_other_obj_relation_type_def split: if_split_asm)
    apply (simp add: other_aobj_relation_def split: arch_kernel_obj.splits)
   apply (frule (1) obj_relation_cuts_obj_bits)
   apply (drule (2) obj_relation_cuts_range_mask_range)+
