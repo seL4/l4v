@@ -430,7 +430,7 @@ lemma objBits_eq_by_type:
   fixes x :: "'a :: pspace_storable" and y :: 'a
   shows "objBits x = objBits y"
   apply (simp add: objBits_def)
-  apply (rule objBits_type)
+  apply (rule koType_objBitsKO)
   apply (simp add: koTypeOf_injectKO)
   done
 
