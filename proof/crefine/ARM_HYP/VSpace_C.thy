@@ -1940,7 +1940,7 @@ lemma restore_virt_timer_ccorres:
   apply (clarsimp simp: irqVTimerEvent_def)
   apply (rule conjI)
    apply clarsimp
-   apply (drule vcpu_at_ko)
+   apply (drule vcpu_at_ko')
    apply normalise_obj_at'
    apply (simp add: fromEnum_def enum_vppievent_irq)
 
