@@ -16,13 +16,18 @@ lemmas [crunch_param_rules] = Let_def return_bind returnOk_bindE
     trans[OF liftE_bindE return_bind]
 
 ML \<open>
-fun get_trace_monad_state_type
-  (Type ("Set.set",
-         [Type ("Product_Type.prod",
-                [Type ("List.list", [Type ("Product_Type.prod", [_,v])]), _])]))
-      = SOME v
-  | get_trace_monad_state_type _ = NONE
+fun is_trace_monad
+  (Type (@{type_name "fun"},
+     [st,
+      Type ("Set.set",
+        [Type ("Product_Type.prod",
+          [Type ("List.list", [Type ("Product_Type.prod", [Type (@{type_name tmid}, []), st'])]),
+           Type (@{type_name "tmres"}, [st'', _])])])]))
+      = (st = st' andalso st = st'')
+  | is_trace_monad _ = false
+\<close>
 
+ML \<open>
 structure CrunchValidInstance : CrunchInstance =
 struct
   val name = "valid";
@@ -48,7 +53,7 @@ struct
   fun wps_tactic _ _ _ = no_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. valid P_free_ignore mapp_lambda_ignore Q_free_ignore";
-  val get_monad_state_type = get_trace_monad_state_type;
+  val is_monad_type = is_trace_monad;
 end;
 
 structure CrunchValid : CRUNCH = Crunch(CrunchValidInstance);
@@ -77,7 +82,7 @@ struct
   fun wps_tactic _ _ _ = no_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. no_fail P_free_ignore mapp_lambda_ignore";
-  val get_monad_state_type = get_trace_monad_state_type;
+  val is_monad_type = is_trace_monad;
 end;
 
 structure CrunchNoFail : CRUNCH = Crunch(CrunchNoFailInstance);
@@ -107,7 +112,7 @@ struct
   fun wps_tactic _ _ _ = no_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. validE P_free_ignore mapp_lambda_ignore Q_free_ignore Q_free_ignore";
-  val get_monad_state_type = get_trace_monad_state_type;
+  val is_monad_type = is_trace_monad;
 end;
 
 structure CrunchValidE : CRUNCH = Crunch(CrunchValidEInstance);
@@ -134,7 +139,7 @@ struct
   fun wps_tactic _ _ _ = no_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. prefix_closed mapp_lambda_ignore";
-  val get_monad_state_type = get_trace_monad_state_type;
+  val is_monad_type = is_trace_monad;
 end;
 
 structure CrunchPrefixClosed : CRUNCH = Crunch(CrunchPrefixClosedInstance);
