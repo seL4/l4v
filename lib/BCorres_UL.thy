@@ -301,7 +301,7 @@ struct
   fun wps_tactic _ _ _ = no_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. bcorres_underlying t_free_ignore mapp_lambda_ignore g_free_ignore";
-  val get_monad_state_type = get_nondet_monad_state_type;
+  val is_monad_type = is_nondet_monad;
 end;
 
 structure CrunchBCorres : CRUNCH = Crunch(CrunchBCorresInstance);

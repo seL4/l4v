@@ -140,10 +140,9 @@ sig
     (* The wps_tactic used, normally wps_tac when applicable and no_tac when not. *)
     val wps_tactic : Proof.context -> thm list -> int -> tactic;
     val magic : term;
-    (* Get the type of the state a monadic specification is operating on. Returns
-       NONE when given the wrong type. See get_nondet_monad_state_type in
+    (* Whether the type is the monad of the crunch instance. See is_nondet_monad in
        Crunch_Instances_NonDet for an example. *)
-    val get_monad_state_type : typ -> typ option
+    val is_monad_type : typ -> bool
 end
 
 signature CRUNCH =
@@ -250,16 +249,16 @@ fun get_monad ctxt f xs = if is_Const f then
        constants like If, case_option, K_bind being considered monadic *)
     let val T = dest_Const f |> fst |> read_const ctxt |> type_of;
 
-    fun is_product v p =
-      Option.getOpt (Option.map (fn v' => v = v') (Instance.get_monad_state_type p),
-                     false)
+    fun num_args T n =
+      if Instance.is_monad_type T
+      then SOME n
+      else case T of
+             Type (@{type_name "fun"}, [_, T']) => num_args T' (n + 1)
+           | _ => NONE
 
-    fun num_args (Type ("fun", [v,p])) n =
-          if is_product v p then SOME n else num_args p (n + 1)
-      | num_args _ _ = NONE
-
-    in case num_args T 0 of NONE => []
-      | SOME n => [list_comb (f, Library.take n (xs @ map Bound (1 upto n)))]
+    in case num_args T 0 of
+         NONE => []
+       | SOME n => [list_comb (f, Library.take n (xs @ map Bound (1 upto n)))]
     end
   else [];
 

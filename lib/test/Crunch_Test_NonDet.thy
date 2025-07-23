@@ -14,13 +14,13 @@ begin
 
 text \<open>Test cases for crunch\<close>
 
-definition
-  "crunch_foo1 (x :: nat) \<equiv> do
-    modify ((+) x);
-    modify ((+) x)
+definition crunch_foo1 :: "nat \<Rightarrow> (unit, nat, unit) nondet_monad" where
+  "crunch_foo1 x \<equiv> do
+    modify (map_state ((+) x));
+    modify (map_state ((+) x))
   od"
 
-definition
+definition crunch_foo2 :: "(unit, nat, unit) nondet_monad" where
   "crunch_foo2 \<equiv> do
     crunch_foo1 12;
     crunch_foo1 13
@@ -34,7 +34,7 @@ crunch crunch_foo2
 crunch_ignore (add: crunch_foo1)
 
 crunch crunch_foo2
-  for gt: "\<lambda>x. x > y"
+  for gt: "\<lambda>x. mstate x > y"
   (ignore_del: crunch_foo1)
 
 crunch_ignore (del: crunch_foo1)
@@ -66,12 +66,12 @@ crunch crunch_foo2
   for (valid) at_2: "crunch_always_true 2"
   (wp: crunch_foo1_at_2[simplified])
 
-fun crunch_foo3 :: "nat => nat => 'a => (nat,unit) nondet_monad" where
+fun crunch_foo3 :: "nat => nat => 'a => (unit, nat, unit) nondet_monad" where
   "crunch_foo3 0 x _ = crunch_foo1 x"
 | "crunch_foo3 (Suc n) x y = crunch_foo3 n x y"
 
 crunch crunch_foo3
-  for gt2: "\<lambda>x. x > y"
+  for gt2: "\<lambda>x. mstate x > y"
 
 crunch crunch_foo3
   for (empty_fail) empty_fail2
@@ -85,7 +85,7 @@ class foo_class =
   fixes stuff :: 'a
 begin
 
-fun crunch_foo4 :: "nat => nat => 'a => (nat,unit) nondet_monad" where
+fun crunch_foo4 :: "nat => nat => 'a => (unit, nat, unit) nondet_monad" where
   "crunch_foo4 0 x _ s = crunch_foo1 x s"
 | "crunch_foo4 (Suc n) x y s = crunch_foo4 n x y s"
 
@@ -102,18 +102,18 @@ lemma crunch_foo4_alt:
 
 (* prove rules about crunch_foo4 with and without the alternative definition *)
 crunch crunch_foo4
-  for gt3: "\<lambda>x. x > y"
+  for gt3: "\<lambda>x. mstate x > y"
 
 crunch crunch_foo4
   for (no_fail) no_fail2
   (rule: crunch_foo4_alt)
 
 crunch crunch_foo4
-  for gt3': "\<lambda>x. x > y"
+  for gt3': "\<lambda>x. mstate x > y"
   (rule: crunch_foo4_alt)
 
 crunch crunch_foo5
-  for gt4: "\<lambda>x. x > y"
+  for gt4: "\<lambda>x. mstate x > y"
 
 (* Test cases for crunch in locales *)
 
@@ -123,7 +123,7 @@ definition
 crunch_ignore (del: bind)
 
 locale test_locale =
-fixes fixed_return_unit :: "(unit, unit) nondet_monad"
+fixes fixed_return_unit :: "(unit, unit, unit) nondet_monad"
 
 begin
 
@@ -145,17 +145,17 @@ definition
 
 definition
   "crunch_foo9 (x :: nat) \<equiv> do
-    modify ((+) x);
-    modify ((+) x)
+    modify (map_state ((+) x));
+    modify (map_state ((+) x))
   od"
 
 crunch crunch_foo9
-  for test: "\<lambda>x. x > y" (ignore: bind)
+  for test: "\<lambda>x. mstate x > y" (ignore: bind)
 
 definition
   "crunch_foo10 (x :: nat) \<equiv> do
-    modify ((+) x);
-    modify ((+) x)
+    modify (map_state ((+) x));
+    modify (map_state ((+) x))
   od"
 
 (*crunch_def attribute overrides definition lookup *)
@@ -166,13 +166,13 @@ lemma crunch_foo10_def2[crunch_def]:
   by simp
 
 crunch crunch_foo10
-  for test[wp]: "\<lambda>x. x > y"
+  for test[wp]: "\<lambda>x. mstate x > y"
 
 (* crunch_ignore works within a locale *)
 crunch_ignore (add: bind)
 
 crunch crunch_foo9
-  for test': "\<lambda>x. x > y"
+  for test': "\<lambda>x. mstate x > y"
 
 end
 
@@ -200,7 +200,7 @@ end
 
 (* check that qualified names are handled properly. *)
 
-consts foo_const :: "(unit, unit) nondet_monad"
+consts foo_const :: "(unit, unit, unit) nondet_monad"
 defs foo_const_def: "foo_const \<equiv> Crunch_Test_Qualified_NonDet.foo_const"
 
 crunch foo_const
@@ -216,9 +216,9 @@ crunch crunch_foo3, crunch_foo4, crunch_foo5
 
 (* check that crunch can use wps to lift sub-predicates
    (and also that top-level constants can be ignored) *)
-consts crunch_foo11 :: "(nat, unit) nondet_monad"
-consts Q :: "bool \<Rightarrow> nat \<Rightarrow> bool"
-consts R :: "nat \<Rightarrow> bool"
+consts crunch_foo11 :: "(unit, nat, unit) nondet_monad"
+consts Q :: "bool \<Rightarrow> (unit, nat) monad_state \<Rightarrow> bool"
+consts R :: "(unit, nat) monad_state \<Rightarrow> bool"
 axiomatization
   where test1: "\<lbrace>Q x\<rbrace> crunch_foo11 \<lbrace>\<lambda>_. Q x\<rbrace>"
   and test2: "\<lbrace>\<lambda>s. P (R s)\<rbrace> crunch_foo11 \<lbrace>\<lambda>_ s. P (R s)\<rbrace>"
@@ -228,15 +228,17 @@ crunch crunch_foo11
   (wp: test1 wps: test2 ignore: crunch_foo11)
 
 (* check that crunch can handle functions lifted between different state spaces *)
-record 'a state =
+record 'a state = "unit monad_state_record" +
   state' :: nat
   ext :: 'a
 
-definition do_nat_op :: "(nat, unit) nondet_monad \<Rightarrow> ('a state,unit) nondet_monad" where
+type_synonym 'a state_x = "('a, unit) state_ext"
+
+definition do_nat_op :: "(unit, nat, unit) nondet_monad \<Rightarrow> (unit, 'a state_x, unit) nondet_monad" where
   "do_nat_op f \<equiv>
      do
        s \<leftarrow> get;
-       (_,s') \<leftarrow> select_f (mk_ef (f (state' s)));
+       (_, s') \<leftarrow> select_f (mk_ef (f (monad_state () (state' s))));
        modify (\<lambda>state. state\<lparr>state' := s'\<rparr>)
      od"
 
@@ -248,23 +250,23 @@ lemma do_nat_op_ef:
   done
 
 lemma nf_do_nat_op:
-  "no_fail P f \<Longrightarrow> empty_fail f \<Longrightarrow> no_fail (P \<circ> state') (do_nat_op f)"
+  "no_fail P f \<Longrightarrow> empty_fail f \<Longrightarrow> no_fail (P \<circ> monad_state () \<circ> state') (do_nat_op f)"
   unfolding do_nat_op_def
   apply wpsimp
   apply (fastforce simp: mk_ef_def no_fail_def empty_fail_def)
   done
 
 definition
-  "crunch_foo12_nat (x :: nat) = modify ((+) x)"
+  "crunch_foo12_nat (x :: nat) = modify (map_state ((+) x))"
 
-consts wrap_ext_op :: "(nat state, unit) nondet_monad \<Rightarrow> ('a state,unit) nondet_monad"
+consts wrap_ext_op :: "(unit, nat state_x, unit) nondet_monad \<Rightarrow> (unit, 'a state_x, unit) nondet_monad"
 consts unwrap_ext :: "'a state \<Rightarrow> nat state"
 
-definition do_extended_op :: "(nat state, unit) nondet_monad \<Rightarrow> ('a state,unit) nondet_monad" where
+definition do_extended_op :: "(unit, nat state_x, unit) nondet_monad \<Rightarrow> (unit, 'a state_x, unit) nondet_monad" where
   "do_extended_op eop \<equiv> do
                          ex \<leftarrow> get;
                          (_,es') \<leftarrow> select_f (mk_ef ((wrap_ext_op eop) ex));
-                         modify (\<lambda>state. state\<lparr>ext := (ext es')\<rparr>)
+                         modify (\<lambda>state. state\<lparr>ext := (ext (monad_state () es'))\<rparr>)
                         od"
 
 axiomatization
@@ -287,7 +289,7 @@ crunch crunch_foo12
   (wp: empty_fail_bind)
 
 (* check that other side conditions can still be collected when mixed with lifted functions*)
-definition crunch_foo13_pre :: "('a state,unit) nondet_monad" where
+definition crunch_foo13_pre :: "(unit, 'a state_x, unit) nondet_monad" where
   "crunch_foo13_pre \<equiv> return ()"
 
 axiomatization

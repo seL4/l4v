@@ -17,13 +17,24 @@ lemmas [crunch_param_rules] = Let_def return_bind returnOk_bindE
     trans[OF liftE_bindE return_bind]
 
 ML \<open>
-fun get_nondet_monad_state_type
-  (Type ("Product_Type.prod",
-         [Type ("Set.set", [Type ("Product_Type.prod", [_,v])]),
-          Type ("HOL.bool",[])]))
-      = SOME v
-  | get_nondet_monad_state_type _ = NONE
+  fun dest_nondet_monad (Type (@{type_name "fun"},
+                          [Type (@{type_name "monad_state_record_ext"}, [env, st]),
+                           Type (@{type_name "prod"},
+                             [Type (@{type_name "set"}, [Type (@{type_name "prod"}, [rv, st'])]),
+                              @{typ bool}])])) = if st = st' then SOME (env, st, rv) else NONE
+    | dest_nondet_monad _ = NONE
 
+  fun is_nondet_monad T = dest_nondet_monad T <> NONE
+
+  fun mk_nondet_monad (env, st, rv) =
+                    Type (@{type_name "fun"},
+                          [Type (@{type_name "monad_state_record_ext"}, [env, st]),
+                           Type (@{type_name "prod"},
+                             [Type (@{type_name "set"}, [Type (@{type_name "prod"}, [rv, st])]),
+                              @{typ bool}])])
+\<close>
+
+ML \<open>
 structure CrunchValidInstance : CrunchInstance =
 struct
   val name = "valid";
@@ -49,7 +60,7 @@ struct
   val wps_tactic = wps_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. valid P_free_ignore mapp_lambda_ignore Q_free_ignore";
-  val get_monad_state_type = get_nondet_monad_state_type;
+  val is_monad_type = is_nondet_monad;
 end;
 
 structure CrunchValid : CRUNCH = Crunch(CrunchValidInstance);
@@ -78,7 +89,7 @@ struct
   fun wps_tactic _ _ _ = no_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. no_fail P_free_ignore mapp_lambda_ignore";
-  val get_monad_state_type = get_nondet_monad_state_type;
+  val is_monad_type = is_nondet_monad;
 end;
 
 structure CrunchNoFail : CRUNCH = Crunch(CrunchNoFailInstance);
@@ -105,7 +116,7 @@ struct
   fun wps_tactic _ _ _ = no_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. empty_fail mapp_lambda_ignore";
-  val get_monad_state_type = get_nondet_monad_state_type;
+  val is_monad_type = is_nondet_monad;
 end;
 
 structure CrunchEmptyFail : CRUNCH = Crunch(CrunchEmptyFailInstance);
@@ -135,7 +146,7 @@ struct
   val wps_tactic = wps_tac;
   val magic = Syntax.parse_term @{context}
     "\<lambda>mapp_lambda_ignore. validE P_free_ignore mapp_lambda_ignore Q_free_ignore Q_free_ignore";
-  val get_monad_state_type = get_nondet_monad_state_type;
+  val is_monad_type = is_nondet_monad;
 end;
 
 structure CrunchValidE : CRUNCH = Crunch(CrunchValidEInstance);
