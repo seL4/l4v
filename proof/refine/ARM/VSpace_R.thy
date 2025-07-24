@@ -1219,8 +1219,7 @@ lemma findFreeHWASID_None_map [wp]:
                    doMachineOp_def split_def
               cong: option.case_cong)
   apply (rule hoare_pre)
-   apply (wp|wpc|simp split del: if_split)+
-  apply auto
+   apply (wp|wpc|simp split del: if_split cong: if_cong)+
   done
 
 lemma findFreeHWASID_None_HWTable [wp]:
