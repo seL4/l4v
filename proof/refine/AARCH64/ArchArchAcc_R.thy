@@ -11,11 +11,9 @@ theory ArchArchAcc_R
 imports ArchAcc_R
 begin
 
-unbundle l4v_word_context
+context Arch begin arch_global_naming
 
-context begin interpretation Arch . (*FIXME: arch-split*)
-
-declare if_cong[cong] (* FIXME: if_cong *)
+named_theorems ArchAcc_R_assms
 
 lemma asid_pool_at_ko:
   "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (AARCH64_A.ASIDPool pool)) p s"
@@ -33,16 +31,7 @@ lemma pteBits_pte_bits[simp]:
   "pteBits = pte_bits"
   by (simp add: bit_simps pteBits_def)
 
-lemma cte_map_in_cnode1:
-  "\<lbrakk> x \<le> x + 2 ^ (cte_level_bits + length y) - 1 \<rbrakk> \<Longrightarrow> x \<le> cte_map (x, y)"
-  apply (simp add: cte_map_def)
-  apply (rule word_plus_mono_right2[where b="mask (cte_level_bits + length y)"])
-   apply (simp add: mask_def add_diff_eq)
-  apply (rule leq_high_bits_shiftr_low_bits_leq_bits)
-  apply (rule of_bl_max)
-  done
-
-lemma pspace_aligned_cross:
+lemma pspace_aligned_cross[ArchAcc_R_assms]:
   "\<lbrakk> pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> pspace_aligned' s'"
   apply (clarsimp simp: pspace_aligned'_def pspace_aligned_def pspace_relation_def)
   apply (rename_tac p' ko')
@@ -82,11 +71,6 @@ lemma pspace_aligned_cross:
          simp add: bit_simps' split: arch_kernel_object.splits)
   done
 
-lemma of_bl_shift_cte_level_bits:
-  "(of_bl z :: machine_word) << cte_level_bits \<le> mask (cte_level_bits + length z)"
-  by word_bitwise
-     (simp add: test_bit_of_bl bit_simps word_size cte_level_bits_def rev_bl_order_simps)
-
 lemma obj_relation_cuts_range_limit:
   "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko' \<rbrakk>
    \<Longrightarrow> \<exists>x n. p' = p + x \<and> is_aligned x n \<and> n \<le> obj_bits ko \<and> x \<le> mask (obj_bits ko)"
@@ -110,7 +94,7 @@ lemma obj_relation_cuts_range_limit:
    apply fastforce+
   done
 
-lemma obj_relation_cuts_range_mask_range:
+lemma obj_relation_cuts_range_mask_range[ArchAcc_R_assms]:
   "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko'; is_aligned p (obj_bits ko) \<rbrakk>
    \<Longrightarrow> p' \<in> mask_range p (obj_bits ko)"
   apply (drule (1) obj_relation_cuts_range_limit, clarsimp)
@@ -135,7 +119,7 @@ lemma obj_relation_cuts_obj_bits:
 
 lemmas is_aligned_add_step_le' = is_aligned_add_step_le[simplified mask_2pm1 add_diff_eq]
 
-lemma pspace_distinct_cross:
+lemma pspace_distinct_cross[ArchAcc_R_assms]:
   "\<lbrakk> pspace_distinct s; pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow>
    pspace_distinct' s'"
   apply (frule (1) pspace_aligned_cross)
@@ -267,11 +251,6 @@ lemma storePTE_state_hyp_refs_of[wp]:
    \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   by (wpsimp wp: hoare_drop_imps setObject_state_hyp_refs_of_eq
              simp: storePTE_def updateObject_default_def in_monad)
-
-crunch setIRQState
-  for cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
-crunch getIRQSlot
-  for inv[wp]: "P"
 
 lemma setObject_ASIDPool_corres[corres]:
   "\<lbrakk> p = p'; a = map_option abs_asid_entry o inv ASIDPool a' o ucast \<rbrakk> \<Longrightarrow>
@@ -561,7 +540,7 @@ proof (induct level arbitrary: pt)
 next
   case (Suc level)
   show ?case
-    by (subst lookupPTFromLevel.simps, simp add: checkPTAt_def)
+    by (subst lookupPTFromLevel.simps, simp add: checkPTAt_def cong: if_cong)
        (wpsimp wp: Suc getPTE_wp simp: pteAtIndex_def)
 qed
 
@@ -587,7 +566,7 @@ lemma ptIndex_eq[simp]:
 
 lemma ptSlotIndex_eq[simp]:
   "ptSlotIndex (size level) = pt_slot_offset level"
-  by (clarsimp intro!: ext simp: ptSlotIndex_def pt_slot_offset_def)
+  by (clarsimp del: ext intro!: ext simp: ptSlotIndex_def pt_slot_offset_def)
 
 lemmas ptSlotIndex_0[simp] = ptSlotIndex_eq[where level=0, simplified]
 
@@ -699,7 +678,8 @@ next
   show ?case
     apply (subst pt_lookup_slot_from_level_rec)
     apply (simp add: lookupPTSlotFromLevel.simps Let_def obind_comp_dist if_comp_dist
-                     gets_the_if_distrib checkPTAt_def gets_the_oapply2_comp)
+                     gets_the_if_distrib checkPTAt_def gets_the_oapply2_comp
+                cong: if_cong)
     apply (rule corres_guard_imp, rule corres_split[where r'=pte_relation'])
          apply (rule pteAtIndex_corres, simp)
         apply (rule corres_if3)
@@ -916,8 +896,6 @@ next
     done
 qed
 
-declare in_set_zip_refl[simp]
-
 crunch storePTE
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
@@ -926,9 +904,9 @@ lemmas storePTE_typ_ats[wp] = typ_at_lifts [OF storePTE_typ_at']
 
 lemma setObject_asid_typ_at' [wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> setObject p' (v::asidpool) \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
-  by (wp setObject_typ_at')
+  by (rule setObject_typ_at')
 
-lemmas setObject_asid_typ_ats' [wp] = typ_at_lifts [OF setObject_asid_typ_at']
+lemmas setObject_asid_typ_ats'[wp] = typ_at_lifts [OF setObject_asid_typ_at']
 
 lemma getObject_pte_inv[wp]:
   "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>rv :: pte. P\<rbrace>"
@@ -945,7 +923,7 @@ lemmas storePTE_corres'[corres] = storePTE_corres[@lift_corres_args]
 lemma arch_cap_rights_update:
   "acap_relation c c' \<Longrightarrow>
    cap_relation (cap.ArchObjectCap (acap_rights_update (acap_rights c \<inter> msk) c))
-                 (Arch.maskCapRights (rights_mask_map msk) c')"
+                (Arch.maskCapRights (rights_mask_map msk) c')"
   apply (cases c, simp_all add: AARCH64_H.maskCapRights_def
                                 acap_rights_update_def Let_def isCap_simps)
   apply (simp add: maskVMRights_def vmrights_map_def rights_mask_map_def
@@ -966,10 +944,10 @@ lemma arch_deriveCap_valid:
   "\<lbrace>valid_cap' (ArchObjectCap arch_cap)\<rbrace>
      Arch.deriveCap u arch_cap
    \<lbrace>\<lambda>rv. valid_cap' rv\<rbrace>,-"
-  apply (simp add: AARCH64_H.deriveCap_def split del: if_split)
+  apply (simp add: AARCH64_H.deriveCap_def split del: if_split cong: if_cong)
   apply (wp undefined_validE_R)
   apply (cases arch_cap; simp add: isCap_defs)
-  apply (simp add: valid_cap'_def capAligned_def capUntypedPtr_def AARCH64_H.capUntypedPtr_def)
+  apply (simp add: valid_cap'_def capAligned_def global.capUntypedPtr_def capUntypedPtr_def)
   done
 
 lemma mdata_map_simps[simp]:
@@ -1134,11 +1112,10 @@ lemma findVSpaceForASID_corres:
   done
 
 lemma setObject_arch:
-  assumes X: "\<And>p q n ko. \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv s. P (ksArchState s)\<rbrace>"
+  assumes "\<And>p q n ko. \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv s. P (ksArchState s)\<rbrace>"
   shows "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setObject t val \<lbrace>\<lambda>rv s. P (ksArchState s)\<rbrace>"
-  apply (simp add: setObject_def split_def)
-  apply (wp X | simp)+
-  done
+  by (simp add: setObject_def split_def)
+     (wpsimp wp: assms)
 
 lemma setObject_ASID_arch [wp]:
   "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setObject p (v::asidpool) \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
@@ -1220,31 +1197,12 @@ lemma setObject_ASID_ctes_of'[wp]:
    \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   by (rule ctes_of_from_cte_wp_at [where Q=\<top>, simplified]) wp
 
-lemma clearMemory_vms':
-  "valid_machine_state' s \<Longrightarrow>
-   \<forall>x\<in>fst (clearMemory ptr bits (ksMachineState s)).
-      valid_machine_state' (s\<lparr>ksMachineState := snd x\<rparr>)"
-  apply (clarsimp simp: valid_machine_state'_def
-                        disj_commute[of "pointerInUserData p s" for p s])
-  apply (drule_tac x=p in spec, simp)
-  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = 0"
-         in use_valid[where P=P and Q="\<lambda>_. P" for P], simp_all)
-  apply (rule clearMemory_um_eq_0)
-  done
-
-lemma dmo_clearMemory_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (clearMemory w sz) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: doMachineOp_def split_def)
-  apply wp
-  apply (clarsimp simp: invs'_def valid_state'_def)
-  apply (rule conjI)
-   apply (simp add: valid_irq_masks'_def, elim allEI, clarsimp)
-   apply (drule use_valid)
-     apply (rule no_irq_clearMemory[simplified no_irq_def, rule_format])
-    apply simp_all
-  apply (drule clearMemory_vms')
-  apply fastforce
-  done
-
 end
+
+interpretation ArchAcc_R?: ArchAcc_R
+proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (intro_locales; (unfold_locales; fact ArchAcc_R_assms)?)
+qed
+
 end
