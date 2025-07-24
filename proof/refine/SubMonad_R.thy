@@ -1,4 +1,5 @@
 (*
+ * Copyright 2014, General Dynamics C4 Systems
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -23,7 +24,7 @@ interpretation submonad_doMachineOp:
 lemma corres_machine_op':
   assumes P: "corres_underlying Id False True r P P' x x'"
   shows      "corres r (P \<circ> machine_state) (P' \<circ> ksMachineState) (do_machine_op x) (doMachineOp x')"
-  apply (rule corres_submonad3 [OF submonad_do_machine_op submonad_doMachineOp _ _ _ _ P])
+  apply (rule corres_submonad3[OF submonad_do_machine_op submonad_doMachineOp _ _ _ _ P])
    apply (simp_all add: state_relation_def swp_def)
   done
 
@@ -31,6 +32,9 @@ lemma corres_machine_op:
   assumes P: "corres_underlying Id False True r \<top> \<top> x x'"
   shows      "corres r \<top> \<top> (do_machine_op x) (doMachineOp x')"
   by (rule corres_machine_op'[OF P, simplified])
+
+lemmas corresK_machine_op =
+  corres_machine_op[atomized, THEN corresK_lift_rule, rule_format, corresK]
 
 lemmas corres_machine_op_Id = corres_machine_op[OF corres_Id]
 lemmas corres_machine_op_Id_dc[corres_term] = corres_machine_op_Id[where r="dc::unit \<Rightarrow> unit \<Rightarrow> bool"]
@@ -52,8 +56,6 @@ lemma doMachineOp_mapM_x:
   apply (rule assms)
   done
 
-
-context begin interpretation Arch . (*FIXME: arch-split*)
 definition
   "asUser_fetch \<equiv> \<lambda>t s. case (ksPSpace s t) of
       Some (KOTCB tcb) \<Rightarrow> (atcbContextGet o tcbArch) tcb
@@ -66,7 +68,6 @@ definition
                  | obj \<Rightarrow> obj
       in s \<lparr> ksPSpace := (ksPSpace s) (t := obj) \<rparr>"
 
-
 lemma threadGet_stateAssert_gets_asUser:
   "threadGet (atcbContextGet o tcbArch) t = do stateAssert (tcb_at' t) []; gets (asUser_fetch t) od"
   apply (rule is_stateAssert_gets [OF _ _ empty_fail_threadGet no_fail_threadGet])
@@ -74,8 +75,7 @@ lemma threadGet_stateAssert_gets_asUser:
    apply (simp add: threadGet_def liftM_def, wp getObject_tcb_at')
   apply (simp add: threadGet_def liftM_def, wp)
    apply (rule hoare_strengthen_post, rule getObject_obj_at')
-     apply (simp add: objBits_simps')+
-   apply (clarsimp simp: obj_at'_def asUser_fetch_def atcbContextGet_def)+
+   apply (clarsimp simp: obj_at'_def asUser_fetch_def objBits_less_word_bits)+
   done
 
 lemma threadSet_modify_asUser:
@@ -88,18 +88,8 @@ lemma threadSet_modify_asUser:
    apply (rule_tac Q'="\<lambda>rv. obj_at' ((=) rv) t and ((=) st)" in hoare_post_imp)
     apply (clarsimp simp: asUser_replace_def Let_def obj_at'_def fun_upd_def
                    split: option.split kernel_object.split)
-   apply (wp getObject_obj_at' | clarsimp simp: objBits_simps' atcbContextSet_def)+
+   apply (wp getObject_obj_at' | clarsimp simp: objBits_less_word_bits)+
   done
-
-lemma atcbContext_get_eq[simp] : "atcbContextGet (atcbContextSet x atcb) = x"
-  by(simp add: atcbContextGet_def atcbContextSet_def)
-
-lemma atcbContext_set_eq[simp] : "atcbContextSet (atcbContextGet t) t = t"
-  by (cases t, simp add: atcbContextGet_def atcbContextSet_def)
-
-
-lemma atcbContext_set_set[simp] : "atcbContextSet x (atcbContextSet y atcb) = atcbContextSet x atcb"
-  by (cases atcb ,simp add: atcbContextSet_def)
 
 lemma submonad_asUser:
   "submonad (asUser_fetch t) (asUser_replace t) (tcb_at' t) (asUser t)"
@@ -115,9 +105,8 @@ lemma submonad_asUser:
                           fun_upd_idem
                    split: kernel_object.splits option.splits)
     apply (rename_tac tcb)
-    apply (case_tac tcb, simp add: map_upd_triv atcbContextSet_def)
-   apply (clarsimp simp: obj_at'_def asUser_replace_def
-                         Let_def atcbContextSet_def
+    apply (case_tac tcb, simp add: map_upd_triv)
+   apply (clarsimp simp: obj_at'_def asUser_replace_def Let_def
                   split: kernel_object.splits option.splits)
    apply (rename_tac tcb)
    apply (case_tac tcb, simp add: objBitsKO_def ps_clear_def)
@@ -130,17 +119,12 @@ lemma submonad_asUser:
   apply (rule refl)
   done
 
-end
-
 global_interpretation submonad_asUser:
   submonad "asUser_fetch t" "asUser_replace t" "tcb_at' t" "asUser t"
   by (rule submonad_asUser)
 
 lemma doMachineOp_nosch [wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> doMachineOp m \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-  apply (simp add: doMachineOp_def split_def)
-  apply (wp select_f_wp)
-  apply simp
-  done
+  by (wpsimp simp: doMachineOp_def split_def wp: select_f_wp)
 
 end
