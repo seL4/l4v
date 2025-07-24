@@ -417,6 +417,7 @@ lemma non_hyp_hyp_refs_of'[simp]:
   by (clarsimp split: option.splits kernel_object.split
                simp: hyp_refs_of'_def tcb_hyp_refs'_def)
 
+(* FIXME arch-split: other arches have this in TcbAcc_R *)
 lemma tcb_at'_cross:
   assumes p: "pspace_relation (kheap s) (ksPSpace s')"
   assumes t: "tcb_at' ptr s'"
@@ -429,177 +430,7 @@ lemma tcb_at'_cross:
                      pdpte_relation_def pml4e_relation_def
               split: Structures_A.kernel_object.split_asm if_split_asm arch_kernel_obj.split_asm)
 
-lemma pspace_aligned_cross:
-  "\<lbrakk> pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> pspace_aligned' s'"
-  apply (clarsimp simp: pspace_aligned'_def pspace_aligned_def pspace_relation_def)
-  apply (rename_tac p' ko')
-  apply (prop_tac "p' \<in> pspace_dom (kheap s)", fastforce)
-  apply (thin_tac "pspace_dom k = p" for k p)
-  apply (clarsimp simp: pspace_dom_def)
-  apply (drule bspec, fastforce)+
-  apply clarsimp
-  apply (rename_tac ko' a a' P ko)
-  apply (erule (1) obj_relation_cutsE; clarsimp simp: objBits_simps)
-
-          \<comment>\<open>CNode\<close>
-          apply (clarsimp simp: cte_map_def simp flip: shiftl_t2n')
-          apply (simp only: cteSizeBits_def cte_level_bits_def)
-          apply (rule is_aligned_add)
-           apply (erule is_aligned_weaken, simp)
-          apply (rule is_aligned_weaken)
-          apply (rule is_aligned_shiftl_self, simp)
-
-        \<comment>\<open>TCB\<close>
-         apply (clarsimp simp: tcbBlockSizeBits_def elim!: is_aligned_weaken)
-
-        \<comment>\<open>PTE\<close>
-        apply (clarsimp simp: archObjSize_def table_size_def ptTranslationBits_def)
-        apply (rule is_aligned_add)
-         apply (erule is_aligned_weaken)
-         apply simp
-        apply (simp add: word_size_bits_def)
-        apply (rule is_aligned_shift)
-
-       \<comment>\<open>PDE\<close>
-       apply (clarsimp simp: archObjSize_def table_size_def ptTranslationBits_def)
-       apply (rule is_aligned_add)
-        apply (erule is_aligned_weaken)
-        apply simp
-       apply (simp add: word_size_bits_def)
-       apply (rule is_aligned_shift)
-
-      \<comment>\<open>PDPTE\<close>
-      apply (clarsimp simp: archObjSize_def table_size_def ptTranslationBits_def)
-      apply (rule is_aligned_add)
-       apply (erule is_aligned_weaken)
-       apply simp
-      apply (simp add: word_size_bits_def)
-      apply (rule is_aligned_shift)
-
-     \<comment>\<open>PML4E\<close>
-     apply (clarsimp simp: archObjSize_def table_size_def ptTranslationBits_def)
-     apply (rule is_aligned_add)
-      apply (erule is_aligned_weaken)
-      apply simp
-     apply (simp add: word_size_bits_def)
-     apply (rule is_aligned_shift)
-
-    \<comment>\<open>DataPage\<close>
-    apply (rule is_aligned_add)
-     apply (erule is_aligned_weaken)
-     apply (rule pbfs_atleast_pageBits)
-    apply (rule is_aligned_mult_triv2)
-
-   \<comment>\<open>other_obj_relation\<close>
-   apply (simp add: other_obj_relation_def)
-   apply (clarsimp simp: tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def
-                  split: kernel_object.splits Structures_A.kernel_object.splits)
-
-  \<comment>\<open>other_aobj_relation\<close>
-  apply (clarsimp simp: other_aobj_relation_def
-                 split: kernel_object.splits Structures_A.kernel_object.splits)
-  apply (fastforce simp: archObjSize_def split: arch_kernel_object.splits arch_kernel_obj.splits)
-  done
-
-lemma of_bl_shift_cte_level_bits:
-  "(of_bl z :: machine_word) << cte_level_bits \<le> mask (cte_level_bits + length z)"
-  by word_bitwise
-     (simp add: test_bit_of_bl bit_simps word_size cte_level_bits_def rev_bl_order_simps)
-
-lemma obj_relation_cuts_range_limit:
-  "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko' \<rbrakk>
-   \<Longrightarrow> \<exists>x n. p' = p + x \<and> is_aligned x n \<and> n \<le> obj_bits ko \<and> x \<le> mask (obj_bits ko)"
-  apply (erule (1) obj_relation_cutsE; clarsimp)
-          apply (drule (1) wf_cs_nD)
-          apply (clarsimp simp: cte_map_def simp flip: shiftl_t2n')
-          apply (rule_tac x=cte_level_bits in exI)
-          apply (simp add: is_aligned_shift of_bl_shift_cte_level_bits)
-         apply (rule_tac x=tcbBlockSizeBits in exI)
-         apply (simp add: tcbBlockSizeBits_def)
-        apply (rule_tac x=word_size_bits in exI, simp add: bit_simps is_aligned_shift mask_def, word_bitwise)
-       apply (rule_tac x=word_size_bits in exI, simp add: bit_simps is_aligned_shift mask_def, word_bitwise)
-      apply (rule_tac x=word_size_bits in exI, simp add: bit_simps is_aligned_shift mask_def, word_bitwise)
-     apply (rule_tac x=word_size_bits in exI, simp add: bit_simps is_aligned_shift mask_def, word_bitwise)
-    apply (rule_tac x=pageBits in exI)
-    apply (simp add: is_aligned_mult_triv2 pbfs_atleast_pageBits)
-    apply (simp add: mask_def shiftl_t2n mult_ac pbfs_less_wb')
-    apply (erule word_less_power_trans2, rule pbfs_atleast_pageBits)
-    apply (simp add: pbfs_less_wb'[unfolded word_bits_def, simplified])
-   apply fastforce+
-  done
-
-lemma obj_relation_cuts_range_mask_range:
-  "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko'; is_aligned p (obj_bits ko) \<rbrakk>
-   \<Longrightarrow> p' \<in> mask_range p (obj_bits ko)"
-  apply (drule (1) obj_relation_cuts_range_limit, clarsimp)
-  apply (rule conjI)
-   apply (rule word_plus_mono_right2; assumption?)
-   apply (simp add: is_aligned_no_overflow_mask)
-  apply (erule word_plus_mono_right)
-  apply (simp add: is_aligned_no_overflow_mask)
-  done
-
-lemma obj_relation_cuts_obj_bits:
-  "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko' \<rbrakk> \<Longrightarrow> objBitsKO ko' \<le> obj_bits ko"
-  apply (erule (1) obj_relation_cutsE;
-          clarsimp simp: objBits_simps objBits_defs bit_simps cte_level_bits_def
-                         pbfs_atleast_pageBits[simplified bit_simps])
-   apply (cases ko; simp add: other_obj_relation_def objBits_defs split: kernel_object.splits)
-  apply (case_tac ako; simp add: other_aobj_relation_def objBits_defs archObjSize_def
-                            split: kernel_object.splits arch_kernel_object.splits)
-  done
-
-lemmas is_aligned_add_step_le' = is_aligned_add_step_le[simplified mask_2pm1 add_diff_eq]
-
-lemma pspace_distinct_cross:
-  "\<lbrakk> pspace_distinct s; pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow>
-   pspace_distinct' s'"
-  apply (frule (1) pspace_aligned_cross)
-  apply (clarsimp simp: pspace_distinct'_def)
-  apply (rename_tac p' ko')
-  apply (rule pspace_dom_relatedE; assumption?)
-  apply (rename_tac p ko P)
-  apply (frule (1) pspace_alignedD')
-  apply (frule (1) pspace_alignedD)
-  apply (rule ps_clearI, assumption)
-   apply (case_tac ko'; simp add: objBits_simps objBits_defs pageBits_def)
-   apply (simp add: archObjSize_def pageBits_def split: arch_kernel_object.splits)
-  apply (rule ccontr, clarsimp)
-  apply (rename_tac x' ko_x')
-  apply (frule_tac x=x' in pspace_alignedD', assumption)
-  apply (rule_tac x=x' in pspace_dom_relatedE; assumption?)
-  apply (rename_tac x ko_x P')
-  apply (frule_tac p=x in pspace_alignedD, assumption)
-  apply (case_tac "p = x")
-   apply clarsimp
-   apply (erule (1) obj_relation_cutsE; clarsimp)
-          apply (clarsimp simp: cte_relation_def cte_map_def objBits_simps)
-          apply (rule_tac n=cte_level_bits in is_aligned_add_step_le'; assumption?)
-            apply (rule is_aligned_add; (rule is_aligned_shift)?)
-            apply (erule is_aligned_weaken, simp add: cte_level_bits_def)
-           apply (rule is_aligned_add; (rule is_aligned_shift)?)
-           apply (erule is_aligned_weaken, simp add: cte_level_bits_def)
-          apply (simp add: cte_level_bits_def cteSizeBits_def)
-         apply (clarsimp simp: pte_relation_def objBits_simps)
-         apply (rule_tac n=word_size_bits in is_aligned_add_step_le'; simp add: word_size_bits_def)
-        apply (clarsimp simp: pde_relation_def objBits_simps)
-        apply (rule_tac n=word_size_bits in is_aligned_add_step_le'; simp add: word_size_bits_def)
-       apply (clarsimp simp: pdpte_relation_def objBits_simps)
-       apply (rule_tac n=word_size_bits in is_aligned_add_step_le'; simp add: word_size_bits_def)
-      apply (clarsimp simp: pml4e_relation_def objBits_simps)
-      apply (rule_tac n=word_size_bits in is_aligned_add_step_le'; simp add: word_size_bits_def)
-     apply (simp add: objBitsKO_Data)
-     apply (rule_tac n=pageBits in is_aligned_add_step_le'; assumption?)
-    apply (case_tac ko; simp split: if_split_asm add: other_obj_relation_def other_aobj_relation_def)
-   apply (case_tac ako; simp add: is_other_obj_relation_type_def a_type_def split: if_split_asm)
-  apply (frule (1) obj_relation_cuts_obj_bits)
-  apply (drule (2) obj_relation_cuts_range_mask_range)+
-  apply (prop_tac "x' \<in> mask_range p' (objBitsKO ko')", simp add: mask_def add_diff_eq)
-  apply (frule_tac x=p and y=x in pspace_distinctD; assumption?)
-  apply (drule (4) mask_range_subsetD)
-  apply (erule (2) in_empty_interE)
-  done
-
+(* FIXME arch-split: other arches have this in TcbAcc_R *)
 lemma pspace_relation_tcb_at':
   assumes p: "pspace_relation (kheap a) (ksPSpace c)"
   assumes t: "tcb_at t a"
@@ -614,14 +445,6 @@ lemma pspace_relation_tcb_at':
   apply (drule(2) aligned_distinct_obj_atI'[where 'a=tcb], simp)
   apply (erule obj_at'_weakenE)
   apply simp
-  done
-
-lemma tcb_at_cross:
-  "\<lbrakk>tcb_at t s; pspace_aligned s; pspace_distinct s; pspace_relation (kheap s) (ksPSpace s')\<rbrakk>
-   \<Longrightarrow> tcb_at' t s'"
-  apply (drule (2) pspace_distinct_cross)
-  apply (drule (1) pspace_aligned_cross)
-  apply (erule (3) pspace_relation_tcb_at')
   done
 
 end
