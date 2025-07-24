@@ -48,7 +48,7 @@ lemma setObject_modify_variable_size:
   apply (simp add: project_inject objBits_def)
   apply (clarsimp simp only: koTypeOf_injectKO)
   apply (frule in_magnitude_check[where s'=s])
-    apply blast
+    apply (simp add: objBits_pos_power2[simplified objBits_def])
    apply fastforce
   apply (simp add: magnitudeCheck_assert in_monad bind_def gets_def oassert_opt_def
                    get_def return_def)
