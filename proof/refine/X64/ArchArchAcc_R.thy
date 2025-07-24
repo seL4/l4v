@@ -4,12 +4,10 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(*
-  Lemmas on arch get/set object etc
-*)
+(* Arch-specific lemmas on arch get/set object etc *)
 
-theory ArchAcc_R
-imports SubMonad_R ArchMove_R
+theory ArchArchAcc_R
+imports ArchAcc_R ArchMove_R
 begin
 
 context Arch begin global_naming X64_A (*FIXME: arch-split*)
