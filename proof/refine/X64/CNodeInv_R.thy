@@ -6717,7 +6717,6 @@ lemma capSwap_rvk_prog:
   apply arith
   done
 
-lemmas setObject_ASID_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF setObject_ASID_ctes_of']
 lemmas cancelAllIPC_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF cancelAllIPC_ctes_of]
 lemmas cancelAllSignals_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF cancelAllSignals_ctes_of]
 lemmas setEndpoint_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF set_ep_ctes_of]
@@ -6726,12 +6725,13 @@ lemmas setNotification_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF set_ntfn_cte
 lemmas emptySlot_rvk_prog' = emptySlot_rvk_prog[unfolded o_def]
 lemmas threadSet_ctesCaps_of = ctes_of_cteCaps_of_lift[OF threadSet_ctes_of]
 
+context begin interpretation Arch . (*FIXME: arch-split*)
+
+lemmas setObject_ASID_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF setObject_ASID_ctes_of']
 lemmas storePTE_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePTE_ctes]
 lemmas storePDE_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePDE_ctes]
 lemmas storePDPTE_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePDPTE_ctes]
 lemmas storePML4E_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePML4E_ctes]
-
-context begin interpretation Arch . (*FIXME: arch-split*)
 
 context
 notes option.case_cong_weak[cong]
