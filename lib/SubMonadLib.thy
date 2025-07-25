@@ -284,24 +284,6 @@ proof (induct l)
     done
 qed
 
-lemma corres_select:
-  "\<forall>s' \<in> S'. \<exists>s \<in> S. rvr s s' \<Longrightarrow> corres_underlying sr nf nf' rvr \<top> \<top> (select S) (select S')"
-  by (clarsimp simp: select_def corres_underlying_def)
-
-lemma corres_select_f:
-  "\<lbrakk> \<forall>s' \<in> fst S'. \<exists>s \<in> fst S. rvr s s'; nf' \<Longrightarrow> \<not> snd S' \<rbrakk>
-      \<Longrightarrow> corres_underlying sr nf nf' rvr \<top> \<top> (select_f S) (select_f S')"
-  by (clarsimp simp: select_f_def corres_underlying_def)
-
-lemma corres_modify':
-  "\<lbrakk> \<forall>s s'. (s, s') \<in> sr \<longrightarrow> (const_env f s, const_env f' s') \<in> sr; r () () \<rbrakk>
-      \<Longrightarrow> corres_underlying sr nf nf' r \<top> \<top> (modify f) (modify f')"
-  by (clarsimp simp: modify_def corres_underlying_def bind_def get_def put_def const_env_def)
-
-lemma stateAssert_sp:
-  "\<lbrace>P\<rbrace> stateAssert Q l \<lbrace>\<lambda>_. P and Q\<rbrace>"
-  by (clarsimp simp: valid_def stateAssert_def in_monad)
-
 lemma corres_submonad:
   "\<lbrakk> submonad f r g fn; submonad f' r' g' fn';
      \<forall>s s'. (s, s') \<in> sr \<and> g s \<and> g' s' \<longrightarrow> (monad_state () (f s), monad_state () (f' s')) \<in> ssr;
