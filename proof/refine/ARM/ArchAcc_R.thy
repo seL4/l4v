@@ -194,7 +194,7 @@ lemma setObject_ASIDPool_corres [corres]:
   apply (corresKsimp search: setObject_other_arch_corres[where P="\<lambda>_. True"]
                         wp: get_object_ret get_object_wp)
   apply (simp add: other_aobj_relation_def asid_pool_relation_def)
-  apply (clarsimp simp: obj_at_simps )
+  apply (clarsimp simp: obj_at_simps aa_type_def)
   by (auto simp: obj_at_simps typ_at_to_obj_at_arches
           split: Structures_A.kernel_object.splits if_splits arch_kernel_obj.splits)
 
@@ -1024,11 +1024,11 @@ declare in_set_zip_refl[simp]
 
 crunch storePDE
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
+  (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
 
 crunch storePTE
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
+  (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
 
 lemmas storePDE_typ_ats[wp] = typ_at_lifts [OF storePDE_typ_at']
 lemmas storePTE_typ_ats[wp] = typ_at_lifts [OF storePTE_typ_at']

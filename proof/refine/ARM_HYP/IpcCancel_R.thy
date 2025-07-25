@@ -9,6 +9,10 @@ imports
   Schedule_R
   "Lib.SimpStrategy"
 begin
+
+arch_requalify_facts
+  valid_global_refs_lift'
+
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch cancelAllIPC
@@ -1731,7 +1735,7 @@ proof -
   done
 qed
 
-context begin interpretation Arch . (* FIXME: arch-split *)
+context Arch begin arch_global_naming
 
 lemma tcbSchedEnqueue_valid_pspace'[wp]:
   "tcbSchedEnqueue tcbPtr \<lbrace>valid_pspace'\<rbrace>"
@@ -1739,6 +1743,9 @@ lemma tcbSchedEnqueue_valid_pspace'[wp]:
   by wpsimp
 
 end
+
+arch_requalify_facts tcbSchedEnqueue_valid_pspace' (* FIXME arch-split: interface *)
+lemmas [wp] = tcbSchedEnqueue_valid_pspace'
 
 lemma cancel_all_invs'_helper:
   "\<lbrace>all_invs_but_sym_refs_ct_not_inQ' and (\<lambda>s. \<forall>x \<in> set q. tcb_at' x s)

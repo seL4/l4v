@@ -7,7 +7,7 @@
 
 theory Init_R
 imports
-  KHeap_R
+  ArchKHeap_R
 
 begin
 

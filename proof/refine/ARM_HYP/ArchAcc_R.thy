@@ -125,16 +125,6 @@ lemma getObject_ASIDPool_corres [@lift_corres_args, corres]:
   apply (clarsimp simp: other_aobj_relation_def asid_pool_relation_def)
   done
 
-lemma aligned_distinct_obj_atI':
-  "\<lbrakk> ksPSpace s x = Some ko; pspace_aligned' s;
-      pspace_distinct' s; ko = injectKO v \<rbrakk>
-      \<Longrightarrow> ko_at' v x s"
-  apply (simp add: obj_at'_def projectKOs project_inject
-                   pspace_distinct'_def pspace_aligned'_def)
-  apply (drule bspec, erule domI)+
-  apply simp
-  done
-
 lemmas aligned_distinct_asid_pool_atI'
     = aligned_distinct_obj_atI'[where 'a=asidpool,
                                 simplified, OF _ _ _ refl]
@@ -237,7 +227,7 @@ lemma setObject_ASIDPool_corres [corres]:
   apply (corresKsimp search: setObject_other_arch_corres[where P="\<lambda>_. True"]
                         wp: get_object_ret get_object_wp)
   apply (simp add: other_aobj_relation_def asid_pool_relation_def)
-  apply (clarsimp simp: obj_at_simps )
+  apply (clarsimp simp: gen_obj_at_simps aa_type_def)
   by (auto simp: obj_at_simps typ_at_to_obj_at_arches
           split: Structures_A.kernel_object.splits if_splits arch_kernel_obj.splits)
 
