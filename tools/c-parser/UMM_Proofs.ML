@@ -545,8 +545,8 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
       Simplifier.asm_full_rewrite
           ((thy2ctxt thy) addsimps
                       [tag_def_thm, typtag_thm,
-                       @{thm "pad_typ_name_def"}, @{thm "insert_commute"},
-                       @{thm "nat_to_bin_string.simps"}])
+                       @{thm "pad_typ_name_def"}, @{thm "insert_commute"}] @ 
+                       @{thms "signed_or_unsigned"} @ @{thms "nat_to_bin_string.simps"})
           (Thm.cterm_of (thy2ctxt thy) (mk_td_names typtag_lhs)) |> Drule.export_without_context
 
   (* Declare the td_names (typ_info_t ..) = ... and add it to the simpset *)
