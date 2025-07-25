@@ -1263,6 +1263,15 @@ lemma corres_either_alternate2:
   apply simp
   done
 
+lemma corres_select:
+  "\<forall>s' \<in> S'. \<exists>s \<in> S. rvr s s' \<Longrightarrow> corres_underlying sr nf nf' rvr \<top> \<top> (select S) (select S')"
+  by (clarsimp simp: select_def corres_underlying_def)
+
+lemma corres_select_f:
+  "\<lbrakk> \<forall>s' \<in> fst S'. \<exists>s \<in> fst S. rvr s s'; nf' \<Longrightarrow> \<not> snd S' \<rbrakk>
+      \<Longrightarrow> corres_underlying sr nf nf' rvr \<top> \<top> (select_f S) (select_f S')"
+  by (clarsimp simp: select_f_def corres_underlying_def)
+
 lemma option_corres:
   assumes None: "\<lbrakk> x = None; x' = None \<rbrakk> \<Longrightarrow> corres_underlying sr nf nf' r P P' (A None) (C None)"
   assumes Some: "\<And>z z'. \<lbrakk> x = Some z; x' = Some z' \<rbrakk> \<Longrightarrow>

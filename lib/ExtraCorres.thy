@@ -158,6 +158,11 @@ lemma corres_modify:
   shows "corres_underlying sr nf nf' dc P P' (modify f) (modify g)"
   by (simp add: simpler_modify_def corres_singleton rl[unfolded const_env_def])
 
+lemma corres_modify':
+  "\<lbrakk> \<forall>s s'. (s, s') \<in> sr \<longrightarrow> (const_env f s, const_env f' s') \<in> sr; r () () \<rbrakk>
+      \<Longrightarrow> corres_underlying sr nf nf' r \<top> \<top> (modify f) (modify f')"
+  by (clarsimp simp: modify_def corres_underlying_def bind_def get_def put_def const_env_def)
+
 lemma corres_gets_the:
   assumes x: "corres_underlying sr nf nf' (r \<circ> the) P P' (gets f) y"
   shows      "corres_underlying sr nf nf' r (P and (\<lambda>s. f s \<noteq> None)) P' (gets_the f) y"

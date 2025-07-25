@@ -123,6 +123,10 @@ lemma stateAssert_wp:
   "\<lbrace>\<lambda>s. P s \<longrightarrow> Q () s\<rbrace> stateAssert P e \<lbrace>Q\<rbrace>"
   by (clarsimp simp: stateAssert_def) wp
 
+lemma stateAssert_sp:
+  "\<lbrace>P\<rbrace> stateAssert Q l \<lbrace>\<lambda>_. P and Q\<rbrace>"
+  by (clarsimp simp: valid_def stateAssert_def in_monad)
+
 lemma empty_fail_stateAssert[intro!, simp]:
   "empty_fail (stateAssert P l)"
   unfolding stateAssert_def by simp
