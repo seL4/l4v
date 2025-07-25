@@ -156,7 +156,7 @@ lemma state_vrefs_store_NonPageTablePTE:
      apply (frule_tac level=lvl in vs_lookup_level)
      apply (drule (1) vs_lookup_table_unique_level, rule refl)
           apply fastforce+
-     apply (frule bit1.plus_one_leq)
+     apply (frule vm_level.plus_one_leq)
      apply (erule_tac x=level in allE)
      apply (subst (asm) vs_lookup_slot_vref_for_level[symmetric], assumption)
      apply (frule_tac bot_level=bot in vs_lookup_min_level)
@@ -639,7 +639,7 @@ lemma vs_lookup_PageTablePTE:
      vref \<in> user_region;
      pts_of s (the (pte_ref pte)) = Some (empty_pt NormalPT_T); pt \<noteq> pptr_from_pte pte \<rbrakk>
      \<Longrightarrow> \<exists>level' \<ge> level. vs_lookup_table level' asid vref s = Some (lvl', pt)"
-  apply (induct level arbitrary: lvl' pt rule: bit1.from_top_full_induct[where y=max_pt_level])
+  apply (induct level arbitrary: lvl' pt rule: vm_level.from_top_full_induct[where y=max_pt_level])
    apply (fastforce simp: geq_max_pt_level vs_lookup_table_def pool_for_asid_def obind_def)
   apply (rule_tac x=lvl' in exI)
   apply (frule vs_lookup_min_level, clarsimp)
@@ -689,7 +689,7 @@ lemma vs_lookup_PageTablePTE':
      invalid_pte_at pt_t p s; ptes_of s' = (ptes_of s)(pt_t, p \<mapsto> pte); is_PageTablePTE pte;
      asid_pools_of s' = asid_pools_of s; asid_table s' = asid_table s; vref \<in> user_region  \<rbrakk>
      \<Longrightarrow> \<exists>level' \<ge> level. vs_lookup_table level' asid vref s' = Some (lvl', pt)"
-  apply (induct level arbitrary: lvl' pt rule: bit1.from_top_full_induct[where y=max_pt_level])
+  apply (induct level arbitrary: lvl' pt rule: vm_level.from_top_full_induct[where y=max_pt_level])
    apply (fastforce simp: geq_max_pt_level vs_lookup_table_def pool_for_asid_def obind_def)
   apply (rule_tac x=lvl' in exI)
   apply (frule vs_lookup_min_level, clarsimp)
