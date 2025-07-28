@@ -1819,6 +1819,408 @@ lemma invokeSchedControl_ConfigureFlags_ccorres:
                     simp: valid_sched_context'_def)
   done
 
+lemma mode_parseTimeArg_ccorres_foo:
+  "ccorres (\<lambda>a rv. rv = args ! n) ret__unsigned_longlong_'
+     (sysargs_rel args buffer and sysargs_rel_n args buffer n)
+     (\<lbrace>unat \<acute>i = n\<rbrace> \<inter> \<lbrace>\<acute>buffer = option_to_ptr buffer\<rbrace>) []
+     (return ()) (Call mode_parseTimeArg_'proc)"
+  apply (cinit' lift: i_' buffer_')
+   apply (rule ccorres_add_return2)
+   apply (ctac add: getSyscallArg_ccorres_foo'[where n=n and args=args and buffer=buffer])
+     apply (fastforce intro: ccorres_return_C)
+    apply wp
+   apply (vcg exspec=getSyscallArg_modifies)
+  apply clarsimp
+  done
+
+lemma mode_parseTimeArg_ccorres_foo':
+  "ccorres (\<lambda>a rv. rv = ucast (args ! n)) (\<lambda>x. ucast (ret__unsigned_longlong_' x))
+     (sysargs_rel args buffer and sysargs_rel_n args buffer n)
+     (\<lbrace>unat \<acute>i = n\<rbrace> \<inter> \<lbrace>\<acute>buffer = option_to_ptr buffer\<rbrace>) []
+     (return ()) (Call mode_parseTimeArg_'proc)"
+  apply (insert mode_parseTimeArg_ccorres_foo[where args=args and n=n and buffer=buffer])
+  apply (clarsimp simp: ccorres_underlying_def)
+  apply (erule (1) my_BallE)
+  apply clarsimp
+  apply (erule allE, erule allE, erule (1) impE)
+  apply (clarsimp simp: return_def unif_rrel_def split: xstate.splits)
+  done
+
+lemma refillAbsoluteMax_size_helper:
+  "\<lbrakk>valid_cap' cap s; isSchedContextCap cap\<rbrakk>
+   \<Longrightarrow> MIN_REFILLS \<le> refillAbsoluteMax cap \<and> refillAbsoluteMax cap < 2 ^ word_bits"
+  supply len_bit0[simp del]
+  apply (clarsimp simp: refillAbsoluteMax_def isSchedContextCap_def split: capability.splits)
+  apply (rule conjI)
+   apply (fastforce intro: MIN_REFILLS_refillAbsoluteMax' simp: valid_cap'_def)
+  apply (simp flip: max_num_refills_eq_refillAbsoluteMax'
+               add: max_num_refils_rewrite max_num_refills'_def valid_cap'_def)
+  apply (rename_tac n)
+  apply (clarsimp simp: refillSizeBytes_sizeof maxUntypedSizeBits_def)
+  apply (rule_tac y="2 ^ n" in le_less_trans)
+   apply fastforce
+  apply (simp add: word_less_nat_alt word_bits_def)
+  apply (simp add: len_bit0)
+  done
+
+lemma MIN_BUDGET_def2:
+  "MIN_BUDGET = us_to_ticks (2 * kernelWCET_us)"
+  by (clarsimp simp: MIN_BUDGET_def kernelWCET_ticks_def timer_defs)
+
+lemma decodeSchedControl_ConfigureFlags_ccorres:
+  "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
+   ccorres (intr_and_se_rel \<currency> dc)  (liftxf errstate id (K ()) ret__unsigned_long_')
+     (\<lambda>s. (invs' s \<and> sch_act_wf (ksSchedulerAction s) s
+           \<and> ksCurThread s = thread \<and> ct_active' s
+           \<and> (excaps_in_mem extraCaps (ctes_of s))
+           \<and> (\<forall>v \<in> set extraCaps. s \<turnstile>' fst v)
+           \<and> (\<forall>v \<in> set extraCaps. \<forall>y \<in> zobj_refs' (fst v). ex_nonz_cap_to' y s)
+           \<and> sysargs_rel args buffer s)
+          \<and> isSchedControlCap cp)
+     (\<lbrace>\<acute>current_extra_caps = extraCaps'\<rbrace>
+      \<inter> \<lbrace>unat \<acute>length___unsigned_long = length args\<rbrace>
+      \<inter> \<lbrace>\<acute>buffer = option_to_ptr buffer\<rbrace>
+      \<inter> \<lbrace>ccap_relation cp \<acute>cap\<rbrace>) hs
+     (decodeSchedControl_ConfigureFlags (map fst extraCaps) args
+      >>= invocationCatch thread isBlocking isCall canDonate InvokeSchedControl)
+     (Call decodeSchedControl_ConfigureFlags_'proc)"
+  apply (intro ccorres_gen_asm[simplified pred_conj_def])
+  supply Collect_const[simp del] if_cong[cong] option.case_cong[cong]
+  apply (cinit' lift: current_extra_caps_' length___unsigned_long_' buffer_' cap_')
+   apply (simp add: decodeSchedControl_ConfigureFlags_def timeArgSize_def wordBits_def'
+                    invocation_eq_use_types gen_invocation_type_eq
+              cong: StateSpace.state.fold_congs globals.fold_congs)
+   apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
+   \<comment> \<open>throw an error if extraCaps is empty\<close>
+   apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
+      apply vcg
+     apply (force simp: interpret_excaps_test_null excaps_map_def)
+    apply (simp add: throwError_bind invocationCatch_def)
+    apply (rule syscall_error_throwError_ccorres_n)
+    apply (simp add: syscall_error_to_H_cases)
+   \<comment> \<open>throw an error if args is of length less than timeArgSize * 2 + 3\<close>
+   apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
+      apply vcg
+     apply (clarsimp simp: word_less_nat_alt)
+    apply (simp add: throwError_bind invocationCatch_def)
+    apply (rule syscall_error_throwError_ccorres_n)
+    apply (simp add: syscall_error_to_H_cases)
+   apply (rule ccorres_add_return,
+          ctac add: mode_parseTimeArg_ccorres_foo'[where args=args and n=0 and buffer=buffer])
+     apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
+     \<comment> \<open>throw an error if the budget is greater than the period\<close>
+     apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
+        apply vcg
+       apply (clarsimp simp: parseTimeArg_def timer_defs maxPeriodUs_def)
+      apply (simp add: throwError_bind invocationCatch_def)
+      apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+      apply (rule allI, rule conseqPre, vcg)
+      apply (clarsimp simp: throwError_def syscall_error_rel_def syscall_error_to_H_cases
+                            exception_defs return_def minBudgetUs_def maxPeriodUs_def
+                            kernelWCET_us_def timer_defs)
+     apply (rule_tac xf'=budget_ticks_'
+                 and val="usToTicks (parseTimeArg 0 args)"
+                  in ccorres_symb_exec_r_known_rv[where R=\<top> and R'="UNIV"])
+        apply (rule conseqPre, vcg)
+        using getCurrentTime_buffer_bound
+        apply (clarsimp simp: parseTimeArg_def timer_defs maxPeriodUs_def word_less_nat_alt)
+       apply ceqv
+      apply (rule ccorres_add_return,
+             ctac add: mode_parseTimeArg_ccorres_foo'[where args=args and n=1 and buffer=buffer])
+        apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
+        \<comment> \<open>throw an error if period is greater than maxPeriodUs\<close>
+        apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
+           apply vcg
+          apply (clarsimp simp: parseTimeArg_def timer_defs maxPeriodUs_def)
+         apply (simp add: throwError_bind invocationCatch_def)
+         apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+         apply (rule allI, rule conseqPre, vcg)
+         apply (clarsimp simp: throwError_def syscall_error_rel_def syscall_error_to_H_cases
+                               exception_defs return_def minBudgetUs_def maxPeriodUs_def
+                               kernelWCET_us_def timer_defs)
+        apply (rule_tac xf'=period_ticks_'
+                    and val="usToTicks (parseTimeArg 1 args)"
+                     in ccorres_symb_exec_r_known_rv[where R=\<top> and R'="UNIV"])
+           apply (rule conseqPre, vcg)
+           using getCurrentTime_buffer_bound
+           apply (clarsimp simp: parseTimeArg_def timer_defs maxPeriodUs_def word_less_nat_alt)
+          apply ceqv
+         apply (rule_tac xf'=ret__unsigned_longlong_'
+                     and val=kernelWCET_ticks
+                      in ccorres_symb_exec_r_known_rv[where R=\<top> and R'="UNIV"])
+            apply (rule conseqPre, vcg)
+            apply (clarsimp simp: kernelWCETTicks_def)
+           apply ceqv
+          \<comment> \<open>throw an error if budget is less than minBudget\<close>
+          apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
+             apply vcg
+            using getCurrentTime_buffer_bound
+            subgoal
+              by (fastforce simp: minBudgetUs_def kernelWCET_ticks_def usToTicks_def
+                                  word_mult_div_assoc timer_defs maxPeriodUs_def
+                                  word_less_nat_alt)
+           apply (simp add: throwError_bind invocationCatch_def)
+           apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+           apply (rule allI, rule conseqPre, vcg)
+           apply (clarsimp simp: throwError_def syscall_error_rel_def
+                                 syscall_error_to_H_cases exception_defs return_def
+                                 minBudgetUs_def maxPeriodUs_def MAX_PERIOD_US_def
+                                 kernelWCET_us_def)
+          apply clarsimp
+          apply (rule_tac xf'=ret__unsigned_longlong_'
+                      and val=kernelWCET_ticks
+                       in ccorres_symb_exec_r_known_rv[where R=\<top> and R'="UNIV"])
+             apply (rule conseqPre, vcg)
+             apply (clarsimp simp: kernelWCETTicks_def)
+            apply ceqv
+          \<comment> \<open>throw an error if the period is less than minBudget\<close>
+           apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
+              apply vcg
+             using getCurrentTime_buffer_bound
+             subgoal
+               by (fastforce simp: minBudgetUs_def kernelWCET_ticks_def usToTicks_def
+                                   word_mult_div_assoc timer_defs maxPeriodUs_def
+                                   word_less_nat_alt)
+            apply (simp add: throwError_bind invocationCatch_def)
+            apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+            apply (rule allI, rule conseqPre, vcg)
+            apply (clarsimp simp: throwError_def syscall_error_rel_def
+                                  syscall_error_to_H_cases exception_defs return_def
+                                  minBudgetUs_def maxPeriodUs_def MAX_PERIOD_US_def
+                                  kernelWCET_us_def)
+           \<comment> \<open>throw an error if period is less than budget\<close>
+           apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
+              apply vcg
+             using getCurrentTime_buffer_bound
+             subgoal
+               by (fastforce simp: minBudgetUs_def kernelWCET_ticks_def usToTicks_def
+                                   word_mult_div_assoc timer_defs maxPeriodUs_def
+                                   word_less_nat_alt)
+            apply (simp add: throwError_bind invocationCatch_def)
+            apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+            apply (rule allI, rule conseqPre, vcg)
+            apply (clarsimp simp: throwError_def syscall_error_rel_def
+                                  syscall_error_to_H_cases exception_defs return_def
+                                  minBudgetUs_def kernelWCET_us_def parseTimeArg_def)
+           apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
+           apply (rule ccorres_move_c_guard_cte)
+           apply ctac
+             apply csymbr
+             apply (simp add: cap_get_tag_isCap cong: call_ignore_cong)
+             apply (rule ccorres_assert2)
+             apply (rule ccorres_Cond_rhs_Seq)
+              \<comment> \<open>the head of extraCaps is not a SchedContextCap; throw\<close>
+              apply (rule ccorres_rhs_assoc)
+              apply ccorres_rewrite
+              apply (prop_tac "\<not> isSchedContextCap (hd (map fst extraCaps))")
+               apply (cases extraCaps; clarsimp)
+              apply (simp add: throwError_bind invocationCatch_def)
+              apply (rule syscall_error_throwError_ccorres_n)
+              apply (simp add: syscall_error_to_H_cases)
+             apply (clarsimp simp: hd_conv_nth)
+             apply (rule ccorres_add_return,
+                    ctac add: getSyscallArg_ccorres_foo'[where args=args and n=2 and buffer=buffer])
+               apply (rule_tac xf'=max_refills_'
+                           and val="word_of_nat (refillAbsoluteMax (fst (extraCaps ! 0)))"
+                           and R="\<lambda>s. s \<turnstile>' fst (extraCaps ! 0)"
+                            in ccorres_symb_exec_r_known_rv[where R'="UNIV"])
+                  apply (rule conseqPre, vcg)
+                  apply clarsimp
+                  apply (intro conjI impI allI)
+                     apply (simp add: cap_get_tag_isCap)
+                    apply (clarsimp simp: refill_C_size)
+                   apply (clarsimp simp: valid_cap'_def)
+                   apply (frule_tac cap'=targetCap in cap_get_tag_SchedContextCap)
+                   apply (clarsimp simp: isSchedContextCap_def cap_get_tag_isCap)
+                   apply (rule_tac y="word_of_nat maxUntypedSizeBits" in le_less_trans)
+                    apply (clarsimp simp:maxUntypedSizeBits_def word_le_nat_alt)
+                   apply (clarsimp simp: maxUntypedSizeBits_def)
+                  apply (clarsimp simp: refillAbsoluteMax_def
+                                        max_num_refills_eq_refillAbsoluteMax'[symmetric]
+                                        max_num_refils_rewrite max_num_refills'_def
+                                        schedContextStructSize_sizeof refillSizeBytes_sizeof
+                                 split: capability.splits)
+                  apply (frule_tac cap'=targetCap in cap_get_tag_SchedContextCap)
+                  apply (clarsimp simp: valid_cap'_def isSchedContextCap_def cap_get_tag_isCap
+                                        sched_context_C_size refill_C_size)
+                  apply (subst word_of_nat_div)
+                    apply (rule_tac y="2 ^ maxUntypedSizeBits" in le_less_trans)
+                     apply (rule_tac y="2 ^ unat (capSCSizeBits_CL
+                                                   (cap_sched_context_cap_lift targetCap))"
+                                  in order_trans)
+                      apply fastforce
+                     apply clarsimp
+                    apply (clarsimp simp: maxUntypedSizeBits_def)
+                   apply (clarsimp simp: refill_C_size)
+                  apply (subst word_of_nat_minus)
+                   apply (rule_tac y="2 ^ minSchedContextBits" in order_trans)
+                    apply (clarsimp simp: sched_context_C_size minSchedContextBits_def)
+                   apply fastforce
+                  apply fastforce
+                 apply ceqv
+                \<comment> \<open>the number of extra refills requested is too large for the cap; throw\<close>
+                apply (rule_tac Q="\<lambda>s. s \<turnstile>' fst (extraCaps ! 0)"
+                            in ccorres_if_cond_throws[rotated -1, where Q'=\<top>])
+                   apply vcg
+                  apply (clarsimp simp: MIN_REFILLS_def word_less_nat_alt)
+                  apply (frule (1) refillAbsoluteMax_size_helper[simplified word_bits_def])
+                  apply (rule_tac arg_cong[where f="\<lambda>t. t < unsigned (args ! 2)"])
+                  apply (subst unat_sub)
+                   apply (rule unat_le_fold[THEN iffD1])
+                    apply fastforce
+                   apply (clarsimp simp: MIN_REFILLS_def)
+                  apply clarsimp
+                  apply (fastforce simp: unat_of_nat64')
+                 apply (rule_tac P="2 \<le> refillAbsoluteMax (fst (extraCaps ! 0))"
+                              in ccorres_gen_asm)
+                 apply (simp add: throwError_bind invocationCatch_def)
+                 apply (rule syscall_error_throwError_ccorres_n)
+                 apply (simp add: syscall_error_to_H_cases)
+                 apply (clarsimp simp: MIN_REFILLS_def)
+                apply (rule ccorres_add_return,
+                       ctac add: getSyscallArg_ccorres_foo'[where args=args and n=3 and buffer=buffer])
+                  apply (rule ccorres_add_return,
+                         ctac add: getSyscallArg_ccorres_foo'[where args=args and n=4 and buffer=buffer])
+                    apply (simp add: returnOk_bind ccorres_invocationCatch_Inr)
+                    apply (ctac (no_vcg) add: setThreadState_ccorres)
+                     apply csymbr
+                     apply csymbr
+                     apply (simp add: performInvocation_def bindE_assoc)
+                     apply (ctac add: invokeSchedControl_ConfigureFlags_ccorres)
+                        apply clarsimp
+                        apply (rule ccorres_alternative2)
+                        apply (rule ccorres_return_CE, simp+)[1]
+                       apply (rule ccorres_return_C_errorE, simp+)[1]
+                      apply (wpsimp simp: invokeSchedContext_def)
+                     apply (vcg exspec=invokeSchedControl_ConfigureFlags_modifies)
+                    apply (wpsimp wp: sts_invs_minor' hoare_vcg_ex_lift)
+                   apply clarsimp
+                   apply wpsimp
+                  apply (vcg exspec=setThreadState_modifies)
+                 apply clarsimp
+                 apply wpsimp
+                apply (vcg exspec=getSyscallArg_modifies)
+               apply (vcg exspec=refill_absolute_max_modifies)
+              apply wpsimp
+             apply (vcg exspec=getSyscallArg_modifies)
+            apply ((wp | simp | wpc | wp (once) hoare_drop_imps)+)[1]
+           apply vcg
+          apply (vcg exspec=getKernelWcetTicks_modifies)
+         apply (vcg exspec=getKernelWcetTicks_modifies)
+        apply simp
+        apply (vcg exspec=usToTicks_modifies)
+       apply clarsimp
+       apply wpsimp
+      apply simp
+      apply (vcg exspec=mode_parseTimeArg_modifies)
+     apply simp
+     apply (vcg exspec=usToTicks_modifies)
+    apply clarsimp
+    apply wpsimp
+   apply simp
+   apply (vcg exspec=mode_parseTimeArg_modifies)
+  apply clarsimp
+  apply (frule sysargs_rel_to_n[where n=0])
+  apply (frule sysargs_rel_to_n[where n=1])
+  apply (frule sysargs_rel_to_n[where n=2])
+  apply (frule sysargs_rel_to_n[where n=3])
+  apply (frule sysargs_rel_to_n[where n=4])
+  apply (insert getCurrentTime_buffer_bound)
+  apply (frule rf_sr_ksCurThread)
+  apply (prop_tac "(of_nat (size_of TYPE(refill_C)) :: 32 word) \<noteq> 0")
+   apply (rule of_nat_neq_0[where 'a=32])
+    apply clarsimp
+   apply (simp add: refill_C_size len32)
+  apply (simp add: cap_get_tag_isCap MIN_REFILLS_def usToTicks_def parseTimeArg_def len64)
+  apply (prop_tac "excaprefs_C (current_extra_caps_' (globals s')).[0] \<noteq> NULL
+                   \<longrightarrow> excaprefs_C (current_extra_caps_' (globals s')).[0]
+                       = cte_Ptr (snd (extraCaps ! 0))")
+   using interpret_excaps_empty
+   subgoal
+     by (fastforce dest: interpret_excaps_eq[rule_format] simp: excaps_map_def split_def)[1]
+  apply (prop_tac "\<forall>acap ccap. (isSchedContextCap acap \<and> ccap_relation acap ccap)
+                               \<longrightarrow> (capSCPtr_CL (cap_sched_context_cap_lift ccap)
+                                   = capSchedContextPtr acap)")
+   apply clarsimp
+   apply (frule_tac cap=acap in cap_get_tag_SchedContextCap)
+   apply (simp add: cap_get_tag_isCap isSchedContextCap_def)
+  apply (intro context_conjI impI allI; clarsimp?)
+           apply (drule_tac x="extraCaps ! 0" in bspec, fastforce)+
+           apply (fastforce simp: refillAbsoluteMax_size_helper[simplified MIN_REFILLS_def])
+          apply (clarsimp simp: pred_tcb_at'_def ct_in_state'_def)
+         apply (fastforce intro: pred_tcb'_weakenE[where P=active'] simp: ct_in_state'_def)
+        apply (drule_tac x="extraCaps ! 0" in bspec, fastforce)+
+        apply (frule (1) refillAbsoluteMax_size_helper)
+        subgoal
+          by (clarsimp simp: refillAbsoluteMax_def MIN_REFILLS_def valid_refills_number'_def
+                             isCap_simps valid_cap'_def
+                      split: capability.splits)
+             (fastforce simp: refillAbsoluteMax_def MIN_REFILLS_def)
+       apply (drule_tac x="extraCaps ! 0" in bspec, fastforce)+
+       subgoal
+         by (force simp: valid_cap'_def isSchedContextCap_def refillAbsoluteMax_def
+                  split: capability.splits)[1]
+      apply (clarsimp simp: MAX_PERIOD_def)
+      apply (rule us_to_ticks_mono)
+       apply (fastforce simp: timer_defs maxPeriodUs_def)
+      apply fastforce
+     apply (clarsimp simp: minBudgetUs_def MIN_BUDGET_def2)
+     apply (rule us_to_ticks_mono)
+      apply fastforce
+     apply (clarsimp simp: maxPeriodUs_def word_less_nat_alt)
+     apply (force intro: mult_le_mono3[where a="5 * unat MAX_PERIOD_US"])
+    apply (clarsimp simp: MAX_PERIOD_def)
+    apply (rule us_to_ticks_mono)
+     apply (clarsimp simp: maxPeriodUs_def word_le_nat_alt word_less_nat_alt)
+    apply (force intro: mult_le_mono3[where a="5 * unat MAX_PERIOD_US"])
+   apply (clarsimp simp: minBudgetUs_def MIN_BUDGET_def2)
+   apply (rule us_to_ticks_mono)
+    apply fastforce
+   apply (clarsimp simp: maxPeriodUs_def word_less_nat_alt)
+   apply (force intro: mult_le_mono3[where a="5 * unat MAX_PERIOD_US"])
+  apply (clarsimp simp: excaps_map_def neq_Nil_conv cte_wp_at_ctes_of dest!: interpret_excaps_eq)
+  done
+
+lemma decodeSchedControlInvocation_ccorres:
+  "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
+   ccorres (intr_and_se_rel \<currency> dc)  (liftxf errstate id (K ()) ret__unsigned_long_')
+     (invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and sch_act_simple
+      and (\<lambda>s. ksCurThread s = thread) and ct_active'
+      and (excaps_in_mem extraCaps o ctes_of)
+      and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)
+      and (\<lambda>s. \<forall>v \<in> set extraCaps. s \<turnstile>' fst v)
+      and (\<lambda>s. \<forall>v \<in> set extraCaps. \<forall>y \<in> zobj_refs' (fst v). ex_nonz_cap_to' y s)
+      and sysargs_rel args buffer
+      and K (isSchedControlCap cp))
+     (\<lbrace>\<acute>label___unsigned_long = label\<rbrace>
+      \<inter> \<lbrace>\<acute>current_extra_caps = extraCaps'\<rbrace>
+      \<inter> \<lbrace>unat \<acute>length___unsigned_long = length args\<rbrace>
+      \<inter> \<lbrace>\<acute>buffer = option_to_ptr buffer\<rbrace>
+      \<inter> \<lbrace>ccap_relation cp \<acute>cap\<rbrace>) hs
+     (decodeSchedControlInvocation label args (map fst extraCaps)
+      >>= invocationCatch thread isBlocking isCall canDonate InvokeSchedControl)
+     (Call decodeSchedControlInvocation_'proc)"
+  supply Collect_const[simp del]
+  apply (cinit' lift: label___unsigned_long_' current_extra_caps_' length___unsigned_long_'
+                      buffer_' cap_')
+   apply (simp add: decodeSchedControlInvocation_def invocation_eq_use_types gen_invocation_type_eq
+              cong: StateSpace.state.fold_congs globals.fold_congs)
+   apply (rule ccorres_Cond_rhs)
+    apply (simp add: returnOk_bind bindE_assoc ccorres_invocationCatch_Inr
+                     performInvocation_def invokeSchedContext_def)
+    apply (rule ccorres_add_returnOk)
+    apply (ctac (no_vcg) add: decodeSchedControl_ConfigureFlags_ccorres)
+      apply (fastforce intro: ccorres_return_CE)
+     apply (fastforce intro: ccorres_return_C_errorE)
+    apply wpsimp
+   apply (rule ccorres_equals_throwError)
+    apply (fastforce simp: throwError_bind invocationCatch_def
+                    split: gen_invocation_labels.split)
+   apply (rule syscall_error_throwError_ccorres_n)
+   apply (simp add: syscall_error_to_H_cases)
+  apply fastforce
+  done
+
 end
 
 end

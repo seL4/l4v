@@ -148,8 +148,12 @@ lemma decodeSchedControlInvocation_wf:
                         MIN_BUDGET_def kernelWCET_ticks_def timeArgSize_def minBudgetUs_def
                         MIN_REFILLS_def minRefills_def not_less
                   cong: conj_cong)
+  apply (rename_tac sc)
   apply (insert getCurrentTime_buffer_bound)
+  apply (cut_tac us="objBitsKO sc" in MIN_REFILLS_refillAbsoluteMax')
+   apply fastforce
   apply (intro conjI impI; (fastforce intro: us_to_ticks_mono)?)
+    apply (fastforce simp: MIN_REFILLS_def)
    apply (rule_tac order_trans[OF MIN_BUDGET_helper])
    apply (rule us_to_ticks_mono)
     apply blast
@@ -344,14 +348,20 @@ lemma decode_sc_inv_corres:
   apply (clarsimp simp: sc_relation_def)
   done
 
+lemma parseTimeArg_parse_time_arg:
+  "parseTimeArg arg n = parse_time_arg arg n"
+  by (clarsimp simp: parseTimeArg_def parse_time_arg_def)
+
 lemma decode_sc_ctrl_inv_corres:
   "list_all2 cap_relation excaps excaps' \<Longrightarrow>
-   corres (ser \<oplus> sc_ctrl_inv_rel) \<top> \<top>
+   corres (ser \<oplus> sc_ctrl_inv_rel) (\<lambda>s. \<forall>x\<in>set excaps. valid_cap x s) \<top>
           (decode_sched_control_invocation_flags (mi_label mi) args' excaps)
           (decodeSchedControlInvocation (mi_label mi) args' excaps')"
   apply (clarsimp simp: decode_sched_control_invocation_flags_def decodeSchedControlInvocation_def)
   apply (cases "gen_invocation_type (mi_label mi)";
-         clarsimp simp: decodeSchedControl_ConfigureFlags_def TIME_ARG_SIZE_def timeArgSize_def)
+         clarsimp simp: decodeSchedControl_ConfigureFlags_def TIME_ARG_SIZE_def timeArgSize_def
+                        wordBits_word_bits parseTimeArg_parse_time_arg minBudgetUs_def maxPeriodUs_def
+                        MIN_BUDGET_US_def parseTimeArg_def usToTicks_def max_refills_cap_def)
   apply (cases excaps; clarsimp)
   apply (rename_tac cap list)
   apply (cases excaps'; clarsimp)
@@ -359,13 +369,37 @@ lemma decode_sc_ctrl_inv_corres:
    apply corresKsimp
   apply (rule corres_splitEE_forwards')
      apply corresKsimp
+    apply (rule whenE_throwError_sp[simplified validE_R_def])+
+  apply (rule corres_splitEE_forwards')
+     apply corresKsimp
+    apply (rule whenE_throwError_sp[simplified validE_R_def])+
+  apply (rule corres_splitEE_forwards')
+     apply corresKsimp
+    apply (rule whenE_throwError_sp[simplified validE_R_def])+
+  apply (rule corres_splitEE_forwards')
+     apply corresKsimp
+    apply (rule whenE_throwError_sp[simplified validE_R_def])+
+  apply (rule corres_splitEE_forwards')
+     apply corresKsimp
+    apply (rule whenE_throwError_sp[simplified validE_R_def])+
+  apply (rule corres_splitEE_forwards')
+     apply corresKsimp
      apply (case_tac cap; clarsimp simp: isSchedContextCap_def)
     apply (rule whenE_throwError_sp[simplified validE_R_def])+
+  apply (clarsimp simp: assertE_liftE liftE_bindE)
+  apply (rule corres_assert_assume_l_forward)
+   apply (case_tac cap;
+          fastforce intro: MIN_REFILLS_refillAbsoluteMax'
+                     simp: isSchedContextCap_def max_num_refills_eq_refillAbsoluteMax'
+                           valid_cap_def valid_sched_context_size_def sc_const_eq)
+  apply (rule corres_splitEE_forwards')
+     apply corresKsimp
+     apply (case_tac cap;
+            clarsimp simp: isSchedContextCap_def max_num_refills_eq_refillAbsoluteMax'
+                           refillAbsoluteMax_def)
+    apply (rule whenE_throwError_sp[simplified validE_R_def])+
   apply corresKsimp
-  apply (auto simp: minBudgetUs_def MIN_BUDGET_US_def maxPeriodUs_def parse_time_arg_def
-                    parseTimeArg_def usToTicks_def minRefills_def MIN_REFILLS_def
-                    max_num_refills_eq_refillAbsoluteMax' refillAbsoluteMax_def max_refills_cap_def
-             split: cap.splits)
+  apply (auto split: cap.splits)
   done
 
 lemma schedContextBindNtfn_corres:

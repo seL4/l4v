@@ -579,25 +579,29 @@ where
     whenE (length excaps = 0) $ throwError TruncatedMessage;
     whenE (length args < TIME_ARG_SIZE*2 + 3) $ throwError TruncatedMessage;
     budget_\<mu>s \<leftarrow> returnOk $ parse_time_arg 0 args;
-    period_\<mu>s \<leftarrow> returnOk $ parse_time_arg TIME_ARG_SIZE args;
-    extra_refills \<leftarrow> returnOk $ args ! (2 * TIME_ARG_SIZE);
-    badge \<leftarrow> returnOk $ args ! (2 * TIME_ARG_SIZE + 1);
-    flags \<leftarrow> returnOk $ args ! (2 * TIME_ARG_SIZE + 2);
-    target_cap \<leftarrow> returnOk $ hd excaps;
-    whenE (\<not>is_sched_context_cap target_cap) $ throwError (InvalidCapability 1);
-    sc_ptr \<leftarrow> returnOk $ obj_ref_of target_cap;
-    whenE (MAX_PERIOD_US < budget_\<mu>s \<or> budget_\<mu>s < MIN_BUDGET_US) $
+    whenE (budget_\<mu>s > MAX_PERIOD_US) $
       throwError (RangeError (ucast MIN_BUDGET_US) (ucast MAX_PERIOD_US));
-    whenE (MAX_PERIOD_US < period_\<mu>s \<or> period_\<mu>s < MIN_BUDGET_US) $
+    period_\<mu>s \<leftarrow> returnOk $ parse_time_arg TIME_ARG_SIZE args;
+    whenE (period_\<mu>s > MAX_PERIOD_US) $
+      throwError (RangeError (ucast MIN_BUDGET_US) (ucast MAX_PERIOD_US));
+    whenE (budget_\<mu>s < MIN_BUDGET_US) $
+      throwError (RangeError (ucast MIN_BUDGET_US) (ucast MAX_PERIOD_US));
+    whenE (period_\<mu>s < MIN_BUDGET_US) $
       throwError (RangeError (ucast MIN_BUDGET_US) (ucast MAX_PERIOD_US));
     whenE (period_\<mu>s < budget_\<mu>s) $
       throwError (RangeError (ucast MIN_BUDGET_US) (ucast period_\<mu>s));
-    whenE (unat extra_refills + MIN_REFILLS > max_refills_cap target_cap) $
+    target_cap \<leftarrow> returnOk $ hd excaps;
+    whenE (\<not>is_sched_context_cap target_cap) $ throwError (InvalidCapability 1);
+    sc_ptr \<leftarrow> returnOk $ obj_ref_of target_cap;
+    assertE (MIN_REFILLS \<le> max_refills_cap target_cap);
+    extra_refills \<leftarrow> returnOk $ args ! (2 * TIME_ARG_SIZE);
+    whenE (unat extra_refills > max_refills_cap target_cap - MIN_REFILLS) $
       throwError (RangeError 0 (of_nat (max_refills_cap target_cap - MIN_REFILLS)));
-    assertE (MIN_REFILLS \<le> unat extra_refills + MIN_REFILLS);
+    badge \<leftarrow> returnOk $ args ! (2 * TIME_ARG_SIZE + 1);
+    flags \<leftarrow> returnOk $ args ! (2 * TIME_ARG_SIZE + 2);
     returnOk $ InvokeSchedControlConfigureFlags sc_ptr
        (us_to_ticks budget_\<mu>s) (us_to_ticks period_\<mu>s) (unat extra_refills + MIN_REFILLS)
-        badge flags
+       badge flags
   odE"
 
 
