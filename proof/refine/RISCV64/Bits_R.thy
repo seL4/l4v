@@ -34,6 +34,10 @@ end
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
+lemma wordBits_word_bits:
+  "wordBits = word_bits"
+  by (simp add: wordBits_def' word_bits_def)
+
 lemma throwE_R: "\<lbrace>\<top>\<rbrace> throw f \<lbrace>P\<rbrace>,-"
   by (simp add: validE_R_def) wp
 
