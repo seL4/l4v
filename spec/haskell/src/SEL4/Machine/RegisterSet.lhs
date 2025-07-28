@@ -174,7 +174,7 @@ Functions for getting and setting registers.
 
 \subsubsection{Time}
 
-Time values are always 64 bit, indenpendent of the architecture.
+Time values are always 64 bit, independent of the architecture.
 
 > type Ticks = Data.Word.Word64
 > type Time = Data.Word.Word64

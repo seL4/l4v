@@ -18,6 +18,7 @@ arch_requalify_types
   irq
   user_monad
   user_context
+  ticks_len
   ticks
   time
 
