@@ -20,7 +20,7 @@ sig
   val adglob_rcd_tyname : string
   val adglob_struct_var : string
 
-  val naming_scheme_name : string
+  val naming_scheme_name : string -> string
 
   val enum_const_name : string -> string
   val enum_const_summary_lemma_sfx : string
@@ -234,7 +234,7 @@ val adglob_struct_var = "adglobs"
 val phantom_state_name = "phantom_machine_state"
 val ghost_state_name = "ghost'state"
 
-val naming_scheme_name = "\\" ^ "<Gamma>_naming"
+fun naming_scheme_name gamma = gamma ^ "_naming"
 val owned_by_fn_name = "owner'ship"
 
 val internalAnonStructPfx = "ISA_anon_struct|"

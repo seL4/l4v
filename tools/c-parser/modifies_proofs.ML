@@ -33,17 +33,18 @@ sig
      goal as something that can be modified.
   *)
 
-  val gen_modify_goalstring : csenv -> string -> string list -> string
+  val gen_modify_goalstring : csenv -> string -> string -> string list -> string
 
   val modifies_vcg_tactic : local_theory -> int -> tactic
   val modifies_tactic : thm -> local_theory -> tactic
 
-  val prove_all_modifies_goals_local : csenv -> (string -> bool) -> typ list ->
+  val prove_all_modifies_goals_local : csenv -> string -> (string -> bool) -> typ list ->
                                        local_theory -> local_theory
 
-  val prove_all_modifies_goals : theory -> csenv -> (string -> bool) ->
+  val prove_all_modifies_goals : theory -> csenv -> string -> (string -> bool) ->
                                  typ list -> string -> theory
-   (* string is the name of the locale where the theorems about Gamma live *)
+   (* first string is the name of the procedure environment Gamma *)
+   (* second string is the name of the locale where the theorems about Gamma live *)
 
   val sorry_modifies_proofs : bool Config.T
   val calculate_modifies_proofs : bool Config.T
@@ -82,14 +83,14 @@ fun cond_sorry_modifies_proofs VAR ctxt =
     ctxt'
   end
 
-fun gen_modify_goalstring csenv fname modstrings = let
+fun gen_modify_goalstring csenv gamma fname modstrings = let
   fun foldthis (vname, vset) =
       case MSymTab.lookup (ProgramAnalysis.get_addressed csenv) (MString.mk vname) of
         NONE => Binaryset.add(vset, vname)
       | SOME _ => Binaryset.add(vset, NameGeneration.global_heap)
   val vset = List.foldl foldthis (Binaryset.empty String.compare) modstrings
 in
-    "\<forall>\<sigma>. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call "^
+    "\<forall>\<sigma>. "^ gamma ^" \<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call "^
     fname ^ "_'proc " ^
     "{t. t may_only_modify_globals \<sigma> in [" ^
     commas (Binaryset.listItems vset) ^ "]}"
@@ -292,7 +293,7 @@ in
     | NONE => prove_mod_inv_prop ()
 end
 
-fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
+fun prove_all_modifies_goals_local csenv gamma includeP tyargs lthy = let
   open ProgramAnalysis
   val _ = Feedback.informStr (0, "Proving automatically calculated modifies proofs")
   val globs_all_addressed = Config.get lthy CalculateState.globals_all_addressed
@@ -300,7 +301,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
   (* first enter the locale where \<Gamma> exists, and where all the
      mappings from function name to function body exist *)
   val lconsts = Proof_Context.consts_of lthy
-  val gamma_nm = Consts.intern lconsts "\<Gamma>"
+  val gamma_nm = Consts.intern lconsts gamma
   val gamma_t = Syntax.check_term lthy (Const(gamma_nm, dummyT))
   val {callgraph,callers} = compute_callgraphs csenv
 
@@ -426,14 +427,14 @@ in
   lthy
 end
 
-fun prove_all_modifies_goals thy csenv includeP tyargs globloc =
+fun prove_all_modifies_goals thy csenv gamma includeP tyargs globloc =
   if Config.get_global thy calculate_modifies_proofs then
     let
       val lthy = Named_Target.init [] globloc thy
     in
       lthy
         |> Local_Theory.begin_nested |> snd
-        |> prove_all_modifies_goals_local csenv includeP tyargs
+        |> prove_all_modifies_goals_local csenv gamma includeP tyargs
         |> Local_Theory.end_nested
         |> Local_Theory.exit_global
     end

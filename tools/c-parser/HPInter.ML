@@ -25,10 +25,11 @@ sig
   type fninfo = HPfninfo.t
   val globalsN : string
   val asm_to_string : (term -> string) -> ('typ,term,'fact) Element.ctxt -> string
-  val mk_fninfo : theory -> csenv -> (string -> bool) ->
+  val mk_fninfo : theory -> csenv -> string -> (string -> bool) ->
                   Absyn.ext_decl list -> fninfo list
   val make_function_definitions :
       string ->                  (* name of locale where definitions will live *)
+      string ->                  (* name of procedure environment (\<Gamma>) *)
       csenv ->                   (* result of ProgramAnalysis over declarations *)
       typ list ->                (* type arguments to state type operator *)
       thm list ->                (* theorems defining names of functions *)
@@ -52,7 +53,7 @@ type csenv = ProgramAnalysis.csenv
 
 (* make function information - perform a preliminary analysis on the
    abstract syntax to extract function names, parameters and specifications *)
-fun mk_fninfo thy csenv includeP decllist : fninfo list = let
+fun mk_fninfo thy csenv gamma includeP decllist : fninfo list = let
   open Absyn NameGeneration
   (* don't fold top-level declarations into the table again: the program
      analysis that built the csenv in the first place will have already
@@ -84,7 +85,7 @@ fun mk_fninfo thy csenv includeP decllist : fninfo list = let
           [("", Element.Assumes (map nprop2Assume nameproplist))]
         end
       | fn_modifies slist => let
-          val mgoal = Modifies_Proofs.gen_modify_goalstring csenv fname slist
+          val mgoal = Modifies_Proofs.gen_modify_goalstring csenv gamma fname slist
         in
           [("", Element.Assumes [((Binding.name (fname ^ "_modifies"), []),
                                   [(mgoal, [])])])]
@@ -378,6 +379,7 @@ fun asm_to_string tmw e =
 (* The following is modelled on the code in HoarePackage.procedures_definition
 *)
 fun make_function_definitions localename
+                              gamma_name
                               (cse : ProgramAnalysis.csenv)
                               (styargs : typ list)
                               (nmdefs : thm list)
@@ -437,7 +439,7 @@ let
           end
           (* name for thm, (proc constant, body constant) *)
           val (_, lthy) = StaticFun.define_tree_and_thms_with_defs
-              @{binding \<Gamma>} (map (suffix HoarePackage.implementationN o #fname) fninfo)
+              (Binding.make (gamma_name, \<^here>)) (map (suffix HoarePackage.implementationN o #fname) fninfo)
               nmdefs (map get_body fninfo) @{term "id :: int => int"} lthy
         in
           Local_Theory.exit_global lthy

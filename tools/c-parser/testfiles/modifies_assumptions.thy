@@ -9,7 +9,7 @@ imports "CParser.CTranslation"
 begin
 
 external_file "modifies_assumptions.c"
-install_C_file "modifies_assumptions.c"
+install_C_file "modifies_assumptions.c" [gamma = \<Gamma>0]
 
 context modifies_assumptions
 begin
@@ -25,7 +25,7 @@ thm h_modifies
 thm j_modifies
 thm k_modifies
 
-lemma "\<Gamma> f_'proc = Some f_body"
+lemma "\<Gamma>0 f_'proc = Some f_body"
 apply (simp add: f_impl)
 done
 

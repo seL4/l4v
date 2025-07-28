@@ -171,6 +171,7 @@ end
 
 fun stmt_term (ctxt : Proof.context)
               (cse : ProgramAnalysis.csenv)
+              (gamma : string)
               (fname : string)
               (termbuilders : varinfo termbuilder)
               (varinfo : MString.t -> varinfo option)
@@ -181,7 +182,7 @@ fun stmt_term (ctxt : Proof.context)
               (ms : bool)
               (stmt : Absyn.statement) : stmt_result = let
   val stmt_term =
-      stmt_term ctxt cse fname termbuilders varinfo fninfo
+      stmt_term ctxt cse gamma fname termbuilders varinfo fninfo
                 statetype globty styargs ms
   val sg = Proof_Context.theory_of ctxt
   val progname = Config.get_global sg CalculateState.current_C_filename
@@ -460,7 +461,7 @@ in
           | (FnPtrCall(rty, _ (* argtys *)), _) => let
               val call_ei = expr_term call_e
               open NameGeneration
-              val naming = Const (Sign.intern_const sg naming_scheme_name,
+              val naming = Const (Sign.intern_const sg (naming_scheme_name gamma),
                     int --> mk_option_ty string_ty)
               val (pbody, pguard) = MemoryModelExtras.mk_lookup_proc_pair
                       symbol_table naming
@@ -771,7 +772,7 @@ in
   CNameTab.fold foldthis state Symtab.empty
 end
 
-fun fndefn_term (state : CalculateState.mungedb) cse fninfo rcdinfo ms globty styargs ctxt decl = let
+fun fndefn_term (state : CalculateState.mungedb) cse gamma fninfo rcdinfo ms globty styargs ctxt decl = let
   val thy = Proof_Context.theory_of ctxt
   open CalculateState
   val statetype = hd styargs
@@ -794,7 +795,7 @@ fun fndefn_term (state : CalculateState.mungedb) cse fninfo rcdinfo ms globty st
   in
     (cse2ecenv cse, get_senv cse)
   end
-  val stmt_trans = stmt_term ctxt cse fname termbuilders
+  val stmt_trans = stmt_term ctxt cse gamma fname termbuilders
                              varinfo fninfo
                              statetype globty styargs ms
   val (body_f, body_parses) = trans_list stmt_trans styargs body
@@ -859,6 +860,7 @@ end
 fun define_functions (globty, styargs)
                      (vdecls : CalculateState.mungedb)
                      cse
+                     gamma
                      fninfo
                      rcdinfo
                      ms
@@ -868,7 +870,7 @@ let
   open TermsTypes CalculateState
   val fns = extract_defined_functions ast
   val function_info =
-      map (fndefn_term vdecls cse fninfo rcdinfo ms globty styargs ctxt) fns
+      map (fndefn_term vdecls cse gamma fninfo rcdinfo ms globty styargs ctxt) fns
 in
   function_info
 end

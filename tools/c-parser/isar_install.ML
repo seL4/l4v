@@ -69,7 +69,8 @@ structure C_Includes = Theory_Data
    val merge = Library.merge (op =)
 end);
 
-datatype additional_options = MachineState of string | GhostState of string | CRoots of string list
+datatype additional_options =
+  MachineState of string | GhostState of string | CRoots of string list | GammaName of string
 
 type install_data = {c_filename : string, locale_names : string list,
         options: (bool * bool * bool),
@@ -160,18 +161,18 @@ in
   ast0 |> SyntaxTransforms.remove_anonstructs |> SyntaxTransforms.remove_typedefs
 end
 
-fun define_naming_scheme [] _ = I
-  | define_naming_scheme fninfo nmdefs = let
+fun define_naming_scheme gamma [] _ = I
+  | define_naming_scheme gamma fninfo nmdefs = let
   fun name_term fni = SOME (HOLogic.mk_string (#fname fni))
   fun name_name fni = #fname fni ^ "_name"
 
   in StaticFun.define_tree_and_thms_with_defs
-      (Binding.name NameGeneration.naming_scheme_name)
+      (Binding.name (NameGeneration.naming_scheme_name gamma))
       (map name_name fninfo) nmdefs
       (map name_term fninfo) @{term "id :: int => int"}
   #> snd end
 
-fun define_function_names fninfo thy = let
+fun define_function_names gamma fninfo thy = let
   open Feedback
   fun decl1 (fni, (n, defs, lthy)) = let
     open TermsTypes
@@ -192,7 +193,7 @@ fun define_function_names fninfo thy = let
   end
   val (_, defs, lthy) =
       List.foldl decl1 (1, [], Named_Target.theory_init thy) fninfo
-  val lthy' = define_naming_scheme fninfo (List.rev defs) lthy
+  val lthy' = define_naming_scheme gamma fninfo (List.rev defs) lthy
 in
   (defs, Local_Theory.exit_global lthy')
 end
@@ -314,6 +315,10 @@ fun install_C_file0 (((((memsafe),ctyps),cdefs),s),statetylist_opt) thy = let
       case get_first (fn (GhostState s) => SOME s | _ => NONE) statetylist of
         NONE => TermsTypes.unit
       | SOME s => Syntax.read_typ_global thy s
+  val gamma =
+      case get_first (fn (GammaName s) => SOME s | _ => NONE) statetylist of
+        NONE => "\<Gamma>"
+      | SOME s => s
   val thy = Config.put_global CalculateState.current_C_filename s thy
   val thy = CalculateState.store_ghostty (s, gstate_ty) thy
   val anon_vars = Config.get_global thy use_anon_vars
@@ -427,17 +432,19 @@ in
           case toTranslate of
               NONE => (fn _ => true)
             | SOME set => (fn s => Binaryset.member(set,s))
-      val fninfo : HPInter.fninfo list = HPInter.mk_fninfo thy cse toTranslateP ast
-      val (nmdefs, thy) = define_function_names fninfo thy
+      val fninfo : HPInter.fninfo list = HPInter.mk_fninfo thy cse gamma toTranslateP ast
+      val (nmdefs, thy) = define_function_names gamma fninfo thy
       val compile_bodies =
           stmt_translation.define_functions (globty, styargs)
                                             mungedb
                                             cse
+                                            gamma
                                             fninfo
                                             rcdinfo
                                             ms
       val (loc2, thy) =
           HPInter.make_function_definitions localename
+                                            gamma
                                             cse
                                             styargs
                                             (List.rev nmdefs)
@@ -448,7 +455,7 @@ in
                                             thy
       val thy =
           if not (Symtab.is_empty (get_defined_functions cse)) then
-            Modifies_Proofs.prove_all_modifies_goals thy cse toTranslateP styargs loc2
+            Modifies_Proofs.prove_all_modifies_goals thy cse gamma toTranslateP styargs loc2
           else thy (* like this is ever going to happen *)
     in
       C_Installs.map (fn ss =>
@@ -527,6 +534,7 @@ val defsN = "c_defs"
 val mtypN = "machinety"
 val ghosttypN = "ghostty"
 val rootsN = "roots"
+val gammaN = "gamma"
 
 local
   structure P = Parse
@@ -542,7 +550,8 @@ val file_inclusion = let
   val typoptions =
       P.reserved mtypN |-- (P.$$$ "=" |-- P.embedded >> MachineState) ||
       P.reserved ghosttypN |-- (P.$$$ "=" |-- P.embedded >> GhostState) ||
-      P.reserved rootsN |-- (P.$$$ "=" |-- (P.$$$ "[" |-- P.enum1 "," P.embedded --| P.$$$ "]") >> CRoots)
+      P.reserved rootsN |-- (P.$$$ "=" |-- (P.$$$ "[" |-- P.enum1 "," P.embedded --| P.$$$ "]") >> CRoots) ||
+      P.reserved gammaN |-- (P.$$$ "=" |-- P.embedded >> GammaName)
 in
     ((Scan.option (P.$$$ memsafeN)) --
      (Scan.option (P.$$$ typesN)) --
