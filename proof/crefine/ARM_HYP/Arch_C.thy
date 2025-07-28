@@ -1360,8 +1360,6 @@ lemma createSafeMappingEntries_PTE_ccorres:
                                   intro: typ_heap_simps split: if_split_asm)[1]
 
                       apply (wp getObject_inv loadObject_default_inv | simp)+
-                    apply (simp add: objBits_simps archObjSize_def table_bits_defs)
-                   apply (simp add: loadObject_default_inv)
                   apply (simp add: empty_fail_getObject)
                  apply (simp add: upto_enum_step_def upto_enum_word
                            split: if_split)
