@@ -8,6 +8,7 @@
 
 > import Prelude hiding (Word)
 > import SEL4.Machine.RegisterSet
+> import Data.WordLib
 
 This module contains configuration parameters that may be set at compile time to suit different applications.
 
@@ -51,5 +52,5 @@ Also related to interrupt latency, clearing of memory before "Retype" is done on
 > resetChunkBits = error "see Kernel_Config.thy"
 
 > timeArgSize :: Int
-> timeArgSize = 2
+> timeArgSize = 64 `div` wordBits
 
