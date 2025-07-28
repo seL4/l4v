@@ -213,7 +213,7 @@ val c_guard_rew_weak =
 
 in
 fun strengthen_c_guards ss thy s =
-  if (exists (curry (=) s) ss)
+  if (exists (curry (op =) s) ss)
   then Pattern.rewrite_term thy [c_guard_rew_weak] []
   else Pattern.rewrite_term thy [c_guard_rew] []
 end;
@@ -273,15 +273,15 @@ val grab_name_str = head_of #> dest_Const #> fst #> Long_Name.base_name
 in
 
 fun const_global_asserts ctxt cond
-  (t as (Const (@{const_name index}, _) $ arr $ n)) = if member (=) consts arr
+  (t as (Const (@{const_name index}, _) $ arr $ n)) = if member (op =) consts arr
     then [(index_eq_set_helper $ grab_name_str arr
         $ lambda s t $ lambda s n $ cond) |> Syntax.check_term ctxt]
     else []
-  | const_global_asserts ctxt cond (Const c) = if member (=) consts (Const c)
+  | const_global_asserts ctxt cond (Const c) = if member (op =) consts (Const c)
     then [(eq_set_helper $ grab_name_str (Const c) $ Const c $ cond)
         |> Syntax.check_term ctxt]
     else []
-  | const_global_asserts ctxt cond (f $ x) = if member (=) consts (f $ x)
+  | const_global_asserts ctxt cond (f $ x) = if member (op =) consts (f $ x)
     then [(eq_set_helper $ grab_name_str (f $ x) $ (f $ x) $ cond)
         |> Syntax.check_term ctxt]
     else const_global_asserts ctxt cond f @ const_global_asserts ctxt cond x
