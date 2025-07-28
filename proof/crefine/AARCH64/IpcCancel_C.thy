@@ -124,16 +124,13 @@ lemma tcbEPDequeue_spec:
              apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def)
             apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff c_guard_clift)
            apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff)
-          apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def
-                          cong: if_weak_cong)
+          apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def)
          apply (rule ext)
          apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def)
         apply (rule ext)
-        apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def
-                        cong: if_weak_cong)
+        apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def)
        apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff c_guard_clift)
-      apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff
-                      cong: if_weak_cong)
+      apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff)
      apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def)
     apply (rule ext)
     apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def)
