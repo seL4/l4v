@@ -5268,8 +5268,8 @@ lemma setObject_modify:
                         assert_opt_def updateObject_default_def bind_assoc)
   apply (simp add: projectKO_def alignCheck_assert)
   apply (simp add: project_inject objBits_def)
-  apply (clarsimp simp only: objBitsT_koTypeOf[symmetric] koTypeOf_injectKO)
-  apply (frule(2) in_magnitude_check[where s'=s])
+  apply (subst magnitudeCheck_assert2; simp?;
+         clarsimp simp only: objBitsT_koTypeOf[symmetric] koTypeOf_injectKO)
   apply (simp add: magnitudeCheck_assert in_monad)
   apply (simp add: simpler_modify_def)
   done
