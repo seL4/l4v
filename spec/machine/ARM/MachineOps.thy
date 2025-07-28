@@ -134,8 +134,10 @@ consts' timerPrecision :: "64 word"
 consts' max_ticks_to_us :: "64 word"
 consts' max_us_to_ticks :: "64 word"
 
-type_synonym ticks = "64 word"
-type_synonym time  = "64 word"
+type_synonym ticks_len = 64
+
+type_synonym ticks = "ticks_len word"
+type_synonym time  = "ticks_len word"
 
 abbreviation max_time :: time where
   "max_time \<equiv> max_word"

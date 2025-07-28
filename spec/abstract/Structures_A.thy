@@ -539,6 +539,9 @@ record sched_context =
   sc_replies    :: "obj_ref list"
   sc_sporadic   :: "bool"
 
+definition TIME_ARG_SIZE :: nat where
+  "TIME_ARG_SIZE \<equiv> LENGTH(ticks_len) div word_bits"
+
 definition "MIN_REFILLS = 2"
 
 definition "MIN_BUDGET_US = 2 * kernelWCET_us"

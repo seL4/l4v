@@ -571,11 +571,6 @@ definition decode_sched_context_invocation ::
   | _ \<Rightarrow> throwError $ IllegalOperation"
 
 definition
-  TIME_ARG_SIZE :: nat
-where
-  "TIME_ARG_SIZE \<equiv> 2" (* sizeof(ticks_t) / sizeof(word_t) *)
-
-definition
   decode_sched_control_invocation_flags ::
   "data \<Rightarrow> data list \<Rightarrow> cap list \<Rightarrow> (sched_control_invocation,'z::state_ext) se_monad"
 where
