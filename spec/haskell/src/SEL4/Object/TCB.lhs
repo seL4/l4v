@@ -763,21 +763,25 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >     when (length excaps == 0) $ throw TruncatedMessage
 >     when (length args < timeArgSize * 2 + 3) $ throw TruncatedMessage
 >     budgetUs <- return $ parseTimeArg 0 args
->     periodUs <- return $ parseTimeArg timeArgSize args
->     extraRefills <- return $ args !! (2 * timeArgSize)
->     badge <- return $ args !! (2 * timeArgSize + 1)
->     flags <- return $ args !! (2 * timeArgSize + 2)
->     targetCap <- return $ head excaps
->     when (not (isSchedContextCap targetCap)) $ throw (InvalidCapability 1)
->     scPtr <- return $ capSchedContextPtr targetCap
->     when (budgetUs > maxPeriodUs || budgetUs < minBudgetUs) $
+>     when (budgetUs > maxPeriodUs) $
 >         throw (RangeError (fromIntegral minBudgetUs) (fromIntegral maxPeriodUs))
->     when (periodUs > maxPeriodUs || periodUs < minBudgetUs) $
+>     periodUs <- return $ parseTimeArg timeArgSize args
+>     when (periodUs > maxPeriodUs) $
+>         throw (RangeError (fromIntegral minBudgetUs) (fromIntegral maxPeriodUs))
+>     when (budgetUs < minBudgetUs) $
+>         throw (RangeError (fromIntegral minBudgetUs) (fromIntegral maxPeriodUs))
+>     when (periodUs < minBudgetUs) $
 >         throw (RangeError (fromIntegral minBudgetUs) (fromIntegral maxPeriodUs))
 >     when (periodUs < budgetUs) $
 >         throw (RangeError (fromIntegral minBudgetUs) (fromIntegral periodUs))
->     when (fromIntegral extraRefills + minRefills > refillAbsoluteMax(targetCap)) $
+>     targetCap <- return $ head excaps
+>     when (not (isSchedContextCap targetCap)) $ throw (InvalidCapability 1)
+>     scPtr <- return $ capSchedContextPtr targetCap
+>     extraRefills <- return $ args !! (2 * timeArgSize)
+>     when (fromIntegral extraRefills > refillAbsoluteMax(targetCap) - minRefills) $
 >         throw (RangeError 0 (fromIntegral (refillAbsoluteMax(targetCap) - minRefills)))
+>     badge <- return $ args !! (2 * timeArgSize + 1)
+>     flags <- return $ args !! (2 * timeArgSize + 2)
 >     return $ InvokeSchedControlConfigureFlags scPtr
 >         (usToTicks budgetUs) (usToTicks periodUs) (fromIntegral extraRefills + minRefills) badge flags
 

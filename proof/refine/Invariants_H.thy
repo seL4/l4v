@@ -3184,6 +3184,10 @@ lemma st_tcb_at'_runnable_is_activatable:
   by (simp add: st_tcb_at'_def)
      (fastforce elim: obj_at'_weakenE)
 
+lemma ct_in_state'_cur_tcb':
+  "ct_in_state' st s \<Longrightarrow> cur_tcb' s"
+  by (clarsimp simp: ct_in_state'_def cur_tcb'_def)
+
 lemma tcb_at'_has_tcbPriority:
  "tcb_at' t s \<Longrightarrow> \<exists>p. obj_at' (\<lambda>tcb. tcbPriority tcb = p) t s"
  by (clarsimp simp add: obj_at'_def)

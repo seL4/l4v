@@ -902,6 +902,16 @@ sorry (* FIXME RT: decodeInvocation_ccorres
            erule decodeIRQHandlerInvocation_ccorres, simp+)
    apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
    apply (simp add: isArchCap_T_isArchObjectCap one_on_true_def from_bool_0)
+  apply clarsimp
+  apply (frule rf_sr_ksCurThread)
+  apply (simp flip: cur_tcb'_def)
+  apply (frule ct_in_state'_cur_tcb')
+  apply (frule simple_sane_strg[rule_format])
+  apply clarsimp
+  apply (prop_tac "st_tcb_at' (\<lambda>st'. st' \<noteq> thread_state.Inactive  \<and> st' \<noteq> IdleThreadState
+                                     \<and> (\<forall>rptr. st' \<noteq> BlockedOnReply rptr)) (ksCurThread s) s")
+   apply (fastforce simp: ct_in_state'_def st_tcb_at'_def obj_at'_def split: thread_state.splits)
+  apply clarsimp
   apply (rule conjI)
    apply (clarsimp simp: tcb_at_invs' ct_in_state'_def
                          simple_sane_strg)
