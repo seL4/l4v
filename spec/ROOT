@@ -81,6 +81,7 @@ session ExecSpec in "design" = Word_Lib +
 
 session CSpec in "cspec" = CKernel +
   directories
+    "multikernel/$L4V_ARCH"
     "c/build/$L4V_ARCH/generated/arch/object"
     "c/build/$L4V_ARCH/generated/sel4"
   theories [condition = "SORRY_MODIFIES_PROOFS", quick_and_dirty]

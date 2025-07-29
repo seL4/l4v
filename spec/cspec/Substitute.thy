@@ -92,9 +92,9 @@ fun prove_impl_tac ctxt ss =
       in simp_tac (put_simpset ss ctxt addsimps unfolds) n
       end);
 
-fun convert_impls ctxt = let
+fun convert_impls gamma ctxt = let
 
-    val thm = Proof_Context.get_thm ctxt "\<Gamma>_def"
+    val thm = Proof_Context.get_thm ctxt (gamma ^ "_def")
 
     val proc_defs = (Term.add_const_names (Thm.concl_of thm) [])
       |> filter (String.isSuffix Hoare.proc_deco)
@@ -114,12 +114,12 @@ fun convert_impls ctxt = let
   in Local_Theory.notes (map (fn (n, t) => ((Binding.name n, []), [([t], [])])) saves)
     ctxt |> snd end
 
-fun take_all_actions prefix src_ctxt proc tm csenv
+fun take_all_actions prefix src_ctxt proc tm csenv gamma
       styargs ctxt = let
     val (_, ctxt) = convert prefix src_ctxt proc tm (Termtab.empty, ctxt);
   in ctxt
-    |> convert_impls
-    |> Modifies_Proofs.prove_all_modifies_goals_local csenv (fn _ => true) styargs
+    |> convert_impls gamma
+    (* |> Modifies_Proofs.prove_all_modifies_goals_local csenv gamma (fn _ => true) styargs *)
   end
 
 end
@@ -190,7 +190,7 @@ abbreviation
 
 end
 
-locale kernel_all_substitute = substitute_pre
+locale kernel_all_substitute0 = substitute_pre
 begin
 
 ML \<open>
@@ -355,8 +355,9 @@ SubstituteSpecs.take_all_actions
     o guard_halt
     o guard_htd_updates_with_domain
     o guard_acc_ptr_adds)
-  @{term kernel_all_global_addresses.\<Gamma>}
+  @{term kernel_all_global_addresses.\<Gamma>0}
   (CalculateState.get_csenv @{theory} "../c/build/$L4V_ARCH/kernel_all.c_pp" |> the)
+  "\<Gamma>0"
   [@{typ "globals myvars"}, @{typ int}, @{typ strictc_errortype}]
 \<close>
 

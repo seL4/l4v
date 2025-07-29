@@ -10,7 +10,7 @@ theory KernelState_C
 imports
   "Word_Lib.WordSetup"
   "CLib.BitFieldProofsLib"
-  "Substitute"
+  "Multikernel_C"
 begin
 
 type_synonym c_ptr_name = int
