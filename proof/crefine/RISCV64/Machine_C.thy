@@ -17,6 +17,10 @@ begin
 
 locale kernel_m = kernel +
 
+(* The current verification is for unicore only *)
+assumes cpu_0:
+  "cpuNum = 0"
+
 assumes setVSpaceRoot_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr___unsigned_long = pt\<rbrace> \<inter> \<lbrace>\<acute>asid___unsigned_long = asid\<rbrace>) []
            (doMachineOp (RISCV64.setVSpaceRoot pt asid))

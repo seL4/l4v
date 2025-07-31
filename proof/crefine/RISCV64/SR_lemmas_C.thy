@@ -2141,9 +2141,9 @@ lemma unat_scast_numDomains:
 
 (* link up Kernel_Config loaded from the seL4 build system with physBase in C code *)
 lemma physBase_spec:
-  "\<forall>s. \<Gamma>\<turnstile> {s} Call physBase_'proc {t. ret__unsigned_long_' t = Kernel_Config.physBase }"
+  "\<forall>s. \<Gamma>\<turnstile> {s} Call physBase_'proc {t. cpuNum = 0 \<longrightarrow> ret__unsigned_long_' t = Kernel_Config.physBase }"
   apply (rule allI, rule conseqPre, vcg)
-  apply (simp add: Kernel_Config.physBase_def)
+  apply (simp add: Kernel_Config.physBase_def ph_base_def)
   done
 
 lemma rf_sr_obj_update_helper:

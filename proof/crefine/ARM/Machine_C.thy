@@ -15,6 +15,11 @@ imports Ctac_lemmas_C
 begin
 
 locale kernel_m = kernel +
+
+(* The current verification is for unicore only *)
+assumes cpu_0:
+  "cpuNum = 0"
+
 assumes resetTimer_ccorres:
   "ccorres dc xfdc \<top> UNIV []
            (doMachineOp resetTimer)

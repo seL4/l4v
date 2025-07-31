@@ -349,9 +349,9 @@ lemma ccap_relation_reply_helpers:
 (*FIXME: arch-split: C kernel names hidden by Haskell names *)
 (*FIXME: fupdate simplification issues for 2D arrays *)
 abbreviation "syscallMessageC \<equiv>  kernel_all_global_addresses.fault_messages.[unat MessageID_Syscall]"
-lemmas syscallMessageC_def = kernel_all_substitute.fault_messages_def
-abbreviation "exceptionMessageC \<equiv> kernel_all_substitute.fault_messages.[unat MessageID_Exception]"
-lemmas exceptionMessageC_def = kernel_all_substitute.fault_messages_def
+lemmas syscallMessageC_def = kernel_all_global_addresses.fault_messages_def
+abbreviation "exceptionMessageC \<equiv> kernel_all_global_addresses.fault_messages.[unat MessageID_Exception]"
+lemmas exceptionMessageC_def = kernel_all_global_addresses.fault_messages_def
 
 lemma syscallMessage_ccorres:
   "n < unat n_syscallMessage
@@ -6075,6 +6075,7 @@ lemma receiveIPC_ccorres [corres]:
       apply (wp gbn_wp' | simp add: guard_is_UNIV_def)+
   apply (auto simp:  isCap_simps valid_cap'_def)
   done
+
 
 lemma sendSignal_dequeue_ccorres_helper:
   "ccorres (\<lambda>rv rv'. rv' = tcb_ptr_to_ctcb_ptr dest) dest_'

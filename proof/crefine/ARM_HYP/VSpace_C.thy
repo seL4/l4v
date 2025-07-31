@@ -782,7 +782,7 @@ lemma ptrFromPAddr_spec:
    Call ptrFromPAddr_'proc
    \<lbrace>\<acute>ret__ptr_to_void = Ptr (ptrFromPAddr (paddr_' s))\<rbrace>"
   apply vcg
-  apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def)
+  apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def cpu_0)
   done
 
 lemma addrFromPPtr_spec:
@@ -790,7 +790,7 @@ lemma addrFromPPtr_spec:
    Call addrFromPPtr_'proc
    \<lbrace>\<acute>ret__unsigned_long = addrFromPPtr (ptr_val (pptr_' s))\<rbrace>"
   apply vcg
-  apply (simp add: addrFromPPtr_def pptrBaseOffset_def pptrBase_def)
+  apply (simp add: addrFromPPtr_def pptrBaseOffset_def pptrBase_def cpu_0)
   done
 
 lemma addrFromKPPtr_spec:
@@ -799,7 +799,7 @@ lemma addrFromKPPtr_spec:
    \<lbrace>\<acute>ret__unsigned_long = addrFromKPPtr (ptr_val (pptr_' s))\<rbrace>"
   apply vcg
   apply (simp add: addrFromKPPtr_def kernelELFBaseOffset_def kernelELFPAddrBase_def
-                   kernelELFBase_def pptrBase_def mask_def)
+                   kernelELFBase_def pptrBase_def mask_def cpu_0)
   done
 
 abbreviation
@@ -2833,8 +2833,8 @@ lemma setRegister_ccorres:
 
 lemma msgRegisters_ccorres:
   "n < unat n_msgRegisters \<Longrightarrow>
-  register_from_H (ARM_HYP_H.msgRegisters ! n) = (index kernel_all_substitute.msgRegisters n)"
-  apply (simp add: kernel_all_substitute.msgRegisters_def msgRegisters_unfold fupdate_def)
+  register_from_H (ARM_HYP_H.msgRegisters ! n) = (index kernel_all_global_addresses.msgRegisters n)"
+  apply (simp add: kernel_all_global_addresses.msgRegisters_def msgRegisters_unfold fupdate_def)
   apply (simp add: Arrays.update_def n_msgRegisters_def fcp_beta nth_Cons' split: if_split)
   done
 

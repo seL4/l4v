@@ -1114,10 +1114,10 @@ lemma Arch_performTransfer_ccorres:
   done
 
 (*FIXME: arch-split: C kernel names hidden by Haskell names *)
-abbreviation "frameRegistersC \<equiv> kernel_all_substitute.frameRegisters"
-lemmas frameRegistersC_def = kernel_all_substitute.frameRegisters_def
-abbreviation "gpRegistersC \<equiv> kernel_all_substitute.gpRegisters"
-lemmas gpRegistersC_def = kernel_all_substitute.gpRegisters_def
+abbreviation "frameRegistersC \<equiv> kernel_all_global_addresses.frameRegisters"
+lemmas frameRegistersC_def = kernel_all_global_addresses.frameRegisters_def
+abbreviation "gpRegistersC \<equiv> kernel_all_global_addresses.gpRegisters"
+lemmas gpRegistersC_def = kernel_all_global_addresses.gpRegisters_def
 
 lemma frame_gp_registers_convs:
   "length RISCV64_H.frameRegisters = unat n_frameRegisters"

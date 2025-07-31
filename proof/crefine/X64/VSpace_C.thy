@@ -1353,8 +1353,8 @@ lemma setRegister_ccorres:
 
 lemma msgRegisters_ccorres:
   "n < unat n_msgRegisters \<Longrightarrow>
-  register_from_H (X64_H.msgRegisters ! n) = (index kernel_all_substitute.msgRegisters n)"
-  apply (simp add: kernel_all_substitute.msgRegisters_def msgRegisters_unfold fupdate_def)
+  register_from_H (X64_H.msgRegisters ! n) = (index kernel_all_global_addresses.msgRegisters n)"
+  apply (simp add: kernel_all_global_addresses.msgRegisters_def msgRegisters_unfold fupdate_def)
   apply (simp add: Arrays.update_def n_msgRegisters_def fcp_beta nth_Cons' split: if_split)
   done
 

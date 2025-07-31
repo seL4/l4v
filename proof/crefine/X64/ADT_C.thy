@@ -1697,8 +1697,8 @@ where
 
 end
 
-locale kernel_global = state_rel + kernel_all_global_addresses
-(* repeating ADT definitions in the c-parser's locale now (not the substitute) *)
+locale kernel_global = state_rel + kernel_all_multi
+(* repeating ADT definitions in the (multikernel-adjusted) C parser's locale now, not the substitute *)
 begin
 
 definition

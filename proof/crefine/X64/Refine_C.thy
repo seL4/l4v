@@ -1083,8 +1083,8 @@ lemma ccorres_underlying_Fault:
 lemma monadic_rewrite_\<Gamma>:
   "monadic_rewrite True False \<top>
     (exec_C \<Gamma> c)
-    (exec_C (kernel_all_global_addresses.\<Gamma> symbol_table) c)"
-  using spec_refine [of symbol_table domain]
+    (exec_C (kernel_all_multi.\<Gamma> symbol_table cpuNum) c)"
+  using spec_refine [of symbol_table cpuNum domain]
   using spec_simulates_to_exec_simulates
   apply (clarsimp simp: spec_statefn_simulates_via_statefn
                         o_def map_option_case monadic_rewrite_def exec_C_def
@@ -1101,8 +1101,8 @@ lemma no_fail_getActiveIRQ_C:
   done
 
 lemma kernel_all_subset_kernel:
-  "global_automaton (kernel_global.check_active_irq_C symbol_table) (do_user_op_C uop)
-       (kernel_global.kernel_call_C symbol_table fp)
+  "global_automaton (kernel_global.check_active_irq_C symbol_table cpuNum) (do_user_op_C uop)
+       (kernel_global.kernel_call_C symbol_table cpuNum fp)
        \<subseteq> global_automaton check_active_irq_C (do_user_op_C uop) (kernel_call_C fp)"
   apply (clarsimp simp: fw_sim_def rel_semi_def global_automaton_def
                         relcomp_unfold in_lift_state_relation_eq)
@@ -1152,7 +1152,7 @@ lemma kernel_all_subset_kernel:
   done
 
 theorem true_refinement:
-  "kernel_global.ADT_C symbol_table x64KSKernelVSpace_C uop
+  "kernel_global.ADT_C symbol_table x64KSKernelVSpace_C cpuNum uop
    \<sqsubseteq> ADT_H uop"
   apply (rule refinement_trans[OF _ refinement2])
   apply (simp add: kernel_global.ADT_C_def ADT_C_def)
@@ -1165,7 +1165,7 @@ theorem true_refinement:
 
 (* FIXME: fastpath
 theorem true_fp_refinement:
-  "kernel_global.ADT_FP_C symbol_table armKSKernelVSpace_C uop
+  "kernel_global.ADT_FP_C symbol_table armKSKernelVSpace_C cpuNum uop
    \<sqsubseteq> ADT_H uop"
   apply (rule refinement_trans[OF _ fp_refinement])
   apply (simp add: kernel_global.ADT_FP_C_def ADT_FP_C_def)

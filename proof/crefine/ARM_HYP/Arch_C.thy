@@ -2776,7 +2776,7 @@ lemma decodeARMFrameInvocation_ccorres:
                 apply (clarsimp dest!: ccap_relation_PageCap_generics)
                 apply (clarsimp simp: hd_drop_conv_nth hd_conv_nth)
                 (* sync up preprocessor-defined number sources coming from C *)
-                apply (clarsimp simp: fromPAddr_def paddrTop_def pptrBase_def pptrTop_def
+                apply (clarsimp simp: fromPAddr_def paddrTop_def pptrBase_def pptrTop_def cpu_0
                                       pptrBaseOffset_def add.commute from_bool_eq_if')
                apply ceqv
 

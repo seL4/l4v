@@ -642,7 +642,7 @@ fun define_modifies_group fn_info prog_info f_names (acc as (callee_modifies, re
 fun new_modifies_rules filename ctxt = let
     val all_fn_info = Symtab.lookup (AutoCorresFunctionInfo.get (Proof_Context.theory_of ctxt)) filename |> the;
     val ts_info = FunctionInfo.Phasetab.lookup all_fn_info FunctionInfo.TS |> the;
-    val prog_info = ProgramInfo.get_prog_info ctxt filename;
+    val prog_info = ProgramInfo.get_prog_info ctxt "\<Gamma>" filename;
     (* Assume that the user has already generated and named modifies rules
      * for previously-translated callees. *)
     val existing_modifies =

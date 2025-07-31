@@ -11,7 +11,7 @@ theory Wellformed_C
 imports
   "CLib.CTranslationNICTA"
   CLevityCatch
-  "CSpec.Substitute"
+  "CSpec.Multikernel_C"
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)

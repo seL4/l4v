@@ -21,8 +21,11 @@ instance virq_C :: array_inner_packed
 
 locale kernel_m = kernel +
 
-(* timer and IRQ common machine ops (function names exist on other platforms *)
+(* The current verification is for unicore only *)
+assumes cpu_0:
+  "cpuNum = 0"
 
+(* timer and IRQ common machine ops (function names exist on other platforms *)
 assumes resetTimer_ccorres:
   "ccorres dc xfdc \<top> UNIV []
            (doMachineOp resetTimer)

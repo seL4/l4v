@@ -1552,7 +1552,7 @@ where
 
 end
 
-locale kernel_global = state_rel + kernel_all_global_addresses
+locale kernel_global = state_rel + kernel_all_multi
 (* note we're in the c-parser's locale now, not the substitute *)
 begin
 

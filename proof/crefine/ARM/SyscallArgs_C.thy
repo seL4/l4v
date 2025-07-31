@@ -14,8 +14,8 @@ begin
 
 (*FIXME: arch-split: C kernel names hidden by Haskell names *)
 context kernel_m begin
-abbreviation "msgRegistersC \<equiv> kernel_all_substitute.msgRegisters"
-lemmas msgRegistersC_def = kernel_all_substitute.msgRegisters_def
+abbreviation "msgRegistersC \<equiv> kernel_all_global_addresses.msgRegisters"
+lemmas msgRegistersC_def = kernel_all_global_addresses.msgRegisters_def
 end
 
 context begin interpretation Arch . (*FIXME: arch-split*)
