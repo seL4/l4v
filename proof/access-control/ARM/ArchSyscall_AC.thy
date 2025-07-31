@@ -212,6 +212,21 @@ crunch handle_spurious_irq
   and integrity[Syscall_AC_assms, wp]: "integrity aag X st"
   (ignore: do_machine_op)
 
+crunch arch_post_cap_deletion, prepare_thread_delete
+  for scheduler_action[Syscall_AC_assms, wp]: "\<lambda>s. P (scheduler_action s)"
+
+lemma arch_invoke_irq_control_in_cur_domainE[Syscall_AC_assms, wp]:
+  "\<lbrace>\<lambda>s::det_state. in_cur_domain t s\<rbrace>
+   arch_invoke_irq_control ivk
+   -,\<lbrace>\<lambda>_ s. in_cur_domain t s\<rbrace>"
+  by (cases ivk; simp; (solves \<open>wpsimp\<close>)?)
+
+lemma arch_perform_invocation_in_cur_domainE[Syscall_AC_assms, wp]:
+  "\<lbrace>\<lambda>s::det_state. in_cur_domain t s\<rbrace>
+   arch_perform_invocation ai
+   -,\<lbrace>\<lambda>_ s. in_cur_domain t s\<rbrace>"
+  by (wpsimp simp: arch_perform_invocation_def)
+
 end
 
 

@@ -1509,17 +1509,6 @@ lemma dcorres_empty_pte_slot:
   apply (clarsimp simp:transform_pte_def)
   done
 
-lemma store_pte_ct:
-  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> store_pte x y \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
-  apply (clarsimp simp:store_pte_def)
-  apply wp
-   apply (simp add:set_pt_def)
-   apply wp
-   apply (rule_tac Q'="\<lambda>r s. P (cur_thread s)" in hoare_strengthen_post)
-    apply (wp|clarsimp)+
-  done
-
-
 lemma invalidate_tlb_by_asid_dwp:
   "\<lbrace>\<lambda>a. transform a = cs\<rbrace> invalidate_tlb_by_asid aa \<lbrace>\<lambda>r s. transform s = cs\<rbrace>"
   apply (simp add:invalidate_tlb_by_asid_def)
@@ -1644,7 +1633,7 @@ lemma dcorres_clear_object_caps_pt:
          apply clarsimp
          apply (rule dcorres_empty_pte_slot,simp)
        apply (rule hoare_pre)
-        apply (wp valid_idle_store_pte store_pte_ct |clarsimp simp:cur_tcb_def | wps store_pte_ct )+
+        apply (wp valid_idle_store_pte |clarsimp simp:cur_tcb_def | wps )+
        apply (simp add:swp_def)
       apply (simp add:pt_bits_def pageBits_def word_bits_def)+
      apply clarsimp

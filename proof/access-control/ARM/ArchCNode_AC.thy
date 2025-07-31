@@ -73,10 +73,6 @@ crunch set_cdt
   for state_vrefs[CNode_AC_assms, wp]: "\<lambda>s. P (state_vrefs s)"
   and state_asids_to_policy[CNode_AC_assms, wp]: "\<lambda>s. P (state_asids_to_policy aag s)"
 
-crunch prepare_thread_delete, arch_finalise_cap
-  for cur_domain[CNode_AC_assms, wp]:"\<lambda>s. P (cur_domain s)"
-  (wp: crunch_wps hoare_vcg_if_lift2 simp: unless_def)
-
 lemma state_vrefs_tcb_upd[CNode_AC_assms]:
   "tcb_at t s \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
   apply (rule ext)
@@ -95,10 +91,6 @@ lemma state_vrefs_simple_type_upd[CNode_AC_assms]:
 lemma a_type_arch_object_not_tcb[CNode_AC_assms, simp]:
   "a_type (ArchObj arch_kernel_obj) \<noteq> ATCB"
   by auto
-
-lemma arch_post_cap_deletion_cur_domain[CNode_AC_assms, wp]:
-  "arch_post_cap_deletion acap \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"
-  by wpsimp
 
 lemma arch_post_cap_deletion_integrity[CNode_AC_assms]:
   "arch_post_cap_deletion acap \<lbrace>integrity aag X st\<rbrace>"
