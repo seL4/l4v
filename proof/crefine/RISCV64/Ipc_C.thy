@@ -291,9 +291,19 @@ lemma ccap_relation_ep_helpers:
 (* FIXME move *)
 lemma ccap_relation_reply_helpers:
   "\<lbrakk> ccap_relation cap cap'; cap_get_tag cap' = scast cap_reply_cap \<rbrakk> \<Longrightarrow>
-   capReplyCanGrant_CL (cap_reply_cap_lift cap') = from_bool (capReplyCanGrant cap)"
+   capReplyCanGrant_CL (cap_reply_cap_lift cap') = from_bool (capReplyCanGrant cap)
+   \<and> capReplyPtr_CL (cap_reply_cap_lift cap') = capReplyPtr cap"
   by (clarsimp simp: cap_lift_reply_cap cap_to_H_simps
                      cap_reply_cap_lift_def word_size
+              elim!: ccap_relationE)
+
+(* FIXME move *)
+lemma ccap_relation_sched_context_helpers:
+  "\<lbrakk> ccap_relation cap cap'; cap_get_tag cap' = scast cap_sched_context_cap \<rbrakk>
+   \<Longrightarrow> capSCPtr_CL (cap_sched_context_cap_lift cap') =  (capSchedContextPtr cap)
+       \<and> unat (capSCSizeBits_CL (cap_sched_context_cap_lift cap')) = capSCSize cap"
+  by (clarsimp simp: cap_lift_sched_context_cap cap_to_H_simps
+                     cap_sched_context_cap_lift_def word_size
               elim!: ccap_relationE)
 
 (*FIXME: arch-split: C kernel names hidden by Haskell names *)
