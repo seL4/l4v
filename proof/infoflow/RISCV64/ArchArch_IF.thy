@@ -1232,7 +1232,6 @@ lemma thread_set_globals_equiv:
   apply simp
   apply (intro impI conjI allI)
     apply (fastforce simp: valid_arch_state_def obj_at_def get_tcb_def dest: valid_global_arch_objs_pt_at)+
-  apply (clarsimp simp: get_tcb_def tcb_at_def2 split: kernel_object.splits option.splits)
   done
 
 end

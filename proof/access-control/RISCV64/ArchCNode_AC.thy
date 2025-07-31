@@ -113,10 +113,6 @@ lemma a_type_arch_object_not_tcb[CNode_AC_assms, simp]:
   "a_type (ArchObj arch_kernel_obj) \<noteq> ATCB"
   by auto
 
-lemma arch_post_cap_deletion_cur_domain[CNode_AC_assms, wp]:
-  "arch_post_cap_deletion acap \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"
-  by wpsimp
-
 lemma arch_post_cap_deletion_integrity[CNode_AC_assms]:
   "arch_post_cap_deletion acap \<lbrace>integrity aag X st\<rbrace>"
   by wpsimp
