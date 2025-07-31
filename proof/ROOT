@@ -75,12 +75,15 @@ session AInvs in "invariant-abstract" = ASpec +
   theories [condition = "SKIP_AINVS_PROOFS", quick_and_dirty, skip_proofs]
     "KernelInit_AI"
     "$L4V_ARCH/ArchDetSchedSchedule_AI"
+    "$L4V_ARCH/ArchFPU_AI"
   theories [condition = "AINVS_QUICK_AND_DIRTY", quick_and_dirty]
     "KernelInit_AI"
     "$L4V_ARCH/ArchDetSchedSchedule_AI"
+    "$L4V_ARCH/ArchFPU_AI"
   theories
     "KernelInit_AI"
     "$L4V_ARCH/ArchDetSchedSchedule_AI"
+    "$L4V_ARCH/ArchFPU_AI"
 
 (*
  * C Refinement proof.
