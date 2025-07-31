@@ -6,7 +6,7 @@
 
 theory Deterministic_AC
 imports
-  "AInvs.ArchDetSchedSchedule_AI"
+  "AInvs.AInvsToplevel_AI"
 begin
 
 (*This theory defines an abstract "integrity" property over
