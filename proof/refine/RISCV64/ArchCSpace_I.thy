@@ -4,12 +4,10 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(*
-   CSpace invariants
-*)
+(* CSpace invariants - architecture-specific *)
 
-theory CSpace_I
-imports ArchArchAcc_R
+theory ArchCSpace_I
+imports CSpace_I
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)

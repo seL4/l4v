@@ -11,7 +11,7 @@
 
 theory CSpace1_R
 imports
-  CSpace_I
+  ArchCSpace_I
 begin
 
 context Arch begin arch_global_naming
