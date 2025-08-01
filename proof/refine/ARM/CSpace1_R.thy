@@ -10,7 +10,7 @@
 
 theory CSpace1_R
 imports
-  CSpace_I
+  ArchCSpace_I
   "AInvs.ArchDetSchedSchedule_AI"
 begin
 
