@@ -12,6 +12,8 @@ context Arch begin arch_global_naming
 
 section \<open>cur_fpu_in_cur_domain\<close>
 
+text \<open>Show that the TCB that owns the current FPU is in the current domain.\<close>
+
 definition cur_fpu_in_cur_domain :: "det_ext state \<Rightarrow> bool" where
   "cur_fpu_in_cur_domain s \<equiv> none_top (\<lambda>t. in_cur_domain t s) (arm_current_fpu_owner (arch_state s))"
 
