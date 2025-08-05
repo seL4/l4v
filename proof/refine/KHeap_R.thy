@@ -19,7 +19,7 @@ lemmas [wp] = valid_arch_obj'_valid
 translations
   (type) "'a kernel" <=(type) "kernel_state \<Rightarrow> ('a \<times> kernel_state) set \<times> bool"
 
-declare fromPPtr_def[simp]
+lemmas [simp] = fromPPtr_def PPtr_def
 
 lemma lookupAround2_known1:
   "m x = Some y \<Longrightarrow> fst (lookupAround2 x m) = Some (x, y)"
