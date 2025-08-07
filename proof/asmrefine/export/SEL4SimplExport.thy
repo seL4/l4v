@@ -14,7 +14,7 @@ val csenv = let
   in fn () => the_csenv end
 \<close>
 
-context kernel_all_substitute begin
+context kernel_all_substitute0 begin
 
 declare ctcb_offset_defs[simp]
 

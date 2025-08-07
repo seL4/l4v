@@ -29,7 +29,7 @@ instance ptr :: (c_type)array_outer_packed ..
 instance tcb_queue_C :: array_outer_packed ..
 instance region_C :: array_outer_packed ..
 
-locale graph_refine_locale = kernel_all_substitute
+locale graph_refine_locale = kernel_all_substitute0
     + assumes globals_list_distinct:
         "globals_list_distinct domain symbol_table globals_list"
       assumes globals_list_ok:

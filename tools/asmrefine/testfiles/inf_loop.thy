@@ -15,7 +15,7 @@ typedecl cghost_state
 
 external_file "inf_loop.c"
 install_C_file "inf_loop.c"
-  [machinety=machine_state, ghostty=cghost_state]
+  [machinety=machine_state, ghostty=cghost_state, gamma=\<Gamma>0]
 
 setup \<open>DefineGlobalsList.define_globals_list_i
   "inf_loop.c" @{typ globals}\<close>

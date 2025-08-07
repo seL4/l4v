@@ -8,7 +8,7 @@ theory ArchSEL4SimplExport
 imports "AsmRefine.SimplExport" "CSpec.Substitute"
 begin
 
-context kernel_all_substitute begin
+context kernel_all_substitute0 begin
 
 lemma ctzl_body_refines:
   "simple_simpl_refines \<Gamma> (Guard ImpossibleSpec \<lbrace>\<acute>x___unsigned_long \<noteq> 0\<rbrace>

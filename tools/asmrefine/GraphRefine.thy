@@ -1733,7 +1733,7 @@ fun inst_graph_tac ctxt = graph_gamma_tac ctxt THEN' inst_graph_node_tac ctxt
 fun mk_graph_refines (funs : ParseGraph.funs) ctxt s = let
     val proc = Syntax.read_term ctxt
         (Long_Name.base_name s ^ "_'proc")
-    val gamma = Syntax.read_term ctxt "\<Gamma>"
+    val gamma = Syntax.read_term ctxt "\<Gamma>0"
     val invs = Syntax.read_term ctxt "simpl_invariant"
     val _ = case head_of invs of Const _ => ()
       | _ => raise TERM ("mk_graph_refines: requires simpl_invariant constant", [])

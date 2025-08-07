@@ -15,7 +15,7 @@ typedecl cghost_state
 
 external_file "global_array_swap.c"
 install_C_file "global_array_swap.c"
-  [machinety=machine_state, ghostty=cghost_state]
+  [machinety=machine_state, ghostty=cghost_state, gamma=\<Gamma>0]
 
 setup \<open>DefineGlobalsList.define_globals_list_i
   "global_array_swap.c" @{typ globals}\<close>
