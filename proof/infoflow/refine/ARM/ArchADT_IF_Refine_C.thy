@@ -319,7 +319,7 @@ lemma obs_cpspace_user_data_relation[ADT_IF_Refine_assms]:
 end
 
 
-sublocale kernel_m \<subseteq> ADT_IF_Refine_1?: ADT_IF_Refine_1 _ _ _ doUserOp_C_if
+sublocale kernel_m \<subseteq> ADT_IF_Refine_1?: ADT_IF_Refine_1 _ _ _ _ doUserOp_C_if
 proof goal_cases
   interpret Arch .
   case 1 show ?case
