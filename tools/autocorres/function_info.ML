@@ -92,7 +92,7 @@ sig
   val all_callees : function_info -> symset;
 
   (* Generate initial function_info from the C Parser's output. *)
-  val init_function_info : Proof.context -> string -> function_info Symtab.table;
+  val init_function_info : Proof.context -> string -> string -> function_info Symtab.table;
 
   type call_graph_info = {
       (* Topologically sorted function calls, in dependency order.
@@ -350,9 +350,9 @@ fun recalc_callees base_infos fn_infos = let
           |> Symtab.make)
   end;
 
-fun init_function_info ctxt filename = let
+fun init_function_info ctxt gamma_name filename = let
   val thy = Proof_Context.theory_of ctxt;
-  val prog_info = ProgramInfo.get_prog_info ctxt filename;
+  val prog_info = ProgramInfo.get_prog_info ctxt gamma_name filename;
   val csenv = #csenv prog_info;
 
   (* Get information about a single function. *)

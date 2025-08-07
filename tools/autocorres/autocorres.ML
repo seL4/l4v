@@ -24,6 +24,9 @@ struct
  * work around this, but this is a light-weight solution.
  *)
 type autocorres_options = {
+  (* Name of the procedure environment. *)
+  gamma_name : string option ref,
+
   (* Do not lift heaps for these functions. *)
   no_heap_abs : string list option ref,
 
@@ -120,6 +123,10 @@ val named_opt = named_option (Scan.repeat Parse.embedded)
 val nat_opt = named_option Parse.nat
 
 (* Valid options. *)
+val gamma_name_parser =
+  named_option Parse.embedded "gamma" "procedure environment" >>
+  (fn gamma_name => none_to_some (#gamma_name) gamma_name "autocorres: gamma specified multiple times")
+
 val no_heap_abs_parser =
   named_opt "no_heap_abs" "function names" >>
   (fn funcs => none_to_some (#no_heap_abs) funcs "autocorres: no_heap_abs option specified multiple times")
@@ -239,6 +246,7 @@ val function_name_suffix_parser =
  * time; hence the dummy parameter.
  *)
 fun default_opts _ = {
+    gamma_name = ref NONE,
     no_heap_abs = ref NONE,
     force_heap_abs = ref NONE,
     skip_heap_abs = ref NONE,
@@ -268,7 +276,8 @@ fun default_opts _ = {
 val autocorres_parser : (autocorres_options * string) parser =
 let
   val option_parser =
-    (no_heap_abs_parser ||
+    (gamma_name_parser ||
+     no_heap_abs_parser ||
      force_heap_abs_parser ||
      skip_heap_abs_parser ||
      ts_rules_parser ||
@@ -323,8 +332,9 @@ let
                | NONE => error ("autocorres: no such locale: " ^ locale_name)
 
   (* Fetch program information from the C-parser output. *)
-  val prog_info = ProgramInfo.get_prog_info lthy filename
-  val all_simpl_info = FunctionInfo.init_function_info lthy filename
+  val gamma_name = case !(#gamma_name opt) of SOME g => g | NONE => "\<Gamma>"
+  val prog_info = ProgramInfo.get_prog_info lthy gamma_name filename
+  val all_simpl_info = FunctionInfo.init_function_info lthy gamma_name filename
   val all_simpl_functions = Symset.make (Symtab.keys all_simpl_info)
 
   (* Process autocorres options. *)

@@ -119,6 +119,10 @@ generated locale (named `file`).
 
 The options are:
 
+  * `gamma = CONSTANT_NAME`: use the given constant name as
+    the name of the procedure environment to expect from the
+    C parser. Default: `"\<Gamma>"`
+
   * `no_heap_abs = FUNC_NAMES`: Disable _heap abstraction_
     on the given list of functions.
 
@@ -203,6 +207,7 @@ An example of invoking AutoCorres with _all_ of the options
 is as follows:
 
     autocorres [
+        gamma = "\<Gamma>",
         no_heap_abs = a b,
         force_heap_abs = c d,
         gen_word_heaps,

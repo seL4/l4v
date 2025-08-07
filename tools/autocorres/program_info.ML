@@ -133,7 +133,7 @@ fun demangle_name (prog_info: prog_info) m =
 (*
  * Extract details from the c-parser about the given program.
  *)
-fun get_prog_info ctxt filename : prog_info =
+fun get_prog_info ctxt gamma_name filename : prog_info =
   let
     val thy = Proof_Context.theory_of ctxt
     val csenv = CalculateState.get_csenv thy filename |> the;
@@ -146,7 +146,7 @@ fun get_prog_info ctxt filename : prog_info =
     (* Get the gamma variable, mapping function numbers to function bodies in
      * SIMPL. *)
     val gamma =
-      (Const (Consts.intern (Proof_Context.consts_of ctxt) "\<Gamma>", dummyT)
+      (Const (Consts.intern (Proof_Context.consts_of ctxt) gamma_name, dummyT)
        |> Syntax.check_term ctxt)
       handle TERM _ => error "autocorres: could not find any functions -- \<Gamma> is not defined."
 

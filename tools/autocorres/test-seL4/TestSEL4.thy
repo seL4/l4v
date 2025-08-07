@@ -13,6 +13,6 @@ begin
 (*
  * Test to see if we can parse all of seL4.
  *)
-autocorres [skip_heap_abs, ts_rules = nondet] "../c/build/$L4V_ARCH/kernel_all.c_pp"
+autocorres [skip_heap_abs, ts_rules = nondet, gamma = "\<Gamma>0"] "../c/build/$L4V_ARCH/kernel_all.c_pp"
 
 end
