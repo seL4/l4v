@@ -19,18 +19,12 @@ for kernel objects.\<close>
 
 section "General Object Access"
 
-axiomatization
-  colour_oracle :: "domain \<Rightarrow> kernel_object set"
-where
-  colour_oracle_no_overlap: "x \<noteq> y \<longrightarrow> (colour_oracle x \<inter> colour_oracle y = {})"
-
 definition
   get_object :: "obj_ref \<Rightarrow> (kernel_object,'z::state_ext) s_monad"
 where
   "get_object ptr \<equiv> do
      kh \<leftarrow> gets kheap;
-     cur_dom \<leftarrow> gets cur_domain;
-     assert (kh ptr \<noteq> None \<and> the (kh ptr) \<in> colour_oracle cur_dom);
+     assert (kh ptr \<noteq> None);
      return $ the $ kh ptr
    od"
 
@@ -38,9 +32,8 @@ definition
   set_object :: "obj_ref \<Rightarrow> kernel_object \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "set_object ptr obj \<equiv> do
-     kobj <- get_object ptr;
-     cur_dom \<leftarrow> gets cur_domain;
-     assert (a_type kobj = a_type obj \<and> obj \<in> colour_oracle cur_dom);
+     kobj \<leftarrow> get_object ptr;
+     assert (a_type kobj = a_type obj);
      s \<leftarrow> get;
      put (s\<lparr>kheap := (kheap s)(ptr \<mapsto> obj)\<rparr>)
    od"
