@@ -3,7 +3,7 @@ imports
   KernelInit_AI
  "$L4V_ARCH/ArchDetSchedSchedule_AI"
 begin
-
+(*declare [[show_types]]*)
 axiomatization
   colour_oracle :: "domain \<Rightarrow> obj_ref set"
 where
@@ -17,22 +17,6 @@ definition
 where
   "check_cap_ref cap obj_set \<equiv> obj_refs cap \<subseteq> obj_set"
 
-(*  "check_cap_ref (NullCap) _ = True"
-| "check_cap_ref (UntypedCap _ obj_ref sz _) s = (\<forall>x. 0 \<le> x \<and> x \<le> sz \<longrightarrow> of_nat (unat obj_ref + x) \<in> s)" (* I *think* this needs a better check *)
-| "check_cap_ref (EndpointCap obj_ref _ _) s = (obj_ref \<in> s)"
-| "check_cap_ref (NotificationCap obj_ref _ _) s = (obj_ref \<in> s)"
-| "check_cap_ref (ReplyCap obj_ref _ _) s = (obj_ref \<in> s)"
-| "check_cap_ref (CNodeCap obj_ref _ _) s = (obj_ref \<in> s)" (* has a number of bits so assuming no need for a better check? *)
-| "check_cap_ref (ThreadCap obj_ref) s = (obj_ref \<in> s)"
-| "check_cap_ref (DomainCap) _ = True"
-| "check_cap_ref (IRQControlCap) _ = True"
-| "check_cap_ref (IRQHandlerCap _) s = True" (* unsure of if `irq` datatype needs special checks *)
-| "check_cap_ref (Zombie obj_ref _ _) s = (obj_ref \<in> s)" (* slightly confused about this *)
-| "check_cap_ref (ArchObjectCap arch_cap) s = (case arch_cap of RISCV64_A.ASIDControlCap \<Rightarrow> True
-                                                              | RISCV64_A.ASIDPoolCap acap_obj acap_asid_base \<Rightarrow> True
-                                                              | RISCV64_A.FrameCap acap_obj acap_rghts acap_fsize acap_is_device acap_map_data \<Rightarrow> True
-                                                              | RISCV64_A.PageTableCap acap_obj acap_map_data \<Rightarrow> True)" (* more work to be done *)
-*)
 
 term "ArchInvariants_AI.RISCV64.obj_addrs" (* should be used everywhere? *)
 term "ArchInvariants_AI.RISCV64.global_refs"
@@ -77,18 +61,9 @@ where
 
 definition colour_invariant
 where
-(*  "colour_invariant s \<equiv> \<forall>ptr. (\<exists>kobj. ko_at kobj ptr s \<and> ptr \<in> colour_oracle (cur_domain s)) \<longrightarrow> check_kernel_object_ref (the $ kheap s ptr) (colour_oracle (cur_domain s))"*)
   "colour_invariant s \<equiv> \<forall>ptr kobj. (ko_at kobj ptr s \<and> ptr \<in> colour_oracle (cur_domain s)) \<longrightarrow> check_kernel_object_ref kobj (colour_oracle (cur_domain s))"
 
-crunch get_object, thread_get for colour_maintained: colour_invariant
-
-lemma colour_maintained_get_object:
-  "\<lbrace>colour_invariant\<rbrace>
-   get_object ptr
-   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  by (unfold get_object_def, wp, simp)
-
-lemma colour_maintained_set_object:
+lemma set_object_colour_maintained:
   "\<lbrace>colour_invariant and (\<lambda>s. check_kernel_object_ref kobj (colour_oracle (cur_domain s)))\<rbrace>
    set_object ptr kobj
    \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -98,19 +73,13 @@ apply wpsimp
 apply (simp add: obj_at_update)
   by presburger
 
-lemma colour_maintained_get_tcb:
+lemma get_tcb_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
    gets (get_tcb ptr)
    \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   by (unfold gets_def, wp)
 
-lemma colour_maintained_thread_get:
-  "\<lbrace>colour_invariant\<rbrace>
-   thread_get f ptr
-  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  by (unfold thread_get_def, wp, simp)
-
-lemma colour_maintained_thread_set:
+lemma thread_set_colour_maintained:
   "\<lbrace>colour_invariant and (\<lambda>s. let tcb = TCB (f $ the (get_tcb ptr s)) in check_kernel_object_ref tcb (colour_oracle (cur_domain s)))\<rbrace>
    thread_set f ptr
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -119,7 +88,7 @@ apply (simp add: colour_invariant_def)
 apply (simp add: obj_at_update)
 by fastforce
 
-lemma colour_maintained_thread_set_priority:
+lemma thread_set_priority_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
    thread_set_priority ptr prio
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -132,7 +101,7 @@ apply (rule impI)
 apply auto
 by fastforce+
 
-lemma colour_maintained_thread_set_time_slice:
+lemma thread_set_time_slice_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
    thread_set_time_slice ptr prio
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -145,7 +114,7 @@ apply (rule impI)
 apply auto
 by fastforce+
 
-lemma colour_maintained_thread_set_domain:
+lemma thread_set_domain_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
    thread_set_domain ptr prio
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -158,13 +127,7 @@ apply (rule impI)
 apply auto
 by fastforce+
 
-lemma colour_maintained_arch_thread_get:
-  "\<lbrace>colour_invariant\<rbrace>
-   arch_thread_get f ptr
-  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  by (unfold arch_thread_get_def, wp, simp)
-
-lemma colour_maintained_arch_thread_set:
+lemma arch_thread_set_colour_maintained:
   "\<lbrace>colour_invariant and (\<lambda>s.
       let tcb = the $ get_tcb ptr s in
       let arch_tcb = f $ tcb_arch tcb in
@@ -177,25 +140,7 @@ apply (simp add: colour_invariant_def)
 apply (simp add: obj_at_update)
   by fastforce
 
-lemma colour_maintained_get_thread_state:
-  "\<lbrace>colour_invariant\<rbrace>
-   get_thread_state ptr
-  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  by (unfold get_thread_state_def, simp add: colour_maintained_thread_get)
-
-lemma colour_maintained_get_bound_notification:
-  "\<lbrace>colour_invariant\<rbrace>
-   get_bound_notification ptr
-  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  by (unfold get_bound_notification_def, simp add: colour_maintained_thread_get)
-
-(*crunch thread_set_domain, thread_set_time_slice, thread_set_priority for colour_maintained: "colour_invariant"
-  (wp: thread_set_wp
-   simp: thread_set_domain_def thread_set_time_slice_def thread_set_priority_def colour_invariant_def obj_at_update)*)
-(* takes a while even for just domain... is that to be expected? Also doesn't work without allI and impI
-One time, it said it proved all 3 *and* also that the proof had failed for all 3... *)
-
-lemma colour_maintained_set_bound_notification:
+lemma set_bound_notification_colour_maintained:
   "\<lbrace>colour_invariant and (\<lambda>s. (set_option ntfn) \<subseteq> colour_oracle (cur_domain s))\<rbrace>
    set_bound_notification ptr ntfn
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -207,15 +152,8 @@ apply (rule impI)
 apply (rule impI)
 apply auto
 by fastforce+
-(*  apply (simp add: colour_maintained_thread_set set_bound_notification_thread_set)*)
 
-lemma colour_maintained_get_simple_ko:
-  "\<lbrace>colour_invariant\<rbrace>
-   get_simple_ko f ptr
-  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  by (simp add: get_simple_ko_inv)
-
-lemma colour_maintained_set_simple_ko:
+lemma set_simple_ko_colour_maintained:
   "\<lbrace>colour_invariant and (\<lambda>s. let kobj = f ep in ko_at kobj ptr s \<longrightarrow> is_simple_type
          kobj \<longrightarrow>
         partial_inv f
@@ -225,7 +163,7 @@ lemma colour_maintained_set_simple_ko:
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
 apply (unfold set_simple_ko_def)
 apply wpsimp
-apply (wp add: get_object_wp set_object_wp colour_maintained_set_object)+
+apply (wp add: get_object_wp set_object_wp set_object_colour_maintained)+
 apply (rule allI)
 apply (rule impI)+
 apply (simp add: obj_at_update colour_invariant_def)
@@ -237,68 +175,67 @@ apply (simp only: fun_upd_apply[symmetric])
 apply (erule allE)
 sorry
 
-lemma colour_maintained_get_irq_state:
-  "\<lbrace>colour_invariant\<rbrace>
-   get_irq_state irq
-   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  by (simp add: get_irq_state_inv hoare_conj)
-
-lemma colour_maintained_set_irq_state:
+lemma set_irq_state_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
    set_irq_state state irq
-  \<lbrace>\<lambda>_.colour_invariant\<rbrace>" (* thought I'd need extra preconds here - why don't I? *)
+  \<lbrace>\<lambda>_.colour_invariant\<rbrace>"
 apply (unfold set_irq_state_def)
 apply wp
 apply (unfold colour_invariant_def)
 apply (unfold do_machine_op_def)
 by wpsimp+
 
-lemma colour_maintained_get_irq_slot:
-  "\<lbrace>colour_invariant\<rbrace>
-   get_irq_slot irq
-   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  by (simp add: get_irq_slot_inv hoare_conj)
-
-lemma colour_maintained_is_irq_active:
-  "\<lbrace>colour_invariant\<rbrace>
-   is_irq_active irq
-   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  by (simp add: is_irq_active_inv hoare_conj)
-(*  apply (unfold is_irq_active_def)
-  apply wp
-  apply (unfold comp_def)
-   apply (wp add: colour_maintained_get_irq_state)
-  by simp <- for future understanding *)
-
-lemma colour_maintained_get_tcb_queue:
-  "\<lbrace>colour_invariant\<rbrace>
-   get_tcb_queue d prio
-   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  by (simp add: get_tcb_queue_inv hoare_conj)
-
-lemma colour_maintained_set_tcb_queue:
+lemma set_tcb_queue_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
    set_tcb_queue d prio queue
-  \<lbrace>\<lambda>_. colour_invariant\<rbrace>" (* same here *)
+  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
 apply (unfold set_tcb_queue_def)
 apply wp
 apply (unfold colour_invariant_def)
 by simp
 
-lemma colour_maintained_tcb_sched_action:
+lemma tcb_sched_action_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
    tcb_sched_action action thread
-  \<lbrace>\<lambda>_. colour_invariant\<rbrace>" (* same here *)
+  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
 apply (unfold tcb_sched_action_def)
 apply wp
 apply (unfold colour_invariant_def)
 by simp
 
-lemma colour_maintained_set_scheduler_action:
-  "\<lbrace>colour_invariant and (\<lambda>s. ko_at kobj ptr s \<and> check_kernel_object_ref kobj (colour_oracle (cur_domain s)))\<rbrace>
-   set_scheduler_action action thread
+lemma set_scheduler_action_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace>
+   set_scheduler_action action
+  \<lbrace>\<lambda>_. colour_invariant\<rbrace>" (* double check that I don't need to check obj_refs in the state *)
+apply (unfold set_scheduler_action_def)
+apply wp
+apply (unfold colour_invariant_def)
+by simp
+
+crunch reschedule_required,
+       possible_switch_to,
+       set_thread_state_act,
+       set_priority for colour_maintained: "colour_invariant"
+  (wp: get_tcb_colour_maintained
+  simp: colour_invariant_def)
+
+lemma set_thread_state_colour_maintained:
+  "\<lbrace>colour_invariant and (\<lambda>s. ref \<in> colour_oracle (cur_domain s))\<rbrace>
+   set_thread_state ref ts
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+apply (unfold set_thread_state_def)
+apply wp
+apply wpsimp
+apply (unfold set_thread_state_act_def set_scheduler_action_def get_thread_state_def)
+apply wpsimp+
+apply (wp add: thread_get_wp)
+apply (wp add: set_object_wp)
+apply (wp add: gets_the_wp)
 sorry
+
+(*crunch thread_set_domain, thread_set_time_slice, thread_set_priority for colour_maintained: "colour_invariant"
+  (wp: thread_set_wp
+   simp: thread_set_domain_def thread_set_time_slice_def thread_set_priority_def colour_invariant_def obj_at_update)*)
 
 term "call_kernel" (* what does schedule do? otherwise, it's basically handle_event and <handle> *)
 
