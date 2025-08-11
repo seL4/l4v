@@ -10,8 +10,11 @@ imports
   Crunch_Instances_NonDet
 begin
 
-definition s_bcorres_underlying where
-  "s_bcorres_underlying t f g s \<equiv> (\<lambda>(x,y). (x, t y)) ` (fst (f s)) \<subseteq> (fst (g (t s)))"
+definition s_bcorres_underlying ::
+  "('s \<Rightarrow> 't) \<Rightarrow> ('c, 's, 'r) nondet_monad \<Rightarrow> ('c, 't, 'r) nondet_monad \<Rightarrow>
+   ('c, 's) monad_state \<Rightarrow> bool" where
+  "s_bcorres_underlying t f g s \<equiv>
+     (\<lambda>(x,y). (x, t y)) ` fst (f s) \<subseteq> fst (g (map_state t s))"
 
 definition bcorres_underlying where
   "bcorres_underlying t f g \<equiv> \<forall>s. s_bcorres_underlying t f g s"
@@ -28,10 +31,10 @@ wpc_setup "\<lambda>f. bcorres_underlying t f g" wpc_helper_bcorres
 wpc_setup "\<lambda>f. s_bcorres_underlying t f g s" wpc_helper_bcorres
 
 lemma s_bcorres_underlying_split[wp_split]:
-  "(\<And>r s'. (r,s') \<in> fst (f s) \<Longrightarrow>  (s_bcorres_underlying t (g r) (g' r) s')) \<Longrightarrow>
-   s_bcorres_underlying t f f' s \<Longrightarrow>
+  "\<lbrakk> \<And>r s'. (r, s') \<in> fst (f s) \<Longrightarrow> s_bcorres_underlying t (g r) (g' r) (with_env_of s s');
+     s_bcorres_underlying t f f' s \<rbrakk> \<Longrightarrow>
    s_bcorres_underlying t (f >>= g) (f' >>= g') s"
-  by (clarsimp simp: s_bcorres_underlying_def bind_def) force
+  by (force simp: s_bcorres_underlying_def bind_def)
 
 lemma bcorres_underlying_split[wp_split]:
   "(\<And>r. (bcorres_underlying t (g r) (g' r))) \<Longrightarrow>
@@ -40,29 +43,31 @@ lemma bcorres_underlying_split[wp_split]:
   by (simp add: bcorres_underlying_def s_bcorres_underlying_split)
 
 lemma get_s_bcorres_underlying[wp]:
-  "s_bcorres_underlying t (f s) (f' (t s)) s \<Longrightarrow> s_bcorres_underlying t (get >>= f) (get >>= f') s"
+  "s_bcorres_underlying t (f s) (f' (map_state t s)) s \<Longrightarrow>
+   s_bcorres_underlying t (get >>= f) (get >>= f') s"
   by (simp add: gets_def s_bcorres_underlying_def get_def bind_def return_def)
 
 lemma get_bcorres[wp]:
-  "(\<And>x. bcorres_underlying t (f x) (f' (t x))) \<Longrightarrow> bcorres_underlying t (get >>= f) (get >>= f')"
-  by (simp add: bcorres_underlying_def get_s_bcorres_underlying)
+  "(\<And>s. bcorres_underlying t (f s) (f' (map_state t s))) \<Longrightarrow>
+   bcorres_underlying t (get >>= f) (get >>= f')"
+  by (force simp: bcorres_underlying_def s_bcorres_underlying_def get_def bind_def return_def)
 
 lemma gets_s_bcorres_underlying[wp]:
-  "x' (t s) = x s \<Longrightarrow>  s_bcorres_underlying t (gets x) (gets x') s"
+  "x' (map_state t s) = x s \<Longrightarrow>  s_bcorres_underlying t (gets x) (gets x') s"
   by (simp add: s_bcorres_underlying_def gets_def get_def bind_def return_def)
 
 lemma gets_bcorres_underlying[wp]:
-  "(\<And>s. x' (t s) = x s) \<Longrightarrow> bcorres_underlying t (gets x) (gets x')"
+  "(\<And>s. x' (map_state t s) = x s) \<Longrightarrow> bcorres_underlying t (gets x) (gets x')"
   by (simp add: bcorres_underlying_def gets_s_bcorres_underlying)
 
 lemma gets_map_bcorres_underlying[wp]:
-  "(\<And>s. f' (t s) p = f s p) \<Longrightarrow> bcorres_underlying t (gets_map f p) (gets_map f' p)"
+  "(\<And>s. f' (map_state t s) p = f s p) \<Longrightarrow> bcorres_underlying t (gets_map f p) (gets_map f' p)"
   by (simp add: gets_map_def bcorres_underlying_def s_bcorres_underlying_def simpler_gets_def
                 bind_def assert_opt_def fail_def return_def
         split: option.splits)
 
 lemma gets_bcorres_underlying':
-  "(\<And>xa. bcorres_underlying t (f (x xa)) (f' (x' (t xa)))) \<Longrightarrow>
+  "(\<And>s. bcorres_underlying t (f (x s)) (f' (x' (map_state t s)))) \<Longrightarrow>
   bcorres_underlying t (gets x >>= f) (gets x' >>= f')"
   by (wpsimp simp: gets_def)
 
@@ -87,13 +92,13 @@ lemma bcorres_underlying_throwError[wp]:
   by (wpsimp simp: throwError_def)
 
 lemma s_bcorres_underlying_splitE[wp_split]:
-  "(\<And>r s'. (Inr r,s') \<in> fst (f s) \<Longrightarrow> s_bcorres_underlying t (g r) (g' r) s') \<Longrightarrow>
+  "(\<And>r s'. (Inr r, mstate s') \<in> fst (f s) \<Longrightarrow> s_bcorres_underlying t (g r) (g' r) s') \<Longrightarrow>
    s_bcorres_underlying t f f' s \<Longrightarrow>
    s_bcorres_underlying t (f >>=E g) (f' >>=E g') s"
   by (wpsimp simp: bindE_def lift_def split: sum.splits | rule conjI drop_sbcorres_underlying)+
 
 lemma get_s_bcorres_underlyingE[wp]:
-  "s_bcorres_underlying t (f s) (f' (t s)) s \<Longrightarrow>
+  "s_bcorres_underlying t (f s) (f' (map_state t s)) s \<Longrightarrow>
    s_bcorres_underlying t (liftE get >>=E f) (liftE get >>=E f') s"
   by (simp add: gets_def s_bcorres_underlying_def get_def bindE_def bind_def return_def liftE_def lift_def)
 
@@ -149,11 +154,11 @@ lemma when_bcorres_underlying[wp]:
   by (simp add: bcorres_underlying_def when_s_bcorres_underlying)
 
 lemma put_bcorres_underlying[wp]:
-  "t f = f' \<Longrightarrow> bcorres_underlying t (put f) (put f')"
-  by (simp add: bcorres_underlying_def s_bcorres_underlying_def put_def)
+  "map_state t s = s' \<Longrightarrow> bcorres_underlying t (put s) (put s')"
+  by (cases s') (simp add: bcorres_underlying_def s_bcorres_underlying_def put_def map_state_def)
 
 lemma modify_bcorres_underlying[wp]:
-  "(\<And>x. t (f x) = f' (t x)) \<Longrightarrow> bcorres_underlying t (modify f) (modify f')"
+  "(\<And>s. map_state t (f s) = f' (map_state t s)) \<Longrightarrow> bcorres_underlying t (modify f) (modify f')"
   by (wpsimp simp: modify_def)
 
 lemma liftM_bcorres_underlying[wp]:
@@ -179,7 +184,7 @@ lemma mapM_bcorres_underlying[wp]:
   by (simp add: mapM_def | wp)+
 
 lemma gets_s_bcorres_underlyingE':
-  "s_bcorres_underlying t (f (x s)) (f' (x' (t s))) s \<Longrightarrow>
+  "s_bcorres_underlying t (f (x s)) (f' (x' (map_state t s))) s \<Longrightarrow>
    s_bcorres_underlying t (liftE (gets x) >>=E f) (liftE (gets x') >>=E f') s"
   by (simp add: gets_def liftE_def lift_def bindE_def) wp
 
@@ -264,7 +269,7 @@ lemma alternative_bcorres[wp]:
   by (fastforce simp: alternative_def bcorres_underlying_def s_bcorres_underlying_def)
 
 lemma gets_the_bcorres_underlying[wp]:
-  "(\<And>s. f' (t s) = f s) \<Longrightarrow> bcorres_underlying t (gets_the f) (gets_the f')"
+  "(\<And>s. f' (map_state t s) = f s) \<Longrightarrow> bcorres_underlying t (gets_the f) (gets_the f')"
   by (wpsimp simp: gets_the_def)
 
 lemma maybeM_bcorres_underlying[wp]:

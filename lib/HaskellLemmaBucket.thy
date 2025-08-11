@@ -274,18 +274,14 @@ lemma filter_assocs_Cons:
 lemmas stateAssert_def = stateAssert_def[unfolded state_assert_def]
 
 lemma snd_stateAssert_after:
-  "\<not> snd ((do _ \<leftarrow> f; stateAssert R vs od) s) \<Longrightarrow>
-  \<not>snd (f s) \<and> (\<forall>(rv, s') \<in> fst (f s). R s')"
-  apply (clarsimp simp: bind_def stateAssert_def get_def assert_def
-      return_def fail_def split_def split: if_split_asm)
-  done
+  "\<not>snd ((do _ \<leftarrow> f; stateAssert R vs od) s) \<Longrightarrow>
+   \<not>snd (f s) \<and> (\<forall>(rv, s') \<in> fst (f s). R (with_env_of s s'))"
+  by (clarsimp simp: bind_def stateAssert_def get_def assert_def return_def fail_def split_def
+               split: if_split_asm)
 
 lemma oblivious_stateAssert [simp]:
-  "oblivious f (stateAssert g xs) = (\<forall>s. g (f s) = g s)"
-  apply (simp add: oblivious_def stateAssert_def exec_get
-                   assert_def return_def fail_def split: if_split)
-  apply auto
-  done
+  "oblivious f (stateAssert g xs) = (\<forall>s. g (map_state f s) = g s)"
+  by (auto simp: oblivious_def stateAssert_def exec_get assert_def return_def fail_def)
 
 lemma stateAssert_def2:
   "stateAssert f xs = do v \<leftarrow> gets f; if v then return () else fail od"

@@ -13,27 +13,24 @@ imports
   Monads.Nondet_Empty_Fail
 begin
 
-(* This still looks a bit wrong to me, although it is more or less what I want \<emdash> we want to be
-   able to move hoare triples across bisimulations, and this allows guards to be left behind, more or less
-definition
+definition bisim_underlying ::
+  "(('c, 's) monad_state \<Rightarrow> ('e, 't) monad_state \<Rightarrow> bool) \<Rightarrow>
+    ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('c, 's) mpred \<Rightarrow> ('e, 't) mpred \<Rightarrow>
+    ('c, 's, 'a) nondet_monad \<Rightarrow> ('e, 't, 'b) nondet_monad \<Rightarrow> bool"
+  where
   "bisim_underlying SR R P P' m m' \<equiv>
-    \<forall>s s'. SR s s' \<longrightarrow> (P s \<longrightarrow> (\<forall>(r, t) \<in> fst (m s). \<exists>(r', t') \<in> fst (m' s'). R r r' \<and> SR t t')) \<and>
-                       (P' s' \<longrightarrow> (\<forall>(r', t') \<in> fst (m' s'). \<exists>(r, t) \<in> fst (m s). R r r' \<and> SR t t'))"
-*)
+    \<forall>s s'. SR s  s' \<and> P s \<and> P' s' \<longrightarrow>
+           (\<forall>(r, t) \<in> fst (m s). \<exists>(r', t') \<in> fst (m' s').
+             R r r' \<and> SR (with_env_of s t) (with_env_of s' t')) \<and>
+           (\<forall>(r', t') \<in> fst (m' s'). \<exists>(r, t) \<in> fst (m s).
+             R r r' \<and> SR (with_env_of s t) (with_env_of s' t'))"
 
-definition
-  bisim_underlying :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('c \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> (('c \<times> 'a) set) \<times> bool) \<Rightarrow> ('b \<Rightarrow> (('d \<times> 'b) set) \<times> bool) \<Rightarrow> bool"
-where
-  "bisim_underlying SR R P P' m m' \<equiv>
-    \<forall>s s'. SR s  s' \<and> P s \<and> P' s' \<longrightarrow> ((\<forall>(r, t) \<in> fst (m s). \<exists>(r', t') \<in> fst (m' s'). R r r' \<and> SR t t') \<and>
-                                      (\<forall>(r', t') \<in> fst (m' s'). \<exists>(r, t) \<in> fst (m s). R r r' \<and> SR t t'))"
-
-(*
 lemma bisim_is_corres_both_ways:
-  "bisim_underlying SR R P P' m m' = (corres_underlying SR False R P P' m m' \<and> corres_underlying (converse SR) False (swp R) P' P m' m)"
+  "bisim_underlying SR R P P' m m' =
+    (corres_underlying {(s, s'). SR s s'} False False R P P' m m' \<and>
+     corres_underlying {(s', s). SR s s'} False False (swp R) P' P m' m)"
   unfolding bisim_underlying_def corres_underlying_def
   by (fastforce simp: swp_def Ball_def Bex_def)
-*)
 
 lemma bisim_valid:
   assumes ac: "bisim_underlying (=)  (=) P P' a a'"
@@ -51,9 +48,11 @@ lemma bisim_valid2:
   unfolding bisim_underlying_def valid_def
   by (fastforce simp: split_def)
 
-lemma bisim_underlyingI [consumes 0, case_names Left Right]:
-  assumes r1: "\<And>s s' r t. \<lbrakk>SR s s'; P s; P' s'; (r, t) \<in> fst (m s) \<rbrakk> \<Longrightarrow> \<exists>(r', t') \<in> fst (m' s'). R r r' \<and> SR t t'"
-  and     r2: "\<And>s s' r' t'. \<lbrakk>SR s s'; P s; P' s'; (r', t') \<in> fst (m' s') \<rbrakk> \<Longrightarrow> \<exists>(r, t) \<in> fst (m s). R r r' \<and> SR t t'"
+lemma bisim_underlyingI[consumes 0, case_names Left Right]:
+  assumes r1: "\<And>s s' r t. \<lbrakk>SR s s'; P s; P' s'; (r, t) \<in> fst (m s) \<rbrakk> \<Longrightarrow>
+                 \<exists>(r', t') \<in> fst (m' s'). R r r' \<and> SR (with_env_of s t) (with_env_of s' t')"
+  and     r2: "\<And>s s' r' t'. \<lbrakk>SR s s'; P s; P' s'; (r', t') \<in> fst (m' s') \<rbrakk> \<Longrightarrow>
+                 \<exists>(r, t) \<in> fst (m s). R r r' \<and> SR (with_env_of s t) (with_env_of s' t')"
   shows   "bisim_underlying SR R P P' m m'"
   unfolding bisim_underlying_def
   by (fastforce dest: r1 r2 simp: split_def)
@@ -63,7 +62,7 @@ lemma bisim_underlyingE1:
   and     sr: "SR s s'"
   and     ps: "P s" "P' s'"
   and     ms: "(r, t) \<in> fst (m s)"
-  and     rl: "\<And>r' t'. \<lbrakk> (r', t') \<in> fst (m' s'); R r r'; SR t t' \<rbrakk> \<Longrightarrow> X"
+  and     rl: "\<And>r' t'. \<lbrakk> (r', t') \<in> fst (m' s'); R r r'; SR (with_env_of s t) (with_env_of s' t') \<rbrakk> \<Longrightarrow> X"
   shows X
   using bs sr ps ms unfolding bisim_underlying_def
   by (fastforce intro: rl)
@@ -73,7 +72,7 @@ lemma bisim_underlyingE2:
   and     sr: "SR s s'"
   and     ps: "P s" "P' s'"
   and     ms: "(r', t') \<in> fst (m' s')"
-  and     rl: "\<And>r t. \<lbrakk> (r, t) \<in> fst (m s); R r r'; SR t t' \<rbrakk> \<Longrightarrow> X"
+  and     rl: "\<And>r t. \<lbrakk> (r, t) \<in> fst (m s); R r r'; SR (with_env_of s t) (with_env_of s' t') \<rbrakk> \<Longrightarrow> X"
   shows X
   using bs sr ps ms unfolding bisim_underlying_def
   by (fastforce intro: rl)
@@ -271,13 +270,13 @@ lemma bisim_noop_det_on:
   apply (erule (1) det_onE)+
   apply (frule use_valid [OF _ a], fastforce)
   apply (frule use_valid [OF _ b], fastforce)
-  apply fastforce
+  apply force
 
   apply clarsimp
   apply (erule (1) det_onE)+
   apply (frule use_valid [OF _ a], fastforce)
   apply (frule use_valid [OF _ b], fastforce)
-  apply fastforce
+  apply force
   done
 
 lemma det_on_gets:
@@ -446,13 +445,13 @@ lemma bisim_noop:
   apply (erule (1) not_emptyE)+
   apply (frule use_valid [OF _ a], fastforce)
   apply (frule use_valid [OF _ b], fastforce)
-  apply fastforce
+  apply force
 
   apply clarsimp
   apply (erule (1) not_emptyE)+
   apply (frule use_valid [OF _ a], fastforce)
   apply (frule use_valid [OF _ b], fastforce)
-  apply fastforce
+  apply force
   done
 
 lemma bisim_symb_exec_r:
@@ -535,7 +534,7 @@ lemma bisim_splitE_req:
     apply assumption+
    apply (frule (1) use_valid [OF _ v1 [unfolded validE_R_def validE_def]])
    apply (clarsimp split: sum.splits)
-    apply (fastforce simp: in_monad bind_def throwError_def return_def split: sum.splits prod.splits)
+    apply (force simp: in_monad bind_def throwError_def return_def split: sum.splits prod.splits)
    apply (rule bisim_underlyingE1 [OF bd])
     apply simp
     apply assumption+
@@ -550,7 +549,7 @@ lemma bisim_splitE_req:
    apply (frule (1) use_valid [OF _ v1 [unfolded validE_R_def validE_def]])
    apply clarsimp
    apply (clarsimp split: sum.splits)
-    apply (fastforce simp: in_monad bind_def throwError_def return_def split: sum.splits prod.splits)
+    apply (force simp: in_monad bind_def throwError_def return_def split: sum.splits prod.splits)
    apply (rule bisim_underlyingE2 [OF bd])
     apply simp
     apply assumption+

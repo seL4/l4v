@@ -41,17 +41,18 @@ text \<open>
   @{const corres_underlying} shows the relation between rcorres and @{const corres_underlying}.\<close>
 
 definition rcorres ::
-  "('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('t, 'b) nondet_monad
-   \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 's \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> bool"
+  "(('c, 's) monad_state \<Rightarrow> ('d, 't) monad_state \<Rightarrow> bool)
+   \<Rightarrow> ('c, 's, 'a) nondet_monad \<Rightarrow> ('d, 't, 'b) nondet_monad
+   \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> ('c, 's) monad_state \<Rightarrow> ('d, 't) monad_state \<Rightarrow> bool) \<Rightarrow> bool"
   where
   "rcorres R f f' R'\<equiv>
-     \<forall>s s'. R s s' \<longrightarrow> (\<forall>(rv', t') \<in> fst (f' s'). \<exists>(rv, t) \<in> fst (f s). R' rv rv' t t')"
+     \<forall>s s'. R s s' \<longrightarrow> (\<forall>(rv', t') \<in> fst (f' s'). \<exists>(rv, t) \<in> fst (f s). R' rv rv' (with_env_of s t) (with_env_of s' t'))"
 
 
 section \<open>Interactions with @{const valid}\<close>
 
 lemma rcorres_as_valid:
-  "rcorres R f f' R' \<longleftrightarrow> (\<forall>s. \<lbrace>\<lambda>s'. R s s'\<rbrace> f' \<lbrace>\<lambda>rv' t'. \<exists>(rv, t) \<in> fst (f s). R' rv rv' t t'\<rbrace>)"
+  "rcorres R f f' R' \<longleftrightarrow> (\<forall>s. \<lbrace>\<lambda>s'. R s s'\<rbrace> f' \<lbrace>\<lambda>rv' t'. \<exists>(rv, t) \<in> fst (f s). R' rv rv' (with_env_of s t) t'\<rbrace>)"
   by (clarsimp simp: rcorres_def valid_def)
 
 lemmas valid_from_rcorres = rcorres_as_valid[THEN iffD1]
@@ -59,7 +60,7 @@ lemmas valid_from_rcorres = rcorres_as_valid[THEN iffD1]
 lemmas rcorres_from_valid = rcorres_as_valid[THEN iffD2]
 
 lemma valid_from_rcorres_det:
-  "\<lbrakk>fst (f s) = {(rv, t)}; rcorres R f f' R'\<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s'. R s s'\<rbrace> f' \<lbrace>\<lambda>rv' t'. R' rv rv' t t'\<rbrace>"
+  "\<lbrakk>fst (f s) = {(rv, t)}; rcorres R f f' R'\<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s'. R s s'\<rbrace> f' \<lbrace>\<lambda>rv' t'. R' rv rv' (with_env_of s t) t'\<rbrace>"
   by (fastforce simp: rcorres_def valid_def)
 
 lemma valid_from_rcorres_det_return:
@@ -68,7 +69,7 @@ lemma valid_from_rcorres_det_return:
 
 lemma rcorres_from_valid_det:
   assumes "\<And>s'. det_wp (\<lambda>s. R s s') f"
-  assumes "\<And>rv s t. (rv, t) \<in> fst (f s) \<Longrightarrow> \<lbrace>\<lambda>s'. R s s'\<rbrace> f' \<lbrace>\<lambda>rv' t'. R' rv rv' t t'\<rbrace>"
+  assumes "\<And>rv s t. (rv, t) \<in> fst (f s) \<Longrightarrow> \<lbrace>\<lambda>s'. R s s'\<rbrace> f' \<lbrace>\<lambda>rv' t'. R' rv rv' (with_env_of s t) t'\<rbrace>"
   shows "rcorres R f f' R'"
   using assms
   by (force simp: rcorres_def det_wp_def valid_def)
@@ -148,8 +149,8 @@ lemma rcorres_symb_exec_l:
   apply (drule_tac x=s in meta_spec)
   apply (drule_tac x=s' in meta_spec)+
   apply clarsimp
-  apply (rename_tac rv t)
-  apply (rule_tac x="(rv, t)" in bexI[rotated], fastforce)
+  apply (rename_tac rv)
+  apply (rule_tac x="(rv, mstate s)" in bexI[rotated], fastforce)
   apply (fastforce simp: valid_def)
   done
 
@@ -450,7 +451,7 @@ lemma no_fail_rcorres_bind:
   apply (clarsimp simp: no_fail_def rcorres_def bind_def)
   apply (rename_tac s' s)
   apply (drule_tac x=s' in spec)
-  apply fast
+  apply (fastforce simp: split_def)
   done
 
 
@@ -485,12 +486,12 @@ method rcorres_conj_lift methods solve uses rule simp wp =
   solves solve
 
 experiment
-  fixes f f' :: "('s, 'r) nondet_monad"
-  fixes g g' h :: "'r \<Rightarrow> ('s, 'r) nondet_monad"
+  fixes f f' :: "('c, 's, 'r) nondet_monad"
+  fixes g g' h :: "'r \<Rightarrow> ('c, 's, 'r) nondet_monad"
 
-  fixes P Q :: "'s \<Rightarrow> bool"
-  fixes R V :: "'s \<Rightarrow> 's \<Rightarrow> bool"
-  fixes S T U :: "'r \<Rightarrow> 'r \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> bool"
+  fixes P Q :: "('c, 's) monad_state \<Rightarrow> bool"
+  fixes R V :: "('c, 's) monad_state \<Rightarrow> ('c, 's) monad_state \<Rightarrow> bool"
+  fixes S T U :: "'r \<Rightarrow> 'r \<Rightarrow> ('c, 's) monad_state \<Rightarrow> ('c, 's) monad_state \<Rightarrow> bool"
 
   assumes [wp]: "f \<lbrace>P\<rbrace>" "\<And>rv. g rv \<lbrace>P\<rbrace>" "f \<lbrace>Q\<rbrace>" "\<And>rv. g rv \<lbrace>Q\<rbrace>"
   assumes [wp]: "no_fail P f" "\<And>rv. no_fail P (g rv)"
@@ -503,7 +504,7 @@ experiment
 
   assumes
     lift[rcorres_lift]:
-      "\<And>(f :: ('s, 'r) nondet_monad) (f' :: ('s, 'r) nondet_monad).
+      "\<And>(f :: ('c, 's, 'r) nondet_monad) (f' :: ('c, 's, 'r) nondet_monad).
          \<lbrakk>no_fail P f; empty_fail f; f \<lbrace>Q\<rbrace>\<rbrakk> \<Longrightarrow> rcorres V f f' (\<lambda>_ _. V)"
 begin
 

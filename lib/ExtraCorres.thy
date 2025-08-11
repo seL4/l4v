@@ -154,10 +154,9 @@ lemma select_pick_corresE:
   by (fastforce simp: liftE_bindE intro: select_pick_corres)
 
 lemma corres_modify:
-  assumes rl:
-  "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk> \<Longrightarrow> (f s, g s') \<in> sr"
+  assumes rl: "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk> \<Longrightarrow> (const_env f s, const_env g s') \<in> sr"
   shows "corres_underlying sr nf nf' dc P P' (modify f) (modify g)"
-  by (simp add: simpler_modify_def corres_singleton rl)
+  by (simp add: simpler_modify_def corres_singleton rl[unfolded const_env_def])
 
 lemma corres_gets_the:
   assumes x: "corres_underlying sr nf nf' (r \<circ> the) P P' (gets f) y"
@@ -227,7 +226,7 @@ lemma corres_underlying_split_ex_abs:
   using assms
   apply (clarsimp simp: corres_underlying_def bind_def)
   apply (clarsimp simp: Bex_def Ball_def valid_def ex_abs_underlying_def)
-  by meson
+  by (metis (no_types, lifting) select_convs(1))
 
 lemma hoare_from_abs:
   assumes corres: "corres_underlying srel nf nf' rrel G G' f f'"
@@ -253,7 +252,7 @@ lemma corres_from_valid:
   assumes nf': "nf' \<Longrightarrow> no_fail (P' and ex_abs_underlying srel P) f'"
   assumes
     "\<And>s. \<lbrace>\<lambda>s'. P s \<and> P' s' \<and> (s, s') \<in> srel\<rbrace>
-          f' \<lbrace>\<lambda>rv' t'. \<exists>(rv, t) \<in> fst (f s). (t, t') \<in> srel \<and> rrel rv rv'\<rbrace>"
+          f' \<lbrace>\<lambda>rv' t'. \<exists>(rv, t) \<in> fst (f s). (with_env_of s t, t') \<in> srel \<and> rrel rv rv'\<rbrace>"
   shows "corres_underlying srel nf nf' rrel P P' f f'"
   using assms
   by (fastforce simp: corres_underlying_def valid_def no_fail_def)
@@ -264,7 +263,7 @@ lemma corres_from_valid_det:
   assumes valid:
     "\<And>s rv t.
       \<lbrakk>fst (f s) = {(rv, t)}; P s\<rbrakk>
-      \<Longrightarrow> \<lbrace>\<lambda>s'. P' s' \<and> (s, s') \<in> srel\<rbrace> f' \<lbrace>\<lambda>rv' t'. (t, t') \<in> srel \<and> rrel rv rv'\<rbrace>"
+      \<Longrightarrow> \<lbrace>\<lambda>s'. P' s' \<and> (s, s') \<in> srel\<rbrace> f' \<lbrace>\<lambda>rv' t'. (with_env_of s t, t') \<in> srel \<and> rrel rv rv'\<rbrace>"
   shows "corres_underlying srel nf nf' rrel P P' f f'"
   apply (clarsimp simp: corres_underlying_def)
   apply (intro conjI)

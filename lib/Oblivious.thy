@@ -17,11 +17,11 @@ theory Oblivious
 begin
 
 
-definition
-  oblivious :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a, 'b) nondet_monad \<Rightarrow> bool" where
- "oblivious f m \<equiv> \<forall>s. (\<forall>(rv, s') \<in> fst (m s). (rv, f s') \<in> fst (m (f s)))
-                    \<and> (\<forall>(rv, s') \<in> fst (m (f s)). \<exists>s''. (rv, s'') \<in> fst (m s) \<and> s' = f s'')
-                    \<and> snd (m (f s)) = snd (m s)"
+definition oblivious :: "('s \<Rightarrow> 's) \<Rightarrow> ('c, 's, 'a) nondet_monad \<Rightarrow> bool" where
+  "oblivious f m \<equiv>
+    \<forall>s. (\<forall>(rv, s') \<in> fst (m s). (rv, f s') \<in> fst (m (map_state f s)))
+        \<and> (\<forall>(rv, s') \<in> fst (m (map_state f s)). \<exists>s''. (rv, s'') \<in> fst (m s) \<and> s' = f s'')
+        \<and> snd (m (map_state f s)) = snd (m s)"
 
 
 lemma oblivious_return[simp]:
@@ -43,15 +43,15 @@ lemma oblivious_assert_opt[simp]:
 lemma oblivious_bind:
   "\<lbrakk> oblivious f m; \<And>rv. oblivious f (m' rv) \<rbrakk> \<Longrightarrow> oblivious f (m >>= m')"
   apply (simp add: oblivious_def)
-  apply (rule allI)
+  apply (rule allI, rename_tac s)
   apply (erule allE)
   apply (intro conjI)
     apply (drule conjunct1)
     apply (clarsimp simp: in_monad)
     apply fastforce
    apply (drule conjunct2, drule conjunct1)
-   apply (clarsimp simp: in_monad)
-   apply fastforce
+   apply (clarsimp simp: in_monad split_def)
+   apply (metis map_state_monad_state fstI sndI)
   apply (clarsimp simp: bind_def disj_commute)
   apply (rule disj_cong [OF refl])
   apply (rule iffI)
@@ -63,10 +63,11 @@ lemma oblivious_bind:
   apply (drule (1) bspec)
   apply (rule bexI [rotated], assumption)
   apply clarsimp
+  apply (metis map_state_monad_state)
   done
 
 lemma oblivious_gets[simp]:
-  "oblivious f (gets f') = (\<forall>s. f' (f s) = f' s)"
+  "oblivious f (gets f') = (\<forall>s. f' (map_state f s) = f' s)"
   by (fastforce simp add: oblivious_def simpler_gets_def)
 
 lemma oblivious_liftM:
@@ -74,18 +75,18 @@ lemma oblivious_liftM:
   by (simp add: liftM_def oblivious_bind)
 
 lemma oblivious_modify[simp]:
-  "oblivious f (modify f') = (\<forall>s. f' (f s) = f (f' s))"
+  "oblivious f (modify f') = (\<forall>s. mstate (f' (map_state f s)) = f (mstate (f' s)))"
   apply (simp add: oblivious_def simpler_modify_def)
   apply (rule ball_cong[where A=UNIV, OF refl, simplified])
   apply fastforce
   done
 
 lemma oblivious_modify_swap:
-  "oblivious f m \<Longrightarrow> (modify f >>= (\<lambda>rv. m)) = (m >>= (\<lambda>rv. modify f))"
+  "oblivious f m \<Longrightarrow> (modify (map_state f) >>= (\<lambda>rv. m)) = (m >>= (\<lambda>rv. modify (map_state f)))"
   apply (clarsimp simp: bind_def simpler_modify_def)
-  apply (rule ext)+
-  apply (case_tac "m (f s)", clarsimp)
-  apply (simp add: oblivious_def)
+  apply (rule ext, rename_tac s)
+  apply (case_tac "m (map_state f s)")
+  apply (simp add: oblivious_def map_state_def)
   apply (drule_tac x=s in spec)
   apply (rule conjI)
    apply (rule set_eqI)

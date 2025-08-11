@@ -11,9 +11,9 @@ imports
 begin
 
 experiment
-  fixes a :: "(int, unit) nondet_monad"
-    and b :: "int \<Rightarrow> (int, int) nondet_monad"
-    and c :: "(int, unit) nondet_monad"
+  fixes a :: "(unit, int, unit) nondet_monad"
+    and b :: "int \<Rightarrow> (unit, int, int) nondet_monad"
+    and c :: "(unit, int, unit) nondet_monad"
 begin
 
 definition

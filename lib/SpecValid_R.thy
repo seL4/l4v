@@ -8,18 +8,18 @@ theory SpecValid_R
 imports ExtraCorres
 begin
 
-definition
-  spec_valid :: "'s \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s, 'r) nondet_monad \<Rightarrow> ('r \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
-                 ("_ \<turnstile> /\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>" [60,0,0,0] 100)
-where
- "spec_valid st P f Q \<equiv> valid (\<lambda>s. s = st \<and> P s) f Q"
+definition spec_valid ::
+  "('c, 's) monad_state \<Rightarrow> ('c,'s) mpred \<Rightarrow> ('c, 's, 'r) nondet_monad \<Rightarrow>
+   ('r \<Rightarrow> ('c,'s) mpred) \<Rightarrow> bool" ("_ \<turnstile> /\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>" [60,0,0,0] 100)
+  where
+  "spec_valid st P f Q \<equiv> \<lbrace>\<lambda>s. s = st \<and> P s\<rbrace> f \<lbrace>Q\<rbrace>"
 
-definition
-  spec_validE :: "'s \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s, 'e + 'r) nondet_monad \<Rightarrow>
-                   ('r \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('e \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
-                 ("_ \<turnstile> /\<lbrace>_\<rbrace>/ _ /(\<lbrace>_\<rbrace>, /\<lbrace>_\<rbrace>)" [60,0,0,0] 100)
-where
- "spec_validE st P f Q E \<equiv> validE (\<lambda>s. s = st \<and> P s) f Q E"
+definition spec_validE ::
+  "('c, 's) monad_state \<Rightarrow> ('c,'s) mpred \<Rightarrow> ('c, 's, 'e + 'r) nondet_monad \<Rightarrow>
+   ('r \<Rightarrow> ('c,'s) mpred) \<Rightarrow> ('e \<Rightarrow> ('c,'s) mpred) \<Rightarrow> bool"
+   ("_ \<turnstile> /\<lbrace>_\<rbrace>/ _ /(\<lbrace>_\<rbrace>, /\<lbrace>_\<rbrace>)" [60,0,0,0] 100)
+  where
+  "spec_validE st P f Q E \<equiv> \<lbrace>\<lambda>s. s = st \<and> P s\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
 
 lemma use_spec':
   assumes x: "\<And>s. s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
@@ -58,7 +58,7 @@ lemma drop_spec_validE[wp_split]:
   done
 
 lemma split_spec_bindE[wp_split]:
-  assumes x: "\<And>rv s''. (Inr rv, s'') \<in> fst (f s') \<Longrightarrow> s'' \<turnstile> \<lbrace>B rv\<rbrace> g rv \<lbrace>C\<rbrace>,\<lbrace>E\<rbrace>"
+  assumes x: "\<And>rv s''. (Inr rv, s'') \<in> fst (f s') \<Longrightarrow> with_env_of s' s'' \<turnstile> \<lbrace>B rv\<rbrace> g rv \<lbrace>C\<rbrace>,\<lbrace>E\<rbrace>"
   shows "s' \<turnstile> \<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>,\<lbrace>E\<rbrace>
    \<Longrightarrow> s' \<turnstile> \<lbrace>A\<rbrace> f >>=E g \<lbrace>C\<rbrace>,\<lbrace>E\<rbrace>"
   apply (clarsimp simp: spec_validE_def validE_def valid_def bind_def bindE_def lift_def split_def)
@@ -69,11 +69,11 @@ lemma split_spec_bindE[wp_split]:
   apply (erule(1) my_BallE, simp)
   apply (drule x)
   apply (clarsimp simp: spec_validE_def validE_def valid_def split_def)
-  apply (erule(1) my_BallE, simp)
+  apply (erule(1) my_BallE, simp split: sum.splits)
   done
 
 lemma split_spec_bind[wp_split]:
-  assumes x: "\<And>rv s''. (rv, s'') \<in> fst (f s') \<Longrightarrow> s'' \<turnstile> \<lbrace>B rv\<rbrace> g rv \<lbrace>C\<rbrace>"
+  assumes x: "\<And>rv s''. (rv, s'') \<in> fst (f s') \<Longrightarrow> with_env_of s' s'' \<turnstile> \<lbrace>B rv\<rbrace> g rv \<lbrace>C\<rbrace>"
   shows "s' \<turnstile> \<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>
    \<Longrightarrow> s' \<turnstile> \<lbrace>A\<rbrace> f >>= g \<lbrace>C\<rbrace>"
   apply (clarsimp simp: spec_valid_def valid_def bind_def lift_def split_def)

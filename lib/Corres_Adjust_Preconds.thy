@@ -151,18 +151,16 @@ setup Corres_Adjust_Preconds.setup
 
 experiment begin
 
-definition
-  test_sr :: "(nat \<times> nat) set"
-where
-  "test_sr = {(x, y). y = 2 * x}"
+definition test_sr :: "((unit, nat) monad_state \<times> (unit, nat) monad_state) set" where
+  "test_sr = {(x, y). mstate y = 2 * mstate x}"
 
 lemma test_corres:
-  "corres_underlying test_sr nf nf' dc (\<lambda>x. x < 40) (\<lambda>y. y < 30 \<and> y = 6)
-    (modify (\<lambda>x. x + 2)) (modify (\<lambda>y. 10))"
+  "corres_underlying test_sr nf nf' dc (\<lambda>x. mstate x < 40) (\<lambda>y. mstate y < 30 \<and> mstate y = 6)
+    (modify (map_state (\<lambda>x. x + 2))) (modify (map_state (\<lambda>y. 10)))"
   by (simp add: corres_underlying_def simpler_modify_def test_sr_def)
 
 lemma test_adj_precond:
-  "(x, y) \<in> test_sr \<Longrightarrow> x = 3 \<Longrightarrow> y = 6"
+  "(x, y) \<in> test_sr \<Longrightarrow> mstate x = 3 \<Longrightarrow> mstate y = 6"
   by (simp add: test_sr_def)
 
 ML \<open>
@@ -170,8 +168,8 @@ Corres_Adjust_Preconds.mk_adj_preconds @{context} [@{thm test_adj_precond}] @{th
 \<close>
 
 lemma foo_adj_corres:
-  "corres_underlying test_sr nf nf' dc (\<lambda>s. s < 40 \<and> s = 3) (\<lambda>s'. s' < 30) (modify (\<lambda>x. x + 2))
-       (modify (\<lambda>y. 10))"
+  "corres_underlying test_sr nf nf' dc (\<lambda>s. mstate s < 40 \<and> mstate s = 3) (\<lambda>s'. mstate s' < 30)
+                     (modify (map_state (\<lambda>x. x + 2))) (modify (map_state (\<lambda>y. 10)))"
   by (rule test_corres[adj_corres test_adj_precond])
 
 text \<open>A more general demo of what it does.\<close>

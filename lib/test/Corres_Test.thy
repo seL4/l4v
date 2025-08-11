@@ -17,7 +17,7 @@ section "Setup"
 experiment
   fixes sr nf nf'
 
-  fixes f f' :: "('s, nat) nondet_monad"
+  fixes f f' :: "('c, 's, nat) nondet_monad"
   assumes f: "corres_underlying sr nf nf' (=) \<top> \<top> f f'"
 
   fixes Q g g' t

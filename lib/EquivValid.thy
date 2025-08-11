@@ -35,13 +35,19 @@ does this.
 
 \<close>
 
-definition
-  equiv_valid_2 :: "('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s,'b) nondet_monad \<Rightarrow> ('s,'c) nondet_monad \<Rightarrow> bool"
-where
+definition equiv_valid_2 ::
+  "(('c, 's) monad_state \<Rightarrow> ('c, 's) monad_state \<Rightarrow> bool) \<Rightarrow>
+   (('c, 's) monad_state \<Rightarrow> ('c, 's) monad_state \<Rightarrow> bool) \<Rightarrow>
+   (('c, 's) monad_state \<Rightarrow> ('c, 's) monad_state \<Rightarrow> bool) \<Rightarrow>
+   ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('c, 's) mpred \<Rightarrow> ('c, 's) mpred \<Rightarrow>
+   ('c, 's, 'a) nondet_monad \<Rightarrow> ('c, 's, 'b) nondet_monad \<Rightarrow> bool"
+  where
   "equiv_valid_2 I A B R P P' f f' \<equiv> \<forall>s t.
-       P s \<and> P' t \<and> I s t \<and> A s t
-     \<longrightarrow> (\<forall>(rva, s') \<in> fst (f s). \<forall>(rvb, t') \<in> fst (f' t).
-          R rva rvb \<and> I s' t' \<and> B s' t')"
+     P s \<and> P' t \<and> I s t \<and> A s t \<longrightarrow>
+     (\<forall>(rva, s') \<in> fst (f s). \<forall>(rvb, t') \<in> fst (f' t).
+        R rva rvb \<and>
+        I (with_env_of s s') (with_env_of t t') \<and>
+        B (with_env_of s s') (with_env_of t t'))"
 
 lemma equiv_valid_2_bind_general:
   assumes r2: "\<And> rv rv'. R' rv rv' \<Longrightarrow> equiv_valid_2 D B C R (Q rv) (Q' rv') (g rv) (g' rv')"
@@ -145,9 +151,13 @@ wp can cope with this.
 
 \<close>
 
-definition
-  spec_equiv_valid :: "'s \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s,'b) nondet_monad \<Rightarrow> bool"
-where
+definition spec_equiv_valid ::
+  "('c, 's) monad_state \<Rightarrow>
+   (('c, 's) monad_state \<Rightarrow> ('c, 's) monad_state \<Rightarrow> bool) \<Rightarrow>
+   (('c, 's) monad_state \<Rightarrow> ('c, 's) monad_state \<Rightarrow> bool) \<Rightarrow>
+   (('c, 's) monad_state \<Rightarrow> ('c, 's) monad_state \<Rightarrow> bool) \<Rightarrow>
+   ('c, 's) mpred \<Rightarrow> ('c, 's, 'b) nondet_monad \<Rightarrow> bool"
+  where
   "spec_equiv_valid st I A B P f \<equiv> equiv_valid_2 I A B (=) (P and ((=) st)) P f f"
 
 abbreviation spec_equiv_valid_inv where
@@ -163,9 +173,12 @@ wp can cope with this too.
 
 \<close>
 
-definition
-  equiv_valid :: "('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s,'b) nondet_monad \<Rightarrow> bool"
-where
+definition equiv_valid ::
+  "(('c, 's) monad_state \<Rightarrow> ('c, 's) monad_state \<Rightarrow> bool) \<Rightarrow>
+   (('c, 's) monad_state \<Rightarrow> ('c, 's) monad_state \<Rightarrow> bool) \<Rightarrow>
+   (('c, 's) monad_state \<Rightarrow> ('c, 's) monad_state \<Rightarrow> bool) \<Rightarrow>
+   ('c, 's) mpred \<Rightarrow> ('c, 's, 'b) nondet_monad \<Rightarrow> bool"
+  where
   "equiv_valid I A B P f \<equiv> \<forall>st. spec_equiv_valid st I A B P f"
 
 lemma equiv_valid_def2:
@@ -266,15 +279,17 @@ lemma equiv_valid_rv_bind:
   using assms by(blast intro: equiv_valid_rv_bind_general)
 
 lemma modify_ev2:
-  assumes "\<And> s t. \<lbrakk>I s t; A s t; P s; P' t\<rbrakk> \<Longrightarrow> R () () \<and> I (f s) (f' t) \<and> B (f s) (f' t)"
+  assumes
+    "\<And>s t. \<lbrakk>I s t; A s t; P s; P' t\<rbrakk> \<Longrightarrow>
+            R () () \<and> I (const_env f s) (const_env f' t) \<and> B (const_env f s) (const_env f' t)"
   shows
   "equiv_valid_2 I A B R P P' (modify f) (modify f')"
   apply(clarsimp simp: equiv_valid_2_def in_monad)
-  using assms by auto
+  using assms by (auto simp: const_env_def)
 
 lemma modify_ev:
   "equiv_valid I A B
-     (\<lambda> s. \<forall> s t. I s t \<and> A s t \<longrightarrow> I (f s) (f t) \<and> B (f s) (f t))
+     (\<lambda> s. \<forall> s t. I s t \<and> A s t \<longrightarrow> I (const_env f s) (const_env f t) \<and> B (const_env f s) (const_env f t))
      (modify f)"
   apply(clarsimp simp:equiv_valid_def2)
   apply(rule modify_ev2)
@@ -282,22 +297,21 @@ lemma modify_ev:
 
 lemma modify_ev':
   "equiv_valid I A B
-     (\<lambda> s. \<forall> t. I s t \<and> A s t \<longrightarrow> I (f s) (f t) \<and> B (f s) (f t))
+     (\<lambda> s. \<forall> t. I s t \<and> A s t \<longrightarrow> I (const_env f s) (const_env f t) \<and> B (const_env f s) (const_env f t))
      (modify f)"
   apply(clarsimp simp:equiv_valid_def2)
   apply(rule modify_ev2)
   by auto
 
 lemma modify_ev'':
-  assumes "\<And> s t. \<lbrakk>I s t; A s t; P s; P t\<rbrakk> \<Longrightarrow> I (f s) (f t) \<and> B (f s) (f t)"
+  assumes "\<And> s t. \<lbrakk>I s t; A s t; P s; P t\<rbrakk> \<Longrightarrow> I (const_env f s) (const_env f t) \<and> B (const_env f s) (const_env f t)"
   shows "equiv_valid I A B P (modify f)"
   apply(clarsimp simp:equiv_valid_def2)
   apply(rule modify_ev2)
   using assms by auto
 
-
 lemma put_ev2:
-  assumes "\<And> s t. \<lbrakk>I s t; A s t; P s; P' t\<rbrakk> \<Longrightarrow> R () () \<and> I x x' \<and> B x x'"
+  assumes "\<And>s t. \<lbrakk>I s t; A s t; P s; P' t\<rbrakk> \<Longrightarrow> R () () \<and> I (with_env_of s (mstate x)) (with_env_of t (mstate x')) \<and> B (with_env_of s (mstate x)) (with_env_of t (mstate x'))"
   shows
   "equiv_valid_2 I A B R P P' (put x) (put x')"
   apply(clarsimp simp: equiv_valid_2_def in_monad)
@@ -407,7 +421,6 @@ lemma equiv_valid_rv_guard_imp:
   "\<lbrakk>equiv_valid_rv I A B R P f; \<And> s. Q s \<Longrightarrow> P s\<rbrakk> \<Longrightarrow>
    equiv_valid_rv I A B R Q f"
   apply(simp add: equiv_valid_2_def)
-  apply fast
   done
 
 lemma gets_ev:
@@ -608,9 +621,9 @@ lemma mapM_x_ev_pre:
   assumes invariant: "\<And> x. x \<in> set lst \<Longrightarrow> \<lbrace> I \<rbrace> m x \<lbrace> \<lambda>_. I \<rbrace>"
   assumes inv_established: "\<And> s. P s \<Longrightarrow> I s"
   shows "equiv_valid_inv D A P (mapM_x m lst)"
-  apply(subst mapM_x_mapM)
-  apply(rule bind_ev_pre[OF return_ev mapM_ev_pre])
-  apply (blast intro: reads_res invariant inv_established wp_post_taut)+
+  apply (subst mapM_x_mapM)
+  apply (rule bind_ev_pre[OF return_ev mapM_ev_pre])
+  apply (blast intro: reads_res invariant inv_established)+
   done
 
 lemma mapM_ev:
@@ -716,7 +729,7 @@ lemma spec_equiv_valid_guard_imp:
   by (fastforce simp: spec_equiv_valid_def equiv_valid_2_def)
 
 lemma bind_spec_ev:
-  assumes reads_res_2: "\<And> rv s''. (rv, s'') \<in> fst (f s') \<Longrightarrow> spec_equiv_valid_inv s'' I A (Q rv) (g rv)"
+  assumes reads_res_2: "\<And> rv s''. (rv, s'') \<in> fst (f s') \<Longrightarrow> spec_equiv_valid_inv (with_env_of s' s'') I A (Q rv) (g rv)"
   assumes reads_res_1: "spec_equiv_valid_inv s' I A P' f"
   assumes hoare: "\<lbrace>P''\<rbrace> f \<lbrace>Q\<rbrace>"
   shows "spec_equiv_valid_inv s' I A (\<lambda>s. P' s \<and> P'' s) (f >>= g)"
@@ -731,14 +744,13 @@ lemma bind_spec_ev:
     apply (cut_tac reads_res_2)
      prefer 2
      apply assumption
-    apply (clarsimp simp: spec_equiv_valid_def equiv_valid_2_def)
-    apply(erule_tac x=bb in allE)
-    using hoare
-    apply (fastforce simp: valid_def)+
+    apply (clarsimp simp: spec_equiv_valid_def equiv_valid_2_def split_def)
+    apply (smt (verit, best) fst_conv hoare post_by_hoare select_convs(1) snd_conv)
+   apply (fastforce simp: valid_def)+
   done
 
 lemma bindE_spec_ev:
-  assumes reads_res_2: "\<And> rv s''. (Inr rv, s'') \<in> fst (f s') \<Longrightarrow> spec_equiv_valid_inv s'' I A (Q rv) (g rv)"
+  assumes reads_res_2: "\<And> rv s''. (Inr rv, s'') \<in> fst (f s') \<Longrightarrow> spec_equiv_valid_inv (with_env_of s' s'') I A (Q rv) (g rv)"
   assumes reads_res_1: "spec_equiv_valid_inv s' I A P' f"
   assumes hoare: "\<lbrace>P''\<rbrace> f \<lbrace>Q\<rbrace>,-"
   shows "spec_equiv_valid_inv s' I A (\<lambda>s. P' s \<and> P'' s) (f >>=E g)"
@@ -827,7 +839,7 @@ lemma spec_equiv_valid_2_inv_guard_imp:
   by(auto simp: spec_equiv_valid_2_inv_def equiv_valid_2_def)
 
 lemma bind_spec_ev2:
-  assumes reads_res_2: "\<And> rv s' rv'. \<lbrakk>(rv, s') \<in> fst (f s); R' rv rv'\<rbrakk> \<Longrightarrow> spec_equiv_valid_2_inv s' I A R (Q rv) (Q' rv') (g rv) (g' rv')"
+  assumes reads_res_2: "\<And> rv s' rv'. \<lbrakk>(rv, s') \<in> fst (f s); R' rv rv'\<rbrakk> \<Longrightarrow> spec_equiv_valid_2_inv (with_env_of s s') I A R (Q rv) (Q' rv') (g rv) (g' rv')"
   assumes reads_res_1: "spec_equiv_valid_2_inv s I A R' P P' f f'"
   assumes hoare: "\<lbrace>S\<rbrace> f \<lbrace>Q\<rbrace>"
   assumes hoare': "\<lbrace>S'\<rbrace> f' \<lbrace>Q'\<rbrace>"
@@ -843,15 +855,11 @@ lemma bind_spec_ev2:
     apply assumption
    apply assumption
   apply (clarsimp simp: spec_equiv_valid_2_inv_def equiv_valid_2_def)
-  apply(drule_tac x=bb in spec)
-  apply clarsimp
-  using hoare hoare'
-  apply (fastforce simp: valid_def)+
-  done
+  by (smt (verit, del_insts) case_prod_conv hoare hoare' select_convs(1) use_valid)
 
 lemma spec_equiv_valid_2_inv_bindE:
   assumes g: "\<And>rv s' rv'. \<lbrakk>(Inr rv, s') \<in> fst (f s); R' rv rv'\<rbrakk> \<Longrightarrow>
-      spec_equiv_valid_2_inv s' I A (E \<oplus> R) (Q rv) (Q' rv') (g rv) (g' rv')"
+      spec_equiv_valid_2_inv (with_env_of s s') I A (E \<oplus> R) (Q rv) (Q' rv') (g rv) (g' rv')"
   assumes h1: "\<lbrace>S\<rbrace> f \<lbrace>Q\<rbrace>,-"
   assumes h2: "\<lbrace>S'\<rbrace> f' \<lbrace>Q'\<rbrace>,-"
   assumes f: "spec_equiv_valid_2_inv s I A (E \<oplus> R') P P' f f'"
@@ -958,13 +966,13 @@ lemma catch_ev[wp]:
 lemma equiv_valid_rv_trivial:
   assumes inv: "\<And> P. \<lbrace> P \<rbrace> f \<lbrace> \<lambda>_. P \<rbrace>"
   shows "equiv_valid_rv_inv I A \<top>\<top> \<top> f"
-  by(auto simp: equiv_valid_2_def dest: state_unchanged[OF inv])
+  by(auto simp: equiv_valid_2_def dest!: state_unchanged[OF inv])
 
 lemma equiv_valid_2_trivial:
   assumes inv: "\<And> P. \<lbrace> P \<rbrace> f \<lbrace> \<lambda>_. P \<rbrace>"
   assumes inv': "\<And> P. \<lbrace> P \<rbrace> f' \<lbrace> \<lambda>_. P \<rbrace>"
   shows "equiv_valid_2 I A A \<top>\<top> \<top> \<top> f f'"
-  by(auto simp: equiv_valid_2_def dest: state_unchanged[OF inv] state_unchanged[OF inv'])
+  by(auto simp: equiv_valid_2_def dest!: state_unchanged[OF inv] state_unchanged[OF inv'])
 
 lemma gen_asm_ev2_r:
   "\<lbrakk>P' \<Longrightarrow> equiv_valid_2 I A B R P Q f f'\<rbrakk> \<Longrightarrow>

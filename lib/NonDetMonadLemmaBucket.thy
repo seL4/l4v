@@ -88,7 +88,7 @@ lemma gets_the_exs_valid_no_ofail:
 
 lemma exs_valid_state_inv:
   "\<lbrakk>\<And>P. f \<lbrace>P\<rbrace>; no_fail P f; P s; empty_fail f\<rbrakk> \<Longrightarrow> \<lbrace>(=) s\<rbrace> f \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
-  by (fastforce simp: no_fail_def empty_fail_def valid_def exs_valid_def)
+  by (cases s) (fastforce simp: no_fail_def empty_fail_def valid_def exs_valid_def)
 
 lemma valid_none_top_post_wp:
   "\<lbrakk>\<And>x. \<lbrace>P x\<rbrace> f \<lbrace>\<lambda>_. Q x\<rbrace>\<rbrakk>

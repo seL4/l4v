@@ -309,8 +309,8 @@ text \<open>CorresK_rv is used to propagate backwards the stateless precondition
 
 
 (*Don't unfold the definition. Use corresK_rv method or associated rules. *)
-definition corres_rv :: "bool \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> bool)
-           \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('t, 'b) nondet_monad \<Rightarrow>
+definition corres_rv :: "bool \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('c, 's) mpred \<Rightarrow> ('e, 't) mpred
+           \<Rightarrow> ('c, 's, 'a) nondet_monad \<Rightarrow> ('e, 't, 'b) nondet_monad \<Rightarrow>
             ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> bool"
   where
   "corres_rv F r P P' f f' Q \<equiv>
@@ -514,14 +514,18 @@ lemma corresK_split:
   assumes z: "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>"
   shows      "corres_underlyingK sr nf nf' (F \<and> F'') r (PP and P and Q) (PP' and P' and Q') (a >>= (\<lambda>rv. b rv)) (c >>= (\<lambda>rv'. d rv'))"
   apply (clarsimp simp: corres_underlying_def corres_underlyingK_def bind_def)
+  apply (rename_tac s s')
   apply (rule conjI)
    apply (frule (3) x[simplified corres_underlyingK_def, rule_format, THEN corres_underlyingD],simp)
    apply clarsimp
-   apply (drule(1) bspec,clarsimp)
+   apply (rename_tac rv' t' rv1' t1')
+   apply (drule (1) bspec, clarsimp)
+   apply (rename_tac rv t)
    apply (drule (5) corres_rvD[OF c])
-   apply (rule_tac x="(ac,bc)" in bexI,clarsimp)
-    apply (frule_tac s'=baa in y[simplified corres_underlyingK_def corres_protect_def, rule_format, THEN corres_underlyingD])
-          apply assumption+
+   apply (rule_tac x="(rv, t)" in bexI, clarsimp)
+    apply (frule_tac s'="with_env_of s' t'" in y[simplified corres_underlyingK_def corres_protect_def,
+                                                 rule_format, THEN corres_underlyingD])
+         apply assumption+
        apply (erule(1) use_valid[OF _ z(1)])
       apply (erule(1) use_valid[OF _ z(2)])
      apply fastforce
@@ -530,10 +534,12 @@ lemma corresK_split:
    apply simp
   apply (frule (3) x[simplified corres_underlyingK_def, rule_format, THEN corres_underlyingD],simp)
   apply clarsimp
+  apply (rename_tac rv' t')
   apply (drule(1) bspec,clarsimp)
   apply (drule (5) corres_rvD[OF c])
-  apply (frule_tac s'=baa in y[simplified corres_underlyingK_def corres_protect_def, rule_format, THEN corres_underlyingD])
-        apply simp+
+  apply (frule_tac s'="with_env_of s' t'" in y[simplified corres_underlyingK_def corres_protect_def,
+                                               rule_format, THEN corres_underlyingD])
+       apply simp+
      apply (erule(1) use_valid[OF _ z(1)])
     apply (erule(1) use_valid[OF _ z(2)])
    apply fastforce
@@ -726,41 +732,43 @@ lemma corresK_if_rev:
       (if G' then c else d)"
     by (simp add: corres_underlying_def corres_underlyingK_def corres_protect_def)
 
-
-
 named_theorems corresK_symb_exec_ls and corresK_symb_exec_rs
 
 lemma corresK_symb_exec_l_search[corresK_symb_exec_ls]:
-  fixes x :: "'b \<Rightarrow> 'a \<Rightarrow> ('d \<times> 'a) set \<times> bool"
-  notes [simp] = corres_noop_def
+  fixes x :: "'b \<Rightarrow> ('c, 't, 'a) nondet_monad"
   shows
   "\<lbrakk>\<And>s. \<lbrace>PP s\<rbrace> m \<lbrace>\<lambda>_. (=) s\<rbrace>; \<And>rv. corres_underlyingK sr nf True (F rv) r (Q rv) P' (x rv) y;
-   corres_rv F' dc RR (\<lambda>_. True) m (corres_noop) (\<lambda>rv _. F rv);
-   empty_fail m; no_fail P m; \<lbrace>R\<rbrace> m \<lbrace>Q\<rbrace>\<rbrakk>
-\<Longrightarrow> corres_underlyingK sr nf True F' r (RR and P and R and (\<lambda>s. \<forall>s'. s = s' \<longrightarrow> PP s' s)) P' (m >>= x) y"
+    corres_rv F' dc RR (\<lambda>_. True) m (corres_noop) (\<lambda>rv _. F rv);
+    empty_fail m; no_fail P m; \<lbrace>R\<rbrace> m \<lbrace>Q\<rbrace>\<rbrakk>
+  \<Longrightarrow> corres_underlyingK sr nf True F' r (RR and P and R and (\<lambda>s. \<forall>s'. s = s' \<longrightarrow> PP s' s)) P' (m >>= x) y"
+  supply corres_noop_def[simp]
   apply (clarsimp simp add: corres_underlyingK_def)
   apply (rule corres_name_pre)
   apply (clarsimp simp: corres_underlying_def corres_underlyingK_def
                         bind_def valid_def empty_fail_def no_fail_def)
-  apply (drule_tac x=a in meta_spec)+
-  apply (drule_tac x=a in spec)+
+  apply (rename_tac s s')
+  apply (drule_tac x=s in meta_spec)+
+  apply (drule_tac x=s in spec)+
   apply (drule mp, assumption)+
   apply (clarsimp simp: not_empty_eq)
+  apply (rename_tac rv t)
   apply (drule corres_rvD; (assumption | simp add: return_def)?)
-  apply (drule_tac x="(aa,ba)" in bspec,simp)+
+  apply (drule_tac x="(rv, t)" in bspec, simp)+
   apply clarsimp
-  apply (drule_tac x=aa in meta_spec)
+  apply (drule_tac x=rv in meta_spec)
   apply clarsimp
-  apply (drule_tac x="(ba,b)" in bspec,simp)
+  apply (drule_tac x="(s, s')" in bspec, simp)
   apply clarsimp
   apply (drule mp, fastforce)
   apply clarsimp
-  apply (drule_tac x="(a,bb)" in bspec,simp)
+  apply (rename_tac rv' t')
+  apply (drule_tac x="(rv', t')" in bspec,simp)
   apply clarsimp
-  apply (rule_tac x="(aa,ba)" in bexI)
-   apply (clarsimp)
-   apply (rule_tac x="(ab,bc)" in bexI)
-    apply (clarsimp)+
+  apply (rename_tac rv0 t)
+  apply (rule_tac x="(rv, mstate s)" in bexI)
+   apply clarsimp
+   apply (rule_tac x="(rv0, t)" in bexI)
+    apply clarsimp+
   done
 
 
@@ -768,7 +776,7 @@ lemmas corresK_symb_exec_liftME_l_search[corresK_symb_exec_ls] =
   corresK_symb_exec_l_search[where 'd="'x + 'y", folded liftE_bindE]
 
 lemma corresK_symb_exec_r_search[corresK_symb_exec_rs]:
-  fixes y :: "'b \<Rightarrow> 'a \<Rightarrow> ('e \<times> 'a) set \<times> bool"
+  fixes y :: "'b \<Rightarrow> ('c, 's, 'a) nondet_monad"
   assumes X: "\<And>s. \<lbrace>PP' s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>"
   assumes corres: "\<And>rv. corres_underlyingK sr nf nf' (F rv) r P (Q' rv) x (y rv)"
   assumes Y: "corres_rv F' dc (\<lambda>_. True) RR (corres_noop) m (\<lambda>_ rv'. F rv')"
@@ -783,14 +791,16 @@ lemma corresK_symb_exec_r_search[corresK_symb_exec_rs]:
   apply (rule corres_name_pre)
   apply (clarsimp simp: corres_underlying_def corres_underlyingK_def
                         bind_def valid_def empty_fail_def no_fail_def)
+  apply (rename_tac s s')
   apply (intro impI conjI ballI)
     apply clarsimp
+    apply (rename_tac rv' t' rv0' t0')
     apply (frule(1) use_valid[OF _ X])
     apply (drule corres_rvD[OF Y]; (assumption | simp add: return_def)?)
     apply (frule(1) use_valid[OF _ Z])
-    apply (drule_tac x=aa in meta_spec)
+    apply (drule_tac x=rv' in meta_spec)
     apply clarsimp
-    apply (drule_tac x="(a, ba)" in bspec,simp)
+    apply (drule_tac x="(s, s')" in bspec, simp)
     apply (clarsimp)
     apply (drule(1) bspec)
     apply clarsimp

@@ -203,7 +203,7 @@ lemmas corres_underlying_stateAssert_stateAssert_trivial[corres_term] =
   corres_underlying_stateAssert_stateAssert[where P=\<top> and P'=\<top>, simplified]
 
 lemma corres_modify_tivial[corres_term]:
-  "(\<And>s s'. (s, s') \<in> sr \<Longrightarrow> (f s, g s') \<in> sr) \<Longrightarrow>
+  "(\<And>s s'. (s, s') \<in> sr \<Longrightarrow> (const_env f s, const_env g s') \<in> sr) \<Longrightarrow>
    corres_underlying sr nf nf' dc \<top> \<top> (modify f) (modify g)"
   by (simp add: corres_modify)
 

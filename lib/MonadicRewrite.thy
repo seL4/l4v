@@ -16,7 +16,7 @@ imports
 begin
 
 definition monadic_rewrite ::
-  "bool \<Rightarrow> bool \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> bool"
+  "bool \<Rightarrow> bool \<Rightarrow> ('c, 's) mpred \<Rightarrow> ('c, 's, 'a) nondet_monad \<Rightarrow> ('c, 's, 'a) nondet_monad \<Rightarrow> bool"
   where
    "monadic_rewrite F E P f g \<equiv>
       \<forall>s. P s \<and> (F \<longrightarrow> \<not> snd (f s))
@@ -116,7 +116,7 @@ lemma monadic_rewrite_weaken_flags':
 text \<open>bind/bindE\<close>
 
 lemma snd_bind:
-  "snd ((a >>= b) s) = (snd (a s) \<or> (\<exists>(r, s') \<in> fst (a s). snd (b r s')))"
+  "snd ((a >>= b) s) = (snd (a s) \<or> (\<exists>(r, s') \<in> fst (a s). snd (b r (with_env_of s s'))))"
   by (auto simp add: bind_def split_def)
 
 lemma monadic_rewrite_bind:
@@ -180,13 +180,16 @@ lemma monadic_rewrite_bind_l:
 
 lemma monadic_rewrite_named_bindE:
   "\<lbrakk> monadic_rewrite F E ((=) s) f f';
-    \<And>rv s'. (Inr rv, s') \<in> fst (f' s) \<Longrightarrow> monadic_rewrite F E ((=) s') (g rv) (g' rv) \<rbrakk>
+    \<And>rv s'. (Inr rv, s') \<in> fst (f' s) \<Longrightarrow> monadic_rewrite F E ((=) (with_env_of s s')) (g rv) (g' rv) \<rbrakk>
    \<Longrightarrow> monadic_rewrite F E ((=) s) (f >>=E (\<lambda>rv. g rv)) (f' >>=E g')"
   apply (rule monadic_rewrite_guard_imp)
-   apply (erule_tac R="(=) s" and Q="\<lambda>rv s'. (Inr rv, s') \<in> fst (f' s)" in monadic_rewrite_bindE)
+   apply (erule_tac R="(=) s" and
+                    Q="\<lambda>rv s'. (Inr rv, mstate s') \<in> fst (f' s) \<and> env s' = env s"
+                    in monadic_rewrite_bindE)
     apply (rule monadic_rewrite_name_pre)
-    apply (clarsimp simp add: validE_R_def validE_def valid_def
-                       split: sum.split)+
+    apply (rename_tac s', case_tac s', simp)
+   apply (clarsimp simp add: validE_R_def validE_def valid_def
+                      split: sum.split)+
   done
 
 lemma monadic_rewrite_drop_return:
@@ -282,7 +285,7 @@ lemma monadic_rewrite_symb_exec_l'':
      apply (clarsimp simp: monadic_rewrite_def bind_def prod_eq_iff)
      apply (subgoal_tac "\<not> snd (m s)")
       apply (simp add: empty_fail_def, drule_tac x=s in spec)
-      apply (prop_tac "\<forall>(rv, s') \<in> fst (m s). x rv s' = y s")
+      apply (prop_tac "\<forall>(rv, s') \<in> fst (m s). x rv (with_env_of s s') = y s")
        apply clarsimp
        apply (drule (1) in_inv_by_hoareD')
        apply (frule (2) use_valid)
@@ -296,14 +299,14 @@ lemma monadic_rewrite_symb_exec_l'':
     apply (clarsimp simp: monadic_rewrite_def bind_def)
     apply (prop_tac "\<not> snd (m s)")
      apply (fastforce simp: no_failD)
-    apply (prop_tac "\<forall>v \<in> fst (m s). Q (fst v) (snd v) \<and> snd v = s")
+    apply (prop_tac "\<forall>v \<in> fst (m s). Q (fst v) (with_env_of s (snd v)) \<and> with_env_of s (snd v) = s")
      apply clarsimp
      apply (frule (2) use_valid)
-     apply (fastforce intro: in_inv_by_hoareD')
+     apply (fastforce intro: in_inv_by_hoareD'[THEN sym] simp: with_env_of_eq_mstate)
     apply simp
     apply (frule (1) empty_failD2)
     apply (clarsimp simp: split_def)
-    apply fast
+    apply (metis SUP_upper2)
     done
   done
 
@@ -338,7 +341,7 @@ lemma monadic_rewrite_symb_exec_r':
      apply (drule (1) no_failD)
      apply clarsimp
      apply (simp add: empty_fail_def, drule_tac x=s in spec)
-     apply (prop_tac "\<forall>(rv, s') \<in> fst (m s). y rv s' = x s")
+     apply (prop_tac "\<forall>(rv, s') \<in> fst (m s). y rv (with_env_of s s') = x s")
       apply clarsimp
       apply (drule (1) in_inv_by_hoareD)
       apply (drule (2) use_valid)
@@ -348,7 +351,7 @@ lemma monadic_rewrite_symb_exec_r':
   subgoal (* \<not> E *)
     apply (clarsimp simp: monadic_rewrite_def bind_def)
     apply (drule(1) no_failD)
-    apply (subgoal_tac "\<forall>v \<in> fst (m s). Q (fst v) (snd v) \<and> snd v = s")
+    apply (subgoal_tac "\<forall>v \<in> fst (m s). Q (fst v) (with_env_of s (snd v)) \<and> with_env_of s (snd v) = s")
      apply fastforce
     apply clarsimp
     apply (frule(2) use_valid)
@@ -576,7 +579,7 @@ lemma monadic_rewrite_bind_alternative:
                                 (f >>= (\<lambda>x. alternative (g x) h))"
   apply (clarsimp simp: monadic_rewrite_def bind_def
                         alternative_def imp_conjL)
-  apply (subgoal_tac "\<forall>x \<in> fst (f s). snd x = s")
+  apply (subgoal_tac "\<forall>x \<in> fst (f s). with_env_of s (snd x) = s")
    apply (simp add: image_image split_def cong: image_cong)
    apply fastforce
   apply clarsimp
@@ -793,7 +796,7 @@ lemmas corres_gets_the_bind
 text \<open>Interaction with @{term oblivious}\<close>
 
 lemma oblivious_monadic_rewrite:
-  "oblivious f m \<Longrightarrow> monadic_rewrite F E \<top> (do modify f; m od) (do m; modify f od)"
+  "oblivious f m \<Longrightarrow> monadic_rewrite F E \<top> (do modify (map_state f); m od) (do m; modify (map_state f) od)"
   by (clarsimp simp: monadic_rewrite_def oblivious_modify_swap)
 
 text \<open>Tool integration\<close>
