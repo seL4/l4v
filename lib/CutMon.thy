@@ -15,19 +15,19 @@ theory CutMon
 begin
 
 definition
-  cutMon :: "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad" where
+  cutMon :: "('c, 's) mpred \<Rightarrow> ('c, 's, 'a) nondet_monad \<Rightarrow> ('c, 's, 'a) nondet_monad" where
  "cutMon P f \<equiv> \<lambda>s. if P s then f s else fail s"
 
 lemma cutMon_walk_bind:
   "cutMon ((=) s) (f >>= g) =
-   (cutMon ((=) s) f >>= (\<lambda>rv. cutMon (\<lambda>s'. (rv, s') \<in> fst (f s)) (g rv)))"
+   (cutMon ((=) s) f >>= (\<lambda>rv. cutMon (\<lambda>s'. (rv, mstate s') \<in> fst (f s)) (g rv)))"
   apply (rule ext, simp add: cutMon_def bind_def fail_def)
   apply (auto simp: split_def)
   done
 
 lemma cutMon_walk_bindE:
   "cutMon ((=) s) (f >>=E g) =
-   (cutMon ((=) s) f >>=E (\<lambda>rv. cutMon (\<lambda>s'. (Inr rv, s') \<in> fst (f s)) (g rv)))"
+   (cutMon ((=) s) f >>=E (\<lambda>rv. cutMon (\<lambda>s'. (Inr rv, mstate s') \<in> fst (f s)) (g rv)))"
   apply (simp add: bindE_def cutMon_walk_bind)
   apply (rule bind_cong, rule refl)
   apply (simp add: cutMon_def lift_def fail_def split: if_split_asm)

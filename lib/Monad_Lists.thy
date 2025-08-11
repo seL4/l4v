@@ -102,7 +102,7 @@ lemma zipWithM_x_mapM_x:
   done
 
 lemma zipWithM_x_append1:
-  fixes f :: "'b \<Rightarrow> 'c \<Rightarrow> ('a, unit) nondet_monad"
+  fixes f :: "'b \<Rightarrow> 'c \<Rightarrow> ('r, 'a, unit) nondet_monad"
   assumes ls: "length xs = length ys"
   shows "(zipWithM_x f (xs @ [x]) (ys @ [y])) = (zipWithM_x f xs ys >>= (\<lambda>_. f x y))"
   unfolding zipWithM_x_def zipWith_def
@@ -135,9 +135,9 @@ lemma mapM_x_return :
 
 lemma bind_comm_mapM_comm:
   assumes bind_comm:
-    "\<And>n z. do x \<leftarrow> a; y \<leftarrow> b z; (n x y :: ('a, 's) nondet_monad) od =
+    "\<And>n z. do x \<leftarrow> a; y \<leftarrow> b z; (n x y :: ('c, 's, 'a) nondet_monad) od =
             do y \<leftarrow> b z; x \<leftarrow> a; n x y od"
-  shows "\<And>n'. do x \<leftarrow> a; ys \<leftarrow> mapM b zs; (n' x ys :: ('a, 's) nondet_monad) od =
+  shows "\<And>n'. do x \<leftarrow> a; ys \<leftarrow> mapM b zs; (n' x ys :: ('c, 's, 'a) nondet_monad) od =
          do ys \<leftarrow> mapM b zs; x \<leftarrow> a; n' x ys od"
 proof (induct zs)
   case Nil
@@ -379,7 +379,7 @@ lemma mapME_wp:
 lemmas mapME_wp' = mapME_wp [OF _ subset_refl]
 
 lemma mapM_x_inv_wp3:
-  fixes m :: "'b \<Rightarrow> ('a, unit) nondet_monad"
+  fixes m :: "'a \<Rightarrow> ('c, 's, unit) nondet_monad"
   assumes hr: "\<And>a as bs. xs = as @ [a] @ bs \<Longrightarrow>
      \<lbrace>\<lambda>s. I s \<and> V as s\<rbrace> m a \<lbrace>\<lambda>r s. I s \<and> V (as @ [a]) s\<rbrace>"
   shows   "\<lbrace>\<lambda>s. I s \<and> V [] s\<rbrace> mapM_x m xs \<lbrace>\<lambda>rv s. I s \<and> V xs s\<rbrace>"
@@ -413,8 +413,8 @@ lemma mapME_x_inv_wp:
   done
 
 lemma mapM_upd:
-  assumes "\<And>x rv s s'. (rv,s') \<in> fst (f x s) \<Longrightarrow> x \<in> set xs \<Longrightarrow> (rv, g s') \<in> fst (f x (g s))"
-  shows "(rv,s') \<in> fst (mapM f xs s) \<Longrightarrow> (rv, g s') \<in> fst (mapM f xs (g s))"
+  assumes "\<And>x rv s s'. (rv,s') \<in> fst (f x s) \<Longrightarrow> x \<in> set xs \<Longrightarrow> (rv, g s') \<in> fst (f x (map_state g s))"
+  shows "(rv,s') \<in> fst (mapM f xs s) \<Longrightarrow> (rv, g s') \<in> fst (mapM f xs (map_state g s))"
   using assms
 proof (induct xs arbitrary: rv s s')
   case Nil
@@ -426,8 +426,9 @@ next
     apply (clarsimp simp: mapM_Cons in_monad)
     apply (drule Cons.prems, simp)
     apply (rule exI, erule conjI)
-    apply (erule Cons.hyps)
-    apply (erule Cons.prems)
+    apply (drule Cons.hyps)
+     apply (erule Cons.prems)
+     apply simp
     apply simp
     done
 qed
@@ -665,9 +666,10 @@ lemma empty_fail_mapM_x [simp]:
   done
 
 lemma mapM_upd_inv:
-  assumes f: "\<And>x rv. (rv,s) \<in> fst (f x s) \<Longrightarrow> x \<in> set xs \<Longrightarrow> (rv, g s) \<in> fst (f x (g s))"
+  assumes f: "\<And>x rv. \<lbrakk> (rv, mstate s) \<in> fst (f x s); x \<in> set xs \<rbrakk> \<Longrightarrow>
+                      (rv, g (mstate s)) \<in> fst (f x (map_state g s))"
   assumes inv: "\<And>x. \<lbrace>(=) s\<rbrace> f x \<lbrace>\<lambda>_. (=) s\<rbrace>"
-  shows "(rv,s) \<in> fst (mapM f xs s) \<Longrightarrow> (rv, g s) \<in> fst (mapM f xs (g s))"
+  shows "(rv, mstate s) \<in> fst (mapM f xs s) \<Longrightarrow> (rv, g (mstate s)) \<in> fst (mapM f xs (map_state g s))"
   using f inv
 proof (induct xs arbitrary: rv s)
   case Nil
@@ -684,7 +686,7 @@ next
     apply (drule Cons.hyps)
       apply simp
      apply assumption
-    apply simp
+    apply (clarsimp simp: map_state_def)
     done
 qed
 

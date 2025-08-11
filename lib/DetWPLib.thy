@@ -12,7 +12,7 @@ definition
   "det_wp P f \<equiv> \<forall>s. P s \<longrightarrow> (\<exists>r. f s = ({r}, False))"
 
 lemma det_result:
-  "\<lbrakk> det_wp P f; \<And>s. \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>_. (=) s\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. fst (f s) = {(rv, s)}\<rbrace>"
+  "\<lbrakk> det_wp P f; \<And>s. \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>_. (=) s\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. fst (f s) = {(rv, mstate s)}\<rbrace>"
   by (fastforce simp: det_wp_def valid_def split_def)
 
 lemma det_wp_use:
@@ -144,11 +144,10 @@ lemma det_wp_def2:
 
 lemma whileLoop_result_det_wp_intermediate:
   "\<lbrakk>det_wp P (B r); C r s; P s;
-    (r', s') \<in> fst (B r s); (Some (r, s), Some (r'', s'')) \<in> whileLoop_results C B\<rbrakk>
-   \<Longrightarrow> (Some (r', s'), Some (r'', s'')) \<in> whileLoop_results C B"
+    (r', s') \<in> fst (B r s); (Some (r, mstate s), Some (r'', s'')) \<in> whileLoop_results C B (env s)\<rbrakk>
+   \<Longrightarrow> (Some (r', s'), Some (r'', s'')) \<in> whileLoop_results C B (env s)"
   apply (clarsimp simp: det_wp_def2)
-  apply (erule whileLoop_results_cases_valid)
-   apply fastforce
+  apply (erule whileLoop_results_cases_valid; clarsimp)
   apply blast
   done
 
@@ -156,7 +155,7 @@ lemma det_wp_whileLoop:
   assumes det: "\<And>r. det_wp (P r and C r) (B r)"
   assumes inv: " \<And>r. \<lbrace>P r and C r\<rbrace> B r \<lbrace>P\<rbrace>"
   assumes ef: "\<And>r. empty_fail (B r)"
-  assumes termin: "\<And>r s. \<lbrakk>P r s; C r s\<rbrakk> \<Longrightarrow> whileLoop_terminates C B r s"
+  assumes termin: "\<And>r s. \<lbrakk>P r s; C r s\<rbrakk> \<Longrightarrow> whileLoop_terminates C B (env s) r (mstate s)"
   shows "det_wp (P r) (whileLoop C B r)"
   apply (clarsimp simp: det_wp_def2)
   apply (intro context_conjI)
@@ -173,7 +172,7 @@ lemma det_wp_whileLoop:
   apply (rename_tac rv state)
   apply (rule_tac P="P r s" in imp_elim)
     apply (rule_tac I="\<lambda>r s r' s'. P r s \<longrightarrow> (rv, state) \<in> fst (whileLoop C B r s)
-                                   \<longrightarrow> rv = r' \<and> state = s'"
+                                   \<longrightarrow> rv = r' \<and> state = mstate s' \<and> env s' = env s"
                  in in_whileLoop_induct)
       apply fastforce
      apply (simp add: whileLoop_cond_fail return_def)

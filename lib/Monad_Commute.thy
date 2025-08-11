@@ -78,9 +78,9 @@ lemma monad_commute_get:
     and eptyf: "empty_fail f" "empty_fail g"
   shows "monad_commute \<top> f g"
 proof -
-  have fsame: "\<And>a b s. (a,b) \<in> fst (f s) \<Longrightarrow> b = s"
-    by (drule use_valid[OF _ hf],auto)
-  have gsame: "\<And>a b s. (a,b) \<in> fst (g s) \<Longrightarrow> b = s"
+  have fsame[simplified]: "\<And>a b s. (a,b) \<in> fst (f s) \<Longrightarrow> with_env_of s b = s"
+    by (drule use_valid[OF _ hf], auto)
+  have gsame: "\<And>a b s. (a,b) \<in> fst (g s) \<Longrightarrow> with_env_of s b = s"
     by (drule use_valid[OF _ hg],auto)
   note ef = empty_fail_not_snd[OF _ eptyf(1)]
   note eg = empty_fail_not_snd[OF _ eptyf(2)]
@@ -94,13 +94,12 @@ proof -
       apply (frule fsame)
       apply clarsimp
       apply (frule gsame)
-      apply (metis fst_conv snd_conv)
+      apply (metis ext_inject fst_conv snd_conv)
      apply (clarsimp simp:Union_eq)
      apply (frule gsame)
      apply clarsimp
      apply (frule fsame)
-     apply clarsimp
-     apply (metis fst_conv snd_conv)
+     apply (metis ext_inject fst_conv snd_conv)
     apply (rule iffI)
      apply (erule disjE)
       apply (clarsimp simp: image_def)

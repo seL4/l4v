@@ -154,10 +154,9 @@ lemma select_pick_corresE:
   by (fastforce simp: liftE_bindE intro: select_pick_corres)
 
 lemma corres_modify:
-  assumes rl:
-  "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk> \<Longrightarrow> (f s, g s') \<in> sr"
+  assumes rl: "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk> \<Longrightarrow> (const_env f s, const_env g s') \<in> sr"
   shows "corres_underlying sr nf nf' dc P P' (modify f) (modify g)"
-  by (simp add: simpler_modify_def corres_singleton rl)
+  by (simp add: simpler_modify_def corres_singleton rl[unfolded const_env_def])
 
 lemma corres_gets_the:
   assumes x: "corres_underlying sr nf nf' (r \<circ> the) P P' (gets f) y"
@@ -227,7 +226,7 @@ lemma corres_underlying_split_ex_abs:
   using assms
   apply (clarsimp simp: corres_underlying_def bind_def)
   apply (clarsimp simp: Bex_def Ball_def valid_def ex_abs_underlying_def)
-  by meson
+  by (metis (no_types, lifting) select_convs(1))
 
 lemma hoare_from_abs:
   assumes corres: "corres_underlying srel nf nf' rrel G G' f f'"
@@ -253,7 +252,7 @@ lemma corres_from_valid:
   assumes nf': "nf' \<Longrightarrow> no_fail (P' and ex_abs_underlying srel P) f'"
   assumes
     "\<And>s. \<lbrace>\<lambda>s'. P s \<and> P' s' \<and> (s, s') \<in> srel\<rbrace>
-          f' \<lbrace>\<lambda>rv' t'. \<exists>(rv, t) \<in> fst (f s). (t, t') \<in> srel \<and> rrel rv rv'\<rbrace>"
+          f' \<lbrace>\<lambda>rv' t'. \<exists>(rv, t) \<in> fst (f s). (with_env_of s t, t') \<in> srel \<and> rrel rv rv'\<rbrace>"
   shows "corres_underlying srel nf nf' rrel P P' f f'"
   using assms
   by (fastforce simp: corres_underlying_def valid_def no_fail_def)
@@ -264,7 +263,7 @@ lemma corres_from_valid_det:
   assumes valid:
     "\<And>s rv t.
       \<lbrakk>fst (f s) = {(rv, t)}; P s\<rbrakk>
-      \<Longrightarrow> \<lbrace>\<lambda>s'. P' s' \<and> (s, s') \<in> srel\<rbrace> f' \<lbrace>\<lambda>rv' t'. (t, t') \<in> srel \<and> rrel rv rv'\<rbrace>"
+      \<Longrightarrow> \<lbrace>\<lambda>s'. P' s' \<and> (s, s') \<in> srel\<rbrace> f' \<lbrace>\<lambda>rv' t'. (with_env_of s t, t') \<in> srel \<and> rrel rv rv'\<rbrace>"
   shows "corres_underlying srel nf nf' rrel P P' f f'"
   apply (clarsimp simp: corres_underlying_def)
   apply (intro conjI)
@@ -364,9 +363,10 @@ lemma in_whileLoop_corres:
   assumes result: "(rv', t') \<in> fst (whileLoop C' B' r' s')"
   assumes nf: "\<And>r. nf \<Longrightarrow> no_fail (P r and C r) (B r)"
   shows "\<forall>s r. (s, s') \<in> srel \<and> rrel r r' \<and> P r s \<and> P' r' s'
-                \<longrightarrow> (\<exists>rv t. (rv, t) \<in> fst (whileLoop C B r s) \<and> (t, t') \<in> srel \<and> rrel rv rv')"
+                \<longrightarrow> (\<exists>rv t. (rv, t) \<in> fst (whileLoop C B r s) \<and> (with_env_of s t, with_env_of s' t') \<in> srel \<and> rrel rv rv')"
   apply (rule in_whileLoop_induct[OF result])
-   apply (force simp: cond whileLoop_def)
+   apply (clarsimp simp: whileLoop_def)
+   apply (metis cond whileLoop_results.intros(1) with_env_of_mstate)
   apply clarsimp
   apply (frule (1) corres_underlyingD2[OF body_corres];
          (fastforce dest: nf simp: cond no_fail_def)?)
@@ -388,7 +388,7 @@ lemma corres_whileLoop_ret:
     "\<And>r'. \<lbrace>P' r' and C' r'\<rbrace> B' r' \<lbrace>P'\<rbrace>"
   assumes rel: "rrel r r'"
   assumes nf': "\<And>r'. no_fail (P' r' and C' r') (B' r')"
-  assumes termin: "\<And>r' s'. \<lbrakk>P' r' s'; C' r' s'\<rbrakk> \<Longrightarrow> whileLoop_terminates C' B' r' s'"
+  assumes termin: "\<And>r' s'. \<lbrakk>P' r' s'; C' r' s'\<rbrakk> \<Longrightarrow> whileLoop_terminates C' B' (env s') r' (mstate s')"
   shows "corres_underlying srel False nf' rrel (P r) (P' r') (whileLoop C B r) (whileLoop C' B' r')"
   apply (rule corres_no_failI)
    apply (fastforce simp: no_fail_whileLoop[OF nf' termin body_inv(2)] no_fail_def)
@@ -408,17 +408,20 @@ lemma whileLoop_terminates_cross:
   assumes body_inv:
     "\<And>r. \<lbrace>P r and C r\<rbrace> B r \<lbrace>P\<rbrace>"
     "\<And>r'. \<lbrace>P' r' and C' r'\<rbrace> B' r' \<lbrace>P'\<rbrace>"
-  assumes abs_termination: "\<And>r s. \<lbrakk>P r s; C r s\<rbrakk> \<Longrightarrow> whileLoop_terminates C B r s"
+  assumes abs_termination: "\<And>r s. \<lbrakk>P r s; C r s\<rbrakk> \<Longrightarrow> whileLoop_terminates C B (env s) r (mstate s)"
   assumes ex_abs: "ex_abs_underlying srel (P r) s'"
   assumes rrel: "rrel r r'"
   assumes P': "P' r' s'"
   assumes nf: "\<And>r. nf \<Longrightarrow> no_fail (P r and C r) (B r)"
-  shows "whileLoop_terminates C' B' r' s'"
+  shows "whileLoop_terminates C' B' (env s') r' (mstate s')"
 proof -
-  have helper: "\<And>s. P r s \<and> C r s \<Longrightarrow> \<forall>r' s'. rrel r r' \<and> (s, s') \<in> srel \<and> P r s \<and> P' r' s'
-                                               \<longrightarrow> whileLoop_terminates C' B' r' s'"
-       (is "\<And>s. _ \<Longrightarrow> ?I r s")
-    apply (rule_tac P="?I" in whileLoop_terminates.induct)
+  have helper:
+     "\<And>s. \<lbrakk> P r s; C r s \<rbrakk> \<Longrightarrow>
+           \<forall>r' s'. rrel r r' \<and> (monad_state (env s) (mstate s), s') \<in> srel \<and>
+                   P r (monad_state (env s) (mstate s)) \<and> P' r' s' \<longrightarrow>
+                   whileLoop_terminates C' B' (env s') r' (mstate s')"
+       (is "\<And>s. \<lbrakk> _; _ \<rbrakk> \<Longrightarrow> ?I (env s) r (mstate s)")
+    apply (rule_tac P="?I (env s)" in whileLoop_terminates.induct)
       apply (fastforce intro: abs_termination)
      apply (fastforce simp: whileLoop_terminates.intros dest: cond)
     apply (subst whileLoop_terminates.simps)
@@ -444,32 +447,34 @@ lemma corres_whileLoop_abs_ret:
   assumes body_inv:
     "\<And>r. \<lbrace>P r and C r\<rbrace> B r \<lbrace>P\<rbrace>"
     "\<And>r'. \<lbrace>P' r' and C' r'\<rbrace> B' r' \<lbrace>P'\<rbrace>"
-  assumes abs_termination: "\<And>r s. \<lbrakk>P r s; C r s\<rbrakk> \<Longrightarrow> whileLoop_terminates C B r s"
+  assumes abs_termination: "\<And>r s. \<lbrakk>P r s; C r s\<rbrakk> \<Longrightarrow> whileLoop_terminates C B (env s) r (mstate s)"
   assumes nf: "\<And>r. nf \<Longrightarrow> no_fail (P r and C r) (B r)"
   shows "corres_underlying srel nf nf' rrel (P r) (P' r') (whileLoop C B r) (whileLoop C' B' r')"
   apply (rule corres_underlyingI)
    apply (frule in_whileLoop_corres[OF body_corres body_inv];
           (fastforce intro: body_corres body_inv rrel dest: nf cond))
   apply (rule_tac I="\<lambda>rv' s'. \<exists>rv s. (s, s') \<in> srel \<and> rrel rv rv' \<and> P rv s \<and> P' rv' s'"
-              and R="{((r', s'), r, s). C' r s \<and> (r', s') \<in> fst (B' r s)
-                                        \<and> whileLoop_terminates C' B' r s}"
+              and R="{((r', s'), r, s). C' r s \<and> (r', mstate s') \<in> fst (B' r s) \<and>
+                                        env s = env s' \<and>
+                                        whileLoop_terminates C' B' (env s) r (mstate s)}"
                in not_snd_whileLoop)
     apply (fastforce intro: rrel)
    apply (rename_tac s s' conc_r new_s)
    apply (clarsimp simp: validNF_def)
    apply (rule conjI)
     apply (intro hoare_vcg_conj_lift_pre_fix; (solves wpsimp)?)
-      apply (rule_tac P'="\<lambda>s'. \<exists>rv s. (s, s') \<in> srel \<and> rrel rv conc_r
-                                     \<and> P rv s \<and> (P' conc_r s' \<and> C' conc_r s') \<and> s' = new_s"
-                   in hoare_weaken_pre[rotated])
-       apply clarsimp
-      apply (rule hoare_ex_pre)
-      apply (rename_tac abs_r)
-      apply (rule hoare_weaken_pre)
-       apply (rule_tac P'="rrel abs_r conc_r" in hoare_grab_asm)
-       apply (wpsimp wp: wp_from_corres_u[OF body_corres] body_inv)
-       apply (fastforce dest: nf)
-      apply (fastforce dest: cond)
+       apply (rule_tac P'="\<lambda>s'. \<exists>rv s. (s, s') \<in> srel \<and> rrel rv conc_r
+                                      \<and> P rv s \<and> (P' conc_r s' \<and> C' conc_r s') \<and> s' = new_s"
+                    in hoare_weaken_pre[rotated])
+        apply clarsimp
+       apply (rule hoare_ex_pre)
+       apply (rename_tac abs_r)
+       apply (rule hoare_weaken_pre)
+        apply (rule_tac P'="rrel abs_r conc_r" in hoare_grab_asm)
+        apply (wpsimp wp: wp_from_corres_u[OF body_corres] body_inv)
+        apply (fastforce dest: nf)
+       apply (fastforce dest: cond)
+      apply (fastforce simp: valid_def)
      apply (fastforce simp: valid_def)
     apply wpsimp
     apply (rule whileLoop_terminates_cross[OF body_corres];

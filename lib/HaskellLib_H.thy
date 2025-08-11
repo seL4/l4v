@@ -19,9 +19,10 @@ begin
 
 abbreviation (input) "flip \<equiv> swp"
 
-abbreviation(input) bind_drop :: "('a, 'c) nondet_monad \<Rightarrow> ('a, 'b) nondet_monad
-                      \<Rightarrow> ('a, 'b) nondet_monad" (infixl ">>'_" 60)
-  where "bind_drop \<equiv> (\<lambda>x y. Nondet_Monad.bind x (K_bind y))"
+abbreviation(input) bind_drop ::
+  "('c, 's, 'c) nondet_monad \<Rightarrow> ('c, 's, 'b) nondet_monad \<Rightarrow> ('c, 's, 'b) nondet_monad"
+  (infixl ">>'_" 60) where
+  "bind_drop \<equiv> (\<lambda>x y. Nondet_Monad.bind x (K_bind y))"
 
 lemma bind_drop_test:
   "foldr bind_drop x (return ()) = sequence_x x"
@@ -30,7 +31,7 @@ lemma bind_drop_test:
 (* If the given monad is deterministic, this function converts
     the nondet_monad type into a normal deterministic state monad *)
 definition
-  runState :: "('s, 'a) nondet_monad \<Rightarrow> 's \<Rightarrow> ('a \<times> 's)" where
+  runState :: "('c, 's, 'a) nondet_monad \<Rightarrow> ('c, 's) monad_state \<Rightarrow> ('a \<times> 's)" where
  "runState f s \<equiv> THE x. x \<in> fst (f s)"
 
 definition
@@ -48,24 +49,19 @@ lemma sassert_cong[fundef_cong]:
   apply (simp add: sassert_def)
   done
 
-definition
-  haskell_assert :: "bool \<Rightarrow> unit list \<Rightarrow> ('a, unit) nondet_monad" where
- "haskell_assert P L \<equiv> assert P"
+definition haskell_assert :: "bool \<Rightarrow> unit list \<Rightarrow> ('c, 'a, unit) nondet_monad" where
+  "haskell_assert P L \<equiv> assert P"
 
-definition
-  haskell_assertE :: "bool \<Rightarrow> unit list \<Rightarrow> ('a, 'e + unit) nondet_monad" where
- "haskell_assertE P L \<equiv> assertE P"
+definition haskell_assertE :: "bool \<Rightarrow> unit list \<Rightarrow> ('c, 'a, 'e + unit) nondet_monad" where
+  "haskell_assertE P L \<equiv> assertE P"
 
-declare haskell_assert_def [simp] haskell_assertE_def [simp]
+definition stateAssert :: "('c, 'a) mpred \<Rightarrow> unit list \<Rightarrow> ('c, 'a, unit) nondet_monad" where
+  "stateAssert P L \<equiv> state_assert P"
 
-definition
-  stateAssert :: "('a \<Rightarrow> bool) \<Rightarrow> unit list \<Rightarrow> ('a, unit) nondet_monad" where
- "stateAssert P L \<equiv> state_assert P"
+definition haskell_fail :: "unit list \<Rightarrow> ('c, 's, 'a) nondet_monad" where
+  "haskell_fail L \<equiv> fail"
 
-definition
-  haskell_fail :: "unit list \<Rightarrow> ('a, 'b) nondet_monad" where
-  haskell_fail_def[simp]:
- "haskell_fail L \<equiv> fail"
+lemmas [simp] = haskell_assert_def haskell_assertE_def haskell_fail_def
 
 definition
   catchError_def[simp]:
@@ -350,7 +346,7 @@ where
   )"
 
 primrec
-  untilM :: "('b \<Rightarrow> ('s, 'a option) nondet_monad) \<Rightarrow> 'b list \<Rightarrow> ('s, 'a option) nondet_monad"
+  untilM :: "('b \<Rightarrow> ('c, 's, 'a option) nondet_monad) \<Rightarrow> 'b list \<Rightarrow> ('c, 's, 'a option) nondet_monad"
 where
   "untilM f [] = return None"
 | "untilM f (x#xs) = do
@@ -361,7 +357,7 @@ where
   od"
 
 primrec
-  untilME :: "('c \<Rightarrow> ('s, ('a + 'b option)) nondet_monad) \<Rightarrow> 'c list \<Rightarrow> ('s, 'a + 'b option) nondet_monad"
+  untilME :: "('c \<Rightarrow> ('r, 's, ('a + 'b option)) nondet_monad) \<Rightarrow> 'c list \<Rightarrow> ('r, 's, 'a + 'b option) nondet_monad"
 where
   "untilME f [] = returnOk None"
 | "untilME f (x#xs) = doE
@@ -372,7 +368,7 @@ where
   odE"
 
 primrec
-  findM :: "('a \<Rightarrow> ('s, bool) nondet_monad) \<Rightarrow> 'a list \<Rightarrow> ('s, 'a option) nondet_monad"
+  findM :: "('a \<Rightarrow> ('c, 's, bool) nondet_monad) \<Rightarrow> 'a list \<Rightarrow> ('c, 's, 'a option) nondet_monad"
 where
   "findM f [] = return None"
 | "findM f (x#xs) = do
@@ -383,7 +379,7 @@ where
   od"
 
 primrec
-  findME :: "('a \<Rightarrow> ('s, ('e + bool)) nondet_monad) \<Rightarrow> 'a list \<Rightarrow> ('s, ('e + 'a option)) nondet_monad"
+  findME :: "('a \<Rightarrow> ('c, 's, ('e + bool)) nondet_monad) \<Rightarrow> 'a list \<Rightarrow> ('c, 's, ('e + 'a option)) nondet_monad"
 where
   "findME f [] = returnOk None"
 | "findME f (x#xs) = doE

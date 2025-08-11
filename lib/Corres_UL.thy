@@ -14,22 +14,24 @@ begin
 
 text \<open>Definition of correspondence\<close>
 
-definition
-  corres_underlying :: "(('s \<times> 't) set) \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow>
-                        ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> bool)
-           \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('t, 'b) nondet_monad \<Rightarrow> bool"
-where
- "corres_underlying srel nf nf' rrel G G' \<equiv> \<lambda>m m'.
-      \<forall>(s, s') \<in> srel. G s \<and> G' s' \<longrightarrow>
-           (nf \<longrightarrow> \<not> snd (m s)) \<longrightarrow>
-           (\<forall>(r', t') \<in> fst (m' s'). \<exists>(r, t) \<in> fst (m s). (t, t') \<in> srel \<and> rrel r r') \<and>
-           (nf' \<longrightarrow> \<not> snd (m' s'))"
+definition corres_underlying ::
+  "((('c, 's) monad_state \<times> ('d, 't) monad_state) set) \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow>
+   ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('c, 's) mpred \<Rightarrow> ('d, 't) mpred \<Rightarrow>
+   ('c, 's, 'a) nondet_monad \<Rightarrow> ('d, 't, 'b) nondet_monad \<Rightarrow> bool"
+  where
+  "corres_underlying srel nf nf' rrel G G' \<equiv> \<lambda>m m'.
+    \<forall>(s, s') \<in> srel. G s \<and> G' s' \<longrightarrow>
+      (nf \<longrightarrow> \<not> snd (m s)) \<longrightarrow>
+      (\<forall>(r', t') \<in> fst (m' s').
+         \<exists>(r, t) \<in> fst (m s). (with_env_of s t, with_env_of s' t') \<in> srel \<and> rrel r r') \<and>
+      (nf' \<longrightarrow> \<not> snd (m' s'))"
 
 text \<open>Base case facts about correspondence\<close>
 
 lemma corres_underlyingI:
-  assumes rv: "\<And>s t rv' t'. \<lbrakk>(s, t) \<in> R; P s; P' t; (rv', t') \<in> fst (c t)\<rbrakk>
-                            \<Longrightarrow> \<exists>(rv, s') \<in> fst (a s). (s', t') \<in> R \<and> r rv rv'"
+  assumes rv:
+    "\<And>s t rv' t'. \<lbrakk>(s, t) \<in> R; P s; P' t; (rv', t') \<in> fst (c t)\<rbrakk>
+                  \<Longrightarrow> \<exists>(rv, s') \<in> fst (a s). (with_env_of s s', with_env_of t t') \<in> R \<and> r rv rv'"
   and     nf: "\<And>s t. \<lbrakk>(s, t) \<in> R; P s; P' t; nf'\<rbrakk> \<Longrightarrow> \<not> snd (c t)"
   shows  "corres_underlying R nf nf' r P P' a c"
   unfolding corres_underlying_def using rv nf by (auto simp: split_def)
@@ -37,7 +39,8 @@ lemma corres_underlyingI:
 lemma corres_underlyingE:
   assumes cul: "corres_underlying R nf nf' r P P' a c"
   and     xin: "(s, t) \<in> R" "P s" "P' t" "(rv', t') \<in> fst (c t)"
-  and      rl: "\<And>s' rv. \<lbrakk>nf' \<longrightarrow> \<not> snd (c t); (rv, s') \<in> fst (a s); (s', t') \<in> R; r rv rv'\<rbrakk> \<Longrightarrow> Q"
+  and      rl: "\<And>s' rv. \<lbrakk>nf' \<longrightarrow> \<not> snd (c t); (rv, s') \<in> fst (a s);
+                          (with_env_of s s', with_env_of t t') \<in> R; r rv rv'\<rbrakk> \<Longrightarrow> Q"
   and      nf: "nf \<longrightarrow> \<not> snd (a s)"
   shows   "Q"
   using cul xin nf
@@ -45,18 +48,19 @@ lemma corres_underlyingE:
 
 lemma corres_underlyingD:
   "\<lbrakk> corres_underlying R nf nf' rs P P' f f'; (s,s') \<in> R; P s; P' s'; nf \<longrightarrow> \<not> snd (f s) \<rbrakk>
-  \<Longrightarrow> (\<forall>(r',t')\<in>fst (f' s'). \<exists>(r,t)\<in>fst (f s). (t, t') \<in> R \<and> rs r r') \<and> (nf' \<longrightarrow> \<not> snd (f' s'))"
+   \<Longrightarrow> (\<forall>(r',t')\<in>fst (f' s'). \<exists>(r,t)\<in>fst (f s). (with_env_of s t, with_env_of s' t') \<in> R \<and> rs r r')
+                                                 \<and> (nf' \<longrightarrow> \<not> snd (f' s'))"
   by (fastforce simp: corres_underlying_def)
 
 lemma corres_underlyingD2:
-  "\<lbrakk> corres_underlying R nf nf' rs P P' f f'; (s,s') \<in> R; P s; P' s'; (r',t')\<in>fst (f' s'); nf \<longrightarrow> \<not> snd (f s) \<rbrakk>
-  \<Longrightarrow> \<exists>(r,t)\<in>fst (f s). (t, t') \<in> R \<and> rs r r'"
+  "\<lbrakk> corres_underlying R nf nf' rs P P' f f'; (s,s') \<in> R; P s; P' s';
+     (r',t')\<in>fst (f' s'); nf \<longrightarrow> \<not> snd (f s) \<rbrakk>
+   \<Longrightarrow> \<exists>(r,t)\<in>fst (f s). (with_env_of s t, with_env_of s' t') \<in> R \<and> rs r r'"
   by (fastforce dest: corres_underlyingD)
 
 lemma propagate_no_fail:
-  "\<lbrakk> corres_underlying S nf True R P P' f f';
-        no_fail P f; \<forall>s'. P' s' \<longrightarrow> (\<exists>s. P s \<and> (s,s') \<in> S) \<rbrakk>
-  \<Longrightarrow> no_fail P' f'"
+  "\<lbrakk> corres_underlying S nf True R P P' f f'; no_fail P f; \<forall>s'. P' s' \<longrightarrow> (\<exists>s. P s \<and> (s,s') \<in> S) \<rbrakk>
+   \<Longrightarrow> no_fail P' f'"
   apply (clarsimp simp: corres_underlying_def no_fail_def)
   apply (erule allE, erule (1) impE)
   apply clarsimp
@@ -75,7 +79,7 @@ lemma corres_underlying_serial:
 lemma corres_singleton:
  "corres_underlying sr nf nf' r P P' (\<lambda>s. ({(R s, S s)},x)) (\<lambda>s. ({(R' s, S' s)},False))
   = (\<forall>s s'. P s \<and> P' s' \<and> (s, s') \<in> sr \<and> (nf \<longrightarrow> \<not> x)
-          \<longrightarrow> ((S s, S' s') \<in> sr \<and> r (R s) (R' s')))"
+          \<longrightarrow> ((with_env_of s (S s), with_env_of s' (S' s')) \<in> sr \<and> r (R s) (R' s')))"
   by (auto simp: corres_underlying_def)
 
 (* Lemmas that should not be [simp] inside automated corres methods.
@@ -124,7 +128,8 @@ lemma corres_no_failI_base:
   assumes f: "nf \<Longrightarrow> no_fail P f"
   assumes f': "nf' \<Longrightarrow> no_fail P' f'"
   assumes corres: "\<forall>(s, s') \<in> S. P s \<and> P' s' \<longrightarrow>
-                     (\<forall>(r', t') \<in> fst (f' s'). \<exists>(r, t) \<in> fst (f s). (t, t') \<in> S \<and> R r r')"
+                     (\<forall>(r', t') \<in> fst (f' s'). \<exists>(r, t) \<in> fst (f s).
+                        (with_env_of s t, with_env_of s' t') \<in> S \<and> R r r')"
   shows "corres_underlying S nf nf' R P P' f f'"
   using assms by (simp add: corres_underlying_def no_fail_def)
 
@@ -132,7 +137,8 @@ lemma corres_no_failI_base:
 lemma corres_no_failI:
   assumes f': "nf' \<Longrightarrow> no_fail P' f'"
   assumes corres: "\<forall>(s, s') \<in> S. P s \<and> P' s' \<longrightarrow>
-                     (\<forall>(r', t') \<in> fst (f' s'). \<exists>(r, t) \<in> fst (f s). (t, t') \<in> S \<and> R r r')"
+                     (\<forall>(r', t') \<in> fst (f' s'). \<exists>(r, t) \<in> fst (f s).
+                        (with_env_of s t, with_env_of s' t') \<in> S \<and> R r r')"
   shows "corres_underlying S False nf' R P P' f f'"
   using assms by (simp add: corres_underlying_def no_fail_def)
 
@@ -144,7 +150,7 @@ lemma corres_cong:
   assumes "\<And>s s'. \<lbrakk> (s,s') \<in> sr; P' s \<rbrakk> \<Longrightarrow> Q s' = Q' s'"
   assumes "\<And>s s'. \<lbrakk> (s,s') \<in> sr; P' s; Q' s' \<rbrakk> \<Longrightarrow> f s = f' s"
   assumes "\<And>s s'. \<lbrakk> (s,s') \<in> sr; P' s; Q' s' \<rbrakk>  \<Longrightarrow> g s' = g' s'"
-  assumes "\<And>x y s t s' t'. \<lbrakk> P' s; Q' t; (s', t') \<in> sr;
+  assumes "\<And>x y s t s' t'. \<lbrakk> P' s; Q' t; (with_env_of s s', with_env_of t t') \<in> sr;
                              (x, s') \<in> fst (f' s); (y, t') \<in> fst (g' t) \<rbrakk> \<Longrightarrow> r x y = r' x y"
   shows   "corres_underlying sr nf nf' r P Q f g = corres_underlying sr nf nf' r' P' Q' f' g'"
   by (force simp: corres_underlying_def assms split_def)
@@ -282,8 +288,7 @@ lemma corres_underlying_split:
   using ac bd valid
   apply (clarsimp simp: corres_underlying_def bind_def)
   apply (clarsimp simp: Bex_def Ball_def valid_def)
-  apply meson
-  done
+  by (metis (no_types, lifting) select_convs(1))
 
 text \<open>Derivative splitting rules\<close>
 
@@ -571,15 +576,19 @@ lemma corres_noop2:
   assumes z: "nf' \<Longrightarrow> no_fail P f" "nf' \<Longrightarrow> no_fail P' g"
   shows      "corres_underlying sr nf nf' dc P P' f g"
   apply (clarsimp simp: corres_underlying_def)
+  apply (rename_tac s s')
   apply (rule conjI)
    apply clarsimp
+   apply (rename_tac r' t')
    apply (rule use_exs_valid)
     apply (rule exs_hoare_post_imp)
      prefer 2
      apply (rule x)
      apply assumption
     apply simp_all
-   apply (subgoal_tac "ba = b")
+   apply clarsimp
+   apply (rename_tac s)
+   apply (subgoal_tac "with_env_of s' t' = s'")
     apply simp
    apply (rule sym)
    apply (rule use_valid[OF _ y], assumption+)
@@ -734,7 +743,7 @@ lemma corres_underlying_trivial[corres]:
    for nicer return relation instantiation. *)
 lemma corres_underlying_trivial_dc[corres]:
   "(nf' \<Longrightarrow> no_fail P' f) \<Longrightarrow> corres_underlying Id nf nf' dc (\<lambda>_. True) P' f f"
-  for f :: "('s, unit) nondet_monad"
+  for f :: "('c, 's, unit) nondet_monad"
   by (fastforce intro: corres_underlying_trivial corres_rrel_pre)
 
 lemma corres_assume_pre:
@@ -978,7 +987,8 @@ lemma corres_underlying_decomposition:
 lemma corres_stronger_no_failI:
   assumes f': "nf' \<Longrightarrow> no_fail (\<lambda>s'. \<exists>s. P s \<and> (s,s') \<in> S \<and> P' s')  f'"
   assumes corres: "\<forall>(s, s') \<in> S. P s \<and> P' s' \<longrightarrow>
-                     (\<forall>(r', t') \<in> fst (f' s'). \<exists>(r, t) \<in> fst (f s). (t, t') \<in> S \<and> R r r')"
+                     (\<forall>(r', t') \<in> fst (f' s'). \<exists>(r, t) \<in> fst (f s).
+                        (with_env_of s t, with_env_of s' t') \<in> S \<and> R r r')"
   shows "corres_underlying S nf nf' R P P' f f'"
   using assms
   apply (simp add: corres_underlying_def no_fail_def)
@@ -1122,15 +1132,15 @@ lemma corres_False':
 
 lemma corres_symb_exec_l_Ex:
   assumes x: "\<And>rv. corres_underlying sr nf nf' r (Q rv) P' (g rv) h"
-  shows      "corres_underlying sr nf nf' r (\<lambda>s. \<exists>rv. Q rv s \<and> (rv, s) \<in> fst (f s)) P'
+  shows      "corres_underlying sr nf nf' r (\<lambda>s. \<exists>rv. Q rv s \<and> (rv, mstate s) \<in> fst (f s)) P'
                        (do rv \<leftarrow> f; g rv od) h"
   apply (clarsimp simp add: corres_underlying_def)
   apply (cut_tac rv=rv in x)
   apply (clarsimp simp add: corres_underlying_def)
   apply (drule(1) bspec, clarsimp)
   apply (case_tac nf)
-   apply (clarsimp simp: bind_def')
-   apply blast
+   apply (clarsimp simp: bind_def' split_def)
+   apply (metis split_pairs with_env_of_eq_mstate)
   apply clarsimp
   apply (drule(1) bspec, clarsimp)
   apply (clarsimp simp: bind_def | erule rev_bexI)+
@@ -1139,7 +1149,7 @@ lemma corres_symb_exec_l_Ex:
 lemma corres_symb_exec_r_All:
   assumes nf: "\<And>rv. nf' \<Longrightarrow> no_fail (Q' rv) g"
   assumes x: "\<And>rv. corres_underlying sr nf nf' r P (Q' rv) f (h rv)"
-  shows      "corres_underlying sr nf nf' r P (\<lambda>s. (\<forall>p \<in> fst (g s). snd p = s \<and> Q' (fst p) s) \<and> (\<exists>rv. Q' rv s))
+  shows      "corres_underlying sr nf nf' r P (\<lambda>s. (\<forall>p \<in> fst (g s). snd p = mstate s \<and> Q' (fst p) s) \<and> (\<exists>rv. Q' rv s))
                        f (do rv \<leftarrow> g; h rv od)"
   apply (clarsimp simp add: corres_underlying_def bind_def)
   apply (rule conjI)
@@ -1436,8 +1446,6 @@ lemma corres_stateAssert_no_fail:
    corres_underlying S False nf' r P Q (do v \<leftarrow> g; _ \<leftarrow> stateAssert X []; h v od) f"
   apply (simp add: corres_underlying_def stateAssert_def get_def assert_def return_def no_fail_def fail_def cong: if_cong)
   apply (clarsimp simp: split_def Nondet_Monad.bind_def split: if_splits)
-  apply (erule allE, erule (1) impE)
-  apply (drule (1) bspec, clarsimp)+
   done
 
 (* We can switch to the corres framework that is allowed to assume non-failure of the abstract

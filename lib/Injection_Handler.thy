@@ -11,7 +11,7 @@ theory Injection_Handler
 begin
 
 definition injection_handler ::
-  "('a \<Rightarrow> 'b) \<Rightarrow> ('s, 'a + 'c) nondet_monad \<Rightarrow> ('s, 'b + 'c) nondet_monad" where
+  "('a \<Rightarrow> 'b) \<Rightarrow> ('c, 's, 'a + 'e) nondet_monad \<Rightarrow> ('c, 's, 'b + 'e) nondet_monad" where
   "injection_handler f m \<equiv> m <handle2> (\<lambda>ft. throwError (f ft))"
 
 lemma injection_wp:
