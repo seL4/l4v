@@ -13,7 +13,7 @@ sig
   val gen_umm_types_file : string -> string -> theory -> theory
   val do_cpp : {error_detail : int, cpp_path : string option} ->
                {includes : string list, filename : string} -> string * bool
-  val install_C_file : (((bool option * bool option) * bool option) * string) *
+  val install_C_file : ((((bool option * bool option) * bool option) * bool option) * string) *
                        additional_options list option ->
                        theory -> theory
   val interactive_install : string -> theory -> theory
@@ -294,7 +294,7 @@ in
   recurse (Binaryset.empty String.compare) slist
 end
 
-fun install_C_file0 (((((memsafe),ctyps),cdefs),s),statetylist_opt) thy = let
+fun install_C_file0 ((((((memsafe),ctyps),cdefs),no_modifies),s),statetylist_opt) thy = let
   val _ = setup_feedback_thy thy
   val {base = localename,...} = OS.Path.splitBaseExt (OS.Path.file s)
   val _ = not (Long_Name.is_qualified localename) orelse
@@ -447,9 +447,9 @@ in
                                             globs
                                             thy
       val thy =
-          if not (Symtab.is_empty (get_defined_functions cse)) then
+          if not (Symtab.is_empty (get_defined_functions cse)) andalso not (o2b no_modifies) then
             Modifies_Proofs.prove_all_modifies_goals thy cse toTranslateP styargs loc2
-          else thy (* like this is ever going to happen *)
+          else thy
     in
       C_Installs.map (fn ss =>
         {c_filename = s, locale_names = [globloc, loc2],
@@ -479,7 +479,7 @@ fun install_C_file args thy =
 
 (* for interactive debugging/testing *)
 fun interactive_install s thy =
-  install_C_file ((((NONE, NONE), NONE), s), NONE) thy
+  install_C_file (((((NONE, NONE), NONE), NONE), s), NONE) thy
   handle TYPE (s,tys,tms) =>
          (Feedback.informStr (0, s ^ "\n" ^
                    Int.toString (length tms) ^ " term(s): " ^
@@ -527,6 +527,7 @@ val defsN = "c_defs"
 val mtypN = "machinety"
 val ghosttypN = "ghostty"
 val rootsN = "roots"
+val no_modifiesN = "no_modifies"
 
 local
   structure P = Parse
@@ -546,7 +547,9 @@ val file_inclusion = let
 in
     ((Scan.option (P.$$$ memsafeN)) --
      (Scan.option (P.$$$ typesN)) --
-     (Scan.option (P.$$$ defsN)) -- P.embedded --
+     (Scan.option (P.$$$ defsN)) --
+     (Scan.option (P.$$$ no_modifiesN)) --
+     P.embedded --
      (Scan.option
           (P.$$$ "[" |-- P.enum1 "," typoptions --| P.$$$ "]"))) >>
     (Toplevel.theory o install_C_file)
