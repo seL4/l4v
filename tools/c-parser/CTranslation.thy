@@ -22,6 +22,7 @@ and
   "memsafe"
   "c_types"
   "c_defs"
+  "no_modifies"
 begin
 
 lemma TWO: "Suc (Suc 0) = 2" by arith

@@ -63,6 +63,8 @@ They have to be provided in the order listed below.
              frame rules
 - `c_types`: only define the types in the C code, leave out function definitions
 - `c_defs`: only provide C definitions, leave out type definitions
+- `no_modifies`: do not generate "modifies" proofs (frame theorems that indicate
+  the global variables each function can change).
 
 If neither of `c_types` and `c_defs` are supplied, both will be produced.
 
@@ -88,7 +90,7 @@ enclosed in square brackets can be provided. These are:
 An example that uses all options:
 
 ```isabelle
-install_C_file memsafe c_types c_defs "file.c"
+install_C_file memsafe c_types c_defs no_modifies "file.c"
                [machinety=int, ghostty=nat, roots=[f, g, h]]
 ```
 
