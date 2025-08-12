@@ -44,6 +44,57 @@ for more information.
 [MLton compiler]: http://mlton.org
 [AutoCorres]: https://trustworthy.systems/projects/OLD/autocorres/
 
+Usage
+-----
+
+The C parser provides a command `install_C_file` that parses and translates
+a single `.c` file, potentially with include files, into Isabelle.
+
+The syntax is as follows
+
+```isabelle
+install_C_file <main options> "file-path" [<param options>]
+```
+
+where `<main options>` are zero or more of the following, separated by space.
+They have to be provided in the order listed below.
+
+- `memsafe`: automatically attempt to prove memory safety for separation logic
+             frame rules
+- `c_types`: only define the types in the C code, leave out function definitions
+- `c_defs`: only provide C definitions, leave out type definitions
+
+If neither of `c_types` and `c_defs` are supplied, both will be produced.
+
+Following the file name an optional comma-separated list `<param-options>`
+enclosed in square brackets can be provided. These are:
+
+- `machinety=<type_name>`: define an additional state field
+  `phantom_machine_state` of type `type_name` as part of the state record. This
+  is intended to be used for variable read/write state that is not visible to
+  standard C semantics, and can be read/written in `AUXUPD` annotations, modifies
+  clauses, and `SPEC` annotations.
+- `ghostty=<type_name>`: define an additional state field `ghost'state` of type
+  `type_name` as part of the global state record. This state is intended to be
+  ghost state. It can only be written to from the program via `GHOSTUPD`
+  annotations, but not read by normal C code. It is accessible and useful in
+  Hoare logic assertions.
+- `roots=[fun_name_1, fun_name_2, ...]`: only translate functions `fun_name_1`,
+  `fun_name_2`, etc, including all functions called by them, but ignoring the
+  rest of the functions in the provided file. This is useful for verifying
+  specific functions in a larger C context that is not entirely in the StrictC
+  subset.
+
+An example that uses all options:
+
+```isabelle
+install_C_file memsafe c_types c_defs "file.c"
+               [machinety=int, ghostty=nat, roots=[f, g, h]]
+```
+
+Definitions will be deposited into a locale with the same name as the base name
+of the C file without extension, i.e. the locale `file` in the example above.
+
 Documentation
 -------------
 
