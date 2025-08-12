@@ -15,7 +15,7 @@ begin
 type_synonym ('a,'b) map_assert = "('a \<rightharpoonup> 'b) \<Rightarrow> bool"
 type_synonym heap_assert = "(addr \<times> s_heap_index,s_heap_value) map_assert"
 
-definition sep_emp :: "('a,'b) map_assert" ("\<box>") where
+definition sep_emp :: "('a,'b) map_assert" where
   "sep_emp \<equiv> (=) Map.empty"
 
 definition sep_true :: "('a,'b) map_assert" where
@@ -40,49 +40,53 @@ definition
 where
   "singleton p v h d \<equiv> lift_state (heap_update p v h,d) |` s_footprint p"
 
-text \<open>
-  Like in Separation.thy, these arrows are defined using bsub and esub but
-  have an \emph{input} syntax abbreviation with just sub.
-  Why? Because if sub is the only way, people write things like
-  @{text "p \<mapsto>\<^sup>i\<^sub>(f x y) v"} instead of @{text "p \<mapsto>\<^sup>i\<^bsub>(f x y)\<^esub> v"}. We preserve
-  the sub syntax though, because esub and bsub are a pain to type.
-\<close>
-
 definition
   sep_map :: "'a::c_type ptr \<Rightarrow> 'a ptr_guard \<Rightarrow> 'a \<Rightarrow> heap_assert" ("_ \<mapsto>\<^bsub>_\<^esub> _" [56,0,51] 56)
 where
   "p \<mapsto>\<^bsub>g\<^esub> v \<equiv> \<lambda>s. lift_typ_heap g s p = Some v \<and> dom s = s_footprint p \<and> wf_heap_val s"
 
-notation (input)
-  sep_map ("_ \<mapsto>\<^sub>_ _" [56,1000,51] 56)
-
 definition
   sep_map_any :: "'a ::c_type ptr \<Rightarrow> 'a ptr_guard \<Rightarrow> heap_assert" ("_ \<mapsto>\<^bsub>_\<^esub> -" [56,0] 56)
 where
-  "p \<mapsto>\<^bsub>g\<^esub> - \<equiv> \<lambda>s. \<exists>v. (p \<mapsto>\<^sub>g v) s"
-
-notation (input)
-  sep_map_any ("_ \<mapsto>\<^sub>_ -" [56,0] 56)
+  "p \<mapsto>\<^bsub>g\<^esub> - \<equiv> \<lambda>s. \<exists>v. (p \<mapsto>\<^bsub>g\<^esub> v) s"
 
 definition
   sep_map' :: "'a::c_type ptr \<Rightarrow> 'a ptr_guard \<Rightarrow> 'a \<Rightarrow> heap_assert" ("_ \<hookrightarrow>\<^bsub>_\<^esub> _" [56,0,51] 56)
 where
   "p \<hookrightarrow>\<^bsub>g\<^esub> v \<equiv> (p \<mapsto>\<^bsub>g\<^esub> v) \<and>\<^sup>* sep_true"
 
-notation (input)
-  sep_map' ("_ \<hookrightarrow>\<^sub>_ _" [56,1000,51] 56)
-
 definition
   sep_map'_any :: "'a ::c_type ptr \<Rightarrow> 'a ptr_guard  \<Rightarrow> heap_assert" ("_ \<hookrightarrow>\<^bsub>_\<^esub> -" [56,0] 56)
 where
-  "p \<hookrightarrow>\<^bsub>g\<^esub> - \<equiv> \<lambda>s. \<exists>x. (p \<hookrightarrow>\<^sub>g x) s"
+  "p \<hookrightarrow>\<^bsub>g\<^esub> - \<equiv> \<lambda>s. \<exists>x. (p \<hookrightarrow>\<^bsub>g\<^esub> x) s"
 
-notation (input)
-  sep_map'_any ("_ \<hookrightarrow>\<^sub>_ -" [56,0] 56)
+open_bundle C_seplog_syntax
+begin
+
+notation sep_emp ("\<box>")
+notation sep_conj (infixr "\<and>\<^sup>*" 35)
+notation sep_impl (infixr "\<longrightarrow>\<^sup>*" 25)
+
+notation sep_map ("_ \<mapsto>\<^bsub>_\<^esub> _" [56,0,51] 56)
+notation sep_map_any ("_ \<mapsto>\<^bsub>_\<^esub> -" [56,0] 56)
+notation sep_map' ("_ \<hookrightarrow>\<^bsub>_\<^esub> _" [56,0,51] 56)
+notation sep_map'_any ("_ \<hookrightarrow>\<^bsub>_\<^esub> -" [56,0] 56)
+
+text \<open>
+  The arrows are defined using bsub and esub but have an \emph{input} syntax abbreviation
+  with just sub. Why? Because if sub is the only way, people write things like
+  @{text "p \<mapsto>\<^sup>i\<^sub>(f x y) v"} instead of @{text "p \<mapsto>\<^sup>i\<^bsub>(f x y)\<^esub> v"}. We preserve
+  the sub syntax though, because esub and bsub are a pain to type.\<close>
+
+notation (input) sep_map ("_ \<mapsto>\<^sub>_ _" [56,1000,51] 56)
+notation (input) sep_map_any ("_ \<mapsto>\<^sub>_ -" [56,0] 56)
+notation (input) sep_map' ("_ \<hookrightarrow>\<^sub>_ _" [56,1000,51] 56)
+notation (input) sep_map'_any ("_ \<hookrightarrow>\<^sub>_ -" [56,0] 56)
 
 syntax
   "_sep_assert" :: "bool \<Rightarrow> heap_state \<Rightarrow> bool" ("'(_')\<^bsup>sep\<^esup>" [0] 100)
 
+end
 
 text \<open>----\<close>
 

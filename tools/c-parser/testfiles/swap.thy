@@ -8,6 +8,8 @@ theory swap
 imports "CParser.CTranslation"
 begin
 
+unbundle C_seplog_syntax
+
 declare hrs_simps [simp add]
 declare sep_conj_ac [simp add]
 
