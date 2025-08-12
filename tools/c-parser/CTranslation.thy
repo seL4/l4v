@@ -180,4 +180,10 @@ lemma proc_deps_lvar_nondet_init [simp]:
 
 declare word_neq_0_conv[simp] (* FIXME: for backward compatibility; remove *)
 
+(* Remove separation logic notation visible here from Separation.thy, because it leads to too
+   many syntax ambiguities in general.
+
+   It can be re-enabled locally using "unbundle C_seplog_syntax" *)
+unbundle no C_seplog_syntax
+
 end
