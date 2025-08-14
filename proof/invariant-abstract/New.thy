@@ -73,12 +73,6 @@ apply wpsimp
 apply (simp add: obj_at_update)
   by presburger
 
-lemma get_tcb_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace>
-   gets (get_tcb ptr)
-   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  by (unfold gets_def, wp)
-
 lemma thread_set_colour_maintained:
   "\<lbrace>colour_invariant and (\<lambda>s. let tcb = TCB (f $ the (get_tcb ptr s)) in check_kernel_object_ref tcb (colour_oracle (cur_domain s)))\<rbrace>
    thread_set f ptr
@@ -127,6 +121,19 @@ apply (rule impI)
 apply auto
 by fastforce+
 
+lemma set_mcpriority_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace>
+   set_mcpriority ref mcp
+  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  apply (simp add: set_mcpriority_def)
+  apply (wp add: thread_set_wp)
+  apply (simp add: colour_invariant_def obj_at_update)
+apply (rule allI)
+apply (rule impI)
+apply (rule impI)
+apply auto
+by fastforce+
+
 lemma arch_thread_set_colour_maintained:
   "\<lbrace>colour_invariant and (\<lambda>s.
       let tcb = the $ get_tcb ptr s in
@@ -154,83 +161,96 @@ apply auto
 by fastforce+
 
 lemma set_simple_ko_colour_maintained:
-  "\<lbrace>colour_invariant and (\<lambda>s. let kobj = f ep in ko_at kobj ptr s \<longrightarrow> is_simple_type
-         kobj \<longrightarrow>
-        partial_inv f
-         kobj \<noteq>
-        None \<longrightarrow> check_kernel_object_ref (f ep) (colour_oracle (cur_domain s)))\<rbrace>
+  "\<lbrace>colour_invariant and (\<lambda>s.
+      let kobj = f ep in
+        ko_at kobj ptr s \<longrightarrow>
+        is_simple_type kobj \<longrightarrow>
+        partial_inv f kobj \<noteq> None \<longrightarrow>
+        check_kernel_object_ref (f ep) (colour_oracle (cur_domain s)))\<rbrace>
    set_simple_ko f ptr ep
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+(*apply (wpsimp simp: get_simple_ko_def partial_inv_def the_equality split: kernel_object.splits)*)
 apply (unfold set_simple_ko_def)
 apply wpsimp
-apply (wp add: get_object_wp set_object_wp set_object_colour_maintained)+
+apply (wp add: get_object_wp set_object_wp)+
 apply (rule allI)
 apply (rule impI)+
 apply (simp add: obj_at_update colour_invariant_def)
 apply (rule allI)+
 apply (rule impI)
-apply wpsimp+
+apply wpsimp
 apply (simp add: Let_def split: if_splits)
-apply (simp only: fun_upd_apply[symmetric])
-apply (erule allE)
+apply (rename_tac out_s out_ko out_ptra out_kobj out_y)
+apply (unfold obj_at_def)
+apply clarsimp
+apply (case_tac "out_ptra = ptr")
+(*apply clarsimp (* looks like it removes a necessary assumption? *)*)
+apply simp
+apply (erule disjE)
+apply clarsimp
+apply (erule allE)+
+apply (erule impE)+
+apply (rule conjI)
 sorry
 
-lemma set_irq_state_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace>
-   set_irq_state state irq
-  \<lbrace>\<lambda>_.colour_invariant\<rbrace>"
-apply (unfold set_irq_state_def)
-apply wp
-apply (unfold colour_invariant_def)
-apply (unfold do_machine_op_def)
-by wpsimp+
+find_theorems "ko_at"
+find_theorems "a_type"
+find_theorems "set_simple_ko"
 
-lemma set_tcb_queue_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace>
-   set_tcb_queue d prio queue
-  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-apply (unfold set_tcb_queue_def)
-apply wp
-apply (unfold colour_invariant_def)
-by simp
-
-lemma tcb_sched_action_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace>
-   tcb_sched_action action thread
-  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-apply (unfold tcb_sched_action_def)
-apply wp
-apply (unfold colour_invariant_def)
-by simp
-
-lemma set_scheduler_action_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace>
-   set_scheduler_action action
-  \<lbrace>\<lambda>_. colour_invariant\<rbrace>" (* double check that I don't need to check obj_refs in the state *)
-apply (unfold set_scheduler_action_def)
-apply wp
-apply (unfold colour_invariant_def)
-by simp
+(*apply (simp only: fun_upd_apply[symmetric])*)
+lemma tmp_colour_maintained:
+  "\<lbrace>colour_invariant and (\<lambda>s.
+      \<lbrace>colour_invariant\<rbrace>
+      f
+      \<lbrace>\<lambda>rv s.
+          \<forall>ptr kobj.
+             ko_at kobj ptr s \<and>
+             ptr
+             \<in> colour_oracle (cur_domain s) \<longrightarrow>
+             check_kernel_object_ref kobj
+              (colour_oracle (cur_domain s))\<rbrace>)\<rbrace>
+    throw_on_false ex f
+    \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+sorry
 
 crunch reschedule_required,
        possible_switch_to,
        set_thread_state_act,
-       set_priority for colour_maintained: "colour_invariant"
-  (wp: get_tcb_colour_maintained
-  simp: colour_invariant_def)
+       set_priority,
+       set_scheduler_action,
+       tcb_sched_action,
+       set_tcb_queue,
+       set_irq_state for colour_maintained: "colour_invariant"
+  (simp: colour_invariant_def obj_at_update)
 
 lemma set_thread_state_colour_maintained:
-  "\<lbrace>colour_invariant and (\<lambda>s. ref \<in> colour_oracle (cur_domain s))\<rbrace>
+  "\<lbrace>colour_invariant and (\<lambda>s.
+      let new_tcb = TCB (tcb \<lparr> tcb_state := ts \<rparr>) in
+      check_kernel_object_ref new_tcb (colour_oracle (cur_domain s)))\<rbrace>
    set_thread_state ref ts
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-apply (unfold set_thread_state_def)
+apply (unfold set_thread_state_def Let_def)
 apply wp
 apply wpsimp
 apply (unfold set_thread_state_act_def set_scheduler_action_def get_thread_state_def)
-apply wpsimp+
+apply wpsimp
 apply (wp add: thread_get_wp)
 apply (wp add: set_object_wp)
 apply (wp add: gets_the_wp)
+apply (simp add: obj_at_update)
+apply (unfold colour_invariant_def)
+apply auto
+apply (erule allE)+
+sorry
+
+lemma as_user_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace>
+   as_user ptr f
+  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+apply (unfold as_user_def)
+apply wpsimp
+apply (wp add: set_object_wp)+
+apply auto
 sorry
 
 (*crunch thread_set_domain, thread_set_time_slice, thread_set_priority for colour_maintained: "colour_invariant"
