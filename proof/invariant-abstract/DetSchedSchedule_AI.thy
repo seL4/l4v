@@ -1251,10 +1251,10 @@ lemma tcb_sched_enqueue_in_cur_domain:
   done
 
 crunch next_domain
-  for valid_queues: valid_queues
-  and valid_blocked: valid_blocked
-  and ct_in_q: ct_in_q
-  and ct_not_in_q: ct_not_in_q
+  for valid_queues[wp]: valid_queues
+  and valid_blocked[wp]: valid_blocked
+  and ct_in_q[wp]: ct_in_q
+  and ct_not_in_q[wp]: ct_not_in_q
   (simp: Let_def ct_in_q_def wp: dxo_wp_weak)
 
 lemma next_domain_valid_sched_action:
