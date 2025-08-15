@@ -36,18 +36,37 @@ context Arch begin global_naming ARM
 value_type irq_len = Kernel_Config.irqBits (* IRQ_CNODE_SLOT_BITS *)
 type_synonym irq = "irq_len word"
 
+(* List of supported Arm platforms that support GICv3 or GICv2 *)
+definition isGICPlatform :: bool where
+  "isGICPlatform \<equiv> \<not>(config_PLAT_OMAP3 \<or> config_PLAT_AM335X \<or> config_PLAT_BCM2837)"
+
+lemmas Kernel_Config_isGICPlatform_def =
+  isGICPlatform_def
+  Kernel_Config.config_PLAT_OMAP3_def
+  Kernel_Config.config_PLAT_AM335X_def
+  Kernel_Config.config_PLAT_BCM2837_def
+
 (* Software-generated interrupts *)
 definition numSGIs_bits :: nat where
   "numSGIs_bits = 4"
 
 definition numSGIs :: nat where
-  "numSGIs = 2^numSGIs_bits"
+  "numSGIs \<equiv> if isGICPlatform then 2^numSGIs_bits else 0"
 
 definition gicNumTargets_bits :: nat where
   "gicNumTargets_bits \<equiv> if Kernel_Config.config_ARM_GIC_V3 then 4 else 3"
 
 definition gicNumTargets :: nat where
-  "gicNumTargets \<equiv> 2^gicNumTargets_bits"
+  "gicNumTargets \<equiv> if isGICPlatform then 2^gicNumTargets_bits else 0"
+
+(* Platforms that have a setTrigger IRQ function. These are currently all
+   platforms that support the Arm GIC. *)
+definition haveSetTrigger :: bool where
+  "haveSetTrigger \<equiv> isGICPlatform"
+
+lemmas Kernel_Config_haveSetTrigger_def =
+  haveSetTrigger_def
+  Kernel_Config_isGICPlatform_def
 
 end
 
@@ -76,9 +95,23 @@ definition cacheLineBits :: nat where
 definition cacheLine :: nat where
   "cacheLine = 2^cacheLineBits"
 
-(* The first virtual address of the kernel's physical memory window *)
+(* The first virtual address of the kernel's physical memory window.
+   Coincides with seL4_UserTop and USER_TOP in C for AArch32.
+
+   The definition below singles out the omap3 platform, because it is the only AArch32
+   platform that does not put seL4_UserTop at 0xe0000000. The macro definition in C is
+   hard to get at for the kernel config generation script and the definition here is
+   comparatively straightforward. *)
 definition pptrBase :: word32 where
-  "pptrBase \<equiv> 0xe0000000"
+  "pptrBase \<equiv> if config_PLAT_OMAP3 then 0xf0000000 else 0xe0000000"
+
+schematic_goal pptrBase_val:
+  "pptrBase = numeral ?n"
+  by (simp add: pptrBase_def Kernel_Config.config_PLAT_OMAP3_def del: word_eq_numeral_iff_iszero)
+
+lemma pptrBase_top_neq_0: (* 20 = size of ARMSectionBits *)
+  "pptrBase >> 20 \<noteq> 0"
+  by (simp add: pptrBase_def)
 
 abbreviation (input) "paddrBase \<equiv> physBase"
 
