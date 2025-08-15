@@ -3634,31 +3634,29 @@ lemma copyGlobalMappings_ccorres:
   apply (cinit lift: newPD_' simp: ARMSectionBits_def pdeBits_def)
    apply (rule ccorres_h_t_valid_armKSGlobalPD)
    apply csymbr
-   apply (simp add: pptrBase_def ARM.pptrBase_def objBits_simps archObjSize_def
-                    whileAnno_def word_sle_def word_sless_def
-                    Collect_True              del: Collect_const)
+   apply (simp add: pptrBase_val objBits_simps whileAnno_def word_sle_def word_sless_def)
    apply (rule ccorres_pre_gets_armKSGlobalPD_ksArchState)
    apply csymbr
    apply (rule ccorres_rel_imp)
     apply (rule_tac F="\<lambda>_ s. globalPD = armKSGlobalPD (ksArchState s)
-                                \<and> is_aligned globalPD pdBits \<and> valid_pde_mappings' s
-                                \<and> page_directory_at' pd s
-                                \<and> page_directory_at' (armKSGlobalPD (ksArchState s)) s"
-                and i="0xE00"
+                             \<and> is_aligned globalPD pdBits \<and> valid_pde_mappings' s
+                             \<and> page_directory_at' pd s
+                             \<and> page_directory_at' (armKSGlobalPD (ksArchState s)) s"
+                and i="unat pptrBase >> unat ARMSectionBits"
              in ccorres_mapM_x_while')
-        apply (clarsimp simp del: Collect_const)
+        apply (clarsimp simp: pptrBase_val ARMSectionBits_def simp del: Collect_const)
         apply (rule ccorres_guard_imp2)
          apply (rule ccorres_pre_getObject_pde)
          apply (simp add: storePDE_def del: Collect_const)
-         apply (rule_tac P="\<lambda>s. ko_at' rv (armKSGlobalPD (ksArchState s)
-                                              + ((0xE00 + of_nat n) << 2)) s
-                                    \<and> page_directory_at' pd s \<and> valid_pde_mappings' s
-                                    \<and> page_directory_at' (armKSGlobalPD (ksArchState s)) s"
-                    and P'="{s. i_' s = of_nat (3584 + n)
-                                    \<and> is_aligned (symbol_table ''armKSGlobalPD'') pdBits}"
+         apply (rule_tac P="\<lambda>s. ko_at' rv (armKSGlobalPD (ksArchState s) +
+                                           (((pptrBase >> unat ARMSectionBits) + of_nat n) << 2)) s
+                                \<and> page_directory_at' pd s \<and> valid_pde_mappings' s
+                                \<and> page_directory_at' (armKSGlobalPD (ksArchState s)) s"
+                    and P'="{s. i_' s = of_nat ((unat pptrBase >> unat ARMSectionBits) + n)
+                                \<and> is_aligned (symbol_table ''armKSGlobalPD'') pdBits}"
                     in setObject_ccorres_helper)
            apply (rule conseqPre, vcg)
-           apply (simp add: upto_enum_word del: upt.simps)
+           apply (simp add: upto_enum_word pptrBase_val ARMSectionBits_def del: upt.simps)
            apply (clarsimp simp: shiftl_t2n field_simps rf_sr_armKSGlobalPD)
            apply (frule_tac pd=pd in page_directory_at_rf_sr, simp)
            apply (frule_tac pd="symbol_table a" for a in page_directory_at_rf_sr, simp)
@@ -3670,23 +3668,23 @@ lemma copyGlobalMappings_ccorres:
            apply (drule(1) page_directory_at_rf_sr)+
            apply clarsimp
            apply (subst array_ptr_valid_array_assertionI[where p="Ptr pd" and q="Ptr pd"],
-             erule h_t_valid_clift; simp)
-            apply (simp add: unat_def[symmetric] unat_word_ariths unat_of_nat pdBits_def pageBits_def pdeBits_def)
+                  erule h_t_valid_clift; simp)
+            apply (simp add: unat_word_ariths unat_of_nat pdBits_def pageBits_def pdeBits_def)
            apply (subst array_ptr_valid_array_assertionI[where q="Ptr (symbol_table x)" for x],
-             erule h_t_valid_clift; simp)
-            apply (simp add: unat_def[symmetric] unat_word_ariths unat_of_nat pdBits_def pageBits_def pdeBits_def)
+                  erule h_t_valid_clift; simp)
+            apply (simp add: unat_word_ariths unat_of_nat pdBits_def pageBits_def pdeBits_def)
            apply (clarsimp simp: rf_sr_def cstate_relation_def
                                  Let_def typ_heap_simps update_pde_map_tos)
            apply (rule conjI)
             apply clarsimp
             apply (rule conjI)
-             apply (rule disjCI2, erule clift_array_assertionE, simp+)
+             apply (rule disjCI2, erule clift_array_assertionE; simp)
              apply (simp only: unat_arith_simps unat_of_nat,
-               simp add: pdBits_def pageBits_def pdeBits_def)
+                    simp add: pdBits_def pageBits_def pdeBits_def)
             apply (rule conjI)
-             apply (rule disjCI2, erule clift_array_assertionE, simp+)
+             apply (rule disjCI2, erule clift_array_assertionE; simp)
              apply (simp only: unat_arith_simps unat_of_nat,
-               simp add: pdBits_def pageBits_def pdeBits_def)
+                    simp add: pdBits_def pageBits_def pdeBits_def)
             apply (rule conjI)
              apply (clarsimp simp: cpspace_relation_def
                                    typ_heap_simps
@@ -3696,11 +3694,10 @@ lemma copyGlobalMappings_ccorres:
              apply (erule(2) cmap_relation_updI)
               subgoal by simp
              subgoal by simp
-            apply (clarsimp simp: carch_state_relation_def
-                                  cmachine_state_relation_def
-                                  typ_heap_simps map_comp_eq
-                                  pd_pointer_to_asid_slot_def
-                          intro!: ext split: if_split)
+            apply (clarsimp simp: carch_state_relation_def cmachine_state_relation_def
+                                  typ_heap_simps map_comp_eq pd_pointer_to_asid_slot_def
+                            intro!: ext
+                            split: if_split)
             apply (simp add: field_simps)
             apply (drule arg_cong[where f="\<lambda>x. x && mask pdBits"],
                    simp add: mask_add_aligned)
@@ -3726,21 +3723,17 @@ lemma copyGlobalMappings_ccorres:
            apply (subst(asm) field_simps, simp add: mask_add_aligned)
            apply (simp add: mask_def pdBits_def pageBits_def pdeBits_def
                             valid_pde_mapping_offset'_def pd_asid_slot_def)
-           apply (simp add: obj_at'_def projectKOs fun_upd_idem)
+           apply (simp add: obj_at'_def fun_upd_idem)
           apply simp
-         apply (simp add: objBits_simps archObjSize_def pdeBits_def)
-        apply (clarsimp simp: upto_enum_word rf_sr_armKSGlobalPD
-                    simp del: upt.simps)
-       apply (simp add: pdBits_def pageBits_def pdeBits_def)
+         apply (simp add: objBits_simps pdeBits_def)
+        apply (clarsimp simp: upto_enum_word rf_sr_armKSGlobalPD pptrBase_val ARMSectionBits_def
+                        simp del: upt.simps)
+       apply (simp add: pdBits_def pageBits_def pdeBits_def  pptrBase_val ARMSectionBits_def)
       apply (rule allI, rule conseqPre, vcg)
-      apply clarsimp
-     apply (rule hoare_pre)
-      apply (wp getObject_valid_pde_mapping' | simp
-        | wps storePDE_arch')+
-     apply (clarsimp simp: mask_add_aligned)
-    apply (simp add: pdBits_def pageBits_def word_bits_def pdeBits_def)
+     apply (wpsimp wp: getObject_valid_pde_mapping' simp: mask_add_aligned | wps storePDE_arch')+
+    apply (simp add: pdBits_def pageBits_def word_bits_def pdeBits_def pptrBase_val ARMSectionBits_def)
    apply simp
-  apply (clarsimp simp: word_sle_def page_directory_at'_def)
+  apply (clarsimp simp: word_sle_def page_directory_at'_def pptrBase_val ARMSectionBits_def)
   done
 
 (* If we only change local variables on the C side, nothing need be done on the abstract side.
