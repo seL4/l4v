@@ -735,7 +735,7 @@ lemma decodeARMPageTableInvocation_ccorres:
          apply (simp add: if_to_top_of_bind del: Collect_const)
          apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
             apply vcg
-           apply (simp add: pptrBase_def ARM.pptrBase_def hd_conv_nth length_ineq_not_Nil)
+           apply (simp add: pptrBase_val hd_conv_nth length_ineq_not_Nil)
           apply (simp add: throwError_bind invocationCatch_def)
           apply (rule syscall_error_throwError_ccorres_n)
           apply (simp add: syscall_error_to_H_cases)
@@ -2575,7 +2575,7 @@ lemma decodeARMFrameInvocation_ccorres:
             apply clarsimp
             apply ccorres_rewrite
             apply csymbr
-            apply (simp add: ARM.pptrBase_def hd_conv_nth length_ineq_not_Nil)
+            apply (simp add: pptrBase_val hd_conv_nth length_ineq_not_Nil)
             apply ccorres_rewrite
             apply (rule syscall_error_throwError_ccorres_n)
             apply (simp add: syscall_error_to_H_cases)
@@ -2601,8 +2601,7 @@ lemma decodeARMFrameInvocation_ccorres:
                  apply (rule ccorres_rhs_assoc)+
                  apply (csymbr, clarsimp, ccorres_rewrite)
                  apply (csymbr,
-                        simp add: ARM.pptrBase_def ARM.pptrBase_def
-                                  hd_conv_nth length_ineq_not_Nil,
+                        simp add: pptrBase_val hd_conv_nth length_ineq_not_Nil,
                         ccorres_rewrite)
                  apply (rule ccorres_return_Skip, clarsimp)
                apply (subgoal_tac "cap_get_tag cap = SCAST(32 signed \<rightarrow> 32) cap_frame_cap
@@ -2773,7 +2772,7 @@ lemma decodeARMFrameInvocation_ccorres:
                          framesize_from_H_eq_eqs of_bool_nth[simplified of_bool_from_bool]
                          vm_page_size_defs neq_Nil_conv excaps_in_mem_def hd_conv_nth
                          length_ineq_not_Nil numeral_2_eq_2 does_not_throw_def
-                         pptrBase_def
+                         pptrBase_val
                    simp del: unsigned_numeral)
    apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
    apply (frule(1) slotcap_in_mem_PageDirectory)
@@ -2983,7 +2982,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
          apply (simp add: syscall_error_to_H_cases)
         apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
            apply vcg
-          apply (clarsimp simp: hd_conv_nth length_ineq_not_Nil pptrBase_def)
+          apply (clarsimp simp: hd_conv_nth length_ineq_not_Nil pptrBase_val)
          apply (simp add:injection_handler_throwError)
          apply (rule syscall_error_throwError_ccorres_n)
          apply (simp add: syscall_error_to_H_cases)

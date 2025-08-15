@@ -678,6 +678,7 @@ crunch updateRestartPC
   and valid_objs'[wp]: valid_objs'
   and tcb_at'[wp]: "tcb_at' p"
 
+(* short name target_' can be ambiguous for some platforms, use full name instead below *)
 lemma suspend_ccorres:
   assumes cteDeleteOne_ccorres:
   "\<And>w slot. ccorres dc xfdc
@@ -689,9 +690,9 @@ lemma suspend_ccorres:
   shows
   "ccorres dc xfdc
    (invs' and sch_act_simple and tcb_at' thread and (\<lambda>s. thread \<noteq> ksIdleThread s))
-   (UNIV \<inter> {s. target_' s = tcb_ptr_to_ctcb_ptr thread}) []
+   {s. target___ptr_to_struct_tcb_C_' s = tcb_ptr_to_ctcb_ptr thread} []
    (suspend thread) (Call suspend_'proc)"
-  apply (cinit lift: target_')
+  apply (cinit lift: target___ptr_to_struct_tcb_C_')
    apply (ctac(no_vcg) add: cancelIPC_ccorres1 [OF cteDeleteOne_ccorres])
     apply (rule getThreadState_ccorres_foo)
     apply (rename_tac threadState)

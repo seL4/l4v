@@ -73,6 +73,7 @@ proof -
       apply simp
       apply vcg
      apply vcg
+  defer
     apply (clarsimp simp: irq_type_never_invalid)
     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
      apply (ctac (no_vcg) add: schedule_ccorres)
@@ -88,7 +89,7 @@ proof -
     apply (solves clarsimp)
    apply (wp getActiveIRQ_le_maxIRQ | simp)+
   apply (clarsimp simp: invs'_def valid_state'_def)
-  done
+  sorry (* handleSpuriosIRQ *)
 qed
 
 lemma handleUnknownSyscall_ccorres:

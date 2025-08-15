@@ -476,7 +476,7 @@ lemma invokeTCB_ThreadControl_ccorres:
           and tcb_inv_wf' (ThreadControl target slot faultep mcp priority cRoot vRoot buf)
           and (\<lambda>_. (faultep = None) = (cRoot = None) \<and> (cRoot = None) = (vRoot = None)
                     \<and> (case buf of Some (ptr, Some (cap, slot)) \<Rightarrow> slot \<noteq> 0 | _ \<Rightarrow> True)))
-   (UNIV \<inter> {s. target_' s = tcb_ptr_to_ctcb_ptr target}
+   (UNIV \<inter> {s. target___ptr_to_struct_tcb_C_' s = tcb_ptr_to_ctcb_ptr target}
          \<inter> {s. (cRoot \<noteq> None \<or> buf \<noteq> None) \<longrightarrow> slot_' s = cte_Ptr slot}
          \<inter> {s. faultep_' s = option_to_0 faultep}
          \<inter> {s. mcp_' s = case_option 0 (ucast o fst) mcp}
@@ -498,9 +498,9 @@ lemma invokeTCB_ThreadControl_ccorres:
   (is "ccorres ?rvr ?xf (?P and (\<lambda>_. ?P')) ?Q [] ?af ?cf")
   supply option.case_cong_weak[cong]
   apply (rule ccorres_gen_asm)
-  apply (cinit lift: target_' slot_' faultep_' mcp_' priority_' cRoot_newCap_' cRoot_srcSlot_'
-                     vRoot_newCap_' vRoot_srcSlot_' bufferAddr_' bufferSrcSlot_' bufferCap_'
-                     updateFlags_')
+  apply (cinit lift: target___ptr_to_struct_tcb_C_' slot_' faultep_' mcp_' priority_' cRoot_newCap_'
+                     cRoot_srcSlot_' vRoot_newCap_' vRoot_srcSlot_' bufferAddr_' bufferSrcSlot_'
+                     bufferCap_' updateFlags_')
    apply csymbr
    apply (simp add: liftE_bindE case_option_If2 thread_control_flag_defs
                     word_ao_dist if_and_helper if_n_0_0
@@ -983,9 +983,9 @@ lemma setupReplyMaster_ccorres:
 
 lemma restart_ccorres:
   "ccorres dc xfdc (invs' and tcb_at' thread and sch_act_simple)
-        (UNIV \<inter> {s. target_' s = tcb_ptr_to_ctcb_ptr thread}) []
+        (UNIV \<inter> {s. target___ptr_to_struct_tcb_C_' s = tcb_ptr_to_ctcb_ptr thread}) []
      (restart thread) (Call restart_'proc)"
-  apply (cinit lift: target_')
+  apply (cinit lift: target___ptr_to_struct_tcb_C_')
    apply (ctac(no_vcg) add: isStopped_ccorres)
     apply (simp only: when_def)
     apply (rule ccorres_cond2[where R=\<top>])
