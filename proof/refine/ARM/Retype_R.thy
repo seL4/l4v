@@ -212,7 +212,7 @@ lemma null_filter_parent_of'':
      \<Longrightarrow> ys \<turnstile> x \<leadsto> c"
   apply (clarsimp simp add: mdb_next_unfold)
   apply (drule arg_cong[where f="\<lambda>xs. xs x"])
-  apply (simp add: null_filter'_def nullPointer_def split: if_split_asm)
+  apply (simp add: null_filter'_def nullPointer_def split: if_split_asm cong: if_weak_cong)
   done
 
 lemma null_filter_parentOf:

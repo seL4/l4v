@@ -329,8 +329,7 @@ lemma cap_relation_masks:
                                  cap_rights_update_def
                           split del: if_split)
   apply (clarsimp simp add: isCap_defs)
-  by (rule ArchAcc_R.arch_cap_rights_update
-         [simplified, simplified rights_mask_map_def])
+  by (rule arch_cap_rights_update[simplified, simplified rights_mask_map_def])
 
 lemma getCTE_wp:
   "\<lbrace>\<lambda>s. cte_at' p s \<longrightarrow> (\<exists>cte. cte_wp_at' ((=) cte) p s \<and> Q cte s)\<rbrace> getCTE p \<lbrace>Q\<rbrace>"
@@ -374,7 +373,7 @@ lemma maskCapRights [simp]:
 
 lemma maskCap_valid [simp]:
   "s \<turnstile>' RetypeDecls_H.maskCapRights R cap = s \<turnstile>' cap"
-  apply (simp    add: valid_cap'_def maskCapRights_def isCap_simps
+  apply (simp add: valid_cap'_def maskCapRights_def isCap_simps
                    capAligned_def X64_H.maskCapRights_def
             split: capability.split arch_capability.split
         split del: if_split)
@@ -957,7 +956,7 @@ lemma cap_insert_objs' [wp]:
   "\<lbrace>valid_objs' and valid_cap' cap\<rbrace>
    cteInsert cap src dest
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (simp add: cteInsert_def updateCap_def setUntypedCapAsFull_def)
+  apply (simp add: cteInsert_def updateCap_def setUntypedCapAsFull_def cong: if_cong)
   apply (wpsimp wp: setCTE_valid_objs | wp getCTE_wp')+
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps
                   dest!: ctes_of_valid_cap'')
@@ -7080,7 +7079,7 @@ lemma cteSwap_corres:
   apply(clarsimp simp: cdt_list_relation_def)
   apply(subst next_slot_eq[OF mdb_swap_abs'.next_slot])
      apply(assumption)
-    apply(fastforce split: option.split)
+    apply(fastforce split: option.split cong: if_cong)
    apply(simp)
   apply(frule finite_depth)
   apply(frule mdb_swap.n_next)

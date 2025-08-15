@@ -50,6 +50,35 @@ lemma untyped_not_null[simp]:
 
 text \<open>Miscellaneous facts about low level constructs\<close>
 
+locale Bits_R =
+  assumes atcbContext_get_eq[simp]:
+    "\<And>uc atcb. atcbContextGet (atcbContextSet uc atcb) = uc"
+  assumes atcbContext_set_eq[simp]:
+    "\<And>t. atcbContextSet (atcbContextGet t) t = t"
+  assumes atcbContext_set_set[simp]:
+    "\<And>uc uc' atcb. atcbContextSet uc (atcbContextSet uc' atcb) = atcbContextSet uc atcb"
+  assumes objBitsKO_less_word_bits:
+    "\<And>ko. objBitsKO ko < word_bits"
+  assumes objBitsKO_neq_0:
+    "\<And>ko. objBitsKO ko \<noteq> 0"
+
+context Bits_R begin
+
+lemma objBitsKO_pos_power2[simp]:
+  "(1::machine_word) < 2 ^ objBitsKO ko"
+  using objBitsKO_neq_0
+  by (simp add: objBitsKO_less_word_bits word_2p_lem word_bits_size)
+
+lemma objBits_less_word_bits:
+  "objBits v < word_bits"
+  unfolding objBits_def by (rule objBitsKO_less_word_bits)
+
+lemma objBits_pos_power2[simp]:
+  "(1::machine_word) < 2 ^ objBits v"
+  unfolding objBits_def by simp
+
+end
+
 lemma projectKO_tcb:
   "(projectKO_opt ko = Some t) = (ko = KOTCB t)"
   by (cases ko) (auto simp: projectKO_opts_defs)
@@ -73,6 +102,16 @@ lemma projectKO_ntfn:
 lemmas gen_projectKOs[simp] =
   projectKO_ntfn projectKO_ep projectKO_cte projectKO_tcb
   projectKO_eq projectKO_eq2
+
+(* same derivation on all architectures, since all objects fit inside address space *)
+lemma (in Arch) obj_sizeBits_less_word_bits:
+  "epSizeBits < word_bits"
+  "ntfnSizeBits < word_bits"
+  "tcbBlockSizeBits < word_bits"
+  "cteSizeBits < word_bits"
+  by (simp_all add: objBits_defs word_bits_def)
+
+requalify_facts Arch.obj_sizeBits_less_word_bits
 
 (* true on all arches *)
 lemma zero_less_tcbBlockSizeBits[simp]:
@@ -105,16 +144,6 @@ lemma (in Arch) zero_one_less_2p_SizeBits[simp]:
 
 requalify_facts Arch.zero_one_less_2p_SizeBits
 declare zero_one_less_2p_SizeBits[simp]
-
-(* same derivation on all architectures, since all objects fit inside address space *)
-lemma (in Arch) obj_sizeBits_less_word_bits:
-  "epSizeBits < word_bits"
-  "ntfnSizeBits < word_bits"
-  "tcbBlockSizeBits < word_bits"
-  "cteSizeBits < word_bits"
-  by (simp_all add: objBits_defs word_bits_def)
-
-requalify_facts Arch.obj_sizeBits_less_word_bits
 
 lemma capAligned_epI:
   "ep_at' p s \<Longrightarrow> capAligned (EndpointCap p a b c d e)"

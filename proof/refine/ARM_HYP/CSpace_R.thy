@@ -760,6 +760,7 @@ lemma cteMove_corres:
           (cap_move cap ptr ptr') (cteMove cap' (cte_map ptr) (cte_map ptr'))"
   (is "corres _ ?P ?P' _ _")
   supply subst_all [simp del]
+  supply if_cong[cong]
   apply (simp add: cap_move_def cteMove_def const_def)
   apply (rule corres_symb_exec_r)
      defer
@@ -2368,7 +2369,8 @@ proof -
      apply (thin_tac "All P" for P)
      apply (rule conjI, clarsimp)
       (* clarsimp first for speed *)
-      apply (rule conjI; clarsimp simp: isCap_simps; fastforce simp: isCap_simps sameRegionAs_def)
+      apply (rule conjI; clarsimp simp: isCap_simps;
+             fastforce simp: isCap_simps sameRegionAs_def cong: if_cong)
      apply (erule (1) valid_arch_badges_master)
     apply (case_tac "word1 = p'")
      apply (clarsimp simp:modify_map_cases valid_badges_def mdb_next_unfold src0 dest0 no0)+
@@ -3616,7 +3618,7 @@ lemma deriveCap_untyped_derived:
   "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte. untyped_derived_eq c' (cteCap cte)) slot s\<rbrace>
   deriveCap slot c'
   \<lbrace>\<lambda>rv s. cte_wp_at' (untyped_derived_eq rv o cteCap) slot s\<rbrace>, -"
-  apply (simp add: deriveCap_def split del: if_split)
+  apply (simp add: deriveCap_def split del: if_split cong: if_cong)
   apply (rule hoare_pre)
    apply (wp arch_deriveCap_inv | simp add: o_def untyped_derived_eq_ArchObjectCap)+
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps untyped_derived_eq_def)
@@ -6123,6 +6125,7 @@ lemma updateCap_same_master:
              (pspace_aligned' and pspace_distinct' and cte_at' (cte_map slot))
      (set_cap cap slot)
      (updateCap (cte_map slot) cap')" (is "_ \<Longrightarrow> corres _ ?P ?P' _ _")
+  supply if_cong[cong]
   apply (unfold updateCap_def)
   apply (rule corres_guard_imp)
     apply (rule_tac Q="?P" and R'="\<lambda>cte. ?P' and (\<lambda>s. ctes_of s (cte_map slot) = Some cte)"
