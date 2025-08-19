@@ -291,6 +291,7 @@ definition arch_decode_irq_control_invocation ::
                  cnode = cps ! 0;
                  irq = ucast irq_word
         in doE
+          unlessE haveSetTrigger $ throwError IllegalOperation;
           arch_check_irq irq_word;
           irq_active \<leftarrow> liftE $ is_irq_active irq;
           whenE irq_active $ throwError RevokeFirst;
@@ -309,6 +310,7 @@ definition arch_decode_irq_control_invocation ::
                  depth = args ! 3;
                  cnode = cps ! 0
         in doE
+          whenE (numSGIs = 0) $ throwError IllegalOperation;
           range_check irq_word 0 (of_nat numSGIs - 1);
           unlessE (sgi_target_valid target_word) $ throwError $ InvalidArgument 1;
           dest_slot \<leftarrow> lookup_target_slot cnode (data_to_cptr index) (unat depth);
