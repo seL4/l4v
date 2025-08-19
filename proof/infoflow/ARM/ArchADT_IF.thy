@@ -364,7 +364,7 @@ crunch create_cap
 
 crunch arch_invoke_irq_control
   for irq_state_of_state[ADT_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
-  (wp: dmo_wp crunch_wps simp: setIRQTrigger_def machine_op_lift_def machine_rest_lift_def)
+  (wp: dmo_wp crunch_wps simp: crunch_simps setIRQTrigger_def machine_op_lift_def machine_rest_lift_def)
 
 lemma handle_reserved_irq_non_kernel_IRQs[ADT_IF_assms]:
   "\<lbrace>P and K (irq \<notin> non_kernel_IRQs)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. P\<rbrace>"

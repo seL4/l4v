@@ -31,7 +31,9 @@ lemma arch_invoke_irq_control_reads_respects[Interrupt_IF_assms]:
   "reads_respects aag (l :: 'a subject_label) (K (arch_authorised_irq_ctl_inv aag i))
                   (arch_invoke_irq_control i)"
   apply (cases i; simp add: setIRQTrigger_def)
-   apply (wp cap_insert_reads_respects set_irq_state_reads_respects dmo_mol_reads_respects | simp)+
+   apply (wp reads_respects_when cap_insert_reads_respects set_irq_state_reads_respects
+             dmo_mol_reads_respects
+          | simp)+
    apply (clarsimp simp: arch_authorised_irq_ctl_inv_def)
   apply (rule pre_ev, wp cap_insert_reads_respects)
   apply (clarsimp simp: arch_authorised_irq_ctl_inv_def)
