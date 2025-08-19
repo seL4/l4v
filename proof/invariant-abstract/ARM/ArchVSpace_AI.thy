@@ -20,7 +20,7 @@ lemma kernel_base_shift_cast_le:
   "(kernel_base >> 20 \<le> ucast x) =
         (ucast (kernel_base >> 20) \<le> x)"
   apply (simp add: word_le_def)
-  apply (subst uint_ucast, simp, simp add: kernel_base_def)
+  apply (subst uint_ucast, simp, simp add: kernel_base_def pptrBase_def)
   apply (simp only: ucast_def)
   apply (subst word_uint.Abs_inverse)
    apply (cut_tac x=x in word_uint.Rep)
@@ -2328,7 +2328,7 @@ lemma kernel_vsrefs_kernel_mapping_slots:
     (VSRef (p && mask pd_bits >> 2) (Some APageDirectory) \<in> kernel_vsrefs)"
   by (clarsimp simp: kernel_mapping_slots_def kernel_vsrefs_def
                      word_le_nat_alt unat_ucast_pd_bits_shift
-                     kernel_base_def)
+                     kernel_base_def pptrBase_def)
 
 lemma vs_lookup_typI:
   "\<lbrakk>(r \<rhd> p) s; valid_vspace_objs s; valid_asid_table (arm_asid_table (arch_state s)) s\<rbrakk>
@@ -3898,10 +3898,7 @@ lemma find_pd_for_asid_cap_to_multiple2[wp]:
   apply (simp add: lookup_pd_slot_add_eq)
   done
 
-lemma unat_ucast_kernel_base_rshift:
-  "unat (ucast (kernel_base >> 20) :: 12 word)
-     = unat (kernel_base >> 20)"
-  by (simp add: kernel_base_def)
+lemmas unat_ucast_kernel_base_rshift = shiftr_20_unat_ucast[of kernel_base]
 
 lemma lookup_pd_slot_kernel_mappings_set_strg:
   "is_aligned pd pd_bits \<and> vmsz_aligned vptr ARMSuperSection

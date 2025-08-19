@@ -31,7 +31,7 @@ lemma kernel_base_shift_cast_le: (* ARMHYP *)
   "(kernel_base >> 21 \<le> ucast x) =
         (ucast (kernel_base >> 21) \<le> x)"
   apply (simp add: word_le_def)
-  apply (subst uint_ucast, simp, simp add: kernel_base_def)
+  apply (subst uint_ucast, simp, simp add: kernel_base_def pptrBase_def)
   apply (simp only: ucast_def)
   apply (subst word_uint.Abs_inverse)
    apply (cut_tac x=x in word_uint.Rep)
@@ -4960,7 +4960,7 @@ lemma find_pd_for_asid_cap_to_multiple2[wp]:
 lemma unat_ucast_kernel_base_rshift:
   "unat (ucast (kernel_base >> 21) :: 11 word)
      = unat (kernel_base >> 21)"
-  by (simp add: kernel_base_def)
+  by (simp add: kernel_base_def pptrBase_def)
 
 lemma lookup_pt_slot_cap_to2:
   "\<lbrace>invs and \<exists>\<rhd> pd and K (is_aligned pd pd_bits) and K (vptr < kernel_base)\<rbrace>

@@ -2108,7 +2108,7 @@ lemma ucast_ucast_id:
 
 lemma kernel_base_kernel_mapping_slots:
   "x < kernel_base \<Longrightarrow> ucast (x >> 20) \<notin> kernel_mapping_slots"
-  apply (simp add: kernel_mapping_slots_def kernel_base_def)
+  apply (simp add: kernel_mapping_slots_def kernel_base_def pptrBase_val)
   apply (subst ucast_le_ucast[symmetric, where 'a=12 and 'b=32])
    apply simp
   apply (subst ucast_ucast_mask)
@@ -2366,19 +2366,7 @@ lemma shiftr_20_less:
 
 lemma kernel_base_aligned_pageBits:
   "is_aligned kernel_base pageBits"
-  by (simp add: is_aligned_def kernel_base_def pageBits_def)
-
-lemma kernel_base_ge_observation:
-  "(kernel_base \<le> x) = (x && ~~ mask 29 = kernel_base)"
-  apply (subst mask_in_range)
-   apply (simp add: kernel_base_def is_aligned_def)
-  apply (simp add: kernel_base_def)
-  done
-
-lemma kernel_base_less_observation:
-  "(x < kernel_base) = (x && ~~ mask 29 \<noteq> kernel_base)"
-  apply (simp add: linorder_not_le[symmetric] kernel_base_ge_observation)
-  done
+  by (simp add: is_aligned_def kernel_base_def pptrBase_def pageBits_def)
 
 lemma vptr_shifting_helper_magic:
   "(x = 0) \<or> (x < 2 ^ 4 \<and> vmsz_aligned (vptr::word32) ARMSuperSection)
@@ -2415,12 +2403,13 @@ lemma less_kernel_base_mapping_slots_both:
   apply (simp add: kernel_mapping_slots_def linorder_not_le
                    shiftr_20_less)
   apply (rule le_m1_iff_lt[THEN iffD1,THEN iffD1])
-   apply (simp add:kernel_base_def)
+   apply (simp add: kernel_base_def pptrBase_val)
   apply (erule disjE)
    apply (drule word_less_sub_1)
    apply simp
    apply (drule le_shiftr[where n=20])
-   apply (clarsimp simp :kernel_base_def vmsz_aligned_def)+
+   apply (fastforce simp: kernel_base_def pptrBase_def)
+  apply (clarsimp simp: kernel_base_def pptrBase_val vmsz_aligned_def)
   apply (drule(1) gap_between_aligned)
     apply (simp add:is_aligned_def)
    apply simp
