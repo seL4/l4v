@@ -1744,15 +1744,32 @@ lemma mapM_x_swp_store_pte_reads_respects':
   apply (fastforce simp: is_cap_simps dest!: cte_wp_at_pt_exists_cap[OF invs_valid_objs])
   done
 
+lemma word_shiftr_20_le_1_shift_pageBits:
+  "x >> 20 \<le> 1 << pageBits" for x::machine_word
+  by word_bitwise (force simp: pageBits_def rev_bl_order_def)
+
+lemma kernel_base_shiftr_ARMSection_lt_2p_pageBits:
+  "(kernel_base >> 20) - 1 < 2 ^ pageBits"
+proof -
+  have "kernel_base >> 20 \<le> 1 << pageBits"
+    by (rule word_shiftr_20_le_1_shift_pageBits)
+  hence "(kernel_base >> 20) - 1 < 1 << pageBits"
+    unfolding kernel_base_def
+    by (intro word_leq_le_minus_one pptrBase_top_neq_0)
+  thus ?thesis
+    by simp
+qed
+
 lemma pd_bits_store_pde_helper:
-  "\<lbrakk> xa \<le> (kernel_base >> 20) - 1; is_aligned word pd_bits \<rbrakk>
-     \<Longrightarrow> ((xa << 2) + word && ~~ mask pd_bits) = word"
+  "\<lbrakk> x \<le> (kernel_base >> 20) - 1; is_aligned word pd_bits \<rbrakk>
+     \<Longrightarrow> ((x << 2) + word && ~~ mask pd_bits) = word"
   apply (clarsimp simp: field_simps)
   apply (subst is_aligned_add_helper)
     apply simp
    apply (rule shiftl_less_t2n)
     apply (erule order_le_less_trans)
-    apply (simp add: kernel_base_def  pd_bits_def pageBits_def)+
+    apply (simp add: pd_bits_def kernel_base_shiftr_ARMSection_lt_2p_pageBits)
+   apply (simp add: pageBits_def pd_bits_def)+
   done
 
 lemma mapM_x_swp_store_pde_reads_respects':
