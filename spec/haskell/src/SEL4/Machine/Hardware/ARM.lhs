@@ -912,6 +912,10 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 > config_ARM_GIC_V3 :: Bool
 > config_ARM_GIC_V3 = error "generated from CMake config"
 
+> -- Whether the setTrigger machine op is available
+> haveSetTrigger :: Bool
+> haveSetTrigger = error "Implemented in machine/(ARM|ARM_HYP)/Platform.thy"
+
 \subsection{SGI}
 
 > numSGIs :: Int
