@@ -933,26 +933,30 @@ lemma store_pde_pde_wp_at2:
 
 lemma obj_at_empty_tableI:
   "invs s \<and>
-  (\<forall>x. x \<notin> kernel_mapping_slots \<longrightarrow>
-      pde_wp_at (\<lambda>pde. pde = InvalidPDE) p x s)
-  \<Longrightarrow> obj_at (empty_table (set (arm_global_pts (arch_state s)))) p s"
+   (\<forall>x. x \<notin> kernel_mapping_slots \<longrightarrow>
+        pde_wp_at (\<lambda>pde. pde = InvalidPDE) p x s)
+   \<Longrightarrow> obj_at (empty_table (set (arm_global_pts (arch_state s)))) p s"
   apply safe
   apply (simp add: obj_at_def empty_table_def pde_wp_at_def)
   (* Boring cases *)
   apply (case_tac "\<exists>ko. kheap s p = Some ko")
-   apply (erule exE) apply (rule_tac x=ko in exI)
+   apply (erule exE)
+   apply (rule_tac x=ko in exI)
    apply (rule conjI)
     apply assumption
    apply (case_tac ko)
        apply ((erule_tac x="ucast (kernel_base >> 20) - 1" in allE,
-         simp add: kernel_base_def kernel_mapping_slots_def)+)[4]
+               simp add: kernel_base_def pptrBase_def kernel_mapping_slots_def
+                    split: if_split_asm)+)[4]
    apply (rename_tac arch_kernel_obj)
    apply (case_tac arch_kernel_obj) defer 3
       apply ((erule_tac x="ucast (kernel_base >> 20) - 1" in allE,
-         simp add: kernel_base_def kernel_mapping_slots_def)+)[4]
+              simp add: kernel_base_def pptrBase_def kernel_mapping_slots_def
+                   split: if_split_asm)+)[4]
    (* Interesting case *)
   apply (rename_tac "fun")
   apply clarsimp
+  apply (rename_tac x)
   apply (erule_tac x=x in allE)
   apply (case_tac "x \<notin> kernel_mapping_slots")
    apply (simp add:valid_pde_mappings_def pde_ref_def)
@@ -967,10 +971,10 @@ lemma obj_at_empty_tableI:
   apply (clarsimp simp: invs_def valid_state_def valid_arch_state_def
                         valid_global_objs_def equal_kernel_mappings_def
                         obj_at_def a_type_simps)
-   apply (erule_tac x=p in allE,
-          erule_tac x="arm_global_pd (arch_state s)" in allE)
-   apply (erule_tac x="fun" in allE, erule_tac x="pd" in allE)
-   apply (simp add: empty_table_def)
+  apply (erule_tac x=p in allE,
+         erule_tac x="arm_global_pd (arch_state s)" in allE)
+  apply (erule_tac x="fun" in allE, erule_tac x="pd" in allE)
+  apply (simp add: empty_table_def)
   done
 
 lemma pd_shifting_again3:
@@ -1013,7 +1017,7 @@ lemma pd_shifting_kernel_mapping_slots:
    prefer 2
    apply (simp add:not_le kernel_mapping_slots_def)
    apply (subst (asm) le_m1_iff_lt[THEN iffD1])
-    apply (simp add: kernel_base_def)
+    apply (simp add: kernel_base_def pptrBase_def)
    apply (rule shiftr_20_less[where x = "sl << 20",THEN iffD2])
    apply (subst shiftl_shiftr_id)
      apply (simp add:word_bits_def)
@@ -1026,13 +1030,13 @@ lemma pd_shifting_kernel_mapping_slots:
     apply (subst eq_commute)
     apply (subst and_mask_eq_iff_le_mask)
     apply (rule order_trans)
-     apply ((simp add: kernel_base_def mask_def)+)[2]
+     apply ((simp add: kernel_base_def pptrBase_def mask_def)+)[2]
    apply (rule_tac x="sl" and y="kernel_base >> 20" in less_trans)
-    apply ((simp add: kernel_base_def word_bits_def)+)[2]
+    apply ((simp add: kernel_base_def pptrBase_def word_bits_def)+)[2]
   apply (subst (asm) le_m1_iff_lt[THEN iffD1])
-   apply (simp add: kernel_base_def)
+   apply (simp add: kernel_base_def pptrBase_def)
   apply (rule_tac x="sl" and y="kernel_base >> 20" in less_trans)
-   apply ((simp add: kernel_base_def word_bits_def)+)[2]
+   apply ((simp add: kernel_base_def pptrBase_def word_bits_def)+)[2]
   done
 
 lemma pd_shifting_global_refs:
@@ -1044,7 +1048,7 @@ lemma pd_shifting_global_refs:
   apply (simp add: ucast_bl word_rep_drop of_drop_to_bl word_size)
   apply (insert and_mask_eq_iff_le_mask[where n=12 and w=ae, THEN iffD2])
   apply (frule_tac z="mask 12" in order_trans)
-   apply (simp add: mask_def kernel_base_def)
+   apply (simp add: mask_def kernel_base_def pptrBase_def)
   apply simp
   done
 

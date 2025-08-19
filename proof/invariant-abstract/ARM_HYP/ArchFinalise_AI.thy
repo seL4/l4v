@@ -1490,7 +1490,7 @@ lemma pd_shifting_global_refs:
   apply (simp add: ucast_bl word_rep_drop of_drop_to_bl word_size)
   apply (insert and_mask_eq_iff_le_mask[where n=11 and w=ae, THEN iffD2])
   apply (frule_tac z="mask 11" in order_trans)
-   apply (simp add: mask_def kernel_base_def)
+   apply (simp add: mask_def kernel_base_def pptrBase_def)
   apply simp
   done
 
