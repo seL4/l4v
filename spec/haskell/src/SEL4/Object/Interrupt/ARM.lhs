@@ -26,7 +26,7 @@ This module defines the machine-specific interrupt handling routines.
 > import SEL4.API.Invocation
 > import SEL4.API.Invocation.ARM as ArchInv
 > import SEL4.API.InvocationLabels.ARM as ArchLabels
-> import SEL4.Machine.Hardware.ARM (config_ARM_GIC_V3, deactivateInterrupt)
+> import SEL4.Machine.Hardware.ARM (config_ARM_GIC_V3, haveSetTrigger, deactivateInterrupt)
 > import {-# SOURCE #-} SEL4.Object.Interrupt (setIRQState, isIRQActive)
 > import {-# SOURCE #-} SEL4.Kernel.CSpace
 > import {-# SOURCE #-} SEL4.Object.CNode
@@ -47,6 +47,7 @@ This module defines the machine-specific interrupt handling routines.
 >     case (invocationType label, args, extraCaps) of
 
 >         (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler, irqW:triggerW:index:depth:_, cnode:_) -> do
+>             unless haveSetTrigger $ throw IllegalOperation
 >             checkIRQ irqW
 >             let irq = toEnum (fromIntegral irqW) :: IRQ
 >             irqActive <- withoutFailure $ isIRQActive irq
@@ -73,7 +74,7 @@ This module defines the machine-specific interrupt handling routines.
 > performIRQControl :: ArchInv.IRQControlInvocation -> KernelP ()
 > performIRQControl (ArchInv.IssueIRQHandler (IRQ irq) destSlot srcSlot trigger) =
 >     withoutPreemption $ do
->         doMachineOp $ Arch.setIRQTrigger irq trigger
+>         when haveSetTrigger $ doMachineOp $ Arch.setIRQTrigger irq trigger
 >         -- do same thing as generic path in performIRQControl in Interrupt.lhs
 >         setIRQState IRQSignal (IRQ irq)
 >         cteInsert (IRQHandlerCap (IRQ irq)) srcSlot destSlot
