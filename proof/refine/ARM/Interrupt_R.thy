@@ -210,13 +210,15 @@ lemma isSGITargetValid_eq:
 lemma sgi_target_cast[simp]:
   "sgi_target_valid w \<Longrightarrow> ucast (ucast w :: sgi_target) = w"
   unfolding sgi_target_valid_def gicNumTargets_def
-  by (simp flip: sgi_target_len_def add: ucast_ucast_len sgi_target_len_val)
+  by (simp flip: sgi_target_len_def add: ucast_ucast_len sgi_target_len_val split: if_split_asm)
 
 lemma sgi_irq_cast:
-  "w \<le> word_of_nat numSGIs - 1 \<Longrightarrow> ucast (ucast w :: sgi_irq) = (w :: machine_word)"
+  "\<lbrakk> w \<le> word_of_nat numSGIs - 1;  0 < numSGIs \<rbrakk> \<Longrightarrow>
+   ucast (ucast w :: sgi_irq) = (w :: machine_word)"
   unfolding numSGIs_def
   by (simp flip: sgi_irq_len_def
-           add: ucast_ucast_len sgi_irq_len_val word_le_nat_alt word_less_nat_alt)
+           add: ucast_ucast_len sgi_irq_len_val word_le_nat_alt word_less_nat_alt
+           split: if_split_asm)
 
 lemma arch_decodeIRQControlInvocation_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
@@ -247,6 +249,7 @@ lemma arch_decodeIRQControlInvocation_corres:
   apply (rule impI, rule conjI, clarsimp)
   \<comment>\<open>ARMIRQIssueIRQHandler\<close>
    apply (rule corres_guard_imp)
+     apply corres
      apply (rule corres_splitEE[OF checkIRQ_corres])
        apply (rule_tac F="y \<le> Kernel_Config.maxIRQ" in corres_gen_asm)
        apply (clarsimp simp: toEnum_unat_ucast le_maxIRQ_machine_less_irqBits_val)
@@ -548,20 +551,15 @@ lemma SGISignalCap_valid[simp, intro!]:
   by (simp add: valid_cap'_def capAligned_def word_bits_def)
 
 lemma arch_performIRQControl_corres:
-  "arch_irq_control_inv_relation x2 ivk' \<Longrightarrow> corres (dc \<oplus> dc)
-          (einvs and arch_irq_control_inv_valid x2)
+  "arch_irq_control_inv_relation ivk ivk' \<Longrightarrow> corres (dc \<oplus> dc)
+          (einvs and arch_irq_control_inv_valid ivk)
           (invs' and arch_irq_control_inv_valid' ivk')
-          (arch_invoke_irq_control x2)
+          (arch_invoke_irq_control ivk)
           (Arch.performIRQControl ivk')"
-  apply (cases x2; simp add: ARM_H.performIRQControl_def invoke_irq_control.cases IRQ_def)
-   apply (rule corres_guard_imp)
-     apply (rule corres_split_nor)
-        apply (rule setIRQTrigger_corres)
-       apply (rule corres_split_nor)
-          apply (rule setIRQState_corres)
-          apply (simp add: irq_state_relation_def)
-         apply (rule cteInsert_simple_corres; simp)
-        apply (wp | simp add: irq_state_relation_def IRQHandler_valid IRQHandler_valid')+
+  apply (cases ivk; simp add: ARM_H.performIRQControl_def invoke_irq_control.cases IRQ_def)
+  apply (corres corres: setIRQTrigger_corres setIRQState_corres cteInsert_simple_corres
+                simp: irq_state_relation_def)
+       apply (wpsimp simp: irq_state_relation_def IRQHandler_valid IRQHandler_valid')+
     apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cte_wp_at_caps_of_state
                           is_simple_cap_def is_cap_simps arch_irq_control_inv_valid_def
                           safe_parent_for_def)
