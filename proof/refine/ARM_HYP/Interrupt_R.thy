@@ -209,13 +209,17 @@ lemma isSGITargetValid_eq:
 lemma sgi_target_cast[simp]:
   "sgi_target_valid w \<Longrightarrow> ucast (ucast w :: sgi_target) = w"
   unfolding sgi_target_valid_def gicNumTargets_def
-  by (simp flip: sgi_target_len_def add: ucast_ucast_len sgi_target_len_val)
+  by (simp flip: sgi_target_len_def add: ucast_ucast_len sgi_target_len_val split: if_split_asm)
 
 lemma sgi_irq_cast:
-  "w \<le> word_of_nat numSGIs - 1 \<Longrightarrow> ucast (ucast w :: sgi_irq) = (w :: machine_word)"
+  "\<lbrakk> w \<le> word_of_nat numSGIs - 1; isGICPlatform \<rbrakk> \<Longrightarrow> ucast (ucast w :: sgi_irq) = (w :: machine_word)"
   unfolding numSGIs_def
   by (simp flip: sgi_irq_len_def
            add: ucast_ucast_len sgi_irq_len_val word_le_nat_alt word_less_nat_alt)
+
+lemma zero_le_numSGIs_isGICPlatform:
+  "0 < numSGIs \<Longrightarrow> isGICPlatform"
+  by (simp add: numSGIs_def split: if_split_asm)
 
 lemma arch_decodeIRQControlInvocation_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
@@ -240,12 +244,12 @@ lemma arch_decodeIRQControlInvocation_corres:
   apply (rule conjI, clarsimp)
    apply (simp add: range_check_def rangeCheck_def)
    apply (corres corres: lookupSlotForCNodeOp_corres ensureEmptySlot_corres corres_returnOkTT
-                 term_simp: numSGIs_def isSGITargetValid_eq sgi_irq_cast not_le)
+                 term_simp: zero_le_numSGIs_isGICPlatform isSGITargetValid_eq sgi_irq_cast not_le)
     apply fastforce
    apply fastforce
   \<comment> \<open> ARM_HYPIRQIssueIRQHandler \<close>
   apply (rule impI, rule conjI, clarsimp)
-   apply (rule corres_guard_imp)
+   apply corres (* unlessE haveSetTrigger *)
      apply (rule corres_splitEE[OF checkIRQ_corres])
        apply (rule_tac F="y \<le> Kernel_Config.maxIRQ" in corres_gen_asm)
        apply (clarsimp simp: toEnum_unat_ucast le_maxIRQ_machine_less_irqBits_val)
@@ -538,6 +542,7 @@ lemma arch_performIRQControl_corres:
   apply (cases x2; simp add: ARM_HYP_H.performIRQControl_def invoke_irq_control.cases IRQ_def)
    apply (rule corres_guard_imp)
      apply (rule corres_split_nor)
+        apply corres (* when *)
         apply (rule setIRQTrigger_corres)
        apply (rule corres_split_nor)
           apply (rule setIRQState_corres)

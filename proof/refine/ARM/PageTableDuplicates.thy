@@ -507,249 +507,235 @@ lemma global_pd_offset:
   done
 
 lemma globalPDEWindow_neg_mask:
-  "\<lbrakk>x && ~~ mask (vs_ptr_align a) = y && ~~ mask (vs_ptr_align a);is_aligned ptr pdBits\<rbrakk>
-  \<Longrightarrow> y \<in> {ptr + (pptrBase >> 20 << 2)..ptr + (2 ^ (pdBits) - 1)}
-  \<Longrightarrow> x \<in> {ptr + (pptrBase >> 20 << 2)..ptr + (2 ^ (pdBits) - 1)}"
-  apply (clarsimp simp: pptrBase_def)
-  apply (intro conjI)
-   apply (rule_tac y = "y &&~~ mask (vs_ptr_align a)" in order_trans)
+  "\<lbrakk> x && ~~mask (vs_ptr_align a) = y && ~~mask (vs_ptr_align a); is_aligned ptr pdBits;
+     y \<in> {ptr + (pptrBase >> 20 << 2)..ptr + (2 ^ pdBits - 1)} \<rbrakk>
+   \<Longrightarrow> x \<in> {ptr + (pptrBase >> 20 << 2)..ptr + (2 ^ pdBits - 1)}"
+  apply clarsimp
+  apply (rule conjI)
+   apply (rule_tac y = "y && ~~mask (vs_ptr_align a)" in order_trans)
     apply (rule is_aligned_le_mask)
      apply (rule is_aligned_weaken[OF _ vs_ptr_align_upbound])
      apply (erule aligned_add_aligned[OF is_aligned_weaken[OF _ le_refl]])
-      apply (simp add:is_aligned_def)
-     apply (simp add:pdBits_def pageBits_def)
+      apply (rule is_aligned_shiftl)
+      apply (rule is_aligned_shiftr)
+      apply simp
+      apply (rule pptrBase_aligned)
+     apply (simp add: pdBits_def pageBits_def)
     apply simp
    apply (drule sym)
-   apply (simp add:word_and_le2)
+   apply (simp add: word_and_le2)
   apply (drule_tac x = y in neg_mask_mono_le[where n = pdBits])
   apply (subst (asm) is_aligned_add_helper)
     apply simp
-   apply (simp add:pdBits_def pageBits_def pdeBits_def)
+   apply (simp add: pdBits_def pageBits_def pdeBits_def)
   apply (rule order_trans[OF and_neg_mask_plus_mask_mono[where n = pdBits]])
   apply (drule mask_out_first_mask_some[where m = pdBits])
    apply (cut_tac a = a in vs_ptr_align_upbound)
-   apply (simp add:pdBits_def pageBits_def)
+   apply (simp add: pdBits_def pageBits_def)
   apply (cut_tac a = a in vs_ptr_align_upbound)
   apply (drule le_trans[where k = 14])
    apply simp
-  apply (simp add:and_not_mask_twice max_def
-    pdBits_def pageBits_def pdeBits_def)
-  apply (simp add:mask_def)
+  apply (simp add: and_not_mask_twice max_def pdBits_def pageBits_def pdeBits_def)
+  apply (simp add: mask_def)
   apply (subst add.commute)
   apply (subst add.commute[where a = ptr])
   apply (rule word_plus_mono_right)
    apply simp
   apply (rule olen_add_eqv[THEN iffD2])
-  apply (simp add:field_simps)
+  apply (simp add: field_simps)
   apply (erule is_aligned_no_wrap')
   apply simp
   done
 
 lemma copyGlobalMappings_ksPSpace_stable:
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
   assumes ptr_al: "is_aligned ptr pdBits"
   shows
-   "\<lbrace>\<lambda>s. ksPSpace s x = ko \<and> pspace_distinct' s \<and> pspace_aligned' s \<and>
-    is_aligned (armKSGlobalPD (ksArchState s)) pdBits\<rbrace>
-   copyGlobalMappings ptr
-   \<lbrace>\<lambda>_ s. ksPSpace s x = (if x \<in> {ptr + (pptrBase >> 20 << 2)..ptr + (2 ^ pdBits - 1)}
-           then ksPSpace s ((armKSGlobalPD (ksArchState s)) + (x && mask pdBits))
-           else ko)\<rbrace>"
-  proof -
-    have not_aligned_eq_None:
-      "\<And>x s. \<lbrakk>\<not> is_aligned x 2; pspace_aligned' s\<rbrakk> \<Longrightarrow> ksPSpace s x = None"
-      apply (rule ccontr)
-      apply clarsimp
-      apply (drule(1) pspace_alignedD')
-      apply (drule is_aligned_weaken[where y = 2])
-       apply (case_tac y, simp_all add: objBits_simps' pageBits_def)
-      apply (simp add: archObjSize_def pageBits_def
-                       pteBits_def pdeBits_def
-                  split: arch_kernel_object.splits)
-      done
-    have ptr_eqD:
-      "\<And>p a b. \<lbrakk>p + a = ptr + b;is_aligned p pdBits;
-            a < 2^ pdBits; b < 2^pdBits \<rbrakk>
-       \<Longrightarrow> p = ptr"
-      apply (drule arg_cong[where f = "\<lambda>x. x && ~~ mask pdBits"])
-      apply (subst (asm) is_aligned_add_helper[THEN conjunct2])
-        apply simp
-       apply simp
-      apply (subst (asm) is_aligned_add_helper[THEN conjunct2])
-        apply (simp add:ptr_al)
-       apply simp
-      apply simp
-      done
-    have postfix_listD:
-      "\<And>a as. suffix (a # as) [pptrBase >> 20.e.2 ^ (pdBits - 2) - 1]
-       \<Longrightarrow> a \<in> set [pptrBase >> 20 .e. 2 ^ (pdBits - 2) - 1]"
-       apply (clarsimp simp:suffix_def)
-       apply (subgoal_tac "a \<in> set (zs @ a # as)")
-        apply (drule sym)
-        apply simp
-       apply simp
-       done
-     have in_rangeD: "\<And>x.
-       \<lbrakk>pptrBase >> 20 \<le> x; x \<le> 2 ^ (pdBits - 2) - 1\<rbrakk>
-       \<Longrightarrow> ptr + (x << 2) \<in> {ptr + (pptrBase >> 20 << 2)..ptr + (2 ^ pdBits - 1)}"
-       apply (clarsimp simp:blah)
-       apply (intro conjI)
-        apply (rule word_plus_mono_right)
-         apply (simp add: pptrBase_def pdBits_def pageBits_def pdeBits_def)
-         apply (word_bitwise,simp)
-        apply (rule is_aligned_no_wrap'[OF ptr_al])
-        apply (simp add:pdBits_def pageBits_def pdeBits_def)
-        apply (word_bitwise,simp)
-       apply (rule word_plus_mono_right)
-        apply (simp add:pdBits_def pageBits_def pdeBits_def)
-        apply (word_bitwise,simp)
-       apply (rule is_aligned_no_wrap'[OF ptr_al])
-       apply (simp add:pdBits_def pageBits_def pdeBits_def)
-       done
+    "\<lbrace>\<lambda>s. ksPSpace s x = ko \<and> pspace_distinct' s \<and> pspace_aligned' s \<and>
+          is_aligned (armKSGlobalPD (ksArchState s)) pdBits\<rbrace>
+     copyGlobalMappings ptr
+     \<lbrace>\<lambda>_ s. ksPSpace s x = (if x \<in> {ptr + (pptrBase >> 20 << 2)..ptr + (2 ^ pdBits - 1)}
+            then ksPSpace s ((armKSGlobalPD (ksArchState s)) + (x && mask pdBits))
+            else ko)\<rbrace>"
+proof -
+  have not_aligned_eq_None:
+    "\<And>x s. \<lbrakk>\<not> is_aligned x 2; pspace_aligned' s\<rbrakk> \<Longrightarrow> ksPSpace s x = None"
+    apply (rule ccontr)
+    apply clarsimp
+    apply (rename_tac y)
+    apply (drule(1) pspace_alignedD')
+    apply (drule is_aligned_weaken[where y=2])
+     apply (case_tac y, simp_all add: objBits_simps' pageBits_def)
+    apply (simp add: archObjSize_def pageBits_def pteBits_def pdeBits_def
+                split: arch_kernel_object.splits)
+    done
 
-     have offset_bound:
-       "\<And>x. \<lbrakk>is_aligned ptr 14;ptr + (pptrBase >> 20 << 2) \<le> x; x \<le> ptr + 0x3FFF\<rbrakk>
-        \<Longrightarrow> x - ptr < 0x4000"
-        apply (clarsimp simp: pptrBase_def field_simps take_bit_Suc)
-        apply unat_arith
-        done
+  have ptr_eqD:
+    "\<And>p a b. \<lbrakk> p + a = ptr + b;is_aligned p pdBits; a < 2^ pdBits; b < 2^pdBits \<rbrakk> \<Longrightarrow> p = ptr"
+    apply (drule arg_cong[where f = "\<lambda>x. x && ~~ mask pdBits"])
+    apply (simp add: is_aligned_add_helper[THEN conjunct2] ptr_al)
+    done
+
+  have postfix_listD:
+    "\<And>a as. suffix (a # as) [pptrBase >> 20.e.2 ^ (pdBits - 2) - 1]
+             \<Longrightarrow> a \<in> set [pptrBase >> 20 .e. 2 ^ (pdBits - 2) - 1]"
+    apply (clarsimp simp: suffix_def)
+    apply (subgoal_tac "a \<in> set (zs @ a # as)")
+     apply (drule sym)
+     apply simp
+    apply simp
+    done
+
+  have in_rangeD:
+    "\<And>x. \<lbrakk> pptrBase >> 20 \<le> x; x \<le> 2 ^ (pdBits - 2) - 1\<rbrakk>
+         \<Longrightarrow> ptr + (x << 2) \<in> {ptr + (pptrBase >> 20 << 2)..ptr + (2 ^ pdBits - 1)}"
+    apply clarsimp
+    apply (rule conjI)
+     apply (rule word_plus_mono_right)
+      apply (simp add: pdBits_def pageBits_def pdeBits_def)
+      apply (word_bitwise, simp)
+     apply (rule is_aligned_no_wrap'[OF ptr_al])
+     apply (simp add: pdBits_def pageBits_def pdeBits_def)
+     apply (word_bitwise, simp)
+    apply (rule word_plus_mono_right)
+     apply (simp add: pdBits_def pageBits_def pdeBits_def)
+     apply (word_bitwise, simp)
+    apply (rule is_aligned_no_wrap'[OF ptr_al])
+    apply (simp add: pdBits_def pageBits_def pdeBits_def)
+    done
+
+  have offset_bound:
+    "\<And>x. \<lbrakk>is_aligned ptr 14;ptr + (pptrBase >> 20 << 2) \<le> x; x \<le> ptr + 0x3FFF\<rbrakk>
+         \<Longrightarrow> x - ptr < 0x4000"
+    by (clarsimp simp: pptrBase_def field_simps take_bit_Suc split: if_split_asm; unat_arith)
 
   show ?thesis
-  apply (case_tac "\<not> is_aligned x 2")
-   apply (rule hoare_name_pre_state)
-   apply (clarsimp)
-   apply (rule_tac Q'="\<lambda>r s. is_aligned (armKSGlobalPD (ksArchState s)) 2
-      \<and> pspace_aligned' s" in hoare_post_imp)
-    apply (frule_tac x = x in not_aligned_eq_None)
-     apply simp
-    apply (frule_tac x = x and s = sa in not_aligned_eq_None)
-     apply simp
-    apply clarsimp
-    apply (drule_tac  x = "armKSGlobalPD (ksArchState sa) + (x && mask pdBits)"
-      and  s = sa in not_aligned_eq_None[rotated])
-     apply (subst is_aligned_mask)
-     apply (simp add: mask_add_aligned mask_twice)
-     apply (simp add:is_aligned_mask pdBits_def mask_def)
-    apply simp
-   apply (wp|simp)+
-   apply (erule is_aligned_weaken)
-   apply (simp add:pdBits_def)
-  apply (simp add: copyGlobalMappings_def)
-  apply (rule hoare_name_pre_state)
-  apply (rule hoare_conjI)
-   apply (rule hoare_pre)
-    apply (rule hoare_vcg_const_imp_lift)
-    apply wp
-     apply (rule_tac V="\<lambda>xs s. \<forall>x \<in> (set [pptrBase >> 20.e.2 ^ (pdBits - 2) - 1] - set xs).
-                                 ksPSpace s (ptr + (x << 2)) = ksPSpace s (globalPD + (x << 2))"
-             and I="\<lambda>s'. globalPD = (armKSGlobalPD (ksArchState s'))
-                       \<and> globalPD = (armKSGlobalPD (ksArchState s))"
-       in mapM_x_inv_wp2)
-      apply (cut_tac ptr_al)
-      apply (clarsimp simp:blah pdBits_def pageBits_def pdeBits_def)
-      apply (drule_tac x="x - ptr >> 2" in spec)
-      apply (frule offset_bound)
-       apply simp+
-      apply (erule impE)
-       apply (rule conjI)
-        apply (rule le_shiftr[where u="pptrBase >> 18" and n=2, simplified shiftr_shiftr, simplified])
-        apply (rule word_le_minus_mono_left[where x=ptr and y="(pptrBase >> 18) + ptr", simplified])
-         apply (simp add: pptrBase_def add.commute take_bit_Suc)
-        apply (simp add:field_simps)
-        apply (erule is_aligned_no_wrap')
-        apply (simp add: pptrBase_def pdBits_def pageBits_def)
-       apply (drule le_m1_iff_lt[THEN iffD1,THEN iffD2,rotated])
+    apply (case_tac "\<not> is_aligned x 2")
+     apply (rule hoare_name_pre_state)
+     apply (clarsimp)
+     apply (rule_tac Q'="\<lambda>r s. is_aligned (armKSGlobalPD (ksArchState s)) 2 \<and> pspace_aligned' s"
+                     in hoare_post_imp)
+      apply (rename_tac s')
+      apply (frule_tac x=x in not_aligned_eq_None)
+       apply simp
+      apply (frule_tac x=x and s=s' in not_aligned_eq_None)
+       apply simp
+      apply clarsimp
+      apply (drule_tac x="armKSGlobalPD (ksArchState s') + (x && mask pdBits)" and s=s'
+                       in not_aligned_eq_None[rotated])
+       apply (simp add: is_aligned_mask mask_add_aligned mask_twice)
+       apply (simp add: is_aligned_mask pdBits_def mask_def)
+      apply simp
+     apply wpsimp
+     apply (erule is_aligned_weaken)
+     apply (simp add: pdBits_def)
+    apply (simp add: copyGlobalMappings_def)
+    apply (rule hoare_name_pre_state)
+    apply (rule hoare_conjI)
+     apply (rule hoare_pre)
+      apply (rule hoare_vcg_const_imp_lift)
+      apply wp
+       apply (rule_tac V="\<lambda>xs s. \<forall>x \<in> (set [pptrBase >> 20.e.2 ^ (pdBits - 2) - 1] - set xs).
+                                   ksPSpace s (ptr + (x << 2)) = ksPSpace s (globalPD + (x << 2))"
+                   and I="\<lambda>s'. globalPD = (armKSGlobalPD (ksArchState s'))
+                               \<and> globalPD = (armKSGlobalPD (ksArchState s))"
+                    in mapM_x_inv_wp2)
+        apply (cut_tac ptr_al)
+        apply (clarsimp simp: pdBits_def pageBits_def pdeBits_def)
+        apply (drule_tac x="x - ptr >> 2" in spec)
+        apply (frule offset_bound)
+          apply simp+
+        apply (erule impE)
+         apply (rule conjI)
+          apply (rule le_shiftr[where u="pptrBase >> 18" and n=2, simplified shiftr_shiftr, simplified])
+          apply (rule word_le_minus_mono_left[where x=ptr and y="(pptrBase >> 18) + ptr", simplified])
+           apply (fastforce simp add: pptrBase_def add.commute take_bit_Suc)
+          apply (simp add: field_simps)
+          apply (erule is_aligned_no_wrap')
+          apply (simp add: pptrBase_def pdBits_def pageBits_def)
+         apply (drule le_m1_iff_lt[THEN iffD1,THEN iffD2,rotated])
+          apply simp
+         apply (drule le_shiftr[where u="x - ptr" and n=2])
+         apply simp
+        apply (cut_tac b=2 and c=2 and a="x - ptr" in shiftr_shiftl1)
+         apply simp
         apply simp
-       apply (drule le_shiftr[where u = "x - ptr" and n = 2])
-       apply simp
-      apply (cut_tac b = 2 and c = 2 and a = "x - ptr" in shiftr_shiftl1)
-       apply simp
-      apply simp
-      apply (cut_tac n = 2 and p = "x - ptr" in is_aligned_neg_mask_eq)
-       apply (erule aligned_sub_aligned)
-        apply (erule is_aligned_weaken,simp)
-       apply simp
-      apply simp
-      apply (drule_tac t = x in
-        global_pd_offset[symmetric,unfolded pdBits_def pageBits_def pdeBits_def,simplified])
-       apply (clarsimp simp:blah field_simps)
-      apply (subgoal_tac "x && mask 14 = x - ptr")
-       apply clarsimp
-      apply (simp add:field_simps)
-     apply (wp hoare_vcg_all_lift getPDE_wp mapM_x_wp'
-        | simp add: storePDE_def setObject_def split_def
-        updateObject_default_def
-        split: option.splits)+
-     apply (clarsimp simp:objBits_simps archObjSize_def)
-     apply (clarsimp simp:obj_at'_def objBits_simps
-        projectKO_def projectKO_opt_pde fail_def return_def
-        split: Structures_H.kernel_object.splits
-        arch_kernel_object.splits)
-     apply (drule_tac x = xa in bspec)
-      apply simp
-      apply (rule ccontr)
-      apply (simp add: pdeBits_def)
-     apply clarsimp
-     apply (drule(1) ptr_eqD)
-       apply (rule shiftl_less_t2n)
-        apply (simp add:pdBits_def pageBits_def )
-        apply (rule le_m1_iff_lt[THEN iffD1,THEN iffD1])
-         apply (simp add: pdeBits_def)
+        apply (cut_tac n=2 and p="x - ptr" in is_aligned_neg_mask_eq)
+         apply (erule aligned_sub_aligned)
+          apply (erule is_aligned_weaken,simp)
+         apply simp
+        apply simp
+        apply (drule_tac t=x in global_pd_offset[symmetric,
+                                                 unfolded pdBits_def pageBits_def pdeBits_def,
+                                                 simplified])
+         apply (clarsimp simp: field_simps)
+        apply (subgoal_tac "x && mask 14 = x - ptr")
+         apply clarsimp
+        apply (simp add: field_simps)
+       apply (wp hoare_vcg_all_lift getPDE_wp mapM_x_wp'
+              | simp add: storePDE_def setObject_def split_def updateObject_default_def
+                     split: option.splits)+
+       apply (clarsimp simp: objBits_simps)
+       apply (rename_tac x')
+       apply (clarsimp simp: obj_at'_def objBits_simps projectKO_def projectKO_opt_pde fail_def
+                             return_def
+                       split: Structures_H.kernel_object.splits arch_kernel_object.splits)
+       apply (drule_tac x=x' in bspec)
+        apply simp
+        apply (rule ccontr)
         apply (simp add: pdeBits_def)
-       apply (simp add:pdBits_def pageBits_def pdeBits_def)
-      apply (simp add: pdeBits_def)
-      apply (rule shiftl_less_t2n)
-       apply (drule postfix_listD)
-       apply (clarsimp simp:pdBits_def pdeBits_def le_less_trans)
-      apply (simp add:pdBits_def pageBits_def pdeBits_def)
-     apply simp
-    apply wp
-   apply (clarsimp simp:objBits_simps archObjSize_def pdeBits_def)
-  apply (rule hoare_name_pre_state)
-  apply (rule hoare_pre)
-   apply (rule hoare_vcg_const_imp_lift)
-   apply wp
-    apply (rule_tac Q'="\<lambda>r s'. ksPSpace s' x = ksPSpace s x \<and> globalPD = armKSGlobalPD (ksArchState s)"
-      in hoare_post_imp)
-     apply (wp hoare_vcg_all_lift getPDE_wp mapM_x_wp'
-        | simp add: storePDE_def setObject_def split_def
-        updateObject_default_def
-        split: option.splits)+
-    apply (clarsimp simp:objBits_simps archObjSize_def pdeBits_def dest!:in_rangeD)
-   apply wp
-  apply simp
-  done
+       apply clarsimp
+       apply (drule(1) ptr_eqD)
+         apply (rule shiftl_less_t2n)
+          apply (simp add: pdBits_def pageBits_def )
+          apply (rule le_m1_iff_lt[THEN iffD1,THEN iffD1])
+           apply (simp add: pdeBits_def)
+          apply (simp add: pdeBits_def)
+         apply (simp add: pdBits_def pageBits_def pdeBits_def)
+        apply (simp add: pdeBits_def)
+        apply (rule shiftl_less_t2n)
+         apply (drule postfix_listD)
+         apply (clarsimp simp: pdBits_def pdeBits_def le_less_trans)
+        apply (simp add: pdBits_def pageBits_def pdeBits_def)
+       apply simp
+      apply wp
+     apply (clarsimp simp: objBits_simps pdeBits_def)
+    apply (rule hoare_name_pre_state)
+    apply (rule hoare_pre)
+     apply (rule hoare_vcg_const_imp_lift)
+     apply wp
+      apply (rule_tac Q'="\<lambda>r s'. ksPSpace s' x = ksPSpace s x \<and>
+                                 globalPD = armKSGlobalPD (ksArchState s)"
+                      in hoare_post_imp)
+       apply (wp hoare_vcg_all_lift getPDE_wp mapM_x_wp'
+              | simp add: storePDE_def setObject_def split_def updateObject_default_def
+                     split: option.splits)+
+      apply (clarsimp simp: objBits_simps pdeBits_def dest!:in_rangeD)
+     apply wp
+    apply simp
+    done
 qed
 
 lemma copyGlobalMappings_ksPSpace_same:
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
-  shows
   "\<lbrakk>is_aligned ptr pdBits\<rbrakk> \<Longrightarrow>
    \<lbrace>\<lambda>s. ksPSpace s x = ko \<and> pspace_distinct' s \<and> pspace_aligned' s \<and>
-    is_aligned (armKSGlobalPD (ksArchState s)) pdBits \<and> ptr = armKSGlobalPD (ksArchState s)\<rbrace>
+        is_aligned (armKSGlobalPD (ksArchState s)) pdBits \<and> ptr = armKSGlobalPD (ksArchState s)\<rbrace>
    copyGlobalMappings ptr
    \<lbrace>\<lambda>_ s. ksPSpace s x = ko\<rbrace>"
-  apply (simp add:copyGlobalMappings_def)
+  apply (simp add: copyGlobalMappings_def)
   apply (rule hoare_name_pre_state)
   apply clarsimp
-  apply (rule hoare_pre)
-   apply wp
-    apply (rule_tac Q'="\<lambda>r s'. ksPSpace s' x = ksPSpace s x \<and> globalPD = armKSGlobalPD (ksArchState s)"
-      in hoare_post_imp)
+  apply wp
+    apply (rule_tac Q'="\<lambda>r s'. ksPSpace s' x = ksPSpace s x \<and>
+                               globalPD = armKSGlobalPD (ksArchState s)"
+                    in hoare_post_imp)
      apply simp
     apply (wp hoare_vcg_all_lift getPDE_wp mapM_x_wp'
-    | simp add: storePDE_def setObject_def split_def
-    updateObject_default_def
-    split: option.splits)+
-    apply (clarsimp simp:objBits_simps archObjSize_def)
-    apply (clarsimp simp:obj_at'_def objBits_simps
-      projectKO_def projectKO_opt_pde fail_def return_def
-      split: Structures_H.kernel_object.splits
-      arch_kernel_object.splits)
+           | simp add: storePDE_def setObject_def split_def updateObject_default_def
+                  split: option.splits)+
+    apply (clarsimp simp: objBits_simps)
+    apply (clarsimp simp: obj_at'_def objBits_simps projectKO_def projectKO_opt_pde fail_def
+                          return_def
+                    split: Structures_H.kernel_object.splits arch_kernel_object.splits)
    apply wp
   apply simp
   done
