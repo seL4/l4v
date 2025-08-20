@@ -9,7 +9,7 @@ imports Refine
 begin
 
 crunch_ignore (empty_fail)
-  (add: handleE' getCTE getObject updateObject ifM andM orM whileM ifM
+  (add: handleE' getCTE getObject updateObject
         CSpaceDecls_H.resolveAddressBits
         doMachineOp suspend restart schedule)
 
@@ -93,10 +93,6 @@ lemma empty_fail_getObject_ep [intro!, wp, simp]:
   "empty_fail (getObject p :: endpoint kernel)"
   by (simp add: empty_fail_getObject)
 
-lemma empty_fail_getObject_reply [intro!, wp, simp]:
-  "empty_fail (getObject p :: reply kernel)"
-  by (simp add: empty_fail_getObject)
-
 lemma getEndpoint_empty_fail [intro!, wp, simp]:
   "empty_fail (getEndpoint ep)"
   by (simp add: getEndpoint_def)
@@ -167,22 +163,14 @@ lemma ignoreFailure_empty_fail[intro!, wp, simp]:
   "empty_fail x \<Longrightarrow> empty_fail (ignoreFailure x)"
   by (simp add: ignoreFailure_def empty_fail_catch)
 
-lemma empty_fail_getObject_sc [intro!, wp, simp]:
-   "empty_fail (getObject p :: sched_context kernel)"
-   by (simp add: empty_fail_getObject)
-
-crunch "SchedContextDecls_H.postpone"
- for (empty_fail) "_H_empty_fail"[intro!, wp, simp]
-  (simp: getSchedContext_def)
-
 context
 notes option.case_cong_weak[cong]
 begin
 crunch
-  cancelIPC, setThreadState, tcbSchedDequeue, isStopped, possibleSwitchTo, tcbSchedAppend,
-  refillUnblockCheck, schedContextResume, ifCondRefillUnblockCheck
- for (empty_fail) empty_fail[intro!, wp, simp]
-  (simp: Let_def wp: empty_fail_whileLoop)
+  cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isStopped,
+  possibleSwitchTo, tcbSchedAppend
+  for (empty_fail) empty_fail[intro!, wp, simp]
+  (simp: crunch_simps)
 end
 
 crunch "ThreadDecls_H.suspend"
@@ -191,7 +179,7 @@ crunch "ThreadDecls_H.suspend"
 
 lemma ThreadDecls_H_restart_empty_fail[intro!, wp, simp]:
   "empty_fail (ThreadDecls_H.restart target)"
-  unfolding restart_def getCurSc_def by wpsimp
+  by (fastforce simp: restart_def)
 
 crunch finaliseCap, preemptionPoint, capSwapForDelete
   for (empty_fail) empty_fail[intro!, wp, simp]
@@ -271,44 +259,24 @@ lemma catchError_empty_fail[intro!, wp, simp]:
   by fastforce
 
 crunch
-  chooseThread, getDomainTime, nextDomain, isHighestPrio, switchSchedContext, setNextInterrupt
- for (empty_fail) empty_fail[intro!, wp, simp]
-  (wp: empty_fail_catch empty_fail_setDeadline empty_fail_whileLoop)
-
-crunch tcbReleaseDequeue
- for (empty_fail) empty_fail[intro!, wp, simp]
-
-lemma awaken_empty_fail[intro!, wp, simp]:
-  "empty_fail awaken"
-  apply (clarsimp simp: awaken_def awakenBody_def)
-  apply (wpsimp wp: empty_fail_whileLoop)
-  done
+  chooseThread, getDomainTime, nextDomain, isHighestPrio
+  for (empty_fail) empty_fail[intro!, wp, simp]
+  (wp: empty_fail_catch)
 
 lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   "empty_fail schedule"
-  apply (simp add: schedule_def scAndTimer_def checkDomainTime_def)
-  apply (clarsimp simp: scheduleChooseNewThread_def split: if_split | wp | wpc | intro conjI impI)+
+  apply (simp add: schedule_def)
+  apply (clarsimp simp: scheduleChooseNewThread_def split: if_split | wp | wpc)+
   done
 
-lemma tcbEPFindIndex_empty_fail[intro!, wp, simp]:
-  "empty_fail (tcbEPFindIndex t qs ci)"
-  by (induct ci; subst tcbEPFindIndex.simps; wpsimp)
-
 crunch callKernel
- for (empty_fail) empty_fail
+  for (empty_fail) empty_fail
   (wp: empty_fail_catch)
 
 theorem call_kernel_serial:
   "\<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and
-                schact_is_rct and
-                current_time_bounded and
-                consumed_time_bounded and
-                valid_machine_time and
-                ct_not_in_release_q and
-                cur_sc_active and
-                (\<lambda>s. cur_sc_offset_ready (consumed_time s) s) and
-                (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s) and
-                (\<lambda>s. 0 < domain_time s \<and> valid_domain_list s)) s;
+              schact_is_rct and
+              (\<lambda>s. 0 < domain_time s \<and> valid_domain_list s)) s;
        \<exists>s'. (s, s') \<in> state_relation \<and>
             (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and
               (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and

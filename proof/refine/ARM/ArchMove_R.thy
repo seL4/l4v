@@ -17,4 +17,13 @@ lemmas cte_index_repair_sym = cte_index_repair[symmetric]
 
 lemmas of_nat_inj32 = of_nat_inj[where 'a=32, folded word_bits_def]
 
+context begin
+interpretation Arch .
+
+(* Move to Deterministic_AI*)
+crunch copy_global_mappings
+  for valid_etcbs[wp]: valid_etcbs (wp: mapM_x_wp')
+
+end
+
 end
