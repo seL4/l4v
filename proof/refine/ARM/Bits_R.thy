@@ -20,8 +20,7 @@ crunch_ignore (add:
   storeWordVM loadWord setRegister getRegister getRestartPC
   debugPrint setNextPC maskInterrupt clearMemory throw_on_false
   unifyFailure ignoreFailure empty_on_failure emptyOnFailure clearMemoryVM null_cap_on_failure
-  setNextPC getRestartPC assertDerived throw_on_false getObject setObject updateObject loadObject
-  ifM andM orM whenM whileM haskell_assert)
+  setNextPC getRestartPC assertDerived throw_on_false getObject setObject updateObject loadObject)
 
 context Arch begin (*FIXME: arch-split*)
 
@@ -57,9 +56,7 @@ lemma isCap_simps:
   "isNotificationCap v = (\<exists>v0 v1 v2 v3. v = NotificationCap v0 v1 v2 v3)"
   "isEndpointCap v = (\<exists>v0 v1 v2 v3 v4 v5. v = EndpointCap v0 v1 v2 v3 v4 v5)"
   "isUntypedCap v = (\<exists>d v0 v1 f. v = UntypedCap d v0 v1 f)"
-  "isReplyCap v = (\<exists>v0 v1. v = ReplyCap v0 v1)"
-  "isSchedContextCap v = (\<exists>v0 v1. v = SchedContextCap v0 v1)"
-  "isSchedControlCap v = (v = SchedControlCap)"
+  "isReplyCap v = (\<exists>v0 v1 v2. v = ReplyCap v0 v1 v2)"
   "isIRQControlCap v = (v = IRQControlCap)"
   "isIRQHandlerCap v = (\<exists>v0. v = IRQHandlerCap v0)"
   "isNullCap v = (v = NullCap)"
@@ -97,27 +94,6 @@ lemma projectKO_ntfn:
   "(projectKO_opt ko = Some t) = (ko = KONotification t)"
   by (cases ko) (auto simp: projectKO_opts_defs)
 
-lemma projectKO_reply:
-  "(projectKO_opt ko = Some t) = (ko = KOReply t)"
-  by (cases ko) (auto simp: projectKO_opts_defs)
-
-lemma reply_of'_KOReply[simp]:
-  "reply_of' (KOReply reply) = Some reply"
-  apply (clarsimp simp: projectKO_reply)
-  done
-
-lemma projectKO_sc:
-  "(projectKO_opt ko = Some t) = (ko = KOSchedContext t)"
-  by (cases ko) (auto simp: projectKO_opts_defs)
-
-lemma sc_of'_Sched[simp]:
-  "sc_of' (KOSchedContext sc) = Some sc"
-  by (simp add: projectKO_sc)
-
-lemma tcb_of'_TCB[simp]:
-  "tcb_of' (KOTCB tcb) = Some tcb"
-  by (simp add: projectKO_tcb)
-
 lemma projectKO_ASID:
   "(projectKO_opt ko = Some t) = (ko = KOArch (KOASIDPool t))"
   by (cases ko)
@@ -145,9 +121,9 @@ lemma projectKO_user_data_device:
 
 
 lemmas projectKOs =
-  projectKO_ntfn projectKO_ep projectKO_cte projectKO_tcb projectKO_reply projectKO_sc
+  projectKO_ntfn projectKO_ep projectKO_cte projectKO_tcb
   projectKO_ASID projectKO_PTE projectKO_PDE projectKO_user_data projectKO_user_data_device
-  projectKO_eq
+  projectKO_eq projectKO_eq2
 
 lemma capAligned_epI:
   "ep_at' p s \<Longrightarrow> capAligned (EndpointCap p a b c d e)"
@@ -175,24 +151,13 @@ lemma capAligned_tcbI:
                   dest!: ko_wp_at_aligned simp: objBits_simps' projectKOs)
   done
 
-lemma capAligned_replyI:
-  "reply_at' p s \<Longrightarrow> capAligned (ReplyCap p r)"
+lemma capAligned_reply_tcbI:
+  "tcb_at' p s \<Longrightarrow> capAligned (ReplyCap p m r)"
   apply (clarsimp simp: obj_at'_real_def capAligned_def
                         objBits_simps word_bits_def capUntypedPtr_def isCap_simps)
   apply (fastforce dest: ko_wp_at_norm
                   dest!: ko_wp_at_aligned simp: objBits_simps' projectKOs)
   done
-
-lemma capAligned_sched_contextI:
-  "\<lbrakk>sc_at'_n r p s; sc_size_bounds r\<rbrakk>
-      \<Longrightarrow> capAligned (SchedContextCap p r)"
-  by (clarsimp simp: obj_at'_real_def capAligned_def sc_size_bounds_def ko_wp_at'_def isCap_simps
-                     objBits_simps word_bits_def capUntypedPtr_def maxUntypedSizeBits_def)
-
-lemma sc_at'_n_sc_at':
-  "sc_at'_n n p s \<Longrightarrow> sc_at' p s"
-  apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKOs)
-  by (case_tac ko; clarsimp)
 
 lemma ko_at_valid_objs':
   assumes ko: "ko_at' k p s"
@@ -201,39 +166,6 @@ lemma ko_at_valid_objs':
   shows "valid_obj' (injectKO k) s" using ko vo
   by (clarsimp simp: valid_objs'_def obj_at'_def projectKOs
                      project_inject ranI)
-
-lemmas ko_at_valid_objs'_pre =
-  ko_at_valid_objs'[simplified project_inject, atomized, simplified, rule_format]
-
-lemmas ep_ko_at_valid_objs_valid_ep' =
-  ko_at_valid_objs'_pre[where 'a=endpoint, simplified injectKO_defs valid_obj'_def, simplified]
-
-lemmas ntfn_ko_at_valid_objs_valid_ntfn' =
-  ko_at_valid_objs'_pre[where 'a=notification, simplified injectKO_defs valid_obj'_def,
-                        simplified]
-
-lemmas tcb_ko_at_valid_objs_valid_tcb' =
-  ko_at_valid_objs'_pre[where 'a=tcb, simplified injectKO_defs valid_obj'_def, simplified]
-
-lemmas cte_ko_at_valid_objs_valid_cte' =
-  ko_at_valid_objs'_pre[where 'a=cte, simplified injectKO_defs valid_obj'_def, simplified]
-
-lemmas sc_ko_at_valid_objs_valid_sc' =
-  ko_at_valid_objs'_pre[where 'a=sched_context, simplified injectKO_defs valid_obj'_def,
-                        simplified]
-
-lemmas reply_ko_at_valid_objs_valid_reply' =
-  ko_at_valid_objs'_pre[where 'a=reply, simplified injectKO_defs valid_obj'_def, simplified]
-
-(* FIXME: arch split *)
-lemmas pde_ko_at_valid_objs_valid_pde' =
-  ko_at_valid_objs'_pre[where 'a=pde, simplified injectKO_pde valid_obj'_def, simplified]
-
-lemmas pte_ko_at_valid_objs_valid_pte' =
-  ko_at_valid_objs'_pre[where 'a=pte, simplified injectKO_pde valid_obj'_def, simplified]
-
-lemmas asidpool_ko_at_valid_objs_valid_asid_pool' =
-  ko_at_valid_objs'_pre[where 'a=asidpool, simplified injectKO_pde valid_obj'_def, simplified]
 
 lemma obj_at_valid_objs':
   "\<lbrakk> obj_at' P p s; valid_objs' s \<rbrakk> \<Longrightarrow>
@@ -269,9 +201,6 @@ lemma getIdleThread_corres [corres]:
 
 lemma git_wp [wp]: "\<lbrace>\<lambda>s. P (ksIdleThread s) s\<rbrace> getIdleThread \<lbrace>P\<rbrace>"
   by (unfold getIdleThread_def, wp)
-
-lemma getIdleSc_wp [wp]: "\<lbrace>\<lambda>s. P (ksIdleSC s) s\<rbrace> getIdleSC \<lbrace>P\<rbrace>"
-  by (unfold getIdleSC_def, wp)
 
 lemma gsa_wp [wp]: "\<lbrace>\<lambda>s. P (ksSchedulerAction s) s\<rbrace> getSchedulerAction \<lbrace>P\<rbrace>"
   by (unfold getSchedulerAction_def, wp)

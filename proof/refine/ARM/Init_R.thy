@@ -50,17 +50,6 @@ definition zeroed_main_abstract_state ::
     is_original_cap = (K True),
     cur_thread = 0,
     idle_thread = 0,
-    consumed_time = 0,
-    cur_time = 0,
-    cur_sc = 0,
-    reprogram_timer = False,
-    scheduler_action = resume_cur_thread,
-    domain_list = [],
-    domain_index = 0,
-    cur_domain = 0,
-    domain_time = 0,
-    ready_queues = (\<lambda>d p. []),
-    release_queue = [],
     machine_state = init_machine_state,
     interrupt_irq_node = (\<lambda>irq. ucast irq << cte_level_bits),
     interrupt_states = (K irq_state.IRQInactive),
@@ -72,6 +61,13 @@ definition zeroed_extended_state ::
   where
   "zeroed_extended_state \<equiv> \<lparr>
     work_units_completed_internal = 0,
+    scheduler_action_internal = resume_cur_thread,
+    ekheap_internal = K None,
+    domain_list_internal = [],
+    domain_index_internal = 0,
+    cur_domain_internal = 0,
+    domain_time_internal = 0,
+    ready_queues_internal = (\<lambda>_ _. []),
     cdt_list_internal = K []
   \<rparr>"
 
@@ -100,16 +96,10 @@ definition zeroed_intermediate_state ::
     ksCurDomain = 0,
     ksDomainTime = 0,
     ksReadyQueues = K (TcbQueue None None),
-    ksReleaseQueue = TcbQueue None None,
     ksReadyQueuesL1Bitmap = K 0,
     ksReadyQueuesL2Bitmap = K 0,
     ksCurThread = 0,
     ksIdleThread = 0,
-    ksIdleSC = idle_sc_ptr,
-    ksConsumedTime = 0,
-    ksCurTime = 0,
-    ksCurSc = 0,
-    ksReprogramTimer = False,
     ksSchedulerAction = ResumeCurrentThread,
     ksInterruptState = (InterruptState 0 (K IRQInactive)),
     ksWorkUnitsCompleted = 0,
@@ -126,10 +116,11 @@ lemma non_empty_refine_state_relation:
   "(zeroed_abstract_state, zeroed_intermediate_state) \<in> state_relation"
   apply (clarsimp simp: state_relation_def zeroed_state_defs state.defs)
   apply (intro conjI)
-           apply (clarsimp simp: pspace_relation_def pspace_dom_def)
-          apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
-         apply (clarsimp simp: ready_queues_relation_def)
-        apply (clarsimp simp: release_queue_relation_def)
+          apply (clarsimp simp: pspace_relation_def pspace_dom_def)
+         apply (clarsimp simp: ekheap_relation_def)
+        apply (clarsimp simp: ready_queues_relation_def ready_queue_relation_def queue_end_valid_def
+                              opt_pred_def list_queue_relation_def tcbQueueEmpty_def
+                              prev_queue_head_def)
        apply (clarsimp simp: ghost_relation_def)
       apply (fastforce simp: cdt_relation_def swp_def dest: cte_wp_at_domI)
      apply (clarsimp simp: cdt_list_relation_def map_to_ctes_def)

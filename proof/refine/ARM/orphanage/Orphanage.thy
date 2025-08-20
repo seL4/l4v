@@ -1058,7 +1058,7 @@ crunch cteInsert, setExtraBadge, setMessageInfo, transferCaps, copyMRs,
 crunch doIPCTransfer, setMRs, setEndpoint
   for ksReadyQueues [wp]: "\<lambda>s. P (ksReadyQueues s)"
   and no_orphans [wp]: "no_orphans"
-  (wp: transferCapsToSlots_pres1 crunch_wps no_orphans_lift updateObject_default_inv)
+  (wp: no_orphans_lift updateObject_default_inv)
 
 lemma sendIPC_no_orphans [wp]:
   "\<lbrace>\<lambda>s. no_orphans s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s\<rbrace>

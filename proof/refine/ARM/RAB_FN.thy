@@ -78,7 +78,7 @@ declare resolveAddressBitsFn.simps[simp del]
 
 lemma isCNodeCap_capUntypedPtr_capCNodePtr:
   "isCNodeCap c \<Longrightarrow> capUntypedPtr c = capCNodePtr c"
-  by (clarsimp simp: isCap_simps State_H.ARM_H.PPtr_def)
+  by (clarsimp simp: isCap_simps)
 
 lemma resolveAddressBitsFn_eq:
   "monadic_rewrite F E (\<lambda>s. (isCNodeCap cap \<longrightarrow> (\<exists>slot. cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot s))

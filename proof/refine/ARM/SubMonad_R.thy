@@ -64,12 +64,12 @@ definition
 lemma threadGet_stateAssert_gets_asUser:
   "threadGet (atcbContextGet o tcbArch) t = do stateAssert (tcb_at' t) []; gets (asUser_fetch t) od"
   apply (rule is_stateAssert_gets [OF _ _ empty_fail_threadGet no_fail_threadGet])
-    apply (clarsimp simp: threadGet_def liftM_def, wp, simp)
-   apply (simp add: threadGet_def liftM_def, wp getObject_tcb_at',
-          clarsimp simp: threadRead_tcb_at')
-  apply (wpsimp simp: threadGet_def)
-  apply (drule use_ovalid[OF ovalid_threadRead_sp], simp)
-  apply (clarsimp simp: obj_at'_def asUser_fetch_def projectKOs atcbContextGet_def o_def)
+    apply (clarsimp simp: threadGet_def liftM_def, wp)
+   apply (simp add: threadGet_def liftM_def, wp getObject_tcb_at')
+  apply (simp add: threadGet_def liftM_def, wp)
+   apply (rule hoare_strengthen_post, rule getObject_obj_at')
+     apply (simp add: objBits_simps')+
+   apply (clarsimp simp: obj_at'_def asUser_fetch_def projectKOs atcbContextGet_def o_def)+
   done
 
 lemma threadSet_modify_asUser:
