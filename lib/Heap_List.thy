@@ -259,19 +259,18 @@ lemma sym_heap_ls_rev:
   by (auto dest!: sym_heap_path_reverse[THEN iffD1])
 
 lemma heap_path_sym_heap_non_nil_lookup_prev:
-  "\<lbrakk>heap_ls hp x (xs @ z # ys); sym_heap hp hp'; xs \<noteq> []\<rbrakk> \<Longrightarrow> hp' z = (Some (last xs))"
-  supply heap_path_append[simp del]
+  "\<lbrakk>heap_path hp x (xs @ z # ys) ed; sym_heap hp hp'; xs \<noteq> []\<rbrakk> \<Longrightarrow> hp' z = (Some (last xs))"
   apply (cut_tac xs="butlast xs" and z="last xs" and ys="z # ys"
-              in heap_path_non_nil_lookup_next[where hp=hp and x=x and y=None])
+              in heap_path_non_nil_lookup_next[where hp=hp and x=x and y=ed])
    apply (frule append_butlast_last_id)
-   apply (metis append_eq_Cons_conv append_eq_append_conv2)
+   apply (metis Cons_eq_append_conv append.assoc)
   apply (fastforce dest: sym_heapD1)
   done
 
-lemma heap_ls_prev_of_last:
-  "\<lbrakk>t = last ls; Suc 0 < length ls; heap_ls hp st ls; sym_heap hp hp'\<rbrakk>
-   \<Longrightarrow> hp' t = Some (last (butlast ls))"
-  apply (cut_tac hp=hp and xs="butlast ls" and z=t and ys="[]"
+lemma heap_path_prev_of_last:
+  "\<lbrakk>heap_path hp st ls ed; sym_heap hp hp'; Suc 0 < length ls\<rbrakk>
+   \<Longrightarrow> hp' (last ls) = Some (last (butlast ls))"
+  apply (cut_tac hp=hp and xs="butlast ls" and z="last ls" and ys="[]"
               in heap_path_sym_heap_non_nil_lookup_prev)
      apply (prop_tac "ls \<noteq> []", fastforce)
      apply fastforce
