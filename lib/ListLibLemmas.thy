@@ -398,17 +398,23 @@ lemma set_list_insert_before:
   done
 
 lemma takeWhile_dropWhile_insert_list_before:
-  "\<lbrakk>distinct ls; sorted (map f ls); sfx \<noteq> []; suffix sfx ls;
-    \<forall>pfx v. pfx @ sfx = ls \<and> v \<in> set pfx \<longrightarrow> f v \<le> f new; f new < f (hd sfx)\<rbrakk> \<Longrightarrow>
-   map fst (takeWhile (\<lambda>(_, t). t \<le> f new) (zip ls (map f ls)))
-    @ new
-    # map fst (dropWhile (\<lambda>(_, t). t \<le> f new) (zip ls (map f ls)))
-   = list_insert_before ls (hd sfx) new"
-  apply (cases sfx; simp)
-  apply (simp add: suffix_def map_fst_takeWhile_zip map_fst_dropWhile_zip)
-  apply (elim exE, rename_tac xs)
-  apply (cut_tac xs=xs and ys="a # list" and new=new in list_insert_before_distinct)
-    apply auto
+  assumes distinct: "distinct ts"
+  assumes member: "ptr \<in> set ts"
+  assumes nf: "\<forall>t \<in> set ts. \<exists>v. f t s = Some v"
+  assumes rel': "\<exists>val'. f ptr s = Some val' \<and> R val val' \<and> val \<noteq> val'"
+                "\<forall>pfx. (\<exists>sfx. pfx @ ptr # sfx = ts) \<longrightarrow> (\<forall>x \<in> set pfx. R (the (f x s)) val)"
+  assumes ord: "antisymp R"
+  shows
+    "map fst (takeWhile (\<lambda>(t', val'). R val' val) (zip ts (map (\<lambda>t. the (f t s)) ts)))
+       @ t # map fst (dropWhile (\<lambda>(t', val'). R val' val) (zip ts (map (\<lambda>t. the (f t s)) ts)))
+     = list_insert_before ts ptr t"
+  apply (insert assms)
+  apply (clarsimp simp: in_set_conv_decomp simp del: distinct_append)
+  apply (rename_tac xs val' ys)
+  apply (cut_tac xs=xs and ys="ptr # ys" and new=t in list_insert_before_distinct)
+    apply fastforce
+   apply fastforce
+  apply (fastforce dest: antisympD)
   done
 
 lemma list_remove_removed:
