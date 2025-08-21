@@ -100,6 +100,12 @@ definition arch_mask_irq_signal :: "irq \<Rightarrow> (unit,'z::state_ext) s_mon
   "arch_mask_irq_signal irq \<equiv>
      when (\<not>Kernel_Config.config_ARM_GIC_V3) (do_machine_op $ maskInterrupt True irq)"
 
+definition handle_spurious_irq:: "(unit, 'z::state_ext) s_monad" where
+  "handle_spurious_irq \<equiv>
+     if hasSpuriousIRQ_mop
+     then do_machine_op handleSpuriousIRQ_mop
+     else return ()"
+
 end
 
 end
