@@ -2695,7 +2695,8 @@ lemma perform_aci_invs [wp]:
 
 lemma capMaster_isPML4Cap':
   "capMasterCap cap' = capMasterCap cap \<Longrightarrow> isPML4Cap' cap' = isPML4Cap' cap"
-  by (simp add: capMasterCap_def isPML4Cap'_def split: capability.splits arch_capability.splits)
+  by (simp add: capMasterCap_def arch_capMasterCap_def isPML4Cap'_def
+           split: capability.splits arch_capability.splits)
 
 lemma isPML4Cap'_PML4 :
   "isPML4Cap' (ArchObjectCap (PML4Cap r m))"

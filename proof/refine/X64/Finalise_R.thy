@@ -1179,8 +1179,8 @@ lemma not_Final_removeable:
     \<Longrightarrow> removeable' sl s cap"
   apply (erule not_FinalE)
    apply (clarsimp simp: removeable'_def gen_isCap_simps)
-  apply (clarsimp simp: cteCaps_of_def sameObjectAs_def2 removeable'_def
-                        cte_wp_at_ctes_of)
+  apply (clarsimp simp: cteCaps_of_def X64.sameObjectAs_def2 removeable'_def
+                        cte_wp_at_ctes_of) (* FIXME arch-split *)
   apply fastforce
   done
 
@@ -1889,7 +1889,7 @@ where
 
 lemma final_matters_Master:
   "final_matters' (capMasterCap cap) = final_matters' cap"
-  by (simp add: capMasterCap_def split: capability.split arch_capability.split,
+  by (simp add: capMasterCap_def arch_capMasterCap_def split: capability.split arch_capability.split,
       simp add: final_matters'_def)
 
 lemma final_matters_sameRegion_sameObject:
@@ -1965,7 +1965,7 @@ lemma notFinal_prev_or_next:
    apply (subst final_matters_Master[symmetric])
    apply (subst(asm) final_matters_Master[symmetric])
    apply (clarsimp simp: sameObjectAs_def3)
-  apply (clarsimp simp: sameObjectAs_def3)
+  apply (clarsimp simp: sameObjectAs_def3 simp del: isArchFrameCap_capMasterCap)
   done
 
 lemma isFinal:
@@ -2063,7 +2063,7 @@ lemma (in vmdb) isFinal_no_subtree:
    apply (erule_tac x="mdbNext n" in allE)
    apply simp
    apply (clarsimp simp: isMDBParentOf_CTE final_matters_sameRegion_sameObject)
-   apply (clarsimp simp: gen_isCap_simps sameObjectAs_def3)
+   apply (clarsimp simp: gen_isCap_simps X64.sameObjectAs_def3)
   apply clarsimp
   done
 

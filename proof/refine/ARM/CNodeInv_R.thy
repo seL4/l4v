@@ -4025,12 +4025,12 @@ qed
 lemma sameRegionAs_eq_child:
   "\<lbrakk> sameRegionAs cap c; weak_derived' c c' \<rbrakk>
   \<Longrightarrow> sameRegionAs cap c'"
-  by (clarsimp simp: weak_derived'_def sameRegionAs_def2)
+  by (clarsimp simp: weak_derived'_def ARM.sameRegionAs_def2) (* FIXME arch-split *)
 
 lemma sameRegionAs_eq_parent:
   "\<lbrakk> sameRegionAs c cap; weak_derived' c c' \<rbrakk>
   \<Longrightarrow> sameRegionAs c' cap"
-  by (clarsimp simp: weak_derived'_def sameRegionAs_def2)
+  by (clarsimp simp: weak_derived'_def ARM.sameRegionAs_def2) (* FIXME arch-split *)
 
 context mdb_swap
 begin
@@ -4075,7 +4075,7 @@ lemma master_srcI:
 
 lemma isEPsrc:
   "isEndpointCap scap = isEndpointCap src_cap"
-  by (rule master_srcI, rule isCap_Master)
+  by (rule master_srcI, rule gen_isCap_Master)
 
 lemma isIRQControl_src:
   "(scap = IRQControlCap) = (src_cap = IRQControlCap)"
@@ -4094,7 +4094,7 @@ lemma isEPbadge_src:
 
 lemma isNTFNsrc:
   "isNotificationCap scap = isNotificationCap src_cap"
-  by (rule master_srcI, rule isCap_Master)
+  by (rule master_srcI, rule gen_isCap_Master)
 
 lemma isNTFNbadge_src:
   "isNotificationCap src_cap \<Longrightarrow> capNtfnBadge scap = capNtfnBadge src_cap"
@@ -4203,11 +4203,11 @@ end
 (* FIXME arch-split: next two lemmas need \<not>isArchFrameCap EndpointCap *)
 lemma sameRegion_ep:
   "\<lbrakk> sameRegionAs cap cap'; isEndpointCap cap \<rbrakk> \<Longrightarrow> isEndpointCap cap'"
-  by (auto simp: gen_isCap_simps sameRegionAs_def3 ARM.isArchFrameCap_def)
+  by (auto simp: gen_isCap_simps ARM.sameRegionAs_def3 ARM.isArchFrameCap_def)
 
 lemma sameRegion_ntfn:
   "\<lbrakk> sameRegionAs cap cap'; isNotificationCap cap \<rbrakk> \<Longrightarrow> isNotificationCap cap'"
-  by (auto simp: gen_isCap_simps sameRegionAs_def3 ARM.isArchFrameCap_def)
+  by (auto simp: gen_isCap_simps ARM.sameRegionAs_def3 ARM.isArchFrameCap_def)
 
 lemma (in mdb_swap) cteSwap_valid_badges:
   "valid_badges n"
@@ -4600,8 +4600,6 @@ lemma Null_weak_derived_Null' [simp]:
   "weak_derived' NullCap cap = (cap = NullCap)"
   by (auto simp add: weak_derived'_def)
 
-
-
 lemma distinct_zombies_switchE:
   "\<lbrakk> distinct_zombies m; m x = Some old_x; m y = Some old_y;
              capMasterCap (cteCap old_x) = capMasterCap (cteCap new_y);
@@ -4614,14 +4612,16 @@ lemma distinct_zombies_switchE:
   apply (drule_tac F="\<lambda>cap. (isUntypedCap cap, isZombie cap, isArchPageCap cap,
                              capClass cap, capUntypedPtr cap, capBits cap, isIRQControlCap cap)"
                in master_eqE,
-         simp add: isCap_Master capClass_Master capUntyped_Master capBits_Master)+
-  apply (simp add: distinct_zombies_def distinct_zombie_caps_def
+         simp add: gen_isCap_Master capClass_Master capUntyped_Master capBits_Master
+                   isArchFrameCap_capMasterCap)+
+  (* FIXME arch-split *)
+  apply (simp add: distinct_zombies_def distinct_zombie_caps_def ARM.arch_isCap_Master
                     split del: if_split)
   apply (intro allI)
   apply (drule_tac x="(id (x := y, y := x)) ptr" in spec)
   apply (drule_tac x="(id (x := y, y := x)) ptr'" in spec)
   apply (clarsimp split del: if_split)
-  apply (clarsimp simp: isCap_Master
+  apply (clarsimp simp: gen_isCap_Master
                         capBits_Master
                         capClass_Master
                         capUntyped_Master
@@ -5542,7 +5542,7 @@ proof (rule mdb_chunked_update_final [OF chunk, OF slot])
     using Fin
     apply (clarsimp simp: isFinal_def)
     apply (drule_tac x=y in spec)
-    apply (clarsimp simp: sameObjectAs_def3)
+    apply (clarsimp simp: sameObjectAs_def3 simp del: isArchFrameCap_capMasterCap)
     done
 
   show Fin1: "\<And>y cte. \<lbrakk> m y = Some cte; y \<noteq> x \<rbrakk> \<Longrightarrow> \<not> sameRegionAs cap (cteCap cte)"
@@ -5567,9 +5567,9 @@ proof (rule mdb_chunked_update_final [OF chunk, OF slot])
        apply (drule arg_cong[where f=capUntypedPtr])
        apply (simp add: capUntyped_Master unt)
       apply (drule arg_cong[where f=isUntypedCap])
-      apply (simp add: isCap_Master)
+      apply (simp add: gen_isCap_Master)
      apply (drule arg_cong[where f=isArchPageCap])
-     apply (clarsimp simp add: isCap_Master)
+     apply (clarsimp simp add: gen_isCap_Master)
      apply (cut_tac ztc2, clarsimp simp: isCap_simps)
     apply (drule arg_cong[where f=capClass])
     apply (simp add: capClass_Master ztc_phys[OF ztc2])
@@ -5582,10 +5582,10 @@ proof (rule mdb_chunked_update_final [OF chunk, OF slot])
     apply (rule disjE [OF cases])
      apply (clarsimp simp: ztc_sameRegion ztc1 ztc2 sameObjectAs_def3)
      apply (drule_tac F="\<lambda>cap. (isNullCap cap, isZombie cap, isIRQControlCap cap,
-                                isUntypedCap cap, isArchPageCap cap, isArchSGISignalCap cap,
+                                isUntypedCap cap, isArchFrameCap cap,
                                 capRange cap)" in  master_eqE,
-             simp add: isCap_Master capRange_Master del: isNullCap)+
-     apply (auto simp: isCap_Master capRange_Master)[1]
+            simp add: gen_isCap_Master capRange_Master del: isNullCap)+
+     apply (auto simp: gen_isCap_Master capRange_Master)[1]
     apply (erule disjE)
      apply (drule(2) zombie_case_helper)
      apply (simp add: ztc_sameRegion ztc1 ztc2)
@@ -5602,8 +5602,8 @@ proof (rule mdb_chunked_update_final [OF chunk, OF slot])
         apply (drule_tac F="\<lambda>cap. (isNullCap cap, isZombie cap,
                                    isUntypedCap cap, isArchPageCap cap,
                                    capRange cap)" in  master_eqE,
-                simp add: isCap_Master capRange_Master del: isNullCap)+
-        apply (auto simp: isCap_Master capRange_Master)[1]
+                simp add: gen_isCap_Master capRange_Master del: isNullCap)+
+        apply (auto simp: gen_isCap_Master capRange_Master)[1]
            apply (clarsimp simp: isCap_simps)+
     done
 
@@ -7945,7 +7945,7 @@ lemma (in mdb_move) m'_next:
 lemma (in mdb_move) sameRegionAs_parent_eq:
   "sameRegionAs cap cap' = sameRegionAs cap src_cap"
   using parency unfolding weak_derived'_def
-  by (simp add: sameRegionAs_def2)
+  by (simp add: ARM.sameRegionAs_def2) (* FIXME arch-split *)
 
 lemma (in mdb_move) m'_cap:
   "m' p = Some (CTE c node) \<Longrightarrow>
@@ -8084,8 +8084,10 @@ lemma sameRegion_cap'_src [simp]:
   "sameRegionAs cap' c = sameRegionAs src_cap c"
   using parency unfolding weak_derived'_def
   apply (case_tac "isReplyCap src_cap"; clarsimp)
-   apply (clarsimp simp: capMasterCap_def split: capability.splits arch_capability.splits
-         ; fastforce simp: sameRegionAs_def ARM_H.sameRegionAs_def isCap_simps split: if_split_asm)+
+   (* FIXME arch-split *)
+   apply (clarsimp simp: capMasterCap_def arch_capMasterCap_def
+                   split: capability.splits arch_capability.splits;
+          fastforce simp: sameRegionAs_def ARM_H.sameRegionAs_def isCap_simps split: if_split_asm)+
   done
 
 lemma mdb_chunked_arch_assms_src[simp]:
@@ -8499,7 +8501,7 @@ proof
     apply (intro ball_ran_fun_updI, simp_all)
      apply (frule bspec, rule ranI, rule m_p)
      apply (clarsimp simp: weak_derived'_def)
-     apply (drule master_eqE[where F=isReplyCap], simp add: isCap_Master)
+     apply (drule master_eqE[where F=isReplyCap], simp add: gen_isCap_Master)
     apply (simp add: isCap_simps)+
     done
 

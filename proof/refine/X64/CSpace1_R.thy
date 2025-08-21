@@ -1363,7 +1363,7 @@ lemma updateCapData_Reply:
    apply (clarsimp simp: isCap_simps)
    apply (simp add: updateCapData_def isCap_simps Let_def)
   apply (drule updateCapData_Master)
-  apply (rule master_eqI, rule isCap_Master)
+  apply (rule master_eqI, rule gen_isCap_Master)
   apply simp
   done
 
@@ -1380,7 +1380,7 @@ lemma weak_derived_updateCapData:
 lemma maskCapRights_Reply[simp]:
   "isReplyCap (maskCapRights r c) = isReplyCap c"
   apply (insert capMasterCap_maskCapRights)
-  apply (rule master_eqI, rule isCap_Master)
+  apply (rule master_eqI, rule gen_isCap_Master)
   apply simp
   done
 
@@ -2994,21 +2994,21 @@ lemma isZombie [simp]:
 
 lemma isUntypedCap [simp]:
   "isUntypedCap cap' = isUntypedCap cap" using master
-  by (simp add: capMasterCap_def isUntypedCap_def split: capability.splits)
+  by (simp add: capMasterCap_def arch_capMasterCap_def isUntypedCap_def split: capability.splits)
 
 lemma isArchPageCap [simp]:
   "isArchPageCap cap' = isArchPageCap cap" using master
-  by (simp add: capMasterCap_def isArchPageCap_def
+  by (simp add: capMasterCap_def arch_capMasterCap_def isArchPageCap_def
            split: capability.splits arch_capability.splits)
 
 lemma isArchIOPortCap [simp]:
   "isArchIOPortCap cap' = isArchIOPortCap cap" using master
-  by (simp add: capMasterCap_def isArchIOPortCap_def
+  by (simp add: capMasterCap_def arch_capMasterCap_def isArchIOPortCap_def
            split: capability.splits arch_capability.splits)
 
 lemma isIOPortControlCap' [simp]:
   "isIOPortControlCap' cap' = isIOPortControlCap' cap" using master
-  by (simp add: capMasterCap_def isCap_simps
+  by (simp add: capMasterCap_def arch_capMasterCap_def isCap_simps
            split: capability.splits arch_capability.splits)
 
 lemma isIRQHandlerCap [simp]:
@@ -3033,7 +3033,8 @@ lemma isReplyCap [simp]:
 
 lemma capRange [simp]:
   "capRange cap' = capRange cap" using master
-  by (simp add: capRange_def capMasterCap_def split: capability.splits arch_capability.splits)
+  by (simp add: capRange_def capMasterCap_def arch_capMasterCap_def
+           split: capability.splits arch_capability.splits)
 
 lemma isDomain1:
   "(cap' = DomainCap) = (cap = DomainCap)" using master
@@ -3368,7 +3369,8 @@ lemma revokable_plus_orderD:
        capMasterCap old = capMasterCap new \<rbrakk>
       \<Longrightarrow> (isUntypedCap new \<or> (\<exists>x. capBadge old = Some 0 \<and> capBadge new = Some x \<and> x \<noteq> 0))"
   by (clarsimp simp: Retype_H.isCapRevocable_def X64_H.isCapRevocable_def X64.isCap_simps
-                        X64_H.arch_capability.simps
+                        X64_H.arch_capability.simps capMasterCap_ArchObjectCap
+                        X64.arch_capMasterCap_simps (* FIXME arch-split *)
               split: if_split_asm capability.split_asm X64_H.arch_capability.split_asm)
 
 lemma valid_badges_def2:
@@ -3386,7 +3388,7 @@ lemma valid_badges_def2:
   apply (simp add: valid_badges_def)
   apply (intro arg_cong[where f=All] ext imp_cong [OF refl])
   apply (case_tac cap; clarsimp simp: gen_isCap_simps)
-      by (fastforce simp: sameRegionAs_def3 X64.isCap_simps)+
+      by (fastforce simp: X64.sameRegionAs_def3 X64.isCap_simps)+ (* FIXME arch-split *)
 
 lemma sameRegionAs_update_untyped:
   "RetypeDecls_H.sameRegionAs (capability.UntypedCap d a b c) =
@@ -3432,7 +3434,7 @@ lemma (in mdb_insert_der) dest_no_parent_n:
               cong: sameRegionAs_update_untyped)
   apply (clarsimp simp: isMDBParentOf_CTE is_derived'_def badge_derived'_def)
   apply (drule(2) revokable_plus_orderD)
-  apply (erule sameRegionAsE, simp_all)
+  apply (erule X64.sameRegionAsE, simp_all) (* FIXME arch-split *)
      apply (simp add: valid_badges_def2)
      apply (erule_tac x=src in allE)
      apply (erule_tac x="mdbNext src_node" in allE)
@@ -3598,8 +3600,9 @@ lemma src_no_mdb_parent:
   apply (clarsimp simp: isMDBParentOf_CTE is_derived'_def badge_derived'_def)
   apply (erule sameRegionAsE)
      apply (clarsimp simp add: sameRegionAs_def3)
-     subgoal by (cases src_cap; auto simp: capMasterCap_def Retype_H.isCapRevocable_def X64_H.isCapRevocable_def
-                                     vsCapRef_def freeIndex_update_def isCap_simps
+     subgoal by (cases src_cap; auto simp: capMasterCap_def arch_capMasterCap_def
+                                           Retype_H.isCapRevocable_def X64_H.isCapRevocable_def
+                                           vsCapRef_def freeIndex_update_def isCap_simps
                                        split: capability.split_asm arch_capability.split_asm) (* long *)
     apply (clarsimp simp: isCap_simps sameRegionAs_def3 capMasterCap_def freeIndex_update_def
        split:capability.splits arch_capability.splits)

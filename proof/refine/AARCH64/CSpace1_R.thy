@@ -1377,7 +1377,7 @@ lemma updateCapData_Reply:
    apply (clarsimp simp: isCap_simps)
    apply (simp add: updateCapData_def isCap_simps Let_def)
   apply (drule updateCapData_Master)
-  apply (rule master_eqI, rule isCap_Master)
+  apply (rule master_eqI, rule gen_isCap_Master)
   apply simp
   done
 
@@ -1394,7 +1394,7 @@ lemma weak_derived_updateCapData:
 lemma maskCapRights_Reply[simp]:
   "isReplyCap (maskCapRights r c) = isReplyCap c"
   apply (insert capMasterCap_maskCapRights)
-  apply (rule master_eqI, rule isCap_Master)
+  apply (rule master_eqI, rule gen_isCap_Master)
   apply simp
   done
 
@@ -2983,7 +2983,7 @@ lemma isUntypedCap [simp]:
 
 lemma isArchFrameCap [simp]:
   "isArchFrameCap cap' = isArchFrameCap cap" using master
-  by (simp add: capMasterCap_def isArchFrameCap_def
+  by (simp add: capMasterCap_def arch_capMasterCap_def isArchFrameCap_def
            split: capability.splits arch_capability.splits)
 
 lemma isIRQHandlerCap [simp]:
@@ -3012,11 +3012,13 @@ lemma isArchObjectCap[simp]:
 
 lemma isArchSGISignalCap[simp]:
   "isArchSGISignalCap cap' = isArchSGISignalCap cap" using master
-  by (simp add: capMasterCap_def isCap_simps split: capability.splits arch_capability.splits)
+  by (simp add: capMasterCap_def arch_capMasterCap_def isCap_simps
+           split: capability.splits arch_capability.splits)
 
 lemma capRange [simp]:
   "capRange cap' = capRange cap" using master
-  by (simp add: capRange_def capMasterCap_def split: capability.splits arch_capability.splits)
+  by (simp add: capRange_def capMasterCap_def arch_capMasterCap_def
+           split: capability.splits arch_capability.splits)
 
 lemma isDomain1:
   "(cap' = DomainCap) = (cap = DomainCap)" using master
@@ -3374,7 +3376,7 @@ lemma valid_badges_def2:
   apply (simp add: valid_badges_def)
   apply (intro arg_cong[where f=All] ext imp_cong [OF refl])
   apply (case_tac cap; clarsimp simp: gen_isCap_simps)
-      by (fastforce simp: sameRegionAs_def3 gen_isCap_simps)+
+      by (fastforce simp: AARCH64.sameRegionAs_def3 AARCH64.isCap_simps)+ (* FIXME arch-split *)
 
 lemma sameRegionAs_update_untyped:
   "RetypeDecls_H.sameRegionAs (capability.UntypedCap d a b c) =
@@ -3416,7 +3418,7 @@ lemma (in mdb_insert_der) dest_no_parent_n:
               cong: sameRegionAs_update_untyped)
   apply (clarsimp simp: isMDBParentOf_CTE is_derived'_def badge_derived'_def)
   apply (drule(2) revokable_plus_orderD)
-  apply (erule sameRegionAsE, simp_all)
+  apply (erule AARCH64.sameRegionAsE, simp_all) (* FIXME arch-split *)
      apply (simp add: valid_badges_def2)
      apply (erule_tac x=src in allE)
      apply (erule_tac x="mdbNext src_node" in allE)
@@ -3582,7 +3584,7 @@ lemma src_no_mdb_parent:
   apply (clarsimp simp: isMDBParentOf_CTE is_derived'_def badge_derived'_def)
   apply (erule sameRegionAsE)
      apply (clarsimp simp add: sameRegionAs_def3)
-     subgoal by (cases src_cap; auto simp: capMasterCap_def Retype_H.isCapRevocable_def AARCH64_H.isCapRevocable_def
+     subgoal by (cases src_cap; auto simp: capMasterCap_def arch_capMasterCap_def Retype_H.isCapRevocable_def AARCH64_H.isCapRevocable_def
                                            freeIndex_update_def isCap_simps
                                        split: capability.split_asm arch_capability.split_asm) (* long *)
     apply (clarsimp simp: isCap_simps sameRegionAs_def3 capMasterCap_def freeIndex_update_def
@@ -3747,7 +3749,7 @@ lemma derived_sameRegionAs:
                           is_aligned_no_overflow capRange_def
                    split: capability.splits arch_capability.splits option.splits)
    apply (clarsimp simp: isCap_simps valid_cap'_def capAligned_def
-                         is_aligned_no_overflow capRange_def
+                         is_aligned_no_overflow capRange_def arch_capMasterCap_def
                   split: capability.splits arch_capability.splits option.splits)
   apply (clarsimp simp: isCap_simps valid_cap'_def
                         is_aligned_no_overflow capRange_def vs_cap_ref_arch'_def
@@ -4794,12 +4796,13 @@ lemma mdb_inv_preserve_updateCap:
    mdb_inv_preserve m (modify_map m slot
      (cteCap_update (\<lambda>_. capFreeIndex_update (\<lambda>_. index) (cteCap cte))))"
   apply (clarsimp simp: mdb_inv_preserve_def modify_map_dom gen_isCap_simps modify_map_def
+                        isArchFrameCap_non_arch
                   split: if_splits)
   apply (intro conjI impI allI)
-    apply fastforce
-    apply (simp add:sameRegionAs_update_untyped)
-    apply (rule ext,simp add:sameRegionAs_update_untyped')
-    apply (simp add:mdb_next_def split:if_splits)
+     apply fastforce
+    apply (simp add: sameRegionAs_update_untyped)
+   apply (rule ext, simp add:sameRegionAs_update_untyped')
+  apply (simp add: mdb_next_def split: if_splits)
   done
 
 lemma mdb_inv_preserve_fun_upd:
