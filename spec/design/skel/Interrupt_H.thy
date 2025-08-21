@@ -43,6 +43,9 @@ end
 arch_requalify_consts (aliasing, H)
   maxIRQ
 
+arch_requalify_consts (H)
+  handleSpuriousIRQ
+
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs
 #INCLUDE_HASKELL SEL4/Object/Interrupt.lhs bodies_only
 
