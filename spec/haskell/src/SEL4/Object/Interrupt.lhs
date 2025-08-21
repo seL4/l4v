@@ -18,7 +18,7 @@ We use the C preprocessor to select a target architecture.
 >     decodeIRQControlInvocation, decodeIRQHandlerInvocation,
 >     performIRQControl, invokeIRQHandler,
 >     deletingIRQHandler, deletedIRQHandler,
->     initInterruptController, handleInterrupt,
+>     initInterruptController, maybeHandleInterrupt,
 >     setIRQState, getIRQState, isIRQActive
 >   ) where
 
@@ -30,6 +30,7 @@ We use the C preprocessor to select a target architecture.
 The architecture-specific definitions are imported qualified with the "Arch" prefix.
 
 > import qualified SEL4.Object.Interrupt.TARGET as Arch
+> import SEL4.Object.Interrupt.TARGET (handleSpuriousIRQ)
 
 \begin{impdetails}
 
@@ -163,6 +164,17 @@ This function is called during bootstrap to set up the initial state of the inte
 \label{sec:object.interrupt.kernel.handling}
 
 This function is called when the kernel receives an interrupt event.
+
+We attempt to retrieve the current IRQ from the IRQ controller. If this fails,
+we call the platform-defined spurious IRQ handler (on most platforms this is
+empty). Otherwise, we handle the interrupt.
+
+> maybeHandleInterrupt :: Bool -> Kernel ()
+> maybeHandleInterrupt inKernel = do
+>     maybeIRQ <- doMachineOp (getActiveIRQ inKernel)
+>     case maybeIRQ of
+>         Nothing -> handleSpuriousIRQ
+>         Just irq -> handleInterrupt irq
 
 In the case of an interrupt above maxIRQ, we mask, ack and pretend it didn't
 happen.  We assume that mask and ack operations for this IRQ are safe in

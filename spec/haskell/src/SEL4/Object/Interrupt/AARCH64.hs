@@ -93,6 +93,9 @@ invokeIRQHandler (AckIRQ irq) =
                  else maskInterrupt False irq)
 invokeIRQHandler _ = return ()
 
+handleSpuriousIRQ :: Kernel ()
+handleSpuriousIRQ = return ()
+
 handleReservedIRQ :: IRQ -> Kernel ()
 handleReservedIRQ irq = do
     when (fromEnum irq == fromEnum irqVGICMaintenance) vgicMaintenance
