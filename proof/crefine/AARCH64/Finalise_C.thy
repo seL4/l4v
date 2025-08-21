@@ -401,7 +401,7 @@ lemma cancelAllIPC_ccorres:
    (cancelAllIPC epptr) (Call cancelAllIPC_'proc)"
   apply (cinit lift: epptr_')
    apply (rule ccorres_stateAssert)
-   apply (rule ccorres_symb_exec_l [OF _ getEndpoint_inv _ empty_fail_getEndpoint])
+   apply (rule ccorres_symb_exec_l [OF _ get_ep_inv' _ empty_fail_getEndpoint])
     apply (rule_tac xf'=ret__unsigned_longlong_'
                 and val="case ep of IdleEP \<Rightarrow> scast EPState_Idle
                             | RecvEP _ \<Rightarrow> scast EPState_Recv | SendEP _ \<Rightarrow> scast EPState_Send"

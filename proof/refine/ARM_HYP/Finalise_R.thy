@@ -1266,8 +1266,8 @@ lemma not_Final_removeable:
     \<Longrightarrow> removeable' sl s cap"
   apply (erule not_FinalE)
    apply (clarsimp simp: removeable'_def gen_isCap_simps)
-  apply (clarsimp simp: cteCaps_of_def sameObjectAs_def2 removeable'_def
-                        cte_wp_at_ctes_of)
+  apply (clarsimp simp: cteCaps_of_def ARM_HYP.sameObjectAs_def2 removeable'_def
+                        cte_wp_at_ctes_of) (* FIXME arch-split *)
   apply fastforce
   done
 
@@ -1900,7 +1900,7 @@ where
 
 lemma final_matters_Master:
   "final_matters' (capMasterCap cap) = final_matters' cap"
-  by (simp add: capMasterCap_def split: capability.split arch_capability.split,
+  by (simp add: capMasterCap_def arch_capMasterCap_def split: capability.split arch_capability.split,
       simp add: final_matters'_def)
 
 lemma final_matters_sameRegion_sameObject:
@@ -1976,7 +1976,7 @@ lemma notFinal_prev_or_next:
    apply (subst final_matters_Master[symmetric])
    apply (subst(asm) final_matters_Master[symmetric])
    apply (clarsimp simp: sameObjectAs_def3)
-  apply (clarsimp simp: sameObjectAs_def3)
+  apply (clarsimp simp: sameObjectAs_def3 simp del: isArchFrameCap_capMasterCap)
   done
 
 lemma isFinal:
@@ -2074,7 +2074,7 @@ lemma (in vmdb) isFinal_no_subtree:
    apply (erule_tac x="mdbNext n" in allE)
    apply simp
    apply (clarsimp simp: isMDBParentOf_CTE final_matters_sameRegion_sameObject)
-   apply (clarsimp simp: gen_isCap_simps sameObjectAs_def3)
+   apply (clarsimp simp: gen_isCap_simps ARM_HYP.sameObjectAs_def3) (* FIXME arch-split *)
   apply clarsimp
   done
 
@@ -2934,8 +2934,6 @@ lemma vcpuFinalise_unlive[wp]:
   apply (rule_tac x="KOArch (KOVCPU ko)" in exI)
   apply (clarsimp simp: live'_def hyp_live'_def arch_live'_def obj_at'_def projectKOs)
   done
-
-lemmas capMasterCap_simps_vcpu = capMasterCap_simps(14)
 
 lemma arch_finaliseCap_removeable[wp]:
   "\<lbrace>\<lambda>s. s \<turnstile>' ArchObjectCap cap \<and> invs' s

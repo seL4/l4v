@@ -219,7 +219,7 @@ lemma parent_preserved:
    isMDBParentOf cte' (CTE src_cap src_node)"
   using parency unfolding weak_derived'_def
   apply (cases cte')
-  apply (simp add: isMDBParentOf_CTE sameRegionAs_def2)
+  apply (simp add: isMDBParentOf_CTE sameRegionAs_def2 del: isArchFrameCap_capMasterCap)
   done
 
 lemma children_preserved:
@@ -1321,9 +1321,8 @@ lemma chunked_n:
     apply clarsimp
     apply (rule conjI)
      apply clarsimp
-     apply (erule sameRegionAsE, simp_all add: sameRegionAs_def3)[1]
-        apply blast
-       apply blast
+     apply (erule sameRegionAsE, simp_all add: sameRegionAs_def3 isCap_simps)[1]
+       apply force
       apply (clarsimp simp: isCap_simps)
      apply (clarsimp simp: isCap_simps)
     apply fastforce
@@ -1548,8 +1547,9 @@ lemma not_untyped: "capAligned c' \<Longrightarrow> \<not>isUntypedCap src_cap"
   apply simp
   apply (clarsimp simp: is_derived'_def freeIndex_update_def gen_isCap_simps capAligned_def
                         badge_derived'_def)
-  apply (clarsimp simp: sameRegionAs_def3 capMasterCap_def gen_isCap_simps interval_empty
-                        is_aligned_no_overflow split:capability.splits)
+  apply (clarsimp simp: X64.sameRegionAs_def3 capMasterCap_def gen_isCap_simps
+                        is_aligned_no_overflow (* FIXME arch-split *)
+                  split: capability.splits)
   done
 
 lemma untyped_inc_n:
@@ -1988,7 +1988,8 @@ lemma capMaster_isUntyped:
 
 lemma capMaster_capRange:
   "capMasterCap c = capMasterCap c' \<Longrightarrow> capRange c = capRange c'"
-  by (simp add: capMasterCap_def capRange_def split: capability.splits arch_capability.splits)
+  by (simp add: capMasterCap_def arch_capMasterCap_def capRange_def
+           split: capability.splits arch_capability.splits)
 
 lemma capMaster_untypedRange:
   "capMasterCap c = capMasterCap c' \<Longrightarrow> untypedRange c = untypedRange c'"
@@ -1996,7 +1997,8 @@ lemma capMaster_untypedRange:
 
 lemma capMaster_capClass:
   "capMasterCap c = capMasterCap c' \<Longrightarrow> capClass c = capClass c'"
-  by (simp add: capMasterCap_def split: capability.splits arch_capability.splits)
+  by (simp add: capMasterCap_def arch_capMasterCap_def capRange_def
+           split: capability.splits arch_capability.splits)
 
 lemma distinct_zombies_nonCTE_modify_map:
   "\<And>m x f. \<lbrakk> \<And>cte. cteCap (f cte) = cteCap cte \<rbrakk>
@@ -5071,7 +5073,7 @@ declare if_split [split]
 
 lemma sameRegion_capRange_sub:
   "sameRegionAs cap cap' \<Longrightarrow> capRange cap' \<subseteq> capRange cap"
-  apply (clarsimp simp: sameRegionAs_def2 isCap_Master capRange_Master)
+  apply (clarsimp simp: sameRegionAs_def2 gen_isCap_Master capRange_Master)
   apply (erule disjE)
    apply (clarsimp dest!: capMaster_capRange)
   apply (erule disjE)
@@ -5117,7 +5119,7 @@ lemma safe_parent_for_untypedRange:
      apply blast
     apply (drule notUntypedRange)
     apply simp
-   apply (clarsimp simp: isCap_Master isCap_simps)
+   apply (clarsimp simp: gen_isCap_Master isCap_simps)
   apply (clarsimp simp: isCap_simps)
   done
 
@@ -5136,7 +5138,7 @@ lemma safe_parent_for_capUntypedRange:
    apply (erule disjE)
     apply (clarsimp simp: capRange_Master untypedCapRange)
     apply blast
-   apply (clarsimp simp: isCap_Master isCap_simps)
+   apply (clarsimp simp: gen_isCap_Master isCap_simps)
   apply (clarsimp simp: capRange_def isCap_simps)
   done
 
@@ -5543,7 +5545,7 @@ lemma sameRegion_src_c':
    apply (clarsimp simp: sameRegionAs_def2 isCap_simps capRange_def)
   apply (erule disjE)
   apply clarsimp
-   apply (simp add: sameRegionAs_def2 isCap_Master capRange_Master)
+   apply (simp add: sameRegionAs_def2 gen_isCap_Master capRange_Master)
    apply (erule disjE)
     prefer 2
     apply (clarsimp simp: isCap_simps)
@@ -5580,14 +5582,9 @@ lemma ut_capRange_non_empty:
 lemma ut_sameRegion_non_empty:
   "\<lbrakk> isUntypedCap src_cap; sameRegionAs c' cap \<rbrakk> \<Longrightarrow> capRange cap \<noteq> {}"
   using simple safe_parent src
-  apply (clarsimp simp: is_simple_cap'_def sameRegionAs_def2 isCap_Master)
-  apply (erule disjE)
-   apply (clarsimp simp: ut_capRange_non_empty dest!: capMaster_capRange)
-  apply clarsimp
-  apply (clarsimp simp: safe_parent_for'_def)
-  apply (erule disjE, clarsimp simp: isCap_simps)
-  apply (clarsimp simp: isCap_simps capRange_def)
-  done
+  by (clarsimp simp: is_simple_cap'_def sameRegionAs_def2 gen_isCap_Master)
+     (force dest!: capMaster_capRange
+            simp: safe_parent_for'_def isCap_simps capRange_def ut_capRange_non_empty)
 
 lemma ut_c'_new:
   assumes ut_src: "isUntypedCap src_cap"
@@ -5595,7 +5592,7 @@ lemma ut_c'_new:
   using src simple
   apply clarsimp
   apply (drule untyped_mdbD', rule ut_src, assumption)
-     apply (clarsimp simp: is_simple_cap'_def sameRegionAs_def2 isCap_Master capRange_Master)
+     apply (clarsimp simp: is_simple_cap'_def sameRegionAs_def2 gen_isCap_Master capRange_Master)
      apply (fastforce simp: isCap_simps)
     apply (frule sameRegion_capRange_sub)
     apply (drule ut_sameRegion_non_empty [OF ut_src])
@@ -5627,13 +5624,12 @@ lemma irq_control_src:
      sameRegionAs cap c' \<rbrakk> \<Longrightarrow> p = src"
   using safe_parent src unfolding safe_parent_for'_def
   apply (clarsimp simp: isCap_simps)
-  apply (clarsimp simp: sameRegionAs_def2 isCap_Master)
-  apply (erule disjE, clarsimp simp: isCap_simps)
-  apply (erule disjE, clarsimp simp: isCap_simps)
+  apply (clarsimp simp: sameRegionAs_def2 gen_isCap_Master)
+  apply (erule disjE, fastforce simp: isCap_simps)
   apply (erule disjE, clarsimp simp: isCap_simps capRange_def)
-  apply (clarsimp simp: isCap_simps)
-  apply (drule (1) irq_controlD, rule irq_control)
-  apply simp
+   apply (drule (1) irq_controlD, rule irq_control)
+   apply simp
+  apply (clarsimp simp: isCap_simps capRange_def)
   done
 
 lemma ioport_control_src:
@@ -5642,7 +5638,7 @@ lemma ioport_control_src:
      sameRegionAs cap c' \<rbrakk> \<Longrightarrow> p = src"
   using safe_parent src unfolding safe_parent_for'_def
   apply (clarsimp simp: isCap_simps)
-  apply (clarsimp simp: sameRegionAs_def2 isCap_Master)
+  apply (clarsimp simp: sameRegionAs_def2 gen_isCap_Master)
   apply (erule disjE, clarsimp simp: isCap_simps)
   apply (erule disjE, clarsimp simp: isCap_simps)
   apply (erule disjE, clarsimp simp: isCap_simps capRange_def)

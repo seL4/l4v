@@ -948,7 +948,7 @@ definition
 lemma untyped_derived_eq_from_sameObjectAs:
   "sameObjectAs cap cap2
     \<Longrightarrow> untyped_derived_eq cap cap2"
-  by (clarsimp simp: untyped_derived_eq_def sameObjectAs_def2 isCap_Master)
+  by (clarsimp simp: untyped_derived_eq_def sameObjectAs_def2 gen_isCap_Master)
 
 lemmas pt_pd_asid'_simps [simp] =
   pt_pd_asid'_def [split_simps capability.split arch_capability.split option.split prod.split]

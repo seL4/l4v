@@ -5387,7 +5387,8 @@ lemma perform_aci_invs [wp]:
 
 lemma capMaster_isPDCap:
   "capMasterCap cap' = capMasterCap cap \<Longrightarrow> isPDCap cap' = isPDCap cap"
-  by (simp add: capMasterCap_def isPDCap_def split: capability.splits arch_capability.splits)
+  by (simp add: capMasterCap_def arch_capMasterCap_def isPDCap_def
+           split: capability.splits arch_capability.splits)
 
 lemma isPDCap_PD :
   "isPDCap (ArchObjectCap (PageDirectoryCap r m))"

@@ -1090,7 +1090,7 @@ lemma decode_page_table_inv_wf[wp]:
 lemma capMaster_isPageTableCap:
   "capMasterCap cap' = capMasterCap cap \<Longrightarrow>
    isArchCap isPageTableCap cap' = isArchCap isPageTableCap cap"
-  by (simp add: capMasterCap_def isArchCap_def isPageTableCap_def
+  by (simp add: capMasterCap_def arch_capMasterCap_def isArchCap_def isPageTableCap_def
            split: capability.splits arch_capability.splits)
 
 lemma arch_decodeInvocation_wf[wp]:
