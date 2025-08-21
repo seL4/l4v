@@ -26,7 +26,7 @@ This is the top-level module; it defines the interface between the kernel and th
 > import SEL4.Model.Preemption(withoutPreemption)
 > import SEL4.Object.Structures
 > import SEL4.Object.TCB(asUser)
-> import SEL4.Object.Interrupt(handleInterrupt)
+> import SEL4.Object.Interrupt(maybeHandleInterrupt)
 > import Control.Monad.Except
 > import Data.Maybe
 
@@ -41,9 +41,7 @@ faults, and system calls; the set of possible events is defined in
 > callKernel ev = do
 >     stateAssert fastpathKernelAssertions "Fast path assertions must hold"
 >     runExceptT $ handleEvent ev
->         `catchError` (\_ -> withoutPreemption $ do
->                       irq <- doMachineOp (getActiveIRQ True)
->                       when (isJust irq) $ handleInterrupt (fromJust irq))
+>         `catchError` (\_ -> withoutPreemption $ maybeHandleInterrupt True)
 >     schedule
 >     activateThread
 >     stateAssert kernelExitAssertions "Kernel exit conditions must hold"

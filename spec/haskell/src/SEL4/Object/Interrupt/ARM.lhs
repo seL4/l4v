@@ -26,7 +26,8 @@ This module defines the machine-specific interrupt handling routines.
 > import SEL4.API.Invocation
 > import SEL4.API.Invocation.ARM as ArchInv
 > import SEL4.API.InvocationLabels.ARM as ArchLabels
-> import SEL4.Machine.Hardware.ARM (config_ARM_GIC_V3, haveSetTrigger, deactivateInterrupt)
+> import SEL4.Machine.Hardware.ARM (config_ARM_GIC_V3, haveSetTrigger, hasSpuriousIRQ_mop,
+>                                   handleSpuriousIRQ_mop, deactivateInterrupt)
 > import {-# SOURCE #-} SEL4.Object.Interrupt (setIRQState, isIRQActive)
 > import {-# SOURCE #-} SEL4.Kernel.CSpace
 > import {-# SOURCE #-} SEL4.Object.CNode
@@ -61,6 +62,7 @@ This module defines the machine-specific interrupt handling routines.
 
 >         (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal,
 >          irqW:targetW:index:depth:_, cnode:_) -> do
+>             when (Arch.numSGIs == 0) $ throw IllegalOperation
 >             rangeCheck irqW 0 (Arch.numSGIs - 1)
 >             unless (isSGITargetValid targetW) $ throw $ InvalidArgument 1
 >             sgiSlot <- lookupTargetSlot cnode (CPtr index) (fromIntegral depth)
@@ -109,6 +111,12 @@ This module defines the machine-specific interrupt handling routines.
 
 > checkIRQ :: Word -> KernelF SyscallError ()
 > checkIRQ irq = rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)
+
+> handleSpuriousIRQ :: Kernel ()
+> handleSpuriousIRQ =
+>     if hasSpuriousIRQ_mop
+>     then doMachineOp handleSpuriousIRQ_mop
+>     else return ()
 
 > handleReservedIRQ :: IRQ -> Kernel ()
 > handleReservedIRQ irq = do
