@@ -144,9 +144,8 @@ subsubsection \<open>Managing collisions and global naming\<close>
 
    However, a more realistic example is when global_naming is involved. Let's say we have a
    Arch locale that's supposed to hide some architecture-specific details, and a name
-   prefix of BOARD for a specific architecture. It makes more sense with constants and types,
-   but those are harder to tell apart in a demo.
-*)
+   prefix of BOARD for a specific architecture. Let's also say we have a constant, that has
+   both a generic and arch-specific component (the former calling the latter). *)
 
 lemma requalify_collision:
   "False = False"
@@ -155,49 +154,70 @@ lemma requalify_collision:
 locale Arch
 
 context Arch begin global_naming BOARD
+
 lemma requalify_collision:
   "True = True"
   by simp
+
+definition
+  "const_collision \<equiv> 1000 :: nat"
+
 end
 
-(* If we access the name, we get what we expect: *)
-thm requalify_collision (* False = False *)
+definition
+  "const_collision \<equiv> 1 + BOARD.const_collision"
 
-(* Exporting requalify_collision to the theory context would now be ill-advised, as it would
-   make the global name inconvenient to access. What makes more sense is to export it such
-   that we can access the architecture specific name under Fake_Arch (and not talk about the
+(* If we access the names, we get what we expect: *)
+thm requalify_collision    (* False = False *)
+term const_collision       (* const_collision (global) *)
+term BOARD.const_collision (* BOARD.const_collision (arch-specific) *)
+
+(* Exporting requalify_collision and const_collision to the theory context would now be ill-advised,
+   as it would make the global names inconvenient to access. What makes more sense is to export them
+   such that we can access the architecture specific names under Arch (and not talk about the
    specific board), while maintaining access to the global name. Let's try: *)
 
+requalify_consts (in Arch) BOARD.const_collision
 requalify_facts (in Arch) BOARD.requalify_collision
 
 (* global context: good *)
 thm requalify_collision (* False = False *)
 thm Arch.requalify_collision (* True = True *)
+term const_collision (* global *)
 
-(* context post-interpretation: we don't have convenient access to the global name anymore *)
+(* context post-interpretation: we don't have convenient access to the global names anymore *)
 context begin interpretation Arch .
 thm requalify_collision (* True = True *)
 thm Arch.requalify_collision (* True = True *)
+term const_collision (* local.const_collision (arch-specific) *)
+term Arch.const_collision (* local.const_collision (arch-specific) *)
 end
 
 (* This is because whatever name was last interpreted takes precedence. If we want to fix this, we
-   need to re-export the global name *from* the Fake_Arch locale.
-   By convention we also give it a "global." prefix: *)
+   need to re-export the global names *from* the Arch locale.
+   By convention we also give them a "global." prefix: *)
 context Arch begin
   context begin global_naming global
   requalify_facts (aliasing) Requalify_Test.requalify_collision
+  requalify_consts (aliasing) Requalify_Test.const_collision
   end
 end
 
 (* After this convolution, the names are now consistently available: *)
 
 (* globally *)
+term const_collision (* global.const_collision *)
+term global.const_collision (* global.const_collision *)
+term Arch.const_collision (* Arch.const_collision *)
 thm requalify_collision (* False = False *)
 thm global.requalify_collision (* False = False *)
 thm Arch.requalify_collision (* True = True *)
 
 (* when interpreted *)
 context begin interpretation Arch .
+term const_collision (* global.const_collision *)
+term global.const_collision (* global.const_collision *)
+term Arch.const_collision (* Arch.const_collision *)
 thm requalify_collision (* False = False *)
 thm global.requalify_collision (* False = False *)
 thm Arch.requalify_collision (* True = True *)
@@ -205,7 +225,40 @@ end
 
 (* and in the locale context *)
 context Arch begin
+term const_collision (* global.const_collision *)
+term global.const_collision (* global.const_collision *)
+term Arch.const_collision (* Arch.const_collision *)
 thm requalify_collision (* False = False *)
+thm global.requalify_collision (* False = False *)
+thm Arch.requalify_collision (* True = True *)
+end
+
+(* Unfortunately, using named_theorems temporarily causes some internal fact name reordering.
+   Consts are not affected by this. *)
+
+(* when interpreted *)
+context begin interpretation Arch .
+thm requalify_collision (* False = False as expected*)
+named_theorems Some_assms
+thm requalify_collision (* REORDERED: should be False = False *)
+thm global.requalify_collision (* False = False *)
+thm Arch.requalify_collision (* True = True *)
+term const_collision (* still global.const_collision *)
+end
+
+(* and in the locale context *)
+context Arch begin
+thm requalify_collision (* False = False as expected*)
+named_theorems Some_assms2
+thm requalify_collision (* REORDERED: should be False = False *)
+thm global.requalify_collision (* False = False *)
+thm Arch.requalify_collision (* True = True *)
+term const_collision (* still global.const_collision *)
+end
+
+(* the effect lasts until the end of the context block containing named_theorems *)
+context Arch begin
+thm requalify_collision (* WORKS AGAIN: False = False *)
 thm global.requalify_collision (* False = False *)
 thm Arch.requalify_collision (* True = True *)
 end
