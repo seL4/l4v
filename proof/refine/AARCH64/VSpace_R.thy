@@ -341,12 +341,12 @@ lemma getObject_ko_at_vcpu [wp]:
 
 lemma corres_gets_gicvcpu_numlistregs:
   "corres (=) \<top> \<top> (gets (arm_gicvcpu_numlistregs \<circ> arch_state))
-                      (gets (armKSGICVCPUNumListRegs \<circ> ksArchState))"
+                  (gets (armKSGICVCPUNumListRegs \<circ> ksArchState))"
   by (simp add: state_relation_def arch_state_relation_def)
 
 lemma corres_gets_current_vcpu[corres]:
   "corres (=) \<top> \<top> (gets (arm_current_vcpu \<circ> arch_state))
-                      (gets (armHSCurVCPU \<circ> ksArchState))"
+                  (gets (armHSCurVCPU \<circ> ksArchState))"
   by (simp add: state_relation_def arch_state_relation_def)
 
 lemma setObject_VCPU_corres:
