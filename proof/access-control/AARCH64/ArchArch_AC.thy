@@ -2243,23 +2243,15 @@ lemma vcpu_invalidate_active_vcpu_proj[wp]:
   unfolding vcpu_invalidate_active_def
   by wpsimp
 
-\<comment> \<open>FIXME: trivial helper lemmas for vcpu_flush_integrity_hyp\<close>
-lemma vcpu_invalid_active_arm_current_vcpu_not_Some[wp]:
-  "\<lbrace>\<top>\<rbrace> vcpu_invalidate_active \<lbrace>\<lambda>_ s. arm_current_vcpu (arch_state s) \<noteq> Some (v, b)\<rbrace>"
-  unfolding vcpu_invalidate_active_def
-  by wpsimp
-
-lemma vcpu_invalid_active_arm_current_vcpu_not_Some'[wp]:
-  "\<lbrace>\<bottom>\<rbrace> vcpu_invalidate_active \<lbrace>\<lambda>_ s. arm_current_vcpu (arch_state s) = Some (v, b)\<rbrace>"
-  by wpsimp
-
 lemma vcpu_flush_integrity_hyp[wp]:
   "\<lbrace>integrity_hyp aag subjects x st and valid_arch_state\<rbrace>
    vcpu_flush
    \<lbrace>\<lambda>_. integrity_hyp aag subjects x st\<rbrace>"
   unfolding integrity_hyp_def vcpu_integrity_def vcpu_flush_def vcpu_proj_of_state
   supply if_split[split del] if_split[where P="\<lambda>v. _ = v", simp]
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift'
+                    hoare_pre_cont[where f=vcpu_invalidate_active and P="\<lambda>_ s. arm_current_vcpu (arch_state s) = Some x" for x]
+         | strengthen None_Some_strg)+
   apply (fastforce split: if_splits)
   done
 
