@@ -659,10 +659,10 @@ end
    locale and the named_theorems collection. *)
 
 global_interpretation Retype_AI?: Retype_AI
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (intro_locales; (unfold_locales; fact Retype_AI_assms)?)
-  qed
+qed
 
 (* ... *)
 
@@ -716,10 +716,10 @@ lemma AA[Foo_AI_assms]: "XXX"
 end
 
 interpretation Foo_AI_1?: Foo_AI_1
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (intro_locales; (unfold_locales; fact Foo_AI_assms)?)
-  qed
+qed
 
 (* now we get access to GB in the global context *)
 
@@ -731,10 +731,10 @@ lemma AC[Foo_AI_assms]: "XXX"
 end
 
 interpretation Foo_AI_2?: Foo_AI_2
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (intro_locales; (unfold_locales; fact Foo_AI_assms)?)
-  qed
+qed
 
 (* now we get access to GD in the global context *)
 ```
