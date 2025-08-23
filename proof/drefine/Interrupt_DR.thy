@@ -133,11 +133,12 @@ lemma decode_irq_control_corres:
      apply clarsimp
      apply (rule corres_guard_imp)
        apply (rule dcorres_alternative_throw)
-        apply (rule TrueI, rule TrueI)
-    apply (clarsimp simp: Let_def)
+      apply (rule TrueI, rule TrueI)
+    apply (clarsimp simp: Let_def unlessE_whenE)
     apply (rule dcorres_whenE_throwError_abstract')
-     apply (rule corres_guard_imp, rule dcorres_alternative_throw)
-        apply (rule TrueI, rule TrueI)
+     apply (rule corres_guard_imp, rule dcorres_alternative_throw; rule TrueI)
+    apply (rule dcorres_whenE_throwError_abstract')
+     apply (rule corres_guard_imp, rule dcorres_alternative_throw; rule TrueI)
     apply (rule dcorres_symb_exec_rE)
       apply (rule dcorres_whenE_throwError_abstract')
        apply (rule corres_guard_imp)
@@ -157,9 +158,7 @@ lemma decode_irq_control_corres:
            apply wp[1]
           apply simp
          apply (wp+)[3]
-      apply simp
-      apply (rule hoare_pre, wp)
-      apply simp
+      apply wpsimp
      apply wp
      apply (cases excaps', auto)[1]
     apply wp
@@ -183,6 +182,8 @@ lemma decode_irq_control_corres:
                       split: list.splits)
       apply (cases excaps'; simp)
        apply (clarsimp simp: corres_alternate2)
+      apply (rule dcorres_whenE_throwError_abstract')
+       apply (rule corres_guard_imp, rule dcorres_alternative_throw; rule TrueI)
       apply (clarsimp simp: transform_cap_list_def get_index_def throw_on_none_def)
       apply (clarsimp simp: range_check_def unlessE_def)
       apply (simp split: if_split)
@@ -553,7 +554,10 @@ lemma dcorres_arch_invoke_irq_control:
    apply (simp add: liftE_bindE)
    apply (rule corres_dummy_return_pl)
    apply (rule corres_guard_imp)
-     apply (rule corres_split[OF dmo_setIRQTrigger_dcorres])
+     apply (rule corres_split)
+        apply (rule corres_cases[where R=haveSetTrigger and P=\<top> and P'=\<top>]; simp)
+         apply (rule dmo_setIRQTrigger_dcorres)
+        apply clarsimp
        apply clarsimp
        apply (rule dcorres_invoke_irq_control_body)
       apply wpsimp+

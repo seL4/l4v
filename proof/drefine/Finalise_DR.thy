@@ -1496,7 +1496,8 @@ lemma is_aligned_less_kernel_base_helper:
   apply (rule aligned_add_offset_less)
      apply (rule_tac n=4 in is_aligned_shiftr)
      apply (simp add: is_aligned_andI1)
-    apply (simp add: kernel_base_def is_aligned_def)
+    apply (rule is_aligned_shiftr)
+    apply (simp add: kernel_base_def pptrBase_aligned[simplified])
    apply assumption
   apply (rule shiftr_less_t2n)
   apply (erule order_le_less_trans)
