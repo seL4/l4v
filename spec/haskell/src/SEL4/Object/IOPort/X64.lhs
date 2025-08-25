@@ -19,7 +19,7 @@ This module defines IO port routines, specific to x64.
 > import SEL4.API.Failures
 > import SEL4.Machine.Hardware.X64
 > import SEL4.Model
-> import SEL4.Model.StateData.X64
+> import SEL4.Model.StateData.X64 hiding (KernelState)
 > import SEL4.Object.Structures
 > import SEL4.Object.TCB
 > import SEL4.Object.ObjectType.X64
@@ -120,7 +120,12 @@ This module defines IO port routines, specific to x64.
 >        doMachineOp $ f w
 >        return []
 
->
+We do not need all of IO port validity in the refinement proof, but do need to
+cross over the constraint that all IO port caps in the state have been issued.
+
+> allIOPortsIssued_asrt :: KernelState -> Bool
+> allIOPortsIssued_asrt _ = True
+
 > performX64PortInvocation :: ArchInv.Invocation -> KernelP [Word]
 > performX64PortInvocation (InvokeIOPort (IOPortInvocation port port_data)) = withoutPreemption $
 >     case port_data of
@@ -133,6 +138,7 @@ This module defines IO port routines, specific to x64.
 
 > performX64PortInvocation (InvokeIOPortControl (IOPortControlIssue f l destSlot srcSlot)) =
 >   withoutPreemption $ do
+>     stateAssert allIOPortsIssued_asrt "all_io_ports_issued'"
 >     setIOPortMask f l True
 >     cteInsert (ArchObjectCap (IOPortCap f l)) srcSlot destSlot
 >     return []

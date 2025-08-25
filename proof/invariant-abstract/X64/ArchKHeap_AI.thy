@@ -303,10 +303,6 @@ lemma set_object_vs_lookup_pages:
   apply simp
   done
 
-lemma set_aobject_valid_arch [wp]:
-  "set_object ptr (ArchObj obj) \<lbrace>valid_arch_state\<rbrace>"
-  by (wpsimp wp: valid_arch_state_lift set_object_wp)
-
 lemma set_object_atyp_at:
   "\<lbrace>\<lambda>s. typ_at (AArch (aa_type ako)) p s \<and> P (typ_at (AArch T) p' s)\<rbrace>
     set_object p (ArchObj ako)
@@ -531,14 +527,42 @@ lemma valid_global_pdpts_lift:
   apply clarsimp
   done
 
-lemma valid_arch_state_lift_aobj_at:
-    "\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
-  apply (simp add: valid_arch_state_def valid_asid_table_def)
+lemma valid_asid_table_lift:
+  "f \<lbrace>\<lambda>s. valid_asid_table (x64_asid_table (arch_state s)) s\<rbrace>"
+  apply (simp add: valid_asid_table_def)
   apply (rule hoare_lift_Pf[where f="arch_state", OF _ arch])
-  apply (wp hoare_vcg_conj_lift hoare_vcg_ball_lift
-            valid_global_pts_lift valid_global_pds_lift valid_global_pdpts_lift
-        | (rule aobj_at, clarsimp))+
+  apply (wp hoare_vcg_conj_lift hoare_vcg_ball_lift aobj_at)
+    apply wpsimp+
+  done
+
+lemma typ_at_lift:
+  "f \<lbrace>\<lambda>s. typ_at (AArch aty) (P (arch_state s)) s\<rbrace>"
+  by (rule hoare_lift_Pf2[where f="arch_state", OF _ arch])
+     (wpsimp wp: aobj_at)
+
+lemma valid_arch_state_lift_ioports_aobj_at:
+  fixes P
+  assumes ioports: "\<lbrace> P \<rbrace> f \<lbrace>\<lambda>_. valid_ioports \<rbrace>"
+  shows "\<lbrace>valid_arch_state and P\<rbrace> f \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
+  apply (simp add: valid_arch_state_def)
+  apply (rule hoare_vcg_conj_lift
+         | wp valid_asid_table_lift typ_at_lift valid_global_pts_lift valid_global_pds_lift
+            valid_global_pdpts_lift)+
+  apply (rule hoare_lift_Pf[where f="arch_state", OF _ arch], wp)
+  apply (rule hoare_vcg_conj_lift)
+  apply (rule hoare_lift_Pf[where f="arch_state", OF _ arch], wp)
+  apply (wp ioports)
   apply simp
+  done
+
+(* interface lemma *)
+lemma valid_arch_state_lift_aobj_at:
+  assumes caps: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  shows "f \<lbrace>valid_arch_state\<rbrace>"
+  apply (simp add: valid_arch_state_def valid_asid_table_def
+                   valid_global_pts_def valid_global_pds_def valid_global_pdpts_def)
+  apply (rule hoare_lift_Pf[where f="\<lambda>s. arch_state s"])
+   apply (wp arch typ_at_lift caps hoare_vcg_conj_lift hoare_vcg_const_Ball_lift)+
   done
 
 end
@@ -885,9 +909,9 @@ lemma valid_arch_tcb_same_type:
 lemma valid_ioports_lift:
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   assumes y: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>rv s. P (arch_state s)\<rbrace>"
-  shows      "\<lbrace>valid_ioports\<rbrace> f \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
-  apply (simp add: valid_ioports_def)
-  apply (rule hoare_use_eq [where f=caps_of_state, OF x y])
+  shows      "f \<lbrace> valid_ioports \<rbrace>"
+  apply (simp add: valid_ioports_2_def)
+  apply (rule hoare_use_eq[where f=caps_of_state, OF x y])
   done
 
 lemma valid_arch_mdb_lift:

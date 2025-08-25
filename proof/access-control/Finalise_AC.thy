@@ -372,7 +372,7 @@ crunch suspend
   for pspace_aligned[wp]: "\<lambda>s :: det_ext state. pspace_aligned s"
   and valid_vspace_objs[wp]: "\<lambda>s :: det_ext state. valid_vspace_objs s"
   and valid_arch_state[wp]: "\<lambda>s :: det_ext state. valid_arch_state s"
-  (wp: dxo_wp_weak hoare_drop_imps simp: crunch_simps)
+  (wp: dxo_wp_weak hoare_drop_imps simp: crunch_simps simp: tcb_cap_cases_def)
 
 crunch suspend
   for pas_refined[wp]: "pas_refined aag"

@@ -1358,7 +1358,7 @@ lemma threadSet_invs_trivialT:
             threadSet_global_refsT
             irqs_masked_lift
             valid_irq_node_lift
-            valid_irq_handlers_lift'' valid_ioports_lift''
+            valid_irq_handlers_lift''
             threadSet_ctes_ofT
             threadSet_not_inQ
             threadSet_ct_idle_or_in_cur_domain'
@@ -5272,8 +5272,6 @@ lemma setBoundNotification_ksDomSchedule[wp]:
 crunch rescheduleRequired, setBoundNotification, setThreadState
   for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
-  and ioports'[wp]: valid_ioports'
-  (wp: valid_ioports_lift'')
 
 lemma sts_utr[wp]:
   "\<lbrace>untyped_ranges_zero'\<rbrace> setThreadState st t \<lbrace>\<lambda>_. untyped_ranges_zero'\<rbrace>"

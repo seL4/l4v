@@ -107,10 +107,6 @@ lemma state_hyp_refs_of_detype:
   "state_hyp_refs_of (detype S s) = (\<lambda>x. if x \<in> S then {} else state_hyp_refs_of s x)"
   by (rule ext, simp add: state_hyp_refs_of_def detype_def)
 
-lemma valid_ioports_detype[Detype_AI_assms]:
-  "valid_ioports s \<Longrightarrow> valid_ioports (detype (untyped_range cap) s)"
-  by simp
-
 end
 
 interpretation Detype_AI?: Detype_AI

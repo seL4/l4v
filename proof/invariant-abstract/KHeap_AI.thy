@@ -24,7 +24,6 @@ arch_requalify_facts
   valid_arch_caps_lift_weak
   valid_global_objs_lift_weak
   valid_asid_map_lift
-  valid_ioports_lift
   valid_kernel_mappings_lift
   equal_kernel_mappings_lift
   valid_global_vspace_mappings_lift
@@ -1213,7 +1212,7 @@ crunch do_machine_op
   and cur_sc_tcb[wp]: cur_sc_tcb
   (simp: cur_tcb_def zombies_final_pspaceI state_refs_of_pspaceI ex_nonz_cap_to_def
          ct_in_state_def valid_replies_pred_pspaceI cur_sc_tcb_def sc_at_pred_n_pspaceI
-   wp: crunch_wps valid_arch_state_lift vs_lookup_vspace_obj_at_lift)
+   wp: crunch_wps valid_arch_state_lift_aobj_at vs_lookup_vspace_obj_at_lift)
 
 lemma dmo_inv:
   assumes "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
@@ -1579,10 +1578,6 @@ locale non_vspace_non_astate_op = non_vspace_op f + non_astate_op f for f
 
 sublocale non_aobj_non_astate_op < non_vspace_non_astate_op ..
 
-lemma (in non_aobj_non_astate_op) valid_arch_state[wp]:
-  "\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift_aobj_at; wp aobj_at; simp)
-
 context non_vspace_non_astate_op begin
 
 lemma valid_vspace_obj[wp]:"f \<lbrace>valid_vspace_objs\<rbrace>"
@@ -1641,6 +1636,10 @@ locale non_vspace_non_cap_op = non_vspace_non_astate_op f + non_cap_op f for f
 locale non_aobj_non_cap_op = non_aobj_non_astate_op f + non_cap_op f for f
 
 sublocale non_aobj_non_cap_op < non_vspace_non_cap_op ..
+
+lemma (in non_aobj_non_cap_op) valid_arch_state[wp]:
+  "\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  by (rule valid_arch_state_lift_aobj_at; wp aobj_at; simp)
 
 lemma (in non_vspace_non_cap_op) valid_arch_caps[wp]:
   "\<lbrace>valid_arch_caps\<rbrace> f \<lbrace>\<lambda>_. valid_arch_caps\<rbrace>"
@@ -1980,7 +1979,7 @@ lemma set_ntfn_minor_invs:
      set_notification ptr val
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-          wp: valid_irq_node_typ valid_ioports_lift simp_del: fun_upd_apply)
+                  wp: valid_irq_node_typ)
   apply (clarsimp simp: state_refs_of_def obj_at_def ext elim!: rsubst[where P = sym_refs])
   done
 

@@ -707,6 +707,28 @@ abbreviation(input)
 where
   "prioInvalid == seL4_InvalidPrio"
 
+(* The magic 4 comes out of the bitfield generator -- this applies to all versions of the kernel. *)
+lemma
+  shows ThreadState_Restart_mask[simp]:
+  "(scast ThreadState_Restart :: machine_word) && mask 4 = scast ThreadState_Restart"
+  and ThreadState_Inactive_mask[simp]:
+  "(scast ThreadState_Inactive :: machine_word) && mask 4 = scast ThreadState_Inactive"
+  and ThreadState_Running_mask[simp]:
+  "(scast ThreadState_Running :: machine_word) && mask 4 = scast ThreadState_Running"
+  and ThreadState_BlockedOnReceive_mask[simp]:
+  "(scast ThreadState_BlockedOnReceive :: machine_word) && mask 4
+   = scast ThreadState_BlockedOnReceive"
+  and ThreadState_BlockedOnSend_mask[simp]:
+  "(scast ThreadState_BlockedOnSend :: machine_word) && mask 4 = scast ThreadState_BlockedOnSend"
+  and ThreadState_BlockedOnReply_mask[simp]:
+  "(scast ThreadState_BlockedOnReply :: machine_word) && mask 4 = scast ThreadState_BlockedOnReply"
+  and ThreadState_BlockedOnNotification_mask[simp]:
+  "(scast ThreadState_BlockedOnNotification :: machine_word) && mask 4
+   = scast ThreadState_BlockedOnNotification"
+  and ThreadState_IdleThreadState_mask[simp]:
+  "(scast ThreadState_IdleThreadState :: machine_word) && mask 4 = scast ThreadState_IdleThreadState"
+  by (simp add: ThreadState_defs mask_def)+
+
 end
 
 end

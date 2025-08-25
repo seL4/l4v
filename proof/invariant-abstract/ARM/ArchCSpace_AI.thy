@@ -517,11 +517,11 @@ lemma cap_insert_simple_arch_caps_no_ap:
   apply (intro conjI impI allI)
   by (auto simp:is_simple_cap_def[simplified is_simple_cap_arch_def] is_cap_simps)
 
-lemma cap_insert_derived_ioports[CSpace_AI_assms]:
-  "\<lbrace>valid_ioports and (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
-     cap_insert cap src dest
-   \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
-  by wpsimp
+lemma cap_insert_derived_valid_arch_state[CSpace_AI_assms]:
+  "\<lbrace>valid_arch_state and (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
+   cap_insert cap src dest
+   \<lbrace>\<lambda>rv. valid_arch_state \<rbrace>"
+  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps cap_insert_aobj_at cap_insert_aobj_at)
 
 end
 
@@ -549,6 +549,10 @@ lemma is_cap_simps':
   by (cases cap,  (auto simp: is_zombie_def is_arch_cap_def is_nondevice_page_cap_def
                               is_reply_cap_def is_nondevice_page_cap_arch_def
                        split: cap.splits arch_cap.splits )+)+
+
+lemma cap_insert_simple_valid_arch_state[wp]:
+  "cap_insert cap src dest \<lbrace> valid_arch_state\<rbrace>"
+  by (wp valid_arch_state_lift_aobj_at_no_caps cap_insert_aobj_at)+
 
 lemma cap_insert_simple_invs:
   "\<lbrace>invs and valid_cap cap and tcb_cap_valid cap dest and

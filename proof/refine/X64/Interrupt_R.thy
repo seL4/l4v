@@ -602,7 +602,7 @@ lemma updateIRQState_invs'[wp]:
                          valid_irq_handlers'_def irq_issued'_def
                          cteCaps_of_def valid_irq_masks'_def
                          bitmapQ_defs  valid_x64_irq_state'_def
-                         valid_ioports'_def all_ioports_issued'_def issued_ioports'_def)
+                         all_ioports_issued'_def issued_ioports'_def)
   done
 
 lemma dmo_ioapicMapPinToVector_invs'[wp]:

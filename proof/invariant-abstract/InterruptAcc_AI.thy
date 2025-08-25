@@ -49,7 +49,6 @@ definition all_invs_but_valid_irq_states_for where
   equal_kernel_mappings and
   valid_asid_map and
   valid_global_objs and
-  valid_ioports and
   valid_global_vspace_mappings and
   pspace_in_kernel_window and
   cap_refs_in_kernel_window and

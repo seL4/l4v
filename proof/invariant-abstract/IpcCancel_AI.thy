@@ -612,7 +612,7 @@ lemma cancel_signal_invs:
   apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_obj ntfna", simp_all)[1]
   apply (rule hoare_pre)
-   apply (wp set_simple_ko_valid_objs valid_irq_node_typ sts_only_idle valid_ioports_lift
+   apply (wp set_simple_ko_valid_objs valid_irq_node_typ sts_only_idle
              sts_valid_replies hoare_vcg_all_lift hoare_vcg_imp_lift sts_fault_tcbs_valid_states
            | simp add: refs_of_ntfn_def
            | wpc)+
@@ -2111,7 +2111,7 @@ lemma cancel_all_ipc_invs_helper:
   apply (rule bind_wp)
    apply wpsimp
   apply (rule hoare_pre)
-   apply (wpsimp wp: valid_ioports_lift cancel_all_ipc_invs_helper' valid_irq_node_typ hoare_vcg_const_Ball_lift)
+   apply (wpsimp wp: cancel_all_ipc_invs_helper' valid_irq_node_typ hoare_vcg_const_Ball_lift)
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_ep_def live_def)
   apply (intro conjI, clarsimp, intro conjI)
       apply (drule (1) sym_refs_obj_atD)
@@ -2316,7 +2316,7 @@ lemma unbind_notification_invs:
   apply (rule bind_wp [OF _ gbn_sp])
   apply (case_tac ntfnptr; clarsimp)
   apply wpsimp
-  apply (wpsimp wp: valid_irq_node_typ set_simple_ko_valid_objs valid_ioports_lift get_simple_ko_wp split_del: if_split
+  apply (wpsimp wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp split_del: if_split
               simp: update_sk_obj_ref_def)
   apply (intro conjI impI;
     (match conclusion in "sym_refs r" for r \<Rightarrow> \<open>-\<close>
@@ -2358,7 +2358,7 @@ lemma cancel_all_signals_invs:
   apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp cancel_all_signals_invs_helper set_simple_ko_valid_objs valid_irq_node_typ
-             hoare_vcg_const_Ball_lift valid_ioports_lift
+             hoare_vcg_const_Ball_lift
         | wpc
         | simp add: live_def)+
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
@@ -2593,13 +2593,13 @@ lemma cancel_badged_sends_invs[wp]:
   apply (case_tac ep; simp)
     apply wpsimp
    apply (simp add: invs_def valid_state_def valid_pspace_def)
-   apply (wpsimp wp: valid_irq_node_typ valid_ioports_lift)
+   apply (wpsimp wp: valid_irq_node_typ)
      apply (simp add: fun_upd_def[symmetric] ep_redux_simps ep_at_def2[symmetric, simplified]
                 cong: list.case_cong)
   apply (rule hoare_strengthen_post,
             rule cancel_badged_sends_filterM_helper[where epptr=epptr])
      apply (auto intro:obj_at_weakenE)[1]
-    apply (wpsimp wp: valid_irq_node_typ set_endpoint_ep_at valid_ioports_lift)
+    apply (wpsimp wp: valid_irq_node_typ set_endpoint_ep_at)
    apply (clarsimp simp: valid_ep_def conj_comms)
    apply (subst obj_at_weakenE, simp, clarsimp simp: is_ep_def)
    apply (clarsimp simp: is_ep_def)

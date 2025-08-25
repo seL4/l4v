@@ -66,6 +66,7 @@ text \<open>
 
     * Don't mix object and meta logic in a lemma statement.\<close>
 
+
 section \<open>Text and comments\<close>
 
 text \<open>
@@ -87,11 +88,18 @@ text \<open>
   the closing bracket on the same line as the ending text to not waste too much vertical space.
   Indent text by 2 inside the @{command text} area. This achieves visual separation.\<close>
 
+
 section \<open>Indentation\<close>
 
 text \<open>
-  Isabelle code is much easier to maintain when indented consistently. In apply style proofs we
-  indent by 2 spaces, and add an additional space for every additional subgoal.
+  Isabelle code is much easier to maintain when indented consistently.
+  When in doubt and not constrained by vertically aligning items or subgoal-count offsets, use
+  2 spaces when indenting something with respect to its container (see ``General layout`` in
+  ``Other`` section).
+
+  In apply style proofs we indent by 2 spaces, and add an additional space for every additional
+  subgoal. For instance, a command which applies when there are 3 subgoals should be indented by
+  4 spaces.
 
   In the following example, the rules iffI and conjI add a new subgoal, and fast removes a subgoal.
   The idea is that, when something breaks, the indentation tells you whether a tactic used to solve
@@ -218,6 +226,43 @@ lemma test_lemma3:
          rename_tac h t,
          case_tac h; simp)
   done
+
+
+section \<open>Fact transformers and attributes\<close>
+
+text \<open>
+  For simple cases, standard approach applies: comma-separated list with one space after commas:\<close>
+
+lemmas attr1 = conj_absorb[THEN iffD2, OF conj_absorb, simplified] \<comment> \<open>basic case\<close>
+
+text \<open>
+  When the transform is more complex or runs out of horizontal room, wrapping is needed.
+  In most cases, reconfiguring the attributes into a vertical list should suffice:\<close>
+
+lemmas attr2 = conj_absorb[THEN iffD2,
+                           OF conj_absorb[where A="A \<and> B \<and> C \<and> D \<and> E \<and> F \<and> G" for A B C D E F G,
+                                          simplified],
+                           simplified] \<comment> \<open>simple wrapping case\<close>
+
+text \<open>
+  When terms get even larger, the transforms more complicated, or we start running into the column
+  limit, more wrapping is needed. We can gain extra space by indenting from the fact name:\<close>
+
+lemmas attr3 = conj_absorb[ \<comment> \<open>note the @{text "["} to indicate transform\<close>
+                 THEN iffD2,
+                 OF conj_absorb[where A="A \<and> B \<and> C \<and> D \<and> E \<and> F \<and> G" for A B C D E F G,
+                                simplified],
+                 simplified] \<comment> \<open>extreme wrapping case\<close>
+
+text \<open>
+  There is an important principle here: telling apart transformed/attributed facts from unaltered
+  facts at a glance. In other words avoid:\<close>
+
+lemmas attrb = conj_absorb \<comment> \<open>BAD: at first glance looks to be an unmodified fact\<close>
+                 [THEN iffD2 (*...*)]
+
+lemmas attrb2 = conj_absorb [THEN iffD2 (*...*)] \<comment> \<open>avoid: still needs some mental processing\<close>
+
 
 section \<open>Right vs left operator-wrapping\<close>
 
@@ -351,6 +396,72 @@ term "
     B \<or>
   A" \<comment> \<open>NOT OK: implies this parses as @{text "((A \<and> B) \<longrightarrow> B) \<or> A"}\<close>
 
+
+section \<open>Wrapping/indenting complex rule instantiations, usually as part of @{text "_tac"} methods\<close>
+
+text \<open>
+  This section concerns @{text "_tac"} methods, which are generally used when the instantiations
+  contain bound variables. When bound variables do no occur, prefer instantiations via attribute
+  (@{text "fact[where ...]"}) as they are more general.\<close>
+
+text \<open>
+  For simple instantiations which can fit on one line, style them as follows.
+  Notes:
+    * for single-variable instantiations, do not use quotes
+    * no space between @{text "="} and the instantiation or start of quote\<close>
+
+lemma
+  "\<lbrakk>a; b\<rbrakk> \<Longrightarrow> a \<and> b"
+  apply (frule_tac P=a and Q="id b" in conjI) \<comment> \<open>GOOD\<close>
+  apply (frule_tac P="a" and Q = "id b" in conjI) \<comment> \<open>BAD: unnecessary quotes, unnecessary spacing\<close>
+  oops
+
+text \<open>
+  However, when the instantiation is complex, the instantiations, @{text "and"} and @{text "in"}
+  need to be distributed over multiple lines.\<close>
+
+lemma conjI3:
+  "\<lbrakk>a; b; c\<rbrakk> \<Longrightarrow> a \<and> b \<and> c"
+  by simp
+
+text \<open>
+  For left operator-wrapping style, use this version. It was chosen based on being space-optimising
+  and nice-looking (variable instantiations and rule all left-align, while operators right-align):\<close>
+
+lemma \<comment> \<open>left operator-wrapping pretty version - preferred\<close>
+  "\<lbrakk> x; y; z \<rbrakk> \<Longrightarrow> x \<and> y \<and> z"
+  apply (drule_tac a=x
+               and b=y
+               and c=z
+                in conjI3)
+  oops
+
+text \<open>
+  For right-operator wrapping style, use this version. It still provides the alignment of variable
+  instantiations, but provides less horizontal space for the instantiation bodies themselves:\<close>
+
+lemma \<comment> \<open>right operator-wrapping pretty version - preferred\<close>
+  "\<lbrakk> x; y; z \<rbrakk> \<Longrightarrow> x \<and> y \<and> z"
+  apply (drule_tac a=x and
+                   b=y and
+                   c=z
+                   in conjI3) \<comment> \<open>this must not go on previous line in multi-line instantiations\<close>
+  oops
+
+text \<open>
+  There is one more left-operator wrappings style we permit, but only due to legacy proofs and the
+  possibility of being understandable/generatable by tools. Please do not use it on new
+  hand-written lemmas:\<close>
+
+lemma \<comment> \<open>left operator-wrapping pretty version for tools/legacy - permitted\<close>
+  "\<lbrakk> x; y; z \<rbrakk> \<Longrightarrow> x \<and> y \<and> z"
+  apply (drule_tac a=x
+                   and b=y
+                   and c=z
+                   in conjI3)
+  oops
+
+
 section \<open>Other\<close>
 
 text \<open>
@@ -364,6 +475,7 @@ text \<open>
   Other:
     * Avoid commands that produce "legacy" warnings. Add an issue with tag cleanup if you see them
       after an Isabelle update.\<close>
+
 
 section \<open>Comments\<close>
 

@@ -10,6 +10,10 @@ begin
 
 context Arch begin arch_global_naming
 
+lemma invs_valid_ioports[elim!]:
+  "invs s \<Longrightarrow> valid_ioports s"
+  by (simp add: invs_def valid_state_def valid_arch_state_def)
+
 lemma invs_unique_table_caps[elim!]:
   "invs s \<Longrightarrow> unique_table_caps (caps_of_state s)"
   by (clarsimp simp: invs_def valid_state_def valid_arch_caps_def)

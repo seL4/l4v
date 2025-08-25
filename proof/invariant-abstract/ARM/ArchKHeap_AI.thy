@@ -554,7 +554,9 @@ lemma valid_global_pts_lift:
   apply clarsimp
   done
 
-lemma valid_arch_state_lift_aobj_at:
+(* intended for use inside Arch, as opposed to the interface lemma valid_arch_state_lift_aobj_at,
+   since this architecture does not need cap preservation for valid_arch_state *)
+lemma valid_arch_state_lift_aobj_at_no_caps:
   "\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
   apply (simp add: valid_arch_state_def valid_asid_table_def)
   apply (rule hoare_lift_Pf[where f="arch_state", OF _ arch])
@@ -563,6 +565,15 @@ lemma valid_arch_state_lift_aobj_at:
   done
 
 end
+
+(* interface lemma *)
+lemma valid_arch_state_lift_aobj_at:
+  assumes aobj_at:
+    "\<And>P P' pd. arch_obj_pred P' \<Longrightarrow> \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
+  assumes caps: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  shows "f \<lbrace>valid_arch_state\<rbrace>"
+  by (intro valid_arch_state_lift_aobj_at_no_caps aobj_at)
+
 end
 
 lemma equal_kernel_mappings_lift:
@@ -897,21 +908,11 @@ lemma valid_arch_tcb_same_type:
    \<Longrightarrow> valid_arch_tcb t (s\<lparr>kheap := (kheap s)(p \<mapsto> k)\<rparr>)"
   by (auto simp: valid_arch_tcb_def obj_at_def)
 
-lemma valid_ioports_lift:
-  assumes x: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
-  assumes y: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>rv s. P (arch_state s)\<rbrace>"
-  shows      "\<lbrace>valid_ioports\<rbrace> f \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
-  apply simp
-  apply (rule hoare_use_eq [where f=caps_of_state, OF x y])
-  done
-
 lemma valid_arch_mdb_lift:
   assumes c: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (caps_of_state s)\<rbrace>"
   assumes r: "\<And>P. \<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> f \<lbrace>\<lambda>r s. P (is_original_cap s)\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>r s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace>"
-  apply (clarsimp simp: valid_def)
-  done
-
+  by (clarsimp simp: valid_def valid_arch_mdb_def)
 
 lemma set_tcb_obj_ref_asid_map[wp]:
   "\<lbrace>valid_asid_map\<rbrace> set_tcb_obj_ref f t ko \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
