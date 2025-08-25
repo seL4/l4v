@@ -8,6 +8,14 @@ theory Arch_IF
 imports ArchRetype_IF
 begin
 
+(* Note: exporting the following diverges from AInvs interfaces where valid_arch_state is
+   permitted to depend on caps (due to supporting x64). If x64 confidentiality is to go ahead,
+   this will need more careful management. *)
+arch_requalify_facts
+  do_ipc_transfer_valid_arch_no_caps
+
+lemmas [wp] = do_ipc_transfer_valid_arch_no_caps
+
 abbreviation irq_state_of_state :: "det_state \<Rightarrow> nat" where
   "irq_state_of_state s \<equiv> irq_state (machine_state s)"
 

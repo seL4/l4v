@@ -3440,10 +3440,6 @@ lemma cap_insert_cspace_agnostic_obj_at:
 lemmas cap_insert_aobj_at =
   cap_insert_cspace_agnostic_obj_at[OF cspace_arch_obj_pred_imp]
 
-lemma cap_insert_valid_arch [wp]:
-  "\<lbrace>valid_arch_state\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift_aobj_at; wp cap_insert_aobj_at)
-
 
 crunch update_cdt
   for caps[wp]: "\<lambda>s. P (caps_of_state s)"
@@ -3568,11 +3564,11 @@ locale CSpace_AI_cap_insert =
             and cte_wp_at (\<lambda>c. cap_range cap \<subseteq> cap_range c) src\<rbrace>
         cap_insert cap src dest
       \<lbrace>\<lambda>rv. cap_refs_in_kernel_window :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  assumes cap_insert_derived_ioports:
+  assumes cap_insert_derived_valid_arch_state:
     "\<And>src cap dest.
-      \<lbrace>valid_ioports and (\<lambda>s::'state_ext state. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
+      \<lbrace>valid_arch_state and (\<lambda>s::'state_ext state. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
         cap_insert cap src dest
-      \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+      \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
 
 lemma cap_is_device_free_index_update_simp[simp]:
   "is_untyped_cap c \<Longrightarrow> cap_is_device (max_free_index_update c) = cap_is_device c"
@@ -3722,7 +3718,7 @@ lemma cap_insert_invs[wp]:
   apply (simp add: invs_def valid_state_def)
   apply (rule hoare_pre)
    apply (wp cap_insert_valid_pspace cap_insert_ifunsafe cap_insert_idle
-             valid_irq_node_typ cap_insert_valid_arch_caps cap_insert_derived_ioports)
+             valid_irq_node_typ cap_insert_valid_arch_caps cap_insert_derived_valid_arch_state)
   apply (auto simp: cte_wp_at_caps_of_state is_derived_cap_is_device
                         is_derived_cap_range valid_pspace_def)
   done

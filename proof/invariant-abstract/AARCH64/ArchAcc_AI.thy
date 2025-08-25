@@ -2821,8 +2821,7 @@ lemma cap_refs_respects_device_region_dmo:
   done
 
 crunch do_machine_op
-  for valid_ioports[wp]: valid_ioports
-  and valid_vspace_objs[wp]: valid_vspace_objs
+  for valid_vspace_objs[wp]: valid_vspace_objs
   and valid_kernel_mappings[wp]: valid_kernel_mappings
   and equal_kernel_mappings[wp]: equal_kernel_mappings
   and valid_asid_map[wp]: valid_asid_map

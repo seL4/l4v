@@ -91,12 +91,12 @@ lemma set_free_index_invs [CSpace_AI_assms]:
   apply (simp add:invs_def valid_state_def)
   apply (rule hoare_pre)
   apply (wp set_free_index_valid_pspace[where cap = cap] set_free_index_valid_mdb
-    set_cap_idle update_cap_ifunsafe)
+            set_cap_idle update_cap_ifunsafe set_cap_no_new_ioports_arch_valid_arch_state)
   apply (simp add:valid_irq_node_def)
   apply wps
   apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap.valid_vspace_obj set_cap_valid_arch_caps
             set_cap.valid_global_objs set_cap_irq_handlers cap_table_at_typ_at set_cap_typ_at
-            set_cap_cap_refs_respects_device_region_spec[where ptr = cref] set_cap_ioports_no_new_ioports)
+            set_cap_cap_refs_respects_device_region_spec[where ptr = cref])
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (rule conjI,simp add:valid_pspace_def)
   apply (rule conjI,clarsimp simp:is_cap_simps)
@@ -401,12 +401,12 @@ lemma valid_ioports_issuedD:
        \<Longrightarrow> cap_ioports cap \<subseteq> issued_ioports (arch_state s)"
   by (auto simp: valid_ioports_def all_ioports_issued_def)
 
-lemma cap_insert_derived_ioports[CSpace_AI_assms]:
+lemma cap_insert_derived_ioports:
   "\<lbrace>valid_ioports and (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
      cap_insert cap src dest
    \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
   apply (simp add: cap_insert_def)
-  apply (wp get_cap_wp set_cap_ioports' set_untyped_cap_as_full_ioports
+  apply (wp get_cap_wp set_cap_ioports_safe set_untyped_cap_as_full_ioports
             set_untyped_cap_as_full_gross_ioports
          | wpc | simp split del: if_splits)+
   apply (rule impI, erule exE, rule impI)
@@ -419,16 +419,31 @@ lemma cap_insert_derived_ioports[CSpace_AI_assms]:
   apply (drule_tac cap=cap in valid_ioports_issuedD, simp+)
   done
 
+lemma cap_insert_derived_valid_arch_state[CSpace_AI_assms]:
+  "\<lbrace>valid_arch_state and (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
+   cap_insert cap src dest
+   \<lbrace>\<lambda>rv. valid_arch_state \<rbrace>"
+  by (wp valid_arch_state_lift_ioports_aobj_at cap_insert_aobj_at cap_insert_derived_ioports)+
+     (simp add: cap_insert_aobj_at valid_arch_state_def)
+
 lemma cap_insert_simple_ioports:
   "\<lbrace>valid_ioports and (\<lambda>s. cte_wp_at (\<lambda>cap'. safe_ioport_insert cap cap' s) dest s) and
         K (is_simple_cap cap \<and> \<not>is_ap_cap cap)\<rbrace>
      cap_insert cap src dest
    \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
   apply (simp add: cap_insert_def)
-  apply (wp get_cap_wp set_cap_ioports' set_untyped_cap_as_full_ioports
+  apply (wp get_cap_wp set_cap_ioports_safe set_untyped_cap_as_full_ioports
             set_untyped_cap_as_full_gross_ioports
          | wpc | simp split del: if_splits)+
   done
+
+lemma cap_insert_simple_valid_arch_state:
+  "\<lbrace>valid_arch_state and (\<lambda>s. cte_wp_at (\<lambda>cap'. safe_ioport_insert cap cap' s) dest s) and
+    K (is_simple_cap cap \<and> \<not>is_ap_cap cap)\<rbrace>
+   cap_insert cap src dest
+   \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
+  by (wp valid_arch_state_lift_ioports_aobj_at cap_insert_aobj_at cap_insert_simple_ioports)+
+     (simp add: valid_arch_state_def)
 
 end
 
@@ -609,10 +624,15 @@ lemma cap_insert_simple_arch_caps_no_ap:
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   by (auto simp: is_simple_cap_def[simplified is_simple_cap_arch_def] is_cap_simps)
 
-lemma setup_reply_master_ioports[wp, CSpace_AI_assms]:
+lemma setup_reply_master_ioports[wp]:
   "\<lbrace>valid_ioports\<rbrace> setup_reply_master c \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
   apply (wpsimp simp: setup_reply_master_def wp: set_cap_ioports_no_new_ioports get_cap_wp)
   by (clarsimp simp: cte_wp_at_caps_of_state)
+
+lemma setup_reply_master_arch[CSpace_AI_assms]:
+  "setup_reply_master t \<lbrace> valid_arch_state \<rbrace>"
+  by (wp valid_arch_state_lift_ioports_typ_at setup_reply_master_ioports)+
+     (auto simp: valid_arch_state_def)
 
 end
 
@@ -636,10 +656,11 @@ lemma cap_insert_simple_invs:
     K (is_simple_cap cap \<and> \<not>is_ap_cap cap) and (\<lambda>s. \<forall>irq \<in> cap_irqs cap. irq_issued irq s)
     and (\<lambda>s. cte_wp_at (\<lambda>c. safe_ioport_insert cap c s) dest s)\<rbrace>
   cap_insert cap src dest \<lbrace>\<lambda>rv. invs\<rbrace>"
+  supply cap_insert_derived_valid_arch_state[wp del]
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
    apply (wp cap_insert_simple_mdb cap_insert_iflive
-             cap_insert_zombies cap_insert_ifunsafe cap_insert_simple_ioports
+             cap_insert_zombies cap_insert_ifunsafe cap_insert_simple_valid_arch_state
              cap_insert_valid_global_refs cap_insert_idle
              valid_irq_node_typ cap_insert_simple_arch_caps_no_ap)
   apply (clarsimp simp: is_simple_cap_def cte_wp_at_caps_of_state)

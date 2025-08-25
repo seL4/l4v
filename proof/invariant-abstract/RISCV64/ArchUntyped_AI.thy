@@ -321,10 +321,6 @@ lemma create_cap_cap_refs_in_kernel_window[wp, Untyped_AI_assms]:
   apply blast
   done
 
-lemma create_cap_ioports[wp, Untyped_AI_assms]:
-  "\<lbrace>valid_ioports and cte_wp_at (\<lambda>_. True) cref\<rbrace> create_cap tp sz p dev (cref,oref) \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
-  by wpsimp
-
 lemma init_arch_objects_nonempty_table[Untyped_AI_assms, wp]:
   "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
          \<and> valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s) and
@@ -362,6 +358,18 @@ lemma obj_is_device_vui_eq[Untyped_AI_assms]:
   apply (simp add: default_arch_object_def split: aobject_type.split)
   apply (auto simp: arch_is_frame_type_def)
   done
+
+lemma create_cap_valid_arch_state[wp, Untyped_AI_assms]:
+  "\<lbrace>valid_arch_state and cte_wp_at (\<lambda>_. True) cref\<rbrace>
+   create_cap tp sz p dev (cref,oref)
+   \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
+  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps create_cap_aobj_at)
+
+lemma set_cap_non_arch_valid_arch_state[Untyped_AI_assms]:
+ "\<lbrace>\<lambda>s. valid_arch_state s \<and> cte_wp_at (\<lambda>_. \<not>is_arch_cap cap) ptr s\<rbrace>
+  set_cap cap ptr
+  \<lbrace>\<lambda>rv. valid_arch_state \<rbrace>"
+  by wpsimp
 
 (* FIXME: move *)
 lemma set_object_obj_at_other:

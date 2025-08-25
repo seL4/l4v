@@ -746,7 +746,7 @@ lemma thread_set_tcb_ipc_buffer_cap_cleared_invs:
             thread_set_global_refs_triv
             valid_irq_node_typ valid_irq_handlers_lift
             thread_set_caps_of_state_trivial
-            valid_ioports_lift
+            thread_set_valid_arch_state
             thread_set_arch_caps_trivial
             thread_set_only_idle
             thread_set_cap_refs_in_kernel_window
@@ -843,7 +843,7 @@ lemma set_mcpriority_invs[wp]:
          thread_set_only_idle
          thread_set_cap_refs_in_kernel_window
          thread_set_valid_ioc_trivial
-         valid_ioports_lift
+         thread_set_valid_arch_state
          thread_set_cap_refs_respects_device_region
          thread_set_valid_replies_trivial
          thread_set_fault_tcbs_valid_states_trivial
@@ -1048,7 +1048,7 @@ lemma bind_notification_invs:
    \<lbrace>\<lambda>_. invs\<rbrace>"
   supply if_weak_cong[cong del]
   apply (simp add: bind_notification_def invs_def valid_state_def valid_pspace_def)
-  apply (wpsimp wp: ntfn_at_typ_at update_sk_obj_ref_typ_at valid_irq_node_typ valid_ioports_lift)
+  apply (wpsimp wp: ntfn_at_typ_at update_sk_obj_ref_typ_at valid_irq_node_typ)
   apply (clarsimp simp: obj_at_def pred_tcb_at_def is_ntfn)
   apply (rule conjI, clarsimp simp: obj_at_def)
   apply clarsimp

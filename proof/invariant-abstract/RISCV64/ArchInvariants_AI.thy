@@ -631,9 +631,6 @@ definition valid_asid_map :: "'z::state_ext state \<Rightarrow> bool" where
 definition valid_global_objs :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_global_objs \<equiv> \<top>"
 
-definition valid_ioports :: "'z::state_ext state \<Rightarrow> bool" where
-  [simp]: "valid_ioports \<equiv> \<top>"
-
 
 (* This definition is needed as interface for other architectures only.
    In other architectures, S is a set of object references (to global tables) that
@@ -2800,10 +2797,6 @@ lemma valid_vs_lookup_update [iff]:
 lemma valid_table_caps_update [iff]:
   "valid_table_caps (f s) = valid_table_caps s"
   by (simp add: valid_table_caps_def arch pspace)
-
-lemma valid_ioports_update[iff]:
-  "valid_ioports (f s) = valid_ioports s"
-  by simp
 
 lemma valid_asid_table_update [iff]:
   "valid_asid_table (f s) = valid_asid_table s"

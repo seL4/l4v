@@ -266,7 +266,7 @@ lemma set_untyped_cap_invs_simple[Untyped_AI_assms]:
   apply wps
   apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap_valid_arch_caps
     set_cap_irq_handlers cap_table_at_typ_at set_cap_typ_at
-    set_untyped_cap_refs_respects_device_simple set_cap_ioports_no_new_ioports)
+    set_untyped_cap_refs_respects_device_simple set_cap_no_new_ioports_arch_valid_arch_state)
   apply (clarsimp simp:cte_wp_at_caps_of_state is_cap_simps)
   apply (intro conjI,clarsimp)
         apply (rule ext,clarsimp simp:is_cap_simps)
@@ -381,10 +381,17 @@ lemma create_cap_cap_refs_in_kernel_window[wp, Untyped_AI_assms]:
   apply blast
   done
 
-lemma create_cap_ioports[wp, Untyped_AI_assms]:
+lemma create_cap_ioports[wp]:
   "\<lbrace>valid_ioports and cte_wp_at (\<lambda>_. True) cref\<rbrace> create_cap tp sz p dev (cref,oref) \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
-  by (wpsimp wp: set_cap_ioports' set_cdt_cte_wp_at
+  by (wpsimp wp: set_cap_ioports_safe set_cdt_cte_wp_at
               simp: safe_ioport_insert_not_ioport[OF default_cap_not_ioport] create_cap_def)
+
+lemma create_cap_valid_arch_state[wp, Untyped_AI_assms]:
+  "\<lbrace>valid_arch_state and cte_wp_at (\<lambda>_. True) cref\<rbrace>
+   create_cap tp sz p dev (cref,oref)
+   \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
+  by (wp valid_arch_state_lift_ioports_aobj_at create_cap_aobj_at)+
+     (simp add: valid_arch_state_def)
 
 (* FIXME: move *)
 lemma simpler_store_pml4e_def:
@@ -584,6 +591,8 @@ lemma obj_is_device_vui_eq[Untyped_AI_assms]:
   apply (simp add: default_arch_object_def split: aobject_type.split)
   apply (auto simp: arch_is_frame_type_def)
   done
+
+lemmas [Untyped_AI_assms] = set_cap_non_arch_valid_arch_state
 
 end
 

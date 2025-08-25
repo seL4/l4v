@@ -12,6 +12,15 @@ context Arch begin global_naming ARM
 
 named_theorems Retype_IF_assms
 
+lemma do_ipc_transfer_valid_arch_no_caps[wp]:
+  "do_ipc_transfer s ep bg grt r \<lbrace>valid_arch_state\<rbrace>"
+  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps do_ipc_transfer_aobj_at)
+
+lemma create_cap_valid_arch_state_no_caps[wp]:
+  "\<lbrace>valid_arch_state \<rbrace> create_cap tp sz p dev ref
+   \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
+  by (wp valid_arch_state_lift_aobj_at_no_caps create_cap_aobj_at)
+
 lemma cacheRangeOp_ev[wp]:
   "(\<And>a b. equiv_valid_inv I A \<top> (oper a b))
    \<Longrightarrow> equiv_valid_inv I A \<top> (cacheRangeOp oper x y z)"

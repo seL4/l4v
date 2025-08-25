@@ -413,15 +413,8 @@ lemma cap_swap_cap_refs_in_kernel_window[wp, CNodeInv_AI_assms]:
                simp: cte_wp_at_caps_of_state weak_derived_cap_range)
   done
 
-
-lemma cap_swap_ioports[wp, CNodeInv_AI_assms]:
-  "\<lbrace>valid_ioports and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
-     cap_swap c a c' b
-   \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
-  by wpsimp
-
 lemma cap_swap_vms[wp, CNodeInv_AI_assms]:
-  "\<lbrace>valid_machine_state\<rbrace>  cap_swap c a c' b \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>"
+  "\<lbrace>valid_machine_state\<rbrace> cap_swap c a c' b \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>"
   apply (simp add: valid_machine_state_def in_user_frame_def)
   apply (wp cap_swap_typ_at
             hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_disj_lift)
@@ -501,6 +494,12 @@ lemma prepare_thread_delete_thread_cap [CNodeInv_AI_assms]:
    \<lbrace>\<lambda>rv s. caps_of_state s x = Some (cap.ThreadCap p)\<rbrace>"
   by (wpsimp simp: prepare_thread_delete_def)
 
+lemma cap_swap_valid_arch_state[wp, CNodeInv_AI_assms]:
+  "\<lbrace>valid_arch_state and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
+   cap_swap c a c' b
+   \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps cap_swap_aobj_at)
+
 end
 
 
@@ -518,7 +517,7 @@ context Arch begin arch_global_naming
 
 lemma post_cap_delete_pre_is_final_cap':
   "\<And>s.
-       \<lbrakk>valid_ioports s; caps_of_state s slot = Some cap; is_final_cap' cap s; cap_cleanup_opt cap \<noteq> NullCap\<rbrakk>
+       \<lbrakk> caps_of_state s slot = Some cap; is_final_cap' cap s; cap_cleanup_opt cap \<noteq> NullCap\<rbrakk>
        \<Longrightarrow> post_cap_delete_pre (cap_cleanup_opt cap) ((caps_of_state s)(slot \<mapsto> NullCap))"
   apply (clarsimp simp: cap_cleanup_opt_def cte_wp_at_def post_cap_delete_pre_def
                       split: cap.split_asm if_split_asm
@@ -904,14 +903,6 @@ global_interpretation CNodeInv_AI_4?: CNodeInv_AI_4
 
 context Arch begin arch_global_naming
 
-lemma cap_move_ioports:
-  "\<lbrace>valid_ioports and cte_wp_at ((=) cap.NullCap) ptr'
-         and cte_wp_at (weak_derived cap) ptr
-         and cte_wp_at (\<lambda>c. c \<noteq> cap.NullCap) ptr and K (ptr \<noteq> ptr')\<rbrace>
-     cap_move cap ptr ptr'
-   \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
-  by wpsimp
-
 lemma cap_move_invs[wp, CNodeInv_AI_assms]:
   "\<lbrace>invs and valid_cap cap and cte_wp_at ((=) cap.NullCap) ptr'
          and tcb_cap_valid cap ptr'
@@ -929,7 +920,6 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
    apply (wpe cap_move_irq_handlers)
    apply (wpe cap_move_valid_arch_caps)
    apply (wpe cap_move_valid_ioc)
-   apply (wpe cap_move_ioports)
    apply (simp add: cap_move_def set_cdt_def)
    apply (rule hoare_pre)
     apply (wp set_cap_valid_objs set_cap_idle set_cap_typ_at

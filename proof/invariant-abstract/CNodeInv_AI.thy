@@ -67,7 +67,6 @@ where
        (cte_wp_at ((=) cap) slot and is_final_cap' cap
             and K (is_zombie cap))"
 
-
 locale CNodeInv_AI =
   fixes state_ext_t :: "'state_ext::state_ext itself"
   assumes derive_cap_objrefs:
@@ -165,10 +164,10 @@ locale CNodeInv_AI =
       \<lbrace>cap_refs_in_kernel_window and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
         cap_swap c a c' b
       \<lbrace>\<lambda>rv. cap_refs_in_kernel_window :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  assumes cap_swap_ioports[wp]:
-  "\<lbrace>valid_ioports and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
+  assumes cap_swap_valid_arch[wp]:
+  "\<lbrace>valid_arch_state and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
      cap_swap c a c' b
-   \<lbrace>\<lambda>rv (s::'state_ext state). valid_ioports s\<rbrace>"
+   \<lbrace>\<lambda>rv (s::'state_ext state). valid_arch_state s\<rbrace>"
   assumes cap_swap_vms[wp]:
     "\<And>c a c' b.
       \<lbrace>valid_machine_state :: 'state_ext state \<Rightarrow> bool\<rbrace>
@@ -1578,6 +1577,11 @@ lemma cap_refs_respects_device_region_original_cap[wp]:
                 (s\<lparr>is_original_cap := ocp\<rparr>) = cap_refs_respects_device_region s"
   by (simp add:cap_refs_respects_device_region_def)
 
+lemma cap_swap_aobj_at:
+  "arch_obj_pred P' \<Longrightarrow>
+  \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> cap_swap c a c' b \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
+  unfolding cap_swap_def set_cdt_def by (wpsimp wp: set_cap.aobj_at)
+
 crunch set_cdt
   for obj_at[wp]: "\<lambda>s. P (obj_at P' p s)"
 
@@ -1634,8 +1638,7 @@ lemma cap_swap_invs[wp]:
     cte_wp_at (\<lambda>cc. is_untyped_cap cc \<longrightarrow> cc = c') b and K (a \<noteq> b)\<rbrace>
    cap_swap c a c' b \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
-  apply (wp valid_arch_state_lift_aobj_at
-            cap_swap_typ_at valid_irq_node_typ cap_swap.aobj_at
+  apply (wp cap_swap_typ_at valid_irq_node_typ cap_swap.aobj_at
          | simp
          | erule disjE
          | clarsimp simp: cte_wp_at_caps_of_state copy_of_cte_refs weak_derived_def

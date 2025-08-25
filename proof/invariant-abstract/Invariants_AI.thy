@@ -50,7 +50,6 @@ arch_requalify_consts
   valid_vspace_objs
   valid_arch_caps
   valid_global_objs
-  valid_ioports
   valid_kernel_mappings
   equal_kernel_mappings
   valid_global_vspace_mappings
@@ -85,7 +84,6 @@ arch_requalify_facts
   valid_vspace_obj_typ
   arch_kobj_size_bounded
   global_refs_lift
-  valid_arch_state_lift
   aobj_at_default_arch_cap_valid
   aobj_ref_default
   wf_acap_rights_update_id
@@ -1272,7 +1270,6 @@ where
                   and valid_irq_node
                   and valid_irq_handlers
                   and valid_irq_states
-                  and valid_ioports
                   and valid_machine_state
                   and valid_vspace_objs
                   and valid_arch_caps
@@ -1378,8 +1375,7 @@ abbreviation (input)
        and valid_arch_state and valid_machine_state and valid_irq_states
        and valid_irq_node and valid_irq_handlers and valid_vspace_objs
        and valid_arch_caps and valid_global_objs and valid_kernel_mappings
-       and equal_kernel_mappings and valid_asid_map and valid_ioports
-       and valid_global_vspace_mappings
+       and equal_kernel_mappings and valid_asid_map and valid_global_vspace_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and pspace_respects_device_region and cap_refs_respects_device_region
        and valid_replies and cur_tcb and cur_sc_tcb"
@@ -3302,10 +3298,6 @@ lemma cap_refs_in_kernel_window_update [iff]:
   "cap_refs_in_kernel_window (f s) = cap_refs_in_kernel_window s"
   by (simp add: cap_refs_in_kernel_window_def arch pspace)
 
-lemma valid_ioports_update[iff]:
-  "valid_ioports (f s) = valid_ioports s"
-  by (simp add: valid_ioports_def arch)
-
 end
 
 
@@ -4137,10 +4129,6 @@ lemma invs_valid_asid_map[elim!]:
   "invs s \<Longrightarrow> valid_asid_map s"
   by (simp add: invs_def valid_state_def)
 
-lemma invs_valid_ioports[elim!]:
-  "invs s \<Longrightarrow> valid_ioports s"
-  by (simp add: invs_def valid_state_def)
-
 lemma invs_fault_tcbs_valid_states[elim!]:
   "invs s \<Longrightarrow> fault_tcbs_valid_states s"
   by (simp add: invs_def valid_state_def valid_pspace_def)
@@ -4685,7 +4673,6 @@ lemmas invs_implies =
   invs_arch_state
   invs_valid_asid_map
   invs_valid_global_objs
-  invs_valid_ioports
   invs_vspace_objs
   invs_psp_aligned
   invs_distinct

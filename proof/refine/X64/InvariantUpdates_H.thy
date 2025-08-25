@@ -272,10 +272,6 @@ lemma valid_arch_state'_interrupt[simp]:
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
-lemma valid_ioports_cr3_update[simp]:
-  "valid_ioports' (s\<lparr>ksArchState := x64KSCurrentUserCR3_update (\<lambda>_. c) (ksArchState s)\<rparr>) = valid_ioports' s"
-  by (clarsimp simp: valid_ioports'_simps)
-
 end
 
 lemma valid_bitmapQ_ksSchedulerAction_upd[simp]:

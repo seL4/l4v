@@ -620,7 +620,6 @@ lemma
   "(scast ThreadState_IdleThreadState :: machine_word) && mask 4 = scast ThreadState_IdleThreadState"
   by (simp add: ThreadState_defs mask_def)+
 
-
 (* generic lemmas with arch-specific consequences *)
 
 schematic_goal size_gpRegisters:

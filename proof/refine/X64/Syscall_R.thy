@@ -883,7 +883,6 @@ abbreviation (input) "all_invs_but_sch_extra \<equiv>
     valid_irq_handlers' s \<and>
     valid_irq_states' s \<and>
     irqs_masked' s \<and>
-    valid_ioports' s \<and>
     valid_machine_state' s \<and>
     cur_tcb' s \<and>
     untyped_ranges_zero' s \<and>
@@ -917,7 +916,6 @@ lemma threadSet_all_invs_but_sch_extra:
      irqs_masked_lift
      valid_irq_node_lift
      valid_irq_handlers_lift''
-     valid_ioports_lift''
      threadSet_ctes_ofT
      threadSet_not_inQ
      threadSet_tcbDomain_update_ct_idle_or_in_cur_domain'

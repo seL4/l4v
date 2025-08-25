@@ -32,7 +32,7 @@ lemma safe_ioport_insert_triv:
   "\<not>is_arch_cap newcap \<Longrightarrow> safe_ioport_insert newcap oldcap s"
   by (clarsimp simp: safe_ioport_insert_def)
 
-lemma set_cap_ioports':
+lemma set_cap_ioports_safe:
  "\<lbrace>\<lambda>s. valid_ioports s
       \<and> cte_wp_at (\<lambda>cap'. safe_ioport_insert cap cap' s) ptr s\<rbrace>
     set_cap cap ptr
@@ -48,6 +48,15 @@ lemma set_cap_ioports':
   apply (clarsimp simp: cte_wp_at_caps_of_state safe_ioport_insert_def elim!: ranE split: if_split_asm)
     apply blast+
   done
+
+lemma set_cap_non_arch_valid_arch_state:
+ "\<lbrace>\<lambda>s. valid_arch_state s \<and> cte_wp_at (\<lambda>_. \<not>is_arch_cap cap) ptr s\<rbrace>
+  set_cap cap ptr
+  \<lbrace>\<lambda>rv. valid_arch_state \<rbrace>"
+  unfolding valid_arch_state_def
+  by (wp set_cap.aobj_at valid_asid_table_lift valid_global_pts_lift valid_global_pds_lift
+         valid_global_pdpts_lift typ_at_lift set_cap_ioports_safe)+
+     (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps valid_pspace_def safe_ioport_insert_triv)
 
 lemma set_cap_ioports_no_new_ioports:
  "\<lbrace>\<lambda>s. valid_ioports s
@@ -68,6 +77,16 @@ lemma set_cap_ioports_no_new_ioports:
     apply (metis Int_empty_left ranI)
    apply (metis Int_empty_right ranI)
   by (meson ranI)
+
+lemma set_cap_no_new_ioports_arch_valid_arch_state:
+ "\<lbrace>\<lambda>s. valid_arch_state s
+       \<and> cte_wp_at (\<lambda>cap'. cap_ioports cap = {} \<or> cap_ioports cap = cap_ioports cap') ptr s\<rbrace>
+  set_cap cap ptr
+  \<lbrace>\<lambda>rv. valid_arch_state \<rbrace>"
+  unfolding valid_arch_state_def
+  by (wp set_cap.aobj_at valid_asid_table_lift valid_global_pts_lift valid_global_pds_lift
+         valid_global_pdpts_lift typ_at_lift set_cap_ioports_no_new_ioports)+
+     (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps valid_pspace_def)
 
 lemma valid_ioportsD:
   "\<lbrakk>valid_ioports s; caps_of_state s p = Some cap; cap' \<in> ran (caps_of_state s);
@@ -105,7 +124,7 @@ lemma replace_cap_invs:
              set_cap_caps_of_state2 set_cap_idle
              replace_cap_ifunsafe valid_irq_node_typ
              set_cap_typ_at set_cap_irq_handlers
-             set_cap_valid_arch_caps set_cap_ioports_no_new_ioports
+             set_cap_valid_arch_caps set_cap_no_new_ioports_arch_valid_arch_state
              set_cap_cap_refs_respects_device_region_replaceable)
   apply (clarsimp simp: valid_pspace_def cte_wp_at_caps_of_state
                         replaceable_def)
@@ -194,8 +213,9 @@ lemma replace_cap_invs:
    apply (clarsimp simp: valid_table_capsD[OF caps_of_state_cteD]
                     valid_arch_caps_def unique_table_refs_no_cap_asidE)
   apply clarsimp
-  apply (rule conjI, rule Ball_emptyI, simp add: gen_obj_refs_subset)
-  by clarsimp
+  apply (rule conjI, solves clarsimp)
+  apply (rule Ball_emptyI, simp add: gen_obj_refs_subset)
+  done
 
 
 definition

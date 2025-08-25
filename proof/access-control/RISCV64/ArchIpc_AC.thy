@@ -66,6 +66,10 @@ lemma tcb_context_no_change[Ipc_AC_assms]:
   apply (auto simp: arch_tcb_context_set_def)
   done
 
+lemma transfer_caps_loop_valid_arch[Ipc_AC_assms]:
+  "transfer_caps_loop ep buffer n caps slots mi \<lbrace>valid_arch_state :: det_ext state \<Rightarrow> _\<rbrace>"
+  by (wp valid_arch_state_lift_aobj_at_no_caps transfer_caps_loop_aobj_at)
+
 end
 
 

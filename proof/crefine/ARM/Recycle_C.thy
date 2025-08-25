@@ -800,7 +800,6 @@ lemma cancelBadgedSends_ccorres:
           apply (clarsimp simp: typ_heap_simps st_tcb_at'_def)
           apply (drule(1) obj_at_cslift_tcb)
           apply (clarsimp simp: ctcb_relation_blocking_ipc_badge)
-          apply (rule conjI, simp add: ThreadState_defs mask_def)
           apply (rule conjI)
            apply clarsimp
            apply (frule rf_sr_cscheduler_relation)

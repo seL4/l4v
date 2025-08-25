@@ -53,6 +53,9 @@ method_setup wpe = \<open>WP_Safe.wpe_args\<close>
 
 text \<open>Testing.\<close>
 
+experiment
+begin
+
 lemma
   assumes x: "\<lbrace> P \<rbrace> f \<lbrace> \<lambda>rv. Q \<rbrace>"
        and y: "\<lbrace> P \<rbrace> f \<lbrace> \<lambda>rv. R \<rbrace>"
@@ -69,5 +72,7 @@ lemma
    apply (wp y)
   apply simp
   done
+
+end
 
 end

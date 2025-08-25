@@ -948,14 +948,9 @@ where
             vspace_at_asid asid pd s \<and> asid \<noteq> 0)"
 
 definition
-  valid_ioports :: "'z::state_ext state \<Rightarrow> bool"
-where
-  "valid_ioports \<equiv> \<lambda>s. True"
-
-definition
   "valid_arch_mdb r cs \<equiv> True"
 
-declare valid_ioports_def[simp] valid_arch_mdb_def[simp]
+declare valid_arch_mdb_def[simp]
 
 section "Lemmas"
 

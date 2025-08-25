@@ -263,7 +263,7 @@ declare option.sel[datatype_schematic]
 declare list.sel(1,3)[datatype_schematic]
 declare sum.sel[datatype_schematic]
 
-locale datatype_schem_demo begin
+experiment begin
 
 lemma handles_nested_constructors:
   "\<exists>f. \<forall>y. f True (Some [x, (y, z)]) = y"
