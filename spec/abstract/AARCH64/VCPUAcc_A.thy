@@ -283,8 +283,8 @@ definition vcpu_flush_if_current :: "obj_ref \<Rightarrow> (unit,'z::state_ext) 
      when (vcpu = map_option fst cur_vcpu) vcpu_flush
    od"
 
-(*FIXME: find the right place to move this to, ArchTcb_A doesn't work as it is imported by VCPUAcc_A
-    and leads to an unresolvable circular dependency*)
+(* This is defined here and not in ArchTcb_A like in non-HYP architectures due to that causing an
+   unresolvable circular dependency between VCPUAcc_A and ArchTcb_A. *)
 definition arch_prepare_set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "arch_prepare_set_domain t new_dom \<equiv> do
      cur_domain \<leftarrow> gets cur_domain;
