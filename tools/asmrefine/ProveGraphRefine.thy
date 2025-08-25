@@ -465,11 +465,20 @@ fun warn_schem_tac msg ctxt tac = SUBGOAL (fn (t, i) => let
         ^ Pretty.string_of (Syntax.pretty_term ctxt t))
   in tac i end)
 
+fun ptr_safe_arr_field_tac ctxt =
+    EVERY' [
+      eqsubst_either_wrap_tac ctxt @{thms ptr_safe_ptr_add_array_ptr_index},
+      resolve_tac ctxt @{thms ptr_safe_field} THEN' assume_tac ctxt THEN' asm_full_simp_tac ctxt,
+      asm_full_simp_tac (ctxt addsimps @{thms typ_uinfo_t_def}),
+      asm_full_simp_tac ctxt
+    ]
+
 fun prove_ptr_safe reason ctxt = DETERM o
     warn_schem_tac "prove_ptr_safe" ctxt
     (TRY o REPEAT_ALL_NEW (eqsubst_either_wrap_tac ctxt
                 @{thms array_ptr_index_coerce nat_uint_less_helper}
             )
+        THEN_ALL_NEW (TRY o REPEAT_ALL_NEW (ptr_safe_arr_field_tac ctxt))
         THEN_ALL_NEW asm_full_simp_tac (ctxt addsimps
             @{thms ptr_safe_ptr_add_array_ptr_index
                    word_sle_msb_le word_sless_msb_less
