@@ -78,7 +78,7 @@ fun tag_subgoals_tac ctxt idx: tactic =
       val data = HOLogic.mk_string ("Subgoal " ^ Int.toString idx) |> Thm.cterm_of ctxt;
       val typInst = ("'a", 0) |> rpair @{sort type} |> rpair @{ctyp string}
       val termInst = ("data", 0) |> rpair @{typ string} |> rpair data;
-      val tagI = Thm.instantiate ([typInst], [termInst]) @{thm tagI};
+      val tagI = Thm.instantiate (TVars.make [typInst], Vars.make [termInst]) @{thm tagI};
     in resolve0_tac [tagI] idx end
 \<close>
 
