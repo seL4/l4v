@@ -2475,7 +2475,7 @@ lemma modifyArchState_armHSCurVCPU_Skip:
   apply (clarsimp simp: carch_state_relation_def carch_globals_def cur_vcpu_relation_def)
   done
 
-(* FIX ARMHYP MOVE *)
+(* FIXME ARMHYP: MOVE *)
 lemma armHSCurVCPU_update_active_false_ccorres:
   "ccorres dc xfdc \<top> UNIV hs
       (modifyArchState (armHSCurVCPU_update (case_option None (\<lambda>(a, _). Some (a, False)))))
@@ -2514,9 +2514,9 @@ lemma vcpuInvalidateActive_ccorres:
    apply (subst bind_assoc[symmetric])
    apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
     apply (rule_tac Q="\<lambda>s. (armHSCurVCPU \<circ> ksArchState) s = hsCurVCPU"
-                   and Q'=UNIV
-                   and C'="{s. \<exists> t. hsCurVCPU =  Some t \<and> snd t}"
-                   in ccorres_rewrite_cond_sr)
+                and Q'=UNIV
+                and C'="{s. \<exists> t. hsCurVCPU =  Some t \<and> snd t}"
+                 in ccorres_rewrite_cond_sr)
         apply clarsimp
         apply (frule rf_sr_ksArchState_armHSCurVCPU)
         apply (case_tac "\<exists> t. (armHSCurVCPU \<circ> ksArchState) s =  Some t \<and> snd t")
@@ -2526,8 +2526,8 @@ lemma vcpuInvalidateActive_ccorres:
        apply (rule_tac a=" _ >>= (\<lambda>_. when (hsCurVCPU \<noteq> None \<and> snd (the hsCurVCPU))
                                           (modifyArchState(armHSCurVCPU_update
                                              (\<lambda>a. case a of None \<Rightarrow> None
-                                                                 | Some (a,_) \<Rightarrow> Some (a, False)))))"
-                       in match_ccorres)
+                                                                  | Some (a,_) \<Rightarrow> Some (a, False)))))"
+                    in match_ccorres)
        apply (wpc; clarsimp ; ccorres_rewrite)
         apply (rule ccorres_return_Skip)
        apply (rule_tac Q="\<lambda>s. (b \<longrightarrow> _ s) \<and> (\<not> b \<longrightarrow> _ s)" in  ccorres_guard_imp)

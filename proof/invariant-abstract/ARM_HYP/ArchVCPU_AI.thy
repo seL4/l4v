@@ -354,8 +354,8 @@ crunch invoke_untyped
   (wp: crunch_wps mapME_x_inv_wp preemption_point_inv
    simp: crunch_simps mapM_x_def[symmetric] active_cur_vcpu_of_def)
 
-\<comment> \<open>FIXME: Replace earlier lemmas that don't have the Qs. These do have extra preconditions however,
-          so updating proofs for this might not be completely trivial.\<close>
+\<comment> \<open>The following @{term etcb_at} lemmas extend earlier ones that don't have the Qs. These have
+   extra preconditions however, so we keep the other lemmas around.\<close>
 lemma delete_objects_etcb_at':
   "\<lbrace>\<lambda>s. Q (etcb_at P t s) \<and> (t \<notin> {ptr..ptr + 2 ^ bits - 1})\<rbrace>
    delete_objects ptr bits
@@ -699,8 +699,6 @@ crunch perform_asid_control_invocation
   for active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
   (simp: active_cur_vcpu_of_def)
 
-\<comment> \<open>FIXME: Replace earlier lemmas that don't have the Qs. These do have extra preconditions however,
-          so updating proofs for this might not be completely trivial.\<close>
 lemma perform_asid_control_etcb_at':
   "\<lbrace>\<lambda>s. Q (etcb_at P t s) \<and> st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t s \<and> invs s \<and> valid_aci aci s \<rbrace>
    perform_asid_control_invocation aci

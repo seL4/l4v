@@ -388,8 +388,8 @@ crunch invoke_untyped
   (wp: crunch_wps mapME_x_inv_wp preemption_point_inv
    simp: crunch_simps mapM_x_def[symmetric] active_cur_vcpu_of_def)
 
-\<comment> \<open>FIXME: Replace earlier lemmas that don't have the Qs. These do have extra preconditions however,
-          so updating proofs for this might not be completely trivial.\<close>
+\<comment> \<open>The following @{term etcb_at} lemmas extend earlier ones that don't have the Qs. These have
+   extra preconditions however, so we keep the other lemmas around.\<close>
 lemma delete_objects_etcb_at':
   "\<lbrace>\<lambda>s. Q (etcb_at P t s) \<and> (t \<notin> {ptr..ptr + 2 ^ bits - 1})\<rbrace>
    delete_objects ptr bits
@@ -427,7 +427,7 @@ lemma invoke_untyped_etcb_at':
          ((simp add: cte_wp_at_caps_of_state descendants_range_def2 empty_descendants_range_in)+))
   done
 
-lemma invoke_untyped_etcb_at:
+lemma invoke_untyped_etcb_at'':
   "\<lbrace>\<lambda>s. Q (etcb_at P t s) \<and> invs s \<and> st_tcb_at (Not o inactive and Not \<circ> idle) t s \<and> ct_active s \<and> valid_untyped_inv ui s\<rbrace>
    invoke_untyped ui
    \<lbrace>\<lambda>_ s. Q (etcb_at P t s)\<rbrace>"
@@ -445,7 +445,7 @@ lemma invoke_untyped_valid_cur_vcpu:
       apply (clarsimp simp: in_cur_domain_def)
       apply (rule_tac f=cur_thread in hoare_lift_Pf2)
        apply (rule_tac f=cur_domain in hoare_lift_Pf2)
-        apply (rule invoke_untyped_etcb_at)
+        apply (rule invoke_untyped_etcb_at'')
        apply wpsimp
       apply wpsimp
      apply (rule_tac f=cur_thread in hoare_lift_Pf2; wpsimp)
@@ -731,8 +731,6 @@ crunch perform_vspace_invocation, perform_sgi_invocation
   for active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
   and valid_cur_vcpu[wp]: valid_cur_vcpu
 
-\<comment> \<open>FIXME: Replace earlier lemmas that don't have the Qs. These do have extra preconditions however,
-          so updating proofs for this might not be completely trivial.\<close>
 lemma perform_asid_control_etcb_at':
   "\<lbrace>\<lambda>s. Q (etcb_at P t s) \<and> st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t s \<and> invs s \<and> valid_aci aci s \<rbrace>
    perform_asid_control_invocation aci
@@ -759,7 +757,7 @@ lemma perform_asid_control_etcb_at':
   apply simp
   done
 
-lemma perform_asid_control_etcb_at:
+lemma perform_asid_control_etcb_at'':
   "\<lbrace>\<lambda>s. Q (etcb_at P t s) \<and> st_tcb_at (Not \<circ> inactive and Not \<circ> idle) t s \<and> ct_active s \<and> invs s \<and> valid_aci aci s\<rbrace>
    perform_asid_control_invocation aci
    \<lbrace>\<lambda>r s. Q (etcb_at P t s)\<rbrace>"
@@ -777,7 +775,7 @@ lemma perform_asid_control_invocation_valid_cur_vcpu:
       apply (clarsimp simp: in_cur_domain_def)
       apply (rule_tac f=cur_thread in hoare_lift_Pf2)
        apply (rule_tac f=cur_domain in hoare_lift_Pf2)
-        apply (rule perform_asid_control_etcb_at)
+        apply (rule perform_asid_control_etcb_at'')
        apply wpsimp
       apply wpsimp
      apply (rule_tac f=cur_thread in hoare_lift_Pf2; wpsimp)
