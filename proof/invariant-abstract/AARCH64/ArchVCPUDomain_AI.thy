@@ -30,7 +30,7 @@ lemma cur_vcpu_in_cur_domain_lift_strong:
   assumes [wp]: "\<And>P. f \<lbrace>\<lambda>s. P (arm_current_vcpu (arch_state s))\<rbrace>"
                 "\<And>P. f \<lbrace>\<lambda>s. P (vcpu_tcbs_of s)\<rbrace>"
                 "\<And>P. f \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"
-                "\<And>P t . f \<lbrace>etcb_at (\<lambda>t. P (etcb_domain t)) t\<rbrace>"
+                "\<And>P t. f \<lbrace>etcb_at (\<lambda>t. P (etcb_domain t)) t\<rbrace>"
   shows "f \<lbrace>cur_vcpu_in_cur_domain\<rbrace>"
   unfolding cur_vcpu_in_cur_domain_defs
   by (wp_pre, wps, wpsimp wp: valid_case_option_post_wp split: option.splits)
@@ -104,7 +104,6 @@ crunch vcpu_disable, vcpu_restore, vcpu_save
   for vcpu_tcbs_of[wp]: "\<lambda>s. P (vcpu_tcbs_of s)"
   (wp: crunch_wps)
 
-\<comment> \<open>FIXME: is using opt_pred here actually nice?\<close>
 lemma vcpu_switch_cur_vcpu_in_cur_domain[wp]:
   "\<lbrace>\<lambda>s. cur_vcpu_in_cur_domain s \<and> none_top ((\<lambda>t. in_cur_domain t s) |< vcpu_tcbs_of s) v\<rbrace>
    vcpu_switch v
@@ -197,7 +196,6 @@ lemma schedule_cur_vcpu_in_cur_domain[wp]:
 
 \<comment> \<open>handle_interrupt\<close>
 
-\<comment> \<open>FIXME: generalise to other objects?\<close>
 lemma set_endpoint_vcpus_of[wp]:
   "set_endpoint p ep \<lbrace>\<lambda>s. P (vcpus_of s)\<rbrace>"
   unfolding set_simple_ko_def
@@ -364,14 +362,9 @@ lemma dissociate_vcpu_tcb_not_current_vcpu[wp]:
   unfolding dissociate_vcpu_tcb_def
   by (wpsimp wp: get_vcpu_wp arch_thread_get_wp vcpu_invalid_active_arm_current_vcpu_None[THEN hoare_strengthen_post])
 
-\<comment> \<open>FIXME: Is this nice? If it is, generalise and move\<close>
-lemma if_option_eq':
-  "((if P then Some x else Q) = None) = (\<not> P \<and> Q = None)"
-  by auto
-
 crunch dissociate_vcpu_tcb
   for vcpus_of_None[wp]: "\<lambda>s. vcpus_of s vcpu_ptr = None"
-  (wp: hoare_vcg_imp_lift' get_vcpu_wp arch_thread_get_wp simp: if_option_eq')
+  (wp: hoare_vcg_imp_lift' get_vcpu_wp arch_thread_get_wp simp: if_option_eq)
 
 crunch dissociate_vcpu_tcb
   for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
@@ -453,7 +446,6 @@ lemma bound_vcpu_bound_tcb_at:
    apply (fastforce simp: state_hyp_refs_of_def pred_tcb_at_def obj_at_def in_omonad)
   apply (clarsimp simp: in_omonad)
   apply (erule (1) valid_objsE)
-\<comment> \<open>FIXME: @{thm valid_obj_arch_valid_obj} should be simp\<close>
   apply (clarsimp simp: valid_obj_def valid_vcpu_def typ_at_eq_kheap_obj)
   apply (fastforce simp: pred_tcb_at_def obj_at_def state_hyp_refs_of_def tcb_vcpu_refs_def
                   split: option.splits)
