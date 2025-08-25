@@ -702,7 +702,7 @@ lemma receive_ipc_blocked_invs':
     show ?thesis
       apply (cases reply_opt)
        apply (all \<open>wpsimp wp: valid_irq_node_typ sts_only_idle set_endpoint_invs hoare_vcg_ball_lift
-                              sts_valid_replies valid_ioports_lift sts_fault_tcbs_valid_states
+                              sts_valid_replies sts_fault_tcbs_valid_states
                         simp: receive_ipc_blocked_def valid_ep_def do_nbrecv_failed_transfer_def\<close>)
        apply (all \<open>clarsimp simp: ep_valid\<close>)
        apply (all \<open>clarsimp simp: invs_def valid_state_def valid_pspace_def st_tcb_at_tcb_at
@@ -1125,7 +1125,7 @@ lemma reply_sc_update_Some_invs:
    set_reply_obj_ref reply_sc_update reply_ptr (Some sc_caller)
    \<lbrace>\<lambda>r. invs\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
-  by (wpsimp wp: valid_ioports_lift)
+  by wpsimp
 
 (* FIXME move *)
 lemma ReplyTCB_bound_reply_tcb_reply_at:
@@ -1218,7 +1218,7 @@ lemma reply_push_sender_sc_Some_invs:
         valid_irq_states s \<and> valid_irq_node s \<and> valid_irq_handlers s \<and>
         valid_vspace_objs s \<and> valid_arch_caps s \<and> valid_global_objs s \<and>
         valid_kernel_mappings s \<and> equal_kernel_mappings s \<and>
-        valid_asid_map s \<and> valid_ioports s \<and> valid_global_vspace_mappings s \<and>
+        valid_asid_map s \<and> valid_global_vspace_mappings s \<and>
         pspace_in_kernel_window s \<and> cap_refs_in_kernel_window s \<and>
         pspace_respects_device_region s \<and> cap_refs_respects_device_region s \<and>
         valid_replies_2 (replies_with_sc s) (replies_blocked s) \<and>
@@ -1251,7 +1251,7 @@ lemma reply_push_sender_sc_Some_invs:
                            \<and> invs s"
            in bind_wp_fwd)
    apply (wpsimp wp: sts_st_tcb_at_cases set_thread_state_bound_sc_tcb_at sts_only_idle
-                     sts_valid_replies sts_fault_tcbs_valid_states valid_ioports_lift
+                     sts_valid_replies sts_fault_tcbs_valid_states
                simp: invs_def valid_state_def valid_pspace_def valid_tcb_state_def
                      st_tcb_at_tcb_at reply_tcb_reply_at
                cong: if_cong)
@@ -1267,7 +1267,7 @@ lemma reply_push_sender_sc_Some_invs:
   apply (rule bind_wp[OF _ gscrpls_sp[simplified]])
   apply (wpsimp wp: sched_context_donate_invs reply_sc_update_Some_invs
                     sc_replies_update_valid_replies_cons valid_sc_typ_list_all_reply
-                    valid_ioports_lift get_simple_ko_wp update_sched_context_valid_idle)
+                    get_simple_ko_wp update_sched_context_valid_idle)
   apply (rule conjI, clarsimp simp: invs_def valid_state_def valid_pspace_def)
     (* sc_caller has empty sc_replies *)
    apply (rule conjI, clarsimp simp: reply_sc_reply_at_def obj_at_def is_reply_def)
@@ -1587,7 +1587,7 @@ lemma maybe_return_sc_invs[wp]:
   "\<lbrace>invs and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
     maybe_return_sc ntfn_ptr thread
    \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (wpsimp wp: hoare_vcg_conj_lift valid_ioports_lift
+  by (wpsimp wp: hoare_vcg_conj_lift
            simp: invs_def valid_state_def valid_pspace_def)
 
 lemma maybe_return_sc_ko_at_Endpoint[wp]:
@@ -1668,7 +1668,7 @@ lemma ri_invs[wp]:
                                 \<and> sender \<notin> set queue
                                 \<and> all_invs_but_sym_refs s)"
            in bind_wp_fwd)
-   apply (wpsimp wp: hoare_vcg_ball_lift set_simple_ko_at valid_ioports_lift)
+   apply (wpsimp wp: hoare_vcg_ball_lift set_simple_ko_at)
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
    apply (apply_conjunct \<open>erule delta_sym_refs; fastforce simp: ko_at_state_refs_ofD
                                                          split: if_splits\<close>)
@@ -1694,7 +1694,7 @@ lemma ri_invs[wp]:
                                 \<and> state_refs_of s ep_ptr = set queue \<times> {EPSend}
                                 \<and> all_invs_but_sym_refs s)"
            in bind_wp_fwd)
-   apply (wpsimp wp: do_ipc_transfer_tcb_caps[where t=thread] hoare_vcg_ball_lift
+   apply (wpsimp wp: do_ipc_transfer_tcb_caps[where t=thread] hoare_vcg_ball_lift do_ipc_transfer_valid_arch
                simp: st_tcb_at_tcb_at)
    apply (rule_tac V="sender \<noteq> ep_ptr" in revcut_rl, fastforce simp: obj_at_def pred_tcb_at_def)
    apply (rule_tac V="ep_ptr \<notin> set queue" in revcut_rl
@@ -1846,8 +1846,7 @@ lemma reply_push_invs_helper:
   apply (case_tac sc_replies'; simp)
    apply (wpsimp wp: sched_context_donate_invs)
      apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                     wp: valid_irq_node_typ set_reply_sc_valid_replies_already_BlockedOnReply
-                         valid_ioports_lift)
+                     wp: valid_irq_node_typ set_reply_sc_valid_replies_already_BlockedOnReply)
     apply (wpsimp wp: set_sc_replies_valid_replies update_sched_context_valid_idle)
    apply clarsimp
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
@@ -1873,10 +1872,10 @@ lemma reply_push_invs_helper:
   apply (wpsimp wp: sched_context_donate_invs)
      apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                      wp: valid_irq_node_typ set_reply_sc_valid_replies_already_BlockedOnReply
-                         valid_ioports_lift valid_sc_typ_list_all_reply)
+                         valid_sc_typ_list_all_reply)
     apply (wpsimp wp: set_sc_replies_valid_replies update_sched_context_valid_idle)
    apply (wpsimp simp: get_simple_ko_def get_object_def
-                   wp: valid_sc_typ_list_all_reply valid_ioports_lift)
+                   wp: valid_sc_typ_list_all_reply)
   apply (subgoal_tac "list_all (\<lambda>r. reply_at r s) (a # list) \<and> reply_ptr \<notin> set (a # list) \<and> distinct (a # list)")
    apply (clarsimp simp: invs_def valid_pspace_def valid_state_def)
    apply (intro conjI)
@@ -1950,7 +1949,7 @@ lemma reply_push_invs':
   apply (case_tac sc_caller; simp)
    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                    wp: sts_only_idle valid_irq_node_typ set_reply_tcb_valid_tcb_state
-                       sts_valid_replies sts_fault_tcbs_valid_states_except_set valid_ioports_lift
+                       sts_valid_replies sts_fault_tcbs_valid_states_except_set
             split_del: if_split)
    apply clarsimp
    apply (intro conjI)
@@ -1970,9 +1969,9 @@ lemma reply_push_invs':
   apply (wpsimp wp: reply_push_invs_helper)
     apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                     wp: sts_only_idle valid_irq_node_typ sts_valid_replies
-                        sts_in_replies_blocked valid_ioports_lift
+                        sts_in_replies_blocked
                         sts_fault_tcbs_valid_states_except_set)
-   apply (wpsimp wp: set_reply_tcb_valid_tcb_state valid_irq_node_typ valid_ioports_lift)
+   apply (wpsimp wp: set_reply_tcb_valid_tcb_state valid_irq_node_typ)
   apply clarsimp
   apply (intro conjI)
    apply (clarsimp simp: pred_tcb_at_def obj_at_def reply_tcb_reply_at_def)
@@ -2119,7 +2118,7 @@ lemma si_invs'_helper_no_reply:
       apply (wp hoare_vcg_all_lift hoare_drop_imps)
         apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                      wp: sts_only_idle valid_irq_node_typ sts_valid_replies
-                         sts_fault_tcbs_valid_states valid_ioports_lift)
+                         sts_fault_tcbs_valid_states)
        apply (wpsimp wp: assert_inv sts_only_idle si_invs'_helper_no_reply_sts_helper
                          sts_refs_of_no_state_refs sts_fault_tcbs_valid_states_except_set
                  wp_del: sts_refs_of)+
@@ -2146,7 +2145,7 @@ lemma si_invs'_helper_no_reply:
    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                    wp: sts_only_idle valid_irq_node_typ sts_valid_replies
                        sched_context_donate_sym_refs_BlockedOnReceive
-                       sts_fault_tcbs_valid_states valid_ioports_lift hoare_drop_imps)+
+                       sts_fault_tcbs_valid_states hoare_drop_imps)+
     apply (wpsimp simp: get_tcb_obj_ref_def thread_get_def)
    apply (clarsimp, intro conjI)
      apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb)
@@ -2193,7 +2192,7 @@ lemma si_invs'_helper_no_reply:
     apply (wp hoare_vcg_all_lift hoare_drop_imps)
    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                    wp: valid_irq_node_typ sts_only_idle sts_valid_replies
-                       sts_fault_tcbs_valid_states valid_ioports_lift hoare_drop_imps)
+                       sts_fault_tcbs_valid_states hoare_drop_imps)
   apply (clarsimp cong: conj_cong)
   apply (apply_conjunct \<open>rule replies_blocked_upd_tcb_st_valid_replies;
          clarsimp simp: replies_blocked_def st_tcb_at_def obj_at_def\<close>)
@@ -2373,7 +2372,7 @@ lemma si_invs'_helper_fault:
   apply (case_tac recv_state; simp split del: if_split)
   apply (rename_tac r pl)
   apply (case_tac r, simp split del: if_split)
-   apply (wpsimp wp: si_invs'_helper_no_reply[simplified])
+   apply (wpsimp wp: si_invs'_helper_no_reply[simplified] do_ipc_transfer_valid_arch)
    apply (intro conjI)
        apply (clarsimp simp: st_tcb_at_def obj_at_def)
       apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb)
@@ -2398,7 +2397,7 @@ lemma si_invs'_helper_fault:
                       reply_unlink_tcb_valid_replies_BlockedOnReceive
                       reply_unlink_tcb_bound_sc_tcb_at hoare_vcg_imp_lift
                       reply_unlink_tcb_reply_tcb_reply_at)
-   apply (wpsimp wp: hoare_vcg_ex_lift valid_irq_node_typ hoare_vcg_imp_lift)
+   apply (wpsimp wp: hoare_vcg_ex_lift valid_irq_node_typ hoare_vcg_imp_lift do_ipc_transfer_valid_arch)
   apply clarsimp
   apply (subgoal_tac "reply_tcb_reply_at (\<lambda>b. b = Some dest) rptr s")
    apply (intro conjI)
@@ -2510,7 +2509,7 @@ lemma si_invs':
   apply (case_tac ep, simp_all)
     apply (cases bl, simp_all)[1]
      apply (simp add: invs_def valid_state_def valid_pspace_def)
-     apply (wpsimp wp: valid_irq_node_typ valid_ioports_lift)
+     apply (wpsimp wp: valid_irq_node_typ)
       apply (simp add: live_def valid_ep_def)
       apply (wp valid_irq_node_typ sts_only_idle sts_typ_ats(1)[simplified ep_at_def2, simplified]
                 sts_valid_replies sts_fault_tcbs_valid_states)
@@ -2530,7 +2529,7 @@ lemma si_invs':
     apply (simp add: invs_def valid_state_def valid_pspace_def)
     apply (wpsimp simp: live_def
                     wp: tcb_ep_append_valid_SendEP sts_valid_replies
-                        sts_fault_tcbs_valid_states valid_ioports_lift)
+                        sts_fault_tcbs_valid_states)
      apply (wpsimp simp: valid_ep_def
                      wp: hoare_vcg_const_Ball_lift sts_only_idle valid_irq_node_typ)
     apply (clarsimp simp: valid_tcb_state_def valid_ep_def)
@@ -2553,7 +2552,7 @@ lemma si_invs':
   apply (rename_tac list)
   apply (case_tac list; simp)
   apply (rename_tac dest tail)
-  apply (wpsimp wp: si_invs'_helper[simplified] valid_ioports_lift)
+  apply (wpsimp wp: si_invs'_helper[simplified])
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
   apply (intro conjI)
       apply (fastforce simp: valid_ep_def obj_at_def valid_obj_def
@@ -2613,7 +2612,7 @@ lemma si_invs'_fault:
   apply (rule bind_wp [OF _ get_simple_ko_sp])
   apply (case_tac ep, simp_all)
     apply (simp add: invs_def valid_state_def valid_pspace_def)
-    apply (wpsimp wp: valid_irq_node_typ valid_ioports_lift)
+    apply (wpsimp wp: valid_irq_node_typ)
      apply (simp add: live_def valid_ep_def)
      apply (wp valid_irq_node_typ sts_only_idle sts_typ_ats(1)[simplified ep_at_def2, simplified]
                sts_valid_replies sts_fault_tcbs_valid_states_except_set)
@@ -2631,7 +2630,7 @@ lemma si_invs'_fault:
    apply (simp add: invs_def valid_state_def valid_pspace_def)
    apply (wpsimp simp: live_def
                    wp: tcb_ep_append_valid_SendEP sts_valid_replies
-                       sts_fault_tcbs_valid_states_except_set valid_ioports_lift)
+                       sts_fault_tcbs_valid_states_except_set)
     apply (wpsimp simp: valid_ep_def
                     wp: hoare_vcg_const_Ball_lift sts_only_idle valid_irq_node_typ)
    apply (clarsimp simp: valid_tcb_state_def valid_ep_def)
@@ -2653,7 +2652,7 @@ lemma si_invs'_fault:
   apply (rename_tac list)
   apply (case_tac list; simp)
   apply (rename_tac dest tail)
-  apply (wpsimp wp: si_invs'_helper_fault[simplified] valid_ioports_lift)
+  apply (wpsimp wp: si_invs'_helper_fault[simplified])
   apply (intro conjI)
       apply (fastforce simp: valid_ep_def obj_at_def valid_obj_def
                       split: list.splits
@@ -2869,7 +2868,7 @@ lemma rai_invs':
     apply (case_tac is_blocking; simp)
      apply (wpsimp simp: live_def live_ntfn_def invs_def valid_state_def valid_pspace_def
                      wp: sts_only_idle sts_valid_replies
-                         sts_fault_tcbs_valid_states valid_ioports_lift)
+                         sts_fault_tcbs_valid_states)
      apply (clarsimp simp: valid_tcb_state_def
                            ntfn_at_typ obj_at_def  is_tcb valid_ntfn_def)
      apply (intro conjI)
@@ -2891,8 +2890,7 @@ lemma rai_invs':
     apply (rule hoare_weaken_pre)
      apply (rule_tac P="ntfn_bound_tcb notification = None" in hoare_gen_asm)
      apply (wpsimp wp: maybe_return_sc_schedule_tcb sts_only_idle sts_valid_replies
-                       sts_fault_tcbs_valid_states valid_ioports_lift
-                       valid_irq_node_typ[where f="as_user t f" for t f]
+                       sts_fault_tcbs_valid_states valid_irq_node_typ[where f="as_user t f" for t f]
                  simp: invs_def valid_state_def valid_pspace_def valid_tcb_state_def
                        valid_ntfn_def live_ntfn_def live_def do_nbrecv_failed_transfer_def)+
     apply (rule conjI, clarsimp simp: is_ntfn obj_at_def)
@@ -2917,8 +2915,8 @@ lemma rai_invs':
                     dest!: sym_refs_ko_atD bspec)
    apply (wpsimp simp: do_nbrecv_failed_transfer_def wp: valid_irq_node_typ)
   apply (wpsimp simp: if_cond_refill_unblock_check_def wp: hoare_vcg_all_lift hoare_drop_imp)
-    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def wp: valid_ioports_lift)
-   apply (wpsimp simp: valid_ntfn_def tcb_at_typ wp: hoare_weak_lift_imp valid_irq_node_typ valid_ioports_lift)
+    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def)
+   apply (wpsimp simp: valid_ntfn_def tcb_at_typ wp: hoare_weak_lift_imp valid_irq_node_typ)
   apply (fastforce simp: invs_def valid_state_def valid_pspace_def state_refs_of_def valid_obj_def
                          valid_ntfn_def tcb_at_typ
                   elim!: obj_at_valid_objsE delta_sym_refs

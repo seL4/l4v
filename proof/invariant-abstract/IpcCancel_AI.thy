@@ -55,8 +55,7 @@ lemma sched_context_maybe_unbind_ntfn_valid_objs[wp]:
   "\<lbrace>valid_objs\<rbrace> sched_context_maybe_unbind_ntfn ntfn_ptr \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   apply (simp add: sched_context_maybe_unbind_ntfn_def )
   apply (wpsimp simp: update_sk_obj_ref_def
-                  wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp get_sk_obj_ref_wp
-                      valid_ioports_lift)
+                  wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp get_sk_obj_ref_wp)
   apply (auto simp: obj_at_def valid_obj_def valid_ntfn_def split: ntfn.splits)
   done
 
@@ -357,8 +356,7 @@ crunch reply_unlink_tcb
   and cur_sc_tcb[wp]: "cur_sc_tcb"
   and valid_mdb[wp]: "valid_mdb"
   and valid_ioc[wp]: "valid_ioc"
-  and valid_ioports[wp]: "valid_ioports"
-  (simp: Let_def wp: hoare_drop_imps valid_ioports_lift)
+  (simp: Let_def wp: hoare_drop_imps)
 
 lemma reply_unlink_tcb_sc_at[wp]: "\<lbrace>sc_at sc_ptr\<rbrace> reply_unlink_tcb t rp \<lbrace>\<lambda>_. sc_at sc_ptr\<rbrace>"
   apply (wpsimp simp: reply_unlink_tcb_def update_sk_obj_ref_def set_simple_ko_def
@@ -480,7 +478,7 @@ lemma set_endpoint_invs:
     set_endpoint p ep
    \<lbrace> \<lambda>rv. invs \<rbrace>"
   by (wpsimp simp: invs_def valid_state_def valid_pspace_def live_def
-               wp: valid_irq_node_typ valid_ioports_lift)
+               wp: valid_irq_node_typ)
 
 definition mk_ep ::
   "(obj_ref list \<Rightarrow> endpoint) \<Rightarrow> obj_ref list \<Rightarrow> endpoint"
@@ -554,7 +552,7 @@ lemma blocked_cancel_ipc_invs:
                             \<and> sym_refs (state_hyp_refs_of s)
                             \<and> all_invs_but_sym_refs s"
            in bind_wp_fwd)
-   apply (wpsimp wp: set_simple_ko_at valid_irq_node_typ valid_ioports_lift)
+   apply (wpsimp wp: set_simple_ko_at valid_irq_node_typ)
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def pred_tcb_at_eq_commute)
    apply (rule conjI, clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
    apply (frule (1) if_live_then_nonz_capD; clarsimp simp: live_def)
@@ -584,7 +582,7 @@ lemma blocked_cancel_ipc_invs:
    apply (wpsimp wp: reply_unlink_tcb_st_tcb_at)
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                   wp: reply_unlink_tcb_refs_of reply_unlink_tcb_valid_replies
-                      reply_unlink_tcb_iflive valid_ioports_lift)
+                      reply_unlink_tcb_iflive)
   apply (rule conjI)
    apply (clarsimp simp: sym_refs_def[of "(state_refs_of _)(_ := _)"])
    apply (drule_tac x=t in spec)
@@ -936,7 +934,7 @@ lemma reply_unlink_tcb_invs_BlockedOnReply':
    \<lbrace> \<lambda>rv. invs \<rbrace>"
   apply (rule reply_unlink_tcb_assume_asserts)
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def pred_tcb_at_eq_commute
-                  wp: reply_unlink_tcb_refs_of reply_unlink_tcb_valid_replies valid_ioports_lift)
+                  wp: reply_unlink_tcb_refs_of reply_unlink_tcb_valid_replies)
   apply (rule_tac V="t'=t" in revcut_rl)
    apply (subgoal_tac "(t', ReplyTCB) \<in> state_refs_of s r"
           , fastforce simp: in_state_refs_of_iff refs_of_rev reply_tcb_reply_at_def obj_at_def)
@@ -1001,7 +999,7 @@ lemma reply_unlink_sc_cur_sc_tcb [wp]:
 lemma reply_unlink_sc_invs:
   "\<lbrace>\<lambda>s. invs s\<rbrace> reply_unlink_sc scp rp \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp simp: invs_def valid_state_def valid_pspace_def
-               wp: reply_unlink_sc_valid_replies reply_unlink_sc_sym_refs valid_ioports_lift
+               wp: reply_unlink_sc_valid_replies reply_unlink_sc_sym_refs
                    reply_unlink_sc_valid_idle')
 
 lemma set_thread_state_act_inv:
@@ -1100,7 +1098,7 @@ lemma sched_context_donate_invs:
    sched_context_donate sc_ptr tcb_ptr
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                  wp: sched_context_donate_sym_refs valid_ioports_lift)
+                  wp: sched_context_donate_sym_refs)
   apply (intro conjI)
    apply (clarsimp simp: idle_no_ex_cap)
   apply (thin_tac "tcb_at tcb_ptr s")
@@ -1227,7 +1225,7 @@ lemma reply_sc_update_None_invs:
    set_reply_obj_ref reply_sc_update r None
    \<lbrace>\<lambda>r. invs\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
-  by (wpsimp wp: valid_ioports_lift)
+  by wpsimp
 
 lemma sc_replies_update_valid_replies_cons:
   "\<lbrace>valid_replies
@@ -1346,7 +1344,7 @@ lemma reply_remove_tcb_invs:
   apply (rule bind_wp[OF _ assert_sp, OF hoare_gen_asm_conj], simp)
   apply (rename_tac r_opt)
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                  wp: valid_ioports_lift hoare_vcg_if_lift2 hoare_vcg_imp_lift'
+                  wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift'
                       update_sched_context_valid_replies update_sched_context_refs_of_update
                       update_sched_context_valid_idle update_sched_context_cur_sc_tcb_no_change)
   apply (frule sc_with_reply_SomeD; clarsimp)
@@ -1488,10 +1486,6 @@ lemma sym_refs_bound_yt_tcb_at:
    apply (auto simp: get_refs_def2)
   done
 
-crunch tcb_release_remove
-  for valid_ioports[wp]: valid_ioports
-  (simp: crunch_simps)
-
 lemma as_user_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> as_user r f \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
   apply (simp add: as_user_def split_def)
@@ -1507,13 +1501,12 @@ lemma as_user_valid_ioc[wp]:
 crunch as_user
   for replies_with_sc[wp]: "\<lambda>s. P (replies_with_sc s)"
   and irq_states[wp]: "valid_irq_states"
-  and ioports[wp]: "valid_ioports"
   and pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
   and cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
   and pspace_respects_device_region[wp]: "pspace_respects_device_region"
   and cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
   and cur_sc_tcb[wp]: "cur_sc_tcb"
-  (rule: valid_ioports_lift pspace_in_kernel_window_atyp_lift as_user_wp_thread_set_helper
+  (rule: pspace_in_kernel_window_atyp_lift as_user_wp_thread_set_helper
    simp: crunch_simps tcb_cap_cases_def)
 
 declare as_user_only_idle[wp]
@@ -1840,7 +1833,7 @@ lemma cancel_all_signals_invs_helper:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule mapM_x_inv_wp2, fastforce)
-  apply (wpsimp wp: valid_ioports_lift hoare_vcg_const_Ball_lift valid_irq_node_typ sts_only_idle
+  apply (wpsimp wp: hoare_vcg_const_Ball_lift valid_irq_node_typ sts_only_idle
                     sts_st_tcb_at_cases sts_valid_replies sts_fault_tcbs_valid_states
               cong: conj_cong)
   apply (intro conjI)
@@ -2005,7 +1998,6 @@ crunch restart_thread_if_no_fault
   and cur_sc_tcb[wp]: "cur_sc_tcb"
   and if_live_then_nonz_cap[wp]: if_live_then_nonz_cap
   and valid_replies[wp]: valid_replies
-  and valid_ioports[wp]: valid_ioports
   and ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
   and tcb_at[wp]: "tcb_at p"
   and ep_at[wp]: "ep_at p"
@@ -2054,8 +2046,7 @@ lemma cancel_all_ipc_invs_helper':
   apply (rule_tac S="distinct (t # q')" in hoare_gen_asm_spec, simp)
   apply (rule hoare_conjI)
    apply (rule bind_wp[OF _ gts_sp], rename_tac st)
-   apply (wpsimp wp: valid_ioports_lift
-                     reply_unlink_tcb_st_tcb_at reply_unlink_tcb_valid_replies
+   apply (wpsimp wp: reply_unlink_tcb_st_tcb_at reply_unlink_tcb_valid_replies
                      thread_get_wp'
                simp: pred_tcb_at_eq_commute
           | clarsimp simp: pred_tcb_at_def obj_at_def
@@ -2555,8 +2546,7 @@ lemma cancel_badged_sends_filterM_helper':
   apply (clarsimp simp: filterM_append bind_assoc simp del: set_append distinct_append)
   apply (drule spec, erule bind_wp_fwd)
   apply (rule bind_wp [OF _ gts_sp])
-  apply (wpsimp wp: valid_irq_node_typ sts_only_idle hoare_vcg_const_Ball_lift
-                    valid_ioports_lift sts_valid_replies)
+  apply (wpsimp wp: valid_irq_node_typ sts_only_idle hoare_vcg_const_Ball_lift sts_valid_replies)
   apply (rule conjI[rotated])
    apply blast
   apply (clarsimp simp: replies_blocked_upd_tcb_st_helper)

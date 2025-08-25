@@ -585,7 +585,6 @@ crunch refill_budget_check, if_cond_refill_unblock_check
   and ex_cap[wp]: "ex_nonz_cap_to p"
   and valid_replies[wp]: "\<lambda>s. P (valid_replies s)"
   and valid_idle[wp]: valid_idle
-  and valid_ioports[wp]: valid_ioports
   (simp: Let_def is_round_robin_def wp: crunch_wps hoare_vcg_if_lift2
    ignore: update_sched_context)
 
@@ -934,7 +933,7 @@ lemma sc_refills_update_valid_state [wp]:
 lemma refill_budget_check_valid_state [wp]:
   "\<lbrace>valid_state\<rbrace> refill_budget_check usage \<lbrace>\<lambda>_. valid_state\<rbrace>"
   by (wpsimp simp: valid_state_def valid_pspace_def
-               wp: valid_irq_node_typ valid_ioports_lift refill_budget_check_valid_idle)
+               wp: valid_irq_node_typ refill_budget_check_valid_idle)
 
 lemma commit_time_valid_state [wp]:
   "\<lbrace>valid_state\<rbrace> commit_time \<lbrace>\<lambda>_. valid_state\<rbrace>"
@@ -1162,7 +1161,7 @@ lemma sched_context_bind_ntfn_invs[wp]:
   apply (wpsimp simp: sched_context_bind_ntfn_def invs_def valid_state_def valid_pspace_def
                       update_sk_obj_ref_def
                   wp: get_simple_ko_wp valid_irq_node_typ set_simple_ko_valid_objs
-                      simple_obj_set_prop_at valid_ioports_lift update_sched_context_valid_idle)
+                      simple_obj_set_prop_at update_sched_context_valid_idle)
   apply (clarsimp simp: obj_at_def is_ntfn sc_ntfn_sc_at_def)
   apply (case_tac "sc=ntfn", simp)
   apply safe
@@ -1184,7 +1183,7 @@ lemma sched_context_unbind_ntfn_invs[wp]:
   apply (simp add: sched_context_unbind_ntfn_def maybeM_def get_sc_obj_ref_def)
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def update_sk_obj_ref_def
                   wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp
-                      get_sched_context_wp valid_ioports_lift update_sched_context_valid_idle)
+                      get_sched_context_wp update_sched_context_valid_idle)
   apply (clarsimp simp: obj_at_def is_ntfn sc_ntfn_sc_at_def)
   apply (case_tac "sc=x", simp)
   apply safe
@@ -1349,7 +1348,7 @@ lemma sched_context_bind_tcb_invs[wp]:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (clarsimp simp: sched_context_bind_tcb_def invs_def valid_state_def valid_pspace_def)
   apply (wpsimp wp: valid_irq_node_typ obj_set_prop_at get_sched_context_wp ssc_refs_of_Some
-                    update_sched_context_valid_objs_same valid_ioports_lift
+                    update_sched_context_valid_objs_same
                     update_sched_context_iflive_update update_sched_context_refs_of_update
                     update_sched_context_cur_sc_tcb_None update_sched_context_valid_idle
                     hoare_vcg_all_lift hoare_vcg_conj_lift | wp set_tcb_obj_ref_wp)+
@@ -1409,7 +1408,7 @@ lemma sched_context_unbind_tcb_invs_helper:
   apply (wpsimp simp: sched_context_unbind_tcb_def invs_def valid_state_def
                       valid_pspace_def sc_tcb_sc_at_def obj_at_def is_tcb
             simp_del: fun_upd_apply disj_not1
-                  wp: valid_irq_node_typ obj_set_prop_at get_sched_context_wp valid_ioports_lift
+                  wp: valid_irq_node_typ obj_set_prop_at get_sched_context_wp
                       sc_tcb_update_cur_sc_tcb hoare_vcg_disj_lift update_sched_context_valid_idle)
   apply (rename_tac tptr)
   apply (frule sym_refs_ko_atD[where p=sc_ptr, rotated])
@@ -1458,7 +1457,7 @@ lemma sched_context_unbind_tcb_invs[wp]:
   apply (rule bind_wp[OF _ gets_sp])
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
             simp_del: disj_not1
-                  wp: sched_context_unbind_tcb_invs_helper valid_irq_node_typ valid_ioports_lift
+                  wp: sched_context_unbind_tcb_invs_helper valid_irq_node_typ
                       hoare_vcg_disj_lift)
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cur_sc_tcb_def sc_tcb_sc_at_def
                         obj_at_def)
@@ -1569,8 +1568,7 @@ lemma set_reply_obj_ref_cur_sc_tcb[wp]:
 lemma sched_context_unbind_reply_invs[wp]:
   "\<lbrace>invs\<rbrace> sched_context_unbind_reply sc_ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   supply fun_upd_apply[simp del]
-  apply (wpsimp wp: valid_irq_node_typ hoare_vcg_conj_lift valid_ioports_lift
-                    update_sched_context_valid_idle
+  apply (wpsimp wp: valid_irq_node_typ hoare_vcg_conj_lift update_sched_context_valid_idle
               simp: sched_context_unbind_reply_def invs_def valid_state_def valid_pspace_def)
   apply (intro conjI)
    apply clarsimp
@@ -1601,7 +1599,7 @@ crunch postpone
 
 lemma postpone_invs[wp]:
   "postpone t \<lbrace>invs\<rbrace>"
-  by (wpsimp simp: invs_def valid_state_def valid_pspace_def wp: valid_ioports_lift)
+  by (wpsimp simp: invs_def valid_state_def valid_pspace_def)
 
 lemma get_tcb_queue_wp[wp]: "\<lbrace>\<lambda>s. P (ready_queues s t p) s\<rbrace> get_tcb_queue t p \<lbrace>P\<rbrace>"
   by (wpsimp simp: get_tcb_queue_def)

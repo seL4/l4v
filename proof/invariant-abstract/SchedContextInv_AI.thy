@@ -468,7 +468,7 @@ lemma sched_context_yield_to_invs:
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def get_sc_obj_ref_def
            split_del: if_split
                   wp: valid_irq_node_typ hoare_vcg_if_lift2 thread_get_inv hoare_drop_imp
-                      valid_ioports_lift update_sched_context_valid_idle hoare_vcg_all_lift)
+                      update_sched_context_valid_idle hoare_vcg_all_lift)
   apply (intro conjI; clarsimp simp: cur_tcb_def)
     apply (clarsimp simp: sc_at_pred_n_def obj_at_def is_sc_obj_def)
     apply (fastforce dest!: valid_objs_valid_sched_context_size)

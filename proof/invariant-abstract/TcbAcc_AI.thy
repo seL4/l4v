@@ -615,7 +615,7 @@ lemma thread_set_invs_fault_None[wp]:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_weaken_pre)
-   by (wp thread_set_fault_valid_objs thread_set_ioports
+   by (wp thread_set_fault_valid_objs thread_set_valid_arch_state
           thread_set_refs_trivial thread_set_hyp_refs_trivial
           thread_set_iflive_trivial thread_set_mdb
           thread_set_ifunsafe_trivial thread_set_zombies_trivial
@@ -638,7 +638,7 @@ lemma thread_set_invs_but_fault_tcbs:
      \<lbrace>\<lambda>rv. all_invs_but_fault_tcbs and fault_tcbs_valid_states_except_set {t}\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_weaken_pre)
-   by (wp thread_set_fault_valid_objs thread_set_ioports
+   by (wp thread_set_fault_valid_objs thread_set_valid_arch_state
           thread_set_refs_trivial thread_set_hyp_refs_trivial
           thread_set_iflive_trivial thread_set_mdb
           thread_set_ifunsafe_trivial thread_set_zombies_trivial
@@ -1860,12 +1860,6 @@ lemma set_bound_notification_valid_ioc[wp]:
                         if_split_asm)
   done
 
-lemma set_tcb_obj_ref_valid_ioports[wp]:
-  "\<lbrace>valid_ioports\<rbrace> set_tcb_obj_ref tcb_yield_to_update t ntfn \<lbrace>\<lambda>_. valid_ioports\<rbrace>"
-  "\<lbrace>valid_ioports\<rbrace> set_tcb_obj_ref tcb_bound_notification_update t ntfn \<lbrace>\<lambda>_. valid_ioports\<rbrace>"
-  "\<lbrace>valid_ioports\<rbrace> set_tcb_obj_ref tcb_sched_context_update t ntfn \<lbrace>\<lambda>_. valid_ioports\<rbrace>"
-  by (wpsimp wp: valid_ioports_lift)+
-
 lemma set_tcb_sched_context_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> set_tcb_obj_ref tcb_sched_context_update t ntfn \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
   apply (simp add: set_tcb_obj_ref_def)
@@ -2373,6 +2367,10 @@ lemma set_mrs_invs[wp]:
            simp: set_mrs_redux zipWithM_x_mapM store_word_offs_def ran_tcb_cap_cases
       split_del: if_split)
 
+crunch thread_set_domain, thread_set_priority
+  for valid_arch_state[wp]: "valid_arch_state :: 'state_ext state \<Rightarrow> _"
+  (simp: tcb_cap_cases_def)
+
 end
 
 
@@ -2426,7 +2424,6 @@ crunch thread_set_domain, thread_set_priority
   and cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
   and cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
   and only_idle[wp]: only_idle
-  and valid_arch_state[wp]: valid_arch_state
   and valid_global_objs[wp]: valid_global_objs
   and valid_kernel_mappings[wp]: valid_kernel_mappings
   and equal_kernel_mappings[wp]: equal_kernel_mappings
@@ -2524,11 +2521,6 @@ lemma thread_set_domain_valid_arch_caps[wp]:
   unfolding thread_set_domain_def
   by (wpsimp wp: thread_set_arch_caps_trivial simp: tcb_cap_cases_def) auto
 
-lemma thread_set_domain_valid_ioports[wp]:
-  "thread_set_domain t d \<lbrace>valid_ioports\<rbrace>"
-  unfolding thread_set_domain_def
-  by (wpsimp wp: valid_ioports_lift thread_set_caps_of_state_trivial2 simp: tcb_cap_cases_def)
-
 global_interpretation thread_set_domain: tcb_op "thread_set_domain t d"
   by (simp add: thread_set_domain_def thread_set.tcb_op_axioms)
 
@@ -2540,8 +2532,8 @@ lemma thread_set_domain_fault_tcbs_valid_states[wp]:
   "thread_set_domain t d \<lbrace> fault_tcbs_valid_states \<rbrace>"
   by (simp add: thread_set_domain_def thread_set_fault_tcbs_valid_states_trivial)
 
-lemma thread_set_domain_invs[wp]:
-  "thread_set_domain t d \<lbrace>invs\<rbrace>"
+lemma (in TcbAcc_AI) thread_set_domain_invs[wp]:
+  "thread_set_domain t d \<lbrace>invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
   by (wpsimp wp: valid_mdb_lift hoare_vcg_all_lift hoare_vcg_imp_lift
            simp: valid_ioc_def valid_global_refs_def valid_refs_def cte_wp_at_caps_of_state)
@@ -2630,11 +2622,6 @@ lemma thread_set_priority_valid_arch_caps[wp]:
   unfolding thread_set_priority_def
   by (wpsimp wp: thread_set_arch_caps_trivial simp: tcb_cap_cases_def) auto
 
-lemma thread_set_priority_valid_ioports[wp]:
-  "thread_set_priority t d \<lbrace>valid_ioports\<rbrace>"
-  unfolding thread_set_priority_def
-  by (wpsimp wp: valid_ioports_lift thread_set_caps_of_state_trivial2 simp: tcb_cap_cases_def)
-
 global_interpretation thread_set_priority: tcb_op "thread_set_priority t p"
   by (simp add: thread_set_priority_def thread_set.tcb_op_axioms)
 
@@ -2646,8 +2633,8 @@ lemma thread_set_priority_fault_tcbs_valid_states[wp]:
   "thread_set_priority t d \<lbrace> fault_tcbs_valid_states \<rbrace>"
   by (simp add: thread_set_priority_def thread_set_fault_tcbs_valid_states_trivial)
 
-lemma thread_set_priority_invs[wp]:
-  "thread_set_priority t d \<lbrace>invs\<rbrace>"
+lemma (in TcbAcc_AI) thread_set_priority_invs[wp]:
+  "thread_set_priority t d \<lbrace>invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
   by (wpsimp wp: valid_mdb_lift hoare_vcg_all_lift hoare_vcg_imp_lift
            simp: valid_ioc_def valid_global_refs_def valid_refs_def cte_wp_at_caps_of_state)

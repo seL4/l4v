@@ -1940,8 +1940,7 @@ lemma bind_sc_reply_invs[wp]:
   apply (case_tac sc_replies'; simp)
    apply (wpsimp wp: sched_context_donate_invs)
      apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                     wp: valid_irq_node_typ set_reply_sc_valid_replies_already_BlockedOnReply
-                         valid_ioports_lift)
+                     wp: valid_irq_node_typ set_reply_sc_valid_replies_already_BlockedOnReply)
     apply (wpsimp wp: set_sc_replies_valid_replies update_sched_context_valid_idle)
    apply clarsimp
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
@@ -1967,10 +1966,10 @@ lemma bind_sc_reply_invs[wp]:
   apply wpsimp
      apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                      wp: valid_irq_node_typ set_reply_sc_valid_replies_already_BlockedOnReply
-                         valid_ioports_lift valid_sc_typ_list_all_reply)
+                         valid_sc_typ_list_all_reply)
     apply (wpsimp wp: set_sc_replies_valid_replies update_sched_context_valid_idle)
    apply (wpsimp simp: get_simple_ko_def get_object_def
-                   wp: valid_sc_typ_list_all_reply valid_ioports_lift)
+                   wp: valid_sc_typ_list_all_reply)
   apply (subgoal_tac "list_all (\<lambda>r. reply_at r s) (a # list) \<and> reply_ptr \<notin> set (a # list) \<and> distinct (a # list)")
    apply (clarsimp simp: invs_def valid_pspace_def valid_state_def)
    apply (intro conjI)
@@ -5457,7 +5456,7 @@ lemma receiveIPC_corres:
                         apply (clarsimp simp: valid_sched_active_scs_valid)
                         apply (rename_tac opt; case_tac opt; clarsimp simp: obj_at_def is_tcb pred_tcb_at_def)
                        apply (wpsimp wp: do_ipc_transfer_tcb_caps hoare_vcg_ball_lift
-                                         valid_bound_obj_lift)
+                                         valid_bound_obj_lift do_ipc_transfer_valid_arch)
                       apply (rule_tac Q'="\<lambda>ya. (\<lambda>s. tcb_at' sender s \<and>
                                                          tcb_at' thread s \<and>
                                                          sym_heap_sched_pointers s \<and>
