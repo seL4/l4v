@@ -45,7 +45,6 @@ We use the C preprocessor to select a target architecture.
 The architecture-specific definitions are imported qualified with the "Arch" prefix.
 
 > import qualified SEL4.Object.ObjectType.TARGET as Arch
-> import qualified SEL4.Object.TCB.TARGET as Arch(prepareSetDomain)
 
 \subsection{Creating Capabilities}
 

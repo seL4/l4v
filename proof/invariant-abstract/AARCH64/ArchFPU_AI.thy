@@ -147,12 +147,14 @@ lemma thread_set_no_change_etcb_at:
 crunch send_signal, set_extra_badge, handle_reserved_irq
   for etcb_at[wp]: "etcb_at P t"
   and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
+  and arm_current_fpu_owner[wp]: "\<lambda>s. P (arm_current_fpu_owner (arch_state s))"
   (wp: crunch_wps transfer_caps_loop_pres thread_set_no_change_etcb_at dxo_wp_weak
    simp: crunch_simps etcb_of_def)
 
 crunch handle_interrupt
   for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   and etcb_at_domain[wp]: "etcb_at (\<lambda>t. P (etcb_domain t)) t"
+  and arm_current_fpu_owner[wp]: "\<lambda>s. P (arm_current_fpu_owner (arch_state s))"
   and cur_fpu_in_cur_domain[wp]: cur_fpu_in_cur_domain
   (wp: thread_set_no_change_etcb_at cur_fpu_in_cur_domain_lift_strong)
 
@@ -278,15 +280,17 @@ lemma fpu_release_arm_current_fpu_owner_n[wp]:
   unfolding fpu_release_def
   by (wpsimp wp: switch_local_fpu_owner_arm_current_fpu_owner_None[THEN hoare_strengthen_post])
 
-crunch fpu_release
-  for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
-
 lemma arch_prepare_set_domain_make_fpu_safe[wp]:
   "\<lbrace>\<top>\<rbrace>
    arch_prepare_set_domain tptr new_dom
    \<lbrace>\<lambda>_ s. arm_current_fpu_owner (arch_state s) \<noteq> Some tptr \<or> cur_domain s = new_dom\<rbrace>"
-  unfolding arch_prepare_set_domain_def
+  unfolding arch_prepare_set_domain_def vcpu_flush_if_current_def
   by (wpsimp wp: hoare_vcg_disj_lift)
+
+crunch vcpu_flush
+  for arm_current_fpu_owner[wp]: "\<lambda>s. P (arm_current_fpu_owner (arch_state s))"
+  and cur_fpu_in_cur_domain[wp]: cur_fpu_in_cur_domain
+  (wp: cur_fpu_in_cur_domain_lift)
 
 crunch arch_prepare_set_domain
   for cur_fpu_in_cur_domain[wp]: cur_fpu_in_cur_domain

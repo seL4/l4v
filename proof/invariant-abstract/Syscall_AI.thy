@@ -26,7 +26,6 @@ arch_requalify_consts
 arch_requalify_facts
   resetTimer_device_state_inv
   arch_decode_invocation_inv
-  arch_post_cap_deletion_cur_thread
   arch_post_cap_deletion_state_refs_of
   arch_invoke_irq_handler_typ_at
   invoke_tcb_typ_at

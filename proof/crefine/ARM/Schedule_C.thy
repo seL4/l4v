@@ -321,7 +321,7 @@ lemma ksDomSched_length_dom_relation[simp]:
 
 lemma nextDomain_ccorres:
   "ccorres dc xfdc invs' UNIV [] nextDomain (Call nextDomain_'proc)"
-  apply (cinit)
+  apply cinit
    apply (simp add: ksDomScheduleLength_def sdiv_word_def sdiv_int_def)
    apply (rule_tac P=invs' and P'=UNIV in ccorres_from_vcg)
    apply (rule allI, rule conseqPre, vcg)
@@ -357,18 +357,27 @@ lemma nextDomain_ccorres:
   apply simp
   done
 
+lemma Arch_prepareNextDomain_ccorres:
+  "ccorres dc xfdc invs' UNIV [] (return ()) (Call Arch_prepareNextDomain_'proc)"
+  apply cinit'
+   apply (rule_tac R=\<top> and R'=UNIV in ccorres_return)
+   apply vcg
+   apply clarsimp
+  apply clarsimp
+  done
+
 lemma prepareNextDomain_ccorres:
   "ccorres dc xfdc invs' UNIV [] prepareNextDomain (Call prepareNextDomain_'proc)"
   apply cinit
-  apply (rule ccorres_return_Skip)
+   apply (ctac add: Arch_prepareNextDomain_ccorres)
   by clarsimp
 
 lemma scheduleChooseNewThread_ccorres:
   "ccorres dc xfdc
      (\<lambda>s. invs' s \<and> ksSchedulerAction s = ChooseNewThread) UNIV hs
      (do domainTime \<leftarrow> getDomainTime;
-         y \<leftarrow> when (domainTime = 0) (do
-             y <- prepareNextDomain;
+         _ \<leftarrow> when (domainTime = 0) (do
+             _ <- prepareNextDomain;
              nextDomain
          od);
          chooseThread

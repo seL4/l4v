@@ -539,7 +539,7 @@ next
       by (case_tac "capa = aa"; clarsimp split:if_splits simp:masked_as_full_def is_cap_simps)
     apply (case_tac "isEndpointCap (fst y) \<and> capEPPtr (fst y) = the ep \<and> (\<exists>y. ep = Some y)")
      apply (clarsimp simp:conj_comms split del:if_split)
-    apply (subst if_not_P)
+    apply (rule conjI)
      apply clarsimp
     apply (clarsimp simp:valid_pspace'_def cte_wp_at_ctes_of split del:if_split)
     apply (intro conjI)
@@ -1810,8 +1810,8 @@ lemma doIPCTransfer_corres:
        apply (simp add: dc_def[symmetric])
        apply (rule doFaultTransfer_corres)
       apply (clarsimp simp: obj_at_def)
-     apply (erule ignore_if)
-    apply (wp|simp add: obj_at_def is_tcb valid_pspace'_def)+
+     apply (rule conjI, clarsimp, assumption)
+     apply (wp|simp add: obj_at_def is_tcb valid_pspace'_def)+
   done
 
 
@@ -3290,6 +3290,7 @@ lemma receiveIPC_corres:
               apply (clarsimp simp: ntfn_relation_def Ipc_A.isActive_def Endpoint_H.isActive_def
                              split: Structures_A.ntfn.splits Structures_H.notification.splits)
              apply clarsimp
+             apply wpfix
              apply (rule completeSignal_corres)
             apply (rule_tac P="einvs and valid_sched and tcb_at thread and
                                       ep_at word1 and valid_ep ep and

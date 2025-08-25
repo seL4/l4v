@@ -216,3 +216,6 @@ capUntypedSize (ASIDPoolCap {}) = bit asidPoolBits
 
 prepareThreadDelete :: PPtr TCB -> Kernel ()
 prepareThreadDelete _ = return ()
+
+prepareSetDomain :: PPtr TCB -> Domain -> Kernel ()
+prepareSetDomain t newDom = return ()
