@@ -1792,7 +1792,7 @@ lemma set_ep_minor_invs:
          and (\<lambda>s. live (Endpoint val) \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
    set_endpoint ptr val
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (wpsimp wp: valid_irq_node_typ valid_ioports_lift
+  apply (wpsimp wp: valid_irq_node_typ
               simp: invs_def valid_state_def valid_pspace_def)
   apply (clarsimp simp: state_refs_of_def obj_at_def ext elim!: rsubst[where P = sym_refs])
   done

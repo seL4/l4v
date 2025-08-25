@@ -734,7 +734,7 @@ lemma sched_context_maybe_unbind_ntfn_invs[wp]:
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def update_sk_obj_ref_def
                       sched_context_maybe_unbind_ntfn_def maybeM_def get_sk_obj_ref_def
                   wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp
-                      get_sched_context_wp valid_ioports_lift update_sched_context_valid_idle)
+                      get_sched_context_wp update_sched_context_valid_idle)
   apply (clarsimp simp: obj_at_def)
   apply (rule valid_objsE, assumption+, clarsimp simp: valid_obj_def)
   apply (clarsimp simp: valid_ntfn_def obj_at_def dest!: is_sc_objD)
@@ -1935,8 +1935,7 @@ lemma sched_context_unbind_ntfn_valid_objs[wp]:
   "\<lbrace>valid_objs\<rbrace> sched_context_unbind_ntfn sc \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   apply (simp add: sched_context_unbind_ntfn_def get_sc_obj_ref_def)
   apply (wpsimp simp: update_sk_obj_ref_def
-                  wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp get_sched_context_wp
-                      valid_ioports_lift)
+                  wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp get_sched_context_wp)
   apply (clarsimp simp: obj_at_def is_ntfn sc_ntfn_sc_at_def)
   apply (frule valid_objs_valid_sched_context_size, fastforce)
   apply (erule_tac x=x in valid_objsE, simp)
@@ -1949,8 +1948,7 @@ lemma sched_context_unbind_ntfn_sym_refs[wp]:
   "\<lbrace>\<lambda>s. valid_objs s \<and> sym_refs (state_refs_of s)\<rbrace> sched_context_unbind_ntfn sc \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s) \<rbrace>"
   apply (simp add: sched_context_unbind_ntfn_def get_sc_obj_ref_def)
   apply (wpsimp simp: update_sk_obj_ref_def
-                  wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp get_sched_context_wp
-                      valid_ioports_lift)
+                  wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp get_sched_context_wp)
   apply (clarsimp simp: obj_at_def is_ntfn sc_ntfn_sc_at_def)
   apply (frule sym_refs_ko_atD[where p=sc, rotated], fastforce simp: obj_at_def)
   apply (frule sym_refs_ko_atD[where ko="Notification x" for x, rotated], fastforce simp: obj_at_def)

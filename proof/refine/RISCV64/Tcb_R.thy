@@ -1941,10 +1941,9 @@ lemma schedContextBindTCB_corres:
         apply (drule_tac tp=ta in sym_ref_tcb_sc)
           apply (fastforce+)[3]
        apply ((wpsimp wp: valid_irq_node_typ obj_set_prop_at get_sched_context_wp ssc_refs_of_Some
-                          update_sched_context_valid_objs_same valid_ioports_lift
-                          update_sched_context_iflive_update update_sched_context_refs_of_update
-                          update_sched_context_cur_sc_tcb_None update_sched_context_valid_idle
-                          valid_dom_schedule'_lift
+                          update_sched_context_valid_objs_same update_sched_context_iflive_update
+                          update_sched_context_refs_of_update update_sched_context_cur_sc_tcb_None
+                          update_sched_context_valid_idle valid_dom_schedule'_lift
                     simp: invs'_def valid_pspace_def updateSchedContext_def
                | rule hoare_vcg_conj_lift update_sched_context_wp)+)[2]
      apply (clarsimp simp: pred_conj_def)

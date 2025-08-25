@@ -2682,7 +2682,7 @@ lemma reset_untyped_cap_invs_etc:
     reset_untyped_cap slot
   \<lbrace>\<lambda>_. invs and valid_untyped_inv_wcap ui (Some (UntypedCap dev ptr sz 0))
       and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)
-      and pspace_no_overlap {ptr .. ptr + 2 ^ sz - 1}\<rbrace>, \<lbrace>\<lambda>_. invs\<rbrace>"
+      and pspace_no_overlap {ptr .. ptr + 2 ^ sz - 1}\<rbrace>, \<lbrace>\<lambda>_. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   (is "\<lbrace>invs and valid_untyped_inv_wcap ?ui (Some ?cap) and ct_active and
         (\<lambda>s. scheduler_action s = resume_cur_thread) and _\<rbrace>
     ?f \<lbrace>\<lambda>_. invs and ?vu2 and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and ?psp\<rbrace>,

@@ -446,7 +446,7 @@ end
 
 (* FIXME: can some of these assumptions be proved with lifting lemmas? *)
 locale Ipc_AI_2 = Ipc_AI state_ext_t
-  for state_ext_t :: "'state_ext::state_ext itself"
+  for state_ext_t :: "'state_ext::state_ext itself" +
   assumes is_derived_cap_rights [simp]:
     "\<And>m p R c. is_derived m p (cap_rights_update R c) = is_derived m p c"
   assumes data_to_message_info_valid:
@@ -590,11 +590,6 @@ locale Ipc_AI_2 = Ipc_AI state_ext_t
         \<lbrace>valid_objs and cte_wp_at P (t, ref) and tcb_at t :: 'state_ext state \<Rightarrow> bool\<rbrace>
           do_ipc_transfer st ep b gr rt
         \<lbrace>\<lambda>rv. cte_wp_at P (t, ref)\<rbrace>"
-  assumes setup_caller_cap_valid_arch[wp]:
-    "\<And>send recv grant.
-      \<lbrace>valid_arch_state :: 'state_ext state \<Rightarrow> bool\<rbrace>
-        setup_caller_cap send recv grant
-      \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
   assumes handle_arch_fault_reply_typ_at[wp]:
     "\<And> P T p x4 t label msg.
       \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>
@@ -2286,7 +2281,7 @@ crunch maybe_donate_sc
 lemma maybe_donate_sc_invs[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> ex_nonz_cap_to tcb_ptr s\<rbrace> maybe_donate_sc tcb_ptr ntfn_ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                  wp: maybe_donate_sc_sym_refs valid_ioports_lift)
+                  wp: maybe_donate_sc_sym_refs)
   apply safe
    apply (clarsimp simp: sym_refs_def)
    apply (erule_tac x = ntfn_ptr in allE)
@@ -2360,7 +2355,7 @@ lemma update_waiting_invs:
   apply wpsimp
     apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                     wp: sts_valid_replies sts_only_idle sts_fault_tcbs_valid_states)
-   apply (wpsimp wp: valid_ioports_lift)
+   apply wpsimp
   apply (simp add: invs_def valid_state_def valid_pspace_def obj_at_def)
   apply (clarsimp simp: not_idle_tcb_in_waitingntfn ex_nonz_cap_to_tcb_in_waitingntfn cong: conj_cong)
   apply (cases q; simp)
@@ -2501,7 +2496,7 @@ lemma sai_invs[wp]:
                              pred_tcb_weakenE)
      apply (clarsimp simp: pred_tcb_at_def obj_at_def)
      apply (fastforce simp: live_def receive_blocked_def intro!: if_live_then_nonz_capD2)
-    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def wp: valid_ioports_lift)
+    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def)
     apply (rule valid_objsE[where x=ntfnptr], assumption, fastforce simp: obj_at_def)
     apply (clarsimp simp: valid_obj_def valid_ntfn_def)
     apply (fastforce simp: valid_obj_def valid_ntfn_def state_refs_of_def obj_at_def
@@ -2515,7 +2510,7 @@ lemma sai_invs[wp]:
    apply (clarsimp simp: live_def live_sc_def
                   dest!: sym_refs_ko_atD[unfolded obj_at_def, simplified])
    apply fastforce
-  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def wp: valid_ioports_lift)
+  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def)
   apply (fastforce simp: valid_obj_def valid_ntfn_def state_refs_of_def obj_at_def
                   elim!: delta_sym_refs
                   split: if_splits)

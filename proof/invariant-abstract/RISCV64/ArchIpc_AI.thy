@@ -478,16 +478,6 @@ crunch make_arch_fault_msg
   for cap_refs_respects_device_region[wp, Ipc_AI_2_assms]: "cap_refs_respects_device_region"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
 
-lemma setup_caller_cap_aobj_at:
-  "arch_obj_pred P' \<Longrightarrow>
-  \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> setup_caller_cap st rt grant \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
-  unfolding setup_caller_cap_def
-  by (wpsimp wp: cap_insert_aobj_at sts.aobj_at)
-
-lemma setup_caller_cap_valid_arch[Ipc_AI_2_assms, wp]:
-  "setup_caller_cap st rt grant \<lbrace>valid_arch_state\<rbrace>"
-  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps[rotated -1] setup_caller_cap_aobj_at)
-
 lemma transfer_caps_loop_valid_arch[Ipc_AI_2_assms]:
   "\<And>slots caps ep buffer n mi.
     \<lbrace>valid_arch_state and valid_objs and valid_mdb and K (distinct slots)

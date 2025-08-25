@@ -16,13 +16,11 @@ arch_requalify_facts
   kernelWCET_ticks_non_zero
   getCurrentTime_def
   install_tcb_cap_sc_tcb_sc_at
-  set_simple_ko_ioports
 
 lemmas [wp] =
   do_ipc_transfer_cur_thread
   handle_arch_fault_reply_typ_at
   machine_ops_last_machine_time
-  set_simple_ko_ioports
 
 (* FIXME RT: move and rename *)
 lemma hoare_drop_assertion:
@@ -16226,7 +16224,7 @@ lemma receive_ipc_valid_sched:
                                 \<and> heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s)
                                 \<and> current_time_bounded s)"
            in bind_wp_fwd)
-   apply (wpsimp wp: hoare_vcg_ball_lift set_simple_ko_at valid_ioports_lift set_endpoint_valid_sched)
+   apply (wpsimp wp: hoare_vcg_ball_lift set_simple_ko_at set_endpoint_valid_sched)
    apply (frule invs_sym_refs, frule sym_refs_inj_tcb_scps)
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
    apply (apply_conjunct \<open>erule delta_sym_refs; fastforce simp: ko_at_state_refs_ofD
@@ -16255,7 +16253,7 @@ lemma receive_ipc_valid_sched:
                                 \<and> heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s)
                                 \<and> current_time_bounded s)"
            in bind_wp_fwd)
-   apply (wpsimp simp: st_tcb_at_tcb_at)
+   apply (wpsimp simp: st_tcb_at_tcb_at wp: do_ipc_transfer_valid_arch)
    apply (rule_tac V="ep_ptr' = ep_ptr" in revcut_rl
           , (drule_tac x=ep_ptr and y=sender and tp=TCBBlockedSend in sym_refsE
              ; fastforce simp: in_state_refs_of_iff refs_of_rev pred_tcb_at_def obj_at_def)
