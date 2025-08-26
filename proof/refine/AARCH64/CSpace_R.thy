@@ -10,7 +10,7 @@
 *)
 
 theory CSpace_R
-imports CSpace1_R
+imports ArchCSpace1_R
 begin
 
 lemma setCTE_pred_tcb_at':

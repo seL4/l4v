@@ -5,13 +5,10 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(*
-  CSpace refinement
-*)
+(* CSpace refinement - architecture-specific *)
 
-theory CSpace1_R
-imports
-  ArchCSpace_I
+theory ArchCSpace1_R
+imports CSpace1_R
 begin
 
 context Arch begin arch_global_naming

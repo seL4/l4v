@@ -1,17 +1,13 @@
 (*
- * Copyright 2014, General Dynamics C4 Systems
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(*
-  CSpace refinement
-*)
+(* CSpace refinement - architecture-specific *)
 
-theory CSpace1_R
-imports
-  ArchCSpace_I
-  "AInvs.ArchDetSchedSchedule_AI"
+theory ArchCSpace1_R
+imports CSpace1_R
 begin
 
 context Arch begin arch_global_naming
@@ -28,7 +24,7 @@ arch_requalify_consts
 defs archMDBAssertions_def:
   "archMDBAssertions s \<equiv> arch_mdb_assert (ctes_of s)"
 
-context Arch begin global_naming ARM_HYP_A (*FIXME: arch-split*)
+context Arch begin global_naming RISCV64_A (*FIXME: arch-split*)
 
 lemmas final_matters_def = final_matters_def[simplified final_matters_arch_def]
 
@@ -41,29 +37,19 @@ end
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
-lemma isArchMDBParentOf_def2:
-  "isArchMDBParentOf cap cap' firstBadged =
-   (isArchSGISignalCap cap \<longrightarrow> isArchSGISignalCap cap' \<longrightarrow> \<not>firstBadged)"
-  by (auto simp: isArchMDBParentOf_def isCap_simps split: capability.splits arch_capability.splits)
-
-lemma sameRegionAs_SGISignalCap[simp]:
-  "sameRegionAs (ArchObjectCap (SGISignalCap irq target)) cap' =
-   (cap' = ArchObjectCap (SGISignalCap irq target))"
-  by (auto simp add: sameRegionAs_def ARM_HYP_H.sameRegionAs_def isCap_simps split: if_splits)
+(* unused on this architecture *)
+declare isArchMDBParentOf_def[simp]
 
 lemma isMDBParentOf_CTE1:
   "isMDBParentOf (CTE cap node) cte =
    (\<exists>cap' node'. cte = CTE cap' node' \<and> sameRegionAs cap cap'
       \<and> mdbRevocable node
-      \<and> (isArchSGISignalCap cap \<longrightarrow> \<not> mdbFirstBadged node')
       \<and> (isEndpointCap cap \<longrightarrow> capEPBadge cap \<noteq> 0 \<longrightarrow>
            capEPBadge cap = capEPBadge cap' \<and> \<not> mdbFirstBadged node')
       \<and> (isNotificationCap cap \<longrightarrow> capNtfnBadge cap \<noteq> 0 \<longrightarrow>
            capNtfnBadge cap = capNtfnBadge cap' \<and> \<not> mdbFirstBadged node'))"
-  apply (simp add: isMDBParentOf_def isArchMDBParentOf_def2 Let_def
-              split: cte.splits split del: if_split
-              cong: if_cong)
-  apply (clarsimp simp: Let_def isCap_simps)
+  apply (simp add: isMDBParentOf_def Let_def split: cte.splits split del: if_split)
+  apply (clarsimp simp: Let_def)
   apply (fastforce simp: isCap_simps)
   done
 
@@ -71,7 +57,6 @@ lemma isMDBParentOf_CTE:
   "isMDBParentOf (CTE cap node) cte =
    (\<exists>cap' node'. cte = CTE cap' node' \<and> sameRegionAs cap cap'
       \<and> mdbRevocable node
-      \<and> (isArchSGISignalCap cap \<longrightarrow> \<not> mdbFirstBadged node')
       \<and> (capBadge cap, capBadge cap') \<in> capBadge_ordering (mdbFirstBadged node'))"
   apply (simp add: isMDBParentOf_CTE1)
   apply (intro arg_cong[where f=Ex] ext conj_cong refl)
@@ -84,7 +69,6 @@ lemma isMDBParentOf_trans:
   apply (cases a)
   apply (clarsimp simp: isMDBParentOf_CTE)
   apply (frule(1) sameRegionAs_trans, simp)
-  apply (rule conjI, clarsimp simp: isCap_simps)
   apply (erule(1) capBadge_ordering_trans)
   done
 
@@ -149,8 +133,8 @@ lemma same_arch_region_as_relation:
   arch_same_region_as c c' =
   sameRegionAs (ArchObjectCap d) (ArchObjectCap d')"
   by (cases c; cases c')
-     (auto simp: ARM_HYP_H.sameRegionAs_def sameRegionAs_def Let_def isCap_simps mask_def
-                  add_diff_eq up_ucast_inj_eq)
+     (auto simp: RISCV64_H.sameRegionAs_def sameRegionAs_def Let_def isCap_simps mask_def
+                 add_diff_eq)
 
 lemma is_phyiscal_relation:
   "cap_relation c c' \<Longrightarrow> is_physical c = isPhysicalCap c'"
@@ -169,23 +153,12 @@ lemma obj_size_relation:
                                 cte_level_bits_def
                          split: option.splits sum.splits)
   apply (rename_tac arch_cap)
-  apply (case_tac arch_cap,
-    simp_all add: objBits_def ARM_HYP_H.capUntypedSize_def asid_low_bits_def
-                  pageBits_def)
+  apply (case_tac arch_cap; simp add: objBits_def RISCV64_H.capUntypedSize_def bit_simps')
   done
 
-lemma isIRQControlCapDescendant_ex:
-  "isIRQControlCapDescendant cap = (\<exists>irq target. cap = SGISignalCap irq target)"
-  by (simp add: isIRQControlCapDescendant_def split: capability.splits arch_capability.splits)
-
-lemma acap_relation_SGISignalCap:
-  "acap_relation acap (SGISignalCap irq target) =
-   (\<exists>irq' target'. acap = arch_cap.SGISignalCap irq' target' \<and>
-                    irq = ucast irq' \<and> target = ucast target')"
-  by (cases acap) auto
-
 lemma same_region_as_relation:
-  "\<lbrakk> cap_relation c d; cap_relation c' d' \<rbrakk> \<Longrightarrow> same_region_as c c' = sameRegionAs d d'"
+    "\<lbrakk> cap_relation c d; cap_relation c' d' \<rbrakk> \<Longrightarrow>
+  same_region_as c c' = sameRegionAs d d'"
   apply (cases c)
              apply clarsimp
             apply (clarsimp simp: sameRegionAs_def isCap_simps Let_def is_phyiscal_relation)
@@ -196,9 +169,7 @@ lemma same_region_as_relation:
         apply (cases c', auto simp: sameRegionAs_def isCap_simps Let_def bits_of_def)[1]
        apply (cases c', auto simp: sameRegionAs_def isCap_simps Let_def)[1]
       apply (cases c', auto simp: sameRegionAs_def isCap_simps Let_def)[1]
-     apply (cases c', auto simp: sameRegionAs_def isCap_simps Let_def is_irq_control_descendant_def
-                                 arch_cap.is_SGISignalCap_def isIRQControlCapDescendant_ex
-                                 acap_relation_SGISignalCap split: arch_capability.splits)[1]
+     apply (cases c', auto simp: sameRegionAs_def isCap_simps Let_def)[1]
     apply (cases c', auto simp: sameRegionAs_def isCap_simps Let_def)[1]
    apply (cases c', auto simp: sameRegionAs_def isCap_simps Let_def)[1]
   apply simp
@@ -207,17 +178,12 @@ lemma same_region_as_relation:
                     clarsimp simp: sameRegionAs_def isCap_simps Let_def)+
   done
 
-lemma acap_relation_SGISignalCapD:
-  "acap_relation acap (SGISignalCap irq target) \<Longrightarrow>
-   acap = arch_cap.SGISignalCap (ucast irq) (ucast target)"
-  by (cases acap) (auto simp: ucast_down_ucast_id is_down)
-
 lemma can_be_is:
   "\<lbrakk> cap_relation c (cteCap cte); cap_relation c' (cteCap cte');
      mdbRevocable (cteMDBNode cte) = r;
      mdbFirstBadged (cteMDBNode cte') = r' \<rbrakk> \<Longrightarrow>
   should_be_parent_of c r c' r' = isMDBParentOf cte cte'"
-  unfolding should_be_parent_of_def should_be_arch_parent_of_def isMDBParentOf_def
+  unfolding should_be_parent_of_def isMDBParentOf_def
   apply (cases cte)
   apply (rename_tac cap mdbnode)
   apply (cases cte')
@@ -231,10 +197,10 @@ lemma can_be_is:
    prefer 2
    apply (simp add: same_region_as_relation)
   apply (simp add: same_region_as_relation split del: if_split)
-  apply (cases c, simp_all add: isCap_simps arch_cap.is_SGISignalCap_def isArchMDBParentOf_def2)
+  apply (cases c, simp_all add: isCap_simps)
     apply (cases c', auto simp: sameRegionAs_def Let_def isCap_simps)[1]
    apply (cases c', auto simp: sameRegionAs_def isCap_simps is_cap_simps)[1]
-  apply (auto simp: Let_def dest!: acap_relation_SGISignalCapD)[1]
+  apply (auto simp: Let_def)[1]
   done
 
 lemma no_fail_getCTE [wp]:
@@ -287,7 +253,7 @@ lemma pspace_relation_cte_wp_at:
   apply (drule(2) aligned_distinct_obj_atI'[where 'a=tcb])
    apply simp
   apply (drule tcb_cases_related)
-  apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
+  apply (clarsimp simp: obj_at'_def objBits_simps)
   apply (erule(2) cte_wp_at_tcbI')
    apply fastforce
   apply simp
@@ -343,19 +309,19 @@ lemma get_cap_corres_P:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
-lemmas get_cap_corres [corres] = get_cap_corres_P[where P="\<top>", simplified]
+lemmas get_cap_corres = get_cap_corres_P[where P="\<top>", simplified]
 
 lemma cap_relation_masks:
   "cap_relation c c' \<Longrightarrow> cap_relation
       (cap_rights_update (cap_rights c \<inter> rmask) c)
       (RetypeDecls_H.maskCapRights (rights_mask_map rmask) c')"
-apply (case_tac c; simp add: isCap_defs maskCapRights_def Let_def
+  apply (case_tac c, simp_all add: isCap_defs maskCapRights_def Let_def
                                  rights_mask_map_def maskVMRights_def
                                  AllowSend_def AllowRecv_def
                                  cap_rights_update_def
-                          split del: if_split split:bool.splits)
-apply (clarsimp simp add: isCap_defs)
-by (rule arch_cap_rights_update[simplified, simplified rights_mask_map_def])
+                          split del: if_split)
+  apply (clarsimp simp add: isCap_defs)
+  by (rule arch_cap_rights_update[simplified, simplified rights_mask_map_def])
 
 lemma getCTE_wp:
   "\<lbrace>\<lambda>s. cte_at' p s \<longrightarrow> (\<exists>cte. cte_wp_at' ((=) cte) p s \<and> Q cte s)\<rbrace> getCTE p \<lbrace>Q\<rbrace>"
@@ -386,7 +352,10 @@ lemma getSlotCap_corres:
      (getSlotCap cte_ptr')"
   apply (simp add: getSlotCap_def)
   apply (subst bind_return [symmetric])
-  apply (corresKsimp)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF get_cap_corres])
+      apply (rule corres_trivial, simp)
+     apply (wp | simp)+
   done
 
 lemma maskCapRights [simp]:
@@ -394,18 +363,12 @@ lemma maskCapRights [simp]:
   cap_relation (mask_cap msk c) (maskCapRights (rights_mask_map msk) c')"
   by (simp add: mask_cap_def cap_relation_masks)
 
-lemma maskVMRights_VMNoAccess[simp]:
-  "(maskVMRights vmR R = VMNoAccess) = (vmR = VMNoAccess)"
-  by (simp add: maskVMRights_def split: vmrights.splits bool.splits)
-
 lemma maskCap_valid [simp]:
   "s \<turnstile>' RetypeDecls_H.maskCapRights R cap = s \<turnstile>' cap"
-  apply (simp add: valid_cap'_def maskCapRights_def isCap_simps
-                   capAligned_def ARM_HYP_H.maskCapRights_def
-            split: capability.split arch_capability.split
-        split del: if_split)
-  apply clarsimp (* FIXME arch-split: unclear why *)
-  done
+  by (clarsimp simp: valid_cap'_def maskCapRights_def isCap_simps
+                     capAligned_def RISCV64_H.maskCapRights_def
+              split: capability.split arch_capability.split
+               cong: if_cong)
 
 lemma getSlotCap_valid_cap:
   "\<lbrace>valid_objs'\<rbrace> getSlotCap t \<lbrace>\<lambda>r. valid_cap' r and cte_at' t\<rbrace>"
@@ -478,15 +441,15 @@ lemma cap_map_update_data:
   shows   "cap_relation (update_cap_data p x c) (updateCapData p x c')"
 proof -
   note simps = update_cap_data_def updateCapData_def word_size
-               isCap_defs is_cap_defs Let_def
+               isCap_defs is_cap_defs Let_def badge_bits_def
                cap_rights_update_def badge_update_def
-  { fix x :: word32
-    define y where "y \<equiv> (x >> 8) && mask 18"
-    define z where "z \<equiv> unat ((x >> 3) && mask 5)"
-    have "of_bl (to_bl (y && mask z)) = (of_bl (replicate (32-z) False @ drop (32-z) (to_bl y))::word32)"
+  { fix x :: machine_word
+    define y where "y \<equiv> (x >> 6) && mask 58" (* guard_bits *)
+    define z where "z \<equiv> unat (x && mask 6)" (* cnode_guard_size_bits *)
+    have "of_bl (to_bl (y && mask z)) = (of_bl (replicate (64-z) False @ drop (64-z) (to_bl y))::machine_word)"
       by (simp add: bl_and_mask)
     then
-    have "y && mask z = of_bl (drop (32 - z) (to_bl y))"
+    have "y && mask z = of_bl (drop (64 - z) (to_bl y))"
       apply simp
       apply (subst test_bit_eq_iff [symmetric])
       apply (rule ext)
@@ -501,18 +464,18 @@ proof -
        apply (simp_all add: simps)[4]
    apply (clarsimp simp: simps the_arch_cap_def)
    apply (rename_tac arch_cap)
-   apply (case_tac arch_cap; simp add: simps arch_update_cap_data_def ARM_HYP_H.updateCapData_def)
+   apply (case_tac arch_cap; simp add: simps arch_update_cap_data_def
+                             RISCV64_H.updateCapData_def)
   \<comment> \<open>CNodeCap\<close>
   apply (simp add: simps word_bits_def the_cnode_cap_def andCapRights_def
-                   rightsFromWord_def data_to_rights_def nth_ucast cteRightsBits_def
-                   cteGuardBits_def)
+                   rightsFromWord_def data_to_rights_def nth_ucast cteRightsBits_def cteGuardBits_def)
   apply (insert x)
-  apply (subgoal_tac "unat ((x >> 3) && mask 5) < unat (2^5::word32)")
+  apply (subgoal_tac "unat (x && mask 6) < unat (2^6::machine_word)")
    prefer 2
    apply (fold word_less_nat_alt)[1]
    apply (rule and_mask_less_size)
    apply (simp add: word_size)
-  apply (simp add: word_bw_assocs)
+  apply (simp add: word_bw_assocs cnode_padding_bits_def cnode_guard_size_bits_def)
   done
 qed
 
@@ -521,10 +484,10 @@ lemma cte_map_shift:
   assumes bl: "to_bl cref' = zs @ cref"
   assumes pre: "guard \<le> cref"
   assumes len: "cbits + length guard \<le> length cref"
-  assumes aligned: "is_aligned ptr (4 + cbits)"
+  assumes aligned: "is_aligned ptr (5 + cbits)" (* cte_level_bits *)
   assumes cbits: "cbits \<le> word_bits - cte_level_bits"
   shows
-  "ptr + 16 * ((cref' >> length cref - (cbits + length guard)) && mask cbits) =
+  "ptr + 32 * ((cref' >> length cref - (cbits + length guard)) && mask cbits) = \<comment> \<open>2^cte_level_bits\<close>
    cte_map (ptr, take cbits (drop (length guard) cref))"
 proof -
   let ?l = "length cref - (cbits + length guard)"
@@ -536,22 +499,22 @@ proof -
   from bl xs
   have cref': "to_bl cref' = zs @ guard @ xs" by simp
   hence "length (to_bl cref') = length \<dots>" by simp
-  hence 32: "32 = length zs + length guard + length xs" by simp
+  hence 64: "64 = length zs + length guard + length xs" by simp
 
   have len_conv [simp]: "size ptr = word_bits"
     by (simp add: word_size word_bits_def)
 
-  have "to_bl ((cref' >> ?l) && mask cbits) = (replicate (32 - cbits) False) @
-        drop (32 - cbits) (to_bl (cref' >> ?l))"
+  have "to_bl ((cref' >> ?l) && mask cbits) = (replicate (64 - cbits) False) @
+        drop (64 - cbits) (to_bl (cref' >> ?l))"
     by (simp add: bl_shiftl word_size bl_and_mask
                   cte_level_bits_def word_bits_def)
   also
-  from len_c len_x cref' 32
-  have "\<dots> = (replicate (32 - cbits) False) @ take cbits xs"
+  from len_c len_x cref' 64
+  have "\<dots> = (replicate (64 - cbits) False) @ take cbits xs"
     by (simp add: bl_shiftr word_size add.commute add.left_commute)
   also
-  from len_x len_c 32
-  have "\<dots> = to_bl (of_bl (take cbits (drop (length guard) cref)) :: word32)"
+  from len_x len_c 64
+  have "\<dots> = to_bl (of_bl (take cbits (drop (length guard) cref)) :: machine_word)"
     by (simp add: xs word_rev_tf takefill_alt rev_take rev_drop)
 
   finally
@@ -561,8 +524,8 @@ qed
 
 lemma cte_map_shift':
   "\<lbrakk> to_bl cref' = zs @ cref; guard \<le> cref; length cref = cbits + length guard;
-    is_aligned ptr (4 + cbits); cbits \<le> word_bits - cte_level_bits \<rbrakk> \<Longrightarrow>
-  ptr + 16 * (cref' && mask cbits) = cte_map (ptr, drop (length guard) cref)"
+    is_aligned ptr (5 + cbits); cbits \<le> word_bits - cte_level_bits \<rbrakk> \<Longrightarrow>
+  ptr + 32 * (cref' && mask cbits) = cte_map (ptr, drop (length guard) cref)"
   by (auto dest: cte_map_shift)
 
 lemma cap_relation_Null2 [simp]:
@@ -591,22 +554,8 @@ lemma cap_table_at_gsCNodes:
   apply blast
   done
 
-lemma getSlotCap_valid:
-  "\<lbrace>\<lambda>s. valid_objs' s \<and> (cte_wp_at' (\<lambda>_. True) p s \<longrightarrow> (\<forall>cap. valid_cap' cap s \<longrightarrow> Q cap s))\<rbrace>
-  getSlotCap p \<lbrace>Q\<rbrace>"
-  apply (rule use_spec)
-  apply (simp add: spec_valid_def)
-  apply (rule hoare_add_post[OF getSlotCap_valid_cap1])
-   apply clarsimp
-  apply (rule hoare_add_post[OF getSlotCap_valid_cap2])
-   apply clarsimp
-  apply (rule hoare_add_post)
-    apply (rule_tac P="\<lambda>x. x = s" in getSlotCap_inv)
-   apply (clarsimp)
-  apply (clarsimp simp add: valid_def)
-  done
 lemma rab_corres':
-  "\<lbrakk> cap_relation (fst a) c'; drop (32-bits) (to_bl cref') = snd a;
+  "\<lbrakk> cap_relation (fst a) c'; drop (64-bits) (to_bl cref') = snd a;
      bits = length (snd a) \<rbrakk> \<Longrightarrow>
   corres (lfr \<oplus> (\<lambda>(cte, bits) (cte', bits').
                    cte' = cte_map cte \<and> length bits = bits'))
@@ -621,7 +570,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
   proof (cases "isCNodeCap c'")
     case True
     with "1.prems"
-    obtain ptr guard' guard cbits where caps:
+    obtain ptr guard cbits where caps:
       "cap = cap.CNodeCap ptr cbits guard"
       "c' = CNodeCap ptr cbits (of_bl guard) (length guard)"
       apply (cases cap, simp_all add: isCap_defs)
@@ -632,7 +581,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
       \<lbrakk> cbits + length guard \<noteq> 0; \<not> length cref < cbits + length guard; guard \<le> cref;
         vc = drop (cbits + length guard) cref; vc \<noteq> []; vd \<noteq> cap.NullCap;
        cap_relation vd c'; bits = length vc; is_cnode_cap vd;
-       drop (32 - bits) (to_bl cref') = vc \<rbrakk>
+       drop (64 - bits) (to_bl cref') = vc \<rbrakk>
       \<Longrightarrow> corres (lfr \<oplus> (\<lambda>(cte, bits) (cte', bits').
                    cte' = cte_map cte \<and> length bits = bits'))
     (valid_objs and pspace_aligned and (\<lambda>s. s \<turnstile> fst (vd,vc)))
@@ -644,7 +593,8 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
       prefer 7
         apply (clarsimp simp: in_monad)
         apply (rule get_cap_success)
-      by (auto simp: in_monad intro!: get_cap_success) (* takes time *)
+      apply (auto simp: in_monad intro!: get_cap_success) (* takes time *)
+      done
     note if_split [split del]
     { assume "cbits + length guard = 0 \<or> cbits = 0 \<and> guard = []"
       hence ?thesis
@@ -659,60 +609,94 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
       hence [simp]: "((cbits + length guard = 0) = False) \<and>
                      ((cbits = 0 \<and> guard = []) = False) \<and>
                     (0 < cbits \<or> guard \<noteq> []) " by simp
-      note drop_append[simp del]
-      note if_cong[cong]
       from "1.prems"
       have ?thesis
         apply -
+        apply (rule corres_assume_pre)
+        apply (subgoal_tac "is_aligned ptr (5 + cbits) \<and> cbits \<le> word_bits - cte_level_bits") (*cte_level_bits *)
+         prefer 2
+         apply (clarsimp simp: caps)
+         apply (erule valid_CNodeCapE)
+           apply fastforce
+          apply fastforce
+         apply (fastforce simp: word_bits_def cte_level_bits_def)
+        apply (thin_tac "t \<in> state_relation" for t)
+        apply (erule conjE)
         apply (subst resolveAddressBits.simps)
         apply (subst resolve_address_bits'.simps)
-        apply (simp add: Let_def unlessE_whenE)
-        apply (simp add: caps isCap_defs Let_def whenE_bindE_throwError_to_if)
-        apply (subst cnode_cap_case_if)
-        apply (corresKsimp search: getSlotCap_corres IH
-                              wp: get_cap_wp getSlotCap_valid no_fail_stateAssert
-                            simp: locateSlot_conv)
-        apply (simp add: drop_postfix_eq)
-        apply clarsimp
-        apply (prop_tac "is_aligned ptr (4 + cbits) \<and> cbits \<le> word_bits - cte_level_bits")
-        apply (erule valid_CNodeCapE; fastforce simp: cte_level_bits_def)
-        subgoal premises prems for s s' x
-          apply (insert prems)
-          apply (rule context_conjI)
-            apply (simp add: guard_mask_shift[OF \<open>to_bl _ = _\<close>, where guard=guard,symmetric])
-            apply (simp add: caps lookup_failure_map_def)
-            apply (rule conjI)
-            apply (clarsimp split: if_splits)
-            apply (intro conjI impI allI;clarsimp?)
-            apply (subst \<open>to_bl _ = _\<close>[symmetric])
-            apply (drule postfix_dropD)
+        apply (simp add: caps isCap_defs Let_def)
+        apply (simp add: linorder_not_less drop_postfix_eq)
+        apply (simp add: liftE_bindE[where a="locateSlotCap a b" for a b])
+        apply (simp add: locateSlot_conv)
+        apply (rule corres_stateAssert_assume_stronger[rotated])
+         apply (clarsimp simp: valid_cap_def cap_table_at_gsCNodes isCap_simps)
+         apply (rule and_mask_less_size, simp add: word_bits_def word_size cte_level_bits_def)
+        apply (erule exE)
+        apply (cases "guard \<le> cref")
+         prefer 2
+         apply (clarsimp simp: guard_mask_shift lookup_failure_map_def unlessE_whenE)
+        apply (clarsimp simp: guard_mask_shift unlessE_whenE)
+        apply (cases "length cref < cbits + length guard")
+         apply (simp add: lookup_failure_map_def)
+        apply simp
+        apply (cases "length cref = cbits + length guard")
+         apply clarsimp
+         apply (rule corres_noopE)
+          prefer 2
+          apply wp
+         apply wp
+         apply (clarsimp simp: objBits_simps cte_level_bits_def)
+         apply (erule (2) valid_CNodeCapE)
+         apply (erule (3) cte_map_shift')
+         apply simp
+        apply simp
+        apply (subgoal_tac "cbits + length guard < length cref"; simp)
+        apply (rule corres_initial_splitE)
+           apply clarsimp
+           apply (rule corres_guard_imp)
+             apply (rule getSlotCap_corres)
+             apply (simp add: objBits_simps cte_level_bits_def)
+             apply (erule (1) cte_map_shift)
+               apply simp
+              apply assumption
+             apply (simp add: cte_level_bits_def)
             apply clarsimp
-            apply (prop_tac "32 + (cbits + length guard) - length cref =
-                             (cbits + length guard) + (32 - length cref)")
-             apply (drule len_drop_lemma, simp, arith)
+            apply (clarsimp simp: valid_cap_def)
+            apply (erule cap_table_at_cte_at)
             apply simp
-            apply (subst drop_drop [symmetric])
-           subgoal by simp
-              apply (erule (2) valid_CNodeCapE)
-              apply (rule cap_table_at_cte_at[OF _ refl])
-              apply (simp add: obj_at_def is_cap_table_def well_formed_cnode_n_def)
-             apply (frule (2) cte_wp_valid_cap)
-           apply (rule context_conjI)
-           apply (intro conjI impI allI;clarsimp?)
-           apply (clarsimp simp add: objBits_simps cte_level_bits_def)
-            apply (erule (2) valid_CNodeCapE)
-            apply (erule (3) cte_map_shift')
+           apply clarsimp
+          apply (case_tac "is_cnode_cap rv")
+           prefer 2
+           apply (simp add: cnode_cap_case_if)
+           apply (rule corres_noopE)
+            prefer 2
+            apply (rule no_fail_pre, rule no_fail_returnOK)
+            apply (rule TrueI)
+           prefer 2
+           apply (simp add: unlessE_whenE cnode_cap_case_if)
+           apply (rule IH, (simp_all)[9])
+            apply clarsimp
+           apply (drule postfix_dropD)
+           apply clarsimp
+           apply (subgoal_tac "64 + (cbits + length guard) - length cref = (cbits + length guard) + (64 - length cref)")
+            prefer 2
+            apply (drule len_drop_lemma)
+             apply simp
+            apply arith
+           apply simp
+           apply (subst drop_drop [symmetric])
+           apply simp
+          apply wp
+          apply (clarsimp simp: objBits_simps cte_level_bits_def)
+          apply (erule (1) cte_map_shift)
             apply simp
-              apply (clarsimp simp add: objBits_simps cte_level_bits_def)
-              apply (erule (1) cte_map_shift; assumption?)
-              subgoal by simp
-              apply (clarsimp simp: cte_level_bits_def)
-           apply (rule conjI)
-             apply (clarsimp simp: valid_cap_def cap_table_at_gsCNodes isCap_simps)
-             apply (rule and_mask_less_size, simp add: word_bits_def word_size cte_level_bits_def)
-           apply (clarsimp split: if_splits)
-           done
-         done
+           apply assumption
+          apply (simp add: cte_level_bits_def)
+         apply (wp get_cap_wp)
+         apply clarsimp
+         apply (erule (1) cte_wp_valid_cap)
+        apply wpsimp
+        done
     }
     ultimately
     show ?thesis by fast
@@ -732,7 +716,7 @@ lemma getThreadCSpaceRoot:
                 tcbCTableSlot_def)
 
 lemma getThreadVSpaceRoot:
-  "getThreadVSpaceRoot t = return (t + 2^cteSizeBits)"
+  "getThreadVSpaceRoot t = return (t+2^cteSizeBits)" (*2^cte_level_bits*)
   by (simp add: getThreadVSpaceRoot_def locateSlot_conv objBits_simps'
                 tcbVTableSlot_def shiftl_t2n cte_level_bits_def)
 
@@ -761,10 +745,10 @@ lemma lookupSlotForThread_corres:
         (lookup_slot_for_thread t (to_bl cptr))
         (lookupSlotForThread t cptr)"
   apply (unfold lookup_slot_for_thread_def lookupSlotForThread_def)
-  apply (simp add: returnOk_bindE const_def)
+  apply (simp add: const_def)
   apply (simp add: getThreadCSpaceRoot)
   apply (fold returnOk_liftE)
-  apply (simp add: returnOk_bindE)
+  apply simp
   apply (rule corres_initial_splitE)
      apply (subst corres_liftE_rel_sum)
      apply (rule corres_guard_imp)
@@ -839,8 +823,7 @@ lemma setObject_cte_obj_at_tcb':
   \<lbrace>\<lambda>_ s. P' (obj_at' P p s)\<rbrace>"
   apply (clarsimp simp: setObject_def in_monad split_def
                         valid_def lookupAround2_char1
-                        obj_at'_def ps_clear_upd projectKOs
-             split del: if_split)
+                        obj_at'_def ps_clear_upd)
   apply (clarsimp elim!: rsubst[where P=P'])
   apply (clarsimp simp: updateObject_cte in_monad objBits_simps
                         tcbCTableSlot_def tcbVTableSlot_def x
@@ -876,14 +859,6 @@ lemma setCTE_tcb_in_cur_domain':
   apply (wp setObject_cte_obj_at_tcb' | simp)+
   done
 
-lemma tcbCTable_upd_simp [simp]:
-  "tcbCTable (tcbCTable_update (\<lambda>_. x) tcb) = x"
-  by (cases tcb) simp
-
-lemma tcbVTable_upd_simp [simp]:
-  "tcbVTable (tcbVTable_update (\<lambda>_. x) tcb) = x"
-  by (cases tcb) simp
-
 lemma setCTE_ctes_of_wp [wp]:
   "\<lbrace>\<lambda>s. P ((ctes_of s) (p \<mapsto> cte))\<rbrace>
   setCTE p cte
@@ -917,7 +892,7 @@ lemma cte_wp_at_extract':
 lemmas setCTE_valid_objs = setCTE_valid_objs'
 
 lemma capFreeIndex_update_valid_cap':
-  "\<lbrakk>fa \<le> fb; fb \<le> 2 ^ bits; is_aligned (of_nat fb :: word32) minUntypedSizeBits;
+  "\<lbrakk>fa \<le> fb; fb \<le> 2 ^ bits; is_aligned (of_nat fb :: machine_word) minUntypedSizeBits;
     s \<turnstile>' capability.UntypedCap d v bits fa\<rbrakk>
    \<Longrightarrow> s \<turnstile>' capability.UntypedCap d v bits fb"
   apply (clarsimp simp:valid_cap'_def capAligned_def valid_untyped'_def ko_wp_at'_def)
@@ -1032,17 +1007,6 @@ lemma updateMDB_no_0 [wp]:
   updateMDB p f
   \<lbrace>\<lambda>rv s. no_0 (ctes_of s)\<rbrace>"
   by wp simp
-
-abbreviation
-  "revokable a b \<equiv> is_cap_revocable b a"
-
-abbreviation
-  "revokable' a b \<equiv> global.isCapRevocable b a"
-
-declare arch_is_cap_revocable_def[simp] ARM_HYP_H.isCapRevocable_def[simp]
-
-lemmas revokable_def = is_cap_revocable_def is_cap_revocable_def[split_simps cap.split]
-lemmas revokable'_def = Retype_H.isCapRevocable_def Retype_H.isCapRevocable_def[split_simps capability.split]
 
 lemma isMDBParentOf_next_update [simp]:
   "isMDBParentOf (cteMDBNode_update (mdbNext_update f) cte) cte' =
@@ -1187,7 +1151,7 @@ lemma next_update_lhs_rtrancl:
   done
 
 definition
-  cte_mdb_prop :: "(word32 \<rightharpoonup> cte) \<Rightarrow> word32 \<Rightarrow> (mdbnode \<Rightarrow> bool) \<Rightarrow> bool"
+  cte_mdb_prop :: "(machine_word \<rightharpoonup> cte) \<Rightarrow> machine_word \<Rightarrow> (mdbnode \<Rightarrow> bool) \<Rightarrow> bool"
 where
   "cte_mdb_prop m p P \<equiv> (\<exists>cte. m p = Some cte \<and> P (cteMDBNode cte))"
 
@@ -1281,7 +1245,8 @@ lemma null_mdb_no_next:
   cte_mdb_prop m target (\<lambda>m. mdbPrev m = nullPointer \<and> mdbNext m = nullPointer) \<rbrakk>
   \<Longrightarrow> \<not> m \<turnstile> x \<leadsto> target"
   unfolding cte_mdb_prop_def
-  by (auto elim: valid_dlistE simp: nullPointer_def no_0_def next_unfold')
+  by (auto elim: valid_dlistE elim!: valid_mdb_ctesE
+    simp: nullPointer_def no_0_def next_unfold')
 
 lemma null_mdb_no_trancl:
   "\<lbrakk> valid_dlist m; no_0 m;
@@ -1294,13 +1259,12 @@ lemma null_mdb_no_next2:
   cte_mdb_prop m target (\<lambda>m. mdbPrev m = nullPointer \<and> mdbNext m = nullPointer) \<rbrakk>
   \<Longrightarrow> \<not> m \<turnstile> target \<leadsto> x"
   unfolding cte_mdb_prop_def
-  by (auto simp: nullPointer_def no_0_def next_unfold')
+  by (auto elim!: valid_mdb_ctesE simp: nullPointer_def no_0_def next_unfold')
 
 definition
   "capASID cap \<equiv> case cap of
-    ArchObjectCap (PageCap _ _ _ _ (Some (asid, _))) \<Rightarrow> Some asid
+    ArchObjectCap (FrameCap _ _ _ _ (Some (asid, _))) \<Rightarrow> Some asid
   | ArchObjectCap (PageTableCap _ (Some (asid, _))) \<Rightarrow> Some asid
-  | ArchObjectCap (PageDirectoryCap _ (Some asid)) \<Rightarrow> Some asid
   | _ \<Rightarrow> None"
 
 lemmas capASID_simps [simp] =
@@ -1316,7 +1280,7 @@ lemmas cap_asid_base'_simps [simp] =
 
 definition
   "cap_vptr' cap \<equiv> case cap of
-    ArchObjectCap (PageCap _ _ _ _ (Some (_, vptr))) \<Rightarrow> Some vptr
+    ArchObjectCap (FrameCap _ _ _ _ (Some (_, vptr))) \<Rightarrow> Some vptr
   | ArchObjectCap (PageTableCap _ (Some (_, vptr))) \<Rightarrow> Some vptr
   | _ \<Rightarrow> None"
 
@@ -1341,7 +1305,7 @@ lemma capASID_update [simp]:
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
          simp_all add: updateCapData_def
-                       ARM_HYP_H.updateCapData_def
+                       RISCV64_H.updateCapData_def
                        isCap_simps Let_def)
   done
 
@@ -1352,7 +1316,7 @@ lemma cap_vptr_update' [simp]:
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
          simp_all add: updateCapData_def
-                       ARM_HYP_H.updateCapData_def
+                       RISCV64_H.updateCapData_def
                        isCap_simps Let_def)
   done
 
@@ -1363,7 +1327,7 @@ lemma cap_asid_base_update' [simp]:
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
          simp_all add: updateCapData_def
-                       ARM_HYP_H.updateCapData_def
+                       RISCV64_H.updateCapData_def
                        isCap_simps Let_def)
   done
 
@@ -1373,7 +1337,7 @@ lemma updateCapData_Master:
   apply (cases cap, simp_all add: updateCapData_def isCap_simps Let_def
                            split: if_split_asm)
   apply (rename_tac arch_capability)
-  apply (case_tac arch_capability, simp_all add: ARM_HYP_H.updateCapData_def)
+  apply (case_tac arch_capability, simp_all add: RISCV64_H.updateCapData_def)
   done
 
 lemma updateCapData_Reply:
@@ -1409,7 +1373,7 @@ lemma capASID_mask [simp]:
   apply (cases c, simp_all add: maskCapRights_def isCap_simps Let_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
-         simp_all add: maskCapRights_def ARM_HYP_H.maskCapRights_def isCap_simps Let_def)
+         simp_all add: maskCapRights_def RISCV64_H.maskCapRights_def isCap_simps Let_def)
   done
 
 lemma cap_vptr_mask' [simp]:
@@ -1418,7 +1382,7 @@ lemma cap_vptr_mask' [simp]:
   apply (cases c, simp_all add: maskCapRights_def isCap_simps Let_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
-         simp_all add: maskCapRights_def ARM_HYP_H.maskCapRights_def isCap_simps Let_def)
+         simp_all add: maskCapRights_def RISCV64_H.maskCapRights_def isCap_simps Let_def)
   done
 
 lemma cap_asid_base_mask' [simp]:
@@ -1427,7 +1391,7 @@ lemma cap_asid_base_mask' [simp]:
   apply (cases c, simp_all add: maskCapRights_def isCap_simps Let_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
-         simp_all add: maskCapRights_def ARM_HYP_H.maskCapRights_def isCap_simps Let_def)
+         simp_all add: maskCapRights_def RISCV64_H.maskCapRights_def isCap_simps Let_def)
   done
 
 lemmas cteInsert_valid_objs = cap_insert_objs'
@@ -1541,17 +1505,17 @@ corollary descendants_of_Null_update':
   shows "descendants_of' c (m (p \<mapsto> cte)) = descendants_of' c m" using assms
   by (simp add: descendants_of'_def subtree_Null_update [symmetric])
 
-lemma ps_clear_16:
+lemma ps_clear_32:
   "\<lbrakk> ps_clear p tcbBlockSizeBits s; is_aligned p tcbBlockSizeBits \<rbrakk>
-     \<Longrightarrow> ksPSpace s (p + 2^cteSizeBits) = None"
-  apply (simp add: ps_clear_def mask_def)
+    \<Longrightarrow> ksPSpace s (p + 2^cteSizeBits) = None"
+  apply (simp add: ps_clear_def)
   apply (drule equals0D[where a="p + 2^cteSizeBits"])
-  apply (simp add: dom_def add.commute objBits_defs take_bit_Suc)
-  apply (drule mp)
+  apply (simp add: dom_def field_simps objBits_defs)
+  apply (erule impE)
    apply (rule word_plus_mono_right)
-    apply simp
+    apply (simp add: mask_def)
    apply (erule is_aligned_no_wrap')
-   apply simp
+   apply (simp add: mask_def)
   apply (erule mp)
   apply (erule is_aligned_no_wrap')
   apply simp
@@ -1568,16 +1532,16 @@ lemma cte_at_cte_map_in_obj_bits:
    apply (erule(1) valid_objsE)
    apply (frule arg_cong[where f="\<lambda>S. snd p \<in> S"])
    apply (simp(no_asm_use) add: domIff)
-   apply (clarsimp simp: cte_map_def split_def cte_level_bits_def
+   apply (clarsimp simp: cte_map_def split_def
                          well_formed_cnode_n_def length_set_helper ex_with_length
                          valid_obj_def valid_cs_size_def valid_cs_def)
-   apply (subgoal_tac "of_bl (snd p) * 16 < 2 ^ (4 + length (snd p))")
+   apply (subgoal_tac "of_bl (snd p) * 2^cte_level_bits < 2 ^ (cte_level_bits + length (snd p))")
     apply (rule conjI)
      apply (erule is_aligned_no_wrap')
-     apply (simp add: shiftl_t2n')
+     apply (simp add: shiftl_t2n mult_ac)
     apply (subst add_diff_eq[symmetric])
     apply (rule word_plus_mono_right)
-     apply (rule word_le_minus_one_leq, simp add: shiftl_t2n')
+     apply (simp add: shiftl_t2n mult_ac)
     apply (erule is_aligned_no_wrap')
     apply (rule word_power_less_1)
     apply (simp add: cte_level_bits_def word_bits_def)
@@ -1585,24 +1549,25 @@ lemma cte_at_cte_map_in_obj_bits:
    apply (subst mult.commute, rule word_mult_less_mono1)
      apply (rule of_bl_length)
      apply (simp add: word_bits_def)
-    apply simp
+    apply (simp add: cte_level_bits_def)
    apply (simp add: cte_level_bits_def word_bits_def)
    apply (drule power_strict_increasing [where a="2 :: nat"])
     apply simp
    apply simp
-  apply (clarsimp simp: cte_map_def' split_def field_simps)
-  apply (subgoal_tac "of_bl (snd p) * 16 < (512 :: word32)")
+  apply (clarsimp simp: cte_map_def split_def field_simps)
+  apply (subgoal_tac "of_bl (snd p) * 2^cte_level_bits < (2^tcb_bits :: machine_word)")
    apply (drule(1) pspace_alignedD[rotated])
    apply (rule conjI)
     apply (erule is_aligned_no_wrap')
-     apply (simp add: word_bits_conv)
+     apply (simp add: word_bits_conv shiftl_t2n mult_ac)
     apply simp
    apply (rule word_plus_mono_right)
+    apply (simp add: shiftl_t2n mult_ac)
     apply (drule word_le_minus_one_leq)
     apply simp
    apply (erule is_aligned_no_wrap')
    apply simp
-  apply (simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1
+  apply (simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1 cte_level_bits_def
               split: if_split_asm)
   done
 
@@ -1629,7 +1594,7 @@ lemma cte_map_inj:
   apply (thin_tac "b \<le> a" for b a)+
   apply (rule notE[OF neq])
   apply (insert cte_at_length_limit [OF c1 vo])
-  apply (simp add: shiftl_t2n[where n=4, simplified, simplified mult.commute, symmetric]
+  apply (simp add: shiftl_t2n[where n=5, simplified, simplified mult.commute, symmetric]
                    word_bits_def cte_level_bits_def prod_eq_iff)
   apply (insert cte_at_cref_len[where p="fst p" and c="snd p" and c'="snd p'", simplified, OF c1])
   apply (simp add: c2 prod_eqI)
@@ -1637,7 +1602,7 @@ lemma cte_map_inj:
   apply (rule nth_equalityI)
    apply simp
   apply clarsimp
-  apply (drule_tac x="i + 4" in word_eqD)
+  apply (drule_tac x="i + 5" in word_eqD)
   apply (simp add: nth_shiftl test_bit_of_bl nth_rev)
   done
 
@@ -1679,7 +1644,7 @@ lemma other_obj_relation_KOCTE[simp]:
   "\<not> other_obj_relation ko (KOCTE cte)"
   by (simp add: other_obj_relation_def
          split: Structures_A.kernel_object.splits
-                ARM_HYP_A.arch_kernel_obj.splits)
+                RISCV64_A.arch_kernel_obj.splits)
 
 lemma cte_map_pulls_tcb_to_abstract:
   "\<lbrakk> y = cte_map z; pspace_relation (kheap s) (ksPSpace s');
@@ -1691,8 +1656,8 @@ lemma cte_map_pulls_tcb_to_abstract:
   apply (rule pspace_dom_relatedE, assumption+)
   apply (erule(1) obj_relation_cutsE;
          clarsimp simp: other_obj_relation_def
-                  split: Structures_A.kernel_object.split_asm
-                         ARM_HYP_A.arch_kernel_obj.split_asm if_split_asm)
+                 split: Structures_A.kernel_object.split_asm
+                        RISCV64_A.arch_kernel_obj.split_asm if_split_asm)
   apply (drule tcb_cases_related2)
   apply clarsimp
   apply (frule(1) cte_wp_at_tcbI [OF _ _ TrueI, where t="(a, b)" for a b, simplified])
@@ -1816,11 +1781,11 @@ lemma set_cap_not_quite_corres_prequel:
   apply clarsimp
   apply (frule(5) cte_map_pulls_cte_to_abstract[OF p])
   apply (clarsimp simp: set_cap_def split_def bind_def get_object_def
-                        simpler_gets_def assert_def fail_def return_def
-                        set_object_def get_def put_def domI a_type_def)
-  apply (rule conjI)
-   apply (erule(1) valid_objsE)
-   apply (clarsimp simp: valid_obj_def valid_cs_def valid_cs_size_def exI)
+                        simpler_gets_def assert_def a_type_def fail_def return_def
+                        set_object_def get_def put_def domI)
+  apply (erule(1) valid_objsE)
+  apply (clarsimp simp: valid_obj_def valid_cs_def valid_cs_size_def exI)
+  apply (rule conjI, clarsimp)
    apply (erule(1) pspace_relation_update_ctes[where cap=c])
     apply clarsimp
     apply (intro conjI impI)
@@ -1835,7 +1800,7 @@ lemma set_cap_not_quite_corres_prequel:
      apply (simp add: cte_at_cases domI well_formed_cnode_invsI[OF cr(3)])
     apply clarsimp
    apply (simp add: c)
-  apply (simp add: well_formed_cnode_invsI wf_cs_upd)
+  apply (simp add: wf_cs_insert)
   done
 
 lemma setCTE_pspace_only:
@@ -1996,7 +1961,7 @@ lemma pspace_relation_cte_wp_atI':
    apply clarsimp
   apply (simp add: other_obj_relation_def
             split: Structures_A.kernel_object.split_asm
-                   ARM_HYP_A.arch_kernel_obj.split_asm)
+                   RISCV64_A.arch_kernel_obj.split_asm)
   done
 
 lemma pspace_relation_cte_wp_atI:
@@ -2060,7 +2025,7 @@ proof -
   have irq: "cap_irqs c = cap_irqs c'" using reg fm fm'
     by (simp add: final_matters_def split: cap.split_asm)
   have arch_ref: "arch_gen_refs c = arch_gen_refs c'" using fm reg
-    by (clarsimp simp: final_matters_def is_cap_simps arch_gen_obj_refs_def
+    by (clarsimp simp: final_matters_def is_cap_simps
                    split: cap.split_asm arch_cap.split_asm)
 
   from final have refs_non_empty: "obj_refs c \<noteq> {} \<or> cap_irqs c \<noteq> {} \<or> arch_gen_refs c \<noteq> {}"
@@ -2087,15 +2052,13 @@ lemma obj_refs_relation_Master:
                     else if capClass (capMasterCap cap') = PhysicalClass
                     then {capUntypedPtr (capMasterCap cap')}
                     else {})"
-  apply (simp add: isCap_simps
+  by (simp add: isCap_simps
          split: cap_relation_split_asm arch_cap.split_asm)
-  done
 
 lemma cap_irqs_relation_Master:
   "cap_relation cap cap' \<Longrightarrow>
    cap_irqs cap = (case capMasterCap cap' of IRQHandlerCap irq \<Rightarrow> {irq} | _ \<Rightarrow> {})"
-  apply (simp split: cap_relation_split_asm arch_cap.split_asm)
-  done
+  by (simp split: cap_relation_split_asm arch_cap.split_asm)
 
 lemma arch_gen_refs_relation_Master:
   "cap_relation cap cap' \<Longrightarrow> arch_gen_refs cap = {}"
@@ -2127,14 +2090,14 @@ proof -
   with neq
   have s: "slot \<noteq> slot'" by clarsimp
   have irq: "cap_irqs c = cap_irqs c'"
-    using master cr cr'
-    by (simp add: cap_irqs_relation_Master)
+  using master cr cr'
+  by (simp add: cap_irqs_relation_Master)
   have ref: "obj_refs c = obj_refs c'"
-    using master cr cr'
-    by (simp add: obj_refs_relation_Master)
+  using master cr cr'
+  by (simp add: obj_refs_relation_Master)
   have arch_ref: "arch_gen_refs c = arch_gen_refs c'"
-    using master cr cr'
-    by (clarsimp simp: arch_gen_refs_relation_Master)
+  using master cr cr'
+  by (clarsimp simp: arch_gen_refs_relation_Master)
 
   from final have refs_non_empty: "obj_refs c \<noteq> {} \<or> cap_irqs c \<noteq> {} \<or> arch_gen_refs c \<noteq> {}"
     by (clarsimp simp add: is_final_cap'_def gen_obj_refs_def)
@@ -2407,14 +2370,14 @@ lemma ctes_of_valid:
   apply (erule disjE)
    apply (subgoal_tac "ko_at' cte p s")
     apply (drule (1) ko_at_valid_objs')
-     apply (simp add: projectKOs)
+     apply simp
     apply (simp add: valid_obj'_def valid_cte'_def)
-   apply (simp add: obj_at'_def projectKOs cte_level_bits_def objBits_simps)
+   apply (simp add: obj_at'_def cte_level_bits_def objBits_simps)
   apply clarsimp
   apply (drule obj_at_ko_at')
   apply clarsimp
   apply (drule (1) ko_at_valid_objs')
-   apply (simp add: projectKOs)
+   apply simp
   apply (simp add: valid_obj'_def valid_tcb'_def)
   apply (fastforce)
   done
@@ -2449,7 +2412,7 @@ lemma capRange_cap_relation:
   "\<lbrakk> cap_relation cap cap'; cap_relation cap cap' \<Longrightarrow> capClass cap' = PhysicalClass \<rbrakk>
     \<Longrightarrow> capRange cap' = {obj_ref_of cap .. obj_ref_of cap + obj_size cap - 1}"
   by (simp add: capRange_def objBits_simps' cte_level_bits_def
-                asid_low_bits_def zbits_map_def vspace_bits_defs vcpu_bits_def
+                asid_low_bits_def zbits_map_def bit_simps
          split: cap_relation_split_asm arch_cap.split_asm
                 option.split sum.split)
 
@@ -2531,15 +2494,15 @@ lemma updateCap_corres:
     apply (unfold cdt_list_relation_def)[1]
     apply (intro allI impI)
     apply (erule_tac x=c in allE)
-    subgoal by (auto elim!: modify_map_casesE)[1]
+    apply (auto elim!: modify_map_casesE)[1]
    apply (unfold revokable_relation_def)[1]
    apply (drule set_cap_caps_of_state_monad)
    apply (simp add: cte_wp_at_caps_of_state del: split_paired_All)
    apply (intro allI impI)
    apply (erule_tac x=c in allE)
    apply (erule impE[where P="\<exists>y. v = Some y" for v])
-    subgoal by (clarsimp simp: null_filter_def is_zombie_def split: if_split_asm)
-   subgoal by (auto elim!: modify_map_casesE del: disjE)[1]
+    apply (clarsimp simp: null_filter_def is_zombie_def split: if_split_asm)
+   apply (auto elim!: modify_map_casesE del: disjE)[1] (* slow *)
   apply (case_tac "ctes_of b (cte_map slot)")
    apply (simp add: modify_map_None)
   apply (simp add: modify_map_apply)
@@ -2548,7 +2511,7 @@ lemma updateCap_corres:
   apply (rule use_update_ztc_one [OF descendants_of_update_ztc])
          apply simp
         apply assumption
-       subgoal by (auto simp: is_cap_simps isCap_simps)[1]
+       apply (auto simp: is_cap_simps isCap_simps)[1]
       apply (frule(3) is_final_untyped_ptrs [OF _ _ not_sym], clarsimp+)
        apply (clarsimp simp: cte_wp_at_caps_of_state)
        apply (simp add: is_cap_simps, elim disjE exE, simp_all)[1]
@@ -2613,7 +2576,7 @@ lemma updateMDB_pspace_relation:
    apply (rule pspace_dom_relatedE, assumption+)
    apply (rule obj_relation_cutsE, assumption+;
           clarsimp split: Structures_A.kernel_object.split_asm
-                          ARM_HYP_A.arch_kernel_obj.split_asm if_split_asm
+                          RISCV64_A.arch_kernel_obj.split_asm if_split_asm
                     simp: other_obj_relation_def)
    apply (frule(1) tcb_cte_cases_aligned_helpers(1))
    apply (frule(1) tcb_cte_cases_aligned_helpers(2))
@@ -2722,13 +2685,13 @@ using assms
   apply (simp add: comp_def)
   done
 
-lemma revokable_eq:
+lemma is_cap_revocable_eq:
   "\<lbrakk> cap_relation c c'; cap_relation src_cap src_cap'; sameRegionAs src_cap' c';
      is_untyped_cap src_cap \<longrightarrow> \<not> is_ep_cap c \<and> \<not> is_ntfn_cap c\<rbrakk>
-  \<Longrightarrow> revokable src_cap c = revokable' src_cap' c'"
-  apply (clarsimp simp: isCap_simps objBits_simps pageBits_def
-                        bits_of_def revokable_def revokable'_def
-                        sameRegionAs_def3
+  \<Longrightarrow> is_cap_revocable c src_cap = isCapRevocable c' src_cap'"
+  apply (clarsimp simp: isCap_simps objBits_simps bit_simps arch_is_cap_revocable_def
+                        bits_of_def is_cap_revocable_def Retype_H.isCapRevocable_def
+                        sameRegionAs_def3 isCapRevocable_def
                  split: cap_relation_split_asm arch_cap.split_asm)
   done
 
@@ -2872,42 +2835,25 @@ lemma isArchCap_simps[simp]:
   by (simp add: isArchCap_def)+
 
 definition
-  vsCapRef :: "capability \<Rightarrow> vs_ref list option"
-where
-  "vsCapRef cap \<equiv> case cap of
-   ArchObjectCap (ASIDPoolCap _ asid) \<Rightarrow>
-     Some [VSRef (ucast (asid_high_bits_of asid)) None]
- | ArchObjectCap (PageDirectoryCap _ (Some asid)) \<Rightarrow>
-     Some [VSRef (asid && mask asid_low_bits) (Some AASIDPool),
-           VSRef (ucast (asid_high_bits_of asid)) None]
- | ArchObjectCap (PageTableCap _ (Some (asid, vptr))) \<Rightarrow>
-     Some [VSRef (vptr >> 21) (Some APageDirectory),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
-           VSRef (ucast (asid_high_bits_of asid)) None]
- | ArchObjectCap (PageCap _ _ _ ARMSmallPage (Some (asid, vptr))) \<Rightarrow>
-     Some [VSRef ((vptr >> 12) && mask 9) (Some APageTable),
-           VSRef (vptr >> 21) (Some APageDirectory),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
-           VSRef (ucast (asid_high_bits_of asid)) None]
- | ArchObjectCap (PageCap _ _ _ ARMLargePage (Some (asid, vptr))) \<Rightarrow>
-     Some [VSRef ((vptr >> 12) && mask 9) (Some APageTable),
-           VSRef (vptr >> 21) (Some APageDirectory),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
-           VSRef (ucast (asid_high_bits_of asid)) None]
- | ArchObjectCap (PageCap _ _ _ ARMSection (Some (asid, vptr))) \<Rightarrow>
-     Some [VSRef (vptr >> 21) (Some APageDirectory),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
-           VSRef (ucast (asid_high_bits_of asid)) None]
- | ArchObjectCap (PageCap _ _ _ ARMSuperSection (Some (asid, vptr))) \<Rightarrow>
-     Some [VSRef (vptr >> 21) (Some APageDirectory),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
-           VSRef (ucast (asid_high_bits_of asid)) None]
- | _ \<Rightarrow> None"
-
-definition
   "badge_derived' cap' cap \<equiv>
     capMasterCap cap = capMasterCap cap' \<and>
     (capBadge cap, capBadge cap') \<in> capBadge_ordering False"
+
+definition vs_cap_ref_arch' :: "arch_capability \<Rightarrow> (asid \<times> vspace_ref) option" where
+  "vs_cap_ref_arch' acap \<equiv>
+     case acap of
+       ASIDPoolCap _ asid \<Rightarrow> Some (asid, 0)
+     | ASIDControlCap \<Rightarrow> None
+     | FrameCap _ _ _ _ m \<Rightarrow> m
+     | PageTableCap _ m \<Rightarrow> m"
+
+lemmas vs_cap_ref_arch'_simps[simp] = vs_cap_ref_arch'_def[split_simps arch_capability.split]
+
+definition
+  "vs_cap_ref' = arch_cap'_fun_lift vs_cap_ref_arch' None"
+
+lemmas vs_cap_ref'_simps[simp] =
+  vs_cap_ref'_def[THEN fun_cong, unfolded arch_cap'_fun_lift_def, split_simps capability.split]
 
 definition
   "is_derived' m p cap' cap \<equiv>
@@ -2919,20 +2865,18 @@ definition
   (isReplyCap cap = isReplyCap cap') \<and>
   (isReplyCap cap \<longrightarrow> capReplyMaster cap) \<and>
   (isReplyCap cap' \<longrightarrow> \<not> capReplyMaster cap') \<and>
-  (vsCapRef cap = vsCapRef cap' \<or> isArchCap isPageCap cap') \<and>
-  ((isArchCap isPageTableCap cap \<or> isArchCap isPageDirectoryCap cap)
-        \<longrightarrow> capASID cap = capASID cap' \<and> capASID cap \<noteq> None)"
+  (vs_cap_ref' cap = vs_cap_ref' cap' \<or> isArchFrameCap cap) \<and>
+  (isArchCap isPageTableCap cap \<longrightarrow> capASID cap = capASID cap' \<and> capASID cap \<noteq> None)"
 
 lemma zbits_map_eq[simp]:
-  "(zbits_map zbits = zbits_map zbits')
-      = (zbits = zbits')"
+  "(zbits_map zbits = zbits_map zbits') = (zbits = zbits')"
   by (simp add: zbits_map_def split: option.split sum.split)
 
 lemma master_cap_relation:
   "\<lbrakk> cap_relation c c'; cap_relation d d' \<rbrakk> \<Longrightarrow>
-   (capMasterCap c' = capMasterCap d') = (cap_master_cap c = cap_master_cap d)"
-  by (auto simp add: cap_master_cap_def capMasterCap_def up_ucast_inj_eq
-           split: cap.splits arch_cap.splits)
+  (capMasterCap c' = capMasterCap d') =
+  (cap_master_cap c = cap_master_cap d)"
+  by (auto simp add: cap_master_cap_def capMasterCap_def split: cap.splits arch_cap.splits)
 
 lemma cap_badge_relation:
   "\<lbrakk> cap_relation c c'; cap_relation d d' \<rbrakk> \<Longrightarrow>
@@ -2944,8 +2888,8 @@ lemma capBadge_ordering_relation:
   "\<lbrakk> cap_relation c c'; cap_relation d d' \<rbrakk> \<Longrightarrow>
   ((capBadge c', capBadge d') \<in> capBadge_ordering f) =
   ((cap_badge c, cap_badge d) \<in> capBadge_ordering f)"
-  by (cases c)
-     (auto simp add: cap_badge_def capBadge_ordering_def split: cap.splits)
+  apply (cases c)
+   by (auto simp add: cap_badge_def capBadge_ordering_def split: cap.splits)
 
 lemma is_reply_cap_relation:
   "cap_relation c c' \<Longrightarrow> is_reply_cap c = (isReplyCap c' \<and> \<not> capReplyMaster c')"
@@ -2957,8 +2901,8 @@ lemma is_reply_master_relation:
   by (cases c, auto simp add: is_cap_simps isCap_simps)
 
 lemma cap_asid_cap_relation:
-  "cap_relation c c' \<Longrightarrow> capASID c' = cap_asid c"
-  by (auto simp: capASID_def cap_asid_def arch_cap_fun_lift_def split: cap.splits arch_cap.splits)
+  "cap_relation c c' \<Longrightarrow> capASID c' = map_option ucast (cap_asid c)"
+  by (auto simp: capASID_def cap_asid_def split: cap.splits arch_cap.splits option.splits)
 
 lemma isArchCapE[elim!]:
   "\<lbrakk> isArchCap P cap; \<And>arch_cap. cap = ArchObjectCap arch_cap \<Longrightarrow> P arch_cap \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
@@ -2972,29 +2916,23 @@ lemma is_derived_eq:
   apply (erule allE, erule impE, simp)
   apply (clarsimp simp: is_derived_def is_derived'_def badge_derived'_def)
   apply (rule conjI)
-   apply (clarsimp simp: is_cap_simps isCap_simps arch_cap_fun_lift_def)
-   apply (cases c; clarsimp simp: isCap_simps cap_master_cap_def capMasterCap_def)
-   apply (fastforce simp: vsCapRef_def vs_cap_ref_def)
+   apply (clarsimp simp: is_cap_simps isCap_simps)
+   apply (cases c, auto simp: isCap_simps cap_master_cap_def capMasterCap_def)[1]
   apply (case_tac "isIRQControlCap d'")
    apply (frule(1) master_cap_relation)
-   apply (clarsimp simp: isCap_simps cap_master_cap_def arch_cap_fun_lift_def
+   apply (clarsimp simp: isCap_simps cap_master_cap_def
                          is_zombie_def is_reply_cap_def is_master_reply_cap_def
-                   split: cap_relation_split_asm arch_cap.split_asm)
+                  split: cap_relation_split_asm arch_cap.split_asm)[1]
   apply (frule(1) master_cap_relation)
   apply (frule(1) cap_badge_relation)
   apply (frule cap_asid_cap_relation)
   apply (frule(1) capBadge_ordering_relation)
-  apply (case_tac d; simp add: isCap_simps is_cap_simps cap_master_cap_def vs_cap_ref_def
-                               vsCapRef_def capMasterCap_def arch_cap_fun_lift_def
-                          split: cap_relation_split_asm arch_cap.split_asm)
-         apply fastforce
-        apply (auto split: arch_cap.splits arch_capability.splits)[3]
-     apply (clarsimp split: option.splits arch_cap.splits arch_capability.splits)
-     apply (fastforce simp: vspace_bits_defs)
-    apply (clarsimp split: option.splits arch_cap.splits arch_capability.splits)
-    apply (intro conjI | clarsimp simp: vspace_bits_defs)+
-        apply fastforce
-       apply (auto simp: up_ucast_inj_eq split: arch_cap.splits arch_capability.splits)
+  apply (case_tac d)
+             apply (simp_all add: isCap_simps is_cap_simps cap_master_cap_def
+                                  capMasterCap_def
+                           split: cap_relation_split_asm arch_cap.split_asm)
+      apply fastforce
+     apply (auto simp: up_ucast_inj_eq split:arch_cap.splits arch_capability.splits option.splits)
   done
 end
 
@@ -3012,9 +2950,9 @@ lemma isUntypedCap [simp]:
   "isUntypedCap cap' = isUntypedCap cap" using master
   by (simp add: capMasterCap_def isUntypedCap_def split: capability.splits)
 
-lemma isArchPageCap [simp]:
-  "isArchPageCap cap' = isArchPageCap cap" using master
-  by (simp add: capMasterCap_def arch_capMasterCap_def isArchPageCap_def
+lemma isArchFrameCap [simp]:
+  "isArchFrameCap cap' = isArchFrameCap cap" using master
+  by (simp add: capMasterCap_def arch_capMasterCap_def isArchFrameCap_def
            split: capability.splits arch_capability.splits)
 
 lemma isIRQHandlerCap [simp]:
@@ -3036,15 +2974,6 @@ lemma isIRQControlCap [simp]:
 lemma isReplyCap [simp]:
   "isReplyCap cap' = isReplyCap cap" using master
   by (simp add: capMasterCap_def isReplyCap_def split: capability.splits)
-
-lemma isArchObjectCap[simp]:
-  "isArchObjectCap cap' = isArchObjectCap cap" using master
-  by (simp add: capMasterCap_def isCap_simps split: capability.splits)
-
-lemma isArchSGISignalCap[simp]:
-  "isArchSGISignalCap cap' = isArchSGISignalCap cap" using master
-  by (simp add: capMasterCap_def arch_capMasterCap_def isCap_simps
-           split: capability.splits arch_capability.splits)
 
 lemma capRange [simp]:
   "capRange cap' = capRange cap" using master
@@ -3233,8 +3162,8 @@ locale mdb_insert =
                (modify_map m dest (cteCap_update (\<lambda>_. c')))
                dest
                (cteMDBNode_update
-                 (\<lambda>m. mdbFirstBadged_update (\<lambda>a. revokable' src_cap c')
-                     (mdbRevocable_update (\<lambda>a. revokable' src_cap c')
+                 (\<lambda>m. mdbFirstBadged_update (\<lambda>a. isCapRevocable c' src_cap)
+                     (mdbRevocable_update (\<lambda>a. isCapRevocable c' src_cap)
                      (mdbPrev_update (\<lambda>a. src) src_node)))))
              src
              (cteMDBNode_update (mdbNext_update (\<lambda>a. dest)))"
@@ -3258,8 +3187,8 @@ lemmas n_0_simps [iff] = no_0_simps [OF no_0_n]
 lemmas neqs [simp] = neq neq [symmetric]
 
 definition
-  "new_dest \<equiv> CTE c' (mdbFirstBadged_update (\<lambda>a. revokable' src_cap c')
-                     (mdbRevocable_update (\<lambda>a. revokable' src_cap c')
+  "new_dest \<equiv> CTE c' (mdbFirstBadged_update (\<lambda>a. isCapRevocable c' src_cap)
+                     (mdbRevocable_update (\<lambda>a. isCapRevocable c' src_cap)
                      (mdbPrev_update (\<lambda>a. src) src_node)))"
 
 definition
@@ -3379,18 +3308,13 @@ lemma n_dest:
 
 end
 
-context Arch begin arch_global_naming
-
 lemma revokable_plus_orderD:
-  "\<lbrakk> revokable' old new; (capBadge old, capBadge new) \<in> capBadge_ordering P;
+  "\<lbrakk> isCapRevocable new old; (capBadge old, capBadge new) \<in> capBadge_ordering P;
        capMasterCap old = capMasterCap new \<rbrakk>
       \<Longrightarrow> (isUntypedCap new \<or> (\<exists>x. capBadge old = Some 0 \<and> capBadge new = Some x \<and> x \<noteq> 0))"
-  by (clarsimp simp: revokable'_def isCap_simps
-               split: if_split_asm capability.splits arch_capability.splits)
-
-end
-
-arch_requalify_facts revokable_plus_orderD (*FIXME: arch-split*)
+  by (clarsimp simp: Retype_H.isCapRevocable_def RISCV64_H.isCapRevocable_def gen_isCap_simps
+                        RISCV64_H.arch_capability.simps
+              split: if_split_asm capability.split_asm RISCV64_H.arch_capability.split_asm)
 
 lemma valid_badges_def2:
   "valid_badges m =
@@ -3407,18 +3331,22 @@ lemma valid_badges_def2:
   apply (simp add: valid_badges_def)
   apply (intro arg_cong[where f=All] ext imp_cong [OF refl])
   apply (case_tac cap; clarsimp simp: gen_isCap_simps)
-      by (fastforce simp: ARM_HYP.sameRegionAs_def3 ARM_HYP.isCap_simps)+ (* FIXME arch-split *)
+      by (fastforce simp: RISCV64.sameRegionAs_def3 RISCV64.isCap_simps)+ (* FIXME arch-split *)
 
 lemma sameRegionAs_update_untyped:
   "RetypeDecls_H.sameRegionAs (capability.UntypedCap d a b c) =
    RetypeDecls_H.sameRegionAs (capability.UntypedCap d a b c')"
   apply (rule ext)
-  by (case_tac x; clarsimp simp: sameRegionAs_def gen_isCap_simps)
+  apply (case_tac x)
+    apply (clarsimp simp:sameRegionAs_def gen_isCap_simps)+
+  done
 
 lemma sameRegionAs_update_untyped':
   "RetypeDecls_H.sameRegionAs cap (capability.UntypedCap d a b f) =
    RetypeDecls_H.sameRegionAs cap (capability.UntypedCap d a b f')"
-  by (case_tac cap; clarsimp simp: sameRegionAs_def gen_isCap_simps)
+  apply (case_tac cap)
+    apply (clarsimp simp:sameRegionAs_def gen_isCap_simps)+
+  done
 
 (*The newly inserted cap should never have children.*)
 lemma (in mdb_insert_der) dest_no_parent_n:
@@ -3437,7 +3365,7 @@ lemma (in mdb_insert_der) dest_no_parent_n:
   apply (case_tac "isUntypedCap src_cap")
   apply (clarsimp simp: gen_isCap_simps isMDBParentOf_CTE is_derived'_def
                         badge_derived'_def freeIndex_update_def capMasterCap_def
-                  split:capability.splits)
+                 split: capability.splits)
    apply (simp add: ut_revocable'_def)
    apply (drule spec[where x=src], simp add: gen_isCap_simps)
    apply (simp add: descendants_of'_def)
@@ -3445,29 +3373,28 @@ lemma (in mdb_insert_der) dest_no_parent_n:
    apply (erule notE, rule direct_parent)
      apply (simp add: mdb_next_unfold)
     apply simp
-   apply (simp add: parentOf_def src isMDBParentOf_CTE ARM_HYP.isCap_simps (* FIXME arch-split *)
-               cong: sameRegionAs_update_untyped)
-  apply (clarsimp simp: isMDBParentOf_CTE is_derived'_def
-    badge_derived'_def)
+   apply (simp add: parentOf_def src isMDBParentOf_CTE gen_isCap_simps
+              cong: sameRegionAs_update_untyped)
+  apply (clarsimp simp: isMDBParentOf_CTE is_derived'_def badge_derived'_def)
   apply (drule(2) revokable_plus_orderD)
-  apply (erule ARM_HYP.sameRegionAsE, simp_all) (* FIXME arch-split *)
-    apply (simp add: valid_badges_def2)
-    apply (erule_tac x=src in allE)
-    apply (erule_tac x="mdbNext src_node" in allE)
-    apply (clarsimp simp: src mdb_next_unfold)
-    apply (case_tac "capBadge cap'", simp_all)
-   apply (clarsimp simp add: gen_isCap_simps capMasterCap_def vsCapRef_def
-                   simp del: not_ex
-                      split: capability.splits)
-  apply (clarsimp simp: ARM_HYP.isCap_simps) (* FIXME arch-split *)
+  apply (erule RISCV64.sameRegionAsE, simp_all) (* FIXME arch-split *)
+     apply (simp add: valid_badges_def2)
+     apply (erule_tac x=src in allE)
+     apply (erule_tac x="mdbNext src_node" in allE)
+     apply (clarsimp simp: src mdb_next_unfold)
+     apply (case_tac "capBadge cap'", simp_all)
+    apply (clarsimp simp add: gen_isCap_simps capMasterCap_def
+                    simp del: not_ex
+                       split: capability.splits)
+   apply (clarsimp simp: RISCV64.isCap_simps)+ (* FIXME arch-split *)
   done
 
 locale mdb_insert_child = mdb_insert_der +
   assumes child:
   "isMDBParentOf
    (CTE src_cap src_node)
-   (CTE c' (mdbFirstBadged_update (\<lambda>a. revokable' src_cap c')
-           (mdbRevocable_update (\<lambda>a. revokable' src_cap c')
+   (CTE c' (mdbFirstBadged_update (\<lambda>a. isCapRevocable c' src_cap)
+           (mdbRevocable_update (\<lambda>a. isCapRevocable c' src_cap)
            (mdbPrev_update (\<lambda>a. src) src_node))))"
 
 context mdb_insert_child
@@ -3599,8 +3526,8 @@ locale mdb_insert_sib = mdb_insert_der +
   assumes no_child:
   "\<not>isMDBParentOf
    (CTE src_cap src_node)
-   (CTE c' (mdbFirstBadged_update (\<lambda>a. revokable' src_cap c')
-           (mdbRevocable_update (\<lambda>a. revokable' src_cap c')
+   (CTE c' (mdbFirstBadged_update (\<lambda>a. isCapRevocable c' src_cap)
+           (mdbRevocable_update (\<lambda>a. isCapRevocable c' src_cap)
            (mdbPrev_update (\<lambda>a. src) src_node))))"
 begin
 interpretation Arch . (*FIXME: arch-split*)
@@ -3615,17 +3542,18 @@ lemma src_no_mdb_parent:
   apply (case_tac cte)
   apply (clarsimp simp: isMDBParentOf_CTE is_derived'_def badge_derived'_def)
   apply (erule sameRegionAsE)
-      apply (clarsimp simp add: sameRegionAs_def3)
-      apply (cases src_cap,
-             auto simp: capMasterCap_def arch_capMasterCap_def revokable'_def vsCapRef_def
-                        freeIndex_update_def isCap_simps
-                  split: capability.splits arch_capability.splits)[1]
-     apply (clarsimp simp: isCap_simps sameRegionAs_def3 capMasterCap_def freeIndex_update_def
-                     split: capability.splits arch_capability.splits)
-    apply (clarsimp simp: isCap_simps sameRegionAs_def3 freeIndex_update_def
-                          capRange_def vsCapRef_def split:capability.splits
-                    simp del: Int_atLeastAtMost atLeastAtMost_iff)
-    apply (auto simp: isCap_simps sameRegionAs_def3)
+     apply (clarsimp simp add: sameRegionAs_def3)
+     subgoal by (cases src_cap; auto simp: capMasterCap_def arch_capMasterCap_def
+                                           Retype_H.isCapRevocable_def RISCV64_H.isCapRevocable_def
+                                           freeIndex_update_def isCap_simps
+                                       split: capability.split_asm arch_capability.split_asm) (* long *)
+    apply (clarsimp simp: isCap_simps sameRegionAs_def3 capMasterCap_def freeIndex_update_def
+       split:capability.splits arch_capability.splits)
+   apply (clarsimp simp: isCap_simps sameRegionAs_def3 freeIndex_update_def
+                         capRange_def split:capability.splits
+               simp del: Int_atLeastAtMost atLeastAtMost_iff)
+   apply auto[1]
+  apply (clarsimp simp: isCap_simps sameRegionAs_def3)+
   done
 
 lemma src_no_parent:
@@ -3646,15 +3574,12 @@ lemma parent_preserved:
   apply (clarsimp simp: is_derived'_def badge_derived'_def)
   apply (rule conjI)
    apply (simp add: sameRegionAs_def2)
-  apply (cases "revokable' src_cap c'")
+  apply (cases "isCapRevocable c' src_cap")
    apply simp
    apply (drule(2) revokable_plus_orderD)
-   apply (erule disjE[where P="isUntypedCap c'"])
-    apply (clarsimp simp: isCap_simps)
-   apply clarsimp
-   apply (rule conjI)
-    apply (clarsimp simp: isCap_simps capBadge_def split: if_split_asm)
-   by (fastforce elim: capBadge_ordering_trans)+
+   apply (erule disjE)
+     apply (clarsimp simp: isCap_simps)
+     by ((fastforce elim: capBadge_ordering_trans simp: isCap_simps)+)
 
 lemma src_no_parent_n [simp]:
   "n \<turnstile> src \<rightarrow> p = False"
@@ -3777,18 +3702,18 @@ lemma derived_sameRegionAs:
        \<Longrightarrow> sameRegionAs cap cap'"
   unfolding is_derived'_def badge_derived'_def
   apply (simp add: sameRegionAs_def3)
-  apply (cases "isUntypedCap cap \<or> isArchPageCap cap")
+  apply (cases "isUntypedCap cap \<or> isArchFrameCap cap")
    apply (rule disjI2, rule disjI1)
    apply (erule disjE)
     apply (clarsimp simp: isCap_simps valid_cap'_def capAligned_def
                           is_aligned_no_overflow capRange_def
-          split:capability.splits arch_capability.splits option.splits)
-    apply (clarsimp simp: isCap_simps valid_cap'_def capAligned_def
-                          is_aligned_no_overflow capRange_def
-          split:capability.splits arch_capability.splits option.splits)
-    apply (clarsimp simp: isCap_simps valid_cap'_def valid_arch_cap'_def
-                          is_aligned_no_overflow capRange_def
-          split:capability.splits arch_capability.splits option.splits)
+                   split: capability.splits arch_capability.splits option.splits)
+   apply (clarsimp simp: isCap_simps valid_cap'_def capAligned_def
+                         is_aligned_no_overflow capRange_def arch_capMasterCap_def
+                  split: capability.splits arch_capability.splits option.splits)
+  apply (clarsimp simp: isCap_simps valid_cap'_def
+                        is_aligned_no_overflow capRange_def vs_cap_ref_arch'_def
+                 split: capability.splits arch_capability.splits option.splits)
   done
 
 lemma no_fail_updateMDB [wp]:
@@ -3801,7 +3726,7 @@ lemma no_fail_updateMDB [wp]:
 lemma updateMDB_cte_at' [wp]:
  "\<lbrace>cte_at' p\<rbrace>
   updateMDB x y
-  \<lbrace>\<lambda>uu. cte_at' p\<rbrace>"
+  \<lbrace>\<lambda>_. cte_at' p\<rbrace>"
   by (wpsimp wp: updateMDB_weak_cte_wp_at)
 
 lemma updateCap_cte_at' [wp]:
@@ -3828,111 +3753,72 @@ lemma is_derived_maskedAsFull[simp]:
    is_derived' m slot c src_cap'"
   apply (clarsimp simp: maskedAsFull_def isCap_simps split:if_splits)
   apply (case_tac c)
-    apply (clarsimp simp:is_derived'_def vsCapRef_def isCap_simps badge_derived'_def )+
-done
+             apply (clarsimp simp:is_derived'_def isCap_simps badge_derived'_def)+
+  done
 
 
 lemma maskedAsFull_revokable:
   "is_derived' x y c' src_cap' \<Longrightarrow>
-   revokable' (maskedAsFull src_cap' a) c' = revokable' src_cap' c'"
-  apply (case_tac src_cap'; simp add: maskedAsFull_def isCap_simps)
-  apply (case_tac c'; simp add: maskedAsFull_def is_derived'_def isCap_simps badge_derived'_def
-                                Retype_H.isCapRevocable_def
-                           split: arch_capability.splits if_splits)
+   isCapRevocable c' (maskedAsFull src_cap' a) = isCapRevocable c' src_cap'"
+  apply (case_tac src_cap')
+             apply (simp_all add:maskedAsFull_def isCap_simps)
+  apply (case_tac c')
+             apply (simp_all add:maskedAsFull_def is_derived'_def isCap_simps)
+          apply (simp_all add:badge_derived'_def capMasterCap_simps split:arch_capability.splits)
+   apply (clarsimp split:if_splits simp:Retype_H.isCapRevocable_def RISCV64_H.isCapRevocable_def isCap_simps)+
   done
-
-lemma sameRegionAs_SGISignalCap2[simp]:
-  "sameRegionAs cap (ArchObjectCap (SGISignalCap irq target)) =
-   (cap = IRQControlCap \<or> cap = ArchObjectCap (SGISignalCap irq target))"
-  by (auto simp: sameRegionAs_def ARM_HYP_H.sameRegionAs_def isCap_simps
-                 isIRQControlCapDescendant_def
-           split: if_splits)
-
-definition
-  "arch_mdb_preservation cap cap' \<equiv> isArchSGISignalCap cap = isArchSGISignalCap cap'"
-
-lemma arch_mdb_preservation_refl[simp, intro!]:
-  "arch_mdb_preservation cap cap"
-  by (simp add: arch_mdb_preservation_def)
-
-lemma arch_mdb_preservation_sym:
-  "arch_mdb_preservation cap cap' = arch_mdb_preservation cap' cap"
-  by (auto simp: arch_mdb_preservation_def)
-
-lemma arch_mdb_preservation_non_arch:
-  "\<lbrakk> \<not>isArchObjectCap cap; \<not>isArchObjectCap cap' \<rbrakk> \<Longrightarrow> arch_mdb_preservation cap cap'"
-  by (simp add: arch_mdb_preservation_def isCap_simps)
-
-lemma arch_mdb_preservation_Untyped[simp]:
-  "arch_mdb_preservation (UntypedCap d p sz idx) (UntypedCap d' p' sz' idx')"
-  by (simp add: arch_mdb_preservation_non_arch isCap_simps)
 
 lemma parentOf_preserve_oneway:
-  assumes dom: "\<And>x. (x \<in> dom m) = (x \<in> dom m')"
-  assumes sameRegion:
-    "\<And>x cte cte'. \<lbrakk>m x = Some cte; m' x = Some cte'\<rbrakk> \<Longrightarrow>
-                     sameRegionAs (cteCap cte) = sameRegionAs (cteCap cte') \<and>
-                     (\<lambda>x. sameRegionAs x (cteCap cte)) = (\<lambda>x. sameRegionAs x (cteCap cte'))"
-  assumes misc:
-    "\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
-                     isUntypedCap (cteCap cte) = isUntypedCap (cteCap cte') \<and>
-                     isNotificationCap (cteCap cte)  = isNotificationCap (cteCap cte') \<and>
-                     (isNotificationCap (cteCap cte) \<longrightarrow> capNtfnBadge (cteCap cte) =
-                                                         capNtfnBadge (cteCap cte')) \<and>
-                     (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte')) \<and>
-                     (isEndpointCap (cteCap cte) \<longrightarrow> capEPBadge (cteCap cte) =
-                                                     capEPBadge (cteCap cte')) \<and>
-                     arch_mdb_preservation (cteCap cte) (cteCap cte') \<and>
-                     cteMDBNode cte = cteMDBNode cte'"
-  assumes node: "\<And>p. mdb_next m p = mdb_next m' p"
-  shows "m \<turnstile> p parentOf x \<Longrightarrow> m'  \<turnstile> p parentOf x"
-  apply (clarsimp simp: parentOf_def)
-  apply (frule iffD1[OF dom, OF domI])
-  apply (frule iffD1[OF dom[where x = p], OF domI])
-  apply clarsimp
-  apply (frule_tac x1=p in conjunct1[OF sameRegion])
-   apply assumption
-  apply (frule_tac x1=x in conjunct2[OF sameRegion])
-   apply assumption
-  apply (drule_tac x="cteCap y" in fun_cong)
-  apply (drule_tac x="cteCap cte'" in fun_cong)
-  apply (drule_tac x=p in misc)
-   apply assumption
-  apply (drule_tac x=x in misc)
-   apply assumption
-  apply ((simp only: isMDBParentOf_def isArchMDBParentOf_def2 split_def
-               split: cte.splits if_split_asm); clarsimp)
-    apply (clarsimp simp: sameRegionAs_def isCap_simps Let_def)
-   apply (clarsimp simp: sameRegionAs_def isCap_simps Let_def)
-  apply (clarsimp simp: arch_mdb_preservation_def split: if_splits)
-  apply blast
-  done
+  assumes dom:"\<And>x. (x \<in> dom m) = (x \<in> dom m')"
+  assumes sameRegion:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
+    sameRegionAs (cteCap cte) = sameRegionAs (cteCap cte')
+  \<and> (\<lambda>x. sameRegionAs x (cteCap cte)) = (\<lambda>x. sameRegionAs x (cteCap cte'))"
+  assumes misc:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
+  isUntypedCap (cteCap cte) = isUntypedCap (cteCap cte')
+  \<and> isNotificationCap (cteCap cte)  = isNotificationCap (cteCap cte')
+  \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
+  \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
+  \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
+  \<and> cteMDBNode cte = cteMDBNode cte'"
+  assumes node:"\<And>p. mdb_next m p = mdb_next m' p"
+  shows "(m  \<turnstile> p parentOf x) \<Longrightarrow> (m'  \<turnstile> p parentOf x)"
+  apply (clarsimp simp:parentOf_def)
+    apply (frule iffD1[OF dom,OF domI])
+    apply (frule iffD1[OF dom[where x = p],OF domI])
+    apply clarsimp
+    apply (frule_tac x1 = p in conjunct1[OF sameRegion])
+      apply assumption
+    apply (frule_tac x1 = x in conjunct2[OF sameRegion])
+      apply assumption
+    apply (drule_tac x = "cteCap y" in fun_cong)
+    apply (drule_tac x = "cteCap cte'" in fun_cong)
+    apply (drule_tac x = p in misc)
+      apply assumption
+    apply (drule_tac x = x in misc)
+      apply assumption
+    apply ((simp only: isMDBParentOf_def split_def split: cte.splits if_split_asm); clarsimp)
+    by (clarsimp simp: sameRegionAs_def isCap_simps Let_def split: if_split_asm)+ (* long *)
 
 lemma parentOf_preserve:
-  assumes dom: "\<And>x. (x \<in> dom m) = (x \<in> dom m')"
-  assumes sameRegion:
-    "\<And>x cte cte'. \<lbrakk>m x = Some cte; m' x = Some cte'\<rbrakk> \<Longrightarrow>
-                     sameRegionAs (cteCap cte) = sameRegionAs (cteCap cte') \<and>
-                     (\<lambda>x. sameRegionAs x (cteCap cte)) = (\<lambda>x. sameRegionAs x (cteCap cte'))"
-  assumes misc:
-    "\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
-                     isUntypedCap (cteCap cte) = isUntypedCap (cteCap cte') \<and>
-                     isNotificationCap (cteCap cte)  = isNotificationCap (cteCap cte') \<and>
-                     (isNotificationCap (cteCap cte) \<longrightarrow> capNtfnBadge (cteCap cte) =
-                                                         capNtfnBadge (cteCap cte')) \<and>
-                     (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte')) \<and>
-                     (isEndpointCap (cteCap cte) \<longrightarrow> capEPBadge (cteCap cte) =
-                                                     capEPBadge (cteCap cte')) \<and>
-                     arch_mdb_preservation (cteCap cte) (cteCap cte') \<and>
-                     cteMDBNode cte = cteMDBNode cte'"
-  assumes node: "\<And>p. mdb_next m p = mdb_next m' p"
+  assumes dom:"\<And>x. (x \<in> dom m) = (x \<in> dom m')"
+  assumes sameRegion:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
+    sameRegionAs (cteCap cte) = sameRegionAs (cteCap cte')
+  \<and> (\<lambda>x. sameRegionAs x (cteCap cte)) = (\<lambda>x. sameRegionAs x (cteCap cte'))"
+  assumes misc:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
+  isUntypedCap (cteCap cte) = isUntypedCap (cteCap cte')
+  \<and> isNotificationCap (cteCap cte)  = isNotificationCap (cteCap cte')
+  \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
+  \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
+  \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
+  \<and> cteMDBNode cte = cteMDBNode cte'"
+  assumes node:"\<And>p. mdb_next m p = mdb_next m' p"
   shows "(m  \<turnstile> p parentOf x) = (m'  \<turnstile> p parentOf x)"
   apply (rule iffI)
-   apply (rule parentOf_preserve_oneway[OF dom sameRegion misc node]; assumption)
-  using misc
-  apply (subst (asm) arch_mdb_preservation_sym)
-  apply (rule parentOf_preserve_oneway, auto simp: dom sameRegion misc node)
-  done
+    apply (rule parentOf_preserve_oneway[OF dom sameRegion misc node])
+      apply (assumption)+
+  apply (rule parentOf_preserve_oneway)
+  apply (auto simp:dom sameRegion misc node)
+done
 
 lemma updateUntypedCap_descendants_of:
   "\<lbrakk>m src = Some cte; isUntypedCap (cteCap cte)\<rbrakk>
@@ -4090,8 +3976,21 @@ lemma setUntypedCapAsFull_corres:
   apply (case_tac src_cap,simp_all)
   done
 
-(* FIXME: move to Bits_R, replace untyped_not_null there *)
-lemmas isUntypedCap_simps[simp] = isUntypedCap_def[split_simps capability.split]
+(* FIXME: SELFOUR-421 move *)
+lemma isUntypedCap_simps[simp]:
+  "isUntypedCap (capability.UntypedCap uu uv uw ux) = True"
+  "isUntypedCap (capability.NullCap) = False"
+  "isUntypedCap (capability.EndpointCap v va vb vc vd ve) = False"
+  "isUntypedCap (capability.NotificationCap v va vb vc) = False"
+  "isUntypedCap (capability.ReplyCap v1 v2 v3) = False"
+  "isUntypedCap (capability.CNodeCap x1 x2 x3 x4) = False"
+  "isUntypedCap (capability.ThreadCap v) = False"
+  "isUntypedCap (capability.DomainCap) = False"
+  "isUntypedCap (capability.IRQControlCap) = False"
+  "isUntypedCap (capability.IRQHandlerCap y1) = False"
+  "isUntypedCap (capability.Zombie v va1 vb1) = False"
+  "isUntypedCap (capability.ArchObjectCap z) = False"
+  by (simp_all add: isUntypedCap_def split: capability.splits)
 
 lemma cap_relation_masked_as_full:
   "\<lbrakk>cap_relation src_cap src_cap';cap_relation c c'\<rbrakk> \<Longrightarrow>
@@ -4260,7 +4159,7 @@ lemma distinct_zombies_preserve_oneway:
   "\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
       isZombie (cteCap cte) = isZombie (cteCap cte') \<and>
       isUntypedCap (cteCap cte) = isUntypedCap (cteCap cte') \<and>
-      isArchPageCap (cteCap cte) = isArchPageCap (cteCap cte') \<and>
+      isArchFrameCap (cteCap cte) = isArchFrameCap (cteCap cte') \<and>
       capBits (cteCap cte) = capBits (cteCap cte') \<and>
       capUntypedPtr (cteCap cte) = capUntypedPtr (cteCap cte') \<and>
       capClass (cteCap cte) = capClass (cteCap cte')"
@@ -4284,7 +4183,7 @@ lemma distinct_zombies_preserve:
   "\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
       isZombie (cteCap cte) = isZombie (cteCap cte') \<and>
       isUntypedCap (cteCap cte) = isUntypedCap (cteCap cte') \<and>
-      isArchPageCap (cteCap cte) = isArchPageCap (cteCap cte') \<and>
+      isArchFrameCap (cteCap cte) = isArchFrameCap (cteCap cte') \<and>
       capBits (cteCap cte) = capBits (cteCap cte') \<and>
       capUntypedPtr (cteCap cte) = capUntypedPtr (cteCap cte') \<and>
       capClass (cteCap cte) = capClass (cteCap cte')"
@@ -4378,16 +4277,14 @@ lemma is_chunk_preserve:
   done
 
 lemma mdb_chunked_preserve_oneway:
-  assumes dom: "\<And>x. (x \<in> dom m) = (x \<in> dom m')"
-  assumes sameRegion:
-    "\<And>x cte cte'.
-       \<lbrakk> m x = Some cte; m' x = Some cte'\<rbrakk> \<Longrightarrow>
-           cteMDBNode cte = cteMDBNode cte'
-         \<and> arch_mdb_preservation (cteCap cte) (cteCap cte')
-         \<and> sameRegionAs (cteCap cte) = sameRegionAs (cteCap cte')
-         \<and> (\<lambda>x. sameRegionAs x (cteCap cte)) = (\<lambda>x. sameRegionAs x (cteCap cte'))"
-  assumes node: "\<And>p. mdb_next m p = mdb_next m' p"
-  shows "mdb_chunked m \<Longrightarrow> mdb_chunked m'"
+  assumes dom:"\<And>x. (x \<in> dom m) = (x \<in> dom m')"
+  assumes sameRegion:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow> cteMDBNode cte = cteMDBNode cte'
+  \<and> sameRegionAs (cteCap cte) = sameRegionAs (cteCap cte')
+  \<and> (\<lambda>x. sameRegionAs x (cteCap cte)) = (\<lambda>x. sameRegionAs x (cteCap cte'))"
+  assumes node:"\<And>p. mdb_next m p = mdb_next m' p"
+  shows
+  "mdb_chunked m \<Longrightarrow> mdb_chunked m'"
+  (* FIXME: arch-split, use AARCH64 version of this lemma for arch splitting *)
   apply (clarsimp simp:mdb_chunked_def)
   apply (drule_tac x=p in spec)
   apply (drule_tac x=p' in spec)
@@ -4404,19 +4301,20 @@ lemma mdb_chunked_preserve_oneway:
    apply fastforce
   apply (subgoal_tac "m \<turnstile> p \<leadsto>\<^sup>+ p' = m' \<turnstile> p \<leadsto>\<^sup>+ p'")
    apply (subgoal_tac "m \<turnstile> p' \<leadsto>\<^sup>+ p = m' \<turnstile> p' \<leadsto>\<^sup>+ p")
-    apply (frule_tac m = m and x = p and c = cap and p = p and p'=p'
-                     in is_chunk_preserve[rotated -1])
+    apply (frule_tac m = m and
+           x = p and c = cap and p = p and p'=p' in is_chunk_preserve[rotated -1])
         apply (simp add:dom)
-       apply (simp add: sameRegion)
-      apply simp+
+       apply (rule sameRegion)
+        apply simp+
       apply (rule node)
      apply assumption
     apply (frule_tac x = p' and c = cap' and p = p' and p'=p in is_chunk_preserve[rotated -1])
         apply (rule dom)
-       apply (simp add: sameRegion)
+       apply (rule sameRegion)
+        apply assumption+
       apply (rule node)
      apply assumption
-    apply (clarsimp simp: mdb_chunked_arch_assms_def arch_mdb_preservation_def)
+    apply (clarsimp simp: mdb_chunked_arch_assms_def)
    apply (rule connect_eqv_singleE)
    apply (clarsimp simp:mdb_next_rel_def node)
   apply (rule connect_eqv_singleE)
@@ -4424,85 +4322,55 @@ lemma mdb_chunked_preserve_oneway:
   done
 
 lemma mdb_chunked_preserve:
-  assumes dom: "\<And>x. (x \<in> dom m) = (x \<in> dom m')"
-  assumes sameRegion:
-    "\<And>x cte cte'.
-       \<lbrakk> m x = Some cte; m' x = Some cte' \<rbrakk> \<Longrightarrow>
-           cteMDBNode cte = cteMDBNode cte'
-         \<and> arch_mdb_preservation (cteCap cte) (cteCap cte')
-         \<and> sameRegionAs (cteCap cte) = sameRegionAs (cteCap cte')
-         \<and> (\<lambda>x. sameRegionAs x (cteCap cte)) = (\<lambda>x. sameRegionAs x (cteCap cte'))"
-  assumes node: "\<And>p. mdb_next m p = mdb_next m' p"
-  shows "mdb_chunked m = mdb_chunked m'"
-  apply (rule iffI)
+  assumes dom:"\<And>x. (x \<in> dom m) = (x \<in> dom m')"
+  assumes sameRegion:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow> cteMDBNode cte = cteMDBNode cte'
+  \<and> sameRegionAs (cteCap cte) = sameRegionAs (cteCap cte')
+  \<and> (\<lambda>x. sameRegionAs x (cteCap cte)) = (\<lambda>x. sameRegionAs x (cteCap cte'))"
+  assumes node:"\<And>p. mdb_next m p = mdb_next m' p"
+  shows
+  "mdb_chunked m = mdb_chunked m'"
+   apply (rule iffI)
+     apply (erule mdb_chunked_preserve_oneway[rotated -1])
+       apply (simp add:dom sameRegion node)+
    apply (erule mdb_chunked_preserve_oneway[rotated -1])
-     apply (simp add:dom sameRegion node)+
-  apply (erule mdb_chunked_preserve_oneway[rotated -1])
-    apply (simp add:dom[symmetric])
+   apply (simp add:dom[symmetric])
    apply (frule sameRegion)
-    apply assumption
-   apply (simp add: arch_mdb_preservation_sym)
-  apply (simp add:node)
+     apply assumption
+     apply simp
+   apply (simp add:node)
   done
 
 lemma valid_badges_preserve_oneway:
-  assumes dom: "\<And>x. (x \<in> dom m) = (x \<in> dom m')"
-  assumes misc:
-    "\<And>x cte cte'.
-       \<lbrakk> m x =Some cte; m' x = Some cte'\<rbrakk> \<Longrightarrow>
-           isNotificationCap (cteCap cte)  = isNotificationCap (cteCap cte')
-         \<and> (isNotificationCap (cteCap cte) \<longrightarrow> capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte'))
-         \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
-         \<and> (isEndpointCap (cteCap cte) \<longrightarrow> capEPBadge (cteCap cte) = capEPBadge (cteCap cte'))
-         \<and> arch_mdb_preservation (cteCap cte) (cteCap cte')
-         \<and> isIRQHandlerCap (cteCap cte) = isIRQHandlerCap (cteCap cte')
-         \<and> isIRQControlCap (cteCap cte) = isIRQControlCap (cteCap cte')
-         \<and> cteMDBNode cte = cteMDBNode cte'"
-  assumes sameRegion:
-    "\<And>x cte cte'. \<lbrakk> m x =Some cte; m' x = Some cte' \<rbrakk> \<Longrightarrow>
-                        sameRegionAs (cteCap cte) = sameRegionAs (cteCap cte')
-                     \<and> (\<lambda>x. sameRegionAs x (cteCap cte)) = (\<lambda>x. sameRegionAs x (cteCap cte'))"
-  assumes mdb_next: "\<And>p. mdb_next m p = mdb_next m' p"
+  assumes dom:"\<And>x. (x \<in> dom m) = (x \<in> dom m')"
+  assumes misc:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
+    isNotificationCap (cteCap cte)  = isNotificationCap (cteCap cte')
+  \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
+  \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
+  \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
+  \<and> cteMDBNode cte = cteMDBNode cte'"
+  assumes sameRegion:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
+    sameRegionAs (cteCap cte) = sameRegionAs (cteCap cte')
+  \<and> (\<lambda>x. sameRegionAs x (cteCap cte)) = (\<lambda>x. sameRegionAs x (cteCap cte'))"
+  assumes mdb_next:"\<And>p. mdb_next m p = mdb_next m' p"
   shows "valid_badges m \<Longrightarrow> valid_badges m'"
-  apply (clarsimp simp:valid_badges_def)
+  (* FIXME: arch-split, use AARCH64 version of this lemma for arch splitting *)
+  apply (clarsimp simp:valid_badges_def valid_arch_badges_def)
   apply (drule_tac x = p in spec)
   apply (drule_tac x = p' in spec)
-  apply (frule iffD2[OF dom,OF domI], rotate_tac)
-  apply (frule iffD2[OF dom,OF domI], rotate_tac)
+  apply (frule iffD2[OF dom,OF domI],rotate_tac)
+  apply (frule iffD2[OF dom,OF domI],rotate_tac)
   apply clarsimp
-  apply (rename_tac cte cte', case_tac cte, case_tac cte')
-  apply (rename_tac m_cap m_node m_cap' m_node')
+  apply (case_tac y,case_tac ya)
   apply clarsimp
   apply (erule impE)
    apply (simp add: mdb_next mdb_next_rel_def)
-  apply clarsimp
-  apply (rule conjI, clarsimp)
-   apply (erule impE)
-    apply (drule(1) sameRegion)+
-    apply clarsimp
-    apply (drule fun_cong)+
-    apply fastforce
-   apply (drule(1) misc)+
-   apply (clarsimp simp: isCap_simps sameRegionAs_def split: if_splits)
-  apply (clarsimp simp: valid_arch_badges_def)
-  apply (thin_tac "sameRegionAs _ _ \<longrightarrow> _")
   apply (erule impE)
-   apply (drule(1) misc)+
-   apply (clarsimp simp: arch_mdb_preservation_def)
-  apply (erule impE)
+   apply (drule(1) sameRegion)+
    apply clarsimp
-   apply (prop_tac "isArchSGISignalCap m_cap'")
-    apply (drule(1) misc)+
-    apply (clarsimp simp: arch_mdb_preservation_def)
-   apply (prop_tac "sameRegionAs m_cap' m_cap'", solves \<open>clarsimp simp: isCap_simps\<close>)
-   apply (drule (1) sameRegion)+
-   apply (erule conjE)
-   apply (drule_tac x=m_cap' in fun_cong)
-   apply (clarsimp simp: isCap_simps)
-   apply (drule_tac x="ArchObjectCap (SGISignalCap irqa target)" in fun_cong)
-   apply (solves simp)
+   apply (drule fun_cong)+
+   apply fastforce
   apply (drule(1) misc)+
-  apply clarsimp
+  apply (clarsimp simp:isCap_simps sameRegionAs_def split:if_splits)
   done
 
 lemma valid_badges_preserve:
@@ -4512,9 +4380,6 @@ lemma valid_badges_preserve:
   \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
   \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
   \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
-  \<and> arch_mdb_preservation (cteCap cte) (cteCap cte')
-  \<and> isIRQHandlerCap (cteCap cte) = isIRQHandlerCap (cteCap cte')
-  \<and> isIRQControlCap (cteCap cte) = isIRQControlCap (cteCap cte')
   \<and> cteMDBNode cte = cteMDBNode cte'"
   assumes sameRegion:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
     sameRegionAs (cteCap cte) = sameRegionAs (cteCap cte')
@@ -4524,8 +4389,6 @@ lemma valid_badges_preserve:
   apply (rule iffI)
     apply (rule valid_badges_preserve_oneway[OF dom misc sameRegion mdb_next])
     apply assumption+
-  using misc
-  apply (subst (asm) arch_mdb_preservation_sym)
   apply (rule valid_badges_preserve_oneway)
   apply (simp add:dom misc sameRegion mdb_next)+
   done
@@ -4539,14 +4402,14 @@ lemma mdb_untyped'_preserve_oneway:
   \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
   \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
   \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
-  \<and> arch_mdb_preservation (cteCap cte) (cteCap cte')
   \<and> capRange (cteCap cte) = capRange (cteCap cte')
   \<and> cteMDBNode cte = cteMDBNode cte'"
   assumes sameRegion:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow> cteMDBNode cte = cteMDBNode cte'
   \<and> sameRegionAs (cteCap cte) = sameRegionAs (cteCap cte')
   \<and> (\<lambda>x. sameRegionAs x (cteCap cte)) = (\<lambda>x. sameRegionAs x (cteCap cte'))"
   assumes mdb_next:"\<And>p. mdb_next m p = mdb_next m' p"
-  shows "untyped_mdb' m \<Longrightarrow> untyped_mdb' m'"
+  shows
+  "untyped_mdb' m \<Longrightarrow> untyped_mdb' m'"
   apply (clarsimp simp:untyped_mdb'_def)
   apply (drule_tac x = p in spec)
   apply (drule_tac x = p' in spec)
@@ -4555,22 +4418,22 @@ lemma mdb_untyped'_preserve_oneway:
   apply clarsimp
   apply (case_tac y,case_tac ya)
   apply (frule misc)
-   apply fastforce
+    apply fastforce
   apply clarsimp
   apply (frule_tac x = p' in misc)
-   apply fastforce
+    apply fastforce
   apply (frule_tac x = p in misc)
-   apply assumption
+    apply assumption
   apply clarsimp
   apply (clarsimp simp: descendants_of'_def Invariants_H.subtree_def)
   apply (erule_tac f1 = "\<lambda>x. lfp x y" for y in iffD1[OF arg_cong,rotated])
-  apply (rule ext)+
-  apply (subgoal_tac "\<And>p p'. (m \<turnstile> p \<leadsto> p') = (m' \<turnstile> p \<leadsto> p')")
-   apply (thin_tac "P" for P)+
-   apply (subgoal_tac "(m \<turnstile> p parentOf x) = (m' \<turnstile> p parentOf x)")
-    apply fastforce
-   apply (rule parentOf_preserve[OF dom])
-     apply (simp add:misc sameRegion mdb_next mdb_next_rel_def)+
+    apply (rule ext)+
+      apply (subgoal_tac "\<And>p p'. (m \<turnstile> p \<leadsto> p') = (m' \<turnstile> p \<leadsto> p')")
+        apply (thin_tac "P" for P)+
+        apply (subgoal_tac "(m \<turnstile> p parentOf x) = (m' \<turnstile> p parentOf x)")
+        apply fastforce
+      apply (rule parentOf_preserve[OF dom])
+  apply (simp add:misc sameRegion mdb_next mdb_next_rel_def)+
   done
 
 
@@ -4583,7 +4446,6 @@ lemma untyped_mdb'_preserve:
   \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
   \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
   \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
-  \<and> arch_mdb_preservation (cteCap cte) (cteCap cte')
   \<and> capRange (cteCap cte) = capRange (cteCap cte')
   \<and> cteMDBNode cte = cteMDBNode cte'"
   assumes sameRegion:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow> cteMDBNode cte = cteMDBNode cte'
@@ -4593,14 +4455,14 @@ lemma untyped_mdb'_preserve:
   shows
   "untyped_mdb' m = untyped_mdb' m'"
   apply (rule iffI)
-   apply (erule mdb_untyped'_preserve_oneway[rotated -1])
+    apply (erule mdb_untyped'_preserve_oneway[rotated -1])
       apply (simp add:dom misc sameRegion range mdb_next)+
-  apply (erule mdb_untyped'_preserve_oneway[rotated -1])
-     apply (simp add:dom[symmetric])
-    apply (frule(1) misc, simp add: arch_mdb_preservation_sym)
-   apply (frule(1) sameRegion,simp)
-  apply (simp add:mdb_next[symmetric])+
-  done
+   apply (erule mdb_untyped'_preserve_oneway[rotated -1])
+   apply (simp add:dom[symmetric])
+     apply (frule(1) misc,simp)
+     apply (frule(1) sameRegion,simp)
+   apply (simp add:mdb_next[symmetric])+
+done
 
 lemma irq_control_preserve_oneway:
   assumes dom: "\<And>x. (x \<in> dom m) = (x \<in> dom m')"
@@ -4639,7 +4501,9 @@ lemma irq_control_preserve:
   apply (rule irq_control_preserve_oneway)
   apply (simp add:dom misc)+
   done
+
 end
+
 locale mdb_inv_preserve =
   fixes m m'
   assumes dom: "\<And>x. (x\<in> dom m)  = (x\<in> dom m')"
@@ -4652,12 +4516,10 @@ locale mdb_inv_preserve =
   \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
   \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
   \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
-  \<and> arch_mdb_preservation (cteCap cte) (cteCap cte')
-  \<and> isIRQHandlerCap (cteCap cte) = isIRQHandlerCap (cteCap cte')
   \<and> untypedRange (cteCap cte) = untypedRange (cteCap cte')
   \<and> capClass (cteCap cte) = capClass (cteCap cte')
   \<and> isZombie (cteCap cte) = isZombie (cteCap cte')
-  \<and> isArchPageCap (cteCap cte) = isArchPageCap (cteCap cte')
+  \<and> isArchFrameCap (cteCap cte) = isArchFrameCap (cteCap cte')
   \<and> capBits (cteCap cte) = capBits (cteCap cte')
   \<and> RetypeDecls_H.capUntypedPtr (cteCap cte) = RetypeDecls_H.capUntypedPtr (cteCap cte')
   \<and> capRange (cteCap cte) = capRange (cteCap cte')
@@ -4831,13 +4693,13 @@ lemma mdb_inv_preserve_updateCap:
    mdb_inv_preserve m (modify_map m slot
      (cteCap_update (\<lambda>_. capFreeIndex_update (\<lambda>_. index) (cteCap cte))))"
   apply (clarsimp simp: mdb_inv_preserve_def modify_map_dom gen_isCap_simps modify_map_def
+                        isArchFrameCap_non_arch
                   split: if_splits)
   apply (intro conjI impI allI)
-      apply fastforce
-     apply (simp add: ARM_HYP.isCap_defs) (* FIXME arch-split *)
+     apply fastforce
     apply (simp add: sameRegionAs_update_untyped)
-   apply (rule ext,simp add:sameRegionAs_update_untyped')
-  apply (simp add:mdb_next_def split:if_splits)
+   apply (rule ext, simp add:sameRegionAs_update_untyped')
+  apply (simp add: mdb_next_def split: if_splits)
   done
 
 lemma mdb_inv_preserve_fun_upd:
@@ -4855,7 +4717,7 @@ lemma updateCap_cte_wp_at':
         updateCap ptr cap \<lbrace>\<lambda>rv s. Q (cte_wp_at' P' p s)\<rbrace>"
   apply (simp add:updateCap_def cte_wp_at_ctes_of)
   apply (wp setCTE_ctes_of_wp getCTE_wp)
-  apply (clarsimp simp: cte_wp_at_ctes_of split del: if_split)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (case_tac cte, auto split: if_split)
   done
 
@@ -5238,9 +5100,9 @@ lemma setUntypedCapAsFull_cte_wp_at:
   apply (clarsimp simp:updateCap_def | wp setCTE_weak_cte_wp_at getCTE_wp)+
   done
 
-lemma mdb_inv_preserve_sym:
-  "mdb_inv_preserve a b \<Longrightarrow> mdb_inv_preserve b a"
-  by (simp add:mdb_inv_preserve_def arch_mdb_preservation_sym[THEN iffD1])
+lemma mdb_inv_preserve_sym:"mdb_inv_preserve a b \<Longrightarrow> mdb_inv_preserve b a"
+ by (simp add:mdb_inv_preserve_def)
+
 
 lemma mdb_inv_preserve_refl[simp]:
   "mdb_inv_preserve m m"
@@ -5411,56 +5273,37 @@ lemma cteInsert_corres:
             apply (subgoal_tac "no_mloop (cdt a)")
              prefer 2
              apply (simp add: valid_mdb_def)
-            apply (clarsimp simp: exec_gets update_cdt_def bind_assoc
-                             set_cdt_def
-                             exec_get exec_put set_original_def modify_def simp del: fun_upd_apply
-                               | (rule bind_execI[where f="cap_insert_ext x y z i p" for x y z i p], clarsimp simp: exec_gets exec_get put_def mdb_insert_abs.cap_insert_ext_det_def2 update_cdt_list_def set_cdt_list_def, rule refl))+
+            apply (clarsimp simp: exec_gets update_cdt_def bind_assoc set_cdt_def
+                                  exec_get exec_put set_original_def modify_def
+                        simp del: fun_upd_apply
+                   | (rule bind_execI[where f="cap_insert_ext x y z i p" for x y z i p], clarsimp simp: exec_gets exec_get put_def mdb_insert_abs.cap_insert_ext_det_def2 update_cdt_list_def set_cdt_list_def, rule refl))+
             apply (clarsimp simp: put_def state_relation_def)
             apply (drule updateCap_stuff)
             apply clarsimp
-            apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:, elim conjE)
-            apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:, elim conjE)
-            apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:,  elim conjE)
+            apply (drule (3) updateMDB_the_lot', simp, simp, elim conjE)
+            apply (drule (3) updateMDB_the_lot', simp, simp, elim conjE)
+            apply (drule (3) updateMDB_the_lot', simp, simp,  elim conjE)
             apply (clarsimp simp: cte_wp_at_ctes_of nullPointer_def
                              prev_update_modify_mdb_relation)
             apply (subgoal_tac "cte_map dest \<noteq> 0")
              prefer 2
-             subgoal by (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def no_0_def)
+             apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def no_0_def)
             apply (subgoal_tac "cte_map src \<noteq> 0")
              prefer 2
-             subgoal by (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def no_0_def)
+             apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def no_0_def)
             apply (thin_tac "ksMachineState t = p" for p t)+
             apply (thin_tac "ksCurThread t = p" for p t)+
             apply (thin_tac "ksIdleThread t = p" for p t)+
             apply (thin_tac "ksSchedulerAction t = p" for p t)+
+
             apply (rule conjI)
-             subgoal by (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
-            apply (thin_tac "gsCNodes t = p" for t p)+
-            apply (thin_tac "ksWorkUnitsCompleted t = p" for t p)+
-            apply (thin_tac "cur_thread t = p" for t p)+
-            apply (thin_tac "domain_index t = p" for t p)+
-            apply (thin_tac "domain_time t = p" for t p)+
-            apply (thin_tac "cur_domain t = p" for t p)+
-            apply (thin_tac "scheduler_action t = p" for t p)+
-            apply (thin_tac "ready_queues t = p" for t p)+
-            apply (thin_tac "idle_thread t = p" for t p)+
-            apply (thin_tac "machine_state t = p" for t p)+
-            apply (thin_tac "work_units_completed t = p" for t p)+
-            apply (thin_tac "ksArchState t = p" for t p)+
-            apply (thin_tac "gsUserPages t = p" for t p)+
-            apply (thin_tac "ksCurDomain t = p" for t p)+
-            apply (thin_tac "ksInterruptState t = p" for t p)+
-            apply (thin_tac "ksDomScheduleIdx t = p" for t p)+
-            apply (thin_tac "ksDomainTime t = p" for t p)+
-            apply (thin_tac "ksDomSchedule t = p" for t p)+
-            apply (thin_tac "ctes_of t = p" for t p)+
-            apply (thin_tac "pspace_relation t p" for t p)+
-            apply (thin_tac "interrupt_state_relation s t p" for s t p)+
-            apply (thin_tac "sched_act_relation t p" for t p)+
-            apply (thin_tac "ready_queues_relation t p" for t p)+
+             apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
             apply (rule conjI)
              defer
              apply(rule conjI)
+              apply (thin_tac "ctes_of s = t" for s t)+
+              apply (thin_tac "pspace_relation s t" for s t)+
+              apply (thin_tac "machine_state t = s" for s t)+
               apply (case_tac "srcCTE")
               apply (rename_tac src_cap' src_node)
               apply (case_tac "oldCTE")
@@ -5545,7 +5388,7 @@ lemma cteInsert_corres:
                 apply(clarsimp simp: modify_map_def const_def)
                 apply(simp split: if_split_asm)
                       apply(drule cte_map_inj_eq')
-                       apply(simp_all)[2]
+                           apply(simp_all)[2]
                      apply(drule_tac p="cte_map src" in valid_mdbD1')
                        subgoal by(simp)
                       subgoal by(simp add: valid_mdb'_def valid_mdb_ctes_def)
@@ -5555,11 +5398,11 @@ lemma cteInsert_corres:
                     apply(erule_tac x="(aa, bb)" in allE)+
                     subgoal by(fastforce)
                    apply(drule cte_map_inj_eq')
-                    apply(simp_all)[2]
+                        apply(simp_all)[2]
                   apply(drule cte_map_inj_eq')
-                   apply(simp_all)[2]
+                       apply(simp_all)[2]
                  apply(drule cte_map_inj_eq')
-                  apply(simp_all)[2]
+                      apply(simp_all)[2]
                 apply(erule_tac x="(aa, bb)" in allE)+
                 subgoal by(fastforce)
 
@@ -5576,7 +5419,7 @@ lemma cteInsert_corres:
                 apply(simp split: if_split_asm)
                   apply(drule_tac p="cte_map src" in valid_mdbD1')
                     subgoal by(simp)
-                   subgoal by(simp add: valid_mdb'_def valid_mdb_ctes_def)
+                   apply(simp add: valid_mdb'_def valid_mdb_ctes_def)
                   subgoal by(clarsimp)
                  apply(drule cte_map_inj_eq')
                   apply(simp_all)[2]
@@ -5621,7 +5464,7 @@ lemma cteInsert_corres:
                  apply simp
                 apply simp
                apply simp
-               apply (subst (asm) revokable_eq, assumption, assumption)
+                apply (subst (asm) is_cap_revocable_eq, assumption, assumption)
                  apply (rule derived_sameRegionAs)
                   apply (subst is_derived_eq[symmetric]; assumption)
                  apply assumption
@@ -5676,9 +5519,9 @@ lemma cteInsert_corres:
                apply(clarsimp simp: modify_map_def const_def)
                apply(simp split: if_split_asm)
                      apply(drule cte_map_inj_eq')
-                      apply(simp_all)[2]
+                          apply(simp_all)[2]
                     apply(drule_tac p="cte_map src" in valid_mdbD1')
-                      apply(simp)
+                      subgoal by(simp)
                      subgoal by(simp add: valid_mdb'_def valid_mdb_ctes_def)
                     subgoal by(clarsimp)
                    apply(clarsimp)
@@ -5686,11 +5529,11 @@ lemma cteInsert_corres:
                    apply(erule_tac x="(aa, bb)" in allE)+
                    subgoal by(fastforce)
                   apply(drule cte_map_inj_eq')
-                   apply(simp_all)[2]
+                       apply(simp_all)[2]
                  apply(drule cte_map_inj_eq')
-                  apply(simp_all)[2]
+                      apply(simp_all)[2]
                 apply(drule cte_map_inj_eq')
-                 apply(simp_all)[2]
+                     apply(simp_all)[2]
                apply(erule_tac x="(aa, bb)" in allE)+
                subgoal by(fastforce)
 
@@ -5713,7 +5556,7 @@ lemma cteInsert_corres:
                   apply(simp add: valid_mdb'_def valid_mdb_ctes_def)
                  subgoal by(clarsimp)
                 apply(drule cte_map_inj_eq')
-                 apply(simp_all)[2]
+                     apply(simp_all)[2]
                apply(erule_tac x=src in allE)+
                subgoal by(fastforce)
               apply(simp)
@@ -5727,7 +5570,7 @@ lemma cteInsert_corres:
               apply(clarsimp simp: modify_map_def const_def)
               apply(simp split: if_split_asm)
                     apply(drule cte_map_inj_eq')
-                     apply(simp_all)[2]
+                         apply(simp_all)[2]
                    apply(drule_tac p="cte_map src" in valid_mdbD1')
                      subgoal by(simp)
                     subgoal by(simp add: valid_mdb'_def valid_mdb_ctes_def)
@@ -5737,23 +5580,24 @@ lemma cteInsert_corres:
                   apply(erule_tac x="(aa, bb)" in allE)+
                   subgoal by(fastforce)
                  apply(drule cte_map_inj_eq')
-                  apply(simp_all)[2]
+                      apply(simp_all)[2]
                 apply(drule cte_map_inj_eq')
-                 apply(simp_all)[2]
+                     apply(simp_all)[2]
                apply(drule cte_map_inj_eq')
-                apply(simp_all)[2]
+                    apply(simp_all)[2]
               apply(erule_tac x="(aa, bb)" in allE)+
               subgoal by(fastforce)
+             apply (thin_tac "ctes_of t = t'" for t t')+
              apply (clarsimp simp: modify_map_apply)
              apply (clarsimp simp: revokable_relation_def  split: if_split)
              apply (rule conjI)
-              apply clarsimp
-              apply (subgoal_tac "mdbRevocable node = revokable' (cteCap srcCTE) c'")
+             apply clarsimp
+              apply (subgoal_tac "mdbRevocable node = isCapRevocable c' (cteCap srcCTE)")
                prefer 2
                apply (case_tac oldCTE)
                subgoal by (clarsimp simp add: const_def modify_map_def split: if_split_asm)
               apply simp
-              apply (rule revokable_eq, assumption, assumption)
+              apply (rule is_cap_revocable_eq, assumption, assumption)
                apply (rule derived_sameRegionAs)
                 apply (drule(3) is_derived_eq[THEN iffD1,rotated -1])
                  subgoal by (simp add: cte_wp_at_def)
@@ -5776,17 +5620,18 @@ lemma cteInsert_corres:
               prefer 2
               subgoal by (clarsimp simp: cte_wp_at_caps_of_state null_filter_def split: if_splits)
 
-             apply clarsimp
-             apply (subgoal_tac "cte_at (aa,bb) a")
-              prefer 2
-              apply (drule null_filter_caps_of_stateD)
-              apply (erule cte_wp_at_weakenE, rule TrueI)
-             apply (subgoal_tac "mdbRevocable node = mdbRevocable node'")
-              subgoal by clarsimp
-             apply (subgoal_tac "cte_map (aa,bb) \<noteq> cte_map dest")
-              subgoal by (clarsimp simp: modify_map_def split: if_split_asm)
-             apply (erule (5) cte_map_inj)
+              apply clarsimp
+              apply (subgoal_tac "cte_at (aa,bb) a")
+               prefer 2
+               apply (drule null_filter_caps_of_stateD)
+               apply (erule cte_wp_at_weakenE, rule TrueI)
+              apply (subgoal_tac "mdbRevocable node = mdbRevocable node'")
+               subgoal by clarsimp
+              apply (subgoal_tac "cte_map (aa,bb) \<noteq> cte_map dest")
+               subgoal by (clarsimp simp: modify_map_def split: if_split_asm)
+              apply (erule (5) cte_map_inj)
 (* FIXME *)
+
             apply (wp set_untyped_cap_full_valid_objs set_untyped_cap_as_full_valid_mdb
                set_untyped_cap_as_full_cte_wp_at setUntypedCapAsFull_valid_cap
                setUntypedCapAsFull_cte_wp_at | clarsimp simp: cte_wp_at_caps_of_state| wps)+
@@ -5795,6 +5640,9 @@ lemma cteInsert_corres:
     apply clarsimp
     subgoal by (fastforce elim: cte_wp_at_weakenE)
    apply (clarsimp simp: cte_wp_at'_def)
+  apply (thin_tac "ctes_of s = t" for s t)+
+  apply (thin_tac "pspace_relation s t" for s t)+
+  apply (thin_tac "machine_state t = s" for s t)+
   apply (case_tac "srcCTE")
   apply (rename_tac src_cap' src_node)
   apply (case_tac "oldCTE")
@@ -5828,7 +5676,7 @@ lemma cteInsert_corres:
   apply (subgoal_tac "descendants_of dest (cdt a) = {}")
    prefer 2
    apply (drule mdb_insert.dest_no_descendants)
-   subgoal by (fastforce simp add: cdt_relation_def)
+   subgoal by (fastforce simp add: cdt_relation_def simp del: split_paired_All)
   apply (subgoal_tac "mdb_insert_abs (cdt a) src dest")
    prefer 2
    apply (erule mdb_insert_abs.intro)
@@ -5854,7 +5702,7 @@ lemma cteInsert_corres:
          apply (simp+)[3]
       apply simp
      apply simp
-    apply (subst (asm) revokable_eq, assumption, assumption)
+    apply (subst (asm) is_cap_revocable_eq, assumption, assumption)
       apply (rule derived_sameRegionAs)
        apply (subst is_derived_eq[symmetric], assumption, assumption,
                     assumption, assumption, assumption)
@@ -5863,7 +5711,7 @@ lemma cteInsert_corres:
                           dest!:cap_master_cap_eqDs)
     apply (subgoal_tac "is_original_cap a src = mdbRevocable src_node")
      prefer 2
-     apply (simp add: revokable_relation_def)
+     apply (simp add: revokable_relation_def del: split_paired_All)
      apply (erule_tac x=src in allE)
      apply (erule impE)
       apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state cap_master_cap_simps
@@ -5877,7 +5725,7 @@ lemma cteInsert_corres:
           prefer 2
           apply assumption
          apply (simp_all)[6]
-   apply (simp add: cdt_relation_def split: if_split)
+   apply (simp add: cdt_relation_def split: if_split del: split_paired_All)
    apply clarsimp
    apply (drule (5) cte_map_inj)+
    apply simp
@@ -5896,7 +5744,7 @@ lemma cteInsert_corres:
      apply simp
     apply simp
    apply simp
-   apply (subst (asm) revokable_eq, assumption, assumption)
+   apply (subst (asm) is_cap_revocable_eq, assumption, assumption)
      apply (rule derived_sameRegionAs)
       apply (subst is_derived_eq[symmetric], assumption, assumption,
                    assumption, assumption, assumption)
@@ -5905,7 +5753,7 @@ lemma cteInsert_corres:
                         dest!:cap_master_cap_eqDs)
    apply (subgoal_tac "is_original_cap a src = mdbRevocable src_node")
     subgoal by simp
-   apply (simp add: revokable_relation_def)
+   apply (simp add: revokable_relation_def del: split_paired_All)
    apply (erule_tac x=src in allE)
    apply (erule impE)
     apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state split: if_splits)
@@ -5915,9 +5763,9 @@ lemma cteInsert_corres:
   apply (frule_tac p="(aa, bb)" in in_set_cap_cte_at)
   apply (rule conjI)
    apply (clarsimp simp: descendants_of_eq')
-   subgoal by (simp add: cdt_relation_def)
+   subgoal by (simp add: cdt_relation_def del: split_paired_All)
   apply (clarsimp simp: descendants_of_eq')
-  subgoal by (simp add: cdt_relation_def)
+  subgoal by (simp add: cdt_relation_def del: split_paired_All)
   done
 
 
@@ -6352,7 +6200,7 @@ lemma next_dest_src [simp]:
 lemmas next_dest_src_sym [simp] = next_dest_src [THEN x_sym]
 
 definition
-  s_d_swp :: "word32 \<Rightarrow> word32"
+  s_d_swp :: "machine_word \<Rightarrow> machine_word"
 where
   "s_d_swp p \<equiv> s_d_swap p src dest"
 
@@ -6818,7 +6666,7 @@ lemma cteSwap_corres:
          (cap_swap scap src dcap dest) (cteSwap scap' src' dcap' dest')"
   (is "corres _ ?P ?P' _ _") using assms including no_pre
   supply None_upd_eq[simp del]
-  supply ARM_HYP.ghost_relation_wrapper_def[simp] (* FIXME arch-split *)
+  supply RISCV64.ghost_relation_wrapper_def[simp] (* FIXME arch-split *)
   apply (unfold cap_swap_def cteSwap_def)
   apply (cases "src=dest")
    apply (rule corres_assume_pre)
@@ -6968,8 +6816,6 @@ lemma cteSwap_corres:
      apply (erule weak_derived_sym')
     apply (erule weak_derived_sym')
    apply assumption
-  apply (rule conjI)
-   subgoal by (simp only: simp_thms ARM_HYP.ghost_relation_typ_at set_cap_a_type_inv ARM_HYP.data_at_def)
   apply (thin_tac "ksMachineState t = p" for t p)+
   apply (thin_tac "ksCurThread t = p" for t p)+
   apply (thin_tac "ksReadyQueues t = p" for t p)+
@@ -6995,6 +6841,8 @@ lemma cteSwap_corres:
   apply (thin_tac "pspace_relation s s'" for s s')+
   apply (thin_tac "interrupt_state_relation n s s'" for n s s')+
   apply (thin_tac "(s,s') \<in> arch_state_relation" for s s')+
+  apply (rule conjI)
+   subgoal by (clarsimp simp: RISCV64.ghost_relation_typ_at set_cap_a_type_inv RISCV64.data_at_def)
   apply(subst conj_assoc[symmetric])
   apply (rule conjI)
    prefer 2
