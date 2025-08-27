@@ -1012,7 +1012,7 @@ crunch copyGlobalMappings
 
 lemmas copyGlobalMappings_typ_ats[wp] = typ_at_lifts [OF copyGlobalMappings_typ_at']
 
-lemma arch_cap_rights_update:
+lemma arch_cap_rights_update[ArchAcc_R_assms]:
   "acap_relation c c' \<Longrightarrow>
    cap_relation (cap.ArchObjectCap (acap_rights_update (acap_rights c \<inter> msk) c))
                  (Arch.maskCapRights (rights_mask_map msk) c')"

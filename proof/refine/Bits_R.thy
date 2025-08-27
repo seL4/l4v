@@ -45,8 +45,7 @@ lemma gen_isCap_simps:
   "isDomainCap v = (v = DomainCap)"
   by (auto simp: gen_isCap_defs split: capability.splits)
 
-lemma untyped_not_null[simp]:
-  "\<not> isUntypedCap NullCap" by (simp add: gen_isCap_simps)
+lemmas isUntypedCap_simps[simp] = isUntypedCap_def[split_simps capability.split]
 
 text \<open>Miscellaneous facts about low level constructs\<close>
 
@@ -113,6 +112,10 @@ lemma (in Arch) obj_sizeBits_less_word_bits:
 
 requalify_facts Arch.obj_sizeBits_less_word_bits
 
+lemma tcbBlockSizeBits_tcb_bits:
+  "tcbBlockSizeBits = tcb_bits"
+  by (simp add: tcbBlockSizeBits_def)
+
 (* true on all arches *)
 lemma zero_less_tcbBlockSizeBits[simp]:
   "0 < tcbBlockSizeBits"
@@ -131,6 +134,10 @@ lemma (in Arch) tcb_slots_less_2p_tcbBlockSizeBits:
 
 requalify_facts Arch.tcb_slots_less_2p_tcbBlockSizeBits
 declare tcb_slots_less_2p_tcbBlockSizeBits[simp]
+
+(* variant for ASpec-equivalents *)
+lemmas tcb_slots_less_2p_tcb_bits[simp] =
+  tcb_slots_less_2p_tcbBlockSizeBits[simplified tcbBlockSizeBits_tcb_bits cteSizeBits_cte_level_bits]
 
 (* same derivation on all architectures *)
 lemma (in Arch) zero_one_less_2p_SizeBits[simp]:
@@ -225,6 +232,16 @@ lemma git_wp [wp]: "\<lbrace>\<lambda>s. P (ksIdleThread s) s\<rbrace> getIdleTh
 
 lemma gsa_wp [wp]: "\<lbrace>\<lambda>s. P (ksSchedulerAction s) s\<rbrace> getSchedulerAction \<lbrace>P\<rbrace>"
   by (unfold getSchedulerAction_def, wp)
+
+lemma is_ep_cap_relation:
+  "cap_relation c c' \<Longrightarrow> isEndpointCap c' = is_ep_cap c"
+  by (simp add: gen_isCap_simps is_cap_simps)
+     (cases c, auto)
+
+lemma is_ntfn_cap_relation:
+  "cap_relation c c' \<Longrightarrow> isNotificationCap c' = is_ntfn_cap c"
+  by (simp add: gen_isCap_simps is_cap_simps)
+     (cases c, auto)
 
 text \<open>Shorthand names for the relations between faults, errors and failures\<close>
 

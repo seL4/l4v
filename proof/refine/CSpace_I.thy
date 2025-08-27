@@ -651,6 +651,12 @@ lemma untypedRange_Master:
   "untypedRange (capMasterCap cap) = untypedRange cap"
   by (simp add: capMasterCap_def split: capability.split)
 
+(* needed to define arch-specific constants before CSpace1_R *)
+definition
+  "badge_derived' cap' cap \<equiv>
+    capMasterCap cap = capMasterCap cap' \<and>
+    (capBadge cap, capBadge cap') \<in> capBadge_ordering False"
+
 end
 
 lemma capAligned_capUntypedPtr:
@@ -772,6 +778,11 @@ locale CSpace_I_2 = CSpace_I +
       capClass (cteCap cte') = PhysicalClass
       \<Longrightarrow> capMasterCap (cteCap cte) = capMasterCap (cteCap cte')\<rbrakk>
      \<Longrightarrow> distinct_zombies (m(x \<mapsto> cte'))"
+  assumes capMasterCap_maskCapRights[simp]:
+    "\<And>msk cap. capMasterCap (maskCapRights msk cap) = capMasterCap cap"
+  assumes cap_table_at_gsCNodes:
+    "\<And>bits ptr s s'.
+     \<lbrakk> cap_table_at bits ptr s; (s, s') \<in> state_relation \<rbrakk> \<Longrightarrow> gsCNodes s' ptr = Some bits"
 
 context CSpace_I_2 begin
 

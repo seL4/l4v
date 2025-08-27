@@ -920,7 +920,7 @@ lemma corres_gets_global_pt [corres]:
 lemmas getObject_PTE_corres'[corres] = getObject_PTE_corres[@lift_corres_args]
 lemmas storePTE_corres'[corres] = storePTE_corres[@lift_corres_args]
 
-lemma arch_cap_rights_update:
+lemma arch_cap_rights_update[ArchAcc_R_assms]:
   "acap_relation c c' \<Longrightarrow>
    cap_relation (cap.ArchObjectCap (acap_rights_update (acap_rights c \<inter> msk) c))
                 (Arch.maskCapRights (rights_mask_map msk) c')"

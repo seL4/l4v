@@ -166,6 +166,16 @@ lemma valid_arch_obj'_valid[wp]:
   unfolding valid_arch_obj'_def
   by (case_tac ako; wpsimp)
 
+lemma ghost_relation_wrapper_ksPSpace_upd[simp, StateRelation_R_assms]:
+  "ghost_relation_wrapper s (s'\<lparr>ksPSpace := ps'\<rparr>) = ghost_relation_wrapper s s'"
+  by (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
+
+lemma ghost_relation_wrapper_abs_upd_simps[simp, StateRelation_R_assms]:
+  "\<And>f s s'. ghost_relation_wrapper (cdt_list_update f s) s' = ghost_relation_wrapper s s'"
+  "\<And>f s s'. ghost_relation_wrapper (cdt_update f s) s' = ghost_relation_wrapper s s'"
+  "\<And>f s s'. ghost_relation_wrapper (is_original_cap_update f s) s' = ghost_relation_wrapper s s'"
+  by simp_all
+
 end
 
 global_interpretation StateRelation_R?: StateRelation_R

@@ -505,6 +505,10 @@ definition
   if capClass cap \<noteq> PhysicalClass then {}
   else {capUntypedPtr cap .. capUntypedPtr cap + 2 ^ capBits cap - 1}"
 
+(* FIXME: poor name, unlike isArchObjectCap this takes a predicate *)
+definition isArchCap :: "(arch_capability \<Rightarrow> bool) \<Rightarrow> capability \<Rightarrow> bool" where
+  "isArchCap P cap \<equiv> case cap of ArchObjectCap acap \<Rightarrow> P acap | _ \<Rightarrow> False"
+
 definition
   "caps_contained' m \<equiv>
   \<forall>p p' c n c' n'.
