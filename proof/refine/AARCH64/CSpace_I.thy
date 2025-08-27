@@ -10,7 +10,7 @@
 *)
 
 theory CSpace_I
-imports ArchAcc_R
+imports ArchArchAcc_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)

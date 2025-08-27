@@ -452,24 +452,4 @@ lemma objBitsT_koTypeOf:
 
 end
 
-context Arch begin
-
-lemma objBits_less_word_bits:
-  "objBits v < word_bits"
-  unfolding objBits_simps'
-  apply (case_tac "injectKO v"; simp)
-  by (simp add: pageBits_def pteBits_def objBits_simps word_bits_def
-         split: arch_kernel_object.split)+
-
-lemma objBits_pos_power2[simp]:
-  assumes "objBits v < word_bits"
-  shows "(1::machine_word) < (2::machine_word) ^ objBits v"
-  unfolding objBits_simps'
-  apply (insert assms)
-  apply (case_tac "injectKO v"; simp)
-  by (simp add: pageBits_def pteBits_def objBits_simps
-         split: arch_kernel_object.split)+
-
-end
-
 end
