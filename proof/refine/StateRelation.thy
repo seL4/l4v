@@ -438,10 +438,17 @@ text \<open>Architecture-specific requirements\<close>
 
 locale StateRelation_R =
   (* ghost state relation must not depend on machine state *)
+  (* FIXME arch-split: consolidate after arch-split pass; these simps have overlap *)
   assumes ghost_relation_wrapper_machine_state_upd_id[simp]:
     "\<And>s s' ss ss'.
        ghost_relation_wrapper (s\<lparr>machine_state := ss\<rparr>) (s'\<lparr>ksMachineState := ss'\<rparr>)
        = ghost_relation_wrapper s s'"
+  assumes ghost_relation_wrapper_ksPSpace_upd[simp]:
+    "\<And>s s' ps'. ghost_relation_wrapper s (s'\<lparr>ksPSpace := ps'\<rparr>) = ghost_relation_wrapper s s'"
+  assumes ghost_relation_wrapper_abs_upd_simps[simp]:
+    "\<And>f s s'. ghost_relation_wrapper (cdt_list_update f s) s' = ghost_relation_wrapper s s'"
+    "\<And>f s s'. ghost_relation_wrapper (cdt_update f s) s' = ghost_relation_wrapper s s'"
+    "\<And>f s s'. ghost_relation_wrapper (is_original_cap_update f s) s' = ghost_relation_wrapper s s'"
   assumes is_other_obj_relation_type_gen[simp]:
     "\<And>n. \<not> is_other_obj_relation_type (ACapTable n)"
     "\<not> is_other_obj_relation_type ATCB"

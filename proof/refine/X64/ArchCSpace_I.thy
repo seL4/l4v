@@ -81,6 +81,14 @@ lemma isArchFrameCap_non_arch[CSpace_I_assms]:
   "\<not>is_ArchObjectCap cap \<Longrightarrow> isArchFrameCap cap = False"
   by (simp add: isArchFrameCap_def is_ArchObjectCap_def split: capability.split)
 
+(* IOPortControl caps are unique and always revocable. Defined separately from archMDBAssertions,
+   because locale mdb_insert_simple needs a form that only takes a cte_heap. *)
+definition arch_mdb_assert :: "cte_heap \<Rightarrow> bool" where
+  "arch_mdb_assert m \<equiv>
+   \<forall>p n. m p = Some (CTE (ArchObjectCap IOPortControlCap) n) \<longrightarrow>
+         mdbRevocable n \<and>
+         (\<forall>p' n'. m p' = Some (CTE (ArchObjectCap IOPortControlCap) n') \<longrightarrow> p' = p)"
+
 end
 
 interpretation CSpace_I?: CSpace_I X64.arch_capMasterCap
@@ -265,8 +273,7 @@ lemma sameRegionAs_trans:
   by (simp add: sameRegionAs_def2, elim conjE disjE)
      (auto simp: isCap_simps capRange_def) (* long *)
 
-(* FIXME arch-split: TODO interface *)
-lemma capMasterCap_maskCapRights[simp]:
+lemma capMasterCap_maskCapRights[simp, CSpace_I_2_assms]:
   "capMasterCap (maskCapRights msk cap) = capMasterCap cap"
   apply (cases cap; simp add: global.maskCapRights_def Let_def isCap_simps capMasterCap_def)
   apply (rename_tac arch_capability)
@@ -386,6 +393,11 @@ declare distinct_zombies_sameMasterE[CSpace_I_2_assms]
 crunch setCTE
   for pspace_in_kernel_mappings'[wp]: "pspace_in_kernel_mappings'"
 
+lemma cap_table_at_gsCNodes[CSpace_I_2_assms]:
+  "\<lbrakk> cap_table_at bits ptr s; (s, s') \<in> state_relation \<rbrakk>
+   \<Longrightarrow> gsCNodes s' ptr = Some bits"
+  by (fastforce simp: state_relation_def ghost_relation_def obj_at_def is_cap_table)
+
 end
 
 interpretation CSpace_I_2?: CSpace_I_2 X64.arch_capMasterCap
@@ -393,5 +405,107 @@ proof goal_cases
   interpret Arch  .
   case 1 show ?case by (intro_locales; (unfold_locales; (fact CSpace_I_2_assms)?)?)
 qed
+
+(* Arch constant definitions required to exist for sane locales in CSpace1_R *)
+
+context Arch begin arch_global_naming
+
+definition arch_mdb_preservation :: "capability \<Rightarrow> capability \<Rightarrow> bool" where
+  "arch_mdb_preservation cap cap' \<equiv> True"
+
+declare arch_mdb_preservation_def[simp]
+
+definition
+  vsCapRef :: "capability \<Rightarrow> vs_ref list option"
+where
+  "vsCapRef cap \<equiv> case cap of
+   ArchObjectCap (ASIDPoolCap _ asid) \<Rightarrow>
+     Some [VSRef (ucast (asid_high_bits_of asid)) None]
+ | ArchObjectCap (PML4Cap _ (Some asid)) \<Rightarrow>
+     Some [VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
+           VSRef (ucast (asid_high_bits_of asid)) None]
+ | ArchObjectCap (PDPointerTableCap _ (Some (asid, vptr))) \<Rightarrow>
+     Some [VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
+           VSRef (ucast (asid_high_bits_of asid)) None]
+ | ArchObjectCap (PageDirectoryCap _ (Some (asid, vptr))) \<Rightarrow>
+     Some [VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
+           VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
+           VSRef (ucast (asid_high_bits_of asid)) None]
+ | ArchObjectCap (PageTableCap _ (Some (asid, vptr))) \<Rightarrow>
+     Some [VSRef ((vptr >> 21) && mask 9) (Some APageDirectory),
+           VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
+           VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
+           VSRef (ucast (asid_high_bits_of asid)) None]
+ | ArchObjectCap (PageCap _ _ _ X64SmallPage _ (Some (asid, vptr))) \<Rightarrow>
+     Some [VSRef ((vptr >> 12) && mask 9) (Some APageTable),
+           VSRef ((vptr >> 21) && mask 9) (Some APageDirectory),
+           VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
+           VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
+           VSRef (ucast (asid_high_bits_of asid)) None]
+ | ArchObjectCap (PageCap _ _ _ X64LargePage _ (Some (asid, vptr))) \<Rightarrow>
+     Some [VSRef ((vptr >> 21) && mask 9) (Some APageDirectory),
+           VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
+           VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
+           VSRef (ucast (asid_high_bits_of asid)) None]
+ | ArchObjectCap (PageCap _ _ _ X64HugePage _ (Some (asid, vptr))) \<Rightarrow>
+     Some [VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
+           VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
+           VSRef (ucast (asid_high_bits_of asid)) None]
+ | _ \<Rightarrow> None"
+
+definition
+  "capASID cap \<equiv> case cap of
+    ArchObjectCap (PageCap _ _ _ _ _ (Some (asid, _))) \<Rightarrow> Some asid
+  | ArchObjectCap (PageTableCap _ (Some (asid, _))) \<Rightarrow> Some asid
+  | ArchObjectCap (PageDirectoryCap _ (Some (asid, _))) \<Rightarrow> Some asid
+  | ArchObjectCap (PDPointerTableCap _ (Some (asid, _))) \<Rightarrow> Some asid
+  | ArchObjectCap (PML4Cap _ (Some asid)) \<Rightarrow> Some asid
+  | _ \<Rightarrow> None"
+
+lemmas capASID_simps[simp] =
+  capASID_def[split_simps capability.split arch_capability.split option.split prod.split]
+
+definition
+  "cap_asid_base' cap \<equiv> case cap of
+    ArchObjectCap (ASIDPoolCap _ asid) \<Rightarrow> Some asid
+  | _ \<Rightarrow> None"
+
+lemmas cap_asid_base'_simps[simp] =
+  cap_asid_base'_def [split_simps capability.split arch_capability.split option.split prod.split]
+
+definition
+  "cap_vptr' cap \<equiv> case cap of
+    ArchObjectCap (PageCap _ _ _ _ _ (Some (_, vptr))) \<Rightarrow> Some vptr
+  | ArchObjectCap (PageTableCap _ (Some (_, vptr))) \<Rightarrow> Some vptr
+  | ArchObjectCap (PageDirectoryCap _ (Some (_, vptr))) \<Rightarrow> Some vptr
+  | ArchObjectCap (PDPointerTableCap _ (Some (_, vptr))) \<Rightarrow> Some vptr
+  | _ \<Rightarrow> None"
+
+lemmas cap_vptr'_simps[simp] =
+  cap_vptr'_def[split_simps capability.split arch_capability.split option.split prod.split]
+
+definition
+  "is_derived' m p cap' cap \<equiv>
+  cap' \<noteq> NullCap \<and>
+  \<not> isZombie cap \<and>
+  \<not> isIRQControlCap cap' \<and>
+  \<not> isIOPortControlCap' cap' \<and>
+  badge_derived' cap' cap \<and>
+  (isUntypedCap cap \<longrightarrow> descendants_of' p m = {}) \<and>
+  (isReplyCap cap = isReplyCap cap') \<and>
+  (isReplyCap cap \<longrightarrow> capReplyMaster cap) \<and>
+  (isReplyCap cap' \<longrightarrow> \<not> capReplyMaster cap') \<and>
+  (vsCapRef cap = vsCapRef cap' \<or> isArchCap isPageCap cap') \<and>
+  ((isArchCap isPageTableCap cap \<or> isArchCap isPageDirectoryCap cap \<or> isArchCap isPDPointerTableCap cap
+     \<or> isArchCap isPML4Cap cap)
+        \<longrightarrow> capASID cap = capASID cap' \<and> capASID cap \<noteq> None)"
+
+end
 
 end (* of theory *)

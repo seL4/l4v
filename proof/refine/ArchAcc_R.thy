@@ -91,5 +91,10 @@ locale ArchAcc_R =
     "\<And>(s::det_state) s'.
      \<lbrakk> pspace_distinct s; pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk>
      \<Longrightarrow> pspace_distinct' s'"
+  assumes arch_cap_rights_update:
+    "\<And>c c' msk.
+     acap_relation c c' \<Longrightarrow>
+     cap_relation (cap.ArchObjectCap (acap_rights_update (acap_rights c \<inter> msk) c))
+                  (Arch.maskCapRights (rights_mask_map msk) c')"
 
 end

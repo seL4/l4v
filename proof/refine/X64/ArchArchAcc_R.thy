@@ -1548,7 +1548,7 @@ lemma copy_global_mappings_corres [@lift_corres_args, corres]:
   by (auto simp: valid_arch_state_def valid_arch_state'_def
            elim: page_map_l4_pml4e_atI page_map_l4_pml4e_atI')
 
-lemma arch_cap_rights_update:
+lemma arch_cap_rights_update[ArchAcc_R_assms]:
   "acap_relation c c' \<Longrightarrow>
    cap_relation (cap.ArchObjectCap (acap_rights_update (acap_rights c \<inter> msk) c))
                  (Arch.maskCapRights (rights_mask_map msk) c')"
