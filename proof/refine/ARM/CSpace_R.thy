@@ -2498,7 +2498,7 @@ lemma cteInsert_valid_pspace:
   \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"
   unfolding valid_pspace'_def
   apply (rule hoare_pre)
-  apply (wp cteInsert_valid_objs)
+  apply (wpsimp wp: cteInsert_valid_objs)
   apply (fastforce elim: valid_capAligned)
   done
 
@@ -2512,10 +2512,10 @@ lemma setCTE_ko_wp_at_live[wp]:
                  elim!: rsubst[where P=P])
   apply (drule(1) updateObject_cte_is_tcb_or_cte [OF _ refl, rotated])
   apply (elim exE conjE disjE)
-   apply (clarsimp simp: ps_clear_upd objBits_simps
+   apply (clarsimp simp: ps_clear_upd objBits_simps live'_def hyp_live'_def
                          lookupAround2_char1)
    apply (simp add: tcb_cte_cases_def split: if_split_asm)
-  apply (clarsimp simp: ps_clear_upd objBits_simps)
+  apply (clarsimp simp: ps_clear_upd objBits_simps live'_def)
   done
 
 lemma setCTE_iflive':
@@ -2573,10 +2573,10 @@ lemma setCTE_ko_wp_at_not_live[wp]:
                  elim!: rsubst[where P=P])
   apply (drule(1) updateObject_cte_is_tcb_or_cte [OF _ refl, rotated])
   apply (elim exE conjE disjE)
-   apply (clarsimp simp: ps_clear_upd objBits_simps
+   apply (clarsimp simp: ps_clear_upd objBits_simps live'_def hyp_live'_def
                          lookupAround2_char1)
    apply (simp add: tcb_cte_cases_def split: if_split_asm)
-  apply (clarsimp simp: ps_clear_upd objBits_simps)
+  apply (clarsimp simp: ps_clear_upd objBits_simps live'_def)
   done
 
 lemma setUntypedCapAsFull_ko_wp_not_at'[wp]:
@@ -2805,6 +2805,21 @@ lemma setCTE_arch [wp]:
   apply (wp|wpc|simp del: hoare_fail_any)+
   done
 
+lemma setCTE_ko_at'_pde[wp]:
+  "setCTE p c \<lbrace> \<lambda>s. P (ko_at' (pde::ARM_H.pde) p' s) \<rbrace>"
+  apply (simp add: setCTE_def)
+  apply (clarsimp simp: setObject_def in_monad split_def
+                        valid_def lookupAround2_char1
+                        obj_at'_def ps_clear_upd projectKOs
+             split del: if_split)
+  apply (clarsimp elim!: rsubst[where P=P])
+  apply (clarsimp simp: updateObject_cte in_monad objBits_simps
+                        tcbCTableSlot_def tcbVTableSlot_def
+                        typeError_def
+                 split: if_split_asm
+                        Structures_H.kernel_object.split_asm)
+  done
+
 lemma setCTE_valid_arch[wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setCTE p c \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   by (wp valid_arch_state_lift' setCTE_typ_at')
@@ -2857,6 +2872,7 @@ lemma updateCap_global_refs [wp]:
 
 crunch cteInsert
   for arch[wp]: "\<lambda>s. P (ksArchState s)"
+  and ko_at'_pde[wp]: "\<lambda>s. P (ko_at' (pde::ARM_H.pde) p' s)"
   (wp: crunch_wps simp: cte_wp_at_ctes_of)
 
 lemma cteInsert_valid_arch [wp]:
@@ -3183,7 +3199,7 @@ lemma usableUntypedRange_empty:
     apply (rule_tac x="2 ^ capBlockSize cp - 1" in word_of_nat_le)
     apply (simp add: unat_2p_sub_1 maxUntypedSizeBits_def)
    apply (simp add: field_simps is_aligned_no_overflow)
-  apply (simp add: field_simps)
+  apply (simp add: field_simps mask_def)
   done
 
 lemma restrict_map_is_map_comp:
@@ -3197,7 +3213,7 @@ lemma untypedZeroRange_to_usableCapRange:
   apply (clarsimp simp: untypedZeroRange_def split: if_split_asm)
   apply (frule(1) usableUntypedRange_empty)
   apply (clarsimp simp: isCap_simps valid_cap_simps' max_free_index_def)
-  apply (simp add: getFreeRef_def)
+  apply (simp add: getFreeRef_def mask_def add_diff_eq)
   done
 
 lemma untyped_ranges_zero_delta:
@@ -4203,6 +4219,7 @@ lemma setupReplyMaster_invs'[wp]:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t\<rbrace>
      setupReplyMaster t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (simp add: invs'_def valid_state'_def)
   apply (rule hoare_pre)
    apply (wp setupReplyMaster_valid_pspace' sch_act_wf_lift tcb_in_cur_domain'_lift ct_idle_or_in_cur_domain'_lift
@@ -4513,6 +4530,7 @@ end
 locale mdb_insert_simple = mdb_insert +
   assumes safe_parent: "safe_parent_for' m src c'"
   assumes simple: "is_simple_cap' c'"
+  assumes arch_mdb_assert: "arch_mdb_assert m"
 begin
 interpretation Arch . (*FIXME: arch-split*)
 lemma dest_no_parent_n:
@@ -4705,6 +4723,13 @@ lemma maskedAsFull_revokable_safe_parent:
 done
 
 context begin interpretation Arch . (*FIXME: arch-split*)
+
+(* FIXME arch-split: generic statement, arch specific proof *)
+lemma setUntypedCapAsFull_archMDBAssertions[wp]:
+  "setUntypedCapAsFull src_cap cap p \<lbrace>archMDBAssertions\<rbrace>"
+  unfolding archMDBAssertions_def arch_mdb_assert_def
+  by wp
+
 lemma cteInsert_simple_corres:
   assumes "cap_relation c c'" "src' = cte_map src" "dest' = cte_map dest"
   notes trans_state_update'[symmetric,simp]
@@ -4713,34 +4738,36 @@ lemma cteInsert_simple_corres:
          valid_mdb and valid_list and K (src\<noteq>dest) and
          cte_wp_at (\<lambda>c. c=cap.NullCap) dest and
          K (is_simple_cap c) and
-         (\<lambda>s. cte_wp_at (safe_parent_for (cdt s) src c) src s))
+         (\<lambda>s. cte_wp_at (safe_parent_for (cdt s) src c) src s) and valid_arch_state)
         (pspace_distinct' and pspace_aligned' and valid_mdb' and valid_cap' c' and
          K (is_simple_cap' c') and
          cte_wp_at' (\<lambda>c. cteCap c=NullCap) dest' and
          (\<lambda>s. safe_parent_for' (ctes_of s) src' c'))
         (cap_insert c src dest)
         (cteInsert c' src' dest')"
-  (is "corres _ (?P and (\<lambda>s. cte_wp_at _ _ s)) (?P' and cte_wp_at' _ _ and _) _ _")
+  (is "corres _ (?P and (\<lambda>s. cte_wp_at _ _ s) and valid_arch_state) (?P' and cte_wp_at' _ _ and _) _ _")
   using assms
   unfolding cap_insert_def cteInsert_def
   supply subst_all [simp del]
   apply simp
+  apply (rule corres_stateAssert_add_assertion[rotated])
+   apply (rule archMDBAssertions_cross; simp add: valid_mdb_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF get_cap_corres])
       apply (rule corres_split[OF get_cap_corres])
-        apply (rule_tac F="cteCap rv' = NullCap" in corres_gen_asm2)
+        apply (rule_tac F="cteCap oldCTE = NullCap" in corres_gen_asm2)
         apply simp
         apply (rule_tac P="?P and cte_at dest and
                             (\<lambda>s. cte_wp_at (safe_parent_for (cdt s) src c) src s) and
                             cte_wp_at ((=) src_cap) src" and
-                        Q="?P' and
-                           cte_wp_at' ((=) rv') (cte_map dest) and
+                        Q="?P' and archMDBAssertions and
+                           cte_wp_at' ((=) oldCTE) (cte_map dest) and
                            cte_wp_at' ((=) srcCTE) (cte_map src) and
                            (\<lambda>s. safe_parent_for' (ctes_of s) src' c')"
                         in corres_assert_assume)
          prefer 2
          apply (clarsimp simp: cte_wp_at_ctes_of valid_mdb'_def valid_mdb_ctes_def valid_nullcaps_def)
-         apply (case_tac rv')
+         apply (case_tac oldCTE)
          apply (simp add: initMDBNode_def)
          apply (erule allE)+
          apply (erule (1) impE)
@@ -4749,7 +4776,7 @@ lemma cteInsert_simple_corres:
           apply (rule_tac R="\<lambda>r. ?P and cte_at dest and
                             (\<lambda>s. cte_wp_at (safe_parent_for (cdt s) src c) src s) and
                             cte_wp_at ((=) (masked_as_full src_cap c)) src" and
-                        R'="\<lambda>r. ?P' and cte_wp_at' ((=) rv') (cte_map dest)
+                        R'="\<lambda>r. ?P' and archMDBAssertions and cte_wp_at' ((=) oldCTE) (cte_map dest)
            and cte_wp_at' ((=) (CTE (maskedAsFull (cteCap srcCTE) c') (cteMDBNode srcCTE))) (cte_map src)
            and (\<lambda>s. safe_parent_for' (ctes_of s) src' c')"
                         in corres_split[where r'=dc])
@@ -4842,7 +4869,7 @@ lemma cteInsert_simple_corres:
               apply clarsimp
               apply (subgoal_tac "mdbRevocable node = revokable' (cteCap srcCTE) c'")
                prefer 2
-               apply (case_tac rv')
+               apply (case_tac oldCTE)
                apply (clarsimp simp add: const_def modify_map_def split: if_split_asm)
               apply clarsimp
               apply (rule revokable_eq, assumption, assumption)
@@ -4855,7 +4882,7 @@ lemma cteInsert_simple_corres:
               apply (clarsimp simp: cte_wp_at_def is_simple_cap_def)
              apply clarsimp
              apply (case_tac srcCTE)
-             apply (case_tac rv')
+             apply (case_tac oldCTE)
              apply clarsimp
              apply (subgoal_tac "\<exists>cap' node'. ctes_of b (cte_map (aa,bb)) = Some (CTE cap' node')")
               prefer 2
@@ -4880,14 +4907,14 @@ lemma cteInsert_simple_corres:
                       setUntypedCapAsFull_valid_cap setUntypedCapAsFull_cte_wp_at setUntypedCapAsFull_safe_parent_for'
                    | clarsimp | wps)+
           apply (clarsimp simp:cte_wp_at_caps_of_state )
-         apply (case_tac rv',clarsimp simp:cte_wp_at_ctes_of maskedAsFull_def)
+         apply (case_tac oldCTE,clarsimp simp:cte_wp_at_ctes_of maskedAsFull_def)
         apply (wp getCTE_wp' get_cap_wp)+
     apply clarsimp
     subgoal by (fastforce elim: cte_wp_at_weakenE)
    subgoal by (clarsimp simp: cte_wp_at'_def)
   apply (case_tac "srcCTE")
   apply (rename_tac src_cap' src_node)
-  apply (case_tac "rv'")
+  apply (case_tac "oldCTE")
   apply (rename_tac dest_node)
   apply (clarsimp simp: in_set_cap_cte_at_swp)
   apply (subgoal_tac "cte_at src a \<and> safe_parent_for (cdt a) src c src_cap")
@@ -4911,7 +4938,8 @@ lemma cteInsert_simple_corres:
    apply (simp (no_asm_simp) add: cdt_relation_def split: if_split)
    apply (intro impI allI)
    apply (frule mdb_insert_simple_axioms.intro)
-    apply(clarsimp simp:cte_wp_at_ctes_of)
+     apply(clarsimp simp:cte_wp_at_ctes_of)
+    apply (simp add: archMDBAssertions_def)
    apply (drule (1) mdb_insert_simple.intro)
    apply (drule_tac src_cap' = src_cap' in maskedAsFull_revokable_safe_parent[symmetric])
       apply simp+
@@ -5795,7 +5823,7 @@ lemma cteInsert_simple_mdb':
                 mdb_ptr_axioms.intro mdb_insert_axioms.intro)
               apply (simp add:modify_map_def valid_mdb_ctes_maskedAsFull)+
          apply (clarsimp simp:nullPointer_def)+
-       apply ((clarsimp simp:valid_mdb_ctes_def)+)
+       apply (clarsimp simp:valid_mdb_ctes_def archMDBAssertions_def)+
   apply (drule mdb_insert_simple'.mdb)
   apply (clarsimp simp:valid_mdb_ctes_def)
   done
@@ -5878,16 +5906,14 @@ lemma locateSlot_cap_to'[wp]:
   "\<lbrace>\<lambda>s. isCNodeCap cap \<and> (\<forall>r \<in> cte_refs' cap (irq_node' s). ex_cte_cap_wp_to' P r s)\<rbrace>
      locateSlotCNode (capCNodePtr cap) n (v && mask (capCNodeBits cap))
    \<lbrace>ex_cte_cap_wp_to' P\<rbrace>"
-  apply (simp add: locateSlot_conv)
+  apply (simp add: locateSlot_conv shiftl_t2n)
   apply wp
   apply (clarsimp dest!: isCapDs valid_capAligned
-                   simp: objBits_simps' mult.commute capAligned_def cte_level_bits_def)
+                   simp: objBits_simps' mult.commute capAligned_def cte_level_bits_def shiftl_t2n)
   apply (erule bspec)
   apply (case_tac "bits < word_bits")
-   apply simp
-   apply (rule and_mask_less_size)
-   apply (simp add: word_bits_def word_size)
-  apply (simp add: power_overflow word_bits_def)
+   apply (simp add: word_and_le1)
+  apply (simp add: power_overflow word_bits_def word_and_le1)
   done
 
 lemma rab_cap_to'':

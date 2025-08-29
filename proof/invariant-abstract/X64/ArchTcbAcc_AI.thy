@@ -163,12 +163,6 @@ lemma arch_tcb_context_get_eq[TcbAcc_AI_assms]:
   unfolding arch_tcb_context_get_def arch_tcb_context_set_def
   by simp
 
-lemma arch_tcb_update_aux2: "(\<lambda>tcb. tcb\<lparr> tcb_arch := f (tcb_arch tcb) \<rparr>)  = tcb_arch_update f"
-  by (rule ext, simp)
-
-lemma arch_tcb_update_aux3: "tcb\<lparr>tcb_arch := f (tcb_arch tcb)\<rparr>  = tcb_arch_update f tcb"
-  by(simp)
-
 lemma tcb_context_update_aux: "arch_tcb_context_set (P (arch_tcb_context_get atcb)) atcb
                                = tcb_context_update (\<lambda>ctx. P ctx) atcb"
   by (simp add: arch_tcb_context_set_def arch_tcb_context_get_def)
@@ -188,6 +182,7 @@ lemma thread_set_valid_arch_state[TcbAcc_AI_assms]:
   "(\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases. getF (f tcb) = getF tcb)
    \<Longrightarrow> thread_set f t \<lbrace> valid_arch_state \<rbrace>"
   by (wp valid_arch_state_lift_ioports_aobj_at thread_set_ioports thread_set.aobj_at
+         thread_set_caps_of_state_trivial
       | simp add: valid_arch_state_def)+
 
 end

@@ -844,12 +844,12 @@ lemma threadSet_tcbDomain_update_invs':
   apply (rule hoare_pre)
   apply (clarsimp simp: invs'_def)
   apply (wp threadSet_valid_pspace'T_P)
-  apply (simp add: tcb_cte_cases_def)+
+  apply (simp add: tcb_cte_cases_def tcb_cte_cases_neqs)+
    apply (wp valid_irq_node_lift valid_irq_handlers_lift'' threadSet_ctes_ofT
              threadSet_valid_dom_schedule' threadSet_iflive'T threadSet_ifunsafe'T
              untyped_ranges_zero_lift threadSet_valid_sched_pointers
              sym_heap_sched_pointers_lift threadSet_tcbSchedNexts_of threadSet_tcbSchedPrevs_of
-          | simp add: tcb_cte_cases_def cteSizeBits_def cteCaps_of_def o_def invs'_def
+          | simp add: tcb_cte_cases_def tcb_cte_cases_neqs cteCaps_of_def o_def invs'_def
           | intro allI)+
   apply (fastforce simp: obj_at'_def opt_map_def)
   done

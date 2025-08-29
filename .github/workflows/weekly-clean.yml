@@ -18,7 +18,57 @@ jobs:
       fail-fast: false
       matrix:
         arch: [ARM, ARM_HYP, AARCH64, RISCV64, X64]
-        num_domains: ['1', '7', '']
+        num_domains: ['1', '']
+        plat: ['']
+        include:
+          - arch: ARM
+            num_domains: '7'
+
+          - arch: ARM
+            plat: exynos4
+          - arch: ARM
+            plat: exynos5410
+          - arch: ARM
+            plat: exynos5422
+          - arch: ARM
+            plat: hikey
+          - arch: ARM
+            plat: tk1
+          - arch: ARM
+            plat: zynq7000
+          - arch: ARM
+            plat: zynqmp
+
+          - arch: ARM_HYP
+            plat: exynos5410
+          - arch: ARM_HYP
+            plat: exynos5
+
+          - arch: AARCH64
+            plat: bcm2711
+          - arch: AARCH64
+            plat: hikey
+          - arch: AARCH64
+            plat: imx8mm
+          - arch: AARCH64
+            plat: imx8mq
+          - arch: AARCH64
+            plat: imx93
+          - arch: AARCH64
+            plat: maaxboard
+          - arch: AARCH64
+            plat: odroidc2
+          - arch: AARCH64
+            plat: odroidc4
+          - arch: AARCH64
+            plat: rockpro64
+          - arch: AARCH64
+            plat: tqma
+          - arch: AARCH64
+            plat: tx1
+          - arch: AARCH64
+            plat: zynqmp
+
     steps:
     - name: Proofs
       uses: seL4/ci-actions/aws-proofs@master
@@ -34,13 +84,13 @@ jobs:
     - name: Upload kernel builds
       uses: actions/upload-artifact@v4
       with:
-        name: kernel-builds-${{ matrix.num_domains }}-${{ matrix.arch }}
+        name: kernel-builds-${{ matrix.num_domains }}-${{ matrix.arch }}-${{ matrix.plat }}
         path: artifacts/kernel-builds
         if-no-files-found: ignore
     - name: Upload logs
       uses: actions/upload-artifact@v4
       with:
-        name: logs-${{ matrix.num_domains }}-${{ matrix.arch }}
+        name: logs-${{ matrix.num_domains }}-${{ matrix.arch }}-${{ matrix.plat }}
         path: logs.tar.xz
 
   binary-verification:

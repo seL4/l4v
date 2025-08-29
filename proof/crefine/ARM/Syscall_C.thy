@@ -502,7 +502,7 @@ lemma rf_sr_tcb_update_twice:
 lemma tcb_cte_cases_tcbFault_update_simp:
   "(f, u) \<in> ran tcb_cte_cases \<Longrightarrow> f (tcbFault_update (\<lambda>_. Some fault) tcb) = f tcb"
   unfolding tcb_cte_cases_def
-  by auto
+  by (auto simp: tcb_cte_cases_neqs)
 
 lemma hrs_mem_update_use_hrs_mem:
   "hrs_mem_update f = (\<lambda>hrs. (hrs_mem_update $ (\<lambda>_. f (hrs_mem hrs))) hrs)"
@@ -1433,6 +1433,24 @@ lemma ccorres_handleReserveIRQ:
   apply simp
   done
 
+(* Because of a case distinction, this proof occurs multiple times in handleInterrupt_ccorres below.
+   The proof matches up the C expression "!config_set(CONFIG_ARM_GIC_V3_SUPPORT)"
+   with config_ARM_GIC_V3 from the spec side. *)
+method maybe_maskInterrupt_before_ack =
+    simp only: maskIrqSignal_def when_def,
+    csymbr, (* unwrap config_set(..) *)
+    rule ccorres_cond_seq,
+    rule ccorres_cond_both[where P="\<lambda>_. \<not>config_ARM_GIC_V3" and R=\<top>],
+       simp add: Kernel_Config.config_ARM_GIC_V3_def, (* match up !config_set(..) condition *)
+      rule ccorres_gen_asm[where P="\<not>config_ARM_GIC_V3"],
+      simp,
+      ctac (no_vcg) add: maskInterrupt_ccorres,
+       ctac add: ackInterrupt_ccorres,
+      wp,
+     rule ccorres_gen_asm[where P="config_ARM_GIC_V3"],
+     simp,
+     ctac add: ackInterrupt_ccorres
+
 lemma handleInterrupt_ccorres:
   "ccorres dc xfdc
            (invs')
@@ -1487,31 +1505,26 @@ lemma handleInterrupt_ccorres:
          apply csymbr
          apply csymbr
          apply (ctac (no_vcg) add: sendSignal_ccorres)
-          apply (simp add: maskIrqSignal_def)
-          apply (ctac (no_vcg) add: maskInterrupt_ccorres)
-           apply (ctac add: ackInterrupt_ccorres)
-          apply wp+
+          apply maybe_maskInterrupt_before_ack
+         apply clarsimp
+         apply wp
         apply (simp del: Collect_const)
         apply (rule ccorres_cond_true_seq)
         apply (rule ccorres_rhs_assoc)+
         apply csymbr+
         apply (rule ccorres_cond_false_seq)
-        apply (simp add: maskIrqSignal_def)
-        apply (ctac (no_vcg) add: maskInterrupt_ccorres)
-         apply (ctac add: ackInterrupt_ccorres)
-        apply wp
+        apply ccorres_rewrite
+        apply maybe_maskInterrupt_before_ack
        apply (rule_tac P=\<top> and P'="{s. ret__int_' s = 0 \<and> cap_get_tag cap \<noteq> scast cap_notification_cap}" in ccorres_inst)
        apply (clarsimp simp: isCap_simps simp del: Collect_const)
        apply (case_tac rva, simp_all del: Collect_const)[1]
                   prefer 3
                   apply metis
-                 apply ((simp add: maskIrqSignal_def,
-                        rule ccorres_guard_imp2,
+                 apply ((rule ccorres_guard_imp2,
                         rule ccorres_cond_false_seq, simp,
                         rule ccorres_cond_false_seq, simp,
-                        ctac (no_vcg) add: maskInterrupt_ccorres,
-                        ctac (no_vcg) add: ackInterrupt_ccorres,
-                        wp, simp)+)
+                        maybe_maskInterrupt_before_ack,
+                        simp)+)[11]
       apply (wp getSlotCap_wp)
      apply simp
      apply vcg

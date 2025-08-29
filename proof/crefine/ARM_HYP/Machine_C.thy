@@ -254,6 +254,12 @@ assumes maskInterrupt_ccorres:
            (doMachineOp (maskInterrupt m irq))
            (Call maskInterrupt_'proc)"
 
+(* This function is only implemented on GICv3 configs, hence the precondition *)
+assumes deactivateInterrupt_ccorres:
+  "ccorres dc xfdc (\<lambda>_. config_ARM_GIC_V3) (\<lbrace>\<acute>irq = ucast irq\<rbrace>) []
+           (doMachineOp (deactivateInterrupt irq))
+           (Call deactivateInterrupt_'proc)"
+
 assumes cleanCacheRange_PoU_spec:
  "\<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> UNIV (Call cleanCacheRange_PoU_'proc) UNIV"
 
@@ -329,6 +335,11 @@ assumes read_cntpct_ccorres:
   "ccorres (=) ret__unsigned_longlong_' \<top> UNIV []
            (doMachineOp read_cntpct)
            (Call read_cntpct_'proc)"
+
+assumes check_export_arch_timer_ccorres:
+  "ccorres dc xfdc \<top> UNIV []
+           (doMachineOp check_export_arch_timer)
+           (Call check_export_arch_timer_'proc)"
 
 assumes get_cntv_cval_64_ccorres:
   "ccorres (=) ret__unsigned_longlong_' \<top> UNIV []

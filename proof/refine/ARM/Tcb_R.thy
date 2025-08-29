@@ -569,7 +569,7 @@ lemma tcbSchedDequeue_ct_in_state'[wp]:
   done
 
 lemma valid_tcb'_tcbPriority_update: "\<lbrakk>valid_tcb' tcb s; f (tcbPriority tcb) \<le> maxPriority \<rbrakk> \<Longrightarrow> valid_tcb' (tcbPriority_update f tcb) s"
-  apply (simp add: valid_tcb'_def tcb_cte_cases_def)
+  apply (simp add: valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs)
   done
 
 lemma threadSet_valid_objs_tcbPriority_update:
@@ -869,7 +869,7 @@ lemma checkCapAt_cteInsert_corres:
      apply clarsimp
      apply (rule conjI, fastforce)+
      apply (cases src_slot)
-     apply (clarsimp simp: cte_wp_at_caps_of_state)
+     apply (clarsimp simp: cte_wp_at_caps_of_state invs_arch_state)
      apply (rule conjI)
       apply (frule same_object_as_cap_master)
       apply (clarsimp simp: cap_master_cap_simps is_cnode_or_valid_arch_def
@@ -996,7 +996,7 @@ lemma setMCPriority_invs':
 
 lemma valid_tcb'_tcbMCP_update:
   "\<lbrakk>valid_tcb' tcb s \<and> f (tcbMCP tcb) \<le> maxPriority\<rbrakk> \<Longrightarrow> valid_tcb' (tcbMCP_update f tcb) s"
-  apply (simp add: valid_tcb'_def tcb_cte_cases_def)
+  apply (simp add: valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs)
   done
 
 lemma setMCPriority_valid_objs'[wp]:
@@ -1080,6 +1080,7 @@ lemma threadcontrol_corres_helper4:
     (checkCapAt (capability.ThreadCap a) (cte_map slot)
        (assertDerived (cte_map (ab, ba)) ac (cteInsert ac (cte_map (ab, ba)) (cte_map (a, tcb_cnode_index 4)))))
   \<lbrace>\<lambda>_ s. sym_heap_sched_pointers s \<and> valid_sched_pointers s \<and> valid_tcbs' s\<rbrace>"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (wpsimp wp:
          | strengthen invs_sym_heap_sched_pointers invs_valid_sched_pointers
                       invs_valid_objs' valid_objs'_valid_tcbs')+
@@ -1131,7 +1132,7 @@ lemma threadSet_invs_trivialT2:
 lemma getThreadBufferSlot_dom_tcb_cte_cases:
   "\<lbrace>\<top>\<rbrace> getThreadBufferSlot a \<lbrace>\<lambda>rv s. rv \<in> (+) a ` dom tcb_cte_cases\<rbrace>"
   by (wpsimp simp: tcb_cte_cases_def getThreadBufferSlot_def locateSlot_conv cte_level_bits_def
-                   tcbIPCBufferSlot_def)
+                   tcbIPCBufferSlot_def cteSizeBits_def)
 
 lemma tcb_at'_cteInsert[wp]:
   "\<lbrace>\<lambda>s. tcb_at' (ksCurThread s) s\<rbrace> cteInsert t x y \<lbrace>\<lambda>_ s. tcb_at' (ksCurThread s) s\<rbrace>"
@@ -1155,7 +1156,7 @@ lemmas threadSet_invs_trivial2 =
 lemma valid_tcb_ipc_buffer_update:
   "\<And>buf s. is_aligned buf msg_align_bits
    \<Longrightarrow> (\<forall>tcb. valid_tcb' tcb s \<longrightarrow> valid_tcb' (tcbIPCBuffer_update (\<lambda>_. buf) tcb) s)"
-  by (simp add: valid_tcb'_def tcb_cte_cases_def)
+  by (simp add: valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs)
 
 lemma threadSet_invs_tcbIPCBuffer_update:
   "\<lbrace>\<lambda>s. invs' s \<and> (\<forall>tcb. is_aligned (tcbIPCBuffer (tcbIPCBuffer_update f tcb)) msg_align_bits)\<rbrace>
@@ -1338,6 +1339,7 @@ proof -
             od odE od)
         g')" (is "corres _ ?T2_pre ?T2_pre' _ _")
     using z sl
+    supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
     apply -
     apply (rule corres_guard_imp[where P=P and P'=P'
                                   and Q="P and cte_at (a, tcb_cnode_index 4)"
@@ -1766,7 +1768,7 @@ lemma invokeTCB_corres:
 lemma tcbBoundNotification_caps_safe[simp]:
   "\<forall>(getF, setF)\<in>ran tcb_cte_cases.
      getF (tcbBoundNotification_update (\<lambda>_. Some ntfnptr) tcb) = getF tcb"
-  by (case_tac tcb, simp add: tcb_cte_cases_def)
+  by (case_tac tcb, simp add: tcb_cte_cases_def tcb_cte_cases_neqs)
 
 lemma valid_bound_ntfn_lift:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"

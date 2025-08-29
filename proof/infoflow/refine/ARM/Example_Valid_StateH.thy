@@ -1915,7 +1915,7 @@ lemma pspace_distinct'_split:
   apply (thin_tac "P \<longrightarrow> Q" for P Q)
   apply (simp add: ps_clear_def)
   apply (erule trans[rotated])
-  apply auto[1]
+  apply (auto simp: mask_def add_diff_eq)[1]
   done
 
 lemma s0H_pspace_distinct':
@@ -1925,7 +1925,7 @@ lemma s0H_pspace_distinct':
   supply option.case_cong[cong] if_cong[cong]
   apply (clarsimp simp: pspace_distinct'_def ps_clear_def)
   apply (rule disjointI)
-  apply clarsimp
+  apply (clarsimp simp: mask_def add_diff_eq)
   apply (drule kh0H_SomeD)+
   by (simp | erule disjE
         | clarsimp simp: kh0H_dom_sets_distinct[THEN orthD1]
@@ -2183,19 +2183,19 @@ lemma s0H_valid_objs':
   apply (elim disjE)
                 apply clarsimp
                apply (clarsimp simp: valid_obj'_def valid_tcb'_def kh0H_obj_def valid_tcb_state'_def
-                                     default_domain_def minBound_word
+                                     default_domain_def minBound_word valid_arch_tcb'_def
                                      default_priority_def tcb_cte_cases_def)
               apply (clarsimp simp: valid_obj'_def valid_tcb'_def kh0H_obj_def valid_tcb_state'_def
                                     High_domain_def minBound_word
                                     High_mcp_def High_prio_def maxPriority_def numPriorities_def
                                     tcb_cte_cases_def High_capsH_def obj_at'_def projectKO_eq
-                                    project_inject)
+                                    project_inject valid_arch_tcb'_def)
               apply (rule conjI)
                apply (simp add: is_aligned_def s0_ptr_defs objBitsKO_def)
               apply (rule pspace_distinctD'[OF _ s0H_pspace_distinct'])
               apply (simp add: ntfnH_def)
              apply (clarsimp simp: valid_obj'_def valid_tcb'_def kh0H_obj_def valid_tcb_state'_def
-                                   Low_domain_def minBound_word
+                                   Low_domain_def minBound_word valid_arch_tcb'_def
                                    Low_mcp_def Low_prio_def maxPriority_def numPriorities_def
                                    tcb_cte_cases_def Low_capsH_def)
             apply (clarsimp simp: valid_obj'_def ntfnH_def valid_ntfn'_def obj_at'_def projectKO_eq
@@ -2839,6 +2839,7 @@ lemma s0H_invs:
   shows "invs' s0H_internal"
   using assms
   supply option.case_cong[cong] if_cong[cong]
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (clarsimp simp: invs'_def valid_state'_def s0H_valid_pspace')
   apply (rule conjI)
    apply (clarsimp simp: sch_act_wf_def s0H_internal_def ct_in_state'_def st_tcb_at'_def obj_at'_def projectKO_eq project_inject objBitsKO_def s0_ptrs_aligned Low_tcbH_def)
@@ -2875,7 +2876,7 @@ lemma s0H_invs:
   apply (rule conjI)
    apply (clarsimp simp: if_live_then_nonz_cap'_def ko_wp_at'_def)
    apply (drule kh0H_SomeD)
-   apply (elim disjE, simp_all add: kh0H_all_obj_def' objBitsKO_def)[1]
+   apply (elim disjE, simp_all add: kh0H_all_obj_def' objBitsKO_def live'_def hyp_live'_def)[1]
              apply (clarsimp simp: ex_nonz_cap_to'_def cte_wp_at_ctes_of)
              apply (rule_tac x="High_cnode_ptr + 0x10" in exI)
              apply (clarsimp simp: kh0H_all_obj_def')
@@ -2885,7 +2886,7 @@ lemma s0H_invs:
            apply (clarsimp simp: ex_nonz_cap_to'_def cte_wp_at_ctes_of)
            apply (rule_tac x="Silc_cnode_ptr + 0x13E0" in exI)
            apply (clarsimp simp: kh0H_all_obj_def')
-          apply (clarsimp split: if_split_asm)+
+          apply (clarsimp split: if_split_asm simp:live'_def hyp_live'_def)+
   apply (rule conjI)
    apply (clarsimp simp: if_unsafe_then_cap'_def ex_cte_cap_wp_to'_def cte_wp_at_ctes_of)
    apply (frule map_to_ctes_kh0H_SomeD)
@@ -2906,14 +2907,16 @@ lemma s0H_invs:
      apply (clarsimp simp: kh0H_all_obj_def' image_def to_bl_use_of_bl cte_level_bits_def the_nat_to_bl_simps split: if_split_asm)
       apply (drule(2) ucast_shiftr_13E, rule s0_ptrs_aligned, simp)
       apply (rule_tac x="0x13E" in bexI)
-       apply simp
-      apply simp
+       apply (simp add: mask_def)
+      apply (simp add: mask_def)
      apply (drule(2) ucast_shiftr_2, rule s0_ptrs_aligned, simp)
      apply (rule_tac x=2 in bexI)
-      apply simp
-     apply simp
+      apply (simp add: mask_def)
+     apply (simp add: mask_def)
     apply (rule_tac x="High_cnode_ptr + 0x20" in exI)
-    apply (clarsimp simp: kh0H_all_obj_def' image_def to_bl_use_of_bl cte_level_bits_def the_nat_to_bl_simps split: if_split_asm)
+    apply (clarsimp simp: kh0H_all_obj_def' image_def to_bl_use_of_bl cte_level_bits_def
+                          the_nat_to_bl_simps mask_def
+                    split: if_split_asm)
        apply (drule(2) ucast_shiftr_13E, rule s0_ptrs_aligned, simp)
        apply (rule_tac x="0x13E" in bexI)
         apply simp
@@ -2931,7 +2934,9 @@ lemma s0H_invs:
      apply simp
     apply simp
    apply (rule_tac x="Low_cnode_ptr + 0x20" in exI)
-   apply (clarsimp simp: kh0H_all_obj_def' image_def to_bl_use_of_bl cte_level_bits_def the_nat_to_bl_simps split: if_split_asm)
+   apply (clarsimp simp: kh0H_all_obj_def' image_def to_bl_use_of_bl cte_level_bits_def
+                         the_nat_to_bl_simps mask_def
+                   split: if_split_asm)
       apply (drule(2) ucast_shiftr_13E, rule s0_ptrs_aligned, simp)
       apply (rule_tac x="0x13E" in bexI)
        apply simp
@@ -2962,69 +2967,24 @@ lemma s0H_invs:
    apply (clarsimp simp: valid_arch_state'_def)
    apply (intro conjI)
         apply (clarsimp simp: s0H_internal_def arch_state0H_def objBitsKO_def pageBits_def)
-         apply (clarsimp simp: s0_ptr_defs is_aligned_def)
+        apply (clarsimp simp: s0_ptr_defs is_aligned_def)
         apply (cut_tac s0H_pspace_distinct')[1]
         apply (simp add: s0H_internal_def arch_state0H_def)
-       apply (clarsimp simp: valid_asid_table'_def s0H_internal_def arch_state0H_def)
-      apply (clarsimp simp: page_directory_at'_def s0H_internal_def arch_state0H_def pdBits_def pageBits_def s0_ptrs_aligned)
-      apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
-      apply (drule less_t2n_ex_ucast[where n=12 and 'b=12, simplified])
-      apply clarsimp
-      apply (cut_tac x=ya in pd_offs_in_range(3))
-      apply (clarsimp simp: global_pdH'_def objBitsKO_def archObjSize_def pd_offs_range_def)
-      apply (rule pspace_distinctD'')
-       apply (simp add: objBitsKO_def archObjSize_def global_pdH'_def)
-      apply (cut_tac s0H_pspace_distinct')[1]
-      apply (simp add: s0H_internal_def arch_state0H_def)
-     apply (clarsimp simp: valid_global_pts'_def s0H_internal_def arch_state0H_def)
-    apply (clarsimp simp: is_inv_def s0H_internal_def arch_state0H_def)
-   apply (clarsimp simp: valid_asid_map'_def s0H_internal_def arch_state0H_def)
-  apply (rule conjI)
-   apply (clarsimp simp: valid_irq_node'_def)
-   apply (rule conjI)
-    apply (clarsimp simp: s0H_internal_def is_aligned_def s0_ptr_defs word_size)
-   apply (clarsimp simp: obj_at'_def projectKO_eq project_inject objBitsKO_def s0H_internal_def
-                         shiftl_t2n[where n=4, simplified, symmetric]
-                          kh0H_simps(1)[simplified cte_level_bits_def])
-   apply (rule conjI)
-    apply (rule is_aligned_add)
-     apply (simp add: is_aligned_def s0_ptr_defs)
-    apply (rule is_aligned_shift)
-   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
-   apply (simp add: objBitsKO_def kh0H_simps(1)[simplified cte_level_bits_def])
-  apply (rule conjI)
-   apply (clarsimp simp: valid_irq_handlers'_def cteCaps_of_def ran_def)
-   apply (drule_tac map_to_ctes_kh0H_SomeD)
-   apply (elim disjE, simp_all add: kh0H_all_obj_def')[1]
-     apply ((clarsimp split: if_split_asm)+)[3]
-  apply (rule conjI)
-   apply (clarsimp simp: valid_irq_states'_def s0H_internal_def machine_state0_def)
-  apply (rule conjI)
-   apply (clarsimp simp: valid_machine_state'_def s0H_internal_def machine_state0_def)
-  apply (rule conjI)
-   apply (clarsimp simp: irqs_masked'_def s0H_internal_def)
-  apply (rule conjI)
-   apply (clarsimp simp: sym_heap_def opt_map_def projectKOs split: option.splits)
-   using kh0H_dom_tcb
-   apply (fastforce simp: kh0H_obj_def)
-  apply (rule conjI)
-   apply (clarsimp simp: valid_sched_pointers_def opt_map_def projectKOs split: option.splits)
-   using kh0H_dom_tcb
-   apply (fastforce simp: kh0H_obj_def)
-  apply (rule conjI)
-   apply (clarsimp simp: valid_bitmaps_def valid_bitmapQ_def bitmapQ_def s0H_internal_def
-                         tcbQueueEmpty_def bitmapQ_no_L1_orphans_def bitmapQ_no_L2_orphans_def)
-  apply (rule conjI)
-   apply (clarsimp simp: ct_not_inQ_def obj_at'_def projectKO_eq project_inject s0H_internal_def objBitsKO_def s0_ptrs_aligned Low_tcbH_def)
-   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
-   apply (simp add: objBitsKO_def)
-(*   apply (simp add: objBitsKO_def kh0H_simps[simplified cte_level_bits_def])*)
-  apply (rule conjI)
-   apply (clarsimp simp: ct_idle_or_in_cur_domain'_def obj_at'_def projectKO_eq project_inject tcb_in_cur_domain'_def s0H_internal_def Low_tcbH_def Low_domain_def objBitsKO_def s0_ptrs_aligned)
-   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
-   apply (simp add: objBitsKO_def)
-(*   apply (simp add: objBitsKO_def kh0H_simps[simplified cte_level_bits_def])*)
-  apply (rule conjI)
+        apply (clarsimp simp: valid_asid_table'_def s0H_internal_def arch_state0H_def)
+       apply (clarsimp simp: page_directory_at'_def s0H_internal_def arch_state0H_def pdBits_def pageBits_def s0_ptrs_aligned)
+       apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
+       apply (drule less_t2n_ex_ucast[where n=12 and 'b=12, simplified])
+       apply clarsimp
+       apply (cut_tac x=ya in pd_offs_in_range(3))
+       apply (clarsimp simp: global_pdH'_def objBitsKO_def archObjSize_def pd_offs_range_def)
+       apply (rule pspace_distinctD'')
+        apply (simp add: objBitsKO_def archObjSize_def global_pdH'_def)
+       apply (cut_tac s0H_pspace_distinct')[1]
+       apply (simp add: s0H_internal_def arch_state0H_def)
+      apply (clarsimp simp: valid_global_pts'_def s0H_internal_def arch_state0H_def)
+     apply (clarsimp simp: is_inv_def s0H_internal_def arch_state0H_def)
+    apply (clarsimp simp: valid_asid_map'_def s0H_internal_def arch_state0H_def)
+   (* valid_pde_mappings' *)
    apply (clarsimp simp: valid_pde_mappings'_def obj_at'_def projectKO_eq project_inject)
    apply (drule kh0H_SomeD)
    apply (elim disjE, simp_all add: kh0H_all_obj_def High_pd'H_def Low_pd'H_def)[1]
@@ -3074,6 +3034,49 @@ lemma s0H_invs:
      apply (simp add: kernel_base_def)
     apply (clarsimp split: if_split_asm)
    apply (clarsimp split: if_split_asm)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_irq_node'_def)
+   apply (rule conjI)
+    apply (clarsimp simp: s0H_internal_def is_aligned_def s0_ptr_defs word_size)
+   apply (clarsimp simp: obj_at'_def projectKO_eq project_inject objBitsKO_def s0H_internal_def
+                         shiftl_t2n[where n=4, simplified, symmetric]
+                          kh0H_simps(1)[simplified cte_level_bits_def])
+   apply (rule conjI)
+    apply (rule is_aligned_add)
+     apply (simp add: is_aligned_def s0_ptr_defs)
+    apply (rule is_aligned_shift)
+   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
+   apply (simp add: objBitsKO_def kh0H_simps(1)[simplified cte_level_bits_def])
+  apply (rule conjI)
+   apply (clarsimp simp: valid_irq_handlers'_def cteCaps_of_def ran_def)
+   apply (drule_tac map_to_ctes_kh0H_SomeD)
+   apply (elim disjE, simp_all add: kh0H_all_obj_def')[1]
+     apply ((clarsimp split: if_split_asm)+)[3]
+  apply (rule conjI)
+   apply (clarsimp simp: valid_irq_states'_def s0H_internal_def machine_state0_def)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_machine_state'_def s0H_internal_def machine_state0_def)
+  apply (rule conjI)
+   apply (clarsimp simp: irqs_masked'_def s0H_internal_def)
+  apply (rule conjI)
+   apply (clarsimp simp: sym_heap_def opt_map_def projectKOs split: option.splits)
+   using kh0H_dom_tcb
+   apply (fastforce simp: kh0H_obj_def)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_sched_pointers_def opt_map_def projectKOs split: option.splits)
+   using kh0H_dom_tcb
+   apply (fastforce simp: kh0H_obj_def)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_bitmaps_def valid_bitmapQ_def bitmapQ_def s0H_internal_def
+                         tcbQueueEmpty_def bitmapQ_no_L1_orphans_def bitmapQ_no_L2_orphans_def)
+  apply (rule conjI)
+   apply (clarsimp simp: ct_not_inQ_def obj_at'_def projectKO_eq project_inject s0H_internal_def objBitsKO_def s0_ptrs_aligned Low_tcbH_def)
+   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
+   apply (simp add: objBitsKO_def)
+  apply (rule conjI)
+   apply (clarsimp simp: ct_idle_or_in_cur_domain'_def obj_at'_def projectKO_eq project_inject tcb_in_cur_domain'_def s0H_internal_def Low_tcbH_def Low_domain_def objBitsKO_def s0_ptrs_aligned)
+   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
+   apply (simp add: objBitsKO_def)
   apply (rule conjI)
    apply (clarsimp simp: kdr_pspace_domain_valid) (* use axiomatization for now *)
   (* unfold s0H_internal for remaining goals *)

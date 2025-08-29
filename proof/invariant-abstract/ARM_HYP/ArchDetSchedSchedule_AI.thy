@@ -271,9 +271,6 @@ lemma set_asid_pool_valid_etcbs[wp]:
   by (wp hoare_drop_imps valid_etcbs_lift | simp add: set_asid_pool_def)+
 
 crunch arch_thread_set
-  for exst[wp]: "\<lambda>s. P (exst s)"
-
-crunch arch_thread_set
   for valid_etcbs[wp]: valid_etcbs
   (wp: valid_etcbs_lift)
 
@@ -292,9 +289,6 @@ lemma set_asid_pool_valid_sched[wp]:
 lemma set_vcpu_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> set_vcpu t vr \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   by (rule valid_sched_lift; wp)
-
-crunch arch_thread_set
-  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
 
 lemma arch_thread_set_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> arch_thread_set f t \<lbrace>\<lambda>_. valid_sched\<rbrace>"

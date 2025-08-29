@@ -879,6 +879,10 @@ lemma vcpuRestoreRegRange_corres[corres]:
      apply (wpsimp wp: vcpuRestoreReg_corres)+
   done
 
+crunch check_export_arch_timer
+  for (no_fail) no_fail[intro!, wp, simp]
+  (simp: check_export_arch_timer_def)
+
 lemma saveVirtTimer_corres[corres]:
   "corres dc (vcpu_at vcpu_ptr) (vcpu_at' vcpu_ptr and no_0_obj')
              (save_virt_timer vcpu_ptr) (saveVirtTimer vcpu_ptr)"
@@ -888,12 +892,15 @@ lemma saveVirtTimer_corres[corres]:
       apply (rule corres_split_dc[OF corres_machine_op], (rule corres_Id; simp))
         apply (rule corres_split_eqr[OF corres_machine_op], (rule corres_Id; simp))+
             apply (rule corres_split_dc[OF vcpuWriteReg_corres], simp)+
-                    apply (rule corres_split_eqr[OF corres_machine_op])
-                       apply (rule corres_Id; simp)
-                      apply (fold dc_def)
-                      apply (rule vcpuUpdate_corres)
-                      apply (simp add: vcpu_relation_def)
-                     apply wpsimp+
+                    apply (rule corres_split_dc[OF vcpuSaveReg_corres], simp)
+                      apply (rule corres_split_eqr[OF corres_machine_op], simp)
+                         apply (rule corres_Id; simp)
+                        apply (rule corres_split_eqr[OF corres_machine_op], simp)
+                           apply (rule corres_Id; simp)
+                          apply (fold dc_def)
+                          apply (rule vcpuUpdate_corres)
+                          apply (simp add: vcpu_relation_def)
+                         apply wpsimp+
   done
 
 lemma isIRQActive_corres:
@@ -913,21 +920,23 @@ lemma restoreVirtTimer_corres[corres]:
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr[OF vcpuReadReg_corres], simp)
       apply (rule corres_split_eqr[OF vcpuReadReg_corres])
-        apply (rule corres_split_eqr[OF corres_machine_op], (rule corres_Id; simp))+
-            apply (rule corres_split[OF getObject_vcpu_corres])
-              apply (rule corres_split_eqr[OF vcpuReadReg_corres])
+        apply (rule corres_split_eqr[OF corres_machine_op], (rule corres_Id; simp))
+          apply (rule corres_split_dc[OF vcpuRestoreReg_corres])
+            apply (rule corres_split_eqr[OF corres_machine_op], (rule corres_Id; simp))
+              apply (rule corres_split[OF getObject_vcpu_corres])
                 apply (rule corres_split_eqr[OF vcpuReadReg_corres])
-                  apply (clarsimp simp: vcpu_relation_def)
-                  apply (rule corres_split_dc[OF vcpuWriteReg_corres])+
-                      apply (rule corres_split_dc[OF corres_machine_op])
-                         apply (rule corres_Id; simp)
-                        apply (rule corres_split_eqr[OF isIRQActive_corres])
-                          apply (rule corres_split_dc[OF corres_when], simp)
-                             apply (simp add: irq_vppi_event_index_def irqVPPIEventIndex_def IRQ_def)
-                             apply (rule corres_machine_op, simp)
-                             apply (rule corres_Id; wpsimp)
-                            apply (rule vcpuRestoreReg_corres)
-                           apply (wpsimp simp: if_apply_def2 isIRQActive_def)+
+                  apply (rule corres_split_eqr[OF vcpuReadReg_corres])
+                    apply (clarsimp simp: vcpu_relation_def)
+                    apply (rule corres_split_dc[OF vcpuWriteReg_corres])+
+                        apply (rule corres_split_dc[OF corres_machine_op])
+                           apply (rule corres_Id; simp)
+                          apply (rule corres_split_eqr[OF isIRQActive_corres])
+                            apply (rule corres_split_dc[OF corres_when], simp)
+                               apply (simp add: irq_vppi_event_index_def irqVPPIEventIndex_def IRQ_def)
+                               apply (rule corres_machine_op, simp)
+                               apply (rule corres_Id; wpsimp)
+                              apply (rule vcpuRestoreReg_corres)
+                             apply (wpsimp simp: if_apply_def2 isIRQActive_def)+
   done
 
 lemma vcpuSave_corres:
@@ -1726,7 +1735,7 @@ lemma storeHWASID_valid_arch' [wp]:
                     checkPDUniqueToASID_def checkPDASIDMapMembership_def)
    apply wp
    apply (rule_tac Q'="\<lambda>rv s. valid_asid_map' (armKSASIDMap (ksArchState s))
-                               \<and> asid \<noteq> 0 \<and> asid \<le> mask asid_bits
+                               \<and> asid \<noteq> 0 \<and> asid \<le> mask asid_bits \<and> valid_pde_mappings' s
                                \<and> armKSGICVCPUNumListRegs (ksArchState s) \<le> max_armKSGICVCPUNumListRegs"
               in hoare_strengthen_postE_R)
     apply (wp findPDForASID_inv2)+
@@ -1987,16 +1996,11 @@ crunch pageTableMapped
   for inv[wp]: "P"
   (wp: loadObject_default_inv)
 
-crunch storePDE
+crunch storePDE, storePTE
   for no_0_obj'[wp]: no_0_obj'
- (wp: setObject_cte_wp_at2' headM_inv hoare_drop_imp)
-
-crunch storePTE
-  for no_0_obj'[wp]: no_0_obj'
- (wp: setObject_cte_wp_at2' headM_inv hoare_drop_imp)
-
-lemma storePDE_valid_arch'[wp]: "\<lbrace>valid_arch_state'\<rbrace> storePDE param_a param_b \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  by (wpsimp wp: setObject_cte_wp_at2' headM_inv hoare_drop_imp simp: storePDE_def)
+  and arch'[wp]: "\<lambda>s. P (ksArchState s)"
+  and cur'[wp]: "\<lambda>s. P (ksCurThread s)"
+  (wp: setObject_cte_wp_at2' headM_inv hoare_drop_imp)
 
 lemma storePTE_valid_arch'[wp]: "\<lbrace>valid_arch_state'\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   by (wpsimp wp: setObject_cte_wp_at2' headM_inv hoare_drop_imp simp: storePTE_def)
@@ -2006,6 +2010,31 @@ lemma storePDE_cur_tcb'[wp]: "\<lbrace>cur_tcb'\<rbrace> storePDE param_a param_
 
 lemma storePTE_cur_tcb'[wp]: "\<lbrace>cur_tcb'\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"
   by (wpsimp wp: setObject_cte_wp_at2' headM_inv hoare_drop_imp simp: storePTE_def)
+
+lemma storePDE_pde_mappings'[wp]:
+  "\<lbrace>valid_pde_mappings' and K (valid_pde_mapping' (p && mask pdBits) pde)\<rbrace>
+      storePDE p pde
+   \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
+  apply (rule hoare_gen_asm)
+  apply (wp valid_pde_mappings_lift')
+   apply (rule hoare_post_imp)
+    apply (simp only: obj_at'_real_def)
+   apply (simp add: storePDE_def)
+   apply (wp setObject_ko_wp_at hoare_drop_imp)
+      apply simp
+     apply (simp add: objBits_simps archObjSize_def vspace_bits_defs)
+    apply simp
+   apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
+  apply assumption
+  done
+
+lemma storePDE_InvalidPDE_pde_mappings'[wp]:
+  "storePDE p InvalidPDE \<lbrace>valid_pde_mappings'\<rbrace>"
+  by (wpsimp simp: valid_pde_mapping'_def)
+
+lemma storePDE_InvalidPDE_valid_arch_state'[wp]:
+  "storePDE p InvalidPDE \<lbrace>valid_arch_state'\<rbrace>"
+  by (wpsimp wp: valid_arch_state_lift'_valid_pde_mappings')
 
 lemma unmapPageTable_corres:
   "corres dc
@@ -3543,6 +3572,10 @@ lemma setVCPU_regs_vgic_vcpu_live:
   apply (clarsimp simp: pred_conj_def is_vcpu'_def ko_wp_at'_def obj_at'_real_def projectKOs)
   done
 
+lemma setObject_vcpu_valid_pde_mappings'[wp]:
+  "setObject p (v::vcpu) \<lbrace> valid_pde_mappings' \<rbrace>"
+  by (wp valid_pde_mappings'_lift')
+
 (* FIXME: move *)
 lemma setVCPU_regs_vgic_valid_arch':
   "\<lbrace>valid_arch_state' and ko_at' vcpu v\<rbrace> setObject v (vcpuRegs_update f (vcpuVGIC_update f' vcpu)) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
@@ -3867,6 +3900,17 @@ lemma getIRQState_wp:
   unfolding getIRQState_def getInterruptState_def
   by (wpsimp simp: comp_def)
 
+crunch check_export_arch_timer
+  for (no_irq) no_irq[wp]
+
+lemma check_export_arch_timer_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (check_export_arch_timer) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq)
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+    apply (wpsimp wp: check_export_arch_timer_underlying_memory)+
+  done
+
 lemma saveVirtTimer_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> saveVirtTimer vcpu_ptr \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
   by (wpsimp simp: saveVirtTimer_def vcpuUpdate_def read_cntpct_def get_cntv_off_64_def
@@ -4126,6 +4170,12 @@ lemma read_writeVCPUHardwareReg_invs'[wp]:
   by ((wpsimp wp: dmo_invs' no_irq no_irq_writeVCPUHardwareReg)
        , drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid
        , (wpsimp simp: writeVCPUHardwareReg_def readVCPUHardwareReg_def)+)+
+
+lemma check_export_arch_timer_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp check_export_arch_timer \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  by (wpsimp wp: dmo_invs' no_irq no_irq_check_export_arch_timer
+      , drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid
+      , (wpsimp simp: check_export_arch_timer_def)+)
 
 lemma vcpuWriteReg_invs'[wp]:
   "vcpuWriteReg vcpu_ptr r v \<lbrace>invs'\<rbrace>"
@@ -4556,36 +4606,11 @@ method valid_idle'_setObject uses simp =
 lemma storePDE_idle [wp]:
   "\<lbrace>valid_idle'\<rbrace> storePDE p pde \<lbrace>\<lambda>rv. valid_idle'\<rbrace>" by (valid_idle'_setObject simp: storePDE_def)
 
-lemma storePDE_arch'[wp]:
-  "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> storePDE param_a param_b \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
-  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePDE_def updateObject_default_def)
-
-lemma storePDE_cur'[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> storePDE param_a param_b \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
-  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePDE_def updateObject_default_def)
-
 lemma storePDE_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> storePDE pde p \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
   apply (simp add: storePDE_def)
   apply (wpsimp wp: valid_irq_states_lift' dmo_lift' no_irq_storeWord setObject_ksMachine
                     updateObject_default_inv hoare_drop_imp)
-  done
-
-lemma storePDE_pde_mappings'[wp]:
-  "\<lbrace>valid_pde_mappings' and K (valid_pde_mapping' (p && mask pdBits) pde)\<rbrace>
-      storePDE p pde
-   \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (wp valid_pde_mappings_lift')
-   apply (rule hoare_post_imp)
-    apply (simp only: obj_at'_real_def)
-   apply (simp add: storePDE_def)
-   apply (wp setObject_ko_wp_at hoare_drop_imp)
-      apply simp
-     apply (simp add: objBits_simps archObjSize_def vspace_bits_defs)
-    apply simp
-   apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
-  apply assumption
   done
 
 lemma setObject_pde_machine_state[wp]:
@@ -4612,7 +4637,7 @@ lemma storePDE_ct_not_inQ[wp]:
   apply (rule ct_not_inQ_lift [OF storePDE_nosch])
   apply (wpsimp simp: storePDE_def updateObject_default_def wp: hoare_drop_imp)
    apply (wps setObject_PDE_ct)
-   apply (wpsimp wp: obj_at_setObject2 simp: updateObject_default_def in_monad)+
+   apply (wpsimp wp: obj_at_setObject2 simp: updateObject_default_def in_monad comp_def)+
   done
 
 lemma setObject_pde_cur_domain[wp]:
@@ -4704,7 +4729,7 @@ lemma storePDE_invs[wp]:
   apply (rule hoare_pre)
    apply (wp sch_act_wf_lift valid_global_refs_lift'
              irqs_masked_lift
-             valid_arch_state_lift' valid_irq_node_lift
+             valid_arch_state_lift'_valid_pde_mappings' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift''
              untyped_ranges_zero_lift sym_heap_sched_pointers_lift valid_bitmaps_lift
            | simp add: cteCaps_of_def o_def)+
@@ -4765,14 +4790,6 @@ lemma storePTE_ifunsafe [wp]:
 lemma storePTE_idle [wp]:
   "\<lbrace>valid_idle'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. valid_idle'\<rbrace>" by (valid_idle'_setObject simp: storePTE_def)
 
-lemma storePTE_arch'[wp]:
-  "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
-  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePTE_def updateObject_default_def)
-
-lemma storePTE_cur'[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
-  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePTE_def updateObject_default_def)
-
 lemma storePTE_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> storePTE pte p \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
   apply (simp add: storePTE_def)
@@ -4825,7 +4842,7 @@ lemma storePTE_ct_not_inQ[wp]:
   apply (rule ct_not_inQ_lift [OF storePTE_nosch])
   apply (wpsimp simp: storePTE_def updateObject_default_def wp: hoare_drop_imp)
    apply (wps setObject_PDE_ct)
-   apply (wpsimp wp: obj_at_setObject2 simp: updateObject_default_def in_monad)+
+   apply (wpsimp wp: obj_at_setObject2 simp: updateObject_default_def in_monad comp_def)+
   done
 
 lemma setObject_pte_cur_domain[wp]:
@@ -4864,7 +4881,7 @@ lemma storePTE_invs [wp]:
   "\<lbrace>invs' and valid_pte' pte\<rbrace> storePTE p pte \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
-            valid_arch_state_lift' valid_irq_node_lift
+            valid_arch_state_lift'_valid_pde_mappings' valid_irq_node_lift
             cur_tcb_lift valid_irq_handlers_lift''
             untyped_ranges_zero_lift valid_bitmaps_lift
           | simp add: cteCaps_of_def o_def)+
@@ -4993,7 +5010,7 @@ lemma setASIDPool_ct_not_inQ[wp]:
   apply (rule hoare_weaken_pre)
    apply (wps setObject_ASID_ct)
   apply (rule obj_at_setObject2)
-   apply (clarsimp simp: updateObject_default_def in_monad)+
+   apply (clarsimp simp: updateObject_default_def in_monad comp_def)+
   done
 
 lemma setObject_asidpool_cur'[wp]:
@@ -5124,6 +5141,8 @@ lemma dmo_cleanCaches_PoU_invs'[wp]:
     apply (simp add: cleanCaches_PoU_def machine_op_lift_def
                      machine_rest_lift_def split_def | wp)+
   done
+
+
 
 crunch unmapPageTable
   for invs'[wp]: "invs'"

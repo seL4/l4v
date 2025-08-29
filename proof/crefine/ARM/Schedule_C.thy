@@ -699,7 +699,7 @@ lemma threadSet_timeSlice_ccorres [corres]:
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
   apply (clarsimp simp: cmachine_state_relation_def carch_state_relation_def cpspace_relation_def)
   apply (clarsimp simp: update_tcb_map_tos typ_heap_simps')
-  apply (simp add: map_to_ctes_upd_tcb_no_ctes tcb_cte_cases_def
+  apply (simp add: map_to_ctes_upd_tcb_no_ctes tcb_cte_cases_def tcb_cte_cases_neqs
                    map_to_tcbs_upd)
   apply (simp add: cep_relations_drop_fun_upd cvariable_relation_upd_const
                    ko_at_projectKO_opt)

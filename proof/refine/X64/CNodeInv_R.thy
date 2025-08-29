@@ -4781,51 +4781,6 @@ lemma irq_control_n: "irq_control n"
   apply clarsimp
   done
 
-lemma ioport_control_n: "ioport_control n"
-  using src dest dest_derived src_derived
-  apply (clarsimp simp: ioport_control_def)
-  apply (frule revokable)
-  apply (drule n_cap)
-  apply (clarsimp split: if_split_asm)
-    apply (clarsimp simp: weak_derived'_def)
-    apply (frule ioport_revocable, rule ioport_control)
-    apply clarsimp
-    apply (drule n_cap)
-    apply (split if_split_asm)
-     apply (thin_tac "capability.ArchObjectCap X64_H.IOPortControlCap = dcap")
-     apply clarsimp
-    apply (clarsimp split: if_split_asm)
-     apply (drule (1) ioport_controlD, rule ioport_control)
-     apply simp
-    apply (drule (1) ioport_controlD, rule ioport_control)
-    apply simp
-   apply (clarsimp simp: weak_derived'_def)
-   apply (frule ioport_revocable, rule ioport_control)
-   apply clarsimp
-   apply (drule n_cap)
-    apply (split if_split_asm)
-     apply clarsimp
-    apply (drule (1) ioport_controlD, rule ioport_control)
-    apply simp
-   apply (split if_split_asm)
-    apply (thin_tac "capability.ArchObjectCap X64_H.IOPortControlCap = scap")
-    apply clarsimp
-   apply (clarsimp split: if_split_asm)
-   apply (drule (1) ioport_controlD, rule ioport_control)
-   apply simp
-  apply (clarsimp simp: weak_derived'_def)
-  apply (frule ioport_revocable, rule ioport_control)
-  apply clarsimp
-  apply (drule n_cap)
-  apply (clarsimp split: if_split_asm)
-    apply (drule (1) ioport_controlD, rule ioport_control)
-    apply simp
-   apply (drule (1) ioport_controlD, rule ioport_control)
-   apply clarsimp
-  apply (drule (1) ioport_controlD, rule ioport_control)
-  apply clarsimp
-  done
-
 lemma distinct_zombies_m:
   "distinct_zombies m"
   using valid by auto
@@ -4870,9 +4825,9 @@ lemma cteSwap_valid_mdb_helper:
   shows "valid_mdb_ctes n"
   using cteSwap_chain cteSwap_dlist_helper cteSwap_valid_badges
         cteSwap_chunked caps_contained untyped_mdb_n untyped_inc_n
-        nullcaps_n ut_rev_n class_links_n irq_control_n ioport_control_n
+        nullcaps_n ut_rev_n class_links_n irq_control_n
         distinct_zombies_n reply_masters_rvk_fb_n
-  by (auto simp:untyped_eq)
+  by (auto simp: untyped_eq)
 
 end
 
@@ -5317,16 +5272,16 @@ lemma Final_notUntyped_capRange_disjoint:
   apply (clarsimp simp: cteCaps_of_def)
   apply (drule(1) ctes_of_valid')
   apply (elim disjE isCapDs[elim_format])
-   apply (clarsimp simp: valid_cap'_def bit_simps
+   apply (clarsimp simp: valid_cap'_def bit_simps valid_arch_cap'_def
                          obj_at'_def projectKOs objBits_simps'
-                         typ_at'_def ko_wp_at'_def
+                         typ_at'_def ko_wp_at'_def live'_def
                   split: capability.split_asm zombie_type.split_asm
                          arch_capability.split_asm
                   dest!: spec[where x=0])
      apply (clarsimp simp: sameObjectAs_def3 isCap_simps)
     apply (simp add: isCap_simps)
    apply (simp add: isCap_simps)
-  apply (clarsimp simp: valid_cap'_def bit_simps
+  apply (clarsimp simp: valid_cap'_def bit_simps valid_arch_cap'_def
                         obj_at'_def projectKOs objBits_simps
                         typ_at'_def ko_wp_at'_def pd_pointer_table_at'_def
                         page_table_at'_def page_directory_at'_def
@@ -5644,7 +5599,7 @@ lemma make_zombie_invs':
                                \<and> bound_tcb_at' ((=) None) p' s
                                \<and> obj_at' (\<lambda>tcb. tcbSchedNext tcb = None
                                                 \<and> tcbSchedPrev tcb = None) p' s")
-    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs)
+    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs live'_def hyp_live'_def)
    apply (auto dest!: isCapDs)[1]
   apply (clarsimp simp: cte_wp_at_ctes_of disj_ac
                  dest!: isCapDs)
@@ -5728,10 +5683,7 @@ lemma make_zombie_invs':
     apply (subgoal_tac "cap \<noteq> IRQControlCap")
      apply (clarsimp simp: irq_control_def)
     apply (clarsimp simp: isCap_simps)
-   apply (rule conjI[rotated])
-    apply (subgoal_tac "cap \<noteq> ArchObjectCap IOPortControlCap")
-     apply (clarsimp simp: ioport_control_def)
-    apply (clarsimp simp: isCap_simps)
+   apply (clarsimp simp: isCap_simps)
    apply (simp add: reply_masters_rvk_fb_def, erule ball_ran_fun_updI)
    apply (clarsimp simp: isCap_simps)
   apply (clarsimp simp: modify_map_apply)
@@ -5759,7 +5711,7 @@ lemma shrink_zombie_invs':
   apply clarsimp
   apply (rule ccontr, erule notE, rule imageI)
   apply (drule word_le_minus_one_leq)
-  apply (rule ccontr, simp add: linorder_not_less mult.commute mult.left_commute)
+  apply (rule ccontr, simp add: linorder_not_less mult.commute mult.left_commute shiftl_t2n)
   done
 
 lemma setQueue_cte_wp_at':
@@ -5809,6 +5761,7 @@ crunch doMachineOp
 
 lemma valid_Zombie_cte_at':
   "\<lbrakk> s \<turnstile>' Zombie p zt m; n < zombieCTEs zt \<rbrakk> \<Longrightarrow> cte_at' (p + (of_nat n * 2^cteSizeBits)) s"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (clarsimp simp: valid_cap'_def split: zombie_type.split_asm)
    apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
    apply (subgoal_tac "tcb_cte_cases (of_nat n * 2^cteSizeBits) \<noteq> None")
@@ -6070,7 +6023,7 @@ lemma ex_Zombie_to2:
   apply (intro exI, rule conjI, assumption)
   apply (simp add: image_def)
   apply (rule bexI[where x="of_nat n - 1"])
-   apply (fastforce simp: objBits_defs)
+   apply (fastforce simp: objBits_defs shiftl_t2n)
   apply (subgoal_tac "n \<in> unats (len_of TYPE(machine_word_len))")
    apply (simp add: word_less_nat_alt)
    apply (subst unat_minus_one)
@@ -6270,7 +6223,8 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
                      \<or> (\<exists>zb n cp. cteCap cte = Zombie q zb n
                           \<and> Q cp \<and> (isZombie cp \<longrightarrow> capZombiePtr cp \<noteq> q))"
   note hyps = "1.hyps"[folded reduceZombie_def[unfolded cteDelete_def finaliseSlot_def]]
-  have Q: "\<And>x y n. {x :: machine_word} = (\<lambda>x. y + x * 2^cteSizeBits) ` {0 ..< n} \<Longrightarrow> n = 1"
+  have Q: "\<And>x y n. {x :: machine_word} = (\<lambda>x. y + (x << cteSizeBits)) ` {0 ..< n} \<Longrightarrow> n = 1"
+    apply (simp only: shiftl_t2n mult_ac)
     apply (drule sym)
     apply (case_tac "1 < n")
      apply (frule_tac x = "y + 0 * 2^cteSizeBits" in eqset_imp_iff)
@@ -6373,14 +6327,15 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
                simp_all add: isCap_simps removeable'_def
                              fun_eq_iff[where f="cte_refs' cap" for cap]
                              fun_eq_iff[where f=tcb_cte_cases]
-                             tcb_cte_cases_def)[1]
-         apply (frule Q)
+                             tcb_cte_cases_def cteSizeBits_def)[1]
+         apply (frule Q[unfolded cteSizeBits_def, simplified])
          apply clarsimp
+        apply (simp add: mask_def)
         apply (subst(asm) R)
          apply (drule valid_capAligned [OF ctes_of_valid'])
           apply fastforce
          apply (simp add: capAligned_def word_bits_def)
-        apply (frule Q)
+         apply (frule Q[unfolded cteSizeBits_def, simplified])
         apply clarsimp
        apply (clarsimp simp: cte_wp_at_ctes_of capRemovable_def)
        apply (subgoal_tac "final_matters' (cteCap rv) \<and> \<not> isUntypedCap (cteCap rv)")
@@ -7449,7 +7404,7 @@ next
     apply (rule_tac x="cte_map slot" in exI)
     apply (clarsimp simp: image_def)
     apply (rule_tac x="of_nat n" in bexI)
-     apply (fastforce simp: cte_level_bits_def objBits_defs mult.commute mult.left_commute)
+     apply (fastforce simp: cte_level_bits_def shiftl_t2n objBits_defs mult.commute mult.left_commute)
     apply simp
     apply (subst field_simps, rule plus_one_helper2)
      apply simp
@@ -8484,28 +8439,6 @@ proof
      apply (drule (1) irq_controlD, rule irq_control)
      apply simp
     apply (erule (1) irq_controlD, rule irq_control)
-    done
-
-  show "ioport_control m'" using src dest parency
-    apply (clarsimp simp: ioport_control_def)
-    apply (frule m'_revocable)
-    apply (drule m'_cap)
-    apply (clarsimp split: if_split_asm)
-     apply (clarsimp simp add: weak_derived'_def)
-     apply (frule ioport_revocable, rule ioport_control)
-     apply clarsimp
-     apply (drule m'_cap)
-     apply (clarsimp split: if_split_asm)
-     apply (drule (1) ioport_controlD, rule ioport_control)
-     apply simp
-    apply (frule ioport_revocable, rule ioport_control)
-    apply clarsimp
-    apply (drule m'_cap)
-    apply (clarsimp split: if_split_asm)
-     apply (clarsimp simp: weak_derived'_def)
-     apply (drule (1) ioport_controlD, rule ioport_control)
-     apply simp
-    apply (erule (1) ioport_controlD, rule ioport_control)
     done
 
   have distz: "distinct_zombies m"

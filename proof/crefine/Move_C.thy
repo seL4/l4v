@@ -132,13 +132,11 @@ lemma length_Suc_0_conv:
 
 lemma imp_ignore: "B \<Longrightarrow> A \<longrightarrow> B" by blast
 
-lemma cteSizeBits_eq:
-  "cteSizeBits = cte_level_bits"
-  by (simp add: cte_level_bits_def cteSizeBits_def)
+lemmas cteSizeBits_eq = cteSizeBits_cte_level_bits
 
 lemma cteSizeBits_le_cte_level_bits[simp]:
   "cteSizeBits \<le> cte_level_bits"
-  by (simp add: cte_level_bits_def cteSizeBits_def)
+  by (simp add: cteSizeBits_eq)
 
 lemma unat_ucast_prio_mask_simp[simp]:
   "unat (ucast (p::priority) && mask m :: machine_word) = unat (p && mask m)"
@@ -345,6 +343,20 @@ lemma word_eq_cast_unsigned:
   "(x = y) = (UCAST ('a signed \<rightarrow> ('a :: len)) x = ucast y)"
   by (simp add: word_eq_iff nth_ucast)
 
+(* tcbIPCBufferSlot is last slot in TCB *)
+(* FIXME arch-split: Arch is needed for wordSizeCase, proof is same on all arches *)
+lemma (in Arch) cteSizeBits_2ptcbBlockSizeBits[simplified tcbIPCBufferSlot_def]:
+  "n \<le> tcbIPCBufferSlot \<Longrightarrow> n << cteSizeBits < 2 ^ tcbBlockSizeBits"
+  unfolding tcbIPCBufferSlot_def tcbBlockSizeBits_def cteSizeBits_def
+  apply (simp only: wordSizeCase_simp)
+  apply (rule shiftl_less_t2n; simp)
+  apply unat_arith
+  done
+
+requalify_facts Arch.cteSizeBits_2ptcbBlockSizeBits
+
+lemmas zero_less_2p_tcbBlockSizeBits = cteSizeBits_2ptcbBlockSizeBits[where n=0, simplified]
+
 lemma ran_tcb_cte_cases:
   "ran tcb_cte_cases =
    {(Structures_H.tcbCTable, tcbCTable_update),
@@ -352,7 +364,8 @@ lemma ran_tcb_cte_cases:
     (Structures_H.tcbIPCBufferFrame, tcbIPCBufferFrame_update),
     (Structures_H.tcbFaultHandler, tcbFaultHandler_update),
     (Structures_H.tcbTimeoutHandler, tcbTimeoutHandler_update)}"
-  by (auto simp add: tcb_cte_cases_def cteSizeBits_def split: if_split_asm)
+  unfolding tcb_cte_cases_def
+  by (auto split: if_split_asm simp: tcb_cte_cases_neqs)
 
 lemma user_data_at_ko:
   "typ_at' UserDataT p s \<Longrightarrow> ko_at' UserData p s"
@@ -567,7 +580,7 @@ lemma threadGet_again:
    (threadGet ext t >>= n) s' = n rv s'"
   apply (clarsimp simp add: threadGet_getObject gets_the_def liftM_def in_monad)
   apply (frule use_valid [OF _ getObject_obj_at'])
-     apply (simp add: objBits_simps')+
+     apply (simp add: gen_objBits_simps tcbBlockSizeBits_def)+ (* FIXME arch-split: tcbBlockSizeBits *)
   apply (frule getObject_tcb_det)
   apply (clarsimp simp: bind_def split_def)
   apply (insert no_fail_getObject_misc)
@@ -622,15 +635,16 @@ lemma mapM_only_length:
 
 lemma tcb_aligned':
   "tcb_at' t s \<Longrightarrow> is_aligned t tcbBlockSizeBits"
-  apply (drule obj_at_aligned')
-   apply (simp add: objBits_simps)
-  apply (simp add: objBits_simps)
-  done
+  by (drule obj_at_aligned'; simp add: gen_objBits_simps)
 
-lemma cte_at_0' [dest!]:
+(* identical proof on all arches *)
+lemma (in Arch) cte_at_0'[dest!]:
   "\<lbrakk> cte_at' 0 s; no_0_obj' s \<rbrakk> \<Longrightarrow> False"
   apply (clarsimp simp: cte_wp_at_obj_cases')
   by (auto simp: tcb_cte_cases_def is_aligned_def objBits_simps' dest!:tcb_aligned' split: if_split_asm)
+
+requalify_facts Arch.cte_at_0'
+lemmas [dest!] = cte_at_0'
 
 lemma getMessageInfo_le3:
   "\<lbrace>\<top>\<rbrace> getMessageInfo sender \<lbrace>\<lambda>rv s. unat (msgExtraCaps rv) \<le> 3\<rbrace>"
@@ -1016,45 +1030,54 @@ lemma updateObject_cte_tcb:
         return (KOTCB (updF (\<lambda>_. ctea) tcb))
     od)"
   using tc unfolding tcb_cte_cases_def
-  apply -
-  apply (clarsimp simp add: updateObject_cte Let_def
-    tcb_cte_cases_def objBits_simps' tcbSlots shiftl_t2n
-    split: if_split_asm cong: if_cong)
-  done
+  by (clarsimp simp: updateObject_cte Let_def tcb_cte_cases_neqs gen_objBits_simps tcbSlots
+               split: if_split_asm
+               cong: if_cong)
+
+lemma self_elim:
+  "\<And>P Q. \<lbrakk> P \<Longrightarrow> Q; P \<rbrakk> \<Longrightarrow> Q"
+  by blast
 
 lemma tcb_cte_cases_in_range1:
   assumes tc:"tcb_cte_cases (y - x) = Some v"
   and     al: "is_aligned x tcbBlockSizeBits"
   shows   "x \<le> y"
 proof -
-  note objBits_defs [simp]
-
   from tc obtain q where yq: "y = x + q" and qv: "q < 2 ^ tcbBlockSizeBits"
     unfolding tcb_cte_cases_def
-    by (simp add: diff_eq_eq split: if_split_asm)
+    by (clarsimp simp: diff_eq_eq tcbSlot_defs
+                 simp del: shiftl_1
+                 elim!: self_elim
+                 intro!: cteSizeBits_2ptcbBlockSizeBits zero_less_2p_tcbBlockSizeBits
+                 split: if_split_asm)
 
   have "x \<le> x + 2 ^ tcbBlockSizeBits - 1" using al
     by (rule is_aligned_no_overflow)
 
   hence "x \<le> x + q" using qv
-    apply simp
-    apply unat_arith
-    apply simp
-    done
+    by unat_arith
 
   thus ?thesis using yq by simp
 qed
+
+lemma tcbBlockSizeBits_word_less_sub_le:
+  fixes x :: machine_word
+  shows "(x \<le> 2 ^ tcbBlockSizeBits - 1) = (x < 2 ^ tcbBlockSizeBits)"
+  unfolding tcbBlockSizeBits_def
+  by (subst word_less_sub_le; simp)
 
 lemma tcb_cte_cases_in_range2:
   assumes tc: "tcb_cte_cases (y - x) = Some v"
   and     al: "is_aligned x tcbBlockSizeBits"
   shows   "y \<le> x + 2 ^ tcbBlockSizeBits - 1"
 proof -
-  note objBits_defs [simp]
-
   from tc obtain q where yq: "y = x + q" and qv: "q \<le> 2 ^ tcbBlockSizeBits - 1"
     unfolding tcb_cte_cases_def
-    by (simp add: diff_eq_eq split: if_split_asm)
+    by (clarsimp simp: diff_eq_eq tcbSlot_defs tcbBlockSizeBits_word_less_sub_le
+                 simp del: shiftl_1
+                 elim!: self_elim
+                 intro!: cteSizeBits_2ptcbBlockSizeBits zero_less_2p_tcbBlockSizeBits
+                 split: if_split_asm)
 
   have "x + q \<le> x + (2 ^ tcbBlockSizeBits - 1)" using qv
     apply (rule word_plus_mono_right)

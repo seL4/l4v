@@ -396,13 +396,14 @@ proof -
       using vu unfolding valid_cap'_def valid_untyped'_def
       apply clarsimp
       apply (drule_tac x = x in spec)
-      apply (clarsimp simp:ko_wp_at'_def)
+      apply (clarsimp simp:ko_wp_at'_def add_mask_fold)
       done
 
     with koat have "\<not> {ptr..ptr + 2 ^ bits - 1} \<subset> {x..x + 2 ^ objBits ko - 1}"
       apply -
       apply (erule obj_atE')+
-      apply (simp add: ko_wp_at'_def projectKOs obj_range'_def not_less objBits_def project_inject)
+      apply (simp add: ko_wp_at'_def projectKOs obj_range'_def not_less objBits_def project_inject
+                       add_mask_fold)
       done
 
     thus ?thesis using subset1
@@ -570,7 +571,7 @@ proof -
      apply simp
     apply clarsimp
     apply (drule_tac y = n in aligned_add_aligned [where m = 4])
-     apply (simp add: tcb_cte_cases_def is_aligned_def split: if_split_asm)
+     apply (simp add: tcb_cte_cases_def cteSizeBits_def is_aligned_def split: if_split_asm)
     apply (simp add: word_bits_conv)
     apply simp
     done
@@ -1645,7 +1646,7 @@ proof -
   hence "cpspace_relation ?ks' (underlying_memory (ksMachineState s)) ?th_s"
     unfolding cpspace_relation_def
     using cendpoint_relation_restrict [OF D.valid_untyped invs rl]
-      cnotification_relation_restrict [OF D.valid_untyped invs rl]
+      cnotification_relation_restrict [OF D.valid_untyped invs rl] b2
     using  cmap_array[simplified table_bits_defs]
     apply -
     apply (elim conjE)
@@ -1793,7 +1794,7 @@ proof -
     apply (frule pspace_distinctD'[OF _ pspace_distinct'])
     apply (clarsimp simp add: valid_cap'_def valid_untyped'_def2 capAligned_def)
     apply (drule_tac x=x in spec)
-    apply (simp add: obj_range'_def objBitsKO_def)
+    apply (simp add: obj_range'_def objBitsKO_def mask_def add_diff_eq)
     apply (simp only: not_le)
     apply (cut_tac is_aligned_no_overflow[OF al])
     apply (case_tac "ptr \<le> x + 2 ^ pageBits - 1",
@@ -1846,7 +1847,7 @@ proof -
     apply (frule pspace_distinctD'[OF _ pspace_distinct'])
     apply (clarsimp simp add: valid_cap'_def valid_untyped'_def2 capAligned_def)
     apply (drule_tac x=x in spec)
-    apply (simp add: obj_range'_def objBitsKO_def)
+    apply (simp add: obj_range'_def objBitsKO_def mask_def add_diff_eq)
     apply (simp only: not_le)
     apply (cut_tac is_aligned_no_overflow[OF al])
     apply (case_tac "ptr \<le> x + 2 ^ pageBits - 1",
@@ -1872,9 +1873,9 @@ proof -
         \<Longrightarrow> {p ..+ 2 ^ objBitsT TCBT} \<inter> {ptr..+2 ^ bits} = {}"
       apply (clarsimp simp: valid_cap'_def)
       apply (drule(1) map_to_ko_atI')
-      apply (clarsimp simp: obj_at'_def valid_untyped'_def2)
+      apply (clarsimp simp: obj_at'_def valid_untyped'_def2 mask_2pm1 add_diff_eq)
       apply (elim allE, drule(1) mp)
-      apply (clarsimp simp only: obj_range'_def upto_intvl_eq[symmetric] al)
+      apply (clarsimp simp only: obj_range'_def upto_intvl_eq[symmetric] al add_mask_fold[symmetric])
       apply (subgoal_tac "objBitsKO ko = objBitsT TCBT")
        apply (subgoal_tac "p \<in> {p ..+ 2 ^ objBitsT TCBT}")
         apply simp

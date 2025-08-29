@@ -334,16 +334,16 @@ lemma valid_globals_ex_cte_cap_irq:
   apply (simp add: global_refs'_def cte_level_bits_def cteSizeBits_def shiftl_t2n mult.commute mult.left_commute)
   done
 
-lemma no_fail_plic_complete_claim [simp, wp]:
-  "no_fail \<top> (AARCH64.plic_complete_claim irw)"
-  unfolding AARCH64.plic_complete_claim_def
-  by (rule no_fail_machine_op_lift)
+lemma no_fail_deactivateInterrupt[wp, simp]:
+  "config_ARM_GIC_V3 \<Longrightarrow> no_fail \<top> (deactivateInterrupt irq)"
+  unfolding deactivateInterrupt_def
+  by wpsimp
 
 lemma arch_invokeIRQHandler_corres:
   "irq_handler_inv_relation i i' \<Longrightarrow>
    corres dc \<top> \<top> (arch_invoke_irq_handler i) (AARCH64_H.invokeIRQHandler i')"
-  apply (cases i; clarsimp simp: AARCH64_H.invokeIRQHandler_def)
-  apply (rule corres_machine_op, rule corres_Id; simp?)
+  apply (cases i; clarsimp simp: AARCH64_H.invokeIRQHandler_def theIRQ_def)
+  apply (intro conjI impI; rule corres_machine_op, rule corres_Id; simp?)
   done
 
 
@@ -429,9 +429,16 @@ lemma doMachineOp_maskInterrupt_False[wp]:
                    ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
   done
 
+lemma doMachineOp_deactivateInterrupt[wp]:
+  "\<lbrace> \<lambda>s. invs' s \<and> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive \<and> config_ARM_GIC_V3 \<rbrace>
+   doMachineOp (deactivateInterrupt irq)
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding deactivateInterrupt_def
+  by (cases config_ARM_GIC_V3; wpsimp)
+
 lemma invoke_arch_irq_handler_invs'[wp]:
   "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace> AARCH64_H.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  by (cases i; wpsimp simp: AARCH64_H.invokeIRQHandler_def)
+  by (cases i; (wpsimp simp: AARCH64_H.invokeIRQHandler_def theIRQ_def | rule conjI)+)
 
 lemma invoke_irq_handler_invs'[wp]:
   "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace>
@@ -476,6 +483,9 @@ lemma setIRQTrigger_corres:
             | rule no_fail_setIRQTrigger
             | simp add: dc_def)+
   done
+
+crunch set_irq_state
+  for valid_arch_state[wp]: valid_arch_state
 
 lemma arch_performIRQControl_corres:
   "arch_irq_control_inv_relation x2 ivk' \<Longrightarrow> corres (dc \<oplus> dc)
@@ -732,16 +742,6 @@ lemma dmo_gets_wp:
 
 crunch vgicUpdateLR
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
-
-lemma virqType_eq[simp]:
-  "virqType = virq_type"
-  unfolding virqType_def virq_type_def
-  by simp
-
-lemma virqSetEOIIRQEN_eq[simp]:
-  "AARCH64_H.virqSetEOIIRQEN = AARCH64_A.virqSetEOIIRQEN"
-  unfolding virqSetEOIIRQEN_def AARCH64_A.virqSetEOIIRQEN_def
-  by auto
 
 lemma not_pred_tcb':
   "(\<not>pred_tcb_at' proj P t s) = (\<not>tcb_at' t s \<or> pred_tcb_at' proj (\<lambda>a. \<not>P a) t s)"
@@ -1042,6 +1042,7 @@ lemma timerTick_invs'[wp]:
            apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
           apply (wpsimp simp: invs'_def valid_state'_def valid_pspace'_def sch_act_wf_weak)+
       apply (wp gts_wp')+
+  apply (frule invs_pspace_in_kernel_mappings')
   apply (auto simp: invs'_def st_tcb_at'_def obj_at'_def valid_state'_def cong: conj_cong)
   done
 

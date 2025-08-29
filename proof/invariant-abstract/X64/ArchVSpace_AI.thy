@@ -1314,6 +1314,10 @@ lemma master_cap_eq_is_device_cap_eq:
 lemmas vs_cap_ref_eq_imp_table_cap_ref_eq' =
        vs_cap_ref_eq_imp_table_cap_ref_eq[OF master_cap_eq_is_pg_cap_eq]
 
+lemma IOPortControlCap_cap_master_cap_eq[simp]:
+  "(ArchObjectCap IOPortControlCap = cap_master_cap cap) = (cap = ArchObjectCap IOPortControlCap)"
+  by (simp add: cap_master_cap_def split: cap.splits arch_cap.splits)
+
 lemma arch_update_cap_invs_map:
   "\<lbrace>cte_wp_at (is_arch_update cap and
                (\<lambda>c. \<forall>r. vs_cap_ref c = Some r \<longrightarrow> vs_cap_ref cap = Some r)) p
@@ -1352,6 +1356,7 @@ lemma arch_update_cap_invs_map:
   apply (rule conjI)
    apply (frule master_cap_obj_refs)
    apply (clarsimp simp: cap_ioports_def cap_master_cap_def split: arch_cap.splits cap.splits)
+  apply (rule conjI, solves \<open>clarsimp simp: cap_master_cap_simps\<close>)
   apply (rule conjI, frule master_cap_obj_refs, simp)
   apply (rule conjI)
    apply (frule master_cap_obj_refs)

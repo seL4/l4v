@@ -71,7 +71,7 @@ crunch arch_switch_to_idle_thread, arch_switch_to_thread
 
 crunch arch_invoke_irq_handler
   for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
-  (wp: dmo_wp simp: maskInterrupt_def)
+  (wp: dmo_wp simp: maskInterrupt_def deactivateInterrupt_def)
 
 crunch arch_perform_invocation
   for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"

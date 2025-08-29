@@ -32,14 +32,7 @@ lemma ps_clear_is_aligned_ksPSpace_None:
                     power_overflow)
   by assumption
 
-lemma ps_clear_is_aligned_ctes_None:
-  assumes "ps_clear p tcbBlockSizeBits s"
-      and "is_aligned p tcbBlockSizeBits"
-  shows "ksPSpace s (p + 2*2^cteSizeBits) = None"
-    and "ksPSpace s (p + 3*2^cteSizeBits) = None"
-    and "ksPSpace s (p + 4*2^cteSizeBits) = None"
-  by (auto intro: assms ps_clear_is_aligned_ksPSpace_None
-            simp: objBits_defs mask_def)+
+context Arch begin arch_global_naming
 
 lemma word_shift_by_3:
   "x * 8 = (x::'a::len word) << 3"
@@ -74,7 +67,14 @@ where
 (* FIXME: move to GenericLib *)
 lemmas unat64_eq_of_nat = unat_eq_of_nat[where 'a=64, folded word_bits_def]
 
-context begin interpretation Arch .
+lemma ps_clear_is_aligned_ctes_None:
+  assumes "ps_clear p tcbBlockSizeBits s"
+      and "is_aligned p tcbBlockSizeBits"
+  shows "ksPSpace s (p + 2*2^cteSizeBits) = None"
+    and "ksPSpace s (p + 3*2^cteSizeBits) = None"
+    and "ksPSpace s (p + 4*2^cteSizeBits) = None"
+  by (auto intro: assms ps_clear_is_aligned_ksPSpace_None
+            simp: objBits_defs mask_def)+
 
 crunch archThreadGet
   for inv'[wp]: P
@@ -405,5 +405,11 @@ crunch insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThread
    ignore_del: preemptionPoint)
 
 end
+
+(* these will need to be requalified when moved *)
+arch_requalify_facts
+  empty_fail_loadWordUser
+
+lemmas [intro!, simp] = empty_fail_loadWordUser
 
 end

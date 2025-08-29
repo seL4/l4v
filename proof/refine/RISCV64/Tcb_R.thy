@@ -566,7 +566,7 @@ lemma tcbSchedDequeue_ct_in_state'[wp]:
 lemma valid_tcb'_tcbPriority_update:
   "\<lbrakk>valid_tcb' tcb s; f (tcbPriority tcb) \<le> maxPriority \<rbrakk> \<Longrightarrow>
    valid_tcb' (tcbPriority_update f tcb) s"
-  apply (simp add: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
+  apply (simp add: valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs)
   done
 
 lemma threadSet_valid_objs_tcbPriority_update:
@@ -1261,7 +1261,7 @@ lemma checkCapAt_cteInsert_corres:
      apply clarsimp
      apply (rule conjI, fastforce)+
      apply (cases src_slot)
-     apply (clarsimp simp: cte_wp_at_caps_of_state)
+     apply (clarsimp simp: cte_wp_at_caps_of_state invs_arch_state)
      apply (rule conjI)
       apply (frule same_object_as_cap_master)
       apply (clarsimp simp: cap_master_cap_simps is_cnode_or_valid_arch_def

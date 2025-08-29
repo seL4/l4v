@@ -106,20 +106,30 @@ definition
 
 text \<open>VCPU : inject IRQ\<close>
 
+(* bit position of type field in virq bitfield struct *)
+definition virq_type_shift :: nat where
+  "virq_type_shift \<equiv> if config_ARM_GIC_V3 then 62 else 28"
+
+(* bit position of eoiirqen field in virq bitfield struct *)
+definition eoiirqen_shift :: nat where
+  "eoiirqen_shift \<equiv> if config_ARM_GIC_V3 then 32+9 else 19"
+
 (* This following function does not correspond to exactly what the C does, but
    it is the value that is stored inside of lr in the vgic  *)
 definition make_virq :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> virq" where
   "make_virq grp prio irq \<equiv>
     let
-      groupShift = 30;
-      prioShift = 23;
-      irqPending = 1 << 28;
-      eoiirqen = 1 << 19
-    in ((grp && 1) << groupShift) || ((prio && 0x1F) << prioShift) || (irq && 0x3FF)
+      groupShift = if config_ARM_GIC_V3 then 60 else 30;
+      prioShift = if config_ARM_GIC_V3 then 48 else 23;
+      irqPending = 1 << virq_type_shift;
+      eoiirqen = 1 << eoiirqen_shift;
+      irqMask = mask (if config_ARM_GIC_V3 then 32 else 10);
+      prioMask = mask (if config_ARM_GIC_V3 then 8 else 5)
+    in ((grp && 1) << groupShift) || ((prio && prioMask) << prioShift) || (irq && irqMask)
        || irqPending || eoiirqen"
 
 definition virq_type :: "virq \<Rightarrow> nat" where
-  "virq_type virq \<equiv> unat ((virq >> 28) && 3)"
+  "virq_type virq \<equiv> unat ((virq >> virq_type_shift) && 3)"
 
 definition is_virq_active :: "virq \<Rightarrow> bool" where
   "is_virq_active virq \<equiv> virq_type virq = 2"

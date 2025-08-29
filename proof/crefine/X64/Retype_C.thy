@@ -1428,7 +1428,7 @@ lemma zero_ranges_ptr_retyps:
   apply (erule disjoint_subset[rotated])
   apply (subst intvl_plus_unat_eq)
     apply clarsimp
-   apply clarsimp
+   apply (clarsimp simp: mask_def add_diff_eq)
    apply (clarsimp simp: word_unat.Rep_inject[symmetric]
                          valid_cap_simps' capAligned_def
                          unat_of_nat
@@ -6147,7 +6147,7 @@ lemma threadSet_domain_ccorres [corres]:
   apply (clarsimp simp: cmachine_state_relation_def carch_state_relation_def cpspace_relation_def
                         fpu_null_state_heap_update_tag_disj_simps)
   apply (clarsimp simp: update_tcb_map_tos typ_heap_simps')
-  apply (simp add: map_to_ctes_upd_tcb_no_ctes map_to_tcbs_upd tcb_cte_cases_def)
+  apply (simp add: map_to_ctes_upd_tcb_no_ctes map_to_tcbs_upd tcb_cte_cases_def cteSizeBits_def)
   apply (simp add: cep_relations_drop_fun_upd
                    cvariable_relation_upd_const ko_at_projectKO_opt)
   apply (drule ko_at_projectKO_opt)
@@ -6578,7 +6578,7 @@ lemma ctes_of_ko_at_strong:
    apply (subst intvl_range_conv[where bits = cteSizeBits,simplified])
      apply simp
     apply (simp add:word_bits_def objBits_simps')
-   apply (simp add:field_simps)
+   apply (simp add:field_simps mask_def)
   apply (intro exI conjI,assumption)
   apply (clarsimp simp:objBits_simps obj_range'_def word_and_le2)
   apply (cut_tac intvl_range_conv[where bits = cteSizeBits and ptr = p, simplified])
@@ -6592,37 +6592,11 @@ lemma ctes_of_ko_at_strong:
   apply (thin_tac "P \<or> Q" for P Q)
   apply (erule order_trans)
   apply (subst word_plus_and_or_coroll2[where x = p and w = "mask tcbBlockSizeBits",symmetric])
-  apply (clarsimp simp:tcb_cte_cases_def field_simps split:if_split_asm)
-      apply (subst p_assoc_help)
-      apply (rule word_plus_mono_right[OF _ is_aligned_no_wrap'])
-        apply (simp add: objBits_simps')
-       apply (rule Aligned.is_aligned_neg_mask)
-       apply (rule le_refl,simp)
-      apply (simp add: objBits_simps')
-     apply (subst p_assoc_help)
-     apply (rule word_plus_mono_right[OF _ is_aligned_no_wrap'])
-       apply (simp add: objBits_simps')
-      apply (rule Aligned.is_aligned_neg_mask)
-      apply (rule le_refl,simp)
-     apply (simp add: objBits_simps')
-    apply (subst p_assoc_help)
-    apply (rule word_plus_mono_right[OF _ is_aligned_no_wrap'])
-    apply (simp add:objBits_simps')
-     apply (rule Aligned.is_aligned_neg_mask)
-     apply (rule le_refl,simp)
-    apply (simp add: objBits_simps')
-   apply (subst p_assoc_help)
-   apply (rule word_plus_mono_right[OF _ is_aligned_no_wrap'])
-     apply (simp add: objBits_simps')
-    apply (rule Aligned.is_aligned_neg_mask)
-    apply (rule le_refl,simp)
-   apply (simp add: objBits_simps')
-  apply (subst p_assoc_help)+
-  apply (rule word_plus_mono_right[OF _ is_aligned_no_wrap'])
-    apply (simp add: objBits_simps')
-   apply (rule Aligned.is_aligned_neg_mask)
-   apply (rule le_refl,simp)
-  apply (simp add: objBits_simps')
+  apply (clarsimp simp: tcb_cte_cases_def field_simps cteSizeBits_def tcbBlockSizeBits_def
+                  split:if_split_asm)
+      apply (subst add.commute)
+      apply (rule word_plus_mono_left[OF _ is_aligned_no_wrap']
+             , simp add: mask_def, rule is_aligned_neg_mask2, simp add: mask_def)+
   done
 
 lemma pspace_no_overlap_induce_cte:
@@ -6651,7 +6625,7 @@ lemma pspace_no_overlap_induce_cte:
   apply (subst intvl_range_conv)
     apply simp
    apply (simp add: word_bits_def)
-  apply (simp add: obj_range'_def)
+  apply (simp add: obj_range'_def ptr_range_mask_range del: Int_atLeastAtMost)
   done
 
 lemma pspace_no_overlap_induce_asidpool:
@@ -7188,7 +7162,7 @@ lemma tcb_ctes_typ_region_bytes:
                         pspace_no_overlap'_def is_aligned_neg_mask_weaken
                         field_simps upto_intvl_eq[symmetric])
   apply (elim allE, drule(1) mp)
-  apply simp
+  apply (simp add: mask_def add_diff_eq upto_intvl_eq[symmetric] del: Int_atLeastAtMost)
   apply (drule(1) pspace_alignedD')
   apply (erule disjoint_subset[rotated])
   apply (simp add: upto_intvl_eq[symmetric])

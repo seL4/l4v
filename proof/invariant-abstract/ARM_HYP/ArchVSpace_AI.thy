@@ -106,6 +106,7 @@ definition
 
 crunch_ignore (add: writeContextIDAndPD_impl addressTranslateS1_impl
            setSCTLR_impl setHCR_impl
+           check_export_arch_timer_impl
            set_gic_vcpu_ctrl_vmcr_impl
            set_gic_vcpu_ctrl_apr_impl
            get_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_lr_impl
@@ -1244,27 +1245,6 @@ crunch flush_page
   for valid_objs[wp]: "valid_objs"
   (wp: crunch_wps hoare_drop_imps simp: crunch_simps)
 
-lemma arch_thread_set_is_thread_set:
-  "arch_thread_set f t = thread_set (tcb_arch_update f) t"
-  by (simp add: thread_set_def arch_thread_set_def cong: tcb.fold_congs)
-
-lemma arch_thread_set_caps_of_state [wp]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> arch_thread_set f t \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  by (wpsimp wp: thread_set_caps_of_state_trivial2 simp: arch_thread_set_is_thread_set)
-
-lemma arch_thread_set_wp:
-  "\<lbrace>\<lambda>s. get_tcb p s \<noteq> None \<longrightarrow> Q (s\<lparr>kheap := (kheap s)(p \<mapsto> TCB (the (get_tcb p s)\<lparr>tcb_arch := f (tcb_arch (the (get_tcb p s)))\<rparr>))\<rparr>) \<rbrace>
-    arch_thread_set f p
-   \<lbrace>\<lambda>_. Q\<rbrace>"
-  apply (simp add: arch_thread_set_def)
-  apply (wp set_object_wp)
-  apply simp
-  done
-
-lemma a_type_VCPU [simp]:
-  "a_type (ArchObj (VCPU v)) = AArch AVCPU"
-  by (simp add: a_type_def)
-
 lemma set_vcpu_wp:
   "\<lbrace>\<lambda>s. vcpu_at p s \<longrightarrow> Q (s\<lparr>kheap := (kheap s)(p \<mapsto> (ArchObj (VCPU vcpu))) \<rparr>) \<rbrace> set_vcpu p vcpu \<lbrace>\<lambda>_. Q\<rbrace>"
   unfolding set_vcpu_def
@@ -1275,12 +1255,6 @@ lemma set_vcpu_wp:
 lemma get_vcpu_wp:
   "\<lbrace>\<lambda>s. \<forall>v. ko_at (ArchObj (VCPU v)) p s \<longrightarrow> Q v s\<rbrace> get_vcpu p \<lbrace>Q\<rbrace>"
   by (wpsimp simp: get_vcpu_def wp: get_object_wp)
-
-lemma arch_thread_get_wp:
-  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at (TCB tcb) t s \<longrightarrow> Q (f (tcb_arch tcb)) s\<rbrace> arch_thread_get f t \<lbrace>Q\<rbrace>"
-  apply (wpsimp simp: arch_thread_get_def)
-  apply (auto dest!: get_tcb_ko_atD)
-  done
 
 lemma set_vcpu_valid_arch_state_hyp_live:
   "\<lbrace>valid_arch_state and K (hyp_live (ArchObj (VCPU vcpu)))\<rbrace> set_vcpu t vcpu \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
@@ -2098,6 +2072,8 @@ crunch setSCTLR,setHCR,getSCTLR,get_gic_vcpu_ctrl_vmcr,set_gic_vcpu_ctrl_vmcr
 crunch
   get_gic_vcpu_ctrl_apr,set_gic_vcpu_ctrl_apr,get_gic_vcpu_ctrl_lr,set_gic_vcpu_ctrl_lr
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
+crunch check_export_arch_timer
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
 crunch setSCTLR,getSCTLR,setHCR
   for underlying_memory: "\<lambda>m'. underlying_memory m' p = um"
@@ -2113,8 +2089,10 @@ crunch get_gic_vcpu_ctrl_hcr,set_gic_vcpu_ctrl_hcr
   for underlying_memory: "\<lambda>m'. underlying_memory m' p = um"
 crunch writeVCPUHardwareReg, readVCPUHardwareReg
   for underlying_memory: "\<lambda>m'. underlying_memory m' p = um"
+crunch check_export_arch_timer
+  for underlying_memory: "\<lambda>m'. underlying_memory m' p = um"
 
-crunch writeVCPUHardwareReg, readVCPUHardwareReg
+crunch writeVCPUHardwareReg, readVCPUHardwareReg, check_export_arch_timer
   for underlying_memory_pred: "\<lambda>m'. P (underlying_memory m')"
 
 lemmas isb_irq_masks = no_irq[OF no_irq_isb]
@@ -2589,7 +2567,8 @@ lemma vcpu_write_reg_invs[wp]:
 
 lemma save_virt_timer_invs[wp]:
   "\<lbrace>\<lambda> s. invs s\<rbrace> save_virt_timer vcpu_ptr \<lbrace>\<lambda>_ . invs\<rbrace>"
-  unfolding save_virt_timer_def read_cntpct_def get_cntv_off_64_def get_cntv_cval_64_def
+  unfolding save_virt_timer_def read_cntpct_def check_export_arch_timer_def
+            get_cntv_off_64_def get_cntv_cval_64_def
   by (wpsimp wp: set_vcpu_invs_eq_hyp get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift')
 
 (* migrated from ArchInterrupt_AI, which is not visible from here *)
@@ -2600,6 +2579,9 @@ lemma maskInterrupt_invs:
    by (wpsimp simp: do_machine_op_def split_def maskInterrupt_def)
       (clarsimp simp: in_monad invs_def valid_state_def valid_machine_state_def cur_tcb_def
                       valid_irq_states_def valid_irq_masks_def)
+
+crunch vcpu_restore_reg
+  for obj_at[wp]: "\<lambda>s. P (obj_at Q p s)"
 
 lemma restore_virt_timer_invs[wp]:
   "\<lbrace>\<lambda> s. invs s\<rbrace> restore_virt_timer vcpu_ptr \<lbrace>\<lambda>_ . invs\<rbrace>"
@@ -4577,7 +4559,7 @@ lemma cacheRangeOp_respects_device_region[wp]:
   by (wpsimp simp: do_flush_def cacheRangeOp_def wp: mapM_x_wp valid_f)+
 
 crunch cleanByVA, cleanCacheRange_PoC, cleanCacheRange_RAM,
-  cleanInvalByVA, invalidateByVA, invalidateL2Range,
+  cleanInvalByVA, invalidateByVA, invalidateL2Range, check_export_arch_timer,
   invalidateCacheRange_RAM, branchFlush, branchFlushRange,
   invalidateByVA_I, cleanInvalidateL2Range, do_flush, storeWord
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"

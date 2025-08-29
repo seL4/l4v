@@ -2443,23 +2443,24 @@ lemma s0H_valid_objs':
                    apply (clarsimp simp: is_aligned_def s0_ptr_defs objBitsKO_def)
                   apply (clarsimp simp: pspace_distinctD'[OF _ s0H_pspace_distinct'])
                  apply (clarsimp simp: valid_obj'_def valid_tcb'_def valid_tcb_state'_def
-                                       Low_domain_def minBound_word
+                                       Low_domain_def minBound_word valid_arch_tcb'_def
                                        Low_mcp_def Low_prio_def maxPriority_def numPriorities_def
                                        tcb_cte_cases_def Low_capsH_def kh0H_obj_def)
                 apply (clarsimp simp: valid_obj'_def valid_tcb'_def  valid_tcb_state'_def
-                                      High_domain_def minBound_word
+                                      High_domain_def minBound_word valid_arch_tcb'_def
                                       High_mcp_def High_prio_def maxPriority_def numPriorities_def
                                       tcb_cte_cases_def High_capsH_def obj_at'_def kh0H_obj_def)
                 apply (rule conjI)
                  apply (simp add: is_aligned_def s0_ptr_defs objBitsKO_def)
                 apply (clarsimp simp: ntfnH_def pspace_distinctD'[OF _ s0H_pspace_distinct'])
                apply (clarsimp simp: valid_obj'_def valid_tcb'_def kh0H_obj_def valid_tcb_state'_def
-                                     default_domain_def minBound_word
+                                     default_domain_def minBound_word valid_arch_tcb'_def
                                      default_priority_def tcb_cte_cases_def)
               defer 2
               apply (auto simp: is_aligned_def addrFromPPtr_def ptrFromPAddr_def pptrBaseOffset_def
-                                valid_obj'_def  valid_mapping'_def s0_ptr_defs kh0H_obj_def)[5]
+                                valid_obj'_def s0_ptr_defs kh0H_obj_def valid_arch_obj'_def)[5]
          apply (auto simp: valid_obj'_def valid_cte'_def empty_cte_def irq_cte_def
+                           valid_arch_obj'_def
                            Low_cte_def Low_cte'_def Low_capsH_def
                            High_cte_def High_cte'_def High_capsH_def
                            Silc_cte_def Silc_cte'_def Silc_capsH_def)
@@ -3253,6 +3254,7 @@ lemma s0H_invs:
   shows "invs' s0H_internal"
   using assms
   supply option.case_cong[cong] if_cong[cong]
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (clarsimp simp: invs'_def valid_state'_def s0H_valid_pspace')
   apply (rule conjI)
    apply (clarsimp simp: sch_act_wf_def ct_in_state'_def st_tcb_at'_def obj_at'_def
@@ -3289,7 +3291,7 @@ lemma s0H_invs:
   apply (rule conjI)
    apply (clarsimp simp: if_live_then_nonz_cap'_def ko_wp_at'_def)
    apply (drule kh0H_SomeD)
-   apply (elim disjE, simp_all add: kh0H_all_obj_def' objBitsKO_def)[1]
+   apply (elim disjE, simp_all add: kh0H_all_obj_def' objBitsKO_def live'_def hyp_live'_def)[1]
              apply (clarsimp simp: ex_nonz_cap_to'_def cte_wp_at_ctes_of)
              apply (rule_tac x="Silc_cnode_ptr + 0x27C0" in exI)
              apply (clarsimp simp: kh0H_all_obj_def')
@@ -3299,7 +3301,7 @@ lemma s0H_invs:
            apply (clarsimp simp: ex_nonz_cap_to'_def cte_wp_at_ctes_of)
            apply (rule_tac x="High_cnode_ptr + 0x20" in exI)
            apply (clarsimp simp: kh0H_all_obj_def')
-          apply (clarsimp split: if_split_asm)+
+          apply (clarsimp split: if_split_asm simp: live'_def hyp_live'_def)+
   apply (rule conjI)
    apply (clarsimp simp: if_unsafe_then_cap'_def ex_cte_cap_wp_to'_def cte_wp_at_ctes_of)
    apply (frule map_to_ctes_kh0H_SomeD)

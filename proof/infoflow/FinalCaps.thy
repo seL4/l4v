@@ -1351,8 +1351,7 @@ lemma silc_inv_preserves_silc_dom_caps:
 context FinalCaps_1 begin
 
 lemma finalise_cap_silc_inv:
-  "\<lbrace>silc_inv aag st and pspace_aligned and valid_vspace_objs and valid_arch_state
-                    and valid_mdb and pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace>
+  "\<lbrace>silc_inv aag st and valid_mdb and pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace>
    finalise_cap cap final
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (case_tac cap)
@@ -1368,7 +1367,7 @@ lemma finalise_cap_silc_inv:
   done
 
 lemma finalise_cap_ret_is_silc:
-  "\<lbrace>silc_inv aag st and pspace_aligned and valid_vspace_objs and valid_arch_state and valid_mdb
+  "\<lbrace>silc_inv aag st and valid_mdb
                     and cte_wp_at ((=) cap) slot and pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace>
    finalise_cap cap blah
    \<lbrace>\<lambda>rvb s. \<not> cap_points_to_label aag (fst rvb) (pasObjectAbs aag (fst slot))
@@ -2426,8 +2425,7 @@ lemma transfer_caps_silc_inv:
   done
 
 lemma do_normal_transfer_silc_inv:
-  "\<lbrace>silc_inv aag st and pspace_aligned and valid_vspace_objs and valid_arch_state
-                    and valid_objs and valid_mdb and pas_refined aag
+  "\<lbrace>silc_inv aag st and valid_objs and valid_mdb and pas_refined aag
                     and K (grant \<longrightarrow> is_subject aag sender \<and> is_subject aag receiver)\<rbrace>
    do_normal_transfer sender send_buffer ep badge grant receiver recv_buffer
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
@@ -2441,8 +2439,7 @@ lemma do_normal_transfer_silc_inv:
   done
 
 lemma do_ipc_transfer_silc_inv:
-  "\<lbrace>silc_inv aag st and pspace_aligned and valid_vspace_objs and valid_arch_state
-                    and valid_objs and valid_mdb and pas_refined aag
+  "\<lbrace>silc_inv aag st and valid_objs and valid_mdb and pas_refined aag
                     and K (grant \<longrightarrow> is_subject aag sender \<and> is_subject aag receiver)\<rbrace>
    do_ipc_transfer sender ep badge grant receiver
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"

@@ -1058,7 +1058,7 @@ lemma rf_sr_tcb_update_not_in_queue:
            x\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
   unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
   apply (clarsimp simp: Let_def update_tcb_map_tos map_to_ctes_upd_tcb_no_ctes
-                        heap_to_user_data_def)
+                        heap_to_user_data_def live'_def)
   apply (frule (1) cmap_relation_ko_atD)
   apply (erule obj_atE')
   apply (clarsimp simp: projectKOs)

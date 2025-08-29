@@ -472,7 +472,7 @@ lemma ball_tcb_cte_casesI:
      P (tcbCaller, tcbCaller_update);
      P (tcbIPCBufferFrame, tcbIPCBufferFrame_update) \<rbrakk>
     \<Longrightarrow> \<forall>x \<in> ran tcb_cte_cases. P x"
-  by (simp add: tcb_cte_cases_def)
+  by (simp add: tcb_cte_cases_def tcb_cte_cases_neqs)
 
 lemma all_tcbI:
   "\<lbrakk> \<And>a b c d e f g h i j k l m n p q r s. P (Thread a b c d e f g h i j k l m n p q r s) \<rbrakk>
@@ -733,6 +733,10 @@ lemma setObject_tcb_arch' [wp]:
   apply wp
   apply simp
   done
+
+lemma setObject_tcb_ko_at'_pde[wp]:
+  "setObject p (v::tcb) \<lbrace> \<lambda>s. P (ko_at' (pde::pde) p' s) \<rbrace>"
+  by (clarsimp intro!: obj_at_setObject2 simp: updateObject_default_def in_monad)
 
 lemma setObject_tcb_valid_arch' [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setObject t (v :: tcb) \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
@@ -1439,6 +1443,7 @@ lemmas threadSet_invs_trivial =
 lemma zobj_refs'_capRange:
   "s \<turnstile>' cap \<Longrightarrow> zobj_refs' cap \<subseteq> capRange cap"
   apply (cases cap; simp add: valid_cap'_def capAligned_def capRange_def is_aligned_no_overflow
+                              valid_arch_cap'_def
                        split: arch_capability.splits)
   apply clarsimp
   apply (drule is_aligned_no_overflow)
@@ -1569,7 +1574,7 @@ lemma asUser_corres':
                      (set_object add (TCB (tcb \<lparr> tcb_arch := arch_tcb_context_set con (tcb_arch tcb) \<rparr>)))
                      (setObject add (tcb' \<lparr> tcbArch := atcbContextSet con' (tcbArch tcb') \<rparr>))"
     by (rule setObject_update_TCB_corres [OF L2],
-        (simp add: tcb_cte_cases_def tcb_cap_cases_def exst_same_def)+)
+        (simp add: tcb_cte_cases_def tcb_cte_cases_neqs tcb_cap_cases_def exst_same_def)+)
   have L4: "\<And>con con'. con = con' \<Longrightarrow>
             corres (\<lambda>(irv, nc) (irv', nc'). r irv irv' \<and> nc = nc')
                    \<top> \<top> (select_f (f con)) (select_f (g con'))"
@@ -1669,7 +1674,7 @@ lemma asUser_valid_objs [wp]:
   "\<lbrace>valid_objs'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp threadSet_valid_objs' hoare_drop_imps
-             | simp add: valid_tcb'_def tcb_cte_cases_def
+             | simp add: valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs
                          valid_arch_tcb'_def atcbContextSet_def)+
   done
 
@@ -3375,7 +3380,7 @@ lemma sbn_valid_objs':
   \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   apply (simp add: setBoundNotification_def)
   apply (wp threadSet_valid_objs')
-     apply (simp add: valid_tcb'_def tcb_cte_cases_def)
+     apply (simp add: valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs)
   done
 
 lemma ssa_wp[wp]:
@@ -3404,7 +3409,7 @@ lemma sts'_valid_pspace'_inv[wp]:
   apply (drule obj_at_ko_at')
   apply clarsimp
   apply (erule obj_at'_weakenE)
-  apply (simp add: tcb_cte_cases_def)
+  apply (simp add: tcb_cte_cases_def tcb_cte_cases_neqs)
   done
 
 crunch setQueue
@@ -3438,7 +3443,7 @@ lemma sbn'_valid_pspace'_inv[wp]:
   apply (drule obj_at_ko_at')
   apply clarsimp
   apply (erule obj_at'_weakenE)
-  apply (simp add: tcb_cte_cases_def)
+  apply (simp add: tcb_cte_cases_def tcb_cte_cases_neqs)
   done
 
 crunch setQueue
@@ -4460,6 +4465,7 @@ qed
 
 lemma cte_at_tcb_at_16':
   "tcb_at' t s \<Longrightarrow> cte_at' (t + 16) s"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (simp add: cte_at'_obj_at')
   apply (rule disjI2, rule bexI[where x=16])
    apply simp
@@ -5031,13 +5037,13 @@ crunch removeFromBitmap
 lemma sts_ctes_of [wp]:
   "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> setThreadState st t \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   apply (simp add: setThreadState_def)
-  apply (wp threadSet_ctes_ofT | simp add: tcb_cte_cases_def)+
+  apply (wp threadSet_ctes_ofT | simp add: tcb_cte_cases_def tcb_cte_cases_neqs)+
   done
 
 lemma sbn_ctes_of [wp]:
   "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   apply (simp add: setBoundNotification_def)
-  apply (wp threadSet_ctes_ofT | simp add: tcb_cte_cases_def)+
+  apply (wp threadSet_ctes_ofT | simp add: tcb_cte_cases_def tcb_cte_cases_neqs)+
   done
 
 crunch setThreadState, setBoundNotification

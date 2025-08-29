@@ -3209,8 +3209,9 @@ lemma tcbSchedEnqueue_unlive_other:
   apply (drule_tac x="tcbPriority tcb" in spec)
   apply clarsimp
   apply (frule (1) tcbQueueHead_ksReadyQueues)
-  apply (fastforce dest!: inQ_implies_tcbQueueds_of
-                    simp: obj_at'_def ko_wp_at'_def opt_pred_def opt_map_def split: option.splits)
+  apply (fastforce dest!: inQ_implies_tcbQueueds_o
+                    simp: obj_at'_def ko_wp_at'_def opt_pred_def opt_map_def live'_def
+                   split: option.splits)
   done
 
 lemma rescheduleRequired_unlive[wp]:
@@ -3280,7 +3281,7 @@ lemma cancelAllIPC_unlive:
                          possibleSwitchTo_sch_act_not_other replyUnlink_unlive hoare_drop_imps)
        apply (fastforce simp: ko_wp_at'_def st_tcb_at'_def obj_at'_def isReceive_def)
       apply (wpsimp wp: getEndpoint_wp)+
-  apply (fastforce simp: ko_wp_at'_def st_tcb_at'_def obj_at'_def valid_ep'_def)
+  apply (fastforce simp: ko_wp_at'_def st_tcb_at'_def obj_at'_def valid_ep'_def live'_def)
   done
 
 lemma cancelAllSignals_unlive_helper:
@@ -3313,9 +3314,9 @@ lemma cancelAllSignals_unlive:
                        \<open>rule bind_wp_fwd_skip, wpsimp\<close>)
   apply (case_tac "ntfnObj ntfn"; simp)
     apply wp
-    apply (fastforce simp: obj_at'_real_def live_ntfn'_def ko_wp_at'_def)
+    apply (fastforce simp: obj_at'_real_def live'_def live_ntfn'_def ko_wp_at'_def)
    apply wp
-   apply (fastforce simp: obj_at'_real_def live_ntfn'_def ko_wp_at'_def)
+   apply (fastforce simp: obj_at'_real_def live'_def live_ntfn'_def ko_wp_at'_def)
   apply (wp rescheduleRequired_unlive)
      apply (rule cancelAllSignals_unlive_helper[THEN hoare_strengthen_post])
      apply fastforce
@@ -3326,7 +3327,7 @@ lemma cancelAllSignals_unlive:
   apply (intro conjI[rotated]; clarsimp)
     apply (fastforce simp: obj_at'_def)
    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
-  apply (clarsimp simp: live_ntfn'_def ko_wp_at'_def obj_at'_def)
+  apply (clarsimp simp: live_ntfn'_def ko_wp_at'_def obj_at'_def live'_def)
   done
 
 declare if_cong[cong]
@@ -3433,7 +3434,7 @@ lemma cancelBadgedSends_invs'[wp]:
   apply (frule obj_at_valid_objs', clarsimp)
   apply (clarsimp simp: valid_obj'_def valid_ep'_def )
   apply (frule if_live_then_nonz_capD', simp add: obj_at'_real_def)
-   apply clarsimp
+   apply (clarsimp simp: live'_def)
   apply (clarsimp simp: sym_refs_asrt_def)
   apply (frule(1) sym_refs_ko_atD')
   apply (clarsimp simp add: fun_upd_idem st_tcb_at_refs_of_rev' o_def sch_act_wf_asrt_def)

@@ -1754,7 +1754,7 @@ lemma storePDE_iflive [wp]:
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
       apply (simp add: objBits_simps archObjSize_def)
-     apply (auto simp: updateObject_default_def in_monad projectKOs)
+     apply (auto simp: updateObject_default_def in_monad projectKOs live'_def hyp_live'_def)
   done
 
 lemma setObject_pde_ksInt [wp]:
@@ -1778,7 +1778,7 @@ lemma storePDPTE_iflive [wp]:
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
       apply (simp add: objBits_simps archObjSize_def)
-     apply (auto simp: updateObject_default_def in_monad projectKOs)
+     apply (auto simp: updateObject_default_def in_monad projectKOs live'_def hyp_live'_def)
   done
 
 lemma setObject_pdpte_ksInt [wp]:
@@ -1802,7 +1802,7 @@ lemma storePML4E_iflive [wp]:
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
       apply (simp add: objBits_simps archObjSize_def)
-     apply (auto simp: updateObject_default_def in_monad projectKOs)
+     apply (auto simp: updateObject_default_def in_monad projectKOs live'_def hyp_live'_def)
   done
 
 lemma setObject_pml4e_ksInt [wp]:
@@ -2171,7 +2171,7 @@ lemma storePTE_iflive [wp]:
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
       apply (simp add: objBits_simps archObjSize_def)
-     apply (auto simp: updateObject_default_def in_monad projectKOs)
+     apply (auto simp: updateObject_default_def in_monad projectKOs live'_def hyp_live'_def)
   done
 
 lemma setObject_pte_ksInt [wp]:
@@ -2344,7 +2344,8 @@ lemma setASIDPool_iflive [wp]:
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
       apply (simp add: objBits_simps archObjSize_def)
-     apply (auto simp: updateObject_default_def in_monad projectKOs pageBits_def)
+     apply (auto simp: updateObject_default_def in_monad projectKOs pageBits_def
+                       live'_def hyp_live'_def)
   done
 
 lemma setASIDPool_ksInt [wp]:

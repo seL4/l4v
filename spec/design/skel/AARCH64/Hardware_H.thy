@@ -15,7 +15,7 @@ context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs Platform=Platform.AARCH64 CONTEXT AARCH64_H \
   NOT PT_Type plic_complete_claim getMemoryRegions getDeviceRegions getKernelDevices \
-  loadWord storeWord storeWordVM getActiveIRQ ackInterrupt maskInterrupt \
+  loadWord storeWord storeWordVM getActiveIRQ ackInterrupt maskInterrupt deactivateInterrupt \
   configureTimer resetTimer debugPrint getRestartPC setNextPC clearMemory \
   clearMemoryVM initMemory freeMemory setHardwareASID wordFromPDE wordFromPTE \
   VMFaultType HypFaultType VMPageSize pageBits pageBitsForSize toPAddr \
@@ -37,7 +37,9 @@ context Arch begin arch_global_naming (H)
   enableFpuEL01 \
   getFAR getDFSR getIFSR getHSR setHCR getESR  getSCTLR setSCTLR \
   addressTranslateS1 \
-  readVCPUHardwareReg writeVCPUHardwareReg vcpuBits
+  readVCPUHardwareReg writeVCPUHardwareReg vcpuBits \
+  config_DISABLE_WFI_WFE_TRAPS \
+  config_ARM_GIC_V3
 
 end
 

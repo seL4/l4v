@@ -181,11 +181,15 @@ lemma tcb_arch_detype[detype_invs_proofs]:
 
 lemma valid_ioports_detype:
   "valid_ioports s \<Longrightarrow> valid_ioports (detype (untyped_range cap) s)"
-  apply (clarsimp simp: valid_ioports_def all_ioports_issued_def ioports_no_overlap_def issued_ioports_def more_update.caps_of_state_update)
-  apply (clarsimp simp: detype_def cap_ioports_def ran_def elim!: ranE split: if_splits cap.splits arch_cap.splits)
-  apply (rule conjI)
-   apply (force simp: ran_def)
-  by (metis (full_types) ranI)
+  apply (clarsimp simp: valid_ioports_def all_ioports_issued_def ioports_no_overlap_def
+                        issued_ioports_def)
+  apply (clarsimp simp: detype_def cap_ioports_def ran_def)
+  by blast
+
+lemma ioport_control_detype:
+  "ioport_control_unique_2 caps \<Longrightarrow>
+   ioport_control_unique_2 (\<lambda>p. if fst p \<in> S then None else caps p)"
+  by (auto simp: ioport_control_unique_2_def)
 
 lemma valid_arch_state_detype[detype_invs_proofs]:
   "valid_arch_state (detype (untyped_range cap) s)"
@@ -194,7 +198,7 @@ lemma valid_arch_state_detype[detype_invs_proofs]:
   apply (strengthen valid_ioports_detype,
          simp add: valid_arch_state_def valid_asid_table_def
                    valid_global_pdpts_def valid_global_pds_def valid_global_pts_def
-                   global_refs_def cap_range_def)
+                   global_refs_def cap_range_def ioport_control_detype)
   apply (clarsimp simp: ran_def arch_state_det)
   apply (drule vs_lookup_atI)
   apply (drule (1) valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI])

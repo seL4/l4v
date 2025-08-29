@@ -5563,7 +5563,7 @@ lemma make_zombie_invs':
                                 \<and> obj_at' (\<lambda>tcb. tcbSchedNext tcb = None
                                                  \<and> tcbSchedPrev tcb = None) p' s
                                 \<and> obj_at' (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) p' s")
-     apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def)
+     apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def live'_def hyp_live'_def)
     subgoal by (auto dest!: isCapDs)
 
    apply (simp only: fold_list_refs_of_replies')
@@ -5689,6 +5689,7 @@ lemma cte_wp_at_disj_eq':
 
 lemma valid_Zombie_cte_at':
   "\<lbrakk> s \<turnstile>' Zombie p zt m; n < zombieCTEs zt \<rbrakk> \<Longrightarrow> cte_at' (p + (of_nat n * 2^cteSizeBits)) s"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (clarsimp simp: valid_cap'_def split: zombie_type.split_asm)
    apply (clarsimp simp: obj_at'_def objBits_simps)
    apply (subgoal_tac "tcb_cte_cases (of_nat n * 2^cteSizeBits) \<noteq> None")

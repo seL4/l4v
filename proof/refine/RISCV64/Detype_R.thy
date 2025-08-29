@@ -811,21 +811,21 @@ lemma detype_tcbSchedNexts_of:
    \<Longrightarrow> ((\<lambda>x. if x \<in> S then None else ksPSpace s' x) |> tcb_of' |> tcbSchedNext)
        = tcbSchedNexts_of s'"
   using pspace_alignedD' pspace_distinctD' pspace_boundedD'
-  by (fastforce simp: opt_map_def ko_wp_at'_def split: option.splits)
+  by (fastforce simp: opt_map_def ko_wp_at'_def live'_def split: option.splits)
 
 lemma detype_tcbSchedPrevs_of:
   "\<lbrakk>pspace_aligned' s'; pspace_distinct' s'; pspace_bounded' s'; \<forall>p. p \<in> S \<longrightarrow> \<not> ko_wp_at' live' p s'\<rbrakk>
    \<Longrightarrow> ((\<lambda>x. if x \<in> S then None else ksPSpace s' x) |> tcb_of' |> tcbSchedPrev)
        = tcbSchedPrevs_of s'"
   using pspace_alignedD' pspace_distinctD' pspace_boundedD'
-  by (fastforce simp: opt_map_def ko_wp_at'_def split: option.splits)
+  by (fastforce simp: opt_map_def ko_wp_at'_def live'_def split: option.splits)
 
 lemma detype_inQ:
   "\<lbrakk>pspace_aligned' s'; pspace_distinct' s'; pspace_bounded' s'; \<forall>p. p \<in> S \<longrightarrow> \<not> ko_wp_at' live' p s'\<rbrakk>
    \<Longrightarrow> \<forall>d p. (inQ d p |< ((\<lambda>x. if x \<in> S then None else ksPSpace s' x) |> tcb_of'))
             = (inQ d p |< tcbs_of' s')"
   using pspace_alignedD' pspace_distinctD' pspace_boundedD'
-  by (fastforce simp: inQ_def opt_pred_def opt_map_def ko_wp_at'_def split: option.splits)
+  by (fastforce simp: inQ_def opt_pred_def opt_map_def ko_wp_at'_def live'_def split: option.splits)
 
 lemma detype_tcbInReleaseQueue:
   "\<lbrakk>pspace_aligned' s'; pspace_distinct' s'; pspace_bounded' s'; \<forall>p. p \<in> S \<longrightarrow> \<not> ko_wp_at' live' p s'\<rbrakk>
@@ -1078,7 +1078,7 @@ lemma valid_obj':
     sym_refs (list_refs_of_replies' s'); sym_heap_sched_pointers s';
     pspace_aligned' s'; pspace_distinct' s'; pspace_bounded' s'\<rbrakk>
    \<Longrightarrow> valid_obj' obj state'"
-  apply (case_tac obj, simp_all add: valid_obj'_def)
+  apply (case_tac obj, simp_all add: valid_obj'_def valid_arch_obj'_def)
        apply (clarsimp dest!: refs_of' simp flip: injectKO_ep)
        apply (fastforce simp: valid_ep'_def split: endpoint.splits)
       apply (clarsimp dest!: refs_of' simp flip: injectKO_ntfn)
@@ -1234,7 +1234,7 @@ lemma tcbSchedNexts_of_pspace':
    apply (case_tac "ksPSpace s' p"; clarsimp)
    apply (rename_tac obj)
    apply (case_tac "tcb_of' obj"; clarsimp)
-   apply (clarsimp simp: ko_wp_at'_def obj_at'_def)
+   apply (clarsimp simp: ko_wp_at'_def obj_at'_def live'_def)
    apply (fastforce simp: pspace_alignedD' pspace_boundedD' pspace_distinctD')
   apply (clarsimp simp: opt_map_def split: option.splits)
   done
@@ -1250,14 +1250,14 @@ lemma tcbSchedPrevs_of_pspace':
    apply (case_tac "ksPSpace s' p"; clarsimp)
    apply (rename_tac obj)
    apply (case_tac "tcb_of' obj"; clarsimp)
-   apply (clarsimp simp: ko_wp_at'_def obj_at'_def)
+   apply (clarsimp simp: ko_wp_at'_def obj_at'_def live'_def)
    apply (fastforce simp: pspace_alignedD' pspace_boundedD' pspace_distinctD')
   apply (clarsimp simp: opt_map_def split: option.splits)
   done
 
 lemma st_tcb:
   "\<And>P p. \<lbrakk> st_tcb_at' P p s'; \<not> P Inactive; \<not> P IdleThreadState \<rbrakk> \<Longrightarrow> st_tcb_at' P p state'"
-  by (fastforce simp: pred_tcb_at'_def obj_at'_real_def
+  by (fastforce simp: pred_tcb_at'_def obj_at'_real_def live'_def
                 dest: live_notRange)
 
 lemma irq_nodes_global:
@@ -1887,7 +1887,7 @@ lemma deleteObjects_st_tcb_at':
     apply (rule conjI)
      apply (fastforce elim: ko_wp_at'_weakenE simp: projectKO_opt_tcb)
     apply (erule if_live_then_nonz_capD' [rotated])
-     apply clarsimp
+     apply (clarsimp simp: live'_def)
     apply (clarsimp simp: invs'_def)
    apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def
                   field_simps ko_wp_at'_def ps_clear_def

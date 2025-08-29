@@ -5,10 +5,117 @@
  *)
 
 theory InvariantUpdates_H
-imports Invariants_H
+imports ArchInvsLemmas_H
 begin
 
+(* generic consequences which require arch-specific proofs from ArchInvsLemmas_H *)
+arch_requalify_facts
+  cte_wp_atE'
+  cte_wp_at_cteI'
+  tcb_at_cte_at'
+  typ_at_lift_valid_cap'
+  valid_arch_tcb_lift'
+  tcb_at_cte_at'
+  gen_objBitsT_simps
+  objBitsT_koTypeOf (* FIXME arch-split: consider declaring [simp] here rather than Schedule_R *)
+
+(* arch-specific typ_at_lifts in Arch *) (* FIXME arch-split: currently unused *)
+lemmas gen_typ_at_lifts =
+         typ_at_lift_tcb' typ_at_lift_ep' typ_at_lift_ntfn' typ_at_lift_cte' typ_at_lift_cte_at'
+         typ_at_lift_valid_untyped' typ_at_lift_valid_cap' valid_bound_tcb_lift
+         valid_arch_tcb_lift'
+
+(* these depend on interpretations in ArchInvLemmas_H *)
+context pspace_update_eq'
+begin
+
+lemma valid_space_update [iff]:
+  "valid_pspace' (f s) = valid_pspace' s"
+  by (fastforce simp: valid_pspace' pspace)
+
+lemma cte_wp_at_update [iff]:
+  "cte_wp_at' P p (f s) = cte_wp_at' P p s"
+  by (fastforce intro: cte_wp_at'_pspaceI simp: pspace)
+
+lemma ex_nonz_cap_to_eq'[iff]:
+  "ex_nonz_cap_to' p (f s) = ex_nonz_cap_to' p s"
+  by (simp add: ex_nonz_cap_to'_def)
+
+lemma iflive_update [iff]:
+  "if_live_then_nonz_cap' (f s) = if_live_then_nonz_cap' s"
+  by (simp add: if_live_then_nonz_cap'_def ex_nonz_cap_to'_def)
+
+lemma valid_objs_update [iff]:
+  "valid_objs' (f s) = valid_objs' s"
+  apply (simp add: valid_objs'_def pspace)
+  apply (fastforce intro: valid_obj'_pspaceI simp: pspace)
+  done
+
+lemma valid_cap_update [iff]:
+  "(f s) \<turnstile>' c = s \<turnstile>' c"
+  by (auto intro: valid_cap'_pspaceI simp: pspace)
+
+(* exports from Arch locale version (safe for generic use) *)
+interpretation Arch_pspace_update_eq' ..
+
+lemmas pspace_in_kernel_mappings_update'[iff] = pspace_in_kernel_mappings_update'
+
+end
+
+context Arch_p_arch_idle_update_eq'
+begin
+
+lemma valid_arch_state_update' [iff]:
+  "valid_arch_state' (f s) = valid_arch_state' s"
+  by (simp add: valid_arch_state'_def arch cong: option.case_cong)
+
+end
+
+context p_arch_idle_update_eq'
+begin
+
+lemma ifunsafe_update [iff]:
+  "if_unsafe_then_cap' (f s) = if_unsafe_then_cap' s"
+  by (simp add: if_unsafe_then_cap'_def ex_cte_cap_to'_def int_nd)
+
+(* exports from Arch locale version (safe for generic use) *)
+interpretation Arch_p_arch_idle_update_eq' ..
+
+lemmas valid_arch_state_update'[iff] = valid_arch_state_update'
+
+end
+
+
 (* FIXME: use locales to shorten this work *)
+
+(* FIXME arch-split: MOVE, or try make generic *)
+context Arch begin arch_global_naming
+
+lemma invs'_gsCNodes_update[simp]:
+  "invs' (gsCNodes_update f s') = invs' s'"
+  apply (clarsimp simp: invs'_def valid_bitmaps_def bitmapQ_defs
+                        valid_irq_node'_def valid_irq_handlers'_def
+                        irq_issued'_def irqs_masked'_def valid_machine_state'_def
+                        valid_dom_schedule'_def)
+  done
+
+lemma invs'_gsUserPages_update[simp]:
+  "invs' (gsUserPages_update f s') = invs' s'"
+  apply (clarsimp simp: invs'_def valid_bitmaps_def bitmapQ_defs
+                        valid_irq_node'_def valid_irq_handlers'_def
+                        irq_issued'_def irqs_masked'_def valid_machine_state'_def
+                        valid_dom_schedule'_def)
+  done
+
+end
+
+(* FIXME arch-split: locale interface? *)
+arch_requalify_facts
+  invs'_gsCNodes_update
+  invs'_gsUserPages_update
+
+lemmas [simp] = invs'_gsCNodes_update invs'_gsUserPages_update
+
 
 lemma ps_clear_domE[elim?]:
   "\<lbrakk> ps_clear x n s; dom (ksPSpace s) = dom (ksPSpace s') \<rbrakk> \<Longrightarrow> ps_clear x n s'"
@@ -69,11 +176,37 @@ lemma inQ_context[simp]:
 
 lemma valid_tcb'_tcbQueued[simp]:
   "valid_tcb' (tcbQueued_update f tcb) = valid_tcb' tcb"
-  by (cases tcb, rule ext, simp add: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
+  by (cases tcb, rule ext, simp add: valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs)
 
 lemma valid_tcb'_tcbFault_update[simp]:
   "valid_tcb' tcb s \<Longrightarrow> valid_tcb' (tcbFault_update f tcb) s"
-  by (clarsimp simp: valid_tcb'_def  tcb_cte_cases_def cteSizeBits_def)
+  by (clarsimp simp: valid_tcb'_def  tcb_cte_cases_def tcb_cte_cases_neqs)
+
+lemma invs'_wu[simp]:
+  "invs' (ksWorkUnitsCompleted_update f s) = invs' s"
+  apply (simp add: invs'_def valid_bitmaps_def valid_sched_pointers_def valid_irq_node'_def
+                   valid_machine_state'_def bitmapQ_defs valid_dom_schedule'_def)
+  done
+
+(* FIXME arch-split: MOVE *)
+context Arch begin arch_global_naming
+
+lemma valid_arch_state'_interrupt[simp]:
+  "valid_arch_state' (ksInterruptState_update f s) = valid_arch_state' s"
+  by (simp add: valid_arch_state'_def)
+
+end
+
+(* FIXME arch-split: locales? *)
+arch_requalify_facts
+  valid_arch_state'_interrupt
+
+lemmas [simp] =
+  valid_arch_state'_interrupt
+
+lemma if_unsafe_then_cap_arch'[simp]:
+  "if_unsafe_then_cap' (ksArchState_update f s) = if_unsafe_then_cap' s"
+  by (simp add: if_unsafe_then_cap'_def ex_cte_cap_to'_def)
 
 lemma valid_bitmaps_ksSchedulerAction_update[simp]:
   "valid_bitmaps (ksSchedulerAction_update f s) = valid_bitmaps s"
@@ -166,8 +299,17 @@ lemma ex_cte_cap_wp_to_work_units[simp]:
     = ex_cte_cap_wp_to' P slot s"
   by (simp add: ex_cte_cap_wp_to'_def)
 
+(* add_upd_simps does not play nice with itself, so we need to give one instance a name prefix *)
+context begin global_naming add_upd_invs'_gsUntypedZeroRanges
+
+add_upd_simps "invs' (gsUntypedZeroRanges_update f s)"
+  (obj_at'_real_def)
+
+end
+lemmas [simp] = add_upd_invs'_gsUntypedZeroRanges.upd_simps
+
 add_upd_simps "ct_in_state' P (gsUntypedZeroRanges_update f s)"
-declare upd_simps[simp]
+lemmas [simp] = upd_simps
 
 lemma ct_not_inQ_ksArchState_update[simp]:
   "ct_not_inQ (ksArchState_update f s) = ct_not_inQ s"
@@ -249,16 +391,6 @@ lemma ct_in_state_ksSched[simp]:
   unfolding ct_in_state'_def
   apply auto
   done
-
-lemma invs'_wu[simp]:
-  "invs' (ksWorkUnitsCompleted_update f s) = invs' s"
-  apply (simp add: invs'_def valid_bitmaps_def valid_sched_pointers_def valid_irq_node'_def
-                   valid_machine_state'_def bitmapQ_defs valid_dom_schedule'_def)
-  done
-
-lemma valid_arch_state'_interrupt[simp]:
-  "valid_arch_state' (ksInterruptState_update f s) = valid_arch_state' s"
-  by (simp add: valid_arch_state'_def cong: option.case_cong)
 
 lemma valid_bitmapQ_ksSchedulerAction_upd[simp]:
   "valid_bitmapQ (ksSchedulerAction_update f s) = valid_bitmapQ s"

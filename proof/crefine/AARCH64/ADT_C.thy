@@ -624,7 +624,7 @@ lemma carch_state_to_H_correct:
    apply (simp add: ccur_vcpu_to_H_correct)
   apply (rule conjI)
   using valid[simplified valid_arch_state'_def]
-   apply (clarsimp simp: max_armKSGICVCPUNumListRegs_def unat_of_nat_eq)
+   apply (clarsimp simp: max_armKSGICVCPUNumListRegs_val unat_of_nat_eq)
   apply (simp add: pt_t)
   done
 
@@ -787,6 +787,7 @@ lemma map_to_ctes_tcb_ctes:
   "ctes_of s' = ctes_of s \<Longrightarrow>
    ko_at' tcb p s \<Longrightarrow> ko_at' tcb' p s' \<Longrightarrow>
    \<forall>x\<in>ran tcb_cte_cases. fst x tcb' = fst x tcb"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (clarsimp simp add: ran_tcb_cte_cases)
   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKO_opt_tcb
                  split: kernel_object.splits)
@@ -1017,7 +1018,7 @@ lemma cpspace_vcpu_relation_unique:
    apply clarsimp
    apply (rule ext)
    apply (rename_tac r)
-   apply (case_tac "64 \<le> r"; simp)
+   apply (case_tac "max_armKSGICVCPUNumListRegs \<le> r"; simp)
   apply (rule conjI)
    apply (rule ext, blast)
   apply (rule conjI, blast)
@@ -1350,7 +1351,7 @@ lemma ksPSpace_eq_imp_valid_objs'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
   shows "valid_objs' s' = valid_objs' s"
   using assms
-  by (clarsimp simp: valid_objs'_def valid_obj'_def valid_ep'_def
+  by (clarsimp simp: valid_objs'_def valid_obj'_def valid_ep'_def valid_arch_obj'_def
                      ksPSpace_eq_imp_obj_at'_eq[OF ksPSpace]
                      ksPSpace_eq_imp_valid_tcb'_eq[OF ksPSpace]
                      ksPSpace_eq_imp_valid_cap'_eq[OF ksPSpace]
@@ -1361,7 +1362,7 @@ lemma ksPSpace_eq_imp_valid_pspace'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
   shows "valid_pspace' s = valid_pspace' s'"
   using assms
-  by (clarsimp simp: valid_pspace'_def pspace_aligned'_def
+  by (clarsimp simp: valid_pspace'_def pspace_aligned'_def pspace_in_kernel_mappings'_def
         pspace_distinct'_def ps_clear_def no_0_obj'_def valid_mdb'_def
         pspace_canonical'_def
         ksPSpace_eq_imp_valid_objs'_eq[OF ksPSpace])

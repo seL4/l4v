@@ -4877,6 +4877,22 @@ lemmas tcbSlots =
   tcbCTableSlot_def tcbVTableSlot_def
   tcbReplySlot_def tcbCallerSlot_def tcbIPCBufferSlot_def
 
+lemma updateMDB_pspace_canonical'[wp]:
+  "updateMDB next prev \<lbrace>pspace_canonical'\<rbrace>"
+  by (wpsimp simp: ARM.pspace_canonical'_top)
+
+lemma updateMDB_pspace_in_kernel_mappings'[wp]:
+  "updateMDB next prev \<lbrace>pspace_in_kernel_mappings'\<rbrace>"
+  by (wpsimp simp: ARM.pspace_in_kernel_mappings'_def)
+
+lemma updateCap_pspace_canonical'[wp]:
+  "updateCap next prev \<lbrace>pspace_canonical'\<rbrace>"
+  by (wpsimp simp: ARM.pspace_canonical'_top)
+
+lemma updateCap_pspace_in_kernel_mappings'[wp]:
+  "updateCap next prev \<lbrace>pspace_in_kernel_mappings'\<rbrace>"
+  by (wpsimp simp: ARM.pspace_in_kernel_mappings'_def)
+
 lemma cteSwap_valid_pspace'[wp]:
   "\<lbrace>valid_pspace' and
     cte_wp_at' (weak_derived' c o cteCap) c1 and
@@ -5283,7 +5299,7 @@ lemma Final_notUntyped_capRange_disjoint:
   apply (clarsimp simp: cteCaps_of_def)
   apply (drule(1) ctes_of_valid')
   apply (elim disjE isCapDs[elim_format])
-   apply (clarsimp simp: valid_cap'_def
+   apply (clarsimp simp: valid_cap'_def valid_arch_cap'_def
                          obj_at'_def projectKOs objBits_simps'
                          typ_at'_def ko_wp_at'_def
                          page_table_at'_def page_directory_at'_def
@@ -5600,7 +5616,7 @@ lemma make_zombie_invs':
                                \<and> bound_tcb_at' ((=) None) p' s
                                \<and> obj_at' (\<lambda>tcb. tcbSchedNext tcb = None
                                                 \<and> tcbSchedPrev tcb = None) p' s")
-    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs)
+    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs live'_def hyp_live'_def)
    apply (auto dest!: isCapDs)[1]
   apply (clarsimp simp: cte_wp_at_ctes_of disj_ac
                  dest!: isCapDs)
@@ -5710,7 +5726,7 @@ lemma shrink_zombie_invs':
   apply clarsimp
   apply (rule ccontr, erule notE, rule imageI)
   apply (drule word_le_minus_one_leq)
-  apply (rule ccontr, simp add: linorder_not_less mult.commute mult.left_commute)
+  apply (rule ccontr, simp add: linorder_not_less mult.commute mult.left_commute shiftl_t2n)
   done
 
 crunch suspend
@@ -5747,6 +5763,7 @@ crunch doMachineOp
 
 lemma valid_Zombie_cte_at':
   "\<lbrakk> s \<turnstile>' Zombie p zt m; n < zombieCTEs zt \<rbrakk> \<Longrightarrow> cte_at' (p + (of_nat n * 2^cteSizeBits)) s"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (clarsimp simp: valid_cap'_def split: zombie_type.split_asm)
    apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
    apply (subgoal_tac "tcb_cte_cases (of_nat n * 2^cteSizeBits) \<noteq> None")
@@ -5983,7 +6000,7 @@ lemma ex_Zombie_to2:
   apply (intro exI, rule conjI, assumption)
   apply (simp add: image_def)
   apply (rule bexI[where x="of_nat n - 1"])
-   apply (fastforce simp: objBits_defs)
+   apply (fastforce simp: objBits_defs shiftl_t2n)
   apply (subgoal_tac "n \<in> unats (len_of TYPE(32))")
    apply (simp add: word_less_nat_alt)
    apply (subst unat_minus_one)
@@ -6167,7 +6184,8 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
                      \<or> (\<exists>zb n cp. cteCap cte = Zombie q zb n
                           \<and> Q cp \<and> (isZombie cp \<longrightarrow> capZombiePtr cp \<noteq> q))"
   note hyps = "1.hyps"[folded reduceZombie_def[unfolded cteDelete_def finaliseSlot_def]]
-  have Q: "\<And>x y n. {x :: word32} = (\<lambda>x. y + x * 2^cteSizeBits) ` {0 ..< n} \<Longrightarrow> n = 1"
+  have Q: "\<And>x y n. {x :: machine_word} = (\<lambda>x. y + (x << cteSizeBits)) ` {0 ..< n} \<Longrightarrow> n = 1"
+    apply (simp only: shiftl_t2n mult_ac)
     apply (drule sym)
     apply (case_tac "1 < n")
      apply (frule_tac x = "y + 0 * 2^cteSizeBits" in eqset_imp_iff)
@@ -6259,14 +6277,15 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
                simp_all add: isCap_simps removeable'_def
                              fun_eq_iff[where f="cte_refs' cap" for cap]
                              fun_eq_iff[where f=tcb_cte_cases]
-                             tcb_cte_cases_def)[1]
-         apply (frule Q)
+                             tcb_cte_cases_def cteSizeBits_def)[1]
+         apply (frule Q[unfolded cteSizeBits_def, simplified])
          apply clarsimp
+        apply (simp add: mask_def)
         apply (subst(asm) R)
          apply (drule valid_capAligned [OF ctes_of_valid'])
           apply fastforce
          apply (simp add: capAligned_def word_bits_def)
-        apply (frule Q)
+        apply (frule Q[unfolded cteSizeBits_def, simplified])
         apply clarsimp
        apply (clarsimp simp: cte_wp_at_ctes_of capRemovable_def)
        apply (subgoal_tac "final_matters' (cteCap rv) \<and> \<not> isUntypedCap (cteCap rv)")
@@ -7338,7 +7357,7 @@ next
     apply (rule_tac x="cte_map slot" in exI)
     apply (clarsimp simp: image_def)
     apply (rule_tac x="of_nat n" in bexI)
-     apply (fastforce simp: cte_level_bits_def objBits_defs mult.commute mult.left_commute)
+     apply (fastforce simp: cte_level_bits_def shiftl_t2n objBits_defs mult.commute mult.left_commute)
     apply simp
     apply (subst field_simps, rule plus_one_helper2)
      apply simp

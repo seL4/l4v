@@ -21,7 +21,7 @@ lemma invokeIRQHandler_AckIRQ_ccorres:
      apply (simp add: Kernel_Config.config_ARM_GIC_V3_def) (* match C condition *)
     apply (ctac add: deactivateInterrupt_ccorres)
    apply (ctac add: maskInterrupt_ccorres)
-  apply simp
+  apply (simp add: theIRQ_def)
   done
 
 lemma getIRQSlot_ccorres:

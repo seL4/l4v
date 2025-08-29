@@ -104,7 +104,8 @@ lemma valid_obj_makeObject_cte [simp]:
 lemma valid_obj_makeObject_tcb [simp]:
   "valid_obj' (KOTCB makeObject) s"
   unfolding valid_obj'_def valid_tcb'_def  valid_tcb_state'_def
-  by (clarsimp simp: makeObject_tcb makeObject_cte tcb_cte_cases_def minBound_word cteSizeBits_def)
+  by (clarsimp simp: makeObject_tcb makeObject_cte tcb_cte_cases_def minBound_word newArchTCB_def
+                     tcb_cte_cases_neqs valid_arch_tcb'_def)
 
 lemma valid_obj_makeObject_tcb_tcbDomain_update [simp]:
   "d \<le> maxDomain \<Longrightarrow> valid_obj' (KOTCB (tcbDomain_update (\<lambda>_. d) makeObject)) s"
@@ -155,12 +156,12 @@ lemma valid_obj_makeObject_user_data_device [simp]:
 
 lemma valid_obj_makeObject_pte[simp]:
   "valid_obj' (KOArch (KOPTE makeObject)) s"
-  unfolding valid_obj'_def by (simp add: makeObject_pte)
+  unfolding valid_obj'_def by (simp add: makeObject_pte valid_arch_obj'_def)
 
 lemma valid_obj_makeObject_asid_pool[simp]:
   "valid_obj' (KOArch (KOASIDPool makeObject)) s"
   unfolding valid_obj'_def
-  by (simp add: makeObject_asidpool Let_def ran_def dom_def)
+  by (simp add: makeObject_asidpool Let_def ran_def dom_def valid_arch_obj'_def)
 
 lemmas valid_obj_makeObject_rules =
   valid_obj_makeObject_user_data valid_obj_makeObject_tcb
@@ -1160,8 +1161,8 @@ lemma ksPSpace_update_gs_eq[simp]:
 
 end
 
-global_interpretation update_gs: PSpace_update_eq "update_gs ty us ptrs"
-  by (simp add: PSpace_update_eq_def)
+global_interpretation update_gs: pspace_update_eq' "update_gs ty us ptrs"
+  by (simp add: pspace_update_eq'_def)
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
@@ -2352,6 +2353,13 @@ qed
 lemmas capFreeIndex_update_valid_untyped' =
   capFreeIndex_update_valid_cap'[unfolded valid_cap'_def,simplified,THEN conjunct2,THEN conjunct1]
 
+lemma range_cover_canonical_address':
+  "\<lbrakk> range_cover ptr sz us n; p < of_nat n;
+     canonical_address (ptr && ~~ mask sz); sz \<le> maxUntypedSizeBits \<rbrakk>
+   \<Longrightarrow> canonical_address (ptr + p * 2 ^ us)"
+  apply (frule range_cover_canonical_address[where p="unat p"]; simp?)
+  using unat_less_helper by blast
+
 lemma createNewCaps_valid_cap:
   fixes ptr :: machine_word
   assumes cover: "range_cover ptr sz (APIType_capBits ty us) n "
@@ -2440,22 +2448,25 @@ proof -
         apply (drule word_leq_minus_one_le[rotated])
          apply (rule range_cover_not_zero[OF not_0 cover])
         apply (intro conjI)
-            apply (rule is_aligned_add_multI[OF _ le_refl refl])
-            apply (fastforce simp:range_cover_def word_bits_def)+
-          apply (clarsimp simp:valid_untyped'_def ko_wp_at'_def obj_range'_def)
-          apply (drule(1) pspace_no_overlapD'[rotated])
-          apply (frule(1) range_cover_cell_subset)
-          apply (erule disjE)
-           apply (simp add: mask_def add_diff_eq)
+             apply (rule is_aligned_add_multI[OF _ le_refl refl])
+             apply (fastforce simp:range_cover_def word_bits_def)+
+           apply (clarsimp simp:valid_untyped'_def ko_wp_at'_def obj_range'_def)
+           apply (drule(1) pspace_no_overlapD'[rotated])
+           apply (frule(1) range_cover_cell_subset)
+           apply (erule disjE)
+            apply (simp add: mask_def add_diff_eq)
             apply (drule psubset_imp_subset)
             apply (drule(1) disjoint_subset2[rotated])
             apply (drule(1) disjoint_subset)
             apply (drule(1) range_cover_subset_not_empty)
-           apply clarsimp+
-          apply (simp add: mask_def add_diff_eq)
-          apply blast
-         apply (drule(1) range_cover_no_0[OF ptr _ unat_less_helper])
-         apply simp
+            apply clarsimp+
+           apply (simp add: mask_def add_diff_eq)
+           apply blast
+          apply (drule(1) range_cover_no_0[OF ptr _ unat_less_helper])
+          apply simp
+         apply (erule (1) range_cover_canonical_address')
+          apply (rule ptr_cn)
+         apply (rule sz_constrained)
         apply (drule (1) range_cover_in_kernel_mappings[OF _ unat_less_helper ptr_km sz_constrained])
         apply simp
         done
@@ -3338,7 +3349,7 @@ proof (intro conjI impI)
                            arch_kernel_object.split_asm)
     apply (drule bspec, erule ranI)
     apply (subst mult.commute)
-    apply (case_tac obj; simp add: valid_obj'_def)
+    apply (case_tac obj; simp add: valid_obj'_def valid_arch_obj'_def)
          apply (rename_tac endpoint)
          apply (case_tac endpoint; simp add: valid_ep'_def obj_at_disj')
         apply (rename_tac notification)
@@ -3346,7 +3357,7 @@ proof (intro conjI impI)
         apply (rename_tac ntfn xa xb)
         apply (case_tac ntfn, simp_all, (clarsimp simp: obj_at_disj' split:option.splits)+)
        apply (rename_tac tcb)
-       apply (case_tac tcb, clarsimp simp add: valid_tcb'_def)
+       apply (case_tac tcb, clarsimp simp add: valid_tcb'_def valid_arch_obj'_def)
        apply (frule pspace_alignedD' [OF _ ad(1)])
        apply (frule pspace_distinctD' [OF _ ad(2)])
        apply (simp add: objBits_simps)
@@ -4143,7 +4154,7 @@ lemma createNewCaps_iflive'[wp]:
         apply (case_tac apiobject_type, simp_all split del: if_split)[1]
               apply (rule hoare_pre, wp, simp)
   by (wp mapM_x_wp' createObjects_iflive' threadSet_iflive'
-      | simp add: not_0 pspace_no_overlap'_def createObjects_def
+      | simp add: not_0 pspace_no_overlap'_def createObjects_def live'_def hyp_live'_def
                   valid_pspace'_def makeObject_tcb makeObject_endpoint
                   makeObject_notification objBitsKO_def curDomain_def scBits_simps
                   live_ntfn'_def live_sc'_def live_reply'_def makeObject_sc
@@ -5403,6 +5414,12 @@ lemma createObjects_untyped_ranges_zero':
                     untypedZeroRange_def)
   apply (simp add: makeObject_cte untypedZeroRange_def)
   done
+
+(* FIXME arch-split: non-hyp arches only *)
+lemma sym_refs_empty[simp]:
+  "sym_refs (\<lambda>p. {}) = True"
+  unfolding sym_refs_def
+  by simp
 
 lemma createObjects_no_cte_invs:
   assumes moKO: "makeObjectKO dev us d ty = Some val"

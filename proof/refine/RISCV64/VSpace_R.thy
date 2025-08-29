@@ -753,7 +753,7 @@ lemma storePTE_iflive [wp]:
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
       apply (simp add: objBits_simps)
-     apply (auto simp: updateObject_default_def in_monad)
+     apply (auto simp: updateObject_default_def in_monad live'_def hyp_live'_def)
   done
 
 method valid_idle'_setObject uses simp =
@@ -797,7 +797,7 @@ lemma storePTE_invs[wp]:
 lemma setASIDPool_valid_objs [wp]:
   "setObject p (ap::asidpool) \<lbrace>valid_objs'\<rbrace>"
   apply (wp setObject_valid_objs'[where P=\<top>])
-   apply (clarsimp simp: updateObject_default_def in_monad valid_obj'_def)
+   apply (clarsimp simp: updateObject_default_def in_monad valid_obj'_def valid_arch_obj'_def)
   apply simp
   done
 
@@ -816,7 +816,7 @@ lemma setASIDPool_iflive [wp]:
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
       apply (simp add: objBits_simps)
-     apply (auto simp: updateObject_default_def in_monad pageBits_def)
+     apply (auto simp: updateObject_default_def in_monad pageBits_def live'_def hyp_live'_def)
   done
 
 lemma setASIDPool_invs [wp]:
@@ -911,6 +911,7 @@ lemma perform_aci_invs [wp]:
 lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   "\<lbrace>valid_objs'\<rbrace> lookupIPCBuffer b t \<lbrace>case_option \<top> valid_ipc_buffer_ptr'\<rbrace>"
   unfolding lookupIPCBuffer_def RISCV64_H.lookupIPCBuffer_def
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (simp add: Let_def getSlotCap_def getThreadBufferSlot_def
                    locateSlot_conv threadGet_getObject)
   apply (wp getCTE_wp getObject_tcb_wp | wpc)+

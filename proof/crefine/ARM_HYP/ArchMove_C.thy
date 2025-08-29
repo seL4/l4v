@@ -28,6 +28,8 @@ lemma vaddr_segment_nonsense6:
   apply (rule shiftr_less_t2n'[where m=11 and n=21 and 'a=machine_word_len, simplified])
   done
 
+context begin interpretation Arch .
+
 (* Short-hand for  unfolding cumbersome machine constants *)
 (* FIXME MOVE these should be in refine, and the _eq forms should NOT be declared [simp]! *)
 (* FIXME YUCK where did you come from *)
@@ -118,8 +120,6 @@ lemma addToBitmap_sets_L1Bitmap_same_dom:
   unfolding addToBitmap_def bitmap_fun_defs
   apply wpsimp
   by (metis nth_0 prioToL1Index_bit_set word_or_zero)
-
-context begin interpretation Arch .
 
 lemma setCTE_asidpool':
   "\<lbrace> ko_at' (ASIDPool pool) p \<rbrace> setCTE c p' \<lbrace>\<lambda>_. ko_at' (ASIDPool pool) p\<rbrace>"
@@ -438,7 +438,7 @@ crunch readVCPUReg
 
 (* schematic_goal leads to Suc (Suc ..) form only *)
 lemma fromEnum_maxBound_vcpureg_def:
-  "fromEnum (maxBound :: vcpureg) = 42"
+  "fromEnum (maxBound :: vcpureg) = 43"
   by (clarsimp simp: fromEnum_def maxBound_def enum_vcpureg)
 
 lemma unat_of_nat_mword_fromEnum_vcpureg[simp]:
@@ -463,7 +463,7 @@ lemma fromEnum_maxBound_vppievent_irq_def:
 (* FIXME move *)
 lemma ps_clear_entire_slotI:
   "({p..p + 2 ^ n - 1}) \<inter> dom (ksPSpace s) = {} \<Longrightarrow> ps_clear p n s"
-  by (fastforce simp: ps_clear_def)
+  by (fastforce simp: ps_clear_def mask_def add_diff_eq)
 
 lemma ps_clear_ksPSpace_upd_same[simp]:
   "ps_clear p n (s\<lparr>ksPSpace := (ksPSpace s)(p \<mapsto> v)\<rparr>) = ps_clear p n s"
@@ -531,6 +531,7 @@ lemma valid_untyped':
   apply (frule pspace_distinctD'[OF _ pspace_distinct'])
   apply simp
   apply (frule aligned_ranges_subset_or_disjoint[OF al])
+  apply (simp only: add_mask_fold)
   apply (fold obj_range'_def)
   apply (rule iffI)
    apply auto[1]
@@ -538,14 +539,15 @@ lemma valid_untyped':
    apply (rule ccontr, simp)
    apply (simp add: Set.psubset_eq)
    apply (erule conjE)
-   apply (case_tac "obj_range' ptr' ko \<inter> {ptr..ptr + 2 ^ bits - 1} \<noteq> {}", simp)
+   apply (case_tac "obj_range' ptr' ko \<inter> mask_range ptr bits \<noteq> {}", simp)
    apply (cut_tac is_aligned_no_overflow[OF al])
-   apply (auto simp add: obj_range'_def)[1]
+   apply (auto simp add: obj_range'_def add_mask_fold)[1]
   apply (clarsimp simp add: usableUntypedRange.simps Int_commute)
-  apply (case_tac "obj_range' ptr' ko \<inter> {ptr..ptr + 2 ^ bits - 1} \<noteq> {}", simp+)
+  apply (case_tac "obj_range' ptr' ko \<inter> mask_range ptr bits \<noteq> {}", simp)
   apply (cut_tac is_aligned_no_overflow[OF al])
   apply (clarsimp simp add: obj_range'_def)
   apply (frule is_aligned_no_overflow)
+  apply (simp add: mask_def add_diff_eq)
   by (metis al intvl_range_conv' le_m1_iff_lt less_is_non_zero_p1
                nat_le_linear power_overflow sub_wrap add_0
                add_0_right word_add_increasing word_less_1 word_less_sub_1)

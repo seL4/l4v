@@ -93,6 +93,14 @@ crunch arch_invoke_irq_handler
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   and valid_list[wp]: valid_list
 
+lemma deactivateInterrupt_invs:
+  "\<lbrace>invs and (\<lambda>s. interrupt_states s irq \<noteq> IRQInactive) and K config_ARM_GIC_V3\<rbrace>
+   do_machine_op (deactivateInterrupt irq)
+   \<lbrace>\<lambda>rv. invs\<rbrace>"
+  unfolding deactivateInterrupt_def
+  by (cases config_ARM_GIC_V3; simp)
+     (wpsimp wp: maskInterrupt_invs_ARCH)
+
 lemma invoke_irq_handler_invs'[Interrupt_AI_assms]:
   assumes dmo_ex_inv[wp]: "\<And>f. \<lbrace>invs and ex_inv\<rbrace> do_machine_op f \<lbrace>\<lambda>rv::unit. ex_inv\<rbrace>"
   assumes cap_insert_ex_inv[wp]: "\<And>cap src dest.
@@ -123,8 +131,7 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_assms]:
    done
   show ?thesis
   apply (cases i, simp_all)
-    apply (wp maskInterrupt_invs_ARCH)
-    apply simp+
+    apply (rule conjI; wpsimp wp: deactivateInterrupt_invs maskInterrupt_invs_ARCH)
    apply (rename_tac irq cap prod)
    apply (rule hoare_pre)
     apply (wp valid_cap_typ [OF cap_delete_one_typ_at])

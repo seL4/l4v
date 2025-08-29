@@ -1006,7 +1006,7 @@ lemma entry_corres:
                apply (simp add: tcb_relation_def arch_tcb_relation_def
                                 arch_tcb_context_set_def atcbContextSet_def)
               apply (clarsimp simp: tcb_cap_cases_def)
-             apply (clarsimp simp: tcb_cte_cases_def cteSizeBits_def)
+             apply (clarsimp simp: tcb_cte_cases_def tcb_cte_cases_neqs)
             apply fastforce
            apply fastforce
           apply (fastforce simp: inQ_def)

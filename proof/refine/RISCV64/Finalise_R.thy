@@ -2310,7 +2310,7 @@ lemma unbindNotification_invs[wp]:
    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   apply (clarsimp simp: pred_tcb_at' conj_comms)
   apply (erule if_live_then_nonz_capE')
-  apply (clarsimp simp: obj_at'_def ko_wp_at'_def live_ntfn'_def)
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def live'_def live_ntfn'_def)
   done
 
 lemma ntfn_bound_tcb_at':
@@ -2335,7 +2335,7 @@ lemma unbindMaybeNotification_invs[wp]:
                     untyped_ranges_zero_lift sym_heap_sched_pointers_lift
               simp: cteCaps_of_def)
   by (auto simp: pred_tcb_at' valid_pspace'_def valid_obj'_def
-                 valid_ntfn'_def ko_wp_at'_def live_ntfn'_def o_def
+                 valid_ntfn'_def ko_wp_at'_def live'_def live_ntfn'_def o_def
           elim!: obj_atE' if_live_then_nonz_capE'
           split: option.splits ntfn.splits)
 
@@ -3586,7 +3586,7 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
   apply (frule cte_wp_at_valid_objs_valid_cap'; clarsimp)
   apply (case_tac "cteCap cte",
          simp_all add: isCap_simps capRange_def cap_has_cleanup'_def
-                       final_matters'_def objBits_simps
+                       final_matters'_def gen_objBits_simps
                        not_Final_removeable finaliseCap_def,
          simp_all add: removeable'_def)
      (* ThreadCap *)
@@ -3821,6 +3821,8 @@ global_interpretation delete_one_conc_pre
   by (unfold_locales, wp)
      (wp cteDeleteOne_tcbDomain_obj_at' cteDeleteOne_typ_at' | simp)+
 
+context begin interpretation Arch . (*FIXME: arch-split*)
+
 lemma cteDeleteOne_invs[wp]:
   "cteDeleteOne ptr \<lbrace>invs'\<rbrace>"
   apply (simp add: cteDeleteOne_def unless_def
@@ -3843,11 +3845,13 @@ lemma cteDeleteOne_invs[wp]:
      apply (rule disjI2)
      apply (rule conjI)
       apply fastforce
-     apply (fastforce dest!: isCapDs simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def)
+     apply (fastforce dest!: isCapDs simp: pred_tcb_at'_def obj_at'_def live'_def hyp_live'_def ko_wp_at'_def)
     apply (wp isFinalCapability_inv getCTE_wp' hoare_weak_lift_imp
            | wp (once) isFinal[where x=ptr])+
   apply (fastforce simp: cte_wp_at_ctes_of)
   done
+
+end
 
 global_interpretation delete_one_conc_fr: delete_one_conc
   by unfold_locales wpsimp
@@ -3970,7 +3974,7 @@ lemma finaliseCap_valid_cap[wp]:
                    RISCV64_H.finaliseCap_def
              cong: if_cong split del: if_split)
   apply wpsimp
-  by (auto simp: valid_cap'_def isCap_simps capAligned_def objBits_simps shiftL_nat)
+  by (auto simp: valid_cap'_def isCap_simps capAligned_def gen_objBits_simps shiftL_nat)
 
 crunch "Arch.finaliseCap"
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"

@@ -6,7 +6,7 @@
  *)
 
 theory TcbAcc_R
-imports CSpace_R ArchMove_R
+imports CSpace_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
@@ -3379,7 +3379,7 @@ lemma sts'_valid_pspace'_inv[wp]:
    apply (wp sts_valid_objs')
    apply (simp add: setThreadState_def threadSet_def
                     setQueue_def bind_assoc valid_mdb'_def)
-   apply (wp getObject_obj_at_tcb | simp)+
+   apply (wp getObject_obj_at_tcb hoare_drop_imps | simp)+
   apply (clarsimp simp: valid_mdb'_def)
   apply (drule obj_at_ko_at')
   apply clarsimp
@@ -4045,6 +4045,8 @@ lemma isRunnable_const:
   "\<lbrace>st_tcb_at' runnable' t\<rbrace> isRunnable t \<lbrace>\<lambda>runnable _. runnable \<rbrace>"
   by (rule isRunnable_wp)
 
+context begin interpretation Arch . (*FIXME: arch-split*)
+
 lemma valid_ipc_buffer_ptr'D:
   assumes yv: "y < unat max_ipc_words"
   and    buf: "valid_ipc_buffer_ptr' a s"
@@ -4133,6 +4135,8 @@ lemma storeWordUser_corres:
    apply (frule (1) valid_ipc_buffer_ptr'D [OF y])
   apply (simp add: valid_ipc_buffer_ptr'_def)
   done
+
+end
 
 lemma load_word_corres:
   "corres (=) \<top>
@@ -4433,6 +4437,7 @@ qed
 
 lemma cte_at_tcb_at_32':
   "tcb_at' t s \<Longrightarrow> cte_at' (t + 32) s"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (simp add: cte_at'_obj_at')
   apply (rule disjI2, rule bexI[where x=32])
    apply simp

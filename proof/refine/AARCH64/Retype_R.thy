@@ -1169,8 +1169,8 @@ lemma ksPSpace_update_gs_eq[simp]:
 
 end
 
-global_interpretation update_gs: PSpace_update_eq "update_gs ty us ptrs"
-  by (simp add: PSpace_update_eq_def)
+global_interpretation update_gs: pspace_update_eq' "update_gs ty us ptrs"
+  by (simp add: pspace_update_eq'_def)
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
@@ -3203,6 +3203,12 @@ lemma valid_untyped'_helper:
   done
 qed
 
+(* FIXME arch-split: workaround for stateless valid_arch_obj' *)
+lemma valid_arch_obj'_state_inv[simp]:
+  "valid_arch_obj' ako s \<Longrightarrow> valid_arch_obj' ako s'"
+  unfolding valid_arch_obj'_def
+  by simp
+
 definition caps_overlap_reserved' :: "machine_word set \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "caps_overlap_reserved' S s \<equiv> \<forall>cte \<in> ran (ctes_of s).
@@ -3266,6 +3272,8 @@ proof (intro conjI impI)
      and vo: "valid_objs' s"
      and ad: "pspace_aligned' s" "pspace_distinct' s"
      and cn: "pspace_canonical' s"
+     (* FIXME arch-split: unused on this platform, but might be needed for interface *)
+     (* and km: "pspace_in_kernel_mappings' s" *)
      and pc: "caps_no_overlap'' ptr sz s"
     and mdb: "valid_mdb' s"
     and p_0: "ptr \<noteq> 0"
@@ -3294,6 +3302,10 @@ proof (intro conjI impI)
   show pspace_canonical: "pspace_canonical' ?s'"
     using retype_canonical'[OF cn cover' sz_limit ptr_cn]
     by (clarsimp simp: field_simps)
+
+  (* FIXME arch-split: unused on this platform, but might be needed for interface
+  show pspace_in_kernel_mappings: "pspace_in_kernel_mappings' ?s'"
+   by (simp add: pspace_in_kernel_mappings'_def) *)
 
   show "pspace_distinct' ?s'"
     using ad' shift

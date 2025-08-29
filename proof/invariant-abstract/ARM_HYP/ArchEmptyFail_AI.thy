@@ -127,7 +127,7 @@ context Arch begin arch_global_naming
 
 crunch vcpu_update, vcpu_save_reg_range, vgic_update_lr, save_virt_timer
   for (empty_fail) empty_fail[wp]
-  (ignore: set_object get_object)
+  (ignore: set_object get_object simp: check_export_arch_timer_def)
 
 lemma vcpu_save_empty_fail[wp,EmptyFail_AI_assms]: "empty_fail (vcpu_save a)"
   apply (simp add:  vcpu_save_def)
@@ -189,6 +189,11 @@ lemma vgic_maintenance_empty_fail[wp]: "empty_fail vgic_maintenance"
                    get_gic_vcpu_ctrl_eisr1_def
                    get_gic_vcpu_ctrl_misr_def
                    vgic_maintenance_def)
+
+lemma deactivateInterrupt_empty_fail[wp]:
+  "config_ARM_GIC_V3 \<Longrightarrow> empty_fail (deactivateInterrupt irq)"
+  unfolding deactivateInterrupt_def
+  by wpsimp
 
 crunch possible_switch_to
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]

@@ -109,7 +109,8 @@ lemma valid_obj_makeObject_cte [simp]:
 lemma valid_obj_makeObject_tcb [simp]:
   "valid_obj' (KOTCB makeObject) s"
   unfolding valid_obj'_def valid_tcb'_def  valid_tcb_state'_def
-  by (clarsimp simp: makeObject_tcb makeObject_cte tcb_cte_cases_def minBound_word)
+  by (clarsimp simp: makeObject_tcb makeObject_cte tcb_cte_cases_def minBound_word newArchTCB_def
+                     cteSizeBits_def valid_arch_tcb'_def)
 
 lemma valid_obj_makeObject_endpoint [simp]:
   "valid_obj' (KOEndpoint makeObject) s"
@@ -396,7 +397,7 @@ lemma pspace_no_overlap_disjoint':
   unfolding pspace_no_overlap'_def
   apply (rule disjointI)
   apply (rule ccontr)
-  apply clarsimp
+  apply (clarsimp simp: mask_def add_diff_eq)
   apply (elim allE impE notE)
     apply (simp add:field_simps)+
     apply (erule(2) order_trans[OF _ is_aligned_no_overflow,OF _ pspace_alignedD'])
@@ -497,7 +498,7 @@ lemma ps_clearD:
   "\<lbrakk> ps_clear x n s; ksPSpace s y = Some v; x < y; y \<le> x + 2 ^ n - 1 \<rbrakk> \<Longrightarrow> False"
   apply (clarsimp simp: ps_clear_def)
   apply (drule_tac a=y in equals0D)
-  apply (simp add: dom_def)
+  apply (simp add: dom_def mask_def add_diff_eq)
   apply fastforce
   done
 
@@ -1024,12 +1025,9 @@ qed
 lemma pspace_no_overlapD':
   "\<lbrakk> ksPSpace s x = Some ko; pspace_no_overlap' p bits s \<rbrakk>
        \<Longrightarrow> {x .. x + 2 ^ objBitsKO ko - 1} \<inter> {p .. (p && ~~ mask bits) + 2 ^ bits - 1} = {}"
-  apply (simp add:pspace_no_overlap'_def)
-  apply (intro impI)
-  apply (elim allE impE)
-  apply (simp add:field_simps)+
-done
+  by (simp add: pspace_no_overlap'_def mask_def add_diff_eq)
 
+(* FIXME arch-split: AARCH64 uses mask_range here *)
 lemma new_range_subset:
   assumes
         cover: "range_cover ptr sz (objBitsKO ko) n"
@@ -1126,14 +1124,14 @@ proof -
     apply (subst foldr_upd_app_if[folded data_map_insert_def])
     apply (simp add: pspace_distinct'_def dom_if_Some ball_Un)
     apply (intro conjI ballI impI)
-      apply (simp add: ps_clear_def dom_if_Some Int_Un_distrib
+      apply (simp add: ps_clear_def dom_if_Some Int_Un_distrib mask_def add_diff_eq
                        objBits_def[symmetric])
       apply (rule conjI)
        apply (erule new_range_disjoint)
       apply (rule disjoint_subset[OF Diff_subset])
       apply (erule disjoint_subset[OF new_range_sub])
       apply (rule pspace_no_overlap_disjoint'[OF vs'(1) pn'])
-    apply (clarsimp simp add: ps_clear_def dom_if_Some Int_Un_distrib)
+    apply (clarsimp simp add: ps_clear_def dom_if_Some Int_Un_distrib mask_def add_diff_eq)
     apply (rule conjI)
       apply (erule new_range_disjoint)
      apply (rule disjoint_subset[OF Diff_subset])
@@ -1145,7 +1143,8 @@ proof -
     apply (subst Int_commute)
     apply (simp add:ptr_add_def field_simps)
     apply (rule disjoint_subset[OF Diff_subset])
-    apply (erule pspace_no_overlapD' [OF _ pn'])
+    apply (drule pspace_no_overlapD' [OF _ pn'])
+    apply (simp add: mask_def add_diff_eq)
     done
 qed
 
@@ -1172,8 +1171,8 @@ lemma ksPSpace_update_gs_eq[simp]:
 
 end
 
-global_interpretation update_gs: PSpace_update_eq "update_gs ty us ptrs"
-  by (simp add: PSpace_update_eq_def)
+global_interpretation update_gs: pspace_update_eq' "update_gs ty us ptrs"
+  by (simp add: pspace_update_eq'_def)
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
@@ -2480,11 +2479,13 @@ proof -
            apply (drule(1) pspace_no_overlapD'[rotated])
            apply (frule(1) range_cover_cell_subset)
            apply (erule disjE)
+            apply (simp add: mask_def add_diff_eq)
             apply (drule psubset_imp_subset)
             apply (drule(1) disjoint_subset2[rotated])
             apply (drule(1) disjoint_subset)
             apply (drule(1) range_cover_subset_not_empty)
             apply clarsimp+
+           apply (simp add: mask_def add_diff_eq)
            apply blast
           apply (drule(1) range_cover_no_0[OF ptr _ unat_less_helper])
           apply simp
@@ -3028,15 +3029,6 @@ lemma irq_control_n:
   apply (erule (1) irq_controlD, rule irq_control)
   done
 
-lemma ioport_control_n:
-  "ioport_control n"
-  apply (clarsimp simp add: ioport_control_def)
-  apply (simp add: n_Some_eq split: if_split_asm)
-  apply (frule ioport_revocable, rule ioport_control)
-  apply clarsimp
-  apply (erule (1) ioport_controlD, rule ioport_control)
-  done
-
 lemma dist_z_m: "distinct_zombies m"
   using valid by auto
 
@@ -3064,7 +3056,7 @@ lemma valid_n:
   by (simp add: valid_mdb_ctes_def dlist_n no_0_n mdb_chain_0_n
                 valid_badges_n caps_contained_n untyped_mdb_n
                 untyped_inc_n mdb_chunked_n valid_nullcaps_n ut_rev_n
-                class_links_n irq_control_n dist_z_n ioport_control_n
+                class_links_n irq_control_n dist_z_n
                 reply_masters_rvk_fb_n)
 
 end
@@ -3079,8 +3071,11 @@ where
 lemma obj_range'_subset:
   "\<lbrakk>range_cover ptr sz (objBitsKO val) n; ptr' \<in> set (new_cap_addrs n ptr val)\<rbrakk>
    \<Longrightarrow> obj_range' ptr' val \<subseteq> {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"
-  unfolding obj_range'_def
-  by (rule new_range_subset, auto)
+  unfolding obj_range'_def mask_2pm1
+  (* FIXME arch-split: this is struggling with the formulation of new_range_subset vs mask_range *)
+  apply (drule (1) new_range_subset)
+  apply (simp only: shiftl_t2n mult_1_right mask_2pm1 add_diff_eq)
+  done
 
 lemma obj_range'_subset_strong:
   assumes "range_cover ptr sz (objBitsKO val) n"
@@ -3140,8 +3135,8 @@ proof -
     apply -
     apply (frule(1) obj_range'_subset)
     apply (simp add: obj_range'_def)
-    apply (cases "n = 0"; clarsimp simp:new_cap_addrs_def)
-   done
+    apply (cases "n = 0"; clarsimp simp:new_cap_addrs_def mask_def field_simps)
+    done
 qed
 
 lemma caps_no_overlapD'':
@@ -3199,9 +3194,10 @@ lemma valid_untyped'_helper:
      apply (drule Int_absorb1[OF psubset_imp_subset])
      apply (drule aligned_untypedRange_non_empty)
       apply (simp add:isCap_simps)
-     apply (simp add:Int_ac)
+      apply (simp add:isCap_simps)
+     apply (simp add:Int_ac add_mask_fold)
     apply (drule(1) subset_trans)
-    apply blast
+    apply (simp only: add_mask_fold)
    apply (frule(1) obj_range'_subset_strong)
    apply (drule(1) non_disjoing_subset)
    apply blast
@@ -3211,8 +3207,9 @@ lemma valid_untyped'_helper:
   apply (frule(1) obj_range'_subset)
   apply (drule(1) subset_trans)
   apply (erule impE)
-   apply clarsimp
+   apply (clarsimp simp: add_mask_fold)
    apply blast
+  apply (simp only: add_mask_fold)
   apply blast
   done
 qed
@@ -3400,7 +3397,8 @@ proof (intro conjI impI)
       apply (rename_tac thread_state mcp priority bool option nat cptr vptr bound tcbprev tcbnext user_context)
       apply (case_tac thread_state, simp_all add: valid_tcb_state'_def valid_bound_tcb'_def
                                                   valid_bound_ntfn'_def obj_at_disj' none_top_def
-                                           split: option.splits)[4]
+                                                  valid_arch_tcb'_def
+                                           split: option.splits)[5]
      apply (simp add: valid_cte'_def)
      apply (frule pspace_alignedD' [OF _ ad(1)])
      apply (frule pspace_distinctD' [OF _ ad(2)])
@@ -3692,7 +3690,7 @@ lemma createObjects_orig_cte_wp_at2':
   apply (simp add: cte_wp_at'_obj_at')
   apply (rule handy_prop_divs)
    apply (wp createObjects_orig_obj_at2'[where sz = sz], simp)
-  apply (simp add: tcb_cte_cases_def)
+  apply (simp add: tcb_cte_cases_def tcb_cte_cases_neqs)
   including classic_wp_pre
   apply (wp handy_prop_divs createObjects_orig_obj_at2'[where sz = sz]
              | simp add: o_def cong: option.case_cong)+
@@ -3726,12 +3724,12 @@ lemma createNewCaps_cte_wp_at2:
                      mapM_x_wp' threadSet_cte_wp_at2')+
                    | assumption
                    | clarsimp simp: APIType_capBits_def projectKO_opts_defs
-                                    makeObject_tcb tcb_cte_cases_def
+                                    makeObject_tcb tcb_cte_cases_def cteSizeBits_def
                                     archObjSize_def bit_simps
                                     createObjects_def curDomain_def
                                     objBits_if_dev
                          split del: if_split
-                   | simp add: objBits_simps)+
+                   | simp add: objBits_simps field_simps mult_2_right)+
   done
 
 lemma createObjects_orig_obj_at':
@@ -3787,7 +3785,7 @@ lemma createObjects_orig_cte_wp_at':
       \<and> cte_wp_at' P p s
       \<and> pspace_no_overlap' ptr sz s\<rbrace>
   createObjects' ptr n val gbits \<lbrace>\<lambda>r s. cte_wp_at' P p s\<rbrace>"
-  apply (simp add: cte_wp_at'_obj_at' tcb_cte_cases_def)
+  apply (simp add: cte_wp_at'_obj_at' tcb_cte_cases_def tcb_cte_cases_neqs)
   apply (rule hoare_pre, wp hoare_vcg_disj_lift createObjects_orig_obj_at'[where sz = sz])
   apply clarsimp
   done
@@ -3811,7 +3809,7 @@ lemma createNewCaps_cte_wp_at':
                   | clarsimp simp: objBits_simps APIType_capBits_def createObjects_def curDomain_def
                                    archObjSize_def bit_simps
                   | intro conjI impI
-                  | force simp: tcb_cte_cases_def)+
+                  | force simp: tcb_cte_cases_def tcb_cte_cases_neqs)+
   done
 
 lemma createObjects_obj_at_other:
@@ -3853,7 +3851,7 @@ lemma valid_cap'_range_no_overlap:
    apply (erule disjE)
     apply (drule(2) disjoint_subset2 [OF obj_range'_subset])
     apply (drule(1) disjoint_subset2[OF psubset_imp_subset])
-    apply (simp add: Int_absorb ptr_add_def p_assoc_help
+    apply (simp add: Int_absorb ptr_add_def p_assoc_help mask_def
                 del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
                      Int_atLeastAtMost atLeastatMost_empty_iff)
    apply (drule(1) obj_range'_subset)
@@ -3864,6 +3862,7 @@ lemma valid_cap'_range_no_overlap:
     apply (erule of_nat_less_pow_64)
     apply (simp add:capAligned_def)
    apply (drule(1) disjoint_subset2)
+   apply (simp add: add_mask_fold)
    apply blast
   apply (intro allI)
   apply (drule_tac x = ptr' in spec)
@@ -3872,7 +3871,7 @@ lemma valid_cap'_range_no_overlap:
                             Int_atLeastAtMost atLeastatMost_empty_iff)
   apply (drule(2) disjoint_subset2 [OF obj_range'_subset])
   apply (drule(1) disjoint_subset2)
-  apply (simp add: Int_absorb ptr_add_def p_assoc_help
+  apply (simp add: Int_absorb ptr_add_def p_assoc_help mask_def
               del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
                    Int_atLeastAtMost atLeastatMost_empty_iff)
   done
@@ -4069,7 +4068,7 @@ lemma createNewCaps_iflive'[wp]:
         apply (case_tac apiobject_type, simp_all split del: if_split)[1]
             apply (rule hoare_pre, wp, simp)
            apply (wp mapM_x_wp' createObjects_iflive' threadSet_iflive'
-                  | simp add: not_0 pspace_no_overlap'_def createObjects_def
+                  | simp add: not_0 pspace_no_overlap'_def createObjects_def live'_def hyp_live'_def
                               valid_pspace'_def makeObject_tcb makeObject_endpoint
                               makeObject_notification objBitsKO_def
                               APIType_capBits_def objBits_def
@@ -4401,7 +4400,7 @@ lemma createNewCaps_idle'[wp]:
                    | simp add: projectKO_opt_tcb projectKO_opt_cte
                                makeObject_cte makeObject_tcb archObjSize_def
                                tcb_cte_cases_def objBitsKO_def APIType_capBits_def
-                               objBits_def createObjects_def bit_simps
+                               objBits_def createObjects_def bit_simps tcb_cte_cases_neqs
                    | intro conjI impI
                    | clarsimp simp: curDomain_def)+
   done
@@ -4746,6 +4745,18 @@ lemma createNewCaps_vms:
                      toAPIType_def object_type.splits bit_simps)
   done
 
+(* FIXME arch-split: move, use as alternative when mask_range comes up *)
+lemma new_range_subset':
+  assumes
+        cover: "range_cover ptr sz (objBitsKO ko) n"
+    and addr: "x \<in> set (new_cap_addrs n ptr ko)"
+  shows       "mask_range x (objBitsKO ko) \<subseteq> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}"
+  using assms
+  apply -
+  apply (drule (1) new_range_subset)
+  apply (simp add: mask_def add_diff_eq)
+  done
+
 lemma createObjects_pspace_domain_valid':
   "\<lbrace>\<lambda>s. range_cover ptr sz (objBitsKO val + gbits) n \<and> n \<noteq> 0
       \<and> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<inter> kernel_data_refs = {}
@@ -4760,13 +4771,12 @@ lemma createObjects_pspace_domain_valid':
                         caps_overlap_reserved'_def)
   apply (simp add: pspace_domain_valid_def foldr_upd_app_if
                    fun_upd_def[symmetric])
-  apply (subgoal_tac " \<forall>x \<in> set (new_cap_addrs (unat (of_nat n << gbits)) ptr
-                           val). {x..x + 2 ^ objBitsKO val - 1}
-                                \<subseteq> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}")
+  apply (subgoal_tac " \<forall>x \<in> set (new_cap_addrs (unat (of_nat n << gbits)) ptr val).
+                         mask_range x (objBitsKO val) \<subseteq> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}")
    apply blast
 
   apply (rule ballI)
-  apply (rule new_range_subset)
+  apply (rule new_range_subset')
    apply (erule range_cover_rel, simp+)
   apply (simp add: range_cover.unat_of_nat_n_shift field_simps)
   done
@@ -5348,10 +5358,16 @@ lemma createObjects_untyped_ranges_zero':
                    split: sum.split_asm kernel_object.split_asm
                           arch_kernel_object.split_asm
                           object_type.split_asm apiobject_type.split_asm)
-   apply (simp add: makeObject_tcb tcb_cte_cases_def makeObject_cte
+   apply (simp add: makeObject_tcb tcb_cte_cases_def makeObject_cte tcb_cte_cases_neqs
                     untypedZeroRange_def)
   apply (simp add: makeObject_cte untypedZeroRange_def)
   done
+
+(* FIXME arch-split: non-hyp arches only *)
+lemma sym_refs_empty[simp]:
+  "sym_refs (\<lambda>p. {}) = True"
+  unfolding sym_refs_def
+  by simp
 
 lemma createObjects_no_cte_invs:
   assumes moKO: "makeObjectKO dev ty = Some val"
@@ -5429,10 +5445,12 @@ proof -
                 createObjects_sched_queues
             | simp)+
     apply clarsimp
-    apply ((intro conjI; assumption?); simp add: valid_pspace'_def objBits_def)
+    apply ((intro conjI; assumption?); simp add: valid_pspace'_def objBits_def projectKOs)
        apply (fastforce simp add: no_cte no_tcb split_def split: option.splits)
-      apply (auto simp: invs'_def no_tcb valid_state'_def no_cte
+      apply (fastforce simp: invs'_def no_tcb valid_state'_def no_cte
                  split: option.splits kernel_object.splits)
+     apply (clarsimp simp: live'_def split: kernel_object.splits)
+    apply (clarsimp simp: live'_def split: kernel_object.splits)
     done
 qed
 

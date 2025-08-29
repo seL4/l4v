@@ -38,11 +38,16 @@ string = 'string'
 nat = 'nat'
 word = 'machine_word'
 
-# All known config keys that could be set in a gen_config.h file.
-# The dict maps config key to (type, definition name)
+# All known config keys that could be set in a gen_config.h file. The dict maps
+# config key to (type, definition name)
 #
-# This table duplicates some information from the kernel build system, but
-# only which keys exist, not their values.
+# This table duplicates some information from the kernel build system, but only
+# which keys exist, not their values.
+#
+# If they are used in Haskell, the translated config key names have to start
+# with a lower case letter, because Haskell enforces that only datatype
+# constructores start with upper case. For new names, we tend to use `config_`
+# as prefix and potentially shorten the C name a bit.
 known_config_keys = {
     'CONFIG_ARM_HIKEY_OUTSTANDING_PREFETCHERS': (bool, None),
     'CONFIG_ARM_HIKEY_PREFETCHER_STRIDE': (bool, None),
@@ -108,7 +113,7 @@ known_config_keys = {
     'CONFIG_DEBUG_DISABLE_L1_DCACHE': (bool, None),
     'CONFIG_DEBUG_DISABLE_BRANCH_PREDICTION': (bool, None),
     'CONFIG_ARM_HYPERVISOR_SUPPORT': (bool, None),
-    'CONFIG_ARM_GIC_V3_SUPPORT': (bool, None),
+    'CONFIG_ARM_GIC_V3_SUPPORT': (bool, 'config_ARM_GIC_V3'),
     'CONFIG_AARCH64_VSPACE_S2_START_L1': (bool, None),
     'CONFIG_ARM_HYP_ENABLE_VCPU_CP14_SAVE_AND_RESTORE': (bool, None),
     'CONFIG_ARM_ERRATA_430973': (bool, None),

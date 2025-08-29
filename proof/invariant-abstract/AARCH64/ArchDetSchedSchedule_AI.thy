@@ -78,7 +78,7 @@ lemma set_asid_pool_valid_queues[wp]:
   unfolding set_asid_pool_def
   by (wpsimp wp: valid_queues_lift)
 
-crunch set_asid_pool, set_vm_root, arch_thread_set
+crunch set_asid_pool, set_vm_root
   for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
   and ekheap[wp]: "\<lambda>s. P (ekheap s)"
   and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"

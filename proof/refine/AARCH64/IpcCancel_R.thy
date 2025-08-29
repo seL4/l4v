@@ -121,7 +121,7 @@ crunch cancelSignal
 context delete_one_conc_pre
 begin
 
-lemmas delete_one_typ_ats[wp] = typ_at_lifts [OF delete_one_typ_at]
+lemmas delete_one_typ_ats[wp] = AARCH64.typ_at_lifts [OF delete_one_typ_at]
 
 lemma cancelIPC_tcb_at'[wp]:
   "\<lbrace>tcb_at' t\<rbrace> cancelIPC t' \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
@@ -1836,8 +1836,14 @@ lemma ct_not_in_ntfnQueue:
 
 crunch rescheduleRequired
   for valid_pspace'[wp]: "valid_pspace'"
+
+context begin interpretation Arch . (*FIXME: arch-split*)
+
 crunch rescheduleRequired
   for valid_global_refs'[wp]: "valid_global_refs'"
+
+end
+
 crunch rescheduleRequired
   for valid_machine_state'[wp]: "valid_machine_state'"
 
@@ -1993,7 +1999,7 @@ lemma threadSet_not_tcb[wp]:
   by (clarsimp simp: threadSet_def valid_def getObject_def
                      setObject_def in_monad loadObject_default_def
                      ko_wp_at'_def split_def in_magnitude_check
-                     objBits_simps' updateObject_default_def
+                     AARCH64.objBits_simps' updateObject_default_def
                      ps_clear_upd projectKO_opt_tcb)
 
 lemma setThreadState_not_tcb[wp]:

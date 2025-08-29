@@ -65,7 +65,7 @@ lemma invoke_irq_control_bcorres[wp]: "bcorres (invoke_irq_control a) (invoke_ir
   done
 
 lemma invoke_irq_handler_bcorres[wp]: "bcorres (invoke_irq_handler a) (invoke_irq_handler a)"
-  by (cases a; wpsimp)
+  by (cases a; (wpsimp | rule conjI)+)
 
 lemma make_arch_fault_msg_bcorres[wp,BCorres2_AI_assms]:
   "bcorres (make_arch_fault_msg a b) (make_arch_fault_msg a b)"

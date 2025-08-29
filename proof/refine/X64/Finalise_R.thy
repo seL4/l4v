@@ -1060,19 +1060,6 @@ lemma irq_control_n [simp]: "irq_control n"
   apply (erule (1) irq_controlD, rule irq_control)
   done
 
-lemma ioport_control_n [simp]: "ioport_control n"
-  using slot
-  apply (clarsimp simp: ioport_control_def)
-  apply (frule n_revokable)
-  apply (drule n_cap)
-  apply (clarsimp split: if_split_asm)
-  apply (frule ioport_revocable, rule ioport_control)
-  apply clarsimp
-  apply (drule n_cap)
-  apply (clarsimp simp: if_split_asm)
-  apply (erule (1) ioport_controlD, rule ioport_control)
-  done
-
 lemma reply_masters_rvk_fb_m: "reply_masters_rvk_fb m"
   using valid by auto
 
@@ -2090,9 +2077,10 @@ lemma isFinal_no_descendants:
   apply (simp add: valid_mdb'_def)
   done
 
+(* FIXME arch-split: locale+Arch combination *)
 lemma (in vmdb) isFinal_untypedParent:
   assumes x: "m slot = Some cte" "isFinal (cteCap cte) slot (option_map cteCap o m)"
-             "final_matters' (cteCap cte) \<and> \<not> isIRQHandlerCap (cteCap cte) \<and> \<not> isArchIOPortCap (cteCap cte)"
+             "final_matters' (cteCap cte) \<and> \<not> isIRQHandlerCap (cteCap cte) \<and> \<not> X64.isArchIOPortCap (cteCap cte)"
   shows
   "m \<turnstile> x \<rightarrow> slot \<Longrightarrow>
   (\<exists>cte'. m x = Some cte' \<and> isUntypedCap (cteCap cte') \<and> RetypeDecls_H.sameRegionAs (cteCap cte') (cteCap cte))"
@@ -2414,10 +2402,10 @@ lemma unbindNotification_invs[wp]:
     apply (auto split: if_split_asm)[1]
    apply (auto simp: tcb_st_not_Bound ntfn_q_refs_of'_mult split: if_split_asm)[1]
   apply (frule obj_at_valid_objs', clarsimp+)
-  apply (simp add: valid_ntfn'_def valid_obj'_def projectKOs
+  apply (simp add: valid_ntfn'_def valid_obj'_def projectKOs live'_def
             split: ntfn.splits)
   apply (erule if_live_then_nonz_capE')
-  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs live'_def)
   done
 
 lemma ntfn_bound_tcb_at':
@@ -2449,7 +2437,7 @@ lemma unbindMaybeNotification_invs[wp]:
            defer 7
            apply (fold_subgoals (prefix))[8]
            subgoal premises prems using prems by (auto simp: pred_tcb_at' valid_pspace'_def projectKOs valid_obj'_def valid_ntfn'_def
-                             ko_wp_at'_def
+                             ko_wp_at'_def live'_def
                       elim!: obj_atE' valid_objsE' if_live_then_nonz_capE'
                       split: option.splits ntfn.splits)
    apply (rule delta_sym_refs, assumption)
@@ -2527,7 +2515,7 @@ lemma deleteASID_invs'[wp]:
       apply clarsimp
      apply (auto dest!: ran_del_subset)[1]
     apply (wp getObject_valid_obj getObject_inv loadObject_default_inv
-             | simp add: objBits_simps archObjSize_def pageBits_def)+
+             | simp add: X64.objBits_simps archObjSize_def pageBits_def)+
   apply clarsimp
   done
 
@@ -2662,7 +2650,8 @@ lemma deletingIRQHandler_removeable':
   apply (subst tree_cte_cteCap_eq[unfolded o_def])+
   apply (wp hoare_use_eq_irq_node' [OF cteDeleteOne_irq_node' cteDeleteOne_cteCaps_of]
             getCTE_wp')
-  apply (clarsimp simp: cte_level_bits_def ucast_nat_def split: option.split_asm)
+  apply (clarsimp simp: cte_level_bits_def ucast_nat_def shiftl_t2n mult_ac cteSizeBits_def
+                  split: option.split_asm)
   done
 
 lemma finaliseCap_cte_refs:
@@ -2680,7 +2669,7 @@ lemma finaliseCap_cte_refs:
   apply clarsimp
   apply (rule ext, simp)
   apply (rule image_cong [OF _ refl])
-  apply (fastforce simp: capAligned_def objBits_simps shiftL_nat)
+  apply (fastforce simp: capAligned_def objBits_simps shiftL_nat mask_def)
   done
 
 lemma deletingIRQHandler_final:
@@ -2698,7 +2687,7 @@ declare suspend_unqueued [wp]
 
 lemma unbindNotification_valid_objs'_helper:
   "valid_tcb' tcb s \<longrightarrow> valid_tcb' (tcbBoundNotification_update (\<lambda>_. None) tcb) s "
-  by (clarsimp simp: valid_bound_ntfn'_def valid_tcb'_def tcb_cte_cases_def
+  by (clarsimp simp: valid_bound_ntfn'_def valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs
                   split: option.splits ntfn.splits)
 
 lemma unbindNotification_valid_objs'_helper':
@@ -2895,7 +2884,7 @@ lemma tcbQueueRemove_tcbSchedNext_tcbSchedPrev_None_obj_at':
   apply (wpsimp wp: threadSet_wp getTCB_wp)
   by (fastforce dest!: heap_ls_last_None
                  simp: list_queue_relation_def prev_queue_head_def queue_end_valid_def
-                       obj_at'_def opt_map_def ps_clear_def objBits_simps
+                       obj_at'_def opt_map_def ps_clear_def X64.objBits_simps
                 split: if_splits)
 
 lemma tcbSchedDequeue_tcbSchedNext_tcbSchedPrev_None_obj_at':
@@ -2962,7 +2951,7 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
   apply (frule cte_wp_at_valid_objs_valid_cap', clarsimp+)
   apply (case_tac "cteCap cte",
          simp_all add: isCap_simps capRange_def cap_has_cleanup'_def
-                       final_matters'_def objBits_simps
+                       final_matters'_def X64.objBits_simps
                        not_Final_removeable finaliseCap_def,
          simp_all add: removeable'_def)
      (* thread *)
@@ -3245,6 +3234,8 @@ end
 global_interpretation delete_one_conc_pre
   by (unfold_locales, wp) (wp cteDeleteOne_tcbDomain_obj_at' cteDeleteOne_typ_at' cteDeleteOne_reply_pred_tcb_at | simp)+
 
+context begin interpretation Arch . (*FIXME: arch-split*)
+
 lemma cteDeleteOne_invs[wp]:
   "\<lbrace>invs'\<rbrace> cteDeleteOne ptr \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: cteDeleteOne_def unless_def
@@ -3268,11 +3259,13 @@ lemma cteDeleteOne_invs[wp]:
     apply (rule conjI)
      subgoal by auto
     subgoal by (auto dest!: isCapDs simp: pred_tcb_at'_def obj_at'_def projectKOs
-                                     ko_wp_at'_def)
+                                     live'_def hyp_live'_def ko_wp_at'_def)
    apply (wp isFinalCapability_inv getCTE_wp' hoare_weak_lift_imp
         | wp (once) isFinal[where x=ptr])+
   apply (fastforce simp: cte_wp_at_ctes_of)
   done
+
+end
 
 global_interpretation delete_one_conc_fr: delete_one_conc
   by unfold_locales wp
@@ -3361,7 +3354,7 @@ lemma finaliseCap_valid_cap[wp]:
   apply simp
   apply (intro conjI impI)
    apply (clarsimp simp: valid_cap'_def isCap_simps capAligned_def
-                         objBits_simps shiftL_nat)+
+                         X64.objBits_simps shiftL_nat)+
   done
 
 
@@ -3513,6 +3506,7 @@ lemma unbindMaybeNotification_corres:
       apply (rule corres_option_split)
         apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
        apply (rule corres_return_trivial)
+      apply simp
       apply (rule corres_split[OF setNotification_corres])
          apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
         apply (rule setBoundNotification_corres)
@@ -3622,7 +3616,7 @@ lemma finaliseCap_corres:
        apply (rule corres_guard_imp)
          apply (rule corres_split[OF unbindMaybeNotification_corres])
            apply (rule cancelAllSignals_corres)
-          apply (wp abs_typ_at_lifts unbind_maybe_notification_invs typ_at_lifts hoare_drop_imps hoare_vcg_all_lift | wpc)+
+          apply (wp abs_typ_at_lifts unbind_maybe_notification_invs gen_typ_at_lifts hoare_drop_imps hoare_vcg_all_lift | wpc)+
         apply (clarsimp simp: valid_cap_def)
        apply (clarsimp simp: valid_cap'_def)
       apply (fastforce simp: final_matters'_def shiftL_nat zbits_map_def)

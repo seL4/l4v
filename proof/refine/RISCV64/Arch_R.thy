@@ -122,6 +122,7 @@ lemma performASIDControlInvocation_corres:
   apply (cases i)
   apply (rename_tac word1 prod1 prod2 word2)
   apply (clarsimp simp: asid_ci_map_def)
+  apply (rename_tac p slot p' slot' word2)
   apply (simp add: perform_asid_control_invocation_def placeNewObject_def2
                    performASIDControlInvocation_def)
   apply (rule corres_name_pre)
@@ -172,7 +173,7 @@ lemma performASIDControlInvocation_corres:
                apply wp+
            apply (strengthen safe_parent_strg[where idx = "2^pageBits"])
            apply (strengthen invs_valid_objs invs_distinct
-                             invs_psp_aligned invs_mdb
+                             invs_psp_aligned invs_mdb invs_arch_state
                   | simp cong:conj_cong)+
            apply (wp retype_region_plain_invs[where sz = pageBits]
                      retype_cte_wp_at[where sz = pageBits])+
@@ -257,7 +258,7 @@ lemma performASIDControlInvocation_corres:
     apply (drule detype_locale.non_null_present)
      apply (fastforce simp: cte_wp_at_caps_of_state)
     apply simp
-   apply (frule_tac ptr = "(aa,ba)" in detype_invariants [rotated 3])
+   apply (frule_tac ptr = "(p', slot')" in detype_invariants [rotated 3])
         apply fastforce
        apply simp
        apply (clarsimp simp: schact_is_rct)
@@ -283,7 +284,7 @@ lemma performASIDControlInvocation_corres:
    apply (simp add:detype_clear_um_independent)
    apply (rule conjI)
     apply clarsimp
-    apply (drule_tac p = "(aa,ba)" in cap_refs_in_kernel_windowD2[OF caps_of_state_cteD])
+    apply (drule_tac p = "(p', slot')" in cap_refs_in_kernel_windowD2[OF caps_of_state_cteD])
      apply fastforce
     apply (clarsimp simp: region_in_kernel_window_def valid_cap_def
                           cap_aligned_def is_aligned_neg_mask_eq detype_def clear_um_def)
@@ -295,7 +296,7 @@ lemma performASIDControlInvocation_corres:
          rule pspace_no_overlap_detype[OF caps_of_state_valid])
         apply (simp add:invs_psp_aligned invs_valid_objs is_aligned_neg_mask_eq)+
    apply (simp add: detype_def clear_um_def)
-  apply (drule_tac x = "cte_map (aa,ba)" in pspace_relation_cte_wp_atI[OF state_relation_pspace_relation])
+  apply (drule_tac x = "cte_map (p', slot')"  in pspace_relation_cte_wp_atI[OF state_relation_pspace_relation])
     apply (simp add:invs_valid_objs)+
   apply clarsimp
   apply (drule cte_map_inj_eq)
@@ -1367,7 +1368,7 @@ lemma performASIDControlInvocation_invs' [wp]:
   apply (frule_tac cte="CTE (capability.UntypedCap False a b c) m" for a b c m in valid_global_refsD', clarsimp)
   apply (simp add: Int_commute)
   by (auto simp:empty_descendants_range_in' objBits_simps max_free_index_def
-                    asid_low_bits_def word_bits_def
+                    asid_low_bits_def word_bits_def live'_def hyp_live'_def
                     range_cover_full descendants_range'_def2 is_aligned_mask
                     null_filter_descendants_of'[OF null_filter_simp'] bit_simps
                     valid_cap_simps' mask_def kernel_mappings_canonical)

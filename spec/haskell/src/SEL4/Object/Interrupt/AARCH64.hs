@@ -24,6 +24,7 @@ import SEL4.API.InvocationLabels.AARCH64 as ArchLabels
 import {-# SOURCE #-} SEL4.Object.CNode
 import {-# SOURCE #-} SEL4.Kernel.CSpace
 import {-# SOURCE #-} SEL4.Object.Interrupt
+import SEL4.Machine.Hardware.AARCH64 (config_ARM_GIC_V3, deactivateInterrupt)
 import qualified SEL4.Machine.Hardware.AARCH64 as Arch
 import SEL4.Machine.Hardware.AARCH64.PLATFORM (irqInvalid)
 import SEL4.Object.VCPU.TARGET (vgicMaintenance, vppiEvent, irqVPPIEventIndex)
@@ -58,7 +59,10 @@ performIRQControl (ArchInv.IssueIRQHandler (IRQ irq) destSlot srcSlot trigger)
     return ()
 
 invokeIRQHandler :: IRQHandlerInvocation -> Kernel ()
-invokeIRQHandler (AckIRQ irq) = doMachineOp $ maskInterrupt False irq
+invokeIRQHandler (AckIRQ irq) =
+    doMachineOp (if config_ARM_GIC_V3
+                 then deactivateInterrupt (theIRQ irq)
+                 else maskInterrupt False irq)
 invokeIRQHandler _ = return ()
 
 handleReservedIRQ :: IRQ -> Kernel ()
@@ -68,7 +72,8 @@ handleReservedIRQ irq = do
     return ()
 
 maskIrqSignal :: IRQ -> Kernel ()
-maskIrqSignal irq = doMachineOp $ maskInterrupt True irq
+maskIrqSignal irq =
+    when (not config_ARM_GIC_V3) (doMachineOp $ maskInterrupt True irq)
 
 initInterruptController :: Kernel ()
 initInterruptController = error "Unimplemented. Init code."

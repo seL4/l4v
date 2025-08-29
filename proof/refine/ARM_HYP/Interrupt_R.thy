@@ -364,16 +364,20 @@ lemma valid_globals_ex_cte_cap_irq:
   apply (simp add: global_refs'_def cte_level_bits_def mult.commute mult.left_commute)
   done
 
+lemma no_fail_deactivateInterrupt[wp, simp]:
+  "config_ARM_GIC_V3 \<Longrightarrow> no_fail \<top> (deactivateInterrupt irq)"
+  unfolding deactivateInterrupt_def
+  by wpsimp
+
 lemma invokeIRQHandler_corres:
   "irq_handler_inv_relation i i' \<Longrightarrow>
    corres dc (einvs and irq_handler_inv_valid i)
              (invs' and irq_handler_inv_valid' i')
      (invoke_irq_handler i)
      (InterruptDecls_H.invokeIRQHandler i')"
-  apply (cases i, simp_all add: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def)
-    apply (rule corres_guard_imp, rule corres_machine_op)
-      apply (rule corres_Id, simp_all)
-    apply (rule no_fail_maskInterrupt)
+  apply (cases i; simp add: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def theIRQ_def
+                       split del: if_split)
+    apply (corres corres: corres_machine_op)
    apply (rename_tac word cap prod)
    apply clarsimp
    apply (rule corres_guard_imp)
@@ -431,14 +435,28 @@ lemma isnt_irq_handler_strg:
   "(\<not> isIRQHandlerCap cap) \<longrightarrow> (\<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> P irq)"
   by (clarsimp simp: isCap_simps)
 
+lemma dmo_maskInterrupt':
+  "\<lbrace>\<lambda>s. invs' s \<and> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive\<rbrace>
+   doMachineOp (maskInterrupt m irq)
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (wp dmo_maskInterrupt)
+  apply (clarsimp simp: invs'_def valid_state'_def)
+  apply (simp add: valid_irq_masks'_def valid_machine_state'_def
+                   ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+  done
+
+lemma doMachineOp_deactivateInterrupt[wp]:
+  "\<lbrace> \<lambda>s. invs' s \<and> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive \<and> config_ARM_GIC_V3 \<rbrace>
+   doMachineOp (deactivateInterrupt irq)
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding deactivateInterrupt_def
+  by (cases config_ARM_GIC_V3; wpsimp wp: dmo_maskInterrupt')
+
 lemma invoke_irq_handler_invs'[wp]:
   "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace>
     InterruptDecls_H.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (cases i, simp_all add: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def)
-    apply (wp dmo_maskInterrupt)
-    apply (clarsimp simp add: invs'_def valid_state'_def valid_irq_masks'_def
-      valid_machine_state'_def ct_not_inQ_def
-      ct_in_current_domain_ksMachineState)
+    apply (rule conjI; wpsimp wp: dmo_maskInterrupt' simp: theIRQ_def)
    apply (wp cteInsert_invs)+
    apply (strengthen ntfn_badge_derived_enough_strg isnt_irq_handler_strg)
    apply (wp cteDeleteOne_other_cap cteDeleteOne_other_cap[unfolded o_def])
@@ -451,7 +469,7 @@ lemma invoke_irq_handler_invs'[wp]:
     apply clarsimp+
   apply (clarsimp simp: cte_wp_at_ctes_of ex_cte_cap_to'_def
                         isCap_simps untyped_derived_eq_def)
-  apply (fastforce simp: cte_level_bits_def badge_derived'_def)+
+  apply (fastforce simp: cte_level_bits_def badge_derived'_def cteSizeBits_def shiftl_t2n)
   done
 
 lemma IRQHandler_valid':
@@ -474,6 +492,9 @@ lemma setIRQTrigger_corres:
             | rule no_fail_setIRQTrigger
             | simp add: dc_def)+
   done
+
+crunch set_irq_state
+  for valid_arch_state[wp]: valid_arch_state
 
 lemma arch_performIRQControl_corres:
   "arch_irq_control_inv_relation x2 ivk' \<Longrightarrow> corres (dc \<oplus> dc)
@@ -1005,11 +1026,8 @@ lemma handleInterrupt_corres:
               apply (rule corres_guard_imp, rule sendSignal_corres)
                apply (clarsimp simp: valid_cap_def valid_cap'_def do_machine_op_bind doMachineOp_bind)+
             apply (clarsimp simp: arch_mask_irq_signal_def maskIrqSignal_def)
-            apply (rule corres_split)
-               apply (rule corres_machine_op, rule corres_eq_trivial ;
-                      (simp add:  no_fail_maskInterrupt no_fail_bind no_fail_ackInterrupt)+)+
-             apply wp+
-     apply clarsimp
+            apply (corres corres: corres_machine_op corres_eq_trivial intro: no_fail_ackInterrupt)
+           apply wpsimp+
     apply fastforce
    apply (rule corres_guard_imp)
      apply (rule corres_split)
@@ -1041,7 +1059,7 @@ lemma updateTimeSlice_valid_pspace[wp]:
   "\<lbrace>valid_pspace'\<rbrace> threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
   \<lbrace>\<lambda>r. valid_pspace'\<rbrace>"
   apply (wp threadSet_valid_pspace'T)
-  apply (auto simp:tcb_cte_cases_def)
+  apply (auto simp:tcb_cte_cases_def tcb_cte_cases_neqs)
   done
 
 lemma dom_upd_eq:
@@ -1064,7 +1082,7 @@ lemma updateTimeSlice_hyp_refs[wp]:
 (* catch up tcbSchedAppend to tcbSchedEnqueue, which has these from crunches on possibleSwitchTo *)
 crunch tcbSchedAppend
   for irq_handlers'[wp]: valid_irq_handlers'
-  (simp: unless_def tcb_cte_cases_def wp: crunch_wps)
+  (simp: unless_def tcb_cte_cases_def tcb_cte_cases_neqs wp: crunch_wps)
 crunch tcbSchedAppend
   for irqs_masked'[wp]: irqs_masked'
   (simp: unless_def wp: crunch_wps)
