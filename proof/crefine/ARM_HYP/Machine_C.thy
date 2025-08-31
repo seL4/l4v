@@ -260,6 +260,15 @@ assumes deactivateInterrupt_ccorres:
            (doMachineOp (deactivateInterrupt irq))
            (Call deactivateInterrupt_'proc)"
 
+(* This rule can only be used for platforms that have a non-empty body for
+   handleSpuriousIRQ. Needs to be in the assumptions instead of the guard so
+   we can make a case distinction before applying the rule. *)
+assumes handleSpuriousIRQ_mop_ccorres:
+  "hasSpuriousIRQ_mop \<Longrightarrow>
+   ccorres dc xfdc \<top> UNIV []
+           (doMachineOp handleSpuriousIRQ_mop)
+           (Call handleSpuriousIRQ_'proc)"
+
 assumes plat_sendSGI_ccorres:
   "\<And>irq target hs. ccorres dc xfdc \<top> (\<lbrace> \<acute>irq = irq \<rbrace> \<inter> \<lbrace> \<acute>target___unsigned_long = target \<rbrace>) hs
                       (doMachineOp (sendSGI irq target))
@@ -411,6 +420,17 @@ assumes setIRQTrigger_ccorres:
           (Call setIRQTrigger_'proc )"
 
 context kernel_m begin
+
+lemma handleSpuriousIRQ_ccorres:
+  "ccorres dc xfdc \<top> UNIV [] handleSpuriousIRQ (Call handleSpuriousIRQ_'proc)"
+  apply (cases "hasSpuriousIRQ_mop")
+   apply (simp add: handleSpuriousIRQ_def)
+   apply (erule handleSpuriousIRQ_mop_ccorres)
+  apply (simp add: handleSpuriousIRQ_def)
+  apply (rule ccorres_from_vcg)
+  apply (rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: Kernel_Config_hasSpuriousIRQ_mop_def return_def)
+  done
 
 lemma index_xf_for_sequence:
   "\<forall>s f. index_' (index_'_update f s) = f (index_' s)

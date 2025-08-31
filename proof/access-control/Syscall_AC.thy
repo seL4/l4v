@@ -459,6 +459,8 @@ locale Syscall_AC_1 =
     "gpd_wps (handle_hypervisor_fault t hf_t)"
   and handle_vm_fault_Syscall_AC_wps[simp]:
     "gpd_wps (handle_vm_fault t vmf_t)"
+  and handle_spurious_irq_Syscall_AC_wps[simp]:
+    "gpd_wps handle_spurious_irq"
   and ackInterrupt_integrity[wp]:
     "do_machine_op (ackInterrupt irq) \<lbrace>integrity aag X st\<rbrace>"
   and maskInterrupt_integrity[wp]:
@@ -569,6 +571,10 @@ locale Syscall_AC_1 =
     "\<And>P. arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s :: det_state. P (cur_domain s)\<rbrace>"
   assumes arch_post_set_flags_cur_domain[wp]:
     "\<And>P. arch_post_set_flags t flags \<lbrace>\<lambda>s :: det_state. P (cur_domain s)\<rbrace>"
+  assumes handle_spurious_irq_pas_refine[wp]:
+    "handle_spurious_irq \<lbrace>pas_refined aag\<rbrace>"
+  assumes handle_spurious_irq_pas_integrity[wp]:
+    "handle_spurious_irq \<lbrace>integrity aag X st\<rbrace>"
 
 
 sublocale Syscall_AC_1 \<subseteq> prepare_thread_delete: gpd_wps' "prepare_thread_delete p"
@@ -601,7 +607,16 @@ sublocale Syscall_AC_1 \<subseteq> arch_activate_idle_thread: Syscall_AC_wps "ar
   by simp
 sublocale Syscall_AC_1 \<subseteq> arch_mask_irq_signal: Syscall_AC_wps "arch_mask_irq_signal irq" aag
   by simp
+sublocale Syscall_AC_1 \<subseteq> handle_spurious_irq: gpd_wps "handle_spurious_irq"
+  by simp
 
+context gpd_wps begin
+
+lemma guarded_pas_domain[wp]:
+  "f \<lbrace>guarded_pas_domain aag\<rbrace>"
+  by (wpsimp wp: guarded_pas_domain_lift)
+
+end
 
 context Syscall_AC_1 begin
 
@@ -711,7 +726,7 @@ lemma handle_event_pas_refined:
      apply (fastforce simp: valid_fault_def)
     apply (wpsimp wp: handle_fault_pas_refined handle_hypervisor_fault_pas_refined hoare_drop_imps
                       handle_interrupt_pas_refined hoare_vcg_conj_lift hoare_vcg_all_lift
-                simp: ct_in_state_def)+
+                simp: ct_in_state_def maybe_handle_interrupt_def)+
   done
 
 lemma valid_fault_Unknown[simp]:
@@ -741,7 +756,7 @@ lemma handle_event_integrity:
    handle_event ev
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (cases ev; simp)
-       apply (unfold handle_send_def handle_call_def)
+       apply (unfold handle_send_def handle_call_def maybe_handle_interrupt_def)
   by (wpsimp wp: handle_recv_integrity handle_invocation_respects
                   handle_reply_respects handle_fault_integrity_autarch
                   handle_interrupt_integrity_autarch handle_vm_fault_integrity
@@ -1182,9 +1197,11 @@ lemma call_kernel_integrity':
                and K (pasMayActivate aag \<and> pasMayEditReadyQueues aag)\<rbrace>
         call_kernel ev
         \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (case_tac "ev = Interrupt"; clarsimp simp: call_kernel_def spec_valid_def)
+  apply (case_tac "ev = Interrupt";
+         clarsimp simp: call_kernel_def maybe_handle_interrupt_def spec_valid_def)
    apply (wpsimp wp: activate_thread_respects schedule_integrity_pasMayEditReadyQueues
-                     handle_interrupt_integrity handle_interrupt_pas_refined)
+                     handle_interrupt_integrity handle_interrupt_pas_refined
+                     handle_spurious_irq_invs)
     apply (rule_tac Q="\<lambda>rv s. (rv = None \<longrightarrow> P s) \<and> (\<forall>x. rv = Some x \<longrightarrow> Q x s)"
                and Q'="\<lambda>rv s. P s \<and> (\<forall>x. rv = Some x \<longrightarrow> Q x s)"
         for P Q in hoare_strengthen_post[rotated]; clarsimp cong: conj_cong)
@@ -1192,14 +1209,19 @@ lemma call_kernel_integrity':
    apply (fastforce intro!: valid_sched_ct_not_queued
                       simp: schact_is_rct_def domain_sep_inv_def guarded_pas_domain_def)
   apply (wpsimp wp: activate_thread_respects schedule_integrity_pasMayEditReadyQueues dmo_wp
-                    handle_interrupt_integrity_autarch handle_interrupt_pas_refined )
-    apply (clarsimp simp: if_fun_split)
+                    handle_interrupt_integrity_autarch handle_interrupt_pas_refined
+                    handle_spurious_irq_invs)
     apply (rule_tac Q'="\<lambda>rv ms. (rv \<noteq> None \<longrightarrow> the rv \<notin> non_kernel_IRQs) \<and>
-                                Q True (domain_sep_inv (pasMaySendIrqs aag) st' s) rv ms"
-                and Q="\<lambda>rv ms. Q (the rv \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)
-                                 (pasMaySendIrqs aag \<or> interrupt_states s (the rv) \<noteq> IRQSignal) rv ms"
-                for Q in hoare_strengthen_post[rotated], fastforce simp: domain_sep_inv_def)
-    apply (wpsimp wp: getActiveIRQ_rv_None getActiveIRQ_inv hoare_drop_imps)
+                                (rv = None \<longrightarrow> Q ms) \<and>
+                                (\<forall>irq. rv = Some irq \<longrightarrow>
+                                   P True (domain_sep_inv (pasMaySendIrqs aag) st' s) ms)"
+                and Q="\<lambda>rv ms. (rv = None \<longrightarrow> Q ms) \<and>
+                               (\<forall>irq. rv = Some irq \<longrightarrow>
+                                  P (irq \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)
+                                    (pasMaySendIrqs aag \<or> interrupt_states s irq \<noteq> IRQSignal)
+                                    ms)"
+                for Q P in hoare_strengthen_post[rotated], fastforce simp: domain_sep_inv_def)
+    apply (wpsimp wp: getActiveIRQ_rv_None getActiveIRQ_inv hoare_drop_imps hoare_vcg_all_lift)
    apply (rule hoare_strengthen_postE,
           rule_tac Q="integrity aag X st and pas_refined aag and einvs and valid_cur_hyp
                                          and guarded_pas_domain aag
@@ -1234,7 +1256,7 @@ lemma call_kernel_pas_refined:
           and schact_is_rct and pas_cur_domain aag and domain_sep_inv (pasMaySendIrqs aag) st'\<rbrace>
    call_kernel ev
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  apply (case_tac "ev = Interrupt"; clarsimp simp: call_kernel_def)
+  apply (case_tac "ev = Interrupt"; clarsimp simp: call_kernel_def maybe_handle_interrupt_def)
    apply (wpsimp wp: activate_thread_pas_refined schedule_pas_refined handle_interrupt_pas_refined
                      do_machine_op_pas_refined dmo_wp hoare_drop_imps getActiveIRQ_inv
           | simp add: if_fun_split

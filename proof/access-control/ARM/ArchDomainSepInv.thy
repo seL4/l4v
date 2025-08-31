@@ -30,7 +30,8 @@ crunch
   invalidate_tlb_by_asid, handle_reserved_irq, handle_vm_fault,
   handle_hypervisor_fault, handle_arch_fault_reply, arch_mask_irq_signal,
   arch_switch_to_thread, arch_switch_to_idle_thread, arch_activate_idle_thread,
-  arch_prepare_set_domain, arch_prepare_next_domain, arch_post_set_flags
+  arch_prepare_set_domain, arch_prepare_next_domain, arch_post_set_flags,
+  handle_spurious_irq
   for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
 
 lemma arch_derive_cap_domain_sep_inv[DomainSepInv_assms, wp]:

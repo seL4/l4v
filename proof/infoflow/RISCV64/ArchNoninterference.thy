@@ -80,6 +80,15 @@ lemma arch_activate_idle_thread_reads_respects_g[Noninterference_assms, wp]:
   "reads_respects_g aag l \<top> (arch_activate_idle_thread t)"
   unfolding arch_activate_idle_thread_def by wpsimp
 
+crunch handle_spurious_irq
+  for domain[wp]: "\<lambda>s.  Q (domain_time s) (domain_index s) (domain_list s)"
+  and irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
+
+lemma handle_spurious_irq_reads_respect_scheduler[Noninterference_assms]:
+  "reads_respects_scheduler aag l \<top> handle_spurious_irq"
+  unfolding handle_spurious_irq_def
+  by wpsimp
+
 definition arch_globals_equiv_strengthener :: "machine_state \<Rightarrow> machine_state \<Rightarrow> bool" where
   "arch_globals_equiv_strengthener ms ms' \<equiv> True"
 

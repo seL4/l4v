@@ -1612,7 +1612,7 @@ lemma handle_event_corres:
        apply (frule (1) ct_running_not_idle_etc)
        apply (fastforce simp: st_tcb_at_def obj_at_def generates_pending_def valid_fault_def
                        split: thread_state.splits)+
-    apply (simp add: handle_pending_interrupts_def)
+    apply (simp add: handle_pending_interrupts_def maybe_handle_interrupt_def)
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF get_active_irq_corres])
         apply corres_cases_both

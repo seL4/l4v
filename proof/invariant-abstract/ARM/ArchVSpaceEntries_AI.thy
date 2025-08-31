@@ -1547,6 +1547,9 @@ lemma schedule_valid_pdpt[wp]:
   "schedule \<lbrace>valid_pdpt_objs\<rbrace>"
   unfolding schedule_def by (wpsimp wp: hoare_drop_imps)
 
+crunch handle_spurious_irq
+  for valid_pdpt[wp]: "valid_pdpt_objs"
+
 lemma call_kernel_valid_pdpt[wp]:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_pdpt_objs\<rbrace>
    call_kernel e

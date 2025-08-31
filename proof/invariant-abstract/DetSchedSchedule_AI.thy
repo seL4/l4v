@@ -902,6 +902,10 @@ locale DetSchedSchedule_AI =
     "\<And>t d P. arch_prepare_set_domain t d \<lbrace>\<lambda>s::det_state. P (scheduler_action s)\<rbrace>"
   assumes arch_prepare_set_domain_valid_idle[wp]:
     "\<And>t d. arch_prepare_set_domain t d \<lbrace>valid_idle :: det_state \<Rightarrow> _\<rbrace>"
+  assumes handle_spurious_irq_valid_sched[wp]:
+    "handle_spurious_irq \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
+  assumes handle_spurious_irq_valid_idle[wp]:
+    "handle_spurious_irq \<lbrace>valid_idle :: det_state \<Rightarrow> _\<rbrace>"
 
 context DetSchedSchedule_AI begin
 
@@ -3583,7 +3587,7 @@ lemma handle_event_valid_sched:
        apply (wp handle_fault_valid_sched hvmf_active hoare_drop_imps hoare_vcg_disj_lift
                  handle_recv_valid_sched' handle_reply_valid_sched hoare_vcg_all_lift|
               wpc |
-              clarsimp simp: ct_in_state_def valid_sched_ct_not_queued |
+              clarsimp simp: ct_in_state_def valid_sched_ct_not_queued maybe_handle_interrupt_def |
               fastforce simp: valid_fault_def)+
   done
 
@@ -3614,16 +3618,16 @@ lemma schedule_valid_list[wp]: "\<lbrace>valid_list\<rbrace> Schedule_A.schedule
   done
 
 lemma call_kernel_valid_list[wp]: "\<lbrace>valid_list\<rbrace> call_kernel e \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  apply (simp add: call_kernel_def)
-  by (wp | simp)+
+  unfolding call_kernel_def
+  by wpsimp
 
 lemma call_kernel_valid_sched:
   "\<lbrace>invs and valid_sched and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_active or ct_idle)
       and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
      call_kernel e
    \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  apply (simp add: call_kernel_def)
-  apply (wp schedule_valid_sched activate_thread_valid_sched | simp)+
+  apply (simp add: call_kernel_def maybe_handle_interrupt_def)
+  apply (wpsimp wp: schedule_valid_sched activate_thread_valid_sched)
      apply (rule_tac Q'="\<lambda>rv. invs" in hoare_strengthen_post)
       apply wp
      apply (erule invs_valid_idle)

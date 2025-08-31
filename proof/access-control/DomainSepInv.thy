@@ -939,6 +939,8 @@ locale DomainSepInv_2 = DomainSepInv_1 state_ext_t
     "\<lbrace>domain_sep_inv irqs st and valid_objs and valid_mdb and sym_refs \<circ> state_refs_of\<rbrace>
      handle_reserved_irq irq
      \<lbrace>\<lambda>_ s :: det_state. domain_sep_inv irqs (st :: 'state_ext state) s\<rbrace>"
+  and handle_spurious_irq_domain_sep_inv[wp]:
+    "handle_spurious_irq \<lbrace>domain_sep_inv irqs st :: det_state \<Rightarrow> _\<rbrace>"
 begin
 
 (* when i is AckIRQ the preconditions here contradict each other, which
@@ -1104,7 +1106,7 @@ lemma handle_event_domain_sep_inv:
   by (wpsimp wp: handle_send_domain_sep_inv handle_call_domain_sep_inv
                  handle_recv_domain_sep_inv handle_reply_domain_sep_inv
       | strengthen invs_valid_objs invs_mdb invs_sym_refs
-      | simp add: valid_fault_def
+      | simp add: valid_fault_def maybe_handle_interrupt_def
       | wp hoare_drop_imps)+
 
 crunch next_domain
@@ -1122,7 +1124,7 @@ lemma call_kernel_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and invs and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
    call_kernel ev :: (unit,det_ext) s_monad
    \<lbrace>\<lambda>_ s. domain_sep_inv irqs (st :: 'state_ext state) s\<rbrace>"
-  unfolding call_kernel_def
+  unfolding call_kernel_def maybe_handle_interrupt_def
   by (wpsimp wp: handle_event_domain_sep_inv schedule_domain_sep_inv
               simp: if_fun_split
       | strengthen invs_valid_objs invs_mdb invs_sym_refs

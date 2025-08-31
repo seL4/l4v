@@ -1726,6 +1726,28 @@ lemmas handleReply_ct_in_state_simple[wp] =
                                      handleReply_st_tcb_at_simple']
 
 
+lemma handleSpuriousIRQ_corres[corres]:
+  "corres dc \<top> \<top> handle_spurious_irq handleSpuriousIRQ"
+  by (simp add: handle_spurious_irq_def handleSpuriousIRQ_def)
+
+lemma contract_all_imp_strg:
+  "P \<and> P' \<and> (\<forall>x. R x \<longrightarrow> Q x) \<Longrightarrow> \<forall>x. R x \<longrightarrow> P \<and> Q x \<and> P'"
+  by blast
+
+lemma maybeHandleInterrupt_corres:
+  "corres dc einvs invs' (maybe_handle_interrupt in_kernel) (maybeHandleInterrupt in_kernel)"
+  unfolding maybe_handle_interrupt_def maybeHandleInterrupt_def
+  apply (corres corres: corres_machine_op handleInterrupt_corres[@lift_corres_args]
+                simp: irq_state_independent_def
+         | corres_cases_both)+
+     apply (wpsimp wp: hoare_drop_imp)
+    apply clarsimp
+    apply (strengthen contract_all_imp_strg[where P'=True, simplified])
+    apply (wpsimp wp: doMachineOp_getActiveIRQ_IRQ_active' hoare_vcg_all_lift)
+   apply clarsimp
+  apply (clarsimp simp: invs'_def valid_state'_def)
+  done
+
 (* FIXME: move *)
 lemma doReplyTransfer_st_tcb_at_active:
   "\<lbrace>st_tcb_at' active' t and tcb_at' t' and K (t \<noteq> t') and
@@ -1941,19 +1963,7 @@ proof -
        apply (auto simp: ct_in_state'_def sch_act_simple_def
                          sch_act_sane_def
                    elim: pred_tcb'_weakenE st_tcb_ex_cap'')[1]
-      apply (rule corres_guard_imp)
-        apply (rule corres_split_eqr[where R="\<lambda>_. einvs"
-                                     and R'="\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> R'' x s"
-                                     for R''])
-           apply (rule corres_machine_op)
-           apply (rule corres_Id; wpsimp)
-          apply (case_tac rv, simp_all add: doMachineOp_return)[1]
-          apply (rule handleInterrupt_corres)
-         apply (wp hoare_vcg_all_lift
-                   doMachineOp_getActiveIRQ_IRQ_active'
-                  | simp
-                  | simp add: imp_conjR | wp (once) hoare_drop_imps)+
-      apply (clarsimp simp: invs'_def valid_state'_def ct_not_inQ_def valid_queues_def)
+      apply (corres corres: maybeHandleInterrupt_corres)
      apply (rule_tac corres_underlying_split)
         apply (rule corres_guard_imp, rule getCurThread_corres, simp+)
        apply (rule corres_split_catch)
@@ -2044,6 +2054,26 @@ lemma handleRecv_ksCurThread[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s) \<rbrace> handleRecv b \<lbrace>\<lambda>rv s. P (ksCurThread s) \<rbrace>"
   unfolding handleRecv_def
   by ((simp, wp hoare_drop_imps) | wpc | wpsimp wp: hoare_drop_imps)+
+
+crunch handleSpuriousIRQ
+  for invs'[wp]: invs'
+  (ignore: doMachineOp)
+
+lemma non_kernel_IRQs_strg:
+  "invs' s \<and> irq \<notin> Some ` non_kernel_IRQs \<Longrightarrow>
+    (\<forall>x. irq = Some x \<longrightarrow> invs' s \<and> (x \<in> non_kernel_IRQs \<longrightarrow> P))"
+  by auto
+
+lemma maybeHandleInterrupt_True_invs'[wp]:
+  "maybeHandleInterrupt True \<lbrace>invs'\<rbrace>"
+  unfolding maybeHandleInterrupt_def
+  by (wpsimp wp: hoare_drop_imp[where Q'="\<lambda>rv _. rv = None"] getActiveIRQ_neq_non_kernel dmo_lift'
+      | strengthen non_kernel_IRQs_strg)+
+
+lemma maybeHandleInterrupt_False_invs'[wp]:
+  "\<lbrace>\<lambda>s. invs' s \<and> sch_act_not (ksCurThread s) s\<rbrace> maybeHandleInterrupt False \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding maybeHandleInterrupt_def
+  by (wpsimp wp: hoare_drop_imp[where Q'="\<lambda>rv _. rv = None"] hoare_vcg_all_lift hoare_drop_imp)
 
 lemma he_invs'[wp]:
   "\<lbrace>invs' and

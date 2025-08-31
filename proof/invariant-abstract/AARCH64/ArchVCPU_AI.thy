@@ -568,7 +568,7 @@ crunch perform_asid_control_invocation
   and active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
   (simp: active_cur_vcpu_of_def)
 
-crunch perform_vspace_invocation, perform_sgi_invocation
+crunch perform_vspace_invocation, perform_sgi_invocation, handle_spurious_irq
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s )"
   and active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
   and valid_cur_vcpu[wp]: valid_cur_vcpu
@@ -619,6 +619,13 @@ lemma handle_recv_valid_cur_vcpu[wp]:
   "handle_recv is_blocking \<lbrace>valid_cur_vcpu\<rbrace>"
   unfolding handle_recv_def Let_def ep_ntfn_cap_case_helper delete_caller_cap_def
   by (wpsimp wp: hoare_drop_imps)
+
+lemma maybe_handle_interrupt_valid_cur_vcpu[wp]:
+  "\<lbrace>valid_cur_vcpu and invs\<rbrace>
+   maybe_handle_interrupt in_kernel
+   \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
+  unfolding maybe_handle_interrupt_def
+  by wpsimp
 
 lemma handle_event_valid_cur_vcpu:
   "\<lbrace>valid_cur_vcpu and invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>

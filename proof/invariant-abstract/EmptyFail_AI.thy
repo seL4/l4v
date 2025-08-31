@@ -374,13 +374,13 @@ locale EmptyFail_AI_call_kernel = EmptyFail_AI_schedule state_ext_t
   assumes handle_event_empty_fail[wp]:
     "\<And>event. empty_fail (handle_event event :: (unit, 'state_ext) p_monad)"
   assumes handle_interrupt_empty_fail[wp]:
-    "\<And>interrupt. empty_fail (handle_interrupt interrupt :: (unit, 'state_ext) s_monad)"
+    "\<And>in_kernel. empty_fail (maybe_handle_interrupt in_kernel :: (unit, 'state_ext) s_monad)"
 
 begin
 
 lemma call_kernel_empty_fail: "empty_fail (call_kernel a :: (unit,'state_ext) s_monad)"
-  apply (simp add: call_kernel_def)
-  by (wp|simp)+
+  unfolding call_kernel_def
+  by wpsimp
 
 end
 

@@ -1951,13 +1951,16 @@ lemma sts_tcb_at'_preserve':
   \<lbrace>\<lambda>_. st_tcb_at' P t \<rbrace>"
   by (wpsimp wp: sts_st_tcb' simp: st_tcb_at_neg')
 
+crunch handleSpuriousIRQ
+  for no_orphans[wp]: no_orphans
+
 lemma handleEvent_no_orphans [wp]:
   "\<lbrace> \<lambda>s. invs' s \<and>
          (e \<noteq> Interrupt \<longrightarrow> ct_running' s) \<and>
          ksSchedulerAction s = ResumeCurrentThread \<and> no_orphans s \<rbrace>
    handleEvent e
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  apply (simp add: handleEvent_def handleSend_def handleCall_def
+  apply (simp add: handleEvent_def handleSend_def handleCall_def maybeHandleInterrupt_def
               cong: event.case_cong syscall.case_cong)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps | wpc | clarsimp simp: handleHypervisorFault_def
@@ -1971,7 +1974,7 @@ theorem callKernel_no_orphans[wp]:
           ksSchedulerAction s = ResumeCurrentThread \<and> no_orphans s \<rbrace>
    callKernel e
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding callKernel_def
+  unfolding callKernel_def maybeHandleInterrupt_def
   apply (wpsimp wp: hoare_drop_imp[where f=activateThread] schedule_invs'
          (* getActiveIRQ can't return a non-kernel IRQ *)
          | wp (once) hoare_post_imp[

@@ -25,6 +25,9 @@ lemma dmo_maskInterrupt_invs [InterruptAcc_AI_assms]:
    apply (clarsimp simp: in_monad invs_def valid_state_def all_invs_but_valid_irq_states_for_def valid_irq_states_but_def valid_irq_masks_but_def valid_machine_state_def cur_tcb_def valid_irq_states_def valid_irq_masks_def)
   done
 
+crunch handle_spurious_irq
+  for invs: invs
+
 end
 
 global_interpretation InterruptAcc_AI?: InterruptAcc_AI

@@ -589,7 +589,7 @@ lemma perform_invocation_valid_cur_vcpu[wp]:
   apply (fastforce simp: valid_arch_inv_def)
   done
 
-crunch reply_from_kernel, receive_signal
+crunch reply_from_kernel, receive_signal, handle_spurious_irq
   for valid_cur_vcpu[wp]: valid_cur_vcpu
   (wp: valid_cur_vcpu_lift_weak)
 
@@ -606,6 +606,13 @@ lemma handle_recv_valid_cur_vcpu[wp]:
   unfolding handle_recv_def Let_def ep_ntfn_cap_case_helper delete_caller_cap_def
   by (wpsimp wp: hoare_drop_imps)
 
+lemma maybe_handle_interrupt_valid_cur_vcpu[wp]:
+  "\<lbrace>valid_cur_vcpu and invs\<rbrace>
+   maybe_handle_interrupt in_kernel
+   \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
+  unfolding maybe_handle_interrupt_def
+  by wpsimp
+
 lemma handle_event_valid_cur_vcpu:
   "\<lbrace>valid_cur_vcpu and invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
    handle_event e
@@ -620,7 +627,8 @@ lemma call_kernel_valid_cur_vcpu:
    \<lbrace>\<lambda>_ . valid_cur_vcpu\<rbrace>"
   unfolding call_kernel_def
   apply (simp flip: bind_assoc)
-  by (wpsimp wp: handle_event_valid_cur_vcpu hoare_vcg_if_lift2 hoare_drop_imps
+  by (wpsimp wp: handle_event_valid_cur_vcpu handle_spurious_irq_invs hoare_vcg_if_lift2
+                 hoare_drop_imps
       | strengthen invs_valid_idle)+
 
 end
