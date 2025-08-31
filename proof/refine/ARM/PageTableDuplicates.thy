@@ -2228,19 +2228,16 @@ lemma handleRecv_valid_duplicates'[wp]:
               simp: ct_in_state'_def sch_act_sane_def)
   done
 
+crunch handleSpuriousIRQ
+  for ksPSpace[wp]: "\<lambda>s. P (ksPSpace s)"
 
 lemma handleEvent_valid_duplicates':
   "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
     sch_act_simple and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s)\<rbrace>
    handleEvent e
    \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (case_tac e, simp_all add: handleEvent_def)
-      apply (rename_tac syscall)
-      apply (case_tac syscall)
-            apply (wp handleReply_sane
-              | simp add: active_from_running' simple_sane_strg cong: if_cong
-              | wpc)+
-  done
+  unfolding handleEvent_def maybeHandleInterrupt_def
+  by (wpsimp simp: active_from_running')
 
 (* nothing extra needed on this architecture *)
 defs fastpathKernelAssertions_def:
@@ -2252,11 +2249,12 @@ lemma callKernel_valid_duplicates':
     (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s)\<rbrace>
    callKernel e
    \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add: callKernel_def fastpathKernelAssertions_def)
+  apply (simp add: callKernel_def maybeHandleInterrupt_def fastpathKernelAssertions_def)
   apply (rule hoare_pre)
    apply (wp activate_invs' activate_sch_act schedule_sch
              schedule_sch_act_simple he_invs'
           | simp add: no_irq_getActiveIRQ
+          | wpc
           | wp (once) hoare_drop_imps )+
    apply (rule hoare_strengthen_postE)
      apply (rule valid_validE)

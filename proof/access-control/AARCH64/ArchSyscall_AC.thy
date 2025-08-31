@@ -425,11 +425,20 @@ crunch arch_prepare_next_domain
   and ct_not_in_q[Syscall_AC_assms, wp]: "ct_not_in_q"
   and ct_in_cur_domain[Syscall_AC_assms, wp]: "ct_in_cur_domain"
 
-crunch arch_prepare_set_domain, arch_prepare_next_domain, arch_post_set_flags
+crunch arch_prepare_set_domain, arch_prepare_next_domain, arch_post_set_flags, handle_spurious_irq
   for valid_sched_action[Syscall_AC_assms, wp]: "valid_sched_action"
   and cur_domain[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_domain s)"
   and cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
   and idle_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (idle_thread s)"
+
+(* already proved elsewhere, so the attribute is not picked up in the crunch above *)
+declare handle_spurious_irq_cur_domain[Syscall_AC_assms]
+declare handle_spurious_irq_cur_thread[Syscall_AC_assms]
+
+crunch handle_spurious_irq
+  for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
+  and integrity[Syscall_AC_assms, wp]: "integrity aag X st"
+  (ignore: do_machine_op)
 
 end
 

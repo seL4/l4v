@@ -3964,11 +3964,13 @@ locale Deterministic_AI_2 = Deterministic_AI_1 +
     "\<lbrace>valid_list\<rbrace> handle_yield \<lbrace>\<lambda>_. valid_list\<rbrace>"
   assumes handle_hypervisor_fault_valid_list[wp]:
     "\<lbrace>valid_list\<rbrace> handle_hypervisor_fault thread fault \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  assumes handle_spurious_irq_valid_list[wp]:
+    "handle_spurious_irq \<lbrace>valid_list\<rbrace>"
 
 
 context Deterministic_AI_2 begin
 
-crunch invoke_irq_handler
+crunch invoke_irq_handler, maybe_handle_interrupt
   for valid_list[wp]: valid_list
 
 lemma handle_event_valid_list[wp]:

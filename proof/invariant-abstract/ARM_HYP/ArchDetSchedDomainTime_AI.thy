@@ -47,9 +47,14 @@ crunch
   prepare_thread_delete, handle_hypervisor_fault, handle_vm_fault,
   arch_post_modify_registers, arch_post_cap_deletion, make_arch_fault_msg,
   arch_invoke_irq_handler, handle_reserved_irq, arch_mask_irq_signal,
-  arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags
+  arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags,
+  handle_spurious_irq
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_time s)"
   (simp: crunch_simps wp: transfer_caps_loop_pres crunch_wps)
+
+crunch handle_spurious_irq
+  for scheduler_action[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (scheduler_action s)"
+  and domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
 
 end
 

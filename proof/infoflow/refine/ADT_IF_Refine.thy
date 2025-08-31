@@ -64,8 +64,7 @@ definition prod_lift where
 
 definition handlePreemption_if :: "user_context \<Rightarrow> user_context kernel" where
   "handlePreemption_if tc \<equiv> do
-     irq \<leftarrow> doMachineOp (getActiveIRQ False);
-     when (irq \<noteq> None) $ handleInterrupt (the irq);
+     maybeHandleInterrupt False;
      stateAssert
        (\<lambda>s. (ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread) \<and> valid_domain_list' s) [];
      return tc
@@ -130,7 +129,7 @@ lemma kernel_entry_if_valid_domain_time:
   unfolding kernel_entry_if_def
   apply (rule hoare_pre)
    apply (wp handle_interrupt_valid_domain_time
-          | clarsimp | wpc)+
+          | clarsimp simp: maybe_handle_interrupt_def | wpc)+
      \<comment> \<open>strengthen post of do_machine_op; we know interrupt occurred\<close>
      apply (rule_tac Q'="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp, fastforce)
      apply (wp+, simp)
@@ -277,9 +276,6 @@ locale ADT_IF_Refine_1 =
      \<lbrace>\<lambda>_. arch_extras\<rbrace>"
   and threadSet_arch_extras[wp]:
     "threadSet a b \<lbrace>arch_extras\<rbrace>"
-  and handle_preemption_if_corres:
-    "corres (=) (einvs and valid_domain_list and (\<lambda>s. 0 < domain_time s)) (invs')
-                (handle_preemption_if tc) (handlePreemption_if tc)"
   and doUserOp_if_ksDomainTime_inv[wp]:
     "\<And>P. doUserOp_if uop tc \<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace>"
   and doUserOp_if_ksDomSchedule_inv[wp]:
@@ -295,6 +291,8 @@ locale ADT_IF_Refine_1 =
               and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
               and arch_extras)
        (handle_event event) (handleEvent event)"
+  and maybeHandleInterrupt_corres_True_False:
+    "corres dc einvs invs' (maybe_handle_interrupt True) (maybeHandleInterrupt False)"
 begin
 
 lemma kernel_entry_if_corres:
@@ -329,7 +327,9 @@ lemma kernel_entry_if_corres:
          apply (wp hoare_TrueI threadSet_invs_trivial thread_set_invs_trivial thread_set_ct_in_state
                    threadSet_ct_running' thread_set_not_state_valid_sched hoare_vcg_const_imp_lift
                    handle_event_domain_time_inv handle_interrupt_valid_domain_time
-                | simp add: tcb_cap_cases_def schact_is_rct_def | wpc | wps
+                | simp add: tcb_cap_cases_def schact_is_rct_def maybe_handle_interrupt_def
+                | wpc
+                | wps
                 | wp (once) hoare_drop_imp)+
    apply (fastforce simp: invs_def cur_tcb_def valid_state_def)
   apply force
@@ -408,9 +408,20 @@ lemma checkActiveIRQ_ex_abs[wp]:
 
 lemma handlePreemption_invs'[wp]:
   "handlePreemption_if tc \<lbrace>invs'\<rbrace>"
-  apply (simp add: handlePreemption_if_def)
-  apply (wp dmo'_getActiveIRQ_wp hoare_drop_imps)
-  apply clarsimp
+  unfolding handlePreemption_if_def
+  by (wpsimp wp: dmo'_getActiveIRQ_wp hoare_drop_imps)
+
+lemma handle_preemption_if_corres:
+  "corres (=) (einvs and valid_domain_list and (\<lambda>s. 0 < domain_time s))
+              (invs') (handle_preemption_if tc) (handlePreemption_if tc)"
+  apply (simp add: handlePreemption_if_def handle_preemption_if_def)
+  apply (corres corres: maybeHandleInterrupt_corres_True_False)
+      apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
+                    P="\<lambda>s. valid_domain_list s \<and>
+                           (domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread)"])
+       apply simp
+      apply (clarsimp simp: state_relation_def)
+     apply (wpsimp wp: maybe_handle_interrupt_valid_domain_time)+
   done
 
 lemma handlePreemption_ex_abs[wp]:
@@ -425,17 +436,7 @@ lemma handlePreemption_ex_abs[wp]:
 
 end
 
-
-lemma handle_preemption_if_valid_domain_time:
-  "\<lbrace>\<lambda>s. 0 < domain_time s \<rbrace>
-   handle_preemption_if tc
-   \<lbrace>\<lambda>r s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
-  unfolding handle_preemption_if_def
-  apply (rule hoare_pre)
-   apply (wp handle_interrupt_valid_domain_time)
-   apply (rule_tac Q'="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp, fastforce)
-   apply (wp, simp)
-  done
+lemmas handle_preemption_if_valid_domain_time = handle_preemption_if_domain_time_sched_action
 
 lemma schedule_if_corres:
  "corres (=) (invs and valid_sched and valid_list and valid_domain_list
@@ -1173,7 +1174,7 @@ lemma st_tcb_at_coerce_haskell:
   apply clarsimp
   apply (simp add: tcb_relation_cut_def)
   apply clarsimp
-  apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_tcb split: kernel_object.splits)
+  apply (clarsimp simp: obj_at'_def split: kernel_object.splits)
   apply (rule_tac x="tcb_state tcb" in exI)
   apply simp
   apply (simp add: tcb_relation_def)
@@ -1209,7 +1210,6 @@ lemma sched_act_cnt_related:
   "\<lbrakk> (a, c) \<in> state_relation; ksSchedulerAction c = ChooseNewThread \<rbrakk>
      \<Longrightarrow> scheduler_action a = choose_new_thread"
   by (case_tac "scheduler_action a", simp_all add: state_relation_def)
-
 
 context ADT_IF_Refine_1 begin
 

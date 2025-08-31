@@ -69,6 +69,14 @@ lemma handle_reserved_irq_globals_equiv[Syscall_IF_assms, wp]:
   "handle_reserved_irq irq \<lbrace>globals_equiv st\<rbrace>"
   unfolding handle_reserved_irq_def by wpsimp
 
+lemma dmo_handleSpuriousIRQ_mop_globals_equiv[wp]:
+  "do_machine_op handleSpuriousIRQ_mop \<lbrace>globals_equiv s\<rbrace>"
+  unfolding handleSpuriousIRQ_mop_def by (rule dmo_mol_globals_equiv)
+
+lemma handle_spurious_irq_globals_equiv[Syscall_IF_assms, wp]:
+  "handle_spurious_irq \<lbrace>globals_equiv st\<rbrace>"
+  unfolding handle_spurious_irq_def by wpsimp
+
 lemma handle_vm_fault_reads_respects[Syscall_IF_assms]:
   "reads_respects aag l (K (is_subject aag thread)) (handle_vm_fault thread vmfault_type)"
   apply (cases vmfault_type)

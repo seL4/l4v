@@ -152,7 +152,7 @@ crunch
   arch_post_modify_registers, arch_invoke_irq_control,
   arch_invoke_irq_handler, arch_perform_invocation, arch_mask_irq_signal,
   handle_reserved_irq, handle_vm_fault, handle_hypervisor_fault, handle_arch_fault_reply,
-  arch_prepare_set_domain, arch_post_set_flags, arch_prepare_next_domain
+  arch_prepare_set_domain, arch_post_set_flags, arch_prepare_next_domain, handle_spurious_irq
   for cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
   and idle_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (idle_thread s)"
   and cur_domain[Syscall_AC_assms, wp]:  "\<lambda>s. P (cur_domain s)"
@@ -191,6 +191,11 @@ crunch arch_prepare_next_domain
   and ct_not_in_q[Syscall_AC_assms, wp]: ct_not_in_q
   and valid_sched_action[Syscall_AC_assms, wp]: valid_sched_action
   and ct_in_cur_domain[Syscall_AC_assms, wp]: ct_in_cur_domain
+
+crunch handle_spurious_irq
+  for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
+  and integrity[Syscall_AC_assms, wp]: "integrity aag X st"
+  (ignore: do_machine_op)
 
 end
 

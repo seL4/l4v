@@ -111,7 +111,7 @@ proof -
     done
   show "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) \<ge> init_irq_node_ptr"
     apply (rule is_aligned_no_wrap'[where sz=14])
-     apply (simp add: is_aligned_def init_irq_node_ptr_def kernel_base_def)
+     apply (simp add: is_aligned_def init_irq_node_ptr_def kernel_base_def pptrBase_def)
     apply (rule shiftl_less_t2n[OF P])
     apply simp
     done

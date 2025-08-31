@@ -511,9 +511,11 @@ crunch
   for arch_finalise_cap[wp, DetSchedSchedule_AI_assms]: "\<lambda>(s:: det_ext state). P (idle_thread s)"
   (wp: crunch_wps simp: if_fun_split)
 
-crunch arch_switch_to_thread
-  for etcbs_of[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (etcbs_of s)"
+crunch arch_switch_to_thread, handle_spurious_irq
+  for valid_sched[wp, DetSchedSchedule_AI_assms]: valid_sched
+  and valid_idle[wp, DetSchedSchedule_AI_assms]: valid_idle
   and cur_domain[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_domain s)"
+  and etcbs_of[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (etcbs_of s)"
 
 end
 

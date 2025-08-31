@@ -129,7 +129,12 @@ locale DetSchedDomainTime_AI_2 = DetSchedDomainTime_AI +
     "\<And>P irq. arch_mask_irq_signal irq \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
   assumes arch_mask_irq_signal_domain_time_inv'[wp]:
     "\<And>P irq. arch_mask_irq_signal irq \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace>"
-
+  assumes handle_spurious_irq_domain_time_inv'[wp]:
+    "\<And>P. handle_spurious_irq \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace>"
+  assumes handle_spurious_irq_domain_list_inv'[wp]:
+    "\<And>P. handle_spurious_irq \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
+  assumes handle_spurious_irq_scheduler_action[wp]:
+    "handle_spurious_irq \<lbrace>\<lambda>s::det_state. P (scheduler_action s) \<rbrace>"
 
 context DetSchedDomainTime_AI begin
 
@@ -226,6 +231,10 @@ crunch cancel_badged_sends
 
 context DetSchedDomainTime_AI_2 begin
 
+lemma handle_spurious_irq_valid_domain[wp]:
+  "handle_spurious_irq \<lbrace>\<lambda>s::det_state. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread \<rbrace>"
+  by (wp | wps)+
+
 lemma invoke_cnode_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s :: det_ext state. P (domain_list s)\<rbrace>
      invoke_cnode i
@@ -240,7 +249,8 @@ crunch perform_invocation, handle_invocation
   (wp: crunch_wps syscall_valid simp: crunch_simps ignore: syscall)
 
 crunch
-  handle_recv, handle_yield, handle_call, handle_reply, handle_vm_fault, handle_hypervisor_fault
+  handle_recv, handle_yield, handle_call, handle_reply, handle_vm_fault, handle_hypervisor_fault,
+  maybe_handle_interrupt
   for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -260,10 +270,7 @@ lemma call_kernel_domain_list_inv_det_ext:
      (call_kernel e) :: (unit,det_ext) s_monad
    \<lbrace>\<lambda>_ s. P (domain_list s) \<rbrace>"
   unfolding call_kernel_def
-  apply (wp)
-   apply (simp add: schedule_def)
-   apply (wpsimp wp: without_preemption_wp simp: if_apply_def2)+
-  done
+  by wpsimp
 
 end
 
@@ -466,28 +473,31 @@ lemma hoare_false_imp:
 
 context DetSchedDomainTime_AI_2 begin
 
+lemma maybe_handle_interrupt_valid_domain_time:
+  "\<lbrace>\<lambda>s. 0 < domain_time s \<rbrace>
+   maybe_handle_interrupt in_kernel :: (unit, det_ext) s_monad
+   \<lbrace>\<lambda>_ s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
+  unfolding maybe_handle_interrupt_def
+  apply (wpsimp wp: handle_interrupt_valid_domain_time)
+   apply (rule_tac Q'="\<lambda>_ s. 0 < domain_time s" in hoare_strengthen_post)
+    apply wpsimp+
+  done
+
 lemma call_kernel_domain_time_inv_det_ext:
   "\<lbrace> (\<lambda>s. 0 < domain_time s) and valid_domain_list and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) \<rbrace>
    (call_kernel e) :: (unit,det_ext) s_monad
    \<lbrace>\<lambda>_ s. 0 < domain_time s \<rbrace>"
   unfolding call_kernel_def
-  apply (case_tac "e = Interrupt")
-   apply simp
-   apply (rule hoare_pre)
-   apply ((wp schedule_domain_time_left handle_interrupt_valid_domain_time
-           | wpc | simp)+)[1]
-   apply (rule_tac Q'="\<lambda>_ s. 0 < domain_time s \<and> valid_domain_list s" in hoare_strengthen_post)
-    apply wp
-   apply fastforce+
+  apply (cases "e = Interrupt"; simp)
+   apply (wpsimp wp: schedule_domain_time_left maybe_handle_interrupt_valid_domain_time)
   (* now non-interrupt case; may throw but does not touch domain_time in handle_event *)
-  apply (wp schedule_domain_time_left without_preemption_wp handle_interrupt_valid_domain_time)
-    apply (rule_tac Q'="\<lambda>_ s. 0 < domain_time s \<and> valid_domain_list s" in hoare_post_imp)
-     apply fastforce
-    apply (wp handle_event_domain_time_inv)+
+  apply (wpsimp wp: schedule_domain_time_left without_preemption_wp
+                    maybe_handle_interrupt_valid_domain_time handle_event_domain_time_inv)
    apply (rule_tac Q'="\<lambda>_ s. 0 < domain_time s" in hoare_strengthen_postE_R)
     apply (wp handle_event_domain_time_inv)
    apply fastforce+
   done
+
 end
 
 end

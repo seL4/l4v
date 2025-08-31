@@ -30,7 +30,7 @@ crunch invoke_untyped
 
 crunch
   set_mcpriority, set_priority, arch_get_sanitise_register_info, arch_post_modify_registers,
-  set_flags, arch_post_set_flags
+  set_flags, arch_post_set_flags, maybe_handle_interrupt
   for (bcorres) bcorres[wp, BCorres2_AI_assms]: truncate_state
 
 lemma invoke_tcb_bcorres[wp]:
@@ -137,9 +137,6 @@ lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fau
   apply (cases b)
   apply (simp | wp)+
   done
-
-lemma handle_reserved_irq_bcorres[wp]: "bcorres (handle_reserved_irq a) (handle_reserved_irq a)"
-  by (simp add: handle_reserved_irq_def; wp)
 
 crunch handle_hypervisor_fault, timer_tick
   for (bcorres) bcorres[wp]: truncate_state

@@ -190,10 +190,6 @@ lemma stit_activatable' [DetSchedSchedule_AI_assms]:
   apply (clarsimp simp: valid_idle_def ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
-crunch set_vm_root
-  for it[wp]: "\<lambda>s. P (idle_thread s)"
-  (simp: crunch_simps)
-
 lemma switch_to_idle_thread_cur_thread_idle_thread [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_ s. cur_thread s = idle_thread s\<rbrace>"
   by (wp | simp add:switch_to_idle_thread_def arch_switch_to_idle_thread_def)+
@@ -349,6 +345,10 @@ crunch cap_swap_for_delete, cap_move, cancel_badged_sends
 crunch arch_switch_to_thread
   for etcbs_of[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (etcbs_of s)"
   and cur_domain[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_domain s)"
+
+crunch handle_spurious_irq
+  for valid_sched[wp, DetSchedSchedule_AI_assms]: valid_sched
+  and valid_idle[wp, DetSchedSchedule_AI_assms]: valid_idle
 
 end
 

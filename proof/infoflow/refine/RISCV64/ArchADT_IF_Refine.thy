@@ -320,31 +320,6 @@ lemma handlePreemption_if_arch_extras[ADT_IF_Refine_assms, wp]:
   apply (wp dmo'_getActiveIRQ_wp hoare_drop_imps)
   done
 
-lemma handle_preemption_if_corres[ADT_IF_Refine_assms]:
-  "corres (=) (einvs and valid_domain_list and (\<lambda>s. 0 < domain_time s))
-              (invs') (handle_preemption_if tc) (handlePreemption_if tc)"
-  apply (simp add: handlePreemption_if_def handle_preemption_if_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split[where r'="(=)"])
-       apply (rule dmo_getActiveIRQ_corres)
-      apply (rule corres_split[where r'="dc"])
-         apply (rule corres_when)
-          apply simp
-         apply simp
-         apply (rule handleInterrupt_corres)
-        apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
-                      P="\<lambda>s. valid_domain_list s \<and>
-                             (domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread)"])
-         apply simp
-        apply (clarsimp simp: state_relation_def)
-       apply (wp handle_interrupt_valid_domain_time)+
-     apply (rule dmo_getActiveIRQ_wp)
-    apply (rule dmo'_getActiveIRQ_wp)
-   apply clarsimp+
-  apply (clarsimp simp: invs'_def valid_state'_def irq_at_def invs_def
-                        Let_def valid_irq_states'_def)
-  done
-
 crunch doUserOp_if
   for ksDomainTime_inv[ADT_IF_Refine_assms, wp]: "\<lambda>s. P (ksDomainTime s)"
   and ksDomSchedule_inv[ADT_IF_Refine_assms, wp]: "\<lambda>s. P (ksDomSchedule s)"
@@ -380,6 +355,26 @@ lemma handleEvent_corres_arch_extras[ADT_IF_Refine_assms]:
               and arch_extras)
        (handle_event event) (handleEvent event)"
   by (fastforce intro: corres_guard2_imp[OF handleEvent_corres])
+
+lemma getActiveIRQ_corres_True_False:
+  "corres_underlying Id False True (=) \<top> \<top> (getActiveIRQ True) (getActiveIRQ False)"
+  unfolding getActiveIRQ_def
+  by (corres simp: non_kernel_IRQs_def)
+
+lemma maybeHandleInterrupt_corres_True_False[ADT_IF_Refine_assms]:
+  "corres dc einvs invs' (maybe_handle_interrupt True) (maybeHandleInterrupt False)"
+  unfolding maybe_handle_interrupt_def maybeHandleInterrupt_def
+  apply (corres corres: corres_machine_op getActiveIRQ_corres_True_False
+                        handleInterrupt_corres[@lift_corres_args]
+                simp:  irq_state_independent_def
+         | corres_cases_both)+
+     apply (wpsimp wp: hoare_drop_imps)
+    apply clarsimp
+    apply (strengthen contract_all_imp_strg[where P'=True, simplified])
+    apply (wpsimp wp: doMachineOp_getActiveIRQ_IRQ_active' hoare_vcg_all_lift)
+   apply clarsimp
+  apply (clarsimp simp: invs'_def valid_state'_def)
+  done
 
 end
 

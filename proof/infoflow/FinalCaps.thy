@@ -2474,6 +2474,8 @@ locale FinalCaps_2 = FinalCaps_1 +
     "arch_prepare_set_domain t new_dom \<lbrace>silc_inv aag st\<rbrace>"
   and arch_prepare_next_domain_silc_inv[wp]:
     "arch_prepare_next_domain \<lbrace>silc_inv aag st\<rbrace>"
+  and handle_spurious_irq_silc_inv[wp]:
+    "handle_spurious_irq \<lbrace>silc_inv aag st\<rbrace>"
 begin
 
 lemma invoke_irq_control_silc_inv:
@@ -2881,7 +2883,7 @@ lemma handle_event_silc_inv:
                     and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>
    handle_event ev
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  apply (case_tac ev; simp_all)
+  apply (case_tac ev; simp_all add: maybe_handle_interrupt_def)
   by (wpsimp wp: handle_send_silc_inv[where st'=st']
                  handle_call_silc_inv[where st'=st']
                  handle_recv_silc_inv
@@ -2906,9 +2908,8 @@ lemma call_kernel_silc_inv:
                     and is_subject aag \<circ> cur_thread and domain_sep_inv (pasMaySendIrqs aag) st'\<rbrace>
    call_kernel ev
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  apply (simp add: call_kernel_def)
-  apply (wp handle_interrupt_silc_inv handle_event_silc_inv[where st'=st'] | simp)+
-  done
+  unfolding call_kernel_def maybe_handle_interrupt_def
+  by (wpsimp wp: handle_interrupt_silc_inv handle_event_silc_inv[where st'=st'])
 
 end
 

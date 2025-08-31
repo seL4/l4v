@@ -345,6 +345,9 @@ lemma handle_invocation_cur_fpu_in_cur_domain[wp]:
                   elim!: pred_tcb_weakenE)
   done
 
+crunch maybe_handle_interrupt
+  for cur_fpu_in_cur_domain[wp]: cur_fpu_in_cur_domain
+
 lemma handle_event_cur_fpu_in_cur_domain[wp]:
   "\<lbrace>cur_fpu_in_cur_domain and invs and ct_in_cur_domain and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
     and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
@@ -362,8 +365,8 @@ lemma call_kernel_cur_fpu_in_cur_domain:
     and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
    call_kernel e
    \<lbrace>\<lambda>_. cur_fpu_in_cur_domain\<rbrace>"
-  unfolding call_kernel_def
-  apply (wpsimp | strengthen invs_valid_objs invs_hyp_sym_refs)+
+  unfolding call_kernel_def maybe_handle_interrupt_def
+  apply (wpsimp wp: handle_spurious_irq_invs | strengthen invs_valid_objs invs_hyp_sym_refs)+
     apply (rule hoare_post_imp[where Q'="\<lambda>irq s. irq \<notin> Some ` non_kernel_IRQs \<and> cur_fpu_in_cur_domain s \<and> valid_sched s \<and> invs s"])
      apply fastforce
     apply (wpsimp wp: getActiveIRQ_neq_non_kernel handle_event_valid_sched

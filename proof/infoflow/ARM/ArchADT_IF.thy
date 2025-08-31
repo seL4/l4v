@@ -272,7 +272,7 @@ lemma kernel_entry_if_valid_vspace_objs_if[ADT_IF_assms, wp]:
 
 lemma handle_preemption_if_valid_pdpt_objs[ADT_IF_assms, wp]:
   "\<lbrace>valid_vspace_objs_if\<rbrace> handle_preemption_if a \<lbrace>\<lambda>rv s. valid_vspace_objs_if s\<rbrace>"
-  by (simp add: handle_preemption_if_def | wp)+
+  by (wpsimp simp: handle_preemption_if_def)
 
 lemma schedule_if_valid_pdpt_objs[ADT_IF_assms, wp]:
   "\<lbrace>valid_vspace_objs_if\<rbrace> schedule_if a \<lbrace>\<lambda>rv s. valid_vspace_objs_if s\<rbrace>"

@@ -19,31 +19,17 @@ lemma handleInterrupt_ccorres[ADT_IF_Refine_assms]:
            []
            (handleEvent Interrupt)
            (handleInterruptEntry_C_body_if)"
-proof -
-  show ?thesis
   apply (rule ccorres_guard_imp2)
    apply (simp add: handleEvent_def minus_one_norm handleInterruptEntry_C_body_if_def)
-   apply (clarsimp simp: liftE_def bind_assoc)
-   apply (rule ccorres_rhs_assoc)
-   apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
-    apply (rule ccorres_Guard_Seq)
-    apply wpc
-     apply (simp add: ccorres_cond_empty_iff)
-     apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
-     apply (rule allI, rule conseqPre, vcg)
-     apply (clarsimp simp: return_def)
-    apply (clarsimp simp: ucast_not_helper ccorres_cond_univ_iff ucast_ucast_a is_down)
-    apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-     apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
-     apply (rule allI, rule conseqPre, vcg)
-     apply (clarsimp simp: return_def)
-    apply wp
-   apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)" in hoare_post_imp)
-    apply (clarsimp simp: non_kernel_IRQs_def)
-   apply (wp getActiveIRQ_le_maxIRQ | simp)+
-  apply (clarsimp simp: invs'_def valid_state'_def)
+   apply (rule ccorres_add_return2)
+   apply (ctac (no_vcg) add: checkInterrupt_ccorres)
+    apply (rule_tac R="\<lambda>_. rv = Inr ()" in ccorres_return[where R'=UNIV])
+    apply (rule conseqPre, vcg)
+    apply (clarsimp simp: return_def)
+   apply (simp add: liftE_def)
+   apply wpsimp
+  apply clarsimp
   done
-qed
 
 lemma handleInvocation_ccorres'[ADT_IF_Refine_assms]:
   "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')

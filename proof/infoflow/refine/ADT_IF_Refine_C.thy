@@ -84,11 +84,7 @@ context kernel_m begin
 
 definition handleInterruptEntry_C_body_if (*:: "(globals myvars, int, l4c_errortype) com"*) where
 "handleInterruptEntry_C_body_if \<equiv> (
-      (\<acute>irq :== CALL getActiveIRQ();;
-       (Guard SignedArithmetic \<lbrace>True\<rbrace>
-         (IF (ucast \<acute>irq :: obj_ref) \<noteq> (ucast irqInvalid) THEN
-            CALL handleInterrupt(\<acute>irq)
-          FI)));;
+      (CALL checkInterrupt());;
        \<acute>ret__unsigned_long :== scast EXCEPTION_NONE)"
 
 definition
@@ -174,12 +170,8 @@ lemma handlePreemption_if_def2:
                             valid_domain_list' s) [];
           return tc
    od"
-  apply (clarsimp simp add: handlePreemption_if_def handleEvent_def liftE_def
-                   bind_assoc)
-  apply (rule bind_eqI)
-  apply (rule ext)
-  apply (clarsimp split: option.splits)
-  done
+  by (clarsimp simp: handlePreemption_if_def maybeHandleInterrupt_def handleEvent_def
+                     liftE_def bind_assoc)
 
 lemma handleInterrupt_no_fail:
   "no_fail (ex_abs (einvs) and invs'
@@ -192,10 +184,16 @@ lemma handleInterrupt_no_fail:
   apply (fastforce simp: ex_abs_def)
   done
 
-lemma handleEvent_Interrupt_no_fail: "no_fail (invs' and ex_abs einvs) (handleEvent Interrupt)"
-  apply (simp add: handleEvent_def)
-   apply wp
-     apply (rule handleInterrupt_no_fail)
+lemma handleSpuriousIRQ_no_fail[intro!, wp, simp]:
+  "no_fail \<top> handleSpuriousIRQ"
+  unfolding handleSpuriousIRQ_def
+  using if_split[split]
+  by wpsimp
+
+lemma handleEvent_Interrupt_no_fail:
+  "no_fail (invs' and ex_abs einvs) (handleEvent Interrupt)"
+  apply (simp add: handleEvent_def maybeHandleInterrupt_def)
+  apply (wpsimp wp: handleInterrupt_no_fail)
     apply (simp add: crunch_simps)
     apply (rule_tac Q'="\<lambda>r s. ex_abs (einvs) s \<and> invs' s \<and>
                              (\<forall>irq. r = Some irq

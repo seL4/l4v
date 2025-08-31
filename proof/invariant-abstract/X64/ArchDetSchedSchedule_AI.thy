@@ -384,9 +384,13 @@ crunch
 
 declare make_arch_fault_msg_invs[DetSchedSchedule_AI_assms]
 
+crunch handle_spurious_irq
+  for valid_sched[wp, DetSchedSchedule_AI_assms]: valid_sched
+  and valid_idle[wp, DetSchedSchedule_AI_assms]: valid_idle
+
 crunch arch_switch_to_thread
-  for etcbs_of[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (etcbs_of s)"
-  and cur_domain[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_domain s)"
+  for cur_domain[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_domain s)"
+  and etcbs_of[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (etcbs_of s)"
 
 end
 

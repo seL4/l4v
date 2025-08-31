@@ -203,7 +203,7 @@ lemma perform_asid_control_invocation_silc_inv:
   apply (fastforce intro: is_aligned_no_wrap' simp: blah)
   done
 
-crunch store_asid_pool_entry
+crunch store_asid_pool_entry, handle_spurious_irq
   for silc_inv[wp]: "silc_inv aag st"
 
 crunch copy_global_mappings
@@ -221,6 +221,8 @@ lemma perform_asid_pool_invocation_silc_inv:
                          slots_holding_overlapping_caps_def authorised_asid_pool_inv_def
                          is_ArchObjectCap_def is_PageTableCap_def update_map_data_def)+
   done
+
+declare handle_spurious_irq_silc_inv[wp, FinalCaps_assms]
 
 lemma arch_perform_invocation_silc_inv[FinalCaps_assms]:
   "\<lbrace>silc_inv aag st and invs and valid_arch_inv ai and authorised_arch_inv aag ai\<rbrace>

@@ -2186,6 +2186,8 @@ lemma handleRecv_valid_duplicates'[wp]:
               simp: ct_in_state'_def sch_act_sane_def)
   done
 
+crunch maybeHandleInterrupt
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 
 lemma handleEvent_valid_duplicates':
   "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
@@ -2205,11 +2207,6 @@ lemma dmo_getActiveIRQ_notin_non_kernel_IRQs[wp]:
   unfolding doMachineOp_def
   by (wpsimp simp: getActiveIRQ_def in_monad split: if_split_asm)
 
-lemma non_kernel_IRQs_strg:
-  "invs' s \<and> irq \<notin> Some ` non_kernel_IRQs \<and> Q \<Longrightarrow>
-    (\<exists>y. irq = Some y) \<longrightarrow> invs' s \<and> (the irq \<in> non_kernel_IRQs \<longrightarrow> P) \<and> Q"
-  by auto
-
 (* nothing extra needed on this architecture *)
 defs fastpathKernelAssertions_def:
   "fastpathKernelAssertions \<equiv> \<lambda>s. True"
@@ -2220,20 +2217,18 @@ lemma callKernel_valid_duplicates':
     (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s)\<rbrace>
    callKernel e
    \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add: callKernel_def fastpathKernelAssertions_def)
-  apply (rule hoare_pre)
-   apply (wp activate_invs' activate_sch_act schedule_sch
-             hoare_drop_imp[where Q'="\<lambda>_. kernelExitAssertions"]
-             schedule_sch_act_simple he_invs' hoare_vcg_if_lift3
-          | simp add: no_irq_getActiveIRQ
-          | strengthen non_kernel_IRQs_strg, simp cong: conj_cong)+
-   apply (rule hoare_strengthen_postE)
-     apply (rule valid_validE)
-     prefer 2
-     apply assumption
-    apply (wp handleEvent_valid_duplicates')
-   apply simp
-  apply simp
+  unfolding callKernel_def fastpathKernelAssertions_def
+  apply (wpsimp wp: activate_invs' activate_sch_act schedule_sch
+                    hoare_drop_imp[where Q'="\<lambda>_. kernelExitAssertions"]
+                    hoare_drop_imp[where Q'="\<lambda>rv _. rv = None"]
+                    schedule_sch_act_simple he_invs' hoare_vcg_if_lift3
+                simp: no_irq_getActiveIRQ
+         | strengthen non_kernel_IRQs_strg, simp cong: conj_cong)+
+    apply (rule hoare_strengthen_postE)
+      apply (rule valid_validE)
+      prefer 2
+      apply assumption
+     apply (wpsimp wp: handleEvent_valid_duplicates')+
   done
 
 end

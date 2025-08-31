@@ -43,17 +43,6 @@ lemma invoke_tcb_bcorres[wp]:
    apply (wp | wpc | simp)+
   done
 
-lemma transfer_caps_loop_bcorres[wp]:
- "bcorres (transfer_caps_loop ep buffer n caps slots mi) (transfer_caps_loop ep buffer n caps slots mi)"
-  apply (induct caps arbitrary: slots n mi ep)
-   apply simp
-   apply wp
-  apply (case_tac a)
-  apply simp
-  apply (intro impI conjI)
-             apply (wp | simp)+
-  done
-
 lemma invoke_irq_control_bcorres[wp]: "bcorres (invoke_irq_control a) (invoke_irq_control a)"
   apply (cases a)
   apply wpsimp
@@ -149,10 +138,10 @@ lemma vppi_event_bcorres[wp]:
   unfolding vppi_event_def
   by wpsimp
 
-lemma handle_reserved_irq_bcorres[wp]: "bcorres (handle_reserved_irq a) (handle_reserved_irq a)"
-  unfolding handle_reserved_irq_def by wpsimp
-
 crunch handle_hypervisor_fault, timer_tick
+  for (bcorres) bcorres[wp]: truncate_state
+
+crunch maybe_handle_interrupt
   for (bcorres) bcorres[wp]: truncate_state
 
 lemma handle_event_bcorres[wp]: "bcorres (handle_event e) (handle_event e)"

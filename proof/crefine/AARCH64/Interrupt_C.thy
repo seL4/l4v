@@ -343,6 +343,8 @@ lemma Arch_invokeIRQControl_IssueIRQHandler_ccorres:
   apply (cinit' lift: irq_' handlerSlot_' controlSlot_' trigger_')
    apply (clarsimp simp: AARCH64_H.performIRQControl_def simp flip: liftE_liftE)
    apply (rule ccorres_liftE_Seq)
+   apply csymbr (* HAVE_SET_TRIGGER *)
+   apply simp (* assume HAVE_SET_TRIGGER to be 1 for AArch64 platforms *)
    apply (ctac (no_vcg) add: setIRQTrigger_ccorres)
     apply (rule ccorres_liftE_Seq)
     apply (rule ccorres_add_returnOk)
@@ -628,6 +630,8 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
     apply (simp add: interpret_excaps_test_null excaps_map_def
                      word_less_nat_alt Let_def
                 cong: call_ignore_cong)
+    apply csymbr (* NUM_SGIS *)
+    apply ccorres_rewrite (* assume NUM_SGIs always \<noteq> 0 on AArch64 *)
     apply (rule ccorres_add_return)
     apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
       apply (rule ccorres_add_return)
@@ -639,6 +643,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
             apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
             apply (rule ccorres_move_c_guard_cte)
             apply ctac
+              apply csymbr (* wrap NUM_SGIS; assume \<noteq> 0 on AArch64 *)
               apply (rule ccorres_assert2)
               apply (simp add: rangeCheck_def unlessE_def
                                length_ineq_not_Nil hd_conv_nth

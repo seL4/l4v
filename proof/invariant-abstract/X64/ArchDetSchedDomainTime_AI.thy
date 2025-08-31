@@ -111,6 +111,11 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
    apply wpsimp+
   done
 
+crunch handle_spurious_irq
+  for domain_time_inv [wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
+  and domain_list_inv [wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
+  and scheduler_action[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (scheduler_action s)"
+
 end
 
 global_interpretation DetSchedDomainTime_AI_2?: DetSchedDomainTime_AI_2
