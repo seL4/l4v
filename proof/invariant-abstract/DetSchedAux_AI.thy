@@ -118,7 +118,7 @@ lemma TCB_default_objectD[dest!]:
 declare tcb_state_merge_tcb_state_default[simp]
 
 lemma retype_region_etcb_at[wp]:
-  "\<lbrace>etcb_at P t\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "
+  "\<lbrace>\<lambda>s. Q (etcb_at P t s)\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> Q (etcb_at P t s)\<rbrace>"
   apply (simp add: retype_region_def)
   apply wp
   apply (clarsimp simp add: pred_tcb_at_def obj_at_def simp del: fun_upd_apply)
@@ -130,7 +130,6 @@ lemma retype_region_etcb_at[wp]:
 crunch do_machine_op
   for ready_queues[wp]: "\<lambda>s. P (ready_queues s)"
   and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
-  and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
 
 context DetSchedAux_AI begin
 
@@ -142,7 +141,7 @@ crunch invoke_untyped
   (wp: crunch_wps mapME_x_inv_wp preemption_point_inv
    simp: detype_def crunch_simps mapM_x_defsym)
 
-lemma invoke_untyped_etcb_at:
+lemma invoke_untyped_etcb_at':
   "\<lbrace>etcb_at P t\<rbrace>
    invoke_untyped ui
    \<lbrace>\<lambda>_ s::'state_ext state. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
@@ -153,6 +152,15 @@ lemma invoke_untyped_etcb_at:
                     hoare_convert_imp[OF create_cap_no_pred_tcb_at]
                     hoare_convert_imp[OF _ init_arch_objects_etcbs_of]
                     hoare_drop_impE_E)
+  done
+
+lemma invoke_untyped_etcb_at:
+  "\<lbrace>\<lambda>s::'state_ext state. etcb_at P t s \<and> invs s \<and> st_tcb_at (Not o inactive and Not \<circ> idle) t s \<and> ct_active s \<and> valid_untyped_inv ui s\<rbrace>
+   invoke_untyped ui
+   \<lbrace>\<lambda>_. etcb_at P t\<rbrace>"
+  apply (rule hoare_post_imp[where Q'="\<lambda>_ s. st_tcb_at (Not \<circ> inactive) t s \<and> (st_tcb_at (Not \<circ> inactive) t s \<longrightarrow> etcb_at P t s)"])
+   apply simp
+  apply (wpsimp wp: invoke_untyped_etcb_at')+
   done
 
 end
@@ -315,7 +323,7 @@ lemma invoke_untyped_valid_sched:
   apply (rule hoare_pre)
    apply (rule_tac I="invs and valid_untyped_inv ui and ct_active"
                 in valid_sched_tcb_state_preservation)
-          apply (wpsimp wp: invoke_untyped_st_tcb_at invoke_untyped_etcb_at)+
+          apply (wpsimp wp: invoke_untyped_st_tcb_at invoke_untyped_etcb_at')+
      apply (rule hoare_strengthen_postE, rule invoke_untyp_invs; simp add: invs_valid_idle)
     apply simp
    apply (rule_tac f="\<lambda>s. P (scheduler_action s)" in hoare_lift_Pf)

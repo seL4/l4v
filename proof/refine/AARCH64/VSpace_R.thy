@@ -341,12 +341,12 @@ lemma getObject_ko_at_vcpu [wp]:
 
 lemma corres_gets_gicvcpu_numlistregs:
   "corres (=) \<top> \<top> (gets (arm_gicvcpu_numlistregs \<circ> arch_state))
-                      (gets (armKSGICVCPUNumListRegs \<circ> ksArchState))"
+                  (gets (armKSGICVCPUNumListRegs \<circ> ksArchState))"
   by (simp add: state_relation_def arch_state_relation_def)
 
 lemma corres_gets_current_vcpu[corres]:
   "corres (=) \<top> \<top> (gets (arm_current_vcpu \<circ> arch_state))
-                      (gets (armHSCurVCPU \<circ> ksArchState))"
+                  (gets (armHSCurVCPU \<circ> ksArchState))"
   by (simp add: state_relation_def arch_state_relation_def)
 
 lemma setObject_VCPU_corres:
@@ -528,10 +528,10 @@ lemma restoreVirtTimer_corres[corres]:
   done
 
 lemma vcpuSave_corres:
-  "corres dc (vcpu_at (fst cvcpu)) (vcpu_at' (fst cvcpu) and no_0_obj')
-             (vcpu_save (Some cvcpu)) (vcpuSave (Some cvcpu))"
-  apply (clarsimp simp add: vcpu_save_def vcpuSave_def armvVCPUSave_def)
-  apply (cases cvcpu, clarsimp, rename_tac v active)
+  "corres dc (none_bot (\<lambda>vcpu. vcpu_at (fst vcpu)) cvcpu) (none_bot (\<lambda>vcpu. vcpu_at' (fst vcpu)) cvcpu and no_0_obj')
+             (vcpu_save cvcpu) (vcpuSave cvcpu)"
+  unfolding vcpu_save_def vcpuSave_def armvVCPUSave_def
+  apply (cases cvcpu; clarsimp; rename_tac v active)
   apply (rule corres_guard_imp)
     apply (rule corres_split_dc[OF corres_machine_op])
        apply (rule corres_Id; wpsimp)
@@ -721,7 +721,7 @@ lemma vcpuSwitch_corres':
 
 crunch
   vgicUpdateLR, vcpuWriteReg, vcpuReadReg, vcpuRestoreRegRange, vcpuSaveRegRange, vcpuSave,
-  vcpuSwitch
+  vcpuSwitch, vcpuFlush
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   (ignore: doMachineOp wp: crunch_wps)
@@ -1354,7 +1354,7 @@ lemma vcpuRestore_invs'[wp]:
                 wp: mapM_x_wp[OF _ subset_refl]
      | subst doMachineOp_bind | rule empty_fail_bind)+
 
-lemma vcpuSave_invs':
+lemma vcpuSave_invs'[wp]:
   "\<lbrace>invs'\<rbrace> vcpuSave v \<lbrace>\<lambda>_. invs'\<rbrace>"
   by (wpsimp simp: vcpuSave_def doMachineOp_mapM armvVCPUSave_def
                    get_gic_vcpu_ctrl_apr_def get_gic_vcpu_ctrl_vmcr_def
@@ -1366,7 +1366,7 @@ lemma vcpuSwitch_invs'[wp]:
        vcpuSwitch v \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (wpsimp simp: vcpuSwitch_def modifyArchState_def
          wp: vcpuDisable_hyp[simplified pred_conj_def] vcpuSave_hyp[unfolded pred_conj_def]
-             dmo_vcpu_hyp vcpuSave_invs'
+             dmo_vcpu_hyp
         | strengthen invs'_armHSCurVCPU_update | simp)+
   apply (auto simp: invs'_def valid_state'_def valid_arch_state'_def pred_conj_def)
   done

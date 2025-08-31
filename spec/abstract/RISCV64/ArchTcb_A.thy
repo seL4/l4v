@@ -27,6 +27,8 @@ definition arch_post_modify_registers :: "obj_ref \<Rightarrow> obj_ref \<Righta
 definition arch_post_set_flags :: "obj_ref \<Rightarrow> tcb_flags \<Rightarrow> (unit, 'a::state_ext) s_monad" where
   "arch_post_set_flags t flags \<equiv> return ()"
 
+(* This is defined here in comparision to its location in HYP architectures due to not causing a
+   circular dependency by calling functions that have to be defined later. *)
 definition arch_prepare_set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> (unit, 'a::state_ext) s_monad" where
   "arch_prepare_set_domain t new_dom \<equiv> return ()"
 

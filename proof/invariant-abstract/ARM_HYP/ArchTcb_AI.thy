@@ -162,6 +162,8 @@ crunch arch_post_set_flags, arch_prepare_set_domain
   for typ_at[wp, Tcb_AI_assms]: "\<lambda>s. P (typ_at T p s)"
   and invs[wp, Tcb_AI_assms]: "invs"
 
+lemmas vcpu_flush_typ_ats [wp] = abs_typ_at_lifts[OF vcpu_flush_typ_at]
+
 lemmas arch_prepare_set_domain_typ_ats[wp] = abs_typ_at_lifts[OF arch_prepare_set_domain_typ_at]
 
 crunch arch_prepare_set_domain
