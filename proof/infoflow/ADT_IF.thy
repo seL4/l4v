@@ -917,18 +917,6 @@ locale ADT_IF_1 =
     "do_user_op_if uop tc \<lbrace>guarded_pas_domain aag\<rbrace>"
   and tcb_arch_ref_tcb_context_set[simp]:
     "tcb_arch_ref (tcb_arch_update (arch_tcb_context_set uc) tcb) = tcb_arch_ref tcb"
-  and arch_switch_to_idle_thread_pspace_aligned[wp]:
-    "arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_ext state. pspace_aligned s\<rbrace>"
-  and arch_switch_to_idle_thread_valid_vspace_objs[wp]:
-    "arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_ext state. valid_vspace_objs s\<rbrace>"
-  and arch_switch_to_idle_thread_valid_arch_state[wp]:
-    "arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_ext state. valid_arch_state s\<rbrace>"
-  and arch_switch_to_thread_pspace_aligned[wp]:
-    "arch_switch_to_thread t \<lbrace>\<lambda>s :: det_ext state. pspace_aligned s\<rbrace>"
-  and arch_switch_to_thread_valid_vspace_objs[wp]:
-    "arch_switch_to_thread t \<lbrace>\<lambda>s :: det_ext state. valid_vspace_objs s\<rbrace>"
-  and arch_switch_to_thread_valid_arch_state[wp]:
-    "arch_switch_to_thread t \<lbrace>\<lambda>s :: det_ext state. valid_arch_state s\<rbrace>"
   and arch_switch_to_thread_cur_thread[wp]:
     "\<And>P. arch_switch_to_thread t \<lbrace>\<lambda>s :: det_state. P (cur_thread s)\<rbrace>"
   and arch_activate_idle_thread_cur_thread[wp]:
