@@ -123,12 +123,6 @@ lemma tcb_arch_ref_tcb_context_set[ADT_IF_assms, simp]:
   "tcb_arch_ref (tcb_arch_update (arch_tcb_context_set tc) tcb) = tcb_arch_ref tcb"
   by (simp add: tcb_arch_ref_def)
 
-crunch arch_switch_to_idle_thread, arch_switch_to_thread
-  for pspace_aligned[ADT_IF_assms, wp]: "\<lambda>s :: det_state. pspace_aligned s"
-  and valid_vspace_objs[ADT_IF_assms, wp]: "\<lambda>s :: det_state. valid_vspace_objs s"
-  and valid_arch_state[ADT_IF_assms, wp]: "\<lambda>s :: det_state. valid_arch_state s"
-  (wp: crunch_wps)
-
 crunch arch_activate_idle_thread, arch_switch_to_thread
   for cur_thread[ADT_IF_assms, wp]: "\<lambda>s. P (cur_thread s)"
 
