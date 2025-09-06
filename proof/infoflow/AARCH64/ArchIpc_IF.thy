@@ -234,8 +234,15 @@ lemma handle_arch_fault_reply_reads_respects[Ipc_IF_assms, wp]:
   "reads_respects aag l (K (aag_can_read aag thread)) (handle_arch_fault_reply afault thread x y)"
   by (simp add: handle_arch_fault_reply_def, wp)
 
+lemma arch_thread_get_reads_respects[wp]:
+  "reads_respects aag l (K (aag_can_read_or_affect aag l t)) (arch_thread_get f t)"
+  unfolding arch_thread_get_def
+  apply (wpsimp)
+  apply (fastforce elim: reads_equivE affects_equivE equiv_forE simp: get_tcb_def split: option.splits)
+  done
+
 lemma arch_get_sanitise_register_info_reads_respects[Ipc_IF_assms, wp]:
-  "reads_respects aag l \<top> (arch_get_sanitise_register_info t)"
+  "reads_respects aag l (K (aag_can_read_or_affect aag l t)) (arch_get_sanitise_register_info t)"
   by wpsimp
 
 declare arch_get_sanitise_register_info_inv[Ipc_IF_assms]

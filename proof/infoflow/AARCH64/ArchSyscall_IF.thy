@@ -67,16 +67,18 @@ lemma arch_mask_irq_signal_globals_equiv[Syscall_IF_assms, wp]:
 
 lemma handle_reserved_irq_globals_equiv[Syscall_IF_assms, wp]:
   "handle_reserved_irq irq \<lbrace>globals_equiv st\<rbrace>"
-  unfolding handle_reserved_irq_def by wpsimp
+  unfolding handle_reserved_irq_def
+  sorry
 
 lemma handle_vm_fault_reads_respects[Syscall_IF_assms]:
   "reads_respects aag l (K (is_subject aag thread)) (handle_vm_fault thread vmfault_type)"
   unfolding handle_vm_fault_def
-  by (cases vmfault_type; wpsimp wp: dmo_read_stval_reads_respects)
+  sorry
 
 lemma handle_hypervisor_fault_reads_respects[Syscall_IF_assms]:
   "reads_respects aag l \<top> (handle_hypervisor_fault thread hypfault_type)"
-  by (cases hypfault_type; wpsimp)
+  apply (cases hypfault_type; wpsimp split_del: if_split)
+  sorry
 
 lemma handle_vm_fault_globals_equiv[Syscall_IF_assms]:
   "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
@@ -87,7 +89,8 @@ lemma handle_vm_fault_globals_equiv[Syscall_IF_assms]:
 
 lemma handle_hypervisor_fault_globals_equiv[Syscall_IF_assms]:
   "handle_hypervisor_fault thread hypfault_type \<lbrace>globals_equiv st\<rbrace>"
-  by (cases hypfault_type; wpsimp)
+  apply (cases hypfault_type; wpsimp split_del: if_split)
+  sorry
 
 crunch arch_activate_idle_thread, handle_spurious_irq
   for globals_equiv[Syscall_IF_assms, wp]: "globals_equiv st"
@@ -135,6 +138,8 @@ lemma decode_frame_invocation_authorised_for_globals:
              decode_frame_invocation_def decode_fr_inv_map_def
   apply (simp add: split_def Let_def cong: arch_cap.case_cong if_cong split del: if_split)
   apply (wpsimp wp: check_vp_wpR)
+  sorry
+(*
   apply (subgoal_tac
           "(\<exists>a b. cte_wp_at (parent_for_refs (make_user_pte (addrFromPPtr x)
                                                             (attribs_from_word (msg ! 2))
@@ -158,6 +163,7 @@ lemma decode_frame_invocation_authorised_for_globals:
    apply assumption
   apply (fastforce simp: is_pt_cap_def is_PageTableCap_def split: option.splits)
   done
+*)
 
 lemma decode_page_table_invocation_authorised_for_globals:
   "\<lbrace>invs and cte_wp_at ((=) (ArchObjectCap cap)) slot
@@ -172,6 +178,8 @@ lemma decode_page_table_invocation_authorised_for_globals:
   apply (frule (1) pt_lookup_vs_lookupI, clarsimp)
   apply (drule vs_lookup_level)
   apply (frule pt_walk_max_level)
+  sorry
+(*
   apply (subgoal_tac "msg ! 0 \<in> user_region")
    apply (frule reachable_page_table_not_global; clarsimp?)
    apply (frule vs_lookup_table_is_aligned; clarsimp?)
@@ -183,6 +191,29 @@ lemma decode_page_table_invocation_authorised_for_globals:
    apply (erule below_user_vtop_canonical)
   apply clarsimp
   done
+*)
+
+lemma decode_sgi_signal_invocation_authorised_for_globals:
+  "\<lbrace>\<top>\<rbrace> decode_sgi_signal_invocation cap
+   \<lbrace>authorised_for_globals_arch_inv\<rbrace>, -"
+  unfolding decode_sgi_signal_invocation_def authorised_for_globals_arch_inv_def
+  by wpsimp
+
+lemma decode_vspace_invocation_authorised_for_globals:
+  "\<lbrace>invs and cte_wp_at ((=) (ArchObjectCap cap)) slot
+         and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)\<rbrace>
+   decode_vspace_invocation label msg slot cap excaps
+   \<lbrace>authorised_for_globals_arch_inv\<rbrace>, -"
+  unfolding decode_vspace_invocation_def
+  sorry
+
+lemma decode_vcpu_invocation_authorised_for_globals:
+  "\<lbrace>invs and cte_wp_at ((=) (ArchObjectCap cap)) slot
+         and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)\<rbrace>
+   decode_vcpu_invocation label msg cap excaps
+   \<lbrace>authorised_for_globals_arch_inv\<rbrace>, -"
+  unfolding decode_vcpu_invocation_def
+  sorry
 
 lemma decode_arch_invocation_authorised_for_globals[Syscall_IF_assms]:
   "\<lbrace>invs and cte_wp_at ((=) (ArchObjectCap cap)) slot
@@ -190,12 +221,21 @@ lemma decode_arch_invocation_authorised_for_globals[Syscall_IF_assms]:
    arch_decode_invocation label msg x_slot slot cap excaps
    \<lbrace>authorised_for_globals_arch_inv\<rbrace>, -"
   unfolding arch_decode_invocation_def
-  by (wpsimp wp: decode_asid_pool_invocation_authorised_for_globals
+  by (wpsimp wp: decode_sgi_signal_invocation_authorised_for_globals
+                 decode_vspace_invocation_authorised_for_globals
+                 decode_vcpu_invocation_authorised_for_globals
+                 decode_asid_pool_invocation_authorised_for_globals
                  decode_asid_control_invocation_authorised_for_globals
                  decode_frame_invocation_authorised_for_globals
                  decode_page_table_invocation_authorised_for_globals, fastforce)
 
-declare arch_prepare_set_domain_inv[Syscall_IF_assms]
+lemma arch_prepare_set_domain_globals_equiv[Syscall_IF_assms]:
+  "arch_prepare_set_domain t new_dom \<lbrace>globals_equiv st\<rbrace>"
+  sorry
+
+lemma arch_prepare_set_domain_valid_arch_state[Syscall_IF_assms]:
+  "arch_prepare_set_domain t new_dom \<lbrace>valid_arch_state\<rbrace>"
+  sorry
 
 end
 

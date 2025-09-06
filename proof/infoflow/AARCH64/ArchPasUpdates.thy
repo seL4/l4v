@@ -34,15 +34,14 @@ qed
 context Arch begin
 
 crunch arch_perform_invocation, arch_post_modify_registers, init_arch_objects,
-         arch_invoke_irq_control, arch_invoke_irq_handler, handle_arch_fault_reply
+       arch_invoke_irq_control, arch_invoke_irq_handler, handle_arch_fault_reply,
+       arch_prepare_set_domain, arch_post_set_flags
   for domain_fields[PasUpdates_assms, wp]: "domain_fields P"
   (wp: syscall_valid crunch_wps mapME_x_inv_wp
    simp: crunch_simps check_cap_at_def detype_def mapM_x_defsym
    ignore: check_cap_at syscall
    ignore_del: set_domain set_priority possible_switch_to
    rule: transfer_caps_loop_pres)
-
-declare init_arch_objects_inv[PasUpdates_assms]
 
 lemma state_asids_to_policy_aux_pasSubject_update:
   "state_asids_to_policy_aux (aag\<lparr>pasSubject := x\<rparr>) caps asid vrefs =
@@ -106,9 +105,6 @@ lemma state_asids_to_policy_pasMayEditReadyQueues_update[PasUpdates_assms]:
   "state_asids_to_policy (aag\<lparr>pasMayEditReadyQueues := x\<rparr>) s =
    state_asids_to_policy aag s"
   by (simp add: state_asids_to_policy_aux_pasMayEditReadyQueues_update)
-
-declare arch_post_set_flags_inv[PasUpdates_assms]
-declare arch_prepare_set_domain_inv[PasUpdates_assms]
 
 end
 

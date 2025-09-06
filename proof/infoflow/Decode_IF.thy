@@ -349,7 +349,7 @@ begin
 
 lemma decode_invocation_reads_respects_f:
   "reads_respects_f aag l
-     (silc_inv aag st and pas_refined aag and valid_cap cap and invs and ct_active
+     (silc_inv aag st and pas_refined aag and invs and ct_active
                       and cte_wp_at ((=) cap) slot and ex_cte_cap_to slot
                       and (\<lambda>s. \<forall>r\<in>zobj_refs cap. ex_nonz_cap_to r s)
                       and (\<lambda>s. \<forall>r\<in>cte_refs cap (interrupt_irq_node s). ex_cte_cap_to r s)

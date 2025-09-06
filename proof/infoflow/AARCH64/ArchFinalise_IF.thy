@@ -190,7 +190,7 @@ lemma aag_cap_auth_ASIDPoolCap:
                 cli_no_irqs pas_refined_all_auth_is_owns)
 
 lemma aag_cap_auth_PageDirectory:
-  "pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word (Some a))) \<Longrightarrow>
+  "pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word pt_t (Some a))) \<Longrightarrow>
     pas_refined aag s \<Longrightarrow> is_subject aag word"
   unfolding aag_cap_auth_def
   by (simp add: clas_no_asid cap_auth_conferred_def arch_cap_auth_conferred_def
@@ -213,27 +213,27 @@ lemma aag_cap_auth_PageCap_asid:
           intro: pas_refined_Control_into_is_subject_asid)
 
 lemma aag_cap_auth_PageTableCap:
-  "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word option)); pas_refined aag s \<rbrakk>
+  "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word pt_t option)); pas_refined aag s \<rbrakk>
      \<Longrightarrow> is_subject aag word"
   unfolding aag_cap_auth_def
   by (simp add: clas_no_asid cap_auth_conferred_def arch_cap_auth_conferred_def
                 cli_no_irqs pas_refined_all_auth_is_owns)
 
 lemma aag_cap_auth_PageTableCap_asid:
-  "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word (Some (a, b)))); pas_refined aag s \<rbrakk>
+  "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word pt_t (Some (a, b)))); pas_refined aag s \<rbrakk>
      \<Longrightarrow> is_subject_asid aag a"
   by (auto simp: aag_cap_auth_def cap_links_asid_slot_def label_owns_asid_slot_def
           intro: pas_refined_Control_into_is_subject_asid)
 
 lemma aag_cap_auth_PageDirectoryCap:
-  "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word option));  pas_refined aag s \<rbrakk>
+  "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word pt_t option));  pas_refined aag s \<rbrakk>
      \<Longrightarrow> is_subject aag word"
   unfolding aag_cap_auth_def
   by (simp add: clas_no_asid cap_auth_conferred_def arch_cap_auth_conferred_def
                 cli_no_irqs pas_refined_all_auth_is_owns)
 
 lemma aag_cap_auth_PageDirectoryCap_asid:
-  "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word (Some (a,vref)))); pas_refined aag s \<rbrakk>
+  "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word pt_t (Some (a,vref)))); pas_refined aag s \<rbrakk>
      \<Longrightarrow> is_subject_asid aag a"
   unfolding aag_cap_auth_def
   by (auto simp: cap_links_asid_slot_def label_owns_asid_slot_def
@@ -245,7 +245,9 @@ lemmas aag_cap_auth_subject = aag_cap_auth_ASIDPoolCap_asid
 
 lemma prepare_thread_delete_reads_respects_f[Finalise_IF_assms]:
   "reads_respects_f aag l \<top> (prepare_thread_delete thread)"
-  unfolding prepare_thread_delete_def by wp
+  unfolding prepare_thread_delete_def
+  apply wp
+  sorry
 
 lemma arch_finalise_cap_reads_respects[Finalise_IF_assms]:
   "reads_respects aag l (pas_refined aag and invs and cte_wp_at ((=) (ArchObjectCap cap)) slot
@@ -257,15 +259,16 @@ lemma arch_finalise_cap_reads_respects[Finalise_IF_assms]:
      apply simp
      apply (simp split: bool.splits)
      apply (intro impI conjI)
-  by (wp delete_asid_pool_reads_respects unmap_page_reads_respects unmap_page_table_reads_respects
+  apply (wp delete_asid_pool_reads_respects unmap_page_reads_respects unmap_page_table_reads_respects
          delete_asid_reads_respects find_vspace_for_asid_reads_respects
       | simp add: invs_psp_aligned invs_vspace_objs invs_valid_objs valid_cap_def
                   valid_arch_state_asid_table invs_arch_state wellformed_mapdata_def
-           split: option.splits bool.splits
+           split: option.splits bool.splits pt_type.splits
       | intro impI conjI allI
       | elim conjE
       | drule cte_wp_valid_cap
       | fastforce dest: aag_can_read_own_asids aag_cap_auth_subject)+
+  sorry
 
 (*NOTE: Required to dance around the issue of the base potentially
         being zero and thus we can't conclude it is in the current subject.*)
@@ -284,8 +287,8 @@ lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq':
   done
 
 lemma pt_cap_aligned:
-  "\<lbrakk> caps_of_state s p = Some (ArchObjectCap (PageTableCap word x)); valid_caps (caps_of_state s) s \<rbrakk>
-     \<Longrightarrow> is_aligned word pt_bits"
+  "\<lbrakk> caps_of_state s p = Some (ArchObjectCap (PageTableCap word pt_t x)); valid_caps (caps_of_state s) s \<rbrakk>
+     \<Longrightarrow> is_aligned word (pt_bits pt_t)"
   by (auto simp: obj_ref_of_def pt_bits_def pageBits_def
           dest!: cap_aligned_valid[OF valid_capsD, unfolded cap_aligned_def, THEN conjunct1])
 
@@ -321,22 +324,30 @@ lemma delete_asid_globals_equiv:
    delete_asid asid pt
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding delete_asid_def
-  by (wpsimp wp: set_vm_root_globals_equiv set_asid_pool_globals_equiv simp: hwASIDFlush_def)
+  apply (wpsimp wp: set_vm_root_globals_equiv set_asid_pool_globals_equiv)
+  sorry
 
 lemma arch_finalise_cap_globals_equiv[Finalise_IF_assms]:
   "\<lbrace>globals_equiv st and invs and valid_arch_cap cap\<rbrace>
    arch_finalise_cap cap b
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (induct cap; simp add: arch_finalise_cap_def)
-  by (wp delete_asid_pool_globals_equiv case_option_wp unmap_page_globals_equiv
+  apply (wp delete_asid_pool_globals_equiv case_option_wp unmap_page_globals_equiv
          unmap_page_table_globals_equiv delete_asid_globals_equiv
       | wpc | clarsimp simp: valid_arch_cap_def wellformed_mapdata_def)+
+    apply fastforce
+  apply (wp delete_asid_pool_globals_equiv case_option_wp unmap_page_globals_equiv
+         unmap_page_table_globals_equiv delete_asid_globals_equiv
+      | wpc | clarsimp simp: valid_arch_cap_def wellformed_mapdata_def)+
+  sorry
 
 declare arch_get_sanitise_register_info_def[simp]
 
-crunch prepare_thread_delete
-  for globals_equiv[Finalise_IF_assms, wp]: "globals_equiv st"
-  (wp: dxo_wp_weak)
+lemma prepare_thread_delete_globals_equiv[Finalise_IF_assms, wp]:
+  "prepare_thread_delete t \<lbrace>globals_equiv s\<rbrace>"
+  unfolding prepare_thread_delete_def
+  apply wpsimp
+  sorry
 
 lemma set_bound_notification_globals_equiv[Finalise_IF_assms]:
   "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>

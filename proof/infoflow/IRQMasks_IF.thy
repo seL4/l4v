@@ -60,8 +60,6 @@ locale IRQMasks_IF_1 =
     "send_signal ntfnptr badge \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   and handle_vm_fault_irq_masks[wp]:
     "handle_vm_fault t vmft \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and handle_hypervisor_fault_irq_masks[wp]:
-    "handle_hypervisor_fault t hvft \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   and handle_interrupt_irq_masks:
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False (st :: 's state) and K (irq \<le> maxIRQ)\<rbrace>
      handle_interrupt irq
@@ -78,8 +76,6 @@ locale IRQMasks_IF_1 =
      \<lbrace>\<lambda>rv s :: det_state. (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)\<rbrace>"
   and activate_thread_irq_masks[wp]:
     "activate_thread \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and schedule_irq_masks[wp]:
-    "schedule \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   and handle_spurious_irq_masks[wp]:
     "handle_spurious_irq \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
 begin
@@ -300,6 +296,10 @@ locale IRQMasks_IF_2 = IRQMasks_IF_1 state_t
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False (st :: 's state) and tcb_inv_wf tinv\<rbrace>
      invoke_tcb tinv
      \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
+  and handle_hypervisor_fault_irq_masks[wp]:
+    "handle_hypervisor_fault t hvft \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  and schedule_irq_masks[wp]:
+    "schedule \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
 begin
 
 crunch invoke_domain

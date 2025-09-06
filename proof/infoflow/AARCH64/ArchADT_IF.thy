@@ -79,13 +79,7 @@ lemma do_use_op_guarded_pas_domain[ADT_IF_assms, wp]:
 
 lemma tcb_arch_ref_tcb_context_set[ADT_IF_assms, simp]:
   "tcb_arch_ref (tcb_arch_update (arch_tcb_context_set tc) tcb) = tcb_arch_ref tcb"
-  by (simp add: tcb_arch_ref_def)
-
-crunch arch_switch_to_idle_thread, arch_switch_to_thread
-  for pspace_aligned[ADT_IF_assms, wp]: "\<lambda>s :: det_state. pspace_aligned s"
-  and valid_vspace_objs[ADT_IF_assms, wp]: "\<lambda>s :: det_state. valid_vspace_objs s"
-  and valid_arch_state[ADT_IF_assms, wp]: "\<lambda>s :: det_state. valid_arch_state s"
-  (wp: crunch_wps simp: crunch_simps)
+  by (simp add: tcb_arch_ref_def arch_tcb_context_set_def)
 
 crunch arch_activate_idle_thread, arch_switch_to_thread
   for cur_thread[ADT_IF_assms, wp]: "\<lambda>s. P (cur_thread s)"
@@ -235,7 +229,7 @@ lemma do_user_op_if_irq_measure_if[ADT_IF_assms]:
          | wps |wp dmo_wp | wpc)+
   done
 
-crunch set_flags
+crunch set_flags, arch_post_set_flags
   for irq_states_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
 
 lemma invoke_tcb_irq_state_inv[ADT_IF_assms]:
@@ -252,7 +246,8 @@ lemma invoke_tcb_irq_state_inv[ADT_IF_assms]:
     defer
       apply ((wp irq_state_inv_triv | simp)+)[2]
     apply (simp add: split_def cong: option.case_cong)
-  by (wp hoare_vcg_all_liftE_R hoare_vcg_all_lift hoare_vcg_const_imp_liftE_R
+ by (clarsimp split del: if_split cong: conj_cong
+     | wp hoare_vcg_all_liftE_R hoare_vcg_all_lift hoare_vcg_const_imp_liftE_R
          checked_cap_insert_domain_sep_inv cap_delete_deletes
          cap_delete_irq_state_inv[where st=st and sta=sta and irq=irq]
          cap_delete_irq_state_next[where st=st and sta=sta and irq=irq]
@@ -278,10 +273,15 @@ lemma reset_untyped_cap_irq_state_inv[ADT_IF_assms]:
           | wp (once) dmo_wp)+
   done
 
-crunch
-  handle_vm_fault, handle_hypervisor_fault
-  for irq_state_of_state[ADT_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
-  (wp: crunch_wps dmo_wp simp: crunch_simps)
+lemma handle_vm_fault_irq_state_of_state[ADT_IF_assms]:
+  "handle_vm_fault thread fault \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+  unfolding handle_vm_fault_def addressTranslateS1_def
+  by (wpsimp wp: dmo_wp)
+
+lemma handle_hypervisor_fault_irq_state_of_state[ADT_IF_assms]:
+  "handle_hypervisor_fault thread fault \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+  by (cases fault, wpsimp wp: dmo_wp split_del: if_split)
+
 
 text \<open>Not true of invoke_untyped any more.\<close>
 crunch create_cap
@@ -297,19 +297,40 @@ crunch arch_invoke_irq_control
 
 lemma handle_reserved_irq_non_kernel_IRQs[ADT_IF_assms]:
   "\<lbrace>P and K (irq \<notin> non_kernel_IRQs)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. P\<rbrace>"
-  by (wpsimp simp: handle_reserved_irq_def)
+  unfolding handle_reserved_irq_def
+  apply (rule hoare_gen_asm)
+  apply (wpsimp wp: when_wp[where P'="\<bottom>"] simp: non_kernel_IRQs_def irq_vppi_event_index_def)
+  done
 
-lemma thread_set_pas_refined[ADT_IF_assms]:
-  assumes cps: "\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb"
-       and st: "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
-      and ntfn: "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
-       and dom: "\<And>tcb. tcb_domain (f tcb) = tcb_domain tcb"
-     shows "thread_set f t \<lbrace>pas_refined aag\<rbrace>"
-  by (wpsimp wp: tcb_domain_map_wellformed_lift_strong thread_set_state_vrefs thread_set_edomains[OF dom]
-           simp: pas_refined_def state_objs_to_policy_def
-      | wps thread_set_caps_of_state_trivial[OF cps]
-            thread_set_thread_st_auth_trivT[OF st]
-            thread_set_thread_bound_ntfns_trivT[OF ntfn])+
+lemma thread_set_context_state_hyp_refs_of[CNode_AC_assms]:
+  "thread_set (tcb_arch_update (arch_tcb_context_set ctxt)) t \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (wpsimp simp: thread_set_def wp: set_object_wp )
+  apply (erule_tac P=P in back_subst)
+  apply (rule ext)
+  apply (simp add: state_hyp_refs_of_def get_tcb_def arch_tcb_context_set_def
+            split: option.splits kernel_object.splits)
+  done
+
+(* FIXME AARCH64 IF: make generic *)
+lemma thread_set_context_pas_refined[ADT_IF_assms]:
+  "thread_set (tcb_arch_update (arch_tcb_context_set ctxt)) t \<lbrace>pas_refined aag\<rbrace>"
+  unfolding pas_refined_def state_objs_to_policy_def
+  apply (rule hoare_weaken_pre)
+   apply (wpsimp wp: tcb_domain_map_wellformed_lift_strong thread_set_edomains)
+   apply (wps thread_set_state_vrefs thread_set_context_state_hyp_refs_of)
+   apply (rule hoare_lift_Pf2[where f="caps_of_state"])
+    apply (rule hoare_lift_Pf2[where f="thread_st_auth"])
+     apply (rule hoare_lift_Pf2[where f="thread_bound_ntfns"])
+      apply wp
+     apply (wpsimp wp: thread_set_thread_bound_ntfns_trivT )
+    apply (wpsimp wp: thread_set_thread_st_auth_trivT)
+   apply (wpsimp wp: thread_set_caps_of_state_trivial simp: ran_tcb_cap_cases)
+  apply simp
+  done
+
+crunch init_arch_objects
+  for irq_states_of_state[ADT_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
+  (wp: crunch_wps dmo_wp)
 
 end
 
@@ -318,7 +339,7 @@ global_interpretation ADT_IF_1?: ADT_IF_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact ADT_IF_assms | wp init_arch_objects_inv)?)
+    by (unfold_locales; (fact ADT_IF_assms | wp )?)
 qed
 
 sublocale valid_initial_state \<subseteq> valid_initial_state?: ADT_valid_initial_state ..

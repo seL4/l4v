@@ -30,10 +30,15 @@ crunch invoke_untyped
        wp: mapME_x_inv_wp preemption_point_inv
      simp: crunch_simps no_irq_clearMemory mapM_x_def_bak unless_def)
 
+lemma vcpu_invalidate_active_irq_masks[wp]:
+  "vcpu_invalidate_active \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding vcpu_invalidate_active_def vcpu_disable_def
+  by (wpsimp wp: dmo_wp)
+
 crunch finalise_cap
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (  wp: crunch_wps dmo_wp no_irq
-   simp: crunch_simps no_irq_setVSpaceRoot no_irq_hwASIDFlush)
+   simp: crunch_simps no_irq_setVSpaceRoot)
 
 crunch send_signal, timer_tick
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
@@ -53,8 +58,10 @@ lemma handle_interrupt_irq_masks[IRQMasks_IF_assms]:
    apply (wp dmo_wp
           | simp add: ackInterrupt_def maskInterrupt_def when_def split del: if_split
           | wpc
-          | simp add: get_irq_state_def handle_reserved_irq_def
-          | wp (once) hoare_drop_imp)+
+          | simp add: get_irq_state_def
+          | wp (once) hoare_drop_imp hoare_pre_cont)+
+  apply (clarsimp simp: domain_sep_inv_def)
+  apply metis
   done
 
 lemma arch_invoke_irq_control_irq_masks[IRQMasks_IF_assms]:
@@ -62,12 +69,21 @@ lemma arch_invoke_irq_control_irq_masks[IRQMasks_IF_assms]:
    arch_invoke_irq_control invok
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   apply (case_tac invok)
-  apply (clarsimp simp: arch_irq_control_inv_valid_def domain_sep_inv_def valid_def)
+   apply (auto simp: arch_irq_control_inv_valid_def domain_sep_inv_def valid_def)
   done
 
-crunch handle_vm_fault, handle_hypervisor_fault
+crunch handle_vm_fault
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp no_irq)
+
+lemma store_word_offs_irq_masks[wp]:
+  "store_word_offs ptr offs v \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding store_word_offs_def
+  by (wpsimp wp: no_irq_storeWord dmo_wp)
+
+crunch set_extra_badge
+  for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
+
 
 lemma dmo_getActiveIRQ_irq_masks[IRQMasks_IF_assms, wp]:
   "do_machine_op (getActiveIRQ in_kernel) \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
@@ -87,9 +103,6 @@ lemma dmo_getActiveIRQ_return_axiom[IRQMasks_IF_assms, wp]:
 crunch activate_thread, handle_spurious_irq
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
 
-crunch schedule
-  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: dmo_wp crunch_wps dxo_wp_weak simp: crunch_simps)
 
 end
 
@@ -104,13 +117,44 @@ qed
 
 context Arch begin global_naming AARCH64
 
-crunch do_reply_transfer, set_priority, set_flags, arch_post_set_flags
+crunch handle_hypervisor_fault
+  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  (wp: dmo_wp)
+
+(* FIXME AARCH64 IF: vcpu_disable modifies irq masks *)
+lemma schedule_irq_masks[IRQMasks_IF_assms, wp]:
+  "schedule \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  sorry
+
+crunch do_reply_transfer, set_priority, set_flags
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps empty_slot_irq_masks simp: crunch_simps unless_def)
 
-crunch arch_perform_invocation
+crunch arch_thread_set
+  for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
+
+crunch arch_post_set_flags
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: dmo_wp crunch_wps no_irq)
+  (wp: crunch_wps dmo_wp empty_slot_irq_masks simp: crunch_simps unless_def)
+
+lemma no_irq_do_flush:
+  "no_irq (do_flush type vstart vend pstart)"
+  by (wpsimp simp: do_flush_def)
+
+crunch perform_vspace_invocation, perform_page_table_invocation, perform_asid_control_invocation,
+       perform_asid_pool_invocation, perform_sgi_invocation, perform_page_invocation
+  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  (wp: dmo_wp crunch_wps no_irq simp: no_irq_do_flush crunch_simps)
+
+(* FIXME AARCH64 IF: vcpu_disable modifies irq masks *)
+lemma perform_vcpu_invocation_irq_masks[wp]:
+  "perform_vcpu_invocation i \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  sorry
+
+lemma arch_perform_invocation_irq_masks[IRQMasks_IF_assms, wp]:
+  "arch_perform_invocation i \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding arch_perform_invocation_def fun_app_def
+  by wpsimp
 
 (* FIXME: remove duplication in this proof -- requires getting the wp automation
           to do the right thing with dropping imps in validE goals *)
@@ -151,12 +195,11 @@ lemma invoke_tcb_irq_masks[IRQMasks_IF_assms]:
     apply (simp add: option_update_thread_def | wp hoare_weak_lift_imp hoare_vcg_all_lift | wpc)+
   by fastforce+
 
-lemma init_arch_objects_irq_masks:
-  "init_arch_objects new_type dev ptr num_objects obj_sz refs \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  by (rule init_arch_objects_inv)
+declare init_arch_objects_irq_masks[IRQMasks_IF_assms]
 
 crunch arch_prepare_set_domain
-  for inv[IRQMasks_IF_assms,wp]: P
+  for irq_masks[IRQMasks_IF_assms,wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  (wp: dmo_wp mapM_x_wp_inv mapM_wp_inv)
 
 end
 

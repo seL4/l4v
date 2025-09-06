@@ -31,7 +31,6 @@ lemma cap_ne_global_pt:
   apply (unfold global_refs_def)
   apply clarsimp
   apply (unfold cap_range_def)
-  apply (drule valid_global_arch_objs_global_ptD)
   apply blast
   done
 
@@ -64,9 +63,17 @@ lemma arch_post_modify_registers_reads_respects_f[Tcb_IF_assms, wp]:
   "reads_respects_f aag l \<top> (arch_post_modify_registers cur t)"
   by wpsimp
 
+(* FIXME AARCH64 IF: consolidate with reads_equiv_valid_rv_inv_f *)
+lemma reads_equiv_valid_inv_f:
+  assumes a: "reads_equiv_valid_inv A aag P f"
+  assumes b: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
+  shows "equiv_valid_inv (reads_equiv_f aag) A P f"
+  using reads_equiv_valid_rv_inv_f equiv_valid_def2 a b by blast
+
 lemma arch_get_sanitise_register_info_reads_respects_f[Tcb_IF_assms, wp]:
-  "reads_respects_f aag l \<top> (arch_get_sanitise_register_info rv)"
-  by wpsimp
+  "reads_respects_f aag l (K (aag_can_read_or_affect aag l rv)) (arch_get_sanitise_register_info rv)"
+  unfolding arch_get_sanitise_register_info_def
+  by (wpsimp wp: reads_equiv_valid_inv_f)
 
 end
 
@@ -86,8 +93,8 @@ lemma valid_ipc_buffer_cap_is_nondevice_page_cap:
   by (clarsimp simp: valid_ipc_buffer_cap_def split: cap.splits arch_cap.splits)
 
 lemma is_valid_vtable_root_def2:
-  "is_valid_vtable_root c = (\<exists>r a. c = ArchObjectCap (PageTableCap r (Some a)))"
-  by (auto simp: is_valid_vtable_root_def split: cap.splits arch_cap.splits option.splits)
+  "is_valid_vtable_root c = (\<exists>r a. c = ArchObjectCap (PageTableCap r VSRootPT_T (Some a)))"
+  by (auto simp: is_valid_vtable_root_def split: cap.splits arch_cap.splits option.splits pt_type.splits)
 
 (* FIXME: Pretty general. Probably belongs somewhere else *)
 lemma invoke_tcb_thread_preservation[Tcb_IF_assms]:
@@ -246,15 +253,189 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
   apply (clarsimp cong: conj_cong)
   apply (intro conjI impI allI)
   (* slow *)
-  by (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def
-                     det_setRegister option.disc_eq_case[symmetric]
-              split: cap.splits arch_cap.splits option.split)+
+ by (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def
+                    det_setRegister option.disc_eq_case[symmetric]
+             split: cap.splits arch_cap.splits option.split pt_type.splits)+
+
+lemma set_arm_current_fpu_owner_None_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows "reads_respects aag l \<top> (set_arm_current_fpu_owner None)"
+  unfolding set_arm_current_fpu_owner_def maybeM_def arch_thread_set_is_thread_set
+  apply clarsimp
+  apply (wpsimp wp: modify_ev thread_set_reads_respects)
+  apply auto
+  subgoal sorry (* FIXME AARCH64 IF: requires equiv fpu arch state *)
+  by (clarsimp simp: reads_equiv_def affects_equiv_def states_equiv_for_def
+                         equiv_for_def equiv_asids_def equiv_asid_def silc_dom_equiv_def)+
+
+lemma dmo_disableFpu_reads_respects[wp]:
+  "reads_respects aag l \<top> (do_machine_op disableFpu)"
+  unfolding disableFpu_def
+  apply (rule use_spec_ev)
+  apply (rule do_machine_op_spec_reads_respects)
+   apply wp
+   apply (simp add: equiv_valid_def2)
+      apply (rule modify_ev2)
+      apply (fastforce simp: equiv_for_def)
+     apply (rule machine_op_lift_ev')
+    apply (rule hoare_TrueI)
+   apply (rule conjI)
+    apply clarsimp
+    apply (clarsimp simp: equiv_for_def)
+   apply assumption
+  apply wpsimp
+  done
+
+lemma dmo_enableFpu_reads_respects[wp]:
+  "reads_respects aag l \<top> (do_machine_op enableFpu)"
+  unfolding enableFpu_def
+  apply (rule use_spec_ev)
+  apply (rule do_machine_op_spec_reads_respects)
+   apply wp
+   apply (simp add: equiv_valid_def2)
+      apply (rule modify_ev2)
+      apply (fastforce simp: equiv_for_def)
+     apply (rule machine_op_lift_ev')
+    apply (rule hoare_TrueI)
+   apply (rule conjI)
+    apply clarsimp
+    apply (clarsimp simp: equiv_for_def)
+   apply assumption
+  apply wpsimp
+  done
+
+lemma equiv_valid_state_assert:
+  "equiv_valid_inv I A P f
+   \<Longrightarrow> equiv_valid_inv I A P (do state_assert g; f od)"
+  unfolding state_assert_def bind_assoc K_bind_def
+  by (erule equiv_valid_get_assert)
+
+lemma dmo_readFpuState_reads_respects[wp]:
+  "reads_respects aag l \<top> (do_machine_op readFpuState)"
+  unfolding readFpuState_def
+  apply (rule use_spec_ev)
+  apply (rule do_machine_op_spec_reads_respects)
+   apply (rule equiv_valid_state_assert)
+   apply (rule equiv_valid_guard_imp)
+    apply wpsimp
+  subgoal sorry (* FIXME AARCH64 IF: requires equiv fpu state *)
+  apply wpsimp
+  done
+
+lemma save_fpu_state_reads_respects[wp]:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows "reads_respects aag l (K (aag_can_read_or_affect aag l t)) (save_fpu_state t)"
+  unfolding save_fpu_state_def
+  by (wpsimp wp: as_user_reads_respects simp: setFPUState_def)
+
+lemma switch_local_fpu_owner_None_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows "reads_respects aag l \<top> (switch_local_fpu_owner None)"
+  unfolding switch_local_fpu_owner_def maybeM_def
+  apply (wpsimp wp: set_arm_current_fpu_owner_None_reads_respects)
+  sorry (* FIXME AARCH64 IF: requires equiv fpu arch state *)
+
+lemma fpu_release_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows "reads_respects aag l \<top> (fpu_release t)"
+  unfolding fpu_release_def
+  apply (wpsimp wp: switch_local_fpu_owner_None_reads_respects when_ev)
+  sorry (* FIXME AARCH64 IF: requires equiv fpu arch state *)
 
 lemma arch_post_set_flags_reads_respects_f[Tcb_IF_assms]:
-  "reads_respects_f aag l \<top> (arch_post_set_flags t flags)"
-  unfolding arch_post_set_flags_def by wpsimp
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows "reads_respects_f aag l (silc_inv aag st) (arch_post_set_flags t flags)"
+  unfolding arch_post_set_flags_def
+  apply (rule equiv_valid_guard_imp)
+   apply (wpsimp wp: when_ev reads_respects_f[OF fpu_release_reads_respects])
+  apply fastforce
+  done
 
-declare arch_post_set_flags_inv[Tcb_IF_assms]
+lemma arch_tcb_context_get_cur_fpu_update[simp]:
+  "arch_tcb_context_get (tcb_arch tcb\<lparr>tcb_cur_fpu := fpu\<rparr>) = arch_tcb_context_get (tcb_arch tcb)"
+  by (simp add: arch_tcb_context_get_def)
+
+lemma globals_equiv_fpu_owner_update[simp]:
+  "globals_equiv st (s\<lparr>arch_state := arch_state s\<lparr>arm_current_fpu_owner := t\<rparr>\<rparr>)  =
+   globals_equiv st s"
+  by (auto simp add: globals_equiv_def idle_equiv_def)
+
+lemma set_arm_current_fpu_owner_globals_equiv[wp]:
+  "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
+   set_arm_current_fpu_owner t
+   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  unfolding set_arm_current_fpu_owner_def arch_thread_set_is_thread_set
+  by (wpsimp wp: thread_set_globals_equiv thread_set_valid_arch_state hoare_vcg_all_lift hoare_drop_imps
+       | fastforce simp: ran_tcb_cap_cases)+
+
+lemma dmo_enableFpu_globals_equiv[wp]:
+  "do_machine_op enableFpu \<lbrace>globals_equiv st\<rbrace>"
+  apply (clarsimp simp: enableFpu_def dmo_distr dmo_modify_distr)
+  apply (rule bind_wp_skip)
+   apply (unfold globals_equiv_def arch_globals_equiv_def idle_equiv_def enableFpu_def)[1]
+   apply wpsimp
+  apply wpsimp
+  done
+
+lemma dmo_disableFpu_globals_equiv[wp]:
+  "do_machine_op disableFpu \<lbrace>globals_equiv st\<rbrace>"
+  apply (clarsimp simp: disableFpu_def dmo_distr dmo_modify_distr)
+  apply (rule bind_wp_skip)
+   apply (unfold globals_equiv_def arch_globals_equiv_def idle_equiv_def enableFpu_def)[1]
+   apply wpsimp
+  apply wpsimp
+  done
+
+lemma dmo_state_assert_inv[wp]:
+  "do_machine_op (state_assert f) \<lbrace>P\<rbrace>"
+  unfolding state_assert_def
+  by (wpsimp wp: dmo_wp)
+
+lemma dmo_readFpuState_globals_equiv[wp]:
+  "do_machine_op readFpuState \<lbrace>globals_equiv st\<rbrace>"
+  by (wpsimp simp: readFpuState_def dmo_distr dmo_modify_distr)
+
+lemma dmo_writeFpuState_globals_equiv[wp]:
+  "do_machine_op (writeFpuState fpustate) \<lbrace>globals_equiv st\<rbrace>"
+  apply (clarsimp simp: writeFpuState_def dmo_distr dmo_modify_distr)
+  apply wpsimp
+  apply (clarsimp simp: globals_equiv_def idle_equiv_def)
+  done
+
+lemma as_user_getRestart_inv[wp]:
+  "as_user t getFPUState \<lbrace>P\<rbrace>"
+  unfolding getFPUState_def
+  by (wpsimp wp: as_user_inv)
+
+lemma load_fpu_state_globals_equiv[wp]:
+  "load_fpu_state t \<lbrace>globals_equiv st\<rbrace>"
+  unfolding load_fpu_state_def
+  by wpsimp
+
+lemma save_fpu_state_globals_equiv[wp]:
+  "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. t \<noteq> idle_thread s)\<rbrace>
+   save_fpu_state t
+   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  unfolding save_fpu_state_def
+  by wpsimp
+
+crunch load_fpu_state, save_fpu_state
+  for valid_arch_state[wp]: "valid_arch_state"
+
+lemma switch_local_fpu_owner_globals_equiv:
+  "\<lbrace>globals_equiv st and invs\<rbrace>
+   switch_local_fpu_owner new_owner
+   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  unfolding switch_local_fpu_owner_def
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_weak_lift_imp)
+  apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_cur_fpu_def
+                         is_tcb_cur_fpu_def live_def arch_tcb_live_def
+                   dest: idle_no_ex_cap if_live_then_nonz_capD)
+  done
+
+crunch arch_post_set_flags
+  for globals_equiv[Tcb_IF_assms]: "globals_equiv st"
+  (simp: crunch_simps)
 
 end
 

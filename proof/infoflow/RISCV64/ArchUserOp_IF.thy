@@ -566,9 +566,20 @@ proof -
     apply (frule_tac level=level in valid_vspace_objs_pte)
       apply clarsimp
      apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def)
-     apply (fastforce simp: table_base_pt_slot_offset[OF vs_lookup_table_is_aligned]
-                      dest: valid_arch_state_asid_table dest!: pt_lookup_vs_lookupI
-                     intro: vs_lookup_level)
+     apply (drule pt_lookup_vs_lookupI)
+     apply (fastforce simp: table_base_pt_slot_offset[OF vs_lookup_table_is_aligned])
+      apply (clarsimp simp: table_base_pt_slot_offset[OF vs_lookup_table_is_aligned])
+    apply (rule_tac x=asid in exI)
+     apply (rule_tac x=x in exI)
+     apply (subst table_base_pt_slot_offset[OF vs_lookup_table_is_aligned])
+           apply fastforce
+           apply fastforce
+           apply fastforce
+           apply fastforce
+       apply (fastforce dest: valid_arch_state_asid_table)
+      apply fastforce
+     apply clarsimp
+     apply (erule vs_lookup_level)
     apply (erule disjE[OF _  _ FalseE])
      prefer 2
      apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def in_omonad pt_walk.simps)

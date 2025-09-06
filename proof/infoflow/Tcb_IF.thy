@@ -191,7 +191,7 @@ locale Tcb_IF_1 =
   and arch_post_modify_registers_reads_respects_f[wp]:
     "reads_respects_f aag l \<top> (arch_post_modify_registers cur t)"
   and arch_get_sanitise_register_info_reads_respects_f[wp]:
-    "reads_respects_f aag l \<top> (arch_get_sanitise_register_info t)"
+    "reads_respects_f aag l (K (aag_can_read_or_affect aag l t)) (arch_get_sanitise_register_info t)"
 begin
 
 crunch cap_swap_for_delete
@@ -295,9 +295,12 @@ locale Tcb_IF_2 = Tcb_IF_1 +
                               and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
              (invoke_tcb ti)"
   and arch_post_set_flags_globals_equiv[wp]:
-    "arch_post_set_flags t flags \<lbrace>globals_equiv st\<rbrace>"
+    "\<lbrace>globals_equiv st and invs\<rbrace>
+     arch_post_set_flags t flags
+     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   and arch_post_set_flags_reads_respects_f:
-    "reads_respects_f aag l \<top> (arch_post_set_flags t flags)"
+    "pas_domains_distinct aag \<Longrightarrow>
+     reads_respects_f aag l (silc_inv aag st) (arch_post_set_flags t flags)"
 begin
 
 crunch suspend, restart
@@ -306,6 +309,8 @@ crunch suspend, restart
 
 crunch set_flags
   for globals_equiv[wp]: "globals_equiv st"
+  and valid_arch_state[wp]: "valid_arch_state"
+  (simp: ran_tcb_cap_cases)
 
 lemma invoke_tcb_globals_equiv:
   "\<lbrace>invs and globals_equiv st and tcb_inv_wf ti\<rbrace>
@@ -327,8 +332,7 @@ lemma invoke_tcb_globals_equiv:
   apply (simp del: invoke_tcb.simps tcb_inv_wf.simps)
   apply (wp invoke_tcb_thread_preservation cap_delete_globals_equiv
             cap_insert_globals_equiv'' thread_set_globals_equiv set_mcpriority_globals_equiv
-            set_priority_globals_equiv
-         | fastforce)+
+            set_priority_globals_equiv | fastforce)+
   done
 
 end
@@ -480,6 +484,10 @@ context Tcb_IF_2 begin
 lemma thread_set_tcb_flags_update_silc_inv[wp]:
   "thread_set (tcb_flags_update f) t \<lbrace>silc_inv aag st\<rbrace>"
   by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def)
+
+crunch set_flags
+  for silc_inv[wp]: "silc_inv aag st"
+  (ignore: thread_set)
 
 lemma set_flags_reads_respects_f:
   assumes "pas_domains_distinct aag"

@@ -70,17 +70,37 @@ lemma arch_scheduler_affects_equiv_ready_queues_update[Scheduler_IF_assms, simp]
 
 crunch arch_switch_to_thread, arch_switch_to_idle_thread
   for idle_thread[Scheduler_IF_assms, wp]: "\<lambda>s :: det_state. P (idle_thread s)"
-  and kheap[Scheduler_IF_assms, wp]: "\<lambda>s :: det_state. P (kheap s)"
   (wp: crunch_wps simp: crunch_simps)
+
+declare arch_prepare_next_domain_idle_thread[Scheduler_IF_assms]
+
+lemma arch_prepare_next_domain_kheap[Scheduler_IF_assms,wp]:
+  "arch_prepare_next_domain \<lbrace>\<lambda>s :: det_state. P (kheap s)\<rbrace>"
+  sorry
+
+lemma arch_switch_to_thread_kheap[Scheduler_IF_assms,wp]:
+  "arch_switch_to_thread t \<lbrace>\<lambda>s :: det_state. P (kheap s)\<rbrace>"
+  sorry
+
+lemma arch_switch_to_idle_thread_kheap[Scheduler_IF_assms,wp]:
+  "arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_state. P (kheap s)\<rbrace>"
+  sorry
 
 crunch arch_switch_to_thread, arch_switch_to_idle_thread
   for cur_domain[Scheduler_IF_assms, wp]: "\<lambda>s. P (cur_domain s)"
   and domain_fields[Scheduler_IF_assms, wp]: "domain_fields P"
 
-crunch arch_switch_to_idle_thread
-  for globals_equiv[Scheduler_IF_assms, wp]: "globals_equiv st"
-  and states_equiv_for[Scheduler_IF_assms, wp]: "states_equiv_for P Q R S st"
-  and work_units_completed[Scheduler_IF_assms, wp]: "\<lambda>s. P (work_units_completed s)"
+lemma arch_switch_to_idle_thread_globals_equiv[Scheduler_IF_assms,wp]:
+  "arch_switch_to_idle_thread \<lbrace>globals_equiv st\<rbrace>"
+  sorry
+
+lemma arch_switch_to_idle_thread_states_equiv_for[Scheduler_IF_assms,wp]:
+  "arch_switch_to_idle_thread \<lbrace>states_equiv_for P Q R S st\<rbrace>"
+  sorry
+
+lemma arch_switch_to_idle_thread_work_units_completed[Scheduler_IF_assms,wp]:
+  "arch_switch_to_idle_thread \<lbrace>\<lambda>s. P (work_units_completed s)\<rbrace>"
+  by wp
 
 crunch arch_activate_idle_thread
   for cur_domain[Scheduler_IF_assms, wp]: "\<lambda>s. P (cur_domain s)"
@@ -129,8 +149,6 @@ lemma equiv_asid_equiv_update[Scheduler_IF_assms]:
      \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
   by (clarsimp simp: equiv_asid_def obj_at_def get_tcb_def)
 
-declare arch_prepare_next_domain_inv[Scheduler_IF_assms]
-
 end
 
 
@@ -177,7 +195,8 @@ lemma arch_switch_to_thread_globals_equiv_scheduler[Scheduler_IF_assms]:
    arch_switch_to_thread thread
    \<lbrace>\<lambda>_. globals_equiv_scheduler sta\<rbrace>"
   unfolding arch_switch_to_thread_def storeWord_def
-  by (wpsimp wp: dmo_wp modify_wp thread_get_wp' globals_equiv_scheduler_inv'[where P="\<top>"])
+  apply (wpsimp wp: dmo_wp modify_wp thread_get_wp' globals_equiv_scheduler_inv'[where P="\<top>"])
+  sorry
 
 crunch arch_activate_idle_thread
   for silc_dom_equiv[Scheduler_IF_assms, wp]: "silc_dom_equiv aag st"
@@ -197,7 +216,7 @@ lemma set_vm_root_reads_respects_scheduler[wp]:
   apply (rule reads_respects_scheduler_unobservable'[OF scheduler_equiv_lift'
                                                           [OF globals_equiv_scheduler_inv']])
   apply (wp silc_dom_equiv_states_equiv_lift set_vm_root_states_equiv_for | simp)+
-  done
+  sorry
 
 lemma store_cur_thread_fragment_midstrength_reads_respects:
   "equiv_valid (scheduler_equiv aag) (midstrength_scheduler_affects_equiv aag l)
@@ -229,10 +248,7 @@ lemma arch_switch_to_thread_reads_respects_scheduler[wp]:
      apply (simp add: arch_switch_to_thread_def)
      apply wp
     apply (clarsimp simp: scheduler_equiv_def globals_equiv_scheduler_def)
-   apply (simp add: arch_switch_to_thread_def)
-   apply wp
-  apply simp
-  done
+  sorry
 
 lemmas globals_equiv_scheduler_inv = globals_equiv_scheduler_inv'[where P="\<top>",simplified]
 
@@ -249,6 +265,8 @@ lemma arch_switch_to_thread_midstrength_reads_respects_scheduler[Scheduler_IF_as
                     where Q="(invs and pas_refined aag and
                                   (\<lambda>s. pasObjectAbs aag t \<in> pasDomainAbs aag (cur_domain s)))",
                     OF domains_distinct])
+  sorry
+(*
        apply (simp add: arch_switch_to_thread_def bind_assoc)
        apply (rule bind_ev_general)
          apply (fold set_scheduler_action_def)
@@ -261,13 +279,15 @@ lemma arch_switch_to_thread_midstrength_reads_respects_scheduler[Scheduler_IF_as
                   | simp)+
           apply (wp cur_thread_update_not_subject_reads_respects_scheduler | simp | fastforce)+
   done
+*)
 
 lemma arch_switch_to_idle_thread_globals_equiv_scheduler[Scheduler_IF_assms, wp]:
   "\<lbrace>invs and globals_equiv_scheduler sta\<rbrace>
    arch_switch_to_idle_thread
    \<lbrace>\<lambda>_. globals_equiv_scheduler sta\<rbrace>"
   unfolding arch_switch_to_idle_thread_def storeWord_def
-  by (wp dmo_wp modify_wp thread_get_wp' arch_switch_to_thread_globals_equiv_scheduler')
+  apply (wp dmo_wp modify_wp thread_get_wp' arch_switch_to_thread_globals_equiv_scheduler')
+  sorry
 
 lemma arch_switch_to_idle_thread_unobservable[Scheduler_IF_assms]:
   "\<lbrace>(\<lambda>s. pasDomainAbs aag (cur_domain s) \<inter> reads_scheduler aag l = {}) and
@@ -277,7 +297,7 @@ lemma arch_switch_to_idle_thread_unobservable[Scheduler_IF_assms]:
   apply (simp add: arch_switch_to_idle_thread_def)
   apply wp
   apply (clarsimp simp add: scheduler_equiv_def domain_fields_equiv_def invs_def valid_state_def)
-  done
+  sorry
 
 lemma arch_switch_to_thread_unobservable[Scheduler_IF_assms]:
   "\<lbrace>(\<lambda>s. \<not> reads_scheduler_cur_domain aag l s) and
@@ -286,7 +306,7 @@ lemma arch_switch_to_thread_unobservable[Scheduler_IF_assms]:
    \<lbrace>\<lambda>_ s. scheduler_affects_equiv aag l st s\<rbrace>"
   apply (simp add: arch_switch_to_thread_def)
   apply (wp set_vm_root_scheduler_affects_equiv | simp)+
-  done
+  sorry
 
 (* Can split, but probably more effort to generalise *)
 lemma next_domain_midstrength_equiv_scheduler[Scheduler_IF_assms]:
@@ -381,7 +401,13 @@ lemma arch_activate_idle_thread_reads_respects_scheduler[Scheduler_IF_assms, wp]
 
 lemma arch_prepare_next_domain_ev[Scheduler_IF_assms]:
   "equiv_valid_inv I A (\<lambda>_. True) arch_prepare_next_domain"
-  unfolding arch_prepare_next_domain_def by wp
+  unfolding arch_prepare_next_domain_def
+  apply wp
+  sorry
+
+lemma arch_prepare_next_domain_globals_equiv_scheduler[Scheduler_IF_assms]:
+  "arch_prepare_next_domain \<lbrace>globals_equiv_scheduler st\<rbrace>"
+  sorry
 
 end
 

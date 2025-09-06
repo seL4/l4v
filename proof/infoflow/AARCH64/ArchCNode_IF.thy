@@ -56,19 +56,15 @@ lemma set_cap_globals_equiv[CNode_IF_assms]:
   done
 
 definition irq_at :: "nat \<Rightarrow> (irq \<Rightarrow> bool) \<Rightarrow> irq option" where
-  "irq_at pos masks \<equiv> let i = irq_oracle pos in (if i = 0x3F \<or> masks i then None else Some i)"
+  "irq_at pos masks \<equiv> let i = irq_oracle pos in (if masks i then None else Some i)"
 
-lemma dmo_getActiveIRQ_wp[CNode_IF_assms]:
-  "\<lbrace>\<lambda>s. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)))
-          (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>)\<rbrace>
-   do_machine_op (getActiveIRQ in_kernel)
-   \<lbrace>P\<rbrace>"
-  apply (simp add: do_machine_op_def getActiveIRQ_def non_kernel_IRQs_def)
-  apply (wp modify_wp | wpc)+
+lemma dmo_getActiveIRQ_globals_equiv[CNode_IF_assms]:
+  "\<lbrace>globals_equiv st\<rbrace> do_machine_op (getActiveIRQ in_kernel) \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  unfolding globals_equiv_def arch_globals_equiv_def idle_equiv_def
+  apply (rule hoare_weaken_pre)
+   apply wps
+   apply wpsimp
   apply clarsimp
-  apply (erule use_valid)
-   apply (wp modify_wp)
-  apply (auto simp: irq_at_def Let_def split: if_splits)
   done
 
 lemma arch_globals_equiv_irq_state_update[CNode_IF_assms, simp]:

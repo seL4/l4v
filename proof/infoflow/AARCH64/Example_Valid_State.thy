@@ -372,6 +372,7 @@ lemma empty_cnode_eq_None[simp]:
   "(empty_cnode n x = None) = (length x \<noteq> n)"
   by (clarsimp simp: empty_cnode_def)
 
+(* FIXME AARCH64 IF
 
 text \<open>Low's CSpace\<close>
 
@@ -1936,6 +1937,7 @@ lemma Sys1_valid_initial_state_noenabled:
 
 text \<open>the extra assumptions in valid_initial_state of being enabled,
         and a serial system, follow from ADT_IF_Refine\<close>
+*)
 
 end
 

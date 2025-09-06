@@ -61,6 +61,14 @@ crunch set_irq_state, arch_post_cap_deletion, handle_arch_fault_reply
   for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp simp: crunch_simps maskInterrupt_def)
 
+crunch readVCPUHardwareReg, read_cntpct, check_export_arch_timer, writeVCPUHardwareReg,
+  maskInterrupt, enableFpuEL01, isb, dsb, setHCR, setSCTLR,
+  set_gic_vcpu_ctrl_hcr, set_gic_vcpu_ctrl_lr, set_gic_vcpu_ctrl_apr, set_gic_vcpu_ctrl_vmcr,
+  get_gic_vcpu_ctrl_hcr, get_gic_vcpu_ctrl_lr, get_gic_vcpu_ctrl_apr, get_gic_vcpu_ctrl_vmcr,
+  invalidateTranslationASID, writeFpuState, disableFpu, enableFpu, deactivateInterrupt, do_flush,
+  sendSGI
+  for irq_state[wp]: "\<lambda>ms. P (irq_state ms)"
+
 crunch arch_switch_to_idle_thread, arch_switch_to_thread
   for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s :: det_state. P (irq_state_of_state s)"
   (wp: dmo_wp modify_wp crunch_wps whenE_wp
@@ -79,7 +87,7 @@ crunch arch_perform_invocation
 crunch arch_finalise_cap, prepare_thread_delete
   for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s :: det_state. P (irq_state_of_state s)"
   (wp: modify_wp crunch_wps dmo_wp
-   simp: crunch_simps hwASIDFlush_def)
+   simp: crunch_simps)
 
 lemma equiv_asid_machine_state_update[Arch_IF_assms, simp]:
   "equiv_asid asid (machine_state_update f s) s' = equiv_asid asid s s'"
@@ -150,6 +158,18 @@ lemma set_cap_globals_equiv''[Arch_IF_assms]:
                    dest: valid_global_arch_objs_pt_at)+
   done
 
+(* FIXME AARCH64 IF: consolidate definitions *)
+lemma set_cap_globals_equiv''':
+  "\<lbrace>globals_equiv s and valid_global_arch_objs\<rbrace>
+   set_cap cap p
+   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  unfolding set_cap_def
+  apply (simp only: split_def)
+  apply (wp set_object_globals_equiv hoare_vcg_all_lift get_object_wp | wpc | simp)+
+  apply (fastforce simp: valid_arch_state_def obj_at_def is_tcb_def
+                   dest: valid_global_arch_objs_pt_at)+
+  done
+
 lemma as_user_globals_equiv[Arch_IF_assms]:
   "\<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
    as_user tptr f
@@ -160,8 +180,8 @@ lemma as_user_globals_equiv[Arch_IF_assms]:
                    dest: valid_global_arch_objs_pt_at)
   done
 
-declare arch_prepare_set_domain_inv[Arch_IF_assms]
-declare arch_prepare_next_domain_inv[Arch_IF_assms]
+crunch arch_prepare_set_domain, arch_prepare_next_domain
+  for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
 
 end
 
@@ -249,12 +269,20 @@ lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq:
   apply (fastforce simp: equiv_asids_def equiv_asid_def intro: aag_can_read_own_asids)
   done
 
-lemma set_vm_root_states_equiv_for[wp]:
-  "set_vm_root thread \<lbrace>states_equiv_for P Q R S st\<rbrace>"
-  unfolding set_vm_root_def catch_def fun_app_def
-  by (wpsimp wp: do_machine_op_mol_states_equiv_for
-                 hoare_vcg_all_lift whenE_wp hoare_drop_imps
-           simp: setVSpaceRoot_def dmo_bind_valid if_apply_def2)+
+lemma load_vmid_reads_respects:
+  "reads_respects aag l (K (asid \<noteq> 0 \<and> aag_can_read_asid aag asid)) (load_vmid asid)"
+  unfolding load_vmid_def
+  apply wpsimp
+  apply (erule reads_equivE)
+  apply (clarsimp simp: equiv_asids_def)
+  apply (erule equiv_forE)
+  apply (erule_tac x=asid in allE)
+  apply clarsimp
+  apply (fastforce simp: vspace_for_asid_def entry_for_asid_def entry_for_pool_def
+                         pool_for_asid_def vspace_for_pool_def
+                         opt_map_def obind_def obj_at_def equiv_asid_def
+                  split: option.splits)
+  done
 
 lemma find_vspace_for_asid_reads_respects:
    "reads_respects aag l (K (asid \<noteq> 0 \<and> aag_can_read_asid aag asid)) (find_vspace_for_asid asid)"
@@ -268,14 +296,25 @@ lemma find_vspace_for_asid_reads_respects:
   apply (erule equiv_forE)
   apply (erule_tac x=asid in allE)
   apply clarsimp
-  apply (fastforce simp: vspace_for_asid_def pool_for_asid_def vspace_for_pool_def
+  apply (fastforce simp: vspace_for_asid_def entry_for_asid_def entry_for_pool_def
+                         pool_for_asid_def vspace_for_pool_def
                          opt_map_def obind_def obj_at_def equiv_asid_def
                   split: option.splits)
   done
 
+lemma invalidate_tlb_by_asid_reads_respects:
+  "reads_respects aag l (K (asid \<noteq> 0 \<and> aag_can_read_asid aag asid)) (invalidate_tlb_by_asid asid)"
+  unfolding invalidate_tlb_by_asid_def invalidateTranslationASID_def
+  by (wpsimp wp: dmo_mol_reads_respects load_vmid_reads_respects)
+
+lemma invalidate_tlb_by_asid_va_reads_respects:
+  "reads_respects aag l (K (asid \<noteq> 0 \<and> aag_can_read_asid aag asid)) (invalidate_tlb_by_asid_va asid vaddr)"
+  unfolding invalidate_tlb_by_asid_va_def invalidateTranslationSingle_def
+  by (wpsimp wp: dmo_mol_reads_respects load_vmid_reads_respects)
+
 lemma ptes_of_reads_equiv:
-  "\<lbrakk> is_subject aag (table_base ptr); reads_equiv aag s t \<rbrakk>
-     \<Longrightarrow> ptes_of s ptr = ptes_of t ptr"
+  "\<lbrakk> is_subject aag (table_base pt_t ptr); reads_equiv aag s t \<rbrakk>
+     \<Longrightarrow> ptes_of s pt_t ptr = ptes_of t pt_t ptr"
   by (fastforce elim: reads_equivE equiv_forE simp: ptes_of_def obind_def opt_map_def)
 
 lemma pt_walk_reads_equiv:
@@ -287,15 +326,15 @@ lemma pt_walk_reads_equiv:
   apply (induct level arbitrary: pt; clarsimp)
   apply (simp (no_asm) add: pt_walk.simps)
   apply (clarsimp simp: obind_def split: if_splits)
-  apply (subgoal_tac "ptes_of s (pt_slot_offset level pt vptr) =
-                      ptes_of t (pt_slot_offset level pt vptr)")
+  apply (subgoal_tac "ptes_of s (level_type level) (pt_slot_offset level pt vptr) =
+                      ptes_of t (level_type level) (pt_slot_offset level pt vptr)")
    apply (clarsimp split: option.splits)
    apply (frule_tac bot_level="level-1" in vs_lookup_table_extend)
      apply (fastforce simp: pt_walk.simps obind_def)
     apply clarsimp
    apply (erule_tac x="pptr_from_pte x2" in meta_allE)
    apply (drule meta_mp)
-    apply (subst (asm) vs_lookup_split_Some[OF order_less_imp_le[OF bit0.pred]])
+    apply (subst (asm) vs_lookup_split_Some[OF order_less_imp_le[OF bit1.pred]])
       apply fastforce+
     apply (erule_tac pt_ptr=pt in pt_walk_is_subject; fastforce)
    apply (erule (1) meta_mp)
@@ -320,7 +359,7 @@ lemma pt_lookup_from_level_reads_respects:
   apply (frule vs_lookup_table_is_aligned; clarsimp)
   apply (prop_tac "pt_walk level (level - 1) pt vref (ptes_of s) =
                    Some (level - 1, pptr_from_pte rv)")
-   apply (fastforce simp: vs_lookup_split_Some[OF order_less_imp_le[OF bit0.pred]]
+   apply (fastforce simp: vs_lookup_split_Some[OF order_less_imp_le[OF bit1.pred]]
                           pt_walk.simps obind_def)
   apply (rule conjI)
    apply (erule_tac level=level and bot_level="level-1" and pt_ptr=pt in pt_walk_is_subject; fastforce)
@@ -333,13 +372,13 @@ lemma unmap_page_table_reads_respects:
      (pas_refined aag and pspace_aligned and valid_vspace_objs and valid_asid_table
                       and K (asid \<noteq> 0 \<and> is_subject_asid aag asid \<and> vaddr \<in> user_region))
      (unmap_page_table asid vaddr pt)"
-  unfolding unmap_page_table_def fun_app_def
+  unfolding unmap_page_table_def fun_app_def cleanByVA_PoU_def
   apply (rule gen_asm_ev)
   apply (rule equiv_valid_guard_imp)
-   apply (wp dmo_mol_reads_respects store_pte_reads_respects get_pte_rev
+   apply (wp dmo_mol_reads_respects store_pte_reads_respects get_pte_rev invalidate_tlb_by_asid_reads_respects
              pt_lookup_from_level_reads_respects pt_lookup_from_level_is_subject
              find_vspace_for_asid_wp find_vspace_for_asid_reads_respects hoare_vcg_all_liftE_R
-          | wpc | simp add: sfence_def | wp (once) hoare_drop_imps)+
+          | wpc | simp | rule hoare_strengthen_postE_R[OF pt_lookup_from_level_is_subject], fastforce)+
   apply clarsimp
   apply (frule vspace_for_asid_is_subject)
      apply (fastforce dest: vspace_for_asid_vs_lookup vs_lookup_table_vref_independent)+
@@ -351,15 +390,16 @@ lemma perform_page_table_invocation_reads_respects:
                                          and K (authorised_page_table_inv aag pti))
                   (perform_page_table_invocation pti)"
   unfolding perform_page_table_invocation_def perform_pt_inv_map_def perform_pt_inv_unmap_def
+cleanByVA_PoU_def cleanCacheRange_PoU_def
   apply (rule equiv_valid_guard_imp)
    apply (wp dmo_mol_reads_respects store_pte_reads_respects set_cap_reads_respects mapM_x_ev''
              unmap_page_table_reads_respects get_cap_rev
-          | wpc | simp add: sfence_def)+
+          | wpc | simp)+
   apply (case_tac pti; clarsimp simp: authorised_page_table_inv_def)
   apply (clarsimp simp: valid_pti_def)
   apply (frule cte_wp_valid_cap)
    apply fastforce
-  apply (clarsimp simp:  is_PageTableCap_def valid_cap_def wellformed_mapdata_def)
+  apply (clarsimp simp: is_PageTableCap_def valid_cap_def wellformed_mapdata_def add_mask_fold)
   done
 
 lemma unmap_page_reads_respects:
@@ -367,13 +407,13 @@ lemma unmap_page_reads_respects:
      (pas_refined aag and pspace_aligned and valid_vspace_objs and valid_asid_table
                       and K (asid \<noteq> 0 \<and> is_subject_asid aag asid \<and> vptr \<in> user_region))
      (unmap_page pgsz asid vptr pptr)"
-  unfolding unmap_page_def catch_def fun_app_def
-  supply gets_the_ev[wp del]
-  apply (simp add: unmap_page_def swp_def cong: vmpage_size.case_cong)
+  unfolding unmap_page_def catch_def fun_app_def cleanByVA_PoU_def
+  apply (simp add: unmap_page_def cong: vmpage_size.case_cong)
   apply (simp add: unlessE_def gets_the_def)
   apply (wp gets_ev' dmo_mol_reads_respects get_pte_rev throw_on_false_reads_respects
             find_vspace_for_asid_reads_respects store_pte_reads_respects[simplified]
-         | wpc | wp (once) hoare_drop_imps | simp add: sfence_def is_aligned_mask[symmetric])+
+            invalidate_tlb_by_asid_va_reads_respects
+         | wpc | simp add: is_aligned_mask[symmetric])+
   apply (clarsimp simp: pt_lookup_slot_def)
   apply (frule (3) vspace_for_asid_is_subject)
   apply safe
@@ -386,6 +426,12 @@ lemma unmap_page_reads_respects:
                      dest: vspace_for_asid_vs_lookup vs_lookup_table_vref_independent)+
   done
 
+lemma perform_flush_reads_respects:
+  "reads_respects aag l \<top> (perform_flush type vstart vend pstart space asid)"
+  unfolding perform_flush_def do_flush_def cleanCacheRange_RAM_def invalidateCacheRange_RAM_def
+            cleanInvalidateCacheRange_RAM_def cleanCacheRange_PoU_def invalidateCacheRange_I_def isb_def dsb_def
+  by (cases type; wpsimp wp: dmo_mol_reads_respects when_ev simp: dmo_distr)
+
 lemma perform_page_invocation_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
@@ -394,17 +440,24 @@ lemma perform_page_invocation_reads_respects:
                                            and pspace_aligned and is_subject aag \<circ> cur_thread)
                     (perform_page_invocation pgi)"
   unfolding perform_page_invocation_def fun_app_def when_def perform_pg_inv_map_def
-            perform_pg_inv_unmap_def perform_pg_inv_get_addr_def
+    perform_pg_inv_unmap_def perform_pg_inv_get_addr_def cleanByVA_PoU_def
   apply (rule equiv_valid_guard_imp)
-   apply (wp dmo_mol_reads_respects mapM_x_ev'' store_pte_reads_respects set_cap_reads_respects
-             mapM_ev'' store_pte_reads_respects unmap_page_reads_respects  dmo_mol_2_reads_respects
-             get_cap_rev set_mrs_reads_respects set_message_info_reads_respects
-          | simp add: sfence_def
-          | wpc | wp (once) hoare_drop_imps[where Q'="\<lambda>r s. r"])+
+   apply (wpsimp)
+                  apply (wp dmo_mol_reads_respects mapM_x_ev'' store_pte_reads_respects set_cap_reads_respects
+                            mapM_ev'' store_pte_reads_respects unmap_page_reads_respects  dmo_mol_2_reads_respects
+                            get_cap_rev set_mrs_reads_respects set_message_info_reads_respects
+                            invalidate_tlb_by_asid_va_reads_respects get_pte_rev perform_flush_reads_respects
+                         | simp
+                         | wpc | wp (once) hoare_drop_imps[where Q'="\<lambda>r s. r"])+
   apply (clarsimp simp: authorised_page_inv_def valid_page_inv_def)
-  apply (auto simp: cte_wp_at_caps_of_state authorised_slots_def cap_links_asid_slot_def
-                    label_owns_asid_slot_def valid_arch_cap_def wellformed_mapdata_def
-             dest!: clas_caps_of_state pas_refined_Control)+
+  apply (case_tac pgi; clarsimp)
+   apply (rule conjI)
+    prefer 2
+    apply clarsimp
+  subgoal sorry (* FIXME AARCH64 IF *)
+   apply (auto simp: cte_wp_at_caps_of_state authorised_slots_def cap_links_asid_slot_def
+                     label_owns_asid_slot_def valid_arch_cap_def wellformed_mapdata_def
+              dest!: clas_caps_of_state pas_refined_Control)
   done
 
 lemma equiv_asids_arm_asid_table_update:
@@ -418,7 +471,7 @@ lemma equiv_asids_arm_asid_table_update:
 
 lemma arm_asid_table_update_reads_respects:
   "reads_respects aag l (K (is_subject aag pool_ptr))
-     (do r \<leftarrow> gets (arm_asid_table \<circ> arch_state);
+     (do r \<leftarrow> gets local.asid_table;
          modify (\<lambda>s. s\<lparr>arch_state :=
                        arch_state s\<lparr>arm_asid_table := r(asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)
       od)"
@@ -470,39 +523,13 @@ lemma set_asid_pool_reads_respects:
   unfolding set_asid_pool_def
   by (wpsimp wp: set_object_reads_respects get_asid_pool_rev)
 
-lemma copy_global_mappings_valid_arch_state:
-  "\<lbrace>valid_arch_state and valid_global_vspace_mappings and pspace_aligned
-                     and (\<lambda>s. x \<notin> global_refs s \<and> is_aligned x pt_bits)\<rbrace>
-   copy_global_mappings x
-   \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  unfolding copy_global_mappings_def including classic_wp_pre
-  apply simp
-  apply wp
-   apply (rule_tac Q'="\<lambda>_. valid_arch_state and valid_global_vspace_mappings and pspace_aligned
-                                           and (\<lambda>s. x \<notin> global_refs s \<and> is_aligned x pt_bits)"
-                in hoare_strengthen_post)
-    apply (wp mapM_x_wp[OF _ subset_refl]
-              store_pte_valid_arch_state_unreachable
-              store_pte_valid_global_vspace_mappings)
-    apply (simp only: pt_index_def)
-    apply (subst table_base_offset_id)
-      apply clarsimp
-     apply (clarsimp simp: pte_bits_def word_size_bits_def pt_bits_def
-                           table_size_def ptTranslationBits_def mask_def)
-     apply (word_bitwise, fastforce)
-    apply clarsimp
-    apply (simp_all)
-  apply (clarsimp simp: valid_arch_state_def)
-  apply (subst (asm) table_base_plus; simp add: mask_def)
-  done
-
 lemma set_asid_pool_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
+  "\<lbrace>globals_equiv s and valid_global_arch_objs\<rbrace>
    set_asid_pool ptr pool
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding set_asid_pool_def
   apply (wpsimp wp: set_object_globals_equiv[THEN hoare_set_object_weaken_pre] simp: a_type_def)
-  apply (fastforce simp: valid_arch_state_def obj_at_def dest: valid_global_arch_objs_pt_at)
+  apply (fastforce simp: obj_at_def dest: valid_global_arch_objs_pt_at)
   done
 
 lemma perform_asid_pool_invocation_reads_respects_g:
@@ -514,19 +541,12 @@ lemma perform_asid_pool_invocation_reads_respects_g:
                      reads_respects_g[OF get_asid_pool_rev]
                      set_asid_pool_globals_equiv set_cap_reads_respects
                      doesnt_touch_globalsI get_cap_auth_wp[where aag=aag] get_cap_rev
-                     copy_global_mappings_reads_respects_g copy_global_mappings_valid_arch_state
                      set_cap_reads_respects_g get_cap_reads_respects_g
           | strengthen valid_arch_state_global_arch_objs
           | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: invs_arch_state invs_valid_global_objs invs_psp_aligned
                         invs_valid_global_vspace_mappings authorised_asid_pool_inv_def
                   cong: conj_cong)
-  apply (frule (1) caps_of_state_valid)
-  apply (clarsimp simp: is_ArchObjectCap_def is_PageTableCap_def
-                        valid_cap_def cap_aligned_def pt_bits_def aag_cap_auth_def
-                        cap_auth_conferred_def arch_cap_auth_conferred_def)
-  apply (frule global_pt_in_global_refs[OF invs_valid_global_arch_objs])
-  apply (fastforce dest: pas_refined_Control cap_not_in_valid_global_refs)
   done
 
 lemma equiv_asids_arm_asid_table_delete:
@@ -572,6 +592,21 @@ lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq':
     apply simp+
   done
 
+(* FIXME AARCH64 IF: not true *)
+lemma get_vmid_vmid_states_equiv_for[wp]:
+  "get_vmid asid \<lbrace>states_equiv_for P Q R S st\<rbrace>"
+  unfolding get_vmid_def
+  apply wpsimp
+  sorry
+
+(* FIXME AARCH64 IF: not true *)
+lemma set_vm_root_states_equiv_for[wp]:
+  "set_vm_root thread \<lbrace>states_equiv_for P Q R S st\<rbrace>"
+  unfolding set_vm_root_def catch_def fun_app_def set_global_user_vspace_def arm_context_switch_def
+  by (wpsimp wp: do_machine_op_mol_states_equiv_for
+                 hoare_vcg_all_lift whenE_wp hoare_drop_imps
+           simp: setVSpaceRoot_def dmo_bind_valid if_apply_def2)+
+
 lemma delete_asid_pool_reads_respects:
   "reads_respects aag l (K (\<forall>asid'. asid' \<noteq> 0 \<and> asid_high_bits_of asid' = asid_high_bits_of base
                                     \<longrightarrow> is_subject_asid aag asid'))
@@ -594,6 +629,8 @@ lemma delete_asid_pool_reads_respects:
           apply (rule equiv_valid_2_bind)
              apply (rule equiv_valid_2_bind)
                 apply (rule equiv_valid_2_unobservable)
+  sorry
+(*
                            apply (wp set_vm_root_states_equiv_for)+
                apply (rule arm_asid_table_delete_ev2)
               apply (wp)+
@@ -601,6 +638,7 @@ lemma delete_asid_pool_reads_respects:
   by (wp mapM_wp' return_ev2
       | rule conjI | drule (1) requiv_arm_asid_table_asid_high_bits_of_asid_eq'
       | clarsimp | simp add: equiv_valid_2_def)+
+*)
 
 lemma set_asid_pool_state_equal_except_kheap:
   "((), s') \<in> fst (set_asid_pool ptr pool s)
@@ -679,14 +717,15 @@ lemma set_asid_pool_delete_ev2:
 lemma delete_asid_reads_respects:
   "reads_respects aag l (K (asid \<noteq> 0 \<and> is_subject_asid aag asid)) (delete_asid asid pt)"
   unfolding delete_asid_def
+  supply fun_upd_apply[simp del]
   apply (subst equiv_valid_def2)
-  apply (rule_tac W="\<top>\<top>" and Q="\<lambda>rv s. rv = arm_asid_table (arch_state s) \<and>
+  apply (rule_tac W="\<top>\<top>" and Q="\<lambda>rv s. rv = asid_table s (asid_high_bits_of asid) \<and>
                                         is_subject_asid aag asid \<and> asid \<noteq> 0" in equiv_valid_rv_bind)
     apply (rule equiv_valid_rv_guard_imp[OF equiv_valid_rv_trivial])
      apply (wp, simp)
-   apply (case_tac "rv (asid_high_bits_of asid) = rv' (asid_high_bits_of asid)")
+     apply (case_tac "rv = rv'")
     apply (simp)
-    apply (case_tac "rv' (asid_high_bits_of asid)")
+    apply (case_tac "rv")
      apply (simp)
      apply (wp return_ev2, simp)
     apply (simp)
@@ -696,6 +735,8 @@ lemma delete_asid_reads_respects:
          apply (simp add: when_def)
          apply (clarsimp | rule conjI)+
           apply (rule_tac R'="\<top>\<top>" in equiv_valid_2_bind)
+          apply (rule_tac R'="\<top>\<top>" in equiv_valid_2_bind)
+          apply (rule_tac R'="\<top>\<top>" in equiv_valid_2_bind)
              apply (rule_tac R'="\<top>\<top>" in equiv_valid_2_bind)
                 apply (subst equiv_valid_def2[symmetric])
                 apply (rule reads_respects_unobservable_unit_return)
@@ -703,7 +744,9 @@ lemma delete_asid_reads_respects:
                apply (rule set_asid_pool_delete_ev2)
               apply (wp)+
             apply (rule equiv_valid_2_unobservable)
-                       apply (wpsimp wp: do_machine_op_mol_states_equiv_for simp: hwASIDFlush_def)+
+                       apply (wpsimp wp: do_machine_op_mol_states_equiv_for)+
+  sorry
+(*
          apply (clarsimp | rule return_ev2)+
         apply (rule equiv_valid_2_guard_imp)
           apply (wp get_asid_pool_revrv)
@@ -717,24 +760,91 @@ lemma delete_asid_reads_respects:
    apply (drule aag_can_read_own_asids)
    apply wpsimp+
   done
+*)
 
 lemma globals_equiv_arm_asid_table_update[simp]:
   "globals_equiv s (t\<lparr>arch_state := arch_state t\<lparr>arm_asid_table := x\<rparr>\<rparr>) = globals_equiv s t"
   by (simp add: globals_equiv_def)
 
+lemma globals_equiv_arm_vmid_table_update[simp]:
+  "globals_equiv s (t\<lparr>arch_state := arch_state t\<lparr>arm_vmid_table := x\<rparr>\<rparr>) = globals_equiv s t"
+  by (simp add: globals_equiv_def)
+
+lemma globals_equiv_arm_next_vmid_update[simp]:
+  "globals_equiv s (t\<lparr>arch_state := arch_state t\<lparr>arm_next_vmid := x\<rparr>\<rparr>) = globals_equiv s t"
+  by (simp add: globals_equiv_def)
+
+lemma valid_global_arch_objs_arm_asid_table_update[simp]:
+  "valid_global_arch_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := x\<rparr>\<rparr>) = valid_global_arch_objs s"
+  by (simp add: valid_global_arch_objs_def)
+
+lemma set_global_user_vspace_globals_equiv[wp]:
+  "set_global_user_vspace \<lbrace>globals_equiv s\<rbrace>"
+  unfolding set_global_user_vspace_def setVSpaceRoot_def
+  by wpsimp
+
+lemma update_asid_pool_entry_globals_equiv[wp]:
+  "\<lbrace>globals_equiv s and valid_global_arch_objs\<rbrace>
+   update_asid_pool_entry f asid
+   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  unfolding update_asid_pool_entry_def
+  by (wpsimp wp: set_asid_pool_globals_equiv)
+
+crunch invalidate_vmid_entry, invalidate_asid
+  for globals_equiv[wp]: "globals_equiv st"
+  (wp: crunch_wps dmo_mol_reads_respects simp: crunch_simps)
+
+lemma find_free_vmid_globals_equiv[wp]:
+  "\<lbrace>globals_equiv s and valid_global_arch_objs\<rbrace>
+   find_free_vmid
+   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  unfolding find_free_vmid_def invalidateTranslationASID_def
+  by wpsimp
+
+crunch get_vmid
+  for globals_equiv[wp]: "globals_equiv st"
+  (wp: crunch_wps dmo_mol_reads_respects simp: crunch_simps)
+
+lemma arm_context_switch_globals_equiv[wp]:
+  "\<lbrace>globals_equiv s and valid_global_arch_objs\<rbrace>
+   arm_context_switch vspace asid
+   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  unfolding arm_context_switch_def setVSpaceRoot_def
+  by (wpsimp wp: dmo_mol_reads_respects)
+
 lemma set_vm_root_globals_equiv[wp]:
-  "set_vm_root tcb \<lbrace>globals_equiv s\<rbrace>"
+  "\<lbrace>globals_equiv s and valid_global_arch_objs\<rbrace>
+   set_vm_root tcb
+   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   by (wpsimp wp: dmo_mol_globals_equiv hoare_vcg_all_lift hoare_drop_imps
            simp: set_vm_root_def setVSpaceRoot_def)
 
+crunch invalidate_asid_entry
+  for globals_equiv[wp]: "globals_equiv st"
+  (wp: crunch_wps dmo_mol_reads_respects simp: crunch_simps)
+
+lemma invalidate_tlb_by_asid_globals_equiv[wp]:
+  "invalidate_tlb_by_asid asid \<lbrace>globals_equiv s\<rbrace>"
+  unfolding invalidate_tlb_by_asid_def invalidateTranslationASID_def
+  by wpsimp
+
+lemma invalidate_tlb_by_asid_va_globals_equiv[wp]:
+  "invalidate_tlb_by_asid_va asid vaddr \<lbrace>globals_equiv s\<rbrace>"
+  unfolding invalidate_tlb_by_asid_va_def invalidateTranslationSingle_def
+  by wpsimp
+
 lemma delete_asid_pool_globals_equiv[wp]:
-  "delete_asid_pool base ptr \<lbrace>globals_equiv s\<rbrace>"
+  "\<lbrace>globals_equiv s and valid_global_arch_objs\<rbrace>
+   delete_asid_pool base ptr
+   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding delete_asid_pool_def
   by (wpsimp wp: set_vm_root_globals_equiv mapM_wp[OF _ subset_refl] modify_wp)
 
+find_consts "5 \<Rightarrow> ?'a" name: level
+
 lemma vs_lookup_slot_not_global:
   "\<lbrakk> vs_lookup_slot level asid vref s = Some (level, pte); level \<le> max_pt_level;
-     pte_refs_of s pte = Some pt; vref \<in> user_region; invs s \<rbrakk>
+     pte_refs_of (level_type level) pte s = Some pt; vref \<in> user_region; invs s \<rbrakk>
      \<Longrightarrow> pt \<notin> global_refs s"
   apply (prop_tac "vs_lookup_target level asid vref s = Some (level, pt)")
    apply (clarsimp simp: vs_lookup_target_def obind_def split: if_splits)
@@ -745,8 +855,8 @@ lemma unmap_page_table_globals_equiv:
   "\<lbrace>invs and globals_equiv st and K (vaddr \<in> user_region)\<rbrace>
    unmap_page_table asid vaddr pt
    \<lbrace>\<lambda>rv. globals_equiv st\<rbrace>"
-  unfolding unmap_page_table_def
-  apply (wp store_pte_globals_equiv pt_lookup_from_level_wrp | wpc | simp add: sfence_def)+
+  unfolding unmap_page_table_def cleanByVA_PoU_def
+  apply (wp store_pte_globals_equiv pt_lookup_from_level_wrp | wpc | simp)+
   apply clarsimp
   apply (rule_tac x=asid in exI)
   apply clarsimp
@@ -754,15 +864,15 @@ lemma unmap_page_table_globals_equiv:
    apply (fastforce dest: vs_lookup_slot_no_asid simp: ptes_of_Some valid_arch_state_asid_table)
   apply (drule vs_lookup_slot_table_base; clarsimp)
   apply (drule reachable_page_table_not_global, clarsimp+)
-  apply (fastforce dest: global_pt_in_global_refs[OF invs_valid_global_arch_objs])
   done
 
+(* FIXME AARCH64 IF: delete if unused
 lemma unmap_page_table_valid_arch_state:
   "\<lbrace>invs and valid_arch_state and K (vaddr \<in> user_region)\<rbrace>
    unmap_page_table asid vaddr pt
    \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   unfolding unmap_page_table_def
-  apply (wpsimp wp: store_pte_valid_arch_state_unreachable pt_lookup_from_level_wrp simp: sfence_def)
+  apply (wpsimp wp: store_pte_valid_arch_state_unreachable pt_lookup_from_level_wrp)
   apply (rule_tac x=asid in exI)
   apply clarsimp
   apply (case_tac "level = asid_pool_level")
@@ -770,58 +880,52 @@ lemma unmap_page_table_valid_arch_state:
   apply (drule vs_lookup_slot_table_base; clarsimp)
   apply (drule reachable_page_table_not_global, clarsimp+)
   done
+*)
 
 lemma mapM_x_swp_store_pte_globals_equiv:
   "\<lbrace>globals_equiv s and pspace_aligned and valid_arch_state and valid_global_vspace_mappings
-                    and (\<lambda>s. \<forall>x \<in> set slots. table_base x \<notin> global_refs s)\<rbrace>
-   mapM_x (swp store_pte pte) slots
+                    and (\<lambda>s. \<forall>x \<in> set slots. table_base pt_t x \<notin> global_refs s)\<rbrace>
+   mapM_x (swp (store_pte pt_t) pte) slots
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   apply (rule_tac Q'="\<lambda>_. pspace_aligned and globals_equiv s and valid_arch_state
                                         and valid_global_vspace_mappings
-                                        and (\<lambda>s. \<forall>x \<in> set slots. table_base x \<notin> global_refs s)"
+                                        and (\<lambda>s. \<forall>x \<in> set slots. table_base pt_t x \<notin> global_refs s)"
                in hoare_strengthen_post)
    apply (wp mapM_x_wp' store_pte_valid_arch_state_unreachable
              store_pte_valid_global_vspace_mappings store_pte_globals_equiv | simp)+
-    apply (clarsimp simp: valid_arch_state_def)
-    apply (fastforce dest: global_pt_in_global_refs[OF invs_valid_global_arch_objs])
-   apply auto
+    apply (auto simp: global_refs_def)
   done
 
 lemma mapM_x_swp_store_pte_valid_ko_at_arch[wp]:
   "\<lbrace>pspace_aligned and valid_arch_state and valid_global_vspace_mappings
-                   and (\<lambda>s. \<forall>x \<in> set slots. table_base x \<notin> global_refs s)\<rbrace>
-   mapM_x (swp store_pte A) slots
+                   and (\<lambda>s. \<forall>x \<in> set slots. table_base pt_t x \<notin> global_refs s)\<rbrace>
+   mapM_x (swp (store_pte pt_t) pte) slots
    \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   apply (rule_tac Q'="\<lambda>_. pspace_aligned and valid_arch_state and valid_global_vspace_mappings
-                                        and (\<lambda>s. \<forall>x \<in> set slots. table_base x \<notin> global_refs s)"
+                                        and (\<lambda>s. \<forall>x \<in> set slots. table_base pt_t x \<notin> global_refs s)"
                in hoare_strengthen_post)
    apply (wp mapM_x_wp' store_pte_valid_arch_state_unreachable
              store_pte_valid_global_vspace_mappings store_pte_globals_equiv | simp)+
-    apply (clarsimp simp: valid_arch_state_def)
-   apply (fastforce dest: global_pt_in_global_refs[OF invs_valid_global_arch_objs])
-  apply auto
   done
-
 
 definition authorised_for_globals_page_table_inv ::
   "page_table_invocation \<Rightarrow> 's :: state_ext state \<Rightarrow> bool" where
   "authorised_for_globals_page_table_inv pti \<equiv> \<lambda>s.
-     case pti of PageTableMap cap ptr pde p \<Rightarrow> p && ~~ mask pt_bits \<noteq> arm_us_global_vspace (arch_state s)
+     case pti of PageTableMap cap ptr pte p lvl \<Rightarrow> table_base (level_type lvl) p \<noteq> arm_us_global_vspace (arch_state s)
                                         | _ \<Rightarrow> True"
 
-
 lemma perform_pt_inv_map_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. table_base x14 \<noteq> global_pt s)\<rbrace>
-   perform_pt_inv_map x11 x12 x13 x14
+  "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. table_base (level_type lvl) p \<noteq> global_pt s)\<rbrace>
+   perform_pt_inv_map cap sl pte p lvl
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  unfolding perform_pt_inv_map_def
-  by (wpsimp wp: store_pte_globals_equiv set_cap_globals_equiv'' simp: sfence_def)
+  unfolding perform_pt_inv_map_def cleanByVA_PoU_def
+  by (wpsimp wp: store_pte_globals_equiv set_cap_globals_equiv'')
 
 lemma perform_pt_inv_unmap_globals_equiv:
   "\<lbrace>invs and globals_equiv st and cte_wp_at ((=) (ArchObjectCap cap)) ct_slot\<rbrace>
    perform_pt_inv_unmap cap ct_slot
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  unfolding perform_pt_inv_unmap_def
+  unfolding perform_pt_inv_unmap_def cleanCacheRange_PoU_def
   apply (wpsimp wp: set_cap_globals_equiv'' mapM_x_swp_store_pte_globals_equiv)
      apply (strengthen invs_imps invs_valid_global_vspace_mappings)
      apply (clarsimp cong: conj_cong)
@@ -832,14 +936,14 @@ lemma perform_pt_inv_unmap_globals_equiv:
    apply (clarsimp simp: is_PageTableCap_def valid_cap_def valid_arch_cap_def wellformed_mapdata_def)
   apply (frule cte_wp_valid_cap, fastforce)
   apply (clarsimp simp: is_PageTableCap_def valid_cap_def valid_arch_cap_def wellformed_mapdata_def)
-  apply (prop_tac "table_base x = acap_obj cap")
-   apply (prop_tac "is_aligned x41 pt_bits")
+  apply (prop_tac "table_base x42 x = acap_obj cap")
+   apply (prop_tac "is_aligned x41 (pt_bits x42)")
     apply (fastforce dest: is_aligned_pt simp: valid_arch_cap_def)
    apply (simp only: is_aligned_neg_mask_eq')
    apply (clarsimp simp: add_mask_fold)
    apply (drule subsetD[OF upto_enum_step_subset], clarsimp)
-   apply (drule neg_mask_mono_le[where n=pt_bits])
-   apply (drule neg_mask_mono_le[where n=pt_bits])
+   apply (drule_tac n="pt_bits x42" in neg_mask_mono_le)
+   apply (drule_tac n="pt_bits x42" in neg_mask_mono_le)
    apply (fastforce dest: plus_mask_AND_NOT_mask_eq)
   apply clarsimp
   apply (frule invs_valid_global_refs)
@@ -859,24 +963,19 @@ lemma perform_page_table_invocation_globals_equiv:
   done
 
 lemma mapM_swp_store_pte_globals_equiv:
-  "\<lbrace>globals_equiv s and pspace_aligned and valid_arch_state and valid_global_vspace_mappings
-                    and (\<lambda>s. \<forall>x \<in> set slots. table_base x \<notin> global_refs s)\<rbrace>
-   mapM (swp store_pte pte) slots
+  "\<lbrace>globals_equiv s and (\<lambda>s. \<forall>x \<in> set slots. table_base pt_t x \<notin> global_refs s)\<rbrace>
+   mapM (swp (store_pte pt_t) pte) slots
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  apply (rule_tac Q'="\<lambda>_. pspace_aligned and globals_equiv s and valid_arch_state
-                                        and valid_global_vspace_mappings
-                                        and (\<lambda>s. \<forall>x \<in> set slots. table_base x \<notin> global_refs s)"
+  apply (rule_tac Q'="\<lambda>_. globals_equiv s and (\<lambda>s. \<forall>x \<in> set slots. table_base pt_t x \<notin> global_refs s)"
                in hoare_strengthen_post)
    apply (wp mapM_wp' store_pte_valid_arch_state_unreachable
              store_pte_valid_global_vspace_mappings store_pte_globals_equiv | simp)+
-    apply (clarsimp simp: valid_arch_state_def)
-    apply (fastforce dest: global_pt_in_global_refs[OF invs_valid_global_arch_objs])
-   apply auto
+    apply (auto simp: global_refs_def)
   done
 
+(* FIXME AARCH64 IF: delete if unused
 lemma mapM_swp_store_pte_valid_ko_at_arch[wp]:
-  "\<lbrace>globals_equiv s and pspace_aligned and valid_arch_state and valid_global_vspace_mappings
-                    and (\<lambda>s. \<forall>x \<in> set slots. table_base x \<notin> global_refs s)\<rbrace>
+  "\<lbrace>globals_equiv s (\<lambda>s. \<forall>x \<in> set slots. table_base x \<notin> global_refs s)\<rbrace>
    mapM (swp store_pte pte) slots
    \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   apply (rule_tac Q'="\<lambda>_. pspace_aligned and globals_equiv s and valid_arch_state
@@ -889,31 +988,31 @@ lemma mapM_swp_store_pte_valid_ko_at_arch[wp]:
     apply (fastforce dest: global_pt_in_global_refs[OF invs_valid_global_arch_objs])
    apply auto
   done
+*)
 
 lemma unmap_page_globals_equiv:
   "\<lbrace>globals_equiv st and invs and K (vptr \<in> user_region)\<rbrace>
    unmap_page pgsz asid vptr pptr
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  unfolding unmap_page_def including no_pre
+  unfolding unmap_page_def cleanByVA_PoU_def including no_pre
   apply (induct pgsz)
-    apply (wpsimp wp: store_pte_globals_equiv | simp add: sfence_def)+
+    apply (wpsimp wp: store_pte_globals_equiv | simp)+
     apply (rule hoare_weaken_preE[OF find_vspace_for_asid_wp])
     apply clarsimp
     apply (frule (1) pt_lookup_slot_vs_lookup_slotI0)
     apply (drule vs_lookup_slot_table_base; clarsimp?)
     apply (drule reachable_page_table_not_global; clarsimp?)
-    apply (fastforce dest: global_pt_in_global_refs[OF invs_valid_global_arch_objs])
+    apply fastforce
    apply (rule hoare_pre)
-    apply (wpsimp wp: store_pte_globals_equiv mapM_swp_store_pte_globals_equiv hoare_drop_imps
-           | simp add: sfence_def)+
+    apply (wpsimp wp: store_pte_globals_equiv mapM_swp_store_pte_globals_equiv hoare_drop_imps)+
    apply (frule (1) pt_lookup_slot_vs_lookup_slotI0)
    apply (drule vs_lookup_slot_level)
    apply (case_tac "x = asid_pool_level")
     apply (fastforce dest: vs_lookup_slot_no_asid simp: ptes_of_Some valid_arch_state_asid_table)
    apply (drule vs_lookup_slot_table_base; clarsimp?)
    apply (drule reachable_page_table_not_global; clarsimp?)
-   apply (fastforce dest: global_pt_in_global_refs[OF invs_valid_global_arch_objs])
-  apply (wpsimp wp: store_pte_globals_equiv | simp add: sfence_def)+
+   apply fastforce
+  apply (wpsimp wp: store_pte_globals_equiv)+
   apply (rule hoare_weaken_preE[OF find_vspace_for_asid_wp])
   apply clarsimp
   apply (frule (1) pt_lookup_slot_vs_lookup_slotI0)
@@ -922,7 +1021,7 @@ lemma unmap_page_globals_equiv:
    apply (fastforce dest: vs_lookup_slot_no_asid simp: ptes_of_Some valid_arch_state_asid_table)
   apply (drule vs_lookup_slot_table_base; clarsimp?)
   apply (drule reachable_page_table_not_global; clarsimp?)
-  apply (fastforce dest: global_pt_in_global_refs[OF invs_valid_global_arch_objs])
+  apply fastforce
   done
 
 
@@ -967,6 +1066,7 @@ lemma perform_pg_inv_get_addr_globals_equiv:
   unfolding perform_pg_inv_get_addr_def
   by (wpsimp wp: set_message_info_globals_equiv set_mrs_globals_equiv)
 
+(* FIXME AARCH64 IF: delete if unused
 lemma unmap_page_valid_arch_state:
   "\<lbrace>invs and K (vptr \<in> user_region)\<rbrace>
    unmap_page pgsz asid vptr pptr
@@ -983,6 +1083,11 @@ lemma unmap_page_valid_arch_state:
   apply (drule vs_lookup_slot_table_base; clarsimp?)
   apply (drule reachable_page_table_not_global; clarsimp?)
   done
+*)
+
+crunch unmap_page
+  for valid_global_arch_objs[wp]: "valid_global_arch_objs"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma perform_pg_inv_unmap_globals_equiv:
   "\<lbrace>invs and globals_equiv st and cte_wp_at ((=) (ArchObjectCap cap)) ct_slot\<rbrace>
@@ -991,10 +1096,10 @@ lemma perform_pg_inv_unmap_globals_equiv:
   unfolding perform_pg_inv_unmap_def
   apply (rule hoare_weaken_pre)
    apply (wp mapM_swp_store_pte_globals_equiv hoare_vcg_all_lift mapM_x_swp_store_pte_globals_equiv
-             set_cap_globals_equiv'' unmap_page_globals_equiv store_pte_globals_equiv
+             set_cap_globals_equiv''' unmap_page_globals_equiv store_pte_globals_equiv
              store_pte_globals_equiv hoare_weak_lift_imp set_message_info_globals_equiv
-             unmap_page_valid_arch_state perform_pg_inv_get_addr_globals_equiv
-          | wpc | simp add: do_machine_op_bind sfence_def)+
+              perform_pg_inv_get_addr_globals_equiv
+          | wpc | simp add: do_machine_op_bind)+
   apply (clarsimp simp: acap_map_data_def)
   apply (intro conjI; clarsimp)
   apply (clarsimp split: arch_cap.splits)
@@ -1003,15 +1108,23 @@ lemma perform_pg_inv_unmap_globals_equiv:
   done
 
 lemma perform_pg_inv_map_globals_equiv:
-  "\<lbrace>invs and globals_equiv st and (\<lambda>s. table_base slot \<noteq> global_pt s)\<rbrace>
-   perform_pg_inv_map cap ct_slot pte slot
+  "\<lbrace>invs and globals_equiv st and (\<lambda>s. table_base (level_type lvl) slot \<noteq> global_pt s)\<rbrace>
+   perform_pg_inv_map cap ct_slot pte slot lvl
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  unfolding perform_pg_inv_map_def
-  by (wp mapM_swp_store_pte_globals_equiv hoare_vcg_all_lift mapM_x_swp_store_pte_globals_equiv
-         set_cap_globals_equiv'' unmap_page_globals_equiv store_pte_globals_equiv
+  unfolding perform_pg_inv_map_def cleanByVA_PoU_def
+  apply (wp mapM_swp_store_pte_globals_equiv hoare_vcg_all_lift mapM_x_swp_store_pte_globals_equiv
+         set_cap_globals_equiv''' unmap_page_globals_equiv store_pte_globals_equiv
          store_pte_globals_equiv hoare_weak_lift_imp set_message_info_globals_equiv
-         unmap_page_valid_arch_state perform_pg_inv_get_addr_globals_equiv
-      | wpc | simp add: do_machine_op_bind sfence_def | fastforce)+
+          perform_pg_inv_get_addr_globals_equiv
+      | wpc | simp add: do_machine_op_bind | rule conjI; rule impI, wp hoare_drop_imps)+
+  apply fastforce
+  done
+
+lemma perform_flush_globals_equiv[wp]:
+  "perform_flush type vstart vend pstart space asid \<lbrace>globals_equiv st\<rbrace>"
+  unfolding perform_flush_def do_flush_def cleanCacheRange_RAM_def invalidateCacheRange_RAM_def
+            cleanInvalidateCacheRange_RAM_def cleanCacheRange_PoU_def invalidateCacheRange_I_def isb_def dsb_def
+  by (cases type; wpsimp wp: dmo_mol_reads_respects when_ev simp: dmo_distr)
 
 lemma perform_page_invocation_globals_equiv:
   "\<lbrace>invs and authorised_for_globals_page_inv pgi and valid_page_inv pgi
@@ -1025,7 +1138,6 @@ lemma perform_page_invocation_globals_equiv:
     apply (clarsimp simp: valid_page_inv_def same_ref_def)
     apply (drule vs_lookup_slot_table_base; clarsimp)
     apply (drule reachable_page_table_not_global, clarsimp+)
-    apply (fastforce dest: global_pt_in_global_refs[OF invs_valid_global_arch_objs])
    apply (clarsimp simp: valid_page_inv_def)
   apply clarsimp
   apply (fastforce dest: invs_valid_idle
@@ -1094,8 +1206,7 @@ lemma perform_asid_control_invocation_globals_equiv:
     apply (simp add: word_bw_assocs pageBits_def mask_zero)
    apply (wp add: delete_objects_invs_ex delete_objects_pspace_no_overlap[where dev=False]
                   delete_objects_globals_equiv hoare_vcg_ex_lift
-             del: Untyped_AI.delete_objects_pspace_no_overlap
-          | simp add: page_bits_def)+
+             del: Untyped_AI.delete_objects_pspace_no_overlap | simp)+
   apply (clarsimp simp: conj_comms
                         invs_psp_aligned invs_valid_objs valid_aci_def)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -1109,13 +1220,11 @@ lemma perform_asid_control_invocation_globals_equiv:
    apply (clarsimp simp: global_refs_def ptr_range_memI)
   apply (rule conjI)
    apply clarify
-   apply (frule global_pt_in_global_refs[OF invs_valid_global_arch_objs])
    apply (drule_tac p="global_pt sa" in ptr_range_memI)
    apply fastforce
   apply (rule conjI, fastforce simp: global_refs_def)
   apply (rule conjI)
    apply clarify
-   apply (frule global_pt_in_global_refs[OF invs_valid_global_arch_objs])
    apply fastforce
   apply (rule conjI)
    apply (drule untyped_slots_not_in_untyped_range)
@@ -1135,7 +1244,7 @@ lemma store_asid_pool_entry_globals_equiv:
    store_asid_pool_entry pool_ptr asid ptr
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding store_asid_pool_entry_def
-  by (wp modify_wp set_asid_pool_globals_equiv set_cap_globals_equiv'' get_cap_wp | wpc | simp)+
+  by (wp modify_wp set_asid_pool_globals_equiv set_cap_globals_equiv'' get_cap_wp | wpc | fastforce)+
 
 lemma perform_asid_pool_invocation_globals_equiv:
   "\<lbrace>globals_equiv s and invs and valid_apinv api\<rbrace>
@@ -1144,22 +1253,9 @@ lemma perform_asid_pool_invocation_globals_equiv:
   unfolding perform_asid_pool_invocation_def
   apply (rule hoare_weaken_pre)
    apply (wp modify_wp set_asid_pool_globals_equiv set_cap_globals_equiv''
-             store_asid_pool_entry_globals_equiv copy_global_mappings_globals_equiv
-             copy_global_mappings_valid_arch_state get_cap_wp
+             store_asid_pool_entry_globals_equiv get_cap_wp
           | wpc | simp)+
   apply (clarsimp simp: valid_apinv_def cong: conj_cong)
-  apply (intro conjI; fastforce?)
-    apply (frule global_pt_in_global_refs[OF invs_valid_global_arch_objs])
-    apply (clarsimp simp: cte_wp_at_caps_of_state)
-    apply (frule (1) cap_not_in_valid_global_refs)
-    apply (clarsimp simp: acap_obj_def is_pt_cap_def split: arch_cap.splits)
-   apply (rule caps_of_state_aligned_page_table)
-    apply (fastforce simp: cte_wp_at_caps_of_state is_pt_cap_def is_PageTableCap_def
-                    split: option.splits)
-   apply clarsimp
-  apply (clarsimp simp: cte_wp_at_caps_of_state)
-  apply (frule (1) cap_not_in_valid_global_refs)
-  apply (clarsimp simp: acap_obj_def is_pt_cap_def split: arch_cap.splits)
   done
 
 
@@ -1170,6 +1266,27 @@ definition authorised_for_globals_arch_inv ::
              | InvokePage oper \<Rightarrow> authorised_for_globals_page_inv oper
              | _ \<Rightarrow> \<top>"
 
+(*
+text \<open>VSpace capabilities confer the authority to flush.\<close>
+definition perform_vspace_invocation :: "vspace_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "perform_vspace_invocation iv \<equiv> case iv of
+     VSpaceNothing \<Rightarrow> return ()
+   | VSpaceFlush type start end pstart space asid \<Rightarrow> perform_flush type start end pstart space asid"
+
+definition perform_sgi_invocation :: "sgi_signal_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "perform_sgi_invocation iv \<equiv> case iv of
+     SGISignalGenerate irq target \<Rightarrow> do_machine_op $ sendSGI (ucast irq) (ucast target)"
+*)
+
+crunch perform_vspace_invocation
+  for globals_equiv[wp]: "globals_equiv st"
+  (simp: sendSGI_def wp: dmo_mol_globals_equiv)
+
+lemma perform_sgi_invocation_globals_equiv[wp]:
+  "perform_sgi_invocation iv
+   \<lbrace>globals_equiv s\<rbrace>"
+  unfolding perform_sgi_invocation_def sendSGI_def
+  by wpsimp
 
 lemma arch_perform_invocation_reads_respects_g:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -1179,7 +1296,7 @@ lemma arch_perform_invocation_reads_respects_g:
                           (arch_perform_invocation ai)"
   unfolding arch_perform_invocation_def fun_app_def
   apply (case_tac ai; rule equiv_valid_guard_imp)
-  by (wpsimp wp: doesnt_touch_globalsI
+  apply (wpsimp wp: doesnt_touch_globalsI
                  reads_respects_g[OF perform_page_table_invocation_reads_respects]
                  reads_respects_g[OF perform_page_invocation_reads_respects]
                  reads_respects_g[OF perform_asid_control_invocation_reads_respects]
@@ -1190,6 +1307,53 @@ lemma arch_perform_invocation_reads_respects_g:
                  perform_asid_pool_invocation_globals_equiv
            simp: authorised_arch_inv_def valid_arch_inv_def authorised_for_globals_arch_inv_def
                  invs_psp_aligned invs_valid_objs invs_vspace_objs invs_valid_asid_table | simp)+
+  sorry
+
+lemma set_vcpu_globals_equiv[wp]:
+  "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
+   set_vcpu ptr vcpu
+   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  unfolding set_vcpu_def
+  apply (wpsimp wp: set_object_globals_equiv[THEN hoare_set_object_weaken_pre] get_object_wp
+              simp: partial_inv_def)+
+  apply (fastforce simp: obj_at_def valid_arch_state_def dest: valid_global_arch_objs_pt_at)
+  done
+
+lemma vcpu_update_globals_equiv[wp]:
+  "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
+   vcpu_update vr f
+   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  unfolding vcpu_update_def
+  by wpsimp
+
+lemma thread_set_globals_equiv:
+  "(\<And>tcb. arch_tcb_context_get (tcb_arch (f tcb)) = arch_tcb_context_get (tcb_arch tcb))
+   \<Longrightarrow> \<lbrace>globals_equiv s and valid_arch_state\<rbrace> thread_set f tptr \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  unfolding thread_set_def
+  apply (wp set_object_globals_equiv)
+  apply simp
+  apply (intro impI conjI allI)
+    apply (fastforce simp: valid_arch_state_def obj_at_def get_tcb_def dest: valid_global_arch_objs_pt_at)+
+  done
+
+lemma arch_thread_set_vcpu_globals_equiv[wp]:
+  "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
+   arch_thread_set (tcb_vcpu_update f) t
+   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  unfolding arch_thread_set_is_thread_set
+  by (wpsimp wp: thread_set_globals_equiv simp: arch_tcb_context_get_def)
+
+crunch vcpu_save_reg
+  for globals_equiv[wp]: "globals_equiv st"
+  (simp: readVCPUHardwareReg_def)
+
+lemma vcpu_save_globals_equiv[wp]:
+  "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
+   vcpu_save a
+   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  unfolding vcpu_save_def vcpu_save_reg_range_def
+  apply (wpsimp wp: )
+  oops
 
 lemma arch_perform_invocation_globals_equiv:
   "\<lbrace>globals_equiv s and invs and ct_active and valid_arch_inv ai
@@ -1202,7 +1366,7 @@ lemma arch_perform_invocation_globals_equiv:
                     perform_asid_control_invocation_globals_equiv
                     perform_asid_pool_invocation_globals_equiv)+
   apply (auto simp: authorised_for_globals_arch_inv_def invs_def valid_state_def valid_arch_inv_def)
-  done
+  sorry
 
 crunch arch_post_cap_deletion
   for valid_global_objs[wp]: "valid_global_objs"
@@ -1222,16 +1386,6 @@ lemma auth_ipc_buffers_mem_Write':
                         vspace_cap_rights_to_auth_def vm_read_write_def
                  split: if_split_asm)
    apply (auto dest: ipcframe_subset_page)
-  done
-
-lemma thread_set_globals_equiv:
-  "(\<And>tcb. arch_tcb_context_get (tcb_arch (f tcb)) = arch_tcb_context_get (tcb_arch tcb))
-   \<Longrightarrow> \<lbrace>globals_equiv s and valid_arch_state\<rbrace> thread_set f tptr \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding thread_set_def
-  apply (wp set_object_globals_equiv)
-  apply simp
-  apply (intro impI conjI allI)
-    apply (fastforce simp: valid_arch_state_def obj_at_def get_tcb_def dest: valid_global_arch_objs_pt_at)+
   done
 
 end
@@ -1271,7 +1425,9 @@ end
 
 declare as_user_globals_equiv[wp]
 
+(*
 axiomatization dmo_reads_respects where
   dmo_read_stval_reads_respects: "reads_respects aag l \<top> (do_machine_op read_stval)"
+*)
 
 end

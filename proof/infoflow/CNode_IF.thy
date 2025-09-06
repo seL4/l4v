@@ -324,11 +324,8 @@ locale CNode_IF_1 =
     "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
      set_cap cap p
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  and dmo_getActiveIRQ_wp:
-    "\<lbrace>\<lambda>s. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)))
-            (s\<lparr>machine_state := machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>\<rparr>)\<rbrace>
-     do_machine_op (getActiveIRQ in_kernel)
-     \<lbrace>\<lambda>rv s :: 's state. P rv s\<rbrace>"
+  and dmo_getActiveIRQ_globals_equiv:
+    "\<lbrace>globals_equiv st\<rbrace> do_machine_op (getActiveIRQ in_kernel) \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   and arch_globals_equiv_irq_state_update[simp]:
     "arch_globals_equiv ct it kh kh' as as' ms (irq_state_update f ms') =
      arch_globals_equiv ct it kh kh' as as' ms ms'"
@@ -476,12 +473,6 @@ lemma only_timer_irq_inv_determines_irq_masks:
   apply (case_tac "interrupt_states s x")
     apply (fastforce simp: invs_def valid_state_def valid_irq_states_def valid_irq_masks_def)
    apply fastforce+
-  done
-
-lemma dmo_getActiveIRQ_globals_equiv:
-  "\<lbrace>globals_equiv st\<rbrace> do_machine_op (getActiveIRQ in_kernel) \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply (wp dmo_getActiveIRQ_wp)
-  apply (auto simp: globals_equiv_def idle_equiv_def)
   done
 
 crunch reset_work_units, work_units_limit_reached, update_work_units

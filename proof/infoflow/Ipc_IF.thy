@@ -159,7 +159,7 @@ locale Ipc_IF_1 =
   and handle_arch_fault_reply_reads_respects:
     "reads_respects aag l (K (aag_can_read aag thread)) (handle_arch_fault_reply afault thread x y)"
   and arch_get_sanitise_register_info_reads_respects[wp]:
-    "reads_respects aag l \<top> (arch_get_sanitise_register_info t)"
+    "reads_respects aag l (K (aag_can_read_or_affect aag l t)) (arch_get_sanitise_register_info t)"
   and arch_get_sanitise_register_info_valid_global_objs[wp]:
     "arch_get_sanitise_register_info t \<lbrace>\<lambda>s :: det_state. valid_global_objs s\<rbrace>"
   and handle_arch_fault_reply_valid_global_objs[wp]:

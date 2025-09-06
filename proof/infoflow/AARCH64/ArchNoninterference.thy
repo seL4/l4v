@@ -131,7 +131,7 @@ next
       using False inte_obj assms
       by (auto elim!: rtranclp_induct integrity_obj_atomic.cases)
     then show ?case using step.hyps
-      by (fastforce intro: troa_arch arch_troa_asidpool_clear integrity_obj_atomic.intros
+      by (fastforce intro: arch_integrity_obj_atomic.intros integrity_obj_atomic.intros
                     elim!: integrity_obj_atomic.cases arch_integrity_obj_atomic.cases)
   qed
   then show ?thesis
@@ -140,20 +140,20 @@ qed
 
 lemma asid_pool_into_aag:
   "\<lbrakk> pool_for_asid asid s = Some p; kheap s p = Some (ArchObj (ASIDPool pool));
-     pool r = Some p'; pas_refined aag s \<rbrakk>
+      pool r = Some entry; ap_vspace entry = p'; pas_refined aag s \<rbrakk>
      \<Longrightarrow> abs_has_auth_to aag Control p p'"
   apply (rule pas_refined_mem [rotated], assumption)
   apply (rule sta_vref)
   apply (rule state_vrefsD)
      apply (erule pool_for_asid_vs_lookupD)
-    apply (fastforce simp: aobjs_of_Some)
+    apply (fastforce simp: opt_map_def)
    apply fastforce
   apply (fastforce simp: vs_refs_aux_def graph_of_def image_iff)
   done
 
 lemma owns_mapping_owns_asidpool:
   "\<lbrakk> pool_for_asid asid s = Some p; kheap s p = Some (ArchObj (ASIDPool pool));
-     pool r = Some p'; pas_refined aag s; is_subject aag p';
+     pool r = Some entry; ap_vspace entry = p'; pas_refined aag s; is_subject aag p';
      pas_wellformed (aag\<lparr>pasSubject := (pasObjectAbs aag p)\<rparr>) \<rbrakk>
      \<Longrightarrow> is_subject aag p"
   apply (frule asid_pool_into_aag)
@@ -167,9 +167,11 @@ lemma partitionIntegrity_subjectAffects_aobj':
   "\<lbrakk> pool_for_asid asid s = Some x; kheap s x = Some (ArchObj ao); ao \<noteq> ao';
      pas_refined aag s; silc_inv aag st s; pas_wellformed_noninterference aag;
      arch_integrity_obj_atomic (aag\<lparr>pasMayActivate := False, pasMayEditReadyQueues := False\<rparr>)
-                               {pasSubject aag} (pasObjectAbs aag x) ao ao' \<rbrakk>
+                              {pasSubject aag} (pasObjectAbs aag x) ao ao' \<rbrakk>
      \<Longrightarrow> subject_can_affect_label_directly aag (pasObjectAbs aag x)"
   unfolding arch_integrity_obj_atomic.simps asid_pool_integrity_def
+  sorry (* FIXME AARCH64 IF: vmid may change *)
+(*
   apply clarsimp
   apply (rule ccontr)
   apply (drule fun_noteqD)
@@ -184,6 +186,7 @@ lemma partitionIntegrity_subjectAffects_aobj':
    apply (fastforce elim!: silc_inv_cnode_onlyE obj_atE simp: is_cap_table_def)
   apply clarsimp
   done
+*)
 
 lemma partitionIntegrity_subjectAffects_aobj[Noninterference_assms]:
   assumes par_inte: "partitionIntegrity aag s s'"
@@ -211,13 +214,19 @@ next
   obtain asid where asid: "pool_for_asid asid s = Some x"
     using assms False inte_obj_arch[OF inte_obj]
           integrity_subjects_asids[OF partitionIntegrity_integrity[OF par_inte]]
+    sorry (* FIXME AARCH64 IF: arch objects include VCPUs *)
+(*
     by (fastforce elim!: integrity_obj_atomic.cases arch_integrity_obj_atomic.cases
                    simp: integrity_asids_def aobjs_of_Some opt_map_def pool_for_asid_def)+
+*)
   show ?thesis
     using assms ao' asid arch_tro
     by (fastforce dest: partitionIntegrity_subjectAffects_aobj')
 qed
 
+term ap_vspace
+
+(* FIXME AARCH64 IF: modify equiv_asids *)
 lemma partitionIntegrity_subjectAffects_asid[Noninterference_assms]:
   "\<lbrakk> partitionIntegrity aag s s'; pas_refined aag s; valid_objs s;
      valid_arch_state s; valid_arch_state s'; pas_wellformed_noninterference aag;
@@ -240,31 +249,34 @@ lemma partitionIntegrity_subjectAffects_asid[Noninterference_assms]:
      apply (fastforce simp: not_in_domIff asid_pools_of_ko_at obj_at_def)
     apply blast
    apply clarsimp
-   apply (rule affects_asidpool_map)
-   apply (rule pas_refined_asid_mem)
-    apply (drule partitionIntegrity_integrity)
-    apply (drule integrity_subjects_obj)
-    apply (drule_tac x="pool_ptr" in spec)+
-    apply (clarsimp simp: asid_pools_of_ko_at obj_at_def)
-    apply (drule tro_tro_alt, erule integrity_obj_alt.cases; simp)
-     apply (drule_tac t="pasSubject aag" in sym)
+   apply (drule partitionIntegrity_integrity)
+   apply (drule integrity_subjects_obj)
+   apply (drule_tac x="pool_ptr" in spec)+
+   apply (clarsimp simp: asid_pools_of_ko_at obj_at_def)
+   apply (case_tac "map_option ap_vspace (asid_pool' (asid_low_bits_of asid)) \<noteq>
+                    map_option ap_vspace (asid_pool (asid_low_bits_of asid))")
+    apply (rule affects_asidpool_map)
+    apply (rule pas_refined_asid_mem)
+     apply (drule tro_tro_alt, erule integrity_obj_alt.cases; simp)
+      apply (drule_tac t="pasSubject aag" in sym)
+      apply simp
+      apply (rule sata_asidpool)
+       apply assumption
+      apply assumption
+     apply (clarsimp simp: arch_integrity_obj_alt.simps asid_pool_integrity_def)
+     apply (drule_tac x="asid_low_bits_of asid" in spec)+
+     apply clarsimp
+     apply (drule owns_mapping_owns_asidpool[rotated])
+           apply ((simp | blast intro: pas_refined_Control[THEN sym]
+                        | fastforce simp: pool_for_asid_def
+                                   intro: pas_wellformed_pasSubject_update[simplified])+)[6]
+     apply (drule_tac t="pasSubject aag" in sym)+
      apply simp
      apply (rule sata_asidpool)
       apply assumption
      apply assumption
-    apply (clarsimp simp: arch_integrity_obj_alt.simps asid_pool_integrity_def)
-    apply (drule_tac x="asid_low_bits_of asid" in spec)+
-    apply clarsimp
-    apply (drule owns_mapping_owns_asidpool[rotated])
-         apply ((simp | blast intro: pas_refined_Control[THEN sym]
-                      | fastforce simp: pool_for_asid_def
-                                 intro: pas_wellformed_pasSubject_update[simplified])+)[5]
-    apply (drule_tac t="pasSubject aag" in sym)+
-    apply simp
-    apply (rule sata_asidpool)
-     apply assumption
     apply assumption
-   apply assumption
+  subgoal sorry (* FIXME AARCH64 IF: vmid may change *)
   apply clarsimp
   apply (drule partitionIntegrity_integrity)
   apply (clarsimp simp: integrity_def integrity_asids_def)
@@ -294,9 +306,8 @@ lemma set_vm_root_reads_respects:
 
 lemmas set_vm_root_reads_respects_g[wp] =
   reads_respects_g[OF set_vm_root_reads_respects,
-                   OF doesnt_touch_globalsI[where P="\<top>"],
-                   simplified,
-                   OF set_vm_root_globals_equiv]
+                   OF doesnt_touch_globalsI[where P="valid_global_arch_objs"],
+                   simplified, OF set_vm_root_globals_equiv]
 
 lemma arch_switch_to_thread_reads_respects_g'[Noninterference_assms]:
   "equiv_valid (reads_equiv_g aag) (affects_equiv aag l)
@@ -306,7 +317,8 @@ lemma arch_switch_to_thread_reads_respects_g'[Noninterference_assms]:
                (arch_switch_to_thread t)"
   apply (simp add: arch_switch_to_thread_def)
   apply (rule equiv_valid_guard_imp)
-  by (wp bind_ev_general thread_get_reads_respects_g | simp)+
+   apply (wp bind_ev_general thread_get_reads_respects_g | simp)+
+  sorry
 
 (* consider rewriting the return-value assumption using equiv_valid_rv_inv *)
 lemma ev2_invisible'[Noninterference_assms]:
@@ -340,12 +352,28 @@ lemma ev2_invisible'[Noninterference_assms]:
                       affects_equiv_sym globals_equiv_trans globals_equiv_sym)
   done
 
+lemmas dmo_mol_reads_respects_g[wp] =
+  reads_respects_g[OF dmo_mol_reads_respects,
+                   OF doesnt_touch_globalsI[where P="\<top>"],
+                   simplified,
+                   OF dmo_mol_globals_equiv]
+
+lemma set_global_user_vspace_reads_respects_g[Noninterference_assms, wp]:
+  "reads_respects_g aag l \<top> (set_global_user_vspace)"
+  unfolding set_global_user_vspace_def setVSpaceRoot_def
+  apply wpsimp
+  apply (clarsimp simp: reads_equiv_g_def globals_equiv_def)
+  done
+
 lemma arch_switch_to_idle_thread_reads_respects_g[Noninterference_assms, wp]:
   "reads_respects_g aag l \<top> (arch_switch_to_idle_thread)"
   apply (simp add: arch_switch_to_idle_thread_def)
   apply wp
+  sorry
+(*
   apply (clarsimp simp: reads_equiv_g_def globals_equiv_idle_thread_ptr)
   done
+*)
 
 lemma arch_globals_equiv_threads_eq[Noninterference_assms]:
   "arch_globals_equiv t' t'' kh kh' as as' ms ms'
@@ -386,18 +414,71 @@ lemma dmo_getActive_IRQ_reads_respect_scheduler[Noninterference_assms]:
   apply (simp add: scheduler_equiv_def)
   done
 
-lemma getActiveIRQ_no_non_kernel_IRQs[Noninterference_assms]:
-  "getActiveIRQ True = getActiveIRQ False"
-  by (clarsimp simp: getActiveIRQ_def non_kernel_IRQs_def)
+lemma integrity_hyp_update_reference_state[Noninterference_assms]:
+   "is_subject aag t
+    \<Longrightarrow> integrity_hyp aag {pasSubject aag} x s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
+  by (auto simp: integrity_hyp_def vcpu_integrity_def vcpu_of_state_def opt_map_def)
 
+lemma integrity_fpu_update_reference_state[Noninterference_assms]:
+  "is_subject aag t
+   \<Longrightarrow> integrity_fpu aag {pasSubject aag} x s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
+  by (auto simp: integrity_fpu_def fpu_of_state_def)
+
+(* FIXME AARCH64 IF: not true *)
 lemma valid_cur_hyp_triv[Noninterference_assms]:
   "valid_cur_hyp s"
-  by (simp add: valid_cur_hyp_def)
+  sorry
 
+(* FIXME AARCH64 IF: not true *)
 lemma arch_tcb_get_registers_equality[Noninterference_assms]:
   "arch_tcb_get_registers (tcb_arch tcb) = arch_tcb_get_registers (tcb_arch tcb')
    \<Longrightarrow> tcb_arch tcb = tcb_arch tcb'"
-  by (auto simp: arch_tcb_get_registers_def intro: arch_tcb.equality user_context.expand)
+  sorry
+(* by (auto simp: arch_tcb_get_registers_def intro: arch_tcb.equality user_context.expand) *)
+
+
+definition irq_at' :: "bool \<Rightarrow> nat \<Rightarrow> (irq \<Rightarrow> bool) \<Rightarrow> irq option" where
+  "irq_at' in_kernel pos masks \<equiv>
+   let i = irq_oracle pos in (if masks i \<or> in_kernel \<and> i \<in> non_kernel_IRQs then None else Some i)"
+
+lemma dmo_getActiveIRQ_wp':
+  "\<lbrace>\<lambda>s. P (irq_at' in_kernel (irq_state (machine_state s) + 1) (irq_masks (machine_state s)))
+          (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>)\<rbrace>
+   do_machine_op (getActiveIRQ in_kernel)
+   \<lbrace>P\<rbrace>"
+  apply (simp add: do_machine_op_def getActiveIRQ_def non_kernel_IRQs_def)
+  apply (wp modify_wp | wpc)+
+  apply clarsimp
+  apply (erule use_valid)
+   apply (wp modify_wp)
+  apply (auto simp: Let_def non_kernel_IRQs_def irq_at'_def split: if_splits)
+  done
+
+lemma getActiveIRQ_ev2[Noninterference_assms]:
+  "equiv_valid_2 (scheduler_equiv aag)
+                 (scheduler_affects_equiv aag l) (scheduler_affects_equiv aag l)
+                 (\<lambda>irq irq'. irq = irq' \<or> irq = None \<and> irq' \<in> Some ` non_kernel_IRQs)
+                 (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s)
+                 (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s)
+   (do_machine_op (getActiveIRQ True)) (do_machine_op (getActiveIRQ False))"
+  apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def)
+  apply (erule use_valid, rule dmo_getActiveIRQ_wp')+
+  apply (intro conjI)
+   apply (clarsimp simp: scheduler_equiv_def irq_at'_def Let_def)
+   apply clarsimp
+   apply (clarsimp simp: scheduler_equiv_def domain_fields_equiv_def globals_equiv_scheduler_def
+                         silc_dom_equiv_def equiv_for_def)
+  apply (clarsimp simp: scheduler_affects_equiv_def)
+  apply (intro conjI impI)
+    apply (clarsimp simp: states_equiv_for_def equiv_for_def equiv_asids_def)
+   apply (clarsimp simp: scheduler_globals_frame_equiv_def)
+  apply (clarsimp simp: arch_scheduler_affects_equiv_def)
+  done
+
+lemma non_kernel_IRQs_le_maxIRQ[Noninterference_assms]:
+  "irq \<in> non_kernel_IRQs \<Longrightarrow> irq \<le> maxIRQ"
+  unfolding non_kernel_IRQs_def Kernel_Config.maxIRQ_def irqVGICMaintenance_def irqVTimerEvent_def
+  by auto
 
 end
 
@@ -410,7 +491,7 @@ global_interpretation Noninterference_1?: Noninterference_1 _ arch_globals_equiv
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Noninterference_assms | solves \<open>rule integrity_arch_triv\<close>)?)
+    by (unfold_locales; (fact Noninterference_assms)?)
 qed
 
 

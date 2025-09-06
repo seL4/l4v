@@ -335,16 +335,12 @@ locale FinalCaps_1 =
     "arch_finalise_cap c x \<lbrace>silc_inv aag st\<rbrace>"
   and prepare_thread_delete_silc_inv[wp]:
     "prepare_thread_delete p \<lbrace>silc_inv aag st\<rbrace>"
-  and handle_reserved_irq_silc_inv[wp]:
-    "handle_reserved_irq irq \<lbrace>silc_inv aag st\<rbrace>"
-  and arch_mask_irq_signal_silc_inv[wp]:
-    "arch_mask_irq_signal irq \<lbrace>silc_inv aag st\<rbrace>"
   and handle_vm_fault_silc_inv[wp]:
     "handle_vm_fault t vmft \<lbrace>silc_inv aag st\<rbrace>"
+  and arch_mask_irq_signal_silc_inv[wp]:
+    "arch_mask_irq_signal irq \<lbrace>silc_inv aag st\<rbrace>"
   and handle_vm_fault_cur_thread[wp]:
     "\<And>P. handle_vm_fault t vmft \<lbrace>\<lambda>s :: det_state. P (cur_thread s)\<rbrace>"
-  and handle_hypervisor_fault_silc_inv[wp]:
-    "handle_hypervisor_fault t hvft \<lbrace>silc_inv aag st\<rbrace>"
   and arch_activate_idle_threadt_silc_inv[wp]:
     "arch_activate_idle_thread t \<lbrace>silc_inv aag st\<rbrace>"
   and arch_switch_to_idle_thread_silc_inv[wp]:
@@ -2725,6 +2721,12 @@ lemma thread_set_tcb_fault_handler_update_silc_inv[wp]:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def)
 
+lemma thread_set_tcb_arch_update_silc_inv[wp]:
+  "\<lbrace>silc_inv aag st\<rbrace>
+   thread_set (tcb_arch_update blah) t
+   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def)
+
 lemma thread_set_tcb_fault_handler_update_invs:
   "\<lbrace>invs and K (length a = word_bits)\<rbrace>
    thread_set (tcb_fault_handler_update (\<lambda>y. a)) word
@@ -2872,6 +2874,16 @@ crunch timer_tick, handle_yield
   for silc_inv[wp]: "silc_inv aag st"
   (simp: tcb_cap_cases_def)
 
+end
+
+
+locale FinalCaps_3 = FinalCaps_2 +
+  assumes handle_reserved_irq_silc_inv[wp]:
+    "handle_reserved_irq irq \<lbrace>silc_inv aag st\<rbrace>"
+  and handle_hypervisor_fault_silc_inv[wp]:
+    "handle_hypervisor_fault t hvft \<lbrace>silc_inv aag st\<rbrace>"
+begin
+
 lemma handle_interrupt_silc_inv:
   "handle_interrupt irq \<lbrace>silc_inv aag st\<rbrace>"
   unfolding handle_interrupt_def by (wpsimp wp: hoare_drop_imps)
@@ -2902,6 +2914,7 @@ crunch schedule
    ignore: set_scheduler_action
      simp: crunch_simps)
 
+(* FIXME AARCH64 IF: is this used? *)
 lemma call_kernel_silc_inv:
   "\<lbrace>silc_inv aag st and einvs and simple_sched_action and pas_refined aag
                     and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s)
