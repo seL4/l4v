@@ -131,16 +131,12 @@ assumed to have checked that the address is correctly aligned for the
 requested object type and that it actually contains an object of the
 requested type.
 
-> coloursOfDomain :: Domain -> Word -> Bool
-> coloursOfDomain _ _ = True
-
 > getObject :: PSpaceStorable a => PPtr a -> Kernel a
 > getObject ptr = do
 >         map <- gets $ psMap . ksPSpace
 >         let (before, after) = lookupAround2 (fromPPtr ptr) map
 >         (ptr', val) <- maybeToMonad before
 >         ksCurDomain <- gets ksCurDomain
->         assert (coloursOfDomain ksCurDomain ptr') "object not in partition of current domain"
 >         loadObject (fromPPtr ptr) ptr' after val
 
 > setObject :: PSpaceStorable a => PPtr a -> a -> Kernel ()
@@ -150,7 +146,31 @@ requested type.
 >         let (before, after) = lookupAround2 (fromPPtr ptr) map
 >         (ptr', obj) <- maybeToMonad before
 >         ksCurDomain <- gets ksCurDomain
->         assert (coloursOfDomain ksCurDomain ptr') "object not in partition of current domain"
+>         obj' <- updateObject val obj (fromPPtr ptr) ptr' after
+>         let map' = Data.Map.insert ptr' obj' map
+>         let ps' = ps { psMap = map' }
+>         modify (\ks -> ks { ksPSpace = ps'})
+
+> isInDomainColour :: Domain -> Word -> Bool
+> isInDomainColour _ _ = True
+
+> getObjectInCurDomain :: PSpaceStorable a => PPtr a -> Kernel a
+> getObjectInCurDomain ptr = do
+>         map <- gets $ psMap . ksPSpace
+>         let (before, after) = lookupAround2 (fromPPtr ptr) map
+>         (ptr', val) <- maybeToMonad before
+>         ksCurDomain <- gets ksCurDomain
+>         assert (isInDomainColour ksCurDomain ptr') "object not in partition of current domain"
+>         loadObject (fromPPtr ptr) ptr' after val
+
+> setObjectInCurDomain :: PSpaceStorable a => PPtr a -> a -> Kernel ()
+> setObjectInCurDomain ptr val = do
+>         ps <- gets ksPSpace
+>         let map = psMap ps
+>         let (before, after) = lookupAround2 (fromPPtr ptr) map
+>         (ptr', obj) <- maybeToMonad before
+>         ksCurDomain <- gets ksCurDomain
+>         assert (isInDomainColour ksCurDomain ptr') "object not in partition of current domain"
 >         obj' <- updateObject val obj (fromPPtr ptr) ptr' after
 >         let map' = Data.Map.insert ptr' obj' map
 >         let ps' = ps { psMap = map' }

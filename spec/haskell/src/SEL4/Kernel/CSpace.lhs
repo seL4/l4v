@@ -50,6 +50,9 @@ These functions simply call the slot lookup functions defined below to locate
 the slot containing the requested capability, and then load the capability from
 it.
 
+> lookupCapInCurDomain :: PPtr TCB -> CPtr -> KernelF LookupFailure Capability
+> lookupCapInCurDomain thread cPtr = liftM fst $ lookupCapAndSlotInCurDomain thread cPtr
+
 > lookupCap :: PPtr TCB -> CPtr -> KernelF LookupFailure Capability
 > lookupCap thread cPtr = liftM fst $ lookupCapAndSlot thread cPtr
 
@@ -58,6 +61,13 @@ it.
 > lookupCapAndSlot thread cPtr = do
 >         slot <- lookupSlotForThread thread cPtr
 >         cap <- withoutFailure $ getSlotCap slot
+>         return (cap, slot)
+
+> lookupCapAndSlotInCurDomain :: PPtr TCB -> CPtr ->
+>                                KernelF LookupFailure (Capability, PPtr CTE)
+> lookupCapAndSlotInCurDomain thread cPtr = do
+>         slot <- lookupSlotForThreadInCurDomain thread cPtr
+>         cap <- withoutFailure $ getSlotCapInCurDomain slot
 >         return (cap, slot)
 
 \subsection{Locating a Capability Table Entry}
@@ -76,6 +86,15 @@ reported as faults.
 > lookupSlotForThread thread capptr = do
 >         threadRootSlot <- withoutFailure $ getThreadCSpaceRoot thread
 >         threadRoot <- withoutFailure $ getSlotCap threadRootSlot
+>         let bits = finiteBitSize $ fromCPtr capptr
+>         (s, _) <- resolveAddressBits threadRoot capptr bits
+>         return s
+
+> lookupSlotForThreadInCurDomain :: PPtr TCB -> CPtr ->
+>         KernelF LookupFailure (PPtr CTE)
+> lookupSlotForThreadInCurDomain thread capptr = do
+>         threadRootSlot <- withoutFailure $ getThreadCSpaceRoot thread
+>         threadRoot <- withoutFailure $ getSlotCapInCurDomain threadRootSlot
 >         let bits = finiteBitSize $ fromCPtr capptr
 >         (s, _) <- resolveAddressBits threadRoot capptr bits
 >         return s

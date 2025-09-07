@@ -732,6 +732,9 @@ The following two functions are specialisations of "getObject" and
 > setCTE :: PPtr CTE -> CTE -> Kernel ()
 > setCTE = setObject
 
+> getCTEInCurDomain :: PPtr CTE -> Kernel CTE
+> getCTEInCurDomain = getObjectInCurDomain
+
 Often, only the capability slot of the CTE needs to be modified.
 
 > updateCap :: PPtr CTE -> Capability -> Kernel ()
@@ -751,6 +754,11 @@ of "Capability" objects, from the "CTE"s that store them.
 > getSlotCap :: PPtr CTE -> Kernel Capability
 > getSlotCap ptr = do
 >     cte <- getCTE ptr
+>     return $ cteCap cte
+
+> getSlotCapInCurDomain :: PPtr CTE -> Kernel Capability
+> getSlotCapInCurDomain ptr = do
+>     cte <- getCTEInCurDomain ptr
 >     return $ cteCap cte
 
 \subsubsection{Testing Capabilities}
