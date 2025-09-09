@@ -110,7 +110,7 @@ lemma valid_obj_makeObject_tcb [simp]:
 lemma valid_obj_makeObject_tcb_tcbDomain_update [simp]:
   "d \<le> maxDomain \<Longrightarrow> valid_obj' (KOTCB (tcbDomain_update (\<lambda>_. d) makeObject)) s"
   unfolding valid_obj'_def valid_tcb'_def  valid_tcb_state'_def
-  by (clarsimp simp: makeObject_tcb makeObject_cte objBits_simps'
+  by (clarsimp simp: makeObject_tcb makeObject_cte objBits_simps' valid_arch_tcb'_def
                      tcb_cte_cases_def maxDomain_def maxPriority_def numPriorities_def minBound_word)
 
 lemma valid_obj_makeObject_endpoint [simp]:
@@ -3357,7 +3357,7 @@ proof (intro conjI impI)
         apply (rename_tac ntfn xa xb)
         apply (case_tac ntfn, simp_all, (clarsimp simp: obj_at_disj' split:option.splits)+)
        apply (rename_tac tcb)
-       apply (case_tac tcb, clarsimp simp add: valid_tcb'_def valid_arch_obj'_def)
+       apply (case_tac tcb, clarsimp simp add: valid_tcb'_def valid_arch_tcb'_def)
        apply (frule pspace_alignedD' [OF _ ad(1)])
        apply (frule pspace_distinctD' [OF _ ad(2)])
        apply (simp add: objBits_simps)

@@ -2216,7 +2216,7 @@ proof -
     apply (fastforce simp: msgMaxLength_unfold length_syscallMessage msgFromLookupFailure_def
                            RISCV64_H.exceptionMessage_def RISCV64.exceptionMessage_def
                            n_exceptionMessage_def n_syscallMessage_def
-                           ArchMove_C.length_msgRegisters seL4_CapFault_IP_def obj_at'_def
+                           RISCV64.length_msgRegisters seL4_CapFault_IP_def obj_at'_def
                     split: lookup_failure.splits)
     done
 qed
@@ -7636,7 +7636,7 @@ lemma sendSignal_ccorres[corres]:
     apply (prop_tac "(tcbPtr, NTFNBound) \<in> (state_refs_of' s) ntfnptr")
      apply (fastforce simp: obj_at'_def state_refs_of'_def)
     apply (frule (1) sym_refsD)
-    apply (clarsimp simp: ko_wp_at'_def valid_ntfn'_def obj_at'_def)
+    apply (clarsimp simp: ko_wp_at'_def valid_ntfn'_def obj_at'_def live'_def)
     apply (fastforce simp: state_refs_of'_def tcb_bound_refs'_def)
    apply (prop_tac "isWaitingNtfn (ntfnObj ntfn)
                     \<longrightarrow> (\<forall>tcbPtr \<in> set (ntfnQueue (ntfnObj ntfn)).
@@ -7646,10 +7646,10 @@ lemma sendSignal_ccorres[corres]:
    apply (prop_tac "isWaitingNtfn (ntfnObj ntfn)
                     \<longrightarrow> (\<forall>tcbPtr \<in> set (ntfnQueue (ntfnObj ntfn)). ex_nonz_cap_to' tcbPtr s)")
     apply (fastforce intro: if_live_then_nonz_capE'
-                      simp: obj_at'_def pred_tcb_at'_def ko_wp_at'_def)
+                      simp: obj_at'_def pred_tcb_at'_def ko_wp_at'_def live'_def)
    apply (prop_tac "isWaitingNtfn (ntfnObj ntfn) \<longrightarrow> ex_nonz_cap_to' ntfnptr s")
     apply (fastforce intro!: if_live_then_nonz_capE'
-                       simp: obj_at'_def isWaitingNtfn_def ko_wp_at'_def live_ntfn'_def
+                       simp: obj_at'_def isWaitingNtfn_def ko_wp_at'_def live'_def live_ntfn'_def
                       split: ntfn.splits)
    apply (clarsimp cong: conj_cong)
    subgoal

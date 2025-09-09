@@ -343,11 +343,11 @@ lemma word_eq_cast_unsigned:
   "(x = y) = (UCAST ('a signed \<rightarrow> ('a :: len)) x = ucast y)"
   by (simp add: word_eq_iff nth_ucast)
 
-(* tcbIPCBufferSlot is last slot in TCB *)
+(* tcbTimeoutHandler is last slot in TCB *)
 (* FIXME arch-split: Arch is needed for wordSizeCase, proof is same on all arches *)
-lemma (in Arch) cteSizeBits_2ptcbBlockSizeBits[simplified tcbIPCBufferSlot_def]:
-  "n \<le> tcbIPCBufferSlot \<Longrightarrow> n << cteSizeBits < 2 ^ tcbBlockSizeBits"
-  unfolding tcbIPCBufferSlot_def tcbBlockSizeBits_def cteSizeBits_def
+lemma (in Arch) cteSizeBits_2ptcbBlockSizeBits[simplified tcbTimeoutHandlerSlot_def]:
+  "n \<le> tcbTimeoutHandlerSlot \<Longrightarrow> n << cteSizeBits < 2 ^ tcbBlockSizeBits"
+  unfolding tcbTimeoutHandlerSlot_def tcbBlockSizeBits_def cteSizeBits_def
   apply (simp only: wordSizeCase_simp)
   apply (rule shiftl_less_t2n; simp)
   apply unat_arith

@@ -628,7 +628,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
           prefer 2
           apply wp
          apply wp
-         apply (clarsimp simp: objBits_simps cte_level_bits_def)
+         apply (clarsimp simp: gen_objBits_simps cte_level_bits_def)
          apply (erule (2) valid_CNodeCapE)
          apply (erule (3) cte_map_shift')
          apply simp
@@ -638,7 +638,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
            apply clarsimp
            apply (rule corres_guard_imp)
              apply (rule getSlotCap_corres)
-             apply (simp add: objBits_simps cte_level_bits_def)
+             apply (simp add: gen_objBits_simps cte_level_bits_def)
              apply (erule (1) cte_map_shift)
                apply simp
               apply assumption
@@ -670,7 +670,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
            apply (subst drop_drop [symmetric])
            apply simp
           apply wp
-          apply (clarsimp simp: objBits_simps cte_level_bits_def)
+          apply (clarsimp simp: gen_objBits_simps cte_level_bits_def)
           apply (erule (1) cte_map_shift)
             apply simp
            apply assumption
@@ -698,10 +698,16 @@ lemma getThreadCSpaceRoot:
   by (simp add: getThreadCSpaceRoot_def locateSlot_conv
                 tcbCTableSlot_def)
 
+context Arch begin arch_global_naming
+
 lemma getThreadVSpaceRoot:
   "getThreadVSpaceRoot t = return (t+2^cteSizeBits)" (*2^cte_level_bits*)
   by (simp add: getThreadVSpaceRoot_def locateSlot_conv objBits_simps'
                 tcbVTableSlot_def shiftl_t2n cte_level_bits_def)
+
+end
+
+arch_requalify_facts getThreadVSpaceRoot (* FIXME: arch-split RT *)
 
 lemma getSlotCap_tcb_corres:
   "corres (\<lambda>t c. cap_relation (tcb_ctable t) c)
@@ -808,7 +814,7 @@ lemma setObject_cte_obj_at_tcb':
                         valid_def lookupAround2_char1
                         obj_at'_def ps_clear_upd)
   apply (clarsimp elim!: rsubst[where P=P'])
-  apply (clarsimp simp: updateObject_cte in_monad objBits_simps
+  apply (clarsimp simp: updateObject_cte in_monad gen_objBits_simps
                         tcbCTableSlot_def tcbVTableSlot_def x
                         typeError_def
                  split: if_split_asm

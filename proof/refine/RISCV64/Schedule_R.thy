@@ -1755,7 +1755,7 @@ lemma updateRefillTl_invs'[wp]:
   apply (intro conjI)
    apply (fastforce dest: invs_iflive'
                     elim: if_live_then_nonz_capE'
-                    simp: valid_idle'_def obj_at'_def ko_wp_at'_def live_sc'_def)
+                    simp: valid_idle'_def obj_at'_def ko_wp_at'_def live'_def live_sc'_def)
   apply (fastforce dest: sc_ko_at_valid_objs_valid_sc'
                    simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps
                          refillSize_def)
@@ -1766,7 +1766,7 @@ lemma updateRefillIndex_if_live_then_nonz_cap'[wp]:
   apply (clarsimp simp: updateRefillIndex_def updateSchedContext_def)
   apply (wpsimp wp: setSchedContext_iflive')
   apply (fastforce elim: if_live_then_nonz_capE'
-                   simp: valid_idle'_def obj_at'_def ko_wp_at'_def live_sc'_def)
+                   simp: valid_idle'_def obj_at'_def ko_wp_at'_def live'_def live_sc'_def)
   done
 
 lemma updateRefillTl_if_live_then_nonz_cap'[wp]:
@@ -1774,7 +1774,7 @@ lemma updateRefillTl_if_live_then_nonz_cap'[wp]:
   apply (clarsimp simp: updateRefillTl_def updateSchedContext_def)
   apply (wpsimp wp: setSchedContext_iflive')
   apply (fastforce elim: if_live_then_nonz_capE'
-                   simp: valid_idle'_def obj_at'_def ko_wp_at'_def live_sc'_def)
+                   simp: valid_idle'_def obj_at'_def ko_wp_at'_def live'_def live_sc'_def)
   done
 
 lemma refillAddTail_if_live_then_nonz_cap'[wp]:
@@ -1782,7 +1782,7 @@ lemma refillAddTail_if_live_then_nonz_cap'[wp]:
   apply (clarsimp simp: refillAddTail_def updateSchedContext_def)
   apply (wpsimp wp: setSchedContext_iflive' getRefillNext_wp getRefillSize_wp)
   apply (fastforce elim: if_live_then_nonz_capE'
-                   simp: valid_idle'_def obj_at'_def ko_wp_at'_def live_sc'_def)
+                   simp: valid_idle'_def obj_at'_def ko_wp_at'_def live'_def live_sc'_def)
   done
 
 lemma scheduleUsed_if_live_then_nonz_cap'[wp]:
@@ -1829,7 +1829,7 @@ lemma refillPopHead_invs'[wp]:
   apply normalise_obj_at'
   apply (rule conjI)
    apply (fastforce intro!: if_live_then_nonz_capE'
-                      simp: ko_wp_at'_def obj_at'_def live_sc'_def)
+                      simp: ko_wp_at'_def obj_at'_def live'_def live_sc'_def)
   by (fastforce dest!: invs'_ko_at_valid_sched_context'
                  simp: valid_sched_context'_def valid_sched_context_size'_def obj_at_simps
                        refillSize_def refillNext_def
@@ -2066,7 +2066,7 @@ lemma refillPopHead_if_live_then_nonz_cap'[wp]:
   apply (clarsimp simp: refillPopHead_def updateSchedContext_def getRefillNext_def)
   apply wpsimp
   apply (fastforce intro: if_live_then_nonz_capE'
-                    simp: ko_wp_at'_def obj_at'_real_def live_sc'_def)
+                    simp: ko_wp_at'_def obj_at'_real_def live'_def live_sc'_def)
   done
 
 lemma updateRefillHd_if_live_then_nonz_cap'[wp]:
@@ -2074,7 +2074,7 @@ lemma updateRefillHd_if_live_then_nonz_cap'[wp]:
   apply (clarsimp simp: updateRefillHd_def updateSchedContext_def)
   apply wpsimp
   apply (fastforce intro: if_live_then_nonz_capE'
-                    simp: ko_wp_at'_def obj_at'_real_def live_sc'_def)
+                    simp: ko_wp_at'_def obj_at'_real_def live'_def live_sc'_def)
   done
 
 crunch refillHeadOverlappingLoop, headInsufficientLoop
@@ -4759,7 +4759,7 @@ lemma tcbSchedDequeue_valid_tcbs'[wp]:
 
 crunch schedContextDonate
   for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' ptr"
-  (wp: threadSet_cap_to crunch_wps simp: tcb_cte_cases_def cteSizeBits_def)
+  (wp: threadSet_cap_to crunch_wps simp: update_tcb_cte_cases)
 
 crunch schedContextDonate
   for valid_irq_handlers'[wp]: "\<lambda>s. valid_irq_handlers' s"
@@ -4797,7 +4797,7 @@ crunch schedContextDonate
   and irqs_masked'[wp]: irqs_masked'
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
-  (simp: comp_def tcb_cte_cases_def crunch_simps cteSizeBits_def
+  (simp: comp_def crunch_simps update_tcb_cte_cases
      wp: threadSet_not_inQ hoare_vcg_imp_lift' valid_irq_node_lift
          threadSet_ifunsafe'T threadSet_cur crunch_wps
          cur_tcb_lift valid_dom_schedule'_lift valid_replies'_lift irqs_masked_lift)
@@ -4824,7 +4824,7 @@ lemma schedContextDonate_if_live_then_nonz_cap':
   by (wpsimp wp: threadSet_iflive'T setSchedContext_iflive' hoare_vcg_all_lift threadSet_cap_to'
            simp: conj_ac cong: conj_cong
       | wp hoare_drop_imps
-      | fastforce simp: tcb_cte_cases_def cteSizeBits_def)+
+      | fastforce simp: update_tcb_cte_cases)+
 
 crunch schedContextDonate
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
@@ -4922,7 +4922,7 @@ lemma schedContextDonate_corres:
                  apply (rule threadset_corresT)
                        apply (clarsimp simp: tcb_relation_def)
                       apply (clarsimp simp: tcb_cap_cases_def)
-                     apply (fastforce simp: tcb_cte_cases_def objBits_simps')
+                     apply (fastforce simp: update_tcb_cte_cases)
                     apply fastforce
                    apply fastforce
                   apply (fastforce simp: inQ_def)
@@ -4961,8 +4961,8 @@ lemma schedContextDonate_corres:
            apply clarsimp
           apply (rule threadset_corresT)
                 apply (clarsimp simp: tcb_relation_def)
-               apply (fastforce simp: tcb_cap_cases_def objBits_simps')
-              apply (fastforce simp: tcb_cte_cases_def objBits_simps')
+               apply (fastforce simp: tcb_cap_cases_def)
+              apply (fastforce simp: update_tcb_cte_cases)
              apply wpsimp
             apply wpsimp
            apply (fastforce simp: inQ_def)

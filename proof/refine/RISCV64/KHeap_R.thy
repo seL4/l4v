@@ -2830,22 +2830,22 @@ locale simple_non_tcb_non_sc_non_reply_ko' =
 (* FIXME: should these be in Arch + sublocale instead? *)
 interpretation set_ep': simple_non_tcb_non_sc_non_reply_ko' setEndpoint getEndpoint
   by unfold_locales (simp_all add: setEndpoint_def getEndpoint_def projectKO_opts_defs
-                                   objBits_simps')
+                                   gen_objBits_simps)
 
 interpretation set_ntfn': simple_non_tcb_non_sc_non_reply_ko' setNotification getNotification
   by unfold_locales (simp_all add: setNotification_def getNotification_def projectKO_opts_defs
-                                   objBits_simps')
+                                   gen_objBits_simps)
 
 interpretation set_reply': simple_non_tcb_non_sc_ko' setReply getReply
-  by unfold_locales (simp_all add: setReply_def getReply_def projectKO_opts_defs objBits_simps')
+  by unfold_locales (simp_all add: setReply_def getReply_def projectKO_opts_defs gen_objBits_simps)
 
 interpretation set_sc': simple_non_tcb_non_reply_ko' setSchedContext getSchedContext
   by unfold_locales (simp_all add: setSchedContext_def getSchedContext_def projectKO_opts_defs
-                                   objBits_simps' scBits_pos_power2)
+                                   gen_objBits_simps scBits_pos_power2)
 
 interpretation set_tcb': simple_non_sc_ko' "\<lambda>p v. setObject p (v::tcb)"
                                            "\<lambda>p. getObject p :: tcb kernel"
-  by unfold_locales (simp_all add: projectKO_opts_defs objBits_simps')
+  by unfold_locales (simp_all add: projectKO_opts_defs gen_objBits_simps)
 
 lemma threadSet_pspace_only':
    "pspace_only' (threadSet f p)"
@@ -3027,8 +3027,7 @@ lemma setSchedContext_iflive'[wp]:
   unfolding setSchedContext_def
   by (wpsimp wp: setObject_iflive'[where P="\<top>"]
            simp: updateObject_default_def in_monad scBits_pos_power2
-                 projectKOs objBits_simps' bind_def
-     |simp)+
+                 objBits_simps' bind_def live'_def)
 
 lemma setReply_iflive'[wp]:
   "\<lbrace>if_live_then_nonz_cap' and ex_nonz_cap_to' p\<rbrace>
@@ -3037,8 +3036,7 @@ lemma setReply_iflive'[wp]:
   unfolding setReply_def
   by (wpsimp wp: setObject_iflive'[where P="\<top>"]
            simp: updateObject_default_def in_monad
-                 projectKOs objBits_simps' bind_def
-     |simp)+
+                 objBits_simps' bind_def live'_def)
 
 lemma setEndpoint_iflive'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
@@ -3048,8 +3046,7 @@ lemma setEndpoint_iflive'[wp]:
   unfolding setEndpoint_def
   by (wpsimp wp: setObject_iflive'[where P="\<top>"]
            simp: updateObject_default_def in_monad
-                 projectKOs objBits_simps' bind_def live'_def
-     |simp)+
+                 objBits_simps' bind_def live'_def)
 
 lemma setReply_list_refs_of_replies'[wp]:
   "\<lbrace>\<lambda>s. P ((list_refs_of_replies' s)(p := list_refs_of_reply' reply))\<rbrace>
@@ -3166,7 +3163,7 @@ lemma ep_redux_simps':
 
 lemma endpoint_live':
   "\<lbrakk>ko_at' ep ptr s; ep \<noteq> IdleEP\<rbrakk> \<Longrightarrow> ko_wp_at' live' ptr s"
-  by (clarsimp simp: ko_wp_at'_def obj_at'_def)
+  by (clarsimp simp: ko_wp_at'_def obj_at'_def live'_def)
 
 (* There are two wp rules for preserving valid_ioc over set_object.
    First, the more involved rule for CNodes and TCBs *)
@@ -3175,6 +3172,8 @@ lemma valid_refs'_def2:
   "valid_refs' R (ctes_of s) = (\<forall>cref. \<not>cte_wp_at' (\<lambda>c. R \<inter> capRange (cteCap c) \<noteq> {}) cref s)"
   by (auto simp: valid_refs'_def cte_wp_at_ctes_of ran_def)
 
+context begin interpretation Arch . (* FIXME: arch-split RT *)
+
 lemma idle_is_global [intro!]:
   "ksIdleThread s \<in> global_refs' s"
   by (simp add: global_refs'_def)
@@ -3182,6 +3181,8 @@ lemma idle_is_global [intro!]:
 lemma idle_sc_is_global [intro!]:
   "idle_sc_ptr \<in> global_refs' s"
   by (simp add: global_refs'_def)
+
+end
 
 lemma valid_globals_cte_wpD':
   "\<lbrakk> valid_global_refs' s; cte_wp_at' P p s; ptr \<in> global_refs' s \<rbrakk>
@@ -4167,8 +4168,8 @@ lemma getReleaseQueue_wp[wp]:
 lemma getObject_sc_wp:
   "\<lbrace>\<lambda>s. sc_at' p s \<longrightarrow> (\<exists>t::sched_context. ko_at' t p s \<and> Q t s)\<rbrace> getObject p \<lbrace>Q\<rbrace>"
   by (clarsimp simp: getObject_def valid_def in_monad
-                     split_def objBits_simps' loadObject_default_def
-                     projectKOs obj_at'_def in_magnitude_check
+                     split_def gen_objBits_simps loadObject_default_def
+                     obj_at'_def in_magnitude_check
               dest!: readObject_misc_ko_at')
 
 lemma getRefillNext_wp:
@@ -4483,7 +4484,7 @@ lemma getObject_idempotent:
   apply (clarsimp simp: monadic_rewrite_def)
   apply (rule monad_state_eqI)
     apply ((clarsimp simp: in_monad getObject_def split_def
-                           loadObject_default_def projectKOs scBits_pos_power2 objBits_simps'
+                           loadObject_default_def scBits_pos_power2 gen_objBits_simps
                            lookupAround2_known1 in_magnitude_check)+)[2]
   apply (fastforce dest!: sc_inv_state_eq[simplified getSchedContext_def]
                           no_fail_getObject_misc[simplified no_fail_def, rule_format]
@@ -4506,7 +4507,7 @@ lemma getSchedContext_setSchedContext_decompose:
     apply (simp add: in_monad getSchedContext_def getObject_def)
     apply (frule no_ofailD[OF no_ofail_sc_at'_readObject])
     apply (clarsimp del: readObject_misc_ko_at' simp del: readObject_misc_obj_at')
-    apply (clarsimp simp: setSchedContext_def setObject_def obj_at'_def objBits_simps'
+    apply (clarsimp simp: setSchedContext_def setObject_def obj_at'_def gen_objBits_simps
                           in_monad scBits_pos_power2 updateObject_default_def
                           in_magnitude_check ps_clear_upd magnitudeCheck_assert split_def
                    split: option.split_asm)
@@ -4515,7 +4516,7 @@ lemma getSchedContext_setSchedContext_decompose:
      apply (rule conjI;
             fastforce simp: readObject_def obind_def omonad_defs split_def
                             ps_clear_upd loadObject_default_def lookupAround2_known1
-                            objBits_simps' scBits_pos_power2 lookupAround2_None2 lookupAround2_char2
+                            gen_objBits_simps scBits_pos_power2 lookupAround2_None2 lookupAround2_char2
                      split: option.splits if_split_asm dest!: readObject_misc_ko_at')
     apply (rename_tac sc p sc')
     apply (rule_tac x="f sc" in exI)
@@ -4523,7 +4524,7 @@ lemma getSchedContext_setSchedContext_decompose:
      apply (thin_tac "scSize _ = _")
      apply (clarsimp simp: readObject_def obind_def omonad_defs fun_upd_def split_def
                            ps_clear_upd loadObject_default_def lookupAround2_known1
-                           objBits_simps' scBits_pos_power2 lookupAround2_None2 lookupAround2_char2
+                           gen_objBits_simps scBits_pos_power2 lookupAround2_None2 lookupAround2_char2
                     split: option.splits if_split_asm)
      apply (metis option.simps(3) word_le_less_eq word_le_not_less)
     apply (clarsimp simp: split: option.splits)
@@ -4567,7 +4568,7 @@ lemma getSchedContext_setSchedContext_decompose:
     apply simp+
 
    apply (prop_tac "sc_at' scPtr (s\<lparr>ksPSpace := (ksPSpace s)(scPtr \<mapsto> KOSchedContext (f sc))\<rparr>)")
-    apply (clarsimp simp: obj_at'_def objBits_simps' ps_clear_upd)
+    apply (clarsimp simp: obj_at'_def gen_objBits_simps ps_clear_upd)
    apply (frule_tac s="s\<lparr>ksPSpace := (ksPSpace s)(scPtr \<mapsto> KOSchedContext (f sc))\<rparr>"
                  in no_failD[OF no_fail_getMiscObject(4)])
    apply clarsimp
@@ -4706,7 +4707,7 @@ lemma ko_at_sc_cross:
   apply (erule (1) pspace_dom_relatedE)
   by (clarsimp simp: obj_relation_cuts_def2 obj_at_def is_sc_obj cte_relation_def
                      other_obj_relation_def pte_relation_def tcb_relation_cut_def
-                     scBits_simps sc_relation_def objBits_simps
+                     scBits_simps sc_relation_def gen_objBits_simps
               split: Structures_A.kernel_object.split_asm if_split_asm
                      RISCV64_A.arch_kernel_obj.split_asm)
 
@@ -4979,8 +4980,8 @@ lemma updateSchedContext_scReplies_of:
 lemma getObject_tcb_wp:
   "\<lbrace>\<lambda>s. tcb_at' p s \<longrightarrow> (\<exists>t::tcb. ko_at' t p s \<and> Q t s)\<rbrace> getObject p \<lbrace>Q\<rbrace>"
   by (clarsimp simp: getObject_def valid_def in_monad
-                     split_def objBits_simps' loadObject_default_def
-                     projectKOs obj_at'_def in_magnitude_check
+                     split_def gen_objBits_simps loadObject_default_def
+                     obj_at'_def in_magnitude_check
               dest!: readObject_misc_ko_at')
 
 lemma threadSet_tcbSCs_of:

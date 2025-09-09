@@ -846,8 +846,7 @@ lemma replyRemoveTCB_corres:
                       apply (clarsimp dest!: sc_ko_at_valid_objs_valid_sc'
                                        simp: valid_sched_context_size'_def)
                      apply (clarsimp dest!: sc_ko_at_valid_objs_valid_sc'
-                                      simp: valid_sched_context'_def valid_sched_context_size'_def
-                                            objBits_simps)
+                                      simp: valid_sched_context'_def valid_sched_context_size'_def)
                      apply (erule sym_refs_replyNext_replyPrev_sym[THEN iffD2])
                      apply (clarsimp simp: opt_map_red obj_at'_def)
                     apply (frule (3) sym_refs_scReplies)
@@ -1022,7 +1021,7 @@ lemma setSchedContext_pop_head_corres:
             apply (rule corres_gen_asm')
             apply (rule stronger_corres_guard_imp)
               apply (rule_tac sc=sc and sc'=sc' in setSchedContext_update_corres; simp?)
-               apply (clarsimp simp: sc_relation_def refillSize_def objBits_simps)+
+               apply (clarsimp simp: sc_relation_def refillSize_def)+
             apply (clarsimp simp: obj_at'_def)
             apply (prop_tac "heap_ls (replyPrevs_of s') (Some rp) (sc_replies sc)")
              apply (drule state_relation_sc_replies_relation)
@@ -1345,7 +1344,7 @@ lemma replyPop_corres:
                                           refillSize_def
                                    split: if_splits)
                   apply (fold fun_upd_def)
-                  apply (clarsimp simp: obj_at'_def  opt_map_red ps_clear_upd objBits_simps
+                  apply (clarsimp simp: obj_at'_def  opt_map_red ps_clear_upd
                                  split: if_split)
                  apply (fastforce dest!: sym_refs_replyNext_replyPrev_sym[where rp'=rp and rp=rp, THEN iffD2]
                                    simp: obj_at_simps opt_map_red)
@@ -1943,7 +1942,7 @@ lemma blockedCancelIPC_invs':
    apply (wpsimp wp: getEndpoint_wp)
    apply (clarsimp simp: obj_at'_def)
   unfolding invs'_def valid_dom_schedule'_def
-  apply (wpsimp wp: valid_irq_node_lift typ_at_lifts
+  apply (wpsimp wp: valid_irq_node_lift
                     valid_irq_handlers_lift' valid_irq_states_lift' irqs_masked_lift
               simp: cteCaps_of_def pred_tcb_at'_def)
   apply fastforce
@@ -2655,7 +2654,7 @@ lemma ntfn_cancel_corres_helper:
           apply (clarsimp simp: in_release_q_def)
          apply (clarsimp simp: valid_tcb_state'_def)
          apply (wpsimp wp: set_thread_state_pred_map_tcb_sts_of)
-        apply (wpsimp wp: typ_at_lifts)
+        apply wpsimp
        apply (clarsimp simp: pred_conj_def)
        apply (rename_tac tp)
        apply (wpsimp wp: get_tcb_obj_ref_wp possible_switch_to_valid_sched_weak hoare_vcg_imp_lift')
@@ -2695,7 +2694,7 @@ lemma ntfn_cancel_corres_helper:
         apply (frule valid_sched_released_ipc_queues)
         apply (fastforce simp: released_ipc_queues_defs vs_all_heap_simps)
        apply (erule valid_sched_active_scs_valid)
-      apply (wpsimp wp: hoare_vcg_const_Ball_lift typ_at_lifts sts_st_tcb')
+      apply (wpsimp wp: hoare_vcg_const_Ball_lift sts_st_tcb')
      apply (auto simp: valid_tcb_state'_def)
   done
 
@@ -2811,7 +2810,7 @@ lemma refillPopHead_valid_pspace'[wp]:
   unfolding refillPopHead_def updateSchedContext_def
   apply (wpsimp wp: whileLoop_valid_inv getRefillNext_wp)
   by (fastforce simp: obj_at'_def valid_obj'_def MIN_REFILLS_def refillSize_def refillNext_def
-                      valid_sched_context'_def valid_sched_context_size'_def scBits_simps objBits_simps
+                      valid_sched_context'_def valid_sched_context_size'_def scBits_simps
                dest!: opt_predD
                elim!: opt_mapE)
 
@@ -2819,7 +2818,7 @@ lemma refillPopHead_not_live'[wp]:
   "refillPopHead scPtr \<lbrace>\<lambda>s. P (ko_wp_at' (Not \<circ> live') p s)\<rbrace>"
   unfolding refillPopHead_def
   apply (wpsimp wp: updateSchedContext_wp getRefillNext_wp)
-  apply (clarsimp simp: ko_wp_at'_def obj_at'_def opt_map_red live_sc'_def objBits_simps'
+  apply (clarsimp simp: ko_wp_at'_def obj_at'_def opt_map_red live'_def live_sc'_def gen_objBits_simps
                         ps_clear_upd)
   done
 
@@ -2827,7 +2826,7 @@ lemma updateRefillHd_ko_wp_at_not_live'[wp]:
   "updateRefillHd scPtr f \<lbrace>\<lambda>s. P (ko_wp_at' (Not \<circ> live') p s)\<rbrace>"
   unfolding updateRefillHd_def
   apply (wpsimp wp: updateSchedContext_wp)
-  apply (clarsimp simp: ko_wp_at'_def obj_at'_def opt_map_red objBits_simps' ps_clear_upd)
+  apply (clarsimp simp: ko_wp_at'_def obj_at'_def opt_map_red gen_objBits_simps ps_clear_upd live'_def)
   done
 
 crunch ifCondRefillUnblockCheck
@@ -3145,7 +3144,7 @@ lemma cancelAllSignals_invs'[wp]:
   apply (intro conjI impI)
     apply (clarsimp simp: list_refs_of_replies'_def opt_map_def o_def split: option.splits)
     apply (fastforce intro: if_live_then_nonz_capE'
-                      simp: ko_wp_at'_def obj_at'_def  live_ntfn'_def)
+                      simp: ko_wp_at'_def obj_at'_def live'_def live_ntfn'_def)
    apply (fastforce elim!: ex_nonz_cap_to'_tcb_in_WaitingNtfn'_q ntfn_queued_st_tcb_at'
                     simp: sym_refs_asrt_def sch_act_wf_asrt_def)+
   done
@@ -3194,7 +3193,7 @@ lemma threadSet_unlive_other:
   by (clarsimp simp: threadSet_def valid_def getObject_def
                      setObject_def in_monad loadObject_default_def
                      ko_wp_at'_def  split_def in_magnitude_check
-                     objBits_simps' updateObject_default_def
+                     updateObject_default_def
                      ps_clear_upd RISCV64_H.fromPPtr_def)
 
 lemma tcbSchedEnqueue_unlive_other:
@@ -3209,7 +3208,7 @@ lemma tcbSchedEnqueue_unlive_other:
   apply (drule_tac x="tcbPriority tcb" in spec)
   apply clarsimp
   apply (frule (1) tcbQueueHead_ksReadyQueues)
-  apply (fastforce dest!: inQ_implies_tcbQueueds_o
+  apply (fastforce dest!: inQ_implies_tcbQueueds_of
                     simp: obj_at'_def ko_wp_at'_def opt_pred_def opt_map_def live'_def
                    split: option.splits)
   done
@@ -3219,7 +3218,8 @@ lemma rescheduleRequired_unlive[wp]:
   supply comp_apply[simp del]
   unfolding rescheduleRequired_def
   apply (wpsimp wp: getSchedulable_wp tcbSchedEnqueue_unlive_other)
-  apply (fastforce simp: schedulable'_def opt_pred_def  obj_at'_def ko_wp_at'_def opt_map_def o_def)
+  apply (fastforce simp: schedulable'_def opt_pred_def  obj_at'_def ko_wp_at'_def opt_map_def o_def
+                         live'_def)
   done
 
 crunch scheduleTCB
@@ -3248,7 +3248,7 @@ lemma setThreadState_Inactive_unlive:
   "setThreadState Inactive tptr \<lbrace>ko_wp_at' (Not o live') p\<rbrace>"
   apply (clarsimp simp: setThreadState_def)
   apply (wpsimp wp: threadSet_wp)
-  apply (fastforce simp: ko_wp_at'_def obj_at'_def objBits_simps)
+  apply (fastforce simp: ko_wp_at'_def obj_at'_def objBits_simps live'_def hyp_live'_def)
   done
 
 lemma replyUnlink_unlive:
@@ -3256,13 +3256,13 @@ lemma replyUnlink_unlive:
   supply fun_upd_apply[simp del]
   apply (clarsimp simp: replyUnlink_def updateReply_def)
   apply (wpsimp wp: setThreadState_Inactive_unlive set_reply'.set_wp gts_wp')
-  apply (clarsimp simp: ko_wp_at'_def live_reply'_def obj_at'_def ps_clear_upd fun_upd_apply)
+  apply (clarsimp simp: ko_wp_at'_def live'_def live_reply'_def obj_at'_def ps_clear_upd fun_upd_apply)
   done
 
 lemma set_Idle_unlive[wp]:
   "\<lbrace>ep_at' ep\<rbrace> setEndpoint ep IdleEP \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') ep\<rbrace>"
   apply (wpsimp wp: set_ep'.set_wp)
-  apply (clarsimp simp: ko_wp_at'_def obj_at'_def objBits_simps ps_clear_upd)
+  apply (clarsimp simp: ko_wp_at'_def obj_at'_def objBits_simps ps_clear_upd live'_def)
   done
 
 lemma cancelAllIPC_unlive:

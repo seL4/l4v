@@ -54,7 +54,8 @@ lemma misc_dmo_valid_sched_pred_strong[wp]:
   "\<And>a b. do_machine_op (do set_current_pd (addrFromPPtr a);
                             setHardwareASID b
                          od) \<lbrace>valid_sched_pred_strong Q\<rbrace>"
-  apply (wpsimp wp: dmo_valid_sched_pred )+
+  "\<And>a. do_machine_op (deactivateInterrupt a) \<lbrace>valid_sched_pred_strong Q\<rbrace>"
+  apply (wpsimp wp: dmo_valid_sched_pred)+
   done
 
 crunch arch_switch_to_thread, arch_switch_to_idle_thread, arch_finalise_cap,
@@ -323,7 +324,7 @@ crunch arch_invoke_irq_handler, arch_mask_irq_signal, handle_reserved_irq
 
 lemma arch_invoke_irq_handler_valid_sched_pred_strong[wp]:
   "arch_invoke_irq_handler i \<lbrace> valid_sched_pred_strong P \<rbrace>"
-  by (cases i; wpsimp)
+  by (cases i; (wpsimp | rule conjI)+)
 
 lemma arch_mask_irq_signal_valid_sched_pred_strong[wp]:
   "arch_mask_irq_signal i \<lbrace> valid_sched_pred_strong P \<rbrace>"

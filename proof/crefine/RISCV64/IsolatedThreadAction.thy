@@ -871,14 +871,14 @@ lemma setBoundNotification_tcbPriority_obj_at'[wp]:
   "setBoundNotification ntfnPtr tptr \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'\<rbrace>"
   unfolding setBoundNotification_def
   apply (wpsimp wp: threadSet_wp)
-  apply (clarsimp simp: obj_at'_def objBits_simps ps_clear_upd)
+  apply (clarsimp simp: obj_at'_def gen_objBits_simps ps_clear_upd)
   done
 
 lemma tcbQueuePrepend_tcbPriority_obj_at'[wp]:
   "tcbQueuePrepend queue tptr \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'\<rbrace>"
   unfolding tcbQueuePrepend_def
   apply (wpsimp wp: threadSet_wp)
-  by (auto simp: obj_at'_def objBits_simps ps_clear_def split: if_splits)
+  by (auto simp: obj_at'_def gen_objBits_simps ps_clear_def split: if_splits)
 
 lemma tcbSchedDequeue_tcbPriority[wp]:
   "tcbSchedDequeue t \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'\<rbrace>"
@@ -897,7 +897,7 @@ lemma setThreadState_tcbPriority_obj_at'[wp]:
   "setThreadState ts tptr \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'\<rbrace>"
   unfolding setThreadState_def
   apply (wpsimp wp: threadSet_wp)
-  apply (fastforce simp: obj_at'_def objBits_simps ps_clear_def)
+  apply (fastforce simp: obj_at'_def gen_objBits_simps ps_clear_def)
   done
 
 (* FIXME RT: move following lemmas about tcbPriority to Refine or possibly DInvs (see VER-1299) *)

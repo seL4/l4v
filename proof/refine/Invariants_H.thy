@@ -35,6 +35,9 @@ arch_requalify_facts (H)
   wordsOfTime_def
   parseTimeArg_def
 
+arch_requalify_facts
+  valid_sz_simps
+
 section "Relationship of Executable Spec to Kernel Configuration"
 
 text \<open>
@@ -53,17 +56,6 @@ lemma le_maxDomain_eq_less_numDomains:
 
 (* FIXME arch-split: review section titles *)
 section "Invariants on Executable Spec"
-
-lemma valid_sz_simps:
-  "objBitsKO ko < word_bits =
-    (case ko of
-      KOSchedContext sc \<Rightarrow> minSchedContextBits + scSize sc < word_bits
-    | _ \<Rightarrow>    True)"
-  by (cases ko;
-      clarsimp simp: objBits_def objBitsKO_def word_size_def archObjSize_def pageBits_def word_bits_def
-                     tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def word_size
-                     pteBits_def wordSizeCase_def wordBits_def replySizeBits_def
-              split: arch_kernel_object.splits)
 
 abbreviation ep_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "ep_at' \<equiv> obj_at' ((\<lambda>x. True) :: endpoint \<Rightarrow> bool)"
@@ -387,7 +379,7 @@ primrec live0' :: "Structures_H.kernel_object \<Rightarrow> bool" where
       \<or> (tcbState tcb \<noteq> Inactive \<and> tcbState tcb \<noteq> IdleThreadState))"
 | "live0' (KOCTE cte)           = False"
 | "live0' (KOEndpoint ep)       = (ep \<noteq> IdleEP)"
-| "live0' (KONotification ntfn) = (bound (ntfnBoundTCB ntfn) \<or> (\<exists>ts. ntfnObj ntfn = WaitingNtfn ts))"
+| "live0' (KONotification ntfn) = live_ntfn' ntfn"
 | "live0' (KOSchedContext sc)   = live_sc' sc"
 | "live0' (KOReply r)           = live_reply' r"
 | "live0' (KOUserData)          = False"
@@ -406,7 +398,9 @@ definition hyp_refs_of' :: "kernel_object \<Rightarrow> (obj_ref \<times> reftyp
    | (KOUserData)          \<Rightarrow> {}
    | (KOUserDataDevice)    \<Rightarrow> {}
    | (KOKernelData)        \<Rightarrow> {}
-   | (KOArch ako)          \<Rightarrow> refs_of_a' ako"
+   | (KOArch ako)          \<Rightarrow> refs_of_a' ako
+   | (KOSchedContext sc)   \<Rightarrow> {}
+   | (KOReply rp)          \<Rightarrow> {}"
 
 definition state_hyp_refs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> reftype) set" where
   "state_hyp_refs_of' s \<equiv>
@@ -442,6 +436,7 @@ fun zobj_refs' :: "capability \<Rightarrow> obj_ref set" where
 | "zobj_refs' (IRQControlCap)                = {}"
 | "zobj_refs' (IRQHandlerCap irq)            = {}"
 | "zobj_refs' (SchedContextCap r _)          = {r}"
+| "zobj_refs' SchedControlCap                = {}"
 | "zobj_refs' (ReplyCap r _)                 = {r}"
 
 definition ex_nonz_cap_to' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
@@ -667,11 +662,6 @@ where
 
 definition pspace_bounded' :: "kernel_state \<Rightarrow> bool" where
   "pspace_bounded' s \<equiv> \<forall>x \<in> dom (ksPSpace s). objBitsKO (the (ksPSpace s x)) < word_bits"
-
-definition
-  pspace_in_kernel_mappings' :: "kernel_state \<Rightarrow> bool"
-where
- "pspace_in_kernel_mappings' s \<equiv> \<forall>p \<in> dom (ksPSpace s). p \<in> kernel_mappings"
 
 definition
   pspace_distinct' :: "kernel_state \<Rightarrow> bool"
@@ -1243,7 +1233,9 @@ definition valid_dom_schedule' :: "kernel_state \<Rightarrow> bool" where
 definition invs' :: "kernel_state \<Rightarrow> bool" where
   "invs' \<equiv> \<lambda>s. valid_pspace' s
                       \<and> valid_bitmaps s
-                      \<and> sym_refs (state_hyp_refs_of' s)
+\<comment> \<open>FIXME arch-split RT: state_hyp_refs_of' not needed until other architectures are being proven.
+                        It might end up being easiest to cross over from ainvs via assertions.
+                      \<and> sym_refs (state_hyp_refs_of' s)\<close>
                       \<and> sym_refs (list_refs_of_replies' s)
                       \<and> sym_heap_sched_pointers s
                       \<and> valid_sched_pointers s
@@ -1543,6 +1535,8 @@ lemma hyp_refs_of'_simps[simp]:
   "hyp_refs_of' (KOUserDataDevice) = {}"
   "hyp_refs_of' (KOKernelData) = {}"
   "hyp_refs_of' (KOArch ao) = refs_of_a' ao"
+  "hyp_refs_of' (KOSchedContext sc) = {}"
+  "hyp_refs_of' (KOReply rp) = {}"
   by (auto simp: hyp_refs_of'_def)
 
 lemma ko_wp_at'_weakenE:
@@ -1647,8 +1641,8 @@ abbreviation idle_refs :: "(machine_word \<times> reftype) set" where
 
 lemma state_hyp_refs_of'_elemD:
   "\<lbrakk> ref \<in> state_hyp_refs_of' s x \<rbrakk> \<Longrightarrow> ko_wp_at' (\<lambda>obj. ref \<in> hyp_refs_of' obj) x s"
-  by (clarsimp simp add: state_hyp_refs_of'_def ko_wp_at'_def
-                  split: option.splits if_split_asm)
+  by (clarsimp simp add: state_hyp_refs_of'_def ko_wp_at'_def valid_sz_simps
+                  split: option.splits if_split_asm kernel_object.splits)
 
 lemma obj_at_state_hyp_refs_ofD':
   "obj_at' P p s \<Longrightarrow> \<exists>ko. P ko \<and> state_hyp_refs_of' s p = hyp_refs_of' (injectKO ko)"
@@ -1676,7 +1670,7 @@ lemma hyp_sym_refs_obj_atD':
     we might want to use this rule, so we do that ahead of time. \<close>
 lemma refs_of_live'[simplified]:
   "refs_of' ko - idle_refs \<noteq> {} \<Longrightarrow> live' ko"
-  apply (cases ko; simp)
+  apply (cases ko; simp add: live'_def)
       apply clarsimp
      apply (rename_tac notification)
      apply (case_tac "ntfnObj notification";
@@ -1857,16 +1851,16 @@ lemma tcb_cte_cases_simps[simp]:
   "tcb_cte_cases (4 << cteSizeBits) = Some (tcbTimeoutHandler, tcbTimeoutHandler_update)"
   by (simp add: tcb_cte_cases_neqs_n tcb_cte_cases_def)+
 
-lemmas tcbSlot_defs = tcbCTableSlot_def tcbVTableSlot_def tcbReplySlot_def tcbCallerSlot_def
-                      tcbIPCBufferSlot_def
+lemmas tcbSlot_defs = tcbCTableSlot_def tcbVTableSlot_def tcbIPCBufferSlot_def
+                      tcbFaultHandlerSlot_def tcbTimeoutHandlerSlot_def
 
 lemma tcb_cte_cases_distinct:
   "distinct [
      tcbCTableSlot << cteSizeBits :: machine_word,
      tcbVTableSlot << cteSizeBits,
-     tcbReplySlot << cteSizeBits,
-     tcbCallerSlot << cteSizeBits,
-     tcbIPCBufferSlot << cteSizeBits]"
+     tcbIPCBufferSlot << cteSizeBits,
+     tcbFaultHandlerSlot << cteSizeBits,
+     tcbTimeoutHandlerSlot << cteSizeBits]"
   by (simp add: tcbSlot_defs tcb_cte_cases_neqs_n)
 
 lemmas tcb_cte_cases_neqs =
@@ -2416,14 +2410,6 @@ lemma typ_at_lift_valid_tcb_state'_strong:
                     typ_at_lift_ntfn'_strong[OF ntfn])
   done
 
-lemmas typ_at_lifts_strong =
-  typ_at_lift_tcb'_strong typ_at_lift_ep'_strong
-  typ_at_lift_ntfn'_strong typ_at_lift_cte'_strong
-  typ_at_lift_reply'_strong typ_at_lift_sc'_strong
-  typ_at_lift_valid_tcb_state'_strong
-  typ_at_lift_page_table_at'_strong
-  typ_at_lift_frame_at'_strong
-
 (* proof is identical for all architectures *)
 lemma (in Arch) koType_obj_range':
   "koTypeOf k = koTypeOf k' \<Longrightarrow> koTypeOf k = SchedContextT \<longrightarrow> objBitsKO k = objBitsKO k' \<Longrightarrow> obj_range' p k = obj_range' p k'"
@@ -2437,13 +2423,6 @@ requalify_facts Arch.koType_obj_range'
 lemma ko_wp_typ_at':
   "ko_wp_at' P p s \<Longrightarrow> \<exists>T. typ_at' T p s"
   by (clarsimp simp: typ_at'_def ko_wp_at'_def)
-
-lemma typ_at_lift_valid_irq_node':
-  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  shows      "\<lbrace>valid_irq_node' p\<rbrace> f \<lbrace>\<lambda>_. valid_irq_node' p\<rbrace>"
-  apply (simp add: valid_irq_node'_def)
-  apply (wp hoare_vcg_all_lift P typ_at_lifts_strong)
-  done
 
 lemma valid_dom_schedule'_lift:
   assumes dsi: "\<And>Q. \<lbrace>\<lambda>s. Q (ksDomScheduleIdx s)\<rbrace> f \<lbrace>\<lambda>rv s. Q (ksDomScheduleIdx s)\<rbrace>"
@@ -2484,55 +2463,6 @@ lemma valid_sc_lift':
   unfolding valid_sched_context'_def
   by (wpsimp wp: valid_bound_ntfn_lift valid_bound_tcb_lift valid_bound_reply_lift)
 
-context begin
-\<comment>\<open> We're using @{command ML_goal} here because there are two useful formulations
-    of typ_at lifting lemmas and we do not want to write all of the possibilities
-    out by hand. If we use typ_at_lift_tcb' as an example, then the first is
-    @{term "\<lbrace>\<lambda>s. P (typ_at' TCBT p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at' TCBT p s)\<rbrace>
-            \<Longrightarrow> \<lbrace>\<lambda>s. P (tcb_at' p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (tcb_at' p s)\<rbrace>"} and the second is
-    @{term "(\<And>P. \<lbrace>\<lambda>s. P (typ_at' TCBT p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at' TCBT p s)\<rbrace>)
-            \<Longrightarrow> \<lbrace>\<lambda>s. P (tcb_at' p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (tcb_at' p s)\<rbrace>"}.
-    The first form is stronger, and therefore preferred for backward reasoning
-    using rule. However, since the P in the premise is free in the first form,
-    forward unification using the OF attribute produces flex-flex pairs which
-    causes problems. The second form avoids the unification issue by demanding
-    that there is a P that is free in the lemma supplied to the OF attribute.
-    However, it can only be applied if @{term f} preserves both
-    @{term "typ_at' TCBT p s"} and @{term "\<not> typ_at' TCBT p s"}.
-    The following @{command ML_goal} generates lemmas of the second form based on
-    the previously proven stronger lemmas of the first form. \<close>
-ML \<open>
-local
-  val strong_thms = @{thms typ_at_lifts_strong[no_vars]};
-  fun abstract_P term = Logic.all (Free ("P", @{typ "bool \<Rightarrow> bool"})) term
-  fun abstract thm =
-    let
-      val prems = List.map abstract_P (Thm.prems_of thm);
-      fun imp [] = Thm.concl_of thm
-        | imp (p :: pms) = @{const Pure.imp} $ p $ imp pms
-    in
-      imp prems
-    end
-in
-  val typ_at_lifts_internal_goals = List.map abstract strong_thms
-end
-\<close>
-
-private ML_goal typ_at_lifts_internal:
-  \<open>typ_at_lifts_internal_goals\<close>
-  by (auto simp: typ_at_lifts_strong)
-
-lemmas typ_at_lifts = typ_at_lifts_internal
-                      typ_at_lift_cte_at'
-                      valid_bound_tcb_lift
-                      valid_bound_reply_lift
-                      valid_bound_sc_lift
-                      valid_bound_ntfn_lift
-                      valid_ntfn_lift'
-                      valid_sc_lift'
-                      typ_at_lift_frame_at'_strong
-end
-
 lemma typ_at_lift_valid_untyped':
   assumes P: "\<And>T p. \<lbrace>\<lambda>s. \<not>typ_at' T p s\<rbrace> f \<lbrace>\<lambda>rv s. \<not>typ_at' T p s\<rbrace>"
   assumes sz: "\<And>p n. \<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> f \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
@@ -2559,80 +2489,6 @@ lemma typ_at_lift_valid_untyped':
    apply (fastforce simp: ko_wp_at'_def dest!: use_valid [OF _ sz])
   apply simp
   done
-
-lemma typ_at'_valid_obj'_lift:
-  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  assumes sz: "\<And>n p. \<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> f \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
-  notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_const_Ball_lift
-               typ_at_lifts[OF P] typ_at_lift_valid_cap'[OF P]
-  shows      "\<lbrace>\<lambda>s. valid_obj' obj s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj' obj s\<rbrace>"
-  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
-  apply (cases obj; simp add: valid_obj'_def hoare_TrueI)
-       apply (rename_tac endpoint)
-       apply (case_tac endpoint; simp add: valid_ep'_def, wp)
-      apply (rename_tac notification)
-      apply (case_tac "ntfnObj notification";
-              simp add: valid_ntfn'_def split: option.splits;
-              (wpsimp|rule conjI)+)
-     apply (rename_tac tcb)
-     apply (case_tac "tcbState tcb";
-            simp add: valid_tcb'_def valid_tcb_state'_def split_def opt_tcb_at'_def;
-            wpsimp wp: sz hoare_case_option_wp)
-    apply (wpsimp simp: valid_cte'_def sz)
-   apply (rename_tac arch_kernel_object)
-   apply (case_tac arch_kernel_object; wpsimp wp: sz)
-  apply (wpsimp simp: valid_reply'_def)
-  done
-
-lemma typ_at'_valid_sched_context'_lift:
-  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  assumes sz: "\<And>n p. \<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> f \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
-  notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_const_Ball_lift
-               typ_at_lifts[OF P] typ_at_lift_valid_cap'[OF P]
-  shows      "\<lbrace>\<lambda>s. valid_sched_context' ko s\<rbrace> f \<lbrace>\<lambda>rv s. valid_sched_context' ko s\<rbrace>"
-  by (wpsimp simp: valid_sched_context'_def)
-
-lemmas typ_at_sc_at'_n_lifts =
-  typ_at_lift_valid_untyped' typ_at_lift_valid_cap' typ_at'_valid_obj'_lift
-  typ_at'_valid_obj'_lift[where obj="KOEndpoint ko" for ko, simplified valid_obj'_def kernel_object.case]
-  typ_at'_valid_obj'_lift[where obj="KONotification ko" for ko, simplified valid_obj'_def kernel_object.case]
-  typ_at'_valid_obj'_lift[where obj="KOTCB ko" for ko, simplified valid_obj'_def kernel_object.case]
-  typ_at'_valid_obj'_lift[where obj="KOCTE ko" for ko, simplified valid_obj'_def kernel_object.case]
-  typ_at'_valid_obj'_lift[where obj="KOArch ko" for ko, simplified valid_obj'_def kernel_object.case]
-  typ_at'_valid_obj'_lift[where obj="KOReply ko" for ko, simplified valid_obj'_def kernel_object.case]
-  typ_at'_valid_sched_context'_lift
-
-lemmas typ_at_lifts_all = typ_at_lifts typ_at_sc_at'_n_lifts
-
-end
-
-locale typ_at_props' =
-  fixes f :: "'a kernel"
-  assumes typ': "f \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
-begin
-
-lemmas typ_at_lifts'[wp] = typ_at_lifts[REPEAT [OF typ']]
-
-end
-
-locale typ_at_all_props' = typ_at_props' +
-  assumes scs: "f \<lbrace>\<lambda>s. Q (sc_at'_n n p s)\<rbrace>"
-begin
-
-lemmas typ_at_sc_at'_n_lifts'[wp] = typ_at_sc_at'_n_lifts[OF typ' scs]
-lemmas typ_at_lifts_all' = typ_at_lifts' typ_at_sc_at'_n_lifts'
-
-context begin
-(* We want to enforce that typ_at_lifts_all' only contains lemmas that have no
-   assumptions. The following thm statements should fail if this is not true. *)
-private lemmas check_valid_internal = iffD1[OF refl, where P="valid p g q" for p g q]
-thm typ_at_lifts_all'[atomized, THEN check_valid_internal]
-end
-
-end
-
-(* we expect typ_at' and sc_at'_n lemmas to be [wp], so this should be easy: *)
-method typ_at_props' = unfold_locales; wp?
 
 lemma mdb_next_unfold:
   "s \<turnstile> c \<leadsto> c' = (\<exists>z. s c = Some z \<and> c' = mdbNext (cteMDBNode z))"
@@ -3018,24 +2874,39 @@ sublocale Arch \<subseteq> ready_queue_bitmap2_update:
   Arch_p_arch_idle_int_cur_update_eq' "ksReadyQueuesL2Bitmap_update f" ..
 
 interpretation reprogramTime_update:
-  P_Arch_Idle_Int_Cur_update_eq "ksReprogramTimer_update f"
+  p_arch_idle_int_cur_update_eq' "ksReprogramTimer_update f"
   by unfold_locales auto
+
+sublocale Arch \<subseteq> reprogramTime_update:
+  Arch_p_arch_idle_int_cur_update_eq' "ksReprogramTimer_update f" ..
 
 interpretation ksReleaseQueue_update:
-  P_Arch_Idle_Int_Cur_update_eq "ksReleaseQueue_update f"
+  p_arch_idle_int_cur_update_eq' "ksReleaseQueue_update f"
   by unfold_locales auto
+
+sublocale Arch \<subseteq> ksReleaseQueue_update:
+  Arch_p_arch_idle_int_cur_update_eq' "ksReleaseQueue_update f" ..
 
 interpretation ksConsumedTime_update:
-  P_Arch_Idle_Int_Cur_update_eq "ksConsumedTime_update f"
+  p_arch_idle_int_cur_update_eq' "ksConsumedTime_update f"
   by unfold_locales auto
+
+sublocale Arch \<subseteq> ksConsumedTime_update:
+  Arch_p_arch_idle_int_cur_update_eq' "ksConsumedTime_update f" ..
 
 interpretation ksCurTime_update:
-  P_Arch_Idle_Int_Cur_update_eq "ksCurTime_update f"
+  p_arch_idle_int_cur_update_eq' "ksCurTime_update f"
   by unfold_locales auto
 
+sublocale Arch \<subseteq> ksCurTime_update:
+  Arch_p_arch_idle_int_cur_update_eq' "ksCurTime_update f" ..
+
 interpretation ksCurSc_update:
-  P_Arch_Idle_Int_Cur_update_eq "ksCurSc_update f"
+  p_arch_idle_int_cur_update_eq' "ksCurSc_update f"
   by unfold_locales auto
+
+sublocale Arch \<subseteq> ksCurSc_update:
+  Arch_p_arch_idle_int_cur_update_eq' "ksCurSc_update f" ..
 
 interpretation cur_thread_update':
   p_arch_idle_int_update_eq' "ksCurThread_update f"
@@ -3283,7 +3154,7 @@ lemma vms_sch_act_update'[iff]:
 
 lemma objBits_sched_context_update[simp]:
   "(\<And>sc. scSize (f sc) = scSize sc) \<Longrightarrow> objBits (f sc) = objBits sc"
-  by (simp add: objBits_simps)
+  by (simp add: objBits_def objBitsKO_def)
 
 lemma obj_at'_and:
   "obj_at' (P and P') t s = (obj_at' P t s \<and> obj_at' P' t s)"
@@ -3411,10 +3282,6 @@ lemma invs_iflive'[elim!]:
 lemma invs_unsafe_then_cap' [elim!]:
   "invs' s \<Longrightarrow> if_unsafe_then_cap' s"
   by (simp add: invs'_def)
-
-lemma invs_sym_hyp' [elim!]:
-  "invs' s \<Longrightarrow> sym_refs (state_hyp_refs_of' s)"
-  by (simp add: invs'_def valid_state'_def)
 
 lemma invs_valid_bitmaps[elim!]:
   "invs' s \<Longrightarrow> valid_bitmaps s"

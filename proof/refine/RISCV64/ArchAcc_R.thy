@@ -57,9 +57,9 @@ sublocale storePTE: simple_non_tcb_non_sc_non_reply_ko' "storePTE" getObject
       simp add: storePTE_def projectKO_opts_defs Arch_objBits_simps' | wp)+
 
 lemmas storePTE_valid_objs'[wp] =
-  storePTE.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
+  storePTE.valid_objs'[simplified valid_obj'_def pred_conj_def valid_arch_obj'_def, simplified]
 lemmas storePTE_valid_pspace'[wp] =
-  storePTE.valid_pspace'[simplified valid_obj'_def pred_conj_def, simplified]
+  storePTE.valid_pspace'[simplified valid_obj'_def pred_conj_def valid_arch_obj'_def, simplified]
 
 end
 

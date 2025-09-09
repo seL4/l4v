@@ -791,7 +791,7 @@ lemma storePTE_invs[wp]:
              cur_tcb_lift valid_irq_handlers_lift''
              untyped_ranges_zero_lift sym_heap_sched_pointers_lift
            | simp add: cteCaps_of_def o_def)+
-  apply clarsimp
+  apply (clarsimp simp: valid_arch_obj'_def)
   done
 
 lemma setASIDPool_valid_objs [wp]:

@@ -2674,8 +2674,6 @@ lemma arch_thread_get_obj_at:
   apply (simp add: arch_thread_get_def)
   apply wp
   apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
-  apply (subst get_tcb_rev, assumption, subst option.sel)+
-  apply simp
   done
 
 lemma arch_thread_set_is_thread_set:

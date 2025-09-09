@@ -40,7 +40,7 @@ lemma activateIdle_invs':
 lemma invs'_live_sc'_ex_nonz_cap_to':
   "ko_at' ko scp s \<Longrightarrow> invs' s \<Longrightarrow> live_sc' ko \<longrightarrow> ex_nonz_cap_to' scp s"
   apply (clarsimp simp: invs'_def if_live_then_nonz_cap'_def)
-  by (fastforce simp: obj_at'_real_def ko_wp_at'_def)
+  by (fastforce simp: obj_at'_real_def ko_wp_at'_def live'_def)
 
 lemma activateThread_corres:
  "corres dc (invs and ct_in_state activatable) (invs' and ct_in_state' activatable')
@@ -611,7 +611,7 @@ lemma reorderNtfn_invs':
   apply (subst bind_assoc[symmetric, where m="tcbEPDequeue tptr _"])
   apply (rule bind_wp | simp only: K_bind_def)+
         apply (wp set_ntfn_minor_invs')
-       apply (simp add: pred_conj_def live_ntfn'_def)
+       apply (simp add: pred_conj_def live'_def live_ntfn'_def)
        apply (wpsimp wp: getNotification_wp tcbEPDequeueAppend_valid_ntfn'_rv hoare_vcg_conj_lift)+
   apply (frule ntfn_ko_at_valid_objs_valid_ntfn', fastforce)
   apply (clarsimp simp: sym_refs_asrt_def valid_ntfn'_def pred_tcb_at'_def
@@ -619,7 +619,7 @@ lemma reorderNtfn_invs':
   apply (case_tac "tcbState obj"; clarsimp simp: ntfnBlocked_def getntfnQueue_def split: ntfn.splits)
   apply (frule_tac ko=obj and p=tptr in sym_refs_ko_atD'[rotated])
    apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_tcb)
-  apply (clarsimp simp: invs'_def valid_idle'_def live_ntfn'_def
+  apply (clarsimp simp: invs'_def valid_idle'_def live'_def live_ntfn'_def
                         if_live_then_nonz_cap'_def refs_of_rev' get_refs_def
                         ko_wp_at'_def obj_at'_def projectKO_eq projectKO_tcb
                  split: option.splits)
@@ -631,7 +631,7 @@ lemma set_ep_minor_invs':
    setEndpoint ptr val
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (clarsimp simp add: invs'_def cteCaps_of_def valid_dom_schedule'_def)
-  apply (wpsimp wp: irqs_masked_lift valid_irq_node_lift untyped_ranges_zero_lift simp: o_def)
+  apply (wpsimp wp: irqs_masked_lift valid_irq_node_lift untyped_ranges_zero_lift simp: o_def live'_def)
   done
 
 lemma getEpQueue_wp[wp]: "\<lbrace>\<lambda>s. ep \<noteq> IdleEP \<longrightarrow> P (epQueue ep) s\<rbrace> getEpQueue ep \<lbrace>P\<rbrace>"
@@ -663,14 +663,14 @@ lemma reorderEp_invs':
   apply (subst bind_assoc[symmetric, where m="tcbEPDequeue tptr _"])
   apply (rule bind_wp | simp only: K_bind_def)+
         apply (wp set_ep_minor_invs')
-       apply (simp add: pred_conj_def live_ntfn'_def)
+       apply (simp add: pred_conj_def live'_def live_ntfn'_def)
        apply (wpsimp wp: getEndpoint_wp tcbEPDequeueAppend_valid_ep'_rv hoare_vcg_conj_lift)+
   apply (frule ep_ko_at_valid_objs_valid_ep', fastforce)
   apply (clarsimp simp: sym_refs_asrt_def pred_tcb_at'_def obj_at'_def)
   apply (frule_tac ko=obj and p=tptr in sym_refs_ko_atD'[rotated])
    apply (clarsimp simp: obj_at'_def)
   apply (case_tac "tcbState obj"; clarsimp simp: epBlocked_def split: if_splits)
-    apply (auto simp: invs'_def if_live_then_nonz_cap'_def refs_of_rev' ko_wp_at'_def)
+    apply (auto simp: invs'_def if_live_then_nonz_cap'_def refs_of_rev' ko_wp_at'_def live'_def)
   done
 
 lemma threadSetPriority_valid_objs'[wp]:
@@ -1597,6 +1597,7 @@ lemma installTCBCap_invs':
                                       \<not> isReplyCap newCap \<and> \<not> isIRQControlCap newCap)\<rbrace>
    installTCBCap target slot n slot_opt
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split RT: legacy, try use tcb_cte_cases_neqs *)
   apply (simp only: installTCBCap_def tcbCTableSlot_def tcbVTableSlot_def tcbFaultHandlerSlot_def
                     getThreadCSpaceRoot_def getThreadVSpaceRoot_def getThreadFaultHandlerSlot_def)
   apply (wpsimp split_del: if_split
@@ -1756,6 +1757,7 @@ lemma installThreadBuffer_corres:
                      split: arch_cap.splits bool.splits option.splits)
     apply (fastforce split: option.splits)
    apply (fastforce simp: obj_at_def is_tcb intro: cte_wp_at_tcbI)
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split RT: legacy, try use tcb_cte_cases_neqs *)
   apply (fastforce simp: cte_map_def tcb_cnode_index_def obj_at'_def
                          cte_level_bits_def objBits_simps cte_wp_at_tcbI')
   done
@@ -1768,6 +1770,7 @@ lemma tcb_at_cte_at'_0: "tcb_at' a s \<Longrightarrow> cte_at' (cte_map (a, tcb_
   done
 
 lemma tcb_at_cte_at'_1: "tcb_at' a s \<Longrightarrow> cte_at' (cte_map (a, tcb_cnode_index (Suc 0))) s"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split RT: legacy, try use tcb_cte_cases_neqs *)
   apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def projectKO_tcb oassert_opt_def
                  split: option.splits)
   apply (rule_tac ptr'=a in cte_wp_at_tcbI'; simp add: objBitsKO_def)
@@ -1775,6 +1778,7 @@ lemma tcb_at_cte_at'_1: "tcb_at' a s \<Longrightarrow> cte_at' (cte_map (a, tcb_
   done
 
 lemma tcb_at_cte_at'_3: "tcb_at' a s \<Longrightarrow> cte_at' (cte_map (a, tcb_cnode_index 3)) s"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split RT: legacy, try use tcb_cte_cases_neqs *)
   apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def projectKO_tcb oassert_opt_def
                  split: option.splits)
   apply (rule_tac ptr'=a in cte_wp_at_tcbI'; simp add: objBitsKO_def)
@@ -1782,6 +1786,7 @@ lemma tcb_at_cte_at'_3: "tcb_at' a s \<Longrightarrow> cte_at' (cte_map (a, tcb_
   done
 
 lemma tcb_at_cte_at'_4: "tcb_at' a s \<Longrightarrow> cte_at' (cte_map (a, tcb_cnode_index 4)) s"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split RT: legacy, try use tcb_cte_cases_neqs *)
   apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def projectKO_tcb oassert_opt_def
                  split: option.splits)
   apply (rule_tac ptr'=a in cte_wp_at_tcbI'; simp add: objBitsKO_def)

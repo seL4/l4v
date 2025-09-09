@@ -703,7 +703,7 @@ lemma threadSet_valid_pspace'T_P:
                             bspec_split [OF spec [OF x]] z
                             split_paired_Ball y u w v1 v2 v3 v4 v5 w')
   apply (simp add: valid_arch_tcb'_def) (* FIXME arch-split: non-hyp only *)
-  apply (drule sym, fastforce simp: z')
+  apply (fastforce simp: eq_commute z')
   done
 
 lemmas threadSet_valid_pspace'T =
@@ -839,9 +839,9 @@ lemma threadSet_iflive'T:
    apply (erule if_live_then_nonz_capE')
    apply (clarsimp simp: ko_wp_at'_def live'_def hyp_live'_def)
   apply (intro conjI)
-     apply (metis if_live_then_nonz_capE' ko_wp_at'_def live'.simps(1))
-    apply (metis if_live_then_nonz_capE' ko_wp_at'_def live'.simps(1))
-   apply (metis if_live_then_nonz_capE' ko_wp_at'_def live'.simps(1))
+     apply (clarsimp, clarsimp elim!: notE if_live_then_nonz_capE' simp: ko_wp_at'_def live'_def)
+    apply (clarsimp, clarsimp elim!: notE if_live_then_nonz_capE' simp: ko_wp_at'_def live'_def)
+   apply (clarsimp, clarsimp elim!: if_live_then_nonz_capE' simp: ko_wp_at'_def live'_def)
   apply (clarsimp simp: bspec_split [OF spec [OF x]])
   done
 
@@ -1525,12 +1525,19 @@ crunch asUser
   for distinct'[wp]: pspace_distinct'
   (simp: crunch_simps wp: crunch_wps)
 
-lemma asUser_valid_objs [wp]:
+context Arch begin arch_global_naming
+
+lemma asUser_valid_objs[wp]:
   "\<lbrace>valid_objs'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   by (simp add: asUser_def split_def)
      (wpsimp wp: threadSet_valid_objs' hoare_drop_imps
              simp: valid_tcb'_def tcb_cte_cases_def valid_arch_tcb'_def cteSizeBits_def
                    atcbContextSet_def)+
+
+end
+
+arch_requalify_facts asUser_valid_objs (* FIXME: arch-split RT *)
+declare asUser_valid_objs[wp]
 
 lemma asUser_valid_pspace'[wp]:
   "\<lbrace>valid_pspace'\<rbrace> asUser t m \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
@@ -1749,7 +1756,7 @@ lemma isRunnable_wp[wp]:
   apply (wpsimp simp: getThreadState_def threadGet_getObject wp: getObject_tcb_wp)
   apply (clarsimp simp: getObject_def valid_def in_monad st_tcb_at'_def
                         loadObject_default_def obj_at'_def
-                        split_def objBits_simps in_magnitude_check)
+                        split_def gen_objBits_simps in_magnitude_check)
   done
 
 lemma setQueue_obj_at[wp]:
@@ -3514,6 +3521,8 @@ lemma set_thread_state_act_corres:
   apply simp
   done
 
+context Arch begin arch_global_naming
+
 lemma setThreadState_corres:
   "thread_state_relation ts ts' \<Longrightarrow>
    corres dc
@@ -3536,6 +3545,10 @@ lemma setThreadState_corres:
    apply (fastforce intro: valid_tcb_state_update)
   apply (fastforce intro: valid_tcb'_tcbState_update)
   done
+
+end
+
+arch_requalify_facts setThreadState_corres (* FIXME: arch-split RT *)
 
 lemma set_tcb_obj_ref_corresT:
   assumes x: "\<And>tcb tcb'. tcb_relation tcb tcb' \<Longrightarrow>
@@ -3591,6 +3604,8 @@ global_interpretation scheduleTCB: typ_at_all_props' "scheduleTCB tcbPtr"
 lemma sts'_valid_mdb'[wp]:
   "setThreadState st t \<lbrace>valid_mdb'\<rbrace>"
   by (wpsimp simp: valid_mdb'_def)
+
+context begin interpretation Arch . (* FIXME: arch-split RT *)
 
 lemma tcbSchedNext_update_valid_objs'[wp]:
   "\<lbrace>valid_objs' and valid_bound_tcb' ptrOpt\<rbrace>
@@ -3794,6 +3809,8 @@ lemma sbn'_valid_pspace'_inv[wp]:
   apply (erule obj_at'_weakenE)
   apply (simp add: tcb_cte_cases_def cteSizeBits_def)
   done
+
+end
 
 crunch setQueue
   for pred_tcb_at'[wp]: "\<lambda>s. P (pred_tcb_at' proj P' t s)"
@@ -5296,73 +5313,65 @@ crunch setQueue, addToBitmap, removeFromBitmap
 crunch rescheduleRequired
   for cap_to'[wp]: "ex_nonz_cap_to' p"
 
-lemma tcbInReleaseQueue_update_tcb_cte_cases:
-  "(a, b) \<in> ran tcb_cte_cases \<Longrightarrow> a (tcbInReleaseQueue_update f tcb) = a tcb"
+lemma update_tcb_cte_cases:
+  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbInReleaseQueue_update f tcb) = getF tcb"
+  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbQueued_update f tcb) = getF tcb"
+  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbSchedNext_update f tcb) = getF tcb"
+  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbSchedPrev_update f tcb) = getF tcb"
+  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbYieldTo_update f tcb) = getF tcb"
+  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbSchedContext_update f tcb) = getF tcb"
+  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbBoundNotification_update f tcb) = getF tcb"
+  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbPriority_update f tcb) = getF tcb"
   unfolding tcb_cte_cases_def
-  by (case_tac tcb; fastforce simp: tcbInReleaseQueue_update_def objBits_simps')
-
-lemma tcbQueued_update_tcb_cte_cases:
-  "(a, b) \<in> ran tcb_cte_cases \<Longrightarrow> a (tcbQueued_update f tcb) = a tcb"
-  unfolding tcb_cte_cases_def
-  by (case_tac tcb; fastforce simp: objBits_simps')
-
-lemma tcbSchedNext_update_tcb_cte_cases:
-  "(a, b) \<in> ran tcb_cte_cases \<Longrightarrow> a (tcbSchedNext_update f tcb) = a tcb"
-  unfolding tcb_cte_cases_def
-  by (case_tac tcb; fastforce simp: objBits_simps')
-
-lemma tcbSchedPrev_update_tcb_cte_cases:
-  "(a, b) \<in> ran tcb_cte_cases \<Longrightarrow> a (tcbSchedPrev_update f tcb) = a tcb"
-  unfolding tcb_cte_cases_def
-  by (case_tac tcb; fastforce simp: objBits_simps')
+  by (case_tac tcb; fastforce simp: objBits_simps')+
 
 lemma tcbSchedNext_update_ctes_of[wp]:
   "threadSet (tcbSchedNext_update f) x \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
-  by (wpsimp wp: threadSet_ctes_ofT simp: tcbSchedNext_update_tcb_cte_cases)
+  by (wpsimp wp: threadSet_ctes_ofT simp: update_tcb_cte_cases)
 
 lemma tcbSchedPrev_update_ctes_of[wp]:
   "threadSet (tcbSchedPrev_update f) x \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
-  by (wpsimp wp: threadSet_ctes_ofT simp: tcbSchedPrev_update_tcb_cte_cases)
+  by (wpsimp wp: threadSet_ctes_ofT simp: update_tcb_cte_cases)
 
 lemma tcbQueued_ex_nonz_cap_to'[wp]:
   "threadSet (tcbQueued_update f) tptr \<lbrace>ex_nonz_cap_to' p\<rbrace>"
-  by (wpsimp wp: threadSet_cap_to simp: tcbQueued_update_tcb_cte_cases)
+  by (wpsimp wp: threadSet_cap_to simp: update_tcb_cte_cases)
 
 lemma tcbInReleaseQueue_ex_nonz_cap_to'[wp]:
   "threadSet (tcbInReleaseQueue_update f) tptr \<lbrace>ex_nonz_cap_to' p\<rbrace>"
-  by (wpsimp wp: threadSet_cap_to simp: tcbInReleaseQueue_update_tcb_cte_cases)
+  by (wpsimp wp: threadSet_cap_to simp: update_tcb_cte_cases)
 
 lemma tcbSchedNext_ex_nonz_cap_to'[wp]:
   "threadSet (tcbSchedNext_update f) tptr \<lbrace>ex_nonz_cap_to' p\<rbrace>"
-  by (wpsimp wp: threadSet_cap_to simp: tcbSchedNext_update_tcb_cte_cases)
+  by (wpsimp wp: threadSet_cap_to simp: update_tcb_cte_cases)
 
 lemma tcbSchedPrev_ex_nonz_cap_to'[wp]:
   "threadSet (tcbSchedPrev_update f) tptr \<lbrace>ex_nonz_cap_to' p\<rbrace>"
-  by (wpsimp wp: threadSet_cap_to simp: tcbSchedPrev_update_tcb_cte_cases)
+  by (wpsimp wp: threadSet_cap_to simp: update_tcb_cte_cases)
 
 lemma tcbSchedNext_update_iflive':
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
    threadSet (tcbSchedNext_update f) t
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: threadSet_iflive'T simp: tcbSchedNext_update_tcb_cte_cases)
+  by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
 
 lemma tcbSchedPrev_update_iflive':
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
    threadSet (tcbSchedPrev_update f) t
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: threadSet_iflive'T simp: tcbSchedPrev_update_tcb_cte_cases)
+  by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
 
 lemma tcbInReleaseQueue_update_iflive'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
    threadSet (tcbInReleaseQueue_update f) t
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: threadSet_iflive'T simp: tcbInReleaseQueue_update_tcb_cte_cases)
+  by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
 
 lemma tcbQueued_update_iflive'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
    threadSet (tcbQueued_update f) t
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: threadSet_iflive'T simp: tcbQueued_update_tcb_cte_cases)
+  by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
 
 lemma tcbQueueRemove_if_live_then_nonz_cap':
   "\<lbrace>if_live_then_nonz_cap' and valid_objs' and sym_heap_sched_pointers and ex_nonz_cap_to' tcbPtr\<rbrace>
@@ -5469,12 +5478,12 @@ lemma tcbQueuePrepend_if_unsafe_then_cap'[wp]:
   "tcbQueuePrepend queue tcbPtr \<lbrace>if_unsafe_then_cap'\<rbrace>"
   unfolding tcbQueuePrepend_def
   by (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imps threadSet_ifunsafe'T
-           simp: tcbSchedPrev_update_tcb_cte_cases tcbSchedNext_update_tcb_cte_cases)
+           simp: update_tcb_cte_cases)
 
 lemma tcbSchedEnqueue_if_unsafe_then_cap'[wp]:
   "tcbSchedEnqueue tcbPtr \<lbrace>if_unsafe_then_cap'\<rbrace>"
   unfolding tcbSchedEnqueue_def setQueue_def
-  by (wpsimp wp: threadSet_ifunsafe'T simp: tcbQueued_update_tcb_cte_cases)
+  by (wpsimp wp: threadSet_ifunsafe'T simp: update_tcb_cte_cases)
 
 lemma setThreadState_if_unsafe_then_cap'[wp]:
   "setThreadState st p \<lbrace>if_unsafe_then_cap'\<rbrace>"
@@ -6161,7 +6170,7 @@ lemma sts_invs_minor':
     apply clarsimp
    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   apply (erule if_live_then_nonz_capE')
-  apply (clarsimp simp: pred_tcb_at'_def ko_wp_at'_def obj_at'_def)
+  apply (clarsimp simp: pred_tcb_at'_def ko_wp_at'_def obj_at'_def live'_def)
   done
 
 lemma sts_invs':
@@ -6412,7 +6421,7 @@ crunch tcbReleaseRemove, tcbQueueRemove, tcbReleaseEnqueue
 
 crunch tcbReleaseRemove, tcbQueueRemove, tcbReleaseEnqueue
   for if_unsafe_then_cap'[wp]: if_unsafe_then_cap'
-  (wp: crunch_wps threadSet_ifunsafe'T simp: tcb_cte_cases_def cteSizeBits_def)
+  (wp: crunch_wps threadSet_ifunsafe'T simp: update_tcb_cte_cases)
 
 crunch tcbReleaseRemove, tcbQueueRemove, tcbReleaseEnqueue
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
@@ -6440,14 +6449,14 @@ crunch tcbReleaseRemove, tcbQueueRemove, tcbReleaseEnqueue
 lemma tcbSchedNext_None_if_live_then_nonz_cap'[wp]:
   "threadSet (tcbSchedNext_update (\<lambda>_. None)) tcbPtr \<lbrace>if_live_then_nonz_cap'\<rbrace>"
   apply (wpsimp wp: threadSet_iflive'T)
-   apply (fastforce simp: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
+   apply (fastforce simp: update_tcb_cte_cases)
   apply fastforce
   done
 
 lemma tcbSchedPrev_None_if_live_then_nonz_cap'[wp]:
   "threadSet (tcbSchedPrev_update (\<lambda>_. None)) tcbPtr \<lbrace>if_live_then_nonz_cap'\<rbrace>"
   apply (wpsimp wp: threadSet_iflive'T)
-   apply (fastforce simp: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
+   apply (fastforce simp: update_tcb_cte_cases)
   apply fastforce
   done
 
@@ -6471,7 +6480,7 @@ lemma tcbReleaseRemove_if_live_then_nonz_cap'[wp]:
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   unfolding tcbReleaseRemove_def setReleaseQueue_def
   apply (wpsimp wp: tcbQueueRemove_if_live_then_nonz_cap' inReleaseQueue_wp threadSet_valid_objs')
-  by (fastforce elim: if_live_then_nonz_capE' simp: obj_at'_def ko_wp_at'_def)
+  by (fastforce elim: if_live_then_nonz_capE' simp: obj_at'_def ko_wp_at'_def live'_def)
 
 lemma tcbSchedPrev_update_tcbQueueds_of[wp]:
   "threadSet (tcbSchedPrev_update f) tcbPtr \<lbrace>\<lambda>s. P (tcbQueued |< tcbs_of' s)\<rbrace>"
@@ -6654,19 +6663,19 @@ crunch setReprogramTimer
 lemma tcbSchedNext_update_valid_mdb'[wp]:
   "\<lbrace>valid_mdb' and tcb_at' tcbPtr\<rbrace> threadSet (tcbSchedNext_update f) tcbPtr \<lbrace>\<lambda>_. valid_mdb'\<rbrace>"
   apply (wpsimp wp: threadSet_mdb')
-  apply (fastforce simp: obj_at'_def valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
+  apply (fastforce simp: obj_at'_def valid_tcb'_def update_tcb_cte_cases)
   done
 
 lemma tcbSchedPrev_update_valid_mdb'[wp]:
   "\<lbrace>valid_mdb' and tcb_at' tcbPtr\<rbrace> threadSet (tcbSchedPrev_update f) tcbPtr \<lbrace>\<lambda>_. valid_mdb'\<rbrace>"
   apply (wpsimp wp: threadSet_mdb')
-  apply (fastforce simp: obj_at'_def valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
+  apply (fastforce simp: obj_at'_def valid_tcb'_def update_tcb_cte_cases)
   done
 
 lemma tcbInReleaseQueue_update_valid_mdb'[wp]:
   "\<lbrace>valid_mdb' and tcb_at' tcbPtr\<rbrace> threadSet (tcbInReleaseQueue_update f) tcbPtr \<lbrace>\<lambda>_. valid_mdb'\<rbrace>"
   apply (wpsimp wp: threadSet_mdb')
-  by (fastforce simp: obj_at'_def tcb_cte_cases_def cteSizeBits_def)
+  by (fastforce simp: obj_at'_def update_tcb_cte_cases)
 
 lemma tcbQueueRemove_valid_mdb':
   "\<lbrace>\<lambda>s. valid_mdb' s \<and> valid_objs' s\<rbrace> tcbQueueRemove q tcbPtr \<lbrace>\<lambda>_. valid_mdb'\<rbrace>"

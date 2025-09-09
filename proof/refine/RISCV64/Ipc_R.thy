@@ -2191,6 +2191,7 @@ lemma cap_in_tcbFaultHandlerSlot:
    \<Longrightarrow> \<exists>cap. cte_wp_at' (\<lambda>c. cteCap c = cap) (t + 2 ^ cte_level_bits * tcbFaultHandlerSlot) s
              \<and> valid_cap' cap s
              \<and> (\<exists>n\<in>dom tcb_cte_cases. cte_wp_at' (\<lambda>cte. cteCap cte = cap) (t + n) s)"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split RT: legacy, try use tcb_cte_cases_neqs *)
   apply (rule_tac x="cteCap (tcbFaultHandler tcb)" in exI)
   apply (rule conjI)
    apply (simp add: cte_wp_at_cases')
@@ -2211,6 +2212,7 @@ lemma cap_in_tcbTimeoutHandlerSlot:
    \<Longrightarrow> \<exists>cap. cte_wp_at' (\<lambda>c. cteCap c = cap) (t + 2 ^ cte_level_bits * tcbTimeoutHandlerSlot) s
              \<and> valid_cap' cap s
              \<and> (\<exists>n\<in>dom tcb_cte_cases. cte_wp_at' (\<lambda>cte. cteCap cte = cap) (t + n) s)"
+  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split RT: legacy, try use tcb_cte_cases_neqs *)
   apply (rule_tac x="cteCap (tcbTimeoutHandler tcb)" in exI)
   apply (rule conjI)
    apply (simp add: cte_wp_at_cases')
@@ -4401,7 +4403,7 @@ lemma sendSignal_corres:
      apply (clarsimp simp: valid_idle'_def invs'_def idle_tcb'_def obj_at'_def
                            pred_tcb_at'_def receiveBlocked_def)
     apply (rule if_live_then_nonz_capE', clarsimp)
-    apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def)
+    apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def live'_def)
     apply (clarsimp simp: receiveBlocked_equiv is_BlockedOnReceive_def)
    \<comment> \<open>WaitingNtfn\<close>
    apply (clarsimp simp: ntfn_relation_def Let_def update_waiting_ntfn_def)
@@ -4725,7 +4727,7 @@ lemma tcbReleaseEnqueue_if_live_then_nonz_cap'[wp]:
   apply (frule (3) obj_at'_tcbQueueEnd_ksReleaseQueue)
   by (fastforce elim!: if_live_then_nonz_capE'
                  dest: heap_path_head intro: aligned'_distinct'_ko_wp_at'I
-                 simp: tcbQueueEmpty_def opt_pred_def opt_map_def obj_at'_def)+
+                 simp: tcbQueueEmpty_def opt_pred_def opt_map_def obj_at'_def live'_def)+
 
 crunch tcbReleaseEnqueue
   for valid_bitmaps[wp]: valid_bitmaps
@@ -4752,7 +4754,7 @@ lemma maybeDonateSc_invs':
   apply (erule if_live_then_nonz_capE'[OF invs_iflive'])
   apply (drule_tac ko="ntfn :: notification" for ntfn in sym_refs_ko_atD'[rotated])
    apply (fastforce simp: obj_at'_def)
-  apply (auto simp: refs_of_rev' ko_wp_at'_def live_sc'_def)
+  apply (auto simp: refs_of_rev' ko_wp_at'_def live'_def live_sc'_def)
   done
 
 lemma simple'_not_is_BlockedOnReply:
@@ -4784,7 +4786,7 @@ lemma sai_invs'[wp]:
      apply (erule if_live_then_nonz_capE'[OF invs_iflive'])
      apply (drule_tac ko="ntfn :: notification" for ntfn in sym_refs_ko_atD'[rotated])
       apply fastforce
-     apply (fastforce simp: refs_of_rev' ko_wp_at'_def)
+     apply (fastforce simp: refs_of_rev' ko_wp_at'_def live'_def)
     \<comment> \<open>ActiveNtfn\<close>
     apply (wpsimp wp: setNotification_invs' simp: valid_ntfn'_def)
    \<comment> \<open>WaitingNtfn\<close>
@@ -4801,7 +4803,7 @@ lemma sai_invs'[wp]:
     apply (erule if_live_then_nonz_capE'[OF invs_iflive'])
     apply (drule_tac ko="ntfn :: notification" for ntfn in sym_refs_ko_atD'[rotated])
      apply fastforce
-    apply (fastforce simp: refs_of_rev' ko_wp_at'_def)
+    apply (fastforce simp: refs_of_rev' ko_wp_at'_def live'_def)
    apply (erule (1) thread_state_tcb_in_WaitingNtfn'_q[THEN pred_tcb'_weakenE]; fastforce?)
   \<comment> \<open>resolve added preconditions\<close>
   apply (clarsimp simp: sym_refs_asrt_def)
@@ -5103,7 +5105,7 @@ lemma maybeReturnSc_invs':
     apply (drule_tac ko="tcb" and p=tptr in sym_refs_ko_atD'[rotated])
      apply (fastforce simp: obj_at'_def)
     apply (clarsimp simp: ko_wp_at'_def refs_of_rev')
-    apply (fastforce elim: if_live_then_nonz_capE' simp: ko_wp_at'_def live_sc'_def)
+    apply (fastforce elim: if_live_then_nonz_capE' simp: ko_wp_at'_def live'_def live_sc'_def)
    apply (fastforce simp: valid_pspace'_def valid_obj'_def valid_sched_context'_def refillSize_def)
   apply (fastforce simp: valid_obj'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
   done
@@ -6100,7 +6102,7 @@ lemma replyPush_if_live_then_nonz_cap':
   apply (subgoal_tac "sc_at' scp s \<and> (scTCBs_of s) scp = Some callerPtr \<and> callerPtr \<noteq> idle_thread_ptr")
    apply (intro conjI)
     apply (erule if_live_then_nonz_capE')
-    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def pred_map_def pred_map_eq_def live_sc'_def)
+    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def pred_map_def pred_map_eq_def live'_def live_sc'_def)
     apply (clarsimp simp: sym_heap_def)
   apply (intro conjI)
     apply (frule obj_at_ko_at'[where p=callerPtr], clarsimp)
@@ -6706,7 +6708,7 @@ lemma si_invs'[wp]:
           apply (fastforce simp: pred_tcb_at'_eq_commute pred_tcb_at'_def obj_at'_def
                                  is_BlockedOnReceive_def isReceive_def
                           split: thread_state.splits)
-         apply (fastforce simp: pred_tcb_at'_def ko_wp_at'_def obj_at'_def isReceive_def
+         apply (fastforce simp: pred_tcb_at'_def ko_wp_at'_def obj_at'_def isReceive_def live'_def
                           elim: if_live_then_nonz_capE' split: thread_state.splits)
         apply (fastforce simp: pred_tcb_at'_def ko_wp_at'_def obj_at'_def isReceive_def
                         split: thread_state.splits)
@@ -6718,7 +6720,7 @@ lemma si_invs'[wp]:
       apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
       apply (drule_tac p=a and ko="obja" in sym_refs_ko_atD'[rotated])
        apply (clarsimp simp: obj_at'_def)
-      apply (clarsimp simp: isReceive_def refs_of_rev' ko_wp_at'_def live_reply'_def
+      apply (clarsimp simp: isReceive_def refs_of_rev' ko_wp_at'_def live'_def live_reply'_def
                      split: thread_state.splits)
      apply (rule impI)
      apply (drule (1) valid_replies'_other_state; clarsimp simp: isReceive_def)
@@ -6726,10 +6728,10 @@ lemma si_invs'[wp]:
     apply (erule if_live_then_nonz_capE')
     apply (drule_tac ko=obj and p=t in sym_refs_ko_atD'[rotated])
      apply (clarsimp simp: obj_at'_def)
-    apply (clarsimp simp: ko_wp_at'_def obj_at'_def refs_of_rev' live_sc'_def valid_idle'_def
+    apply (clarsimp simp: ko_wp_at'_def obj_at'_def refs_of_rev' live'_def live_sc'_def valid_idle'_def
                           idle_tcb'_def tcb_bound_refs'_def)
-   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def isReceive_def is_BlockedOnReply_def)
   \<comment> \<open>epa = IdleEP\<close>
+   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def isReceive_def is_BlockedOnReply_def)
    apply (cases bl)
     apply (wpsimp wp: sts_sch_act' setThreadState_ct_not_inQ
                 simp: invs'_def valid_dom_schedule'_def valid_ep'_def)
@@ -6963,7 +6965,7 @@ lemma doReplyTransfer_corres:
                 apply (rule corres_split)
                    apply (rule_tac P="tcb_at sender and tcb_at recvr and valid_objs and pspace_aligned and
                                       valid_list and pspace_distinct and valid_mdb and cur_tcb
-                                      and current_time_bounded" and
+                                      and current_time_bounded and valid_arch_state" and
                                    P'="tcb_at' sender and tcb_at' recvr and valid_pspace' and
                                        sym_heap_sched_pointers"
                           in corres_guard_imp)

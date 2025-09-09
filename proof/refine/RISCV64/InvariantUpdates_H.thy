@@ -14,16 +14,8 @@ arch_requalify_facts
   cte_wp_at_cteI'
   tcb_at_cte_at'
   typ_at_lift_valid_cap'
-  valid_arch_tcb_lift'
   tcb_at_cte_at'
   gen_objBitsT_simps
-  objBitsT_koTypeOf (* FIXME arch-split: consider declaring [simp] here rather than Schedule_R *)
-
-(* arch-specific typ_at_lifts in Arch *) (* FIXME arch-split: currently unused *)
-lemmas gen_typ_at_lifts =
-         typ_at_lift_tcb' typ_at_lift_ep' typ_at_lift_ntfn' typ_at_lift_cte' typ_at_lift_cte_at'
-         typ_at_lift_valid_untyped' typ_at_lift_valid_cap' valid_bound_tcb_lift
-         valid_arch_tcb_lift'
 
 (* these depend on interpretations in ArchInvLemmas_H *)
 context pspace_update_eq'
@@ -191,6 +183,11 @@ lemma invs'_wu[simp]:
 (* FIXME arch-split: MOVE *)
 context Arch begin arch_global_naming
 
+lemma valid_tcb'_ksMachineState_update[simp]:
+  "valid_tcb' tcb (ksMachineState_update f s) = valid_tcb' tcb s"
+  by (auto simp: valid_tcb'_def valid_tcb_state'_def valid_bound_obj'_def valid_arch_tcb'_def
+          split: option.splits thread_state.splits)
+
 lemma valid_arch_state'_interrupt[simp]:
   "valid_arch_state' (ksInterruptState_update f s) = valid_arch_state' s"
   by (simp add: valid_arch_state'_def)
@@ -199,10 +196,10 @@ end
 
 (* FIXME arch-split: locales? *)
 arch_requalify_facts
-  valid_arch_state'_interrupt
+  valid_arch_state'_interrupt valid_tcb'_ksMachineState_update
 
 lemmas [simp] =
-  valid_arch_state'_interrupt
+  valid_arch_state'_interrupt valid_tcb'_ksMachineState_update
 
 lemma if_unsafe_then_cap_arch'[simp]:
   "if_unsafe_then_cap' (ksArchState_update f s) = if_unsafe_then_cap' s"
@@ -524,11 +521,11 @@ lemma refillSize_scPeriod_update[simp]:
 lemma valid_obj'_scPeriod_update[simp]:
   "valid_obj' (KOSchedContext (scPeriod_update f sc')) = valid_obj' (KOSchedContext sc')"
   unfolding valid_obj'_def
-  by (clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps)
+  by (clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def gen_objBits_simps)
 
 lemma valid_sched_context_size'_scReply_update[simp]:
   "valid_sched_context_size' (scReply_update f sc) = valid_sched_context_size' sc"
-  by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
+  by (clarsimp simp: valid_sched_context_size'_def gen_objBits_simps)
 
 lemma refillSize_scBadge_update[simp]:
   "refillSize (scBadge_update f sc') = refillSize sc'"
@@ -540,7 +537,7 @@ lemma valid_sched_context'_scBadge_update[simp]:
 
 lemma valid_sched_context_size'_scBadge_update[simp]:
   "valid_sched_context_size' (scBadge_update f sc) = valid_sched_context_size' sc"
-  by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
+  by (clarsimp simp: valid_sched_context_size'_def gen_objBits_simps)
 
 lemma refillSize_scBSporadic_update[simp]:
   "refillSize (scSporadic_update f sc') = refillSize sc'"
@@ -553,31 +550,31 @@ lemma valid_sched_context'_scSporadic_update[simp]:
 lemma valid_sched_context'_scPeriod_update[simp]:
   "valid_sched_context' (scPeriod_update f sc') = valid_sched_context' sc'"
   unfolding valid_sched_context'_def
-  by (clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps)
+  by (clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def gen_objBits_simps)
 
 lemma valid_sched_context_size'_scPeriod_update[simp]:
   "valid_sched_context_size' (scPeriod_update f sc) = valid_sched_context_size' sc"
-  by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
+  by (clarsimp simp: valid_sched_context_size'_def gen_objBits_simps)
 
 lemma valid_sched_context_size'_scSporadic_update[simp]:
   "valid_sched_context_size' (scSporadic_update f sc) = valid_sched_context_size' sc"
-  by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
+  by (clarsimp simp: valid_sched_context_size'_def gen_objBits_simps)
 
 lemma valid_sched_context_size'_scRefillMax_update[simp]:
   "valid_sched_context_size' (scRefillMax_update f sc) = valid_sched_context_size' sc"
-  by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
+  by (clarsimp simp: valid_sched_context_size'_def gen_objBits_simps)
 
 lemma valid_sched_context_size'_scRefillHead_update[simp]:
   "valid_sched_context_size' (scRefillHead_update f sc) = valid_sched_context_size' sc"
-  by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
+  by (clarsimp simp: valid_sched_context_size'_def gen_objBits_simps)
 
 lemma valid_sched_context_size'_scRefills_update[simp]:
   "valid_sched_context_size' (scRefills_update f sc) = valid_sched_context_size' sc"
-  by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
+  by (clarsimp simp: valid_sched_context_size'_def gen_objBits_simps)
 
 lemma valid_sched_context_size'_scRefillTail_update[simp]:
   "valid_sched_context_size' (scRefillTail_update f sc') = valid_sched_context_size' sc'"
-  by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
+  by (clarsimp simp: valid_sched_context_size'_def gen_objBits_simps)
 
 lemma valid_tcb_yield_to_update[elim!]:
   "valid_tcb tp tcb s \<Longrightarrow> sc_at scp s \<Longrightarrow> valid_tcb tp (tcb_yield_to_update (\<lambda>_. Some scp) tcb) s"

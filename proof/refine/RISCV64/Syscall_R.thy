@@ -1678,7 +1678,7 @@ lemma setSchedulerAction_obj_at'[wp]:
 lemma live_sc'_ex_cap:
   "if_live_then_nonz_cap' s \<Longrightarrow>
    \<forall>ko. ko_at' ko scPtr s \<longrightarrow> live_sc' ko \<longrightarrow> ex_nonz_cap_to' scPtr s"
-  by (clarsimp simp: obj_at'_real_def ko_wp_at'_def
+  by (clarsimp simp: obj_at'_real_def ko_wp_at'_def live'_def
               elim!: if_live_then_nonz_capE')
 
 lemma valid_sc_strengthen:
@@ -2294,7 +2294,7 @@ lemma checkBudgetRestart_invs'[wp]:
     apply (erule ko_wp_at'_weakenE, clarsimp)
    apply (drule invs_iflive')
    apply (erule (1) if_live_then_nonz_capD')
-  by (fastforce simp: live_def ko_wp_at'_def opt_map_red is_BlockedOnReply_def)+
+  by (fastforce simp: live'_def live_def ko_wp_at'_def opt_map_red is_BlockedOnReply_def)+
 
 crunch check_budget
   for cur_tcb[wp]: cur_tcb

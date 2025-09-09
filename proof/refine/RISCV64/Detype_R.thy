@@ -800,7 +800,7 @@ lemma detype_ReplyPrevs_of:
   apply (prop_tac "\<And>p reply_ptr. (replyPrevs_of s' p = Some reply_ptr) \<Longrightarrow> p \<notin> S")
    apply (clarsimp simp: opt_map_def split: option.splits)
    apply (drule_tac x=p in spec)
-   apply (clarsimp simp: ko_wp_at'_def pred_neg_def live_reply'_def
+   apply (clarsimp simp: ko_wp_at'_def pred_neg_def live'_def live_reply'_def
                   split: kernel_object.splits)
    using pspace_alignedD' pspace_distinctD' pspace_boundedD' apply clarsimp
   by (force simp: vs_all_heap_simps opt_map_def in_opt_map_eq
@@ -832,7 +832,7 @@ lemma detype_tcbInReleaseQueue:
    \<Longrightarrow> (tcbInReleaseQueue |< ((\<lambda>x. if x \<in> S then None else ksPSpace s' x) |> tcb_of'))
        = (tcbInReleaseQueue |< tcbs_of' s')"
   using pspace_alignedD' pspace_distinctD' pspace_boundedD'
-  by (fastforce simp: opt_pred_def opt_map_def ko_wp_at'_def split: option.splits)
+  by (fastforce simp: opt_pred_def opt_map_def ko_wp_at'_def live'_def split: option.splits)
 
 lemma detype_sc_replies_relation:
   "\<lbrakk>pspace_aligned' s'; pspace_distinct' s'; pspace_bounded' s';
@@ -1057,7 +1057,7 @@ lemma list_refs_of_replies_live':
                         pspace_aligned'_def pspace_distinct'_def get_refs_def
                  elim!: opt_mapE
                  split: option.splits)
-    by (intro conjI impI allI | force simp: live_reply'_def)+
+    by (intro conjI impI allI | force simp: live'_def live_reply'_def)+
 
 lemma replyPrev_list_refs_of_replies:
   "\<lbrakk>ko_at' reply p s'; replyPrev reply = Some reply_ptr\<rbrakk>
@@ -1086,7 +1086,7 @@ lemma valid_obj':
      apply (clarsimp simp flip: injectKO_tcb)
      apply (frule refs_of')
       apply (frule (2) sym_refs_ko_wp_atD)
-     apply (clarsimp simp: valid_tcb'_def ko_wp_at'_def objBits_simps)
+     apply (clarsimp simp: valid_tcb'_def valid_arch_tcb'_def ko_wp_at'_def objBits_simps)
      apply (rule conjI)
       apply (erule ballEI, clarsimp elim!: ranE)
       apply (rule_tac p="p + x" in valid_cap2)
@@ -1103,11 +1103,11 @@ lemma valid_obj':
       apply (clarsimp simp: none_top_bool_cases)
       apply (rename_tac prev)
       apply (cut_tac P=live' and p=prev in live_notRange; fastforce?)
-      apply (fastforce dest: sym_heapD2[where p'=p] simp: opt_map_def ko_wp_at'_def obj_at'_def)
+      apply (fastforce dest: sym_heapD2[where p'=p] simp: opt_map_def ko_wp_at'_def obj_at'_def live'_def)
      apply (clarsimp simp: none_top_bool_cases)
      apply (rename_tac "next")
      apply (cut_tac P=live' and p="next" in live_notRange; fastforce?)
-     apply (fastforce dest!: sym_heapD1[where p=p] simp: opt_map_def ko_wp_at'_def obj_at'_def)
+     apply (fastforce dest!: sym_heapD1[where p=p] simp: opt_map_def ko_wp_at'_def obj_at'_def live'_def)
     apply (clarsimp simp: valid_cte'_def)
     apply (rule_tac p=p in valid_cap2)
     apply (clarsimp simp: ko_wp_at'_def objBits_simps' cte_level_bits_def[symmetric])
@@ -1179,7 +1179,7 @@ lemma thread_not_idle_implies_sc_not_idle':
   apply (clarsimp simp: valid_obj'_def valid_tcb'_def is_sc_obj_def obj_at'_def)
   apply (drule (5) thread_not_idle_implies_sc_not_idle'_helper)
   apply (drule if_live_then_nonz_capE'[where p=idle_sc_ptr])
-   apply (fastforce simp: ko_wp_at'_def  live_sc'_def state_refs_of'_def
+   apply (fastforce simp: ko_wp_at'_def live'_def live_sc'_def state_refs_of'_def
                    dest!: thread_not_idle_implies_sc_not_idle_helper)
   apply fastforce
   done
@@ -1196,18 +1196,18 @@ lemma state_refs:
   apply (clarsimp simp: state_refs_of'_def split: option.splits)
   apply (rename_tac ko)
   apply (case_tac ko; simp)
-      apply (fastforce simp: ep_q_refs_of'_def ko_wp_at'_def)
-     apply (fastforce simp: ntfn_q_refs_of'_def ko_wp_at'_def live_ntfn'_def state_refs_of'_def
+      apply (fastforce simp: ep_q_refs_of'_def ko_wp_at'_def live'_def)
+     apply (fastforce simp: ntfn_q_refs_of'_def ko_wp_at'_def live'_def live_ntfn'_def state_refs_of'_def
                      split: ntfn.splits)
     apply (insert refs valid_objs valid_idle' iflive pspace)
     apply (frule (8) thread_not_idle_implies_sc_not_idle')
      apply (fastforce simp: state_refs_of'_def)
-    apply (fastforce simp: ko_wp_at'_def tcb_bound_refs'_def)
+    apply (fastforce simp: ko_wp_at'_def tcb_bound_refs'_def live'_def)
    apply (frule (6) sc_tcb_not_idle_thread')
      apply (fastforce simp: state_refs_of'_def)
     apply (fastforce simp: state_refs_of'_def)
-   apply (clarsimp simp: ko_wp_at'_def live_sc'_def  valid_idle'_def)
-  apply (clarsimp simp: ko_wp_at'_def live_reply'_def)
+   apply (clarsimp simp: ko_wp_at'_def live'_def live_sc'_def  valid_idle'_def)
+  apply (clarsimp simp: ko_wp_at'_def live'_def live_reply'_def)
   done
 
 lemma list_refs_of_reply'_state':
@@ -1219,7 +1219,7 @@ lemma list_refs_of_reply'_state':
   apply (rename_tac x reply_ptr)
   apply (prop_tac "x \<in> base_bits", simp)
   apply (frule untyped_range_live_idle')
-  apply (clarsimp simp: ko_wp_at'_def live_reply'_def)
+  apply (clarsimp simp: ko_wp_at'_def live'_def live_reply'_def)
   using pspace_alignedD' pspace_distinctD' pspace_boundedD' apply clarsimp
   done
 
@@ -1495,7 +1495,7 @@ proof (simp add: invs'_def valid_pspace'_def
     apply clarsimp
     apply (prop_tac "tptr \<notin> base_bits")
      apply (rule live_notRange[where P=live']; clarsimp?)
-     apply (fastforce simp: ko_wp_at'_def pred_tcb_at'_def obj_at'_def projectKOs)
+     apply (fastforce simp: ko_wp_at'_def pred_tcb_at'_def obj_at'_def live'_def)
     apply (clarsimp simp: pred_tcb_at'_def opt_map_def)
     done
 

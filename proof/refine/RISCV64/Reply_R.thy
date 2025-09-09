@@ -422,7 +422,7 @@ lemma replyRemoveTCB_valid_objs'[wp]:
   apply (clarsimp simp: valid_reply'_def if_bool_eq_conj if_distribR)
   apply (case_tac "replyPrev ko = None"; clarsimp)
    apply (drule(1) sc_ko_at_valid_objs_valid_sc',
-          clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps
+          clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def
                          refillSize_def
                   split: if_splits)+
   done
@@ -461,7 +461,7 @@ lemma updateReply_iflive'_strong:
     apply (wpsimp wp: updateReply_wp_all)
    apply wpsimp
   apply clarsimp
-  apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def ps_clear_def)
+  apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def ps_clear_def live'_def)
   apply (case_tac "x=rptr"; clarsimp)
   done
 
@@ -497,14 +497,14 @@ lemma replyRemoveTCB_iflive'[wp]:
    apply (prop_tac "live_sc' sc")
     apply (clarsimp simp: live_sc'_def)
    apply (prop_tac "ko_wp_at' live' (theHeadScPtr (Some next_ptr)) s")
-    apply (clarsimp simp: ko_wp_at'_def obj_at'_def)
+    apply (clarsimp simp: ko_wp_at'_def obj_at'_def live'_def)
    apply (clarsimp simp: if_live_then_nonz_cap'_def)
   apply normalise_obj_at'
   apply (rename_tac s sc reply tcb_reply_ptr next_ptr tcb)
   apply (prop_tac "live_sc' sc")
    apply (clarsimp simp: live_sc'_def)
   apply (prop_tac "ko_wp_at' live' (theHeadScPtr (Some next_ptr)) s")
-   apply (clarsimp simp: ko_wp_at'_def obj_at'_def)
+   apply (clarsimp simp: ko_wp_at'_def obj_at'_def live'_def)
   apply (clarsimp simp: if_live_then_nonz_cap'_def)
   done
 
@@ -994,7 +994,7 @@ lemma bindScReply_if_live_then_nonz_cap':
          | rule threadGet_wp)+
   apply clarsimp
   apply (erule if_live_then_nonz_capE')
-   apply (clarsimp simp: ko_wp_at'_def obj_at'_def live_reply'_def opt_map_def)
+   apply (clarsimp simp: ko_wp_at'_def obj_at'_def live'_def live_reply'_def opt_map_def)
   done
 
 lemma bindScReply_ex_nonz_cap_to'[wp]:
@@ -1092,7 +1092,7 @@ crunch cleanReply
 lemma no_fail_setReply [wp]:
   "no_fail (reply_at' p) (setReply p reply)"
   unfolding setReply_def
-  by (wpsimp simp: objBits_simps)
+  by (wpsimp simp: gen_objBits_simps)
 
 lemma no_fail_updateReply [wp]:
   "no_fail (reply_at' rp) (updateReply rp f)"
@@ -1103,7 +1103,7 @@ lemma no_fail_cleanReply [wp]:
   unfolding cleanReply_def
   apply (rule no_fail_pre, rule no_fail_bind)
      apply (wpsimp wp: updateReply_wp_all)+
-  apply (clarsimp simp: obj_at'_def ps_clear_upd objBits_simps')
+  apply (clarsimp simp: obj_at'_def ps_clear_upd gen_objBits_simps)
   done
 
 (* sc_with_reply/sc_with_reply' *)
@@ -1597,7 +1597,7 @@ lemma setSchedContext_scReply_update_None_corres:
           apply (rule corres_gen_asm')
           apply (rule corres_guard_imp)
             apply (rule_tac sc=sc and sc'=sc' in setSchedContext_update_corres; simp?)
-             apply (clarsimp simp: sc_relation_def objBits_simps refillSize_def)+
+             apply (clarsimp simp: sc_relation_def refillSize_def)+
          apply (wpsimp wp: get_sched_context_exs_valid simp: is_sc_obj_def obj_at_def)
           apply (rename_tac ko; case_tac ko; clarsimp)
          apply simp
@@ -1610,6 +1610,8 @@ lemma replyPrevNext_update_commute:
   "replyPrev_update f (replyNext_update g reply)
    = replyNext_update g (replyPrev_update f reply)"
   by (cases reply; clarsimp)
+
+context begin interpretation Arch .
 
 lemma updateReply_Prev_Next_rewrite:
   "monadic_rewrite False True (reply_at' rp)
@@ -1634,6 +1636,8 @@ lemma updateReply_Prev_Next_rewrite:
                               split_def in_monad in_magnitude_check' objBits_simps'\<close>)
    apply (fastforce simp add: fun_upd_def replyPrevNext_update_commute)+
   done
+
+end
 
 lemma reply_sc_update_sc_with_reply_None:
   "set_reply_obj_ref reply_sc_update rp None \<lbrace>\<lambda>s. sc_with_reply rp s = None\<rbrace>"
@@ -1748,17 +1752,17 @@ proof -
                            get_object_def2 set_object_def bind_assoc loadObject_default_def2[simplified]
                            scBits_simps split_def lookupAround2_known1 exec_gets a_type_def
                            obj_at'_def reply_sc_reply_at_def obj_at_def
-                           updateObject_default_def in_magnitude_check objBits_simps')
+                           updateObject_default_def in_magnitude_check)
      apply (clarsimp simp: get_def put_def bind_def)
      apply (rename_tac reply' sc' nextr)
      apply (prop_tac "reply_at' nrp s'")
-      apply (clarsimp simp: obj_at'_def objBits_simps')
+      apply (clarsimp simp: obj_at'_def)
      apply (prop_tac "reply_at nrp s")
       apply (drule (1) valid_sched_context_objsI)
       apply (clarsimp simp: valid_sched_context_def)
       apply (frule pspace_relation_pspace_bounded'[OF state_relation_pspace_relation])
       apply (frule_tac nrp=nrp in next_reply_in_sc_replies[where rp=rp, OF state_relation_sc_replies_relation])
-            apply (simp add: obj_at'_def objBits_simps' opt_map_red)+
+            apply (simp add: obj_at'_def opt_map_red)+
       apply (clarsimp simp: vs_heap_simps)
      apply (drule_tac x=nextr in z)
      apply (clarsimp simp: state_relation_def obj_at_def is_reply obj_at'_def)

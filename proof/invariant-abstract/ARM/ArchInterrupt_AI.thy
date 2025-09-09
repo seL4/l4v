@@ -210,6 +210,7 @@ lemma empty_fail_maskInterrupt_ARCH[Interrupt_AI_assms]:
 
 lemma (* handle_interrupt_invs *) [Interrupt_AI_assms]:
   "\<lbrace>invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
+  supply if_cong[cong]
   apply (simp add: handle_interrupt_def)
   apply (rule conjI; rule impI)
   apply (simp add: do_machine_op_bind empty_fail_ackInterrupt_ARCH empty_fail_maskInterrupt_ARCH)

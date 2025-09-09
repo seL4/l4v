@@ -118,7 +118,7 @@ crunch cleanByVA_PoU, cleanCacheRange_PoU, cleanCacheRange_RAM
   for machine_times[wp, arch_machine_ops_last_machine_time']: "\<lambda>ms. P (last_machine_time ms) (time_state ms)"
   (wp: crunch_wps simp: crunch_simps ignore_del: cleanByVA_PoU cleanL2Range cleanByVA)
 
-crunch storeWord, clearMemory, freeMemory, ackDeadlineIRQ, ackInterrupt, maskInterrupt, setDeadline
+crunch storeWord, clearMemory, freeMemory, ackDeadlineIRQ, ackInterrupt, maskInterrupt, setDeadline, deactivateInterrupt
   for machine_times[wp, machine_ops_last_machine_time']: "\<lambda>ms. P (last_machine_time ms) (time_state ms)"
   (wp: crunch_wps simp: crunch_simps ignore_del: storeWord maskInterrupt clearMemory cleanL2Range cleanByVA)
 

@@ -521,7 +521,7 @@ lemma heap_to_user_data_in_user_mem'[simp]:
    apply (frule(1) pspace_distinctD')
    apply (subgoal_tac "x + ucast off * 8 + xa  && ~~ mask pageBits = x" )
     apply (clarsimp simp: pointerInUserData_def typ_at'_def ko_wp_at'_def word_bits_def
-                          objBits_simps' RISCV64.pageBits_def)
+                          gen_objBits_simps RISCV64.pageBits_def)
    apply (simp add: RISCV64.pageBits_def)
    apply (subst mask_lower_twice2[where n = 3 and m = 12,simplified,symmetric])
    apply (subst is_aligned_add_helper[THEN conjunct2,where n1 = 3])
@@ -597,7 +597,7 @@ lemma clearMemory_setObject_PTE_ccorres:
    apply (erule mapM_x_store_memset_ccorres_assist
                       [unfolded split_def, OF _ _ _ _ _ _ _ subset_refl],
           simp_all add: shiftl_t2n hd_map objBits_simps archObjSize_def bit_simps)[1]
-    apply (clarsimp simp: objBits_simps' objBitsT_def makeObjectT_def bit_simps)
+    apply (clarsimp simp: objBits_simps' objBitsT_def makeObjectT_def archMakeObjectT_def bit_simps)
    apply (rule cmap_relationE1, erule rf_sr_cpte_relation, erule ko_at_projectKO_opt)
    apply (subst coerce_memset_to_heap_update_pte)
    apply (clarsimp simp: rf_sr_def Let_def cstate_relation_def typ_heap_simps)

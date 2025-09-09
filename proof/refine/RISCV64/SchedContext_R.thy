@@ -35,7 +35,7 @@ lemma valid_sched_context'_scConsumed_update[simp]:
 
 lemma valid_sched_context_size'_scConsumed_update[simp]:
   "valid_sched_context_size' (scConsumed_update f sc') = valid_sched_context_size' sc'"
-  by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
+  by (clarsimp simp: valid_sched_context_size'_def gen_objBits_simps)
 
 lemma readSchedContext_SomeD:
   "readSchedContext scp s = Some sc'
@@ -116,7 +116,7 @@ lemma live_sc'_ko_ex_nonz_cap_to':
   "\<lbrakk>invs' s; ko_at' ko scPtr s\<rbrakk> \<Longrightarrow> live_sc' ko \<Longrightarrow> ex_nonz_cap_to' scPtr s"
   apply (drule invs_iflive')
   apply (erule if_live_then_nonz_capE')
-  by (clarsimp simp: ko_wp_at'_def obj_at'_real_def)
+  by (clarsimp simp: ko_wp_at'_def obj_at'_real_def live'_def)
 
 lemma updateSchedContext_refills_invs':
   "\<lbrace>invs'
@@ -168,7 +168,7 @@ lemma updateSchedContext_invs'_indep:
   apply (intro conjI; intro allI impI; (drule_tac x=ko in spec)+)
    apply (clarsimp simp: invs'_def valid_objs'_def obj_at'_def)
    apply (erule if_live_then_nonz_capE')
-   apply (clarsimp simp: ko_wp_at'_def live_sc'_def)
+   apply (clarsimp simp: ko_wp_at'_def live'_def live_sc'_def)
   apply (frule (1) invs'_ko_at_valid_sched_context', simp)
   done
 
@@ -271,7 +271,7 @@ lemma schedContextUpdateConsumed_valid_ipc_buffer_ptr'[wp]:
 lemma schedContextUpdateConsumed_iflive[wp]:
   "schedContextUpdateConsumed scp \<lbrace>if_live_then_nonz_cap'\<rbrace>"
   apply (wpsimp simp: schedContextUpdateConsumed_def updateSchedContext_def)
-  apply (clarsimp elim!: if_live_then_nonz_capE' simp: obj_at'_def ko_wp_at'_def)
+  apply (clarsimp elim!: if_live_then_nonz_capE' simp: obj_at'_def ko_wp_at'_def live'_def)
   done
 
 lemma schedContextUpdateConsumed_valid_idle'[wp]:
@@ -328,11 +328,11 @@ lemma updateSchedContext_valid_objs'[wp]:
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (wpsimp simp: updateSchedContext_def wp: set_sc'.valid_objs')
   by (fastforce simp: valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def
-                      obj_at'_def scBits_simps objBits_simps opt_map_red opt_pred_def)
+                      obj_at'_def scBits_simps gen_objBits_simps opt_map_red opt_pred_def)
 
 lemma valid_tcb'_tcbYieldTo_update:
   "valid_tcb' tcb s \<Longrightarrow> valid_tcb' (tcbYieldTo_update Map.empty tcb) s"
-  by (simp add: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def )
+  by (fastforce simp: valid_tcb'_def update_tcb_cte_cases)
 
 lemma schedContextCancelYieldTo_valid_objs'[wp]:
   "schedContextCancelYieldTo tptr \<lbrace>valid_objs'\<rbrace>"
@@ -347,7 +347,7 @@ lemma schedContextCancelYieldTo_valid_mdb'[wp]:
   "schedContextCancelYieldTo tptr \<lbrace>valid_mdb'\<rbrace>"
   apply (clarsimp simp: schedContextCancelYieldTo_def updateSchedContext_def threadSet_def)
   apply (wpsimp wp: getObject_tcb_wp hoare_drop_imps hoare_vcg_ex_lift threadGet_wp)
-  apply (fastforce simp: obj_at'_def tcb_cte_cases_def cteSizeBits_def)
+  apply (fastforce simp: obj_at'_def update_tcb_cte_cases)
   done
 
 lemma schedContextCancelYieldTo_sch_act_wf[wp]:
@@ -364,7 +364,7 @@ lemma schedContextCancelYieldTo_if_live_then_nonz_cap'[wp]:
   apply (wpsimp wp: threadSet_iflive' setSchedContext_iflive' hoare_vcg_imp_lift' hoare_vcg_all_lift
                     threadGet_wp)
   by (fastforce elim: if_live_then_nonz_capE'
-                simp: ko_wp_at'_def obj_at'_def live_sc'_def)
+                simp: ko_wp_at'_def obj_at'_def live'_def live_sc'_def)
 
 lemma schedContextCancelYieldTo_if_unsafe_then_cap'[wp]:
   "schedContextCancelYieldTo tptr \<lbrace>if_unsafe_then_cap'\<rbrace>"
@@ -530,7 +530,7 @@ lemma schedContextCancelYieldTo_corres:
     apply (rule corres_split[OF update_sc_no_reply_stack_update_corres])
           apply (simp add: sc_relation_tcb_yield_to_update)
          apply simp
-        apply (clarsimp simp: objBits_simps')
+        apply (clarsimp simp: gen_objBits_simps)
        apply simp
       apply (rule tcb_yield_to_update_corres)
      apply wpsimp
@@ -608,13 +608,13 @@ lemma tcbSchedContext_update_Some_valid_objs'[wp]:
    threadSet (tcbSchedContext_update (\<lambda>_. Some scPtr)) tcbPtr
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (wpsimp wp: threadSet_valid_objs')
-  apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
+  apply (fastforce simp: valid_tcb'_def update_tcb_cte_cases)
   done
 
 lemma tcbSchedContext_update_None_valid_objs'[wp]:
   "threadSet (tcbSchedContext_update (\<lambda>_. None)) tcbPtr \<lbrace>valid_objs'\<rbrace>"
   apply (wpsimp wp: threadSet_valid_objs')
-  apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
+  apply (fastforce simp: valid_tcb'_def update_tcb_cte_cases)
   done
 
 lemma updateSchedContext_valid_objs'_stTCB_update_Just[wp]:

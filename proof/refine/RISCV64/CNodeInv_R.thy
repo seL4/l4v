@@ -6405,7 +6405,7 @@ lemma cteDelete_cte_at:
                in hoare_weaken_pre)
    apply (rule hoare_strengthen_post)
     apply (rule hoare_vcg_disj_lift)
-     apply (rule typ_at_lifts, rule cteDelete_typ_at')
+     apply (rule cteDelete.typ_at_lifts')
     apply (simp add: cteDelete_def finaliseSlot_def split_def)
     apply (rule validE_valid, rule bindE_wp_fwd)
      apply (subst finaliseSlot'_simps_ext)
@@ -6899,11 +6899,13 @@ lemma spec_corres_liftME2:
 
 lemmas preemption_point_valid_list = preemption_point_inv'[where P="valid_list", simplified]
 
-lemma finaliseSlot_typ_at'[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> finaliseSlot ptr exposed \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
-  by (rule finaliseSlot_preservation, (wp | simp)+)
+crunch finaliseSlot
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
+  (rule: finaliseSlot_preservation)
 
-lemmas finaliseSlot_typ_ats[wp] = typ_at_lifts[OF finaliseSlot_typ_at']
+global_interpretation finaliseSlot: typ_at_all_props' "finaliseSlot ptr exposed"
+  by typ_at_props'
 
 lemmas rec_del_valid_list_irq_state_independent[wp] =
   rec_del_preservation[OF cap_swap_for_delete_valid_list set_cap_valid_list empty_slot_valid_list finalise_cap_valid_list preemption_point_valid_list]
