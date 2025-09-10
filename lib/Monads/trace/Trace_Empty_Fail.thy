@@ -17,7 +17,7 @@ text \<open>
   Usually, well-formed monads constructed from the primitives in @{text Trace_Monad} will have the
   following property: if they return an empty set of completed results, there exists a trace
   corresponding to a failed result.\<close>
-definition empty_fail :: "('s,'a) tmonad \<Rightarrow> bool" where
+definition empty_fail :: "('c, 's, 'a) tmonad \<Rightarrow> bool" where
   "empty_fail m \<equiv> \<forall>s. mres (m s) = {} \<longrightarrow> failed (m s)"
 
 text \<open>Useful in forcing otherwise unknown executions to have the @{const empty_fail} property.\<close>
@@ -114,7 +114,7 @@ lemma empty_fail_select[empty_fail_cond]:
 
 lemma mres_bind_empty:
   "mres ((f >>= g) s) = {}
-   \<Longrightarrow> mres (f s) = {} \<or> (\<forall>res\<in>mres (f s). mres (g (fst res) (snd res)) = {})"
+   \<Longrightarrow> mres (f s) = {} \<or> (\<forall>res\<in>mres (f s). mres (g (fst res) (with_env_of s (snd res))) = {})"
   apply (clarsimp simp: bind_def mres_def split_def)
   apply (clarsimp simp: image_def)
   apply fastforce
@@ -125,7 +125,7 @@ lemma bind_failedI1:
   by (force simp: bind_def vimage_def failed_def)
 
 lemma bind_failedI2:
-  "\<lbrakk>\<forall>res\<in>mres (f s). failed (g (fst res) (snd res)); mres (f s) \<noteq> {}\<rbrakk>
+  "\<lbrakk>\<forall>res\<in>mres (f s). failed (g (fst res) (with_env_of s (snd res))); mres (f s) \<noteq> {}\<rbrakk>
    \<Longrightarrow> failed ((f >>= g) s)"
   by (force simp: bind_def mres_def image_def split_def failed_def)
 
@@ -357,14 +357,15 @@ lemma empty_fail_interference[empty_fail_term]:
   by (simp add: interference_def commit_step_def empty_fail_term empty_fail_cond)
 
 lemma last_st_tr_not_empty:
-  "P s \<Longrightarrow> \<exists>xs. P (last_st_tr (map (Pair Env) xs) s')"
+  "P (with_env_of s' s) \<Longrightarrow> \<exists>xs. P (with_env_of s' (last_st_tr (map (Pair Env) xs) (mstate s')))"
   apply (rule exI[where x="[s]"])
   apply (auto simp: last_st_tr_def)
   done
 
 lemma empty_fail_await[empty_fail_term]:
-  "\<exists>s. c s \<Longrightarrow> empty_fail (await c)"
-  by (clarsimp simp: await_def last_st_tr_not_empty empty_fail_term empty_fail_cond)
+  "\<forall>env. \<exists>s. c (monad_state env s) \<Longrightarrow> empty_fail (await c)"
+  by (fastforce simp: await_def empty_fail_term intro!: empty_fail_cond last_st_tr_not_empty
+                 del: notI)
 
 (* not everything [simp] by default, because side conditions can slow down simp a lot *)
 lemmas empty_fail[wp, intro!] = empty_fail_term empty_fail_cond
@@ -384,7 +385,7 @@ lemma empty_fail_liftM_eq[simp]:
 
 lemma empty_fail_liftE_eq[simp]:
   "empty_fail (liftE f) = empty_fail f"
-  by (auto simp: liftE_def empty_fail_bindD1)
+  by (fastforce simp: liftE_def empty_fail_bindD1)
 
 lemma liftME_empty_fail_eq[simp]:
   "empty_fail (liftME f m) = empty_fail m"

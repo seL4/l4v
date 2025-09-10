@@ -15,11 +15,11 @@ subsection "Determinism"
 text \<open>
   A monad of type @{text tmonad} is deterministic iff it
   returns an empty trace, exactly one state and result and does not fail\<close>
-definition det :: "('a,'s) tmonad \<Rightarrow> bool" where
+definition det :: "('c, 's, 'a) tmonad \<Rightarrow> bool" where
   "det f \<equiv> \<forall>s. \<exists>r. f s = {([], Result r)}"
 
 text \<open>A deterministic @{text tmonad} can be turned into a normal state monad:\<close>
-definition the_run_state :: "('s,'a) tmonad \<Rightarrow> 's \<Rightarrow> 'a \<times> 's" where
+definition the_run_state :: "('c, 's, 'a) tmonad \<Rightarrow> ('c, 's) monad_state \<Rightarrow> 'a \<times> 's" where
   "the_run_state M \<equiv> \<lambda>s. THE s'. mres (M s) = {s'}"
 
 

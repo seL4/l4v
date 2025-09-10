@@ -19,11 +19,11 @@ text \<open>
   The predicates @{text no_throw} and @{text no_return} allow us to reason about functions in
   the exception monad that never throw an exception or never return normally.\<close>
 
-definition no_throw :: "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'e + 'a) tmonad \<Rightarrow> bool" where
-  "no_throw P A \<equiv> \<lbrace> P \<rbrace> A \<lbrace> \<lambda>_ _. True \<rbrace>,\<lbrace> \<lambda>_ _. False \<rbrace>"
+definition no_throw :: "('c, 's) mpred \<Rightarrow> ('c, 's, 'e + 'a) tmonad \<Rightarrow> bool" where
+  "no_throw P A \<equiv> \<lbrace>P\<rbrace> A \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_ _. False\<rbrace>"
 
-definition no_return :: "('a \<Rightarrow> bool) \<Rightarrow> ('a, 'b + 'c) tmonad \<Rightarrow> bool" where
-  "no_return P A \<equiv> \<lbrace> P \<rbrace> A \<lbrace>\<lambda>_ _. False\<rbrace>,\<lbrace>\<lambda>_ _. True \<rbrace>"
+definition no_return :: "('c, 's) mpred \<Rightarrow> ('c, 's, 'e + 'a) tmonad \<Rightarrow> bool" where
+  "no_return P A \<equiv> \<lbrace>P\<rbrace> A \<lbrace>\<lambda>_ _. False\<rbrace>, \<lbrace>\<lambda>_ _. True\<rbrace>"
 
 (* Alternative definition of no_throw; easier to work with than unfolding validE. *)
 lemma no_throw_def':

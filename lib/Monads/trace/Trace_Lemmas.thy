@@ -19,8 +19,9 @@ lemma in_mres:
   by (fastforce simp: mres_def intro: image_eqI[rotated])
 
 lemma bind_apply_cong':
-  "\<lbrakk>f s = f' s'; (\<forall>rv st. (rv, st) \<in> mres (f s) \<longrightarrow> g rv st = g' rv st)\<rbrakk>
-   \<Longrightarrow> bind f g s = bind f' g' s'"
+  "\<lbrakk>f s = f' s';
+    (\<forall>rv st. (rv, st) \<in> mres (f s) \<longrightarrow> g rv (with_env_of s st) = g' rv (with_env_of s' st))\<rbrakk>
+   \<Longrightarrow> (f >>= g) s = (f' >>= g') s'"
   apply (simp add: bind_def)
   apply (rule SUP_cong; simp?)
   apply (clarsimp split: tmres.split)
@@ -31,17 +32,30 @@ lemma bind_apply_cong':
 lemmas bind_apply_cong = bind_apply_cong'[rule_format, fundef_cong]
 
 lemma bind_cong[fundef_cong]:
-  "\<lbrakk> f = f'; \<And>v s s'. (v, s') \<in> mres (f' s) \<Longrightarrow> g v s' = g' v s' \<rbrakk> \<Longrightarrow> f >>= g = f' >>= g'"
+  "\<lbrakk> f = f'; \<And>v s s'. (v, s') \<in> mres (f' s) \<Longrightarrow> g v (with_env_of s s') = g' v (with_env_of s s') \<rbrakk>
+   \<Longrightarrow> f >>= g = f' >>= g'"
   by (auto intro!: bind_apply_cong)
 
 lemma bindE_cong[fundef_cong]:
-  "\<lbrakk> M = M' ; \<And>v s s'. (Inr v, s') \<in> mres (M' s) \<Longrightarrow> N v s' = N' v s' \<rbrakk> \<Longrightarrow> bindE M N = bindE M' N'"
+  "\<lbrakk> M = M';
+     \<And>v s s'. (Inr v, s') \<in> mres (M' s) \<Longrightarrow> N v (with_env_of s s') = N' v (with_env_of s s') \<rbrakk>
+   \<Longrightarrow> bindE M N = bindE M' N'"
   by (auto simp: bindE_def lift_def split: sum.splits intro!: bind_cong)
 
+lemma return_no_const:
+  "mstate s = mstate s' \<Longrightarrow> return x s = return x s'"
+  by (simp add: return_def)
+
+lemma throwError_no_const:
+  "mstate s = mstate s' \<Longrightarrow> throwError e s = throwError e s'"
+  by (auto simp: throwError_def intro!: return_no_const)
+
 lemma bindE_apply_cong[fundef_cong]:
-  "\<lbrakk> f s = f' s'; \<And>rv st. (Inr rv, st) \<in> mres (f' s') \<Longrightarrow> g rv st = g' rv st \<rbrakk>
+  "\<lbrakk> f s = f' s';
+     \<And>rv st. (Inr rv, st) \<in> mres (f' s') \<Longrightarrow> g rv (with_env_of s st) = g' rv (with_env_of s' st) \<rbrakk>
   \<Longrightarrow> (f >>=E g) s = (f' >>=E g') s'"
-  by (auto simp: bindE_def lift_def split: sum.splits intro!: bind_apply_cong)
+  by (auto simp: bindE_def lift_def split: sum.splits intro!: bind_apply_cong throwError_no_const
+            del: subset_antisym)
 
 lemma K_bind_apply_cong[fundef_cong]:
   "\<lbrakk> f st = f' st' \<rbrakk> \<Longrightarrow> K_bind f arg st = K_bind f' arg' st'"
@@ -235,6 +249,10 @@ lemma exec_gets:
   "(gets f >>= m) s = m (f s) s"
   by (simp add: simpler_gets_def bind_def)
 
+lemma exec_ask:
+  "(ask >>= f) x = f (env x) x"
+  by (simp add: ask_def bind_def)
+
 lemma bind_eqI:
   "\<lbrakk> f = f'; \<And>x. g x = g' x \<rbrakk> \<Longrightarrow> f >>= g = f' >>= g'"
   by (auto simp: bind_def split_def)
@@ -267,5 +285,40 @@ lemma condition_false:
 
 lemmas arg_cong_bind = arg_cong2[where f=bind]
 lemmas arg_cong_bind1 = arg_cong_bind[OF refl ext]
+
+
+subsection \<open>Low-level monadic reasoning\<close>
+
+lemma monad_eqI [intro]:
+  "\<lbrakk> \<And>tr res s. (tr, res) \<in> A s \<Longrightarrow> (tr, res) \<in> B s;
+     \<And>tr res s. (tr, res) \<in> B s \<Longrightarrow> (tr, res) \<in> A s \<rbrakk>
+  \<Longrightarrow> A = B" for A :: "('c, 's, 'a) tmonad"
+  by (fastforce intro!: set_eqI prod_eqI)
+
+lemma monad_state_eqI [intro]:
+  "\<lbrakk> \<And>tr res. (tr, res) \<in> A s \<Longrightarrow> (tr, res) \<in> B s';
+     \<And>tr res. (tr, res) \<in> B s' \<Longrightarrow> (tr, res) \<in> A s \<rbrakk>
+  \<Longrightarrow> A s = B s'" for A :: "('c, 's, 'a) tmonad"
+  by (fastforce intro!: set_eqI prod_eqI)
+
+
+subsection \<open>General @{const whileLoop} reasoning\<close>
+
+definition whileLoop_terminatesE ::
+  "('a \<Rightarrow> ('c,'s) mpred) \<Rightarrow> ('a \<Rightarrow> ('c, 's, 'e + 'a) tmonad) \<Rightarrow> 'c \<Rightarrow> 'a \<Rightarrow> 's \<Rightarrow> bool"
+  where
+  "whileLoop_terminatesE C B c \<equiv>
+     \<lambda>r. whileLoop_terminates (\<lambda>r s. case r of Inr v \<Rightarrow> C v s | _ \<Rightarrow> False) (lift B) c (Inr r)"
+
+lemma whileLoop_cond_fail:
+  "\<not> C x s \<Longrightarrow> whileLoop C B x s = return x s"
+  by (auto simp: return_def whileLoop_def
+           intro: whileLoop_results.intros whileLoop_terminates.intros
+           elim: whileLoop_results.cases)
+
+lemma whileLoopE_cond_fail:
+  "\<not> C x s \<Longrightarrow> whileLoopE C B x s = returnOk x s"
+  unfolding whileLoopE_def returnOk_def
+  by (auto intro!: whileLoop_cond_fail)
 
 end

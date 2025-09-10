@@ -43,7 +43,8 @@ primrec trace_steps :: "(tmid \<times> 's) list \<Rightarrow> 's \<Rightarrow> (
   | "trace_steps [] s0 = {}"
 
 lemma trace_steps_nth:
-  "trace_steps xs s0 = (\<lambda>i. (fst (xs ! i), (if i = 0 then s0 else snd (xs ! (i - 1))), snd (xs ! i))) ` {..< length xs}"
+  "trace_steps xs s0 =
+     (\<lambda>i. (fst (xs ! i), (if i = 0 then s0 else snd (xs ! (i - 1))), snd (xs ! i))) ` {..< length xs}"
 proof (induct xs arbitrary: s0)
   case Nil
   show ?case by simp
@@ -56,92 +57,101 @@ next
     done
 qed
 
-text \<open>@{text rg_pred} type: Rely-Guaranty predicates (@{text "state before => state after => bool"})\<close>
-type_synonym 's rg_pred = "'s \<Rightarrow> 's \<Rightarrow> bool"
+text \<open>@{text rg_pred} type: Rely-Guarantee predicates (@{text "state before => state after => bool"})\<close>
+type_synonym ('c, 's) rg_pred = "('c, 's) monad_state \<Rightarrow> ('c, 's) monad_state \<Rightarrow> bool"
 
 text \<open>Abbreviations for trivial postconditions (taking three arguments):\<close>
 abbreviation(input)
-  toptoptop :: "'a \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> bool" ("\<top>\<top>\<top>") where
+  toptoptop :: "'a \<Rightarrow> 'b \<Rightarrow> 'c \<Rightarrow> bool" ("\<top>\<top>\<top>") where
   "\<top>\<top>\<top> \<equiv> \<lambda>_ _ _. True"
 
 abbreviation(input)
-  botbotbot :: "'a \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> bool" ("\<bottom>\<bottom>\<bottom>") where
+  botbotbot :: "'a \<Rightarrow> 'b \<Rightarrow> 'c \<Rightarrow> bool" ("\<bottom>\<bottom>\<bottom>") where
   "\<bottom>\<bottom>\<bottom> \<equiv> \<lambda>_ _ _. False"
 
 text \<open>
   Test whether the environment steps in @{text tr} satisfy the rely condition @{text R},
   assuming that @{text s0s} was the initial state before the first step in the trace.\<close>
-definition rely_cond :: "'s rg_pred \<Rightarrow> 's \<Rightarrow> (tmid \<times> 's) list \<Rightarrow> bool" where
-  "rely_cond R s0s tr = (\<forall>(ident, s0, s) \<in> trace_steps (rev tr) s0s. ident = Env \<longrightarrow> R s0 s)"
+definition rely_cond :: "('c, 's) rg_pred \<Rightarrow> 'c \<Rightarrow> 's \<Rightarrow> (tmid \<times> 's) list \<Rightarrow> bool" where
+  "rely_cond R c s0s tr \<equiv>
+     \<forall>(ident, s0, s) \<in> trace_steps (rev tr) s0s. ident = Env \<longrightarrow> R (monad_state c s0) (monad_state c s)"
 
 text \<open>
   Test whether the self steps in @{text tr} satisfy the guarantee condition @{text G},
   assuming that @{text s0s} was the initial state before the first step in the trace.\<close>
-definition guar_cond :: "'s rg_pred \<Rightarrow> 's \<Rightarrow> (tmid \<times> 's) list \<Rightarrow> bool" where
-  "guar_cond G s0s tr = (\<forall>(ident, s0, s) \<in> trace_steps (rev tr) s0s. ident = Me \<longrightarrow> G s0 s)"
+definition guar_cond :: "('c, 's) rg_pred \<Rightarrow> 'c \<Rightarrow> 's \<Rightarrow> (tmid \<times> 's) list \<Rightarrow> bool" where
+  "guar_cond G c s0s tr \<equiv>
+     \<forall>(ident, s0, s) \<in> trace_steps (rev tr) s0s. ident = Me \<longrightarrow> G (monad_state c s0) (monad_state c s)"
 
 lemma rg_empty_conds[simp]:
-  "rely_cond R s0s []"
-  "guar_cond G s0s []"
+  "rely_cond R c s0s []"
+  "guar_cond G c s0s []"
   by (simp_all add: rely_cond_def guar_cond_def)
 
 lemma rg_conds_True[simp]:
-  "rely_cond \<top>\<top> = \<top>\<top>"
-  "guar_cond \<top>\<top> = \<top>\<top>"
+  "rely_cond \<top>\<top> c = \<top>\<top>"
+  "guar_cond \<top>\<top> c = \<top>\<top>"
   by (clarsimp simp: rely_cond_def guar_cond_def fun_eq_iff)+
 
 text \<open>
   @{text "rely f R s0s"} constructs a new function from @{text f}, where the environment
   steps are constrained by @{text R} and @{text s0s} was the initial state before the first
   step in the trace.\<close>
-definition rely :: "('s, 'a) tmonad \<Rightarrow> 's rg_pred \<Rightarrow> 's \<Rightarrow> ('s, 'a) tmonad" where
-  "rely f R s0s \<equiv> (\<lambda>s. f s \<inter> ({tr. rely_cond R s0s tr} \<times> UNIV))"
+definition rely :: "('c, 's, 'a) tmonad \<Rightarrow> ('c, 's) rg_pred \<Rightarrow> 's \<Rightarrow> ('c, 's, 'a) tmonad" where
+  "rely f R s0s \<equiv> (\<lambda>s. f s \<inter> ({tr. rely_cond R (env s) s0s tr} \<times> UNIV))"
+
+(*FIXME: name*)
+text \<open>@{text m2_pred} type: Rely-Guarantee pre- and post-conditions (@{text "initial state => current state => bool"})\<close>
+type_synonym ('c, 's) m2_pred = "('c, 's) monad_state \<Rightarrow> ('c, 's) monad_state \<Rightarrow> bool"
 
 definition valid_rg ::
-  "('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's rg_pred \<Rightarrow> ('s,'a) tmonad \<Rightarrow> 's rg_pred \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
+  "('c, 's) m2_pred \<Rightarrow> ('c, 's) rg_pred \<Rightarrow> ('c, 's, 'a) tmonad \<Rightarrow> ('c, 's) rg_pred \<Rightarrow>
+   ('a \<Rightarrow> ('c, 's) m2_pred) \<Rightarrow> bool"
   ("(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)/ _ /(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)") where
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> \<equiv>
      prefix_closed f
-     \<and> (\<forall>s0 s tr res. P s0 s \<and> (tr, res) \<in> (rely f R s0 s)
-         \<longrightarrow> guar_cond G s0 tr
-           \<and> (\<forall>rv s'. res = Result (rv, s') \<longrightarrow> Q rv (last_st_tr tr s0) s'))"
+     \<and> (\<forall>s0 s tr res. P (with_env_of s s0) s \<and> (tr, res) \<in> (rely f R s0 s)
+         \<longrightarrow> guar_cond G (env s) s0 tr
+           \<and> (\<forall>rv s'. res = Result (rv, s')
+                \<longrightarrow> Q rv (with_env_of s (last_st_tr tr s0)) (with_env_of s s')))"
 
 text \<open>
   We often reason about invariant predicates. The following provides shorthand syntax
   that avoids repeating potentially long predicates.\<close>
 abbreviation invariant_rg ::
-  "('s,'a) tmonad \<Rightarrow> 's rg_pred \<Rightarrow> 's rg_pred \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
+  "('c, 's, 'a) tmonad \<Rightarrow> ('c, 's) rg_pred \<Rightarrow> ('c, 's) rg_pred \<Rightarrow> ('c, 's) m2_pred \<Rightarrow> bool"
   ("_/ \<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>" [59,0] 60) where
   "invariant_rg f R G P \<equiv> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. P\<rbrace>"
 
 text \<open> Validity for exception monad with interferences, built on @{term valid_rg}. \<close>
 definition valid_rgE ::
-  "('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's rg_pred \<Rightarrow> ('s, 'a + 'b) tmonad \<Rightarrow> 's rg_pred \<Rightarrow> ('b \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow>
-   ('a \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
+  "('c, 's) m2_pred \<Rightarrow> ('c, 's) rg_pred \<Rightarrow> ('c, 's, 'a + 'b) tmonad \<Rightarrow> ('c, 's) rg_pred \<Rightarrow>
+   ('b \<Rightarrow> ('c, 's) m2_pred) \<Rightarrow> ('a \<Rightarrow> ('c, 's) m2_pred) \<Rightarrow> bool"
   ("(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)/ _ /(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)") where
-  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<equiv> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace> \<lambda>v s0 s. case v of Inr r \<Rightarrow> Q r s0 s | Inl e \<Rightarrow> E e s0 s \<rbrace>"
+  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<equiv> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>v s0 s. case v of Inr r \<Rightarrow> Q r s0 s | Inl e \<Rightarrow> E e s0 s\<rbrace>"
 
 lemma valid_rgE_def2:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<equiv>
      prefix_closed f
-     \<and> (\<forall>s0 s tr res. P s0 s \<and> (tr, res) \<in> (rely f R s0 s)
-         \<longrightarrow> guar_cond G s0 tr
+     \<and> (\<forall>s0 s tr res. P (with_env_of s s0) s \<and> (tr, res) \<in> (rely f R s0 s)
+         \<longrightarrow> guar_cond G (env s) s0 tr
            \<and> (\<forall>rv s'. res = Result (rv, s')
-                \<longrightarrow> (case rv of Inr b \<Rightarrow> Q b (last_st_tr tr s0) s' | Inl a \<Rightarrow> E a (last_st_tr tr s0) s')))"
+                \<longrightarrow> (case rv of Inr b \<Rightarrow> Q b (with_env_of s (last_st_tr tr s0)) (with_env_of s s')
+                              | Inl a \<Rightarrow> E a (with_env_of s (last_st_tr tr s0)) (with_env_of s s'))))"
   by (unfold valid_rg_def valid_rgE_def)
 
 text \<open>
   The following two abbreviations are convenient to separate reasoning for exceptional and
   normal case.\<close>
 abbreviation valid_rgE_R ::
-  "('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's rg_pred \<Rightarrow> ('s, 'a + 'b) tmonad \<Rightarrow> 's rg_pred \<Rightarrow> ('b \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow>
-   bool"
+  "('c, 's) m2_pred \<Rightarrow> ('c, 's) rg_pred \<Rightarrow> ('c, 's, 'a + 'b) tmonad \<Rightarrow> ('c, 's) rg_pred \<Rightarrow>
+   ('b \<Rightarrow> ('c, 's) m2_pred) \<Rightarrow> bool"
   ("(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)/ _ /(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>,/ -)") where
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,- \<equiv> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>"
 
 abbreviation valid_rgE_E ::
-  "('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's rg_pred \<Rightarrow> ('s, 'a + 'b) tmonad \<Rightarrow> 's rg_pred \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow>
-    bool"
+  "('c, 's) m2_pred \<Rightarrow> ('c, 's) rg_pred \<Rightarrow> ('c, 's, 'a + 'b) tmonad \<Rightarrow> ('c, 's) rg_pred \<Rightarrow>
+   ('a \<Rightarrow> ('c, 's) m2_pred) \<Rightarrow> bool"
   ("(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)/ _ /(\<lbrace>_\<rbrace>,/ -,/ \<lbrace>_\<rbrace>)") where
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>E\<rbrace> \<equiv> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>,\<lbrace>E\<rbrace>"
 
@@ -149,33 +159,35 @@ text \<open>
   The following abbreviations are convenient to separate reasoning about postconditions and the
   guarantee condition.\<close>
 abbreviation valid_rg_no_guarantee ::
-  "('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's rg_pred \<Rightarrow> ('s,'a) tmonad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
+  "('c, 's) m2_pred \<Rightarrow> ('c, 's) rg_pred \<Rightarrow> ('c, 's, 'a) tmonad \<Rightarrow> ('a \<Rightarrow> ('c, 's) m2_pred) \<Rightarrow> bool"
   ("(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)/ _ /(-,/ \<lbrace>_\<rbrace>)") where
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>Q\<rbrace> \<equiv> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>\<lambda>_ _. True\<rbrace>,\<lbrace>Q\<rbrace>"
 
 abbreviation invariant_rg_no_guarantee ::
-  "('s,'a) tmonad \<Rightarrow> 's rg_pred \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
+  "('c, 's, 'a) tmonad \<Rightarrow> ('c, 's) rg_pred \<Rightarrow> ('c, 's) m2_pred \<Rightarrow> bool"
   ("_/ \<lbrace>_\<rbrace>,/ -,/ \<lbrace>_\<rbrace>" [59,0] 60) where
   "f \<lbrace>R\<rbrace>, -, \<lbrace>P\<rbrace> \<equiv> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>\<lambda>_ _. True\<rbrace>,\<lbrace>\<lambda>_. P\<rbrace>"
 
 abbreviation valid_rgE_no_guarantee ::
-  "('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's rg_pred \<Rightarrow> ('s, 'a + 'b) tmonad \<Rightarrow> ('b \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow>
-   ('a \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
+  "('c, 's) m2_pred \<Rightarrow> ('c, 's) rg_pred \<Rightarrow> ('c, 's, 'a + 'b) tmonad \<Rightarrow>
+   ('b \<Rightarrow> ('c, 's) m2_pred) \<Rightarrow> ('a \<Rightarrow> ('c, 's) m2_pred) \<Rightarrow> bool"
   ("(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)/ _ /(-,/ \<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)") where
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<equiv> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>\<lambda>_ _. True\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
 
 abbreviation valid_rgE_R_no_guarantee ::
-  "('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's rg_pred \<Rightarrow> ('s, 'a + 'b) tmonad \<Rightarrow> ('b \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
+  "('c, 's) m2_pred \<Rightarrow> ('c, 's) rg_pred \<Rightarrow> ('c, 's, 'a + 'b) tmonad \<Rightarrow>
+   ('b \<Rightarrow> ('c, 's) m2_pred) \<Rightarrow> bool"
   ("(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)/ _ /(-,/ \<lbrace>_\<rbrace>,/ -)") where
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>Q\<rbrace>,- \<equiv> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>\<lambda>_ _. True\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>"
 
 abbreviation valid_rgE_E_no_guarantee ::
-  "('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's rg_pred \<Rightarrow> ('s, 'a + 'b) tmonad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
+  "('c, 's) m2_pred \<Rightarrow> ('c, 's) rg_pred \<Rightarrow> ('c, 's, 'a + 'b) tmonad \<Rightarrow>
+   ('a \<Rightarrow> ('c, 's) m2_pred) \<Rightarrow> bool"
   ("(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)/ _ /(-,/ -,/ \<lbrace>_\<rbrace>)") where
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f -,-,\<lbrace>E\<rbrace> \<equiv> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>\<lambda>_ _. True\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>,\<lbrace>E\<rbrace>"
 
 lemma in_rely:
-  "\<lbrakk>(tr, res) \<in> f s; rely_cond R s0s tr\<rbrakk> \<Longrightarrow> (tr, res) \<in> rely f R s0s s"
+  "\<lbrakk>(tr, res) \<in> f s; rely_cond R (env s) s0s tr\<rbrakk> \<Longrightarrow> (tr, res) \<in> rely f R s0s s"
   by (simp add: rely_def)
 
 lemmas valid_rg_D =
@@ -187,8 +199,12 @@ lemmas valid_rg_prefix_closed = valid_rg_def[THEN meta_eq_to_obj_eq, THEN iffD1,
 lemmas valid_rg_prefix_closed_T =
   valid_rg_prefix_closed[where P="\<lambda>_ _. False" and R="\<lambda>_ _. False" and G="\<lambda>_ _. True"
                          and Q="\<lambda>_ _ _. True"]
+lemmas valid_rgE_D =
+  valid_rgE_def2[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, rule_format,
+             OF _ conjI, OF _ _ in_rely]
+lemmas valid_rgE_prefix_closed = valid_rgE_def2[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct1]
 
-declare valid_rg_prefix_closed[elim!]
+declare valid_rg_prefix_closed[elim!] valid_rgE_prefix_closed[elim!]
 
 
 section \<open>Pre Lemmas\<close>
@@ -235,6 +251,10 @@ lemmas rg_pre[wp_pre] =
   rg_weaken_pre
   rg_weaken_preE
 
+lemma valid_rg_pre_add_env_s0:
+  "\<lbrace>\<lambda>s0 s. P s0 s \<and> env s0 = env s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  by (clarsimp simp: valid_rg_def)
+
 
 subsection \<open>Setting up the precondition case splitter.\<close>
 
@@ -259,11 +279,11 @@ lemma trace_steps_append:
   by (induct xs arbitrary: s, simp_all add: last_st_tr_def hd_append)
 
 lemma rely_cond_append:
-  "rely_cond R s (xs @ ys) = (rely_cond R s ys \<and> rely_cond R (last_st_tr ys s) xs)"
+  "rely_cond R c s (xs @ ys) = (rely_cond R c s ys \<and> rely_cond R c (last_st_tr ys s) xs)"
   by (simp add: rely_cond_def trace_steps_append ball_Un conj_comms)
 
 lemma guar_cond_append:
-  "guar_cond G s (xs @ ys) = (guar_cond G s ys \<and> guar_cond G (last_st_tr ys s) xs)"
+  "guar_cond G c s (xs @ ys) = (guar_cond G c s ys \<and> guar_cond G c (last_st_tr ys s) xs)"
   by (simp add: guar_cond_def trace_steps_append ball_Un conj_comms)
 
 lemma no_trace_last_st_tr:
@@ -271,11 +291,12 @@ lemma no_trace_last_st_tr:
   by (fastforce simp: no_trace_def)
 
 lemma no_trace_rely_cond:
-  "\<lbrakk>no_trace f; (tr, res) \<in> f s\<rbrakk> \<Longrightarrow> rely_cond R s0 tr"
+  "\<lbrakk>no_trace f; (tr, res) \<in> f s\<rbrakk> \<Longrightarrow> rely_cond R c s0 tr"
   by (fastforce simp: no_trace_def rely_cond_def)
 
 lemma valid_rg_valid_no_trace_eq:
-  "no_trace f \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> = (\<forall>s0. \<lbrace>P s0\<rbrace> f \<lbrace>\<lambda>v. Q v s0\<rbrace>)"
+  "no_trace f \<Longrightarrow>
+   \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> = (\<forall>s0. \<lbrace>\<lambda>s. P (with_env_of s s0) s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv (with_env_of s s0) s\<rbrace>)"
   apply (rule iffI)
    apply (fastforce simp: rely_def valid_rg_def valid_def mres_def
                     dest: no_trace_emp)
@@ -284,7 +305,9 @@ lemma valid_rg_valid_no_trace_eq:
   done
 
 lemma valid_rgE_validE_no_trace_eq:
-  "no_trace f \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> = (\<forall>s0. \<lbrace>P s0\<rbrace> f \<lbrace>\<lambda>v. Q v s0\<rbrace>,\<lbrace>\<lambda>v. E v s0\<rbrace>)"
+  "no_trace f \<Longrightarrow>
+   \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>
+   = (\<forall>s0. \<lbrace>\<lambda>s. P (with_env_of s s0) s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv (with_env_of s s0) s\<rbrace>,\<lbrace>\<lambda>rv s. E rv (with_env_of s s0) s\<rbrace>)"
   unfolding valid_rgE_def validE_def
   apply (clarsimp simp: valid_rg_valid_no_trace_eq)
   done
@@ -302,12 +325,12 @@ lemma bind_twp[wp_split]:
   "\<lbrakk>\<And>r. \<lbrace>Q' r\<rbrace>,\<lbrace>R\<rbrace> g r \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>\<rbrakk>
    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f >>= (\<lambda>rv. g rv) \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   apply (subst valid_rg_def, rule conjI)
-   apply (blast intro: prefix_closed_bind valid_rg_prefix_closed)
+   apply (fastforce intro: prefix_closed_bind)
   apply (clarsimp simp: bind_def rely_def)
   apply (drule(2) valid_rg_D)
    apply (clarsimp simp: rely_cond_append split: tmres.split_asm)
   apply (clarsimp split: tmres.split_asm)
-  apply (drule meta_spec, frule(2) valid_rg_D)
+  apply (drule meta_spec, frule_tac s="with_env_of s ba" in valid_rg_D, fastforce, assumption)
    apply (clarsimp simp: rely_cond_append split: if_split_asm)
   apply (clarsimp simp: guar_cond_append)
   done
@@ -363,8 +386,8 @@ lemma rg_FalseE[simp]:
   by (simp add: valid_rg_def valid_rgE_def)
 
 lemma rg_modifyE_var:
-  "\<lbrakk> \<And>s0 s. P s0 s \<Longrightarrow> Q s0 (f s) \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> modify f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>"
-  by (simp add: valid_rg_def modify_def put_def get_def bind_def prefix_closed_def rely_def)
+  "\<lbrakk> \<And>s0 s. P s0 s \<Longrightarrow> Q s0 (const_env f s) \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> modify f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>"
+  by (simp add: valid_rg_def const_env_def modify_def put_def get_def bind_def prefix_closed_def rely_def)
 
 lemma rg_if:
   "\<lbrakk> P' \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<not> P' \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> if P' then f else g \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
@@ -379,24 +402,23 @@ lemma rg_post_subst:
   by (erule subst)
 
 lemma rg_post_imp:
-  "\<lbrakk>\<And>v s0 s. Q' v s0 s \<Longrightarrow> Q v s0 s; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  by (simp add: valid_rg_def)
+  "\<lbrakk>\<And>rv s0 s. Q' rv s0 s \<Longrightarrow> Q rv s0 s; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  by (fastforce simp: valid_rg_def split_def)
 
 lemma rg_post_impE:
-  "\<lbrakk>\<And>v s0 s. Q' v s0 s \<Longrightarrow> Q v s0 s; \<And>v s0 s. E' v s0 s \<Longrightarrow> E v s0 s; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>,\<lbrace>E'\<rbrace>\<rbrakk>
+  "\<lbrakk>\<And>rv s0 s. Q' rv s0 s \<Longrightarrow> Q rv s0 s; \<And>rv s0 s. E' rv s0 s \<Longrightarrow> E rv s0 s; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>,\<lbrace>E'\<rbrace>\<rbrakk>
    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   by (clarsimp simp: valid_rgE_def2 split: sum.splits)
 
 lemmas rg_strengthen_post = rg_post_imp[rotated]
 lemmas rg_strengthen_postE = rg_post_impE[rotated 2]
 
-lemma rg_strengthen_postE_R:
-  "\<lbrakk> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>,-; \<And>rv s0 s. Q' rv s0 s \<Longrightarrow> Q rv s0 s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,-"
-  by (erule rg_post_impE)
+lemmas rg_strengthen_postE_R = rg_strengthen_postE[where E="\<top>\<top>\<top>" and E'="\<top>\<top>\<top>", simplified]
+lemmas rg_strengthen_postE_E = rg_strengthen_postE[where Q="\<top>\<top>\<top>" and Q'="\<top>\<top>\<top>", simplified]
 
-lemma rg_strengthen_postE_E:
-  "\<lbrakk> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>E'\<rbrace>; \<And>rv s0 s. E' rv s0 s \<Longrightarrow> E rv s0 s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>E\<rbrace>"
-  by (rule rg_post_impE)
+lemma rg_valid_rgE_cases:
+  "\<lbrakk> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,-; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+  by (fastforce simp: valid_rgE_def2 split: sum.splits)
 
 lemma rg_post_impE_dc:
   "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q'\<rbrace>; \<And>s0 s. Q' s0 s \<Longrightarrow> Q s0 s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>"
@@ -409,6 +431,14 @@ lemma rg_post_impE_R_dc:
 lemma rg_post_impE_E_dc:
   "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q'\<rbrace>; \<And>s0 s. Q' s0 s \<Longrightarrow> Q s0 s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>\<lambda>_. Q\<rbrace>"
   by (fastforce simp: valid_rgE_def valid_rg_def split: sum.splits)
+
+lemma rg_post_impE_R_dc_actual:
+  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>,-"
+  by (rule rg_post_impE_R_dc)
+
+lemma rg_post_impE_E_dc_actual:
+  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,-,\<lbrace>\<lambda>_. Q\<rbrace>"
+  by (rule rg_post_impE_E_dc)
 
 lemma rg_guar_imp:
   "\<lbrakk>\<And>s0 s. G' s0 s \<Longrightarrow> G s0 s; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G'\<rbrace>,\<lbrace>Q\<rbrace>\<rbrakk>
@@ -440,8 +470,8 @@ lemma rg_post_disjI2:
   unfolding valid_rg_def by auto
 
 lemma use_valid_rg':
-  "\<lbrakk>(tr, Result (rv, s')) \<in> rely f R s0 s; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; P s0 s; s0' = last_st_tr tr s0\<rbrakk>
-   \<Longrightarrow> Q rv s0' s'"
+  "\<lbrakk>(tr, Result (rv, s')) \<in> rely f R s0 s; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; P (with_env_of s s0) s; s0' = last_st_tr tr s0\<rbrakk>
+   \<Longrightarrow> Q rv (with_env_of s s0') (with_env_of s s')"
   unfolding valid_rg_def by auto
 
 lemmas use_valid_rg = use_valid_rg'[OF _ _ _ refl]
@@ -449,24 +479,40 @@ lemmas use_valid_rg = use_valid_rg'[OF _ _ _ refl]
 lemmas post_by_rg = use_valid_rg[rotated]
 
 lemma use_valid_rg_guar:
-  "\<lbrakk>(tr, res) \<in> rely f R s0 s; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; P s0 s\<rbrakk>
-   \<Longrightarrow> guar_cond G s0 tr"
+  "\<lbrakk>(tr, res) \<in> rely f R s0 s; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; P (with_env_of s s0) s\<rbrakk>
+   \<Longrightarrow> guar_cond G (env s) s0 tr"
   unfolding valid_rg_def by auto
 
 lemmas guar_by_rg = use_valid_rg_guar[rotated]
 
+lemma use_valid_rg_inv:
+  assumes step: "(tr, Result (rv, s')) \<in> rely f R s0 s"
+  assumes pres: "\<And>N. \<lbrace>\<lambda>_ s. N (P s) \<and> E s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_ _ s. N (P s)\<rbrace>"
+  shows "E s \<Longrightarrow> P s = P (with_env_of s s')"
+  using use_valid_rg[where f=f, OF step pres[where N="\<lambda>p. p = P s"]] by simp
+
+lemma use_valid_rgE_norm:
+  "\<lbrakk>(tr, Result (Inr r', s')) \<in> rely f R s0 s; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>; P (with_env_of s s0) s\<rbrakk>
+   \<Longrightarrow> Q r' (with_env_of s (last_st_tr tr s0)) (with_env_of s s')"
+  unfolding valid_rgE_def valid_rg_def by force
+
+lemma use_valid_rgE_except:
+  "\<lbrakk>(tr, Result (Inl r', s')) \<in> rely f R s0 s; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>; P (with_env_of s s0) s\<rbrakk>
+   \<Longrightarrow> E r' (with_env_of s (last_st_tr tr s0)) (with_env_of s s')"
+  unfolding valid_rgE_def valid_rg_def by force
+
 lemma in_inv_by_rgD:
-  "\<lbrakk>\<And>P. f \<lbrace>R\<rbrace>,-,\<lbrace>P\<rbrace>; (tr, Result (rv, s')) \<in> rely f R s0 s\<rbrakk> \<Longrightarrow> s' = s"
+  "\<lbrakk>\<And>P. f \<lbrace>R\<rbrace>,-,\<lbrace>P\<rbrace>; (tr, Result (rv, s')) \<in> rely f R s0 s\<rbrakk> \<Longrightarrow> s' = mstate s"
   unfolding valid_rg_def
   apply (drule meta_spec[where x="\<lambda>_. (=) s"])
-  apply blast
+  apply force
   done
 
 lemma last_st_in_inv_by_rgD:
   "\<lbrakk>\<And>P. f \<lbrace>R\<rbrace>,-,\<lbrace>P\<rbrace>; (tr, Result (rv, s')) \<in> rely f R s0 s\<rbrakk> \<Longrightarrow> last_st_tr tr s0 = s0"
   unfolding valid_rg_def
-  apply (drule meta_spec[where x="\<lambda>s0' _. s0' = s0"])
-  apply blast
+  apply (drule meta_spec[where x="\<lambda>s0' _. mstate s0' = s0"])
+  apply fastforce
   done
 
 lemma trace_steps_rev_drop_nth:
@@ -492,21 +538,21 @@ next
 qed
 
 lemma valid_rg_GD_drop:
-  "\<lbrakk>\<lbrace>P\<rbrace>, \<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>, \<lbrace>Q\<rbrace>; P s0 s; (tr, res) \<in> f s;
-     rely_cond R s0 (drop n tr)\<rbrakk>
-   \<Longrightarrow> guar_cond G s0 (drop n tr)"
+  "\<lbrakk>\<lbrace>P\<rbrace>, \<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>, \<lbrace>Q\<rbrace>; P (with_env_of s s0) s; (tr, res) \<in> f s;
+     rely_cond R (env s) s0 (drop n tr)\<rbrakk>
+   \<Longrightarrow> guar_cond G (env s) s0 (drop n tr)"
   apply (drule prefix_closed_drop[where n=n], erule valid_rg_prefix_closed)
   apply (auto dest: valid_rg_GD)
   done
 
 lemma rely_cond_drop:
-  "rely_cond R s0 xs \<Longrightarrow> rely_cond R s0 (drop n xs)"
+  "rely_cond R c s0 xs \<Longrightarrow> rely_cond R c s0 (drop n xs)"
   using rely_cond_append[where xs="take n xs" and ys="drop n xs"]
-  by simp
+  by fastforce
 
 lemma rely_cond_is_drop:
-  "\<lbrakk>rely_cond R s0 xs; (ys = drop (length xs - length ys) xs)\<rbrakk>
-   \<Longrightarrow> rely_cond R s0 ys"
+  "\<lbrakk>rely_cond R c s0 xs; (ys = drop (length xs - length ys) xs)\<rbrakk>
+   \<Longrightarrow> rely_cond R c s0 ys"
   by (metis rely_cond_drop)
 
 lemma bounded_rev_nat_induct:
@@ -520,51 +566,57 @@ lemma drop_n_induct:
   by (induct len\<equiv>"length (drop n xs)" arbitrary: n xs; simp)
 
 lemma guar_cond_Cons_eq:
-  "guar_cond R s0 (x # xs)
-   = (guar_cond R s0 xs \<and> (fst x \<noteq> Env \<longrightarrow> R (last_st_tr xs s0) (snd x)))"
+  "guar_cond R c s0 (x # xs)
+   = (guar_cond R c s0 xs \<and>
+      (fst x \<noteq> Env \<longrightarrow> R (monad_state c (last_st_tr xs s0)) (monad_state c (snd x))))"
   by (cases "fst x"; simp add: guar_cond_def trace_steps_append conj_comms)
 
 lemma guar_cond_Cons:
-  "\<lbrakk>guar_cond R s0 xs; fst x \<noteq> Env \<longrightarrow> R (last_st_tr xs s0) (snd x)\<rbrakk>
-   \<Longrightarrow> guar_cond R s0 (x # xs)"
+  "\<lbrakk>guar_cond R c s0 xs;
+    fst x \<noteq> Env \<longrightarrow> R (monad_state c (last_st_tr xs s0)) (monad_state c (snd x))\<rbrakk>
+   \<Longrightarrow> guar_cond R c s0 (x # xs)"
   by (simp add: guar_cond_Cons_eq)
 
 lemma guar_cond_drop_Suc_eq:
   "n < length xs
-   \<Longrightarrow> guar_cond R s0 (drop n xs) = (guar_cond R s0 (drop (Suc n) xs)
-       \<and> (fst (xs ! n) \<noteq> Env \<longrightarrow> R (last_st_tr (drop (Suc n) xs) s0) (snd (xs ! n))))"
+   \<Longrightarrow> guar_cond R c s0 (drop n xs) = (guar_cond R c s0 (drop (Suc n) xs)
+       \<and> (fst (xs ! n) \<noteq> Env
+          \<longrightarrow> R (monad_state c (last_st_tr (drop (Suc n) xs) s0)) (monad_state c (snd (xs ! n)))))"
   apply (rule trans[OF _ guar_cond_Cons_eq])
   apply (simp add: Cons_nth_drop_Suc)
   done
 
 lemma guar_cond_drop_Suc:
-  "\<lbrakk>guar_cond R s0 (drop (Suc n) xs);
-    fst (xs ! n) \<noteq> Env \<longrightarrow> R (last_st_tr (drop (Suc n) xs) s0) (snd (xs ! n))\<rbrakk>
-   \<Longrightarrow> guar_cond R s0 (drop n xs)"
+  "\<lbrakk>guar_cond R c s0 (drop (Suc n) xs);
+    fst (xs ! n) \<noteq> Env
+    \<longrightarrow> R (monad_state c (last_st_tr (drop (Suc n) xs) s0)) (monad_state c (snd (xs ! n)))\<rbrakk>
+   \<Longrightarrow> guar_cond R c s0 (drop n xs)"
   by (cases "n < length xs"; simp add: guar_cond_drop_Suc_eq)
 
 lemma rely_cond_Cons_eq:
-  "rely_cond R s0 (x # xs)
-   = (rely_cond R s0 xs \<and> (fst x = Env \<longrightarrow> R (last_st_tr xs s0) (snd x)))"
+  "rely_cond R c s0 (x # xs)
+   = (rely_cond R c s0 xs \<and>
+      (fst x = Env \<longrightarrow> R (monad_state c (last_st_tr xs s0)) (monad_state c (snd x))))"
   by (simp add: rely_cond_def trace_steps_append conj_comms)
 
 lemma rely_cond_Cons:
-  "\<lbrakk>rely_cond R s0 xs; fst x = Env \<longrightarrow> R (last_st_tr xs s0) (snd x)\<rbrakk>
-   \<Longrightarrow> rely_cond R s0 (x # xs)"
+  "\<lbrakk>rely_cond R c s0 xs; fst x = Env \<longrightarrow> R (monad_state c (last_st_tr xs s0)) (monad_state c (snd x))\<rbrakk>
+   \<Longrightarrow> rely_cond R c s0 (x # xs)"
   by (simp add: rely_cond_Cons_eq)
 
 lemma rely_cond_drop_Suc_eq:
   "n < length xs
-   \<Longrightarrow> rely_cond R s0 (drop n xs) = (rely_cond R s0 (drop (Suc n) xs)
-       \<and> (fst (xs ! n) = Env \<longrightarrow> R (last_st_tr (drop (Suc n) xs) s0) (snd (xs ! n))))"
+   \<Longrightarrow> rely_cond R c s0 (drop n xs) = (rely_cond R c s0 (drop (Suc n) xs)
+       \<and> (fst (xs ! n) = Env
+          \<longrightarrow> R (monad_state c (last_st_tr (drop (Suc n) xs) s0)) (monad_state c (snd (xs ! n)))))"
   apply (rule trans[OF _ rely_cond_Cons_eq])
   apply (simp add: Cons_nth_drop_Suc)
   done
 
 lemma rely_cond_drop_Suc:
-  "\<lbrakk>rely_cond R s0 (drop (Suc n) xs);
-    fst (xs ! n) = Env \<longrightarrow> R (last_st_tr (drop (Suc n) xs) s0) (snd (xs ! n))\<rbrakk>
-   \<Longrightarrow> rely_cond R s0 (drop n xs)"
+  "\<lbrakk>rely_cond R c s0 (drop (Suc n) xs);
+    fst (xs ! n) = Env \<longrightarrow> R (monad_state c (last_st_tr (drop (Suc n) xs) s0)) (monad_state c (snd (xs ! n)))\<rbrakk>
+   \<Longrightarrow> rely_cond R c s0 (drop n xs)"
   by (cases "n < length xs"; simp add: rely_cond_drop_Suc_eq)
 
 lemma last_st_tr_map_zip_hd:
@@ -592,18 +644,18 @@ lemma last_st_tr_map_zip:
   done
 
 lemma parallel_rely_induct:
-  assumes preds: "(tr, v) \<in> parallel f g s" "Pf s0 s" "Pg s0 s"
+  assumes preds: "(tr, v) \<in> parallel f g s" "Pf (with_env_of s s0) s" "Pg (with_env_of s s0) s"
   and valid_rg: "\<lbrace>Pf\<rbrace>,\<lbrace>Rf\<rbrace> f' \<lbrace>Gf\<rbrace>,\<lbrace>Qf\<rbrace>"
      "\<lbrace>Pg\<rbrace>,\<lbrace>Rg\<rbrace> g' \<lbrace>Gg\<rbrace>,\<lbrace>Qg\<rbrace>"
      "f s \<subseteq> f' s" "g s \<subseteq> g' s"
   and compat: "R \<le> Rf" "R \<le> Rg" "Gf \<le> G" "Gg \<le> G" "Gf \<le> Rg" "Gg \<le> Rf"
-  and rely: "rely_cond R s0 (drop n tr)"
+  and rely: "rely_cond R (env s) s0 (drop n tr)"
   shows
     "\<exists>tr_f tr_g. (tr_f, v) \<in> f s \<and> (tr_g, v) \<in> g s
-       \<and> rely_cond Rf s0 (drop n tr_f) \<and> rely_cond Rg s0 (drop n tr_g)
+       \<and> rely_cond Rf (env s) s0 (drop n tr_f) \<and> rely_cond Rg (env s) s0 (drop n tr_g)
        \<and> map snd tr_f = map snd tr \<and> map snd tr_g = map snd tr
        \<and> (\<forall>i \<le> length tr. last_st_tr (drop i tr_g) s0 = last_st_tr (drop i tr_f) s0)
-       \<and> guar_cond G s0 (drop n tr)"
+       \<and> guar_cond G (env s) s0 (drop n tr)"
   (is "\<exists>ys zs. _ \<and> _ \<and> ?concl ys zs")
 proof -
   obtain ys zs where tr: "tr = map parallel_mrg (zip ys zs)"
@@ -648,7 +700,7 @@ qed
 
 lemmas parallel_rely_induct0 = parallel_rely_induct[where n=0, simplified]
 
-lemma parallel_valid_rg:
+lemma rg_valid_rg:
   assumes valid_rg: "\<lbrace>Pf\<rbrace>,\<lbrace>Rf\<rbrace> f \<lbrace>Gf\<rbrace>,\<lbrace>Qf\<rbrace>"
      "\<lbrace>Pg\<rbrace>,\<lbrace>Rg\<rbrace> g \<lbrace>Gg\<rbrace>,\<lbrace>Qg\<rbrace>"
   and compat: "R \<le> Rf" "R \<le> Rg" "Gf \<le> G" "Gg \<le> G" "Gf \<le> Rg" "Gg \<le> Rf"
@@ -662,7 +714,7 @@ lemma parallel_valid_rg:
   done
 
 lemma rely_prim[simp]:
-  "rely (\<lambda>s. insert (v s) (f s)) R s0 = (\<lambda>s. {x. x = v s \<and> rely_cond R s0 (fst x)} \<union> (rely f R s0 s))"
+  "rely (\<lambda>s. insert (v s) (f s)) R s0 = (\<lambda>s. {x. x = v s \<and> rely_cond R (env s) s0 (fst x)} \<union> (rely f R s0 s))"
   "rely (\<lambda>s. {}) R s0 = (\<lambda>_. {})"
   "rely (\<lambda>s. (f s) \<union> (g s)) R s0 = (\<lambda>s. (rely f R s0 s) \<union> (rely g R s0 s))"
   "rely (\<lambda>s. if C s then f s else g s) R s0 = (\<lambda>s. if C s then rely f R s0 s else rely g R s0 s)"
@@ -670,7 +722,7 @@ lemma rely_prim[simp]:
 
 lemma put_trace_eq_drop:
   "put_trace xs s
-   = ((\<lambda>n. (drop n xs, if n = 0 then Result ((), s) else Incomplete)) ` {.. length xs})"
+   = ((\<lambda>n. (drop n xs, if n = 0 then Result ((), mstate s) else Incomplete)) ` {.. length xs})"
   apply (induct xs)
    apply (clarsimp simp: return_def)
   apply (clarsimp simp: put_trace_elem_def bind_def)
@@ -685,14 +737,14 @@ lemma put_trace_eq_drop:
 lemma put_trace_res:
   "(tr, res) \<in> put_trace xs s
    \<Longrightarrow> \<exists>n. tr = drop n xs \<and> n \<le> length xs
-         \<and> res = (case n of 0 \<Rightarrow> Result ((), s) | _ \<Rightarrow> Incomplete)"
+         \<and> res = (case n of 0 \<Rightarrow> Result ((), mstate s) | _ \<Rightarrow> Incomplete)"
   apply (clarsimp simp: put_trace_eq_drop)
   apply (auto simp: gr0_conv_Suc intro: exI[where x=0])
   done
 
 lemma put_trace_twp[wp]:
-  "\<lbrace>\<lambda>s0 s. (\<forall>n. rely_cond R s0 (drop n xs) \<longrightarrow> guar_cond G s0 (drop n xs))
-     \<and> (rely_cond R s0 xs \<longrightarrow> Q () (last_st_tr xs s0) s)\<rbrace>,\<lbrace>R\<rbrace>
+  "\<lbrace>\<lambda>s0 s. (\<forall>n. rely_cond R (env s) (mstate s0) (drop n xs) \<longrightarrow> guar_cond G (env s) (mstate s0) (drop n xs))
+     \<and> (rely_cond R (env s) (mstate s0) xs \<longrightarrow> Q () (with_env_of s (last_st_tr xs (mstate s0))) s)\<rbrace>,\<lbrace>R\<rbrace>
    put_trace xs
    \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   apply (clarsimp simp: valid_rg_def rely_def)
@@ -703,7 +755,8 @@ lemma put_trace_twp[wp]:
 lemmas put_trace_elem_twp = put_trace_twp[where xs="[x]" for x, simplified]
 
 lemma rely_cond_rtranclp:
-  "rely_cond R s (map (Pair Env) xs) \<Longrightarrow> rtranclp R s (last_st_tr (map (Pair Env) xs) s)"
+  "rely_cond R c s (map (Pair Env) xs)
+   \<Longrightarrow> rtranclp R (monad_state c s) (monad_state c (last_st_tr (map (Pair Env) xs) s))"
   apply (induct xs arbitrary: s rule: rev_induct)
    apply simp
   apply (clarsimp simp add: rely_cond_def)
@@ -758,7 +811,7 @@ lemma rg_assume_preE:
 
 lemma rg_allI:
   "(\<And>x. \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q x\<rbrace>) \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. \<forall>x. Q x rv s0 s\<rbrace>"
-  by (simp add: valid_rg_def)
+  by (simp add: valid_rg_def) blast
 
 lemma valid_rgE_allI:
   "(\<And>x. \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>r s. Q x r s\<rbrace>,\<lbrace>E\<rbrace>) \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. \<forall>x. Q x rv s0 s\<rbrace>,\<lbrace>E\<rbrace>"
@@ -770,7 +823,7 @@ lemma rg_exI:
 
 lemma rg_impI:
   "P' \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. P' \<longrightarrow> Q rv s0 s\<rbrace>"
-  by (simp add: valid_rg_def)
+  by (simp add: valid_rg_def) blast
 
 lemma valid_rgE_impI:
   "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>,\<lbrace>E\<rbrace>; P' \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>\<rbrakk> \<Longrightarrow>
@@ -790,7 +843,7 @@ lemma rg_case_option_wp2:
 (* Might be useful for forward reasoning, when P is known. *)
 lemma rg_when_cases:
   "\<lbrakk>\<And>s0 s. \<lbrakk>\<not>B; P s0 s\<rbrakk> \<Longrightarrow> Q s0 s; B \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> when B f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>"
-  by (cases B; simp add: valid_rg_def prefix_closed_def return_def)
+  by (cases B; clarsimp simp: valid_rg_def prefix_closed_def return_def)
 
 lemma rg_vcg_prop:
   "prefix_closed f \<Longrightarrow> \<lbrace>\<lambda>s0 s. P\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. P\<rbrace>"
@@ -934,8 +987,8 @@ lemma rg_vcg_conj_liftE_weaker:
   assumes "\<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>,\<lbrace>E\<rbrace>"
   shows "\<lbrace>\<lambda>s0 s. P s0 s \<and> P' s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q rv s0 s \<and> Q' rv s0 s\<rbrace>,\<lbrace>E\<rbrace>"
   apply (rule rg_pre)
-    apply (fastforce intro: assms rg_vcg_conj_liftE1 rg_post_impE)
-   apply simp+
+   apply (fastforce intro: assms rg_vcg_conj_liftE1 rg_post_impE)
+  apply simp+
   done
 
 lemma rg_vcg_disj_lift:
@@ -1017,7 +1070,8 @@ lemma rg_vcg_imp_liftE_E':
   by (wpsimp wp: rg_vcg_imp_liftE_E)
 
 lemma rg_vcg_imp_conj_lift[wp_comb]:
-  "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q rv s0 s \<longrightarrow> Q' rv s0 s\<rbrace>; \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. (Q rv s0 s \<longrightarrow> Q'' rv s0 s) \<and> Q''' rv s0 s\<rbrace>\<rbrakk>
+  "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q rv s0 s \<longrightarrow> Q' rv s0 s\<rbrace>;
+    \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. (Q rv s0 s \<longrightarrow> Q'' rv s0 s) \<and> Q''' rv s0 s\<rbrace>\<rbrakk>
    \<Longrightarrow> \<lbrace>P and P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. (Q rv s0 s \<longrightarrow> Q' rv s0 s \<and> Q'' rv s0 s) \<and> Q''' rv s0 s\<rbrace>"
   by (auto simp: valid_rg_def)
 
@@ -1057,9 +1111,9 @@ lemma rg_vcg_const_imp_liftE_R:
 
 (*FIXME MC: not clear whether we want these _T variants, and if we do whether they should be in the
           wp set along with the above rules*)
-lemmas rg_vcg_const_imp_lift_T = rg_vcg_const_imp_lift[where G="\<top>\<top>" and P''="\<top>\<top>", simplified]
-lemmas rg_vcg_const_imp_liftE_E_T = rg_vcg_const_imp_liftE_E[where G="\<top>\<top>" and P''="\<top>\<top>", simplified]
-lemmas rg_vcg_const_imp_liftE_R_T = rg_vcg_const_imp_liftE_R[where G="\<top>\<top>" and P''="\<top>\<top>", simplified]
+lemmas rg_vcg_const_imp_lift_T = rg_vcg_const_imp_lift[where G="\<top>\<top>" and P''="\<top>\<top>", simplified rg_TrueI, simplified]
+lemmas rg_vcg_const_imp_liftE_E_T = rg_vcg_const_imp_liftE_E[where G="\<top>\<top>" and P''="\<top>\<top>", simplified rg_TrueI, simplified]
+lemmas rg_vcg_const_imp_liftE_R_T = rg_vcg_const_imp_liftE_R[where G="\<top>\<top>" and P''="\<top>\<top>", simplified rg_TrueI, simplified]
 
 lemma rg_weak_lift_imp:
   "\<lbrakk>\<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>Q\<rbrace>; \<lbrace>P''\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<top>\<top>\<top>\<rbrace>\<rbrakk>
@@ -1080,9 +1134,9 @@ lemma rg_weak_lift_impE_R:
   by (rule rg_strengthen_post)
      (fastforce intro!: rg_weak_lift_imp split: sum.splits)+
 
-lemmas rg_weak_lift_imp_T = rg_weak_lift_imp[where G="\<top>\<top>" and P''="\<top>\<top>", simplified]
-lemmas rg_weak_lift_impE_T = rg_weak_lift_impE[where G="\<top>\<top>" and P''="\<top>\<top>", simplified]
-lemmas rg_weak_lift_impE_R_T = rg_weak_lift_impE_R[where G="\<top>\<top>" and P''="\<top>\<top>", simplified]
+lemmas rg_weak_lift_imp_T = rg_weak_lift_imp[where G="\<top>\<top>" and P''="\<top>\<top>", simplified rg_TrueI, simplified]
+lemmas rg_weak_lift_impE_T = rg_weak_lift_impE[where G="\<top>\<top>" and P''="\<top>\<top>", simplified rg_TrueI, simplified]
+lemmas rg_weak_lift_impE_R_T = rg_weak_lift_impE_R[where G="\<top>\<top>" and P''="\<top>\<top>", simplified rg_TrueI, simplified]
 
 lemma rg_vcg_ex_lift:
   "\<lbrakk>\<And>x. \<lbrace>P x\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q x\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s0 s. \<exists>x. P x s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. \<exists>x. Q x rv s0 s\<rbrace>"
@@ -1109,8 +1163,9 @@ lemma rg_liftP_ext:
   apply (rule conjI, clarsimp simp: rely_def, erule (2) valid_rg_GD[OF assms])
   apply clarsimp
   apply (erule subst2[rotated 2, where P=P])
+   apply clarsimp
    apply (drule use_valid_rg, rule assms, rule refl)
-   apply simp
+   apply fastforce
   apply (rule ext)
   apply (drule use_valid_rg, rule assms, rule refl)
   apply simp
@@ -1149,6 +1204,25 @@ lemma rg_vcg_split_lift[wp]:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f x y \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> case (x, y) of (a, b) \<Rightarrow> f a b \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   by simp
 
+(* unfortunately not good wp rule -- unsafe when you need to collect context by digging into f *)
+lemma rg_vcg_const_lift:
+  "prefix_closed f \<Longrightarrow> f \<lbrace>R\<rbrace>,-,\<lbrace>\<lambda>_ s. P (env s)\<rbrace>"
+  unfolding valid_rg_def
+  by clarsimp
+
+lemma rg_vcg_const_liftE:
+  "prefix_closed f \<Longrightarrow> \<lbrace>\<lambda>_ s. Q (env s) \<and> E (env s)\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>_ _ s. Q (env s)\<rbrace>, \<lbrace>\<lambda>_ _ s. E (env s)\<rbrace>"
+  unfolding valid_rgE_def valid_rg_def
+  by (simp split: sum.splits)
+
+lemmas rg_vcg_const_liftE_R = rg_vcg_const_liftE[where Q=\<top> and E=P for P, simplified]
+
+lemmas rg_vcg_const_liftE_E = rg_vcg_const_liftE[where E=\<top> and Q=P for P, simplified]
+
+(* not wp, see comment for rg_vcg_const_lift *)
+lemmas rg_vcg_const_lifts =
+  rg_vcg_const_lift rg_vcg_const_liftE rg_vcg_const_liftE_R rg_vcg_const_liftE_E
+
 named_theorems rg_vcg_op_lift
 lemmas [rg_vcg_op_lift] =
   rg_vcg_const_imp_lift
@@ -1176,13 +1250,20 @@ lemmas [rg_vcg_op_lift] =
 
 subsection \<open>Weakest Precondition Rules\<close>
 
+lemma valid_rg_valid_no_trace_eq':
+  "no_trace f \<Longrightarrow> (\<And>s0. \<lbrace>\<lambda>s. P s0 s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s0 s\<rbrace>) \<Longrightarrow>
+   \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  apply (clarsimp simp: rely_def valid_rg_def valid_def mres_def no_trace_prefix_closed)
+  apply (fastforce simp: eq_snd_iff dest: no_trace_emp)
+  done
+
 lemma valid_valid_rg_wp:
-  "\<lbrakk>no_trace f; \<And>s0. \<lbrace>P s0\<rbrace> f \<lbrace>\<lambda>v. Q v s0 \<rbrace>\<rbrakk>
+  "\<lbrakk>no_trace f; \<And>s0. \<lbrace>\<lambda>s. P s0 s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s0 s\<rbrace>\<rbrakk>
    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  by (clarsimp simp: valid_rg_valid_no_trace_eq)
+  by (clarsimp simp: valid_rg_valid_no_trace_eq')
 
 lemma validE_valid_rgE_wp:
-  "\<lbrakk>no_trace f; \<And>s0. \<lbrace>P s0\<rbrace> f \<lbrace>\<lambda>v. Q v s0 \<rbrace>,\<lbrace>\<lambda>v. E v s0\<rbrace>\<rbrakk>
+  "\<lbrakk>no_trace f; \<And>s0. \<lbrace>\<lambda>s. P (with_env_of s s0) s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv (with_env_of s s0) s\<rbrace>,\<lbrace>\<lambda>rv s. E rv (with_env_of s s0) s\<rbrace>\<rbrakk>
    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   by (clarsimp simp: valid_rgE_validE_no_trace_eq)
 
@@ -1197,24 +1278,53 @@ lemma liftE_twp:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> liftE f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   by simp
 
+(*FIXME MC: this might not be necessary if with_env_of was a definition instead of an abbrevation*)
+lemma with_env_of_rewrite:
+  "F x (with_env_of s s0) (with_env_of s s') = F x (with_env_of (with_env_of s s') s0) (with_env_of s s')"
+  by clarsimp
+
 lemma catch_twp:
   "\<lbrakk> \<And>x. \<lbrace>E x\<rbrace>,\<lbrace>R\<rbrace> handler x \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk>
    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> catch f handler \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  unfolding valid_rg_def valid_rgE_def
-  apply (rule conjI, clarsimp)
+  apply (subst valid_rg_def)
+  apply (rule conjI, fastforce)
   unfolding catch_def return_def rely_def bind_def
-  apply (fastforce simp: rely_cond_append guar_cond_append
-                 split: sum.splits tmres.splits)
+  apply clarsimp
+  apply (clarsimp simp: rely_cond_append guar_cond_append
+                 split: sum.split_asm tmres.split_asm)
+     apply (drule (3) valid_rgE_D, clarsimp)
+    apply (drule (3) valid_rgE_D, clarsimp)
+   apply (drule (3) valid_rgE_D)
+   apply (clarsimp split: sum.splits)
+   apply (clarsimp simp: with_env_of_rewrite simp del: select_convs(1))
+   apply (drule_tac x=x1 in meta_spec)
+   apply (drule (2) valid_rg_D)
+    apply simp
+   apply fastforce
+  apply (drule (3) valid_rgE_D)
+  apply clarsimp
   done
 
 lemma handleE'_twp:
   "\<lbrakk> \<And>x. \<lbrace>F x\<rbrace>,\<lbrace>R\<rbrace> handler x \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>F\<rbrace> \<rbrakk>
    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f <handle2> handler \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  unfolding valid_rg_def valid_rgE_def
-  apply (rule conjI, clarsimp)
+  apply (subst valid_rgE_def2)
+  apply (rule conjI, fastforce)
   unfolding handleE'_def return_def rely_def bind_def
-  apply (fastforce simp: rely_cond_append guar_cond_append
-                 split: sum.splits tmres.splits)
+  apply clarsimp
+  apply (clarsimp simp: rely_cond_append guar_cond_append
+                 split: sum.split_asm tmres.split_asm)
+     apply (drule (3) valid_rgE_D, clarsimp)
+    apply (drule (3) valid_rgE_D, clarsimp)
+   apply (drule (3) valid_rgE_D)
+   apply (clarsimp split: sum.splits)
+   apply (clarsimp simp: with_env_of_rewrite simp del: select_convs(1))
+   apply (drule_tac x=x1 in meta_spec)
+   apply (drule (2) valid_rgE_D)
+    apply simp
+   apply fastforce
+  apply (drule (3) valid_rgE_D)
+  apply clarsimp
   done
 
 lemma handleE_twp:
@@ -1353,16 +1463,22 @@ lemma select_throwError_twp:
 
 (*FIXME MC: explore adding a rely_preserves definition for the first part of this precondition*)
 lemma env_steps_twp[wp]:
-  "\<lbrace>\<lambda>s0 s. (\<forall>s'. R\<^sup>*\<^sup>* s0 s' \<longrightarrow> Q () s' s') \<and> Q () s0 s\<rbrace>,\<lbrace>R\<rbrace> env_steps \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  "\<lbrace>\<lambda>s0 s. (\<forall>s'. env s' = env s \<and> R\<^sup>*\<^sup>* s0 s' \<longrightarrow> Q () s' s') \<and> Q () s0 s\<rbrace>,\<lbrace>R\<rbrace>
+   env_steps
+   \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  apply (rule valid_rg_pre_add_env_s0)
   apply (simp add: env_steps_def)
   apply wp
   apply (clarsimp simp: guar_cond_def trace_steps_rev_drop_nth rev_nth)
   apply (drule rely_cond_rtranclp)
-  apply (clarsimp simp add: last_st_tr_def hd_append)
+  apply (auto simp: last_st_tr_def hd_append)
   done
 
 lemma interference_twp[wp]:
-  "\<lbrace>\<lambda>s0 s. (\<forall>s'. R\<^sup>*\<^sup>* s s' \<longrightarrow> Q () s' s') \<and> G s0 s\<rbrace>,\<lbrace>R\<rbrace> interference \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  "\<lbrace>\<lambda>s0 s. (\<forall>s'. env s' = env s \<and> R\<^sup>*\<^sup>* s s' \<longrightarrow> Q () s' s') \<and> G s0 s\<rbrace>,\<lbrace>R\<rbrace>
+   interference
+   \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  apply (rule valid_rg_pre_add_env_s0)
   apply (simp add: interference_def commit_step_def del: put_trace.simps)
   apply wp
   apply clarsimp
@@ -1374,7 +1490,10 @@ lemma interference_twp[wp]:
    revisit this if we find a use for await when this isn't the
    case *)
 lemma await_sync_twp:
-  "\<lbrace>\<lambda>s0 s. s = s0 \<and> (\<forall>x. R\<^sup>*\<^sup>* s0 x \<and> c x \<longrightarrow> Q () x x)\<rbrace>,\<lbrace>R\<rbrace> await c \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  "\<lbrace>\<lambda>s0 s. s = s0 \<and>
+           (\<forall>s'. env s' = env s \<and> R\<^sup>*\<^sup>* s0 s' \<and> c s' \<longrightarrow> Q () s' s')\<rbrace>,\<lbrace>R\<rbrace>
+   await c
+   \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   apply (simp add: await_def split_def)
   apply wp
   apply clarsimp
@@ -1390,22 +1509,22 @@ subsection \<open>Setting up the @{method wp} method\<close>
    It doesn't work. It seems that wp_comb rules cannot take more than 1 assumption *)
 lemma valid_rg_is_triple:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>
-   = triple_judgement (\<lambda>(s0,s). prefix_closed f \<longrightarrow> P s0 s) f
+   = triple_judgement (\<lambda>(s0,s). prefix_closed f \<longrightarrow> P (with_env_of s s0) s) f
                       (\<lambda>(s0,s) f. prefix_closed f \<and> (\<forall>tr res. (tr, res) \<in> rely f R s0 s
-                          \<longrightarrow> guar_cond G s0 tr
-                              \<and> (\<forall>rv s'. res = Result (rv, s') \<longrightarrow> Q rv (last_st_tr tr s0) s')))"
-  apply (simp add: triple_judgement_def valid_rg_def )
+                          \<longrightarrow> guar_cond G (env s) s0 tr
+                              \<and> (\<forall>rv s'. res = Result (rv, s') \<longrightarrow> Q rv (with_env_of s (last_st_tr tr s0)) (with_env_of s s'))))"
+  apply (simp add: triple_judgement_def valid_rg_def)
   apply (cases "prefix_closed f"; fastforce)
   done
 
 lemma valid_rgE_is_triple:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>
-   = triple_judgement (\<lambda>(s0,s). prefix_closed f \<longrightarrow> P s0 s) f
+   = triple_judgement (\<lambda>(s0,s). prefix_closed f \<longrightarrow> P (with_env_of s s0) s) f
                       (\<lambda>(s0,s) f. prefix_closed f \<and> (\<forall>tr res. (tr, res) \<in> rely f R s0 s
-                          \<longrightarrow> guar_cond G s0 tr
+                          \<longrightarrow> guar_cond G (env s) s0 tr
                               \<and> (\<forall>rv s'. res = Result (rv, s')
-                                   \<longrightarrow> (case rv of Inr b \<Rightarrow> Q b (last_st_tr tr s0) s'
-                                                 | Inl a \<Rightarrow> E a (last_st_tr tr s0) s'))))"
+                                   \<longrightarrow> (case rv of Inr b \<Rightarrow> Q b (with_env_of s (last_st_tr tr s0)) (with_env_of s s')
+                                                 | Inl a \<Rightarrow> E a (with_env_of s (last_st_tr tr s0)) (with_env_of s s')))))"
   by (fastforce simp: valid_rgE_def2 triple_judgement_def)
 
 lemmas rg_wp_combs = rg_vcg_conj_lift
@@ -1581,12 +1700,12 @@ lemma rg_use_eq:
 lemma rg_valid_rgE_pred_conj:
   "\<lbrakk> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q and Q'\<rbrace>,\<lbrace>E\<rbrace>"
   unfolding valid_rg_def valid_rgE_def
-  by (simp split: sum.splits)
+  by (fastforce split: sum.splits)
 
 lemma rg_valid_rgE_conj:
   "\<lbrakk> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q rv s0 s \<and> Q' rv s0 s\<rbrace>,\<lbrace>E\<rbrace>"
   unfolding valid_rg_def valid_rgE_def
-  by (simp split: sum.splits)
+  by (fastforce split: sum.splits)
 
 lemma rg_drop_imp:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q' rv s0 s \<longrightarrow> Q rv s0 s\<rbrace>"
@@ -1596,7 +1715,7 @@ lemma rg_drop_impE:
   "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q' rv s0 s \<longrightarrow> Q rv s0 s\<rbrace>, \<lbrace>E\<rbrace>"
   by (simp add: rg_chainE)
 
-(*Q is used instead of E so that hoare_drop_imps can be instantiated, which requires that all of its
+(*Q is used instead of E so that rg_drop_imps can be instantiated, which requires that all of its
   thms have the same variables.*)
 lemma rg_drop_impE_E:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q''\<rbrace>,\<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q''\<rbrace>, \<lbrace>\<lambda>rv s0 s. Q' rv s0 s \<longrightarrow> Q rv s0 s\<rbrace>"
@@ -1661,7 +1780,7 @@ lemma get_tsp:
   by (simp add: get_def valid_rg_def prefix_closed_def)
 
 lemma put_tsp:
-  "\<lbrace>\<top>\<top>\<rbrace>,\<lbrace>R\<rbrace> put a \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_ s0 s. s = a\<rbrace>"
+  "\<lbrace>\<top>\<top>\<rbrace>,\<lbrace>R\<rbrace> put a \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_ s0 s. mstate s = mstate a\<rbrace>"
   by (simp add: put_def valid_rg_def prefix_closed_def)
 
 lemma return_tsp:
@@ -1775,9 +1894,11 @@ lemma UN_If_distrib:
    = ((\<Union>x \<in> S \<inter> {x. P x}. A x) \<union> (\<Union>x \<in> S \<inter> {x. \<not> P x}. B x))"
   by (fastforce split: if_split_asm)
 
+
 lemma await_redef:
   "await P = do
-     s1 \<leftarrow> select {s. P s};
+     s0 \<leftarrow> get;
+     s1 \<leftarrow> select {s. P (with_env_of s0 s)};
      env_steps;
      s \<leftarrow> get;
      select (if P s then {()} else {})
@@ -1787,7 +1908,7 @@ lemma await_redef:
    apply (simp add: select_def bind_def get_def)
   apply (rule ext)
   apply (simp add: exec_get select_bind_UN put_then_get_then)
-  apply (simp add: bind_promote_If2 if_distribR if_distrib[where f=select])
+  apply (simp add: ask_early exec_ask bind_promote_If2 if_distribR if_distrib[where f=select])
   apply (simp add: exec_put_trace cong: if_cong)
   apply (simp add: put_def bind_def select_def cong: if_cong)
   apply (strengthen equalityI)
@@ -1809,16 +1930,16 @@ lemma valid_rg_invariant_imp:
     and G: "\<forall>s0 s. I s0 \<longrightarrow> G s0 s \<longrightarrow> I s"
   shows "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>\<lambda>s0 s. I s0 \<and> I s \<and> G s0 s\<rbrace>,\<lbrace>\<lambda>rv s0 s. I s0 \<and> Q rv s0 s\<rbrace>"
 proof -
-  { fix tr s0 i
-    assume r: "rely_cond R s0 tr" and g: "guar_cond G s0 tr"
-      and I: "I s0"
-    hence imp: "\<forall>(_, s, s') \<in> trace_steps (rev tr) s0. I s \<longrightarrow> I s'"
+  { fix tr s0 i c
+    assume r: "rely_cond R c s0 tr" and g: "guar_cond G c s0 tr"
+      and I: "I (monad_state c s0)"
+    hence imp: "\<forall>(_, s, s') \<in> trace_steps (rev tr) s0. I (monad_state c s) \<longrightarrow> I (monad_state c s')"
       apply (clarsimp simp: guar_cond_def rely_cond_def)
       apply (drule(1) bspec)+
       apply (clarsimp simp: eq_Me_neq_Env)
       apply (metis R G)
       done
-    hence "i < length tr \<longrightarrow> I (snd (rev tr ! i))"
+    hence "i < length tr \<longrightarrow> I (monad_state c (snd (rev tr ! i)))"
       using I
       apply (induct i)
        apply (clarsimp simp: neq_Nil_conv[where xs="rev tr" for tr, simplified])
@@ -1851,11 +1972,11 @@ lemma valid_rg_guar_post_conj_lift:
 
 lemma valid_rg_valid_wp:
   "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>\<top>\<top>\<rbrace> f -,\<lbrace>\<lambda>rv _ s. Q rv s\<rbrace>\<rbrakk>
-   \<Longrightarrow> \<lbrace>P s0\<rbrace> f \<lbrace>Q\<rbrace>"
+   \<Longrightarrow> \<lbrace>\<lambda>s. P (with_env_of s s0) s\<rbrace> f \<lbrace>Q\<rbrace>"
   by (auto simp: rely_def valid_rg_def valid_def mres_def)
 
 lemma valid_rg_triv_valid_eq:
-  "prefix_closed f \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>\<top>\<top>\<rbrace> f -,\<lbrace>\<lambda>rv _ s. Q rv s\<rbrace> = (\<forall>s0. \<lbrace>\<lambda>s. P s0 s\<rbrace> f \<lbrace>Q\<rbrace>)"
+  "prefix_closed f \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>\<top>\<top>\<rbrace> f -,\<lbrace>\<lambda>rv _ s. Q rv s\<rbrace> = (\<forall>s0. \<lbrace>\<lambda>s. P (with_env_of s s0) s\<rbrace> f \<lbrace>Q\<rbrace>)"
   by (fastforce simp: rely_def valid_rg_def valid_def mres_def image_def)
 
 end

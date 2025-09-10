@@ -301,7 +301,7 @@ lemma shrinks_proof:
   by (metis use_valid w z)
 
 lemma use_validE_R:
-  "\<lbrakk> (Inr r, s') \<in> mres (f s); \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-; P s \<rbrakk> \<Longrightarrow> Q r s'"
+  "\<lbrakk> (Inr r, s') \<in> mres (f s); \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-; P s \<rbrakk> \<Longrightarrow> Q r (with_env_of s s')"
   unfolding validE_R_def validE_def
   by (frule(2) use_valid, simp)
 
@@ -341,8 +341,8 @@ lemma gets_the_inv: "\<lbrace>P\<rbrace> gets_the V \<lbrace>\<lambda>rv. P\<rbr
 
 lemmas state_unchanged = in_inv_by_hoareD [THEN sym]
 
-lemma validI:
-  assumes rl: "\<And>s r s'. \<lbrakk> P s; (r, s') \<in> mres (S s) \<rbrakk> \<Longrightarrow> Q r s'"
+lemma valid_rg:
+  assumes rl: "\<And>s r s'. \<lbrakk> P s; (r, s') \<in> mres (S s) \<rbrakk> \<Longrightarrow> Q r (with_env_of s s')"
   shows "\<lbrace>P\<rbrace> S \<lbrace>Q\<rbrace>"
   unfolding valid_def using rl by safe
 
@@ -464,7 +464,7 @@ lemma hoare_conj_lift_inv:
 
 lemma hoare_in_monad_post:
   assumes x: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>x. P\<rbrace>"
-  shows      "\<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>rv s. (rv, s) \<in> mres (f s)\<rbrace>"
+  shows      "\<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>rv s. (rv, mstate s) \<in> mres (f s)\<rbrace>"
   apply (clarsimp simp: valid_def)
   apply (rule back_subst[where P="\<lambda>s. x\<in>mres (f s)" for x], assumption)
   apply (simp add: state_unchanged[OF x])
@@ -551,12 +551,12 @@ lemma hoare_walk_assmsE:
   done
 
 lemma univ_wp:
-  "\<lbrace>\<lambda>s. \<forall>(rv, s') \<in> mres (f s). Q rv s'\<rbrace> f \<lbrace>Q\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>(rv, s') \<in> mres (f s). Q rv (with_env_of s s')\<rbrace> f \<lbrace>Q\<rbrace>"
   by (simp add: valid_def)
 
 lemma univ_get_wp:
   assumes x: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. P\<rbrace>"
-  shows "\<lbrace>\<lambda>s. \<forall>(rv, s') \<in> mres (f s). s = s' \<longrightarrow> Q rv s'\<rbrace> f \<lbrace>Q\<rbrace>"
+  shows "\<lbrace>\<lambda>s. \<forall>(rv, s') \<in> mres (f s). mstate s = s' \<longrightarrow> Q rv (with_env_of s s')\<rbrace> f \<lbrace>Q\<rbrace>"
   apply (rule hoare_pre_imp[OF _ univ_wp])
   apply clarsimp
   apply (drule bspec, assumption, simp)
@@ -567,21 +567,21 @@ lemma univ_get_wp:
 
 lemma other_hoare_in_monad_post:
   assumes x: "\<And>P. \<lbrace>P\<rbrace> fn \<lbrace>\<lambda>rv. P\<rbrace>"
-  shows "\<lbrace>\<lambda>s. \<forall>(v, s) \<in> mres (fn s). F v = v\<rbrace> fn \<lbrace>\<lambda>v s'. (F v, s') \<in> mres (fn s')\<rbrace>"
-  proof -
-  have P: "\<And>v s. (F v = v) \<and> (v, s) \<in> mres (fn s) \<Longrightarrow> (F v, s) \<in> mres (fn s)"
+  shows "\<lbrace>\<lambda>s. \<forall>(v, s) \<in> mres (fn s). F v = v\<rbrace> fn \<lbrace>\<lambda>v s'. (F v, mstate s') \<in> mres (fn s')\<rbrace>"
+proof -
+  have P: "\<And>v s. (F v = v) \<and> (v, mstate s) \<in> mres (fn s) \<Longrightarrow> (F v, mstate s) \<in> mres (fn s)"
     by simp
   show ?thesis
-  apply (rule hoare_post_imp [OF P], assumption)
-  apply (rule hoare_pre_imp)
-  defer
-   apply (rule hoare_vcg_conj_lift)
-    apply (rule univ_get_wp [OF x])
-   apply (rule hoare_in_monad_post [OF x])
-  apply clarsimp
-  apply (drule bspec, assumption, simp)
-  done
-  qed
+    apply (rule hoare_post_imp [OF P], assumption)
+    apply (rule hoare_pre_imp)
+     defer
+     apply (rule hoare_vcg_conj_lift)
+      apply (rule univ_get_wp [OF x])
+     apply (rule hoare_in_monad_post [OF x])
+    apply clarsimp
+    apply (drule bspec, assumption, simp)
+    done
+qed
 
 lemma weak_if_wp:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace> \<rbrakk> \<Longrightarrow>
@@ -594,15 +594,14 @@ lemma weak_if_wp':
   by (auto simp add: valid_def split_def)
 
 lemma bindE_split_recursive_asm:
-  assumes x: "\<And>x s'. \<lbrakk> (Inr x, s') \<in> mres (f s) \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. Q' x s \<and> s = s'\<rbrace> g x \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+  assumes x: "\<And>x s'. \<lbrakk> (Inr x, s') \<in> mres (f s) \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. Q' x s \<and> mstate s = s'\<rbrace> g x \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   shows      "\<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>, \<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>st. P st \<and> st = s\<rbrace> f >>=E g \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   apply (clarsimp simp: validE_def valid_def bindE_def in_bind lift_def)
   apply (erule allE, erule(1) impE)
   apply (drule(1) bspec, simp)
   apply (clarsimp simp: in_throwError split: sum.splits)
   apply (drule x)
-  apply (clarsimp simp: validE_def valid_def)
-  apply (drule(1) bspec, simp split: sum.splits)
+  apply (fastforce simp: validE_def valid_def)
   done
 
 lemma validE_R_abstract_rv:
