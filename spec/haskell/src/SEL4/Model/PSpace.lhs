@@ -136,7 +136,6 @@ requested type.
 >         map <- gets $ psMap . ksPSpace
 >         let (before, after) = lookupAround2 (fromPPtr ptr) map
 >         (ptr', val) <- maybeToMonad before
->         ksCurDomain <- gets ksCurDomain
 >         loadObject (fromPPtr ptr) ptr' after val
 
 > setObject :: PSpaceStorable a => PPtr a -> a -> Kernel ()
@@ -145,7 +144,6 @@ requested type.
 >         let map = psMap ps
 >         let (before, after) = lookupAround2 (fromPPtr ptr) map
 >         (ptr', obj) <- maybeToMonad before
->         ksCurDomain <- gets ksCurDomain
 >         obj' <- updateObject val obj (fromPPtr ptr) ptr' after
 >         let map' = Data.Map.insert ptr' obj' map
 >         let ps' = ps { psMap = map' }

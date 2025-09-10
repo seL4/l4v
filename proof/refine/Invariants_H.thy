@@ -1552,7 +1552,7 @@ lemma in_alignCheck[simp]:
           cong: conj_cong)
 
 lemma cte_wp_at'_pspaceI:
-  "\<lbrakk>cte_wp_at' P p s; ksPSpace s = ksPSpace s'; ksCurDomain s = ksCurDomain s'\<rbrakk> \<Longrightarrow> cte_wp_at' P p s'"
+  "\<lbrakk>cte_wp_at' P p s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> cte_wp_at' P p s'"
   supply in_alignCheck[simp del]
   apply (clarsimp simp add: cte_wp_at'_def getObject_def)
   apply (drule equalityD2)
@@ -1611,7 +1611,7 @@ lemma (in Invariants_H_pspaceI) valid_pspace':
            intro: valid_obj'_pspaceI valid_mdb'_pspaceI pspace_in_kernel_mappings'_pspaceI)
 
 lemma (in Invariants_H_pspaceI) ex_cte_cap_to_pspaceI'[elim]:
-  "ex_cte_cap_to' p s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> ksCurDomain s = ksCurDomain s' \<Longrightarrow>
+  "ex_cte_cap_to' p s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow>
      intStateIRQNode (ksInterruptState s) = intStateIRQNode (ksInterruptState s')
      \<Longrightarrow> ex_cte_cap_to' p s'"
   by (fastforce simp: ex_cte_cap_to'_def elim: cte_wp_at'_pspaceI)

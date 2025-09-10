@@ -23,13 +23,11 @@ where "deleteRange m ptr bits \<equiv>
         let inRange = (\<lambda> x. x && ((- mask bits) - 1) = fromPPtr ptr) in
         data_map_filterWithKey (\<lambda> x _. Not (inRange x)) m"
 
-#INCLUDE_HASKELL SEL4/Model/PSpace.lhs decls_only Data.Map=DataMap NOT PSpace ptrBits ptrBitsForSize lookupAround maybeToMonad lookupAround2 typeError alignError alignCheck sizeCheck objBits deleteRange coloursOfDomain
+#INCLUDE_HASKELL SEL4/Model/PSpace.lhs decls_only Data.Map=DataMap NOT PSpace ptrBits ptrBitsForSize lookupAround maybeToMonad lookupAround2 typeError alignError alignCheck sizeCheck objBits deleteRange
 
 consts
 lookupAround2 :: "('k :: {linorder,finite}) \<Rightarrow> ( 'k , 'a ) DataMap.map \<Rightarrow> (('k * 'a) option * 'k option)"
 
-consts coloursOfDomain :: "domain \<Rightarrow> machine_word \<Rightarrow> bool"
-
-#INCLUDE_HASKELL SEL4/Model/PSpace.lhs bodies_only Data.Map=DataMap NOT PSpace ptrBits ptrBitsForSize lookupAround maybeToMonad typeError alignError alignCheck sizeCheck objBits deletionIsSafe deletionIsSafe_delete_locale cNodePartialOverlap pointerInUserData ksASIDMapSafe deleteRange coloursOfDomain
+#INCLUDE_HASKELL SEL4/Model/PSpace.lhs bodies_only Data.Map=DataMap NOT PSpace ptrBits ptrBitsForSize lookupAround maybeToMonad typeError alignError alignCheck sizeCheck objBits deletionIsSafe deletionIsSafe_delete_locale cNodePartialOverlap pointerInUserData ksASIDMapSafe deleteRange
 
 end
