@@ -17,7 +17,7 @@ text \<open>
   A monad of type @{text tmonad} does not have a trace iff for all starting
   states, all of the potential outcomes have the empty list as a trace and do
   not return an @{term Incomplete} result.\<close>
-definition no_trace :: "('s,'a) tmonad  \<Rightarrow> bool" where
+definition no_trace :: "('c, 's, 'a) tmonad  \<Rightarrow> bool" where
   "no_trace f = (\<forall>tr res s. (tr, res) \<in> f s \<longrightarrow> tr = [] \<and> res \<noteq> Incomplete)"
 
 lemmas no_traceD = no_trace_def[THEN iffD1, rule_format]

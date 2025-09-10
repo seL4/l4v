@@ -53,6 +53,10 @@ lemma with_env_of_mstate[simp]:
   "with_env_of s (mstate s) = s"
   by (cases s, auto)
 
+lemma with_env_of_mstate'[simp]:
+  "env s' = env s \<Longrightarrow> with_env_of s (mstate s') = s'"
+  by clarsimp
+
 lemma eq_with_env_of_mstate[simp]:
   "(s = with_env_of s s') = (mstate s = s')"
   by (cases s, auto)
