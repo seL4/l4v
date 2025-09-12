@@ -3,7 +3,7 @@ theory New
     KernelInit_AI
     "$L4V_ARCH/ArchDetSchedSchedule_AI"
 begin
-  (*declare [[show_types]]*)
+section "Initialisation"
 axiomatization
   colour_oracle :: "domain \<Rightarrow> obj_ref set"
   where
@@ -65,6 +65,7 @@ definition colour_invariant
     (ko_at kobj ptr s \<and> ptr \<in> colour_oracle (cur_domain s)) \<longrightarrow>
     check_kernel_object_ref kobj (colour_oracle (cur_domain s))"
 
+section "KHeap_A Colour Invariant"
 lemma set_object_colour_maintained:
   "\<lbrace>colour_invariant and (\<lambda>s. check_kernel_object_ref kobj (colour_oracle (cur_domain s)))\<rbrace>
    set_object ptr kobj
@@ -217,6 +218,161 @@ crunch reschedule_required,
   (wp: thread_set_wp
    simp: thread_set_domain_def thread_set_time_slice_def thread_set_priority_def colour_invariant_def obj_at_update)*)
 
+section "Top-Down Colour Invariant Work"
 term "call_kernel" (* what does schedule do? otherwise, it's basically handle_event and <handle> *)
 
+crunch store_word_offs,
+  set_extra_badge,
+  set_cdt,
+  update_cdt,
+  set_message_info for colour_maintained: "colour_invariant"
+  (simp: colour_invariant_def obj_at_update)
+
+lemma set_cap_colour_maintained:
+  "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref cap (colour_oracle (cur_domain s)))\<rbrace>
+   set_cap cap cs_ptr
+  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+apply (unfold set_cap_def)
+apply wpsimp
+apply (wp add: set_object_wp)
+apply wpsimp
+apply (wp add: get_object_wp)
+apply (simp add: colour_invariant_def obj_at_update obj_at_def)
+using check_kernel_object_ref.simps(1,2) by blast
+
+lemma set_untyped_cap_as_full_colour_maintained:
+  "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref src_cap (colour_oracle (cur_domain s)))\<rbrace>
+   set_untyped_cap_as_full src_cap new_cap src_slot
+  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+apply (unfold set_untyped_cap_as_full_def)
+apply wpsimp
+apply (wp add: set_cap_colour_maintained)
+apply auto
+by (simp add: check_cap_ref_def)
+
+lemma tmp:
+  "\<lbrakk>\<forall>ptr kobj.
+           ko_at kobj ptr s \<and>
+           ptr \<in> colour_oracle (cur_domain s) \<longrightarrow>
+           check_kernel_object_ref kobj
+            (colour_oracle (cur_domain s));
+        fst (get_cap (a, b) s) = {(capa, s)} \<and>
+        cap = capa\<rbrakk>
+       \<Longrightarrow> check_cap_ref cap
+            (colour_oracle (cur_domain s))"
+sorry
+
+lemma cap_insert_colour_maintained:
+  "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref new_cap (colour_oracle (cur_domain s)))\<rbrace>
+   cap_insert new_cap (a, b) dest_slot
+  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  apply (unfold cap_insert_def colour_invariant_def)
+  apply wpsimp
+apply (unfold update_cdt_def)
+apply wpsimp
+apply (rule conjI)
+apply (rule impI)
+apply (fold colour_invariant_def)
+apply (wp add: set_cdt_colour_maintained)
+apply (rule impI)
+apply (wp add: set_cdt_colour_maintained)
+apply wpsimp+
+apply (wp add: set_cap_colour_maintained)
+apply (wp add: set_untyped_cap_as_full_colour_maintained)
+apply wpsimp
+apply (rule get_cap_wp)
+apply wpsimp
+apply (rule get_cap_wp)
+apply auto
+apply (unfold colour_invariant_def)
+apply (unfold cte_wp_at_def)
+apply (erule exE)+
+apply (thin_tac "fst (get_cap dest_slot s) = {(capb, s)} \<and> NullCap = capb")
+apply (thin_tac "check_cap_ref new_cap (colour_oracle (cur_domain s))")
+apply (erule allE[where x=a])
+apply (erule allE[where x=kobj])
+apply (subgoal_tac "kobj\<in>fst (get_object a s)")
+apply (case_tac A)
+apply simp
+sorry
+
+find_theorems "cte_wp_at ((=) _) _ _"
+find_theorems "fst (get_cap _ _)"
+
+find_theorems "transfer_caps_loop"
+
+lemma transfer_caps_loop_colour_maintained: (* TODO - work out preconds and fix non-loop version*)
+  "\<lbrace>colour_invariant\<rbrace>
+   transfer_caps_loop  ep rcv_buffer n caps slots mi
+  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  apply (induction caps arbitrary: mi n slots)
+    apply simp
+apply wpsimp
+apply auto
+apply wpsimp
+apply assumption
+apply wpsimp
+apply (wp add: set_extra_badge_colour_maintained)
+apply simp
+apply wpsimp
+apply assumption
+apply wpsimp
+apply (wp add: cap_insert_colour_maintained)
+apply wpsimp+
+
+sorry
+
+lemma transfer_caps_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace>
+   transfer_caps info caps endpoint receiver recv_buffer
+  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+apply (unfold transfer_caps_def)
+apply wpsimp
+apply (wp add: transfer_caps_loop_colour_maintained)
+by wpsimp+
+
+lemma copy_mrs_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace>
+   copy_mrs  sender sbuf receiver rbuf n
+  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+apply (unfold copy_mrs_def)
+apply wpsimp
+apply (rule conjI)
+apply (rule impI)
+apply (wp add: mapM_wp[where S="set ([Suc (length msg_registers)..<unat n] @
+                [unat n])"])
+apply (wp add: store_word_offs_colour_maintained)
+apply (wp add: load_word_offs_P)
+apply simp
+apply (rule impI)
+apply (wp add: mapM_wp)
+apply (wp add: store_word_offs_colour_maintained)
+apply (wp add: load_word_offs_P)
+apply simp
+apply (wp add: mapM_wp[where S="UNIV"]) (* TODO - just replace with set of registers *)
+apply simp
+apply (wp add: as_user_colour_maintained)
+apply simp
+apply (wp add: as_user_colour_maintained)
+by wpsimp+
+
+lemma do_normal_transfer_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace>
+   do_normal_transfer  sender sbuf endpoint badge grant receiver rbuf
+  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+apply (unfold do_normal_transfer_def)
+apply wpsimp
+apply (wp add: as_user_colour_maintained)
+apply (wp add: set_message_info_colour_maintained)
+apply (wp add: transfer_caps_colour_maintained) (* TODO - come back to this once transfer caps is done *)
+sorry
+
+lemma syscall_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace>
+   syscall param_a param_b param_c param_d param_e
+  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+sorry
+
+crunch call_kernel for colour_maintained: "colour_invariant"
+  (simp: colour_invariant_def obj_at_update)
 end
