@@ -299,16 +299,21 @@ sorry
 find_theorems "cte_wp_at ((=) _) _ _"
 find_theorems "fst (get_cap _ _)"
 
-find_theorems "transfer_caps_loop"
+lemma temp:
+  "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. Q\<rbrace>,-; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<not>(cond rv) \<longrightarrow> R rv s\<rbrace>,-\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. if cond rv then (\<lambda>s. Q s \<and> True) else (\<lambda>s. Q s \<and> R rv s)\<rbrace>,-"
+by (smt (verit) packed_validRE
+    packed_validRI)
 
-lemma transfer_caps_loop_colour_maintained: (* TODO - work out preconds and fix non-loop version*)
+thm temp[where Q="\<lambda>s. colour_invariant s" and R="\<lambda>rv s. check_cap_ref rv (colour_oracle (cur_domain s))" and cond="\<lambda>rv. rv = NullCap"]
+
+lemma transfer_caps_loop_colour_maintained: (* TODO - add precond saying all caps satisfy check (breaks a bunch of stuff) *)
   "\<lbrace>colour_invariant\<rbrace>
    transfer_caps_loop  ep rcv_buffer n caps slots mi
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  apply (induction caps arbitrary: mi n slots)
+  apply (induction caps arbitrary: mi n slots ep rcv_buffer)
     apply simp
 apply wpsimp
-apply auto
+apply (rule conjI; rule impI)+
 apply wpsimp
 apply assumption
 apply wpsimp
@@ -318,9 +323,31 @@ apply wpsimp
 apply assumption
 apply wpsimp
 apply (wp add: cap_insert_colour_maintained)
-apply wpsimp+
-
+apply simp
+apply wpsimp
+defer
+defer
+apply (rule conjI; rule impI)+
+apply wpsimp
+apply assumption
+apply wpsimp
+apply (wp add: set_extra_badge_colour_maintained)
+apply simp
+apply wpsimp
+apply wp
+apply (wp add: temp)
+apply simp
+apply (simp add: check_cap_ref_def)
 sorry
+
+
+find_theorems "derive_cap"
+find_theorems "transfer_caps_loop"
+find_theorems "\<lambda>rv. if _ then _ else _"
+find_theorems "_ = NullCap \<longrightarrow> _"
+thm "derive_cap_objrefs"
+thm "hoare_post_imp"
+thm "hoare_if_r_and"
 
 lemma transfer_caps_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
@@ -339,8 +366,7 @@ apply (unfold copy_mrs_def)
 apply wpsimp
 apply (rule conjI)
 apply (rule impI)
-apply (wp add: mapM_wp[where S="set ([Suc (length msg_registers)..<unat n] @
-                [unat n])"])
+apply (wp add: mapM_wp[where S="UNIV"])
 apply (wp add: store_word_offs_colour_maintained)
 apply (wp add: load_word_offs_P)
 apply simp
@@ -349,12 +375,8 @@ apply (wp add: mapM_wp)
 apply (wp add: store_word_offs_colour_maintained)
 apply (wp add: load_word_offs_P)
 apply simp
-apply (wp add: mapM_wp[where S="UNIV"]) (* TODO - just replace with set of registers *)
-apply simp
-apply (wp add: as_user_colour_maintained)
-apply simp
-apply (wp add: as_user_colour_maintained)
-by wpsimp+
+apply (wp add: mapM_wp[where S="UNIV"])
+by (simp; wp add: as_user_colour_maintained)+
 
 lemma do_normal_transfer_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
@@ -362,9 +384,9 @@ lemma do_normal_transfer_colour_maintained:
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
 apply (unfold do_normal_transfer_def)
 apply wpsimp
-apply (wp add: as_user_colour_maintained)
-apply (wp add: set_message_info_colour_maintained)
-apply (wp add: transfer_caps_colour_maintained) (* TODO - come back to this once transfer caps is done *)
+apply (wp add: as_user_colour_maintained
+               set_message_info_colour_maintained
+               transfer_caps_colour_maintained)+ (* TODO - come back to this once transfer caps is done *)
 sorry
 
 lemma syscall_colour_maintained:

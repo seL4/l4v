@@ -216,22 +216,6 @@ lemma getObjectInCurDomain_inv_tcb [wp]: "\<lbrace>P\<rbrace> getObjectInCurDoma
   apply (rule loadObject_default_inv)
   done
 
-lemma no_fail_getObject_tcb [wp]:
-  "no_fail (tcb_at' t) (getObject t :: tcb kernel)"
-  apply (simp add: getObject_def split_def)
-  apply (rule no_fail_pre)
-   apply wp
-  apply (clarsimp simp add: obj_at'_def objBits_simps'
-                      cong: conj_cong)
-  apply (rule ps_clear_lookupAround2, assumption+)
-    apply simp
-   apply (simp add: field_simps)
-   apply (erule is_aligned_no_wrap')
-   apply simp
-  apply (fastforce split: option.split_asm simp: objBits_simps')
-  done
-sorry
-
 lemma no_fail_getObjectInCurDomain_tcb [wp]:
   "no_fail (tcb_at' t and (\<lambda>s. isInDomainColour (ksCurDomain s) t)) (getObjectInCurDomain t :: tcb kernel)"
   apply (simp add: getObjectInCurDomain_def split_def)
@@ -250,8 +234,8 @@ lemma no_fail_getObjectInCurDomain_tcb [wp]:
    apply (metis Some_to_the prod.sel(1))
   apply (rule exI)
   apply (rule conjI)
-  apply (fastforce split: option.split_asm simp: objBits_simps')
-  sorry
+  apply (simp_all del: lookupAround2_same1)
+  by (fastforce split: option.split_asm simp: objBits_simps')
 
 lemma corres_get_tcb_inCurDomain:
   "corres (tcb_relation \<circ> the) (tcb_at t) (tcb_at' t and (\<lambda>s. isInDomainColour (ksCurDomain s) t)) (gets (get_tcb t)) (getObjectInCurDomain t)"
