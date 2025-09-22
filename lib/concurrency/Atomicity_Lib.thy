@@ -99,7 +99,7 @@ text \<open>
   environment acts. This reduces both env_steps and interference to
   noops.\<close>
 
-definition detrace :: "('s, 'a) tmonad \<Rightarrow> ('s, 'a) tmonad" where
+definition detrace :: "('c, 's, 'a) tmonad \<Rightarrow> ('c, 's, 'a) tmonad" where
   "detrace f =
      (\<lambda>s. (\<lambda>(tr, res). ([], res)) ` (f s \<inter> ({tr. Env \<notin> fst ` set tr} \<times> {res. res \<noteq> Incomplete})))"
 
@@ -293,12 +293,12 @@ text \<open>
   how interference points can be moved.\<close>
 
 definition rel_tr_refinement ::
-  "('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> 's rg_pred \<Rightarrow> bool \<Rightarrow> ('s, 'a) tmonad \<Rightarrow> ('s, 'a) tmonad \<Rightarrow> bool"
+  "('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('c, 's) mpred \<Rightarrow> ('c, 's) rg_pred \<Rightarrow> bool \<Rightarrow> ('c, 's, 'a) tmonad \<Rightarrow> ('c, 's, 'a) tmonad \<Rightarrow> bool"
   where
   "rel_tr_refinement sr P R commit f g =
      (\<forall>tr res s s0. P s
-        \<longrightarrow> (tr, res) \<in> f s \<longrightarrow> rely_cond R s0 tr \<longrightarrow> (commit \<longrightarrow> s0 = s)
-        \<longrightarrow> (\<exists>tr'. (tr', res) \<in> g s \<and> rely_cond R s0 tr'
+        \<longrightarrow> (tr, res) \<in> f s \<longrightarrow> rely_cond R (env s) s0 tr \<longrightarrow> (commit \<longrightarrow> s0 = mstate s)
+        \<longrightarrow> (\<exists>tr'. (tr', res) \<in> g s \<and> rely_cond R (env s) s0 tr'
                    \<and> list_all2 (rel_prod (=) sr) tr tr'))"
 
 lemma rely_cond_equiv_s:
@@ -376,7 +376,7 @@ lemma pfx_refinement_use_rel_tr_refinement_equivp:
   apply (metis equivpE sympD transpD)
   done
 
-definition not_env_steps_first :: "('s, 'a) tmonad \<Rightarrow> bool" where
+definition not_env_steps_first :: "('c, 's, 'a) tmonad \<Rightarrow> bool" where
   "not_env_steps_first f = (\<forall>tr res s. (tr, res) \<in> f s \<longrightarrow> tr \<noteq> [] \<longrightarrow> fst (last tr) = Me)"
 
 lemmas not_env_steps_firstD = not_env_steps_first_def[THEN iffD1, rule_format]

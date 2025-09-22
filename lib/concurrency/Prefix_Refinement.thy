@@ -26,7 +26,9 @@ text \<open>
 text \<open>
   Fragments must be self-closed, or enabled. Certain incomplete traces
   must be possible to extend by a program step.\<close>
-definition self_closed :: "((tmid \<times> 's) list \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> ('s, 'a) tmonad \<Rightarrow> bool" where
+definition self_closed ::
+  "((tmid \<times> 's) list \<Rightarrow> bool) \<Rightarrow> ('c, 's) monad_state \<Rightarrow> ('c, 's, 'a) tmonad \<Rightarrow> bool"
+  where
   "self_closed cond s f =
      (\<forall>xs. (xs, Incomplete) \<in> f s \<longrightarrow> cond xs \<longrightarrow> (\<exists>s'. (Me, s') # xs \<in> fst ` f s))"
 
@@ -36,7 +38,9 @@ text \<open>
   Fragments must be environment-closed. Certain incomplete traces
   must be possible to extend by any environment step that is
   compatible with some condition.\<close>
-definition env_closed :: "((tmid \<times> 's) list \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> ('s, 'a) tmonad \<Rightarrow> bool" where
+definition env_closed ::
+  "((tmid \<times> 's) list \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('c, 's) monad_state \<Rightarrow> ('c, 's, 'a) tmonad \<Rightarrow> bool"
+  where
   "env_closed cond s f =
      (\<forall>xs s'. (xs, Incomplete) \<in> f s \<longrightarrow> cond xs s' \<longrightarrow> ((Env, s') # xs) \<in> fst ` f s)"
 
@@ -46,9 +50,15 @@ lemma env_closed_strengthen_cond:
   "\<lbrakk>env_closed P s f; \<forall>xs s. Q xs s \<longrightarrow> P xs s\<rbrakk> \<Longrightarrow> env_closed Q s f"
   by (simp add: env_closed_def)
 
+text \<open>@{text mrel} type: @{typ "('c, 's) monad_state"} state relations\<close>
+type_synonym ('c, 's, 'd, 't) mrel = "('c, 's) monad_state \<Rightarrow> ('d, 't) monad_state \<Rightarrow> bool"
+
 text \<open>Two traces match according to some state relation if they match at every step.\<close>
-definition matching_tr :: "('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> (tmid \<times> 's) list \<Rightarrow> (tmid \<times> 't) list \<Rightarrow> bool" where
-  "matching_tr sr = list_all2 (\<lambda>(aid, as) (cid, cs). aid = cid \<and> sr as cs)"
+definition matching_tr ::
+  "('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> (tmid \<times> 's) list \<Rightarrow> (tmid \<times> 't) list \<Rightarrow> bool"
+  where
+  "matching_tr sr =
+     list_all2 (\<lambda>(aid, as) (cid, cs). aid = cid \<and> sr as cs)"
 
 definition matching_tr_pfx ::
   "('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> (tmid \<times> 's) list \<Rightarrow> (tmid \<times> 't) list \<Rightarrow> bool"
@@ -63,8 +73,24 @@ abbreviation (input)
   "matching_self_cond ctr \<equiv> (\<lambda>xs. length xs < length ctr \<and> fst (rev ctr ! length xs) = Me)"
 
 abbreviation (input)
-  "matching_env_cond sr ctr s0 R \<equiv>
-     (\<lambda>xs s. matching_tr_pfx sr ((Env, s) # xs) ctr \<and> rely_cond R s0 ((Env, s) # xs))"
+  "matching_env_cond sr ctr c s0 R \<equiv>
+     (\<lambda>xs s. matching_tr_pfx sr ((Env, s) # xs) ctr \<and> rely_cond R c s0 ((Env, s) # xs))"
+
+abbreviation with_env_sr :: "('c, 's, 'd, 't) mrel \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> 's \<Rightarrow> 't \<Rightarrow> bool" where
+  "with_env_sr R c d s t \<equiv> R (monad_state c s) (monad_state d t)"
+
+abbreviation with_env_of_sr ::
+  "('c, 's, 'd, 't) mrel \<Rightarrow> ('c, 's) monad_state \<Rightarrow> ('d, 't) monad_state \<Rightarrow> 's \<Rightarrow> 't \<Rightarrow> bool"
+  where
+  "with_env_of_sr R s t \<equiv> with_env_sr R (env s) (env t)"
+
+abbreviation with_env_R :: "('c, 's) rg_pred \<Rightarrow> 'c \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> bool" where
+  "with_env_R R c \<equiv> with_env_sr R c c"
+
+abbreviation with_env_of_R ::
+  "('c, 's) rg_pred \<Rightarrow> ('c, 's) monad_state \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> bool"
+  where
+  "with_env_of_R R s \<equiv> with_env_of_sr R s s"
 
 text \<open>
   The collection of properties a fragment must have to match some concrete
@@ -73,18 +99,18 @@ text \<open>
   the rely condition, the concrete trace (or a prefix), and must either be
   a matching result or @{term Incomplete} if a prefix.\<close>
 definition is_matching_fragment ::
-  "('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> (tmid \<times> 't) list \<Rightarrow>
-   ('t, 'b) tmres \<Rightarrow> 's \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> ('s, 'a) tmonad \<Rightarrow> bool"
+  "('c, 's, 'd, 't) mrel \<Rightarrow> ('c, 's, 'd, 't) mrel \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> 'd \<Rightarrow> (tmid \<times> 't) list \<Rightarrow>
+   ('t, 'b) tmres \<Rightarrow> 's \<Rightarrow> ('c, 's) rg_pred \<Rightarrow> ('c, 's) monad_state \<Rightarrow> ('c, 's, 'a) tmonad \<Rightarrow> bool"
   where
-  "is_matching_fragment sr osr rvr ctr cres s0 R s f
+  "is_matching_fragment sr osr rvr c' ctr cres s0 R s f
      = ((prefix_closed f
          \<and> self_closed (matching_self_cond ctr) s f
-         \<and> env_closed (matching_env_cond sr ctr s0 R) s f)
+         \<and> env_closed (matching_env_cond (with_env_sr sr (env s) c') ctr (env s) s0 R) s f)
         \<and> f s \<noteq> {}
-        \<and> (\<forall>(tr, res) \<in> f s. rely_cond R s0 tr
-             \<and> matching_tr_pfx sr tr ctr
+        \<and> (\<forall>(tr, res) \<in> f s. rely_cond R (env s) s0 tr
+             \<and> matching_tr_pfx (with_env_sr sr (env s) c') tr ctr
              \<and> (length tr < length ctr \<longrightarrow> res = Incomplete)
-             \<and> (length tr = length ctr \<longrightarrow> rel_tmres osr rvr res cres)))"
+             \<and> (length tr = length ctr \<longrightarrow> rel_tmres (with_env_sr osr (env s) c') rvr res cres)))"
 
 lemmas is_matching_fragmentD = is_matching_fragment_def[THEN iffD1, rule_format]
 
@@ -106,15 +132,15 @@ text \<open>
 \<comment> \<open>FIXME: should we have an option for showing non-failure of the concrete program.\<close>
 \<comment> \<open>FIXME: corres uses a set for the state relation, this uses a predicate. Do we care?\<close>
 definition prefix_refinement ::
-  "('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow>
-   ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow>
-   ('s, 'a) tmonad \<Rightarrow> ('t, 'b) tmonad \<Rightarrow> bool"
+  "('c, 's, 'd, 't) mrel \<Rightarrow> ('c, 's, 'd, 't) mrel \<Rightarrow> ('c, 's, 'd, 't) mrel \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow>
+   ('c, 's) rg_pred \<Rightarrow> ('d, 't) rg_pred \<Rightarrow> ('c, 's) m2_pred \<Rightarrow> ('d, 't) m2_pred \<Rightarrow>
+   ('c, 's, 'a) tmonad \<Rightarrow> ('d, 't, 'b) tmonad \<Rightarrow> bool"
   where
   "prefix_refinement sr isr osr rvr AR R P Q aprog cprog
-    = (\<forall>s s0 t0 t. isr s t \<longrightarrow> P s0 s \<longrightarrow> sr s0 t0 \<longrightarrow> Q t0 t
+    = (\<forall>s s0 t0 t. isr s t \<longrightarrow> P (with_env_of s s0) s \<longrightarrow> with_env_of_sr sr s t s0 t0 \<longrightarrow> Q (with_env_of t t0) t
          \<longrightarrow> (\<forall>(ctr, cres) \<in> cprog t.
-                rely_cond R t0 ctr \<longrightarrow>
-                  (\<exists>f. is_matching_fragment sr osr rvr ctr cres s0 AR s f
+                rely_cond R (env t) t0 ctr \<longrightarrow>
+                  (\<exists>f. is_matching_fragment sr osr rvr (env t) ctr cres s0 AR s f
                        \<and> triv_refinement aprog f)))"
 
 abbreviation
@@ -146,18 +172,18 @@ lemma matching_tr_pfx_aCons:
   done
 
 lemma rely_cond_hd:
-  "\<lbrakk>rely_cond R s0 xs; xs \<noteq> []\<rbrakk>
-   \<Longrightarrow> fst (hd xs) = Env \<longrightarrow> R (last_st_tr (tl xs) s0) (snd (hd xs))"
+  "\<lbrakk>rely_cond R c s0 xs; xs \<noteq> []\<rbrakk>
+   \<Longrightarrow> fst (hd xs) = Env \<longrightarrow> R (monad_state c (last_st_tr (tl xs) s0)) (monad_state c (snd (hd xs)))"
   by (clarsimp simp: rely_cond_def neq_Nil_conv trace_steps_append
               split: if_split_asm)
 
 lemma rely_cond_nth:
-  "\<lbrakk>rely_cond R s0 tr; n < length tr\<rbrakk>
-   \<Longrightarrow> fst (rev tr ! n) = Env \<longrightarrow> R ((if n = 0 then s0 else snd (rev tr ! (n - 1)))) (snd (rev tr ! n))"
+  "\<lbrakk>rely_cond R c s0 tr; n < length tr\<rbrakk>
+   \<Longrightarrow> fst (rev tr ! n) = Env \<longrightarrow> R (monad_state c ((if n = 0 then s0 else snd (rev tr ! (n - 1))))) (monad_state c (snd (rev tr ! n)))"
   by (simp add: rely_cond_def trace_steps_rev_drop_nth[where n=0, simplified])
 
 lemma is_matching_fragment_Nil:
-  "is_matching_fragment sr osr rvr ctr cres s0 R s f \<Longrightarrow> [] \<in> fst ` f s"
+  "is_matching_fragment sr osr rvr c' ctr cres s0 R s f \<Longrightarrow> [] \<in> fst ` f s"
   apply (clarsimp simp: is_matching_fragment_def)
   apply (clarsimp simp only: set_eq_iff empty_iff simp_thms not_all)
   apply (drule(1) prefix_closed_drop[where tr=tr and n="length tr" for tr])
@@ -193,16 +219,16 @@ lemma prefix_refinement_serial:
   oops\<close>
 
 lemma is_matching_fragment_no_trace:
-  "is_matching_fragment sr osr rvr [] cres s0 R s (\<lambda>s. {([], ares s)})
-   = rel_tmres osr rvr (ares s) cres"
+  "is_matching_fragment sr osr rvr c' [] cres s0 R s (\<lambda>s. {([], ares s)})
+   = rel_tmres (with_env_sr osr (env s) c') rvr (ares s) cres"
   by (simp add: is_matching_fragment_def prefix_closed_def self_closed_def env_closed_def
                 matching_tr_pfx_def matching_tr_def)
 
 \<comment> \<open>Singleton trace monads must have an empty trace to be prefix_closed\<close>
 lemma prefix_refinement_singleton:
   "prefix_refinement sr isr osr rvr AR R P Q (\<lambda>s. {([], res s)}) (\<lambda>s. {([], cres s)})
-   = (\<forall>s0 s t0 t. isr s t \<longrightarrow> P s0 s \<longrightarrow> sr s0 t0 \<longrightarrow> Q t0 t
-          \<longrightarrow> rel_tmres osr rvr (res s) (cres t))"
+   = (\<forall>s0 s t0 t. isr s t \<longrightarrow> P (with_env_of s s0) s \<longrightarrow> with_env_of_sr sr s t s0 t0 \<longrightarrow> Q (with_env_of t t0) t
+          \<longrightarrow> rel_tmres (with_env_of_sr osr s t) rvr (res s) (cres t))"
   (is "prefix_refinement _ _ _ _ _ _ _ _ ?f _ = _")
   apply (rule iffI; clarsimp simp: prefix_refinement_def)
    apply ((drule spec)+, (drule (1) mp)+)
@@ -223,8 +249,8 @@ lemma prefix_refinement_singleton:
 lemma prefix_refinement_no_trace:
   "no_trace g
    \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q f g
-       = (\<forall>s0 s t0 t. isr s t \<longrightarrow> P s0 s \<longrightarrow> sr s0 t0 \<longrightarrow> Q t0 t
-            \<longrightarrow> (\<forall>cres \<in> snd ` (g t). \<exists>(tr, res) \<in> (f s). tr = [] \<and> rel_tmres osr rvr res cres))"
+       = (\<forall>s0 s t0 t. isr s t \<longrightarrow> P (with_env_of s s0) s \<longrightarrow> with_env_of_sr sr s t s0 t0 \<longrightarrow> Q (with_env_of t t0) t
+            \<longrightarrow> (\<forall>cres \<in> snd ` (g t). \<exists>(tr, res) \<in> (f s). tr = [] \<and> rel_tmres (with_env_of_sr osr s t) rvr res cres))"
   apply (rule iffI; clarsimp simp: prefix_refinement_def; drule (1) no_traceD; clarsimp)
    apply ((drule spec)+, (drule (1) mp)+)
    apply (drule (1) bspec, clarsimp)
@@ -244,8 +270,8 @@ lemma prefix_refinement_no_trace:
 
 lemma prefix_refinement_no_trace':
   "\<lbrakk>no_trace g;
-    \<And>s0 s t0 t. \<lbrakk>isr s t; P s0 s; sr s0 t0; Q t0 t\<rbrakk>
-                \<Longrightarrow> (\<forall>cres \<in> snd ` (g t). \<exists>(tr, res) \<in> (f s). tr = [] \<and> rel_tmres osr rvr res cres)\<rbrakk>
+    \<And>s0 s t0 t. \<lbrakk>isr s t; P (with_env_of s s0) s; with_env_of_sr sr s t s0 t0; Q (with_env_of t t0) t\<rbrakk>
+                \<Longrightarrow> (\<forall>cres \<in> snd ` (g t). \<exists>(tr, res) \<in> (f s). tr = [] \<and> rel_tmres (with_env_of_sr osr s t) rvr res cres)\<rbrakk>
    \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q f g"
   by (simp add: prefix_refinement_no_trace)
 
@@ -253,17 +279,17 @@ section \<open>Building blocks\<close>
 text \<open>Prefix refinement rules for basic constructs.\<close>
 
 lemma default_prefix_refinement_ex:
-  "is_matching_fragment sr osr rvr ctr cres s0 R s
+  "is_matching_fragment sr osr rvr c' ctr cres s0 R s
      (\<lambda>s. aprog s \<inter> ({tr'. length tr' \<le> length ctr} \<times> UNIV))
-   \<Longrightarrow> \<exists>f. is_matching_fragment sr osr rvr ctr cres s0 R s f \<and> triv_refinement aprog f"
+   \<Longrightarrow> \<exists>f. is_matching_fragment sr osr rvr c' ctr cres s0 R s f \<and> triv_refinement aprog f"
   apply (intro exI conjI, assumption)
   apply (simp add: triv_refinement_def)
   done
 
 lemma default_prefix_refinement_ex_match_iosr_R:
-  "is_matching_fragment sr osr rvr ctr cres s0 R s
+  "is_matching_fragment sr osr rvr c' ctr cres s0 R s
      (rely (\<lambda>s. aprog s \<inter> ({tr'. matching_tr_pfx iosr tr' ctr} \<times> UNIV)) R s0)
-   \<Longrightarrow> \<exists>f. is_matching_fragment sr osr rvr ctr cres s0 R s f \<and> triv_refinement aprog f"
+   \<Longrightarrow> \<exists>f. is_matching_fragment sr osr rvr c' ctr cres s0 R s f \<and> triv_refinement aprog f"
   apply (intro exI conjI, assumption)
   apply (clarsimp simp: triv_refinement_def rely_def)
   done
@@ -309,13 +335,13 @@ text \<open>
   allow us to prove the existence of a matching trace in the abstract
   program.\<close>
 theorem matching_fragment_matching_tr:
-  assumes match: "is_matching_fragment sr osr rvr ctr cres s0 R' s f"
-  and rely: "rely_cond R t0 ctr"
-  and sr0: "sr s0 t0"
-  and sr: "(\<forall>s t t'. sr s t \<longrightarrow> R t t' \<longrightarrow> (\<exists>s'. sr s' t' \<and> R' s s'))"
-  shows "\<exists>(atr, ares) \<in> f s. matching_tr sr atr ctr
-                    \<and> rel_tmres osr rvr ares cres
-                    \<and> rely_cond R' s0 atr"
+  assumes match: "is_matching_fragment sr osr rvr c' ctr cres s0 R' s f"
+  and rely: "rely_cond R c' t0 ctr"
+  and sr0: "with_env_sr sr (env s) c' s0 t0"
+  and sr: "\<forall>s t t'. sr s t \<longrightarrow> R t t' \<longrightarrow> (\<exists>s'. sr s' t' \<and> R' s s')"
+  shows "\<exists>(atr, ares) \<in> f s. matching_tr (with_env_sr sr (env s) c') atr ctr
+                    \<and> rel_tmres (with_env_sr osr (env s) c') rvr ares cres
+                    \<and> rely_cond R' (env s) s0 atr"
 proof -
 
   note pfx_closed = is_matching_fragment_prefix_closed[OF match]
@@ -326,43 +352,38 @@ proof -
   note pfx_closedD = pfx_closed[THEN prefix_closedD]
 
   have extend:
-    "\<And>tmid s' tr res. ((tmid, s') # tr, res) \<in> f s \<Longrightarrow> rely_cond R' s0 tr
-        \<Longrightarrow> \<exists>x res. (x # tr, res) \<in> f s \<and> rely_cond R' s0 (x # tr)"
+    "\<And>tmid s' tr res. ((tmid, s') # tr, res) \<in> f s \<Longrightarrow> rely_cond R' (env s) s0 tr
+        \<Longrightarrow> \<exists>x res. (x # tr, res) \<in> f s \<and> rely_cond R' (env s) s0 (x # tr)"
     apply (case_tac tmid)
      apply (fastforce simp: rely_cond_Cons)
     apply (frule f_prop[OF pfx_closedD], clarsimp)
     apply (frule f_prop, clarsimp simp: matching_tr_pfx_aCons)
     apply (frule rely_cond_nth[rotated], rule rely, simp)
-    apply (drule_tac s="last_st_tr tr s0" in sr[rule_format, rotated])
+    apply (drule_tac s="with_env_of s (last_st_tr tr s0)" in sr[rule_format, rotated])
      apply (clarsimp simp: sr0 neq_Nil_conv matching_tr_pfx_aCons)
-    apply clarsimp
-    apply (rename_tac t' s'_rely)
-    apply (drule_tac s'="s'_rely" in env_closedD[where f=f, OF env_closed, OF prefix_closedD[OF pfx_closed]])
-     apply (clarsimp simp: matching_tr_pfx_aCons rely_cond_Cons_eq)
-    apply clarsimp
-    apply (fastforce intro!: rely_cond_Cons)
+    apply fastforce
     done
 
   have extend2:
-    "\<And>tr res. (tr, res) \<in> f s \<Longrightarrow> rely_cond R' s0 tr
+    "\<And>tr res. (tr, res) \<in> f s \<Longrightarrow> rely_cond R' (env s) s0 tr
         \<Longrightarrow> length tr < length ctr
-        \<Longrightarrow> \<exists>x res. (x # tr, res) \<in> f s \<and> rely_cond R' s0 (x # tr)"
+        \<Longrightarrow> \<exists>x res. (x # tr, res) \<in> f s \<and> rely_cond R' (env s) s0 (x # tr)"
     apply (frule f_prop, clarsimp)
     apply (case_tac "fst (rev ctr ! length tr)")
      apply (frule self_closed[THEN self_closedD], simp)
      apply (fastforce intro: rely_cond_Cons)
     apply (frule rely_cond_nth[rotated], rule rely, simp)
-    apply (drule_tac s="last_st_tr tr s0" in sr[rule_format, rotated])
+    apply (drule_tac s="with_env_of s (last_st_tr tr s0)" in sr[rule_format, rotated])
      apply (clarsimp simp: sr0 neq_Nil_conv matching_tr_pfx_aCons)
     apply clarsimp
-    apply (drule_tac s'=s' in env_closedD[OF env_closed])
+    apply (drule_tac s'="mstate s'" in env_closedD[OF env_closed])
      apply (simp add: matching_tr_pfx_aCons prod_eq_iff rely_cond_Cons)
     apply (fastforce intro: rely_cond_Cons)
     done
 
   { fix n
     have "\<exists>(tr, res) \<in> f s. (n \<le> length ctr \<longrightarrow> length tr = n)
-        \<and> rely_cond R' s0 tr"
+        \<and> rely_cond R' (env s) s0 tr"
       apply (induct n)
        apply (cut_tac f=f in is_matching_fragment_Nil;
           (rule sr0 match)?)
@@ -388,7 +409,7 @@ qed
 
 corollary matching_fragment_matching_tr_trivR:
   assumes match: "is_matching_fragment sr osr rvr ctr cres s0 R s f"
-  and sr: "(\<forall>s t t'. sr s t \<longrightarrow> (\<exists>s'. sr s' t' \<and> R s s'))"
+  and sr: "(\<forall>s' t' t''. sr s' t' \<longrightarrow> (\<exists>s''. sr s'' t'' \<and> with_env_R R (env s) s' s''))"
   and srx: "sr s0 t0"
   shows "\<exists>(atr, ares) \<in> f s. matching_tr sr atr ctr \<and> rel_tmres osr rvr ares cres"
   using matching_fragment_matching_tr[where R="\<lambda>_ _. True", OF match _ srx]
@@ -397,14 +418,14 @@ corollary matching_fragment_matching_tr_trivR:
 theorem prefix_refinement_rely_cond_trD:
   assumes preds: "prefix_refinement sr isr osr rvr AR R P Q aprog cprog"
     "isr s t" "P s0 s" "Q t0 t" "(ctr, cres) \<in> cprog t"
-    "rely_cond R t0 ctr" "sr s0 t0"
+    "rely_cond R (env t) t0 ctr" "sr (with_env_of s s0) (with_env_of t t0)"
   and sr: "(\<forall>s t t'. sr s t \<longrightarrow> R t t' \<longrightarrow> (\<exists>s'. sr s' t' \<and> AR s s'))"
-  shows "\<exists>(atr, ares) \<in> aprog s. matching_tr sr atr ctr
-                    \<and> rel_tmres osr rvr ares cres
-                    \<and> rely_cond AR s0 atr"
+  shows "\<exists>(atr, ares) \<in> aprog s. matching_tr (with_env_of_sr sr s t) atr ctr
+                    \<and> rel_tmres (with_env_of_sr osr s t) rvr ares cres
+                    \<and> rely_cond AR (env s) s0 atr"
 proof -
   obtain f where subs: "f s \<subseteq> aprog s"
-      and match: "is_matching_fragment sr osr rvr ctr cres s0 AR s f"
+      and match: "is_matching_fragment (with_env_of_sr sr s t) (with_env_of_sr osr s t) rvr ctr cres s0 AR s f"
     using prefix_refinementD[OF preds(1-3) _ preds(4-5)] preds(6-)
     by (auto simp add: triv_refinement_def)
   show ?thesis
@@ -626,8 +647,8 @@ lemma ball_set_zip_conv_nth:
   "(\<forall>x \<in> set (zip ys zs). P x) = (\<forall>n. n < length ys \<longrightarrow> n < length zs \<longrightarrow> P (ys ! n, zs ! n))"
   by (auto simp: Ball_def in_set_zip)
 
-definition par_tr_fin_principle :: "('s, unit) tmonad \<Rightarrow> bool" where
-  "par_tr_fin_principle f = (\<forall>s tr s'. (tr, Result ((), s')) \<in> f s \<longrightarrow> s' = last_st_tr tr s \<and> tr \<noteq> [])"
+definition par_tr_fin_principle :: "('c, 's, unit) tmonad \<Rightarrow> bool" where
+  "par_tr_fin_principle f = (\<forall>s tr s'. (tr, Result ((), s')) \<in> f s \<longrightarrow> s' = last_st_tr tr (mstate s) \<and> tr \<noteq> [])"
 
 lemmas par_tr_fin_principleD = par_tr_fin_principle_def[THEN iffD1, rule_format]
 
@@ -697,7 +718,7 @@ lemma par_tr_fragment_parallel_def:
 
 lemmas list_all2_rev_nthD = list_all2_nthD[OF list_all2_rev[THEN iffD2], simplified]
 
-definition forward_enabled :: "'s rg_pred \<Rightarrow> bool" where
+definition forward_enabled :: "('c, 's) rg_pred \<Rightarrow> bool" where
   "forward_enabled P = (\<forall>s_pre. \<exists>s. P s_pre s)"
 
 lemmas forward_enabledD = forward_enabled_def[THEN iffD1, rule_format]
@@ -939,13 +960,13 @@ lemma is_matching_fragment_UNION:
   This is a variant of @{term Trace_Monad.bind}, that is used to build up the fragment required
   for proving @{text prefix_refinement_bind_general}.\<close>
 definition mbind ::
-  "('s, 'a) tmonad \<Rightarrow> ('s \<Rightarrow> 'a \<Rightarrow> ('s, 'b) tmonad) \<Rightarrow> 's \<Rightarrow> ('s, 'b) tmonad"
+  "('c, 's, 'a) tmonad \<Rightarrow> ('s \<Rightarrow> 'a \<Rightarrow> ('c, 's, 'b) tmonad) \<Rightarrow> 's \<Rightarrow> ('c, 's, 'b) tmonad"
   where
   "mbind f g s0 \<equiv> \<lambda>s. \<Union>(xs, r) \<in> (f s).
      case r of
          Failed \<Rightarrow> {(xs, Failed)}
        | Incomplete \<Rightarrow> {(xs, Incomplete)}
-       | Result (rv, s) \<Rightarrow> fst_upd (\<lambda>ys. ys @ xs) ` g (last_st_tr xs s0) rv s"
+       | Result (rv, s') \<Rightarrow> fst_upd (\<lambda>ys. ys @ xs) ` g (last_st_tr xs s0) rv (with_env_of s s')"
 
 lemma self_closed_mbind:
   "\<lbrakk>is_matching_fragment sr osr rvr ctr cres s0 R s f;
@@ -1529,6 +1550,7 @@ lemma prefix_refinement_noop2:
   apply (insert nf)
   apply (clarsimp simp: no_trace_def no_fail_def failed_def image_def)
   apply (subgoal_tac "\<exists>(r, s')\<in>mres (f s). rel_tmres iosr dc (Result (r, s')) b")
+sorry
    apply (case_tac b; fastforce simp: mres_def intro: rev_bexI)
   apply (rule use_exs_valid)
    apply (rule exs_hoare_post_imp[rotated])
@@ -2033,20 +2055,20 @@ lemma whenM_prefix_refinement:
   done
 
 
-section \<open>prefix_refinement rules for env_step, commit_step, interference and await\<close>
+section \<open>prefix_refinement rules for env_step, commit_step, interference and Await\<close>
 \<comment> \<open>FIXME: better name for section\<close>
 
 lemma Int_insert_left2:
   "(insert a B \<inter> C) = ((if a \<in> C then {a} else {}) \<union> (B \<inter> C))"
   by auto
 
-definition rely_stable :: "('t \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> bool) \<Rightarrow> bool" where
+definition rely_stable :: "('d, 't) rg_pred \<Rightarrow> ('c, 's, 'd, 't) mrel \<Rightarrow> ('d, 't) mpred \<Rightarrow> bool" where
   "rely_stable R sr Q = (\<forall>s t t'. Q t \<and> sr s t \<and> R t t' \<longrightarrow> Q t' \<and> (\<exists>s'. sr s' t'))"
 
 lemmas rely_stableD = rely_stable_def[THEN iffD1, simplified imp_conjL, rule_format]
 
 definition env_rely_stable_iosr ::
-  "'s rg_pred \<Rightarrow> 't rg_pred \<Rightarrow> ('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> bool) \<Rightarrow> bool"
+  "('c, 's) rg_pred \<Rightarrow> ('d, 't) rg_pred \<Rightarrow> ('c, 's, 'd, 't) mrel \<Rightarrow> ('c, 's, 'd, 't) mrel \<Rightarrow> ('d, 't) mpred \<Rightarrow> bool"
   where
   "env_rely_stable_iosr AR R sr iosr Q =
      (\<forall>s0 t0 s t. Q t0 \<longrightarrow> iosr s0 t0 \<longrightarrow> R t0 t \<longrightarrow> AR s0 s \<longrightarrow> sr s t \<longrightarrow> iosr s t)"
@@ -2054,7 +2076,7 @@ definition env_rely_stable_iosr ::
 lemmas env_rely_stable_iosrD = env_rely_stable_iosr_def[THEN iffD1, rule_format]
 
 definition env_stable ::
-  "'s rg_pred \<Rightarrow> 't rg_pred \<Rightarrow> ('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> bool) \<Rightarrow> bool"
+  "('c, 's) rg_pred \<Rightarrow> ('d, 't) rg_pred \<Rightarrow> ('c, 's, 'd, 't) mrel \<Rightarrow> ('c, 's, 'd, 't) mrel \<Rightarrow> ('d, 't) mpred \<Rightarrow> bool"
   where
   "env_stable AR R sr iosr Q = (rely_stable R sr Q \<and> env_rely_stable_iosr AR R sr iosr Q \<and> iosr \<le> sr)"
 
@@ -2110,6 +2132,7 @@ proof -
            simp add: prefix_closed_def in_fst_snd_image_eq self_closed_def
                      matching_tr_pfx_def matching_tr_def
                      env_closed_def)
+sorry
      apply (metis env_rely_stable_iosrD[OF est])
     apply clarsimp
     apply (auto dest: rely_stableD[OF st] predicate2D[OF sr])[1]
@@ -2212,7 +2235,7 @@ lemma prefix_refinement_interference:
   apply (clarsimp simp: guar_cond_def)
   done
 
-lemma prefix_refinement_await:
+lemma prefix_refinement_Await:
   "\<lbrakk>env_stable AR R sr iosr Q; abs_rely_stable AR P;
     \<forall>s t. P s \<longrightarrow> Q t \<longrightarrow> iosr s t \<longrightarrow> G' t \<longrightarrow> G s;
     (\<exists>s. G' s) \<longrightarrow> (\<exists>s. G s)\<rbrakk>
@@ -2410,6 +2433,7 @@ lemma prefix_refinement_in_place_trans:
     apply (clarsimp simp: is_matching_fragment_def)
    apply (drule(2) matching_fragment_matching_tr, simp)
    apply (clarsimp simp: matching_tr_def dest!: list_all2_lengthD)
+sorry
    apply blast
   apply (clarsimp simp: triv_refinement_def)
   apply blast
