@@ -23,7 +23,7 @@ text \<open>
 definition no_throw :: "('c, 's) mpred \<Rightarrow> ('c, 's, 'e + 'a) nondet_monad \<Rightarrow> bool" where
   "no_throw P A \<equiv> \<lbrace>P\<rbrace> A \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_ _. False\<rbrace>"
 
-definition no_return :: "('c, 'a) mpred \<Rightarrow> ('c, 'a, 'b + 'c) nondet_monad \<Rightarrow> bool" where
+definition no_return :: "('c, 's) mpred \<Rightarrow> ('c, 's, 'e + 'a) nondet_monad \<Rightarrow> bool" where
   "no_return P A \<equiv> \<lbrace>P\<rbrace> A \<lbrace>\<lambda>_ _. False\<rbrace>, \<lbrace>\<lambda>_ _. True\<rbrace>"
 
 (* Alternative definition of no_throw; easier to work with than unfolding validE. *)
@@ -32,7 +32,7 @@ lemma no_throw_def':
   by (clarsimp simp: no_throw_def validE_def2 split_def split: sum.splits)
 
 
-subsection \<open>@{text no_throw} rules\<close>
+subsection \<open>@{const no_throw} rules\<close>
 
 lemma no_throw_returnOk[simp]:
   "no_throw P (returnOk a)"

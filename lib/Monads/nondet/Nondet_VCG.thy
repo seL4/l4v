@@ -35,14 +35,14 @@ text \<open>
   to assume @{term P}! Proving non-failure is done via a separate predicate and
   calculus (see theory @{text Nondet_No_Fail}).\<close>
 definition valid ::
-  "(('c,'s) mpred) \<Rightarrow> ('c,'s,'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> ('c,'s) mpred) \<Rightarrow> bool"
+  "(('c, 's) mpred) \<Rightarrow> ('c, 's, 'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> ('c, 's) mpred) \<Rightarrow> bool"
   ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>") where
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<equiv> \<forall>s. P s \<longrightarrow> (\<forall>(r,s') \<in> fst (f s). Q r (with_env_of s s'))"
 
 text \<open>
   We often reason about invariant predicates. The following provides shorthand syntax
   that avoids repeating potentially long predicates.\<close>
-abbreviation invariant :: "('c,'s,'a) nondet_monad \<Rightarrow> ('c,'s) mpred \<Rightarrow> bool"
+abbreviation invariant :: "('c, 's, 'a) nondet_monad \<Rightarrow> ('c, 's) mpred \<Rightarrow> bool"
   ("_ \<lbrace>_\<rbrace>" [59,0] 60) where
   "invariant f P \<equiv> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
 
@@ -51,8 +51,8 @@ text \<open>
   validity above. Instead of one postcondition, we have two: one for
   normal and one for exceptional results.\<close>
 definition validE ::
-  "('c,'s) mpred \<Rightarrow> ('c, 's, 'a + 'b) nondet_monad \<Rightarrow>
-   ('b \<Rightarrow> ('c,'s) mpred) \<Rightarrow> ('a \<Rightarrow> ('c,'s) mpred) \<Rightarrow> bool"
+  "('c, 's) mpred \<Rightarrow> ('c, 's, 'a + 'b) nondet_monad \<Rightarrow>
+   ('b \<Rightarrow> ('c, 's) mpred) \<Rightarrow> ('a \<Rightarrow> ('c, 's) mpred) \<Rightarrow> bool"
   ("\<lbrace>_\<rbrace>/ _ /(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)") where
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<equiv> \<lbrace>P\<rbrace> f \<lbrace> \<lambda>v s. case v of Inr r \<Rightarrow> Q r s | Inl e \<Rightarrow> E e s \<rbrace>"
 
@@ -69,13 +69,13 @@ text \<open>
 (* Narrator: they are in fact not convenient, and are now considered a mistake that should have
              been an abbreviation instead. *)
 definition validE_R :: (* FIXME lib: this should be an abbreviation *)
-  "('c,'s) mpred \<Rightarrow> ('c, 's, 'e + 'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> ('c,'s) mpred) \<Rightarrow> bool"
+  "('c, 's) mpred \<Rightarrow> ('c, 's, 'e + 'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> ('c, 's) mpred) \<Rightarrow> bool"
   ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>, -")
   where
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<equiv> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>_. \<top>\<rbrace>"
 
 definition validE_E :: (* FIXME lib: this should be an abbreviation *)
-  "(('c,'s) mpred) \<Rightarrow>  ('c, 's, 'e + 'a) nondet_monad \<Rightarrow> ('e \<Rightarrow> ('c,'s) mpred) \<Rightarrow> bool"
+  "(('c, 's) mpred) \<Rightarrow>  ('c, 's, 'e + 'a) nondet_monad \<Rightarrow> ('e \<Rightarrow> ('c, 's) mpred) \<Rightarrow> bool"
    ("\<lbrace>_\<rbrace>/ _ /-, \<lbrace>_\<rbrace>")
   where
   "\<lbrace>P\<rbrace> f -,\<lbrace>E\<rbrace> \<equiv> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. \<top>\<rbrace>,\<lbrace>E\<rbrace>"
@@ -248,11 +248,11 @@ lemma hoare_post_subst:
 
 lemma hoare_post_imp:
   "\<lbrakk> \<And>rv s. Q' rv s \<Longrightarrow> Q rv s; \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
-  by(fastforce simp: valid_def split_def)
+  by (fastforce simp: valid_def split_def)
 
 lemma hoare_post_impE:
   "\<lbrakk> \<And>rv s. Q' rv s \<Longrightarrow> Q rv s; \<And>e s. E' e s \<Longrightarrow> E e s; \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>,\<lbrace>E'\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  by(fastforce simp: validE_def2 split: sum.splits)
+  by (fastforce simp: validE_def2 split: sum.splits)
 
 lemmas hoare_strengthen_post = hoare_post_imp[rotated]
 lemmas hoare_strengthen_postE = hoare_post_impE[rotated 2]
@@ -765,17 +765,17 @@ lemma hoare_vcg_const_lift:
   by simp
 
 lemma hoare_vcg_const_liftE:
-  "\<lbrace>\<lambda>s. Q (env s) \<and> E (env s)\<rbrace> f \<lbrace>\<lambda>_s. Q (env s)\<rbrace>, \<lbrace>\<lambda>_s. E (env s)\<rbrace>"
+  "\<lbrace>\<lambda>s. Q (env s) \<and> E (env s)\<rbrace> f \<lbrace>\<lambda>_ s. Q (env s)\<rbrace>, \<lbrace>\<lambda>_ s. E (env s)\<rbrace>"
   unfolding validE_def valid_def
   by (simp split: sum.splits)
 
 lemma hoare_vcg_const_liftE_R:
-  "\<lbrace>\<lambda>s. P (env s)\<rbrace> f \<lbrace>\<lambda>_s. P (env s)\<rbrace>, -"
+  "\<lbrace>\<lambda>s. P (env s)\<rbrace> f \<lbrace>\<lambda>_ s. P (env s)\<rbrace>, -"
   unfolding validE_R_def
   by (wp hoare_vcg_const_liftE)
 
 lemma hoare_vcg_const_liftE_E:
-  "\<lbrace>\<lambda>s. P (env s)\<rbrace> f -, \<lbrace>\<lambda>_s. P (env s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (env s)\<rbrace> f -, \<lbrace>\<lambda>_ s. P (env s)\<rbrace>"
   unfolding validE_E_def
   by (wp hoare_vcg_const_liftE)
 
