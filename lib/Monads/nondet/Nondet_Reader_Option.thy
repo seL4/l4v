@@ -23,7 +23,7 @@ translations
   "_doO (_nobind b) e"     == "b |>> (CONST K_bind e)"
   "DO x <- a; e OD"        == "a |>> (\<lambda>x. e)"
 
-(* These are here, because K_bind is not available yet in  Reader_Option_VCG *)
+(* These are here, because K_bind is not available yet in Reader_Option_VCG *)
 lemma ovalid_K_bind_wp[wp]:
   "ovalid P f Q \<Longrightarrow> ovalid P (K_bind f x) Q"
   by simp

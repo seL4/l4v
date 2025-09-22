@@ -20,7 +20,7 @@ text \<open>
   is often similar. The following definitions allow such reasoning to take place.\<close>
 
 definition validNF ::
-  "('c,'s) mpred \<Rightarrow> ('c,'s,'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> ('c,'s) mpred) \<Rightarrow> bool"
+  "('c, 's) mpred \<Rightarrow> ('c, 's, 'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> ('c, 's) mpred) \<Rightarrow> bool"
   ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>!") where
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>! \<equiv> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<and> no_fail P f"
 
@@ -29,8 +29,8 @@ lemma validNF_alt_def:
   by (fastforce simp: validNF_def valid_def no_fail_def)
 
 definition validE_NF ::
-  "('c,'s) mpred \<Rightarrow> ('c, 's, 'a + 'b) nondet_monad \<Rightarrow>
-   ('b \<Rightarrow> ('c,'s) mpred) \<Rightarrow> ('a \<Rightarrow> ('c,'s) mpred) \<Rightarrow> bool"
+  "('c, 's) mpred \<Rightarrow> ('c, 's, 'a + 'b) nondet_monad \<Rightarrow> ('b \<Rightarrow> ('c, 's) mpred) \<Rightarrow>
+   ('a \<Rightarrow> ('c, 's) mpred) \<Rightarrow> bool"
   ("\<lbrace>_\<rbrace>/ _ /(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>!)") where
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>! \<equiv> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace> \<and> no_fail P f"
 
@@ -108,7 +108,7 @@ lemma validNF_get[wp]:
   by (wp validNF)+
 
 lemma validNF_put[wp]:
-  "\<lbrace> \<lambda>s. P () (with_env_of s (mstate x))  \<rbrace> put x \<lbrace> P \<rbrace>!"
+  "\<lbrace> \<lambda>s. P () (with_env_of s (mstate x)) \<rbrace> put x \<lbrace> P \<rbrace>!"
   by (wp validNF)+
 
 lemma validNF_K_bind[wp]:
@@ -135,8 +135,8 @@ text \<open>
   Set up combination rules for @{method wp}, which also requires a @{text wp_trip} rule for
   @{const validNF}.\<close>
 definition validNF_property ::
-  "('a \<Rightarrow> ('c,'s) mpred) \<Rightarrow> ('c,'s) monad_state \<Rightarrow> ('c,'s,'a) nondet_monad \<Rightarrow> bool"
-   where
+  "('a \<Rightarrow> ('c, 's) mpred) \<Rightarrow> ('c, 's) monad_state \<Rightarrow> ('c, 's, 'a) nondet_monad \<Rightarrow> bool"
+  where
   "validNF_property Q s b \<equiv> \<not> snd (b s) \<and> (\<forall>(r', s') \<in> fst (b s). Q r' (with_env_of s s'))"
 
 lemma validNF_is_triple[wp_trip]:
@@ -308,8 +308,8 @@ lemma validNF_nobindE[wp]:
 text \<open>
   Set up triple rules for @{term validE_NF} so that we can use @{method wp} combinator rules.\<close>
 definition validE_NF_property ::
-  "('a \<Rightarrow> ('c,'s) mpred) \<Rightarrow> ('e \<Rightarrow> ('c,'s) mpred) \<Rightarrow>
-   ('c,'s) monad_state \<Rightarrow> ('c, 's, 'e+'a) nondet_monad \<Rightarrow> bool"
+  "('a \<Rightarrow> ('c, 's) mpred) \<Rightarrow> ('e \<Rightarrow> ('c, 's) mpred) \<Rightarrow>
+   ('c, 's) monad_state \<Rightarrow> ('c, 's, 'e + 'a) nondet_monad \<Rightarrow> bool"
   where
   "validE_NF_property Q E s b \<equiv>
    \<not> snd (b s) \<and>

@@ -59,7 +59,7 @@ text \<open>
   The definition of fundamental monad functions @{text return} and
   @{text bind}. The monad function @{text "return x"} does not change
   the  state, does not fail, and returns @{text "x"}.\<close>
-definition return :: "'a \<Rightarrow> ('c,'s,'a) nondet_monad" where
+definition return :: "'a \<Rightarrow> ('c, 's, 'a) nondet_monad" where
   "return a \<equiv> \<lambda>s. ({(a, mstate s)},False)"
 
 text \<open>
@@ -102,13 +102,13 @@ text \<open>
   integrates well with how @{text gets} and @{text modify} are intended to be
   used with a record type state -- the standard record update and access
   will expect the full state type, not only the variable part of the state.\<close>
-definition get :: "('c,'s, ('c,'s) monad_state) nondet_monad" where
+definition get :: "('c, 's, ('c, 's) monad_state) nondet_monad" where
   "get \<equiv> \<lambda>s. ({(s, mstate s)}, False)"
 
-definition ask :: "('c,'s,'c) nondet_monad" where
+definition ask :: "('c, 's, 'c) nondet_monad" where
   "ask \<equiv> \<lambda>s. ({(env s, mstate s)}, False)"
 
-definition put :: "('c,'s) monad_state \<Rightarrow> ('c, 's, unit) nondet_monad" where
+definition put :: "('c, 's) monad_state \<Rightarrow> ('c, 's, unit) nondet_monad" where
   "put s \<equiv> \<lambda>_. ({((), mstate s)}, False)"
 
 subsection "Nondeterminism"
@@ -140,7 +140,7 @@ text \<open>
   nondeterministically a state related to the input state. Fails if no such
   state exists.\<close>
 definition state_select ::
-  "(('c,'s) monad_state \<times> ('c,'s) monad_state) set \<Rightarrow> ('c, 's, unit) nondet_monad" where
+  "(('c, 's) monad_state \<times> ('c, 's) monad_state) set \<Rightarrow> ('c, 's, unit) nondet_monad" where
   "state_select r \<equiv> \<lambda>s. ((\<lambda>x. ((), mstate x)) ` {s'. (s, s') \<in> r}, \<not> (\<exists>s'. (s, s') \<in> r))"
 
 subsection "Failure"
@@ -159,13 +159,13 @@ definition assert_opt :: "'a option \<Rightarrow> ('c, 's, 'a) nondet_monad" whe
   "assert_opt v \<equiv> case v of None \<Rightarrow> fail | Some v \<Rightarrow> return v"
 
 text \<open>An assertion that also can introspect the current state.\<close>
-definition state_assert :: "('c,'s) mpred \<Rightarrow> ('c, 's, unit) nondet_monad" where
+definition state_assert :: "('c, 's) mpred \<Rightarrow> ('c, 's, unit) nondet_monad" where
   "state_assert P \<equiv> get >>= (\<lambda>s. assert (P s))"
 
 subsection "Generic functions on top of the state monad"
 
 text \<open>Apply a function to the current state and return the result without changing the state.\<close>
-definition gets :: "(('c,'s) monad_state \<Rightarrow> 'a) \<Rightarrow> ('c, 's, 'a) nondet_monad" where
+definition gets :: "(('c, 's) monad_state \<Rightarrow> 'a) \<Rightarrow> ('c, 's, 'a) nondet_monad" where
   "gets f \<equiv> get >>= (\<lambda>s. return (f s))"
 
 text \<open>Apply a function to the constant state and return the result without changing the state.\<close>
@@ -198,7 +198,7 @@ text \<open>
   Perform a test on the current state, performing the left monad if
   the result is true or the right monad if the result is false. \<close>
 definition condition ::
-  "('c,'s) mpred \<Rightarrow> ('c, 's, 'r) nondet_monad \<Rightarrow> ('c, 's, 'r) nondet_monad \<Rightarrow> ('c, 's, 'r) nondet_monad"
+  "('c, 's) mpred \<Rightarrow> ('c, 's, 'r) nondet_monad \<Rightarrow> ('c, 's, 'r) nondet_monad \<Rightarrow> ('c, 's, 'r) nondet_monad"
   where
   "condition P L R \<equiv> \<lambda>s. if P s then L s else R s"
 
@@ -208,14 +208,14 @@ notation (output)
 text \<open>
   Apply an option valued function to the current state, fail if it returns @{const None},
   return @{text v} if it returns @{term "Some v"}.\<close>
-definition gets_the :: "(('c,'s) monad_state \<Rightarrow> 'a option) \<Rightarrow> ('c, 's, 'a) nondet_monad" where
+definition gets_the :: "(('c, 's) monad_state \<Rightarrow> 'a option) \<Rightarrow> ('c, 's, 'a) nondet_monad" where
   "gets_the f \<equiv> gets f >>= assert_opt"
 
 text \<open>
   Get a map (such as a heap) from the current state and apply an argument to the map.
   Fail if the map returns @{const None}, otherwise return the value.\<close>
 definition gets_map ::
-  "(('c,'s) monad_state \<Rightarrow> 'a \<Rightarrow> 'b option) \<Rightarrow> 'a \<Rightarrow> ('c, 's, 'b) nondet_monad"
+  "(('c, 's) monad_state \<Rightarrow> 'a \<Rightarrow> 'b option) \<Rightarrow> 'a \<Rightarrow> ('c, 's, 'b) nondet_monad"
   where
   "gets_map f p \<equiv> gets f >>= (\<lambda>m. assert_opt (m p))"
 
@@ -278,7 +278,9 @@ definition throwError :: "'e \<Rightarrow> ('c, 's, 'e + 'a) nondet_monad" where
 text \<open>
   Lifting a function over the exception type: if the input is an
   exception, return that exception; otherwise continue execution.\<close>
-definition lift :: "('a \<Rightarrow> ('c, 's, 'e + 'b) nondet_monad) \<Rightarrow> 'e +'a \<Rightarrow> ('c, 's, 'e + 'b) nondet_monad" where
+definition lift ::
+  "('a \<Rightarrow> ('c, 's, 'e + 'b) nondet_monad) \<Rightarrow> 'e + 'a \<Rightarrow> ('c, 's, 'e + 'b) nondet_monad"
+  where
   "lift f v \<equiv> case v of Inl e \<Rightarrow> throwError e | Inr v' \<Rightarrow> f v'"
 
 text \<open>
@@ -295,7 +297,7 @@ text \<open>
   Lifting a normal nondeterministic monad into the
   exception monad is achieved by always returning its
   result as normal result and never throwing an exception.\<close>
-definition liftE :: "('c,'s,'a) nondet_monad \<Rightarrow> ('c, 's, 'e+'a) nondet_monad" where
+definition liftE :: "('c, 's, 'a) nondet_monad \<Rightarrow> ('c, 's, 'e + 'a) nondet_monad" where
   "liftE f \<equiv> f >>= (\<lambda>r. return (Inr r))"
 
 text \<open>
@@ -446,7 +448,7 @@ definition liftM :: "('a \<Rightarrow> 'b) \<Rightarrow> ('c, 's, 'a) nondet_mon
   "liftM f m \<equiv> do x \<leftarrow> m; return (f x) od"
 
 text \<open>The same for the exception monad:\<close>
-definition liftME :: "('a \<Rightarrow> 'b) \<Rightarrow> ('c, 's, 'e+'a) nondet_monad \<Rightarrow> ('c, 's, 'e+'b) nondet_monad" where
+definition liftME :: "('a \<Rightarrow> 'b) \<Rightarrow> ('c, 's, 'e + 'a) nondet_monad \<Rightarrow> ('c, 's, 'e + 'b) nondet_monad" where
   "liftME f m \<equiv> doE x \<leftarrow> m; returnOk (f x) odE"
 
 text \<open>Execute @{term f} for @{term "Some x"}, otherwise do nothing.\<close>
@@ -483,7 +485,7 @@ definition mapM :: "('a \<Rightarrow> ('c, 's,'b) nondet_monad) \<Rightarrow> 'a
   "mapM f xs \<equiv> sequence (map f xs)"
 
 definition zipWithM ::
-  "('a \<Rightarrow> 'b \<Rightarrow> ('r,'s,'c) nondet_monad) \<Rightarrow> 'a list \<Rightarrow> 'b list \<Rightarrow> ('r, 's, 'c list) nondet_monad"
+  "('a \<Rightarrow> 'b \<Rightarrow> ('r, 's, 'c) nondet_monad) \<Rightarrow> 'a list \<Rightarrow> 'b list \<Rightarrow> ('r, 's, 'c list) nondet_monad"
   where
   "zipWithM f xs ys \<equiv> sequence (zipWith f xs ys)"
 
@@ -500,23 +502,25 @@ definition foldME ::
 text \<open>
   The sequence and map functions above for the exception monad, with and without
   lists of return value\<close>
-definition sequenceE_x :: "('c, 's, 'e+'a) nondet_monad list \<Rightarrow> ('c, 's, 'e+unit) nondet_monad" where
+definition sequenceE_x :: "('c, 's, 'e + 'a) nondet_monad list \<Rightarrow> ('c, 's, 'e + unit) nondet_monad" where
   "sequenceE_x xs \<equiv> foldr (\<lambda>x y. doE _ <- x; y odE) xs (returnOk ())"
 
-definition mapME_x :: "('a \<Rightarrow> ('c, 's,'e+'b) nondet_monad) \<Rightarrow> 'a list \<Rightarrow> ('c, 's,'e+unit) nondet_monad" where
+definition mapME_x ::
+  "('a \<Rightarrow> ('c, 's,'e + 'b) nondet_monad) \<Rightarrow> 'a list \<Rightarrow> ('c, 's,'e + unit) nondet_monad"
+  where
   "mapME_x f xs \<equiv> sequenceE_x (map f xs)"
 
-definition sequenceE :: "('c, 's, 'e+'a) nondet_monad list \<Rightarrow> ('c, 's, 'e+'a list) nondet_monad" where
+definition sequenceE :: "('c, 's, 'e + 'a) nondet_monad list \<Rightarrow> ('c, 's, 'e + 'a list) nondet_monad" where
   "sequenceE xs \<equiv> let mcons = (\<lambda>p q. p >>=E (\<lambda>x. q >>=E (\<lambda>y. returnOk (x#y))))
                    in foldr mcons xs (returnOk [])"
 
 definition mapME ::
-  "('a \<Rightarrow> ('c,'s,'e+'b) nondet_monad) \<Rightarrow> 'a list \<Rightarrow> ('c,'s,'e+'b list) nondet_monad"
+  "('a \<Rightarrow> ('c, 's, 'e + 'b) nondet_monad) \<Rightarrow> 'a list \<Rightarrow> ('c, 's, 'e + 'b list) nondet_monad"
   where
   "mapME f xs \<equiv> sequenceE (map f xs)"
 
 text \<open>Filtering a list using a monadic function as predicate:\<close>
-primrec filterM :: "('a \<Rightarrow> ('c,'s, bool) nondet_monad) \<Rightarrow> 'a list \<Rightarrow> ('c, 's, 'a list) nondet_monad" where
+primrec filterM :: "('a \<Rightarrow> ('c, 's, bool) nondet_monad) \<Rightarrow> 'a list \<Rightarrow> ('c, 's, 'a list) nondet_monad" where
   "filterM P []       = return []"
 | "filterM P (x # xs) = do
      b  <- P x;
@@ -599,7 +603,7 @@ text \<open>
   non-termination is represented using the failure flag of the
   monad.\<close>
 inductive_set whileLoop_results ::
-  "('r \<Rightarrow> ('c,'s) mpred) \<Rightarrow> ('r \<Rightarrow> ('c, 's, 'r) nondet_monad) \<Rightarrow> 'c \<Rightarrow>
+  "('r \<Rightarrow> ('c, 's) mpred) \<Rightarrow> ('r \<Rightarrow> ('c, 's, 'r) nondet_monad) \<Rightarrow> 'c \<Rightarrow>
    ((('r \<times> 's) option) \<times> (('r \<times> 's) option)) set"
   for C B c where
     "\<lbrakk> \<not> C r (monad_state c s) \<rbrakk> \<Longrightarrow> (Some (r, s), Some (r, s)) \<in> whileLoop_results C B c"
@@ -616,7 +620,7 @@ inductive_simps whileLoop_results_simps_valid: "(Some x, Some y) \<in> whileLoop
 inductive_simps whileLoop_results_simps_start_fail[simp]: "(None, x) \<in> whileLoop_results C B c"
 
 inductive whileLoop_terminates ::
-  "('r \<Rightarrow> ('c,'s) mpred) \<Rightarrow> ('r \<Rightarrow> ('c, 's, 'r) nondet_monad) \<Rightarrow> 'c \<Rightarrow> 'r \<Rightarrow> 's \<Rightarrow> bool"
+  "('r \<Rightarrow> ('c, 's) mpred) \<Rightarrow> ('r \<Rightarrow> ('c, 's, 'r) nondet_monad) \<Rightarrow> 'c \<Rightarrow> 'r \<Rightarrow> 's \<Rightarrow> bool"
   for C B c where
     "\<not> C r (monad_state c s) \<Longrightarrow> whileLoop_terminates C B c r s"
   | "\<lbrakk> C r (monad_state c s);
@@ -627,7 +631,7 @@ inductive_cases whileLoop_terminates_cases: "whileLoop_terminates C B c r s"
 inductive_simps whileLoop_terminates_simps: "whileLoop_terminates C B c r s"
 
 definition whileLoop ::
-  "('a \<Rightarrow> ('c,'s) mpred) \<Rightarrow> ('a \<Rightarrow> ('c, 's, 'a) nondet_monad) \<Rightarrow> 'a \<Rightarrow> ('c, 's, 'a) nondet_monad"
+  "('a \<Rightarrow> ('c, 's) mpred) \<Rightarrow> ('a \<Rightarrow> ('c, 's, 'a) nondet_monad) \<Rightarrow> 'a \<Rightarrow> ('c, 's, 'a) nondet_monad"
   where
   "whileLoop C B \<equiv> \<lambda>r s.
      ({(r',s'). (Some (r, mstate s), Some (r', s')) \<in> whileLoop_results C B (env s)},
@@ -638,7 +642,7 @@ notation (output)
   whileLoop  ("(whileLoop (_)//  (_))" [1000, 1000] 1000)
 
 definition whileLoopE ::
-  "('r \<Rightarrow> ('c,'s) mpred) \<Rightarrow> ('r \<Rightarrow> ('c, 's, 'e + 'r) nondet_monad) \<Rightarrow>
+  "('r \<Rightarrow> ('c, 's) mpred) \<Rightarrow> ('r \<Rightarrow> ('c, 's, 'e + 'r) nondet_monad) \<Rightarrow>
    'r \<Rightarrow> ('c, 's, 'e + 'r) nondet_monad"
   where
   "whileLoopE C body \<equiv>
