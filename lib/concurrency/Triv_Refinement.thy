@@ -13,7 +13,7 @@ begin
 text \<open>
   This is a simple (almost trivial) definition of refinement, which simply resolves nondeterminism
   to a smaller set of options.\<close>
-definition triv_refinement :: "('s,'a) tmonad \<Rightarrow> ('s,'a) tmonad \<Rightarrow> bool" where
+definition triv_refinement :: "('c, 's, 'a) tmonad \<Rightarrow> ('c, 's, 'a) tmonad \<Rightarrow> bool" where
   "triv_refinement aprog cprog = (\<forall>s. cprog s \<subseteq> aprog s)"
 
 lemmas triv_refinement_elemD = triv_refinement_def[THEN iffD1, rule_format, THEN subsetD]
@@ -56,7 +56,7 @@ lemma triv_refinement_parallel:
             triv_refinement_trans)
 
 lemma select_subset:
-  "(select S s \<subseteq> select S' s') = (S \<subseteq> S' \<and> (S \<noteq> {} \<longrightarrow> s = s'))"
+  "(select S s \<subseteq> select S' s') = (S \<subseteq> S' \<and> (S \<noteq> {} \<longrightarrow> mstate s = mstate s'))"
   by (auto simp add: select_def)
 
 lemma triv_refinement_select:
@@ -88,11 +88,11 @@ lemma triv_refinement_refl[simp]:
 
 lemma triv_refinement_select_concrete_All:
   "\<forall>x \<in> S. triv_refinement aprog (cprog x) \<Longrightarrow> triv_refinement aprog (select S >>= cprog)"
-  by (auto simp: triv_refinement_def bind_def select_def)
+  by (fastforce simp: triv_refinement_def bind_def select_def)
 
 lemma triv_refinement_select_abstract_x:
   "\<lbrakk>x \<in> S; triv_refinement (aprog x) cprog\<rbrakk> \<Longrightarrow> triv_refinement (select S >>= aprog) cprog"
-  by (auto simp: triv_refinement_def bind_def select_def)
+  by (fastforce simp: triv_refinement_def bind_def select_def)
 
 lemma triv_refinement_alternative1:
   "triv_refinement (a \<sqinter> b) a"
