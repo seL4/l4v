@@ -735,11 +735,6 @@ lemma tcbSchedDequeue_sch_act_simple[wp]:
   "tcbSchedDequeue t \<lbrace>sch_act_simple\<rbrace>"
   by (wpsimp simp: sch_act_simple_def)
 
-lemma tcbSchedNext_update_tcb_cte_cases:
-  "(a, b) \<in> ran tcb_cte_cases \<Longrightarrow> a (tcbPriority_update f tcb) = a tcb"
-  unfolding tcb_cte_cases_def
-  by (case_tac tcb; fastforce simp: objBits_simps')
-
 lemma threadSet_priority_invs':
   "\<lbrace>invs' and tcb_at' t and K (p \<le> maxPriority)\<rbrace>
    threadSet (tcbPriority_update (\<lambda>_. p)) t
@@ -761,7 +756,7 @@ lemma threadSet_priority_invs':
             untyped_ranges_zero_lift
             sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
             threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of
-         | clarsimp simp: cteCaps_of_def tcbSchedNext_update_tcb_cte_cases o_def | rule refl)+
+         | clarsimp simp: cteCaps_of_def update_tcb_cte_cases o_def | rule refl)+
   by (auto simp: obj_at'_def)
 
 lemma setP_invs':
