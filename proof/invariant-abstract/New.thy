@@ -250,20 +250,33 @@ apply (wp add: set_cap_colour_maintained)
 apply auto
 by (simp add: check_cap_ref_def)
 
-lemma tmp:
-  "\<lbrakk>\<forall>ptr kobj.
-           ko_at kobj ptr s \<and>
-           ptr \<in> colour_oracle (cur_domain s) \<longrightarrow>
-           check_kernel_object_ref kobj
-            (colour_oracle (cur_domain s));
-        fst (get_cap (a, b) s) = {(capa, s)} \<and>
-        cap = capa\<rbrakk>
+lemma cte_wp_at_check_cap_ref:
+"\<And>s cap.
+       \<lbrakk>cte_wp_at ((=) cap) (a, b) s;
+        colour_invariant s;
+        a \<in> colour_oracle (cur_domain s)\<rbrakk>
        \<Longrightarrow> check_cap_ref cap
-            (colour_oracle (cur_domain s))"
-sorry
+             (colour_oracle (cur_domain s))"
+apply (simp add: cte_wp_at_cases2)
+apply (erule disjE|erule exE|erule conjE)+
+apply (simp_all add: colour_invariant_def obj_at_def)
+apply (erule_tac x=a in allE)
+apply (erule_tac x="CNode sz fun" in allE)
+apply (erule impE)
+apply simp
+apply (simp add: check_kernel_object_ref_def)
+apply (erule_tac x=b in allE)
+apply simp
+apply (erule disjE|erule exE|erule conjE)+
+apply (erule_tac x=a in allE)
+apply (erule_tac x="TCB tcb" in allE)
+apply (erule impE)
+apply simp
+using ranI ran_tcb_cnode_map
+  by force
 
 lemma cap_insert_colour_maintained:
-  "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref new_cap (colour_oracle (cur_domain s)))\<rbrace>
+  "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref new_cap (colour_oracle (cur_domain s))) and (\<lambda>s. a\<in>colour_oracle (cur_domain s))\<rbrace>
    cap_insert new_cap (a, b) dest_slot
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   apply (unfold cap_insert_def colour_invariant_def)
@@ -283,32 +296,62 @@ apply wpsimp
 apply (rule get_cap_wp)
 apply wpsimp
 apply (rule get_cap_wp)
-apply auto
-apply (unfold colour_invariant_def)
-apply (unfold cte_wp_at_def)
-apply (erule exE)+
-apply (thin_tac "fst (get_cap dest_slot s) = {(capb, s)} \<and> NullCap = capb")
-apply (thin_tac "check_cap_ref new_cap (colour_oracle (cur_domain s))")
-apply (erule allE[where x=a])
-apply (erule allE[where x=kobj])
-apply (subgoal_tac "kobj\<in>fst (get_object a s)")
-apply (case_tac A)
 apply simp
-sorry
-
-find_theorems "cte_wp_at ((=) _) _ _"
-find_theorems "fst (get_cap _ _)"
+apply (rule allI|rule impI|erule conjE)+
+by (simp add: cte_wp_at_check_cap_ref)
 
 lemma temp:
   "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. Q\<rbrace>,-; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<not>(cond rv) \<longrightarrow> R rv s\<rbrace>,-\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. if cond rv then (\<lambda>s. Q s \<and> True) else (\<lambda>s. Q s \<and> R rv s)\<rbrace>,-"
 by (smt (verit) packed_validRE
     packed_validRI)
 
-thm temp[where Q="\<lambda>s. colour_invariant s" and R="\<lambda>rv s. check_cap_ref rv (colour_oracle (cur_domain s))" and cond="\<lambda>rv. rv = NullCap"]
+lemma transfer_caps_loop_colour_maintained:
+  "\<lbrace>colour_invariant and (\<lambda>s. \<forall>(cap, _)\<in>(set caps). check_cap_ref cap (colour_oracle (cur_domain s)))\<rbrace>
+   transfer_caps_loop ep rcv_buffer n caps slots mi
+  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+proof (induct caps arbitrary: ep rcv_buffer n slots mi)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a caps)
+  note Cons.hyps[wp]
+  show ?case
+  apply (cases a)
+  apply wpsimp
+  apply (rule conjI; rule impI)+
+      apply wpsimp
+       apply (wp add: set_extra_badge_colour_maintained)
+       apply (simp add: set_extra_badge_def)
+    apply wpsimp
+      apply simp
+     apply wpsimp
+        apply (wp add: cap_insert_colour_maintained)
+       apply simp
+    apply wpsimp
+    defer
+      defer
+      apply (rule conjI; rule impI)+
+       apply wpsimp
+        apply (wp add: set_extra_badge_colour_maintained)
+        apply (simp add: set_extra_badge_def)
+        apply wpsimp
+       apply simp
+      apply wpsimp
+     apply wp
+  apply (wp add: temp[where P=
+    "colour_invariant and
+    (\<lambda>s. \<forall>(cap, _)\<in>(set caps).
+       check_cap_ref cap (colour_oracle (cur_domain s)))"
+  ])
+      apply simp
+      apply (wp add: derive_cap_inv)
+      apply simp
+     apply (simp add: check_cap_ref_def)
+qed
 
-lemma transfer_caps_loop_colour_maintained: (* TODO - add precond saying all caps satisfy check (breaks a bunch of stuff) *)
-  "\<lbrace>colour_invariant\<rbrace>
-   transfer_caps_loop  ep rcv_buffer n caps slots mi
+lemma transfer_caps_loop_colour_maintained:
+  "\<lbrace>colour_invariant and (\<lambda>s. \<forall>(cap, _)\<in>(set caps). check_cap_ref cap (colour_oracle (cur_domain s)))\<rbrace>
+   transfer_caps_loop ep rcv_buffer n caps slots mi
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   apply (induction caps arbitrary: mi n slots ep rcv_buffer)
     apply simp
@@ -316,8 +359,10 @@ apply wpsimp
 apply (rule conjI; rule impI)+
 apply wpsimp
 apply assumption
-apply wpsimp
+apply simp
 apply (wp add: set_extra_badge_colour_maintained)
+apply (simp add: set_extra_badge_def)
+apply wpsimp
 apply simp
 apply wpsimp
 apply assumption
@@ -332,25 +377,29 @@ apply wpsimp
 apply assumption
 apply wpsimp
 apply (wp add: set_extra_badge_colour_maintained)
+apply (simp add: set_extra_badge_def)
+apply wpsimp
 apply simp
 apply wpsimp
 apply wp
-apply (wp add: temp)
+apply (wp add: temp[where P=
+  "colour_invariant and
+  (\<lambda>s. \<forall>(cap, _)\<in>(set caps).
+     check_cap_ref cap (colour_oracle (cur_domain s)))"
+])
+apply simp
+apply (wp add: derive_cap_inv)
 apply simp
 apply (simp add: check_cap_ref_def)
 sorry
 
-
-find_theorems "derive_cap"
-find_theorems "transfer_caps_loop"
-find_theorems "\<lambda>rv. if _ then _ else _"
-find_theorems "_ = NullCap \<longrightarrow> _"
+find_theorems "transfer_caps_loop" name: "pres"
+find_theorems "cap_master_cap" "derive_cap"
+find_theorems (50) "derive_cap"
 thm "derive_cap_objrefs"
-thm "hoare_post_imp"
-thm "hoare_if_r_and"
 
 lemma transfer_caps_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace>
+  "\<lbrace>colour_invariant and (\<lambda>s. \<forall>(cap, _)\<in>(set caps). check_cap_ref cap (colour_oracle (cur_domain s)))\<rbrace>
    transfer_caps info caps endpoint receiver recv_buffer
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
 apply (unfold transfer_caps_def)
@@ -386,13 +435,38 @@ apply (unfold do_normal_transfer_def)
 apply wpsimp
 apply (wp add: as_user_colour_maintained
                set_message_info_colour_maintained
-               transfer_caps_colour_maintained)+ (* TODO - come back to this once transfer caps is done *)
+               transfer_caps_colour_maintained)+
+apply (wp add: copy_mrs_colour_maintained)
+apply (simp add: copy_mrs_def; wpsimp)
+apply (rule conjI)
+apply (rule impI)
+apply (wp add: mapM_wp[where S="UNIV"])
+apply simp
+apply (rule impI)
+apply (wp add: mapM_wp[where S="UNIV"])
+apply simp
+apply (wp add: mapM_wp[where S="UNIV"])
+apply simp+
+apply wpsimp
+apply (wp add: lookup_extra_caps_inv)
 sorry
 
 lemma syscall_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace>
+  "\<lbrakk>\<forall>x. \<lbrace>colour_invariant\<rbrace> param_b x \<lbrace>\<lambda>_. colour_invariant\<rbrace>;
+    \<forall>x. \<lbrace>colour_invariant\<rbrace> param_d x \<lbrace>\<lambda>_. colour_invariant\<rbrace>;
+    \<forall>x. \<lbrace>colour_invariant\<rbrace> param_e x \<lbrace>\<lambda>_. colour_invariant\<rbrace>\<rbrakk> \<Longrightarrow>
+  \<lbrace>colour_invariant\<rbrace>
    syscall param_a param_b param_c param_d param_e
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+apply (simp add: syscall_def)
+apply wpsimp
+apply (erule allE)+
+apply assumption
+apply wpsimp
+apply (erule allE)+
+apply assumption
+apply (erule allE)+
+apply wpsimp
 sorry
 
 crunch call_kernel for colour_maintained: "colour_invariant"
