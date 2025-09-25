@@ -488,7 +488,7 @@ lemmas isCapRevocable_simps[simp] = Retype_H.isCapRevocable_def[split_simps capa
 
 context begin (* revokable_ccorres *)
 
-private method revokable'_hammer = solves \<open>(
+private method isCapRevocable_hammer = solves \<open>(
               simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs,
               rule ccorres_guard_imp,
               rule ccorres_return_C; clarsimp)\<close>
@@ -516,7 +516,7 @@ lemma revokable_ccorres:
   apply (rule_tac P'=UNIV and P=\<top> in ccorres_inst)
    apply (cases cap)
     \<comment> \<open>Uninteresting caps\<close>
-              apply revokable'_hammer+
+              apply isCapRevocable_hammer+
     \<comment> \<open>NotificationCap\<close>
             apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs)
             apply (rule ccorres_guard_imp, (rule ccorres_rhs_assoc)+, csymbr, csymbr)
@@ -541,7 +541,7 @@ lemma revokable_ccorres:
            apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
           apply (fastforce simp: cap_get_tag_isCap isCap_simps)
     \<comment> \<open>Other Caps\<close>
-  by (revokable'_hammer | fastforce simp: isCap_simps)+
+  by (isCapRevocable_hammer | fastforce simp: isCap_simps)+
 
 end (* revokable_ccorres *)
 

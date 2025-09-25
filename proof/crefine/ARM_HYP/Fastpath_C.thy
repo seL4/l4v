@@ -2181,8 +2181,8 @@ proof -
                                 apply (rule getCTE_setCTE_rf_sr, simp_all)[1]
                                 apply (case_tac destCallerCTE, case_tac curThreadReplyCTE,
                                        case_tac "cteMDBNode curThreadReplyCTE")
-                                apply (clarsimp simp add: ccte_relation_eq_ccap_relation)
-                                apply (clarsimp simp: nullMDBNode_def revokable'_def)
+                                apply (clarsimp simp: ccte_relation_eq_ccap_relation nullMDBNode_def
+                                                      Retype_H.isCapRevocable_def)
                                apply ceqv
                               apply (rule ccorres_move_c_guard_cte)
                               apply (rule_tac xf'=xfdc and r'=dc in ccorres_split_nothrow)
