@@ -765,7 +765,7 @@ lemma map_to_ctes_tcb_ctes:
           assumption, simp add: objBits_simps')
    apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
           assumption, simp add: objBits_simps')
-   apply (drule (1) ps_clear_16)+
+   apply (drule (1) ps_clear_32)+
    apply (simp add: is_aligned_add_helper[of _ 9 "0x10", simplified]
                     split_def objBits_simps')
   apply (rule conjI)
