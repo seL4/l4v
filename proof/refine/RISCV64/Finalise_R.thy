@@ -2023,7 +2023,8 @@ lemma (in vmdb) isFinal_no_subtree:
    apply (clarsimp simp: isFinal_def parentOf_def mdb_next_unfold cteCaps_of_def)
    apply (erule_tac x="mdbNext n" in allE)
    apply simp
-   apply (clarsimp simp: isMDBParentOf_CTE final_matters_sameRegion_sameObject)
+   (* FIXME arch-split *)
+   apply (clarsimp simp: RISCV64.isMDBParentOf_CTE final_matters_sameRegion_sameObject)
    apply (clarsimp simp: gen_isCap_simps RISCV64.sameObjectAs_def3) (* FIXME arch-split *)
   apply clarsimp
   done

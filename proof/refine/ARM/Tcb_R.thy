@@ -2563,9 +2563,10 @@ lemma lsft_real_cte:
   apply (wp resolveAddressBits_real_cte_at'|simp add: split_def)+
   done
 
-lemma tcb_real_cte_16:
+(* FIXME: poor lemma name *)
+lemma tcb_real_cte_32:
   "\<lbrakk> real_cte_at' (t+2^cteSizeBits) s; tcb_at' t s \<rbrakk> \<Longrightarrow> False"
-  by (clarsimp simp: obj_at'_def projectKOs objBitsKO_def ps_clear_16)
+  by (clarsimp simp: obj_at'_def projectKOs objBitsKO_def ps_clear_32)
 
 lemma corres_splitEE':
   assumes x: "corres_underlying sr nf nf' (f \<oplus> r') P P' a c"
@@ -2697,7 +2698,7 @@ lemma real_cte_at_not_tcb_at':
   "real_cte_at' x s \<Longrightarrow> \<not> tcb_at' x s"
   "real_cte_at' (x + 2^cteSizeBits) s \<Longrightarrow> \<not> tcb_at' x s"
   apply (clarsimp simp: obj_at'_def projectKOs)
-  apply (clarsimp elim!: tcb_real_cte_16)
+  apply (clarsimp elim!: tcb_real_cte_32)
   done
 
 lemma decodeBindNotification_wf:

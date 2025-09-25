@@ -12,6 +12,50 @@ theory CSpace_R
 imports ArchCSpace1_R
 begin
 
+(* transfer facts from partial locales (with extra assumptions) into complete locales
+   (since we can satisfy these assumptions) *)
+
+context mdb_insert_child begin
+
+sublocale mdb_insert_child_gen
+  by (unfold_locales;
+      fastforce simp: dest_no_parent_n[simplified n_def] elim!: subtree_trans)+
+
+end
+
+context mdb_insert_sib begin
+
+sublocale mdb_insert_sib_gen
+  by (unfold_locales;
+      fastforce simp: dest_no_parent_n[simplified n_def] src_no_mdb_parent parent_preserved)+
+
+end
+
+context mdb_inv_preserve begin
+
+sublocale mdb_inv_preserve_gen by unfold_locales
+
+lemmas descendants_of = descendants_of
+
+end
+
+context mdb_swap begin
+
+sublocale mdb_swap_gen
+  by (unfold_locales; fastforce elim: isMDBParentOf_eq)+
+
+end
+
+context mdb_inv_preserve begin
+
+sublocale mdb_inv_preserve_gen
+  by unfold_locales
+
+lemmas preserve_stuff = preserve_stuff
+lemmas untyped_inc' = untyped_inc'
+
+end
+
 lemma setCTE_pred_tcb_at':
   "\<lbrace>pred_tcb_at' proj P t\<rbrace>
      setCTE c cte
@@ -1358,7 +1402,7 @@ lemma untyped_c':
   using partial_is_derived'
   apply -
    apply (case_tac "isUntypedCap src_cap")
-     by (clarsimp simp: gen_isCap_simps freeIndex_update_def is_derived'_def
+     by (clarsimp simp: gen_isCap_simps freeIndex_update_def X64.is_derived'_def (* FIXME arch-split *)
        badge_derived'_def capMasterCap_def split:if_splits capability.splits)+
 
 lemma capRange_c':
@@ -1370,7 +1414,7 @@ lemma capRange_c':
   apply (rule master_eqI, rule capRange_Master)
   apply simp
   apply (rule arg_cong)
-  apply (auto simp: gen_isCap_simps freeIndex_update_def is_derived'_def
+  apply (auto simp: gen_isCap_simps freeIndex_update_def X64.is_derived'_def (* FIXME arch-split *)
                     badge_derived'_def capMasterCap_def
               split: if_splits capability.splits)
   done
@@ -1378,7 +1422,8 @@ lemma capRange_c':
 lemma untyped_no_parent:
   "isUntypedCap src_cap \<Longrightarrow> \<not> m \<turnstile> src \<rightarrow> p"
   using partial_is_derived' untyped_c'
-  by (clarsimp simp: is_derived'_def gen_isCap_simps freeIndex_update_def descendants_of'_def)
+  (* FIXME arch-split *)
+  by (clarsimp simp: X64.is_derived'_def gen_isCap_simps freeIndex_update_def descendants_of'_def)
 
 end
 
@@ -1396,13 +1441,13 @@ lemma (in mdb_insert_der) irq_control_n:
   apply (frule n_cap)
   apply (drule n_revocable)
   apply (clarsimp split: if_split_asm)
-   apply (simp add: is_derived'_def gen_isCap_simps)
+   apply (simp add: X64.is_derived'_def gen_isCap_simps) (* FIXME arch-split *)
   apply (frule irq_revocable, rule irq_control)
   apply clarsimp
   apply (drule n_cap)
   apply (clarsimp split: if_split_asm)
   apply (erule disjE)
-   apply (clarsimp simp: is_derived'_def gen_isCap_simps)
+   apply (simp add: X64.is_derived'_def gen_isCap_simps) (* FIXME arch-split *)
   apply (erule (1) irq_controlD, rule irq_control)
   done
 
@@ -1542,11 +1587,11 @@ lemma untyped_mdb_n:
 
 lemma not_untyped: "capAligned c' \<Longrightarrow> \<not>isUntypedCap src_cap"
   using no_child partial_is_derived' ut_rev src
-  apply (clarsimp simp: ut_revocable'_def isMDBParentOf_CTE)
+  apply (clarsimp simp: ut_revocable'_def X64.isMDBParentOf_CTE) (* FIXME arch-split *)
   apply (erule_tac x=src in allE)
   apply simp
-  apply (clarsimp simp: is_derived'_def freeIndex_update_def gen_isCap_simps capAligned_def
-                        badge_derived'_def)
+  apply (clarsimp simp: X64.is_derived'_def freeIndex_update_def gen_isCap_simps capAligned_def
+                        badge_derived'_def) (* FIXME arch-split *)
   apply (clarsimp simp: X64.sameRegionAs_def3 capMasterCap_def gen_isCap_simps
                         is_aligned_no_overflow (* FIXME arch-split *)
                   split: capability.splits)
@@ -1656,7 +1701,7 @@ lemma untyped_inc_prev_update:
 
 lemma is_derived_badge_derived':
   "is_derived' m src cap cap' \<Longrightarrow> badge_derived' cap cap'"
-  by (simp add: is_derived'_def)
+  by (simp add: X64.is_derived'_def) (* FIXME arch-split *)
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
@@ -3503,7 +3548,7 @@ lemma lookupSlotForCNodeOp_corres:
   apply (rule corres_lookup_error)
   apply (rule corres_guard_imp)
     apply (rule corres_splitEE)
-       apply (rule rab_corres'; simp)
+       apply (rule rab_corres'; simp add: word_bits_def)
       apply (rule corres_trivial)
       apply (clarsimp simp: returnOk_def lookup_failure_map_def
                       split: list.split)
@@ -3758,7 +3803,7 @@ lemma getCTE_symb_exec_r:
   done
 
 lemma updateMDB_symb_exec_r:
-  "corres_underlying {(s, s'). pspace_relation (kheap s) (ksPSpace s')} False nf' dc
+  "corres_underlying {(s::det_state, s'). pspace_relation (kheap s) (ksPSpace s')} False nf' dc
         \<top> (pspace_aligned' and pspace_distinct' and (no_0 \<circ> ctes_of) and (\<lambda>s. p \<noteq> 0 \<longrightarrow> cte_at' p s))
         (return ()) (updateMDB p m)"
   using no_fail_updateMDB [of p m]
