@@ -59,6 +59,8 @@ jobs:
             plat: exynos4
           - arch: ARM
             plat: hikey
+          - arch: ARM
+            plat: omap3
           - arch: ARM_HYP
             plat: exynos5
           - arch: AARCH64
