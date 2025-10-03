@@ -135,6 +135,7 @@ integer=([1-9]{digit}*|0){intsuffix}?;
 octint=0{digit}+{intsuffix}?;
 hexint=("0x"|"0X")({digit}|[a-fA-F])+{intsuffix}?;
 identifier=({alpha}|"_")({alpha}|{digit}|"_")*;
+isa_identifier=({alpha}|"_")({alpha}|{digit}|"_"|"'")*;
 ws = [\ \t];
 commentbody = ([^*]*(\*[^/])?)*;
 attr_start = "__attribute__"{ws}*"((";
@@ -543,7 +544,7 @@ attr_start = "__attribute__"{ws}*"((";
 <SPECIAL_COMMENT>"[" => (tok(Tokens.LBRACKET,source,yypos,yypos));
 <SPECIAL_COMMENT>"]" => (tok(Tokens.RBRACKET,source,yypos,yypos));
 <SPECIAL_COMMENT>"*" => (tok(Tokens.YSTAR,source,yypos,yypos));
-<SPECIAL_COMMENT>{identifier} =>
+<SPECIAL_COMMENT>{isa_identifier} =>
   (mk_tokident(yytext,getPos(source,yypos),
                getPos(source,yypos + size yytext - 1)));
 <SPECIAL_COMMENT>"*/" => (YYBEGIN INITIAL;
