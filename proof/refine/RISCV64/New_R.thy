@@ -4,21 +4,10 @@ imports
   "$L4V_ARCH/RAB_FN"
   "$L4V_ARCH/EmptyFail_H"
   "$L4V_ARCH/Init_R"
+  "AInvs.New"
 begin
 
 context begin interpretation Arch .
-lemma getObject_cinv_lift[wp, simp]:
-  "\<lbrace>P\<rbrace> getObject p \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P and (\<lambda>s. isInDomainColour (ksCurDomain s) p)\<rbrace> getObjectInCurDomain p \<lbrace>Q\<rbrace>"
-  apply (simp add: getObject_def getObjectInCurDomain_def)
-apply wpsimp
-oops
-
-lemma setObject_cinv_lift[wp, simp]:
-  "\<lbrace>P\<rbrace> setObject p v \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P and (\<lambda>s. isInDomainColour (ksCurDomain s) p)\<rbrace> setObjectInCurDomain p v \<lbrace>Q\<rbrace>"
-  apply (simp add: setObject_def setObjectInCurDomain_def)
-apply wpsimp
-oops
-
 lemma no_fail_setObjectInCurDomain_other [wp]:
   fixes ob :: "'a :: pspace_storable"
   assumes x: "updateObject ob = updateObject_default ob"
@@ -237,7 +226,7 @@ lemma no_fail_getObjectInCurDomain_tcb [wp]:
   apply (simp_all del: lookupAround2_same1)
   by (fastforce split: option.split_asm simp: objBits_simps')
 
-lemma corres_get_tcb_inCurDomain:
+lemma corres_get_tcb_inCurDomain':
   "corres (tcb_relation \<circ> the) (tcb_at t) (tcb_at' t and (\<lambda>s. isInDomainColour (ksCurDomain s) t)) (gets (get_tcb t)) (getObjectInCurDomain t)"
     apply (rule corres_no_failI)
    apply wp
@@ -255,6 +244,10 @@ lemma corres_get_tcb_inCurDomain:
   apply (clarsimp simp: tcb_relation_cut_def lookupAround2_known1)
   done
 
+thm "corres_guard_imp"
+thm "stronger_corres_guard_imp"
+thm corres_cross_over_guard
+
 lemma getObject_TCB_corres:
   "corres tcb_relation (tcb_at t and pspace_aligned and pspace_distinct) \<top>
           (gets_the (get_tcb t)) (getObjectInCurDomain t)"
@@ -271,6 +264,23 @@ lemma getObject_TCB_corres:
   apply (fastforce simp: tcb_at_cross state_relation_def)
   done
   sorry
+
+lemma colour_invariant_isInDomColour:
+  "\<lbrakk>(s, s')\<in>state_relation; ptr \<in> colour_oracle (cur_domain s)\<rbrakk> \<Longrightarrow> isInDomainColour (ksCurDomain s') ptr"
+  apply (simp add: isInDomainColour_def)
+done
+
+term state_assert
+find_theorems state_assert corres_underlying
+find_theorems stateAssert corres_underlying
+thm corres_stateAssert_r_cross (* look for other shit *)
+
+lemma corres_get_tcb_inCurDomain:
+  "corres (tcb_relation \<circ> the) (tcb_at t and (\<lambda>s. t \<in> colour_oracle (cur_domain s))) (tcb_at' t) (gets (get_tcb t)) (getObjectInCurDomain t)"
+by (smt (z3) colour_invariant_isInDomColour
+    corres_get_tcb_inCurDomain'
+    pred_conj_def(1)
+    stronger_corres_guard_imp)
 
 end
 end
