@@ -143,35 +143,17 @@ lemma set_thread_state_colour_maintained:
   "\<lbrace>colour_invariant and (\<lambda>s. check_tcb_state ts (colour_oracle (cur_domain s)))\<rbrace>
        set_thread_state ref ts
       \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  apply (unfold set_thread_state_def Let_def)
-  apply wp
-     apply wpsimp
-     apply (unfold set_thread_state_act_def set_scheduler_action_def get_thread_state_def)
-     apply wpsimp
-     apply (wp add: thread_get_wp)
-    apply (wp add: set_object_wp)
-   apply (wp add: gets_the_wp)
-  unfolding colour_invariant_def
+     apply (wpsimp simp: set_thread_state_def Let_def set_thread_state_act_def set_scheduler_action_def get_thread_state_def colour_invariant_def
+  wp: thread_get_wp set_object_wp gets_the_wp)
   apply (simp add: obj_at_update obj_at_def del: check_kernel_object_ref.simps)
-  apply clarsimp
   apply (drule get_tcb_SomeD)
-  apply (rule conjI|rule impI)+
-  using get_tcb_rev by fastforce+
+  using get_tcb_rev by fastforce
 
 lemma as_user_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
      as_user ptr f
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  apply (unfold as_user_def)
-  apply wpsimp
-       apply (wp add: set_object_wp)+
-  apply clarsimp
-  unfolding colour_invariant_def
-  apply (simp add: obj_at_update)
-  apply clarsimp
-  apply (case_tac "ptr\<noteq>ptra")
-   apply (simp add: obj_at_def)+
-  using get_tcb_SomeD by fastforce
+  by (wpsimp simp: as_user_def colour_invariant_def obj_at_update obj_at_def wp: set_object_wp, fastforce dest: get_tcb_SomeD)
 
 \<comment>\<open>I suspect that a lot of the above can effectively be turned into crunches - might try that at some point\<close>
 crunch reschedule_required,
@@ -197,12 +179,7 @@ lemma set_cap_colour_maintained:
   "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref cap (colour_oracle (cur_domain s)))\<rbrace>
    set_cap cap cs_ptr
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  apply (unfold set_cap_def)
-  apply wpsimp
-     apply (wp add: set_object_wp)
-    apply wpsimp
-   apply (wp add: get_object_wp)
-  apply (simp add: colour_invariant_def obj_at_update obj_at_def)
+  apply (wpsimp simp: set_cap_def colour_invariant_def obj_at_update obj_at_def wp: set_object_wp get_object_wp)
   using check_kernel_object_ref.simps(1,2) by blast
 
 lemma set_untyped_cap_as_full_colour_maintained:
@@ -213,7 +190,6 @@ lemma set_untyped_cap_as_full_colour_maintained:
   apply wpsimp
     apply (wp add: set_cap_colour_maintained)
   apply wpsimp
-   apply clarsimp
   by (simp add: check_cap_ref_def)
 
 lemma cte_wp_at_check_cap_ref:
@@ -238,33 +214,17 @@ lemma cte_wp_at_check_cap_ref:
   apply (erule_tac x="TCB tcb" in allE)
   apply (erule impE)
    apply simp
-  using ranI ran_tcb_cnode_map
-  by force
+  using ranI ran_tcb_cnode_map by force
 
 lemma cap_insert_colour_maintained':
   "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref new_cap (colour_oracle (cur_domain s))) and (\<lambda>s. a\<in>colour_oracle (cur_domain s))\<rbrace>
    cap_insert new_cap (a, b) dest_slot
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  apply (unfold cap_insert_def colour_invariant_def)
-  apply wpsimp
-             apply (unfold update_cdt_def)
-             apply wpsimp
-              apply (rule conjI)
-               apply (rule impI)
+  apply (wpsimp simp: cap_insert_def colour_invariant_def update_cdt_def)
+              apply (rule conjI, rule impI)
                apply (fold colour_invariant_def)
-               apply (wp add: set_cdt_colour_maintained)
-              apply (rule impI)
-              apply (wp add: set_cdt_colour_maintained)
-             apply wpsimp+
-        apply (wp add: set_cap_colour_maintained)
-       apply (wp add: set_untyped_cap_as_full_colour_maintained)
-      apply wpsimp
-     apply (rule get_cap_wp)
-    apply wpsimp
-   apply (rule get_cap_wp)
-  apply simp
-  apply (rule allI|rule impI|erule conjE)+
-  by (simp add: cte_wp_at_check_cap_ref)
+               apply (wpsimp wp: set_cdt_colour_maintained)+
+              by (wpsimp simp: cte_wp_at_check_cap_ref wp: set_cdt_colour_maintained set_cap_colour_maintained set_untyped_cap_as_full_colour_maintained get_cap_wp)+
 
 lemma cap_insert_colour_maintained:
   "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref new_cap (colour_oracle (cur_domain s))) and (\<lambda>s. fst (src_slot) \<in>colour_oracle (cur_domain s))\<rbrace>
@@ -274,15 +234,14 @@ lemma cap_insert_colour_maintained:
 
 lemma hoare_weird_if:
   "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. Q\<rbrace>,-; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<not>(cond rv) \<longrightarrow> R rv s\<rbrace>,-\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. if cond rv then (\<lambda>s. Q s \<and> True) else (\<lambda>s. Q s \<and> R rv s)\<rbrace>,-"
-      apply (wp add: hoare_vcg_if_lift_ER[where P=P])
-      apply (wp add: hoare_vcg_conj_liftE_R'[where P=P and P'=P])
-  apply (wp add: hoare_vcg_imp_liftE_R'[where P'="(\<lambda>s. False)" and Q'=P])
+      apply (wp add: hoare_vcg_if_lift_ER)
+      apply (wp add: hoare_vcg_conj_liftE_R')
+  apply (wp add: hoare_vcg_imp_liftE_R'[where Q'=P])
   apply (wp add: hoare_FalseE)
   apply wpsimp+
   apply (rule hoare_strengthen_postE_R[where Q'="\<lambda>rv s. (\<not> cond rv \<longrightarrow> R rv s) \<and> Q s"])
-  apply (wp add: hoare_vcg_conj_liftE_R'[where P=P and P'=P])
+  apply (wp add: hoare_vcg_conj_liftE_R')
   by wpsimp+
-
 
 lemma transfer_caps_loop_colour_maintained:
   "\<lbrace>colour_invariant and
@@ -299,8 +258,7 @@ next
     apply (cases a)
     apply wpsimp
     apply (rule conjI; rule impI)+
-      apply wpsimp
-       apply (wp add: set_extra_badge_colour_maintained)
+      apply (wpsimp wp: set_extra_badge_colour_maintained)
        apply (simp add: set_extra_badge_def)
        apply wpsimp
       apply simp
@@ -333,37 +291,22 @@ lemma transfer_caps_colour_maintained:
   "\<lbrace>colour_invariant and (\<lambda>s. \<forall>(cap, o_ref, _)\<in>(set caps). check_cap_ref cap (colour_oracle (cur_domain s)) \<and> o_ref \<in> colour_oracle (cur_domain s))\<rbrace>
  transfer_caps info caps endpoint receiver recv_buffer
 \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  apply (unfold transfer_caps_def)
-  apply wpsimp
-     apply (wp add: transfer_caps_loop_colour_maintained)
-  by wpsimp+
+  by (wpsimp simp: transfer_caps_def wp: transfer_caps_loop_colour_maintained)
 
 lemma copy_mrs_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
      copy_mrs  sender sbuf receiver rbuf n
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  apply (unfold copy_mrs_def)
-  apply wpsimp
+  apply (wpsimp simp: copy_mrs_def)
      apply (rule conjI)
       apply (rule impI)
-      apply (wp add: mapM_wp[where S="UNIV"])
-        apply (wp add: store_word_offs_colour_maintained)
-       apply (wp add: load_word_offs_P)
-      apply simp
-     apply (rule impI)
-     apply (wp add: mapM_wp)
-       apply (wp add: store_word_offs_colour_maintained)
-      apply (wp add: load_word_offs_P)
-     apply simp
-    apply (wp add: mapM_wp[where S="UNIV"])
-  by (simp; wp add: as_user_colour_maintained)+
+      by (wpsimp wp: mapM_wp[where S="UNIV"] store_word_offs_colour_maintained load_word_offs_P as_user_colour_maintained)+
 
 lemma do_normal_transfer_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
      do_normal_transfer  sender sbuf endpoint badge grant receiver rbuf
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  apply (unfold do_normal_transfer_def)
-  apply wpsimp
+  apply (wpsimp simp: do_normal_transfer_def)
         apply (wp add: as_user_colour_maintained
                        set_message_info_colour_maintained
                        transfer_caps_colour_maintained)+
@@ -400,17 +343,7 @@ lemma set_mrs_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
      set_mrs thread buf msgs
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  apply (simp add: set_mrs_def)
-  apply wpsimp
-  apply (rule conjI)
-  apply (rule impI)
-  apply (wp add: zipWithM_x_inv' store_word_offs_colour_maintained)
-  apply (rule impI)
-  apply (wp add: zipWithM_x_inv' store_word_offs_colour_maintained)
-  apply (wp add: set_object_wp)
-  apply wpsimp
-  apply (simp add: colour_invariant_def)
-  apply clarsimp
+  apply (wpsimp simp: set_mrs_def colour_invariant_def wp: zipWithM_x_inv' store_word_offs_colour_maintained set_object_wp)
   apply (simp add: obj_at_update obj_at_def)
   apply (drule get_tcb_SomeD)
   apply (case_tac "ptr=thread")
@@ -425,45 +358,22 @@ lemma make_fault_msg_colour_maintained:
   apply (cases fault; wpsimp)
   apply (rule conjI)
   apply (rule impI)
-  apply wpsimp
-  apply (wp add: as_user_colour_maintained)
-  apply simp
-  apply (rule impI)
-  apply wpsimp
-  apply (wp add: as_user_colour_maintained)
-  apply simp
-     apply (wp add: as_user_colour_maintained)
-  apply simp
-     apply (wp add: as_user_colour_maintained)
-  apply simp
-     by (wp add: RISCV64.make_arch_fault_msg_inv)
+  by (wpsimp wp: as_user_colour_maintained RISCV64.make_arch_fault_msg_inv)+
 
 lemma setup_caller_cap_colour_maintained:
   "\<lbrace>colour_invariant and (\<lambda>s. sender \<in> colour_oracle (cur_domain s))\<rbrace>
   setup_caller_cap sender receiver grant
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  apply (simp add: setup_caller_cap_def)
+  apply (wpsimp simp: setup_caller_cap_def)
   apply (rule conjI)
   apply (rule impI)
-  apply wpsimp
-  apply (wp add: cap_insert_colour_maintained)
-  apply (wp add: set_thread_state_colour_maintained)
-  apply wpsimp
-  apply (simp add: colour_invariant_def obj_at_def check_cap_ref_def)
-  apply (rule impI)
-  apply wpsimp
-  apply (wp add: cap_insert_colour_maintained)
-  apply (wp add: set_thread_state_colour_maintained)
-  apply wpsimp
-  by (simp add: colour_invariant_def obj_at_def check_cap_ref_def)
+  by (wpsimp simp: colour_invariant_def obj_at_def check_cap_ref_def wp: cap_insert_colour_maintained set_thread_state_colour_maintained)+
 
 lemma handle_double_fault_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
   handle_double_fault tptr ex1 ex2
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  apply (simp add: handle_double_fault_def)
-  apply (wp add: set_thread_state_colour_maintained)
-  by simp
+  by (wpsimp simp: handle_double_fault_def wp: set_thread_state_colour_maintained)
 
 lemma send_ipc_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
@@ -556,26 +466,15 @@ lemma reset_untyped_cap_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
   reset_untyped_cap src_slot
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  apply (wpsimp simp: reset_untyped_cap_def)
-  apply (wp add: set_cap_colour_maintained)
-  apply wpsimp
-  apply (wp add: do_machine_op_colour_maintained)
-  apply wpsimp
-  apply (wp add: mapME_x_wp[where S=UNIV])
-  apply (wp add: preemption_point_inv)
-  apply (simp add: irq_state_independent_A_def, clarsimp)
-  apply (simp add: colour_invariant_def)
-          apply (simp add: colour_invariant_def)
-  apply (wp add: preemption_point_inv)
-  apply (simp add: irq_state_independent_A_def, clarsimp)
-  apply (simp add: colour_invariant_def)
-         apply (simp add: colour_invariant_def)
-  apply wpsimp
-        apply (wp add: set_cap_colour_maintained)
-  apply wpsimp
+  apply (wpsimp simp: reset_untyped_cap_def wp: set_cap_colour_maintained)
+  apply (wpsimp wp: do_machine_op_colour_maintained)
+  apply (wpsimp wp: mapME_x_wp[where S=UNIV] preemption_point_inv)
+  apply (simp add: colour_invariant_def, simp add: colour_invariant_def)
+  apply (wpsimp simp: irq_state_independent_A_def wp: preemption_point_inv)
+  apply (simp add: colour_invariant_def, simp add: colour_invariant_def)
+        apply (wpsimp wp: set_cap_colour_maintained)
   apply (wp add: do_machine_op_colour_maintained)
   apply (simp add: check_cap_ref_def)
-  apply simp
   apply wpsimp+
   apply (rule impI|rule conjI)+
   apply (wp add: delete_objects_colour_maintained)
@@ -589,24 +488,9 @@ apply (wp add: hoare_vcg_imp_lift)
 apply (wp add: hoare_vcg_imp_lift)
     apply (wp add: delete_objects_colour_maintained)
   apply wpsimp
-   apply (wp add: hoare_vcg_imp_lift)
-  apply (wp add: get_cap_cte_wp_at3)
-  apply (wp add: get_cap_inv)
-   apply (wp add: hoare_vcg_imp_lift)
-  apply (wp add: get_cap_cte_wp_at3)
-   apply (wp add: hoare_vcg_conj_lift)
-     apply (wp add: hoare_vcg_imp_lift)
-     apply (wp add: get_cap_cte_wp_at3)
-  apply (wp add: get_cap_inv)
-   apply (wp add: hoare_vcg_conj_lift)
-    apply (wp add: hoare_vcg_disj_lift)
-     apply (wp add: get_cap_cte_wp_at3)
-  apply (wp add: get_cap_inv)
-   apply (wp add: hoare_vcg_conj_lift)
+   apply (wp add: hoare_vcg_imp_lift get_cap_cte_wp_at3 hoare_vcg_conj_lift hoare_vcg_disj_lift)
   apply (wpsimp simp: check_cap_ref_def)
-  apply (wp add: hoare_vcg_imp_lift)
-    apply (wp add: get_cap_cte_wp_at3)
-  apply (wp add: get_cap_inv)
+  apply (wp add: hoare_vcg_imp_lift get_cap_cte_wp_at3)
   by clarsimp
 
 lemma syscall_colour_maintained:
@@ -637,12 +521,7 @@ lemma next_domain_colour_maintained:
       check_kernel_object_ref kobj (colour_oracle new_dom))\<rbrace>
       next_domain
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  apply (simp add: next_domain_def)
-  apply wpsimp
-  apply (simp add: colour_invariant_def)
-   apply wpsimp+
-  apply (thin_tac "colour_invariant s")
-  by (simp add: colour_invariant_def Let_def)
+  by (wpsimp simp: next_domain_def colour_invariant_def Let_def)
 
 lemma arch_switch_to_idle_thread_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
