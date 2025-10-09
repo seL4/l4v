@@ -6,23 +6,16 @@ begin
 section "Initialisation"
 axiomatization
   colour_oracle :: "domain \<Rightarrow> obj_ref set"
-  where
+  \<comment>\<open>where
     colour_oracle_no_overlap: "x \<noteq> y \<Longrightarrow> (colour_oracle x \<inter> colour_oracle y = {})" and
-    colour_oracle_cur_thread: "\<forall>s. cur_thread s \<in> (colour_oracle (cur_domain s))"
-
-term "obj_refs"
-term "obj_ref_of"
+    colour_oracle_cur_thread: "\<forall>s. cur_thread s \<in> (colour_oracle (cur_domain s))"\<close>
 
 definition
   check_cap_ref :: "cap \<Rightarrow> obj_ref set \<Rightarrow> bool"
   where
     "check_cap_ref cap obj_set \<equiv> obj_refs cap \<subseteq> obj_set"
 
-
 term "ArchInvariants_AI.RISCV64.obj_addrs" (* should be used everywhere? *)
-term "ArchInvariants_AI.RISCV64.global_refs"
-term "ArchInvariants_AI.RISCV64.device_region"
-term "obj_addrs"
 
 fun
   check_tcb_state :: "thread_state \<Rightarrow> obj_ref set \<Rightarrow> bool"
@@ -225,8 +218,6 @@ crunch reschedule_required,
    simp: thread_set_domain_def thread_set_time_slice_def thread_set_priority_def colour_invariant_def obj_at_update)*)
 
 section "Top-Down Colour Invariant Work"
-term "call_kernel" (* what does schedule do? otherwise, it's basically handle_event and <handle> *)
-
 crunch store_word_offs,
   set_extra_badge,
   set_cdt,

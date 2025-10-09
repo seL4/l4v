@@ -8,6 +8,73 @@ imports
 begin
 
 context begin interpretation Arch .
+
+section \<open>Domain Colour Lemmas\<close>
+
+lemma colour_invariant_isInDomColour:
+  "\<lbrakk>(s, s')\<in>state_relation; ptr \<in> colour_oracle (cur_domain s)\<rbrakk> \<Longrightarrow> isInDomainColour (ksCurDomain s') ptr"
+  apply (simp add: isInDomainColour_def)
+  done
+
+lemma getObjectInCurDomain_state_assert:
+  "getObjectInCurDomain ptr \<equiv> (do
+        map \<leftarrow> gets $ psMap \<circ> ksPSpace;
+        (before, after) \<leftarrow> return ( lookupAround2 (fromPPtr ptr) map);
+        (ptr', val) \<leftarrow> maybeToMonad before;
+        stateAssert (\<lambda>s. isInDomainColour (ksCurDomain s) ptr') [];
+        loadObject (fromPPtr ptr) ptr' after val
+  od)"
+  by (simp add: getObjectInCurDomain_def stateAssert_def state_assert_def bind_assoc gets_def)
+
+lemma setObjectInCurDomain_state_assert:
+  "setObjectInCurDomain ptr val\<equiv> (do
+          ps \<leftarrow> gets ksPSpace;
+          map \<leftarrow> return ( psMap ps);
+          (before, after) \<leftarrow> return ( lookupAround2 (fromPPtr ptr) map);
+          (ptr', obj) \<leftarrow> maybeToMonad before;
+          stateAssert (\<lambda>s. isInDomainColour (ksCurDomain s) ptr') [];
+          obj' \<leftarrow> updateObject val obj (fromPPtr ptr) ptr' after;
+          map' \<leftarrow> return ( data_map_insert ptr' obj' map);
+          ps' \<leftarrow> return ( ps \<lparr> psMap := map' \<rparr>);
+          modify (\<lambda> ks. ks \<lparr> ksPSpace := ps'\<rparr>)
+  od)"
+  by (simp add: setObjectInCurDomain_def stateAssert_def state_assert_def bind_assoc gets_def)
+
+section \<open>Modified lemmas for methods\<close>
+
+lemma getObjectInCurDomain_inv:
+  assumes x: "\<And>p q n ko. \<lbrace>P\<rbrace> loadObject p q n ko \<lbrace>\<lambda>(rv :: 'a :: pspace_storable). P\<rbrace>"
+  shows      "\<lbrace>P\<rbrace> getObjectInCurDomain p \<lbrace>\<lambda>(rv :: 'a :: pspace_storable). P\<rbrace>"
+  by (simp add: getObjectInCurDomain_def split_def | wp x)+
+
+lemma getObjectInCurDomain_inv_tcb [wp]:
+  "\<lbrace>P\<rbrace> getObjectInCurDomain l \<lbrace>\<lambda>(rv :: Structures_H.tcb). P\<rbrace>"
+  apply (rule getObjectInCurDomain_inv)
+  apply simp
+  apply (rule loadObject_default_inv)
+  done
+
+lemma no_fail_getObjectInCurDomain_tcb [wp]:
+  "no_fail (tcb_at' t and (\<lambda>s. isInDomainColour (ksCurDomain s) t)) (getObjectInCurDomain t :: tcb kernel)"
+  apply (simp add: getObjectInCurDomain_def split_def)
+  apply (rule no_fail_pre)
+   apply wp
+  apply (clarsimp simp add: obj_at'_def objBits_simps'
+                      cong: conj_cong)
+  apply (rule ps_clear_lookupAround2, assumption+)
+    apply simp
+   apply (simp add: field_simps)
+   apply (erule is_aligned_no_wrap')
+   apply simp
+  apply (rule conjI)
+  apply (fastforce split: option.split_asm simp: objBits_simps')
+  apply (rule conjI)
+   apply (metis Some_to_the prod.sel(1))
+  apply (rule exI)
+  apply (rule conjI)
+  apply (simp_all del: lookupAround2_same1)
+  by (fastforce split: option.split_asm simp: objBits_simps')
+
 lemma no_fail_setObjectInCurDomain_other [wp]:
   fixes ob :: "'a :: pspace_storable"
   assumes x: "updateObject ob = updateObject_default ob"
@@ -37,7 +104,143 @@ lemma no_fail_setObject_tcb [wp]:
   apply (simp add: objBits_simps)
   done
 
-lemma setObjectInCurDomain_update_TCB_corres':
+term "state_relation"
+term "pspace_relation"
+term "obj_relation_cuts"
+
+thm "corres_guard_imp"
+thm "stronger_corres_guard_imp"
+thm corres_cross_over_guard
+
+term state_assert
+find_theorems state_assert corres_underlying
+find_theorems stateAssert corres_underlying
+thm corres_stateAssert_r_cross (* look for other shit *)
+thm spec_corres_split'
+thm stronger_corres_guard_imp
+find_theorems "corres"
+
+section \<open>corres lemmas\<close>
+
+lemma corres_get_tcb_inCurDomain':
+  "corres (tcb_relation \<circ> the) (tcb_at t) (tcb_at' t and (\<lambda>s. isInDomainColour (ksCurDomain s) t)) (gets (get_tcb t)) (getObjectInCurDomain t)"
+    apply (rule corres_no_failI)
+   apply wp
+  apply (clarsimp simp add: gets_def get_def return_def bind_def get_tcb_def)
+  apply (frule in_inv_by_hoareD [OF getObjectInCurDomain_inv_tcb])
+  apply (clarsimp simp add: obj_at_def is_tcb obj_at'_def projectKO_def
+                            projectKO_opt_tcb split_def
+                            getObjectInCurDomain_def loadObject_default_def in_monad)
+  apply (case_tac bb)
+   apply (simp_all add: fail_def return_def)
+  apply (clarsimp simp add: state_relation_def pspace_relation_def)
+  apply (drule bspec)
+   apply clarsimp
+   apply blast
+  apply (clarsimp simp: tcb_relation_cut_def lookupAround2_known1)
+  done
+
+lemma corres_get_tcb_inCurDomain:
+  "corres (tcb_relation \<circ> the) (tcb_at t and (\<lambda>s. t \<in> colour_oracle (cur_domain s))) (tcb_at' t) (gets (get_tcb t)) (getObjectInCurDomain t)"
+  apply (rule stronger_corres_guard_imp[where Q="tcb_at t" and Q'="tcb_at' t and (\<lambda>s. isInDomainColour (ksCurDomain s) t)"])
+  by (simp add: corres_get_tcb_inCurDomain' colour_invariant_isInDomColour)+
+
+lemma getObject_TCB_corres_inCurDomain':
+  "corres tcb_relation (tcb_at t and pspace_aligned and pspace_distinct) (\<lambda>s. isInDomainColour (ksCurDomain s) t)
+          (gets_the (get_tcb t)) (getObjectInCurDomain t)"
+  apply (rule corres_cross_over_guard[where Q="tcb_at' t and (\<lambda>s. isInDomainColour (ksCurDomain s) t)"])
+   apply (fastforce simp: tcb_at_cross state_relation_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_gets_the)
+    apply (rule corres_get_tcb_inCurDomain')
+   apply (simp add: tcb_at_def)
+  apply assumption
+  done
+
+lemma getObject_TCB_corres_inCurDomain:
+  "corres tcb_relation (tcb_at t and pspace_aligned and pspace_distinct and (\<lambda>s. t \<in> colour_oracle (cur_domain s))) \<top>
+          (gets_the (get_tcb t)) (getObjectInCurDomain t)"
+  apply (rule stronger_corres_guard_imp[where Q="tcb_at t and pspace_aligned and pspace_distinct" and Q'="\<lambda>s. isInDomainColour (ksCurDomain s) t"])
+  by (simp add: getObject_TCB_corres_inCurDomain' colour_invariant_isInDomColour)+
+
+lemma getObject_ASIDPool_corres_inCurDomain':
+  "p' = p \<Longrightarrow>
+   corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
+          (asid_pool_at p and pspace_aligned and pspace_distinct) (\<lambda>s. isInDomainColour (ksCurDomain s) p')
+          (get_asid_pool p) (getObjectInCurDomain p')"
+  apply (rule corres_cross_over_asid_pool_at, fastforce)
+  apply (simp add: getObjectInCurDomain_def gets_map_def split_def)
+  apply (rule corres_no_failI)
+   apply (rule no_fail_pre, wp)
+   apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
+   apply (case_tac ko; simp)
+   apply (rename_tac arch_kernel_object)
+   apply (case_tac arch_kernel_object, simp_all)[1]
+   apply (clarsimp simp: lookupAround2_known1)
+   apply (clarsimp simp: obj_at'_def objBits_simps)
+   apply (erule (1) ps_clear_lookupAround2)
+     apply simp
+    apply (erule is_aligned_no_overflow)
+   apply simp
+   apply (clarsimp simp add: objBits_simps
+                      split: option.split)
+  apply (clarsimp simp: in_monad loadObject_default_def)
+  apply (simp add: bind_assoc exec_gets)
+  apply (drule asid_pool_at_ko)
+  apply (clarsimp simp: obj_at_def assert_opt_def fail_def return_def in_omonad
+                  split: option.split)
+  apply (simp add: in_magnitude_check objBits_simps pageBits_def)
+  apply (clarsimp simp: state_relation_def pspace_relation_def)
+  apply (drule bspec, blast)
+  apply (clarsimp simp: other_obj_relation_def asid_pool_relation_def)
+  done
+
+lemma getObject_ASIDPool_corres_inCurDomain:
+  "p' = p \<Longrightarrow>
+   corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
+          (asid_pool_at p and pspace_aligned and pspace_distinct and (\<lambda>s. p \<in> colour_oracle (cur_domain s))) \<top>
+          (get_asid_pool p) (getObjectInCurDomain p')"
+  apply (rule stronger_corres_guard_imp[where Q="asid_pool_at p and pspace_aligned and pspace_distinct" and Q'="\<lambda>s. isInDomainColour (ksCurDomain s) p'"])
+  by (simp add: getObject_ASIDPool_corres_inCurDomain' colour_invariant_isInDomColour)+
+
+lemma getObject_PTE_corres_inCurDomain':
+  "p = p' \<Longrightarrow>
+   corres pte_relation' (pte_at p and pspace_aligned and pspace_distinct) (\<lambda>s. isInDomainColour (ksCurDomain s) p')
+          (get_pte p) (getObjectInCurDomain p')"
+  apply (rule corres_cross_over_pte_at, fastforce)
+  apply (simp add: getObjectInCurDomain_def gets_map_def split_def bind_assoc)
+  apply (rule corres_no_failI)
+   apply (rule no_fail_pre, wp)
+   apply (clarsimp simp: ko_wp_at'_def typ_at'_def lookupAround2_known1)
+   apply (case_tac ko, simp_all)[1]
+   apply (rename_tac arch_kernel_object)
+   apply (case_tac arch_kernel_object; simp)
+   apply (clarsimp simp: objBits_def cong: option.case_cong)
+   apply (erule (1) ps_clear_lookupAround2)
+     apply simp
+    apply (erule is_aligned_no_overflow)
+    apply (simp add: objBits_simps word_bits_def)
+   apply simp
+  apply (clarsimp simp: in_monad loadObject_default_def)
+  apply (simp add: bind_assoc exec_gets fst_assert_opt)
+  apply (clarsimp simp: pte_at_eq)
+  apply (clarsimp simp: ptes_of_def)
+  apply (clarsimp simp: typ_at'_def ko_wp_at'_def in_magnitude_check objBits_simps bit_simps)
+  apply (clarsimp simp: state_relation_def pspace_relation_def elim!: opt_mapE)
+  apply (drule bspec, blast)
+  apply (clarsimp simp: other_obj_relation_def pte_relation_def)
+  apply (erule_tac x="table_index p" in allE)
+  apply (clarsimp simp: mask_pt_bits_inner_beauty[simplified bit_simps] bit_simps)
+  done
+
+lemma getObject_PTE_corres_inCurDomain[corres]:
+  "p = p' \<Longrightarrow>
+   corres pte_relation' (pte_at p and pspace_aligned and pspace_distinct and (\<lambda>s. p \<in> colour_oracle (cur_domain s))) \<top>
+          (get_pte p) (getObjectInCurDomain p')"
+  apply (rule stronger_corres_guard_imp[where Q="pte_at p and pspace_aligned and pspace_distinct" and Q'="\<lambda>s. isInDomainColour (ksCurDomain s) p'"])
+  by (simp add: getObject_PTE_corres_inCurDomain' colour_invariant_isInDomColour)+
+
+lemma setObject_update_TCB_corres_inCurDomain'':
   assumes tcbs: "tcb_relation tcb tcb' \<Longrightarrow> tcb_relation new_tcb new_tcb'"
   assumes tables: "\<forall>(getF, v) \<in> ran tcb_cap_cases. getF new_tcb = getF tcb"
   assumes tables': "\<forall>(getF, v) \<in> ran tcb_cte_cases. getF new_tcb' = getF tcb'"
@@ -110,7 +313,7 @@ lemma setObjectInCurDomain_update_TCB_corres':
    apply (fastforce simp: opt_map_def)
   by (clarsimp simp: ready_queue_relation_def opt_pred_def opt_map_def split: option.splits)
 
-lemma setObjectInCurDomain_update_TCB_corres:
+lemma setObject_update_TCB_corres_inCurDomain':
   "\<lbrakk>tcb_relation tcb tcb' \<Longrightarrow> tcb_relation new_tcb new_tcb';
      \<forall>(getF, v) \<in> ran tcb_cap_cases. getF new_tcb = getF tcb;
      \<forall>(getF, v) \<in> ran tcb_cte_cases. getF new_tcb' = getF tcb';
@@ -118,21 +321,34 @@ lemma setObjectInCurDomain_update_TCB_corres:
      \<And>d p. inQ d p new_tcb' = inQ d p tcb';
      r () ()\<rbrakk> \<Longrightarrow>
    corres r
-     (\<lambda>s. get_tcb ptr s = Some tcb) ((\<lambda>s'. (tcb', s') \<in> fst (getObject ptr s'))and (\<lambda>s. isInDomainColour (ksCurDomain s) ptr))
+     (\<lambda>s. get_tcb ptr s = Some tcb) ((\<lambda>s'. (tcb', s') \<in> fst (getObject ptr s')) and (\<lambda>s. isInDomainColour (ksCurDomain s) ptr))
      (set_object ptr (TCB new_tcb)) (setObjectInCurDomain ptr new_tcb')"
   apply (rule corres_guard_imp)
-    apply (erule (4) setObjectInCurDomain_update_TCB_corres')
+    apply (erule (4) setObject_update_TCB_corres_inCurDomain'')
    apply (clarsimp simp: getObject_def in_monad split_def obj_at'_def
                          loadObject_default_def objBits_simps' in_magnitude_check)+
   done
 
-lemma setObjectInCurDomain_other_corres:
+lemma setObject_update_TCB_corres_inCurDomain:
+  "\<lbrakk>tcb_relation tcb tcb' \<Longrightarrow> tcb_relation new_tcb new_tcb';
+     \<forall>(getF, v) \<in> ran tcb_cap_cases. getF new_tcb = getF tcb;
+     \<forall>(getF, v) \<in> ran tcb_cte_cases. getF new_tcb' = getF tcb';
+     tcbSchedPrev new_tcb' = tcbSchedPrev tcb'; tcbSchedNext new_tcb' = tcbSchedNext tcb';
+     \<And>d p. inQ d p new_tcb' = inQ d p tcb';
+     r () ()\<rbrakk> \<Longrightarrow>
+   corres r
+     ((\<lambda>s. get_tcb ptr s = Some tcb) and (\<lambda>s. ptr \<in> colour_oracle (cur_domain s))) ((\<lambda>s'. (tcb', s') \<in> fst (getObject ptr s')))
+     (set_object ptr (TCB new_tcb)) (setObjectInCurDomain ptr new_tcb')"
+  apply (rule stronger_corres_guard_imp[where Q="\<lambda>s. get_tcb ptr s = Some tcb" and Q'="(\<lambda>s'. (tcb', s') \<in> fst (getObject ptr s')) and (\<lambda>s. isInDomainColour (ksCurDomain s) ptr)"])
+  by (simp add: setObject_update_TCB_corres_inCurDomain' colour_invariant_isInDomColour)+
+
+lemma setObject_other_corres_inCurDomain':
   assumes x: "updateObject ob' = updateObject_default ob'"
   assumes z: "\<And>s. obj_at' P ptr s
                \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO ob')) = map_to_ctes (ksPSpace s)"
   assumes t: "is_other_obj_relation_type (a_type ob)"
   assumes b: "\<And>ko. P ko \<Longrightarrow> objBits ko = objBits ob'"
-  assumes P: "\<And>(v::'a::pspace_storable). 0 < objBits v"
+  assumes P: "\<And>(v::'a::pspace_storable). (1 :: machine_word) < 2 ^ (objBits v)"
   shows      "other_obj_relation ob (injectKO (ob' :: 'a :: pspace_storable)) \<Longrightarrow>
   corres dc (obj_at (\<lambda>ko. a_type ko = a_type ob) ptr and obj_at (same_caps ob) ptr)
             (obj_at' (P :: 'a \<Rightarrow> bool) ptr and (\<lambda>s. isInDomainColour (ksCurDomain s) ptr))
@@ -147,7 +363,7 @@ lemma setObjectInCurDomain_other_corres:
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def Bex_def
                         put_def return_def modify_def get_object_def x
                         projectKOs obj_at_def
-                        updateObject_default_def in_magnitude_check[OF _ P])
+                        updateObject_default_def in_magnitude_check [OF _ P])
   apply (rename_tac ko)
   apply (clarsimp simp add: state_relation_def z)
   apply (clarsimp simp add: caps_of_state_after_update cte_wp_at_after_update
@@ -189,98 +405,141 @@ lemma setObjectInCurDomain_other_corres:
          simp split: arch_kernel_obj.split_asm)
   by (fastforce dest: tcbs_of'_non_tcb_update)
 
-term "state_relation"
-term "pspace_relation"
-term "obj_relation_cuts"
+lemma setObject_other_corres_inCurDomain:
+  assumes x: "updateObject ob' = updateObject_default ob'"
+  assumes z: "\<And>s. obj_at' P ptr s
+               \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO ob')) = map_to_ctes (ksPSpace s)"
+  assumes t: "is_other_obj_relation_type (a_type ob)"
+  assumes b: "\<And>ko. P ko \<Longrightarrow> objBits ko = objBits ob'"
+  assumes P: "\<And>(v::'a::pspace_storable). (1 :: machine_word) < 2 ^ (objBits v)"
+  shows      "other_obj_relation ob (injectKO (ob' :: 'a :: pspace_storable)) \<Longrightarrow>
+  corres dc (obj_at (\<lambda>ko. a_type ko = a_type ob) ptr and obj_at (same_caps ob) ptr and (\<lambda>s. ptr \<in> colour_oracle (cur_domain s)))
+            (obj_at' (P :: 'a \<Rightarrow> bool) ptr)
+            (set_object ptr ob) (setObjectInCurDomain ptr ob')"
+  apply (rule stronger_corres_guard_imp[where Q="obj_at (\<lambda>ko. a_type ko = a_type ob) ptr and obj_at (same_caps ob) ptr" and Q'="obj_at' (P :: 'a \<Rightarrow> bool) ptr  and (\<lambda>s. isInDomainColour (ksCurDomain s) ptr)"])
+  by (simp add: setObject_other_corres_inCurDomain' colour_invariant_isInDomColour x z t b P)+
 
-
-lemma getObjectInCurDomain_inv:
-  assumes x: "\<And>p q n ko. \<lbrace>P\<rbrace> loadObject p q n ko \<lbrace>\<lambda>(rv :: 'a :: pspace_storable). P\<rbrace>"
-  shows      "\<lbrace>P\<rbrace> getObjectInCurDomain p \<lbrace>\<lambda>(rv :: 'a :: pspace_storable). P\<rbrace>"
-  by (simp add: getObjectInCurDomain_def split_def | wp x)+
-
-lemma getObjectInCurDomain_inv_tcb [wp]: "\<lbrace>P\<rbrace> getObjectInCurDomain l \<lbrace>\<lambda>(rv :: Structures_H.tcb). P\<rbrace>"
-  apply (rule getObjectInCurDomain_inv)
-  apply simp
-  apply (rule loadObject_default_inv)
-  done
-
-lemma no_fail_getObjectInCurDomain_tcb [wp]:
-  "no_fail (tcb_at' t and (\<lambda>s. isInDomainColour (ksCurDomain s) t)) (getObjectInCurDomain t :: tcb kernel)"
-  apply (simp add: getObjectInCurDomain_def split_def)
-  apply (rule no_fail_pre)
-   apply wp
-  apply (clarsimp simp add: obj_at'_def objBits_simps'
-                      cong: conj_cong)
-  apply (rule ps_clear_lookupAround2, assumption+)
+lemma setObject_PT_corres_inCurDomain':
+  "pte_relation' pte pte' \<Longrightarrow>
+   corres dc ((\<lambda>s. pts_of s (table_base p) = Some pt) and K (is_aligned p pte_bits) and
+              pspace_aligned and pspace_distinct) (\<lambda>s. isInDomainColour (ksCurDomain s) p)
+          (set_pt (table_base p) (pt(table_index p := pte)))
+          (setObjectInCurDomain p pte')"
+  supply opt_mapE[elim!]
+  apply (rule corres_cross_over_pte_at[where p=p])
+   apply (simp add: pte_at_eq ptes_of_def in_omonad)
+  apply (simp add: set_pt_def get_object_def bind_assoc set_object_def gets_map_def)
+  apply (rule corres_no_failI)
+   apply (rule no_fail_pre, wp)
     apply simp
-   apply (simp add: field_simps)
-   apply (erule is_aligned_no_wrap')
-   apply simp
+   apply (clarsimp simp: obj_at'_def ko_wp_at'_def typ_at'_def lookupAround2_known1)
+   apply (case_tac ko; simp)
+   apply (rename_tac arch_kernel_object)
+   apply (case_tac arch_kernel_object; simp)
+   apply (simp add: objBits_simps word_bits_def)
+  apply (clarsimp simp: setObjectInCurDomain_def in_monad split_def updateObject_default_def)
+  apply (simp add: in_magnitude_check objBits_simps a_type_simps)
+  apply (clarsimp simp: obj_at_def exec_gets a_type_simps opt_map_def exec_get put_def)
+  apply (clarsimp simp: state_relation_def mask_pt_bits_inner_beauty)
   apply (rule conjI)
-  apply (fastforce split: option.split_asm simp: objBits_simps')
-  apply (rule conjI)
-   apply (metis Some_to_the prod.sel(1))
-  apply (rule exI)
-  apply (rule conjI)
-  apply (simp_all del: lookupAround2_same1)
-  by (fastforce split: option.split_asm simp: objBits_simps')
-
-lemma corres_get_tcb_inCurDomain':
-  "corres (tcb_relation \<circ> the) (tcb_at t) (tcb_at' t and (\<lambda>s. isInDomainColour (ksCurDomain s) t)) (gets (get_tcb t)) (getObjectInCurDomain t)"
-    apply (rule corres_no_failI)
-   apply wp
-  apply (clarsimp simp add: gets_def get_def return_def bind_def get_tcb_def)
-  apply (frule in_inv_by_hoareD [OF getObjectInCurDomain_inv_tcb])
-  apply (clarsimp simp add: obj_at_def is_tcb obj_at'_def projectKO_def
-                            projectKO_opt_tcb split_def
-                            getObjectInCurDomain_def loadObject_default_def in_monad)
-  apply (case_tac bb)
-   apply (simp_all add: fail_def return_def)
-  apply (clarsimp simp add: state_relation_def pspace_relation_def)
-  apply (drule bspec)
+   apply (clarsimp simp: pspace_relation_def split del: if_split)
+   apply (rule conjI)
+    apply (subst pspace_dom_update, assumption)
+     apply (simp add: a_type_def)
+    apply (auto simp: dom_def)[1]
+   apply (rule conjI)
+    apply (drule bspec, blast)
+    apply clarsimp
+    apply (drule_tac x = x in spec)
+    apply (clarsimp simp: pte_relation_def mask_pt_bits_inner_beauty
+                   dest!: more_pt_inner_beauty)
+   apply (rule ballI)
+   apply (drule (1) bspec)
    apply clarsimp
-   apply blast
-  apply (clarsimp simp: tcb_relation_cut_def lookupAround2_known1)
+   apply (rule conjI)
+    apply (clarsimp simp: pte_relation_def mask_pt_bits_inner_beauty
+                   dest!: more_pt_inner_beauty)
+   apply clarsimp
+   apply (drule bspec, assumption)
+   apply clarsimp
+   apply (erule (1) obj_relation_cutsE)
+      apply simp
+     apply simp
+     apply clarsimp
+     apply (frule (1) pspace_alignedD)
+     apply (drule_tac p=x in pspace_alignedD, assumption)
+     apply simp
+     apply (drule mask_alignment_ugliness)
+        apply (simp add: pt_bits_def pageBits_def)
+       apply (simp add: pt_bits_def pageBits_def)
+      apply clarsimp
+      apply (drule test_bit_size)
+      apply (clarsimp simp: word_size bit_simps)
+      apply arith
+     apply ((simp split: if_split_asm)+)[2]
+   apply (simp add: other_obj_relation_def
+               split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
+  apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
+   apply (clarsimp simp add: ghost_relation_def)
+   apply (erule_tac x="p && ~~ mask pt_bits" in allE)+
+   apply fastforce
+  apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
+   apply (prop_tac "typ_at' (koTypeOf (injectKO pte')) p b")
+    apply (simp add: typ_at'_def ko_wp_at'_def)
+   subgoal by (fastforce dest: tcbs_of'_non_tcb_update)
+  apply (simp add: map_to_ctes_upd_other)
+  apply (simp add: fun_upd_def)
+  apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
   done
 
-thm "corres_guard_imp"
-thm "stronger_corres_guard_imp"
-thm corres_cross_over_guard
+lemma setObject_PT_corres_inCurDomain:
+  "pte_relation' pte pte' \<Longrightarrow>
+   corres dc ((\<lambda>s. pts_of s (table_base p) = Some pt) and K (is_aligned p pte_bits) and
+              pspace_aligned and pspace_distinct and (\<lambda>s. p \<in> colour_oracle (cur_domain s))) \<top>
+          (set_pt (table_base p) (pt(table_index p := pte)))
+          (setObjectInCurDomain p pte')"
+  apply (rule stronger_corres_guard_imp[where Q="(\<lambda>s. pts_of s (table_base p) = Some pt) and K (is_aligned p pte_bits) and  pspace_aligned and pspace_distinct" and Q'="\<lambda>s. isInDomainColour (ksCurDomain s) p"])
+  by (simp only: setObject_PT_corres_inCurDomain'|simp add: colour_invariant_isInDomColour)+
 
-lemma getObject_TCB_corres:
-  "corres tcb_relation (tcb_at t and pspace_aligned and pspace_distinct) \<top>
-          (gets_the (get_tcb t)) (getObjectInCurDomain t)"
-  apply (rule corres_cross_over_guard[where Q="tcb_at' t and (\<lambda>s. isInDomainColour (ksCurDomain s) t)"])
-   defer
+lemma setObject_ASIDPool_corres_inCurDomain':
+  "\<lbrakk> a = inv ASIDPool a' o ucast; p' = p \<rbrakk> \<Longrightarrow>
+  corres dc (asid_pool_at p and pspace_aligned and pspace_distinct) (\<lambda>s. isInDomainColour (ksCurDomain s) p')
+            (set_asid_pool p a) (setObjectInCurDomain p' a')"
+  apply (simp add: set_asid_pool_def)
+  apply (rule corres_underlying_symb_exec_l[where P=P and Q="\<lambda>_. P" for P])
+    apply (rule corres_no_failI; clarsimp)
+    apply (simp add:
+      TcbAcc_R.no_fail_return)
+    apply (clarsimp simp: gets_map_def bind_def simpler_gets_def assert_opt_def fail_def return_def
+                          obj_at_def in_omonad
+                    split: option.splits)
+   prefer 2
+   apply wpsimp
+  apply (rule corres_cross_over_asid_pool_at, fastforce)
   apply (rule corres_guard_imp)
-    apply (rule corres_gets_the)
-    apply (rule corres_get_tcb_inCurDomain)
-   apply (simp add: tcb_at_def)
-  apply assumption
-  apply (simp add: state_relation_def)
-  apply (rule conjI)
-   apply (fastforce simp: tcb_at_cross)
-  apply (fastforce simp: tcb_at_cross state_relation_def)
+    apply (rule setObject_other_corres_inCurDomain' [where P="\<lambda>ko::asidpool. True"])
+          apply simp
+         apply (clarsimp simp: obj_at'_def)
+         apply (erule map_to_ctes_upd_other, simp, simp)
+        apply (simp add: a_type_def is_other_obj_relation_type_def)
+       apply (simp add: objBits_simps)
+      apply simp
+     apply (simp add: objBits_simps pageBits_def)
+    apply (simp add: other_obj_relation_def asid_pool_relation_def)
+   apply (simp add: typ_at'_def obj_at'_def ko_wp_at'_def)
+   apply clarsimp
+   apply (rename_tac arch_kernel_object)
+   apply (case_tac arch_kernel_object; simp)
+   apply (clarsimp simp: obj_at_def exs_valid_def assert_def a_type_def return_def fail_def)
+   apply (auto split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_split_asm)[1]
+  apply (simp add: typ_at_to_obj_at_arches)
   done
-  sorry
 
-lemma colour_invariant_isInDomColour:
-  "\<lbrakk>(s, s')\<in>state_relation; ptr \<in> colour_oracle (cur_domain s)\<rbrakk> \<Longrightarrow> isInDomainColour (ksCurDomain s') ptr"
-  apply (simp add: isInDomainColour_def)
-done
-
-term state_assert
-find_theorems state_assert corres_underlying
-find_theorems stateAssert corres_underlying
-thm corres_stateAssert_r_cross (* look for other shit *)
-
-lemma corres_get_tcb_inCurDomain:
-  "corres (tcb_relation \<circ> the) (tcb_at t and (\<lambda>s. t \<in> colour_oracle (cur_domain s))) (tcb_at' t) (gets (get_tcb t)) (getObjectInCurDomain t)"
-by (smt (z3) colour_invariant_isInDomColour
-    corres_get_tcb_inCurDomain'
-    pred_conj_def(1)
-    stronger_corres_guard_imp)
-
+lemma setObject_ASIDPool_corres_inCurDomain[corres]:
+  "\<lbrakk> a = inv ASIDPool a' o ucast; p' = p \<rbrakk> \<Longrightarrow>
+  corres dc (asid_pool_at p and pspace_aligned and pspace_distinct and (\<lambda>s. p \<in> colour_oracle (cur_domain s))) \<top>
+            (set_asid_pool p a) (setObjectInCurDomain p' a')"
+  apply (rule stronger_corres_guard_imp[where Q="asid_pool_at p and pspace_aligned and pspace_distinct" and Q'="\<lambda>s. isInDomainColour (ksCurDomain s) p"])
+  by (simp add: colour_invariant_isInDomColour setObject_ASIDPool_corres_inCurDomain')+
 end
 end
