@@ -141,7 +141,9 @@ lemma corres_get_tcb_inCurDomain':
   done
 
 lemma corres_get_tcb_inCurDomain:
-  "corres (tcb_relation \<circ> the) (tcb_at t and (\<lambda>s. t \<in> colour_oracle (cur_domain s))) (tcb_at' t) (gets (get_tcb t)) (getObjectInCurDomain t)"
+  "corres (tcb_relation \<circ> the)
+    (tcb_at t and (\<lambda>s. t \<in> colour_oracle (cur_domain s))) (tcb_at' t)
+  (gets (get_tcb t)) (getObjectInCurDomain t)"
   apply (rule stronger_corres_guard_imp[where Q="tcb_at t" and Q'="tcb_at' t and (\<lambda>s. isInDomainColour (ksCurDomain s) t)"])
   by (simp add: corres_get_tcb_inCurDomain' colour_invariant_isInDomColour)+
 
