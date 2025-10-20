@@ -42,6 +42,8 @@ data ArchCapability
         capPTMappedAddress :: Maybe (ASID, VPtr) }
     | VCPUCap {
         capVCPUPtr :: PPtr VCPU }
+    | SMCCap {
+        capSMCBadge :: Word }
     | SGISignalCap {
         capSGIIRQ :: Word,
         capSGITargetMask :: Word }
