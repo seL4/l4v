@@ -476,6 +476,18 @@ vgicHCREN = (0x1 :: Word32) -- VGIC_HCR_EN
 gicVCPUMaxNumLR = (64 :: Int)
 
 
+{- Secure Monitor Call (SMC) -}
+
+numSMCRegs :: Int
+numSMCRegs = error "defined in machine/AARCH64/MachineOps.thy"
+
+-- we make the assumption here that numSMCRegs is 8; the assumption will be enforced in the proofs
+type EightTuple a = (a, a, a, a, a, a, a, a)
+
+doSMC_mop :: EightTuple Word -> MachineMonad (EightTuple Word)
+doSMC_mop args = error "Unimplemented - machine op"
+
+
 {- Software-Generated Interrupts (SGI) -}
 
 numSGIs :: Int

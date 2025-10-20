@@ -32,6 +32,7 @@ data Invocation
     | InvokeASIDPool ASIDPoolInvocation
     | InvokeVCPU VCPUInvocation
     | InvokeSGISignal SGISignalInvocation
+    | InvokeSMCCall SMCInvocation
     deriving Show
 
 data VSpaceInvocation
@@ -113,6 +114,13 @@ data SGISignalInvocation
     = SGISignalGenerate {
         sgiIRQ :: Word,
         sgiTargets :: Word }
+    deriving (Show, Eq)
+
+{- SMC -}
+
+data SMCInvocation
+    = SMCCall {
+        smcArgs :: EightTuple Word }
     deriving (Show, Eq)
 
 {- Interrupt Control -}
