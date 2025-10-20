@@ -2305,3 +2305,48 @@ case \x of ((a@PageCap {}), (b@PageCap {})) -> ((a@PageTableCap {}), (b@PageTabl
     else if isSGISignalCap a \<and> isSGISignalCap b
     then ->7
     else ->8
+
+case \x of (c@PageTableCap { capPTMappedAddress = Just _ }) -> (PageTableCap { capPTMappedAddress = Nothing }) -> (c@FrameCap {}) -> c@ASIDControlCap -> (c@ASIDPoolCap {}) -> (c@VCPUCap {}) -> (c@SGISignalCap {}) -> (c@SMCCap {}) ->  ---> let c = \x in
+    if isPageTableCap c \<and> capPTMappedAddress c \<noteq> None
+    then ->1
+    else if isPageTableCap c \<and> capPTMappedAddress c = None
+    then ->2
+    else if isFrameCap c
+    then ->3
+    else if isASIDControlCap c
+    then ->4
+    else if isASIDPoolCap c
+    then ->5
+    else if isVCPUCap c
+    then ->6
+    else if isSGISignalCap c
+    then ->7
+    else if isSMCCap c
+    then -> 8
+    else undefined
+
+case \x of ((a@FrameCap {}), (b@FrameCap {})) -> ((a@PageTableCap {}), (b@PageTableCap {})) -> (ASIDControlCap, ASIDControlCap) -> ((a@ASIDPoolCap {}), (b@ASIDPoolCap {})) -> ((a@VCPUCap {}), (b@VCPUCap {})) -> ((a@SGISignalCap {}), (b@SGISignalCap {})) -> ((SMCCap {}), (SMCCap {})) -> (_, _) ->  ---> let (a,b) = \x in
+  if isFrameCap a \<and> isFrameCap b
+  then ->1
+  else if isPageTableCap a \<and> isPageTableCap b
+  then ->2
+  else if a = ASIDControlCap \<and> b = ASIDControlCap
+  then ->3
+  else if isASIDPoolCap a \<and> isASIDPoolCap b
+  then ->4
+  else if isVCPUCap a \<and> isVCPUCap b
+  then ->5
+  else if isSGISignalCap a \<and> isSGISignalCap b
+  then ->6
+  else if isSMCCap a \<and> isSMCCap b
+  then ->7
+  else ->8
+
+case \x of ArchInv.InvokeVCPU iv -> ArchInv.InvokeSGISignal iv -> ArchInv.InvokeSMCCall iv -> _ ->  ---> case \x of
+    InvokeVCPU iv \<Rightarrow> ->1
+  | InvokeSGISignal iv \<Rightarrow> ->2
+  | InvokeSMCCall iv \<Rightarrow> ->3
+  | _ \<Rightarrow> ->4
+
+case \x of (ArchInv.SMCCall args) ->  ---> let args = smcArgs \x in
+  ->1
