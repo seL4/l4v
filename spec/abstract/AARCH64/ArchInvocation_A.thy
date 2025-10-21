@@ -85,6 +85,9 @@ datatype vcpu_invocation =
 datatype sgi_signal_invocation =
     SGISignalGenerate (sgi_irq : sgi_irq) (sgi_target : sgi_target)
 
+datatype smc_invocation =
+    SMCCall (smc_args : "machine_word eight_tuple")
+
 datatype arch_invocation =
     InvokeVSpace vspace_invocation
   | InvokePageTable page_table_invocation
@@ -93,6 +96,7 @@ datatype arch_invocation =
   | InvokeASIDPool asid_pool_invocation
   | InvokeVCPU vcpu_invocation
   | InvokeSGISignal sgi_signal_invocation
+  | InvokeSMCCall smc_invocation
 
 datatype arch_copy_register_sets =
     ARMNoExtraRegisters
