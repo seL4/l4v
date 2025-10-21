@@ -53,6 +53,8 @@ datatype arch_cap =
   | SGISignalCap
       (acap_sgi_irq : sgi_irq)
       (acap_sgi_target : sgi_target)
+  | SMCCap
+      (acap_smc_badge : machine_word)
 
 
 text \<open>Update the mapping data saved in a frame or page table capability.\<close>
@@ -212,6 +214,7 @@ primrec arch_obj_size :: "arch_cap \<Rightarrow> nat" where
 | "arch_obj_size (PageTableCap _ pt_t _ ) = table_size pt_t"
 | "arch_obj_size (VCPUCap _) = vcpuBits"
 | "arch_obj_size (SGISignalCap _ _) = 0"
+| "arch_obj_size (SMCCap _ ) = 0"
 
 fun arch_cap_is_device :: "arch_cap \<Rightarrow> bool" where
   "arch_cap_is_device (FrameCap _ _ _ is_dev _) = is_dev"
@@ -244,6 +247,7 @@ primrec arch_kobj_size :: "arch_kernel_obj \<Rightarrow> nat" where
 fun aobj_ref :: "arch_cap \<rightharpoonup> obj_ref" where
   "aobj_ref ASIDControlCap = None"
 | "aobj_ref (SGISignalCap _ _) = None"
+| "aobj_ref (SMCCap _) = None"
 | "aobj_ref c = Some (acap_obj c)"
 
 definition acap_rights_update :: "cap_rights \<Rightarrow> arch_cap \<Rightarrow> arch_cap" where
