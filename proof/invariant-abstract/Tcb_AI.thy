@@ -52,6 +52,8 @@ locale Tcb_AI_1 =
                 finalise_cap cap fin \<lbrace>\<lambda>rv s. \<forall>cp \<in> ran (caps_of_state s). P cp\<rbrace>"
   assumes table_cap_ref_max_free_index_upd[simp]: (* reordered to resolve dependency in tc_invs *)
   "\<And>cap. table_cap_ref (max_free_index_update cap) = table_cap_ref cap"
+  assumes arch_cap_badge_none_master[simp]:
+  "\<And>acap. (arch_cap_badge (cap_master_arch_cap acap) = None) = (arch_cap_badge acap = None)"
 
 lemma ct_in_state_weaken:
   "\<lbrakk> ct_in_state Q s; \<And>st. Q st \<Longrightarrow> P st \<rbrakk> \<Longrightarrow> ct_in_state P s"
@@ -371,6 +373,8 @@ lemma zombies_final_helperE:
   apply (fastforce simp: cte_wp_at_caps_of_state)
   done
 
+context Tcb_AI_1 begin
+
 lemma cap_badge_none_master:
   "(cap_badge (cap_master_cap cap) = None)
      = (cap_badge cap = None)"
@@ -384,6 +388,7 @@ lemma cap_master_eq_badge_none:
   apply (simp add: cap_badge_none_master)
   done
 
+end
 
 lemma check_cap_inv2:
   assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"

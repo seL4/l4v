@@ -14,6 +14,7 @@ begin
 
 arch_requalify_consts
   cap_master_arch_cap
+  arch_cap_badge
   replaceable_final_arch_cap
   replaceable_non_final_arch_cap
   unique_table_refs
@@ -403,32 +404,28 @@ lemmas cap_master_cap_eqDs =
   cap_master_cap_eqDs1 cap_master_cap_arch_eqD
   cap_master_cap_eqDs1 [OF sym] cap_master_cap_arch_eqD [OF sym]
 
-
-definition
-  cap_badge :: "cap \<rightharpoonup> badge"
-where
+definition cap_badge :: "cap \<rightharpoonup> badge" where
  "cap_badge cap \<equiv> case cap of
-    cap.EndpointCap r badge rights \<Rightarrow> Some badge
-  | cap.NotificationCap r badge rights \<Rightarrow> Some badge
+    EndpointCap r badge rights \<Rightarrow> Some badge
+  | NotificationCap r badge rights \<Rightarrow> Some badge
+  | ArchObjectCap acap \<Rightarrow> arch_cap_badge acap
   | _ \<Rightarrow> None"
 
 lemma cap_badge_simps [simp]:
- "cap_badge (cap.EndpointCap r badge rights)       = Some badge"
- "cap_badge (cap.NotificationCap r badge rights)   = Some badge"
- "cap_badge (cap.UntypedCap dev p n f)             = None"
- "cap_badge (cap.NullCap)                          = None"
- "cap_badge (cap.DomainCap)                        = None"
- "cap_badge (cap.CNodeCap r bits guard)            = None"
- "cap_badge (cap.ThreadCap r)                      = None"
- "cap_badge (cap.DomainCap)                        = None"
- "cap_badge (cap.ReplyCap r master rights)         = None"
- "cap_badge (cap.IRQControlCap)                    = None"
- "cap_badge (cap.IRQHandlerCap irq)                = None"
- "cap_badge (cap.Zombie r b n)                     = None"
- "cap_badge (cap.ArchObjectCap cap)                = None"
+ "cap_badge (EndpointCap r badge rights)       = Some badge"
+ "cap_badge (NotificationCap r badge rights)   = Some badge"
+ "cap_badge (UntypedCap dev p n f)             = None"
+ "cap_badge (NullCap)                          = None"
+ "cap_badge (DomainCap)                        = None"
+ "cap_badge (CNodeCap r bits guard)            = None"
+ "cap_badge (ThreadCap r)                      = None"
+ "cap_badge (DomainCap)                        = None"
+ "cap_badge (ReplyCap r master rights)         = None"
+ "cap_badge (IRQControlCap)                    = None"
+ "cap_badge (IRQHandlerCap irq)                = None"
+ "cap_badge (Zombie r b n)                     = None"
+ "cap_badge (ArchObjectCap acap)               = arch_cap_badge acap"
   by (auto simp: cap_badge_def)
-
-
 
 
 lemma cdt_parent_of_def:

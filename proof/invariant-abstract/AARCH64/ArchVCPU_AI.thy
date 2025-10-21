@@ -737,7 +737,8 @@ crunch perform_asid_control_invocation
   for active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
   (simp: active_cur_vcpu_of_def)
 
-crunch perform_vspace_invocation, perform_sgi_invocation, handle_spurious_irq
+crunch perform_vspace_invocation, perform_sgi_invocation, handle_spurious_irq,
+       perform_smc_invocation
   for active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
   and valid_cur_vcpu[wp]: valid_cur_vcpu
 
@@ -1278,7 +1279,8 @@ crunch store_pte, store_asid_pool_entry
 
 crunch
   perform_vspace_invocation, perform_page_table_invocation, perform_page_invocation,
-  perform_asid_control_invocation, perform_asid_pool_invocation, perform_sgi_invocation
+  perform_asid_control_invocation, perform_asid_pool_invocation, perform_sgi_invocation,
+  perform_smc_invocation
   for cur_vcpu_in_cur_domain[wp]: cur_vcpu_in_cur_domain
   (wp: crunch_wps  simp: crunch_simps)
 

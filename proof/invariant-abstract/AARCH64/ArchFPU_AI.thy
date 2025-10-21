@@ -253,7 +253,7 @@ crunch store_pte, store_asid_pool_entry, set_vcpu
 crunch
   perform_vspace_invocation, perform_page_table_invocation, perform_page_invocation,
   perform_asid_control_invocation, perform_asid_pool_invocation, perform_vcpu_invocation,
-  perform_sgi_invocation
+  perform_sgi_invocation, perform_smc_invocation
   for cur_fpu_in_cur_domain[wp]: cur_fpu_in_cur_domain
   (wp: crunch_wps  simp: crunch_simps)
 

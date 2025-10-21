@@ -169,7 +169,7 @@ lemma safe_parent_for_arch_not_arch:
 
 lemma safe_parent_cap_range_arch:
   "safe_parent_for_arch cap pcap \<Longrightarrow> cap_range cap \<subseteq> cap_range pcap"
-  by (clarsimp simp: safe_parent_for_arch_def cap_range_def is_cap_simps)
+  by (auto simp: safe_parent_for_arch_def cap_range_def is_cap_simps)
 
 definition
   "cap_asid_base_arch cap \<equiv> case cap of
