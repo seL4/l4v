@@ -47,18 +47,15 @@ lemma update_cap_objrefs [CNodeInv_AI_assms]:
   "\<lbrakk> update_cap_data P dt cap \<noteq> NullCap \<rbrakk> \<Longrightarrow>
      obj_refs (update_cap_data P dt cap) = obj_refs cap"
   by (case_tac cap,
-      simp_all add: update_cap_data_closedform arch_update_cap_data_def Let_def
+      simp_all add: update_cap_data_closedform arch_update_cap_data_def Let_def is_cap_simps
              split: if_split_asm arch_cap.splits)
-
 
 lemma update_cap_zobjrefs [CNodeInv_AI_assms]:
   "\<lbrakk> update_cap_data P dt cap \<noteq> cap.NullCap \<rbrakk> \<Longrightarrow>
      zobj_refs (update_cap_data P dt cap) = zobj_refs cap"
-  apply (case_tac cap,
-      simp_all add: update_cap_data_closedform arch_update_cap_data_def Let_def
+  by (case_tac cap,
+      simp_all add: update_cap_data_closedform arch_update_cap_data_def Let_def is_cap_simps
              split: if_split_asm arch_cap.splits)
-  done
-
 
 lemma copy_mask [simp, CNodeInv_AI_assms]:
   "copy_of (mask_cap R c) = copy_of c"
@@ -232,9 +229,9 @@ lemma weak_derived_mask [CNodeInv_AI_assms]:
 
 lemma vs_cap_ref_update_cap_data[simp, CNodeInv_AI_assms]:
   "vs_cap_ref (update_cap_data P d cap) = vs_cap_ref cap"
-  by (simp add: vs_cap_ref_def update_cap_data_closedform
-                arch_update_cap_data_def Let_def
-         split: arch_cap.splits cap.split if_splits)
+  by (auto simp: vs_cap_ref_def update_cap_data_closedform
+                 arch_update_cap_data_def Let_def is_cap_simps
+          split: arch_cap.splits cap.split if_splits)
 
 
 lemmas [CNodeInv_AI_assms] = invs_irq_state_independent
