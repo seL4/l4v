@@ -42,12 +42,72 @@ lemma same_object_obj_refs[Tcb_AI_assms]:
        apply (clarsimp simp: is_cap_simps bits_of_def split: cap.split_asm)+
   by (cases "the_arch_cap cap"; cases "the_arch_cap cap'"; simp)
 
+lemma arch_cap_badge_none_master[Tcb_AI_assms, simp]:
+  "(arch_cap_badge (cap_master_arch_cap acap) = None) = (arch_cap_badge acap = None)"
+  by (cases acap; simp add: cap_master_arch_cap_def)
+
 definition
   is_cnode_or_valid_arch :: "cap \<Rightarrow> bool"
 where
  "is_cnode_or_valid_arch cap \<equiv>
-    is_cnode_cap cap \<or> is_arch_cap cap \<and> (is_pt_cap cap \<longrightarrow> cap_asid cap \<noteq> None)"
+    is_cnode_cap cap \<or>
+    is_arch_cap cap \<and> (is_pt_cap cap \<longrightarrow> cap_asid cap \<noteq> None) \<and>
+      (\<not> arch_cap_fun_lift is_SMCCap False cap)"
 
+crunch arch_get_sanitise_register_info, arch_post_modify_registers
+  for tcb_at[wp, Tcb_AI_assms]: "tcb_at a"
+  and invs[wp, Tcb_AI_assms]: "invs"
+  and ex_nonz_cap_to[wp, Tcb_AI_assms]: "ex_nonz_cap_to a"
+
+lemma finalise_cap_not_cte_wp_at[Tcb_AI_assms]:
+  assumes x: "P cap.NullCap"
+  shows      "\<lbrace>\<lambda>s. \<forall>cp \<in> ran (caps_of_state s). P cp\<rbrace>
+                finalise_cap cap fin
+              \<lbrace>\<lambda>rv s. \<forall>cp \<in> ran (caps_of_state s). P cp\<rbrace>"
+  apply (cases cap, simp_all)
+       apply (wp suspend_caps_of_state hoare_vcg_all_lift
+            | simp
+            | rule impI
+            | rule hoare_drop_imps)+
+     apply (clarsimp simp: ball_ran_eq x)
+    apply (wp delete_one_caps_of_state
+         | rule impI
+         | simp add: deleting_irq_handler_def get_irq_slot_def x ball_ran_eq)+
+    done
+
+crunch arch_post_set_flags, arch_prepare_set_domain
+  for typ_at[wp, Tcb_AI_assms]: "\<lambda>s. P (typ_at T p s)"
+
+crunch arch_prepare_set_domain
+  for invs[wp, Tcb_AI_assms]: "invs"
+
+lemma arch_post_set_flags_invs[wp, Tcb_AI_assms]:
+  "\<lbrace>invs and ex_nonz_cap_to t\<rbrace> arch_post_set_flags t flags \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding arch_post_set_flags_def
+  by wpsimp
+
+lemmas arch_prepare_set_domain_typ_ats[wp] = abs_typ_at_lifts[OF arch_prepare_set_domain_typ_at]
+
+crunch arch_prepare_set_domain
+  for pspace_aligned[wp]: pspace_aligned
+  and pspace_distinct[wp]: pspace_distinct
+  (wp: crunch_wps)
+
+lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_assms]:
+  "table_cap_ref (max_free_index_update cap) = table_cap_ref cap"
+  by (simp add:free_index_update_def table_cap_ref_def split:cap.splits)
+
+end
+
+global_interpretation Tcb_AI_1?: Tcb_AI_1
+  where state_ext_t = state_ext_t
+  and is_cnode_or_valid_arch = is_cnode_or_valid_arch
+proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (unfold_locales; (fact Tcb_AI_assms)?)
+qed
+
+context Arch begin arch_global_naming
 
 definition (* arch specific *)
   "vspace_asid cap \<equiv> case cap of
@@ -121,52 +181,7 @@ lemma checked_insert_tcb_invs[wp]: (* arch specific *)
   apply (auto simp: is_cnode_or_valid_arch_def is_cap_simps)
   done
 
-crunch arch_get_sanitise_register_info, arch_post_modify_registers
-  for tcb_at[wp, Tcb_AI_assms]: "tcb_at a"
-crunch arch_get_sanitise_register_info, arch_post_modify_registers
-  for invs[wp, Tcb_AI_assms]: "invs"
-crunch arch_get_sanitise_register_info, arch_post_modify_registers
-  for ex_nonz_cap_to[wp, Tcb_AI_assms]: "ex_nonz_cap_to a"
-
-lemma finalise_cap_not_cte_wp_at[Tcb_AI_assms]:
-  assumes x: "P cap.NullCap"
-  shows      "\<lbrace>\<lambda>s. \<forall>cp \<in> ran (caps_of_state s). P cp\<rbrace>
-                finalise_cap cap fin
-              \<lbrace>\<lambda>rv s. \<forall>cp \<in> ran (caps_of_state s). P cp\<rbrace>"
-  apply (cases cap, simp_all)
-       apply (wp suspend_caps_of_state hoare_vcg_all_lift
-            | simp
-            | rule impI
-            | rule hoare_drop_imps)+
-     apply (clarsimp simp: ball_ran_eq x)
-    apply (wp delete_one_caps_of_state
-         | rule impI
-         | simp add: deleting_irq_handler_def get_irq_slot_def x ball_ran_eq)+
-    done
-
-crunch arch_post_set_flags, arch_prepare_set_domain
-  for typ_at[wp, Tcb_AI_assms]: "\<lambda>s. P (typ_at T p s)"
-
-crunch arch_prepare_set_domain
-  for invs[wp, Tcb_AI_assms]: "invs"
-
-lemma arch_post_set_flags_invs[wp, Tcb_AI_assms]:
-  "\<lbrace>invs and ex_nonz_cap_to t\<rbrace> arch_post_set_flags t flags \<lbrace>\<lambda>_. invs\<rbrace>"
-  unfolding arch_post_set_flags_def
-  by wpsimp
-
 lemmas vcpu_flush_typ_ats [wp] = abs_typ_at_lifts[OF vcpu_flush_typ_at]
-
-lemmas arch_prepare_set_domain_typ_ats[wp] = abs_typ_at_lifts[OF arch_prepare_set_domain_typ_at]
-
-crunch arch_prepare_set_domain
-  for pspace_aligned[wp]: pspace_aligned
-  and pspace_distinct[wp]: pspace_distinct
-  (wp: crunch_wps)
-
-lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_assms]:
-  "table_cap_ref (max_free_index_update cap) = table_cap_ref cap"
-  by (simp add:free_index_update_def table_cap_ref_def split:cap.splits)
 
 end
 
@@ -314,8 +329,7 @@ lemma check_valid_ipc_buffer_wp[Tcb_AI_assms]:
   apply (simp add: check_valid_ipc_buffer_def whenE_def
              cong: cap.case_cong arch_cap.case_cong
              split del: if_split)
-  apply (rule hoare_pre)
-   apply (wp | simp add: whenE_def split del: if_split | wpc)+
+  apply wpsimp
   apply (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def
                         valid_ipc_buffer_cap_def)
   done
@@ -352,13 +366,10 @@ lemma no_cap_to_obj_with_diff_ref_update_cap_data[Tcb_AI_assms]:
                                  = vs_cap_ref c")
    apply (simp add: no_cap_to_obj_with_diff_ref_def
                     update_cap_objrefs)
-  apply (clarsimp simp: update_cap_data_closedform
-                        table_cap_ref_def Let_def
-                        arch_update_cap_data_def
-                 split: cap.split arch_cap.splits)
-  apply simp
+   apply (auto simp: update_cap_data_closedform table_cap_ref_def Let_def is_cap_simps
+                     arch_update_cap_data_def
+               split: cap.split arch_cap.splits)
   done
-
 
 lemma update_cap_valid[Tcb_AI_assms]:
   "valid_cap cap (s::'state_ext::state_ext state) \<Longrightarrow>
