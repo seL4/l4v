@@ -690,7 +690,9 @@ known_type_assignments = [
     'machine_data',
     'machine_monad',
     'ready_queue',
-    'user_monad'
+    'user_monad',
+    'fpustate',
+    'eight_tuple a'
 ]
 
 
