@@ -341,12 +341,15 @@ definition arch_derive_cap :: "arch_cap \<Rightarrow> (cap,'z::state_ext) se_mon
      | ASIDControlCap \<Rightarrow> returnOk (ArchObjectCap c)
      | ASIDPoolCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)
      | VCPUCap _ \<Rightarrow> returnOk (ArchObjectCap c)
-     | SGISignalCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)"
+     | SGISignalCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)
+     | SMCCap _ \<Rightarrow> returnOk (ArchObjectCap c)"
 
-text \<open>No user-modifiable data is stored in AARCH64-specific capabilities.\<close>
+text \<open>Of the arch specific caps on AArch64, only SMC caps carry badge data.\<close>
 definition arch_update_cap_data :: "bool \<Rightarrow> data \<Rightarrow> arch_cap \<Rightarrow> cap" where
-  "arch_update_cap_data preserve data c \<equiv> ArchObjectCap c"
-
+  "arch_update_cap_data preserve data c \<equiv>
+     if is_SMCCap c
+     then if \<not>preserve \<and> acap_smc_badge c = 0 then ArchObjectCap (SMCCap data) else NullCap
+     else ArchObjectCap c"
 
 text \<open>Actions that must be taken on finalisation of AARCH64-specific capabilities.\<close>
 definition arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap \<times> cap,'z::state_ext) s_monad" where
