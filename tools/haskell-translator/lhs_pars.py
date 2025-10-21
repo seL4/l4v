@@ -699,7 +699,8 @@ def typename_transform(line, header, d):
         [oldtype] = line.split()
     except:
         if header not in known_type_assignments:
-            warning('type assignment with parameters not supported %s' % d.body, filename)
+            warning('Type assignment with parameters not supported %s\n  Translated string was "%s"'
+                    % (d.body, header), filename)
             call.bad_type_assignment = True
         return
     if oldtype.startswith('Data.Word.Word'):
