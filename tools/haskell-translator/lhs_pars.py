@@ -2173,7 +2173,7 @@ regexes = [
     (re.compile('/='), r'\<noteq>'),
     (re.compile('"([^"])*"'), '[]'),
     (re.compile('&&'), r'\<and>'),
-    (re.compile('\|\|'), r'\<or>'),
+    (re.compile(r'\|\|'), r'\<or>'),
     (re.compile(r"(\W)not(\s)"), r"\1Not\2"),
     (re.compile(r"(\W)and(\s)"), r"\1andList\2"),
     (re.compile(r"(\W)or(\s)"), r"\1orList\2"),
