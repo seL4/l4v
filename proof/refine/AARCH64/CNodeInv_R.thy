@@ -73,22 +73,28 @@ where
 | "cnodeinv_relation (CancelBadgedSendsCall c) x = (\<exists>c'. cap_relation c c' \<and> x = CancelBadgedSends c')"
 
 
+lemma acap_relation_arch_update_cap_data_NullCap:
+  "acap_relation acap acap' \<Longrightarrow>
+   (arch_update_cap_data P x acap = cap.NullCap) = (Arch.updateCapData P x acap' = NullCap)"
+  unfolding arch_update_cap_data_def AARCH64_H.updateCapData_def
+  by (cases acap; simp)
+
 lemma cap_relation_NullCap:
   "cap_relation cap cap' \<Longrightarrow>
    (update_cap_data P x cap = cap.NullCap) = (RetypeDecls_H.updateCapData P x cap' = capability.NullCap)"
   apply (cases cap)
             apply (simp_all add: Let_def mask_cap_def cap_rights_update_def update_cap_data_closedform
-                                 arch_update_cap_data_def word_bits_def updateCapData_def isCap_simps
+                                 word_bits_def updateCapData_def isCap_simps
                       split del: if_split)
      apply simp
     apply simp
    apply (clarsimp simp: word_size word_size_def cnode_padding_bits_def cnode_guard_size_bits_def
                          cteRightsBits_def cteGuardBits_def)
-  apply (clarsimp simp: AARCH64_H.updateCapData_def isCap_simps split del: if_split)
+  apply (clarsimp simp: isCap_simps acap_relation_arch_update_cap_data_NullCap split del: if_split)
   done
 
 (* Sometimes I need something about the state. This is neater (IMHO) and req *)
-lemma whenE_throwError_corres':
+lemma whenE_throwError_corres': (* FIXME: move *)
   assumes P: "frel f f'"
   assumes Q: "\<And>s s'. \<lbrakk>(s, s') \<in> state_relation; R s; R' s'\<rbrakk> \<Longrightarrow> P = P'"
   assumes R: "\<not> P \<Longrightarrow> corres (frel \<oplus> rvr) Q Q' m m'"
@@ -368,18 +374,23 @@ lemma decodeCNodeInvocation_corres:
   apply fastforce
   done
 
+lemma arch_capBadge_updateCapData_True:
+  "Arch.updateCapData True x acap \<noteq> NullCap \<Longrightarrow>
+   capBadge (Arch.updateCapData True x acap) = arch_capBadge acap"
+  unfolding AARCH64_H.updateCapData_def
+  by (cases acap; simp)
+
 lemma capBadge_updateCapData_True:
   "updateCapData True x c \<noteq> NullCap \<Longrightarrow> capBadge (updateCapData True x c) = capBadge c"
   apply (simp add: updateCapData_def isCap_simps Let_def
             split: if_split_asm split del: if_split)
-  apply (simp add: AARCH64_H.updateCapData_def)
+  apply (simp add: arch_capBadge_updateCapData_True)
   done
 
 lemma badge_derived_updateCapData:
   "\<lbrakk> updateCapData False x cap \<noteq> NullCap; badge_derived' cap cap' \<rbrakk>
-         \<Longrightarrow> badge_derived' (updateCapData False x cap) cap'"
-  by (simp add: badge_derived'_def updateCapData_Master
-                updateCapData_ordering)
+   \<Longrightarrow> badge_derived' (updateCapData False x cap) cap'"
+  by (clarsimp simp: badge_derived'_def updateCapData_ordering updateCapData_Master)
 
 lemma deriveCap_Null_helper:
   assumes "\<lbrace>P\<rbrace> deriveCap x cap \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow> Q rv s\<rbrace>,-"
@@ -4143,7 +4154,8 @@ lemma isSGI_src:
 
 lemma isSGI_dest:
   "isArchSGISignalCap dcap = isArchSGISignalCap dest_cap"
-  using dest_derived by (fastforce simp: isCap_simps weak_derived'_def)
+  using dest_derived
+  by (fastforce simp: isCap_simps weak_derived'_def)
 
 lemma SGI_dcap_neq:
   "isArchSGISignalCap dest_cap \<Longrightarrow> (cap \<noteq> dcap) = (cap \<noteq> dest_cap)"
@@ -4165,6 +4177,25 @@ lemma SGI_scap_neq_cap:
   using src_derived
   by (auto simp: weak_derived'_def isCap_simps)
 
+lemma isSMC_src:
+  "isArchSMCCap scap = isArchSMCCap src_cap"
+  using src_derived
+  by (fastforce simp: isCap_simps weak_derived'_def)
+
+lemma isSMC_dest:
+  "isArchSMCCap dcap = isArchSMCCap dest_cap"
+  using dest_derived
+  by (fastforce simp: isCap_simps weak_derived'_def)
+
+lemma isSMCbadge_src:
+  "isArchSMCCap src_cap \<Longrightarrow> archSMCBadge scap = archSMCBadge src_cap"
+  using src_derived
+  by (auto simp: weak_derived'_def isCap_simps)
+
+lemma isSMCbadge_dest:
+  "isArchSMCCap dest_cap \<Longrightarrow> archSMCBadge dcap = archSMCBadge dest_cap"
+  using dest_derived
+  by (auto simp: weak_derived'_def isCap_simps)
 
 (* export to generic below *)
 
@@ -4179,19 +4210,19 @@ lemma mdb_chunked_arch_assms_dcap[simp]:
 
 lemma valid_arch_badges_src[simp]:
   "valid_arch_badges scap c node = valid_arch_badges src_cap c node"
-  by (simp add: valid_arch_badges_def SGI_scap_neq_cap)
+  by (simp add: valid_arch_badges_def SGI_scap_neq_cap isSMCbadge_src isSMC_src)
 
 lemma valid_arch_badges_dest[simp]:
   "valid_arch_badges c dcap node = valid_arch_badges c dest_cap node"
-  by (simp add: valid_arch_badges_def isSGI_dest SGI_dcap_neq)
+  by (simp add: valid_arch_badges_def isSGI_dest SGI_dcap_neq isSMCbadge_dest isSMC_dest)
 
 lemma valid_arch_badges_dest'[simp]:
   "valid_arch_badges dcap c node = valid_arch_badges dest_cap c node"
-  by (simp add: valid_arch_badges_def  SGI_dcap_neq_cap)
+  by (simp add: valid_arch_badges_def  SGI_dcap_neq_cap isSMCbadge_dest isSMC_dest)
 
 lemma valid_arch_badges_src'[simp]:
   "valid_arch_badges c scap node = valid_arch_badges c src_cap node"
-  by (simp add: valid_arch_badges_def isSGI_src SGI_scap_neq)
+  by (simp add: valid_arch_badges_def isSGI_src SGI_scap_neq isSMCbadge_src isSMC_src)
 
 end
 
@@ -5736,16 +5767,17 @@ lemma make_zombie_invs':
     apply (clarsimp simp: mdb_next_unfold)
     apply (erule_tac x=p in allE)
     apply (erule_tac x="mdbNext node" in allE)
-   subgoal by simp
+    subgoal by simp
    apply (clarsimp simp: isCap_simps valid_arch_badges_def split: if_split_asm)
-    apply (erule_tac x=sl in allE)
-    apply simp
-    apply (erule_tac x=p' in allE)
-    apply (solves \<open>clarsimp simp: mdb_next_unfold\<close>)
+     apply (erule_tac x=sl in allE)
+     apply simp
+     apply (erule_tac x=p' in allE)
+     apply (rule conjI; solves \<open>clarsimp simp: mdb_next_unfold\<close>)
+    apply (fastforce simp: mdb_next_unfold)
    apply (erule_tac x=p in allE)
    apply simp
    apply (erule_tac x=p' in allE)
-   apply (solves \<open>clarsimp simp: mdb_next_unfold\<close>)
+   apply (rule conjI; solves \<open>clarsimp simp: mdb_next_unfold\<close>) (* fastforce too slow *)
   apply (rule conjI)
    apply clarsimp
    apply (erule (1) caps_contained_subrange, simp)
@@ -7880,7 +7912,7 @@ lemmas cteRevoke_corres = use_spec_corres [OF cteRevoke_corres']
 
 lemma arch_recycleCap_improve_cases:
   "\<lbrakk> \<not>isFrameCap cap; \<not>isPageTableCap cap; \<not>isVCPUCap cap; \<not>isASIDControlCap cap;
-     \<not>isSGISignalCap cap \<rbrakk>
+     \<not>isSGISignalCap cap; \<not>isSMCCap cap \<rbrakk>
    \<Longrightarrow> (if isASIDPoolCap cap then v else undefined) = v"
   by (cases cap, simp_all add: isCap_simps)
 
@@ -8364,10 +8396,15 @@ proof
     unfolding weak_derived'_def
     by (clarsimp simp: isCap_simps)
 
+  from parency
+  have SMC_cap': "isArchSMCCap cap' \<Longrightarrow> cap' = src_cap"
+    unfolding weak_derived'_def
+    by (clarsimp simp: isCap_simps)
+
   from valid
   have "valid_badges m" ..
   thus "valid_badges m'" using src dest parency
-    apply (clarsimp simp: valid_badges_def2 valid_arch_badges_def)
+    apply (clarsimp simp: valid_badges_def3 unordered_valid_arch_badges_def)
     apply (drule m'_badged)+
     apply (drule m'_next)
     apply (clarsimp simp add: weak_derived'_def split: if_split_asm)
@@ -9014,11 +9051,6 @@ lemma updateCap_noop_invs:
    apply assumption
   apply clarsimp
   done
-
-lemmas make_zombie_or_noop_or_arch_invs
-    = hoare_vcg_disj_lift [OF updateCap_noop_invs
-   hoare_vcg_disj_lift [OF make_zombie_invs' arch_update_updateCap_invs],
-   simplified]
 
 lemma invokeCNode_invs' [wp]:
   "\<lbrace>invs' and sch_act_simple and valid_cnode_inv' cinv\<rbrace>

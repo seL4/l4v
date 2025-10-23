@@ -319,11 +319,6 @@ where valid_cap'_def:
                     \<and> (\<forall>addr. real_cte_at' (r + 2^cteSizeBits * (addr && mask n)) s))
   | ArchObjectCap ac \<Rightarrow> valid_arch_cap' ac s)"
 
-definition arch_cap'_fun_lift :: "(arch_capability \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> capability \<Rightarrow> 'a" where
-  "arch_cap'_fun_lift P F c \<equiv> case c of ArchObjectCap ac \<Rightarrow> P ac | _ \<Rightarrow> F"
-
-lemmas arch_cap'_fun_lift_simps[simp] = arch_cap'_fun_lift_def[split_simps capability.split]
-
 (* Use abbreviation, not syntax, so that it can be input-only *)
 abbreviation (input) valid_cap'_syn ::
   "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>'' _" [60, 60] 61) where

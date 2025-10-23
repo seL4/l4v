@@ -69,12 +69,14 @@ lemmas isMDBParentOf = isMDBParentOf
 
 lemmas sameRegionAs = sameRegionAs
 
+lemmas capBadgeNone = capBadgeNone
+
 end
 
 lemma same_master_descendants:
   assumes slot: "m slot = Some cte"
   assumes master: "capMasterCap (cteCap cte) = capMasterCap cap'"
-  assumes c': "\<not>isReplyCap cap'" "\<not>isEndpointCap cap'" "\<not>isNotificationCap cap'"
+  assumes c': "capBadge cap' = None"
   defines "m' \<equiv> m(slot \<mapsto> cteCap_update (\<lambda>_. cap') cte)"
   shows "descendants_of' p m' = descendants_of' p m"
 proof (rule set_eqI, simp add: descendants_of'_def)
@@ -84,9 +86,7 @@ proof (rule set_eqI, simp add: descendants_of'_def)
     using master by (simp add: masterCap_def)
 
   from c'
-  have c: "\<not>isReplyCap cap"
-          "\<not>isEndpointCap cap"
-          "\<not>isNotificationCap cap" by auto
+  have c: "capBadge cap = None" by (auto simp: capBadgeNone)
 
   note parent [simp] = isMDBParentOf [OF c]
 
@@ -875,7 +875,9 @@ locale CSpace_R =
      valid_arch_badges cap cap' (mdbPrev_update f node) = valid_arch_badges cap cap' node"
   assumes valid_arch_badges_master:
     "\<And>cap cap' src_cap node.
-     \<lbrakk>capMasterCap src_cap = capMasterCap cap; valid_arch_badges src_cap cap' node\<rbrakk>
+     \<lbrakk>capMasterCap src_cap = capMasterCap cap;
+      (capBadge src_cap, capBadge cap) \<in> capBadge_ordering False;
+      valid_arch_badges src_cap cap' node\<rbrakk>
      \<Longrightarrow> valid_arch_badges cap cap' node"
   assumes valid_arch_badges_firstBadged:
     "\<And>cap cap' node node'.
@@ -2340,7 +2342,7 @@ proof -
       (* clarsimp first for speed *)
       apply (rule conjI; clarsimp simp: gen_isCap_simps;
              fastforce simp: gen_isCap_simps sameRegionAs_def cong: if_cong)
-     apply (erule (1) valid_arch_badges_master)
+     apply (erule (2) valid_arch_badges_master)
     apply (case_tac "word1 = p'")
      apply (clarsimp simp:modify_map_cases valid_badges_def mdb_next_unfold src0 dest0 no0)+
     apply (case_tac "p = dest")
@@ -3613,7 +3615,8 @@ proof -
 qed
 
 definition is_arch_update' :: "capability \<Rightarrow> cte \<Rightarrow> bool" where
-  "is_arch_update' cap cte \<equiv> isArchObjectCap cap \<and> capMasterCap cap = capMasterCap (cteCap cte)"
+  "is_arch_update' cap cte \<equiv>
+     isArchObjectCap cap \<and> capMasterCap cap = capMasterCap (cteCap cte) \<and> capBadge cap = None"
 
 (* corresponds to safe_parent_for in AInvs *)
 definition
@@ -5226,7 +5229,7 @@ lemma updateCap_same_master:
    corres dc (valid_objs and pspace_aligned and pspace_distinct and
               cte_wp_at (\<lambda>c. cap_master_cap c = cap_master_cap cap \<and>
                              \<not>is_reply_cap c \<and> \<not>is_master_reply_cap c \<and>
-                             \<not>is_ep_cap c \<and> \<not>is_ntfn_cap c) slot)
+                             cap_badge c = None) slot)
              (pspace_aligned' and pspace_distinct' and cte_at' (cte_map slot))
      (set_cap cap slot)
      (updateCap (cte_map slot) cap')" (is "_ \<Longrightarrow> corres _ ?P ?P' _ _")
@@ -5234,7 +5237,7 @@ lemma updateCap_same_master:
   apply (unfold updateCap_def)
   apply (rule corres_guard_imp)
     apply (rule_tac Q="?P" and R'="\<lambda>cte. ?P' and (\<lambda>s. ctes_of s (cte_map slot) = Some cte)"
-      in corres_symb_exec_r_conj)
+                    in corres_symb_exec_r_conj)
        apply (rule corres_stronger_no_failI)
         apply (rule no_fail_pre, wp)
         apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -5253,7 +5256,7 @@ lemma updateCap_same_master:
        apply clarsimp
        apply (subst conj_assoc[symmetric])
        apply (extract_conjunct \<open>match conclusion in "ready_queues_relation a b" for a b \<Rightarrow> -\<close>)
-        subgoal by (erule setCTE_set_cap_ready_queues_relation_valid_corres; assumption)
+        apply (erule setCTE_set_cap_ready_queues_relation_valid_corres; assumption)
        apply (rule conjI)
         apply (frule setCTE_pspace_only)
         apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
@@ -5275,7 +5278,7 @@ lemma updateCap_same_master:
         apply (erule use_valid [OF _ setCTE_ctes_of_wp])
         apply (clarsimp simp: revokable_relation_def simp del: fun_upd_apply)
         apply (clarsimp split: if_split_asm)
-        apply (drule cte_map_inj_eq)
+         apply (drule cte_map_inj_eq)
               prefer 2
               apply (erule cte_wp_at_weakenE, rule TrueI)
              apply (simp add: null_filter_def split: if_split_asm)
@@ -5286,7 +5289,7 @@ lemma updateCap_same_master:
           apply fastforce
          apply clarsimp
          apply (simp add: null_filter_def split: if_split_asm)
-          apply (erule_tac x=aa in allE, erule_tac x=bb in allE)
+         apply (erule_tac x=aa in allE, erule_tac x=bb in allE)
          apply (clarsimp simp: cte_wp_at_caps_of_state)
          apply (erule disjE)
           apply (clarsimp simp: cap_master_cap_simps dest!: cap_master_cap_eqDs)
@@ -5308,21 +5311,17 @@ lemma updateCap_same_master:
         apply fastforce
        apply (clarsimp simp del: fun_upd_apply)
        apply (subst same_master_descendants)
-            apply assumption
-           apply (clarsimp simp: master_cap_relation)
-          apply (frule_tac d=c in master_cap_relation [symmetric], assumption)
-          apply (frule is_reply_cap_relation[symmetric],
-                 drule is_reply_master_relation[symmetric])+
-          apply simp
-          apply (drule masterCap.intro)
-          apply (drule masterCap.isReplyCap)
-          apply simp
-         apply (drule is_ep_cap_relation)+
-         apply (drule master_cap_ep)
-         apply simp
-        apply (drule is_ntfn_cap_relation)+
-        apply (drule master_cap_ntfn)
+          apply assumption
+         apply (clarsimp simp: master_cap_relation)
+        apply (frule_tac d=c in master_cap_relation [symmetric], assumption)
+        apply (frule cap_relation_capBadge)
+        apply (frule is_reply_cap_relation[symmetric],
+               drule is_reply_master_relation[symmetric])+
         apply simp
+        apply (drule masterCap.intro)
+        apply (drule masterCap.isReplyCap)
+        apply simp
+        apply (drule cap_master_eq_badge_none, simp)
        apply (simp add: in_set_cap_cte_at)
        apply(simp add: cdt_list_relation_def split del: if_split)
        apply(intro allI impI)

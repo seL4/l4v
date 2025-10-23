@@ -631,7 +631,7 @@ crunch decodeDomainInvocation
 
 lemma arch_cap_exhausted:
   "\<lbrakk>\<not> isFrameCap cap; \<not> isPageTableCap cap; \<not> isASIDControlCap cap; \<not> isASIDPoolCap cap;
-    \<not> isVCPUCap cap; \<not>isSGISignalCap cap\<rbrakk>
+    \<not> isVCPUCap cap; \<not>isSGISignalCap cap; \<not>isSMCCap cap\<rbrakk>
     \<Longrightarrow> undefined \<lbrace>P\<rbrace>"
   by (cases cap; simp add: isCap_simps)
 
