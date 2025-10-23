@@ -4601,54 +4601,48 @@ crunch removeFromBitmap
 crunch rescheduleRequired
   for cap_to'[wp]: "ex_nonz_cap_to' p"
 
-lemma tcbQueued_update_tcb_cte_cases:
-  "(getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbQueued_update f tcb) = getF tcb"
+lemma update_tcb_cte_cases:
+  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbQueued_update f tcb) = getF tcb"
+  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbSchedNext_update f tcb) = getF tcb"
+  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbSchedPrev_update f tcb) = getF tcb"
+  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbBoundNotification_update f tcb) = getF tcb"
+  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbPriority_update f tcb) = getF tcb"
   unfolding tcb_cte_cases_def
-  by (case_tac tcb; fastforce simp: objBits_simps')
-
-lemma tcbSchedNext_update_tcb_cte_cases:
-  "(getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbSchedNext_update f tcb) = getF tcb"
-  unfolding tcb_cte_cases_def
-  by (case_tac tcb; fastforce simp: objBits_simps')
-
-lemma tcbSchedPrev_update_tcb_cte_cases:
-  "(getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbSchedPrev_update f tcb) = getF tcb"
-  unfolding tcb_cte_cases_def
-  by (case_tac tcb; fastforce simp: objBits_simps')
+  by (case_tac tcb; fastforce simp: objBits_simps')+
 
 lemma tcbSchedNext_update_ctes_of[wp]:
   "threadSet (tcbSchedNext_update f) tptr \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
-  by (wpsimp wp: threadSet_ctes_ofT simp: tcbSchedNext_update_tcb_cte_cases)
+  by (wpsimp wp: threadSet_ctes_ofT simp: update_tcb_cte_cases)
 
 lemma tcbSchedPrev_update_ctes_of[wp]:
   "threadSet (tcbSchedPrev_update f) tptr \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
-  by (wpsimp wp: threadSet_ctes_ofT simp: tcbSchedPrev_update_tcb_cte_cases)
+  by (wpsimp wp: threadSet_ctes_ofT simp: update_tcb_cte_cases)
 
 lemma tcbSchedNext_ex_nonz_cap_to'[wp]:
   "threadSet (tcbSchedNext_update f) tptr \<lbrace>ex_nonz_cap_to' p\<rbrace>"
-  by (wpsimp wp: threadSet_cap_to simp: tcbSchedNext_update_tcb_cte_cases)
+  by (wpsimp wp: threadSet_cap_to simp: update_tcb_cte_cases)
 
 lemma tcbSchedPrev_ex_nonz_cap_to'[wp]:
   "threadSet (tcbSchedPrev_update f) tptr \<lbrace>ex_nonz_cap_to' p\<rbrace>"
-  by (wpsimp wp: threadSet_cap_to simp: tcbSchedPrev_update_tcb_cte_cases)
+  by (wpsimp wp: threadSet_cap_to simp: update_tcb_cte_cases)
 
 lemma tcbSchedNext_update_iflive':
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
    threadSet (tcbSchedNext_update f) t
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: threadSet_iflive'T simp: tcbSchedNext_update_tcb_cte_cases)
+  by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
 
 lemma tcbSchedPrev_update_iflive':
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
    threadSet (tcbSchedPrev_update f) t
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: threadSet_iflive'T simp: tcbSchedPrev_update_tcb_cte_cases)
+  by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
 
 lemma tcbQueued_update_iflive'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
    threadSet (tcbQueued_update f) t
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: threadSet_iflive'T simp: tcbQueued_update_tcb_cte_cases)
+  by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
 
 lemma getTCB_wp:
   "\<lbrace>\<lambda>s. \<forall>ko :: tcb. ko_at' ko p s \<longrightarrow> Q ko s\<rbrace> getObject p \<lbrace>Q\<rbrace>"
