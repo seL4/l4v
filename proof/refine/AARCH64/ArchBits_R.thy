@@ -49,10 +49,11 @@ lemma arch_isCap_simps:
   "isASIDPoolCap w = (\<exists>v0 v1. w = ASIDPoolCap v0 v1)"
   "isVCPUCap w = (\<exists>v. w = VCPUCap v)"
   "isSGISignalCap w = (\<exists>irq target. w = SGISignalCap irq target)"
+  "isSMCCap w = (\<exists>smc_badge. w = SMCCap smc_badge)"
   by (auto simp: isCap_defs split: capability.splits arch_capability.splits)
 
 (* isArchSGISignalCap_def is already in expanded exists form, so no need to spell it out. *)
-lemmas isCap_simps = gen_isCap_simps arch_isCap_simps isArchSGISignalCap_def
+lemmas isCap_simps = gen_isCap_simps arch_isCap_simps isArchSGISignalCap_def isArchSMCCap_simp
 
 lemma pageBits_le_maxUntypedSizeBits[Bits_R_assms, simp]:
   "pageBits \<le> maxUntypedSizeBits"
