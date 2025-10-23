@@ -37,7 +37,9 @@ lemma archMDBAssertions_cross[CSpace1_R_assms]:
 
 lemma isArchMDBParentOf_def2:
   "isArchMDBParentOf cap cap' firstBadged =
-   (isArchSGISignalCap cap \<longrightarrow> isArchSGISignalCap cap' \<longrightarrow> \<not>firstBadged)"
+   ((isArchSGISignalCap cap \<longrightarrow> isArchSGISignalCap cap' \<longrightarrow> \<not>firstBadged) \<and>
+    (isArchSMCCap cap \<longrightarrow> isArchSMCCap cap' \<longrightarrow>
+       archSMCBadge cap = 0 \<or> archSMCBadge cap = archSMCBadge cap' \<and> \<not>firstBadged))"
   by (auto simp: isArchMDBParentOf_def isCap_simps split: capability.splits arch_capability.splits)
 
 lemma sameRegionAs_SGISignalCap[simp]:
@@ -45,11 +47,18 @@ lemma sameRegionAs_SGISignalCap[simp]:
    (cap' = ArchObjectCap (SGISignalCap irq target))"
   by (auto simp add: global.sameRegionAs_def AARCH64_H.sameRegionAs_def isCap_simps split: if_splits)
 
+lemma sameRegionAs_SMCCap[simp]:
+  "sameRegionAs (ArchObjectCap (SMCCap smc_badge)) cap' =
+   (\<exists>smc_badge'. cap' = ArchObjectCap (SMCCap smc_badge'))"
+  by (auto simp add: global.sameRegionAs_def AARCH64_H.sameRegionAs_def isCap_simps split: if_splits)
+
 lemma isMDBParentOf_CTE1:
   "isMDBParentOf (CTE cap node) cte =
    (\<exists>cap' node'. cte = CTE cap' node' \<and> sameRegionAs cap cap'
       \<and> mdbRevocable node
       \<and> (isArchSGISignalCap cap \<longrightarrow> \<not> mdbFirstBadged node')
+      \<and> (isArchSMCCap cap \<longrightarrow>
+           archSMCBadge cap = 0 \<or> archSMCBadge cap = archSMCBadge cap' \<and> \<not> mdbFirstBadged node')
       \<and> (isEndpointCap cap \<longrightarrow> capEPBadge cap \<noteq> 0 \<longrightarrow>
            capEPBadge cap = capEPBadge cap' \<and> \<not> mdbFirstBadged node')
       \<and> (isNotificationCap cap \<longrightarrow> capNtfnBadge cap \<noteq> 0 \<longrightarrow>
@@ -70,7 +79,9 @@ lemma isMDBParentOf_CTE:
   apply (simp add: isMDBParentOf_CTE1)
   apply (intro arg_cong[where f=Ex] ext conj_cong refl)
   apply (cases cap, simp_all add: isCap_simps)
-   apply (auto elim!: sameRegionAsE simp: isCap_simps)
+    apply (auto elim!: sameRegionAsE simp: isCap_simps)[2]
+  apply (rename_tac acap, case_tac acap; simp)
+  apply (auto elim!: sameRegionAsE simp: isCap_simps)
   done
 
 lemma isMDBParentOf_trans:
@@ -151,6 +162,15 @@ lemma acap_relation_SGISignalCapD:
    acap = arch_cap.SGISignalCap (ucast irq) (ucast target)"
   by (cases acap) (auto simp: ucast_down_ucast_id is_down)
 
+lemma acap_relation_SMCCap[simp]:
+  "acap_relation acap (SMCCap smc_badge) = (acap = arch_cap.SMCCap smc_badge)"
+  by (cases acap) auto
+
+lemma cap_relation_SMCCap[simp]:
+  "cap_relation cap (ArchObjectCap (SMCCap smc_badge)) =
+     (cap = cap.ArchObjectCap (arch_cap.SMCCap smc_badge))"
+  by (cases cap) auto
+
 lemma can_be_is[CSpace1_R_assms]:
   "\<lbrakk> cap_relation c (cteCap cte); cap_relation c' (cteCap cte');
      mdbRevocable (cteMDBNode cte) = r;
@@ -173,7 +193,7 @@ lemma can_be_is[CSpace1_R_assms]:
   apply (cases c, simp_all add: isCap_simps arch_cap.is_SGISignalCap_def isArchMDBParentOf_def2)
     apply (cases c', auto simp: global.sameRegionAs_def Let_def isCap_simps)[1]
    apply (cases c', auto simp: global.sameRegionAs_def isCap_simps is_cap_simps)[1]
-  apply (auto simp: Let_def dest!: acap_relation_SGISignalCapD)[1]
+  apply (auto simp: Let_def isCap_simps is_cap_simps dest!: acap_relation_SGISignalCapD)[1]
   done
 
 lemma maskCap_valid[simp]:
@@ -228,51 +248,44 @@ qed
 
 lemmas setCTE_typ_ats[wp] = typ_at_lifts[OF setCTE_typ_at']
 
+context begin (* private method *)
+
+private method updateCapData_cases for c =
+  (cases c; simp add: global.updateCapData_def isCap_simps Let_def),
+  (rename_tac arch_capability),
+  (case_tac arch_capability; simp add: AARCH64_H.updateCapData_def isCap_simps Let_def)
+
 lemma capASID_update[simp]:
   "capASID (RetypeDecls_H.updateCapData P x c) = capASID c"
   unfolding capASID_def
-  apply (cases c, simp_all add: updateCapData_def isCap_simps Let_def)
-  apply (rename_tac arch_capability)
-  apply (case_tac arch_capability,
-         simp_all add: global.updateCapData_def AARCH64_H.updateCapData_def isCap_simps Let_def)
-  done
+  by (updateCapData_cases c)
 
 lemma cap_vptr_update'[simp]:
   "cap_vptr' (RetypeDecls_H.updateCapData P x c) = cap_vptr' c"
   unfolding capASID_def
-  apply (cases c, simp_all add: updateCapData_def isCap_simps Let_def)
-  apply (rename_tac arch_capability)
-  apply (case_tac arch_capability,
-         simp_all add: global.updateCapData_def AARCH64_H.updateCapData_def isCap_simps Let_def)
-  done
+  by (updateCapData_cases c)
 
 lemma cap_asid_base_update'[simp]:
   "cap_asid_base' (RetypeDecls_H.updateCapData P x c) = cap_asid_base' c"
   unfolding cap_asid_base'_def
-  apply (cases c, simp_all add: updateCapData_def isCap_simps Let_def)
-  apply (rename_tac arch_capability)
-  apply (case_tac arch_capability,
-         simp_all add: global.updateCapData_def AARCH64_H.updateCapData_def isCap_simps Let_def)
-  done
+  by (updateCapData_cases c)
+
+lemma arch_updateCapData_Master:
+  "Arch.updateCapData P d acap \<noteq> NullCap \<Longrightarrow>
+   capMasterCap (Arch.updateCapData P d acap) = capMasterCap (ArchObjectCap acap)"
+  by (cases acap; simp add: AARCH64_H.updateCapData_def split: if_split_asm)
 
 lemma updateCapData_Master:
-  "updateCapData P d cap \<noteq> NullCap \<Longrightarrow>
-   capMasterCap (updateCapData P d cap) = capMasterCap cap"
-  apply (cases cap, simp_all add: global.updateCapData_def isCap_simps Let_def
-                           split: if_split_asm)
-  apply (rename_tac arch_capability)
-  apply (case_tac arch_capability, simp_all add: AARCH64_H.updateCapData_def)
+  "updateCapData P d cap \<noteq> NullCap \<Longrightarrow> capMasterCap (updateCapData P d cap) = capMasterCap cap"
+  apply (cases cap; simp add: global.updateCapData_def isCap_simps Let_def split: if_split_asm)
+  apply (simp add: arch_updateCapData_Master)
   done
 
 lemma updateCapData_Reply:
   "isReplyCap (updateCapData P x c) = isReplyCap c"
-  apply (cases "updateCapData P x c = NullCap")
-   apply (clarsimp simp: gen_isCap_simps)
-   apply (simp add: global.updateCapData_def gen_isCap_simps Let_def)
-  apply (drule updateCapData_Master)
-  apply (rule master_eqI, rule gen_isCap_Master)
-  apply simp
-  done
+  by (updateCapData_cases c)
+
+end (* context private method *)
 
 lemma capASID_mask[simp]:
   "capASID (maskCapRights x c) = capASID c"
@@ -751,6 +764,14 @@ lemma revokable_plus_orderD[CSpace1_R_assms]:
   by (clarsimp simp: Retype_H.isCapRevocable_def AARCH64_H.isCapRevocable_def isCap_simps
               split: if_split_asm capability.split_asm arch_capability.split_asm)
 
+lemma valid_arch_badges_SMC:
+  "valid_arch_badges (ArchObjectCap (SMCCap badge)) cap' node' =
+   ((isArchSGISignalCap cap' \<longrightarrow> mdbFirstBadged node') \<and>
+    (isArchSMCCap cap' \<longrightarrow> badge \<noteq> archSMCBadge cap' \<longrightarrow> archSMCBadge cap' \<noteq> 0 \<longrightarrow>
+      mdbFirstBadged node'))"
+  unfolding valid_arch_badges_def
+  by (auto simp: isCap_simps)
+
 lemma valid_badges_def2[CSpace1_R_assms]:
   "valid_badges m =
    (\<forall>p p' cap node cap' node'.
@@ -766,7 +787,15 @@ lemma valid_badges_def2[CSpace1_R_assms]:
   apply (simp add: valid_badges_def)
   apply (intro arg_cong[where f=All] ext imp_cong [OF refl])
   apply (case_tac cap; clarsimp simp: gen_isCap_simps)
-      by (fastforce simp: sameRegionAs_def3 isCap_simps)+
+       apply (fastforce simp: sameRegionAs_def3 isCap_simps)+
+  apply (rename_tac acap node)
+  apply (case_tac acap; simp)
+  apply (auto simp: isCap_simps valid_arch_badges_SMC)
+  done
+
+lemma capRange_SMC[simp]:
+  "capRange (ArchObjectCap (SMCCap smc_badge)) = {}"
+  by (simp add: capRange_def)
 
 lemma is_cap_revocable_eq[CSpace1_R_assms]:
   "\<lbrakk> cap_relation c c'; cap_relation src_cap src_cap'; sameRegionAs src_cap' c';
@@ -792,6 +821,10 @@ lemma is_derived'_genD[CSpace1_R_assms]:
    (isReplyCap cap \<longrightarrow> capReplyMaster cap) \<and>
    (isReplyCap cap' \<longrightarrow> \<not> capReplyMaster cap')"
   by (simp add: AARCH64.is_derived'_def)
+
+lemma acap_relation_capBadge[CSpace1_R_assms]:
+  "acap_relation acap acap' \<Longrightarrow> arch_capBadge acap' = arch_cap_badge acap"
+  by (cases acap; simp)
 
 end (* Arch *)
 
@@ -869,11 +902,6 @@ lemma master_cap_relation:
   by (auto simp add: cap_master_cap_def capMasterCap_def up_ucast_inj_eq
            split: cap.splits arch_cap.splits)
 
-lemma cap_badge_relation:
-  "\<lbrakk> cap_relation c c'; cap_relation d d' \<rbrakk> \<Longrightarrow>
-   (capBadge c' = capBadge d') = (cap_badge c = cap_badge d)"
-  by (auto simp add: cap_badge_def split: cap.splits arch_cap.splits)
-
 lemma cap_asid_cap_relation:
   "cap_relation c c' \<Longrightarrow> capASID c' = map_option ucast (cap_asid c)"
   by (auto simp: capASID_def cap_asid_def split: cap.splits arch_cap.splits option.splits)
@@ -902,8 +930,7 @@ lemma is_derived_eq[CSpace1_R_2_assms]:
                                   capMasterCap_def
                            split: cap_relation_split_asm arch_cap.split_asm)
       apply fastforce
-     apply (auto simp: up_ucast_inj_eq split:arch_cap.splits arch_capability.splits option.splits)
-  done
+     by (auto simp: up_ucast_inj_eq split:arch_cap.splits arch_capability.splits option.splits)
 
 lemma isMDBParentOf_eq_parent:
   "\<lbrakk> isMDBParentOf c cte;
@@ -971,9 +998,9 @@ lemma maskedAsFull_revokable:
   "is_derived' x y c' src_cap' \<Longrightarrow>
    isCapRevocable c' (maskedAsFull src_cap' a) = isCapRevocable c' src_cap'"
   apply (case_tac src_cap'; simp add: maskedAsFull_def isCap_simps)
-  apply (case_tac c'; simp add: maskedAsFull_def is_derived'_def isCap_simps badge_derived'_def
-                                Retype_H.isCapRevocable_def AARCH64_H.isCapRevocable_def
-                           split: arch_capability.splits if_splits)
+  apply (case_tac c'; clarsimp simp: maskedAsFull_def is_derived'_def isCap_simps badge_derived'_def
+                                     Retype_H.isCapRevocable_def AARCH64_H.isCapRevocable_def
+                               split: arch_capability.splits if_splits)
   done
 
 lemma sameRegionAs_SGISignalCap2[simp]:
@@ -1127,24 +1154,8 @@ lemma valid_badges_preserve_oneway[CSpace1_R_2_assms]:
    apply (drule(1) misc)+
    apply (clarsimp simp: isCap_simps global.sameRegionAs_def split: if_splits)
   apply (clarsimp simp: valid_arch_badges_def)
-  apply (thin_tac "sameRegionAs _ _ \<longrightarrow> _")
-  apply (erule impE)
-   apply (drule(1) misc)+
-   apply (clarsimp simp: arch_mdb_preservation_def)
-  apply (erule impE)
-   apply clarsimp
-   apply (prop_tac "isArchSGISignalCap m_cap'")
-    apply (drule(1) misc)+
-    apply (clarsimp simp: arch_mdb_preservation_def)
-   apply (prop_tac "sameRegionAs m_cap' m_cap'", solves \<open>clarsimp simp: isCap_simps\<close>)
-   apply (drule (1) sameRegion)+
-   apply (erule conjE)
-   apply (drule_tac x=m_cap' in fun_cong)
-   apply (clarsimp simp: isCap_simps)
-   apply (drule_tac x="ArchObjectCap (SGISignalCap irqa target)" in fun_cong)
-   apply (solves simp)
   apply (drule(1) misc)+
-  apply clarsimp
+  apply (clarsimp simp: arch_mdb_preservation_def)
   done
 
 (* corresponds to safe_parent_for_arch in AInvs, used by safe_parent_for' *)
@@ -1163,7 +1174,8 @@ definition is_simple_cap' :: "capability \<Rightarrow> bool" where
      \<not> isThreadCap cap \<and>
      \<not> isCNodeCap cap \<and>
      \<not> isZombie cap \<and>
-     \<not> isArchFrameCap cap"
+     \<not> isArchFrameCap cap \<and>
+     \<not> isArchSMCCap cap"
 
 end (* Arch *)
 
@@ -1346,51 +1358,39 @@ lemma sameRegionAs2:
   "sameRegionAs cap' c = sameRegionAs cap c" using master
   by (simp add: sameRegionAs_def3)
 
+lemma capBadgeNone:
+  "(capBadge cap' = None) = (capBadge cap = None)"
+  using master
+  apply (clarsimp simp: capBadge_def)
+  apply (clarsimp simp: isCap_simps capMasterCap_def capMasterCap_ArchObjectCap
+                  split: capability.splits)
+  apply (clarsimp simp: arch_capMasterCap_def split: arch_capability.splits)
+  done
+
 lemmas sameRegionAs[simp] = sameRegionAs1 sameRegionAs2
 
 lemma isMDBParentOf1:
-  assumes "\<not>isReplyCap cap"
-  assumes "\<not>isEndpointCap cap"
-  assumes "\<not>isNotificationCap cap"
+  assumes "capBadge cap = None"
   shows "isMDBParentOf c (CTE cap' m) = isMDBParentOf c (CTE cap m)"
 proof -
   from assms
-  have c':
-    "\<not>isReplyCap cap'" "\<not>isEndpointCap cap'"
-    "\<not>isNotificationCap cap'" by auto
-  note isReplyCap [simp del] isEndpointCap [simp del] isNotificationCap [simp del]
-  from c' assms
+  have "capBadge cap' = None"
+    by (auto simp: capBadgeNone)
+  with assms
   show ?thesis
-  apply (cases c, clarsimp)
-  apply (simp add: isMDBParentOf_CTE)
-  apply (rule iffI)
-   apply clarsimp
-   apply (clarsimp simp: capBadge_ordering_def capBadge_def isCap_simps sameRegionAs_def3
-                   split: if_split_asm)
-  apply clarsimp
-  apply (clarsimp simp: capBadge_ordering_def capBadge_def isCap_simps sameRegionAs_def3
-                  split: if_split_asm)
-  done
+    by (cases c, clarsimp simp add: isMDBParentOf_CTE)
 qed
 
 lemma isMDBParentOf2:
-  assumes "\<not>isReplyCap cap"
-  assumes "\<not>isEndpointCap cap"
-  assumes "\<not>isNotificationCap cap"
+  assumes "capBadge cap = None"
   shows "isMDBParentOf (CTE cap' m) c = isMDBParentOf (CTE cap m) c"
 proof -
   from assms
-  have c':
-    "\<not>isReplyCap cap'" "\<not>isEndpointCap cap'"
-    "\<not>isNotificationCap cap'" by auto
-  note isReplyCap [simp del] isEndpointCap [simp del] isNotificationCap [simp del]
-  from c' assms
+  have "capBadge cap' = None"
+    by (auto simp: capBadgeNone)
+  with assms
   show ?thesis
-  apply (cases c, clarsimp)
-  apply (simp add: isMDBParentOf_CTE)
-  apply (auto simp: capBadge_ordering_def capBadge_def isCap_simps sameRegionAs_def3
-                  split: if_split_asm)[1]
-  done
+    by (cases c, simp add: isMDBParentOf_CTE)
 qed
 
 lemmas isMDBParentOf = isMDBParentOf1 isMDBParentOf2

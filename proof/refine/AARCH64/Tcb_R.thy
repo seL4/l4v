@@ -912,14 +912,6 @@ lemma checkCapAt_cteInsert_corres:
   apply fastforce
   done
 
-lemma capBadgeNone_masters:
-  "capMasterCap cap = capMasterCap cap'
-      \<Longrightarrow> (capBadge cap = None) = (capBadge cap' = None)"
-  apply (rule master_eqI)
-   apply (auto simp add: capBadge_def capMasterCap_def isCap_simps
-             split: capability.split)
-  done
-
 definition
   "vspace_asid' cap \<equiv> case cap of
     ArchObjectCap (PageTableCap _ _ (Some (asid, _))) \<Rightarrow> Some asid
@@ -955,7 +947,7 @@ lemma checked_insert_tcb_invs'[wp]:
                         ex_cte_cap_to'_cteCap)
   apply (erule sameObjectAsE)+
   apply (clarsimp simp: badge_derived'_def)
-  apply (frule capBadgeNone_masters, simp)
+  apply (frule masterCap.capBadgeNone[unfolded masterCap_def], simp)
   apply (rule conjI)
    apply (rule_tac x=slot' in exI)
    subgoal by (clarsimp simp: isCap_simps)
@@ -1055,7 +1047,7 @@ lemma threadcontrol_corres_helper3:
 lemma threadcontrol_corres_helper4:
   "isArchObjectCap ac \<Longrightarrow>
   \<lbrace>invs' and cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap) (cte_map (a, tcb_cnode_index 4))
-         and valid_cap' ac\<rbrace>
+         and valid_cap' ac and (\<lambda>_. capBadge ac = None)\<rbrace>
   checkCapAt ac (cte_map (ab, ba))
     (checkCapAt (capability.ThreadCap a) (cte_map slot)
        (assertDerived (cte_map (ab, ba)) ac (cteInsert ac (cte_map (ab, ba)) (cte_map (a, tcb_cnode_index 4)))))
@@ -1214,7 +1206,8 @@ lemma transferCaps_corres:
      case_option \<top> (valid_cap' o fst) f' and
      K (case_option True (isValidVTableRoot o fst) f') and
      K (case_option True ((\<lambda>v. is_aligned v msg_align_bits) o fst) g') and
-     K (case_option True (case_option True (isArchObjectCap o fst) o snd) g') and
+     K (case_option True (case_option True ((\<lambda>cap. isArchObjectCap cap \<and>
+                                                   capBadge cap = None) o fst) o snd) g') and
      case_option \<top> (case_option \<top> (valid_cap' o fst) o snd) g' and
      tcb_at' a and ex_nonz_cap_to' a and K (valid_option_prio p_auth \<and> valid_option_prio mcp_auth) and
      (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at' ((\<le>) pr) auth s) p_auth) and
@@ -1317,7 +1310,7 @@ proof -
        (\<lambda>s. \<forall>cp \<in> (case g' of None \<Rightarrow> {} | Some (x, v) \<Rightarrow> (case v of
                               None \<Rightarrow> {} | Some (c, sl) \<Rightarrow> {c})). s \<turnstile>' cp) and
         K (case g' of None \<Rightarrow> True | Some (x, v) \<Rightarrow> is_aligned x msg_align_bits
-        \<and> (case v of None \<Rightarrow> True | Some (ac, _) \<Rightarrow> isArchObjectCap ac)) )
+        \<and> (case v of None \<Rightarrow> True | Some (ac, _) \<Rightarrow> isArchObjectCap ac \<and> capBadge ac = None)) )
      (case_option (returnOk ())
        (case_prod
          (\<lambda>ptr frame.
@@ -1541,7 +1534,7 @@ proof -
             apply (clarsimp cong: imp_cong conj_cong)
             apply (rule_tac Q'="\<lambda>_. ?T2_pre' and (\<lambda>s. valid_option_prio p_auth)"
                          in hoare_strengthen_postE_R[simplified validE_R_def, rotated])
-             apply (case_tac g'; clarsimp simp: isCap_simps ; clarsimp cong:imp_cong)
+             apply (case_tac g'; clarsimp simp: isCap_simps ; clarsimp cong: imp_cong)
             apply (wp add: stuff hoare_vcg_all_liftE_R hoare_vcg_all_lift
                                  hoare_vcg_const_imp_liftE_R hoare_vcg_const_imp_lift setMCPriority_invs'
                                  threadSet_valid_objs' thread_set_not_state_valid_sched setP_invs'
@@ -1594,7 +1587,8 @@ lemma tc_invs':
     case_option \<top> (valid_cap' o fst) f' and
     K (case_option True (isValidVTableRoot o fst) f') and
     case_option \<top> (valid_cap') (case_option None (case_option None (Some o fst) o snd) g) and
-    K (case_option True isArchObjectCap (case_option None (case_option None (Some o fst) o snd) g))
+    K (case_option True (\<lambda>cap. isArchObjectCap cap \<and> capBadge cap = None)
+                   (case_option None (case_option None (Some o fst) o snd) g))
     and K (case_option True (swp is_aligned msg_align_bits o fst) g) \<rbrace>
       invokeTCB (tcbinvocation.ThreadControl a sl b' mcp d e' f' g)
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -1729,7 +1723,10 @@ where
                case_option \<top> (case_option \<top> (valid_cap' o fst) o snd) buf and
                case_option \<top> (case_option \<top> (cte_at' o snd) o snd) buf and
                K (case_option True (swp is_aligned msg_align_bits o fst) buf) and
-               K (case_option True (case_option True (isArchObjectCap o fst) o snd) buf) and
+               K (case_option True
+                    (case_option True
+                                 ((\<lambda>cap. isArchObjectCap cap \<and> capBadge cap = None) o fst) o snd)
+                                 buf) and
                (\<lambda>s. {croot, vroot, option_map undefined buf} \<noteq> {None}
                      \<longrightarrow> cte_at' sl s) and
                (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at' ((\<le>) pr) auth s) p) and
@@ -2237,7 +2234,7 @@ lemma checkValidIPCBuffer_corres:
   done
 
 lemma checkValidIPCBuffer_ArchObject_wp:
-  "\<lbrace>\<lambda>s. isArchObjectCap cap \<and> is_aligned x msg_align_bits \<longrightarrow> P s\<rbrace>
+  "\<lbrace>\<lambda>s. isArchObjectCap cap \<and> capBadge cap = None \<and> is_aligned x msg_align_bits \<longrightarrow> P s\<rbrace>
      checkValidIPCBuffer x cap
    \<lbrace>\<lambda>rv s. P s\<rbrace>,-"
   apply (simp add: checkValidIPCBuffer_def
