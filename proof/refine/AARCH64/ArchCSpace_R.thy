@@ -5,12 +5,10 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(*
-  CSpace refinement
-*)
+(* CSpace refinement - architecture-specific *)
 
-theory CSpace_R
-imports ArchCSpace1_R
+theory ArchCSpace_R
+imports CSpace_R
 begin
 
 (* transfer facts from partial locales (with extra assumptions) into complete locales
