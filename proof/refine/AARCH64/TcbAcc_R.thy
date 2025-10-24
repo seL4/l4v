@@ -6,7 +6,7 @@
  *)
 
 theory TcbAcc_R
-imports CSpace_R
+imports ArchCSpace_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
