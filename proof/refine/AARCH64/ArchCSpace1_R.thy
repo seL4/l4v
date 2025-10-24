@@ -781,6 +781,18 @@ lemma is_cap_revocable_eq[CSpace1_R_assms]:
 lemmas use_update_ztc_one_descendants[CSpace1_R_assms] =
   use_update_ztc_one[OF AARCH64.descendants_of_update_ztc, simplified]
 
+lemma is_derived'_genD[CSpace1_R_assms]:
+  "is_derived' m p cap' cap \<Longrightarrow>
+   cap' \<noteq> NullCap \<and>
+   \<not> isZombie cap \<and>
+   \<not> isIRQControlCap cap' \<and>
+   badge_derived' cap' cap \<and>
+   (isUntypedCap cap \<longrightarrow> descendants_of' p m = {}) \<and>
+   (isReplyCap cap = isReplyCap cap') \<and>
+   (isReplyCap cap \<longrightarrow> capReplyMaster cap) \<and>
+   (isReplyCap cap' \<longrightarrow> \<not> capReplyMaster cap')"
+  by (simp add: AARCH64.is_derived'_def)
+
 end (* Arch *)
 
 interpretation CSpace1_R?: CSpace1_R
@@ -1135,6 +1147,24 @@ lemma valid_badges_preserve_oneway[CSpace1_R_2_assms]:
   apply clarsimp
   done
 
+(* corresponds to safe_parent_for_arch in AInvs, used by safe_parent_for' *)
+definition
+  "safe_parent_for_arch' m cap parent \<equiv>
+     parent = IRQControlCap \<and> isArchSGISignalCap cap"
+
+definition is_simple_cap' :: "capability \<Rightarrow> bool" where
+  "is_simple_cap' cap \<equiv>
+     cap \<noteq> NullCap \<and>
+     cap \<noteq> IRQControlCap \<and>
+     \<not> isUntypedCap cap \<and>
+     \<not> isReplyCap cap \<and>
+     \<not> isEndpointCap cap \<and>
+     \<not> isNotificationCap cap \<and>
+     \<not> isThreadCap cap \<and>
+     \<not> isCNodeCap cap \<and>
+     \<not> isZombie cap \<and>
+     \<not> isArchFrameCap cap"
+
 end (* Arch *)
 
 interpretation CSpace1_R_2?: CSpace1_R_2
@@ -1244,6 +1274,19 @@ lemma parent_preserved:
      apply (clarsimp simp: isCap_simps)
      by ((fastforce elim: capBadge_ordering_trans simp: isCap_simps)+)
 
+lemma not_untyped:
+  "capAligned c' \<Longrightarrow> \<not>isUntypedCap src_cap"
+  using no_child partial_is_derived' ut_rev src
+  apply (clarsimp simp: ut_revocable'_def isMDBParentOf_CTE)
+  apply (erule_tac x=src in allE)
+  apply simp
+  apply (clarsimp simp: is_derived'_def freeIndex_update_def isCap_simps capAligned_def
+                        badge_derived'_def)
+  apply (clarsimp simp: sameRegionAs_def3 capMasterCap_def arch_capMasterCap_def
+                        gen_isCap_simps is_aligned_no_overflow
+                  split: capability.splits)
+  done
+
 end (* Arch_mdb_insert_sib *)
 
 (* requalify src_no_mdb_parent+parent_preserved back into mdb_insert_sib *)
@@ -1253,6 +1296,7 @@ interpretation Arch_mdb_insert_sib by unfold_locales
 
 lemmas src_no_mdb_parent = src_no_mdb_parent
 lemmas parent_preserved = parent_preserved
+lemmas not_untyped = not_untyped
 
 end
 
@@ -1352,80 +1396,5 @@ qed
 lemmas isMDBParentOf = isMDBParentOf1 isMDBParentOf2
 
 end (* Arch_masterCap *)
-
-(* FIXME arch-split: move requalification and same_master_descendants to CSpace_R
-   when arch-splitting it, these can be generic *)
-
-(* requalify isMDBParentOf+sameRegionAs back into masterCap *)
-context masterCap begin
-
-interpretation Arch_masterCap by unfold_locales
-
-lemmas isMDBParentOf = isMDBParentOf
-
-lemmas sameRegionAs = sameRegionAs
-
-end
-
-lemma same_master_descendants:
-  assumes slot: "m slot = Some cte"
-  assumes master: "capMasterCap (cteCap cte) = capMasterCap cap'"
-  assumes c': "\<not>isReplyCap cap'" "\<not>isEndpointCap cap'" "\<not>isNotificationCap cap'"
-  defines "m' \<equiv> m(slot \<mapsto> cteCap_update (\<lambda>_. cap') cte)"
-  shows "descendants_of' p m' = descendants_of' p m"
-proof (rule set_eqI, simp add: descendants_of'_def)
-  obtain cap n where cte: "cte = CTE cap n" by (cases cte)
-  then
-  interpret masterCap cap cap'
-    using master by (simp add: masterCap_def)
-
-  from c'
-  have c: "\<not>isReplyCap cap"
-          "\<not>isEndpointCap cap"
-          "\<not>isNotificationCap cap" by auto
-
-  note parent [simp] = isMDBParentOf [OF c]
-
-  { fix a b
-    from slot
-    have "m' \<turnstile> a \<leadsto> b = m \<turnstile> a \<leadsto> b"
-      by (simp add: m'_def mdb_next_unfold)
-  } note this [simp]
-
-  { fix a b
-    from slot cte
-    have "m' \<turnstile> a parentOf b = m \<turnstile> a parentOf b"
-      by (simp add: m'_def parentOf_def)
-  } note this [simp]
-
-  fix x
-  { assume "m \<turnstile> p \<rightarrow> x"
-    hence "m' \<turnstile> p \<rightarrow> x"
-    proof induct
-      case (direct_parent c')
-      thus ?case
-        by (auto intro: subtree.direct_parent)
-    next
-      case trans_parent
-      thus ?case
-        by (auto elim: subtree.trans_parent)
-    qed
-  }
-  moreover {
-    assume "m' \<turnstile> p \<rightarrow> x"
-    hence "m \<turnstile> p \<rightarrow> x"
-    proof induct
-      case (direct_parent c')
-      thus ?case
-        by (auto intro: subtree.direct_parent)
-    next
-      case trans_parent
-      thus ?case
-        by (auto elim: subtree.trans_parent)
-    qed
-  }
-  ultimately
-  show "m' \<turnstile> p \<rightarrow> x = m \<turnstile> p \<rightarrow> x" by blast
-qed
 
 end

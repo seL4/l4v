@@ -189,5 +189,34 @@ definition arch_state_relation :: "(arch_state \<times> X64_H.kernel_state) set"
        \<and> x64_irq_relation (x64_irq_state s) (x64KSIRQState s')
        \<and> x64_current_fpu_owner s = x64KSCurFPUOwner s'}"
 
+lemma ghost_relation_of_heap:
+  "ghost_relation h ups cns \<longleftrightarrow> ups_of_heap h = ups \<and> cns_of_heap h = cns"
+  apply (rule iffI)
+   apply (rule conjI)
+    apply (rule ext)
+    apply (clarsimp simp add: ghost_relation_def ups_of_heap_def)
+    apply (drule_tac x=x in spec)
+    apply (auto simp: ghost_relation_def ups_of_heap_def
+                split: option.splits Structures_A.kernel_object.splits
+                       arch_kernel_obj.splits)[1]
+    subgoal for x dev sz
+     by (drule_tac x = sz in spec,simp)
+   apply (rule ext)
+   apply (clarsimp simp add: ghost_relation_def cns_of_heap_def)
+   apply (drule_tac x=x in spec)+
+   apply (rule ccontr)
+   apply (simp split: option.splits Structures_A.kernel_object.splits
+                      arch_kernel_obj.splits)[1]
+   apply (simp split: if_split_asm)
+    apply force
+   apply (drule not_sym)
+   apply clarsimp
+   apply (erule_tac x=y in allE)
+   apply simp
+  apply (auto simp add: ghost_relation_def ups_of_heap_def cns_of_heap_def
+              split: option.splits Structures_A.kernel_object.splits
+                     arch_kernel_obj.splits if_split_asm)
+  done
+
 end
 end
