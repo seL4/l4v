@@ -354,7 +354,7 @@ lemma capUntyped_Master[CSpace_I_2_assms]:
   "capUntypedPtr (capMasterCap cap) = capUntypedPtr cap"
   by (clarsimp simp: capMasterCap_def ARM_HYP_H.capUntypedPtr_def split: capability.split arch_capability.split)
 
-lemma distinct_zombies_copyMasterE:
+lemma distinct_zombies_copyMasterE[CSpace_I_2_assms]:
   "\<lbrakk> distinct_zombies m; m x = Some cte;
      capClass (cteCap cte') = PhysicalClass
      \<Longrightarrow> capMasterCap (cteCap cte) = capMasterCap (cteCap cte');

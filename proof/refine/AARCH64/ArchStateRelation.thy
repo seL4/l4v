@@ -146,6 +146,56 @@ definition arch_state_relation :: "(arch_state \<times> AARCH64_H.kernel_state) 
          \<and> arm_gicvcpu_numlistregs s = armKSGICVCPUNumListRegs s'
          \<and> arm_current_fpu_owner s = armKSCurFPUOwner s'}"
 
+locale_abbrev
+  "pt_types_of s \<equiv> pts_of s ||> pt_type"
+
+(* oldish-style, but still needed for the heap-only form below *)
+definition pt_types_of_heap :: "(obj_ref \<rightharpoonup> Structures_A.kernel_object) \<Rightarrow> obj_ref \<rightharpoonup> pt_type" where
+  "pt_types_of_heap h \<equiv> h |> aobj_of |> pt_of ||> pt_type"
+
+lemma pt_types_of_heap_eq:
+  "pt_types_of_heap (kheap s) = pt_types_of s"
+  by (simp add: pt_types_of_heap_def)
+
+lemma ghost_relation_of_heap:
+  "ghost_relation h ups cns pt_types \<longleftrightarrow>
+   ups_of_heap h = ups \<and> cns_of_heap h = cns \<and> pt_types_of_heap h = pt_types"
+  apply (rule iffI)
+   apply (rule conjI)
+    apply (rule ext)
+    apply (clarsimp simp add: ghost_relation_def ups_of_heap_def)
+    apply (drule_tac x=x in spec)
+    apply (auto simp: ghost_relation_def ups_of_heap_def
+                split: option.splits Structures_A.kernel_object.splits
+                       arch_kernel_obj.splits)[1]
+   subgoal for x dev sz
+     by (drule_tac x = sz in spec,simp)
+   apply (rule conjI)
+    apply (rule ext)
+    apply (clarsimp simp add: ghost_relation_def cns_of_heap_def)
+    apply (drule_tac x=x in spec)+
+    apply (rule ccontr)
+    apply (simp split: option.splits Structures_A.kernel_object.splits
+                       arch_kernel_obj.splits)[1]
+    apply (simp split: if_split_asm)
+     apply force
+    apply (drule not_sym)
+    apply clarsimp
+    apply (erule_tac x=y in allE)
+    apply simp
+   apply (rule ext)
+   apply (clarsimp simp: ghost_relation_def cns_of_heap_def)
+   apply (thin_tac P for P) \<comment> \<open>DataPages\<close>
+   apply (thin_tac P for P) \<comment> \<open>CNodes\<close>
+   apply (simp add: pt_types_of_heap_def)
+   apply (clarsimp simp: opt_map_def split: option.splits)
+   apply (clarsimp?, rule conjI, clarsimp, rule sym, rule ccontr, force)+
+   apply force
+  apply (auto simp: ghost_relation_def ups_of_heap_def cns_of_heap_def pt_types_of_heap_def in_omonad
+              split: option.splits Structures_A.kernel_object.splits
+                     arch_kernel_obj.splits if_split_asm)[1]
+  done
+
 end
 
 end

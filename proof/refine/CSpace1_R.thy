@@ -179,6 +179,17 @@ locale CSpace1_R =
       isZombie (cteCap cte) \<or> isCNodeCap (cteCap cte) \<or> isThreadCap (cteCap cte);
       no_loops m\<rbrakk>
      \<Longrightarrow> descendants_of' c m = descendants_of' c (m(slot \<mapsto> cteCap_update (\<lambda>_. cap) cte))"
+  assumes is_derived'_genD:
+    "\<And>m p cap' cap.
+     is_derived' m p cap' cap \<Longrightarrow>
+     cap' \<noteq> NullCap \<and>
+     \<not> isZombie cap \<and>
+     \<not> isIRQControlCap cap' \<and>
+     badge_derived' cap' cap \<and>
+     (isUntypedCap cap \<longrightarrow> descendants_of' p m = {}) \<and>
+     (isReplyCap cap = isReplyCap cap') \<and>
+     (isReplyCap cap \<longrightarrow> capReplyMaster cap) \<and>
+     (isReplyCap cap' \<longrightarrow> \<not> capReplyMaster cap')"
 
 lemma subtree_no_parent:
   assumes "m \<turnstile> p \<rightarrow> x"
@@ -5051,7 +5062,7 @@ locale CSpace1_R_3 = CSpace1_R_2 +
      isCapRevocable c' (maskedAsFull src_cap' a) = isCapRevocable c' src_cap'"
 begin
 
-(* this locale should satisfy all the assumptions of mbd_insert_(child/sib)_gen, so we can
+(* this locale should satisfy all the assumptions of mdb_insert_(child/sib)_gen, so we can
    treat them like the non-gen locales *)
 
 lemma mdb_insert_child_convert:

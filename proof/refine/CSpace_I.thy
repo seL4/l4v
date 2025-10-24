@@ -783,6 +783,13 @@ locale CSpace_I_2 = CSpace_I +
   assumes cap_table_at_gsCNodes:
     "\<And>bits ptr s s'.
      \<lbrakk> cap_table_at bits ptr s; (s, s') \<in> state_relation \<rbrakk> \<Longrightarrow> gsCNodes s' ptr = Some bits"
+  assumes distinct_zombies_copyMasterE:
+    "\<And>m x cte cte' y.
+     \<lbrakk> distinct_zombies m; m x = Some cte;
+       capClass (cteCap cte') = PhysicalClass
+       \<Longrightarrow> capMasterCap (cteCap cte) = capMasterCap (cteCap cte');
+       isZombie (cteCap cte') \<Longrightarrow> x = y \<rbrakk>
+     \<Longrightarrow> distinct_zombies (m (y \<mapsto> cte'))"
 
 context CSpace_I_2 begin
 
