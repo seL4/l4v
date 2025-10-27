@@ -699,7 +699,6 @@ crunch test_possible_switch_to
  for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: maybeM_inv hoare_drop_imp)
 
-
 crunch reorder_ntfn, reorder_ep, thread_set_priority, set_priority
  for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: crunch_wps simp: crunch_simps)
@@ -1592,7 +1591,7 @@ lemma decode_invocation_valid_pdpt[wp]:
   done
 
 crunch handle_fault, reply_from_kernel
- for valid_pdpt_objs[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
+  for valid_pdpt_objs[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
   (simp: crunch_simps unless_def wp: crunch_wps)
 
 
@@ -1609,12 +1608,13 @@ lemma invocation_duplicates_valid_scheduler_action_update[simp]:
                          page_invocation.splits sum.splits)
 
 crunch set_thread_state_act
- for invocation_duplicates_valid[wp]: "invocation_duplicates_valid i"
+  for invocation_duplicates_valid[wp]: "invocation_duplicates_valid i"
 
 lemma set_thread_state_duplicates_valid[wp]:
   "\<lbrace>invocation_duplicates_valid i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. invocation_duplicates_valid i\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def get_object_def)
-  apply (wp|simp)+
+  apply (simp add: set_thread_state_def set_thread_state_act_def set_scheduler_action_def
+                   get_thread_state_def thread_get_def set_object_def get_object_def)
+  apply wpsimp
   apply (clarsimp simp: invocation_duplicates_valid_def pti_duplicates_valid_def
                         page_inv_duplicates_valid_def page_inv_entries_safe_def
                         Let_def
@@ -1623,7 +1623,7 @@ lemma set_thread_state_duplicates_valid[wp]:
                         page_table_invocation.split
                         page_invocation.split sum.split
                         )
-  apply (auto simp add: obj_at_def page_inv_entries_safe_def)
+   apply (auto simp add: obj_at_def page_inv_entries_safe_def)
   done
 
 lemma handle_invocation_valid_pdpt[wp]:
@@ -1646,26 +1646,27 @@ crunch update_time_stamp, check_domain_time
   (simp: crunch_simps)
 
 crunch sc_and_timer
- for valid_pdpt[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
+  for valid_pdpt[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: hoare_drop_imps hoare_vcg_if_lift2)
+
 crunch schedule_choose_new_thread
- for valid_pdpt[wp]: "valid_pdpt_objs"
+  for valid_pdpt[wp]: "valid_pdpt_objs"
   (simp: Let_def wp: hoare_drop_imp)
 
-crunch activate_thread, switch_to_thread, switch_to_idle_thread,
-                       awaken
- for valid_pdpt[wp]: "valid_pdpt_objs"
+crunch activate_thread, switch_to_thread, switch_to_idle_thread, awaken
+  for valid_pdpt[wp]: "valid_pdpt_objs"
   (simp: crunch_simps
    wp: crunch_wps OR_choice_weak_wp select_ext_weak_wp)
 
 crunch handle_call, handle_recv, handle_send, handle_yield,
  handle_interrupt, handle_vm_fault, handle_hypervisor_fault
- for valid_pdpt[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
+  for valid_pdpt[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: hoare_vcg_if_lift2 hoare_drop_imps crunch_wps
    simp: crunch_simps Let_def whenE_def liftE_def
    ignore: check_budget_restart)
 
-lemma schedule_valid_pdpt[wp]: "\<lbrace>valid_pdpt_objs\<rbrace> schedule :: (unit,det_ext) s_monad \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
+lemma schedule_valid_pdpt[wp]:
+  "\<lbrace>valid_pdpt_objs\<rbrace> schedule :: (unit,det_ext) s_monad \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
   apply (simp add: schedule_def)
   apply (wpsimp wp: hoare_drop_imps)
   done

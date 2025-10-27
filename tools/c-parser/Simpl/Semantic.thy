@@ -10,7 +10,7 @@ section \<open>Big-Step Semantics for Simpl\<close>
 theory Semantic imports Language begin
 
 notation
-restrict_map  ("_|\<^bsub>_\<^esub>" [90, 91] 90)
+restrict_map  (\<open>_|\<^bsub>_\<^esub>\<close> [90, 91] 90)
 
 
 datatype ('s,'f) xstate = Normal 's | Abrupt 's | Fault 'f | Stuck
@@ -57,7 +57,7 @@ type_synonym ('s,'p,'f) body = "'p \<Rightarrow> ('s,'p,'f) com option"
 
 inductive
   "exec"::"[('s,'p,'f) body,('s,'p,'f) com,('s,'f) xstate,('s,'f) xstate]
-                    \<Rightarrow> bool" ("_\<turnstile> \<langle>_,_\<rangle> \<Rightarrow> _"  [60,20,98,98] 89)
+                    \<Rightarrow> bool" (\<open>_\<turnstile> \<langle>_,_\<rangle> \<Rightarrow> _\<close>  [60,20,98,98] 89)
   for \<Gamma>::"('s,'p,'f) body"
 where
   Skip: "\<Gamma>\<turnstile>\<langle>Skip,Normal s\<rangle> \<Rightarrow> Normal s"
@@ -695,7 +695,7 @@ subsection \<open>Big-Step Execution with Recursion Limit: \<open>\<Gamma>\<turn
 (* ************************************************************************* *)
 
 inductive "execn"::"[('s,'p,'f) body,('s,'p,'f) com,('s,'f) xstate,nat,('s,'f) xstate]
-                      \<Rightarrow> bool" ("_\<turnstile> \<langle>_,_\<rangle> =_\<Rightarrow> _"  [60,20,98,65,98] 89)
+                      \<Rightarrow> bool" (\<open>_\<turnstile> \<langle>_,_\<rangle> =_\<Rightarrow> _\<close>  [60,20,98,65,98] 89)
   for \<Gamma>::"('s,'p,'f) body"
 where
   Skip: "\<Gamma>\<turnstile>\<langle>Skip,Normal s\<rangle> =n\<Rightarrow>  Normal s"
@@ -1403,12 +1403,12 @@ theorem exec_iff_execn: "(\<Gamma>\<turnstile>\<langle>c,s\<rangle> \<Rightarrow
 
 definition nfinal_notin:: "('s,'p,'f) body \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'f) xstate \<Rightarrow>  nat
                        \<Rightarrow> ('s,'f) xstate set \<Rightarrow> bool"
-  ("_\<turnstile> \<langle>_,_\<rangle> =_\<Rightarrow>\<notin>_"  [60,20,98,65,60] 89) where
+  (\<open>_\<turnstile> \<langle>_,_\<rangle> =_\<Rightarrow>\<notin>_\<close>  [60,20,98,65,60] 89) where
 "\<Gamma>\<turnstile> \<langle>c,s\<rangle> =n\<Rightarrow>\<notin>T = (\<forall>t. \<Gamma>\<turnstile> \<langle>c,s\<rangle> =n\<Rightarrow> t \<longrightarrow> t\<notin>T)"
 
 definition final_notin:: "('s,'p,'f) body \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'f) xstate
                        \<Rightarrow> ('s,'f) xstate set \<Rightarrow> bool"
-  ("_\<turnstile> \<langle>_,_\<rangle> \<Rightarrow>\<notin>_"  [60,20,98,60] 89) where
+  (\<open>_\<turnstile> \<langle>_,_\<rangle> \<Rightarrow>\<notin>_\<close>  [60,20,98,60] 89) where
 "\<Gamma>\<turnstile> \<langle>c,s\<rangle> \<Rightarrow>\<notin>T = (\<forall>t. \<Gamma>\<turnstile> \<langle>c,s\<rangle> \<Rightarrow>t \<longrightarrow> t\<notin>T)"
 
 lemma final_notinI: "\<lbrakk>\<And>t. \<Gamma>\<turnstile>\<langle>c,s\<rangle> \<Rightarrow> t \<Longrightarrow> t \<notin> T\<rbrakk> \<Longrightarrow> \<Gamma>\<turnstile>\<langle>c,s\<rangle> \<Rightarrow>\<notin>T"

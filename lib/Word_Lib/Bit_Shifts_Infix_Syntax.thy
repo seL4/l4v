@@ -15,14 +15,14 @@ begin
 context semiring_bit_operations
 begin
 
-definition shiftl :: \<open>'a \<Rightarrow> nat \<Rightarrow> 'a\<close>  (infixl "<<" 55)
+definition shiftl :: \<open>'a \<Rightarrow> nat \<Rightarrow> 'a\<close>  (infixl \<open><<\<close> 55)
   where [code_unfold]: \<open>a << n = push_bit n a\<close>
 
 lemma bit_shiftl_iff [bit_simps]:
   \<open>bit (a << m) n \<longleftrightarrow> m \<le> n \<and> possible_bit TYPE('a) n \<and> bit a (n - m)\<close>
   by (simp add: shiftl_def bit_simps)
 
-definition shiftr :: \<open>'a \<Rightarrow> nat \<Rightarrow> 'a\<close>  (infixl ">>" 55)
+definition shiftr :: \<open>'a \<Rightarrow> nat \<Rightarrow> 'a\<close>  (infixl \<open>>>\<close> 55)
   where [code_unfold]: \<open>a >> n = drop_bit n a\<close>
 
 lemma bit_shiftr_eq [bit_simps]:
@@ -133,6 +133,14 @@ lemma shiftr_eq_div:
   unfolding shiftr_def by (fact drop_bit_eq_div)
 
 end
+
+lemmas shiftl_int_def = shiftl_eq_mult[of x for x::int]
+lemmas shiftr_int_def = shiftr_eq_div[of x for x::int]
+
+lemma int_shiftl_BIT: fixes x :: int
+  shows int_shiftl0: "x << 0 = x"
+  and int_shiftl_Suc: "x << Suc n = 2 * x << n"
+  by (auto simp add: shiftl_int_def)
 
 context ring_bit_operations
 begin

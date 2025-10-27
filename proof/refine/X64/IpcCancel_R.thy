@@ -537,7 +537,7 @@ lemma (in delete_one) cancelIPC_ReplyCap_corres:
           apply (simp add: tcb_relation_def fault_rel_optionation_def)
          apply (simp add: tcb_cap_cases_def)
         apply (simp add: tcb_cte_cases_def cteSizeBits_def)
-       apply (simp add: exst_same_def)
+       apply (simp add: inQ_def)
       apply (fastforce simp: st_tcb_at_tcb_at)
      apply clarsimp
     defer
@@ -1196,17 +1196,21 @@ crunch asUser
 
 crunch set_thread_state
   for in_correct_ready_q[wp]: in_correct_ready_q
-  (wp: crunch_wps ignore_del: set_thread_state_ext)
+  (wp: set_object_wp)
 
-crunch set_thread_state_ext
+crunch set_thread_state_act
   for ready_qs_distinct[wp]: ready_qs_distinct
-  (wp: crunch_wps ignore_del: set_thread_state_ext)
+  (wp: crunch_wps)
 
 lemma set_thread_state_ready_qs_distinct[wp]:
   "set_thread_state ref ts \<lbrace>ready_qs_distinct\<rbrace>"
   unfolding set_thread_state_def
   apply (wpsimp wp: set_object_wp)
   by (clarsimp simp: ready_qs_distinct_def)
+
+crunch as_user
+  for in_correct_ready_q[wp]: in_correct_ready_q
+  (wp: set_object_wp)
 
 lemma as_user_ready_qs_distinct[wp]:
   "as_user tptr f \<lbrace>ready_qs_distinct\<rbrace>"
@@ -1458,7 +1462,7 @@ lemma sts_sch_act_not_ct[wp]:
 text \<open>Cancelling all IPC in an endpoint or notification object\<close>
 
 lemma ep_cancel_corres_helper:
-  "corres dc ((\<lambda>s. \<forall>t \<in> set list. tcb_at t s) and valid_etcbs and valid_queues
+  "corres dc ((\<lambda>s. \<forall>t \<in> set list. tcb_at t s) and valid_queues
                                               and pspace_aligned and pspace_distinct)
              (valid_objs' and sym_heap_sched_pointers and valid_sched_pointers)
           (mapM_x (\<lambda>t. do
@@ -1497,7 +1501,7 @@ lemma ep_cancel_corres_helper:
 crunch set_simple_ko
   for ready_qs_distinct[wp]: ready_qs_distinct
   and in_correct_ready_q[wp]: in_correct_ready_q
-  (rule: ready_qs_distinct_lift wp: crunch_wps)
+  (wp: ready_qs_distinct_lift in_correct_ready_q_lift)
 
 lemma ep_cancel_corres:
   "corres dc (invs and valid_sched and ep_at ep) (invs' and ep_at' ep)
@@ -1506,7 +1510,7 @@ proof -
   have P:
     "\<And>list.
      corres dc (\<lambda>s. (\<forall>t \<in> set list. tcb_at t s) \<and> valid_pspace s \<and> ep_at ep s
-                        \<and> valid_etcbs s \<and> weak_valid_sched_action s \<and> valid_queues s)
+                        \<and> weak_valid_sched_action s \<and> valid_queues s)
                (\<lambda>s. (\<forall>t \<in> set list. tcb_at' t s) \<and> valid_pspace' s
                          \<and> ep_at' ep s \<and> weak_sch_act_wf (ksSchedulerAction s) s
                          \<and> valid_objs' s \<and> sym_heap_sched_pointers s \<and> valid_sched_pointers s)
@@ -2232,7 +2236,7 @@ lemma cancelBadgedSends_corres:
       apply (rule corres_split_eqr[OF _ _ _ hoare_post_add[where Q'="\<lambda>_. valid_objs'"]])
          apply (rule_tac S="(=)"
                      and Q="\<lambda>xs s. (\<forall>x \<in> set xs. (epptr, TCBBlockedSend) \<in> state_refs_of s x) \<and>
-                                   distinct xs \<and> valid_etcbs s \<and>
+                                   distinct xs \<and>
                                    in_correct_ready_q s \<and> ready_qs_distinct s \<and>
                                    pspace_aligned s \<and> pspace_distinct s"
                      and Q'="\<lambda>_ s. valid_objs' s \<and> sym_heap_sched_pointers s \<and> valid_sched_pointers s
@@ -2256,7 +2260,7 @@ lemma cancelBadgedSends_corres:
                        | strengthen valid_objs'_valid_tcbs')+
             apply (clarsimp simp: valid_tcb_state_def tcb_at_def st_tcb_def2
                                   st_tcb_at_refs_of_rev
-                           dest!: state_refs_of_elemD elim!: tcb_at_is_etcb_at[rotated])
+                           dest!: state_refs_of_elemD)
            apply (simp add: valid_tcb_state'_def)
           apply (wp hoare_vcg_const_Ball_lift gts_wp | clarsimp)+
             apply (wp hoare_vcg_imp_lift sts_st_tcb' sts_valid_objs'

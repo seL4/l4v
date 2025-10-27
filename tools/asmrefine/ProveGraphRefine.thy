@@ -357,6 +357,7 @@ fun fold_of_nat_eq_Ifs ctxt tm = let
 val fold_of_nat_eq_Ifs_simproc = Simplifier.make_simproc
   (Proof_Context.init_global @{theory})
   { name = "fold_of_nat_eq_Ifs"
+  , kind = Simproc
   , lhss = [@{term "If (x = 0) y z"}]
   , proc = fn _ => fn ctxt => try (fold_of_nat_eq_Ifs ctxt) o Thm.term_of
   , identifier = []
@@ -373,6 +374,7 @@ fun unfold_assertion_data_get_set_conv ctxt tm = let
 val unfold_assertion_data_get_set = Simplifier.make_simproc
   (Proof_Context.init_global @{theory})
   { name = "unfold_assertion_data_get"
+  , kind = Simproc
   , lhss = [@{term "ghost_assertion_data_get k acc s"}, @{term "ghost_assertion_data_set k v upd"}]
   , proc = fn _ => fn ctxt => SOME o (unfold_assertion_data_get_set_conv ctxt) o Thm.term_of
   , identifier = []

@@ -2089,7 +2089,7 @@ crunch asUser
 crunch set_thread_state_act
   for in_correct_ready_q[wp]: in_correct_ready_q
   and ready_qs_distinct[wp]: ready_qs_distinct
-  (wp: crunch_wps)
+  (wp: set_object_wp)
 
 lemma set_thread_state_in_correct_ready_q[wp]:
   "set_thread_state ref ts \<lbrace>in_correct_ready_q\<rbrace>"
@@ -2105,6 +2105,10 @@ lemma set_thread_state_ready_qs_distinct[wp]:
   unfolding set_thread_state_def
   apply (wpsimp wp: set_object_wp)
   by (clarsimp simp: ready_qs_distinct_def)
+
+crunch as_user
+  for in_correct_ready_q[wp]: in_correct_ready_q
+  (wp: set_object_wp)
 
 lemma as_user_ready_qs_distinct[wp]:
   "as_user tptr f \<lbrace>ready_qs_distinct\<rbrace>"

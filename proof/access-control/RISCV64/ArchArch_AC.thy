@@ -312,9 +312,8 @@ lemma store_pte_thread_bound_ntfns[wp]:
                  elim!: rsubst[where P=P, OF _ ext])
   done
 
-lemma store_pte_domains_of_state[wp]:
-  "store_pte p pte \<lbrace>\<lambda>s. P (domains_of_state s)\<rbrace>"
-  unfolding store_pte_def set_pt_def by (wpsimp wp: set_object_wp)
+crunch store_pte
+  for etcbs_of[wp]: "\<lambda>s. P (etcbs_of s)"
 
 lemma mapM_x_store_pte_caps_of_state[wp]:
   "mapM_x (swp store_pte InvalidPTE) slots \<lbrace>\<lambda>s. P (asid_table s)\<rbrace>"
@@ -776,14 +775,6 @@ lemma perform_page_table_invocation_pas_refined:
   apply (case_tac iv; clarsimp)
   done
 
-(* FIXME move to AInvs *)
-lemma store_pte_ekheap[wp]:
-  "store_pte p pte \<lbrace>\<lambda>s. P (ekheap s)\<rbrace>"
-  apply (simp add: store_pte_def set_pt_def)
-  apply (wp get_object_wp)
-  apply simp
-  done
-
 lemma set_asid_pool_thread_st_auth[wp]:
   "set_asid_pool p pool \<lbrace>\<lambda>s. P (thread_st_auth s)\<rbrace>"
   apply (simp add: set_asid_pool_def)
@@ -800,13 +791,6 @@ lemma set_asid_pool_thread_bound_ntfns[wp]:
   apply (clarsimp simp: thread_bound_ntfns_def obj_at_def get_tcb_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext]
                  split: kernel_object.split_asm option.split)
-  done
-
-(* FIXME move to AInvs *)
-lemma set_asid_pool_ekheap[wp]:
-  "set_asid_pool p pool \<lbrace>\<lambda>s. P (ekheap s)\<rbrace>"
-  apply (simp add: set_asid_pool_def)
-  apply (wp get_object_wp | simp)+
   done
 
 crunch set_asid_pool
@@ -1899,19 +1883,19 @@ lemma decode_arch_invocation_authorised:
   apply auto
   done
 
-lemma authorised_arch_inv_sa_update:
+lemma authorised_arch_inv_sa_update[simp]:
   "authorised_arch_inv aag i (scheduler_action_update (\<lambda>_. act) s) =
    authorised_arch_inv aag i s"
   by (clarsimp simp: authorised_arch_inv_def authorised_page_inv_def authorised_slots_def
               split: arch_invocation.splits page_invocation.splits)
 
+crunch set_thread_state_act
+  for authorised_arch_inv[wp]: "authorised_arch_inv aag i"
+
 lemma set_thread_state_authorised_arch_inv[wp]:
   "set_thread_state ref ts \<lbrace>authorised_arch_inv aag i\<rbrace>"
   unfolding set_thread_state_def
-  apply (wpsimp wp: dxo_wp_weak)
-     apply (clarsimp simp: authorised_arch_inv_def authorised_page_inv_def authorised_slots_def
-                    split: arch_invocation.splits page_invocation.splits)
-    apply (wpsimp wp: set_object_wp)+
+  apply (wpsimp wp: set_object_wp)
   apply (clarsimp simp: authorised_arch_inv_def authorised_page_inv_def
                         authorised_slots_def vs_lookup_slot_def obind_def
                  split: arch_invocation.splits page_invocation.splits if_splits option.splits)

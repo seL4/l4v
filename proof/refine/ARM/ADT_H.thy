@@ -434,6 +434,9 @@ definition
       tcb_fault = map_option FaultMap (tcbFault tcb),
       tcb_bound_notification = tcbBoundNotification tcb,
       tcb_mcpriority = tcbMCP tcb,
+      tcb_priority = tcbPriority tcb,
+      tcb_time_slice = tcbTimeSlice tcb,
+      tcb_domain = tcbDomain tcb,
       tcb_arch = ArchTcbMap (tcbArch tcb)\<rparr>"
 
 definition
@@ -910,55 +913,6 @@ proof -
     done
 qed
 
-definition
-  "EtcbMap tcb \<equiv>
-     \<lparr>tcb_priority = tcbPriority tcb,
-      time_slice = tcbTimeSlice tcb,
-      tcb_domain = tcbDomain tcb\<rparr>"
-
-definition
-  absEkheap :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow> etcb option"
-  where
-  "absEkheap h \<equiv> \<lambda>x.
-     case h x of
-       Some (KOTCB tcb) \<Rightarrow> Some (EtcbMap tcb)
-     | _ \<Rightarrow> None"
-
-lemma absEkheap_correct:
-assumes pspace_relation: "pspace_relation (kheap s) (ksPSpace s')"
-assumes ekheap_relation: "ekheap_relation (ekheap s) (ksPSpace s')"
-assumes vetcbs: "valid_etcbs s"
-shows
-  "absEkheap (ksPSpace s') = ekheap s"
-  apply (rule ext)
-  apply (clarsimp simp: absEkheap_def split: option.splits Structures_H.kernel_object.splits)
-  apply (subgoal_tac "\<forall>x. (\<exists>tcb. kheap s x = Some (TCB tcb)) =
-                          (\<exists>tcb'. ksPSpace s' x = Some (KOTCB tcb'))")
-   using vetcbs ekheap_relation
-   apply (clarsimp simp: valid_etcbs_def is_etcb_at_def dom_def ekheap_relation_def st_tcb_at_def obj_at_def)
-   apply (erule_tac x=x in allE)+
-   apply (rule conjI, force)
-   apply clarsimp
-   apply (rule conjI, clarsimp simp: EtcbMap_def etcb_relation_def)+
-   apply clarsimp
-  using pspace_relation
-  apply (clarsimp simp add: pspace_relation_def pspace_dom_def UNION_eq
-                              dom_def Collect_eq)
-  apply (rule iffI)
-   apply (erule_tac x=x in allE)+
-   apply (case_tac "ksPSpace s' x", clarsimp)
-    apply (erule_tac x=x in allE, clarsimp)
-   apply clarsimp
-   apply (case_tac a, simp_all add: tcb_relation_cut_def other_obj_relation_def)
-  apply (insert pspace_relation)
-  apply (clarsimp simp: obj_at'_def projectKOs)
-  apply (erule(1) pspace_dom_relatedE)
-  apply (erule(1) obj_relation_cutsE)
-  apply (clarsimp simp: other_obj_relation_def
-                 split: Structures_A.kernel_object.split_asm  if_split_asm
-                        ARM_A.arch_kernel_obj.split_asm)+
-  done
-
 text \<open>The following function can be used to reverse cte_map.\<close>
 definition
   "cteMap cns \<equiv> \<lambda>p.
@@ -986,31 +940,6 @@ lemma of_bl_mult_and_not_mask_eq:
   apply (drule two_power_increasing[where 'a=32], simp)
   apply (drule (2) less_le_trans)
 done
-
-lemma bin_to_bl_of_bl_eq:
-  "\<lbrakk>is_aligned (a::'a::len word) n; length b + c \<le> n; length b + c < LENGTH('a)\<rbrakk>
-  \<Longrightarrow> bin_to_bl (length b) (uint ((a + of_bl b * 2^c) >> c)) = b"
-  apply (subst word_plus_and_or_coroll)
-   apply (erule is_aligned_get_word_bits)
-    apply (rule is_aligned_AND_less_0)
-     apply (simp add: is_aligned_mask)
-    apply (rule order_less_le_trans)
-     apply (rule of_bl_length2)
-     apply (simp add: word_bits_conv cte_level_bits_def)
-    apply (simp add: two_power_increasing)
-   apply simp
-  apply (rule nth_equalityI)
-   apply (simp only: len_bin_to_bl)
-  apply (clarsimp simp only: len_bin_to_bl nth_bin_to_bl
-                             word_test_bit_def[symmetric])
-  apply (simp add: nth_shiftr nth_shiftl
-                   shiftl_t2n[where n=c, simplified mult.commute,
-                              simplified, symmetric])
-  apply (simp add: is_aligned_nth[THEN iffD1, rule_format]
-                   test_bit_of_bl nth_rev)
-  apply (case_tac "b ! i", simp_all)
-  apply arith
-  done
 
 lemma TCB_implies_KOTCB:
   "\<lbrakk>pspace_relation (kheap s) (ksPSpace s'); kheap s a = Some (TCB tcb)\<rbrakk>
@@ -1796,13 +1725,6 @@ lemma absSchedulerAction_correct:
 definition
   "absExst s \<equiv>
      \<lparr>work_units_completed_internal = ksWorkUnitsCompleted s,
-      scheduler_action_internal = absSchedulerAction (ksSchedulerAction s),
-      ekheap_internal = absEkheap (ksPSpace s),
-      domain_list_internal = ksDomSchedule s,
-      domain_index_internal = ksDomScheduleIdx s,
-      cur_domain_internal = ksCurDomain s,
-      domain_time_internal = ksDomainTime s,
-      ready_queues_internal = (\<lambda>d p. heap_walk (tcbSchedNexts_of s) (tcbQueueHead (ksReadyQueues s (d, p))) []),
       cdt_list_internal = absCDTList (cteMap (gsCNodes s)) (ctes_of s)\<rparr>"
 
 lemma absExst_correct:
@@ -1810,16 +1732,12 @@ lemma absExst_correct:
   assumes rel: "(s, s') \<in> state_relation"
   shows "absExst s' = exst s"
   apply (rule det_ext.equality)
-           using rel invs invs'
-           apply (simp_all add: absExst_def absSchedulerAction_correct absEkheap_correct
-                                absCDTList_correct[THEN fun_cong] state_relation_def invs_def
-                                valid_state_def ready_queues_relation_def ready_queue_relation_def
-                                invs'_def valid_state'_def
-                                valid_pspace_def valid_sched_def valid_pspace'_def curry_def
-                                fun_eq_iff)
-   apply (fastforce simp: absEkheap_correct)
-  apply (fastforce simp: list_queue_relation_def Let_def dest: heap_ls_is_walk)
-  done
+      using rel invs invs'
+      apply (simp_all add: absExst_def absSchedulerAction_correct
+                           absCDTList_correct[THEN fun_cong] state_relation_def invs_def valid_state_def
+                           ready_queues_relation_def invs'_def valid_state'_def
+                           valid_pspace_def valid_sched_def valid_pspace'_def curry_def fun_eq_iff)
+      done
 
 
 definition
@@ -1828,6 +1746,12 @@ definition
     cdt = absCDT (cteMap (gsCNodes s)) (ctes_of s),
     is_original_cap = absIsOriginalCap (cteMap (gsCNodes s)) (ksPSpace s),
     cur_thread = ksCurThread s, idle_thread = ksIdleThread s,
+    scheduler_action = absSchedulerAction (ksSchedulerAction s),
+    domain_list = ksDomSchedule s,
+    domain_index = ksDomScheduleIdx s,
+    cur_domain = ksCurDomain s,
+    domain_time = ksDomainTime s,
+    ready_queues = (\<lambda>d p. heap_walk (tcbSchedNexts_of s) (tcbQueueHead (ksReadyQueues s (d, p))) []),
     machine_state = observable_memory (ksMachineState s) (user_mem' s),
     interrupt_irq_node = absInterruptIRQNode (ksInterruptState s),
     interrupt_states = absInterruptStates (ksInterruptState s),

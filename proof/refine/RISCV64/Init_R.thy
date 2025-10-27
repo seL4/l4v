@@ -55,7 +55,7 @@ definition zeroed_main_abstract_state ::
     domain_index = 0,
     cur_domain = 0,
     domain_time = 0,
-    ready_queues = (\<lambda>d p. []),
+    ready_queues = (\<lambda>_ _. []),
     release_queue = [],
     machine_state = init_machine_state,
     interrupt_irq_node = (\<lambda>irq. ucast irq << cte_level_bits),

@@ -212,15 +212,13 @@ lemma perform_asid_control_invocation_bound_sc_obj_tcb_at[wp]:
 crunch perform_asid_control_invocation
   for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
   and valid_blocked[wp]: "valid_blocked"
-  (wp: hoare_weak_lift_imp)
-
-crunch perform_asid_control_invocation
-  for rqueues[wp]: "\<lambda>s. P (ready_queues s)"
+  and rqueues[wp]: "\<lambda>s. P (ready_queues s)"
   and schedact[wp]: "\<lambda>s. P (scheduler_action s)"
   and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   and release_queue[wp]: "\<lambda>s. P (release_queue s)"
   and misc[wp]: "\<lambda>s. P (scheduler_action s) (ready_queues s)
                (cur_domain s) (release_queue s)"
+  (wp: hoare_weak_lift_imp)
 
 (* FIXME: move up *)
 lemma pageBits_le_word_bits[simp]:
@@ -362,6 +360,7 @@ lemma perform_asid_control_invocation_sporadic_implies:
 crunch perform_asid_control_invocation
   for valid_machine_time[wp]: "valid_machine_time"
   and cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
+  and ct[wp]: "\<lambda>s. P (cur_thread s)"
 
 lemma perform_asid_control_invocation_valid_sched:
   "\<lbrace>ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and invs and valid_aci aci and
@@ -417,4 +416,5 @@ lemma kernelWCET_ticks_non_zero:
   by simp
 
 end
+
 end

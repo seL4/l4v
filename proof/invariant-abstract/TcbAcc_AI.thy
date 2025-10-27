@@ -466,7 +466,7 @@ lemma thread_set_global_refs_triv:
   done
 
 crunch thread_set
- for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
+  for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
 
 lemma tcb_not_empty_table:
   "\<not> empty_table S (TCB tcb)"
@@ -788,10 +788,8 @@ lemma idle_thread_idle[wp]:
                  split: option.splits Structures_A.kernel_object.splits)
   done
 
-lemma set_thread_state_act_valid_objs[wp]:
- "set_thread_state_act t \<lbrace>valid_objs\<rbrace>"
-  unfolding set_thread_state_act_def set_scheduler_action_def
-  by wpsimp
+crunch set_thread_state_act
+  for valid_objs[wp]: valid_objs
 
 lemma set_thread_state_valid_objs[wp]:
  "\<lbrace>valid_objs and valid_tcb_state st\<rbrace>
@@ -848,20 +846,8 @@ lemma set_tcb_obj_ref_aligned[wp]:
   apply clarsimp
   done
 
-lemma set_thread_state_typ_at [wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_thread_state st p' \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def get_object_def)
-  apply (wp|clarsimp)+
-  apply (clarsimp simp: obj_at_def a_type_def dest!: get_tcb_SomeD)
-  done
-
 crunch set_tcb_obj_ref
  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
-
-
-lemma set_thread_state_tcb[wp]:
-  "set_thread_state ts t' \<lbrace>\<lambda>s. P (tcb_at t s)\<rbrace>"
-  by (simp add: tcb_at_typ, wp)
 
 lemma set_tcb_obj_ref_tcb_at[wp]:
   "set_tcb_obj_ref f t' obj \<lbrace>\<lambda>s. P (tcb_at t s)\<rbrace>"
@@ -1165,7 +1151,7 @@ lemma ssc_valid_idle [wp]:
                   simp: valid_idle_def pred_tcb_at_def obj_at_def get_tcb_def)
   done
 
-crunch set_thread_state
+crunch set_thread_state, set_tcb_obj_ref
   for distinct[wp]: pspace_distinct
 
 lemma syt_valid_idle [wp]:
@@ -1177,9 +1163,6 @@ lemma syt_valid_idle [wp]:
   apply (clarsimp cong: if_cong
                   simp: valid_idle_def pred_tcb_at_def obj_at_def get_tcb_def)
   done
-
-crunch set_thread_state, set_tcb_obj_ref
-  for distinct[wp]: pspace_distinct
 
 lemma cur_tcb_scheduler_action[simp]:
   "cur_tcb (scheduler_action_update f s) = cur_tcb s"
@@ -1270,7 +1253,7 @@ lemma syt_iflive[wp]:
   done
 
 crunch set_thread_state_act
- for ifunsafe[wp]: if_unsafe_then_cap
+  for ifunsafe[wp]: if_unsafe_then_cap
 
 lemma sts_ifunsafe[wp]:
   "\<lbrace>if_unsafe_then_cap\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
@@ -1301,7 +1284,7 @@ lemma syt_ifunsafe[wp]:
   done
 
 crunch set_thread_state
- for zombies[wp]: zombies_final
+  for zombies[wp]: zombies_final
   (simp: tcb_cap_cases_def)
 
 lemma sbn_zombies[wp]:
@@ -2149,7 +2132,6 @@ crunch set_tcb_obj_ref
 crunch set_tcb_obj_ref
  for cte_at: "cte_at p"
 
-
 lemma as_user_mdb [wp]:
   "\<lbrace>valid_mdb\<rbrace> as_user f t \<lbrace>\<lambda>_. valid_mdb\<rbrace>"
   apply (simp add: as_user_def split_def)
@@ -2286,7 +2268,7 @@ lemma bound_sc_tcb_bound_sc_at:
 
 lemma thread_set_ct_in_state:
   "(\<And>tcb. tcb_state (f tcb) = tcb_state tcb) \<Longrightarrow>
-  \<lbrace>ct_in_state P\<rbrace> thread_set f t \<lbrace>\<lambda>rv. ct_in_state P\<rbrace>"
+  \<lbrace>ct_in_state st\<rbrace> thread_set f t \<lbrace>\<lambda>rv. ct_in_state st\<rbrace>"
   apply (simp add: ct_in_state_def)
   apply (rule hoare_lift_Pf [where f=cur_thread])
    apply (wp thread_set_no_change_tcb_state; simp)
@@ -2408,6 +2390,8 @@ lemma live_tcb_priority_update[simp]:
   "live (TCB (tcb_priority_update f t)) = live (TCB t)"
   by (simp add: live_def)
 
+context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
+
 crunch thread_set_domain, thread_set_priority
   for aligned[wp]: pspace_aligned
   and distinct[wp]: pspace_distinct
@@ -2425,6 +2409,7 @@ crunch thread_set_domain, thread_set_priority
   and cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
   and cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
   and only_idle[wp]: only_idle
+  and valid_arch_state[wp]: "valid_arch_state ::'state_ext state \<Rightarrow> _"
   and valid_global_objs[wp]: valid_global_objs
   and valid_kernel_mappings[wp]: valid_kernel_mappings
   and equal_kernel_mappings[wp]: equal_kernel_mappings
@@ -2491,7 +2476,6 @@ lemma thread_set_domain_hyp_refs_of[wp]:
   apply (subst state_hyp_refs_of_tcb_domain_update; auto simp: get_tcb_def)
   done
 
-
 lemma thread_set_domain_valid_idle[wp]:
   "thread_set_domain t d \<lbrace>valid_idle\<rbrace>"
   unfolding thread_set_domain_def thread_set_def
@@ -2533,7 +2517,7 @@ lemma thread_set_domain_fault_tcbs_valid_states[wp]:
   "thread_set_domain t d \<lbrace> fault_tcbs_valid_states \<rbrace>"
   by (simp add: thread_set_domain_def thread_set_fault_tcbs_valid_states_trivial)
 
-lemma (in TcbAcc_AI) thread_set_domain_invs[wp]:
+lemma thread_set_domain_invs[wp]:
   "thread_set_domain t d \<lbrace>invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
   by (wpsimp wp: valid_mdb_lift hoare_vcg_all_lift hoare_vcg_imp_lift
@@ -2592,7 +2576,6 @@ lemma thread_set_priority_hyp_refs_of[wp]:
   apply (subst state_hyp_refs_of_tcb_priority_update; auto simp: get_tcb_def)
   done
 
-
 lemma thread_set_priority_valid_idle[wp]:
   "thread_set_priority t d \<lbrace>valid_idle\<rbrace>"
   unfolding thread_set_priority_def thread_set_def
@@ -2634,11 +2617,13 @@ lemma thread_set_priority_fault_tcbs_valid_states[wp]:
   "thread_set_priority t d \<lbrace> fault_tcbs_valid_states \<rbrace>"
   by (simp add: thread_set_priority_def thread_set_fault_tcbs_valid_states_trivial)
 
-lemma (in TcbAcc_AI) thread_set_priority_invs[wp]:
+lemma thread_set_priority_invs[wp]:
   "thread_set_priority t d \<lbrace>invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
   by (wpsimp wp: valid_mdb_lift hoare_vcg_all_lift hoare_vcg_imp_lift
            simp: valid_ioc_def valid_global_refs_def valid_refs_def cte_wp_at_caps_of_state)
+
+end
 
 lemma gts_wp:
   "\<lbrace>\<lambda>s. \<forall>st. st_tcb_at ((=) st) t s \<longrightarrow> P st s\<rbrace> get_thread_state t \<lbrace>P\<rbrace>"
@@ -2657,6 +2642,64 @@ lemma replies_blocked_upd_tcb_st_not_BlockedonReply:
 
 global_interpretation set_thread_state: non_sc_op "set_thread_state t st"
   by unfold_locales (wpsimp simp: sc_at_pred_n_def wp: sts_obj_at_impossible')
+
+text \<open>set_thread_state_act and possible_switch_to invariants\<close>
+
+lemma (in pspace_update_eq) ex_nonz_cap_to_update[iff]:
+  "ex_nonz_cap_to p (f s) = ex_nonz_cap_to p s"
+  by (simp add: ex_nonz_cap_to_def)
+
+crunch set_thread_state_act, tcb_sched_action, reschedule_required, possible_switch_to
+  for aligned[wp]: pspace_aligned
+  and it[wp]: "\<lambda>s. P (idle_thread s)"
+  and distinct[wp]: pspace_distinct
+  and tcb_at[wp]: "\<lambda>s. P (tcb_at tptr s)"
+  and pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P tptr s)"
+  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and no_cdt[wp]: "\<lambda>s. P (cdt s)"
+  and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"
+  and valid_irq_states[wp]: "valid_irq_states"
+  and pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
+  and pspace_respects_device_region[wp]: "pspace_respects_device_region"
+  and cur_tcb[wp]: "cur_tcb"
+  and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+  and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
+  and valid_objs[wp]: valid_objs
+  and iflive[wp]: "if_live_then_nonz_cap"
+  and nonz_cap_to[wp]: "ex_nonz_cap_to p"
+  and valid_mdb[wp]: valid_mdb
+  and zombies[wp]: zombies_final
+  and valid_irq_handlers[wp]: "valid_irq_handlers"
+  and valid_ioc[wp]: "valid_ioc"
+  and valid_idle[wp]: valid_idle
+  and cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
+  and cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
+  and valid_arch[wp]: "valid_arch_state"
+  and ifunsafe[wp]: "if_unsafe_then_cap"
+  and only_idle[wp]: "only_idle"
+  and valid_global_objs[wp]: "valid_global_objs"
+  and valid_global_vspace_mappings[wp]: "valid_global_vspace_mappings"
+  and valid_arch_caps[wp]: "valid_arch_caps"
+  and v_ker_map[wp]: "valid_kernel_mappings"
+  and equal_mappings[wp]: "equal_kernel_mappings"
+  and vms[wp]: "valid_machine_state"
+  and valid_vspace_objs[wp]: "valid_vspace_objs"
+  and valid_global_refs[wp]: "valid_global_refs"
+  and valid_asid_map[wp]: "valid_asid_map"
+  and state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
+  and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
+  and cte_wp_at[wp]: "cte_wp_at P c"
+  and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
+  and arch_state[wp]: "\<lambda>s. P (arch_state s)"
+  and aligned[wp]: pspace_aligned
+  and distinct[wp]: pspace_distinct
+  and valid_objs[wp]: valid_objs
+  and cte_wp_at[wp]: "cte_wp_at P c"
+  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
+  and no_cdt[wp]: "\<lambda>s. P (cdt s)"
+  (simp: Let_def Let_def
+   wp: hoare_drop_imps hoare_vcg_if_lift2 mapM_wp)
 
 crunch arch_thread_get
   for inv[wp]: "P"

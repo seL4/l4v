@@ -161,13 +161,6 @@ crunch
   cap_delete, choose_thread
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
 end
-(*
-global_interpretation EmptyFail_AI_schedule_unit?: EmptyFail_AI_schedule_unit
-  proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
-*)
 
 global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
   proof goal_cases
@@ -192,17 +185,9 @@ crunch handle_event, activate_thread, check_budget
          bool.splits apiobject_type.splits aobject_type.splits notification.splits
          thread_state.splits endpoint.splits catch_def sum.splits cnode_invocation.splits
          page_table_invocation.splits page_invocation.splits asid_control_invocation.splits
-         asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits
-   ignore_del: possible_switch_to)
+         asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits)
 
 end
-(*
-global_interpretation EmptyFail_AI_call_kernel_unit?: EmptyFail_AI_call_kernel_unit
-  proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
-*)
 
 global_interpretation EmptyFail_AI_call_kernel?: EmptyFail_AI_call_kernel
   proof goal_cases

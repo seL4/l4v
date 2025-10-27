@@ -168,6 +168,7 @@ where
      set_object ref (TCB (f (K new) tcb))
    od"
 
+
 section "simple kernel objects"
 (* to be used for abstraction unifying kernel objects other than TCB and CNode *)
 
@@ -540,6 +541,26 @@ definition reschedule_required :: "(unit, 'z::state_ext) s_monad" where
    od"
 
 definition
+  possible_switch_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "possible_switch_to target \<equiv> do
+     sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context target;
+     inq \<leftarrow> gets $ in_release_queue target;
+     when (sc_opt \<noteq> None \<and> \<not>inq) $ do
+       cur_dom \<leftarrow> gets cur_domain;
+       target_dom \<leftarrow> thread_get tcb_domain target;
+       action \<leftarrow> gets scheduler_action;
+       \<comment> \<open>not in @{text \<open>release queue & active_sc\<close>}\<close>
+       if target_dom \<noteq> cur_dom then
+         tcb_sched_action tcb_sched_enqueue target \<comment> \<open>not @{text \<open>in cur_domain\<close>}\<close>
+       else if action \<noteq> resume_cur_thread then do
+           reschedule_required;
+           tcb_sched_action tcb_sched_enqueue target
+         od
+       else set_scheduler_action $ switch_thread target
+     od
+   od"
+
+definition
   schedule_tcb :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "schedule_tcb tcb_ptr \<equiv> do
@@ -558,7 +579,6 @@ where
     schedulable \<leftarrow> gets (schedulable tcb_ptr);
     when (tcb_ptr = cur \<and> sched_act = resume_cur_thread \<and> \<not>schedulable) $ set_scheduler_action choose_new_thread
   od"
-
 
 (***)
 
@@ -621,6 +641,7 @@ text \<open>Tests whether an IRQ identifier is in use.\<close>
 definition
   is_irq_active :: "irq \<Rightarrow> (bool,'z::state_ext) s_monad" where
  "is_irq_active irq \<equiv> liftM (\<lambda>st. st \<noteq> IRQInactive) $ get_irq_state irq"
+
 
 section "User Context"
 

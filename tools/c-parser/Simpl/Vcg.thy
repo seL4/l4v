@@ -38,7 +38,7 @@ typical variable names, we append a unusual suffix at the end of each name by
 parsing
 \<close>
 
-definition list_multsel:: "'a list \<Rightarrow> nat list \<Rightarrow> 'a list" (infixl "!!" 100)
+definition list_multsel:: "'a list \<Rightarrow> nat list \<Rightarrow> 'a list" (infixl \<open>!!\<close> 100)
   where "xs !! ns = map (nth xs) ns"
 
 definition list_multupd:: "'a list \<Rightarrow> nat list \<Rightarrow> 'a list \<Rightarrow> 'a list"
@@ -48,10 +48,13 @@ nonterminal lmupdbinds and lmupdbind
 
 syntax
   \<comment> \<open>multiple list update\<close>
-  "_lmupdbind":: "['a, 'a] => lmupdbind"    ("(2_ [:=]/ _)")
-  "" :: "lmupdbind => lmupdbinds"    ("_")
-  "_lmupdbinds" :: "[lmupdbind, lmupdbinds] => lmupdbinds"    ("_,/ _")
-  "_LMUpdate" :: "['a, lmupdbinds] => 'a"    ("_/[(_)]" [900,0] 900)
+  "_lmupdbind":: "['a, 'a] => lmupdbind"    (\<open>(2_ [:=]/ _)\<close>)
+  "" :: "lmupdbind => lmupdbinds"    (\<open>_\<close>)
+  "_lmupdbinds" :: "[lmupdbind, lmupdbinds] => lmupdbinds"    (\<open>_,/ _\<close>)
+  "_LMUpdate" :: "['a, lmupdbinds] => 'a"    (\<open>_/[(_)]\<close> [900,0] 900)
+
+syntax_consts
+  "_lmupdbind" "_lmupdbinds" "_LMUpdate" == list_multupd
 
 translations
   "_LMUpdate xs (_lmupdbinds b bs)" == "_LMUpdate (_LMUpdate xs b) bs"
@@ -66,7 +69,7 @@ subsection \<open>Some Fancy Syntax\<close>
  *)
 
 text \<open>reverse application\<close>
-definition rapp:: "'a \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> 'b" (infixr "|>" 60)
+definition rapp:: "'a \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> 'b" (infixr \<open>|>\<close> 60)
   where "rapp x f = f x"
 
 
@@ -85,139 +88,139 @@ nonterminal
   basicblock
 
 notation
-  Skip  ("SKIP") and
-  Throw  ("THROW")
+  Skip  (\<open>SKIP\<close>) and
+  Throw  (\<open>THROW\<close>)
 
 syntax
-  "_raise":: "'c \<Rightarrow> 'c \<Rightarrow> ('a,'b,'f) com"       ("(RAISE _ :==/ _)" [30, 30] 23)
-  "_seq"::"('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com" ("_;;/ _" [20, 21] 20)
-  "_guarantee"     :: "'s set \<Rightarrow> grd"       ("_\<surd>" [1000] 1000)
-  "_guaranteeStrip":: "'s set \<Rightarrow> grd"       ("_#" [1000] 1000)
-  "_grd"           :: "'s set \<Rightarrow> grd"       ("_" [1000] 1000)
-  "_last_grd"      :: "grd \<Rightarrow> grds"         ("_" 1000)
-  "_grds"          :: "[grd, grds] \<Rightarrow> grds" ("_,/ _" [999,1000] 1000)
+  "_raise":: "'c \<Rightarrow> 'c \<Rightarrow> ('a,'b,'f) com"       (\<open>(RAISE _ :==/ _)\<close> [30, 30] 23)
+  "_seq"::"('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com" (\<open>_;;/ _\<close> [20, 21] 20)
+  "_guarantee"     :: "'s set \<Rightarrow> grd"       (\<open>_\<surd>\<close> [1000] 1000)
+  "_guaranteeStrip":: "'s set \<Rightarrow> grd"       (\<open>_#\<close> [1000] 1000)
+  "_grd"           :: "'s set \<Rightarrow> grd"       (\<open>_\<close> [1000] 1000)
+  "_last_grd"      :: "grd \<Rightarrow> grds"         (\<open>_\<close> 1000)
+  "_grds"          :: "[grd, grds] \<Rightarrow> grds" (\<open>_,/ _\<close> [999,1000] 1000)
   "_guards"        :: "grds \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com"
-                                            ("(_/\<longmapsto> _)" [60, 21] 23)
+                                            (\<open>(_/\<longmapsto> _)\<close> [60, 21] 23)
   "_quote"       :: "'b => ('a => 'b)"
-  "_antiquoteCur0"  :: "('a => 'b) => 'b"       ("\<acute>_" [1000] 1000)
+  "_antiquoteCur0"  :: "('a => 'b) => 'b"       (\<open>\<acute>_\<close> [1000] 1000)
   "_antiquoteCur"  :: "('a => 'b) => 'b"
-  "_antiquoteOld0"  :: "('a => 'b) => 'a => 'b"       ("\<^bsup>_\<^esup>_" [1000,1000] 1000)
+  "_antiquoteOld0"  :: "('a => 'b) => 'a => 'b"       (\<open>\<^bsup>_\<^esup>_\<close> [1000,1000] 1000)
   "_antiquoteOld"  :: "('a => 'b) => 'a => 'b"
-  "_Assert"      :: "'a => 'a set"            ("(\<lbrace>_\<rbrace>)" [0] 1000)
-  "_AssertState" :: "idt \<Rightarrow> 'a => 'a set"     ("(\<lbrace>_. _\<rbrace>)" [1000,0] 1000)
-  "_Assign"      :: "'b => 'b => ('a,'p,'f) com"    ("(_ :==/ _)" [30, 30] 23)
+  "_Assert"      :: "'a => 'a set"            (\<open>(\<lbrace>_\<rbrace>)\<close> [0] 1000)
+  "_AssertState" :: "idt \<Rightarrow> 'a => 'a set"     (\<open>(\<lbrace>_. _\<rbrace>)\<close> [1000,0] 1000)
+  "_Assign"      :: "'b => 'b => ('a,'p,'f) com"    (\<open>(_ :==/ _)\<close> [30, 30] 23)
   "_Init"        :: "ident \<Rightarrow> 'c \<Rightarrow> 'b \<Rightarrow> ('a,'p,'f) com"
-                                             ("(\<acute>_ :==\<^bsub>_\<^esub>/ _)" [30,1000, 30] 23)
-  "_GuardedAssign":: "'b => 'b => ('a,'p,'f) com"    ("(_ :==\<^sub>g/ _)" [30, 30] 23)
-  "_newinit"      :: "[ident,'a] \<Rightarrow> newinit" ("(2\<acute>_ :==/ _)")
-  ""             :: "newinit \<Rightarrow> newinits"    ("_")
-  "_newinits"    :: "[newinit, newinits] \<Rightarrow> newinits" ("_,/ _")
+                                             (\<open>(\<acute>_ :==\<^bsub>_\<^esub>/ _)\<close> [30,1000, 30] 23)
+  "_GuardedAssign":: "'b => 'b => ('a,'p,'f) com"    (\<open>(_ :==\<^sub>g/ _)\<close> [30, 30] 23)
+  "_newinit"      :: "[ident,'a] \<Rightarrow> newinit" (\<open>(2\<acute>_ :==/ _)\<close>)
+  ""             :: "newinit \<Rightarrow> newinits"    (\<open>_\<close>)
+  "_newinits"    :: "[newinit, newinits] \<Rightarrow> newinits" (\<open>_,/ _\<close>)
   "_New"         :: "['a, 'b, newinits] \<Rightarrow> ('a,'b,'f) com"
-                                            ("(_ :==/(2 NEW _/ [_]))" [30, 65, 0] 23)
+                                            (\<open>(_ :==/(2 NEW _/ [_]))\<close> [30, 65, 0] 23)
   "_GuardedNew"  :: "['a, 'b, newinits] \<Rightarrow> ('a,'b,'f) com"
-                                            ("(_ :==\<^sub>g/(2 NEW _/ [_]))" [30, 65, 0] 23)
+                                            (\<open>(_ :==\<^sub>g/(2 NEW _/ [_]))\<close> [30, 65, 0] 23)
   "_NNew"         :: "['a, 'b, newinits] \<Rightarrow> ('a,'b,'f) com"
-                                            ("(_ :==/(2 NNEW _/ [_]))" [30, 65, 0] 23)
+                                            (\<open>(_ :==/(2 NNEW _/ [_]))\<close> [30, 65, 0] 23)
   "_GuardedNNew"  :: "['a, 'b, newinits] \<Rightarrow> ('a,'b,'f) com"
-                                            ("(_ :==\<^sub>g/(2 NNEW _/ [_]))" [30, 65, 0] 23)
+                                            (\<open>(_ :==\<^sub>g/(2 NNEW _/ [_]))\<close> [30, 65, 0] 23)
 
   "_Cond"        :: "'a bexp => ('a,'p,'f) com => ('a,'p,'f) com => ('a,'p,'f) com"
-        ("(0IF (_)/ (2THEN/ _)/ (2ELSE _)/ FI)" [0, 0, 0] 71)
+        (\<open>(0IF (_)/ (2THEN/ _)/ (2ELSE _)/ FI)\<close> [0, 0, 0] 71)
   "_Cond_no_else":: "'a bexp => ('a,'p,'f) com => ('a,'p,'f) com"
-        ("(0IF (_)/ (2THEN/ _)/ FI)" [0, 0] 71)
+        (\<open>(0IF (_)/ (2THEN/ _)/ FI)\<close> [0, 0] 71)
   "_GuardedCond" :: "'a bexp => ('a,'p,'f) com => ('a,'p,'f) com => ('a,'p,'f) com"
-        ("(0IF\<^sub>g (_)/ (2THEN _)/ (2ELSE _)/ FI)" [0, 0, 0] 71)
+        (\<open>(0IF\<^sub>g (_)/ (2THEN _)/ (2ELSE _)/ FI)\<close> [0, 0, 0] 71)
   "_GuardedCond_no_else":: "'a bexp => ('a,'p,'f) com => ('a,'p,'f) com"
-        ("(0IF\<^sub>g (_)/ (2THEN _)/ FI)" [0, 0] 71)
+        (\<open>(0IF\<^sub>g (_)/ (2THEN _)/ FI)\<close> [0, 0] 71)
   "_While_inv_var"   :: "'a bexp => 'a assn  \<Rightarrow> ('a \<times> 'a) set \<Rightarrow> bdy
                           \<Rightarrow> ('a,'p,'f) com"
-        ("(0WHILE (_)/ INV (_)/ VAR (_) /_)"  [25, 0, 0, 81] 71)
+        (\<open>(0WHILE (_)/ INV (_)/ VAR (_) /_)\<close>  [25, 0, 0, 81] 71)
   "_WhileFix_inv_var"   :: "'a bexp => pttrn \<Rightarrow> ('z \<Rightarrow> 'a assn)  \<Rightarrow>
                             ('z \<Rightarrow> ('a \<times> 'a) set) \<Rightarrow> bdy
                           \<Rightarrow> ('a,'p,'f) com"
-        ("(0WHILE (_)/ FIX _./ INV (_)/ VAR (_) /_)"  [25, 0, 0, 0, 81] 71)
+        (\<open>(0WHILE (_)/ FIX _./ INV (_)/ VAR (_) /_)\<close>  [25, 0, 0, 0, 81] 71)
   "_WhileFix_inv"   :: "'a bexp => pttrn \<Rightarrow> ('z \<Rightarrow> 'a assn)  \<Rightarrow> bdy
                           \<Rightarrow> ('a,'p,'f) com"
-        ("(0WHILE (_)/ FIX _./ INV (_) /_)"  [25, 0, 0, 81] 71)
+        (\<open>(0WHILE (_)/ FIX _./ INV (_) /_)\<close>  [25, 0, 0, 81] 71)
   "_GuardedWhileFix_inv_var"   :: "'a bexp => pttrn \<Rightarrow> ('z \<Rightarrow> 'a assn)  \<Rightarrow>
                             ('z \<Rightarrow> ('a \<times> 'a) set) \<Rightarrow> bdy
                           \<Rightarrow> ('a,'p,'f) com"
-        ("(0WHILE\<^sub>g (_)/ FIX _./ INV (_)/ VAR (_) /_)"  [25, 0, 0, 0, 81] 71)
+        (\<open>(0WHILE\<^sub>g (_)/ FIX _./ INV (_)/ VAR (_) /_)\<close>  [25, 0, 0, 0, 81] 71)
   "_GuardedWhileFix_inv_var_hook"   :: "'a bexp \<Rightarrow> ('z \<Rightarrow> 'a assn)  \<Rightarrow>
                             ('z \<Rightarrow> ('a \<times> 'a) set) \<Rightarrow> bdy
                           \<Rightarrow> ('a,'p,'f) com"
   "_GuardedWhileFix_inv"   :: "'a bexp => pttrn \<Rightarrow> ('z \<Rightarrow> 'a assn)  \<Rightarrow> bdy
                           \<Rightarrow> ('a,'p,'f) com"
-        ("(0WHILE\<^sub>g (_)/ FIX _./ INV (_)/_)"  [25, 0, 0, 81] 71)
+        (\<open>(0WHILE\<^sub>g (_)/ FIX _./ INV (_)/_)\<close>  [25, 0, 0, 81] 71)
 
   "_GuardedWhile_inv_var"::
        "'a bexp => 'a assn  \<Rightarrow> ('a \<times> 'a) set \<Rightarrow> bdy \<Rightarrow> ('a,'p,'f) com"
-        ("(0WHILE\<^sub>g (_)/ INV (_)/ VAR (_) /_)"  [25, 0, 0, 81] 71)
+        (\<open>(0WHILE\<^sub>g (_)/ INV (_)/ VAR (_) /_)\<close>  [25, 0, 0, 81] 71)
   "_While_inv"   :: "'a bexp => 'a assn => bdy => ('a,'p,'f) com"
-        ("(0WHILE (_)/ INV (_) /_)"  [25, 0, 81] 71)
+        (\<open>(0WHILE (_)/ INV (_) /_)\<close>  [25, 0, 81] 71)
   "_GuardedWhile_inv"   :: "'a bexp => 'a assn => ('a,'p,'f) com => ('a,'p,'f) com"
-        ("(0WHILE\<^sub>g (_)/ INV (_) /_)"  [25, 0, 81] 71)
+        (\<open>(0WHILE\<^sub>g (_)/ INV (_) /_)\<close>  [25, 0, 81] 71)
   "_While"       :: "'a bexp => bdy => ('a,'p,'f) com"
-        ("(0WHILE (_) /_)"  [25, 81] 71)
+        (\<open>(0WHILE (_) /_)\<close>  [25, 81] 71)
   "_GuardedWhile"       :: "'a bexp => bdy => ('a,'p,'f) com"
-        ("(0WHILE\<^sub>g (_) /_)"  [25, 81] 71)
+        (\<open>(0WHILE\<^sub>g (_) /_)\<close>  [25, 81] 71)
   "_While_guard"       :: "grds => 'a bexp => bdy => ('a,'p,'f) com"
-        ("(0WHILE (_/\<longmapsto> (1_)) /_)"  [1000,25,81] 71)
+        (\<open>(0WHILE (_/\<longmapsto> (1_)) /_)\<close>  [1000,25,81] 71)
   "_While_guard_inv":: "grds \<Rightarrow>'a bexp\<Rightarrow>'a assn\<Rightarrow>bdy \<Rightarrow> ('a,'p,'f) com"
-        ("(0WHILE (_/\<longmapsto> (1_)) INV (_) /_)"  [1000,25,0,81] 71)
+        (\<open>(0WHILE (_/\<longmapsto> (1_)) INV (_) /_)\<close>  [1000,25,0,81] 71)
   "_While_guard_inv_var":: "grds \<Rightarrow>'a bexp\<Rightarrow>'a assn\<Rightarrow>('a\<times>'a) set
                              \<Rightarrow>bdy \<Rightarrow> ('a,'p,'f) com"
-        ("(0WHILE (_/\<longmapsto> (1_)) INV (_)/ VAR (_) /_)"  [1000,25,0,0,81] 71)
+        (\<open>(0WHILE (_/\<longmapsto> (1_)) INV (_)/ VAR (_) /_)\<close>  [1000,25,0,0,81] 71)
   "_WhileFix_guard_inv_var":: "grds \<Rightarrow>'a bexp\<Rightarrow>pttrn\<Rightarrow>('z\<Rightarrow>'a assn)\<Rightarrow>('z\<Rightarrow>('a\<times>'a) set)
                              \<Rightarrow>bdy \<Rightarrow> ('a,'p,'f) com"
-        ("(0WHILE (_/\<longmapsto> (1_)) FIX _./ INV (_)/ VAR (_) /_)"  [1000,25,0,0,0,81] 71)
+        (\<open>(0WHILE (_/\<longmapsto> (1_)) FIX _./ INV (_)/ VAR (_) /_)\<close>  [1000,25,0,0,0,81] 71)
   "_WhileFix_guard_inv":: "grds \<Rightarrow>'a bexp\<Rightarrow>pttrn\<Rightarrow>('z\<Rightarrow>'a assn)
                              \<Rightarrow>bdy \<Rightarrow> ('a,'p,'f) com"
-        ("(0WHILE (_/\<longmapsto> (1_)) FIX _./ INV (_)/_)"  [1000,25,0,0,81] 71)
+        (\<open>(0WHILE (_/\<longmapsto> (1_)) FIX _./ INV (_)/_)\<close>  [1000,25,0,0,81] 71)
 
   "_Try_Catch":: "('a,'p,'f) com \<Rightarrow>('a,'p,'f) com \<Rightarrow> ('a,'p,'f) com"
-        ("(0TRY (_)/ (2CATCH _)/ END)"  [0,0] 71)
+        (\<open>(0TRY (_)/ (2CATCH _)/ END)\<close>  [0,0] 71)
 
   "_DoPre" :: "('a,'p,'f) com \<Rightarrow> ('a,'p,'f) com"
-  "_Do" :: "('a,'p,'f) com \<Rightarrow> bdy" ("(2DO/ (_)) /OD" [0] 1000)
+  "_Do" :: "('a,'p,'f) com \<Rightarrow> bdy" (\<open>(2DO/ (_)) /OD\<close> [0] 1000)
   "_Lab":: "'a bexp \<Rightarrow> ('a,'p,'f) com \<Rightarrow> bdy"
-            ("_\<bullet>/_" [1000,71] 81)
-  "":: "bdy \<Rightarrow> ('a,'p,'f) com" ("_")
+            (\<open>_\<bullet>/_\<close> [1000,71] 81)
+  "":: "bdy \<Rightarrow> ('a,'p,'f) com" (\<open>_\<close>)
   "_Spec":: "pttrn \<Rightarrow> 's set \<Rightarrow>  ('s,'p,'f) com \<Rightarrow> 's set \<Rightarrow> 's set \<Rightarrow> ('s,'p,'f) com"
-            ("(ANNO _. _/ (_)/ _,/_)" [0,1000,20,1000,1000] 60)
+            (\<open>(ANNO _. _/ (_)/ _,/_)\<close> [0,1000,20,1000,1000] 60)
   "_SpecNoAbrupt":: "pttrn \<Rightarrow> 's set \<Rightarrow>  ('s,'p,'f) com \<Rightarrow> 's set \<Rightarrow> ('s,'p,'f) com"
-            ("(ANNO _. _/ (_)/ _)" [0,1000,20,1000] 60)
+            (\<open>(ANNO _. _/ (_)/ _)\<close> [0,1000,20,1000] 60)
   "_LemAnno":: "'n \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com"
-              ("(0 LEMMA (_)/ _ END)" [1000,0] 71)
-  "_locnoinit"    :: "ident \<Rightarrow> locinit"               ("\<acute>_")
-  "_locinit"      :: "[ident,'a] \<Rightarrow> locinit"          ("(2\<acute>_ :==/ _)")
-  ""             :: "locinit \<Rightarrow> locinits"             ("_")
-  "_locinits"    :: "[locinit, locinits] \<Rightarrow> locinits" ("_,/ _")
+              (\<open>(0 LEMMA (_)/ _ END)\<close> [1000,0] 71)
+  "_locnoinit"    :: "ident \<Rightarrow> locinit"               (\<open>\<acute>_\<close>)
+  "_locinit"      :: "[ident,'a] \<Rightarrow> locinit"          (\<open>(2\<acute>_ :==/ _)\<close>)
+  ""             :: "locinit \<Rightarrow> locinits"             (\<open>_\<close>)
+  "_locinits"    :: "[locinit, locinits] \<Rightarrow> locinits" (\<open>_,/ _\<close>)
   "_Loc":: "[locinits,('s,'p,'f) com] \<Rightarrow> ('s,'p,'f) com"
-                                         ("(2 LOC _;;/ (_) COL)" [0,0] 71)
+                                         (\<open>(2 LOC _;;/ (_) COL)\<close> [0,0] 71)
   "_Switch":: "('s \<Rightarrow> 'v) \<Rightarrow> switchcases \<Rightarrow> ('s,'p,'f) com"
-              ("(0 SWITCH (_)/ _ END)" [22,0] 71)
-  "_switchcase":: "'v set \<Rightarrow> ('s,'p,'f) com \<Rightarrow> switchcase" ("_\<Rightarrow>/ _" )
-  "_switchcasesSingle"  :: "switchcase \<Rightarrow> switchcases" ("_")
+              (\<open>(0 SWITCH (_)/ _ END)\<close> [22,0] 71)
+  "_switchcase":: "'v set \<Rightarrow> ('s,'p,'f) com \<Rightarrow> switchcase" (\<open>_\<Rightarrow>/ _\<close> )
+  "_switchcasesSingle"  :: "switchcase \<Rightarrow> switchcases" (\<open>_\<close>)
   "_switchcasesCons":: "switchcase \<Rightarrow> switchcases \<Rightarrow> switchcases"
-                       ("_/ | _")
-  "_Basic":: "basicblock \<Rightarrow> ('s,'p,'f) com" ("(0BASIC/ (_)/ END)" [22] 71)
-  "_BasicBlock":: "basics \<Rightarrow> basicblock" ("_")
-  "_BAssign"   :: "'b => 'b => basic"    ("(_ :==/ _)" [30, 30] 23)
-  ""           :: "basic \<Rightarrow> basics"             ("_")
-  "_basics"    :: "[basic, basics] \<Rightarrow> basics" ("_,/ _")
+                       (\<open>_/ | _\<close>)
+  "_Basic":: "basicblock \<Rightarrow> ('s,'p,'f) com" (\<open>(0BASIC/ (_)/ END)\<close> [22] 71)
+  "_BasicBlock":: "basics \<Rightarrow> basicblock" (\<open>_\<close>)
+  "_BAssign"   :: "'b => 'b => basic"    (\<open>(_ :==/ _)\<close> [30, 30] 23)
+  ""           :: "basic \<Rightarrow> basics"             (\<open>_\<close>)
+  "_basics"    :: "[basic, basics] \<Rightarrow> basics" (\<open>_,/ _\<close>)
 
 syntax (ASCII)
-  "_Assert"      :: "'a => 'a set"           ("({|_|})" [0] 1000)
-  "_AssertState" :: "idt \<Rightarrow> 'a \<Rightarrow> 'a set"    ("({|_. _|})" [1000,0] 1000)
+  "_Assert"      :: "'a => 'a set"           (\<open>({|_|})\<close> [0] 1000)
+  "_AssertState" :: "idt \<Rightarrow> 'a \<Rightarrow> 'a set"    (\<open>({|_. _|})\<close> [1000,0] 1000)
   "_While_guard"       :: "grds => 'a bexp => bdy \<Rightarrow> ('a,'p,'f) com"
-        ("(0WHILE (_|-> /_) /_)"  [0,0,1000] 71)
+        (\<open>(0WHILE (_|-> /_) /_)\<close>  [0,0,1000] 71)
   "_While_guard_inv":: "grds\<Rightarrow>'a bexp\<Rightarrow>'a assn\<Rightarrow>bdy \<Rightarrow> ('a,'p,'f) com"
-        ("(0WHILE (_|-> /_) INV (_) /_)"  [0,0,0,1000] 71)
-  "_guards" :: "grds \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com" ("(_|->_ )" [60, 21] 23)
+        (\<open>(0WHILE (_|-> /_) INV (_) /_)\<close>  [0,0,0,1000] 71)
+  "_guards" :: "grds \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com" (\<open>(_|->_ )\<close> [60, 21] 23)
 
 syntax (output)
-  "_hidden_grds"      :: "grds" ("\<dots>")
+  "_hidden_grds"      :: "grds" (\<open>\<dots>\<close>)
 
 translations
   "_Do c" => "c"
@@ -330,11 +333,11 @@ print_ast_translation \<open>
 
 syntax
   "_faccess"  :: "'ref \<Rightarrow> ('ref \<Rightarrow> 'v) \<Rightarrow> 'v"
-   ("_\<rightarrow>_" [65,1000] 100)
+   (\<open>_\<rightarrow>_\<close> [65,1000] 100)
 
 syntax (ASCII)
   "_faccess"  :: "'ref \<Rightarrow> ('ref \<Rightarrow> 'v) \<Rightarrow> 'v"
-   ("_->_" [65,1000] 100)
+   (\<open>_->_\<close> [65,1000] 100)
 
 translations
 
@@ -345,40 +348,40 @@ translations
 nonterminal par and pars and actuals
 
 syntax
-  "_par" :: "'a \<Rightarrow> par"                                ("_")
-  ""    :: "par \<Rightarrow> pars"                               ("_")
-  "_pars" :: "[par,pars] \<Rightarrow> pars"                      ("_,/_")
-  "_actuals" :: "pars \<Rightarrow> actuals"                      ("'(_')")
-  "_actuals_empty" :: "actuals"                        ("'(')")
+  "_par" :: "'a \<Rightarrow> par"                                (\<open>_\<close>)
+  ""    :: "par \<Rightarrow> pars"                               (\<open>_\<close>)
+  "_pars" :: "[par,pars] \<Rightarrow> pars"                      (\<open>_,/_\<close>)
+  "_actuals" :: "pars \<Rightarrow> actuals"                      (\<open>'(_')\<close>)
+  "_actuals_empty" :: "actuals"                        (\<open>'(')\<close>)
 
-syntax "_Call" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" ("CALL __" [1000,1000] 21)
-       "_GuardedCall" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" ("CALL\<^sub>g __" [1000,1000] 21)
+syntax "_Call" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" (\<open>CALL __\<close> [1000,1000] 21)
+       "_GuardedCall" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" (\<open>CALL\<^sub>g __\<close> [1000,1000] 21)
        "_CallAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)"
-             ("_ :== CALL __" [30,1000,1000] 21)
-       "_Call_exn" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" ("CALL\<^sub>e __" [1000,1000] 21)
+             (\<open>_ :== CALL __\<close> [30,1000,1000] 21)
+       "_Call_exn" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" (\<open>CALL\<^sub>e __\<close> [1000,1000] 21)
        "_CallAss_exn":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)"
-             ("_ :== CALL\<^sub>e __" [30,1000,1000] 21)
-       "_Proc" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" ("PROC __" 21)
+             (\<open>_ :== CALL\<^sub>e __\<close> [30,1000,1000] 21)
+       "_Proc" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" (\<open>PROC __\<close> 21)
        "_ProcAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)"
-             ("_ :== PROC __" [30,1000,1000] 21)
+             (\<open>_ :== PROC __\<close> [30,1000,1000] 21)
        "_GuardedCallAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)"
-             ("_ :== CALL\<^sub>g __" [30,1000,1000] 21)
-       "_DynCall" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" ("DYNCALL __" [1000,1000] 21)
-       "_GuardedDynCall" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" ("DYNCALL\<^sub>g __" [1000,1000] 21)
+             (\<open>_ :== CALL\<^sub>g __\<close> [30,1000,1000] 21)
+       "_DynCall" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" (\<open>DYNCALL __\<close> [1000,1000] 21)
+       "_GuardedDynCall" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" (\<open>DYNCALL\<^sub>g __\<close> [1000,1000] 21)
        "_DynCallAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)"
-             ("_ :== DYNCALL __" [30,1000,1000] 21)
-       "_DynCall_exn" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" ("DYNCALL\<^sub>e __" [1000,1000] 21)
+             (\<open>_ :== DYNCALL __\<close> [30,1000,1000] 21)
+       "_DynCall_exn" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" (\<open>DYNCALL\<^sub>e __\<close> [1000,1000] 21)
        "_DynCallAss_exn":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)"
-             ("_ :== DYNCALL\<^sub>e __" [30,1000,1000] 21)
+             (\<open>_ :== DYNCALL\<^sub>e __\<close> [30,1000,1000] 21)
        "_GuardedDynCallAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)"
-             ("_ :== DYNCALL\<^sub>g __" [30,1000,1000] 21)
+             (\<open>_ :== DYNCALL\<^sub>g __\<close> [30,1000,1000] 21)
 
        "_Bind":: "['s \<Rightarrow> 'v, idt, 'v \<Rightarrow> ('s,'p,'f) com] \<Rightarrow> ('s,'p,'f) com"
-                      ("_ \<ggreater> _./ _" [22,1000,21] 21)
+                      (\<open>_ \<ggreater> _./ _\<close> [22,1000,21] 21)
        "_bseq"::"('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com"
-           ("_\<ggreater>/ _" [22, 21] 21)
+           (\<open>_\<ggreater>/ _\<close> [22, 21] 21)
        "_FCall" :: "['p,actuals,idt,(('a,string,'f) com)]\<Rightarrow> (('a,string,'f) com)"
-                      ("CALL __ \<ggreater> _./ _" [1000,1000,1000,21] 21)
+                      (\<open>CALL __ \<ggreater> _./ _\<close> [1000,1000,1000,21] 21)
 
 
 
@@ -393,13 +396,13 @@ nonterminal modifyargs
 
 syntax
   "_may_modify" :: "['a,'a,modifyargs] \<Rightarrow> bool"
-        ("_ may'_only'_modify'_globals _ in [_]" [100,100,0] 100)
+        (\<open>_ may'_only'_modify'_globals _ in [_]\<close> [100,100,0] 100)
   "_may_not_modify" :: "['a,'a] \<Rightarrow> bool"
-        ("_ may'_not'_modify'_globals _" [100,100] 100)
+        (\<open>_ may'_not'_modify'_globals _\<close> [100,100] 100)
   "_may_modify_empty" :: "['a,'a] \<Rightarrow> bool"
-        ("_ may'_only'_modify'_globals _ in []" [100,100] 100)
-  "_modifyargs" :: "[id,modifyargs] \<Rightarrow> modifyargs" ("_,/ _")
-  ""            :: "id => modifyargs"              ("_")
+        (\<open>_ may'_only'_modify'_globals _ in []\<close> [100,100] 100)
+  "_modifyargs" :: "[id,modifyargs] \<Rightarrow> modifyargs" (\<open>_,/ _\<close>)
+  ""            :: "id => modifyargs"              (\<open>_\<close>)
 
 translations
 "s may_only_modify_globals Z in []" => "s may_not_modify_globals Z"
@@ -609,10 +612,13 @@ print_translation \<open>
 
 syntax
 "_Measure":: "('a \<Rightarrow> nat) \<Rightarrow> ('a \<times> 'a) set"
-      ("MEASURE _" [22] 1)
+      (\<open>MEASURE _\<close> [22] 1)
 "_Mlex":: "('a \<Rightarrow> nat) \<Rightarrow> ('a \<times> 'a) set \<Rightarrow> ('a \<times> 'a) set"
-      (infixr "<*MLEX*>" 30)
+      (infixr \<open><*MLEX*>\<close> 30)
 
+syntax_consts
+"_Measure" == measure and
+"_Mlex" == mlex_prod
 
 translations
  "MEASURE f"       => "(CONST measure) (_quote f)"

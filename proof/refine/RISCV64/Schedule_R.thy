@@ -173,7 +173,7 @@ lemma schedule_choose_new_thread_sched_act_rct[wp]:
 lemma tcbSchedAppend_corres:
   "tcb_ptr = tcbPtr \<Longrightarrow>
    corres dc
-     (st_tcb_at runnable tcb_ptr and in_correct_ready_q and ready_qs_distinct
+     (in_correct_ready_q and ready_qs_distinct and st_tcb_at runnable tcb_ptr
       and not_in_release_q tcb_ptr and ready_or_release and pspace_aligned and pspace_distinct)
      (sym_heap_sched_pointers and valid_sched_pointers and valid_tcbs')
      (tcb_sched_action tcb_sched_append tcb_ptr) (tcbSchedAppend tcbPtr)"
@@ -207,9 +207,10 @@ lemma tcbSchedAppend_corres:
   apply (subst if_distrib[where f="set_tcb_queue domain prio" for domain prio])
   apply (rule corres_if_strong')
     apply (rule arg_cong_Not)
-    apply (fastforce dest!: state_relation_ready_queues_relation
-                            in_ready_q_tcbQueued_eq[where t=tcbPtr]
-                      simp: obj_at'_def opt_pred_def opt_map_def in_correct_ready_q_def
+    subgoal
+      by (fastforce dest!: state_relation_ready_queues_relation
+                           in_ready_q_tcbQueued_eq[where t=tcbPtr]
+                     simp: obj_at'_def opt_pred_def opt_map_def in_correct_ready_q_def
                             vs_all_heap_simps obj_at_def in_ready_q_def)
    apply (find_goal \<open>match conclusion in "corres _ _ _ _ (return ())" \<Rightarrow> \<open>-\<close>\<close>)
    apply (rule monadic_rewrite_corres_l[where P=P and Q=P for P, simplified])
@@ -969,9 +970,9 @@ lemma bitmapQ_lookupBitmapPriority_simp: (* neater unfold, actual unfold is real
      ksReadyQueuesL2Bitmap s (d, invertL1Index (word_log2 (ksReadyQueuesL1Bitmap s d))) !!
        word_log2 (ksReadyQueuesL2Bitmap s (d, invertL1Index (word_log2 (ksReadyQueuesL1Bitmap s d)))))"
   unfolding bitmapQ_def lookupBitmapPriority_def
-  apply (drule word_log2_nth_same, clarsimp)
+  apply (drule bit_word_log2, clarsimp)
   apply (drule (1) bitmapQ_no_L1_orphansD, clarsimp)
-  apply (drule word_log2_nth_same, clarsimp)
+  apply (drule bit_word_log2, clarsimp)
   apply (frule test_bit_size[where n="word_log2 (ksReadyQueuesL2Bitmap _ _)"])
   apply (clarsimp simp: numPriorities_def wordBits_def word_size)
   apply (subst prioToL1Index_l1IndexToPrio_or_id)
@@ -992,9 +993,9 @@ lemma bitmapQ_from_bitmap_lookup:
      \<rbrakk>
    \<Longrightarrow> bitmapQ d (lookupBitmapPriority d s) s"
   apply (simp add: bitmapQ_lookupBitmapPriority_simp)
-  apply (drule word_log2_nth_same)
+  apply (drule bit_word_log2)
   apply (drule (1) bitmapQ_no_L1_orphansD)
-  apply (fastforce dest!: word_log2_nth_same
+  apply (fastforce dest!: bit_word_log2
                    simp: word_ao_dist lookupBitmapPriority_def word_size numPriorities_def
                          wordBits_def)
   done
@@ -1065,7 +1066,7 @@ lemma bitmapL1_highest_lookup:
    apply (subst word_le_nat_alt)
    apply (subst unat_of_nat_eq)
     apply (rule order_less_le_trans[OF word_log2_max], simp add: word_size)
-   apply (rule word_log2_highest)
+   apply (rule word_log2_maximum)
    apply (subst (asm) prioToL1Index_l1IndexToPrio_or_id)
      apply (subst unat_of_nat_eq)
       apply (rule order_less_le_trans[OF word_log2_max], simp add: word_size)
@@ -1084,7 +1085,7 @@ lemma bitmapL1_highest_lookup:
     apply (rule order_less_le_trans[OF word_log2_max], simp add: word_size wordRadix_def')
    apply (fastforce dest: bitmapQ_no_L1_orphansD
                     simp: wordBits_def numPriorities_def word_size wordRadix_def' l2BitmapSize_def')
-  apply (erule word_log2_highest)
+  apply (erule word_log2_maximum)
   done
 
 lemma bitmapQ_ksReadyQueuesI:
@@ -1447,8 +1448,8 @@ lemma nextDomain_corres:
 lemma next_domain_valid_sched[wp]:
   "\<lbrace> valid_sched and (\<lambda>s. scheduler_action s  = choose_new_thread)\<rbrace> next_domain \<lbrace> \<lambda>_. valid_sched \<rbrace>"
   apply (simp add: next_domain_def Let_def)
-  apply (wp, simp add: valid_sched_def valid_sched_action_2_def ct_not_in_q_2_def)
-  apply (fastforce simp: valid_blocked_defs)
+  apply (wpsimp wp: dxo_wp_weak)
+  apply (clarsimp simp: valid_sched_def valid_blocked_defs)
   done
 
 lemma nextDomain_invs':
@@ -1521,9 +1522,6 @@ lemma isHighestPrio_corres:
           apply fastforce
          apply (wpsimp simp: if_apply_def2 wp: hoare_drop_imps ksReadyQueuesL1Bitmap_return_wp)+
   done
-
-crunch set_scheduler_action
-  for valid_idle_etcb[wp]: valid_idle_etcb
 
 crunch isHighestPrio
   for inv[wp]: P

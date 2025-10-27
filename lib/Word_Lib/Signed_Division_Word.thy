@@ -27,12 +27,12 @@ lift_definition signed_modulo_word :: \<open>'a::len word \<Rightarrow> 'a word 
   is \<open>\<lambda>k l. signed_take_bit (LENGTH('a) - Suc 0) k smod signed_take_bit (LENGTH('a) - Suc 0) l\<close>
   by (simp flip: signed_take_bit_decr_length_iff)
 
-lemma sdiv_word_def [code]:
+lemma sdiv_word_def:
   \<open>v sdiv w = word_of_int (sint v sdiv sint w)\<close>
   for v w :: \<open>'a::len word\<close>
   by transfer simp
 
-lemma smod_word_def [code]:
+lemma smod_word_def:
   \<open>v smod w = word_of_int (sint v smod sint w)\<close>
   for v w :: \<open>'a::len word\<close>
   by transfer simp
@@ -49,6 +49,24 @@ qed
 
 end
 
+lemma signed_divide_word_code [code]: \<^marker>\<open>contributor \<open>Andreas Lochbihler\<close>\<close>
+  \<open>v sdiv w =
+   (let v' = sint v; w' = sint w;
+        negative = (v' < 0) \<noteq> (w' < 0);
+        result = \<bar>v'\<bar> div \<bar>w'\<bar>
+    in word_of_int (if negative then - result else result))\<close>
+  for v w :: \<open>'a::len word\<close>
+  by (simp add: sdiv_word_def signed_divide_int_def sgn_if)
+
+lemma signed_modulo_word_code [code]: \<^marker>\<open>contributor \<open>Andreas Lochbihler\<close>\<close>
+  \<open>v smod w =
+   (let v' = sint v; w' = sint w;
+        negative = (v' < 0);
+        result = \<bar>v'\<bar> mod \<bar>w'\<bar>
+    in word_of_int (if negative then - result else result))\<close>
+  for v w :: \<open>'a::len word\<close>
+  by (simp add: smod_word_def signed_modulo_int_def sgn_if)
+
 lemma sdiv_smod_id:
   \<open>(a sdiv b) * b + (a smod b) = a\<close>
   for a b :: \<open>'a::len word\<close>
@@ -56,20 +74,15 @@ lemma sdiv_smod_id:
 
 lemma signed_div_arith:
     "sint ((a::('a::len) word) sdiv b) = signed_take_bit (LENGTH('a) - 1) (sint a sdiv sint b)"
-  apply transfer
-  apply simp
-  done
+  by (simp add: sdiv_word_def sint_sbintrunc')
 
 lemma signed_mod_arith:
     "sint ((a::('a::len) word) smod b) = signed_take_bit (LENGTH('a) - 1) (sint a smod sint b)"
-  apply transfer
-  apply simp
-  done
+  by (simp add: sint_sbintrunc' smod_word_def)
 
 lemma word_sdiv_div0 [simp]:
     "(a :: ('a::len) word) sdiv 0 = 0"
-  apply (auto simp: sdiv_word_def signed_divide_int_def sgn_if)
-  done
+  by (auto simp: sdiv_word_def signed_divide_int_def sgn_if)
 
 lemma smod_word_zero [simp]:
   \<open>w smod 0 = w\<close> for w :: \<open>'a::len word\<close>
@@ -77,14 +90,13 @@ lemma smod_word_zero [simp]:
 
 lemma word_sdiv_div1 [simp]:
     "(a :: ('a::len) word) sdiv 1 = a"
-  apply (cases \<open>LENGTH('a)\<close>)
-  apply simp_all
-  apply transfer
-  apply simp
-  apply (case_tac nat)
-   apply simp_all
-  apply (simp add: take_bit_signed_take_bit)
-  done
+proof -
+  have "sint (- (1::'a word)) = - 1"
+    by simp
+  then show ?thesis
+    by (metis int_sdiv_simps(1) mult_1 mult_minus_left scast_eq scast_id
+        sdiv_minus_eq sdiv_word_def signed_1 wi_hom_neg)
+qed
 
 lemma smod_word_one [simp]:
   \<open>w smod 1 = 0\<close> for w :: \<open>'a::len word\<close>
@@ -92,11 +104,7 @@ lemma smod_word_one [simp]:
 
 lemma word_sdiv_div_minus1 [simp]:
     "(a :: ('a::len) word) sdiv -1 = -a"
-  apply (auto simp: sdiv_word_def signed_divide_int_def sgn_if)
-  apply transfer
-  apply simp
-  apply (metis Suc_pred len_gt_0 signed_take_bit_eq_iff_take_bit_eq signed_take_bit_of_0 take_bit_of_0)
-  done
+  by (simp add: sdiv_word_def)
 
 lemma smod_word_minus_one [simp]:
   \<open>w smod - 1 = 0\<close> for w :: \<open>'a::len word\<close>
@@ -127,10 +135,8 @@ lemma one_smod_word_eq [simp]:
 
 lemma minus_one_sdiv_word_eq [simp]:
   \<open>- 1 sdiv w = - (1 sdiv w)\<close> for w :: \<open>'a::len word\<close>
-  apply (auto simp add: sdiv_word_def signed_divide_int_def)
-  apply transfer
-  apply simp
-  done
+  by (metis (mono_tags, opaque_lifting) minus_sdiv_eq of_int_minus sdiv_word_def signed_1 sint_n1
+      word_sdiv_div1 word_sdiv_div_minus1)
 
 lemma minus_one_smod_word_eq [simp]:
   \<open>- 1 smod w = - (1 smod w)\<close> for w :: \<open>'a::len word\<close>
@@ -170,28 +176,19 @@ lemmas word_sdiv_0 = word_sdiv_div0
 
 lemma sdiv_word_min:
     "- (2 ^ (size a - 1)) \<le> sint (a :: ('a::len) word) sdiv sint (b :: ('a::len) word)"
-  using sdiv_int_range [where a="sint a" and b="sint b"]
-  apply auto
-  apply (cases \<open>LENGTH('a)\<close>)
-   apply simp_all
-  apply transfer
-  apply simp
-  apply (rule order_trans)
-   defer
-   apply assumption
-  apply simp
-  apply (metis abs_le_iff add.inverse_inverse le_cases le_minus_iff not_le signed_take_bit_int_eq_self_iff signed_take_bit_minus)
-  done
+  by (smt (verit, ccfv_SIG) atLeastAtMost_iff sdiv_int_range sint_ge sint_lt wsst_TYs(3))
 
 lemma sdiv_word_max:
   \<open>sint a sdiv sint b \<le> 2 ^ (size a - Suc 0)\<close>
   for a b :: \<open>'a::len word\<close>
 proof (cases \<open>sint a = 0 \<or> sint b = 0 \<or> sgn (sint a) \<noteq> sgn (sint b)\<close>)
   case True then show ?thesis
-    apply (auto simp add: sgn_if not_less signed_divide_int_def split: if_splits)
-     apply (smt (verit) pos_imp_zdiv_neg_iff zero_le_power)
-    apply (smt (verit) not_exp_less_eq_0_int pos_imp_zdiv_neg_iff)
-    done
+  proof -
+    have "\<And>i j::int. i sdiv j \<le> \<bar>i\<bar>"
+      by (meson atLeastAtMost_iff sdiv_int_range)
+    then show ?thesis
+      by (smt (verit) sint_range_size)
+  qed
 next
   case False
   then have \<open>\<bar>sint a\<bar> div \<bar>sint b\<bar> \<le> \<bar>sint a\<bar>\<close>
@@ -218,35 +215,19 @@ lemma smod_word_0_mod [simp]:
 
 lemma smod_word_max:
   "sint (a::'a word) smod sint (b::'a word) < 2 ^ (LENGTH('a::len) - Suc 0)"
-  apply (cases \<open>sint b = 0\<close>)
-   apply (simp_all add: sint_less)
-  apply (cases \<open>LENGTH('a)\<close>)
-   apply simp_all
-  using smod_int_range [where a="sint a" and b="sint b"]
-  apply auto
-  apply (rule less_le_trans)
-   apply assumption
-  apply (auto simp add: abs_le_iff)
-   apply (metis diff_Suc_1 le_cases linorder_not_le sint_lt)
-  apply (metis add.inverse_inverse diff_Suc_1 linorder_not_less neg_less_iff_less sint_ge)
-  done
+proof (cases \<open>sint b = 0 \<or> LENGTH('a) = 0\<close>)
+  case True
+  then show ?thesis
+    by (force simp: sint_less)
+next
+  case False
+  then show ?thesis
+    by (smt (verit) sint_greater_eq sint_less smod_int_compares)
+qed
 
 lemma smod_word_min:
   "- (2 ^ (LENGTH('a::len) - Suc 0)) \<le> sint (a::'a word) smod sint (b::'a word)"
-  apply (cases \<open>LENGTH('a)\<close>)
-   apply simp_all
-  apply (cases \<open>sint b = 0\<close>)
-   apply simp_all
-   apply (metis diff_Suc_1 sint_ge)
-  using smod_int_range [where a="sint a" and b="sint b"]
-  apply auto
-  apply (rule order_trans)
-   defer
-   apply assumption
-  apply (auto simp add: algebra_simps abs_le_iff)
-   apply (metis abs_zero add.left_neutral add_mono_thms_linordered_semiring(1) diff_Suc_1 le_cases linorder_not_less sint_lt zabs_less_one_iff)
-  apply (metis abs_zero add.inverse_inverse add.left_neutral add_mono_thms_linordered_semiring(1) diff_Suc_1 le_cases le_minus_iff linorder_not_less sint_ge zabs_less_one_iff)
-  done
+  by (smt (verit) sint_greater_eq sint_less smod_int_compares smod_int_mod_0)
 
 lemmas word_smod_numerals_lhs = smod_word_def[where v="numeral x" for x]
     smod_word_def[where v=0] smod_word_def[where v=1]

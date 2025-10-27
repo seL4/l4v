@@ -30,11 +30,11 @@ lemma get_cap_reads_respects:
   apply (wp get_object_reads_respects | wpc | simp)+
   done
 
-lemma set_thread_state_ext_runnable_equiv_but_for_labels:
+lemma set_thread_state_act_runnable_equiv_but_for_labels:
   "\<lbrace>equiv_but_for_labels aag L st and K (pasObjectAbs aag thread \<in> L) and st_tcb_at runnable thread\<rbrace>
-   set_thread_state_ext thread
+   set_thread_state_act thread
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
-  apply (simp add: set_thread_state_ext_def)
+  apply (simp add: set_thread_state_act_def)
   apply (wp gts_wp | rule hoare_pre_cont)+
   apply (force simp: st_tcb_at_def obj_at_def)
   done
@@ -64,10 +64,9 @@ lemma tcb_sched_action_equiv_but_for_labels:
   apply (simp add: tcb_sched_action_def, wp)
   apply (clarsimp simp: etcb_at_def equiv_but_for_labels_def split: option.splits)
   apply (rule states_equiv_forI)
-           apply (fastforce intro!: equiv_forI elim!: states_equiv_forE dest: equiv_forD[where f=kheap])
-          apply (simp add: states_equiv_for_def)
-         apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt])
-        apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=ekheap])
+          apply (fastforce intro!: equiv_forI elim!: states_equiv_forE dest: equiv_forD[where f=kheap])
+         apply (simp add: states_equiv_for_def)
+        apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt])
        apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt_list])
       apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=is_original_cap])
      apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=interrupt_states])
@@ -75,13 +74,13 @@ lemma tcb_sched_action_equiv_but_for_labels:
    apply (fastforce simp: equiv_asids_def elim: states_equiv_forE)
   apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def split: option.splits)
   apply (rule equiv_forI)
-  apply (erule_tac x="(thread, tcb_domain (the (ekheap s thread)))" in ballE)
-   apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=ready_queues])
-  apply (force intro: domtcbs)
+  apply (erule_tac x="(thread, etcb_domain (the (etcbs_of s thread)))" in ballE)
+   apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=ready_queues] ko_at_etcbD)
+  apply (force intro: domtcbs dest: ko_at_etcbD)
   done
 
 lemma possible_switch_to_equiv_but_for_labels:
-  "\<lbrace>equiv_but_for_labels aag L st and (\<lambda>s. etcb_at (\<lambda>etcb. tcb_domain etcb \<noteq> cur_domain s) target s)
+  "\<lbrace>equiv_but_for_labels aag L st and (\<lambda>s. etcb_at (\<lambda>etcb. etcb_domain etcb \<noteq> cur_domain s) target s)
                                   and K (pasObjectAbs aag target \<in> L) and pas_refined aag\<rbrace>
    possible_switch_to target
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
@@ -92,12 +91,12 @@ lemma possible_switch_to_equiv_but_for_labels:
       apply (wp tcb_sched_action_equiv_but_for_labels)
       apply (rule hoare_pre_cont)
      apply (wp tcb_sched_action_equiv_but_for_labels)+
-  apply (clarsimp simp: etcb_at_def split: option.splits)
+  apply (clarsimp simp: etcb_at_def etcbs_of'_def obj_at_def split: option.splits)
   done
 
-crunch set_thread_state_ext, set_thread_state, set_simple_ko
+crunch set_thread_state
   for etcb_at_cdom[wp]: "\<lambda>s. etcb_at (P (cur_domain s)) t s"
-  (wp: crunch_wps)
+  (wp: crunch_wps set_object_wp)
 
 
 locale Ipc_IF_1 =
@@ -215,7 +214,7 @@ lemma update_waiting_ntfn_reads_respects:
 lemma update_waiting_ntfn_equiv_but_for_labels:
   "\<lbrace>equiv_but_for_labels aag L st and pas_refined aag and
     valid_objs and ko_at (Notification ntfn) nptr and sym_refs \<circ> state_refs_of and
-    (\<lambda>s. \<forall>t\<in> set list. etcb_at (\<lambda>etcb. tcb_domain etcb \<noteq> cur_domain s) t s) and
+    (\<lambda>s. \<forall>t\<in> set list. etcb_at (\<lambda>etcb. etcb_domain etcb \<noteq> cur_domain s) t s) and
     K (ntfn_obj ntfn = WaitingNtfn list \<and> pasObjectAbs aag nptr \<in> L \<and>
        all_with_auth_to aag Receive (pasObjectAbs aag nptr) \<subseteq> L \<and>
        \<Union> (all_to_which_has_auth aag Write ` all_with_auth_to aag Receive (pasObjectAbs aag nptr)) \<subseteq> L)\<rbrace>
@@ -226,7 +225,7 @@ lemma update_waiting_ntfn_equiv_but_for_labels:
             set_thread_state_pas_refined set_notification_equiv_but_for_labels
             set_simple_ko_pred_tcb_at set_simple_ko_pas_refined
             hoare_vcg_disj_lift possible_switch_to_equiv_but_for_labels
-         | wpc | simp add: split_def)+
+         | wpc | simp add: split_def | wps)+
   apply clarsimp
   apply (frule_tac P="receive_blocked_on nptr" and t="hd list" in ntfn_queued_st_tcb_at')
       apply (fastforce)
@@ -294,11 +293,12 @@ lemma read_queued_thread_reads_ntfn:
 
 lemma not_etcb_at_not_cdom_can_read:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
-  shows "\<lbrakk> \<not> etcb_at (\<lambda>etcb. tcb_domain etcb \<noteq> cur_domain s) t s;
-           tcb_at t s; valid_etcbs s; pas_refined aag s; pas_cur_domain aag s \<rbrakk>
+  shows "\<lbrakk> \<not> etcb_at (\<lambda>etcb. etcb_domain etcb \<noteq> cur_domain s) t s;
+           tcb_at t s; pas_refined aag s; pas_cur_domain aag s \<rbrakk>
            \<Longrightarrow> aag_can_read aag t"
-  apply (clarsimp simp: valid_etcbs_def tcb_at_st_tcb_at etcb_at_def is_etcb_at_def
-                        pas_refined_def tcb_domain_map_wellformed_aux_def)
+  apply (clarsimp simp: obj_at_def etcb_at_def
+                        pas_refined_def tcb_domain_map_wellformed_aux_def
+                 split: option.splits)
   apply (erule_tac x="(t, cur_domain s)" in ballE)
    apply (force dest: domains_distinct[THEN pas_domains_distinct_inj])
   apply (force intro: domtcbs)
@@ -326,8 +326,8 @@ lemma no_fail_gts:
 
 lemma sts_noop:
    "monadic_rewrite True True (tcb_at tcb and (\<lambda>s. tcb \<noteq> cur_thread s))
-                    (set_thread_state_ext tcb) (return ())"
-  unfolding set_thread_state_ext_def when_def
+                    (set_thread_state_act tcb) (return ())"
+  apply (clarsimp simp: set_thread_state_act_def when_def)
   apply (monadic_rewrite_l monadic_rewrite_if_l_False \<open>wpsimp wp: gts_wp\<close>)
    apply (monadic_rewrite_symb_exec_l_drop)+
    apply (rule monadic_rewrite_refl)
@@ -349,7 +349,7 @@ lemma sts_to_modify':
 lemma sts_no_fail:
   "no_fail (\<lambda>s :: det_state. tcb_at tcb s) (set_thread_state tcb st)"
   apply (simp add: set_thread_state_def set_object_def)
-  apply (simp add: set_thread_state_ext_def get_thread_state_def
+  apply (simp add: set_thread_state_act_def get_thread_state_def
                    thread_get_def set_scheduler_action_def)
   apply (rule no_fail_pre)
    apply (wpsimp wp: get_object_wp)+
@@ -510,7 +510,7 @@ lemmas cancel_ipc_valid_rewrite =
 crunch blocked_cancel_ipc_nosts
   for etcb_at[wp]: "etcb_at P t"
 crunch blocked_cancel_ipc_nosts
-  for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
+  for cur_domain[wp]: "\<lambda>s::det_state. P (cur_domain s)"
 crunch blocked_cancel_ipc_nosts
   for pas_refined[wp]: "pas_refined aag"
 crunch blocked_cancel_ipc_nosts
@@ -536,7 +536,7 @@ lemma send_signal_reads_respects:
     "reads_respects aag l
        (pas_refined aag and pas_cur_domain aag
                         and (\<lambda>s. is_subject aag (cur_thread s))
-                        and valid_etcbs and ct_active
+                        and ct_active
                         and (\<lambda>s. sym_refs (state_refs_of s)) and valid_objs
                         and K ((pasSubject aag, Notify, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag))
        (send_signal ntfnptr badge)"
@@ -617,7 +617,7 @@ lemma send_signal_reads_respects:
      subgoal waiting_ntfn
        apply clarsimp
        apply (rule ccontr)
-       apply (frule (3) not_etcb_at_not_cdom_can_read[OF domains_distinct, rotated 2])
+       apply (frule (2) not_etcb_at_not_cdom_can_read[OF domains_distinct, rotated 2])
         apply (rule tcb_at_ntfn_queue;assumption)
        apply (frule (7) read_queued_thread_reads_ntfn)
        using invisible
@@ -654,7 +654,7 @@ lemma send_signal_reads_respects:
             by (fastforce split: thread_state.splits)
          apply (rule ccontr)
          apply (insert prems)
-         apply (frule (4) not_etcb_at_not_cdom_can_read[OF domains_distinct])
+         apply (frule (3) not_etcb_at_not_cdom_can_read[OF domains_distinct])
          using bound_tcb_can_receive
          apply (fastforce simp: labels_are_invisible_def all_with_auth_to_def all_to_which_has_auth_def)
         apply (fastforce simp: pred_tcb_at_def receive_blocked_def obj_at_def)
@@ -1784,7 +1784,7 @@ lemma valid_ep_send_enqueue:
   apply (auto split: list.splits)
   done
 
-crunch complete_signal
+crunch complete_signal, possible_switch_to
   for globals_equiv[wp]: "globals_equiv st"
 
 lemma case_list_cons_cong:
@@ -1892,7 +1892,6 @@ lemma update_waiting_ntfn_globals_equiv:
    update_waiting_ntfn ntfnptr queue bound_tcb badge
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding update_waiting_ntfn_def
-  supply possible_switch_to_extended.dxo_eq[simp del]
   apply (wpsimp wp: set_thread_state_globals_equiv as_user_globals_equiv
                     set_notification_globals_equiv dxo_wp_weak)
   by (auto simp: neq_Nil_conv)
@@ -1909,11 +1908,6 @@ lemma cancel_ipc_blocked_globals_equiv:
   apply clarsimp
   apply (case_tac state;(clarsimp simp: pred_tcb_at_def obj_at_def receive_blocked_def))
   by (simp add: eq_commute)
-
-crunch possible_switch_to
-  for globals_equiv[wp]: "globals_equiv st"
-  (wp: tcb_sched_action_extended.globals_equiv reschedule_required_ext_extended.globals_equiv
-   ignore_del: possible_switch_to)
 
 lemma send_signal_globals_equiv:
   "\<lbrace>globals_equiv s and valid_objs and valid_arch_state and valid_global_refs
@@ -2073,7 +2067,7 @@ lemma send_signal_reads_respects_g:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows
   "reads_respects_g aag l
-     (pas_refined aag and pas_cur_domain aag and valid_etcbs and valid_objs
+     (pas_refined aag and pas_cur_domain aag and valid_objs
                       and valid_arch_state and valid_global_refs
                       and pspace_distinct and valid_idle and ct_active
                       and sym_refs \<circ> state_refs_of and is_subject aag \<circ> cur_thread

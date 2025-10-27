@@ -845,7 +845,7 @@ fun gen__range_lookups ctxt tree_list_lookup_eq_thm list_def list_monotonic_thm 
       FO_OF [tree_list_lookup_eq_thm, list_monotonic_thm])
   |> Conv.fconv_rule (fp_eval_conv' ctxt
                         (@{thms RangeMap.list_all_dest prod.case} @ [list_def]) [])
-  |> HOLogic.conj_elims ctxt
+  |> HOLogic.conj_elims
   |> map (fn t => (@{thm RangeMap.spec_FO} FO_OF [t])
                   |> beta_conversion_thm Conv.arg_conv (* beta reduce result of spec thm *))
   |> map (Conv.fconv_rule (fp_eval_conv' ctxt @{thms RangeMap.in_range.simps} []));
@@ -866,7 +866,7 @@ fun gen__start_lookups ctxt
                         (@{thms RangeMap.list_all_dest prod.case simp_thms}
                          @ [list_def] @ key_range_nonempty_thms)
                         [])
-  |> HOLogic.conj_elims ctxt;
+  |> HOLogic.conj_elims;
 
 fun expected__start_lookups tree_const elems key_range_nonempty_thms =
   elems ~~ key_range_nonempty_thms
@@ -1039,7 +1039,7 @@ fun define_map
           @{thm RangeMap.lookup_range_tree_to_list_of_gen}
             FO_OF [tree_valid_thm, tree_to_list_thm];
     val [tree_list_lookup_eq_thm, list_monotonic_thm] =
-          HOLogic.conj_elims ctxt list_properties;
+          HOLogic.conj_elims list_properties;
     val ctxt = notes ctxt
           [(#tree_to_list_thm name_opts, [tree_to_list_thm]),
            (#tree_list_lookup_eq_thm name_opts, [tree_list_lookup_eq_thm]),

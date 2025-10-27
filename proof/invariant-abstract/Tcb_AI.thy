@@ -1562,7 +1562,6 @@ end
 
 lemma set_domain_invs[wp]:
   "set_domain t d \<lbrace>invs\<rbrace>"
-  supply if_weak_cong[cong del]
   by (simp add: set_domain_def | wp)+
 
 lemma invoke_domain_invs:
@@ -1572,10 +1571,7 @@ lemma invoke_domain_invs:
   by (simp add: invoke_domain_def | wp)+
 
 lemma set_domain_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>
-     set_domain t d
-   \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  supply if_weak_cong[cong del]
+  "set_domain t d \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
   by (simp add: set_domain_def | wp)+
 
 lemma invoke_domain_typ_at[wp]:
@@ -1827,10 +1823,9 @@ lemma reorder_ep_invs[wp]:
   done
 
 lemma set_priority_invs[wp]:
-  "\<lbrace>invs and ex_nonz_cap_to t\<rbrace> set_priority t p \<lbrace>\<lambda>_. invs\<rbrace>"
+  "set_priority t p \<lbrace>invs\<rbrace>"
   unfolding set_priority_def
-  by (wpsimp wp: gts_wp hoare_vcg_imp_lift' hoare_vcg_all_lift
-           simp: thread_get_def get_tcb_queue_def pred_tcb_at_def obj_at_def)
+  by wpsimp
 
 lemma set_mcpriority_bound_sc_tcb_at[wp]:
   "set_mcpriority ref mcp \<lbrace>\<lambda>s. Q (bound_sc_tcb_at P t s)\<rbrace>"

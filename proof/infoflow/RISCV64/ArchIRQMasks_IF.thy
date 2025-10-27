@@ -35,7 +35,7 @@ crunch finalise_cap
   (  wp: crunch_wps dmo_wp no_irq
    simp: crunch_simps no_irq_setVSpaceRoot no_irq_hwASIDFlush)
 
-crunch send_signal
+crunch send_signal, timer_tick
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps ignore: do_machine_op wp: dmo_wp simp: crunch_simps)
 
@@ -89,7 +89,7 @@ crunch activate_thread
 
 crunch schedule
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: dmo_wp crunch_wps simp: crunch_simps)
+  (wp: dmo_wp crunch_wps dxo_wp_weak simp: crunch_simps)
 
 end
 
@@ -104,7 +104,7 @@ qed
 
 context Arch begin global_naming RISCV64
 
-crunch do_reply_transfer
+crunch do_reply_transfer, set_priority
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps empty_slot_irq_masks simp: crunch_simps unless_def)
 

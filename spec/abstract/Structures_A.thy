@@ -459,7 +459,8 @@ record tcb =
  tcb_yield_to      :: "obj_ref option"
  tcb_priority      :: priority
  tcb_domain        :: domain
- tcb_arch          :: arch_tcb
+ tcb_arch          :: arch_tcb (* arch_tcb must have a field for user context *)
+
 
 text \<open>Determines whether a thread in a given state may be scheduled.\<close>
 primrec runnable :: "Structures_A.thread_state \<Rightarrow> bool" where
@@ -483,17 +484,15 @@ primrec ipc_queued_thread_state :: "thread_state \<Rightarrow> bool" where
 | "ipc_queued_thread_state (IdleThreadState)         = False"
 | "ipc_queued_thread_state (BlockedOnReply _)        = True"
 
-definition default_domain :: domain
-where
+definition default_domain :: "domain" where
   "default_domain \<equiv> minBound"
 
-definition default_priority :: priority
-where
+definition default_priority :: "priority" where
   "default_priority \<equiv> minBound"
 
 definition
   default_tcb :: "domain \<Rightarrow> tcb" where
-  "default_tcb domain \<equiv> \<lparr>
+  "default_tcb d \<equiv> \<lparr>
       tcb_ctable   = NullCap,
       tcb_vtable   = NullCap,
       tcb_ipcframe = NullCap,
@@ -507,7 +506,7 @@ definition
       tcb_sched_context = None,
       tcb_yield_to      = None,
       tcb_priority   = default_priority,
-      tcb_domain     = domain,
+      tcb_domain     = d,
       tcb_arch       = default_arch_tcb\<rparr>"
 
 record refill =
@@ -694,7 +693,7 @@ datatype irq_state =
 text \<open>The current scheduler action\<close>
 datatype scheduler_action =
     resume_cur_thread
-  | switch_thread obj_ref
+  | switch_thread (sch_act_target : obj_ref)
   | choose_new_thread
 
 type_synonym ready_queue = "obj_ref list"

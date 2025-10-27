@@ -61,6 +61,7 @@ crunch init_arch_objects
   and valid_mdb[wp]: "valid_mdb"
   and cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
   and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+  and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (ignore: clearMemory wp: crunch_wps)
 
 crunch store_pte
@@ -343,11 +344,11 @@ proof -
      apply clarsimp
      apply (drule (1) disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt tysc[THEN conjunct1, THEN impI]]])
       apply (simp add: Int_ac p_assoc_help[symmetric])
-     apply simp
+     apply fastforce
     apply clarsimp
     apply (drule (1) disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt tysc[THEN conjunct1, THEN impI]]])
      apply (simp add: Int_ac p_assoc_help[symmetric])
-    apply simp
+    apply fastforce
     done
 qed
 
@@ -707,7 +708,7 @@ lemma pspace_respects_device_regionD:
 
 
 lemma default_obj_dev:
-  "\<lbrakk>ty \<noteq> Untyped; default_object ty dev us dm = ArchObj (DataPage dev' sz)\<rbrakk> \<Longrightarrow> dev = dev'"
+  "\<lbrakk>ty \<noteq> Untyped; default_object ty dev us d = ArchObj (DataPage dev' sz)\<rbrakk> \<Longrightarrow> dev = dev'"
   by (clarsimp simp: default_object_def default_arch_object_def
               split: apiobject_type.split_asm aobject_type.split_asm)
 
@@ -818,9 +819,10 @@ lemma pspace_respects_device_region:
   apply (rule pspace_respects_device_regionI)
      apply (clarsimp simp add: pspace_respects_device_region_def s'_def ps_def
                         split: if_split_asm )
-      apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt tysc[THEN conjunct1, simplified atomize_imp]])
+      apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt tysc[THEN conjunct1, simplified atomize_imp],
+                                                 where d'="cur_domain s"])
        using cover tyunt tysc
-       apply (simp add: obj_bits_api_def3[where dm="cur_domain s"] split: if_splits)
+       apply (simp add: obj_bits_api_def3 split: if_splits)
       apply (frule default_obj_dev[OF tyunt],simp)
       apply (drule(1) subsetD)
       apply (rule exE[OF dev])
@@ -832,9 +834,10 @@ lemma pspace_respects_device_region:
      apply fastforce
     apply (clarsimp simp add: pspace_respects_device_region_def s'_def ps_def
                        split: if_split_asm )
-     apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt tysc[THEN conjunct1, simplified atomize_imp]])
+     apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt tysc[THEN conjunct1, simplified atomize_imp],
+                                                where d'="cur_domain s"])
       using cover tyunt tysc
-      apply (simp add: obj_bits_api_def4[where dm="cur_domain s"] split: if_splits)
+      apply (simp add: obj_bits_api_def4 split: if_splits)
      apply (frule default_obj_dev[OF tyunt],simp)
       apply (drule(1) subsetD)
       apply (rule exE[OF dev])

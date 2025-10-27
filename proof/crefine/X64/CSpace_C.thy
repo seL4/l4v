@@ -624,9 +624,11 @@ lemma ccorres_updateMDB_set_mdbNext [corres]:
     apply (erule (2) cspace_cte_relation_upd_mdbI)
     apply (simp add: cmdbnode_relation_def)
     apply (intro arg_cong[where f="\<lambda>f. mdbNext_update f mdb" for mdb] ext word_eqI)
-    apply (simp add: sign_extend_bitwise_if' neg_mask_test_bit word_size)
-    apply (match premises in C: "canonical_address _" and A: "is_aligned _ _" (multi) \<Rightarrow>
-           \<open>match premises in H[thin]: _ (multi) \<Rightarrow> \<open>insert C A\<close>\<close>)
+    apply (simp add: sign_extend_bitwise_if' neg_mask_test_bit)
+    apply (match premises in C: "canonical_address _"
+                          and A: "is_aligned _ _"
+                          and sz: "_ < size _" (multi) \<Rightarrow>
+           \<open>match premises in H[thin]: _ (multi) \<Rightarrow> \<open>insert C A sz\<close>\<close>)
     apply (drule is_aligned_weaken[where y=2], simp add: objBits_defs)
     apply (case_tac "n < 2"; case_tac "n \<le> 47";
            clarsimp simp: linorder_not_less linorder_not_le is_aligned_nth[THEN iffD1])

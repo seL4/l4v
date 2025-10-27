@@ -602,8 +602,10 @@ lemma ccorres_updateMDB_set_mdbNext [corres]:
     apply (erule (2) cspace_cte_relation_upd_mdbI)
     apply (simp add: cmdbnode_relation_def)
     apply (intro arg_cong[where f="\<lambda>f. mdbNext_update f mdb" for mdb] ext word_eqI)
-    apply (match premises in C: "canonical_address _" and A: "is_aligned _ _" (multi) \<Rightarrow>
-           \<open>match premises in H[thin]: _ (multi) \<Rightarrow> \<open>insert C A\<close>\<close>)
+    apply (match premises in C: "canonical_address _"
+                          and A: "is_aligned _ _"
+                          and sz: "_ < size _" (multi) \<Rightarrow>
+           \<open>match premises in H[thin]: _ (multi) \<Rightarrow> \<open>insert C A sz\<close>\<close>)
     apply (clarsimp simp: word_size)
     apply (drule is_aligned_weaken[where y=2], simp add: objBits_defs)
     apply (case_tac "n < 2"; case_tac "n \<le> canonical_bit";

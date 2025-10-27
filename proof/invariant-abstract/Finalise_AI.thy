@@ -1127,7 +1127,8 @@ lemma (in Finalise_AI_1) finalise_cap_equal_cap[wp]:
                  hoare_drop_imp thread_set_cte_wp_at_trivial reply_unlink_sc_cte_wp_at
                | clarsimp simp: can_fast_finalise_def unbind_maybe_notification_def
                                 unbind_notification_def
-                                tcb_cap_cases_def | wpc)+
+                                tcb_cap_cases_def
+               | wpc)+
   done
 
 locale Finalise_AI_2 = Finalise_AI_1 a b
@@ -1444,11 +1445,6 @@ lemma valid_irq_node_arch [iff]:
   by (simp add: valid_irq_node_def)
 
 (* FIXME: move *)
-lemma vms_arch_state_update[simp]:
-  "valid_machine_state (arch_state_update f s) = valid_machine_state s"
-  by (simp add: valid_machine_state_def)
-
-(* FIXME: move *)
 lemma dmo_bind_return:
   "\<lbrace>P\<rbrace> do_machine_op f \<lbrace>\<lambda>_. Q\<rbrace> \<Longrightarrow>
    \<lbrace>P\<rbrace> do_machine_op (do _ \<leftarrow> f; return x od) \<lbrace>\<lambda>_. Q\<rbrace>"
@@ -1463,12 +1459,12 @@ lemma st_tcb_at_idle_thread:
 
 lemma tcb_state_merge_tcb_state_default:
   "tcb_state (tcb_registers_caps_merge tcb tcb') = tcb_state tcb"
-  "tcb_state (default_tcb dm) = Structures_A.Inactive"
+  "tcb_state (default_tcb d) = Structures_A.Inactive"
   by (auto simp add: tcb_registers_caps_merge_def default_tcb_def)
 
 lemma tcb_bound_notification_merge_tcb_state_default:
   "tcb_bound_notification (tcb_registers_caps_merge tcb tcb') = tcb_bound_notification tcb"
-  "tcb_bound_notification (default_tcb dm) = None"
+  "tcb_bound_notification (default_tcb d) = None"
   by (auto simp add: tcb_registers_caps_merge_def default_tcb_def)
 
 (*Lift hoare triples from an instantiation to the nondeterministic hoare triple version.

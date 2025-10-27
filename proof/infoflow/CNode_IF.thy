@@ -86,7 +86,7 @@ lemma lookup_slot_for_thread_rev:
   apply (clarsimp simp: tcb.splits)
   apply (erule (2) owns_thread_owns_cspace)
    defer
-   apply (case_tac tcb_ctablea, simp_all)
+   apply (case_tac tcb_ctable, simp_all)
   done
 
 lemma lookup_cap_and_slot_rev[wp]:
@@ -309,11 +309,6 @@ lemma set_original_globals_equiv:
   "set_original slot v \<lbrace>globals_equiv s\<rbrace>"
   unfolding set_original_def
   by (wpsimp simp: globals_equiv_def idle_equiv_def)
-
-lemma globals_equiv_exst_update[simp]:
-  "globals_equiv st (trans_state f s) =
-   globals_equiv st s"
-  by (simp add: globals_equiv_def idle_equiv_def)
 
 lemma (in is_extended') globals_equiv: "I (globals_equiv st)" by (rule lift_inv,simp)
 

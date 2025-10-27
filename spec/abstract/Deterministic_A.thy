@@ -27,7 +27,7 @@ The basic technique, and its motivation, are described in~\cite{Matichuk_Murray_
 
 Here, we define two such instantiations. The first yields a
 largely-deterministic specification by instantiating @{typ "'a"} with
-a record that includes concrete scheduler state and
+a record that includes
 information about sibling ordering in the capability derivation tree (CDT).
 We call the resulting
 specification the \emph{deterministic abstract specification} and it is
@@ -35,8 +35,8 @@ defined below in \autoref{s:det-spec}.
 
 The second instantiation uses the type @{typ unit} for @{typ 'a}, yielding
 a specification that is far more nondeterministic. In particular, the
-scheduling behaviour and the order in which capabilities are deleted during
-a \emph{revoke} system call both become completely nondeterministic.
+order in which capabilities are deleted during
+a \emph{revoke} system call becomes completely nondeterministic.
 We call this second instantiation the
 \emph{nondeterministic abstract specification} and it is defined below in
 \autoref{s:nondet-spec}.
@@ -45,8 +45,7 @@ We call this second instantiation the
 text \<open>Translate a state of type @{typ "'a state"} to one of type @{typ "'b state"}
   via a function @{term t} from @{typ "'a"} to @{typ "'b"}.
 \<close>
-definition trans_state :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a state \<Rightarrow> 'b state"
-where
+definition trans_state :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a state \<Rightarrow> 'b state" where
   "trans_state t s = abstract_state.extend (abstract_state.truncate s) (state.fields (t (exst s)))"
 
 (*<*)

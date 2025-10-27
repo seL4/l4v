@@ -3710,8 +3710,7 @@ proof -
     unfolding state_relation_def swp_cte_at
     apply (rule corres_underlying_decomposition[OF pspace_corres])
      apply (simp add: ghost_relation_of_heap)
-     apply (wp hoare_vcg_conj_lift mdb_wp rvk_wp list_wp updates abs_irq_together)
-    apply (wpsimp wp: hoare_vcg_conj_lift updates simp: swp_cte_at)
+     apply (wpsimp wp: hoare_vcg_conj_lift mdb_wp rvk_wp list_wp updates abs_irq_together)+
     apply (frule updated_relations)
       apply fastforce
      apply (fastforce simp: state_relation_def swp_cte_at)
@@ -3757,33 +3756,16 @@ lemma revokable_relation_simp:
       \<Longrightarrow> mdbRevocable node = is_original_cap s p"
   by (cases p, clarsimp simp: state_relation_def revokable_relation_def)
 
-lemma setCTE_gsUserPages[wp]:
-  "\<lbrace>\<lambda>s. P (gsUserPages s)\<rbrace> setCTE p v \<lbrace>\<lambda>rv s. P (gsUserPages s)\<rbrace>"
-  apply (simp add: setCTE_def setObject_def split_def)
-  apply (wp updateObject_cte_inv crunch_wps | simp)+
-  done
-
-lemma setCTE_gsCNodes[wp]:
-  "\<lbrace>\<lambda>s. P (gsCNodes s)\<rbrace> setCTE p v \<lbrace>\<lambda>rv s. P (gsCNodes s)\<rbrace>"
-  apply (simp add: setCTE_def setObject_def split_def)
-  apply (wp updateObject_cte_inv crunch_wps | simp)+
-  done
+crunch setCTE
+  for gsUserPages[wp]: "\<lambda>s. P (gsUserPages s)"
+  and gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
+  and domain_time[wp]: "\<lambda>s. P (ksDomainTime s)"
+  and work_units_completed[wp]: "\<lambda>s. P (ksWorkUnitsCompleted s)"
+  (simp: setObject_def wp: updateObject_cte_inv)
 
 lemma set_original_symb_exec_l':
   "corres_underlying {(s, s'). f (kheap s) s'} False nf' dc P P' (set_original p b) (return x)"
   by (simp add: corres_underlying_def return_def set_original_def in_monad Bex_def)
-
-lemma setCTE_domain_time[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace> setCTE p v \<lbrace>\<lambda>rv s. P (ksDomainTime s)\<rbrace>"
-  apply (simp add: setCTE_def setObject_def split_def)
-  apply (wp updateObject_cte_inv crunch_wps | simp)+
-  done
-
-lemma setCTE_work_units_completed[wp]:
-  "\<lbrace>\<lambda>s. P (ksWorkUnitsCompleted s)\<rbrace> setCTE p v \<lbrace>\<lambda>_ s. P (ksWorkUnitsCompleted s)\<rbrace>"
-  apply (simp add: setCTE_def setObject_def split_def)
-  apply (wp updateObject_cte_inv crunch_wps | simp)+
-  done
 
 lemma cte_map_nat_to_cref:
   "\<lbrakk> n < 2 ^ b; b < word_bits \<rbrakk> \<Longrightarrow>

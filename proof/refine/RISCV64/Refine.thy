@@ -572,11 +572,6 @@ lemma kernelEntry_invs':
                  hoare_vcg_disj_lift threadSet_schedulable'_fields_inv
       | wps)+
 
-lemma absKState_correct':
-  "\<lbrakk>einvs s; invs' s'; (s,s') \<in> state_relation\<rbrakk>
-   \<Longrightarrow> absKState s' = abs_state s"
-  by (rule absKState_correct)
-
 lemma ptable_lift_abs_state[simp]:
   "ptable_lift t (abs_state s) = ptable_lift t s"
   by (simp add: ptable_lift_def abs_state_def)
@@ -594,7 +589,7 @@ lemma ptable_rights_imp_UserData:
   shows "pointerInUserData y s' \<or> pointerInDeviceData y s'"
 proof -
   from invs invs' rel have [simp]: "absKState s' = abs_state s"
-    by - (rule absKState_correct', simp_all)
+    by - (rule absKState_correct, simp_all)
   from invs have valid: "valid_state s" by auto
   have "in_user_frame y s \<or> in_device_frame y s "
     by (rule ptable_rights_imp_frame[OF valid rights[simplified]

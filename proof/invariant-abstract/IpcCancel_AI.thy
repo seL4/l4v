@@ -28,7 +28,7 @@ lemma cancel_signal_simple:
   by (simp add: cancel_signal_def | wp)+
 
 crunch cancel_all_ipc
- for typ_at[wp]: "\<lambda>s. P (typ_at T p s)" (wp: crunch_wps mapM_x_wp)
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)" (wp: crunch_wps mapM_x_wp)
 
 crunch restart_thread_if_no_fault
   for valid_objs[wp]: valid_objs
@@ -1768,7 +1768,7 @@ lemma set_thread_state_not_live0:
   by (wpsimp simp: set_thread_state_def obj_at_def pred_tcb_at_def get_tcb_def wp: set_object_wp)
 
 crunch tcb_sched_action
- for obj_at[wp]: "\<lambda>s. P (obj_at Q p s)"
+  for obj_at[wp]: "\<lambda>s. P (obj_at Q p s)"
 
 lemma obj_at_bound_yt_tcb_at_eq[simp]:
   "obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> bound_yt_tcb_at ((=) (tcb_yield_to tcb)) t s) t s
@@ -2456,8 +2456,10 @@ lemma cancel_all_unlive_helper:
                simp: is_ep)
   apply (clarsimp simp: obj_at_def)
   done
+crunch possible_switch_to
+  for obj_at[wp]: "\<lambda>s. P (obj_at Q p s)"
 
-lemma cancel_all_ipc_unlive:
+lemma cancel_all_ipc_unlive[wp]:
   "\<lbrace>\<top>\<rbrace> cancel_all_ipc ptr \<lbrace>\<lambda> rv. obj_at (Not \<circ> live) ptr\<rbrace>"
   apply (simp add: cancel_all_ipc_def)
   apply (rule bind_wp [OF _ get_simple_ko_sp])

@@ -3368,13 +3368,14 @@ proof -
 
   have tcb_rel:
     "ctcb_relation (tcbDomain_update (\<lambda>_. d) makeObject) ?new_tcb"
-    unfolding ctcb_relation_def makeObject_tcb heap_updates_defs initContext_registers_def domrel
+    unfolding ctcb_relation_def makeObject_tcb heap_updates_defs initContext_registers_def
     apply (simp add: fbtcb minBound_word)
     apply (intro conjI)
           apply (simp add: cthread_state_relation_def thread_state_lift_def
-                           eval_nat_numeral ThreadState_Inactive_def)
+                           eval_nat_numeral ThreadState_defs)
          apply (clarsimp simp: ccontext_relation_def newContext_def2 carch_tcb_relation_def
-                               newArchTCB_def cregs_relation_def atcbContextGet_def)
+                               newArchTCB_def cregs_relation_def atcbContextGet_def
+                               index_foldr_update)
          apply (case_tac r; simp add: C_register_defs index_foldr_update
                                       atcbContext_def newArchTCB_def newContext_def
                                       initContext_def)
@@ -4014,7 +4015,7 @@ proof (intro impI allI)
     by (clarsimp dest!: is_aligned_weaken range_cover.aligned)
 
   (* This is a hack *)
-  have mko: "\<And>dev us d . makeObjectKO False us d (Inr object_type.SmallPageObject) = Some ko"
+  have mko: "\<And>dev us d. makeObjectKO False us d (Inr object_type.SmallPageObject) = Some ko"
     by (simp add: makeObjectKO_def ko_def)
 
   from sz have "3 \<le> sz" by (simp add: objBits_simps pageBits_def ko_def)
@@ -6231,22 +6232,20 @@ proof -
             apply (rule ccorres_symb_exec_r)
               apply (ccorres_remove_UNIV_guard)
               apply (simp add: hrs_htd_update)
-                apply (rule ccorres_pre_curDomain)
-              apply (ctac (c_lines 4) add: ccorres_placeNewObject_tcb[simplified])
+              apply (rule ccorres_pre_curDomain)
+              apply (ctac (c_lines 5) add: ccorres_placeNewObject_tcb[simplified])
                 apply simp
-                  apply (rule ccorres_symb_exec_r)
-                    apply (rule ccorres_return_C, simp, simp, simp)
-                   apply vcg
-                  apply (rule conseqPre, vcg, clarsimp)
-                 apply wp
+                apply (rule ccorres_symb_exec_r)
+                  apply (rule ccorres_return_C, simp, simp, simp)
+                 apply vcg
+                apply (rule conseqPre, vcg, clarsimp)
+               apply wp
               apply (vcg exspec=Arch_initContext_modifies)
              apply clarsimp
              apply vcg
             apply (rule conseqPre, vcg, clarsimp)
            apply (clarsimp simp: createObject_hs_preconds_def
                                  createObject_c_preconds_def)
-           apply (frule invs_pspace_aligned')
-           apply (frule invs_pspace_distinct')
 
            apply (simp add: getObjectSize_def objBits_simps word_bits_conv
                             apiGetObjectSize_def

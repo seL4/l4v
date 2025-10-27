@@ -22,12 +22,6 @@ locale BCorres2_AI =
     "\<And> a b.
       bcorres (make_arch_fault_msg a b :: 'a state \<Rightarrow> _)
               (make_arch_fault_msg a b)"
-  assumes arch_switch_to_thread_bcorres[wp]:
-    "\<And>t. bcorres (arch_switch_to_thread t :: 'a state \<Rightarrow> _)
-        (arch_switch_to_thread t)"
-  assumes arch_switch_to_idle_thread_bcorres[wp]:
-    "bcorres (arch_switch_to_idle_thread :: 'a state \<Rightarrow> _)
-        arch_switch_to_idle_thread"
 
 definition all_but_exst where
   "all_but_exst P \<equiv> (\<lambda>s. P (kheap s) (cdt s) (is_original_cap s)
@@ -49,7 +43,7 @@ lemma ef_mk_ef: "empty_fail f \<Longrightarrow> mk_ef (f s) = f s"
 lemma all_but_obvious:
   "all_but_exst (\<lambda>kheap cdt is_original_cap cur_thread idle_thread consumed_time cur_time cur_sc
        reprogram_timer scheduler_action domain_list domain_index cur_domain domain_time
-       ready_queues release_queue  machine_state interrupt_irq_node interrupt_states arch_state.
+       ready_queues release_queue machine_state interrupt_irq_node interrupt_states arch_state.
        x = \<lparr>kheap = kheap, cdt = cdt, is_original_cap = is_original_cap, cur_thread = cur_thread,
             idle_thread = idle_thread, consumed_time = consumed_time, cur_time = cur_time,
             cur_sc = cur_sc, reprogram_timer = reprogram_timer, scheduler_action = scheduler_action,
@@ -119,14 +113,13 @@ lemma dxo_ex: "((),x :: det_ext state) \<in> fst (do_extended_op f s) \<Longrigh
 locale is_extended' =
   fixes f :: "'a det_ext_monad"
   assumes a: "\<And>P. \<lbrace>all_but_exst P\<rbrace> f \<lbrace>\<lambda>_. all_but_exst P\<rbrace>"
+begin
 
-context is_extended' begin
-
-lemmas v = use_valid[OF _ a, OF _ all_but_obvious,simplified all_but_exst_def]
+lemmas all_but_exst_unchanged = use_valid[OF _ a, OF _ all_but_obvious,simplified all_but_exst_def]
 
 lemma ex_st:
   "(a,x :: det_ext state) \<in> fst (f s) \<Longrightarrow> \<exists>e :: det_ext. x = (trans_state (\<lambda>_. e) s)"
-  apply (drule v)
+  apply (drule all_but_exst_unchanged)
   apply (simp add: trans_state_update')
   apply (rule_tac x="exst x" in exI)
   apply (cases s)
@@ -227,10 +220,7 @@ context is_extended begin
 
 lemma in_f_exst:
   "(r, s') \<in> fst (f s) \<Longrightarrow> s\<lparr>exst := exst s'\<rparr> = s'"
-  apply (drule v)
-  apply (cases s)
-  apply simp
-  done
+  by (cases s) (fastforce dest: all_but_exst_unchanged)
 
 lemma dxo_eq[simp]:
   "do_extended_op f = f"
@@ -254,7 +244,7 @@ lemma all_but_exst_update[simp]:
   done
 
 crunch cap_move_ext
- for all_but_exst[wp]: "all_but_exst P"
+  for all_but_exst[wp]: "all_but_exst P"
   (simp: Let_def ignore_del: cap_move_ext)
 
 crunch cap_move_ext
@@ -276,19 +266,6 @@ lemma alternative_first:"x \<in> fst (f s) \<Longrightarrow> x \<in> fst ((f \<s
 lemma alternative_second:"x \<in> fst (g s) \<Longrightarrow> x \<in> fst ((f \<sqinter> g) s)"
   by (simp add: alternative_def)
 
-lemma trans_state_twice[simp]: "trans_state (\<lambda>_. e) (trans_state f s) = trans_state (\<lambda>_. e) s"
-  by (rule trans_state_update'')
-
-(* don't think this is used anywhere
-lemma guarded_sub_switch: "((),x) \<in> fst (guarded_switch_to word s) \<Longrightarrow>
-       \<exists>s'. ((),x) \<in> fst (switch_to_thread word s')
-       \<and> (True, s') \<in> fst (is_schedulable word (in_release_queue word s) s)"
-  apply (clarsimp simp add: guarded_switch_to_def bind_def
-                            get_thread_state_def get_sched_context_def
-                            thread_get_def get_object_def
-                            in_monad)
-  *)
-
 lemma get_before_assert_opt:
   "do s \<leftarrow> assert_opt x; s' \<leftarrow> get; f s s' od
     = do s' \<leftarrow> get; s \<leftarrow> assert_opt x; f s s' od"
@@ -300,8 +277,11 @@ lemma get_outside_alternative:
   "alternative (get >>= f) g
     = do s \<leftarrow> get; alternative (f s) g od"
   by (simp add: alternative_def exec_get fun_eq_iff)
-(*
-lemmas schedule_unfold_all = schedule_def allActiveTCBs_def
-                        get_thread_state_def thread_get_def getActiveTCB_def
-*)
+
+(* FIXME move if useful *)
+lemma if_s_bcorres_underlying[wp]:
+  "(P \<Longrightarrow> s_bcorres_underlying t f f' s) \<Longrightarrow> (\<not>P \<Longrightarrow> s_bcorres_underlying t g g' s)
+  \<Longrightarrow> s_bcorres_underlying t (if P then f else g) (if P then f' else g') s"
+  by (simp add: return_s_bcorres_underlying)
+
 end

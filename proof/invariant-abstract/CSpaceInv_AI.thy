@@ -337,16 +337,7 @@ lemma gbyt_bound_tcb:
   apply wp
   apply (clarsimp simp: pred_tcb_at_def)
   done
-(*
-lemma allActiveTCBs_valid_state:
-  "\<lbrace>valid_state\<rbrace> allActiveTCBs \<lbrace>\<lambda>R s. valid_state s \<and> (\<forall>t \<in> R. st_tcb_at runnable t s) \<rbrace>"
-  apply (simp add: allActiveTCBs_def, wp)
-  apply (simp add: getActiveTCB_def pred_tcb_at_def obj_at_def get_tcb_def
-            split: option.splits if_split_asm Structures_A.kernel_object.splits)
-  apply (clarsimp simp: is_schedulable_opt_def get_tcb_rev
-                 split: option.splits)
-  done
-*)
+
 definition
   cap_master_cap :: "cap \<Rightarrow> cap"
 where
@@ -1670,10 +1661,6 @@ lemma cap_insert_typ_at [wp]:
          |simp split del: if_split)+
   done
 
-lemma cur_mdb [simp]:
-  "cur_tcb (cdt_update f s) = cur_tcb s"
-  by (simp add: cur_tcb_def)
-
 lemma cur_sc_tcb_mdb [simp]:
   "cur_sc_tcb (cdt_update f s) = cur_sc_tcb s"
   by (simp add: cur_sc_tcb_def)
@@ -1780,10 +1767,6 @@ lemma valid_cap_free_index_update[simp]:
   apply (clarsimp simp: valid_cap_def cap_aligned_def valid_untyped_def max_free_index_def)
   done
 
-
-lemma ex_nonz_cap_to_more_update[iff]:
-  "ex_nonz_cap_to w (trans_state f s) = ex_nonz_cap_to w s"
-   by (simp add: ex_nonz_cap_to_def)
 
 lemma cap_insert_ex_cap:
   "\<lbrace>ex_nonz_cap_to p\<rbrace>

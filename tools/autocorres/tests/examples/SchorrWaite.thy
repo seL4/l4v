@@ -198,13 +198,12 @@ lemma rel_upd1: "(a,b) \<notin> rel (r(q:=t)) \<Longrightarrow> (a,b) \<in> rel 
 lemma rel_upd2: "(a,b)  \<notin> rel r \<Longrightarrow> (a,b) \<in> rel (r(q:=t)) \<Longrightarrow> a=q"
   by (rule classical) (simp add:rel_defs)
 
+no_notation disj (infixr \<open>|\<close> 30) \<comment> \<open>Avoid syntax conflict with restr\<close>
+
 definition \<comment> \<open>Restriction of a relation\<close>
   restr :: "('a ptr \<times> 'a ptr) set \<Rightarrow> ('a ptr \<Rightarrow> bool) \<Rightarrow> ('a ptr \<times> 'a ptr) set"
-           ("(_/ | _)" [50, 51] 50)
-  where
-  "restr r m = {(x,y). (x,y) \<in> r \<and> \<not> m x}"
-
-no_notation disj (infixr "|" 30) \<comment> \<open>Avoid syntax conflict with restr\<close>
+    (\<open>(\<open>notation=\<open>infix restr\<close>\<close>_/ | _)\<close> [50, 51] 50)
+  where "r | m = {(x,y). (x,y) \<in> r \<and> \<not> m x}"
 
 text \<open>Rewrite rules for the restriction of a relation\<close>
 

@@ -341,27 +341,8 @@ locale EmptyFail_AI_schedule = EmptyFail_AI_cap_revoke state_ext_t
     "empty_fail (switch_to_idle_thread :: (unit, 'state_ext) s_monad)"
   assumes get_thread_state_empty_fail[wp]:
     "empty_fail (get_thread_state ref :: (thread_state, 'state_ext) s_monad)"
-  assumes switch_to_thread_empty_fail[wp]:
-    "empty_fail (switch_to_thread thread :: (unit, 'state_ext) s_monad)"
-  assumes choose_thread_empty_fail[wp]:
-    "empty_fail (choose_thread :: (unit, 'state_ext) s_monad)"
-
-(*
-locale EmptyFail_AI_schedule_unit = EmptyFail_AI_schedule "TYPE(unit)"
-
-context EmptyFail_AI_schedule_unit begin
-
-lemma schedule_empty_fail[wp]:
-  "empty_fail (schedule :: (unit,unit) s_monad)"
-  apply (simp add: schedule_def)
-  apply (wp disjI2 sc_and_timer_empty_fail)
-  done
-
-end
-*)
-crunch
-  set_scheduler_action, next_domain, reschedule_required, get_sc_refill_capacity, check_domain_time
- for (empty_fail) empty_fail[wp]
+  assumes arch_switch_to_thread_empty_fail[wp]:
+    "empty_fail (arch_switch_to_thread t :: (unit, 'state_ext) s_monad)"
 
 crunch
   possible_switch_to, awaken, schedule_switch_thread_fastfail
@@ -371,8 +352,19 @@ crunch
 crunch sc_and_timer
  for (empty_fail) empty_fail[wp, intro!, simp]
   (wp: empty_fail_setDeadline empty_fail_whileLoop simp: Let_def)
-
 context EmptyFail_AI_schedule begin
+
+lemma switch_to_thread_empty_fail[intro!, wp, simp]:
+  "empty_fail (switch_to_thread thread :: (unit,'state_ext) s_monad)"
+  by (wpsimp simp: switch_to_thread_def)
+
+lemma guarded_switch_to_empty_fail[intro!, wp, simp]:
+  "empty_fail (guarded_switch_to thread :: (unit,'state_ext) s_monad)"
+  by (wpsimp simp: guarded_switch_to_def)
+
+lemma choose_thread_empty_fail[intro!, wp, simp]:
+  "empty_fail (choose_thread :: (unit,'state_ext) s_monad)"
+  by (wpsimp simp: choose_thread_def)
 
 lemma schedule_choose_new_thread_empty_fail[intro!, wp, simp]:
   "empty_fail (schedule_choose_new_thread :: (unit,'state_ext) s_monad)"
@@ -411,24 +403,10 @@ locale EmptyFail_AI_call_kernel = EmptyFail_AI_schedule state_ext_t
 begin
 
 lemma call_kernel_empty_fail: "empty_fail (call_kernel a :: (unit,'state_ext) s_monad)"
-  apply (simp add: call_kernel_def preemption_path_def check_domain_time_def)
+  apply (simp add: call_kernel_def)
   apply (wpsimp simp: get_sc_active_def)
   done
 
 end
-
-(*
-locale EmptyFail_AI_call_kernel_unit
-  = EmptyFail_AI_schedule_unit
-  + EmptyFail_AI_call_kernel "TYPE(unit)"
-context EmptyFail_AI_call_kernel_unit begin
-
-lemma call_kernel_empty_fail': "empty_fail (call_kernel a :: (unit,unit) s_monad)"
-  apply (simp add: call_kernel_def)
-  apply (wp | simp)+
-  done
-
-end
-*)
 
 end

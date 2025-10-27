@@ -18,10 +18,6 @@ lemma bit_eq_iff:
 
 end
 
-notation (output)  Generic_set_bit.set_bit (\<open>Generic'_set'_bit.set'_bit\<close>)
-
-hide_const (open) Generic_set_bit.set_bit
-
 no_notation bit  (infixl \<open>!!\<close> 100)
 
 (*>*)
@@ -240,8 +236,7 @@ text \<open>
 
       \<^descr>[\<^theory>\<open>Word_Lib.Least_significant_bit\<close>]
 
-        The least significant bit as an alias:
-        @{thm [mode=iff] lsb_odd [where ?'a = int, no_vars]}
+        The least significant bit as abbreviation \<^abbrev>\<open>lsb\<close>.
 
       \<^descr>[\<^theory>\<open>Word_Lib.Most_significant_bit\<close>]
 
@@ -353,7 +348,7 @@ text \<open>
 
   \<^descr>[\<^theory>\<open>Word_Lib.Generic_set_bit\<close>]
 
-    Kind of an alias: @{thm set_bit_eq [no_vars]}
+    A variant of a singleton bit operation: @{thm Generic_set_bit.set_bit_eq [no_vars]}
 
   \<^descr>[\<^theory>\<open>Word_Lib.Typedef_Morphisms\<close>]
 
@@ -393,12 +388,28 @@ text \<open>
 section \<open>Changelog\<close>
 
 text \<open>
+  \<^descr>[Changes since AFP 2025] ~
+
+    \<^item> \<^const>\<open>Generic_set_bit.set_bit\<close> is now a regular derived operation
+      without any special treatment.
+
+  \<^descr>[Changes since AFP 2024] ~
+
+    \<^item> Theory \<^text>\<open>Strict_part_mono\<close> is not part of text\<open>Word_Lib_Sumo\<close> any longer.
+
+    \<^item> Session \<^text>\<open>Native_Word\<close>: Fact aliases \<^text>\<open>word_sdiv_def\<close> and \<^text>\<open>word_smod_def\<close>
+      are gone, use \<^text>\<open>sdiv_word_def\<close> and \<^text>\<open>smod_word_def\<close> instead.
+
+    \<^item> Session \<^text>\<open>Native_Word\<close>: Removed abbreviation \<^text>\<open>word_of_integer\<close>.
+
   \<^descr>[Changes since AFP 2022] ~
 
     \<^item> Theory \<^text>\<open>Word_Lib.Ancient_Numeral\<close> has been removed from session.
 
     \<^item> Bit comprehension syntax for \<^typ>\<open>int\<close> moved to separate theory
       \<^theory>\<open>Word_Lib.Bit_Comprehension_Int\<close>.
+
+    \<^item> Operation \<^abbrev>\<open>lsb\<close> turned into abbreviation or \<^text>\<open>bit _ 0\<close>.
 
   \<^descr>[Changes since AFP 2021] ~
 

@@ -300,7 +300,7 @@ lemma len_the_nat_to_bl [simp]:
   apply (clarsimp simp: the_nat_to_bl_def nat_to_bl_def)
   apply safe
    apply (metis le_def mod_less_divisor nat_zero_less_power_iff zero_less_numeral)
-  apply (clarsimp simp: len_bin_to_bl_aux not_le)
+  apply (clarsimp simp: size_bin_to_bl_aux not_le)
   done
 
 lemma tcb_cnode_index_nat_to_bl [simp]:
@@ -591,14 +591,10 @@ where
      tcb_fault         = None,
      tcb_bound_notification     = None,
      tcb_mcpriority    = Low_mcp,
+     tcb_priority      = Low_prio,
+     tcb_time_slice    = Low_time_slice,
+     tcb_domain        = Low_domain,
      tcb_arch = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
-
-definition
-  Low_etcb :: etcb
-where
-  "Low_etcb \<equiv> \<lparr>tcb_priority   = Low_prio,
-               tcb_time_slice = Low_time_slice,
-               tcb_domain     = Low_domain\<rparr>"
 
 
 text \<open>High's tcb\<close>
@@ -620,14 +616,10 @@ where
      tcb_fault         = None,
      tcb_bound_notification     = None,
      tcb_mcpriority    = High_mcp,
+     tcb_priority      = High_prio,
+     tcb_time_slice    = High_time_slice,
+     tcb_domain        = High_domain,
      tcb_arch = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
-
-definition
-  High_etcb :: etcb
-where
-  "High_etcb \<equiv> \<lparr>tcb_priority   = High_prio,
-                tcb_time_slice = High_time_slice,
-                tcb_domain     = High_domain\<rparr>"
 
 
 text \<open>idle's tcb\<close>
@@ -648,6 +640,9 @@ where
      tcb_fault         = None,
      tcb_bound_notification     = None,
      tcb_mcpriority    = default_priority,
+     tcb_priority      = default_priority,
+     tcb_time_slice    = timeSlice,
+     tcb_domain        = default_domain,
      tcb_arch = \<lparr>tcb_context = empty_context\<rparr>\<rparr>"
 
 
@@ -820,19 +815,7 @@ lemmas kh0_obj_def =
 
 definition exst0 :: "det_ext" where
   "exst0 \<equiv> \<lparr>work_units_completed_internal = undefined,
-             scheduler_action_internal = resume_cur_thread,
-             ekheap_internal = [Low_tcb_ptr  \<mapsto> Low_etcb,
-                                High_tcb_ptr \<mapsto> High_etcb,
-                                idle_tcb_ptr \<mapsto> default_etcb],
-             domain_list_internal = [(0, 10), (1, 10)],
-             domain_index_internal = 0,
-             cur_domain_internal = 0,
-             domain_time_internal = 5,
-             ready_queues_internal = (const (const [])),
              cdt_list_internal = const []\<rparr>"
-
-lemmas ekh0_obj_def =
-  Low_etcb_def High_etcb_def default_etcb_def
 
 definition machine_state0 :: "machine_state" where
   "machine_state0 \<equiv> \<lparr>irq_masks = (\<lambda>irq. if irq = timer_irq then False else True),
@@ -860,6 +843,12 @@ where
                                     (High_tcb_ptr, tcb_cnode_index 2) := True),
     cur_thread = Low_tcb_ptr,
     idle_thread = idle_tcb_ptr,
+    scheduler_action = resume_cur_thread,
+    domain_list = [(0, 10), (1, 10)],
+    domain_index = 0,
+    cur_domain = 0,
+    domain_time = 5,
+    ready_queues = (const (const [])),
     machine_state = machine_state0,
     interrupt_irq_node = (\<lambda>irq. init_irq_node_ptr + (ucast irq << cte_level_bits)),
     interrupt_states = (\<lambda>_. irq_state.IRQInactive) (timer_irq := irq_state.IRQTimer),
@@ -1022,9 +1011,9 @@ lemma domains_of_state_s0[simp]:
    apply(rule subsetI)
    apply clarsimp
    apply (erule domains_of_state_aux.cases)
-   apply (clarsimp simp: s0_internal_def exst0_def ekh0_obj_def split: if_split_asm)
+   apply (clarsimp simp: s0_internal_def etcbs_of'_def kh0_def kh0_obj_def split: if_split_asm)
   apply clarsimp
-  apply (force simp: s0_internal_def exst0_def ekh0_obj_def intro: domains_of_state_aux.domtcbs)+
+  apply (force simp: s0_internal_def etcbs_of'_def kh0_def kh0_obj_def intro: domains_of_state_aux.domtcbs)+
   done
 
 lemma Sys1_pas_refined:
@@ -1760,17 +1749,18 @@ lemma valid_sched_s0[simp]:
   "valid_sched s0_internal"
   apply (simp add: valid_sched_def s0_internal_def exst0_def)
   apply (intro conjI)
-        apply (clarsimp simp: valid_etcbs_def s0_ptr_defs kh0_def kh0_obj_def is_etcb_at'_def
+        apply (clarsimp simp: s0_ptr_defs kh0_def kh0_obj_def is_etcb_at'_def
                               st_tcb_at_kh_def obj_at_kh_def obj_at_def)
        apply (clarsimp simp: const_def)
       apply (clarsimp simp: const_def)
      apply (clarsimp simp: valid_sched_action_def is_activatable_def st_tcb_at_kh_def
                            obj_at_kh_def obj_at_def kh0_def kh0_obj_def s0_ptr_defs)
-    apply (clarsimp simp: ct_in_cur_domain_def in_cur_domain_def etcb_at'_def ekh0_obj_def
-                          s0_ptr_defs)
+    apply (clarsimp simp: ct_in_cur_domain_def in_cur_domain_def etcb_at'_def etcbs_of'_def kh0_def
+                          kh0_obj_def s0_ptr_defs)
    apply (clarsimp simp: const_def valid_blocked_def st_tcb_at_kh_def obj_at_kh_def obj_at_def
                          kh0_def kh0_obj_def split: if_split_asm)
-  apply (clarsimp simp: valid_idle_etcb_def etcb_at'_def ekh0_obj_def s0_ptr_defs idle_thread_ptr_def)
+  apply (clarsimp simp: valid_idle_etcb_def etcb_at'_def etcbs_of'_def kh0_def kh0_obj_def s0_ptr_defs
+                        idle_thread_ptr_def)
   done
 
 lemma respects_device_trivial:
