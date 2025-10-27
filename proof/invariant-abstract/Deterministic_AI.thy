@@ -4041,14 +4041,8 @@ lemma invoke_cnode_valid_list[wp]:
 
 end
 
-lemma (in Deterministic_AI_1) set_priority_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> set_priority a b \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: set_priority_def reorder_ntfn_def reorder_ep_def thread_set_priority_def thread_set_def
-               wp: get_simple_ko_wp hoare_drop_imp hoare_vcg_all_lift)
-
-lemma set_mcpriority_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> set_mcpriority a b \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: set_mcpriority_def)
+crunch set_priority,set_mcpriority
+  for valid_list[wp]: "valid_list"
 
 crunch set_priority,set_mcpriority
   for (empty_fail) empty_fail[wp]

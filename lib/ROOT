@@ -136,7 +136,7 @@ session SepTactics (lib) in Hoare_Sep_Tactics = Sep_Algebra +
   theories
     Hoare_Sep_Tactics
 
-session Concurrency (lib) in concurrency = HOL +
+session Concurrency (lib) in concurrency = Word_Lib +
   sessions
     Lib
   directories

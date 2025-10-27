@@ -20,7 +20,7 @@ crunch
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply,
   arch_invoke_irq_control, handle_vm_fault, arch_get_sanitise_register_info,
-  prepare_thread_delete, handle_hypervisor_fault, make_arch_fault_msg,init_arch_objects,
+  prepare_thread_delete, handle_hypervisor_fault, make_arch_fault_msg, init_arch_objects,
   arch_post_modify_registers, arch_post_cap_deletion, arch_invoke_irq_handler
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps)
@@ -57,7 +57,7 @@ crunch arch_perform_invocation, arch_mask_irq_signal
   (wp: crunch_wps simp: crunch_simps)
 
 crunch arch_perform_invocation
- for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
+  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps check_cap_inv)
 
 crunch handle_reserved_irq

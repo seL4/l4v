@@ -1762,37 +1762,30 @@ proof -
     done
 qed
 
-definition pspace_relations where
-  "pspace_relations ekh kh kh' \<equiv> pspace_relation kh kh' \<and> ekheap_relation ekh kh'"
-
 lemma set_cap_not_quite_corres_prequel:
   assumes cr:
-  "pspace_relations (ekheap s) (kheap s) (ksPSpace s')"
+  "pspace_relation (kheap s) (ksPSpace s')"
   "(x,t') \<in> fst (setCTE p' c' s')"
   "valid_objs s" "pspace_aligned s" "pspace_distinct s" "cte_at p s"
   "pspace_aligned' s'" "pspace_distinct' s'"
   assumes c: "cap_relation c (cteCap c')"
   assumes p: "p' = cte_map p"
   shows "\<exists>t. ((),t) \<in> fst (set_cap c p s) \<and>
-             pspace_relations (ekheap t) (kheap t) (ksPSpace t')"
+             pspace_relation (kheap t) (ksPSpace t')"
   using cr
   apply (clarsimp simp: setCTE_def setObject_def in_monad split_def)
   apply (drule(1) updateObject_cte_is_tcb_or_cte[OF _ refl, rotated])
   apply (elim disjE exE conjE)
-   apply (clarsimp simp: lookupAround2_char1 pspace_relations_def)
+   apply (clarsimp simp: lookupAround2_char1)
    apply (frule(5) cte_map_pulls_tcb_to_abstract[OF p])
     apply (simp add: domI)
    apply (frule tcb_cases_related2)
    apply (clarsimp simp: set_cap_def2 split_def bind_def get_object_def
                          simpler_gets_def assert_def fail_def return_def
                          set_object_def get_def put_def)
-   apply (rule conjI)
-    apply (erule(2) pspace_relation_update_tcbs)
-    apply (simp add: c)
-   apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
-   apply (drule bspec, erule domI)
-   apply (clarsimp simp: etcb_relation_def tcb_cte_cases_def split: if_split_asm)
-  apply (clarsimp simp: pspace_relations_def)
+   apply (erule(2) pspace_relation_update_tcbs)
+   apply (simp add: c)
+  apply clarsimp
   apply (frule(5) cte_map_pulls_cte_to_abstract[OF p])
   apply (clarsimp simp: set_cap_def split_def bind_def get_object_def
                         simpler_gets_def assert_def fail_def return_def
@@ -1800,24 +1793,20 @@ lemma set_cap_not_quite_corres_prequel:
   apply (rule conjI)
    apply (erule(1) valid_objsE)
    apply (clarsimp simp: valid_obj_def valid_cs_def valid_cs_size_def exI)
-   apply (rule conjI)
-    apply (erule(1) pspace_relation_update_ctes[where cap=c])
-     apply clarsimp
-     apply (intro conjI impI)
-      apply (rule ext, clarsimp simp add: domI p)
-      apply (drule cte_map_inj_eq [OF _ _ cr(6) cr(3-5)])
-       apply (simp add: cte_at_cases domI)
-      apply (simp add: prod_eq_iff)
-     apply (insert p)[1]
-     apply (clarsimp split: option.split Structures_A.kernel_object.split
-                    intro!: ext)
+   apply (erule(1) pspace_relation_update_ctes[where cap=c])
+    apply clarsimp
+    apply (intro conjI impI)
+     apply (rule ext, clarsimp simp add: domI p)
      apply (drule cte_map_inj_eq [OF _ _ cr(6) cr(3-5)])
-      apply (simp add: cte_at_cases domI well_formed_cnode_invsI[OF cr(3)])
-     apply clarsimp
-    apply (simp add: c)
-   apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
-   apply (drule bspec, erule domI)
-   apply (clarsimp simp: etcb_relation_def tcb_cte_cases_def split: if_split_asm)
+      apply (simp add: cte_at_cases domI)
+     apply (simp add: prod_eq_iff)
+    apply (insert p)[1]
+    apply (clarsimp split: option.split Structures_A.kernel_object.split
+                   intro!: ext)
+    apply (drule cte_map_inj_eq [OF _ _ cr(6) cr(3-5)])
+     apply (simp add: cte_at_cases domI well_formed_cnode_invsI[OF cr(3)])
+    apply clarsimp
+   apply (simp add: c)
   apply (simp add: well_formed_cnode_invsI wf_cs_upd)
   done
 
@@ -1830,7 +1819,7 @@ lemma setCTE_pspace_only:
 
 lemma set_cap_not_quite_corres:
   assumes cr:
-  "pspace_relations (ekheap s) (kheap s) (ksPSpace s')"
+  "pspace_relation (kheap s) (ksPSpace s')"
   "cur_thread s = ksCurThread s'"
   "idle_thread s = ksIdleThread s'"
   "machine_state s = ksMachineState s'"
@@ -1847,10 +1836,9 @@ lemma set_cap_not_quite_corres:
   assumes c: "cap_relation c c'"
   assumes p: "p' = cte_map p"
   shows "\<exists>t. ((),t) \<in> fst (set_cap c p s) \<and>
-             pspace_relations (ekheap t) (kheap t) (ksPSpace t') \<and>
+             pspace_relation (kheap t) (ksPSpace t') \<and>
              cdt t = cdt s \<and>
              cdt_list t = cdt_list s \<and>
-             ekheap t = ekheap s \<and>
              scheduler_action t = scheduler_action s \<and>
              ready_queues t = ready_queues s \<and>
              is_original_cap t = is_original_cap s \<and>
@@ -2478,10 +2466,6 @@ lemma capClass_ztc_relation:
        cap_relation c c' \<rbrakk> \<Longrightarrow> capClass c' = PhysicalClass"
   by (auto simp: is_cap_simps)
 
-lemma pspace_relationsD:
-  "\<lbrakk>pspace_relation kh kh'; ekheap_relation ekh kh'\<rbrakk> \<Longrightarrow> pspace_relations ekh kh kh'"
-  by (simp add: pspace_relations_def)
-
 lemma updateCap_corres:
   "\<lbrakk>cap_relation cap cap';
     is_zombie cap \<or> is_cnode_cap cap \<or> is_thread_cap cap \<rbrakk>
@@ -2503,14 +2487,13 @@ lemma updateCap_corres:
     apply fastforce
    apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (clarsimp simp add: state_relation_def)
-  apply (drule(1) pspace_relationsD)
   apply (frule (3) set_cap_not_quite_corres; fastforce?)
    apply (erule cte_wp_at_weakenE, rule TrueI)
   apply clarsimp
   apply (rule bexI)
    prefer 2
    apply simp
-  apply (clarsimp simp: in_set_cap_cte_at_swp pspace_relations_def)
+  apply (clarsimp simp: in_set_cap_cte_at_swp)
   apply (drule updateCap_stuff)
   apply simp
   apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
@@ -2632,24 +2615,6 @@ lemma updateMDB_pspace_relation:
   apply fastforce
   done
 
-lemma updateMDB_ekheap_relation:
-  assumes "(x, s'') \<in> fst (updateMDB p f s')"
-  assumes "ekheap_relation (ekheap s) (ksPSpace s')"
-  shows "ekheap_relation (ekheap s) (ksPSpace s'')" using assms
-  apply (clarsimp simp: updateMDB_def Let_def setCTE_def setObject_def in_monad ekheap_relation_def etcb_relation_def split_def split: if_split_asm)
-  apply (drule(1) updateObject_cte_is_tcb_or_cte[OF _ refl, rotated])
-  apply (drule_tac P="(=) s'" in use_valid [OF _ getCTE_sp], rule refl)
-  apply (drule bspec, erule domI)
-  apply (clarsimp simp: tcb_cte_cases_def lookupAround2_char1 split: if_split_asm)
-  done
-
-lemma updateMDB_pspace_relations:
-  assumes "(x, s'') \<in> fst (updateMDB p f s')"
-  assumes "pspace_relations (ekheap s) (kheap s) (ksPSpace s')"
-  assumes "pspace_aligned' s'" "pspace_distinct' s'"
-  shows "pspace_relations (ekheap s) (kheap s) (ksPSpace s'')" using assms
-  by (simp add: pspace_relations_def updateMDB_pspace_relation updateMDB_ekheap_relation)
-
 lemma updateMDB_ctes_of:
   assumes "(x, s') \<in> fst (updateMDB p f s)"
   assumes "no_0 (ctes_of s)"
@@ -2694,7 +2659,7 @@ crunch updateMDB
 
 lemma updateMDB_the_lot:
   assumes "(x, s'') \<in> fst (updateMDB p f s')"
-  assumes "pspace_relations (ekheap s) (kheap s) (ksPSpace s')"
+  assumes "pspace_relation (kheap s) (ksPSpace s')"
   assumes "pspace_aligned' s'" "pspace_distinct' s'" "no_0 (ctes_of s')"
   shows "ctes_of s'' = modify_map (ctes_of s') p (cteMDBNode_update f) \<and>
          ksMachineState s'' = ksMachineState s' \<and>
@@ -2707,7 +2672,7 @@ lemma updateMDB_the_lot:
          ksArchState s'' = ksArchState s' \<and>
          gsUserPages s'' = gsUserPages s' \<and>
          gsCNodes s'' = gsCNodes s' \<and>
-         pspace_relations (ekheap s) (kheap s) (ksPSpace s'') \<and>
+         pspace_relation (kheap s) (ksPSpace s'') \<and>
          pspace_aligned' s'' \<and> pspace_distinct' s'' \<and>
          no_0 (ctes_of s'') \<and>
          ksDomScheduleIdx s'' = ksDomScheduleIdx s' \<and>
@@ -2719,7 +2684,7 @@ lemma updateMDB_the_lot:
          (\<forall>domain priority.
             (inQ domain priority |< tcbs_of' s'') = (inQ domain priority |< tcbs_of' s'))"
 using assms
-  apply (simp add: updateMDB_eqs updateMDB_pspace_relations split del: if_split)
+  apply (simp add: updateMDB_eqs updateMDB_pspace_relation split del: if_split)
   apply (frule (1) updateMDB_ctes_of)
   apply clarsimp
   apply (rule conjI)
@@ -3936,7 +3901,6 @@ lemma setCTE_UntypedCap_corres:
    apply (clarsimp simp: cte_wp_at_ctes_of)
   apply clarsimp
   apply (clarsimp simp add: state_relation_def split_def)
-  apply (drule (1) pspace_relationsD)
   apply (frule_tac c = "cap.UntypedCap dev r bits idx"
                 in set_cap_not_quite_corres_prequel)
          apply assumption+
@@ -3947,8 +3911,6 @@ lemma setCTE_UntypedCap_corres:
   apply (rule bexI)
    prefer 2
    apply assumption
-  apply (clarsimp simp: pspace_relations_def)
-  apply (subst conj_assoc[symmetric])
   apply clarsimp
   apply (rule conjI)
    apply (frule setCTE_pspace_only)
@@ -3960,7 +3922,7 @@ lemma setCTE_UntypedCap_corres:
    apply (rule use_valid[OF _ setCTE_tcbSchedNexts_of], assumption)
    apply (rule use_valid[OF _ setCTE_ksReadyQueues], assumption)
    apply (rule use_valid[OF _ setCTE_inQ_opt_pred], assumption)
-   apply (rule use_valid[OF _ set_cap_exst], assumption)
+   apply (rule use_valid[OF _ set_cap_rqueues], assumption)
    apply clarsimp
   apply (rule conjI)
    apply (frule setCTE_pspace_only)
@@ -5221,8 +5183,8 @@ crunch set_untyped_cap_as_full
 
 lemma updateMDB_the_lot':
   assumes "(x, s'') \<in> fst (updateMDB p f s')"
-  assumes "pspace_relations (ekheap sa) (kheap s) (ksPSpace s')"
-  assumes "pspace_aligned' s'" "pspace_distinct' s'" "no_0 (ctes_of s')" "ekheap s = ekheap sa"
+  assumes "pspace_relation (kheap s) (ksPSpace s')"
+  assumes "pspace_aligned' s'" "pspace_distinct' s'" "no_0 (ctes_of s')"
   shows "ctes_of s'' = modify_map (ctes_of s') p (cteMDBNode_update f) \<and>
          ksMachineState s'' = ksMachineState s' \<and>
          ksWorkUnitsCompleted s'' = ksWorkUnitsCompleted s' \<and>
@@ -5234,7 +5196,7 @@ lemma updateMDB_the_lot':
          ksArchState s'' = ksArchState s' \<and>
          gsUserPages s'' = gsUserPages s' \<and>
          gsCNodes s'' = gsCNodes s' \<and>
-         pspace_relations (ekheap s) (kheap s) (ksPSpace s'') \<and>
+         pspace_relation (kheap s) (ksPSpace s'') \<and>
          pspace_aligned' s'' \<and> pspace_distinct' s'' \<and>
          no_0 (ctes_of s'') \<and>
          ksDomScheduleIdx s'' = ksDomScheduleIdx s' \<and>
@@ -5247,7 +5209,7 @@ lemma updateMDB_the_lot':
             (inQ domain priority |< tcbs_of' s'') = (inQ domain priority |< tcbs_of' s'))"
   apply (rule updateMDB_the_lot)
       using assms
-      apply (fastforce simp: pspace_relations_def)+
+      apply fastforce+
    done
 
 lemma cte_map_inj_eq':
@@ -5324,7 +5286,6 @@ lemma cteInsert_corres:
                apply (simp+)[3]
             apply (clarsimp simp: corres_underlying_def state_relation_def
                                   in_monad valid_mdb'_def valid_mdb_ctes_def)
-            apply (drule (1) pspace_relationsD)
             apply (drule (18) set_cap_not_quite_corres)
              apply (rule refl)
             apply (elim conjE exE)
@@ -5363,7 +5324,6 @@ lemma cteInsert_corres:
             apply (thin_tac "ksCurThread t = p" for p t)+
             apply (thin_tac "ksIdleThread t = p" for p t)+
             apply (thin_tac "ksSchedulerAction t = p" for p t)+
-            apply (clarsimp simp: pspace_relations_def)
             apply (rule conjI)
              subgoal by (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
             apply (thin_tac "gsCNodes t = p" for t p)+
@@ -5385,7 +5345,6 @@ lemma cteInsert_corres:
             apply (thin_tac "ksDomainTime t = p" for t p)+
             apply (thin_tac "ksDomSchedule t = p" for t p)+
             apply (thin_tac "ctes_of t = p" for t p)+
-            apply (thin_tac "ekheap_relation t p" for t p)+
             apply (thin_tac "pspace_relation t p" for t p)+
             apply (thin_tac "interrupt_state_relation s t p" for s t p)+
             apply (thin_tac "sched_act_relation t p" for t p)+
@@ -6818,7 +6777,6 @@ lemma cteSwap_corres:
   apply (clarsimp simp: corres_underlying_def in_monad
                         state_relation_def)
   apply (clarsimp simp: valid_mdb'_def)
-  apply (drule(1) pspace_relationsD)
   apply (drule (12) set_cap_not_quite_corres)
       apply (erule cte_wp_at_weakenE, rule TrueI)
      apply assumption+
@@ -6854,20 +6812,19 @@ lemma cteSwap_corres:
   apply (simp cong: option.case_cong)
   apply (drule updateCap_stuff, elim conjE, erule(1) impE)
   apply (drule (2) updateMDB_the_lot')
-     apply (erule (1) impE, assumption)
-    apply (fastforce simp only: no_0_modify_map)
-   apply assumption
+    apply (erule (1) impE, assumption)
+   apply (fastforce simp only: no_0_modify_map)
   apply (elim conjE TrueE, simp only:)
-  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
+  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map)
   apply (drule in_getCTE, elim conjE, simp only:)
-  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
+  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map)
   apply (elim conjE TrueE, simp only:)
-  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
+  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map)
   apply (elim conjE TrueE, simp only:)
-  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
+  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map)
   apply (elim conjE TrueE, simp only:)
-  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
-  apply (simp only: pspace_relations_def refl)
+  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map)
+  apply (simp only: refl)
   apply (rule conjI, rule TrueI)+
   apply (thin_tac "ksMachineState t = p" for t p)+
   apply (thin_tac "ksCurThread t = p" for t p)+
@@ -6918,7 +6875,6 @@ lemma cteSwap_corres:
   apply (thin_tac "domain_index t = p" for t p)+
   apply (thin_tac "domain_list t = p" for t p)+
   apply (thin_tac "domain_time t = p" for t p)+
-  apply (thin_tac "ekheap t = p" for t p)+
   apply (thin_tac "scheduler_action t = p" for t p)+
   apply (thin_tac "ksArchState t = p" for t p)+
   apply (thin_tac "gsCNodes t = p" for t p)+
@@ -6927,7 +6883,6 @@ lemma cteSwap_corres:
   apply (thin_tac "ksIdleThread t = p" for t p)+
   apply (thin_tac "gsUserPages t = p" for t p)+
   apply (thin_tac "pspace_relation s s'" for s s')+
-  apply (thin_tac "ekheap_relation e p" for e p)+
   apply (thin_tac "interrupt_state_relation n s s'" for n s s')+
   apply (thin_tac "(s,s') \<in> arch_state_relation" for s s')+
   apply(subst conj_assoc[symmetric])

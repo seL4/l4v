@@ -281,7 +281,7 @@ lemma setObject_update_TCB_corres':
   apply (unfold set_object_def setObject_def)
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def Bex_def
                         put_def return_def modify_def get_object_def obj_at_def
-                        updateObject_default_def in_magnitude_check)
+                        updateObject_default_def in_magnitude_check objBits_less_word_bits)
   apply (rename_tac s s' ko)
   apply (prop_tac "ko = tcb'")
    apply (clarsimp simp: obj_at'_def project_inject)
@@ -410,10 +410,10 @@ lemma threadset_corresT:
   assumes x: "\<And>tcb tcb'. tcb_relation tcb tcb' \<Longrightarrow> tcb_relation (f tcb) (f' tcb')"
   assumes y: "\<And>tcb. \<forall>(getF, setF) \<in> ran tcb_cap_cases. getF (f tcb) = getF tcb"
   assumes z: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF (f' tcb) = getF tcb"
-  assumes s: "\<forall>tcb'. tcbSchedPrev (f' tcb') = tcbSchedPrev tcb'"
-             "\<forall>tcb'. tcbSchedNext (f' tcb') = tcbSchedNext tcb'"
-  assumes f: "\<And>d p tcb'. inQ d p (f' tcb') = inQ d p tcb'"
-             "\<And>tcb'. tcbInReleaseQueue (f' tcb') = tcbInReleaseQueue tcb'"
+  assumes sched_pointers: "\<And>tcb. tcbSchedPrev (f' tcb) = tcbSchedPrev tcb"
+                          "\<And>tcb. tcbSchedNext (f' tcb) = tcbSchedNext tcb"
+  assumes flags: "\<And>d p tcb'. inQ d p (f' tcb') = inQ d p tcb'"
+                 "\<And>tcb'. tcbInReleaseQueue (f' tcb') = tcbInReleaseQueue tcb'"
   shows
     "corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
        (thread_set f t) (threadSet f' t)"
@@ -424,10 +424,10 @@ lemma threadset_corresT:
               apply (erule x)
              apply (rule y)
             apply (fastforce simp: bspec_split [OF spec [OF z]])
-           apply (fastforce simp: s)
-          apply (fastforce simp: s)
-         apply (fastforce simp: f)
-        apply (fastforce simp: f)
+           apply (fastforce simp: sched_pointers)
+          apply (fastforce simp: sched_pointers)
+         apply (fastforce simp: flags)
+        apply (fastforce simp: flags)
        apply fastforce
       apply wp+
    apply (fastforce dest: get_tcb_SomeD simp: tcb_at_def obj_at_def)
@@ -464,10 +464,9 @@ proof -
        defer
        apply (subst bind_return [symmetric],
               rule corres_underlying_split [OF threadset_corresT])
-                apply (simp add: x)
-               apply simp
-              apply (rule y)
-             apply (fastforce simp: s)
+               apply (simp add: x)
+              apply simp
+             apply (rule y)
             apply (fastforce simp: s)
            apply (fastforce simp: f)
           apply (fastforce simp: f)
@@ -493,9 +492,8 @@ lemma threadSet_corres_noop_splitT:
   apply (rule corres_guard_imp)
     apply (subst return_bind[symmetric])
     apply (rule corres_split_nor[OF threadSet_corres_noopT])
-            apply (simp add: x)
-           apply (rule y)
-          apply (fastforce simp: s)
+           apply (simp add: x)
+          apply (rule y)
          apply (fastforce simp: s)
         apply (fastforce simp: f)
        apply (fastforce simp: f)

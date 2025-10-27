@@ -278,7 +278,6 @@ definition states_equal_except_kheap_asid :: "det_state \<Rightarrow> det_state 
      equiv_machine_state \<top> (machine_state s) (machine_state s') \<and>
      equiv_for \<top> cdt s s' \<and>
      equiv_for \<top> cdt_list s s' \<and>
-     equiv_for \<top> ekheap s s' \<and>
      equiv_for \<top> ready_queues s s' \<and>
      equiv_for \<top> is_original_cap s s' \<and>
      equiv_for \<top> interrupt_states s s' \<and>
@@ -503,13 +502,16 @@ lemma set_message_info_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding set_message_info_def by (wp as_user_globals_equiv)
 
+crunch reschedule_required
+  for globals_equiv[wp]: "globals_equiv s"
+
 lemma cancel_badged_sends_globals_equiv:
   "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
    cancel_badged_sends epptr badge
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace> "
   unfolding cancel_badged_sends_def
   by (wpsimp wp: set_endpoint_globals_equiv set_thread_state_globals_equiv
-                 filterM_preserved dxo_wp_weak hoare_drop_imps)
+                 filterM_preserved get_simple_ko_wp)
 
 end
 

@@ -16,31 +16,6 @@ abbreviation "bcorres \<equiv> bcorres_underlying truncate_state"
 
 abbreviation "s_bcorres \<equiv> s_bcorres_underlying truncate_state"
 
-crunch_ignore (bcorres)
-  (add: Nondet_Monad.bind gets modify get put do_extended_op empty_slot_ext mapM_x "when"
-        select unless mapM catch bindE liftE whenE alternative cap_swap_ext
-        cap_insert_ext cap_move_ext liftM create_cap_ext
-        lookup_error_on_failure getActiveIRQ maybeM
-        gets_the liftME zipWithM_x unlessE mapME_x handleE forM_x)
-
-context Arch begin arch_global_naming
-
-crunch arch_post_cap_deletion
-  for (bcorres) bcorres[wp]: truncate_state
-
-end
-
-arch_requalify_facts
-  arch_post_cap_deletion_bcorres
-
-lemma get_object_bcorres[wp]:
-  "bcorres (get_object p) (get_object p)"
-  apply (simp add: get_object_def)
-  apply (simp add: gets_the_def gets_def bind_def get_def return_def assert_opt_def read_object_def)
-  apply (simp add: bcorres_underlying_def s_bcorres_underlying_def fail_def return_def
-            split: option.splits)
-  done
-
 lemma dxo_bcorres[wp]:
   "bcorres (do_extended_op f) (do_extended_op f)"
   apply (simp add: do_extended_op_def)
@@ -74,10 +49,27 @@ lemma OR_choiceE_bcorres[wp]:
   apply force
   done
 
+crunch_ignore (bcorres)
+  (add: Nondet_Monad.bind gets modify get put do_extended_op empty_slot_ext mapM_x "when"
+        select unless mapM catch bindE liftE whenE alternative cap_swap_ext
+        cap_insert_ext cap_move_ext liftM create_cap_ext
+        lookup_error_on_failure getActiveIRQ
+        gets_the liftME zipWithM_x unlessE mapME_x handleE forM_x)
+
 lemma bcorres_select_ext[wp]:
   "bcorres (select_ext a A) (select_ext a A)"
   by (clarsimp simp: select_ext_def bind_def gets_def return_def select_def assert_def get_def
                      select_switch_unit_def bcorres_underlying_def s_bcorres_underlying_def fail_def)
+
+context Arch begin arch_global_naming
+
+crunch arch_post_cap_deletion
+  for (bcorres) bcorres[wp]: truncate_state
+
+end
+
+arch_requalify_facts
+  arch_post_cap_deletion_bcorres
 
 crunch
   set_original, set_object, set_cap, set_irq_state, deleted_irq_handler, get_cap,set_cdt, empty_slot
@@ -167,10 +159,7 @@ lemma gets_the_tcb_bcorres[wp]:
 
 lemma set_tcb_queue_bcorres[wp]:
   "bcorres (set_tcb_queue d prio q) (set_tcb_queue d prio q)"
-  apply (simp add: set_tcb_queue_def)
-  apply wpsimp
-  apply (simp cong: if_cong)
-  done
+  by (wpsimp simp: set_tcb_queue_def cong: if_cong)
 
 lemma get_sc_refill_ready_bcorres[wp]:
   "bcorres (get_sc_refill_ready scp) (get_sc_refill_ready scp)"

@@ -1598,7 +1598,7 @@ lemma emptySlot_corres:
   apply (simp add: put_def)
   apply (simp add: exec_gets exec_get exec_put del: fun_upd_apply | subst bind_def)+
   apply (clarsimp simp: state_relation_def)
-  apply (drule updateMDB_the_lot, fastforce simp: pspace_relations_def, fastforce, fastforce)
+  apply (drule updateMDB_the_lot, fastforce simp: pspace_relation_def, fastforce, fastforce)
    apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
                          valid_mdb'_def valid_mdb_ctes_def)
   apply (elim conjE)
@@ -1627,7 +1627,7 @@ lemma emptySlot_corres:
   apply clarsimp
   apply (drule updateCap_stuff, elim conjE, erule (1) impE)
   apply clarsimp
-  apply (drule updateMDB_the_lot, force simp: pspace_relations_def, assumption+, simp)
+  apply (drule updateMDB_the_lot, force simp: pspace_relation_def, assumption+, simp)
   apply (rule bexI)
    prefer 2
    apply (simp only: trans_state_update[symmetric])
@@ -1655,7 +1655,7 @@ lemma emptySlot_corres:
    apply (rule mdb_ptr_axioms.intro)
    subgoal by simp
   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
-  apply (simp add: pspace_relations_def)
+  apply (simp add: pspace_relation_def)
   apply (rule conjI)
    apply (clarsimp simp: data_at_def ghost_relation_typ_at set_cap_a_type_inv)
   apply (rule conjI)
@@ -3849,8 +3849,7 @@ lemma vcpuFinalise_corres [corres]:
 lemma arch_finaliseCap_corres:
   "\<lbrakk> final_matters' (ArchObjectCap cap') \<Longrightarrow> final = final'; acap_relation cap cap' \<rbrakk>
      \<Longrightarrow> corres (\<lambda>r r'. cap_relation (fst r) (fst r') \<and> cap_relation (snd r) (snd r'))
-           (\<lambda>s. invs s \<and> valid_etcbs s
-                       \<and> s \<turnstile> cap.ArchObjectCap cap
+           (\<lambda>s. invs s \<and> s \<turnstile> cap.ArchObjectCap cap
                        \<and> (final_matters (cap.ArchObjectCap cap)
                             \<longrightarrow> final = is_final_cap' (cap.ArchObjectCap cap) s)
                        \<and> cte_wp_at ((=) (cap.ArchObjectCap cap)) sl s)
@@ -4204,9 +4203,6 @@ lemma isFinal_lift:
 
 crunch invalidateTLBByASID
   for cteCaps_of: "\<lambda>s. P (cteCaps_of s)"
-
-crunch invalidate_tlb_by_asid
-  for valid_etcbs[wp]: valid_etcbs
 
 lemma cteCaps_of_ctes_of_lift:
   "(\<And>P. \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. P (cteCaps_of s) \<rbrace> f \<lbrace>\<lambda>_ s. P (cteCaps_of s)\<rbrace>"

@@ -343,7 +343,7 @@ definition
 lemma unat_ucast_mask_pageBits_shift:
   "unat (ucast (p && mask pageBits >> 2) :: 10 word) = unat ((p::word32) && mask pageBits >> 2)"
   apply (simp only: unat_ucast)
-  apply (rule Divides.mod_less, simp)
+  apply (rule Euclidean_Rings.mod_less)
   apply (rule unat_less_power)
    apply (simp add: word_bits_def)
   apply (rule shiftr_less_t2n)

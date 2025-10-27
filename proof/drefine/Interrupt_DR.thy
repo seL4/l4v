@@ -61,8 +61,7 @@ lemma decode_irq_control_corres:
      \<top>
      (valid_objs and (\<lambda>s. \<forall>e \<in> set excaps'. valid_cap (fst e) s)
                  and valid_global_refs
-                 and valid_idle
-                 and valid_etcbs)
+                 and valid_idle)
      (Interrupt_D.decode_irq_control_invocation cap slot excaps ui)
      (Decode_A.decode_irq_control_invocation label' args' slot' (map fst excaps'))"
   apply (cases "invocation_type label' = GenInvocationLabel IRQIssueIRQHandler")
@@ -245,7 +244,7 @@ lemma decode_irq_handler_corres:
 lemma option_get_cap_corres:
   "ptr' = transform_cslot_ptr ptr \<Longrightarrow>
    dcorres (\<lambda>rv rv'. rv = Some (transform_cap rv')) \<top>
-   (valid_idle and not_idle_thread (fst ptr) and valid_etcbs)
+   (valid_idle and not_idle_thread (fst ptr))
      (gets (KHeap_D.opt_cap ptr'))
      (CSpaceAcc_A.get_cap ptr)"
   apply (case_tac ptr)
@@ -259,12 +258,10 @@ lemma option_get_cap_corres:
     apply (simp add:corres_free_fail)
    apply clarsimp
    apply (subst cap_slot_cnode_property_lift, assumption, simp_all)[1]
-    apply fastforce
-   apply (clarsimp simp: transform_cap_def)
+   apply fastforce
   apply (clarsimp simp:transform_tcb_slot_simp[simplified])
   apply (rename_tac tcb)
   apply (subgoal_tac "get_tcb a x = Some tcb")
-   apply (frule(1) valid_etcbs_get_tcb_get_etcb)
    apply (clarsimp simp:lift_simp not_idle_thread_def)
   apply (clarsimp simp: get_tcb_def)
   done
@@ -338,23 +335,28 @@ lemma transform_domain_time_update[iff]:
 lemma dec_domain_time_transform: "\<lbrace>\<lambda>ps. transform ps = cs\<rbrace> dec_domain_time \<lbrace>\<lambda>r s. transform s = cs\<rbrace>"
   by (clarsimp simp: dec_domain_time_def | wp)+
 
+lemma transform_full_intent_update_tcb_time_slice[simp]:
+  "transform_full_intent ms p' (tcb\<lparr>tcb_time_slice := time\<rparr>) = transform_full_intent ms p' tcb"
+  apply (simp add: transform_full_intent_def Let_def)
+  apply (simp add: get_tcb_message_info_def get_tcb_mrs_def get_ipc_buffer_words_def)
+  done
+
 lemma thread_set_time_slice_transform: "\<lbrace>\<lambda>ps. transform ps = cs\<rbrace> thread_set_time_slice tptr time \<lbrace>\<lambda>r s. transform s = cs\<rbrace>"
-  apply (clarsimp simp: thread_set_time_slice_def ethread_set_def set_eobject_def | wp)+
+  apply (clarsimp simp: thread_set_time_slice_def thread_set_def set_object_def | wp hoare_drop_imps)+
   apply (clarsimp simp: transform_def transform_objects_def transform_cdt_def transform_current_thread_def transform_asid_table_def)
-  apply (rule_tac y="\<lambda>ptr. map_option (transform_object (machine_state s) ptr ((ekheap s |` (- {idle_thread s})) ptr)) ((kheap s |` (- {idle_thread s})) ptr)" in arg_cong)
+  apply (rule_tac y="\<lambda>ptr. map_option (transform_object (machine_state s) ptr) ((kheap s |` (- {idle_thread s})) ptr)" in arg_cong)
   apply (rule ext)
-  apply (rule_tac y="transform_object (machine_state s) ptr ((ekheap s |` (- {idle_thread s})) ptr)" in arg_cong)
-  apply (rule ext)
-  apply (clarsimp simp: transform_object_def transform_tcb_def restrict_map_def get_etcb_def split: option.splits Structures_A.kernel_object.splits)
+  apply (clarsimp simp: option_map_def transform_object_def transform_tcb_def restrict_map_def get_tcb_def
+                 split: option.splits Structures_A.kernel_object.splits)
   done
 
 lemma timer_tick_dcorres: "dcorres dc P P' (return ()) timer_tick"
   apply (rule corres_noop)
-   apply (simp add: timer_tick_def reschedule_required_def set_scheduler_action_def etcb_at_def split: option.splits | wp tcb_sched_action_transform dec_domain_time_transform thread_set_time_slice_transform | wpc | wp (once) hoare_vcg_all_lift hoare_drop_imps)+
+   apply (simp add: timer_tick_def reschedule_required_def set_scheduler_action_def split: option.splits | wp tcb_sched_action_transform dec_domain_time_transform thread_set_time_slice_transform | wpc | wp (once) hoare_vcg_all_lift hoare_drop_imps)+
   done
 
 lemma handle_interrupt_corres:
-  "dcorres dc \<top> (invs and valid_etcbs) (Interrupt_D.handle_interrupt x) (Interrupt_A.handle_interrupt x)"
+  "dcorres dc \<top> invs (Interrupt_D.handle_interrupt x) (Interrupt_A.handle_interrupt x)"
   apply (clarsimp simp:Interrupt_A.handle_interrupt_def)
   apply (clarsimp simp:get_irq_state_def gets_def bind_assoc)
   apply (rule conjI; rule impI)
@@ -368,7 +370,7 @@ lemma handle_interrupt_corres:
    apply (simp add:Interrupt_D.handle_interrupt_def bind_assoc)
    apply (rule corres_guard_imp)
      apply (rule_tac Q'="(=) s'" in corres_split[OF dcorres_get_irq_slot])
-       apply (rule_tac R'="\<lambda>rv.  (\<lambda>s. (is_ntfn_cap rv \<longrightarrow> ntfn_at (obj_ref_of rv) s)) and invs and valid_etcbs"
+       apply (rule_tac R'="\<lambda>rv.  (\<lambda>s. (is_ntfn_cap rv \<longrightarrow> ntfn_at (obj_ref_of rv) s)) and invs"
                in corres_split)
           apply (rule option_get_cap_corres; simp)
          apply (rename_tac cap')
@@ -404,7 +406,6 @@ lemma handle_interrupt_corres:
     apply (drule irq_state_IRQSignal_NullCap)
          apply ((simp add:invs_def valid_state_def)+)
     apply (frule caps_of_state_transform_opt_cap)
-      apply clarsimp
      apply clarsimp
      apply (drule(1) irq_node_image_not_idle[where y = x])
      apply (clarsimp simp:not_idle_thread_def)
@@ -424,7 +425,6 @@ lemma handle_interrupt_corres:
    apply (drule irq_state_IRQSignal_NullCap)
         apply ((simp add:invs_def valid_state_def)+)
    apply (frule caps_of_state_transform_opt_cap)
-     apply clarsimp
     apply clarsimp
     apply (drule(1) irq_node_image_not_idle[where y = x])
     apply (clarsimp simp:not_idle_thread_def)
@@ -464,8 +464,7 @@ lemma dcorres_invoke_irq_control_body:
         (invs and (cte_wp_at ((=) cap.NullCap) p1
               and cte_wp_at ((=) cap.IRQControlCap) p2
               and ex_cte_cap_wp_to Structures_A.is_cnode_cap p1
-              and real_cte_at p1 and (\<lambda>y. word \<le> maxIRQ))
-              and valid_etcbs)
+              and real_cte_at p1 and (\<lambda>y. word \<le> maxIRQ)))
         (insert_cap_child (IrqHandlerCap word) (transform_cslot_ptr p2) (transform_cslot_ptr p1))
         (liftE (do y <- set_irq_state irq_state.IRQSignal word;
                    cap_insert (cap.IRQHandlerCap word) p2 p1
@@ -510,7 +509,7 @@ lemma dcorres_invoke_irq_control_body:
   done
 
 lemma dcorres_arch_invoke_irq_control:
-  "dcorres dc \<top> (invs and arch_irq_control_inv_valid arch_irq_control_invocation and valid_etcbs)
+  "dcorres dc \<top> (invs and arch_irq_control_inv_valid arch_irq_control_invocation)
     (Interrupt_D.invoke_irq_control (
        translate_irq_control_invocation (
           irq_control_invocation.ArchIRQControl arch_irq_control_invocation)))
@@ -529,7 +528,7 @@ lemma dcorres_arch_invoke_irq_control:
   done
 
 lemma dcorres_invoke_irq_control:
-  "dcorres dc \<top> (invs and irq_control_inv_valid irq_control_invocation and valid_etcbs)
+  "dcorres dc \<top> (invs and irq_control_inv_valid irq_control_invocation)
     (Interrupt_D.invoke_irq_control (translate_irq_control_invocation irq_control_invocation))
     (Interrupt_A.invoke_irq_control irq_control_invocation)"
   apply (case_tac irq_control_invocation)
@@ -608,7 +607,7 @@ lemma is_ntfn_capD:
   by (case_tac cap,simp_all)
 
 lemma dcorres_invoke_irq_handler:
-  "dcorres dc \<top> (invs and irq_handler_inv_valid irq_handler_invocation and valid_etcbs)
+  "dcorres dc \<top> (invs and irq_handler_inv_valid irq_handler_invocation)
           (Interrupt_D.invoke_irq_handler
             (translate_irq_handler_invocation irq_handler_invocation))
           (Interrupt_A.invoke_irq_handler irq_handler_invocation)"

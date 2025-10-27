@@ -352,6 +352,14 @@ lemma empty_fail_maskInterrupt_ARCH[Interrupt_AI_assms]:
   "empty_fail (maskInterrupt f irq)"
   by (wp | simp add: maskInterrupt_def)+
 
+crunch timer_tick
+  for invs[wp]: invs
+  (wp: thread_set_invs_trivial[OF ball_tcb_cap_casesI])
+
+crunch timer_tick
+  for invs[wp]: invs
+  (wp: thread_set_invs_trivial[OF ball_tcb_cap_casesI])
+
 lemma (* handle_interrupt_invs *) [Interrupt_AI_assms]:
   "\<lbrace>invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: handle_interrupt_def  )

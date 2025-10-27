@@ -109,8 +109,8 @@ lemma valid_obj_makeObject_tcb [simp]:
 
 lemma valid_obj_makeObject_tcb_tcbDomain_update [simp]:
   "d \<le> maxDomain \<Longrightarrow> valid_obj' (KOTCB (tcbDomain_update (\<lambda>_. d) makeObject)) s"
-  unfolding valid_obj'_def valid_tcb'_def  valid_tcb_state'_def
-  by (clarsimp simp: makeObject_tcb makeObject_cte objBits_simps' valid_arch_tcb'_def
+  unfolding valid_obj'_def valid_tcb'_def  valid_tcb_state'_def valid_arch_tcb'_def
+  by (clarsimp simp: makeObject_tcb makeObject_cte objBits_simps' newArchTCB_def
                      tcb_cte_cases_def maxDomain_def maxPriority_def numPriorities_def minBound_word)
 
 lemma valid_obj_makeObject_endpoint [simp]:
@@ -531,9 +531,7 @@ lemma cte_wp_at_retype':
     apply (subgoal_tac "(\<exists>P :: cte \<Rightarrow> bool. obj_at' P p ?s')
                           \<longrightarrow> (\<not> (\<exists>P :: tcb \<Rightarrow> bool. obj_at' P (p && ~~ mask tcbBlockSizeBits) ?s'))")
      apply (simp only: cte_wp_at_obj_cases_mask foldr_update_obj_at'[OF pv pv' al])
-     apply (simp    add: projectKOs the_ctes_makeObject
-                         makeObjectKO_eq [OF ko]
-                         makeObject_cte
+     apply (simp    add: the_ctes_makeObject makeObjectKO_eq [OF ko] makeObject_cte
               split del: if_split
                    cong: if_cong)
      apply (insert al ko)
@@ -541,7 +539,7 @@ lemma cte_wp_at_retype':
      apply (safe; simp)
               apply ((fastforce simp: makeObjectKO_def makeObject_cte makeObject_tcb tcb_cte_cases_def
                                split: if_split_asm)+)[10]
-    apply (clarsimp elim!: obj_atE' simp: projectKOs objBits_simps)
+    apply (clarsimp elim!: obj_atE' simp: objBits_simps)
     apply (drule ps_clearD[where y=p and n=tcbBlockSizeBits])
        apply simp
       apply (rule order_trans_rules(17))
@@ -1814,12 +1812,6 @@ next
     apply (simp add: mapM_x_def sequence_x_def)
     done
 qed
-
-(*
-
-The existing proof continues below.
-
-*)
 
 lemma corres_retype':
   assumes    not_zero: "n \<noteq> 0"
@@ -3698,13 +3690,11 @@ lemma createNewCaps_cte_wp_at2:
      createNewCaps ty ptr n objsz dev
    \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>"
   including classic_wp_pre
-  apply (simp add: createNewCaps_def createObjects_def RISCV64_H.toAPIType_def
-           split del: if_split)
-  apply (case_tac ty; simp add: createNewCaps_def createObjects_def Arch_createNewCaps_def
-                           split del: if_split cong: if_cong)
+  unfolding createNewCaps_def Arch_createNewCaps_def createObjects_def RISCV64_H.toAPIType_def
+  apply (case_tac ty; simp split del: if_split cong: if_cong)
         apply (rename_tac apiobject_type)
         apply (case_tac apiobject_type; simp split del: if_split)
-              apply (rule hoare_pre, wp, simp add:createObjects_def)
+              apply (rule hoare_pre, wp, simp add: createObjects_def)
   by (wpsimp wp: createObjects_orig_cte_wp_at2'[where sz = sz] mapM_x_wp' split_del: if_split
            simp: createObjects_def curDomain_def objBits_simps APIType_capBits_def
       | simp add: projectKO_opts_defs makeObject_tcb tcb_cte_cases_def Let_def
@@ -4667,13 +4657,12 @@ lemma createNewCaps_sched_queues:
      createNewCaps ty ptr n us dev
      \<lbrace>\<lambda>_ s. P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
   unfolding createNewCaps_def
-  apply (clarsimp simp: RISCV64_H.toAPIType_def
-             split del: if_split)
+  apply (clarsimp simp: RISCV64_H.toAPIType_def split del: if_split)
   apply (cases ty; simp add: createNewCaps_def Arch_createNewCaps_def
                         split del: if_split)
         apply (rename_tac apiobject_type)
         apply (case_tac apiobject_type; simp split del: if_split)
-            apply (rule hoare_pre, wp, simp)
+            apply (wp, simp)
            apply (insert cover not_0 tysc)
            apply (wpsimp wp: mapM_x_wp' createObjects_sched_queues
                        simp: curDomain_def)
@@ -5516,7 +5505,8 @@ lemma gcd_corres[corres]: "corres (=) \<top> \<top> (gets cur_domain) curDomain"
 lemma createObjects_tcb_at':
   "\<lbrakk>range_cover ptr sz (objBitsKO (injectKOS (makeObject::tcb))) n; n \<noteq> 0\<rbrakk> \<Longrightarrow>
    \<lbrace>\<lambda>s. pspace_no_overlap' ptr sz s \<and> pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_bounded' s\<rbrace>
-   createObjects ptr n (KOTCB makeObject) 0 \<lbrace>\<lambda>ptrs s. \<forall>addr\<in>set ptrs. tcb_at' addr s\<rbrace>"
+   createObjects ptr n (KOTCB makeObject) 0
+   \<lbrace>\<lambda>ptrs s. \<forall>addr\<in>set ptrs. tcb_at' addr s\<rbrace>"
   apply (rule hoare_strengthen_post[OF createObjects_ko_at_strg[where val = "(makeObject :: tcb)"]])
   apply (auto simp: obj_at'_def project_inject objBitsKO_def objBits_def makeObject_tcb)
   done

@@ -138,7 +138,8 @@ experiment begin
               blast: \<open>blast\<close>
               metis: \<open>metis\<close>
               meson: \<open>meson\<close>
-              smt:   \<open>smt\<close>
+              (* smt:   \<open>smt\<close>  removed Z3-based SMT for stability on arm64-linux --
+                               it was the 3rd-slowest method; smt (verit) diverges *)
               force: \<open>force\<close>
               fastforce: \<open>fastforce intro: ex_bool_eq[THEN iffD2]\<close>
               fastforce: \<open>fastforce simp: ex_bool_eq\<close>

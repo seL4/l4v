@@ -1052,6 +1052,7 @@ lemma cancelBadgedSends_ccorres:
                 apply (rule_tac P="\<lambda>s. \<forall>t \<in> set (x @ a # lista). tcb_at' t s"
                              in ccorres_cross_over_guard)
                 apply (rule ccorres_add_return, rule ccorres_split_nothrow[OF _ ceqv_refl])
+                   apply (rename_tac xfdc')
                    apply (rule_tac rrel=dc and xf=xfdc
                                and P="\<lambda>s. (\<forall>t \<in> set (x @ a # lista). tcb_at' t s)
                                           \<and> (\<forall>p. \<forall>t \<in> set (x @ a # lista). \<forall>rf. (t, rf) \<notin> {r \<in> state_refs_of' s p. snd r \<noteq> NTFNBound})

@@ -106,13 +106,18 @@ lemma domain_sep_inv_triv:
   apply (rule cte_pres, rule irq_pres)
   done
 
-lemma domain_sep_inv_arch_state_update[simp]:
-  "domain_sep_inv irqs st (s\<lparr>arch_state := blah\<rparr>) = domain_sep_inv irqs st s"
-  by (simp add: domain_sep_inv_def)
-
-lemma domain_sep_inv_machine_state_update[simp]:
-  "domain_sep_inv irqs st (s\<lparr>machine_state := X\<rparr>) = domain_sep_inv irqs st s"
-  by (simp add: domain_sep_inv_def)
+lemma domain_sep_inv_updates[simp]:
+  "\<And>f. domain_sep_inv irqs st (trans_state f s) = domain_sep_inv irqs st s"
+  "\<And>f. domain_sep_inv irqs st (arch_state_update f s) = domain_sep_inv irqs st s"
+  "\<And>f. domain_sep_inv irqs st (machine_state_update f s) = domain_sep_inv irqs st s"
+  "\<And>f. domain_sep_inv irqs st (is_original_cap_update f s) = domain_sep_inv irqs st s"
+  "\<And>f. domain_sep_inv irqs st (cdt_update f s) = domain_sep_inv irqs st s"
+  "\<And>f. domain_sep_inv irqs st (scheduler_action_update f s) = domain_sep_inv irqs st s"
+  "\<And>f. domain_sep_inv irqs st (domain_index_update f s) = domain_sep_inv irqs st s"
+  "\<And>f. domain_sep_inv irqs st (cur_domain_update f s) = domain_sep_inv irqs st s"
+  "\<And>f. domain_sep_inv irqs st (domain_time_update f s) = domain_sep_inv irqs st s"
+  "\<And>f. domain_sep_inv irqs st (ready_queues_update f s) = domain_sep_inv irqs st s"
+  by (simp add: domain_sep_inv_def)+
 
 lemma detype_interrupts_states[simp]:
   "interrupt_states (detype S s) = interrupt_states s"
@@ -254,18 +259,6 @@ lemma cte_wp_at_is_derived_domain_sep_inv_cap:
                    dest: cte_wp_at_norm DomainCap_is_derived is_derived_IRQHandlerCap)
   done
 
-lemma domain_sep_inv_exst_update[simp]:
-  "domain_sep_inv irqs st (trans_state f s) = domain_sep_inv irqs st s"
-  by (simp add: domain_sep_inv_def)
-
-lemma domain_sep_inv_is_original_cap_update[simp]:
-  "domain_sep_inv irqs st (s\<lparr>is_original_cap := X\<rparr>) = domain_sep_inv irqs st s"
-  by (simp add: domain_sep_inv_def)
-
-lemma domain_sep_inv_cdt_update[simp]:
-  "domain_sep_inv irqs st (s\<lparr>cdt := X\<rparr>) = domain_sep_inv irqs st s"
-  by (simp add: domain_sep_inv_def)
-
 crunch update_cdt
   for domain_sep_inv[wp]: "domain_sep_inv irqs st"
 
@@ -374,10 +367,13 @@ crunch set_simple_ko
   for domain_sep_inv[wp]: "domain_sep_inv irqs st"
   (wp: domain_sep_inv_triv)
 
+crunch set_thread_state_act
+  for neg_cte_wp_at[wp]: "\<lambda>s. \<not> cte_wp_at P c s"
+
 lemma set_thread_state_neg_cte_wp_at[wp]:
   "set_thread_state a b \<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace>"
   apply (simp add: set_thread_state_def)
-  apply (wp set_object_wp get_object_wp dxo_wp_weak| simp)+
+  apply (wp set_object_wp get_object_wp | simp)+
   apply (case_tac "a = fst slot")
    apply (clarsimp split: kernel_object.splits)
    apply (erule notE)
@@ -412,26 +408,27 @@ crunch set_thread_state, set_bound_notification, get_bound_notification
   for domain_sep_inv[wp]: "domain_sep_inv irqs st"
   (wp: domain_sep_inv_triv)
 
-lemma thread_set_tcb_fault_update_neg_cte_wp_at[wp]:
-  "thread_set (tcb_fault_update blah) t \<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace>"
-  apply (simp add: thread_set_def)
-  apply (wp set_object_wp get_object_wp | simp)+
-  apply (case_tac "t = fst slot")
-   apply (clarsimp split: kernel_object.splits)
-   apply (erule notE)
-   apply (erule cte_wp_atE)
-    apply (fastforce simp: obj_at_def)
-   apply (drule get_tcb_SomeD)
-   apply (rule cte_wp_at_tcbI)
-     apply simp
-    apply assumption
-   apply (fastforce simp: tcb_cap_cases_def split: if_splits)
-  apply (fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
-  done
+lemma thread_set_domain_sep_inv_triv:
+  "\<lbrakk>\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases. getF (f tcb) = getF tcb\<rbrakk>
+   \<Longrightarrow> thread_set f t \<lbrace>domain_sep_inv irqs st\<rbrace>"
+  by (wpsimp wp: domain_sep_inv_triv thread_set_cte_wp_at_trivial simp: ran_tcb_cap_cases)
 
-lemma thread_set_tcb_fault_update_domain_sep_inv[wp]:
-  "thread_set (tcb_fault_update blah) t \<lbrace>domain_sep_inv irqs st\<rbrace>"
-  by (wp domain_sep_inv_triv)
+lemmas thread_set_tcb_fault_update_domain_sep_inv[wp]
+  = thread_set_domain_sep_inv_triv[where f="tcb_fault_update f" for f, simplified ran_tcb_cap_cases, simplified]
+lemmas thread_set_tcb_ipc_buffer_update_domain_sep_inv[wp]
+  = thread_set_domain_sep_inv_triv[where f="tcb_ipc_buffer_update f" for f, simplified ran_tcb_cap_cases, simplified]
+lemmas thread_set_tcb_fault_handler_update_domain_sep_inv[wp]
+  = thread_set_domain_sep_inv_triv[where f="tcb_fault_handler_update f" for f, simplified ran_tcb_cap_cases, simplified]
+lemmas thread_set_tcb_mcpriority_update_domain_sep_inv[wp]
+  = thread_set_domain_sep_inv_triv[where f="tcb_mcpriority_update f" for f, simplified ran_tcb_cap_cases, simplified]
+lemmas thread_set_tcb_priority_update_domain_sep_inv[wp]
+  = thread_set_domain_sep_inv_triv[where f="tcb_priority_update f" for f, simplified ran_tcb_cap_cases, simplified]
+lemmas thread_set_tcb_time_slice_update_domain_sep_inv[wp]
+  = thread_set_domain_sep_inv_triv[where f="tcb_time_slice_update f" for f, simplified ran_tcb_cap_cases, simplified]
+lemmas thread_set_tcb_domain_update_domain_sep_inv[wp]
+  = thread_set_domain_sep_inv_triv[where f="tcb_domain_update f" for f, simplified ran_tcb_cap_cases, simplified]
+lemmas thread_set_tcb_registers_caps_merge_default_tcb_domain_sep_inv[wp]
+  = thread_set_domain_sep_inv_triv[where f="tcb_registers_caps_merge tcb" for tcb, simplified ran_tcb_cap_cases tcb_registers_caps_merge_def, simplified]
 
 crunch as_user
   for domain_sep_inv[wp]: "domain_sep_inv irqs st"
@@ -462,8 +459,8 @@ lemma reply_cancel_ipc_domain_sep_inv[wp]:
    \<lbrace>\<lambda>_ s. domain_sep_inv irqs  (st :: 'state_ext state) (s :: det_ext state)\<rbrace>"
   apply (simp add: reply_cancel_ipc_def)
   apply wp
-  apply (rule hoare_strengthen_post[OF thread_set_tcb_fault_update_domain_sep_inv])
-  apply auto
+   apply (rule hoare_strengthen_post[OF thread_set_tcb_fault_update_domain_sep_inv])
+   apply auto
   done
 
 crunch finalise_cap
@@ -605,31 +602,13 @@ lemma cte_wp_at_weak_derived_ReplyCap:
   apply auto
   done
 
-lemma thread_set_tcb_registers_caps_merge_default_tcb_neg_cte_wp_at[wp]:
-  "thread_set (tcb_registers_caps_merge default_tcb) word \<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace>"
-  unfolding thread_set_def
-  apply (wp set_object_wp | simp)+
-  apply (case_tac "word = fst slot")
-   apply (clarsimp split: kernel_object.splits)
-   apply (erule notE)
-   apply (erule cte_wp_atE)
-    apply (fastforce simp: obj_at_def)
-   apply (drule get_tcb_SomeD)
-   apply (rule cte_wp_at_tcbI)
-     apply simp
-    apply assumption
-   apply (clarsimp simp: tcb_cap_cases_def tcb_registers_caps_merge_def split: if_splits)
-  apply (fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
-  done
-
-lemma thread_set_tcb_registers_caps_merge_default_tcb_domain_sep_inv[wp]:
-  "thread_set (tcb_registers_caps_merge default_tcb) word \<lbrace>domain_sep_inv irqs st\<rbrace>"
-  by (wp domain_sep_inv_triv)
+crunch possible_switch_to
+  for domain_sep_inv[wp]: "domain_sep_inv irqs st"
 
 lemma cancel_badged_sends_domain_sep_inv[wp]:
   "cancel_badged_sends epptr badge \<lbrace>domain_sep_inv irqs st\<rbrace>"
   apply (simp add: cancel_badged_sends_def)
-  apply (wpsimp wp: dxo_wp_weak mapM_wp | simp add: filterM_mapM | wp (once) hoare_drop_imps)+
+  apply (wpsimp wp: mapM_wp | simp add: filterM_mapM | wp (once) hoare_drop_imps)+
   done
 
 lemma create_cap_domain_sep_inv[wp]:
@@ -874,76 +853,13 @@ lemma send_fault_ipc_domain_sep_inv:
 
 crunch do_reply_transfer, handle_fault, reply_from_kernel, restart
   for domain_sep_inv[wp]: "\<lambda>s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_ext state)"
-  (wp: handle_arch_fault_reply_domain_sep_inv dxo_wp_weak crunch_wps ignore: thread_set)
+  (wp: crunch_wps handle_arch_fault_reply_domain_sep_inv ignore: thread_set)
 
 end
 
 crunch setup_reply_master
   for domain_sep_inv[wp]: "domain_sep_inv irqs st"
   (wp: crunch_wps simp: crunch_simps)
-
-lemma thread_set_tcb_ipc_buffer_update_neg_cte_wp_at[wp]:
-  "thread_set (tcb_ipc_buffer_update f) t \<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace>"
-  unfolding thread_set_def
-  apply (wp set_object_wp | simp)+
-  apply (case_tac "t = fst slot")
-   apply (clarsimp split: kernel_object.splits)
-   apply (erule notE)
-   apply (erule cte_wp_atE)
-    apply (fastforce simp: obj_at_def)
-   apply (drule get_tcb_SomeD)
-   apply (rule cte_wp_at_tcbI)
-     apply simp
-    apply assumption
-   apply (fastforce simp: tcb_cap_cases_def split: if_splits)
-  apply (fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
-  done
-
-lemma thread_set_tcb_ipc_buffer_update_domain_sep_inv[wp]:
-  "thread_set (tcb_ipc_buffer_update f) t \<lbrace>domain_sep_inv irqs st\<rbrace>"
-  by (rule domain_sep_inv_triv; wp)
-
-lemma thread_set_tcb_fault_handler_update_neg_cte_wp_at[wp]:
-  "thread_set (tcb_fault_handler_update f) t \<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace>"
-  unfolding thread_set_def
-  apply (wp set_object_wp | simp)+
-  apply (case_tac "t = fst slot")
-   apply (clarsimp split: kernel_object.splits)
-   apply (erule notE)
-   apply (erule cte_wp_atE)
-    apply (fastforce simp: obj_at_def)
-   apply (drule get_tcb_SomeD)
-   apply (rule cte_wp_at_tcbI)
-     apply simp
-    apply assumption
-   apply (fastforce simp: tcb_cap_cases_def split: if_splits)
-  apply (fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
-  done
-
-lemma thread_set_tcb_fault_handler_update_domain_sep_inv[wp]:
-  "thread_set (tcb_fault_handler_update f) t \<lbrace>domain_sep_inv irqs st\<rbrace>"
-  by (rule domain_sep_inv_triv; wp)
-
-lemma thread_set_tcb_tcb_mcpriority_update_neg_cte_wp_at[wp]:
-  "thread_set (tcb_mcpriority_update f) t \<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace>"
-  unfolding thread_set_def
-  apply (wp set_object_wp | simp)+
-  apply (case_tac "t = fst slot")
-   apply (clarsimp split: kernel_object.splits)
-   apply (erule notE)
-   apply (erule cte_wp_atE)
-    apply (fastforce simp: obj_at_def)
-   apply (drule get_tcb_SomeD)
-   apply (rule cte_wp_at_tcbI)
-     apply simp
-    apply assumption
-   apply (fastforce simp: tcb_cap_cases_def split: if_splits)
-  apply (fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
-  done
-
-lemma thread_set_tcb_tcp_mcpriority_update_domain_sep_inv[wp]:
-  "thread_set (tcb_mcpriority_update f) t \<lbrace>domain_sep_inv irqs st\<rbrace>"
-  by (rule domain_sep_inv_triv; wp)
 
 lemma same_object_as_domain_sep_inv_cap:
   "\<lbrakk> same_object_as a cap; domain_sep_inv_cap irqs cap \<rbrakk>
@@ -961,18 +877,9 @@ lemma checked_cap_insert_domain_sep_inv:
   apply (erule (1) same_object_as_domain_sep_inv_cap)
   done
 
-crunch bind_notification,reschedule_required
+crunch bind_notification, set_mcpriority, set_priority, invoke_domain
   for domain_sep_inv[wp]: "domain_sep_inv irqs st"
-
-lemma set_mcpriority_domain_sep_inv[wp]:
-  "set_mcpriority tcb_ref mcp \<lbrace>domain_sep_inv irqs st\<rbrace>"
-  unfolding set_mcpriority_def by wp
-
-lemma invoke_domain_domain_set_inv:
-  "invoke_domain word1 word2 \<lbrace>domain_sep_inv irqs st\<rbrace>"
-  apply (simp add: invoke_domain_def)
-  apply (wp dxo_wp_weak | simp)+
-  done
+  (ignore: thread_set)
 
 
 context DomainSepInv_1 begin
@@ -993,11 +900,10 @@ lemma invoke_tcb_domain_sep_inv:
     apply (simp add: split_def cong: option.case_cong)
     apply (wp checked_cap_insert_domain_sep_inv hoare_vcg_all_liftE_R hoare_vcg_all_lift
               hoare_vcg_const_imp_liftE_R cap_delete_domain_sep_inv cap_delete_deletes
-              dxo_wp_weak cap_delete_valid_cap cap_delete_cte_at hoare_weak_lift_imp
+              cap_delete_valid_cap cap_delete_cte_at hoare_weak_lift_imp
            | wpc | strengthen
            | simp add: option_update_thread_def emptyable_def tcb_cap_cases_def
-                       tcb_cap_valid_def tcb_at_st_tcb_at
-                  del: set_priority_extended.dxo_eq)+
+                       tcb_cap_valid_def tcb_at_st_tcb_at)+
   done
 
 end
@@ -1073,7 +979,6 @@ lemma perform_invocation_domain_sep_inv':
            apply (wp send_ipc_domain_sep_inv invoke_tcb_domain_sep_inv
                      invoke_cnode_domain_sep_inv invoke_control_domain_sep_inv
                      invoke_irq_handler_domain_sep_inv arch_perform_invocation_domain_sep_inv
-                     invoke_domain_domain_set_inv
                   | simp add: split_def | blast)+
   done
 
@@ -1177,9 +1082,9 @@ lemma handle_recv_domain_sep_inv:
     apply (wp | simp add: invs_valid_objs invs_mdb invs_sym_refs tcb_at_invs)+
   done
 
-crunch handle_interrupt, activate_thread, choose_thread
+crunch handle_interrupt, activate_thread, choose_thread, handle_yield
   for domain_sep_inv[wp]: "\<lambda>s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_ext state)"
-  (wp: dxo_wp_weak crunch_wps)
+  (wp: crunch_wps ignore: thread_set)
 
 lemma handle_event_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and invs and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
@@ -1187,16 +1092,19 @@ lemma handle_event_domain_sep_inv:
    \<lbrace>\<lambda>_ s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_ext state)\<rbrace>"
   apply (case_tac ev)
   by (wpsimp wp: handle_send_domain_sep_inv handle_call_domain_sep_inv
-                 handle_recv_domain_sep_inv handle_reply_domain_sep_inv hy_inv
+                 handle_recv_domain_sep_inv handle_reply_domain_sep_inv
       | strengthen invs_valid_objs invs_mdb invs_sym_refs
       | simp add: valid_fault_def
       | wp hoare_drop_imps)+
 
+crunch next_domain
+  for domain_sep_inv[wp]: "domain_sep_inv irqs st"
+  (simp: crunch_simps)
+
 lemma schedule_domain_sep_inv:
   "(schedule :: (unit,det_ext) s_monad) \<lbrace>domain_sep_inv irqs (st :: 'state_ext state)\<rbrace>"
-  unfolding schedule_def allActiveTCBs_def
+  unfolding schedule_def
   by (wp add: guarded_switch_to_lift hoare_drop_imps
-         del: ethread_get_wp
       | wpc | clarsimp simp: get_thread_state_def thread_get_def trans_state_update'[symmetric]
                              schedule_choose_new_thread_def)+
 

@@ -165,14 +165,10 @@ lemma invoke_cnode_valid_vspace_objs'[wp]:
    apply (wp get_cap_wp | wpc | simp split del: if_split)+
   done
 
-crunch invoke_tcb
+crunch invoke_tcb, invoke_domain
  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (wp: check_cap_inv crunch_wps simp: crunch_simps is_round_robin_def
        ignore: check_cap_at update_sk_obj_ref)
-
-crunch invoke_domain
- for valid_vspace_objs'[wp]: "valid_vspace_objs'"
-  (wp: crunch_wps simp: crunch_simps)
 
 crunch set_extra_badge, transfer_caps_loop
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
@@ -342,9 +338,9 @@ lemma handle_invocation_valid_vspace_objs'[wp]:
   done
 
 crunch activate_thread,switch_to_thread, handle_hypervisor_fault,
-         switch_to_idle_thread, handle_call, handle_recv, handle_vm_fault,
-         handle_send, handle_yield, handle_interrupt, check_budget_restart, update_time_stamp,
-         schedule_choose_new_thread, activate_thread, switch_to_thread, check_domain_time
+       switch_to_idle_thread, handle_call, handle_recv, handle_vm_fault,
+       handle_send, handle_yield, handle_interrupt, check_budget_restart, update_time_stamp,
+       schedule_choose_new_thread, activate_thread, switch_to_thread, check_domain_time
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (simp: crunch_simps wp: crunch_wps hoare_vcg_all_lift
    ignore: without_preemption getActiveIRQ resetTimer ackInterrupt update_sk_obj_ref)
@@ -354,14 +350,14 @@ crunch awaken, sc_and_timer
   (wp: hoare_drop_imps hoare_vcg_if_lift2 crunch_wps)
 
 lemma schedule_valid_vspace_objs'[wp]:
-  "\<lbrace>valid_vspace_objs'\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
+  "schedule \<lbrace>valid_vspace_objs'\<rbrace>"
   unfolding schedule_def by (wpsimp wp: hoare_drop_imps)
 
 (* FIXME RT: clean up the duplication here (also in ARM); factor out handle_event? *)
 lemma call_kernel_valid_vspace_objs'[wp]:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_vspace_objs' and
     (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_schedulable\<rbrace>
-      (call_kernel e) :: (unit,unit) s_monad
+   call_kernel e
    \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
   apply (cases e, simp_all add: call_kernel_def preemption_path_def)
        apply (rule bind_wp_fwd)

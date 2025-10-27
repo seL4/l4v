@@ -799,9 +799,9 @@ abbreviation
   "tcb_has_fault \<equiv> \<lambda>tcb. tcb_fault tcb \<noteq> None"
 
 definition
-  transform_tcb :: "machine_state \<Rightarrow> obj_ref \<Rightarrow> tcb \<Rightarrow> etcb \<Rightarrow> cdl_object"
+  transform_tcb :: "machine_state \<Rightarrow> obj_ref \<Rightarrow> tcb \<Rightarrow> cdl_object"
 where
-  "transform_tcb ms ptr tcb etcb \<equiv>
+  "transform_tcb ms ptr tcb \<equiv>
     Types_D.Tcb \<lparr> cdl_tcb_caps = [
                    tcb_cspace_slot \<mapsto> (transform_cap $ tcb_ctable tcb),
                    tcb_vspace_slot \<mapsto> (transform_cap $ tcb_vtable tcb),
@@ -817,7 +817,7 @@ where
                  \<comment> \<open>Decode the thread's intent.\<close>
                  cdl_tcb_intent = transform_full_intent ms ptr tcb,
                  cdl_tcb_has_fault = (tcb_has_fault tcb),
-                 cdl_tcb_domain = tcb_domain etcb
+                 cdl_tcb_domain = tcb_domain tcb
                 \<rparr>"
 
 definition
@@ -896,13 +896,11 @@ definition
 where
   "transform_page_directory_contents M \<equiv> unat_map (Some o transform_pde o kernel_pde_mask M)"
 
-(* sseefried: The 'undefined' case below will never occur as long as this function is invoked in an environment
-   where the invariant 'valid_etcbs s' holds *)
 (* Transform a kernel object. *)
 definition
-  transform_object :: "machine_state \<Rightarrow> obj_ref \<Rightarrow> etcb option \<Rightarrow> kernel_object \<Rightarrow> cdl_object"
+  transform_object :: "machine_state \<Rightarrow> obj_ref \<Rightarrow> kernel_object \<Rightarrow> cdl_object"
   where
-  "transform_object ms ref opt_etcb ko \<equiv> case ko of
+  "transform_object ms ref ko \<equiv> case ko of
            Structures_A.CNode 0 c \<Rightarrow>
               Types_D.IRQNode \<lparr>cdl_irq_node_caps = transform_cnode_contents 0 c\<rparr>
          | Structures_A.CNode sz c \<Rightarrow>
@@ -910,7 +908,7 @@ definition
                 cdl_cnode_caps = transform_cnode_contents sz c,
                 cdl_cnode_size_bits = sz
                 \<rparr>
-         | Structures_A.TCB tcb \<Rightarrow> (case opt_etcb of Some etcb \<Rightarrow> transform_tcb ms ref tcb etcb | None \<Rightarrow> undefined)
+         | Structures_A.TCB tcb \<Rightarrow> transform_tcb ms ref tcb
          | Structures_A.Endpoint _ \<Rightarrow> Types_D.Endpoint
          | Structures_A.Notification _ \<Rightarrow> Types_D.Notification
          | Structures_A.ArchObj (ARM_A.ASIDPool ap) \<Rightarrow>
@@ -971,7 +969,7 @@ definition
   transform_objects :: "det_ext state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object option)"
 where
    "transform_objects s = (\<lambda>ptr. Some Types_D.Untyped) |` (- {idle_thread s}) ++
-                           (\<lambda>ptr. map_option (transform_object (machine_state s) ptr ((ekheap s |` (- {idle_thread s})) ptr))
+                           (\<lambda>ptr. map_option (transform_object (machine_state s) ptr)
                                 ((kheap s  |` (- {idle_thread s})) ptr))"
 
 lemma evalMonad_return [simp]:

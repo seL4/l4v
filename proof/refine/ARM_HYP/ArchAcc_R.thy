@@ -231,7 +231,7 @@ crunch getIRQSlot
 
 lemma setObject_ASIDPool_corres [corres]:
   "a = inv ASIDPool a' o ucast \<Longrightarrow>
-  corres dc (asid_pool_at p and valid_etcbs) (asid_pool_at' p)
+  corres dc (asid_pool_at p) (asid_pool_at' p)
             (set_asid_pool p a) (setObject p a')"
   apply (simp add: set_asid_pool_def)
   apply (corresKsimp search: setObject_other_corres[where P="\<lambda>_. True"]
@@ -243,7 +243,7 @@ lemma setObject_ASIDPool_corres [corres]:
 
 lemma setObject_ASIDPool_corres':
   "a = inv ASIDPool a' o ucast \<Longrightarrow>
-  corres dc (asid_pool_at p and valid_etcbs) (pspace_aligned' and pspace_distinct')
+  corres dc (asid_pool_at p) (pspace_aligned' and pspace_distinct')
             (set_asid_pool p a) (setObject p a')"
   apply (rule stronger_corres_guard_imp[OF setObject_ASIDPool_corres])
    apply auto
@@ -873,7 +873,7 @@ lemma get_master_pte_corres':
 lemma setObject_PD_corres [corres]:
   "pde_relation_aligned (p>>pde_bits) pde pde' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits)
-                     and pspace_aligned and valid_etcbs)
+                     and pspace_aligned)
                     (pde_at' p)
           (set_pd (p && ~~ mask pd_bits) (pd(ucast (p && mask pd_bits >> pde_bits) := pde)))
           (setObject p pde')"
@@ -916,9 +916,9 @@ lemma setObject_PD_corres [corres]:
    apply (drule bspec, assumption)
    apply clarsimp
    apply (erule (1) obj_relation_cutsE)
+        apply simp
        apply simp
-      apply simp
-     apply clarsimp
+      apply clarsimp
      apply (frule (1) pspace_alignedD)
      apply (drule_tac p=x in pspace_alignedD, assumption)
      apply simp
@@ -933,13 +933,6 @@ lemma setObject_PD_corres [corres]:
     apply (simp split: if_split_asm)
    apply (simp add: other_obj_relation_def
                split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  apply (rule conjI)
-   apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
-   apply (drule(1) ekheap_kheap_dom)
-   apply clarsimp
-   apply (drule_tac x=p in bspec, erule domI)
-   apply (simp add: tcb_relation_cut_def
-           split: Structures_A.kernel_object.splits)
   apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pd_bits" in allE)+
@@ -956,7 +949,7 @@ lemma setObject_PD_corres [corres]:
 lemma setObject_PT_corres [corres]:
   "pte_relation_aligned (p >> pte_bits) pte pte' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageTable pt)) (p && ~~ mask pt_bits)
-                     and pspace_aligned and valid_etcbs)
+                     and pspace_aligned)
                     (pte_at' p)
           (set_pt (p && ~~ mask pt_bits) (pt(ucast (p && mask pt_bits >> pte_bits) := pte)))
           (setObject p pte')"
@@ -996,8 +989,8 @@ lemma setObject_PT_corres [corres]:
    apply (drule bspec, assumption)
    apply clarsimp
    apply (erule (1) obj_relation_cutsE)
-       apply simp
-      apply clarsimp
+        apply simp
+       apply clarsimp
       apply (frule (1) pspace_alignedD)
       apply (drule_tac p=x in pspace_alignedD, assumption)
       apply simp
@@ -1013,12 +1006,6 @@ lemma setObject_PT_corres [corres]:
     apply (simp split: if_split_asm)
    apply (simp add: other_obj_relation_def
                split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  apply (rule conjI)
-   apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
-   apply (drule(1) ekheap_kheap_dom)
-   apply clarsimp
-   apply (drule_tac x=p in bspec, erule domI)
-   apply (simp add: tcb_relation_cut_def split: Structures_A.kernel_object.splits)
   apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pt_bits" in allE)+
@@ -1037,7 +1024,7 @@ lemma wordsFromPDEis2: "\<exists>a b . wordsFromPDE pde = [a , b]"
 
 lemma storePDE_corres [corres]:
   "pde_relation_aligned (p >> pde_bits) pde pde' \<Longrightarrow>
-  corres dc (pde_at p and pspace_aligned and valid_etcbs) (pde_at' p) (store_pde p pde) (storePDE p pde')"
+  corres dc (pde_at p and pspace_aligned) (pde_at' p) (store_pde p pde) (storePDE p pde')"
   apply (simp add: store_pde_def storePDE_def)
   apply (insert wordsFromPDEis2[of pde'])
   apply (clarsimp simp: tailM_def headM_def)
@@ -1058,7 +1045,7 @@ lemma storePDE_corres [corres]:
 lemma storePDE_corres':
   "pde_relation_aligned (p >> pde_bits) pde pde' \<Longrightarrow>
   corres dc
-     (pde_at p and pspace_aligned and valid_etcbs) (pspace_aligned' and pspace_distinct')
+     (pde_at p and pspace_aligned) (pspace_aligned' and pspace_distinct')
      (store_pde p pde) (storePDE p pde')"
   apply (rule stronger_corres_guard_imp, rule storePDE_corres)
    apply auto
@@ -1069,7 +1056,7 @@ lemma wordsFromPTEis2: "\<exists>a b . wordsFromPTE pte = [a , b]"
 
 lemma storePTE_corres [corres]:
   "pte_relation_aligned (p>>pte_bits) pte pte' \<Longrightarrow>
-  corres dc (pte_at p and pspace_aligned and valid_etcbs) (pte_at' p) (store_pte p pte) (storePTE p pte')"
+  corres dc (pte_at p and pspace_aligned) (pte_at' p) (store_pte p pte) (storePTE p pte')"
   apply (simp add: store_pte_def storePTE_def)
   apply (insert wordsFromPTEis2[of pte'])
   apply (clarsimp simp: tailM_def headM_def)
@@ -1089,7 +1076,7 @@ lemma storePTE_corres [corres]:
 
 lemma storePTE_corres':
   "pte_relation_aligned (p >> pte_bits) pte pte' \<Longrightarrow>
-  corres dc (pte_at p and pspace_aligned and valid_etcbs)
+  corres dc (pte_at p and pspace_aligned)
             (pspace_aligned' and pspace_distinct')
             (store_pte p pte) (storePTE p pte')"
   apply (rule stronger_corres_guard_imp, rule storePTE_corres)
@@ -1265,7 +1252,7 @@ crunch copyGlobalMappings
 lemmas copyGlobalMappings_typ_ats[wp] = typ_at_lifts [OF copyGlobalMappings_typ_at']
 
 lemma copy_global_mappings_corres [corres]:
-  "corres dc (page_directory_at pd and pspace_aligned and valid_arch_state and valid_etcbs)
+  "corres dc (page_directory_at pd and pspace_aligned and valid_arch_state)
              (page_directory_at' pd and valid_arch_state')
           (copy_global_mappings pd) (copyGlobalMappings pd)"
   apply (simp add: copy_global_mappings_def copyGlobalMappings_def)

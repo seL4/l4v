@@ -647,7 +647,7 @@ lemma createObject_valid_duplicates'[wp]:
   apply (simp add:createObject_def)
   apply (rule hoare_pre)
   apply (wpc | wp| simp add: ARM_HYP_H.createObject_def split del: if_split)+
-         apply (simp add: placeNewObject_def placeNewDataObject_def
+         apply (simp add: placeNewObject_def placeNewDataObject_def curDomain_def
                           placeNewObject'_def split_def copyGlobalMappings_def
                      split del: if_split
            | wp unless_wp[where P="d"] unless_wp[where P'=\<top>]

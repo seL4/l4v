@@ -1049,7 +1049,7 @@ lemma createObject_valid_duplicates'[wp]:
            | wpc | simp add: alignError_def split del: if_split)+
      apply (rule copyGlobalMappings_valid_duplicates')
     apply ((wp unless_wp[where P="d"] unless_wp[where P'=\<top>] | wpc
-            | simp add: alignError_def placeNewObject_def
+            | simp add: alignError_def placeNewObject_def curDomain_def
                         placeNewObject'_def split_def split del: if_split)+)[2]
   apply (intro conjI impI)
              apply clarsimp+

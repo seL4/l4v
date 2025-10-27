@@ -142,9 +142,16 @@ lemma set_vm_root_active_cur_vcpu_of[wp]:
   "set_vm_root tcb \<lbrace>\<lambda>s. P (active_cur_vcpu_of s)\<rbrace>"
   by (wpsimp simp: set_vm_root_def find_pd_for_asid_def wp: get_cap_wp)
 
-crunch set_vm_root
+lemma active_cur_vcpu_of_ready_queues_upd[simp]:
+  "active_cur_vcpu_of (ready_queues_update f s) = active_cur_vcpu_of s"
+  by (clarsimp simp: active_cur_vcpu_of_def pred_tcb_at_def obj_at_def valid_cur_vcpu_def)
+
+crunch set_vm_root, set_tcb_queue
   for valid_cur_vcpu_cur_thread_update[wp]: "\<lambda>s. valid_cur_vcpu (s\<lparr>cur_thread := t\<rparr>)"
   (wp: valid_cur_vcpu_lift_cur_thread_update)
+
+crunch tcb_sched_action
+  for valid_cur_vcpu_cur_thread_update[wp]: "\<lambda>s. valid_cur_vcpu (s\<lparr>cur_thread := t\<rparr>)"
 
 lemma arch_switch_to_thread_valid_cur_vcpu_cur_thread_update[wp]:
   "\<lbrace>valid_cur_vcpu\<rbrace>
@@ -158,7 +165,7 @@ lemma arch_switch_to_thread_valid_cur_vcpu_cur_thread_update[wp]:
 lemma switch_to_thread_valid_cur_vcpu[wp]:
   "switch_to_thread t \<lbrace>valid_cur_vcpu\<rbrace>"
   unfolding switch_to_thread_def
-  by (wpsimp simp: valid_cur_vcpu_def active_cur_vcpu_of_def)
+  by wpsimp
 
 lemma arch_switch_to_idle_thread_valid_cur_vcpu_cur_thread_update[wp]:
   "\<lbrace>\<lambda>s. valid_cur_vcpu s \<and> valid_idle s \<and> t = idle_thread s\<rbrace>
@@ -232,30 +239,12 @@ crunch activate_thread
   for valid_cur_vcpu[wp]: valid_cur_vcpu
 
 crunch tcb_sched_action
-  for arch_tcb_at[wp]: "arch_tcb_at P t"
-  (simp: tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def)
-
-crunch tcb_sched_action
   for valid_cur_vcpu[wp]: valid_cur_vcpu
   (wp: valid_cur_vcpu_lift_weak)
 
-crunch schedule_choose_new_thread
+crunch schedule
   for valid_cur_vcpu[wp]: valid_cur_vcpu
   (simp: crunch_simps valid_cur_vcpu_def active_cur_vcpu_of_def wp: crunch_wps)
-
-lemma schedule_valid_cur_vcpu_det_ext[wp]:
-  "\<lbrace>valid_cur_vcpu and valid_idle\<rbrace>
-   (schedule :: (unit, det_ext) s_monad)
-   \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
-  unfolding schedule_def schedule_switch_thread_fastfail_def ethread_get_when_def ethread_get_def
-  by (wpsimp wp: hoare_drop_imps gts_wp)
-
-lemma schedule_valid_cur_vcpu[wp]:
-  "\<lbrace>valid_cur_vcpu and valid_idle\<rbrace>
-   (schedule :: (unit, unit) s_monad)
-   \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
-  unfolding schedule_def allActiveTCBs_def
-  by wpsimp
 
 crunch cancel_all_ipc, blocked_cancel_ipc, unbind_maybe_notification, cancel_all_signals,
          bind_notification, fast_finalise, deleted_irq_handler, post_cap_deletion, cap_delete_one,
@@ -312,12 +301,7 @@ lemma send_fault_ipc_arch_tcb_at[wp]:
 
 crunch handle_fault, handle_interrupt, handle_vm_fault, handle_hypervisor_fault, send_signal
   for arch_tcb_at[wp]: "arch_tcb_at P t"
-  (wp: mapM_x_wp_inv crunch_wps)
-
-crunch reschedule_required, set_scheduler_action, tcb_sched_action
-  for arch_tcb_at[wp]: "arch_tcb_at P t"
-  (simp: reschedule_required_def set_scheduler_action_def tcb_sched_action_def set_tcb_queue_def
-         get_tcb_queue_def)
+  (wp: mapM_x_wp_inv crunch_wps thread_set_no_change_tcb_pred)
 
 lemma thread_set_fault_arch_tcb_at[wp]:
   "thread_set (tcb_fault_update f) r \<lbrace>arch_tcb_at P t\<rbrace>"
@@ -514,7 +498,7 @@ lemma valid_cur_vcpu_trans_state[simp]:
 
 crunch restart, reschedule_required, possible_switch_to, thread_set_priority
   for arch_tcb_at[wp]: "arch_tcb_at P t"
-  (simp: possible_switch_to_def set_tcb_queue_def get_tcb_queue_def)
+  (wp: thread_set_no_change_tcb_pred)
 
 crunch restart, reschedule_required, possible_switch_to, thread_set_priority
   for valid_cur_vcpu[wp]: valid_cur_vcpu
@@ -545,13 +529,6 @@ crunch set_mcpriority, set_priority
   for valid_cur_vcpu[wp]: valid_cur_vcpu
   (simp: set_priority_def)
 
-lemma ethread_set_state_hyp_refs_of[wp]:
-  "ethread_set f t \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
-  unfolding ethread_set_def set_eobject_def
-  apply wp
-  apply (clarsimp dest!: get_tcb_SomeD)
-  done
-
 crunch tcb_sched_action, possible_switch_to, set_scheduler_action, reschedule_required
   for state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
   (simp: tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def possible_switch_to_def
@@ -578,7 +555,7 @@ crunch invoke_domain
   and arch_tcb_at[wp]: "arch_tcb_at P t"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   and valid_cur_vcpu[wp]: valid_cur_vcpu
-  (wp: valid_cur_vcpu_lift_weak)
+  (wp: valid_cur_vcpu_lift_weak thread_set_no_change_tcb_pred)
 
 crunch perform_asid_control_invocation
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s )"
@@ -642,16 +619,7 @@ lemma handle_event_valid_cur_vcpu:
 
 lemma call_kernel_valid_cur_vcpu:
   "\<lbrace>valid_cur_vcpu and invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
-   (call_kernel e) :: (unit, unit) s_monad
-   \<lbrace>\<lambda>_ . valid_cur_vcpu\<rbrace>"
-  unfolding call_kernel_def
-  apply (simp flip: bind_assoc)
-  by (wpsimp wp: handle_event_valid_cur_vcpu hoare_vcg_if_lift2 hoare_drop_imps
-      | strengthen invs_valid_idle)+
-
-lemma call_kernel_valid_cur_vcpu_det_ext:
-  "\<lbrace>valid_cur_vcpu and invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
-   (call_kernel e) :: (unit, det_ext) s_monad
+   call_kernel e
    \<lbrace>\<lambda>_ . valid_cur_vcpu\<rbrace>"
   unfolding call_kernel_def
   apply (simp flip: bind_assoc)

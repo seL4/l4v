@@ -237,7 +237,7 @@ lemma dxo_wp_weak[wp]:
 crunch set_thread_state
   for ct[wp]: "\<lambda>s. P (cur_thread s)"
 
-crunch set_scheduler_action
+crunch set_scheduler_action, get_thread_state
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
 
 lemma set_thread_state_typ_at[wp]:
@@ -964,6 +964,18 @@ lemma cap_refs_respects_region_cong:
 
 lemmas device_region_congs[cong] = pspace_respects_region_cong cap_refs_respects_region_cong
 
+lemma invs_ready_queues_update[simp]:
+  "invs (ready_queues_update f s) = invs s"
+  by (simp add: invs_def valid_state_def)
+
+lemma invs_domain_time_update[simp]:
+  "invs (domain_time_update f s) = invs s"
+  by (simp add: invs_def valid_state_def)
+
+lemma invs_exst [iff]:
+  "invs (trans_state f s) = invs s"
+  by (simp add: invs_def valid_state_def)
+
 lemma dmo_invs1:
   assumes valid_mf: "\<And>P. f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>"
   shows
@@ -1130,12 +1142,10 @@ lemma update_ep_queue_triv[simp]: "ep \<noteq> IdleEP \<Longrightarrow> update_e
 
 crunch set_simple_ko
   for arch[wp]: "\<lambda>s. P (arch_state s)"
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch set_simple_ko
-  for irq_node_inv[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and irq_node_inv[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
   and valid_irq_node[wp]: valid_irq_node
-  (wp: crunch_wps valid_irq_node_typ)
+  (wp: crunch_wps valid_irq_node_typ simp: crunch_simps)
 
 lemma set_simple_ko_global_refs [wp]:
   "set_simple_ko f ntfn p \<lbrace>valid_global_refs\<rbrace>"
@@ -1684,9 +1694,8 @@ lemma no_ofail_read_object[simp]:
   "no_ofail (obj_at P ptr) (read_object ptr)"
   by (clarsimp simp: no_ofail_def obj_at_def)
 
-lemma stsa_caps_of_state[wp]:
-  "set_thread_state_act t \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
-  unfolding set_thread_state_act_def set_scheduler_action_def by wpsimp
+crunch set_thread_state_act
+  for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
 
 lemma shows
   sts_caps_of_state[wp]:
@@ -1718,11 +1727,10 @@ lemma set_mrs_caps_of_state[wp]:
   by (auto simp: cte_wp_at_cases2 tcb_cnode_map_def dest!: get_tcb_SomeD)
 
 crunch set_thread_state_act
- for obj_at[wp]: "\<lambda>s. P (obj_at P' p' s)"
+  for obj_at[wp]: "\<lambda>s. P (obj_at P' p' s)"
 crunch set_thread_state
- for arch_state[wp]: "\<lambda>s. P (arch_state s)"
-crunch set_thread_state
- for machine[wp]: "\<lambda>s. P (underlying_memory (machine_state s))"
+  for arch_state[wp]: "\<lambda>s. P (arch_state s)"
+  and machine[wp]: "\<lambda>s. P (underlying_memory (machine_state s))"
 
 lemma set_object_cspace:
   "cspace_agnostic_pred P' \<Longrightarrow>

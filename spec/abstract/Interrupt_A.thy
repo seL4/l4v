@@ -62,7 +62,7 @@ definition
    if irq > maxIRQ then do_machine_op $ do
     maskInterrupt True irq;
     ackInterrupt irq
-  od
+   od
   else do
    st \<leftarrow> get_irq_state irq;
    case st of
@@ -80,6 +80,6 @@ definition
    | IRQInactive \<Rightarrow> fail \<comment> \<open>not meant to be able to get IRQs from inactive lines\<close>
    | IRQReserved \<Rightarrow> handle_reserved_irq irq;
    do_machine_op $ ackInterrupt irq
- od"
+  od"
 
 end

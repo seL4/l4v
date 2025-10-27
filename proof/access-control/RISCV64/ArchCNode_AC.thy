@@ -131,15 +131,12 @@ lemma list_integ_lift[CNode_AC_assms]:
     "\<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
      f
      \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag}  (cdt st) (tcb_states_of_state st)) st\<rbrace>"
-  assumes ekh: "\<And>P. f \<lbrace>\<lambda>s. P (ekheap s)\<rbrace>"
-  assumes rq: "\<And>P. f \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace>"
   shows "\<lbrace>integrity aag X st and Q\<rbrace> f \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_pre)
    apply (unfold integrity_def[abs_def] integrity_asids_def)
    apply (simp only: integrity_cdt_list_as_list_integ)
-   apply (rule hoare_lift_Pf2[where f="ekheap"])
-    apply (simp add: tcb_states_of_state_def get_tcb_def)
-    apply (wp li[simplified tcb_states_of_state_def get_tcb_def] ekh rq)+
+   apply (simp add: tcb_states_of_state_def get_tcb_def)
+   apply (wp li[simplified tcb_states_of_state_def get_tcb_def])+
   apply (simp only: integrity_cdt_list_as_list_integ)
   apply (simp add: tcb_states_of_state_def get_tcb_def)
   done

@@ -48,11 +48,9 @@ lemma arch_stt_sc_at[wp,Schedule_AI_assms]:
   apply wp
   done
 
-lemma arch_stt_runnable[Schedule_AI_assms]:
-  "\<lbrace>st_tcb_at Q t\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>r . st_tcb_at Q t\<rbrace>"
-  apply (simp add: arch_switch_to_thread_def)
-  apply wp
-  done
+lemma arch_stt_st_tcb_at[Schedule_AI_assms]:
+  "arch_switch_to_thread t \<lbrace>st_tcb_at Q t\<rbrace>"
+  by (wpsimp simp: arch_switch_to_thread_def)
 
 lemma arch_stit_invs[wp, Schedule_AI_assms]:
   "\<lbrace>invs\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>r. invs\<rbrace>"
@@ -73,6 +71,7 @@ lemma arch_stit_sc_at[wp, Schedule_AI_assms]:
 crunch set_vm_root
   for ct[wp]: "\<lambda>s. P (cur_thread s)"
   and it[wp]: "\<lambda>s. P (idle_thread s)"
+  and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
   (simp: crunch_simps wp: hoare_drop_imps)
 
 lemma arch_stit_activatable[wp, Schedule_AI_assms]:

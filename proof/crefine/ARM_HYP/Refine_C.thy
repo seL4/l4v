@@ -648,9 +648,9 @@ lemma callKernel_withFastpath_corres_C:
   apply (auto elim!: pred_tcb'_weakenE cnode_caps_gsCNodes_from_sr[rotated])
   done
 
-lemma tcb_arch_ref_context_set_id [simp]:
-  "tcb_arch_ref (tcb_arch_update (arch_tcb_context_set f) tcb) = tcb_arch_ref tcb"
-  unfolding tcb_arch_ref_def arch_tcb_context_set_def
+lemma tcb_vcpu_context_set_id[simp]:
+  "tcb_vcpu (arch_tcb_context_set f (tcb_arch tcb)) = tcb_vcpu (tcb_arch tcb)"
+  unfolding arch_tcb_context_set_def
   by simp
 
 lemma threadSet_all_invs_triv':
@@ -659,25 +659,24 @@ lemma threadSet_all_invs_triv':
   unfolding all_invs'_def
   apply (rule hoare_pre)
    apply (rule wp_from_corres_unit)
-     apply (rule threadset_corresT [where f="tcb_arch_update (arch_tcb_context_set f)"])
-            apply (simp add: tcb_relation_def arch_tcb_context_set_def
-                            atcbContextSet_def arch_tcb_relation_def)
-           apply (simp add: tcb_cap_cases_def)
-          apply (simp add: tcb_cte_cases_def tcb_cte_cases_neqs)
-         apply fastforce
-        apply fastforce
-       apply fastforce
-     apply (simp add: exst_same_def)
-    apply (wp thread_set_invs_trivial thread_set_ct_running thread_set_not_state_valid_sched
-              threadSet_invs_trivial threadSet_ct_running' hoare_weak_lift_imp
-              thread_set_ct_in_state
-           | simp add: tcb_cap_cases_def
-           | rule threadSet_ct_in_state'
-           | wp (once) hoare_vcg_disj_lift)+
+      apply (rule threadset_corresT [where f="tcb_arch_update (arch_tcb_context_set f)"]; simp?)
+        apply (simp add: tcb_relation_def arch_tcb_context_set_def
+                         atcbContextSet_def arch_tcb_relation_def)
+       apply (simp add: tcb_cap_cases_def)
+      apply (simp add: tcb_cte_cases_def cteSizeBits_def)
+     apply (wp thread_set_invs_trivial thread_set_not_state_valid_sched
+               threadSet_invs_trivial threadSet_ct_running' hoare_weak_lift_imp
+               thread_set_ct_in_state
+            | simp add: tcb_cap_cases_def tcb_arch_ref_def
+            | rule threadSet_ct_in_state'
+            | wp (once) hoare_vcg_disj_lift)+
   apply clarsimp
+  apply (rename_tac s s')
   apply (rule exI, rule conjI, assumption)
-  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def invs'_def cur_tcb_def)
-  apply (simp add: state_relation_def)
+  apply (prop_tac "invs s'")
+   apply (clarsimp simp: invs_def)
+  apply (clarsimp simp: invs_psp_aligned invs_distinct)
+  apply (clarsimp simp: invs_def cur_tcb_def cur_tcb'_def state_relation_def)
   done
 
 lemma getContext_corres:

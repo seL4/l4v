@@ -59,6 +59,7 @@ crunch init_arch_objects
   and valid_mdb[wp]: "valid_mdb"
   and cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
   and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+  and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (ignore: clearMemory wp: crunch_wps)
 
 crunch store_pte
@@ -183,7 +184,7 @@ lemma valid_untyped_helper [Retype_AI_assms]:
   and     cn   : "caps_no_overlap ptr sz s"
   and     vp   : "valid_pspace s"
   shows "valid_cap c
-           (s\<lparr>kheap := \<lambda>x. if x \<in> set (retype_addrs ptr ty n us) then Some (default_object ty dev us) else kheap s x\<rparr>)"
+           (s\<lparr>kheap := \<lambda>x. if x \<in> set (retype_addrs ptr ty n us) then Some (default_object ty dev us (cur_domain s)) else kheap s x\<rparr>)"
   (is "valid_cap c ?ns")
   proof -
   have obj_at_pres: "\<And>P x. obj_at P x s \<Longrightarrow> obj_at P x ?ns"
@@ -191,7 +192,7 @@ lemma valid_untyped_helper [Retype_AI_assms]:
    (erule pspace_no_overlapC [OF pn _ _ cover vp])
   note blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
         Int_atLeastAtMost atLeastatMost_empty_iff
-  have cover':"range_cover ptr sz (obj_bits (default_object ty dev us)) n"
+  have cover':"range_cover ptr sz (obj_bits (default_object ty dev us (cur_domain s))) n"
     using cover tyunt
     by (clarsimp simp:obj_bits_dev_irr)
 
@@ -278,7 +279,7 @@ lemma valid_cap:
   proof -
   note blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
         Int_atLeastAtMost atLeastatMost_empty_iff
-  have cover':"range_cover ptr sz (obj_bits (default_object ty dev us)) n"
+  have cover':"range_cover ptr sz (obj_bits (default_object ty dev us (cur_domain s))) n"
     using cover tyunt
     by (clarsimp simp: obj_bits_dev_irr)
   show ?thesis
@@ -292,11 +293,11 @@ lemma valid_cap:
      apply clarsimp
      apply (drule disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt]])
       apply (simp add: Int_ac p_assoc_help[symmetric])
-     apply simp
+     apply fastforce
     apply clarsimp
     apply (drule disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt]])
      apply (simp add: Int_ac p_assoc_help[symmetric])
-    apply simp
+    apply fastforce
     done
   qed
 
@@ -345,7 +346,7 @@ lemma ptes_of:
   by (auto simp: level_pte_of_def obind_def pts_of if_option split: option.splits)
 
 lemma default_empty:
-  "default_object ty dev us = ArchObj (PageTable pt) \<Longrightarrow> pt = (empty_pt (pt_type pt))"
+  "default_object ty dev us d = ArchObj (PageTable pt) \<Longrightarrow> pt = (empty_pt (pt_type pt))"
   by (auto simp: default_object_def default_arch_object_def empty_pt_def tyunt
            split: apiobject_type.splits aobject_type.splits)
 
@@ -665,7 +666,7 @@ lemma pspace_respects_device_regionD:
 
 
 lemma default_obj_dev:
-  "\<lbrakk>ty \<noteq> Untyped;default_object ty dev us = ArchObj (DataPage dev' sz)\<rbrakk> \<Longrightarrow> dev = dev'"
+  "\<lbrakk>ty \<noteq> Untyped;default_object ty dev us d = ArchObj (DataPage dev' sz)\<rbrakk> \<Longrightarrow> dev = dev'"
   by (clarsimp simp: default_object_def default_arch_object_def
               split: apiobject_type.split_asm aobject_type.split_asm)
 
@@ -765,7 +766,7 @@ lemma pspace_respects_device_region:
   apply (rule pspace_respects_device_regionI)
      apply (clarsimp simp add: pspace_respects_device_region_def s'_def ps_def
                         split: if_split_asm )
-      apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt])
+      apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt, where d'="cur_domain s"])
        using cover tyunt
        apply (simp add: obj_bits_api_def3 split: if_splits)
       apply (frule default_obj_dev[OF tyunt],simp)
@@ -779,7 +780,7 @@ lemma pspace_respects_device_region:
      apply fastforce
     apply (clarsimp simp add: pspace_respects_device_region_def s'_def ps_def
                        split: if_split_asm )
-     apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt])
+     apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt, where d'="cur_domain s"])
       using cover tyunt
       apply (simp add: obj_bits_api_def4 split: if_splits)
      apply (frule default_obj_dev[OF tyunt],simp)

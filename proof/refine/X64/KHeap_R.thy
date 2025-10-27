@@ -1214,17 +1214,6 @@ lemma obj_relation_cut_same_type:
                   Structures_H.kernel_object.split_asm
                   X64_A.arch_kernel_obj.split_asm)
 
-definition exst_same :: "Structures_H.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool"
-where
-  "exst_same tcb tcb' \<equiv> tcbPriority tcb = tcbPriority tcb'
-                      \<and> tcbTimeSlice tcb = tcbTimeSlice tcb'
-                      \<and> tcbDomain tcb = tcbDomain tcb'"
-
-fun exst_same' :: "Structures_H.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"
-where
-  "exst_same' (KOTCB tcb) (KOTCB tcb') = exst_same tcb tcb'" |
-  "exst_same' _ _ = True"
-
 lemma tcbs_of'_non_tcb_update:
   "\<lbrakk>typ_at' (koTypeOf ko) ptr s'; koTypeOf ko \<noteq> TCBT\<rbrakk>
    \<Longrightarrow> tcbs_of' (s'\<lparr>ksPSpace := (ksPSpace s')(ptr \<mapsto> ko)\<rparr>) = tcbs_of' s'"
@@ -1242,7 +1231,6 @@ lemma setObject_other_corres:
                \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO ob')) = map_to_ctes (ksPSpace s)"
   assumes t: "is_other_obj_relation_type (a_type ob)"
   assumes b: "\<And>ko. P ko \<Longrightarrow> objBits ko = objBits ob'"
-  assumes e: "\<And>ko. P ko \<Longrightarrow> exst_same' (injectKO ko) (injectKO ob')"
   assumes P: "\<And>(v::'a::pspace_storable). (1 :: machine_word) < 2 ^ (objBits v)"
   shows      "other_obj_relation ob (injectKO (ob' :: 'a :: pspace_storable)) \<Longrightarrow>
   corres dc (obj_at (\<lambda>ko. a_type ko = a_type ob) ptr and obj_at (same_caps ob) ptr)
@@ -1293,21 +1281,6 @@ lemma setObject_other_corres:
    apply (insert t)
    apply ((erule disjE
           | clarsimp simp: is_other_obj_relation_type is_other_obj_relation_type_def a_type_def)+)[1]
-  apply (extract_conjunct \<open>match conclusion in "ekheap_relation _ _" \<Rightarrow> -\<close>)
-   apply (simp only: ekheap_relation_def)
-   apply (rule ballI, drule(1) bspec)
-   apply (drule domD)
-   apply (insert e)
-   apply atomize
-   apply (clarsimp simp: obj_at'_def)
-   apply (erule_tac x=obj in allE)
-   apply (clarsimp simp: projectKO_eq project_inject)
-   apply (case_tac ob;
-          simp_all add: a_type_def other_obj_relation_def etcb_relation_def
-                        is_other_obj_relation_type t exst_same_def)
-     apply (clarsimp simp: is_other_obj_relation_type t exst_same_def
-                    split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits
-                           arch_kernel_obj.splits)+
   \<comment> \<open>ready_queues_relation\<close>
   apply (prop_tac "koTypeOf (injectKO ob') \<noteq> TCBT")
    subgoal
