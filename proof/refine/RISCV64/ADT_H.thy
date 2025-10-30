@@ -1507,7 +1507,7 @@ lemma absExst_correct:
       using rel invs invs'
       apply (simp_all add: absExst_def absSchedulerAction_correct
                            absCDTList_correct[THEN fun_cong] state_relation_def invs_def valid_state_def
-                           ready_queues_relation_def invs'_def valid_state'_def
+                           ready_queues_relation_def invs'_def
                            valid_pspace_def valid_sched_def valid_pspace'_def curry_def fun_eq_iff)
   done
 

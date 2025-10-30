@@ -1813,7 +1813,7 @@ where
 lemma set_thread_state_fault_tcb_at[wp]:
   "\<lbrace>fault_tcb_at P t\<rbrace> set_thread_state p ts \<lbrace>\<lambda>_. fault_tcb_at P t\<rbrace>"
   unfolding set_thread_state_def set_object_def get_object_def
-  by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)\
+  by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
 
 lemma cancel_all_signals_invs_helper:
   "\<lbrace>all_invs_but_sym_refs

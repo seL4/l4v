@@ -2106,10 +2106,6 @@ lemma set_thread_state_ready_qs_distinct[wp]:
   apply (wpsimp wp: set_object_wp)
   by (clarsimp simp: ready_qs_distinct_def)
 
-crunch as_user
-  for in_correct_ready_q[wp]: in_correct_ready_q
-  (wp: set_object_wp)
-
 lemma as_user_ready_qs_distinct[wp]:
   "as_user tptr f \<lbrace>ready_qs_distinct\<rbrace>"
   unfolding as_user_def

@@ -2481,13 +2481,12 @@ lemma setObject_pre:
   shows "\<lbrace>P\<rbrace> setObject p obj \<lbrace>Q\<rbrace>"
   supply simps = in_magnitude_check[OF _, unfolded objBits_def] valid_def
                  setObject_def in_monad split_def default_update updateObject_default_def
-                 projectKO_eq project_inject objBits_def
-                 RISCV64_H.fromPPtr_def (* FIXME: arch split *)
+                 project_inject objBits_def RISCV64_H.fromPPtr_def (* FIXME: arch split *)
   using assms
   apply (clarsimp simp: simps)
   apply (rename_tac s ko)
   apply (drule_tac x=s in spec)
-  apply (clarsimp simp: obj_at'_def projectKO_eq split_paired_Ball project_inject)
+  apply (clarsimp simp: obj_at'_def split_paired_Ball project_inject)
   apply (erule impE)
    apply fastforce
   apply (drule spec, erule mp)
@@ -2841,7 +2840,7 @@ interpretation set_reply': simple_non_tcb_non_sc_ko' setReply getReply
 
 interpretation set_sc': simple_non_tcb_non_reply_ko' setSchedContext getSchedContext
   by unfold_locales (simp_all add: setSchedContext_def getSchedContext_def projectKO_opts_defs
-                                   gen_objBits_simps scBits_pos_power2)
+                                   gen_objBits_simps)
 
 interpretation set_tcb': simple_non_sc_ko' "\<lambda>p v. setObject p (v::tcb)"
                                            "\<lambda>p. getObject p :: tcb kernel"

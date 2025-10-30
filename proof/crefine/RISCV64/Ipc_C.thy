@@ -5643,7 +5643,7 @@ lemma reply_push_ccorres:
                            simp: typ_heap_simps' creply_relation_def option_to_ctcb_ptr_def
                           split: if_splits)
        apply ceqv
-      apply (ctac add: setThreadStateBlockedOnReply_ccorres)
+      apply (ctac add: setThreadStateBlockedOnReply_ccorres, rename_tac xfdc')
         apply (rule ccorres_rhs_assoc2)
         apply (rule_tac xf'=ret__int_'
                     and val="from_bool ((\<exists>y. scPtrOptDonated = Some y) \<and> scPtrOptCallee = None)"
@@ -7408,7 +7408,7 @@ lemma sendSignal_ccorres[corres]:
         apply (ctac (no_vcg) add: cancelIPC_ccorres1[OF cteDeleteOne_ccorres])
          apply (ctac (no_vcg) add: setThreadState_ccorres)
           apply (ctac (no_vcg) add: setRegister_ccorres)
-           apply (ctac (no_vcg) add: maybeDonateSchedContext_ccorres)
+           apply (ctac (no_vcg) add: maybeDonateSchedContext_ccorres, rename_tac xfdc')
             apply (ctac (no_vcg) add: isSchedulable_ccorres)
              apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
                  apply (clarsimp simp: when_def)
@@ -7546,7 +7546,7 @@ lemma sendSignal_ccorres[corres]:
       apply (ctac (no_vcg))
        apply simp
        apply (ctac (no_vcg))
-        apply (ctac (no_vcg) add: maybeDonateSchedContext_ccorres)
+        apply (ctac (no_vcg) add: maybeDonateSchedContext_ccorres, rename_tac xfdc')
          apply (ctac (no_vcg) add: isSchedulable_ccorres)
           apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
               apply (clarsimp simp: when_def)

@@ -2750,11 +2750,6 @@ lemma guarded_switch_to_lift:
   shows "\<lbrace>P\<rbrace> guarded_switch_to thread \<lbrace>Q\<rbrace>"
   by (wpsimp simp: guarded_switch_to_def wp: assms thread_get_wp')
 
-lemma next_domain_valid_idle[wp]:
-  "\<lbrace> valid_idle \<rbrace> next_domain \<lbrace> \<lambda>_. valid_idle\<rbrace>"
-  apply (wpsimp simp: next_domain_def wp: dxo_wp_weak)
-  by (clarsimp simp: valid_idle_def Let_def)
-
 (* FIXME move *)
 lemma in_release_q_valid_blocked_ct_upd:
   "\<lbrakk>in_release_q (cur_thread s) s; valid_blocked s\<rbrakk> \<Longrightarrow> valid_blocked (s\<lparr>cur_thread := thread\<rparr>)"
@@ -9779,7 +9774,7 @@ lemma schedule_used_refills_unat_sum:
    apply (subst unat_add_lem'')
    apply (prop_tac "unat (r_amount (refill_tl sc)) \<in> set (map unat (map r_amount (sc_refills sc)))")
      apply force
-    apply (frule member_le_sum_list)
+    apply (frule member_le_sum_list, clarsimp)
     apply (rule_tac y="unat (sc_budget sc)" in order_trans, linarith)
     apply force
    subgoal by (metis (no_types, lifting) ab_semigroup_add_class.add_ac(1) append_butlast_last_id
@@ -9792,7 +9787,7 @@ lemma schedule_used_refills_unat_sum:
   apply (subst unat_add_lem''; fastforce?)
    apply (prop_tac "unat (r_amount (refill_tl sc)) \<in> set (map unat (map r_amount (sc_refills sc)))")
     apply force
-   apply (frule member_le_sum_list)
+   apply (frule member_le_sum_list, clarsimp)
    apply (rule_tac y="unat (sc_budget sc)" in order_trans, force)
    apply force
   by (metis Groups.add_ac(1) append_butlast_last_id refills_unat_sum_append refills_unat_sum_def

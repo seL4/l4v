@@ -4096,17 +4096,18 @@ lemma cur_tcb_revokable [iff]:
   "cur_tcb (is_original_cap_update f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
 
-lemma cur_sc_tcb_revokable [iff]:
-  "cur_sc_tcb (is_original_cap_update f s) = cur_sc_tcb s"
-  by (simp add: cur_sc_tcb_def sc_tcb_sc_at_def)
-
 lemma cur_tcb_arch [iff]:
   "cur_tcb (arch_state_update f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
 
-lemma cur_sc_tcb_arch [iff]:
-  "cur_sc_tcb (arch_state_update f s) = cur_sc_tcb s"
-  by (simp add: cur_sc_tcb_def sc_tcb_sc_at_def)
+lemma cur_sc_tcb_simps[simp]:
+  "\<And>f. cur_sc_tcb (arch_state_update f s) = cur_sc_tcb s"
+  "\<And>f. cur_sc_tcb (is_original_cap_update f s) = cur_sc_tcb s"
+  "\<And>f. cur_sc_tcb (cdt_update f s) = cur_sc_tcb s"
+  "\<And>f. cur_sc_tcb (trans_state f s) = cur_sc_tcb s"
+  "\<And>f. cur_sc_tcb (ready_queues_update f s) = cur_sc_tcb s"
+  "\<And>f. cur_sc_tcb (domain_time_update f s) = cur_sc_tcb s"
+  by (simp_all add: cur_sc_tcb_def sc_tcb_sc_at_def)
 
 lemma invs_valid_global_objs[elim!]:
   "invs s \<Longrightarrow> valid_global_objs s"

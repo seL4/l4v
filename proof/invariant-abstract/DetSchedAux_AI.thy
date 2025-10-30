@@ -562,12 +562,6 @@ lemma retype_region_valid_blocked[wp]:
   apply (blast intro: valid_blocked_fold_update)
   done
 
-=======
-crunch create_cap, cap_insert
-  for valid_queues[wp]: valid_queues
-  (wp: valid_queues_lift)
->>>>>>> 3667ef81cd60b2b814cd28e59231bc7399250fc6
-
 lemma delete_objects_valid_blocked[wp]:
   "\<lbrace>valid_blocked\<rbrace> delete_objects a b \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   apply (simp add: delete_objects_def)

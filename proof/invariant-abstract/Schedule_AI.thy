@@ -107,7 +107,6 @@ lemma dmo_kheap_arch_state[wp]:
 lemmas do_machine_op_tcb[wp] =
   do_machine_op_obj_at[where P=id and Q=is_tcb, simplified]
 
-
 lemma (in Schedule_AI) stt_tcb [wp]:
   "\<lbrace>tcb_at t\<rbrace> switch_to_thread t \<lbrace>\<lambda>_. (tcb_at t :: 'a state \<Rightarrow> bool)\<rbrace>"
   apply (simp add: switch_to_thread_def)

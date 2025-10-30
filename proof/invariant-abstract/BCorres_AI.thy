@@ -74,7 +74,7 @@ arch_requalify_facts
 crunch
   set_original, set_object, set_cap, set_irq_state, deleted_irq_handler, get_cap,set_cdt, empty_slot
   for (bcorres) bcorres[wp]: truncate_state
-  (ignore: maskInterrupt)
+  (simp: read_object_def)
 
 lemma get_cap_det:
   "(r,s') \<in> fst (get_cap p s) \<Longrightarrow> get_cap p s = ({(r,s)}, False)"

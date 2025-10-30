@@ -4043,6 +4043,7 @@ end
 
 crunch set_priority,set_mcpriority
   for valid_list[wp]: "valid_list"
+  (wp: crunch_wps)
 
 crunch set_priority,set_mcpriority
   for (empty_fail) empty_fail[wp]
