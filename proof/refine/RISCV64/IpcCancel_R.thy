@@ -2089,7 +2089,7 @@ crunch asUser
 crunch set_thread_state_act
   for in_correct_ready_q[wp]: in_correct_ready_q
   and ready_qs_distinct[wp]: ready_qs_distinct
-  (wp: crunch_wps)
+  (wp: set_object_wp)
 
 lemma set_thread_state_in_correct_ready_q[wp]:
   "set_thread_state ref ts \<lbrace>in_correct_ready_q\<rbrace>"

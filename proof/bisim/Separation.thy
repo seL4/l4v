@@ -158,4 +158,18 @@ lemma separate_state_get_tcbD:
   apply (simp add: tcb_at_def separate_tcb_def caps_of_state_tcb_cap_cases dom_tcb_cap_cases)
   done
 
+lemma separate_state_simps[simp]:
+  "\<And>f. separate_state (trans_state f s) = separate_state s"
+  "\<And>f. separate_state (cdt_update f s) = separate_state s"
+  "\<And>f. separate_state (is_original_cap_update f s) = separate_state s"
+  "\<And>f. separate_state (domain_index_update f s) = separate_state s"
+  "\<And>f. separate_state (cur_domain_update f s) = separate_state s"
+  "\<And>f. separate_state (domain_time_update f s) = separate_state s"
+  "\<And>f. separate_state (arch_state_update f s) = separate_state s"
+  "\<And>f. separate_state (machine_state_update f s) = separate_state s"
+  "\<And>f. separate_state (cur_thread_update f s) = separate_state s"
+  "\<And>f. separate_state (ready_queues_update f s) = separate_state s"
+  "\<And>f. separate_state (scheduler_action_update f s) = separate_state s"
+  by (simp add: separate_state_def)+
+
 end

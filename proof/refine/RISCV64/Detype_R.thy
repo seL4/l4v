@@ -1000,8 +1000,7 @@ lemma deleteObjects_corres:
         apply (fastforce simp: add_mask_fold)
        apply (erule state_relation_release_queue_relation)
       apply (fastforce simp: add_mask_fold)
-     apply (clarsimp simp: state_relation_def ghost_relation_of_heap
-                           detype_def)
+     apply (clarsimp simp: state_relation_def ghost_relation_of_heap detype_def)
      apply (drule_tac t="gsUserPages s'" in sym)
      apply (drule_tac t="gsCNodes s'" in sym)
      apply (auto simp add: ups_of_heap_def cns_of_heap_def ext add_mask_fold
@@ -4582,9 +4581,7 @@ proof -
                          Arch_createNewCaps_def)
         apply (rename_tac apiobject_type)
         apply (case_tac apiobject_type)
-            apply (simp_all add: bind_assoc RISCV64_H.toAPIType_def
-                                 )
-
+            apply (simp_all add: bind_assoc RISCV64_H.toAPIType_def)
               \<comment> \<open>Untyped\<close>
               apply (simp add: bind_assoc RISCV64_H.getObjectSize_def
                                mapM_def sequence_def Retype_H.createObject_def
@@ -5080,8 +5077,8 @@ lemma createObject_pspace_no_overlap':
   apply (frule range_cover_offset[rotated,where p = n])
    apply simp+
   by (auto simp: word_shiftl_add_distrib field_simps shiftl_t2n elim: range_cover_le)
-     (auto simp add: APIType_capBits_def fromAPIType_def objBits_def scBits_simps objBits_simps
-              dest!: to_from_apiTypeD)
+     (auto simp: APIType_capBits_def fromAPIType_def objBits_def scBits_simps objBits_simps
+          dest!: to_from_apiTypeD)
 
 lemma createObject_pspace_aligned_distinct':
   "\<lbrace>pspace_aligned' and K (is_aligned ptr (APIType_capBits ty us)) and pspace_bounded'

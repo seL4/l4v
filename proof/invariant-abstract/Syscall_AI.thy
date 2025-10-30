@@ -51,6 +51,11 @@ lemmas [simp] =
   data_to_cptr_def
 
 
+crunch next_domain
+  for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
+  and valid_idle[wp]: valid_idle
+  (simp: crunch_simps)
+
 lemma next_domain_invs[wp]:
   "next_domain \<lbrace> invs \<rbrace>"
   unfolding next_domain_def
@@ -59,11 +64,6 @@ lemma next_domain_invs[wp]:
                    valid_mdb_def mdb_cte_at_def valid_ioc_def valid_irq_states_def
                    valid_machine_state_def)
   done
-
-lemma next_domain_scheduler_action[wp]:
-  "next_domain \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
-  unfolding next_domain_def
-  by (wpsimp simp: Let_def)
 
 crunch awaken
   for invs[wp]: invs
@@ -636,7 +636,6 @@ lemma sts_mcpriority_tcb_at[wp]:
 
 lemma sts_mcpriority_tcb_at_ct[wp]:
   "\<lbrace>\<lambda>s. mcpriority_tcb_at P (cur_thread s) s\<rbrace> set_thread_state p ts \<lbrace>\<lambda>rv s. mcpriority_tcb_at P (cur_thread s) s\<rbrace>"
-  apply wp_pre
   by (wpsimp | wps)+
 
 lemma option_None_True: "case_option (\<lambda>_. True) f x = (\<lambda>s. \<forall>y. x = Some y \<longrightarrow> f y s)"
@@ -1269,11 +1268,6 @@ lemma tcb_state_If_valid[simp]:
       = \<top>"
   by (rule ext, simp add: valid_tcb_state_def)
 
-lemma drop_when_dxo_wp: "(\<And>f s. P (trans_state f s) = P s ) \<Longrightarrow> \<lbrace>P\<rbrace> when b (do_extended_op e) \<lbrace>\<lambda>_.P\<rbrace>"
-  apply (clarsimp simp add: when_def)
-  apply (wp | simp)+
-  done
-
 crunch handle_timeout
  for ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
   (wp: crunch_wps thread_set_cap_to simp: crunch_simps ran_tcb_cap_cases)
@@ -1604,7 +1598,7 @@ lemma fast_finalise_sym_refs:
   by (strengthen invs_sym_refs, rule fast_finalise_invs)
 
 crunch empty_slot
- for state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
+  for state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
   (wp: crunch_wps simp: crunch_simps interrupt_update.state_refs_update)
 
 lemma reply_unlink_runnable[wp]:

@@ -636,13 +636,14 @@ lemmas pred_tcb_scps_of_kh_simps =
                        , simplified pred_map_eq_map_join]
   pred_map2'_upd1[where m="tcb_scps_of_kh kh" and m'=sc_heap for kh and sc_heap]
 
-\<comment> \<open>Project etcbs. These records originally made up the "extended kheap" used in the
-    deterministic version of the specification. For MCS, they are now part of tcb objects
+\<comment> \<open>These records originally made up the "extended kheap" used in the
+    deterministic version of the specification but they are now part of tcb objects
     in the main kheap. We project them together, since they are typically used together.\<close>
 
 record etcb =
-  etcb_priority :: "priority"
-  etcb_domain :: "domain"
+  etcb_priority :: priority
+  \<comment> \<open>etcb_time_slice :: nat FIXME: time_slice was part of the ekheap but isn't used in valid_sched, do we want it here?\<close>
+  etcb_domain :: domain
 
 definition etcb_of :: "tcb \<Rightarrow> etcb" where
   "etcb_of t = \<lparr> etcb_priority = tcb_priority t, etcb_domain = tcb_domain t \<rparr>"

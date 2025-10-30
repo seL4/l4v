@@ -271,7 +271,7 @@ definition
      thread_set_domain tptr new_dom;
      sched \<leftarrow> gets (schedulable tptr);
      when sched $ tcb_sched_action tcb_sched_enqueue tptr; \<comment> \<open>schedulable and dequeued\<close>
-     when (tptr = cur) $ reschedule_required
+     when (tptr = cur) reschedule_required
    od"
 
 definition invoke_domain:: "obj_ref \<Rightarrow> domain \<Rightarrow> (data list,'z::state_ext) p_monad"

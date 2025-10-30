@@ -96,7 +96,7 @@ fun make_bind_local nm =
 
 fun set_global_qualify (args : qualify_args) thy =
   let
-    val _ = Locale.check thy (#target_name args, Position.none)
+    val _ = Locale.check_global thy (#target_name args, Position.none)
     val _ = case get_qualify thy of SOME _ => error "Already in a qualify block!" | NONE => ();
 
     val thy' = Data.map (K (SOME (thy,args))) thy;

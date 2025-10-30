@@ -1368,14 +1368,13 @@ lemma set_cdt_symb_exec_l:
   by (simp add: corres_underlying_def return_def set_cdt_def in_monad Bex_def)
 
 crunch create_cap_ext
-  for domain_index[wp]: "\<lambda>s. P (domain_index s)"
-crunch create_cap_ext
   for work_units_completed[wp]: "\<lambda>s. P (work_units_completed s)"
+  (ignore_del: create_cap_ext)
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma updateNewFreeIndex_noop_psp_corres:
-  "corres_underlying {(s, s'). pspace_relations (ekheap s) (kheap s) (ksPSpace s')} False True
+  "corres_underlying {(s, s'). pspace_relation (kheap s) (ksPSpace s')} False True
     dc \<top> (cte_at' slot)
     (return ()) (updateNewFreeIndex slot)"
   apply (simp add: updateNewFreeIndex_def)
@@ -3051,7 +3050,7 @@ lemma createNewCaps_range_helper:
                     clarsimp simp: APIType_capBits_def word_bits_def
                                    objBits_simps archObjSize_def ptr_add_def o_def,
                     fastforce simp: objBitsKO_def objBits_def scBits_simps)+)[5]
-       \<comment>\<open>Arch objects\<close>
+        \<comment>\<open>Arch objects\<close>
         by (wp createObjects_ret2
             | clarsimp simp: APIType_capBits_def objBits_if_dev archObjSize_def
                              word_bits_def  bit_simps

@@ -90,7 +90,7 @@ lemma createObject_typ_at':
   apply (subgoal_tac "x \<in> mask_range x (objBitsKO y)")
    apply fastforce
   apply (drule(1) pspace_alignedD')
-  apply (fastforce dest: is_aligned_no_overflow_mask)
+  apply (clarsimp simp: is_aligned_no_overflow_mask)
   done
 
 lemma set_cap_device_and_range_aligned:

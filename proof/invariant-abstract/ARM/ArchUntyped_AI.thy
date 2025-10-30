@@ -182,7 +182,7 @@ lemma retype_ret_valid_caps_aobj[Untyped_AI_assms]:
   range_cover ptr sz (obj_bits_api (ArchObject x6) us) n \<and> ptr \<noteq> 0\<rbrakk>
             \<Longrightarrow> \<forall>y\<in>{0..<n}. s
                    \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object (ArchObject x6) dev us (cur_domain s))) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api (ArchObject x6) us)) [0..<n])
-                              (kheap s)\<rparr> \<turnstile> ArchObjectCap (ARM_A.arch_default_cap x6 (ptr_add ptr (y * 2 ^ obj_bits_api (ArchObject x6) us)) us dev)"
+                              (kheap s)\<rparr> \<turnstile> ArchObjectCap (arch_default_cap x6 (ptr_add ptr (y * 2 ^ obj_bits_api (ArchObject x6) us)) us dev)"
   apply (rename_tac aobject_type us n)
   apply (case_tac aobject_type)
   by (clarsimp simp: valid_cap_def default_object_def cap_aligned_def
@@ -534,9 +534,8 @@ lemma nonempty_table_caps_of[Untyped_AI_assms]:
 
 
 lemma nonempty_default[simp, Untyped_AI_assms]:
-  "tp \<noteq> Untyped \<Longrightarrow> \<not> nonempty_table S (default_object tp dev us dm)"
-  apply (case_tac tp, simp_all add: default_object_def nonempty_table_def
-                                    a_type_def)
+  "tp \<noteq> Untyped \<Longrightarrow> \<not> nonempty_table S (default_object tp dev us d)"
+  apply (case_tac tp, simp_all add: default_object_def nonempty_table_def a_type_def)
   apply (rename_tac aobject_type)
   apply (case_tac aobject_type, simp_all add: default_arch_object_def)
    apply (simp_all add: empty_table_def pde_ref_def valid_pde_mappings_def)

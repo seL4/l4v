@@ -1111,8 +1111,8 @@ lemma setMCPriority_corres:
   apply (rule corres_guard_imp)
     apply (clarsimp simp: setMCPriority_def set_mcpriority_def)
     apply (rule threadset_corresT)
-      by (clarsimp simp: tcb_relation_def tcb_cap_cases_tcb_mcpriority tcb_cte_cases_def
-                         cteSizeBits_def inQ_def)+
+  by (clarsimp simp: tcb_relation_def tcb_cap_cases_tcb_mcpriority
+                     tcb_cte_cases_def cteSizeBits_def inQ_def)+
 
 definition
  "out_rel fn fn' v v' \<equiv>

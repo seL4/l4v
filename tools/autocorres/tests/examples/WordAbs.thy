@@ -262,7 +262,8 @@ lemma "\<lbrace>\<lambda>s. n < 32 \<and> 0 <=s x \<and> sint x << n \<le> INT_M
        \<lbrace>\<lambda>r s. r = x << n\<rbrace>!"
   supply Word.of_nat_unat[simp del]
   by (wpsimp simp: S_shiftl_U_abs_U'_def INT_MAX_def shiftl_int_def shiftl_def
-                   nat_int_comparison(2) int_unat_nonneg)
+                   nat_int_comparison(2) int_unat_nonneg
+             simp_del: of_nat_less_numeral_iff)
 
 lemma "x < 0 \<Longrightarrow> \<not> no_fail \<top> (S_shiftl_U_abs_S' (x :: int) (n :: word32))"
   by (monad_eq simp: S_shiftl_U_abs_S'_def no_fail_def)

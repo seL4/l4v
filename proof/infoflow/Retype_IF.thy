@@ -199,14 +199,6 @@ lemma dmo_freeMemory_reads_respects_g:
 end
 
 
-lemma globals_equiv_cdt_update[simp]:
-  "globals_equiv s (s'\<lparr>cdt := x\<rparr>) = globals_equiv s s'"
-  by (fastforce simp: globals_equiv_def idle_equiv_def)
-
-lemma globals_equiv_is_original_cap_update[simp]:
-  "globals_equiv s (s'\<lparr>is_original_cap := x\<rparr>) = globals_equiv s s'"
-  by (fastforce simp: globals_equiv_def idle_equiv_def)
-
 crunch set_cdt
   for valid_arch_state[wp]: "\<lambda>s. P (valid_arch_state s)"
 
@@ -309,17 +301,26 @@ lemma create_cap_reads_respects_g:
    apply (wp doesnt_touch_globalsI create_cap_globals_equiv | simp)+
   done
 
-lemma retype_region_ext_def2:
-  "retype_region_ext a b =
-   modify (\<lambda>s. ekheap_update (\<lambda>ekh x. if x \<in> set a then default_ext b (cur_domain s) else ekh x) s)"
-  by (simp add: retype_region_ext_def foldr_upd_app_if' gets_def bind_def
-                return_def modify_def get_def put_def fun_eq_iff)
+lemma gets_kheap_revrv:
+  "reads_equiv_valid_rv_inv (affects_equiv aag l) aag
+                            (equiv_for (aag_can_read aag or aag_can_affect aag l) id) \<top> (gets kheap)"
+  apply (rule equiv_valid_rv_guard_imp)
+   apply (rule gets_evrv)
+  apply (fastforce simp: equiv_for_comp[symmetric] equiv_for_or or_comp_dist
+                   elim: reads_equivE affects_equivE)
+  done
+
+lemma gets_cur_domain_revrv:
+  "reads_equiv_valid_rv_inv (affects_equiv aag l) aag (=) \<top> (gets cur_domain)"
+  apply (rule equiv_valid_2_guard_imp)
+    apply (wp gets_evrv')
+   apply (simp add: reads_equiv_def)+
+  done
 
 lemma retype_region_reads_respects:
   "reads_respects aag l \<top> (retype_region ptr num_objects o_bits type dev)"
   apply (simp only: retype_region_def retype_addrs_def foldr_upd_app_if fun_app_def
-                    K_bind_def when_def retype_region_ext_extended.dxo_eq)
-  apply (simp only: retype_region_ext_def2)
+                    K_bind_def when_def)
   apply (simp split del: if_split add: equiv_valid_def2)
   apply (rule_tac W="\<top>\<top>" and Q="\<top>\<top>" in equiv_valid_rv_bind)
     apply (rule equiv_valid_rv_guard_imp[OF if_evrv])
@@ -331,10 +332,7 @@ lemma retype_region_reads_respects:
             apply (fastforce elim: reads_equiv_identical_kheap_updates
                                    affects_equiv_identical_kheap_updates
                              simp: identical_kheap_updates_def)
-           apply (rule_tac P=\<top> and P'=\<top> in modify_ev2)
-           apply (fastforce intro: reads_equiv_identical_ekheap_updates
-                                   affects_equiv_identical_ekheap_updates
-                             simp: identical_updates_def default_ext_def reads_equiv_def)
+           apply (rule gets_cur_domain_revrv)
           apply (wp | simp)+
      apply (rule return_ev2 | simp | rule impI, rule TrueI)+
   apply (intro impI, wp)
@@ -357,30 +355,25 @@ lemma post_retype_invs_pspace_alignedI:
   "post_retype_invs ty rv s \<Longrightarrow> pspace_aligned s"
   by (clarsimp simp: post_retype_invs_def invs_def valid_state_def split: if_split_asm)
 
-lemma detype_def2:
-   "detype S (s :: det_state) = s\<lparr>kheap := \<lambda>x. if x \<in> S then None else kheap s x,
-                                  ekheap := \<lambda>x. if x \<in> S then None else ekheap s x\<rparr>"
-  by (simp add: detype_def detype_ext_def)
-
 lemma cur_thread_detype:
   "cur_thread (detype S s) = cur_thread s"
   by (auto simp: detype_def)
 
 lemma cur_domain_detype:
   "cur_domain (detype S s) = cur_domain s"
-  by (auto simp: detype_def detype_ext_def)
+  by (auto simp: detype_def)
 
 lemma sched_act_detype:
   "scheduler_action (detype S s) = scheduler_action s"
-  by (auto simp: detype_def detype_ext_def)
+  by (auto simp: detype_def)
 
 lemma wuc_detype:
   "work_units_completed (detype S s) = work_units_completed s"
-  by (auto simp: detype_def detype_ext_def)
+  by (auto simp: detype_def)
 
 lemma machine_state_detype:
   "machine_state (detype S s) = machine_state s"
-  by (auto simp: detype_def detype_ext_def)
+  by (auto simp: detype_def)
 
 
 context Retype_IF_1 begin
@@ -401,7 +394,7 @@ lemma retype_region_reads_respects_g:
 lemma states_equiv_for_detype:
   "states_equiv_for P Q R S s s' \<Longrightarrow> states_equiv_for P Q R S (detype N s) (detype N s')"
   apply (simp add: states_equiv_for_def equiv_for_def equiv_asids_def obj_at_def equiv_asid_detype)
-  apply (simp add: detype_def detype_ext_def)
+  apply (simp add: detype_def)
   done
 
 lemma detype_reads_respects:

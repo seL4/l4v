@@ -32,14 +32,12 @@ lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
   apply (rule hoare_gen_asm)+
   apply (subst invoke_tcb.simps)
   apply (subst option_update_thread_def)
-  apply (subst set_priority_extended.dxo_eq)
   apply (rule hoare_weaken_pre)
    apply (rule_tac P="case ep of Some v \<Rightarrow> length v = word_bits | _ \<Rightarrow> True"
                  in hoare_gen_asm)
    apply (simp only: split_def)
   apply (((simp add: conj_comms,
           strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
-         | strengthen invs_psp_aligned invs_vspace_objs invs_arch_state
          | rule wp_split_const_if wp_split_const_if_R hoare_vcg_all_liftE_R
                 hoare_vcg_conj_elimE hoare_vcg_const_imp_liftE_R hoare_vcg_conj_liftE_R
          | wp restart_integrity_autarch set_mcpriority_integrity_autarch
@@ -79,7 +77,8 @@ lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
          | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
                      emptyable_def a_type_def partial_inv_def
          | wpc
-         | strengthen invs_mdb use_no_cap_to_obj_asid_strg
+         | strengthen invs_psp_aligned invs_vspace_objs invs_arch_state
+                      invs_mdb use_no_cap_to_obj_asid_strg
                       tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
                       tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"]))+
   apply (clarsimp simp: authorised_tcb_inv_def)

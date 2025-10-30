@@ -1572,9 +1572,7 @@ lemma invoke_domain_invs:
   by (simp add: invoke_domain_def | wp)+
 
 lemma set_domain_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>
-     set_domain t d
-   \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  "set_domain t d \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
   supply if_weak_cong[cong del]
   by (simp add: set_domain_def | wp)+
 
@@ -1827,7 +1825,7 @@ lemma reorder_ep_invs[wp]:
   done
 
 lemma set_priority_invs[wp]:
-  "\<lbrace>invs and ex_nonz_cap_to t\<rbrace> set_priority t p \<lbrace>\<lambda>_. invs\<rbrace>"
+  "set_priority t p \<lbrace>invs\<rbrace>"
   unfolding set_priority_def
   by (wpsimp wp: gts_wp hoare_vcg_imp_lift' hoare_vcg_all_lift
            simp: thread_get_def get_tcb_queue_def pred_tcb_at_def obj_at_def)

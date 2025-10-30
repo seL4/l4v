@@ -5,7 +5,7 @@
  *)
 
 theory Tcb_IF
-imports ArchFinalise_IF
+imports ArchIpc_IF
 begin
 
 section "valid global objs"
@@ -260,7 +260,7 @@ lemma invoke_tcb_NotificationControl_globals_equiv:
   apply (wp unbind_notification_globals_equiv bind_notification_globals_equiv)+
   done
 
-crunch set_mcpriority
+crunch set_mcpriority, set_priority
   for globals_equiv: "globals_equiv st"
 
 lemma dxo_globals_equiv[wp]:
@@ -280,6 +280,8 @@ locale Tcb_IF_2 = Tcb_IF_1 +
        \<And>f ptr. \<lbrace>invs and P\<rbrace> thread_set (tcb_ipc_buffer_update f) ptr \<lbrace>\<lambda>_.P\<rbrace>;
        \<And>f ptr. \<lbrace>invs and P\<rbrace> thread_set (tcb_fault_handler_update f) ptr \<lbrace>\<lambda>_.P\<rbrace>;
        \<And>mcp ptr. \<lbrace>invs and P\<rbrace> set_mcpriority ptr mcp \<lbrace>\<lambda>_.P\<rbrace>;
+       \<And>prio ptr. \<lbrace>invs and P\<rbrace> set_priority ptr prio \<lbrace>\<lambda>_.P\<rbrace>;
+       reschedule_required \<lbrace>P\<rbrace>;
        \<And>f s. P (trans_state f s) = P s \<rbrakk>
        \<Longrightarrow> \<lbrace>P and invs and tcb_inv_wf (ThreadControl t sl ep mcp prio croot vroot buf)\<rbrace>
            invoke_tcb (ThreadControl t sl ep mcp prio croot vroot buf)
@@ -302,7 +304,6 @@ lemma invoke_tcb_globals_equiv:
   "\<lbrace>invs and globals_equiv st and tcb_inv_wf ti\<rbrace>
    invoke_tcb ti
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  supply reschedule_required_ext_extended.dxo_eq[simp del]
   apply (case_tac ti; (solves \<open>(wp mapM_x_wp' as_user_globals_equiv
                                    invoke_tcb_NotificationControl_globals_equiv
                                 | simp
@@ -319,6 +320,7 @@ lemma invoke_tcb_globals_equiv:
   apply (simp del: invoke_tcb.simps tcb_inv_wf.simps)
   apply (wp invoke_tcb_thread_preservation cap_delete_globals_equiv
             cap_insert_globals_equiv'' thread_set_globals_equiv set_mcpriority_globals_equiv
+            set_priority_globals_equiv
          | fastforce)+
   done
 
@@ -385,29 +387,11 @@ lemma checked_insert_reads_respects:
 lemmas as_user_reads_respects_f =
   reads_respects_f[OF as_user_reads_respects, where Q="\<top>", simplified, OF as_user_silc_inv]
 
-lemma ethread_set_reads_respects:
-  "reads_respects aag l \<top> (ethread_set f word)"
-  apply (simp add: ethread_set_def)
-  apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def put_def get_def bind_def set_eobject_def
-                        return_def gets_def gets_the_def assert_opt_def get_etcb_def fail_def
-                  cong: option.case_cong split: option.splits)
-  apply (fastforce intro: equiv_forI reads_equiv_ekheap_updates affects_equiv_ekheap_update
-                    elim: states_equiv_forE_ekheap
-                    simp: reads_equiv_def2 affects_equiv_def2 )
-  done
-
 declare gts_st_tcb_at[wp del]
 
-lemma ethread_set_priority_pas_refined[wp]:
-  "ethread_set (tcb_priority_update f) thread \<lbrace>pas_refined aag\<rbrace>"
-  apply (simp add: ethread_set_def set_eobject_def | wp)+
-  apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def)
-  apply (erule_tac x="(a, b)" in ballE)
-   apply force
-  apply (erule notE)
-  apply (erule domains_of_state_aux.cases, simp add: get_etcb_def split: if_split_asm)
-   apply (force intro: domtcbs)+
-  done
+lemma thread_set_priority_pas_refined:
+  "thread_set (tcb_priority_update f) thread \<lbrace>pas_refined aag\<rbrace>"
+  by (wpsimp wp: thread_set_pas_refined)
 
 lemma set_priority_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -416,15 +400,10 @@ lemma set_priority_reads_respects:
                             and (\<lambda>s. is_subject aag (cur_thread s)))
            (set_priority word prio)"
   apply (simp add: set_priority_def thread_set_priority_def)
-  apply (wp get_thread_state_rev gets_cur_thread_ev gts_wp when_ev
-            hoare_vcg_all_lift hoare_vcg_imp_lift'
-            ethread_set_reads_respects
-            tcb_sched_action_reads_respects
-            possible_switch_to_reads_respects
-         | simp split del: if_split
-         | wp (once) hoare_drop_imps
-         | (rule hoare_strengthen_post, rule ethread_set_priority_pas_refined)
-         | force)+
+  apply (wpsimp wp: when_ev possible_switch_to_reads_respects get_thread_state_rev hoare_drop_imps
+                    thread_set_reads_respects thread_set_priority_pas_refined
+                    tcb_sched_action_reads_respects)
+  apply force
   done
 
 lemma set_mcpriority_reads_respects:
@@ -444,6 +423,9 @@ lemma cap_delete_only_timer_irq_inv:
   apply (simp add: only_timer_irq_inv_def)
   apply (wp only_timer_irq_pres cap_delete_irq_masks | force)+
   done
+
+crunch set_priority
+  for machine_state[wp]: "\<lambda>s. P (machine_state s)"
 
 lemma set_priority_only_timer_irq_inv:
   "set_priority t prio \<lbrace>only_timer_irq_inv irq (st :: det_state)\<rbrace>"
@@ -483,7 +465,7 @@ lemmas thread_get_reads_respects_f =
 
 lemmas reschedule_required_reads_respects_f =
   reads_respects_f[OF reschedule_required_reads_respects, where Q="\<top>", simplified,
-                   OF _ reschedule_required_ext_extended.silc_inv]
+                   OF _ reschedule_required_silc_inv]
 
 
 context Tcb_IF_2 begin

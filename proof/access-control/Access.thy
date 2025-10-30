@@ -246,15 +246,15 @@ unauthorised subjects (see integrity_ready_queues).
 
 \<close>
 
-inductive_set domains_of_state_aux for ekheap where
+inductive_set domains_of_state_aux for etcbs_of where
   domtcbs:
-    "\<lbrakk> ekheap ptr = Some etcb; d = tcb_domain etcb \<rbrakk> \<Longrightarrow> (ptr, d) \<in> domains_of_state_aux ekheap"
+    "\<lbrakk> etcbs_of ptr = Some tcb; d = etcb_domain tcb \<rbrakk> \<Longrightarrow> (ptr, d) \<in> domains_of_state_aux etcbs_of"
 
-abbreviation "domains_of_state s \<equiv> domains_of_state_aux (ekheap s)"
+abbreviation "domains_of_state s \<equiv> domains_of_state_aux (etcbs_of s)"
 
 definition tcb_domain_map_wellformed_aux where
-  "tcb_domain_map_wellformed_aux aag etcbs_doms \<equiv>
-     \<forall>(ptr, d) \<in> etcbs_doms. pasObjectAbs aag ptr \<in> pasDomainAbs aag d"
+  "tcb_domain_map_wellformed_aux aag tcbs_doms \<equiv>
+     \<forall>(ptr, d) \<in> tcbs_doms. pasObjectAbs aag ptr \<in> pasDomainAbs aag d"
 
 abbreviation tcb_domain_map_wellformed where
   "tcb_domain_map_wellformed aag s \<equiv> tcb_domain_map_wellformed_aux aag (domains_of_state s)"
@@ -660,7 +660,7 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
        \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 
 
-subsubsection \<open>ekheap and ready queues\<close>
+subsubsection \<open>ready queues\<close>
 
 text\<open>
 
@@ -678,10 +678,6 @@ text\<open>
 definition integrity_ready_queues where
   "integrity_ready_queues aag subjects queue_labels rq rq' \<equiv>
      pasMayEditReadyQueues aag \<or> (queue_labels \<inter> subjects = {} \<longrightarrow> (\<exists>threads. threads @ rq = rq'))"
-
-inductive integrity_eobj for aag subjects l' eko eko' where
-  tre_lrefl: "l' \<in> subjects \<Longrightarrow> integrity_eobj aag subjects l' eko eko'"
-| tre_orefl: "eko = eko' \<Longrightarrow> integrity_eobj aag subjects l' eko eko'"
 
 
 abbreviation object_integrity where
@@ -846,7 +842,6 @@ definition integrity_subjects ::
   "'a set \<Rightarrow> 'a PAS \<Rightarrow> bool \<Rightarrow> obj_ref set \<Rightarrow> det_ext state \<Rightarrow> det_ext state \<Rightarrow> bool" where
   "integrity_subjects subjects aag activate X s s' \<equiv>
      (\<forall>x. integrity_obj aag activate subjects (pasObjectAbs aag x) (kheap s x) (kheap s' x))
-   \<and> (\<forall>x. integrity_eobj aag subjects (pasObjectAbs aag x) (ekheap s x) (ekheap s' x))
    \<and> integrity_cdt_state aag subjects s s'
    \<and> integrity_cdt_list_state aag subjects s s'
    \<and> (\<forall>x. integrity_interrupts aag subjects x (interrupt_irq_node s x, interrupt_states s x)

@@ -96,7 +96,7 @@ lemma handleInterruptEntry_ccorres:
    apply (rule ccorres_stateAssert)+
    apply (simp add: liftE_bind bind_assoc)
    apply (rule ccorres_rhs_assoc)+
-   apply (ctac (no_vcg) add: updateTimestamp_ccorres)
+   apply (ctac (no_vcg) add: updateTimestamp_ccorres, rename_tac xfdc')
     apply (rule_tac xf'=xfdc in ccorres_split_nothrow_novcg)
         apply (rule_tac xf''=xfdc in ccorres_call)
            apply (rule ccorres_rel_imp)
@@ -157,7 +157,7 @@ lemma handleUnknownSyscall_ccorres:
    apply (simp add: callKernel_def handleEvent_def)
    apply (rule ccorres_stateAssert)+
    apply (simp add: liftE_bind bind_assoc)
-   apply (ctac (no_vcg) add: updateTimestamp_ccorres)
+   apply (ctac (no_vcg) add: updateTimestamp_ccorres, rename_tac xfdc')
     apply (ctac (no_vcg) add: checkBudgetRestart_ccorres)
      apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
          apply (clarsimp simp: when_def)
@@ -205,7 +205,7 @@ lemma handleVMFaultEvent_ccorres:
    apply (rule ccorres_stateAssert)
    apply (simp add: liftE_bind bind_assoc)
    apply (rule ccorres_stateAssert)+
-   apply (ctac (no_vcg) add: updateTimestamp_ccorres)
+   apply (ctac (no_vcg) add: updateTimestamp_ccorres, rename_tac xfdc')
     apply (ctac (no_vcg) add: checkBudgetRestart_ccorres)
      apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
          apply (clarsimp simp: when_def)
@@ -262,7 +262,7 @@ lemma handleUserLevelFault_ccorres:
    apply (simp add: callKernel_def handleEvent_def)
    apply (rule ccorres_stateAssert)+
    apply (simp add: liftE_bind bind_assoc)
-   apply (ctac (no_vcg) add: updateTimestamp_ccorres)
+   apply (ctac (no_vcg) add: updateTimestamp_ccorres, rename_tac xfdc')
     apply (ctac (no_vcg) add: checkBudgetRestart_ccorres, rename_tac restart restart')
      apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
          apply (clarsimp simp: when_def)
@@ -735,17 +735,17 @@ lemma threadSet_all_invs_triv':
   unfolding all_invs'_def
   apply (rule hoare_pre)
    apply (rule wp_from_corres_unit)
-     apply (rule threadset_corresT [where f="tcb_arch_update (arch_tcb_context_set f)"])
+      apply (rule threadset_corresT [where f="tcb_arch_update (arch_tcb_context_set f)"]; simp?)
         apply (simp add: tcb_relation_def arch_tcb_context_set_def
                          atcbContextSet_def arch_tcb_relation_def)
        apply (simp add: tcb_cap_cases_def)
       apply (simp add: tcb_cte_cases_def cteSizeBits_def)
-    apply (wp thread_set_invs_trivial thread_set_not_state_valid_sched
-              threadSet_invs_trivial threadSet_ct_running' hoare_weak_lift_imp
-              thread_set_ct_in_state
-           | simp add: tcb_cap_cases_def tcb_arch_ref_def
-           | rule threadSet_ct_in_state'
-           | wp (once) hoare_vcg_disj_lift)+
+     apply (wp thread_set_invs_trivial thread_set_not_state_valid_sched
+               threadSet_invs_trivial threadSet_ct_running' hoare_weak_lift_imp
+               thread_set_ct_in_state
+            | simp add: tcb_cap_cases_def tcb_arch_ref_def
+            | rule threadSet_ct_in_state'
+            | wp (once) hoare_vcg_disj_lift)+
   apply clarsimp
   apply (rename_tac s s')
   apply (rule exI, rule conjI, assumption)

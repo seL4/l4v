@@ -426,7 +426,7 @@ let
       |> apply_tac "unfolding L2 rewritten theorem"
              (EqSubst.eqsubst_tac lthy [0] [hd inst_thms] 1)
       |> apply_tac "simplifying remainder"
-             (TRY (simp_tac (put_simpset HOL_ss (Utils.set_hidden_ctxt lthy) addsimps simps) 1))
+             (TRY (simp_tac (put_simpset HOL_ss (Context_Position.set_visible false lthy) addsimps simps) 1))
     )
     |> Goal.finish lthy
 
@@ -592,7 +592,7 @@ let
   (* For now, just works sequentially like the old TypeStrengthen. *)
   fun translate_group fn_names (lthy, _, ts_infos) =
   let
-    val _ = writeln ("Translating (type strengthen) " ^ Utils.commas fn_names);
+    val _ = writeln ("Translating (type strengthen) " ^ commas fn_names);
     val start_time = Timer.startRealTimer ();
 
     val (lthy, new_ts_infos, monad_name) =
@@ -600,7 +600,7 @@ let
                             fn_names make_function_name keep_going do_opt lthy;
 
     val _ = writeln ("  --> " ^ monad_name);
-    val _ = tracing ("Converted (TS) " ^ Utils.commas fn_names ^ " in " ^
+    val _ = tracing ("Converted (TS) " ^ commas fn_names ^ " in " ^
                      Time.toString (Timer.checkRealTimer start_time) ^ " s");
   in (lthy, new_ts_infos, Symtab.merge (K false) (ts_infos, new_ts_infos)) end;
 

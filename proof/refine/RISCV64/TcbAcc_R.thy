@@ -410,10 +410,10 @@ lemma threadset_corresT:
   assumes x: "\<And>tcb tcb'. tcb_relation tcb tcb' \<Longrightarrow> tcb_relation (f tcb) (f' tcb')"
   assumes y: "\<And>tcb. \<forall>(getF, setF) \<in> ran tcb_cap_cases. getF (f tcb) = getF tcb"
   assumes z: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF (f' tcb) = getF tcb"
-  assumes s: "\<forall>tcb'. tcbSchedPrev (f' tcb') = tcbSchedPrev tcb'"
-             "\<forall>tcb'. tcbSchedNext (f' tcb') = tcbSchedNext tcb'"
-  assumes f: "\<And>d p tcb'. inQ d p (f' tcb') = inQ d p tcb'"
-             "\<And>tcb'. tcbInReleaseQueue (f' tcb') = tcbInReleaseQueue tcb'"
+  assumes sched_pointers: "\<And>tcb. tcbSchedPrev (f' tcb) = tcbSchedPrev tcb"
+                          "\<And>tcb. tcbSchedNext (f' tcb) = tcbSchedNext tcb"
+  assumes flags: "\<And>d p tcb'. inQ d p (f' tcb') = inQ d p tcb'"
+                 "\<And>tcb'. tcbInReleaseQueue (f' tcb') = tcbInReleaseQueue tcb'"
   shows
     "corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
        (thread_set f t) (threadSet f' t)"
@@ -424,10 +424,10 @@ lemma threadset_corresT:
               apply (erule x)
              apply (rule y)
             apply (fastforce simp: bspec_split [OF spec [OF z]])
-           apply (fastforce simp: s)
-          apply (fastforce simp: s)
-         apply (fastforce simp: f)
-        apply (fastforce simp: f)
+           apply (fastforce simp: sched_pointers)
+          apply (fastforce simp: sched_pointers)
+         apply (fastforce simp: flags)
+        apply (fastforce simp: flags)
        apply fastforce
       apply wp+
    apply (fastforce dest: get_tcb_SomeD simp: tcb_at_def obj_at_def)
@@ -3565,6 +3565,7 @@ lemma set_tcb_obj_ref_corresT:
        (set_tcb_obj_ref f t new) (threadSet f' t)"
   using assms
   unfolding set_tcb_obj_ref_thread_set
+  apply -
   by (corres corres: threadset_corresT simp: inQ_def)
 
 lemmas set_tcb_obj_ref_corres =

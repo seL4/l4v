@@ -4034,8 +4034,7 @@ context begin interpretation Arch . (*FIXME: arch-split*)
 lemma arch_finaliseCap_corres:
   "\<lbrakk> final_matters' (ArchObjectCap cap') \<Longrightarrow> final = final'; acap_relation cap cap' \<rbrakk>
      \<Longrightarrow> corres (\<lambda>r r'. cap_relation (fst r) (fst r') \<and> cap_relation (snd r) (snd r'))
-           (\<lambda>s. invs s \<and> valid_etcbs s
-                       \<and> s \<turnstile> cap.ArchObjectCap cap
+           (\<lambda>s. invs s \<and> s \<turnstile> cap.ArchObjectCap cap
                        \<and> (final_matters (cap.ArchObjectCap cap)
                             \<longrightarrow> final = is_final_cap' (cap.ArchObjectCap cap) s)
                        \<and> cte_wp_at ((=) (cap.ArchObjectCap cap)) sl s)

@@ -766,11 +766,9 @@ definition kernel_entry_if ::
    od"
 
 crunch kernel_entry_if
-  for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
-crunch kernel_entry_if
-  for idle_thread[wp]: "\<lambda>s::det_state. P (idle_thread s)"
-crunch kernel_entry_if
-  for cur_thread[wp]: "\<lambda>s::det_state. P (cur_thread s)"
+  for cur_domain[wp]: "\<lambda>s::det_state. P (cur_domain s)"
+  and idle_thread[wp]: "\<lambda>s::det_state. P (idle_thread s)"
+  and cur_thread[wp]: "\<lambda>s::det_state. P (cur_thread s)"
 
 lemma thread_set_tcb_context_update_ct_active[wp]:
   "thread_set (tcb_arch_update (arch_tcb_context_set f)) t \<lbrace>ct_active\<rbrace>"
@@ -873,7 +871,7 @@ crunch schedule_if
 crunch activate_thread
   for idle_thread[wp]: "\<lambda>s :: det_state. P (idle_thread s)"
 crunch activate_thread
-  for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
+  for cur_domain[wp]: "\<lambda>s::det_state. P (cur_domain s)"
 
 function (domintros) next_irq_state :: "nat \<Rightarrow> (irq \<Rightarrow> bool) \<Rightarrow> nat" where
   "next_irq_state cur masks =
@@ -909,13 +907,13 @@ locale ADT_IF_1 =
   and do_user_op_if_domain_sep_inv[wp]:
     "do_user_op_if uop tc \<lbrace>\<lambda>s. domain_sep_inv irqs (st :: det_state) (s :: det_state)\<rbrace>"
   and do_user_op_if_valid_sched[wp]:
-    "do_user_op_if uop tc \<lbrace>valid_sched\<rbrace>"
+    "do_user_op_if uop tc \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
   and do_user_op_if_irq_masks[wp]:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   and do_user_op_if_valid_list[wp]:
     "do_user_op_if uop tc \<lbrace>valid_list\<rbrace>"
   and do_user_op_if_scheduler_action[wp]:
-    "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
+    "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. P (scheduler_action s)\<rbrace>"
   and do_user_op_silc_inv[wp]:
     "do_user_op_if uop tc \<lbrace>silc_inv (aag :: 'a subject_label PAS) st\<rbrace>"
   and do_user_op_pas_refined[wp]:
@@ -923,7 +921,7 @@ locale ADT_IF_1 =
   and do_user_op_cur_thread[wp]:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. P (cur_thread s)\<rbrace>"
   and do_user_op_cur_domain[wp]:
-    "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"
+    "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. P (cur_domain s)\<rbrace>"
   and do_user_op_idle_thread[wp]:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. P (idle_thread s)\<rbrace>"
   and do_user_op_domain_fields[wp]:
@@ -1135,7 +1133,7 @@ lemma handle_preemption_if_silc_inv[wp]:
   done
 
 crunch handle_preemption_if
-  for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
+  for cur_domain[wp]: "\<lambda>s::det_state. P (cur_domain s)"
 crunch handle_preemption_if
   for cur_thread[wp]: "\<lambda>s :: det_state. P (cur_thread s)"
 crunch handle_preemption_if
@@ -1226,10 +1224,10 @@ lemma schedule_if_ct_running_or_ct_idle[wp]:
   done
 
 lemma set_thread_state_scheduler_action:
-  "\<lbrace>(\<lambda>s. P (scheduler_action (s :: det_state))) and st_tcb_at runnable t and K (runnable s)\<rbrace>
+  "\<lbrace>(\<lambda>s. P (scheduler_action s)) and st_tcb_at runnable t and K (runnable s)\<rbrace>
    set_thread_state t s
    \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
-  apply (simp add: set_thread_state_def | wp sts_ext_running_noop set_object_wp)+
+  apply (simp add: set_thread_state_def | wp sts_act_running_noop set_object_wp)+
   apply (clarsimp simp: st_tcb_at_def obj_at_def)
   done
 
@@ -1240,27 +1238,17 @@ lemma schedule_guarded_pas_domain:
   "\<lbrace>guarded_pas_domain aag and einvs and pas_refined aag\<rbrace>
    schedule
    \<lbrace>\<lambda>_. guarded_pas_domain aag\<rbrace>"
-  supply ethread_get_wp[wp del]
   apply (simp add: schedule_def)
   apply (wpsimp wp: guarded_pas_domain_lift[where f="activate_thread"]
                     guarded_pas_domain_lift[where f="set_scheduler_action f" for f]
                     guarded_switch_to_lift switch_to_thread_guarded_pas_domain
-                    next_domain_valid_queues activate_thread_cur_thread gts_wp
+                    next_domain_valid_queues activate_thread_cur_thread gts_wp hoare_vcg_all_lift
          | wpc
          | rule choose_thread_guarded_pas_domain
-         | simp add: schedule_choose_new_thread_def ethread_get_when_def split del: if_split
-         | wp (once) hoare_drop_imp[where f="ethread_get t v" for t v]
-         | wp (once) hoare_drop_imp[where f="schedule_switch_thread_fastfail c i cp p" for c i cp p])+
-       apply (wp hoare_drop_imp)
-      apply (wpsimp wp: guarded_pas_domain_lift[where f="activate_thread"]
-                        guarded_pas_domain_lift[where f="set_scheduler_action f" for f]
-                        guarded_switch_to_lift switch_to_thread_guarded_pas_domain
-                        next_domain_valid_queues activate_thread_cur_thread gts_wp
-             | wpc
-             | rule choose_thread_guarded_pas_domain
-             | simp add: schedule_choose_new_thread_def ethread_get_when_def split del: if_split
-             | wp (once) hoare_drop_imp[where f="ethread_get t v" for t v]
-             | wp (once) hoare_drop_imp[where f="schedule_switch_thread_fastfail c i cp p" for c i cp p])+
+         | simp add: schedule_choose_new_thread_def split del: if_split
+         | wp (once) hoare_drop_imp[where f="thread_get t v" for t v]
+         | wp (once) hoare_drop_imp[where f="schedule_switch_thread_fastfail c i cp p" for c i cp p]
+         | wp (once) hoare_drop_imp[where f="tcb_sched_action f t" for f t])+
   apply (fastforce intro: switch_to_cur_domain switch_thread_runnable
                     simp: valid_sched_def elim!: st_tcb_weakenE)+
   done
@@ -1274,7 +1262,7 @@ lemma schedule_if_guarded_pas_domain[wp]:
   done
 
 lemma activate_thread_scheduler_action[wp]:
-  "activate_thread \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
+  "activate_thread \<lbrace>\<lambda>s::det_state. P (scheduler_action s)\<rbrace>"
   apply (simp add: activate_thread_def | wp set_thread_state_scheduler_action gts_wp | wpc)+
   apply (fastforce elim: st_tcb_weakenE)
   done
@@ -1304,7 +1292,7 @@ end
 
 
 crunch schedule_if
-  for valid_sched[wp]: valid_sched
+  for valid_sched[wp]: "valid_sched :: det_state \<Rightarrow> _"
   and valid_list[wp]: valid_list
 
 lemma schedule_if_irq_masks:
@@ -1576,11 +1564,11 @@ crunch handle_yield
 crunch activate_thread
   for domain_fields[wp]: "domain_fields P"
 crunch kernel_entry_if
-  for domain_list[wp]: "\<lambda>s. P (domain_list s)"
+  for domain_list[wp]: "\<lambda>s::det_state. P (domain_list s)"
 crunch handle_preemption_if
-  for domain_list[wp]: "\<lambda>s. P (domain_list s)"
+  for domain_list[wp]: "\<lambda>s::det_state. P (domain_list s)"
 crunch schedule_if
-  for domain_list[wp]: "\<lambda>s. P (domain_list s)"
+  for domain_list[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma schedule_if_domain_time_nonzero':
@@ -1593,7 +1581,7 @@ lemma schedule_if_domain_time_nonzero':
                     choose_thread_def switch_to_idle_thread_def)+
               apply (wp hoare_drop_imps)
              apply (wp hoare_drop_imps)
-            apply wp+
+            apply (wp hoare_vcg_all_lift hoare_drop_imp[where f="tcb_sched_action f t" for f t])+
     apply (wpsimp simp: choose_thread_def switch_to_idle_thread_def
                         guarded_switch_to_def switch_to_thread_def
                     wp: gts_wp)+
@@ -1612,10 +1600,9 @@ lemma schedule_if_domain_time_nonzero:
 context ADT_IF_1 begin
 
 lemma handle_event_domain_fields:
-  notes hy_inv[wp del]
-  shows "\<lbrace>domain_fields P and K (e \<noteq> Interrupt)\<rbrace>
-         handle_event e
-         \<lbrace>\<lambda>_. domain_fields P\<rbrace>"
+  "\<lbrace>domain_fields P and K (e \<noteq> Interrupt)\<rbrace>
+   handle_event e
+   \<lbrace>\<lambda>_. domain_fields P\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_pre)
    apply (case_tac e)
@@ -2709,6 +2696,9 @@ lemma handle_invocation_irq_state_inv:
   apply fastforce
   done
 
+crunch handle_yield
+  for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
+
 lemma handle_event_irq_state_inv:
   "event \<noteq> Interrupt
    \<Longrightarrow> \<lbrace>irq_state_inv st and invs and domain_sep_inv False (sta :: det_state)
@@ -2720,8 +2710,10 @@ lemma handle_event_irq_state_inv:
       apply (case_tac syscall)
   by (simp add: handle_send_def handle_call_def
       | wp handle_invocation_irq_state_inv[where sta=sta and irq=irq]
-           irq_state_inv_triv[OF handle_recv_irq_state_of_state] irq_state_inv_triv
-           irq_state_inv_triv[OF handle_reply_irq_state_of_state] hy_inv)+
+           irq_state_inv_triv[OF handle_recv_irq_state_of_state]
+           irq_state_inv_triv'[OF _ handle_yield_irq_masks_of_state[simplified pred_conj_aci(2), where st=sta]]
+           irq_state_inv_triv
+           irq_state_inv_triv[OF handle_reply_irq_state_of_state])+
 
 end
 

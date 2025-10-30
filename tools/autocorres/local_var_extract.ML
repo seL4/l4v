@@ -692,7 +692,7 @@ let
        head $ st $ ret_xf $ ex_xf $ precond $ new_l2_term $ l1_term
        |> map_aterms convert_free_to_var
        |> HOLogic.mk_Trueprop
-  val new_thm = list_implies (cprems_of thm, Thm.cterm_of ctxt new_concl)
+  val new_thm = list_implies (Thm.cprems_of thm, Thm.cterm_of ctxt new_concl)
 in
   Goal.init new_thm
   |> asm_full_simp_tac (put_simpset HOL_basic_ss ctxt addsimps [mk_meta_eq @{thm split_def}]) 1 |> Seq.hd

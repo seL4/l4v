@@ -455,17 +455,17 @@ lemma activate_thread_globals_equiv_scheduler:
   by (wp globals_equiv_scheduler_inv' activate_thread_globals_equiv | force | fastforce)+
 
 lemma schedule_cur_domain:
-  "\<lbrace>\<lambda>s. P (cur_domain s) \<and> domain_time s \<noteq> 0\<rbrace>
+  "\<lbrace>\<lambda>s::det_state. P (cur_domain s) \<and> domain_time s \<noteq> 0\<rbrace>
    schedule
    \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
    (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
   supply hoare_pre_cont[where f=next_domain, wp add]
-         ethread_get_wp[wp del] if_split[split del] if_cong[cong]
+         if_split[split del] if_cong[cong]
   apply (simp add: schedule_def schedule_choose_new_thread_def | wp | wpc)+
                apply (rule_tac Q'="\<lambda>_. ?PRE" in hoare_strengthen_post)
                 apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
                apply (rule_tac Q'="\<lambda>_. ?PRE" in hoare_strengthen_post)
-                apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
+                apply (simp | wp gts_wp hoare_vcg_all_lift | wp (once) hoare_drop_imps)+
       apply (rule_tac Q'="\<lambda>_. ?PRE" in hoare_strengthen_post)
        apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
   apply (clarsimp split: if_split)
@@ -477,12 +477,12 @@ lemma schedule_domain_fields:
    \<lbrace>\<lambda>_. domain_fields P\<rbrace>"
    (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
   supply hoare_pre_cont[where f=next_domain, wp add]
-         ethread_get_wp[wp del] if_split[split del] if_cong[cong]
+         if_split[split del] if_cong[cong]
   apply (simp add: schedule_def schedule_choose_new_thread_def | wp | wpc)+
                apply (rule_tac Q'="\<lambda>_. ?PRE" in hoare_strengthen_post)
                 apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
                apply (rule_tac Q'="\<lambda>_. ?PRE" in hoare_strengthen_post)
-                apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
+                apply (simp | wp gts_wp hoare_vcg_all_lift | wp (once) hoare_drop_imps)+
       apply (rule_tac Q'="\<lambda>_. ?PRE" in hoare_strengthen_post)
        apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
   apply (clarsimp split: if_split)
@@ -551,29 +551,26 @@ lemma pas_refined_tcb_st_to_auth:
 lemmas integrity_subjects_obj =
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct1]
 
-lemmas integrity_subjects_eobj =
+lemmas integrity_subjects_cdt =
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct1]
 
-lemmas integrity_subjects_cdt =
+lemmas integrity_subjects_cdt_list =
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct1]
 
-lemmas integrity_subjects_cdt_list =
+lemmas integrity_subjects_interrupts =
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1]
 
-lemmas integrity_subjects_interrupts =
+lemmas integrity_subjects_ready_queues =
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1]
 
-lemmas integrity_subjects_ready_queues =
+lemmas integrity_subjects_mem =
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1]
 
-lemmas integrity_subjects_mem =
+lemmas integrity_subjects_device =
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1]
 
-lemmas integrity_subjects_device =
-  integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1]
-
 lemmas integrity_subjects_asids =
-  integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2]
+  integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2]
 
 lemma pas_wellformed_pasSubject_update_Control:
   "\<lbrakk> pas_wellformed (aag\<lparr>pasSubject := pasObjectAbs aag p\<rparr>);
@@ -1083,20 +1080,6 @@ lemma pas_wellformed_pasSubject_update:
   apply (fastforce simp: is_cap_table_def)
   done
 
-lemma partitionIntegrity_subjectAffects_eobj:
-  "\<lbrakk> partitionIntegrity aag s s'; pas_refined aag s;
-     valid_objs s; einvs s; einvs s'; pas_wellformed_noninterference aag;
-     silc_inv aag st s; silc_inv aag st' s'; ekheap s x \<noteq> ekheap s' x \<rbrakk>
-     \<Longrightarrow> pasObjectAbs aag x \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
-  apply (drule partitionIntegrity_integrity)
-  apply (drule integrity_subjects_eobj)
-  apply (drule_tac x=x in spec)
-  apply (erule integrity_eobj.cases)
-   apply simp
-   apply (rule subjectAffects.affects_lrefl)
-  apply simp
-  done
-
 (*FIXME: Move*)
 lemma prefix_helper:
   "\<lbrakk> a @ l = l'; distinct l; distinct l' \<rbrakk> \<Longrightarrow> set a \<inter> set l = {} \<and> set a \<subseteq> set l'"
@@ -1109,7 +1092,7 @@ lemma prefix_helper:
 lemma valid_queuesE:
   assumes "valid_queues s"
   assumes "t \<in> set (ready_queues s d p)"
-  assumes "\<lbrakk> is_etcb_at t s; etcb_at (\<lambda>t. tcb_priority t = p \<and> tcb_domain t = d) t s;
+  assumes "\<lbrakk> etcb_at (\<lambda>t. etcb_priority t = p \<and> etcb_domain t = d) t s;
              st_tcb_at runnable t s; distinct (ready_queues s d p) \<rbrakk>
              \<Longrightarrow> R "
   shows R
@@ -1124,18 +1107,19 @@ lemma valid_blocked_imp:
 
 lemma valid_queues_not_in_place:
   "\<lbrakk> valid_queues s; t \<notin> set (ready_queues s d a);
-     etcb_at (\<lambda>t. tcb_priority t = a \<and> tcb_domain t = d) t s; is_etcb_at t s\<rbrakk>
+     etcb_at (\<lambda>t. etcb_priority t = a \<and> etcb_domain t = d) t s; tcb_at t s\<rbrakk>
      \<Longrightarrow> not_queued t s"
-  by (clarsimp simp: valid_queues_def not_queued_def etcb_at_def is_etcb_at_def
-              split: option.splits)
+  apply (clarsimp simp: not_queued_def)
+  apply (erule (1) valid_queuesE)
+  by (clarsimp simp: etcb_at_def obj_at_def etcbs_of'_def is_tcb)
 
 lemma ready_queues_alters_kheap:
-  assumes a: "valid_queues s"
+  assumes a: "valid_queues (s::det_state)"
   assumes b: "valid_blocked s"
   assumes c: "valid_idle s'"
   shows "\<lbrakk> ready_queues s d a \<noteq> ready_queues s' d a;
            threads @ ready_queues s d a = ready_queues s' d a; valid_queues s';
-           valid_etcbs s; valid_etcbs s'; t \<in> set threads; ekheap s t = ekheap s' t;
+           t \<in> set threads; etcbs_of s t = etcbs_of s' t;
            t \<noteq> idle_thread s \<longrightarrow> (t \<noteq> cur_thread s \<and> t \<noteq> cur_thread s');
            scheduler_action s \<noteq> switch_thread t; idle_thread s = idle_thread s' \<rbrakk>
            \<Longrightarrow> kheap s t \<noteq> kheap s' t"
@@ -1149,7 +1133,7 @@ lemma ready_queues_alters_kheap:
    apply (frule valid_blocked_imp[OF b])
       apply (rule valid_queues_not_in_place[OF a],assumption)
        apply (simp add: etcb_at_def)
-      apply (simp add: is_etcb_at_def)
+      apply simp
      using c apply (auto simp: pred_tcb_at_def tcb_at_st_tcb_at obj_at_def valid_idle_def)
    done
 
@@ -1158,6 +1142,16 @@ lemma valid_sched_valid_blocked: "valid_sched s \<Longrightarrow> valid_blocked 
 
 
 context Noninterference_1 begin
+
+lemma partitionIntegrity_subjectAffects_etcbs:
+  "\<lbrakk> partitionIntegrity (aag :: 'a subject_label PAS) s s'; pas_refined aag s;
+     valid_objs s; einvs s; einvs s'; pas_wellformed_noninterference aag;
+     silc_inv aag st s; silc_inv aag st' s'; etcbs_of s x \<noteq> etcbs_of s' x \<rbrakk>
+     \<Longrightarrow> pasObjectAbs aag x \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
+  apply (prop_tac "kheap s x \<noteq> kheap s' x")
+   apply (clarsimp simp: etcbs_of'_def)
+  apply (erule partitionIntegrity_subjectAffects_obj; simp)
+  done
 
 lemma partitionIntegrity_subjectAffects_ready_queues:
   assumes domains_distinct: "pas_domains_distinct (aag :: 'a subject_label PAS)"
@@ -1190,8 +1184,8 @@ lemma partitionIntegrity_subjectAffects_ready_queues:
       apply simp
      apply simp
     apply (fastforce dest: domains_distinct[THEN pas_domains_distinct_inj])
-   apply (case_tac "ekheap s tcb_ptr \<noteq> ekheap s' tcb_ptr")
-    apply (rule_tac s=s and s'=s' in partitionIntegrity_subjectAffects_eobj)
+   apply (case_tac "etcbs_of s tcb_ptr \<noteq> etcbs_of s' tcb_ptr")
+    apply (rule_tac s=s and s'=s' in partitionIntegrity_subjectAffects_etcbs)
             apply (simp add: partitionIntegrity_def)+
    apply (subgoal_tac "kheap s tcb_ptr \<noteq> kheap s' tcb_ptr")
     apply (rule partitionIntegrity_subjectAffects_obj)
@@ -1307,7 +1301,6 @@ lemma partsSubjectAffects_bounds_subjects_affects:
   apply (safe del: iffI notI)
                              apply (fastforce dest: partitionIntegrity_subjectAffects_obj)
                             apply ((auto dest: partitionIntegrity_subjectAffects_obj
-                                               partitionIntegrity_subjectAffects_eobj
                                                partitionIntegrity_subjectAffects_mem
                                                partitionIntegrity_subjectAffects_device
                                                partitionIntegrity_subjectAffects_cdt
@@ -1999,7 +1992,7 @@ lemmas tcb_sched_action_reads_respects_g =
     reads_respects_g[OF tcb_sched_action_reads_respects,
                      OF _ doesnt_touch_globalsI[where P="\<top>"],
                      simplified,
-                     OF _ tcb_sched_action_extended.globals_equiv]
+                     OF _ tcb_sched_action_globals_equiv]
 
 lemma set_tcb_queue_reads_respects_g':
   "equiv_valid (reads_equiv_g aag)
@@ -2070,7 +2063,7 @@ lemma tcb_sched_action_reads_respects_g':
   apply (simp add: tcb_sched_action_def get_tcb_queue_def)
   apply (subst gets_apply)
   apply (case_tac "aag_can_read aag thread \<or> aag_can_affect aag l thread")
-   apply (simp add: ethread_get_def)
+   apply (simp add: thread_get_def)
    apply (wp set_tcb_queue_reads_respects_g')
          apply (rule_tac Q="\<lambda>s. pasObjectAbs aag thread \<in> pasDomainAbs aag (tcb_domain rv)"
                       in equiv_valid_guard_imp)
@@ -2081,12 +2074,12 @@ lemma tcb_sched_action_reads_respects_g':
           apply metis (* only one that works *)
          apply (wp | simp)+
    apply (intro conjI impI allI
-          | fastforce simp: get_etcb_def reads_equiv_g_def
+          | fastforce simp: get_tcb_def reads_equiv_g_def
                       elim: reads_equivE affects_equivE equiv_forE)+
    apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def split: option.splits)
    apply (erule_tac x="(thread, tcb_domain y)" in ballE, force)
-   apply (force intro: domtcbs simp: get_etcb_def)
-  apply (simp add: equiv_valid_def2 ethread_get_def)
+   apply (force intro: domtcbs simp: get_tcb_Some etcbs_of'_def)
+  apply (simp add: equiv_valid_def2 thread_get_def)
   apply (rule equiv_valid_rv_bind)
     apply (wpsimp wp: equiv_valid_rv_trivial')
    apply (rule equiv_valid_2_bind)
@@ -2105,7 +2098,7 @@ lemma tcb_sched_action_reads_respects_g':
   apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def)
   apply (erule_tac x="(thread, tcb_domain y)" in ballE)
    apply force
-  apply (force intro: domtcbs simp: get_etcb_def)
+  apply (force intro: domtcbs simp: get_tcb_Some etcbs_of'_def)
   done
 
 lemma switch_to_thread_reads_respects_g:
@@ -2198,13 +2191,8 @@ lemma scheduler_action_switch_thread_is_subject:
                         switch_in_cur_domain_2_def in_cur_domain_def)
   apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def)
   apply (drule_tac x="(x,cur_domain s)" in bspec)
-   apply (clarsimp simp: etcb_at_def)
    apply (clarsimp simp: weak_valid_sched_action_2_def)
-   apply (clarsimp simp: valid_etcbs_def)
-   apply (drule_tac x=x in spec)
-   apply (simp add: st_tcb_weakenE)
-   apply (simp add: is_etcb_at_def split: option.splits)
-   apply (fastforce elim: domains_of_state_aux.intros)
+   apply (fastforce intro: etcb_in_domains_of_state pred_tcb_at_tcb_at)
   apply (fastforce dest: domains_distinct[THEN pas_domains_distinct_inj])
   done
 
@@ -2225,7 +2213,7 @@ lemma reads_equiv_valid_g_inv_schedule_switch_thread_fastfail:
      ((\<lambda>s. ct \<noteq> it \<longrightarrow> is_subject aag (ct)))
      (schedule_switch_thread_fastfail ct it ct_prio target_prio)"
   unfolding schedule_switch_thread_fastfail_def
-  by (wpsimp wp: reads_respects_g_from_inv[OF reads_respects_ethread_get])
+  by wpsimp
 
 lemma reads_respects_gets_ready_queues:
   "reads_respects aag l (\<lambda>s. pasSubject aag \<in> pasDomainAbs aag d)
@@ -2239,19 +2227,11 @@ lemma reads_respects_is_highest_prio:
                   (gets (\<lambda>s. is_highest_prio d p s))"
   by (fastforce simp: is_highest_prio_def intro: reads_respects_gets_ready_queues)
 
-lemma reads_respects_ethread_get_when:
-  "reads_respects aag l (\<lambda>_. b \<longrightarrow> is_subject aag thread) (ethread_get_when b f thread)"
-  apply (simp add: ethread_get_when_def)
-  apply (rule conjI; clarsimp)
-   apply (rule reads_respects_ethread_get)
-  apply wp
-  done
-
 text \<open>strengthening of @{thm ArchSyscall_AC.valid_sched_action_switch_subject_thread}\<close>
 lemma valid_sched_action_switch_is_subject:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows "\<lbrakk> scheduler_action s = switch_thread t ; valid_sched_action s ;
-           valid_etcbs s ; pas_refined aag s ; pas_cur_domain aag s \<rbrakk>
+           pas_refined aag s ; pas_cur_domain aag s \<rbrakk>
            \<Longrightarrow> is_subject aag t"
   by (fastforce dest: valid_sched_action_switch_subject_thread
                       domains_distinct[THEN pas_domains_distinct_inj])
@@ -2279,7 +2259,6 @@ lemma schedule_reads_respects_g:
            ((\<lambda>s. cur_thread s \<noteq> idle_thread s \<longrightarrow> is_subject aag (cur_thread s)) and einvs and
             pas_cur_domain aag and (\<lambda>s. domain_time s \<noteq> 0) and pas_refined aag)
            schedule"
-  supply ethread_get_wp[wp del]
   supply set_scheduler_action_wp[wp del]
   supply conj_cong[cong del] (* knowing the scheduler action messes with valid_sched_2 *)
   apply (simp add: schedule_def)
@@ -2290,34 +2269,35 @@ lemma schedule_reads_respects_g:
           prefer 2
           (* choose new thread *)
           apply ((wp set_scheduler_action_reads_respects_g tcb_sched_action_reads_respects_g
-                     schedule_choose_new_thread_reads_respects_g when_ev
+                     schedule_choose_new_thread_reads_respects_g when_ev hoare_drop_imps
                   | wpc | simp)+)[1]
          (* now switch_thread case *)
          apply (wpsimp wp: schedule_choose_new_thread_reads_respects_g enqueue_thread_queued
                            set_scheduler_action_reads_respects_g tcb_sched_action_reads_respects_g
-                           set_scheduler_action_cnt_valid_sched)+
+                           set_scheduler_action_cnt_valid_sched hoare_vcg_imp_lift'
+                | wps)+
                         (* tcb_sched_action tcb_sched_append *)
                         apply (wp append_thread_queued set_scheduler_action_reads_respects_g
                                   guarded_switch_to_reads_respects_g
                                   reads_respects_g_from_inv[OF reads_respects_is_highest_prio]
                                   reads_equiv_valid_g_inv_schedule_switch_thread_fastfail)+
                  (* fastfail calculation *)
-                 apply (wpsimp wp: reads_respects_g_from_inv[OF reads_respects_ethread_get]
-                                   reads_respects_g_from_inv[OF reads_respects_ethread_get_when]
+                 apply (wpsimp wp: reads_respects_g_from_inv[OF thread_get_reads_respects]
                                    when_ev gts_wp tcb_sched_action_reads_respects_g
                                    tcb_sched_action_enqueue_valid_blocked_except
-                                   get_thread_state_reads_respects_g
+                                   get_thread_state_reads_respects_g hoare_vcg_all_lift
                         | wp (once) hoare_drop_imp)+
   apply (clarsimp simp: invs_valid_idle)
   apply (intro allI conjI impI; (elim conjE)?;
          ((fastforce simp: valid_sched_def valid_sched_action_switch_is_subject[OF domains_distinct]
                     dest!: reads_equiv_gD intro!: globals_equiv_idle_thread_ptr))?)
-               apply (tactic \<open>distinct_subgoals_tac\<close>)
-         apply (all \<open>(erule requiv_g_cur_thread_eq)?\<close>)
-         apply (simp_all add: requiv_sched_act_eq[OF reads_equiv_gD[THEN conjunct1]])
-         apply (all \<open>(solves \<open>clarsimp elim!: st_tcb_weakenE\<close>)?\<close>)
-       apply (all \<open>(solves \<open>clarsimp simp: not_cur_thread_def\<close>)?\<close>)
-   apply (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_def)+
+                  apply (tactic \<open>distinct_subgoals_tac\<close>)
+             apply (all \<open>(erule requiv_g_cur_thread_eq)?\<close>)
+             apply (simp_all add: requiv_sched_act_eq[OF reads_equiv_gD[THEN conjunct1]])
+             apply (all \<open>(solves \<open>clarsimp elim!: st_tcb_weakenE\<close>)?\<close>)
+           apply (all \<open>(solves \<open>clarsimp simp: not_cur_thread_def\<close>)?\<close>)
+      apply (all \<open>(solves \<open>fastforce dest: st_tcb_at_not_idle_thread\<close>)?\<close>)
+    apply (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_def)+
   done
 
 lemma schedule_if_reads_respects_g:
@@ -2794,7 +2774,7 @@ lemma thread_set_tcb_context_update_reads_respects_g:
    apply simp+
   done
 
-lemma thread_set_tcb_context_update_silc_inv:
+lemma thread_set_tcb_context_update_silc_inv[wp]:
   "thread_set (tcb_arch_update (arch_tcb_context_set f)) t \<lbrace>silc_inv aag st\<rbrace>"
   apply (rule thread_set_silc_inv)
   apply (simp add: tcb_cap_cases_def)
@@ -3467,7 +3447,7 @@ lemma preemption_interrupt_scheduler_invisible:
                       apply (rule return_ev2)
                       apply simp
                      apply (rule equiv_valid_2)
-                     apply (wp handle_interrupt_reads_respects_scheduler[where st=st] | simp)+
+                     apply (wp handle_interrupt_reads_respects_scheduler[where st=st and st'=st'] | simp)+
                 apply (rule equiv_valid_2)
                 apply (rule dmo_getActive_IRQ_reads_respect_scheduler)
                apply (wp dmo_getActiveIRQ_return_axiom[simplified try_some_magic]
@@ -3523,7 +3503,7 @@ lemma kernel_entry_scheduler_equiv_2:
       apply (rule equiv_valid_2_bind_pre[where R'="(=)"])
            apply (rule equiv_valid_2)
            apply simp
-           apply (wp del: no_irq add: handle_interrupt_reads_respects_scheduler[where st=st]
+           apply (wp del: no_irq add: handle_interrupt_reads_respects_scheduler[where st=st and st'=st']
                                       dmo_getActive_IRQ_reads_respect_scheduler
                   | wpc
                   | simp add: imp_conjR all_conj_distrib  arch_tcb_update_aux2

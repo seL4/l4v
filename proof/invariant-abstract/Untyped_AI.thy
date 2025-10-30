@@ -2966,7 +2966,7 @@ locale Untyped_AI_nonempty_table =
   "\<And>tp oref sz p dev cref.\<lbrace>cap_refs_in_kernel_window and cte_wp_at (\<lambda>c. cap_range (default_cap tp oref sz dev) \<subseteq> cap_range c) p\<rbrace>
      create_cap tp sz p dev (cref, oref) \<lbrace>\<lambda>rv. (cap_refs_in_kernel_window::'state_ext state \<Rightarrow> bool)\<rbrace>"
   assumes nonempty_default[simp]:
-  "\<And>tp S us dev dm. tp \<noteq> Untyped \<Longrightarrow> \<not> nonempty_table S (default_object tp dev us dm)"
+  "\<And>tp S us dev d. tp \<noteq> Untyped \<Longrightarrow> \<not> nonempty_table S (default_object tp dev us d)"
   assumes nonempty_table_caps_of:
   "\<And>S ko. nonempty_table S ko \<Longrightarrow> caps_of ko = {}"
   assumes init_arch_objects_nonempty_table:

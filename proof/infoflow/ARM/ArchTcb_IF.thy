@@ -82,6 +82,11 @@ qed
 
 context Arch begin global_naming ARM
 
+lemma valid_ipc_buffer_cap_is_nondevice_page_cap:
+  "\<lbrakk>valid_ipc_buffer_cap cap ptr; cap \<noteq> NullCap\<rbrakk> \<Longrightarrow> is_nondevice_page_cap cap"
+  by (clarsimp simp: valid_ipc_buffer_cap_def is_nondevice_page_cap_simps is_nondevice_page_cap_arch_def
+              split: cap.splits arch_cap.splits bool.splits)
+
 (* FIXME: Pretty general. Probably belongs somewhere else *)
 lemma invoke_tcb_thread_preservation[Tcb_IF_assms]:
   assumes cap_delete_P: "\<And>slot. \<lbrace>invs and P and emptyable slot\<rbrace> cap_delete slot \<lbrace>\<lambda>_. P\<rbrace>"
@@ -89,58 +94,59 @@ lemma invoke_tcb_thread_preservation[Tcb_IF_assms]:
   assumes thread_set_P: "\<And>f ptr. \<lbrace>invs and P\<rbrace> thread_set (tcb_ipc_buffer_update f) ptr \<lbrace>\<lambda>_. P\<rbrace>"
   assumes thread_set_P': "\<And>f ptr. \<lbrace>invs and P\<rbrace> thread_set (tcb_fault_handler_update f) ptr \<lbrace>\<lambda>_. P\<rbrace>"
   assumes set_mcpriority_P: "\<And>mcp ptr. \<lbrace>invs and P\<rbrace> set_mcpriority ptr mcp \<lbrace>\<lambda>_.P\<rbrace>"
+  assumes set_priority_P: "\<And>prio ptr. \<lbrace>invs and P\<rbrace> set_priority ptr prio \<lbrace>\<lambda>_.P\<rbrace>"
+  assumes reschedule_required_P: "reschedule_required \<lbrace>P\<rbrace>"
   assumes P_trans[simp]: "\<And>f s. P (trans_state f s) = P s"
   shows
     "\<lbrace>P and invs and tcb_inv_wf (tcb_invocation.ThreadControl t sl ep mcp prio croot vroot buf)\<rbrace>
      invoke_tcb (tcb_invocation.ThreadControl t sl ep mcp prio croot vroot buf)
      \<lbrace>\<lambda>rv s :: det_state. P s\<rbrace>"
-  supply set_priority_extended.dxo_eq[simp del]
-         reschedule_required_ext_extended.dxo_eq[simp del]
   apply (simp add: split_def cong: option.case_cong)
   apply (rule hoare_weaken_pre)
    apply (rule_tac P="case ep of Some v \<Rightarrow> length v = word_bits | _ \<Rightarrow> True"
                 in hoare_gen_asm)
    apply wp
-        apply ((simp add: conj_comms(1, 2)
-                | rule wp_split_const_if wp_split_const_if_R hoare_vcg_all_liftE_R
-                       hoare_vcg_conj_elimE hoare_vcg_const_imp_liftE_R hoare_vcg_conj_liftE_R
-                | (wp check_cap_inv2[where Q="\<lambda>_. pas_refined aag"]
-                      check_cap_inv2[where Q="\<lambda>_ s. t \<noteq> idle_thread s"]
-                      out_invs_trivial case_option_wpE cap_delete_deletes
-                      cap_delete_valid_cap cap_insert_valid_cap out_cte_at
-                      cap_insert_cte_at cap_delete_cte_at out_valid_cap out_tcb_valid
-                      hoare_vcg_const_imp_liftE_R hoare_vcg_all_liftE_R
-                      thread_set_tcb_ipc_buffer_cap_cleared_invs
-                      thread_set_invs_trivial[OF ball_tcb_cap_casesI]
-                      hoare_vcg_all_lift thread_set_valid_cap out_emptyable
-                      check_cap_inv [where P="valid_cap c" for c]
-                      check_cap_inv [where P="tcb_cap_valid c p" for c p]
-                      check_cap_inv[where P="cte_at p0" for p0]
-                      check_cap_inv[where P="tcb_at p0" for p0]
-                      thread_set_cte_at thread_set_no_cap_to_trivial[OF ball_tcb_cap_casesI]
-                      checked_insert_no_cap_to
-                      thread_set_cte_wp_at_trivial[where Q="\<lambda>x. x", OF ball_tcb_cap_casesI]
-                      out_no_cap_to_trivial[OF ball_tcb_cap_casesI] thread_set_ipc_tcb_cap_valid
-                      check_cap_inv2[where Q="\<lambda>_. P"] cap_delete_P cap_insert_P
-                      thread_set_P thread_set_P' set_mcpriority_P set_mcpriority_idle_thread
-                      dxo_wp_weak hoare_weak_lift_imp)
-                | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified] emptyable_def
-                | wpc
-                | strengthen use_no_cap_to_obj_asid_strg
-                             tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
-                             tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"])+)
-  apply (unfold option_update_thread_def)
-  apply (wp itr_wps thread_set_P thread_set_P'
-         | simp add: emptyable_def | wpc)+ (*slow*)
-  apply (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
-                        is_cap_simps is_valid_vtable_root_def
-                        is_cnode_or_valid_arch_def tcb_cap_valid_def
-                        tcb_at_st_tcb_at[symmetric] invs_valid_objs
-                        cap_asid_def vs_cap_ref_def
-                        clas_no_asid cli_no_irqs no_cap_to_idle_thread
-                 split: option.split_asm
-         | rule conjI)+ (* also slow *)
-  done
+        apply (wpsimp wp: set_priority_P)
+       apply (rule_tac Q'="\<lambda>_. invs and P" and E'="\<lambda>_. P" in hoare_post_impE; clarsimp)
+       apply ((simp add: conj_comms(1, 2)
+               | rule wp_split_const_if wp_split_const_if_R hoare_vcg_all_liftE_R
+                      hoare_vcg_conj_elimE hoare_vcg_const_imp_liftE_R hoare_vcg_conj_liftE_R
+               | (wp check_cap_inv2[where Q="\<lambda>_ s. t \<noteq> idle_thread s"]
+                     out_invs_trivial case_option_wpE cap_delete_deletes
+                     cap_delete_valid_cap cap_insert_valid_cap out_cte_at
+                     cap_insert_cte_at cap_delete_cte_at out_valid_cap out_tcb_valid
+                     hoare_vcg_const_imp_liftE_R hoare_vcg_all_liftE_R
+                     thread_set_tcb_ipc_buffer_cap_cleared_invs
+                     thread_set_invs_trivial[OF ball_tcb_cap_casesI]
+                     hoare_vcg_all_lift thread_set_valid_cap out_emptyable
+                     check_cap_inv [where P="valid_cap c" for c]
+                     check_cap_inv [where P="tcb_cap_valid c p" for c p]
+                     check_cap_inv[where P="cte_at p0" for p0]
+                     check_cap_inv[where P="tcb_at p0" for p0]
+                     thread_set_cte_at thread_set_no_cap_to_trivial[OF ball_tcb_cap_casesI]
+                     checked_insert_no_cap_to
+                     thread_set_cte_wp_at_trivial[where Q="\<lambda>x. x", OF ball_tcb_cap_casesI]
+                     out_no_cap_to_trivial[OF ball_tcb_cap_casesI] thread_set_ipc_tcb_cap_valid
+                     check_cap_inv2[where Q="\<lambda>_. P"] cap_delete_P cap_insert_P
+                     thread_set_P thread_set_P' set_mcpriority_P set_mcpriority_idle_thread
+                     set_priority_P reschedule_required_P dxo_wp_weak hoare_weak_lift_imp)
+               | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified] emptyable_def
+               | wpc
+               | strengthen use_no_cap_to_obj_asid_strg
+                            tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
+                            tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"])+) (*slow*)
+     apply (unfold option_update_thread_def)
+     apply (wp itr_wps thread_set_P thread_set_P'
+            | simp add: emptyable_def | wpc)+ (* also slow *)
+  apply clarsimp
+  by (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
+                     is_cap_simps is_valid_vtable_root_def
+                     is_cnode_or_valid_arch_def tcb_cap_valid_def
+                     tcb_at_st_tcb_at[symmetric] invs_valid_objs
+                     cap_asid_def vs_cap_ref_def
+                     clas_no_asid cli_no_irqs no_cap_to_idle_thread
+                     valid_ipc_buffer_cap_is_nondevice_page_cap
+              split: option.split_asm)
 
 lemma tc_reads_respects_f[Tcb_IF_assms]:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"

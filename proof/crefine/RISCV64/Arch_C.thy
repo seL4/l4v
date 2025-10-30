@@ -250,7 +250,7 @@ proof -
      simplified, OF empty[folded szko] szo[symmetric], unfolded szko]
 
   have szb: "pageBits < word_bits" by simp
-  have mko: "\<And>dev us d. makeObjectKO dev us d (Inl (KOArch (KOASIDPool f))) = Some ko"
+  have mko: "\<And>dev us d f. makeObjectKO dev us d (Inl (KOArch (KOASIDPool f))) = Some ko"
     by (simp add: ko_def makeObjectKO_def)
 
 

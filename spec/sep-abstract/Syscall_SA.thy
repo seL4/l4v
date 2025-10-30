@@ -115,9 +115,9 @@ definition
   handle_yield :: "(unit,'z::state_ext) s_monad" where
   "handle_yield \<equiv> do
      thread \<leftarrow> gets cur_thread;
-     do_extended_op (tcb_sched_action (tcb_sched_dequeue) thread);
-     do_extended_op (tcb_sched_action (tcb_sched_append) thread);
-     do_extended_op reschedule_required
+     tcb_sched_action (tcb_sched_dequeue) thread;
+     tcb_sched_action (tcb_sched_append) thread;
+     reschedule_required
    od"
 
 definition
@@ -244,7 +244,7 @@ text \<open>
 \<close>
 
 definition
-  call_kernel :: "event \<Rightarrow> (unit,'z::state_ext_sched) s_monad" where
+  call_kernel :: "event \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "call_kernel ev \<equiv> do
        handle_event ev <handle>
            (\<lambda>_. without_preemption $ do

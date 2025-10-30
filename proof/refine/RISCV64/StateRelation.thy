@@ -151,20 +151,20 @@ definition arch_tcb_relation :: "Structures_A.arch_tcb \<Rightarrow> Structures_
 definition tcb_relation :: "Structures_A.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool" where
   "tcb_relation \<equiv> \<lambda>tcb tcb'.
      tcb_ipc_buffer tcb = tcbIPCBuffer tcb'
-  \<and> arch_tcb_relation (tcb_arch tcb) (tcbArch tcb')
-  \<and> thread_state_relation (tcb_state tcb) (tcbState tcb')
-  \<and> fault_rel_optionation (tcb_fault tcb) (tcbFault tcb')
-  \<and> cap_relation (tcb_ctable tcb) (cteCap (tcbCTable tcb'))
-  \<and> cap_relation (tcb_vtable tcb) (cteCap (tcbVTable tcb'))
-  \<and> cap_relation (tcb_fault_handler tcb) (cteCap (tcbFaultHandler tcb'))
-  \<and> cap_relation (tcb_timeout_handler tcb) (cteCap (tcbTimeoutHandler tcb'))
-  \<and> cap_relation (tcb_ipcframe tcb) (cteCap (tcbIPCBufferFrame tcb'))
-  \<and> tcb_bound_notification tcb = tcbBoundNotification tcb'
-  \<and> tcb_sched_context tcb = tcbSchedContext tcb'
-  \<and> tcb_yield_to tcb = tcbYieldTo tcb'
-  \<and> tcb_mcpriority tcb = tcbMCP tcb'
-  \<and> tcb_priority tcb = tcbPriority tcb'
-  \<and> tcb_domain tcb = tcbDomain tcb'"
+   \<and> arch_tcb_relation (tcb_arch tcb) (tcbArch tcb')
+   \<and> thread_state_relation (tcb_state tcb) (tcbState tcb')
+   \<and> fault_rel_optionation (tcb_fault tcb) (tcbFault tcb')
+   \<and> cap_relation (tcb_ctable tcb) (cteCap (tcbCTable tcb'))
+   \<and> cap_relation (tcb_vtable tcb) (cteCap (tcbVTable tcb'))
+   \<and> cap_relation (tcb_fault_handler tcb) (cteCap (tcbFaultHandler tcb'))
+   \<and> cap_relation (tcb_timeout_handler tcb) (cteCap (tcbTimeoutHandler tcb'))
+   \<and> cap_relation (tcb_ipcframe tcb) (cteCap (tcbIPCBufferFrame tcb'))
+   \<and> tcb_bound_notification tcb = tcbBoundNotification tcb'
+   \<and> tcb_sched_context tcb = tcbSchedContext tcb'
+   \<and> tcb_yield_to tcb = tcbYieldTo tcb'
+   \<and> tcb_mcpriority tcb = tcbMCP tcb'
+   \<and> tcb_priority tcb = tcbPriority tcb'
+   \<and> tcb_domain tcb = tcbDomain tcb'"
 
 lemma sc_sporadic_flag_eq_schedContextSporadicFlag[simp]:
   "sc_sporadic_flag = schedContextSporadicFlag"
@@ -742,30 +742,31 @@ lemma state_relation_idle_thread[elim!]:
 
 lemma state_relationD:
   assumes sr:  "(s, s') \<in> state_relation"
-  shows "pspace_relation (kheap s) (ksPSpace s') \<and>
-  sc_replies_relation s s' \<and>
-  sched_act_relation (scheduler_action s) (ksSchedulerAction s') \<and>
-  ready_queues_relation s s' \<and>
-  release_queue_relation s s' \<and>
-  ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') \<and>
-  cdt_relation (swp cte_at s) (cdt s) (ctes_of s') \<and>
-  cdt_list_relation (cdt_list s) (cdt s) (ctes_of s') \<and>
-  revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) (ctes_of s') \<and>
-  (arch_state s, ksArchState s') \<in> arch_state_relation \<and>
-  interrupt_state_relation (interrupt_irq_node s) (interrupt_states s) (ksInterruptState s') \<and>
-  cur_thread s = ksCurThread s' \<and>
-  idle_thread s = ksIdleThread s' \<and>
-  idle_sc_ptr = ksIdleSC s' \<and>
-  machine_state s = ksMachineState s' \<and>
-  work_units_completed s = ksWorkUnitsCompleted s' \<and>
-  domain_index s = ksDomScheduleIdx s' \<and>
-  domain_list s = ksDomSchedule s' \<and>
-  cur_domain s = ksCurDomain s' \<and>
-  domain_time s = ksDomainTime s' \<and>
-  consumed_time s = ksConsumedTime s' \<and>
-  cur_time s = ksCurTime s' \<and>
-  cur_sc s = ksCurSc s' \<and>
-  reprogram_timer s = ksReprogramTimer s'"
+  shows
+  "pspace_relation (kheap s) (ksPSpace s') \<and>
+   sc_replies_relation s s' \<and>
+   sched_act_relation (scheduler_action s) (ksSchedulerAction s') \<and>
+   ready_queues_relation s s' \<and>
+   release_queue_relation s s' \<and>
+   ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') \<and>
+   cdt_relation (swp cte_at s) (cdt s) (ctes_of s') \<and>
+   cdt_list_relation (cdt_list s) (cdt s) (ctes_of s') \<and>
+   revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) (ctes_of s') \<and>
+   (arch_state s, ksArchState s') \<in> arch_state_relation \<and>
+   interrupt_state_relation (interrupt_irq_node s) (interrupt_states s) (ksInterruptState s') \<and>
+   cur_thread s = ksCurThread s' \<and>
+   idle_thread s = ksIdleThread s' \<and>
+   idle_sc_ptr = ksIdleSC s' \<and>
+   machine_state s = ksMachineState s' \<and>
+   work_units_completed s = ksWorkUnitsCompleted s' \<and>
+   domain_index s = ksDomScheduleIdx s' \<and>
+   domain_list s = ksDomSchedule s' \<and>
+   cur_domain s = ksCurDomain s' \<and>
+   domain_time s = ksDomainTime s' \<and>
+   consumed_time s = ksConsumedTime s' \<and>
+   cur_time s = ksCurTime s' \<and>
+   cur_sc s = ksCurSc s' \<and>
+   reprogram_timer s = ksReprogramTimer s'"
   using sr unfolding state_relation_def by simp
 
 lemma state_relationE [elim?]:
@@ -1098,28 +1099,6 @@ lemma length_scRefills_bounded:
   apply simp
   apply (clarsimp simp add: word_bits_def untypedBits_defs)
   done
-
-lemma scBits_pos_power2:
-  assumes "minSchedContextBits + scSize sc < word_bits"
-  shows "(1::machine_word) < (2::machine_word) ^ (minSchedContextBits + scSize sc)"
-  apply (insert assms)
-  apply (subst word_less_nat_alt)
-  apply (clarsimp simp: minSchedContextBits_def)
-  by (auto simp: pow_mono_leq_imp_lt)
-
-lemma objBits_pos_power2[simp]:
-  assumes "objBits v < word_bits"
-  shows "(1::machine_word) < (2::machine_word) ^ objBits v"
-  unfolding objBits_simps'
-  apply (insert assms)
-  apply (case_tac "injectKO v"; simp)
-  by (simp add: pageBits_def pteBits_def objBits_simps scBits_pos_power2
-         split: arch_kernel_object.split)+
-
-lemma objBitsKO_no_overflow[simp, intro!]:
-  "objBitsKO ko < word_bits \<Longrightarrow> (1::machine_word) < (2::machine_word)^(objBitsKO ko)"
-  by (cases ko; simp add: objBits_simps' pageBits_def pteBits_def scBits_pos_power2
-                   split: arch_kernel_object.splits)
 
 (* for handling refill buffer *)
 

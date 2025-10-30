@@ -326,17 +326,9 @@ lemma ucast_ucast_mask_pageBits_shift:
   apply (auto simp: word_size nth_ucast nth_shiftr pageBits_def)
   done
 
-(* FIXME: rewrite using unat_ucast_mask_shift *)
 lemma unat_ucast_mask_pageBits_shift:
   "unat (ucast (p && mask pageBits >> 2) :: 10 word) = unat ((p::word32) && mask pageBits >> 2)"
-  apply (simp only: unat_ucast)
-  apply (rule Divides.mod_less, simp)
-  apply (rule unat_less_power)
-   apply (simp add: word_bits_def)
-  apply (rule shiftr_less_t2n)
-  apply (rule order_le_less_trans [OF word_and_le1])
-  apply (simp add: pageBits_def mask_def)
-  done
+  by (metis ucast_ucast_mask_pageBits_shift unat_ucast_10_32)
 
 (* FIXME: rewrite using mask_shift_sum *)
 lemma mask_pageBits_shift_sum:

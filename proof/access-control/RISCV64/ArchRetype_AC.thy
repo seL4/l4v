@@ -52,9 +52,10 @@ end
 context retype_region_proofs' begin interpretation Arch .
 
 lemma pas_refined:
-  "\<lbrakk> invs s; pas_refined aag s \<rbrakk> \<Longrightarrow> pas_refined aag s'"
-  apply (erule pas_refined_state_objs_to_policy_subset)
-      apply (simp add: state_objs_to_policy_def refs_eq  mdb_and_revokable)
+  "\<lbrakk> invs s; pas_refined aag s; pas_cur_domain aag s; \<forall>x\<in> set (retype_addrs ptr ty n us). is_subject aag x \<rbrakk>
+   \<Longrightarrow> pas_refined aag s'"
+  apply (erule pas_refined_subsets_tcb_domain_map_wellformed)
+      apply (simp add: state_objs_to_policy_def refs_eq mdb_and_revokable)
       apply (subst state_vrefs_eq; fastforce?)
       apply (rule subsetI, rename_tac x, case_tac x, simp)
       apply (erule state_bits_to_policy.cases)
@@ -75,7 +76,7 @@ lemma pas_refined:
     apply clarsimp
     apply (erule state_irqs_to_policy_aux.cases)
     apply (solves\<open>auto intro!: sita_controlled intro: caps_retype split: cap.split\<close>)
-   apply (rule domains_of_state)
+   apply (erule (2) tcb_domain_map_wellformed)
   apply simp
   done
 
@@ -359,14 +360,13 @@ lemma retype_region_integrity_asids[Retype_AC_assms]:
      \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_asids aag {pasSubject aag} x a s st \<rbrakk>
      \<Longrightarrow> integrity_asids aag {pasSubject aag} x a s
            (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
-                            then Some (default_object typ dev o_bits)
+                            then Some (default_object typ dev o_bits d)
                             else kheap s a\<rparr>)"
   apply (clarsimp simp: opt_map_def)
   apply (case_tac "x \<in> up_aligned_area ptr sz"; clarsimp)
-  apply (fastforce intro: tro_lrefl tre_lrefl
-                    dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]
-                    simp: image_def p_assoc_help power_sub)
-  done
+  by (fastforce intro: tro_lrefl
+                 dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]
+                 simp: image_def p_assoc_help power_sub)
 
 declare init_arch_objects_inv[Retype_AC_assms]
 
