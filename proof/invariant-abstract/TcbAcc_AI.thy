@@ -849,6 +849,10 @@ lemma set_tcb_obj_ref_aligned[wp]:
 crunch set_tcb_obj_ref
  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
 
+lemma set_thread_state_tcb[wp]:
+  "set_thread_state ts t' \<lbrace>\<lambda>s. P (tcb_at t s)\<rbrace>"
+  by (simp add: tcb_at_typ, wp)
+
 lemma set_tcb_obj_ref_tcb_at[wp]:
   "set_tcb_obj_ref f t' obj \<lbrace>\<lambda>s. P (tcb_at t s)\<rbrace>"
   by (wpsimp simp: tcb_at_typ)
@@ -1646,13 +1650,6 @@ lemma dom_tcb_cap_cases:
 
 end
 
-lemma set_thread_state_interrupt_irq_node[wp]: "\<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace>
-  set_thread_state param_a param_b \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace> "
-  apply (simp add: set_thread_state_def)
-  apply (wp|simp add: set_object_def)+
-  done
-(*crunch irq_node[wp]: set_thread_state "\<lambda>s. P (interrupt_irq_node s)"*)
-
 crunch set_tcb_obj_ref
  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
 
@@ -2350,10 +2347,6 @@ lemma set_mrs_invs[wp]:
            simp: set_mrs_redux zipWithM_x_mapM store_word_offs_def ran_tcb_cap_cases
       split_del: if_split)
 
-crunch thread_set_domain, thread_set_priority
-  for valid_arch_state[wp]: "valid_arch_state :: 'state_ext state \<Rightarrow> _"
-  (simp: tcb_cap_cases_def)
-
 end
 
 
@@ -2506,7 +2499,7 @@ lemma thread_set_domain_valid_arch_caps[wp]:
   unfolding thread_set_domain_def
   by (wpsimp wp: thread_set_arch_caps_trivial simp: tcb_cap_cases_def) auto
 
-global_interpretation thread_set_domain: tcb_op "thread_set_domain t d"
+sublocale thread_set_domain: tcb_op "thread_set_domain t d"
   by (simp add: thread_set_domain_def thread_set.tcb_op_axioms)
 
 lemma thread_set_domain_valid_replies[wp]:
@@ -2606,7 +2599,7 @@ lemma thread_set_priority_valid_arch_caps[wp]:
   unfolding thread_set_priority_def
   by (wpsimp wp: thread_set_arch_caps_trivial simp: tcb_cap_cases_def) auto
 
-global_interpretation thread_set_priority: tcb_op "thread_set_priority t p"
+sublocale thread_set_priority: tcb_op "thread_set_priority t p"
   by (simp add: thread_set_priority_def thread_set.tcb_op_axioms)
 
 lemma thread_set_priority_valid_replies[wp]:
@@ -2645,6 +2638,7 @@ global_interpretation set_thread_state: non_sc_op "set_thread_state t st"
 
 text \<open>set_thread_state_act and possible_switch_to invariants\<close>
 
+(* FIXME: move to Invariants_AI *)
 lemma (in pspace_update_eq) ex_nonz_cap_to_update[iff]:
   "ex_nonz_cap_to p (f s) = ex_nonz_cap_to p s"
   by (simp add: ex_nonz_cap_to_def)

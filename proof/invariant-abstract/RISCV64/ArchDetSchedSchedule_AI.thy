@@ -317,10 +317,6 @@ lemma handle_hyp_fault_trivial[wp]:
   "handle_hypervisor_fault t fault \<lbrace>Q\<rbrace>"
   by (cases fault; wpsimp)
 
-crunch arch_switch_to_thread
-  for etcbs_of[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (etcbs_of s)"
-  and cur_domain[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_domain s)"
-
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI

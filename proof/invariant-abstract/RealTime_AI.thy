@@ -504,11 +504,6 @@ lemma valid_mdb_release_queue_update[simp]:
   "valid_mdb (release_queue_update f s) = valid_mdb s"
   by (simp add: valid_mdb_def mdb_cte_at_def)
 
-(* FIXME: move to Invariants_AI *)
-lemma (in pspace_update_eq) ex_nonz_cap_to_update[iff]:
-  "ex_nonz_cap_to p (f s) = ex_nonz_cap_to p s"
-  by (simp add: ex_nonz_cap_to_def)
-
 (* FIXME: do this in Invariants_AI *)
 declare release_queue_update.state_refs_update[simp]
 declare ready_queues_update.state_refs_update[simp]

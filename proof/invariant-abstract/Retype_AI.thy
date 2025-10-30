@@ -105,7 +105,7 @@ lemma obj_bits_api_def4:
 lemma obj_bits_dev_irr:
   "\<lbrakk>ty \<noteq> Untyped; ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us\<rbrakk>
      \<Longrightarrow> obj_bits (default_object ty dev us d) = obj_bits_api ty us"
-  by (simp add: obj_bits_api_def3[where dm=0] cong: obj_bits_cong)
+  by (simp add: obj_bits_api_def3 cong: obj_bits_cong)
 
 lemma default_obj_range:
   "\<lbrakk>ty \<noteq> Untyped; ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us\<rbrakk> \<Longrightarrow>
@@ -1318,7 +1318,7 @@ proof -
     + (2 :: machine_word) ^ obj_bits (default_object ty dev us d)"
     apply (simp add:distrib_right[where b = "1::'a::len word",simplified,symmetric])
     using not_0 n_less
-    apply (simp add: unat_of_nat_minus_1 obj_bits_api_def3[where dm=0] tyunt tysc
+    apply (simp add: unat_of_nat_minus_1 obj_bits_api_def3 tyunt tysc
                cong: obj_bits_cong)
     done
   show  "p + 2 ^ obj_bits (default_object ty dev us d) - 1 \<le> ptr + of_nat n * 2 ^ obj_bits_api ty us - 1"

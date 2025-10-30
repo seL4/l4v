@@ -2811,7 +2811,7 @@ lemma schedContext_unbindTCB_ccorres:
         apply (rule ccorres_return_Skip)
        apply ceqv
       apply (ctac add: tcbSchedDequeue_ccorres)
-        apply (ctac add: tcbReleaseRemove_ccorres)
+        apply (ctac add: tcbReleaseRemove_ccorres, rename_tac xfdc')
           apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
               apply (rule_tac P'="ko_at' sc scPtr and valid_objs'"
                            in threadSet_ccorres_lemma3[where P=\<top>])

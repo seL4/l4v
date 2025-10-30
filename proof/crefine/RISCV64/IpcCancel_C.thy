@@ -3381,7 +3381,7 @@ lemma schedContext_donate_ccorres:
                           split: option.splits)
          apply (rule ccorres_rhs_assoc)+
          apply (ctac add: tcbSchedDequeue_ccorres)
-           apply (ctac add: tcbReleaseRemove_ccorres)
+           apply (ctac add: tcbReleaseRemove_ccorres, rename_tac xfdc')
              apply (rule ccorres_move_c_guard_tcb)
              apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
                  apply (rule_tac R="{s'. from_' s' = option_to_ctcb_ptr (scTCB sc)}"

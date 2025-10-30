@@ -2373,7 +2373,7 @@ lemma schedule_ccorres:
   apply cinit
    apply (rule ccorres_stateAssert)+
    apply (ctac (no_vcg) add: awaken_ccorres)
-    apply (ctac (no_vcg) add: checkDomainTime_ccorres)
+    apply (ctac (no_vcg) add: checkDomainTime_ccorres, rename_tac xfdc')
      apply (rule ccorres_pre_getCurThread)
      apply (rule ccorres_pre_getSchedulerAction)
      apply (rule ccorres_rhs_assoc2)
@@ -2605,7 +2605,7 @@ lemma schedule_ccorres:
         apply ceqv
        apply (clarsimp simp: scAndTimer_def)
        apply (simp add: bind_assoc)
-       apply (ctac add: switchSchedContext_ccorres)
+       apply (ctac add: switchSchedContext_ccorres, rename_tac xfdc')
          apply (rule ccorres_pre_getReprogramTimer)
          apply (rule ccorres_seq_skip'[THEN iffD1])
          apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)

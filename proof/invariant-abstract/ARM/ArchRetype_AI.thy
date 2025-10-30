@@ -748,33 +748,32 @@ lemma valid_cap:
   assumes cap:
     "(s::'state_ext state) \<turnstile> cap \<and> untyped_range cap \<inter> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} = {}"
   shows "s' \<turnstile> cap"
-  proof -
+proof -
   note blah[simp del] = atLeastAtMost_simps
   have cover':"range_cover ptr sz (obj_bits (default_object ty dev us (cur_domain s))) n"
     using cover tyunt tysc
     by (clarsimp simp: obj_bits_dev_irr)
   show ?thesis
-  using cap
-  apply (case_tac cap)
+    using cap
+    apply (case_tac cap)
     unfolding valid_cap_def
-             apply (simp_all add: valid_cap_def obj_at_pres cte_at_pres
-                           split: option.split_asm arch_cap.split_asm option.splits)
-     apply (clarsimp simp add: valid_untyped_def ps_def s'_def)
-     apply (intro conjI)
-      apply clarsimp
-      apply (drule (1) disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt tysc[THEN conjunct1, THEN impI]]])
-       apply (simp add: Int_ac p_assoc_help[symmetric])
-      apply fastforce
-     apply clarsimp
-     apply (drule disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt]])
-      apply (simp add: Int_ac p_assoc_help[symmetric])
-     apply fastforce
-    using cover tyunt
-    apply (simp add: obj_bits_api_def2 split: Structures_A.apiobject_type.splits)
-        apply (fastforce elim!: obj_at_pres)+
-  done
-  qed
-
+                 apply (simp_all add: valid_cap_def obj_at_pres cte_at_pres
+                               split: option.split_asm arch_cap.split_asm option.splits)
+       apply (clarsimp simp add: valid_untyped_def ps_def s'_def)
+       apply (intro conjI)
+        apply clarsimp
+        apply (drule (1) disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt tysc[THEN conjunct1, THEN impI]]])
+         apply (simp add: Int_ac p_assoc_help[symmetric])
+        apply fastforce
+       apply clarsimp
+       apply (drule (1) disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt tysc[THEN conjunct1, THEN impI]]])
+        apply (simp add: Int_ac p_assoc_help[symmetric])
+       apply fastforce
+      using cover tyunt tysc
+      apply (simp add: obj_bits_api_def2 split: Structures_A.apiobject_type.splits)
+            apply (fastforce elim!: obj_at_pres)+
+    done
+qed
 
 lemma valid_global_refs:
   "valid_global_refs s \<Longrightarrow> valid_global_refs s'"

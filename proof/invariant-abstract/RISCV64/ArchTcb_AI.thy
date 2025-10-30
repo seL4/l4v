@@ -380,7 +380,7 @@ lemma tcs_invs[Tcb_AI_assms]:
   apply (simp add: split_def cong: option.case_cong)
   apply (wpsimp wp: maybeM_wp_drop_None, assumption)
      apply (clarsimp cong: conj_cong)
-     apply (wpsimp wp: maybeM_wp_drop_None hoare_vcg_all_lift hoare_vcg_imp_lift', assumption)
+     apply (wpsimp wp: maybeM_inv hoare_vcg_all_lift hoare_vcg_imp_lift')
     apply (clarsimp cong: conj_cong)
     apply (wpsimp wp: maybeM_wp_drop_None hoare_vcg_all_lift hoare_vcg_imp_lift', assumption)
    apply (clarsimp cong: conj_cong)

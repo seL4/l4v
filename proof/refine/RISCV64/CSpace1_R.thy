@@ -1748,7 +1748,7 @@ lemma set_cap_not_quite_corres_prequel:
    apply (frule tcb_cases_related2)
    apply (clarsimp simp: set_cap_def2 split_def bind_def get_object_def
                          simpler_gets_def assert_def fail_def return_def
-                         set_object_def get_def put_def)
+                         set_object_def get_def put_def gets_the_def)
    apply (erule(2) pspace_relation_update_tcbs)
    apply (simp add: c)
   apply clarsimp

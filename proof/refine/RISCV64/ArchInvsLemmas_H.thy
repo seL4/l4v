@@ -576,14 +576,15 @@ lemmas gen_objBitsT_simps = objBitsT_simps(1-7)
 
 end
 
-context Arch begin
+context Arch begin arch_global_naming
 
-lemma objBits_less_word_bits:
-  "objBits v < word_bits"
-  unfolding objBits_simps'
-  apply (case_tac "injectKO v"; simp)
-  by (simp add: pageBits_def pteBits_def objBits_simps word_bits_def
-         split: arch_kernel_object.split)+
+lemma scBits_pos_power2:
+  assumes "minSchedContextBits + scSize sc < word_bits"
+  shows "(1::machine_word) < (2::machine_word) ^ (minSchedContextBits + scSize sc)"
+  apply (insert assms)
+  apply (subst word_less_nat_alt)
+  apply (clarsimp simp: minSchedContextBits_def)
+  by (auto simp: pow_mono_leq_imp_lt)
 
 lemma objBits_pos_power2[simp]:
   assumes "objBits v < word_bits"
@@ -591,9 +592,22 @@ lemma objBits_pos_power2[simp]:
   unfolding objBits_simps'
   apply (insert assms)
   apply (case_tac "injectKO v"; simp)
-  by (simp add: pageBits_def pteBits_def objBits_simps
+  by (simp add: pageBits_def pteBits_def objBits_simps scBits_pos_power2
          split: arch_kernel_object.split)+
 
+lemma objBitsKO_no_overflow[simp, intro!]:
+  "objBitsKO ko < word_bits \<Longrightarrow> (1::machine_word) < (2::machine_word)^(objBitsKO ko)"
+  by (cases ko; simp add: objBits_simps' pageBits_def pteBits_def scBits_pos_power2
+                   split: arch_kernel_object.splits)
+
 end
+
+(* FIXME: arch-split RT *)
+arch_requalify_facts
+  scBits_pos_power2
+  objBits_pos_power2
+  objBitsKO_no_overflow
+
+declare objBits_pos_power2[simp] objBitsKO_no_overflow[simp, intro!]
 
 end

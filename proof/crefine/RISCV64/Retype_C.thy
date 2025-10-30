@@ -6233,7 +6233,7 @@ proof -
               apply (ccorres_remove_UNIV_guard)
               apply (simp add: hrs_htd_update)
               apply (rule ccorres_pre_curDomain)
-              apply (ctac (c_lines 5) add: ccorres_placeNewObject_tcb[simplified])
+              apply (ctac (c_lines 4) add: ccorres_placeNewObject_tcb[simplified])
                 apply simp
                 apply (rule ccorres_symb_exec_r)
                   apply (rule ccorres_return_C, simp, simp, simp)

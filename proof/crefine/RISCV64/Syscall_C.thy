@@ -374,7 +374,7 @@ lemma doReplyTransfer_ccorres:
         apply (frule (1) obj_at_cslift_reply)
         apply (clarsimp simp: creply_relation_def typ_heap_simps)
        apply ceqv
-      apply (ctac add: reply_remove_ccorres)
+      apply (ctac add: reply_remove_ccorres, rename_tac xfdc')
         apply (rule ccorres_pre_threadGet)
         apply (rule ccorres_move_c_guard_tcb)
         apply (rule ccorres_rhs_assoc2)
@@ -2373,7 +2373,7 @@ lemma handleInterrupt_ccorres:
     apply (rule ccorres_cond_false_seq)
     apply (rule ccorres_cond_true_seq)
     apply (rule ccorres_rhs_assoc)+
-    apply (ctac add: ackDeadlineIRQ_ccorres)
+    apply (ctac add: ackDeadlineIRQ_ccorres, rename_tac xfdc')
       apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
           apply (rule_tac ccorres_from_vcg[where P=\<top> and P'=UNIV])
           apply (rule allI, rule conseqPre, vcg)

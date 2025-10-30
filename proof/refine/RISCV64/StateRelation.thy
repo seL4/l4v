@@ -1100,28 +1100,6 @@ lemma length_scRefills_bounded:
   apply (clarsimp simp add: word_bits_def untypedBits_defs)
   done
 
-lemma scBits_pos_power2:
-  assumes "minSchedContextBits + scSize sc < word_bits"
-  shows "(1::machine_word) < (2::machine_word) ^ (minSchedContextBits + scSize sc)"
-  apply (insert assms)
-  apply (subst word_less_nat_alt)
-  apply (clarsimp simp: minSchedContextBits_def)
-  by (auto simp: pow_mono_leq_imp_lt)
-
-lemma objBits_pos_power2[simp]:
-  assumes "objBits v < word_bits"
-  shows "(1::machine_word) < (2::machine_word) ^ objBits v"
-  unfolding objBits_simps'
-  apply (insert assms)
-  apply (case_tac "injectKO v"; simp)
-  by (simp add: pageBits_def pteBits_def objBits_simps scBits_pos_power2
-         split: arch_kernel_object.split)+
-
-lemma objBitsKO_no_overflow[simp, intro!]:
-  "objBitsKO ko < word_bits \<Longrightarrow> (1::machine_word) < (2::machine_word)^(objBitsKO ko)"
-  by (cases ko; simp add: objBits_simps' pageBits_def pteBits_def scBits_pos_power2
-                   split: arch_kernel_object.splits)
-
 (* for handling refill buffer *)
 
 abbreviation replaceAt where

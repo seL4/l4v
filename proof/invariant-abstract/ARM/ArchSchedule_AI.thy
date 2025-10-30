@@ -70,11 +70,6 @@ lemma arch_stit_tcb_at[wp, Schedule_AI_assms]:
   apply wp
   done
 
-lemma idle_strg:
-  "thread = idle_thread s \<and> invs s \<Longrightarrow> invs (s\<lparr>cur_thread := thread\<rparr>)"
-  by (clarsimp simp: invs_def valid_state_def valid_idle_def cur_tcb_def
-                     pred_tcb_at_def valid_machine_state_def obj_at_def is_tcb_def)
-
 crunch set_vm_root
   for ct[wp]: "\<lambda>s. P (cur_thread s)"
   and it[wp]: "\<lambda>s. P (idle_thread s)"

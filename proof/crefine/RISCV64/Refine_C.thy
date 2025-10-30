@@ -96,7 +96,7 @@ lemma handleInterruptEntry_ccorres:
    apply (rule ccorres_stateAssert)+
    apply (simp add: liftE_bind bind_assoc)
    apply (rule ccorres_rhs_assoc)+
-   apply (ctac (no_vcg) add: updateTimestamp_ccorres)
+   apply (ctac (no_vcg) add: updateTimestamp_ccorres, rename_tac xfdc')
     apply (rule_tac xf'=xfdc in ccorres_split_nothrow_novcg)
         apply (rule_tac xf''=xfdc in ccorres_call)
            apply (rule ccorres_rel_imp)
@@ -157,7 +157,7 @@ lemma handleUnknownSyscall_ccorres:
    apply (simp add: callKernel_def handleEvent_def)
    apply (rule ccorres_stateAssert)+
    apply (simp add: liftE_bind bind_assoc)
-   apply (ctac (no_vcg) add: updateTimestamp_ccorres)
+   apply (ctac (no_vcg) add: updateTimestamp_ccorres, rename_tac xfdc')
     apply (ctac (no_vcg) add: checkBudgetRestart_ccorres)
      apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
          apply (clarsimp simp: when_def)
@@ -205,7 +205,7 @@ lemma handleVMFaultEvent_ccorres:
    apply (rule ccorres_stateAssert)
    apply (simp add: liftE_bind bind_assoc)
    apply (rule ccorres_stateAssert)+
-   apply (ctac (no_vcg) add: updateTimestamp_ccorres)
+   apply (ctac (no_vcg) add: updateTimestamp_ccorres, rename_tac xfdc')
     apply (ctac (no_vcg) add: checkBudgetRestart_ccorres)
      apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
          apply (clarsimp simp: when_def)
@@ -262,7 +262,7 @@ lemma handleUserLevelFault_ccorres:
    apply (simp add: callKernel_def handleEvent_def)
    apply (rule ccorres_stateAssert)+
    apply (simp add: liftE_bind bind_assoc)
-   apply (ctac (no_vcg) add: updateTimestamp_ccorres)
+   apply (ctac (no_vcg) add: updateTimestamp_ccorres, rename_tac xfdc')
     apply (ctac (no_vcg) add: checkBudgetRestart_ccorres, rename_tac restart restart')
      apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
          apply (clarsimp simp: when_def)

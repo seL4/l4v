@@ -345,6 +345,10 @@ locale EmptyFail_AI_schedule = EmptyFail_AI_cap_revoke state_ext_t
     "empty_fail (arch_switch_to_thread t :: (unit, 'state_ext) s_monad)"
 
 crunch
+  set_scheduler_action, next_domain, reschedule_required, get_sc_refill_capacity, check_domain_time
+ for (empty_fail) empty_fail[wp]
+
+crunch
   possible_switch_to, awaken, schedule_switch_thread_fastfail
  for (empty_fail) empty_fail[wp, intro!, simp]
   (wp: empty_fail_whileLoop)
@@ -352,6 +356,7 @@ crunch
 crunch sc_and_timer
  for (empty_fail) empty_fail[wp, intro!, simp]
   (wp: empty_fail_setDeadline empty_fail_whileLoop simp: Let_def)
+
 context EmptyFail_AI_schedule begin
 
 lemma switch_to_thread_empty_fail[intro!, wp, simp]:
@@ -403,7 +408,7 @@ locale EmptyFail_AI_call_kernel = EmptyFail_AI_schedule state_ext_t
 begin
 
 lemma call_kernel_empty_fail: "empty_fail (call_kernel a :: (unit,'state_ext) s_monad)"
-  apply (simp add: call_kernel_def)
+  apply (simp add: call_kernel_def preemption_path_def)
   apply (wpsimp simp: get_sc_active_def)
   done
 
