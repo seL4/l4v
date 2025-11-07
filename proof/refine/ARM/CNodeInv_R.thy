@@ -8090,6 +8090,12 @@ lemma sameRegion_cap'_src [simp]:
           fastforce simp: sameRegionAs_def ARM_H.sameRegionAs_def isCap_simps split: if_split_asm)+
   done
 
+(* FIXME arch-split: temporarily duplicate this from Arch_mdb_move until proper split/requalify *)
+lemma capMasterCap_isArchSGISignalCap[simp]:
+  "isArchSGISignalCap cap' = isArchSGISignalCap src_cap"
+  using parency unfolding weak_derived'_def
+  by (blast intro!: capMasterCap_isArchSGISignalCap)
+
 lemma mdb_chunked_arch_assms_src[simp]:
   "mdb_chunked_arch_assms cap' = mdb_chunked_arch_assms src_cap"
   by (simp add: mdb_chunked_arch_assms_def)

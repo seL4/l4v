@@ -46,7 +46,7 @@ lemma safe_parent_strg':
    descendants_of' p (ctes_of s) = {} \<and>
    valid_pspace' s
   \<longrightarrow> safe_parent_for' (ctes_of s) p (ArchObjectCap (ASIDPoolCap frame base))"
-  apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
+  apply (clarsimp simp: safe_parent_for'_def safe_parent_for_arch'_def cte_wp_at_ctes_of)
   apply (case_tac cte)
   apply (simp add: isCap_simps)
   apply (subst conj_comms)

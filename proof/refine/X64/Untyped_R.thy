@@ -3694,9 +3694,6 @@ lemma updateFreeIndex_clear_invs':
        apply (simp add: ifunsafe'_def3 cteInsert_def setUntypedCapAsFull_def
                split del: if_split)
        apply wp+
-      apply (rule hoare_vcg_conj_lift)
-       apply (simp add:updateCap_def)
-       apply wp+
       apply (wp valid_irq_node_lift)
       apply (rule hoare_vcg_conj_lift)
        apply (simp add:updateCap_def)
