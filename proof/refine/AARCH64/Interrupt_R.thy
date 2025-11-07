@@ -549,7 +549,7 @@ lemma arch_performIRQControl_corres:
                          safe_parent_for_def is_simple_cap_arch_def is_irq_control_descendant_def)
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
                         is_simple_cap'_def isCap_simps)
-  apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
+  apply (clarsimp simp: safe_parent_for'_def safe_parent_for_arch'_def cte_wp_at_ctes_of)
   apply (rename_tac cte', case_tac cte', simp add: isCap_simps)
   done
 
@@ -611,7 +611,7 @@ lemma arch_invoke_irq_control_invs'[wp]:
   apply (rule hoare_pre)
    apply (wpsimp wp: cteInsert_simple_invs simp: cte_wp_at_ctes_of isCap_simps IRQ_def)
   apply (clarsimp simp: cte_wp_at_ctes_of IRQHandler_valid' is_simple_cap'_def isCap_simps
-                        safe_parent_for'_def sameRegionAs_def3)
+                        safe_parent_for'_def safe_parent_for_arch'_def sameRegionAs_def3)
   apply (clarsimp simp: capRange_def)
   apply (rule conjI; clarsimp simp: cte_wp_at_ctes_of; case_tac ctea)
    apply (auto dest: valid_irq_handlers_ctes_ofD
