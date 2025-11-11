@@ -396,7 +396,7 @@ qed
 arch_requalify_facts
   setObject_other_corres
   setObject_pspace_in_kernel_mappings'
-
+  valid_global_refs_lift'
 
 (* arch-specific lemmas not required for satisfying KHeap_R interface *)
 
