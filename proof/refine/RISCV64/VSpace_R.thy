@@ -9,7 +9,7 @@
 *)
 
 theory VSpace_R
-imports TcbAcc_R
+imports ArchTcbAcc_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)

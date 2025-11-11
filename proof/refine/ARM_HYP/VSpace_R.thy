@@ -9,7 +9,7 @@
 *)
 
 theory VSpace_R
-imports TcbAcc_R
+imports ArchTcbAcc_R
 begin
 context Arch begin global_naming ARM (*FIXME: arch-split*)
 
