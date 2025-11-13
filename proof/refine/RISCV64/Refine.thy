@@ -472,10 +472,6 @@ proof -
      pointerInDeviceData_relation[OF rel valid' valid])
 qed
 
-lemma ex_abs_ksReadyQueues_asrt:
-  "ex_abs P s \<Longrightarrow> ksReadyQueues_asrt s"
-  by (fastforce simp: ex_abs_def intro: ksReadyQueues_asrt_cross)
-
 lemma device_update_invs':
   "\<lbrace>invs'\<rbrace>doMachineOp (device_memory_update ds)
    \<lbrace>\<lambda>_. invs'\<rbrace>"

@@ -872,7 +872,7 @@ proof -
      \<lbrace>\<lambda>rv. invs'\<rbrace>"
     unfolding getThreadReplySlot_def
     by (wp valid_irq_node_lift delete_one_invs hoare_drop_imps
-           threadSet_invs_trivial irqs_masked_lift
+           AARCH64.threadSet_invs_trivial irqs_masked_lift (* FIXME arch-split *)
       | simp add: o_def if_apply_def2
       | fastforce simp: inQ_def)+
   show ?thesis
@@ -1674,9 +1674,6 @@ lemma tcbSchedEnqueue_valid_pspace'[wp]:
 
 end
 
-arch_requalify_facts tcbSchedEnqueue_valid_pspace' (* FIXME arch-split: interface *)
-lemmas [wp] = tcbSchedEnqueue_valid_pspace'
-
 lemma cancel_all_invs'_helper:
   "\<lbrace>all_invs_but_sym_refs_ct_not_inQ' and (\<lambda>s. \<forall>x \<in> set q. tcb_at' x s)
          and (\<lambda>s. sym_refs (\<lambda>x. if x \<in> set q then {r \<in> state_refs_of' s x. snd r = TCBBound}
@@ -2355,12 +2352,6 @@ lemma dissociateVCPUTCB_st_tcb_at'[wp]:
 crunch dissociateVCPUTCB
   for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
   (wp: crunch_wps setObject_queues_unchanged_tcb simp: crunch_simps)
-
-(* FIXME AARCH64: move to TcbAcc_R *)
-lemma archThreadGet_wp:
-  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at' tcb t s \<longrightarrow> Q (f (tcbArch tcb)) s\<rbrace> archThreadGet f t \<lbrace>Q\<rbrace>"
-  unfolding archThreadGet_def
-  by (wpsimp wp: getObject_tcb_wp simp: obj_at'_def)
 
 crunch fpuRelease
   for st_tcb_at'[wp]: "\<lambda>s. Q (st_tcb_at' P t s)"

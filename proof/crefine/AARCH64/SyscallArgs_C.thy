@@ -597,7 +597,7 @@ lemma no_fail_loadWordUser:
   "no_fail (pointerInUserData x and K (is_aligned x 3)) (loadWordUser x)"
   apply (simp add: loadWordUser_def)
   apply (rule no_fail_pre, wp no_fail_stateAssert)
-  apply simp
+  apply (simp add: word_size_bits_def)
   done
 
 lemma no_fail_getMRs:

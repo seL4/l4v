@@ -449,6 +449,11 @@ lemma tcbSchedEnqueue_valid_mdb'[wp]:
                     simp: ready_queue_relation_def ksReadyQueues_asrt_def obj_at'_def)
   done
 
+lemma tcbSchedEnqueue_valid_pspace'[wp]:
+  "tcbSchedEnqueue tcbPtr \<lbrace>valid_pspace'\<rbrace>"
+  unfolding valid_pspace'_def
+  by wpsimp
+
 crunch tcbSchedEnqueue
   for cur_tcb'[wp]: cur_tcb'
   (wp: threadSet_cur)
@@ -1054,7 +1059,7 @@ lemma threadSet_invs_no_cicd'_trivialT:
             threadSet_valid_dom_schedule' threadSet_sched_pointers threadSet_valid_sched_pointers
             threadSet_cur
             untyped_ranges_zero_lift
-         | clarsimp simp: assms cteCaps_of_def | rule refl)+
+         | clarsimp simp: assms cteCaps_of_def valid_arch_tcb'_def | rule refl)+
   by (auto simp: o_def)
 
 lemmas threadSet_invs_no_cicd'_trivial =
