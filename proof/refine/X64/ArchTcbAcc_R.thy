@@ -1,5 +1,6 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
+ * Copyright 2023, Proofcraft Pty Ltd
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
@@ -59,17 +60,6 @@ lemma st_tcb_at_coerce_abstract[TcbAcc_R_assms]:
                           X64_A.arch_kernel_obj.split_asm)+
   done
 
-lemma tcb_at'_cross:
-  assumes p: "pspace_relation (kheap s) (ksPSpace s')"
-  assumes t: "tcb_at' ptr s'"
-  shows "tcb_at ptr s"
-  using assms
-  apply (clarsimp simp: obj_at'_def)
-  apply (erule (1) pspace_dom_relatedE)
-  by (clarsimp simp: obj_relation_cuts_def2 obj_at_def  cte_relation_def
-                     other_obj_relation_def pte_relation_def is_tcb_def
-              split: Structures_A.kernel_object.split_asm if_split_asm arch_kernel_obj.split_asm)
-
 lemma setObject_update_TCB_corres'[TcbAcc_R_assms]:
   assumes tcbs: "tcb_relation tcb tcb' \<Longrightarrow> tcb_relation new_tcb new_tcb'"
   assumes tables: "\<forall>(getF, v) \<in> ran tcb_cap_cases. getF new_tcb = getF tcb"
@@ -110,7 +100,7 @@ lemma setObject_update_TCB_corres'[TcbAcc_R_assms]:
    apply (fastforce simp: obj_at_def)
   apply (clarsimp simp: caps_of_state_after_update cte_wp_at_after_update swp_def fun_upd_def
                         obj_at_def assms)
-  apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _ _" \<Rightarrow> -\<close>)
+  apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp: ghost_relation_def)
    apply (erule_tac x=ptr in allE)+
    apply clarsimp
@@ -144,9 +134,7 @@ lemma setObject_update_TCB_corres'[TcbAcc_R_assms]:
 
 lemma setObject_tcb_valid_arch'[TcbAcc_R_assms, wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setObject t (v :: tcb) \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
-  by (wpsimp wp: valid_arch_state_lift' setObject_typ_at' setObject_ko_wp_at
-             simp: objBits_simps', rule refl; simp add: pred_conj_def)
-     (clarsimp simp: is_vcpu'_def ko_wp_at'_def obj_at'_def)
+  by (wp valid_arch_state_lift' setObject_typ_at')
 
 lemma setObject_tcb_refs'[TcbAcc_R_assms, wp]:
   "\<lbrace>\<lambda>s. P (global_refs' s)\<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>rv s. P (global_refs' s)\<rbrace>"
@@ -156,13 +144,10 @@ lemma setObject_tcb_refs'[TcbAcc_R_assms, wp]:
   done
 
 lemma threadSet_state_hyp_refs_of':
-  assumes y: "\<And>tcb. atcbVCPUPtr (tcbArch (F tcb)) = atcbVCPUPtr (tcbArch tcb)"
-  shows      "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> threadSet F t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  shows "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> threadSet F t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   apply (simp add: threadSet_def)
   apply (wpsimp wp: setObject_state_hyp_refs_of' getObject_tcb_wp
-    simp: gen_objBits_simps obj_at'_def state_hyp_refs_of'_def)
-  apply (clarsimp simp: gen_objBits_simps y state_hyp_refs_of'_def
-                 elim!: rsubst[where P=P] del: ext intro!: ext)+
+                simp: gen_objBits_simps obj_at'_def state_hyp_refs_of'_def)
   done
 
 lemma threadSet_iflive'T:
@@ -180,8 +165,6 @@ lemma threadSet_iflive'T:
       \<and> ((\<exists>tcb. tcbSchedPrev tcb = None \<and> tcbSchedPrev (F tcb) \<noteq> None
               \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
       \<and> ((\<exists>tcb. \<not> tcbQueued tcb \<and> tcbQueued (F tcb)
-              \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
-      \<and> ((\<exists>tcb. \<not> bound (atcbVCPUPtr (tcbArch tcb)) \<and> bound (atcbVCPUPtr (tcbArch (F tcb)))
               \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
      threadSet F t
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
@@ -203,14 +186,7 @@ lemmas threadSet_typ_at_lifts[wp] = typ_at_lifts[OF threadSet_typ_at']
 
 lemma zobj_refs'_capRange[TcbAcc_R_assms]:
   "s \<turnstile>' cap \<Longrightarrow> zobj_refs' cap \<subseteq> capRange cap"
-  apply (cases cap; simp add: valid_cap'_def capAligned_def capRange_def is_aligned_no_overflow)
-  apply (rename_tac aobj_cap)
-  apply (case_tac aobj_cap; clarsimp dest!: is_aligned_no_overflow)
-  done
-
-lemma atcbVCPUPtr_atcbContextSet_id[simp]:
-  "atcbVCPUPtr (atcbContextSet f (tcbArch tcb)) = atcbVCPUPtr (tcbArch tcb)"
-  by (simp add: atcbContextSet_def)
+  by (cases cap; simp add: valid_cap'_def capAligned_def capRange_def is_aligned_no_overflow)
 
 lemma asUser_valid_tcbs'[wp]:
   "asUser t f \<lbrace>valid_tcbs'\<rbrace>"
@@ -231,7 +207,7 @@ lemmas addToBitmap_typ_ats[wp] = typ_at_lifts[OF addToBitmap_typ_at']
 lemmas removeFromBitmap_typ_ats[wp] = typ_at_lifts[OF removeFromBitmap_typ_at']
 
 lemma threadSet_ghost_relation[wp]:
-  "threadSet f tcbPtr \<lbrace>\<lambda>s'. ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') (gsPTTypes (ksArchState s'))\<rbrace>"
+  "threadSet f tcbPtr \<lbrace>\<lambda>s'. ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')\<rbrace>"
   unfolding threadSet_def setObject_def updateObject_default_def
   apply (wpsimp wp: getObject_tcb_wp simp: updateObject_default_def)
   apply (clarsimp simp: obj_at'_def)
@@ -239,12 +215,12 @@ lemma threadSet_ghost_relation[wp]:
 
 lemma removeFromBitmap_ghost_relation[wp]:
   "removeFromBitmap tdom prio
-   \<lbrace>\<lambda>s'. ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')  (gsPTTypes (ksArchState s'))\<rbrace>"
+   \<lbrace>\<lambda>s'. ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')\<rbrace>"
   by (rule_tac f=gsUserPages in hoare_lift_Pf2; wpsimp simp: bitmap_fun_defs)
 
 crunch tcbQueueRemove, tcbQueuePrepend, tcbQueueAppend, tcbQueueInsert,
          setQueue, removeFromBitmap
-  for ghost_relation_projs[wp]: "\<lambda>s. P (gsUserPages s) (gsCNodes s) (gsPTTypes (ksArchState s))"
+  for ghost_relation_projs[wp]: "\<lambda>s. P (gsUserPages s) (gsCNodes s)"
   (wp: crunch_wps getObject_tcb_wp simp: setObject_def updateObject_default_def obj_at'_def)
 
 schematic_goal l2BitmapSize_def': (* arch specific consequence *)
@@ -308,18 +284,19 @@ lemma pspace_dom_dom[TcbAcc_R_assms]:
   "dom ps \<subseteq> pspace_dom ps"
   unfolding pspace_dom_def
   apply clarsimp
-  apply (rule rev_bexI [OF domI], assumption)
-  apply (simp add: obj_relation_cuts_def2 image_Collect cte_map_def range_composition [symmetric]
+  apply (rule rev_bexI[OF domI], assumption)
+  apply (simp add: obj_relation_cuts_def2 image_Collect cte_map_def range_composition[symmetric]
               split: Structures_A.kernel_object.splits arch_kernel_obj.splits
               cong: arch_kernel_obj.case_cong)
   apply safe
-    (* CNode *)
-    apply (force dest: wf_cs_0 simp: of_bl_def)
-   (* PageTable *)
-   apply (fastforce simp add: image_Collect image_image intro: image_eqI[where x=0])
-  (* DataPage *)
-  apply (rule exI[where x=0])
-  apply (simp add: pageBitsForSize_def bit_simps split: vmpage_size.split)
+     apply (drule wf_cs_0)
+     apply clarsimp
+     apply (rule_tac x = n in exI)
+     apply (clarsimp simp: of_bl_def)
+    apply (rule range_eqI[where x = 0], simp)+
+  apply (rename_tac vmpage_size)
+  apply (rule exI[where x = 0])
+  apply (case_tac vmpage_size, simp_all add: bit_simps)
   done
 
 lemmas [TcbAcc_R_assms] =
@@ -356,7 +333,6 @@ lemma threadSet_invs_trivialT:
     "\<forall>tcb. tcbPriority (F tcb) = tcbPriority tcb"
     "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
     "\<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0"
-    "\<forall>tcb. atcbVCPUPtr (tcbArch (F tcb)) = atcbVCPUPtr (tcbArch tcb)"
   shows "threadSet F t \<lbrace>invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def split del: if_split)
   apply (wp threadSet_valid_pspace'T
@@ -952,10 +928,9 @@ lemma cte_at_tcb_at_32': (* FIXME arch-split: can't be generic with this 32 *)
 lemmas valid_ipc_buffer_cap_simps = valid_ipc_buffer_cap_def [split_simps cap.split arch_cap.split]
 
 lemma lookupIPCBuffer_corres'[TcbAcc_R_2_assms]:
-  "corres (=)
-     (tcb_at t and valid_objs and pspace_aligned and pspace_distinct)
-     (valid_objs' and no_0_obj')
-     (lookup_ipc_buffer w t) (lookupIPCBuffer w t)"
+  "corres (=) (tcb_at t and valid_objs and pspace_aligned and pspace_distinct)
+               (valid_objs' and no_0_obj')
+               (lookup_ipc_buffer w t) (lookupIPCBuffer w t)"
   apply (rule corres_cross_add_guard[where Q'="pspace_aligned' and pspace_distinct'"])
    apply (fastforce simp: pspace_aligned_cross pspace_distinct_cross state_relation_def)
   apply (simp add: lookup_ipc_buffer_def X64_H.lookupIPCBuffer_def)
@@ -972,7 +947,7 @@ lemma lookupIPCBuffer_corres'[TcbAcc_R_2_assms]:
         apply (simp add: Let_def split: cap.split arch_cap.split
               split del: if_split cong: if_cong)
         apply (safe, simp_all add: isCap_simps valid_ipc_buffer_cap_simps split:bool.split_asm)[1]
-        apply (rename_tac word rights vmpage_size d option)
+        apply (rename_tac word rights mt vmpage_size option)
         apply (subgoal_tac "word + (buffer_ptr &&
                                     mask (pageBitsForSize vmpage_size)) \<noteq> 0")
          apply (simp add: cap_aligned_def
@@ -1004,7 +979,7 @@ crunch lookupIPCBuffer
   for inv[wp]: P
   (wp: crunch_wps simp: crunch_simps)
 
-crunch rescheduleRequired
+crunch rescheduleRequired, tcbSchedEnqueue
   for hyp_refs_of'[wp]: "\<lambda>s. P (state_hyp_refs_of' s)"
   (simp: unless_def crunch_simps wp: threadSet_state_hyp_refs_of' ignore: threadSet)
 
@@ -1012,11 +987,6 @@ lemmas [TcbAcc_R_2_assms] =
   lookupIPCBuffer_inv
   rescheduleRequired_hyp_refs_of'
   tcbSchedEnqueue_hyp_refs_of'
-
-lemma archThreadGet_wp:
-  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at' tcb t s \<longrightarrow> Q (f (tcbArch tcb)) s\<rbrace> archThreadGet f t \<lbrace>Q\<rbrace>"
-  unfolding archThreadGet_def
-  by (wpsimp wp: getObject_tcb_wp simp: obj_at'_def)
 
 lemma setThreadState_state_hyp_refs_of'[TcbAcc_R_2_assms, wp]:
   "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s))\<rbrace>
@@ -1120,9 +1090,10 @@ proof -
   done
 qed
 
-lemma tcbSchedAppend_pspace_in_kernel_mappings'[TcbAcc_R_2_assms]:
-  "tcbSchedAppend t \<lbrace>pspace_in_kernel_mappings'\<rbrace>"
-  by wpsimp
+crunch tcbSchedAppend
+  for pspace_in_kernel_mappings'[wp]: pspace_in_kernel_mappings'
+
+lemmas [TcbAcc_R_2_assms] = tcbSchedAppend_pspace_in_kernel_mappings'
 
 end (* Arch *)
 
