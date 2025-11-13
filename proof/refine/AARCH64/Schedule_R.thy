@@ -669,6 +669,11 @@ lemma tcbSchedEnqueue_valid_mdb'[wp]:
                     simp: ready_queue_relation_def ksReadyQueues_asrt_def obj_at'_def)
   done
 
+lemma tcbSchedEnqueue_valid_pspace'[wp]:
+  "tcbSchedEnqueue tcbPtr \<lbrace>valid_pspace'\<rbrace>"
+  unfolding valid_pspace'_def
+  by wpsimp
+
 crunch tcbSchedEnqueue
   for cur_tcb'[wp]: cur_tcb'
   (wp: threadSet_cur)

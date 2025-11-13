@@ -685,7 +685,7 @@ lemma sp_corres2:
                 obj_at'_weakenE[where P="Not \<circ> tcbQueued"]
               | wps)+)
    apply (force simp: tcb_at_st_tcb_at[symmetric] state_relation_def
-                dest: pspace_relation_tcb_at intro: st_tcb_at_opeqI)
+                dest: tcb_at'_cross intro: st_tcb_at_opeqI)
   apply clarsimp
   done
 
@@ -1069,8 +1069,7 @@ lemma threadcontrol_corres_helper4:
    checkCapAt ac (cte_map (ab, ba))
      (checkCapAt (capability.ThreadCap a) (cte_map slot)
         (assertDerived (cte_map (ab, ba)) ac (cteInsert ac (cte_map (ab, ba)) (cte_map (a, tcb_cnode_index 4)))))
-   \<lbrace>\<lambda>_ s. sym_heap_sched_pointers s \<and> valid_sched_pointers s \<and> valid_tcbs' s \<and> pspace_aligned' s \<and>
-          pspace_distinct' s\<rbrace>"
+   \<lbrace>\<lambda>_ s. sym_heap_sched_pointers s \<and> valid_sched_pointers s \<and> valid_tcbs' s\<rbrace>"
   supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (wpsimp wp:
          | strengthen invs_sym_heap_sched_pointers invs_valid_sched_pointers
@@ -1118,7 +1117,7 @@ lemma threadSet_invs_trivialT2:
              threadSet_not_inQ
              threadSet_ct_idle_or_in_cur_domain'
              threadSet_cur
-          | clarsimp simp: assms cteCaps_of_def | rule refl)+
+          | clarsimp simp: assms cteCaps_of_def valid_arch_tcb'_def | rule refl)+
   apply (clarsimp simp: o_def)
   by (auto simp: obj_at'_def)
 
@@ -1822,11 +1821,11 @@ lemma invokeTCB_corres:
     apply (clarsimp simp: obj_at'_def projectKOs)
    apply (simp add: invokeTCB_def tlsBaseRegister_def)
    apply (rule corres_guard_imp)
-     apply (rule corres_split[OF TcbAcc_R.asUser_setRegister_corres])
+     apply (rule corres_split[OF asUser_setRegister_corres])
        apply (rule corres_split[OF Bits_R.getCurThread_corres])
          apply (rule corres_split[OF Corres_UL.corres_when])
              apply simp
-            apply (rule TcbAcc_R.rescheduleRequired_corres)
+            apply (rule rescheduleRequired_corres)
            apply (rule corres_trivial, simp)
           apply (wpsimp wp: hoare_drop_imp)+
     apply (fastforce dest: valid_sched_valid_queues simp: valid_sched_weak_strg)

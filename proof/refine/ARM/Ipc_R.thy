@@ -117,7 +117,7 @@ lemma loadCapTransfer_corres:
           apply (clarsimp simp: ct_relation_def)
          apply (wp no_irq_loadWord)+
    apply simp
-  apply (simp add: conj_comms)
+  apply (simp add: conj_comms word_size_bits_def)
   apply safe
        apply (erule valid_ipc_buffer_ptr_aligned_2, simp add: is_aligned_def)+
     apply (erule valid_ipc_buffer_ptr'D2, simp add: max_ipc_words, simp add: is_aligned_def)+
