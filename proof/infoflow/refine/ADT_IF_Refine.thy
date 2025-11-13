@@ -293,47 +293,17 @@ locale ADT_IF_Refine_1 =
        (handle_event event) (handleEvent event)"
   and maybeHandleInterrupt_corres_True_False:
     "corres dc einvs invs' (maybe_handle_interrupt True) (maybeHandleInterrupt False)"
+  and kernel_entry_if_corres:
+    "\<And>event tc.
+     corres (prod_lift (dc \<oplus> dc))
+       (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s)
+              and schact_is_rct
+              and (\<lambda>s. 0 < domain_time s) and valid_domain_list)
+       (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s)
+              and arch_extras
+              and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+       (kernel_entry_if event tc) (kernelEntry_if event tc)"
 begin
-
-lemma kernel_entry_if_corres:
-  "corres (prod_lift (dc \<oplus> dc))
-     (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s)
-            and schact_is_rct
-            and (\<lambda>s. 0 < domain_time s) and valid_domain_list)
-     (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s)
-            and arch_extras
-            and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
-     (kernel_entry_if event tc) (kernelEntry_if event tc)"
-  apply (simp add: kernel_entry_if_def kernelEntry_if_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split[OF getCurThread_corres])
-      apply (rule corres_split)
-         apply simp
-         apply (rule threadset_corresT)
-              apply (erule arch_tcb_context_set_tcb_relation)
-             apply (clarsimp simp: tcb_cap_cases_def)
-            apply (rule allI[OF ball_tcb_cte_casesI]; clarsimp)
-           apply fastforce
-          apply fastforce
-         apply fastforce
-        apply (rule corres_split[OF handleEvent_corres_arch_extras])
-          apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
-                        P="\<lambda>s. valid_domain_list s \<and>
-                               (event \<noteq> Interrupt \<longrightarrow> 0 < domain_time s) \<and>
-                               (event = Interrupt \<longrightarrow> domain_time s = 0 \<longrightarrow>
-                                 scheduler_action s = choose_new_thread)"])
-           apply (clarsimp simp: prod_lift_def)
-          apply (clarsimp simp: state_relation_def)
-         apply (wp hoare_TrueI threadSet_invs_trivial thread_set_invs_trivial thread_set_ct_in_state
-                   threadSet_ct_running' thread_set_not_state_valid_sched hoare_vcg_const_imp_lift
-                   handle_event_domain_time_inv handle_interrupt_valid_domain_time
-                | simp add: tcb_cap_cases_def schact_is_rct_def maybe_handle_interrupt_def
-                | wpc
-                | wps
-                | wp (once) hoare_drop_imp)+
-   apply (fastforce simp: invs_def cur_tcb_def valid_state_def)
-  apply force
-  done
 
 lemma kernelEntry_ex_abs[wp]:
   "\<lbrace>invs' and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle')
