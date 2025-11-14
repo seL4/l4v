@@ -224,17 +224,18 @@ lemma is_derived_cap_arch_asid_issues:
 definition
   safe_parent_for_arch :: "cap \<Rightarrow> cap \<Rightarrow> bool"
 where
-  "safe_parent_for_arch cap parent \<equiv> False"
+  "safe_parent_for_arch cap parent \<equiv>
+     parent = IRQControlCap \<and> is_ArchObjectCap cap \<and> is_SGISignalCap (the_arch_cap cap)"
 
 declare safe_parent_for_arch_def[simp]
 
 lemma safe_parent_for_arch_not_arch:
   "\<not>is_arch_cap cap \<Longrightarrow> \<not>safe_parent_for_arch cap p"
-  by clarsimp
+  by (clarsimp simp: is_cap_simps)
 
 lemma safe_parent_cap_range_arch:
   "safe_parent_for_arch cap pcap \<Longrightarrow> cap_range cap \<subseteq> cap_range pcap"
-  by clarsimp
+  by (clarsimp simp: is_cap_simps cap_range_def)
 
 
 end

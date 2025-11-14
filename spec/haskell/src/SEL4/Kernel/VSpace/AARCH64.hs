@@ -767,7 +767,7 @@ decodeARMMMUInvocation label args _ _ cap@(ASIDControlCap {}) extraCaps =
     decodeARMASIDControlInvocation label args cap extraCaps
 decodeARMMMUInvocation label _ _ _ cap@(ASIDPoolCap {}) extraCaps =
     decodeARMASIDPoolInvocation label cap extraCaps
-decodeARMMMUInvocation _ _ _ _ (VCPUCap {}) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
+decodeARMMMUInvocation _ _ _ _ _ _ = fail "decodeARMMMUInvocation: not an MMU invocation"
 
 
 {- Invocation Implementations -}
@@ -876,7 +876,7 @@ performARMMMUInvocation i = withoutPreemption $ do
         InvokeASIDPool oper -> do
             performASIDPoolInvocation oper
             return []
-        InvokeVCPU _ -> fail "performARMMMUInvocation: not an MMU invocation"
+        _ -> fail "performARMMMUInvocation: not an MMU invocation"
 
 storePTE :: PPtr PTE -> PTE -> Kernel ()
 storePTE slot pte = do

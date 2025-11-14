@@ -35,8 +35,10 @@ type_synonym vm_attributes = "vm_attribute set"
 
 section \<open>Architecture-specific capabilities\<close>
 
-text \<open>The ARM kernel supports capabilities for ASID pools and an ASID controller capability,
-along with capabilities for page directories, page tables, and page mappings.\<close>
+text \<open>
+  The ARM kernel supports capabilities for ASID pools and an ASID controller capability,
+  along with capabilities for page directories, page tables, page mappings, and
+  software-generated interrupts.\<close>
 
 datatype arch_cap =
    ASIDPoolCap obj_ref asid
@@ -44,6 +46,9 @@ datatype arch_cap =
  | PageCap bool obj_ref cap_rights vmpage_size "(asid * vspace_ref) option"
  | PageTableCap obj_ref "(asid * vspace_ref) option"
  | PageDirectoryCap obj_ref "asid option"
+ | SGISignalCap
+     (acap_sgi_irq : sgi_irq)
+     (acap_sgi_target : sgi_target)
 
 lemmas arch_cap_cases =
   arch_cap.induct[where arch_cap=x and P="\<lambda>x'. x = x' \<longrightarrow> P x'" for x P, simplified, rule_format]
@@ -105,15 +110,13 @@ where
 | "arch_obj_size (PageCap dev x rs sz as4) = pageBitsForSize sz"
 | "arch_obj_size (PageDirectoryCap x as2) = 14"
 | "arch_obj_size (PageTableCap x as3) = 10"
+| "arch_obj_size (SGISignalCap _ _) = 0"
 
-primrec
+fun
   arch_cap_is_device :: "arch_cap \<Rightarrow> bool"
 where
   "arch_cap_is_device (PageCap dev x rs sz as4) = dev"
-| "arch_cap_is_device ASIDControlCap = False"
-| "arch_cap_is_device (ASIDPoolCap p as) = False"
-| "arch_cap_is_device (PageTableCap x as3) = False"
-| "arch_cap_is_device (PageDirectoryCap x as2) = False"
+| "arch_cap_is_device _ = False"
 
 definition tcb_bits :: nat where
   "tcb_bits \<equiv> 9"
@@ -149,6 +152,7 @@ where
 | "aobj_ref (PageCap dev x rs sz as4) = Some x"
 | "aobj_ref (PageDirectoryCap x as2) = Some x"
 | "aobj_ref (PageTableCap x as3) = Some x"
+| "aobj_ref (SGISignalCap _ _) = None"
 
 primrec (nonexhaustive)
   acap_rights :: "arch_cap \<Rightarrow> cap_rights"

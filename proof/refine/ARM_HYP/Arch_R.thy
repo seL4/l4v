@@ -150,7 +150,7 @@ lemma performASIDControlInvocation_corres:
                    apply simp
                   apply (simp add: objBits_simps obj_bits_api_def arch_kobj_size_def
                                    default_arch_object_def archObjSize_def)+
-               apply (simp add: obj_relation_retype_def default_object_def
+               apply (simp add: obj_relation_retype_def default_object_def other_aobj_relation_def
                                 default_arch_object_def objBits_simps archObjSize_def)
                apply (simp add: other_obj_relation_def asid_pool_relation_def)
                apply (simp add: makeObject_asidpool const_def inv_def)
@@ -345,6 +345,11 @@ where
    |  vcpu_invocation.VCPUAckVPPI obj irq \<Rightarrow> VCPUAckVPPI obj irq
 "
 
+definition sgi_invocation_map :: "sgi_signal_invocation \<Rightarrow> sgisignal_invocation" where
+  "sgi_invocation_map sgii \<equiv>
+     case sgii of ARM_HYP_A.SGISignalGenerate irq target
+       \<Rightarrow> SGISignalGenerate (ucast irq) (ucast target)"
+
 definition
   archinv_relation :: "arch_invocation \<Rightarrow> Arch.invocation \<Rightarrow> bool"
 where
@@ -360,7 +365,9 @@ where
    | arch_invocation.InvokeASIDPool ap \<Rightarrow>
        \<exists>ap'. ai' = InvokeASIDPool ap' \<and>  ap' = asid_pool_invocation_map ap
    | arch_invocation.InvokeVCPU vcpui \<Rightarrow>
-       \<exists>vcpui'. ai' = InvokeVCPU vcpui' \<and> vcpui' = vcpu_invocation_map vcpui"
+       \<exists>vcpui'. ai' = InvokeVCPU vcpui' \<and> vcpui' = vcpu_invocation_map vcpui
+   | arch_invocation.InvokeSGISignal sgii \<Rightarrow>
+       ai' = InvokeSGISignal (sgi_invocation_map sgii)"
 
 
 definition
@@ -372,7 +379,8 @@ where
    | InvokePage pgi \<Rightarrow> valid_page_inv' pgi
    | InvokeASIDControl aci \<Rightarrow> valid_aci' aci
    | InvokeASIDPool ap \<Rightarrow> valid_apinv' ap
-   | InvokeVCPU v \<Rightarrow> valid_vcpuinv' v"
+   | InvokeVCPU v \<Rightarrow> valid_vcpuinv' v
+   | InvokeSGISignal _ \<Rightarrow> \<top>"
 
 lemma mask_vmrights_corres:
   "maskVMRights (vmrights_map R) (rightsFromWord d) =
@@ -423,6 +431,7 @@ lemma ARMMMU_improve_cases:
     else if isASIDControlCap cap then S
     else if isASIDPoolCap cap then T
     else if isVCPUCap cap then U
+    else if isSGISignalCap cap then V
     else undefined)
     =
    (if isPageDirectoryCap cap then P
@@ -430,7 +439,8 @@ lemma ARMMMU_improve_cases:
     else if isPageCap cap then R
     else if isASIDControlCap cap then S
     else if isASIDPoolCap cap then T
-    else U)"
+    else if isVCPUCap cap then U
+    else V)"
   by (cases cap, simp_all add: isCap_simps) (* not sure if this is useful as is *)
 
 lemma decodeVCPUInjectIRQ_inv[wp]: "\<lbrace>P\<rbrace> decodeVCPUInjectIRQ a b \<lbrace>\<lambda>_. P\<rbrace>"
@@ -897,6 +907,12 @@ shows
   unfolding arch_decode_invocation_def ARM_HYP_H.decodeInvocation_def
             decodeARMMMUInvocation_def decode_mmu_invocation_def
   apply (cases arch_cap)
+        prefer 7
+        (* SGISignalCap *)
+        apply (simp add: decodeSGISignalInvocation_def decode_sgi_signal_invocation_def)
+        apply (rule corres_returnOk)
+        apply (clarsimp simp: archinv_relation_def sgi_invocation_map_def)
+       (* ASIDPoolCap *)
        apply (simp add: isCap_simps Let_def split del: if_split)
        apply (cases "invocation_type (mi_label mi) \<noteq> ArchInvocationLabel ARMASIDPoolAssign")
         apply (clarsimp  split: invocation_label.split arch_invocation_label.split)
@@ -1361,6 +1377,16 @@ lemma performARMVCPUInvocation_corres:
      apply (rule inv_corres [THEN corres_guard_imp]; simp add: invs_no_0_obj')+
   done
 
+lemma performSGIInvocation_corres:
+  "corres (=) \<top> \<top>
+          (do _ \<leftarrow> perform_sgi_invocation iv; return [] od)
+          (performSGISignalGenerate (sgi_invocation_map iv))"
+  apply (clarsimp simp: perform_sgi_invocation_def performSGISignalGenerate_def
+                        sgi_invocation_map_def ucast_ucast_b is_up
+                  split: sgi_signal_invocation.splits)
+  apply (corres corres: corres_machine_op)
+  done
+
 lemma arch_performInvocation_corres:
   assumes "archinv_relation ai ai'"
   shows   "corres (dc \<oplus> (=))
@@ -1368,8 +1394,10 @@ lemma arch_performInvocation_corres:
                   (invs' and ct_active' and valid_arch_inv' ai' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
                   (arch_perform_invocation ai) (Arch.performInvocation ai')"
 proof -
-  note invocation_corres =  performPageTableInvocation_corres performPageDirectoryInvocation_corres
-                            performASIDControlInvocation_corres performASIDPoolInvocation_corres performPageInvocation_corres performARMVCPUInvocation_corres
+  note invocation_corres = performPageTableInvocation_corres performPageDirectoryInvocation_corres
+                           performASIDControlInvocation_corres performASIDPoolInvocation_corres
+                           performPageInvocation_corres performARMVCPUInvocation_corres
+                           performSGIInvocation_corres
   from assms show ?thesis
   unfolding arch_perform_invocation_def ARM_HYP_H.performInvocation_def performARMMMUInvocation_def
   apply clarsimp
@@ -1429,7 +1457,7 @@ lemma performASIDControlInvocation_tcb_at':
   apply clarsimp
   done
 
-crunch writeVCPUReg, readVCPUReg, performARMVCPUInvocation
+crunch writeVCPUReg, readVCPUReg, performARMVCPUInvocation, performSGISignalGenerate
   for tcb_at'[wp]: "tcb_at' p"
 
 lemma invokeArch_tcb_at':
@@ -1438,11 +1466,12 @@ lemma invokeArch_tcb_at':
    \<lbrace>\<lambda>rv. tcb_at' p\<rbrace>"
   apply (simp add: ARM_HYP_H.performInvocation_def)
   apply (cases ai; simp add: performARMMMUInvocation_def)
+        apply (wp, clarsimp simp: pred_tcb_at')
        apply (wp, clarsimp simp: pred_tcb_at')
-      apply (wp, clarsimp simp: pred_tcb_at')
-     apply (wp, clarsimp simp: st_tcb_strg'[rule_format])
-    apply (wp performASIDControlInvocation_tcb_at', clarsimp simp: valid_arch_inv'_def)
-   apply (wp, clarsimp simp: pred_tcb_at')
+      apply (wp, clarsimp simp: st_tcb_strg'[rule_format])
+     apply (wp performASIDControlInvocation_tcb_at', clarsimp simp: valid_arch_inv'_def)
+    apply (wp, clarsimp simp: pred_tcb_at')
+   apply wpsimp
   apply wpsimp
   done
 
@@ -1522,29 +1551,27 @@ crunch
 lemma sts_valid_arch_inv':
   "\<lbrace>valid_arch_inv' ai\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_arch_inv' ai\<rbrace>"
   apply (cases ai, simp_all add: valid_arch_inv'_def)
-       apply (clarsimp simp: valid_pti'_def split: page_table_invocation.splits)
-       apply (intro allI conjI impI)
-        apply (wp | simp)+
-     apply (rename_tac page_invocation)
-     apply (case_tac page_invocation, simp_all add: valid_page_inv'_def)[1]
-         apply (wp valid_slots_lift' valid_slots_duplicated_lift'|simp)+
-    apply (clarsimp simp: valid_aci'_def split: asidcontrol_invocation.splits)
-    apply (clarsimp simp: cte_wp_at_ctes_of)
-    apply (rule hoare_pre, wp)
-    apply clarsimp
-   apply (clarsimp simp: valid_apinv'_def split: asidpool_invocation.splits)
-   apply (rule hoare_pre, wp)
-   apply simp
-  apply (rename_tac vcpui)
-  apply (case_tac vcpui; wpsimp simp: valid_vcpuinv'_def)
+        apply (clarsimp simp: valid_pti'_def split: page_table_invocation.splits)
+        apply (intro allI conjI impI)
+         apply wpsimp+
+      apply (rename_tac page_invocation)
+      apply (case_tac page_invocation; simp add: valid_page_inv'_def)
+         apply (wpsimp wp: valid_slots_lift' valid_slots_duplicated_lift')+
+     apply (clarsimp simp: valid_aci'_def split: asidcontrol_invocation.splits)
+     apply (clarsimp simp: cte_wp_at_ctes_of)
+     apply wpsimp
+    apply (clarsimp simp: valid_apinv'_def split: asidpool_invocation.splits)
+    apply wpsimp
+   apply (rename_tac vcpui)
+   apply (case_tac vcpui; wpsimp simp: valid_vcpuinv'_def)
+  apply wp
   done
 
 lemma less_pptrBase_valid_pde_offset':
   "\<lbrakk> vptr < pptrBase; x = 0 \<or> is_aligned vptr 25; x \<le> 0x0F \<rbrakk>
      \<Longrightarrow> valid_pde_mapping_offset' (((x * 8) + (vptr >> 21 << 3)) && mask pdBits)"
-  apply (clarsimp simp: ARM_HYP.pptrBase_def pptrBase_def pdBits_def pageBits_def
-                        valid_pde_mapping_offset'_def pd_asid_slot_def pt_index_bits_def
-                        vspace_bits_defs)
+  apply (clarsimp simp: pptrBase_def pdBits_def  valid_pde_mapping_offset'_def
+                        pd_asid_slot_def pt_index_bits_def vspace_bits_defs)
   apply (drule word_le_minus_one_leq, simp)
   apply (drule le_shiftr[where u=vptr and n=21])
   apply (subst(asm) iffD2[OF mask_eq_iff_w2p])
@@ -1797,6 +1824,11 @@ lemma arch_decodeInvocation_wf[wp]:
    Arch.decodeInvocation label args cap_index slot arch_cap excaps
    \<lbrace>valid_arch_inv'\<rbrace>,-"
   apply (cases arch_cap)
+        prefer 7
+        (* SGISignalCap *)
+        apply (wpsimp simp: ARM_HYP_H.decodeInvocation_def decodeSGISignalInvocation_def
+                            valid_arch_inv'_def)
+       (* ASIDPoolCap *)
        apply (simp add: decodeARMMMUInvocation_def ARM_HYP_H.decodeInvocation_def
                         Let_def split_def isCap_simps
                   cong: if_cong split del: if_split)
@@ -1947,7 +1979,7 @@ lemma arch_decodeInvocation_wf[wp]:
                             split: Structures_H.kernel_object.splits arch_kernel_object.splits)
             apply ((wp whenE_throwError_wp isFinalCapability_inv
                     | wpc | simp add: valid_arch_inv'_def valid_pti'_def if_apply_def2
-                    | rule hoare_drop_imp)+)[19]
+                    | rule hoare_drop_imp)+)[20]
     apply (clarsimp simp: linorder_not_le isCap_simps cte_wp_at_ctes_of)
     apply (frule eq_arch_update')
     apply (case_tac option; clarsimp)
@@ -2381,6 +2413,14 @@ lemma invokeVCPUWriteReg_invs'[wp]:
 lemma performARMVCPUInvocation_invs'[wp]:
   "\<lbrace>invs' and valid_vcpuinv' i\<rbrace> performARMVCPUInvocation i \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding performARMVCPUInvocation_def valid_vcpuinv'_def by wpsimp
+
+crunch sendSGI
+  for um[wp]: "\<lambda>ms. P (underlying_memory ms)"
+
+lemma performSGISignalInvocation_invs[wp]:
+  "performSGISignalGenerate sgi \<lbrace>invs'\<rbrace>"
+  unfolding performSGISignalGenerate_def
+  by (wpsimp wp: dmo_invs'_simple no_irq_sendSGI)
 
 lemma arch_performInvocation_invs':
   "\<lbrace>invs' and ct_active' and valid_arch_inv' invocation\<rbrace>

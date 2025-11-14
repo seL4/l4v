@@ -1093,4 +1093,14 @@ lemma ucast_and_mask_source:
    UCAST('a \<rightarrow> 'b::len) w && mask n = ucast w && mask LENGTH('a)" for w::"'a::len word"
   by word_eqI (fastforce dest: test_bit_lenD)
 
+lemma toEnum_unat_le:
+  "x \<le> ucast y \<Longrightarrow> toEnum (unat x) \<le> y" for x::"'a::len word" and y::"'b::len word"
+  apply (subgoal_tac "unat y < 2^LENGTH('b)")
+   apply (subgoal_tac "unat x < 2^LENGTH('b)")
+    apply (simp add: le_ucast_ucast_le)
+   apply (fastforce simp: word_le_nat_alt unat_ucast
+                    elim!: order_trans order_le_less_trans[rotated])
+  apply simp
+  done
+
 end

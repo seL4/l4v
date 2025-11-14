@@ -156,7 +156,7 @@ lemma performASIDControlInvocation_corres:
                                    default_arch_object_def archObjSize_def)+
                apply (simp add: obj_relation_retype_def default_object_def
                                 default_arch_object_def objBits_simps archObjSize_def)
-               apply (simp add: other_obj_relation_def asid_pool_relation_def)
+               apply (simp add: other_aobj_relation_def asid_pool_relation_def)
                apply (simp add: makeObject_asidpool const_def inv_def)
               apply (rule range_cover_full)
                apply (simp add:obj_bits_api_def arch_kobj_size_def default_arch_object_def)+
@@ -1577,6 +1577,7 @@ lemma sts_valid_arch_inv':
   done
 
 lemma inv_ASIDPool: "inv ASIDPool = (\<lambda>v. case v of ASIDPool a \<Rightarrow> a)"
+  supply inj_ASIDPool[simp del]
   apply (rule ext)
   apply (case_tac v)
   apply simp

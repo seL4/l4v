@@ -121,6 +121,7 @@ where
     | UntypedCap _ _ _          \<Rightarrow> False
     | AsidControlCap          \<Rightarrow> False
     | AsidPoolCap _ _         \<Rightarrow> False
+    | SGISignalCap _ _        \<Rightarrow> False \<comment> \<open>FIXME SGI: eventually allow this\<close>
     | _                       \<Rightarrow> False)"
 
 (* LIMITATION: The specification cannot contain ASID numbers. *)
@@ -810,6 +811,9 @@ lemma well_formed_orig_ep_cap_is_default:
     ep_related_cap cap; cap \<noteq> NullCap\<rbrakk>
    \<Longrightarrow> is_default_cap cap"
   apply (case_tac "\<exists>obj_id R. cap = ReplyCap obj_id R")
+   apply (frule (1) well_formed_well_formed_cap', simp)
+   apply (clarsimp simp: well_formed_cap_def)
+  apply (case_tac "\<exists>irq target. cap = SGISignalCap irq target")
    apply (frule (1) well_formed_well_formed_cap', simp)
    apply (clarsimp simp: well_formed_cap_def)
   apply (frule (3) well_formed_well_formed_orig_cap)

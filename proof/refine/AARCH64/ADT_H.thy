@@ -169,6 +169,9 @@ fun CapabilityMap :: "capability \<Rightarrow> cap" where
 | "CapabilityMap (capability.ArchObjectCap
                     (arch_capability.VCPUCap v)) =
   cap.ArchObjectCap (arch_cap.VCPUCap v)"
+| "CapabilityMap (capability.ArchObjectCap
+                    (arch_capability.SGISignalCap irq target)) =
+  cap.ArchObjectCap (arch_cap.SGISignalCap (ucast irq) (ucast target))"
 
 (* FIXME: wellformed_cap_simps has lots of duplicates. *)
 lemma cap_relation_imp_CapabilityMap:
@@ -185,8 +188,7 @@ lemma cap_relation_imp_CapabilityMap:
    apply (simp add: zbits_map_def split: option.splits)
   apply (rename_tac arch_cap)
   apply clarsimp
-  apply (case_tac arch_cap, simp_all add: wellformed_cap_simps)
-  apply (simp add: ucast_down_ucast_id is_down)
+  apply (case_tac arch_cap; simp add: wellformed_cap_simps ucast_down_ucast_id is_down)
   done
 
 primrec ThStateMap :: "Structures_H.thread_state \<Rightarrow> Structures_A.thread_state" where
@@ -664,15 +666,15 @@ proof -
       apply (in_case "KOASIDPool ?pool")
       apply clarsimp
       apply (case_tac arch_kernel_obj)
-         apply (simp add: other_obj_relation_def asid_pool_relation_def
+         apply (simp add: other_aobj_relation_def asid_pool_relation_def
                           inv_def o_def)
         apply (clarsimp simp add:  pte_relation_def)
-       apply (clarsimp split: if_split_asm)+
-      apply (simp add: other_obj_relation_def)
+       apply (clarsimp simp: other_aobj_relation_def split: if_split_asm)
+      apply (simp add: other_aobj_relation_def)
 
      apply (in_case "KOPTE ?pte")
      apply (case_tac arch_kernel_obj;
-            simp add: other_obj_relation_def asid_pool_relation_def inv_def o_def)
+            simp add: other_obj_relation_def other_aobj_relation_def asid_pool_relation_def inv_def o_def)
       apply clarsimp
       apply (rename_tac p pte pt idx)
       apply (frule pspace_alignedD, rule pspace_aligned)
@@ -827,7 +829,7 @@ proof -
     apply clarsimp
     apply (rename_tac arch_kernel_obj vcpu)
     apply (case_tac arch_kernel_obj;
-           clarsimp simp: other_obj_relation_def pte_relation_def split: if_splits)
+           clarsimp simp: other_obj_relation_def other_aobj_relation_def pte_relation_def split: if_splits)
     apply (rename_tac vcpu')
     apply (case_tac vcpu')
     apply (clarsimp simp: vcpu_relation_def split: vcpu.splits)

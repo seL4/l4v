@@ -2447,6 +2447,35 @@ lemma mdb_next_rtrancl_not_0_s0H:
   apply (simp add: mdb_next_trancl_s0H s0_ptr_defs)
   done
 
+lemma Low_cte_cte_not_SGISignal[simp]:
+  "Low_cte_cte lp p \<noteq> Some (CTE (ArchObjectCap (SGISignalCap irq target)) node')"
+  by (simp add: Low_cte_cte_def Low_cte'_def Low_capsH_def empty_cte_def)
+
+lemma High_cte_cte_not_SGISignal[simp]:
+  "High_cte_cte hp p \<noteq> Some (CTE (ArchObjectCap (SGISignalCap irq target)) node')"
+  by (simp add: High_cte_cte_def High_cte'_def High_capsH_def empty_cte_def)
+
+lemma Silc_cte_cte_not_SGISignal[simp]:
+  "Silc_cte_cte sp p \<noteq> Some (CTE (ArchObjectCap (SGISignalCap irq target)) node')"
+  by (simp add: Silc_cte_cte_def Silc_cte'_def Silc_capsH_def empty_cte_def)
+
+lemma Low_tcb_cte_not_SGISignal[simp]:
+  "Low_tcb_cte p \<noteq> Some (CTE (ArchObjectCap (SGISignalCap irq target)) node')"
+  by (simp add: Low_tcb_cte_def tcbCTable_def Low_tcbH_def)
+
+lemma High_tcb_cte_not_SGISignal[simp]:
+  "High_tcb_cte p \<noteq> Some (CTE (ArchObjectCap (SGISignalCap irq target)) node')"
+  by (simp add: High_tcb_cte_def tcbCTable_def High_tcbH_def)
+
+lemma idle_tcb_cte_not_SGISignal[simp]:
+  "idle_tcb_cte p \<noteq> Some (CTE (ArchObjectCap (SGISignalCap irq target)) node')"
+  by (simp add: idle_tcb_cte_def tcbCTable_def idle_tcbH_def)
+
+lemma map_to_ctes_not_SGISignal[simp]:
+  "map_to_ctes kh0H p' \<noteq> Some (CTE (ArchObjectCap (SGISignalCap irq target)) node')"
+  by (clarsimp simp: map_to_ctes_kh0H option_update_range_def split: option.splits)
+     (rule conjI; clarsimp)+
+
 lemma sameRegionAs_s0H:
   "\<lbrakk>map_to_ctes kh0H p = Some (CTE cap mdb); map_to_ctes kh0H p' = Some (CTE cap' mdb');
     sameRegionAs cap cap'; p \<noteq> p'\<rbrakk>
@@ -2739,22 +2768,25 @@ lemma s0H_valid_pspace':
                  apply simp
                 apply (erule r_into_trancl[OF next_fold], simp)+
             apply (clarsimp simp: valid_badges_def)
-            apply (frule_tac x=p in map_to_ctes_kh0H_SomeD)
-            apply (elim disjE, (clarsimp simp: kh0H_all_obj_def Low_cte_cte_def High_cte_cte_def Silc_cte_cte_def isCap_simps cnode_offs_range_def split: if_split_asm)+)[1]
-              apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
-              apply (elim disjE, (clarsimp simp: kh0H_all_obj_def Low_cte_cte_def High_cte_cte_def Silc_cte_cte_def isCap_simps cnode_offs_range_def sameRegionAs_def split: if_split_asm)+)[1]
-             apply (intro conjI impI)
+            apply (rule conjI)
+             apply (frule_tac x=p in map_to_ctes_kh0H_SomeD)
+             apply (elim disjE, (clarsimp simp: kh0H_all_obj_def Low_cte_cte_def High_cte_cte_def Silc_cte_cte_def isCap_simps cnode_offs_range_def split: if_split_asm)+)[1]
+               apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
+               apply (elim disjE, (clarsimp simp: kh0H_all_obj_def Low_cte_cte_def High_cte_cte_def Silc_cte_cte_def isCap_simps cnode_offs_range_def sameRegionAs_def split: if_split_asm)+)[1]
+              apply (intro conjI impI)
+               apply (clarsimp simp: High_cte_cte_def kh0H_all_obj_def isCap_simps split: if_split_asm)
+              apply (drule(1) sameRegion_ntfn)
               apply (clarsimp simp: High_cte_cte_def kh0H_all_obj_def isCap_simps split: if_split_asm)
-             apply (drule(1) sameRegion_ntfn)
+              apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
+              apply (elim disjE, (clarsimp simp: isCap_simps kh0H_all_obj_def High_cte_cte_def Low_cte_cte_def Silc_cte_cte_def split: if_split_asm)+)[1]
              apply (clarsimp simp: High_cte_cte_def kh0H_all_obj_def isCap_simps split: if_split_asm)
-             apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
-             apply (elim disjE, (clarsimp simp: kh0H_all_obj_def High_cte_cte_def Low_cte_cte_def Silc_cte_cte_def split: if_split_asm)+)[1]
-            apply (intro conjI impI)
+             apply (intro conjI impI)
+              apply (clarsimp simp: Low_cte_cte_def kh0H_all_obj_def isCap_simps split: if_split_asm)
+             apply (drule sameRegion_ntfn, clarsimp simp: isCap_simps)
              apply (clarsimp simp: Low_cte_cte_def kh0H_all_obj_def isCap_simps split: if_split_asm)
-            apply (drule(1) sameRegion_ntfn)
-            apply (clarsimp simp: Low_cte_cte_def kh0H_all_obj_def isCap_simps split: if_split_asm)
-            apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
-            apply (elim disjE, (clarsimp simp: kh0H_all_obj_def High_cte_cte_def Low_cte_cte_def Silc_cte_cte_def split: if_split_asm)+)[1]
+             apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
+             apply (elim disjE, (clarsimp simp: isCap_simps kh0H_all_obj_def High_cte_cte_def Low_cte_cte_def Silc_cte_cte_def split: if_split_asm)+)[1]
+            apply (clarsimp simp: valid_arch_badges_def isArchSGISignalCap_def)
            apply (clarsimp simp: caps_contained'_def)
            apply (drule_tac x=p in map_to_ctes_kh0H_SomeD)
            apply (elim disjE, simp_all)[1]
@@ -3261,19 +3293,19 @@ lemma s0_pspace_rel:
         apply (clarsimp simp: pd_offs_range_def pde_relation_def pde_relation_aligned_def pde_relation'_def)
        apply (clarsimp simp: kh0H_obj_def irq_cnode_def cte_map_def cte_relation_def well_formed_cnode_n_def split: if_split_asm)
       apply (clarsimp simp: kh0H_obj_def kh0_obj_def other_obj_relation_def ntfn_relation_def)
-     apply (clarsimp simp: kh0H_obj_def kh0_obj_def cte_relation_def cte_map_def)
+     apply (clarsimp simp: kh0H_obj_def kh0_obj_def cte_relation_def cte_map_def shiftl_t2n')
      apply (cut_tac dom_caps(1))[1]
      apply (frule_tac m="Silc_caps" in domI)
      apply (cut_tac x=y in cnode_offs_in_range(3))
       apply simp
      apply (clarsimp simp: cnode_offs_range_def Silc_cte_def Silc_cte'_def Silc_capsH_def the_nat_to_bl_simps Silc_caps_def cte_level_bits_def empty_cte_def split: if_split_asm)
-    apply (clarsimp simp: kh0H_obj_def kh0_obj_def cte_relation_def cte_map_def)
+    apply (clarsimp simp: kh0H_obj_def kh0_obj_def cte_relation_def cte_map_def shiftl_t2n')
     apply (cut_tac dom_caps(2))[1]
     apply (frule_tac m="High_caps" in domI)
     apply (cut_tac x=y in cnode_offs_in_range(2))
      apply simp
     apply (clarsimp simp: cnode_offs_range_def High_cte_def High_cte'_def High_capsH_def the_nat_to_bl_simps High_caps_def cte_level_bits_def empty_cte_def split: if_split_asm)
-   apply (clarsimp simp: kh0H_obj_def kh0_obj_def cte_relation_def cte_map_def)
+   apply (clarsimp simp: kh0H_obj_def kh0_obj_def cte_relation_def cte_map_def shiftl_t2n')
    apply (cut_tac dom_caps(3))[1]
    apply (frule_tac m="Low_caps" in domI)
    apply (cut_tac x=y in cnode_offs_in_range(1))
@@ -3387,7 +3419,9 @@ lemma s0_srel:
             apply (drule s0_caps_of_state)
             apply clarsimp
             apply (elim disjE)
-                           apply (clarsimp simp: cte_map_def s0H_internal_def s0_internal_def kh0H_all_obj_def' cte_level_bits_def split: if_split_asm)+
+                           apply (clarsimp simp: cte_map_def s0H_internal_def s0_internal_def
+                                                 kh0H_all_obj_def' cte_level_bits_def shiftl_t2n'
+                                           split: if_split_asm)+
                  apply (clarsimp simp: tcb_cnode_index_def ucast_bl[symmetric] Low_tcb_cte_def Low_tcbH_def High_tcb_cte_def High_tcbH_def)
                 apply ((clarsimp simp: cte_map_def' s0H_internal_def s0_internal_def,
                        clarsimp simp: tcb_cnode_index_def ucast_bl[symmetric] Low_tcb_cte_def Low_tcbH_def High_tcb_cte_def High_tcbH_def)+)[5]

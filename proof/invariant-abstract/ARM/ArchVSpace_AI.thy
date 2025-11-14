@@ -2823,7 +2823,7 @@ lemma pd_slots_helper:
   apply (simp add: obj_refs_def)
   apply (case_tac cap, simp+)
   apply (rename_tac arch_cap)
-  apply (case_tac arch_cap, simp+)
+  apply (case_tac arch_cap; simp)
     apply (drule (1) set_rev_mp)
     apply (drule (1) set_rev_mp)
     apply force

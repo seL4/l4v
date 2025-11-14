@@ -91,6 +91,7 @@ primrec azobj_refs' :: "arch_capability \<Rightarrow> obj_ref set" where
 | "azobj_refs' (FrameCap _ _ _ _ _) = {}"
 | "azobj_refs' (PageTableCap _ _ _) = {}"
 | "azobj_refs' (VCPUCap v) = {v}"
+| "azobj_refs' (SGISignalCap _ _) = {}"
 
 lemma azobj_refs'_only_vcpu:
   "(x \<in> azobj_refs' acap) = (acap = VCPUCap x)"
@@ -99,12 +100,16 @@ lemma azobj_refs'_only_vcpu:
 
 section "Valid caps and objects (design spec)"
 
+definition isArchSGISignalCap :: "capability \<Rightarrow> bool" where
+  "isArchSGISignalCap cap \<equiv> \<exists>irq target. cap = ArchObjectCap (SGISignalCap irq target)"
+
 primrec acapBits :: "arch_capability \<Rightarrow> nat" where
   "acapBits (ASIDPoolCap _ _)       = asidLowBits + word_size_bits"
 | "acapBits ASIDControlCap          = asidHighBits + word_size_bits"
 | "acapBits (FrameCap _ _ sz _ _)   = pageBitsForSize sz"
 | "acapBits (PageTableCap _ pt_t _) = table_size pt_t"
 | "acapBits (VCPUCap v)             = vcpuBits"
+| "acapBits (SGISignalCap _ _)      = 0"
 
 definition page_table_at' :: "pt_type \<Rightarrow> obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
  "page_table_at' pt_t p \<equiv> \<lambda>s.
@@ -145,7 +150,8 @@ definition valid_arch_cap_ref' :: "arch_capability \<Rightarrow> kernel_state \<
    | ASIDControlCap \<Rightarrow> True
    | FrameCap r rghts sz dev mapdata \<Rightarrow> frame_at' r sz dev s
    | PageTableCap r pt_t mapdata \<Rightarrow> page_table_at' pt_t r s
-   | VCPUCap r \<Rightarrow> vcpu_at' r s"
+   | VCPUCap r \<Rightarrow> vcpu_at' r s
+   | SGISignalCap _ _ \<Rightarrow> True"
 
 lemmas valid_arch_cap_ref'_simps[simp] =
   valid_arch_cap_ref'_def[split_simps arch_capability.split]
@@ -193,7 +199,15 @@ where
 | "acapClass ASIDControlCap       = ASIDMasterClass"
 | "acapClass (FrameCap _ _ _ _ _) = PhysicalClass"
 | "acapClass (PageTableCap _ _ _) = PhysicalClass"
-| "acapClass (VCPUCap _) = PhysicalClass"
+| "acapClass (VCPUCap _)          = PhysicalClass"
+| "acapClass (SGISignalCap _ _)   = IRQClass"
+
+definition valid_arch_badges :: "capability \<Rightarrow> capability \<Rightarrow> mdbnode \<Rightarrow> bool" where
+  "valid_arch_badges cap cap' node' \<equiv>
+     isArchSGISignalCap cap' \<longrightarrow> cap \<noteq> cap' \<longrightarrow> mdbFirstBadged node'"
+
+definition mdb_chunked_arch_assms :: "capability \<Rightarrow> bool" where
+  "mdb_chunked_arch_assms cap \<equiv> \<not>isArchSGISignalCap cap"
 
 definition
   isArchFrameCap :: "capability \<Rightarrow> bool"

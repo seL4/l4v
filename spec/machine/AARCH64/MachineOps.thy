@@ -136,6 +136,10 @@ definition ackInterrupt :: "irq \<Rightarrow> unit machine_monad" where
 definition setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> unit machine_monad" where
   "setInterruptMode \<equiv> \<lambda>irq levelTrigger polarityLow. return ()"
 
+consts' sendSGI_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition sendSGI :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
+  "sendSGI sgi_irq target \<equiv> machine_op_lift $ sendSGI_impl sgi_irq target"
+
 text \<open>Only exists on GICv3 platforms. We model interrupt deactivation as unmasking
   for the purposes of the interrupt oracle.\<close>
 definition deactivateInterrupt :: "irq \<Rightarrow> unit machine_monad" where

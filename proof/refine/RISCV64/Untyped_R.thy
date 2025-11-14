@@ -2028,7 +2028,7 @@ lemma no_next_region:
 
 lemma valid_badges_n' [simp]: "valid_badges n'"
   using valid_badges
-  apply (clarsimp simp: valid_badges_def)
+  apply (clarsimp simp: valid_badges_def valid_arch_badges_def) (* FIXME arch-split; take AARCH64 version *)
   apply (simp add: n'_direct_eq)
   apply (drule n'_badged)+
   apply (clarsimp split: if_split_asm)
@@ -2252,6 +2252,8 @@ lemma mdb_chunked_n' [simp]:
     apply (frule sameRegionAs_trans [OF _ same_region])
     apply (clarsimp simp: parent is_chunk_def n'_trancl_eq n'_rtrancl_eq
                           m_rtrancl_to_site site' new_site_def)
+    apply (prop_tac "mdb_chunked_arch_assms cap'", clarsimp simp: isCap_simps mdb_chunked_arch_assms_def)
+    apply clarsimp
     apply (drule_tac x=p'' in spec)
     apply clarsimp
     apply (drule_tac p=p'' in m_cap, clarsimp)
@@ -3894,6 +3896,7 @@ lemma updateFreeIndex_corres:
          (cte_at' (cte_map src)
            and pspace_distinct' and pspace_aligned')
          (set_cap cap src) (updateFreeIndex (cte_map src) idx)"
+  supply RISCV64.ghost_relation_wrapper_def[simp] (* FIXME arch-split *)
   apply (rule corres_name_pre)
   apply (simp add: updateFreeIndex_def updateTrackedFreeIndex_def)
   apply (rule corres_guard_imp)

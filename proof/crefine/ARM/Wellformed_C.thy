@@ -306,7 +306,9 @@ where
                                           (if to_bool (capPDIsMapped_CL pdf)
                                            then Some (capPDMappedASID_CL pdf)
                                            else None))
- | Cap_domain_cap \<Rightarrow> DomainCap"
+ | Cap_domain_cap \<Rightarrow> DomainCap
+ | Cap_sgi_signal_cap sgi \<Rightarrow> ArchObjectCap (SGISignalCap (ucast (capSGIIRQ_CL sgi))
+                                                         (ucast (capSGITarget_CL sgi)))"
 
 lemmas cap_to_H_simps = cap_to_H_def[split_simps cap_CL.split]
 
@@ -354,6 +356,7 @@ lemma  c_valid_cap_simps [simp]:
   "cap_get_tag c = scast cap_untyped_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_zombie_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_reply_cap \<Longrightarrow> c_valid_cap c"
+  "cap_get_tag c = scast cap_sgi_signal_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_null_cap \<Longrightarrow> c_valid_cap c"
   unfolding c_valid_cap_def  cap_lift_def cap_tag_defs
   by (simp add: cl_valid_cap_def)+

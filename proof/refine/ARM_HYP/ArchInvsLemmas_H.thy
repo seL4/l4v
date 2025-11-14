@@ -282,7 +282,14 @@ lemma valid_pde_mappings'_update [iff]:
   "valid_pde_mappings' (f s) = valid_pde_mappings' s"
   by (simp add: valid_pde_mappings'_def)
 
+end
 
+context Arch_p_arch_idle_update_eq'
+begin
+
+lemma valid_arch_state_update'[iff]:
+  "valid_arch_state' (f s) = valid_arch_state' s"
+  by (simp add: valid_arch_state'_def arch cong: option.case_cong)
 
 end
 
@@ -355,13 +362,14 @@ lemmas valid_cap_simps' =
 
 lemma is_physical_cases:
  "(capClass cap = PhysicalClass) =
-  (case cap of NullCap                         \<Rightarrow> False
-             | DomainCap                       \<Rightarrow> False
-             | IRQControlCap                   \<Rightarrow> False
-             | IRQHandlerCap irq               \<Rightarrow> False
-             | ReplyCap r m cr                 \<Rightarrow> False
-             | ArchObjectCap ASIDControlCap    \<Rightarrow> False
-             | _                               \<Rightarrow> True)"
+  (case cap of NullCap                          \<Rightarrow> False
+             | DomainCap                        \<Rightarrow> False
+             | IRQControlCap                    \<Rightarrow> False
+             | IRQHandlerCap irq                \<Rightarrow> False
+             | ReplyCap r m cr                  \<Rightarrow> False
+             | ArchObjectCap ASIDControlCap     \<Rightarrow> False
+             | ArchObjectCap (SGISignalCap _ _) \<Rightarrow> False
+             | _                                \<Rightarrow> True)"
   by (simp split: capability.splits arch_capability.splits zombie_type.splits)
 
 lemma typ_at_lift_page_directory_at':

@@ -24,9 +24,12 @@ fun
 where
   "arch_invoke_irq_control (ArchIRQControlIssue irq handler_slot control_slot trigger) = without_preemption (do
     do_machine_op $ setIRQTrigger irq trigger;
-    set_irq_state IRQSignal (irq);
-    cap_insert (IRQHandlerCap (irq)) control_slot handler_slot
+    set_irq_state IRQSignal irq;
+    cap_insert (IRQHandlerCap irq) control_slot handler_slot
   od)"
+| "arch_invoke_irq_control (IssueSGISignal irq target control_slot sgi_slot) =
+     without_preemption
+       (cap_insert (ArchObjectCap (SGISignalCap irq target)) control_slot sgi_slot)"
 
 text \<open>Switch to a thread's virtual address space context. Clear the load-exclusive monitor.\<close>
 definition
@@ -196,6 +199,10 @@ case iv of PageTableMap cap ct_slot pde pd_slot \<Rightarrow> do
   | _ \<Rightarrow> fail"
 
 
+definition perform_sgi_invocation :: "sgi_signal_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "perform_sgi_invocation iv \<equiv> case iv of
+     SGISignalGenerate irq target \<Rightarrow> do_machine_op $ sendSGI (ucast irq) (ucast target)"
+
 text \<open>Top level system call despatcher for all ARM-specific system calls.\<close>
 definition
   arch_perform_invocation :: "arch_invocation \<Rightarrow> (data list,'z::state_ext) p_monad" where
@@ -206,7 +213,8 @@ definition
         | InvokePage oper \<Rightarrow> perform_page_invocation oper
         | InvokeASIDControl oper \<Rightarrow> do perform_asid_control_invocation oper; return [] od
         | InvokeASIDPool oper \<Rightarrow> do perform_asid_pool_invocation oper; return [] od
-        | InvokeVCPU oper \<Rightarrow> perform_vcpu_invocation oper"
+        | InvokeVCPU oper \<Rightarrow> perform_vcpu_invocation oper
+        | InvokeSGISignal oper \<Rightarrow> do perform_sgi_invocation oper; return [] od"
 
 end
 

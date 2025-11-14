@@ -17,9 +17,12 @@ fun arch_invoke_irq_control :: "arch_irq_control_invocation \<Rightarrow> (unit,
   "arch_invoke_irq_control (ARMIRQControlInvocation irq handler_slot control_slot trigger) =
      without_preemption (do
        do_machine_op $ setIRQTrigger irq trigger;
-       set_irq_state IRQSignal (irq);
-       cap_insert (IRQHandlerCap (irq)) control_slot handler_slot
+       set_irq_state IRQSignal irq;
+       cap_insert (IRQHandlerCap irq) control_slot handler_slot
   od)"
+| "arch_invoke_irq_control (IssueSGISignal irq target control_slot sgi_slot) =
+     without_preemption
+       (cap_insert (ArchObjectCap (SGISignalCap irq target)) control_slot sgi_slot)"
 
 definition arch_switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "arch_switch_to_thread t \<equiv> do
@@ -185,6 +188,10 @@ definition perform_vspace_invocation :: "vspace_invocation \<Rightarrow> (unit,'
      VSpaceNothing \<Rightarrow> return ()
    | VSpaceFlush type start end pstart space asid \<Rightarrow> perform_flush type start end pstart space asid"
 
+definition perform_sgi_invocation :: "sgi_signal_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "perform_sgi_invocation iv \<equiv> case iv of
+     SGISignalGenerate irq target \<Rightarrow> do_machine_op $ sendSGI (ucast irq) (ucast target)"
+
 locale_abbrev arch_no_return :: "(unit, 'z::state_ext) s_monad \<Rightarrow> (data list, 'z::state_ext) s_monad"
   where
   "arch_no_return oper \<equiv> do oper; return [] od"
@@ -198,7 +205,8 @@ definition arch_perform_invocation :: "arch_invocation \<Rightarrow> (data list,
    | InvokePage oper \<Rightarrow> perform_page_invocation oper
    | InvokeASIDControl oper \<Rightarrow> arch_no_return $ perform_asid_control_invocation oper
    | InvokeASIDPool oper \<Rightarrow> arch_no_return $ perform_asid_pool_invocation oper
-   | InvokeVCPU oper \<Rightarrow> perform_vcpu_invocation oper"
+   | InvokeVCPU oper \<Rightarrow> perform_vcpu_invocation oper
+   | InvokeSGISignal oper \<Rightarrow> arch_no_return $ perform_sgi_invocation oper"
 
 end
 end

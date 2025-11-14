@@ -148,11 +148,11 @@ lemma performASIDControlInvocation_corres:
                                         THEN createObjects_corres',simplified,
                                         where val = "makeObject::asidpool"])
                    apply simp
-                  apply (simp add: objBits_simps obj_bits_api_def arch_kobj_size_def
+                  apply (simp add: objBits_simps obj_bits_api_def arch_kobj_size_def shiftl_t2n'
                                    default_arch_object_def archObjSize_def)+
                apply (simp add: obj_relation_retype_def default_object_def
                                 default_arch_object_def objBits_simps archObjSize_def)
-               apply (simp add: other_obj_relation_def asid_pool_relation_def)
+               apply (simp add: other_aobj_relation_def asid_pool_relation_def)
                apply (simp add: makeObject_asidpool const_def inv_def)
               apply (rule range_cover_full)
                apply (simp add:obj_bits_api_def arch_kobj_size_def default_arch_object_def)+
@@ -333,6 +333,10 @@ lemma performASIDControlInvocation_corres:
   apply clarsimp
   done
 
+definition sgi_invocation_map :: "sgi_signal_invocation \<Rightarrow> sgisignal_invocation" where
+  "sgi_invocation_map sgii \<equiv>
+     case sgii of ARM_A.SGISignalGenerate irq target \<Rightarrow> SGISignalGenerate (ucast irq) (ucast target)"
+
 definition
   archinv_relation :: "arch_invocation \<Rightarrow> Arch.invocation \<Rightarrow> bool"
 where
@@ -346,7 +350,9 @@ where
    | arch_invocation.InvokeASIDControl aci \<Rightarrow>
        \<exists>aci'. ai' = InvokeASIDControl aci' \<and> aci' = asid_ci_map aci
    | arch_invocation.InvokeASIDPool ap \<Rightarrow>
-       \<exists>ap'. ai' = InvokeASIDPool ap' \<and>  ap' = asid_pool_invocation_map ap"
+       \<exists>ap'. ai' = InvokeASIDPool ap' \<and>  ap' = asid_pool_invocation_map ap
+   | arch_invocation.InvokeSGISignal sgii \<Rightarrow>
+       ai' = InvokeSGISignal (sgi_invocation_map sgii)"
 
 definition
   valid_arch_inv' :: "Arch.invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -356,7 +362,8 @@ where
    | InvokePageDirectory pdi \<Rightarrow> \<top>
    | InvokePage pgi \<Rightarrow> valid_page_inv' pgi
    | InvokeASIDControl aci \<Rightarrow> valid_aci' aci
-   | InvokeASIDPool ap \<Rightarrow> valid_apinv' ap"
+   | InvokeASIDPool ap \<Rightarrow> valid_apinv' ap
+   | InvokeSGISignal _ \<Rightarrow> \<top>"
 
 lemma mask_vmrights_corres:
   "maskVMRights (vmrights_map R) (rightsFromWord d) =
@@ -397,26 +404,16 @@ lemma asidHighBits [simp]:
 
 declare word_unat_power [symmetric, simp del]
 
-lemma ARMMMU_improve_cases:
-  "(if isPageDirectoryCap cap then P
-    else if isPageTableCap cap then Q
-    else if isPageCap cap then R
-    else if isASIDControlCap cap then S
-    else if isASIDPoolCap cap then T
-    else undefined)
-    =
-   (if isPageDirectoryCap cap then P
-    else if isPageTableCap cap then Q
-    else if isPageCap cap then R
-    else if isASIDControlCap cap then S
-    else T)"
-  by (cases cap, simp_all add: isCap_simps)
-
+(* takes long, gets there eventually *)
+crunch decodeARMMMUInvocation
+  for inv [wp]: "P"
+  (wp: crunch_wps mapME_x_inv_wp getASID_wp isFinalCapability_inv
+   simp: crunch_simps)
 
 crunch "ARM_H.decodeInvocation"
   for inv[wp]: "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp
-   simp: crunch_simps ARMMMU_improve_cases)
+   simp: crunch_simps)
 
 lemma case_option_corresE:
   assumes nonec: "corres r Pn Qn (nc >>=E f) (nc' >>=E g)"
@@ -428,7 +425,6 @@ lemma case_option_corresE:
   apply simp
   apply (rule somec)
   done
-
 
 lemma cap_relation_Untyped_eq:
   "cap_relation c (UntypedCap d p sz f) = (c = cap.UntypedCap d p sz f)"
@@ -774,10 +770,17 @@ shows
       arch_cap excaps)
    (Arch.decodeInvocation (mi_label mi) args cptr'
      (cte_map slot) arch_cap' excaps')"
-  apply (simp add: arch_decode_invocation_def ARM_H.decodeInvocation_def decodeARMMMUInvocation_def
+  apply (simp add: arch_decode_invocation_def ARM_H.decodeInvocation_def
               split del: if_split)
   apply (cases arch_cap)
-      apply (simp add: isCap_simps split del: if_split)
+       \<comment> \<open>SGISignalCap\<close>
+       prefer 6
+       apply (in_case "arch_cap.SGISignalCap ?irq ?target")
+       apply (simp add: isCap_simps decode_sgi_signal_invocation_def decodeSGISignalInvocation_def)
+       apply (rule corres_returnOk)
+       apply (simp add: archinv_relation_def sgi_invocation_map_def)
+      \<comment> \<open>ASIDPoolCap\<close>
+      apply (simp add: isCap_simps decodeARMMMUInvocation_def Let_def split del: if_split)
       apply (cases "invocation_type (mi_label mi) \<noteq> ArchInvocationLabel ARMASIDPoolAssign")
        apply (simp split: invocation_label.split arch_invocation_label.split)
       apply (rename_tac word1 word2)
@@ -828,7 +831,7 @@ shows
          apply (wp whenE_wp getASID_wp)+
        apply (clarsimp simp: valid_cap_def)
       apply auto[1]
-     apply (simp add: isCap_simps split del: if_split)
+     apply (simp add: isCap_simps decodeARMMMUInvocation_def Let_def split del: if_split)
      apply (cases "invocation_type (mi_label mi) \<noteq> ArchInvocationLabel ARMASIDControlMakePool")
       apply (simp split: invocation_label.split arch_invocation_label.split)
      apply (subgoal_tac "length excaps' = length excaps")
@@ -910,7 +913,7 @@ shows
       apply (drule hd_in_set)
       apply simp
      apply fastforce
-    apply (simp add: isCap_simps split del: if_split)
+    apply (simp add: isCap_simps decodeARMMMUInvocation_def Let_def split del: if_split)
     apply (cases "invocation_type (mi_label mi) = ArchInvocationLabel ARMPageMap")
      apply (rename_tac dev frame_ptr cap_rights vmpage_size map_data)
      apply (case_tac "\<not>(2 < length args \<and> excaps \<noteq> [])", clarsimp split: list.splits)
@@ -969,7 +972,7 @@ shows
                      intro!: page_directory_pde_at_lookupI page_directory_at_aligned_pd_bits)
      apply fastforce
 
-    apply (simp split del: if_split)
+    apply (simp add: decodeARMMMUInvocation_def Let_def split del: if_split)
     apply (cases "invocation_type (mi_label mi) = ArchInvocationLabel ARMPageUnmap")
      apply simp
      apply (rule corres_returnOk)
@@ -985,7 +988,7 @@ shows
      apply (rule corres_returnOk)
      apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
     subgoal by (clarsimp split: invocation_label.splits arch_invocation_label.splits split del: if_split)
-   apply (simp add: isCap_simps split del: if_split)
+   apply (simp add: decodeARMMMUInvocation_def Let_def isCap_simps split del: if_split)
    apply (simp split: invocation_label.split arch_invocation_label.splits split del: if_split)
    apply (intro conjI impI allI)
     apply (simp split: list.split, intro conjI impI allI, simp_all)[1]
@@ -1048,7 +1051,7 @@ shows
    apply (drule pspace_relation_ctes_ofI[OF _ caps_of_state_cteD, rotated],
           erule invs_pspace_aligned', clarsimp+)
    apply (simp add: isCap_simps)
-  apply (simp add: isCap_simps split del: if_split)
+  apply (simp add: decodeARMMMUInvocation_def Let_def isCap_simps split del: if_split)
   apply (cases "ARM_H.isPDFlushLabel (invocation_type (mi_label mi))")
    apply (clarsimp split del: if_split)
    apply (cases args, simp)
@@ -1114,38 +1117,38 @@ lemma arch_performInvocation_corres:
   apply (clarsimp simp: arch_perform_invocation_def
                         ARM_H.performInvocation_def
                         performARMMMUInvocation_def)
-  apply (cases ai)
-      apply (clarsimp simp: archinv_relation_def)
+  apply (cases ai; clarsimp simp: archinv_relation_def performARMMMUInvocation_def)
+       apply (rule corres_underlying_split[OF _ corres_return_eq_same[OF refl]])
+         apply (erule corres_guard_imp [OF performPageTableInvocation_corres])
+          apply (fastforce simp: valid_arch_inv_def)
+         apply (fastforce simp: valid_arch_inv'_def)
+        apply wp
+       apply wp
       apply (rule corres_underlying_split[OF _ corres_return_eq_same[OF refl]])
-        apply (erule corres_guard_imp [OF performPageTableInvocation_corres])
+        apply (erule corres_guard_imp [OF performPageDirectoryInvocation_corres])
          apply (fastforce simp: valid_arch_inv_def)
         apply (fastforce simp: valid_arch_inv'_def)
        apply wp
       apply wp
-     apply (clarsimp simp: archinv_relation_def)
-     apply (rule corres_underlying_split[OF _ corres_return_eq_same[OF refl]])
-       apply (erule corres_guard_imp [OF performPageDirectoryInvocation_corres])
-        apply (fastforce simp: valid_arch_inv_def)
-       apply (fastforce simp: valid_arch_inv'_def)
-      apply wp
-     apply wp
-    apply (clarsimp simp: archinv_relation_def)
-    apply (erule corres_guard_imp [OF performPageInvocation_corres])
-     apply (fastforce simp: valid_arch_inv_def)
-    apply (fastforce simp: valid_arch_inv'_def)
-   apply (clarsimp simp: archinv_relation_def)
-   apply (rule corres_underlying_split[OF _ corres_return_eq_same[OF refl]])
-     apply (rule corres_guard_imp [OF performASIDControlInvocation_corres], rule refl)
+     apply (erule corres_guard_imp [OF performPageInvocation_corres])
       apply (fastforce simp: valid_arch_inv_def)
      apply (fastforce simp: valid_arch_inv'_def)
+    apply (rule corres_underlying_split[OF _ corres_return_eq_same[OF refl]])
+      apply (rule corres_guard_imp [OF performASIDControlInvocation_corres], rule refl)
+       apply (fastforce simp: valid_arch_inv_def)
+      apply (fastforce simp: valid_arch_inv'_def)
+     apply wp
     apply wp
-   apply wp
-  apply (clarsimp simp: archinv_relation_def)
-  apply (rule corres_underlying_split[OF _ corres_return_eq_same[OF refl]])
-    apply (rule corres_guard_imp [OF performASIDPoolInvocation_corres], rule refl)
-     apply (fastforce simp: valid_arch_inv_def)
-    apply (fastforce simp: valid_arch_inv'_def)
-   apply wp+
+   apply (rule corres_underlying_split[OF _ corres_return_eq_same[OF refl]])
+     apply (rule corres_guard_imp [OF performASIDPoolInvocation_corres], rule refl)
+      apply (fastforce simp: valid_arch_inv_def)
+     apply (fastforce simp: valid_arch_inv'_def)
+    apply wp+
+  apply (in_case "InvokeSGISignal ?i")
+  apply (clarsimp simp: perform_sgi_invocation_def performSGISignalGenerate_def
+                        sgi_invocation_map_def ucast_ucast_b is_up
+                   split: sgi_signal_invocation.splits)
+  apply (corres corres: corres_machine_op)
   done
 
 lemma asid_pool_typ_at_ext':
@@ -1196,17 +1199,21 @@ lemma performASIDControlInvocation_tcb_at':
   apply clarsimp
   done
 
+crunch performSGISignalGenerate
+  for tcb_at'[wp]: "\<lambda>s. P (tcb_at' t s)"
+
 lemma invokeArch_tcb_at':
   "\<lbrace>invs' and valid_arch_inv' ai and ct_active' and st_tcb_at' active' p\<rbrace>
      Arch.performInvocation ai
    \<lbrace>\<lambda>rv. tcb_at' p\<rbrace>"
-  apply (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def)
-  apply (cases ai, simp_all)
-     apply (wp, clarsimp simp: pred_tcb_at')
-    apply (wp, clarsimp simp: pred_tcb_at')
-    apply (wp, clarsimp simp: st_tcb_strg'[rule_format])
-   apply (wp performASIDControlInvocation_tcb_at', clarsimp simp: valid_arch_inv'_def)
-  apply (wp, clarsimp simp: pred_tcb_at')
+  apply (simp add: ARM_H.performInvocation_def)
+  apply (cases ai; simp add: performARMMMUInvocation_def)
+       apply (wp, clarsimp simp: pred_tcb_at')
+      apply (wp, clarsimp simp: pred_tcb_at')
+     apply (wp, clarsimp simp: st_tcb_strg'[rule_format])
+    apply (wp performASIDControlInvocation_tcb_at', clarsimp simp: valid_arch_inv'_def)
+   apply (wp, clarsimp simp: pred_tcb_at')
+  apply wpsimp
   done
 
 crunch setThreadState
@@ -1285,19 +1292,15 @@ crunch
 lemma sts_valid_arch_inv':
   "\<lbrace>valid_arch_inv' ai\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_arch_inv' ai\<rbrace>"
   apply (cases ai, simp_all add: valid_arch_inv'_def)
-      apply (clarsimp simp: valid_pti'_def split: page_table_invocation.splits)
-      apply (intro allI conjI impI)
-       apply (wp | simp)+
-    apply (rename_tac page_invocation)
-    apply (case_tac page_invocation, simp_all add: valid_page_inv'_def)[1]
-        apply (wp valid_slots_lift' valid_slots_duplicated_lift'|simp)+
-   apply (clarsimp simp: valid_aci'_def split: asidcontrol_invocation.splits)
-   apply (clarsimp simp: cte_wp_at_ctes_of)
-   apply (rule hoare_pre, wp)
-  apply clarsimp
-  apply (clarsimp simp: valid_apinv'_def split: asidpool_invocation.splits)
-  apply (rule hoare_pre, wp)
-  apply simp
+       apply (clarsimp simp: valid_pti'_def split: page_table_invocation.splits)
+       apply (intro allI conjI impI; wpsimp)
+      apply wp
+     apply (rename_tac page_invocation)
+     apply (case_tac page_invocation;
+            wpsimp simp: valid_page_inv'_def wp: valid_slots_lift' valid_slots_duplicated_lift')
+    apply (wpsimp simp: cte_wp_at_ctes_of valid_aci'_def split: asidcontrol_invocation.splits)
+   apply (wpsimp simp: valid_apinv'_def split: asidpool_invocation.splits)
+  apply wp
   done
 
 lemma less_pptrBase_valid_pde_offset':
@@ -1564,6 +1567,11 @@ lemma arch_decodeInvocation_wf[wp]:
    Arch.decodeInvocation label args cap_index slot arch_cap excaps
    \<lbrace>valid_arch_inv'\<rbrace>,-"
   apply (cases arch_cap)
+       prefer 6
+       apply (in_case "SGISignalCap ?irq ?target")
+       apply (wpsimp simp: ARM_H.decodeInvocation_def decodeSGISignalInvocation_def
+                           valid_arch_inv'_def)
+      apply (in_case "ASIDPoolCap ?ap ?asid_base")
       apply (simp add: decodeARMMMUInvocation_def ARM_H.decodeInvocation_def
                        Let_def split_def isCap_simps
                  cong: if_cong split del: if_split)
@@ -1903,6 +1911,11 @@ lemma doFlush_invs[wp]:
 lemma performPageDirectoryInvocation_invs'[wp]:
   "\<lbrace> invs' \<rbrace> performPageDirectoryInvocation pdi \<lbrace> \<lambda>rv. invs' \<rbrace>"
   by(cases pdi, simp_all add:performPageDirectoryInvocation_def, (wp|simp)+)
+
+lemma performSGISignalInvocation_invs[wp]:
+  "performSGISignalGenerate sgi \<lbrace>invs'\<rbrace>"
+  unfolding performSGISignalGenerate_def
+  by (wpsimp wp: dmo_invs'_simple simp: no_irq_sendSGI)
 
 lemma arch_performInvocation_invs':
   "\<lbrace>invs' and ct_active' and valid_arch_inv' invocation\<rbrace>

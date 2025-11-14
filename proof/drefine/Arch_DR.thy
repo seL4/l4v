@@ -64,11 +64,15 @@ where "transform_page_inv invok \<equiv> case invok of
 | ARM_A.page_invocation.PageGetAddr base \<Rightarrow> Some (cdl_page_invocation.PageGetAddress)
 | _ \<Rightarrow> None"
 
+definition transform_sgi_inv :: "sgi_signal_invocation \<Rightarrow> cdl_sgi_signal_invocation" where
+  "transform_sgi_inv iv \<equiv> cdl_sgi_signal_invocation.SGISignalGenerate"
+
 definition translate_arch_invocation :: "arch_invocation \<Rightarrow> cdl_invocation option"
 where "translate_arch_invocation invo \<equiv> case invo of
     arch_invocation.InvokePageTable oper \<Rightarrow> option_map cdl_invocation.InvokePageTable (transform_page_table_inv oper)
   | arch_invocation.InvokePage oper \<Rightarrow> option_map cdl_invocation.InvokePage (transform_page_inv oper)
   | arch_invocation.InvokePageDirectory oper \<Rightarrow> option_map cdl_invocation.InvokePageDirectory (transform_page_dir_inv oper)
+  | arch_invocation.InvokeSGISignal oper \<Rightarrow> Some (cdl_invocation.InvokeSGISignal (transform_sgi_inv oper))
   | arch_invocation.InvokeASIDControl oper \<Rightarrow>
       Some (case oper of ARM_A.MakePool frame slot parent base
         \<Rightarrow> cdl_invocation.InvokeAsidControl
@@ -1012,6 +1016,16 @@ next
                         select_ret_or_throw_def in_monad in_select)+
     done
 
+next
+  case (SGISignalCap irq target)
+  thus ?case
+    apply (simp add: Decode_D.decode_invocation_def
+                     Decode_A.decode_invocation_def arch_decode_invocation_def
+                     decode_sgi_signal_invocation_def)
+    apply (rule corres_returnOk)
+    apply (simp add: arch_invocation_relation_def translate_arch_invocation_def
+                     transform_sgi_inv_def)
+    done
 qed
 
 
@@ -1818,38 +1832,49 @@ lemma invoke_arch_corres:
     (arch_perform_invocation arch_invok)"
   apply (clarsimp simp: arch_perform_invocation_def valid_arch_inv_def)
   apply (case_tac arch_invok)
-      apply (simp_all add:arch_invocation_relation_def translate_arch_invocation_def)
-      apply (clarsimp simp:liftE_def bind_assoc)
+       apply (simp_all add:arch_invocation_relation_def translate_arch_invocation_def)
+       apply (clarsimp simp:liftE_def bind_assoc)
+       apply (rule corres_guard_imp)
+         apply (rule corres_split)
+            apply (rule invoke_page_table_corres; simp)
+           apply (rule corres_trivial, simp)
+          apply (wp | clarsimp)+
+      apply (rule corres_dummy_return_l)
       apply (rule corres_guard_imp)
         apply (rule corres_split)
-           apply (rule invoke_page_table_corres; simp)
-          apply (rule corres_trivial, simp)
+           apply (rule invoke_page_directory_corres; simp)
+          apply (rule corres_trivial[OF corres_free_return])
          apply (wp | clarsimp)+
-     apply (rule corres_dummy_return_l)
      apply (rule corres_guard_imp)
-       apply (rule corres_split)
-          apply (rule invoke_page_directory_corres; simp)
-         apply (rule corres_trivial[OF corres_free_return])
-        apply (wp | clarsimp)+
+       apply (rule invoke_page_corres)
+       apply (wp | clarsimp simp:invocation_duplicates_valid_def)+
+    apply (clarsimp split: asid_control_invocation.split)
+    apply (rule corres_dummy_return_l)
     apply (rule corres_guard_imp)
-      apply (rule invoke_page_corres)
-      apply (wp | clarsimp simp:invocation_duplicates_valid_def)+
-   apply (clarsimp split: asid_control_invocation.split)
+      apply (rule corres_split)
+         apply (rule invoke_asid_control_corres)
+         apply (simp add: arch_invocation_relation_def translate_arch_invocation_def)
+        apply (rule corres_trivial, simp)
+       apply (wp | simp)+
+   apply (clarsimp split: asid_pool_invocation.split)
    apply (rule corres_dummy_return_l)
    apply (rule corres_guard_imp)
      apply (rule corres_split)
-        apply (rule invoke_asid_control_corres)
+        apply (rule invoke_asid_pool_corres)
         apply (simp add: arch_invocation_relation_def translate_arch_invocation_def)
-       apply (rule corres_trivial, simp)
-      apply (wp | simp)+
-  apply (clarsimp split: asid_pool_invocation.split)
-  apply (rule corres_dummy_return_l)
+       apply (rule corres_trivial[OF corres_free_return])
+      apply (wp | clarsimp)+
+  apply (rename_tac iv; case_tac iv)
+  apply (clarsimp simp: perform_sgi_invocation_def transform_sgi_inv_def
+                       invoke_sgi_signal_generate_def)
+  apply (rule corres_add_noop_lhs)
   apply (rule corres_guard_imp)
     apply (rule corres_split)
-       apply (rule invoke_asid_pool_corres)
-       apply (simp add: arch_invocation_relation_def translate_arch_invocation_def)
-      apply (rule corres_trivial[OF corres_free_return])
-     apply (wp | clarsimp)+
+       apply (rule dcorres_machine_op_noop)
+       apply (wpsimp simp: sendSGI_def)
+      apply (rule corres_inst[where P=\<top> and P'=\<top>])
+      apply simp
+     apply wpsimp+
   done
 
 end

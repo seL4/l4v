@@ -4106,6 +4106,37 @@ lemma isNTFNbadge_dest:
   "isNotificationCap dest_cap \<Longrightarrow> capNtfnBadge dcap = capNtfnBadge dest_cap"
   using dest_derived by (auto simp: weak_derived'_def isCap_simps)
 
+context begin
+interpretation Arch .
+
+(* arch-split interface *)
+
+lemma mdb_chunked_arch_assms_scap[simp]:
+  "mdb_chunked_arch_assms scap =  mdb_chunked_arch_assms src_cap"
+  by (simp add: mdb_chunked_arch_assms_def)
+
+lemma mdb_chunked_arch_assms_dcap[simp]:
+  "mdb_chunked_arch_assms dcap =  mdb_chunked_arch_assms dest_cap"
+  by (simp add: mdb_chunked_arch_assms_def)
+
+lemma valid_arch_badges_src[simp]:
+  "valid_arch_badges scap c node = valid_arch_badges src_cap c node"
+  by (simp add: valid_arch_badges_def)
+
+lemma valid_arch_badges_dest[simp]:
+  "valid_arch_badges c dcap node = valid_arch_badges c dest_cap node"
+  by (simp add: valid_arch_badges_def)
+
+lemma valid_arch_badges_dest'[simp]:
+  "valid_arch_badges dcap c node = valid_arch_badges dest_cap c node"
+  by (simp add: valid_arch_badges_def)
+
+lemma valid_arch_badges_src'[simp]:
+  "valid_arch_badges c scap node = valid_arch_badges c src_cap node"
+  by (simp add: valid_arch_badges_def)
+
+end
+
 lemmas ep_simps =
   isEPsrc isEPbadge_src isNTFNsrc isNTFNbadge_src
   isEPdest isEPbadge_dest isNTFNdest isNTFNbadge_dest
@@ -4130,13 +4161,9 @@ proof -
     apply (frule_tac p=p in n_cap)
     apply (frule_tac p=p' in n_cap)
     apply (drule badge_n)+
-    apply (clarsimp simp: s_d_swap_def sameRegion_ntfn sameRegion_ep
-                          ep_simps region_simps
-                    split: if_split_asm)
-       apply fastforce
-      apply fastforce
-     apply fastforce
-    apply fastforce
+    apply (clarsimp simp: s_d_swap_def sameRegion_ntfn sameRegion_ep ep_simps region_simps
+                    split: if_split_asm;
+           blast intro: valid_arch_badges_firstBadged)
     done
 qed
 
@@ -5481,7 +5508,7 @@ proof (rule mdb_chunked_update_final [OF chunk, OF slot])
     apply (frule(1) Fin1)
     apply (rule disjE [OF cases])
      apply (clarsimp simp: ztc_sameRegion ztc1 ztc2 sameObjectAs_def3)
-     apply (drule_tac F="\<lambda>cap. (isNullCap cap, isZombie cap,
+     apply (drule_tac F="\<lambda>cap. (isNullCap cap, isZombie cap, isIRQControlCap cap,
                                 isUntypedCap cap, isArchPageCap cap,
                                 capRange cap)" in  master_eqE,
              simp add: isCap_Master capRange_Master del: isNullCap)+
@@ -5617,7 +5644,7 @@ lemma make_zombie_invs':
    apply simp
   apply (rule conjI)
    apply (clarsimp simp: modify_map_apply)
-   apply (simp add: valid_badges_def del: fun_upd_apply)
+   apply (simp add: valid_badges_def valid_arch_badges_def del: fun_upd_apply)
    apply clarify
    apply (thin_tac "\<not> isUntypedCap cap" for cap)
    apply (clarsimp simp: isCap_simps split: if_split_asm)
@@ -8067,6 +8094,10 @@ lemma sameRegion_cap'_src [simp]:
          ; fastforce simp: sameRegionAs_def X64_H.sameRegionAs_def isCap_simps split: if_split_asm)+
   done
 
+lemma mdb_chunked_arch_assms_src[simp]:
+  "mdb_chunked_arch_assms cap' = mdb_chunked_arch_assms src_cap"
+  by (simp add: mdb_chunked_arch_assms_def)
+
 lemma chunked':
   "mdb_chunked m'"
   using chunked
@@ -8273,7 +8304,7 @@ proof
   from valid
   have "valid_badges m" ..
   thus "valid_badges m'" using src dest parency
-    apply (clarsimp simp: valid_badges_def2)
+    apply (clarsimp simp: valid_badges_def2 valid_arch_badges_def)
     apply (drule m'_badged)+
     apply (drule m'_next)
     apply (clarsimp simp add: weak_derived'_def split: if_split_asm)
@@ -8868,7 +8899,7 @@ lemma invokeCNode_corres:
      apply (rule corres_split[OF getCurThread_corres])
        apply (subgoal_tac "thread + 2^cte_level_bits * tcbCallerSlot = cte_map (thread, tcb_cnode_index 3)")
         prefer 2
-        apply (simp add: cte_map_def tcb_cnode_index_def tcbCallerSlot_def)
+        apply (simp add: cte_map_def tcb_cnode_index_def tcbCallerSlot_def shiftl_t2n')
        apply (rule corres_split[OF getSlotCap_corres])
           apply simp
          apply (rule_tac P="\<lambda>s. (is_reply_cap cap \<or> cap = cap.NullCap) \<and>

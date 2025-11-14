@@ -96,17 +96,15 @@ lemma cap_master_update_cap_data [CNodeInv_AI_assms]:
 lemma same_object_as_def2:
   "same_object_as cp cp' = (cap_master_cap cp = cap_master_cap cp'
                                 \<and> \<not> cp = NullCap \<and> \<not> is_untyped_cap cp
-                                \<and> \<not> is_zombie cp
+                                \<and> \<not> is_zombie cp \<and> cp \<noteq> IRQControlCap
                                 \<and> (is_arch_cap cp \<longrightarrow>
-                                     (case the_arch_cap cp of PageCap dev x rs sz v
-                                              \<Rightarrow> x \<le> x + 2 ^ pageBitsForSize sz - 1
-                                          | _ \<Rightarrow> True)))"
+                                     (case the_arch_cap cp of
+                                        PageCap _ x _ sz _ \<Rightarrow> x \<le> x + 2 ^ pageBitsForSize sz - 1
+                                      | SGISignalCap _ _ \<Rightarrow> False
+                                      | _ \<Rightarrow> True)))"
   apply (simp add: same_object_as_def is_cap_simps split: cap.split)
-  apply (auto simp: cap_master_cap_def bits_of_def
-             split: arch_cap.split_asm)
-  apply (auto split: arch_cap.split)
-  done
-
+  by (auto simp: cap_master_cap_def bits_of_def
+           split: arch_cap.splits cap.splits)
 
 lemma same_object_as_cap_master [CNodeInv_AI_assms]:
   "same_object_as cap cap' \<Longrightarrow> cap_master_cap cap = cap_master_cap cap'"

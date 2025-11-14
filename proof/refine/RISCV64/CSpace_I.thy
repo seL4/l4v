@@ -424,7 +424,6 @@ proof (unfold valid_badges_def, clarify)
   assume c: "(m(p \<mapsto> cte)) c = Some (CTE cap n)"
   assume c': "(m(p \<mapsto> cte)) c' = Some (CTE cap' n')"
   assume nxt: "m(p \<mapsto> cte) \<turnstile> c \<leadsto> c'"
-  assume r: "sameRegionAs cap cap'"
 
   from p 0 have p0: "p \<noteq> 0" by (clarsimp simp: no_0_def)
 
@@ -444,15 +443,17 @@ proof (unfold valid_badges_def, clarify)
   with nxt c c' cp
   have "m \<turnstile> c \<leadsto> c'" by (simp add: mdb_next_unfold)
   ultimately
-  show "(isEndpointCap cap \<longrightarrow>
-            capEPBadge cap \<noteq> capEPBadge cap' \<longrightarrow>
-            capEPBadge cap' \<noteq> 0 \<longrightarrow>
-            mdbFirstBadged n') \<and>
-        (isNotificationCap cap \<longrightarrow>
-            capNtfnBadge cap \<noteq> capNtfnBadge cap' \<longrightarrow>
-            capNtfnBadge cap' \<noteq> 0 \<longrightarrow>
-            mdbFirstBadged n')"
-    using r c c' v by (fastforce simp: valid_badges_def)
+  show "(sameRegionAs cap cap' \<longrightarrow>
+          (isEndpointCap cap \<longrightarrow>
+              capEPBadge cap \<noteq> capEPBadge cap' \<longrightarrow>
+              capEPBadge cap' \<noteq> 0 \<longrightarrow>
+              mdbFirstBadged n') \<and>
+          (isNotificationCap cap \<longrightarrow>
+              capNtfnBadge cap \<noteq> capNtfnBadge cap' \<longrightarrow>
+              capNtfnBadge cap' \<noteq> 0 \<longrightarrow>
+              mdbFirstBadged n')) \<and>
+        valid_arch_badges cap cap' n'"
+    using c c' v by (fastforce simp: valid_badges_def)
 qed
 
 definition
@@ -665,6 +666,9 @@ lemma capUntypedSize_capBits:
                          zombie_type.splits)
   done
 
+(* unused in this architecture *)
+declare isIRQControlCapDescendant_def[simp]
+
 lemma sameRegionAs_def2:
  "sameRegionAs cap cap' = (\<lambda>cap cap'.
      (cap = cap'
@@ -703,7 +707,8 @@ lemma sameObjectAs_def2:
           \<and> (\<not> isNullCap cap \<and> \<not> isZombie cap \<and> \<not> isUntypedCap cap)
           \<and> (\<not> isNullCap cap' \<and> \<not> isZombie cap' \<and> \<not> isUntypedCap cap')
           \<and> (isArchFrameCap cap \<longrightarrow> capRange cap \<noteq> {})
-          \<and> (isArchFrameCap cap' \<longrightarrow> capRange cap' \<noteq> {})))
+          \<and> (isArchFrameCap cap' \<longrightarrow> capRange cap' \<noteq> {})
+          \<and> \<not>isIRQControlCap cap))
         (capMasterCap cap) (capMasterCap cap')"
   apply (simp add: sameObjectAs_def sameRegionAs_def2
                    isCap_simps capMasterCap_def
@@ -747,7 +752,7 @@ lemma sameObjectAs_sameRegionAs:
 
 lemma sameObjectAs_sym:
   "sameObjectAs c d = sameObjectAs d c"
-  by (simp add: sameObjectAs_def2 eq_commute conj_comms)
+  by (auto simp add: sameObjectAs_def2 eq_commute conj_comms)
 
 lemma untypedRange_Master:
   "untypedRange (capMasterCap cap) = untypedRange cap"
@@ -950,6 +955,7 @@ proof clarify
   assume p': "m' p' = Some (CTE c' n')"
   assume r: "sameRegionAs c c'"
   assume neq: "p \<noteq> p'"
+  assume arch_assm: "mdb_chunked_arch_assms c"
 
   note no_region = caps_no_overlap'_no_region [OF no_c valid no_v]
 
@@ -990,7 +996,7 @@ proof clarify
    "(m \<turnstile> p \<leadsto>\<^sup>+ p' \<or> m \<turnstile> p' \<leadsto>\<^sup>+ p) \<and>
     (m \<turnstile> p \<leadsto>\<^sup>+ p' \<longrightarrow> is_chunk m c p p') \<and>
     (m \<turnstile> p' \<leadsto>\<^sup>+ p \<longrightarrow> is_chunk m c' p' p)"
-    using chunked p p' neq r
+    using chunked p p' neq r arch_assm
     unfolding mdb_chunked_def m'_def
     by simp
 

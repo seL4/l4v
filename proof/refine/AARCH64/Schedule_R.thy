@@ -138,7 +138,7 @@ lemma ko_vcpu_cross:
   apply (clarsimp simp: obj_at_def)
   apply (clarsimp simp: state_relation_def pspace_relation_def obj_at_def)
   apply (drule bspec, fastforce)
-  apply (clarsimp simp: other_obj_relation_def
+  apply (clarsimp simp: other_aobj_relation_def
                   split: kernel_object.splits arch_kernel_object.splits)
   apply (prop_tac "ksPSpace s' p \<noteq> None")
    apply (prop_tac "p \<in> pspace_dom (kheap s)")

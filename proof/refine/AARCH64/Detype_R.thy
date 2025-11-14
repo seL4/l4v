@@ -907,7 +907,7 @@ lemma cNodeNoPartialOverlap:
 lemma state_rel_ghost:
   "(s,s') \<in> state_relation \<Longrightarrow>
    ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') (gsPTTypes (ksArchState s'))"
-  by (erule state_relationE)
+  by (erule state_relationE[simplified ghost_relation_wrapper_def]) (* FIXME arch-split *)
 
 lemma ghost_PTTypes:
   "\<lbrakk> ghost_relation kh gsu gsc pt_Ts; pt_Ts p = Some pt_t \<rbrakk> \<Longrightarrow>
@@ -1557,7 +1557,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     done
 
   from badges show "valid_badges ?ctes'"
-    by (simp add: valid_badges_def tree_to_ctes next_unfold')
+    by (clarsimp simp: valid_badges_def tree_to_ctes next_unfold')
 
   from contained show "caps_contained' ?ctes'"
     by (simp add: caps_contained'_def tree_to_ctes)

@@ -2704,10 +2704,13 @@ lemma kernel_mappings_canonical:
   apply simp
   done
 
-
 lemma valid_sc_size_less_word_bits:
   "valid_sched_context_size n \<Longrightarrow> min_sched_context_bits + n < word_bits"
   by (simp add: valid_sched_context_size_def untyped_max_bits_def word_bits_def)
+
+(* unused on this architecture *)
+declare is_irq_control_descendant_def[simp]
+declare should_be_arch_parent_of_def[simp]
 
 end
 

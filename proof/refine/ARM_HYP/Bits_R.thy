@@ -5,7 +5,7 @@
  *)
 
 theory Bits_R
-imports Corres
+imports Corres ArchStateRelationLemmas
 begin
 
 crunch_ignore (add:
@@ -43,9 +43,9 @@ lemma withoutFailure_wp [wp]:
 
 lemma no_fail_typeError [simp, wp]:
   "no_fail \<bottom> (typeError xs ko)"
-  by (simp add: typeError_def)
+  by (rule no_fail_False)
 
-lemma isCap_simps:
+lemma isCap_simps':
   "isZombie v = (\<exists>v0 v1 v2. v = Zombie v0 v1 v2)"
   "isArchObjectCap v = (\<exists>v0. v = ArchObjectCap v0)"
   "isThreadCap v = (\<exists>v0. v = ThreadCap v0)"
@@ -65,7 +65,10 @@ lemma isCap_simps:
   "isASIDPoolCap w = (\<exists>v0 v1. w = ASIDPoolCap v0 v1)"
   "isArchPageCap cap = (\<exists>d ref rghts sz data. cap = ArchObjectCap (PageCap d ref rghts sz data))"
   "isVCPUCap w = (\<exists>v. w = VCPUCap v)"
+  "isSGISignalCap w = (\<exists>irq target. w = SGISignalCap irq target)"
   by (auto simp: isCap_defs split: capability.splits arch_capability.splits)
+
+lemmas isCap_simps = isCap_simps' isArchSGISignalCap_def
 
 lemma untyped_not_null [simp]:
   "\<not> isUntypedCap NullCap" by (simp add: isCap_simps)

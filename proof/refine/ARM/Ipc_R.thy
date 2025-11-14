@@ -2318,7 +2318,7 @@ lemma setupCallerCap_corres:
                         tcbCallerSlot_def tcb_cnode_index_def
                         is_cap_simps)
   apply (auto intro: reply_no_descendants_mdbNext_null[OF not_waiting_reply_slot_no_descendants]
-               simp: cte_index_repair)
+               simp: cte_index_repair shiftl_t2n')
   done
 
 crunch getThreadCallerSlot

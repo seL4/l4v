@@ -220,7 +220,7 @@ next
                  (map (nat_to_cref bits) xs))"
     apply (subgoal_tac "Suc (unat (arg4 + arg5 - 1)) = unat arg4 + unat arg5")
      apply (simp add: upto_enum_def xs del: upt.simps)
-     apply (clarsimp simp: cte_map_def)
+     apply (clarsimp simp: cte_map_def shiftl_t2n)
      apply (subst of_bl_nat_to_cref)
        apply simp
       apply (simp add: word_bits_def)
@@ -482,59 +482,61 @@ lemma ctes_of_ko:
    \<comment> \<open>Arch cases\<close>
    apply (rename_tac arch_capability)
    apply (case_tac arch_capability)
-       \<comment> \<open>ASID case\<close>
-       apply (clarsimp simp: valid_cap'_def  typ_at'_def ko_wp_at'_def)
-       apply (intro exI conjI, assumption)
-       apply (clarsimp simp: obj_range'_def archObjSize_def objBitsKO_def)
-       apply (case_tac ko, simp+)[1]
-       apply (rename_tac arch_kernel_object)
-       apply (case_tac arch_kernel_object;
-              simp add: archObjSize_def asid_low_bits_def mask_def add_ac bit_simps pageBits_def
+        \<comment> \<open>ASID case\<close>
+        apply (clarsimp simp: valid_cap'_def  typ_at'_def ko_wp_at'_def)
+        apply (intro exI conjI, assumption)
+        apply (clarsimp simp: obj_range'_def archObjSize_def objBitsKO_def)
+        apply (case_tac ko, simp+)[1]
+        apply (rename_tac arch_kernel_object)
+        apply (case_tac arch_kernel_object;
+               simp add: archObjSize_def asid_low_bits_def mask_def add_ac bit_simps pageBits_def
                         word_size_bits_def)
-      apply simp
-     \<comment> \<open>Page case\<close>
-     apply (rename_tac word vmrights vmpage_size option)
-     apply (clarsimp simp: valid_cap'_def typ_at'_def ko_wp_at'_def capAligned_def)
-     apply (frule_tac ptr = ptr and sz = "pageBits" in nasty_range [where 'a=32, folded word_bits_def])
-        apply assumption
-       apply (simp add: pbfs_atleast_pageBits)+
-     apply (clarsimp,drule_tac x = idx in spec,clarsimp)
+       apply simp
+      \<comment> \<open>Page case\<close>
+      apply (rename_tac word vmrights vmpage_size option)
+      apply (clarsimp simp: valid_cap'_def typ_at'_def ko_wp_at'_def capAligned_def)
+      apply (frule_tac ptr = ptr and sz = "pageBits" in nasty_range [where 'a=32, folded word_bits_def])
+         apply assumption
+        apply (simp add: pbfs_atleast_pageBits)+
+      apply (clarsimp,drule_tac x = idx in spec,clarsimp)
+      apply (intro exI conjI,assumption)
+      apply (clarsimp simp: obj_range'_def)
+      apply (case_tac ko, simp_all split: if_splits,
+              (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n mask_def)+)[1]
+     \<comment> \<open>PT case\<close>
+     apply (rename_tac word option)
+     apply (clarsimp simp: valid_cap'_def obj_at'_def pageBits_def pteBits_def asid_bits_def
+                           page_table_at'_def typ_at'_def ko_wp_at'_def)
+     apply (frule_tac ptr=ptr and sz=2 in
+                      nasty_range[where 'a=32 and bz="ptBits", folded word_bits_def,
+                                  simplified pageBits_def word_bits_def, simplified,rotated])
+        apply (clarsimp simp add: ptBits_def pteBits_def)+
+     apply (drule_tac x=idx in spec)
+     apply clarsimp
      apply (intro exI conjI,assumption)
      apply (clarsimp simp: obj_range'_def)
-     apply (case_tac ko, simp_all split: if_splits,
-             (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n mask_def)+)[1]
-    \<comment> \<open>PT case\<close>
-    apply (rename_tac word option)
-    apply (clarsimp simp: valid_cap'_def obj_at'_def pageBits_def pteBits_def asid_bits_def
-                          page_table_at'_def typ_at'_def ko_wp_at'_def)
+     apply (case_tac ko; simp)
+     apply (rename_tac arch_kernel_object)
+     apply (case_tac arch_kernel_object; simp)
+     apply (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n
+                      ptBits_def pteBits_def mask_def)
+    \<comment> \<open>PD case\<close>
+    apply (clarsimp simp: valid_cap'_def obj_at'_def pageBits_def pdBits_def
+                          page_directory_at'_def typ_at'_def ko_wp_at'_def)
     apply (frule_tac ptr=ptr and sz=2 in
-                     nasty_range[where 'a=32 and bz="ptBits", folded word_bits_def,
-                                 simplified pageBits_def word_bits_def, simplified,rotated])
-    apply (clarsimp simp add: ptBits_def pteBits_def)+
-    apply (drule_tac x=idx in spec)
+                     nasty_range[where 'a=32 and bz="pdBits", folded word_bits_def,rotated,
+                                 simplified pdBits_def pageBits_def word_bits_def, simplified])
+       apply (clarsimp simp add: pdBits_def pdeBits_def)+
+    apply (drule_tac x="idx" in spec)
     apply clarsimp
-    apply (intro exI conjI,assumption)
-    apply (clarsimp simp: obj_range'_def)
+    apply (intro exI conjI, assumption)
+    apply (clarsimp simp: obj_range'_def objBitsKO_def field_simps)
     apply (case_tac ko; simp)
     apply (rename_tac arch_kernel_object)
     apply (case_tac arch_kernel_object; simp)
-    apply (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n
-                     ptBits_def pteBits_def mask_def)
-   \<comment> \<open>PD case\<close>
-   apply (clarsimp simp: valid_cap'_def obj_at'_def pageBits_def pdBits_def
-                         page_directory_at'_def typ_at'_def ko_wp_at'_def)
-   apply (frule_tac ptr=ptr and sz=2 in
-                    nasty_range[where 'a=32 and bz="pdBits", folded word_bits_def,rotated,
-                                simplified pdBits_def pageBits_def word_bits_def, simplified])
-      apply (clarsimp simp add: pdBits_def pdeBits_def)+
-   apply (drule_tac x="idx" in spec)
+    apply (simp add: field_simps archObjSize_def shiftl_t2n pdBits_def pdeBits_def mask_def)
+   \<comment> \<open>SGISignal\<close>
    apply clarsimp
-   apply (intro exI conjI, assumption)
-   apply (clarsimp simp: obj_range'_def objBitsKO_def field_simps)
-   apply (case_tac ko; simp)
-   apply (rename_tac arch_kernel_object)
-   apply (case_tac arch_kernel_object; simp)
-   apply (simp add: field_simps archObjSize_def shiftl_t2n pdBits_def pdeBits_def mask_def)
   \<comment> \<open>CNode case\<close>
   apply (clarsimp simp: valid_cap'_def obj_at'_def capAligned_def
                         objBits_simps')
@@ -943,16 +945,17 @@ lemma capRange_sameRegionAs:
   "\<lbrakk> sameRegionAs x y; s \<turnstile>' y; capClass x = PhysicalClass \<or> capClass y = PhysicalClass \<rbrakk>
    \<Longrightarrow> capRange x \<inter> capRange y \<noteq> {}"
   apply (erule sameRegionAsE)
-     apply (subgoal_tac "capClass x = capClass y \<and> capRange x = capRange y")
-      apply simp
-      apply (drule valid_capAligned)
-      apply (drule(1) capAligned_capUntypedPtr)
-      apply clarsimp
-     apply (rule conjI)
-      apply (rule master_eqI, rule capClass_Master, simp)
-     apply (rule master_eqI, rule capRange_Master, simp)
+      apply (subgoal_tac "capClass x = capClass y \<and> capRange x = capRange y")
+       apply simp
+       apply (drule valid_capAligned)
+       apply (drule(1) capAligned_capUntypedPtr)
+       apply clarsimp
+      apply (rule conjI)
+       apply (rule master_eqI, rule capClass_Master, simp)
+      apply (rule master_eqI, rule capRange_Master, simp)
+     apply blast
     apply blast
-   apply blast
+   apply (clarsimp simp: isCap_simps)
   apply (clarsimp simp: isCap_simps)
   done
 end
@@ -1462,7 +1465,7 @@ shows
               apply clarsimp
              apply (rule mdb_insert_again_child_axioms.intro)
              apply (clarsimp simp: isMDBParentOf_def)
-             apply (clarsimp simp: isCap_simps)
+             apply (clarsimp simp: isCap_simps isArchMDBParentOf_def)
              apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def
                                    ut_revocable'_def)
             apply (fold fun_upd_def)
@@ -1617,7 +1620,7 @@ lemma setCTE_cteCaps_of[wp]:
    \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
   apply (simp add: cteCaps_of_def)
   apply wp
-  apply (clarsimp elim!: rsubst[where P=P] intro!: ext)
+  apply (clarsimp elim!: rsubst[where P=P] del: ext intro!: ext)
   done
 
 lemma insertNewCap_wps[wp]:
@@ -1629,7 +1632,7 @@ lemma insertNewCap_wps[wp]:
   apply (simp_all add: insertNewCap_def)
    apply (wp hoare_drop_imps
             | simp add: o_def)+
-  apply (clarsimp elim!: rsubst[where P=P] intro!: ext)
+  apply (clarsimp elim!: rsubst[where P=P] del: ext intro!: ext)
   done
 
 definition apitype_of :: "cap \<Rightarrow> apiobject_type option"
@@ -1655,17 +1658,6 @@ lemma caps_contained_modify_mdb_helper[simp]:
   apply (cases "m p", simp_all add: modify_map_def)
   apply (case_tac a, simp_all)
   done
-
-lemma sameRegionAs_capRange_subset:
-  "\<lbrakk> sameRegionAs c c'; capClass c = PhysicalClass \<rbrakk> \<Longrightarrow> capRange c' \<subseteq> capRange c"
-  apply (erule sameRegionAsE)
-     apply (rule equalityD1)
-     apply (rule master_eqI, rule capRange_Master)
-     apply simp
-    apply assumption+
-  apply (clarsimp simp: isCap_simps)
-  done
-
 
 definition
   is_end_chunk :: "cte_heap \<Rightarrow> capability \<Rightarrow> word32 \<Rightarrow> bool"
@@ -1974,13 +1966,17 @@ lemma no_next_region:
   done
 
 lemma valid_badges_n' [simp]: "valid_badges n'"
-  using valid_badges
-  apply (clarsimp simp: valid_badges_def)
+  using valid_badges same_region parent
+  apply (clarsimp simp: valid_badges_def valid_arch_badges_def)
   apply (simp add: n'_direct_eq)
   apply (drule n'_badged)+
   apply (clarsimp split: if_split_asm)
-   apply (drule (1) no_next_region)
+   apply (frule (1) no_next_region)
+   apply (clarsimp simp: isCap_simps)
+   apply (erule_tac x=parent in allE)
    apply simp
+   apply (erule_tac x=p' in allE)
+   apply (clarsimp simp: isCap_simps)
   apply (erule_tac x=p in allE)
   apply (erule_tac x=p' in allE)
   apply simp
@@ -2008,10 +2004,7 @@ lemma phys': "capClass parent_cap = PhysicalClass"
   by simp
 
 lemma capRange_c': "capRange c' \<subseteq> capRange parent_cap"
-  apply (rule sameRegionAs_capRange_subset)
-   apply (rule same_region)
-  apply (rule phys')
-  done
+  by (rule sameRegion_capRange_sub, rule same_region)
 
 lemma untypedRange_c':
   assumes ut: "isUntypedCap c'"
@@ -2129,28 +2122,31 @@ lemma untyped_inc_mdbD:
    apply (cases "isUntypedCap cap'")
     apply (drule(4) untyped_incD'[where p=p and p'=p'])
     apply (erule sameRegionAsE, simp_all add: untypedCapRange)[1]
-      apply (cases "untypedRange cap = untypedRange cap'")
-       apply simp
-       apply (elim disjE conjE)
-      apply (simp only: simp_thms descendants_of'_D)+
-     apply (elim disjE conjE)
-     apply (simp add: subset_iff_psubset_eq)
-     apply (elim disjE)
-      apply (simp add:descendants_of'_D)+
-     apply (clarsimp simp:descendants_of'_def)
+       apply (cases "untypedRange cap = untypedRange cap'")
+        apply simp
+        apply (elim disjE conjE)
+          apply (simp only: simp_thms descendants_of'_D)+
+      apply (elim disjE conjE)
+      apply (simp add: subset_iff_psubset_eq)
+      apply (elim disjE)
+       apply (simp add: descendants_of'_D)+
+      apply (clarsimp simp: descendants_of'_def)
+     apply (clarsimp simp: isCap_simps)
     apply (clarsimp simp: isCap_simps)
-  apply clarsimp
-  apply (erule sameRegionAsE)
-      apply simp
-     apply (drule(1) untyped_mdbD',simp)
-         apply (simp add:untypedCapRange)
+   apply clarsimp
+   apply (erule sameRegionAsE)
+       apply simp
+      apply (drule(1) untyped_mdbD',simp)
+         apply (simp add: untypedCapRange)
          apply blast
         apply simp
        apply assumption
-      apply (simp add:descendants_of'_def)
-     apply (clarsimp simp:isCap_simps)
-    apply (simp add:isCap_simps)
-  apply (clarsimp simp:sameRegionAs_def3)
+      apply (simp add: descendants_of'_def)
+     apply (clarsimp simp: isCap_simps)
+    apply (clarsimp simp: isCap_simps)
+   apply (clarsimp simp: isCap_simps)
+  apply (clarsimp simp add: sameRegionAs_def3 del: disjCI)
+  apply (rule disjI1)
   apply (erule disjE)
    apply (intro conjI)
      apply blast
@@ -2159,9 +2155,9 @@ lemma untyped_inc_mdbD:
    apply clarsimp
    apply (rule untypedRange_not_emptyD)
    apply (simp add:untypedCapRange)
-    apply blast
+   apply blast
   apply (clarsimp simp:isCap_simps)
-done
+  done
 
 lemma parent_chunk:
   "is_chunk n' parent_cap parent site"
@@ -2198,6 +2194,8 @@ lemma mdb_chunked_n' [simp]:
     apply (frule sameRegionAs_trans [OF _ same_region])
     apply (clarsimp simp: parent is_chunk_def n'_trancl_eq n'_rtrancl_eq
                           m_rtrancl_to_site site' new_site_def)
+    apply (prop_tac "mdb_chunked_arch_assms cap'", clarsimp simp: isCap_simps mdb_chunked_arch_assms_def)
+    apply clarsimp
     apply (drule_tac x=p'' in spec)
     apply clarsimp
     apply (drule_tac p=p'' in m_cap, clarsimp)
@@ -2760,7 +2758,7 @@ lemma insertNewCap_ranges:
       apply (erule (1) ctes_of_valid_cap')
      apply (simp add: valid_mdb'_def valid_mdb_ctes_def)
     apply clarsimp
-   apply (clarsimp simp: isMDBParentOf_def)
+   apply (clarsimp simp: isMDBParentOf_def isArchMDBParentOf_def2)
    apply (clarsimp simp: isCap_simps valid_mdb'_def
                          valid_mdb_ctes_def ut_revocable'_def)
   apply clarsimp
@@ -3814,6 +3812,7 @@ lemma updateFreeIndex_corres:
          (cte_at' (cte_map src)
            and pspace_distinct' and pspace_aligned')
          (set_cap cap src) (updateFreeIndex (cte_map src) idx)"
+  supply ARM.ghost_relation_wrapper_def[simp] (* FIXME arch-split *)
   apply (rule corres_name_pre)
   apply (simp add: updateFreeIndex_def updateTrackedFreeIndex_def)
   apply (rule corres_guard_imp)
@@ -5021,15 +5020,6 @@ crunch doMachineOp
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
   (wp: crunch_wps)
 
-
-crunch set_thread_state
-  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
-crunch setQueue
-  for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
-crunch setQueue
-  for cte_wp_at[wp]: "cte_wp_at' P p"
-  (simp: cte_wp_at_ctes_of)
-
 lemma sts_valid_untyped_inv':
   "\<lbrace>valid_untyped_inv' ui\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_untyped_inv' ui\<rbrace>"
   apply (cases ui, simp add: ex_cte_cap_to'_def)
@@ -5073,13 +5063,8 @@ crunch insertNewCap
   for norqL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   (wp: crunch_wps)
 crunch insertNewCap
-  for ct[wp]: "\<lambda>s. P (ksCurThread s)"
-  (wp: crunch_wps)
-crunch insertNewCap
   for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
   (wp: crunch_wps)
-crunch updateNewFreeIndex
-  for cteCaps[wp]: "\<lambda>s. P (cteCaps_of s)"
 crunch updateNewFreeIndex
   for if_unsafe_then_cap'[wp]: "if_unsafe_then_cap'"
 

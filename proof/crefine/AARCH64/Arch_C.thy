@@ -1218,8 +1218,6 @@ lemma checkVPAlignment_spec:
                (vmsz_aligned (w_' s) (framesize_to_H (sz_' s)))}"
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: mask_eq_iff_w2p word_size)
-  apply (rule conjI)
-   apply (simp add: pageBitsForSize_def bit_simps split: vmpage_size.split)
   apply (simp add: vmsz_aligned_def is_aligned_mask mask_def split: if_split)
   done
 
@@ -2166,7 +2164,7 @@ lemma decodeARMFrameInvocation_ccorres:
                   apply (rule ccorres_cond_both'[where Q=\<top> and Q'=\<top>])
                     apply (clarsimp simp: ccap_relation_FrameCap_Size framesize_from_to_H)
                     apply (rule unat_eq_of_nat)
-                    apply (rule less_trans, rule pageBitsForSize_64, simp)
+                    apply (rule less_trans, rule pageBitsForSize_le_word_size, simp)
                    apply clarsimp
                    apply ccorres_rewrite
                    apply wpfix
@@ -2220,7 +2218,7 @@ lemma decodeARMFrameInvocation_ccorres:
                  apply (rule ccorres_cond_both'[where Q=\<top> and Q'=\<top>])
                    apply (clarsimp simp: ccap_relation_FrameCap_Size framesize_from_to_H)
                    apply (rule unat_eq_of_nat)
-                   apply (rule less_trans, rule pageBitsForSize_64, simp)
+                   apply (rule less_trans, rule pageBitsForSize_le_word_size, simp)
                   apply clarsimp
                   apply ccorres_rewrite
                   apply wpfix
@@ -2690,7 +2688,7 @@ lemma injection_handler_stateAssert_relocate:
 lemma decodeARMMMUInvocation_ccorres:
   notes Collect_const[simp del] if_cong[cong]
   shows
-  "\<lbrakk> interpret_excaps extraCaps' = excaps_map extraCaps; \<not> isVCPUCap cp \<rbrakk>
+  "\<lbrakk> interpret_excaps extraCaps' = excaps_map extraCaps; \<not> isVCPUCap cp; \<not> isSGISignalCap cp \<rbrakk>
    \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
@@ -4360,6 +4358,53 @@ lemma decodeARMVCPUInvocation_ccorres:
   apply auto
   done
 
+lemma invokeSGISignalGenerate_ccorres:
+  "ccorres (\<lambda>reply exc. reply = [] \<and> exc = scast EXCEPTION_NONE) ret__unsigned_long_'
+     \<top>
+     (\<lbrace> \<acute>irq = irq \<rbrace> \<inter> \<lbrace> \<acute>target___unsigned_long = ucast target \<rbrace>) hs
+     (performSGISignalGenerate (SGISignalGenerate irq target))
+     (Call invokeSGISignalGenerate_'proc)"
+  apply (cinit lift:  irq_' target___unsigned_long_')
+  apply (ctac (no_vcg) add: plat_sendSGI_ccorres)
+    apply (rule ccorres_return_C; simp)
+   apply wp
+  apply clarsimp
+  done
+
+lemma decodeSGISignalInvocation_ccorres:
+  "\<lbrakk> interpret_excaps extraCaps' = excaps_map extraCaps ; isSGISignalCap cp \<rbrakk>
+     \<Longrightarrow>
+   ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
+              and (valid_cap' (ArchObjectCap cp)))
+       \<lbrace>ccap_relation (ArchObjectCap cp) \<acute>cap\<rbrace> hs
+       (decodeSGISignalInvocation cp
+              >>= invocationCatch thread isBlocking isCall InvokeArchObject)
+       (Call decodeSGISignalInvocation_'proc)"
+  apply (clarsimp simp: isCap_simps)
+  apply (cinit' lift:  cap_')
+   apply (clarsimp simp: decodeSGISignalInvocation_def
+                         ccorres_invocationCatch_Inr returnOk_def liftE_bindE
+                         performInvocation_def AARCH64_H.performInvocation_def)
+   apply csymbr
+   apply csymbr
+   apply csymbr
+   apply csymbr
+   apply (ctac add: setThreadState_ccorres)
+     apply (ctac (no_vcg) add: invokeSGISignalGenerate_ccorres)
+      apply clarsimp
+      apply (rule ccorres_alternative2)
+      apply (rule ccorres_return_CE; simp)
+     apply wp
+    apply wp
+   apply (vcg exspec=setThreadState_modifies)
+  apply (clarsimp simp: rf_sr_ksCurThread)
+  apply (frule cap_get_tag_isCap_unfolded_H_cap)
+  apply (erule ccap_relationE)
+  apply (fastforce simp: cap_to_H_def cap_lift_def Let_def cap_tag_defs cap_sgi_signal_cap_lift_def
+                         ucast_ucast_mask)
+  done
+
 lemma Arch_decodeInvocation_ccorres:
   notes if_cong[cong]
   assumes "interpret_excaps extraCaps' = excaps_map extraCaps"
@@ -4384,9 +4429,10 @@ lemma Arch_decodeInvocation_ccorres:
 proof -
   note trim_call = ccorres_trim_returnE[rotated 2, OF ccorres_call]
 
-  have not_VCPUCap_case_helper_eq:
-    "\<And>P Q. \<not> isVCPUCap cp \<Longrightarrow> (case cp of arch_capability.VCPUCap x \<Rightarrow> P cp | _ \<Rightarrow> Q cp) = Q cp"
-    by (clarsimp simp: isVCPUCap_def split: arch_capability.splits)
+  have MMU_case_helper_eq:
+    "\<And>P Q R. \<lbrakk> \<not> isVCPUCap cp; \<not> isSGISignalCap cp \<rbrakk> \<Longrightarrow>
+           (case cp of VCPUCap x \<Rightarrow> P cp | SGISignalCap _ _ \<Rightarrow> R | _ \<Rightarrow> Q cp) = Q cp"
+    by (clarsimp simp: isCap_simps split: arch_capability.splits)
 
   from assms show ?thesis
     apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' slot_'
@@ -4394,21 +4440,26 @@ proof -
      apply csymbr
      apply (simp only: cap_get_tag_isCap_ArchObject AARCH64_H.decodeInvocation_def)
      apply (rule ccorres_Cond_rhs)
-      apply wpc
-           apply (clarsimp simp: isVCPUCap_def)+
+      apply (wpc; (rule ccorres_inst[where P=\<top> and P'=UNIV], solves \<open>clarsimp simp: isCap_simps\<close>)?)
       apply (rule ccorres_trim_returnE, simp+)
       apply (rule ccorres_call,
              rule decodeARMVCPUInvocation_ccorres, (simp add: isVCPUCap_def)+)[1]
+     apply (rule ccorres_Cond_rhs)
+      apply (wpc; (rule ccorres_inst[where P=\<top> and P'=UNIV], solves \<open>clarsimp simp: isCap_simps\<close>)?)
+      apply (rule ccorres_trim_returnE, simp+)
+      apply (rule ccorres_call,
+             rule decodeSGISignalInvocation_ccorres; simp add: isCap_simps)
+
      (* will not rewrite any other way, and we do not want to repeat proof for each MMU cap case
         of decodeARMMMUInvocation *)
-     apply (subst not_VCPUCap_case_helper_eq, assumption)
+     apply (subst MMU_case_helper_eq, assumption, assumption)
      apply (rule ccorres_trim_returnE, simp+)
      apply (rule ccorres_call,
-            rule decodeARMMMUInvocation_ccorres, simp+)[1]
+            rule decodeARMMMUInvocation_ccorres; simp)
     apply (clarsimp simp: cte_wp_at_ctes_of ct_in_state'_def)
     apply (drule_tac t="cteCap cte" in sym, simp)
     apply (frule(1) ctes_of_valid', simp)
-    apply (clarsimp split: arch_capability.splits simp: isVCPUCap_def)
+    apply (fastforce split: arch_capability.splits simp: isCap_simps)
     done
 qed
 

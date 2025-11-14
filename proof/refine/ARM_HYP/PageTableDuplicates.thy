@@ -1240,11 +1240,6 @@ crunch
   for ko_wp_at'[wp]: "\<lambda>s. ko_wp_at' P p s"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
-crunch
- armv_contextSwitch
-  for ko_wp_at'[wp]: "\<lambda>s. ko_wp_at' P p s"
-  (wp: crunch_wps simp: crunch_simps unless_def)
-
 lemma setVCPU_nondup_obj[wp]:
  "\<lbrace>\<lambda>s. ko_wp_at' nondup_obj p s\<rbrace>
    setObject a (vcpu::vcpu)
@@ -1886,7 +1881,7 @@ lemma placeASIDPool_valid_duplicates'[wp]:
   apply assumption
   done
 
-crunch performARMVCPUInvocation
+crunch performARMVCPUInvocation, performSGISignalGenerate
   for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps)
 
@@ -1956,10 +1951,6 @@ crunch restart, setPriority, setMCPriority
   for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (ignore: threadSet wp: setObject_ksInterrupt updateObject_default_inv
      simp: crunch_simps)
-
-crunch getThreadBufferSlot
-  for inv[wp]: P
-  (wp: crunch_wps)
 
 lemma tc_valid_duplicates':
   "\<lbrace>invs' and sch_act_simple and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and tcb_at' a and ex_nonz_cap_to' a and

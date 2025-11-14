@@ -605,7 +605,8 @@ crunch decodeDomainInvocation
   (wp: crunch_wps simp: crunch_simps)
 
 lemma arch_cap_exhausted:
-  "\<lbrakk>\<not> isFrameCap cap; \<not> isPageTableCap cap; \<not> isASIDControlCap cap; \<not> isASIDPoolCap cap; \<not> isVCPUCap cap\<rbrakk>
+  "\<lbrakk>\<not> isFrameCap cap; \<not> isPageTableCap cap; \<not> isASIDControlCap cap; \<not> isASIDPoolCap cap;
+    \<not> isVCPUCap cap; \<not>isSGISignalCap cap\<rbrakk>
     \<Longrightarrow> undefined \<lbrace>P\<rbrace>"
   by (cases cap; simp add: isCap_simps)
 

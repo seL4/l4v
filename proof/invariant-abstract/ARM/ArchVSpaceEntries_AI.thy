@@ -1180,6 +1180,10 @@ crunch check_budget_restart, invoke_sched_control_configure_flags
   (wp: hoare_drop_imps hoare_vcg_if_lift2 whileLoop_valid_inv hoare_vcg_all_lift
    simp: Let_def crunch_simps ignore: tcb_release_remove)
 
+lemma perform_sgi_invocation_valid_pdpt[wp]:
+  "perform_sgi_invocation iv \<lbrace>valid_pdpt_objs\<rbrace>"
+  by (wpsimp simp: perform_sgi_invocation_def)
+
 lemma perform_invocation_valid_pdpt[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i and valid_pdpt_objs and
     invocation_duplicates_valid i and
@@ -1531,6 +1535,12 @@ lemma create_mapping_entries_safe[wp]:
   apply simp
   done
 
+lemma decode_sgi_signal_invocation_valid_pdpt[wp]:
+  "\<lbrace>\<top>\<rbrace>
+   decode_sgi_signal_invocation (SGISignalCap irq target)
+   \<lbrace>invocation_duplicates_valid \<circ> InvokeArchObject\<rbrace>, -"
+  by (wpsimp simp: decode_sgi_signal_invocation_def invocation_duplicates_valid_def)
+
 lemma arch_decode_invocation_valid_pdpt[wp]:
   "\<lbrace>invs and valid_cap (cap.ArchObjectCap cap) and valid_pdpt_objs\<rbrace>
    arch_decode_invocation label args cap_index slot cap excaps
@@ -1559,7 +1569,8 @@ proof -
                    cong: if_cong)
     \<comment> \<open>Handle the two interesting cases now\<close>
     apply (clarsimp; erule disjE; cases cap;
-           simp add: isPDFlushLabel_def isPageFlushLabel_def throwError_R')
+           simp add: isPDFlushLabel_def isPageFlushLabel_def throwError_R';
+           (solves wp)?)
      \<comment> \<open>PageTableMap\<close>
      apply (wpsimp simp: Let_def get_master_pde_def
                      wp: get_pde_wp hoare_vcg_if_lift_ER | wp (once) hoare_drop_imps)+

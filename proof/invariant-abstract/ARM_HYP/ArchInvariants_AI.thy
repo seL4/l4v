@@ -61,7 +61,8 @@ lemma arch_cap_fun_lift_expand[simp]:
                               | PageCap dev obj_ref rights sz vr \<Rightarrow> P_PageCap obj_ref rights sz vr
                               | PageTableCap obj_ref vr \<Rightarrow> P_PageTableCap dev obj_ref vr
                               | PageDirectoryCap obj_ref asid \<Rightarrow> P_PageDirectoryCap obj_ref asid
-                              | VCPUCap obj_ref \<Rightarrow> P_VCPUCap obj_ref)
+                              | VCPUCap obj_ref \<Rightarrow> P_VCPUCap obj_ref
+                              | SGISignalCap irq target \<Rightarrow> P_SGI irq target)
                       F) = (\<lambda>c.
    (case c of
       ArchObjectCap (ASIDPoolCap obj_ref asid) \<Rightarrow> P_ASIDPoolCap obj_ref asid
@@ -70,6 +71,7 @@ lemma arch_cap_fun_lift_expand[simp]:
     | ArchObjectCap (PageTableCap obj_ref vr) \<Rightarrow> P_PageTableCap dev obj_ref vr
     | ArchObjectCap (PageDirectoryCap obj_ref asid) \<Rightarrow> P_PageDirectoryCap obj_ref asid
     | ArchObjectCap (VCPUCap obj_ref) \<Rightarrow> P_VCPUCap obj_ref
+    | ArchObjectCap (SGISignalCap irq target) \<Rightarrow> P_SGI irq target
     | _ \<Rightarrow> F))"
   apply (rule ext)
   by (simp add: arch_cap_fun_lift_def)
@@ -177,14 +179,15 @@ definition
 definition
   valid_arch_cap_ref :: "arch_cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "valid_arch_cap_ref ac s \<equiv> (case ac of
+  "valid_arch_cap_ref ac s \<equiv> case ac of
     ASIDPoolCap r as \<Rightarrow> typ_at (AArch AASIDPool) r s
   | ASIDControlCap \<Rightarrow> True
   | PageCap dev r rghts sz mapdata \<Rightarrow> if dev then typ_at (AArch (ADeviceData sz)) r s
                                              else typ_at (AArch (AUserData sz)) r s
   | PageTableCap r mapdata \<Rightarrow> typ_at (AArch APageTable) r s
   | PageDirectoryCap r mapdata\<Rightarrow> typ_at (AArch APageDirectory) r s
-  | VCPUCap r \<Rightarrow> typ_at (AArch AVCPU) r s)"
+  | VCPUCap r \<Rightarrow> typ_at (AArch AVCPU) r s
+  | SGISignalCap _ _ \<Rightarrow> True"
 
 lemmas valid_arch_cap_ref_simps =
   valid_arch_cap_ref_def[split_simps arch_cap.split]
@@ -192,7 +195,7 @@ lemmas valid_arch_cap_ref_simps =
 definition
   valid_arch_cap :: "arch_cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "valid_arch_cap ac s \<equiv> (case ac of
+  "valid_arch_cap ac s \<equiv> case ac of
     ASIDPoolCap r as \<Rightarrow>
          typ_at (AArch AASIDPool) r s \<and> is_aligned as asid_low_bits
            \<and> as \<le> 2^asid_bits - 1
@@ -212,7 +215,8 @@ where
   | PageDirectoryCap r mapdata \<Rightarrow>
     typ_at (AArch APageDirectory) r s \<and>
     case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata
-  | VCPUCap r \<Rightarrow> typ_at (AArch AVCPU) r s)"
+  | VCPUCap r \<Rightarrow> typ_at (AArch AVCPU) r s
+  | SGISignalCap _ _ \<Rightarrow> True"
 
 lemmas valid_arch_cap_simps =
   valid_arch_cap_def[split_simps arch_cap.split]
@@ -230,12 +234,13 @@ lemmas is_nondevice_page_cap_simps = is_nondevice_page_cap_def[split_simps arch_
 primrec
   acap_class :: "arch_cap \<Rightarrow> capclass"
 where
-  "acap_class (ASIDPoolCap x y)      = PhysicalClass"
+  "acap_class (ASIDPoolCap _ _)      = PhysicalClass"
 | "acap_class (ASIDControlCap)       = ASIDMasterClass"
-| "acap_class (PageCap dev x y sz z)     = PhysicalClass"
-| "acap_class (PageTableCap x y)     = PhysicalClass"
-| "acap_class (PageDirectoryCap x y) = PhysicalClass"
-| "acap_class (VCPUCap v)            = PhysicalClass"
+| "acap_class (PageCap _ _ _ _ _)    = PhysicalClass"
+| "acap_class (PageTableCap _ _)     = PhysicalClass"
+| "acap_class (PageDirectoryCap _ _) = PhysicalClass"
+| "acap_class (VCPUCap _)            = PhysicalClass"
+| "acap_class (SGISignalCap _ _)     = IRQClass"
 
 definition
   valid_ipc_buffer_cap_arch :: "arch_cap \<Rightarrow> word32 \<Rightarrow> bool"
@@ -806,11 +811,11 @@ definition
 definition
   "is_pt_cap c \<equiv> \<exists>p asid. c = ArchObjectCap (PageTableCap p asid)"
 
-lemma is_arch_cap_simps:
-  "is_pg_cap cap = (\<exists>dev p R sz m. cap = (ArchObjectCap (PageCap dev p R sz m)))"
-  "is_pd_cap cap = (\<exists>p asid. cap = (ArchObjectCap (PageDirectoryCap p asid)))"
-  "is_pt_cap cap = (\<exists>p asid. cap = (ArchObjectCap (PageTableCap p asid)))"
-  by (auto simp add: is_pg_cap_def is_pd_cap_def is_pt_cap_def)
+lemmas is_arch_cap_simps =
+  is_pg_cap_def[THEN meta_eq_to_obj_eq]
+  is_pt_cap_def[THEN meta_eq_to_obj_eq]
+  is_pd_cap_def[THEN meta_eq_to_obj_eq]
+  is_SGISignalCap_def
 
 definition
   "cap_asid_arch cap \<equiv> case cap of
@@ -2488,6 +2493,7 @@ lemma arch_gen_obj_refs_simps[simp]:
   "arch_gen_obj_refs (ASIDControlCap) = {}"
   "arch_gen_obj_refs (PageCap x1 x2 x3 x4 x5) = {}"
   "arch_gen_obj_refs (VCPUCap x6) = {}"
+  "arch_gen_obj_refs (SGISignalCap irq target) = {}"
   by (simp add: arch_gen_obj_refs_def)+
 
 lemma same_aobject_same_arch_gen_refs:

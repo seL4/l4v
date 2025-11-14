@@ -62,21 +62,22 @@ lemma arch_decode_ARMASIDControlMakePool_empty_fail:
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
   apply (simp add: arch_decode_invocation_def Let_def)
   apply (wpsimp simp: arch_decode_invocation_def decode_asid_pool_invocation_def)
-     apply (simp add: decode_asid_control_invocation_def)
-     apply (intro impI conjI allI)
-     apply (simp add: split_def)
-     apply (wp (once), simp)
-     apply (subst bindE_assoc[symmetric])
-     apply (rule empty_fail_bindE)
-      subgoal by (force simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def
-                              bind_def return_def returnOk_def lift_def liftE_def fail_def
-                              gets_def get_def assert_def select_def
-                        split: if_split_asm)
-     apply wpsimp
-    apply (wpsimp simp: decode_frame_invocation_def decode_fr_inv_flush_def Let_def)
-   apply (wpsimp simp: decode_vspace_invocation_def decode_vs_inv_flush_def
-                       decode_page_table_invocation_def Let_def)
-  apply (wpsimp simp: decode_vcpu_invocation_def)
+      apply (simp add: decode_asid_control_invocation_def)
+      apply (intro impI conjI allI)
+      apply (simp add: split_def)
+      apply (wp (once), simp)
+      apply (subst bindE_assoc[symmetric])
+      apply (rule empty_fail_bindE)
+       subgoal by (force simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def
+                               bind_def return_def returnOk_def lift_def liftE_def fail_def
+                               gets_def get_def assert_def select_def
+                         split: if_split_asm)
+      apply wpsimp
+     apply (wpsimp simp: decode_frame_invocation_def decode_fr_inv_flush_def Let_def)
+    apply (wpsimp simp: decode_vspace_invocation_def decode_vs_inv_flush_def
+                        decode_page_table_invocation_def Let_def)
+   apply (wpsimp simp: decode_vcpu_invocation_def)
+  apply (wpsimp simp: decode_sgi_signal_invocation_def)
   done
 
 lemma arch_decode_ARMASIDPoolAssign_empty_fail:
@@ -84,7 +85,7 @@ lemma arch_decode_ARMASIDPoolAssign_empty_fail:
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
   unfolding arch_decode_invocation_def decode_page_table_invocation_def decode_frame_invocation_def
             decode_asid_control_invocation_def decode_fr_inv_flush_def Let_def
-            decode_vspace_invocation_def decode_vs_inv_flush_def
+            decode_vspace_invocation_def decode_vs_inv_flush_def decode_sgi_signal_invocation_def
   apply (wpsimp; wpsimp?)
   apply (simp add: decode_asid_pool_invocation_def)
   apply (intro impI allI conjI)
@@ -113,12 +114,12 @@ lemma arch_decode_invocation_empty_fail[wp]:
   apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDPoolAssign_empty_fail\<close>\<close>)
   apply ((simp add: arch_decode_ARMASIDControlMakePool_empty_fail
                     arch_decode_ARMASIDPoolAssign_empty_fail)+)[2]
-  apply (all \<open>(wpsimp simp: arch_decode_invocation_def decode_asid_pool_invocation_def
-                            decode_asid_control_invocation_def decode_frame_invocation_def
-                            decode_page_table_invocation_def decode_pt_inv_map_def
-                            decode_fr_inv_map_def decode_fr_inv_flush_def
-                            decode_vspace_invocation_def decode_vs_inv_flush_def Let_def)\<close>) (* 15s *)
-  done
+  by (all \<open>(wpsimp simp: arch_decode_invocation_def decode_asid_pool_invocation_def
+                         decode_asid_control_invocation_def decode_frame_invocation_def
+                         decode_page_table_invocation_def decode_pt_inv_map_def
+                         decode_fr_inv_map_def decode_fr_inv_flush_def
+                         decode_vspace_invocation_def decode_vs_inv_flush_def Let_def
+                         decode_sgi_signal_invocation_def)\<close>) (* 15s *)
 
 end
 

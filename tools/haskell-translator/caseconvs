@@ -2289,3 +2289,216 @@ case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((NotificationCap { c
     else if isZombie cap \<and> \<not> final
     then ->13
     else ->14
+
+case \x of (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@EndpointCap {})) -> ((a@NotificationCap {}), (b@NotificationCap {})) -> ((a@CNodeCap {}), (b@CNodeCap {})) -> ((a@ThreadCap {}), (b@ThreadCap {})) -> ((a@ReplyCap {}), (b@ReplyCap {})) -> (DomainCap, DomainCap) -> (IRQControlCap, IRQControlCap) -> (IRQControlCap, (IRQHandlerCap {})) -> (IRQControlCap, (ArchObjectCap b)) -> ((IRQHandlerCap a), (IRQHandlerCap b)) -> ((ArchObjectCap a), (ArchObjectCap b)) -> (_, _) ->  --->  let (a, b) = \x in
+    if isUntypedCap a
+    then ->1
+    else if isEndpointCap a \<and> isEndpointCap b
+    then ->2
+    else if isNotificationCap a \<and> isNotificationCap b
+    then ->3
+    else if isCNodeCap a \<and> isCNodeCap b
+    then ->4
+    else if isThreadCap a \<and> isThreadCap b
+    then ->5
+    else if isReplyCap a \<and> isReplyCap b
+    then ->6
+    else if isDomainCap a \<and> isDomainCap b
+    then ->7
+    else if isIRQControlCap a \<and> isIRQControlCap b
+    then ->8
+    else if isIRQControlCap a \<and> isIRQHandlerCap b
+    then ->9
+    else if isIRQControlCap a \<and> isArchObjectCap b
+    then (case b of ArchObjectCap b \<Rightarrow> ->10
+         )
+    else if isIRQHandlerCap a \<and> isIRQHandlerCap b
+    then (case (a, b) of
+        (IRQHandlerCap a, IRQHandlerCap b) \<Rightarrow> ->11
+        )
+    else if isArchObjectCap a \<and> isArchObjectCap b
+    then (case (a, b) of
+        (ArchObjectCap a, ArchObjectCap b) \<Rightarrow> ->12
+        )
+    else ->13
+
+case \x of (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandlerTrigger, irqW:triggerW:index:depth:_, cnode:_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandlerTrigger,_,_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal, irqW:targetW:index:depth:_, cnode:_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal,_,_) -> _ ->  ---> let (label, args, extraCaps) = \x in
+    case (label, args, extraCaps) of
+      (ArchInvocationLabel ARMIRQIssueIRQHandlerTrigger,
+        irqW#triggerW#index#depth#_, cnode#_) => ->1
+    | (ArchInvocationLabel ARMIRQIssueIRQHandlerTrigger, _, _) => ->2
+    | (ArchInvocationLabel ARMIRQIssueSGISignal,
+        irqW#targetW#index#depth#_, cnode#_) => ->3
+    | (ArchInvocationLabel ARMIRQIssueSGISignal, _, _) => ->4
+    | _ => ->5
+
+case \x of (ArchInv.IssueIRQHandler (IRQ irq) destSlot srcSlot trigger) -> (ArchInv.IssueSGISignal irq target controlSlot sgiSlot) ->  ---> case \x of
+      IssueIRQHandler irq destSlot srcSlot trigger => ->1
+    | IssueSGISignal irq target controlSlot sgiSlot => ->2
+
+case \x of (ArchInv.SGISignalGenerate irq target) ->  ---> case \x of
+    SGISignalGenerate irq target => ->1
+
+case \x of (c@PageTableCap { capPTMappedAddress = Just _ }) -> (PageTableCap { capPTMappedAddress = Nothing }) -> (c@FrameCap {}) -> c@ASIDControlCap -> (c@ASIDPoolCap {}) -> (c@VCPUCap {}) -> (c@SGISignalCap {}) ->   ---> let c = \x in
+  if isPageTableCap c \<and> capPTMappedAddress c \<noteq> None
+  then ->1
+  else if isPageTableCap c \<and> capPTMappedAddress c = None
+  then ->2
+  else if isFrameCap c
+  then ->3
+  else if c = ASIDControlCap
+  then ->4
+  else if isASIDPoolCap c
+  then ->5
+  else if isVCPUCap c
+  then ->6
+  else if isSGISignalCap c
+  then ->7
+  else undefined
+
+case \x of ((a@FrameCap {}), (b@FrameCap {})) -> ((a@PageTableCap {}), (b@PageTableCap {})) -> (ASIDControlCap, ASIDControlCap) -> ((a@ASIDPoolCap {}), (b@ASIDPoolCap {})) -> ((a@VCPUCap {}), (b@VCPUCap {})) -> ((a@SGISignalCap {}), (b@SGISignalCap {})) -> (_, _) ->  ---> let (a,b) = \x in
+  if isFrameCap a \<and> isFrameCap b
+  then ->1
+  else if isPageTableCap a \<and> isPageTableCap b
+  then ->2
+  else if a = ASIDControlCap \<and> b = ASIDControlCap
+  then ->3
+  else if isASIDPoolCap a \<and> isASIDPoolCap b
+  then ->4
+  else if isVCPUCap a \<and> isVCPUCap b
+  then ->5
+  else if isSGISignalCap a \<and> isSGISignalCap b
+  then ->6
+  else ->7
+
+case \x of ArchInv.InvokeVCPU iv -> ArchInv.InvokeSGISignal iv -> _ ->  ---> case \x of
+    InvokeVCPU iv \<Rightarrow> ->1
+  | InvokeSGISignal iv \<Rightarrow> ->2
+  | _ \<Rightarrow> ->3
+
+case \x of cap@(FrameCap {}) -> cap@(PageTableCap { capPTType = NormalPT_T }) -> cap@(PageTableCap { capPTType = VSRootPT_T }) -> cap@(ASIDControlCap {}) -> cap@(ASIDPoolCap {}) -> _ ->  ---> let cap = \x in
+  if isFrameCap cap
+  then ->1
+  else if isPageTableCap cap \<and> capPTType cap = NormalPT_T
+  then ->2
+  else if isPageTableCap cap \<and> capPTType cap = VSRootPT_T
+  then ->3
+  else if isASIDControlCap cap
+  then ->4
+  else if isASIDPoolCap cap
+  then ->5
+  else ->6
+
+case \x of ((a@FrameCap { capFBasePtr = ptrA }), (b@FrameCap {})) -> ((SGISignalCap {}), _) -> (a, b) ->  ---> let (a, b) = \x in
+    if isFrameCap a \<and> isFrameCap b
+    then let ptrA = capFBasePtr a in ->1
+    else if isSGISignalCap a
+    then ->2
+    else ->3
+
+case \x of (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler, irqW:triggerW:index:depth:_, cnode:_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler,_,_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal, irqW:targetW:index:depth:_, cnode:_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal,_,_) -> _ ->  ---> let (label, args, extraCaps) = \x in
+    case (label, args, extraCaps) of
+      (ArchInvocationLabel ARMIRQIssueIRQHandler,
+        irqW#triggerW#index#depth#_, cnode#_) => ->1
+    | (ArchInvocationLabel ARMIRQIssueIRQHandler, _, _) => ->2
+    | (ArchInvocationLabel ARMIRQIssueSGISignal,
+        irqW#targetW#index#depth#_, cnode#_) => ->3
+    | (ArchInvocationLabel ARMIRQIssueSGISignal, _, _) => ->4
+    | _ => ->5
+
+case \x of (c@PageTableCap { capPTMappedAddress = Just _ }) -> (PageTableCap { capPTMappedAddress = Nothing }) -> (c@PageDirectoryCap { capPDMappedASID = Just _ }) -> (PageDirectoryCap { capPDMappedASID = Nothing }) -> (c@PageCap {}) -> c@ASIDControlCap -> (c@ASIDPoolCap {}) -> (c@SGISignalCap {}) ->  ---> let c = \x in
+    if isPageTableCap c \<and> capPTMappedAddress c \<noteq> None
+    then ->1
+    else if isPageTableCap c \<and> capPTMappedAddress c = None
+    then ->2
+    else if isPageDirectoryCap c \<and> capPDMappedASID c \<noteq> None
+    then ->3
+    else if isPageDirectoryCap c \<and> capPDMappedASID c = None
+    then ->4
+    else if isPageCap c
+    then ->5
+    else if isASIDControlCap c
+    then ->6
+    else if isASIDPoolCap c
+    then ->7
+    else if isSGISignalCap c
+    then ->8
+    else undefined
+
+case \x of ((a@PageCap {}), (b@PageCap {})) -> ((a@PageTableCap {}), (b@PageTableCap {})) -> ((a@PageDirectoryCap {}), (b@PageDirectoryCap {})) -> (ASIDControlCap, ASIDControlCap) -> ((a@ASIDPoolCap {}), (b@ASIDPoolCap {})) -> ((a@SGISignalCap {}), (b@SGISignalCap {})) -> (_, _) ->  ---> let (a, b) = \x in
+    if isPageCap a \<and> isPageCap b
+    then ->1
+    else if isPageTableCap a \<and> isPageTableCap b
+    then ->2
+    else if isPageDirectoryCap a \<and> isPageDirectoryCap b
+    then ->3
+    else if isASIDControlCap a \<and> isASIDControlCap b
+    then ->4
+    else if isASIDPoolCap a \<and> isASIDPoolCap b
+    then ->5
+    else if isSGISignalCap a \<and> isSGISignalCap b
+    then ->6
+    else ->7
+
+case \x of ((a@PageCap { capVPBasePtr = ptrA }), (b@PageCap {})) -> ((SGISignalCap {}), _) -> (a, b) ->  --->  let (a, b) = \x in
+    if isPageCap a \<and> isPageCap b
+    then let ptrA = capVPBasePtr a
+        in ->1
+    else if isSGISignalCap a
+    then ->2
+    else ->3
+
+case \x of ArchInv.InvokeSGISignal iv -> _ ->  ---> case \x of
+    InvokeSGISignal iv \<Rightarrow> ->1
+  | _ \<Rightarrow> ->2
+
+case \x of cap@(PageDirectoryCap {}) -> cap@(PageTableCap {}) -> cap@(PageCap {}) -> ASIDControlCap -> cap@(ASIDPoolCap {}) -> _ -> ---> let cap = \x in
+    if isPageDirectoryCap cap
+    then ->1
+    else if isPageTableCap cap
+    then ->2
+    else if isPageCap cap
+    then ->3
+    else if isASIDControlCap cap
+    then ->4
+    else if isASIDPoolCap cap
+    then ->5
+    else ->6
+
+case \x of (c@PageTableCap { capPTMappedAddress = Just _ }) -> (PageTableCap { capPTMappedAddress = Nothing }) -> (c@PageDirectoryCap { capPDMappedASID = Just _ }) -> (PageDirectoryCap { capPDMappedASID = Nothing }) -> (c@PageCap {}) -> c@ASIDControlCap -> (c@ASIDPoolCap {}) -> (c@VCPUCap {}) -> (c@SGISignalCap {}) ->  ---> let c = \x in
+    if isPageTableCap c \<and> capPTMappedAddress c \<noteq> None
+    then ->1
+    else if isPageTableCap c \<and> capPTMappedAddress c = None
+    then ->2
+    else if isPageDirectoryCap c \<and> capPDMappedASID c \<noteq> None
+    then ->3
+    else if isPageDirectoryCap c \<and> capPDMappedASID c = None
+    then ->4
+    else if isPageCap c
+    then ->5
+    else if isASIDControlCap c
+    then ->6
+    else if isASIDPoolCap c
+    then ->7
+    else if isVCPUCap c
+    then ->8
+    else if isSGISignalCap c
+    then ->9
+    else undefined
+
+case \x of ((a@PageCap {}), (b@PageCap {})) -> ((a@PageTableCap {}), (b@PageTableCap {})) -> ((a@PageDirectoryCap {}), (b@PageDirectoryCap {})) -> (ASIDControlCap, ASIDControlCap) -> ((a@ASIDPoolCap {}), (b@ASIDPoolCap {})) -> ((a@VCPUCap {}), (b@VCPUCap {})) -> ((a@SGISignalCap {}), (b@SGISignalCap {})) -> (_, _) ->  ---> let (a, b) = \x in
+    if isPageCap a \<and> isPageCap b
+    then ->1
+    else if isPageTableCap a \<and> isPageTableCap b
+    then ->2
+    else if isPageDirectoryCap a \<and> isPageDirectoryCap b
+    then ->3
+    else if isASIDControlCap a \<and> isASIDControlCap b
+    then ->4
+    else if isASIDPoolCap a \<and> isASIDPoolCap b
+    then ->5
+    else if isVCPUCap a \<and> isVCPUCap b
+    then ->6
+    else if isSGISignalCap a \<and> isSGISignalCap b
+    then ->7
+    else ->8

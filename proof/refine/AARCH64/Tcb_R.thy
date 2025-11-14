@@ -810,19 +810,16 @@ lemma sameObject_corres2:
   apply (frule(1) sameRegion_corres2[symmetric, where c=c and d=d])
   apply (case_tac c; simp add: sameObjectAs_def same_object_as_def
                                isCap_simps is_cap_simps bits_of_def)
-   apply (case_tac d; simp)
-   apply (case_tac d'; simp)
-  apply (rename_tac arch_cap)
-  apply clarsimp
-  apply (case_tac d, (simp_all split: arch_cap.split)[11])
-  apply (rename_tac arch_capa)
+  apply (case_tac d; case_tac c'; simp)
+  apply (case_tac d'; simp)
+  apply (rename_tac arch_cap arch_capa)
   apply (clarsimp simp add: AARCH64_H.sameObjectAs_def Let_def)
   apply (intro conjI impI)
-   apply (case_tac arch_cap; simp add: sameRegionAs_def isCap_simps)
-   apply (case_tac arch_capa; fastforce simp add: add_mask_fold)
-  apply (case_tac arch_cap; simp add: sameRegionAs_def isCap_simps)
-  apply (case_tac arch_capa; simp)
-  done
+     apply (solves \<open>clarsimp simp: sameRegionAs_def isCap_simps split: arch_cap.splits\<close>)
+    apply (fastforce simp: sameRegionAs_def isCap_simps split: arch_cap.splits)
+   subgoal by (fastforce simp: add_mask_fold sameRegionAs_def isCap_simps
+                         split: arch_cap.splits)
+  by (fastforce simp: sameRegionAs_def isCap_simps split: arch_cap.splits)
 
 lemma checkCapAt_corres:
   assumes r: "cap_relation cap cap'"

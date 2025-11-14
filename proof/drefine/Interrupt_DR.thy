@@ -11,15 +11,16 @@ begin
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma arch_decode_irq_control_error_corres:
-  "\<not> (\<exists> ui. (Some (IrqControlIntent ui)) = (transform_intent (invocation_type label) args)) \<Longrightarrow>
+  "\<not>(\<exists> ui. Some (IrqControlIntent ui) = transform_intent (invocation_type label) args) \<Longrightarrow>
      dcorres (dc \<oplus> anyrel) \<top> \<top>
       (throwError e)
       (Decode_A.arch_decode_irq_control_invocation label args slot (map fst excaps))"
   unfolding arch_decode_irq_control_invocation_def
   apply (cases "invocation_type label"; simp add: arch_decode_irq_control_invocation_def)
-   apply (simp add: transform_intent_def arch_transform_intent_issue_irq_handler_def
-               split: list.splits arch_invocation_label.splits)
-done
+  apply (simp add: transform_intent_def arch_transform_intent_issue_irq_handler_def
+                   arch_transform_intent_issue_sgi_signal_def
+              split: list.splits arch_invocation_label.splits)
+  done
 
 lemma decode_irq_control_error_corres:
   "\<not> (\<exists> ui. (Some (IrqControlIntent ui)) = (transform_intent (invocation_type label) args)) \<Longrightarrow>
@@ -31,20 +32,26 @@ lemma decode_irq_control_error_corres:
                                                   arch_decode_irq_control_error_corres)
    apply (clarsimp simp: transform_intent_def transform_intent_issue_irq_handler_def
                          arch_transform_intent_issue_irq_handler_def
+                         arch_transform_intent_issue_sgi_signal_def
                    simp flip: gen_invocation_type_eq
                    split: list.splits arch_invocation_label.splits)+
   done
 
 (* Interrupt Control Invocations *)
 
-primrec (nonexhaustive) translate_irq_control_invocation ::
+primrec translate_irq_control_invocation ::
   "Invocations_A.irq_control_invocation \<Rightarrow> cdl_irq_control_invocation"
   where
   "translate_irq_control_invocation (Invocations_A.IRQControl irq p slot) =
     IssueIrqHandler irq (transform_cslot_ptr slot) (transform_cslot_ptr p)"
 | "translate_irq_control_invocation (Invocations_A.ArchIRQControl arch_label) =
-    (case arch_label of ArchIRQControlIssue irq p slot t \<Rightarrow>
-    (IssueIrqHandler irq (transform_cslot_ptr slot) (transform_cslot_ptr p)))"
+    (case arch_label of
+       ArchIRQControlIssue irq p slot t \<Rightarrow>
+         IssueIrqHandler irq (transform_cslot_ptr slot) (transform_cslot_ptr p)
+     | IssueSGISignal irq target ctrl_slot sgi_slot \<Rightarrow>
+         ArchIssueIrqHandler (ARMIssueSGISignal irq target
+                                                (transform_cslot_ptr ctrl_slot)
+                                                (transform_cslot_ptr sgi_slot)))"
 
 definition
   cdl_irq_control_invocation_relation :: "cdl_irq_control_invocation \<Rightarrow> Invocations_A.irq_control_invocation \<Rightarrow> bool"
@@ -161,14 +168,39 @@ lemma decode_irq_control_corres:
       apply (unfold Interrupt_D.decode_irq_control_invocation_def
                     Interrupt_D.arch_decode_irq_control_invocation_def
                     Decode_A.decode_irq_control_invocation_def
-                    arch_decode_irq_control_invocation_def
-                    arch_check_irq_def)
+                    arch_decode_irq_control_invocation_def)
+      supply if_split[split del]
       apply clarsimp
-      apply (cases ui; simp)
-       apply (simp add: corres_alternate2 flip: gen_invocation_type_eq)
-      apply(rename_tac ARMIRQControlIntent)
-      apply (case_tac ARMIRQControlIntent; simp)
-      apply (simp add: corres_alternate2 flip: gen_invocation_type_eq)
+      apply (cases "gen_invocation_type label' = IRQIssueIRQHandler")
+       apply (simp add: gen_invocation_type_def split: invocation_label.splits)
+      apply simp
+      apply (cases "invocation_type label' = ArchInvocationLabel ARMIRQIssueSGISignal"; simp)
+       prefer 2
+       apply (cases ui; clarsimp simp: corres_alternate2)
+       apply(rename_tac ARMIRQControlIntent)
+       apply (case_tac ARMIRQControlIntent; simp add: corres_alternate2)
+      apply (clarsimp simp: transform_intent_def arch_transform_intent_issue_sgi_signal_def
+                      split: list.splits)
+      apply (cases excaps'; simp)
+       apply (clarsimp simp: corres_alternate2)
+      apply (clarsimp simp: transform_cap_list_def get_index_def throw_on_none_def)
+      apply (clarsimp simp: range_check_def unlessE_def)
+      apply (simp split: if_split)
+      apply (intro conjI impI; (simp add: corres_alternate2)?)
+      apply (rule corres_alternative_throw_splitE)
+           apply (rule corres_alternate1)
+           apply (rule corres_guard_imp)
+             apply (rule lookup_slot_for_cnode_op_corres; simp)
+            apply simp
+           apply simp
+          apply (rule corres_alternative_throw_splitE)
+               apply (rule corres_alternate1)
+               apply clarsimp
+               apply (rule dcorres_ensure_empty)
+              apply (rule corres_alternate1)
+              apply (rule dcorres_returnOk)
+              apply (simp add: cdl_irq_control_invocation_relation_def)
+             apply (wpsimp wp: lsfco_not_idle)+
       done
     done
 
@@ -460,7 +492,7 @@ lemma dmo_setIRQTrigger_dcorres:
 
 lemma dcorres_invoke_irq_control_body:
 "\<And>word p1 p2.
-       dcorres dc (\<lambda>_. True)
+       dcorres (\<lambda>_. isRight) (\<lambda>_. True)
         (invs and (cte_wp_at ((=) cap.NullCap) p1
               and cte_wp_at ((=) cap.IRQControlCap) p2
               and ex_cte_cap_wp_to Structures_A.is_cnode_cap p1
@@ -479,7 +511,7 @@ lemma dcorres_invoke_irq_control_body:
           apply (rule insert_cap_child_corres)
          apply (simp add:transform_cap_def)
         apply (rule corres_trivial)
-        apply (rule corres_free_return)
+        apply simp
        apply (wp|clarsimp)+
     apply simp
    apply (simp add:valid_cap_def cap_aligned_def word_bits_def)
@@ -509,26 +541,39 @@ lemma dcorres_invoke_irq_control_body:
   done
 
 lemma dcorres_arch_invoke_irq_control:
-  "dcorres dc \<top> (invs and arch_irq_control_inv_valid arch_irq_control_invocation)
+  "dcorres (\<lambda>_. isRight) \<top> (invs and arch_irq_control_inv_valid arch_irq_control_invocation)
     (Interrupt_D.invoke_irq_control (
        translate_irq_control_invocation (
           irq_control_invocation.ArchIRQControl arch_irq_control_invocation)))
     (arch_invoke_irq_control arch_irq_control_invocation)"
   apply (case_tac arch_irq_control_invocation)
-  apply (simp add:Interrupt_D.invoke_irq_control_def arch_irq_control_inv_valid_def)
-  apply (rename_tac word p1 p2 t)
-  apply (subst liftE_distrib)
-  apply (simp add: liftE_bindE)
-  apply (rule corres_dummy_return_pl)
+   apply (simp add:Interrupt_D.invoke_irq_control_def arch_irq_control_inv_valid_def)
+   apply (rename_tac word p1 p2 t)
+   apply (subst liftE_distrib)
+   apply (simp add: liftE_bindE)
+   apply (rule corres_dummy_return_pl)
+   apply (rule corres_guard_imp)
+     apply (rule corres_split[OF dmo_setIRQTrigger_dcorres])
+       apply clarsimp
+       apply (rule dcorres_invoke_irq_control_body)
+      apply wpsimp+
+  apply (clarsimp simp: Interrupt_D.invoke_irq_control_def Interrupt_D.arch_invoke_irq_control_def
+                        liftE_def)
+  apply (rule corres_dummy_return_l)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF dmo_setIRQTrigger_dcorres])
-      apply clarsimp
-      apply (rule dcorres_invoke_irq_control_body)
+    apply (rule corres_split)
+       apply (rule insert_cap_child_corres[where cap="ArchObjectCap (SGISignalCap _ _)", simplified])
+      apply (rule corres_trivial, simp)
      apply wpsimp+
-  done
+  apply (clarsimp simp: arch_irq_control_inv_valid_def cap_aligned_def word_bits_def)
+  apply (rule conjI)
+   apply (clarsimp simp: cte_wp_at_caps_of_state should_be_parent_of_def is_irq_control_descendant_def)
+   apply (erule irq_revocableD)
+   apply (simp add: caps_of_state_cteD invs_def valid_state_def valid_pspace_def valid_mdb_def)
+  by (fastforce dest: if_unsafe_then_capD ex_cte_cap_wp_to_not_idle)
 
 lemma dcorres_invoke_irq_control:
-  "dcorres dc \<top> (invs and irq_control_inv_valid irq_control_invocation)
+  "dcorres (\<lambda>_. isRight) \<top> (invs and irq_control_inv_valid irq_control_invocation)
     (Interrupt_D.invoke_irq_control (translate_irq_control_invocation irq_control_invocation))
     (Interrupt_A.invoke_irq_control irq_control_invocation)"
   apply (case_tac irq_control_invocation)

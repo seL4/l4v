@@ -342,6 +342,10 @@ lemma no_fail_setDeadline: "no_fail \<top>(setDeadline t)"
 lemma empty_fail_setDeadline: "empty_fail (setDeadline t)"
   by (simp add: setDeadline_def)
 
+lemma no_fail_sendSGI[wp]:
+  "no_fail \<top> (sendSGI irq target)"
+  by (simp add: sendSGI_def)
+
 lemma no_irq_use:
   "\<lbrakk> no_irq f; (rv,s') \<in> fst (f s) \<rbrakk> \<Longrightarrow> irq_masks s' = irq_masks s"
   apply (simp add: no_irq_def valid_def)
@@ -362,6 +366,10 @@ crunch machine_op_lift
 lemma no_irq:
   "no_irq f \<Longrightarrow> \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
   by (simp add: no_irq_def)
+
+lemma no_irq_sendSGI:
+  "no_irq (sendSGI irq target)"
+  by (simp add: sendSGI_def)
 
 lemma no_irq_isb: "no_irq  isb"
   by (simp add: isb_def)
@@ -649,6 +657,10 @@ lemma empty_fail_dsb: "empty_fail  dsb"
 
 lemma empty_fail_dmb: "empty_fail  dmb"
   by (simp add: dmb_def)
+
+lemma empty_fail_sendSGI:
+  "empty_fail (sendSGI irq target)"
+  by (simp add: sendSGI_def)
 
 lemma empty_fail_cleanByVA: "empty_fail  (cleanByVA w p)"
   by (simp add: cleanByVA_def)

@@ -598,11 +598,13 @@ definition
 where
   "ackInterrupt irq \<equiv> machine_op_lift (ackInterrupt_impl irq)"
 
-consts' deadlineIRQ :: irq
+consts' sendSGI_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition sendSGI :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
+  "sendSGI sgi_irq target \<equiv> machine_op_lift $ sendSGI_impl sgi_irq target"
 
+consts' deadlineIRQ :: irq
 definition
   "ackDeadlineIRQ \<equiv> ackInterrupt deadlineIRQ"
-
 
 \<comment> \<open>Interrupt controller operations\<close>
 

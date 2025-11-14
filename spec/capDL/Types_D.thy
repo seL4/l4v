@@ -18,7 +18,11 @@ imports
   "Lib.Lib"
   "Lib.SplitRule"
   "HOL-Combinatorics.Transposition" (* for Fun.swap *)
+  "ExecSpec.Arch_Kernel_Config_Lemmas"
 begin
+
+arch_requalify_types irq sgi_irq sgi_target
+arch_requalify_consts numSGIs gicNumTargets
 
 (* A hardware IRQ number. *)
 type_synonym cdl_irq = irq
@@ -113,6 +117,9 @@ datatype cdl_cap =
   (* Interrupt capabilities *)
   | IrqControlCap
   | IrqHandlerCap cdl_irq
+
+  (* Arm specific IRQ/SGI caps *)
+  | SGISignalCap sgi_irq sgi_target
 
   (* Virtual memory capabilties *)
   | FrameCap bool cdl_object_id "cdl_right set" nat cdl_frame_cap_type "cdl_mapped_addr option"
@@ -315,7 +322,7 @@ lemmas tcb_slot_defs =
 
 (* Capability getters / setters *)
 
-primrec (nonexhaustive)
+fun
   cap_objects :: "cdl_cap \<Rightarrow> cdl_object_id set"
 where
     "cap_objects (IOPageTableCap x) = {x}"
@@ -337,20 +344,22 @@ where
   | "cap_objects (PendingSyncRecvCap x _ _) = {x}"
   | "cap_objects (PendingNtfnRecvCap x) = {x}"
   | "cap_objects (BoundNotificationCap x) = {x}"
+  | "cap_objects _ = {}"
 
 definition
   cap_has_object :: "cdl_cap \<Rightarrow> bool"
 where
   "cap_has_object cap \<equiv> case cap of
      NullCap          \<Rightarrow> False
-  | IrqControlCap    \<Rightarrow> False
-  | IrqHandlerCap _  \<Rightarrow> False
-  | AsidControlCap   \<Rightarrow> False
-  | IOSpaceMasterCap \<Rightarrow> False
-  | RestartCap       \<Rightarrow> False
-  | RunningCap       \<Rightarrow> False
-  | DomainCap        \<Rightarrow> False
-  | _                \<Rightarrow> True"
+  | IrqControlCap     \<Rightarrow> False
+  | IrqHandlerCap _   \<Rightarrow> False
+  | SGISignalCap _ _  \<Rightarrow> False
+  | AsidControlCap    \<Rightarrow> False
+  | IOSpaceMasterCap  \<Rightarrow> False
+  | RestartCap        \<Rightarrow> False
+  | RunningCap        \<Rightarrow> False
+  | DomainCap         \<Rightarrow> False
+  | _                 \<Rightarrow> True"
 
 definition
   cap_object :: "cdl_cap \<Rightarrow> cdl_object_id"

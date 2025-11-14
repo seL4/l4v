@@ -10,6 +10,8 @@ implementations of the operations that user-level threads can request
 by invoking a capability table node. It is also responsible for
 creating the "Capability" objects used at higher levels of the kernel.
 
+> {-# LANGUAGE CPP #-}
+
 > module SEL4.Object.CNode (
 >         cteRevoke, cteDelete, cteInsert, cteDeleteOne,
 >         ensureNoChildren, ensureEmptySlot, slotCapLongRunningDelete,
@@ -36,6 +38,7 @@ creating the "Capability" objects used at higher levels of the kernel.
 > import SEL4.Object.Interrupt
 > import SEL4.Object.Instances()
 > import SEL4.Object.ObjectType
+> import SEL4.Object.ObjectType.TARGET(isArchMDBParentOf)
 > import SEL4.Object.Endpoint(cancelBadgedSends)
 > import SEL4.Object.SchedContext(preemptionPoint)
 > import {-# SOURCE #-} SEL4.Kernel.CSpace
@@ -614,10 +617,14 @@ To be the parent of "b", "a" must have the "mdbRevocable" bit set and must have 
 > isMDBParentOf (CTE a mdbA) (CTE b mdbB)
 >     | not $ mdbRevocable mdbA  = False
 >     | not $ a `sameRegionAs` b = False
->     | otherwise                = case a of
+
+Architecture caps may have their own constraints on parenthood.
+
+>     | not $ isArchMDBParentOf a b (mdbFirstBadged mdbB) = False
 
 If "a" is an endpoint capability with a badge set, then it is the parent of "b" if and only if "b" has the same badge as "a" and has the "mdbFirstBadged" bit clear.
 
+>     | otherwise                = case a of
 >         EndpointCap { capEPBadge = badge } | badge /= 0 ->
 >             (badge == capEPBadge b) && (not $ mdbFirstBadged mdbB)
 >         NotificationCap { capNtfnBadge = badge } | badge /= 0 ->

@@ -19,7 +19,7 @@ crunch_ignore (empty_fail)
         clean_D_PoU_impl cleanInvalidate_D_PoC_impl cleanInvalidateL2Range_impl
         invalidateL2Range_impl cleanL2Range_impl flushBTAC_impl
         writeContextID_impl isb_impl dsb_impl dmb_impl setHardwareASID_impl
-        writeTTBR0_impl cacheRangeOp setIRQTrigger_impl)
+        writeTTBR0_impl cacheRangeOp setIRQTrigger_impl sendSGI_impl)
 
 crunch
   loadWord, load_word_offs, store_word_offs, storeWord, getRestartPC, get_mrs, setRegister
@@ -57,18 +57,19 @@ lemma decode_tcb_invocation_empty_fail[wp]:
   "empty_fail (decode_tcb_invocation a b (ThreadCap p) d e)"
   by (simp add: decode_tcb_invocation_def split: invocation_label.splits | wp | wpc | intro conjI impI)+
 
-crunch find_pd_for_asid, get_master_pde, check_vp_alignment,
-                   create_mapping_entries, ensure_safe_mapping, get_asid_pool, resolve_vaddr
+crunch
+  find_pd_for_asid, get_master_pde, check_vp_alignment, create_mapping_entries, ensure_safe_mapping,
+  get_asid_pool, resolve_vaddr, decode_sgi_signal_invocation
   for (empty_fail) empty_fail[wp]
   (simp: kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits)
 
 lemma arch_decode_ARMASIDControlMakePool_empty_fail:
   "invocation_type label = ArchInvocationLabel ARMASIDControlMakePool
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
+  supply decode_sgi_signal_invocation_empty_fail[simp] (* [wp] not enough in this case *)
   apply (simp add: arch_decode_invocation_def Let_def)
+  apply (cases e; simp add: isPageFlushLabel_def isPDFlushLabel_def)
   apply (intro impI conjI allI)
-   apply (simp add: isPageFlushLabel_def isPDFlushLabel_def split: arch_cap.splits)+
-   apply (rule impI)
    apply (simp add: split_def)
    apply (wp (once), simp)
    apply (subst bindE_assoc[symmetric])
@@ -77,21 +78,19 @@ lemma arch_decode_ARMASIDControlMakePool_empty_fail:
                             bind_def return_def returnOk_def lift_def liftE_def fail_def gets_def
                             get_def assert_def select_def
                       split: if_split_asm)
-   by (simp add: Let_def split: cap.splits arch_cap.splits option.splits bool.splits | wp | intro conjI impI allI)+
+  by wpsimp
 
 lemma arch_decode_ARMASIDPoolAssign_empty_fail:
   "invocation_type label = ArchInvocationLabel ARMASIDPoolAssign
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
+  unfolding arch_decode_invocation_def
+  supply decode_sgi_signal_invocation_empty_fail[simp] (* [wp] not enough in this case *)
   apply (simp add: arch_decode_invocation_def split_def Let_def isPageFlushLabel_def isPDFlushLabel_def
             split: arch_cap.splits cap.splits option.splits | intro impI allI)+
-  apply (rule empty_fail_bindE)
-   apply simp
-  apply (rule empty_fail_bindE)
-   apply ((simp | wp)+)[1]
-  apply (rule empty_fail_bindE)
-   apply ((simp | wp)+)[1]
-  apply (rule empty_fail_bindE)
-   apply ((simp | wp)+)[1]
+  apply (rule empty_fail_bindE, wpsimp)
+  apply (rule empty_fail_bindE, wpsimp)
+  apply (rule empty_fail_bindE, wpsimp)
+  apply (rule empty_fail_bindE, wpsimp)
   apply (subst bindE_assoc[symmetric])
   apply (rule empty_fail_bindE)
    subgoal by (force simp: empty_fail_def whenE_def throwError_def select_def bindE_def

@@ -831,8 +831,8 @@ lemma obj_relation_retype_other_obj:
       \<Longrightarrow> obj_relation_retype ko ko'"
   apply (simp add: obj_relation_retype_def)
   apply (subgoal_tac "objBitsKO ko' = obj_bits ko")
-   apply (clarsimp simp: is_other_obj_relation_type)
-  apply (fastforce simp: other_obj_relation_def objBits_simps' archObjSize_def
+   apply (clarsimp simp: is_other_obj_relation_type other_obj_relation_not_aobj)
+  apply (fastforce simp: other_obj_relation_def objBits_simps'
                   split: Structures_A.kernel_object.split_asm
                          Structures_H.kernel_object.split_asm
                          Structures_H.kernel_object.split
@@ -1360,7 +1360,7 @@ lemma retype_state_relation:
     by (rule ccontr) (clarsimp simp: pspace_no_overlapD1[OF pn _ cover vs(1)])
 
   from sr have gr: "ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')"
-    by (rule state_relationE)
+    by (rule state_relationE[simplified ghost_relation_wrapper_def]) (* FIXME arch-split *)
 
   show "ghost_relation ?ps (gsUserPages ?t') (gsCNodes ?t')"
   proof (cases ?tp)
@@ -2522,6 +2522,14 @@ lemma descendants_of_retype':
 lemma capRange_Null [simp]: "capRange NullCap = {}"
   by (simp add: capRange_def)
 
+lemma valid_arch_badges_not_arch:
+  "\<not>isArchObjectCap cap' \<Longrightarrow> valid_arch_badges cap cap' node"
+  by (auto simp: isCap_simps valid_arch_badges_def)
+
+lemma valid_arch_badges_NullCap[simp]:
+  "valid_arch_badges cap NullCap node"
+  by (simp add: valid_arch_badges_not_arch isCap_simps)
+
 end
 
 locale retype_mdb = vmdb +
@@ -2627,7 +2635,7 @@ proof -
   have "valid_badges m" ..
   thus ?thesis
     apply (clarsimp simp: valid_badges_def)
-    apply (simp add: n_Some_eq n_next split: if_split_asm)
+    apply (simp add: n_Some_eq n_next isCap_simps split: if_split_asm)
     apply fastforce
     done
 qed

@@ -19,6 +19,11 @@ primrec arch_irq_control_inv_valid_real ::
       ex_cte_cap_wp_to is_cnode_cap dest_slot and
       real_cte_at dest_slot and
       K (irq \<le> maxIRQ))"
+| "arch_irq_control_inv_valid_real (IssueSGISignal irq target src_slot sgi_slot) =
+     (cte_wp_at ((=) cap.NullCap) sgi_slot and
+      cte_wp_at ((=) cap.IRQControlCap) src_slot and
+      ex_cte_cap_wp_to is_cnode_cap sgi_slot and
+      real_cte_at sgi_slot)"
 
 defs arch_irq_control_inv_valid_def:
   "arch_irq_control_inv_valid \<equiv> arch_irq_control_inv_valid_real"
@@ -27,7 +32,7 @@ named_theorems Interrupt_AI_assms
 
 lemma (* decode_irq_control_invocation_inv *)[Interrupt_AI_assms]:
   "\<lbrace>P\<rbrace> decode_irq_control_invocation label args slot caps \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp add: decode_irq_control_invocation_def Let_def arch_check_irq_def
+  apply (simp add: decode_irq_control_invocation_def Let_def arch_check_irq_def range_check_def
                    arch_decode_irq_control_invocation_def whenE_def, safe)
   apply (wp | simp)+
   done
@@ -40,14 +45,14 @@ lemma decode_irq_control_valid [Interrupt_AI_assms]:
      decode_irq_control_invocation label args slot caps
    \<lbrace>irq_control_inv_valid\<rbrace>,-"
   apply (simp add: decode_irq_control_invocation_def Let_def split_def
-                   whenE_def arch_check_irq_def
+                   whenE_def arch_check_irq_def range_check_def
                    arch_decode_irq_control_invocation_def
                  split del: if_split cong: if_cong)
   apply (wpsimp wp: ensure_empty_stronger simp: cte_wp_at_eq_simp arch_irq_control_inv_valid_def
         | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: linorder_not_less word_le_nat_alt unat_ucast mod_le_nat)
   apply (cases caps ; fastforce simp: cte_wp_at_eq_simp)
-done
+  done
 
 lemma get_irq_slot_different_ARCH[Interrupt_AI_assms]:
   "\<lbrace>\<lambda>s. valid_global_refs s \<and> ex_cte_cap_wp_to is_cnode_cap ptr s\<rbrace>
@@ -156,9 +161,25 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_assms]:
   done
 qed
 
-lemma (* invoke_irq_control_invs *) [Interrupt_AI_assms]:
+lemma safe_parent_for_arch_IRQControl[simp, intro!]:
+  "safe_parent_for_arch (ArchObjectCap (SGISignalCap irq target)) IRQControlCap"
+  by (simp add: is_cap_simps)
+
+lemma no_cap_to_obj_with_diff_ref_SGISignalCap[simp, intro!]:
+  "no_cap_to_obj_with_diff_ref (ArchObjectCap (SGISignalCap irq target)) S s"
+  apply (clarsimp simp add: no_cap_to_obj_with_diff_ref_def cte_wp_at_caps_of_state)
+  apply (case_tac cap; simp add: table_cap_ref_def)
+  apply (rename_tac acap, case_tac acap; simp)
+  done
+
+lemma valid_cap_SGISignalCap[simp, intro!]:
+  "s \<turnstile> ArchObjectCap (SGISignalCap irq target)"
+  unfolding valid_cap_def
+  by (clarsimp simp: cap_aligned_def word_bits_def)
+
+lemma invoke_irq_control_invs[Interrupt_AI_assms]:
   "\<lbrace>invs and irq_control_inv_valid i\<rbrace> invoke_irq_control i \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (cases i, simp_all)
+  apply (cases i; simp)
    apply (wp cap_insert_simple_invs
           | simp add: IRQHandler_valid is_cap_simps  no_cap_to_obj_with_diff_IRQHandler_ARCH
           | strengthen real_cte_tcb_valid)+
@@ -166,15 +187,21 @@ lemma (* invoke_irq_control_invs *) [Interrupt_AI_assms]:
                          is_simple_cap_def is_cap_simps is_pt_cap_def
                          safe_parent_for_def
                          ex_cte_cap_to_cnode_always_appropriate_strg)
-  apply (case_tac x2)
-  apply (simp add: arch_irq_control_inv_valid_def)
-  apply (wp cap_insert_simple_invs
-         | simp add: IRQHandler_valid is_cap_simps  no_cap_to_obj_with_diff_IRQHandler_ARCH
-         | strengthen real_cte_tcb_valid)+
-  apply (clarsimp simp: cte_wp_at_caps_of_state
-                        is_simple_cap_def is_cap_simps is_pt_cap_def
-                        safe_parent_for_def
-                        ex_cte_cap_to_cnode_always_appropriate_strg)
+  apply (rename_tac arch_inv)
+  apply (case_tac arch_inv)
+   apply (simp add: arch_irq_control_inv_valid_def)
+   apply (wp cap_insert_simple_invs
+          | simp add: IRQHandler_valid is_cap_simps  no_cap_to_obj_with_diff_IRQHandler_ARCH
+          | strengthen real_cte_tcb_valid)+
+   apply (clarsimp simp: cte_wp_at_caps_of_state
+                         is_simple_cap_def is_cap_simps is_pt_cap_def
+                         safe_parent_for_def
+                         ex_cte_cap_to_cnode_always_appropriate_strg)
+  apply (wpsimp wp: cap_insert_simple_invs)
+  apply (clarsimp simp: arch_irq_control_inv_valid_def cte_wp_at_caps_of_state is_simple_cap_def
+                        is_cap_simps  safe_parent_for_def is_irq_control_descendant_def
+                        ex_cte_cap_to_cnode_always_appropriate_strg tcb_cap_valid_def obj_at_def
+                        is_tcb is_cap_table)
   done
 
 
@@ -265,11 +292,7 @@ crunch timer_tick
   for invs[wp]: invs
   (wp: thread_set_invs_trivial[OF ball_tcb_cap_casesI])
 
-crunch timer_tick
-  for invs[wp]: invs
-  (wp: thread_set_invs_trivial[OF ball_tcb_cap_casesI])
-
-lemma (* handle_interrupt_invs *) [Interrupt_AI_assms]:
+lemma handle_interrupt_invs[Interrupt_AI_assms]:
   "\<lbrace>invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: handle_interrupt_def)
   apply (rule conjI; rule impI)
@@ -299,9 +322,9 @@ lemma sts_arch_irq_control_inv_valid[wp, Interrupt_AI_assms]:
 end
 
 interpretation Interrupt_AI?: Interrupt_AI
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (intro_locales; (unfold_locales, simp_all add: Interrupt_AI_assms)?)
-  qed
+qed
 
 end

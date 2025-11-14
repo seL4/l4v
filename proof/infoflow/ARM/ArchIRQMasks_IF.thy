@@ -64,9 +64,7 @@ lemma arch_invoke_irq_control_irq_masks[IRQMasks_IF_assms]:
   "\<lbrace>domain_sep_inv False st and arch_irq_control_inv_valid invok\<rbrace>
    arch_invoke_irq_control invok
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
-  apply (case_tac invok)
-  apply (clarsimp simp: arch_irq_control_inv_valid_def domain_sep_inv_def valid_def)
-  done
+  by (case_tac invok; clarsimp simp: arch_irq_control_inv_valid_def domain_sep_inv_def valid_def)
 
 crunch handle_vm_fault, handle_hypervisor_fault
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
@@ -114,7 +112,7 @@ crunch do_reply_transfer, set_priority
 crunch arch_perform_invocation
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp crunch_wps no_irq
-   simp: no_irq_cleanByVA_PoU no_irq_invalidateLocalTLB_ASID no_irq_do_flush)
+   simp: no_irq_cleanByVA_PoU no_irq_invalidateLocalTLB_ASID no_irq_do_flush no_irq_sendSGI)
 
 (* FIXME: remove duplication in this proof -- requires getting the wp automation
           to do the right thing with dropping imps in validE goals *)

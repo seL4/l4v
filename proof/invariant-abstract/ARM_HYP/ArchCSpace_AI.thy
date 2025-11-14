@@ -485,18 +485,16 @@ lemma same_region_as_Untyped2 [CSpace_AI_assms]:
   by (fastforce simp: is_cap_simps cap_range_def is_physical_def arch_is_physical_def
                split: cap.splits arch_cap.splits)
 
-
 lemma same_region_as_cap_class [CSpace_AI_assms]:
   shows "same_region_as a b \<Longrightarrow> cap_class a = cap_class b"
   apply (case_tac a)
-   apply (fastforce simp: cap_range_def arch_is_physical_def is_cap_simps
-     is_physical_def split:cap.splits arch_cap.splits)+
- apply (clarsimp split: arch_cap.splits cap.splits)
- apply (rename_tac arch_cap arch_capa)
- apply (case_tac arch_cap)
-  apply (case_tac arch_capa,clarsimp+)+
- done
-
+             apply (fastforce simp: cap_range_def arch_is_physical_def is_cap_simps
+                                    is_physical_def is_irq_control_descendant_def
+                              split: cap.splits arch_cap.splits)+
+  apply (clarsimp split: cap.splits)
+  apply (rename_tac arch_cap arch_capa)
+  apply (case_tac arch_cap; case_tac arch_capa; clarsimp)
+  done
 
 lemma cap_insert_simple_arch_caps_no_ap:
   "\<lbrace>valid_arch_caps and (\<lambda>s. cte_wp_at (safe_parent_for (cdt s) src cap) src s)

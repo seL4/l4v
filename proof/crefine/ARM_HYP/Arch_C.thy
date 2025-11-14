@@ -3646,7 +3646,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
       | rule word_of_nat_less, simp add: pbfs_less)+
 
 lemma decodeARMMMUInvocation_ccorres:
-  "\<lbrakk> interpret_excaps extraCaps' = excaps_map extraCaps ; \<not> isVCPUCap cp \<rbrakk>
+  "\<lbrakk> interpret_excaps extraCaps' = excaps_map extraCaps ; \<not> isVCPUCap cp; \<not>isSGISignalCap cp \<rbrakk>
    \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
@@ -5315,11 +5315,61 @@ lemma decodeARMVCPUInvocation_ccorres:
   apply auto
   done
 
+lemma invokeSGISignalGenerate_ccorres:
+  "ccorres (\<lambda>reply exc. reply = [] \<and> exc = scast EXCEPTION_NONE) ret__unsigned_long_'
+     \<top>
+     (\<lbrace> \<acute>irq = irq \<rbrace> \<inter> \<lbrace> \<acute>target___unsigned_long = ucast target \<rbrace>) hs
+     (performSGISignalGenerate (SGISignalGenerate irq target))
+     (Call invokeSGISignalGenerate_'proc)"
+  apply (cinit lift:  irq_' target___unsigned_long_')
+  apply (ctac (no_vcg) add: plat_sendSGI_ccorres)
+    apply (rule ccorres_return_C; simp)
+   apply wp
+  apply clarsimp
+  done
+
+lemma decodeSGISignalInvocation_ccorres:
+  "\<lbrakk> interpret_excaps extraCaps' = excaps_map extraCaps ; isSGISignalCap cp \<rbrakk> \<Longrightarrow>
+   ccorres (intr_and_se_rel \<currency> dc)
+           (liftxf errstate id (K ()) ret__unsigned_long_')
+           (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple)
+           \<lbrace>ccap_relation (ArchObjectCap cp) \<acute>cap\<rbrace> hs
+           (decodeSGISignalInvocation cp
+                >>= invocationCatch thread isBlocking isCall InvokeArchObject)
+           (Call decodeSGISignalInvocation_'proc)"
+  apply (clarsimp simp: isCap_simps)
+  apply (cinit' lift:  cap_')
+   apply (clarsimp simp: decodeSGISignalInvocation_def
+                         ccorres_invocationCatch_Inr returnOk_def liftE_bindE
+                         performInvocation_def ARM_HYP_H.performInvocation_def)
+   apply csymbr
+   apply csymbr
+   apply csymbr
+   apply csymbr
+   apply (ctac add: setThreadState_ccorres)
+     apply (ctac (no_vcg) add: invokeSGISignalGenerate_ccorres)
+      apply clarsimp
+      apply (rule ccorres_alternative2)
+      apply (rule ccorres_return_CE; simp)
+     apply wp
+    apply wp
+   apply (vcg exspec=setThreadState_modifies)
+  apply (clarsimp simp: rf_sr_ksCurThread)
+  apply (frule cap_get_tag_isCap_unfolded_H_cap)
+  apply (erule ccap_relationE)
+  apply (simp add: ThreadState_Restart_def mask_def)
+  apply (fastforce simp: cap_to_H_def cap_lift_def Let_def cap_tag_defs cap_sgi_signal_cap_lift_def
+                         ucast_ucast_mask valid_tcb_state'_def)
+  done
+
+lemma case_VCPU_SGISignal_is_if:
+  "(case cp of VCPUCap v \<Rightarrow> f cp | SGISignalCap irq target \<Rightarrow> g cp | _ \<Rightarrow> h cp) =
+   (if isVCPUCap cp then f cp else if isSGISignalCap cp then g cp else h cp)"
+  by (cases cp; clarsimp simp: isCap_simps)
+
 lemma Arch_decodeInvocation_ccorres:
-  notes if_cong[cong]
-  assumes "interpret_excaps extraCaps' = excaps_map extraCaps"
-  shows
-  "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+  "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
+   ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
               and (excaps_in_mem extraCaps \<circ> ctes_of)
               and cte_wp_at' ((=) (ArchObjectCap cp) \<circ> cteCap) slot
@@ -5331,41 +5381,32 @@ lemma Arch_decodeInvocation_ccorres:
              \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}
-             \<inter> \<lbrace>\<acute>call = from_bool isCall \<rbrace>) []
+             \<inter> {s. call_' s = from_bool isCall}) []
        (Arch.decodeInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call Arch_decodeInvocation_'proc)"
-  (is "ccorres ?r ?xf ?P (?P' slot_') [] ?a ?c")
-proof -
-
-  have not_VCPUCap_case_helper_eq:
-    "\<And>P Q. \<not> isVCPUCap cp \<Longrightarrow> (case cp of arch_capability.VCPUCap x \<Rightarrow> P cp | _ \<Rightarrow> Q cp) = Q cp"
-    by (clarsimp simp: isVCPUCap_def split: arch_capability.splits)
-
-  from assms show ?thesis
-    apply (cinit' lift: invLabel_'  length___unsigned_long_'  slot_'  current_extra_caps_'  cap_'
-                        buffer_' call_')
-     apply csymbr
-     apply (simp only: cap_get_tag_isCap_ArchObject ARM_HYP_H.decodeInvocation_def)
-     apply (rule ccorres_Cond_rhs)
-      apply wpc
-           apply (clarsimp simp: isVCPUCap_def)+
-      apply (rule ccorres_trim_returnE, simp+)
-      apply (rule ccorres_call,
-             rule decodeARMVCPUInvocation_ccorres, (simp add: isVCPUCap_def)+)[1]
-     (* will not rewrite any other way, and we do not want to repeat proof for each MMU cap case
-        of decodeARMMMUInvocation *)
-     apply (subst not_VCPUCap_case_helper_eq, assumption)
-     apply (rule ccorres_trim_returnE, simp+)
-     apply (rule ccorres_call,
-            rule decodeARMMMUInvocation_ccorres, simp+)[1]
-
-    apply (clarsimp simp: cte_wp_at_ctes_of ct_in_state'_def)
-    apply (drule_tac t="cteCap cte" in sym, simp)
-    apply (frule(1) ctes_of_valid', simp)
-    apply (clarsimp split: arch_capability.splits simp: isVCPUCap_def)
-    done
-qed
+  (is "?F \<Longrightarrow> ccorres ?r ?xf ?P (?P' slot_') [] ?a ?c")
+  unfolding ARM_HYP_H.decodeInvocation_def
+  supply if_cong[cong] Collect_const[simp del]
+  apply (subst case_VCPU_SGISignal_is_if)
+  apply (cinit' lift: invLabel_' length___unsigned_long_' slot_'
+                      current_extra_caps_' cap_' buffer_' call_')
+   apply csymbr
+   apply (simp cong: ccorres_prog_only_cong)
+   apply (rule ccorres_Cond_rhs)
+    apply (prop_tac "isVCPUCap cp", solves \<open>clarsimp simp: cap_get_tag_isCap_ArchObject\<close>)
+    apply (rule ccorres_trim_returnE; simp)
+    apply (ctac add: decodeARMVCPUInvocation_ccorres[where buffer=buffer])
+   apply (prop_tac "\<not>isVCPUCap cp", solves \<open>clarsimp simp: cap_get_tag_isCap_ArchObject\<close>)
+   apply (rule ccorres_Cond_rhs)
+    apply (prop_tac "isSGISignalCap cp", solves \<open>clarsimp simp: cap_get_tag_isCap_ArchObject\<close>)
+    apply (rule ccorres_trim_returnE; simp)
+    apply (ctac add: decodeSGISignalInvocation_ccorres)
+   apply (prop_tac "\<not>isSGISignalCap cp", solves \<open>clarsimp simp: cap_get_tag_isCap_ArchObject\<close>)
+   apply (rule ccorres_trim_returnE; simp)
+   apply (ctac add: decodeARMMMUInvocation_ccorres)
+  apply (fastforce simp: cte_wp_at_ctes_of ctes_of_valid')
+  done
 
 end
 

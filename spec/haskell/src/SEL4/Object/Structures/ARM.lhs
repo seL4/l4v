@@ -60,6 +60,9 @@ There are six ARM-specific capability types: the global ASID control capability,
 >     | VCPUCap {
 >         capVCPUPtr :: PPtr VCPU }
 #endif
+>     | SGISignalCap {
+>         capSGIIRQ :: Word,
+>         capSGITargetMask :: Word }
 #ifdef CONFIG_ARM_SMMU
 >     | IOSpaceCap {
 >         capIOSpaceModuleID :: Word16,

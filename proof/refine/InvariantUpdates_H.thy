@@ -47,19 +47,10 @@ lemma valid_cap_update [iff]:
   "(f s) \<turnstile>' c = s \<turnstile>' c"
   by (auto intro: valid_cap'_pspaceI simp: pspace)
 
-(* exports from Arch locale version (safe for generic use) *)
+(* exports from Arch locale version which are safe for generic use *)
 interpretation Arch_pspace_update_eq' ..
 
 lemmas pspace_in_kernel_mappings_update'[iff] = pspace_in_kernel_mappings_update'
-
-end
-
-context Arch_p_arch_idle_update_eq'
-begin
-
-lemma valid_arch_state_update' [iff]:
-  "valid_arch_state' (f s) = valid_arch_state' s"
-  by (simp add: valid_arch_state'_def arch cong: option.case_cong)
 
 end
 
@@ -77,37 +68,11 @@ lemmas valid_arch_state_update'[iff] = valid_arch_state_update'
 
 end
 
+locale InvariantUpdates_H =
+  assumes valid_arch_state'_interrupt[simp]:
+    "\<And>f s. valid_arch_state' (ksInterruptState_update f s) = valid_arch_state' s"
 
 (* FIXME: use locales to shorten this work *)
-
-(* FIXME arch-split: MOVE, or try make generic *)
-context Arch begin arch_global_naming
-
-lemma invs'_gsCNodes_update[simp]:
-  "invs' (gsCNodes_update f s') = invs' s'"
-  apply (clarsimp simp: invs'_def valid_bitmaps_def bitmapQ_defs
-                        valid_irq_node'_def valid_irq_handlers'_def
-                        irq_issued'_def irqs_masked'_def valid_machine_state'_def
-                        valid_dom_schedule'_def)
-  done
-
-lemma invs'_gsUserPages_update[simp]:
-  "invs' (gsUserPages_update f s') = invs' s'"
-  apply (clarsimp simp: invs'_def valid_bitmaps_def bitmapQ_defs
-                        valid_irq_node'_def valid_irq_handlers'_def
-                        irq_issued'_def irqs_masked'_def valid_machine_state'_def
-                        valid_dom_schedule'_def)
-  done
-
-end
-
-(* FIXME arch-split: locale interface? *)
-arch_requalify_facts
-  invs'_gsCNodes_update
-  invs'_gsUserPages_update
-
-lemmas [simp] = invs'_gsCNodes_update invs'_gsUserPages_update
-
 
 lemma ps_clear_domE[elim?]:
   "\<lbrakk> ps_clear x n s; dom (ksPSpace s) = dom (ksPSpace s') \<rbrakk> \<Longrightarrow> ps_clear x n s'"
@@ -154,6 +119,11 @@ lemma pspace_no_overlap'_ksSchedulerAction[simp]:
    pspace_no_overlap' a b s"
   by (simp add: pspace_no_overlap'_def)
 
+lemma pspace_no_overlap'_ksArchState_update[simp]:
+  "pspace_no_overlap' p n (ksArchState_update f s) =
+   pspace_no_overlap' p n s"
+  by (simp add: pspace_no_overlap'_def)
+
 lemma ksReadyQueues_update_id[simp]:
   "ksReadyQueues_update id s = s"
   by simp
@@ -172,34 +142,18 @@ lemma valid_tcb'_tcbQueued[simp]:
 
 lemma valid_tcb'_tcbFault_update[simp]:
   "valid_tcb' tcb s \<Longrightarrow> valid_tcb' (tcbFault_update f tcb) s"
-  by (clarsimp simp: valid_tcb'_def  tcb_cte_cases_def tcb_cte_cases_neqs)
-
-lemma invs'_wu[simp]:
-  "invs' (ksWorkUnitsCompleted_update f s) = invs' s"
-  apply (simp add: invs'_def valid_bitmaps_def valid_sched_pointers_def valid_irq_node'_def
-                   valid_machine_state'_def bitmapQ_defs valid_dom_schedule'_def)
-  done
-
-(* FIXME arch-split: MOVE *)
-context Arch begin arch_global_naming
+  by (clarsimp simp: valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs)
 
 lemma valid_tcb'_ksMachineState_update[simp]:
   "valid_tcb' tcb (ksMachineState_update f s) = valid_tcb' tcb s"
   by (auto simp: valid_tcb'_def valid_tcb_state'_def valid_bound_obj'_def valid_arch_tcb'_def
           split: option.splits thread_state.splits)
 
-lemma valid_arch_state'_interrupt[simp]:
-  "valid_arch_state' (ksInterruptState_update f s) = valid_arch_state' s"
-  by (simp add: valid_arch_state'_def)
-
-end
-
-(* FIXME arch-split: locales? *)
-arch_requalify_facts
-  valid_arch_state'_interrupt valid_tcb'_ksMachineState_update
-
-lemmas [simp] =
-  valid_arch_state'_interrupt valid_tcb'_ksMachineState_update
+lemma invs'_wu[simp]:
+  "invs' (ksWorkUnitsCompleted_update f s) = invs' s"
+  apply (simp add: invs'_def valid_bitmaps_def valid_sched_pointers_def valid_irq_node'_def
+                   valid_machine_state'_def bitmapQ_defs valid_dom_schedule'_def)
+  done
 
 lemma if_unsafe_then_cap_arch'[simp]:
   "if_unsafe_then_cap' (ksArchState_update f s) = if_unsafe_then_cap' s"
@@ -432,14 +386,6 @@ lemma sch_act_simple_ksReadyQueuesL2Bitmap[simp]:
   apply (simp add: sch_act_simple_def)
   done
 
-lemma ksDomainTime_invs[simp]:
-  "invs' (ksDomainTime_update f s) = invs' s"
-  by (simp add: invs'_def valid_machine_state'_def valid_dom_schedule'_def)
-
-lemma ksSchedulerAction_invs'[simp]:
-  "invs' (ksSchedulerAction_update f s) = invs' s"
-  by (auto simp: invs'_def valid_machine_state'_def  valid_irq_node'_def valid_dom_schedule'_def)
-
 lemma valid_machine_state'_ksDomainTime[simp]:
   "valid_machine_state' (ksDomainTime_update f s) = valid_machine_state' s"
   by (simp add:valid_machine_state'_def)
@@ -463,6 +409,14 @@ lemma ct_not_inQ_update_cnt[simp]:
 lemma ct_not_inQ_update_stt[simp]:
   "ct_not_inQ (s\<lparr>ksSchedulerAction := SwitchToThread t\<rparr>)"
    by (simp add: ct_not_inQ_def)
+
+lemma ksDomainTime_invs[simp]:
+  "invs' (ksDomainTime_update f s) = invs' s"
+  by (simp add: invs'_def valid_machine_state'_def valid_dom_schedule'_def)
+
+lemma ksSchedulerAction_invs'[simp]:
+  "invs' (ksSchedulerAction_update f s) = invs' s"
+  by (auto simp: invs'_def valid_machine_state'_def  valid_irq_node'_def valid_dom_schedule'_def)
 
 lemma invs'_update_cnt[elim!]:
   "invs' s \<Longrightarrow> invs' (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>)"
@@ -585,5 +539,21 @@ lemma valid_ipc_buffer_ptr'_ks_updates[simp]:
   "valid_ipc_buffer_ptr' buf (ksReprogramTimer_update g s) = valid_ipc_buffer_ptr' buf s"
   "valid_ipc_buffer_ptr' buf (ksReleaseQueue_update h s) = valid_ipc_buffer_ptr' buf s"
   by (simp add: valid_ipc_buffer_ptr'_def)+
+
+lemma invs'_gsCNodes_update[simp]:
+  "invs' (gsCNodes_update f s') = invs' s'"
+  apply (clarsimp simp: invs'_def valid_bitmaps_def bitmapQ_defs
+                        valid_irq_node'_def valid_irq_handlers'_def
+                        irq_issued'_def irqs_masked'_def valid_machine_state'_def
+                        valid_dom_schedule'_def)
+  done
+
+lemma invs'_gsUserPages_update[simp]:
+  "invs' (gsUserPages_update f s') = invs' s'"
+  apply (clarsimp simp: invs'_def valid_bitmaps_def bitmapQ_defs
+                        valid_irq_node'_def valid_irq_handlers'_def
+                        irq_issued'_def irqs_masked'_def valid_machine_state'_def
+                        valid_dom_schedule'_def)
+  done
 
 end

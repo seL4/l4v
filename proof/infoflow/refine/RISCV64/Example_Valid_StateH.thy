@@ -3037,6 +3037,7 @@ lemma mdb_nextI:
 
 lemma s0H_valid_pspace':
   notes pteBits_def[simp] objBits_defs[simp]
+  notes valid_arch_badges_def[simp] mdb_chunked_arch_assms_def[simp]
   assumes "1 \<le> maxDomain"
   shows "valid_pspace' s0H_internal"
   using assms
@@ -3625,7 +3626,8 @@ lemma s0_pspace_rel:
         apply (clarsimp simp: kh0H_obj_def bit_simps ntfn_def other_obj_relation_def ntfn_relation_def)
        defer
        apply ((clarsimp simp: kh0_obj_def kh0H_obj_def other_obj_relation_def
-                              asid_pool_relation_def comp_def inv_into_def2, rule ext,
+                              asid_pool_relation_def comp_def inv_into_def2 other_aobj_relation_def,
+               rule ext,
                clarsimp simp: asid_low_bits_of_def asid_low_bits_def High_asid_def,
                word_bitwise, fastforce)+)[2]
      apply (clarsimp simp: kh0H_obj_def kh0_obj_def cte_relation_def cte_map_def')

@@ -29,6 +29,9 @@ definition page_base :: "vspace_ref \<Rightarrow> vmpage_size \<Rightarrow> vspa
 
 section "Architecture-specific Decode Functions"
 
+definition sgi_target_valid :: "machine_word \<Rightarrow> bool" where
+  "sgi_target_valid t \<equiv> t < of_nat gicNumTargets"
+
 definition arch_decode_irq_control_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap list \<Rightarrow> (arch_irq_control_invocation,'z::state_ext) se_monad"
   where
@@ -49,8 +52,23 @@ definition arch_decode_irq_control_invocation ::
           ensure_empty dest_slot;
           returnOk $ ARMIRQControlInvocation irq dest_slot src_slot (trigger \<noteq> 0)
         odE
-      else throwError TruncatedMessage
-    else throwError IllegalOperation)"
+        else throwError TruncatedMessage
+      else if invocation_type label = ArchInvocationLabel ARMIRQIssueSGISignal
+      then if length args \<ge> 4 \<and> length cps \<ge> 1
+        then let irq_word = args ! 0;
+                 target_word = args ! 1;
+                 index = args ! 2;
+                 depth = args ! 3;
+                 cnode = cps ! 0
+        in doE
+          range_check irq_word 0 (of_nat numSGIs - 1);
+          unlessE (sgi_target_valid target_word) $ throwError $ InvalidArgument 1;
+          dest_slot \<leftarrow> lookup_target_slot cnode (data_to_cptr index) (unat depth);
+          ensure_empty dest_slot;
+          returnOk $ IssueSGISignal (ucast irq_word) (ucast target_word) src_slot dest_slot
+        odE
+        else throwError TruncatedMessage
+      else throwError IllegalOperation)"
 
 definition attribs_from_word :: "machine_word \<Rightarrow> vm_attributes" where
   "attribs_from_word w \<equiv> {attr.  \<not>w!!0 \<and> attr = Device \<or> \<not>w !! 2 \<and> attr = Execute}"
@@ -305,6 +323,12 @@ definition decode_asid_pool_invocation :: "'z::state_ext arch_decoder" where
      else throwError TruncatedMessage
      else throwError IllegalOperation"
 
+definition decode_sgi_signal_invocation :: "arch_cap \<Rightarrow> (arch_invocation,'z::state_ext) se_monad" where
+  "decode_sgi_signal_invocation acap \<equiv>
+     case acap of
+       SGISignalCap irq target \<Rightarrow> returnOk $ InvokeSGISignal $ SGISignalGenerate irq target
+     | _ \<Rightarrow> fail"
+
 definition arch_decode_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cap_ref \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
     (arch_invocation,'z::state_ext) se_monad"
@@ -312,11 +336,11 @@ definition arch_decode_invocation ::
   "arch_decode_invocation label args x_slot cte cap extra_caps \<equiv> case cap of
      PageTableCap _ VSRootPT_T _ \<Rightarrow> decode_vspace_invocation label args cte cap extra_caps
    | PageTableCap _ NormalPT_T _ \<Rightarrow> decode_page_table_invocation label args cte cap extra_caps
-   | FrameCap _ _ _ _ _        \<Rightarrow> decode_frame_invocation label args cte cap extra_caps
-   | ASIDControlCap            \<Rightarrow> decode_asid_control_invocation label args cte cap extra_caps
-   | ASIDPoolCap _ _           \<Rightarrow> decode_asid_pool_invocation label args cte cap extra_caps
-   | VCPUCap _                 \<Rightarrow> decode_vcpu_invocation label args cap extra_caps"
-
+   | FrameCap _ _ _ _ _          \<Rightarrow> decode_frame_invocation label args cte cap extra_caps
+   | ASIDControlCap              \<Rightarrow> decode_asid_control_invocation label args cte cap extra_caps
+   | ASIDPoolCap _ _             \<Rightarrow> decode_asid_pool_invocation label args cte cap extra_caps
+   | VCPUCap _                   \<Rightarrow> decode_vcpu_invocation label args cap extra_caps
+   | SGISignalCap _ _            \<Rightarrow> decode_sgi_signal_invocation cap"
 
 section "Interface Functions used in Decode"
 

@@ -78,6 +78,13 @@ ASID capabilities can be copied without modification, as can IOPort and IOSpace 
 >     ArchObjectCap (IOPortCap {}) -> isIOPortControlCap' srcCap
 >     _ -> False
 
+Whether the first capability is a parent of the second one. Can assume that
+sameRegionAs is true for the two capabilities. If this function returns True,
+the remaining cases of generic isMDBParentOf are still checked.
+
+> isArchMDBParentOf :: Capability -> Capability -> Bool -> Bool
+> isArchMDBParentOf _ _ _ = True
+
 % X64 has two writable user data caps
 
 > -- FIXME x64: io_space_capdata_get_domainID
@@ -227,6 +234,9 @@ Deletion of a final capability to a page table that has been mapped requires tha
 >--
 
 \subsection{Identifying Capabilities}
+
+> isIRQControlCapDescendant :: ArchCapability -> Bool
+> isIRQControlCapDescendant _ = False
 
 > sameRegionAs :: ArchCapability -> ArchCapability -> Bool
 > sameRegionAs (a@PageCap {}) (b@PageCap {}) =

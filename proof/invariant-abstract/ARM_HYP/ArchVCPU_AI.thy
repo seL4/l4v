@@ -580,6 +580,9 @@ lemma perform_vcpu_invocation_valid_cur_vcpu:
   unfolding perform_vcpu_invocation_def
   by (wpsimp wp: associate_vcpu_tcb_valid_cur_vcpu)
 
+crunch perform_sgi_invocation
+  for valid_cur_vcpu[wp]: valid_cur_vcpu
+
 lemma perform_invocation_valid_cur_vcpu[wp]:
   "\<lbrace>valid_cur_vcpu and invs and valid_invocation iv and ct_active\<rbrace>
    perform_invocation blocking call iv

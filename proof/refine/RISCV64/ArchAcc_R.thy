@@ -189,7 +189,7 @@ lemma asid_pool_at_cross:
    apply clarsimp
   apply (clarsimp simp: pspace_relation_def)
   apply (drule bspec, fastforce)
-  apply (clarsimp simp: other_obj_relation_def split: kernel_object.splits arch_kernel_object.splits)
+  apply (clarsimp simp: other_aobj_relation_def split: kernel_object.splits arch_kernel_object.splits)
   apply (clarsimp simp: objBits_simps)
   apply (frule (1) pspace_alignedD)
   apply (rule conjI, simp add: bit_simps)
@@ -226,7 +226,7 @@ lemma getObject_ASIDPool_corres:
                   split: option.split)
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
-  apply (clarsimp simp: other_obj_relation_def asid_pool_relation_def obj_at'_def)
+  apply (clarsimp simp: other_aobj_relation_def asid_pool_relation_def obj_at'_def)
   done
 
 lemma aligned_distinct_obj_atI':
@@ -265,15 +265,14 @@ lemma setObject_ASIDPool_corres[corres]:
    apply wpsimp
   apply (rule corres_cross_over_asid_pool_at, fastforce)
   apply (rule corres_guard_imp)
-    apply (rule setObject_other_corres [where P="\<lambda>ko::asidpool. True"])
-          apply simp
-         apply (clarsimp simp: obj_at'_def)
-         apply (erule map_to_ctes_upd_other, simp, simp)
-        apply (simp add: a_type_def is_other_obj_relation_type_def)
-       apply (simp add: objBits_simps)
-      apply simp
-     apply (simp add: objBits_simps pageBits_def)
-    apply (simp add: other_obj_relation_def asid_pool_relation_def)
+    apply (rule setObject_other_arch_corres[where P="\<lambda>ko::asidpool. True"])
+           apply simp
+          apply (clarsimp simp: obj_at'_def)
+          apply (erule map_to_ctes_upd_other, simp, simp)
+         apply (simp add: a_type_def is_other_obj_relation_type_def)
+        apply (simp add: objBits_simps)+
+      apply (simp add: objBits_simps pageBits_def)+
+    apply (simp add: other_aobj_relation_def asid_pool_relation_def)
    apply (simp add: typ_at'_def obj_at'_def ko_wp_at'_def)
    apply clarsimp
    apply (rename_tac arch_kernel_object)
@@ -382,8 +381,9 @@ lemma setObject_PT_corres:
    apply (drule bspec, assumption)
    apply clarsimp
    apply (erule (1) obj_relation_cutsE)
+          apply simp
          apply simp
-        apply simp
+        apply clarsimp
        apply simp
       apply clarsimp
      apply (frule (1) pspace_alignedD)
@@ -397,8 +397,8 @@ lemma setObject_PT_corres:
       apply (clarsimp simp: word_size bit_simps)
       apply arith
      apply ((simp split: if_split_asm)+)[2]
-   apply (simp add: other_obj_relation_def
-               split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
+    apply (simp add: other_obj_relation_def split: Structures_A.kernel_object.splits)
+   apply (simp add: other_aobj_relation_def split: arch_kernel_obj.splits)
   apply (rule conjI)
    apply (fastforce simp: sc_replies_relation_def sc_replies_of_scs_def map_project_def
                           scs_of_kh_def opt_map_def projectKO_opts_defs)
