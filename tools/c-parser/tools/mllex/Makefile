@@ -22,10 +22,10 @@ ifeq ($(SML_COMPILER),mlton)
 #
 # Compilation if the compiler is mlton
 #
-MLTON_DEPS := $(shell mlton -stop f $(MLLEX_PFX)/mllex.mlb)
+MLTON_DEPS := $(shell $(MLTON) -stop f $(MLLEX_PFX)/mllex.mlb)
 
 $(MLLEX): $(MLTON_DEPS)
-	mlton $<
+	$(MLTON) $<
 else ifeq ($(SML_COMPILER),poly)
 #
 # Compilation if the compiler is Poly/ML
