@@ -921,7 +921,7 @@ proof -
      \<lbrace>\<lambda>rv. invs'\<rbrace>"
     unfolding getThreadReplySlot_def
     by (wp valid_irq_node_lift delete_one_invs hoare_drop_imps
-           threadSet_invs_trivial irqs_masked_lift
+           ARM_HYP.threadSet_invs_trivial irqs_masked_lift (* FIXME arch-split *)
       | simp add: o_def if_apply_def2
       | fastforce simp: inQ_def)+
   show ?thesis
@@ -1720,18 +1720,6 @@ proof -
   apply assumption
   done
 qed
-
-context Arch begin arch_global_naming
-
-lemma tcbSchedEnqueue_valid_pspace'[wp]:
-  "tcbSchedEnqueue tcbPtr \<lbrace>valid_pspace'\<rbrace>"
-  unfolding valid_pspace'_def
-  by wpsimp
-
-end
-
-arch_requalify_facts tcbSchedEnqueue_valid_pspace' (* FIXME arch-split: interface *)
-lemmas [wp] = tcbSchedEnqueue_valid_pspace'
 
 lemma cancel_all_invs'_helper:
   "\<lbrace>all_invs_but_sym_refs_ct_not_inQ' and (\<lambda>s. \<forall>x \<in> set q. tcb_at' x s)

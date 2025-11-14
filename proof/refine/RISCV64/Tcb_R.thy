@@ -11,7 +11,7 @@ begin
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma asUser_setNextPC_corres:
-  "corres dc (tcb_at t and invs) (tcb_at' t and invs')
+  "corres dc (tcb_at t and invs) invs'
              (as_user t (setNextPC v)) (asUser t (setNextPC v))"
   apply (rule asUser_corres)
   apply (rule corres_Id, simp, simp)
@@ -667,7 +667,7 @@ lemma sp_corres2:
                 obj_at'_weakenE[where P="Not \<circ> tcbQueued"]
               | wps)+)
    apply (force simp: tcb_at_st_tcb_at[symmetric] state_relation_def
-                dest: pspace_relation_tcb_at intro: st_tcb_at_opeqI)
+                dest: tcb_at'_cross intro: st_tcb_at_opeqI)
   apply clarsimp
   done
 
@@ -1110,7 +1110,7 @@ lemma threadSet_invs_trivialT2:
              threadSet_not_inQ
              threadSet_ct_idle_or_in_cur_domain'
              threadSet_cur
-          | clarsimp simp: assms cteCaps_of_def | rule refl)+
+          | clarsimp simp: assms cteCaps_of_def valid_arch_tcb'_def | rule refl)+
   apply (clarsimp simp: o_def)
   by (auto simp: obj_at'_def)
 
@@ -1792,11 +1792,11 @@ lemma invokeTCB_corres:
     apply (clarsimp simp: obj_at'_def)
    apply (simp add: invokeTCB_def tlsBaseRegister_def)
    apply (rule corres_guard_imp)
-     apply (rule corres_split[OF TcbAcc_R.asUser_setRegister_corres])
+     apply (rule corres_split[OF asUser_setRegister_corres])
        apply (rule corres_split[OF Bits_R.getCurThread_corres])
          apply (rule corres_split[OF Corres_UL.corres_when])
              apply simp
-            apply (rule TcbAcc_R.rescheduleRequired_corres)
+            apply (rule rescheduleRequired_corres)
            apply (rule corres_trivial, simp)
           apply (wpsimp wp: hoare_drop_imp)+
     apply (fastforce dest: valid_sched_valid_queues simp: valid_sched_weak_strg)

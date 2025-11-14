@@ -3175,14 +3175,10 @@ lemma usableUntypedRange_uniq:
   apply blast
   done
 
-(* FIXME arch-split: move? doesn't seem like the ARCH version actually unfolds arch on AARCH64, maybe others, check *)
-lemmas gen_valid_cap_simps' =
-  valid_cap'_def[split_simps capability.split]
-
 lemma usableUntypedRange_empty:
   "valid_cap' cp s \<Longrightarrow> isUntypedCap cp
    \<Longrightarrow> (usableUntypedRange cp = {}) = (capFreeIndex cp = maxFreeIndex (capBlockSize cp))"
-  apply (clarsimp simp: gen_isCap_simps max_free_index_def gen_valid_cap_simps' capAligned_def)
+  apply (clarsimp simp: gen_isCap_simps max_free_index_def valid_cap_simps' capAligned_def)
   apply (rule order_trans, rule word_plus_mono_right)
     apply (rule_tac x="2 ^ capBlockSize cp - 1" in word_of_nat_le)
     apply simp
@@ -3204,7 +3200,7 @@ lemma untypedZeroRange_to_usableCapRange:
         \<and> x \<le> y"
   apply (clarsimp simp: untypedZeroRange_def split: if_split_asm)
   apply (frule(1) usableUntypedRange_empty)
-  apply (clarsimp simp: gen_isCap_simps gen_valid_cap_simps' max_free_index_def)
+  apply (clarsimp simp: gen_isCap_simps valid_cap_simps' max_free_index_def)
   apply (simp add: getFreeRef_def mask_def add_diff_eq)
   done
 
@@ -3285,7 +3281,7 @@ crunch cteInsert
 
 lemma valid_NullCap:
   "valid_cap' NullCap = \<top>"
-  by (rule ext, simp add: gen_valid_cap_simps' capAligned_def word_bits_def)
+  by (rule ext, simp add: valid_cap_simps' capAligned_def word_bits_def)
 
 context CSpace_R begin
 
@@ -5081,7 +5077,7 @@ lemma updateFreeIndex_forward_valid_objs':
   apply clarsimp
   apply (frule(1) CSpace1_R.ctes_of_valid)
   apply (clarsimp simp: cte_wp_at_ctes_of gen_isCap_simps capAligned_def
-                        gen_valid_cap_simps' is_aligned_weaken[OF is_aligned_triv])
+                        valid_cap_simps' is_aligned_weaken[OF is_aligned_triv])
   apply (clarsimp simp add: valid_untyped'_def
                   simp del: usableUntypedRange.simps)
   apply (erule allE, erule notE, erule ko_wp_at'_weakenE)
@@ -5108,7 +5104,7 @@ lemma updateFreeIndex_forward_valid_mdb':
   apply (frule(1) CSpace1_R.ctes_of_valid)
   apply (clarsimp simp: cte_wp_at_ctes_of del: subsetI)
   apply (rule usableUntypedRange_mono2,
-         auto simp add: gen_isCap_simps gen_valid_cap_simps' capAligned_def)
+         auto simp add: gen_isCap_simps valid_cap_simps' capAligned_def)
   done
 
 lemma no_fail_getSlotCap:

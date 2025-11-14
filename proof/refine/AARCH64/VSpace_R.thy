@@ -10,7 +10,7 @@
 *)
 
 theory VSpace_R
-imports TcbAcc_R
+imports ArchTcbAcc_R
 begin
 
 lemma cteCaps_of_ctes_of_lift:

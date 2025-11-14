@@ -825,20 +825,6 @@ lemma sym_refs_empty[simp]:
   unfolding sym_refs_def
   by simp
 
-context Arch begin arch_global_naming
-
-crunch setThreadState, rescheduleRequired
-  for state_hyp_refs_of': "\<lambda>s. P (state_hyp_refs_of' s)"
-
-end
-
-(* FIXME arch-split: interface candidates *)
-arch_requalify_facts
-  setThreadState_state_hyp_refs_of'
-  rescheduleRequired_state_hyp_refs_of'
-
-lemmas [wp] = setThreadState_state_hyp_refs_of' rescheduleRequired_state_hyp_refs_of'
-
 lemma (in delete_one_conc) cancelIPC_invs[wp]:
   shows "\<lbrace>tcb_at' t and invs'\<rbrace> cancelIPC t \<lbrace>\<lambda>rv. invs'\<rbrace>"
 proof -
@@ -927,7 +913,7 @@ proof -
      \<lbrace>\<lambda>rv. invs'\<rbrace>"
     unfolding getThreadReplySlot_def
     by (wp valid_irq_node_lift delete_one_invs hoare_drop_imps
-           threadSet_invs_trivial irqs_masked_lift
+           ARM.threadSet_invs_trivial irqs_masked_lift (* FIXME arch-split *)
       | simp add: o_def if_apply_def2
       | fastforce simp: inQ_def)+
   show ?thesis
@@ -1600,18 +1586,6 @@ proof -
   apply assumption
   done
 qed
-
-context Arch begin arch_global_naming
-
-lemma tcbSchedEnqueue_valid_pspace'[wp]:
-  "tcbSchedEnqueue tcbPtr \<lbrace>valid_pspace'\<rbrace>"
-  unfolding valid_pspace'_def
-  by wpsimp
-
-end
-
-arch_requalify_facts tcbSchedEnqueue_valid_pspace' (* FIXME arch-split: interface *)
-lemmas [wp] = tcbSchedEnqueue_valid_pspace'
 
 lemma cancel_all_invs'_helper:
   "\<lbrace>all_invs_but_sym_refs_ct_not_inQ' and (\<lambda>s. \<forall>x \<in> set q. tcb_at' x s)

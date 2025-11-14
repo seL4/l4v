@@ -19,6 +19,8 @@ unbundle l4v_word_context
 
 declare in_set_zip_refl[simp]
 
+lemmas [wp] = setObject_pspace_in_kernel_mappings'
+
 lemma fun_all: "f = f' \<Longrightarrow> (\<forall>s. f s \<longrightarrow> f' s)"
  by simp
 

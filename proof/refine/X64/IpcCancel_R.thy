@@ -808,20 +808,6 @@ lemma sym_refs_empty[simp]:
   unfolding sym_refs_def
   by simp
 
-context Arch begin arch_global_naming
-
-crunch setThreadState, rescheduleRequired
-  for state_hyp_refs_of': "\<lambda>s. P (state_hyp_refs_of' s)"
-
-end
-
-(* FIXME arch-split: interface candidates *)
-arch_requalify_facts
-  setThreadState_state_hyp_refs_of'
-  rescheduleRequired_state_hyp_refs_of'
-
-lemmas [wp] = setThreadState_state_hyp_refs_of' rescheduleRequired_state_hyp_refs_of'
-
 lemma (in delete_one_conc) cancelIPC_invs[wp]:
   shows "\<lbrace>tcb_at' t and invs'\<rbrace> cancelIPC t \<lbrace>\<lambda>rv. invs'\<rbrace>"
 proof -
@@ -910,7 +896,7 @@ proof -
      \<lbrace>\<lambda>rv. invs'\<rbrace>"
     unfolding getThreadReplySlot_def
     by (wp valid_irq_node_lift delete_one_invs hoare_drop_imps
-           threadSet_invs_trivial irqs_masked_lift
+           X64.threadSet_invs_trivial irqs_masked_lift (* FIXME arch-split *)
       | simp add: o_def if_apply_def2
       | fastforce simp: inQ_def)+
   show ?thesis
@@ -1561,7 +1547,6 @@ proof -
            | (clarsimp simp: valid_ep'_def)
            | (drule (1) bspec, clarsimp simp: valid_pspace'_def valid_tcb'_def valid_ep'_def
            | strengthen valid_objs'_valid_tcbs'))+
-    apply fastforce
     done
 
   show ?thesis
@@ -2249,7 +2234,9 @@ lemma cancelBadgedSends_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor[OF setEndpoint_corres])
        apply (simp add: ep_relation_def)
-      apply (rule corres_split_eqr[OF _ _ _ hoare_post_add[where Q'="\<lambda>_. valid_objs'"]])
+      apply (rule corres_split_eqr[OF _ _ _
+                                      hoare_post_add[where Q'="\<lambda>_. valid_objs' and pspace_aligned'
+                                                                   and pspace_distinct'"]])
          apply (rule_tac S="(=)"
                      and Q="\<lambda>xs s. (\<forall>x \<in> set xs. (epptr, TCBBlockedSend) \<in> state_refs_of s x) \<and>
                                    distinct xs \<and>
@@ -2304,8 +2291,7 @@ lemma cancelBadgedSends_corres:
    apply (drule(1) bspec, drule st_tcb_at_state_refs_ofD, clarsimp)
    apply (simp add: set_eq_subset)
   apply (clarsimp simp: obj_at'_weakenE[OF _ TrueI])
-  apply (drule ko_at_valid_objs', clarsimp)
-   apply (simp add: projectKOs)
+  apply (drule ko_at_valid_objs'; clarsimp)
   apply (fastforce simp: valid_obj'_def valid_ep'_def invs_weak_sch_act_wf
                          invs'_def valid_state'_def)
   done

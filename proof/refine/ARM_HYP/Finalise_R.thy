@@ -3374,6 +3374,12 @@ lemma archThreadSet_tcbSchedPrevNext[wp]:
   apply auto
   done
 
+(* FIXME arch-split: RAF move to ArchTcbAcc_R on ARM_HYP and AARCH64 *)
+lemma archThreadGet_wp:
+  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at' tcb t s \<longrightarrow> Q (f (tcbArch tcb)) s\<rbrace> archThreadGet f t \<lbrace>Q\<rbrace>"
+  unfolding archThreadGet_def
+  by (wpsimp wp: getObject_tcb_wp simp: obj_at'_def)
+
 crunch prepareThreadDelete
   for tcbSchedPrevNext[wp]: "obj_at' (\<lambda>tcb. P (tcbSchedNext tcb) (tcbSchedPrev tcb)) t"
   (wp: threadGet_wp getVCPU_wp archThreadGet_wp crunch_wps simp: crunch_simps)

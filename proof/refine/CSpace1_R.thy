@@ -75,6 +75,8 @@ lemmas final_matters_simps[simp]
 
 end
 
+lemmas valid_cap_simps' =
+  valid_cap'_def[split_simps capability.split]
 
 locale CSpace1_R =
   assumes archMDBAssertions_cross:
