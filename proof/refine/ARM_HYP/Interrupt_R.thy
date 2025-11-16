@@ -1036,16 +1036,17 @@ lemma handle_reserved_irq_corres[corres]:
 
 lemma handleInterrupt_corres:
   "corres dc
-     einvs (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive))
+     einvs (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive)
+                  and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s))
      (handle_interrupt irq) (handleInterrupt irq)"
-  (is "corres dc _ ?P' ?f ?g")
+  (is "corres dc _ (invs' and _ and ?P') _ _")
   apply (simp add: handle_interrupt_def handleInterrupt_def)
   apply (rule conjI[rotated]; rule impI)
 
    apply (rule corres_guard_imp)
      apply (rule corres_split[OF getIRQState_corres,
                                where R="\<lambda>rv. einvs"
-                                 and R'="\<lambda>rv. invs' and (\<lambda>s. rv \<noteq> IRQInactive)"])
+                                 and R'="\<lambda>rv. invs' and ?P' and (\<lambda>s. rv \<noteq> IRQInactive)"])
        defer
        apply (wp getIRQState_prop getIRQState_inv do_machine_op_bind doMachineOp_bind | simp add: do_machine_op_bind doMachineOp_bind )+
    apply (rule corres_guard_imp)
@@ -1056,34 +1057,27 @@ lemma handleInterrupt_corres:
       apply ((wp | simp)+)[4]
 
   apply (rule corres_gen_asm2)
-  apply (case_tac st, simp_all add: irq_state_relation_def split: irqstate.split_asm)
-   apply (simp add: getSlotCap_def bind_assoc)
-   apply (rule corres_guard_imp)
-     apply (rule corres_split[OF getIRQSlot_corres])
-       apply simp
-       apply (rule corres_split[OF get_cap_corres,
-                                where R="\<lambda>rv. einvs and valid_cap rv"
-                                  and R'="\<lambda>rv. invs' and valid_cap' (cteCap rv)"])
-         apply (rule corres_underlying_split[where r'=dc])
-            apply (case_tac xb, simp_all add: doMachineOp_return)[1]
-             apply (clarsimp simp add: when_def doMachineOp_return)
-             apply (rule corres_guard_imp, rule sendSignal_corres)
-              apply (clarsimp simp: valid_cap_def valid_cap'_def arch_mask_irq_signal_def
-                                    maskIrqSignal_def do_machine_op_bind doMachineOp_bind)+
-           apply corres
-             apply (rule corres_machine_op, rule corres_eq_trivial; simp; rule no_fail_ackInterrupt no_fail_maskInterrupt)+
-            apply wpsimp+
-   apply fastforce
-  apply (rule corres_guard_imp)
-    apply (rule corres_split)
-       apply simp
-       apply (rule corres_split[OF timerTick_corres corres_machine_op])
-         apply (rule corres_eq_trivial, wpsimp+)
-      apply (rule corres_machine_op)
-      apply (rule corres_eq_trivial; simp)
-     apply wpsimp+
-   apply (clarsimp simp: invs_distinct invs_psp_aligned schact_is_rct_def)
-  apply clarsimp
+  apply (case_tac st, simp_all add: irq_state_relation_def bind_assoc split: irqstate.split_asm)
+    apply (simp add: getSlotCap_def bind_assoc)
+    apply (rule corres_guard_imp)
+      apply (rule corres_split[OF getIRQSlot_corres])
+        apply simp
+        apply (rule corres_split[OF get_cap_corres,
+                                 where R="\<lambda>rv. einvs and valid_cap rv"
+                                   and R'="\<lambda>rv. invs' and valid_cap' (cteCap rv)"])
+          apply (rule corres_underlying_split[where r'=dc])
+             apply (case_tac xb, simp_all add: doMachineOp_return)[1]
+              apply (clarsimp simp add: when_def doMachineOp_return)
+              apply (rule corres_guard_imp, rule sendSignal_corres)
+               apply (clarsimp simp: valid_cap_def valid_cap'_def arch_mask_irq_signal_def
+                                     maskIrqSignal_def do_machine_op_bind doMachineOp_bind)+
+            apply corres
+               apply (rule corres_machine_op, rule corres_eq_trivial; simp; rule no_fail_ackInterrupt no_fail_maskInterrupt)+
+             apply wpsimp+
+    apply fastforce
+   apply (corres corres: timerTick_corres corres_machine_op
+                   simp: invs_distinct invs_psp_aligned)
+  apply (corres corres: corres_machine_op)
   done
 
 lemma threadSet_ksDomainTime[wp]:
