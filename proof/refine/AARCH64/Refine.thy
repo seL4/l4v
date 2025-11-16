@@ -539,9 +539,8 @@ lemma kernel_corres':
                  activateThread
               od)"
   unfolding call_kernel_def
-  apply (corres corres: handleEvent_corres corres_machine_op
-                        maybeHandleInterrupt_corres
-                simp: irq_state_independent_def
+  apply (corres corres: handleEvent_corres corres_machine_op maybeHandleInterrupt_corres
+                  simp: irq_state_independent_def
          | corres_cases_both)+
         apply (wpsimp wp: handle_event_valid_sched)+
       apply (corres corres: schedule_corres activateThread_corres)

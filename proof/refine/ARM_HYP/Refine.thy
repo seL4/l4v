@@ -535,7 +535,7 @@ lemma kernel_corres':
   apply (corres corres: handleEvent_corres corres_machine_op maybeHandleInterrupt_corres
                 simp: irq_state_independent_def
          | corres_cases_both)+
-        apply (wp handle_event_valid_sched)+
+        apply (wpsimp wp: handle_event_valid_sched)+
       apply (corres corres: schedule_corres activateThread_corres)
       apply (wpsimp wp: schedule_invs' hoare_vcg_if_lift2 dmo_getActiveIRQ_non_kernel
                         handle_spurious_irq_invs

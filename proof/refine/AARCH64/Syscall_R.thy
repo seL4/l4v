@@ -1748,16 +1748,21 @@ lemma contract_all_imp_strg:
   by blast
 
 lemma maybeHandleInterrupt_corres:
-  "corres dc einvs invs' (maybe_handle_interrupt in_kernel) (maybeHandleInterrupt in_kernel)"
+  "corres dc einvs (invs' and (\<lambda>s'. in_kernel \<or> sch_act_not (ksCurThread s') s'))
+          (maybe_handle_interrupt in_kernel) (maybeHandleInterrupt in_kernel)"
   unfolding maybe_handle_interrupt_def maybeHandleInterrupt_def
   apply (corres corres: corres_machine_op handleInterrupt_corres[@lift_corres_args]
                 simp: irq_state_independent_def
          | corres_cases_both)+
-     apply (wpsimp wp: hoare_drop_imp)
-    apply clarsimp
-    apply (strengthen contract_all_imp_strg[where P'=True, simplified])
-    apply (wpsimp wp: doMachineOp_getActiveIRQ_IRQ_active' hoare_vcg_all_lift)
-   apply clarsimp
+     apply (wpsimp wp: hoare_drop_imps)
+    apply (rule_tac Q'="\<lambda>rv s. (\<forall>irq. rv = Some irq \<longrightarrow> irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s)
+                             \<and> (\<forall>irq. rv = Some irq \<longrightarrow> intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive)
+                             \<and> invs' s"
+                 in hoare_strengthen_post)
+     apply (rule hoare_pre_disj[where P="_ and K (in_kernel)" and P'="_ and K(\<not>in_kernel)"];
+            rule hoare_gen_asm; simp)
+      apply ((wp | wp hoare_vcg_all_lift doMachineOp_getActiveIRQ_IRQ_active'
+                 | simp | simp add: imp_conjR | wp hoare_drop_imps)+)
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
 
