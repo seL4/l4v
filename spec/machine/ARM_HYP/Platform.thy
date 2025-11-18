@@ -54,7 +54,7 @@ definition numSGIs :: nat where
   "numSGIs \<equiv> if isGICPlatform then 2^numSGIs_bits else 0"
 
 definition gicNumTargets_bits :: nat where
-  "gicNumTargets_bits \<equiv> if Kernel_Config.config_ARM_GIC_V3 then 4 else 3"
+  "gicNumTargets_bits \<equiv> if Kernel_Config.config_ARM_GIC_V3 then 32 else 3"
 
 definition gicNumTargets :: nat where
   "gicNumTargets \<equiv> if isGICPlatform then 2^gicNumTargets_bits else 0"

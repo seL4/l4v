@@ -40,7 +40,7 @@ This module defines the machine-specific interrupt handling routines.
 \end{impdetails}
 
 > isSGITargetValid :: Word -> Bool
-> isSGITargetValid target = target < fromIntegral Arch.gicNumTargets
+> isSGITargetValid target = target <= fromIntegral Arch.gicNumTargets - 1
 
 > decodeIRQControlInvocation :: Word -> [Word] -> PPtr CTE -> [Capability] ->
 >         KernelF SyscallError ArchInv.IRQControlInvocation

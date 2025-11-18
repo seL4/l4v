@@ -31,7 +31,7 @@ import SEL4.Object.VCPU.TARGET (vgicMaintenance, vppiEvent, irqVPPIEventIndex)
 import SEL4.Machine.Hardware.AARCH64.PLATFORM (irqVGICMaintenance, irqVTimerEvent, irqSMMU)
 
 isSGITargetValid :: Word -> Bool
-isSGITargetValid target = target < fromIntegral Arch.gicNumTargets
+isSGITargetValid target = target <= fromIntegral Arch.gicNumTargets - 1
 
 decodeIRQControlInvocation :: Word -> [Word] -> PPtr CTE -> [Capability] ->
         KernelF SyscallError ArchInv.IRQControlInvocation
