@@ -427,8 +427,8 @@ lemma checkIRQ_ret_good:
   by (clarsimp split: if_split)
 
 lemma sgi_target_valid_sgi_target_len:
-  "isGICPlatform \<Longrightarrow> isSGITargetValid w = (w < 2^sgi_target_len)"
-  by (simp add: isSGITargetValid_def gicNumTargets_def sgi_target_len_def)
+  "isGICPlatform \<Longrightarrow> isSGITargetValid w = (w \<le> mask sgi_target_len)"
+  by (simp add: isSGITargetValid_def gicNumTargets_def sgi_target_len_def mask_def)
 
 lemma Arch_invokeIRQControl_IssueSGISignal_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -519,7 +519,7 @@ lemma plat_SGITargetValid_spec:
   apply (hoare_rule HoarePartial.ProcNoRec1)
   apply vcg
   apply (simp add: isSGITargetValid_def gicNumTargets_def sgi_target_len_val
-                   Kernel_Config_isGICPlatform_def
+                   Kernel_Config_isGICPlatform_def max_minus_one_word32
               flip: sgi_target_len_def
               split: if_split)
   done

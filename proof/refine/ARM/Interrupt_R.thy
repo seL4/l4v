@@ -207,10 +207,16 @@ lemma isSGITargetValid_eq:
   unfolding isSGITargetValid_def sgi_target_valid_def
   by simp
 
+lemma zero_less_numSGIs_isGIC:
+  "0 < numSGIs \<Longrightarrow> isGICPlatform"
+  by (simp add: numSGIs_def split: if_split_asm)
+
 lemma sgi_target_cast[simp]:
-  "sgi_target_valid w \<Longrightarrow> ucast (ucast w :: sgi_target) = w"
+  "\<lbrakk> sgi_target_valid w; 0 < numSGIs \<rbrakk> \<Longrightarrow> ucast (ucast w :: sgi_target) = w"
   unfolding sgi_target_valid_def gicNumTargets_def
-  by (simp flip: sgi_target_len_def add: ucast_ucast_len sgi_target_len_val split: if_split_asm)
+  by (simp flip: sgi_target_len_def add: ucast_ucast_le_mask mask_def sgi_target_len_val
+                 zero_less_numSGIs_isGIC
+           split: if_splits)
 
 lemma sgi_irq_cast:
   "\<lbrakk> w \<le> word_of_nat numSGIs - 1;  0 < numSGIs \<rbrakk> \<Longrightarrow>

@@ -358,14 +358,13 @@ lemma Arch_invokeIRQControl_IssueIRQHandler_ccorres:
   done
 
 lemma sgi_target_valid_sgi_target_len:
-  "isSGITargetValid w = (w < 2^sgi_target_len)"
-  by (simp add: isSGITargetValid_def gicNumTargets_def sgi_target_len_def)
+  "isSGITargetValid w = (w \<le> mask sgi_target_len)"
+  by (simp add: isSGITargetValid_def gicNumTargets_def sgi_target_len_def mask_def)
 
-(* 32 is from width of field in bitfield generator for sgi target.
-   Written as mask so it also works on 32 bit words. *)
-lemma sgi_target_len_mask_32:
-  "2 ^ sgi_target_len \<le> (mask 32 :: machine_word)"
-  by (simp add: sgi_target_len_val mask_def)
+(* 32 is from width of field in bitfield generator for sgi target. *)
+lemma sgi_target_len_le_32:
+  "sgi_target_len \<le> 32"
+  by (simp add: sgi_target_len_val)
 
 lemma Arch_invokeIRQControl_IssueSGISignal_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -393,8 +392,8 @@ lemma Arch_invokeIRQControl_IssueSGISignal_ccorres:
                         sgi_target_valid_sgi_target_len numSGIs_def)
   apply (rule conjI; rule le_mask_imp_and_mask[symmetric])
    apply (simp add: numSGIs_bits_def mask_def word_le_nat_alt word_less_nat_alt)
-  apply (rule order_trans[OF _ sgi_target_len_mask_32])
-  apply simp
+  apply (erule order_trans, rule mask_le_mono)
+  apply (rule sgi_target_len_le_32)
   done
 
 (* Bundle of definitions for minIRQ, maxIRQ, minUserIRQ, etc *)

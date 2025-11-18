@@ -200,7 +200,7 @@ lemma isSGITargetValid_eq:
 lemma sgi_target_cast[simp]:
   "sgi_target_valid w \<Longrightarrow> ucast (ucast w :: sgi_target) = w"
   unfolding sgi_target_valid_def gicNumTargets_def
-  by (simp flip: sgi_target_len_def add: ucast_ucast_len sgi_target_len_val)
+  by (simp flip: sgi_target_len_def add: ucast_ucast_le_mask mask_def sgi_target_len_val)
 
 lemma sgi_irq_cast:
   "w \<le> word_of_nat numSGIs - 1 \<Longrightarrow> ucast (ucast w :: sgi_irq) = (w :: machine_word)"
