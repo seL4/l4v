@@ -262,7 +262,7 @@ where
   "arch_check_irq irq \<equiv> whenE (irq > maxIRQ) $ throwError (RangeError 0 maxIRQ)"
 
 definition sgi_target_valid :: "machine_word \<Rightarrow> bool" where
-  "sgi_target_valid t \<equiv> t \<le> of_nat gicNumTargets - 1"
+  "sgi_target_valid t \<equiv> isGICPlatform \<and> t \<le> of_nat gicNumTargets - 1"
 
 definition arch_decode_irq_control_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap list \<Rightarrow> (arch_irq_control_invocation,'z::state_ext) se_monad"
