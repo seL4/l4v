@@ -389,6 +389,8 @@ attr_start = "__attribute__"{ws}*"((";
      (tok(Tokens.YRETURN,source,yypos,yypos+size yytext-1));
 <INITIAL,TDEF,TS,TSS,TSI>"sizeof" =>
      (tok(Tokens.YSIZEOF,source,yypos,yypos+size yytext-1));
+<INITIAL,TDEF,TS,TSS,TSI>"_Static_assert" =>
+     (tok(Tokens.STATIC_ASSERT,source,yypos,yypos+size yytext-1));
 <INITIAL,TS,TSS,TSI>"enum" =>
      (tok(Tokens.YENUM,source,yypos,yypos+size yytext-1));
 <INITIAL,TDEF,TS,TSS,TSI>"__attribute__" =>
