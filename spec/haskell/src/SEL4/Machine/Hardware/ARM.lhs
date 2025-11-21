@@ -931,6 +931,9 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 > gicNumTargets :: Int
 > gicNumTargets = error "defined in machine/AARCH64/Platform.thy"
 
+> isGICPlatform :: Bool
+> isGICPlatform = error "defined in machine/AARCH64/Platform.thy"
+
 > -- the machine op uses word_t (and irq_t which is also word_t in C)
 > sendSGI :: Word -> Word -> MachineMonad ()
 > sendSGI irq target = error "Unimplemented - machine op"
