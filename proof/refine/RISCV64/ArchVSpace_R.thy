@@ -8,8 +8,8 @@
    RISCV64 VSpace refinement
 *)
 
-theory VSpace_R
-imports ArchTcbAcc_R
+theory ArchVSpace_R
+imports VSpace_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)

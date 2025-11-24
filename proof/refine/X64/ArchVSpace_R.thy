@@ -8,8 +8,8 @@
    X64 VSpace refinement
 *)
 
-theory VSpace_R
-imports ArchTcbAcc_R
+theory ArchVSpace_R
+imports VSpace_R
 begin
 context Arch begin global_naming X64 (*FIXME: arch-split*)
 

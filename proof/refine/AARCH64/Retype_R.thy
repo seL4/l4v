@@ -10,7 +10,7 @@
 *)
 
 theory Retype_R
-imports VSpace_R
+imports ArchVSpace_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
