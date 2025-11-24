@@ -1085,7 +1085,7 @@ lemma cteMove_corres:
     apply fastforce
    apply fastforce
   apply (rule conjI)
-   apply (erule (5) ghost_relation_wrapper_set_cap_twice)
+   apply (erule (2) ghost_relation_wrapper_set_cap_twice; rule refl)
   apply (thin_tac "gsCNodes t = p" for t p)+
   apply (thin_tac "ksWorkUnitsCompleted t = p" for t p)+
   apply (thin_tac "cur_thread t = p" for t p)+
@@ -4258,7 +4258,7 @@ lemma (in CSpace_R_2) cteInsert_simple_corres:
             apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:, elim conjE)
             apply clarsimp
             apply (rule conjI)
-             apply (erule (4) ghost_relation_wrapper_same_abs_set_cap)
+             apply (erule (1) ghost_relation_wrapper_same_abs_set_cap; rule refl)
             apply (thin_tac "gsCNodes t = p" for t p)+
             apply (thin_tac "ksMachineState t = p" for t p)+
             apply (thin_tac "ksCurThread t = p" for t p)+

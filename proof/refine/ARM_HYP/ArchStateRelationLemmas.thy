@@ -161,27 +161,12 @@ lemma other_aobj_relation_aobj:
   unfolding other_aobj_relation_def is_ArchObj_def
   by (clarsimp split: Structures_A.kernel_object.splits)
 
-lemma ghost_relation_wrapper_machine_state_upd_id[StateRelation_R_assms,simp]:
-  "ghost_relation_wrapper (s\<lparr>machine_state := ss\<rparr>) (s'\<lparr>ksMachineState := ss'\<rparr>)
-   = ghost_relation_wrapper s s'"
-  by simp
-
 (* interface lemma, can't be used in locale assumptions due to free type variable *)
 lemma valid_arch_obj'_valid[wp]:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_const_Ball_lift typ_at_lifts[OF P]
   shows "\<lbrace>valid_arch_obj' ako\<rbrace> f \<lbrace>\<lambda>rv. valid_arch_obj' ako\<rbrace>"
   by (case_tac ako; wpsimp)
-
-lemma ghost_relation_wrapper_ksPSpace_upd[simp, StateRelation_R_assms]:
-  "ghost_relation_wrapper s (s'\<lparr>ksPSpace := ps'\<rparr>) = ghost_relation_wrapper s s'"
-  by (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
-
-lemma ghost_relation_wrapper_abs_upd_simps[simp, StateRelation_R_assms]:
-  "\<And>f s s'. ghost_relation_wrapper (cdt_list_update f s) s' = ghost_relation_wrapper s s'"
-  "\<And>f s s'. ghost_relation_wrapper (cdt_update f s) s' = ghost_relation_wrapper s s'"
-  "\<And>f s s'. ghost_relation_wrapper (is_original_cap_update f s) s' = ghost_relation_wrapper s s'"
-  by simp_all
 
 end
 

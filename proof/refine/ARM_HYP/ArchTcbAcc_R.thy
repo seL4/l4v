@@ -13,14 +13,6 @@ context Arch begin arch_global_naming
 
 named_theorems TcbAcc_R_assms
 
-lemma ghost_relation_wrapper_ksSchedulerAction_upd[TcbAcc_R_assms, simp]:
-  "ghost_relation_wrapper s (s'\<lparr>ksSchedulerAction := v\<rparr>) = ghost_relation_wrapper s s'"
-  by clarsimp
-
-lemma ghost_relation_wrapper_scheduler_action_upd[TcbAcc_R_assms, simp]:
-  "ghost_relation_wrapper (s\<lparr>scheduler_action := v\<rparr>) s' = ghost_relation_wrapper s s'"
-  by clarsimp
-
 (* FIXME: move & the versions in Machine_AI could use word_size_bits form instead of specific number *)
 lemma no_fail_loadWord_bits[TcbAcc_R_assms, wp]:
   "no_fail (\<lambda>_. is_aligned p word_size_bits) (loadWord p)"
@@ -230,14 +222,6 @@ lemma asUser_valid_tcbs'[wp]:
   apply (wpsimp wp: threadSet_valid_tcbs' hoare_drop_imps
               simp: valid_tcb'_def valid_arch_tcb'_def tcb_cte_cases_def objBits_simps')
   done
-
-lemma ghost_relation_wrapper_ksReadyQueuesL1Bitmap_upd[TcbAcc_R_assms, simp]:
-  "ghost_relation_wrapper s (s'\<lparr>ksReadyQueuesL1Bitmap := v\<rparr>) = ghost_relation_wrapper s s'"
-  by (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
-
-lemma ghost_relation_wrapper_ksReadyQueuesL2Bitmap_upd[TcbAcc_R_assms, simp]:
-  "ghost_relation_wrapper s (s'\<lparr>ksReadyQueuesL2Bitmap := v\<rparr>) = ghost_relation_wrapper s s'"
-  by (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
 
 lemmas addToBitmap_typ_ats[wp] = typ_at_lifts[OF addToBitmap_typ_at']
 lemmas removeFromBitmap_typ_ats[wp] = typ_at_lifts[OF removeFromBitmap_typ_at']
@@ -522,14 +506,6 @@ lemma asUser_setRegister_corres:
   apply (rule asUser_corres')
   apply (rule corres_modify'; simp)
   done
-
-lemma ghost_relation_wrapper_ksReadyQueues_upd[TcbAcc_R_2_assms, simp]:
-  "ghost_relation_wrapper s (s'\<lparr>ksReadyQueues := v\<rparr>) = ghost_relation_wrapper s s'"
-  by clarsimp
-
-lemma ghost_relation_wrapper_ready_queues_upd[TcbAcc_R_2_assms, simp]:
-  "ghost_relation_wrapper (s\<lparr>ready_queues := v\<rparr>) s' = ghost_relation_wrapper s s'"
-  by clarsimp
 
 lemma removeFromBitmap_bitmapQ_no_L1_orphans[TcbAcc_R_2_assms, wp]:
   "\<lbrace> bitmapQ_no_L1_orphans \<rbrace> removeFromBitmap d p \<lbrace>\<lambda>_. bitmapQ_no_L1_orphans \<rbrace>"
