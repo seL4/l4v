@@ -119,21 +119,23 @@ definition is_other_obj_relation_type :: "a_type \<Rightarrow> bool" where
     | _ \<Rightarrow> True"
 
 definition ghost_relation ::
-  "Structures_A.kheap \<Rightarrow> (machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow> (machine_word \<rightharpoonup> pt_type) \<Rightarrow> bool" where
+  "kheap \<Rightarrow> (machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow> (machine_word \<rightharpoonup> pt_type) \<Rightarrow> bool"
+  where
   "ghost_relation h ups cns pt_types \<equiv>
      (\<forall>a sz. (\<exists>dev. h a = Some (ArchObj (DataPage dev sz))) \<longleftrightarrow> ups a = Some sz) \<and>
      (\<forall>a n. (\<exists>cs. h a = Some (CNode n cs) \<and> well_formed_cnode_n n cs) \<longleftrightarrow> cns a = Some n) \<and>
      (\<forall>a pt_t. (\<exists>pt. h a = Some (ArchObj (PageTable pt)) \<and> pt_t = pt_type pt) \<longleftrightarrow> pt_types a = Some pt_t)"
 
-(* FIXME arch-split: provided only so that ghost_relation can be used within generic definition
+(* provided only so that ghost_relation can be used within generic definition
    of state_relation (since arch_state_relation doesn't have access to kheap, and
    gsPTTypes on AARCH64 isn't generic) *)
-definition ghost_relation_wrapper :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "ghost_relation_wrapper s s' \<equiv>
-     ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') (gsPTTypes (ksArchState s'))"
+definition ghost_relation_wrapper_2 ::
+  "kheap \<Rightarrow> (machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow> Arch.kernel_state \<Rightarrow> bool"
+  where
+  "ghost_relation_wrapper_2 h ups cns as \<equiv> ghost_relation h ups cns (gsPTTypes as)"
 
 (* inside Arch locale, we have no need for the wrapper *)
-lemmas [simp] = ghost_relation_wrapper_def
+lemmas ghost_relation_wrapper_def[simp] = ghost_relation_wrapper_2_def
 
 definition arch_state_relation :: "(arch_state \<times> AARCH64_H.kernel_state) set" where
   "arch_state_relation \<equiv> {(s, s') .

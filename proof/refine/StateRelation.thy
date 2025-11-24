@@ -21,7 +21,7 @@ arch_requalify_consts
   aobj_relation_cuts
   is_other_obj_relation_type
   ghost_relation
-  ghost_relation_wrapper
+  ghost_relation_wrapper_2
   arch_state_relation
 
 definition cte_map :: "cslot_ptr \<Rightarrow> machine_word" where
@@ -299,6 +299,13 @@ primrec syscall_error_map :: "ExceptionTypes_A.syscall_error \<Rightarrow> Fault
 | "syscall_error_map ExceptionTypes_A.RevokeFirst           = Fault_H.RevokeFirst"
 | "syscall_error_map (ExceptionTypes_A.NotEnoughMemory n)   = Fault_H.syscall_error.NotEnoughMemory n"
 
+(* provided so that ghost_relation can be used within the generic definition of state_relation, by
+   passing in the union of fields needed by ghost_relation on all architectures and hiding any
+   specific arch fields needed *)
+abbreviation ghost_relation_wrapper :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "ghost_relation_wrapper s s' \<equiv>
+     ghost_relation_wrapper_2 (kheap s) (gsUserPages s') (gsCNodes s') (ksArchState s')"
+
 definition state_relation :: "(det_state \<times> kernel_state) set" where
   "state_relation \<equiv> {(s, s').
          pspace_relation (kheap s) (ksPSpace s')
@@ -438,18 +445,6 @@ lemma eq_trans_helper:
 text \<open>Architecture-specific requirements\<close>
 
 locale StateRelation_R =
-  (* ghost state relation must not depend on machine state *)
-  (* FIXME arch-split: consolidate after arch-split pass; these simps have overlap *)
-  assumes ghost_relation_wrapper_machine_state_upd_id[simp]:
-    "\<And>s s' ss ss'.
-       ghost_relation_wrapper (s\<lparr>machine_state := ss\<rparr>) (s'\<lparr>ksMachineState := ss'\<rparr>)
-       = ghost_relation_wrapper s s'"
-  assumes ghost_relation_wrapper_ksPSpace_upd[simp]:
-    "\<And>s s' ps'. ghost_relation_wrapper s (s'\<lparr>ksPSpace := ps'\<rparr>) = ghost_relation_wrapper s s'"
-  assumes ghost_relation_wrapper_abs_upd_simps[simp]:
-    "\<And>f s s'. ghost_relation_wrapper (cdt_list_update f s) s' = ghost_relation_wrapper s s'"
-    "\<And>f s s'. ghost_relation_wrapper (cdt_update f s) s' = ghost_relation_wrapper s s'"
-    "\<And>f s s'. ghost_relation_wrapper (is_original_cap_update f s) s' = ghost_relation_wrapper s s'"
   assumes is_other_obj_relation_type_gen[simp]:
     "\<And>n. \<not> is_other_obj_relation_type (ACapTable n)"
     "\<not> is_other_obj_relation_type ATCB"

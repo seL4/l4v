@@ -5177,7 +5177,7 @@ lemma cteInsert_corres:
             apply (thin_tac "ksIdleThread t = p" for p t)+
             apply (thin_tac "ksSchedulerAction t = p" for p t)+
             apply (rule conjI)
-             apply (erule (4) ghost_relation_wrapper_same_abs_set_cap)
+             apply (erule (1) ghost_relation_wrapper_same_abs_set_cap; rule refl)
             apply (rule conjI)
              defer
              apply(rule conjI)
@@ -5841,7 +5841,7 @@ lemma cteSwap_corres:
   apply (thin_tac "interrupt_state_relation n s s'" for n s s')+
   apply (thin_tac "(s,s') \<in> arch_state_relation" for s s')+
   apply (rule conjI)
-   apply (erule (5) ghost_relation_wrapper_set_cap_twice)
+   apply (erule (2) ghost_relation_wrapper_set_cap_twice; rule refl)
   apply (thin_tac "ksArchState t = p" for t p)+
   apply (thin_tac "gsCNodes t = p" for t p)+
   apply (thin_tac "gsUserPages t = p" for t p)+

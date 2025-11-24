@@ -83,10 +83,6 @@ locale TcbAcc_R =
      \<lbrace>\<lambda>s. P (global_refs' s)\<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>rv s. P (global_refs' s)\<rbrace>"
   assumes zobj_refs'_capRange:
     "\<And>s cap. s \<turnstile>' cap \<Longrightarrow> zobj_refs' cap \<subseteq> capRange cap"
-  assumes ghost_relation_wrapper_ksReadyQueuesL1Bitmap_upd[simp]:
-    "\<And>s s' v. ghost_relation_wrapper s (s'\<lparr>ksReadyQueuesL1Bitmap := v\<rparr>) = ghost_relation_wrapper s s'"
-  assumes ghost_relation_wrapper_ksReadyQueuesL2Bitmap_upd[simp]:
-    "\<And>s s' v. ghost_relation_wrapper s (s'\<lparr>ksReadyQueuesL2Bitmap := v\<rparr>) = ghost_relation_wrapper s s'"
   assumes pspace_relation_update_tcbs:
     "\<And>s s' x tcb tcb' otcb otcb'.
      \<lbrakk> pspace_relation s s'; s x = Some (TCB otcb); s' x = Some (KOTCB otcb');
@@ -107,10 +103,6 @@ locale TcbAcc_R =
      = (prioToL1Index p \<noteq> prioToL1Index p')"
   assumes prioToL1Index_size[simp]:
     "\<And>w. prioToL1Index w < l2BitmapSize"
-  assumes ghost_relation_wrapper_ksSchedulerAction_upd[simp]:
-    "\<And>s s' v. ghost_relation_wrapper s (s'\<lparr>ksSchedulerAction := v\<rparr>) = ghost_relation_wrapper s s'"
-  assumes ghost_relation_wrapper_scheduler_action_upd[simp]:
-    "\<And>s s' v. ghost_relation_wrapper (s\<lparr>scheduler_action := v\<rparr>) s' = ghost_relation_wrapper s s'"
   assumes pspace_dom_dom:
     "\<And>ps. dom ps \<subseteq> pspace_dom ps"
 
@@ -2060,10 +2052,6 @@ lemma in_ready_q_tcbQueued_eq:
 
 
 locale TcbAcc_R_2 = TcbAcc_R +
-  assumes ghost_relation_wrapper_ksReadyQueues_upd[simp]:
-    "\<And>s s' v. ghost_relation_wrapper s (s'\<lparr>ksReadyQueues := v\<rparr>) = ghost_relation_wrapper s s'"
-  assumes ghost_relation_wrapper_ready_queues_upd[simp]:
-    "\<And>s s' v. ghost_relation_wrapper (s\<lparr>ready_queues := v\<rparr>) s' = ghost_relation_wrapper s s'"
   assumes removeFromBitmap_valid_bitmapQ_except:
     "\<And>d p. removeFromBitmap d p \<lbrace>valid_bitmapQ_except d p \<rbrace>"
   assumes removeFromBitmap_bitmapQ_no_L2_orphans[wp]:
@@ -2211,9 +2199,6 @@ lemma tcbSchedEnqueue_corres:
   apply (clarsimp simp: state_relation_def)
   apply (intro hoare_vcg_conj_lift_pre_fix;
          (solves \<open>frule singleton_eqD, frule set_tcb_queue_projs_inv, wpsimp simp: swp_def\<close>)?)
-   (* generic ghost_state_wrapper won't work after set_tcb_queue_projs_inv *)
-   prefer 2
-   apply (solves \<open>drule singleton_eqD, wpsimp simp: set_tcb_queue_def, monad_eq\<close>)
 
   \<comment> \<open>ready_queues_relation\<close>
   apply (clarsimp simp: ready_queues_relation_def ready_queue_relation_def Let_def)
@@ -2655,9 +2640,6 @@ lemma tcbSchedDequeue_corres:
   apply (clarsimp simp: state_relation_def)
   apply (intro hoare_vcg_conj_lift_pre_fix;
          (solves \<open>frule singleton_eqD, frule set_tcb_queue_projs_inv, wpsimp simp: swp_def\<close>)?)
-   (* generic ghost_state_wrapper won't work after set_tcb_queue_projs_inv *)
-   prefer 2
-   apply (solves \<open>drule singleton_eqD, wpsimp simp: set_tcb_queue_def, monad_eq\<close>)
 
   \<comment> \<open>ready_queues_relation\<close>
   apply (clarsimp simp: ready_queues_relation_def ready_queue_relation_def Let_def)

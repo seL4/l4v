@@ -3809,7 +3809,6 @@ lemma updateFreeIndex_corres:
          (cte_at' (cte_map src)
            and pspace_distinct' and pspace_aligned')
          (set_cap cap src) (updateFreeIndex (cte_map src) idx)"
-  supply ARM.ghost_relation_wrapper_def[simp] (* FIXME arch-split *)
   apply (rule corres_name_pre)
   apply (simp add: updateFreeIndex_def updateTrackedFreeIndex_def)
   apply (rule corres_guard_imp)
