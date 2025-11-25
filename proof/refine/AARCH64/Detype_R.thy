@@ -6,7 +6,7 @@
  *)
 
 theory Detype_R
-imports Retype_R
+imports ArchRetype_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
