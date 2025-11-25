@@ -2079,7 +2079,7 @@ lemma associateVCPUTCB_ccorres:
         apply (clarsimp simp: typ_heap_simps')
         apply (case_tac "atcbVCPUPtr (tcbArch tcba) \<noteq> None")
          apply (clarsimp simp add: ctcb_relation_def carch_tcb_relation_def)
-         apply(frule valid_objs_valid_tcb', simp)
+         apply (frule tcb_ko_at_valid_objs_valid_tcb', simp)
          apply (clarsimp simp: valid_tcb'_def valid_arch_tcb'_def)
         apply (clarsimp simp: ctcb_relation_def carch_tcb_relation_def)
        apply (wpc ; clarsimp ; ccorres_rewrite)

@@ -2109,6 +2109,11 @@ locale TcbAcc_R_2 = TcbAcc_R +
     "\<And>P. rescheduleRequired \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
   assumes tcbSchedEnqueue_hyp_refs_of'[wp]:
     "\<And>P t. tcbSchedEnqueue t \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
+  assumes asUser_setRegister_corres:
+    "\<And>t r v.
+     corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
+               (as_user t (setRegister r v))
+               (asUser t (setRegister r v))"
 
 lemma threadSet_ghost_relation_wrapper[wp]:
   "threadSet f p \<lbrace>ghost_relation_wrapper t\<rbrace>"

@@ -1349,7 +1349,7 @@ lemma associateVCPUTCB_corres:
   apply (frule invs_arch_state)
   apply (clarsimp simp: valid_arch_state_def obj_at_def is_vcpu_def)
   apply normalise_obj_at'
-  apply (drule valid_objs_valid_tcb'[rotated], fastforce)
+  apply (drule tcb_ko_at_valid_objs_valid_tcb', fastforce)
   apply (clarsimp simp: valid_tcb'_def valid_arch_tcb'_def invs_no_0_obj')
   apply (drule valid_objs_valid_vcpu'[rotated], fastforce)
   apply (fastforce simp: valid_vcpu'_def typ_at_tcb')

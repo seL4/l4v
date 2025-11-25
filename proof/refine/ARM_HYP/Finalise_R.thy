@@ -1415,7 +1415,7 @@ lemma emptySlot_valid_global_refs[wp]:
   done
 
 lemmas doMachineOp_irq_handlers[wp]
-    = valid_irq_handlers_lift'' [OF doMachineOp_ctes doMachineOp_ksInterrupt]
+    = valid_irq_handlers_lift'' [OF doMachineOp_ctes doMachineOp_ksInterruptState]
 
 lemma deletedIRQHandler_irq_handlers'[wp]:
   "\<lbrace>\<lambda>s. valid_irq_handlers' s \<and> (IRQHandlerCap irq \<notin> ran (cteCaps_of s))\<rbrace>
@@ -2569,7 +2569,7 @@ lemma archThreadSet_valid_objs'[wp]:
   apply (wp setObject_tcb_valid_objs getObject_tcb_wp)
   apply clarsimp
   apply normalise_obj_at'
-  apply (drule (1) valid_objs_valid_tcb')
+  apply (drule (1) tcb_ko_at_valid_objs_valid_tcb')
   apply (clarsimp simp: valid_obj'_def valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs)
   done
 

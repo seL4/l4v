@@ -4,18 +4,13 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(*
-   X64 VSpace refinement
-*)
+(* VSpace refinement - architecture-specific *)
 
 theory ArchVSpace_R
 imports VSpace_R
 begin
-context Arch begin global_naming X64 (*FIXME: arch-split*)
 
-end
-
-context begin interpretation Arch . (*FIXME: arch-split*)
+context Arch begin arch_global_naming
 
 definition
   "vspace_at_asid' vs asid \<equiv> \<lambda>s. \<exists>ap pool.
@@ -41,31 +36,9 @@ lemma findVSpaceForASID_vs_at_wp:
   apply (subst (asm) inv_f_f, rule inj_onI, simp)
   by fastforce
 
-crunch findVSpaceForASID, haskell_fail
+crunch findVSpaceForASID
   for inv[wp]: "P"
   (simp: const_def crunch_simps wp: loadObject_default_inv crunch_wps ignore_del: getObject)
-
-lemma dmo_invs_no_cicd_lift': (* FIXME X64: move up *)
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>"
-  assumes "\<And>P p. f \<lbrace>\<lambda>s. P (underlying_memory s p)\<rbrace>"
-  shows "doMachineOp f \<lbrace>all_invs_but_ct_idle_or_in_cur_domain'\<rbrace>"
-  apply (wp dmo_invs_no_cicd' assms)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid,
-         rule assms, rule refl)
-  apply simp
-  done
-
-lemma dmo_invs_lift': (* FIXME X64: move up *)
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>"
-  assumes "\<And>P p. f \<lbrace>\<lambda>s. P (underlying_memory s p)\<rbrace>"
-  shows "doMachineOp f \<lbrace>invs'\<rbrace>"
-  apply (wp dmo_invs' assms)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid,
-         rule assms, rule refl)
-  apply simp
-  done
 
 lemma dmo_invalidateTranslationSingleASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (invalidateTranslationSingleASID a b) \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -313,12 +286,6 @@ lemma get_asid_pool_corres_inv':
   apply simp
   done
 
-lemma dMo_no_0_obj'[wp]:
-  "\<lbrace>no_0_obj'\<rbrace> doMachineOp f \<lbrace>\<lambda>_. no_0_obj'\<rbrace>"
-  apply (simp add: doMachineOp_def split_def)
-  apply wp
-  by (simp add: no_0_obj'_def)
-
 lemma hwASIDInvalidate_corres:
   assumes "pm' = pm" "asid' = asid"
   shows "corres dc \<top> \<top> (hw_asid_invalidate asid pm) (hwASIDInvalidate asid' pm')"
@@ -335,18 +302,6 @@ crunch hwASIDInvalidate
 crunch hwASIDInvalidate
   for cur'[wp]: cur_tcb'
 
-lemma dMo_x64KSASIDTable_inv[wp]:
-  "\<lbrace>\<lambda>s. P (x64KSASIDTable (ksArchState s))\<rbrace> doMachineOp f \<lbrace>\<lambda>_ s. P (x64KSASIDTable (ksArchState s))\<rbrace>"
-  apply (simp add: doMachineOp_def split_def)
-  apply wp
-  by (clarsimp)
-
-lemma dMo_valid_arch_state'[wp]:
-  "\<lbrace>\<lambda>s. P (valid_arch_state' s)\<rbrace> doMachineOp f \<lbrace>\<lambda>_ s. P (valid_arch_state' s)\<rbrace>"
-  apply (simp add: doMachineOp_def split_def)
-  apply wp
-  by (clarsimp)
-
 lemma invalidateASID_valid_arch_state [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> hwASIDInvalidate x y \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   unfolding hwASIDInvalidate_def
@@ -359,7 +314,6 @@ crunch deleteASID
 
 lemma deleteASID_corres [corres]:
   assumes "asid' = asid" "pm' = pm"
-  notes set_asid_pool_def[simp del]
   shows "corres dc
           (invs and K (asid_wf asid \<and> asid \<noteq> 0))
           (pspace_aligned' and pspace_distinct' and no_0_obj'
@@ -516,10 +470,6 @@ lemma deleteASIDPool_corres:
   apply clarsimp
   done
 
-crunch findVSpaceForASID
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps getObject_inv simp: crunch_simps loadObject_default_def)
-
 crunch setVMRoot
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps)
@@ -567,7 +517,7 @@ lemma flushTable_corres:
           apply (simp add: upto_enum_def bit_simps take_bit_nat_eq_self unsigned_of_nat)
          apply (rule corres_guard_imp)
            apply (rule corres_split[OF getObject_PTE_corres''])
-              apply (simp add: bit_simps objBits_simps archObjSize_def)
+              apply (simp add: bit_simps objBits_simps)
              apply (case_tac rv; case_tac rv'; simp)
              apply (rule corres_machine_op)
              apply (subgoal_tac "ucast x = y"; simp)
@@ -589,11 +539,6 @@ crunch flushTable
 lemmas flushTable_typ_ats' [wp] = typ_at_lifts [OF flushTable_typ_at']
 
 lemmas findVSpaceForASID_typ_ats' [wp] = typ_at_lifts [OF findVSpaceForASID_inv]
-
-crunch findVSpaceForASID
-  for inv[wp]: P
-  (simp: assertE_def whenE_def loadObject_default_def
-   wp: crunch_wps getObject_inv)
 
 crunch unmapPageTable, unmapPageDirectory, unmapPDPT
   for aligned'[wp]: "pspace_aligned'"
@@ -619,7 +564,7 @@ lemma invalidatePageStructureCacheASID_corres' [corres]:
   by (corresKsimp simp: invalidate_page_structure_cache_asid_def
                        X64_H.invalidatePageStructureCacheASID_def
                        invalidateLocalPageStructureCacheASID_def
-                       assms ucast_id
+                       assms
                corres: corres_machine_op
                    wp: no_fail_machine_op_lift)
 
@@ -672,19 +617,6 @@ crunch unmapPage
 crunch unmapPage
   for distinct'[wp]: pspace_distinct'
   (wp: crunch_wps simp: crunch_simps)
-
-lemma corres_split_strengthen_ftE:
-  "\<lbrakk> corres (ftr \<oplus> r') P P' f j;
-      \<And>rv rv'. r' rv rv' \<Longrightarrow> corres (ftr' \<oplus> r) (R rv) (R' rv') (g rv) (k rv');
-      \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>,-; \<lbrace>Q'\<rbrace> j \<lbrace>R'\<rbrace>,- \<rbrakk>
-    \<Longrightarrow> corres (dc \<oplus> r) (P and Q) (P' and Q') (f >>=E (\<lambda>rv. g rv)) (j >>=E (\<lambda>rv'. k rv'))"
-  apply (rule_tac r'=r' in corres_splitEE)
-     apply (erule corres_rel_imp)
-     apply (case_tac x, auto)[1]
-    apply (rule corres_rel_imp, assumption)
-    apply (case_tac x, auto)[1]
-   apply (simp add: validE_R_def)+
-  done
 
 lemma checkMappingPPtr_corres:
   "page_entry_map m m' \<Longrightarrow> corres (dc \<oplus> dc) \<top> \<top>
@@ -834,10 +766,6 @@ lemma updateCap_valid_slots'[wp]:
   apply (case_tac x2, case_tac a)
     by (wpsimp simp: valid_slots'_def wp: hoare_vcg_ball_lift)+
 
-
-crunch do_machine_op, store_pte, store_pde, store_pdpte
-  for unique_table_refs[wp]: "\<lambda>s. (unique_table_refs (caps_of_state s))"
-
 lemma set_cap_valid_slots_inv[wp]:
   "\<lbrace>valid_slots m\<rbrace> set_cap t st \<lbrace>\<lambda>rv. valid_slots m\<rbrace>"
   apply (cases m; simp)
@@ -867,44 +795,6 @@ lemma set_cap_valid_page_map_inv:
   apply (clarsimp simp: cte_wp_at_def parent_for_refs_def)
   apply (auto simp: is_pt_cap_def is_pg_cap_def is_pd_cap_def is_pdpt_cap_def split: vm_page_entry.splits)
   done
-
-lemma message_info_to_data_eqv:
-  "wordFromMessageInfo (message_info_map mi) = message_info_to_data mi"
-  apply (cases mi)
-  apply (simp add: wordFromMessageInfo_def msgLengthBits_def msgExtraCapBits_def msgMaxExtraCaps_def shiftL_nat)
-  done
-
-lemma message_info_from_data_eqv:
-  "message_info_map (data_to_message_info rv) = messageInfoFromWord rv"
-  using shiftr_mask_eq[where 'a=64 and n=12]
-  by (auto simp: data_to_message_info_def messageInfoFromWord_def Let_def not_less
-                 msgLengthBits_def msgExtraCapBits_def msgMaxExtraCaps_def mask_def
-                 shiftL_nat msgMaxLength_def msgLabelBits_def)
-
-lemma setMessageInfo_corres:
- "mi' = message_info_map mi \<Longrightarrow>
-  corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
-         (set_message_info t mi) (setMessageInfo t mi')"
-  apply (simp add: setMessageInfo_def set_message_info_def)
-  apply (subgoal_tac "wordFromMessageInfo (message_info_map mi) =
-                      message_info_to_data mi")
-   apply (simp add: asUser_setRegister_corres msg_info_register_def
-                    msgInfoRegister_def)
-  apply (simp add: message_info_to_data_eqv)
-  done
-
-
-lemma set_mi_invs'[wp]: "\<lbrace>invs' and tcb_at' t\<rbrace> setMessageInfo t a \<lbrace>\<lambda>x. invs'\<rbrace>"
-  by (simp add: setMessageInfo_def) wp
-
-lemma set_mi_tcb' [wp]:
-  "\<lbrace> tcb_at' t \<rbrace> setMessageInfo receiver msg \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
-  by (simp add: setMessageInfo_def) wp
-
-
-lemma setMRs_typ_at':
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> setMRs receiver recv_buf mrs \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  by (simp add: setMRs_def zipWithM_x_mapM split_def, wp crunch_wps)
 
 lemmas setMRs_typ_at_lifts[wp] = typ_at_lifts [OF setMRs_typ_at']
 
@@ -1221,7 +1111,7 @@ lemma performPageTableInvocation_corres:
   apply (rule_tac F="is_pt_cap cap" in corres_req)
    apply (clarsimp simp: valid_pti_def)
   apply (clarsimp simp: is_pt_cap_def split_def
-                        bit_simps objBits_simps archObjSize_def
+                        bit_simps objBits_simps
                   cong: option.case_cong)
   apply (simp add: case_option_If2 getSlotCap_def split del: if_split)
   apply (rule corres_guard_imp)
@@ -1268,7 +1158,7 @@ definition
 lemma flush_all_corres [corres]:
   assumes "vspace' = vspace" "asid' = asid"
   shows "corres dc \<top> \<top> (flush_all vspace asid) (flushAll vspace' asid')"
-  apply (simp add: assms flush_all_def flushAll_def ucast_id)
+  apply (simp add: assms flush_all_def flushAll_def)
   apply (rule corres_rel_imp[OF _ dc_simp])
   apply (rule corres_machine_op)
   apply (rule corres_underlying_trivial[OF no_fail_invalidateASID])
@@ -1312,7 +1202,6 @@ lemma unmapPageDirectory_corres:
 
 crunch unmap_pd, unmap_pdpt
   for valid_objs[wp]: "valid_objs"
-  and pspace_aligned[wp]: "pspace_aligned"
   and pspace_distinct[wp]: "pspace_distinct"
 
 lemma performPageDirectoryInvocation_corres:
@@ -1351,8 +1240,7 @@ lemma performPageDirectoryInvocation_corres:
   apply (clarsimp simp: page_directory_invocation_map_def)
   apply (rule_tac F="is_pd_cap cap" in corres_req)
    apply (clarsimp simp: valid_pdi_def)
-  apply (clarsimp simp: is_pd_cap_def split_def
-                        bit_simps objBits_simps archObjSize_def
+  apply (clarsimp simp: is_pd_cap_def split_def bit_simps objBits_simps
                   cong: option.case_cong)
   apply (simp add: case_option_If2 getSlotCap_def split del: if_split)
   apply (rule corres_guard_imp)
@@ -1478,8 +1366,7 @@ lemma performPDPTInvocation_corres:
   apply (clarsimp simp: pdpt_invocation_map_def)
   apply (rule_tac F="is_pdpt_cap cap" in corres_req)
    apply (clarsimp simp: valid_pdpti_def)
-  apply (clarsimp simp: is_pdpt_cap_def split_def
-                        bit_simps objBits_simps archObjSize_def
+  apply (clarsimp simp: is_pdpt_cap_def split_def bit_simps objBits_simps
                   cong: option.case_cong)
   apply (simp add: case_option_If2 getSlotCap_def split del: if_split)
   apply (rule corres_guard_imp)
@@ -1582,13 +1469,6 @@ crunch setVMRoot
   for obj_at[wp]: "\<lambda>s. P (obj_at' P' t s)"
   (simp: crunch_simps)
 
-crunch doMachineOp
-  for it[wp]:  "\<lambda>s. P (ksIdleThread s)"
-  and arch[wp]: "\<lambda>s. P (ksArchState s)"
-  and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
-  and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
-  and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
-
 lemma setCurrentUserCR3_invs' [wp]:
   "\<lbrace>invs' and K (valid_cr3' c)\<rbrace> setCurrentUserCR3 c \<lbrace>\<lambda>rv. invs'\<rbrace>"
   unfolding setCurrentUserCR3_def
@@ -1641,57 +1521,13 @@ crunch setVMRoot
   (wp: crunch_wps getObject_inv simp: crunch_simps
        loadObject_default_def)
 
-crunch findVSpaceForASID
-  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def wp: getObject_inv)
-
-crunch deleteASIDPool
-  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def wp: getObject_inv mapM_wp')
-
-crunch lookupPTSlot
-  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def wp: getObject_inv)
-
-crunch storePTE
-  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps updateObject_default_def wp: setObject_idle')
-
-crunch storePDE
-  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps updateObject_default_def wp: setObject_idle')
-
-crunch storePDPTE
-  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps updateObject_default_def wp: setObject_idle')
-
-crunch storePML4E
-  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps updateObject_default_def wp: setObject_idle')
-
-crunch flushTable
-  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def
-   wp: setObject_idle' hoare_drop_imps mapM_x_wp')
-
-crunch deleteASID
+crunch deleteASIDPool, flushTable, deleteASID, storePTE, storePDE, storePDPTE, storePML4E
   for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def updateObject_default_def
-   wp: getObject_inv)
+   wp: getObject_inv mapM_wp' setObject_idle' hoare_drop_imps mapM_x_wp')
 
-crunch performPageTableInvocation
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps)
-
-crunch performPageDirectoryInvocation
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps)
-
-crunch performPDPTInvocation
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps)
-
-crunch performPageInvocation
+crunch performPageTableInvocation, performPageDirectoryInvocation, performPDPTInvocation,
+       performPageInvocation
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -1777,22 +1613,22 @@ crunch storePDE, storePDPTE, storePML4E
 lemma storePDE_inQ[wp]:
   "\<lbrace>\<lambda>s. P (obj_at' (inQ d p) t s)\<rbrace> storePDE ptr pde \<lbrace>\<lambda>rv s. P (obj_at' (inQ d p) t s)\<rbrace>"
   apply (simp add: obj_at'_real_def storePDE_def)
-  apply (wp setObject_ko_wp_at | simp add: objBits_simps archObjSize_def)+
-  apply (clarsimp simp: projectKOs obj_at'_def ko_wp_at'_def)
+  apply (wp setObject_ko_wp_at | simp add: objBits_simps)+
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def)
   done
 
 lemma storePDPTE_inQ[wp]:
   "\<lbrace>\<lambda>s. P (obj_at' (inQ d p) t s)\<rbrace> storePDPTE ptr pde \<lbrace>\<lambda>rv s. P (obj_at' (inQ d p) t s)\<rbrace>"
   apply (simp add: obj_at'_real_def storePDPTE_def)
-  apply (wp setObject_ko_wp_at | simp add: objBits_simps archObjSize_def)+
-  apply (clarsimp simp: projectKOs obj_at'_def ko_wp_at'_def)
+  apply (wp setObject_ko_wp_at | simp add: objBits_simps)+
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def)
   done
 
 lemma storePML4E_inQ[wp]:
   "\<lbrace>\<lambda>s. P (obj_at' (inQ d p) t s)\<rbrace> storePML4E ptr pde \<lbrace>\<lambda>rv s. P (obj_at' (inQ d p) t s)\<rbrace>"
   apply (simp add: obj_at'_real_def storePML4E_def)
-  apply (wp setObject_ko_wp_at | simp add: objBits_simps archObjSize_def)+
-  apply (clarsimp simp: projectKOs obj_at'_def ko_wp_at'_def)
+  apply (wp setObject_ko_wp_at | simp add: objBits_simps)+
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def)
   done
 
 crunch storePDE, storePDPTE, storePML4E
@@ -1804,9 +1640,10 @@ lemma storePDE_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> storePDE p pde \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: storePDE_def)
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
-                        updateObject_default_def projectKOs objBits_simps
+                        updateObject_default_def objBits_simps
                         in_magnitude_check state_refs_of'_def ps_clear_upd
-                 elim!: rsubst[where P=P] intro!: ext
+                 elim!: rsubst[where P=P]
+                   del: ext intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (simp split: option.split)
   done
@@ -1816,8 +1653,8 @@ lemma storePDE_iflive [wp]:
   apply (simp add: storePDE_def)
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
-      apply (simp add: objBits_simps archObjSize_def)
-     apply (auto simp: updateObject_default_def in_monad projectKOs live'_def hyp_live'_def)
+      apply (simp add: objBits_simps)
+     apply (auto simp: updateObject_default_def in_monad live'_def hyp_live'_def)
   done
 
 lemma setObject_pde_ksInt [wp]:
@@ -1828,9 +1665,10 @@ lemma storePDPTE_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> storePDPTE p pdpte \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: storePDPTE_def)
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
-                        updateObject_default_def projectKOs objBits_simps
+                        updateObject_default_def objBits_simps
                         in_magnitude_check state_refs_of'_def ps_clear_upd
-                 elim!: rsubst[where P=P] intro!: ext
+                 elim!: rsubst[where P=P]
+                   del: ext intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (simp split: option.split)
   done
@@ -1840,8 +1678,8 @@ lemma storePDPTE_iflive [wp]:
   apply (simp add: storePDPTE_def)
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
-      apply (simp add: objBits_simps archObjSize_def)
-     apply (auto simp: updateObject_default_def in_monad projectKOs live'_def hyp_live'_def)
+      apply (simp add: objBits_simps)
+     apply (auto simp: updateObject_default_def in_monad live'_def hyp_live'_def)
   done
 
 lemma setObject_pdpte_ksInt [wp]:
@@ -1852,9 +1690,10 @@ lemma storePML4E_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> storePML4E p pml4e \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: storePML4E_def)
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
-                        updateObject_default_def projectKOs objBits_simps
+                        updateObject_default_def objBits_simps
                         in_magnitude_check state_refs_of'_def ps_clear_upd
-                 elim!: rsubst[where P=P] intro!: ext
+                 elim!: rsubst[where P=P]
+                   del: ext intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (simp split: option.split)
   done
@@ -1864,8 +1703,8 @@ lemma storePML4E_iflive [wp]:
   apply (simp add: storePML4E_def)
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
-      apply (simp add: objBits_simps archObjSize_def)
-     apply (auto simp: updateObject_default_def in_monad projectKOs live'_def hyp_live'_def)
+      apply (simp add: objBits_simps)
+     apply (auto simp: updateObject_default_def in_monad live'_def hyp_live'_def)
   done
 
 lemma setObject_pml4e_ksInt [wp]:
@@ -1880,7 +1719,7 @@ lemma storePDE_ifunsafe [wp]:
   apply (simp add: storePDE_def)
   apply (rule hoare_pre)
    apply (rule setObject_ifunsafe' [where P=\<top>], simp)
-     apply (auto simp: updateObject_default_def in_monad projectKOs)[2]
+     apply (auto simp: updateObject_default_def in_monad)[2]
    apply wp
   apply simp
   done
@@ -1899,7 +1738,7 @@ lemma storePDPTE_ifunsafe [wp]:
   apply (simp add: storePDPTE_def)
   apply (rule hoare_pre)
    apply (rule setObject_ifunsafe' [where P=\<top>], simp)
-     apply (auto simp: updateObject_default_def in_monad projectKOs)[2]
+     apply (auto simp: updateObject_default_def in_monad)[2]
    apply wp
   apply simp
   done
@@ -1912,7 +1751,7 @@ lemma storePML4E_ifunsafe [wp]:
   apply (simp add: storePML4E_def)
   apply (rule hoare_pre)
    apply (rule setObject_ifunsafe' [where P=\<top>], simp)
-     apply (auto simp: updateObject_default_def in_monad projectKOs)[2]
+     apply (auto simp: updateObject_default_def in_monad)[2]
    apply wp
   apply simp
   done
@@ -1944,9 +1783,6 @@ lemma storePML4E_irq_states' [wp]:
   apply (wpsimp wp: valid_irq_states_lift' dmo_lift' no_irq_storeWord setObject_ksMachine
                     updateObject_default_inv)
   done
-
-crunch storePDE, storePDPTE, storePML4E
-  for no_0_obj'[wp]: no_0_obj'
 
 lemma storePDE_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> storePDE p pde \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
@@ -2101,11 +1937,11 @@ lemma setObject_pml4e_ksDomSchedule[wp]:
 
 lemma storePML4E_cur_domain[wp]:
   "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> storePML4E p pml4e \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
-by (simp add: storePML4E_def) wp
+  by (simp add: storePML4E_def) wp
 
 lemma storePML4E_ksDomSchedule[wp]:
   "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> storePML4E p pml4e \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
-by (simp add: storePML4E_def) wp
+  by (simp add: storePML4E_def) wp
 
 lemma storePML4E_tcb_obj_at'[wp]:
   "\<lbrace>obj_at' (P::tcb \<Rightarrow> bool) t\<rbrace> storePML4E p pml4e \<lbrace>\<lambda>_. obj_at' P t\<rbrace>"
@@ -2216,8 +2052,8 @@ crunch storePTE
 lemma storePTE_inQ[wp]:
   "\<lbrace>\<lambda>s. P (obj_at' (inQ d p) t s)\<rbrace> storePTE ptr pde \<lbrace>\<lambda>rv s. P (obj_at' (inQ d p) t s)\<rbrace>"
   apply (simp add: obj_at'_real_def storePTE_def)
-  apply (wp setObject_ko_wp_at | simp add: objBits_simps archObjSize_def)+
-  apply (clarsimp simp: projectKOs obj_at'_def ko_wp_at'_def)
+  apply (wp setObject_ko_wp_at | simp add: objBits_simps)+
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def)
   done
 
 crunch storePTE
@@ -2233,8 +2069,8 @@ lemma storePTE_iflive [wp]:
   apply (simp add: storePTE_def)
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
-      apply (simp add: objBits_simps archObjSize_def)
-     apply (auto simp: updateObject_default_def in_monad projectKOs live'_def hyp_live'_def)
+      apply (simp add: objBits_simps)
+     apply (auto simp: updateObject_default_def in_monad live'_def hyp_live'_def)
   done
 
 lemma setObject_pte_ksInt [wp]:
@@ -2249,7 +2085,7 @@ lemma storePTE_ifunsafe [wp]:
   apply (simp add: storePTE_def)
   apply (rule hoare_pre)
    apply (rule setObject_ifunsafe' [where P=\<top>], simp)
-     apply (auto simp: updateObject_default_def in_monad projectKOs)[2]
+     apply (auto simp: updateObject_default_def in_monad)[2]
    apply wp
   apply simp
   done
@@ -2379,9 +2215,9 @@ lemma setASIDPool_inQ[wp]:
    \<lbrace>\<lambda>rv s. P (obj_at' (inQ d p) t s)\<rbrace>"
   apply (simp add: obj_at'_real_def)
   apply (wp setObject_ko_wp_at
-            | simp add: objBits_simps archObjSize_def)+
+         | simp add: objBits_simps)+
    apply (simp add: pageBits_def)
-  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def)
   done
 
 lemma setASIDPool_qsL1 [wp]:
@@ -2395,9 +2231,10 @@ lemma setASIDPool_qsL2 [wp]:
 lemma setASIDPool_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
-                        updateObject_default_def projectKOs objBits_simps
+                        updateObject_default_def objBits_simps
                         in_magnitude_check state_refs_of'_def ps_clear_upd
-                 elim!: rsubst[where P=P] intro!: ext
+                 elim!: rsubst[where P=P]
+                   del: ext intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (simp split: option.split)
   done
@@ -2406,9 +2243,8 @@ lemma setASIDPool_iflive [wp]:
   "\<lbrace>if_live_then_nonz_cap'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
-      apply (simp add: objBits_simps archObjSize_def)
-     apply (auto simp: updateObject_default_def in_monad projectKOs pageBits_def
-                       live'_def hyp_live'_def)
+      apply (simp add: objBits_simps)
+     apply (auto simp: updateObject_default_def in_monad pageBits_def live'_def hyp_live'_def)
   done
 
 lemma setASIDPool_ksInt [wp]:
@@ -2419,7 +2255,7 @@ lemma setASIDPool_ifunsafe [wp]:
   "\<lbrace>if_unsafe_then_cap'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
   apply (rule hoare_pre)
    apply (rule setObject_ifunsafe' [where P=\<top>], simp)
-     apply (auto simp: updateObject_default_def in_monad projectKOs)[2]
+     apply (auto simp: updateObject_default_def in_monad)[2]
    apply wp
   apply simp
   done
@@ -2516,15 +2352,7 @@ lemma setASIDPool_invs [wp]:
   apply (clarsimp simp add: setObject_def o_def)
   done
 
-crunch unmapPageTable
-  for cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch unmapPageDirectory
-  for cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch unmapPDPT
+crunch unmapPageTable, unmapPageDirectory, unmapPDPT
   for cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -2602,10 +2430,6 @@ crunch unmapPage
 
 lemmas unmapPage_typ_ats [wp] = typ_at_lifts [OF unmapPage_typ_at']
 
-crunch lookupPTSlot
-  for inv: P
-  (wp: crunch_wps simp: crunch_simps)
-
 lemma unmapPage_invs' [wp]:
   "\<lbrace>invs'\<rbrace> unmapPage sz asid vptr pptr \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: unmapPage_def)
@@ -2658,9 +2482,8 @@ lemma setObject_cte_obj_at_ap':
   "\<lbrace>\<lambda>s. P' (obj_at' (P :: asidpool \<Rightarrow> bool) p s)\<rbrace>
   setObject c (cte::cte)
   \<lbrace>\<lambda>_ s. P' (obj_at' P p s)\<rbrace>"
-  apply (clarsimp simp: setObject_def in_monad split_def
-                        valid_def lookupAround2_char1
-                        obj_at'_def ps_clear_upd projectKOs
+  apply (clarsimp simp: setObject_def in_monad split_def valid_def lookupAround2_char1
+                        obj_at'_def ps_clear_upd
              split del: if_split)
   apply (clarsimp elim!: rsubst[where P=P'])
   apply (clarsimp simp: updateObject_cte in_monad objBits_simps
@@ -2685,7 +2508,7 @@ lemma perform_aci_invs [wp]:
   apply (clarsimp split: if_splits)
   apply (drule ctes_of_valid_cap', fastforce)
   apply (clarsimp simp: isPML4Cap'_def valid_cap'_def capAligned_def is_arch_update'_def isCap_simps)
-  apply (drule ko_at_valid_objs', fastforce, clarsimp simp: projectKOs)
+  apply (drule ko_at_valid_objs', fastforce, clarsimp)
   apply (clarsimp simp: valid_obj'_def ran_def mask_asid_low_bits_ucast_ucast
                  split: if_split_asm)
   apply (case_tac x, clarsimp simp: inv_def)
@@ -2702,11 +2525,6 @@ lemma isPML4Cap'_PML4 :
   "isPML4Cap' (ArchObjectCap (PML4Cap r m))"
   by (simp add: isPML4Cap'_def)
 
-
 end
-
-lemma cteCaps_of_ctes_of_lift:
-  "(\<And>P. \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. P (cteCaps_of s) \<rbrace> f \<lbrace>\<lambda>_ s. P (cteCaps_of s)\<rbrace>"
-  unfolding cteCaps_of_def .
 
 end

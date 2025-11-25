@@ -451,5 +451,9 @@ locale StateRelation_R =
     "is_other_obj_relation_type AEndpoint"
     "is_other_obj_relation_type ANTFN"
     "\<And>n. \<not> is_other_obj_relation_type (AGarbage n)"
+  assumes msgLabelBits_msg_label_bits:
+    "msgLabelBits = msg_label_bits"
+  assumes msgInfoRegister_msg_info_register:
+    "msgInfoRegister = msg_info_register"
 
 end

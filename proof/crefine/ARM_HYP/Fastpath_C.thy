@@ -809,7 +809,7 @@ lemma switchToThread_fp_ccorres:
   apply (intro allI impI conjI)
         apply (clarsimp split: option.splits)
         apply (rule valid_tcb'_vcpuE)
-          apply (erule (3) valid_objs_valid_tcb')
+          apply (erule (3) tcb_ko_at_valid_objs_valid_tcb')
        apply (force simp: ran_def)
       apply (frule (1) ctes_of_valid')
       apply (simp add: valid_cap_simps')

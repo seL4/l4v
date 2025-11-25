@@ -377,7 +377,7 @@ lemma ko_at'_tcb_vcpu_not_NULL:
   unfolding valid_pspace'_def
   supply word_neq_0_conv[simp del]
   by (fastforce simp: valid_tcb'_def valid_arch_tcb'_def word_gt_0 typ_at'_no_0_objD
-                dest: valid_objs_valid_tcb')
+                dest: tcb_ko_at_valid_objs_valid_tcb')
 
 lemma vcpuEnable_valid_pspace' [wp]:
   "\<lbrace> valid_pspace' \<rbrace> vcpuEnable a \<lbrace>\<lambda>_. valid_pspace' \<rbrace>"

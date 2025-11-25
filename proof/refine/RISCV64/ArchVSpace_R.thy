@@ -4,15 +4,13 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(*
-   RISCV64 VSpace refinement
-*)
+(* VSpace refinement - architecture-specific *)
 
 theory ArchVSpace_R
 imports VSpace_R
 begin
 
-context begin interpretation Arch . (*FIXME: arch-split*)
+context Arch begin arch_global_naming
 
 definition
   "vspace_at_asid' vs asid \<equiv> \<lambda>s. \<exists>ap pool.
@@ -139,24 +137,6 @@ lemma get_asid_pool_corres_inv'[corres]:
    apply (rule getObject_ASIDPool_corres[OF assms])
   apply simp
   done
-
-lemma dMo_no_0_obj'[wp]:
-  "doMachineOp f \<lbrace>no_0_obj'\<rbrace>"
-  apply (simp add: doMachineOp_def split_def)
-  apply wp
-  by (simp add: no_0_obj'_def)
-
-lemma dMo_riscvKSASIDTable_inv[wp]:
-  "doMachineOp f \<lbrace>\<lambda>s. P (riscvKSASIDTable (ksArchState s))\<rbrace>"
-  apply (simp add: doMachineOp_def split_def)
-  apply wp
-  by (clarsimp)
-
-lemma dMo_valid_arch_state'[wp]:
-  "\<lbrace>\<lambda>s. P (valid_arch_state' s)\<rbrace> doMachineOp f \<lbrace>\<lambda>_ s. P (valid_arch_state' s)\<rbrace>"
-  apply (simp add: doMachineOp_def split_def)
-  apply wp
-  by (clarsimp)
 
 crunch deleteASID
   for no_0_obj'[wp]: "no_0_obj'"
@@ -306,19 +286,6 @@ lemma unmapPageTable_corres:
   apply simp
   done
 
-lemma corres_split_strengthen_ftE:
-  "\<lbrakk> corres (ftr \<oplus> r') P P' f j;
-      \<And>rv rv'. r' rv rv' \<Longrightarrow> corres (ftr' \<oplus> r) (R rv) (R' rv') (g rv) (k rv');
-      \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>,-; \<lbrace>Q'\<rbrace> j \<lbrace>R'\<rbrace>,- \<rbrakk>
-    \<Longrightarrow> corres (dc \<oplus> r) (P and Q) (P' and Q') (f >>=E (\<lambda>rv. g rv)) (j >>=E (\<lambda>rv'. k rv'))"
-  apply (rule_tac r'=r' in corres_splitEE)
-     apply (erule corres_rel_imp)
-     apply (case_tac x, auto)[1]
-    apply (rule corres_rel_imp, assumption)
-    apply (case_tac x, auto)[1]
-   apply (simp add: validE_R_def)+
-  done
-
 lemma checkMappingPPtr_corres:
   "pte_relation' pte pte' \<Longrightarrow> corres (dc \<oplus> dc) \<top> \<top>
       (whenE (RISCV64_A.is_PagePTE pte \<longrightarrow> pptr_from_pte pte \<noteq> pptr) (throwError ExceptionTypes_A.InvalidRoot))
@@ -398,44 +365,6 @@ definition
       K (isFrameCap cap) and
       cte_wp_at' (is_arch_update' (ArchObjectCap cap)) ptr and valid_cap' (ArchObjectCap cap)
   | PageGetAddr ptr \<Rightarrow> \<top>"
-
-lemma message_info_to_data_eqv:
-  "wordFromMessageInfo (message_info_map mi) = message_info_to_data mi"
-  apply (cases mi)
-  apply (simp add: wordFromMessageInfo_def msgLengthBits_def msgExtraCapBits_def msgMaxExtraCaps_def shiftL_nat)
-  done
-
-lemma message_info_from_data_eqv:
-  "message_info_map (data_to_message_info rv) = messageInfoFromWord rv"
-  using shiftr_mask_eq[where 'a=64 and n=12]
-  by (auto simp: data_to_message_info_def messageInfoFromWord_def Let_def not_less
-                 msgLengthBits_def msgExtraCapBits_def msgMaxExtraCaps_def mask_def
-                 shiftL_nat msgMaxLength_def msgLabelBits_def)
-
-lemma setMessageInfo_corres:
- "mi' = message_info_map mi \<Longrightarrow>
-  corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
-            (set_message_info t mi) (setMessageInfo t mi')"
-  apply (simp add: setMessageInfo_def set_message_info_def)
-  apply (subgoal_tac "wordFromMessageInfo (message_info_map mi) =
-                      message_info_to_data mi")
-   apply (simp add: asUser_setRegister_corres msg_info_register_def
-                    msgInfoRegister_def)
-  apply (simp add: message_info_to_data_eqv)
-  done
-
-
-lemma set_mi_invs'[wp]: "\<lbrace>invs' and tcb_at' t\<rbrace> setMessageInfo t a \<lbrace>\<lambda>x. invs'\<rbrace>"
-  by (simp add: setMessageInfo_def) wp
-
-lemma set_mi_tcb' [wp]:
-  "\<lbrace> tcb_at' t \<rbrace> setMessageInfo receiver msg \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
-  by (simp add: setMessageInfo_def) wp
-
-
-lemma setMRs_typ_at':
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> setMRs receiver recv_buf mrs \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  by (simp add: setMRs_def zipWithM_x_mapM split_def, wp crunch_wps)
 
 lemmas setMRs_typ_at_lifts[wp] = typ_at_lifts [OF setMRs_typ_at']
 
@@ -659,20 +588,6 @@ crunch setVMRoot
   for obj_at[wp]: "\<lambda>s. P (obj_at' P' t s)"
   (simp: crunch_simps wp: crunch_wps)
 
-crunch doMachineOp
-  for arch[wp]: "\<lambda>s. P (ksArchState s)"
-  and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
-  and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
-  and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
-  and cur'[wp]: "\<lambda>s. P (ksCurThread s)"
-  and cteCaps_of[wp]: "\<lambda>s. P (cteCaps_of s)"
-  and dmo_global_refs'[wp]: "\<lambda>s. P (global_refs' s)"
-  and ksPSpace[wp]: "\<lambda>s. P (ksPSpace s)"
-  and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
-  and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
-  and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
-  and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
-
 crunch sfence, setVSpaceRoot
   for irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
 
@@ -772,13 +687,6 @@ lemma storePTE_pred_tcb_at' [wp]:
   apply (simp add: storePTE_def pred_tcb_at'_def)
   apply (rule obj_at_setObject2)
   apply (clarsimp simp add: updateObject_default_def in_monad)
-  done
-
-lemma dmo_ct[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> doMachineOp m \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
-  apply (simp add: doMachineOp_def split_def)
-  apply wp
-  apply clarsimp
   done
 
 lemma storePTE_valid_mdb [wp]:
@@ -996,7 +904,8 @@ lemma setASIDPool_state_refs' [wp]:
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
                         updateObject_default_def objBits_simps
                         in_magnitude_check state_refs_of'_def ps_clear_upd
-                 elim!: rsubst[where P=P] intro!: ext
+                 elim!: rsubst[where P=P]
+                   del: ext intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (simp split: option.split)
   done
@@ -1219,9 +1128,5 @@ lemma perform_aci_invs [wp]:
   done
 
 end
-
-lemma cteCaps_of_ctes_of_lift:
-  "(\<And>P. \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. P (cteCaps_of s) \<rbrace> f \<lbrace>\<lambda>_ s. P (cteCaps_of s)\<rbrace>"
-  unfolding cteCaps_of_def .
 
 end
