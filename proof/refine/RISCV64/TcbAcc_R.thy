@@ -2757,6 +2757,15 @@ defs valid_objs'_asrt_def:
 
 declare valid_objs'_asrt_def[simp]
 
+lemma threadSet_ghost_relation_wrapper[wp]:
+  "threadSet f p \<lbrace>ghost_relation_wrapper t\<rbrace>"
+  unfolding threadSet_def setObject_def
+  by (wpsimp wp: getObject_tcb_wp simp: updateObject_default_def obj_at'_def)
+
+crunch setQueue, tcbQueuePrepend, tcbQueueRemove, removeFromBitmap
+  for ghost_relation_wrapper[wp]: "ghost_relation_wrapper t"
+  (wp: crunch_wps)
+
 lemma tcbSchedEnqueue_corres:
   "tcb_ptr = tcbPtr \<Longrightarrow>
    corres dc

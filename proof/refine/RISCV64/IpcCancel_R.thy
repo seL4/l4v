@@ -256,7 +256,7 @@ lemma blocked_cancelIPC_corres:
        apply (clarsimp simp: obj_at_def sk_obj_at_pred_def)
        apply (rename_tac rp list reply)
        apply (drule_tac x=rp in pspace_relation_absD, simp)
-       apply (clarsimp simp: obj_relation_cuts_def2 obj_at'_def reply_relation_def)
+       apply (clarsimp simp: obj_relation_cuts_def obj_at'_def reply_relation_def)
        apply (rename_tac ko)
        apply (case_tac ko; simp)
        apply (rename_tac reply')

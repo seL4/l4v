@@ -317,7 +317,7 @@ lemma pspace_relation_sc_at:
   assumes t: "scs_of' s' scp \<noteq> None"
   shows "sc_at scp s" using assms
   by (fastforce elim!: pspace_dom_relatedE obj_relation_cutsE
-                 simp: other_obj_relation_def is_sc_obj obj_at_def projectKOs opt_map_def
+                 simp: other_obj_relation_def other_aobj_relation_def is_sc_obj obj_at_def opt_map_def
                 split: Structures_A.kernel_object.split_asm if_split_asm option.splits
                        arch_kernel_obj.splits kernel_object.splits)
 
@@ -1499,19 +1499,31 @@ lemma setObject_other_arch_corres:
                  split: Structures_A.kernel_object.split_asm if_split_asm
                         arch_kernel_obj.split_asm kernel_object.split_asm
                         arch_kernel_object.split_asm)
-  apply clarsimp
   apply (rule conjI)
-   apply (rule ballI, drule(1) bspec)
-   apply (drule domD)
-   apply (clarsimp simp: is_other_obj_relation_type t a)
-   apply (drule(1) bspec)
-   apply clarsimp
-   apply (frule_tac ko'=ko and x'=ptr in obj_relation_cut_same_type)
-   apply ((fastforce simp add: is_other_obj_relation_type t)+)[3] (* loops when folded into above *)
-   apply (insert t)
-   apply ((erule disjE
-          | clarsimp simp: is_other_obj_relation_type is_other_obj_relation_type_def a_type_def)+)[1]
-  \<comment> \<open>ready_queues_relation\<close>
+   apply (rule conjI)
+    apply (rule ballI, drule(1) bspec)
+    apply (drule domD)
+    apply (clarsimp simp: is_other_obj_relation_type t a)
+    apply (drule(1) bspec)
+    apply clarsimp
+    apply (frule_tac ko'=ko and x'=ptr in obj_relation_cut_same_type)
+    apply ((fastforce simp add: is_other_obj_relation_type t)+)[3] (* loops when folded into above *)
+    apply (insert t)
+    apply ((erule disjE
+           | clarsimp simp: is_other_obj_relation_type is_other_obj_relation_type_def a_type_def)+)[1]
+   (* sc_replies_relation *)
+   apply (simp add: sc_replies_relation_def)
+   apply (clarsimp simp: sc_replies_of_scs_def map_project_def scs_of_kh_def)
+   apply (drule_tac x=p in spec)
+   apply (rule conjI; clarsimp split: Structures_A.kernel_object.split_asm if_split_asm)
+    apply (clarsimp simp: a_type_def is_other_obj_relation_type_def)
+   apply (rename_tac sc n)
+   apply (drule replyPrevs_of_non_reply_update[simplified])
+    subgoal
+      by (clarsimp simp: other_aobj_relation_def; cases ob; cases "injectKO ob'";
+          simp split: arch_kernel_obj.split_asm)
+   apply (clarsimp simp: opt_map_def)
+  \<comment> \<open>ready_queues_relation and release_queue_relation\<close>
   apply (prop_tac "koTypeOf (injectKO ob') \<noteq> TCBT")
    subgoal
      by (clarsimp simp: other_aobj_relation_def; cases ob; cases "injectKO ob'";
@@ -1535,10 +1547,10 @@ lemma reply_at'_cross:
   assumes p: "pspace_relation (kheap s) (ksPSpace s')"
   assumes t: "reply_at' ptr s'"
   shows "reply_at ptr s" using assms
-  apply (clarsimp simp: obj_at'_def projectKOs)
+  apply (clarsimp simp: obj_at'_def)
   apply (erule (1) pspace_dom_relatedE)
   by (clarsimp simp: obj_relation_cuts_def2 obj_at_def is_reply cte_relation_def
-                     other_obj_relation_def pte_relation_def tcb_relation_cut_def
+                     other_obj_relation_def other_aobj_relation_def pte_relation_def tcb_relation_cut_def
               split: Structures_A.kernel_object.split_asm if_split_asm
                      arch_kernel_obj.split_asm)
 
@@ -1703,7 +1715,7 @@ lemma sc_at'_cross:
   apply (clarsimp simp: obj_at'_def projectKOs)
   apply (erule (1) pspace_dom_relatedE)
   by (clarsimp simp: obj_relation_cuts_def2 obj_at_def is_sc_obj cte_relation_def
-                     other_obj_relation_def pte_relation_def tcb_relation_cut_def
+                     other_obj_relation_def other_aobj_relation_def pte_relation_def tcb_relation_cut_def
               split: Structures_A.kernel_object.split_asm if_split_asm
                      arch_kernel_obj.split_asm)
 
@@ -1714,8 +1726,8 @@ lemma sc_obj_at'_cross:
   apply (clarsimp simp: obj_at'_def)
   apply (erule (1) pspace_dom_relatedE)
   by (clarsimp simp: obj_relation_cuts_def2 obj_at_def is_sc_obj cte_relation_def
-                     objBits_simps scBits_simps
-                     other_obj_relation_def pte_relation_def sc_relation_def tcb_relation_cut_def
+                     objBits_simps scBits_simps other_obj_relation_def
+                     other_aobj_relation_def pte_relation_def sc_relation_def tcb_relation_cut_def
               split: Structures_A.kernel_object.split_asm if_split_asm
                      arch_kernel_obj.split_asm)
 
@@ -3607,18 +3619,21 @@ lemma pspace_relation_pspace_bounded':
   apply (erule (1) obj_relation_cutsE;
          clarsimp simp: objBits_simps' word_bits_def pageBits_def pteBits_def)
 
-  \<comment>\<open>SchedContext\<close>
-     apply (clarsimp simp: minSchedContextBits_def min_sched_context_bits_def replySizeBits_def
-                            valid_sched_context_size_def sc_relation_def
-                            untyped_max_bits_def
-                     elim!: is_aligned_weaken)
+    \<comment>\<open>SchedContext\<close>
+    apply (clarsimp simp: minSchedContextBits_def min_sched_context_bits_def replySizeBits_def
+                          valid_sched_context_size_def sc_relation_def untyped_max_bits_def
+                   elim!: is_aligned_weaken)
 
-  \<comment>\<open>other_obj_relation\<close>
-  apply (simp add: other_obj_relation_def)
-  by (clarsimp simp: bit_simps' tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def
-              split: kernel_object.splits Structures_A.kernel_object.splits)
-     (clarsimp simp: archObjSize_def pteBits_def pageBits_def
-              split: arch_kernel_object.splits arch_kernel_obj.splits)
+   \<comment>\<open>other_obj_relation\<close>
+   apply (simp add: other_obj_relation_def)
+   apply (clarsimp simp: bit_simps' tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def
+                  split: kernel_object.splits Structures_A.kernel_object.splits)
+
+  \<comment>\<open>other_aobj_relation\<close>
+  apply (simp add: other_aobj_relation_def)
+  apply (clarsimp simp: bit_simps' archObjSize_def
+                 split: kernel_object.splits arch_kernel_object.splits arch_kernel_obj.splits)
+  done
 
 lemma pspace_distinct_cross:
   "\<lbrakk> pspace_distinct s; pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow>
@@ -3646,21 +3661,22 @@ lemma pspace_distinct_cross:
   apply (case_tac "p = x")
    apply clarsimp
    apply (erule (1) obj_relation_cutsE; clarsimp)
-      apply (clarsimp simp: cte_relation_def cte_map_def objBits_simps)
-      apply (rule_tac n=cteSizeBits in is_aligned_add_step_le'; assumption?)
-     apply (clarsimp simp: pte_relation_def objBits_simps)
-     apply (rule_tac n=pteBits in is_aligned_add_step_le'; assumption?)
-    apply (simp add: objBitsKO_Data)
-    apply (rule_tac n=pageBits in is_aligned_add_step_le'; assumption?)
-   apply (case_tac ko;
-          simp split: if_split_asm
-                 add: is_other_obj_relation_type_CapTable
-                      is_other_obj_relation_type_SchedContext
-                      is_other_obj_relation_type_Reply
-                      a_type_def)
-   apply (rename_tac ako,
-          case_tac ako;
-          simp add: is_other_obj_relation_type_def a_type_def split: if_split_asm)
+       apply (clarsimp simp: cte_relation_def cte_map_def objBits_simps)
+       apply (rule_tac n=cteSizeBits in is_aligned_add_step_le'; assumption?)
+      apply (clarsimp simp: pte_relation_def objBits_simps)
+      apply (rule_tac n=pteBits in is_aligned_add_step_le'; assumption?)
+     apply (simp add: objBitsKO_Data)
+     apply (rule_tac n=pageBits in is_aligned_add_step_le'; assumption?)
+    apply (case_tac ko;
+           simp split: if_split_asm
+                  add: is_other_obj_relation_type_CapTable
+                       is_other_obj_relation_type_SchedContext
+                       is_other_obj_relation_type_Reply
+                       a_type_def)
+    apply (rename_tac ako,
+           case_tac ako;
+           simp add: is_other_obj_relation_type_def a_type_def split: if_split_asm)
+   apply (case_tac ako; simp add: is_other_obj_relation_type_def split: if_split_asm)
   apply (frule (1) obj_relation_cuts_obj_bits)
   apply (drule (2) obj_relation_cuts_range_mask_range)+
   apply (prop_tac "x' \<in> mask_range p' (objBitsKO ko')", simp add: mask_def add_diff_eq)
@@ -3721,8 +3737,7 @@ lemma st_tcb_at_coerce_abstract:
   assumes sr: "(a, c) \<in> state_relation"
   shows "st_tcb_at (\<lambda>st. \<exists>st'. thread_state_relation st st' \<and> P st') t a"
   using assms
-  apply (clarsimp simp: state_relation_def pred_tcb_at'_def obj_at'_def
-                        projectKOs)
+  apply (clarsimp simp: state_relation_def pred_tcb_at'_def obj_at'_def)
   apply (erule (1) pspace_dom_relatedE)
   apply (erule (1) obj_relation_cutsE, simp_all)
   by (fastforce simp: st_tcb_at_def obj_at_def other_obj_relation_def tcb_relation_def
@@ -3972,7 +3987,7 @@ lemma state_refs_of_cross_eq:
         apply (fastforce simp: cte_relation_def cte_map_def well_formed_cnode_n_def)
        apply (find_goal \<open>match premises in "_ = Some (ArchObj _)" \<Rightarrow> -\<close>)
        apply (rename_tac ako; case_tac ako; simp)
-          apply (case_tac ko'; clarsimp simp: other_obj_relation_def)
+          apply (case_tac ko'; clarsimp simp: other_aobj_relation_def)
          apply ((drule_tac x=0 in spec, clarsimp simp:  pte_relation_def)+)[1]
        apply (drule_tac x=p in spec)
        apply (rename_tac b sz)
@@ -4772,8 +4787,6 @@ lemma updateSchedContext_no_stack_update_corres:
 
 (* end : updateSchedContext *)
 
-end
-
 (* this lets cross the sc size information from concrete to abstract *)
 lemma ko_at_sc_cross:
   assumes p: "pspace_relation (kheap s) (ksPSpace s')"
@@ -4782,10 +4795,12 @@ lemma ko_at_sc_cross:
   apply (clarsimp simp: obj_at'_def projectKOs)
   apply (erule (1) pspace_dom_relatedE)
   by (clarsimp simp: obj_relation_cuts_def2 obj_at_def is_sc_obj cte_relation_def
-                     other_obj_relation_def pte_relation_def tcb_relation_cut_def
+                     other_obj_relation_def other_aobj_relation_def pte_relation_def tcb_relation_cut_def
                      scBits_simps sc_relation_def gen_objBits_simps
               split: Structures_A.kernel_object.split_asm if_split_asm
                      RISCV64_A.arch_kernel_obj.split_asm)
+
+end
 
 lemma update_sc_no_reply_stack_update_ko_at'_corres:
   assumes x: "\<And>sc n. sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc')"

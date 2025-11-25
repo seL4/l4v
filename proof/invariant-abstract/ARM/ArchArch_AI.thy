@@ -1508,7 +1508,7 @@ declare word_less_sub_le [simp]
 crunch perform_page_table_invocation, perform_page_invocation,
        perform_asid_pool_invocation, perform_page_directory_invocation,
        perform_sgi_invocation
-  for pred_tcb_at: "pred_tcb_at proj P t"
+  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma arch_pinv_st_tcb_at:
@@ -1521,11 +1521,7 @@ lemma arch_pinv_st_tcb_at:
    arch_perform_invocation ai
    \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   by (wpsimp simp: arch_perform_invocation_def valid_arch_inv_def
-               wp: perform_page_table_invocation_pred_tcb_at
-                   perform_page_directory_invocation_pred_tcb_at
-                   perform_page_invocation_pred_tcb_at
-                   perform_asid_control_invocation_st_tcb_at
-                   perform_asid_pool_invocation_pred_tcb_at)
+               wp: perform_asid_control_invocation_st_tcb_at)
 
 crunch arch_perform_invocation
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"

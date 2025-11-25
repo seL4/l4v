@@ -74,15 +74,13 @@ lemma obj_relation_cutsE:
      \<And>sz dev n. \<lbrakk> ko = ArchObj (DataPage dev sz);
                   ko' = (if dev then KOUserDataDevice else KOUserData);
                   y = x + (n << pageBits); n < 2 ^ (pageBitsForSize sz - pageBits) \<rbrakk> \<Longrightarrow> R;
-            \<lbrakk> y = x; other_obj_relation ko ko'; is_other_obj_relation_type (a_type ko) \<rbrakk> \<Longrightarrow> R
+     \<And>ako. \<lbrakk> ko \<noteq> ArchObj ako; y = x; other_obj_relation ko ko'; is_other_obj_relation_type (a_type ko) \<rbrakk> \<Longrightarrow> R;
+     \<And>ako. \<lbrakk> ko = ArchObj ako; y = x; other_aobj_relation ko ko'; is_other_obj_relation_type (a_type ko) \<rbrakk> \<Longrightarrow> R
     \<rbrakk> \<Longrightarrow> R"
-  apply (simp add: obj_relation_cuts_def2 is_other_obj_relation_type_def
-                   a_type_def tcb_relation_cut_def
-            split: Structures_A.kernel_object.split_asm if_split_asm
-                   RISCV64_A.arch_kernel_obj.split_asm)
-  by (clarsimp split: if_splits kernel_object.split_asm,
-      clarsimp simp: cte_relation_def pte_relation_def
-                     reply_relation_def sc_relation_def)+
+  by (force simp: obj_relation_cuts_def2 is_other_obj_relation_type_def a_type_def
+                  tcb_relation_cut_def cte_relation_def pte_relation_def
+            split: Structures_A.kernel_object.splits kernel_object.splits if_splits
+                   RISCV64_A.arch_kernel_obj.splits)
 
 lemma is_other_obj_relation_type_CapTable[StateRelation_R_assms]:
   "\<not> is_other_obj_relation_type (ACapTable n)"
@@ -141,13 +139,8 @@ lemma ghost_relation_typ_at:
 
 (* FIXME arch-split: extension of gen_isCap_defs *)
 lemmas isCap_defs =
-  isZombie_def isArchObjectCap_def
-  isThreadCap_def isCNodeCap_def isNotificationCap_def
-  isEndpointCap_def isUntypedCap_def isNullCap_def
-  isIRQHandlerCap_def isIRQControlCap_def isReplyCap_def
-  isFrameCap_def isPageTableCap_def
-  isASIDControlCap_def isASIDPoolCap_def
-  isDomainCap_def isArchFrameCap_def
+  gen_isCap_defs isFrameCap_def isPageTableCap_def
+  isASIDControlCap_def isASIDPoolCap_def isArchFrameCap_def
 
 lemma is_other_obj_relation_type:
   "is_other_obj_relation_type (a_type ko)
@@ -174,11 +167,6 @@ lemma other_aobj_relation_aobj:
   "other_aobj_relation ko ko' \<Longrightarrow> is_ArchObj ko"
   unfolding other_aobj_relation_def is_ArchObj_def
   by (clarsimp split: Structures_A.kernel_object.splits)
-
-lemma ghost_relation_wrapper_machine_state_upd_id[StateRelation_R_assms,simp]:
-  "ghost_relation_wrapper (s\<lparr>machine_state := ss\<rparr>) (s'\<lparr>ksMachineState := ss'\<rparr>)
-   = ghost_relation_wrapper s s'"
-  by simp
 
 end
 

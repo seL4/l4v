@@ -27,7 +27,7 @@ crunch setHardwareASID, set_current_pd, invalidateLocalTLB_ASID, cleanByVA, inva
   cleanCacheRange_PoU, cleanInvalidateCacheRange_RAM, cleanInvalidateCacheRange_RAM,
   invalidateCacheRange_RAM, cleanCacheRange_RAM, setIRQTrigger, maskInterrupt, clearExMonitor,
   invalidateLocalTLB_VAASID, do_flush, storeWord, freeMemory, ackDeadlineIRQ, clearMemory,
-  getDFSR, getFAR, getIFSR
+  getDFSR, getFAR, getIFSR, sendSGI
   for machine_times[wp]: "\<lambda>s. P (last_machine_time s) (time_state s)"
   (simp: isb_def writeTTBR0_def wp: crunch_wps
    ignore_del: setHardwareASID invalidateLocalTLB_ASID cleanByVA invalidateL2Range invalidateByVA
@@ -69,7 +69,7 @@ lemma handle_vm_fault_valid_sched_pred_strong[wp, DetSchedSchedule_AI_assms]:
 
 crunch
   perform_page_table_invocation, perform_page_directory_invocation,
-  perform_page_invocation, perform_asid_pool_invocation
+  perform_page_invocation, perform_asid_pool_invocation, perform_sgi_invocation
   for valid_sched_misc[wp]: "valid_sched_pred_strong P"
   (wp: dmo_valid_sched_pred crunch_wps simp: crunch_simps detype_def ignore: do_machine_op)
 

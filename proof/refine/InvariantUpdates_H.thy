@@ -144,9 +144,17 @@ lemma valid_tcb'_tcbFault_update[simp]:
   "valid_tcb' tcb s \<Longrightarrow> valid_tcb' (tcbFault_update f tcb) s"
   by (clarsimp simp: valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs)
 
+(* true on all architectures *)
+lemma (in Arch) valid_arch_tcb'_ksMachineState_update:
+  "valid_arch_tcb' arch_tcb (ksMachineState_update f s) = valid_arch_tcb' arch_tcb s"
+  by (clarsimp simp: valid_arch_tcb'_def)
+
+requalify_facts Arch.valid_arch_tcb'_ksMachineState_update
+declare valid_arch_tcb'_ksMachineState_update[simp]
+
 lemma valid_tcb'_ksMachineState_update[simp]:
   "valid_tcb' tcb (ksMachineState_update f s) = valid_tcb' tcb s"
-  by (auto simp: valid_tcb'_def valid_tcb_state'_def valid_bound_obj'_def valid_arch_tcb'_def
+  by (auto simp: valid_tcb'_def valid_tcb_state'_def valid_bound_obj'_def
           split: option.splits thread_state.splits)
 
 lemma invs'_wu[simp]:

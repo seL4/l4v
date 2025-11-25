@@ -464,8 +464,6 @@ proof -
   done
 qed
 
-end
-
 lemma cte_map_shift:
   assumes bl: "to_bl cref' = zs @ cref"
   assumes pre: "guard \<le> cref"
@@ -695,6 +693,8 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
                      isCap_defs lookup_failure_map_def)
   qed
 qed
+
+end
 
 lemma getThreadCSpaceRoot:
   "getThreadCSpaceRoot t = return t"

@@ -2290,7 +2290,7 @@ case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((NotificationCap { c
     then ->13
     else ->14
 
-case \x of (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@EndpointCap {})) -> ((a@NotificationCap {}), (b@NotificationCap {})) -> ((a@CNodeCap {}), (b@CNodeCap {})) -> ((a@ThreadCap {}), (b@ThreadCap {})) -> ((a@ReplyCap {}), (b@ReplyCap {})) -> (DomainCap, DomainCap) -> (IRQControlCap, IRQControlCap) -> (IRQControlCap, (IRQHandlerCap {})) -> (IRQControlCap, (ArchObjectCap b)) -> ((IRQHandlerCap a), (IRQHandlerCap b)) -> ((ArchObjectCap a), (ArchObjectCap b)) -> (_, _) ->  --->  let (a, b) = \x in
+case \x of (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@EndpointCap {})) -> ((a@NotificationCap {}), (b@NotificationCap {})) -> ((a@CNodeCap {}), (b@CNodeCap {})) -> ((a@ThreadCap {}), (b@ThreadCap {})) -> ((a@SchedContextCap {}), (b@SchedContextCap {})) -> (SchedControlCap, SchedControlCap) -> ((a@ReplyCap {}), (b@ReplyCap {})) -> (DomainCap, DomainCap) -> (IRQControlCap, IRQControlCap) -> (IRQControlCap, (IRQHandlerCap {})) -> (IRQControlCap, (ArchObjectCap b)) -> ((IRQHandlerCap a), (IRQHandlerCap b)) -> ((ArchObjectCap a), (ArchObjectCap b)) -> (_, _) ->  --->  let (a, b) = \x in
     if isUntypedCap a
     then ->1
     else if isEndpointCap a \<and> isEndpointCap b
@@ -2301,26 +2301,30 @@ case \x of (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@EndpointCap {})) ->
     then ->4
     else if isThreadCap a \<and> isThreadCap b
     then ->5
-    else if isReplyCap a \<and> isReplyCap b
+    else if isSchedContextCap a \<and> isSchedContextCap b
     then ->6
-    else if isDomainCap a \<and> isDomainCap b
+    else if isSchedControlCap a \<and> isSchedControlCap b
     then ->7
-    else if isIRQControlCap a \<and> isIRQControlCap b
+    else if isReplyCap a \<and> isReplyCap b
     then ->8
-    else if isIRQControlCap a \<and> isIRQHandlerCap b
+    else if isDomainCap a \<and> isDomainCap b
     then ->9
+    else if isIRQControlCap a \<and> isIRQControlCap b
+    then ->10
+    else if isIRQControlCap a \<and> isIRQHandlerCap b
+    then ->11
     else if isIRQControlCap a \<and> isArchObjectCap b
-    then (case b of ArchObjectCap b \<Rightarrow> ->10
+    then (case b of ArchObjectCap b \<Rightarrow> ->12
          )
     else if isIRQHandlerCap a \<and> isIRQHandlerCap b
     then (case (a, b) of
-        (IRQHandlerCap a, IRQHandlerCap b) \<Rightarrow> ->11
+        (IRQHandlerCap a, IRQHandlerCap b) \<Rightarrow> ->13
         )
     else if isArchObjectCap a \<and> isArchObjectCap b
     then (case (a, b) of
-        (ArchObjectCap a, ArchObjectCap b) \<Rightarrow> ->12
+        (ArchObjectCap a, ArchObjectCap b) \<Rightarrow> ->14
         )
-    else ->13
+    else ->15
 
 case \x of (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandlerTrigger, irqW:triggerW:index:depth:_, cnode:_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandlerTrigger,_,_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal, irqW:targetW:index:depth:_, cnode:_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal,_,_) -> _ ->  ---> let (label, args, extraCaps) = \x in
     case (label, args, extraCaps) of

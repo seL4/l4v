@@ -21,7 +21,7 @@ arch_requalify_consts
   aobj_relation_cuts
   is_other_obj_relation_type
   ghost_relation
-  ghost_relation_wrapper
+  ghost_relation_wrapper_2
   arch_state_relation
 
 definition cte_map :: "cslot_ptr \<Rightarrow> machine_word" where
@@ -105,6 +105,13 @@ definition ep_relation :: "Structures_A.endpoint \<Rightarrow> Structures_H.endp
 definition fault_rel_optionation :: "ExceptionTypes_A.fault option \<Rightarrow> Fault_H.fault option \<Rightarrow> bool"
   where
   "fault_rel_optionation \<equiv> \<lambda>f f'. f' = map_option fault_map f"
+
+(* provided so that ghost_relation can be used within the generic definition of state_relation, by
+   passing in the union of fields needed by ghost_relation on all architectures and hiding any
+   specific arch fields needed *)
+abbreviation ghost_relation_wrapper :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "ghost_relation_wrapper s s' \<equiv>
+     ghost_relation_wrapper_2 (kheap s) (gsUserPages s') (gsCNodes s') (ksArchState s')"
 
 primrec thread_state_relation :: "Structures_A.thread_state \<Rightarrow> Structures_H.thread_state \<Rightarrow> bool"
   where
@@ -262,8 +269,8 @@ lemma
 
 lemma maxReleaseTime_equiv:
   "maxReleaseTime = MAX_RELEASE_TIME"
-  apply (clarsimp simp: maxReleaseTime_def MAX_RELEASE_TIME_def maxBound_max_word maxPeriodUs_def
-                        usToTicks_def MAX_PERIOD_def)
+  apply (clarsimp simp: maxReleaseTime_def MAX_RELEASE_TIME_def maxBound_max_word RISCV64_H.maxPeriodUs_def
+                        RISCV64_H.usToTicks_def MAX_PERIOD_def) (* FIXME arch-split RT *)
   done
 
 definition reply_relation :: "Structures_A.reply \<Rightarrow> Structures_H.reply \<Rightarrow> bool" where
@@ -647,7 +654,7 @@ lemma pspace_relation_absD:
   apply (fastforce simp: image_def intro: rev_bexI)
   done
 
-lemma pspace_relation_None:
+lemma (in Arch) pspace_relation_None:
   "\<lbrakk>pspace_relation p p'; p' ptr = None \<rbrakk> \<Longrightarrow> p ptr = None"
   apply (rule not_Some_eq[THEN iffD1, OF allI, OF notI])
   apply (drule(1) pspace_relation_absD)
@@ -673,6 +680,8 @@ lemma pspace_relation_None:
    subgoal for _ sz by (cases sz; simp add: ptTranslationBits_def)
    done
   done
+
+requalify_facts Arch.pspace_relation_None (* FIXME arch-split RT *)
 
 lemma in_related_pspace_dom:
   "\<lbrakk> s' x = Some y; pspace_relation s s' \<rbrakk> \<Longrightarrow> x \<in> pspace_dom s"
@@ -790,7 +799,7 @@ lemma sc_const_eq:
   "schedContextStructSize = sizeof_sched_context_t"
   "minSchedContextBits = min_sched_context_bits"
   by (auto simp: refillSizeBytes_def refill_size_bytes_def minSchedContextBits_def
-                 wordSize_def wordBits_def' word_size_def
+                 wordSize_def RISCV64.wordBits_def' word_size_def (* FIXME arch-split RT *)
                  sizeof_sched_context_t_def min_sched_context_bits_def schedContextStructSize_def)
 
 lemma max_num_refills_eq_refillAbsoluteMax':
@@ -800,7 +809,7 @@ lemma max_num_refills_eq_refillAbsoluteMax':
 
 lemma maxUntyped_eq:
   "untyped_max_bits = maxUntypedSizeBits"
-  by (simp add: untyped_max_bits_def maxUntypedSizeBits_def)
+  by (simp add: RISCV64_A.untyped_max_bits_def RISCV64_H.maxUntypedSizeBits_def) (* FIXME arch-split RT *)
 
 lemmas sc_const_conc = sc_const_eq[symmetric] max_num_refills_eq_refillAbsoluteMax' maxUntyped_eq
 
@@ -885,7 +894,7 @@ lemma MIN_REFILLS_refillAbsoluteMax'[simp]:
 lemma length_scRefills_bounded:
   "\<lbrakk>valid_sched_context' sc s; valid_sched_context_size' sc\<rbrakk>
    \<Longrightarrow> refillSizeBytes * length (scRefills sc) < 2 ^ word_bits"
-  apply (clarsimp simp: valid_sched_context_size'_def sc_size_bounds_def objBits_simps
+  apply (clarsimp simp: valid_sched_context_size'_def sc_size_bounds_def gen_objBits_simps
                         valid_sched_context'_def)
   apply (insert schedContextStructSize_minSchedContextBits)
   apply (prop_tac "schedContextStructSize \<le> 2 ^ (minSchedContextBits + scSize sc)")
@@ -894,7 +903,7 @@ lemma length_scRefills_bounded:
   apply (rule_tac y="2 ^ (minSchedContextBits + scSize sc)" in le_less_trans)
    apply (clarsimp simp: refillSizeBytes_def)
   apply simp
-  apply (clarsimp simp add: word_bits_def untypedBits_defs)
+  apply (clarsimp simp add: word_bits_def RISCV64.untypedBits_defs) (* FIXME arch-split RT *)
   done
 
 (* for handling refill buffer *)
@@ -1067,7 +1076,7 @@ lemma refill_ready_relation:
   "\<lbrakk>sc_relation sc n sc'; sc_valid_refills' sc'\<rbrakk>
    \<Longrightarrow> refill_ready time (refill_hd sc) = (rTime (refillHd sc') \<le> time)"
   apply (frule (1) refill_hd_relation)
-  by (clarsimp simp: refill_ready_def kernelWCETTicks_def refill_map_def)
+  by (clarsimp simp: refill_ready_def RISCV64_H.kernelWCETTicks_def refill_map_def) (* FIXME arch-split RT *)
 
 lemma refill_capacity_relation:
   "\<lbrakk>sc_relation sc n sc'; sc_valid_refills' sc'\<rbrakk> \<Longrightarrow>
@@ -1080,7 +1089,7 @@ lemma refill_sufficient_relation:
    refill_sufficient usage (refill_hd sc) = refillSufficient usage (refillHd sc')"
   apply (frule (1) refill_capacity_relation[where usage=usage])
   by (clarsimp simp: refillSufficient_def refill_sufficient_def minBudget_def MIN_BUDGET_def
-                     kernelWCETTicks_def)
+                     RISCV64_H.kernelWCETTicks_def) (* FIXME arch-split RT *)
 
 (* used for generating architecture-specific cap_relation split lemmas *)
 lemma eq_trans_helper:
@@ -1090,11 +1099,6 @@ lemma eq_trans_helper:
 text \<open>Architecture-specific requirements\<close>
 
 locale StateRelation_R =
-  (* ghost state relation must not depend on machine state *)
-  assumes ghost_relation_wrapper_machine_state_upd_id[simp]:
-    "\<And>s s' ss ss'.
-       ghost_relation_wrapper (s\<lparr>machine_state := ss\<rparr>) (s'\<lparr>ksMachineState := ss'\<rparr>)
-       = ghost_relation_wrapper s s'"
   assumes is_other_obj_relation_type_CapTable:
     "\<And>n. \<not> is_other_obj_relation_type (ACapTable n)"
   assumes is_other_obj_relation_type_TCB:

@@ -1277,6 +1277,8 @@ lemma sc_with_reply_replyNext_Some:
    apply blast
   by (meson heap_ls_next_in_list)
 
+context begin interpretation Arch . (* FIXME arch-split RT *)
+
 lemma sc_with_reply_replyPrev_None:
   "\<lbrakk>sc_with_reply rp s = None; sc_replies_relation s s'; valid_objs' s';
     pspace_relation (kheap s) (ksPSpace s');
@@ -1290,9 +1292,9 @@ lemma sc_with_reply_replyPrev_None:
    apply (clarsimp elim!: opt_mapE)
    apply (erule (1) pspace_dom_relatedE)
    apply (erule (1) obj_relation_cutsE)
-         apply ((clarsimp simp: other_obj_relation_def is_reply obj_at_def
+         apply ((clarsimp simp: other_obj_relation_def other_aobj_relation_def is_reply obj_at_def
                          split: Structures_A.kernel_object.split_asm if_split_asm
-                                RISCV64_A.arch_kernel_obj.split_asm)+)[7]
+                                RISCV64_A.arch_kernel_obj.split_asm)+)[8]
   apply (prop_tac "sc_with_reply' rp s' = None \<and> reply_at' rp s' \<and> pspace_aligned' s' \<and> pspace_distinct' s'")
    apply (fastforce simp: sc_replies_relation_sc_with_reply_cross_eq
                    elim!: reply_at_cross pspace_distinct_cross pspace_aligned_cross)
@@ -1325,9 +1327,9 @@ lemma sc_with_reply_replyNext_None:
    apply (clarsimp elim!: opt_mapE)
    apply (erule (1) pspace_dom_relatedE)
    apply (erule (1) obj_relation_cutsE)
-         apply ((clarsimp simp: other_obj_relation_def is_reply obj_at_def
+         apply ((clarsimp simp: other_obj_relation_def other_aobj_relation_def is_reply obj_at_def
                          split: Structures_A.kernel_object.split_asm if_split_asm
-                                RISCV64_A.arch_kernel_obj.split_asm)+)[7]
+                                RISCV64_A.arch_kernel_obj.split_asm)+)[8]
   apply (prop_tac "pspace_aligned' s' \<and> pspace_distinct' s'")
    apply (fastforce elim!: pspace_distinct_cross pspace_aligned_cross)
   apply (rule ccontr)
@@ -1367,10 +1369,12 @@ lemma pspace_relation_reply_at:
   apply -
   apply (erule (1) pspace_dom_relatedE)
   apply (erule (1) obj_relation_cutsE)
-  apply (clarsimp simp: other_obj_relation_def is_reply obj_at_def
+  apply (clarsimp simp: other_obj_relation_def other_aobj_relation_def is_reply obj_at_def
                  split: Structures_A.kernel_object.split_asm if_split_asm
                         RISCV64_A.arch_kernel_obj.split_asm)+
   done
+
+end
 
 lemma next_is_not_head[simp]:
   "isNext x \<Longrightarrow> \<not> isHead x"
@@ -1820,7 +1824,7 @@ proof -
       apply (simp add: sc_with_reply_def the_pred_option_def
                 split: if_split_asm)
       apply blast
-      apply (clarsimp simp add: ghost_relation_def)
+      apply (clarsimp simp add: RISCV64.ghost_relation_wrapper_def RISCV64.ghost_relation_def) (* FIXME arch-split RT *)
       apply (erule_tac x=scp in allE)+
       apply (clarsimp simp: obj_at_def a_type_def
                      split: Structures_A.kernel_object.splits if_split_asm)

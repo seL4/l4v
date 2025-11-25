@@ -450,7 +450,7 @@ begin
 private method ako =
   find_goal \<open>match premises in "kheap s p = Some (ArchObj ako)" for s p ako \<Rightarrow> succeed\<close>,
   (rename_tac ako, case_tac ako;
-   clarsimp simp: other_obj_relation_def pte_relation_def split: if_split_asm)
+   clarsimp simp: other_obj_relation_def other_aobj_relation_def pte_relation_def split: if_split_asm)
 
 private method ko =
   case_tac ko; clarsimp simp: other_obj_relation_def cte_relation_def split: if_split_asm
