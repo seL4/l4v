@@ -9,7 +9,7 @@
 *)
 
 theory CorresK_Test
-imports "Refine.VSpace_R" "Lib.CorresK_Method"
+imports "Refine.ArchVSpace_R" "Lib.CorresK_Method"
 begin
 
 chapter \<open>The Corres Method\<close>
