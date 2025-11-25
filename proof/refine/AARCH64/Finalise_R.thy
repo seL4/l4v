@@ -2528,10 +2528,6 @@ lemma deleteASID_invs'[wp]:
   unfolding deleteASID_def
   by (wpsimp wp: getASID_wp hoare_drop_imps simp: getPoolPtr_def)
 
-lemma valid_objs_valid_tcb':
-  "\<lbrakk> valid_objs' s ; ko_at' (t :: tcb) p s \<rbrakk> \<Longrightarrow> valid_tcb' t s"
-  by (fastforce simp add: obj_at'_def ran_def valid_obj'_def valid_objs'_def)
-
 lemmas archThreadSet_typ_ats[wp] = typ_at_lifts [OF archThreadSet_typ_at']
 
 lemma archThreadSet_valid_objs'[wp]:
@@ -2541,7 +2537,7 @@ lemma archThreadSet_valid_objs'[wp]:
   apply (wp setObject_tcb_valid_objs getObject_tcb_wp)
   apply clarsimp
   apply normalise_obj_at'
-  apply (drule (1) valid_objs_valid_tcb')
+  apply (drule (1) tcb_ko_at_valid_objs_valid_tcb')
   apply (clarsimp simp: valid_obj'_def valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
   done
 

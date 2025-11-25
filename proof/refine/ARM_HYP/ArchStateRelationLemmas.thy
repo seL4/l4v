@@ -168,6 +168,14 @@ lemma valid_arch_obj'_valid[wp]:
   shows "\<lbrace>valid_arch_obj' ako\<rbrace> f \<lbrace>\<lambda>rv. valid_arch_obj' ako\<rbrace>"
   by (case_tac ako; wpsimp)
 
+lemma msgLabelBits_msg_label_bits[StateRelation_R_assms]:
+  "msgLabelBits = msg_label_bits"
+  by (simp add: msgLabelBits_def)
+
+lemma msgInfoRegister_msg_info_register[StateRelation_R_assms]:
+  "msgInfoRegister = msg_info_register"
+  by (simp add: msg_info_register_def msgInfoRegister_def)
+
 end
 
 global_interpretation StateRelation_R?: StateRelation_R

@@ -483,7 +483,7 @@ lemma asUser_iflive'[wp]:
   unfolding asUser_def
   by (wpsimp wp: threadSet_iflive' hoare_drop_imps, auto)
 
-lemma asUser_setRegister_corres:
+lemma asUser_setRegister_corres[TcbAcc_R_2_assms]:
   "corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
              (as_user t (setRegister r v))
              (asUser t (setRegister r v))"
