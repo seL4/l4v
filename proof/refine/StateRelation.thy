@@ -455,5 +455,7 @@ locale StateRelation_R =
     "msgLabelBits = msg_label_bits"
   assumes msgInfoRegister_msg_info_register:
     "msgInfoRegister = msg_info_register"
+  assumes obj_relation_cuts_trivial:
+    "\<And>ptr ty. ptr \<in> fst ` obj_relation_cuts ty ptr"
 
 end
