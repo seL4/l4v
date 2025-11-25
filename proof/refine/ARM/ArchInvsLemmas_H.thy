@@ -35,6 +35,9 @@ lemmas untypedBits_defs = minUntypedSizeBits_def maxUntypedSizeBits_def
 lemmas objBits_simps = objBits_def objBitsKO_def word_size_def archObjSize_def
 lemmas objBits_simps' = objBits_simps objBits_defs
 
+lemmas vspace_bits_defs = pd_bits_def pdeBits_def pt_bits_def pteBits_def pageBits_def
+                          ptBits_def pdBits_def
+
 lemma valid_cap'_pspaceI[Invariants_H_pspaceI_assms]:
   "s \<turnstile>' cap \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> s' \<turnstile>' cap"
   unfolding valid_cap'_def
@@ -83,6 +86,12 @@ lemma pspace_in_kernel_mappings'_pspaceI[Invariants_H_pspaceI_assms]:
   "pspace_in_kernel_mappings' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> pspace_in_kernel_mappings' s'"
   unfolding pspace_in_kernel_mappings'_def
   by simp
+
+lemma range_cover_canonical_address[Invariants_H_pspaceI_assms]:
+  "\<lbrakk> range_cover ptr sz us n ; p < n ;
+     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
+   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
+  by (simp add: canonical_address_def)
 
 (* not interesting on this architecture *)
 lemmas [simp] = pspace_in_kernel_mappings'_pspaceI

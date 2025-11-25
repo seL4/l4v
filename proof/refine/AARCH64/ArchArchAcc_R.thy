@@ -19,7 +19,7 @@ lemma asid_pool_at_ko:
   "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (AARCH64_A.ASIDPool pool)) p s"
   by (clarsimp simp: asid_pools_at_eq obj_at_def elim!: opt_mapE)
 
-lemma corres_gets_asid:
+lemma corres_gets_asid[corres]:
   "corres (\<lambda>a c. a = c o ucast) \<top> \<top> (gets asid_table) (gets (armKSASIDTable \<circ> ksArchState))"
   by (simp add: state_relation_def arch_state_relation_def)
 
@@ -196,7 +196,7 @@ lemma corres_cross_over_asid_pool_at:
   apply assumption
   done
 
-lemma getObject_ASIDPool_corres:
+lemma getObject_ASIDPool_corres[corres]:
   "p' = p \<Longrightarrow>
    corres asid_pool_relation
           (asid_pool_at p and pspace_aligned and pspace_distinct) \<top>
@@ -1008,7 +1008,7 @@ lemma find_vspace_for_asid_rewite:
                    throwError_def)
   done
 
-lemma getPoolPtr_corres:
+lemma getPoolPtr_corres[corres]:
   "corres (=) (K (0 < asid)) \<top> (gets (pool_for_asid asid)) (getPoolPtr (ucast asid))"
   unfolding pool_for_asid_def getPoolPtr_def asidRange_def
   apply simp
