@@ -95,6 +95,10 @@ lemma dmos_invs_no_cicd'[wp]:
   "\<And>r. doMachineOp (readVCPUHardwareReg r) \<lbrace>invs_no_cicd'\<rbrace>"
   "\<And>r v. doMachineOp (writeVCPUHardwareReg r v) \<lbrace>invs_no_cicd'\<rbrace>"
   "doMachineOp check_export_arch_timer \<lbrace>invs_no_cicd'\<rbrace>"
+  "doMachineOp enableFpu \<lbrace>invs_no_cicd'\<rbrace>"
+  "doMachineOp disableFpu \<lbrace>invs_no_cicd'\<rbrace>"
+  "doMachineOp (writeFpuState val) \<lbrace>invs_no_cicd'\<rbrace>"
+  "doMachineOp readFpuState \<lbrace>invs_no_cicd'\<rbrace>"
   by (wp dmo_invs_no_cicd_lift')+
 
 lemma dmos_invs'[wp]:
@@ -114,6 +118,10 @@ lemma dmos_invs'[wp]:
   "\<And>r. doMachineOp (readVCPUHardwareReg r) \<lbrace>invs'\<rbrace>"
   "\<And>r v. doMachineOp (writeVCPUHardwareReg r v) \<lbrace>invs'\<rbrace>"
   "doMachineOp check_export_arch_timer \<lbrace>invs'\<rbrace>"
+  "doMachineOp enableFpu \<lbrace>invs'\<rbrace>"
+  "doMachineOp disableFpu \<lbrace>invs'\<rbrace>"
+  "doMachineOp (writeFpuState val) \<lbrace>invs'\<rbrace>"
+  "doMachineOp readFpuState \<lbrace>invs'\<rbrace>"
   by (wp dmo_invs_lift')+
 
 lemma valid_irq_node_lift_asm:
@@ -1313,9 +1321,7 @@ lemma saveVirtTimer_invs'[wp]:
 
 lemma vcpuDisable_invs'[wp]:
   "vcpuDisable v \<lbrace>invs'\<rbrace>"
-  unfolding vcpuDisable_def isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def
-             getSCTLR_def get_gic_vcpu_ctrl_hcr_def dsb_def vgicUpdate_def vcpuUpdate_def
-             vcpuSaveReg_def enableFpuEL01_def
+  unfolding vcpuDisable_def vgicUpdate_def vcpuUpdate_def
   by (wpsimp wp: dmo'_gets_wp setVCPU_vgic_invs' setVCPU_regs_invs' dmo_maskInterrupt_True
                  hoare_drop_imps
              simp: doMachineOp_bind empty_fail_cond)
@@ -1618,11 +1624,6 @@ lemma take_vmid_minBound_maxBound:
   for next_vmid :: vmid
   using leq_maxBound[where x=next_vmid]
   by (simp add: word_le_nat_alt init_def upto_enum_word minBound_word)
-
-(* FIXME AARCH64: move to SubMonad *)
-lemmas corres_machine_op_Id = corres_machine_op[OF corres_Id]
-lemmas corres_machine_op_Id_eq[corres_term] = corres_machine_op_Id[where r="(=)"]
-lemmas corres_machine_op_Id_dc[corres_term] = corres_machine_op_Id[where r="dc::unit \<Rightarrow> unit \<Rightarrow> bool"]
 
 lemma invalidateVMIDEntry_corres[corres]:
   "vmid' = vmid \<Longrightarrow>

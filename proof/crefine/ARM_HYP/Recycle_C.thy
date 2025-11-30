@@ -1202,7 +1202,7 @@ lemma coerce_memset_to_heap_update:
       = heap_update (tcb_Ptr x)
              (tcb_C.tcb_C (arch_tcb_C (user_context_C (FCP (\<lambda>x. 0))) NULL)
                           (thread_state_C (FCP (\<lambda>x. 0)))
-                          (NULL)
+                          0 NULL
                           (seL4_Fault_C (FCP (\<lambda>x. 0)))
                           (lookup_fault_C (FCP (\<lambda>x. 0)))
                             0 0 0 0 0 0 NULL NULL NULL NULL)"

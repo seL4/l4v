@@ -2048,8 +2048,6 @@ show ?thesis
      apply (rule range_cover_rel[OF cover])
       apply (simp add: objBitsKO_def pageBits_def not_0)+
      using not_0 apply simp_all
-    apply (clarsimp simp add: projectKO_def return_def
-      projectKO_opts_defs split: kernel_object.splits)
   apply (rule hoare_gen_asm[unfolded K_def])
   apply (rule hoare_pre)
   apply (rule create_objs_normal)
@@ -2063,11 +2061,9 @@ show ?thesis
          apply (simp add: word_bits_def pageBits_def not_0)+
      apply (rule range_cover_rel[OF cover])
       apply (simp add: objBitsKO_def pageBits_def not_0)+
-     using not_0 apply simp_all
-    apply (clarsimp simp add: projectKO_def return_def
-      projectKO_opts_defs split: kernel_object.splits)
   done
 qed
+
 lemmas capFreeIndex_update_valid_untyped' =
   capFreeIndex_update_valid_cap'[unfolded valid_cap'_def,simplified,THEN conjunct2,THEN conjunct1]
 
@@ -2085,6 +2081,7 @@ proof -
   note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   note if_split_def[split del] = if_splits
+  note projectKOs[simp del]
 
   show ?thesis
   proof(cases "Types_H.toAPIType ty")
@@ -2332,6 +2329,10 @@ lemma other_objs_default_relation:
                         arch_tcb_relation_def
                  split: Structures_A.apiobject_type.split_asm)
   done
+
+lemma word_to_tcb_flags_0[simp]:
+  "word_to_tcb_flags 0 = {}"
+  by (clarsimp simp: word_to_tcb_flags_def)
 
 lemma tcb_relation_retype:
   "obj_relation_retype (default_object Structures_A.TCBObject dev n d)
@@ -2857,9 +2858,9 @@ lemma caps_no_overlapD'':
   "\<lbrakk>cte_wp_at' (\<lambda>cap. cteCap cap = c) q s;caps_no_overlap'' ptr sz s\<rbrakk>
    \<Longrightarrow> untypedRange c \<inter> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<noteq> {} \<longrightarrow>
        {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<subseteq> untypedRange c"
-  apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps caps_no_overlap''_def
-        simp del:atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-        Int_atLeastAtMost atLeastatMost_empty_iff)
+  apply (clarsimp simp: cte_wp_at_ctes_of gen_isCap_simps caps_no_overlap''_def
+                  simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+                            Int_atLeastAtMost atLeastatMost_empty_iff)
   apply (drule_tac x = cte in bspec)
     apply fastforce
   apply (erule(1) impE)
@@ -3059,7 +3060,7 @@ proof (intro conjI impI)
        apply (rule_tac ptr="x + xa" in cte_wp_at_tcbI', assumption+)
         apply fastforce
        apply simp
-      apply (rename_tac thread_state mcp priority bool option nat cptr vptr bound tcbprev tcbnext user_context)
+      apply (rename_tac thread_state mcp priority bool option nat cptr vptr bound tcbprev tcbnext tcbflags tcbarch)
       apply (case_tac thread_state, simp_all add: valid_tcb_state'_def valid_bound_tcb'_def
                                                   valid_bound_ntfn'_def obj_at_disj' opt_tcb_at'_def
                                            split: option.splits)[4]
@@ -4914,6 +4915,7 @@ lemma createObjects_no_cte_ifunsafe':
        if_unsafe_then_cap' s\<rbrace>
       createObjects ptr n val gbits
    \<lbrace>\<lambda>rv s. if_unsafe_then_cap' s\<rbrace>"
+  supply projectKOs[simp del]
   apply (simp only: if_unsafe_then_cap'_def ex_cte_cap_to'_def
                     imp_conv_disj)
   apply (rule hoare_pre)
@@ -4935,6 +4937,7 @@ lemma createObjects_no_cte_valid_global:
         valid_global_refs' s\<rbrace>
       createObjects ptr n val gbits
    \<lbrace>\<lambda>rv s. valid_global_refs' s\<rbrace>"
+  supply projectKOs[simp del]
   apply (simp add: valid_global_refs'_def valid_cap_sizes'_def valid_refs'_def)
   apply (rule_tac Q'="\<lambda>rv s. \<forall>ptr. \<not> cte_wp_at' (\<lambda>cte. (kernel_data_refs \<inter> capRange (cteCap cte) \<noteq> {}
         \<or> 2 ^ capBits (cteCap cte) > gsMaxObjectSize s)) ptr s \<and> global_refs' s \<subseteq> kernel_data_refs"
@@ -5032,6 +5035,7 @@ lemma createObjects_no_cte_irq_handlers:
         valid_irq_handlers' s\<rbrace>
       createObjects ptr n val gbits
    \<lbrace>\<lambda>rv s.  valid_irq_handlers' s\<rbrace>"
+  supply projectKOs[simp del]
   apply (simp add: valid_irq_handlers_cte_wp_at_form' createObjects_def irq_issued'_def)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift
              createObjects_orig_cte_wp_at2')
@@ -5146,6 +5150,7 @@ proof -
       apply (simp)+
     done
   show ?thesis
+  supply projectKOs[simp del]
   apply (rule hoare_grab_asm)+
    apply (clarsimp simp: invs'_def valid_state'_def)
    apply wp
@@ -5533,7 +5538,6 @@ lemma corres_retype_region_createNewCaps:
         apply (rule createObjects_ko_at[where sz = sz and 'a = pde])
           apply (simp add: objBits_simps archObjSize_def vspace_bits_defs
                            page_directory_at'_def)+
-        apply (simp add: projectKOs)
        apply (rule createObjects_aligned)
           apply (simp add: objBits_simps archObjSize_def vspace_bits_defs
                            page_directory_at'_def)+

@@ -1710,8 +1710,8 @@ lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   apply (drule obj_at_ko_at')
   apply (clarsimp simp del: imp_disjL)
   apply (rule_tac x = ko in exI)
-  apply (frule ko_at_cte_ipcbuffer)
-  apply (clarsimp simp: cte_wp_at_ctes_of simp del: imp_disjL)
+  apply (frule ko_at_cte_ipcbuffer[simplified cteSizeBits_def])
+  apply (clarsimp simp: cte_wp_at_ctes_of shiftl_t2n' simp del: imp_disjL)
   apply (clarsimp simp: valid_ipc_buffer_ptr'_def)
   apply (frule (1) ko_at_valid_objs')
    apply (clarsimp simp: projectKO_opts_defs split: kernel_object.split_asm)
@@ -1880,9 +1880,9 @@ crunch doIPCTransfer
    simp: split_def zipWithM_x_mapM)
 
 lemma sanitise_register_corres:
-  "foldl (\<lambda>s (a, b). UserContext (fpu_state s) ((user_regs s)(a := sanitise_register x a b))) s
+  "foldl (\<lambda>s (a, b). UserContext (user_fpu_state s) ((user_regs s)(a := sanitise_register x a b))) s
           (zip msg_template msg) =
-   foldl (\<lambda>s (a, b). UserContext (fpu_state s) ((user_regs s)(a := sanitiseRegister y a b))) s
+   foldl (\<lambda>s (a, b). UserContext (user_fpu_state s) ((user_regs s)(a := sanitiseRegister y a b))) s
           (zip msg_template msg)"
   apply (rule foldl_cong)
     apply simp

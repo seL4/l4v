@@ -1619,7 +1619,7 @@ lemmas threadget_fault_corres =
                               and f = tcb_fault and f' = tcbFault,
                             simplified tcb_relation_def, simplified]
 
-context begin interpretation Arch . (*FIXME: arch-split*)
+context begin interpretation Arch . (*FIXME: arch-split RT*)
 
 crunch make_fault_msg
   for in_user_Frame[wp]: "in_user_frame buffer"

@@ -442,6 +442,15 @@ lemma transfer_caps_loop_cspace_agnostic_obj_at:
 lemmas transfer_caps_loop_aobj_at =
   transfer_caps_loop_cspace_agnostic_obj_at[OF cspace_arch_obj_pred_imp]
 
+lemma transfer_caps_loop_typ_at[wp]:
+   "\<And>P T p ep buffer n caps slots mi.
+      \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>
+        transfer_caps_loop ep buffer n caps slots mi
+      \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  by (wp transfer_caps_loop_pres)
+
+lemmas transfer_caps_loop_typ_ats[wp] = abs_typ_at_lifts[OF transfer_caps_loop_typ_at]
+
 end
 
 (* FIXME: can some of these assumptions be proved with lifting lemmas? *)
@@ -568,6 +577,8 @@ locale Ipc_AI_2 = Ipc_AI state_ext_t
     "\<And> P p ft t. make_arch_fault_msg ft t \<lbrace>reply_sc_reply_at P p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_reply_tcb[wp]:
     "\<And> P p ft t. make_arch_fault_msg ft t \<lbrace>reply_tcb_reply_at P p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_arch_tcb_at[wp]:
+    "\<And> Q P ft t p. make_arch_fault_msg ft t \<lbrace>\<lambda>s::'state_ext state. Q (arch_tcb_at P p s)\<rbrace>"
   assumes do_fault_transfer_invs[wp]:
     "\<And>receiver badge sender recv_buf.
       \<lbrace>invs and tcb_at receiver :: 'state_ext state \<Rightarrow> bool\<rbrace>
@@ -637,13 +648,6 @@ lemma get_mi_valid[wp]:
 lemma mask_cap_vs_cap_ref[simp]:
   "vs_cap_ref (mask_cap msk cap) = vs_cap_ref cap"
   by (simp add: mask_cap_def)
-
-lemma transfer_caps_loop_typ_at[wp]:
-   "\<And>P T p ep buffer n caps slots mi.
-      \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>
-        transfer_caps_loop ep buffer n caps slots mi
-      \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  by (wp transfer_caps_loop_pres)
 
 lemma transfer_loop_aligned[wp]:
   "\<And>ep buffer n caps slots mi.
@@ -1151,7 +1155,8 @@ lemma transfer_caps_refs_respects_device_region[wp]:
   done
 
 crunch transfer_caps_loop
-  for fault_tcbs_valid_states_except_set[wp]: "fault_tcbs_valid_states_except_set TS :: 'state_ext state \<Rightarrow> _"
+  for valid_cur_fpu[wp]: "valid_cur_fpu ::'state_ext state \<Rightarrow> _"
+  and fault_tcbs_valid_states_except_set[wp]: "fault_tcbs_valid_states_except_set TS :: 'state_ext state \<Rightarrow> _"
   (rule: transfer_caps_loop_pres wp: crunch_wps)
 
 lemma transfer_caps_loop_invs[wp]:
@@ -1616,6 +1621,12 @@ crunch do_ipc_transfer
  for valid_globals[wp]: "valid_global_refs :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift simp: crunch_simps zipWithM_x_mapM ball_conj_distrib
    ignore: set_object)
+
+crunch do_ipc_transfer
+  for arch_tcb_at[wp]: "\<lambda>s::'state_ext state. Q (arch_tcb_at P t s)"
+  and arch_state[wp]: "\<lambda>s::'state_ext state. P (arch_state s)"
+  and valid_cur_fpu[wp]: "valid_cur_fpu :: 'state_ext state \<Rightarrow> bool"
+  (wp: crunch_wps valid_cur_fpu_lift rule: transfer_caps_loop_pres)
 
 end
 

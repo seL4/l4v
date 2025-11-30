@@ -90,7 +90,8 @@ lemma opt_map_Some_upd_Some:
   "f(x \<mapsto> v) ||> g = (f ||> g)(x \<mapsto> g v)"
   by (simp add: opt_map_upd_Some)
 
-lemmas opt_map_upd[simp] = opt_map_upd_None opt_map_upd_Some opt_map_Some_upd_Some
+lemmas opt_map_upd[simp] =
+  opt_map_upd_None opt_map_upd_Some opt_map_Some_upd_Some opt_map_upd_Some[unfolded fun_upd_def]
 
 lemma opt_map_upd_triv:
   "t k = Some x \<Longrightarrow> (t |> f)(k := f x) = t |> f"

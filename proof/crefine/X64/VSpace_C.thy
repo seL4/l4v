@@ -1358,19 +1358,19 @@ lemma msgRegisters_ccorres:
   apply (simp add: Arrays.update_def n_msgRegisters_def fcp_beta nth_Cons' split: if_split)
   done
 
-(* usually when we call setMR directly, we mean to only set a registers, which will
-   fit in actual registers *)
+(* usually when we call setMR directly, we mean to only set a single message register
+   which will fit in actual registers *)
 lemma setMR_as_setRegister_ccorres:
   "ccorres (\<lambda>rv rv'. rv' = of_nat offset + 1) ret__unsigned_'
       (tcb_at' thread and K (TCB_H.msgRegisters ! offset = reg \<and> offset < length msgRegisters))
-      (UNIV \<inter> \<lbrace>\<acute>reg___unsigned_long = val\<rbrace>
-            \<inter> \<lbrace>\<acute>offset = of_nat offset\<rbrace>
-            \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
+      (\<lbrace>\<acute>reg___unsigned_long = val\<rbrace>
+       \<inter> \<lbrace>\<acute>offset = of_nat offset\<rbrace>
+       \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
     (asUser thread (setRegister reg val))
     (Call setMR_'proc)"
   apply (rule ccorres_grab_asm)
-  apply (cinit' lift:  reg___unsigned_long_' offset_' receiver_')
-   apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters)
+  apply (cinit' lift: reg___unsigned_long_' offset_' receiver_')
+   apply (clarsimp simp: length_msgRegisters)
    apply (rule ccorres_cond_false)
    apply (rule ccorres_move_const_guards)
    apply (rule ccorres_add_return2)
@@ -1380,9 +1380,9 @@ lemma setMR_as_setRegister_ccorres:
      apply (clarsimp simp: return_def)
     apply (rule hoare_TrueI[of \<top>])
    apply (vcg exspec=setRegister_modifies)
-  apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters not_le conj_commute)
+  apply (clarsimp simp: length_msgRegisters n_msgRegisters_def not_le conj_commute)
   apply (subst msgRegisters_ccorres[symmetric])
-   apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters unat_of_nat_eq)
+   apply (clarsimp simp: n_msgRegisters_def unat_of_nat_eq)
   apply (clarsimp simp: word_less_nat_alt word_le_nat_alt unat_of_nat_eq not_le[symmetric])
   done
 
@@ -1908,8 +1908,7 @@ lemma updateCap_frame_mapped_addr_ccorres:
     apply (erule (1) setCTE_tcb_case)
    subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
                          typ_heap_simps h_t_valid_clift_Some_iff
-                         cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
-                         fpu_null_state_heap_update_tag_disj_simps)
+                         cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
   apply (clarsimp simp: ccte_relation_def)
   apply (clarsimp simp: cte_lift_def)
   apply (simp split: option.splits)
@@ -2294,7 +2293,6 @@ lemma setObjectASID_Basic_ccorres:
           erule ko_at_projectKO_opt, simp+)
   apply (simp add: cready_queues_relation_def
                    carch_state_relation_def
-                   fpu_null_state_heap_update_tag_disj_simps
                    cmachine_state_relation_def
                    Let_def typ_heap_simps
                    update_asidpool_map_tos)
@@ -2383,7 +2381,6 @@ lemma performASIDPoolInvocation_ccorres:
             apply (erule (1) setCTE_tcb_case)
            apply (simp add: carch_state_relation_def cmachine_state_relation_def
                             cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
-                            fpu_null_state_heap_update_tag_disj_simps
                             global_ioport_bitmap_heap_update_tag_disj_simps
                             packed_heap_update_collapse_hrs)
           apply (clarsimp simp: cte_wp_at_ctes_of)

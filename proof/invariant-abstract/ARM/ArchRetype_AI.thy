@@ -781,6 +781,10 @@ lemma valid_global_refs:
   apply (simp add: cte_retype cap_range_def)
   done
 
+lemma valid_cur_fpu':
+  "valid_cur_fpu s \<Longrightarrow> valid_cur_fpu s'"
+  by (clarsimp simp: valid_cur_fpu_def)
+
 lemma valid_arch_state:
   "valid_arch_state s \<Longrightarrow> valid_arch_state s'"
   by (clarsimp simp: valid_arch_state_def obj_at_pres
@@ -1190,7 +1194,7 @@ lemma post_retype_invs:
   using equal_kernel_mappings
   by (clarsimp simp: invs_def post_retype_invs_def valid_state_def
                      unsafe_rep2 null_filter valid_idle
-                     valid_global_refs valid_arch_state
+                     valid_global_refs valid_arch_state valid_cur_fpu'
                      valid_irq_node_def obj_at_pres
                      valid_arch_caps valid_global_objs
                      valid_vspace_objs' valid_irq_handlers

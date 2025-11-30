@@ -2470,6 +2470,10 @@ locale FinalCaps_2 = FinalCaps_1 +
                       and K (authorised_tcb_inv aag tinv)\<rbrace>
      invoke_tcb tinv
      \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  and arch_prepare_set_domain_silc_inv[wp]:
+    "arch_prepare_set_domain t new_dom \<lbrace>silc_inv aag st\<rbrace>"
+  and arch_prepare_next_domain_silc_inv[wp]:
+    "arch_prepare_next_domain \<lbrace>silc_inv aag st\<rbrace>"
 begin
 
 lemma invoke_irq_control_silc_inv:

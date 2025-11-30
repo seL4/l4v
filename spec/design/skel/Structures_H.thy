@@ -12,6 +12,7 @@ chapter "Kernel Data Structures"
 
 theory Structures_H
 imports
+  Structs_B
   Config_H
   State_H
   Fault_H
@@ -36,8 +37,8 @@ arch_requalify_consts (H)
   wordsOfTime
   parseTimeArg
 
-#INCLUDE_HASKELL SEL4/Object/Structures.lhs decls_only NOT isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap isThreadCap isSchedContextCap objBitsKO
-#INCLUDE_HASKELL SEL4/Object/Structures.lhs bodies_only NOT kernelObjectTypeName isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap isThreadCap isSchedContextCap objBitsKO
+#INCLUDE_HASKELL SEL4/Object/Structures.lhs decls_only NOT isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap isThreadCap isSchedContextCap TcbFlag tcbFlagToWord tcbFlagMask objBitsKO
+#INCLUDE_HASKELL SEL4/Object/Structures.lhs bodies_only NOT kernelObjectTypeName isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap isThreadCap isSchedContextCap tcbFlagToWord tcbFlagMask objBitsKO
 
 #INCLUDE_HASKELL SEL4/Object/Structures.lhs decls_only ONLY objBitsKO
 #INCLUDE_HASKELL SEL4/Object/Structures.lhs bodies_only ONLY objBitsKO

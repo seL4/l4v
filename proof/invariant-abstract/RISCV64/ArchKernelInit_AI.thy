@@ -588,7 +588,7 @@ lemma invs_A:
    apply (simp add: pspace_aligned_init_A pspace_distinct_init_A)
    apply (rule conjI)
     apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def state_defs live_def hyp_live_def
-                          default_sched_context_def live_sc_def)
+                          arch_tcb_live_def default_sched_context_def live_sc_def)
    apply (rule conjI)
     apply (clarsimp simp: zombies_final_def cte_wp_at_cases state_defs
                           tcb_cap_cases_def is_zombie_def)
@@ -625,6 +625,7 @@ lemma invs_A:
    apply (rule conjI)
     apply (clarsimp simp: valid_asid_table_def state_defs)
    apply (simp add: state_defs)
+  apply (rule conjI, clarsimp simp: valid_cur_fpu_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_irq_node_def obj_at_def state_defs
                          is_cap_table_def wf_empty_bits

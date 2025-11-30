@@ -1815,6 +1815,9 @@ lemma set_thread_state_fault_tcb_at[wp]:
   unfolding set_thread_state_def set_object_def get_object_def
   by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
 
+crunch tcb_sched_action, possible_switch_to
+  for valid_cur_fpu[wp]: valid_cur_fpu
+
 lemma cancel_all_signals_invs_helper:
   "\<lbrace>all_invs_but_sym_refs
           and (\<lambda>s. (\<forall>x\<in>set q. ex_nonz_cap_to x s)
@@ -2299,6 +2302,10 @@ lemma set_ntfn_bound_tcb_none_if_live_then_nonz_cap [wp]:
   apply (wpsimp simp: update_sk_obj_ref_def obj_at_def wp: get_simple_ko_wp)
   apply (fastforce simp: live_def live_ntfn_def elim!: if_live_then_nonz_capD2)
   done
+
+crunch set_bound_notification
+  for valid_cur_fpu[wp]: valid_cur_fpu
+  (wp: valid_cur_fpu_lift)
 
 lemma unbind_notification_invs:
   notes refs_of_simps[simp del] if_cong[cong]

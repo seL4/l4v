@@ -13,6 +13,7 @@ begin
 arch_requalify_consts (A)
   arch_switch_to_thread
   arch_switch_to_idle_thread
+  arch_prepare_next_domain
 
 abbreviation
   "idle st \<equiv> st = Structures_A.IdleThreadState"
@@ -183,7 +184,10 @@ definition
 definition
   "schedule_choose_new_thread \<equiv> do
      dom_time \<leftarrow> gets domain_time;
-     when (dom_time = 0) next_domain;
+     when (dom_time = 0) $ do
+       arch_prepare_next_domain;
+       next_domain
+     od;
      choose_thread;
      set_scheduler_action resume_cur_thread
    od"

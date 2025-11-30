@@ -378,12 +378,12 @@ lemma cmdbnode_relation_mdb_node_to_H [simp]:
 definition tcb_no_ctes_proj ::
   "tcb \<Rightarrow> Structures_H.thread_state \<times> machine_word \<times> machine_word \<times> arch_tcb \<times> bool \<times> word8
           \<times> word8 \<times> word8 \<times> nat \<times> fault option \<times> machine_word option
-          \<times> machine_word option \<times> machine_word option"
+          \<times> machine_word option \<times> machine_word option \<times> machine_word"
   where
   "tcb_no_ctes_proj t \<equiv>
      (tcbState t, tcbFaultHandler t, tcbIPCBuffer t, tcbArch t, tcbQueued t,
       tcbMCP t, tcbPriority t, tcbDomain t, tcbTimeSlice t, tcbFault t, tcbBoundNotification t,
-      tcbSchedNext t, tcbSchedPrev t)"
+      tcbSchedNext t, tcbSchedPrev t, tcbFlags t)"
 
 lemma tcb_cte_cases_proj_eq [simp]:
   "tcb_cte_cases p = Some (getF, setF) \<Longrightarrow>
@@ -1423,6 +1423,7 @@ lemma getObject_eq:
   and objat: "ko_at' ko p s"
   shows      "(ko, s) \<in> fst (getObject p s)"
   using objat unfolding exs_valid_def obj_at'_def
+  supply projectKOs[simp del]
   apply clarsimp
   apply (simp add: projectKO_def fail_def split: option.splits)
   apply (clarsimp simp: loadObject_default_def getObject_def in_monad return_def lookupAround2_char1

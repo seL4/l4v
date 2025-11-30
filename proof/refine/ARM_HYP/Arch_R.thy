@@ -1314,6 +1314,7 @@ lemma associateVCPUTCB_corres:
                 od)
                (associateVCPUTCB v t)"
   unfolding associate_vcpu_tcb_def associateVCPUTCB_def
+  supply projectKOs[simp del]
   apply (clarsimp simp: bind_assoc)
   apply (corresKsimp search: getObject_vcpu_corres setObject_VCPU_corres vcpuSwitch_corres''
                         wp: get_vcpu_wp getVCPU_wp hoare_vcg_imp_lift'
@@ -1687,6 +1688,7 @@ lemma ensureSafeMapping_valid_slots_duplicated':
   "\<lbrace>\<lambda>s. slots_duplicated_ensured entries s\<rbrace>
   ensureSafeMapping entries
   \<lbrace>\<lambda>rv s. valid_slots_duplicated' entries s\<rbrace>,-"
+  supply projectKOs[simp del]
   apply (simp add:ensureSafeMapping_def)
   apply (case_tac entries)
    apply (case_tac a)
@@ -1742,6 +1744,7 @@ lemma ensureSafeMapping_valid_slots_duplicated':
 (* FIXME: this lemma is too specific *)
 lemma lookupPTSlot_aligned:
   "\<lbrace>\<lambda>s. is_aligned vptr 16 \<and> valid_objs' s\<rbrace> lookupPTSlot pd vptr \<lbrace>\<lambda>p s. is_aligned p 7\<rbrace>,-"
+  supply projectKOs[simp del]
   apply (simp add:lookupPTSlot_def)
   apply (wp getPDE_wp |wpc|simp)+
   apply (clarsimp simp:obj_at'_real_def ko_wp_at'_def)
@@ -2272,6 +2275,7 @@ lemma assoc_invs':
   unfolding invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
             valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
   supply fun_upd_apply[simp del]
+  supply projectKOs[simp del]
   apply (wpsimp wp: sch_act_wf_lift tcb_in_cur_domain'_lift valid_queues_lift
                     setObject_tcb_valid_objs setObject_vcpu_valid_objs'
                     setObject_state_refs_of' setObject_state_hyp_refs_of' valid_global_refs_lift'
@@ -2293,9 +2297,7 @@ lemma assoc_invs':
   supply fun_upd_apply[simp]
   apply (clarsimp simp: hyp_live'_def arch_live'_def)
   apply (rule_tac rfs'="state_hyp_refs_of' s" in delta_sym_refs, assumption)
-   apply (clarsimp split: if_split_asm)
-   apply (clarsimp simp: state_hyp_refs_of'_def obj_at'_def projectKOs tcb_vcpu_refs'_def
-                  split: option.splits if_split_asm)
+   apply (clarsimp simp: obj_at'_def projectKOs split: if_split_asm)
   by (clarsimp simp: state_hyp_refs_of'_def obj_at'_def projectKOs split: option.splits if_split_asm)
 
 lemma asUser_obj_at_vcpu[wp]:
@@ -2304,7 +2306,6 @@ lemma asUser_obj_at_vcpu[wp]:
    \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
   apply (simp add: asUser_def threadGet_stateAssert_gets_asUser)
   apply (wpsimp wp: threadSet_ko_wp_at2' simp: obj_at'_real_def)
-  apply (simp add: asUser_fetch_def projectKOs split: option.splits)
   done
 
 lemma archThreadSet_obj_at'_vcpu[wp]:
@@ -2379,11 +2380,11 @@ lemma associateVCPUTCB_invs'[wp]:
                            ex_nonz_cap_to' vcpu and ex_nonz_cap_to' tcb and vcpu_at' vcpu"
                     in hoare_strengthen_post)
      apply wpsimp
-    apply (clarsimp simp: obj_at'_def projectKOs)
-    apply (rename_tac v obj)
+    apply (clarsimp simp: obj_at'_def)
+    apply (rename_tac v ko)
     apply (case_tac v, simp)
    apply (wpsimp wp: getObject_tcb_wp simp: archThreadGet_def)
-  apply (clarsimp simp: obj_at'_def projectKOs)
+  apply (clarsimp simp: obj_at'_def)
   done
 
 lemma invokeVCPUInjectIRQ_invs'[wp]:

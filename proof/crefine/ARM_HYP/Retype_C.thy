@@ -3392,7 +3392,9 @@ proof -
        tcbFaultHandler_C := 0, tcbIPCBuffer_C := 0,
        tcbSchedNext_C := tcb_Ptr 0, tcbSchedPrev_C := tcb_Ptr 0,
        tcbEPNext_C := tcb_Ptr 0, tcbEPPrev_C := tcb_Ptr 0,
-       tcbBoundNotification_C := ntfn_Ptr 0\<rparr>"
+       tcbBoundNotification_C := ntfn_Ptr 0,
+       tcbFlags_C := 0\<rparr>"
+
   have fbtcb: "from_bytes (replicate (size_of TYPE(tcb_C)) 0) = ?tcb"
     apply (simp add: from_bytes_def)
     apply (simp add: typ_info_simps tcb_C_tag_def)

@@ -20,8 +20,8 @@ context Arch begin arch_global_naming (A)
 definition "page_bits \<equiv> pageBits"
 
 definition
-  updateIRQState :: "irq \<Rightarrow> X64IRQState \<Rightarrow> ('a abstract_state_scheme, unit) nondet_monad" where
-  "updateIRQState irq irqState \<equiv> do
+  update_irq_state :: "irq \<Rightarrow> X64IRQState \<Rightarrow> ('a abstract_state_scheme, unit) nondet_monad" where
+  "update_irq_state irq irqState \<equiv> do
      irq_states \<leftarrow> gets (x64_irq_state o arch_state);
      modify (\<lambda>s. s \<lparr>arch_state := (arch_state s) \<lparr>x64_irq_state := irq_states (irq := irqState)\<rparr>\<rparr>)
   od"
@@ -32,13 +32,13 @@ definition
     IssueIRQHandlerIOAPIC irq dest src ioapic pin level polarity vector \<Rightarrow> without_preemption (do
       do_machine_op $ ioapicMapPinToVector ioapic pin level polarity vector;
       irq_state \<leftarrow> return $ IRQIOAPIC (ioapic && mask 5) (pin && mask 5) (level && 1) (polarity && 1) True;
-      updateIRQState irq irq_state;
+      update_irq_state irq irq_state;
       set_irq_state IRQSignal (IRQ irq);
       cap_insert (IRQHandlerCap (IRQ irq)) src dest
     od) |
     IssueIRQHandlerMSI irq dest src bus dev func handle \<Rightarrow> without_preemption (do
       irq_state \<leftarrow> return $ IRQMSI (bus && mask 8) (dev && mask 5) (func && mask 3) (handle && mask 32);
-      updateIRQState irq irq_state;
+      update_irq_state irq irq_state;
       set_irq_state IRQSignal (IRQ irq);
       cap_insert (IRQHandlerCap (IRQ irq)) src dest
     od)
@@ -48,7 +48,10 @@ text \<open>Switch to a thread's virtual address space context.\<close>
 
 definition
   arch_switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "arch_switch_to_thread t \<equiv> set_vm_root t"
+  "arch_switch_to_thread t \<equiv> do
+     set_vm_root t;
+     lazy_fpu_restore t
+   od"
 
 definition
    arch_switch_to_idle_thread :: "(unit,'z::state_ext) s_monad" where
@@ -56,6 +59,9 @@ definition
      thread \<leftarrow> gets idle_thread;
      set_vm_root thread
    od"
+
+definition arch_prepare_next_domain :: "(unit,'z::state_ext) s_monad" where
+  "arch_prepare_next_domain \<equiv> switch_local_fpu_owner None"
 
 definition
   arch_activate_idle_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where

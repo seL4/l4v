@@ -333,15 +333,15 @@ lemma cmdbnode_relation_mdb_node_to_H [simp]:
   unfolding cmdbnode_relation_def mdb_node_to_H_def mdb_node_lift_def cte_lift_def
   by (fastforce split: option.splits)
 
-definition
-  tcb_no_ctes_proj ::
+definition tcb_no_ctes_proj ::
   "tcb \<Rightarrow> Structures_H.thread_state \<times> vptr \<times> arch_tcb \<times> bool \<times> bool \<times> priority \<times> priority \<times>
           domain \<times> fault option \<times> machine_word option \<times> machine_word option \<times>
-          machine_word option \<times> machine_word option \<times> machine_word option"
+          machine_word option \<times> machine_word option \<times> machine_word option  \<times> machine_word"
   where
-  "tcb_no_ctes_proj t \<equiv> (tcbState t, tcbIPCBuffer t, tcbArch t, tcbQueued t, tcbInReleaseQueue t,
-                          tcbMCP t, tcbPriority t, tcbDomain t, tcbFault t, tcbBoundNotification t,
-                          tcbSchedContext t, tcbYieldTo t, tcbSchedNext t, tcbSchedPrev t)"
+  "tcb_no_ctes_proj t \<equiv>
+     (tcbState t, tcbIPCBuffer t, tcbArch t, tcbQueued t, tcbInReleaseQueue t,
+      tcbMCP t, tcbPriority t, tcbDomain t, tcbFault t, tcbBoundNotification t,
+      tcbSchedContext t, tcbYieldTo t, tcbSchedNext t, tcbSchedPrev t, tcbFlags t)"
 
 lemma tcb_cte_cases_proj_eq [simp]:
   "tcb_cte_cases p = Some (getF, setF) \<Longrightarrow>

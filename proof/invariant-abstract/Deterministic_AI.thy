@@ -3999,6 +3999,8 @@ locale Deterministic_AI_1 =
     "\<And>t ptr. \<lbrace>valid_list\<rbrace> arch_post_modify_registers t ptr \<lbrace>\<lambda>_. valid_list\<rbrace>"
   assumes make_arch_fault_msg_valid_list[wp]:
     "\<And>afault thread. \<lbrace>valid_list\<rbrace> make_arch_fault_msg afault thread \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  assumes arch_post_set_flags_valid_list[wp]:
+    "\<And>t fs. arch_post_set_flags t fs \<lbrace>valid_list\<rbrace>"
   notes if_cong[cong]
 
 context Deterministic_AI_1 begin

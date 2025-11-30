@@ -39,6 +39,7 @@ definition all_invs_but_valid_irq_states_for where
   if_unsafe_then_cap and
   valid_global_refs and
   valid_arch_state and
+  valid_cur_fpu and
   valid_irq_node and
   valid_irq_handlers and
   valid_irq_states_but irq and

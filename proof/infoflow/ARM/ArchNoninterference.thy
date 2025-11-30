@@ -378,11 +378,20 @@ lemma dmo_getActive_IRQ_reads_respect_scheduler[Noninterference_assms]:
 lemma integrity_asids_update_reference_state[Noninterference_assms]:
   "is_subject aag t
    \<Longrightarrow> integrity_asids aag {pasSubject aag} x asid s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
-  by clarsimp
+  by (clarsimp simp: integrity_asids_def)
 
 lemma getActiveIRQ_no_non_kernel_IRQs[Noninterference_assms]:
   "getActiveIRQ True = getActiveIRQ False"
   by (clarsimp simp: getActiveIRQ_def non_kernel_IRQs_def)
+
+lemma valid_cur_hyp_triv[Noninterference_assms]:
+  "valid_cur_hyp s"
+  by (simp add: valid_cur_hyp_def)
+
+lemma arch_tcb_get_registers_equality[Noninterference_assms]:
+  "arch_tcb_get_registers (tcb_arch tcb) = arch_tcb_get_registers (tcb_arch tcb')
+   \<Longrightarrow> tcb_arch tcb = tcb_arch tcb'"
+  by (auto simp: arch_tcb_get_registers_def intro: arch_tcb.equality user_context.expand)
 
 end
 
@@ -398,7 +407,7 @@ global_interpretation Noninterference_1?: Noninterference_1 _ arch_globals_equiv
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Noninterference_assms)?)
+    by (unfold_locales; (fact Noninterference_assms | solves \<open>rule integrity_arch_triv\<close>)?)
 qed
 
 sublocale valid_initial_state \<subseteq> valid_initial_state?:

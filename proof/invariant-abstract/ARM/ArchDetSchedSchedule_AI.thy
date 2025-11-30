@@ -92,8 +92,8 @@ crunch set_vm_root
   (wp: crunch_wps whenE_wp simp: crunch_simps)
 
 crunch switch_to_thread
- for etcb_at[wp]: "etcb_at P t"
-  (wp: hoare_drop_imp)
+  for etcb_at[wp]: "etcb_at P t"
+  (wp: crunch_wps hoare_drop_imp)
 
 crunch
   arch_switch_to_idle_thread
@@ -194,7 +194,7 @@ crunch arch_switch_to_thread, arch_switch_to_idle_thread
   for valid_list [wp]: "valid_list"
 
 crunch handle_arch_fault_reply, handle_vm_fault, arch_post_modify_registers
- for cur_tcb[wp]: cur_tcb
+  for cur_tcb[wp]: cur_tcb
 
 declare make_arch_fault_msg_inv[DetSchedSchedule_AI_assms]
 

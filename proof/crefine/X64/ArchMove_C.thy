@@ -96,13 +96,16 @@ lemma prio_ucast_shiftr_wordRadix_helper3:
 
 lemmas setEndpoint_obj_at_tcb' = setEndpoint_obj_at'_tcb
 
+crunch lazyFpuRestore
+  for tcbQueued[wp]: "obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t'"
+
 (* FIXME: Move to Schedule_R.thy. Make Arch_switchToThread_obj_at a specialisation of this *)
 lemma Arch_switchToThread_obj_at_pre:
   "\<lbrace>obj_at' (Not \<circ> tcbQueued) t\<rbrace>
    Arch.switchToThread t
    \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
-  apply (simp add: X64_H.switchToThread_def)
-  apply (wp asUser_obj_at_notQ doMachineOp_obj_at hoare_drop_imps|wpc)+
+  unfolding X64_H.switchToThread_def
+  apply (wpsimp wp: asUser_obj_at_notQ doMachineOp_obj_at hoare_drop_imps simp: comp_def)
   done
 
 crunch setThreadState
@@ -267,10 +270,6 @@ lemma setVMRoot_valid_arch_state':
          | strengthen valid_cr3'_makeCR3)+
   done
 
-crunch switchToThread
-  for valid_arch_state'[wp]: valid_arch_state'
-  (wp: crunch_wps simp: crunch_simps)
-
 lemma mab_gt_2 [simp]:
   "2 \<le> msg_align_bits" by (simp add: msg_align_bits)
 
@@ -297,7 +296,7 @@ lemma threadGet_tcbFault_loadWordUser_comm:
                           ps_clear_upd ps_clear_upd_None pointerInUserData_def
                    split: option.split kernel_object.split)
    apply (simp add: get_def empty_fail_def)
-  apply (simp add: ef_loadWord)
+  apply simp
   done
 
 lemma threadGet_tcbFault_storeWordUser_comm:
@@ -313,7 +312,7 @@ lemma threadGet_tcbFault_storeWordUser_comm:
                           ps_clear_upd ps_clear_upd_None pointerInUserData_def
                    split: option.split kernel_object.split)
    apply (simp add: get_def empty_fail_def)
-  apply (simp add: ef_storeWord)
+  apply simp
   done
 
 lemma asUser_getRegister_discarded:
@@ -462,7 +461,7 @@ lemma length_msgRegisters[simplified size_msgRegisters_def]:
 
 lemma empty_fail_loadWordUser[intro!, simp]:
   "empty_fail (loadWordUser x)"
-  by (fastforce simp: loadWordUser_def ef_loadWord ef_dmo')
+  by (fastforce simp: loadWordUser_def ef_dmo')
 
 lemma empty_fail_getMRs[iff]:
   "empty_fail (getMRs t buf mi)"

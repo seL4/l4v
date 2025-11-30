@@ -504,6 +504,18 @@ lemma sched_context_cancel_yield_to_unlive:
                       get_object_def pred_tcb_at_def obj_at_def get_tcb_def live_def hyp_live_def)
   done
 
+crunch prepare_thread_delete
+  for no_cap_to_obj_with_diff_ref[wp]: "no_cap_to_obj_with_diff_ref cap S"
+
+lemma prepare_thread_delete_unlive[wp]:
+  "\<lbrace>tcb_at ptr and obj_at (Not \<circ> live0) ptr\<rbrace>
+   prepare_thread_delete ptr
+   \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) ptr\<rbrace>"
+  unfolding prepare_thread_delete_def
+  apply (wpsimp simp: prepare_thread_delete_def)
+  apply (clarsimp simp: obj_at_def, case_tac ko; clarsimp simp: live_def hyp_live_def arch_tcb_live_def)
+  done
+
 lemma suspend_unlive':
   "\<lbrace>bound_tcb_at ((=) None) t and bound_sc_tcb_at ((=) None) t\<rbrace>
    suspend t

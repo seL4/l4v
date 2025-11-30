@@ -1736,23 +1736,6 @@ proof -
   }
 
   moreover
-  {
-    assume "s' \<Turnstile>\<^sub>c fpu_state_Ptr (symbol_table ''x86KSnullFpuState'')"
-    moreover
-    have "ptr_span (fpu_state_Ptr (symbol_table ''x86KSnullFpuState''))
-             \<inter> {ptr..ptr + 2 ^ bits - 1} = {}"
-      using sr ptr_refs by (fastforce simp: rf_sr_def cstate_relation_def Let_def
-                                            carch_state_relation_def fpu_null_state_relation_def)
-    ultimately
-    have "hrs_htd (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s')))
-            \<Turnstile>\<^sub>t fpu_state_Ptr (symbol_table ''x86KSnullFpuState'')"
-      using al wb
-      apply (cases "t_hrs_' (globals s')")
-      apply (simp add: hrs_htd_update_def hrs_htd_def h_t_valid_typ_region_bytes upto_intvl_eq)
-      done
-  }
-
-  moreover
   have h2ud_eq:
        "heap_to_user_data (?psu (ksPSpace s))
                           (?mmu (underlying_memory (ksMachineState s))) =
@@ -1862,6 +1845,7 @@ proof -
       "\<And>p v. map_to_tcbs (ksPSpace s) p = Some v
         \<Longrightarrow> p \<notin> {ptr..+2 ^ bits}
         \<Longrightarrow> {p ..+ 2 ^ objBitsT TCBT} \<inter> {ptr..+2 ^ bits} = {}"
+      supply projectKOs[simp del]
       apply (clarsimp simp: valid_cap'_def)
       apply (drule(1) map_to_ko_atI')
       apply (clarsimp simp: obj_at'_def valid_untyped'_def2 mask_2pm1 add_diff_eq)
@@ -1934,8 +1918,7 @@ proof -
     using sr untyped_cap_rf_sr_ptr_bits_domain[OF cte invs sr]
     by (simp add: rf_sr_def cstate_relation_def Let_def clift
                   psu_restrict cpspace_relation_def global_ioport_bitmap_relation_def2
-                  carch_state_relation_def fpu_null_state_relation_def2
-                  cmachine_state_relation_def
+                  carch_state_relation_def cmachine_state_relation_def
                   hrs_htd_update htd_safe_typ_region_bytes
                   zero_ranges_are_zero_typ_region_bytes)
 

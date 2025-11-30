@@ -114,6 +114,12 @@ definition cur_vcpu_relation ::
       Some acurvcpu \<Rightarrow> cvcpu = Ptr (fst acurvcpu) \<and> cvcpu \<noteq> NULL \<and> cactive = from_bool (snd acurvcpu)
     | None \<Rightarrow> cvcpu = NULL \<and> cactive = 0"
 
+definition cur_fpu_relation :: "machine_word option \<Rightarrow> tcb_C ptr \<Rightarrow> bool" where
+  "cur_fpu_relation akscurfpu cfpu \<equiv>
+     case akscurfpu of
+       Some acurfpu \<Rightarrow> cfpu = tcb_ptr_to_ctcb_ptr acurfpu \<and> cfpu \<noteq> NULL
+     | None \<Rightarrow> cfpu = NULL"
+
 (* FIXME AARCH64: the naming in C is confusing (do we want to change it to talk about VMIDs instead
    of HW ASIDs?:
    armKSNextVMID in Haskell is armKSNextASID in C (note this is a hw_asid_t, so should have "HW" in it
@@ -129,7 +135,8 @@ definition carch_state_relation :: "Arch.kernel_state \<Rightarrow> globals \<Ri
       (armKSVMIDTable astate) (armKSHWASIDTable_' cstate) \<and>
     carch_globals astate \<and>
     gic_vcpu_num_list_regs_' cstate = of_nat (armKSGICVCPUNumListRegs astate) \<and>
-    cur_vcpu_relation (armHSCurVCPU astate) (armHSCurVCPU_' cstate) (armHSVCPUActive_' cstate)"
+    cur_vcpu_relation (armHSCurVCPU astate) (armHSCurVCPU_' cstate) (armHSVCPUActive_' cstate) \<and>
+    cur_fpu_relation (armKSCurFPUOwner astate) (ksCurFPUOwner_' cstate)"
 
 end
 
@@ -142,6 +149,9 @@ where
   irq_masks s = irq_masks (phantom_machine_state_' s') \<and>
   irq_state s = irq_state (phantom_machine_state_' s') \<and>
   device_state s = device_state (phantom_machine_state_' s') \<and>
+  vcpu_state s = vcpu_state (phantom_machine_state_' s') \<and>
+  fpu_state s = fpu_state (phantom_machine_state_' s') \<and>
+  fpu_enabled s = fpu_enabled (phantom_machine_state_' s') \<and>
   \<comment> \<open>exclusive_state s = exclusive_state (phantom_machine_state_' s') \<and>\<close> \<comment> \<open>FIXME: this is needed for infoflow so we'll leave it commented\<close>
   machine_state_rest s = machine_state_rest (phantom_machine_state_' s')"
 
@@ -272,7 +282,7 @@ definition
   ccontext_relation :: "user_context \<Rightarrow> user_context_C \<Rightarrow> bool"
 where
   "ccontext_relation uc_H uc_C \<equiv> cregs_relation (user_regs uc_H) (registers_C uc_C) \<and>
-                                 fpu_relation (fpu_state uc_H) (fpuState_C uc_C)"
+                                 fpu_relation (user_fpu_state uc_H) (fpuState_C uc_C)"
 
 primrec
   cthread_state_relation_lifted :: "Structures_H.thread_state \<Rightarrow>
@@ -405,7 +415,8 @@ where
                   (lookup_fault_lift (tcbLookupFailure_C ctcb))
      \<and> option_to_ptr (tcbBoundNotification atcb) = tcbBoundNotification_C ctcb
      \<and> option_to_ctcb_ptr (tcbSchedPrev atcb) = tcbSchedPrev_C ctcb
-     \<and> option_to_ctcb_ptr (tcbSchedNext atcb) = tcbSchedNext_C ctcb"
+     \<and> option_to_ctcb_ptr (tcbSchedNext atcb) = tcbSchedNext_C ctcb
+     \<and> tcbFlags atcb = tcbFlags_C ctcb"
 
 abbreviation
   "ep_queue_relation' \<equiv> tcb_queue_relation' tcbEPNext_C tcbEPPrev_C"

@@ -10,6 +10,14 @@ begin
 
 context Arch begin arch_global_naming
 
+(* arch-specific interpretations of update locales: *)
+
+(* FIXME: do this for other x64 arch_state fields *)
+sublocale p_asid_table_current_fpu_update:
+  Arch_p_asid_table_update_eq "\<lambda>s. s\<lparr>arch_state := x64_current_fpu_owner_update f (arch_state s)\<rparr>"
+  by (unfold_locales) (auto simp: second_level_tables_def)
+
+
 lemma invs_valid_ioports[elim!]:
   "invs s \<Longrightarrow> valid_ioports s"
   by (simp add: invs_def valid_state_def valid_arch_state_def)

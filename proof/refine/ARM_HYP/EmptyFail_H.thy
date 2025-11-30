@@ -171,7 +171,7 @@ begin
 crunch
   cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isStopped, possibleSwitchTo, tcbSchedAppend
   for (empty_fail) empty_fail[intro!, wp, simp]
-(simp: crunch_simps)
+  (simp: crunch_simps)
 end
 
 crunch "ThreadDecls_H.suspend"
@@ -268,7 +268,7 @@ lemma catchError_empty_fail[intro!, wp, simp]:
   by fastforce
 
 crunch
-  chooseThread, getDomainTime, nextDomain, isHighestPrio
+  chooseThread, getDomainTime, nextDomain, isHighestPrio, prepareNextDomain
   for (empty_fail) empty_fail[intro!, wp, simp]
   (wp: empty_fail_catch)
 

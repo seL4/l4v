@@ -3700,7 +3700,7 @@ lemma cap_insert_invs[wp]:
     \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: invs_def valid_state_def)
   apply (rule hoare_pre)
-   apply (wp cap_insert_valid_pspace cap_insert_ifunsafe cap_insert_idle
+   apply (wp cap_insert_valid_pspace cap_insert_ifunsafe cap_insert_idle valid_cur_fpu_lift
              valid_irq_node_typ cap_insert_valid_arch_caps cap_insert_derived_valid_arch_state)
   apply (auto simp: cte_wp_at_caps_of_state is_derived_cap_is_device
                         is_derived_cap_range valid_pspace_def)
@@ -3760,6 +3760,7 @@ lemma cap_swap_typ_at:
          |simp split del: if_split)+
   done
 
+lemmas cap_swap_typ_ats[wp] = abs_typ_at_lifts[OF cap_swap_typ_at]
 
 lemma cap_swap_valid_cap:
   "\<lbrace>valid_cap c\<rbrace> cap_swap cap x cap' y \<lbrace>\<lambda>_. valid_cap c\<rbrace>"

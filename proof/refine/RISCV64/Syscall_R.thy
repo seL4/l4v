@@ -374,6 +374,12 @@ lemma tcbSchedDequeue_schedulable'[wp]:
   unfolding tcbSchedDequeue_def tcbQueueRemove_def setQueue_def
   by (wpsimp wp: threadSet_schedulable'_fields_inv getTCB_wp threadGet_wp hoare_drop_imps)
 
+lemma prepareSetDomain_corres[corres]:
+  "corres dc (pspace_aligned and pspace_distinct) \<top>
+     (arch_prepare_set_domain tptr new_dom) (prepareSetDomain tptr new_dom)"
+  unfolding prepareSetDomain_def arch_prepare_set_domain_def
+  by (corres corres: gcd_corres)
+
 lemma setDomain_corres:
   "corres dc
      (valid_tcbs and pspace_aligned and pspace_distinct and weak_valid_sched_action
@@ -413,6 +419,11 @@ lemma setDomain_corres:
    apply (clarsimp simp: schedulable_def2)
   apply fastforce
   done
+
+crunch prepareSetDomain
+  for invs'[wp]: invs'
+  and sch_act_simple[wp]: sch_act_simple
+  and tcb_at'[wp]: "tcb_at' p"
 
 lemma performInvocation_corres:
   "\<lbrakk> inv_relation i i'; call \<longrightarrow> block \<rbrakk> \<Longrightarrow>
@@ -482,9 +493,10 @@ lemma performInvocation_corres:
         \<comment> \<open>domain cap\<close>
         apply (clarsimp simp: invoke_domain_def)
         apply (rule corres_guard_imp)
-          apply (rule corres_split[OF setDomain_corres])
-            apply (rule corres_trivial, simp)
-           apply (wp)+
+          apply (rule corres_split[OF prepareSetDomain_corres])
+            apply (rule corres_split[OF setDomain_corres])
+              apply (rule corres_trivial, simp)
+             apply wpsimp+
          apply ((clarsimp | fastforce dest: valid_sched_valid_ready_qs)+)[3]
        \<comment> \<open>SchedContext\<close>
        apply (corres corres: invokeSchedContext_corres)
@@ -521,7 +533,7 @@ crunch sendSignal, setDomain
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T t s)"
   (simp: crunch_simps wp: crunch_wps)
 
-crunch restart, bindNotification, performTransfer, invokeTCB, doReplyTransfer,
+crunch restart, bindNotification, performTransfer, setFlags, postSetFlags, invokeTCB, doReplyTransfer,
          performIRQControl, InterruptDecls_H.invokeIRQHandler, sendIPC,
          invokeSchedContext, invokeSchedControlConfigureFlags, handleFault
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
@@ -1033,6 +1045,12 @@ lemma invokeSchedControlConfigureFlags_invs':
                      tcbReleaseRemove_invs' hoare_vcg_ex_lift hoare_vcg_imp_lift'
           | wps)+
   by (fastforce simp: st_tcb_at'_def obj_at_simps valid_refills_number'_def)
+
+crunch prepareSetDomain
+  for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
+  and ct_in_state'[wp]: "ct_in_state' P"
+  and ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  (wp: ct_in_state_thread_state_lift')
 
 lemma performInv_invs'[wp]:
   "\<lbrace>invs' and ct_active' and valid_invocation' i

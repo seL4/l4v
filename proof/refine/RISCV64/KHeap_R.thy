@@ -7,7 +7,7 @@
 
 theory KHeap_R
 imports
-  Machine_R
+  ArchMachine_R
 begin
 
 lemma obj_at_replyTCBs_of:

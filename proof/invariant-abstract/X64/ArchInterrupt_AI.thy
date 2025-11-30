@@ -257,11 +257,11 @@ qed
 crunch ioapicMapPinToVector
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
-lemma updateIRQState_invs[wp]:
+lemma update_irq_state_invs[wp]:
   "\<lbrace>invs and K (irq \<le> maxIRQ)\<rbrace>
-   updateIRQState irq state
+   update_irq_state irq state
    \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (clarsimp simp: updateIRQState_def)
+  apply (clarsimp simp: update_irq_state_def)
   apply wp
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_global_refs_def
                         global_refs_def valid_arch_state_def valid_vspace_objs_def
@@ -269,13 +269,8 @@ lemma updateIRQState_invs[wp]:
                         vs_lookup_pages1_def valid_table_caps_def empty_table_def second_level_tables_def
                         valid_global_objs_def valid_kernel_mappings_def valid_asid_map_def
                         valid_x64_irq_state_def valid_ioports_def all_ioports_issued_def
-                        issued_ioports_def word_not_le[symmetric])
+                        issued_ioports_def word_not_le[symmetric] valid_cur_fpu_def is_tcb_cur_fpu_def)
   done
-
-lemma no_irq_ioapicMapPinToVector: "no_irq (ioapicMapPinToVector a b c d e)"
-  by (wp no_irq | clarsimp simp: no_irq_def ioapicMapPinToVector_def)+
-
-lemmas ioapicMapPinToVector_irq_masks = no_irq[OF no_irq_ioapicMapPinToVector]
 
 lemma dmo_ioapicMapPinToVector[wp]: "\<lbrace>invs\<rbrace> do_machine_op (ioapicMapPinToVector irq b c d e) \<lbrace>\<lambda>y. invs\<rbrace>"
   apply (wp dmo_invs)
@@ -287,7 +282,7 @@ lemma dmo_ioapicMapPinToVector[wp]: "\<lbrace>invs\<rbrace> do_machine_op (ioapi
   apply(erule (1) use_valid[OF _ ioapicMapPinToVector_irq_masks])
   done
 
-crunch updateIRQState
+crunch update_irq_state
   for real_cte_at[wp]: "real_cte_at x"
   and cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at Q slot s)"
   and cdt[wp]: "\<lambda>s. P (cdt s)"

@@ -8,15 +8,11 @@ theory ArchIpc_AC
 imports Ipc_AC
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 named_theorems Ipc_AC_assms
 
-lemma make_fault_message_inv[Ipc_AC_assms, wp]:
-  "make_fault_msg ft t \<lbrace>P\<rbrace>"
-  apply (cases ft, simp_all split del: if_split)
-  by (wp as_user_inv getRestartPC_inv mapM_wp' make_arch_fault_msg_inv | simp add: getRegister_def)+
-
+declare make_fault_msg_inv[Ipc_AC_assms]
 declare handle_arch_fault_reply_typ_at[Ipc_AC_assms]
 
 crunch cap_insert_ext
@@ -60,13 +56,30 @@ lemma lookup_ipc_buffer_has_auth[Ipc_AC_assms, wp]:
   apply simp
   done
 
-lemma tcb_context_no_change[Ipc_AC_assms]:
-  "\<exists>ctxt. tcb = tcb\<lparr>tcb_arch := arch_tcb_context_set ctxt (tcb_arch tcb)\<rparr>"
-  apply (cases tcb, clarsimp)
-  apply (case_tac tcb_arch)
-  apply (auto simp: arch_tcb_context_set_def)
-  done
+lemma arch_tcb_get_set_registers[Ipc_AC_assms,simp]:
+  "arch_tcb_get_registers (arch_tcb_set_registers regs atcb) = regs"
+  by (clarsimp simp: arch_tcb_get_registers_def arch_tcb_set_registers_def)
 
+lemma arch_tcb_set_get_registers[Ipc_AC_assms,simp]:
+  "arch_tcb_set_registers (arch_tcb_get_registers atcb) atcb = atcb"
+  by (simp add: arch_tcb_set_registers_def arch_tcb_get_registers_def)
+
+lemma arch_tcb_set_set_registers[Ipc_AC_assms,simp]:
+  "arch_tcb_set_registers regs (arch_tcb_set_registers regs' atcb) =
+   arch_tcb_set_registers regs atcb"
+  by (auto simp: arch_tcb_set_registers_def)
+
+lemma arch_tcb_context_set_set_registers[Ipc_AC_assms,simp]:
+  "arch_tcb_context_set (arch_tcb_context_get (arch_tcb_set_registers regs atcb)) atcb =
+   arch_tcb_set_registers regs atcb"
+  by (auto simp: arch_tcb_context_set_def arch_tcb_context_get_def arch_tcb_set_registers_def)
+
+lemma arch_tcb_setRegister[Ipc_AC_assms]:
+  "((), uc) \<in> fst (setRegister r v (arch_tcb_context_get atcb))
+   \<Longrightarrow> uc = arch_tcb_context_get (arch_tcb_set_registers ((arch_tcb_get_registers atcb)(r := v)) atcb)"
+  by (simp add: arch_tcb_context_get_def arch_tcb_context_set_def
+                arch_tcb_get_registers_def arch_tcb_set_registers_def
+                setRegister_def modify_def get_def put_def bind_def)
 end
 
 
@@ -78,7 +91,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin arch_global_naming
 
 lemma store_word_offs_respects_in_ipc[Ipc_AC_assms]:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and
@@ -90,7 +103,7 @@ lemma store_word_offs_respects_in_ipc[Ipc_AC_assms]:
   apply (wp dmo_wp)
   apply (clarsimp simp: integrity_tcb_in_ipc_def)
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def)
+  apply (clarsimp simp: integrity_def integrity_asids_def)
   apply (subgoal_tac "\<forall>i \<in> set [0..7].
                       buf + of_nat r * of_nat word_size + of_int i \<in> ptr_range buf msg_align_bits")
    apply (fastforce simp: word_rsplit_0 upto.simps atLeastAtMost_upto)
@@ -125,7 +138,7 @@ lemma set_mrs_respects_in_ipc[Ipc_AC_assms]:
    apply simp
    apply wp+
   apply (clarsimp simp: arch_tcb_set_registers_def)
-  apply (rule update_tcb_context_in_ipc [unfolded fun_upd_def]; fastforce simp: arch_tcb_context_set_def)
+  apply (rule update_tcb_context_in_ipc [unfolded fun_upd_def]; fastforce simp: arch_tcb_set_registers_def)
   done
 
 lemma lookup_ipc_buffer_ptr_range_in_ipc[Ipc_AC_assms]:
@@ -191,6 +204,11 @@ lemma cap_insert_ext_integrity_asids_in_ipc[Ipc_AC_assms, wp]:
           (s\<lparr>kheap := \<lambda>a. if a = receiver then kheap st receiver else kheap s a\<rparr>)\<rbrace>"
   by wpsimp
 
+lemma integrity_asids_kh_updI[Ipc_AC_assms]:
+  "integrity_asids_2 aag subjects x asid as as ao ao'
+   \<Longrightarrow> integrity_asids_2 aag subjects x asid as as (ao(p := ako)) (ao'(p := ako))"
+  by (clarsimp simp: integrity_asids_def opt_map_def)
+
 declare handle_arch_fault_reply_inv[Ipc_AC_assms]
 declare arch_get_sanitise_register_info_inv[Ipc_AC_assms]
 
@@ -225,7 +243,7 @@ global_interpretation Ipc_AC_2?: Ipc_AC_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Ipc_AC_assms)?)
+    by (unfold_locales; (fact Ipc_AC_assms | solves \<open>rule integrity_arch_triv\<close>)?)
 qed
 
 end

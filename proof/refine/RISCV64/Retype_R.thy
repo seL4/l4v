@@ -2639,6 +2639,10 @@ lemma reply_relation_retype:
                 makeObject_reply obj_relation_retype_def
                 objBits_simps word_bits_def replySizeBits_def)
 
+lemma word_to_tcb_flags_0[simp]:
+  "word_to_tcb_flags 0 = {}"
+  by (clarsimp simp: word_to_tcb_flags_def)
+
 lemma tcb_relation_retype:
   "obj_relation_retype (default_object Structures_A.TCBObject dev n d)
                        (KOTCB (tcbDomain_update (\<lambda>_. d) makeObject))"
@@ -3103,9 +3107,9 @@ lemma caps_no_overlapD'':
   "\<lbrakk>cte_wp_at' (\<lambda>cap. cteCap cap = c) q s;caps_no_overlap'' ptr sz s\<rbrakk>
    \<Longrightarrow> untypedRange c \<inter> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<noteq> {} \<longrightarrow>
        {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<subseteq> untypedRange c"
-  apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps caps_no_overlap''_def
-        simp del:atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-        Int_atLeastAtMost atLeastatMost_empty_iff)
+  apply (clarsimp simp: cte_wp_at_ctes_of gen_isCap_simps caps_no_overlap''_def
+                  simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+                            Int_atLeastAtMost atLeastatMost_empty_iff)
   apply (drule_tac x = cte in bspec)
     apply fastforce
   apply (erule(1) impE)
@@ -3362,7 +3366,7 @@ proof (intro conjI impI)
            apply fastforce
           apply simp
           apply (rename_tac thread_state mcp priority inQ inRQ option vptr boundntfn tcbsc tcbyt
-                            tcbprev tcbnext user_context)
+                            tcbprev tcbnext tcbflags tcbarch)
           apply (case_tac thread_state, simp_all add: valid_tcb_state'_def valid_bound_obj'_def
                                                       obj_at_disj' opt_tcb_at'_def
                                                split: option.splits)[6]

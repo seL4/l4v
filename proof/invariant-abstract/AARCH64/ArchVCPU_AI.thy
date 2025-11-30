@@ -20,19 +20,19 @@ definition valid_cur_vcpu :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_cur_vcpu s \<equiv> arch_tcb_at (\<lambda>itcb. itcb_vcpu itcb = active_cur_vcpu_of s) (cur_thread s) s"
 
 lemma valid_cur_vcpu_lift_ct_Q:
-  assumes arch_tcb_of_cur_thread: "\<And>P. \<lbrace>\<lambda>s. arch_tcb_at P (cur_thread s) s \<and> Q s\<rbrace>
-                                        f \<lbrace>\<lambda>_ s. arch_tcb_at P (cur_thread s) s\<rbrace>"
+  assumes tcb_vcpu_of_cur_thread: "\<And>P. \<lbrace>\<lambda>s. arch_tcb_at (\<lambda>itcb. P (itcb_vcpu itcb)) (cur_thread s) s \<and> Q s\<rbrace>
+                                        f \<lbrace>\<lambda>_ s. arch_tcb_at (\<lambda>itcb. P (itcb_vcpu itcb)) (cur_thread s) s\<rbrace>"
   and active_cur_vcpu_of: "\<And>P. \<lbrace>\<lambda>s. P (active_cur_vcpu_of s) \<and> Q s\<rbrace>
                                 f \<lbrace>\<lambda>_ s. P (active_cur_vcpu_of s)\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_cur_vcpu s \<and> Q s\<rbrace> f \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
   unfolding valid_cur_vcpu_def valid_def
-  using use_valid[OF _ active_cur_vcpu_of] use_valid[OF _ arch_tcb_of_cur_thread]
+  using use_valid[OF _ active_cur_vcpu_of] use_valid[OF _ tcb_vcpu_of_cur_thread]
   by (fastforce simp: active_cur_vcpu_of_def)
 
 lemmas valid_cur_vcpu_lift_ct = valid_cur_vcpu_lift_ct_Q[where Q=\<top>, simplified]
 
 lemma valid_cur_vcpu_lift:
-  "\<lbrakk>\<And>P. f \<lbrace>\<lambda>s. P (active_cur_vcpu_of s)\<rbrace>; \<And>P t. f \<lbrace>\<lambda>s. arch_tcb_at P t s\<rbrace>;
+  "\<lbrakk>\<And>P. f \<lbrace>\<lambda>s. P (active_cur_vcpu_of s)\<rbrace>; \<And>P t. f \<lbrace>\<lambda>s. arch_tcb_at (\<lambda>itcb. P (itcb_vcpu itcb)) t s\<rbrace>;
     \<And>P. f \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>\<rbrakk> \<Longrightarrow>
    f \<lbrace>valid_cur_vcpu\<rbrace>"
   apply (rule valid_cur_vcpu_lift_ct)
@@ -42,7 +42,7 @@ lemma valid_cur_vcpu_lift:
 
 lemma valid_cur_vcpu_lift_weak:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
-  assumes "\<And>P t. f \<lbrace>\<lambda>s. arch_tcb_at P t s\<rbrace>"
+  assumes "\<And>P t. f \<lbrace>\<lambda>s. arch_tcb_at (\<lambda>itcb. P (itcb_vcpu itcb)) t s\<rbrace>"
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>"
   shows "f \<lbrace>valid_cur_vcpu\<rbrace>"
   apply (rule valid_cur_vcpu_lift_ct)
@@ -51,11 +51,11 @@ lemma valid_cur_vcpu_lift_weak:
   done
 
 lemma valid_cur_vcpu_lift_cur_thread_update:
-  assumes arch_tcb_at: "\<And>P. f \<lbrace>arch_tcb_at P t\<rbrace>"
+  assumes tcb_vcpu_at: "\<And>P. f \<lbrace>arch_tcb_at (\<lambda>itcb. P (itcb_vcpu itcb)) t\<rbrace>"
   and active_cur_vcpu_of: "\<And>P. f \<lbrace>\<lambda>s. P (active_cur_vcpu_of s)\<rbrace>"
   shows "f \<lbrace>\<lambda>s. valid_cur_vcpu (s\<lparr>cur_thread := t\<rparr>)\<rbrace>"
   unfolding valid_cur_vcpu_def valid_def
-  using use_valid[OF _ active_cur_vcpu_of] use_valid[OF _ arch_tcb_at]
+  using use_valid[OF _ active_cur_vcpu_of] use_valid[OF _ tcb_vcpu_at]
   by (fastforce simp: active_cur_vcpu_of_def)
 
 crunch as_user
@@ -131,19 +131,35 @@ lemma switch_vcpu_valid_cur_vcpu[wp]:
   apply (wpsimp simp: valid_cur_vcpu_def active_cur_vcpu_of_def)
   by (clarsimp simp: pred_tcb_at_def obj_at_def)
 
-lemma active_cur_vcpu_of_arm_vmid_table_upd[simp]:
-  "active_cur_vcpu_of (s\<lparr>arch_state := arch_state s \<lparr>arm_vmid_table := x \<rparr>\<rparr>) = active_cur_vcpu_of s"
-  by (clarsimp simp: active_cur_vcpu_of_def pred_tcb_at_def obj_at_def valid_cur_vcpu_def)
+lemma active_cur_vcpu_of_simps[simp]:
+  "\<And>f. active_cur_vcpu_of (scheduler_action_update f s) = active_cur_vcpu_of s"
+  "\<And>f. active_cur_vcpu_of (ready_queues_update f s) = active_cur_vcpu_of s"
+  "\<And>x. active_cur_vcpu_of (s\<lparr>arch_state := arch_state s \<lparr>arm_vmid_table := x \<rparr>\<rparr>) = active_cur_vcpu_of s"
+  "\<And>x. active_cur_vcpu_of (s\<lparr>arch_state := arch_state s \<lparr>arm_current_fpu_owner := x \<rparr>\<rparr>) = active_cur_vcpu_of s"
+  by (clarsimp simp: active_cur_vcpu_of_def pred_tcb_at_def obj_at_def valid_cur_vcpu_def)+
 
 lemma valid_cur_vcpu_arm_vmid_table_upd[simp]:
   "valid_cur_vcpu (s\<lparr>arch_state := arch_state s \<lparr>arm_vmid_table := x \<rparr>\<rparr>) = valid_cur_vcpu s"
   by (clarsimp simp: valid_cur_vcpu_def)
 
-lemma active_cur_vcpu_of_ready_queues_upd[simp]:
-  "active_cur_vcpu_of (ready_queues_update f s) = active_cur_vcpu_of s"
-  by (clarsimp simp: active_cur_vcpu_of_def pred_tcb_at_def obj_at_def valid_cur_vcpu_def)
+lemma tcb_cur_fpu_update_tcb_vcpu_at[wp]:
+  "arch_thread_set (tcb_cur_fpu_update f) t' \<lbrace>arch_tcb_at (\<lambda>itcb. P (itcb_vcpu itcb)) t\<rbrace>"
+  apply (simp add: arch_thread_set_def set_object_def get_object_def)
+  apply wp
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_rev arch_tcb_update_aux3)
+  done
 
-crunch set_vm_root, set_tcb_queue
+lemma tcb_cur_fpu_update_active_cur_vcpu_of[wp]:
+  "arch_thread_set (tcb_cur_fpu_update f) t \<lbrace>\<lambda>s. P (active_cur_vcpu_of s)\<rbrace>"
+  apply (wpsimp wp: arch_thread_set_wp)
+  by (clarsimp simp: active_cur_vcpu_of_def)
+
+crunch lazy_fpu_restore
+  for active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
+  and tcb_vcpu_at[wp]: "arch_tcb_at (\<lambda>itcb. P (itcb_vcpu itcb)) t"
+  (ignore: arch_thread_set wp: crunch_wps)
+
+crunch set_vm_root, set_tcb_queue, lazy_fpu_restore
   for valid_cur_vcpu_cur_thread_update[wp]: "\<lambda>s. valid_cur_vcpu (s\<lparr>cur_thread := t\<rparr>)"
   (wp: valid_cur_vcpu_lift_cur_thread_update)
 
@@ -222,22 +238,16 @@ lemma associate_vcpu_tcb_valid_cur_vcpu:
        apply (clarsimp simp: pred_tcb_at_def obj_at_def valid_cur_vcpu_def active_cur_vcpu_of_def)
       by (wpsimp wp: get_vcpu_wp hoare_drop_imps)+
 
-lemma set_thread_state_arch_tcb_at[wp]:
-  "set_thread_state ts ref \<lbrace>arch_tcb_at P t\<rbrace>"
-  unfolding set_thread_state_def
-  apply (wpsimp wp: set_object_wp)
-  by (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
-
-crunch set_thread_state
+crunch set_thread_state, tcb_sched_action
   for valid_cur_vcpu[wp]: valid_cur_vcpu
   (wp: valid_cur_vcpu_lift_weak)
 
 crunch activate_thread
   for valid_cur_vcpu[wp]: valid_cur_vcpu
 
-crunch tcb_sched_action
+crunch switch_local_fpu_owner
   for valid_cur_vcpu[wp]: valid_cur_vcpu
-  (wp: valid_cur_vcpu_lift_weak)
+  (wp: valid_cur_vcpu_lift)
 
 crunch schedule
   for valid_cur_vcpu[wp]: valid_cur_vcpu
@@ -355,15 +365,18 @@ crunch cap_insert, cap_move
   for valid_cur_vcpu[wp]: valid_cur_vcpu
   (wp: valid_cur_vcpu_lift_weak)
 
-crunch suspend, unbind_notification, cap_swap_for_delete
+crunch suspend, unbind_notification, cap_swap_for_delete, fpu_release
   for state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
-  (wp: crunch_wps thread_set_hyp_refs_trivial simp: crunch_simps)
+  (wp: crunch_wps thread_set_hyp_refs_trivial simp: crunch_simps ignore: arch_thread_set)
+
+crunch fpu_release
+  for valid_cur_vcpu[wp]: valid_cur_vcpu
 
 lemma prepare_thread_delete_valid_cur_vcpu[wp]:
   "\<lbrace>\<lambda>s. valid_cur_vcpu s \<and> sym_refs (state_hyp_refs_of s)\<rbrace>
    prepare_thread_delete t
    \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
-  unfolding prepare_thread_delete_def fpu_thread_delete_def
+  unfolding prepare_thread_delete_def
   by (wpsimp wp: dissociate_vcpu_tcb_valid_cur_vcpu arch_thread_get_wp
                  hoare_drop_imps hoare_vcg_all_lift)
 
@@ -515,7 +528,7 @@ lemma fault_handler_update_state_hyp_refs_of[wp]:
   unfolding option_update_thread_def
   by (fastforce intro: thread_set_hyp_refs_trivial split: option.splits)
 
-crunch set_mcpriority, set_priority
+crunch set_mcpriority, set_priority, set_flags, arch_post_set_flags
   for valid_cur_vcpu[wp]: valid_cur_vcpu
   (simp: set_priority_def)
 
@@ -540,12 +553,15 @@ lemma invoke_tcb_valid_cur_vcpu[wp]:
   apply (forward_inv_step wp: check_cap_inv)+
   by (wpsimp wp: check_cap_inv hoare_drop_imps thread_set_hyp_refs_trivial thread_set_valid_cur_vcpu)
 
-crunch invoke_domain
+crunch set_domain
   for arch_state[wp]: "\<lambda>s. P (arch_state s)"
   and arch_tcb_at[wp]: "arch_tcb_at P t"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   and valid_cur_vcpu[wp]: valid_cur_vcpu
-  (wp: valid_cur_vcpu_lift_weak thread_set_no_change_tcb_pred)
+  (wp: valid_cur_vcpu_lift_weak thread_set_no_change_tcb_pred crunch_wps)
+
+crunch invoke_domain
+  for valid_cur_vcpu[wp]: valid_cur_vcpu
 
 crunch perform_asid_control_invocation
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s )"

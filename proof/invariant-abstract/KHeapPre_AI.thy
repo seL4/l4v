@@ -38,6 +38,10 @@ lemma same_caps_more_simps[simp]:
  "same_caps (ArchObj ao) val        = (\<exists>ao'. val = ArchObj ao')"
  by (cases val, (fastforce simp: is_obj_defs)+)+
 
+lemma same_caps_tcb_arch_update[simp]:
+  "same_caps (TCB (tcb_arch_update f tcb)) = same_caps (TCB tcb)"
+  by (rule ext) (clarsimp simp: tcb_cap_cases_def)
+
 lemma dmo_return [simp]:
   "do_machine_op (return x) = return x"
   by (simp add: do_machine_op_def select_f_def return_def gets_def get_def

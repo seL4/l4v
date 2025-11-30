@@ -18,6 +18,7 @@ lemma setObject_obj_at_pre:
    setObject p ko
      = (stateAssert (typ_at' (koTypeOf (injectKO ko)) p) []
            >>= (\<lambda>_. setObject p ko))"
+  supply projectKOs[simp del]
   apply (rule ext)
   apply (case_tac "typ_at' (koTypeOf (injectKO ko)) p x")
    apply (simp add: stateAssert_def bind_def

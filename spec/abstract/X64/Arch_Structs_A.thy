@@ -8,7 +8,7 @@ chapter "x64-Specific Data Types"
 
 theory Arch_Structs_A
 imports
-  "ExecSpec.Arch_Structs_B"
+  ExecSpec.Arch_Structs_B
   ExceptionTypes_A
   VMRights_A
   ExecSpec.Arch_Kernel_Config_Lemmas
@@ -312,6 +312,7 @@ record arch_state =
   x64_num_ioapics           :: "64 word"
   x64_ioapic_nirqs          :: "machine_word \<Rightarrow> 8 word"
   x64_irq_state             :: "8 word \<Rightarrow> X64_A.X64IRQState"
+  x64_current_fpu_owner     :: "obj_ref option"
 
 (* FIXME x64-vtd:
   x64_num_io_domain_bits    :: "16 word"
@@ -405,9 +406,14 @@ section "Arch-specific TCB"
 
 qualify X64_A (in Arch)
 
-text \<open> Arch-specific part of a TCB: this must have at least a field for user context. \<close>
+text \<open>
+  Arch-specific part of a TCB: this must have at least a field for user context.
+  @{text tcb_cur_fpu} is a ghost variable used to used to track within the tcb whether it is the
+  current fpu owner, so that we are able to determine whether a tcb is live without needing to look
+  at global state.\<close>
 record arch_tcb =
   tcb_context :: user_context
+  tcb_cur_fpu :: bool
 
 end_qualify
 
@@ -415,7 +421,7 @@ context Arch begin arch_global_naming (A)
 
 definition
   default_arch_tcb :: arch_tcb where
-  "default_arch_tcb \<equiv> \<lparr>tcb_context = new_context\<rparr>"
+  "default_arch_tcb \<equiv> \<lparr>tcb_context = new_context, tcb_cur_fpu = False\<rparr>"
 
 text \<open> Accessors for @{text "tcb_context"} inside @{text "arch_tcb"}.
   These are later used to implement @{text as_user}, i.e.\ need to be
@@ -440,7 +446,7 @@ definition
   arch_tcb_set_registers :: "(register \<Rightarrow> machine_word) \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
 where
   "arch_tcb_set_registers regs a_tcb \<equiv>
-    a_tcb \<lparr> tcb_context := UserContext (fpu_state (tcb_context a_tcb)) regs \<rparr>"
+    a_tcb \<lparr> tcb_context := UserContext (user_fpu_state (tcb_context a_tcb)) regs \<rparr>"
 
 definition
   arch_tcb_get_registers :: "arch_tcb \<Rightarrow> register \<Rightarrow> machine_word"

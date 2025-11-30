@@ -680,6 +680,10 @@ lemma activate_thread_separate_state [wp]:
   unfolding activate_thread_def
   by (wp separate_state_pres' | wpc | simp add: arch_activate_idle_thread_def |  strengthen imp_consequent)+
 
+crunch arch_prepare_next_domain
+  for separate_state[wp]: separate_state
+  (wp: separate_state_pres')
+
 crunch schedule_choose_new_thread
   for separate_state[wp]: separate_state
   and typ_at[wp]: "\<lambda>s. P (typ_at t p s)"

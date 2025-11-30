@@ -21,7 +21,8 @@ crunch
   handle_arch_fault_reply,
   arch_invoke_irq_control, handle_vm_fault, arch_get_sanitise_register_info,
   prepare_thread_delete, handle_hypervisor_fault, make_arch_fault_msg, init_arch_objects,
-  arch_post_modify_registers, arch_post_cap_deletion, arch_invoke_irq_handler
+  arch_post_modify_registers, arch_post_cap_deletion, arch_invoke_irq_handler,
+  arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps)
 
@@ -46,13 +47,13 @@ crunch
   handle_arch_fault_reply, init_arch_objects,
   arch_invoke_irq_control, handle_vm_fault,
   prepare_thread_delete, handle_hypervisor_fault,
-  arch_post_modify_registers, arch_post_cap_deletion, arch_invoke_irq_handler,
-  make_arch_fault_msg
+  arch_post_modify_registers, arch_post_cap_deletion, make_arch_fault_msg,
+  arch_invoke_irq_handler, arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_time s)"
   (wp: crunch_wps)
 
 declare init_arch_objects_exst[DetSchedDomainTime_AI_assms]
-        make_arch_fault_msg_invs[DetSchedDomainTime_AI_assms]
+        make_arch_fault_msg_inv[DetSchedDomainTime_AI_assms]
         arch_get_sanitise_register_info_inv[DetSchedDomainTime_AI_assms]
 
 end

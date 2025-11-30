@@ -433,6 +433,9 @@ lemma valid_arch_caps: "valid_arch_caps s"
 lemma valid_arch_state: "valid_arch_state s" using invs
   by clarsimp
   (* moreover *)
+lemma valid_cur_fpu: "valid_cur_fpu s" using invs
+  by clarsimp
+  (* moreover *)
 lemma ut_mdb: "untyped_mdb (cdt s) (caps_of_state s)"
   using invs
   by (clarsimp dest!: invs_mdb simp add: valid_mdb_def)
@@ -502,6 +505,7 @@ locale detype_locale_gen_2 = detype_locale_gen_1 cap ptr s
   assumes detype_invs_assms:
     "valid_idle (detype (untyped_range cap) s)"
     "valid_arch_state (detype (untyped_range cap) s)"
+    "valid_cur_fpu (detype (untyped_range cap) s)"
     "valid_vspace_objs (detype (untyped_range cap) s)"
     "valid_arch_caps (detype (untyped_range cap) s)"
     "valid_kernel_mappings (detype (untyped_range cap) s)"
@@ -1126,7 +1130,7 @@ lemma (in Detype_AI) cte_map_not_null_outside: (*FIXME: arch-split*)
   apply (drule(1) valid_globals_irq_node, fastforce simp: cap_range_def)
   done
 
-
+(* FIXME: move *)
 lemma corres_submonad2:
   "\<lbrakk> submonad f r g fn; submonad f' r' g' fn';
      \<forall>s s'. (s, s') \<in> sr \<and> g s \<and> g' s' \<longrightarrow> (f s, f' s') \<in> ssr;
@@ -1152,7 +1156,7 @@ lemma corres_submonad2:
   apply fastforce
   done
 
-
+(* FIXME: move *)
 lemma corres_submonad3:
   "\<lbrakk>submonad f r g fn; submonad f' r' g' fn';
     \<forall>s s'. (s, s') \<in> sr \<and> g s \<and> g' s' \<longrightarrow> (f s, f' s') \<in> ssr;

@@ -284,6 +284,10 @@ lemma tcb_vcpu_init_arch_tcb_None[simp]:
   "tcb_vcpu init_arch_tcb = None"
   by (simp add: init_arch_tcb_def)
 
+lemma tcb_cur_fpu_init_arch_tcb_False[simp]:
+  "tcb_cur_fpu init_arch_tcb = False"
+  by (simp add: init_arch_tcb_def)
+
 lemma pspace_in_kernel_window_init_A_st:
   "pspace_in_kernel_window init_A_st"
   apply (clarsimp simp: pspace_in_kernel_window_def init_A_st_def init_kheap_def)
@@ -330,9 +334,10 @@ lemma invs_A:
                           valid_tcb_def
                    split: if_split_asm)
    apply (simp add: pspace_aligned_init_A pspace_distinct_init_A)
-    apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def state_defs live_def hyp_live_def arch_live_def)
-    apply (clarsimp simp: zombies_final_def cte_wp_at_cases state_defs ex_nonz_cap_to_def
-                          tcb_cap_cases_def is_zombie_def)
+   apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def state_defs live_def hyp_live_def
+                         arch_live_def arch_tcb_live_def)
+   apply (clarsimp simp: zombies_final_def cte_wp_at_cases state_defs ex_nonz_cap_to_def
+                         tcb_cap_cases_def is_zombie_def)
    apply (clarsimp simp: sym_refs_def state_refs_of_def state_defs state_hyp_refs_of_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_mdb_def init_cdt_def no_mloop_def
@@ -366,9 +371,10 @@ lemma invs_A:
    apply (clarsimp simp: valid_arch_state_def)
    apply (rule conjI)
     apply (clarsimp simp: valid_asid_table_def state_defs)
-   apply (simp add: valid_arch_state_def state_defs obj_at_def a_type_def cur_vcpu_2_def
-                    vmid_inv_def is_inv_def vmid_for_asid_2_def obind_def
-                    valid_global_tables_2_def empty_pt_def valid_vmid_table_def)
+   apply (simp add: valid_arch_state_def vmid_inv_def vmid_for_asid_2_def valid_vmid_table_def
+                    valid_global_tables_2_def valid_numlistregs_def cur_vcpu_2_def is_inv_def
+                    state_defs obj_at_def a_type_def word_bits_def obind_def empty_pt_def)
+  apply (rule conjI, clarsimp simp: valid_cur_fpu_def is_tcb_cur_fpu_def obj_at_def state_defs)
   apply (rule conjI)
    apply (clarsimp simp: valid_irq_node_def obj_at_def state_defs
                          is_cap_table_def wf_empty_bits

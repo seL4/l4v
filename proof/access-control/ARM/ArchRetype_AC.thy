@@ -40,16 +40,17 @@ lemma pas_refined:
       apply (simp add: state_objs_to_policy_def refs_eq vrefs_eq mdb_and_revokable)
       apply (rule subsetI, rename_tac x, case_tac x, simp)
       apply (erule state_bits_to_policy.cases)
-            apply (solves \<open>auto intro!: sbta_caps intro: caps_retype split: cap.split\<close>)
-           apply (solves \<open>auto intro!: sbta_untyped intro: caps_retype split: cap.split\<close>)
+             apply (solves \<open>auto intro!: sbta_caps intro: caps_retype split: cap.split\<close>)
+            apply (solves \<open>auto intro!: sbta_untyped intro: caps_retype split: cap.split\<close>)
+           apply (blast intro: state_bits_to_policy.intros)
           apply (blast intro: state_bits_to_policy.intros)
-         apply (blast intro: state_bits_to_policy.intros)
-        apply (force intro!: sbta_cdt
+         apply (force intro!: sbta_cdt
+                        dest: caps_of_state_pres invs_mdb_cte'[THEN mdb_cte_atD[rotated]])
+        apply (force intro!: sbta_cdt_transferable
                        dest: caps_of_state_pres invs_mdb_cte'[THEN mdb_cte_atD[rotated]])
-       apply (force intro!: sbta_cdt_transferable
-                      dest: caps_of_state_pres invs_mdb_cte'[THEN mdb_cte_atD[rotated]])
-      apply (simp add: vrefs_eq)
-      apply (blast intro: state_bits_to_policy.intros)
+       apply (simp add: vrefs_eq)
+       apply (blast intro: state_bits_to_policy.intros)
+      apply simp
      apply (simp add: vrefs_eq)
      apply (force elim!: state_asids_to_policy_aux.cases
                  intro: state_asids_to_policy_aux.intros caps_retype
@@ -65,7 +66,7 @@ lemma pas_refined:
 end
 
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming
 
 named_theorems Retype_AC_assms
 
@@ -421,7 +422,7 @@ lemma integrity_asids_detype[Retype_AC_assms]:
      integrity_asids aag subjects x a s s'"
     "integrity_asids aag subjects x a s (detype refs s') =
      integrity_asids aag subjects x a s s'"
-  by auto
+  by (auto simp: integrity_asids_def detype_def refs opt_map_def)
 
 lemma retype_region_integrity_asids[Retype_AC_assms]:
   "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped;
@@ -430,7 +431,9 @@ lemma retype_region_integrity_asids[Retype_AC_assms]:
            (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
                             then Some (default_object typ dev o_bits d)
                             else kheap s a\<rparr>)"
-  by clarsimp
+  by (clarsimp simp: integrity_asids_def opt_map_def)
+
+declare state_hyp_refs_of_detype[Retype_AC_assms]
 
 end
 
@@ -438,14 +441,8 @@ global_interpretation Retype_AC_1?: Retype_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Retype_AC_assms | solves \<open>wp only: Retype_AC_assms; simp\<close>)?)
+    by (unfold_locales; (fact Retype_AC_assms | solves \<open>rule integrity_arch_triv\<close>
+                                              | solves \<open>wp only: Retype_AC_assms; simp\<close>)?)
 qed
-
-
-context begin interpretation Arch .
-
-requalify_facts storeWord_respects
-
-end
 
 end

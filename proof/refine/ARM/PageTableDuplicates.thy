@@ -13,6 +13,7 @@ context begin interpretation Arch . (*FIXME: arch-split*)
 lemma set_ep_valid_duplicate' [wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
   setEndpoint ep v  \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
+  supply projectKOs[simp del]
   apply (simp add:setEndpoint_def)
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
                         projectKOs pspace_aligned'_def ps_clear_upd
@@ -40,26 +41,10 @@ lemma set_ntfn_valid_duplicate' [wp]:
   apply (clarsimp simp:updateObject_default_def assert_def bind_def
     alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
     assert_opt_def return_def fail_def split:if_splits option.splits)
-   apply (rule_tac ko = ba in valid_duplicates'_non_pd_pt_I)
+   apply (rule_tac ko="KONotification a" in valid_duplicates'_non_pd_pt_I)
        apply simp+
-  apply (rule_tac ko = ba in valid_duplicates'_non_pd_pt_I)
+  apply (rule_tac ko="KONotification a" in valid_duplicates'_non_pd_pt_I)
       apply simp+
-  done
-
-lemma setCTE_valid_duplicates'[wp]:
- "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
-  setCTE p cte \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add:setCTE_def)
-  apply (clarsimp simp: setObject_def split_def valid_def in_monad
-                        projectKOs pspace_aligned'_def ps_clear_upd
-                        objBits_def[symmetric] lookupAround2_char1
-                 split: if_split_asm)
-  apply (frule pspace_storable_class.updateObject_type[where v = cte,simplified])
-  apply (clarsimp simp:ObjectInstances_H.updateObject_cte assert_def bind_def
-    alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
-    assert_opt_def return_def fail_def typeError_def
-    split:if_splits option.splits Structures_H.kernel_object.splits)
-     apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],simp+)+
   done
 
 crunch cteInsert, setupReplyMaster
@@ -2087,7 +2072,7 @@ lemma tc_valid_duplicates':
                         tcbIPCBufferSlot_def)
   by (auto dest!: isCapDs isReplyCapD isValidVTableRootD simp: isCap_simps)
 
-crunch performTransfer, unbindNotification, bindNotification, setDomain
+crunch performTransfer, unbindNotification, bindNotification, setDomain, prepareSetDomain,postSetFlags, setFlags
   for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (ignore: threadSet wp: setObject_ksInterrupt updateObject_default_inv
      simp: crunch_simps)
@@ -2110,7 +2095,7 @@ lemma invokeTCB_valid_duplicates'[wp]:
      apply (clarsimp split:option.splits)
      apply (rename_tac option)
      apply (case_tac option, simp_all)
-    apply (simp add:invokeTCB_def | wp mapM_x_wp' | intro impI conjI | wpc)+
+    apply (simp add:invokeTCB_def invokeSetFlags_def | wp mapM_x_wp' | intro impI conjI | wpc)+
   done
 
 lemma performInvocation_valid_duplicates'[wp]:

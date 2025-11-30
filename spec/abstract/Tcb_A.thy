@@ -19,6 +19,8 @@ arch_requalify_consts (A)
   sanitise_register
   arch_get_sanitise_register_info
   arch_post_modify_registers
+  arch_post_set_flags
+  arch_prepare_set_domain
 
 section "Activating Threads"
 
@@ -263,6 +265,15 @@ where
     return []
   od)"
 
+| "invoke_tcb (SetFlags tcb clearFlags setFlags) =
+  (liftE $ do
+    flags \<leftarrow> thread_get tcb_flags tcb;
+    new_flags \<leftarrow> return $ flags - clearFlags \<union> setFlags;
+    set_flags tcb new_flags;
+    arch_post_set_flags tcb new_flags;
+    return [tcb_flags_to_word new_flags]
+  od)"
+
 definition
   set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "set_domain tptr new_dom \<equiv> do
@@ -274,10 +285,13 @@ definition
      when (tptr = cur) reschedule_required
    od"
 
-definition invoke_domain:: "obj_ref \<Rightarrow> domain \<Rightarrow> (data list,'z::state_ext) p_monad"
-where
+definition invoke_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> (data list,'z::state_ext) p_monad" where
   "invoke_domain thread domain \<equiv>
-     liftE (do set_domain thread domain; return [] od)"
+     liftE $ do
+       arch_prepare_set_domain thread domain;
+       set_domain thread domain;
+       return []
+     od"
 
 text \<open>Get all of the message registers, both from the sending thread's current
 register file and its IPC buffer.\<close>

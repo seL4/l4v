@@ -96,7 +96,7 @@ lemma switch_to_idle_thread_invs:
   done
 
 lemma switch_to_thread_invs:
-  "\<lbrace>\<lambda>s. invs s \<and> scheduler_action s \<noteq> resume_cur_thread\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> ex_nonz_cap_to tptr \<and> scheduler_action s \<noteq> resume_cur_thread\<rbrace>
    switch_to_thread tptr
    \<lbrace>\<lambda>_. invs\<rbrace>"
   by (wpsimp simp: switch_to_thread_def get_tcb_obj_ref_def thread_get_def is_tcb
@@ -106,8 +106,8 @@ lemma guarded_switch_to_invs:
   "\<lbrace>\<lambda>s. invs s \<and> scheduler_action s \<noteq> resume_cur_thread\<rbrace>
    guarded_switch_to thread
    \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (wpsimp simp: guarded_switch_to_def
-               wp: switch_to_thread_invs hoare_drop_imps)
+  apply (wpsimp simp: guarded_switch_to_def wp: switch_to_thread_invs gts_wp)
+  by (fastforce elim: st_tcb_ex_cap' simp: runnable_eq)
 
 (* still true without scheduler_action s \<noteq> resume_cur_thread, but the proof for schedule_invs
    will be simpler with it *)

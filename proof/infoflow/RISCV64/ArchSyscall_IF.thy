@@ -195,6 +195,8 @@ lemma decode_arch_invocation_authorised_for_globals[Syscall_IF_assms]:
                  decode_frame_invocation_authorised_for_globals
                  decode_page_table_invocation_authorised_for_globals, fastforce)
 
+declare arch_prepare_set_domain_inv[Syscall_IF_assms]
+
 end
 
 

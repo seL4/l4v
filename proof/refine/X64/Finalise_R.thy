@@ -1178,7 +1178,7 @@ lemma not_Final_removeable:
   "\<not> isFinal cap sl (cteCaps_of s)
     \<Longrightarrow> removeable' sl s cap"
   apply (erule not_FinalE)
-   apply (clarsimp simp: removeable'_def isCap_simps)
+   apply (clarsimp simp: removeable'_def gen_isCap_simps)
   apply (clarsimp simp: cteCaps_of_def sameObjectAs_def2 removeable'_def
                         cte_wp_at_ctes_of)
   apply fastforce
@@ -1407,8 +1407,6 @@ lemma emptySlot_valid_irq_handlers'[wp]:
   apply auto
   done
 
-declare setIRQState_irq_states' [wp]
-
 context begin interpretation Arch .
 crunch emptySlot
   for irq_states'[wp]: valid_irq_states'
@@ -1417,8 +1415,6 @@ crunch emptySlot
   for no_0_obj'[wp]: no_0_obj'
  (wp: crunch_wps)
 
-end
-
 lemma deletedIRQHandler_irqs_masked'[wp]:
   "\<lbrace>irqs_masked'\<rbrace> deletedIRQHandler irq \<lbrace>\<lambda>_. irqs_masked'\<rbrace>"
   apply (simp add: deletedIRQHandler_def setIRQState_def getInterruptState_def setInterruptState_def)
@@ -1426,7 +1422,6 @@ lemma deletedIRQHandler_irqs_masked'[wp]:
   apply (simp add: irqs_masked'_def)
   done
 
-context begin interpretation Arch . (*FIXME: arch-split*)
 crunch emptySlot
   for irqs_masked'[wp]: "irqs_masked'"
 
@@ -2068,7 +2063,7 @@ lemma (in vmdb) isFinal_no_subtree:
    apply (erule_tac x="mdbNext n" in allE)
    apply simp
    apply (clarsimp simp: isMDBParentOf_CTE final_matters_sameRegion_sameObject)
-   apply (clarsimp simp: isCap_simps sameObjectAs_def3)
+   apply (clarsimp simp: gen_isCap_simps sameObjectAs_def3)
   apply clarsimp
   done
 
@@ -2849,35 +2844,17 @@ lemma unbindMaybeNotification_tcb_at'[wp]:
   apply (wp gbn_wp' | wpc | simp)+
   done
 
-lemma dmo_nativeThreadUsingFPU_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (nativeThreadUsingFPU thread) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_nativeThreadUsingFPU no_irq)
-  apply clarsimp
-  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid[where P=P and Q="\<lambda>_. P" for P])
-    apply (simp add: nativeThreadUsingFPU_def machine_op_lift_def
-                     machine_rest_lift_def split_def | wp)+
-  done
-
-lemma dmo_switchFpuOwner_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (switchFpuOwner thread cpu) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_switchFpuOwner no_irq)
-  apply clarsimp
-  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid[where P=P and Q="\<lambda>_. P" for P])
-    apply (simp add: switchFpuOwner_def machine_op_lift_def
-                     machine_rest_lift_def split_def | wp)+
-  done
-
 crunch prepareThreadDelete
   for cte_wp_at'[wp]: "cte_wp_at' P p"
 crunch prepareThreadDelete
   for valid_cap'[wp]: "valid_cap' cap"
 crunch prepareThreadDelete
-  for invs[wp]: "invs'" (ignore: doMachineOp)
+  for invs[wp]: "invs'"
+  (ignore: doMachineOp)
+
 crunch prepareThreadDelete
-  for obj_at'[wp]: "\<lambda>s. P' (obj_at' P p s)"
-  (wp: whenE_wp simp: crunch_simps)
+  for tcbSchedPrevNext[wp]: "obj_at' (\<lambda>tcb. P (tcbSchedNext tcb) (tcbSchedPrev tcb)) t"
+  (wp: crunch_wps simp: crunch_simps)
 
 end
 
@@ -2951,12 +2928,12 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
            | simp add: isZombie_Null isThreadCap_threadCapRefs_tcbptr
                        isArchObjectCap_Cap_capCap
            | (rule hoare_strengthen_post [OF arch_finaliseCap_removeable[where slot=slot]],
-                  clarsimp simp: isCap_simps)
+              clarsimp simp: gen_isCap_simps)
            | wpc)+
   apply clarsimp
   apply (frule cte_wp_at_valid_objs_valid_cap', clarsimp+)
   apply (case_tac "cteCap cte",
-         simp_all add: isCap_simps capRange_def cap_has_cleanup'_def
+         simp_all add: gen_isCap_simps capRange_def cap_has_cleanup'_def
                        final_matters'_def X64.objBits_simps
                        not_Final_removeable finaliseCap_def,
          simp_all add: removeable'_def)
@@ -3313,9 +3290,8 @@ lemma finaliseCap_zombie_cap[wp]:
   apply (simp add: finaliseCap_def Let_def
              cong: if_cong split del: if_split)
   apply (rule hoare_pre)
-   apply (wp suspend_cte_wp_at'
-             deletingIRQHandler_cte_preserved
-                 | clarsimp simp: finaliseCap_def isCap_simps | wpc)+
+   apply (wp suspend_cte_wp_at' deletingIRQHandler_cte_preserved
+          | clarsimp simp: finaliseCap_def gen_isCap_simps | wpc)+
   done
 
 lemma finaliseCap_zombie_cap':
@@ -3336,7 +3312,7 @@ lemma finaliseCap_cte_cap_wp_to[wp]:
    apply (wp suspend_cte_wp_at'
              deletingIRQHandler_cte_preserved
              hoare_vcg_ex_lift
-                 | clarsimp simp: finaliseCap_def isCap_simps
+                 | clarsimp simp: finaliseCap_def gen_isCap_simps
                  | rule conjI
                  | wpc)+
   apply fastforce
@@ -3359,10 +3335,21 @@ lemma finaliseCap_valid_cap[wp]:
    apply (wp | simp only: valid_NullCap o_def fst_conv | wpc)+
   apply simp
   apply (intro conjI impI)
-   apply (clarsimp simp: valid_cap'_def isCap_simps capAligned_def
+   apply (clarsimp simp: valid_cap'_def gen_isCap_simps capAligned_def
                          X64.objBits_simps shiftL_nat)+
   done
 
+lemma no_idle_thread_cap:
+  "\<lbrakk> cte_wp_at ((=) (cap.ThreadCap (idle_thread s))) sl s; valid_global_refs s \<rbrakk> \<Longrightarrow> False"
+  apply (cases sl)
+  apply (clarsimp simp: valid_global_refs_def valid_refs_def cte_wp_at_caps_of_state)
+  apply ((erule allE)+, erule (1) impE)
+  apply (clarsimp simp: cap_range_def)
+  done
+
+lemmas getCTE_no_0_obj'_helper
+  = getCTE_inv
+    hoare_strengthen_post[where Q'="\<lambda>_. no_0_obj'" and P=no_0_obj' and f="getCTE slot" for slot]
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
@@ -3414,7 +3401,7 @@ lemma (in delete_one) deletingIRQHandler_corres:
           apply (clarsimp simp: cte_wp_at_caps_of_state state_relation_def)
           apply (drule caps_of_state_cteD)
           apply (drule(1) pspace_relation_cte_wp_at, clarsimp+)
-          apply (auto simp: cte_wp_at_ctes_of is_cap_simps isCap_simps)[1]
+          apply (auto simp: cte_wp_at_ctes_of is_cap_simps gen_isCap_simps)[1]
          apply simp
          apply (rule corres_guard_imp, rule delete_one_corres[unfolded dc_def])
           apply (auto simp: cte_wp_at_caps_of_state is_cap_simps can_fast_finalise_def)[1]
@@ -3587,6 +3574,15 @@ lemma cap_delete_one_corres:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply fastforce
   done
+
+context
+notes option.case_cong_weak[cong]
+begin
+crunch ThreadDecls_H.suspend, unbindNotification
+  for no_0_obj'[wp]: no_0_obj'
+  (simp: crunch_simps wp: crunch_wps getCTE_no_0_obj'_helper)
+end
+
 end
 (* FIXME: strengthen locale instead *)
 
@@ -3607,7 +3603,8 @@ lemma finaliseCap_corres:
                  (final_matters' cap' \<longrightarrow>
                       final' = isFinal cap' (cte_map sl) (cteCaps_of s)))
            (finalise_cap cap final) (finaliseCap cap' final' flag)"
-  apply (cases cap, simp_all add: finaliseCap_def isCap_simps
+  supply invs_no_0_obj'[simp]
+  apply (cases cap, simp_all add: finaliseCap_def gen_isCap_simps
                                   corres_liftM2_simp[unfolded liftM_def]
                                   o_def dc_def[symmetric] when_def
                                   can_fast_finalise_def
@@ -3628,12 +3625,19 @@ lemma finaliseCap_corres:
      apply (clarsimp simp add: final_matters'_def getThreadCSpaceRoot
                                liftM_def[symmetric] o_def zbits_map_def
                                dc_def[symmetric])
+     apply (rename_tac t)
+     apply (rule_tac P="\<lambda>s. t \<noteq> idle_thread s" and P'="\<lambda>s. t \<noteq> ksIdleThread s" in corres_add_guard)
+      apply clarsimp
+      apply (rule context_conjI)
+       apply (clarsimp dest!: no_idle_thread_cap)
+      apply (clarsimp simp: state_relation_def)
      apply (rule corres_guard_imp)
        apply (rule corres_split[OF unbindNotification_corres])
          apply (rule corres_split[OF suspend_corres])
-            apply (clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric] zbits_map_def)
-          apply (rule prepareThreadDelete_corres)
-        apply (wp unbind_notification_invs unbind_notification_simple_sched_action)+
+           apply (clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric] zbits_map_def)
+           apply (rule prepareThreadDelete_corres, simp)
+          apply (wp unbind_notification_invs unbind_notification_simple_sched_action
+                    delete_one_conc_fr.suspend_objs')+
       apply (simp add: valid_cap_def)
      apply (simp add: valid_cap'_def)
     apply (simp add: final_matters'_def liftM_def[symmetric]

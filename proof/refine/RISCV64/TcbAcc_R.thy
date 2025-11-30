@@ -686,6 +686,7 @@ lemma threadSet_valid_pspace'T_P:
   assumes u: "\<forall>tcb. tcbDomain tcb \<le> maxDomain \<longrightarrow> tcbDomain (F tcb) \<le> maxDomain"
   assumes w: "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
   assumes w': "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
+  assumes f: "\<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0"
   shows
   "\<lbrace>valid_pspace' and (\<lambda>s. P \<longrightarrow> st_tcb_at' Q1 t s \<and> bound_tcb_at' Q2 t s \<and>
                                  bound_sc_tcb_at' Q3 t s \<and> bound_yt_tcb_at' Q4 t s \<and>
@@ -701,7 +702,7 @@ lemma threadSet_valid_pspace'T_P:
   apply (erule(1) valid_objsE')
   apply (clarsimp simp add: valid_obj'_def valid_tcb'_def
                             bspec_split [OF spec [OF x]] z
-                            split_paired_Ball y u w v1 v2 v3 v4 v5 w')
+                            split_paired_Ball y u w v1 v2 v3 v4 v5 w' f)
   apply (simp add: valid_arch_tcb'_def) (* FIXME arch-split: non-hyp only *)
   apply (fastforce simp: eq_commute z')
   done
@@ -1029,36 +1030,39 @@ lemma threadSet_obj_at'_strongish[wp]:
      threadSet f t \<lbrace>\<lambda>rv. obj_at' P t'\<rbrace>"
   by (simp add: hoare_weaken_pre [OF threadSet_obj_at'_really_strongest])
 
-lemma threadSet_obj_at_no_state:
-  assumes "\<And>tcb. proj (f tcb) = proj tcb"
-  shows "threadSet f t \<lbrace>\<lambda>s. P (obj_at' (\<lambda>tcb. P' (proj tcb)) t' s)\<rbrace>"
+lemma threadSet_obj_at'_no_state:
+  assumes "\<And>tcb. P' (f tcb) = P' tcb"
+  shows   "threadSet f t \<lbrace>\<lambda>s. P (obj_at' P' t' s)\<rbrace>"
 proof -
-  have pos: "\<And>P' t' t. threadSet f t \<lbrace>\<lambda>s. obj_at' (\<lambda>tcb. P' (proj tcb)) t' s\<rbrace>"
-    apply (wpsimp wp: threadSet_obj_at'_strongish)
+  have pos: "\<And>t' t.
+            \<lbrace>obj_at' P' t'\<rbrace> threadSet f t \<lbrace>\<lambda>rv. obj_at' P' t'\<rbrace>"
+    apply (wp threadSet_obj_at'_strongish)
+    apply clarsimp
+    apply (erule obj_at'_weakenE)
     apply (insert assms)
     apply clarsimp
     done
   show ?thesis
     apply (rule_tac P=P in P_bool_lift)
      apply (rule pos)
-    apply (rule_tac Q'="\<lambda>_ s. \<not> tcb_at' t' s \<or> obj_at' (\<lambda>tcb. \<not> P' (proj tcb)) t' s"
-                 in hoare_post_imp)
+    apply (rule_tac Q'="\<lambda>_ s. \<not> tcb_at' t' s \<or> obj_at' (\<lambda>tcb. \<not> P' tcb) t' s"
+             in hoare_post_imp)
      apply (erule disjE)
       apply (clarsimp simp: obj_at'_def)
-     apply (clarsimp simp: obj_at'_def)
-     apply clarsimp
-    apply (wp hoare_convert_imp pos)
-    apply (clarsimp simp: tcb_at_typ_at' not_obj_at'
-                   elim!: obj_at'_weakenE)
+     apply (clarsimp)
+     apply (frule_tac P=P' and Q="\<lambda>tcb. \<not> P' tcb" in obj_at_conj')
+      apply (clarsimp)+
+    apply (wp hoare_convert_imp)
+      apply (simp add: typ_at_tcb' [symmetric])
+      apply (wp pos)+
+    apply (clarsimp simp: not_obj_at' assms elim!: obj_at'_weakenE)
     done
 qed
 
 lemma threadSet_pred_tcb_no_state:
   assumes "\<And>tcb. proj (tcb_to_itcb' (f tcb)) = proj (tcb_to_itcb' tcb)"
-  shows "threadSet f t \<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
-  unfolding pred_tcb_at'_def
-  using assms
-  by (rule threadSet_obj_at_no_state)
+  shows   "threadSet f t \<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
+  by (wpsimp wp: threadSet_obj_at'_no_state simp: pred_tcb_at'_def assms)
 
 lemma threadSet_mdb':
   "\<lbrace>valid_mdb' and obj_at' (\<lambda>t. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF t = getF (f t)) t\<rbrace>
@@ -1231,6 +1235,7 @@ lemma threadSet_invs_trivialT:
     "\<forall>tcb. tcbDomain (F tcb) = tcbDomain tcb"
     "\<forall>tcb. tcbPriority (F tcb) = tcbPriority tcb"
     "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
+    "\<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0"
   shows "threadSet F t \<lbrace>invs'\<rbrace>"
   apply (simp add: invs'_def split del: if_split)
   apply (wp threadSet_valid_pspace'T
@@ -1618,6 +1623,12 @@ lemma asUser_tcbPriority_inv[wp]:
   apply (wp threadSet_obj_at'_strongish getObject_tcb_wp | wpc | simp | clarsimp simp: obj_at'_def)+
   done
 
+lemma asUser_tcbState_inv[wp]:
+  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbState tcb)) t'\<rbrace> asUser t m \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbState tcb)) t'\<rbrace>"
+  apply (simp add: asUser_def threadGet_def)
+  apply (wpsimp wp: getObject_tcb_wp simp: obj_at'_def)
+  done
+
 lemma asUser_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
     asUser t m \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
@@ -1894,6 +1905,12 @@ lemma pspace_relation_update_concrete_tcb:
   "\<lbrakk>pspace_relation s s'; s ptr = Some (TCB tcb); s' ptr = Some (KOTCB otcb');
     tcb_relation tcb tcb'\<rbrakk>
    \<Longrightarrow> pspace_relation s (s'(ptr \<mapsto> KOTCB tcb'))"
+  by (fastforce dest: pspace_relation_update_tcbs simp: map_upd_triv)
+
+lemma pspace_relation_update_abstract_tcb:
+  "\<lbrakk>pspace_relation s s'; s ptr = Some (TCB tcb); s' ptr = Some (KOTCB otcb');
+    tcb_relation tcb' otcb'\<rbrakk>
+   \<Longrightarrow> pspace_relation (s(ptr \<mapsto> TCB tcb')) s'"
   by (fastforce dest: pspace_relation_update_tcbs simp: map_upd_triv)
 
 crunch threadSet

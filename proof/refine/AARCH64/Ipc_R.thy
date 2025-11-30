@@ -1600,13 +1600,6 @@ lemmas threadget_fault_corres =
                               and f = tcb_fault and f' = tcbFault,
                             simplified tcb_relation_def, simplified]
 
-lemma make_fault_msg_in_user_frame[wp]:
-  "make_fault_msg f t \<lbrace>in_user_frame p\<rbrace>"
-  supply if_split[split del]
-  apply (cases f; wpsimp)
-  apply (rename_tac af; case_tac af; wpsimp)
-  done
-
 lemma doFaultTransfer_corres:
   "corres dc
     (obj_at (\<lambda>ko. \<exists>tcb ft. ko = TCB tcb \<and> tcb_fault tcb = Some ft) sender
@@ -1672,8 +1665,8 @@ lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   apply (drule obj_at_ko_at')
   apply (clarsimp simp del: imp_disjL)
   apply (rule_tac x = ko in exI)
-  apply (frule ko_at_cte_ipcbuffer)
-  apply (clarsimp simp: cte_wp_at_ctes_of simp del: imp_disjL)
+  apply (frule ko_at_cte_ipcbuffer[simplified cteSizeBits_def])
+  apply (clarsimp simp: cte_wp_at_ctes_of shiftl_t2n' simp del: imp_disjL)
   apply (rename_tac ref rg sz d m)
   apply (clarsimp simp: valid_ipc_buffer_ptr'_def)
   apply (frule (1) ko_at_valid_objs')

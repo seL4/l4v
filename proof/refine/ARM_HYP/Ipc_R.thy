@@ -1663,9 +1663,6 @@ lemma makeFaultMessage_tcb_at'[wp]:
                  simp: getRegister_def makeArchFaultMessage_def)+
   done
 
-crunch make_fault_msg
-  for in_user_frame[wp]: "in_user_frame p"
-
 lemma makeFaultMessage_valid_ipc_buffer_ptr'[wp]:
   "makeFaultMessage ft t \<lbrace>valid_ipc_buffer_ptr' p\<rbrace>"
   apply (cases ft, simp_all add: makeFaultMessage_def)
@@ -1745,8 +1742,8 @@ lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   apply (drule obj_at_ko_at')
   apply (clarsimp simp del: imp_disjL)
   apply (rule_tac x = ko in exI)
-  apply (frule ko_at_cte_ipcbuffer)
-  apply (clarsimp simp: cte_wp_at_ctes_of simp del: imp_disjL)
+  apply (frule ko_at_cte_ipcbuffer[simplified cteSizeBits_def])
+  apply (clarsimp simp: cte_wp_at_ctes_of shiftl_t2n' simp del: imp_disjL)
   apply (clarsimp simp: valid_ipc_buffer_ptr'_def)
   apply (frule (1) ko_at_valid_objs')
    apply (clarsimp simp: projectKO_opts_defs split: kernel_object.split_asm)

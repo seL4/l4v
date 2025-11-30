@@ -315,6 +315,7 @@ where
      tcb_priority           = undefined,
      tcb_time_slice         = undefined,
      tcb_domain             = 0,
+     tcb_flags              = undefined,
      tcb_arch               = \<lparr>tcb_context = undefined\<rparr> \<rparr>"
 
 
@@ -339,6 +340,7 @@ where
      tcb_priority           = undefined,
      tcb_time_slice         = undefined,
      tcb_domain             = 0,
+     tcb_flags              = undefined,
      tcb_arch               = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 definition
@@ -573,6 +575,10 @@ lemma tcb_domain_map_wellformed_s1:
   by (clarsimp simp: tcb_domain_map_wellformed_aux_def Sys1PAS_def domains_of_state_s1
                         Sys1AgentMap_simps Sys1DomainMap_def)
 
+lemma state_hyp_refs_of_s1_empty[simp]:
+  "state_hyp_refs_of s1 = (\<lambda>_. {})"
+  by (auto simp: state_hyp_refs_of_def hyp_refs_of_def split: option.splits kernel_object.splits)
+
 lemma "pas_refined Sys1PAS s1"
   apply (clarsimp simp: pas_refined_def)
   apply (intro conjI)
@@ -597,7 +603,6 @@ lemma "pas_refined Sys1PAS s1"
        apply (simp add:  thread_bound_ntfns_1)
       apply (simp add: s1_def) (* this is OK because cdt is empty..*)
      apply (simp add: s1_def) (* this is OK because cdt is empty..*)
-
     apply (fastforce simp: state_vrefs_def
                            vs_refs_no_global_pts_def
                            s1_def kh1_def  Sys1AgentMap_simps
@@ -607,7 +612,6 @@ lemma "pas_refined Sys1PAS s1"
                            Sys1AuthGraph_aux_def
                      dest!: graph_ofD
                      split: if_splits)
-
    apply (rule subsetI, clarsimp)
    apply (erule state_asids_to_policy_aux.cases)
      apply clarsimp
@@ -629,10 +633,9 @@ lemma "pas_refined Sys1PAS s1"
   apply (erule state_irqs_to_policy_aux.cases)
   apply (simp add: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def Sys1PAS_def Sys1ASIDMap_def)
   apply (drule s1_caps_of_state)
-  apply (simp add: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def Sys1PAS_def Sys1ASIDMap_def)
-  apply (elim disjE conjE, simp_all add: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def asid1_3065_def asid1_3063_def
-    asid_low_bits_def asid_high_bits_of_def )[1]
-   done
+  by (auto simp: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def Sys1PAS_def
+                    Sys1ASIDMap_def Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def
+                    asid1_3065_def asid1_3063_def asid_low_bits_def asid_high_bits_of_def)
 
 
 (*---------------------------------------------------------*)
@@ -869,6 +872,7 @@ where
      tcb_priority           = undefined,
      tcb_time_slice         = undefined,
      tcb_domain             = 0,
+     tcb_flags              = undefined,
      tcb_arch          = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 
@@ -893,6 +897,7 @@ where
      tcb_priority           = undefined,
      tcb_time_slice         = undefined,
      tcb_domain             = 0,
+     tcb_flags              = undefined,
      tcb_arch               = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 (* the boolean in BlockedOnReceive is True if the object can receive but not send.
@@ -1024,12 +1029,6 @@ lemma caps2_6_well_formed: "well_formed_cnode_n 10 caps2_6"
  apply clarsimp
 done
 
-
-
-
-
-
-
 lemma s2_caps_of_state :
   "caps_of_state s2 p = Some cap \<Longrightarrow>
      cap = NullCap \<or>
@@ -1060,7 +1059,7 @@ lemma s2_caps_of_state :
      apply (clarsimp simp: tcb_cap_cases_def split: if_splits)+
    apply (clarsimp simp: caps2_7_def split: if_splits)
   apply (clarsimp simp: caps2_6_def cte_wp_at_cases  split: if_splits)
-done
+  done
 
 lemma Sys2_wellformed: "pas_wellformed Sys2PAS"
   apply (clarsimp simp: Sys2PAS_def policy_wellformed_def)
@@ -1106,6 +1105,10 @@ lemma thread_bound_ntfns_2[simp]:
   apply (simp add: get_tcb_def)
   apply (simp add: kh2_def kh2_obj_def)
   done
+
+lemma state_hyp_refs_of_s2_empty[simp]:
+  "state_hyp_refs_of s2 = (\<lambda>_. {})"
+  by (auto simp: state_hyp_refs_of_def hyp_refs_of_def split: option.splits kernel_object.splits)
 
 lemma "pas_refined Sys2PAS s2"
   apply (clarsimp simp: pas_refined_def)

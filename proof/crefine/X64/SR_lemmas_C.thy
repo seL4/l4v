@@ -295,12 +295,12 @@ lemma cmdbnode_relation_mdb_node_to_H [simp]:
 definition tcb_no_ctes_proj ::
   "tcb \<Rightarrow> Structures_H.thread_state \<times> machine_word \<times> machine_word \<times> arch_tcb \<times> bool \<times> word8
           \<times> word8 \<times> word8 \<times> nat \<times> fault option \<times> machine_word option
-          \<times> machine_word option \<times> machine_word option"
+          \<times> machine_word option \<times> machine_word option \<times> machine_word"
   where
   "tcb_no_ctes_proj t \<equiv>
      (tcbState t, tcbFaultHandler t, tcbIPCBuffer t, tcbArch t, tcbQueued t,
       tcbMCP t, tcbPriority t, tcbDomain t, tcbTimeSlice t, tcbFault t, tcbBoundNotification t,
-      tcbSchedNext t, tcbSchedPrev t)"
+      tcbSchedNext t, tcbSchedPrev t, tcbFlags t)"
 
 lemma tcb_cte_cases_proj_eq [simp]:
   "tcb_cte_cases p = Some (getF, setF) \<Longrightarrow>
@@ -1075,7 +1075,9 @@ lemma cstate_relation_only_t_hrs:
   ksDomainTime_' s = ksDomainTime_' t;
   num_ioapics_' s = num_ioapics_' t;
   ioapic_nirqs_' s = ioapic_nirqs_' t;
-  x86KSIRQState_' s = x86KSIRQState_' t
+  x86KSIRQState_' s = x86KSIRQState_' t;
+  ksCurFPUOwner_' s = ksCurFPUOwner_' t;
+  x86KSnullFpuState_' s = x86KSnullFpuState_' t
   \<rbrakk>
   \<Longrightarrow> cstate_relation a s = cstate_relation a t"
   unfolding cstate_relation_def
@@ -1102,6 +1104,8 @@ lemma rf_sr_upd:
     "num_ioapics_' (globals x) = num_ioapics_' (globals y)"
     "ioapic_nirqs_' (globals x) = ioapic_nirqs_' (globals y)"
     "x86KSIRQState_' (globals x) = x86KSIRQState_' (globals y)"
+    "ksCurFPUOwner_' (globals x) = ksCurFPUOwner_' (globals y)"
+    "x86KSnullFpuState_' (globals x) = x86KSnullFpuState_' (globals y)"
   shows "((a, x) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
   unfolding rf_sr_def using assms
   by simp (rule cstate_relation_only_t_hrs, auto)
@@ -1125,6 +1129,8 @@ lemma rf_sr_upd_safe[simp]:
     "num_ioapics_' (globals (g y)) = num_ioapics_' (globals y)"
     "ioapic_nirqs_' (globals (g y)) = ioapic_nirqs_' (globals y)"
     "x86KSIRQState_' (globals (g y)) = x86KSIRQState_' (globals y)"
+    "ksCurFPUOwner_' (globals (g y)) = ksCurFPUOwner_' (globals y)"
+    "x86KSnullFpuState_' (globals (g y)) = x86KSnullFpuState_' (globals y)"
   and    gs: "ghost'state_' (globals (g y)) = ghost'state_' (globals y)"
   and     wu:  "(ksWorkUnitsCompleted_' (globals (g y))) = (ksWorkUnitsCompleted_' (globals y))"
   shows "((a, (g y)) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
@@ -1338,6 +1344,7 @@ lemma getObject_eq:
   and objat: "ko_at' ko p s"
   shows      "(ko, s) \<in> fst (getObject p s)"
   using objat unfolding exs_valid_def obj_at'_def
+  supply projectKOs[simp del]
   apply clarsimp
   apply (simp add: projectKO_def fail_def split: option.splits)
   apply (clarsimp simp: loadObject_default_def getObject_def in_monad return_def lookupAround2_char1
@@ -2424,12 +2431,6 @@ lemma tcb_and_not_mask_canonical:
 lemmas tcb_ptr_sign_extend_canonical =
       tcb_and_not_mask_canonical[where n=0, simplified mask_def objBits_simps', simplified]
 
-lemma fpu_null_state_typ_heap_preservation:
-  assumes "fpu_null_state_relation s"
-  assumes "(clift t :: user_fpu_state_C typ_heap) = clift s"
-  shows "fpu_null_state_relation t"
-  using assms by (simp add: fpu_null_state_relation_def)
-
 (* FIXME: move up to TypHeap? *)
 lemma lift_t_Some_iff:
   "lift_t g hrs p = Some v \<longleftrightarrow> hrs_htd hrs, g \<Turnstile>\<^sub>t p \<and> h_val (hrs_mem hrs) p = v"
@@ -2464,14 +2465,6 @@ lemma global_ioport_bitmap_relation_def2:
         \<and> ptr_span (ioport_table_Ptr (symbol_table ''x86KSAllocatedIOPorts'')) \<subseteq> kernel_data_refs"
   by (clarsimp simp: global_ioport_bitmap_relation_def lift_t_Some_iff)
 
-lemma fpu_null_state_relation_def2:
-  "fpu_null_state_relation hrs \<equiv>
-    hrs_htd hrs \<Turnstile>\<^sub>t fpu_state_Ptr (symbol_table ''x86KSnullFpuState'')
-     \<and> h_val (hrs_mem hrs) (fpu_state_Ptr (symbol_table ''x86KSnullFpuState''))
-         = user_fpu_state_C (ARRAY i. FPUNullState (finite_index i))
-     \<and> ptr_span (fpu_state_Ptr (symbol_table ''x86KSnullFpuState'')) \<subseteq> kernel_data_refs"
-  by (clarsimp simp: fpu_null_state_relation_def lift_t_Some_iff)
-
 lemma global_ioport_bitmap_heap_update_tag_disj':
   fixes p :: "'a::mem_type ptr"
   assumes valid: "hrs_htd h, g \<Turnstile>\<^sub>t p"
@@ -2480,16 +2473,6 @@ lemma global_ioport_bitmap_heap_update_tag_disj':
   unfolding global_ioport_bitmap_relation_def
   using lift_t_heap_update_same[OF valid disj]
   by (clarsimp simp: global_ioport_bitmap_relation_def hrs_mem_update_def hrs_htd_def
-              split: prod.splits)
-
-lemma fpu_null_state_heap_update_tag_disj':
-  fixes p :: "'a::mem_type ptr"
-  assumes valid: "hrs_htd h, g \<Turnstile>\<^sub>t p"
-  assumes disj: "typ_uinfo_t TYPE(user_fpu_state_C) \<bottom>\<^sub>t typ_uinfo_t TYPE('a)"
-  shows "fpu_null_state_relation (hrs_mem_update (heap_update p v) h) = fpu_null_state_relation h"
-  unfolding fpu_null_state_relation_def
-  using lift_t_heap_update_same[OF valid disj]
-  by (clarsimp simp: fpu_null_state_relation_def hrs_mem_update_def hrs_htd_def
               split: prod.splits)
 
 lemma rf_sr_obj_update_helper:
@@ -2509,9 +2492,6 @@ lemmas h_t_valid_fields_clift =
 
 lemmas global_ioport_bitmap_heap_update_tag_disj_simps =
   h_t_valid_fields_clift[THEN global_ioport_bitmap_heap_update_tag_disj'[OF _ tag_disj_via_td_name]]
-
-lemmas fpu_null_state_heap_update_tag_disj_simps =
-  h_t_valid_fields_clift[THEN fpu_null_state_heap_update_tag_disj'[OF _ tag_disj_via_td_name]]
 
 lemma numDomains_sge_1_simp:
   "1 <s Kernel_C.numDomains \<longleftrightarrow> Suc 0 < Kernel_Config.numDomains"

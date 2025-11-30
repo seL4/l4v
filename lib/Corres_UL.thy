@@ -1566,6 +1566,7 @@ lemma corres_returnTT:
   by simp
 
 lemmas corres_return_eq_same = corres_returnTT[of "(=)"]
+lemmas corres_return_eq_same_unit = corres_returnTT[where 'a=unit and 'b=unit, of dc]
 
 lemmas corres_discard_r =
   corres_symb_exec_r [where P'=P' and Q'="\<lambda>_. P'" for P', simplified]

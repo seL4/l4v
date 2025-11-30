@@ -8,11 +8,14 @@ theory ArchTcb_AC
 imports Tcb_AC
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming
 
 named_theorems Tcb_AC_assms
 
 declare arch_get_sanitise_register_info_inv[Tcb_AC_assms]
+
+crunch arch_post_set_flags
+  for inv[Tcb_AC_assms,wp]: P
 
 crunch arch_post_modify_registers
   for pas_refined[Tcb_AC_assms, wp]: "pas_refined aag"
@@ -99,7 +102,7 @@ global_interpretation Tcb_AC_1?: Tcb_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Tcb_AC_assms)?)
+    by (unfold_locales; (fact Tcb_AC_assms | solves \<open>wp only: Tcb_AC_assms; simp\<close>)?)
 qed
 
 end

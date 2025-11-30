@@ -479,7 +479,7 @@ lemma cap_insert_derived_valid_arch_state[CSpace_AI_assms]:
   "\<lbrace>valid_arch_state and (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
    cap_insert cap src dest
    \<lbrace>\<lambda>rv. valid_arch_state \<rbrace>"
-  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps cap_insert_aobj_at cap_insert_aobj_at)
+  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps cap_insert_tcb cap_insert_aobj_at)
 
 end
 
@@ -510,7 +510,7 @@ lemma is_cap_simps':
 
 lemma cap_insert_simple_valid_arch_state[wp]:
   "cap_insert cap src dest \<lbrace> valid_arch_state\<rbrace>"
-  by (wp valid_arch_state_lift_aobj_at_no_caps cap_insert_aobj_at)+
+  by (wp valid_arch_state_lift_aobj_at_no_caps cap_insert_tcb cap_insert_aobj_at)+
 
 lemma cap_insert_simple_invs:
   "\<lbrace>invs and valid_cap cap and tcb_cap_valid cap dest and

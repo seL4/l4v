@@ -467,6 +467,31 @@ lemma threadGet_tcbFault_submonad_fn:
                         select_f_def modify_def put_def)
   done
 
+lemma is_stateAssert_modify:
+  "\<lbrakk> \<forall>s. \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>_. (=) (replace s)\<rbrace>; \<forall>s. \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>_ _. guard s\<rbrace>;
+     empty_fail f; no_fail guard f \<rbrakk>
+   \<Longrightarrow> f = do stateAssert guard []; modify replace od"
+  apply (rule ext)
+  apply (rename_tac s)
+  apply (clarsimp simp: bind_def empty_fail_def valid_def no_fail_def
+                        stateAssert_def assert_def simpler_modify_def get_def
+                        return_def fail_def image_def split_def)
+  apply (case_tac "f s")
+  apply (intro conjI impI)
+   apply (drule_tac x=s in spec)+
+   apply (subgoal_tac "\<forall>x\<in>fst (f s). fst x = () \<and> snd x = replace s")
+    apply fastforce
+   apply clarsimp
+  apply (drule_tac x=s in spec)+
+  apply fastforce
+  done
+
+lemma threadSet_stateAssert_modify:
+  "threadSet f t = do stateAssert (tcb_at' t) []; modify (thread_replace (\<lambda>_. f) t ()) od"
+  apply (rule is_stateAssert_modify [OF _ _ empty_fail_threadSet no_fail_threadSet])
+  apply (wp threadSet_wp | clarsimp simp: obj_at'_def thread_replace_def projectKOs)+
+  done
+
 lemmas asUser_return = submonad.return [OF submonad_asUser]
 
 lemmas asUser_bind_distrib =
@@ -595,8 +620,7 @@ lemma setMRs_Nil:
 
 lemma device_data_at_ko:
   "typ_at' UserDataDeviceT p s \<Longrightarrow> ko_at' UserDataDevice p s"
-  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def
-                        projectKO_user_data_device projectKO_eq)
+  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
   apply (case_tac ko, auto)
   done
 
@@ -619,7 +643,7 @@ proof -
                 K_bind_def haskell_assertE_def split_def)
   apply (intro empty_fail_cutMon_intros)
   apply (clarsimp simp: empty_fail_drop_cutMon locateSlot_conv returnOk_liftE[symmetric]
-                        isCap_simps)+
+                        gen_isCap_simps)+
   done
 qed
 
@@ -905,7 +929,7 @@ lemma tcb_in_cur_domain'_def':
 lemma updateCapData_Untyped:
   "isUntypedCap a
          \<Longrightarrow> updateCapData b c a = a"
- by (clarsimp simp: isCap_simps updateCapData_def)
+ by (clarsimp simp: gen_isCap_simps updateCapData_def)
 
 lemma ctes_of_valid_strengthen:
   "(invs' s \<and> ctes_of s p = Some cte) \<longrightarrow> valid_cap' (cteCap cte) s"
@@ -1090,7 +1114,7 @@ qed
 lemma valid_cap_cte_at':
   "\<lbrakk>isCNodeCap cap; valid_cap' cap s'\<rbrakk>
    \<Longrightarrow> cte_at' (capCNodePtr cap + 2^cteSizeBits * (addr && mask (capCNodeBits cap))) s'"
-  apply (clarsimp simp: isCap_simps valid_cap'_def)
+  apply (clarsimp simp: gen_isCap_simps valid_cap'_def)
   apply (rule real_cte_at')
   apply (erule spec)
   done
@@ -1121,7 +1145,7 @@ lemma cap_case_EndpointCap_NotificationCap:
       else if isNotificationCap cap
            then g (capNtfnPtr cap)  (capNtfnBadge cap) (capNtfnCanSend cap) (capNtfnCanReceive cap)
            else h)"
-  by (simp add: isCap_simps
+  by (simp add: gen_isCap_simps
          split: capability.split split del: if_split)
 
 lemma asUser_obj_at':

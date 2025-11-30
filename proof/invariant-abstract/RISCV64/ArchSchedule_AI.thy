@@ -31,9 +31,9 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_assms]:
   done
 
 lemma arch_stt_invs [wp,Schedule_AI_assms]:
-  "\<lbrace>invs\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. invs\<rbrace>"
+  "\<lbrace>invs and ex_nonz_cap_to t\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: arch_switch_to_thread_def)
-  apply wp
+  apply wpsimp
   done
 
 lemma arch_stt_tcb [wp,Schedule_AI_assms]:
@@ -96,6 +96,14 @@ lemma arch_stt_scheduler_action [wp, Schedule_AI_assms]:
   "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
   by (wpsimp simp: arch_switch_to_thread_def)
 
+crunch arch_prepare_next_domain
+  for ct[wp, Schedule_AI_assms]: "\<lambda>s. P (cur_thread s)"
+  and activatable[wp, Schedule_AI_assms]: "ct_in_state activatable"
+  and st_tcb_at[wp, Schedule_AI_assms]: "\<lambda>s. P (st_tcb_at Q t s)"
+  and valid_idle[wp, Schedule_AI_assms]: valid_idle
+  and invs[wp, Schedule_AI_assms]: invs
+  (wp: crunch_wps ct_in_state_thread_state_lift)
+
 lemma arch_stit_scheduler_action [wp, Schedule_AI_assms]:
   "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
   by (wpsimp simp: arch_switch_to_idle_thread_def)
@@ -105,7 +113,8 @@ end
 interpretation Schedule_AI?: Schedule_AI
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact Schedule_AI_assms)?)
+  case 1 show ?case
+  by (intro_locales; unfold_locales; (fact Schedule_AI_assms)?)
   qed
 
 end

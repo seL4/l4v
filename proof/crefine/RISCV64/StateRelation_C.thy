@@ -380,7 +380,8 @@ where
      \<and> option_to_ptr (tcbSchedContext atcb) = tcbSchedContext_C ctcb
      \<and> option_to_ptr (tcbYieldTo atcb) = tcbYieldTo_C ctcb
      \<and> option_to_ctcb_ptr (tcbSchedPrev atcb) = tcbSchedPrev_C ctcb
-     \<and> option_to_ctcb_ptr (tcbSchedNext atcb) = tcbSchedNext_C ctcb"
+     \<and> option_to_ctcb_ptr (tcbSchedNext atcb) = tcbSchedNext_C ctcb
+     \<and> tcbFlags atcb = tcbFlags_C ctcb"
 
 definition csched_context_relation :: "Structures_H.sched_context \<Rightarrow> sched_context_C \<Rightarrow> bool" where
   "csched_context_relation asc csc \<equiv>

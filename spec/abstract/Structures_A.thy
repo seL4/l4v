@@ -14,6 +14,7 @@ chapter "Basic Data Structures"
 
 theory Structures_A
 imports
+  ExecSpec.Structs_B
   Arch_Structs_A
   "ExecSpec.MachineExports"
 begin
@@ -444,6 +445,17 @@ lemma is_blocked_thread_state_simps[simp]:
 type_synonym priority = word8
 type_synonym domain = word8
 
+type_synonym tcb_flags = "tcb_flag set"
+
+text \<open>
+  The set of TCB flags may be larger than the set of configured flags (e.g. FpuDisabled is only
+  used when FPU is configured), hence we only convert flags in `tcbFlagMask`. \<close>
+definition word_to_tcb_flags :: "machine_word \<Rightarrow> tcb_flags" where
+  "word_to_tcb_flags w \<equiv> {flag. w && tcbFlagToWord flag && tcbFlagMask \<noteq> 0}"
+
+definition tcb_flags_to_word :: "tcb_flags \<Rightarrow> machine_word" where
+  "tcb_flags_to_word flags \<equiv> THE w. word_to_tcb_flags w = flags \<and> w && ~~ tcbFlagMask = 0"
+
 record tcb =
  tcb_ctable        :: cap
  tcb_vtable        :: cap
@@ -459,6 +471,7 @@ record tcb =
  tcb_yield_to      :: "obj_ref option"
  tcb_priority      :: priority
  tcb_domain        :: domain
+ tcb_flags         :: tcb_flags
  tcb_arch          :: arch_tcb (* arch_tcb must have a field for user context *)
 
 
@@ -490,8 +503,7 @@ definition default_domain :: "domain" where
 definition default_priority :: "priority" where
   "default_priority \<equiv> minBound"
 
-definition
-  default_tcb :: "domain \<Rightarrow> tcb" where
+definition default_tcb :: "domain \<Rightarrow> tcb" where
   "default_tcb d \<equiv> \<lparr>
       tcb_ctable   = NullCap,
       tcb_vtable   = NullCap,
@@ -507,6 +519,7 @@ definition
       tcb_yield_to      = None,
       tcb_priority   = default_priority,
       tcb_domain     = d,
+      tcb_flags      = {},
       tcb_arch       = default_arch_tcb\<rparr>"
 
 record refill =

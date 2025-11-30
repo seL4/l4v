@@ -14,7 +14,7 @@ imports
   LevityCatch
   "AInvs.AInvs"
   "Lib.Heap_List"
-  Move_R
+  TcbFlags_R
 begin
 
 section \<open>Locale Setup for kernel_state Field Update Identities\<close>

@@ -130,7 +130,7 @@ known_config_keys = {
     'CONFIG_EXPORT_PTMR_USER': (bool, None),
     'CONFIG_EXPORT_VTMR_USER': (bool, None),
     'CONFIG_VTIMER_UPDATE_VOFFSET': (bool, None),
-    'CONFIG_HAVE_FPU': (bool, None),
+    'CONFIG_HAVE_FPU': (bool, 'config_HAVE_FPU'),
     'CONFIG_PADDR_USER_DEVICE_TOP': (word, None),
     'CONFIG_ROOT_CNODE_SIZE_BITS': (nat, None),
     'CONFIG_TIMER_TICK_MS': (word, None),

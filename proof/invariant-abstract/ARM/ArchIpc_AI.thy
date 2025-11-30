@@ -258,18 +258,17 @@ lemma copy_mrs_in_user_frame[wp, Ipc_AI_2_assms]:
   "\<lbrace>in_user_frame p\<rbrace> copy_mrs t buf t' buf' n \<lbrace>\<lambda>rv. in_user_frame p\<rbrace>"
   by (simp add: in_user_frame_def) (wp hoare_vcg_ex_lift)
 
-lemma as_user_getRestart_invs[wp]: "\<lbrace>P\<rbrace> as_user t getRestartPC \<lbrace>\<lambda>_. P\<rbrace>"
+lemma as_user_getRestart_inv[wp]:
+  "as_user t getRestartPC \<lbrace>P\<rbrace>"
   by (simp add: getRestartPC_def, rule user_getreg_inv)
 
-lemma make_arch_fault_msg_inv[wp]: "\<lbrace>P\<rbrace> make_arch_fault_msg f t \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (cases f)
-  apply simp
-  apply wp
-  done
+lemma make_arch_fault_msg_inv[wp, Ipc_AI_2_assms]:
+  "make_arch_fault_msg ft t \<lbrace>P\<rbrace>"
+  by (cases ft; wpsimp)
 
-crunch make_fault_msg
-  for invs[wp]: invs
-  and tcb_at[wp]: "tcb_at t"
+lemma make_fault_msg_inv[wp, Ipc_AI_2_assms]:
+  "make_fault_msg ft t \<lbrace>P\<rbrace>"
+  by (cases ft; wpsimp wp: as_user_inv getRestartPC_inv mapM_wp' split_del: if_split)
 
 lemma do_fault_transfer_invs[wp, Ipc_AI_2_assms]:
   "\<lbrace>invs and tcb_at receiver\<rbrace>
@@ -446,8 +445,6 @@ lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_2_assms]:
         | assumption | simp split del: if_split)+
   done
 
-declare make_arch_fault_msg_inv[Ipc_AI_2_assms]
-
 lemma transfer_caps_loop_valid_arch[Ipc_AI_2_assms]:
   "\<And>slots caps ep buffer n mi.
     \<lbrace>valid_arch_state and valid_objs and valid_mdb and K (distinct slots)
@@ -455,7 +452,7 @@ lemma transfer_caps_loop_valid_arch[Ipc_AI_2_assms]:
          and transfer_caps_srcs caps\<rbrace>
       transfer_caps_loop ep buffer n caps slots mi
     \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps transfer_caps_loop_aobj_at)
+  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps transfer_caps_loop_typ_ats transfer_caps_loop_aobj_at)
 
 (* interface lemma name *)
 lemmas make_arch_fault_msg_valid_replies = make_arch_fault_msg_inv
@@ -512,7 +509,7 @@ lemma do_ipc_transfer_valid_arch[Ipc_AI_3_assms]:
   "\<lbrace>valid_arch_state and valid_objs and valid_mdb \<rbrace>
    do_ipc_transfer s ep bg grt r
    \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
-  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps do_ipc_transfer_aobj_at)
+  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps dit_tcb_at do_ipc_transfer_aobj_at)
 
 end
 

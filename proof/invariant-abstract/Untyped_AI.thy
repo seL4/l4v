@@ -3024,6 +3024,9 @@ lemma create_cap_refs_respects_device:
   apply (fastforce simp: is_cap_simps)
   done
 
+crunch create_cap
+  for valid_cur_fpu[wp]: valid_cur_fpu
+
 global_interpretation create_cap: cspace_non_astate_non_mem_op "create_cap tp sz p dev refs"
   by unfold_locales (wpsimp simp: create_cap_def wp: set_cap.cspace_agnostic_obj_at set_cdt_wp)
 

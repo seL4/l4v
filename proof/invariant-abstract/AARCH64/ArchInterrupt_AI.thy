@@ -247,14 +247,6 @@ lemma dmo_ex_nonz_cap_to[wp]:
 lemma conj_imp_strg:
   "P \<Longrightarrow> (A \<longrightarrow> P) \<and> (B \<longrightarrow> P)" by simp
 
-lemma runnable_eq:
-  "runnable st = (st = Running \<or> st = Restart)"
-  by (cases st; simp)
-
-lemma halted_eq:
-  "halted st = (st = Inactive \<or> st = IdleThreadState)"
-  by (cases st; simp)
-
 crunch vgic_update, vgic_update_lr, vcpu_update for ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
   (wp: ex_nonz_cap_to_pres)
 

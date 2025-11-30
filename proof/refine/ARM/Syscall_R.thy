@@ -339,6 +339,12 @@ lemma threadSet_tcbDomain_update_sch_act_wf[wp]:
    apply (auto simp: obj_at'_def)
   done
 
+lemma prepareSetDomain_corres[corres]:
+  "corres dc (pspace_aligned and pspace_distinct) \<top>
+     (arch_prepare_set_domain tptr new_dom) (prepareSetDomain tptr new_dom)"
+  unfolding prepareSetDomain_def arch_prepare_set_domain_def
+  by (corres corres: gcd_corres)
+
 lemma setDomain_corres:
   "corres dc
      (valid_sched and tcb_at tptr and pspace_aligned and pspace_distinct)
@@ -392,6 +398,11 @@ lemma setDomain_corres:
    apply (auto elim: valid_objs'_maxDomain valid_objs'_maxPriority pred_tcb'_weakenE
                simp: valid_sched_def valid_sched_action_def)
   done
+
+crunch prepareSetDomain
+  for invs'[wp]: invs'
+  and sch_act_simple[wp]: sch_act_simple
+  and tcb_at'[wp]: "tcb_at' p"
 
 lemma performInvocation_corres:
   "\<lbrakk> inv_relation i i'; call \<longrightarrow> block \<rbrakk> \<Longrightarrow>
@@ -448,12 +459,13 @@ lemma performInvocation_corres:
        apply (rule corres_guard_imp)
          apply (erule invokeTCB_corres)
         apply ((clarsimp dest!: schact_is_rct_simple)+)[2]
-       \<comment> \<open>domain cap\<close>
+      \<comment> \<open>domain cap\<close>
       apply (clarsimp simp: invoke_domain_def)
       apply (rule corres_guard_imp)
-        apply (rule corres_split[OF setDomain_corres])
-          apply (rule corres_trivial, simp)
-         apply (wp)+
+        apply (rule corres_split[OF prepareSetDomain_corres])
+          apply (rule corres_split[OF setDomain_corres])
+            apply (rule corres_trivial, simp)
+           apply wpsimp+
        apply (fastforce+)[2]
      \<comment> \<open>CNodes\<close>
      apply clarsimp
@@ -485,7 +497,7 @@ lemma sendSignal_tcb_at'[wp]:
 lemmas checkCap_inv_typ_at'
   = checkCap_inv[where P="\<lambda>s. P (typ_at' T p s)" for P T p]
 
-crunch restart, bindNotification, performTransfer
+crunch restart, bindNotification, performTransfer, setFlags, postSetFlags
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
 lemma invokeTCB_typ_at'[wp]:
@@ -493,7 +505,7 @@ lemma invokeTCB_typ_at'[wp]:
      invokeTCB tinv
    \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   apply (cases tinv,
-         simp_all add: invokeTCB_def
+         simp_all add: invokeTCB_def invokeSetFlags_def
                        getThreadBufferSlot_def locateSlot_conv
             split del: if_split)
    apply (simp only: cases_simp if_cancel simp_thms conj_comms pred_conj_def
@@ -960,6 +972,12 @@ lemma setDomain_invs':
     apply (wp hoare_vcg_imp_lift)+
   apply (clarsimp simp:invs'_def valid_pspace'_def valid_state'_def)+
   done
+
+crunch prepareSetDomain
+  for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
+  and ct_in_state'[wp]: "ct_in_state' P"
+  and ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  (wp: ct_in_state_thread_state_lift')
 
 lemma performInv_invs'[wp]:
   "\<lbrace>invs' and sch_act_simple and ct_active' and valid_invocation' i\<rbrace>

@@ -24,6 +24,7 @@ import SEL4.Kernel.VSpace.AARCH64
 import SEL4.Object.VCPU.AARCH64
 import SEL4.Object.Interrupt.AARCH64
 import {-# SOURCE #-} SEL4.Object.TCB
+import SEL4.Object.FPU.AARCH64
 
 import Data.Bits
 import Data.Word(Word16)
@@ -296,14 +297,10 @@ capUntypedSize (SGISignalCap {}) = 0 -- invalid case, use C default
 
 -- Thread deletion requires associated FPU cleanup
 
-fpuThreadDelete :: PPtr TCB -> Kernel ()
-fpuThreadDelete threadPtr =
-    doMachineOp $ fpuThreadDeleteOp (fromPPtr threadPtr)
-
 prepareThreadDelete :: PPtr TCB -> Kernel ()
 prepareThreadDelete thread = do
-    fpuThreadDelete thread
     tcbVCPU <- archThreadGet atcbVCPUPtr thread
     case tcbVCPU of
       Just ptr -> dissociateVCPUTCB ptr thread
       _ -> return ()
+    fpuRelease thread

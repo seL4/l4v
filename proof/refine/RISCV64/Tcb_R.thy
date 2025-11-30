@@ -1392,6 +1392,7 @@ lemma threadSet_invs_trivialT2:
     "\<forall>tcb. tcbDomain tcb \<le> maxDomain \<longrightarrow> tcbDomain (F tcb) \<le> maxDomain"
     "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
     "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
+    "\<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0"
   shows
   "\<lbrace>\<lambda>s. invs' s \<and> (\<forall>tcb. is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits)\<rbrace>
    threadSet F t
@@ -1446,7 +1447,26 @@ lemma checkCap_wp:
    apply (wp x | simp)+
   done
 
+lemma postSetFlags_corres[corres]:
+  "flags = word_to_tcb_flags flags' \<Longrightarrow>
+   corres dc (pspace_aligned and pspace_distinct) \<top>
+     (arch_post_set_flags  t flags) (postSetFlags t flags')"
+  by (clarsimp simp: arch_post_set_flags_def postSetFlags_def)
+
 end
+
+lemma setFlags_corres[corres]:
+  "flags = word_to_tcb_flags flags' \<Longrightarrow>
+   corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
+         (set_flags t flags) (setFlags t flags')"
+  unfolding set_flags_def setFlags_def
+  apply (corres corres: threadset_corres)
+  by (clarsimp simp: tcb_relation_def inQ_def)+
+
+crunch set_flags
+  for pspace_aligned[wp]: pspace_aligned
+  and pspace_distinct[wp]: pspace_distinct
+
 
 consts
   copyregsets_map :: "arch_copy_register_sets \<Rightarrow> Arch.copy_register_sets"
@@ -1482,6 +1502,10 @@ where
     = (x = tcbinvocation.NotificationControl t ntfnptr)"
 | "tcbinv_relation (tcb_invocation.SetTLSBase ref w) x
     = (x = tcbinvocation.SetTLSBase ref w)"
+| "tcbinv_relation (tcb_invocation.SetFlags ref clears sets) x
+    = (\<exists>clears' sets'.
+         clears = word_to_tcb_flags clears' \<and> sets = word_to_tcb_flags sets' \<and>
+         x = tcbinvocation.SetFlags ref clears' sets')"
 
 primrec
   tcb_inv_wf' :: "tcbinvocation \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -1530,6 +1554,17 @@ where
                                           and bound_tcb_at' ((=) None) t) )"
 | "tcb_inv_wf' (tcbinvocation.SetTLSBase ref w)
              = (tcb_at' ref and ex_nonz_cap_to' ref)"
+| "tcb_inv_wf' (tcbinvocation.SetFlags ref clears sets)
+             = (tcb_at' ref and ex_nonz_cap_to' ref)"
+
+lemma invokeSetFlags_helper:
+  "flags = word_to_tcb_flags flags' \<Longrightarrow>
+   corres (=) \<top> (K (flags' && ~~ tcbFlagMask = 0))
+     (return [tcb_flags_to_word (flags - word_to_tcb_flags clears' \<union> word_to_tcb_flags sets')])
+     (return [flags' && ~~ clears' || sets' && tcbFlagMask])"
+  by (fastforce simp: mask_eq_x_eq_0[symmetric] word_to_tcb_flags_simps[symmetric]
+                      word_to_tcb_flags_and_not[symmetric] tcb_flags_to_word_id word_bw_comms
+                      word_ao_dist2 word_bw_assocs[symmetric])
 
 lemma installTCBCap_corres_helper:
   "n \<in> {0,1,3,4} \<Longrightarrow>
@@ -2464,34 +2499,41 @@ lemma invokeTCB_corres:
          (invs' and tcb_inv_wf' ti')
          (invoke_tcb ti) (invokeTCB ti')"
   apply (case_tac ti, simp_all only: tcbinv_relation.simps valid_tcb_invocation_def)
-          apply (rule corres_guard_imp[OF invokeTCB_WriteRegisters_corres], fastforce+)[1]
-         apply (rule corres_guard_imp[OF invokeTCB_ReadRegisters_corres], simp+)[1]
-        apply (rule corres_guard_imp[OF invokeTCB_CopyRegisters_corres], fastforce+)[1]
+           apply (rule corres_guard_imp[OF invokeTCB_WriteRegisters_corres], fastforce+)[1]
+          apply (rule corres_guard_imp[OF invokeTCB_ReadRegisters_corres], simp+)[1]
+         apply (rule corres_guard_imp[OF invokeTCB_CopyRegisters_corres], fastforce+)[1]
+        apply (clarsimp simp del: invoke_tcb.simps)
+        apply (rule corres_guard_imp[OF tc_corres_caps]; clarsimp)
        apply (clarsimp simp del: invoke_tcb.simps)
-       apply (rule corres_guard_imp[OF tc_corres_caps]; clarsimp)
-      apply (clarsimp simp del: invoke_tcb.simps)
-      apply (rename_tac word a b sc_fault_h mcp prio sc_opt sl' sc_fault_h')
-      apply (rule corres_guard_imp[OF tc_corres_sched]; clarsimp)
+       apply (rename_tac word a b sc_fault_h mcp prio sc_opt sl' sc_fault_h')
+       apply (rule corres_guard_imp[OF tc_corres_sched]; clarsimp)
+      apply (clarsimp simp: invokeTCB_def liftM_def[symmetric] o_def dc_def[symmetric])
+      apply (rule corres_guard_imp[OF suspend_corres]; clarsimp)
      apply (clarsimp simp: invokeTCB_def liftM_def[symmetric] o_def dc_def[symmetric])
-     apply (rule corres_guard_imp[OF suspend_corres]; clarsimp)
-    apply (clarsimp simp: invokeTCB_def liftM_def[symmetric] o_def dc_def[symmetric])
-    apply (rule corres_guard_imp[OF restart_corres]; clarsimp)
-   apply (clarsimp simp: invokeTCB_def)
-   apply (rename_tac option)
-   apply (case_tac option; clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric])
-    apply (rule corres_guard_imp[OF unbindNotification_corres]; clarsimp)
-   apply (rule corres_guard_imp[OF bindNotification_corres];
-          clarsimp simp: obj_at'_def obj_at_def is_ntfn_def)
-  apply (clarsimp simp: invokeTCB_def tlsBaseRegister_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split[OF TcbAcc_R.asUser_setRegister_corres])
-      apply (rule corres_split[OF Bits_R.getCurThread_corres])
-        apply (rule corres_split[OF Corres_UL.corres_when])
-            apply simp
-           apply (rule TcbAcc_R.rescheduleRequired_corres)
-          apply (rule corres_trivial, simp)
-         apply (solves \<open>wpsimp wp: hoare_drop_imp\<close>)+
-   apply (fastforce dest: valid_sched_valid_ready_qs)
+     apply (rule corres_guard_imp[OF restart_corres]; clarsimp)
+    apply (clarsimp simp: invokeTCB_def)
+    apply (rename_tac option)
+    apply (case_tac option; clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric])
+     apply (rule corres_guard_imp[OF unbindNotification_corres]; clarsimp)
+    apply (rule corres_guard_imp[OF bindNotification_corres];
+           clarsimp simp: obj_at'_def obj_at_def is_ntfn_def)
+   apply (clarsimp simp: invokeTCB_def tlsBaseRegister_def)
+   apply (rule corres_guard_imp)
+     apply (rule corres_split[OF TcbAcc_R.asUser_setRegister_corres])
+       apply (rule corres_split[OF Bits_R.getCurThread_corres])
+         apply (rule corres_split[OF Corres_UL.corres_when])
+             apply simp
+            apply (rule TcbAcc_R.rescheduleRequired_corres)
+           apply (rule corres_trivial, simp)
+          apply (solves \<open>wpsimp wp: hoare_drop_imp\<close>)+
+    apply (fastforce dest: valid_sched_valid_ready_qs)
+  apply (clarsimp simp: invokeTCB_def invokeSetFlags_def bind_assoc)
+  apply (corres corres: threadGet_corres[where r="\<lambda>flags flags'. flags = word_to_tcb_flags flags'"]
+                        invokeSetFlags_helper
+             term_simp: tcb_relation_def word_to_tcb_flags_simps Diff_Int_distrib Diff_Int
+                    wp: threadGet_wp)
+   apply fastforce
+  apply (fastforce dest: tcb_ko_at_valid_objs_valid_tcb' simp: valid_tcb'_def)
   apply fastforce
   done
 
@@ -2539,19 +2581,45 @@ lemma setTLSBase_invs'[wp]:
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   by (wpsimp simp: invokeTCB_def)
 
+lemma threadSet_flags_invs'[wp]:
+  "\<lbrace>invs' and K (\<forall>flags. flags && ~~ tcbFlagMask = 0 \<longrightarrow> f flags && ~~ tcbFlagMask = 0)\<rbrace>
+   threadSet (tcbFlags_update f) t
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  by (rule hoare_gen_asm) (wpsimp wp: threadSet_invs_trivial)
+
+lemma setFlags_invs'[wp]:
+  "\<lbrace>invs' and K (flags && ~~ tcbFlagMask = 0)\<rbrace>
+   setFlags t flags
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  by (wpsimp simp: setFlags_def wp: threadSet_flags_invs')
+
+crunch postSetFlags
+  for invs'[wp]: invs'
+  (ignore: threadSet)
+
+lemma invokeSetFlags_invs'[wp]:
+  "\<lbrace>invs' and tcb_inv_wf' (tcbinvocation.SetFlags tcb clears' sets')\<rbrace>
+   invokeTCB (tcbinvocation.SetFlags tcb clears' sets')
+   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  unfolding invokeTCB_def invokeSetFlags_def
+  apply (wpsimp wp: threadGet_wp)
+  apply (fastforce dest: tcb_ko_at_valid_objs_valid_tcb'
+                   simp: valid_tcb'_def word_ao_dist word_bw_assocs word_bw_lcs)+
+  done
+
 lemma tcbinv_invs':
   "\<lbrace>invs' and tcb_inv_wf' ti\<rbrace> invokeTCB ti \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (case_tac ti; simp only:)
+           apply (simp add: invokeTCB_def)
+           apply wp
+           apply (clarsimp simp: invs'_def
+                           dest!: global'_no_ex_cap)
           apply (simp add: invokeTCB_def)
-          apply wp
+          apply (wp restart_invs')
           apply (clarsimp simp: invs'_def
                           dest!: global'_no_ex_cap)
-         apply (simp add: invokeTCB_def)
-         apply (wp restart_invs')
-         apply (clarsimp simp: invs'_def
-                         dest!: global'_no_ex_cap)
-        apply (wpsimp wp: tc_caps_invs' tc_sched_invs' writereg_invs' readreg_invs'
-                          copyreg_invs' tcbntfn_invs')+
+         apply (wpsimp wp: tc_caps_invs' tc_sched_invs' writereg_invs' readreg_invs'
+                           copyreg_invs' tcbntfn_invs')+
   done
 
 declare assertDerived_wp [wp]
@@ -3461,6 +3529,13 @@ lemma decodeSetTimeoutEndpoint_corres:
                    dest: cap_rel_valid_fh)
   done
 
+lemma decodeSetFlags_corres:
+  "corres (ser \<oplus> tcbinv_relation) (tcb_at t) (tcb_at' t)
+          (decode_set_flags w (cap.ThreadCap t))
+          (decodeSetFlags w (capability.ThreadCap t))"
+  by (clarsimp simp: decode_set_flags_def decodeSetFlags_def returnOk_def
+               split: list.split)
+
 lemma decodeTCBInvocation_corres:
  "\<lbrakk> c = Structures_A.ThreadCap t; cap_relation c c';
       list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras';
@@ -3489,6 +3564,7 @@ lemma decodeTCBInvocation_corres:
              corres_guard_imp[OF decodeBindNotification_corres]
              corres_guard_imp[OF decodeUnbindNotification_corres]
              corres_guard_imp[OF decodeSetTLSBase_corres]
+             corres_guard_imp[OF decodeSetFlags_corres]
              corres_guard_imp[OF decodeSetTimeoutEndpoint_corres],
          simp_all add: valid_cap_simps valid_cap_simps' invs_def valid_state_def valid_pspace_def
                        valid_sched_def)
@@ -3540,6 +3616,12 @@ lemma decodeSetTLSBase_wf:
   apply (simp add: decodeSetTLSBase_def
              cong: list.case_cong)
   by wpsimp
+
+lemma decodeSetFlags_wf[wp]:
+  "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t\<rbrace>
+   decodeSetFlags w (capability.ThreadCap t)
+   \<lbrace>tcb_inv_wf'\<rbrace>,-"
+  by (wpsimp simp: decodeSetFlags_def)
 
 lemma decodeSetTimeoutEndpoint_wf[wp]:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t and cte_at' slot

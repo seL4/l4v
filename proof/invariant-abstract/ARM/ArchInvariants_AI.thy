@@ -752,6 +752,14 @@ definition
 where
   "hyp_live ko \<equiv> False"
 
+(* arch_tcb_live stub; there is no state in the arch specific part of TCBs on this platform that
+   marks a TCB as live *)
+definition arch_tcb_live :: "arch_tcb \<Rightarrow> bool" where
+  "arch_tcb_live arch_tcb \<equiv> False"
+
+definition valid_cur_fpu :: "'z::state_ext state \<Rightarrow> bool" where
+  "valid_cur_fpu \<equiv> \<top>"
+
 definition
   valid_arch_state :: "'z::state_ext state \<Rightarrow> bool"
 where
@@ -1344,6 +1352,9 @@ lemma valid_vspace_objs_update' [iff]:
   "valid_vspace_objs (f s) = valid_vspace_objs s"
   by (simp add: valid_vspace_objs_def)
 
+lemma valid_cur_fpu_update [iff]:
+  "valid_cur_fpu (f s) = valid_cur_fpu s"
+  by (auto simp: valid_cur_fpu_def)
 
 end
 
@@ -1380,6 +1391,10 @@ lemma valid_arch_state_lift:
   apply (rule hoare_lift_Pf[where f="\<lambda>s. arch_state s"])
    apply (wp arch typs hoare_vcg_conj_lift hoare_vcg_const_Ball_lift)+
   done
+
+lemma valid_cur_fpu_updates[simp]:
+  "\<And>f. valid_cur_fpu (arch_state_update f s) = valid_cur_fpu s"
+  by (auto simp: valid_cur_fpu_def)
 
 lemma aobj_at_default_arch_cap_valid:
   assumes "ty \<noteq> ASIDPoolObj"
@@ -2135,9 +2150,9 @@ lemma vs_lookup_2ConsD:
   apply (fastforce simp: vs_lookup1_def)
   done
 
-lemma global_refs_asid_table_update [iff]:
-  "global_refs (s\<lparr>arch_state := arm_asid_table_update f (arch_state s)\<rparr>) = global_refs s"
-  by (simp add: global_refs_def)
+lemma global_refs_updates[simp]:
+  "\<And>f. global_refs (s\<lparr>arch_state := arm_asid_table_update f (arch_state s)\<rparr>) = global_refs s"
+  by (auto simp: global_refs_def)
 
 lemma pspace_in_kernel_window_arch_update[simp]:
   "arm_kernel_vspace (f (arch_state s)) = arm_kernel_vspace (arch_state s)
@@ -2318,22 +2333,20 @@ lemma valid_tcb_arch_ref_lift:
   "tcb_arch_ref t = tcb_arch_ref t' \<Longrightarrow> valid_arch_tcb (tcb_arch t) = valid_arch_tcb (tcb_arch t')"
   by (simp add: valid_arch_tcb_def tcb_arch_ref_def)
 
-lemma valid_arch_tcb_context_update[simp]:
-  "valid_arch_tcb (tcb_context_update f t) = valid_arch_tcb t"
-  unfolding valid_arch_tcb_def obj_at_def by simp
+lemma valid_arch_tcb_simps[simp]:
+  "\<And>f. valid_arch_tcb (tcb_context_update f t) = valid_arch_tcb t"
+  by (simp add: valid_arch_tcb_def)+
 
-lemma valid_arch_arch_tcb_context_set[simp]:
-  "valid_arch_tcb (arch_tcb_context_set a t) = valid_arch_tcb t"
-  by (simp add: arch_tcb_context_set_def)
-
-lemma valid_arch_arch_tcb_set_registers[simp]:
-  "valid_arch_tcb (arch_tcb_set_registers a t) = valid_arch_tcb t"
-   by (simp add: arch_tcb_set_registers_def)
+lemma valid_arch_tcb_context_simps[simp]:
+  "\<And>a. valid_arch_tcb (arch_tcb_context_set a t) = valid_arch_tcb t"
+  "\<And>a. valid_arch_tcb (arch_tcb_set_registers a t) = valid_arch_tcb t"
+  by (simp add: arch_tcb_context_set_def arch_tcb_set_registers_def)+
 
 
 lemma tcb_arch_ref_simps[simp]:
   "\<And>f. tcb_arch_ref (tcb_ipc_buffer_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_mcpriority_update f tcb) = tcb_arch_ref tcb"
+  "\<And>f. tcb_arch_ref (tcb_flags_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_ctable_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_vtable_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_ipcframe_update f tcb) = tcb_arch_ref tcb"
@@ -2369,6 +2382,15 @@ lemma hyp_live_tcb_simps[simp]:
   "\<And>tcb f. hyp_live (TCB (tcb_domain_update f tcb)) = hyp_live (TCB tcb)"
   "\<And>tcb f. hyp_live (TCB (tcb_priority_update f tcb)) = hyp_live (TCB tcb)"
   by (simp_all add: hyp_live_tcb_def)
+
+lemma arch_tcb_live_simps[simp]:
+  "\<And>f. arch_tcb_live (tcb_context_update f arch_tcb) = arch_tcb_live arch_tcb"
+  by (simp_all add: arch_tcb_live_def)
+
+lemma arch_tcb_live_context_simps[simp]:
+  "\<And>f. arch_tcb_live (arch_tcb_context_set f arch_tcb) = arch_tcb_live arch_tcb"
+  "\<And>f. arch_tcb_live (arch_tcb_set_registers f arch_tcb) = arch_tcb_live arch_tcb"
+  by (simp_all add: arch_tcb_context_set_def arch_tcb_set_registers_def)
 
 lemma valid_arch_tcb_pspaceI:
   "\<lbrakk> valid_arch_tcb t s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_arch_tcb t s'"

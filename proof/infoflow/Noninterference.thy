@@ -628,6 +628,12 @@ locale Noninterference_1 =
   and integrity_asids_update_reference_state:
    "is_subject aag t
     \<Longrightarrow> integrity_asids aag {pasSubject aag} x asid s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
+  and integrity_hyp_update_reference_state:
+   "is_subject aag t
+    \<Longrightarrow> integrity_hyp aag {pasSubject aag} x s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
+  and integrity_fpu_update_reference_state:
+   "is_subject aag t
+    \<Longrightarrow> integrity_fpu aag {pasSubject aag} x s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
   and partitionIntegrity_subjectAffects_aobj:
     "\<lbrakk> partitionIntegrity aag s s'; kheap s x = Some (ArchObj ao); kheap s x \<noteq> kheap s' x;
        silc_inv aag st s; pas_refined aag s; pas_wellformed_noninterference aag \<rbrakk>
@@ -678,14 +684,21 @@ locale Noninterference_1 =
   (* FIXME IF: precludes ARM_HYP *)
   and getActiveIRQ_no_non_kernel_IRQs:
     "getActiveIRQ True = getActiveIRQ False"
+  and valid_cur_hyp_triv:
+    "valid_cur_hyp s"
+  and arch_tcb_get_registers_equality:
+    "arch_tcb_get_registers (tcb_arch tcb) = arch_tcb_get_registers (tcb_arch tcb')
+     \<Longrightarrow> tcb_arch (tcb :: tcb) = tcb_arch (tcb' :: tcb)"
 begin
 
 lemma integrity_update_reference_state:
   "\<lbrakk> is_subject aag t; integrity aag X st s; st = st'\<lparr>kheap := (kheap st')(t \<mapsto> blah)\<rparr> \<rbrakk>
      \<Longrightarrow> integrity (aag :: 'a subject_label PAS) X st' s"
   apply (erule integrity_trans[rotated])
-  apply (clarsimp simp: integrity_def opt_map_def integrity_asids_update_reference_state)
-  done
+  by (auto simp: integrity_def opt_map_def
+           dest: integrity_asids_update_reference_state
+                 integrity_hyp_update_reference_state
+                 integrity_fpu_update_reference_state)
 
 (* lots of ugly hackery because handle_event_integrity wants the reference state to
    be identical to the initial one, but it isn't because we first update the
@@ -708,7 +721,7 @@ lemma kernel_entry_if_integrity:
      apply (fastforce intro: integrity_update_reference_state)
     apply (wp thread_set_integrity_autarch thread_set_pas_refined guarded_pas_domain_lift
               thread_set_invs_trivial thread_set_not_state_valid_sched
-           | simp add: tcb_cap_cases_def schact_is_rct_def arch_tcb_update_aux2)+
+           | simp add: tcb_cap_cases_def schact_is_rct_def arch_tcb_update_aux2 valid_cur_hyp_triv)+
     apply (wp thread_set_tcb_context_update_wp)+
   apply (clarsimp simp: schact_is_rct_def)
   apply (rule conjI)
@@ -874,6 +887,10 @@ proof -
         case (troa_tcb_activate tcb tcb')
         thus ?thesis by blast
       next
+        case (troa_tcb_fpu tcb tcb' new_arch)
+        thus ?thesis
+          by (auto intro!: step tcb.equality arch_tcb_get_registers_equality)
+      next
         case (troa_arch ao ao')
         thus ?thesis
           using assms by (fastforce dest: partitionIntegrity_subjectAffects_aobj)
@@ -971,7 +988,7 @@ lemma partitionIntegrity_subjectAffects_mem:
         apply (erule affects_reply)
         by (force intro: auth_ipc_buffers_mem_Write')
     next
-      case (tro_alt_tcb_receive tcb tcb' ccap' cap' ntfn' new_st ep)
+      case (tro_alt_tcb_receive tcb tcb' ccap' cap' ntfn' new_arch new_st ep)
       thus ?thesis using hyps
         apply (clarsimp elim!: tcb_states_of_state_kheapE send_blocked_on.elims
                                can_receive_ipc.elims)
@@ -2249,7 +2266,7 @@ lemma schedule_choose_new_thread_reads_respects_g:
   apply (subst gets_app_rewrite[where y=domain_time and f="\<lambda>x. x = 0"])+
   apply (wp gets_domain_time_zero_ev set_scheduler_action_reads_respects_g
             choose_thread_reads_respects_g ev_pre_cont[where f=next_domain]
-            hoare_pre_cont[where f=next_domain] when_ev)
+            arch_prepare_next_domain_ev hoare_pre_cont[where f=next_domain] when_ev)
   apply (clarsimp simp: valid_sched_def word_neq_0_conv)
   done
 

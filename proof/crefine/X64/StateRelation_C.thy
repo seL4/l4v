@@ -174,12 +174,16 @@ where
            \<and> ptr_span (ioport_table_Ptr (symbol_table ''x86KSAllocatedIOPorts'')) \<subseteq> kernel_data_refs"
 
 definition
-  fpu_null_state_relation :: "heap_raw_state \<Rightarrow> bool"
+  fpu_null_state_relation :: "user_fpu_state_C \<Rightarrow> bool"
 where
-  "fpu_null_state_relation hrs \<equiv>
-    clift hrs (Ptr (symbol_table ''x86KSnullFpuState''))
-      = Some (user_fpu_state_C (ARRAY i. FPUNullState (finite_index i))) \<and>
-    ptr_span (fpu_state_Ptr (symbol_table ''x86KSnullFpuState'')) \<subseteq> kernel_data_refs"
+  "fpu_null_state_relation nullFpuState \<equiv>
+    nullFpuState = user_fpu_state_C (ARRAY i. FPUNullState (finite_index i))"
+
+definition cur_fpu_relation :: "machine_word option \<Rightarrow> tcb_C ptr \<Rightarrow> bool" where
+  "cur_fpu_relation akscurfpu cfpu \<equiv>
+     case akscurfpu of
+       Some acurfpu \<Rightarrow> cfpu = tcb_ptr_to_ctcb_ptr acurfpu \<and> cfpu \<noteq> NULL
+     | None \<Rightarrow> cfpu = NULL"
 
 definition
   carch_state_relation :: "Arch.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
@@ -189,11 +193,12 @@ where
     array_relation ((=) \<circ> option_to_ptr) (2^asid_high_bits - 1) (x64KSASIDTable astate) (x86KSASIDTable_' cstate) \<and>
     ccr3_relation (x64KSCurrentUserCR3 astate) (x64KSCurrentUserCR3_' cstate) \<and>
     global_ioport_bitmap_relation (clift (t_hrs_' cstate)) (x64KSAllocatedIOPorts astate) \<and>
-    fpu_null_state_relation (t_hrs_' cstate) \<and>
+    fpu_null_state_relation (x86KSnullFpuState_' cstate) \<and>
     x64KSNumIOAPICs astate = UCAST (32 \<rightarrow> 64) (num_ioapics_' cstate) \<and>
     array_relation (=) (of_nat Kernel_Config.maxNumIOAPIC) (x64KSIOAPICnIRQs astate) (ioapic_nirqs_' cstate) \<and>
     array_relation x64_irq_state_relation maxIRQ (x64KSIRQState astate) (x86KSIRQState_' cstate) \<and>
-    carch_globals astate"
+    carch_globals astate \<and>
+    cur_fpu_relation (x64KSCurFPUOwner astate) (ksCurFPUOwner_' cstate)"
 
 end
 
@@ -206,6 +211,7 @@ where
   irq_masks s = irq_masks (phantom_machine_state_' s') \<and>
   irq_state s = irq_state (phantom_machine_state_' s') \<and>
   device_state s = device_state (phantom_machine_state_' s') \<and>
+  fpu_enabled s = fpu_enabled (phantom_machine_state_' s') \<and>
   \<comment> \<open>exclusive_state s = exclusive_state (phantom_machine_state_' s') \<and>\<close> \<comment> \<open>FIXME x64:this is needed for infoflow so we'll leave it commented\<close>
   machine_state_rest s = machine_state_rest (phantom_machine_state_' s')"
 
@@ -330,7 +336,7 @@ definition
   ccontext_relation :: "user_context \<Rightarrow> user_context_C \<Rightarrow> bool"
 where
   "ccontext_relation uc_H uc_C \<equiv> cregs_relation (user_regs uc_H) (registers_C uc_C) \<and>
-                                  fpu_relation (fpu_state uc_H) (fpuState_C uc_C)"
+                                  fpu_relation (user_fpu_state uc_H) (fpuState_C uc_C)"
 
 primrec
   cthread_state_relation_lifted :: "Structures_H.thread_state \<Rightarrow>
@@ -441,7 +447,8 @@ where
                   (lookup_fault_lift (tcbLookupFailure_C ctcb))
      \<and> option_to_ptr (tcbBoundNotification atcb) = tcbBoundNotification_C ctcb
      \<and> option_to_ctcb_ptr (tcbSchedPrev atcb) = tcbSchedPrev_C ctcb
-     \<and> option_to_ctcb_ptr (tcbSchedNext atcb) = tcbSchedNext_C ctcb"
+     \<and> option_to_ctcb_ptr (tcbSchedNext atcb) = tcbSchedNext_C ctcb
+     \<and> tcbFlags atcb = tcbFlags_C ctcb"
 
 abbreviation
   "ep_queue_relation' \<equiv> tcb_queue_relation' tcbEPNext_C tcbEPPrev_C"

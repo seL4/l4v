@@ -1167,7 +1167,7 @@ lemma not_Final_removeable:
   "\<not> isFinal cap sl (cteCaps_of s)
     \<Longrightarrow> removeable' sl s cap"
   apply (erule not_FinalE)
-   apply (clarsimp simp: removeable'_def isCap_simps)
+   apply (clarsimp simp: removeable'_def gen_isCap_simps)
   apply (clarsimp simp: cteCaps_of_def sameObjectAs_def2 removeable'_def
                         cte_wp_at_ctes_of)
   apply fastforce
@@ -1386,8 +1386,6 @@ lemma emptySlot_valid_irq_handlers'[wp]:
   apply auto
   done
 
-declare setIRQState_irq_states' [wp]
-
 context begin interpretation Arch .
 crunch emptySlot
   for irq_states'[wp]: valid_irq_states'
@@ -1396,8 +1394,6 @@ crunch emptySlot
   for no_0_obj'[wp]: no_0_obj'
  (wp: crunch_wps)
 
-end
-
 lemma deletedIRQHandler_irqs_masked'[wp]:
   "\<lbrace>irqs_masked'\<rbrace> deletedIRQHandler irq \<lbrace>\<lambda>_. irqs_masked'\<rbrace>"
   apply (simp add: deletedIRQHandler_def setIRQState_def getInterruptState_def setInterruptState_def)
@@ -1405,9 +1401,7 @@ lemma deletedIRQHandler_irqs_masked'[wp]:
   apply (simp add: irqs_masked'_def)
   done
 
-context begin interpretation Arch . (*FIXME: arch-split*)
-
-lemma setObject_cte_irq_masked'[wp]:
+lemma (in Arch) setObject_cte_irq_masked'[wp]: (*FIXME: arch-split RT*)
   "setObject p (v::cte) \<lbrace>irqs_masked'\<rbrace>"
   unfolding setObject_def
   by (wpsimp simp: irqs_masked'_def Ball_def wp: hoare_vcg_all_lift hoare_vcg_imp_lift' updateObject_cte_inv)
@@ -1987,7 +1981,7 @@ lemma (in vmdb) isFinal_no_subtree:
    apply (erule_tac x="mdbNext n" in allE)
    apply simp
    apply (clarsimp simp: isMDBParentOf_CTE final_matters_sameRegion_sameObject)
-   apply (clarsimp simp: isCap_simps sameObjectAs_def3)
+   apply (clarsimp simp: gen_isCap_simps sameObjectAs_def3)
   apply clarsimp
   done
 
@@ -3583,12 +3577,12 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
                          schedContextUnbindAllTCBs_obj_at'_tcb_None
                    simp: isZombie_Null isThreadCap_threadCapRefs_tcbptr)+
     apply (rule hoare_strengthen_post [OF arch_finaliseCap_removeable[where slot=slot]],
-           clarsimp simp: isCap_simps)
+           clarsimp simp: gen_isCap_simps)
    apply (wpsimp wp: deletingIRQHandler_removeable'
                      deletingIRQHandler_final[where slot=slot])+
   apply (frule cte_wp_at_valid_objs_valid_cap'; clarsimp)
   apply (case_tac "cteCap cte",
-         simp_all add: isCap_simps capRange_def cap_has_cleanup'_def
+         simp_all add: gen_isCap_simps capRange_def cap_has_cleanup'_def
                        final_matters'_def gen_objBits_simps
                        not_Final_removeable finaliseCap_def,
          simp_all add: removeable'_def)
@@ -3940,7 +3934,7 @@ lemma finaliseCap_zombie_cap[wp]:
   apply (simp add: finaliseCap_def Let_def
              cong: if_cong split del: if_split)
   apply (wpsimp wp: suspend_cte_wp_at' deletingIRQHandler_cte_preserved
-              simp: finaliseCap_def isCap_simps)
+              simp: finaliseCap_def gen_isCap_simps)
   done
 
 lemma finaliseCap_zombie_cap':
@@ -3958,17 +3952,14 @@ lemma finaliseCap_cte_cap_wp_to[wp]:
   apply (rule hoare_pre, rule hoare_use_eq_irq_node' [OF finaliseCap_irq_node'])
    apply (simp add: finaliseCap_def Let_def
               cong: if_cong split del: if_split)
-   apply (wpsimp wp: suspend_cte_wp_at' deletingIRQHandler_cte_preserved
-                     hoare_vcg_ex_lift
-               simp: finaliseCap_def isCap_simps
+   apply (wpsimp wp: suspend_cte_wp_at' deletingIRQHandler_cte_preserved hoare_vcg_ex_lift
+               simp: finaliseCap_def gen_isCap_simps
           | rule conjI)+
   apply fastforce
   done
 
 global_interpretation unbindNotification: typ_at_all_props' "unbindNotification tcb"
   by typ_at_props'
-
-context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma finaliseCap_valid_cap[wp]:
   "\<lbrace>valid_cap' cap\<rbrace> finaliseCap cap final flag \<lbrace>\<lambda>rv. valid_cap' (fst rv)\<rbrace>"
@@ -3977,7 +3968,9 @@ lemma finaliseCap_valid_cap[wp]:
                    RISCV64_H.finaliseCap_def
              cong: if_cong split del: if_split)
   apply wpsimp
-  by (auto simp: valid_cap'_def isCap_simps capAligned_def gen_objBits_simps shiftL_nat)
+  by (auto simp: valid_cap'_def gen_isCap_simps capAligned_def gen_objBits_simps shiftL_nat)
+
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch "Arch.finaliseCap"
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
@@ -4022,7 +4015,7 @@ lemma (in delete_one) deletingIRQHandler_corres:
           apply (clarsimp simp: cte_wp_at_caps_of_state state_relation_def)
           apply (drule caps_of_state_cteD)
           apply (drule(1) pspace_relation_cte_wp_at, clarsimp+)
-          apply (auto simp: cte_wp_at_ctes_of is_cap_simps isCap_simps)[1]
+          apply (auto simp: cte_wp_at_ctes_of is_cap_simps gen_isCap_simps)[1]
          apply simp
          apply (rule corres_guard_imp, rule delete_one_corres[unfolded dc_def])
           apply (auto simp: cte_wp_at_caps_of_state is_cap_simps can_fast_finalise_def)[1]
@@ -4634,7 +4627,7 @@ lemma finaliseCap_corres:
        apply (simp only: K_bind_def)
        apply (rule corres_returnTT)
        apply wpsimp+
-  apply (cases cap, simp_all add: finaliseCap_def isCap_simps
+  apply (cases cap, simp_all add: finaliseCap_def gen_isCap_simps
                                   corres_liftM2_simp[unfolded liftM_def]
                                   o_def dc_def[symmetric] when_def
                                   can_fast_finalise_def

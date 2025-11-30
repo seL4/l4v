@@ -87,6 +87,11 @@ lemma isArchCap_tag_def2:
   "isArchCap_tag n \<equiv> n && 1 = 1"
   by (simp add: isArchCap_tag_def word_mod_2p_is_mask[where n=1, simplified] mask_def)
 
+end
+
+(* FIXME arch-split: need to exit raw Arch interpretation context to override lemmas in Arch *)
+context Arch begin arch_global_naming
+
 (* On AARCH64 we cannot have isArchPageTableCap as at the abstract level there is only one cap,
    while in C there are separate page table and vspace caps. *)
 
@@ -98,6 +103,10 @@ definition isArchVSpacePTCap :: "capability \<Rightarrow> bool" where
 
 (* FIXME AARCH64 overrides version in Bits_R *)
 lemmas isCap_simps = isCap_simps isArchNormalPTCap_def isArchVSpacePTCap_def
+
+end
+
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma cap_get_tag_isCap0:
   assumes cr: "ccap_relation cap cap'"
@@ -429,12 +438,12 @@ lemma cmdbnode_relation_mdb_node_to_H [simp]:
 definition tcb_no_ctes_proj ::
   "tcb \<Rightarrow> Structures_H.thread_state \<times> machine_word \<times> machine_word \<times> arch_tcb \<times> bool \<times> word8
           \<times> word8 \<times> word8 \<times> nat \<times> fault option \<times> machine_word option
-          \<times> machine_word option \<times> machine_word option"
+          \<times> machine_word option \<times> machine_word option \<times> machine_word"
   where
   "tcb_no_ctes_proj t \<equiv>
      (tcbState t, tcbFaultHandler t, tcbIPCBuffer t, tcbArch t, tcbQueued t,
       tcbMCP t, tcbPriority t, tcbDomain t, tcbTimeSlice t, tcbFault t, tcbBoundNotification t,
-      tcbSchedNext t, tcbSchedPrev t)"
+      tcbSchedNext t, tcbSchedPrev t, tcbFlags t)"
 
 lemma tcb_cte_cases_proj_eq [simp]:
   "tcb_cte_cases p = Some (getF, setF) \<Longrightarrow>
@@ -1171,7 +1180,8 @@ lemma cstate_relation_only_t_hrs:
   ksDomainTime_' s = ksDomainTime_' t;
   gic_vcpu_num_list_regs_' s = gic_vcpu_num_list_regs_' t;
   armHSCurVCPU_' s = armHSCurVCPU_' t;
-  armHSVCPUActive_' s = armHSVCPUActive_' t
+  armHSVCPUActive_' s = armHSVCPUActive_' t;
+  ksCurFPUOwner_' s = ksCurFPUOwner_' t
   \<rbrakk>
   \<Longrightarrow> cstate_relation a s = cstate_relation a t"
   unfolding cstate_relation_def
@@ -1199,6 +1209,7 @@ lemma rf_sr_upd:
     "gic_vcpu_num_list_regs_' (globals x) = gic_vcpu_num_list_regs_' (globals y)"
     "armHSCurVCPU_' (globals x) = armHSCurVCPU_' (globals y)"
     "armHSVCPUActive_' (globals x) = armHSVCPUActive_' (globals y)"
+    "ksCurFPUOwner_' (globals x) = ksCurFPUOwner_' (globals y)"
   shows "((a, x) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
   unfolding rf_sr_def using assms
   by simp (rule cstate_relation_only_t_hrs, auto)
@@ -1223,7 +1234,7 @@ lemma rf_sr_upd_safe[simp]:
     "gic_vcpu_num_list_regs_' (globals (g y)) = gic_vcpu_num_list_regs_' (globals y)"
     "armHSCurVCPU_' (globals (g y)) = armHSCurVCPU_' (globals y)"
     "armHSVCPUActive_' (globals (g y)) = armHSVCPUActive_' (globals y)"
-    "phantom_machine_state_' (globals (g y)) = phantom_machine_state_' (globals y)"
+    "ksCurFPUOwner_' (globals (g y)) = ksCurFPUOwner_' (globals y)"
   and    gs: "ghost'state_' (globals (g y)) = ghost'state_' (globals y)"
   and     wu:  "(ksWorkUnitsCompleted_' (globals (g y))) = (ksWorkUnitsCompleted_' (globals y))"
   shows "((a, (g y)) \<in> rf_sr) = ((a, y) \<in> rf_sr)"

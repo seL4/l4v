@@ -8,11 +8,11 @@ theory ArchIpc_AC
 imports Ipc_AC
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming
 
 named_theorems Ipc_AC_assms
 
-declare make_fault_message_inv[Ipc_AC_assms]
+declare make_fault_msg_inv[Ipc_AC_assms]
 declare handle_arch_fault_reply_typ_at[Ipc_AC_assms]
 
 crunch cap_insert_ext
@@ -57,12 +57,30 @@ lemma lookup_ipc_buffer_has_auth[Ipc_AC_assms, wp]:
   apply simp
   done
 
-lemma tcb_context_no_change[Ipc_AC_assms]:
-  "\<exists>ctxt. tcb = tcb\<lparr>tcb_arch := arch_tcb_context_set ctxt (tcb_arch tcb)\<rparr>"
-  apply (cases tcb, clarsimp)
-  apply (case_tac tcb_arch)
-  apply (auto simp: arch_tcb_context_set_def)
-  done
+lemma arch_tcb_get_set_registers[Ipc_AC_assms,simp]:
+  "arch_tcb_get_registers (arch_tcb_set_registers regs atcb) = regs"
+  by (clarsimp simp: arch_tcb_get_registers_def arch_tcb_set_registers_def)
+
+lemma arch_tcb_set_get_registers[Ipc_AC_assms,simp]:
+  "arch_tcb_set_registers (arch_tcb_get_registers atcb) atcb = atcb"
+  by (simp add: arch_tcb_set_registers_def arch_tcb_get_registers_def)
+
+lemma arch_tcb_set_set_registers[Ipc_AC_assms,simp]:
+  "arch_tcb_set_registers regs (arch_tcb_set_registers regs' atcb) =
+   arch_tcb_set_registers regs atcb"
+  by (auto simp: arch_tcb_set_registers_def)
+
+lemma arch_tcb_context_set_set_registers[Ipc_AC_assms,simp]:
+  "arch_tcb_context_set (arch_tcb_context_get (arch_tcb_set_registers regs atcb)) atcb =
+   arch_tcb_set_registers regs atcb"
+  by (auto simp: arch_tcb_context_set_def arch_tcb_context_get_def arch_tcb_set_registers_def)
+
+lemma arch_tcb_setRegister[Ipc_AC_assms]:
+  "((), uc) \<in> fst (setRegister r v (arch_tcb_context_get atcb))
+   \<Longrightarrow> uc = arch_tcb_context_get (arch_tcb_set_registers ((arch_tcb_get_registers atcb)(r := v)) atcb)"
+  by (simp add: arch_tcb_context_get_def arch_tcb_context_set_def
+                arch_tcb_get_registers_def arch_tcb_set_registers_def
+                setRegister_def modify_def get_def put_def bind_def)
 
 end
 
@@ -75,7 +93,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming
 
 lemma store_word_offs_respects_in_ipc[Ipc_AC_assms]:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and
@@ -92,9 +110,9 @@ lemma store_word_offs_respects_in_ipc[Ipc_AC_assms]:
      apply assumption+
    apply clarsimp
    apply (erule integrity_trans)
-   apply (clarsimp simp: ptr_range_off_off_mems integrity_def is_aligned_mask[symmetric])
+   apply (clarsimp simp: integrity_def integrity_asids_def)
    apply (intro conjI impI)
-     apply (subst (asm) ptr_range_off_off_mems; clarsimp simp: word_size_def)+
+      apply (subst (asm) ptr_range_off_off_mems; clarsimp simp: word_size_def)+
   apply simp
   done
 
@@ -127,8 +145,7 @@ lemma set_mrs_respects_in_ipc[Ipc_AC_assms]:
    apply simp
    apply wp+
   apply (clarsimp simp: arch_tcb_set_registers_def)
-  by (rule update_tcb_context_in_ipc [unfolded fun_upd_def]
-      ; fastforce simp: arch_tcb_context_set_def)
+  by (rule update_tcb_context_in_ipc [unfolded fun_upd_def]; fastforce simp: arch_tcb_set_registers_def)
 
 lemma lookup_ipc_buffer_ptr_range_in_ipc[Ipc_AC_assms]:
   "\<lbrace>valid_objs and integrity_tcb_in_ipc aag X thread epptr tst st\<rbrace>
@@ -187,6 +204,11 @@ lemma auth_ipc_buffers_machine_state_update[Ipc_AC_assms, simp]:
   "auth_ipc_buffers (machine_state_update f s) = auth_ipc_buffers s"
   by (clarsimp simp: auth_ipc_buffers_def get_tcb_def)
 
+lemma integrity_asids_kh_updI[Ipc_AC_assms]:
+  "integrity_asids_2 aag subjects x asid as as ao ao'
+   \<Longrightarrow> integrity_asids_2 aag subjects x asid as as (ao(p := ako)) (ao'(p := ako))"
+  by (clarsimp simp: integrity_asids_def opt_map_def)
+
 declare handle_arch_fault_reply_inv[Ipc_AC_assms]
 declare arch_get_sanitise_register_info_inv[Ipc_AC_assms]
 
@@ -203,7 +225,7 @@ lemma list_integ_lift_in_ipc[Ipc_AC_assms]:
   shows "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st and Q\<rbrace>
          f
          \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
-  apply (unfold integrity_tcb_in_ipc_def integrity_def[abs_def])
+  apply (unfold integrity_tcb_in_ipc_def integrity_def[abs_def] integrity_asids_def)
   apply (simp del:split_paired_All)
   apply (rule hoare_pre)
    apply (simp only: integrity_cdt_list_as_list_integ)
@@ -226,7 +248,7 @@ global_interpretation Ipc_AC_2?: Ipc_AC_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Ipc_AC_assms)?)
+    by (unfold_locales; (fact Ipc_AC_assms | solves \<open>rule integrity_arch_triv\<close>)?)
 qed
 
 end
