@@ -159,14 +159,6 @@ lemma other_aobj_relation_aobj:
   unfolding other_aobj_relation_def is_ArchObj_def
   by (clarsimp split: Structures_A.kernel_object.splits)
 
-(* interface lemma, can't be used in locale assumptions due to free type variable *)
-lemma valid_arch_obj'_valid[wp]:
-  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_const_Ball_lift typ_at_lifts[OF P]
-  shows "\<lbrace>valid_arch_obj' ako\<rbrace> f \<lbrace>\<lambda>rv. valid_arch_obj' ako\<rbrace>"
-  unfolding valid_arch_obj'_def
-  by (case_tac ako; wpsimp)
-
 lemma msgLabelBits_msg_label_bits[StateRelation_R_assms]:
   "msgLabelBits = msg_label_bits"
   by (simp add: msgLabelBits_def)

@@ -3079,17 +3079,6 @@ proof (intro conjI impI)
      apply (erule valid_cap[unfolded foldr_upd_app_if[folded data_map_insert_def]])
      apply (erule(2) cte_wp_at_cteI'[unfolded cte_level_bits_def])
      apply simp
-    apply (rename_tac arch_kernel_object)
-    apply (case_tac arch_kernel_object; simp)
-      apply (rename_tac asidpool)
-      apply (case_tac asidpool, clarsimp simp: page_directory_at'_def
-                                               typ_at_to_obj_at_arches
-                                               obj_at_disj')
-     apply (rename_tac pte)
-     apply (case_tac pte; simp add: valid_mapping'_def)
-    apply (rename_tac pde)
-    apply (case_tac pde; simp add: valid_mapping'_def page_table_at'_def
-                                   typ_at_to_obj_at_arches obj_at_disj')
     done
   have not_0: "0 \<notin> set (new_cap_addrs (2 ^ gbits * n) ptr val)"
     using p_0
@@ -3168,7 +3157,7 @@ lemma createObjects_valid_pspace_untyped':
   done
 
 lemma getObject_valid_pde'[wp]:
-  "\<lbrace>valid_objs'\<rbrace> getObject x \<lbrace>valid_pde'\<rbrace>"
+  "\<lbrace>valid_objs'\<rbrace> getObject x \<lbrace>\<lambda>rv _. valid_pde' rv\<rbrace>"
   apply (rule hoare_chain)
     apply (rule hoare_vcg_conj_lift)
      apply (rule getObject_ko_at, simp)
@@ -3176,7 +3165,7 @@ lemma getObject_valid_pde'[wp]:
     apply (rule getObject_inv[where P=valid_objs'])
     apply (simp add: loadObject_default_inv)
    apply simp
-  apply (clarsimp simp: projectKOs valid_obj'_def dest!: obj_at_valid_objs')
+  apply (clarsimp simp: valid_obj'_def dest!: obj_at_valid_objs')
   done
 
 crunch copyGlobalMappings
@@ -3795,7 +3784,7 @@ lemma copyGlobalMappings_ko_wp_at:
      apply (simp add: objBits_simps archObjSize_def)
     apply (simp add: pdeBits_def)
    apply (simp cong: if_cong split del: if_split)
-   apply (wp getObject_inv loadObject_default_inv | simp split del: if_split)+
+   apply (wp (trace) getObject_inv loadObject_default_inv | simp split del: if_split)+
    apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
   apply (wp | simp)+
   done

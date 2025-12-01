@@ -965,7 +965,8 @@ definition
      PageTableMap cap slot pde pdeSlot vspace \<Rightarrow>
      cte_wp_at' (is_arch_update' cap) slot and
      valid_cap' cap and
-     valid_pde' pde and K (case cap of ArchObjectCap (PageTableCap _ (Some (asid, vs))) \<Rightarrow> True | _ \<Rightarrow> False)
+     K (valid_pde' pde) and
+     K (case cap of ArchObjectCap (PageTableCap _ (Some (asid, vs))) \<Rightarrow> True | _ \<Rightarrow> False)
    | PageTableUnmap cap slot \<Rightarrow> cte_wp_at' (is_arch_update' (ArchObjectCap cap)) slot
                                  and valid_cap' (ArchObjectCap cap)
                                  and K (isPageTableCap cap)"
@@ -1150,7 +1151,8 @@ definition
      PageDirectoryMap cap slot pdpte pdptSlot vspace \<Rightarrow>
      cte_wp_at' (is_arch_update' cap) slot and
      valid_cap' cap and
-     valid_pdpte' pdpte and K (case cap of ArchObjectCap (PageDirectoryCap _ (Some (asid, vs))) \<Rightarrow> True | _ \<Rightarrow> False)
+     K (valid_pdpte' pdpte) and
+     K (case cap of ArchObjectCap (PageDirectoryCap _ (Some (asid, vs))) \<Rightarrow> True | _ \<Rightarrow> False)
    | PageDirectoryUnmap cap slot \<Rightarrow> cte_wp_at' (is_arch_update' (ArchObjectCap cap)) slot
                                  and valid_cap' (ArchObjectCap cap)
                                  and K (isPageDirectoryCap cap)"
@@ -1279,7 +1281,8 @@ definition
      PDPTMap cap slot pml4e pml4Slot vspace \<Rightarrow>
      cte_wp_at' (is_arch_update' cap) slot and
      valid_cap' cap and
-     valid_pml4e' pml4e and K (case cap of ArchObjectCap (PDPointerTableCap _ (Some (asid, vs))) \<Rightarrow> True | _ \<Rightarrow> False)
+     K (valid_pml4e' pml4e) and
+     K (case cap of ArchObjectCap (PDPointerTableCap _ (Some (asid, vs))) \<Rightarrow> True | _ \<Rightarrow> False)
    | PDPTUnmap cap slot \<Rightarrow> cte_wp_at' (is_arch_update' (ArchObjectCap cap)) slot
                                  and valid_cap' (ArchObjectCap cap)
                                  and K (isPDPointerTableCap cap)"
@@ -1993,7 +1996,7 @@ lemma storePML4E_tcbs_of'[wp]:
   by setObject_easy_cases
 
 lemma storePDE_invs[wp]:
-  "\<lbrace>invs' and valid_pde' pde\<rbrace>
+  "\<lbrace>invs' and K (valid_pde' pde)\<rbrace>
       storePDE p pde
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
@@ -2008,7 +2011,7 @@ lemma storePDE_invs[wp]:
   done
 
 lemma storePDPTE_invs[wp]:
-  "\<lbrace>invs' and valid_pdpte' pde\<rbrace>
+  "\<lbrace>invs' and K (valid_pdpte' pde)\<rbrace>
       storePDPTE p pde
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
@@ -2023,7 +2026,7 @@ lemma storePDPTE_invs[wp]:
   done
 
 lemma storePML4E_invs[wp]:
-  "\<lbrace>invs' and valid_pml4e' pde\<rbrace>
+  "\<lbrace>invs' and K (valid_pml4e' pde)\<rbrace>
       storePML4E p pde
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
@@ -2107,7 +2110,7 @@ lemma storePTE_irq_states' [wp]:
   done
 
 lemma storePTE_valid_objs [wp]:
-  "\<lbrace>valid_objs' and valid_pte' pte\<rbrace> storePTE p pte \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  "\<lbrace>valid_objs' and K (valid_pte' pte)\<rbrace> storePTE p pte \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (simp add: storePTE_def doMachineOp_def split_def)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps|wpc|simp)+
@@ -2176,7 +2179,7 @@ lemma storePTE_ct_idle_or_in_cur_domain'[wp]:
   by (wp ct_idle_or_in_cur_domain'_lift hoare_vcg_disj_lift)
 
 lemma storePTE_invs [wp]:
-  "\<lbrace>invs' and valid_pte' pte\<rbrace> storePTE p pte \<lbrace>\<lambda>_. invs'\<rbrace>"
+  "\<lbrace>invs' and K (valid_pte' pte)\<rbrace> storePTE p pte \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (rule hoare_pre)
    apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
@@ -2188,7 +2191,7 @@ lemma storePTE_invs [wp]:
   done
 
 lemma setASIDPool_valid_objs [wp]:
-  "\<lbrace>valid_objs' and valid_asid_pool' ap\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  "\<lbrace>valid_objs' and K (valid_asid_pool' ap)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (rule hoare_pre)
    apply (rule setObject_valid_objs')
    prefer 2
@@ -2339,7 +2342,7 @@ lemma setObject_asidpool_tcbs_of'[wp]:
   by setObject_easy_cases
 
 lemma setASIDPool_invs [wp]:
-  "\<lbrace>invs' and valid_asid_pool' ap\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. invs'\<rbrace>"
+  "\<lbrace>invs' and K (valid_asid_pool' ap)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (rule hoare_pre)
    apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
@@ -2381,7 +2384,7 @@ lemma perform_pti_invs [wp]:
                          is_arch_update'_def isCap_simps valid_cap'_def
                          capAligned_def)
   apply (rule hoare_pre)
-   apply (wpsimp wp: arch_update_updateCap_invs valid_pde_lift' hoare_vcg_all_lift hoare_vcg_ex_lift
+   apply (wpsimp wp: arch_update_updateCap_invs hoare_vcg_all_lift hoare_vcg_ex_lift
              | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: cte_wp_at_ctes_of valid_pti'_def)
   done
@@ -2400,7 +2403,7 @@ lemma perform_pdi_invs [wp]:
                          is_arch_update'_def isCap_simps valid_cap'_def
                          capAligned_def)
   apply (rule hoare_pre)
-   apply (wpsimp wp: arch_update_updateCap_invs valid_pdpte_lift' hoare_vcg_all_lift hoare_vcg_ex_lift
+   apply (wpsimp wp: arch_update_updateCap_invs hoare_vcg_all_lift hoare_vcg_ex_lift
              | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: cte_wp_at_ctes_of valid_pdi'_def)
   done
@@ -2442,8 +2445,6 @@ lemma unmapPage_invs' [wp]:
 
 crunch pteCheckIfMapped, pdeCheckIfMapped
   for invs'[wp]: "invs'"
-  and valid_pte'[wp]: "valid_pte' pte"
-  and valid_pde'[wp]: "valid_pde' pde"
 
 lemma perform_page_invs [wp]:
   notes no_irq[wp]

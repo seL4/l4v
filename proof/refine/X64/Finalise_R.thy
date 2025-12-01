@@ -2492,11 +2492,6 @@ lemma deleteASIDPool_invs[wp]:
               | simp)+
   done
 
-lemma hwASIDInvalidate_valid_ap' [wp]:
-  "\<lbrace>valid_asid_pool' p\<rbrace> hwASIDInvalidate asid vs \<lbrace>\<lambda>r. valid_asid_pool' p\<rbrace>"
-  apply (simp add: hwASIDInvalidate_def)
-  by wp
-
 lemma deleteASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> deleteASID asid pd \<lbrace>\<lambda>rv. invs'\<rbrace>"
   supply inj_ASIDPool[simp del]

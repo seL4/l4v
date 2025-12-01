@@ -1545,7 +1545,7 @@ lemma valid_slots_lift':
   apply (clarsimp simp: valid_slots'_def)
   apply (case_tac x, clarsimp split: vmpage_entry.splits)
   apply safe
-   apply (rule hoare_pre, wp hoare_vcg_const_Ball_lift t valid_pde_lift' valid_pte_lift' valid_pdpte_lift', simp)+
+   apply (rule hoare_pre, wp hoare_vcg_const_Ball_lift t, simp)+
   done
 
 lemma sts_valid_arch_inv':

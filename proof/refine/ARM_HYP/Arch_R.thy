@@ -2292,8 +2292,7 @@ lemma assoc_invs':
   apply (rule conjI)
    apply (clarsimp simp: typ_at_to_obj_at_arches obj_at'_def)
   apply (rule conjI)
-   apply (clarsimp simp: typ_at_tcb' obj_at'_def)
-
+   apply (fastforce dest!: obj_at_aligned' simp add: objBits_def objBits_simps')
   supply fun_upd_apply[simp]
   apply (clarsimp simp: hyp_live'_def arch_live'_def)
   apply (rule_tac rfs'="state_hyp_refs_of' s" in delta_sym_refs, assumption)

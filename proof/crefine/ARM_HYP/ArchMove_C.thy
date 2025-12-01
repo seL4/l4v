@@ -241,8 +241,8 @@ lemma le_mask_asid_bits_helper:
   apply (clarsimp simp: asid_bits_def asid_low_bits_def asid_high_bits_def nth_shiftl)
   done
 
-lemma valid_objs_valid_pte': "\<lbrakk> valid_objs' s ; ko_at' (ko :: pte) p s \<rbrakk> \<Longrightarrow> valid_pte' ko s"
-  by (fastforce simp add: obj_at'_def ran_def valid_obj'_def projectKOs valid_objs'_def)
+lemma valid_objs_valid_pte': "\<lbrakk> valid_objs' s ; ko_at' (ko :: pte) p s \<rbrakk> \<Longrightarrow> valid_pte' ko"
+  by (fastforce simp add: obj_at'_def ran_def valid_obj'_def valid_objs'_def)
 
 lemma is_aligned_pageBitsForSize_minimum:
   "\<lbrakk> is_aligned p (pageBitsForSize sz) ; n \<le> pageBits \<rbrakk> \<Longrightarrow> is_aligned p n"
@@ -314,7 +314,7 @@ where
     0 \<notin> ran pool \<and> (\<forall>x \<in> ran pool. is_aligned x pdBits))"
 
 lemma valid_eq_wf_asid_pool'[simp]:
-  "valid_asid_pool' pool = (\<lambda>s. wf_asid_pool' pool)"
+  "valid_asid_pool' pool = wf_asid_pool' pool"
   by (case_tac pool) simp
 declare valid_asid_pool'.simps[simp del]
 (*<<<*)

@@ -1089,8 +1089,8 @@ lemma pte_relation'_Invalid_inv [simp]:
 
 definition
   "valid_slots' m \<equiv> case m of
-    Inl (pte, xs) \<Rightarrow> \<lambda>s. valid_pte' pte s
-  | Inr (pde, xs) \<Rightarrow> \<lambda>s. valid_pde' pde s"
+    Inl (pte, xs) \<Rightarrow> \<lambda>s. valid_pte' pte
+  | Inr (pde, xs) \<Rightarrow> \<lambda>s. valid_pde' pde"
 
 lemma createMappingEntries_valid_slots' [wp]:
   "\<lbrace>valid_objs' and
@@ -1324,7 +1324,7 @@ lemma storePDE_ctes [wp]:
 
 
 lemma storePDE_valid_objs [wp]:
-  "\<lbrace>valid_objs' and valid_pde' pde\<rbrace> storePDE p pde \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  "\<lbrace>valid_objs' and K (valid_pde' pde)\<rbrace> storePDE p pde \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (simp add: storePDE_def doMachineOp_def split_def)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps|wpc|simp)+

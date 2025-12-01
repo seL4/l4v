@@ -2526,15 +2526,6 @@ lemma deleteASIDPool_invs[wp]:
               | simp)+
   done
 
-lemma invalidateASIDEntry_valid_ap' [wp]:
-  "\<lbrace>valid_asid_pool' p\<rbrace> invalidateASIDEntry asid \<lbrace>\<lambda>r. valid_asid_pool' p\<rbrace>"
-  apply (simp add: invalidateASIDEntry_def invalidateASID_def
-                   invalidateHWASIDEntry_def bind_assoc)
-  apply (wp loadHWASID_wp | simp)+
-  apply (case_tac p)
-  apply (clarsimp simp del: fun_upd_apply)
-  done
-
 lemmas flushSpace_typ_ats' [wp] = typ_at_lifts [OF flushSpace_typ_at']
 
 lemma deleteASID_invs'[wp]:

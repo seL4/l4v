@@ -3073,21 +3073,6 @@ proof (intro conjI impI)
      apply (erule valid_cap[unfolded foldr_upd_app_if[folded data_map_insert_def]])
      apply (erule(2) cte_wp_at_cteI'[unfolded cte_level_bits_def])
      apply simp
-    apply (rename_tac arch_kernel_object)
-    apply (case_tac arch_kernel_object; simp)
-      apply (rename_tac asidpool)
-      apply (case_tac asidpool, clarsimp simp: page_directory_at'_def
-                                               typ_at_to_obj_at_arches
-                                               obj_at_disj')
-     apply (rename_tac pte)
-     apply (case_tac pte; simp add: valid_mapping'_def)
-    apply (rename_tac pde)
-    apply (case_tac pde; simp add: valid_mapping'_def page_table_at'_def
-                                   typ_at_to_obj_at_arches obj_at_disj')
-   apply (rename_tac vcpu)
-   apply (case_tac "vcpuTCBPtr vcpu";
-          clarsimp simp: valid_vcpu'_def typ_at_to_obj_at'[where 'a=tcb, simplified]
-                         typ_at_to_obj_at_arches obj_at_disj')
    done
   have not_0: "0 \<notin> set (new_cap_addrs (2 ^ gbits * n) ptr val)"
     using p_0

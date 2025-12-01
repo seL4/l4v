@@ -11,11 +11,6 @@ imports
   ArchMachine_R
 begin
 
-arch_requalify_facts
-  valid_arch_obj'_valid
-
-lemmas [wp] = valid_arch_obj'_valid
-
 translations
   (type) "'a kernel" <=(type) "kernel_state \<Rightarrow> ('a \<times> kernel_state) set \<times> bool"
 
@@ -1730,8 +1725,7 @@ lemma typ_at'_valid_obj'_lift:
                      valid_bound_ntfn'_def;
            wpsimp wp: hoare_case_option_wp hoare_case_option_wp2 valid_arch_tcb_lift' P;
            (clarsimp split: option.splits)?)
-   apply (wpsimp simp: valid_cte'_def)
-  apply (rule valid_arch_obj'_valid[OF P])
+   apply (wpsimp simp: valid_cte'_def)+
   done
 
 lemmas setObject_valid_obj = typ_at'_valid_obj'_lift [OF setObject_typ_at']
