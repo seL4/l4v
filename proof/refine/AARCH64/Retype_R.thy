@@ -2940,12 +2940,6 @@ lemma valid_untyped'_helper:
   done
 qed
 
-(* FIXME arch-split: workaround for stateless valid_arch_obj' *)
-lemma valid_arch_obj'_state_inv[simp]:
-  "valid_arch_obj' ako s \<Longrightarrow> valid_arch_obj' ako s'"
-  unfolding valid_arch_obj'_def
-  by simp
-
 definition caps_overlap_reserved' :: "machine_word set \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "caps_overlap_reserved' S s \<equiv> \<forall>cte \<in> ran (ctes_of s).

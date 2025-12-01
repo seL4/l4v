@@ -1025,8 +1025,8 @@ lemma memattr_from_cacheable_inject[simp]:
 
 lemma cpspace_pde_relation_unique:
   assumes "cpspace_pde_relation ah ch" "cpspace_pde_relation ah' ch"
-  assumes "\<forall>x \<in> ran (map_to_pdes ah). valid_pde' x s"
-  assumes "\<forall>x \<in> ran (map_to_pdes ah'). valid_pde' x s'"
+  assumes "\<forall>x \<in> ran (map_to_pdes ah). valid_pde' x"
+  assumes "\<forall>x \<in> ran (map_to_pdes ah'). valid_pde' x"
   shows   "map_to_pdes ah' = map_to_pdes ah"
   apply (rule cmap_relation_unique'[OF inj_Ptr _ assms])
   apply (simp add: cpde_relation_def Let_def split: pde.splits bool.splits)
@@ -1034,8 +1034,8 @@ lemma cpspace_pde_relation_unique:
 
 lemma cpspace_pte_relation_unique:
   assumes "cpspace_pte_relation ah ch" "cpspace_pte_relation ah' ch"
-  assumes "\<forall>x \<in> ran (map_to_ptes ah). valid_pte' x s"
-  assumes "\<forall>x \<in> ran (map_to_ptes ah'). valid_pte' x s'"
+  assumes "\<forall>x \<in> ran (map_to_ptes ah). valid_pte' x"
+  assumes "\<forall>x \<in> ran (map_to_ptes ah'). valid_pte' x"
   shows   "map_to_ptes ah' = map_to_ptes ah"
   apply (rule cmap_relation_unique'[OF inj_Ptr _ assms])
   apply (simp add: cpte_relation_def Let_def split: pte.splits bool.splits)
@@ -1260,7 +1260,7 @@ lemma map_to_cnes_eq:
   done
 
 lemma valid_objs'_valid_pde'_ran:
-  "valid_objs' s \<Longrightarrow> \<forall>x\<in>ran (map_to_pdes (ksPSpace s)). valid_pde' x s"
+  "valid_objs' s \<Longrightarrow> \<forall>x\<in>ran (map_to_pdes (ksPSpace s)). valid_pde' x"
   apply (clarsimp simp: valid_objs'_def ran_def)
   apply (case_tac "ksPSpace s a", simp+)
   apply (rename_tac y, drule_tac x=y in spec)
@@ -1270,7 +1270,7 @@ lemma valid_objs'_valid_pde'_ran:
   done
 
 lemma valid_objs'_valid_pte'_ran:
-  "valid_objs' s \<Longrightarrow> \<forall>x\<in>ran (map_to_ptes (ksPSpace s)). valid_pte' x s"
+  "valid_objs' s \<Longrightarrow> \<forall>x\<in>ran (map_to_ptes (ksPSpace s)). valid_pte' x"
   apply (clarsimp simp: valid_objs'_def ran_def)
   apply (case_tac "ksPSpace s a", simp+)
   apply (rename_tac y, drule_tac x=y in spec)
@@ -1287,7 +1287,6 @@ lemma valid_objs'_aligned_vcpuTCB:
   apply (case_tac y; clarsimp simp: projectKOs)
   apply (erule impE, fastforce)
   apply (clarsimp simp: valid_obj'_def valid_vcpu'_def split: option.splits)
-  apply (clarsimp simp: typ_at_tcb' obj_at'_def projectKOs objBits_simps)
   done
 
 lemma cpspace_relation_unique:
@@ -1384,23 +1383,6 @@ lemma ksPSpace_eq_imp_valid_tcb'_eq:
                  valid_tcb'_def valid_tcb_state'_def valid_bound_ntfn'_def valid_arch_tcb'_def
           split: thread_state.splits option.splits)
 
-lemma ksPSpace_eq_imp_valid_vcpu'_eq:
-  assumes ksPSpace: "ksPSpace s' = ksPSpace s"
-  shows "valid_vcpu' vcpu s' = valid_vcpu' vcpu s"
-  by (auto simp: valid_vcpu'_def ksPSpace_eq_imp_typ_at'_eq[OF ksPSpace] split: option.splits)
-
-lemma ksPSpace_eq_imp_valid_arch_obj'_eq:
-  assumes ksPSpace: "ksPSpace s' = ksPSpace s"
-  shows "valid_arch_obj' ao s' = valid_arch_obj' ao s"
-  apply (case_tac ao, simp)
-    apply (rename_tac pte)
-    apply (case_tac pte, simp_all add: valid_mapping'_def)
-   apply (rename_tac pde)
-   apply (case_tac pde, simp_all add: valid_mapping'_def)
-  apply (rename_tac vcpu)
-  apply (rule ksPSpace_eq_imp_valid_vcpu'_eq[OF ksPSpace])
-  done
-
 lemma ksPSpace_eq_imp_valid_objs'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
   shows "valid_objs' s' = valid_objs' s"
@@ -1409,7 +1391,6 @@ lemma ksPSpace_eq_imp_valid_objs'_eq:
                      ksPSpace_eq_imp_obj_at'_eq[OF ksPSpace]
                      ksPSpace_eq_imp_valid_tcb'_eq[OF ksPSpace]
                      ksPSpace_eq_imp_valid_cap'_eq[OF ksPSpace]
-                     ksPSpace_eq_imp_valid_arch_obj'_eq[OF ksPSpace]
                      valid_ntfn'_def valid_cte'_def valid_bound_tcb'_def
               split: kernel_object.splits endpoint.splits ntfn.splits option.splits)
 

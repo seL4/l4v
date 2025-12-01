@@ -392,7 +392,7 @@ definition valid_obj' :: "Structures_H.kernel_object \<Rightarrow> kernel_state 
   | KOUserDataDevice \<Rightarrow> True
   | KOTCB tcb \<Rightarrow> valid_tcb' tcb s
   | KOCTE cte \<Rightarrow> valid_cte' cte s
-  | KOArch ako \<Rightarrow> valid_arch_obj' ako s"
+  | KOArch ako \<Rightarrow> valid_arch_obj' ako"
 
 definition
   pspace_aligned' :: "kernel_state \<Rightarrow> bool"

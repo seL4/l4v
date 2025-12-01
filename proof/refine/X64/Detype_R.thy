@@ -1136,18 +1136,6 @@ lemma valid_obj':
    apply (clarsimp simp: ko_wp_at'_def objBits_simps' cte_level_bits_def[symmetric])
    apply (erule(2) cte_wp_at_cteI')
    apply simp
-  apply (rename_tac arch_kernel_object)
-  apply (case_tac "arch_kernel_object", simp_all)
-      apply (rename_tac asidpool)
-      apply (case_tac asidpool, clarsimp simp: page_directory_at'_def)
-     apply (rename_tac pte)
-     apply (case_tac pte, simp_all add: valid_mapping'_def)
-    apply (rename_tac pde)
-    apply (case_tac pde, simp_all add: valid_mapping'_def)
-   apply (rename_tac pdpte)
-   apply (case_tac pdpte, simp_all add: valid_mapping'_def)
-  apply (rename_tac pml4e)
-  apply (case_tac pml4e, simp_all add: valid_mapping'_def)
   done
 
 lemma tcbSchedNexts_of_pspace':

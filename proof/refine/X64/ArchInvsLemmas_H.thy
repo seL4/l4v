@@ -40,34 +40,17 @@ lemma valid_cap'_pspaceI[Invariants_H_pspaceI_assms]:
             simp: vspace_table_at'_defs valid_arch_cap'_def
            split: arch_capability.split zombie_type.split option.splits)+
 
-lemma valid_arch_obj'_pspaceI:
-  "valid_arch_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_arch_obj' obj s'"
-  apply (cases obj; simp)
-    apply (rename_tac asidpool)
-    apply (case_tac asidpool,
-           auto simp: page_directory_at'_def intro: typ_at'_pspaceI[rotated])[1]
-   apply (rename_tac pte)
-   apply (case_tac pte; simp add: valid_mapping'_def)
-  apply (rename_tac pde)
-  apply (case_tac pde;
-         auto simp: page_table_at'_def valid_mapping'_def
-             intro: typ_at'_pspaceI[rotated])
-   apply (rename_tac pdpte)
-   apply (case_tac pdpte; auto simp: valid_mapping'_def)
-  apply (rename_tac pml4e)
-  apply (case_tac pml4e; auto simp: valid_mapping'_def)
-  done
-
 lemma valid_obj'_pspaceI[Invariants_H_pspaceI_assms]:
   "valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
   unfolding valid_obj'_def
+  supply no_0_obj_at'[rule del] (* avoid weak elim rule warning *)
   by (cases obj)
      (auto simp: valid_ep'_def valid_ntfn'_def valid_tcb'_def valid_cte'_def
                  valid_tcb_state'_def valid_bound_tcb'_def
                  valid_bound_ntfn'_def valid_arch_tcb'_def
            split: Structures_H.endpoint.splits Structures_H.notification.splits
                   Structures_H.thread_state.splits ntfn.splits option.splits
-           intro: obj_at'_pspaceI valid_cap'_pspaceI typ_at'_pspaceI valid_arch_obj'_pspaceI)
+           intro: obj_at'_pspaceI valid_cap'_pspaceI)
 
 lemma tcb_space_clear[Invariants_H_pspaceI_assms]:
   "\<lbrakk> tcb_cte_cases (y - x) = Some (getF, setF);
@@ -468,31 +451,6 @@ lemma valid_arch_tcb_lift':
   shows "\<lbrace>\<lambda>s. valid_arch_tcb' tcb s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_tcb' tcb s\<rbrace>"
   by (clarsimp simp add: valid_arch_tcb'_def, wp)
 
-lemma valid_pde_lift':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_pde' pde s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pde' pde s\<rbrace>"
-  by (cases pde) (simp add: valid_mapping'_def|wp x typ_at_lift_page_table_at')+
-
-lemma valid_pte_lift':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_pte' pte s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pte' pte s\<rbrace>"
-  by (cases pte) (simp add: valid_mapping'_def|wp x typ_at_lift_page_directory_at')+
-
-lemma valid_pdpte_lift':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_pdpte' pdpte s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pdpte' pdpte s\<rbrace>"
-  by (cases pdpte) (simp add: valid_mapping'_def|wp x typ_at_lift_pd_pointer_table_at')+
-
-lemma valid_pml4e_lift':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_pml4e' pml4e s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pml4e' pml4e s\<rbrace>"
-  by (cases pml4e) (simp add: valid_mapping'_def|wp x typ_at_lift_page_map_l4_at')+
-
-lemma valid_asid_pool_lift':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_asid_pool' ap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_asid_pool' ap s\<rbrace>"
-  by (cases ap) (simp|wp x typ_at_lift_page_directory_at' hoare_vcg_const_Ball_lift)+
-
 lemmas typ_at_lifts =
          typ_at_lift_tcb' typ_at_lift_ep' typ_at_lift_ntfn' typ_at_lift_cte' typ_at_lift_cte_at'
          typ_at_lift_valid_untyped' typ_at_lift_valid_cap' valid_bound_tcb_lift
@@ -501,11 +459,7 @@ lemmas typ_at_lifts =
          typ_at_lift_page_map_l4_at'
          typ_at_lift_pd_pointer_table_at'
          typ_at_lift_asid_at'
-         valid_pde_lift'
-         valid_pte_lift'
-         valid_pdpte_lift'
-         valid_pml4e_lift'
-         valid_asid_pool_lift'
+         valid_arch_tcb_lift'
 
 (* FIXME arch-split: X64: this probably needs more to be useful *)
 lemmas bit_simps' = asidHighBits_def asid_low_bits_def

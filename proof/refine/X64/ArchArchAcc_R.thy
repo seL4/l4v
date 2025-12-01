@@ -1682,9 +1682,9 @@ lemma pml4e_relation'_Invalid_inv [simp]:
 
 definition
   "valid_slots' m \<equiv> case m of
-    (VMPTE pte, p) \<Rightarrow> \<lambda>s. valid_pte' pte s
-  | (VMPDE pde, p) \<Rightarrow> \<lambda>s. valid_pde' pde s
-  | (VMPDPTE pdpte, p) \<Rightarrow> \<lambda>s. valid_pdpte' pdpte s"
+    (VMPTE pte, p) \<Rightarrow> \<lambda>s. valid_pte' pte
+  | (VMPDE pde, p) \<Rightarrow> \<lambda>s. valid_pde' pde
+  | (VMPDPTE pdpte, p) \<Rightarrow> \<lambda>s. valid_pdpte' pdpte"
 
 lemma createMappingEntries_valid_slots' [wp]:
   "\<lbrace>valid_objs' and
@@ -2015,7 +2015,7 @@ lemma storePML4E_ctes [wp]:
   done
 
 lemma storePML4E_valid_objs [wp]:
-  "\<lbrace>valid_objs' and valid_pml4e' pml4e\<rbrace> storePML4E p pml4e \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  "\<lbrace>valid_objs' and K (valid_pml4e' pml4e)\<rbrace> storePML4E p pml4e \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (simp add: storePML4E_def doMachineOp_def split_def)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps|wpc|simp)+
@@ -2027,7 +2027,7 @@ lemma storePML4E_valid_objs [wp]:
   done
 
 lemma storePDPTE_valid_objs [wp]:
-  "\<lbrace>valid_objs' and valid_pdpte' pdpte\<rbrace> storePDPTE p pdpte \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  "\<lbrace>valid_objs' and K (valid_pdpte' pdpte)\<rbrace> storePDPTE p pdpte \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (simp add: storePDPTE_def doMachineOp_def split_def)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps|wpc|simp)+
@@ -2039,7 +2039,7 @@ lemma storePDPTE_valid_objs [wp]:
   done
 
 lemma storePDE_valid_objs [wp]:
-  "\<lbrace>valid_objs' and valid_pde' pde\<rbrace> storePDE p pde \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  "\<lbrace>valid_objs' and K (valid_pde' pde)\<rbrace> storePDE p pde \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (simp add: storePDE_def doMachineOp_def split_def)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps|wpc|simp)+

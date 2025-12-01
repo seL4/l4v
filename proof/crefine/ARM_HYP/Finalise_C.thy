@@ -2089,29 +2089,21 @@ lemma associateVCPUTCB_ccorres:
      apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
      apply (rule ccorres_move_c_guard_vcpu)
      apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
-         apply (rule_tac Q="(\<lambda>s. \<exists>tcb. ko_at' vcpu vcpuptr s) and
+         apply (rule_tac Q="ko_at' vcpu vcpuptr and
                             no_0_obj' and
                             valid_objs'"
                      and Q'=UNIV
                      and C'="{s. (vcpuTCBPtr vcpu \<noteq> None)}"
                      in ccorres_rewrite_cond_sr)
+
           apply clarsimp
-          apply (frule cmap_relation_vcpu)
-          apply (erule cmap_relationE1)
-           apply (erule ko_at_projectKO_opt, rename_tac cvcpu)
-          apply (clarsimp simp add: typ_heap_simps')
-          apply (case_tac "vcpuTCBPtr vcpu \<noteq> None")
-           apply(frule valid_objs_valid_vcpu', simp)
-           apply (clarsimp simp add: cvcpu_relation_def
-                                     option_to_ctcb_ptr_def
-                                     tcb_ptr_to_ctcb_ptr_def
-                                     typ_at_tcb'
-                                     valid_vcpu'_def)
-           apply (frule tcb_aligned')
-           apply (frule_tac y=ctcb_offset and n=tcbBlockSizeBits in aligned_offset_non_zero
-                 ; clarsimp simp: ctcb_offset_defs objBits_defs)
-          apply (clarsimp simp: cvcpu_relation_def option_to_ctcb_ptr_def)
-         apply (wpc ; clarsimp ; ccorres_rewrite)
+          apply (frule (1) ko_at_valid_objs', simp)
+          apply (clarsimp simp: valid_obj'_def valid_vcpu'_def)
+          apply (drule (1) vcpu_at_rf_sr)
+          apply (clarsimp simp: typ_heap_simps' cvcpu_relation_def option_to_ctcb_ptr_def
+                          dest!: aligned_tcb_ctcb_not_NULL
+                          split: if_split)
+         apply (wpc; clarsimp; ccorres_rewrite)
           apply (rule ccorres_return_Skip)
          apply (rule ccorres_move_c_guard_vcpu)
          apply (ctac add: dissociateVCPUTCB_vcpu_ccorres)
@@ -2145,9 +2137,9 @@ lemma associateVCPUTCB_ccorres:
               | strengthen invs_valid_objs' invs_arch_state')+)[1]
      apply (vcg exspec=dissociateVCPUTCB_modifies)
     apply (rule_tac Q'="\<lambda>_. invs' and vcpu_at' vcpuptr and tcb_at' tptr" in hoare_post_imp)
-     apply (clarsimp simp: valid_vcpu'_def typ_at_tcb' obj_at'_def projectKOs)
+     apply (clarsimp simp: valid_vcpu'_def typ_at_tcb' obj_at'_def)
      apply (rename_tac vcpu obj, case_tac vcpu)
-     apply (fastforce simp: valid_arch_tcb'_def)
+     apply (fastforce simp: valid_arch_tcb'_def valid_vcpu'_def objBits_simps)
     apply wpsimp
    apply (vcg exspec=dissociateVCPUTCB_modifies)
   apply (fastforce simp: ctcb_relation_def carch_tcb_relation_def typ_heap_simps
@@ -2161,7 +2153,7 @@ lemma vcpuFinalise_ccorres:
   apply (cinit lift: vcpu_')
    apply (rule ccorres_move_c_guard_vcpu)
    apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
-   apply (rule_tac Q="(\<lambda>s. \<exists>tcb. ko_at' vcpu vcpuptr s) and
+   apply (rule_tac Q="ko_at' vcpu vcpuptr and
                            no_0_obj' and
                            valid_objs'"
                    and Q'=UNIV
@@ -2171,24 +2163,17 @@ lemma vcpuFinalise_ccorres:
     apply (frule cmap_relation_vcpu)
     apply (erule cmap_relationE1)
      apply (erule ko_at_projectKO_opt, rename_tac cvcpu)
-    apply (clarsimp simp add: typ_heap_simps')
-    apply (case_tac "vcpuTCBPtr vcpu \<noteq> None")
-     apply(frule valid_objs_valid_vcpu', simp)
-     apply (clarsimp simp add: cvcpu_relation_def
-                               option_to_ctcb_ptr_def
-                               tcb_ptr_to_ctcb_ptr_def
-                               typ_at_tcb'
-                               valid_vcpu'_def)
-     apply (frule tcb_aligned')
-     apply (frule_tac y=ctcb_offset and n=tcbBlockSizeBits in aligned_offset_non_zero
-           ; clarsimp simp: ctcb_offset_defs objBits_defs)
-    apply (clarsimp simp: cvcpu_relation_def option_to_ctcb_ptr_def)
-   apply (wpc ; clarsimp ; ccorres_rewrite)
+    apply (frule (1) ko_at_valid_objs', simp)
+    apply (clarsimp simp: valid_obj'_def valid_vcpu'_def)
+    apply (clarsimp simp: typ_heap_simps' cvcpu_relation_def option_to_ctcb_ptr_def
+                    dest!: aligned_tcb_ctcb_not_NULL
+                    split: if_split)
+   apply (wpc; clarsimp; ccorres_rewrite)
     apply (rule ccorres_return_Skip)
    apply (rule ccorres_move_c_guard_vcpu)
    apply (ctac add: dissociateVCPUTCB_vcpu_ccorres)
   apply (fastforce simp: ctcb_relation_def carch_tcb_relation_def typ_heap_simps
-                         cvcpu_relation_def option_to_ctcb_ptr_def)
+                         cvcpu_relation_def option_to_ctcb_ptr_def)+
   done
 
 lemma capFSize_eq: "\<lbrakk>ccap_relation (capability.ArchObjectCap (arch_capability.PageCap x31 x32 x33 x34 (Some (a, b)))) cap;

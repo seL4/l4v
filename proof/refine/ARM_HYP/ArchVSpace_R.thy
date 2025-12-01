@@ -2016,7 +2016,7 @@ crunch flushPage
 
 lemmas flushPage_typ_ats' [wp] = typ_at_lifts [OF flushPage_typ_at']
 
-lemma valid_objs_valid_vcpu': "\<lbrakk> valid_objs' s ; ko_at' (t :: vcpu) p s \<rbrakk> \<Longrightarrow> valid_vcpu' t s"
+lemma valid_objs_valid_vcpu': "\<lbrakk> valid_objs' s ; ko_at' (t :: vcpu) p s \<rbrakk> \<Longrightarrow> valid_vcpu' t"
   by (fastforce simp add: obj_at'_def ran_def valid_obj'_def valid_objs'_def)
 
 lemma setObject_vcpu_no_tcb_update:
@@ -2981,7 +2981,7 @@ definition
      cte_wp_at' (is_arch_update' cap) slot and
      ko_wp_at' (\<lambda>ko. vs_entry_align ko = 0) pdeSlot and
      valid_cap' cap and
-     valid_pde' pde and
+     K (valid_pde' pde) and
      K (valid_pde_mapping' (pdeSlot && mask pdBits) pde \<and> vs_entry_align (KOArch (KOPDE pde)) = 0)
    | PageTableUnmap cap slot \<Rightarrow> cte_wp_at' (is_arch_update' (ArchObjectCap cap)) slot
                                  and valid_cap' (ArchObjectCap cap)
@@ -3487,8 +3487,8 @@ lemma state_hyp_refs_of'_vcpu_absorb:
      by (rule ext) (clarsimp simp: state_hyp_refs_of'_def obj_at'_def)
 
 lemma setObject_vcpu_valid_objs':
-  "\<lbrace>valid_objs' and valid_vcpu' vcpu\<rbrace> setObject v vcpu \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (wp setObject_valid_objs'[where P="valid_vcpu' vcpu"])
+  "\<lbrace>valid_objs' and K (valid_vcpu' vcpu) \<rbrace> setObject v vcpu \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  apply (wp setObject_valid_objs'[where P="\<lambda>_. valid_vcpu' vcpu"])
    apply (clarsimp simp: in_monad updateObject_default_def valid_obj'_def)
   apply simp
   done
@@ -4297,7 +4297,7 @@ lemma valid_slots_lift':
   shows "\<lbrace>valid_slots' x\<rbrace> f \<lbrace>\<lambda>rv. valid_slots' x\<rbrace>"
   apply (clarsimp simp: valid_slots'_def split: sum.splits prod.splits)
   apply safe
-   apply (rule hoare_pre, wp hoare_vcg_const_Ball_lift t valid_pde_lift' valid_pte_lift', simp)+
+   apply (rule hoare_pre, wp hoare_vcg_const_Ball_lift t, simp)+
   done
 
 crunch performPageTableInvocation
@@ -4533,7 +4533,7 @@ crunch storePDE
   (wp: crunch_wps)
 
 lemma storePDE_invs[wp]:
-  "\<lbrace>invs' and valid_pde' pde
+  "\<lbrace>invs' and K (valid_pde' pde)
           and (\<lambda>s. valid_pde_mapping' (p && mask pdBits) pde)\<rbrace>
       storePDE p pde
    \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -4610,7 +4610,7 @@ lemma storePTE_irq_states' [wp]:
   done
 
 lemma storePTE_valid_objs [wp]:
-  "\<lbrace>valid_objs' and valid_pte' pte\<rbrace> storePTE p pte \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  "\<lbrace>valid_objs' and K (valid_pte' pte)\<rbrace> storePTE p pte \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (simp add: storePTE_def doMachineOp_def split_def)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps|wpc|simp)+
@@ -4690,7 +4690,7 @@ lemma storePTE_ct_idle_or_in_cur_domain'[wp]:
   by (wp ct_idle_or_in_cur_domain'_lift hoare_vcg_disj_lift)
 
 lemma storePTE_invs [wp]:
-  "\<lbrace>invs' and valid_pte' pte\<rbrace> storePTE p pte \<lbrace>\<lambda>_. invs'\<rbrace>"
+  "\<lbrace>invs' and K (valid_pte' pte)\<rbrace> storePTE p pte \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
             valid_arch_state_lift'_valid_pde_mappings' valid_irq_node_lift
@@ -4701,7 +4701,7 @@ lemma storePTE_invs [wp]:
   done
 
 lemma setASIDPool_valid_objs [wp]:
-  "\<lbrace>valid_objs' and valid_asid_pool' ap\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  "\<lbrace>valid_objs' and K (valid_asid_pool' ap)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (rule hoare_pre)
    apply (rule setObject_valid_objs')
    prefer 2
@@ -4865,7 +4865,7 @@ lemma setObject_asidpool_tcbs_of'[wp]:
   by setObject_easy_cases
 
 lemma setASIDPool_invs [wp]:
-  "\<lbrace>invs' and valid_asid_pool' ap\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. invs'\<rbrace>"
+  "\<lbrace>invs' and K (valid_asid_pool' ap)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (rule hoare_pre)
    apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
@@ -4975,8 +4975,7 @@ lemma perform_pti_invs [wp]:
                          is_arch_update'_def isCap_simps valid_cap'_def
                          capAligned_def)
   apply (rule hoare_pre)
-   apply (wp arch_update_updateCap_invs valid_pde_lift'
-             no_irq_cleanByVA_PoU
+   apply (wp arch_update_updateCap_invs no_irq_cleanByVA_PoU
           | simp)+
   apply (clarsimp simp: cte_wp_at_ctes_of valid_pti'_def)
   done
@@ -4990,8 +4989,8 @@ lemma in_set_zip_singleton[simp]:
   by (cases xs) auto
 
 lemma valid_pte'_offset:
-  "\<lbrakk> valid_pte' pte s; x \<le> 15; pte = LargePagePTE p a b c; vmsz_aligned' p ARMLargePage \<rbrakk>
-  \<Longrightarrow> valid_pte' (addPTEOffset pte x) s"
+  "\<lbrakk> valid_pte' pte; x \<le> 15; pte = LargePagePTE p a b c; vmsz_aligned' p ARMLargePage \<rbrakk>
+  \<Longrightarrow> valid_pte' (addPTEOffset pte x)"
   using is_aligned_mult_triv2[of x 12, simplified] is_aligned_pptrBaseOffset [of ARMLargePage]
   apply (clarsimp simp: addPTEOffset_def valid_mapping'_def addPAddr_def fromPAddr_def is_aligned_add)
   apply (clarsimp simp: ptrFromPAddr_def vmsz_aligned'_def)
@@ -5005,15 +5004,15 @@ lemma valid_pte'_offset:
   done
 
 lemma mapM_x_storePTE_invs:
-  "\<lbrace>invs' and valid_pte' pte and
-    K (pte_vmsz_aligned' pte \<and> length slots = (case pte of LargePagePTE _ _ _ _ \<Rightarrow> 16 | _ \<Rightarrow> 1))\<rbrace>
+  "\<lbrace>invs' and
+    K (valid_pte' pte \<and> pte_vmsz_aligned' pte \<and> length slots = (case pte of LargePagePTE _ _ _ _ \<Rightarrow> 16 | _ \<Rightarrow> 1))\<rbrace>
      mapM_x (\<lambda>(slot, i). storePTE slot (addPTEOffset pte i))
             (zip slots [(0::32 word).e.of_nat (length slots - Suc 0)])
   \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (rule hoare_post_imp)
    prefer 2
    apply (rule mapM_x_wp')
-   apply (wpsimp wp: valid_pte_lift')
+   apply wpsimp
    apply (clarsimp split: pte.splits)
    apply (rule valid_pte'_offset; simp?)
    apply (drule in_set_zip2, simp)
@@ -5021,8 +5020,8 @@ lemma mapM_x_storePTE_invs:
   done
 
 lemma valid_pde'_offset:
-  "\<lbrakk> valid_pde' pde s; x \<le> 15; pde = SuperSectionPDE p a b c; vmsz_aligned' p ARMSuperSection \<rbrakk>
-  \<Longrightarrow> valid_pde' (addPDEOffset pde x) s"
+  "\<lbrakk> valid_pde' pde; x \<le> 15; pde = SuperSectionPDE p a b c; vmsz_aligned' p ARMSuperSection \<rbrakk>
+  \<Longrightarrow> valid_pde' (addPDEOffset pde x)"
   using is_aligned_mult_triv2[of x 21, simplified] is_aligned_pptrBaseOffset [of ARMSuperSection]
   apply (clarsimp simp: addPDEOffset_def valid_mapping'_def addPAddr_def fromPAddr_def is_aligned_add)
   apply (clarsimp simp: ptrFromPAddr_def vmsz_aligned'_def)
@@ -5040,7 +5039,7 @@ lemma addPDEOffset_InvalidPDE[simp]:
   by (cases pde; simp add: addPDEOffset_def)
 
 lemma mapM_x_storePDE_invs:
-  "\<lbrace>invs' and valid_pde' pde and K (\<forall>p \<in> set slots. valid_pde_mapping' (p && mask pdBits) pde) and
+  "\<lbrace>invs' and K (valid_pde' pde) and K (\<forall>p \<in> set slots. valid_pde_mapping' (p && mask pdBits) pde) and
     K (pde_vmsz_aligned' pde \<and> length slots = (case pde of SuperSectionPDE _ _ _ _ \<Rightarrow> 16 | _ \<Rightarrow> 1))\<rbrace>
      mapM_x (\<lambda>(slot, i). storePDE slot (addPDEOffset pde i))
             (zip slots [(0::32 word).e.of_nat (length slots - Suc 0)])
@@ -5049,7 +5048,7 @@ lemma mapM_x_storePDE_invs:
   apply (rule hoare_post_imp)
    prefer 2
    apply (rule mapM_x_wp')
-   apply (wpsimp wp: valid_pde_lift')
+   apply wpsimp
    apply (rule conjI)
     apply (clarsimp split: pde.splits)
     apply (rule valid_pde'_offset; simp?)
@@ -5060,25 +5059,21 @@ lemma mapM_x_storePDE_invs:
   done
 
 lemma mapM_storePTE_invs:
-  "\<lbrace>invs' and valid_pte' pte\<rbrace> mapM (swp storePTE pte) ps \<lbrace>\<lambda>_. invs'\<rbrace>"
+  "\<lbrace>invs' and K (valid_pte' pte)\<rbrace> mapM (swp storePTE pte) ps \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (rule hoare_post_imp)
    prefer 2
    apply (rule mapM_wp')
-   apply simp
-   apply (wp valid_pte_lift')
-    apply simp+
+   apply wpsimp+
   done
 
 lemma mapM_storePDE_invs:
-  "\<lbrace>invs' and valid_pde' pde
+  "\<lbrace>invs' and K (valid_pde' pde)
        and K (\<forall>p \<in> set ps. valid_pde_mapping' (p && mask pdBits) pde)\<rbrace>
        mapM (swp storePDE pde) ps \<lbrace>\<lambda>xa. invs'\<rbrace>"
   apply (rule hoare_post_imp)
    prefer 2
    apply (rule mapM_wp')
-   apply simp
-   apply (wp valid_pde_lift')
-    apply simp+
+   apply wpsimp+
   done
 
 crunch unmapPage
@@ -5107,8 +5102,6 @@ crunch doFlush
 
 crunch pteCheckIfMapped, pdeCheckIfMapped
   for invs'[wp]: "invs'"
-  and valid_pte'[wp]: "valid_pte' pte"
-  and valid_pde'[wp]: "valid_pde' pde"
 
 lemma perform_pt_invs [wp]:
   notes no_irq[wp]

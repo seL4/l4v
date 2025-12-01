@@ -1186,21 +1186,6 @@ lemma valid_obj':
    apply (clarsimp simp: ko_wp_at'_def objBits_simps' cte_level_bits_def[symmetric])
    apply (erule(2) cte_wp_at_cteI')
    apply simp
-  apply (rename_tac arch_kernel_object)
-  apply (case_tac "arch_kernel_object", simp_all)
-    apply (rename_tac asidpool)
-    apply (case_tac asidpool, clarsimp)
-   apply (rename_tac pte)
-   apply (case_tac pte, simp_all add: valid_mapping'_def)
-  apply(rename_tac pde)
-  apply (case_tac pde, simp_all add: valid_mapping'_def)
-  (* vcpu case *)
-  using sym_hyp_refs
-  apply (clarsimp simp add: valid_vcpu'_def split: option.split_asm)
-  apply (drule (2) sym_refs_VCPU_hyp_live')
-  apply (drule live_notRange, clarsimp simp: live'_def)
-   apply (case_tac ko; simp)
-  apply clarsimp
   done
 
 lemma tcbSchedNexts_of_pspace':

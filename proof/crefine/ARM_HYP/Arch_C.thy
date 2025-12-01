@@ -2520,7 +2520,7 @@ lemma resolveVAddr_ccorres:
       apply ceqv
      apply (rule ccorres_pre_getObject_pte)
      apply (rule_tac P="page_table_at' (ptrFromPAddr word1)" in ccorres_cross_over_guard)
-     apply (rule_tac P = "\<lambda>s. valid_pte' rv s"
+     apply (rule_tac P = "\<lambda>_. valid_pte' rv"
                  and P'="{s. \<exists>v. cslift s (pte_Ptr (lookup_pt_slot_no_fail (ptrFromPAddr word1) vaddr)) = Some v
                                     \<and> cpte_relation rv v
                                     \<and> array_assertion (pte_Ptr (ptrFromPAddr word1))

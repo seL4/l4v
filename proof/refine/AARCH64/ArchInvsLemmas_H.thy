@@ -44,12 +44,6 @@ lemma valid_cap'_pspaceI[Invariants_H_pspaceI_assms]:
             simp: vspace_table_at'_defs valid_arch_cap'_def valid_arch_cap_ref'_def
            split: arch_capability.split zombie_type.split option.splits)
 
-(* FIXME arch-split: required since valid_arch_obj' takes state due to other arches *)
-lemma valid_arch_obj'_pspaceI:
-  "\<lbrakk>valid_arch_obj' obj s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> valid_arch_obj' obj s'"
-  unfolding valid_arch_obj'_def
-  by simp
-
 lemma valid_obj'_pspaceI[Invariants_H_pspaceI_assms]:
   "valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
   unfolding valid_obj'_def
@@ -59,7 +53,7 @@ lemma valid_obj'_pspaceI[Invariants_H_pspaceI_assms]:
                  valid_bound_ntfn'_def valid_arch_tcb'_def
            split: Structures_H.endpoint.splits Structures_H.notification.splits
                   Structures_H.thread_state.splits ntfn.splits option.splits
-           intro: obj_at'_pspaceI valid_cap'_pspaceI typ_at'_pspaceI valid_arch_obj'_pspaceI)
+           intro: obj_at'_pspaceI valid_cap'_pspaceI typ_at'_pspaceI)
 
 lemma tcb_space_clear[Invariants_H_pspaceI_assms]:
   "\<lbrakk> tcb_cte_cases (y - x) = Some (getF, setF);

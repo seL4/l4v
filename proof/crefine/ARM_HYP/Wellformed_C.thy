@@ -746,6 +746,25 @@ lemma
   "(scast ThreadState_IdleThreadState :: machine_word) && mask 4 = scast ThreadState_IdleThreadState"
   by (simp add: ThreadState_defs mask_def)+
 
+lemma aligned_tcb_ctcb_not_NULL:
+  assumes "is_aligned p tcbBlockSizeBits"
+  shows "tcb_ptr_to_ctcb_ptr p \<noteq> NULL"
+proof
+  assume "tcb_ptr_to_ctcb_ptr p = NULL"
+  hence "p + ctcb_offset = 0"
+     by (simp add: tcb_ptr_to_ctcb_ptr_def)
+  moreover
+  from `is_aligned p tcbBlockSizeBits`
+  have "p + ctcb_offset = p || ctcb_offset"
+    by (rule word_and_or_mask_aligned) (simp add: ctcb_offset_defs objBits_defs mask_def)
+  moreover
+  have "ctcb_offset !! ctcb_size_bits"
+    by (simp add: ctcb_offset_defs objBits_defs)
+  ultimately
+  show False
+    by (simp add: bang_eq)
+qed
+
 end
 
 end
