@@ -26,29 +26,17 @@ section \<open>Modified Method Defns\<close>
 
 consts' getObjectColoured :: "machine_word \<Rightarrow> ('a :: pspace_storable) kernel"
 defs getObjectColoured_def:
-"getObjectColoured ptr \<equiv> (do
-        map \<leftarrow> gets $ psMap \<circ> ksPSpace;
-        (before, after) \<leftarrow> return ( lookupAround2 (fromPPtr ptr) map);
-        (ptr', val) \<leftarrow> maybeToMonad before;
-        ksCurDomain \<leftarrow> gets ksCurDomain;
-        haskell_assert (isInDomainColour' ksCurDomain ptr') [];
-        loadObject (fromPPtr ptr) ptr' after val
-od)"
+"getObjectColoured ptr \<equiv> do
+        stateAssert (\<lambda>s. isInDomainColour' (ksCurDomain s) ptr) [];
+        getObject ptr
+od"
 
 consts' setObjectColoured :: "machine_word \<Rightarrow> ('a :: pspace_storable) \<Rightarrow> unit kernel"
 defs setObjectColoured_def:
-"setObjectColoured ptr val\<equiv> (do
-        ps \<leftarrow> gets ksPSpace;
-        map \<leftarrow> return ( psMap ps);
-        (before, after) \<leftarrow> return ( lookupAround2 (fromPPtr ptr) map);
-        (ptr', obj) \<leftarrow> maybeToMonad before;
-        ksCurDomain \<leftarrow> gets ksCurDomain;
-        haskell_assert (isInDomainColour' ksCurDomain ptr') [];
-        obj' \<leftarrow> updateObject val obj (fromPPtr ptr) ptr' after;
-        map' \<leftarrow> return ( data_map_insert ptr' obj' map);
-        ps' \<leftarrow> return ( ps \<lparr> psMap := map' \<rparr>);
-        modify (\<lambda> ks. ks \<lparr> ksPSpace := ps'\<rparr>)
-od)"
+"setObjectColoured ptr val\<equiv> do
+        stateAssert (\<lambda>s. isInDomainColour' (ksCurDomain s) ptr) [];
+        setObject ptr val
+od"
 
 consts' getCTEColoured :: "machine_word \<Rightarrow> cte kernel"
 defs getCTEColoured_def:
@@ -57,18 +45,17 @@ defs getCTEColoured_def:
 
 consts' threadSetInCurDomain :: "(tcb \<Rightarrow> tcb) \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 defs threadSetInCurDomain_def:
-"threadSetInCurDomain f tptr \<equiv>
-    do
-       tcb <- getObjectColoured tptr;
-       setObjectColoured tptr $ f tcb
-    od"
+"threadSetInCurDomain f tptr \<equiv> do
+   stateAssert (\<lambda>s. isInDomainColour' (ksCurDomain s) tptr) [];
+   threadSet f tptr
+od"
 
 section \<open>Modified lemmas for methods\<close>
 
 lemma getObjectColoured_inv [wp]:
   assumes x: "\<And>p q n ko. \<lbrace>P\<rbrace> loadObject p q n ko \<lbrace>\<lambda>(rv :: 'a :: pspace_storable). P\<rbrace>"
   shows      "\<lbrace>P\<rbrace> getObjectColoured p \<lbrace>\<lambda>(rv :: 'a :: pspace_storable). P\<rbrace>"
-  by (simp add: getObjectColoured_def split_def | wp x)+
+  by (simp add: getObjectColoured_def split_def | wp x getObject_inv)+
 
 lemma getObjectColoured_inv_tcb [wp]:
   "\<lbrace>P\<rbrace> getObjectColoured l \<lbrace>\<lambda>(rv :: Structures_H.tcb). P\<rbrace>"
@@ -82,21 +69,9 @@ lemma no_fail_getObjectColoured_tcb [wp]:
   apply (simp add: getObjectColoured_def split_def)
   apply (rule no_fail_pre)
    apply wp
-  apply (clarsimp simp add: obj_at'_def objBits_simps'
+  apply (rule no_fail_stateAssert)
+  by (clarsimp simp add: obj_at'_def objBits_simps'
                       cong: conj_cong)
-  apply (rule ps_clear_lookupAround2, assumption+)
-    apply simp
-   apply (simp add: field_simps)
-   apply (erule is_aligned_no_wrap')
-   apply simp
-  apply (rule conjI)
-  apply (fastforce split: option.split_asm simp: objBits_simps')
-  apply (rule conjI)
-   apply (metis Some_to_the prod.sel(1))
-  apply (rule exI)
-  apply (rule conjI)
-  apply (simp_all del: lookupAround2_same1)
-  by (fastforce split: option.split_asm simp: objBits_simps')
 
 lemma no_fail_setObjectColoured_other [wp]:
   fixes ob :: "'a :: pspace_storable"
@@ -108,16 +83,10 @@ lemma no_fail_setObjectColoured_other [wp]:
   apply (rule no_fail_pre)
    apply wp
   apply (clarsimp simp: is_aligned_mask[symmetric] obj_at'_def
-                        objBits_def[symmetric] project_inject lookupAround2_known1)
-  apply (erule(1) ps_clear_lookupAround2)
-    apply simp
-   apply (erule is_aligned_get_word_bits)
-    apply (subst add_diff_eq[symmetric])
-    apply (erule is_aligned_no_wrap')
-    apply simp
-   apply simp
-  apply fastforce
-  done
+                        objBits_def[symmetric] project_inject lookupAround2_known1 x)
+  apply (rule stateAssert_inv)
+apply (rule no_fail_stateAssert)
+  by simp
 
 lemma no_fail_setObject_tcb [wp]:
   "no_fail (tcb_at' t and (\<lambda>s. isInDomainColour' (ksCurDomain s) t)) (setObjectColoured t (t'::tcb))"
@@ -171,10 +140,7 @@ lemma getCTE_inv_inCurDomain [wp]: "\<lbrace>P\<rbrace> getCTEColoured addr \<lb
 
 lemma getObject_cte_inv_inCurDomain [wp]: "\<lbrace>P\<rbrace> (getObjectColoured addr :: cte kernel) \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: getObjectColoured_def loadObject_cte split_def)
-  apply (clarsimp simp: valid_def in_monad)
-  apply (clarsimp simp: typeError_def in_monad magnitudeCheck_def
-                 split: kernel_object.split_asm if_split_asm option.split_asm)
-  done
+  by wpsimp
 
 lemma getObject_cte_det_inCurDomain: (* TODO: update cte_wp_at' to use curDomain version of getObject *)
   "(r::cte,s') \<in> fst (getObjectColoured p s) \<Longrightarrow> fst (getObject p s) = {(r,s)} \<and> s' = s"
@@ -211,10 +177,7 @@ lemma getObject_obj_at'_inCurDomain:
                 (loadObject_default p q n ko :: ('a :: pspace_storable) kernel)"
   assumes P: "\<And>(v::'a::pspace_storable). (1 :: machine_word) < 2 ^ (objBits v)"
   shows      "\<lbrace> \<top> \<rbrace> getObjectColoured p \<lbrace>\<lambda>r::'a::pspace_storable. obj_at' ((=) r) p\<rbrace>"
-  by (clarsimp simp: valid_def getObjectColoured_def in_monad
-                     loadObject_default_def obj_at'_def
-                     split_def in_magnitude_check lookupAround2_char1
-                     x P project_inject objBits_def[symmetric])
+  by (wpsimp simp: getObjectColoured_def x P wp: getObject_obj_at')
 
 lemma getObject_ko_at_inCurDomain:
   assumes x: "\<And>q n ko. loadObject p q n ko =
@@ -231,21 +194,9 @@ section \<open>corres lemmas\<close>
 
 lemma corres_get_tcb_inCurDomain':
   "corres (tcb_relation \<circ> the) (tcb_at t) (tcb_at' t and (\<lambda>s. isInDomainColour' (ksCurDomain s) t)) (gets (get_tcb t)) (getObjectColoured t)"
-    apply (rule corres_no_failI)
-   apply wp
-  apply (clarsimp simp add: gets_def get_def return_def bind_def get_tcb_def)
-  apply (frule in_inv_by_hoareD [OF getObjectColoured_inv_tcb])
-  apply (clarsimp simp add: obj_at_def is_tcb obj_at'_def projectKO_def
-                            projectKO_opt_tcb split_def
-                            getObjectColoured_def loadObject_default_def in_monad)
-  apply (case_tac bb)
-   apply (simp_all add: fail_def return_def)
-  apply (clarsimp simp add: state_relation_def pspace_relation_def)
-  apply (drule bspec)
-   apply clarsimp
-   apply blast
-  apply (clarsimp simp: tcb_relation_cut_def lookupAround2_known1)
-  done
+  apply (simp add: getObjectColoured_def)
+  apply (rule corres_stateAssert_r)
+  by (rule corres_get_tcb)
 
 lemma corres_get_tcb_inCurDomain:
   "corres (tcb_relation \<circ> the)
@@ -272,37 +223,27 @@ lemma getObject_TCB_corres_inCurDomain:
   apply (rule stronger_corres_guard_imp[where Q="tcb_at t and pspace_aligned and pspace_distinct" and Q'="\<lambda>s. isInDomainColour' (ksCurDomain s) t"])
   by (simp add: getObject_TCB_corres_inCurDomain' colour_invariant_isInDomColour')+
 
+lemma corres_stateAssert_r':
+  "corres_underlying sr nf nf' r P Q f (g ()) \<Longrightarrow>
+   corres_underlying sr nf nf' r P (P' and Q) f (stateAssert P' [] >>= g)"
+  apply (clarsimp simp: bind_assoc stateAssert_def)
+  apply (rule corres_symb_exec_r [OF _ get_sp])
+    apply (rule corres_assert_assume)
+     apply (rule corres_assume_pre)
+     apply (erule corres_guard_imp, clarsimp+)
+   apply (wp | rule no_fail_pre)+
+  done
+
 lemma getObject_ASIDPool_corres_inCurDomain':
   "p' = p \<Longrightarrow>
    corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
           (asid_pool_at p and pspace_aligned and pspace_distinct) (\<lambda>s. isInDomainColour' (ksCurDomain s) p')
           (get_asid_pool p) (getObjectColoured p')"
   apply (rule corres_cross_over_asid_pool_at, fastforce)
-  apply (simp add: getObjectColoured_def gets_map_def split_def)
-  apply (rule corres_no_failI)
-   apply (rule no_fail_pre, wp)
-   apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
-   apply (case_tac ko; simp)
-   apply (rename_tac arch_kernel_object)
-   apply (case_tac arch_kernel_object, simp_all)[1]
-   apply (clarsimp simp: lookupAround2_known1)
-   apply (clarsimp simp: obj_at'_def objBits_simps)
-   apply (erule (1) ps_clear_lookupAround2)
-     apply simp
-    apply (erule is_aligned_no_overflow)
-   apply simp
-   apply (clarsimp simp add: objBits_simps
-                      split: option.split)
-  apply (clarsimp simp: in_monad loadObject_default_def)
-  apply (simp add: bind_assoc exec_gets)
-  apply (drule asid_pool_at_ko)
-  apply (clarsimp simp: obj_at_def assert_opt_def fail_def return_def in_omonad
-                  split: option.split)
-  apply (simp add: in_magnitude_check objBits_simps pageBits_def)
-  apply (clarsimp simp: state_relation_def pspace_relation_def)
-  apply (drule bspec, blast)
-  apply (clarsimp simp: other_obj_relation_def asid_pool_relation_def)
-  done
+  apply (simp add: getObjectColoured_def)
+  apply (rule corres_stateAssert_r')
+by (simp add: corres_cross_over_guard
+    getObject_ASIDPool_corres)
 
 lemma getObject_ASIDPool_corres_inCurDomain:
   "p' = p \<Longrightarrow>
@@ -317,30 +258,10 @@ lemma getObject_PTE_corres_inCurDomain':
    corres pte_relation' (pte_at p and pspace_aligned and pspace_distinct) (\<lambda>s. isInDomainColour' (ksCurDomain s) p')
           (get_pte p) (getObjectColoured p')"
   apply (rule corres_cross_over_pte_at, fastforce)
-  apply (simp add: getObjectColoured_def gets_map_def split_def bind_assoc)
-  apply (rule corres_no_failI)
-   apply (rule no_fail_pre, wp)
-   apply (clarsimp simp: ko_wp_at'_def typ_at'_def lookupAround2_known1)
-   apply (case_tac ko, simp_all)[1]
-   apply (rename_tac arch_kernel_object)
-   apply (case_tac arch_kernel_object; simp)
-   apply (clarsimp simp: objBits_def cong: option.case_cong)
-   apply (erule (1) ps_clear_lookupAround2)
-     apply simp
-    apply (erule is_aligned_no_overflow)
-    apply (simp add: objBits_simps word_bits_def)
-   apply simp
-  apply (clarsimp simp: in_monad loadObject_default_def)
-  apply (simp add: bind_assoc exec_gets fst_assert_opt)
-  apply (clarsimp simp: pte_at_eq)
-  apply (clarsimp simp: ptes_of_def)
-  apply (clarsimp simp: typ_at'_def ko_wp_at'_def in_magnitude_check objBits_simps bit_simps)
-  apply (clarsimp simp: state_relation_def pspace_relation_def elim!: opt_mapE)
-  apply (drule bspec, blast)
-  apply (clarsimp simp: other_obj_relation_def pte_relation_def)
-  apply (erule_tac x="table_index p" in allE)
-  apply (clarsimp simp: mask_pt_bits_inner_beauty[simplified bit_simps] bit_simps)
-  done
+  apply (simp add: getObjectColoured_def)
+  apply (rule corres_stateAssert_r')
+by (simp add: corres_cross_over_guard
+    getObject_PTE_corres)
 
 lemma getObject_PTE_corres_inCurDomain[corres]:
   "p = p' \<Longrightarrow>
@@ -361,66 +282,10 @@ lemma setObject_update_TCB_corres_inCurDomain'':
     "corres r
        (ko_at (TCB tcb) ptr) (ko_at' tcb' ptr and (\<lambda>s. isInDomainColour' (ksCurDomain s) ptr))
        (set_object ptr (TCB new_tcb)) (setObjectColoured ptr new_tcb')"
-  apply (rule_tac F="tcb_relation tcb tcb'" in corres_req)
-   apply (clarsimp simp: state_relation_def obj_at_def obj_at'_def)
-   apply (frule(1) pspace_relation_absD)
-   apply (clarsimp simp: tcb_relation_cut_def)
-  apply (rule corres_no_failI)
-   apply wp
-   apply (clarsimp simp: obj_at'_def)
-  apply (unfold set_object_def setObjectColoured_def)
-  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def Bex_def
-                        put_def return_def modify_def get_object_def obj_at_def
-                        updateObject_default_def in_magnitude_check objBits_less_word_bits)
-  apply (rename_tac s s' ko)
-  apply (prop_tac "ko = tcb'")
-   apply (clarsimp simp: obj_at'_def project_inject)
-  apply (clarsimp simp: state_relation_def)
-  apply (prop_tac "map_to_ctes ((ksPSpace s') (ptr \<mapsto> injectKO new_tcb'))
-                   = map_to_ctes (ksPSpace s')")
-   apply (frule_tac tcb=new_tcb' and tcb=tcb' in map_to_ctes_upd_tcb)
-     apply (clarsimp simp: objBits_simps)
-    apply (clarsimp simp: objBits_simps ps_clear_def3 field_simps objBits_defs mask_def)
-   apply (insert tables')[1]
-   apply (rule ext)
-   subgoal by auto
-  apply (prop_tac "obj_at (same_caps (TCB new_tcb)) ptr s")
-   using tables
-   apply (fastforce simp: obj_at_def)
-  apply (clarsimp simp: caps_of_state_after_update cte_wp_at_after_update swp_def fun_upd_def
-                        obj_at_def assms)
-  apply (subst conj_assoc[symmetric])
-  apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
-   apply (clarsimp simp: ghost_relation_def)
-   apply (erule_tac x=ptr in allE)+
-   apply clarsimp
-  apply (extract_conjunct \<open>match conclusion in "pspace_relation _ _" \<Rightarrow> -\<close>)
-   apply (fold fun_upd_def)
-   apply (simp only: pspace_relation_def simp_thms
-                     pspace_dom_update[where x="kernel_object.TCB _"
-                                         and v="kernel_object.TCB _",
-                                       simplified a_type_def, simplified])
-   using assms
-   apply (simp only: dom_fun_upd2 simp_thms)
-   apply (elim conjE)
-   apply (frule bspec, erule domI)
-   apply (rule ballI, drule(1) bspec)
-   apply (drule domD)
-   apply (clarsimp simp: project_inject tcb_relation_cut_def
-                  split: if_split_asm kernel_object.split_asm)
-   apply (rename_tac aa ba)
-   apply (drule_tac x="(aa, ba)" in bspec, simp)
-   apply clarsimp
-   apply (frule_tac ko'="kernel_object.TCB tcb" and x'=ptr in obj_relation_cut_same_type)
-      apply (simp add: tcb_relation_cut_def)+
-   apply clarsimp
-  apply (insert sched_pointers flag)
-  apply (clarsimp simp: ready_queues_relation_def Let_def)
-  apply (prop_tac "(tcbSchedNexts_of s')(ptr := tcbSchedNext new_tcb') = tcbSchedNexts_of s'")
-   apply (fastforce simp: opt_map_def)
-  apply (prop_tac "(tcbSchedPrevs_of s')(ptr := tcbSchedPrev new_tcb') = tcbSchedPrevs_of s'")
-   apply (fastforce simp: opt_map_def)
-  by (clarsimp simp: ready_queue_relation_def opt_pred_def opt_map_def split: option.splits)
+  apply (simp add: setObjectColoured_def)
+  apply (rule corres_stateAssert_r)
+  apply (rule setObject_update_TCB_corres')
+  by (simp_all add: assms)
 
 lemma setObject_update_TCB_corres_inCurDomain':
   "\<lbrakk>tcb_relation tcb tcb' \<Longrightarrow> tcb_relation new_tcb new_tcb';
@@ -462,57 +327,10 @@ lemma setObject_other_corres_inCurDomain':
   corres dc (obj_at (\<lambda>ko. a_type ko = a_type ob) ptr and obj_at (same_caps ob) ptr)
             (obj_at' (P :: 'a \<Rightarrow> bool) ptr and (\<lambda>s. isInDomainColour' (ksCurDomain s) ptr))
             (set_object ptr ob) (setObjectColoured ptr ob')"
-  supply image_cong_simp [cong del] projectKOs[simp del]
-  apply (rule corres_no_failI)
-   apply (rule no_fail_pre)
-    apply wp
-    apply (rule x)
-   apply (clarsimp simp: b elim!: obj_at'_weakenE)
-  apply (unfold set_object_def setObjectColoured_def)
-  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def Bex_def
-                        put_def return_def modify_def get_object_def x
-                        projectKOs obj_at_def
-                        updateObject_default_def in_magnitude_check [OF _ P])
-  apply (rename_tac ko)
-  apply (clarsimp simp add: state_relation_def z)
-  apply (clarsimp simp add: caps_of_state_after_update cte_wp_at_after_update
-                            swp_def fun_upd_def obj_at_def)
-  apply (subst conj_assoc[symmetric])
-  apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
-   apply (clarsimp simp add: ghost_relation_def)
-   apply (erule_tac x=ptr in allE)+
-   apply (clarsimp simp: obj_at_def a_type_def
-                   split: Structures_A.kernel_object.splits if_split_asm)
-   apply (simp split: arch_kernel_obj.splits if_splits)
-  apply (fold fun_upd_def)
-  apply (simp only: pspace_relation_def pspace_dom_update dom_fun_upd2 simp_thms)
-  apply (elim conjE)
-  apply (frule bspec, erule domI)
-  apply (prop_tac "typ_at' (koTypeOf (injectKO ob')) ptr b")
-   subgoal
-     by (clarsimp simp: typ_at'_def ko_wp_at'_def obj_at'_def projectKO_opts_defs
-                        is_other_obj_relation_type_def a_type_def other_obj_relation_def
-                 split: Structures_A.kernel_object.split_asm if_split_asm
-                        arch_kernel_obj.split_asm kernel_object.split_asm
-                        arch_kernel_object.split_asm)
-  apply clarsimp
-  apply (rule conjI)
-   apply (rule ballI, drule(1) bspec)
-   apply (drule domD)
-   apply (clarsimp simp: is_other_obj_relation_type t)
-   apply (drule(1) bspec)
-   apply clarsimp
-   apply (frule_tac ko'=ko and x'=ptr in obj_relation_cut_same_type,
-           (fastforce simp add: is_other_obj_relation_type t)+)
-   apply (insert t)
-   apply ((erule disjE
-          | clarsimp simp: is_other_obj_relation_type is_other_obj_relation_type_def a_type_def)+)[1]
-  \<comment> \<open>ready_queues_relation\<close>
-  apply (prop_tac "koTypeOf (injectKO ob') \<noteq> TCBT")
-   subgoal
-     by (clarsimp simp: other_obj_relation_def; cases ob; cases "injectKO ob'";
-         simp split: arch_kernel_obj.split_asm)
-  by (fastforce dest: tcbs_of'_non_tcb_update)
+  apply (simp add: setObjectColoured_def)
+  apply (rule corres_stateAssert_r)
+  apply (rule setObject_other_corres)
+  by (simp_all add: assms)
 
 lemma setObject_other_corres_inCurDomain:
   assumes x: "updateObject ob' = updateObject_default ob'"
@@ -537,6 +355,8 @@ lemma setObject_PT_corres_inCurDomain':
   supply opt_mapE[elim!]
   apply (rule corres_cross_over_pte_at[where p=p])
    apply (simp add: pte_at_eq ptes_of_def in_omonad)
+  apply (simp add: setObjectColoured_def)
+  apply (rule corres_stateAssert_r')
   apply (simp add: set_pt_def get_object_def bind_assoc set_object_def gets_map_def)
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
@@ -546,7 +366,7 @@ lemma setObject_PT_corres_inCurDomain':
    apply (rename_tac arch_kernel_object)
    apply (case_tac arch_kernel_object; simp)
    apply (simp add: objBits_simps word_bits_def)
-  apply (clarsimp simp: setObjectColoured_def in_monad split_def updateObject_default_def)
+  apply (clarsimp simp: setObject_def in_monad split_def updateObject_default_def)
   apply (simp add: in_magnitude_check objBits_simps a_type_simps)
   apply (clarsimp simp: obj_at_def exec_gets a_type_simps opt_map_def exec_get put_def)
   apply (clarsimp simp: state_relation_def mask_pt_bits_inner_beauty)
@@ -708,24 +528,11 @@ lemma threadsetInCurDomain_corresT':
   shows      "corres dc (tcb_at t and pspace_aligned and pspace_distinct)
                         (\<lambda>s. isInDomainColour' (ksCurDomain s) t)
                         (thread_set f t) (threadSetInCurDomain f' t)"
-  apply (simp add: thread_set_def threadSetInCurDomain_def)
+  apply (simp add: threadSetInCurDomain_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF getObject_TCB_corres_inCurDomain'])
-      apply (rule setObject_update_TCB_corres_inCurDomain'')
-            apply (erule x)
-           apply (rule y)
-          apply (clarsimp simp: bspec_split [OF spec [OF z]])
-          apply fastforce
-         apply (rule sched_pointers)
-        apply (rule sched_pointers)
-       apply (rule flag)
-      apply simp
-     apply wp+
-   apply (clarsimp simp add: tcb_at_def obj_at_def)
-   apply (drule get_tcb_SomeD)
-   apply fastforce
-  apply simp
-  done
+  apply (rule corres_stateAssert_r')
+  apply (rule threadset_corresT)
+  by (simp_all add: assms)
 
 lemma threadsetInCurDomain_corresT:
   assumes x: "\<And>tcb tcb'. tcb_relation tcb tcb' \<Longrightarrow>
