@@ -1079,7 +1079,7 @@ lemma retype_state_relation[Retype_R_2_assms]:
     apply -
     apply (rule ext, induct (?al); clarsimp simp: ups_of_heap_def default_object_def)
     apply (case_tac "?tp";
-           force simp: APIType_map2_gen_def not_unt data_map_insert_def map_upd_Some_unfold 
+           force simp: APIType_map2_gen_def not_unt data_map_insert_def map_upd_Some_unfold
                  split: Structures_A.kernel_object.splits option.splits)
     done
 
@@ -1089,7 +1089,7 @@ lemma retype_state_relation[Retype_R_2_assms]:
     apply -
     apply (rule ext, induct (?al); clarsimp simp: cns_of_heap_def default_object_def)
     apply (case_tac "?tp";
-           force simp: APIType_map2_gen_def not_unt data_map_insert_def map_upd_Some_unfold 
+           force simp: APIType_map2_gen_def not_unt data_map_insert_def map_upd_Some_unfold
                  split: Structures_A.kernel_object.splits option.splits)
     done
 
