@@ -1400,10 +1400,6 @@ lemma mask_is_asid_low_bits_of[simp]:
   "(ucast asid :: machine_word) && mask asid_low_bits = ucast (asid_low_bits_of asid)"
   by (word_eqI_solve simp: asid_low_bits_of_def asid_low_bits_def)
 
-declare corres_gets_asid[corres] (* FIXME AARCH64: declare at origin *)
-declare getPoolPtr_corres[corres] (* FIXME AARCH64: declare at origin *)
-declare getObject_ASIDPool_corres[corres] (* FIXME AARCH64: declare at origin *)
-
 lemma getASIDPoolEntry_corres'[corres]:
   "asid' = ucast asid \<Longrightarrow>
    corres (\<lambda>r r'. r = map_option abs_asid_entry r')

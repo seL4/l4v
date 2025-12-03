@@ -54,6 +54,10 @@ lemma arch_isCap_simps:
 (* isArchSGISignalCap_def is already in expanded exists form, so no need to spell it out. *)
 lemmas isCap_simps = gen_isCap_simps arch_isCap_simps isArchSGISignalCap_def
 
+lemma pageBits_le_maxUntypedSizeBits[Bits_R_assms, simp]:
+  "pageBits \<le> maxUntypedSizeBits"
+  by (simp add: pageBits_def maxUntypedSizeBits_def)
+
 text \<open>Miscellaneous facts about low level constructs\<close>
 
 lemma projectKO_ASID:

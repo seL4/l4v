@@ -60,6 +60,8 @@ locale Bits_R =
     "\<And>ko. objBitsKO ko < word_bits"
   assumes objBitsKO_neq_0:
     "\<And>ko. objBitsKO ko \<noteq> 0"
+  assumes pageBits_le_maxUntypedSizeBits[simp]:
+    "pageBits \<le> maxUntypedSizeBits"
 
 context Bits_R begin
 

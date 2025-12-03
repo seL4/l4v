@@ -1595,6 +1595,11 @@ locale Invariants_H_pspaceI =
        ksPSpace s x = Some (KOTCB tcb); ksPSpace s y = Some v;
        \<lbrakk> x = y; getF = tcbCTable; setF = tcbCTable_update \<rbrakk> \<Longrightarrow> P
       \<rbrakk> \<Longrightarrow> P"
+  assumes range_cover_canonical_address:
+    "\<And>ptr sz us n p.
+     \<lbrakk> range_cover ptr sz us n ; p < n ; canonical_address (ptr && ~~ mask sz);
+       sz \<le> maxUntypedSizeBits \<rbrakk>
+     \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
 
 lemma pred_tcb_at'_pspaceI:
   "pred_tcb_at' proj P t s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> pred_tcb_at' proj P t s'"
