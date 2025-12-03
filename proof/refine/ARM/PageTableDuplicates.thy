@@ -1103,6 +1103,7 @@ lemma createObject_valid_duplicates'[wp]:
                 split: ARM_H.pde.splits)+
    apply (rule none_in_new_cap_addrs[where us =12,simplified]
      ,(simp add: objBits_simps pageBits_def word_bits_conv archObjSize_def pdeBits_def)+)[1]
+  supply APIType_capBits_generic[simp del]
   apply (intro conjI impI allI)
       apply simp
      apply clarsimp
@@ -1130,7 +1131,6 @@ lemma createObject_valid_duplicates'[wp]:
    apply (simp add: objBits_simps')
    apply (rule none_in_new_cap_addrs
      ,(simp add: objBits_simps' pageBits_def APIType_capBits_def
-                 ARM_H.toAPIType_def
                  word_bits_conv archObjSize_def is_aligned_mask
           split: ARM_H.object_type.splits)+)[1]
   apply (clarsimp simp: word_bits_def)

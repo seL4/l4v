@@ -2546,7 +2546,7 @@ lemma invokeUntyped_Retype_ccorres:
                               arg_cong[OF mask_out_sub_mask, where f="\<lambda>y. x - y" for x]
                               field_simps unat_of_nat_eq[OF range_cover.weak, OF cover]
                               if_apply_def2 invs_valid_objs' ptr_base_eq
-                              invs_urz untypedBits_defs)
+                              invs_urz untypedBits_defs sz_bound)
 
         apply (intro conjI)
                  (* pspace_no_overlap *)

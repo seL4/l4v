@@ -1020,7 +1020,10 @@ lemma deleteObjects_corres:
     apply (rule state_relation_null_filterE, assumption,
            simp_all add: pspace_aligned'_cut pspace_distinct'_cut)[1]
            apply (simp add: detype_def)
-          apply (intro exI, fastforce)
+          apply clarsimp
+          (* unification can't guess we want identity update on ksArchState s' *)
+          apply (repeat 3 \<open>rule exI\<close>, rule_tac x=id in exI)
+          apply fastforce
          apply (rule ext, clarsimp simp add: null_filter_def)
          apply (rule sym, rule ccontr, clarsimp)
          apply (drule(4) cte_map_not_null_outside')
@@ -1046,6 +1049,7 @@ lemma deleteObjects_corres:
        apply (clarsimp simp: deletionIsSafe_delete_locale_def)
       apply (frule state_relation_ready_queues_relation)
       apply (simp add: ready_queues_relation_def Let_def)
+      apply (clarsimp simp: state_relation_def)
      apply (clarsimp simp: state_relation_def ghost_relation_of_heap detype_def)
      apply (drule_tac t="gsUserPages s'" in sym)
      apply (drule_tac t="gsCNodes s'" in sym)
@@ -1404,7 +1408,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     done
 
   show "sym_refs (state_hyp_refs_of' ?s)"
-    by simp
+    by (simp add: sym_refs_def)
 
   show "if_live_then_nonz_cap' ?s" using iflive
     apply (clarsimp simp: if_live_then_nonz_cap'_def)
@@ -2225,10 +2229,10 @@ proof -
   apply (drule(1) src_in_range)+
   apply (drule base_member_set[OF pspace_alignedD'])
     apply simp
-   apply (simp add:objBitsKO_bounded2[unfolded word_bits_def,simplified])
+   apply (simp add: objBitsKO_less_word_bits[unfolded word_bits_def,simplified])
   apply (drule base_member_set[OF pspace_alignedD'])
     apply simp
-   apply (simp add:objBitsKO_bounded2[unfolded word_bits_def,simplified])
+   apply (simp add: objBitsKO_less_word_bits[unfolded word_bits_def,simplified])
   apply (clarsimp simp: field_simps)
   apply (elim disjE; fastforce simp: mask_def p_assoc_help)
   done
@@ -5387,7 +5391,7 @@ lemma createNewObjects_def2:
     distinct dslots;
     valid_arch_state' s;
     range_cover ptr sz (Types_H.getObjectSize ty us) (length dslots);
-    ptr \<noteq> 0;
+    ptr \<noteq> 0; sz \<le> maxUntypedSizeBits;
     ksCurDomain s \<le> maxDomain\<rbrakk>
    \<Longrightarrow> createNewObjects ty parent dslots ptr us d s =
        insertNewCaps ty parent dslots ptr us d s"
@@ -5401,6 +5405,7 @@ lemma createNewObjects_def2:
   assume dist: "distinct ys"
   assume extra: "y\<notin> set ys" "cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) y s"
   assume not_0: "ptr \<noteq> 0"
+  assume sz_limit: "sz \<le> maxUntypedSizeBits"
   assume kscd: "ksCurDomain s \<le> maxDomain"
   assume valid_psp: "valid_pspace' s"
   assume valid_arch_state: "valid_arch_state' s"
@@ -5416,7 +5421,7 @@ lemma createNewObjects_def2:
             insertNewCap parent slot)
         [0.e.of_nat (length ys)] (y # ys) s =
        (createNewCaps ty ptr (Suc (length ys)) us d >>= zipWithM_x (insertNewCap parent) (y # ys))  s"
-    using le list_nc dist extra range_cover not_0 caps_reserved
+    using le list_nc dist extra range_cover not_0 caps_reserved sz_limit
     proof (induct ys arbitrary: y rule:rev_induct)
       case Nil
       show ?case
@@ -5494,7 +5499,7 @@ lemma createNewObjects_def2:
                   createNewCaps_obj_at'[where sz=sz])
           apply simp
          apply (rule range_cover_le)
-           apply (simp add:objSize_eq_capBits caps_r)+
+           apply (simp add:objSize_eq_capBits caps_r canonical_address_def)+
         apply (wp createNewCaps_ret_len createNewCaps_valid_arch_state)
        apply (frule range_cover_le[where n = "Suc (length as)"])
         apply simp+
@@ -5509,19 +5514,20 @@ lemma createNewObjects_corres_helper:
 assumes check: "distinct dslots"
   and   cover: "range_cover ptr sz (Types_H.getObjectSize ty us) (length dslots)"
   and   not_0: "ptr \<noteq> 0" "length dslots \<noteq> 0"
+  and sz_limit: "sz \<le> maxUntypedSizeBits"
   and       c: "corres r P P' f (insertNewCaps ty parent dslots ptr us d)"
   and     imp: "\<And>s. P' s \<Longrightarrow> (cte_wp_at' (\<lambda>c. isUntypedCap (cteCap c)) parent s
-  \<and> (\<forall>slot \<in> set dslots. cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) slot s)
-  \<and> pspace_no_overlap' ptr sz s
-  \<and> caps_no_overlap'' ptr sz s
-  \<and> caps_overlap_reserved'
-   {ptr..ptr + of_nat (length dslots) * 2^ (Types_H.getObjectSize ty us) - 1} s
-  \<and> valid_pspace' s \<and> valid_arch_state' s \<and> ksCurDomain s \<le> maxDomain)"
-shows "corres r P P' f (createNewObjects ty parent dslots ptr us d)"
-  using check cover not_0
+                   \<and> (\<forall>slot \<in> set dslots. cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) slot s)
+                   \<and> pspace_no_overlap' ptr sz s
+                   \<and> caps_no_overlap'' ptr sz s
+                   \<and> caps_overlap_reserved' {ptr..ptr + of_nat (length dslots) *
+                                                          2^ (Types_H.getObjectSize ty us) - 1} s
+                   \<and> valid_pspace' s \<and> valid_arch_state' s \<and> ksCurDomain s \<le> maxDomain)"
+  shows "corres r P P' f (createNewObjects ty parent dslots ptr us d)"
+  using check cover not_0 sz_limit
   apply (clarsimp simp:corres_underlying_def)
   apply (frule imp)
-  apply (frule range_cover.range_cover_le_n_less(1)[where 'a=32, folded word_bits_def, OF _ le_refl])
+  apply (frule range_cover.range_cover_le_n_less(1)[where 'a=machine_word_len, folded word_bits_def, OF _ le_refl])
   apply clarsimp
   apply (simp add:createNewObjects_def2)
   using c
@@ -5534,6 +5540,7 @@ lemma createNewObjects_wp_helper:
   assumes check: "distinct dslots"
   and   cover: "range_cover ptr sz (Types_H.getObjectSize ty us) (length dslots)"
   and   not_0: "ptr \<noteq> 0" "length dslots \<noteq> 0"
+  and   sz_limit: "sz \<le> maxUntypedSizeBits"
   shows "\<lbrace>P\<rbrace> insertNewCaps ty parent dslots ptr us d \<lbrace>Q\<rbrace>
   \<Longrightarrow> \<lbrace>P and (cte_wp_at' (\<lambda>c. isUntypedCap (cteCap c)) parent
   and (\<lambda>s. \<forall>slot \<in> set dslots. cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) slot s)
@@ -5609,8 +5616,9 @@ lemma ArchCreateObject_pspace_no_overlap':
     apply (metis numeral_2_eq_2)
    apply (simp add:shiftl_t2n field_simps)
   apply (intro conjI allI)
-  apply (clarsimp simp: field_simps pageBits_def pdBits_def word_bits_conv archObjSize_def ptBits_def
-                        APIType_capBits_def shiftl_t2n objBits_simps pdeBits_def pteBits_def
+  apply (clarsimp simp: field_simps pageBits_def pdBits_def word_bits_conv ptBits_def
+                        APIType_capBits_def shiftl_t2n objBits_simps APIType_capBits_gen_def
+                        pdeBits_def pteBits_def
          | rule conjI | erule range_cover_le,simp)+
   done
 
@@ -5663,7 +5671,7 @@ lemma createObject_pspace_no_overlap':
   apply (frule range_cover_offset[rotated,where p = n])
    apply simp+
   by (auto simp: word_shiftl_add_distrib field_simps shiftl_t2n elim: range_cover_le)
-     (auto simp: APIType_capBits_def fromAPIType_def objBits_def objBits_simps
+     (auto simp: APIType_capBits_gen_def fromAPIType_def objBits_def objBits_simps
           dest!: to_from_apiTypeD)
 
 lemma createObject_pspace_aligned_distinct':

@@ -764,8 +764,8 @@ lemma createObject_valid_duplicates'[wp]:
     apply (simp add: nondup_obj_def)
    apply simp
    apply (rule none_in_new_cap_addrs
-     ,(simp add: objBits_simps' pageBits_def APIType_capBits_def
-                 ARM_HYP_H.toAPIType_def word_bits_conv archObjSize_def is_aligned_mask
+     ,(simp add: objBits_simps' pageBits_def APIType_capBits_gen_def
+                 word_bits_conv archObjSize_def is_aligned_mask
           split: ARM_HYP_H.object_type.splits)+)[1]
   apply (clarsimp simp: word_bits_def)
  done
