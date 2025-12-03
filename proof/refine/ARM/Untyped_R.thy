@@ -897,7 +897,7 @@ lemma decodeUntyped_wf[wp]:
    apply (clarsimp simp: image_def isCap_simps nullPointer_def word_size field_simps)
    apply (drule_tac x=x in spec)+
    apply simp
-  apply (clarsimp simp: APIType_capBits_def)
+  apply (clarsimp simp: APIType_capBits_gen_def)
   done
 
 lemma getCTE_known_cap:
@@ -2890,6 +2890,7 @@ lemma inv_untyped_corres_helper1:
 
 lemma createNewCaps_valid_pspace_extras:
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
+          \<and> sz \<le> maxUntypedSizeBits
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2898,6 +2899,7 @@ lemma createNewCaps_valid_pspace_extras:
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
+          \<and> sz \<le> maxUntypedSizeBits
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2906,6 +2908,7 @@ lemma createNewCaps_valid_pspace_extras:
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
+          \<and> sz \<le> maxUntypedSizeBits
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2914,6 +2917,7 @@ lemma createNewCaps_valid_pspace_extras:
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
+          \<and> sz \<le> maxUntypedSizeBits
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2921,6 +2925,7 @@ lemma createNewCaps_valid_pspace_extras:
    )\<rbrace>
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
+  supply canonical_address_def[simp]
   apply (rule hoare_grab_asm)+
     apply (rule hoare_pre,rule hoare_strengthen_post[OF createNewCaps_valid_pspace])
     apply (simp add:valid_pspace'_def)+
@@ -2961,7 +2966,7 @@ lemma createNewCaps_range_helper:
             \<comment>\<open>Untyped\<close>
             apply (rule hoare_pre, wp)
             apply (frule range_cover_not_zero[rotated -1],simp)
-            apply (clarsimp simp: APIType_capBits_def objBits_simps ptr_add_def o_def)
+            apply (clarsimp simp: APIType_capBits_gen_def objBits_simps ptr_add_def o_def)
             apply (subst upto_enum_red')
              apply unat_arith
             apply (clarsimp simp: o_def fromIntegral_def toInteger_nat fromInteger_nat)
@@ -2969,11 +2974,11 @@ lemma createNewCaps_range_helper:
            \<comment>\<open>TCB\<close>
            apply (rule hoare_pre, wp createObjects_ret2)
             apply (wpsimp simp: curDomain_def)
-           apply (clarsimp simp: APIType_capBits_def word_bits_def objBits_simps ptr_add_def o_def)
+           apply (clarsimp simp: APIType_capBits_gen_def word_bits_def objBits_simps ptr_add_def o_def)
            apply (fastforce simp: objBitsKO_def objBits_def)
           \<comment>\<open>other APIObjectType\<close>
           apply ((rule hoare_pre, wp createObjects_ret2,
-                  clarsimp simp: APIType_capBits_def word_bits_def objBits_simps ptr_add_def o_def,
+                  clarsimp simp: APIType_capBits_gen_def word_bits_def objBits_simps ptr_add_def o_def,
                   fastforce simp: objBitsKO_def objBits_def)+)[3]
        \<comment>\<open>Arch objects\<close>
        by (wp createObjects_ret2
@@ -3925,6 +3930,23 @@ lemma caps_no_overlap'[simp]: "caps_no_overlap'' ptr sz s"
    apply simp+
   done
 
+lemma vc'[simp] : "s \<turnstile>' capability.UntypedCap dev (ptr && ~~ mask sz) sz idx"
+  using misc cte_wp_at'
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (case_tac cte)
+  apply clarsimp
+  apply (erule ctes_of_valid_cap')
+  apply (simp add: invs_valid_objs')
+  done
+
+lemma ptr_cn[simp]:
+  "canonical_address (ptr && ~~ mask sz)"
+  using vc' unfolding valid_cap'_def by simp
+
+lemma sz_limit[simp]:
+  "sz \<le> maxUntypedSizeBits"
+  using vc' unfolding valid_cap'_def by clarsimp
+
     lemma idx_compare'[simp]:"unat ((ptr && mask sz) + (of_nat (length slots)<< (APIType_capBits tp us))) \<le> 2 ^ sz"
       apply (rule le_trans[OF unat_plus_gt])
       apply (simp add: range_cover.unat_of_nat_n_shift[OF cover] range_cover_unat)
@@ -4817,6 +4839,12 @@ lemma inv_untyped_corres':
      apply (clarsimp simp: cte_wp_at_caps_of_state)
      done
 
+   have sz_limit[simp]: "sz \<le> maxUntypedSizeBits"
+     using vc' unfolding valid_cap'_def by clarsimp
+
+   have canonical_ptr[simp]: "canonical_address ptr"
+     by (simp add: canonical_address_def)
+
     note set_cap_free_index_invs_spec = set_free_index_invs[where cap = "cap.UntypedCap
         dev (ptr && ~~ mask sz) sz (if reset then 0 else idx)"
       ,unfolded free_index_update_def free_index_of_def,simplified]
@@ -5396,7 +5424,7 @@ lemma createNewCaps_ct_active':
    apply (rule hoare_pre)
    apply wps
    apply (wp createNewCaps_pred_tcb_at'[where sz=sz])
-   apply simp
+   apply (simp add: createNewCaps_arch_ko_type_pre_non_arch)
    done
 
 crunch deleteObjects
@@ -5484,6 +5512,8 @@ lemma invokeUntyped_invs'':
     note slots_invD = invokeUntyped_proofs.slots_invD[OF pf]
     note nidx[simp] = add_minus_neg_mask[where ptr = ptr]
     note idx_compare' = invokeUntyped_proofs.idx_compare'[OF pf]
+    note ptr_cn[simp] = invokeUntyped_proofs.ptr_cn[OF pf]
+    note sz_limit[simp] = invokeUntyped_proofs.sz_limit[OF pf]
 
     have valid_global_refs': "valid_global_refs' s"
       using misc by auto
@@ -5641,7 +5671,7 @@ lemma inv_untyp_st_tcb_at'[wp]:
    apply (rule hoare_strengthen_post)
     apply (rule invokeUntyped_invs''[where Q="st_tcb_at' P tptr"];
            wp createNewCaps_pred_tcb_at')
-      apply (auto simp: valid_pspace'_def)[1]
+      apply (auto simp: valid_pspace'_def createNewCaps_arch_ko_type_pre_non_arch)[1]
      apply (wp resetUntypedCap_st_tcb_at' | simp)+
   apply (cases ui, clarsimp simp: cte_wp_at_ctes_of isCap_simps)
   apply (clarsimp elim!: pred_tcb'_weakenE)

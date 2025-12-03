@@ -1111,7 +1111,7 @@ lemma createNewCaps_no_orphans:
                    | clarsimp simp: is_active_thread_state_def makeObject_tcb
                                     projectKO_opt_tcb isRunning_def isRestart_def
                                     APIType_capBits_def Arch_createNewCaps_def
-                                    objBits_if_dev
+                                    objBits_if_dev APIType_capBits_gen_def
                           split del: if_split
                    | simp add: objBits_simps
                    | fastforce simp:pageBits_def pteBits_def archObjSize_def ptBits_def pdBits_def
@@ -1144,6 +1144,7 @@ lemma createNewObjects_no_orphans:
          \<and> (\<forall>slot\<in>set slots. cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) slot s)
          \<and> cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap d (ptr && ~~ mask sz) sz idx) cref s
          \<and> caps_no_overlap'' ptr sz s
+         \<and> sz \<le> maxUntypedSizeBits
          \<and> range_cover ptr sz (APIType_capBits tp us) (length slots)
          \<and> (tp = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> us > 0)
          \<and> caps_overlap_reserved' {ptr..ptr + of_nat (length slots) * 2 ^ APIType_capBits tp us - 1} s

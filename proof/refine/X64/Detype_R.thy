@@ -1020,38 +1020,41 @@ lemma deleteObjects_corres:
     apply (simp add: valid_pspace'_def)
     apply (rule state_relation_null_filterE, assumption,
            simp_all add: pspace_aligned'_cut pspace_distinct'_cut)[1]
-           apply (simp add: detype_def)
-          apply (intro exI, fastforce)
-         apply (rule ext, clarsimp simp add: null_filter_def)
+            apply (simp add: detype_def)
+           apply clarsimp
+           (* unification can't guess we want identity update on ksArchState s' *)
+           apply (repeat 3 \<open>rule exI\<close>, rule_tac x=id in exI)
+           apply fastforce
+          apply (rule ext, clarsimp simp add: null_filter_def)
+          apply (rule sym, rule ccontr, clarsimp)
+          apply (drule(4) cte_map_not_null_outside')
+           apply (fastforce simp add: cte_wp_at_caps_of_state)
+          apply simp
+         apply (rule ext, clarsimp simp add: null_filter'_def
+                            map_to_ctes_delete[simplified field_simps])
          apply (rule sym, rule ccontr, clarsimp)
-         apply (drule(4) cte_map_not_null_outside')
-          apply (fastforce simp add: cte_wp_at_caps_of_state)
+         apply (frule(2) pspace_relation_cte_wp_atI
+                         [OF state_relation_pspace_relation])
+         apply (elim exE)
+         apply (frule(4) cte_map_not_null_outside')
+          apply (rule cte_wp_at_weakenE, erule conjunct1)
+          apply (case_tac y, clarsimp)
+          apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def
+                                valid_nullcaps_def)
+         apply clarsimp
+         apply (frule_tac cref="(aa, ba)" in cte_map_untyped_range,
+                erule cte_wp_at_weakenE[OF _ TrueI], assumption+)
          apply simp
-        apply (rule ext, clarsimp simp add: null_filter'_def
-                           map_to_ctes_delete[simplified field_simps])
-        apply (rule sym, rule ccontr, clarsimp)
-        apply (frule(2) pspace_relation_cte_wp_atI
-                        [OF state_relation_pspace_relation])
-        apply (elim exE)
-        apply (frule(4) cte_map_not_null_outside')
-         apply (rule cte_wp_at_weakenE, erule conjunct1)
-         apply (case_tac y, clarsimp)
-         apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def
-                               valid_nullcaps_def)
-        apply clarsimp
-        apply (frule_tac cref="(aa, ba)" in cte_map_untyped_range,
-               erule cte_wp_at_weakenE[OF _ TrueI], assumption+)
-        apply simp
-       apply (rule detype_pspace_relation[simplified],
-              simp_all add: state_relation_pspace_relation valid_pspace_def)[1]
-        apply (simp add: valid_cap'_def capAligned_def)
-       apply (clarsimp simp: valid_cap_def, assumption)
-      apply (rule detype_ready_queues_relation; blast?)
-       apply (clarsimp simp: deletionIsSafe_delete_locale_def)
-      apply (frule state_relation_ready_queues_relation)
-      apply (simp add: ready_queues_relation_def Let_def)
-     apply (clarsimp simp: state_relation_def ghost_relation_of_heap
-                           detype_def)
+        apply (rule detype_pspace_relation[simplified],
+               simp_all add: state_relation_pspace_relation valid_pspace_def)[1]
+         apply (simp add: valid_cap'_def capAligned_def)
+        apply (clarsimp simp: valid_cap_def, assumption)
+       apply (rule detype_ready_queues_relation; blast?)
+        apply (clarsimp simp: deletionIsSafe_delete_locale_def)
+       apply (frule state_relation_ready_queues_relation)
+       apply (simp add: ready_queues_relation_def Let_def)
+      apply (clarsimp simp: state_relation_def)
+     apply (clarsimp simp: state_relation_def ghost_relation_of_heap detype_def)
      apply (drule_tac t="gsUserPages s'" in sym)
      apply (drule_tac t="gsCNodes s'" in sym)
      apply (auto simp add: ups_of_heap_def cns_of_heap_def ext
@@ -2234,10 +2237,10 @@ proof -
   apply (drule(1) src_in_range)+
   apply (drule base_member_set[OF pspace_alignedD'])
     apply simp
-   apply (simp add:objBitsKO_bounded2[unfolded word_bits_def,simplified])
+   apply (simp add: objBitsKO_less_word_bits[unfolded word_bits_def,simplified])
   apply (drule base_member_set[OF pspace_alignedD'])
     apply simp
-   apply (simp add:objBitsKO_bounded2[unfolded word_bits_def,simplified])
+   apply (simp add: objBitsKO_less_word_bits[unfolded word_bits_def,simplified])
   apply (clarsimp simp: field_simps)
   apply (elim disjE; fastforce simp: mask_def p_assoc_help)
   done
@@ -5737,8 +5740,8 @@ lemma ArchCreateObject_pspace_no_overlap':
     apply (metis numeral_2_eq_2)
    apply (simp add:shiftl_t2n field_simps)
   apply (intro conjI allI)
-  apply (clarsimp simp: field_simps pageBits_def pdBits_def word_bits_conv archObjSize_def ptBits_def
-                        APIType_capBits_def shiftl_t2n objBits_simps bit_simps
+  apply (clarsimp simp: field_simps pageBits_def pdBits_def word_bits_conv ptBits_def
+                        APIType_capBits_def APIType_capBits_gen_def shiftl_t2n objBits_simps bit_simps
          | rule conjI | erule range_cover_le,simp)+
   done
 
@@ -5755,6 +5758,7 @@ lemma createObject_pspace_no_overlap':
    createObject ty (ptr + (of_nat n << APIType_capBits ty userSize)) userSize d
    \<lbrace>\<lambda>rv s. pspace_no_overlap'
              (ptr + (1 + of_nat n << APIType_capBits ty userSize)) sz s\<rbrace>"
+  supply APIType_capBits_generic[simp del]
   apply (rule hoare_pre)
    apply (clarsimp simp:createObject_def)
    apply wpc
