@@ -75,6 +75,19 @@ lemma tcb_space_clear[Invariants_H_pspaceI_assms]:
   apply (simp add: tcb_cte_cases_def cteSizeBits_def split: if_split_asm)
   done
 
+lemma range_cover_canonical_address[Invariants_H_pspaceI_assms]:
+  "\<lbrakk> range_cover ptr sz us n ; p < n ;
+     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
+   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
+  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
+  apply (subst add.commute)
+  apply (subst add.assoc)
+  apply (rule canonical_address_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
+  apply (drule (1) range_cover.range_cover_compare)
+  apply (clarsimp simp: word_less_nat_alt)
+  apply unat_arith
+  done
+
 lemma pspace_in_kernel_mappings'_pspaceI[Invariants_H_pspaceI_assms]:
   "pspace_in_kernel_mappings' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> pspace_in_kernel_mappings' s'"
   unfolding pspace_in_kernel_mappings'_def
@@ -289,19 +302,6 @@ lemma mask_wordRadix_less_wordBits:
 lemma priority_mask_wordRadix_size:
   "unat ((w::priority) && mask wordRadix) < wordBits"
   by (rule mask_wordRadix_less_wordBits, simp add: wordRadix_def word_size)
-
-lemma range_cover_canonical_address:
-  "\<lbrakk> range_cover ptr sz us n ; p < n ;
-     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
-   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
-  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
-  apply (subst add.commute)
-  apply (subst add.assoc)
-  apply (rule canonical_address_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
-  apply (drule (1) range_cover.range_cover_compare)
-  apply (clarsimp simp: word_less_nat_alt)
-  apply unat_arith
-  done
 
 lemma canonical_address_neq_mask:
   "\<lbrakk> canonical_address ptr ; sz \<le> maxUntypedSizeBits \<rbrakk>

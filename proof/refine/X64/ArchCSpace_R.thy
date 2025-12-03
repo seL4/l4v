@@ -1411,4 +1411,33 @@ sublocale mdb_move_gen
 
 end
 
+context Arch begin arch_global_naming
+
+(* createNewCaps can't deal with top-level page table entries on this architecture;
+   required for Retype_R setup *)
+
+definition createNewCaps_arch_ko_pre :: "(kernel_object \<Rightarrow> bool) \<Rightarrow> bool" where
+  "createNewCaps_arch_ko_pre P \<equiv>
+     \<forall>pml4e pml4e'. P (KOArch (KOPML4E pml4e)) = P (KOArch (KOPML4E pml4e'))"
+
+definition createNewCaps_arch_ko_type_pre :: "kernel_object_type \<Rightarrow> bool" where
+  "createNewCaps_arch_ko_type_pre ty \<equiv> ty \<noteq> koType(TYPE(pml4e))"
+
+(* interface lemma, but can't be locale assumption due to free type variable  *)
+lemma createNewCaps_arch_ko_type_preD:
+  "\<lbrakk> createNewCaps_arch_ko_type_pre (koType(TYPE('a::pspace_storable))) \<rbrakk>
+   \<Longrightarrow> createNewCaps_arch_ko_pre (\<lambda>ko. \<exists>obj. projectKO_opt ko = Some (obj::'a) \<and> P obj)"
+  unfolding createNewCaps_arch_ko_type_pre_def createNewCaps_arch_ko_pre_def
+  by (auto dest!: project_koType[THEN iffD1, OF exI])
+
+end (* Arch *)
+
+arch_requalify_consts
+  createNewCaps_arch_ko_pre
+  createNewCaps_arch_ko_type_pre
+
+(* requalify interface lemmas which can't be locale assumptions due to free type variable *)
+arch_requalify_facts
+  createNewCaps_arch_ko_type_preD
+
 end
