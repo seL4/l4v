@@ -953,7 +953,10 @@ lemma deleteObjects_corres:
     apply (rule state_relation_null_filterE, assumption,
            simp_all add: pspace_aligned'_cut pspace_distinct'_cut)[1]
            apply (simp add: detype_def)
-          apply (intro exI, fastforce)
+          apply clarsimp
+          (* unification can't guess we want identity update on ksArchState s' *)
+          apply (repeat 3 \<open>rule exI\<close>, rule_tac x=id in exI)
+          apply fastforce
          apply (rule ext, clarsimp simp add: null_filter_def)
          apply (rule sym, rule ccontr, clarsimp)
          apply (drule(4) cte_map_not_null_outside')
@@ -981,6 +984,7 @@ lemma deleteObjects_corres:
        apply (clarsimp simp: deletionIsSafe_delete_locale_def)
       apply (frule state_relation_ready_queues_relation)
       apply (simp add: ready_queues_relation_def Let_def)
+      apply (clarsimp simp: state_relation_def)
      apply (clarsimp simp: state_relation_def ghost_relation_of_heap detype_def)
      apply (drule_tac t="gsUserPages s'" in sym)
      apply (drule_tac t="gsCNodes s'" in sym)
@@ -1337,7 +1341,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     done
 
   show "sym_refs (state_hyp_refs_of' ?s)"
-    by simp
+    by (simp add: sym_refs_def)
 
   show "if_live_then_nonz_cap' ?s" using iflive
     apply (clarsimp simp: if_live_then_nonz_cap'_def)
@@ -2138,10 +2142,10 @@ proof -
   apply (drule(1) src_in_range)+
   apply (drule base_member_set[OF pspace_alignedD'])
     apply simp
-   apply (simp add:objBitsKO_bounded2[unfolded word_bits_def,simplified])
+   apply (simp add: objBitsKO_less_word_bits[unfolded word_bits_def,simplified])
   apply (drule base_member_set[OF pspace_alignedD'])
     apply simp
-   apply (simp add:objBitsKO_bounded2[unfolded word_bits_def,simplified])
+   apply (simp add: objBitsKO_less_word_bits[unfolded word_bits_def,simplified])
   apply (clarsimp simp:field_simps mask_def)
   apply blast
   done
@@ -4825,7 +4829,7 @@ lemma ArchCreateObject_pspace_no_overlap':
    apply (simp add:shiftl_t2n field_simps)
   apply (intro conjI allI)
       apply (clarsimp simp: field_simps word_bits_conv
-                            APIType_capBits_def shiftl_t2n objBits_simps bit_simps
+                            APIType_capBits_gen_def shiftl_t2n objBits_simps bit_simps
              | rule conjI | erule range_cover_le,simp)+
   done
 
@@ -4878,7 +4882,7 @@ lemma createObject_pspace_no_overlap':
   apply (frule range_cover_offset[rotated,where p = n])
    apply simp+
   by (auto simp: word_shiftl_add_distrib field_simps shiftl_t2n elim: range_cover_le)
-     (auto simp: APIType_capBits_def fromAPIType_def objBits_def objBits_simps
+     (auto simp: APIType_capBits_def fromAPIType_def APIType_capBits_gen_def objBits_def objBits_simps
           dest!: to_from_apiTypeD)
 
 lemma createObject_pspace_aligned_distinct':

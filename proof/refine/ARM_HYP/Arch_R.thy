@@ -186,7 +186,7 @@ lemma performASIDControlInvocation_corres:
           apply (wp createObjects_valid_pspace'
                     [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
              apply (simp add: makeObjectKO_def)+
-           apply (simp add:objBits_simps archObjSize_def range_cover_full)+
+           apply (simp add:objBits_simps archObjSize_def range_cover_full canonical_address_def)+
           apply (clarsimp simp:valid_cap'_def)
           apply (wp createObject_typ_at'
                     createObjects_orig_cte_wp_at'[where sz = pageBits])
@@ -1093,6 +1093,7 @@ shows
                    apply wpsimp+
              apply (wp find_pd_for_asid_pd_at_asid_again)
             apply (wp findPDForASID_pd_at_wp)
+           (* FIXME: this block of wpsimps is very slow (over a minute) *)
            apply wpsimp
           apply wpsimp
          apply wpsimp
@@ -2148,6 +2149,7 @@ lemma ex_cte_not_in_untyped_range:
 lemma performASIDControlInvocation_invs' [wp]:
   "\<lbrace>invs' and ct_active' and valid_aci' aci\<rbrace>
   performASIDControlInvocation aci \<lbrace>\<lambda>y. invs'\<rbrace>"
+  supply canonical_address_def[simp]
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp: performASIDControlInvocation_def valid_aci'_def
     placeNewObject_def2 cte_wp_at_ctes_of
