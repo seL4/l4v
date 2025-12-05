@@ -647,9 +647,8 @@ lemma createNewCaps_cte_wp_at'[Retype_R_assms]:
                   | force simp: tcb_cte_cases_def cteSizeBits_def)+
   done
 
-(* FIXME arch-split: example of arch-split attempt of this kind of proof;
-   unfortunately splitting off the arch-specific part doesn't actually save space, so we will leave
-   these in Arch *)
+(* example of arch-split attempt of this kind of proof; unfortunately splitting off the
+   arch-specific part doesn't actually save space, so we will leave these in Arch *)
 lemma createNewCaps_state_refs_of'[Retype_R_assms]:
   assumes cover: "range_cover ptr sz (APIType_capBits ty us) n"
   and     not_0: "n \<noteq> 0"
