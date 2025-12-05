@@ -14,10 +14,6 @@ begin
 
 (* FIXME: review empty_fail lemmas to follow [intro!, wp] policy *)
 
-lemma empty_fail_fun_app[intro!]:
-  "empty_fail (f x) \<Longrightarrow> empty_fail (f $ x)"
-  by simp
-
 lemma empty_fail_alignCheck [intro!, wp, simp]:
   "empty_fail (alignCheck a b)"
   unfolding alignCheck_def by wpsimp
@@ -81,10 +77,6 @@ lemma empty_fail_updateObject_default [intro!, wp, simp]:
   "empty_fail (updateObject_default v ko a b c)"
   by (wpsimp simp: updateObject_default_def)
 
-lemma empty_fail_threadSet [intro!, wp, simp]:
-  "empty_fail (threadSet f p)"
-  by (wpsimp simp: threadSet_def setObject_def)
-
 lemma empty_fail_getThreadState[iff]:
   "empty_fail (getThreadState t)"
   by (simp add: getThreadState_def)
@@ -119,6 +111,10 @@ lemma empty_fail_getObject_tcb[intro!, wp, simp]:
 lemma empty_fail_getNotification [intro!, wp, simp]:
   "empty_fail (getNotification ep)"
   by (simp add: getNotification_def)
+
+lemma empty_fail_threadSet [intro!, wp, simp]:
+  "empty_fail (threadSet f p)"
+  by (wpsimp simp: threadSet_def setObject_def)
 
 locale EmptyFail_R =
   assumes empty_fail_lookupIPCBuffer[intro!, wp, simp]:

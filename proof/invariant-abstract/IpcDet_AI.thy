@@ -6,12 +6,9 @@
 
 theory IpcDet_AI
 imports
-  "Lib.MonadicRewrite"
-  "./$L4V_ARCH/ArchIpc_AI"
+  Lib.MonadicRewrite
+  ArchIpc_AI
 begin
-
-arch_requalify_facts
-  make_arch_fault_msg_valid_replies
 
 lemma replies_with_sc_kh_update_sc:
   "sc_replies (f sc v) = sc_replies sc
@@ -784,9 +781,6 @@ global_interpretation sched_context_update_consumed:
   non_reply_op "sched_context_update_consumed sc_ptr"
   by unfold_locales (wpsimp simp: sched_context_update_consumed_def)
 
-global_interpretation make_arch_fault_msg: non_reply_op "make_arch_fault_msg f t"
-  by unfold_locales (rule sk_obj_at_pred_valid_lift, rule make_arch_fault_msg_obj_at)
-
 global_interpretation make_fault_msg: non_reply_op "make_fault_msg fault t"
   by unfold_locales (cases fault; wpsimp split_del: if_split)
 
@@ -1097,7 +1091,7 @@ lemma sched_context_update_consumed_valid_replies[wp]:
 
 crunch do_ipc_transfer
  for valid_replies[wp]: "valid_replies_pred P"
-  (simp: crunch_simps wp: crunch_wps make_arch_fault_msg_valid_replies)
+  (simp: crunch_simps wp: crunch_wps )
 
 lemma set_reply_sc_valid_replies_already_BlockedOnReply:
   "\<lbrace> \<lambda>s. valid_replies s \<and> r \<in> fst ` replies_blocked s \<rbrace>
@@ -1222,7 +1216,7 @@ lemma reply_push_sender_sc_Some_invs:
         pspace_in_kernel_window s \<and> cap_refs_in_kernel_window s \<and>
         pspace_respects_device_region s \<and> cap_refs_respects_device_region s \<and>
         valid_replies_2 (replies_with_sc s) (replies_blocked s) \<and>
-        fault_tcbs_valid_states s \<and> cur_tcb s \<and> cur_sc_tcb s\<rbrace>
+        fault_tcbs_valid_states s \<and> cur_tcb s \<and> cur_sc_tcb s \<and> valid_cur_fpu s\<rbrace>
    reply_push sender thread reply_ptr ((\<exists>y. sender_sc = Some y) \<and>
              \<not> (case fault of None \<Rightarrow> False
                  | Some x \<Rightarrow> is_timeout_fault x))
@@ -1417,6 +1411,7 @@ crunch maybe_return_sc
   and valid_mdb[wp]: valid_mdb
   and valid_ioc[wp]: valid_ioc
   and state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
+  and valid_cur_fpu[wp]: valid_cur_fpu
   (simp: crunch_simps wp: crunch_wps ignore: set_tcb_obj_ref)
 
 lemma set_sc_obj_ref_ko_not_tcb_at[wp]:
@@ -2721,8 +2716,6 @@ lemma hf_invs':
    apply (fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def
                     dest: invs_valid_idle)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_ko_at)
-  apply (rule conjI)
-   apply fastforce
   apply (simp add: ex_nonz_cap_to_def cte_wp_at_cases2)
   apply (rule_tac x = t in exI)
   apply (rule_tac x = "tcb_cnode_index 3" in exI)

@@ -92,7 +92,7 @@ lemma sc_of'_Sched[simp]:
 
 lemmas gen_projectKOs[simp] =
   projectKO_ntfn projectKO_ep projectKO_cte projectKO_tcb projectKO_reply projectKO_sc
-  projectKO_eq projectKO_eq2
+  projectKO_eq
 
 (* same derivation on all architectures, since all objects fit inside address space *)
 lemma (in Arch) obj_sizeBits_less_word_bits:
@@ -100,6 +100,7 @@ lemma (in Arch) obj_sizeBits_less_word_bits:
   "ntfnSizeBits < word_bits"
   "tcbBlockSizeBits < word_bits"
   "cteSizeBits < word_bits"
+  "replySizeBits < word_bits"
   by (simp_all add: objBits_defs word_bits_def)
 
 requalify_facts Arch.obj_sizeBits_less_word_bits
@@ -141,14 +142,13 @@ lemma capAligned_replyI:
   done
 
 lemma capAligned_sched_contextI:
-  "\<lbrakk>sc_at'_n r p s; sc_size_bounds r\<rbrakk>
-      \<Longrightarrow> capAligned (SchedContextCap p r)"
-  by (clarsimp simp: obj_at'_real_def capAligned_def sc_size_bounds_def ko_wp_at'_def isCap_simps
-                     objBits_simps word_bits_def capUntypedPtr_def maxUntypedSizeBits_def)
+  "\<lbrakk>sc_at'_n r p s; sc_size_bounds r\<rbrakk> \<Longrightarrow> capAligned (SchedContextCap p r)"
+  by (clarsimp simp: obj_at'_real_def capAligned_def PPtr_def sc_size_bounds_def ko_wp_at'_def gen_isCap_simps
+                     gen_objBits_simps word_bits_def capUntypedPtr_def RISCV64_H.maxUntypedSizeBits_def) (* FIXME arch-split RT *)
 
 lemma sc_at'_n_sc_at':
   "sc_at'_n n p s \<Longrightarrow> sc_at' p s"
-  apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKOs)
+  apply (clarsimp simp: ko_wp_at'_def obj_at'_def)
   by (case_tac ko; clarsimp)
 
 lemma ko_at_valid_objs':
@@ -156,8 +156,7 @@ lemma ko_at_valid_objs':
   assumes vo: "valid_objs' s"
   assumes k: "\<And>ko. projectKO_opt ko = Some k \<Longrightarrow> injectKO k = ko"
   shows "valid_obj' (injectKO k) s" using ko vo
-  by (clarsimp simp: valid_objs'_def obj_at'_def projectKOs
-                     project_inject ranI)
+  by (clarsimp simp: valid_objs'_def obj_at'_def project_inject ranI)
 
 lemmas ko_at_valid_objs'_pre =
   ko_at_valid_objs'[simplified project_inject, atomized, simplified, rule_format]
@@ -181,9 +180,6 @@ lemmas sc_ko_at_valid_objs_valid_sc' =
 
 lemmas reply_ko_at_valid_objs_valid_reply' =
   ko_at_valid_objs'_pre[where 'a=reply, simplified injectKO_defs valid_obj'_def, simplified]
-
-lemmas pte_ko_at_valid_objs_valid_pte' =
-  ko_at_valid_objs'_pre[where 'a=pte, simplified injectKO_pte valid_obj'_def]
 
 lemma obj_at_valid_objs':
   "\<lbrakk> obj_at' P p s; valid_objs' s \<rbrakk> \<Longrightarrow>

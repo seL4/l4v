@@ -107,6 +107,7 @@ crunch arch_prepare_next_domain
   and st_tcb_at[wp, Schedule_AI_assms]: "\<lambda>s. P (st_tcb_at Q t s)"
   and valid_idle[wp, Schedule_AI_assms]: valid_idle
   and invs[wp, Schedule_AI_assms]: invs
+  and scheduler_action[wp, Schedule_AI_assms]: "\<lambda>s. P (scheduler_action s)"
   (wp: crunch_wps ct_in_state_thread_state_lift)
 
 lemma arch_stit_scheduler_action [wp, Schedule_AI_assms]:

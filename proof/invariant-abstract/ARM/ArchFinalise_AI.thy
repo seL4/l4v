@@ -492,6 +492,7 @@ lemma set_thread_state_not_live:
    set_thread_state t Inactive
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) t\<rbrace>"
   by (wpsimp simp: set_thread_state_def obj_at_def pred_tcb_at_def get_tcb_def live_def hyp_live_def
+                   arch_tcb_live_def
              wp: set_object_wp)
 
 lemma sched_context_cancel_yield_to_unlive:
@@ -500,8 +501,8 @@ lemma sched_context_cancel_yield_to_unlive:
    \<lbrace>\<lambda>_. obj_at (Not \<circ> live) t\<rbrace>"
   apply (clarsimp simp: sched_context_cancel_yield_to_def)
   apply (rule bind_wp[OF _ gyt_sp])
-  apply (wpsimp simp: set_tcb_obj_ref_def set_object_def update_sched_context_def
-                      get_object_def pred_tcb_at_def obj_at_def get_tcb_def live_def hyp_live_def)
+  apply (wpsimp simp: set_tcb_obj_ref_def set_object_def update_sched_context_def get_object_def
+                      pred_tcb_at_def obj_at_def get_tcb_def live_def hyp_live_def arch_tcb_live_def)
   done
 
 crunch prepare_thread_delete
@@ -513,7 +514,7 @@ lemma prepare_thread_delete_unlive[wp]:
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) ptr\<rbrace>"
   unfolding prepare_thread_delete_def
   apply (wpsimp simp: prepare_thread_delete_def)
-  apply (clarsimp simp: obj_at_def, case_tac ko; clarsimp simp: live_def hyp_live_def arch_tcb_live_def)
+  apply (clarsimp simp: obj_at_def, case_tac ko; fastforce simp: live_def hyp_live_def arch_tcb_live_def)
   done
 
 lemma suspend_unlive':

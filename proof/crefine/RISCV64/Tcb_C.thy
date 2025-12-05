@@ -4673,7 +4673,8 @@ lemma invokeTCB_SetFlags_ccorres:
   notes hoare_weak_lift_imp [wp]
   shows
   "ccorres dc xfdc
-     (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' ((=) Restart))
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<and> ksCurThread s = thread)
+            and ct_in_state' ((=) Restart))
      (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr tcb\<rbrace> \<inter> \<lbrace>\<acute>clear = clears\<rbrace> \<inter> \<lbrace>\<acute>set = sets\<rbrace> \<inter> \<lbrace>\<acute>call = from_bool isCall\<rbrace>) []
      (do reply \<leftarrow> invokeSetFlags tcb clears sets;
          replyOnRestart thread [reply] isCall od)
@@ -4739,7 +4740,7 @@ lemma invokeTCB_SetFlags_ccorres:
     apply clarsimp
     apply vcg
    apply (rule conseqPre, vcg, clarsimp)
-  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_valid_objs' invs_sch_act_wf'
+  apply (clarsimp simp: invs_no_0_obj' invs_valid_objs'
                         rf_sr_ksCurThread msgRegisters_unfold
                         seL4_MessageInfo_lift_def message_info_to_H_def
                         obj_at'_def typ_heap_simps' ctcb_relation_def)
@@ -4751,7 +4752,8 @@ lemma invokeTCB_SetFlags_ccorres:
 lemma decodeSetFlags_ccorres:
   "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and sch_act_simple
-              and (\<lambda>s. ksCurThread s = thread) and ct_active' and K (isThreadCap cp)
+              and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<and> ksCurThread s = thread)
+              and ct_active' and K (isThreadCap cp)
               and valid_cap' cp and (\<lambda>s. \<forall>x \<in> zobj_refs' cp. ex_nonz_cap_to' x s)
               and sysargs_rel args buffer)
        (\<lbrace>ccap_relation cp \<acute>cap\<rbrace>
@@ -4759,7 +4761,7 @@ lemma decodeSetFlags_ccorres:
         \<inter> \<lbrace>\<acute>buffer = option_to_ptr buffer\<rbrace>
         \<inter> \<lbrace>\<acute>call = from_bool isCall\<rbrace>) []
      (decodeSetFlags args cp
-        >>= invocationCatch thread isBlocking isCall InvokeTCB)
+        >>= invocationCatch thread isBlocking isCall canDonate InvokeTCB)
      (Call decodeSetFlags_'proc)"
   apply (cinit' lift: cap_' length___unsigned_long_' buffer_' call_'
                 simp: decodeSetFlags_def )
@@ -4776,7 +4778,7 @@ lemma decodeSetFlags_ccorres:
    apply (clarsimp simp: linorder_not_less word_le_nat_alt)
    apply (rule_tac P="\<lambda>a. ccorres rvr xf P P' hs a c" for rvr xf P P' hs c in ssubst,
           rule bind_cong [OF _ refl], rule list_case_helper,
-          clarsimp)+
+          clarsimp simp: tl_drop_1)+
    apply (rule ccorres_add_return,
           ctac add: getSyscallArg_ccorres_foo'[where args=args and n=0 and buffer=buffer])
      apply (rule ccorres_add_return,
@@ -4810,7 +4812,7 @@ lemma decodeSetFlags_ccorres:
   apply (simp only: cap_get_tag_isCap[symmetric], drule(1) cap_get_tag_to_H)
   apply (clarsimp simp: rf_sr_ksCurThread word_sle_def cap_get_tag_isCap cap_get_tag_to_H word_less_nat_alt)
   apply (subgoal_tac "args \<noteq> []")
-   apply (clarsimp simp: hd_conv_nth)
+   apply (clarsimp simp: hd_conv_nth tl_drop_1)
   apply clarsimp
   done
 

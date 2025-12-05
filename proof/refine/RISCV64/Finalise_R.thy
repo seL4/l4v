@@ -1401,7 +1401,7 @@ lemma deletedIRQHandler_irqs_masked'[wp]:
   apply (simp add: irqs_masked'_def)
   done
 
-lemma (in Arch) setObject_cte_irq_masked'[wp]: (*FIXME: arch-split RT*)
+lemma setObject_cte_irq_masked'[wp]:
   "setObject p (v::cte) \<lbrace>irqs_masked'\<rbrace>"
   unfolding setObject_def
   by (wpsimp simp: irqs_masked'_def Ball_def wp: hoare_vcg_all_lift hoare_vcg_imp_lift' updateObject_cte_inv)
@@ -2238,13 +2238,13 @@ lemma finaliseCap_cases[wp]:
                    getThreadCSpaceRoot
              cong: if_cong split del: if_split)
   apply (rule hoare_pre)
-   apply ((wp | simp add: isCap_simps split del: if_split
+   apply ((wp | simp add: gen_isCap_simps split del: if_split
               | wpc
               | simp only: valid_NullCap fst_conv snd_conv)+)[1]
   apply (simp only: simp_thms fst_conv snd_conv option.simps if_cancel
                     o_def)
   apply (intro allI impI conjI TrueI)
-  apply (auto simp add: isCap_simps cap_has_cleanup'_def)
+  apply (auto simp add: gen_isCap_simps cap_has_cleanup'_def)
   done
 
 context begin interpretation Arch . (*FIXME: arch-split*)
@@ -3916,7 +3916,7 @@ lemma finaliseCap_invs:
              cong: if_cong split del: if_split)
   apply (rule hoare_pre)
    apply (wpsimp wp: hoare_vcg_all_lift)
-  apply (case_tac cap; clarsimp simp: isCap_simps)
+  apply (case_tac cap; clarsimp simp: gen_isCap_simps)
    apply (frule invs_valid_global', drule(1) valid_globals_cte_wpD'_idleThread)
    apply (frule valid_capAligned, drule capAligned_capUntypedPtr)
     apply clarsimp
@@ -4602,7 +4602,7 @@ lemma can_fast_finalise_finaliseCap:
   "is_ReplyCap cap \<or> is_EndpointCap cap \<or> is_NotificationCap cap \<or> cap = NullCap
    \<Longrightarrow> finaliseCap cap final flag
          = do finaliseCap cap final True; return (NullCap, NullCap) od"
-  by (cases cap; simp add: finaliseCap_def isCap_simps)
+  by (cases cap; simp add: finaliseCap_def gen_isCap_simps)
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 

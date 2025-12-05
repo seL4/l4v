@@ -3700,7 +3700,7 @@ lemma cap_insert_invs[wp]:
     \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: invs_def valid_state_def)
   apply (rule hoare_pre)
-   apply (wp cap_insert_valid_pspace cap_insert_ifunsafe cap_insert_idle valid_cur_fpu_lift
+   apply (wp cap_insert_valid_pspace cap_insert_ifunsafe cap_insert_idle
              valid_irq_node_typ cap_insert_valid_arch_caps cap_insert_derived_valid_arch_state)
   apply (auto simp: cte_wp_at_caps_of_state is_derived_cap_is_device
                         is_derived_cap_range valid_pspace_def)
@@ -3794,8 +3794,6 @@ lemma set_cap_tcb_ipc_buffer:
   apply (wp get_object_wp | wpc)+
   apply (clarsimp simp: obj_at_def)
   done
-
-lemmas set_cap_pred_tcb = set_cap.cspace_pred_tcb_at[of "\<lambda>x. x"]
 
 lemmas set_cap_tcb_cap[wp]
   = tcb_cap_valid_typ_st [OF set_cap_typ_at set_cap_pred_tcb set_cap_tcb_ipc_buffer]

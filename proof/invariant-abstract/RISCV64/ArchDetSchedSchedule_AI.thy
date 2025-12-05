@@ -308,14 +308,20 @@ lemma arch_mask_irq_signal_valid_sched_pred_strong[wp]:
   unfolding arch_mask_irq_signal_def by wpsimp
 
 crunch arch_switch_to_thread, arch_switch_to_idle_thread
-for cdt_cdt_list_exst [wp]:  "\<lambda>s. P (cdt s) (cdt_list_internal (exst s))"
-
-crunch make_arch_fault_msg
-  for valid_sched_pred_strong[wp,DetSchedSchedule_AI_assms]: "valid_sched_pred_strong P"
+  for cdt_cdt_list_exst [wp]:  "\<lambda>s. P (cdt s) (cdt_list_internal (exst s))"
 
 lemma handle_hyp_fault_trivial[wp]:
   "handle_hypervisor_fault t fault \<lbrace>Q\<rbrace>"
   by (cases fault; wpsimp)
+
+crunch arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags
+  for valid_sched_pred_strong[wp, DetSchedSchedule_AI_assms]: "valid_sched_pred_strong P"
+
+crunch arch_prepare_set_domain
+  for valid_idle[wp]: "valid_idle"
+
+crunch arch_prepare_next_domain
+  for valid_list[wp]: "valid_list"
 
 end
 
@@ -328,7 +334,7 @@ qed
 global_interpretation DetSchedSchedule_AI_det_ext?: DetSchedSchedule_AI_det_ext
 proof goal_cases
   interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact DetSchedSchedule_AI_assms)?; wpsimp)
+  case 1 show ?case by (unfold_locales; (fact DetSchedSchedule_AI_assms)?; wpsimp?)
 qed
 
 context Arch begin arch_global_naming

@@ -3138,12 +3138,10 @@ lemma setReply_list_refs_of_replies'[wp]:
   "\<lbrace>\<lambda>s. P ((list_refs_of_replies' s)(p := list_refs_of_reply' reply))\<rbrace>
    setReply p reply
    \<lbrace>\<lambda>_ s. P (list_refs_of_replies' s)\<rbrace>"
-  apply (wpsimp simp: setReply_def updateObject_default_def setObject_def split_def)
+  apply (wpsimp simp: setReply_def)
   apply (erule arg_cong[where f=P, THEN iffD1, rotated])
-  apply (clarsimp simp: opt_map_def sym_refs_def fun_upd_def list_refs_of_reply'_def
-                        map_set_def projectKO_opt_reply)
   apply (rule ext)
-  apply (clarsimp simp: projectKO_opt_reply list_refs_of_reply'_def)
+  apply (clarsimp simp: opt_map_def map_set_def)
   done
 
 lemma setObject_ksPSpace_only:

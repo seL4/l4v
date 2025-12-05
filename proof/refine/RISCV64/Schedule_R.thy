@@ -4615,8 +4615,6 @@ lemma schedule_corres:
      apply (wpsimp wp: schedule_switch_thread_branch_sc_at_cur_sc)
      apply fastforce
     apply (wpsimp wp: schedule_switch_thread_branch_active_sc_tcb_at_cur_thread)
-    apply (fastforce simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_def
-                           vs_all_heap_simps)
 
    apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>" for P f Q  \<Rightarrow> -\<close>)
    apply (rename_tac target)
@@ -4743,14 +4741,14 @@ lemma schedule_corres:
    apply fastforce
 
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF switchToThread_corres])
+    apply (rule corres_split[OF guarded_switch_to_corres])
       apply clarsimp
       apply (rule setSchedulerAction_corres)
       apply (clarsimp simp: sched_act_relation_def)
      apply wpsimp
     apply wpsimp
    apply (clarsimp simp: pred_conj_def)
-   apply (fastforce simp: obj_at_def vs_all_heap_simps pred_tcb_at_def)
+   apply (fastforce simp: obj_at_def vs_all_heap_simps pred_tcb_at_def schedulable_def3)
   apply fastforce
   done
 

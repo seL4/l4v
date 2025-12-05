@@ -933,7 +933,7 @@ lemma cap_insert_objs' [wp]:
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (simp add: cteInsert_def updateCap_def setUntypedCapAsFull_def)
   apply (wpsimp wp: setCTE_valid_objs | wp getCTE_wp')+
-  apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps
+  apply (clarsimp simp: cte_wp_at_ctes_of gen_isCap_simps
                   dest!: ctes_of_valid_cap'')
   done
 
@@ -946,7 +946,7 @@ lemma cteInsert_weak_cte_wp_at:
   apply (simp add: bind_assoc split del: if_split)
   apply (wp setCTE_weak_cte_wp_at updateMDB_weak_cte_wp_at hoare_weak_lift_imp | simp)+
    apply (wp getCTE_ctes_wp)+
-   apply (clarsimp simp: isCap_simps split:if_split_asm| rule conjI)+
+   apply (clarsimp simp: gen_isCap_simps split:if_split_asm| rule conjI)+
   done
 
 lemma updateMDB_valid_cap:

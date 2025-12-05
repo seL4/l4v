@@ -35,7 +35,6 @@ arch_requalify_facts
   arch_post_cap_deletion_caps_of_state
   arch_post_cap_deletion_irq_node
   arch_post_cap_deletion_invs
-  valid_arch_arch_tcb_set_registers
   invs_irq_state_independent
   invs_update_time_stamp_independent
   invs_getCurrentTime_independent
@@ -1045,13 +1044,12 @@ lemma set_mrs_valid_objs[wp]:
   supply if_split[split del]
   apply (cases a)
    apply (simp add: set_mrs_redux)
-   apply (wpsimp wp: thread_set_valid_objs_triv)
-           apply (fastforce simp: tcb_cap_cases_def)
-          apply (simp add: valid_arch_arch_tcb_set_registers)+
+   apply (wpsimp wp: thread_set_valid_objs_triv; simp?)
+   apply (fastforce simp: tcb_cap_cases_def)
   apply (simp add: set_mrs_redux zipWithM_x_mapM split_def
                    store_word_offs_def)
   apply (wpsimp wp: mapM_wp' thread_set_valid_objs_triv)
-          apply (auto simp: tcb_cap_cases_def valid_arch_arch_tcb_set_registers)
+          apply (auto simp: tcb_cap_cases_def)
   done
 
 crunch set_consumed

@@ -285,7 +285,7 @@ lemmas unifyFailure_discard2
 lemma deriveCap_not_null:
   "\<lbrace>\<top>\<rbrace> deriveCap slot cap \<lbrace>\<lambda>rv. K (rv \<noteq> NullCap \<longrightarrow> cap \<noteq> NullCap)\<rbrace>,-"
   apply (simp add: deriveCap_def split del: if_split)
-  by (case_tac cap; wpsimp simp: isCap_simps)
+  by (case_tac cap; wpsimp simp: gen_isCap_simps)
 
 lemma deriveCap_derived_foo:
   "\<lbrace>\<lambda>s. \<forall>cap'. (cte_wp_at' (\<lambda>cte. badge_derived' cap (cteCap cte)
@@ -344,10 +344,10 @@ lemma cteInsert_cte_wp_at:
   apply (rule conjI)
    apply (clarsimp simp: maskedAsFull_def cte_wp_at_ctes_of split:if_split_asm)
    apply (erule disjE) prefer 2 apply simp
-   apply (clarsimp simp: is_derived'_def isCap_simps)
+   apply (clarsimp simp: is_derived'_def gen_isCap_simps)
    apply (drule valid_mdb_untyped_incD')
    apply (case_tac cte, case_tac cteb, clarsimp)
-   apply (drule untyped_incD', (simp add: isCap_simps)+)
+   apply (drule untyped_incD', (simp add: gen_isCap_simps)+)
    apply (frule(1) ctes_of_valid'[where p = p])
    apply (clarsimp simp:valid_cap'_def capAligned_def split:if_splits)
     apply (drule_tac y ="of_nat fb"  in word_plus_mono_right[OF _  is_aligned_no_overflow',rotated])
@@ -357,7 +357,7 @@ lemma cteInsert_cte_wp_at:
     apply (simp add:p_assoc_help mask_def)
    apply (simp add: max_free_index_def)
   apply (clarsimp simp: maskedAsFull_def is_derived'_def badge_derived'_def
-                        isCap_simps capMasterCap_def cte_wp_at_ctes_of
+                        gen_isCap_simps capMasterCap_def cte_wp_at_ctes_of
                   split: if_split_asm capability.splits)
   done
 
@@ -375,7 +375,7 @@ lemma cteInsert_weak_cte_wp_at3:
 lemma maskedAsFull_null_cap[simp]:
   "(maskedAsFull x y = capability.NullCap) = (x = capability.NullCap)"
   "(capability.NullCap  = maskedAsFull x y) = (x = capability.NullCap)"
-  by (case_tac x, auto simp:maskedAsFull_def isCap_simps )
+  by (case_tac x, auto simp:maskedAsFull_def gen_isCap_simps )
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 

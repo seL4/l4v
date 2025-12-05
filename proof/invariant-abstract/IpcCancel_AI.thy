@@ -356,6 +356,7 @@ crunch reply_unlink_tcb
   and cur_sc_tcb[wp]: "cur_sc_tcb"
   and valid_mdb[wp]: "valid_mdb"
   and valid_ioc[wp]: "valid_ioc"
+  and valid_cur_fpu[wp]: valid_cur_fpu
   (simp: Let_def wp: hoare_drop_imps)
 
 lemma reply_unlink_tcb_sc_at[wp]: "\<lbrace>sc_at sc_ptr\<rbrace> reply_unlink_tcb t rp \<lbrace>\<lambda>_. sc_at sc_ptr\<rbrace>"
@@ -678,7 +679,6 @@ lemma sched_context_donate_valid_idle [wp]:
 
 crunch sched_context_donate
   for only_idle[wp]: only_idle
-  and fault_tcbs_valid_states[wp]: fault_tcbs_valid_states
   and valid_arch_state[wp]: valid_arch_state
   and valid_irq_states[wp]: valid_irq_states
   and valid_machine_state[wp]: valid_machine_state
@@ -690,6 +690,8 @@ crunch sched_context_donate
   and valid_asid_map[wp]: valid_asid_map
   and valid_global_vspace_mappings[wp]: valid_global_vspace_mappings
   and cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
+  and arch_tcb_at[wp]: "\<lambda>s. P' (arch_tcb_at P t s)"
+  and valid_cur_fpu[wp]: valid_cur_fpu
   (ignore: set_object set_tcb_obj_ref wp: crunch_wps simp: crunch_simps)
 
 lemma sched_context_donate_valid_irq_node [wp]:
@@ -736,7 +738,8 @@ crunch reply_unlink_sc, restart_thread_if_no_fault
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   and arch_state[wp]: "\<lambda>s. P (arch_state s)"
   and it[wp]: "\<lambda>s. P (idle_thread s)"
-  (wp: get_simple_ko_wp valid_irq_node_typ crunch_wps sts_only_idle)
+  and valid_cur_fpu[wp]: valid_cur_fpu
+  (wp: get_simple_ko_wp valid_irq_node_typ crunch_wps sts_only_idle valid_cur_fpu_lift)
 
 lemma reply_unlink_sc_sc_at [wp]:
   "\<lbrace>sc_at scp'\<rbrace> reply_unlink_sc scp rp \<lbrace>\<lambda>rv. sc_at scp'\<rbrace>"
@@ -2303,10 +2306,6 @@ lemma set_ntfn_bound_tcb_none_if_live_then_nonz_cap [wp]:
   apply (fastforce simp: live_def live_ntfn_def elim!: if_live_then_nonz_capD2)
   done
 
-crunch set_bound_notification
-  for valid_cur_fpu[wp]: valid_cur_fpu
-  (wp: valid_cur_fpu_lift)
-
 lemma unbind_notification_invs:
   notes refs_of_simps[simp del] if_cong[cong]
   shows "\<lbrace>invs\<rbrace> unbind_notification t \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -2314,8 +2313,8 @@ lemma unbind_notification_invs:
   apply (rule bind_wp [OF _ gbn_sp])
   apply (case_tac ntfnptr; clarsimp)
   apply wpsimp
-  apply (wpsimp wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp split_del: if_split
-              simp: update_sk_obj_ref_def)
+  apply (wpsimp wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp
+              simp: update_sk_obj_ref_def split_del: if_split)
   apply (intro conjI impI;
     (match conclusion in "sym_refs r" for r \<Rightarrow> \<open>-\<close>
         | auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2

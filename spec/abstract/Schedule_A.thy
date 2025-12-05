@@ -233,7 +233,7 @@ where
                         set_scheduler_action choose_new_thread;
                         schedule_choose_new_thread
                      od
-                else do switch_to_thread candidate;
+                else do guarded_switch_to candidate;
                         \<comment> \<open>Duplication assists in wp proof under different scheduler actions\<close>
                         set_scheduler_action resume_cur_thread
                      od

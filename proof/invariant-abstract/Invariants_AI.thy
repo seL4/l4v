@@ -4624,6 +4624,10 @@ lemma runnable_eq_active: "runnable = active"
   apply (case_tac st, simp_all)
   done
 
+lemma halted_eq:
+  "halted st = (st = Inactive \<or> st = IdleThreadState)"
+  by (cases st; simp)
+
 lemma sc_atD1:
   "sc_at t s \<Longrightarrow> (\<exists>sc n. kheap s t = Some (SchedContext sc n))"
   by (clarsimp simp:obj_at_def is_sc_obj_def; case_tac ko; simp)
@@ -4731,13 +4735,5 @@ lemma invs_strengthen:
   "invs s \<and> (P s \<longrightarrow> Q s) \<Longrightarrow> P s \<longrightarrow> (invs and Q) s"
   "invs s \<and> (P s \<longrightarrow> Q s) \<Longrightarrow> P s \<longrightarrow> (Q and invs) s"
   by auto
-
-lemma runnable_eq:
-  "runnable st = (st = Running \<or> st = Restart)"
-  by (cases st; simp)
-
-lemma halted_eq:
-  "halted st = (st = Inactive \<or> st = IdleThreadState)"
-  by (cases st; simp)
 
 end

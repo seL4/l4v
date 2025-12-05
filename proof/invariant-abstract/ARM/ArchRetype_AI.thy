@@ -1400,6 +1400,10 @@ lemma hyp_live_default_object:
   "ty \<noteq> Untyped \<Longrightarrow> \<not> hyp_live (default_object ty dev us dm)"
   by (cases ty; simp add: hyp_live_def)
 
+lemma arch_tcb_live_default_arch_tcb:
+  "\<not> arch_tcb_live default_arch_tcb"
+  by (simp add: arch_tcb_live_def)
+
 lemmas init_arch_objects_wps
     = init_arch_objects_cte_wp_at
       init_arch_objects_valid_cap

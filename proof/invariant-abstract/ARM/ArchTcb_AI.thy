@@ -186,6 +186,8 @@ lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_assms]:
 crunch arch_post_set_flags, arch_prepare_set_domain
   for typ_at[wp, Tcb_AI_assms]: "\<lambda>s. P (typ_at T p s)"
   and invs[wp, Tcb_AI_assms]: "invs"
+  and cur_thread[wp, Tcb_AI_assms]: "\<lambda>s. P (cur_thread s)"
+  and pred_tcb_at[wp, Tcb_AI_assms]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
 
 lemmas arch_prepare_set_domain_typ_ats[wp] = abs_typ_at_lifts[OF arch_prepare_set_domain_typ_at]
 

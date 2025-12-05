@@ -22,6 +22,9 @@ lemma arch_isCap_simps:
 
 lemmas isCap_simps = gen_isCap_simps arch_isCap_simps
 
+lemmas pte_ko_at_valid_objs_valid_pte' =
+  ko_at_valid_objs'_pre[where 'a=pte, simplified injectKO_pte valid_obj'_def]
+
 text \<open>Miscellaneous facts about low level constructs\<close>
 
 lemma projectKO_ASID:

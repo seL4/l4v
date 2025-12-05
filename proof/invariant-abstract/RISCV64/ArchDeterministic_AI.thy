@@ -14,12 +14,11 @@ named_theorems Deterministic_AI_assms
 
 crunch
   cap_swap_for_delete,set_cap,finalise_cap,
-  arch_post_modify_registers,make_arch_fault_msg, arch_post_set_flags
+  arch_post_modify_registers, arch_post_set_flags
   for valid_list[wp, Deterministic_AI_assms]: valid_list
   (wp: crunch_wps maybeM_inv simp: unless_def crunch_simps)
 
 declare get_cap_inv[Deterministic_AI_assms]
-        make_arch_fault_msg_invs[Deterministic_AI_assms]
         arch_get_sanitise_register_info_inv[Deterministic_AI_assms]
 
 end

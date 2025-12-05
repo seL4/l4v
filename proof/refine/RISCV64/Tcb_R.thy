@@ -2527,6 +2527,7 @@ lemma invokeTCB_corres:
            apply (rule corres_trivial, simp)
           apply (solves \<open>wpsimp wp: hoare_drop_imp\<close>)+
     apply (fastforce dest: valid_sched_valid_ready_qs)
+   apply fastforce
   apply (clarsimp simp: invokeTCB_def invokeSetFlags_def bind_assoc)
   apply (corres corres: threadGet_corres[where r="\<lambda>flags flags'. flags = word_to_tcb_flags flags'"]
                         invokeSetFlags_helper
@@ -2534,7 +2535,6 @@ lemma invokeTCB_corres:
                     wp: threadGet_wp)
    apply fastforce
   apply (fastforce dest: tcb_ko_at_valid_objs_valid_tcb' simp: valid_tcb'_def)
-  apply fastforce
   done
 
 crunch option_update_thread

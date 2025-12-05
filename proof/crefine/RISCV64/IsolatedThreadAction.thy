@@ -271,22 +271,22 @@ lemma map_to_ctes_partial_overwrite:
   apply (simp add: map_to_ctes_def partial_overwrite_def
                    Let_def)
   apply (case_tac "x \<in> range idx")
-   apply (clarsimp simp: put_tcb_state_regs_def)
+   apply clarsimp
    apply (drule_tac x=xa in spec)
    apply (clarsimp simp: obj_at'_def objBits_simps'
                    cong: if_cong)
-   apply (simp add: put_tcb_state_regs_tcb_def objBits_simps'
+   apply (simp add: put_tcb_state_regs_defs objBits_simps'
               cong: if_cong option.case_cong)
    apply (case_tac obj, simp split: tcb_state_regs.split if_split)
   apply simp
   apply (rule if_cong[OF refl])
    apply simp
   apply (case_tac "x && ~~ mask (objBitsKO (KOTCB undefined)) \<in> range idx")
-   apply (clarsimp simp: put_tcb_state_regs_def)
+   apply clarsimp
    apply (drule_tac x=xa in spec)
    apply (clarsimp simp: obj_at'_def objBits_simps'
                    cong: if_cong)
-   apply (simp add: put_tcb_state_regs_tcb_def objBits_simps'
+   apply (simp add: put_tcb_state_regs_defs objBits_simps'
               cong: if_cong option.case_cong)
    apply (case_tac obj, simp split: tcb_state_regs.split if_split)
    apply (intro impI allI)

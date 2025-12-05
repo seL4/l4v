@@ -266,9 +266,9 @@ lemma make_arch_fault_msg_inv[wp, Ipc_AI_2_assms]:
   "make_arch_fault_msg ft t \<lbrace>P\<rbrace>"
   by (cases ft; wpsimp)
 
-lemma make_fault_msg_inv[wp, Ipc_AI_2_assms]:
-  "make_fault_msg ft t \<lbrace>P\<rbrace>"
-  by (cases ft; wpsimp wp: as_user_inv getRestartPC_inv mapM_wp' split_del: if_split)
+crunch make_fault_msg
+  for invs[wp]: invs
+  and tcb_at[wp]: "tcb_at t"
 
 lemma do_fault_transfer_invs[wp, Ipc_AI_2_assms]:
   "\<lbrace>invs and tcb_at receiver\<rbrace>
@@ -453,9 +453,6 @@ lemma transfer_caps_loop_valid_arch[Ipc_AI_2_assms]:
       transfer_caps_loop ep buffer n caps slots mi
     \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps transfer_caps_loop_typ_ats transfer_caps_loop_aobj_at)
-
-(* interface lemma name *)
-lemmas make_arch_fault_msg_valid_replies = make_arch_fault_msg_inv
 
 end
 

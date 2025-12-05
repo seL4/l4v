@@ -106,7 +106,7 @@ lemma prepareSetDomain_ccorres:
 
 lemma invokeDomainSetSet_ccorres:
   "ccorres dc xfdc
-      (invs' and tcb_at' t and sch_act_simple
+      (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and tcb_at' t and sch_act_simple
              and (\<lambda>s. d \<le> maxDomain))
       (\<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace> \<inter> \<lbrace>\<acute>domain = ucast d\<rbrace>) []
       (do x <- prepareSetDomain t d;
@@ -117,7 +117,7 @@ lemma invokeDomainSetSet_ccorres:
    apply (simp add: liftE_def bind_assoc)
    apply (ctac (no_vcg) add: prepareSetDomain_ccorres)
     apply (ctac (no_vcg) add: setDomain_ccorres)
-   apply wpsimp+
+   apply (wpsimp wp: weak_sch_act_wf_lift)+
   done
 
 lemma decodeDomainInvocation_ccorres:

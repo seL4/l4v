@@ -1843,6 +1843,7 @@ lemma tcb_cnode_agnostic_predE:
               "tcb_yield_to tcb' = tcb_yield_to tcb"
               "tcb_priority tcb' = tcb_priority tcb"
               "tcb_domain tcb' = tcb_domain tcb"
+              "tcb_flags tcb' = tcb_flags tcb"
               "tcb_arch tcb' = tcb_arch tcb"
   shows "P (TCB tcb')"
   apply (rule subst[OF tcb.equality[of tcb', symmetric], rotated -1])
@@ -2075,7 +2076,7 @@ crunch get_irq_slot
 text \<open>some invariants on sched_context\<close>
 
 crunch update_sched_context
- for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
 
 lemma update_sched_context_aligned [wp]:
  "\<lbrace>pspace_aligned\<rbrace> update_sched_context ptr v \<lbrace>\<lambda>rv. pspace_aligned\<rbrace>"
@@ -2164,6 +2165,10 @@ lemma update_sched_context_zombies[wp]:
 lemma update_sched_context_pred_tcb_at [wp]:
   "update_sched_context ptr update \<lbrace> \<lambda>s. P (pred_tcb_at proj f t s) \<rbrace>"
   by (wpsimp simp: update_sched_context_def set_object_def get_object_def pred_tcb_at_def obj_at_def)
+
+crunch update_sched_context
+  for valid_cur_fpu[wp]: valid_cur_fpu
+  (wp: valid_cur_fpu_lift)
 
 lemma update_sched_context_ex_cap [wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> update_sched_context ptr f \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
@@ -2291,7 +2296,7 @@ global_interpretation return: non_heap_op "return x"
 context cspace_op begin
 
 lemma cspace_pred_tcb_at[wp]:
-  "f \<lbrace> \<lambda>s. P (pred_tcb_at proj P' p s) \<rbrace>"
+  "f \<lbrace> \<lambda>s. P' (pred_tcb_at proj P p s) \<rbrace>"
   by (auto intro: cspace_agnostic_obj_at
             simp: pred_tcb_at_def cspace_agnostic_pred_def tcb_to_itcb_def)
 
@@ -2403,6 +2408,7 @@ global_interpretation set_reply_sc: non_reply_tcb_op "set_reply_obj_ref reply_sc
 
 crunch update_sk_obj_ref
   for pred_tcb_at[wp]: "\<lambda>s. P (pred_tcb_at proj P' t s)"
+  and valid_cur_fpu[wp]: valid_cur_fpu
 
 lemma set_ntfn_obj_ref_sc_at_pred_n[wp]:
   "set_ntfn_obj_ref update ref new \<lbrace>\<lambda>s. P (sc_at_pred_n f g h sc s)\<rbrace>"

@@ -96,22 +96,24 @@ lemma switch_to_idle_thread_invs:
   done
 
 lemma switch_to_thread_invs:
-  "\<lbrace>\<lambda>s. invs s \<and> ex_nonz_cap_to tptr \<and> scheduler_action s \<noteq> resume_cur_thread\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> ex_nonz_cap_to tptr s \<and> scheduler_action s \<noteq> resume_cur_thread\<rbrace>
    switch_to_thread tptr
    \<lbrace>\<lambda>_. invs\<rbrace>"
   by (wpsimp simp: switch_to_thread_def get_tcb_obj_ref_def thread_get_def is_tcb
                wp: cur_thread_update_invs arch_stt_scheduler_action)
 
-lemma guarded_switch_to_invs:
+lemma guarded_switch_to_invs[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> scheduler_action s \<noteq> resume_cur_thread\<rbrace>
    guarded_switch_to thread
    \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wpsimp simp: guarded_switch_to_def wp: switch_to_thread_invs gts_wp)
-  by (fastforce elim: st_tcb_ex_cap' simp: runnable_eq)
+  apply (wpsimp simp: guarded_switch_to_def
+               wp: switch_to_thread_invs thread_get_wp')
+  by (fastforce intro: runnable_nonz_cap_to
+                 simp: schedulable_def pred_tcb_at_def obj_at_def opt_pred_def opt_map_def tcbs_of_kh_def)
 
 (* still true without scheduler_action s \<noteq> resume_cur_thread, but the proof for schedule_invs
    will be simpler with it *)
-lemma schedule_choose_new_thread_valid_state_cur_tcb [wp]:
+lemma schedule_choose_new_thread_valid_state_cur_tcb[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> scheduler_action s \<noteq> resume_cur_thread\<rbrace>
    schedule_choose_new_thread
    \<lbrace>\<lambda>_ s. valid_state s \<and> cur_tcb s\<rbrace>"
@@ -127,10 +129,6 @@ lemma schedule_invs[wp]:
     apply (rule_tac Q'="\<lambda>_. invs" in hoare_strengthen_post)
      apply (wpsimp simp: invs_def)+
   done
-
-lemma invs_domain_time_update[simp]:
-  "invs (domain_time_update f s) = invs s"
-  by (simp add: invs_def valid_state_def cur_sc_tcb_def)
 
 lemma invs_domain_index_update[simp]:
   "invs (domain_index_update f s) = invs s"
@@ -1501,6 +1499,10 @@ crunch
   for ct_in_state: "ct_in_state P :: 'state_ext state \<Rightarrow> _"
   (wp: crunch_wps ct_in_state_thread_state_lift ignore: set_tcb_obj_ref
    simp: crunch_simps return_consumed_def)
+
+crunch arch_prepare_set_domain
+  for ct_in_state[wp]: "ct_in_state P"
+  (wp: ct_in_state_thread_state_lift)
 
 crunch invoke_domain, invoke_sched_context
   for ct_in_state[wp]: "ct_in_state P :: 'state_ext state \<Rightarrow> _"

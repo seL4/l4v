@@ -196,8 +196,6 @@ crunch arch_switch_to_thread, arch_switch_to_idle_thread
 crunch handle_arch_fault_reply, handle_vm_fault, arch_post_modify_registers
   for cur_tcb[wp]: cur_tcb
 
-declare make_arch_fault_msg_inv[DetSchedSchedule_AI_assms]
-
 (* FIXME: move out of arch *)
 lemma valid_idle_thread_state_contradiction:
   "valid_idle s \<Longrightarrow> pred_map P (tcb_sts_of s) (idle_thread s) \<Longrightarrow> \<not> P (IdleThreadState) \<Longrightarrow> False"
@@ -338,6 +336,15 @@ lemma handle_hyp_fault_trivial[wp]:
   "handle_hypervisor_fault t fault \<lbrace>Q\<rbrace>"
   by (cases fault; wpsimp)
 
+crunch arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags
+  for valid_sched_pred_strong[wp, DetSchedSchedule_AI_assms]: "valid_sched_pred_strong P"
+
+crunch arch_prepare_set_domain
+  for valid_idle[wp]: "valid_idle"
+
+crunch arch_prepare_next_domain
+  for valid_list[wp]: "valid_list"
+
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
@@ -349,7 +356,7 @@ global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
 global_interpretation DetSchedSchedule_AI_det_ext?: DetSchedSchedule_AI_det_ext
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact DetSchedSchedule_AI_assms)?; wpsimp)
+  case 1 show ?case by (unfold_locales; (fact DetSchedSchedule_AI_assms)?; wpsimp?)
 qed
 
 context Arch begin arch_global_naming

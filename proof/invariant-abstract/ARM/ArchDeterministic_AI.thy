@@ -19,7 +19,6 @@ crunch
   (wp: crunch_wps maybeM_inv simp: unless_def crunch_simps)
 
 declare get_cap_inv[Deterministic_AI_assms]
-        make_arch_fault_msg_inv[Deterministic_AI_assms]
         arch_get_sanitise_register_info_inv[Deterministic_AI_assms]
 
 end

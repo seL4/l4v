@@ -498,7 +498,7 @@ lemma set_refills_valid_state [wp]:
   "\<lbrace>valid_state\<rbrace> set_refills sc_ptr refills
    \<lbrace>\<lambda>_. valid_state\<rbrace>"
   by (wpsimp simp: set_refills_def valid_state_def valid_pspace_def valid_sched_context_def
-               wp: update_sched_context_valid_objs_same valid_irq_node_typ)
+               wp: update_sched_context_valid_objs_same valid_irq_node_typ valid_cur_fpu_lift)
 
 lemma set_refills_cur_tcb [wp]:
   "\<lbrace>cur_tcb\<rbrace> set_refills sc_ptr refills \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
@@ -585,6 +585,7 @@ crunch refill_budget_check, if_cond_refill_unblock_check
   and ex_cap[wp]: "ex_nonz_cap_to p"
   and valid_replies[wp]: "\<lambda>s. P (valid_replies s)"
   and valid_idle[wp]: valid_idle
+  and valid_cur_fpu[wp]: valid_cur_fpu
   (simp: Let_def is_round_robin_def wp: crunch_wps hoare_vcg_if_lift2
    ignore: update_sched_context)
 
@@ -707,7 +708,7 @@ lemma sc_consumed_update_invs[wp]:
   "update_sched_context p (sc_consumed_update f) \<lbrace>invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
                   wp: update_sched_context_valid_objs_same update_sched_context_refs_of_same
-                      update_sched_context_valid_replies)
+                      update_sched_context_valid_replies valid_cur_fpu_lift)
   by (fastforce simp: replies_with_sc_upd_replies_trivial)
 
 lemma sc_consumed_update_sym_refs[wp]:
@@ -718,6 +719,7 @@ lemma sc_consumed_update_sym_refs[wp]:
 crunch refill_unblock_check, if_cond_refill_unblock_check
   for valid_irq_node[wp]: valid_irq_node
   and cur_sc_tcb[wp]: cur_sc_tcb
+  and arch_state[wp]: "\<lambda>s. P (arch_state s)"
   (simp: Let_def is_round_robin_def wp: crunch_wps hoare_vcg_if_lift2 ignore: update_sched_context)
 
 lemmas refill_unblock_check_typ_ats [wp] =
@@ -725,7 +727,7 @@ lemmas refill_unblock_check_typ_ats [wp] =
 
 lemma refill_unblock_check_valid_state [wp]:
   "refill_unblock_check sc_ptr \<lbrace>valid_state\<rbrace>"
-  apply (wpsimp simp: valid_state_def valid_pspace_def pred_conj_def)
+  apply (wpsimp wp: valid_cur_fpu_lift simp: valid_state_def valid_pspace_def pred_conj_def)
   done
 
 lemma refill_unblock_check_invs [wp]:
@@ -810,7 +812,7 @@ lemma commit_times_invs_helper:
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                       consumed_time_update_arch.state_refs_update
                       sc_consumed_update_eq[symmetric]
-                  wp: valid_irq_node_typ hoare_vcg_imp_lift')
+                  wp: valid_irq_node_typ valid_cur_fpu_lift hoare_vcg_imp_lift')
   done
 
 lemma get_sc_active_sp:
@@ -834,7 +836,8 @@ lemma commit_time_invs:
                 simp: refill_budget_check_round_robin_def is_round_robin_def
                       update_refill_tl_def update_refill_hd_def)
    apply (clarsimp simp: obj_at_def is_sc_obj_def)
-   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
+   apply (wpsimp wp: valid_cur_fpu_lift
+               simp: invs_def valid_state_def valid_pspace_def
                        consumed_time_update_arch.state_refs_update sc_consumed_update_eq[symmetric])
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                       consumed_time_update_arch.state_refs_update)
@@ -923,17 +926,17 @@ lemma valid_state_consumed_time_update[iff]:
 lemma sc_consumed_update_valid_state [wp]:
   "\<lbrace>valid_state\<rbrace> update_sched_context p (sc_consumed_update f) \<lbrace>\<lambda>_. valid_state\<rbrace>"
   by (wpsimp simp: valid_state_def valid_pspace_def
-               wp: valid_irq_node_typ)
+               wp: valid_irq_node_typ valid_cur_fpu_lift)
 
 lemma sc_refills_update_valid_state [wp]:
   "\<lbrace>valid_state\<rbrace> update_sched_context p (sc_refills_update f) \<lbrace>\<lambda>_. valid_state\<rbrace>"
   by (wpsimp simp: valid_state_def valid_pspace_def
-               wp: valid_irq_node_typ)
+               wp: valid_irq_node_typ valid_cur_fpu_lift)
 
 lemma refill_budget_check_valid_state [wp]:
   "\<lbrace>valid_state\<rbrace> refill_budget_check usage \<lbrace>\<lambda>_. valid_state\<rbrace>"
   by (wpsimp simp: valid_state_def valid_pspace_def
-               wp: valid_irq_node_typ refill_budget_check_valid_idle)
+               wp: valid_irq_node_typ refill_budget_check_valid_idle valid_cur_fpu_lift)
 
 lemma commit_time_valid_state [wp]:
   "\<lbrace>valid_state\<rbrace> commit_time \<lbrace>\<lambda>_. valid_state\<rbrace>"
@@ -1249,6 +1252,7 @@ crunch sched_context_resume, test_possible_switch_to, tcb_release_remove, postpo
   and ex_cap[wp]: "ex_nonz_cap_to p"
   and fault_tcbs_valid_states[wp]: fault_tcbs_valid_states
   and pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
+  and valid_cur_fpu[wp]: valid_cur_fpu
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_tcb_yt_update_bound_sc_tcb_at[wp]:
@@ -1352,12 +1356,11 @@ lemma sched_context_bind_tcb_invs[wp]:
                     update_sched_context_iflive_update update_sched_context_refs_of_update
                     update_sched_context_cur_sc_tcb_None update_sched_context_valid_idle
                     hoare_vcg_all_lift hoare_vcg_conj_lift | wp set_tcb_obj_ref_wp)+
-  apply (fastforce simp: obj_at_def tcb_cap_cases_def tcb_st_refs_of_def is_sc_obj_def
-                         pred_tcb_at_def sc_tcb_sc_at_def valid_sched_context_def
-                         is_tcb valid_idle_def state_refs_of_def get_refs_def2
-                   elim: ex_cap_to_after_update' delta_sym_refs valid_objs_valid_sched_context_size
-                  dest!: symreftype_inverse' split: if_splits)
-  done
+  by (fastforce simp: obj_at_def tcb_cap_cases_def tcb_st_refs_of_def is_sc_obj_def
+                      pred_tcb_at_def sc_tcb_sc_at_def valid_sched_context_def
+                      is_tcb valid_idle_def state_refs_of_def get_refs_def2
+                elim: ex_cap_to_after_update' delta_sym_refs valid_objs_valid_sched_context_size
+               dest!: symreftype_inverse' split: if_splits)
 
 lemma maybe_sched_context_bind_tcb_invs[wp]:
   "\<lbrace>invs and (\<lambda>s. tcb_at tcb s \<and> (bound_sc_tcb_at (\<lambda>x. x \<noteq> Some sc) tcb s \<longrightarrow>
@@ -1599,7 +1602,7 @@ crunch postpone
 
 lemma postpone_invs[wp]:
   "postpone t \<lbrace>invs\<rbrace>"
-  by (wpsimp simp: invs_def valid_state_def valid_pspace_def)
+  by (wpsimp wp: valid_cur_fpu_lift simp: invs_def valid_state_def valid_pspace_def)
 
 lemma get_tcb_queue_wp[wp]: "\<lbrace>\<lambda>s. P (ready_queues s t p) s\<rbrace> get_tcb_queue t p \<lbrace>P\<rbrace>"
   by (wpsimp simp: get_tcb_queue_def)
@@ -1628,7 +1631,7 @@ lemma set_sc_obj_ref_invs_no_change:
                       update_sched_context_refs_of_same
                       update_sc_but_not_sc_replies_valid_replies_2
                       update_sched_context_valid_idle
-                      update_sched_context_cur_sc_tcb_no_change
+                      update_sched_context_cur_sc_tcb_no_change valid_cur_fpu_lift
             simp_del: fun_upd_apply)
   apply (clarsimp simp: valid_sched_context_def live_sc_def)
   done

@@ -6821,10 +6821,10 @@ lemma spec_corres_locate_Zombie:
      apply (clarsimp simp: valid_cap_def cap_aligned_def word_bits_def
                      split: option.split_asm)
     apply (simp add: mult.commute cte_level_bits_def)
-    apply (clarsimp simp: isCap_simps valid_cap_def)
+    apply (clarsimp simp: gen_isCap_simps valid_cap_def)
     apply (simp only: assert_def, subst if_P)
      apply (cases bits, simp_all add: zbits_map_def)
-     apply (clarsimp simp: cap_table_at_gsCNodes isCap_simps
+     apply (clarsimp simp: cap_table_at_gsCNodes gen_isCap_simps
                            zbits_map_def)
      apply (rule word_of_nat_less)
      apply (simp add: cap_aligned_def)

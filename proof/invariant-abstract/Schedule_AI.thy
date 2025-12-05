@@ -50,6 +50,8 @@ locale Schedule_AI =
       "arch_prepare_next_domain \<lbrace>valid_idle :: 'a state \<Rightarrow> bool\<rbrace>"
     assumes arch_prepare_next_domain_invs[wp]:
       "arch_prepare_next_domain \<lbrace>invs :: 'a state \<Rightarrow> bool\<rbrace>"
+    assumes arch_prepare_next_domain_scheduler_action[wp]:
+      "\<And>P. arch_prepare_next_domain \<lbrace>\<lambda>s :: 'a state. P (scheduler_action s)\<rbrace>"
 
 crunch schedule_switch_thread_fastfail
   for inv[wp]: P

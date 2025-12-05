@@ -474,6 +474,9 @@ crunch nextDomain
   and ksReadyQueues_asrt[wp]: ksReadyQueues_asrt
   (simp: crunch_simps ready_or_release'_def ksReadyQueues_asrt_def)
 
+crunch prepareNextDomain
+  for valid_domain_list'[wp]: valid_domain_list'
+
 lemma prepareNextDomain_ccorres:
   "ccorres dc xfdc invs' UNIV [] prepareNextDomain (Call prepareNextDomain_'proc)"
   apply cinit

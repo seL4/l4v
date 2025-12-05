@@ -38,10 +38,18 @@ locale Tcb_AI_1 =
        \<lbrace>\<lambda>b s. ex_nonz_cap_to a s\<rbrace>"
   assumes arch_post_set_flags[wp]:
   "\<And>t flags. arch_post_set_flags t flags \<lbrace>invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  assumes arch_post_set_flags_cur_thread[wp]:
+  "\<And>t d. arch_post_set_flags t d \<lbrace>\<lambda>s::'state_ext state. P (cur_thread s)\<rbrace>"
+  assumes arch_post_set_flags_st_tcb_at[wp]:
+  "\<And>t d Q P t'. arch_post_set_flags t d \<lbrace>\<lambda>s::'state_ext state. Q (st_tcb_at P t' s)\<rbrace>"
   assumes arch_prepare_set_domain_invs[wp]:
   "\<And>t d. arch_prepare_set_domain t d \<lbrace>invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes arch_prepare_set_domain_typ_at[wp]:
   "\<And>t d P T p. arch_prepare_set_domain t d \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>"
+  assumes arch_prepare_set_domain_cur_thread[wp]:
+  "\<And>t d. arch_prepare_set_domain t d \<lbrace>\<lambda>s::'state_ext state. P (cur_thread s)\<rbrace>"
+  assumes arch_prepare_set_domain_st_tcb_at[wp]:
+  "\<And>t d Q P t'. arch_prepare_set_domain t d \<lbrace>\<lambda>s::'state_ext state. Q (st_tcb_at P t' s)\<rbrace>"
   assumes arch_post_modify_registers_fault_tcb_at[wp]:
   "\<And>c t P a. \<lbrace>\<lambda>(s::'state_ext state). fault_tcb_at P a s\<rbrace> arch_post_modify_registers c t
        \<lbrace>\<lambda>b s. fault_tcb_at P a s\<rbrace>"
@@ -1096,8 +1104,6 @@ lemma set_flags_invs[wp]:
          thread_set_zombies_trivial
          thread_set_valid_idle_trivial
          thread_set_global_refs_triv
-         thread_set_valid_reply_caps_trivial
-         thread_set_valid_reply_masters_trivial
          valid_irq_node_typ valid_irq_handlers_lift
          thread_set_caps_of_state_trivial
          thread_set_arch_caps_trivial
@@ -1105,6 +1111,8 @@ lemma set_flags_invs[wp]:
          thread_set_cap_refs_in_kernel_window
          thread_set_valid_ioc_trivial thread_set_valid_arch_state thread_set_valid_cur_fpu
          thread_set_cap_refs_respects_device_region
+         thread_set_valid_replies_trivial
+         thread_set_fault_tcbs_valid_states_trivial
       | simp add: ran_tcb_cap_cases invs_def valid_state_def valid_pspace_def
       | rule conjI | erule disjE)+
 
@@ -1112,13 +1120,13 @@ lemma (in Tcb_AI) tcbinv_invs:
   "\<lbrace>(invs::'state_ext state\<Rightarrow>bool) and tcb_inv_wf ti\<rbrace>
      invoke_tcb ti
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (case_tac ti, simp only:)
-          apply ((wp writereg_invs readreg_invs copyreg_invs tcc_invs tcs_invs suspend_invs
-                 | simp add: valid_idle_def
-                 | clarsimp simp: invs_def valid_state_def valid_pspace_def
-                           dest!: idle_no_ex_cap
-                           split: option.split
-                 | rule conjI)+)[7]
+  apply (case_tac ti; simp only:)
+           apply ((wp writereg_invs readreg_invs copyreg_invs tcc_invs tcs_invs suspend_invs
+                  | simp add: valid_idle_def
+                  | clarsimp simp: invs_def valid_state_def valid_pspace_def
+                            dest!: idle_no_ex_cap
+                            split: option.split
+                  | rule conjI)+)[7]
     apply (rename_tac option)
     apply (case_tac option; simp)
      apply (rule hoare_pre)

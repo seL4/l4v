@@ -258,7 +258,7 @@ lemma starting_cur_thread_not_live:
    (tcb_state tcb = Inactive \<or> tcb_state tcb = IdleThreadState)  \<Longrightarrow>
    tcb_sched_context tcb = Some idle_sc_ptr \<Longrightarrow>
    (live (TCB tcb) = False)"
-  by (clarsimp simp: live_def hyp_live_def)
+  by (clarsimp simp: live_def hyp_live_def arch_tcb_live_def)
 
 lemma starting_cur_sc_not_live:
   "sc_yield_from sc = None \<Longrightarrow>

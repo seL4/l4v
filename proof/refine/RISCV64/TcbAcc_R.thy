@@ -402,7 +402,7 @@ lemma ball_tcb_cte_casesI:
   by (simp add: tcb_cte_cases_def cteSizeBits_def)
 
 lemma all_tcbI:
-  "\<lbrakk> \<And>a b c d e f g h i j k l m n p q r s t. P (Thread a b c d e f g h i j k l m n p q r s t) \<rbrakk>
+  "\<lbrakk> \<And>a b c d e f g h i j k l m n p q r s t u. P (Thread a b c d e f g h i j k l m n p q r s t u) \<rbrakk>
    \<Longrightarrow> \<forall>tcb. P tcb"
   by (rule allI, case_tac tcb, simp)
 
@@ -704,7 +704,7 @@ lemma threadSet_valid_pspace'T_P:
                             bspec_split [OF spec [OF x]] z
                             split_paired_Ball y u w v1 v2 v3 v4 v5 w' f)
   apply (simp add: valid_arch_tcb'_def) (* FIXME arch-split: non-hyp only *)
-  apply (fastforce simp: eq_commute z')
+  apply (fastforce simp: eq_commute[where b="tcbState obj" for obj] z')
   done
 
 lemmas threadSet_valid_pspace'T =
@@ -1034,11 +1034,8 @@ lemma threadSet_obj_at'_no_state:
   assumes "\<And>tcb. P' (f tcb) = P' tcb"
   shows   "threadSet f t \<lbrace>\<lambda>s. P (obj_at' P' t' s)\<rbrace>"
 proof -
-  have pos: "\<And>t' t.
-            \<lbrace>obj_at' P' t'\<rbrace> threadSet f t \<lbrace>\<lambda>rv. obj_at' P' t'\<rbrace>"
-    apply (wp threadSet_obj_at'_strongish)
-    apply clarsimp
-    apply (erule obj_at'_weakenE)
+  have pos: "\<And>t' t. threadSet f t \<lbrace>obj_at' P' t'\<rbrace>"
+    apply (wpsimp wp: threadSet_obj_at'_strongish)
     apply (insert assms)
     apply clarsimp
     done
@@ -1046,15 +1043,10 @@ proof -
     apply (rule_tac P=P in P_bool_lift)
      apply (rule pos)
     apply (rule_tac Q'="\<lambda>_ s. \<not> tcb_at' t' s \<or> obj_at' (\<lambda>tcb. \<not> P' tcb) t' s"
-             in hoare_post_imp)
-     apply (erule disjE)
-      apply (clarsimp simp: obj_at'_def)
-     apply (clarsimp)
-     apply (frule_tac P=P' and Q="\<lambda>tcb. \<not> P' tcb" in obj_at_conj')
-      apply (clarsimp)+
-    apply (wp hoare_convert_imp)
-      apply (simp add: typ_at_tcb' [symmetric])
-      apply (wp pos)+
+                 in hoare_post_imp)
+     apply (clarsimp simp: obj_at'_def)
+    apply (simp add: typ_at_tcb'[symmetric])
+    apply (wpsimp wp: hoare_convert_imp)
     apply (clarsimp simp: not_obj_at' assms elim!: obj_at'_weakenE)
     done
 qed
@@ -6471,7 +6463,7 @@ crunch tcbReleaseRemove, tcbQueueRemove, tcbReleaseEnqueue
   for tcbDomain[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
   and tcb_in_cur_domain'[wp]: "tcb_in_cur_domain' t"
   and sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
-  (wp: crunch_wps threadSet_obj_at_no_state rule: tcb_in_cur_domain'_lift sch_act_wf_lift)
+  (wp: crunch_wps threadSet_obj_at'_no_state rule: tcb_in_cur_domain'_lift sch_act_wf_lift)
 
 lemma tcbSchedNext_None_if_live_then_nonz_cap'[wp]:
   "threadSet (tcbSchedNext_update (\<lambda>_. None)) tcbPtr \<lbrace>if_live_then_nonz_cap'\<rbrace>"

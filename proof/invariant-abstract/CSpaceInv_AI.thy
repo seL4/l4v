@@ -586,6 +586,8 @@ lemma set_cap_cur [wp]:
   apply (clarsimp simp: cur_tcb_def obj_at_def is_tcb)
   done
 
+lemmas set_cap_pred_tcb = set_cap.cspace_pred_tcb_at
+
 lemma set_cap_cur_sc_tcb [wp]:
   "\<lbrace>cur_sc_tcb\<rbrace> set_cap c p \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
   apply (simp add: set_cap_def set_object_def )

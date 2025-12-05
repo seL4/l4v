@@ -263,9 +263,9 @@ lemma make_arch_fault_msg_inv[wp, Ipc_AI_2_assms]:
   "make_arch_fault_msg ft t \<lbrace>P\<rbrace>"
   by (cases ft; wpsimp)
 
-lemma make_fault_msg_inv[wp, Ipc_AI_2_assms]:
-  "make_fault_msg ft t \<lbrace>P\<rbrace>"
-  by (cases ft; wpsimp wp: as_user_inv getRestartPC_inv mapM_wp' split_del: if_split)
+crunch make_fault_msg
+  for invs[wp]: invs
+  and tcb_at[wp]: "tcb_at t"
 
 lemma do_fault_transfer_invs[wp, Ipc_AI_2_assms]:
   "\<lbrace>invs and tcb_at receiver\<rbrace>
@@ -425,60 +425,6 @@ lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_2_assms]:
              hoare_drop_imps
         | assumption | simp split del: if_split)+
   done
-
-crunch make_arch_fault_msg
-  for aligned                   [wp, Ipc_AI_2_assms]: "pspace_aligned"
-  and distinct                  [wp, Ipc_AI_2_assms]: "pspace_distinct"
-  and vmdb                      [wp, Ipc_AI_2_assms]: "valid_mdb"
-  and ifunsafe                  [wp, Ipc_AI_2_assms]: "if_unsafe_then_cap"
-  and iflive                    [wp, Ipc_AI_2_assms]: "if_live_then_nonz_cap"
-  and state_refs_of             [wp, Ipc_AI_2_assms]: "\<lambda>s. P (state_refs_of s)"
-  and ct                        [wp, Ipc_AI_2_assms]: "cur_tcb"
-  and zombies                   [wp, Ipc_AI_2_assms]: "zombies_final"
-  and it                        [wp, Ipc_AI_2_assms]: "\<lambda>s. P (idle_thread s)"
-  and valid_globals             [wp, Ipc_AI_2_assms]: "valid_global_refs"
-  and valid_idle                [wp, Ipc_AI_2_assms]: "valid_idle"
-  and arch                      [wp, Ipc_AI_2_assms]: "\<lambda>s. P (arch_state s)"
-  and typ_at                    [wp, Ipc_AI_2_assms]: "\<lambda>s. P (typ_at T p s)"
-  and irq_node                  [wp, Ipc_AI_2_assms]: "\<lambda>s. P (interrupt_irq_node s)"
-  and irq_handlers              [wp, Ipc_AI_2_assms]: "valid_irq_handlers"
-  and vspace_objs               [wp, Ipc_AI_2_assms]: "valid_vspace_objs"
-  and global_objs               [wp, Ipc_AI_2_assms]: "valid_global_objs"
-  and global_vspace_mapping     [wp, Ipc_AI_2_assms]: "valid_global_vspace_mappings"
-  and arch_caps                 [wp, Ipc_AI_2_assms]: "valid_arch_caps"
-  and v_ker_map                 [wp, Ipc_AI_2_assms]: "valid_kernel_mappings"
-  and eq_ker_map                [wp, Ipc_AI_2_assms]: "equal_kernel_mappings"
-  and asid_map                  [wp, Ipc_AI_2_assms]: "valid_asid_map"
-  and only_idle                 [wp, Ipc_AI_2_assms]: "only_idle"
-  and pspace_in_kernel_window   [wp, Ipc_AI_2_assms]: "pspace_in_kernel_window"
-  and cap_refs_in_kernel_window [wp, Ipc_AI_2_assms]: "cap_refs_in_kernel_window"
-  and valid_objs                [wp, Ipc_AI_2_assms]: "valid_objs"
-  and valid_ioc                 [wp, Ipc_AI_2_assms]: "valid_ioc"
-  and pred_tcb                  [wp, Ipc_AI_2_assms]: "pred_tcb_at proj P t"
-  and cap_to                    [wp, Ipc_AI_2_assms]: "ex_nonz_cap_to p"
-  and cur_sc_tcb                [wp, Ipc_AI_2_assms]: "cur_sc_tcb"
-  and st_tcb_at                 [wp, Ipc_AI_2_assms]: "\<lambda>s. Q (st_tcb_at P p s)"
-  and fault_tcb_at              [wp, Ipc_AI_2_assms]: "\<lambda>s. Q (fault_tcb_at P p s)"
-  and bound_sc_tcb_at           [wp, Ipc_AI_2_assms]: "\<lambda>s. Q (bound_sc_tcb_at P p s)"
-  and valid_replies             [wp]: "valid_replies_pred P"
-
-crunch make_arch_fault_msg
-  for obj_at[wp, Ipc_AI_2_assms]: "\<lambda>s. P (obj_at P' pd s)"
-  and reply_sc_reply_at[wp, Ipc_AI_2_assms]: "reply_sc_reply_at P p"
-  and reply_tcb_reply_at[wp, Ipc_AI_2_assms]: "reply_tcb_reply_at P p"
-  (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def)
-
-crunch make_arch_fault_msg
-  for vms[wp, Ipc_AI_2_assms]: valid_machine_state
-  (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
-
-crunch make_arch_fault_msg
-  for valid_irq_states[wp, Ipc_AI_2_assms]: "valid_irq_states"
-  (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
-
-crunch make_arch_fault_msg
-  for cap_refs_respects_device_region[wp, Ipc_AI_2_assms]: "cap_refs_respects_device_region"
-  (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
 
 lemma transfer_caps_loop_valid_arch[Ipc_AI_2_assms]:
   "\<And>slots caps ep buffer n mi.

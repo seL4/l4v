@@ -3541,7 +3541,7 @@ lemma valid_idle_etcb_lift_pre_conj:
     shows "\<lbrace>\<lambda>s. valid_idle_etcb s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_idle_etcb\<rbrace>"
   by (wpsimp wp: d simp: valid_idle_etcb_def)
 
-lemmas valid_idle_etcb_lift[wp] = valid_idle_etcb_lift_pre_conj[where R = \<top>, simplified]
+lemmas valid_idle_etcb_lift = valid_idle_etcb_lift_pre_conj[where R = \<top>, simplified]
 
 lemma active_reply_scs_lift_pre_conj:
   assumes "\<And>scp. \<lbrace>\<lambda>s. active_if_reply_sc_at scp s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. active_if_reply_sc_at scp s\<rbrace>"
