@@ -298,8 +298,6 @@ crunch arch_get_sanitise_register_info, arch_post_modify_registers
 crunch arch_get_sanitise_register_info, arch_post_modify_registers
   for scheduler_action[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (scheduler_action s)"
 
-declare make_arch_fault_msg_inv[DetSchedSchedule_AI_assms]
-
 lemma arch_post_modify_registers_not_idle_thread[DetSchedSchedule_AI_assms]:
   "\<lbrace>\<lambda>s::det_ext state. t \<noteq> idle_thread s\<rbrace> arch_post_modify_registers c t \<lbrace>\<lambda>_ s. t \<noteq> idle_thread s\<rbrace>"
   by (wpsimp simp: arch_post_modify_registers_def)

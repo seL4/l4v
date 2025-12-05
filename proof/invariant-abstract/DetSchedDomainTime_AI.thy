@@ -79,10 +79,6 @@ locale DetSchedDomainTime_AI =
     "\<And>P t f. \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace> handle_vm_fault t f \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes prepare_thread_delete_domain_time_inv'[wp]:
     "\<And>P t. \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
-  assumes make_arch_fault_msg_domain_time_inv'[wp]:
-    "\<And>P ft t. \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace> make_arch_fault_msg ft t \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
-  assumes make_arch_fault_msg_domain_list_inv'[wp]:
-    "\<And>P ft t. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> make_arch_fault_msg ft t \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes arch_post_cap_deletion_domain_time_inv'[wp]:
     "\<And>P ft. \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace> arch_post_cap_deletion ft \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes arch_post_cap_deletion_domain_list_inv'[wp]:
