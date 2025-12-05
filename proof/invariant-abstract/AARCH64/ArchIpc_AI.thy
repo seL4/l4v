@@ -227,7 +227,7 @@ lemma make_arch_fault_msg_inv[wp, Ipc_AI_2_assms]:
   "make_arch_fault_msg ft t \<lbrace>P\<rbrace>"
   by (cases ft; wpsimp)
 
-lemma make_fault_msg_inv[wp, Ipc_AI_2_assms]:
+lemma make_fault_msg_inv[wp]:
   "make_fault_msg ft t \<lbrace>P\<rbrace>"
   by (cases ft; wpsimp wp: as_user_inv getRestartPC_inv mapM_wp' split_del: if_split)
 
