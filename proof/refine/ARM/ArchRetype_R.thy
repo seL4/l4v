@@ -93,17 +93,10 @@ lemma makeObjectKO_generic[Retype_R_assms, simp]:
 
 text \<open>makeObject etc. lemmas\<close>
 
-lemma valid_obj_makeObject_tcb[Retype_R_assms, simp]:
-  "valid_obj' (KOTCB makeObject) s"
-  unfolding valid_obj'_def valid_tcb'_def valid_tcb_state'_def valid_arch_tcb'_def
-  by (clarsimp simp: makeObject_tcb makeObject_cte tcb_cte_cases_def minBound_word newArchTCB_def
-                     cteSizeBits_def)
-
-lemma valid_obj_makeObject_tcb_tcbDomain_update[simp]:
-  "d \<le> maxDomain \<Longrightarrow> valid_obj' (KOTCB (tcbDomain_update (\<lambda>_. d) makeObject)) s"
-  unfolding valid_obj'_def valid_tcb'_def valid_tcb_state'_def valid_arch_tcb'_def
-  by (clarsimp simp: makeObject_tcb makeObject_cte objBits_simps' newArchTCB_def
-                     tcb_cte_cases_def maxDomain_def maxPriority_def numPriorities_def minBound_word)
+lemma valid_arch_tcb'_newArchTCB[Retype_R_assms, simp]:
+  "valid_arch_tcb' newArchTCB s"
+  unfolding valid_arch_tcb'_def newArchTCB_def
+  by simp
 
 lemma valid_obj_makeObject_pte[simp]:
   "valid_obj' (KOArch (KOPTE makeObject)) s"
@@ -134,21 +127,6 @@ lemma makeObjectKO_eq[Retype_R_assms]:
          split: apiobject_type.split_asm sum.split_asm kernel_object.split_asm
                 ARM_H.object_type.split_asm arch_kernel_object.split_asm)+
 
-lemma obj_relation_cuts_trivial[Retype_R_assms]:
-  "ptr \<in> fst ` obj_relation_cuts ty ptr"
-  apply (case_tac ty)
-      apply (rename_tac sz cs)
-      apply (clarsimp simp:image_def cte_map_def well_formed_cnode_n_def)
-      apply (rule_tac x = "replicate sz False" in exI)
-      apply clarsimp+
-  apply (rename_tac arch_kernel_obj)
-  apply (case_tac arch_kernel_obj; simp add: image_def pageBits_def)
-    apply (rule_tac x=0 in exI, simp)+
-  apply (rule p2_gt_0[THEN iffD2])
-  apply (rename_tac vmpage_size)
-  apply (case_tac vmpage_size; clarsimp simp: pageBitsForSize_def)
-  done
-
 lemma objBits_le_obj_bits_api[Retype_R_assms]:
   "makeObjectKO dev d ty = Some ko \<Longrightarrow> objBitsKO ko \<le> obj_bits_api (APIType_map2 ty) us"
   apply (case_tac ty)
@@ -177,13 +155,13 @@ definition update_gs :: "Structures_A.apiobject_type \<Rightarrow> nat \<Rightar
   "update_gs ty us ptrs \<equiv> case ty of
        Structures_A.CapTableObject \<Rightarrow> gsCNodes_update
          (\<lambda>cns x. if x \<in> ptrs then Some us else cns x)
-     | ArchObject (SmallPageObj) \<Rightarrow> gsUserPages_update
+     | ArchObject SmallPageObj \<Rightarrow> gsUserPages_update
          (\<lambda>ups x. if x \<in> ptrs then Some ARMSmallPage else ups x)
-     | ArchObject (LargePageObj) \<Rightarrow> gsUserPages_update
+     | ArchObject LargePageObj \<Rightarrow> gsUserPages_update
          (\<lambda>ups x. if x \<in> ptrs then Some ARMLargePage else ups x)
-     | ArchObject (SectionObj) \<Rightarrow> gsUserPages_update
+     | ArchObject SectionObj \<Rightarrow> gsUserPages_update
          (\<lambda>ups x. if x \<in> ptrs then Some ARMSection else ups x)
-     | ArchObject (SuperSectionObj) \<Rightarrow> gsUserPages_update
+     | ArchObject SuperSectionObj \<Rightarrow> gsUserPages_update
          (\<lambda>ups x. if x \<in> ptrs then Some ARMSuperSection else ups x)
      | _ \<Rightarrow> id"
 
@@ -240,8 +218,8 @@ lemma objBitsKO_gt_0[Retype_R_assms]:
   done
 
 lemma cwo_ret:
-  assumes  cover:"range_cover ptr sz v n"
-  assumes not_0:"n\<noteq> 0"
+  assumes not_0: "n\<noteq> 0"
+  assumes cover: "range_cover ptr sz v n"
   shows result: "\<lbrace>pspace_no_overlap' ptr sz and valid_pspace' and K (v = 12 + bs)\<rbrace>
            createObjects ptr n (if dev then KOUserDataDevice else KOUserData) bs
           \<lbrace>\<lambda>rv s. \<forall>x\<in>set rv. \<forall>p<2 ^ (v - pageBits).
@@ -293,7 +271,7 @@ lemma range_cover_canonical_address':
   using unat_less_helper by blast
 
 lemma createNewCaps_valid_cap:
-  fixes ptr :: word32
+  fixes ptr :: machine_word
   assumes cover: "range_cover ptr sz (APIType_capBits ty us) n "
   assumes not_0: "n \<noteq> 0"
   assumes ct: "ty = APIObjectType ArchTypes_H.CapTableObject \<Longrightarrow> 0 < us"
@@ -303,10 +281,10 @@ lemma createNewCaps_valid_cap:
            createNewCaps ty ptr n us dev
          \<lbrace>\<lambda>r s. (\<forall>cap \<in> set r. s \<turnstile>' cap)\<rbrace>"
 proof -
-  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  note [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
+                    atLeastatMost_subset_iff atLeastLessThan_iff Int_atLeastAtMost
+                    atLeastatMost_empty_iff split_paired_Ex
   note if_split[split del]
-  note projectKOs[simp del]
 
   show ?thesis
   proof(cases "Types_H.toAPIType ty")
@@ -323,7 +301,7 @@ proof -
        apply (simp add: valid_cap'_def capAligned_def n_less_word_bits
                         ball_conj_distrib)
        apply ((wp createObjects_aligned2 createObjects_nonzero[OF not_0 ,simplified]
-                 cwo_ret[OF _ not_0]
+                 cwo_ret[OF not_0]
          | simp add: objBits_if_dev pageBits_def ptr range_cover_n_wb)+)
        apply (simp add:pageBits_def ptr word_bits_def)
       \<comment> \<open>LargePageObject\<close>
@@ -331,7 +309,7 @@ proof -
       apply (simp add: valid_cap'_def capAligned_def n_less_word_bits
                        ball_conj_distrib)
       apply (wp createObjects_aligned2 createObjects_nonzero[OF not_0 ,simplified]
-                cwo_ret[OF _ not_0]
+                cwo_ret[OF not_0]
         | simp add: objBits_if_dev pageBits_def ptr range_cover_n_wb)+
       apply (simp add:pageBits_def ptr word_bits_def)
 
@@ -340,7 +318,7 @@ proof -
      apply (simp add: valid_cap'_def capAligned_def n_less_word_bits
                       ball_conj_distrib)
      apply (wp createObjects_aligned2 createObjects_nonzero[OF not_0 ,simplified]
-               cwo_ret[OF _ not_0]
+               cwo_ret[OF not_0]
        | simp add: objBits_if_dev vspace_bits_defs ptr range_cover_n_wb)+
      apply (simp add: pageBits_def ptr word_bits_def)
 
@@ -349,7 +327,7 @@ proof -
     apply (simp add: valid_cap'_def capAligned_def n_less_word_bits
                      ball_conj_distrib)
     apply (wp createObjects_aligned2 createObjects_nonzero[OF not_0 ,simplified]
-              cwo_ret[OF _ not_0]
+              cwo_ret[OF not_0]
       | simp add: objBits_if_dev pageBits_def ptr range_cover_n_wb)+
     apply (simp add:pageBits_def ptr word_bits_def)
 
@@ -366,10 +344,6 @@ proof -
        apply (simp add:range_cover_def word_bits_def)
        apply (rule createObjects_obj_at[where 'a =pte, OF _  not_0])
          apply (simp add:objBits_simps vspace_bits_defs)+
-       apply (simp add: projectKO_opt_pte)
-      apply simp
-     apply (clarsimp simp: objBits_simps vspace_bits_defs)
-    apply clarsimp
   \<comment> \<open>PageDirectoryObject\<close>
    apply (wp mapM_x_wp' hoare_vcg_op_lift)
    apply (simp add: valid_cap'_def capAligned_def n_less_word_bits)
@@ -383,7 +357,7 @@ proof -
       apply (simp add:range_cover_def word_bits_def)
      apply (rule createObjects_obj_at [where 'a=pde, OF _  not_0])
       apply (simp add:objBits_simps vspace_bits_defs)
-     apply (simp add: projectKOs projectKO_opt_pde)
+     apply simp
     apply simp
    apply (clarsimp simp: objBits_simps vspace_bits_defs)
   apply simp
@@ -454,7 +428,7 @@ proof -
           using cover
           apply (clarsimp simp: ARM_H.toAPIType_def APIType_capBits_def objBits_simps
                          split: ARM_H.object_type.splits)
-         apply (simp add: projectKOs)
+         apply simp
         apply (clarsimp simp: valid_cap'_def objBits_simps)
         apply (fastforce intro: capAligned_epI)
         done
@@ -472,7 +446,7 @@ proof -
           using cover
           apply (clarsimp simp: ARM_H.toAPIType_def APIType_capBits_def objBits_simps
                          split: ARM_H.object_type.splits)
-         apply (simp add: projectKOs)
+         apply simp
         apply (clarsimp simp: valid_cap'_def objBits_simps)
         apply (fastforce intro: capAligned_ntfnI)
         done
@@ -494,7 +468,7 @@ proof -
             apply (rule createObjects_ret [OF range_cover.range_cover_n_less(1)[where 'a=32, unfolded word_bits_len_of, OF cover] not_0])
            apply (rule createObjects_obj_at [where 'a=cte, OF _ not_0])
             apply (simp add: objBits_simps APIType_capBits_def)
-           apply (simp add: projectKOs)
+           apply simp
           apply simp
          apply (clarsimp simp: valid_cap'_def capAligned_def objBits_simps
                         dest!: less_two_pow_divD)

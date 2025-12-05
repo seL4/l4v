@@ -15,11 +15,9 @@ begin
 arch_requalify_consts
   no_gs_types
 
-lemmas [simp] = objBitsKO_less_word_bits
-
 lemma placeNewObject_def2:
   "placeNewObject ptr val gb = createObjects' ptr 1 (injectKO val) gb"
-  by (clarsimp simp:placeNewObject_def placeNewObject'_def createObjects'_def shiftL_nat)
+  by (clarsimp simp: placeNewObject_def placeNewObject'_def createObjects'_def shiftL_nat)
 
 lemma createObjects_ret:
   "\<lbrakk>n < 2^word_bits; n\<noteq> 0\<rbrakk> \<Longrightarrow>
@@ -371,7 +369,7 @@ definition obj_relation_retype :: "Structures_A.kernel_object \<Rightarrow> Stru
            \<and> (\<forall>x \<in> obj_relation_cuts ko p. snd x ko ko'))"
 
 abbreviation
- "injectKOS \<equiv> (injectKO :: ('a :: pspace_storable) \<Rightarrow> kernel_object)"
+  "injectKOS \<equiv> (injectKO :: ('a :: pspace_storable) \<Rightarrow> kernel_object)"
 
 crunch createObjects, doMachineOp
   for ct[wp]: "\<lambda>s. P (ksCurThread s)"
@@ -393,8 +391,8 @@ lemma createObjects_createObjects'_inv:
   by (fastforce simp: createObjects_def valid_def bind_def return_def)
 
 locale Retype_R =
-  assumes valid_obj_makeObject_tcb[simp]:
-    "valid_obj' (KOTCB makeObject) s"
+  assumes valid_arch_tcb'_newArchTCB[simp]:
+    "\<And>s. valid_arch_tcb' newArchTCB s"
   fixes makeObjectKO :: "bool \<Rightarrow> domain \<Rightarrow> (kernel_object + object_type) \<rightharpoonup> kernel_object"
   fixes APIType_map2 :: "kernel_object + object_type \<Rightarrow> Structures_A.apiobject_type"
   fixes APIType_capBits :: "object_type \<Rightarrow> nat \<Rightarrow> nat"
@@ -422,8 +420,6 @@ locale Retype_R =
     "\<And>api us. APIType_capBits (APIObjectType api) us = APIType_capBits_gen api us"
   assumes toAPIType_Some[simp]:
     "\<And>ty x. (toAPIType ty = Some x) = (ty = APIObjectType x)"
-  assumes obj_relation_cuts_trivial:
-    "\<And>ptr ty. ptr \<in> fst ` obj_relation_cuts ty ptr"
   assumes objBits_le_obj_bits_api:
     "\<And>dev d ty ko us.
      makeObjectKO dev d ty = Some ko \<Longrightarrow> objBitsKO ko \<le> obj_bits_api (APIType_map2 ty) us"
@@ -559,6 +555,17 @@ locale Retype_R =
      createNewCaps ty ptr n us dev
      \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
 begin
+
+lemma valid_obj_makeObject_tcb[simp]:
+  "valid_obj' (KOTCB makeObject) s"
+  by (simp add: valid_obj'_def valid_tcb'_def makeObject_tcb tcb_cte_cases_def tcb_cte_cases_neqs
+                VPtr_def valid_tcb_state'_def minBound_word makeObject_cte)
+
+lemma valid_obj_makeObject_tcb_tcbDomain_update[simp]:
+  "d \<le> maxDomain \<Longrightarrow> valid_obj' (KOTCB (tcbDomain_update (\<lambda>_. d) makeObject)) s"
+  unfolding valid_obj'_def valid_tcb'_def valid_tcb_state'_def
+  by (clarsimp simp: makeObject_tcb makeObject_cte gen_objBits_simps minBound_word VPtr_def
+                     tcb_cte_cases_def tcb_cte_cases_neqs)
 
 lemmas gen_valid_obj_makeObject_rules =
   valid_obj_makeObject_user_data valid_obj_makeObject_tcb
@@ -2246,6 +2253,8 @@ lemmas gen_object_splits =
   apiobject_type.split_asm
   sum.split_asm kernel_object.split_asm
 
+(* FIXME: these were manually added to [wp] sometime after their definition; those declarations
+   should become localised rather than global *)
 declare hoare_in_monad_post[wp del]
 declare univ_get_wp[wp del]
 

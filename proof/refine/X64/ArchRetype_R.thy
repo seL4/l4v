@@ -96,17 +96,10 @@ lemma makeObjectKO_generic[Retype_R_assms, simp]:
 
 text \<open>makeObject etc. lemmas\<close>
 
-lemma valid_obj_makeObject_tcb[Retype_R_assms, simp]:
-  "valid_obj' (KOTCB makeObject) s"
-  unfolding valid_obj'_def valid_tcb'_def valid_tcb_state'_def valid_arch_tcb'_def
-  by (clarsimp simp: makeObject_tcb makeObject_cte tcb_cte_cases_def minBound_word newArchTCB_def
-                     cteSizeBits_def)
-
-lemma valid_obj_makeObject_tcb_tcbDomain_update[simp]:
-  "d \<le> maxDomain \<Longrightarrow> valid_obj' (KOTCB (tcbDomain_update (\<lambda>_. d) makeObject)) s"
-  unfolding valid_obj'_def valid_tcb'_def valid_tcb_state'_def valid_arch_tcb'_def
-  by (clarsimp simp: makeObject_tcb makeObject_cte objBits_simps' newArchTCB_def
-                     tcb_cte_cases_def maxDomain_def maxPriority_def numPriorities_def minBound_word)
+lemma valid_arch_tcb'_newArchTCB[Retype_R_assms, simp]:
+  "valid_arch_tcb' newArchTCB s"
+  unfolding valid_arch_tcb'_def newArchTCB_def
+  by simp
 
 lemma valid_obj_makeObject_pte[simp]:
   "valid_obj' (KOArch (KOPTE makeObject)) s"
@@ -144,23 +137,6 @@ lemma makeObjectKO_eq[Retype_R_assms]:
   by (simp add: makeObjectKO_def eq_commute
          split: apiobject_type.split_asm sum.split_asm kernel_object.split_asm
                 X64_H.object_type.split_asm arch_kernel_object.split_asm)+
-
-lemma obj_relation_cuts_trivial[Retype_R_assms]:
-  "ptr \<in> fst ` obj_relation_cuts ty ptr"
-  apply (case_tac ty)
-      apply (rename_tac sz cs)
-      apply (clarsimp simp:image_def cte_map_def well_formed_cnode_n_def)
-      apply (rule_tac x = "replicate sz False" in exI)
-      apply clarsimp+
-  apply (rename_tac arch_kernel_obj)
-  apply (case_tac arch_kernel_obj)
-     apply clarsimp
-    apply (simp_all add:image_def pageBits_def)
-    apply (rule_tac x = 0 in exI, simp)+
-  apply (rule p2_gt_0[THEN iffD2])
-  apply (rename_tac vmpage_size)
-  by (case_tac vmpage_size;
-      clarsimp simp:pageBitsForSize_def bit_simps)
 
 lemma objBits_le_obj_bits_api[Retype_R_assms]:
   "makeObjectKO dev d ty = Some ko \<Longrightarrow> objBitsKO ko \<le> obj_bits_api (APIType_map2 ty) us"
@@ -321,8 +297,9 @@ lemma createNewCaps_valid_cap:
            createNewCaps ty ptr n us dev
          \<lbrace>\<lambda>r s. (\<forall>cap \<in> set r. s \<turnstile>' cap)\<rbrace>"
 proof -
-  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  note [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
+                    atLeastatMost_subset_iff atLeastLessThan_iff Int_atLeastAtMost
+                    atLeastatMost_empty_iff split_paired_Ex
   note if_split[split del]
   note createObjects_nonzero' = createObjects_nonzero[OF not_0]
   note cwo_ret' = cwo_ret[OF not_0]
