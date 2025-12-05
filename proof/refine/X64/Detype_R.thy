@@ -961,10 +961,6 @@ lemma detype_ready_queues_relation:
   apply (fastforce simp add: detype_def)
   done
 
-lemma insert_id_ksArchState_upd:
-  "s = s\<lparr>ksArchState := id (ksArchState s)\<rparr>"
-  by simp
-
 lemma deleteObjects_corres:
   "is_aligned base magnitude \<Longrightarrow> magnitude \<ge> 3 \<Longrightarrow>
    corres dc
