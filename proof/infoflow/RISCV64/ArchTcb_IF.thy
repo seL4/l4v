@@ -250,6 +250,12 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
                      det_setRegister option.disc_eq_case[symmetric]
               split: cap.splits arch_cap.splits option.split)+
 
+lemma arch_post_set_flags_reads_respects_f[Tcb_IF_assms]:
+  "reads_respects_f aag l \<top> (arch_post_set_flags t flags)"
+  unfolding arch_post_set_flags_def by wpsimp
+
+declare arch_post_set_flags_inv[Tcb_IF_assms]
+
 end
 
 

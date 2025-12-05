@@ -380,7 +380,6 @@ lemma invokeIRQHandler_corres:
   apply (cases i, simp_all add: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def)
     apply (rule corres_guard_imp, rule corres_machine_op)
       apply (rule corres_Id, simp_all)
-    apply (rule no_fail_maskInterrupt)
    apply (rename_tac word cap prod)
    apply clarsimp
    apply (rule corres_guard_imp)
@@ -477,16 +476,16 @@ method do_machine_op_corres
 lemma updateIRQState_corres[wp]:
   "state = x64irqstate_to_abstract state' \<Longrightarrow>
      corres dc \<top> \<top>
-       (X64_A.updateIRQState irq state)
-       (X64_H.updateIRQState irq state')"
-  apply (clarsimp simp: X64_A.updateIRQState_def X64_H.updateIRQState_def)
+       (update_irq_state irq state)
+       (updateIRQState irq state')"
+  apply (clarsimp simp: update_irq_state_def updateIRQState_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF corres_gets_x64_irq_state])
       apply (rule corres_modify[where P=\<top> and P'=\<top>])
       apply (auto simp: state_relation_def arch_state_relation_def x64_irq_relation_def)
   done
 
-crunch X64_H.updateIRQState
+crunch updateIRQState
   for pspace_distinct'[wp]: "pspace_distinct'"
   and pspace_aligned'[wp]: "pspace_aligned'"
   and cte_wp_at'[wp]: "cte_wp_at' a b"
@@ -601,9 +600,9 @@ lemma setIRQState_issued[wp]:
 
 lemma updateIRQState_invs'[wp]:
   "\<lbrace>invs' and K (irq \<le> maxIRQ)\<rbrace>
-   X64_H.updateIRQState irq state
+   updateIRQState irq state
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (clarsimp simp: X64_H.updateIRQState_def)
+  apply (clarsimp simp: updateIRQState_def)
   apply wp
   apply (fastforce simp: invs'_def valid_state'_def cur_tcb'_def
                          valid_idle'_def valid_irq_node'_def

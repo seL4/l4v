@@ -157,6 +157,7 @@ By default, new threads are unable to change the security domains of other threa
 >         tcbYieldTo = Nothing,
 >         tcbSchedPrev = Nothing,
 >         tcbSchedNext = Nothing,
+>         tcbFlags = 0,
 >         tcbArch = newArchTCB }
 >     injectKO   = KOTCB
 >     projectKO o = case o of

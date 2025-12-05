@@ -4080,17 +4080,17 @@ lemma isEPsrc:
 lemma isIRQControl_src:
   "(scap = IRQControlCap) = (src_cap = IRQControlCap)"
   using src_derived
-  by (auto simp: isCap_simps weak_derived'_def)
+  by (auto simp: gen_isCap_simps weak_derived'_def)
 
 lemma isIRQHandler_src:
   "isIRQHandlerCap scap = isIRQHandlerCap src_cap"
   using src_derived
-  by (fastforce simp: isCap_simps weak_derived'_def)
+  by (fastforce simp: gen_isCap_simps weak_derived'_def)
 
 lemma isEPbadge_src:
   "isEndpointCap src_cap \<Longrightarrow> capEPBadge scap = capEPBadge src_cap"
   using src_derived
-  by (clarsimp simp: isCap_simps weak_derived'_def)
+  by (clarsimp simp: gen_isCap_simps weak_derived'_def)
 
 lemma isNTFNsrc:
   "isNotificationCap scap = isNotificationCap src_cap"
@@ -4099,31 +4099,31 @@ lemma isNTFNsrc:
 lemma isNTFNbadge_src:
   "isNotificationCap src_cap \<Longrightarrow> capNtfnBadge scap = capNtfnBadge src_cap"
   using src_derived
-  by (clarsimp simp: isCap_simps weak_derived'_def)
+  by (clarsimp simp: gen_isCap_simps weak_derived'_def)
 
 lemma isEPdest:
   "isEndpointCap dcap = isEndpointCap dest_cap"
-  using dest_derived by (fastforce simp: isCap_simps weak_derived'_def)
+  using dest_derived by (fastforce simp: gen_isCap_simps weak_derived'_def)
 
 lemma isIRQHandler_dest:
   "isIRQHandlerCap dcap = isIRQHandlerCap dest_cap"
-  using dest_derived by (fastforce simp: isCap_simps weak_derived'_def)
+  using dest_derived by (fastforce simp: gen_isCap_simps weak_derived'_def)
 
 lemma isIRQControl_dest:
   "(dcap = IRQControlCap) = (dest_cap = IRQControlCap)"
-  using dest_derived by (auto simp: isCap_simps weak_derived'_def)
+  using dest_derived by (auto simp: gen_isCap_simps weak_derived'_def)
 
 lemma isEPbadge_dest:
   "isEndpointCap dest_cap \<Longrightarrow> capEPBadge dcap = capEPBadge dest_cap"
-  using dest_derived by (auto simp: weak_derived'_def isCap_simps)
+  using dest_derived by (auto simp: weak_derived'_def gen_isCap_simps)
 
 lemma isNTFNdest:
   "isNotificationCap dcap = isNotificationCap dest_cap"
-  using dest_derived by (auto simp: weak_derived'_def isCap_simps)
+  using dest_derived by (auto simp: weak_derived'_def gen_isCap_simps)
 
 lemma isNTFNbadge_dest:
   "isNotificationCap dest_cap \<Longrightarrow> capNtfnBadge dcap = capNtfnBadge dest_cap"
-  using dest_derived by (auto simp: weak_derived'_def isCap_simps)
+  using dest_derived by (auto simp: weak_derived'_def gen_isCap_simps)
 
 lemmas ep_simps =
   isEPsrc isEPbadge_src isNTFNsrc isNTFNbadge_src
@@ -4200,13 +4200,14 @@ lemmas cap_simps =
 
 end
 
+(* FIXME arch-split: next two lemmas need \<not>isArchFrameCap EndpointCap *)
 lemma sameRegion_ep:
   "\<lbrakk> sameRegionAs cap cap'; isEndpointCap cap \<rbrakk> \<Longrightarrow> isEndpointCap cap'"
-  by (auto simp: isCap_simps sameRegionAs_def3)
+  by (auto simp: gen_isCap_simps sameRegionAs_def3 ARM.isArchFrameCap_def)
 
 lemma sameRegion_ntfn:
   "\<lbrakk> sameRegionAs cap cap'; isNotificationCap cap \<rbrakk> \<Longrightarrow> isNotificationCap cap'"
-  by (auto simp: isCap_simps sameRegionAs_def3)
+  by (auto simp: gen_isCap_simps sameRegionAs_def3 ARM.isArchFrameCap_def)
 
 lemma (in mdb_swap) cteSwap_valid_badges:
   "valid_badges n"
@@ -4556,7 +4557,7 @@ begin
 
 lemma isUntyped_new:
   "isUntypedCap new = isUntypedCap old"
-  using derived by (auto simp: weak_derived'_def isCap_simps)
+  using derived by (auto simp: weak_derived'_def gen_isCap_simps)
 
 lemma capRange_new:
   "capRange new = capRange old"
@@ -4581,7 +4582,7 @@ lemma isReplyMaster_eq:
   "(isReplyCap new \<and> capReplyMaster new)
       = (isReplyCap old \<and> capReplyMaster old)"
   using derived
-  by (fastforce simp: weak_derived'_def isCap_simps)
+  by (fastforce simp: weak_derived'_def gen_isCap_simps)
 
 end
 
@@ -6651,7 +6652,7 @@ lemma finaliseCap2_st_tcb_at':
    apply ((wp cancelAllIPC_st_tcb_at cancelAllSignals_st_tcb_at
               prepareThreadDelete_st_tcb_at'
               suspend_st_tcb_at' cteDeleteOne_st_tcb_at getCTE_wp'
-             | simp add: isCap_simps getSlotCap_def getIRQSlot_def
+             | simp add: gen_isCap_simps getSlotCap_def getIRQSlot_def
                          locateSlot_conv getInterruptState_def
                   split del: if_split
              | wpc))+

@@ -19,7 +19,7 @@ We use the C preprocessor to select a target architecture.
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.Model SEL4.Machine SEL4.Object.Structures SEL4.Object.Instances() SEL4.API.Types #-}
-% {-# BOOT-EXPORTS: setDomain setMCPriority setPriority getThreadState setThreadState setBoundNotification getBoundNotification doIPCTransfer isRunnable restart suspend  doReplyTransfer tcbQueueEmpty tcbQueuePrepend tcbQueueAppend tcbQueueInsert tcbQueueRemove tcbSchedEnqueue tcbSchedDequeue rescheduleRequired scheduleTCB getSchedulable possibleSwitchTo endTimeslice inReleaseQueue tcbReleaseRemove tcbSchedAppend switchToThread #-}
+% {-# BOOT-EXPORTS: setDomain setMCPriority setPriority setFlags getThreadState setThreadState setBoundNotification getBoundNotification doIPCTransfer isRunnable restart suspend  doReplyTransfer tcbQueueEmpty tcbQueuePrepend tcbQueueAppend tcbQueueInsert tcbQueueRemove tcbSchedEnqueue tcbSchedDequeue rescheduleRequired scheduleTCB getSchedulable possibleSwitchTo endTimeslice inReleaseQueue tcbReleaseRemove tcbSchedAppend switchToThread #-}
 
 > import Prelude hiding (Word)
 > import SEL4.Config
@@ -344,7 +344,9 @@ has the highest runnable priority in the system on kernel entry (unless idle).
 > scheduleChooseNewThread = do
 >     stateAssert ksReadyQueues_asrt ""
 >     domainTime <- getDomainTime
->     when (domainTime == 0) $ nextDomain
+>     when (domainTime == 0) $ do
+>         Arch.prepareNextDomain
+>         nextDomain
 >     chooseThread
 >     setSchedulerAction ResumeCurrentThread
 
@@ -523,6 +525,12 @@ The following function is used to alter a thread's domain.
 >         schedulable <- getSchedulable tptr
 >         when schedulable $ tcbSchedEnqueue tptr
 >         when (tptr == curThread) $ rescheduleRequired
+
+\subsubsection{Changing a thread's flags}
+
+> setFlags :: PPtr TCB -> TcbFlags -> Kernel ()
+> setFlags tptr flags = do
+>         threadSet (\t -> t { tcbFlags = flags }) tptr
 
 \subsubsection{Changing a thread's MCP}
 

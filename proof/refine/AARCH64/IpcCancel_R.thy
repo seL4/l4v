@@ -98,7 +98,7 @@ lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at':
      cancelIPC t
    \<lbrace>\<lambda>rv. st_tcb_at' P t'\<rbrace>"
   apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def locateSlot_conv
-                   capHasProperty_def isCap_simps)
+                   capHasProperty_def gen_isCap_simps)
   apply (wp sts_pred_tcb_neq' hoare_drop_imps delete_one_reply_st_tcb_at
        | wpc | clarsimp)+
           apply (wp getCTE_wp | clarsimp)+
@@ -106,7 +106,7 @@ lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at':
                    cancelSignal_pred_tcb_at' sts_pred_tcb_neq' getEndpoint_wp gts_wp'
                    threadSet_pred_tcb_no_state
               | wpc | clarsimp)+
-  apply (auto simp: cte_wp_at_ctes_of isCap_simps)
+  apply (auto simp: cte_wp_at_ctes_of gen_isCap_simps)
   done
 
 context begin interpretation Arch .
@@ -1161,9 +1161,9 @@ lemma updateObject_ep_inv:
   by simp (rule updateObject_default_inv)
 
 lemma asUser_tcbQueued_inv[wp]:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t'\<rbrace> asUser t m \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t'\<rbrace>"
+  "asUser t m \<lbrace>\<lambda>s. Q (obj_at' (\<lambda>tcb. P (tcbQueued tcb)) tcb_ptr s)\<rbrace>"
   apply (simp add: asUser_def tcb_in_cur_domain'_def threadGet_def)
-  apply (wp threadSet_obj_at'_strongish getObject_tcb_wp | wpc | simp | clarsimp simp: obj_at'_def)+
+  apply (wp threadSet_obj_at'_no_state getObject_tcb_wp | wpc | simp | clarsimp simp: obj_at'_def)+
   done
 
 context begin interpretation Arch .
@@ -1343,7 +1343,8 @@ lemma dissociateVCPUTCB_corres[corres]:
                 simp: vcpu_relation_def archThreadSet_def tcb_ko_at' tcb_at_typ_at')
             apply (wpsimp simp: tcb_at_typ_at' archThreadGet_def
                           wp: get_vcpu_wp getVCPU_wp arch_thread_get_wp getObject_tcb_wp)+
-   apply (clarsimp simp: obj_at_def is_tcb in_omonad)
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb in_omonad)
+  apply (clarsimp simp: pred_tcb_at_def)
   apply normalise_obj_at'
   apply (rule context_conjI)
    apply (rule vcpu_at_cross; assumption?)
@@ -1369,18 +1370,10 @@ lemma sym_refs_tcb_vcpu:
   apply (case_tac koa; simp add: vcpu_tcb_refs_def split: option.splits)
   done
 
-lemma fpuThreadDelete_corres[corres]:
-  "t' = t \<Longrightarrow> corres dc \<top> \<top> (fpu_thread_delete t) (fpuThreadDelete t')"
-  by (corres simp: fpu_thread_delete_def fpuThreadDelete_def)
-
-crunch fpu_thread_delete
-  for aligned[wp]: pspace_aligned
-  and distinct[wp]: pspace_distinct
-  and obj_at[wp]: "\<lambda>s. P (obj_at Q p s)"
-
-crunch fpuThreadDelete
-  for obj_at'[wp]: "\<lambda>s. P (obj_at' Q p s)"
-  and no_0_obj'[wp]: no_0_obj'
+lemma fpuRelease_corres[corres]:
+  "t' = t \<Longrightarrow>
+   corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu) \<top> (fpu_release t) (fpuRelease t')"
+  by (corres simp: fpu_release_def fpuRelease_def)
 
 lemma prepareThreadDelete_corres[corres]:
   "t' = t \<Longrightarrow>
@@ -2338,9 +2331,9 @@ crunch vcpuInvalidateActive
   for no_vcpu[wp]: "obj_at' (P::'a:: no_vcpu \<Rightarrow> bool) t"
 
 lemma asUser_tcbQueued[wp]:
-  "asUser t' f \<lbrace>obj_at' (P \<circ> tcbQueued) t\<rbrace>"
+  "asUser t' f \<lbrace>\<lambda>s. Q (obj_at' (P \<circ> tcbQueued) t s)\<rbrace>"
   unfolding asUser_def threadGet_stateAssert_gets_asUser
-  by (wpsimp simp: asUser_fetch_def obj_at'_def)
+  by (wpsimp wp: threadSet_obj_at'_no_state simp: asUser_fetch_def obj_at'_def)
 
 lemma archThreadSet_tcbQueued[wp]:
   "archThreadSet f tcb \<lbrace>obj_at' (P \<circ> tcbQueued) t\<rbrace>"
@@ -2376,11 +2369,15 @@ lemma archThreadGet_wp:
   unfolding archThreadGet_def
   by (wpsimp wp: getObject_tcb_wp simp: obj_at'_def)
 
+crunch fpuRelease
+  for st_tcb_at'[wp]: "\<lambda>s. Q (st_tcb_at' P t s)"
+  and valid_objs'[wp]: valid_objs'
+  and sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
+
 crunch prepareThreadDelete
   for unqueued: "obj_at' (Not \<circ> tcbQueued) t"
-  (simp: o_def wp: dissociateVCPUTCB_unqueued[simplified o_def] archThreadGet_wp)
-crunch prepareThreadDelete
-  for inactive: "st_tcb_at' ((=) Inactive) t'"
+  and inactive: "st_tcb_at' ((=) Inactive) t'"
+  (simp: obj_at'_not_comp_fold)
 
 end
 end

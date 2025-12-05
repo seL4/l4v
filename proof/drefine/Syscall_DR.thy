@@ -641,7 +641,7 @@ lemma invoke_domain_corres:
             (tcb_at word1 and (\<lambda>s. word1 \<noteq> idle_thread s)))
            (Tcb_D.invoke_domain (SetDomain word1 word2)) (Tcb_A.invoke_domain word1 word2)"
   supply if_cong[cong]
-  apply (clarsimp simp: Tcb_D.invoke_domain_def Tcb_A.invoke_domain_def)
+  apply (clarsimp simp: Tcb_D.invoke_domain_def Tcb_A.invoke_domain_def arch_prepare_set_domain_def)
   apply (rule corres_bind_return_r)
   apply (clarsimp simp: Tcb_D.set_domain_def Tcb_A.set_domain_def)
   apply (rule corres_symb_exec_r)

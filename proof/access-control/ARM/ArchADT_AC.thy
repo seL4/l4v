@@ -8,7 +8,7 @@ theory ArchADT_AC
 imports ADT_AC
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming
 
 named_theorems ADT_AC_assms
 

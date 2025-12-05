@@ -316,8 +316,7 @@ lemma clearMemory_PageCap_ccorres:
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
    apply (clarsimp simp: cpspace_relation_def typ_heap_simps
                          clift_foldl_hrs_mem_update foldl_id
-                         carch_state_relation_def fpu_null_state_relation_def
-                         cmachine_state_relation_def
+                         carch_state_relation_def cmachine_state_relation_def
                          foldl_fun_upd_const[unfolded fun_upd_def]
                          power_user_page_foldl_zero_ranges
                          dom_heap_to_device_data)
@@ -682,7 +681,6 @@ lemma clearMemory_setObject_PTE_ccorres:
     apply (rule cmap_relation_updI, simp_all)[1]
     apply (simp add: cpte_relation_def Let_def pte_lift_def)
    apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                    fpu_null_state_heap_update_tag_disj_simps
                     global_ioport_bitmap_heap_update_tag_disj_simps
                     update_pte_map_tos)
   apply simp
@@ -933,8 +931,7 @@ lemma cancelBadgedSends_ccorres:
           apply (rule setObject_eq; simp add: objBits_simps')[1]
          apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                carch_state_relation_def cmachine_state_relation_def
-                               packed_heap_update_collapse_hrs
-                               fpu_null_state_heap_update_tag_disj_simps)
+                               packed_heap_update_collapse_hrs)
          apply (clarsimp simp: cpspace_relation_def update_ep_map_tos typ_heap_simps')
          apply (erule(1) cpspace_relation_ep_update_ep2)
           apply (simp add: cendpoint_relation_def endpoint_state_defs)
@@ -974,7 +971,6 @@ lemma cancelBadgedSends_ccorres:
                apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                      packed_heap_update_collapse_hrs
                                      carch_state_relation_def
-                                     fpu_null_state_heap_update_tag_disj_simps
                                      cmachine_state_relation_def)
                apply (clarsimp simp: cpspace_relation_def typ_heap_simps'
                                      update_ep_map_tos)
@@ -988,7 +984,6 @@ lemma cancelBadgedSends_ccorres:
               apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                     packed_heap_update_collapse_hrs
                                     carch_state_relation_def
-                                    fpu_null_state_heap_update_tag_disj_simps
                                     cmachine_state_relation_def)
               apply (clarsimp simp: cpspace_relation_def typ_heap_simps'
                                     update_ep_map_tos)
@@ -1091,8 +1086,7 @@ lemma cancelBadgedSends_ccorres:
                     apply (clarsimp simp: image_iff)
                     apply (drule_tac x=p in spec)
                     subgoal by fastforce
-                   apply (clarsimp simp: carch_state_relation_def cmachine_state_relation_def
-                                  elim!: fpu_null_state_typ_heap_preservation)
+                   apply (clarsimp simp: carch_state_relation_def cmachine_state_relation_def)
                   apply (rule ccorres_symb_exec_r2)
                     apply (erule spec)
                    apply vcg
@@ -1207,7 +1201,7 @@ lemma coerce_memset_to_heap_update:
       = heap_update (tcb_Ptr x)
              (tcb_C.tcb_C (arch_tcb_C (user_context_C (user_fpu_state_C (FCP (\<lambda>x. 0))) (FCP (\<lambda>x. 0))))
                           (thread_state_C (FCP (\<lambda>x. 0)))
-                          (NULL)
+                          0 NULL
                           (seL4_Fault_C (FCP (\<lambda>x. 0)))
                           (lookup_fault_C (FCP (\<lambda>x. 0)))
                             0 0 0 0 0 0 NULL NULL NULL NULL)"
@@ -1304,7 +1298,6 @@ lemma updateFreeIndex_ccorres:
     apply (rule setCTE_tcb_case, assumption+)
    apply (case_tac s', clarsimp)
    subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
-                         fpu_null_state_heap_update_tag_disj_simps
                          global_ioport_bitmap_heap_update_tag_disj_simps)
 
   apply (clarsimp simp: isCap_simps)

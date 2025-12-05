@@ -346,10 +346,6 @@ lemma as_user_unlive0[wp]:
 lemma o_def_not: "obj_at (\<lambda>a. \<not> P a) t s =  obj_at (Not o P) t s"
   by (simp add: obj_at_def)
 
-lemma same_caps_tcb_arch_update[simp]:
-  "same_caps (TCB (tcb_arch_update f tcb)) = same_caps (TCB tcb)"
-  by (rule ext) (clarsimp simp: tcb_cap_cases_def)
-
 lemma as_user_valid_irq_node[wp]:
   "\<lbrace>valid_irq_node\<rbrace> as_user t f \<lbrace>\<lambda>_. valid_irq_node\<rbrace>"
   unfolding as_user_def
@@ -634,8 +630,8 @@ lemma prepare_thread_delete_unlive[wp]:
   apply (rule_tac Q'="\<lambda>rv. obj_at (Not \<circ> live0) ptr and obj_at (Not \<circ> hyp_live) ptr" in hoare_strengthen_post)
   apply (wpsimp wp: hoare_vcg_conj_lift prepare_thread_delete_unlive_hyp prepare_thread_delete_unlive0)
    apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: obj_at_def live_def)
-  apply (auto split: kernel_object.splits)
+  apply (fastforce simp: obj_at_def live_def arch_tcb_live_def
+                  split: kernel_object.splits)
   done
 
 lemma set_thread_state_not_live:
@@ -644,6 +640,7 @@ lemma set_thread_state_not_live:
    set_thread_state t Inactive
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) t\<rbrace>"
   by (wpsimp simp: set_thread_state_def obj_at_def pred_tcb_at_def get_tcb_def live_def hyp_live_def
+                   arch_tcb_live_def
              wp: set_object_wp)
 
 lemma sched_context_cancel_yield_to_unlive:
@@ -652,8 +649,8 @@ lemma sched_context_cancel_yield_to_unlive:
    \<lbrace>\<lambda>_. obj_at (Not \<circ> live) t\<rbrace>"
   apply (clarsimp simp: sched_context_cancel_yield_to_def)
   apply (rule bind_wp[OF _ gyt_sp])
-  apply (wpsimp simp: set_tcb_obj_ref_def set_object_def update_sched_context_def
-                      get_object_def pred_tcb_at_def obj_at_def get_tcb_def live_def hyp_live_def)
+  apply (wpsimp simp: set_tcb_obj_ref_def set_object_def update_sched_context_def get_object_def
+                      pred_tcb_at_def obj_at_def get_tcb_def live_def hyp_live_def arch_tcb_live_def)
   done
 
 lemma suspend_unlive':

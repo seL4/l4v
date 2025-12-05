@@ -8,7 +8,7 @@ chapter "RISCV64-Specific Data Types"
 
 theory Arch_Structs_A
 imports
-  "ExecSpec.Arch_Structs_B"
+  ExecSpec.Arch_Structs_B
   ExceptionTypes_A
   VMRights_A
   ExecSpec.Arch_Kernel_Config_Lemmas

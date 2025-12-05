@@ -92,6 +92,7 @@ There are eleven types of invocation for a thread control block. All require wri
 >         TCBBindNotification -> decodeBindNotification cap extraCaps
 >         TCBUnbindNotification -> decodeUnbindNotification cap
 >         TCBSetTLSBase -> decodeSetTLSBase args cap
+>         TCBSetFlags -> decodeSetFlags args cap
 >         _ -> throw IllegalOperation
 
 > emptyTCCaps :: PPtr TCB -> TCBInvocation
@@ -431,6 +432,15 @@ This is to ensure that the source capability is not made invalid by the deletion
 >         setTLSBaseNewBase = tls_base }
 > decodeSetTLSBase _ _ = throw TruncatedMessage
 
+> decodeSetFlags :: [Word] -> Capability ->
+>         KernelF SyscallError TCBInvocation
+> decodeSetFlags (flagsClear:flagsSet:_) cap = do
+>     return $ SetFlags {
+>         setFlagsTCB = capTCBPtr cap,
+>         setFlagsClear = flagsClear,
+>         setFlagsSet = flagsSet }
+> decodeSetFlags _ _ = throw TruncatedMessage
+
 > installTCBCap :: PPtr TCB -> PPtr CTE -> Int -> Maybe (Capability, PPtr CTE) -> KernelP ()
 > installTCBCap target slot n slot_opt =
 >     maybe (return ()) (\(newCap, srcSlot) -> do
@@ -625,6 +635,19 @@ Modifying the current thread may require rescheduling because modified registers
 >     cur <- getCurThread
 >     when (tcb == cur) rescheduleRequired
 >     return []
+
+> invokeTCB (SetFlags tcb flagsClear flagsSet) =
+>   withoutPreemption $ do
+>     newFlags <- invokeSetFlags tcb flagsClear flagsSet
+>     return [newFlags]
+
+> invokeSetFlags :: PPtr TCB -> Word -> Word -> Kernel Word
+> invokeSetFlags tcb flagsClear flagsSet = do
+>     flags <- threadGet tcbFlags tcb
+>     let newFlags = (flags .&. complement flagsClear) .|. (flagsSet .&. tcbFlagMask)
+>     setFlags tcb newFlags
+>     Arch.postSetFlags tcb newFlags
+>     return newFlags
 
 \subsection{Decoding Domain Invocations}
 

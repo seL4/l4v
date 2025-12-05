@@ -3157,6 +3157,7 @@ lemma cte_wp_at_modify_pde:
   shows
   "\<lbrakk>ksPSpace s ptr' = Some (KOArch (KOPDE pde)); pspace_aligned' s;cte_wp_at' \<top> ptr s\<rbrakk>
        \<Longrightarrow> cte_wp_at' \<top> ptr (s\<lparr>ksPSpace := (ksPSpace s)(ptr' \<mapsto> (KOArch (KOPDE pde')))\<rparr>)"
+  supply projectKOs[simp del]
   apply (simp add:cte_wp_at_obj_cases_mask obj_at'_real_def)
   apply (frule(1) pspace_alignedD')
   apply (elim disjE)
@@ -3334,6 +3335,7 @@ lemma threadSet_det:
   \<Longrightarrow> threadSet f ptr s =
   modify (ksPSpace_update (\<lambda>ps. ps(ptr \<mapsto>
     (\<lambda>t. case t of Some (KOTCB tcb) \<Rightarrow> KOTCB (f tcb)) (ps ptr)))) s"
+  supply projectKOs[simp del]
   apply (clarsimp simp add:threadSet_def bind_def obj_at'_def)
   apply (clarsimp simp:projectKO_eq projectKO_opt_tcb
     split: Structures_H.kernel_object.splits)
@@ -3361,6 +3363,7 @@ lemma setCTE_modify_tcbDomain_commute:
     note blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
           atLeastAtMost_iff
+    note projectKOs[simp del]
 
     have hint:
       "\<And>P ptr a cte b src ra. monad_commute (tcb_at' ptr and ko_wp_at' P a )
@@ -4506,6 +4509,7 @@ lemma createObjects'_page_directory_at':
     pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz\<rbrace>
    createObjects' ptr (Suc n) (KOArch (KOPDE makeObject)) 11
    \<lbrace>\<lambda>rv s. (\<forall>x\<le>of_nat n. page_directory_at' (ptr + (x << 14)) s)\<rbrace>"
+  supply projectKOs[simp del]
   apply (rule createObjects'_wp_subst)
    apply simp
   apply (clarsimp simp:valid_def)

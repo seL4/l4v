@@ -1660,7 +1660,7 @@ crunch sc_and_timer
   for valid_pdpt[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: hoare_drop_imps hoare_vcg_if_lift2)
 
-crunch schedule_choose_new_thread
+crunch schedule_choose_new_thread, arch_prepare_next_domain
   for valid_pdpt[wp]: "valid_pdpt_objs"
   (simp: Let_def wp: hoare_drop_imp)
 

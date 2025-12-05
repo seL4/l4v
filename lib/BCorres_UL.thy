@@ -268,7 +268,8 @@ lemma gets_the_bcorres_underlying[wp]:
   by (wpsimp simp: gets_the_def)
 
 lemma maybeM_bcorres_underlying[wp]:
-  "(\<And>p. opt = Some p \<Longrightarrow> bcorres_underlying t (f p) (f' p)) \<Longrightarrow> bcorres_underlying t (maybeM f opt) (maybeM f' opt)"
+  "\<lbrakk>\<And>p. opt = Some p \<Longrightarrow> bcorres_underlying t (f p) (f' p)\<rbrakk>
+   \<Longrightarrow> bcorres_underlying t (maybeM f opt) (maybeM f' opt)"
   by (wpsimp simp: maybeM_def)
 
 lemma whileLoop_results_bcorres_helper':

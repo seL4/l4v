@@ -1367,7 +1367,7 @@ lemma untyped_c':
   using partial_is_derived'
   apply -
    apply (case_tac "isUntypedCap src_cap")
-     by (clarsimp simp:isCap_simps freeIndex_update_def is_derived'_def
+     by (clarsimp simp: gen_isCap_simps freeIndex_update_def is_derived'_def
        badge_derived'_def capMasterCap_def split:if_splits capability.splits)+
 
 lemma capRange_c':
@@ -1379,14 +1379,15 @@ lemma capRange_c':
   apply (rule master_eqI, rule capRange_Master)
   apply simp
   apply (rule arg_cong)
-  apply (auto simp:isCap_simps freeIndex_update_def is_derived'_def
-       badge_derived'_def capMasterCap_def split:if_splits capability.splits)
+  apply (auto simp: gen_isCap_simps freeIndex_update_def is_derived'_def
+                    badge_derived'_def capMasterCap_def
+              split: if_splits capability.splits)
   done
 
 lemma untyped_no_parent:
   "isUntypedCap src_cap \<Longrightarrow> \<not> m \<turnstile> src \<rightarrow> p"
   using partial_is_derived' untyped_c'
-  by (clarsimp simp: is_derived'_def isCap_simps freeIndex_update_def descendants_of'_def)
+  by (clarsimp simp: is_derived'_def gen_isCap_simps freeIndex_update_def descendants_of'_def)
 
 end
 
@@ -1404,13 +1405,13 @@ lemma (in mdb_insert_der) irq_control_n:
   apply (frule n_cap)
   apply (drule n_revocable)
   apply (clarsimp split: if_split_asm)
-   apply (simp add: is_derived'_def isCap_simps)
+   apply (simp add: is_derived'_def gen_isCap_simps)
   apply (frule irq_revocable, rule irq_control)
   apply clarsimp
   apply (drule n_cap)
   apply (clarsimp split: if_split_asm)
   apply (erule disjE)
-   apply (clarsimp simp: is_derived'_def isCap_simps)
+   apply (clarsimp simp: is_derived'_def gen_isCap_simps)
   apply (erule (1) irq_controlD, rule irq_control)
   done
 
@@ -1453,7 +1454,7 @@ lemma parent_untyped_must_not_usable:
    apply (drule_tac p = ptr in untyped_no_parent)
    apply (simp add:descendants_of'_def)
   apply (drule (1) aligned_untypedRange_non_empty)
-  apply (case_tac ccap,simp_all add:isCap_simps)
+  apply (case_tac ccap, simp_all add: gen_isCap_simps)
   done
 
 lemma untyped_inc_n:
@@ -1553,10 +1554,10 @@ lemma not_untyped: "capAligned c' \<Longrightarrow> \<not>isUntypedCap src_cap"
   apply (clarsimp simp: ut_revocable'_def isMDBParentOf_CTE)
   apply (erule_tac x=src in allE)
   apply simp
-  apply (clarsimp simp: is_derived'_def freeIndex_update_def isCap_simps capAligned_def
+  apply (clarsimp simp: is_derived'_def freeIndex_update_def gen_isCap_simps capAligned_def
                         badge_derived'_def)
-  apply (clarsimp simp: sameRegionAs_def3 capMasterCap_def isCap_simps
-                        is_aligned_no_overflow split:capability.splits)
+  apply (clarsimp simp: sameRegionAs_def3 capMasterCap_def gen_isCap_simps is_aligned_no_overflow
+                  split: capability.splits)
   done
 
 lemma untyped_inc_n:
@@ -4326,7 +4327,7 @@ lemma setUntypedCapAsFull_safe_parent_for':
      (modify_map (ctes_of s) slot
      (cteCap_update (\<lambda>_. capFreeIndex_update (\<lambda>_. max_free_index (capBlockSize c')) (cteCap srcCTE))))")
     apply (frule mdb_inv_preserve.descendants_of[where p = slot])
-    apply (clarsimp simp:isCap_simps modify_map_def cte_wp_at_ctes_of simp del:fun_upd_apply)
+    apply (clarsimp simp: gen_isCap_simps modify_map_def cte_wp_at_ctes_of simp del: fun_upd_apply)
     apply (clarsimp cong:sameRegionAs_update_untyped)
    apply (rule mdb_inv_preserve_updateCap)
     apply (simp add:cte_wp_at_ctes_of)
@@ -4342,7 +4343,7 @@ lemma maskedAsFull_revokable_safe_parent:
   apply (clarsimp simp:isCapRevocable_def RISCV64_H.isCapRevocable_def maskedAsFull_def
                  split:if_splits capability.splits)
    apply (intro allI impI conjI)
-     apply (clarsimp simp:isCap_simps is_simple_cap'_def)+
+     apply (clarsimp simp: gen_isCap_simps is_simple_cap'_def)+
   done
 
 context begin interpretation Arch . (*FIXME: arch-split*)

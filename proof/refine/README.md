@@ -32,6 +32,6 @@ the entire kernel is [`Refine`](ARM/Refine.thy); the state-relation that
 relates the state-spaces of the two specifications is defined in
 [`StateRelation`](StateRelation.thy) and the basic correspondence
 property proved over each kernel function is defined in
-[`Corres`](ARM/Corres.thy).
+[`Corres`](Corres.thy).
 
 

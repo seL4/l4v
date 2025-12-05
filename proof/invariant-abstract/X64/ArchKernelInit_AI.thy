@@ -219,6 +219,10 @@ lemma cap_refs_respects_device_region_init[simp]:
    apply (clarsimp simp: cte_wp_at_caps_of_state cap_range_respects_device_region_def)
    done
 
+lemma tcb_cur_fpu_init_arch_tcb_False[simp]:
+  "tcb_cur_fpu init_arch_tcb = False"
+  by (simp add: init_arch_tcb_def)
+
 lemma kernel_mapping_slot: "0x1FF \<in> kernel_mapping_slots"
   by (auto simp: kernel_mapping_slots_def pptr_base_def pptrBase_def bit_simps)
 
@@ -264,14 +268,13 @@ lemma invs_A:
     apply (clarsimp simp: valid_cs_def word_bits_def cte_level_bits_def
                           init_irq_ptrs_all_ineqs valid_tcb_def
                    split: if_split_asm)
-     apply (clarsimp simp: vmsz_aligned_def is_aligned_addrFromPPtr_n table_size is_aligned_shift
-                           pageBits_def ptTranslationBits_def)
+    apply (clarsimp simp: vmsz_aligned_def is_aligned_addrFromPPtr_n table_size is_aligned_shift
+                          pageBits_def ptTranslationBits_def)
    apply (simp add: pspace_aligned_init_A pspace_distinct_init_A)
-   apply (rule conjI)
-    apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def state_defs live_def hyp_live_def)
-   apply (rule conjI)
-    apply (clarsimp simp: zombies_final_def cte_wp_at_cases state_defs
-                          tcb_cap_cases_def is_zombie_def)
+   apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def state_defs live_def hyp_live_def
+                         arch_live_def arch_tcb_live_def)
+   apply (clarsimp simp: zombies_final_def cte_wp_at_cases state_defs ex_nonz_cap_to_def
+                         tcb_cap_cases_def is_zombie_def)
    apply (clarsimp simp: sym_refs_def state_refs_of_def state_defs state_hyp_refs_of_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_mdb_def init_cdt_def no_mloop_def
@@ -300,7 +303,7 @@ lemma invs_A:
                          caps_of_state_init_A_st_Null is_master_reply_cap_to_def
                          valid_reply_masters_def valid_global_refs_def
                          valid_refs_def[unfolded cte_wp_at_caps_of_state])
-  apply (clarsimp, (thin_tac "_")+) (* use new proven assumptions, then drop them *)
+   apply (clarsimp, (thin_tac "_")+) (* use new proven assumptions, then drop them *)
    apply (rule conjI)
     apply (clarsimp simp: valid_arch_state_def)
     apply (rule conjI)
@@ -314,6 +317,7 @@ lemma invs_A:
     apply (clarsimp simp: valid_ioports_def caps_of_state_init_A_st_Null all_ioports_issued_def ran_def
                           issued_ioports_def ioports_no_overlap_def
                     cong: rev_conj_cong)
+  apply (rule conjI, clarsimp simp: valid_cur_fpu_def is_tcb_cur_fpu_def obj_at_def state_defs)
   apply (rule conjI)
    apply (clarsimp simp: valid_irq_node_def obj_at_def state_defs
                          is_cap_table_def wf_empty_bits

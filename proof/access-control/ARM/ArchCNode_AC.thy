@@ -10,7 +10,7 @@ begin
 
 section\<open>Arch-specific CNode AC.\<close>
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming
 
 declare arch_post_modify_registers_def[simp]
 declare arch_post_cap_deletion_def[simp]
@@ -124,6 +124,13 @@ lemma list_integ_lift[CNode_AC_assms]:
   apply (simp add: tcb_states_of_state_def get_tcb_def)
   done
 
+lemma set_irq_state_respects[CNode_AC_assms,wp]:
+  "\<lbrace>integrity aag X st and K (is_subject_irq aag irq)\<rbrace>
+   set_irq_state irqst irq
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  unfolding set_irq_state_def maskInterrupt_def
+  by (wpsimp wp: dmo_no_mem_respects simp: integrity_subjects_def integrity_interrupts_def)
+
 end
 
 
@@ -135,7 +142,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming
 
 lemma integrity_asids_set_cap_Nullcap[CNode_AC_assms]:
   "\<lbrace>(=) s\<rbrace> set_cap NullCap slot \<lbrace>\<lambda>_. integrity_asids aag subjects x a s\<rbrace>"
@@ -158,11 +165,11 @@ global_interpretation CNode_AC_2?: CNode_AC_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact CNode_AC_assms)?)
+    by (unfold_locales; (fact CNode_AC_assms | solves \<open>rule integrity_arch_triv\<close>)?)
 qed
 
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming
 
 lemma arch_post_cap_deletion_pas_refined[CNode_AC_assms, wp]:
   "arch_post_cap_deletion irqopt \<lbrace>pas_refined aag\<rbrace>"
@@ -172,8 +179,14 @@ lemma aobj_ref'_same_aobject[CNode_AC_assms]:
   "same_aobject_as ao' ao \<Longrightarrow> aobj_ref' ao = aobj_ref' ao'"
   by (cases ao; clarsimp split: arch_cap.splits)
 
-crunch set_untyped_cap_as_full
-  for valid_arch_state[CNode_AC_assms]: valid_arch_state
+lemma thread_set_arch_trivT[CNode_AC_assms]:
+  assumes arch: "\<And>tcb. tcb_arch (f tcb) = tcb_arch tcb"
+  shows "thread_set f t \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (wpsimp simp: thread_set_def wp: set_object_wp )
+  apply (erule_tac P=P in back_subst)
+  apply (rule ext)
+  apply (simp add: arch state_hyp_refs_of_def get_tcb_def split: option.splits kernel_object.splits)
+  done
 
 end
 
@@ -200,7 +213,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming
 
 lemma arch_derive_cap_auth_derived[CNode_AC_assms]:
   "\<lbrace>\<lambda>s. cte_wp_at (auth_derived (ArchObjectCap cap)) src_slot s\<rbrace>
@@ -308,7 +321,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming
 
 lemma pas_refined_arch_state_update_not_asids[simp]:
  "arm_asid_table (f (arch_state s)) = arm_asid_table (arch_state s)
@@ -374,6 +387,11 @@ lemma auth_graph_map_def2:
 crunch store_pte
   for etcbs_of[wp]: "\<lambda>s. P (etcbs_of s)"
   and asid_table_inv[wp]: "\<lambda>s. P (asid_table s)"
+
+lemma state_hyp_refs_empty[simp]:
+  "state_hyp_refs_of s = (\<lambda>_. {})"
+  by (auto simp: state_hyp_refs_of_def hyp_refs_of_def tcb_hyp_refs_def refs_of_a_def
+          split: option.splits kernel_object.splits)
 
 lemma store_pte_pas_refined[wp]:
   "\<lbrace>pas_refined aag and

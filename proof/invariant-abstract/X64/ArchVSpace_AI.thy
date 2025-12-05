@@ -15,21 +15,6 @@ begin
 
 context Arch begin arch_global_naming
 
-(* FIXME: should go in Machine_AI, but needs dmo_invs from KHeap_AI. *)
-lemmas machine_op_lift_irq_masks = no_irq[OF no_irq_machine_op_lift]
-
-lemma machine_op_lift_underlying_memory:
-  "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> machine_op_lift m \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
-  by (wpsimp simp: machine_op_lift_def machine_rest_lift_def split_def)
-
-lemma do_machine_op_lift_invs:
-  "\<lbrace>invs\<rbrace> do_machine_op (machine_op_lift m) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid[OF _ machine_op_lift_underlying_memory]; fastforce)
-  apply (erule (1) use_valid[OF _ machine_op_lift_irq_masks])
-  done
-
 abbreviation "canonicalise x \<equiv> (scast ((ucast x) :: 48 word)) :: 64 word"
 
 lemma pptr_base_shift_cast_le:
@@ -180,13 +165,6 @@ lemma find_vspace_for_asid_vspace_at_asid [wp]:
 
 crunch do_machine_op
   for valid_vs_lookup[wp]: "valid_vs_lookup"
-
-
-lemma invalidateTLB_underlying_memory:
-  "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace>
-   invalidateTLB
-   \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
-  by (simp add: invalidateTLB_def machine_op_lift_underlying_memory)
 
 
 lemma vspace_at_asid_arch_up':
@@ -352,27 +330,11 @@ crunch hw_asid_invalidate
   for valid_vs_lookup[wp]: "valid_vs_lookup"
 
 crunch hw_asid_invalidate
-  for arm_asid_table_inv[wp]: "\<lambda>s. P (x64_asid_table (arch_state s))"
-
-lemma invalidateASID_underlying_memory:
-  "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace>
-   invalidateASID a b
-   \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
-  by (simp add: invalidateASID_def invalidateASID_def machine_op_lift_underlying_memory)
-
-(* FIXME x64: move to Machine_AI *)
-lemma no_irq_invalidateASID: "no_irq (invalidateASID a b)"
-  by (clarsimp simp: invalidateASID_def invalidateASID_def)
-
-lemmas invalidateASID_irq_masks = no_irq[OF no_irq_invalidateASID]
-
-crunch invalidateASID
-  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
-  (ignore: ignore_failure)
+  for x64_asid_table_inv[wp]: "\<lambda>s. P (x64_asid_table (arch_state s))"
 
 lemma dmo_invalidateASID_invs[wp]:
   "\<lbrace>invs\<rbrace> do_machine_op (invalidateASID a b) \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (simp add: invalidateASID_def do_machine_op_lift_invs)
+  by (simp add: invalidateASID_def dmo_machine_op_lift_invs)
 
 lemma hw_asid_invalidate_invs[wp]: "\<lbrace>invs\<rbrace> hw_asid_invalidate asid vspace \<lbrace>\<lambda>_. invs\<rbrace>"
   by (wpsimp simp: hw_asid_invalidate_def)
@@ -853,17 +815,14 @@ definition
   and K (0 < asid \<and> asid_wf asid)
   and ([VSRef (ucast (asid_high_bits_of asid)) None] \<rhd> p)"
 
-crunch ackInterrupt, writeCR3
-  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
-
 
 lemma dmo_ackInterrupt[wp]: "\<lbrace>invs\<rbrace> do_machine_op (ackInterrupt irq) \<lbrace>\<lambda>y. invs\<rbrace>"
-  by (simp add: ackInterrupt_def do_machine_op_lift_invs)
+  by (simp add: ackInterrupt_def dmo_machine_op_lift_invs)
 
 lemmas writeCR3_irq_masks = no_irq[OF no_irq_writeCR3]
 
 lemma dmo_writeCR3[wp]: "\<lbrace>invs\<rbrace> do_machine_op (writeCR3 vs asid) \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (simp add: writeCR3_def do_machine_op_lift_invs)
+  by (simp add: writeCR3_def dmo_machine_op_lift_invs)
 
 crunch get_current_cr3
   for inv[wp]: P
@@ -884,6 +843,7 @@ lemma arch_state_update_invs:
   assumes "pspace_in_kernel_window s \<Longrightarrow> pspace_in_kernel_window (arch_state_update f s)"
   assumes "cap_refs_in_kernel_window s \<Longrightarrow> cap_refs_in_kernel_window (arch_state_update f s)"
   assumes "valid_ioports s \<Longrightarrow> valid_ioports (arch_state_update f s)"
+  assumes "valid_cur_fpu s \<Longrightarrow> valid_cur_fpu (arch_state_update f s)"
   shows "invs (arch_state_update f s)"
   using assms by (simp add: invs_def valid_state_def valid_irq_node_def valid_irq_states_def
                             valid_machine_state_def valid_arch_caps_def valid_asid_map_def
@@ -900,7 +860,7 @@ lemma set_current_cr3_invs[wp]:
   "\<lbrace>invs and K (valid_cr3 c)\<rbrace> set_current_cr3 c \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: set_current_cr3_def; erule arch_state_update_invs)
   by (auto simp: valid_global_refs_def global_refs_def valid_arch_state_def valid_table_caps_def
-                 valid_global_objs_def valid_kernel_mappings_def second_level_tables_def)
+                 valid_global_objs_def valid_kernel_mappings_def second_level_tables_def valid_cur_fpu_defs)
 
 lemma valid_cr3_make_cr3:
   "asid_wf asid \<Longrightarrow> valid_cr3 (make_cr3 addr asid)"
@@ -935,11 +895,8 @@ lemma svr_invs [wp]:
   apply (simp add: valid_cap_def)
   done
 
-crunch set_current_vspace_root
-  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
-
-crunch set_vm_root
-  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
+crunch set_current_vspace_root, set_vm_root
+  for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
   (simp: crunch_simps)
 
 crunch get_current_cr3, set_vm_root
@@ -1565,28 +1522,13 @@ lemma arch_update_cap_invs_unmap_pd_pointer_table:
   apply fastforce
   done
 
-lemma invalidateTLBEntry_underlying_memory:
-  "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace>
-   invalidateTLBEntry a
-   \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
-  by (simp add: invalidateTLBEntry_def machine_op_lift_underlying_memory)
-
-lemmas invalidateTLBEntry_irq_masks = no_irq[OF no_irq_invalidateTLBEntry]
-
-crunch invalidateTLBEntry
-  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
-  (ignore: ignore_failure)
-
 lemma dmo_invalidateTLBEntry_invs[wp]:
   "\<lbrace>invs\<rbrace> do_machine_op (invalidateTLBEntry a) \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (simp add: invalidateTLBEntry_def do_machine_op_lift_invs)
-
-crunch invalidateTranslationSingleASID
-  for device_state[wp]: "\<lambda>ms. P (device_state ms)"
+  by (simp add: invalidateTLBEntry_def dmo_machine_op_lift_invs)
 
 lemma invalidatePageStructureCache_invs[wp]:
   "\<lbrace>invs\<rbrace> do_machine_op (invalidateTranslationSingleASID a b)\<lbrace>\<lambda>_. invs\<rbrace>"
-  by (simp add: invalidateTranslationSingleASID_def do_machine_op_lift_invs)
+  by (simp add: invalidateTranslationSingleASID_def dmo_machine_op_lift_invs)
 
 lemma flush_table_invs[wp]:
   "\<lbrace>invs\<rbrace> flush_table pm vaddr pt vspace \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -1629,7 +1571,7 @@ lemma not_in_global_refs_vs_lookup:
 
 lemma flush_all_invs[wp]:
   "\<lbrace>invs\<rbrace> flush_all vspace asid \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (simp add: flush_all_def invalidateASID_def do_machine_op_lift_invs)
+  by (simp add: flush_all_def invalidateASID_def dmo_machine_op_lift_invs)
 
 lemma valid_asid_table_inverse_injD:
   "\<lbrakk>(a,b) \<in> vs_asid_refs (x64_asid_table (arch_state s)); (a,c) \<in> vs_asid_refs (x64_asid_table (arch_state s))\<rbrakk>
@@ -2498,7 +2440,7 @@ lemma vs_lookup1_archD:
 
 lemma dmo_invalidateLocalPageStructureCacheASID[wp]:
   "\<lbrace>invs\<rbrace> do_machine_op (invalidateLocalPageStructureCacheASID vs asid) \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (simp add: invalidateLocalPageStructureCacheASID_def do_machine_op_lift_invs)
+  by (simp add: invalidateLocalPageStructureCacheASID_def dmo_machine_op_lift_invs)
 
 lemma invalidate_page_structure_cache_asid_invs[wp]:
   "\<lbrace>invs\<rbrace> invalidate_page_structure_cache_asid vs asid \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -3821,13 +3763,13 @@ lemma dmo_in32[wp]: "\<lbrace>invs\<rbrace> do_machine_op (in32 irq) \<lbrace>\<
   done
 
 lemma dmo_out8[wp]: "\<lbrace>invs\<rbrace> do_machine_op (out8 irq b) \<lbrace>\<lambda>y. invs\<rbrace>"
-  by (clarsimp simp: out8_def do_machine_op_lift_invs)
+  by (clarsimp simp: out8_def dmo_machine_op_lift_invs)
 
 lemma dmo_out16[wp]: "\<lbrace>invs\<rbrace> do_machine_op (out16 irq b) \<lbrace>\<lambda>y. invs\<rbrace>"
-  by (clarsimp simp: out16_def do_machine_op_lift_invs)
+  by (clarsimp simp: out16_def dmo_machine_op_lift_invs)
 
 lemma dmo_out32[wp]: "\<lbrace>invs\<rbrace> do_machine_op (out32 irq b) \<lbrace>\<lambda>y. invs\<rbrace>"
-  by (clarsimp simp: out32_def do_machine_op_lift_invs)
+  by (clarsimp simp: out32_def dmo_machine_op_lift_invs)
 
 lemma perform_io_port_invocation_invs[wp]:
   "\<lbrace>invs\<rbrace> perform_io_port_invocation iopinv \<lbrace>\<lambda>rv. invs\<rbrace>"

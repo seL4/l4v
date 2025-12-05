@@ -46,6 +46,7 @@ The following type enumerates all the kinds of invocations that clients can requ
 >          | TCBBindNotification
 >          | TCBUnbindNotification
 >          | TCBSetTLSBase
+>          | TCBSetFlags
 >          | CNodeRevoke
 >          | CNodeDelete
 >          | CNodeCancelBadgedSends

@@ -1114,9 +1114,8 @@ lemma vgicMaintenance_invs'[wp]:
    vgicMaintenance
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   supply if_split[split del]
-  apply (clarsimp simp: vgicMaintenance_def get_gic_vcpu_ctrl_lr_def set_gic_vcpu_ctrl_lr_def
-                get_gic_vcpu_ctrl_misr_def get_gic_vcpu_ctrl_eisr1_def get_gic_vcpu_ctrl_eisr0_def
-                doMachineOp_bind)
+  apply (clarsimp simp: vgicMaintenance_def get_gic_vcpu_ctrl_misr_def
+                        get_gic_vcpu_ctrl_eisr1_def get_gic_vcpu_ctrl_eisr0_def)
   apply (wpsimp simp: if_apply_def2 wp: hoare_vcg_const_imp_lift)
             apply (strengthen st_tcb_ex_cap''[where P=active'])
             apply (strengthen invs_iflive')

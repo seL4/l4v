@@ -73,12 +73,20 @@ locale DetSchedDomainTime_AI =
     "\<And>P t. arch_switch_to_thread t \<lbrace>\<lambda>s :: det_state. P (domain_time s)\<rbrace>"
   assumes arch_switch_to_idle_thread_domain_time_inv'[wp]:
     "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_state. P (domain_time s)\<rbrace>"
-  assumes make_arch_fault_msg_domain_list_inv'[wp]:
-    "\<And>P ft t. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> make_arch_fault_msg ft t \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes arch_post_cap_deletion_domain_list_inv'[wp]:
     "\<And>P ft. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> arch_post_cap_deletion ft \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes arch_invoke_irq_handler_domain_list_inv'[wp]:
     "\<And>P i. arch_invoke_irq_handler i \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
+  assumes arch_prepare_next_domain_domain_list_inv'[wp]:
+    "\<And>P. arch_prepare_next_domain \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
+  assumes arch_prepare_set_domain_domain_list_inv'[wp]:
+    "\<And>P t d. arch_prepare_set_domain t d \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
+  assumes arch_post_set_flags_domain_list_inv'[wp]:
+    "\<And>P t fs. arch_post_set_flags t fs \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
+  assumes arch_prepare_set_domain_domain_time_inv'[wp]:
+    "\<And>P t d. arch_prepare_set_domain t d \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace>"
+  assumes arch_post_set_flags_domain_time_inv'[wp]:
+    "\<And>P t fs. arch_post_set_flags t fs \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace>"
 
 crunch update_restart_pc
   for domain_list[wp]: "\<lambda>s. P (domain_list s)"

@@ -205,6 +205,11 @@ lemma valid_arch_state_detype[detype_invs_proofs]:
   apply blast
   done
 
+lemma valid_cur_fpu[detype_invs_proofs]:
+  "valid_cur_fpu (detype (untyped_range cap) s)"
+  using valid_cur_fpu
+  by (clarsimp simp: valid_cur_fpu_def)
+
 lemma global_pts: (* ARCH SPECIFIC STATEMENT*)
   "\<And>p. \<lbrakk> p \<in> set (arm_global_pts (arch_state s)); p \<in> untyped_range cap \<rbrakk>  \<Longrightarrow> False"
   using valid_global_refsD [OF globals cap] by (simp add: cap_range_def global_refs_def)
@@ -535,7 +540,7 @@ sublocale detype_locale < detype_locale_gen_2
  proof goal_cases
   interpret detype_locale_arch ..
   case 1 show ?case
-  by (intro_locales; (unfold_locales; fact detype_invs_proofs)?)
+  by (intro_locales; unfold_locales; (fact detype_invs_proofs)?)
   qed
 
 context detype_locale begin

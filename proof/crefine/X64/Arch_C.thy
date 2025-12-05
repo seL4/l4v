@@ -119,7 +119,6 @@ lemma performPageTableInvocationUnmap_ccorres:
                              cap_page_table_cap_lift_def)
       apply simp
      apply (clarsimp simp: carch_state_relation_def cmachine_state_relation_def
-                           fpu_null_state_heap_update_tag_disj_simps
                            global_ioport_bitmap_heap_update_tag_disj_simps
                            cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
                     dest!: ksPSpace_update_eq_ExD)
@@ -182,7 +181,6 @@ lemma clearMemory_setObject_PDE_ccorres:
     subgoal by (simp add: cpde_relation_def Let_def pde_lift_def pde_get_tag_def pde_tag_defs
                    split: if_splits pde.split_asm)
    apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                    fpu_null_state_heap_update_tag_disj_simps
                     global_ioport_bitmap_heap_update_tag_disj_simps
                     update_pde_map_tos)
   apply simp
@@ -261,7 +259,6 @@ lemma performPageDirectoryInvocationUnmap_ccorres:
                              cap_page_directory_cap_lift_def)
       apply simp
      apply (clarsimp simp: carch_state_relation_def cmachine_state_relation_def
-                           fpu_null_state_heap_update_tag_disj_simps
                            global_ioport_bitmap_heap_update_tag_disj_simps
                            cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
                     dest!: ksPSpace_update_eq_ExD)
@@ -324,7 +321,6 @@ lemma clearMemory_setObject_PDPTE_ccorres:
     subgoal by (simp add: cpdpte_relation_def Let_def pdpte_lift_def pdpte_get_tag_def pdpte_tag_defs
                    split: if_splits pdpte.split_asm)
    apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                    fpu_null_state_heap_update_tag_disj_simps
                     global_ioport_bitmap_heap_update_tag_disj_simps
                     update_pdpte_map_tos)
   apply simp
@@ -403,7 +399,6 @@ lemma performPDPTInvocationUnmap_ccorres:
                              cap_pdpt_cap_lift_def)
       apply simp
      apply (clarsimp simp: carch_state_relation_def cmachine_state_relation_def
-                           fpu_null_state_heap_update_tag_disj_simps
                            global_ioport_bitmap_heap_update_tag_disj_simps
                            cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
                     dest!: ksPSpace_update_eq_ExD)
@@ -624,8 +619,7 @@ proof -
   thus ?thesis using rf empty kdr zro
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name
                      ko_def[symmetric])
-    apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                     fpu_null_state_relation_def)
+    apply (simp add: carch_state_relation_def cmachine_state_relation_def)
     apply (simp add: rl' cterl tag_disj_via_td_name h_t_valid_clift_Some_iff tcb_C_size)
     apply (clarsimp simp: hrs_htd_update ptr_retyps_htd_safe_neg szo szko
                           kernel_data_refs_domain_eq_rotate

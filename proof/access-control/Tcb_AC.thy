@@ -25,7 +25,8 @@ definition authorised_tcb_inv :: "'a PAS \<Rightarrow> tcb_invocation \<Rightarr
   | ReadRegisters src susp n arch \<Rightarrow> is_subject aag src
   | WriteRegisters dest res values arch \<Rightarrow> is_subject aag dest
   | CopyRegisters dest src susp res frame int_regs arch \<Rightarrow> is_subject aag src \<and> is_subject aag dest
-  | SetTLSBase tcb tls_base \<Rightarrow> is_subject aag tcb"
+  | SetTLSBase tcb tls_base \<Rightarrow> is_subject aag tcb
+  | SetFlags tcb clearFlags setFlags \<Rightarrow> is_subject aag tcb"
 
 subsection\<open>invoke\<close>
 
@@ -239,10 +240,10 @@ lemma sbn_bind_respects:
     K (aag_has_auth_to aag Receive ntfn \<and> is_subject aag t)\<rbrace>
    set_bound_notification t (Some ntfn)
    \<lbrace>\<lambda>_. integrity aag X st \<rbrace>"
-  apply (simp add: set_bound_notification_def)
-  apply (wpsimp wp: set_object_wp)
+  apply (wpsimp wp: set_object_wp simp: set_bound_notification_def)
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def obj_at_def pred_tcb_at_def integrity_asids_kh_upds)
+  apply (clarsimp simp: integrity_def integrity_arch_kh_upds
+                        obj_at_def pred_tcb_at_def get_tcb_def)
   done
 
 lemma bind_notification_respects:
@@ -288,8 +289,14 @@ locale Tcb_AC_1 =
     "\<lbrace>integrity aag X st and K (is_subject aag t)\<rbrace>
      arch_post_modify_registers cur t
      \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
+  and arch_post_set_flags_respects[wp]:
+    "\<lbrace>integrity aag X st and valid_cur_fpu\<rbrace>
+     arch_post_set_flags t flags
+     \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
+  assumes arch_post_set_flags_pas_refined[wp]:
+    "arch_post_set_flags t flags \<lbrace>pas_refined aag\<rbrace>"
   and arch_get_sanitise_register_info_inv[wp]:
-    "arch_get_sanitise_register_info t \<lbrace>\<lambda>s :: det_ext state. P s\<rbrace>"
+    "arch_get_sanitise_register_info t \<lbrace>\<lambda>s :: det_state. P s\<rbrace>"
   and invoke_tcb_tc_respects_aag:
     "\<lbrace>integrity aag X st and pas_refined aag and einvs and simple_sched_action
                          and tcb_inv_wf (ThreadControl t sl ep mcp priority croot vroot buf)
@@ -297,6 +304,18 @@ locale Tcb_AC_1 =
      invoke_tcb (ThreadControl t sl ep mcp priority croot vroot buf)
      \<lbrace>\<lambda>rv. integrity aag X st and pas_refined aag\<rbrace>"
 begin
+
+crunch set_flags
+  for integrity_autarch[wp]: "integrity aag X st"
+  and valid_cur_fpu[wp]: "valid_cur_fpu"
+
+lemma invoke_tcb_set_flags_respects[wp]:
+  "\<lbrace>integrity aag X st and pas_refined aag and einvs and simple_sched_action
+                       and tcb_inv_wf (SetFlags tcb clearFlags setFlags)
+                       and K (authorised_tcb_inv aag (SetFlags tcb clearFlags setFlags))\<rbrace>
+   invoke_tcb (SetFlags tcb clearFlags setFlags)
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  by (wpsimp simp: authorised_tcb_inv_def)
 
 lemma invoke_tcb_respects:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and simple_sched_action
@@ -346,6 +365,16 @@ lemma invoke_tcb_ntfn_control_pas_refined[wp]:
 
 context Tcb_AC_1 begin
 
+crunch set_flags
+  for pas_refined[wp]: "pas_refined aag"
+
+lemma invoke_tcb_set_flags_pas_refined[wp]:
+  "\<lbrace>pas_refined aag and tcb_inv_wf (SetFlags tcb clearFlags setFlags) and einvs and simple_sched_action
+                    and K (authorised_tcb_inv aag (SetFlags tcb clearFlags setFlags))\<rbrace>
+   invoke_tcb (SetFlags tcb clearFlags setFlags)
+   \<lbrace>\<lambda>_. pas_refined aag \<rbrace>"
+  by wpsimp
+
 lemma invoke_tcb_pas_refined:
   "\<lbrace>pas_refined aag and tcb_inv_wf ti and einvs and simple_sched_action
                     and K (authorised_tcb_inv aag ti)\<rbrace>
@@ -392,7 +421,7 @@ lemma decode_set_ipc_buffer_authorised:
   "\<lbrace>K (is_subject aag t \<and> (\<forall>x \<in> set excaps. is_subject aag (fst (snd x)))
                         \<and> (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x)))\<rbrace>
    decode_set_ipc_buffer msg (ThreadCap t) slot excaps
-   \<lbrace>\<lambda>rv _ :: det_ext state. authorised_tcb_inv aag rv\<rbrace>, -"
+   \<lbrace>\<lambda>rv _ :: det_state. authorised_tcb_inv aag rv\<rbrace>, -"
   unfolding decode_set_ipc_buffer_def authorised_tcb_inv_def
   apply (cases "excaps ! 0")
   apply (clarsimp cong: list.case_cong split del: if_split)
@@ -409,7 +438,7 @@ lemma decode_set_space_authorised:
   "\<lbrace>K (is_subject aag t \<and> (\<forall>x \<in> set excaps. is_subject aag (fst (snd x)))
                         \<and> (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x)))\<rbrace>
    decode_set_space ws (ThreadCap t) slot excaps
-   \<lbrace>\<lambda>rv _ :: det_ext state. authorised_tcb_inv aag rv\<rbrace>, -"
+   \<lbrace>\<lambda>rv _ :: det_state. authorised_tcb_inv aag rv\<rbrace>, -"
   unfolding decode_set_space_def authorised_tcb_inv_def
   apply (rule hoare_pre)
   apply (simp cong: list.case_cong split del: if_split)
@@ -430,7 +459,7 @@ lemma decode_tcb_configure_authorised_helper:
                                    \<and> authorised_tcb_inv aag set_param
                                    \<and> is_ThreadControl set_param)\<rbrace>
    decode_set_space ws (ThreadCap t) slot excaps
-   \<lbrace>\<lambda>rv _ :: det_ext state. authorised_tcb_inv aag (ThreadControl t slot (tc_new_fault_ep rv)
+   \<lbrace>\<lambda>rv _ :: det_state. authorised_tcb_inv aag (ThreadControl t slot (tc_new_fault_ep rv)
                                                                   None None (tc_new_croot rv)
                                                                   (tc_new_vroot rv)
                                                                   (tc_new_buffer set_param))\<rbrace>, -"
@@ -456,7 +485,7 @@ lemma decode_tcb_configure_authorised:
   "\<lbrace>K (is_subject aag t \<and> (\<forall>x \<in> set excaps. is_subject aag (fst (snd x)))
                         \<and> (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x)))\<rbrace>
    decode_tcb_configure msg (ThreadCap t) slot excaps
-   \<lbrace>\<lambda>rv _ :: det_ext state. authorised_tcb_inv aag rv\<rbrace>, -"
+   \<lbrace>\<lambda>rv _ :: det_state. authorised_tcb_inv aag rv\<rbrace>, -"
   apply (wpsimp simp: decode_tcb_configure_def
                 wp: whenE_throwError_wp decode_tcb_configure_authorised_helper
                     decode_set_ipc_buffer_authorised)
@@ -512,6 +541,14 @@ lemma decode_set_tls_base_authorised:
   apply (wpsimp wp: gbn_wp)
   done
 
+lemma decode_set_flags_authorised:
+  "\<lbrace>K (is_subject aag t)\<rbrace>
+   decode_set_flags args (ThreadCap t)
+   \<lbrace>\<lambda>rv _. authorised_tcb_inv aag rv\<rbrace>, -"
+  unfolding decode_set_flags_def authorised_tcb_inv_def
+  apply wpsimp
+  done
+
 lemma decode_tcb_invocation_authorised:
   "\<lbrace>invs and pas_refined aag
          and K (is_subject aag t \<and> (\<forall>x \<in> set excaps. is_subject aag (fst (snd x)))
@@ -527,7 +564,7 @@ lemma decode_tcb_invocation_authorised:
             decode_set_ipc_buffer_authorised decode_set_space_authorised
             decode_bind_notification_authorised
             decode_unbind_notification_authorised
-            decode_set_tls_base_authorised)+
+            decode_set_tls_base_authorised decode_set_flags_authorised)+
   by (auto iff: authorised_tcb_inv_def)
 
 text\<open>

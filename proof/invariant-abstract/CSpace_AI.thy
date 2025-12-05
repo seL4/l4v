@@ -3760,6 +3760,7 @@ lemma cap_swap_typ_at:
          |simp split del: if_split)+
   done
 
+lemmas cap_swap_typ_ats[wp] = abs_typ_at_lifts[OF cap_swap_typ_at]
 
 lemma cap_swap_valid_cap:
   "\<lbrace>valid_cap c\<rbrace> cap_swap cap x cap' y \<lbrace>\<lambda>_. valid_cap c\<rbrace>"
@@ -3793,8 +3794,6 @@ lemma set_cap_tcb_ipc_buffer:
   apply (wp get_object_wp | wpc)+
   apply (clarsimp simp: obj_at_def)
   done
-
-lemmas set_cap_pred_tcb = set_cap.cspace_pred_tcb_at[of "\<lambda>x. x"]
 
 lemmas set_cap_tcb_cap[wp]
   = tcb_cap_valid_typ_st [OF set_cap_typ_at set_cap_pred_tcb set_cap_tcb_ipc_buffer]

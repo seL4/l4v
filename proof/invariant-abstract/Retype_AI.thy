@@ -913,7 +913,7 @@ abbreviation(input)
        and valid_pspace and valid_mdb and valid_idle and only_idle
        and if_unsafe_then_cap
        and valid_global_refs and valid_arch_state
-       and valid_irq_node and valid_irq_handlers and valid_vspace_objs
+       and valid_cur_fpu and valid_irq_node and valid_irq_handlers and valid_vspace_objs
        and valid_irq_states and valid_global_objs
        and valid_arch_caps and valid_kernel_mappings
        and valid_asid_map and valid_global_vspace_mappings
@@ -2221,11 +2221,6 @@ lemma ioc_more_swap[simp]: "
   done
 
 
-lemma is_final_cap'_more_update[simp]:
-  "is_final_cap' cap (trans_state f s) = is_final_cap' cap s"
-  by (simp add: is_final_cap'_def)
-
-
 lemma no_cap_to_obj_with_diff_ref_more_update[simp]:
   "no_cap_to_obj_with_diff_ref cap sl (trans_state f s) =
    no_cap_to_obj_with_diff_ref cap sl s"
@@ -2234,11 +2229,6 @@ lemma no_cap_to_obj_with_diff_ref_more_update[simp]:
 end
 
 (* FIXME: irq_state stuff moved from CNodeInv_AI, not clear it makes sense here. *)
-
-lemma cte_wp_at_irq_state_independent[intro!, simp]:
-  "is_final_cap' x (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
-   = is_final_cap' x s"
-  by (simp add: is_final_cap'_def)
 
 lemma ex_cte_cap_wp_to_irq_state_independent[intro!, simp]:
   "ex_cte_cap_wp_to x y (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)

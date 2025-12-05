@@ -794,7 +794,7 @@ lemma set_pt_distinct [wp]:
 
 crunch store_pte
   for arch[wp]: "\<lambda>s. P (arch_state s)"
-  and "distinct"[wp]: pspace_distinct
+  and distinct[wp]: pspace_distinct
 
 lemma store_pt_asid_pools_of[wp]:
   "set_pt p pt \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
@@ -1549,6 +1549,13 @@ lemma set_asid_pool_iflive [wp]:
   done
 
 
+lemma set_asid_pool_nonz_cap_to[wp]:
+  "set_asid_pool p ap \<lbrace>ex_nonz_cap_to t\<rbrace>"
+  apply (simp add: set_asid_pool_def)
+  including unfold_objects
+  by (wpsimp wp: set_object_nonz_cap_to[THEN hoare_set_object_weaken_pre]
+           simp: a_type_def)
+
 lemma set_asid_pool_zombies [wp]:
   "\<lbrace>\<lambda>s. zombies_final s\<rbrace>
   set_asid_pool p ap
@@ -2070,6 +2077,10 @@ lemma mdb_cte_at_set_asid_pool[wp]:
   apply (simp only: imp_conv_disj)
   apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift)
 done
+
+crunch set_asid_pool
+  for valid_cur_fpu[wp]: valid_cur_fpu
+  (wp: valid_cur_fpu_lift)
 
 lemma set_asid_pool_invs_unmap:
   "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and (\<lambda>s. \<exists>a. asid_table s a = Some p) and

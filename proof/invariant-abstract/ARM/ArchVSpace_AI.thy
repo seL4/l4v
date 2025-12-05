@@ -1729,12 +1729,9 @@ lemma svr_invs [wp]:
 crunch arm_context_switch
  for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
 
-lemma svr_pred_st_tcb[wp]:
-  "set_vm_root t \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
-  unfolding set_vm_root_def by (wpsimp wp: get_cap_wp hoare_vcg_if_lift_ER hoare_drop_imps)
-
 crunch set_vm_root
- for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+  for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
+  and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (simp: crunch_simps)
 
 lemmas set_vm_root_typ_ats [wp] = abs_typ_at_lifts [OF set_vm_root_typ_at]

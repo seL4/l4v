@@ -2494,7 +2494,7 @@ lemma dcorres_dummy_set_pending_cap_Restart:
 
 crunch do_ipc_transfer
   for pred_tcb[wp]: "pred_tcb_at proj P t"
-  (wp: crunch_wps transfer_caps_loop_pres make_fault_message_inv simp: zipWithM_x_mapM)
+  (wp: crunch_wps transfer_caps_loop_pres simp: zipWithM_x_mapM)
 
 lemma dcorres_get_thread_state:
   "dcorres (\<lambda>op ts. op = infer_tcb_pending_op t ts)

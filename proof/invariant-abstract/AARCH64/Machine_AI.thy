@@ -172,6 +172,10 @@ lemma no_irq_return[simp, wp]:
   unfolding no_irq_def
   by simp
 
+lemma no_irq_get[simp, wp]:
+  "no_irq get"
+  by (wpsimp simp: no_irq_def)
+
 lemma no_irq_gets[simp, wp]:
   "no_irq (gets f)"
   by (simp add: no_irq_def)
@@ -244,9 +248,10 @@ crunch_ignore (valid, empty_fail, no_fail)
     cleanCacheRange_RAM_impl
     cleanInvalidateCacheRange_RAM_impl
     configureTimer_impl
+    disableFpu_impl
     dsb_impl
     enableFpuEL01_impl
-    fpuThreadDeleteOp_impl
+    enableFpu_impl
     get_gic_vcpu_ctrl_lr_impl
     initL2Cache_impl
     initTimer_impl
@@ -255,7 +260,6 @@ crunch_ignore (valid, empty_fail, no_fail)
     invalidateTranslationASID_impl
     invalidateTranslationSingle_impl
     isb_impl
-    nativeThreadUsingFPU_impl
     plic_complete_claim_impl
     resetTimer_impl
     set_gic_vcpu_ctrl_apr_impl
@@ -267,7 +271,7 @@ crunch_ignore (valid, empty_fail, no_fail)
     setIRQTrigger_impl
     setSCTLR_impl
     setVSpaceRoot_impl
-    switchFpuOwner_impl
+    writeFpuState_impl
     writeVCPUHardwareReg_impl
     sendSGI_impl
     )
@@ -276,8 +280,8 @@ crunch_ignore (valid, empty_fail, no_fail)
    List obtained using:
    grep -oE "(\w+_impl)|(get\w+)" MachineOps.thy|sort|uniq|sed "s/_impl//;s/$/,/;s/^/  /"
    with the following manual interventions:
-   - remove false positives: get_def, gets_def, getFPUState, getRegister, getRestartPC
-   - add read_cntpct
+   - remove false positives: get_def, gets, gets_def, getFPUState, getRegister, getRestartPC
+   - add read_cntpct and readFpuState
    - remove final comma
    - getActiveIRQ does not preserve no_irq *)
 crunch
@@ -289,9 +293,11 @@ crunch
   cleanCacheRange_RAM,
   cleanInvalidateCacheRange_RAM,
   configureTimer,
+  disableFpu,
   dsb,
   enableFpuEL01,
-  fpuThreadDeleteOp,
+  enableFpu,
+  getDFSR,
   getESR,
   getFAR,
   get_gic_vcpu_ctrl_apr,
@@ -304,8 +310,8 @@ crunch
   get_gic_vcpu_ctrl_vmcr,
   get_gic_vcpu_ctrl_vtr,
   getHSR,
+  getIFSR,
   getMemoryRegions,
-  gets,
   getSCTLR,
   initL2Cache,
   initTimer,
@@ -314,7 +320,6 @@ crunch
   invalidateTranslationASID,
   invalidateTranslationSingle,
   isb,
-  nativeThreadUsingFPU,
   plic_complete_claim,
   resetTimer,
   set_gic_vcpu_ctrl_apr,
@@ -326,18 +331,19 @@ crunch
   setIRQTrigger,
   setSCTLR,
   setVSpaceRoot,
-  switchFpuOwner,
+  writeFpuState,
   readVCPUHardwareReg,
   writeVCPUHardwareReg,
   read_cntpct,
-  sendSGI
+  sendSGI,
+  readFpuState
   for (no_fail) no_fail[intro!, wp, simp]
   and (empty_fail) empty_fail[intro!, wp, simp]
   and (no_irq) no_irq[intro!, wp, simp]
   and device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
   and irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
   and underlying_memory_inv[wp]: "\<lambda>s. P (underlying_memory s)"
-  (wp: no_irq_bind ignore: empty_fail Nondet_Monad.bind)
+  (wp: no_irq_bind no_irq_modify ef_machine_rest_lift no_fail_machine_state_rest_T)
 
 crunch getFPUState, getRegister, getRestartPC, setNextPC, ackInterrupt, maskInterrupt
   for (no_fail) no_fail[intro!, wp, simp]

@@ -169,7 +169,7 @@ lemma preemptionPoint_ccorres:
         apply (simp add: from_bool_0 whenE_def returnOk_def throwError_def
                          return_def split: option.splits)
         apply (clarsimp simp: cintr_def exception_defs)
-       apply wp+
+       apply wpsimp+
      apply vcg
     apply (unfold modifyWorkUnits_def)[1]
     apply wp
@@ -581,14 +581,6 @@ lemma no_fail_getMRs:
   apply (rule det_wp_no_fail)
   apply (rule det_wp_getMRs)
   done
-
-lemma msgRegisters_ccorres:
-  "n < unat n_msgRegisters \<Longrightarrow>
-  register_from_H (ARM_H.msgRegisters ! n) = (index msgRegistersC n)"
-  apply (simp add: msgRegistersC_def msgRegisters_unfold fupdate_def)
-  apply (simp add: Arrays.update_def n_msgRegisters_def fcp_beta nth_Cons' split: if_split)
-  done
-
 
 lemma asUser_cur_obj_at':
   assumes f: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"

@@ -1543,7 +1543,7 @@ proof (intro impI allI)
   thus ?thesis using rf empty kdr rzo
   apply (simp add: rf_sr_def cstate_relation_def Let_def rl'
                    tag_disj_via_td_name)
-  apply (simp add: carch_state_relation_def fpu_null_state_relation_def cmachine_state_relation_def)
+  apply (simp add: carch_state_relation_def cmachine_state_relation_def)
   apply (simp add: rl' cterl tag_disj_via_td_name h_t_valid_clift_Some_iff)
   apply (clarsimp simp: hrs_htd_update ptr_retyps_htd_safe_neg szo
                         kernel_data_refs_domain_eq_rotate
@@ -1657,7 +1657,7 @@ proof (intro impI allI)
 
   thus ?thesis using rf empty kdr rzo
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name)
-    apply (simp add: carch_state_relation_def fpu_null_state_relation_def cmachine_state_relation_def)
+    apply (simp add: carch_state_relation_def cmachine_state_relation_def)
     apply (simp add: rl' cterl tag_disj_via_td_name h_t_valid_clift_Some_iff )
     apply (clarsimp simp: hrs_htd_update ptr_retyps_htd_safe_neg szo
                           kernel_data_refs_domain_eq_rotate
@@ -1804,7 +1804,7 @@ proof (intro impI allI)
 
   thus ?thesis using rf empty kdr irq rzo
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name)
-    apply (simp add: carch_state_relation_def fpu_null_state_relation_def cmachine_state_relation_def)
+    apply (simp add: carch_state_relation_def cmachine_state_relation_def)
     apply (simp add: rl' cterl tag_disj_via_td_name h_t_valid_clift_Some_iff)
     apply (clarsimp simp: hrs_htd_update ptr_retyps_htd_safe_neg szo
                           kernel_data_refs_domain_eq_rotate
@@ -2101,7 +2101,7 @@ proof (intro impI allI)
   ultimately
   show ?thesis using rf empty kernel_data_refs_disj rzo
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name)
-    apply (simp add: carch_state_relation_def fpu_null_state_relation_def cmachine_state_relation_def)
+    apply (simp add: carch_state_relation_def cmachine_state_relation_def)
     apply (clarsimp simp add: rl' cterl tag_disj_via_td_name
       hrs_htd_update ht_rl foldr_upd_app_if [folded data_map_insert_def] rl projectKOs
       cvariable_array_ptr_retyps[OF szo]
@@ -2284,7 +2284,7 @@ proof (intro impI allI)
   ultimately
   show ?thesis using rf empty kernel_data_refs_disj rzo
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name)
-    apply (simp add: carch_state_relation_def fpu_null_state_relation_def cmachine_state_relation_def)
+    apply (simp add: carch_state_relation_def cmachine_state_relation_def)
     apply (clarsimp simp add: rl' cterl tag_disj_via_td_name
       hrs_htd_update ht_rl foldr_upd_app_if [folded data_map_insert_def] rl projectKOs
       cvariable_array_ptr_retyps[OF szo]
@@ -2465,7 +2465,7 @@ proof (intro impI allI)
   ultimately
   show ?thesis using rf empty kernel_data_refs_disj rzo
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name)
-    apply (simp add: carch_state_relation_def fpu_null_state_relation_def cmachine_state_relation_def)
+    apply (simp add: carch_state_relation_def cmachine_state_relation_def)
     apply (clarsimp simp add: rl' cterl tag_disj_via_td_name
       hrs_htd_update ht_rl foldr_upd_app_if [folded data_map_insert_def] rl projectKOs
       cvariable_array_ptr_retyps[OF szo]
@@ -2646,7 +2646,7 @@ proof (intro impI allI)
   ultimately
   show ?thesis using rf empty kernel_data_refs_disj rzo
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name)
-    apply (simp add: carch_state_relation_def fpu_null_state_relation_def cmachine_state_relation_def)
+    apply (simp add: carch_state_relation_def cmachine_state_relation_def)
     apply (clarsimp simp add: rl' cterl tag_disj_via_td_name
       hrs_htd_update ht_rl foldr_upd_app_if [folded data_map_insert_def] rl projectKOs
       cvariable_array_ptr_retyps[OF szo]
@@ -2843,8 +2843,7 @@ lemma insertNewCap_ccorres_helper:
   apply (simp cong: lifth_update)
   apply (rule conjI)
    apply (erule (1) setCTE_tcb_case)
-  apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                   fpu_null_state_heap_update_tag_disj_simps typ_heap_simps
+  apply (simp add: carch_state_relation_def cmachine_state_relation_def typ_heap_simps
                    cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
   done
 
@@ -3501,10 +3500,6 @@ lemmas field_tag_subs =
   field_tag_sub_trans[OF field_tag_sub']
   field_tag_sub'
 
-lemmas fpu_null_state_heap_update_field =
-  field_tag_subs[THEN disjoint_subset[where B=kernel_data_refs],
-                 THEN fpu_null_state_heap_update_span_disjoint]
-
 context
   fixes p:: "'a::mem_type ptr" and n :: nat
   assumes nkr: "{ptr_val p ..+ n * size_of TYPE('a)} \<inter> kernel_data_refs = {}"
@@ -3518,12 +3513,6 @@ lemma retyp_non_kernel_data_ref:
   apply (subst Int_commute)
   apply (rule disjoint_subset2[OF assms nkr])
   done
-
-lemma fpu_null_state_retyp_disjoint:
-  "fpu_null_state_relation (hrs_htd_update (ptr_retyps_gen n p foo) h) = fpu_null_state_relation h"
-  by (cases "ptr_span (fpu_state_Ptr (symbol_table ''x86KSnullFpuState'')) \<subseteq> kernel_data_refs";
-      clarsimp simp: fpu_null_state_relation_def lift_t_Some_iff hrs_htd_update
-                     retyp_non_kernel_data_ref)
 
 end
 
@@ -3885,7 +3874,9 @@ proof -
        tcbFaultHandler_C := 0, tcbIPCBuffer_C := 0,
        tcbSchedNext_C := tcb_Ptr 0, tcbSchedPrev_C := tcb_Ptr 0,
        tcbEPNext_C := tcb_Ptr 0, tcbEPPrev_C := tcb_Ptr 0,
-       tcbBoundNotification_C := ntfn_Ptr 0\<rparr>"
+       tcbBoundNotification_C := ntfn_Ptr 0,
+       tcbFlags_C := 0\<rparr>"
+
   have fbtcb: "from_bytes (replicate (size_of TYPE(tcb_C)) 0) = ?tcb"
     apply (simp add: from_bytes_def)
     apply (simp add: typ_info_simps tcb_C_tag_def)
@@ -4099,12 +4090,6 @@ proof -
                           htd_safe[simplified] kernel_data_refs_domain_eq_rotate)
     apply (simp add: heap_updates_def tcb_queue_update_other' hrs_htd_update
                      ptr_retyp_to_array[simplified] irq[simplified])
-    apply (match premises in H: \<open>fpu_null_state_relation _\<close> \<Rightarrow>
-             \<open>match premises in _[thin]: _ (multi) \<Rightarrow> \<open>insert H\<close>\<close>)
-    apply (simp add: fpu_null_state_heap_update_field p_nkr size_td_array
-                     fpu_null_state_retyp_disjoint
-                     disjoint_subset[OF _ kdr] disjoint_subset[OF _ p_nkr]
-                     intvl_start_le cte_C_size tcbBlockSizeBits_def)
     done
 qed
 
@@ -4256,8 +4241,7 @@ lemma rf_sr_rep0:
   shows "(\<sigma>, globals_update (t_hrs_'_update (hrs_mem_update (heap_update_list ptr (replicate sz 0)))) x) \<in> rf_sr"
   using sr
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def cpspace_relation_def
-                     carch_state_relation_def fpu_null_state_relation_def
-                     cmachine_state_relation_def hrs_mem_update
+                     carch_state_relation_def cmachine_state_relation_def hrs_mem_update
                      cslift_bytes_mem_update[OF empty, simplified] cte_C_size)
 
 (* FIXME: generalise *)
@@ -4756,7 +4740,7 @@ proof (intro impI allI)
 
   thus  ?thesis using rf empty kdr rzo
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name )
-    apply (simp add: carch_state_relation_def fpu_null_state_relation_def cmachine_state_relation_def)
+    apply (simp add: carch_state_relation_def cmachine_state_relation_def)
     apply (simp add: tag_disj_via_td_name rl' tcb_C_size h_t_valid_clift_Some_iff)
     apply (clarsimp simp: hrs_htd_update szo'[symmetric])
     apply (simp add:szo hrs_htd_def p2dist objBits_simps ko_def ptr_retyps_htd_safe_neg
@@ -4815,8 +4799,7 @@ lemma copyGlobalMappings_ccorres:
                               carray_map_relation_upd_triv)
         subgoal by (erule (2) cmap_relation_updI; simp)
        subgoal by (clarsimp simp: carch_state_relation_def cmachine_state_relation_def
-                                  global_ioport_bitmap_heap_update_tag_disj_simps
-                                  fpu_null_state_heap_update_tag_disj_simps)
+                                  global_ioport_bitmap_heap_update_tag_disj_simps)
       apply simp
      apply (simp add: objBits_simps archObjSize_def)
     apply clarsimp
@@ -5152,14 +5135,13 @@ lemmas Mode_initContext_spec'' =
 lemma Arch_initContext_spec':
   shows
     "\<forall>s\<^sub>0. \<Gamma> \<turnstile>
-      {t. t = s\<^sub>0 \<and> t \<Turnstile>\<^sub>c context_' t \<and> s\<^sub>0 \<Turnstile>\<^sub>c fpu_state_Ptr (symbol_table ''x86KSnullFpuState'')}
+      {t. t = s\<^sub>0 \<and> t \<Turnstile>\<^sub>c context_' t}
         Call Arch_initContext_'proc
       {t. t = globals_update
                (t_hrs_'_update
                 (hrs_mem_update
                  (heap_update (fpu_state_Ptr &(context_' s\<^sub>0\<rightarrow>[''fpuState_C'']))
-                              (h_val (hrs_mem (t_hrs_' (globals s\<^sub>0)))
-                                     (fpu_state_Ptr (symbol_table ''x86KSnullFpuState''))) \<circ>
+                              (x86KSnullFpuState_' (globals s\<^sub>0)) \<circ>
                   heap_update (registers_Ptr &(context_' s\<^sub>0\<rightarrow>[''registers_C'']))
                               (array_updates (h_val (hrs_mem (t_hrs_' (globals s\<^sub>0)))
                                                     (registers_Ptr &(context_' s\<^sub>0\<rightarrow>[''registers_C''])))
@@ -5175,19 +5157,18 @@ lemma Arch_initContext_spec':
           | (vcg exspec=Mode_initContext_spec'',
              clarsimp simp: hrs_mem_update_compose h_val_id packed_heap_update_collapse o_def
                             array_updates_rev_app))+
-  apply (auto simp: h_val_heap_same_hrs_mem_update_typ_disj[OF h_t_valid_c_guard_field _ tag_disj_via_td_name]
-                    export_tag_adjust_ti typ_uinfo_t_def array_updates_rev
+  apply (auto simp: array_updates_rev
               cong: Kernel_C.globals.unfold_congs StateSpace.state.unfold_congs)
   done
 
 lemma rf_sr_fpu_null_relation:
-  "(s,s') \<in> rf_sr \<Longrightarrow> fpu_null_state_relation (t_hrs_' (globals s'))"
+  "(s,s') \<in> rf_sr \<Longrightarrow> fpu_null_state_relation (x86KSnullFpuState_' (globals s'))"
   by (simp add: rf_sr_def cstate_relation_def Let_def carch_state_relation_def)
 
 lemma ccorres_placeNewObject_tcb:
   "ccorresG rf_sr \<Gamma> dc xfdc
    (pspace_aligned' and pspace_distinct' and pspace_no_overlap' regionBase tcbBlockSizeBits
-      and (\<lambda>s. sym_refs (state_refs_of' s))
+      and (\<lambda>s. sym_refs (state_refs_of' s)) and valid_idle'
       and (\<lambda>s. 2 ^ tcbBlockSizeBits \<le> gsMaxObjectSize s)
       and ret_zero regionBase (2 ^ tcbBlockSizeBits)
       and K (regionBase \<noteq> 0 \<and> range_cover regionBase tcbBlockSizeBits tcbBlockSizeBits 1
@@ -5237,16 +5218,7 @@ lemma ccorres_placeNewObject_tcb:
      apply (erule disjoint_subset[rotated],
             simp add: intvl_start_le size_td_array cte_C_size objBits_defs)
     apply (clarsimp simp: hrs_htd_update)
-    apply (rule h_t_valid_field[rotated], simp+)+
-   apply (clarsimp simp: hrs_htd_update)
-   apply (subgoal_tac "{regionBase + 0x400 ..+ size_of TYPE(tcb_C)} \<subseteq> {regionBase ..+ 2 ^ tcbBlockSizeBits}")
-    apply (subgoal_tac "{regionBase ..+ 5*size_of TYPE(cte_C)} \<subseteq> {regionBase ..+ 2 ^ tcbBlockSizeBits}")
-     apply (intro h_t_valid_ptr_retyps_gen_disjoint
-                    [where n=1 and arr=False, unfolded ptr_retyps_gen_def, simplified];
-            clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                           fpu_null_state_relation_def2 objBits_defs
-                    elim!: disjoint_subset disjoint_subset2; blast)
-    apply (rule intvl_sub_offset intvl_start_le; clarsimp simp: objBits_defs cte_C_size)+
+    apply ((rule h_t_valid_field[rotated], simp+)+)[1]
   apply (rule bexI[OF _ placeNewObject_eq];
          clarsimp simp: hrs_htd_update word_bits_def no_fail_def objBitsKO_def
                         range_cover.aligned new_cap_addrs_def)
@@ -5256,7 +5228,7 @@ lemma ccorres_placeNewObject_tcb:
          clarsimp simp: ctcb_ptr_to_tcb_ptr_def objBitsKO_def range_cover.aligned)
     apply (frule region_actually_is_bytes; clarsimp simp: region_is_bytes'_def)
    apply (clarsimp simp: hrs_mem_def)
-  apply (frule rf_sr_fpu_null_relation; simp add: fpu_null_state_relation_def2)
+  apply (frule rf_sr_fpu_null_relation; simp add: fpu_null_state_relation_def)
   by (clarsimp simp: ctcb_offset_defs rf_sr_def ptr_retyps_gen_def heap_updates_def
                      hrs_mem_update_compose
                cong: Kernel_C.globals.unfold_congs StateSpace.state.unfold_congs
@@ -5586,7 +5558,7 @@ proof (intro impI allI)
 
   thus  ?thesis using rf empty kdr rzo
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name )
-    apply (simp add: carch_state_relation_def fpu_null_state_relation_def cmachine_state_relation_def)
+    apply (simp add: carch_state_relation_def cmachine_state_relation_def)
     apply (simp add: tag_disj_via_td_name rl' tcb_C_size h_t_valid_clift_Some_iff)
     apply (clarsimp simp: hrs_htd_update szo'[symmetric] cvariable_array_ptr_retyps[OF szo] rb')
     apply (subst zero_ranges_ptr_retyps, simp_all only: szo'[symmetric] power_add, simp)
@@ -6159,8 +6131,7 @@ lemma threadSet_domain_ccorres [corres]:
    apply assumption
   apply clarsimp
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-  apply (clarsimp simp: cmachine_state_relation_def carch_state_relation_def cpspace_relation_def
-                        fpu_null_state_heap_update_tag_disj_simps)
+  apply (clarsimp simp: cmachine_state_relation_def carch_state_relation_def cpspace_relation_def)
   apply (clarsimp simp: update_tcb_map_tos typ_heap_simps')
   apply (simp add: map_to_ctes_upd_tcb_no_ctes map_to_tcbs_upd tcb_cte_cases_def cteSizeBits_def)
   apply (simp add: cep_relations_drop_fun_upd
@@ -7235,8 +7206,7 @@ lemma ccorres_typ_region_bytes_dummy:
                    objBitsT_simps word_bits_def zero_ranges_are_zero_typ_region_bytes
              cong: conj_cong)
   apply (rule conjI, rule htd_safe_typ_region_bytes, simp, blast)
-  by (clarsimp simp: global_ioport_bitmap_relation_def fpu_null_state_relation_def
-                     typ_bytes_cpspace_relation_clift_gptr
+  by (clarsimp simp: global_ioport_bitmap_relation_def typ_bytes_cpspace_relation_clift_gptr
                      cpspace_relation_def bit_simps word_bits_def invs_pspace_aligned')
 
 lemma region_is_typeless_cong:

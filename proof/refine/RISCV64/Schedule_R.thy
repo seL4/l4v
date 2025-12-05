@@ -1459,26 +1459,35 @@ lemma nextDomain_invs':
   apply (clarsimp simp: invs'_def valid_machine_state'_def dschDomain_def valid_dom_schedule'_def)
   done
 
+lemma prepareNextDomain_corres[corres]:
+  "corres dc (pspace_aligned and pspace_distinct) \<top>
+             arch_prepare_next_domain prepareNextDomain"
+  by (clarsimp simp: arch_prepare_next_domain_def prepareNextDomain_def)
+
+crunch prepareNextDomain
+  for invs'[wp]: invs'
+  and nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+
 lemma scheduleChooseNewThread_fragment_corres:
   "corres dc (invs and valid_ready_qs and ready_or_release
               and (\<lambda>s. scheduler_action s = choose_new_thread))
              (invs' and (\<lambda>s. ksSchedulerAction s = ChooseNewThread))
-     (do _ \<leftarrow> when (domainTime = 0) next_domain;
+     (do _ \<leftarrow> when (domainTime = 0) (do
+           _ \<leftarrow> arch_prepare_next_domain;
+           next_domain
+         od);
          choose_thread
       od)
-     (do _ \<leftarrow> when (domainTime = 0) nextDomain;
-          chooseThread
+     (do _ \<leftarrow> when (domainTime = 0) (do
+           _ \<leftarrow> prepareNextDomain;
+           nextDomain
+         od);
+         chooseThread
       od)"
-  apply (subst bind_dummy_ret_val)
-  apply (subst bind_dummy_ret_val)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split[OF corres_when])
-        apply simp
-       apply (rule nextDomain_corres)
-      apply simp
-      apply (rule chooseThread_corres)
-     apply (wp nextDomain_invs')+
-   apply (clarsimp simp: valid_sched_def invs'_def)+
+  apply (subst bind_dummy_ret_val)+
+  apply (corres corres: nextDomain_corres chooseThread_corres
+                    wp: nextDomain_invs')
+   apply (auto simp: valid_sched_def invs'_def)
   done
 
 lemma scheduleSwitchThreadFastfail_corres:
@@ -4606,8 +4615,6 @@ lemma schedule_corres:
      apply (wpsimp wp: schedule_switch_thread_branch_sc_at_cur_sc)
      apply fastforce
     apply (wpsimp wp: schedule_switch_thread_branch_active_sc_tcb_at_cur_thread)
-    apply (fastforce simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_def
-                           vs_all_heap_simps)
 
    apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>" for P f Q  \<Rightarrow> -\<close>)
    apply (rename_tac target)
@@ -4734,14 +4741,14 @@ lemma schedule_corres:
    apply fastforce
 
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF switchToThread_corres])
+    apply (rule corres_split[OF guarded_switch_to_corres])
       apply clarsimp
       apply (rule setSchedulerAction_corres)
       apply (clarsimp simp: sched_act_relation_def)
      apply wpsimp
     apply wpsimp
    apply (clarsimp simp: pred_conj_def)
-   apply (fastforce simp: obj_at_def vs_all_heap_simps pred_tcb_at_def)
+   apply (fastforce simp: obj_at_def vs_all_heap_simps pred_tcb_at_def schedulable_def3)
   apply fastforce
   done
 

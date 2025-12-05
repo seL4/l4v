@@ -13,6 +13,7 @@ arch_requalify_facts
   init_arch_objects_pred_tcb_at
   init_arch_objects_cur_thread
   hyp_live_default_object
+  arch_tcb_live_default_arch_tcb
 
 lemmas [wp] =
   init_arch_objects_typ_at
@@ -243,8 +244,7 @@ lemma invoke_untyped_etcb_at:
   apply (cases ui)
   apply (simp add: invoke_untyped_def whenE_def flip: mapM_x_def split del: if_split)
   apply (wpsimp wp: mapM_x_wp'
-            create_cap.cspace_pred_tcb_at[where P=Not]
-            hoare_convert_imp[OF create_cap.cspace_pred_tcb_at[where P=Not]]
+            hoare_convert_imp[OF create_cap.cspace_pred_tcb_at[where P'=Not]]
             hoare_convert_imp[OF _ init_arch_objects_valid_sched_pred]
          | wp (once) hoare_drop_impE_E)+
   done
@@ -1066,6 +1066,8 @@ lemma live_default_object:
   shows "\<not> live (default_object ty dev us dm)"
   using pre[where dev=dev and us=us and dm=dm, OF assms]
   by (simp only: live_def split: kernel_object.splits; simp)
+     (clarsimp simp: arch_tcb_live_default_arch_tcb default_object_def default_tcb_def assms
+              split: apiobject_type.splits)
 
 (* FIXME RT: move to Untyped_AI *)
 lemma retype_region_obj_at_live_ex:

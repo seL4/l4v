@@ -78,7 +78,7 @@ declare resolveAddressBitsFn.simps[simp del]
 
 lemma isCNodeCap_capUntypedPtr_capCNodePtr:
   "isCNodeCap c \<Longrightarrow> capUntypedPtr c = capCNodePtr c"
-  by (clarsimp simp: isCap_simps RISCV64_H.PPtr_def)
+  by (clarsimp simp: gen_isCap_simps RISCV64_H.PPtr_def)
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 

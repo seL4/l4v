@@ -252,6 +252,33 @@ lemma sanitiseRegister_spec:
   apply (case_tac r; simp add: C_register_defs sanitiseRegister_def sanitiseOrFlags_def sanitiseAndFlags_def) (* long *)
   by word_bitwise
 
+lemma rf_sr_ksArchState_x64KSCurFPUOwner:
+  "(s, s') \<in> rf_sr \<Longrightarrow> cur_fpu_relation (x64KSCurFPUOwner (ksArchState s)) (ksCurFPUOwner_' (globals s'))"
+  by (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def Let_def)
+
+lemma ccorres_pre_getCurFPUOwner:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows
+    "ccorres r xf
+       (\<lambda>s. (\<forall>rv. (x64KSCurFPUOwner \<circ> ksArchState) s = rv \<longrightarrow> P rv s))
+       {s. \<forall>rv fpu'. ksCurFPUOwner_' (globals s) = fpu' \<and> cur_fpu_relation rv fpu' \<longrightarrow> s \<in> P' rv} hs
+       (gets (x64KSCurFPUOwner \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l)
+       defer
+       apply wp[1]
+      apply (rule gets_sp)
+     apply (clarsimp simp: empty_fail_def simpler_gets_def)
+    apply assumption
+   apply clarsimp
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply clarsimp
+   apply assumption
+  apply (simp add: rf_sr_ksArchState_x64KSCurFPUOwner)
+  done
+
 lemma getObject_tcb_wp':
   "\<lbrace>\<lambda>s. \<forall>t. ko_at' (t :: tcb) p s \<longrightarrow> Q t s\<rbrace> getObject p \<lbrace>Q\<rbrace>"
   by (clarsimp simp: getObject_def valid_def in_monad
@@ -278,6 +305,18 @@ lemma ccorres_pre_getObject_tcb:
            erule ko_at_projectKO_opt)
   apply simp
   done
+
+lemma armKSCurFPUOwner_update_ccorres:
+  "ccorres dc xfdc (\<lambda>_. cur_fpu_relation fpu fpu') UNIV hs
+     (modifyArchState (x64KSCurFPUOwner_update (\<lambda>_. fpu)))
+     (Basic (\<lambda>s. globals_update (ksCurFPUOwner_'_update (\<lambda>_. fpu')) s))"
+  apply (clarsimp simp: modifyArchState_def)
+  apply (rule ccorres_from_vcg)
+  apply (rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: bind_def simpler_gets_def simpler_modify_def)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+  by (clarsimp simp: carch_state_relation_def carch_globals_def cur_fpu_relation_def
+                     cmachine_state_relation_def)
 
 (* FIXME: MOVE, probably to CSpace_RAB  *)
 lemma ccorres_gen_asm2_state:

@@ -18,6 +18,7 @@ import Prelude hiding (Word)
 import SEL4.Machine(PPtr)
 import SEL4.Model
 import SEL4.Object.Structures
+import SEL4.API.Types
 import SEL4.API.Failures
 import SEL4.API.Invocation.RISCV64
 import SEL4.Machine.RegisterSet(setRegister, UserMonad, VPtr(..))
@@ -41,3 +42,9 @@ getSanitiseRegisterInfo _ = return False
 
 postModifyRegisters :: PPtr TCB -> PPtr TCB -> UserMonad ()
 postModifyRegisters _ _ = return ()
+
+postSetFlags :: PPtr TCB -> TcbFlags -> Kernel ()
+postSetFlags t flags = return ()
+
+prepareSetDomain :: PPtr TCB -> Domain -> Kernel ()
+prepareSetDomain t newDom = return ()

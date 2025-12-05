@@ -158,6 +158,16 @@ lemma finalise_cap_not_cte_wp_at[Tcb_AI_assms]:
          | simp add: deleting_irq_handler_def get_irq_slot_def x ball_ran_eq)+
   done
 
+crunch arch_post_set_flags, arch_prepare_set_domain
+  for typ_at[wp, Tcb_AI_assms]: "\<lambda>s. P (typ_at T p s)"
+  and invs[wp, Tcb_AI_assms]: "invs"
+
+lemmas arch_prepare_set_domain_typ_ats[wp] = abs_typ_at_lifts[OF arch_prepare_set_domain_typ_at]
+
+crunch arch_prepare_set_domain
+  for pspace_aligned[wp]: pspace_aligned
+  and pspace_distinct[wp]: pspace_distinct
+  (wp: crunch_wps)
 
 lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_assms]:
   "table_cap_ref (max_free_index_update cap) = table_cap_ref cap"
@@ -366,7 +376,6 @@ lemma update_cap_valid[Tcb_AI_assms]:
   apply (case_tac arch_cap, simp_all add: acap_rights_update_def
                                      split: option.splits prod.splits bool.splits)
   done
-
 
 crunch switch_to_thread
   for pred_tcb_at: "pred_tcb_at proj P t"

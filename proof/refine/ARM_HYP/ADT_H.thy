@@ -313,6 +313,7 @@ definition
       tcb_priority = tcbPriority tcb,
       tcb_time_slice = tcbTimeSlice tcb,
       tcb_domain = tcbDomain tcb,
+      tcb_flags = word_to_tcb_flags (tcbFlags tcb),
       tcb_arch = ArchTcbMap (tcbArch tcb)\<rparr>"
 
 definition

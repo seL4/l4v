@@ -1788,7 +1788,7 @@ proof -
   apply (rule hoare_pre)
    apply (rule_tac P'="is_aligned ptr bits \<and> 3 \<le> bits \<and> bits \<le> word_bits" in hoare_grab_asm)
    apply (clarsimp simp add: deleteObjects_def2)
-   apply (simp add: freeMemory_def bind_assoc doMachineOp_bind ef_storeWord)
+   apply (simp add: freeMemory_def bind_assoc doMachineOp_bind)
    apply (simp add: bind_assoc[where f="\<lambda>_. modify f" for f, symmetric])
    apply (simp add: mapM_x_storeWord_step[simplified word_size_bits_def]
                     doMachineOp_modify modify_modify)
@@ -2954,6 +2954,7 @@ lemma cte_wp_at_modify_pde:
   shows
   "\<lbrakk>ksPSpace s ptr' = Some (KOArch (KOPDE pde)); pspace_aligned' s;cte_wp_at' \<top> ptr s\<rbrakk>
        \<Longrightarrow> cte_wp_at' \<top> ptr (s\<lparr>ksPSpace := (ksPSpace s)(ptr' \<mapsto> (KOArch (KOPDE pde')))\<rparr>)"
+  supply projectKOs[simp del]
   apply (simp add:cte_wp_at_obj_cases_mask obj_at'_real_def)
   apply (frule(1) pspace_alignedD')
   apply (elim disjE)
@@ -3365,6 +3366,7 @@ lemma cte_wp_at_modify_pml4e:
   shows
   "\<lbrakk>ksPSpace s ptr' = Some (KOArch (KOPML4E pml4e)); pspace_aligned' s;cte_wp_at' \<top> ptr s\<rbrakk>
        \<Longrightarrow> cte_wp_at' \<top> ptr (s\<lparr>ksPSpace := (ksPSpace s)(ptr' \<mapsto> (KOArch (KOPML4E pml4e')))\<rparr>)"
+  supply projectKOs[simp del]
   apply (simp add:cte_wp_at_obj_cases_mask obj_at'_real_def)
   apply (frule(1) pspace_alignedD')
   apply (elim disjE)
@@ -3574,6 +3576,7 @@ lemma threadSet_det:
   \<Longrightarrow> threadSet f ptr s =
   modify (ksPSpace_update (\<lambda>ps. ps(ptr \<mapsto>
     (\<lambda>t. case t of Some (KOTCB tcb) \<Rightarrow> KOTCB (f tcb)) (ps ptr)))) s"
+  supply projectKOs[simp del]
   apply (clarsimp simp add:threadSet_def bind_def obj_at'_def)
   apply (clarsimp simp:projectKO_eq projectKO_opt_tcb
     split: Structures_H.kernel_object.splits)
@@ -3601,6 +3604,8 @@ lemma setCTE_modify_tcbDomain_commute:
     note blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
           atLeastAtMost_iff
+
+    note projectKOs[simp del]
 
     have hint:
       "\<And>P ptr a cte b src ra. monad_commute (tcb_at' ptr and ko_wp_at' P a )
@@ -4712,6 +4717,7 @@ lemma createObjects'_page_map_l4_at':
     pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz\<rbrace>
    createObjects' ptr (Suc n) (KOArch (KOPML4E makeObject)) ptTranslationBits
    \<lbrace>\<lambda>rv s. (\<forall>x\<le>of_nat n. page_map_l4_at' (ptr + (x << 12)) s)\<rbrace>"
+  supply projectKOs[simp del]
   apply (rule createObjects'_wp_subst)
    apply simp
   apply (clarsimp simp:valid_def)

@@ -417,7 +417,7 @@ lemma copy_global_invs_mappings_restricted:
    apply (rule mapM_x_wp[where S="{x. get_pml4_index pptr_base \<le> x
                                        \<and> x < 2 ^ (pml4_bits - word_size_bits)}"])
     apply simp_all
-   apply (wpsimp wp: valid_irq_node_typ valid_irq_handlers_lift get_pml4e_wp
+   apply (wpsimp wp: valid_irq_node_typ valid_irq_handlers_lift get_pml4e_wp valid_cur_fpu_lift_arch
                simp: store_pml4e_def valid_asid_map_def)
    apply (clarsimp simp: valid_global_objs_def)
    apply (frule(1) invs_aligned_pml4D)
@@ -1006,6 +1006,20 @@ lemmas ioport_control_eq
     = arg_cong[where f=ioport_control_unique_2, OF null_filter,
                simplified ioport_control_null]
 
+lemma is_tcb_cur_fpu':
+  "is_tcb_cur_fpu p s' = is_tcb_cur_fpu p s"
+  apply (clarsimp simp: s'_def ps_def is_tcb_cur_fpu_def obj_at_def)
+  apply (rule iffI; clarsimp)
+   apply (fastforce simp: default_object_def default_tcb_def default_arch_tcb_def tyunt
+                   split: apiobject_type.splits)
+  apply (erule (1) pspace_no_overlapC[OF orth _ _ cover vp])
+  done
+
+lemma valid_cur_fpu':
+  "valid_cur_fpu s \<Longrightarrow> valid_cur_fpu s'"
+  unfolding valid_cur_fpu_def
+  by (clarsimp simp: is_tcb_cur_fpu')
+
 lemma valid_arch_state:
   "valid_arch_state s \<Longrightarrow> valid_arch_state s'"
   unfolding valid_arch_state_def
@@ -1149,7 +1163,7 @@ lemma post_retype_invs:
   by (clarsimp simp: invs_def post_retype_invs_def valid_state_def
                      unsafe_rep2 null_filter valid_idle
                      valid_reply_caps valid_reply_masters
-                     valid_global_refs valid_arch_state
+                     valid_global_refs valid_arch_state valid_cur_fpu'
                      valid_irq_node_def obj_at_pres
                      valid_arch_caps valid_global_objs
                      valid_vspace_objs' valid_irq_handlers

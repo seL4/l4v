@@ -1869,6 +1869,7 @@ proof -
       "\<And>p v. map_to_tcbs (ksPSpace s) p = Some v
         \<Longrightarrow> p \<notin> {ptr..+2 ^ bits}
         \<Longrightarrow> {p ..+ 2 ^ objBitsT TCBT} \<inter> {ptr..+2 ^ bits} = {}"
+      supply projectKOs[simp del]
       apply (clarsimp simp: valid_cap'_def)
       apply (drule(1) map_to_ko_atI')
       apply (clarsimp simp: obj_at'_def valid_untyped'_def2 mask_2pm1 add_diff_eq)

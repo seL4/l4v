@@ -114,6 +114,7 @@ definition init_kheap :: kheap
          tcb_yield_to = None,
          tcb_priority = 0,
          tcb_domain = default_domain,
+         tcb_flags = {},
          tcb_arch = init_arch_tcb
          \<rparr>,
       idle_sc_ptr \<mapsto> SchedContext (default_sched_context

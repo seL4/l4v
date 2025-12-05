@@ -105,7 +105,7 @@ lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at':
      cancelIPC t
    \<lbrace>\<lambda>rv. st_tcb_at' P t'\<rbrace>"
   apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def locateSlot_conv
-                   capHasProperty_def isCap_simps)
+                   capHasProperty_def gen_isCap_simps)
   apply (wp sts_pred_tcb_neq' hoare_drop_imps delete_one_reply_st_tcb_at
        | wpc | clarsimp)+
           apply (wp getCTE_wp | clarsimp)+
@@ -113,7 +113,7 @@ lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at':
                    cancelSignal_pred_tcb_at' sts_pred_tcb_neq' getEndpoint_wp gts_wp'
                    threadSet_pred_tcb_no_state
               | wpc | clarsimp)+
-  apply (auto simp: cte_wp_at_ctes_of isCap_simps)
+  apply (auto simp: cte_wp_at_ctes_of gen_isCap_simps)
   done
 
 context begin interpretation Arch .
@@ -1206,9 +1206,9 @@ lemma updateObject_ep_inv:
   by simp (rule updateObject_default_inv)
 
 lemma asUser_tcbQueued_inv[wp]:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t'\<rbrace> asUser t m \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t'\<rbrace>"
+  "asUser t m \<lbrace>\<lambda>s. Q (obj_at' (\<lambda>tcb. P (tcbQueued tcb)) tcb_ptr s)\<rbrace>"
   apply (simp add: asUser_def tcb_in_cur_domain'_def threadGet_def)
-  apply (wp threadSet_obj_at'_strongish getObject_tcb_wp | wpc | simp | clarsimp simp: obj_at'_def)+
+  apply (wp threadSet_obj_at'_no_state getObject_tcb_wp | wpc | simp | clarsimp simp: obj_at'_def)+
   done
 
 context begin interpretation Arch .
@@ -2423,8 +2423,8 @@ crunch dissociateVCPUTCB
 
 crunch prepareThreadDelete
   for unqueued: "obj_at' (Not \<circ> tcbQueued) t"
-crunch prepareThreadDelete
-  for inactive: "st_tcb_at' ((=) Inactive) t'"
+  and inactive: "st_tcb_at' ((=) Inactive) t'"
+  (simp: obj_at'_not_comp_fold)
 
 end
 end

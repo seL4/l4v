@@ -57,7 +57,7 @@ definition empty_context :: user_context where
   "empty_context \<equiv> UserContext (FPUState (\<lambda>_. 0) 0 0) (\<lambda>_. 0)"
 
 definition init_arch_tcb :: arch_tcb where
-  "init_arch_tcb \<equiv> \<lparr> tcb_context = empty_context, tcb_vcpu = None \<rparr>"
+  "init_arch_tcb \<equiv> \<lparr> tcb_context = empty_context, tcb_vcpu = None, tcb_cur_fpu = False \<rparr>"
 
 end
 end

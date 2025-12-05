@@ -14,12 +14,12 @@ Arch-specific access control.
 
 \<close>
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming
 
 named_theorems Arch_AC_assms
 
 lemma set_mrs_state_vrefs[Arch_AC_assms, wp]:
-  "set_mrs thread buf msgs \<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace>"
+  "set_mrs thread buf msgs \<lbrace>\<lambda>s :: det_state. P (state_vrefs s)\<rbrace>"
   apply (simp add: set_mrs_def split_def set_object_def get_object_def split del: if_split)
   apply (wpsimp wp: gets_the_wp get_wp put_wp mapM_x_wp'
               simp: zipWithM_x_mapM_x split_def store_word_offs_def
@@ -42,6 +42,9 @@ lemma zero_less_word_size[Arch_AC_assms, simp]:
     "0 < (word_size :: obj_ref)"
   by (simp add: word_size_def)
 
+declare set_mrs_state_hyp_refs_of[Arch_AC_assms]
+declare storeWord_respects[Arch_AC_assms]
+
 end
 
 
@@ -53,7 +56,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming ARM_A
+context Arch begin arch_global_naming
 
 lemma store_pte_respects:
   "\<lbrace>integrity aag X st and K (is_subject aag (p && ~~ mask pt_bits))\<rbrace>
@@ -67,22 +70,22 @@ lemma store_pte_respects:
 lemma integrity_arch_state [iff]:
   "arm_asid_table v = arm_asid_table (arch_state s)
    \<Longrightarrow> integrity aag X st (s\<lparr>arch_state := v\<rparr>) = integrity aag X st s"
-  unfolding integrity_def by simp
+  unfolding integrity_def integrity_asids_def by simp
 
 lemma integrity_arm_asid_map[iff]:
   "integrity aag X st (s\<lparr>arch_state := ((arch_state s)\<lparr>arm_asid_map := v\<rparr>)\<rparr>) =
    integrity aag X st s"
-  unfolding integrity_def by simp
+  unfolding integrity_def integrity_asids_def by simp
 
 lemma integrity_arm_hwasid_table[iff]:
   "integrity aag X st (s\<lparr>arch_state := ((arch_state s)\<lparr>arm_hwasid_table := v\<rparr>)\<rparr>) =
    integrity aag X st s"
-  unfolding integrity_def by simp
+  unfolding integrity_def integrity_asids_def by simp
 
 lemma integrity_arm_next_asid[iff]:
   "integrity aag X st (s\<lparr>arch_state := ((arch_state s)\<lparr>arm_next_asid := v\<rparr>)\<rparr>) =
    integrity aag X st s"
-  unfolding integrity_def by simp
+  unfolding integrity_def integrity_asids_def by simp
 
 crunch arm_context_switch
   for respects[wp]: "integrity X aag st"
@@ -174,7 +177,7 @@ definition authorised_page_table_inv :: "'a PAS \<Rightarrow> page_table_invocat
   "authorised_page_table_inv aag pti \<equiv>
    case pti of PageTableMap cap cslot_ptr pde obj_ref \<Rightarrow>
                  is_subject aag (fst cslot_ptr) \<and> is_subject aag (obj_ref && ~~ mask pd_bits) \<and>
-                 (case_option True (is_subject aag o fst) (pde_ref2 pde)) \<and>
+                 (case_option True (is_subject aag \<circ> fst) (pde_ref2 pde)) \<and>
                  pas_cap_cur_auth aag cap
              | PageTableUnmap cap cslot_ptr \<Rightarrow>
                  is_subject aag (fst cslot_ptr) \<and> aag_cap_auth aag (pasSubject aag) cap  \<and>
@@ -541,7 +544,7 @@ lemma integrity_arm_asid_table_entry_update':
                                                           \<lambda>a. if a = asid_high_bits_of asid
                                                               then v
                                                               else atable a\<rparr>\<rparr>)"
-  by (clarsimp simp: integrity_def)
+  by (clarsimp simp: integrity_def integrity_asids_def)
 
 lemma arm_asid_table_entry_update_integrity[wp]:
  "\<lbrace>integrity aag X st and (\<lambda> s. atable = arm_asid_table (arch_state s)) and
@@ -750,7 +753,7 @@ lemma perform_asid_pool_invocation_pas_refined [wp]:
 definition authorised_page_directory_inv :: "'a PAS \<Rightarrow> page_directory_invocation \<Rightarrow> bool" where
   "authorised_page_directory_inv aag pdi \<equiv> True"
 
-definition authorised_arch_inv :: "'a PAS \<Rightarrow> arch_invocation \<Rightarrow> 's :: state_ext state \<Rightarrow> bool" where
+definition authorised_arch_inv :: "'a PAS \<Rightarrow> arch_invocation \<Rightarrow> det_state \<Rightarrow> bool" where
  "authorised_arch_inv aag ai s \<equiv> case ai of
      InvokePageTable pti \<Rightarrow> authorised_page_table_inv aag pti
    | InvokePageDirectory pdi \<Rightarrow> authorised_page_directory_inv aag pdi
@@ -772,7 +775,7 @@ crunch perform_page_directory_invocation, perform_sgi_invocation
 crunch perform_page_directory_invocation
   for pas_refined[wp]: "pas_refined aag"
 
-lemma invoke_arch_respects:
+lemma invoke_arch_respects[Arch_AC_assms]:
   "\<lbrace>integrity aag X st and authorised_arch_inv aag ai and
     pas_refined aag and invs and valid_arch_inv ai and is_subject aag \<circ> cur_thread\<rbrace>
    arch_perform_invocation ai
@@ -783,7 +786,7 @@ lemma invoke_arch_respects:
   apply (auto simp: authorised_arch_inv_def valid_arch_inv_def)
   done
 
-lemma invoke_arch_pas_refined:
+lemma invoke_arch_pas_refined[Arch_AC_assms]:
   "\<lbrace>pas_refined aag and pas_cur_domain aag and invs and ct_active
                     and valid_arch_inv ai and authorised_arch_inv aag ai\<rbrace>
    arch_perform_invocation ai
@@ -834,7 +837,7 @@ lemma x_t2n_sub_1_neg_mask:
 lemmas vmsz_aligned_t2n_neg_mask =
   x_t2n_sub_1_neg_mask[OF _ pageBitsForSize_le_t29, folded vmsz_aligned_def]
 
-lemma decode_arch_invocation_authorised:
+lemma decode_arch_invocation_authorised[Arch_AC_assms]:
   "\<lbrace>invs and pas_refined aag and cte_wp_at ((=) (ArchObjectCap cap)) slot
          and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)
          and K (\<forall>(cap, slot) \<in> {(ArchObjectCap cap, slot)} \<union> set excaps.
@@ -1007,7 +1010,7 @@ lemma set_asid_pool_respects_clear:
               simp: obj_at_def a_type_def
              split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_splits)
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def)
+  apply (clarsimp simp: integrity_def integrity_asids_def)
   apply (rule tro_arch; fastforce simp: arch_integrity_obj_atomic.simps)
   done
 
@@ -1018,7 +1021,7 @@ lemma delete_asid_respects:
   by (wpsimp wp: set_asid_pool_respects_clear hoare_vcg_all_lift
            simp: obj_at_def pas_refined_refl delete_asid_def asid_pool_integrity_def)
 
-lemma authorised_arch_inv_sa_update[simp]:
+lemma authorised_arch_inv_sa_update[Arch_AC_assms,simp]:
   "authorised_arch_inv aag i (scheduler_action_update (\<lambda>_. act) s) =
    authorised_arch_inv aag i s"
   by (clarsimp simp: authorised_arch_inv_def authorised_page_inv_def authorised_slots_def
@@ -1027,7 +1030,7 @@ lemma authorised_arch_inv_sa_update[simp]:
 crunch set_thread_state_act
   for authorised_arch_inv[wp]: "authorised_arch_inv aag i"
 
-lemma set_thread_state_authorised_arch_inv[wp]:
+lemma set_thread_state_authorised_arch_inv[Arch_AC_assms,wp]:
   "set_thread_state ref ts \<lbrace>authorised_arch_inv aag i\<rbrace>"
   unfolding set_thread_state_def
   apply (wpsimp wp: set_object_wp)
@@ -1036,21 +1039,13 @@ lemma set_thread_state_authorised_arch_inv[wp]:
 end
 
 
-context begin interpretation Arch .
+arch_requalify_consts authorised_arch_inv
 
-requalify_facts
-  invoke_arch_pas_refined
-  invoke_arch_respects
-  decode_arch_invocation_authorised
-  authorised_arch_inv_sa_update
-  set_thread_state_authorised_arch_inv
-
-requalify_consts
-  authorised_arch_inv
-
-end
-
-declare authorised_arch_inv_sa_update[simp]
-declare set_thread_state_authorised_arch_inv[wp]
+global_interpretation Arch_AC_2?: Arch_AC_2 aag authorised_arch_inv for aag
+proof goal_cases
+  interpret Arch .
+  case 1 show ?case
+    by (unfold_locales; (fact Arch_AC_assms)?)
+qed
 
 end

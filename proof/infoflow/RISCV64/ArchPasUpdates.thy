@@ -107,6 +107,9 @@ lemma state_asids_to_policy_pasMayEditReadyQueues_update[PasUpdates_assms]:
    state_asids_to_policy aag s"
   by (simp add: state_asids_to_policy_aux_pasMayEditReadyQueues_update)
 
+declare arch_post_set_flags_inv[PasUpdates_assms]
+declare arch_prepare_set_domain_inv[PasUpdates_assms]
+
 end
 
 

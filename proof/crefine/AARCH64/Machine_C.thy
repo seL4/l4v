@@ -73,12 +73,6 @@ assumes plat_sendSGI_ccorres:
                       (doMachineOp (sendSGI irq target))
                       (Call plat_sendSGI_'proc)"
 
-(* This is a simplification until complete FPU handling is added at a future date *)
-assumes fpuThreadDelete_ccorres:
-  "ccorres dc xfdc (tcb_at' thread) (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
-     (fpuThreadDelete thread)
-     (Call fpuThreadDelete_'proc)"
-
 assumes setVSpaceRoot_ccorres:
   "ccorres dc xfdc
            \<top> (\<lbrace> base_address_CL (ttbr_lift \<acute>ttbr) = pt\<rbrace> \<inter> \<lbrace> asid_CL (ttbr_lift \<acute>ttbr) = asid\<rbrace>) []
@@ -261,14 +255,6 @@ assumes get_gic_vcpu_ctrl_lr_ccorres:
   "ccorres (\<lambda>v virq. virq = virq_C (FCP (\<lambda>_. v))) ret__struct_virq_C_' \<top> (\<lbrace>\<acute>num = scast n \<rbrace>) hs
            (doMachineOp (get_gic_vcpu_ctrl_lr n)) (Call get_gic_vcpu_ctrl_lr_'proc)"
 
-(* Lazy FPU switching is not in current verification scope. We abstract this by acting as if
-   FPU is always enabled. When the FPU switching implementation is updated, this assumption
-   should be removed. *)
-assumes isFpuEnable_ccorres:
-  "ccorres (\<lambda>rv rv'. rv' = from_bool rv) ret__unsigned_long_' \<top> UNIV []
-           (doMachineOp isFpuEnable)
-           (Call isFpuEnable_'proc)"
-
 (* ARM Hypervisor banked register save/restoring *)
 
 assumes vcpu_hw_read_reg_ccorres:
@@ -282,6 +268,26 @@ assumes vcpu_hw_write_reg_ccorres:
            \<top> (\<lbrace> unat \<acute>reg_index = fromEnum r \<rbrace> \<inter> \<lbrace> \<acute>reg = v \<rbrace>) hs
            (doMachineOp (writeVCPUHardwareReg r v))
            (Call vcpu_hw_write_reg_'proc)"
+
+
+(* FPU-related machine ops *)
+
+assumes saveFpuState_ccorres:
+  "ccorres dc xfdc (tcb_at' t) (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr t \<rbrace>) []
+     (saveFpuState t) (Call saveFpuState_'proc)"
+
+assumes loadFpuState_ccorres:
+  "ccorres dc xfdc (tcb_at' t) (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr t \<rbrace>) []
+     (loadFpuState t) (Call loadFpuState_'proc)"
+
+assumes enableFpu_ccorres:
+  "ccorres dc xfdc \<top> UNIV []
+     (doMachineOp enableFpu) (Call enableFpu_'proc)"
+
+assumes disableFpu_ccorres:
+  "ccorres dc xfdc \<top> UNIV []
+     (doMachineOp disableFpu) (Call disableFpu_'proc)"
+
 
 (* The following are fastpath specific assumptions.
    We might want to move them somewhere else. *)

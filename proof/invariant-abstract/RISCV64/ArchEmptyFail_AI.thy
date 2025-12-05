@@ -31,21 +31,22 @@ global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
 context Arch begin arch_global_naming
 
 crunch possible_switch_to,set_thread_state_act
- for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
+  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
          Let_def wp: empty_fail_zipWithM_x)
 
 crunch handle_fault
- for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
+  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
          Let_def)
 
-crunch decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
+crunch
+  decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
   decode_set_priority, decode_set_mcpriority, decode_set_sched_params, decode_set_timeout_ep,
-  decode_set_tls_base, decode_set_space
- for (empty_fail) empty_fail[wp]
+  decode_set_tls_base, decode_set_flags, decode_set_space
+  for (empty_fail) empty_fail[wp]
   (simp: cap.splits arch_cap.splits split_def)
 
 lemma decode_tcb_invocation_empty_fail[wp]:
@@ -158,7 +159,7 @@ global_interpretation EmptyFail_AI_rec_del?: EmptyFail_AI_rec_del
 
 context Arch begin arch_global_naming
 crunch
-  cap_delete, choose_thread
+  cap_delete, choose_thread, arch_prepare_next_domain
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
 end
 

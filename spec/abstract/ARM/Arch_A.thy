@@ -49,6 +49,9 @@ definition
      set_vm_root thread
    od"
 
+definition arch_prepare_next_domain :: "(unit,'z::state_ext) s_monad" where
+  "arch_prepare_next_domain \<equiv> return ()"
+
 definition
   arch_activate_idle_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "arch_activate_idle_thread t \<equiv> return ()"

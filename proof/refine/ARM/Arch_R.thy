@@ -1428,6 +1428,7 @@ lemma ensureSafeMapping_valid_slots_duplicated':
   "\<lbrace>\<lambda>s. slots_duplicated_ensured entries s\<rbrace>
   ensureSafeMapping entries
   \<lbrace>\<lambda>rv s. valid_slots_duplicated' entries s\<rbrace>,-"
+  supply projectKOs[simp del]
   apply (simp add:ensureSafeMapping_def)
   apply (case_tac entries)
    apply (case_tac a)
@@ -1485,6 +1486,7 @@ lemma ensureSafeMapping_valid_slots_duplicated':
 (* FIXME: this lemma is too specific *)
 lemma lookupPTSlot_aligned:
   "\<lbrace>\<lambda>s. is_aligned vptr 16 \<and> valid_objs' s\<rbrace> lookupPTSlot pd vptr \<lbrace>\<lambda>p s. is_aligned p 6\<rbrace>,-"
+  supply projectKOs[simp del]
   apply (simp add:lookupPTSlot_def)
   apply (wp getPDE_wp |wpc|simp)+
   apply (clarsimp simp:obj_at'_real_def ko_wp_at'_def)

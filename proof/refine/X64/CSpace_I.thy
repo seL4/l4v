@@ -1693,16 +1693,17 @@ lemma aligned_untypedRange_non_empty:
   "\<lbrakk>capAligned c; isUntypedCap c\<rbrakk> \<Longrightarrow> untypedRange c \<noteq> {}"
   apply (frule untypedCapRange)
   apply (drule capAligned_capUntypedPtr)
-   apply (clarsimp simp: isCap_simps)
+   apply (clarsimp simp: gen_isCap_simps)
   apply blast
   done
 
 lemma untypedRange_not_emptyD: "untypedRange c' \<noteq> {} \<Longrightarrow> isUntypedCap c'"
-  by (case_tac c'; simp add: isCap_simps)
+  by (case_tac c'; simp add: gen_isCap_simps)
 
 lemma usableRange_subseteq:
   "\<lbrakk>capAligned c';isUntypedCap c'\<rbrakk> \<Longrightarrow> usableUntypedRange c' \<subseteq> untypedRange c'"
-  apply (clarsimp simp:isCap_simps capAligned_def shiftl_t2n' mask_def field_simps split:if_splits)
+  apply (clarsimp simp: gen_isCap_simps capAligned_def shiftl_t2n' mask_def field_simps
+                  split:if_splits)
   apply (erule order_trans[OF is_aligned_no_wrap'])
    apply (erule of_nat_power)
    apply (simp add:word_bits_def)+
@@ -1827,7 +1828,7 @@ lemma distinct_zombies_copyE:
     apply clarsimp
     apply (drule_tac x=y in spec)
     apply (drule_tac x=ptr' in spec)
-    apply (clarsimp simp: isCap_simps)
+    apply (clarsimp simp: gen_isCap_simps)
    apply clarsimp
    apply (drule_tac x=ptr in spec)
    apply (drule_tac x=x in spec)

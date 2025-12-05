@@ -149,7 +149,8 @@ definition tcb_relation :: "Structures_A.tcb \<Rightarrow> Structures_H.tcb \<Ri
    \<and> tcb_yield_to tcb = tcbYieldTo tcb'
    \<and> tcb_mcpriority tcb = tcbMCP tcb'
    \<and> tcb_priority tcb = tcbPriority tcb'
-   \<and> tcb_domain tcb = tcbDomain tcb'"
+   \<and> tcb_domain tcb = tcbDomain tcb'
+   \<and> tcb_flags tcb = word_to_tcb_flags (tcbFlags tcb')"
 
 lemma sc_sporadic_flag_eq_schedContextSporadicFlag[simp]:
   "sc_sporadic_flag = schedContextSporadicFlag"

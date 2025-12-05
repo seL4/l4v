@@ -265,6 +265,7 @@ definition
       tcb_yield_to = tcbYieldTo tcb,
       tcb_priority = tcbPriority tcb,
       tcb_domain = tcbDomain tcb,
+      tcb_flags = word_to_tcb_flags (tcbFlags tcb),
       tcb_arch = ArchTcbMap (tcbArch tcb)\<rparr>"
 
 definition

@@ -309,6 +309,7 @@ where
      tcb_priority           = undefined,
      tcb_time_slice         = undefined,
      tcb_domain             = 0,
+     tcb_flags              = undefined,
      tcb_arch               = \<lparr>tcb_context = undefined\<rparr> \<rparr>"
 
 
@@ -333,6 +334,7 @@ where
      tcb_priority           = undefined,
      tcb_time_slice         = undefined,
      tcb_domain             = 0,
+     tcb_flags              = undefined,
      tcb_arch               = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 definition
@@ -574,6 +576,10 @@ lemma is_aligned_0xC00000[simp]:
 lemma is_aligned_0xC05000[simp]:
   "ptrFromPAddr (addr_from_ppn (UCAST(64 \<rightarrow> 52) (addrFromPPtr 0xC05000 >> pageBits))) = 0xC05000"
   by (subst ptrFromPAddr_addr_from_ppn; fastforce simp: bit_simps is_aligned_mask mask_def)
+
+lemma state_hyp_refs_of_s1_empty[simp]:
+  "state_hyp_refs_of s1 = (\<lambda>_. {})"
+  by (auto simp: state_hyp_refs_of_def hyp_refs_of_def split: option.splits kernel_object.splits)
 
 lemma "pas_refined Sys1PAS s1"
   apply (clarsimp simp: pas_refined_def)
@@ -855,6 +861,7 @@ where
      tcb_priority           = undefined,
      tcb_time_slice         = undefined,
      tcb_domain             = 0,
+     tcb_flags              = undefined,
      tcb_arch               = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 
@@ -879,6 +886,7 @@ where
      tcb_priority           = undefined,
      tcb_time_slice         = undefined,
      tcb_domain             = 0,
+     tcb_flags              = undefined,
      tcb_arch               = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 (* the boolean in BlockedOnReceive is True if the object can receive but not send.
@@ -1082,6 +1090,10 @@ lemma thread_bound_ntfns_2[simp]:
   apply (simp add: get_tcb_def)
   apply (simp add: kh2_def kh2_obj_def)
   done
+
+lemma state_hyp_refs_of_s2_empty[simp]:
+  "state_hyp_refs_of s2 = (\<lambda>_. {})"
+  by (auto simp: state_hyp_refs_of_def hyp_refs_of_def split: option.splits kernel_object.splits)
 
 lemma "pas_refined Sys2PAS s2"
   apply (clarsimp simp: pas_refined_def)

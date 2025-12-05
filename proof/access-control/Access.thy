@@ -8,6 +8,22 @@ theory Access
 imports ArchAccess
 begin
 
+arch_requalify_consts
+  vspace_cap_rights_to_auth
+  arch_cap_auth_conferred
+  state_vrefs
+  aobj_ref'
+  acap_asid'
+  state_asids_to_policy_arch
+  integrity_asids_2
+  integrity_hyp_2
+  integrity_fpu_2
+  arch_integrity_obj_atomic
+  arch_integrity_obj_alt
+  arch_IP_update
+  auth_ipc_buffers
+  valid_cur_hyp (* FIXME AC: incorporate into invs *)
+
 subsection \<open>Policy wellformedness\<close>
 
 text\<open>
@@ -206,32 +222,36 @@ definition thread_st_auth where
 definition thread_bound_ntfns where
   "thread_bound_ntfns s \<equiv> \<lambda>p. case_option None tcb_bound_notification (get_tcb p s)"
 
-inductive_set state_bits_to_policy for caps thread_sts thread_bas cdt vrefs where
+inductive_set state_bits_to_policy for caps thread_sts thread_bas cdt vrefs hrefs where
   sbta_caps:
     "\<lbrakk> caps ptr = Some cap; oref \<in> obj_refs_ac cap; auth \<in> cap_auth_conferred cap \<rbrakk>
-       \<Longrightarrow> (fst ptr, auth, oref) \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs"
+       \<Longrightarrow> (fst ptr, auth, oref) \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
 | sbta_untyped:
     "\<lbrakk> caps ptr = Some cap; oref \<in> untyped_range cap \<rbrakk>
-       \<Longrightarrow> (fst ptr, Control, oref) \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs"
+       \<Longrightarrow> (fst ptr, Control, oref) \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
 | sbta_ts:
     "(oref', auth) \<in> thread_sts oref
-     \<Longrightarrow> (oref, auth, oref') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs"
+     \<Longrightarrow> (oref, auth, oref') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
 | sbta_bounds:
     "\<lbrakk> thread_bas oref = Some oref'; auth \<in> {Receive, Reset} \<rbrakk>
-       \<Longrightarrow> (oref, auth, oref') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs"
+       \<Longrightarrow> (oref, auth, oref') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
 | sbta_cdt:
     "\<lbrakk> cdt slot' = Some slot ; \<not>is_transferable (caps slot') \<rbrakk>
-       \<Longrightarrow> (fst slot, Control, fst slot') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs"
+       \<Longrightarrow> (fst slot, Control, fst slot') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
 | sbta_cdt_transferable:
     "cdt slot' = Some slot
-     \<Longrightarrow> (fst slot, DeleteDerived, fst slot') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs"
+     \<Longrightarrow> (fst slot, DeleteDerived, fst slot') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
 | sbta_vref:
     "(ptr', _, _, auth) \<in> vrefs ptr
-     \<Longrightarrow> (ptr, auth, ptr') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs"
+     \<Longrightarrow> (ptr, auth, ptr') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
+| sbta_href:
+    "\<lbrakk> (ptr',_) \<in> hrefs ptr \<rbrakk>
+       \<Longrightarrow> (ptr, Control, ptr') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
 
-definition state_objs_to_policy :: "det_ext state \<Rightarrow> (obj_ref \<times> auth \<times> obj_ref) set" where
+definition state_objs_to_policy :: "det_state \<Rightarrow> (obj_ref \<times> auth \<times> obj_ref) set" where
   "state_objs_to_policy s = state_bits_to_policy (caps_of_state s) (thread_st_auth s)
-                                                 (thread_bound_ntfns s) (cdt s) (state_vrefs s)"
+                                                 (thread_bound_ntfns s) (cdt s)
+                                                 (state_vrefs s) (state_hyp_refs_of s)"
 
 
 subsection \<open>Policy Refinement\<close>
@@ -281,15 +301,15 @@ the policy:
 
 \<close>
 
-abbreviation state_objs_in_policy :: "'a PAS \<Rightarrow> det_ext state \<Rightarrow> bool" where
+abbreviation state_objs_in_policy :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "state_objs_in_policy aag s \<equiv>
                 auth_graph_map (pasObjectAbs aag) (state_objs_to_policy s) \<subseteq> pasPolicy aag"
 
-abbreviation state_asids_to_policy :: "'a PAS \<Rightarrow> det_ext state \<Rightarrow> ('a \<times> auth \<times> 'a) set" where
+abbreviation state_asids_to_policy :: "'a PAS \<Rightarrow> det_state \<Rightarrow> ('a \<times> auth \<times> 'a) set" where
   "state_asids_to_policy aag s \<equiv>
      state_asids_to_policy_arch aag (caps_of_state s) (arch_state s) (state_vrefs s)"
 
-definition pas_refined :: "'a PAS \<Rightarrow> det_ext state \<Rightarrow> bool" where
+definition pas_refined :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "pas_refined aag \<equiv> \<lambda>s.
      pas_wellformed aag
    \<and> irq_map_wellformed aag s
@@ -421,7 +441,7 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko' where
      modify any thread that is waiting on it *)
 | troa_tcb_send:
     "\<lbrakk> ko = Some (TCB tcb); ko' = Some (TCB tcb');
-       tcb' = tcb \<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb), tcb_state := Running\<rparr>;
+       tcb' = tcb \<lparr>tcb_arch := arch_tcb_set_registers regs' (tcb_arch tcb), tcb_state := Running\<rparr>;
        direct_send subjects aag ep tcb
        \<or> indirect_send subjects aag (the (tcb_bound_notification tcb)) ep tcb \<rbrakk>
        \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
@@ -429,7 +449,7 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko' where
      to do that call, and insert a ReplyCap back towards a subject*)
 | troa_tcb_call:
     "\<lbrakk> ko = Some (TCB tcb); ko' = Some (TCB tcb');
-       tcb' = tcb \<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb), tcb_state := Running,
+       tcb' = tcb \<lparr>tcb_arch := arch_tcb_set_registers regs' (tcb_arch tcb), tcb_state := Running,
                    tcb_caller := ReplyCap caller False R\<rparr>;
        pasObjectAbs aag caller \<in> subjects;
        direct_call subjects aag ep (tcb_state tcb) \<rbrakk>
@@ -439,7 +459,7 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko' where
      the fault handler*)
 | troa_tcb_reply:
     "\<lbrakk> ko = Some (TCB tcb); ko' = Some (TCB tcb');
-       tcb' = tcb \<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb),
+       tcb' = tcb \<lparr>tcb_arch := arch_tcb_set_registers regs' (tcb_arch tcb),
                    tcb_state := new_st, tcb_fault := None\<rparr>;
        new_st = Running \<or> (tcb_fault tcb \<noteq> None \<and> (new_st = Restart \<or> new_st = Inactive));
        awaiting_reply (tcb_state tcb); aag_subjects_have_auth_to_label subjects aag Reply l \<rbrakk>
@@ -490,6 +510,13 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko' where
        tcb' = tcb\<lparr>tcb_arch := arch_IP_update (tcb_arch tcb),
                   tcb_state := Running\<rparr>;
        tcb_state tcb = Restart; activate \<rbrakk> \<comment> \<open>Anyone can do this\<close>
+       \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
+  (* Allow any FPU changes; constraints are imposed by integrity_fpu instead *)
+| troa_tcb_fpu:
+    "\<lbrakk> ko = Some (TCB tcb); ko' = Some (TCB tcb');
+       tcb' = tcb\<lparr>tcb_arch := new_arch\<rparr>;
+       arch_tcb_get_registers new_arch = arch_tcb_get_registers (tcb_arch tcb);
+       tcb_hyp_refs new_arch = tcb_hyp_refs (tcb_arch tcb) \<rbrakk>
        \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
   (* If there is a deletable_cap in a CNode, it must be allowed to be deleted *)
 | troa_cnode:
@@ -576,9 +603,10 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
        \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_tcb_send:
     "\<lbrakk> tro_tag TCBSend; ko = Some (TCB tcb); ko' = Some (TCB tcb');
-       \<exists>ctxt'. tcb' = tcb \<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb),
-                           tcb_state := Running, tcb_bound_notification := ntfn',
-                           tcb_caller := cap', tcb_ctable := ccap'\<rparr>;
+       tcb' = tcb \<lparr>tcb_arch := new_arch,
+                   tcb_state := Running, tcb_bound_notification := ntfn',
+                   tcb_caller := cap', tcb_ctable := ccap'\<rparr>;
+       tcb_hyp_refs new_arch = tcb_hyp_refs (tcb_arch tcb);
        tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
        reply_cap_deletion_integrity subjects aag (tcb_caller tcb) cap';
        reply_cap_deletion_integrity subjects aag (tcb_ctable tcb) ccap';
@@ -587,9 +615,10 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
        \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_tcb_call:
     "\<lbrakk> tro_tag TCBCall; ko = Some (TCB tcb); ko' = Some (TCB tcb');
-       \<exists>ctxt'. tcb' = tcb \<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb),
-                           tcb_state := Running, tcb_bound_notification := ntfn',
-                            tcb_caller := cap', tcb_ctable := ccap'\<rparr>;
+       tcb' = tcb \<lparr>tcb_arch := new_arch,
+                   tcb_state := Running, tcb_bound_notification := ntfn',
+                   tcb_caller := cap', tcb_ctable := ccap'\<rparr>;
+       tcb_hyp_refs new_arch = tcb_hyp_refs (tcb_arch tcb);
        pasObjectAbs aag caller \<in> subjects;
        tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
        reply_cap_deletion_integrity subjects aag (ReplyCap caller False R) cap';
@@ -598,10 +627,11 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
        \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_tcb_reply:
     "\<lbrakk> tro_tag TCBReply; ko = Some (TCB tcb); ko' = Some (TCB tcb');
-       \<exists>ctxt'. tcb' = tcb \<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb),
-                           tcb_state := new_st, tcb_fault := None,
-                           tcb_bound_notification := ntfn',
-                           tcb_caller := cap', tcb_ctable := ccap'\<rparr>;
+       tcb' = tcb \<lparr>tcb_arch := new_arch,
+                   tcb_state := new_st, tcb_fault := None,
+                   tcb_bound_notification := ntfn',
+                   tcb_caller := cap', tcb_ctable := ccap'\<rparr>;
+       tcb_hyp_refs new_arch = tcb_hyp_refs (tcb_arch tcb);
        new_st = Running \<or> (tcb_fault tcb \<noteq> None \<and> (new_st = Restart \<or> new_st = Inactive));
        tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
        reply_cap_deletion_integrity subjects aag (tcb_caller tcb) cap';
@@ -610,8 +640,10 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
        \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_tcb_receive:
     "\<lbrakk> tro_tag TCBReceive; ko = Some (TCB tcb); ko' = Some (TCB tcb');
-       tcb' = tcb \<lparr>tcb_state := new_st, tcb_bound_notification := ntfn',
+       tcb' = tcb \<lparr>tcb_state := new_st, tcb_arch := new_arch,
+                   tcb_bound_notification := ntfn',
                    tcb_caller := cap', tcb_ctable := ccap'\<rparr>;
+       tcb_hyp_refs new_arch = tcb_hyp_refs (tcb_arch tcb);
        new_st = Running \<or> ((new_st = Inactive \<and> call_blocked ep (tcb_state tcb)) \<or>
        (new_st = BlockedOnReply \<and> (allowed_call_blocked ep (tcb_state tcb))));
        tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
@@ -622,10 +654,11 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
        \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_tcb_restart:
     "\<lbrakk> tro_tag TCBRestart; ko  = Some (TCB tcb); ko' = Some (TCB tcb');
-       tcb' = tcb\<lparr>tcb_arch := new_arch, tcb_state := tcb_state tcb',
-                  tcb_bound_notification := ntfn', tcb_caller := cap', tcb_ctable := ccap'\<rparr>;
-       (tcb_state tcb' = Restart \<and> new_arch = tcb_arch tcb) \<or>
-       (tcb_state tcb' = Running \<and> new_arch = arch_IP_update (tcb_arch tcb));
+       tcb' = tcb \<lparr>tcb_arch := new_arch,
+                   tcb_state := tcb_state tcb', tcb_bound_notification := ntfn',
+                   tcb_caller := cap', tcb_ctable := ccap'\<rparr>;
+       tcb_hyp_refs new_arch = tcb_hyp_refs (tcb_arch tcb);
+       tcb_state tcb' = Restart \<or> tcb_state tcb' = Running;
        tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
        reply_cap_deletion_integrity subjects aag (tcb_caller tcb) cap';
        reply_cap_deletion_integrity subjects aag (tcb_ctable tcb) ccap';
@@ -634,16 +667,18 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
        \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_tcb_generic:
     "\<lbrakk> tro_tag TCBGeneric; ko = Some (TCB tcb); ko' = Some (TCB tcb');
-       tcb' = tcb \<lparr>tcb_bound_notification := ntfn', tcb_caller := cap', tcb_ctable := ccap'\<rparr>;
+       tcb' = tcb \<lparr>tcb_arch := new_arch, tcb_bound_notification := ntfn',
+                   tcb_caller := cap', tcb_ctable := ccap'\<rparr>;
+       tcb_hyp_refs new_arch = tcb_hyp_refs (tcb_arch tcb);
        tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag ;
        reply_cap_deletion_integrity subjects aag (tcb_caller tcb) cap';
        reply_cap_deletion_integrity subjects aag (tcb_ctable tcb) ccap' \<rbrakk>
        \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_tcb_activate:
     "\<lbrakk> tro_tag TCBActivate; ko  = Some (TCB tcb); ko' = Some (TCB tcb');
-       tcb' = tcb \<lparr>tcb_arch := arch_IP_update (tcb_arch tcb),
-                   tcb_caller := cap', tcb_ctable := ccap',
+       tcb' = tcb \<lparr>tcb_arch := new_arch, tcb_caller := cap', tcb_ctable := ccap',
                    tcb_state := Running, tcb_bound_notification := ntfn'\<rparr>;
+       tcb_hyp_refs new_arch = tcb_hyp_refs (tcb_arch tcb);
        tcb_state tcb = Restart;
        reply_cap_deletion_integrity subjects aag (tcb_caller tcb) cap';
        reply_cap_deletion_integrity subjects aag (tcb_ctable tcb) ccap';
@@ -824,6 +859,26 @@ definition integrity_interrupts ::
   "'a PAS \<Rightarrow> 'a set \<Rightarrow> irq \<Rightarrow> (obj_ref \<times> irq_state) \<Rightarrow> (obj_ref \<times> irq_state) \<Rightarrow> bool" where
   "integrity_interrupts aag subjects irq v v' \<equiv> v = v' \<or> pasIRQAbs aag irq \<in> subjects"
 
+subsection \<open>Abbreviations for arch-specific definitions\<close>
+
+abbreviation integrity_asids ::
+  "'a PAS \<Rightarrow> 'a set \<Rightarrow> obj_ref \<Rightarrow> asid \<Rightarrow> 'st::state_ext state \<Rightarrow> 's::state_ext state  \<Rightarrow> bool" where
+  "integrity_asids aag subjects x asid s s' \<equiv>
+   integrity_asids_2 aag subjects x asid (arch_state s) (arch_state s') (aobjs_of s) (aobjs_of s')"
+
+abbreviation integrity_hyp ::
+  "'a PAS \<Rightarrow> 'a set \<Rightarrow> obj_ref \<Rightarrow> 'st::state_ext state \<Rightarrow> 's::state_ext state \<Rightarrow> bool"
+ where
+  "integrity_hyp aag subjects x s s' \<equiv>
+   integrity_hyp_2 aag subjects x (machine_state s) (machine_state s')
+                   (arch_state s) (arch_state s') (aobjs_of s) (aobjs_of s')"
+
+abbreviation integrity_fpu ::
+  "'a PAS \<Rightarrow> 'a set \<Rightarrow> obj_ref \<Rightarrow> 'st::state_ext state \<Rightarrow> 's::state_ext state \<Rightarrow> bool"
+where
+  "integrity_fpu aag subjects x s s' \<equiv>
+   integrity_fpu_2 aag subjects x (machine_state s) (machine_state s') (kheap s) (kheap s')"
+
 
 subsection \<open>General integrity\<close>
 
@@ -839,7 +894,7 @@ policy. See @{term "state_objs_to_policy s"} and @{term "pas_refined aag s"}.
 \<close>
 
 definition integrity_subjects ::
-  "'a set \<Rightarrow> 'a PAS \<Rightarrow> bool \<Rightarrow> obj_ref set \<Rightarrow> det_ext state \<Rightarrow> det_ext state \<Rightarrow> bool" where
+  "'a set \<Rightarrow> 'a PAS \<Rightarrow> bool \<Rightarrow> obj_ref set \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> bool" where
   "integrity_subjects subjects aag activate X s s' \<equiv>
      (\<forall>x. integrity_obj aag activate subjects (pasObjectAbs aag x) (kheap s x) (kheap s' x))
    \<and> integrity_cdt_state aag subjects s s'
@@ -855,9 +910,11 @@ definition integrity_subjects ::
    \<and> (\<forall>x. integrity_device aag subjects x (tcb_states_of_state s) (tcb_states_of_state s')
                            (device_state (machine_state s) x)
                            (device_state (machine_state s') x))
-   \<and> (\<forall>x a. integrity_asids aag subjects x a s s')"
+   \<and> (\<forall>x a. integrity_asids aag subjects x a s s')
+   \<and> (\<forall>x. integrity_hyp aag subjects x s s')
+   \<and> (\<forall>x. integrity_fpu aag subjects x s s')"
 
-abbreviation "integrity pas \<equiv> integrity_subjects {pasSubject pas} pas (pasMayActivate pas)"
+abbreviation "integrity aag \<equiv> integrity_subjects {pasSubject aag} aag (pasMayActivate aag)"
 
 subsection \<open>Various definitions and abbreviations\<close>
 

@@ -1139,6 +1139,12 @@ lemma associate_vcpu_tcb_valid_objs[wp]:
                wp: arch_thread_get_wp
       | simp add: obj_at_def)+
 
+crunch associate_vcpu_tcb
+  for arm_current_fpu_owner[wp]: "\<lambda>s. P (arm_current_fpu_owner (arch_state s))"
+  and arch_tcb_cur_fpu[wp]: "\<lambda>s. P (arch_tcb_at itcb_cur_fpu p s)"
+  and valid_cur_fpu[wp]: valid_cur_fpu
+  (wp: valid_cur_fpu_lift_arch arch_thread_set_no_change_arch_tcb_at crunch_wps)
+
 lemma associate_vcpu_tcb_invs[wp]:
   "\<lbrace>invs and ex_nonz_cap_to vcpu and ex_nonz_cap_to tcb and vcpu_at vcpu and (\<lambda>s. tcb \<noteq> idle_thread s)\<rbrace>
    associate_vcpu_tcb vcpu tcb

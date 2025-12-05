@@ -22,9 +22,9 @@ lemma set_ntfn_valid_duplicate' [wp]:
   apply (clarsimp simp:updateObject_default_def assert_def bind_def
     alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
     assert_opt_def return_def fail_def split:if_splits option.splits)
-   apply (rule_tac ko = ba in valid_duplicates'_non_pd_pt_I)
+   apply (rule_tac ko="KONotification a" in valid_duplicates'_non_pd_pt_I)
        apply simp+
-  apply (rule_tac ko = ba in valid_duplicates'_non_pd_pt_I)
+  apply (rule_tac ko="KONotification a" in valid_duplicates'_non_pd_pt_I)
       apply simp+
   done
 
@@ -2007,7 +2007,7 @@ lemma tc_valid_duplicates':
                simp: isCap_simps)
   done
 
-crunch performTransfer, unbindNotification, bindNotification, setDomain
+crunch performTransfer, unbindNotification, bindNotification, setDomain, prepareSetDomain,postSetFlags, setFlags
   for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (ignore: threadSet wp: setObject_ksInterrupt updateObject_default_inv
      simp: crunch_simps)
@@ -2030,7 +2030,7 @@ lemma invokeTCB_valid_duplicates'[wp]:
      apply (clarsimp split:option.splits)
      apply (rename_tac option)
      apply (case_tac option, simp_all)
-    apply (simp add:invokeTCB_def | wp mapM_x_wp' | intro impI conjI | wpc)+
+    apply (simp add:invokeTCB_def invokeSetFlags_def | wp mapM_x_wp' | intro impI conjI | wpc)+
   done
 
 lemma performInvocation_valid_duplicates'[wp]:

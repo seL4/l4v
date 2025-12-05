@@ -169,7 +169,7 @@ lemma preemptionPoint_ccorres:
         apply (simp add: from_bool_0 whenE_def returnOk_def throwError_def
                          return_def split: option.splits)
         apply (clarsimp simp: cintr_def exception_defs)
-       apply wp+
+       apply wpsimp+
      apply vcg
     apply (unfold modifyWorkUnits_def)[1]
     apply wp

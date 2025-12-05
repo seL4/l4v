@@ -536,7 +536,7 @@ lemma cap_swap_valid_arch_state[wp, CNodeInv_AI_assms]:
   "\<lbrace>valid_arch_state and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
    cap_swap c a c' b
    \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps cap_swap_aobj_at)
+  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps cap_swap_typ_ats cap_swap_aobj_at)
 
 end
 

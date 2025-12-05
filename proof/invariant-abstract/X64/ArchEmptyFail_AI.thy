@@ -12,18 +12,12 @@ context Arch begin arch_global_naming
 
 named_theorems EmptyFail_AI_assms
 
-crunch_ignore (empty_fail)
-  (add: invalidateTLBEntry_impl invalidateTranslationSingleASID_impl
-        invalidateASID_impl ioapicMapPinToVector_impl
-        in8_impl in16_impl in32_impl out8_impl out16_impl out32_impl)
-
-lemma invalidateLocalPageStructureCacheASID_ef[simp,wp]:
-  "empty_fail (invalidateLocalPageStructureCacheASID vs asid)"
-  by (simp add: invalidateLocalPageStructureCacheASID_def)
-
 crunch
-  loadWord, load_word_offs, storeWord, getRestartPC, get_mrs, invalidate_page_structure_cache_asid
+  load_word_offs, get_mrs, invalidate_page_structure_cache_asid
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
+
+(* FIXME: remove from locale *)
+declare loadWord_empty_fail[EmptyFail_AI_assms]
 
 end
 
@@ -56,7 +50,7 @@ lemma port_in_empty_fail[simp, intro!]:
 crunch
   decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
   decode_set_priority, decode_set_mcpriority, decode_set_sched_params,
-  decode_set_tls_base
+  decode_set_tls_base, decode_set_flags
   for (empty_fail) empty_fail[wp]
   (simp: cap.splits arch_cap.splits split_def)
 
@@ -154,11 +148,7 @@ crunch maskInterrupt, empty_slot,
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
          notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
          kernel_object.splits vmpage_size.splits pde.splits bool.splits list.splits
-         set_object_def
-   ignore: nativeThreadUsingFPU_impl switchFpuOwner_impl)
-
-crunch setRegister, setNextPC
-  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
+         set_object_def)
 
 end
 
@@ -170,7 +160,7 @@ global_interpretation EmptyFail_AI_rec_del?: EmptyFail_AI_rec_del
 
 context Arch begin arch_global_naming
 crunch
-  cap_delete, choose_thread
+  cap_delete, choose_thread, arch_prepare_next_domain
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
 end
 
@@ -189,8 +179,7 @@ crunch possible_switch_to, handle_event, activate_thread
          bool.splits apiobject_type.splits aobject_type.splits notification.splits
          thread_state.splits endpoint.splits catch_def sum.splits cnode_invocation.splits
          page_table_invocation.splits page_invocation.splits asid_control_invocation.splits
-         asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits
-   ignore: resetTimer_impl)
+         asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits)
 end
 
 global_interpretation EmptyFail_AI_call_kernel?: EmptyFail_AI_call_kernel

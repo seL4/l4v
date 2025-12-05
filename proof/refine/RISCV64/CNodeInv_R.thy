@@ -4077,7 +4077,7 @@ lemma isEPsrc:
 lemma isEPbadge_src:
   "isEndpointCap src_cap \<Longrightarrow> capEPBadge scap = capEPBadge src_cap"
   using src_derived
-  by (clarsimp simp: isCap_simps weak_derived'_def)
+  by (clarsimp simp: gen_isCap_simps weak_derived'_def)
 
 lemma isNTFNsrc:
   "isNotificationCap scap = isNotificationCap src_cap"
@@ -4086,23 +4086,23 @@ lemma isNTFNsrc:
 lemma isNTFNbadge_src:
   "isNotificationCap src_cap \<Longrightarrow> capNtfnBadge scap = capNtfnBadge src_cap"
   using src_derived
-  by (clarsimp simp: isCap_simps weak_derived'_def)
+  by (clarsimp simp: gen_isCap_simps weak_derived'_def)
 
 lemma isEPdest:
   "isEndpointCap dcap = isEndpointCap dest_cap"
-  using dest_derived by (fastforce simp: isCap_simps weak_derived'_def)
+  using dest_derived by (fastforce simp: gen_isCap_simps weak_derived'_def)
 
 lemma isEPbadge_dest:
   "isEndpointCap dest_cap \<Longrightarrow> capEPBadge dcap = capEPBadge dest_cap"
-  using dest_derived by (auto simp: weak_derived'_def isCap_simps)
+  using dest_derived by (auto simp: weak_derived'_def gen_isCap_simps)
 
 lemma isNTFNdest:
   "isNotificationCap dcap = isNotificationCap dest_cap"
-  using dest_derived by (auto simp: weak_derived'_def isCap_simps)
+  using dest_derived by (auto simp: weak_derived'_def gen_isCap_simps)
 
 lemma isNTFNbadge_dest:
   "isNotificationCap dest_cap \<Longrightarrow> capNtfnBadge dcap = capNtfnBadge dest_cap"
-  using dest_derived by (auto simp: weak_derived'_def isCap_simps)
+  using dest_derived by (auto simp: weak_derived'_def gen_isCap_simps)
 
 context begin
 interpretation Arch .
@@ -4144,11 +4144,11 @@ end
 
 lemma sameRegion_ep:
   "\<lbrakk> sameRegionAs cap cap'; isEndpointCap cap \<rbrakk> \<Longrightarrow> isEndpointCap cap'"
-  by (auto simp: isCap_simps sameRegionAs_def3)
+  by (auto simp: gen_isCap_simps sameRegionAs_def3)
 
 lemma sameRegion_ntfn:
   "\<lbrakk> sameRegionAs cap cap'; isNotificationCap cap \<rbrakk> \<Longrightarrow> isNotificationCap cap'"
-  by (auto simp: isCap_simps sameRegionAs_def3)
+  by (auto simp: gen_isCap_simps sameRegionAs_def3)
 
 lemma (in mdb_swap) cteSwap_valid_badges:
   "valid_badges n"
@@ -4498,7 +4498,7 @@ begin
 
 lemma isUntyped_new:
   "isUntypedCap new = isUntypedCap old"
-  using derived by (auto simp: weak_derived'_def isCap_simps)
+  using derived by (auto simp: weak_derived'_def gen_isCap_simps)
 
 lemma capRange_new:
   "capRange new = capRange old"
@@ -6821,10 +6821,10 @@ lemma spec_corres_locate_Zombie:
      apply (clarsimp simp: valid_cap_def cap_aligned_def word_bits_def
                      split: option.split_asm)
     apply (simp add: mult.commute cte_level_bits_def)
-    apply (clarsimp simp: isCap_simps valid_cap_def)
+    apply (clarsimp simp: gen_isCap_simps valid_cap_def)
     apply (simp only: assert_def, subst if_P)
      apply (cases bits, simp_all add: zbits_map_def)
-     apply (clarsimp simp: cap_table_at_gsCNodes isCap_simps
+     apply (clarsimp simp: cap_table_at_gsCNodes gen_isCap_simps
                            zbits_map_def)
      apply (rule word_of_nat_less)
      apply (simp add: cap_aligned_def)

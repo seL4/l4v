@@ -2073,9 +2073,9 @@ lemma updateObject_ep_inv:
   by simp (rule updateObject_default_inv)
 
 lemma asUser_tcbQueued_inv[wp]:
-  "asUser t m \<lbrace>obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t'\<rbrace>"
+  "asUser t m \<lbrace>\<lambda>s. Q (obj_at' (\<lambda>tcb. P (tcbQueued tcb)) tcb_ptr s)\<rbrace>"
   unfolding asUser_def
-  by (wp threadSet_obj_at'_strongish threadGet_wp | clarsimp simp: obj_at'_def)+
+  by (wpsimp wp: threadSet_obj_at'_no_state threadGet_wp)
 
 crunch setThreadState
   for valid_sched_pointers[wp]: valid_sched_pointers
@@ -3650,9 +3650,9 @@ lemma suspend_flag_not_set:
   done
 
 crunch prepareThreadDelete
- for unqueued: "obj_at' (Not \<circ> tcbQueued) t"
-crunch prepareThreadDelete
- for inactive: "st_tcb_at' ((=) Inactive) t'"
+  for unqueued: "obj_at' (Not \<circ> tcbQueued) t"
+  and inactive: "st_tcb_at' ((=) Inactive) t'"
+  (simp: obj_at'_not_comp_fold)
 
 end
 end

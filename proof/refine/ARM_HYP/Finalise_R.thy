@@ -1265,7 +1265,7 @@ lemma not_Final_removeable:
   "\<not> isFinal cap sl (cteCaps_of s)
     \<Longrightarrow> removeable' sl s cap"
   apply (erule not_FinalE)
-   apply (clarsimp simp: removeable'_def isCap_simps)
+   apply (clarsimp simp: removeable'_def gen_isCap_simps)
   apply (clarsimp simp: cteCaps_of_def sameObjectAs_def2 removeable'_def
                         cte_wp_at_ctes_of)
   apply fastforce
@@ -1454,8 +1454,6 @@ lemma emptySlot_valid_irq_handlers'[wp]:
   apply auto
   done
 
-declare setIRQState_irq_states' [wp]
-
 context begin interpretation Arch .
 crunch emptySlot
   for irq_states'[wp]: valid_irq_states'
@@ -1466,7 +1464,6 @@ crunch emptySlot
 
 crunch emptySlot
   for pde_mappings'[wp]: "valid_pde_mappings'"
-end
 
 lemma deletedIRQHandler_irqs_masked'[wp]:
   "\<lbrace>irqs_masked'\<rbrace> deletedIRQHandler irq \<lbrace>\<lambda>_. irqs_masked'\<rbrace>"
@@ -1475,7 +1472,6 @@ lemma deletedIRQHandler_irqs_masked'[wp]:
   apply (simp add: irqs_masked'_def)
   done
 
-context begin interpretation Arch . (*FIXME: arch-split*)
 crunch emptySlot
   for irqs_masked'[wp]: "irqs_masked'"
 
@@ -2078,7 +2074,7 @@ lemma (in vmdb) isFinal_no_subtree:
    apply (erule_tac x="mdbNext n" in allE)
    apply simp
    apply (clarsimp simp: isMDBParentOf_CTE final_matters_sameRegion_sameObject)
-   apply (clarsimp simp: isCap_simps sameObjectAs_def3)
+   apply (clarsimp simp: gen_isCap_simps sameObjectAs_def3)
   apply clarsimp
   done
 
@@ -2474,7 +2470,8 @@ lemma finaliseCap_True_invs[wp]:
   done
 
 crunch flushSpace
-  for invs'[wp]: "invs'" (ignore: doMachineOp)
+  for invs'[wp]: "invs'"
+  (ignore: doMachineOp)
 
 lemma invs_asid_update_strg':
   "invs' s \<and> tab = armKSASIDTable (ksArchState s) \<longrightarrow>
@@ -3423,12 +3420,12 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
            | simp add: isZombie_Null isThreadCap_threadCapRefs_tcbptr
                        isArchObjectCap_Cap_capCap
            | (rule hoare_strengthen_post [OF arch_finaliseCap_removeable[where slot=slot]],
-                  clarsimp simp: isCap_simps)
+              clarsimp simp: gen_isCap_simps)
            | wpc)+
   apply clarsimp
   apply (frule cte_wp_at_valid_objs_valid_cap', clarsimp+)
   apply (case_tac "cteCap cte",
-         simp_all add: isCap_simps capRange_def
+         simp_all add: gen_isCap_simps capRange_def
                        final_matters'_def gen_objBits_simps
                        not_Final_removeable finaliseCap_def,
          simp_all add: removeable'_def)[1]
@@ -3789,9 +3786,8 @@ lemma finaliseCap_zombie_cap[wp]:
   apply (simp add: finaliseCap_def Let_def
              cong: if_cong split del: if_split)
   apply (rule hoare_pre)
-   apply (wp suspend_cte_wp_at'
-             deletingIRQHandler_cte_preserved
-                 | clarsimp simp: finaliseCap_def isCap_simps | wpc)+
+   apply (wp suspend_cte_wp_at' deletingIRQHandler_cte_preserved
+          | clarsimp simp: finaliseCap_def gen_isCap_simps | wpc)+
   done
 
 lemma finaliseCap_zombie_cap':
@@ -3812,7 +3808,7 @@ lemma finaliseCap_cte_cap_wp_to[wp]:
    apply (wp suspend_cte_wp_at'
              deletingIRQHandler_cte_preserved
              hoare_vcg_ex_lift
-                 | clarsimp simp: finaliseCap_def isCap_simps
+                 | clarsimp simp: finaliseCap_def gen_isCap_simps
                  | rule conjI
                  | wpc)+
   apply fastforce
@@ -3835,7 +3831,7 @@ lemma finaliseCap_valid_cap[wp]:
    apply (wp | simp only: valid_NullCap o_def fst_conv | wpc)+
   apply simp
   apply (intro conjI impI)
-   apply (clarsimp simp: valid_cap'_def isCap_simps capAligned_def
+   apply (clarsimp simp: valid_cap'_def gen_isCap_simps capAligned_def
                          gen_objBits_simps shiftL_nat)+
   done
 
@@ -3895,7 +3891,7 @@ lemma (in delete_one) deletingIRQHandler_corres:
           apply (clarsimp simp: cte_wp_at_caps_of_state state_relation_def)
           apply (drule caps_of_state_cteD)
           apply (drule(1) pspace_relation_cte_wp_at, clarsimp+)
-          apply (auto simp: cte_wp_at_ctes_of is_cap_simps isCap_simps)[1]
+          apply (auto simp: cte_wp_at_ctes_of is_cap_simps gen_isCap_simps)[1]
          apply simp
          apply (rule corres_guard_imp, rule delete_one_corres[unfolded dc_def])
           apply (auto simp: cte_wp_at_caps_of_state is_cap_simps can_fast_finalise_def)[1]
@@ -4134,7 +4130,7 @@ lemma finaliseCap_corres:
                       final' = isFinal cap' (cte_map sl) (cteCaps_of s)))
            (finalise_cap cap final) (finaliseCap cap' final' flag)"
   supply invs_no_0_obj'[simp]
-  apply (cases cap, simp_all add: finaliseCap_def isCap_simps
+  apply (cases cap, simp_all add: finaliseCap_def gen_isCap_simps
                                   corres_liftM2_simp[unfolded liftM_def]
                                   o_def dc_def[symmetric] when_def
                                   can_fast_finalise_def

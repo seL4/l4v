@@ -3117,6 +3117,7 @@ lemma cte_wp_at_modify_pde:
   shows
   "\<lbrakk>ksPSpace s ptr' = Some (KOArch (KOPDE pde)); pspace_aligned' s;cte_wp_at' \<top> ptr s\<rbrakk>
        \<Longrightarrow> cte_wp_at' \<top> ptr (s\<lparr>ksPSpace := (ksPSpace s)(ptr' \<mapsto> (KOArch (KOPDE pde')))\<rparr>)"
+  supply projectKOs[simp del]
   apply (simp add:cte_wp_at_obj_cases_mask obj_at'_real_def)
   apply (frule(1) pspace_alignedD')
   apply (elim disjE)
@@ -3126,7 +3127,7 @@ lemma cte_wp_at_modify_pde:
       apply (simp add:objBits_simps archObjSize_def)
      apply (clarsimp simp:projectKO_opt_cte)
     apply (simp add:ps_clear_def)+
-    apply (clarsimp simp:objBits_simps archObjSize_def)
+    apply (clarsimp simp: objBits_simps archObjSize_def)
    apply (simp add:ps_clear_def)
    apply (rule ccontr)
    apply simp
@@ -3374,6 +3375,7 @@ lemma threadSet_det:
   \<Longrightarrow> threadSet f ptr s =
   modify (ksPSpace_update (\<lambda>ps. ps(ptr \<mapsto>
     (\<lambda>t. case t of Some (KOTCB tcb) \<Rightarrow> KOTCB (f tcb)) (ps ptr)))) s"
+  supply projectKOs[simp del]
   apply (clarsimp simp add:threadSet_def bind_def obj_at'_def)
   apply (clarsimp simp:projectKO_eq projectKO_opt_tcb
     split: Structures_H.kernel_object.splits)
@@ -3401,6 +3403,7 @@ lemma setCTE_modify_tcbDomain_commute:
     note blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
           atLeastAtMost_iff
+    note projectKOs[simp del]
 
     have hint:
       "\<And>P ptr a cte b src ra. monad_commute (tcb_at' ptr and ko_wp_at' P a )
@@ -4665,9 +4668,6 @@ lemma createObjects'_page_directory_at':
   apply (simp add:obj_at'_real_def objBits_simps archObjSize_def pdeBits_def)
   apply (erule ko_wp_at'_weakenE)
   apply (simp add: projectKO_opt_pde)
-  apply (case_tac ko; simp)
-  apply (rename_tac arch_kernel_object)
-  apply (case_tac arch_kernel_object; simp)
   done
 
 lemma gsCNodes_upd_createObjects'_comm:

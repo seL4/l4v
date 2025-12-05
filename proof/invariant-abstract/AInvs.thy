@@ -567,6 +567,15 @@ lemma switch_to_thread_active_sc_tcb_at_cur_thread:
    \<lbrace>\<lambda>_ s. active_sc_tcb_at (cur_thread s) s\<rbrace>"
   by (wpsimp simp: switch_to_thread_def)
 
+lemma guarded_switch_to_active_sc_tcb_at_cur_thread:
+  "\<lbrace>valid_idle\<rbrace>
+   guarded_switch_to thread
+   \<lbrace>\<lambda>_ s. active_sc_tcb_at (cur_thread s) s\<rbrace>"
+  unfolding guarded_switch_to_def
+  apply (wpsimp wp: switch_to_thread_active_sc_tcb_at_cur_thread thread_get_wp')
+  apply (clarsimp simp: schedulable_def2)
+  done
+
 lemma choose_thread_active_sc_tcb_at_cur_thread:
   "\<lbrace>valid_idle\<rbrace>
    choose_thread
@@ -579,16 +588,7 @@ lemma choose_thread_active_sc_tcb_at_cur_thread:
    apply wpsimp
    apply (clarsimp simp: valid_idle_def vs_all_heap_simps pred_tcb_at_def obj_at_def
                          MIN_REFILLS_def active_sc_def)
-  apply (clarsimp simp: guarded_switch_to_def)
-  apply (rule bind_wp[OF _ thread_get_sp])
-  apply (rule bind_wp[OF _ assert_opt_sp])
-  apply (rule bind_wp[OF _ gets_sp])
-  apply (rule bind_wp[OF _ assert_sp])
-  apply (wpsimp wp: switch_to_thread_active_sc_tcb_at_cur_thread hoare_vcg_imp_lift')
-  apply (frule hd_max_non_empty_queue_in_ready_queues)
-  apply (prop_tac "tcb_at (hd (max_non_empty_queue (ready_queues s (cur_domain s)))) s")
-   apply (clarsimp simp: obj_at_def is_tcb_def)
-  apply (clarsimp simp: vs_all_heap_simps obj_at_def pred_tcb_at_def schedulable_def2)
+  apply (wpsimp wp: guarded_switch_to_active_sc_tcb_at_cur_thread)
   done
 
 lemma schedule_choose_new_thread_active_sc_tcb_at_cur_thread:
@@ -600,13 +600,13 @@ lemma schedule_choose_new_thread_active_sc_tcb_at_cur_thread:
   done
 
 lemma schedule_switch_thread_branch_active_sc_tcb_at_cur_thread:
-  "\<lbrace>\<lambda>s. active_sc_tcb_at candidate s \<and> valid_idle s\<rbrace>
+  "\<lbrace>valid_idle\<rbrace>
    schedule_switch_thread_branch candidate ct ct_schdble
    \<lbrace>\<lambda>_ s. active_sc_tcb_at (cur_thread s) s\<rbrace>"
   apply clarsimp
   apply (rule bind_wp_fwd_skip, solves wpsimp)+
   apply (wpsimp wp: schedule_choose_new_thread_active_sc_tcb_at_cur_thread
-                    switch_to_thread_active_sc_tcb_at_cur_thread)
+                    guarded_switch_to_active_sc_tcb_at_cur_thread)
   done
 
 lemma schedule_cur_sc_active:
@@ -625,8 +625,7 @@ lemma schedule_cur_sc_active:
    apply (subst bind_dummy_ret_val)+
    apply (rule hoare_weaken_pre)
     apply (rule schedule_switch_thread_branch_active_sc_tcb_at_cur_thread)
-   apply (fastforce dest: valid_sched_weak_valid_sched_action
-                    simp: weak_valid_sched_action_def vs_all_heap_simps)
+   apply clarsimp
   apply (wpsimp wp: schedule_choose_new_thread_active_sc_tcb_at_cur_thread)
   done
 
@@ -1673,52 +1672,54 @@ lemma invoke_tcb_schact_is_rct_imp_ct_activatable:
    \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
   (is "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_. ?Q\<rbrace>")
   apply (cases iv; clarsimp)
+           apply (clarsimp simp: liftE_def bind_assoc)
+           apply (rule_tac P'="?Q" in hoare_weaken_pre[rotated])
+            apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+            apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+            apply wpsimp
           apply (clarsimp simp: liftE_def bind_assoc)
           apply (rule_tac P'="?Q" in hoare_weaken_pre[rotated])
            apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-           apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
-           apply wpsimp
+          apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+          apply wpsimp
          apply (clarsimp simp: liftE_def bind_assoc)
          apply (rule_tac P'="?Q" in hoare_weaken_pre[rotated])
           apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-         apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+         apply (rule bind_wp_fwd_skip,
+                solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift' crunch_wps mapM_x_wp')+\<close>)+
          apply wpsimp
-        apply (clarsimp simp: liftE_def bind_assoc)
-        apply (rule_tac P'="?Q" in hoare_weaken_pre[rotated])
-         apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-        apply (rule bind_wp_fwd_skip,
-               solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift' crunch_wps mapM_x_wp')+\<close>)+
-        apply wpsimp
-       subgoal for target cnode_index cslot_ptr fault_handler timeout_handler croot vroot buffer
-         apply wp
-              apply (wpsimp wp: install_tcb_frame_cap_schact_is_rct_imp_ct_activatable)
-             apply (invoke_tcb_install_tcb_cap_helper wp: install_tcb_cap_schact_is_rct_imp_ct_activatable)+
-         apply simp
-         apply (strengthen tcb_cap_valid_ep_strgs)
-         apply (clarsimp cong: conj_cong)
-         apply (intro conjI impI;
-                clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats
-                               ct_in_state_def pred_tcb_at_def obj_at_def
-                        split: thread_state.splits)
-             apply (case_tac "tcb_state tcb"; clarsimp)
-            apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
-           apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
-           apply (metis (no_types, lifting) cap.simps(38) fst_conv is_obj_defs(3) o_apply obj_atI
-                                            option.simps(5) real_cte_at_not_tcb_at snd_conv)
-          apply auto
-         done
-      apply (rule validE_valid)
-      apply (rule_tac Q'="\<lambda>_ . ?Q" in bindE_wp_fwd)
-       apply (wpsimp wp: install_tcb_cap_schact_is_rct_imp_ct_activatable)
-       apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-      apply (rule bindE_wp_fwd_skip, solves \<open>wpsimp wp: hoare_vcg_imp_lift'\<close>)+
-      apply (wpsimp wp: hoare_vcg_imp_lift')
+        subgoal for target cnode_index cslot_ptr fault_handler timeout_handler croot vroot buffer
+          apply wp
+               apply (wpsimp wp: install_tcb_frame_cap_schact_is_rct_imp_ct_activatable)
+              apply (invoke_tcb_install_tcb_cap_helper wp: install_tcb_cap_schact_is_rct_imp_ct_activatable)+
+          apply simp
+          apply (strengthen tcb_cap_valid_ep_strgs)
+          apply (clarsimp cong: conj_cong)
+          apply (intro conjI impI;
+                 clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats
+                                ct_in_state_def pred_tcb_at_def obj_at_def
+                         split: thread_state.splits)
+              apply (case_tac "tcb_state tcb"; clarsimp)
+             apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
+            apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
+            apply (metis (no_types, lifting) cap.simps(38) fst_conv is_obj_defs(3) o_apply obj_atI
+                                             option.simps(5) real_cte_at_not_tcb_at snd_conv)
+           apply auto
+          done
+       apply (rule validE_valid)
+       apply (rule_tac Q'="\<lambda>_ . ?Q" in bindE_wp_fwd)
+        apply (wpsimp wp: install_tcb_cap_schact_is_rct_imp_ct_activatable)
+        apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+       apply (rule bindE_wp_fwd_skip, solves \<open>wpsimp wp: hoare_vcg_imp_lift'\<close>)+
+       apply (wpsimp wp: hoare_vcg_imp_lift')
+      apply wpsimp
+      apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
      apply wpsimp
      apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-    apply wpsimp
-    apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-   apply (rename_tac ntfnptr_opt)
-   apply (case_tac ntfnptr_opt; clarsimp)
+    apply (rename_tac ntfnptr_opt)
+    apply (case_tac ntfnptr_opt; clarsimp)
+     apply (wpsimp wp: hoare_vcg_imp_lift')
+     apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
     apply (wpsimp wp: hoare_vcg_imp_lift')
     apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
    apply (wpsimp wp: hoare_vcg_imp_lift')
@@ -2060,7 +2061,7 @@ crunch check_domain_time
 lemma is_refill_ready_imp_cur_sc_offset_ready_zero:
   "\<lbrakk>is_refill_ready (cur_sc s) s\<rbrakk> \<Longrightarrow> cur_sc_offset_ready 0 s"
   apply (clarsimp simp: vs_all_heap_simps refill_ready_no_overflow_def refill_ready_def)
-  apply (metis le_antisym nat_le_linear unat_plus_gt_trans word_less_eq_iff_unsigned)
+  apply (metis word_less_eq_iff_unsigned)
   done
 
 lemma commit_time_cur_sc_offset_ready_and_sufficient_consumed_time:
@@ -2182,7 +2183,7 @@ lemma switch_sched_context_cur_sc_offset_ready_and_sufficient_consumed_time:
    apply (rule_tac Q'="\<lambda>_ s. is_refill_ready scp s \<and> consumed_time s =  0" in bind_wp)
     apply wpsimp
     apply (clarsimp simp: vs_all_heap_simps refill_ready_no_overflow_def refill_ready_def)
-    apply (metis le_antisym nat_le_linear unat_plus_gt_trans word_less_eq_iff_unsigned)
+    apply (metis word_less_eq_iff_unsigned)
    apply (simp add: bind_assoc)
    apply (intro hoare_vcg_conj_lift_pre_fix)
     apply (wpsimp wp: commit_time_is_refill_ready_other hoare_drop_imps)
@@ -2250,6 +2251,14 @@ lemma switch_to_thread_cur_sc_offset_ready_and_sufficient:
                         in_ready_q_def refill_ready_no_overflow_def refill_ready_def)
   done
 
+lemma guarded_switch_to_cur_sc_offset_ready_and_sufficient:
+  "\<lbrace>\<lambda>s. cur_sc_more_than_ready s \<and> released_sc_tcb_at thread s \<and> active_scs_valid s\<rbrace>
+   guarded_switch_to thread
+   \<lbrace>\<lambda>_ s. cur_sc_tcb_are_bound s \<and> cur_thread s \<noteq> idle_thread s
+          \<longrightarrow> cur_sc_offset_ready (consumed_time s) s \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
+  unfolding guarded_switch_to_def
+  by (wpsimp wp: switch_to_thread_cur_sc_offset_ready_and_sufficient thread_get_wp')
+
 lemma choose_thread_cur_sc_offset_ready_and_sufficient:
   "\<lbrace>\<lambda>s. cur_sc_more_than_ready s \<and> valid_ready_qs s \<and> active_scs_valid s \<and> invs s
         \<and> current_time_bounded s\<rbrace>
@@ -2262,9 +2271,7 @@ lemma choose_thread_cur_sc_offset_ready_and_sufficient:
    apply (rule_tac Q'="\<lambda>_ s. cur_thread s = idle_thread s" in hoare_post_imp)
     apply fastforce
    apply wpsimp
-  apply (clarsimp simp: guarded_switch_to_def)
-  apply (wpsimp wp: switch_to_thread_cur_sc_offset_ready_and_sufficient thread_get_wp)
-  apply (clarsimp simp: obj_at_def)
+  apply (wpsimp wp: guarded_switch_to_cur_sc_offset_ready_and_sufficient)
   apply (frule hd_max_non_empty_queue_in_ready_queues)
   apply (fastforce simp: valid_ready_qs_def vs_all_heap_simps in_ready_q_def)
   done
@@ -2324,7 +2331,7 @@ lemma schedule_switch_thread_branch_cur_sc_offset_ready_and_sufficient:
   apply (simp flip: bind_assoc)
   apply (rule bind_wp)
    apply wpsimp
-  apply (wpsimp wp: switch_to_thread_cur_sc_offset_ready_and_sufficient)
+  apply (wpsimp wp: guarded_switch_to_cur_sc_offset_ready_and_sufficient)
   apply (clarsimp simp: valid_sched_action_def weak_valid_sched_action_def)
   done
 
@@ -2334,6 +2341,13 @@ lemma switch_to_thread_ct_released[wp]:
    \<lbrace>\<lambda>_. ct_released\<rbrace>"
   apply (wpsimp simp: switch_to_thread_def)
   done
+
+lemma guarded_switch_to_ct_released[wp]:
+  "\<lbrace>released_sc_tcb_at thread\<rbrace>
+   guarded_switch_to thread
+   \<lbrace>\<lambda>_. ct_released\<rbrace>"
+  unfolding guarded_switch_to_def
+  by (wpsimp wp: thread_get_wp')
 
 lemma choose_thread_ct_not_idle_imp_ct_released[wp]:
   "\<lbrace>valid_ready_qs\<rbrace>
@@ -2379,7 +2393,7 @@ lemma schedule_switch_thread_branch_ct_not_idle_imp_ct_released:
    apply (wpsimp wp: schedule_choose_new_thread_ct_not_idle_imp_ct_released)
    apply (clarsimp simp: valid_sched_action_def weak_valid_sched_action_def vs_all_heap_simps
                          obj_at_kh_kheap_simps)
-  apply (wpsimp wp: schedule_choose_new_thread_ct_not_idle_imp_ct_released hoare_drop_imps)
+  apply (wpsimp wp: hoare_drop_imps)
   apply (clarsimp simp: valid_sched_action_def weak_valid_sched_action_def vs_all_heap_simps
                         obj_at_kh_kheap_simps)
   done

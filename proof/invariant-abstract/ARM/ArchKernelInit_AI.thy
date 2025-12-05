@@ -258,7 +258,7 @@ lemma starting_cur_thread_not_live:
    (tcb_state tcb = Inactive \<or> tcb_state tcb = IdleThreadState)  \<Longrightarrow>
    tcb_sched_context tcb = Some idle_sc_ptr \<Longrightarrow>
    (live (TCB tcb) = False)"
-  by (clarsimp simp: live_def hyp_live_def)
+  by (clarsimp simp: live_def hyp_live_def arch_tcb_live_def)
 
 lemma starting_cur_sc_not_live:
   "sc_yield_from sc = None \<Longrightarrow>
@@ -342,7 +342,7 @@ lemma invs_A:
     apply (rule impI, rule conjI)+
       apply (clarsimp simp: idle_sc_ptr_def)
      apply (clarsimp simp: starting_cur_thread_not_live)
-    apply (clarsimp simp: idle_sc_ptr_def live_def hyp_live_def default_sched_context_def
+    apply (clarsimp simp: idle_sc_ptr_def live_def hyp_live_def arch_tcb_live_def default_sched_context_def
                           starting_cur_sc_not_live[simplified idle_thread_ptr_def])
    apply (rule conjI)
     apply (clarsimp simp: zombies_final_def cte_wp_at_cases state_defs
@@ -387,6 +387,7 @@ lemma invs_A:
    apply (rule conjI)
     apply (simp add: valid_global_pts_def state_defs)
    apply (simp add: state_defs is_inv_def)
+  apply (rule conjI, clarsimp simp: valid_cur_fpu_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_irq_node_def obj_at_def state_defs
                          is_cap_table_def wf_empty_bits

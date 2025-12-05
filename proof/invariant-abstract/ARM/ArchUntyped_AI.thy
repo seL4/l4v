@@ -574,7 +574,7 @@ lemma create_cap_valid_arch_state[wp, Untyped_AI_assms]:
   "\<lbrace>valid_arch_state and cte_wp_at (\<lambda>_. True) cref\<rbrace>
    create_cap tp sz p dev (cref,oref)
    \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
-  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps create_cap_aobj_at)
+  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps create_cap_tcb create_cap_aobj_at)
 
 lemma set_cap_non_arch_valid_arch_state[Untyped_AI_assms]:
  "\<lbrace>\<lambda>s. valid_arch_state s \<and> cte_wp_at (\<lambda>_. \<not>is_arch_cap cap) ptr s\<rbrace>

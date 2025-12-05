@@ -806,57 +806,59 @@ lemma state_objs_transform:
   "\<lbrakk> einvs s; (x, a, y) \<in> state_objs_to_policy s \<rbrakk> \<Longrightarrow>
                (x, a, y) \<in> cdl_state_objs_to_policy (transform s)"
   apply (erule state_objs_to_policy_cases)
+         apply (simp add:fst_transform_cslot_ptr)
+         apply (rule_tac ptr="transform_cslot_ptr ptr" and auth=auth and oref=oref and
+                         cap="transform_cap cap" and s="transform s" in csta_caps)
+           apply (rule caps_of_state_transform_opt_cap)
+            apply simp
+           apply (simp add:idle_thread_no_authority)
+          apply (case_tac cap; simp)
+          apply (rename_tac arch_cap)
+          apply (case_tac arch_cap; simp)
+         apply (simp add:cap_auth_conferred_transform)
         apply (simp add:fst_transform_cslot_ptr)
-        apply (rule_tac ptr="transform_cslot_ptr ptr" and auth=auth and oref=oref and
-                        cap="transform_cap cap" and s="transform s" in csta_caps)
+        apply (rule_tac ptr="transform_cslot_ptr ptr" and auth=Control and oref=oref and
+                         cap="transform_cap cap" and s="transform s" in csta_caps)
           apply (rule caps_of_state_transform_opt_cap)
            apply simp
-          apply (simp add:idle_thread_no_authority)
-         apply (case_tac cap; simp)
-         apply (rename_tac arch_cap)
-         apply (case_tac arch_cap; simp)
-        apply (simp add:cap_auth_conferred_transform)
-       apply (simp add:fst_transform_cslot_ptr)
-       apply (rule_tac ptr="transform_cslot_ptr ptr" and auth=Control and oref=oref and
-                        cap="transform_cap cap" and s="transform s" in csta_caps)
-         apply (rule caps_of_state_transform_opt_cap)
-          apply simp
-         apply (simp add:idle_thread_no_untyped_range)
-        apply (case_tac cap, (simp add:untyped_range_transform del:untyped_range.simps(1))+)
-       apply (case_tac cap, (simp add:cdl_cap_auth_conferred_def)+)
-      apply (rule thread_st_auth_transform, simp+)
-     apply (rule thread_bound_ntfns_transform, simp+)
+          apply (simp add:idle_thread_no_untyped_range)
+         apply (case_tac cap, (simp add:untyped_range_transform del:untyped_range.simps(1))+)
+        apply (case_tac cap, (simp add:cdl_cap_auth_conferred_def)+)
+       apply (rule thread_st_auth_transform, simp+)
+      apply (rule thread_bound_ntfns_transform, simp+)
 
-    apply (simp add:fst_transform_cslot_ptr)
-    apply (rule_tac slot="transform_cslot_ptr slot" and slot'="transform_cslot_ptr slot'"
-                    and s="transform s" in csta_cdt)
-     apply (simp add:transform_def)
-     apply (rule transform_cdt_some)
-      apply (simp add:invs_mdb_cte)
-     apply simp
-    apply (fastforce intro: cdl_transferable_implies_transferable)
+     apply (simp add:fst_transform_cslot_ptr)
+     apply (rule_tac slot="transform_cslot_ptr slot" and slot'="transform_cslot_ptr slot'"
+                     and s="transform s" in csta_cdt)
+      apply (simp add:transform_def)
+      apply (rule transform_cdt_some)
+       apply (simp add:invs_mdb_cte)
+      apply simp
+     apply (fastforce intro: cdl_transferable_implies_transferable)
 
-   apply (clarsimp split: prod.splits)
-   subgoal for slot pslot
-     apply (rule cdl_state_objs_to_policy_intros(3)
-                   [where slot'="(y, nat (bl_to_bin slot))" and slot="(x, nat (bl_to_bin pslot))",
-                    simplified])
-     apply (frule transform_cdt_slot_inj_on_mdb_cte_at[OF invs_mdb_cte])
-     apply (clarsimp simp: cdt_transform map_lift_over_def transform_cslot_ptr_def)
-     apply safe
-      apply (rule_tac x=pslot in exI)
-      apply (subst inv_into_f_eq[where x="(y, slot)"])
-         apply (fastforce simp: inj_on_def)
-        apply blast
-       apply simp
-      apply blast
+    apply (clarsimp split: prod.splits)
+    subgoal for slot pslot
+    apply (rule cdl_state_objs_to_policy_intros(3)
+                  [where slot'="(y, nat (bl_to_bin slot))" and slot="(x, nat (bl_to_bin pslot))",
+                   simplified])
+    apply (frule transform_cdt_slot_inj_on_mdb_cte_at[OF invs_mdb_cte])
+    apply (clarsimp simp: cdt_transform map_lift_over_def transform_cslot_ptr_def)
+    apply safe
+     apply (rule_tac x=pslot in exI)
+     apply (subst inv_into_f_eq[where x="(y, slot)"])
+        apply (fastforce simp: inj_on_def)
+       apply blast
+      apply simp
      apply blast
-     done
+    apply blast
+    done
 
-  apply (subgoal_tac "ptr \<noteq> idle_thread s")
-   apply (simp add:state_vrefs_transform)
-  apply (clarsimp simp:state_vrefs_def vs_refs_no_global_pts_def invs_def valid_state_def
-                       valid_idle_def pred_tcb_at_def obj_at_def)
+   apply (subgoal_tac "ptr \<noteq> idle_thread s")
+    apply (simp add:state_vrefs_transform)
+   apply (clarsimp simp:state_vrefs_def vs_refs_no_global_pts_def invs_def valid_state_def
+                        valid_idle_def pred_tcb_at_def obj_at_def)
+  apply (clarsimp simp: state_hyp_refs_of_def hyp_refs_of_def
+                 split: option.splits kernel_object.splits)
   done
 
 lemma state_objs_transform_rev:

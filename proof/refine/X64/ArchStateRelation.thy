@@ -186,7 +186,8 @@ definition arch_state_relation :: "(arch_state \<times> X64_H.kernel_state) set"
        \<and> x64_allocated_io_ports s = x64KSAllocatedIOPorts s'
        \<and> x64_num_ioapics s = x64KSNumIOAPICs s'
        \<and> x64_ioapic_nirqs s = x64KSIOAPICnIRQs s'
-       \<and> x64_irq_relation (x64_irq_state s) (x64KSIRQState s')}"
+       \<and> x64_irq_relation (x64_irq_state s) (x64KSIRQState s')
+       \<and> x64_current_fpu_owner s = x64KSCurFPUOwner s'}"
 
 end
 end

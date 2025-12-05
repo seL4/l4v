@@ -24,30 +24,31 @@ end_qualify
 section "X64-specific invariant definitions"
 
 qualify X64 (in Arch)
-(* X64 has no interest for iarch_tcb (introduced for ARM_HYP) ,
-    and we consider no non-trivial predicates of iarch_tcb,
-    so an unspecified typedecl seems appropriate.
-   In contrast to using a unit type, this avoids
-    over-simplification of idle_tcb_at predicates,
-    which would make it hard to use facts that talk about idle_tcb_at. *)
-typedecl iarch_tcb
+record iarch_tcb =
+  itcb_cur_fpu :: bool
 end_qualify
 
 context Arch begin arch_global_naming
 
-definition
-  arch_tcb_to_iarch_tcb :: "arch_tcb \<Rightarrow> iarch_tcb"
-where
-  "arch_tcb_to_iarch_tcb arch_tcb \<equiv> undefined"
+definition arch_tcb_to_iarch_tcb :: "arch_tcb \<Rightarrow> iarch_tcb" where
+  "arch_tcb_to_iarch_tcb arch_tcb \<equiv> \<lparr> itcb_cur_fpu = tcb_cur_fpu arch_tcb \<rparr>"
+
+(* Need one of these simp rules for each field in 'iarch_tcb' *)
+lemma arch_tcb_to_iarch_tcb_simps[simp]:
+  "itcb_cur_fpu (arch_tcb_to_iarch_tcb arch_tcb) = tcb_cur_fpu arch_tcb"
+  by (auto simp: arch_tcb_to_iarch_tcb_def)
+
+lemma iarch_tcb_simps[simp]:
+  "\<And>f. arch_tcb_to_iarch_tcb (tcb_context_update f arch_tcb) = arch_tcb_to_iarch_tcb arch_tcb"
+  by simp+
 
 lemma iarch_tcb_context_set[simp]:
   "arch_tcb_to_iarch_tcb (arch_tcb_context_set p tcb) = arch_tcb_to_iarch_tcb tcb"
-  by (auto simp: arch_tcb_to_iarch_tcb_def arch_tcb_context_set_def)
+  by (auto simp: arch_tcb_context_set_def)
 
 lemma iarch_tcb_set_registers[simp]:
-  "arch_tcb_to_iarch_tcb (arch_tcb_set_registers regs arch_tcb)
-     = arch_tcb_to_iarch_tcb arch_tcb"
-  by (simp add: arch_tcb_to_iarch_tcb_def)
+  "arch_tcb_to_iarch_tcb (arch_tcb_set_registers regs arch_tcb) = arch_tcb_to_iarch_tcb arch_tcb"
+  by (auto simp: arch_tcb_set_registers_def)
 
 (* These simplifications allows us to keep many arch-specific proofs unchanged. *)
 
@@ -1015,6 +1016,18 @@ definition
 where
   "hyp_live ko \<equiv> False"
 
+(* A TCB is live if it is the current FPU owner. The link between the TCB's local ghost variable
+   tcb_cur_fpu and the global x64_current_fpu_owner is enforced by valid_cur_fpu. *)
+definition arch_tcb_live :: "arch_tcb \<Rightarrow> bool" where
+  "arch_tcb_live arch_tcb \<equiv> tcb_cur_fpu arch_tcb"
+
+definition is_tcb_cur_fpu :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "is_tcb_cur_fpu \<equiv> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_cur_fpu (tcb_arch tcb))"
+
+(* Each TCB's local ghost variable tcb_cur_fpu is consistent with the global x64_current_fpu_owner *)
+definition valid_cur_fpu :: "'z::state_ext state \<Rightarrow> bool" where
+  "valid_cur_fpu s \<equiv> \<forall>p. x64_current_fpu_owner (arch_state s) = Some p \<longleftrightarrow> is_tcb_cur_fpu p s"
+
 definition
   issued_ioports :: "arch_state \<Rightarrow> io_port set"
 where
@@ -1447,6 +1460,13 @@ lemma vs_lookup_stateI:
   shows "(ref \<rhd> p) s'"
   using 1 vs_lookup_sub [OF ko table] by blast
 
+lemma vs_lookup_pages_stateI:
+  assumes 1: "(ref \<unrhd> p) s"
+  assumes ko: "\<And>ko p. ko_at ko p s \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs_pages ko \<subseteq> vs_refs_pages ko') p s'"
+  assumes table: "graph_of (x64_asid_table (arch_state s)) \<subseteq> graph_of (x64_asid_table (arch_state s'))"
+  shows "(ref \<unrhd> p) s'"
+  using 1 vs_lookup_pages_sub [OF ko table] by blast
+
 lemma valid_vspace_objsD:
   "\<lbrakk> (ref \<rhd> p) s; ko_at (ArchObj ao) p s; valid_vspace_objs s \<rbrakk> \<Longrightarrow> valid_vspace_obj ao s"
   by (fastforce simp add: valid_vspace_objs_def)
@@ -1545,6 +1565,15 @@ lemmas aa_type_elims[elim!] =
    aa_type_AASIDPoolE aa_type_AUserDataE aa_type_ADeviceDataE
    aa_type_APageDirectoryE aa_type_APageTableE aa_type_APDPointerTableE aa_type_APageMapL4E
 
+lemma arch_tcb_live_simps[simp]:
+  "\<And>f. arch_tcb_live (tcb_context_update f arch_tcb) = arch_tcb_live arch_tcb"
+  by (simp_all add: arch_tcb_live_def)
+
+lemma arch_tcb_live_context_simps[simp]:
+  "\<And>f. arch_tcb_live (arch_tcb_context_set f arch_tcb) = arch_tcb_live arch_tcb"
+  "\<And>f. arch_tcb_live (arch_tcb_set_registers f arch_tcb) = arch_tcb_live arch_tcb"
+  by (simp_all add: arch_tcb_context_set_def arch_tcb_set_registers_def)
+
 lemma wellformed_arch_typ:
    assumes P: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
    shows   "\<lbrace>\<lambda>s. arch_valid_obj ao s\<rbrace> f \<lbrace>\<lambda>rv s. arch_valid_obj ao s\<rbrace>"
@@ -1592,6 +1621,13 @@ lemma pageBits_clb_less_word_bits [simp]:
   by (rule less_imp_diff_less, simp)
 
 end
+
+locale Arch_asid_table_update_eq = Arch +
+  fixes f :: "'z::state_ext state \<Rightarrow> 'c::state_ext state"
+  assumes asid_table: "x64_asid_table (arch_state (f s)) = x64_asid_table (arch_state s)"
+  assumes second_level_tables: "second_level_tables (arch_state (f s)) = second_level_tables (arch_state s)"
+
+locale Arch_p_asid_table_update_eq = Arch_pspace_update_eq + Arch_asid_table_update_eq
 
 context Arch_pspace_update_eq begin
 
@@ -1717,7 +1753,50 @@ lemma global_refs_update [iff]:
 
 end
 
+context Arch_p_asid_table_update_eq begin
+
+lemma vs_lookup_update[iff]:
+  "vs_lookup (f s) = vs_lookup s"
+  by (auto elim!: vs_lookup_stateI simp: asid_table obj_at_def)
+
+lemma vspace_at_asid_update[iff]:
+  "vspace_at_asid asid pt (f s) = vspace_at_asid asid pt s"
+  by (simp add: vspace_at_asid_def)
+
+lemma vs_lookup_pages_update[iff]:
+  "vs_lookup_pages (f s) = vs_lookup_pages s"
+  by (auto elim!: vs_lookup_pages_stateI simp: asid_table obj_at_def)
+
+lemma valid_vs_lookup_update [iff]:
+  "valid_vs_lookup (f s) = valid_vs_lookup s"
+  by (simp add: valid_vs_lookup_def asid_table )
+
+lemma valid_table_caps_update [iff]:
+  "valid_table_caps (f s) = valid_table_caps s"
+  by (simp add: valid_table_caps_def asid_table pspace second_level_tables)
+
+lemma valid_vspace_objs_update [iff]:
+  "valid_vspace_objs (f s) = valid_vspace_objs s"
+  by (simp add: valid_vspace_objs_def pspace)
+
+lemma valid_arch_caps_update [iff]:
+  "valid_arch_caps (f s) = valid_arch_caps s"
+  by (simp add: valid_arch_caps_def asid_table)
+
+lemma valid_kernel_mappings_update [iff]:
+  "valid_kernel_mappings (f s) = valid_kernel_mappings s"
+  by (simp add: valid_kernel_mappings_def pspace second_level_tables)
+
+lemma valid_asid_map_update [iff]:
+  "valid_asid_map (f s) = valid_asid_map s"
+  by (simp add: valid_asid_map_def)
+
+end
+
 context Arch_p_arch_update_eq begin
+
+sublocale Arch_p_asid_table_update_eq
+  by unfold_locales (simp add: arch second_level_tables_def)+
 
 lemma vs_lookup1_update [iff]:
   "vs_lookup1 (f s) = vs_lookup1 s"
@@ -1727,10 +1806,6 @@ lemma vs_lookup_trans_update [iff]:
   "vs_lookup_trans (f s) = vs_lookup_trans s"
   by simp
 
-lemma vs_lookup_update [iff]:
-  "vs_lookup (f s) = vs_lookup s"
-  by (simp add: vs_lookup_def arch)
-
 lemma vs_lookup_pages1_update [iff]:
   "vs_lookup_pages1 (f s) = vs_lookup_pages1 s"
   by (simp add: vs_lookup_pages1_def)
@@ -1739,21 +1814,13 @@ lemma vs_lookup_pages_trans_update [iff]:
   "vs_lookup_pages_trans (f s) = vs_lookup_pages_trans s"
   by simp
 
-lemma vs_lookup_pages_update [iff]:
-  "vs_lookup_pages (f s) = vs_lookup_pages s"
-  by (simp add: vs_lookup_pages_def arch)
-
-lemma valid_vs_lookup_update [iff]:
-  "valid_vs_lookup (f s) = valid_vs_lookup s"
-  by (simp add: valid_vs_lookup_def arch)
-
-lemma valid_table_caps_update [iff]:
-  "valid_table_caps (f s) = valid_table_caps s"
-  by (simp add: valid_table_caps_def arch)
-
 lemma valid_ioports_update[iff]:
   "valid_ioports (f s) = valid_ioports s"
   by (simp add: arch)
+
+lemma valid_cur_fpu_update [iff]:
+  "valid_cur_fpu (f s) = valid_cur_fpu s"
+  by (auto simp: valid_cur_fpu_def is_tcb_cur_fpu_def arch)
 
 end
 
@@ -1812,6 +1879,17 @@ lemma valid_arch_state_lift_ioports_typ_at:
            apply (wps arch | wp control typs hoare_vcg_op_lift)+
   apply simp
   done
+
+lemmas valid_cur_fpu_defs = valid_cur_fpu_def is_tcb_cur_fpu_def obj_at_def
+
+lemma valid_cur_fpu_is_tcb_cur_fpu_unique:
+  "\<lbrakk>valid_cur_fpu s; is_tcb_cur_fpu p s; is_tcb_cur_fpu p' s\<rbrakk> \<Longrightarrow> p = p'"
+  by (metis valid_cur_fpu_def option.inject)
+
+lemma valid_cur_fpu_is_tcb_cur_fpu_unique':
+  "\<lbrakk>valid_cur_fpu s; kheap s p = Some (TCB tcb); tcb_cur_fpu (tcb_arch tcb);
+    kheap s p' = Some (TCB tcb'); tcb_cur_fpu (tcb_arch tcb')\<rbrakk> \<Longrightarrow> p = p'"
+  by (clarsimp simp: valid_cur_fpu_is_tcb_cur_fpu_unique is_tcb_cur_fpu_def obj_at_def)
 
 lemma aobj_at_default_arch_cap_valid:
   assumes "ty \<noteq> ASIDPoolObj"
@@ -3031,9 +3109,25 @@ lemma vs_lookup_2ConsD:
   apply (fastforce simp: vs_lookup1_def)
   done
 
-lemma global_refs_asid_table_update [iff]:
-  "global_refs (s\<lparr>arch_state := x64_asid_table_update f (arch_state s)\<rparr>) = global_refs s"
-  by (simp add: global_refs_def)
+lemma global_refs_updates[simp]:
+  "\<And>f. global_refs (s\<lparr>arch_state := x64_asid_table_update f (arch_state s)\<rparr>) = global_refs s"
+  "\<And>f. global_refs (s\<lparr>arch_state := x64_current_fpu_owner_update f (arch_state s)\<rparr>) = global_refs s"
+  by (auto simp: global_refs_def)
+
+(* FIXME: pspace_update_eq is interpreted for arch_state_update later, in Invariants_AI *)
+lemma valid_arch_state_updates[simp]:
+  "\<And>f. valid_arch_state (s\<lparr>arch_state := x64_current_fpu_owner_update f (arch_state s)\<rparr>) = valid_arch_state s"
+  by (auto simp: valid_arch_state_def valid_asid_table_def valid_global_pts_def valid_global_pds_def
+                 valid_global_pdpts_def valid_ioports_def all_ioports_issued_def issued_ioports_def
+                 Arch_pspace_update_eq.caps_of_state_update Arch_pspace_update_eq_def pspace_update_eq_def
+                 obj_at_def a_type_simps)
+
+(* FIXME: pspace_update_eq is interpreted for arch_state_update later, in Invariants_AI *)
+lemma valid_global_objs_updates[simp]:
+  "\<And>f. valid_global_objs (s\<lparr>arch_state := x64_current_fpu_owner_update f (arch_state s)\<rparr>) = valid_global_objs s"
+  by (auto simp: valid_global_objs_def second_level_tables_def
+                 Arch_pspace_update_eq.valid_vso_at_update Arch_pspace_update_eq_def pspace_update_eq_def
+                 obj_at_def a_type_simps)
 
 lemma pspace_in_kernel_window_arch_update[simp]:
   "x64_kernel_vspace (f (arch_state s)) = x64_kernel_vspace (arch_state s)
@@ -3243,21 +3337,20 @@ lemma valid_tcb_arch_ref_lift:
   "tcb_arch_ref t = tcb_arch_ref t' \<Longrightarrow> valid_arch_tcb (tcb_arch t) = valid_arch_tcb (tcb_arch t')"
   by (simp add: valid_arch_tcb_def tcb_arch_ref_def)
 
-lemma valid_arch_tcb_context_update[simp]:
-  "valid_arch_tcb (tcb_context_update f t) = valid_arch_tcb t"
-  unfolding valid_arch_tcb_def obj_at_def by simp
+lemma valid_arch_tcb_simps[simp]:
+  "\<And>f. valid_arch_tcb (tcb_context_update f t) = valid_arch_tcb t"
+  "\<And>f. valid_arch_tcb (tcb_cur_fpu_update f t) = valid_arch_tcb t"
+  by (simp add: valid_arch_tcb_def)+
 
-lemma valid_arch_arch_tcb_context_set[simp]:
-  "valid_arch_tcb (arch_tcb_context_set a t) = valid_arch_tcb t"
-  by (simp add: arch_tcb_context_set_def)
-
-lemma valid_arch_arch_tcb_set_registers[simp]:
-  "valid_arch_tcb (arch_tcb_set_registers a t) = valid_arch_tcb t"
-  by (simp add: arch_tcb_set_registers_def)
+lemma valid_arch_tcb_context_simps[simp]:
+  "\<And>a. valid_arch_tcb (arch_tcb_context_set a t) = valid_arch_tcb t"
+  "\<And>a. valid_arch_tcb (arch_tcb_set_registers a t) = valid_arch_tcb t"
+  by (simp add: arch_tcb_context_set_def arch_tcb_set_registers_def)+
 
 lemma tcb_arch_ref_simps[simp]:
   "\<And>f. tcb_arch_ref (tcb_ipc_buffer_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_mcpriority_update f tcb) = tcb_arch_ref tcb"
+  "\<And>f. tcb_arch_ref (tcb_flags_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_ctable_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_vtable_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_reply_update f tcb) = tcb_arch_ref tcb"
