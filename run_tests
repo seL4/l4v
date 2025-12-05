@@ -89,8 +89,10 @@ if not set(L4V_ARCH_LIST) <= set(EXCLUDE.keys()):
     sys.exit("[INTERNAL ERROR] exclusion lists are non-exhaustive")
 
 parser = argparse.ArgumentParser(add_help=False)
-parser.add_argument('--l4v-arches', metavar='ARCH,...', type=str,
+parser.add_argument('--l4v-arch', metavar='ARCH,...', type=str,
                     help='test multiple L4V_ARCHs (comma-separated)')
+parser.add_argument('--l4v-arches', metavar='ARCH,...', type=str,
+                    help='legacy alias for --l4v-arch')
 parser.add_argument('--l4v-arch-all', dest='l4v_arches',
                     action='store_const', const=','.join(L4V_ARCH_LIST),
                     help='test all L4V_ARCHes')
