@@ -56,10 +56,12 @@ locale Bits_R =
     "\<And>t. atcbContextSet (atcbContextGet t) t = t"
   assumes atcbContext_set_set[simp]:
     "\<And>uc uc' atcb. atcbContextSet uc (atcbContextSet uc' atcb) = atcbContextSet uc atcb"
-  assumes objBitsKO_less_word_bits:
+  assumes objBitsKO_less_word_bits[simp]:
     "\<And>ko. objBitsKO ko < word_bits"
   assumes objBitsKO_neq_0:
     "\<And>ko. objBitsKO ko \<noteq> 0"
+  assumes pageBits_le_maxUntypedSizeBits[simp]:
+    "pageBits \<le> maxUntypedSizeBits"
 
 context Bits_R begin
 

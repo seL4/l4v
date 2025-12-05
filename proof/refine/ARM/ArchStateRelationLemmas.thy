@@ -102,6 +102,21 @@ lemma is_other_obj_relation_type_DeviceData:
   "\<not> is_other_obj_relation_type (AArch (ADeviceData sz))"
   unfolding is_other_obj_relation_type_def by simp
 
+lemma obj_relation_cuts_trivial[StateRelation_R_assms]:
+  "ptr \<in> fst ` obj_relation_cuts ty ptr"
+  apply (case_tac ty)
+      apply (rename_tac sz cs)
+      apply (clarsimp simp:image_def cte_map_def well_formed_cnode_n_def)
+      apply (rule_tac x = "replicate sz False" in exI)
+      apply clarsimp+
+  apply (rename_tac arch_kernel_obj)
+  apply (case_tac arch_kernel_obj; simp add: image_def pageBits_def)
+    apply (rule_tac x=0 in exI, simp)+
+  apply (rule p2_gt_0[THEN iffD2])
+  apply (rename_tac vmpage_size)
+  apply (case_tac vmpage_size; clarsimp simp: pageBitsForSize_def)
+  done
+
 lemma cap_relation_case':
   "cap_relation cap cap' = (case cap of
                               cap.ArchObjectCap arch_cap.ASIDControlCap \<Rightarrow> cap_relation cap cap'

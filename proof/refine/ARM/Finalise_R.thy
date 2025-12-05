@@ -8,7 +8,7 @@ theory Finalise_R
 imports
   IpcCancel_R
   InterruptAcc_R
-  Retype_R
+  ArchRetype_R
 begin
 context begin interpretation Arch . (*FIXME: arch-split*)
 

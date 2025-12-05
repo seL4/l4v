@@ -6201,7 +6201,7 @@ proof -
                           nAPIObjects_def word_sle_def createObject_c_preconds_def word_le_nat_alt
                     split: apiobject_type.splits object_type.splits)
    apply (subgoal_tac "\<exists>apiType. newType = APIObjectType apiType")
-    apply clarsimp
+    apply (clarsimp simp: APIType_capBits_gen_def)
     apply (rule ccorres_guard_imp)
       apply (rule_tac apiType=apiType in ccorres_apiType_split)
 
@@ -6265,13 +6265,12 @@ proof -
          apply (frule invs_pspace_distinct')
          apply (frule invs_sym')
          apply (simp add: getObjectSize_def objBits_simps word_bits_conv
-                          ARM_HYP_H.getObjectSize_def apiGetObjectSize_def
+                          ARM_HYP_H.getObjectSize_def apiGetObjectSize_def APIType_capBits_gen_def
                           tcbBlockSizeBits_def new_cap_addrs_def projectKO_opt_tcb)
-         apply (clarsimp simp: range_cover.aligned
-                               region_actually_is_bytes_def APIType_capBits_def)
+         apply (clarsimp simp: range_cover.aligned region_actually_is_bytes_def)
          apply (frule(1) ghost_assertion_size_logic_no_unat)
          apply (clarsimp simp: ccap_relation_def cap_to_H_def
-                               getObjectSize_def ARM_HYP_H.getObjectSize_def
+                               getObjectSize_def
                                apiGetObjectSize_def Collect_const_mem
                                cap_thread_cap_lift aligned_add_aligned
                         split: option.splits)
@@ -6319,7 +6318,7 @@ proof -
         apply (frule invs_sym')
         apply (auto simp: getObjectSize_def objBits_simps
                           ARM_HYP_H.getObjectSize_def apiGetObjectSize_def
-                          epSizeBits_def word_bits_conv
+                          epSizeBits_def word_bits_conv APIType_capBits_gen_def
                    elim!: is_aligned_no_wrap'
                   intro!: range_cover_simpleI)[1]
 
@@ -6359,7 +6358,7 @@ proof -
        apply (frule invs_sym')
        apply (auto simp: getObjectSize_def objBits_simps
                          ARM_HYP_H.getObjectSize_def apiGetObjectSize_def
-                         ntfnSizeBits_def word_bits_conv
+                         ntfnSizeBits_def word_bits_conv APIType_capBits_gen_def
                   elim!: is_aligned_no_wrap'
                  intro!: range_cover_simpleI)[1]
 
@@ -6401,6 +6400,7 @@ proof -
        apply (frule invs_sym')
        apply (frule(1) ghost_assertion_size_logic_no_unat)
        apply (clarsimp simp: objBits_simps ARM_HYP_H.getObjectSize_def apiGetObjectSize_def
+                             APIType_capBits_gen_def
                              cteSizeBits_def word_bits_conv add.commute createObject_c_preconds_def
                              region_actually_is_bytes_def invs_valid_objs' invs_urz
                       elim!: is_aligned_no_wrap'
@@ -6410,7 +6410,7 @@ proof -
       apply (subst h_t_array_valid_retyp, simp+)
        apply (simp add: power_add cte_C_size objBits_defs)
       apply (frule range_cover.aligned)
-      apply (clarsimp simp: ccap_relation_def cap_to_H_def cap_cnode_cap_lift
+      apply (clarsimp simp: ccap_relation_def cap_to_H_def cap_cnode_cap_lift APIType_capBits_gen_def
                             getObjectSize_def apiGetObjectSize_def objBits_simps' field_simps
                             is_aligned_power2 addr_card_wb is_aligned_weaken[where y=word_size_bits]
                             is_aligned_neg_mask
@@ -6422,7 +6422,7 @@ proof -
       apply simp
      apply unat_arith
      apply auto[1]
-    apply (clarsimp simp: createObject_c_preconds_def)
+    apply (clarsimp simp: createObject_c_preconds_def APIType_capBits_gen_def)
     apply (clarsimp simp:nAPIOBjects_object_type_from_H)?
     apply (intro impI conjI, simp_all)[1]
    apply (clarsimp simp: nAPIObjects_def object_type_from_H_def Kernel_C_defs
@@ -7308,14 +7308,17 @@ lemma createObject_invs':
           \<and> caps_no_overlap'' ptr (APIType_capBits ty us) s \<and> ptr \<noteq> 0 \<and>
           caps_overlap_reserved' {ptr..ptr + 2 ^ APIType_capBits ty us - 1} s \<and>
           (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> 0 < us) \<and>
-          is_aligned ptr (APIType_capBits ty us) \<and> APIType_capBits ty us < word_bits \<and>
+          is_aligned ptr (APIType_capBits ty us) \<and> APIType_capBits ty us \<le> maxUntypedSizeBits \<and>
           {ptr..ptr + 2 ^ APIType_capBits ty us - 1} \<inter> kernel_data_refs = {} \<and>
           0 < gsMaxObjectSize s
     \<rbrace> createObject ty ptr us dev\<lbrace>\<lambda>r s. invs' s \<rbrace>"
+  supply canonical_address_def[simp]
   apply (simp add:createObject_def3)
   apply (rule hoare_pre)
   apply (wp createNewCaps_invs'[where sz = "APIType_capBits ty us"])
-  apply (clarsimp simp:range_cover_full)
+  apply (subgoal_tac "APIType_capBits ty us < word_bits")
+   apply (clarsimp simp: range_cover_full)
+  apply (fastforce simp: untypedBits_defs word_bits_def)
   done
 
 lemma createObject_sch_act_simple[wp]:
@@ -7336,7 +7339,7 @@ lemma createObject_ct_active'[wp]:
  apply wps
  apply (wp createNewCaps_pred_tcb_at')
  apply (intro conjI)
- apply (auto simp:range_cover_full)
+ apply (auto simp: range_cover_full createNewCaps_arch_ko_type_pre_non_arch)
  done
 
 lemma createObject_notZombie[wp]:
@@ -7378,6 +7381,7 @@ lemma createObject_untypedRange:
             (toAPIType ty \<noteq> Some apiobject_type.Untyped \<longrightarrow> Q {} s)\<rbrace>"
   shows "\<lbrace>P\<rbrace> createObject ty ptr us dev\<lbrace>\<lambda>m s. Q (untypedRange m) s\<rbrace>"
   including no_pre
+  supply toAPIType_Some[simp del]
   using split
   apply (simp add: createObject_def)
   apply (case_tac "toAPIType ty")
@@ -7396,9 +7400,9 @@ shows "\<lbrace>P\<rbrace>createObject ty ptr us dev \<lbrace>\<lambda>m s. capR
         apply (rule hoare_pre)
          apply wpc
              apply wp
-        apply (simp add:split untypedRange.simps objBits_simps capRange_def APIType_capBits_def | wp)+
+        apply (simp add: objBits_simps capRange_def APIType_capBits_gen_def | wp)+
        apply (wpsimp simp: ARM_HYP_H.createObject_def capRange_def APIType_capBits_def
-                        machine_bits_defs acapClass.simps)+
+                           machine_bits_defs)+
   done
 
 lemma createObject_capRange_helper:
@@ -7663,8 +7667,7 @@ shows
   {}\<rbrace>"
   apply (rule createObject_untypedRange)
   apply (clarsimp | wp)+
-  apply (clarsimp simp: blah toAPIType_def APIType_capBits_def
-    ARM_HYP_H.toAPIType_def split: object_type.splits)
+  apply (clarsimp simp: blah toAPIType_def APIType_capBits_gen_def split: object_type.splits)
   apply (clarsimp simp:shiftl_t2n field_simps)
   apply (drule word_eq_zeroI)
   apply (drule(1) range_cover_no_0[where p = "Suc n"])
@@ -7875,13 +7878,13 @@ lemma createObject_cnodes_have_size:
       \<and> cnodes_retype_have_size R (APIType_capBits newType userSize) (gsCNodes s)\<rbrace>
     createObject newType ptr userSize dev
   \<lbrace>\<lambda>rv s. cnodes_retype_have_size R (APIType_capBits newType userSize) (gsCNodes s)\<rbrace>"
+  supply toAPIType_Some[simp del]
   apply (simp add: createObject_def)
   apply (rule hoare_pre)
    apply (wp mapM_x_wp' | wpc | simp add: createObjects_def)+
-  apply (cases newType, simp_all add: ARM_HYP_H.toAPIType_def)
-  apply (clarsimp simp: APIType_capBits_def objBits_simps'
-                              cnodes_retype_have_size_def cte_level_bits_def
-                       split: if_split_asm)
+  apply (cases newType, simp_all add: toAPIType_def APIType_capBits_gen_def)
+  apply (clarsimp simp: objBits_simps' cnodes_retype_have_size_def cte_level_bits_def
+                  split: if_split_asm)
   done
 
 lemma range_cover_not_in_neqD:
@@ -8218,7 +8221,7 @@ lemma createObject_untyped_region_is_zero_bytes:
                    cap_untyped_cap_lift_def object_type_from_H_def)
   apply (simp add: untypedZeroRange_def split: if_split)
   apply (clarsimp simp: getFreeRef_def Let_def object_type_to_H_def untypedBits_defs)
-  apply (simp add: APIType_capBits_def less_mask_eq word_less_nat_alt)
+  apply (simp add: APIType_capBits_gen_def less_mask_eq word_less_nat_alt)
   done
 
 lemma createNewObjects_ccorres:
@@ -8242,6 +8245,8 @@ shows  "ccorres dc xfdc
                     \<and> destSlots \<noteq> []
                     \<and> range_cover ptr sz (getObjectSize newType userSize) (length destSlots )
                     \<and> ptr \<noteq> 0
+                    \<and> sz \<le> maxUntypedSizeBits
+                    \<and> APIType_capBits newType userSize \<le> maxUntypedSizeBits
                     \<and> {ptr .. ptr + of_nat (length destSlots) * 2^ (getObjectSize newType userSize) - 1}
                       \<inter> kernel_data_refs = {}
                     \<and> cnodeptr \<notin> {ptr .. ptr + (of_nat (length destSlots)<< APIType_capBits newType userSize) - 1}
@@ -8434,7 +8439,7 @@ shows  "ccorres dc xfdc
             apply simp
            apply (simp only: unat_eq_0, clarsimp simp: unat_of_nat)
           apply (frule range_cover_sz')
-          apply (clarsimp simp: Let_def hrs_htd_update
+          apply (clarsimp simp: Let_def hrs_htd_update APIType_capBits_gen_def
                                 APIType_capBits_def[where ty="APIObjectType ArchTypes_H.apiobject_type.Untyped"])
           apply (subst is_aligned_add, erule range_cover.aligned)
            apply (simp add: is_aligned_shiftl)+

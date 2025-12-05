@@ -83,6 +83,59 @@ lemma pspace_in_kernel_mappings'_pspaceI[Invariants_H_pspaceI_assms]:
   unfolding pspace_in_kernel_mappings'_def
   by simp
 
+lemma canonical_address_mask_eq:
+  "canonical_address p = (p && mask (Suc canonical_bit) = p)"
+  by (simp add: canonical_address_def canonical_address_of_def ucast_ucast_mask canonical_bit_def)
+
+lemma canonical_address_and:
+  "canonical_address p \<Longrightarrow> canonical_address (p && b)"
+  by (simp add: canonical_address_range word_and_le)
+
+lemma canonical_address_add:
+  assumes "is_aligned p n"
+  assumes "f < 2 ^ n"
+  assumes "n \<le> canonical_bit"
+  assumes "canonical_address p"
+  shows "canonical_address (p + f)"
+proof -
+  from `f < 2 ^ n`
+  have "f \<le> mask n"
+    by (simp add: mask_plus_1 plus_one_helper)
+
+  from `canonical_address p`
+  have "p && mask (Suc canonical_bit) = p"
+    by (simp add: canonical_address_mask_eq)
+  moreover
+  from `f \<le> mask n` `is_aligned p n`
+  have "p + f = p || f"
+    by (simp add: word_and_or_mask_aligned)
+  moreover
+  from `f \<le> mask n` `n \<le> canonical_bit`
+  have "f \<le> mask (Suc canonical_bit)"
+    using le_smaller_mask by fastforce
+  hence "f && mask (Suc canonical_bit) = f"
+    by (simp add: le_mask_imp_and_mask)
+  ultimately
+  have "(p + f) && mask (Suc canonical_bit) = p + f"
+    by (simp add: word_ao_dist)
+  thus ?thesis
+    by (simp add: canonical_address_mask_eq)
+qed
+
+lemma range_cover_canonical_address[Invariants_H_pspaceI_assms]:
+  "\<lbrakk> range_cover ptr sz us n ; p < n ;
+     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
+   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
+  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
+  apply (subst add.commute)
+  apply (subst add.assoc)
+  apply (rule canonical_address_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
+   apply (drule (1) range_cover.range_cover_compare)
+   apply (clarsimp simp: word_less_nat_alt)
+   apply unat_arith
+  apply (simp add: canonical_bit_def)
+  done
+
 (* not interesting on this architecture *)
 lemmas [simp] = pspace_in_kernel_mappings'_pspaceI
 
@@ -271,59 +324,6 @@ lemma mask_wordRadix_less_wordBits:
 lemma priority_mask_wordRadix_size:
   "unat ((w::priority) && mask wordRadix) < wordBits"
   by (rule mask_wordRadix_less_wordBits, simp add: wordRadix_def word_size)
-
-lemma canonical_address_mask_eq:
-  "canonical_address p = (p && mask (Suc canonical_bit) = p)"
-  by (simp add: canonical_address_def canonical_address_of_def ucast_ucast_mask canonical_bit_def)
-
-lemma canonical_address_and:
-  "canonical_address p \<Longrightarrow> canonical_address (p && b)"
-  by (simp add: canonical_address_range word_and_le)
-
-lemma canonical_address_add:
-  assumes "is_aligned p n"
-  assumes "f < 2 ^ n"
-  assumes "n \<le> canonical_bit"
-  assumes "canonical_address p"
-  shows "canonical_address (p + f)"
-proof -
-  from `f < 2 ^ n`
-  have "f \<le> mask n"
-    by (simp add: mask_plus_1 plus_one_helper)
-
-  from `canonical_address p`
-  have "p && mask (Suc canonical_bit) = p"
-    by (simp add: canonical_address_mask_eq)
-  moreover
-  from `f \<le> mask n` `is_aligned p n`
-  have "p + f = p || f"
-    by (simp add: word_and_or_mask_aligned)
-  moreover
-  from `f \<le> mask n` `n \<le> canonical_bit`
-  have "f \<le> mask (Suc canonical_bit)"
-    using le_smaller_mask by fastforce
-  hence "f && mask (Suc canonical_bit) = f"
-    by (simp add: le_mask_imp_and_mask)
-  ultimately
-  have "(p + f) && mask (Suc canonical_bit) = p + f"
-    by (simp add: word_ao_dist)
-  thus ?thesis
-    by (simp add: canonical_address_mask_eq)
-qed
-
-lemma range_cover_canonical_address:
-  "\<lbrakk> range_cover ptr sz us n ; p < n ;
-     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
-   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
-  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
-  apply (subst add.commute)
-  apply (subst add.assoc)
-  apply (rule canonical_address_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
-   apply (drule (1) range_cover.range_cover_compare)
-   apply (clarsimp simp: word_less_nat_alt)
-   apply unat_arith
-  apply (simp add: canonical_bit_def)
-  done
 
 lemma tcb_hyp_refs_of'_simps[simp]:
   "tcb_hyp_refs' atcb = tcb_vcpu_refs' (atcbVCPUPtr atcb)"

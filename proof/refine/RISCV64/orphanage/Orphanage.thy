@@ -1132,7 +1132,7 @@ lemma createNewCaps_no_orphans:
                    | clarsimp simp: is_active_thread_state_def makeObject_tcb
                                     projectKO_opt_tcb isRunning_def isRestart_def
                                     APIType_capBits_def Arch_createNewCaps_def
-                                    objBits_if_dev
+                                    objBits_if_dev APIType_capBits_gen_def
                           split del: if_split
                    | simp add: objBits_simps
                    | fastforce simp: bit_simps objBits_simps)+

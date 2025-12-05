@@ -84,6 +84,12 @@ lemma pspace_in_kernel_mappings'_pspaceI[Invariants_H_pspaceI_assms]:
   unfolding pspace_in_kernel_mappings'_def
   by simp
 
+lemma range_cover_canonical_address[Invariants_H_pspaceI_assms]:
+  "\<lbrakk> range_cover ptr sz us n ; p < n ;
+     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
+   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
+  by (simp add: canonical_address_def)
+
 (* not interesting on this architecture *)
 lemmas [simp] = pspace_in_kernel_mappings'_pspaceI
 
