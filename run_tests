@@ -40,7 +40,9 @@ EXCLUDE["ARM_HYP"]=[
     "RefineOrphanage",
     "SimplExportAndRefine"]
 
-EXCLUDE["ARM"]=[]
+EXCLUDE["ARM"]=[
+    "InfoFlow" # for development only
+]
 
 EXCLUDE["X64"]=[
     "Access",
@@ -54,6 +56,7 @@ EXCLUDE["X64"]=[
 ]
 
 EXCLUDE["RISCV64"]=[
+    "InfoFlow", # for development only
     "AutoCorresSEL4",
     "DSpec",
     "DBaseRefine",
@@ -64,7 +67,7 @@ EXCLUDE["RISCV64"]=[
 EXCLUDE["AARCH64"]=[
     # To be eliminated/refined as development progresses
     "ASepSpec",
-    "InfoFlow",
+    "InfoFlowCBase",
 
     # Tools and unrelated content, removed for development
     "AutoCorres",

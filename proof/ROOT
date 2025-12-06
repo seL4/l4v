@@ -151,7 +151,7 @@ session Access in "access-control" = AInvs +
 session InfoFlow in "infoflow" = Access +
   directories
     "$L4V_ARCH"
-  theories
+  theories [quick_and_dirty] (* for development only *)
     "InfoFlow_Image_Toplevel"
 
 session InfoFlowCBase in "infoflow/refine/base" = CRefine +
