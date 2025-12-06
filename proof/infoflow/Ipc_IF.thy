@@ -159,7 +159,7 @@ locale Ipc_IF_1 =
   and handle_arch_fault_reply_reads_respects:
     "reads_respects aag l (K (aag_can_read aag thread)) (handle_arch_fault_reply afault thread x y)"
   and arch_get_sanitise_register_info_reads_respects[wp]:
-    "reads_respects aag l \<top> (arch_get_sanitise_register_info t)"
+    "reads_respects aag l (K (aag_can_read_or_affect aag l t)) (arch_get_sanitise_register_info t)"
   and arch_get_sanitise_register_info_valid_global_objs[wp]:
     "arch_get_sanitise_register_info t \<lbrace>\<lambda>s :: det_state. valid_global_objs s\<rbrace>"
   and handle_arch_fault_reply_valid_global_objs[wp]:
@@ -2049,8 +2049,7 @@ end
 
 
 lemma reply_from_kernel_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct
-                    and pspace_aligned and  (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
+  "\<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
    reply_from_kernel thread x
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding reply_from_kernel_def
@@ -2205,10 +2204,8 @@ lemma handle_reply_reads_respects_g:
 lemma reply_from_kernel_reads_respects_g:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows
-    "reads_respects_g aag l (valid_global_objs and valid_objs and valid_arch_state
-                                               and valid_global_refs and pspace_distinct
-                                               and pspace_aligned and (\<lambda>s. thread \<noteq> idle_thread s)
-                                               and K (is_subject aag thread))
+    "reads_respects_g aag l (valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s)
+                                              and K (is_subject aag thread))
                       (reply_from_kernel thread x)"
   apply (rule equiv_valid_guard_imp[OF reads_respects_g])
     apply (rule reply_from_kernel_reads_respects[OF domains_distinct])

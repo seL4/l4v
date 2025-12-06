@@ -917,18 +917,6 @@ locale ADT_IF_1 =
     "do_user_op_if uop tc \<lbrace>guarded_pas_domain aag\<rbrace>"
   and tcb_arch_ref_tcb_context_set[simp]:
     "tcb_arch_ref (tcb_arch_update (arch_tcb_context_set uc) tcb) = tcb_arch_ref tcb"
-  and arch_switch_to_idle_thread_pspace_aligned[wp]:
-    "arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_ext state. pspace_aligned s\<rbrace>"
-  and arch_switch_to_idle_thread_valid_vspace_objs[wp]:
-    "arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_ext state. valid_vspace_objs s\<rbrace>"
-  and arch_switch_to_idle_thread_valid_arch_state[wp]:
-    "arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_ext state. valid_arch_state s\<rbrace>"
-  and arch_switch_to_thread_pspace_aligned[wp]:
-    "arch_switch_to_thread t \<lbrace>\<lambda>s :: det_ext state. pspace_aligned s\<rbrace>"
-  and arch_switch_to_thread_valid_vspace_objs[wp]:
-    "arch_switch_to_thread t \<lbrace>\<lambda>s :: det_ext state. valid_vspace_objs s\<rbrace>"
-  and arch_switch_to_thread_valid_arch_state[wp]:
-    "arch_switch_to_thread t \<lbrace>\<lambda>s :: det_ext state. valid_arch_state s\<rbrace>"
   and arch_switch_to_thread_cur_thread[wp]:
     "\<And>P. arch_switch_to_thread t \<lbrace>\<lambda>s :: det_state. P (cur_thread s)\<rbrace>"
   and arch_activate_idle_thread_cur_thread[wp]:
@@ -999,12 +987,8 @@ locale ADT_IF_1 =
     "create_cap type bits untyped dev sl \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   and arch_invoke_irq_control_irq_state_of_state[wp]:
     "arch_invoke_irq_control ici \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and thread_set_pas_refined:
-    "\<lbrakk> \<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb;
-       \<And>tcb. tcb_state (f tcb) = tcb_state tcb;
-       \<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb;
-       \<And>tcb. tcb_domain (f tcb) = tcb_domain tcb \<rbrakk>
-       \<Longrightarrow> thread_set f t \<lbrace>pas_refined aag\<rbrace>"
+  and thread_set_context_pas_refined:
+    "thread_set (tcb_arch_update (arch_tcb_context_set ctxt)) t \<lbrace>pas_refined aag\<rbrace>"
 begin
 
 lemma kernel_entry_silc_inv[wp]:
@@ -1017,7 +1001,7 @@ lemma kernel_entry_silc_inv[wp]:
   unfolding kernel_entry_if_def
   by (wpsimp simp: ran_tcb_cap_cases arch_tcb_update_aux2
                wp: hoare_weak_lift_imp handle_event_silc_inv thread_set_silc_inv thread_set_invs_trivial
-                   thread_set_not_state_valid_sched thread_set_pas_refined
+                   thread_set_not_state_valid_sched thread_set_context_pas_refined
       | wp (once) hoare_vcg_imp_lift | force)+
 
 lemma kernel_entry_pas_refined[wp]:
@@ -1028,7 +1012,7 @@ lemma kernel_entry_pas_refined[wp]:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   unfolding kernel_entry_if_def
   by (wpsimp simp: ran_tcb_cap_cases schact_is_rct_def arch_tcb_update_aux2
-               wp: hoare_vcg_imp_lift' handle_event_pas_refined thread_set_pas_refined
+               wp: hoare_vcg_imp_lift' handle_event_pas_refined thread_set_context_pas_refined
                    guarded_pas_domain_lift thread_set_invs_trivial thread_set_not_state_valid_sched)+
 
 lemma kernel_entry_if_domain_sep_inv:
@@ -1393,6 +1377,30 @@ definition ADT_A_if ::
       Step = (\<lambda>u. global_automaton_if check_active_irq_A_if (do_user_op_A_if uop) kernel_call_A_if
                                       kernel_handle_preemption_if kernel_schedule_if kernel_exit_A_if
                \<inter> {(s,s'). step_restrict s'})\<rparr>"
+
+(* FIXME AARCH64 IF: not true. Assumes non_kernel_irqs are empty, requires a rework to irq_at
+
+definition irq_at' :: "bool \<Rightarrow> nat \<Rightarrow> (irq \<Rightarrow> bool) \<Rightarrow> irq option" where
+  "irq_at' in_kernel pos masks \<equiv>
+   let i = irq_oracle pos in (if masks i \<or> in_kernel \<and> i \<in> non_kernel_IRQs then None else Some i)"
+
+*)
+context begin interpretation Arch .
+
+lemma dmo_getActiveIRQ_wp:
+  "\<lbrace>\<lambda>s. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)))
+          (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>)\<rbrace>
+   do_machine_op (getActiveIRQ in_kernel)
+   \<lbrace>P\<rbrace>"
+  apply (simp add: do_machine_op_def getActiveIRQ_def non_kernel_IRQs_def)
+  apply (wp modify_wp | wpc)+
+  apply clarsimp
+  apply (erule use_valid)
+   apply (wp modify_wp)
+  apply (auto simp: Let_def non_kernel_IRQs_def irq_at_def split: if_splits)
+  sorry
+
+end
 
 lemma check_active_irq_if_wp:
   "\<lbrace>\<lambda>s. P ((irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s))),tc)
@@ -2427,7 +2435,7 @@ lemma preemption_point_irq_state_inv'[wp]:
   apply (wpsimp wp: OR_choiceE_wp[where P'="irq_state_inv st and K(irq_is_recurring irq st)"
                                     and P''="irq_state_inv st and K(irq_is_recurring irq st)"]
               simp: reset_work_units_def)+
-     apply simp
+      apply simp
      apply (wpsimp wp: OR_choiceE_wp dmo_getActiveIRQ_wp simp: reset_work_units_def)+
      apply (clarsimp simp: irq_state_inv_def)
      apply (simp add: next_irq_state_Suc[OF _ recurring_next_irq_state_dom])

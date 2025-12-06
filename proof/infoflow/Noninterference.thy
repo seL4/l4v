@@ -570,7 +570,13 @@ lemmas integrity_subjects_device =
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1]
 
 lemmas integrity_subjects_asids =
-  integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2]
+  integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1]
+
+lemmas integrity_subjects_hyps =
+  integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1]
+
+lemmas integrity_subjects_fpus =
+  integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2]
 
 lemma pas_wellformed_pasSubject_update_Control:
   "\<lbrakk> pas_wellformed (aag\<lparr>pasSubject := pasObjectAbs aag p\<rparr>);
@@ -683,14 +689,20 @@ locale Noninterference_1 =
                              (do_machine_op (getActiveIRQ in_kernel))"
   and handle_spurious_irq_reads_respects_scheduler[wp]:
     "reads_respects_scheduler aag l \<top> handle_spurious_irq"
-  (* FIXME IF: precludes ARM_HYP *)
-  and getActiveIRQ_no_non_kernel_IRQs:
-    "getActiveIRQ True = getActiveIRQ False"
   and valid_cur_hyp_triv:
     "valid_cur_hyp s"
   and arch_tcb_get_registers_equality:
     "arch_tcb_get_registers (tcb_arch tcb) = arch_tcb_get_registers (tcb_arch tcb')
      \<Longrightarrow> tcb_arch (tcb :: tcb) = tcb_arch (tcb' :: tcb)"
+  and getActiveIRQ_ev2:
+    "equiv_valid_2 (scheduler_equiv aag)
+                   (scheduler_affects_equiv aag l) (scheduler_affects_equiv aag l)
+                   (\<lambda>irq irq'. irq = irq' \<or> irq = None \<and> irq' \<in> Some ` non_kernel_IRQs)
+                   (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s)
+                   (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s)
+     (do_machine_op (getActiveIRQ True)) (do_machine_op (getActiveIRQ False))"
+  and non_kernel_IRQs_le_maxIRQ:
+    "irq \<in> non_kernel_IRQs \<Longrightarrow> irq \<le> maxIRQ"
 begin
 
 lemma integrity_update_reference_state:
@@ -721,7 +733,8 @@ lemma kernel_entry_if_integrity:
                        \<and> cur_thread s = cur_thread st" in hoare_strengthen_post)
       apply (wp handle_event_integrity handle_event_cur_thread | simp)+
      apply (fastforce intro: integrity_update_reference_state)
-    apply (wp thread_set_integrity_autarch thread_set_pas_refined guarded_pas_domain_lift
+    (* FIXME AARCH64 IF: removing valid_cur_hyp_triv propagates valid_cur_hyp through multiple lemmas *)
+    apply (wp thread_set_integrity_autarch thread_set_context_pas_refined guarded_pas_domain_lift
               thread_set_invs_trivial thread_set_not_state_valid_sched
            | simp add: tcb_cap_cases_def schact_is_rct_def arch_tcb_update_aux2 valid_cur_hyp_triv)+
     apply (wp thread_set_tcb_context_update_wp)+
@@ -761,7 +774,7 @@ lemma kernel_entry_if_partitionIntegrity:
                        (\<lambda> s. ev \<noteq> Interrupt \<longrightarrow> ct_active s)"
                  in silc_dom_equiv_from_silc_inv_valid')
     apply (wp kernel_entry_silc_inv[where st'=st'], simp add: schact_is_rct_simple)
-   apply (fastforce simp: pas_refined_pasMayActivate_update pas_refined_pasMayEditReadyQueues_update
+   apply (fastforce simp: pas_refined_pasMayEditReadyQueues_update
                           globals_equiv_scheduler_refl silc_dom_equiv_def equiv_for_refl
                           domain_fields_equiv_def ct_active_not_idle')
   apply (fastforce simp: partitionIntegrity_def)
@@ -1319,8 +1332,7 @@ lemma partsSubjectAffects_bounds_subjects_affects:
                        partsSubjectAffects_def image_def label_can_affect_partition_def)
   apply (safe del: iffI notI)
                              apply (fastforce dest: partitionIntegrity_subjectAffects_obj)
-                            apply ((auto dest: partitionIntegrity_subjectAffects_obj
-                                               partitionIntegrity_subjectAffects_mem
+                            apply ((auto dest: partitionIntegrity_subjectAffects_mem
                                                partitionIntegrity_subjectAffects_device
                                                partitionIntegrity_subjectAffects_cdt
                                                partitionIntegrity_subjectAffects_cdt_list
@@ -1333,7 +1345,7 @@ lemma partsSubjectAffects_bounds_subjects_affects:
                                                   OF domains_distinct]
                                                domains_distinct[THEN pas_domains_distinct_inj]
                                     | fastforce simp: partitionIntegrity_def
-                                                      silc_dom_equiv_def equiv_for_def)+)[11]
+                                                      silc_dom_equiv_def equiv_for_def)+)[10]
                  apply ((fastforce intro: affects_lrefl
                                    simp: partitionIntegrity_def domain_fields_equiv_def
                                    dest: domains_distinct[THEN pas_domains_distinct_inj])+)[16]
@@ -1341,17 +1353,6 @@ lemma partsSubjectAffects_bounds_subjects_affects:
 
 end
 
-
-lemma cur_thread_not_SilcLabel:
-  "\<lbrakk> silc_inv aag st s; invs s \<rbrakk> \<Longrightarrow> pasObjectAbs aag (cur_thread s) \<noteq> SilcLabel"
-  apply (rule notI)
-  apply (simp add: silc_inv_def)
-  apply (drule tcb_at_invs)
-  apply clarify
-  apply (drule_tac x="cur_thread s" in spec, erule (1) impE)
-  apply (auto simp: obj_at_def is_tcb_def is_cap_table_def)
-  apply (case_tac ko, simp_all)
-  done
 
 lemma ev_add_pre:
   "equiv_valid_inv I A P f \<Longrightarrow> equiv_valid_inv I A (P and Q) f"
@@ -1362,7 +1363,7 @@ lemma ev_add_pre:
 
 crunch check_active_irq_if
   for invs[wp]: "einvs"
-  (wp: dmo_getActiveIRQ_wp ignore: do_machine_op)
+  (ignore: do_machine_op)
 
 crunch thread_set
   for schact_is_rct[wp]: "schact_is_rct"
@@ -2815,7 +2816,7 @@ lemma kernel_entry_if_reads_respects_f_g:
   apply (simp add: kernel_entry_if_def)
   apply (wp handle_event_reads_respects_f_g thread_set_tcb_context_update_reads_respects_f_g
             thread_set_tcb_context_update_silc_inv only_timer_irq_inv_pres[where P="\<top>" and Q="\<top>"]
-            thread_set_invs_trivial thread_set_not_state_valid_sched thread_set_pas_refined
+            thread_set_invs_trivial thread_set_not_state_valid_sched thread_set_context_pas_refined
          | simp add: tcb_cap_cases_def arch_tcb_update_aux2)+
   apply (elim conjE)
   apply (frule (1) ct_active_cur_thread_not_idle_thread[OF invs_valid_idle])
@@ -3438,6 +3439,22 @@ lemma handle_preemption_agnostic_tc:
 
 context Noninterference_1 begin
 
+lemma handle_non_kernel_IRQ_ev2:
+  "equiv_valid_2 I A A R P (domain_sep_inv False st and K (irq \<in> non_kernel_IRQs))
+                           LHS (handle_interrupt irq >>= RHS)"
+  unfolding handle_interrupt_def
+  apply (rule EquivValid.gen_asm_ev2_r)
+  apply (case_tac "maxIRQ < irq")
+   apply (fastforce dest: non_kernel_IRQs_le_maxIRQ)
+  apply (clarsimp simp: bind_assoc)
+  apply (rule_tac Q="\<lambda>irq _. irq = IRQInactive" in equiv_valid_2_bind_right)
+       apply (rule gen_asm_ev2_r)
+       apply (clarsimp simp: fail_ev2_r)
+      apply (wpsimp simp: get_irq_state_def)+
+   apply (fastforce simp: domain_sep_inv_def)
+  apply simp
+  done
+
 lemma preemption_interrupt_scheduler_invisible:
   assumes domains_distinct[wp]: "pas_domains_distinct (aag :: 'a subject_label PAS)"
   shows "equiv_valid_2 (scheduler_equiv aag) (scheduler_affects_equiv aag l)
@@ -3453,21 +3470,24 @@ lemma preemption_interrupt_scheduler_invisible:
                               and (\<lambda>s. ct_idle s \<longrightarrow> uc' = idle_context s)
                               and (\<lambda>s. \<not> reads_scheduler_cur_domain aag l s))
                        (handle_preemption_if uc) (kernel_entry_if Interrupt uc')"
-  apply (simp add: kernel_entry_if_def handle_preemption_if_def maybe_handle_interrupt_def
-                   getActiveIRQ_no_non_kernel_IRQs)
+  apply (simp add: kernel_entry_if_def handle_preemption_if_def maybe_handle_interrupt_def)
   apply (rule equiv_valid_2_bind_right)
        apply (rule equiv_valid_2_bind_right)
             apply (simp add: liftE_def bind_assoc)
             apply (simp only: option.case_eq_if)
-            apply (rule equiv_valid_2_bind_pre[where R'="(=)"])
+            apply (rule equiv_valid_2_bind_pre[OF _ getActiveIRQ_ev2])
+                apply (elim disjE)
                  apply (simp split del: if_split)
                  apply (rule equiv_valid_2_bind_pre[where R'="(=)" and Q="\<top>\<top>" and Q'="\<top>\<top>"])
                       apply (rule return_ev2)
                       apply simp
                      apply (rule equiv_valid_2)
                      apply (wp handle_interrupt_reads_respects_scheduler[where st=st and st'=st'] | simp)+
-                apply (rule equiv_valid_2)
-                apply (rule dmo_getActive_IRQ_reads_respect_scheduler)
+                apply clarsimp
+                apply (rule equiv_valid_2_guard_imp)
+                  apply (rule handle_non_kernel_IRQ_ev2)
+                 apply simp
+                apply fastforce
                apply (wp dmo_getActiveIRQ_return_axiom[simplified try_some_magic]
                       | simp  add: imp_conjR arch_tcb_update_aux2
                       | elim conjE
@@ -3530,7 +3550,7 @@ lemma kernel_entry_scheduler_equiv_2:
                   | wp (once) hoare_drop_imps)+
           apply (rule context_update_cur_thread_snippit)
          apply (wp thread_set_invs_trivial guarded_pas_domain_lift
-                   thread_set_pas_refined thread_set_not_state_valid_sched
+                   thread_set_context_pas_refined thread_set_not_state_valid_sched
                 | simp add: tcb_cap_cases_def arch_tcb_update_aux2)+
    apply (fastforce simp: silc_inv_not_cur_thread cur_thread_idle)+
   done
