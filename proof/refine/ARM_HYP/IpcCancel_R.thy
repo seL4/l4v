@@ -6,7 +6,7 @@
 
 theory IpcCancel_R
 imports
-  Schedule_R
+  ArchSchedule_R
   "Lib.SimpStrategy"
 begin
 
