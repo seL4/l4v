@@ -7,7 +7,7 @@
 
 theory IpcCancel_R
 imports
-  Schedule_R
+  ArchSchedule_R
 begin
 
 arch_requalify_facts
