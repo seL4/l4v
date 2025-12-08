@@ -163,6 +163,19 @@ lemma tcb_at_cross:
   apply (erule (3) pspace_relation_tcb_at')
   done
 
+lemma ko_tcb_cross:
+  "\<lbrakk> ko_at (TCB tcb) t s; pspace_aligned s; pspace_distinct s; (s, s') \<in> state_relation \<rbrakk>
+   \<Longrightarrow> \<exists>tcb'. ko_at' tcb' t s' \<and> tcb_relation tcb tcb'"
+  apply (frule (1) pspace_distinct_cross, fastforce simp: state_relation_def)
+  apply (frule pspace_aligned_cross, fastforce simp: state_relation_def)
+  apply (prop_tac "tcb_at t s", clarsimp simp: st_tcb_at_def obj_at_def is_tcb)
+  apply (drule (2) tcb_at_cross, fastforce simp: state_relation_def)
+  apply normalise_obj_at'
+  apply (clarsimp simp: state_relation_def pspace_relation_def obj_at_def)
+  apply (drule bspec, fastforce)
+  apply (clarsimp simp: tcb_relation_cut_def obj_at'_def)
+  done
+
 lemma (in TcbAcc_R) st_tcb_at_runnable_cross:
   "\<lbrakk> st_tcb_at runnable t s; pspace_aligned s; pspace_distinct s; (s, s') \<in> state_relation \<rbrakk>
    \<Longrightarrow> st_tcb_at' runnable' t s'"
