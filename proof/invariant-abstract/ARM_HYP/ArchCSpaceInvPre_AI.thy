@@ -66,6 +66,12 @@ definition
 
 lemmas is_ap_cap_simps [simp] = is_ap_cap_def [split_simps cap.split arch_cap.split]
 
+(* No badges on arch capabilities on this architecture *)
+definition arch_cap_badge :: "arch_cap \<Rightarrow> machine_word option" where
+  "arch_cap_badge acap \<equiv> None"
+
+lemmas arch_cap_badge_simps[simp] = arch_cap_badge_def
+
 definition
   "reachable_pg_cap cap \<equiv> \<lambda>s.
    is_pg_cap cap \<and>

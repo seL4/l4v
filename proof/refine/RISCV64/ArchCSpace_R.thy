@@ -69,12 +69,17 @@ lemma valid_arch_badges_master_eq:
    valid_arch_badges src_cap cap' node = valid_arch_badges cap cap' node"
   by (auto simp: valid_arch_badges_def isCap_simps)
 
-lemmas valid_arch_badges_master[CSpace_R_assms] = valid_arch_badges_master_eq[THEN iffD1]
-
 lemma valid_arch_badges_firstBadged[CSpace_R_assms]:
   "\<lbrakk> valid_arch_badges cap cap' node; mdbFirstBadged node = mdbFirstBadged node' \<rbrakk> \<Longrightarrow>
    valid_arch_badges cap cap' node'"
   by (simp add: valid_arch_badges_def)
+
+lemma valid_arch_badges_master[CSpace_R_assms]:
+  "\<lbrakk>capMasterCap src_cap = capMasterCap cap;
+    (capBadge src_cap, capBadge cap) \<in> capBadge_ordering False;
+    valid_arch_badges src_cap cap' node\<rbrakk> \<Longrightarrow>
+   valid_arch_badges cap cap' node"
+  by (clarsimp simp: valid_arch_badges_def isCap_simps)
 
 lemma badge_derived'_capRange[CSpace_R_assms]:
   "badge_derived' cap src_cap \<Longrightarrow> capRange cap = capRange src_cap"
