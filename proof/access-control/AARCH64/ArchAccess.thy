@@ -56,6 +56,7 @@ primrec aobj_ref' where
 | "aobj_ref' (PageTableCap ref _ _) = {ref}"
 | "aobj_ref' (VCPUCap ref) = {ref}"
 | "aobj_ref' (SGISignalCap _ _) = {}"
+| "aobj_ref' (SMCCap _) = {}"
 
 fun acap_asid' :: "arch_cap \<Rightarrow> asid set" where
   "acap_asid' (FrameCap _ _ _ _ mapping) = fst ` set_option mapping"
@@ -64,6 +65,7 @@ fun acap_asid' :: "arch_cap \<Rightarrow> asid set" where
 | "acap_asid' ASIDControlCap = UNIV"
 | "acap_asid' (VCPUCap _) = {}"
 | "acap_asid' (SGISignalCap _ _) = {}"
+| "acap_asid' (SMCCap _) = {}"
 
 inductive_set state_asids_to_policy_aux for aag caps asid_tab vrefs where
   sata_asid:
