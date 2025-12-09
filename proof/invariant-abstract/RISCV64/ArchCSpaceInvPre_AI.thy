@@ -55,6 +55,12 @@ definition
      \<exists>level. vs_lookup_target level asid vref s = Some (level, p) \<or>
              pool_for_asid asid s = Some p"
 
+(* No badges on arch capabilities on this architecture *)
+definition arch_cap_badge :: "arch_cap \<Rightarrow> machine_word option" where
+  "arch_cap_badge acap \<equiv> None"
+
+lemmas arch_cap_badge_simps[simp] = arch_cap_badge_def
+
 definition
   "reachable_frame_cap cap \<equiv> \<lambda>s.
      is_frame_cap cap \<and> (\<exists>ref. vs_cap_ref cap = Some ref \<and> reachable_target ref (obj_ref_of cap) s)"
