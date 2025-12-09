@@ -529,7 +529,7 @@ proof -
            apply assumption+
          apply (simp add: sameRegionAs_def3)
          apply (intro disjI1)
-         apply (fastforce simp:isCap_simps capMasterCap_def split:capability.splits)
+         apply (fastforce simp:isCap_simps capMasterCap_def arch_capBadge_def split:capability.splits)
         apply clarsimp
        apply (clarsimp simp: isCap_simps mdb_chunked_arch_assms_def)
       apply clarsimp
@@ -705,13 +705,12 @@ proof induct
       apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
      apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
     (* SGISignalCap *)
-    apply (clarsimp simp: parentOf_def isCap_simps isMDBParentOf_CTE)
+    apply (clarsimp simp: parentOf_def isCap_simps isMDBParentOf_CTE arch_capBadge_def)
     apply (rename_tac next_node)
     apply (rule subtree.trans_parent[OF _ m_slot_next], simp_all)
      apply (rule subtree.direct_parent)
        apply (erule prev_slot_next)
       apply simp
-     prefer 2
      apply (clarsimp simp: parentOf_def slot isMDBParentOf_CTE)
     apply (clarsimp simp: parentOf_def slot isMDBParentOf_CTE isCap_simps)
     apply (cases "mdbFirstBadged s_node", simp)
@@ -805,7 +804,7 @@ next
         apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
        (* SGISignalCap *)
        apply (rename_tac next_cap next_node)
-       apply (clarsimp simp: isCap_simps)
+       apply (clarsimp simp: isCap_simps arch_capBadge_def)
        apply (case_tac cte, case_tac cte')
        apply (rename_tac cap'' node'')
        apply (clarsimp simp: isMDBParentOf_CTE)

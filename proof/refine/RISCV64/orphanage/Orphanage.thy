@@ -1648,7 +1648,8 @@ lemma tc_no_orphans:
     K (case_option True isArchObjectCap (case_option None (case_option None (Some o fst) o snd) g)) and
     K (case_option True (swp is_aligned 2 o fst) g) and
     K (case_option True (swp is_aligned msg_align_bits o fst) g) and
-    K (case g of None \<Rightarrow> True | Some x \<Rightarrow> (case_option True (isArchObjectCap \<circ> fst) \<circ> snd) x) and
+    K (case g of None \<Rightarrow> True | Some x \<Rightarrow>
+         (case_option True ((\<lambda>cap. isArchObjectCap cap \<and> capBadge cap = None ) \<circ> fst) \<circ> snd) x) and
     K (valid_option_prio d \<and> valid_option_prio mcp) \<rbrace>
       invokeTCB (tcbinvocation.ThreadControl a sl b' mcp d e' f' g)
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
