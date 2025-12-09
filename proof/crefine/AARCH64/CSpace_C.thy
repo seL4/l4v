@@ -470,10 +470,6 @@ lemma cap_lift_capEPBadge_mask_eq:
   unfolding cap_lift_def
   by (fastforce simp: Let_def mask_def word_bw_assocs split: if_split_asm)
 
-lemma Arch_isCapRevocable_def2:
-  "Arch.isCapRevocable cap cap' = (isArchSGISignalCap cap \<and> cap' = IRQControlCap)"
-  by (auto simp add: isCapRevocable_def isCap_simps split: capability.splits arch_capability.splits)
-
 lemma cap_get_tag_isCap_unfolded_H_cap2: (* FIXME AARCH64: move; potentially replace original *)
   shows "ccap_relation (capability.ThreadCap v0) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_thread_cap)"
   and "ccap_relation (capability.NullCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_null_cap)"
@@ -496,6 +492,7 @@ lemma cap_get_tag_isCap_unfolded_H_cap2: (* FIXME AARCH64: move; potentially rep
   and "ccap_relation (capability.ArchObjectCap (arch_capability.FrameCap v101 v44 v45 v46 v47)) cap'  \<Longrightarrow> (cap_get_tag cap' = scast cap_frame_cap)"
   and "ccap_relation (capability.ArchObjectCap (arch_capability.VCPUCap v48)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_vcpu_cap)"
   and "ccap_relation (capability.ArchObjectCap (arch_capability.SGISignalCap irq target)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_sgi_signal_cap)"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.SMCCap smc_badge)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_smc_cap)"
   apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps)
   apply (frule cap_get_tag_isCap(2), simp)
   apply (clarsimp simp: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps
@@ -503,22 +500,49 @@ lemma cap_get_tag_isCap_unfolded_H_cap2: (* FIXME AARCH64: move; potentially rep
   done
 
 lemmas ccap_rel_cap_get_tag_cases_arch2 = (* FIXME AARCH64: move; potentially replace original *)
-  cap_get_tag_isCap_unfolded_H_cap2(12-17)
+  cap_get_tag_isCap_unfolded_H_cap2(12-18)
     [OF back_subst[of "\<lambda>cap. ccap_relation (ArchObjectCap cap) cap'" for cap'],
      OF back_subst[of "\<lambda>cap. ccap_relation cap cap'" for cap']]
 
 lemmas ccap_rel_cap_get_tag_cases_arch2' = (* FIXME AARCH64: move; potentially replace original *)
   ccap_rel_cap_get_tag_cases_arch2[OF _ refl]
 
+lemma ccap_relation_SMCCap_eq:
+   "ccap_relation (ArchObjectCap (SMCCap smc_badge)) ccap =
+    (\<exists>cap_CL. cap_lift ccap = Some (Cap_smc_cap cap_CL) \<and> capSMCBadge_CL cap_CL = smc_badge)"
+  by (simp add: ccap_relation_def map_option_Some_eq2 cap_to_H_def Let_def cap_lift_def
+           split: cap_CL.splits)
+
+lemma ccap_relation_SMCCap_lift_eq:
+   "ccap_relation (ArchObjectCap (SMCCap smc_badge)) ccap =
+    (cap_get_tag ccap = scast cap_smc_cap \<and>
+     capSMCBadge_CL (cap_smc_cap_lift ccap) = smc_badge)"
+  by (auto simp: ccap_relation_SMCCap_eq cap_smc_cap_lift_def cap_smc_cap_lift)
+
+lemma Arch_isCapRevocable_def2:
+  "Arch.isCapRevocable cap cap' =
+     ((isArchSGISignalCap cap \<and> cap' = IRQControlCap) \<or>
+      (isArchSMCCap cap \<and> capSMCBadge (capCap cap) \<noteq> capSMCBadge (capCap cap')))"
+  by (auto simp add: isCapRevocable_def isCap_simps split: capability.splits arch_capability.splits)
+
 lemma Arch_isCapRevocable_spec:
-  "\<forall>s. \<Gamma>\<turnstile> {\<sigma>. s = \<sigma> \<and> True}
+  "\<forall>s. \<Gamma>\<turnstile> {\<sigma>. s = \<sigma> \<and> (cap_get_tag (derivedCap_' s) = scast cap_smc_cap \<longrightarrow> cap_get_tag (srcCap_' s) = scast cap_smc_cap)}
           Call Arch_isCapRevocable_'proc
         {t. \<forall>c c'.  ccap_relation c (derivedCap_' s) \<and> ccap_relation c' (srcCap_' s)
             \<longrightarrow> ret__unsigned_long_' t = from_bool (Arch.isCapRevocable c c')}"
   apply vcg
-  by (auto dest!: sym[where s="scast x" for x]
-           simp: cap_get_tag_isCap cap_get_tag_isCap_unfolded_H_cap2 isCap_simps
-                 Arch_isCapRevocable_def2 from_bool_0)
+  apply (clarsimp simp: Arch_isCapRevocable_def2 from_bool_eq_if' cong: if_cong split del: if_split)
+  apply (rule conjI; clarsimp)
+   (* get_tag derivedCap = cap_sgi_signal_cap *)
+   apply (drule sym[where s="scast tag" for tag])
+   apply (solves \<open>clarsimp simp: cap_get_tag_isCap isCap_simps\<close>)
+  apply (rule conjI; clarsimp)
+   (* get_tag derivedCap = cap_smc_cap *)
+   apply (drule sym[where s="scast tag" for tag])
+   apply (clarsimp simp: cap_get_tag_isCap isCap_simps ccap_relation_SMCCap_lift_eq)
+  (* neither of the two cases above *)
+  apply (auto simp: isCap_simps cap_get_tag_isCap_unfolded_H_cap2)
+  done
 
 lemmas isCapRevocable_simps[simp] = Retype_H.isCapRevocable_def[split_simps capability.split]
 
@@ -551,9 +575,9 @@ lemma revokable_ccorres:
   apply csymbr
   apply (rule_tac P'=UNIV and P=\<top> in ccorres_inst)
    apply (cases cap)
-    \<comment> \<open>Uninteresting caps\<close>
+              \<comment> \<open>Uninteresting caps\<close>
               apply isCapRevocable_hammer+
-    \<comment> \<open>NotificationCap\<close>
+            \<comment> \<open>NotificationCap\<close>
             apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs)
             apply (rule ccorres_guard_imp, (rule ccorres_rhs_assoc)+, csymbr, csymbr)
               apply (rule ccorres_return_C, clarsimp+)
@@ -562,12 +586,12 @@ lemma revokable_ccorres:
             apply (frule_tac cap'1=derivedCap in cap_get_tag_NotificationCap[THEN iffD1])
              apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
             apply (fastforce simp: cap_get_tag_isCap isCap_simps)
-    \<comment> \<open>IRQHandlerCap\<close>
+           \<comment> \<open>IRQHandlerCap\<close>
            apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs)
            apply (rule ccorres_guard_imp, csymbr)
              apply (rule ccorres_return_C, clarsimp+)
            apply (fastforce simp: cap_get_tag_isCap isCap_simps)
-    \<comment> \<open>EndpointCap\<close>
+          \<comment> \<open>EndpointCap\<close>
           apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs)
           apply (rule ccorres_guard_imp, (rule ccorres_rhs_assoc)+, csymbr, csymbr)
             apply (rule ccorres_return_C, clarsimp+)
@@ -576,8 +600,11 @@ lemma revokable_ccorres:
           apply (frule_tac cap'1=derivedCap in cap_get_tag_EndpointCap[THEN iffD1])
            apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
           apply (fastforce simp: cap_get_tag_isCap isCap_simps)
-    \<comment> \<open>Other Caps\<close>
-  by (isCapRevocable_hammer | fastforce simp: isCap_simps)+
+         \<comment> \<open>Other Caps\<close>
+         apply (isCapRevocable_hammer | fastforce simp: isCap_simps)+
+  \<comment> \<open>Final preconditions goal\<close>
+  apply (clarsimp simp: cap_get_tag_isCap isCap_simps is_simple_cap'_def)
+  done
 
 end (* revokable_ccorres *)
 
@@ -716,7 +743,8 @@ definition
     \<and> tag \<noteq> scast cap_untyped_cap \<and> tag \<noteq> scast cap_reply_cap
     \<and> tag \<noteq> scast cap_endpoint_cap \<and> tag \<noteq> scast cap_notification_cap
     \<and> tag \<noteq> scast cap_thread_cap \<and> tag \<noteq> scast cap_cnode_cap
-    \<and> tag \<noteq> scast cap_zombie_cap \<and> tag \<noteq> scast cap_frame_cap"
+    \<and> tag \<noteq> scast cap_zombie_cap \<and> tag \<noteq> scast cap_frame_cap
+    \<and> tag \<noteq> scast cap_smc_cap"
 
 (* Useful:
   apply (tactic {* let val _ = reset CtacImpl.trace_ceqv; val _ = reset CtacImpl.trace_ctac in all_tac end; *})
@@ -730,7 +758,7 @@ schematic_goal ccap_relation_tag_Master:
                (case_arch_capability ?aa ?ab ?ac
                   (\<lambda>base_ptr pt_t maddr. if pt_t = VSRootPT_T
                                          then scast cap_vspace_cap
-                                         else scast cap_page_table_cap) ?ae ?af)
+                                         else scast cap_page_table_cap) ?ae ?af ?ag)
                ?h ?i ?j ?k
             (capMasterCap cap)"
   by (fastforce simp: ccap_relation_def map_option_Some_eq2
@@ -3163,17 +3191,33 @@ lemma sameRegionAs_NotificationCap:
 
 lemma Arch_isMDBParentOf_spec:
   "\<forall>capa capb firstBadged.
-     \<Gamma> \<turnstile> \<lbrace>  ccap_relation capa \<acute>cap_a \<and> \<acute>firstBadged = from_bool firstBadged \<and>
-            sameRegionAs capa capb \<rbrace>
+     \<Gamma> \<turnstile> \<lbrace>  ccap_relation capa \<acute>cap_a \<and> ccap_relation capb \<acute>cap_b \<and>
+            \<acute>firstBadged = from_bool firstBadged \<and> sameRegionAs capa capb \<rbrace>
          Call Arch_isMDBParentOf_'proc
          \<lbrace> \<acute>ret__unsigned_long = from_bool (isArchMDBParentOf capa capb firstBadged) \<rbrace>"
   apply (intro allI, rule conseqPre, vcg)
-  apply (clarsimp simp: isArchMDBParentOf_def2 from_bool_0 split: if_splits)
+  apply clarsimp
   apply (rule conjI; clarsimp)
+   (* cap_a = cap_sgi_signal_cap *)
+   apply (clarsimp simp: isArchMDBParentOf_def2 from_bool_0 isCap_simps
+                   dest!: cap_get_tag_isCap0
+                   split: if_splits)
+  apply (rule conjI; clarsimp)
+   (* cap_a = cap_smc_cap *)
+   apply (drule sym[where s="scast cap_smc_cap"])
+   apply (rule conjI; clarsimp)
+    (* badge cap_a = 0 *)
+    apply (clarsimp simp: isArchMDBParentOf_def2 cap_get_tag_SMCCap isCap_simps)
+   (* badge cap_a \<noteq> 0 *)
    apply (rule context_conjI)
-    apply (clarsimp dest!: cap_get_tag_isCap0)
-   apply (clarsimp simp: isCap_simps)
-  apply (clarsimp simp: isCap_simps cap_get_tag_isCap_unfolded_H_cap)
+    (* establish get_tag cap_b = cap_smc_cap *)
+    apply (clarsimp simp: cap_get_tag_SMCCap isCap_simps)
+    apply (thin_tac "ccap_relation c c'" for c c')
+    apply (solves \<open>clarsimp simp: ccap_relation_SMCCap_eq cap_smc_cap_lift_def\<close>)
+   apply (fastforce simp: isArchMDBParentOf_def2 cap_get_tag_SMCCap isCap_simps
+                    split: if_splits)
+  (* neither SMC nor SGI *)
+  apply (clarsimp simp: isArchMDBParentOf_def2 dest!: cap_get_tag_isCap0)
   done
 
 lemma from_bool_to_bool_mdbFirstBadged[simp]:
@@ -3217,6 +3261,7 @@ lemma isMDBParentOf_spec:
   apply (simp add: cte_lift_def)
   apply (clarsimp simp: cte_to_H_def mdb_node_to_H_def
                  split: option.split_asm)
+  apply (rename_tac cap_a cap_b)
 
   apply (rule conjI)
    \<comment> \<open>sameRegionAs = 0\<close>
@@ -3227,7 +3272,7 @@ lemma isMDBParentOf_spec:
   \<comment> \<open>sameRegionAs \<noteq> 0\<close>
   apply (clarsimp simp: typ_heap_simps from_bool_0)
   apply (rule exI, rule conjI, assumption)
-  apply (rule_tac x="cap_to_H x2c" in  exI)
+  apply (rule exI, rule conjI, assumption)
   apply (rule_tac x="to_bool (mdbFirstBadged_CL (mdb_node_lift (cteMDBNode_C cte_b)))" in exI)
   apply clarsimp
 
@@ -3245,8 +3290,8 @@ lemma isMDBParentOf_spec:
     prefer 2
     apply (rule sameRegionAs_EndpointCap, assumption+)
 
-   apply (clarsimp simp: if_1_0_0 typ_heap_simps'   Let_def case_bool_If)
-   apply (frule_tac cap="(cap_to_H x2c)" in cap_get_tag_EndpointCap)
+   apply (clarsimp simp: if_1_0_0 typ_heap_simps' Let_def case_bool_If)
+   apply (frule_tac cap="cap_to_H cap_b" in cap_get_tag_EndpointCap)
    apply (clarsimp split: if_split_asm simp: if_distrib [where f=scast])
 
   apply (clarsimp, rule conjI)
@@ -3263,15 +3308,11 @@ lemma isMDBParentOf_spec:
    apply (rule conjI, simp)
    apply clarsimp
    apply (simp add: Let_def case_bool_If)
-   apply (frule_tac cap="(cap_to_H x2c)" in cap_get_tag_NotificationCap)
+   apply (frule_tac cap="cap_to_H cap_b" in cap_get_tag_NotificationCap)
    apply clarsimp
 
   \<comment> \<open>main goal\<close>
-  apply clarsimp
-  apply (simp add: to_bool_def)
-  apply (subgoal_tac "(\<not> (isEndpointCap (cap_to_H x2b))) \<and> ( \<not> (isNotificationCap (cap_to_H x2b)))")
-   apply clarsimp
-  apply (clarsimp simp: cap_get_tag_isCap [symmetric])
+  apply (clarsimp simp: cap_get_tag_isCap[symmetric] to_bool_def)
   done
 
 lemma updateCapData_spec:
@@ -3281,24 +3322,26 @@ lemma updateCapData_spec:
   supply if_cong[cong]
   apply (rule allI, rule conseqPre)
   apply vcg
-  apply (clarsimp simp: if_1_0_0)
+  apply clarsimp
 
   apply (simp add: updateCapData_def)
 
   apply (case_tac cap, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                                      isCap_simps isArchCap_tag_def2 cap_tag_defs Let_def)
-  \<comment> \<open>NotificationCap\<close>
+     \<comment> \<open>NotificationCap\<close>
      apply clarsimp
      apply (frule cap_get_tag_isCap_unfolded_H_cap(3))
      apply (frule (1) iffD1[OF cap_get_tag_NotificationCap])
      apply clarsimp
 
      apply (intro conjI impI)
-     \<comment> \<open>preserve is zero and capNtfnBadge_CL \<dots> = 0\<close>
+       \<comment> \<open>preserve is zero and capNtfnBadge_CL \<dots> = 0\<close>
        apply clarsimp
+       (* slow, because there are many hidden cap_lift in there that get unfolded and turned
+          into cases: *)
        apply (clarsimp simp:cap_notification_cap_lift_def cap_lift_def cap_tag_defs)
        apply (simp add: ccap_relation_def cap_lift_def cap_tag_defs cap_to_H_def)
-     \<comment> \<open>preserve is zero and capNtfnBadge_CL \<dots> \<noteq> 0\<close>
+      \<comment> \<open>preserve is zero and capNtfnBadge_CL \<dots> \<noteq> 0\<close>
       apply clarsimp
       apply (simp add: ccap_relation_NullCap_iff cap_tag_defs)
      \<comment> \<open>preserve is not zero\<close>
@@ -3309,18 +3352,20 @@ lemma updateCapData_spec:
      apply (simp add: if_not_P)
      apply (simp add: ccap_relation_NullCap_iff cap_tag_defs)
 
-  \<comment> \<open>EndpointCap\<close>
+    \<comment> \<open>EndpointCap\<close>
     apply clarsimp
     apply (frule cap_get_tag_isCap_unfolded_H_cap(4))
     apply (frule (1) iffD1[OF cap_get_tag_EndpointCap])
     apply clarsimp
 
     apply (intro impI conjI)
-    \<comment> \<open>preserve is zero and capNtfnBadge_CL \<dots> = 0\<close>
+      \<comment> \<open>preserve is zero and capEPBadge_CL \<dots> = 0\<close>
       apply clarsimp
+      (* same as above: slow, because there are many hidden cap_lift in there that get unfolded and
+         turned into cases. *)
       apply (clarsimp simp:cap_endpoint_cap_lift_def cap_lift_def cap_tag_defs)
       apply (simp add: ccap_relation_def cap_lift_def cap_tag_defs cap_to_H_def)
-    \<comment> \<open>preserve is zero and capNtfnBadge_CL \<dots> \<noteq> 0\<close>
+     \<comment> \<open>preserve is zero and capEPBadge_CL \<dots> \<noteq> 0\<close>
      apply clarsimp
      apply (simp add: ccap_relation_NullCap_iff cap_tag_defs)
     \<comment> \<open>preserve is not zero\<close>
@@ -3330,12 +3375,19 @@ lemma updateCapData_spec:
     apply (simp add: if_not_P)
     apply (simp add: ccap_relation_NullCap_iff cap_tag_defs)
 
-  \<comment> \<open>ArchObjectCap\<close>
+   \<comment> \<open>ArchObjectCap\<close>
    apply clarsimp
+   apply (rename_tac acap)
    apply (frule cap_get_tag_isArchCap_unfolded_H_cap)
-   apply (simp add: isArchCap_tag_def2)
-   apply (simp add: AARCH64_H.updateCapData_def)
-
+   apply (clarsimp simp: isArchCap_tag_def2 AARCH64_H.updateCapData_def)
+   apply (case_tac acap;
+          simp add: cap_get_tag_isCap_unfolded_H_cap2[unfolded cap_tag_defs, simplified])
+    apply (rename_tac p pt_t m)
+    apply (case_tac pt_t;
+           simp add: cap_get_tag_isCap_unfolded_H_cap2[unfolded cap_tag_defs, simplified])
+   (* SMCCap *)
+   apply (solves \<open>clarsimp simp: ccap_relation_SMCCap_lift_eq cap_tag_defs to_bool_def
+                                 ccap_relation_NullCap_iff\<close>)
   \<comment> \<open>CNodeCap\<close>
   apply (clarsimp simp: cteRightsBits_def cteGuardBits_def)
   apply (frule cap_get_tag_isCap_unfolded_H_cap(10))
