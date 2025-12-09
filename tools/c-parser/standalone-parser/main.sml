@@ -359,6 +359,7 @@ in
                                              NONE => "anonymous"
                                            | SOME s => s)^
                         " enum"
+  | StaticAssertion {message,...} => "static assertion "^node message
 end
 
 fun print_fnslocs cse ast = let
@@ -383,6 +384,7 @@ fun print_ast cse ast = let
         VarDecl (_, s, _, _, _) => "VarDecl: " ^ node s
       | StructDecl (s, _) => "StructDecl: " ^ node s
       | ExtFnDecl exfn => "ExtFnDecl: " ^ node (#name exfn)
+      | StaticAssertion {message, ...} => "StaticAssertion: " ^ node message
       | EnumDecl (soptw, _) =>
           case node soptw of
             SOME s => "EnumDecl: "  ^ s
