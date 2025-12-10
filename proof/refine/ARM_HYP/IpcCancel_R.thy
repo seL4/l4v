@@ -9,6 +9,10 @@ imports
   Schedule_R
   "Lib.SimpStrategy"
 begin
+
+arch_requalify_facts
+  valid_global_refs_lift'
+
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch cancelAllIPC
@@ -917,7 +921,7 @@ proof -
      \<lbrace>\<lambda>rv. invs'\<rbrace>"
     unfolding getThreadReplySlot_def
     by (wp valid_irq_node_lift delete_one_invs hoare_drop_imps
-           threadSet_invs_trivial irqs_masked_lift
+           ARM_HYP.threadSet_invs_trivial irqs_masked_lift (* FIXME arch-split *)
       | simp add: o_def if_apply_def2
       | fastforce simp: inQ_def)+
   show ?thesis
@@ -1263,7 +1267,7 @@ lemma (in delete_one) suspend_corres:
             apply (simp add: ARM_HYP.nextInstructionRegister_def ARM_HYP.faultRegister_def
                              ARM_HYP_H.nextInstructionRegister_def ARM_HYP_H.faultRegister_def)
             apply (simp add: ARM_HYP_H.Register_def)
-            apply (subst unit_dc_is_eq)
+            apply (fold dc_def, subst unit_dc_is_eq)
             apply (rule corres_underlying_trivial)
             apply (wpsimp simp: ARM_HYP.setRegister_def ARM_HYP.getRegister_def)
            apply (rule corres_return_trivial)
@@ -1311,20 +1315,6 @@ lemma opt_case_when:
   "(case x of None \<Rightarrow> return () | Some (c, _) \<Rightarrow> when (c = v) f) =
    when (\<exists>a. x = Some (v, a)) f"
   by (cases x) (auto simp add: split_def)
-
-lemma corres_gets_current_vcpu[corres]:
-  "corres (=) \<top> \<top> (gets (arm_current_vcpu \<circ> arch_state))
-                      (gets (armHSCurVCPU \<circ> ksArchState))"
-  by (simp add: state_relation_def arch_state_relation_def)
-
-lemma vcpuInvalidateActive_corres[corres]:
-  "corres dc \<top> no_0_obj' vcpu_invalidate_active vcpuInvalidateActive"
-  unfolding vcpuInvalidateActive_def vcpu_invalidate_active_def
-  apply (corresKsimp  corres: vcpuDisable_corres
-                    corresK: corresK_modifyT
-                       simp: modifyArchState_def)
-  apply (clarsimp simp: state_relation_def arch_state_relation_def)
-  done
 
 lemma tcb_ko_at':
   "tcb_at' t s \<Longrightarrow> \<exists>ta::tcb. ko_at' ta t s"
@@ -1730,15 +1720,6 @@ proof -
   apply assumption
   done
 qed
-
-context begin interpretation Arch . (* FIXME: arch-split *)
-
-lemma tcbSchedEnqueue_valid_pspace'[wp]:
-  "tcbSchedEnqueue tcbPtr \<lbrace>valid_pspace'\<rbrace>"
-  unfolding valid_pspace'_def
-  by wpsimp
-
-end
 
 lemma cancel_all_invs'_helper:
   "\<lbrace>all_invs_but_sym_refs_ct_not_inQ' and (\<lambda>s. \<forall>x \<in> set q. tcb_at' x s)
@@ -2382,7 +2363,7 @@ lemma suspend_unqueued:
   by (wpsimp simp: comp_def wp: tcbSchedDequeue_not_tcbQueued)
 
 crunch vcpuInvalidateActive
-  for no_vcpu[wp]: "obj_at' (P::'a:: no_vcpu \<Rightarrow> bool) t"
+  for no_vcpu[wp]: "\<lambda>s. P (obj_at' (P'::'a:: no_vcpu \<Rightarrow> bool) t s)"
 
 lemma asUser_tcbQueued[wp]:
   "asUser t' f \<lbrace>obj_at' (P \<circ> tcbQueued) t\<rbrace>"
@@ -2396,13 +2377,13 @@ lemma archThreadSet_tcbQueued[wp]:
 
 lemma dissociateVCPUTCB_unqueued:
   "dissociateVCPUTCB vcpu tcb \<lbrace>obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
-  unfolding dissociateVCPUTCB_def archThreadGet_def by wpsimp
+  unfolding dissociateVCPUTCB_def archThreadGet_def by (wpsimp simp: o_def)
 
 lemmas asUser_st_tcb_at'[wp] = asUser_obj_at [folded st_tcb_at'_def]
 lemmas setObject_vcpu_st_tcb_at'[wp] =
-  setObject_vcpu_obj_at'_no_vcpu [where P'="P o tcbState" for P, folded st_tcb_at'_def]
+  setObject_vcpu_obj_at'_no_vcpu [where P'="P' o tcbState" for P', folded st_tcb_at'_def]
 lemmas vcpuInvalidateActive_st_tcb_at'[wp] =
-  vcpuInvalidateActive_no_vcpu [where P="P o tcbState" for P, folded st_tcb_at'_def]
+  vcpuInvalidateActive_no_vcpu [where P'="P' o tcbState" for P', folded st_tcb_at'_def]
 
 lemma archThreadSet_st_tcb_at'[wp]:
   "archThreadSet f tcb \<lbrace>st_tcb_at' P t\<rbrace>"

@@ -512,7 +512,7 @@ lemma arch_performIRQControl_corres:
                          safe_parent_for_def is_simple_cap_arch_def)
   apply (clarsimp simp: invs'_def valid_pspace'_def IRQHandler_valid
                         IRQHandler_valid' is_simple_cap'_def isCap_simps IRQ_def)
-  apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
+  apply (clarsimp simp: safe_parent_for'_def safe_parent_for_arch'_def cte_wp_at_ctes_of)
   apply (case_tac ctea)
   apply (clarsimp simp: isCap_simps sameRegionAs_def3)
   apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
@@ -580,7 +580,7 @@ lemma arch_invoke_irq_control_invs'[wp]:
   apply (rule hoare_pre)
    apply (wpsimp wp: cteInsert_simple_invs simp: cte_wp_at_ctes_of isCap_simps IRQ_def)
   apply (clarsimp simp: cte_wp_at_ctes_of IRQHandler_valid' is_simple_cap'_def isCap_simps
-                        safe_parent_for'_def sameRegionAs_def3)
+                        safe_parent_for'_def safe_parent_for_arch'_def sameRegionAs_def3)
   apply (rule conjI, clarsimp simp: cte_wp_at_ctes_of)
   apply (case_tac ctea)
   apply (auto dest: valid_irq_handlers_ctes_ofD
@@ -634,6 +634,7 @@ lemma threadState_case_if:
 
 lemmas corres_eq_trivial = corres_Id[where f = h and g = h for h, simplified]
 
+<<<<<<< HEAD
 lemma doMachineOp_ackDeadlineIRQ_invs'[wp]:
   "doMachineOp ackDeadlineIRQ \<lbrace>invs'\<rbrace>"
   apply (wpsimp simp: ackDeadlineIRQ_def wp: dmo_invs' ackInterrupt_irq_masks)
@@ -641,6 +642,13 @@ lemma doMachineOp_ackDeadlineIRQ_invs'[wp]:
          in use_valid[where P=P and Q="\<lambda>_. P" for P])
     apply wpsimp+
   done
+||||||| 0d43d8dee
+=======
+(* FIXME arch-split: architectures with hypervisor support impose stronger guards *)
+lemma handle_reserved_irq_corres[corres]:
+  "corres dc einvs invs' (handle_reserved_irq irq) (handleReservedIRQ irq)"
+  unfolding handle_reserved_irq_def handleReservedIRQ_def by corres
+>>>>>>> verification/master
 
 lemma handleInterrupt_corres:
   "corres dc
@@ -663,8 +671,26 @@ lemma handleInterrupt_corres:
       apply ((wp | simp)+)[4]
   apply (rule corres_gen_asm2)
   apply (case_tac st, simp_all add: irq_state_relation_def split: irqstate.split_asm)
-   apply (simp add: getSlotCap_def bind_assoc)
+    apply (simp add: getSlotCap_def bind_assoc)
+    apply (rule corres_guard_imp)
+      apply (rule corres_split[OF getIRQSlot_corres])
+        apply simp
+        apply (rule corres_split[OF get_cap_corres,
+                                  where R="\<lambda>rv. einvs and valid_cap rv"
+                                   and R'="\<lambda>rv. invs' and valid_cap' (cteCap rv)"])
+          apply (rule corres_underlying_split[where r'=dc])
+             apply (case_tac xb, simp_all add: doMachineOp_return)[1]
+              apply (clarsimp simp add: when_def doMachineOp_return)
+              apply (rule corres_guard_imp, rule sendSignal_corres)
+               apply (clarsimp simp: valid_cap_def valid_cap'_def arch_mask_irq_signal_def
+                                     maskIrqSignal_def do_machine_op_bind doMachineOp_bind)+
+            apply (rule corres_machine_op, rule corres_eq_trivial;
+                    (simp add: no_fail_ackInterrupt)+)+
+           apply ((wp |simp)+)
+     apply clarsimp
+    apply fastforce
    apply (rule corres_guard_imp)
+<<<<<<< HEAD
      apply (rule corres_split[OF getIRQSlot_corres])
        apply simp
        apply (rule corres_split[OF get_cap_corres,
@@ -684,6 +710,47 @@ lemma handleInterrupt_corres:
   apply (corresKsimp corres: corres_machine_op setReprogramTimer_corres
                       simp: ackDeadlineIRQ_def ackInterrupt_def)
   by fastforce
+||||||| 0d43d8dee
+     apply (rule corres_split[OF getIRQSlot_corres])
+       apply simp
+       apply (rule corres_split[OF get_cap_corres,
+                                 where R="\<lambda>rv. einvs and valid_cap rv"
+                                  and R'="\<lambda>rv. invs' and valid_cap' (cteCap rv)"])
+         apply (rule corres_underlying_split[where r'=dc])
+            apply (case_tac xb, simp_all add: doMachineOp_return)[1]
+             apply (clarsimp simp add: when_def doMachineOp_return)
+             apply (rule corres_guard_imp, rule sendSignal_corres)
+              apply (clarsimp simp: valid_cap_def valid_cap'_def arch_mask_irq_signal_def
+                                    maskIrqSignal_def do_machine_op_bind doMachineOp_bind)+
+           apply (rule corres_machine_op, rule corres_eq_trivial;
+                   (simp add: no_fail_ackInterrupt)+)+
+          apply ((wp |simp)+)
+    apply clarsimp
+   apply fastforce
+  apply (rule corres_guard_imp)
+    apply (rule corres_split)
+       apply simp
+       apply (rule corres_split[OF timerTick_corres corres_machine_op])
+         apply (rule corres_eq_trivial, wpsimp+)
+      apply (rule corres_machine_op)
+      apply (rule corres_eq_trivial, (simp add: no_fail_ackInterrupt)+)
+     apply wp+
+   apply (clarsimp simp: invs_distinct invs_psp_aligned schact_is_rct_def)
+  apply clarsimp
+  done
+=======
+     apply (rule corres_split)
+        apply simp
+        apply (rule corres_split[OF timerTick_corres corres_machine_op])
+          apply (rule corres_eq_trivial, wpsimp+)
+       apply (rule corres_machine_op)
+       apply (rule corres_eq_trivial, (simp add: no_fail_ackInterrupt)+)
+      apply wp+
+    apply (clarsimp simp: invs_distinct invs_psp_aligned schact_is_rct_def)
+   apply clarsimp
+  apply (corres corres: corres_machine_op corres_eq_trivial)
+  done
+>>>>>>> verification/master
 
 crunch rescheduleRequired, tcbSchedAppend
   for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
@@ -721,6 +788,7 @@ lemma dmo_ackInterrupt[wp]:
                            machine_rest_lift_def split_def | wp)+)[3]
   done
 
+(* FIXME arch-split: imposing a stronger precondition affects InfoFlow refinement *)
 lemma hint_invs[wp]:
   "handleInterrupt irq \<lbrace>invs'\<rbrace>"
   apply (simp add: handleInterrupt_def getSlotCap_def cong: irqstate.case_cong)

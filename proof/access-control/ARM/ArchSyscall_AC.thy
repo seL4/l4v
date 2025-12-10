@@ -163,7 +163,7 @@ crunch
   arch_post_modify_registers, arch_invoke_irq_control,
   arch_invoke_irq_handler, arch_perform_invocation, arch_mask_irq_signal,
   handle_reserved_irq, handle_vm_fault, handle_hypervisor_fault, handle_arch_fault_reply,
-  arch_prepare_set_domain, arch_post_set_flags, arch_prepare_next_domain
+  arch_prepare_set_domain, arch_post_set_flags, arch_prepare_next_domain, handle_spurious_irq
   for cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
   and idle_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (idle_thread s)"
   and cur_domain[Syscall_AC_assms, wp]:  "\<lambda>s. P (cur_domain s)"
@@ -201,6 +201,31 @@ crunch arch_prepare_next_domain
   and ct_not_in_q[Syscall_AC_assms, wp]: ct_not_in_q
   and valid_sched_action[Syscall_AC_assms, wp]: valid_sched_action
   and ct_in_cur_domain[Syscall_AC_assms, wp]: ct_in_cur_domain
+
+lemma handleSpuriousIRQ_mop_integrity[wp]:
+  "do_machine_op handleSpuriousIRQ_mop \<lbrace>integrity aag X st\<rbrace>"
+  unfolding handleSpuriousIRQ_mop_def
+  by (wpsimp wp: dmo_no_mem_respects)
+
+crunch handle_spurious_irq
+  for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
+  and integrity[Syscall_AC_assms, wp]: "integrity aag X st"
+  (ignore: do_machine_op)
+
+crunch arch_post_cap_deletion, prepare_thread_delete
+  for scheduler_action[Syscall_AC_assms, wp]: "\<lambda>s. P (scheduler_action s)"
+
+lemma arch_invoke_irq_control_in_cur_domainE[Syscall_AC_assms, wp]:
+  "\<lbrace>\<lambda>s::det_state. in_cur_domain t s\<rbrace>
+   arch_invoke_irq_control ivk
+   -,\<lbrace>\<lambda>_ s. in_cur_domain t s\<rbrace>"
+  by (cases ivk; simp; (solves \<open>wpsimp\<close>)?)
+
+lemma arch_perform_invocation_in_cur_domainE[Syscall_AC_assms, wp]:
+  "\<lbrace>\<lambda>s::det_state. in_cur_domain t s\<rbrace>
+   arch_perform_invocation ai
+   -,\<lbrace>\<lambda>_ s. in_cur_domain t s\<rbrace>"
+  by (wpsimp simp: arch_perform_invocation_def)
 
 end
 

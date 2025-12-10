@@ -365,6 +365,28 @@ proof -
     by (clarsimp simp: whileLoop_def, blast)
 qed
 
+lemma no_fail_whileLoop:
+  assumes nf: "\<And>r. no_fail (P r and C r) (B r)"
+  assumes termin: "\<And>r s. \<lbrakk>P r s; C r s\<rbrakk> \<Longrightarrow> whileLoop_terminates C B r s"
+  assumes body_inv: "\<And>r. \<lbrace>P r and C r\<rbrace> B r \<lbrace>P\<rbrace>"
+  assumes P: "P r s"
+  shows "\<not> snd (whileLoop C B r s)"
+  apply (insert P)
+  apply (erule_tac I="\<lambda>r s. P r s"
+               and R="{((r', s'), r, s). C r s \<and> (r', s') \<in> fst (B r s)
+                                         \<and> whileLoop_terminates C B r s}"
+                in not_snd_whileLoop)
+   apply (clarsimp simp: validNF_def)
+   apply (rule conjI)
+    apply (intro hoare_vcg_conj_lift_pre_fix)
+       apply (fastforce intro: body_inv hoare_weaken_pre)
+      apply (fastforce intro: hoare_vcg_prop hoare_weaken_pre)
+     apply (fastforce intro: body_inv simp: valid_def)
+    apply (fastforce intro: termin hoare_vcg_prop hoare_weaken_pre)
+   apply (fastforce intro: no_fail_pre nf)
+  apply (fastforce intro: wf_subset[OF whileLoop_terminates_wf[where C=C]])
+  done
+
 lemma valid_whileLoop:
   assumes first_step: "\<And>s. P r s \<Longrightarrow> I r s"
       and inv_step: "\<And>r. \<lbrace> \<lambda>s. I r s \<and> C r s \<rbrace> B r \<lbrace> I \<rbrace>"

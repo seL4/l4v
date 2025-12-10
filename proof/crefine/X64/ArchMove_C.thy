@@ -371,7 +371,7 @@ lemma is_aligned_pageBitsForSize_minimum:
   apply (erule is_aligned_weaken, simp)+
   done
 
-lemma valid_objs_valid_pte': "\<lbrakk> valid_objs' s ; ko_at' (ko :: pte) p s \<rbrakk> \<Longrightarrow> valid_pte' ko s"
+lemma valid_objs_valid_pte': "\<lbrakk> valid_objs' s ; ko_at' (ko :: pte) p s \<rbrakk> \<Longrightarrow> valid_pte' ko"
   by (fastforce simp add: obj_at'_def ran_def valid_obj'_def projectKOs valid_objs'_def)
 
 lemma obj_at_kernel_mappings':
@@ -388,7 +388,7 @@ where
     0 \<notin> ran pool \<and> (\<forall>x \<in> ran pool. is_aligned x pml4_bits))"
 
 lemma valid_eq_wf_asid_pool'[simp]:
-  "valid_asid_pool' pool = (\<lambda>s. wf_asid_pool' pool)"
+  "valid_asid_pool' pool = wf_asid_pool' pool"
   by (case_tac pool) simp
 
 declare valid_asid_pool'.simps[simp del]

@@ -436,6 +436,10 @@ lemma clift_h_t_validD:
 
 (* Tests *)
 
+context
+includes C_seplog_syntax
+begin
+
 lemma sep_conj_dom:
   "((\<lambda>s. dom s = X) \<and>\<^sup>* (\<lambda>s. dom s = Y)) = (\<lambda>s. dom s = X \<union> Y \<and> X \<inter> Y = {})"
   unfolding sep_conj_def
@@ -447,6 +451,8 @@ lemma sep_conj_dom:
   apply (clarsimp simp: map_disj_def Int_Un_distrib2)
   apply (simp add: Int_ac heap_merge_restrict_dom_un Un_ac)
   done
+
+end
 
 lemma Diff_Diff_Un_eq: "(A - B) - C = A - (B \<union> C)"
   by (simp add: Diff_eq Int_ac)

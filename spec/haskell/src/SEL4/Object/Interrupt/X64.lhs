@@ -140,6 +140,9 @@ checkIRQ is only used for the legacy PIC interrupt so always fails with the IOAP
 
 %FIXME: handle VTD faults
 
+> handleSpuriousIRQ :: Kernel ()
+> handleSpuriousIRQ = return ()
+
 > handleReservedIRQ :: IRQ -> Kernel ()
 > handleReservedIRQ _ = return ()
 

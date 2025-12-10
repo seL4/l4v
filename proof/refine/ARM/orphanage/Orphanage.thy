@@ -1111,7 +1111,7 @@ lemma createNewCaps_no_orphans:
                    | clarsimp simp: is_active_thread_state_def makeObject_tcb
                                     projectKO_opt_tcb isRunning_def isRestart_def
                                     APIType_capBits_def Arch_createNewCaps_def
-                                    objBits_if_dev
+                                    objBits_if_dev APIType_capBits_gen_def
                           split del: if_split
                    | simp add: objBits_simps
                    | fastforce simp:pageBits_def pteBits_def archObjSize_def ptBits_def pdBits_def
@@ -1144,6 +1144,7 @@ lemma createNewObjects_no_orphans:
          \<and> (\<forall>slot\<in>set slots. cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) slot s)
          \<and> cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap d (ptr && ~~ mask sz) sz idx) cref s
          \<and> caps_no_overlap'' ptr sz s
+         \<and> sz \<le> maxUntypedSizeBits
          \<and> range_cover ptr sz (APIType_capBits tp us) (length slots)
          \<and> (tp = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> us > 0)
          \<and> caps_overlap_reserved' {ptr..ptr + of_nat (length slots) * 2 ^ APIType_capBits tp us - 1} s
@@ -2031,16 +2032,18 @@ lemma sts_tcb_at'_preserve':
   \<lbrace>\<lambda>_. st_tcb_at' P t \<rbrace>"
   by (wpsimp wp: sts_st_tcb' simp: st_tcb_at_neg')
 
+crunch handleSpuriousIRQ
+  for no_orphans[wp]: no_orphans
+
 lemma handleEvent_no_orphans [wp]:
   "\<lbrace> \<lambda>s. invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and>
          (e \<noteq> Interrupt \<longrightarrow> ct_running' s) \<and>
          ksSchedulerAction s = ResumeCurrentThread \<and> no_orphans s \<rbrace>
    handleEvent e
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  apply (simp add: handleEvent_def handleSend_def handleCall_def
+  apply (simp add: handleEvent_def handleSend_def handleCall_def maybeHandleInterrupt_def
               cong: event.case_cong syscall.case_cong)
-  apply (rule hoare_pre)
-   apply (wp hv_inv' hoare_drop_imps | wpc | clarsimp simp: handleHypervisorFault_def)+
+  apply (wpsimp wp: hv_inv' hoare_drop_imps simp: handleHypervisorFault_def)
   apply (auto simp: activatable_from_running' active_from_running')
   done
 
@@ -2050,7 +2053,7 @@ theorem callKernel_no_orphans [wp]:
           ksSchedulerAction s = ResumeCurrentThread \<and> no_orphans s \<rbrace>
    callKernel e
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding callKernel_def
+  unfolding callKernel_def maybeHandleInterrupt_def
   by (wpsimp wp: weak_if_wp schedule_invs' hoare_drop_imps
       | strengthen invs_pspace_aligned' invs_pspace_distinct')+
 

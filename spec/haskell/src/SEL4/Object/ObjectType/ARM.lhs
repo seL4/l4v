@@ -397,3 +397,14 @@ A function called from finaliseCap in ObjectType.lhs to prepare a tcb for deleti
 > prepareThreadDelete _ = return ()
 #endif
 
+Save and clear any VCPU state of a TCB before changing its domain, to ensure
+that we do not later write to cross-domain state.
+
+> prepareSetDomain :: PPtr TCB -> Domain -> Kernel ()
+> prepareSetDomain t newDom = do
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     curDom <- curDomain
+>     when (curDom /= newDom) (vcpuFlushIfCurrent t)
+#else
+>     return ()
+#endif

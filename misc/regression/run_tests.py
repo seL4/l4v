@@ -43,6 +43,7 @@ ANSI_RESET = "\033[0m"
 ANSI_RED = "\033[31;1m"
 ANSI_GREEN = "\033[32m"
 ANSI_YELLOW = "\033[33m"
+ANSI_BRIGHT_YELLOW = "\033[0;93m"
 ANSI_WHITE = "\033[37m"
 ANSI_BOLD = "\033[1m"
 
@@ -66,6 +67,27 @@ def which(filename):
         if os.path.exists(candidate) and os.access(candidate, os.X_OK):
             return candidate
     return None
+
+
+# Warn user if skip_proofs is set (Isabelle won't prove anything)
+
+# run_tests invokes us with cwd set to top-level l4v/run_tests script
+ISABELLE = "./isabelle/bin/isabelle"
+
+
+def warn_isabelle_skip_proofs():
+    try:
+        out = subprocess.run([ISABELLE, "options", "-g", "skip_proofs"],
+                             capture_output=True, text=True, check=True)
+        if out.stdout.strip() == 'true':
+            print(output_color(ANSI_BRIGHT_YELLOW,
+                               "Warning: skip_proofs set in isabelle preferences"))
+    except:
+        # if Isabelle isn't available/working, Isabelle-related tests will
+        # fail, and non-Isabelle-related tests will still run so we don't want
+        # to say anything.
+        pass
+
 
 #
 # Kill a process and all of its children.
@@ -492,6 +514,8 @@ def main():
         else:
             print_tests('total', all_tests, args.verbose)
         sys.exit(0)
+
+    warn_isabelle_skip_proofs()
 
     # Calculate which tests should be run.
     desired_names = set(args.tests) or set(os.environ.get('RUN_TESTS_DEFAULT', '').split())

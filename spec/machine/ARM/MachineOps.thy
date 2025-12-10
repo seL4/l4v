@@ -69,6 +69,22 @@ definition
 where
   "setIRQTrigger irq trigger \<equiv> machine_op_lift (setIRQTrigger_impl irq trigger)"
 
+consts'
+  handleSpuriousIRQ_impl :: "unit machine_rest_monad"
+
+definition
+  handleSpuriousIRQ_mop :: "unit machine_monad"
+where
+  "handleSpuriousIRQ_mop \<equiv> machine_op_lift handleSpuriousIRQ_impl"
+
+definition hasSpuriousIRQ_mop :: bool where
+  "hasSpuriousIRQ_mop \<equiv> config_PLAT_OMAP3 \<or> config_PLAT_AM335X"
+
+lemmas Kernel_Config_hasSpuriousIRQ_mop_def =
+  hasSpuriousIRQ_mop_def
+  Kernel_Config.config_PLAT_OMAP3_def
+  Kernel_Config.config_PLAT_AM335X_def
+
 definition
   loadWord :: "machine_word \<Rightarrow> machine_word machine_monad"
   where "loadWord p \<equiv> do m \<leftarrow> gets underlying_memory;

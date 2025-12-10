@@ -8,10 +8,6 @@ theory fnptr
 imports "CParser.CTranslation"
 begin
 
-ML \<open>
-  IsarInstall.install_C_file ((((NONE,NONE),NONE),"fnptr.c"),NONE) @{theory}
-\<close>
-
 external_file "fnptr.c"
 install_C_file "fnptr.c"
 

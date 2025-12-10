@@ -25,6 +25,13 @@ lemma dmo_maskInterrupt_invs [InterruptAcc_AI_assms]:
    apply (clarsimp simp: in_monad invs_def valid_state_def all_invs_but_valid_irq_states_for_def valid_irq_states_but_def valid_irq_masks_but_def valid_machine_state_def cur_tcb_def valid_irq_states_def valid_irq_masks_def)
   done
 
+lemma handle_spurious_irq_invs:
+  "handle_spurious_irq \<lbrace>invs\<rbrace>"
+  unfolding handle_spurious_irq_def
+  apply (wpsimp wp: dmo_invs machine_op_lift_device_state simp: handleSpuriousIRQ_mop_def)
+  apply (clarsimp simp add: machine_op_lift_def machine_rest_lift_def in_monad select_f_def)
+  done
+
 end
 
 global_interpretation InterruptAcc_AI?: InterruptAcc_AI

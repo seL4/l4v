@@ -521,7 +521,7 @@ lemma cap_lift_capEPBadge_mask_eq:
 
 lemma Arch_isCapRevocable_def2:
   "Arch.isCapRevocable cap cap' = (isArchSGISignalCap cap \<and> cap' = IRQControlCap)"
-  by (auto simp: isCap_simps split: capability.splits arch_capability.splits)
+  by (auto simp add: isCapRevocable_def isCap_simps split: capability.splits arch_capability.splits)
 
 lemma Arch_isCapRevocable_spec:
   "\<forall>s. \<Gamma>\<turnstile> {\<sigma>. s = \<sigma> \<and> True}
@@ -534,17 +534,23 @@ lemma Arch_isCapRevocable_spec:
            simp: cap_get_tag_isCap cap_get_tag_isCap_unfolded_H_cap isCap_simps
                  Arch_isCapRevocable_def2 from_bool_0)
 
-method revokable'_hammer = solves \<open>(simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs,
-                    rule ccorres_guard_imp, rule ccorres_return_C; clarsimp)\<close>
+lemmas isCapRevocable_simps[simp] = Retype_H.isCapRevocable_def[split_simps capability.split]
+
+context begin (* revokable_ccorres *)
+
+private method isCapRevocable_hammer = solves \<open>(
+              simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs,
+              rule ccorres_guard_imp,
+              rule ccorres_return_C; clarsimp)\<close>
 
 lemma revokable_ccorres:
   "ccorres (\<lambda>a c. from_bool a = c) ret__unsigned_long_'
            (\<lambda>_. capMasterCap cap = capMasterCap parent \<or> is_simple_cap' cap)
            (UNIV \<inter> {s. ccap_relation cap (derivedCap_' s)} \<inter> {s. ccap_relation parent (srcCap_' s)}) hs
-           (return (revokable' parent cap))
+           (return (isCapRevocable cap parent))
            (Call isCapRevocable_'proc)"
   apply (rule ccorres_gen_asm[where G=\<top>, simplified])
-  apply (cinit' lift: derivedCap_' srcCap_' simp: revokable'_def)
+  apply (cinit' lift: derivedCap_' srcCap_')
    \<comment> \<open>Clear up Arch cap case\<close>
    apply csymbr
    apply (clarsimp simp: cap_get_tag_isCap simp del: Collect_const)
@@ -555,12 +561,13 @@ lemma revokable_ccorres:
     apply (erule allE, erule allE, erule impE, fastforce)
     apply clarsimp
     apply ccorres_rewrite
+    apply (drule sym, simp only:)
     apply (rule ccorres_return_C, clarsimp+)
   apply csymbr
   apply (rule_tac P'=UNIV and P=\<top> in ccorres_inst)
    apply (cases cap)
     \<comment> \<open>Uninteresting caps\<close>
-              apply revokable'_hammer+
+              apply isCapRevocable_hammer+
     \<comment> \<open>NotificationCap\<close>
             apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs)
             apply (rule ccorres_guard_imp, (rule ccorres_rhs_assoc)+, csymbr, csymbr)
@@ -585,7 +592,9 @@ lemma revokable_ccorres:
            apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
           apply (fastforce simp: cap_get_tag_isCap isCap_simps)
     \<comment> \<open>Other Caps\<close>
-  by (revokable'_hammer | fastforce simp: isCap_simps)+
+  by (isCapRevocable_hammer | fastforce simp: isCap_simps)+
+
+end (* revokable_ccorres *)
 
 lemma cteInsert_ccorres_mdb_helper:
   "\<lbrakk>cmdbnode_relation rva srcMDB; from_bool rvc = (newCapIsRevocable :: word32); srcSlot = Ptr src\<rbrakk>

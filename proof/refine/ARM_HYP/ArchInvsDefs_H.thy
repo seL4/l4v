@@ -166,36 +166,34 @@ lemmas [simp] = arch_valid_irq_def
 definition valid_arch_tcb' :: "Structures_H.arch_tcb \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_arch_tcb' \<equiv> \<lambda>t s. \<forall>v. atcbVCPUPtr t = Some v \<longrightarrow> vcpu_at' v s "
 
-definition valid_mapping' :: "word32 \<Rightarrow> vmpage_size \<Rightarrow> kernel_state \<Rightarrow> bool" where
- "valid_mapping' x sz s \<equiv> is_aligned x (pageBitsForSize sz)
-                            \<and> ptrFromPAddr x \<noteq> 0"
+definition valid_mapping' :: "word32 \<Rightarrow> vmpage_size \<Rightarrow> bool" where
+ "valid_mapping' x sz \<equiv> is_aligned x (pageBitsForSize sz)
+                        \<and> ptrFromPAddr x \<noteq> 0"
 
-primrec valid_pte' :: "ARM_HYP_H.pte \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_pte' (InvalidPTE) = \<top>"
+primrec valid_pte' :: "ARM_HYP_H.pte \<Rightarrow> bool" where
+  "valid_pte' (InvalidPTE) = True"
   (* The first LargePagePTE is aligned to ARMLargePage, all other `duplicates' to ARMSmallPage.
      The former is only stated in the abstract spec invariants, not here. *)
-| "valid_pte' (LargePagePTE ptr _ _ r) = (\<lambda>s. valid_mapping' ptr ARMSmallPage s \<and> r \<noteq> VMNoAccess)"
-| "valid_pte' (SmallPagePTE ptr _ _ r) = (\<lambda>s. valid_mapping' ptr ARMSmallPage s \<and> r \<noteq> VMNoAccess)"
+| "valid_pte' (LargePagePTE ptr _ _ r) = (valid_mapping' ptr ARMSmallPage \<and> r \<noteq> VMNoAccess)"
+| "valid_pte' (SmallPagePTE ptr _ _ r) = (valid_mapping' ptr ARMSmallPage \<and> r \<noteq> VMNoAccess)"
 
-primrec valid_pde' :: "ARM_HYP_H.pde \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_pde' (InvalidPDE) = \<top>"
-| "valid_pde' (SectionPDE ptr _ _ r) = (\<lambda>s. valid_mapping' ptr ARMSection s \<and> r \<noteq> VMNoAccess)"
+primrec valid_pde' :: "ARM_HYP_H.pde \<Rightarrow> bool" where
+  "valid_pde' (InvalidPDE) = True"
+| "valid_pde' (SectionPDE ptr _ _ r) = (valid_mapping' ptr ARMSection \<and> r \<noteq> VMNoAccess)"
   (* The first SuperSectionPDE is aligned to ARMSuperSection, all other `duplicates' to ARMSection.
      The former is only stated in the abstract spec invariants, not here. *)
-| "valid_pde' (SuperSectionPDE ptr _ _ r) = (\<lambda>s. valid_mapping' ptr ARMSection s \<and> r \<noteq> VMNoAccess)"
-| "valid_pde' (PageTablePDE ptr) = (\<lambda>_. is_aligned ptr ptBits)"
+| "valid_pde' (SuperSectionPDE ptr _ _ r) = (valid_mapping' ptr ARMSection \<and> r \<noteq> VMNoAccess)"
+| "valid_pde' (PageTablePDE ptr) = is_aligned ptr ptBits"
 
-primrec valid_asid_pool' :: "asidpool \<Rightarrow> kernel_state \<Rightarrow> bool" where
+primrec valid_asid_pool' :: "asidpool \<Rightarrow> bool" where
   "valid_asid_pool' (ASIDPool pool)
-     = (\<lambda>s. dom pool \<subseteq> {0 .. 2^asid_low_bits - 1}
-            \<and> 0 \<notin> ran pool \<and> (\<forall>x \<in> ran pool. is_aligned x pdBits))"
+     = (dom pool \<subseteq> {0 .. 2^asid_low_bits - 1}
+        \<and> 0 \<notin> ran pool \<and> (\<forall>x \<in> ran pool. is_aligned x pdBits))"
 
-definition valid_vcpu' :: "vcpu \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_vcpu' v \<equiv> (case vcpuTCBPtr v of
-    None \<Rightarrow> \<top>
-  | Some vt \<Rightarrow> typ_at' (TCBT) vt)"
+definition valid_vcpu' :: "vcpu \<Rightarrow> bool" where
+  "valid_vcpu' v \<equiv> case vcpuTCBPtr v of None \<Rightarrow> True | Some vt \<Rightarrow> is_aligned vt tcbBlockSizeBits"
 
-primrec valid_arch_obj' :: "arch_kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool" where
+primrec valid_arch_obj' :: "arch_kernel_object \<Rightarrow> bool" where
   "valid_arch_obj' (KOASIDPool pool) = valid_asid_pool' pool"
 | "valid_arch_obj' (KOPDE pde) = valid_pde' pde"
 | "valid_arch_obj' (KOPTE pte) = valid_pte' pte"

@@ -6,7 +6,7 @@
  *)
 
 theory Detype_R
-imports Retype_R
+imports ArchRetype_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
@@ -957,6 +957,7 @@ lemma deleteObjects_corres:
     apply (simp add: valid_pspace'_def)
     apply (rule state_relation_null_filterE, assumption,
            simp_all add: pspace_aligned'_cut pspace_distinct'_cut)[1]
+<<<<<<< HEAD
              apply (simp add: detype_def)
             apply (intro exI, fastforce)
            apply (rule ext, clarsimp simp add: null_filter_def)
@@ -1000,6 +1001,71 @@ lemma deleteObjects_corres:
         apply (fastforce simp: add_mask_fold)
        apply (erule state_relation_release_queue_relation)
       apply (fastforce simp: add_mask_fold)
+||||||| 0d43d8dee
+           apply (simp add: detype_def)
+          apply (intro exI, fastforce)
+         apply (rule ext, clarsimp simp add: null_filter_def)
+         apply (rule sym, rule ccontr, clarsimp)
+         apply (drule(4) cte_map_not_null_outside')
+          apply (fastforce simp add: cte_wp_at_caps_of_state)
+         apply simp
+        apply (rule ext, clarsimp simp: null_filter'_def map_to_ctes_delete)
+        apply (rule sym, rule ccontr, clarsimp)
+        apply (frule(2) pspace_relation_cte_wp_atI[OF state_relation_pspace_relation])
+        apply (elim exE)
+        apply (frule (4) cte_map_not_null_outside')
+         apply (rule cte_wp_at_weakenE, erule conjunct1)
+         apply (case_tac y, clarsimp)
+         apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def valid_nullcaps_def)
+        apply clarsimp
+        apply (frule_tac cref="(aa, ba)" in cte_map_untyped_range,
+               erule cte_wp_at_weakenE[OF _ TrueI], assumption+)
+        apply (simp add: add_mask_fold)
+       apply (simp add: add_mask_fold)
+       apply (rule detype_pspace_relation[simplified],
+              simp_all add: state_relation_pspace_relation valid_pspace_def)[1]
+        apply (simp add: valid_cap'_def capAligned_def)
+       apply (clarsimp simp: valid_cap_def, assumption)
+      apply (simp add: add_mask_fold)
+      apply (rule detype_ready_queues_relation; blast?)
+       apply (clarsimp simp: deletionIsSafe_delete_locale_def)
+      apply (frule state_relation_ready_queues_relation)
+      apply (simp add: ready_queues_relation_def Let_def)
+=======
+           apply (simp add: detype_def)
+          apply clarsimp
+          (* unification can't guess we want identity update on ksArchState s' *)
+          apply (repeat 3 \<open>rule exI\<close>, rule_tac x=id in exI)
+          apply fastforce
+         apply (rule ext, clarsimp simp add: null_filter_def)
+         apply (rule sym, rule ccontr, clarsimp)
+         apply (drule(4) cte_map_not_null_outside')
+          apply (fastforce simp add: cte_wp_at_caps_of_state)
+         apply simp
+        apply (rule ext, clarsimp simp: null_filter'_def map_to_ctes_delete)
+        apply (rule sym, rule ccontr, clarsimp)
+        apply (frule(2) pspace_relation_cte_wp_atI[OF state_relation_pspace_relation])
+        apply (elim exE)
+        apply (frule (4) cte_map_not_null_outside')
+         apply (rule cte_wp_at_weakenE, erule conjunct1)
+         apply (case_tac y, clarsimp)
+         apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def valid_nullcaps_def)
+        apply clarsimp
+        apply (frule_tac cref="(aa, ba)" in cte_map_untyped_range,
+               erule cte_wp_at_weakenE[OF _ TrueI], assumption+)
+        apply (simp add: add_mask_fold)
+       apply (simp add: add_mask_fold)
+       apply (rule detype_pspace_relation[simplified],
+              simp_all add: state_relation_pspace_relation valid_pspace_def)[1]
+        apply (simp add: valid_cap'_def capAligned_def)
+       apply (clarsimp simp: valid_cap_def, assumption)
+      apply (simp add: add_mask_fold)
+      apply (rule detype_ready_queues_relation; blast?)
+       apply (clarsimp simp: deletionIsSafe_delete_locale_def)
+      apply (frule state_relation_ready_queues_relation)
+      apply (simp add: ready_queues_relation_def Let_def)
+      apply (clarsimp simp: state_relation_def)
+>>>>>>> verification/master
      apply (clarsimp simp: state_relation_def ghost_relation_of_heap detype_def)
      apply (drule_tac t="gsUserPages s'" in sym)
      apply (drule_tac t="gsCNodes s'" in sym)
@@ -1498,9 +1564,15 @@ proof (simp add: invs'_def valid_pspace'_def
     apply (clarsimp simp: pred_tcb_at'_def opt_map_def)
     done
 
+<<<<<<< HEAD
   show "sym_refs (map_set (replies' ||> list_refs_of_reply'))"
     apply (insert pa pd bd pspace_distinct'_state' list_refs)
     by (subst list_refs_of_reply'_state'; blast?)
+||||||| 0d43d8dee
+=======
+  show "sym_refs (state_hyp_refs_of' ?s)"
+    by (simp add: sym_refs_def)
+>>>>>>> verification/master
 
   show "if_live_then_nonz_cap' ?s" using iflive
     apply (clarsimp simp: if_live_then_nonz_cap'_def)
@@ -2036,6 +2108,7 @@ definition pspace_no_overlap_cell' where
 
 lemma pspace_no_overlap'_lift:
   assumes typ_at:"\<And>slot P Q. \<lbrace>\<lambda>s. P (typ_at' Q slot s)\<rbrace> f \<lbrace>\<lambda>r s. P (typ_at' Q slot s) \<rbrace>"
+<<<<<<< HEAD
   assumes sz: "\<And>p n. \<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> f \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
   assumes ps :"\<lbrace>Q and pspace_aligned' and pspace_distinct' and pspace_bounded'\<rbrace>
                f
@@ -2060,6 +2133,47 @@ lemma pspace_no_overlap'_lift:
   apply (frule(1) pspace_distinctD')
   apply (drule(1) pspace_boundedD')
   apply simp
+||||||| 0d43d8dee
+  assumes ps :"\<lbrace>Q\<rbrace> f \<lbrace>\<lambda>r s. pspace_aligned' s \<and> pspace_distinct' s \<rbrace>"
+  shows "\<lbrace>Q and pspace_no_overlap' ptr sz \<rbrace> f \<lbrace>\<lambda>r. pspace_no_overlap' ptr sz\<rbrace>"
+proof -
+  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  show ?thesis
+    apply (clarsimp simp:valid_def pspace_no_overlap'_def)
+    apply (drule_tac x = x in spec)
+    apply (subgoal_tac "\<exists>ko'. ksPSpace s x = Some ko' \<and> koTypeOf ko = koTypeOf ko'")
+     apply (clarsimp dest!:objBits_type)
+    apply (rule ccontr)
+    apply clarsimp
+    apply (frule_tac slot1 = x and Q1 = "koTypeOf ko" and P1 = "\<lambda>a. \<not> a" in use_valid[OF _ typ_at])
+    apply (clarsimp simp:typ_at'_def ko_wp_at'_def)+
+    apply (frule(1) use_valid[OF _ ps])
+    apply (clarsimp simp:valid_pspace'_def)
+    apply (frule(1) pspace_alignedD')
+    apply (drule(1) pspace_distinctD')
+    apply simp
+=======
+  assumes ps :"\<lbrace>Q\<rbrace> f \<lbrace>\<lambda>r s. pspace_aligned' s \<and> pspace_distinct' s \<rbrace>"
+  shows "\<lbrace>Q and pspace_no_overlap' ptr sz \<rbrace> f \<lbrace>\<lambda>r. pspace_no_overlap' ptr sz\<rbrace>"
+proof -
+  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  show ?thesis
+    apply (clarsimp simp:valid_def pspace_no_overlap'_def)
+    apply (drule_tac x = x in spec)
+    apply (subgoal_tac "\<exists>ko'. ksPSpace s x = Some ko' \<and> koTypeOf ko = koTypeOf ko'")
+     apply (clarsimp dest!: koType_objBitsKO)
+    apply (rule ccontr)
+    apply clarsimp
+    apply (frule_tac slot1 = x and Q1 = "koTypeOf ko" and P1 = "\<lambda>a. \<not> a" in use_valid[OF _ typ_at])
+    apply (clarsimp simp:typ_at'_def ko_wp_at'_def)+
+    apply (frule(1) use_valid[OF _ ps])
+    apply (clarsimp simp:valid_pspace'_def)
+    apply (frule(1) pspace_alignedD')
+    apply (drule(1) pspace_distinctD')
+    apply simp
+>>>>>>> verification/master
   done
 
 lemmas pspace_no_overlap'_lift2 = pspace_no_overlap'_lift[where Q=\<top>, simplified]
@@ -2294,12 +2408,28 @@ proof -
   apply (drule(1) src_in_range)+
   apply (drule base_member_set[OF pspace_alignedD'])
     apply simp
+<<<<<<< HEAD
    apply (simp add: word_bits_def)
   apply (frule base_member_set[OF pspace_alignedD'])
+||||||| 0d43d8dee
+   apply (simp add:objBitsKO_bounded2[unfolded word_bits_def,simplified])
+  apply (drule base_member_set[OF pspace_alignedD'])
+=======
+   apply (simp add: objBitsKO_less_word_bits[unfolded word_bits_def,simplified])
+  apply (drule base_member_set[OF pspace_alignedD'])
+>>>>>>> verification/master
     apply simp
+<<<<<<< HEAD
    apply (fold word_bits_def)
    apply (erule (1) pspace_boundedD')
   apply (clarsimp simp: field_simps mask_def)
+||||||| 0d43d8dee
+   apply (simp add:objBitsKO_bounded2[unfolded word_bits_def,simplified])
+  apply (clarsimp simp:field_simps mask_def)
+=======
+   apply (simp add: objBitsKO_less_word_bits[unfolded word_bits_def,simplified])
+  apply (clarsimp simp:field_simps mask_def)
+>>>>>>> verification/master
   apply blast
   done
   assume
@@ -5023,7 +5153,7 @@ lemma ArchCreateObject_pspace_no_overlap':
    apply (simp add:shiftl_t2n field_simps)
   apply (intro conjI allI)
       apply (clarsimp simp: field_simps word_bits_conv
-                            APIType_capBits_def shiftl_t2n objBits_simps bit_simps
+                            APIType_capBits_gen_def shiftl_t2n objBits_simps bit_simps
              | rule conjI | erule range_cover_le,simp)+
   done
 
@@ -5077,7 +5207,13 @@ lemma createObject_pspace_no_overlap':
   apply (frule range_cover_offset[rotated,where p = n])
    apply simp+
   by (auto simp: word_shiftl_add_distrib field_simps shiftl_t2n elim: range_cover_le)
+<<<<<<< HEAD
      (auto simp: APIType_capBits_def fromAPIType_def objBits_def scBits_simps objBits_simps
+||||||| 0d43d8dee
+     (auto simp: APIType_capBits_def fromAPIType_def objBits_def objBits_simps
+=======
+     (auto simp: APIType_capBits_def fromAPIType_def APIType_capBits_gen_def objBits_def objBits_simps
+>>>>>>> verification/master
           dest!: to_from_apiTypeD)
 
 lemma createObject_pspace_aligned_distinct':

@@ -3513,7 +3513,8 @@ fun mk_hoare_tac hoare_tac finish_tac annotate_inv exnames
        SOME (Tids,mode,kind)
        => SELECT_GOAL
             (hoare_tac annotate_inv exnames strip_guards mode kind (is_state_space_var Tids)
-                   spec_sfx ctxt (finish_tac kind (is_state_space_var Tids))) i st
+                   spec_sfx (Context_Position.set_visible false ctxt)
+                   (finish_tac kind (is_state_space_var Tids))) i st
      | NONE => no_tac st
 
 fun vcg_tac spec_sfx strip_guards exnames ctxt i st =

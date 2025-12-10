@@ -266,9 +266,19 @@ lemma make_arch_fault_msg_inv[wp, Ipc_AI_2_assms]:
   "make_arch_fault_msg ft t \<lbrace>P\<rbrace>"
   by (cases ft; wpsimp)
 
+<<<<<<< HEAD
 crunch make_fault_msg
   for invs[wp]: invs
   and tcb_at[wp]: "tcb_at t"
+||||||| 0d43d8dee
+lemma make_fault_msg_inv[wp, Ipc_AI_2_assms]:
+  "make_fault_msg ft t \<lbrace>P\<rbrace>"
+  by (cases ft; wpsimp wp: as_user_inv getRestartPC_inv mapM_wp' split_del: if_split)
+=======
+lemma make_fault_msg_inv[wp]:
+  "make_fault_msg ft t \<lbrace>P\<rbrace>"
+  by (cases ft; wpsimp wp: as_user_inv getRestartPC_inv mapM_wp' split_del: if_split)
+>>>>>>> verification/master
 
 lemma do_fault_transfer_invs[wp, Ipc_AI_2_assms]:
   "\<lbrace>invs and tcb_at receiver\<rbrace>

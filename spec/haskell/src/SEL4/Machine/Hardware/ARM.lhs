@@ -208,6 +208,9 @@ The following functions define the ARM-specific interface between the kernel and
 > setIRQTrigger :: IRQ -> Bool -> MachineMonad ()
 > setIRQTrigger irq trigger = error "ARM machine callback unimplemented"
 
+> handleSpuriousIRQ_mop :: MachineMonad ()
+> handleSpuriousIRQ_mop = error "See MachineOps.thy"
+
 > resetTimer :: MachineMonad ()
 > resetTimer = do
 >     cbptr <- ask
@@ -948,6 +951,14 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 > config_ARM_GIC_V3 :: Bool
 > config_ARM_GIC_V3 = error "generated from CMake config"
 
+> -- Whether the handleSpuriousIRQ machine op is available
+> hasSpuriousIRQ_mop :: Bool
+> hasSpuriousIRQ_mop = error "Implemented in MachineOps.thy"
+
+> -- Whether the setTrigger machine op is available
+> haveSetTrigger :: Bool
+> haveSetTrigger = error "Implemented in machine/(ARM|ARM_HYP)/Platform.thy"
+
 \subsection{SGI}
 
 > numSGIs :: Int
@@ -955,6 +966,9 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 
 > gicNumTargets :: Int
 > gicNumTargets = error "defined in machine/AARCH64/Platform.thy"
+
+> isGICPlatform :: Bool
+> isGICPlatform = error "defined in machine/AARCH64/Platform.thy"
 
 > -- the machine op uses word_t (and irq_t which is also word_t in C)
 > sendSGI :: Word -> Word -> MachineMonad ()

@@ -1885,23 +1885,21 @@ lemma threadGet_get_obj_at'_has_domain:
   "\<lbrace> tcb_at' t \<rbrace> threadGet tcbDomain t \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. rv = tcbDomain tcb) t\<rbrace>"
   by (wp threadGet_obj_at') (simp add: obj_at'_def)
 
+(* short name target_' can be ambiguous for some platforms, use full name instead below *)
 lemma possibleSwitchTo_ccorres:
-  shows
   "ccorres dc xfdc
          ((\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
             and st_tcb_at' runnable' t and (\<lambda>s. ksCurDomain s \<le> maxDomain)
             and valid_objs' and pspace_aligned' and pspace_distinct')
-         ({s. target_' s = tcb_ptr_to_ctcb_ptr t}
+         ({s. target___ptr_to_struct_tcb_C_' s = tcb_ptr_to_ctcb_ptr t}
           \<inter> UNIV) []
      (possibleSwitchTo t )
      (Call possibleSwitchTo_'proc)"
   supply if_split [split del]
   supply Collect_const [simp del]
   supply prio_and_dom_limit_helpers[simp]
-  (* FIXME: these should likely be in simpset for CRefine, or even in general *)
-  supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp]
-         ccorres_IF_True[simp] if_cong[cong]
-  apply (cinit lift: target_')
+  supply if_cong[cong]
+  apply (cinit lift: target___ptr_to_struct_tcb_C_')
    apply (rule ccorres_move_c_guard_tcb)
    apply (rule ccorres_pre_curDomain, rename_tac curDom)
    apply (rule ccorres_symb_exec_l3[OF _ threadGet_inv _ empty_fail_threadGet], rename_tac targetDom)

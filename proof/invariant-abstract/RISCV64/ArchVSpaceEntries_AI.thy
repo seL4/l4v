@@ -338,10 +338,21 @@ lemma handle_invocation_valid_vspace_objs'[wp]:
   done
 
 crunch activate_thread,switch_to_thread, handle_hypervisor_fault,
+<<<<<<< HEAD
        switch_to_idle_thread, handle_call, handle_recv, handle_vm_fault,
        handle_send, handle_yield, handle_interrupt, check_budget_restart, update_time_stamp,
        schedule_choose_new_thread, arch_prepare_next_domain, activate_thread, switch_to_thread,
        check_domain_time
+||||||| 0d43d8dee
+       switch_to_idle_thread, handle_call, handle_recv, handle_reply,
+       handle_send, handle_yield, handle_interrupt,
+       schedule_choose_new_thread, arch_prepare_next_domain
+=======
+       switch_to_idle_thread, handle_call, handle_recv, handle_reply,
+       handle_send, handle_yield, handle_interrupt,
+       schedule_choose_new_thread, arch_prepare_next_domain,
+       maybe_handle_interrupt
+>>>>>>> verification/master
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (simp: crunch_simps wp: crunch_wps hoare_vcg_all_lift
    ignore: without_preemption getActiveIRQ resetTimer ackInterrupt update_sk_obj_ref)

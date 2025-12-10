@@ -33,7 +33,7 @@ lemma det_wp_bind [wp]:
   apply fastforce
   done
 
-lemma det_wp_pre:
+lemma det_wp_pre[wp_pre]:
   "det_wp P' f \<Longrightarrow> (\<And>s. P s \<Longrightarrow> P' s) \<Longrightarrow> det_wp P f"
   by (simp add: det_wp_def)
 
@@ -122,6 +122,71 @@ lemma det_wp_assert_opt :
   apply (simp add: assert_opt_def)
   apply (rule det_wp_pre, wp)
   apply simp
+  done
+
+lemma det_wp_def2:
+  "det_wp P f = (\<forall>s. P s \<longrightarrow> (\<not> snd (f s)) \<and> (\<exists>r. r \<in> fst (f s) \<and> (\<forall>r'. r' \<in> fst (f s) \<longrightarrow> r' = r)))"
+  apply (clarsimp simp: det_wp_def)
+  apply (subst singleton_iff[symmetric])
+  apply (intro iffI conjI impI allI)
+    apply fastforce
+   apply fastforce
+  apply clarsimp
+  apply (rename_tac s)
+  apply (drule_tac x=s in spec)
+  apply clarsimp
+  apply (rename_tac r)
+  apply (rule_tac x=r in exI)
+  apply (rule sym)
+  apply (subst split_pairs)
+  apply fastforce
+  done
+
+lemma whileLoop_result_det_wp_intermediate:
+  "\<lbrakk>det_wp P (B r); C r s; P s;
+    (r', s') \<in> fst (B r s); (Some (r, s), Some (r'', s'')) \<in> whileLoop_results C B\<rbrakk>
+   \<Longrightarrow> (Some (r', s'), Some (r'', s'')) \<in> whileLoop_results C B"
+  apply (clarsimp simp: det_wp_def2)
+  apply (erule whileLoop_results_cases_valid)
+   apply fastforce
+  apply blast
+  done
+
+lemma det_wp_whileLoop:
+  assumes det: "\<And>r. det_wp (P r and C r) (B r)"
+  assumes inv: " \<And>r. \<lbrace>P r and C r\<rbrace> B r \<lbrace>P\<rbrace>"
+  assumes ef: "\<And>r. empty_fail (B r)"
+  assumes termin: "\<And>r s. \<lbrakk>P r s; C r s\<rbrakk> \<Longrightarrow> whileLoop_terminates C B r s"
+  shows "det_wp (P r) (whileLoop C B r)"
+  apply (clarsimp simp: det_wp_def2)
+  apply (intro context_conjI)
+   apply (fastforce simp: no_fail_whileLoop[OF det[THEN det_wp_no_fail] termin inv])
+  apply (insert empty_fail_whileLoop[where C=C and B=B and r=r, rotated] ef)
+  apply clarsimp
+  apply (frule (1) empty_failD3)
+  apply (clarsimp simp: not_empty_eq)
+  apply (rename_tac r' s')
+  apply (rule_tac x=r' in exI)
+  apply (rule_tac x=s' in exI)
+  apply simp
+  apply (intro allI)
+  apply (rename_tac rv state)
+  apply (rule_tac P="P r s" in imp_elim)
+    apply (rule_tac I="\<lambda>r s r' s'. P r s \<longrightarrow> (rv, state) \<in> fst (whileLoop C B r s)
+                                   \<longrightarrow> rv = r' \<and> state = s'"
+                 in in_whileLoop_induct)
+      apply fastforce
+     apply (simp add: whileLoop_cond_fail return_def)
+    apply clarsimp
+    apply (elim impE)
+      apply (fastforce elim: use_valid[where f="B _ "] intro: inv)
+     apply (clarsimp simp: whileLoop_def)
+     apply (rule whileLoop_result_det_wp_intermediate)
+         apply (clarsimp simp: det_wp_def2)
+         apply force+
+       using det
+       apply (fastforce simp: no_fail_def det_wp_def2)
+      apply fastforce+
   done
 
 end

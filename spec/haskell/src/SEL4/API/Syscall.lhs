@@ -121,8 +121,10 @@ System call events are dispatched here to the appropriate system call handlers, 
 
 \subsubsection{Interrupts}
 
-Interrupt handling is performed by "handleInterrupt", defined in \autoref{sec:object.interrupt.kernel.handling}.
+Interrupt handling is performed by "maybeHandleInterrupt", defined in
+\autoref{sec:object.interrupt.kernel.handling}.
 
+<<<<<<< HEAD
 > handleEvent Interrupt = withoutPreemption $ do
 >     updateTimeStamp
 >     checkBudget
@@ -130,6 +132,15 @@ Interrupt handling is performed by "handleInterrupt", defined in \autoref{sec:ob
 >     case active of
 >         Just irq -> handleInterrupt irq
 >         Nothing -> doMachineOp $ debugPrint "spurious interrupt"
+||||||| 0d43d8dee
+> handleEvent Interrupt = withoutPreemption $ do
+>     active <- doMachineOp (getActiveIRQ False)
+>     case active of
+>         Just irq -> handleInterrupt irq
+>         Nothing -> doMachineOp $ debugPrint "spurious interrupt"
+=======
+> handleEvent Interrupt = withoutPreemption $ maybeHandleInterrupt False
+>>>>>>> verification/master
 
 \subsubsection{Unknown System Calls}
 

@@ -655,7 +655,7 @@ definition valid_obj' :: "kernel_object \<Rightarrow> kernel_state \<Rightarrow>
   | KOUserDataDevice \<Rightarrow> True
   | KOTCB tcb \<Rightarrow> valid_tcb' tcb s
   | KOCTE cte \<Rightarrow> valid_cte' cte s
-  | KOArch ako \<Rightarrow> valid_arch_obj' ako s"
+  | KOArch ako \<Rightarrow> valid_arch_obj' ako"
 
 definition
   pspace_aligned' :: "kernel_state \<Rightarrow> bool"
@@ -784,6 +784,10 @@ definition
   "capRange cap \<equiv>
   if capClass cap \<noteq> PhysicalClass then {}
   else {capUntypedPtr cap .. capUntypedPtr cap + 2 ^ capBits cap - 1}"
+
+(* FIXME: poor name, unlike isArchObjectCap this takes a predicate *)
+definition isArchCap :: "(arch_capability \<Rightarrow> bool) \<Rightarrow> capability \<Rightarrow> bool" where
+  "isArchCap P cap \<equiv> case cap of ArchObjectCap acap \<Rightarrow> P acap | _ \<Rightarrow> False"
 
 definition
   "caps_contained' m \<equiv>
@@ -1924,6 +1928,11 @@ locale Invariants_H_pspaceI =
        ksPSpace s x = Some (KOTCB tcb); ksPSpace s y = Some v;
        \<lbrakk> x = y; getF = tcbCTable; setF = tcbCTable_update \<rbrakk> \<Longrightarrow> P
       \<rbrakk> \<Longrightarrow> P"
+  assumes range_cover_canonical_address:
+    "\<And>ptr sz us n p.
+     \<lbrakk> range_cover ptr sz us n ; p < n ; canonical_address (ptr && ~~ mask sz);
+       sz \<le> maxUntypedSizeBits \<rbrakk>
+     \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
 
 lemma valid_obj_size'_pspaceI:
   "valid_obj_size' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj_size' obj s'"

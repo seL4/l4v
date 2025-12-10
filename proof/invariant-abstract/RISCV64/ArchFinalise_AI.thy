@@ -784,6 +784,23 @@ crunch prepare_thread_delete, arch_finalise_cap
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at
    ignore: arch_thread_set)
 
+<<<<<<< HEAD
+||||||| 0d43d8dee
+crunch arch_finalise_cap
+  for cte_wp_at[wp,Finalise_AI_assms]: "\<lambda>s. P (cte_wp_at P' p s)"
+  (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at)
+=======
+crunch arch_finalise_cap
+  for cte_wp_at[wp,Finalise_AI_assms]: "\<lambda>s. P (cte_wp_at P' p s)"
+  (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at)
+
+declare arch_post_cap_deletion_cur_thread[Finalise_AI_assms]
+
+crunch arch_post_cap_deletion
+  for cur_domain[Finalise_AI_assms, wp]: "\<lambda>s. P (cur_domain s)"
+  (wp: crunch_wps dxo_wp_weak)
+
+>>>>>>> verification/master
 end
 
 interpretation Finalise_AI_1?: Finalise_AI_1

@@ -179,7 +179,13 @@ lemma plic_complete_claim_empty_fail[wp, EmptyFail_AI_assms]:
   "empty_fail (plic_complete_claim irq)"
   by (clarsimp simp: plic_complete_claim_def)
 
+<<<<<<< HEAD
 crunch handle_event, activate_thread, check_budget
+||||||| 0d43d8dee
+crunch possible_switch_to, handle_event, activate_thread
+=======
+crunch possible_switch_to, handle_event, activate_thread, maybe_handle_interrupt
+>>>>>>> verification/master
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pte.splits

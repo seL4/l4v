@@ -23,7 +23,7 @@ fun
   arch_invoke_irq_control :: "arch_irq_control_invocation \<Rightarrow> (unit,'z::state_ext) p_monad"
 where
   "arch_invoke_irq_control (ArchIRQControlIssue irq handler_slot control_slot trigger) = without_preemption (do
-    do_machine_op $ setIRQTrigger irq trigger;
+    when haveSetTrigger $ do_machine_op $ setIRQTrigger irq trigger;
     set_irq_state IRQSignal irq;
     cap_insert (IRQHandlerCap irq) control_slot handler_slot
   od)"

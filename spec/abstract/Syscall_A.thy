@@ -383,6 +383,7 @@ where
     od
   od)"
 
+<<<<<<< HEAD
 | "handle_event Interrupt = (without_preemption $ do
     update_time_stamp;
     check_budget;
@@ -391,6 +392,16 @@ where
        Some irq \<Rightarrow> handle_interrupt irq
      | None \<Rightarrow> return ()
   od)"
+||||||| 0d43d8dee
+| "handle_event Interrupt = (without_preemption $ do
+    active \<leftarrow> do_machine_op $ getActiveIRQ False;
+    case active of
+       Some irq \<Rightarrow> handle_interrupt irq
+     | None \<Rightarrow> return ()
+  od)"
+=======
+| "handle_event Interrupt = without_preemption (maybe_handle_interrupt False)"
+>>>>>>> verification/master
 
 | "handle_event (VMFaultEvent fault_type) = (without_preemption $ do
     update_time_stamp;
@@ -437,7 +448,17 @@ definition preemption_path where
 definition
   call_kernel :: "event \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "call_kernel ev \<equiv> do
+<<<<<<< HEAD
        handle_event ev <handle> (\<lambda>_. without_preemption preemption_path);
+||||||| 0d43d8dee
+       handle_event ev <handle>
+           (\<lambda>_. without_preemption $ do
+                  irq \<leftarrow> do_machine_op $ getActiveIRQ True;
+                  when (irq \<noteq> None) $ handle_interrupt (the irq)
+                od);
+=======
+       handle_event ev <handle> (\<lambda>_. without_preemption $ maybe_handle_interrupt True);
+>>>>>>> verification/master
        schedule;
        activate_thread
    od"

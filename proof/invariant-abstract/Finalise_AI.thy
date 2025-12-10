@@ -138,9 +138,21 @@ locale Finalise_AI_1 =
       \<lbrace>\<lambda>(s :: 'a state). P (cte_wp_at P' p s)\<rbrace> prepare_thread_delete a \<lbrace>\<lambda>_ s. P (cte_wp_at P' p s)\<rbrace>"
   assumes prepare_thread_delete_caps_of_state:
     "\<And>P t. \<lbrace>\<lambda>(s :: 'a state). P (caps_of_state s)\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  assumes arch_post_cap_deletion_cur_thread[wp]:
+    "\<And>P c. arch_post_cap_deletion c \<lbrace>\<lambda>s::'a state. P (cur_thread s)\<rbrace>"
+  assumes arch_post_cap_deletion_cur_domain[wp]:
+    "\<And>P c. arch_post_cap_deletion c \<lbrace>\<lambda>s::'a state. P (cur_domain s)\<rbrace>"
 
 
 text \<open>Properties about empty_slot\<close>
+
+crunch do_machine_op, set_cap, set_cdt
+  for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
+  (wp: crunch_wps)
+
+crunch (in Finalise_AI_1) empty_slot
+  for cur_thread[wp]: "\<lambda>s::'a state. P (cur_thread s)"
+  and cur_domain[wp]: "\<lambda>s::'a state. P (cur_domain s)"
 
 definition
  "halted_if_tcb \<equiv> \<lambda>t s. tcb_at t s \<longrightarrow> st_tcb_at halted t s"

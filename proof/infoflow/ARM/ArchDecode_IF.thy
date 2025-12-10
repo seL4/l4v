@@ -280,17 +280,7 @@ lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
                      apply (fastforce dest: aag_cap_auth_PageDirectoryCap)
                     apply fastforce
                    apply fastforce
-                  (* clagged from Arch_AI *)
-                  apply (simp add: linorder_not_le kernel_base_less_observation
-                                   vmsz_aligned_def p_assoc_help)
-                  apply (subst(asm) mask_lower_twice[symmetric])
-                   prefer 2
-                   apply (subst(asm) is_aligned_add_helper,
-                          assumption)
-                   apply (rule word_power_less_1)
-                    apply (case_tac xc, simp_all)[1]
-                   apply simp
-                  apply (case_tac xc, simp_all)[1]
+                  apply (simp add: linorder_not_le aligned_sum_less_kernel_base)
                  apply (rule ball_subset[OF _ vspace_cap_rights_to_auth_mask_vm_rights])
                  apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def arch_cap_auth_conferred_def)
                 apply (simp add: lookup_pd_slot_def)

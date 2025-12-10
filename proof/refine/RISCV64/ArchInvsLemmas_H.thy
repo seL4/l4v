@@ -45,12 +45,6 @@ lemma valid_cap'_pspaceI[Invariants_H_pspaceI_assms]:
             simp: vspace_table_at'_defs valid_arch_cap'_def valid_arch_cap_ref'_def
            split: arch_capability.split zombie_type.split option.splits)
 
-(* FIXME arch-split: required since valid_arch_obj' takes state due to other arches *)
-lemma valid_arch_obj'_pspaceI:
-  "\<lbrakk>valid_arch_obj' obj s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> valid_arch_obj' obj s'"
-  unfolding valid_arch_obj'_def
-  by simp
-
 lemma valid_obj'_pspaceI[Invariants_H_pspaceI_assms]:
   "valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
   unfolding valid_obj'_def
@@ -60,7 +54,7 @@ lemma valid_obj'_pspaceI[Invariants_H_pspaceI_assms]:
                  valid_arch_tcb'_def
            split: Structures_H.endpoint.splits Structures_H.notification.splits
                   Structures_H.thread_state.splits ntfn.splits option.splits
-           intro: obj_at'_pspaceI valid_cap'_pspaceI typ_at'_pspaceI valid_arch_obj'_pspaceI)
+           intro: obj_at'_pspaceI valid_cap'_pspaceI typ_at'_pspaceI)
 
 lemma tcb_space_clear[Invariants_H_pspaceI_assms]:
   "\<lbrakk> tcb_cte_cases (y - x) = Some (getF, setF);
@@ -89,6 +83,20 @@ lemma pspace_in_kernel_mappings'_pspaceI[Invariants_H_pspaceI_assms]:
   "pspace_in_kernel_mappings' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> pspace_in_kernel_mappings' s'"
   unfolding pspace_in_kernel_mappings'_def
   by simp
+
+lemma range_cover_canonical_address[Invariants_H_pspaceI_assms]:
+  "\<lbrakk> range_cover ptr sz us n ; p < n ;
+     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
+   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
+  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
+  apply (subst add.commute)
+  apply (subst add.assoc)
+  apply (rule canonical_address_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
+   apply (drule (1) range_cover.range_cover_compare)
+   apply (clarsimp simp: word_less_nat_alt)
+   apply unat_arith
+  apply (simp add: canonical_bit_def)
+  done
 
 (* not interesting on this architecture *)
 lemmas [simp] = pspace_in_kernel_mappings'_pspaceI
@@ -282,20 +290,6 @@ lemma priority_mask_wordRadix_size:
   "unat ((w::priority) && mask wordRadix) < wordBits"
   by (rule mask_wordRadix_less_wordBits, simp add: wordRadix_def word_size)
 
-lemma range_cover_canonical_address:
-  "\<lbrakk> range_cover ptr sz us n ; p < n ;
-     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
-   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
-  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
-  apply (subst add.commute)
-  apply (subst add.assoc)
-  apply (rule canonical_address_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
-   apply (drule (1) range_cover.range_cover_compare)
-   apply (clarsimp simp: word_less_nat_alt)
-   apply unat_arith
-  apply (simp add: canonical_bit_def)
-  done
-
 lemma canonical_address_neq_mask:
   "\<lbrakk> canonical_address ptr ; sz \<le> maxUntypedSizeBits \<rbrakk>
    \<Longrightarrow> canonical_address (ptr && ~~ mask sz)"
@@ -351,9 +345,36 @@ lemma hyp_refs_of_live':
   "hyp_refs_of' ko \<noteq> {} \<Longrightarrow> live' ko"
   by (cases ko, simp_all add: live'_def hyp_refs_of_hyp_live')
 
+<<<<<<< HEAD
 lemmas valid_cap_simps' =
   valid_cap'_def[split_simps capability.split arch_capability.split]
 
+||||||| 0d43d8dee
+lemmas valid_cap_simps' =
+  valid_cap'_def[split_simps capability.split arch_capability.split]
+
+lemma is_physical_cases:
+ "(capClass cap = PhysicalClass) =
+  (case cap of NullCap                         \<Rightarrow> False
+             | DomainCap                       \<Rightarrow> False
+             | IRQControlCap                   \<Rightarrow> False
+             | IRQHandlerCap irq               \<Rightarrow> False
+             | ReplyCap r m cr                 \<Rightarrow> False
+             | ArchObjectCap ASIDControlCap    \<Rightarrow> False
+             | _                               \<Rightarrow> True)"
+  by (simp split: capability.splits arch_capability.splits zombie_type.splits)
+=======
+lemma is_physical_cases:
+ "(capClass cap = PhysicalClass) =
+  (case cap of NullCap                         \<Rightarrow> False
+             | DomainCap                       \<Rightarrow> False
+             | IRQControlCap                   \<Rightarrow> False
+             | IRQHandlerCap irq               \<Rightarrow> False
+             | ReplyCap r m cr                 \<Rightarrow> False
+             | ArchObjectCap ASIDControlCap    \<Rightarrow> False
+             | _                               \<Rightarrow> True)"
+  by (simp split: capability.splits arch_capability.splits zombie_type.splits)
+>>>>>>> verification/master
 
 (* FIXME arch-split RT: whole typ_at_lift section needs to be split *)
 lemma typ_at_lift_page_table_at'_strong:
@@ -585,6 +606,7 @@ lemmas gen_objBitsT_simps = objBitsT_simps(1-7)
 
 end
 
+<<<<<<< HEAD
 context Arch begin arch_global_naming
 
 lemma scBits_pos_power2:
@@ -619,4 +641,27 @@ arch_requalify_facts
 
 declare objBits_pos_power2[simp] objBitsKO_no_overflow[simp, intro!]
 
+||||||| 0d43d8dee
+context Arch begin
+
+lemma objBits_less_word_bits:
+  "objBits v < word_bits"
+  unfolding objBits_simps'
+  apply (case_tac "injectKO v"; simp)
+  by (simp add: pageBits_def pteBits_def objBits_simps word_bits_def
+         split: arch_kernel_object.split)+
+
+lemma objBits_pos_power2[simp]:
+  assumes "objBits v < word_bits"
+  shows "(1::machine_word) < (2::machine_word) ^ objBits v"
+  unfolding objBits_simps'
+  apply (insert assms)
+  apply (case_tac "injectKO v"; simp)
+  by (simp add: pageBits_def pteBits_def objBits_simps
+         split: arch_kernel_object.split)+
+
+end
+
+=======
+>>>>>>> verification/master
 end

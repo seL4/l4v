@@ -421,6 +421,26 @@ lemma coerce_memset_to_heap_update_pte:
   apply (simp add: replicateHider_def word_rsplit_0 word_bits_def)
   done
 
+<<<<<<< HEAD
+||||||| 0d43d8dee
+lemma objBits_eq_by_type:
+  fixes x :: "'a :: pspace_storable" and y :: 'a
+  shows "objBits x = objBits y"
+  apply (simp add: objBits_def)
+  apply (rule objBits_type)
+  apply (simp add: koTypeOf_injectKO)
+  done
+
+=======
+lemma objBits_eq_by_type:
+  fixes x :: "'a :: pspace_storable" and y :: 'a
+  shows "objBits x = objBits y"
+  apply (simp add: objBits_def)
+  apply (rule koType_objBitsKO)
+  apply (simp add: koTypeOf_injectKO)
+  done
+
+>>>>>>> verification/master
 lemma mapM_x_store_memset_ccorres_assist:
   fixes val :: "'a :: pspace_storable"
   assumes nofail: "\<not> snd (mapM_x (\<lambda>slot. setObject slot val) slots \<sigma>)"

@@ -186,8 +186,8 @@ definition valid_vcpu' :: "vcpu \<Rightarrow> bool" where
 definition ppn_bounded :: "pte \<Rightarrow> bool" where
   "ppn_bounded pte \<equiv> case pte of PageTablePTE ppn \<Rightarrow> canonical_address ppn | _ \<Rightarrow> True"
 
-definition valid_arch_obj' :: "arch_kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_arch_obj' ako _ \<equiv> case ako of
+definition valid_arch_obj' :: "arch_kernel_object \<Rightarrow> bool" where
+  "valid_arch_obj' ako \<equiv> case ako of
      KOPTE pte \<Rightarrow> ppn_bounded pte
    | KOVCPU vcpu \<Rightarrow> valid_vcpu' vcpu
    | _ \<Rightarrow> True"

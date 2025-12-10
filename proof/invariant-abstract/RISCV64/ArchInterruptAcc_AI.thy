@@ -32,6 +32,9 @@ lemma getCurrentTime_invs[wp]:
   by (simp add: do_machine_op_def modify_def in_get bind_assoc get_def put_def gets_def in_bind
                    split_def select_f_returns in_return)
 
+crunch handle_spurious_irq
+  for invs: invs
+
 end
 
 global_interpretation InterruptAcc_AI?: InterruptAcc_AI

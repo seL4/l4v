@@ -3138,10 +3138,55 @@ lemma valid_blocked_except_set_cur_thread[simp]:
   "valid_blocked_except_set (insert (cur_thread s) S) s = valid_blocked_except_set S s"
    by (auto simp: valid_blocked_defs)
 
+<<<<<<< HEAD
 lemma valid_blocked_except_set_not_runnable:
   "valid_blocked_except_set {t} s \<Longrightarrow> st_tcb_at (\<lambda>st. \<not> runnable st) t s  \<Longrightarrow> valid_blocked s"
   unfolding valid_blocked_defs obj_at_kh_kheap_simps runnable_eq
   by (erule allEI; rename_tac t'; case_tac "t' = t"; clarsimp simp: pred_map_simps)
+||||||| 0d43d8dee
+lemma valid_queues_lift:
+  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
+      and b: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
+      and c: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
+    shows "\<lbrace>valid_queues\<rbrace> f \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
+  apply (simp add: valid_queues_def)
+  apply (rule hoare_lift_Pf[where f="\<lambda>s. etcbs_of s", OF _ b])
+  apply (rule hoare_lift_Pf[where f="\<lambda>s. ready_queues s", OF _ c])
+  apply (wp hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift a)
+  done
+
+lemma valid_sched_valid_queues[elim!]:
+  "valid_sched s \<Longrightarrow> valid_queues s"
+  by (clarsimp simp: valid_sched_def)
+=======
+\<comment> \<open>Not safe for wp because P could unify in a way that loops\<close>
+lemma in_cur_domain_lift_weak_gen:
+  assumes a: "\<And>P . f \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"
+    and b: "\<And>Q. \<lbrace>\<lambda>s. P (etcb_at Q t s) \<and> P' s\<rbrace> f \<lbrace>\<lambda>_ s. P (etcb_at Q t s)\<rbrace>"
+  shows "\<lbrace>\<lambda>s. P (in_cur_domain t s) \<and> P' s\<rbrace> f \<lbrace>\<lambda>_ s. P (in_cur_domain t s)\<rbrace>"
+  unfolding in_cur_domain_def
+  by (wp_pre, wps a, wp b, clarsimp)
+
+lemmas in_cur_domain_lift_weak'
+  = in_cur_domain_lift_weak_gen[where P=Not] in_cur_domain_lift_weak_gen[where P=id, simplified]
+
+lemmas in_cur_domain_lift_weak = in_cur_domain_lift_weak'[where P'=\<top>, simplified]
+
+lemma valid_queues_lift:
+  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
+    and b: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
+    and c: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
+  shows "\<lbrace>valid_queues\<rbrace> f \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
+  apply (simp add: valid_queues_def)
+  apply (rule hoare_lift_Pf[where f="\<lambda>s. etcbs_of s", OF _ b])
+  apply (rule hoare_lift_Pf[where f="\<lambda>s. ready_queues s", OF _ c])
+  apply (wp hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift a)
+  done
+
+lemma valid_sched_valid_queues[elim!]:
+  "valid_sched s \<Longrightarrow> valid_queues s"
+  by (clarsimp simp: valid_sched_def)
+>>>>>>> verification/master
 
 lemma valid_sched_valid_blocked[elim!]:
   "valid_sched s \<Longrightarrow> valid_blocked_except_set S s" by (clarsimp simp: valid_sched_def)
@@ -3168,6 +3213,7 @@ lemma valid_sched_released_ipc_queues[elim!]:
   "valid_sched s \<Longrightarrow> released_ipc_queues s"
   by (clarsimp simp: valid_sched_def)
 
+<<<<<<< HEAD
 lemma valid_sched_active_scs_valid[elim!]:
   "valid_sched s \<Longrightarrow> active_scs_valid s" by (simp add: valid_sched_def)
 
@@ -3613,6 +3659,56 @@ lemma invs_cur_sc_tcb_symref:
   "invs s \<Longrightarrow> schact_is_rct s \<Longrightarrow> bound_sc_tcb_at (\<lambda>x. x = Some (cur_sc s)) (cur_thread s) s"
   apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl invs_sym_refs], simp)
   apply (simp add: invs_def cur_sc_tcb_def sc_at_pred_n_def obj_at_def schact_is_rct_def)
+||||||| 0d43d8dee
+lemma typ_at_st_tcb_at_lift:
+  assumes typ_lift: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>r s. P (typ_at T p s)\<rbrace>"
+  assumes st_lift: "\<And>P. \<lbrace>st_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+  shows "\<lbrace>\<lambda>s. \<not> st_tcb_at P t s\<rbrace> f \<lbrace>\<lambda>r s. \<not> st_tcb_at P t s\<rbrace>"
+
+  apply (simp add: valid_def obj_at_def st_tcb_at_def)
+  apply clarsimp
+  apply (case_tac "kheap s t")
+   apply (cut_tac P="\<lambda>x. \<not> x" and p=t and T="ATCB" in typ_lift)
+   apply (simp add: valid_def obj_at_def)
+   apply force
+  apply (cut_tac P="\<lambda>x. x" and p=t and T="a_type aa" in typ_lift)
+  apply (cut_tac P="\<lambda>t. \<not> P t" in st_lift)
+  apply (simp add: valid_def obj_at_def st_tcb_at_def)
+  apply (drule_tac x=s in spec)
+  apply simp
+  apply (drule_tac x="(a,b)" in bspec)
+   apply simp
+  apply simp
+  apply (subgoal_tac "a_type aa = ATCB")
+   apply (erule a_type_ATCBE)
+   apply simp
+   apply force
+  apply simp
+=======
+lemma typ_at_st_tcb_at_lift:
+  assumes typ_lift: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>r s. P (typ_at T p s)\<rbrace>"
+  assumes st_lift: "\<And>P. \<lbrace>st_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+  shows "\<lbrace>\<lambda>s. \<not> st_tcb_at P t s\<rbrace> f \<lbrace>\<lambda>r s. \<not> st_tcb_at P t s\<rbrace>"
+  apply (simp add: valid_def obj_at_def st_tcb_at_def)
+  apply clarsimp
+  apply (case_tac "kheap s t")
+   apply (cut_tac P="\<lambda>x. \<not> x" and p=t and T="ATCB" in typ_lift)
+   apply (simp add: valid_def obj_at_def)
+   apply force
+  apply (cut_tac P="\<lambda>x. x" and p=t and T="a_type aa" in typ_lift)
+  apply (cut_tac P="\<lambda>t. \<not> P t" in st_lift)
+  apply (simp add: valid_def obj_at_def st_tcb_at_def)
+  apply (drule_tac x=s in spec)
+  apply simp
+  apply (drule_tac x="(a,b)" in bspec)
+   apply simp
+  apply simp
+  apply (subgoal_tac "a_type aa = ATCB")
+   apply (erule a_type_ATCBE)
+   apply simp
+   apply force
+  apply simp
+>>>>>>> verification/master
   done
 
 lemma sym_refs_pred_map_eq_iff_sc_tcb_sc_at:

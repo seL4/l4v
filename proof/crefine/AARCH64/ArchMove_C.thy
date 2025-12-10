@@ -441,7 +441,7 @@ lemma ko_at'_tcb_vcpu_not_NULL:
   \<comment> \<open>when C pointer is NULL, need this to show atcbVCPUPtr is None\<close>
   unfolding valid_pspace'_def
   by (fastforce simp: valid_tcb'_def valid_arch_tcb'_def word_gt_0 typ_at'_no_0_objD
-                dest: valid_objs_valid_tcb')
+                dest: tcb_ko_at_valid_objs_valid_tcb')
 
 lemma ko_at_vcpu_at'D:
   "ko_at' (vcpu :: vcpu) vcpuptr s \<Longrightarrow> vcpu_at' vcpuptr s"

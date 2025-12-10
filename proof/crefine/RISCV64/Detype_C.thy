@@ -312,10 +312,40 @@ proof -
 
   hence "?oran' \<inter> ?ran' = {}" by simp
   thus "{ptr_val x..+size_of TYPE('b)} \<inter> ?ran' = {}"
+<<<<<<< HEAD
     apply (rule disjoint_subset[rotated])
     apply (rule intvl_start_le)
     apply (clarsimp simp: size_of_def)
     by (fastforce intro: sof po tp)
+||||||| 0d43d8dee
+  proof (rule disjoint_subset [rotated])
+    have "objBits (undefined :: 'a) = objBitsKO ko" using po
+      apply (simp add: objBits_def)
+      apply (rule objBits_type)
+      apply (subst iffD1 [OF project_koType])
+      apply (fastforce simp add: project_inject)
+      apply (erule tp)
+      done
+    thus "{ptr_val x..+size_of TYPE('b)} \<subseteq> ?oran'" using sof
+      apply -
+      apply (rule intvl_start_le)
+      apply (simp add: size_of_def)
+      done
+=======
+  proof (rule disjoint_subset [rotated])
+    have "objBits (undefined :: 'a) = objBitsKO ko" using po
+      apply (simp add: objBits_def)
+      apply (rule koType_objBitsKO)
+      apply (subst iffD1 [OF project_koType])
+      apply (fastforce simp add: project_inject)
+      apply (erule tp)
+      done
+    thus "{ptr_val x..+size_of TYPE('b)} \<subseteq> ?oran'" using sof
+      apply -
+      apply (rule intvl_start_le)
+      apply (simp add: size_of_def)
+      done
+>>>>>>> verification/master
   qed
 
 lemma vut_subseteq:

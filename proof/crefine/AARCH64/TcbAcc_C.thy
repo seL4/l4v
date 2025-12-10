@@ -430,7 +430,7 @@ crunch vcpuDisable, vcpuRestore, vcpuSave, vcpuEnable
 (* FIXME: move *)
 lemma vcpu_at_c_guard:
   "\<lbrakk>vcpu_at' p s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow> c_guard (vcpu_Ptr p)"
-  by (fastforce intro: typ_heap_simps dest!: vcpu_at_ko vcpu_at_rf_sr)
+  by (fastforce intro: typ_heap_simps dest!: vcpu_at_ko' vcpu_at_rf_sr)
 
 (* FIXME move *)
 lemma ccorres_pre_gets_armKSGICVCPUNumListRegs_ksArchState:

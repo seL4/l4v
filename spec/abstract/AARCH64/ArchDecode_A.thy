@@ -30,7 +30,7 @@ definition page_base :: "vspace_ref \<Rightarrow> vmpage_size \<Rightarrow> vspa
 section "Architecture-specific Decode Functions"
 
 definition sgi_target_valid :: "machine_word \<Rightarrow> bool" where
-  "sgi_target_valid t \<equiv> t < of_nat gicNumTargets"
+  "sgi_target_valid t \<equiv> t \<le> of_nat gicNumTargets - 1"
 
 definition arch_decode_irq_control_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap list \<Rightarrow> (arch_irq_control_invocation,'z::state_ext) se_monad"

@@ -87,7 +87,40 @@ lemma ucast_8_32_neq:
   "x \<noteq> 0xFF \<Longrightarrow> UCAST(8 \<rightarrow> 32 signed) x \<noteq> 0xFF"
   by uint_arith (clarsimp simp: uint_up_ucast is_up)
 
+lemma checkInterrupt_ccorres:
+  "ccorres dc xfdc invs' UNIV []
+           (liftE (maybeHandleInterrupt inKernel)) (Call checkInterrupt_'proc)"
+  unfolding maybeHandleInterrupt_def
+  apply cinit'
+   apply (rule ccorres_guard_imp)
+     apply (simp add: liftE_def bind_assoc)
+     apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
+      apply (subst ccorres_seq_skip'[symmetric])
+      apply (rule ccorres_split_nothrow_novcg)
+          apply (rule_tac P="\<lambda>_. rv \<noteq> None" and R=\<top> in ccorres_cond_both)
+            apply (auto simp: irqInvalid_def Kernel_C.irqInvalid_def split: option.splits)[1]
+           apply (rule_tac P="rv \<noteq> None" in ccorres_gen_asm)
+           apply clarsimp
+           apply wpfix
+           apply (rule ccorres_call[where xf'=xfdc, OF handleInterrupt_ccorres]; simp)
+          apply (rule_tac P="rv = None" in ccorres_gen_asm)
+          apply (clarsimp simp: handleSpuriousIRQ_def)
+          apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
+          apply (rule allI, rule conseqPre, vcg)
+          apply (simp add: return_def)
+         apply ceqv
+        apply (rule_tac r=dc and xf=xfdc in ccorres_returnOk_skip[unfolded returnOk_def,simplified])
+       apply wp
+      apply (simp add: guard_is_UNIV_def)
+     apply (clarsimp simp: non_kernel_IRQs_def)
+     apply (wpsimp wp: hoare_drop_imps)
+    apply assumption
+   apply assumption
+  apply (clarsimp simp: invs'_def valid_state'_def)
+  done
+
 lemma handleInterruptEntry_ccorres:
+<<<<<<< HEAD
   "ccorres dc xfdc (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)) UNIV []
      (callKernel Interrupt) (Call handleInterruptEntry_'proc)"
   supply Collect_const[simp del]
@@ -192,6 +225,141 @@ lemma handleUnknownSyscall_ccorres:
   apply (fastforce simp: weak_sch_act_wf_def ct_in_state'_def runnable_eq_active'
                          st_tcb_at'_def obj_at'_def cfault_rel_def seL4_Fault_UnknownSyscall_lift
                          is_cap_fault_def)
+||||||| 0d43d8dee
+  "ccorres dc xfdc
+           (invs' and sch_act_simple)
+           UNIV []
+           (callKernel Interrupt) (Call handleInterruptEntry_'proc)"
+proof -
+  show ?thesis
+  apply (cinit')
+   apply (simp add: callKernel_def handleEvent_def minus_one_norm)
+   apply (rule ccorres_stateAssert)
+   apply (simp add: liftE_bind bind_assoc)
+    apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
+    apply (rule ccorres_Guard_Seq)?
+    apply wpc
+     apply (simp add: irqInvalid_def Kernel_C.irqInvalid_def)
+     apply (rule ccorres_symb_exec_r)
+       apply (ctac (no_vcg) add: schedule_ccorres)
+        apply (rule ccorres_stateAssert_after)
+        apply (rule ccorres_add_return2)
+        apply (ctac (no_vcg) add: activateThread_ccorres)
+         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+         apply (rule allI, rule conseqPre, vcg)
+         apply (clarsimp simp: return_def)
+        apply (wp schedule_sch_act_wf schedule_invs'
+             | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
+      apply vcg
+     apply vcg
+    apply (clarsimp simp: irqInvalid_def ucast_8_32_neq Kernel_C.irqInvalid_def)
+    apply (ctac (no_vcg) add: handleInterrupt_ccorres)
+     apply (ctac (no_vcg) add: schedule_ccorres)
+      apply (rule ccorres_stateAssert_after)
+      apply (rule ccorres_add_return2)
+      apply (ctac (no_vcg) add: activateThread_ccorres)
+       apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+       apply (rule allI, rule conseqPre, vcg)
+       apply (clarsimp simp: return_def)
+      apply (wp schedule_sch_act_wf schedule_invs'
+             | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
+   apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> RISCV64.maxIRQ) \<and> rv \<noteq> Some 0x3FF" in hoare_post_imp)
+    apply (clarsimp simp: non_kernel_IRQs_def)
+   apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0x3FF | simp)+
+  apply (clarsimp simp: invs'_def valid_state'_def)
+  done
+qed
+
+lemma handleUnknownSyscall_ccorres:
+  "ccorres dc xfdc
+           (invs' and ct_running' and
+              (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+           (UNIV \<inter> {s. of_nat n = w_' s}) []
+           (callKernel (UnknownSyscall n)) (Call handleUnknownSyscall_'proc)"
+  apply (cinit' lift: w_')
+   apply (simp add: callKernel_def handleEvent_def)
+   apply (rule ccorres_stateAssert)
+   apply (simp add: liftE_bind bind_assoc)
+   apply (rule ccorres_symb_exec_r)
+     apply (rule ccorres_pre_getCurThread)
+     apply (ctac (no_vcg) add: handleFault_ccorres)
+      apply (ctac (no_vcg) add: schedule_ccorres)
+       apply (rule ccorres_stateAssert_after)
+       apply (rule ccorres_add_return2)
+       apply (ctac (no_vcg) add: activateThread_ccorres)
+        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+         apply (rule allI, rule conseqPre, vcg)
+        apply (clarsimp simp: return_def)
+       apply (wp schedule_sch_act_wf schedule_invs'
+              | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
+    apply (clarsimp, vcg)
+   apply (clarsimp, rule conseqPre, vcg, clarsimp)
+  apply clarsimp
+  apply (intro impI conjI allI)
+    apply fastforce
+   apply (rule active_ex_cap')
+    apply (erule active_from_running')
+   apply (erule invs_iflive')
+  apply (clarsimp simp: ct_in_state'_def)
+  apply (frule st_tcb_idle'[rotated])
+   apply (erule invs_valid_idle')
+  apply (clarsimp simp: cfault_rel_def seL4_Fault_UnknownSyscall_lift is_cap_fault_def)
+=======
+  "ccorres dc xfdc
+           (invs' and sch_act_simple)
+           UNIV []
+           (callKernel Interrupt) (Call handleInterruptEntry_'proc)"
+  apply cinit'
+   apply (simp add: callKernel_def handleEvent_def)
+   apply (rule ccorres_stateAssert)
+   apply (ctac (no_vcg) add: checkInterrupt_ccorres)
+    apply (ctac (no_vcg) add: schedule_ccorres)
+     apply (rule ccorres_stateAssert_after)
+     apply (rule ccorres_add_return2)
+     apply (ctac (no_vcg) add: activateThread_ccorres)
+      apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+      apply (rule allI, rule conseqPre, vcg)
+      apply (clarsimp simp: return_def)
+     apply (wp schedule_sch_act_wf schedule_invs'
+          | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
+  apply (clarsimp simp: irqInvalid_def ucast_8_32_neq Kernel_C.irqInvalid_def)
+  done
+
+lemma handleUnknownSyscall_ccorres:
+  "ccorres dc xfdc
+           (invs' and ct_running' and
+              (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+           (UNIV \<inter> {s. of_nat n = w_' s}) []
+           (callKernel (UnknownSyscall n)) (Call handleUnknownSyscall_'proc)"
+  apply (cinit' lift: w_')
+   apply (simp add: callKernel_def handleEvent_def)
+   apply (rule ccorres_stateAssert)
+   apply (simp add: liftE_bind bind_assoc)
+   apply (rule ccorres_symb_exec_r)
+     apply (rule ccorres_pre_getCurThread)
+     apply (ctac (no_vcg) add: handleFault_ccorres)
+      apply (ctac (no_vcg) add: schedule_ccorres)
+       apply (rule ccorres_stateAssert_after)
+       apply (rule ccorres_add_return2)
+       apply (ctac (no_vcg) add: activateThread_ccorres)
+        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+         apply (rule allI, rule conseqPre, vcg)
+        apply (clarsimp simp: return_def)
+       apply (wp schedule_sch_act_wf schedule_invs'
+              | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
+    apply (clarsimp, vcg)
+   apply (clarsimp, rule conseqPre, vcg, clarsimp)
+  apply clarsimp
+  apply (intro impI conjI allI)
+    apply fastforce
+   apply (rule active_ex_cap')
+    apply (erule active_from_running')
+   apply (erule invs_iflive')
+  apply (clarsimp simp: ct_in_state'_def)
+  apply (frule st_tcb_idle'[rotated])
+   apply (erule invs_valid_idle')
+  apply (clarsimp simp: cfault_rel_def seL4_Fault_UnknownSyscall_lift is_cap_fault_def)
+>>>>>>> verification/master
   done
 
 lemma handleVMFaultEvent_ccorres:
@@ -308,7 +476,6 @@ lemma ct_active_not_idle'_strengthen:
   "valid_idle' s \<and> ct_active' s \<longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
   by clarsimp
 
-
 lemma handleSyscall_ccorres:
   "ccorres dc xfdc
            (invs' and
@@ -335,29 +502,9 @@ sorry (* FIXME RT: handleSyscall_ccorres
                  apply clarsimp
                  apply (rule ccorres_cond_empty)
                  apply (rule ccorres_returnOk_skip[unfolded returnOk_def,simplified])
-                apply clarsimp
-                apply (rule ccorres_cond_univ)
-                apply (simp add: liftE_def bind_assoc)
-                apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
-                 apply (rule ccorres_Guard)?
-                 apply (simp only: irqInvalid_def)?
-                 apply (rule_tac P="rv \<noteq> Some 0xFFFF" in ccorres_gen_asm)
-                 apply (subst ccorres_seq_skip'[symmetric])
-                 apply (rule ccorres_split_nothrow_novcg)
-                     apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
-                      apply (case_tac rv; clarsimp simp: Kernel_C.irqInvalid_def)
-                     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-                    apply ceqv
-                   apply (rule_tac r=dc and xf=xfdc in ccorres_returnOk_skip[unfolded returnOk_def,simplified])
-                  apply wp
-                 apply (simp add: guard_is_UNIV_def)
-                apply clarsimp
-                apply (rule_tac Q'="\<lambda>rv s. invs' s \<and>
-                 (\<forall>x. rv = Some x \<longrightarrow> x \<le> RISCV64.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
-                                             in hoare_post_imp)
-                 apply (clarsimp simp: non_kernel_IRQs_def)
-                apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0x3FF | simp)+
-               apply (rule_tac Q'=" invs' " in hoare_post_impE_E_dc, wp)
+                apply ccorres_rewrite
+                apply (rule ccorres_call[where xf'=xfdc, OF checkInterrupt_ccorres]; simp)
+               apply (rule_tac Q'="invs'" in hoare_post_impE_E_dc, wp)
                apply (simp add: invs'_def valid_state'_def)
               apply clarsimp
               apply (vcg exspec=handleInvocation_modifies)
@@ -372,28 +519,9 @@ sorry (* FIXME RT: handleSyscall_ccorres
                 apply clarsimp
                 apply (rule ccorres_cond_empty)
                 apply (rule ccorres_returnOk_skip[unfolded returnOk_def,simplified])
-               apply clarsimp
-               apply (rule ccorres_cond_univ)
-               apply (simp add: liftE_def bind_assoc irqInvalid_def)
-               apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
-                apply (rule_tac P="rv \<noteq> Some 0xFFFF" in ccorres_gen_asm)
-                apply (subst ccorres_seq_skip'[symmetric])
-                apply (rule ccorres_split_nothrow_novcg)
-                    apply (rule ccorres_Guard)?
-                    apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
-                      apply (case_tac rv; clarsimp simp: Kernel_C.irqInvalid_def irqInvalid_def)
-                    apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-                   apply ceqv
-                  apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
-                 apply wp
-                apply (simp add: guard_is_UNIV_def)
-               apply clarsimp
-               apply (rule_tac Q'="\<lambda>rv s. invs' s \<and>
-                (\<forall>x. rv = Some x \<longrightarrow> x \<le> RISCV64.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
-                                     in hoare_post_imp)
-                apply (clarsimp simp: non_kernel_IRQs_def)
-               apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0x3FF | simp)+
-              apply (rule_tac Q'=" invs' " in hoare_post_impE_E_dc, wp)
+               apply ccorres_rewrite
+               apply (rule ccorres_call[where xf'=xfdc, OF checkInterrupt_ccorres]; simp)
+              apply (rule_tac Q'="invs'" in hoare_post_impE_E_dc, wp)
               apply (simp add: invs'_def valid_state'_def)
              apply clarsimp
              apply (vcg exspec=handleInvocation_modifies)
@@ -407,28 +535,9 @@ sorry (* FIXME RT: handleSyscall_ccorres
                apply clarsimp
                apply (rule ccorres_cond_empty)
                apply (rule ccorres_returnOk_skip[unfolded returnOk_def,simplified])
-              apply clarsimp
-              apply (rule ccorres_cond_univ)
-              apply (simp add: liftE_def bind_assoc irqInvalid_def)
-              apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
-               apply (rule_tac P="rv \<noteq> Some 0xFFFF" in ccorres_gen_asm)
-               apply (subst ccorres_seq_skip'[symmetric])
-               apply (rule ccorres_split_nothrow_novcg)
-                   apply (rule ccorres_Guard)?
-                   apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
-                    apply (case_tac rv; clarsimp simp: Kernel_C.irqInvalid_def irqInvalid_def)
-                   apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-                  apply ceqv
-                 apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
-                apply wp
-               apply (simp add: guard_is_UNIV_def)
-              apply clarsimp
-              apply (rule_tac Q'="\<lambda>rv s. invs' s \<and>
-               (\<forall>x. rv = Some x \<longrightarrow> x \<le> RISCV64.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
-                                        in hoare_post_imp)
-               apply (clarsimp simp: non_kernel_IRQs_def)
-              apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0x3FF | simp)+
-             apply (rule_tac Q'=" invs' " in hoare_post_impE_E_dc, wp)
+              apply ccorres_rewrite
+              apply (rule ccorres_call[where xf'=xfdc, OF checkInterrupt_ccorres]; simp)
+             apply (rule_tac Q'="invs'" in hoare_post_impE_E_dc, wp)
              apply (simp add: invs'_def valid_state'_def)
             apply clarsimp
             apply (vcg exspec=handleInvocation_modifies)

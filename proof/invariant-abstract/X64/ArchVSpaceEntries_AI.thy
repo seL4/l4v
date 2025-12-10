@@ -715,7 +715,8 @@ lemma handle_invocation_valid_vspace_objs'[wp]:
 crunch activate_thread,switch_to_thread, handle_hypervisor_fault,
        switch_to_idle_thread, handle_call, handle_recv, handle_reply,
        handle_send, handle_yield, handle_interrupt,
-       schedule_choose_new_thread, arch_prepare_next_domain
+       schedule_choose_new_thread, arch_prepare_next_domain,
+       maybe_handle_interrupt
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (simp: crunch_simps wp: crunch_wps OR_choice_weak_wp select_ext_weak_wp
       ignore: without_preemption getActiveIRQ resetTimer ackInterrupt

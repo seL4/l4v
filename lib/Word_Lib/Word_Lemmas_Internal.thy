@@ -1103,4 +1103,9 @@ lemma toEnum_unat_le:
   apply simp
   done
 
+lemma ucast_ucast_le_mask:
+  "x \<le> mask LENGTH('b) \<Longrightarrow> ucast (ucast x::'b::len word) = (x::'a::len word)"
+  using of_nat_unat_le_mask_ucast
+  by force
+
 end

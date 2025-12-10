@@ -343,6 +343,8 @@ lemma Arch_invokeIRQControl_IssueIRQHandler_ccorres:
   apply (cinit' lift: irq_' handlerSlot_' controlSlot_' trigger_')
    apply (clarsimp simp: AARCH64_H.performIRQControl_def simp flip: liftE_liftE)
    apply (rule ccorres_liftE_Seq)
+   apply csymbr (* HAVE_SET_TRIGGER *)
+   apply simp (* assume HAVE_SET_TRIGGER to be 1 for AArch64 platforms *)
    apply (ctac (no_vcg) add: setIRQTrigger_ccorres)
     apply (rule ccorres_liftE_Seq)
     apply (rule ccorres_add_returnOk)
@@ -356,14 +358,13 @@ lemma Arch_invokeIRQControl_IssueIRQHandler_ccorres:
   done
 
 lemma sgi_target_valid_sgi_target_len:
-  "isSGITargetValid w = (w < 2^sgi_target_len)"
-  by (simp add: isSGITargetValid_def gicNumTargets_def sgi_target_len_def)
+  "isSGITargetValid w = (w \<le> mask sgi_target_len)"
+  by (simp add: isSGITargetValid_def gicNumTargets_def sgi_target_len_def mask_def)
 
-(* 32 is from width of field in bitfield generator for sgi target.
-   Written as mask so it also works on 32 bit words. *)
-lemma sgi_target_len_mask_32:
-  "2 ^ sgi_target_len \<le> (mask 32 :: machine_word)"
-  by (simp add: sgi_target_len_val mask_def)
+(* 32 is from width of field in bitfield generator for sgi target. *)
+lemma sgi_target_len_le_32:
+  "sgi_target_len \<le> 32"
+  by (simp add: sgi_target_len_val)
 
 lemma Arch_invokeIRQControl_IssueSGISignal_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -391,8 +392,8 @@ lemma Arch_invokeIRQControl_IssueSGISignal_ccorres:
                         sgi_target_valid_sgi_target_len numSGIs_def)
   apply (rule conjI; rule le_mask_imp_and_mask[symmetric])
    apply (simp add: numSGIs_bits_def mask_def word_le_nat_alt word_less_nat_alt)
-  apply (rule order_trans[OF _ sgi_target_len_mask_32])
-  apply simp
+  apply (erule order_trans, rule mask_le_mono)
+  apply (rule sgi_target_len_le_32)
   done
 
 (* Bundle of definitions for minIRQ, maxIRQ, minUserIRQ, etc *)
@@ -628,6 +629,8 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
     apply (simp add: interpret_excaps_test_null excaps_map_def
                      word_less_nat_alt Let_def
                 cong: call_ignore_cong)
+    apply csymbr (* NUM_SGIS *)
+    apply ccorres_rewrite (* assume NUM_SGIs always \<noteq> 0 on AArch64 *)
     apply (rule ccorres_add_return)
     apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
       apply (rule ccorres_add_return)
@@ -639,6 +642,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
             apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
             apply (rule ccorres_move_c_guard_cte)
             apply ctac
+              apply csymbr (* wrap NUM_SGIS; assume \<noteq> 0 on AArch64 *)
               apply (rule ccorres_assert2)
               apply (simp add: rangeCheck_def unlessE_def
                                length_ineq_not_Nil hd_conv_nth

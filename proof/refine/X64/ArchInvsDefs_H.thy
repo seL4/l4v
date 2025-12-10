@@ -150,34 +150,33 @@ lemmas [simp] = arch_valid_irq_def
 definition valid_arch_tcb' :: "Structures_H.arch_tcb \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_arch_tcb' \<equiv> \<lambda>t. \<top>"
 
-definition valid_mapping' :: "machine_word \<Rightarrow> vmpage_size \<Rightarrow> kernel_state \<Rightarrow> bool" where
- "valid_mapping' x sz s \<equiv> is_aligned x (pageBitsForSize sz)
-                            \<and> ptrFromPAddr x \<noteq> 0"
+definition valid_mapping' :: "machine_word \<Rightarrow> vmpage_size \<Rightarrow> bool" where
+ "valid_mapping' x sz \<equiv> is_aligned x (pageBitsForSize sz) \<and> ptrFromPAddr x \<noteq> 0"
 
-primrec valid_pte' :: "X64_H.pte \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_pte' (InvalidPTE) = \<top>"
-| "valid_pte' (SmallPagePTE ptr _ _ _ _ _ _ _ _) = (valid_mapping' ptr X64SmallPage)"
+primrec valid_pte' :: "X64_H.pte \<Rightarrow> bool" where
+  "valid_pte' (InvalidPTE) = True"
+| "valid_pte' (SmallPagePTE ptr _ _ _ _ _ _ _ _) = valid_mapping' ptr X64SmallPage"
 
-primrec valid_pde' :: "X64_H.pde \<Rightarrow> kernel_state \<Rightarrow> bool" where
- "valid_pde' (InvalidPDE) = \<top>"
+primrec valid_pde' :: "X64_H.pde \<Rightarrow> bool" where
+ "valid_pde' (InvalidPDE) = True"
 | "valid_pde' (LargePagePDE ptr _ _ _ _ _ _ _ _) = (valid_mapping' ptr X64LargePage)"
-| "valid_pde' (PageTablePDE ptr _ _ _ _ _) = (\<lambda>_. is_aligned ptr ptBits)"
+| "valid_pde' (PageTablePDE ptr _ _ _ _ _) = is_aligned ptr ptBits"
 
-primrec valid_pdpte' :: "X64_H.pdpte \<Rightarrow> kernel_state \<Rightarrow> bool" where
- "valid_pdpte' (InvalidPDPTE) = \<top>"
+primrec valid_pdpte' :: "X64_H.pdpte \<Rightarrow> bool" where
+ "valid_pdpte' (InvalidPDPTE) = True"
 | "valid_pdpte' (HugePagePDPTE ptr _ _ _ _ _ _ _ _) = (valid_mapping' ptr X64HugePage)"
-| "valid_pdpte' (PageDirectoryPDPTE ptr _ _ _ _ _) = (\<lambda>_. is_aligned ptr pdBits)"
+| "valid_pdpte' (PageDirectoryPDPTE ptr _ _ _ _ _) = is_aligned ptr pdBits"
 
-primrec valid_pml4e' :: "X64_H.pml4e \<Rightarrow> kernel_state \<Rightarrow> bool" where
- "valid_pml4e' (InvalidPML4E) = \<top>"
-| "valid_pml4e' (PDPointerTablePML4E ptr _ _ _ _ _) = (\<lambda>_. is_aligned ptr pdptBits)"
+primrec valid_pml4e' :: "X64_H.pml4e \<Rightarrow> bool" where
+ "valid_pml4e' (InvalidPML4E) = True"
+| "valid_pml4e' (PDPointerTablePML4E ptr _ _ _ _ _) = is_aligned ptr pdptBits"
 
-primrec valid_asid_pool' :: "asidpool \<Rightarrow> kernel_state \<Rightarrow> bool" where
+primrec valid_asid_pool' :: "asidpool \<Rightarrow> bool" where
  "valid_asid_pool' (ASIDPool pool)
-     = (\<lambda>s. dom pool \<subseteq> {0 .. 2^asid_low_bits - 1}
-           \<and> 0 \<notin> ran pool \<and> (\<forall>x \<in> ran pool. is_aligned x pml4Bits))"
+     = (dom pool \<subseteq> {0 .. 2^asid_low_bits - 1}
+        \<and> 0 \<notin> ran pool \<and> (\<forall>x \<in> ran pool. is_aligned x pml4Bits))"
 
-primrec valid_arch_obj' :: "arch_kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool" where
+primrec valid_arch_obj' :: "arch_kernel_object \<Rightarrow> bool" where
   "valid_arch_obj' (KOASIDPool pool) = valid_asid_pool' pool"
 | "valid_arch_obj' (KOPDE pde) = valid_pde' pde"
 | "valid_arch_obj' (KOPTE pte) = valid_pte' pte"

@@ -1575,7 +1575,7 @@ lemma aligned_sum_less_kernel_base:
   apply (simp add:field_simps[symmetric])
   apply (erule gap_between_aligned)
     apply (simp add: vmsz_aligned_def)+
-   apply (case_tac sz,simp_all add:kernel_base_def is_aligned_def)+
+   apply (case_tac sz,simp_all add:kernel_base_def pptrBase_def is_aligned_def)+
   done
 
 lemma find_pd_for_asid_pde_unfolded[wp]:

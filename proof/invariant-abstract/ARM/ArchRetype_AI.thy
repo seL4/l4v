@@ -410,7 +410,7 @@ lemma copy_global_equal_kernel_mappings_restricted:
   apply clarsimp
   apply (frule_tac x="kernel_base >> 20" in spec)
   apply (drule mp)
-   apply (simp add: kernel_base_def pd_bits_def pageBits_def)
+   apply (simp add: kernel_base_def pd_bits_def pageBits_def pptrBase_def)
   apply (clarsimp simp: obj_at_def)
   apply (subst equal_kernel_mappings_specific_def)
    apply (fastforce simp add: obj_at_def restrict_map_def)

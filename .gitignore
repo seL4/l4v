@@ -52,6 +52,12 @@ umm_types.txt
 /tools/c-parser/StrictC.grm.sig
 /tools/c-parser/StrictC.grm.sml
 /tools/c-parser/StrictC.lex.sml
+/tools/c-parser/doc/*.aux
+/tools/c-parser/doc/*.bbl
+/tools/c-parser/doc/*.blg
+/tools/c-parser/doc/*.log
+/tools/c-parser/doc/*.toc
+/tools/c-parser/doc/ctranslation.pdf
 
 /camkes/adl-spec/camkes.ML
 

@@ -809,7 +809,7 @@ lemma switchToThread_fp_ccorres:
   apply (intro allI impI conjI)
         apply (clarsimp split: option.splits)
         apply (rule valid_tcb'_vcpuE)
-          apply (erule (3) valid_objs_valid_tcb')
+          apply (erule (3) tcb_ko_at_valid_objs_valid_tcb')
        apply (force simp: ran_def)
       apply (frule (1) ctes_of_valid')
       apply (simp add: valid_cap_simps')
@@ -2181,8 +2181,8 @@ proof -
                                 apply (rule getCTE_setCTE_rf_sr, simp_all)[1]
                                 apply (case_tac destCallerCTE, case_tac curThreadReplyCTE,
                                        case_tac "cteMDBNode curThreadReplyCTE")
-                                apply (clarsimp simp add: ccte_relation_eq_ccap_relation)
-                                apply (clarsimp simp: nullMDBNode_def revokable'_def)
+                                apply (clarsimp simp: ccte_relation_eq_ccap_relation nullMDBNode_def
+                                                      Retype_H.isCapRevocable_def)
                                apply ceqv
                               apply (rule ccorres_move_c_guard_cte)
                               apply (rule_tac xf'=xfdc and r'=dc in ccorres_split_nothrow)

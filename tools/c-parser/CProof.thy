@@ -192,22 +192,37 @@ lemma c_guard_ptr_aligned_fl:
   apply(simp add: c_guard_def field_lvalue_def field_offset_def field_offset_untyped_def typ_uinfo_t_def)
   done
 
-(* StrictC guard separation syntax translations *)
+(* StrictC guard separation notation *)
 
-(* FIXME: make these abbreviations *)
-syntax
-  "_sep_map" :: "'a::c_type ptr \<Rightarrow> 'a \<Rightarrow> heap_assert" ("_ \<mapsto> _" [56,51] 56) (* FIXME: clashes with map update *)
-  "_sep_map_any" :: "'a::c_type ptr \<Rightarrow> heap_assert" ("_ \<mapsto> -" [56] 56)
-  "_sep_map'" :: "'a::c_type ptr \<Rightarrow> 'a \<Rightarrow> heap_assert" ("_ \<hookrightarrow>  _" [56,51] 56)
-  "_sep_map'_any" :: "'a::c_type ptr \<Rightarrow> heap_assert" ("_ \<hookrightarrow> -" [56] 56)
-  "_tagd" :: "'a::c_type ptr \<Rightarrow> heap_assert" ("\<turnstile>\<^sub>s _" [99] 100)
+abbreviation sep_map_c :: "'a::c_type ptr \<Rightarrow> 'a \<Rightarrow> heap_assert" ("_ \<mapsto> _" [56,51] 56) where
+  "p \<mapsto> v \<equiv> p \<mapsto>\<^sup>i\<^bsub>c_guard\<^esub> v"
 
-translations
-  "p \<mapsto> v" == "p \<mapsto>\<^sup>i\<^sub>(CONST c_guard) v"
-  "p \<mapsto> -" == "p \<mapsto>\<^sup>i\<^sub>(CONST c_guard) -"
-  "p \<hookrightarrow> v" == "p \<hookrightarrow>\<^sup>i\<^sub>(CONST c_guard) v"
-  "p \<hookrightarrow> -" == "p \<hookrightarrow>\<^sup>i\<^sub>(CONST c_guard) -"
-  "\<turnstile>\<^sub>s p" == "CONST c_guard \<turnstile>\<^sub>s\<^sup>i p"
+abbreviation sep_map_any_c :: "'a::c_type ptr \<Rightarrow> heap_assert" ("_ \<mapsto> -" [56] 56) where
+  "p \<mapsto> - \<equiv> p \<mapsto>\<^sup>i\<^bsub>c_guard\<^esub> -"
+
+abbreviation sep_map'_c :: "'a::c_type ptr \<Rightarrow> 'a \<Rightarrow> heap_assert" ("_ \<hookrightarrow>  _" [56,51] 56) where
+  "p \<hookrightarrow> v \<equiv> p \<hookrightarrow>\<^sup>i\<^bsub>c_guard\<^esub> v"
+
+abbreviation sep_map'_any_c :: "'a::c_type ptr \<Rightarrow> heap_assert" ("_ \<hookrightarrow> -" [56] 56) where
+  "p \<hookrightarrow> - \<equiv> p \<hookrightarrow>\<^sup>i\<^bsub>c_guard\<^esub> -"
+
+abbreviation tagd_c :: "'a::c_type ptr \<Rightarrow> heap_assert" ("\<turnstile>\<^sub>s _" [99] 100) where
+  "\<turnstile>\<^sub>s p \<equiv> c_guard \<turnstile>\<^sub>s\<^sup>i p"
+
+(* Shadow Separation.C_seplog_syntax *)
+bundle C_seplog_syntax
+begin
+
+unbundle Separation.C_seplog_syntax
+
+notation sep_map_c ("_ \<mapsto> _" [56,51] 56)
+notation sep_map_any_c ("_ \<mapsto> -" [56] 56)
+notation sep_map'_c ("_ \<hookrightarrow>  _" [56,51] 56)
+notation sep_map'_any_c ("_ \<hookrightarrow> -" [56] 56)
+notation tagd_c ("\<turnstile>\<^sub>s _" [99] 100)
+
+end
+
 
 term "x \<mapsto> y"
 term "(x \<mapsto> y \<and>\<^sup>* y \<mapsto> z) s"

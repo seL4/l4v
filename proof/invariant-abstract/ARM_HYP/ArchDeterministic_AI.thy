@@ -6,7 +6,7 @@
  *)
 
 theory ArchDeterministic_AI
-imports Deterministic_AI ArchVCPU_AI
+imports Deterministic_AI
 begin
 
 declare dxo_wp_weak[wp del]
@@ -100,7 +100,7 @@ lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
   unfolding handle_interrupt_def ackInterrupt_def handle_reserved_irq_def
   by (wpsimp wp: hoare_drop_imps simp: arch_mask_irq_signal_def)
 
-crunch handle_send,handle_reply
+crunch handle_send, handle_reply, handle_spurious_irq
   for valid_list[wp, Deterministic_AI_assms]: valid_list
 
 crunch handle_hypervisor_fault

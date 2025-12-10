@@ -28,7 +28,8 @@ crunch invoke_untyped
   for (bcorres) bcorres[wp]: truncate_state
   (ignore: sequence_x)
 
-crunch set_mcpriority, set_priority, set_flags, arch_post_set_flags
+crunch set_mcpriority, set_priority, set_flags, arch_post_set_flags,
+  maybe_handle_interrupt
   for (bcorres) bcorres[wp]: truncate_state
 
 crunch arch_get_sanitise_register_info, arch_post_modify_registers

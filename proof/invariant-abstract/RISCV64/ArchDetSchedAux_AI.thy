@@ -39,10 +39,30 @@ lemma set_pt_valid_sched_pred[wp]:
   apply (fastforce simp: obj_at_kh_kheap_simps vs_all_heap_simps)
   done
 
+<<<<<<< HEAD
 lemma set_asid_pool_eps_of[wp]:
   "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (eps_of s)\<rbrace>"
   by (set_object_easy_cases def: set_asid_pool_def)
+||||||| 0d43d8dee
+crunch perform_asid_control_invocation
+  for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
+  and valid_blocked[wp]: valid_blocked
+  and schedact[wp]: "\<lambda>s. P (scheduler_action s)"
+  and ready_queues[wp]: "\<lambda>s. P (ready_queues s)"
+  and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
+  (wp: hoare_weak_lift_imp simp: detype_def)
+=======
+crunch perform_asid_control_invocation
+  for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
+  and valid_blocked[wp]: valid_blocked
+  and schedact[wp]: "\<lambda>s. P (scheduler_action s)"
+  and ready_queues[wp]: "\<lambda>s. P (ready_queues s)"
+  and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
+  and ct[wp]: "\<lambda>s. P (cur_thread s)"
+  (wp: hoare_weak_lift_imp simp: detype_def)
+>>>>>>> verification/master
 
+<<<<<<< HEAD
 lemma set_asid_pool_ntfns_of[wp]:
   "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (ntfns_of s)\<rbrace>"
   by (set_object_easy_cases def: set_asid_pool_def)
@@ -161,6 +181,44 @@ lemma update_time_stamp_valid_machine_time[wp, DetSchedAux_AI_assms]:
   unfolding update_time_stamp_def
   apply (wpsimp simp: do_machine_op_def)
   apply (fastforce simp: getCurrentTime_def elim: valid_machine_time_getCurrentTime)
+||||||| 0d43d8dee
+crunch perform_asid_control_invocation
+  for ct[wp]: "\<lambda>s. P (cur_thread s)"
+
+lemma perform_asid_control_invocation_valid_sched:
+  "\<lbrace>ct_active and invs and valid_aci aci and valid_sched and valid_idle\<rbrace>
+     perform_asid_control_invocation aci
+   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  apply (rule hoare_pre)
+   apply (rule_tac I="invs and ct_active and valid_aci aci" in valid_sched_tcb_state_preservation)
+          apply (wp perform_asid_control_invocation_st_tcb_at)
+          apply simp
+         apply (wp perform_asid_control_etcb_at)+
+    apply (rule hoare_strengthen_post, rule aci_invs)
+    apply (simp add: invs_def valid_state_def)
+   apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s"])
+    apply (rule hoare_lift_Pf[where f="\<lambda>s. cur_domain s"])
+     apply (rule hoare_lift_Pf[where f="\<lambda>s. idle_thread s"])
+      apply wp+
+  apply simp
+=======
+lemma perform_asid_control_invocation_valid_sched:
+  "\<lbrace>ct_active and invs and valid_aci aci and valid_sched and valid_idle\<rbrace>
+     perform_asid_control_invocation aci
+   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  apply (rule hoare_pre)
+   apply (rule_tac I="invs and ct_active and valid_aci aci" in valid_sched_tcb_state_preservation)
+          apply (wp perform_asid_control_invocation_st_tcb_at)
+          apply simp
+         apply (wp perform_asid_control_etcb_at)+
+    apply (rule hoare_strengthen_post, rule aci_invs)
+    apply (simp add: invs_def valid_state_def)
+   apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s"])
+    apply (rule hoare_lift_Pf[where f="\<lambda>s. cur_domain s"])
+     apply (rule hoare_lift_Pf[where f="\<lambda>s. idle_thread s"])
+      apply wp+
+  apply simp
+>>>>>>> verification/master
   done
 
 end

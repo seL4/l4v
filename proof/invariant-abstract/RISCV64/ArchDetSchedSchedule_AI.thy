@@ -197,6 +197,7 @@ lemma machine_state_detype[simp]:
   "machine_state (detype S s) = machine_state s"
   by (clarsimp simp: valid_machine_time_def detype_def)
 
+<<<<<<< HEAD
 crunch handle_hypervisor_fault, handle_reserved_irq
   for valid_machine_time: valid_machine_time
 
@@ -208,6 +209,17 @@ lemma retype_region_not_bound_sc[wp]:
   by (wpsimp simp: retype_region_def,
          clarsimp simp: pred_tcb_at_def sc_at_pred_def obj_at_def default_object_def
                  split: if_splits)
+||||||| 0d43d8dee
+declare make_arch_fault_msg_inv[DetSchedSchedule_AI_assms]
+
+lemma arch_post_modify_registers_not_idle_thread[DetSchedSchedule_AI_assms]:
+  "\<lbrace>\<lambda>s::det_ext state. t \<noteq> idle_thread s\<rbrace> arch_post_modify_registers c t \<lbrace>\<lambda>_ s. t \<noteq> idle_thread s\<rbrace>"
+  by (wpsimp simp: arch_post_modify_registers_def)
+=======
+lemma arch_post_modify_registers_not_idle_thread[DetSchedSchedule_AI_assms]:
+  "\<lbrace>\<lambda>s::det_ext state. t \<noteq> idle_thread s\<rbrace> arch_post_modify_registers c t \<lbrace>\<lambda>_ s. t \<noteq> idle_thread s\<rbrace>"
+  by (wpsimp simp: arch_post_modify_registers_def)
+>>>>>>> verification/master
 
 crunch arch_perform_invocation
   for not_bound_sc_tcb_at[wp]: "(\<lambda>s. \<not> bound_sc_tcb_at P t s)"
@@ -232,6 +244,7 @@ lemma arch_finalise_cap_ct_in_state:
   apply (case_tac c; case_tac x; simp add: arch_finalise_cap_def)
   by (wpsimp wp: ct_in_state_thread_state_lift)+
 
+<<<<<<< HEAD
 lemma kernel_irq_timer_kernel_IRQ[simp]:
   "kernel_irq_timer \<notin> non_kernel_IRQs"
   by (simp add: non_kernel_IRQs_def)
@@ -322,6 +335,21 @@ crunch arch_prepare_set_domain
 
 crunch arch_prepare_next_domain
   for valid_list[wp]: "valid_list"
+||||||| 0d43d8dee
+crunch arch_switch_to_thread
+  for etcbs_of[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (etcbs_of s)"
+  and cur_domain[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_domain s)"
+=======
+crunch handle_spurious_irq
+  for valid_sched[wp, DetSchedSchedule_AI_assms]: valid_sched
+  and valid_idle[wp, DetSchedSchedule_AI_assms]: valid_idle
+
+crunch prepare_thread_delete, arch_post_cap_deletion, arch_finalise_cap
+  for cur_thread[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_thread s)"
+  and cur_domain[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_domain s)"
+  and etcbs_of[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (etcbs_of s)"
+  (wp: crunch_wps simp: crunch_simps)
+>>>>>>> verification/master
 
 end
 

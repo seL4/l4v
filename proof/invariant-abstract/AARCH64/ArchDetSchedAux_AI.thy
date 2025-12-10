@@ -52,6 +52,7 @@ crunch perform_asid_control_invocation
   and schedact[wp]: "\<lambda>s. P (scheduler_action s)"
   and ready_queues[wp]: "\<lambda>s. P (ready_queues s)"
   and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
+  and ct[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: hoare_weak_lift_imp simp: detype_def)
 
 lemma perform_asid_control_invocation_valid_sched:

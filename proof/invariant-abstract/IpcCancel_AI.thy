@@ -2254,6 +2254,7 @@ lemma ntfn_q_refs_no_TCBBound:
   "(x, TCBBound) \<notin> ntfn_q_refs_of ntfn"
   by (auto simp: ntfn_q_refs_of_def split:ntfn.splits)
 
+<<<<<<< HEAD
 lemma ntfn_bound_tcb_at:
   "\<lbrakk>sym_refs (state_refs_of s); valid_objs s; kheap s ntfnptr = Some (Notification ntfn);
     ntfn_bound_tcb ntfn = Some tcbptr; P (Some ntfnptr)\<rbrakk>
@@ -2305,6 +2306,61 @@ lemma set_ntfn_bound_tcb_none_if_live_then_nonz_cap [wp]:
   apply (wpsimp simp: update_sk_obj_ref_def obj_at_def wp: get_simple_ko_wp)
   apply (fastforce simp: live_def live_ntfn_def elim!: if_live_then_nonz_capD2)
   done
+||||||| 0d43d8dee
+lemma ntfn_bound_tcb_get_set[simp]:
+  "ntfn_bound_tcb (ntfn_set_bound_tcb ntfn ntfn') = ntfn'"
+  by auto
+
+lemma ntfn_obj_tcb_get_set[simp]:
+  "ntfn_obj (ntfn_set_bound_tcb ntfn ntfn') = ntfn_obj ntfn"
+  by auto
+
+lemma valid_ntfn_set_bound_None:
+  "valid_ntfn ntfn s \<Longrightarrow> valid_ntfn (ntfn_set_bound_tcb ntfn None) s"
+  by (auto simp: valid_ntfn_def split:ntfn.splits)
+
+lemma ntfn_bound_tcb_at:
+  "\<lbrakk>sym_refs (state_refs_of s); valid_objs s; kheap s ntfnptr = Some (Notification ntfn);
+    ntfn_bound_tcb ntfn = Some tcbptr; P (Some ntfnptr)\<rbrakk>
+  \<Longrightarrow> bound_tcb_at P tcbptr s"
+  apply (drule_tac x=ntfnptr in sym_refsD[rotated])
+   apply (fastforce simp: state_refs_of_def)
+  apply (fastforce simp: pred_tcb_at_def obj_at_def valid_obj_def valid_ntfn_def is_tcb
+                         state_refs_of_def refs_of_rev
+                   simp del: refs_of_simps)
+  done
+
+lemma bound_tcb_bound_notification_at:
+  "\<lbrakk>sym_refs (state_refs_of s); valid_objs s; kheap s ntfnptr = Some (Notification ntfn);
+    bound_tcb_at (\<lambda>ptr. ptr = (Some ntfnptr)) tcbptr s \<rbrakk>
+  \<Longrightarrow> ntfn_bound_tcb ntfn = Some tcbptr"
+  apply (drule_tac x=tcbptr in sym_refsD[rotated])
+   apply (fastforce simp: state_refs_of_def pred_tcb_at_def obj_at_def)
+  apply (auto simp: pred_tcb_at_def obj_at_def valid_obj_def valid_ntfn_def is_tcb
+                    state_refs_of_def refs_of_rev
+          simp del: refs_of_simps)
+  done
+
+crunch set_bound_notification
+  for valid_cur_fpu[wp]: valid_cur_fpu
+  (wp: valid_cur_fpu_lift)
+=======
+lemma ntfn_bound_tcb_get_set[simp]:
+  "ntfn_bound_tcb (ntfn_set_bound_tcb ntfn ntfn') = ntfn'"
+  by auto
+
+lemma ntfn_obj_tcb_get_set[simp]:
+  "ntfn_obj (ntfn_set_bound_tcb ntfn ntfn') = ntfn_obj ntfn"
+  by auto
+
+lemma valid_ntfn_set_bound_None:
+  "valid_ntfn ntfn s \<Longrightarrow> valid_ntfn (ntfn_set_bound_tcb ntfn None) s"
+  by (auto simp: valid_ntfn_def split:ntfn.splits)
+
+crunch set_bound_notification
+  for valid_cur_fpu[wp]: valid_cur_fpu
+  (wp: valid_cur_fpu_lift)
+>>>>>>> verification/master
 
 lemma unbind_notification_invs:
   notes refs_of_simps[simp del] if_cong[cong]

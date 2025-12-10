@@ -392,6 +392,7 @@ lemma ksDomSched_length_dom_relation[simp]:
   apply (auto simp: cstate_relation_def cdom_schedule_relation_def Let_def ksDomScheduleLength_def)
   done
 
+<<<<<<< HEAD
 (* FIXME RT: move to Lib *)
 lemma mult_non_zero_less_eq:
   fixes a b c :: nat
@@ -413,6 +414,15 @@ lemma domain_time_overflow_condition_helper:
   apply (rename_tac n d time)
   apply (prop_tac "dschedule_C.length_C (ksDomSchedule.[n]) = time")
    apply (frule ksDomSched_length_dom_relation)
+||||||| 0d43d8dee
+lemma nextDomain_ccorres:
+  "ccorres dc xfdc invs' UNIV [] nextDomain (Call nextDomain_'proc)"
+  apply (cinit)
+=======
+lemma nextDomain_ccorres:
+  "ccorres dc xfdc invs' UNIV [] nextDomain (Call nextDomain_'proc)"
+  apply cinit
+>>>>>>> verification/master
    apply (simp add: ksDomScheduleLength_def sdiv_word_def sdiv_int_def)
    apply (clarsimp simp: cdom_schedule_relation_def dom_schedule_entry_relation_def
                simp del: ksDomSched_length_dom_relation)
@@ -466,6 +476,7 @@ lemma nextDomain_ccorres:
   apply simp
   done
 
+<<<<<<< HEAD
 (* FIXME RT: move *)
 crunch nextDomain
   for valid_idle'[wp]: valid_idle'
@@ -476,11 +487,22 @@ crunch nextDomain
 
 crunch prepareNextDomain
   for valid_domain_list'[wp]: valid_domain_list'
+||||||| 0d43d8dee
+=======
+lemma Arch_prepareNextDomain_ccorres:
+  "ccorres dc xfdc invs' UNIV [] (return ()) (Call Arch_prepareNextDomain_'proc)"
+  apply cinit'
+   apply (rule_tac R=\<top> and R'=UNIV in ccorres_return)
+   apply vcg
+   apply clarsimp
+  apply clarsimp
+  done
+>>>>>>> verification/master
 
 lemma prepareNextDomain_ccorres:
   "ccorres dc xfdc invs' UNIV [] prepareNextDomain (Call prepareNextDomain_'proc)"
   apply cinit
-  apply (rule ccorres_return_Skip)
+   apply (ctac add: Arch_prepareNextDomain_ccorres)
   by clarsimp
 
 lemma scheduleChooseNewThread_ccorres:
@@ -488,8 +510,8 @@ lemma scheduleChooseNewThread_ccorres:
      (\<lambda>s. invs' s \<and> valid_idle' s \<and> ksSchedulerAction s = ChooseNewThread \<and> valid_domain_list' s)
      UNIV hs
      (do domainTime \<leftarrow> getDomainTime;
-         y \<leftarrow> when (domainTime = 0) (do
-             y <- prepareNextDomain;
+         _ \<leftarrow> when (domainTime = 0) (do
+             _ <- prepareNextDomain;
              nextDomain
          od);
          chooseThread

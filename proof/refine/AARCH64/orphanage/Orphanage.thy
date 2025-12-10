@@ -748,13 +748,17 @@ lemma ThreadDecls_H_switchToThread_ct [wp]:
   apply (wp | clarsimp)+
   done
 
-crunch nextDomain, prepareNextDomain
+crunch nextDomain, vcpuFlush, switchLocalFpuOwner
+  for no_orphans[wp]: no_orphans
+  (wp: no_orphans_lift crunch_wps simp: Let_def)
+
+crunch nextDomain, vcpuFlush, prepareNextDomain
   for no_orphans[wp]: no_orphans
   and tcbQueued[wp]: "\<lambda>s. Q (obj_at' (\<lambda>tcb. P (tcbQueued tcb)) tcb_ptr s)"
   and st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' p s)"
   and ct'[wp]: "\<lambda>s. P (ksCurThread s)"
   and sch_act_not[wp]: "sch_act_not t"
-  (wp: no_orphans_lift simp: Let_def)
+  (wp:  crunch_wps simp: Let_def)
 
 lemma all_invs_but_ct_idle_or_in_cur_domain'_strg:
   "invs' s \<longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
@@ -926,7 +930,7 @@ proof -
         apply (clarsimp simp: conj_comms cong: conj_cong imp_cong split del: if_split)
         apply (wp hoare_vcg_imp_lift'
                | strengthen not_pred_tcb_at'_strengthen)+
-        apply (wps | wpsimp wp: tcbSchedEnqueue_all_queued_tcb_ptrs')+
+         apply (wps | wpsimp wp: tcbSchedEnqueue_all_queued_tcb_ptrs')+
     apply (fastforce simp: is_active_tcb_ptr_runnable' all_invs_but_ct_idle_or_in_cur_domain'_strg
                            invs_switchToThread_runnable')
     done
@@ -1126,7 +1130,7 @@ lemma createNewCaps_no_orphans:
                    | clarsimp simp: is_active_thread_state_def makeObject_tcb
                                     projectKO_opt_tcb isRunning_def isRestart_def
                                     APIType_capBits_def Arch_createNewCaps_def
-                                    objBits_if_dev
+                                    objBits_if_dev APIType_capBits_gen_def
                    | simp add: objBits_simps mult_2 nat_arith.add1 split: if_split)+
   done
 
@@ -1826,6 +1830,7 @@ lemma setDomain_no_orphans [wp]:
 crunch prepareSetDomain
   for no_orphans[wp]: no_orphans
   and cur_tcb'[wp]: cur_tcb'
+  (wp: cur_tcb_lift)
 
 lemma performInvocation_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> valid_invocation' i s \<and> ct_active' s \<and> sch_act_simple s \<rbrace>
@@ -1951,13 +1956,16 @@ lemma sts_tcb_at'_preserve':
   \<lbrace>\<lambda>_. st_tcb_at' P t \<rbrace>"
   by (wpsimp wp: sts_st_tcb' simp: st_tcb_at_neg')
 
+crunch handleSpuriousIRQ
+  for no_orphans[wp]: no_orphans
+
 lemma handleEvent_no_orphans [wp]:
   "\<lbrace> \<lambda>s. invs' s \<and>
          (e \<noteq> Interrupt \<longrightarrow> ct_running' s) \<and>
          ksSchedulerAction s = ResumeCurrentThread \<and> no_orphans s \<rbrace>
    handleEvent e
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  apply (simp add: handleEvent_def handleSend_def handleCall_def
+  apply (simp add: handleEvent_def handleSend_def handleCall_def maybeHandleInterrupt_def
               cong: event.case_cong syscall.case_cong)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps | wpc | clarsimp simp: handleHypervisorFault_def
@@ -1971,7 +1979,7 @@ theorem callKernel_no_orphans[wp]:
           ksSchedulerAction s = ResumeCurrentThread \<and> no_orphans s \<rbrace>
    callKernel e
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding callKernel_def
+  unfolding callKernel_def maybeHandleInterrupt_def
   apply (wpsimp wp: hoare_drop_imp[where f=activateThread] schedule_invs'
          (* getActiveIRQ can't return a non-kernel IRQ *)
          | wp (once) hoare_post_imp[

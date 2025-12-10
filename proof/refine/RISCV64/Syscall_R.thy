@@ -2229,8 +2229,224 @@ lemma handleHypervisorFault_corres:
   apply (cases fault; clarsimp simp add: handleHypervisorFault_def returnOk_def2)
   done
 
+lemma handleSpuriousIRQ_corres[corres]:
+  "corres dc \<top> \<top> handle_spurious_irq handleSpuriousIRQ"
+  by (simp add: handle_spurious_irq_def handleSpuriousIRQ_def)
+
+lemma contract_all_imp_strg:
+  "P \<and> P' \<and> (\<forall>x. R x \<longrightarrow> Q x) \<Longrightarrow> \<forall>x. R x \<longrightarrow> P \<and> Q x \<and> P'"
+  by blast
+
+lemma maybeHandleInterrupt_corres:
+  "corres dc einvs invs' (maybe_handle_interrupt in_kernel) (maybeHandleInterrupt in_kernel)"
+  unfolding maybe_handle_interrupt_def maybeHandleInterrupt_def
+  apply (corres corres: corres_machine_op handleInterrupt_corres[@lift_corres_args]
+                simp: irq_state_independent_def
+         | corres_cases_both)+
+     apply (wpsimp wp: hoare_drop_imp)
+    apply clarsimp
+    apply (strengthen contract_all_imp_strg[where P'=True, simplified])
+    apply (wpsimp wp: doMachineOp_getActiveIRQ_IRQ_active' hoare_vcg_all_lift)
+   apply clarsimp
+  apply (clarsimp simp: invs'_def valid_state'_def)
+  done
+
 (* FIXME: move *)
+<<<<<<< HEAD
 crunch handleVMFault,handleHypervisorFault
+||||||| 0d43d8dee
+lemma handleEvent_corres:
+  "corres (dc \<oplus> dc) (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
+                       schact_is_rct)
+                      (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
+                       (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+                      (handle_event event) (handleEvent event)"
+  (is "?handleEvent_corres")
+proof -
+  have hw:
+    "\<And>isBlocking. corres dc (einvs and ct_running and schact_is_rct)
+               (invs' and ct_running'
+                      and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+               (handle_recv isBlocking) (handleRecv isBlocking)"
+    apply (rule corres_guard_imp [OF handleRecv_isBlocking_corres])
+     apply (clarsimp simp: ct_in_state_def ct_in_state'_def
+                     elim!: st_tcb_weakenE pred_tcb'_weakenE)+
+    done
+    show ?thesis
+      apply (case_tac event)
+           apply (simp_all add: handleEvent_def)
+
+           apply (rename_tac syscall)
+           apply (case_tac syscall)
+                  apply (auto intro: corres_guard_imp[OF handleSend_corres]
+                                     corres_guard_imp[OF hw]
+                                     corres_guard_imp [OF handleReply_corres]
+                                     corres_guard_imp[OF handleReply_handleRecv_corres]
+                                     corres_guard_imp[OF handleCall_corres]
+                                     corres_guard_imp[OF handleYield_corres]
+                                     active_from_running active_from_running'
+                              simp: simple_sane_strg schact_is_rct_def)[8]
+          apply (rule corres_underlying_split)
+             apply (rule corres_guard_imp[OF getCurThread_corres], simp+)
+            apply (rule handleFault_corres)
+            apply simp
+           apply (simp add: valid_fault_def)
+           apply wp
+           apply (fastforce elim!: st_tcb_ex_cap st_tcb_weakenE
+                            simp: ct_in_state_def)
+          apply wp
+          apply (clarsimp)
+          apply (auto simp: ct_in_state'_def sch_act_simple_def
+                            sch_act_sane_def
+                      elim: pred_tcb'_weakenE st_tcb_ex_cap'')[1]
+         apply (rule corres_underlying_split)
+            apply (rule corres_guard_imp, rule getCurThread_corres, simp+)
+           apply (rule handleFault_corres)
+           apply (simp add: valid_fault_def)
+          apply wp
+          apply (fastforce elim!: st_tcb_ex_cap st_tcb_weakenE
+                           simp: ct_in_state_def valid_fault_def)
+         apply wp
+         apply clarsimp
+         apply (auto simp: ct_in_state'_def sch_act_simple_def
+                           sch_act_sane_def
+                     elim: pred_tcb'_weakenE st_tcb_ex_cap'')[1]
+        apply (rule corres_guard_imp)
+          apply (rule corres_split_eqr[where R="\<lambda>_. einvs"
+                                       and R'="\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> R'' x s"
+                                       for R''])
+             apply (rule corres_machine_op)
+             apply (rule corres_Id, simp+)
+             apply wp
+            apply (case_tac rv, simp_all add: doMachineOp_return)[1]
+            apply (rule handleInterrupt_corres)
+           apply (wp hoare_vcg_all_lift
+                     doMachineOp_getActiveIRQ_IRQ_active'
+                    | simp add: imp_conjR | wp (once) hoare_drop_imps)+
+        apply (simp add: invs'_def valid_state'_def)
+       apply (rule_tac corres_underlying_split)
+          apply (rule corres_guard_imp, rule getCurThread_corres, simp+)
+         apply (rule corres_split_catch)
+            apply (rule handleVMFault_corres)
+           apply (erule handleFault_corres)
+          apply (rule hoare_elim_pred_conjE2)
+          apply (rule hoare_vcg_conj_liftE_E, rule valid_validE_E, wp)
+          apply (wp handle_vm_fault_valid_fault)
+         apply (rule hv_inv_ex')
+        apply wp
+        apply (clarsimp simp: simple_from_running tcb_at_invs)
+        apply (fastforce elim!: st_tcb_ex_cap st_tcb_weakenE simp: ct_in_state_def)
+       apply wp
+       apply (clarsimp)
+       apply (fastforce simp: simple_sane_strg sch_act_simple_def ct_in_state'_def
+                   elim: st_tcb_ex_cap'' pred_tcb'_weakenE)
+      apply (rule corres_underlying_split)
+         apply (rule corres_guard_imp[OF getCurThread_corres], simp+)
+        apply (rule handleHypervisorFault_corres)
+       apply (simp add: valid_fault_def)
+       apply wp
+       apply (fastforce elim!: st_tcb_ex_cap st_tcb_weakenE
+                        simp: ct_in_state_def)
+      apply wp
+      apply (clarsimp)
+      apply (auto simp: ct_in_state'_def sch_act_simple_def
+                        sch_act_sane_def
+                  elim: pred_tcb'_weakenE st_tcb_ex_cap'')[1]
+      done
+  qed
+
+crunch handleVMFault, handleHypervisorFault
+=======
+lemma handleEvent_corres:
+  "corres (dc \<oplus> dc) (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
+                       schact_is_rct)
+                      (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
+                       (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+                      (handle_event event) (handleEvent event)"
+  (is "?handleEvent_corres")
+proof -
+  have hw:
+    "\<And>isBlocking. corres dc (einvs and ct_running and schact_is_rct)
+               (invs' and ct_running'
+                      and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+               (handle_recv isBlocking) (handleRecv isBlocking)"
+    apply (rule corres_guard_imp [OF handleRecv_isBlocking_corres])
+     apply (clarsimp simp: ct_in_state_def ct_in_state'_def
+                     elim!: st_tcb_weakenE pred_tcb'_weakenE)+
+    done
+    show ?thesis
+      apply (case_tac event)
+           apply (simp_all add: handleEvent_def)
+
+           apply (rename_tac syscall)
+           apply (case_tac syscall)
+                  apply (auto intro: corres_guard_imp[OF handleSend_corres]
+                                     corres_guard_imp[OF hw]
+                                     corres_guard_imp [OF handleReply_corres]
+                                     corres_guard_imp[OF handleReply_handleRecv_corres]
+                                     corres_guard_imp[OF handleCall_corres]
+                                     corres_guard_imp[OF handleYield_corres]
+                                     active_from_running active_from_running'
+                              simp: simple_sane_strg schact_is_rct_def)[8]
+          apply (rule corres_underlying_split)
+             apply (rule corres_guard_imp[OF getCurThread_corres], simp+)
+            apply (rule handleFault_corres)
+            apply simp
+           apply (simp add: valid_fault_def)
+           apply wp
+           apply (fastforce elim!: st_tcb_ex_cap st_tcb_weakenE
+                            simp: ct_in_state_def)
+          apply wp
+          apply (clarsimp)
+          apply (auto simp: ct_in_state'_def sch_act_simple_def
+                            sch_act_sane_def
+                      elim: pred_tcb'_weakenE st_tcb_ex_cap'')[1]
+         apply (rule corres_underlying_split)
+            apply (rule corres_guard_imp, rule getCurThread_corres, simp+)
+           apply (rule handleFault_corres)
+           apply (simp add: valid_fault_def)
+          apply wp
+          apply (fastforce elim!: st_tcb_ex_cap st_tcb_weakenE
+                           simp: ct_in_state_def valid_fault_def)
+         apply wp
+         apply clarsimp
+         apply (auto simp: ct_in_state'_def sch_act_simple_def
+                           sch_act_sane_def
+                     elim: pred_tcb'_weakenE st_tcb_ex_cap'')[1]
+        apply (corres corres: maybeHandleInterrupt_corres)
+       apply (rule_tac corres_underlying_split)
+          apply (rule corres_guard_imp, rule getCurThread_corres, simp+)
+         apply (rule corres_split_catch)
+            apply (rule handleVMFault_corres)
+           apply (erule handleFault_corres)
+          apply (rule hoare_elim_pred_conjE2)
+          apply (rule hoare_vcg_conj_liftE_E, rule valid_validE_E, wp)
+          apply (wp handle_vm_fault_valid_fault)
+         apply (rule hv_inv_ex')
+        apply wp
+        apply (clarsimp simp: simple_from_running tcb_at_invs)
+        apply (fastforce elim!: st_tcb_ex_cap st_tcb_weakenE simp: ct_in_state_def)
+       apply wp
+       apply (clarsimp)
+       apply (fastforce simp: simple_sane_strg sch_act_simple_def ct_in_state'_def
+                   elim: st_tcb_ex_cap'' pred_tcb'_weakenE)
+      apply (rule corres_underlying_split)
+         apply (rule corres_guard_imp[OF getCurThread_corres], simp+)
+        apply (rule handleHypervisorFault_corres)
+       apply (simp add: valid_fault_def)
+       apply wp
+       apply (fastforce elim!: st_tcb_ex_cap st_tcb_weakenE
+                        simp: ct_in_state_def)
+      apply wp
+      apply (clarsimp)
+      apply (auto simp: ct_in_state'_def sch_act_simple_def
+                        sch_act_sane_def
+                  elim: pred_tcb'_weakenE st_tcb_ex_cap'')[1]
+      done
+  qed
+
+crunch handleVMFault, handleHypervisorFault
+>>>>>>> verification/master
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   and cap_to'[wp]: "ex_nonz_cap_to' t"
   and ksit[wp]: "\<lambda>s. P (ksIdleThread s)"
@@ -2423,6 +2639,14 @@ lemma schedulable'_runnableE:
   "schedulable' t s \<Longrightarrow> tcb_at' t s \<Longrightarrow> st_tcb_at' runnable' t s"
   unfolding schedulable'_def
   by (clarsimp simp: pred_tcb_at'_def obj_at'_def opt_pred_def opt_map_def)
+
+lemma handleSpuriousIRQ_invs'[wp]:
+  "handleSpuriousIRQ \<lbrace>invs'\<rbrace>"
+  by (simp add: handleSpuriousIRQ_def)
+
+crunch handleSpuriousIRQ, maybeHandleInterrupt
+  for invs'[wp]: invs'
+  (ignore: doMachineOp)
 
 lemma he_invs'[wp]:
   "\<lbrace>invs' and cur_tcb' and
