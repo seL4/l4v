@@ -10,6 +10,9 @@ imports
   Schedule_R
 begin
 
+arch_requalify_facts
+  valid_global_refs_lift'
+
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch cancelAllIPC
@@ -724,9 +727,6 @@ lemma cancelSignal_invs':
       done
   qed
 
-lemmas setEndpoint_valid_arch[wp]
-    = valid_arch_state_lift' [OF setEndpoint_typ_at' set_ep_arch']
-
 lemma ep_redux_simps3:
   "ep_q_refs_of' (case xs of [] \<Rightarrow> IdleEP | y # ys \<Rightarrow> RecvEP (y # ys))
         = (set xs \<times> {EPRecv})"
@@ -771,7 +771,7 @@ lemma setEndpoint_ct_not_inQ[wp]:
   apply (rule hoare_weaken_pre)
    apply (wps setObject_ep_ct)
    apply (wp obj_at_setObject2)
-   apply (clarsimp simp: updateObject_default_def in_monad)+
+   apply (clarsimp simp: updateObject_default_def in_monad comp_def)+
   done
 
 lemma setEndpoint_ksDomScheduleIdx[wp]:
@@ -872,7 +872,7 @@ proof -
      \<lbrace>\<lambda>rv. invs'\<rbrace>"
     unfolding getThreadReplySlot_def
     by (wp valid_irq_node_lift delete_one_invs hoare_drop_imps
-           threadSet_invs_trivial irqs_masked_lift
+           AARCH64.threadSet_invs_trivial irqs_masked_lift (* FIXME arch-split *)
       | simp add: o_def if_apply_def2
       | fastforce simp: inQ_def)+
   show ?thesis
@@ -1220,7 +1220,7 @@ lemma (in delete_one) suspend_corres:
             apply (simp add: AARCH64.nextInstructionRegister_def AARCH64.faultRegister_def
                              AARCH64_H.nextInstructionRegister_def AARCH64_H.faultRegister_def)
             apply (simp add: AARCH64_H.Register_def)
-            apply (subst unit_dc_is_eq)
+            apply (fold dc_def, subst unit_dc_is_eq)
             apply (rule corres_underlying_trivial)
             apply (wpsimp simp: AARCH64.setRegister_def AARCH64.getRegister_def)
            apply (rule corres_return_trivial)
@@ -1268,20 +1268,6 @@ lemma opt_case_when:
   "(case x of None \<Rightarrow> return () | Some (c, _) \<Rightarrow> when (c = v) f) =
    when (\<exists>a. x = Some (v, a)) f"
   by (cases x) (auto simp add: split_def)
-
-lemma corres_gets_current_vcpu[corres]:
-  "corres (=) \<top> \<top> (gets (arm_current_vcpu \<circ> arch_state))
-                      (gets (armHSCurVCPU \<circ> ksArchState))"
-  by (simp add: state_relation_def arch_state_relation_def)
-
-lemma vcpuInvalidateActive_corres[corres]:
-  "corres dc \<top> no_0_obj' vcpu_invalidate_active vcpuInvalidateActive"
-  unfolding vcpuInvalidateActive_def vcpu_invalidate_active_def
-  apply (corresKsimp  corres: vcpuDisable_corres
-                    corresK: corresK_modifyT
-                       simp: modifyArchState_def)
-  apply (clarsimp simp: state_relation_def arch_state_relation_def)
-  done
 
 lemma tcb_ko_at':
   "tcb_at' t s \<Longrightarrow> \<exists>ta::tcb. ko_at' ta t s"
@@ -1679,10 +1665,14 @@ proof -
   done
 qed
 
+context Arch begin arch_global_naming
+
 lemma tcbSchedEnqueue_valid_pspace'[wp]:
   "tcbSchedEnqueue tcbPtr \<lbrace>valid_pspace'\<rbrace>"
   unfolding valid_pspace'_def
   by wpsimp
+
+end
 
 lemma cancel_all_invs'_helper:
   "\<lbrace>all_invs_but_sym_refs_ct_not_inQ' and (\<lambda>s. \<forall>x \<in> set q. tcb_at' x s)
@@ -1866,7 +1856,7 @@ lemma cancelAllIPC_invs'[wp]:
   apply (rule bind_wp[OF _ stateAssert_sp])
   apply (wp rescheduleRequired_all_invs_but_ct_not_inQ
             cancel_all_invs'_helper hoare_vcg_const_Ball_lift
-            valid_global_refs_lift' valid_arch_state_lift'
+            valid_global_refs_lift'
             valid_irq_node_lift ssa_invs' sts_sch_act'
             irqs_masked_lift
          | simp only: sch_act_wf.simps forM_x_def | simp)+
@@ -2328,7 +2318,7 @@ lemma suspend_unqueued:
   by (wpsimp simp: comp_def wp: tcbSchedDequeue_not_tcbQueued)
 
 crunch vcpuInvalidateActive
-  for no_vcpu[wp]: "obj_at' (P::'a:: no_vcpu \<Rightarrow> bool) t"
+  for no_vcpu[wp]: "\<lambda>s. P (obj_at' (P'::'a:: no_vcpu \<Rightarrow> bool) t s)"
 
 lemma asUser_tcbQueued[wp]:
   "asUser t' f \<lbrace>\<lambda>s. Q (obj_at' (P \<circ> tcbQueued) t s)\<rbrace>"
@@ -2342,13 +2332,13 @@ lemma archThreadSet_tcbQueued[wp]:
 
 lemma dissociateVCPUTCB_unqueued[wp]:
   "dissociateVCPUTCB vcpu tcb \<lbrace>obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
-  unfolding dissociateVCPUTCB_def archThreadGet_def by wpsimp
+  unfolding dissociateVCPUTCB_def archThreadGet_def by (wpsimp simp: o_def)
 
 lemmas asUser_st_tcb_at'[wp] = asUser_obj_at [folded st_tcb_at'_def]
 lemmas setObject_vcpu_st_tcb_at'[wp] =
-  setObject_vcpu_obj_at'_no_vcpu [where P'="P o tcbState" for P, folded st_tcb_at'_def]
+  setObject_vcpu_obj_at'_no_vcpu [where P'="P' o tcbState" for P', folded st_tcb_at'_def]
 lemmas vcpuInvalidateActive_st_tcb_at'[wp] =
-  vcpuInvalidateActive_no_vcpu [where P="P o tcbState" for P, folded st_tcb_at'_def]
+  vcpuInvalidateActive_no_vcpu [where P'="P' o tcbState" for P', folded st_tcb_at'_def]
 
 lemma archThreadSet_st_tcb_at'[wp]:
   "archThreadSet f tcb \<lbrace>st_tcb_at' P t\<rbrace>"
@@ -2362,12 +2352,6 @@ lemma dissociateVCPUTCB_st_tcb_at'[wp]:
 crunch dissociateVCPUTCB
   for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
   (wp: crunch_wps setObject_queues_unchanged_tcb simp: crunch_simps)
-
-(* FIXME AARCH64: move to TcbAcc_R *)
-lemma archThreadGet_wp:
-  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at' tcb t s \<longrightarrow> Q (f (tcbArch tcb)) s\<rbrace> archThreadGet f t \<lbrace>Q\<rbrace>"
-  unfolding archThreadGet_def
-  by (wpsimp wp: getObject_tcb_wp simp: obj_at'_def)
 
 crunch fpuRelease
   for st_tcb_at'[wp]: "\<lambda>s. Q (st_tcb_at' P t s)"

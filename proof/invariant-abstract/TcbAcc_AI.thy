@@ -3051,4 +3051,26 @@ lemma arch_thread_set_no_change_arch_tcb_at:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_Some_ko_at)
   done
 
+lemma ntfn_bound_tcb_at:
+  "\<lbrakk>sym_refs (state_refs_of s); valid_objs s; kheap s ntfnptr = Some (Notification ntfn);
+    ntfn_bound_tcb ntfn = Some tcbptr; P (Some ntfnptr)\<rbrakk>
+  \<Longrightarrow> bound_tcb_at P tcbptr s"
+  apply (drule_tac x=ntfnptr in sym_refsD[rotated])
+   apply (fastforce simp: state_refs_of_def)
+  apply (fastforce simp: pred_tcb_at_def obj_at_def valid_obj_def valid_ntfn_def is_tcb
+                         state_refs_of_def refs_of_rev
+                   simp del: refs_of_simps)
+  done
+
+lemma bound_tcb_bound_notification_at:
+  "\<lbrakk>sym_refs (state_refs_of s); valid_objs s; kheap s ntfnptr = Some (Notification ntfn);
+    bound_tcb_at (\<lambda>ptr. ptr = (Some ntfnptr)) tcbptr s \<rbrakk>
+  \<Longrightarrow> ntfn_bound_tcb ntfn = Some tcbptr"
+  apply (drule_tac x=tcbptr in sym_refsD[rotated])
+   apply (fastforce simp: state_refs_of_def pred_tcb_at_def obj_at_def)
+  apply (auto simp: pred_tcb_at_def obj_at_def valid_obj_def valid_ntfn_def is_tcb
+                    state_refs_of_def refs_of_rev
+          simp del: refs_of_simps)
+  done
+
 end

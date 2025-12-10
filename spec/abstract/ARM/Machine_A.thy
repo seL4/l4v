@@ -115,11 +115,7 @@ text \<open>The lowest virtual address in the kernel window. The kernel reserves
 virtual addresses from here up in every virtual address space.\<close>
 definition
   kernel_base :: "vspace_ref" where
-  "kernel_base \<equiv> 0xe0000000"
-
-definition
-  idle_thread_ptr :: vspace_ref where
-  "idle_thread_ptr = kernel_base + 0x1000"
+  "kernel_base \<equiv> pptrBase"
 
 definition
   idle_sc_ptr :: vspace_ref where
@@ -127,7 +123,7 @@ definition
 
 end
 
-arch_requalify_consts (A) kernel_base idle_thread_ptr idle_sc_ptr
+arch_requalify_consts (A) kernel_base idle_sc_ptr
 
 context Arch begin arch_global_naming (A)
 

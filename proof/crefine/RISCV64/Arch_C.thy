@@ -1140,7 +1140,7 @@ lemma decodeRISCVPageTableInvocation_ccorres:
     apply (clarsimp simp: ccap_relation_PageTableCap_BasePtr ccap_relation_PageTableCap_IsMapped
                           ccap_relation_PageTableCap_MappedASID)
     apply (rule conjI)
-     (* ccap relation between caps with new mapping info *) (* FIXME RAF CLEANUP *)
+     (* ccap relation between caps with new mapping info *)
      apply (fold mask_2pm1)
      apply (subst ccap_relation_def)
      apply (clarsimp simp: map_option_Some_eq2 cap_page_table_cap_lift[THEN iffD1]

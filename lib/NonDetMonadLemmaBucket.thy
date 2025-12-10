@@ -86,6 +86,11 @@ lemma gets_the_exs_valid_no_ofail:
   apply (fastforce simp: ovalid_def no_ofail_def)
   done
 
+lemma valid_none_top_post_wp:
+  "\<lbrakk>\<And>x. \<lbrace>P x\<rbrace> f \<lbrace>\<lambda>_. Q x\<rbrace>\<rbrakk>
+   \<Longrightarrow> \<lbrace>\<lambda>s. none_top (\<lambda>x. P x s) y\<rbrace> f \<lbrace>\<lambda>_ s. none_top (\<lambda>x. Q x s) y\<rbrace>"
+  by (cases y, simp_all add: hoare_vcg_prop)
+
 lemma put_id_return:
   "put s s = return () s"
   by (clarsimp simp: put_def return_def)

@@ -386,10 +386,7 @@ where
 | "handle_event Interrupt = (without_preemption $ do
     update_time_stamp;
     check_budget;
-    active \<leftarrow> do_machine_op $ getActiveIRQ False;
-    case active of
-       Some irq \<Rightarrow> handle_interrupt irq
-     | None \<Rightarrow> return ()
+    maybe_handle_interrupt False
   od)"
 
 | "handle_event (VMFaultEvent fault_type) = (without_preemption $ do
@@ -417,7 +414,6 @@ text \<open>
 
 definition preemption_path where
   "preemption_path \<equiv> do
-      irq \<leftarrow> do_machine_op (getActiveIRQ True);
       ct \<leftarrow> gets cur_thread;
       schedulable \<leftarrow> gets (schedulable ct);
       if schedulable then do check_budget;
@@ -431,7 +427,7 @@ definition preemption_path where
                        od
                   else modify (\<lambda>s. s\<lparr>consumed_time := 0\<rparr>)
            od;
-      when (irq \<noteq> None) (handle_interrupt (the irq))
+      maybe_handle_interrupt True
    od"
 
 definition

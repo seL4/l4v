@@ -28,6 +28,10 @@ definition arch_mask_irq_signal :: "irq \<Rightarrow> (unit,'z::state_ext) s_mon
   where
   "arch_mask_irq_signal irq \<equiv> do_machine_op $ maskInterrupt True irq"
 
+definition handle_spurious_irq :: "(unit,'z::state_ext) s_monad"
+  where
+  "handle_spurious_irq \<equiv> return ()"
+
 end
 
 (* On Arm architectures, maxIRQ is defined in Kernel_Config. On X64 it is defined manually. *)

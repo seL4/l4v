@@ -552,14 +552,14 @@ lemma copy_global_mappings_valid_pdpt_objs[wp]:
   apply (clarsimp simp: invs_aligned_pdD ranI
                  elim!: ranE split: if_split_asm)
   apply (intro conjI)
-   apply (rule_tac S="{x. ucast x \<ge> (kernel_base >> 20)}"
-                 in valid_entries_partial_copy)
+   apply (rule_tac S="{x. ucast x \<ge> (kernel_base >> 20)}" in valid_entries_partial_copy)
       apply (fastforce simp: obj_at_def ran_def)
      apply (fastforce simp: obj_at_def ran_def)
-    apply (clarsimp simp:image_def)
+    apply (clarsimp simp: image_def)
+    apply (rename_tac v x1 x2)
     apply (subst (asm) less_mask_eq)
      apply (rule shiftl_less_t2n)
-      apply (simp add:pd_bits_def pageBits_def word_le_make_less)
+      apply (simp add: pd_bits_def pageBits_def word_le_make_less)
      apply (simp add:pd_bits_def pageBits_def)
     apply (subst (asm) shiftl_shiftr1)
      apply simp
@@ -571,19 +571,22 @@ lemma copy_global_mappings_valid_pdpt_objs[wp]:
     apply (clarsimp split:if_splits)
      apply (simp add:kernel_base_shift_cast_le)
      apply (simp add:kernel_base_def)
-     apply (cut_tac y1 = xb and x1 = "0xE00::12 word" in ucast_le_migrate[THEN iffD1,rotated -1])
-        apply simp
-       apply (simp add:word_size le_less_trans)
-      apply (simp add:word_size)
-     apply (drule aligned_le_sharp[where n = 4 and a = "0xE00::12 word"])
-      apply (simp add:kernel_base_def is_aligned_def)
+     apply (cut_tac y1=x2 and x1="ucast (pptrBase >> pageBitsForSize ARMSection)::12 word"
+                    in ucast_le_migrate[THEN iffD1,rotated -1])
+        apply (simp add: pptrBase_def split: if_split_asm)
+       apply (simp add: word_size le_less_trans)
+      apply (simp add: word_size)
+     apply (drule aligned_le_sharp[where n=4 and
+                                         a="ucast (pptrBase >> pageBitsForSize ARMSection)::12 word"])
+      apply (simp add: kernel_base_def pptrBase_def is_aligned_def)
+     apply simp
      apply (erule order_trans)
      apply (erule subst)
-     apply (simp add:word_and_le2)
+     apply (simp add: word_and_le2)
     apply (subst ucast_ucast_len)
-     apply (simp,word_bitwise)
+     apply (simp, word_bitwise)
     apply simp
-   apply (clarsimp simp:image_def)
+   apply (clarsimp simp: image_def)
    apply (rule disjointI)
    apply clarsimp
    apply (drule_tac x = "ucast x" in spec)
@@ -608,13 +611,12 @@ lemma copy_global_mappings_valid_pdpt_objs[wp]:
    apply (case_tac v,simp_all)
    apply (clarsimp split:if_splits)
    apply (drule aligned_le_sharp[where n = 4])
-    apply (simp add:kernel_base_def is_aligned_def)
+    apply (simp add:kernel_base_def pptrBase_def is_aligned_def)
    apply (simp add:word_size kernel_base_def pd_bits_def pageBits_def)
    apply word_bitwise
    apply simp
   apply (clarsimp simp:obj_at_def)
-  apply (subst (asm) is_aligned_neg_mask_eq
-    [where p = p and n = pd_bits,symmetric])
+  apply (subst (asm) is_aligned_neg_mask_eq[where p = p and n = pd_bits,symmetric])
    apply simp
   apply (drule(1) valid_pdpt_objs_pdD[rotated])+
   apply (clarsimp simp:entries_align_def)
@@ -1686,6 +1688,9 @@ crunch check_domain_time
   for pred_tcb_at_ct[wp]: "\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s"
   and ct_running[wp]: ct_running
   (simp: crunch_simps wp: crunch_wps)
+
+crunch handle_spurious_irq
+  for valid_pdpt[wp]: "valid_pdpt_objs"
 
 lemma call_kernel_valid_pdpt[wp]:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_pdpt_objs

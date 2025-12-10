@@ -1132,7 +1132,7 @@ lemma createNewCaps_no_orphans:
                    | clarsimp simp: is_active_thread_state_def makeObject_tcb
                                     projectKO_opt_tcb isRunning_def isRestart_def
                                     APIType_capBits_def Arch_createNewCaps_def
-                                    objBits_if_dev
+                                    objBits_if_dev APIType_capBits_gen_def
                           split del: if_split
                    | simp add: objBits_simps
                    | fastforce simp: bit_simps objBits_simps)+
@@ -1993,16 +1993,18 @@ lemma sts_tcb_at'_preserve':
   \<lbrace>\<lambda>_. st_tcb_at' P t \<rbrace>"
   by (wpsimp wp: sts_st_tcb' simp: st_tcb_at_neg')
 
+crunch handleSpuriousIRQ
+  for no_orphans[wp]: no_orphans
+
 lemma handleEvent_no_orphans [wp]:
   "\<lbrace> \<lambda>s. invs' s \<and>
          (e \<noteq> Interrupt \<longrightarrow> ct_running' s) \<and>
          ksSchedulerAction s = ResumeCurrentThread \<and> no_orphans s \<rbrace>
    handleEvent e
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  apply (simp add: handleEvent_def handleSend_def handleCall_def
+  apply (simp add: handleEvent_def handleSend_def handleCall_def maybeHandleInterrupt_def
               cong: event.case_cong syscall.case_cong)
-  apply (rule hoare_pre)
-   apply (wp hv_inv' hoare_drop_imps | wpc | clarsimp simp: handleHypervisorFault_def)+
+  apply (wpsimp wp: hv_inv' hoare_drop_imps  simp: handleHypervisorFault_def)
   apply (auto simp: activatable_from_running' active_from_running')
   done
 
@@ -2012,7 +2014,7 @@ theorem callKernel_no_orphans [wp]:
           ksSchedulerAction s = ResumeCurrentThread \<and> no_orphans s \<rbrace>
    callKernel e
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding callKernel_def
+  unfolding callKernel_def maybeHandleInterrupt_def
   by (wpsimp wp: weak_if_wp schedule_invs' hoare_drop_imps
       | strengthen invs_pspace_aligned' invs_pspace_distinct')+
 

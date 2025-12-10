@@ -1,6 +1,11 @@
 AutoCorres Change Log
 =====================
 
+AutoCorres 1.12 (24 Oct 2024)
+----------------------------
+
+        * Isabelle2025 edition of both AutoCorres and the C parser.
+
 AutoCorres 1.11 (11 Oct 2024)
 ----------------------------
 

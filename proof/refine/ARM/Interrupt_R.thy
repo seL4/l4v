@@ -207,16 +207,24 @@ lemma isSGITargetValid_eq:
   unfolding isSGITargetValid_def sgi_target_valid_def
   by simp
 
+lemma zero_less_numSGIs_isGIC:
+  "0 < numSGIs \<Longrightarrow> isGICPlatform"
+  by (simp add: numSGIs_def split: if_split_asm)
+
 lemma sgi_target_cast[simp]:
-  "sgi_target_valid w \<Longrightarrow> ucast (ucast w :: sgi_target) = w"
+  "\<lbrakk> sgi_target_valid w; 0 < numSGIs \<rbrakk> \<Longrightarrow> ucast (ucast w :: sgi_target) = w"
   unfolding sgi_target_valid_def gicNumTargets_def
-  by (simp flip: sgi_target_len_def add: ucast_ucast_len sgi_target_len_val)
+  by (simp flip: sgi_target_len_def add: ucast_ucast_le_mask mask_def sgi_target_len_val
+                 zero_less_numSGIs_isGIC
+           split: if_splits)
 
 lemma sgi_irq_cast:
-  "w \<le> word_of_nat numSGIs - 1 \<Longrightarrow> ucast (ucast w :: sgi_irq) = (w :: machine_word)"
+  "\<lbrakk> w \<le> word_of_nat numSGIs - 1;  0 < numSGIs \<rbrakk> \<Longrightarrow>
+   ucast (ucast w :: sgi_irq) = (w :: machine_word)"
   unfolding numSGIs_def
   by (simp flip: sgi_irq_len_def
-           add: ucast_ucast_len sgi_irq_len_val word_le_nat_alt word_less_nat_alt)
+           add: ucast_ucast_len sgi_irq_len_val word_le_nat_alt word_less_nat_alt
+           split: if_split_asm)
 
 lemma arch_decodeIRQControlInvocation_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
@@ -247,6 +255,7 @@ lemma arch_decodeIRQControlInvocation_corres:
   apply (rule impI, rule conjI, clarsimp)
   \<comment>\<open>ARMIRQIssueIRQHandler\<close>
    apply (rule corres_guard_imp)
+     apply corres
      apply (rule corres_splitEE[OF checkIRQ_corres])
        apply (rule_tac F="y \<le> Kernel_Config.maxIRQ" in corres_gen_asm)
        apply (clarsimp simp: toEnum_unat_ucast le_maxIRQ_machine_less_irqBits_val)
@@ -548,20 +557,15 @@ lemma SGISignalCap_valid[simp, intro!]:
   by (simp add: valid_cap'_def capAligned_def word_bits_def)
 
 lemma arch_performIRQControl_corres:
-  "arch_irq_control_inv_relation x2 ivk' \<Longrightarrow> corres (dc \<oplus> dc)
-          (einvs and arch_irq_control_inv_valid x2)
+  "arch_irq_control_inv_relation ivk ivk' \<Longrightarrow> corres (dc \<oplus> dc)
+          (einvs and arch_irq_control_inv_valid ivk)
           (invs' and arch_irq_control_inv_valid' ivk')
-          (arch_invoke_irq_control x2)
+          (arch_invoke_irq_control ivk)
           (Arch.performIRQControl ivk')"
-  apply (cases x2; simp add: ARM_H.performIRQControl_def invoke_irq_control.cases IRQ_def)
-   apply (rule corres_guard_imp)
-     apply (rule corres_split_nor)
-        apply (rule setIRQTrigger_corres)
-       apply (rule corres_split_nor)
-          apply (rule setIRQState_corres)
-          apply (simp add: irq_state_relation_def)
-         apply (rule cteInsert_simple_corres; simp)
-        apply (wp | simp add: irq_state_relation_def IRQHandler_valid IRQHandler_valid')+
+  apply (cases ivk; simp add: ARM_H.performIRQControl_def invoke_irq_control.cases IRQ_def)
+  apply (corres corres: setIRQTrigger_corres setIRQState_corres cteInsert_simple_corres
+                simp: irq_state_relation_def)
+       apply (wpsimp simp: irq_state_relation_def IRQHandler_valid IRQHandler_valid')+
     apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cte_wp_at_caps_of_state
                           is_simple_cap_def is_cap_simps arch_irq_control_inv_valid_def
                           safe_parent_for_def)
@@ -577,7 +581,7 @@ lemma arch_performIRQControl_corres:
                          safe_parent_for_def is_irq_control_descendant_def)
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
                         is_simple_cap'_def isCap_simps)
-  apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
+  apply (clarsimp simp: safe_parent_for'_def safe_parent_for_arch'_def cte_wp_at_ctes_of)
   apply (rename_tac cte', case_tac cte', simp add: isCap_simps)
   done
 
@@ -642,7 +646,7 @@ lemma arch_invoke_irq_control_invs'[wp]:
           | simp add: cte_wp_at_ctes_of isCap_simps IRQ_def
           | wpc)+
   apply (clarsimp simp: cte_wp_at_ctes_of IRQHandler_valid' is_simple_cap'_def isCap_simps
-                        safe_parent_for'_def sameRegionAs_def3)
+                        safe_parent_for'_def safe_parent_for_arch'_def sameRegionAs_def3)
   apply (clarsimp simp: capRange_def)
   apply (rule conjI; clarsimp simp: cte_wp_at_ctes_of; case_tac ctea)
    apply (auto dest: valid_irq_handlers_ctes_ofD
@@ -772,6 +776,11 @@ lemma timerTick_corres:
 
 lemmas corres_eq_trivial = corres_Id[where f = h and g = h for h, simplified]
 
+(* FIXME arch-split: architectures with hypervisor support impose stronger guards *)
+lemma handle_reserved_irq_corres[corres]:
+  "corres dc einvs invs' (handle_reserved_irq irq) (handleReservedIRQ irq)"
+  unfolding handle_reserved_irq_def handleReservedIRQ_def by corres
+
 lemma handleInterrupt_corres:
   "corres dc
      (einvs) (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive))
@@ -792,25 +801,26 @@ lemma handleInterrupt_corres:
       apply ((wp | simp)+)[4]
   apply (rule corres_gen_asm2)
   apply (case_tac st, simp_all add: irq_state_relation_def split: irqstate.split_asm)
-   apply (simp add: getSlotCap_def bind_assoc)
-   apply (rule corres_guard_imp)
-     apply (rule corres_split[OF getIRQSlot_corres])
-       apply simp
-       apply (rule corres_split[OF get_cap_corres,
-                                 where R="\<lambda>rv. einvs and valid_cap rv"
-                                  and R'="\<lambda>rv. invs' and valid_cap' (cteCap rv)"])
-         apply (rule corres_underlying_split[where r'=dc])
-            apply (case_tac xb, simp_all add: doMachineOp_return)[1]
-             apply (clarsimp simp add: when_def doMachineOp_return)
-             apply (rule corres_guard_imp, rule sendSignal_corres)
-              apply (clarsimp simp: valid_cap_def valid_cap'_def)+
-           apply (clarsimp simp: arch_mask_irq_signal_def maskIrqSignal_def)
-           apply (corres corres: corres_machine_op corres_eq_trivial intro: no_fail_ackInterrupt)
-          apply wpsimp+
-   apply fastforce
-  apply (corres corres: timerTick_corres corres_machine_op simp: bind_assoc)
-   apply fastforce
-  apply clarsimp
+    apply (simp add: getSlotCap_def bind_assoc)
+    apply (rule corres_guard_imp)
+      apply (rule corres_split[OF getIRQSlot_corres])
+        apply simp
+        apply (rule corres_split[OF get_cap_corres,
+                                  where R="\<lambda>rv. einvs and valid_cap rv"
+                                   and R'="\<lambda>rv. invs' and valid_cap' (cteCap rv)"])
+          apply (rule corres_underlying_split[where r'=dc])
+             apply (case_tac xb, simp_all add: doMachineOp_return)[1]
+              apply (clarsimp simp add: when_def doMachineOp_return)
+              apply (rule corres_guard_imp, rule sendSignal_corres)
+               apply (clarsimp simp: valid_cap_def valid_cap'_def)+
+            apply (clarsimp simp: arch_mask_irq_signal_def maskIrqSignal_def)
+            apply (corres corres: corres_machine_op corres_eq_trivial intro: no_fail_ackInterrupt)
+           apply wpsimp+
+    apply fastforce
+   apply (corres corres: timerTick_corres corres_machine_op simp: bind_assoc)
+    apply fastforce
+   apply clarsimp
+  apply (corres corres: corres_machine_op corres_eq_trivial)
   done
 
 lemma threadSet_ksDomainTime[wp]:
@@ -899,6 +909,7 @@ lemma dmo_ackInterrupt[wp]:
                            machine_rest_lift_def split_def | wp)+)[3]
   done
 
+(* FIXME arch-split: imposing a stronger precondition affects InfoFlow refinement *)
 lemma hint_invs[wp]:
   "\<lbrace>invs'\<rbrace> InterruptDecls_H.handleInterrupt irq \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: Interrupt_H.handleInterrupt_def getSlotCap_def

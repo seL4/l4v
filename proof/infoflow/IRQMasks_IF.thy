@@ -80,6 +80,8 @@ locale IRQMasks_IF_1 =
     "activate_thread \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   and schedule_irq_masks[wp]:
     "schedule \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  and handle_spurious_irq_masks[wp]:
+    "handle_spurious_irq \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
 begin
 
 crunch set_extra_badge
@@ -339,13 +341,13 @@ lemma handle_event_irq_masks:
    handle_event ev
    \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
   apply ((case_tac ev, rename_tac syscall, case_tac syscall);
-         (solves \<open>(simp add: handle_send_def handle_call_def
+         (solves \<open>(simp add: handle_send_def handle_call_def maybe_handle_interrupt_def
                    | wp handle_invocation_irq_masks[where st=st]
                         handle_interrupt_irq_masks[where st=st]
                          hoare_vcg_all_lift
                    | wpc
                    | wp (once) hoare_drop_imps)+\<close>)?)
-  apply simp
+  apply (simp add: maybe_handle_interrupt_def)
   apply (wp handle_interrupt_irq_masks[where st=st] | wpc | simp)+
    apply (rule_tac Q'="\<lambda>rv s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s \<and>
                              (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)" in hoare_strengthen_post)
@@ -357,8 +359,8 @@ lemma call_kernel_irq_masks:
                                    and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
    call_kernel ev
    \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
-  apply (simp add: call_kernel_def)
-  apply (wp handle_interrupt_irq_masks[where st=st])+
+  apply (simp add: call_kernel_def maybe_handle_interrupt_def)
+  apply (wpsimp wp: handle_interrupt_irq_masks[where st=st])
     apply (rule_tac Q'="\<lambda>rv s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s \<and>
                               (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)" in hoare_strengthen_post)
      apply (wp | simp)+

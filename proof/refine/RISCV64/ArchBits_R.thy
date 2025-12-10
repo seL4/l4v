@@ -10,7 +10,28 @@ begin
 
 context Arch begin arch_global_naming
 
+named_theorems Bits_R_assms
+
 crunch_ignore (add: lookupPTSlotFromLevel lookupPTFromLevel)
+
+lemma atcbContext_get_eq[Bits_R_assms, simp]:
+  "atcbContextGet (atcbContextSet x atcb) = x"
+  by (simp add: atcbContextGet_def atcbContextSet_def)
+
+lemma atcbContext_set_eq[Bits_R_assms, simp]:
+  "atcbContextSet (atcbContextGet t) t = t"
+  by (cases t, simp add: atcbContextGet_def atcbContextSet_def)
+
+lemma atcbContext_set_set[Bits_R_assms, simp]:
+  "atcbContextSet x (atcbContextSet y atcb) = atcbContextSet x atcb"
+  by (cases atcb, simp add: atcbContextSet_def)
+
+lemma objBitsKO_neq_0[Bits_R_assms]:
+  "objBitsKO ko \<noteq> 0"
+  unfolding objBits_def
+  by (case_tac ko;
+      simp add: pageBits_def pteBits_def objBits_simps'
+         split: arch_kernel_object.split)
 
 lemma arch_isCap_simps:
   "isFrameCap w = (\<exists>v0 v1 v2 v3 v4. w = FrameCap v0 v1 v2 v3 v4)"
@@ -21,6 +42,10 @@ lemma arch_isCap_simps:
   by (auto simp: isCap_defs split: capability.splits arch_capability.splits)
 
 lemmas isCap_simps = gen_isCap_simps arch_isCap_simps
+
+lemma pageBits_le_maxUntypedSizeBits[Bits_R_assms, simp]:
+  "pageBits \<le> maxUntypedSizeBits"
+  by (simp add: pageBits_def maxUntypedSizeBits_def)
 
 lemmas pte_ko_at_valid_objs_valid_pte' =
   ko_at_valid_objs'_pre[where 'a=pte, simplified injectKO_pte valid_obj'_def]
@@ -59,5 +84,11 @@ declare arch_projectKOs[simp]
 
 (* provide combined alias when needed for [simp del] *)
 lemmas projectKOs = gen_projectKOs arch_projectKOs
+
+interpretation Bits_R?: Bits_R
+proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (intro_locales; (unfold_locales; fact Bits_R_assms)?)
+qed
 
 end

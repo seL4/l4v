@@ -2448,20 +2448,6 @@ lemma shiftr_21_less:
   "((ucast (x >> 21) :: 12 word) \<le> ucast (y >> 21)) = ((x >> 21 :: word32) \<le> y >> 21)"
   by (simp add: word_less_nat_alt word_le_nat_alt shiftr_21_unat_ucast)+
 
-
-lemma kernel_base_ge_observation:
-  "(kernel_base \<le> x) = (x && ~~ mask 29 = kernel_base)"
-  apply (subst mask_in_range)
-   apply (simp add: kernel_base_def is_aligned_def)
-  apply (simp add: kernel_base_def)
-  done
-
-
-lemma kernel_base_less_observation:
-  "(x < kernel_base) = (x && ~~ mask 29 \<noteq> kernel_base)"
-  apply (simp add: linorder_not_le[symmetric] kernel_base_ge_observation)
-  done
-
 lemma is_aligned_lookup_pd_slot:
   "\<lbrakk>is_aligned vptr 25; is_aligned pd 7\<rbrakk>
    \<Longrightarrow> is_aligned (lookup_pd_slot pd vptr) 7"

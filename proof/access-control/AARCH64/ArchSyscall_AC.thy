@@ -16,9 +16,7 @@ crunch set_original
   for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
 
-crunch prepare_thread_delete
-  for idle_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (idle_thread s)"
-  (wp: crunch_wps simp: crunch_simps)
+declare prepare_thread_delete_idle_thread[Syscall_AC_assms]
 
 lemma cap_move_idle_thread[Syscall_AC_assms, wp]:
   "cap_move new_cap src_slot dest_slot \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace>"
@@ -44,9 +42,8 @@ lemma invs_irq_state_update[Syscall_AC_assms, simp]:
   apply clarsimp
   done
 
-crunch prepare_thread_delete, arch_finalise_cap
-  for cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
-  (wp: crunch_wps simp: crunch_simps)
+declare prepare_thread_delete_cur_thread[Syscall_AC_assms]
+        arch_finalise_cap_cur_thread[Syscall_AC_assms]
 
 lemma cap_move_cur_thread[Syscall_AC_assms, wp]:
   "cap_move new_cap src_slot dest_slot \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>"
@@ -125,19 +122,13 @@ lemma arch_activate_idle_thread_pas_refined[Syscall_AC_assms, wp]:
 
 lemma update_asid_pool_entry_valid_cur_vcpu[wp]:
   "update_asid_pool_entry f asid \<lbrace>valid_cur_vcpu\<rbrace>"
-  apply (wpsimp wp: set_object_wp simp: update_asid_pool_entry_def set_asid_pool_def)
-  apply (auto simp: valid_cur_vcpu_def pred_tcb_at_def obj_at_def
-                    asid_pools_of_ko_at active_cur_vcpu_of_def)
-  done
+  by (wpsimp wp: valid_cur_vcpu_lift_weak in_cur_domain_lift_weak)
 
 lemma valid_cur_vcpu_vmid_upd[simp]:
   "valid_cur_vcpu (s\<lparr>arch_state := arch_state s\<lparr>arm_next_vmid := v\<rparr>\<rparr>) = valid_cur_vcpu s"
   by (auto simp: valid_cur_vcpu_def pred_tcb_at_def obj_at_def active_cur_vcpu_of_def)
 
-crunch set_vm_root
-  for valid_cur_vcpu[wp]: "valid_cur_vcpu"
-
-crunch set_vm_root, vcpu_switch
+crunch set_vm_root, vcpu_switch, vcpu_flush
   for valid_cur_fpu[wp]: "valid_cur_fpu"
   (wp: mapM_x_wp_inv mapM_wp_inv)
 
@@ -157,19 +148,23 @@ crunch arch_post_cap_deletion
 crunch
   arch_post_modify_registers, arch_invoke_irq_control,
   arch_invoke_irq_handler, arch_perform_invocation, arch_mask_irq_signal,
-   handle_vm_fault,  handle_arch_fault_reply
+  handle_vm_fault, handle_arch_fault_reply
   for cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
   and idle_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (idle_thread s)"
   and cur_domain[Syscall_AC_assms, wp]:  "\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch handle_hypervisor_fault
-  for idle_thread[Syscall_AC_assms, wp]: "\<lambda>s :: det_state. P (idle_thread s)"
-  (wp: crunch_wps  simp: crunch_simps)
-
-crunch handle_reserved_irq
-  for idle_thread[Syscall_AC_assms, wp]: "\<lambda>s :: det_state. P (idle_thread s)"
-  (wp: crunch_wps simp: crunch_simps)
+declare arch_invoke_irq_control_cur_domain[Syscall_AC_assms]
+        arch_invoke_irq_handler_cur_domain[Syscall_AC_assms]
+        arch_mask_irq_signal_idle_thread[Syscall_AC_assms]
+        arch_mask_irq_signal_cur_domain[Syscall_AC_assms]
+        handle_reserved_irq_idle_thread[Syscall_AC_assms]
+        handle_reserved_irq_cur_domain[Syscall_AC_assms]
+        handle_arch_fault_reply_cur_domain[Syscall_AC_assms]
+        handle_hypervisor_fault_idle_thread[Syscall_AC_assms]
+        handle_hypervisor_fault_cur_domain[Syscall_AC_assms]
+        handle_vm_fault_idle_thread[Syscall_AC_assms]
+        handle_vm_fault_cur_domain[Syscall_AC_assms]
 
 crunch set_extra_badge
  for cur_domain[Syscall_AC_assms, wp]:  "\<lambda>s :: det_state. P (cur_domain s)"
@@ -181,14 +176,6 @@ lemma transfer_caps_loop_cur_domain[wp]:
   apply (induct caps arbitrary: slots n mi)
    apply (wpsimp | assumption)+
   done
-
-crunch handle_hypervisor_fault
-  for cur_domain[Syscall_AC_assms, wp]:  "\<lambda>s :: det_state. P (cur_domain s)"
-  (wp: crunch_wps simp: crunch_simps ignore_del: possible_switch_to)
-
-crunch handle_reserved_irq
-  for cur_domain[Syscall_AC_assms, wp]:  "\<lambda>s :: det_state. P (cur_domain s)"
-  (wp: crunch_wps simp: crunch_simps)
 
 crunch vgic_update_lr, vgic_update
   for integrity_autarch[wp]: "integrity aag X st"
@@ -207,7 +194,8 @@ lemma set_lrs_integrity_autarch:
   done
 
 lemma vgic_maintenance_integrity_autarch:
-  "\<lbrace>\<lambda>s. integrity aag X st s \<and> pas_refined aag s \<and> is_subject aag (cur_thread s) \<and> invs s \<and> valid_cur_vcpu s\<rbrace>
+  "\<lbrace>\<lambda>s. integrity aag X st s \<and> pas_refined aag s \<and> is_subject aag (cur_thread s) \<and> invs s
+        \<and> valid_cur_vcpu s \<and> (in_cur_domain (cur_thread s) s \<or> cur_thread s = idle_thread s)\<rbrace>
    vgic_maintenance
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   (is "\<lbrace>?P\<rbrace> _ \<lbrace>_\<rbrace>")
@@ -260,7 +248,8 @@ lemma vcpu_vppi_masked_update_pas_refined[wp]:
   unfolding pas_refined_def state_objs_to_policy_def by (wp | wps | simp)+
 
 lemma vppi_event_integrity_autarch:
-  "\<lbrace>\<lambda>s. integrity aag X st s \<and> pas_refined aag s \<and> invs s \<and> valid_cur_vcpu s \<and> is_subject aag (cur_thread s)\<rbrace>
+  "\<lbrace>\<lambda>s. integrity aag X st s \<and> pas_refined aag s \<and> invs s \<and> valid_cur_vcpu s \<and> is_subject aag (cur_thread s)
+        \<and> (in_cur_domain (cur_thread s) s \<or> cur_thread s = idle_thread s)\<rbrace>
    vppi_event irq
    \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
   unfolding vppi_event_def
@@ -292,7 +281,8 @@ lemma vppi_event_pas_refined:
 
 lemma handle_reserved_irq_integrity_autarch[Syscall_AC_assms]:
   "\<lbrace>integrity aag X st and pas_refined aag and invs and valid_cur_vcpu
-                       and is_subject aag \<circ> cur_thread\<rbrace>
+                       and is_subject aag \<circ> cur_thread
+                       and (\<lambda>s. in_cur_domain (cur_thread s) s \<or> cur_thread s = idle_thread s)\<rbrace>
    handle_reserved_irq irq
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   unfolding handle_reserved_irq_def
@@ -419,17 +409,54 @@ lemma arch_thread_set_ct_in_cur_domain[wp]:
            simp: ct_in_cur_domain_def in_cur_domain_def get_tcb_def etcbs_of'_def etcb_at'_def
           split: option.splits kernel_object.splits if_splits)
 
+crunch vcpu_flush
+  for ct_in_cur_domain[wp]: ct_in_cur_domain
+  and weak_valid_sched_action[wp]: weak_valid_sched_action
+  (ignore: vcpu_flush wp: weak_valid_sched_action_lift)
+
 crunch arch_prepare_next_domain
   for integrity[Syscall_AC_assms, wp]: "integrity aag X st"
   and pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
   and ct_not_in_q[Syscall_AC_assms, wp]: "ct_not_in_q"
   and ct_in_cur_domain[Syscall_AC_assms, wp]: "ct_in_cur_domain"
 
-crunch arch_prepare_set_domain, arch_prepare_next_domain, arch_post_set_flags
+lemma vcpu_flush_valid_sched_action[wp]:
+  "vcpu_flush \<lbrace>valid_sched_action\<rbrace>"
+  unfolding valid_sched_action_def is_activatable_def st_tcb_at_kh_simp
+  by (rule hoare_lift_Pf[where f=cur_thread]; wpsimp wp: hoare_vcg_imp_lift switch_in_cur_domain_lift)
+
+crunch arch_prepare_set_domain, arch_prepare_next_domain, arch_post_set_flags, handle_spurious_irq
   for valid_sched_action[Syscall_AC_assms, wp]: "valid_sched_action"
   and cur_domain[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_domain s)"
   and cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
   and idle_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (idle_thread s)"
+
+(* already proved elsewhere, so the attribute is not picked up in the crunch above *)
+declare handle_spurious_irq_cur_domain[Syscall_AC_assms]
+declare handle_spurious_irq_cur_thread[Syscall_AC_assms]
+declare arch_prepare_next_domain_cur_domain[Syscall_AC_assms]
+declare arch_prepare_set_domain_cur_domain[Syscall_AC_assms]
+declare arch_prepare_set_domain_cur_thread[Syscall_AC_assms]
+
+crunch handle_spurious_irq
+  for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
+  and integrity[Syscall_AC_assms, wp]: "integrity aag X st"
+  (ignore: do_machine_op)
+
+crunch arch_post_cap_deletion, prepare_thread_delete
+  for scheduler_action[Syscall_AC_assms, wp]: "\<lambda>s. P (scheduler_action s)"
+
+lemma arch_invoke_irq_control_in_cur_domainE[Syscall_AC_assms, wp]:
+  "\<lbrace>\<lambda>s::det_state. in_cur_domain t s\<rbrace>
+   arch_invoke_irq_control ivk
+   -,\<lbrace>\<lambda>_ s. in_cur_domain t s\<rbrace>"
+  by (cases ivk; simp; (solves \<open>wpsimp\<close>)?)
+
+lemma arch_perform_invocation_in_cur_domainE[Syscall_AC_assms, wp]:
+  "\<lbrace>\<lambda>s::det_state. in_cur_domain t s\<rbrace>
+   arch_perform_invocation ai
+   -,\<lbrace>\<lambda>_ s. in_cur_domain t s\<rbrace>"
+  by (wpsimp simp: arch_perform_invocation_def)
 
 end
 

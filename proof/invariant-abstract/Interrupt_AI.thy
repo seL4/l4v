@@ -14,6 +14,8 @@ begin
 
 arch_requalify_facts
   arch_post_cap_deletion_mdb_inv
+  handle_spurious_irq_invs
+  invs_irq_state_independent
 
 definition
   interrupt_derived :: "cap \<Rightarrow> cap \<Rightarrow> bool"
@@ -281,5 +283,13 @@ lemma send_signal_interrupt_states[wp_unsafe]:
   apply (wp gts_wp hoare_vcg_all_lift thread_get_wp | wpc | simp)+
   done
 
+context Interrupt_AI begin
+
+lemma maybe_handle_interrupt_invs[wp]:
+  "maybe_handle_interrupt in_kernel \<lbrace>invs :: 'a state \<Rightarrow> _\<rbrace>"
+  unfolding maybe_handle_interrupt_def
+  by (wpsimp wp: handle_spurious_irq_invs simp: invs_irq_state_independent)
+
+end
 
 end

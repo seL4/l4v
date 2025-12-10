@@ -32,7 +32,7 @@ crunch
   handle_hypervisor_fault, handle_arch_fault_reply, arch_mask_irq_signal,
   arch_switch_to_thread, arch_switch_to_idle_thread, arch_activate_idle_thread,
   arch_prepare_set_domain, arch_prepare_next_domain, arch_post_set_flags,
-  store_asid_pool_entry, copy_global_mappings
+  store_asid_pool_entry, copy_global_mappings, handle_spurious_irq
   for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
   (wp: crunch_wps)
 

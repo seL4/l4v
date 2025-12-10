@@ -11,6 +11,9 @@ imports
   "Lib.SimpStrategy"
 begin
 
+arch_requalify_facts
+  valid_global_refs_lift'
+
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 (* FIXME RT: remove *)
@@ -2895,6 +2898,9 @@ lemma valid_pspace'_pspace_bounded'[elim!]:
   "valid_pspace' s \<Longrightarrow> pspace_bounded' s"
   by fastforce
 
+arch_requalify_facts tcbSchedEnqueue_valid_pspace' (* FIXME arch-split: interface *)
+lemmas [wp] = tcbSchedEnqueue_valid_pspace'
+
 lemma cancel_all_invs'_helper:
   "\<lbrace>invs'
     and (\<lambda>s. (\<forall>x \<in> set q.
@@ -2917,7 +2923,8 @@ lemma cancel_all_invs'_helper:
   supply if_split[split del] comp_apply[simp del]
   unfolding valid_dom_schedule'_def invs'_def
   apply (rule mapM_x_inv_wp2)
-   apply clarsimp
+   (* FIXME arch-split: this helper lemma has different definition on hyp platforms *)
+   apply (clarsimp simp: RISCV64.non_hyp_state_hyp_refs_of')
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
                     hoare_vcg_const_Ball_lift sts_st_tcb'
                     possibleSwitchTo_sch_act_not_other)
@@ -3061,7 +3068,7 @@ lemma cancelAllIPC_invs'[wp]:
   apply (intro bind_wp[OF _ stateAssert_sp])
   apply (wpsimp wp: rescheduleRequired_invs' cancel_all_invs'_helper
                     hoare_vcg_const_Ball_lift
-                    valid_global_refs_lift' valid_arch_state_lift'
+                    valid_global_refs_lift'
                     valid_irq_node_lift ssa_invs' sts_sch_act' getEndpoint_wp
                     irqs_masked_lift)
      apply (clarsimp simp: invs'_def valid_ep'_def)

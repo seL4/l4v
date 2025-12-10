@@ -46,7 +46,7 @@ lemma safe_parent_strg':
    descendants_of' p (ctes_of s) = {} \<and>
    valid_pspace' s
   \<longrightarrow> safe_parent_for' (ctes_of s) p (ArchObjectCap (ASIDPoolCap frame base))"
-  apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
+  apply (clarsimp simp: safe_parent_for'_def safe_parent_for_arch'_def cte_wp_at_ctes_of)
   apply (case_tac cte)
   apply (simp add: isCap_simps)
   apply (subst conj_comms)
@@ -1385,7 +1385,7 @@ lemma performX64PortInvocation_corres:
    apply (fastforce simp: safe_parent_for_def safe_parent_for_arch_def)
   apply (clarsimp simp: invs_pspace_distinct' invs_pspace_aligned' valid_arch_inv'_def ioport_control_inv_valid'_def
                         valid_cap'_def capAligned_def word_bits_def)
-  apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
+  apply (clarsimp simp: safe_parent_for'_def safe_parent_for_arch'_def cte_wp_at_ctes_of)
   apply (case_tac ctea)
   apply (clarsimp simp: isCap_simps sameRegionAs_def3)
   apply (drule_tac src=p in all_ioports_issued_issuedD')
@@ -1546,7 +1546,7 @@ lemma valid_slots_lift':
   apply (clarsimp simp: valid_slots'_def)
   apply (case_tac x, clarsimp split: vmpage_entry.splits)
   apply safe
-   apply (rule hoare_pre, wp hoare_vcg_const_Ball_lift t valid_pde_lift' valid_pte_lift' valid_pdpte_lift', simp)+
+   apply (rule hoare_pre, wp hoare_vcg_const_Ball_lift t, simp)+
   done
 
 lemma sts_valid_arch_inv':
@@ -2192,7 +2192,7 @@ lemma arch_performInvocation_invs':
                         is_simple_cap'_def isCap_simps)
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (rule conjI, clarsimp)
-  apply (clarsimp simp: safe_parent_for'_def)
+  apply (clarsimp simp: safe_parent_for'_def safe_parent_for_arch'_def)
   apply (case_tac ctea)
   apply (clarsimp simp: isCap_simps sameRegionAs_def3)
   apply (drule_tac src=p in all_ioports_issued_issuedD')

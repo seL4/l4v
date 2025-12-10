@@ -48,10 +48,48 @@ lemma gen_isCap_simps:
   "isDomainCap v = (v = DomainCap)"
   by (auto simp: gen_isCap_defs split: capability.splits)
 
-lemma untyped_not_null[simp]:
-  "\<not> isUntypedCap NullCap" by (simp add: gen_isCap_simps)
+lemmas isUntypedCap_simps[simp] = isUntypedCap_def[split_simps capability.split]
 
 text \<open>Miscellaneous facts about low level constructs\<close>
+
+locale Bits_R =
+  assumes atcbContext_get_eq[simp]:
+    "\<And>uc atcb. atcbContextGet (atcbContextSet uc atcb) = uc"
+  assumes atcbContext_set_eq[simp]:
+    "\<And>t. atcbContextSet (atcbContextGet t) t = t"
+  assumes atcbContext_set_set[simp]:
+    "\<And>uc uc' atcb. atcbContextSet uc (atcbContextSet uc' atcb) = atcbContextSet uc atcb"
+  assumes objBitsKO_neq_0:
+    "\<And>ko. objBitsKO ko \<noteq> 0"
+  assumes pageBits_le_maxUntypedSizeBits[simp]:
+    "pageBits \<le> maxUntypedSizeBits"
+
+context Bits_R begin
+
+lemma objBitsKO_pos_power2[simp]:
+  "(1::machine_word) < 2 ^ objBitsKO ko"
+  using objBitsKO_neq_0
+  by (simp add: objBitsKO_less_word_bits word_2p_lem word_bits_size)
+
+lemma scBits_pos_power2:
+  assumes "minSchedContextBits + scSize sc < word_bits"
+  shows "(1::machine_word) < (2::machine_word) ^ (minSchedContextBits + scSize sc)"
+  apply (insert assms)
+  apply (subst word_less_nat_alt)
+  apply (clarsimp simp: minSchedContextBits_def)
+  by (auto simp: pow_mono_leq_imp_lt)
+
+lemma objBits_pos_power2[simp]:
+  assumes "objBits v < word_bits"
+  shows "(1::machine_word) < 2 ^ objBits v"
+  unfolding objBits_def by (simp add: scBits_pos_power2)
+
+lemma objBitsKO_no_overflow[simp, intro!]:
+  "objBitsKO ko < word_bits \<Longrightarrow> (1::machine_word) < 2 ^ objBitsKO ko"
+  by (cases ko; simp add: objBits_simps' pageBits_def pteBits_def scBits_pos_power2
+                   split: arch_kernel_object.splits)
+
+end
 
 lemma projectKO_tcb:
   "(projectKO_opt ko = Some t) = (ko = KOTCB t)"
@@ -104,6 +142,46 @@ lemma (in Arch) obj_sizeBits_less_word_bits:
   by (simp_all add: objBits_defs word_bits_def)
 
 requalify_facts Arch.obj_sizeBits_less_word_bits
+
+lemma tcbBlockSizeBits_tcb_bits:
+  "tcbBlockSizeBits = tcb_bits"
+  by (simp add: tcbBlockSizeBits_def)
+
+(* true on all arches *)
+lemma zero_less_tcbBlockSizeBits[simp]:
+  "0 < tcbBlockSizeBits"
+  unfolding tcbBlockSizeBits_def by simp
+
+(* same derivation on all architectures; some duplication for convenience in simpset *)
+lemma (in Arch) tcb_slots_less_2p_tcbBlockSizeBits:
+  "0 < (2::machine_word) ^ tcbBlockSizeBits"
+  "1 < (2::machine_word) ^ tcbBlockSizeBits"
+  "1 << cteSizeBits < (2::machine_word) ^ tcbBlockSizeBits"
+  "2 << cteSizeBits < (2::machine_word) ^ tcbBlockSizeBits"
+  "3 << cteSizeBits < (2::machine_word) ^ tcbBlockSizeBits"
+  "4 << cteSizeBits < (2::machine_word) ^ tcbBlockSizeBits"
+  "(2::machine_word) ^ cteSizeBits < 2 ^ tcbBlockSizeBits"
+  unfolding tcbBlockSizeBits_def by (auto simp: objBits_simps')
+
+requalify_facts Arch.tcb_slots_less_2p_tcbBlockSizeBits
+declare tcb_slots_less_2p_tcbBlockSizeBits[simp]
+
+(* variant for ASpec-equivalents *)
+lemmas tcb_slots_less_2p_tcb_bits[simp] =
+  tcb_slots_less_2p_tcbBlockSizeBits[simplified tcbBlockSizeBits_tcb_bits cteSizeBits_cte_level_bits]
+
+(* same derivation on all architectures *)
+lemma (in Arch) zero_one_less_2p_SizeBits[simp]:
+  "(0::machine_word) < 2 ^ cteSizeBits"
+  "(1::machine_word) < 2 ^ cteSizeBits"
+  "(0::machine_word) < 2 ^ epSizeBits"
+  "(1::machine_word) < 2 ^ epSizeBits"
+  "(0::machine_word) < 2 ^ ntfnSizeBits"
+  "(1::machine_word) < 2 ^ ntfnSizeBits"
+  by (auto simp: objBits_simps')
+
+requalify_facts Arch.zero_one_less_2p_SizeBits
+declare zero_one_less_2p_SizeBits[simp]
 
 lemma capAligned_epI:
   "ep_at' p s \<Longrightarrow> capAligned (EndpointCap p a b c d e)"
@@ -221,6 +299,16 @@ lemma getIdleSc_wp [wp]: "\<lbrace>\<lambda>s. P (ksIdleSC s) s\<rbrace> getIdle
 
 lemma gsa_wp [wp]: "\<lbrace>\<lambda>s. P (ksSchedulerAction s) s\<rbrace> getSchedulerAction \<lbrace>P\<rbrace>"
   by (unfold getSchedulerAction_def, wp)
+
+lemma is_ep_cap_relation:
+  "cap_relation c c' \<Longrightarrow> isEndpointCap c' = is_ep_cap c"
+  by (simp add: gen_isCap_simps is_cap_simps)
+     (cases c, auto)
+
+lemma is_ntfn_cap_relation:
+  "cap_relation c c' \<Longrightarrow> isNotificationCap c' = is_ntfn_cap c"
+  by (simp add: gen_isCap_simps is_cap_simps)
+     (cases c, auto)
 
 text \<open>Shorthand names for the relations between faults, errors and failures\<close>
 

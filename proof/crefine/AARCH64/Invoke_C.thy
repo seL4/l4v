@@ -93,6 +93,16 @@ lemma setDomain_ccorres:
                          invs'_def valid_state'_def valid_pspace'_def)
   done
 
+lemma Arch_prepareSetDomain_ccorres:
+  "ccorres dc xfdc invs' \<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr t\<rbrace> []
+     (vcpuFlushIfCurrent t) (Call Arch_prepareSetDomain_'proc)"
+  apply cinit'
+   apply csymbr (* config_set(CONFIG_ARM_HYPERVISOR_SUPPORT) *)
+   apply ccorres_rewrite
+   apply (ctac add: vcpu_flush_if_current_ccorres)
+  apply simp
+  done
+
 lemma prepareSetDomain_ccorres:
   "ccorres dc xfdc
       (invs' and tcb_at' t)
@@ -107,7 +117,10 @@ lemma prepareSetDomain_ccorres:
     apply (clarsimp simp: rf_sr_ksCurDomain)
    apply (rule ccorres_when[where R=\<top>])
     apply clarsimp
-   apply (ctac add: fpuRelease_ccorres)
+   apply (ctac add: Arch_prepareSetDomain_ccorres)
+     apply (ctac add: fpuRelease_ccorres)
+    apply (wpsimp | strengthen invs_no_0_obj')+
+   apply (vcg exspec=Arch_prepareSetDomain_modifies)
   apply clarsimp
   done
 

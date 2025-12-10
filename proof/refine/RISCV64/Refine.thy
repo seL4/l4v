@@ -495,11 +495,11 @@ lemma akernel_invariant:
   done
 
 lemma ckernel_invs:
-  "\<lbrace>invs' and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> schedulable' (ksCurThread s) s)
-    and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
+  "\<lbrace>invs' and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> schedulable' (ksCurThread s) s) and
+    (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
    callKernel e
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: callKernel_def mcsPreemptionPoint_def)
+  unfolding callKernel_def mcsPreemptionPoint_def
   apply (wpsimp wp: hoare_drop_imp[where Q'="\<lambda>_. kernelExitAssertions"] activate_invs')
        apply (rule hoare_drop_imp)
        apply (wpsimp wp: schedule_invs')
@@ -800,9 +800,8 @@ lemma kernel_corres':
                  _ \<leftarrow> runExceptT $
                       handleEvent event `~catchError~`
                         (\<lambda>_. withoutPreemption $ do
-                               irq_opt <- doMachineOp (getActiveIRQ True);
                                _ \<leftarrow> mcsPreemptionPoint irq_opt;
-                               when (isJust irq_opt) $ handleInterrupt (fromJust irq_opt)
+                               maybeHandleInterrupt True
                              od);
                  _ \<leftarrow> stateAssert rct_imp_activatable'_asrt [];
                  _ \<leftarrow> ThreadDecls_H.schedule;

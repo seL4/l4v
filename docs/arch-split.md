@@ -406,6 +406,7 @@ imports
 begin
 
 term deriveCap (* Outside the Arch context, this is the arch-generic deriveCap function. *)
+thm deriveCap_def (* Similarly, this is the arch-generic deriveCap definition. *)
 
 context Arch begin
 
@@ -414,8 +415,12 @@ context Arch begin
 term deriveCap               (* In the Arch context, this is the deriveCap function for arch caps. *)
 term RetypeDecls_H.deriveCap (* This is the arch-generic deriveCap function. *)
 
+thm deriveCap_def            (* In the Arch context, this is the deriveCap definition for arch caps. *)
+thm Retype_H.deriveCap_def   (* This is the arch-generic deriveCap definition. *)
+
 (* The following makes Arch.deriveCap refer to the architecture-specific constant. *)
 requalify_consts deriveCap   (* Warning: Name "deriveCap" already exists in theory context *)
+requalify_facts deriveCap_def (* Warning: Name "deriveCap_def" already exists in theory context *)
 
 (* Unfortunately, the above also means that in a context in which Arch is interpreted,
   `deriveCap` unqualified would refer to the arch-specific constant, which may break existing proofs.
@@ -423,7 +428,8 @@ requalify_consts deriveCap   (* Warning: Name "deriveCap" already exists in theo
    even when the Arch locale is interpreted. *)
 
 context begin global_naming global
-requalify_consts RetypeDecls_H.deriveCap
+requalify_consts (aliasing) RetypeDecls_H.deriveCap
+requalify_facts (aliasing) Retype_H.deriveCap_def
 end
 
 end
@@ -432,12 +438,14 @@ end
 term deriveCap        (* arch-generic *)
 term global.deriveCap (* arch-generic alternative *)
 term Arch.deriveCap   (* arch-specific *)
+thm deriveCap_def     (* arch-generic *)
 
 (* Also when we interpret the Arch locale... *)
 context begin interpretation Arch .
 term deriveCap        (* arch-generic *)
 term global.deriveCap (* arch-generic alternative *)
 term Arch.deriveCap   (* arch-specific *)
+thm deriveCap_def     (* arch-generic *)
 end
 
 (* Even when we re-enter the Arch locale... *)
@@ -445,6 +453,14 @@ context Arch begin
 term deriveCap        (* arch-generic *)
 term global.deriveCap (* arch-generic alternative *)
 term Arch.deriveCap   (* arch-specific *)
+thm deriveCap_def     (* arch-generic *)
+end
+
+(* For facts, there is an additional caveat: named_theorems perturbs fact name ordering: *)
+context Arch begin
+thm deriveCap_def     (* arch-generic, as expected *)
+named_theorems Some_assms
+thm deriveCap_def     (* arch-specific, until the end of the context block! *)
 end
 
 (* ... *)
@@ -471,6 +487,20 @@ requalification, choosing `global` as our convention. A side effect is that the
 arch-generic thing can be found with *either* an unqualified name or a
 `global`-qualified name, whereas the arch-specific thing can only be found with
 an `Arch`-qualified name.
+
+As shown above, for facts, `named_theorems` causes a reordering of fact names,
+meaning that the default name becomes arch-specific in an `Arch` locale or
+interpretation. For this reason, when dealing with fact names which have been
+disambiguated with a `global./Arch.` prefix, we strongly suggest qualifying
+both fact names when unfolding them inside of an Arch locale or interpretation:
+
+```isabelle
+context Arch begin
+(* ... *)
+  apply (simp add: global.deriveCap_def Arch.deriveCap_def)
+(* ... *)
+end
+```
 
 Note: In a generic theory, we typically *only* enter the Arch context
 to requalify names with the "Arch" qualifier.
@@ -659,10 +689,10 @@ end
    locale and the named_theorems collection. *)
 
 global_interpretation Retype_AI?: Retype_AI
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (intro_locales; (unfold_locales; fact Retype_AI_assms)?)
-  qed
+qed
 
 (* ... *)
 
@@ -716,10 +746,10 @@ lemma AA[Foo_AI_assms]: "XXX"
 end
 
 interpretation Foo_AI_1?: Foo_AI_1
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (intro_locales; (unfold_locales; fact Foo_AI_assms)?)
-  qed
+qed
 
 (* now we get access to GB in the global context *)
 
@@ -731,10 +761,10 @@ lemma AC[Foo_AI_assms]: "XXX"
 end
 
 interpretation Foo_AI_2?: Foo_AI_2
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (intro_locales; (unfold_locales; fact Foo_AI_assms)?)
-  qed
+qed
 
 (* now we get access to GD in the global context *)
 ```

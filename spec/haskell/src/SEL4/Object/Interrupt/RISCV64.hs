@@ -61,6 +61,9 @@ invokeIRQHandler :: IRQHandlerInvocation -> Kernel ()
 invokeIRQHandler (AckIRQ irq) = doMachineOp $ plic_complete_claim irq
 invokeIRQHandler _ = return ()
 
+handleSpuriousIRQ :: Kernel ()
+handleSpuriousIRQ = return ()
+
 handleReservedIRQ :: IRQ -> Kernel ()
 handleReservedIRQ _ = return ()
 

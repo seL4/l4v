@@ -2229,8 +2229,30 @@ lemma handleHypervisorFault_corres:
   apply (cases fault; clarsimp simp add: handleHypervisorFault_def returnOk_def2)
   done
 
+lemma handleSpuriousIRQ_corres[corres]:
+  "corres dc \<top> \<top> handle_spurious_irq handleSpuriousIRQ"
+  by (simp add: handle_spurious_irq_def handleSpuriousIRQ_def)
+
+lemma contract_all_imp_strg:
+  "P \<and> P' \<and> (\<forall>x. R x \<longrightarrow> Q x) \<Longrightarrow> \<forall>x. R x \<longrightarrow> P \<and> Q x \<and> P'"
+  by blast
+
+lemma maybeHandleInterrupt_corres:
+  "corres dc einvs invs' (maybe_handle_interrupt in_kernel) (maybeHandleInterrupt in_kernel)"
+  unfolding maybe_handle_interrupt_def maybeHandleInterrupt_def
+  apply (corres corres: corres_machine_op handleInterrupt_corres[@lift_corres_args]
+                simp: irq_state_independent_def
+         | corres_cases_both)+
+     apply (wpsimp wp: hoare_drop_imp)
+    apply clarsimp
+    apply (strengthen contract_all_imp_strg[where P'=True, simplified])
+    apply (wpsimp wp: doMachineOp_getActiveIRQ_IRQ_active' hoare_vcg_all_lift)
+   apply clarsimp
+  apply (clarsimp simp: invs'_def valid_state'_def)
+  done
+
 (* FIXME: move *)
-crunch handleVMFault,handleHypervisorFault
+crunch handleVMFault, handleHypervisorFault
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   and cap_to'[wp]: "ex_nonz_cap_to' t"
   and ksit[wp]: "\<lambda>s. P (ksIdleThread s)"
@@ -2423,6 +2445,14 @@ lemma schedulable'_runnableE:
   "schedulable' t s \<Longrightarrow> tcb_at' t s \<Longrightarrow> st_tcb_at' runnable' t s"
   unfolding schedulable'_def
   by (clarsimp simp: pred_tcb_at'_def obj_at'_def opt_pred_def opt_map_def)
+
+lemma handleSpuriousIRQ_invs'[wp]:
+  "handleSpuriousIRQ \<lbrace>invs'\<rbrace>"
+  by (simp add: handleSpuriousIRQ_def)
+
+crunch handleSpuriousIRQ, maybeHandleInterrupt
+  for invs'[wp]: invs'
+  (ignore: doMachineOp)
 
 lemma he_invs'[wp]:
   "\<lbrace>invs' and cur_tcb' and

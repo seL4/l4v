@@ -1269,7 +1269,7 @@ lemma aligned_sum_less_kernel_base:
   apply (simp add:field_simps[symmetric])
   apply (erule gap_between_aligned)
     apply (simp add: vmsz_aligned_def)+
-   apply (case_tac sz,simp_all add:kernel_base_def is_aligned_def)+
+   apply (case_tac sz; simp add: kernel_base_def pptrBase_def is_aligned_def)+
   done
 
 lemma decode_sgi_signal_invocation_wf[wp]:
@@ -1485,7 +1485,7 @@ lemma arch_decode_inv_wf[wp]:
      apply (clarsimp simp: kernel_vsrefs_def)
      apply (simp add: linorder_not_le, drule word_le_minus_one_leq)
      apply (drule le_shiftr[where n=20], drule(1) order_trans)
-     apply (simp add: kernel_base_def)
+     apply (simp add: kernel_base_def pptrBase_def split: if_split_asm)
     apply (simp add: valid_arch_inv_def valid_pti_def)
     apply (clarsimp simp: cte_wp_at_def is_cap_simps)
    apply (simp add: arch_decode_invocation_def Let_def)

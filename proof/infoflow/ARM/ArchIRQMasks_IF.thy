@@ -76,6 +76,12 @@ lemma dmo_getActiveIRQ_irq_masks[IRQMasks_IF_assms, wp]:
   apply (simp add: getActiveIRQ_def | wp | simp add: no_irq_def | clarsimp)+
   done
 
+lemma dmo_handleSpuriousIRQ_mop_irq_masks[wp]:
+  "do_machine_op handleSpuriousIRQ_mop \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  apply (rule hoare_pre, rule dmo_wp)
+  apply (simp add: handleSpuriousIRQ_mop_def | wp | simp add: no_irq_def | clarsimp)+
+  done
+
 lemma dmo_getActiveIRQ_return_axiom[IRQMasks_IF_assms, wp]:
   "\<lbrace>\<top>\<rbrace> do_machine_op (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv s. (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)\<rbrace>"
   apply (simp add: getActiveIRQ_def)
@@ -85,8 +91,9 @@ lemma dmo_getActiveIRQ_return_axiom[IRQMasks_IF_assms, wp]:
   apply clarsimp
   done
 
-crunch activate_thread
+crunch activate_thread, handle_spurious_irq
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  (ignore: do_machine_op)
 
 crunch schedule
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"

@@ -8,13 +8,14 @@ theory ArchInterruptDecls_H
 imports RetypeDecls_H CNode_H
 begin
 
-context Arch begin arch_global_naming (H)
-
+(* performSGISignalGenerate in Haskell expects Arch.sgisignal_invocation *)
 requalify_types (in Arch)
   sgisignal_invocation
 
-#INCLUDE_HASKELL SEL4/Object/Interrupt/AARCH64.hs CONTEXT AARCH64_H decls_only ArchInv=Arch Arch=MachineOps NOT plic_complete_claim
+context Arch begin arch_global_naming (H)
 
-end (* context AARCH64 *)
+#INCLUDE_HASKELL SEL4/Object/Interrupt/AARCH64.hs CONTEXT AARCH64_H decls_only ArchInv=Arch Arch=MachineOps
+
+end (* context AARCH64_H *)
 
 end

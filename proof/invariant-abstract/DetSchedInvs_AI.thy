@@ -3143,6 +3143,19 @@ lemma valid_blocked_except_set_not_runnable:
   unfolding valid_blocked_defs obj_at_kh_kheap_simps runnable_eq
   by (erule allEI; rename_tac t'; case_tac "t' = t"; clarsimp simp: pred_map_simps)
 
+\<comment> \<open>Not safe for wp because P could unify in a way that loops\<close>
+lemma in_cur_domain_lift_weak_gen:
+  assumes a: "\<And>P . f \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"
+    and b: "\<And>Q. \<lbrace>\<lambda>s. P (etcb_at Q t s) \<and> P' s\<rbrace> f \<lbrace>\<lambda>_ s. P (etcb_at Q t s)\<rbrace>"
+  shows "\<lbrace>\<lambda>s. P (in_cur_domain t s) \<and> P' s\<rbrace> f \<lbrace>\<lambda>_ s. P (in_cur_domain t s)\<rbrace>"
+  unfolding in_cur_domain_def
+  by (wp_pre, wps a, wp b, clarsimp)
+
+lemmas in_cur_domain_lift_weak'
+  = in_cur_domain_lift_weak_gen[where P=Not] in_cur_domain_lift_weak_gen[where P=id, simplified]
+
+lemmas in_cur_domain_lift_weak = in_cur_domain_lift_weak'[where P'=\<top>, simplified]
+
 lemma valid_sched_valid_blocked[elim!]:
   "valid_sched s \<Longrightarrow> valid_blocked_except_set S s" by (clarsimp simp: valid_sched_def)
 

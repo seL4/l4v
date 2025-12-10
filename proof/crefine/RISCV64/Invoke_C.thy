@@ -94,13 +94,24 @@ lemma setDomain_ccorres:
   apply fastforce
   done
 
+lemma Arch_prepareSetDomain_ccorres:
+  "ccorres dc xfdc invs' UNIV [] (return ()) (Call Arch_prepareSetDomain_'proc)"
+  apply cinit'
+   apply (rule_tac R=\<top> and R'=UNIV in ccorres_return)
+   apply vcg
+   apply clarsimp
+  apply clarsimp
+  done
+
 lemma prepareSetDomain_ccorres:
   "ccorres dc xfdc
       (invs' and tcb_at' t)
       (\<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr t\<rbrace> \<inter> \<lbrace>\<acute>dom = ucast d\<rbrace>) []
       (prepareSetDomain t d) (Call prepareSetDomain_'proc)"
   apply (cinit lift: tptr_' dom_')
-   apply (rule ccorres_return_Skip)
+   apply (rule ccorres_cond_weak)
+    apply (ctac add: Arch_prepareSetDomain_ccorres)
+   apply (ctac add: ccorres_return_Skip)
   apply clarsimp
   done
 

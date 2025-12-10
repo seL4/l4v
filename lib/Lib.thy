@@ -2709,8 +2709,8 @@ lemma if_option_Some_eq:
   by simp+
 
 lemma if_option_None_eq:
-  "((if P then None else Some x) = None) = P"
-  "((if P then Some x else None) = None) = (\<not>P)"
+  "((if P then Q else Some x) = None) = (P \<and> Q = None)"
+  "((if P then Some x else Q) = None) = (\<not>P \<and> Q = None)"
   by simp+
 
 lemma option_case_all_conv:

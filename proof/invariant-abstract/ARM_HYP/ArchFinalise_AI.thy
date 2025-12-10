@@ -595,10 +595,6 @@ lemma dissociate_vcpu_tcb_if_live_then_nonz_cap[wp]:
   unfolding dissociate_vcpu_tcb_def arch_get_sanitise_register_info_def
   by (wpsimp wp: get_vcpu_wp arch_thread_get_wp hoare_drop_imps)
 
-lemma vcpu_invalidate_active_ivs[wp]: "\<lbrace>invs\<rbrace> vcpu_invalidate_active \<lbrace>\<lambda>_. invs\<rbrace>"
-  unfolding vcpu_invalidate_active_def
-  by (wpsimp simp: cur_vcpu_at_def | strengthen invs_current_vcpu_update')+
-
 crunch dissociate_vcpu_tcb
   for cur_tcb[wp]: "cur_tcb"
   (wp: crunch_wps)
@@ -1052,6 +1048,13 @@ crunch prepare_thread_delete
 crunch arch_finalise_cap
   for cte_wp_at[wp,Finalise_AI_assms]: "\<lambda>s. P (cte_wp_at P' p s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at)
+
+declare arch_post_cap_deletion_cur_thread[Finalise_AI_assms]
+
+crunch arch_post_cap_deletion
+  for cur_domain[Finalise_AI_assms, wp]: "\<lambda>s. P (cur_domain s)"
+  (wp: crunch_wps dxo_wp_weak)
+
 end
 
 interpretation Finalise_AI_1?: Finalise_AI_1
@@ -1490,7 +1493,7 @@ lemma pd_shifting_global_refs:
   apply (simp add: ucast_bl word_rep_drop of_drop_to_bl word_size)
   apply (insert and_mask_eq_iff_le_mask[where n=11 and w=ae, THEN iffD2])
   apply (frule_tac z="mask 11" in order_trans)
-   apply (simp add: mask_def kernel_base_def)
+   apply (simp add: mask_def kernel_base_def pptrBase_def)
   apply simp
   done
 

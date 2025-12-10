@@ -9,7 +9,7 @@ theory Finalise_R
 imports
   IpcCancel_R
   InterruptAcc_R
-  Retype_R
+  ArchRetype_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
@@ -1266,8 +1266,8 @@ lemma not_Final_removeable:
     \<Longrightarrow> removeable' sl s cap"
   apply (erule not_FinalE)
    apply (clarsimp simp: removeable'_def gen_isCap_simps)
-  apply (clarsimp simp: cteCaps_of_def sameObjectAs_def2 removeable'_def
-                        cte_wp_at_ctes_of)
+  apply (clarsimp simp: cteCaps_of_def AARCH64.sameObjectAs_def2 removeable'_def
+                        cte_wp_at_ctes_of) (* FIXME arch-split *)
   apply fastforce
   done
 
@@ -1925,7 +1925,7 @@ where
 
 lemma final_matters_Master:
   "final_matters' (capMasterCap cap) = final_matters' cap"
-  by (simp add: capMasterCap_def split: capability.split arch_capability.split,
+  by (simp add: capMasterCap_def arch_capMasterCap_def split: capability.split arch_capability.split,
       simp add: final_matters'_def)
 
 lemma final_matters_sameRegion_sameObject:
@@ -2001,7 +2001,7 @@ lemma notFinal_prev_or_next:
    apply (subst final_matters_Master[symmetric])
    apply (subst(asm) final_matters_Master[symmetric])
    apply (clarsimp simp: sameObjectAs_def3)
-  apply (clarsimp simp: sameObjectAs_def3)
+  apply (clarsimp simp: sameObjectAs_def3 simp del: isArchFrameCap_capMasterCap)
   done
 
 lemma isFinal:
@@ -2098,8 +2098,8 @@ lemma (in vmdb) isFinal_no_subtree:
    apply (clarsimp simp: isFinal_def parentOf_def mdb_next_unfold cteCaps_of_def)
    apply (erule_tac x="mdbNext n" in allE)
    apply simp
-   apply (clarsimp simp: isMDBParentOf_CTE final_matters_sameRegion_sameObject)
-   apply (clarsimp simp: gen_isCap_simps sameObjectAs_def3)
+   apply (clarsimp simp: AARCH64.isMDBParentOf_CTE final_matters_sameRegion_sameObject) (* FIXME arch-split *)
+   apply (clarsimp simp: gen_isCap_simps AARCH64.sameObjectAs_def3) (* FIXME arch-split *)
   apply clarsimp
   done
 
@@ -2528,10 +2528,6 @@ lemma deleteASID_invs'[wp]:
   unfolding deleteASID_def
   by (wpsimp wp: getASID_wp hoare_drop_imps simp: getPoolPtr_def)
 
-lemma valid_objs_valid_tcb':
-  "\<lbrakk> valid_objs' s ; ko_at' (t :: tcb) p s \<rbrakk> \<Longrightarrow> valid_tcb' t s"
-  by (fastforce simp add: obj_at'_def ran_def valid_obj'_def valid_objs'_def)
-
 lemmas archThreadSet_typ_ats[wp] = typ_at_lifts [OF archThreadSet_typ_at']
 
 lemma archThreadSet_valid_objs'[wp]:
@@ -2541,7 +2537,7 @@ lemma archThreadSet_valid_objs'[wp]:
   apply (wp setObject_tcb_valid_objs getObject_tcb_wp)
   apply clarsimp
   apply normalise_obj_at'
-  apply (drule (1) valid_objs_valid_tcb')
+  apply (drule (1) tcb_ko_at_valid_objs_valid_tcb')
   apply (clarsimp simp: valid_obj'_def valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
   done
 

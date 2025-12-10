@@ -429,6 +429,7 @@ shows
                    \<inter> {s. asid_base_' s = base}) []
        (liftE (performASIDControlInvocation (MakePool frame slot parent base)))
        (Call performASIDControlInvocation_'proc)"
+  supply canonical_address_def[simp]
   apply (rule ccorres_gen_asm)
   apply (simp only: liftE_liftM ccorres_liftM_simp)
   apply (cinit lift: frame_' slot_' parent_' asid_base_')
@@ -1360,8 +1361,6 @@ lemma createSafeMappingEntries_PTE_ccorres:
                                   intro: typ_heap_simps split: if_split_asm)[1]
 
                       apply (wp getObject_inv loadObject_default_inv | simp)+
-                    apply (simp add: objBits_simps archObjSize_def table_bits_defs)
-                   apply (simp add: loadObject_default_inv)
                   apply (simp add: empty_fail_getObject)
                  apply (simp add: upto_enum_step_def upto_enum_word
                            split: if_split)
@@ -2522,7 +2521,7 @@ lemma resolveVAddr_ccorres:
       apply ceqv
      apply (rule ccorres_pre_getObject_pte)
      apply (rule_tac P="page_table_at' (ptrFromPAddr word1)" in ccorres_cross_over_guard)
-     apply (rule_tac P = "\<lambda>s. valid_pte' rv s"
+     apply (rule_tac P = "\<lambda>_. valid_pte' rv"
                  and P'="{s. \<exists>v. cslift s (pte_Ptr (lookup_pt_slot_no_fail (ptrFromPAddr word1) vaddr)) = Some v
                                     \<and> cpte_relation rv v
                                     \<and> array_assertion (pte_Ptr (ptrFromPAddr word1))

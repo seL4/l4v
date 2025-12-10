@@ -92,13 +92,31 @@ lemma setDomain_ccorres:
                          invs'_def valid_state'_def valid_pspace'_def)
   done
 
+lemma Arch_prepareSetDomain_ccorres:
+  "ccorres dc xfdc invs' \<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr t\<rbrace> []
+     (vcpuFlushIfCurrent t) (Call Arch_prepareSetDomain_'proc)"
+  apply cinit'
+   apply csymbr (* config_set(CONFIG_ARM_HYPERVISOR_SUPPORT) *)
+   apply ccorres_rewrite
+   apply (ctac add: vcpu_flush_if_current_ccorres)
+  apply simp
+  done
+
 lemma prepareSetDomain_ccorres:
   "ccorres dc xfdc
       (invs' and tcb_at' t)
       (\<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr t\<rbrace> \<inter> \<lbrace>\<acute>dom = ucast d\<rbrace>) []
       (prepareSetDomain t d) (Call prepareSetDomain_'proc)"
   apply (cinit lift: tptr_' dom_')
-   apply (rule ccorres_return_Skip)
+   apply (rule ccorres_pre_curDomain)
+   apply (rule_tac C'="{s. curDom \<noteq> ucast d}"
+               and Q="\<lambda>s. curDom = ksCurDomain s"
+               and Q'=UNIV
+                in ccorres_rewrite_cond_sr)
+    apply (clarsimp simp: rf_sr_ksCurDomain)
+   apply (rule ccorres_when[where R=\<top>])
+    apply clarsimp
+   apply (ctac add: Arch_prepareSetDomain_ccorres)
   apply clarsimp
   done
 
@@ -2528,7 +2546,7 @@ lemma invokeUntyped_Retype_ccorres:
                               arg_cong[OF mask_out_sub_mask, where f="\<lambda>y. x - y" for x]
                               field_simps unat_of_nat_eq[OF range_cover.weak, OF cover]
                               if_apply_def2 invs_valid_objs' ptr_base_eq
-                              invs_urz untypedBits_defs)
+                              invs_urz untypedBits_defs sz_bound)
 
         apply (intro conjI)
                  (* pspace_no_overlap *)

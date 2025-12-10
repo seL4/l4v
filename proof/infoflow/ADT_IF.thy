@@ -833,8 +833,7 @@ text \<open>
 \<close>
 definition handle_preemption_if :: "user_context \<Rightarrow> (user_context,det_ext) s_monad" where
   "handle_preemption_if tc \<equiv>
-   do irq \<leftarrow> do_machine_op (getActiveIRQ True);
-      when (irq \<noteq> None) $ handle_interrupt (the irq);
+   do maybe_handle_interrupt True;
       return tc
    od"
 
@@ -1088,7 +1087,8 @@ definition kernel_call_A_if ::
 
 lemma handle_preemption_if_invs:
   "handle_preemption_if tc \<lbrace>invs\<rbrace>"
-  by (simp add: handle_preemption_if_def | wp)+
+  unfolding handle_preemption_if_def
+  by (wpsimp wp: handle_spurious_irq_invs)
 
 
 context ADT_IF_1 begin
@@ -1104,7 +1104,8 @@ lemma handle_kernel_interrupt_domain_sep_inv:
 
 lemma handle_preemption_if_domain_sep_inv:
   "handle_preemption_if e \<lbrace>domain_sep_inv irqs st\<rbrace>"
-  apply (wpsimp simp: handle_preemption_if_def wp: handle_kernel_interrupt_domain_sep_inv)
+  apply (wpsimp simp: handle_preemption_if_def maybe_handle_interrupt_def
+                wp: handle_kernel_interrupt_domain_sep_inv)
    apply (rule_tac Q'="\<lambda>rv s. domain_sep_inv  irqs st s \<and> (rv \<noteq> None \<longrightarrow> the rv \<notin> non_kernel_IRQs)"
                 in hoare_strengthen_post)
     apply (wpsimp wp: getActiveIRQ_rv_None)+
@@ -1123,7 +1124,8 @@ lemma handle_kernel_interrupt_pas_refined:
 
 lemma handle_preemption_if_pas_refined[wp]:
   "handle_preemption_if tc \<lbrace>pas_refined aag\<rbrace>"
-  apply (wpsimp simp: handle_preemption_if_def wp: handle_kernel_interrupt_pas_refined)
+  apply (wpsimp simp: handle_preemption_if_def maybe_handle_interrupt_def
+                wp: handle_kernel_interrupt_pas_refined)
    apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s \<and> (rv \<noteq> None \<longrightarrow> the rv \<notin> non_kernel_IRQs)"
                 in hoare_strengthen_post)
     apply (wpsimp wp: getActiveIRQ_rv_None)+
@@ -1134,9 +1136,8 @@ end
 
 lemma handle_preemption_if_silc_inv[wp]:
   "handle_preemption_if tc \<lbrace>silc_inv aag st\<rbrace>"
-  apply (simp add: handle_preemption_if_def)
-  apply (wp handle_interrupt_silc_inv do_machine_op_silc_inv | simp)+
-  done
+  unfolding handle_preemption_if_def maybe_handle_interrupt_def
+  by (wpsimp wp: handle_interrupt_silc_inv do_machine_op_silc_inv)
 
 crunch handle_preemption_if
   for cur_domain[wp]: "\<lambda>s::det_state. P (cur_domain s)"
@@ -1153,10 +1154,11 @@ lemma handle_preemption_if_irq_masks:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
    handle_preemption_if tc
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
-  apply (simp add: handle_preemption_if_def | wp handle_interrupt_irq_masks[where st=st])+
+  unfolding handle_preemption_if_def maybe_handle_interrupt_def
+  apply (wpsimp wp: handle_interrupt_irq_masks[where st=st])
    apply (rule_tac Q'="\<lambda>rv s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s \<and>
                              (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)" in hoare_strengthen_post)
-  by (wp | simp)+
+    by wpsimp+
 
 crunch handle_preemption_if
   for valid_list[wp]: "valid_list"
@@ -1630,7 +1632,7 @@ lemma kernel_entry_if_domain_time_sched_action:
    kernel_entry_if e tc
    \<lbrace>\<lambda>_ s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
   apply (case_tac "e = Interrupt")
-   apply (simp add: kernel_entry_if_def)
+   apply (simp add: kernel_entry_if_def maybe_handle_interrupt_def)
    apply (wp handle_interrupt_valid_domain_time| wpc | simp)+
       apply (rule_tac Q'="\<lambda>r s. domain_time s > 0" in hoare_strengthen_post)
        apply (wp | simp)+
@@ -1646,7 +1648,7 @@ lemma handle_preemption_if_domain_time_sched_action:
   "\<lbrace>\<lambda>s. domain_time s > 0\<rbrace>
    handle_preemption_if tc
    \<lbrace>\<lambda>_ s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
-  apply (simp add: handle_preemption_if_def)
+  apply (simp add: handle_preemption_if_def maybe_handle_interrupt_def)
   apply (wp handle_interrupt_valid_domain_time| wpc | simp)+
    apply (rule_tac Q'="\<lambda>r s. domain_time s > 0" in hoare_strengthen_post)
     apply wpsimp+
@@ -1700,10 +1702,9 @@ lemma handle_preemption_globals_equiv[wp]:
   "\<lbrace>globals_equiv st and invs\<rbrace>
    handle_preemption_if a
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply (simp add: handle_preemption_if_def)
-  apply (wp handle_interrupt_globals_equiv dmo_getActiveIRQ_globals_equiv crunch_wps
-         | simp add: crunch_simps)+
-  done
+  unfolding handle_preemption_if_def maybe_handle_interrupt_def
+  by (wpsimp wp: handle_interrupt_globals_equiv dmo_getActiveIRQ_globals_equiv crunch_wps
+             simp: crunch_simps)
 
 lemma schedule_if_globals_equiv_scheduler[wp]:
   "\<lbrace>globals_equiv_scheduler st and invs\<rbrace>
@@ -1969,7 +1970,7 @@ lemma handle_preemption_if_valid_sched[wp]:
   "\<lbrace>valid_sched and invs\<rbrace>
    handle_preemption_if irq
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply (wpsimp simp: handle_preemption_if_def cong: if_cong)
+  apply (wpsimp simp: handle_preemption_if_def maybe_handle_interrupt_def cong: if_cong)
    apply (rule_tac Q'="\<lambda>rv. valid_sched and invs and K (rv \<notin> Some ` non_kernel_IRQs)"
                 in hoare_strengthen_post[rotated])
     apply clarsimp

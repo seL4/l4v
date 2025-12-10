@@ -12,7 +12,7 @@ begin
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma asUser_setNextPC_corres:
-  "corres dc (tcb_at t and invs) (tcb_at' t and invs')
+  "corres dc (tcb_at t and invs) invs'
              (as_user t (setNextPC v)) (asUser t (setNextPC v))"
   apply (rule asUser_corres)
   apply (rule corres_Id, simp, simp)
@@ -672,7 +672,7 @@ lemma sp_corres2:
                 obj_at'_weakenE[where P="Not \<circ> tcbQueued"]
               | wps)+)
    apply (force simp: tcb_at_st_tcb_at[symmetric] state_relation_def
-                dest: pspace_relation_tcb_at intro: st_tcb_at_opeqI)
+                dest: pspace_relation_tcb_at' intro: st_tcb_at_opeqI)
   apply clarsimp
   done
 
@@ -725,11 +725,6 @@ lemma tcbSchedDequeue_sch_act_simple[wp]:
   "tcbSchedDequeue t \<lbrace>sch_act_simple\<rbrace>"
   by (wpsimp simp: sch_act_simple_def)
 
-lemma tcbSchedNext_update_tcb_cte_cases:
-  "(a, b) \<in> ran tcb_cte_cases \<Longrightarrow> a (tcbPriority_update f tcb) = a tcb"
-  unfolding tcb_cte_cases_def
-  by (case_tac tcb; fastforce simp: objBits_simps')
-
 lemma threadSet_priority_invs':
   "\<lbrace>invs' and tcb_at' t and K (p \<le> maxPriority)\<rbrace>
    threadSet (tcbPriority_update (\<lambda>_. p)) t
@@ -752,7 +747,7 @@ lemma threadSet_priority_invs':
             untyped_ranges_zero_lift
             sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
             threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of
-         | clarsimp simp: cteCaps_of_def tcbSchedNext_update_tcb_cte_cases | rule refl)+
+         | clarsimp simp: cteCaps_of_def update_tcb_cte_cases | rule refl)+
   apply (clarsimp simp: o_def)
   by (auto simp: obj_at'_def)
 
@@ -933,7 +928,7 @@ definition
 lemma untyped_derived_eq_from_sameObjectAs:
   "sameObjectAs cap cap2
     \<Longrightarrow> untyped_derived_eq cap cap2"
-  by (clarsimp simp: untyped_derived_eq_def sameObjectAs_def2 isCap_Master)
+  by (clarsimp simp: untyped_derived_eq_def sameObjectAs_def2 gen_isCap_Master)
 
 lemmas vspace_asid'_simps [simp] =
   vspace_asid'_def [split_simps capability.split arch_capability.split option.split prod.split]
@@ -1811,11 +1806,11 @@ lemma invokeTCB_corres:
     apply (clarsimp simp: obj_at'_def)
    apply (simp add: invokeTCB_def tlsBaseRegister_def)
    apply (rule corres_guard_imp)
-     apply (rule corres_split[OF TcbAcc_R.asUser_setRegister_corres])
+     apply (rule corres_split[OF asUser_setRegister_corres])
        apply (rule corres_split[OF Bits_R.getCurThread_corres])
          apply (rule corres_split[OF Corres_UL.corres_when])
              apply simp
-            apply (rule TcbAcc_R.rescheduleRequired_corres)
+            apply (rule rescheduleRequired_corres)
            apply (rule corres_trivial, simp)
           apply (wpsimp wp: hoare_drop_imp)+
     apply (fastforce dest: valid_sched_valid_queues simp: valid_sched_weak_strg)

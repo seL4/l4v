@@ -5,7 +5,7 @@
  *)
 
 theory Schedule_R
-imports VSpace_R
+imports ArchVSpace_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
@@ -455,6 +455,11 @@ lemma tcbSchedEnqueue_valid_mdb'[wp]:
   apply (fastforce dest!: obj_at'_tcbQueueHead_ksReadyQueues
                     simp: ready_queue_relation_def ksReadyQueues_asrt_def obj_at'_def)
   done
+
+lemma tcbSchedEnqueue_valid_pspace'[wp]:
+  "tcbSchedEnqueue tcbPtr \<lbrace>valid_pspace'\<rbrace>"
+  unfolding valid_pspace'_def
+  by wpsimp
 
 crunch tcbSchedEnqueue
   for cur_tcb'[wp]: cur_tcb'
@@ -1260,7 +1265,7 @@ lemma bitmapL1_highest_lookup:
      apply (rule order_less_le_trans[OF word_log2_max], simp add: word_size wordRadix_def')
     apply (simp add: word_size)
     apply (drule (1) bitmapQ_no_L1_orphansD[where d=d and i="word_log2 _"])
-    apply (simp add: numPriorities_def wordBits_def word_size l2BitmapSize_def')
+    apply (simp add: numPriorities_def wordBits_def word_size l2BitmapSize_def' wordRadix_def')
    apply simp
   apply (rule prioToL1Index_le_index[rotated], simp)
   apply (frule (2) bitmapQ_from_bitmap_lookup)
@@ -1271,7 +1276,7 @@ lemma bitmapL1_highest_lookup:
      apply (rule order_less_le_trans[OF word_log2_max], simp add: word_size)
     apply (rule order_less_le_trans[OF word_log2_max], simp add: word_size wordRadix_def')
    apply (fastforce dest: bitmapQ_no_L1_orphansD
-                    simp: wordBits_def numPriorities_def word_size l2BitmapSize_def')
+                    simp: wordBits_def numPriorities_def word_size l2BitmapSize_def' wordRadix_def')
   apply (erule word_log2_maximum)
   done
 

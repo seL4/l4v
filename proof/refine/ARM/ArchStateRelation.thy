@@ -136,21 +136,21 @@ definition
    | _ \<Rightarrow> True"
 
 definition ghost_relation ::
-  "Structures_A.kheap \<Rightarrow> (word32 \<rightharpoonup> vmpage_size) \<Rightarrow> (word32 \<rightharpoonup> nat) \<Rightarrow> bool" where
+  "kheap \<Rightarrow> (machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow> bool" where
   "ghost_relation h ups cns \<equiv>
-   (\<forall>a sz. (\<exists>dev. h a = Some (ArchObj (DataPage dev sz))) \<longleftrightarrow> ups a = Some sz) \<and>
-   (\<forall>a n. (\<exists>cs. h a = Some (CNode n cs) \<and> well_formed_cnode_n n cs) \<longleftrightarrow>
-          cns a = Some n)"
+     (\<forall>a sz. (\<exists>dev. h a = Some (ArchObj (DataPage dev sz))) \<longleftrightarrow> ups a = Some sz) \<and>
+     (\<forall>a n. (\<exists>cs. h a = Some (CNode n cs) \<and> well_formed_cnode_n n cs) \<longleftrightarrow> cns a = Some n)"
 
-(* FIXME arch-split: provided only so that ghost_relation can be used within generic definition
+(* provided only so that ghost_relation can be used within generic definition
    of state_relation (since arch_state_relation doesn't have access to kheap, and
    gsPTTypes on AARCH64 isn't generic) *)
-definition ghost_relation_wrapper :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "ghost_relation_wrapper s s' \<equiv>
-     ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')"
+definition ghost_relation_wrapper_2 ::
+  "kheap \<Rightarrow> (machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow> Arch.kernel_state \<Rightarrow> bool"
+  where
+  "ghost_relation_wrapper_2 h ups cns as \<equiv> ghost_relation h ups cns"
 
 (* inside Arch locale, we have no need for the wrapper *)
-lemmas [simp] = ghost_relation_wrapper_def
+lemmas ghost_relation_wrapper_def[simp] = ghost_relation_wrapper_2_def
 
 definition arch_state_relation :: "(arch_state \<times> ARM_H.kernel_state) set" where
   "arch_state_relation \<equiv> {(s, s') .
@@ -161,6 +161,35 @@ definition arch_state_relation :: "(arch_state \<times> ARM_H.kernel_state) set"
        \<and> arm_next_asid s = armKSNextASID s'
        \<and> arm_asid_map s = armKSASIDMap s'
        \<and> arm_kernel_vspace s = armKSKernelVSpace s'}"
+
+lemma ghost_relation_of_heap:
+  "ghost_relation h ups cns \<longleftrightarrow> ups_of_heap h = ups \<and> cns_of_heap h = cns"
+  apply (rule iffI)
+   apply (rule conjI)
+    apply (rule ext)
+    apply (clarsimp simp add: ghost_relation_def ups_of_heap_def)
+    apply (drule_tac x=x in spec)
+    apply (auto simp: ghost_relation_def ups_of_heap_def
+                split: option.splits Structures_A.kernel_object.splits
+                       arch_kernel_obj.splits)[1]
+    subgoal for x dev sz
+     by (drule_tac x = sz in spec,simp)
+   apply (rule ext)
+   apply (clarsimp simp add: ghost_relation_def cns_of_heap_def)
+   apply (drule_tac x=x in spec)+
+   apply (rule ccontr)
+   apply (simp split: option.splits Structures_A.kernel_object.splits
+                      arch_kernel_obj.splits)[1]
+   apply (simp split: if_split_asm)
+    apply force
+   apply (drule not_sym)
+   apply clarsimp
+   apply (erule_tac x=y in allE)
+   apply simp
+  apply (auto simp add: ghost_relation_def ups_of_heap_def cns_of_heap_def
+              split: option.splits Structures_A.kernel_object.splits
+                     arch_kernel_obj.splits if_split_asm)
+  done
 
 end
 end

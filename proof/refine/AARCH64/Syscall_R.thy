@@ -349,11 +349,22 @@ lemma threadSet_tcbDomain_update_sch_act_wf[wp]:
    apply (auto simp: obj_at'_def)
   done
 
+lemma vcpuFlushIfCurrent_corres[corres]:
+  "corres dc (pspace_aligned and pspace_distinct and valid_arch_state and tcb_at tptr)
+             (pspace_aligned' and pspace_distinct' and no_0_obj')
+             (vcpu_flush_if_current tptr) (vcpuFlushIfCurrent tptr)"
+  unfolding vcpu_flush_if_current_def vcpuFlushIfCurrent_def
+  by (corres wp: arch_thread_get_wp archThreadGet_wp)
+
+crunch vcpu_flush_if_current
+  for valid_cur_fpu[wp]: valid_cur_fpu
+
 lemma prepareSetDomain_corres[corres]:
-  "corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu) \<top>
-     (arch_prepare_set_domain tptr new_dom) (prepareSetDomain tptr new_dom)"
-  unfolding prepareSetDomain_def arch_prepare_set_domain_def
-  by (corres corres: gcd_corres)
+  "corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu and valid_arch_state and tcb_at tptr)
+             (pspace_aligned' and pspace_distinct' and no_0_obj')
+             (arch_prepare_set_domain tptr new_dom) (prepareSetDomain tptr new_dom)"
+  unfolding prepareSetDomain_def arch_prepare_set_domain_def curDomain_def
+  by corres
 
 lemma setDomain_corres:
   "corres dc
@@ -411,8 +422,10 @@ lemma setDomain_corres:
 
 crunch prepareSetDomain
   for invs'[wp]: invs'
+  and ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and sch_act_simple[wp]: sch_act_simple
   and tcb_at'[wp]: "tcb_at' p"
+  (wp: sch_act_simple_lift)
 
 lemma performInvocation_corres:
   "\<lbrakk> inv_relation i i'; call \<longrightarrow> block \<rbrakk> \<Longrightarrow>
@@ -475,7 +488,7 @@ lemma performInvocation_corres:
           apply (rule corres_split[OF setDomain_corres])
             apply (rule corres_trivial, simp)
            apply wpsimp+
-       apply ((clarsimp simp: invs_psp_aligned invs_distinct)+)[2]
+       apply (fastforce+)[2]
      \<comment> \<open>CNodes\<close>
      apply clarsimp
      apply (rule corres_guard_imp)
@@ -982,9 +995,9 @@ lemma setDomain_invs':
 
 crunch prepareSetDomain
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
+  and pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
   and ct_in_state'[wp]: "ct_in_state' P"
-  and ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
-  (wp: ct_in_state_thread_state_lift')
+  (wp: ct_in_state_thread_state_lift' crunch_wps)
 
 lemma performInv_invs'[wp]:
   "\<lbrace>invs' and sch_act_simple and ct_active' and valid_invocation' i\<rbrace>
@@ -1726,6 +1739,33 @@ lemmas handleReply_ct_in_state_simple[wp] =
                                      handleReply_st_tcb_at_simple']
 
 
+lemma handleSpuriousIRQ_corres[corres]:
+  "corres dc \<top> \<top> handle_spurious_irq handleSpuriousIRQ"
+  by (simp add: handle_spurious_irq_def handleSpuriousIRQ_def)
+
+lemma contract_all_imp_strg:
+  "P \<and> P' \<and> (\<forall>x. R x \<longrightarrow> Q x) \<Longrightarrow> \<forall>x. R x \<longrightarrow> P \<and> Q x \<and> P'"
+  by blast
+
+lemma maybeHandleInterrupt_corres:
+  "corres dc einvs (invs' and (\<lambda>s'. in_kernel \<or> sch_act_not (ksCurThread s') s'))
+          (maybe_handle_interrupt in_kernel) (maybeHandleInterrupt in_kernel)"
+  unfolding maybe_handle_interrupt_def maybeHandleInterrupt_def
+  apply (corres corres: corres_machine_op handleInterrupt_corres[@lift_corres_args]
+                simp: irq_state_independent_def
+         | corres_cases_both)+
+     apply (wpsimp wp: hoare_drop_imps)
+    apply (rule_tac Q'="\<lambda>rv s. (\<forall>irq. rv = Some irq \<longrightarrow> irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s)
+                             \<and> (\<forall>irq. rv = Some irq \<longrightarrow> intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive)
+                             \<and> invs' s"
+                 in hoare_strengthen_post)
+     apply (rule hoare_pre_disj[where P="_ and K (in_kernel)" and P'="_ and K(\<not>in_kernel)"];
+            rule hoare_gen_asm; simp)
+      apply ((wp | wp hoare_vcg_all_lift doMachineOp_getActiveIRQ_IRQ_active'
+                 | simp | simp add: imp_conjR | wp hoare_drop_imps)+)
+  apply (clarsimp simp: invs'_def valid_state'_def)
+  done
+
 (* FIXME: move *)
 lemma doReplyTransfer_st_tcb_at_active:
   "\<lbrace>st_tcb_at' active' t and tcb_at' t' and K (t \<noteq> t') and
@@ -1941,19 +1981,7 @@ proof -
        apply (auto simp: ct_in_state'_def sch_act_simple_def
                          sch_act_sane_def
                    elim: pred_tcb'_weakenE st_tcb_ex_cap'')[1]
-      apply (rule corres_guard_imp)
-        apply (rule corres_split_eqr[where R="\<lambda>_. einvs"
-                                     and R'="\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> R'' x s"
-                                     for R''])
-           apply (rule corres_machine_op)
-           apply (rule corres_Id; wpsimp)
-          apply (case_tac rv, simp_all add: doMachineOp_return)[1]
-          apply (rule handleInterrupt_corres)
-         apply (wp hoare_vcg_all_lift
-                   doMachineOp_getActiveIRQ_IRQ_active'
-                  | simp
-                  | simp add: imp_conjR | wp (once) hoare_drop_imps)+
-      apply (clarsimp simp: invs'_def valid_state'_def ct_not_inQ_def valid_queues_def)
+      apply (corres corres: maybeHandleInterrupt_corres)
      apply (rule_tac corres_underlying_split)
         apply (rule corres_guard_imp, rule getCurThread_corres, simp+)
        apply (rule corres_split_catch)
@@ -2044,6 +2072,26 @@ lemma handleRecv_ksCurThread[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s) \<rbrace> handleRecv b \<lbrace>\<lambda>rv s. P (ksCurThread s) \<rbrace>"
   unfolding handleRecv_def
   by ((simp, wp hoare_drop_imps) | wpc | wpsimp wp: hoare_drop_imps)+
+
+crunch handleSpuriousIRQ
+  for invs'[wp]: invs'
+  (ignore: doMachineOp)
+
+lemma non_kernel_IRQs_strg:
+  "invs' s \<and> irq \<notin> Some ` non_kernel_IRQs \<Longrightarrow>
+    (\<forall>x. irq = Some x \<longrightarrow> invs' s \<and> (x \<in> non_kernel_IRQs \<longrightarrow> P))"
+  by auto
+
+lemma maybeHandleInterrupt_True_invs'[wp]:
+  "maybeHandleInterrupt True \<lbrace>invs'\<rbrace>"
+  unfolding maybeHandleInterrupt_def
+  by (wpsimp wp: hoare_drop_imp[where Q'="\<lambda>rv _. rv = None"] getActiveIRQ_neq_non_kernel dmo_lift'
+      | strengthen non_kernel_IRQs_strg)+
+
+lemma maybeHandleInterrupt_False_invs'[wp]:
+  "\<lbrace>\<lambda>s. invs' s \<and> sch_act_not (ksCurThread s) s\<rbrace> maybeHandleInterrupt False \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding maybeHandleInterrupt_def
+  by (wpsimp wp: hoare_drop_imp[where Q'="\<lambda>rv _. rv = None"] hoare_vcg_all_lift hoare_drop_imp)
 
 lemma he_invs'[wp]:
   "\<lbrace>invs' and

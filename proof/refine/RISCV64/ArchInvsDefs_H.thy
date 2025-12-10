@@ -142,8 +142,8 @@ definition is_device_frame_cap' :: "capability \<Rightarrow> bool" where
 definition valid_arch_tcb' :: "Structures_H.arch_tcb \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_arch_tcb' \<equiv> \<lambda>t. \<top>"
 
-definition valid_arch_obj' :: "arch_kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_arch_obj' ako _ \<equiv> case ako of
+definition valid_arch_obj' :: "arch_kernel_object \<Rightarrow> bool" where
+  "valid_arch_obj' ako \<equiv> case ako of
      _ \<Rightarrow> True"
 
 primrec

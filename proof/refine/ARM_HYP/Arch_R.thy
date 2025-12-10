@@ -46,7 +46,7 @@ lemma safe_parent_strg':
    descendants_of' p (ctes_of s) = {} \<and>
    valid_pspace' s
   \<longrightarrow> safe_parent_for' (ctes_of s) p (ArchObjectCap (ASIDPoolCap frame base))"
-  apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
+  apply (clarsimp simp: safe_parent_for'_def safe_parent_for_arch'_def cte_wp_at_ctes_of)
   apply (case_tac cte)
   apply (simp add: isCap_simps)
   apply (subst conj_comms)
@@ -186,7 +186,7 @@ lemma performASIDControlInvocation_corres:
           apply (wp createObjects_valid_pspace'
                     [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
              apply (simp add: makeObjectKO_def)+
-           apply (simp add:objBits_simps archObjSize_def range_cover_full)+
+           apply (simp add:objBits_simps archObjSize_def range_cover_full canonical_address_def)+
           apply (clarsimp simp:valid_cap'_def)
           apply (wp createObject_typ_at'
                     createObjects_orig_cte_wp_at'[where sz = pageBits])
@@ -1093,6 +1093,7 @@ shows
                    apply wpsimp+
              apply (wp find_pd_for_asid_pd_at_asid_again)
             apply (wp findPDForASID_pd_at_wp)
+           (* FIXME: this block of wpsimps is very slow (over a minute) *)
            apply wpsimp
           apply wpsimp
          apply wpsimp
@@ -1349,7 +1350,7 @@ lemma associateVCPUTCB_corres:
   apply (frule invs_arch_state)
   apply (clarsimp simp: valid_arch_state_def obj_at_def is_vcpu_def)
   apply normalise_obj_at'
-  apply (drule valid_objs_valid_tcb'[rotated], fastforce)
+  apply (drule tcb_ko_at_valid_objs_valid_tcb', fastforce)
   apply (clarsimp simp: valid_tcb'_def valid_arch_tcb'_def invs_no_0_obj')
   apply (drule valid_objs_valid_vcpu'[rotated], fastforce)
   apply (fastforce simp: valid_vcpu'_def typ_at_tcb')
@@ -2148,6 +2149,7 @@ lemma ex_cte_not_in_untyped_range:
 lemma performASIDControlInvocation_invs' [wp]:
   "\<lbrace>invs' and ct_active' and valid_aci' aci\<rbrace>
   performASIDControlInvocation aci \<lbrace>\<lambda>y. invs'\<rbrace>"
+  supply canonical_address_def[simp]
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp: performASIDControlInvocation_def valid_aci'_def
     placeNewObject_def2 cte_wp_at_ctes_of
@@ -2292,8 +2294,7 @@ lemma assoc_invs':
   apply (rule conjI)
    apply (clarsimp simp: typ_at_to_obj_at_arches obj_at'_def)
   apply (rule conjI)
-   apply (clarsimp simp: typ_at_tcb' obj_at'_def)
-
+   apply (fastforce dest!: obj_at_aligned' simp add: objBits_def objBits_simps')
   supply fun_upd_apply[simp]
   apply (clarsimp simp: hyp_live'_def arch_live'_def)
   apply (rule_tac rfs'="state_hyp_refs_of' s" in delta_sym_refs, assumption)

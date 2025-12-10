@@ -22,23 +22,33 @@ text \<open>
   show that the invariants and refinement relation are consistent.
 \<close>
 
+(* picked such that init_objs_base \<ge> kernel_base for all platforms, with sufficient alignment
+   for ARMSection *)
+definition
+  init_objs_base :: machine_word where
+  "init_objs_base = 0xf0000000"
+
+definition
+  idle_thread_ptr :: vspace_ref where
+  "idle_thread_ptr = init_objs_base + 0x1000"
+
 definition
   init_tcb_ptr :: word32 where
-  "init_tcb_ptr = kernel_base + 0x2000"
+  "init_tcb_ptr = init_objs_base + 0x2000"
 
 definition
   init_irq_node_ptr :: word32 where
-  "init_irq_node_ptr = kernel_base + 0x8000"
+  "init_irq_node_ptr = init_objs_base + 0x8000"
 
 (* It is easy to remove a memory slot here, but once if we want to reserve other slots of memory, we have to do the proof of disjoint for example state again.
    Comment is left here so that next time we need 4k memory, we don't need to fix example state and can simply change its name. *)
 definition
   init_globals_frame :: word32 where
-  "init_globals_frame = kernel_base + 0x5000"
+  "init_globals_frame = init_objs_base + 0x5000"
 
 definition
   init_global_pd :: word32 where
-  "init_global_pd = kernel_base + 0x60000"
+  "init_global_pd = init_objs_base + 0x60000"
 
 definition
   "init_arch_state \<equiv> \<lparr>
@@ -49,14 +59,15 @@ definition
     arm_global_pd = init_global_pd,
     arm_global_pts = [],
     arm_kernel_vspace = \<lambda>ref.
-      if ref \<in> {kernel_base .. kernel_base + mask 20}
+      if ref \<in> {init_objs_base .. init_objs_base + mask 20}
       then ArmVSpaceKernelWindow
       else ArmVSpaceInvalidRegion
   \<rparr>"
 
 definition
   [simp]:
-  "global_pd \<equiv> (\<lambda>_. InvalidPDE)( ucast (kernel_base >> 20) := SectionPDE (addrFromPPtr kernel_base) {} 0 {})"
+  "global_pd \<equiv> (\<lambda>_. InvalidPDE)(ucast (init_objs_base >> 20) :=
+                                  SectionPDE (addrFromPPtr init_objs_base) {} 0 {})"
 
 definition
   "init_kheap \<equiv>

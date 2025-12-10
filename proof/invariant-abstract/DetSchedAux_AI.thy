@@ -204,11 +204,11 @@ lemma TCB_default_objectD[dest!]:
 declare tcb_state_merge_tcb_state_default[simp]
 
 lemma retype_region_etcb_at[wp]:
-  "\<lbrace>etcb_at P t\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "
+  "\<lbrace>\<lambda>s. Q (etcb_at P t s)\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> Q (etcb_at P t s)\<rbrace>"
   apply (simp add: retype_region_def)
   apply wp
   apply (clarsimp simp add: pred_tcb_at_def obj_at_def simp del: fun_upd_apply)
-  apply (clarsimp simp:  etcb_at'_def etcb_of_def pred_map_simps vs_heap_simps)
+  apply (clarsimp simp: etcbs_of'_def etcb_at'_def etcb_of_def)
   apply (drule foldr_kh_eq)
   apply (auto simp: etcb_of_def split: if_split_asm option.splits elim!: rsubst[where P=P])
   done
@@ -237,18 +237,27 @@ lemma retype_region_etcb_at':
   by (wpsimp wp: retype_region_etcb_at_other)
 
 context DetSchedAux_AI begin
-lemma invoke_untyped_etcb_at:
-  "\<lbrace>\<lambda>s::'state_ext state. etcb_at P t s\<rbrace>
+lemma invoke_untyped_etcb_at':
+  "\<lbrace>etcb_at P t\<rbrace>
    invoke_untyped ui
-   \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
+   \<lbrace>\<lambda>_ s::'state_ext state. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
   apply (cases ui)
-  apply (simp add: invoke_untyped_def whenE_def flip: mapM_x_def split del: if_split)
+  apply (simp add: mapM_x_def[symmetric] invoke_untyped_def)
   apply (wpsimp wp: mapM_x_wp'
-            hoare_convert_imp[OF create_cap.cspace_pred_tcb_at[where P'=Not]]
-            hoare_convert_imp[OF _ init_arch_objects_valid_sched_pred]
-         | wp (once) hoare_drop_impE_E)+
+                    create_cap_no_pred_tcb_at typ_at_pred_tcb_at_lift
+                    hoare_convert_imp[OF create_cap_no_pred_tcb_at]
+                    hoare_convert_imp[OF _ init_arch_objects_etcbs_of]
+                    hoare_drop_impE_E)
   done
-end
+
+lemma invoke_untyped_etcb_at:
+  "\<lbrace>\<lambda>s::'state_ext state. etcb_at P t s \<and> invs s \<and> st_tcb_at (Not o inactive and Not \<circ> idle) t s \<and> ct_active s \<and> valid_untyped_inv ui s\<rbrace>
+   invoke_untyped ui
+   \<lbrace>\<lambda>_. etcb_at P t\<rbrace>"
+  apply (rule hoare_post_imp[where Q'="\<lambda>_ s. st_tcb_at (Not \<circ> inactive) t s \<and> (st_tcb_at (Not \<circ> inactive) t s \<longrightarrow> etcb_at P t s)"])
+   apply simp
+  apply (wpsimp wp: invoke_untyped_etcb_at')+
+  done
 
 lemma invoke_untyped_non_cspace_obj_at:
   assumes non_cspace: "cspace_agnostic_pred P"
@@ -1372,7 +1381,7 @@ lemma invoke_untyped_valid_sched:
                          apply (wpsimp wp: invoke_untyped_pred_tcb_at
                                            invoke_untyped_pred_tcb_at_live
                                            invoke_untyped_sc_at_pred_n_live[where Q="Not"]
-                                           invoke_untyped_etcb_at invoke_untyped_sc_at_pred_n
+                                           invoke_untyped_etcb_at' invoke_untyped_sc_at_pred_n
                                            invoke_untyped_pred_map_sc_refill_cfgs_of
                                            invoke_untyped_valid_idle
                                            invoke_untyped_valid_sched_pred_misc

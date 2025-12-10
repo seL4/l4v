@@ -397,7 +397,7 @@ locale EmptyFail_AI_call_kernel = EmptyFail_AI_schedule state_ext_t
   assumes handle_event_empty_fail[wp]:
     "\<And>event. empty_fail (handle_event event :: (unit, 'state_ext) p_monad)"
   assumes handle_interrupt_empty_fail[wp]:
-    "\<And>interrupt. empty_fail (handle_interrupt interrupt :: (unit, 'state_ext) s_monad)"
+    "\<And>in_kernel. empty_fail (maybe_handle_interrupt in_kernel :: (unit, 'state_ext) s_monad)"
   assumes handle_timeout_empty_fail[wp]:
     "\<And>tptr fault. empty_fail (handle_timeout tptr fault :: (unit, 'state_ext) s_monad)"
   assumes check_budget_empty_fail[wp]:
@@ -410,9 +410,8 @@ locale EmptyFail_AI_call_kernel = EmptyFail_AI_schedule state_ext_t
 begin
 
 lemma call_kernel_empty_fail: "empty_fail (call_kernel a :: (unit,'state_ext) s_monad)"
-  apply (simp add: call_kernel_def preemption_path_def)
-  apply (wpsimp simp: get_sc_active_def)
-  done
+  unfolding call_kernel_def preemption_path_def
+  by (wpsimp simp: get_sc_active_def)
 
 end
 

@@ -30,7 +30,8 @@ crunch
   invalidate_tlb_by_asid, handle_reserved_irq, handle_vm_fault,
   handle_hypervisor_fault, handle_arch_fault_reply, arch_mask_irq_signal,
   arch_switch_to_thread, arch_switch_to_idle_thread, arch_activate_idle_thread,
-  arch_prepare_set_domain, arch_prepare_next_domain, arch_post_set_flags
+  arch_prepare_set_domain, arch_prepare_next_domain, arch_post_set_flags,
+  handle_spurious_irq
   for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
 
 lemma arch_derive_cap_domain_sep_inv[DomainSepInv_assms, wp]:
@@ -123,7 +124,8 @@ lemma arch_invoke_irq_control_domain_sep_inv[DomainSepInv_assms]:
    apply (rule_tac Q'="\<lambda>_. domain_sep_inv irqs st and arch_irq_control_inv_valid ivk"
                 in hoare_strengthen_post[rotated])
     apply (fastforce simp: domain_sep_inv_def domain_sep_inv_cap_def arch_irq_control_inv_valid_def)
-   apply (wpsimp wp: do_machine_op_domain_sep_inv simp: arch_irq_control_inv_valid_def)+
+   apply (wpsimp wp: do_machine_op_domain_sep_inv simp: arch_irq_control_inv_valid_def)
+  apply (fastforce simp: domain_sep_inv_def domain_sep_inv_cap_def arch_irq_control_inv_valid_def)
   done
 
 end

@@ -263,6 +263,37 @@ definition vcpu_switch :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_m
               od))
      od"
 
+text \<open>
+  Flush the current VCPU if there is one, saving any existing state before disabling VCPU mode and
+  setting it so that there is no current VCPU.\<close>
+definition vcpu_flush :: "(unit,'z::state_ext) s_monad" where
+  "vcpu_flush \<equiv> do
+     cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
+     when (cur_v \<noteq> None) $ do
+       vcpu_save cur_v;
+       vcpu_invalidate_active
+     od
+   od"
+
+text \<open>Flush the given TCB's VCPU if it is the current VCPU.\<close>
+definition vcpu_flush_if_current :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "vcpu_flush_if_current t \<equiv> do
+     cur_vcpu \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
+     vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
+     when (vcpu = map_option fst cur_vcpu) vcpu_flush
+   od"
+
+(* This is defined here and not in ArchTcb_A like in non-HYP architectures due to that causing an
+   unresolvable circular dependency between VCPUAcc_A and ArchTcb_A. *)
+definition arch_prepare_set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "arch_prepare_set_domain t new_dom \<equiv> do
+     cur_domain \<leftarrow> gets cur_domain;
+     when (cur_domain \<noteq> new_dom) $ do
+       vcpu_flush_if_current t;
+       fpu_release t
+     od
+   od"
+
 
 text \<open>VCPU objects can be associated with and dissociated from TCBs.\<close>
 

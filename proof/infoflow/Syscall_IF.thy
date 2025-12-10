@@ -55,6 +55,8 @@ locale Syscall_IF_1 =
     "arch_mask_irq_signal irq \<lbrace>globals_equiv st\<rbrace>"
   and handle_reserved_irq_globals_equiv[wp]:
     "handle_reserved_irq irq \<lbrace>globals_equiv st\<rbrace>"
+  and handle_spurious_irq_globals_equiv[wp]:
+    "handle_spurious_irq \<lbrace>globals_equiv st\<rbrace>"
   and arch_prepare_set_domain_globals_equiv[wp]:
     "arch_prepare_set_domain t new_dom \<lbrace>globals_equiv st\<rbrace>"
   and arch_prepare_set_domain_valid_arch_state[wp]:
@@ -1015,7 +1017,7 @@ lemma handle_event_globals_equiv:
          handle_reply_globals_equiv handle_interrupt_globals_equiv handle_vm_fault_globals_equiv
          handle_hypervisor_fault_globals_equiv
       | wpc
-      | simp add: handle_send_def handle_call_def Let_def
+      | simp add: handle_send_def handle_call_def maybe_handle_interrupt_def Let_def
       | wp (once) hoare_drop_imps
       | clarsimp simp: invs_imps invs_valid_idle ct_active_not_idle)+
 

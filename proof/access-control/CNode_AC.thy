@@ -78,12 +78,6 @@ locale CNode_AC_1 =
     "\<And>P. set_cdt t \<lbrace>\<lambda>s::det_state. P (state_asids_to_policy aag s)\<rbrace>"
   and arch_post_cap_deletion_integrity[wp]:
     "arch_post_cap_deletion acap \<lbrace>integrity aag X st\<rbrace>"
-  and arch_post_cap_deletion_cur_domain[wp]:
-    "\<And>P. arch_post_cap_deletion acap \<lbrace>\<lambda>s::det_state. P (cur_domain s)\<rbrace>"
-  and arch_finalise_cap_cur_domain:
-    "\<And>P. arch_finalise_cap acap final \<lbrace>\<lambda>s::det_state. P (cur_domain s)\<rbrace>"
-  and prepare_thread_delete_cur_domain:
-    "\<And>P. prepare_thread_delete p \<lbrace>\<lambda>s::det_state. P (cur_domain s)\<rbrace>"
   and maskInterrupt_underlying_memory[wp]:
     "\<And>P. maskInterrupt m irq \<lbrace>\<lambda>s. P (underlying_memory s)\<rbrace>"
   and maskInterrupt_device_state[wp]:

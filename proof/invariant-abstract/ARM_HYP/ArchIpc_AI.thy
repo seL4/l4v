@@ -231,7 +231,7 @@ lemma make_arch_fault_msg_inv[wp, Ipc_AI_2_assms]:
   "make_arch_fault_msg ft t \<lbrace>P\<rbrace>"
   by (cases ft; wpsimp)
 
-lemma make_fault_msg_inv[wp, Ipc_AI_2_assms]:
+lemma make_fault_msg_inv[wp]:
   "make_fault_msg ft t \<lbrace>P\<rbrace>"
   by (cases ft; wpsimp wp: as_user_inv getRestartPC_inv mapM_wp' split_del: if_split)
 
@@ -428,85 +428,6 @@ lemma dmo_addressTranslateS1_valid_irq_state[wp]:
 lemma dmo_addressTranslateS1_cap_refs_respects_device_region[wp]:
   "do_machine_op (addressTranslateS1 pc) \<lbrace>cap_refs_respects_device_region\<rbrace>"
   by (wpsimp  wp: cap_refs_respects_device_region_dmo)
-
-crunch  make_arch_fault_msg
-  for aligned[wp, Ipc_AI_2_assms]: "pspace_aligned"
-crunch  make_arch_fault_msg
-  for distinct[wp, Ipc_AI_2_assms]: "pspace_distinct"
-crunch  make_arch_fault_msg
-  for vmdb[wp, Ipc_AI_2_assms]: "valid_mdb"
-crunch  make_arch_fault_msg
-  for ifunsafe[wp, Ipc_AI_2_assms]: "if_unsafe_then_cap"
-crunch  make_arch_fault_msg
-  for iflive[wp, Ipc_AI_2_assms]: "if_live_then_nonz_cap"
-crunch  make_arch_fault_msg
-  for state_refs_of[wp, Ipc_AI_2_assms]: "\<lambda>s. P (state_refs_of s)"
-crunch  make_arch_fault_msg
-  for ct[wp, Ipc_AI_2_assms]: "cur_tcb"
-crunch  make_arch_fault_msg
-  for zombies[wp, Ipc_AI_2_assms]: "zombies_final"
-crunch  make_arch_fault_msg
-  for it[wp, Ipc_AI_2_assms]: "\<lambda>s. P (idle_thread s)"
-crunch  make_arch_fault_msg
-  for valid_globals[wp, Ipc_AI_2_assms]: "valid_global_refs"
-crunch  make_arch_fault_msg
-  for reply_masters[wp, Ipc_AI_2_assms]: "valid_reply_masters"
-crunch  make_arch_fault_msg
-  for valid_idle[wp, Ipc_AI_2_assms]: "valid_idle"
-crunch  make_arch_fault_msg
-  for arch[wp, Ipc_AI_2_assms]: "\<lambda>s. P (arch_state s)"
-crunch  make_arch_fault_msg
-  for typ_at[wp, Ipc_AI_2_assms]: "\<lambda>s. P (typ_at T p s)"
-crunch  make_arch_fault_msg
-  for irq_node[wp, Ipc_AI_2_assms]: "\<lambda>s. P (interrupt_irq_node s)"
-crunch  make_arch_fault_msg
-  for valid_reply[wp, Ipc_AI_2_assms]: "valid_reply_caps"
-crunch  make_arch_fault_msg
-  for irq_handlers[wp, Ipc_AI_2_assms]: "valid_irq_handlers"
-crunch  make_arch_fault_msg
-  for vspace_objs[wp, Ipc_AI_2_assms]: "valid_vspace_objs"
-crunch  make_arch_fault_msg
-  for global_objs[wp, Ipc_AI_2_assms]: "valid_global_objs"
-crunch  make_arch_fault_msg
-  for global_vspace_mapping[wp, Ipc_AI_2_assms]: "valid_global_vspace_mappings"
-crunch  make_arch_fault_msg
-  for arch_caps[wp, Ipc_AI_2_assms]: "valid_arch_caps"
-crunch  make_arch_fault_msg
-  for v_ker_map[wp, Ipc_AI_2_assms]: "valid_kernel_mappings"
-crunch  make_arch_fault_msg
-  for eq_ker_map[wp, Ipc_AI_2_assms]: "equal_kernel_mappings"
-crunch  make_arch_fault_msg
-  for asid_map[wp, Ipc_AI_2_assms]: "valid_asid_map"
-crunch  make_arch_fault_msg
-  for only_idle[wp, Ipc_AI_2_assms]: "only_idle"
-crunch  make_arch_fault_msg
-  for pspace_in_kernel_window[wp, Ipc_AI_2_assms]: "pspace_in_kernel_window"
-crunch  make_arch_fault_msg
-  for cap_refs_in_kernel_window[wp, Ipc_AI_2_assms]: "cap_refs_in_kernel_window"
-crunch  make_arch_fault_msg
-  for valid_objs[wp, Ipc_AI_2_assms]: "valid_objs"
-crunch  make_arch_fault_msg
-  for valid_ioc[wp, Ipc_AI_2_assms]: "valid_ioc"
-crunch  make_arch_fault_msg
-  for pred_tcb[wp, Ipc_AI_2_assms]: "pred_tcb_at proj P t"
-crunch  make_arch_fault_msg
-  for cap_to[wp, Ipc_AI_2_assms]: "ex_nonz_cap_to p"
-
-crunch  make_arch_fault_msg
-  for obj_at[wp, Ipc_AI_2_assms]: "\<lambda>s. P (obj_at P' pd s)"
-  (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def)
-
-crunch make_arch_fault_msg
-  for vms[wp, Ipc_AI_2_assms]: valid_machine_state
-  (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
-
-crunch make_arch_fault_msg
-  for valid_irq_states[wp, Ipc_AI_2_assms]: "valid_irq_states"
-  (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
-
-crunch make_arch_fault_msg
-  for cap_refs_respects_device_region[wp, Ipc_AI_2_assms]: "cap_refs_respects_device_region"
-  (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
 
 lemma setup_caller_cap_aobj_at:
   "arch_obj_pred P' \<Longrightarrow>

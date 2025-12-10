@@ -375,6 +375,36 @@ lemma dmo_getActive_IRQ_reads_respect_scheduler[Noninterference_assms]:
   apply (simp add: scheduler_equiv_def)
   done
 
+crunch handle_spurious_irq
+  for domain[wp]: "\<lambda>s.  Q (domain_time s) (domain_index s) (domain_list s)"
+
+crunch handle_spurious_irq
+  for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
+  (ignore: do_machine_op simp: handleSpuriousIRQ_mop_def)
+
+lemma dmo_handleSpuriousIRQ_mop_globals_equiv_scheduler[wp]:
+  "do_machine_op handleSpuriousIRQ_mop \<lbrace>globals_equiv_scheduler st\<rbrace>"
+  unfolding handleSpuriousIRQ_mop_def
+  by (wp dmo_no_mem_globals_equiv_scheduler)
+
+lemma dmo_handleSpuriousIRQ_mop_scheduler_affects_equiv[wp]:
+  "do_machine_op handleSpuriousIRQ_mop \<lbrace>scheduler_affects_equiv aag l st\<rbrace>"
+  unfolding handleSpuriousIRQ_mop_def scheduler_affects_equiv_def
+  apply wp_pre
+   apply (wps | wp do_machine_op_mol_states_equiv_for hoare_vcg_const_imp_lift)+
+   apply (simp add: scheduler_globals_frame_equiv_def)
+   apply (wpsimp wp: do_machine_op_mol_states_equiv_for hoare_vcg_const_imp_lift
+                 simp: arch_scheduler_affects_equiv_def)
+  apply (clarsimp simp: arch_scheduler_affects_equiv_def)
+  done
+
+lemma handle_spurious_irq_reads_respect_scheduler[Noninterference_assms]:
+  "reads_respects_scheduler aag l \<top> handle_spurious_irq"
+  apply (rule reads_respects_scheduler_unobservable)
+   apply (rule scheduler_equiv_lift; wp?)
+    apply (wpsimp simp: handle_spurious_irq_def)+
+  done
+
 lemma integrity_asids_update_reference_state[Noninterference_assms]:
   "is_subject aag t
    \<Longrightarrow> integrity_asids aag {pasSubject aag} x asid s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"

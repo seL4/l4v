@@ -106,7 +106,7 @@ lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
        | wpc | simp add: get_irq_slot_def handle_reserved_irq_def arch_mask_irq_signal_def
        | wp (once) hoare_drop_imps)+
 
-crunch handle_send, handle_hypervisor_fault
+crunch handle_send, handle_spurious_irq, handle_hypervisor_fault
   for valid_list[wp, Deterministic_AI_assms]: valid_list
 
 named_theorems machine_ops_last_machine_time'

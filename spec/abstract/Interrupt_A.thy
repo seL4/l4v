@@ -19,6 +19,7 @@ arch_requalify_consts (A)
   arch_invoke_irq_handler
   handle_reserved_irq
   arch_mask_irq_signal
+  handle_spurious_irq
 
 text \<open>The IRQControl capability can be used to create a new IRQHandler
 capability as well as to perform whatever architecture specific interrupt
@@ -81,5 +82,13 @@ definition
    | IRQReserved \<Rightarrow> handle_reserved_irq irq;
    do_machine_op $ ackInterrupt irq
   od"
+
+definition maybe_handle_interrupt :: "bool \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "maybe_handle_interrupt in_kernel \<equiv> do
+     irq_opt \<leftarrow> do_machine_op $ getActiveIRQ in_kernel;
+     case irq_opt of
+       None \<Rightarrow> handle_spurious_irq
+     | Some irq \<Rightarrow> handle_interrupt irq
+   od"
 
 end

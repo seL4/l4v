@@ -888,8 +888,8 @@ lemma decodeUntyped_wf[wp]:
     apply (clarsimp simp: image_def isCap_simps nullPointer_def word_size field_simps)
     apply (drule_tac x=x in spec)+
     apply simp
-   apply (clarsimp simp: APIType_capBits_def)
-  apply (clarsimp simp: APIType_capBits_def sc_size_bounds_def)
+   apply (clarsimp simp: APIType_capBits_gen_def)
+  apply (clarsimp simp: APIType_capBits_gen_def sc_size_bounds_def)
   done
 
 lemma corres_list_all2_mapM_':
@@ -3036,7 +3036,7 @@ lemma createNewCaps_range_helper:
               \<comment>\<open>Untyped\<close>
               apply (rule hoare_pre, wp)
               apply (frule range_cover_not_zero[rotated -1],simp)
-              apply (clarsimp simp: APIType_capBits_def objBits_simps archObjSize_def ptr_add_def o_def)
+              apply (clarsimp simp: APIType_capBits_gen_def objBits_simps archObjSize_def ptr_add_def o_def)
               apply (subst upto_enum_red')
                apply unat_arith
               apply (clarsimp simp: o_def fromIntegral_def toInteger_nat fromInteger_nat)
@@ -3044,12 +3044,12 @@ lemma createNewCaps_range_helper:
              \<comment>\<open>TCB\<close>
              apply (rule hoare_pre, wp createObjects_ret2)
               apply (wpsimp simp: curDomain_def)
-             apply (clarsimp simp: APIType_capBits_def word_bits_def
+             apply (clarsimp simp: APIType_capBits_gen_def word_bits_def
                                    objBits_simps archObjSize_def ptr_add_def o_def)
              apply (fastforce simp: objBitsKO_def objBits_def)
              \<comment>\<open>other APIObjectType\<close>
             apply ((rule hoare_pre, wp createObjects_ret2,
-                    clarsimp simp: APIType_capBits_def word_bits_def
+                    clarsimp simp: APIType_capBits_gen_def word_bits_def
                                    objBits_simps archObjSize_def ptr_add_def o_def,
                     fastforce simp: objBitsKO_def objBits_def scBits_simps)+)[5]
         \<comment>\<open>Arch objects\<close>
@@ -3677,9 +3677,6 @@ lemma updateFreeIndex_clear_invs':
        apply (simp add: ifunsafe'_def3 cteInsert_def setUntypedCapAsFull_def
                split del: if_split)
        apply wp+
-      apply (rule hoare_vcg_conj_lift)
-       apply (simp add:updateCap_def)
-       apply wp+
       apply (wp valid_irq_node_lift)
       apply (rule hoare_vcg_conj_lift)
        apply (simp add:updateCap_def)
@@ -3896,7 +3893,6 @@ lemma updateFreeIndex_corres:
          (cte_at' (cte_map src)
            and pspace_distinct' and pspace_aligned')
          (set_cap cap src) (updateFreeIndex (cte_map src) idx)"
-  supply RISCV64.ghost_relation_wrapper_def[simp] (* FIXME arch-split *)
   apply (rule corres_name_pre)
   apply (simp add: updateFreeIndex_def updateTrackedFreeIndex_def)
   apply (rule corres_guard_imp)

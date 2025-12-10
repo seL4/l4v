@@ -11,7 +11,7 @@ begin
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma asUser_setNextPC_corres:
-  "corres dc (tcb_at t and invs) (tcb_at' t and invs')
+  "corres dc (tcb_at t and invs) invs'
              (as_user t (setNextPC v)) (asUser t (setNextPC v))"
   apply (rule asUser_corres)
   apply (rule corres_Id, simp, simp)
@@ -1274,7 +1274,7 @@ definition
 lemma untyped_derived_eq_from_sameObjectAs:
   "sameObjectAs cap cap2
     \<Longrightarrow> untyped_derived_eq cap cap2"
-  by (clarsimp simp: untyped_derived_eq_def sameObjectAs_def2 isCap_Master)
+  by (clarsimp simp: untyped_derived_eq_def sameObjectAs_def2 gen_isCap_Master)
 
 lemmas vspace_asid'_simps [simp] =
   vspace_asid'_def [split_simps capability.split arch_capability.split option.split prod.split]
@@ -1412,7 +1412,7 @@ lemma threadSet_invs_trivialT2:
              sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
              threadSet_tcbInReleaseQueue threadSet_tcbQueued
              threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of valid_bitmaps_lift
-          | clarsimp simp: assms cteCaps_of_def | rule refl)+
+          | clarsimp simp: assms cteCaps_of_def valid_arch_tcb'_def | rule refl)+
   apply (clarsimp simp: o_def)
   by (auto simp: obj_at'_def)
 
@@ -2519,11 +2519,11 @@ lemma invokeTCB_corres:
            clarsimp simp: obj_at'_def obj_at_def is_ntfn_def)
    apply (clarsimp simp: invokeTCB_def tlsBaseRegister_def)
    apply (rule corres_guard_imp)
-     apply (rule corres_split[OF TcbAcc_R.asUser_setRegister_corres])
+     apply (rule corres_split[OF asUser_setRegister_corres])
        apply (rule corres_split[OF Bits_R.getCurThread_corres])
          apply (rule corres_split[OF Corres_UL.corres_when])
              apply simp
-            apply (rule TcbAcc_R.rescheduleRequired_corres)
+            apply (rule rescheduleRequired_corres)
            apply (rule corres_trivial, simp)
           apply (solves \<open>wpsimp wp: hoare_drop_imp\<close>)+
     apply (fastforce dest: valid_sched_valid_ready_qs)

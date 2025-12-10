@@ -53,21 +53,17 @@ global_interpretation DetSchedDomainTime_AI?: DetSchedDomainTime_AI
 context Arch begin arch_global_naming
 
 crunch arch_perform_invocation, arch_mask_irq_signal
-  for domain_list_inv [wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch arch_perform_invocation
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps check_cap_inv)
 
-crunch handle_reserved_irq
+crunch handle_reserved_irq, handle_spurious_irq
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]:
-        "\<lambda>s. P (domain_time s)"
+         "\<lambda>s. P (domain_time s) (scheduler_action s)"
+  and domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps)
 
-crunch handle_reserved_irq
-  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps)
+crunch handle_spurious_irq
+  for scheduler_action[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (scheduler_action s)"
 
 end
 
