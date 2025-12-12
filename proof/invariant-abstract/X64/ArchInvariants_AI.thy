@@ -300,14 +300,14 @@ primrec
   acap_class :: "arch_cap \<Rightarrow> capclass"
 where
   "acap_class (ASIDPoolCap x y)       = PhysicalClass"
-| "acap_class (ASIDControlCap)        = ASIDMasterClass"
+| "acap_class (ASIDControlCap)        = OtherCapClass"
 | "acap_class (PageCap d x y m sz z)  = PhysicalClass"
 | "acap_class (PageTableCap x y)      = PhysicalClass"
 | "acap_class (PageDirectoryCap x y)  = PhysicalClass"
 | "acap_class (PDPointerTableCap x y) = PhysicalClass"
 | "acap_class (PML4Cap x y)           = PhysicalClass"
-| "acap_class (IOPortCap x y)         = IOPortClass"
-| "acap_class (IOPortControlCap)      = IOPortClass"
+| "acap_class (IOPortCap x y)         = OtherCapClass"
+| "acap_class (IOPortControlCap)      = OtherCapClass"
 
 definition
   valid_ipc_buffer_cap_arch :: "arch_cap \<Rightarrow> machine_word \<Rightarrow> bool"

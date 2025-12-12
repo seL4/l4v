@@ -277,12 +277,12 @@ lemmas is_nondevice_page_cap_simps[simp] =
 
 primrec acap_class :: "arch_cap \<Rightarrow> capclass" where
   "acap_class (ASIDPoolCap _ _)     = PhysicalClass"
-| "acap_class (ASIDControlCap)      = ASIDMasterClass"
-| "acap_class (SGISignalCap _ _)    = IRQClass"
+| "acap_class (ASIDControlCap)      = OtherCapClass"
+| "acap_class (SGISignalCap _ _)    = OtherCapClass"
 | "acap_class (FrameCap _ _ _ _ _)  = PhysicalClass"
 | "acap_class (PageTableCap _ _ _)  = PhysicalClass"
 | "acap_class (VCPUCap _)           = PhysicalClass"
-| "acap_class (SMCCap _)            = SMCClass"
+| "acap_class (SMCCap _)            = OtherCapClass"
 
 definition valid_ipc_buffer_cap_arch :: "arch_cap \<Rightarrow> machine_word \<Rightarrow> bool" where
   [simp]: "valid_ipc_buffer_cap_arch ac bufptr \<equiv>
