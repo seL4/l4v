@@ -843,6 +843,11 @@ definition
 section "Cap classification used to define invariants"
 
 datatype capclass =
-  PhysicalClass | ReplyClass "obj_ref" | IRQClass | ASIDMasterClass | NullClass | DomainClass | IOPortClass | SMCClass
+  PhysicalClass | ReplyClass "obj_ref" | OtherCapClass
+
+text \<open>@{const PhysicalClass} is for caps to objects that consume physical
+memory. This includes anything that can be retyped from Untyped caps.
+@{const ReplyClass} is specifically for reply caps. @{const OtherCapClass} for
+anything else.\<close>
 
 end
