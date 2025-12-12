@@ -482,18 +482,18 @@ where
 primrec
   capClass :: "capability \<Rightarrow> capclass"
 where
-  "capClass (NullCap)                          = NullClass"
-| "capClass (DomainCap)                        = DomainClass"
-| "capClass (UntypedCap d p n f)               = PhysicalClass"
-| "capClass (EndpointCap ref badge s r g gr)   = PhysicalClass"
-| "capClass (NotificationCap ref badge s r)    = PhysicalClass"
-| "capClass (CNodeCap ref bits g gs)           = PhysicalClass"
-| "capClass (ThreadCap ref)                    = PhysicalClass"
-| "capClass (Zombie r b n)                     = PhysicalClass"
-| "capClass (IRQControlCap)                    = IRQClass"
-| "capClass (IRQHandlerCap irq)                = IRQClass"
-| "capClass (ReplyCap tcb m g)                 = ReplyClass tcb"
-| "capClass (ArchObjectCap cap)                = acapClass cap"
+  "capClass (NullCap)                        = OtherCapClass"
+| "capClass (DomainCap)                      = OtherCapClass"
+| "capClass (UntypedCap d p n f)             = PhysicalClass"
+| "capClass (EndpointCap ref badge s r g gr) = PhysicalClass"
+| "capClass (NotificationCap ref badge s r)  = PhysicalClass"
+| "capClass (CNodeCap ref bits g gs)         = PhysicalClass"
+| "capClass (ThreadCap ref)                  = PhysicalClass"
+| "capClass (Zombie r b n)                   = PhysicalClass"
+| "capClass (IRQControlCap)                  = OtherCapClass"
+| "capClass (IRQHandlerCap irq)              = OtherCapClass"
+| "capClass (ReplyCap tcb m g)               = ReplyClass tcb"
+| "capClass (ArchObjectCap cap)              = acapClass cap"
 
 definition
   "capRange cap \<equiv>

@@ -199,12 +199,12 @@ primrec
   acapClass :: "arch_capability \<Rightarrow> capclass"
 where
   "acapClass (ASIDPoolCap _ _)    = PhysicalClass"
-| "acapClass ASIDControlCap       = ASIDMasterClass"
+| "acapClass ASIDControlCap       = OtherCapClass"
 | "acapClass (FrameCap _ _ _ _ _) = PhysicalClass"
 | "acapClass (PageTableCap _ _ _) = PhysicalClass"
 | "acapClass (VCPUCap _)          = PhysicalClass"
-| "acapClass (SGISignalCap _ _)   = IRQClass"
-| "acapClass (SMCCap _)           = SMCClass"
+| "acapClass (SGISignalCap _ _)   = OtherCapClass"
+| "acapClass (SMCCap _)           = OtherCapClass"
 
 locale_abbrev isArchSMCCap :: "capability \<Rightarrow> bool" where
   "isArchSMCCap \<equiv> arch_cap'_pred is_SMCCap"
