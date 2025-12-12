@@ -400,18 +400,18 @@ definition
 primrec
   cap_class :: "cap \<Rightarrow> capclass"
 where
-  "cap_class (cap.NullCap)                          = NullClass"
-| "cap_class (cap.UntypedCap dev p n f)             = PhysicalClass"
-| "cap_class (cap.EndpointCap ref badge r)          = PhysicalClass"
-| "cap_class (cap.NotificationCap ref badge r)     = PhysicalClass"
-| "cap_class (cap.CNodeCap ref n bits)              = PhysicalClass"
-| "cap_class (cap.ThreadCap ref)                    = PhysicalClass"
-| "cap_class (cap.DomainCap)                        = DomainClass"
-| "cap_class (cap.Zombie r b n)                     = PhysicalClass"
-| "cap_class (cap.IRQControlCap)                    = IRQClass"
-| "cap_class (cap.IRQHandlerCap irq)                = IRQClass"
-| "cap_class (cap.ReplyCap tcb m rights)            = ReplyClass tcb"
-| "cap_class (cap.ArchObjectCap cap)                = acap_class cap"
+  "cap_class (NullCap)                     = OtherCapClass"
+| "cap_class (UntypedCap dev p n f)        = PhysicalClass"
+| "cap_class (EndpointCap ref badge r)     = PhysicalClass"
+| "cap_class (NotificationCap ref badge r) = PhysicalClass"
+| "cap_class (CNodeCap ref n bits)         = PhysicalClass"
+| "cap_class (ThreadCap ref)               = PhysicalClass"
+| "cap_class (DomainCap)                   = OtherCapClass"
+| "cap_class (Zombie r b n)                = PhysicalClass"
+| "cap_class (IRQControlCap)               = OtherCapClass"
+| "cap_class (IRQHandlerCap irq)           = OtherCapClass"
+| "cap_class (ReplyCap tcb m rights)       = ReplyClass tcb"
+| "cap_class (ArchObjectCap cap)           = acap_class cap"
 
 
 definition

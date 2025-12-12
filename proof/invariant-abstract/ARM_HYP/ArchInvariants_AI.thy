@@ -235,12 +235,12 @@ primrec
   acap_class :: "arch_cap \<Rightarrow> capclass"
 where
   "acap_class (ASIDPoolCap _ _)      = PhysicalClass"
-| "acap_class (ASIDControlCap)       = ASIDMasterClass"
+| "acap_class (ASIDControlCap)       = OtherCapClass"
 | "acap_class (PageCap _ _ _ _ _)    = PhysicalClass"
 | "acap_class (PageTableCap _ _)     = PhysicalClass"
 | "acap_class (PageDirectoryCap _ _) = PhysicalClass"
 | "acap_class (VCPUCap _)            = PhysicalClass"
-| "acap_class (SGISignalCap _ _)     = IRQClass"
+| "acap_class (SGISignalCap _ _)     = OtherCapClass"
 
 definition
   valid_ipc_buffer_cap_arch :: "arch_cap \<Rightarrow> word32 \<Rightarrow> bool"

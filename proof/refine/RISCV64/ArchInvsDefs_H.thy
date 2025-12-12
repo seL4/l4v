@@ -150,7 +150,7 @@ primrec
   acapClass :: "arch_capability \<Rightarrow> capclass"
 where
   "acapClass (ASIDPoolCap _ _)    = PhysicalClass"
-| "acapClass ASIDControlCap       = ASIDMasterClass"
+| "acapClass ASIDControlCap       = OtherCapClass"
 | "acapClass (FrameCap _ _ _ _ _) = PhysicalClass"
 | "acapClass (PageTableCap _ _)   = PhysicalClass"
 

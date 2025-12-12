@@ -187,15 +187,15 @@ definition pspace_in_kernel_mappings' :: "kernel_state \<Rightarrow> bool" where
  "pspace_in_kernel_mappings' s \<equiv> \<forall>p \<in> dom (ksPSpace s). p \<in> kernel_mappings"
 
 primrec acapClass :: "arch_capability \<Rightarrow> capclass" where
-  "acapClass (ASIDPoolCap x y)      = PhysicalClass"
-| "acapClass ASIDControlCap         = ASIDMasterClass"
-| "acapClass (PageCap x y t sz d z) = PhysicalClass"
-| "acapClass (PageTableCap x y)     = PhysicalClass"
-| "acapClass (PageDirectoryCap x y) = PhysicalClass"
+  "acapClass (ASIDPoolCap x y)       = PhysicalClass"
+| "acapClass ASIDControlCap          = OtherCapClass"
+| "acapClass (PageCap x y t sz d z)  = PhysicalClass"
+| "acapClass (PageTableCap x y)      = PhysicalClass"
+| "acapClass (PageDirectoryCap x y)  = PhysicalClass"
 | "acapClass (PDPointerTableCap x y) = PhysicalClass"
-| "acapClass (PML4Cap x y) = PhysicalClass"
-| "acapClass (IOPortCap x y) = IOPortClass"
-| "acapClass IOPortControlCap = IOPortClass"
+| "acapClass (PML4Cap x y)           = PhysicalClass"
+| "acapClass (IOPortCap x y)         = OtherCapClass"
+| "acapClass IOPortControlCap        = OtherCapClass"
 
 (* No arch badges currently on this architecture *)
 definition valid_arch_badges :: "capability \<Rightarrow> capability \<Rightarrow> mdbnode \<Rightarrow> bool" where
