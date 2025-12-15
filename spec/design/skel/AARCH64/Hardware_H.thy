@@ -41,7 +41,7 @@ context Arch begin arch_global_naming (H)
   readVCPUHardwareReg writeVCPUHardwareReg vcpuBits \
   config_DISABLE_WFI_WFE_TRAPS \
   config_ARM_GIC_V3 \
-  sendSGI
+  sendSGI numSMCRegs doSMC_mop
 
 end
 

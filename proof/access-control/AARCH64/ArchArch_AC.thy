@@ -2595,14 +2595,20 @@ definition authorised_arch_inv :: "'a PAS \<Rightarrow> arch_invocation \<Righta
    | InvokeASIDPool api \<Rightarrow> authorised_asid_pool_inv aag api
    | InvokeVCPU vi \<Rightarrow> authorised_vcpu_inv aag vi
    | InvokeVSpace vi \<Rightarrow> True
-   | InvokeSGISignal _ \<Rightarrow> True"
+   | InvokeSGISignal _ \<Rightarrow> True
+   | InvokeSMCCall _ \<Rightarrow> True"
 
 lemma sendSGI_respects[wp]:
   "do_machine_op (sendSGI irq target) \<lbrace>integrity aag X st\<rbrace>"
   unfolding sendSGI_def
   by (wpsimp wp: dmo_mol_respects)
 
-crunch perform_sgi_invocation
+lemma doSMC_mip_respects[wp]:
+  "do_machine_op (doSMC_mop args) \<lbrace>integrity aag X st\<rbrace>"
+  unfolding doSMC_mop_def
+  by (wpsimp wp: dmo_mol_respects simp: do_machine_op_bind)
+
+crunch perform_sgi_invocation, perform_smc_invocation
   for pas_refined [wp]: "pas_refined aag"
   and respects [wp]: "integrity aag X st"
   (ignore: do_machine_op)
@@ -2858,6 +2864,13 @@ lemma decode_sgi_signal_invocation_authorised:
    decode_sgi_signal_invocation cap
    \<lbrace>\<lambda>rv. authorised_arch_inv aag rv\<rbrace>, -"
   unfolding decode_sgi_signal_invocation_def authorised_arch_inv_def
+  by wpsimp
+
+lemma decode_smc_invocation_authorised[wp]:
+  "\<lbrace>invs and pas_refined aag and K (is_SMCCap acap)\<rbrace>
+   decode_smc_invocation label args acap
+   \<lbrace>\<lambda>rv. authorised_arch_inv aag rv\<rbrace>, -"
+  unfolding decode_smc_invocation_def authorised_arch_inv_def
   by wpsimp
 
 lemma decode_arch_invocation_authorised[Arch_AC_assms]:

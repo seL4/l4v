@@ -45,6 +45,9 @@ lemma same_object_obj_refs[Tcb_AI_assms]:
                       split: cap.split_asm)+
   by (cases "the_arch_cap cap"; cases "the_arch_cap cap'"; simp)
 
+lemma arch_cap_badge_none_master[Tcb_AI_assms, simp]:
+  "(arch_cap_badge (cap_master_arch_cap acap) = None) = (arch_cap_badge acap = None)"
+  by simp
 
 definition
   is_cnode_or_valid_arch :: "cap \<Rightarrow> bool"
@@ -74,7 +77,6 @@ lemma checked_insert_is_derived: (* arch specific *)
   apply (cases slot)
   apply (frule same_object_as_cap_master)
   apply (frule master_cap_obj_refs)
-  apply (frule cap_master_eq_badge_none)
   apply (frule same_master_cap_same_types)
   apply (simp add: is_derived_def)
   apply clarsimp
@@ -179,7 +181,7 @@ lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_assms]:
 interpretation Tcb_AI_1? : Tcb_AI_1
   where state_ext_t = state_ext_t
   and is_cnode_or_valid_arch = is_cnode_or_valid_arch
-by (unfold_locales; fact Tcb_AI_assms)
+  by (unfold_locales; fact Tcb_AI_assms)
 
 
 lemma use_no_cap_to_obj_asid_strg: (* arch specific *)

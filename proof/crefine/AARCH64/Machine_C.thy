@@ -19,6 +19,17 @@ instance virq_C :: array_inner_packed
   apply intro_classes
   by (simp add: size_of_def)
 
+context kernel
+begin
+
+(* for doSMC_mop_ccorres *)
+definition smc_args_to_C :: "machine_word eight_tuple \<Rightarrow> smc_args_t__C" where
+  "smc_args_to_C \<equiv>
+     \<lambda>(x0, x1, x2, x3, x4, x5, x6, x7).
+       smc_args_t__C (ARRAY i. [x0, x1, x2, x3, x4, x5, x6, x7] ! i)"
+
+end
+
 locale kernel_m = kernel +
 
 (* timer and IRQ common machine ops (function names exist on other platforms *)
@@ -80,6 +91,11 @@ assumes setVSpaceRoot_ccorres:
            (Call setCurrentUserVSpaceRoot_'proc)"
 
 (* AArch64-specific machine ops (function names don't exist on other architectures) *)
+
+assumes doSMC_mop_ccorres:
+  "\<And>args. ccorres (\<lambda>r r'. r' = smc_args_to_C r) ret__struct_smc_args_t__C_'
+                  \<top> \<lbrace> \<acute>smc_args = smc_args_to_C args \<rbrace> []
+                  (doMachineOp (doSMC_mop args)) (Call doSMC_'proc)"
 
 assumes getFAR_ccorres:
   "ccorres (=) ret__unsigned_long_' \<top> UNIV []

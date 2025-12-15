@@ -124,6 +124,16 @@ abbreviation irq_node' :: "kernel_state \<Rightarrow> obj_ref" where
 
 type_synonym cte_heap = "machine_word \<Rightarrow> cte option"
 
+definition arch_cap'_fun_lift :: "'a \<Rightarrow> (arch_capability \<Rightarrow> 'a) \<Rightarrow> capability \<Rightarrow> 'a" where
+  "arch_cap'_fun_lift v f cap \<equiv> case cap of ArchObjectCap acap \<Rightarrow> f acap | _ \<Rightarrow> v"
+
+lemmas arch_cap'_fun_lift_simps[simp] = arch_cap'_fun_lift_def[split_simps capability.split]
+
+locale_abbrev arch_cap'_pred :: "(arch_capability \<Rightarrow> bool) \<Rightarrow> capability \<Rightarrow> bool" where
+  "arch_cap'_pred \<equiv> arch_cap'_fun_lift False"
+
+lemmas arch_cap_pred_def = arch_cap'_fun_lift_def
+
 (* FIXME arch-split: consider adding to simpset early in Refine, then changing over definitions *)
 (* proof is identical on all arches *)
 lemma (in Arch) cteSizeBits_cte_level_bits:

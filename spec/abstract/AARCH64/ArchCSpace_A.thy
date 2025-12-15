@@ -34,6 +34,7 @@ definition arch_is_physical :: "arch_cap \<Rightarrow> bool" where
   "arch_is_physical cap \<equiv> case cap of
      ASIDControlCap \<Rightarrow> False
    | SGISignalCap _ _ \<Rightarrow> False
+   | SMCCap _ \<Rightarrow> False
    | _ \<Rightarrow> True"
 
 text \<open>
@@ -54,6 +55,7 @@ fun arch_same_region_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool" 
 | "arch_same_region_as (ASIDPoolCap r _) c' = (\<exists>r' d'. c' = ASIDPoolCap r' d' \<and> r = r')"
 | "arch_same_region_as (VCPUCap r) c' = (\<exists>r'. c' = VCPUCap r' \<and> r = r')"
 | "arch_same_region_as (SGISignalCap irq target) c' = (c' = SGISignalCap irq target)"
+| "arch_same_region_as (SMCCap _) c' = is_SMCCap c'"
 
 text \<open>Check whether given cap is a descendant of IRQControlCap\<close>
 definition is_irq_control_descendant :: "arch_cap \<Rightarrow> bool" where
@@ -74,10 +76,14 @@ definition arch_is_cap_revocable :: "cap \<Rightarrow> cap \<Rightarrow> bool" w
   "arch_is_cap_revocable new_cap src_cap \<equiv>
     case new_cap of
       ArchObjectCap (SGISignalCap _ _) \<Rightarrow> src_cap = IRQControlCap
+    | ArchObjectCap (SMCCap badge) \<Rightarrow> badge \<noteq> acap_smc_badge (the_arch_cap src_cap)
     | _ \<Rightarrow> False"
 
 definition should_be_arch_parent_of :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool \<Rightarrow> bool" where
-  "should_be_arch_parent_of acap acap' original' \<equiv> is_SGISignalCap acap \<longrightarrow> \<not>original'"
+  "should_be_arch_parent_of acap acap' original' \<equiv>
+     (is_SGISignalCap acap \<longrightarrow> \<not>original') \<and>
+     (is_SMCCap acap \<longrightarrow> acap_smc_badge acap \<noteq> 0 \<longrightarrow>
+        acap_smc_badge acap' = acap_smc_badge acap \<and> \<not>original')"
 
 end
 end

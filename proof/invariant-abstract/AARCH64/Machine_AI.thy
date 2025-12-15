@@ -274,6 +274,7 @@ crunch_ignore (valid, empty_fail, no_fail)
     writeFpuState_impl
     writeVCPUHardwareReg_impl
     sendSGI_impl
+    doSMC_mop_impl
     )
 
 (* Crunches for machine ops without concrete implementations (using _impl or _val).
@@ -336,6 +337,7 @@ crunch
   writeVCPUHardwareReg,
   read_cntpct,
   sendSGI,
+  doSMC_mop,
   readFpuState
   for (no_fail) no_fail[intro!, wp, simp]
   and (empty_fail) empty_fail[intro!, wp, simp]

@@ -362,6 +362,13 @@ lemma valid_cap_update_rights[simp, CSpace_AI_assms]:
   apply (case_tac arch_cap, simp_all)
   done
 
+lemma cap_aligned_SMCCap[simp, intro!]:
+  "cap_aligned (ArchObjectCap (SMCCap badge))"
+  by (simp add: cap_aligned_def word_bits_def)
+
+lemma valid_cap_SMCCap[simp, intro!]:
+  "valid_cap (ArchObjectCap (SMCCap badge)) s"
+  by (simp add: valid_cap_def)
 
 lemma update_cap_data_validI [CSpace_AI_assms]:
   "s \<turnstile> cap \<Longrightarrow> s \<turnstile> update_cap_data p d cap"
