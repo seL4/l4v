@@ -104,29 +104,6 @@ lemma Arch_switchToThread_ccorres:
   apply clarsimp
   done
 
-lemma lazyFPURestore_ccorres:
-  "ccorres dc xfdc
-     (no_0_obj' and tcb_at' t)
-     (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr t\<rbrace>) hs
-     (lazyFpuRestore t) (Call lazyFPURestore_'proc)"
-  apply (cinit lift: thread_')
-   apply (rule ccorres_pre_threadGet, rename_tac flags)
-   apply (rule ccorres_move_c_guard_tcb)
-   apply (rule ccorres_if_lhs)
-    apply (rule ccorres_cond_true)
-    apply (ctac add: disableFpu_ccorres)
-   apply (rule ccorres_cond_false)
-   apply (ctac add: nativeThreadUsingFPU_ccorres[where thread=t])
-     apply (rule ccorres_cond[where R=\<top>])
-       apply (clarsimp simp: to_bool_neq_0 split: if_split)
-      apply (ctac add: enableFpu_ccorres)
-     apply (ctac add: switchLocalFpuOwner_ccorres)
-    apply wpsimp
-   apply (vcg exspec=nativeThreadUsingFPU_modifies)
-  apply (clarsimp simp: isFlagSet_def typ_heap_simps' word_bw_comms ctcb_relation_def
-                        option_to_ctcb_ptr_def)
-  done
-
 crunch arch_switchToThread
   for no_0_obj'[wp]: no_0_obj'
   and tcb_at'[wp]: "tcb_at' t"

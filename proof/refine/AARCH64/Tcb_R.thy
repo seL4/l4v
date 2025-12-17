@@ -1654,10 +1654,10 @@ lemma setSchedulerAction_invs'[wp]:
               need to unfold config_HAVE_FPU. *)
 lemma postSetFlags_corres[corres]:
   "flags = word_to_tcb_flags flags' \<Longrightarrow>
-   corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu) \<top>
+   corres dc (cur_tcb and pspace_aligned and pspace_distinct and valid_cur_fpu) \<top>
      (arch_post_set_flags  t flags) (postSetFlags t flags')"
   unfolding arch_post_set_flags_def postSetFlags_def
-  by (corres term_simp: Kernel_Config.config_HAVE_FPU_def)
+  by (corres simp: Kernel_Config.config_HAVE_FPU_def cur_tcb_def)
 
 end
 
@@ -1673,6 +1673,7 @@ crunch set_flags
   for pspace_aligned[wp]: pspace_aligned
   and pspace_distinct[wp]: pspace_distinct
   and valid_cur_fpu[wp]: valid_cur_fpu
+  and cur_tcb[wp]: cur_tcb
 
 
 consts
@@ -1904,9 +1905,10 @@ lemma setFlags_invs'[wp]:
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   by (wpsimp simp: setFlags_def wp: threadSet_flags_invs')
 
-crunch postSetFlags
-  for invs'[wp]: invs'
-  (ignore: threadSet)
+lemma postSetFlags_invs'[wp]:
+  "postSetFlags t flags \<lbrace>invs'\<rbrace>"
+  unfolding postSetFlags_def
+  by wpsimp
 
 lemma invokeSetFlags_invs'[wp]:
   "\<lbrace>invs' and tcb_inv_wf' (tcbinvocation.SetFlags tcb clears' sets')\<rbrace>

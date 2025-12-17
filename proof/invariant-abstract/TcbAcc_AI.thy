@@ -512,6 +512,13 @@ lemma thread_set_cte_wp_at_trivial:
   by (auto simp: cte_wp_at_caps_of_state
           intro: thread_set_caps_of_state_trivial [OF x])
 
+lemma thread_set_ex_nonz_cap_to_trivial:
+  assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
+                  getF (f tcb) = getF tcb"
+  shows "\<lbrace>\<lambda>s. Q (ex_nonz_cap_to p s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. Q (ex_nonz_cap_to p s)\<rbrace>"
+  unfolding ex_nonz_cap_to_def
+  by (auto simp: cte_wp_at_caps_of_state
+          intro: thread_set_caps_of_state_trivial [OF x])
 
 lemma det_query_twice:
   assumes x: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>x. P\<rbrace>"

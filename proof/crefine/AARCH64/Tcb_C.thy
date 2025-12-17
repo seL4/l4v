@@ -4505,6 +4505,35 @@ lemma decodeSetTLSBase_ccorres:
   apply (auto simp: unat_eq_0 le_max_word_ucast_id)+
   done
 
+lemma lazyFPURestore_ccorres:
+  "ccorres dc xfdc
+     (no_0_obj' and tcb_at' t)
+     (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr t\<rbrace>) hs
+     (lazyFpuRestore t) (Call lazyFPURestore_'proc)"
+  apply (cinit lift: thread_')
+   apply (rule ccorres_pre_threadGet, rename_tac flags)
+   apply (rule ccorres_move_c_guard_tcb)
+   apply (rule ccorres_if_lhs)
+    apply (rule ccorres_cond_true)
+    apply (ctac add: disableFpu_ccorres)
+   apply (rule ccorres_cond_false)
+   apply (ctac add: nativeThreadUsingFPU_ccorres[where thread=t])
+     apply (rule ccorres_cond[where R=\<top>])
+       apply (clarsimp simp: to_bool_neq_0 split: if_split)
+      apply (ctac add: enableFpu_ccorres)
+     apply (ctac add: switchLocalFpuOwner_ccorres)
+    apply wpsimp
+   apply (vcg exspec=nativeThreadUsingFPU_modifies)
+  apply (clarsimp simp: isFlagSet_def typ_heap_simps' word_bw_comms ctcb_relation_def
+                        option_to_ctcb_ptr_def)
+  done
+
+crunch lazyFpuRestore
+  for st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' Q p s)"
+  and sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
+  and aligned'[wp]: "pspace_aligned'"
+  and distinct'[wp]: "pspace_distinct'"
+
 lemma invokeTCB_SetFlags_ccorres:
   notes hoare_weak_lift_imp [wp]
   shows
@@ -4530,12 +4559,16 @@ lemma invokeTCB_SetFlags_ccorres:
           apply (rule ball_tcb_cte_casesI, simp+)
          apply (clarsimp simp: ctcb_relation_def)
         apply ceqv
+       apply (rule ccorres_pre_getCurThread, rename_tac cur)
        apply (rule ccorres_split_nothrow_dc)
           apply (rule_tac R=\<top> and R'="\<lbrace>\<acute>flags = flags && ~~ clears || sets && tcbFlagMask\<rbrace>"
+                       in ccorres_cond_strong)
+            apply (clarsimp simp: isFlagSet_def word_bw_comms)
+           apply (ctac add: fpuRelease_ccorres)
+          apply (rule_tac R=\<top> and R'="\<lbrace>\<acute>cur_thread = tcb_ptr_to_ctcb_ptr cur\<rbrace>"
                        in ccorres_when_strong)
-           apply (clarsimp simp: isFlagSet_def word_bw_comms)
-          apply (ctac add: fpuRelease_ccorres)
-
+           apply clarsimp
+          apply (ctac add: lazyFPURestore_ccorres)
          apply (rule ccorres_Cond_rhs_Seq[rotated]; clarsimp)
           apply (simp add: replyOnRestart_def liftE_def bind_assoc)
           apply (rule getThreadState_ccorres_foo, rename_tac tstate)
@@ -4576,7 +4609,7 @@ lemma invokeTCB_SetFlags_ccorres:
          apply (vcg exspec=lookupIPCBuffer_modifies)
         apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
        apply clarsimp
-       apply (vcg exspec=fpuRelease_modifies)
+       apply (vcg exspec=fpuRelease_modifies exspec=lazyFPURestore_modifies)
       apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' threadSet_pred_tcb_no_state
                         threadSet_sch_act weak_if_wp' | strengthen invs_valid_objs')+
      apply vcg

@@ -815,11 +815,6 @@ crunch reply_from_kernel, receive_signal
   and valid_cur_vcpu[wp]: valid_cur_vcpu
   (wp: valid_cur_vcpu_lift_weak in_cur_domain_lift_weak simp: crunch_simps)
 
-lemma ct_in_cur_domain_active_resume_cur_thread:
-  "\<lbrakk>ct_in_cur_domain s; ct_active s; valid_idle s; scheduler_action s = resume_cur_thread\<rbrakk>
-   \<Longrightarrow> in_cur_domain (cur_thread s) s"
-  by (clarsimp simp: ct_in_cur_domain_def ct_in_state_def dest!: st_tcb_at_idle_thread)
-
 lemma handle_invocation_valid_cur_vcpu[wp]:
   "\<lbrace>valid_cur_vcpu and einvs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
    handle_invocation calling blocking

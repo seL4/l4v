@@ -164,6 +164,11 @@ crunch arch_post_set_flags, arch_prepare_set_domain
 
 lemmas vcpu_flush_typ_ats [wp] = abs_typ_at_lifts[OF vcpu_flush_typ_at]
 
+(* Interface asks for a weaker lemma due to other arches needing an extra precondition *)
+lemma arch_post_set_flags_invs'[Tcb_AI_assms]:
+  "\<lbrace>invs and ex_nonz_cap_to t\<rbrace> arch_post_set_flags t flags \<lbrace>\<lambda>_. invs\<rbrace>"
+  by wpsimp
+
 lemmas arch_prepare_set_domain_typ_ats[wp] = abs_typ_at_lifts[OF arch_prepare_set_domain_typ_at]
 
 crunch arch_prepare_set_domain
@@ -179,7 +184,7 @@ lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_assms]:
 interpretation Tcb_AI_1? : Tcb_AI_1
   where state_ext_t = state_ext_t
   and is_cnode_or_valid_arch = is_cnode_or_valid_arch
-by (unfold_locales; fact Tcb_AI_assms)
+  by (unfold_locales; fact Tcb_AI_assms)
 
 
 lemma use_no_cap_to_obj_asid_strg: (* arch specific *)

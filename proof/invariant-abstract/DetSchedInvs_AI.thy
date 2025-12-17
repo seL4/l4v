@@ -409,4 +409,9 @@ lemma valid_sched_lift:
             valid_sched_action_lift valid_blocked_lift a c d e f g h i hoare_vcg_conj_lift)
   done
 
+lemma ct_in_cur_domain_active_resume_cur_thread:
+  "\<lbrakk>ct_in_cur_domain s; ct_active s; valid_idle s; scheduler_action s = resume_cur_thread\<rbrakk>
+   \<Longrightarrow> in_cur_domain (cur_thread s) s"
+  by (clarsimp simp: ct_in_cur_domain_def ct_in_state_def dest!: st_tcb_at_idle_thread)
+
 end
