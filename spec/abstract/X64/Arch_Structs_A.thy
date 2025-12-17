@@ -454,5 +454,4 @@ where
   "arch_tcb_get_registers a_tcb \<equiv> user_regs (tcb_context a_tcb)"
 
 end
-
 end
