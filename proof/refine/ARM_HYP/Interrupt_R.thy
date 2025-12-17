@@ -719,7 +719,6 @@ lemma timerTick_corres:
                 apply (rule corres_split[OF threadset_corres])
                                 apply (simp add: sch_act_wf_weak tcb_relation_def pred_conj_def inQ_def)+
                   apply (rule corres_split[OF tcbSchedAppend_corres], simp)
-                    apply (fold dc_def)
                     apply (rule rescheduleRequired_corres)
                    apply wp
                   apply ((wpsimp wp: tcbSchedAppend_sym_heap_sched_pointers
