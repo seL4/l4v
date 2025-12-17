@@ -423,7 +423,7 @@ crunch readVCPUReg
   for obj_at'[wp]: "\<lambda>s. P (obj_at' a p s)"
 
 crunch readVCPUReg
-  for pred_tcb_at'[wp]: "\<lambda>s. P (pred_tcb_at' a b p s)"
+  for pred_tcb_at'2[wp]: "\<lambda>s. P (pred_tcb_at' a b p s)"
 
 crunch readVCPUReg
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
