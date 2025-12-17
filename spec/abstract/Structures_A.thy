@@ -13,7 +13,7 @@ chapter "Basic Data Structures"
 
 theory Structures_A
 imports
-  ExecSpec.Structs_B
+  ExecSpec.Arch_Structs_B
   Arch_Structs_A
   "ExecSpec.MachineExports"
 begin
@@ -47,6 +47,9 @@ arch_requalify_consts (A)
   untyped_min_bits
   untyped_max_bits
   msg_label_bits
+
+arch_requalify_consts (H) (* shared from Haskell spec *)
+  parseTimeArg
 
 text \<open>
   User mode can request these objects to be created by retype:
@@ -368,7 +371,8 @@ datatype thread_state
 
 type_synonym priority = word8
 
-type_synonym domain = word8
+value_type domain_len = domainBits
+type_synonym domain = "domain_len word"
 
 type_synonym tcb_flags = "tcb_flag set"
 
@@ -541,6 +545,13 @@ datatype scheduler_action =
 
 type_synonym ready_queue = "obj_ref list"
 
+text \<open>The C kernel always uses 64 bits total for entries in the domain schedule.\<close>
+value_type domain_duration_len = "64 - domainBits"
+type_synonym domain_duration = "domain_duration_len word"
+
+definition max_domain_duration :: ticks where
+  "max_domain_duration \<equiv> mask LENGTH(domain_duration_len)"
+
 text \<open>The kernel state includes a heap, a capability derivation tree
 (CDT), a bitmap used to determine if a capability is the original
 capability to that object, a pointer to the current thread, a pointer
@@ -563,10 +574,11 @@ record abstract_state =
   cur_thread         :: obj_ref
   idle_thread        :: obj_ref
   scheduler_action   :: scheduler_action
-  domain_list        :: "(domain \<times> machine_word) list"
+  domain_list        :: "(domain \<times> domain_duration) list"
   domain_index       :: nat
+  domain_start_index :: nat
   cur_domain         :: domain
-  domain_time        :: "machine_word"
+  domain_time        :: ticks
   ready_queues       :: "domain \<Rightarrow> priority \<Rightarrow> ready_queue"
   machine_state      :: machine_state
   interrupt_irq_node :: "irq \<Rightarrow> obj_ref"
