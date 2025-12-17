@@ -164,7 +164,14 @@ lemma finalise_cap_not_cte_wp_at[Tcb_AI_assms]:
 
 crunch arch_post_set_flags, arch_prepare_set_domain
   for typ_at[wp, Tcb_AI_assms]: "\<lambda>s. P (typ_at T p s)"
-  and invs[wp, Tcb_AI_assms]: "invs"
+
+crunch arch_prepare_set_domain
+  for invs[wp, Tcb_AI_assms]: "invs"
+
+lemma arch_post_set_flags_invs[wp, Tcb_AI_assms]:
+  "\<lbrace>invs and ex_nonz_cap_to t\<rbrace> arch_post_set_flags t flags \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding arch_post_set_flags_def
+  by wpsimp
 
 lemmas arch_prepare_set_domain_typ_ats[wp] = abs_typ_at_lifts[OF arch_prepare_set_domain_typ_at]
 

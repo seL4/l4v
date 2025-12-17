@@ -41,8 +41,8 @@ locale Tcb_AI_1 =
   assumes arch_post_modify_registers_ex_nonz_cap_to[wp]:
   "\<And>c t a. \<lbrace>\<lambda>(s::'state_ext state). ex_nonz_cap_to a s\<rbrace> arch_post_modify_registers c t
        \<lbrace>\<lambda>b s. ex_nonz_cap_to a s\<rbrace>"
-  assumes arch_post_set_flags[wp]:
-  "\<And>t flags. arch_post_set_flags t flags \<lbrace>invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  assumes arch_post_set_flags_invs[wp]:
+  "\<And>t flags. \<lbrace>invs and ex_nonz_cap_to t\<rbrace> arch_post_set_flags t flags \<lbrace>\<lambda>_. invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes arch_prepare_set_domain_invs[wp]:
   "\<And>t d. arch_prepare_set_domain t d \<lbrace>invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes arch_prepare_set_domain_typ_at[wp]:
@@ -838,6 +838,8 @@ lemma set_flags_valid_objs[wp]:
 crunch set_flags
   for valid_cap[wp]: "valid_cap c"
   and cte_at[wp]: "cte_at c"
+  and ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
+  (wp: thread_set_ex_nonz_cap_to_trivial simp: ball_tcb_cap_casesI)
 
 lemma set_flags_invs[wp]:
   "\<lbrace>invs and tcb_at t\<rbrace> set_flags t fs \<lbrace>\<lambda>rv. invs\<rbrace>"
