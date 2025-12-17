@@ -11,7 +11,9 @@ imports
 begin
 
 arch_requalify_facts
-  valid_global_refs_lift'
+  asUser_sym_heap_sched_pointers (* free type variable *)
+
+lemmas [wp] = asUser_sym_heap_sched_pointers
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
@@ -1388,7 +1390,6 @@ lemma suspend_makes_inactive:
   done
 
 declare threadSet_sch_act_sane [wp]
-declare setThreadState_sch_act_sane [wp]
 
 lemma tcbSchedEnqueue_sch_act_not_ct[wp]:
   "\<lbrace>\<lambda>s. sch_act_not (ksCurThread s) s\<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_ s. sch_act_not (ksCurThread s) s\<rbrace>"

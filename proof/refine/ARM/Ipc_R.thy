@@ -424,7 +424,7 @@ next
     apply (rule corres_const_on_failure)
     apply (simp add: dc_def[symmetric] split del: if_split)
     apply (rule corres_guard_imp)
-      apply (rule corres_if2)
+      apply (rule corres_if3)
         apply (case_tac "fst x", auto simp add: isCap_simps)[1]
        apply (rule corres_split[OF corres_set_extra_badge])
           apply (clarsimp simp: is_cap_simps)
@@ -1706,7 +1706,7 @@ lemma doIPCTransfer_corres:
      defer
      apply (rule corres_guard_imp)
        apply (subst case_option_If)+
-       apply (rule corres_if2)
+       apply (rule corres_if3)
          apply (simp add: fault_rel_optionation_def)
         apply (rule corres_split_eqr[OF lookupIPCBuffer_corres'])
           apply (simp add: dc_def[symmetric])

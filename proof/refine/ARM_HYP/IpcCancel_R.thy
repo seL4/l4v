@@ -11,7 +11,9 @@ imports
 begin
 
 arch_requalify_facts
-  valid_global_refs_lift'
+  asUser_sym_heap_sched_pointers (* free type variable *)
+
+lemmas [wp] = asUser_sym_heap_sched_pointers
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
@@ -1267,7 +1269,7 @@ lemma (in delete_one) suspend_corres:
             apply (simp add: ARM_HYP.nextInstructionRegister_def ARM_HYP.faultRegister_def
                              ARM_HYP_H.nextInstructionRegister_def ARM_HYP_H.faultRegister_def)
             apply (simp add: ARM_HYP_H.Register_def)
-            apply (fold dc_def, subst unit_dc_is_eq)
+            apply (subst unit_dc_is_eq)
             apply (rule corres_underlying_trivial)
             apply (wpsimp simp: ARM_HYP.setRegister_def ARM_HYP.getRegister_def)
            apply (rule corres_return_trivial)

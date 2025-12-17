@@ -798,6 +798,18 @@ lemma in_all_active_tcb_ptrsD:
   apply (case_tac st; clarsimp)
   done
 
+lemma chooseThread_nosch:
+  "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>
+   chooseThread
+   \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
+  unfolding chooseThread_def Let_def curDomain_def
+  supply if_split[split del]
+  apply (simp only: return_bind, simp)
+  apply (wp findM_inv | simp)+
+  apply (case_tac queue)
+  apply (wp stt_nosch | simp add: curDomain_def bitmap_fun_defs)+
+  done
+
 lemma scheduleChooseNewThread_no_orphans:
   "\<lbrace>invs' and no_orphans
     and (\<lambda>s. ksSchedulerAction s = ChooseNewThread
