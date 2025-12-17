@@ -8,6 +8,7 @@ axiomatization
   colour_oracle :: "domain \<Rightarrow> obj_ref set"
   where
     colour_oracle_no_overlap: "x \<noteq> y \<Longrightarrow> (colour_oracle x \<inter> colour_oracle y = {0})" \<comment>\<open>and
+    colour_oracle_domain_list: "(d, a)\<in> set (domain_list s) \<Longrightarrow> colour_oracle d = {}" and
     colour_oracle_cur_thread: "\<forall>s. cur_thread s \<in> (colour_oracle (cur_domain s))"\<close>
 
 lemma colour_oracle_zero: "0 \<in> colour_oracle x"
@@ -215,7 +216,6 @@ lemma activate_thread_colour_maintained:
 using is_obj_defs(3) is_tcb_def
   by presburger
 
-
 lemma set_cap_colour_maintained:
   "\<lbrace>colour_invariant and (valid_ptr_in_cur_domain $ fst cs_ptr) and (\<lambda>s. check_cap_ref cap (colour_oracle (cur_domain s)))\<rbrace>
    set_cap cap cs_ptr
@@ -250,16 +250,14 @@ lemma cte_wp_at_check_cap_ref:
   apply clarsimp
   apply (erule_tac x=b in allE)
     apply (simp add: check_kernel_object_ref_def)
-  apply (erule_tac allE)
-   apply (erule_tac x=b in allE)
-   apply simp
 defer
   apply (erule disjE|erule exE|erule conjE)+
   apply (erule_tac x=a in allE)
   apply (erule_tac x="TCB tcb" in allE)
+   apply (erule_tac x="(cur_domain s, _)" in ballE)
   apply (erule impE)
    apply simp
-  using ranI ran_tcb_cnode_map by force
+  (*using ranI ran_tcb_cnode_map by force*)
 sorry
 
 lemma cap_insert_colour_maintained':
@@ -288,12 +286,19 @@ lemma hoare_weird_if:
 
 lemma transfer_caps_loop_colour_maintained:
   "\<lbrace>colour_invariant and
-        (\<lambda>s. \<forall>(cap, o_ref, _)\<in>(set caps). check_cap_ref cap (colour_oracle (cur_domain s)) \<and> o_ref \<in> colour_oracle (cur_domain s))\<rbrace>
+        (\<lambda>s.
+            (
+              (\<forall>(cap, o_ref, _)\<in>(set caps).
+                check_cap_ref cap (colour_oracle (cur_domain s)) \<and>
+                valid_ptr_in_cur_domain o_ref s)) \<and>
+              (\<forall>(slot, _)\<in>(set slots). valid_ptr_in_cur_domain slot s)
+            )
+   \<rbrace>
      transfer_caps_loop ep rcv_buffer n caps slots mi
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
 proof (induct caps arbitrary: ep rcv_buffer n slots mi)
   case Nil
-  then show ?case by simp
+  then show ?case by wpsimp
 next
   case (Cons a caps)
   note Cons.hyps[wp]
@@ -302,35 +307,54 @@ next
     apply wpsimp
     apply (rule conjI; rule impI)+
       apply (wpsimp wp: set_extra_badge_colour_maintained)
-       apply (simp add: set_extra_badge_def)
+       apply (simp add: set_extra_badge_def valid_ptr_in_cur_domain_def)
        apply wpsimp
-      apply simp
+      apply (simp add: valid_ptr_in_cur_domain_def)
      apply wpsimp
-        apply (wp add: cap_insert_colour_maintained)
+        apply (wpsimp simp: valid_ptr_in_cur_domain_def wp: cap_insert_colour_maintained)
        apply simp
        apply wpsimp+
       apply (wp add: hoare_weird_if[where P=
         "colour_invariant and
         (\<lambda>s. \<forall>(cap, o_ref, _)\<in>(set (a # caps)).
-           check_cap_ref cap (colour_oracle (cur_domain s)) \<and> o_ref \<in> colour_oracle (cur_domain s))"
+           check_cap_ref cap (colour_oracle (cur_domain s)) \<and> valid_ptr_in_cur_domain o_ref s \<and>
+              (\<forall>(slot, _)\<in>(set slots). valid_ptr_in_cur_domain slot s))"
       ])
        apply (wpsimp simp: check_cap_ref_def wp: derive_cap_inv)+
       apply (wp add: derive_cap_objrefs_iszombie)
       apply simp+
-    apply (rule conjI; rule impI)+
-     apply wpsimp
+    apply (rule conjI|rule impI)+
+       apply (simp add: valid_ptr_in_cur_domain_def)
+    apply (rule conjI|rule impI)+
+       apply (simp add: crunch_simps(1))
+      apply (rule conjI|rule impI)+
+  apply (simp add: valid_ptr_in_cur_domain_def)
+  apply (erule conjE)+
+  apply simp
+apply (simp add: list.set_sel(2)
+    valid_ptr_in_cur_domain_def)
+  apply simp
+  apply safe
+  apply wpsimp
       apply (wp add: set_extra_badge_colour_maintained)
-      apply (simp add: set_extra_badge_def)
+      apply (simp add: set_extra_badge_def valid_ptr_in_cur_domain_def)
       apply wpsimp
-     apply simp
-    by wpsimp
+     apply (simp add: valid_ptr_in_cur_domain_def)
+    by wpsimp+
 qed
 
 lemma transfer_caps_colour_maintained:
-  "\<lbrace>colour_invariant and (\<lambda>s. \<forall>(cap, o_ref, _)\<in>(set caps). check_cap_ref cap (colour_oracle (cur_domain s)) \<and> o_ref \<in> colour_oracle (cur_domain s))\<rbrace>
+  "\<lbrace>colour_invariant and (\<lambda>s. (\<forall>(cap, o_ref, _)\<in>(set caps). check_cap_ref cap (colour_oracle (cur_domain s)) \<and> valid_ptr_in_cur_domain o_ref s))
+   \<rbrace>
  transfer_caps info caps endpoint receiver recv_buffer
 \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  by (wpsimp simp: transfer_caps_def wp: transfer_caps_loop_colour_maintained)
+find_theorems get_receive_slots
+  apply (wpsimp simp: transfer_caps_def wp: transfer_caps_loop_colour_maintained)
+  apply (wpsimp wp: hoare_vcg_op_lift weak_if_wp')
+find_theorems lookup_slot_for_cnode_op
+  find_theorems "\<lbrace>_\<rbrace>_\<lbrace>\<lambda>_. if _ then _ else _\<rbrace>"
+  apply (wp add: hoare_vcg_if_lift)
+sorry
 
 lemma copy_mrs_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
@@ -606,7 +630,7 @@ lemma reset_untyped_cap_colour_maintained:
    by (clarsimp simp add: valid_ptr_in_cur_domain_def cte_wp_at_def)
 
 lemma syscall_colour_maintained:
-  "\<lbrakk>\<forall>x. \<lbrace>colour_invariant\<rbrace> param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>, \<lbrace>\<lambda>_. colour_invariant\<rbrace>;
+  "\<lbrakk>\<lbrace>colour_invariant\<rbrace> param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>, \<lbrace>\<lambda>_. colour_invariant\<rbrace>;
     \<forall>x. \<lbrace>colour_invariant\<rbrace> param_b x \<lbrace>\<lambda>_. colour_invariant\<rbrace>;
     \<forall>x. \<lbrace>colour_invariant\<rbrace> param_c x \<lbrace>\<lambda>_. colour_invariant\<rbrace>, \<lbrace>\<lambda>_. colour_invariant\<rbrace>;
     \<forall>x. \<lbrace>colour_invariant\<rbrace> param_d x \<lbrace>\<lambda>_. colour_invariant\<rbrace>;
@@ -618,11 +642,7 @@ lemma syscall_colour_maintained:
   by ((erule allE)+, simp)+
 
 lemma next_domain_colour_maintained:
-  "\<lbrace>colour_invariant and (\<lambda>s.
-     let domain_index' = Suc (domain_index s) mod length (domain_list s);
-     next_dom = domain_list s ! domain_index';
-     new_dom = fst next_dom in
-     colour_invariant (s\<lparr>cur_domain := new_dom\<rparr>))\<rbrace>
+  "\<lbrace>colour_invariant\<rbrace>
       next_domain
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   by (wpsimp simp: next_domain_def colour_invariant_def Let_def)
@@ -652,11 +672,7 @@ lemma guarded_switch_to_colour_maintained:
   wp: switch_to_thread_colour_maintained hoare_vcg_imp_lift[where P'=\<bottom>])
 
 lemma schedule_choose_new_thread_colour_maintained:
-  "\<lbrace>colour_invariant and (\<lambda>s.
-     let domain_index' = Suc (domain_index s) mod length (domain_list s);
-     next_dom = domain_list s ! domain_index';
-     new_dom = fst next_dom in
-     colour_invariant (s\<lparr>cur_domain := new_dom\<rparr>))\<rbrace>
+  "\<lbrace>colour_invariant\<rbrace>
       schedule_choose_new_thread
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   apply (wpsimp simp: schedule_choose_new_thread_def choose_thread_def next_domain_def colour_invariant_def
@@ -667,11 +683,7 @@ lemma temp2: "colour_invariant s = colour_invariant (s\<lparr>scheduler_action :
   by (simp add: colour_invariant_def)
 
 lemma schedule_colour_maintained:
-  "\<lbrace>colour_invariant and (\<lambda>s.
-     let domain_index' = Suc (domain_index s) mod length (domain_list s);
-     next_dom = domain_list s ! domain_index';
-     new_dom = fst next_dom in
-      colour_invariant (s\<lparr>cur_domain := new_dom\<rparr>))\<rbrace>
+  "\<lbrace>colour_invariant\<rbrace>
       schedule
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   apply (wpsimp simp: schedule_def temp2[symmetric] tcb_sched_action_def
@@ -688,4 +700,100 @@ lemma schedule_colour_maintained:
 
 crunch call_kernel for colour_maintained: "colour_invariant"
   (simp: colour_invariant_def obj_at_update)
+
+lemma test2:
+  "\<lbrakk>\<forall>s. let P1 = (=) (cur_domain s) in
+      P1 (cur_domain s) \<longrightarrow>
+         (\<forall>x\<in>fst (f s).
+             case x of
+             (r, s') \<Rightarrow>
+               P1
+    (cur_domain s'));
+     \<forall>s. let P2 = (=) (domain_list s) in
+        P2 (domain_list s) \<longrightarrow>
+         (\<forall>x\<in>fst (f s).
+             case x of
+             (r, s') \<Rightarrow>
+               P2
+(domain_list s'))\<rbrakk> \<Longrightarrow>
+    \<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>
+      f
+    \<lbrace>\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
+  apply (simp add: valid_def)
+  by fastforce
+
+
+context Arch begin arch_global_naming (A)
+
+crunch cap_insert, set_extra_badge for domain_ting: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+  (simp: crunch_simps
+       wp: crunch_wps)
+
+lemma transfer_caps_loop_domain_ting:
+  "\<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>
+   transfer_caps_loop ep rcv_buffer n caps slots mi
+   \<lbrace>\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
+  by (rule transfer_caps_loop_pres[OF cap_insert_domain_ting set_extra_badge_domain_ting])
+
+crunch handle_fault,
+        reply_from_kernel,
+        send_signal,
+        do_reply_transfer for domain_ting: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+  (simp: crunch_simps
+       wp: crunch_wps)
+
+find_theorems handle_invocation
+
+lemma handle_invocation_domain_ting:
+  "\<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>
+   handle_invocation a b
+   \<lbrace>\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
+  apply (simp add: handle_invocation_def)
+  apply (wp syscall_valid set_thread_state_ct_st
+               | simp add: split_def | wpc
+               | wp (once) hoare_drop_imps)
+  apply (wpsimp wp: handle_fault_domain_ting)
+  apply (wpsimp wp: reply_from_kernel_domain_ting)
+  apply (wpsimp wp: set_thread_state_domain_ting reply_from_kernel_domain_ting)
+  apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"])
+  apply (wpsimp wp: get_thread_state_inv)
+  apply simp
+  apply (case_tac rv; wpsimp)
+  apply (rule valid_validE2)
+  prefer 2
+  apply simp
+  prefer 2
+  apply simp
+  apply (rule test2)
+  apply (simp add: invoke_untyped_cur_domain[unfolded valid_def])
+                    apply (simp add: invoke_untyped_domain_list_inv[unfolded valid_def])
+defer
+  apply (wpsimp wp: send_ipc_domain_ting)
+                   apply (wpsimp wp: gets_inv)
+                  apply (wpsimp wp: send_signal_domain_ting)
+                 apply (wpsimp wp: do_reply_transfer_domain_ting)
+                apply (wpsimp wp: gets_inv)
+thm invoke_untyped_cur_domain[unfolded valid_def]
+thm invoke_untyped_domain_list_inv[unfolded valid_def]
+find_theorems invoke_untyped valid domain_list
+sorry
+
+lemma next_domain_domain_ting:
+  "\<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>
+   next_domain
+   \<lbrace>\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
+  apply (wpsimp simp: next_domain_def Let_def)
+  apply (rule_tac x="snd
+   (domain_list s !
+    (Suc (domain_index s) mod
+     length (domain_list s)))" in exI)
+  apply clarsimp
+  apply (rule nth_mem)
+  by (meson length_pos_if_in_set
+    mod_less_divisor)
+
+crunch call_kernel for domain_ting: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+  (simp: crunch_simps
+       wp: crunch_wps)
+end
 end
