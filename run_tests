@@ -101,8 +101,11 @@ parser.add_argument('-h', '--help', action='store_true',
 
 args, passthrough_args = parser.parse_known_args()
 
-if args.l4v_arches:
-    archs = args.l4v_arches.split(',')
+if args.l4v_arch or args.l4v_arches:
+    archs = args.l4v_arch.split(',') if args.l4v_arch else []
+    archs += args.l4v_arches.split(',') if args.l4v_arches else []
+    # remove duplicates in case both are used
+    archs = list(dict.fromkeys(archs))
 elif "L4V_ARCH" in os.environ:
     archs = [os.environ["L4V_ARCH"]]
 else:
