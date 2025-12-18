@@ -638,8 +638,7 @@ lemma setVMRoot_corres:
               and unique_table_refs o caps_of_state and valid_vs_lookup
               and valid_global_objs and pspace_aligned and pspace_distinct
               and valid_vspace_objs)
-             (pspace_aligned' and pspace_distinct'
-                 and valid_arch_state' and tcb_at' t and no_0_obj')
+             (no_0_obj')
              (set_vm_root t) (setVMRoot t)"
 proof -
   have P: "corres dc \<top> \<top>
@@ -674,6 +673,10 @@ proof -
   show ?thesis
     unfolding set_vm_root_def setVMRoot_def locateSlot_conv
                      getThreadVSpaceRoot_def setCurrentPD_to_abs[symmetric]
+    apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
+     apply (fastforce dest: pspace_aligned_cross)
+    apply (rule_tac Q'=pspace_distinct' in corres_cross_add_guard)
+     apply (fastforce dest: pspace_distinct_cross)
     apply (rule corres_guard_imp)
       apply (rule corres_underlying_split [where r'="(=) \<circ> cte_map"])
          apply (simp add: tcbVTableSlot_def cte_map_def objBits_def cte_level_bits_def
@@ -860,7 +863,6 @@ lemma deleteASID_corres:
                        set_asid_pool_vspace_objs_unmap_single
                        set_asid_pool_vs_lookup_unmap')+
             apply simp
-            apply (fold cur_tcb'_def)
             apply (wp invalidate_asid_entry_invalidates)+
          apply (wp | clarsimp simp: o_def)+
        apply (subgoal_tac "vspace_at_asid asid pd s")
@@ -1025,8 +1027,6 @@ lemma deleteASIDPool_corres:
                      in hoare_post_add)
         apply (simp only: pred_conj_def cong: conj_cong)
         apply simp
-        apply (strengthen valid_arch_state_unmap_strg')
-        apply (fold cur_tcb'_def)
         apply (wp mapM_wp')+
        apply (clarsimp simp: cur_tcb'_def)
       apply (simp add: o_def pred_conj_def)

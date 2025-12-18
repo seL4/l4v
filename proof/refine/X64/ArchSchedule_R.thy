@@ -1,5 +1,6 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
+ * Copyright 2023, Proofcraft Pty Ltd
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
@@ -12,89 +13,13 @@ context Arch begin arch_global_naming
 
 named_theorems Schedule_R_assms
 
-lemma vs_lookup_pages_vcpu_update:
-  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow>
-   vs_lookup_target level asid vref (s\<lparr>kheap := (kheap s)(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>) =
-   vs_lookup_target level asid vref s"
-  unfolding vs_lookup_target_def vs_lookup_slot_def vs_lookup_table_def
-  apply (prop_tac "asid_pools_of s vcpuPtr = None", clarsimp simp: opt_map_def obj_at_def)
-  apply (prop_tac "pts_of s vcpuPtr = None", clarsimp simp: opt_map_def obj_at_def)
-  apply (fastforce simp: obind_assoc intro!: obind_eqI)
-  done
-
-lemma valid_vs_lookup_vcpu_update:
-  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow>
-   valid_vs_lookup (s\<lparr>kheap := (kheap s)(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>) = valid_vs_lookup s"
-  by (clarsimp simp: valid_vs_lookup_def caps_of_state_VCPU_update vs_lookup_pages_vcpu_update)
-
-lemma set_vpcu_valid_vs_lookup[wp]:
-  "set_vcpu vcpuPtr vcpu \<lbrace>\<lambda>s. P (valid_vs_lookup s)\<rbrace>"
-  by (wpsimp wp: set_vcpu_wp simp: valid_vs_lookup_vcpu_update)
-
-lemma set_vcpu_vmid_inv[wp]:
-  "set_vcpu vcpuPtr vcpu \<lbrace>\<lambda>s. P (vmid_inv s)\<rbrace>"
-  unfolding vmid_inv_def
-  by (wp_pre, wps, wpsimp, simp)
-
-lemma vmid_inv_cur_vcpu[simp]:
-  "vmid_inv (s\<lparr>arch_state := arch_state s\<lparr>arm_current_vcpu := x\<rparr>\<rparr>) = vmid_inv s"
-  by (simp add: vmid_inv_def)
-
-lemma set_vcpu_valid_asid_table[wp]:
-  "set_vcpu ptr vcpu \<lbrace>valid_asid_table\<rbrace>"
-  apply (wpsimp wp: set_vcpu_wp)
-  apply (prop_tac "asid_pools_of s ptr = None")
-   apply (clarsimp simp: obj_at_def opt_map_def)
-  apply simp
-  done
-
-crunch vcpu_switch
-  for valid_vs_lookup[wp]: "\<lambda>s. P (valid_vs_lookup s)"
-  and vmid_inv[wp]: vmid_inv
-  and valid_vmid_table[wp]: valid_vmid_table
-  and valid_asid_table[wp]: valid_asid_table
-  and global_pt[wp]: "\<lambda>s. P (global_pt s)"
-  and valid_uses[wp]: valid_uses
-  (simp: crunch_simps wp: crunch_wps)
-
-lemma vcpu_switch_valid_global_arch_objs[wp]:
-  "vcpu_switch v \<lbrace>valid_global_arch_objs\<rbrace>"
-  by (wp valid_global_arch_objs_lift)
-
 crunch set_vm_root
   for pspace_distinct[wp]: pspace_distinct
   (simp: crunch_simps)
 
-(* FIXME X64: move *)
-lemma ko_vcpu_cross:
-  "\<lbrakk> ko_at (ArchObj (VCPU vcpu)) p s; pspace_aligned s; pspace_distinct s; (s, s') \<in> state_relation \<rbrakk>
-  \<Longrightarrow> \<exists>vcpu'. ko_at' vcpu' p s' \<and> vcpu_relation vcpu vcpu'"
-  apply (frule (1) pspace_distinct_cross, fastforce simp: state_relation_def)
-  apply (frule pspace_aligned_cross, fastforce simp: state_relation_def)
-  apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: state_relation_def pspace_relation_def obj_at_def)
-  apply (drule bspec, fastforce)
-  apply (clarsimp simp: other_aobj_relation_def
-                  split: kernel_object.splits arch_kernel_object.splits)
-  apply (prop_tac "ksPSpace s' p \<noteq> None")
-   apply (prop_tac "p \<in> pspace_dom (kheap s)")
-    apply (fastforce intro!: set_mp[OF pspace_dom_dom])
-   apply fastforce
-  apply (fastforce simp: obj_at'_def objBits_simps dest: pspace_alignedD pspace_distinctD')
-  done
-
-(* FIXME X64: move *)
-lemma vcpu_at_cross:
-  "\<lbrakk> vcpu_at p s; pspace_aligned s; pspace_distinct s; (s, s') \<in> state_relation \<rbrakk>
-   \<Longrightarrow> vcpu_at' p s'"
-  apply (drule vcpu_at_ko, clarsimp)
-  apply (drule (3) ko_vcpu_cross)
-  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
-  done
-
-lemma gets_armKSCurFPUOwner_corres[corres]:
+lemma gets_x64KSCurFPUOwner_corres[corres]:
   "corres (=) \<top> \<top>
-          (gets (arm_current_fpu_owner \<circ> arch_state)) (gets (armKSCurFPUOwner \<circ> ksArchState))"
+          (gets (x64_current_fpu_owner \<circ> arch_state)) (gets (x64KSCurFPUOwner \<circ> ksArchState))"
   by (simp add: state_relation_def arch_state_relation_def)
 
 crunch setFPUState
@@ -125,19 +50,15 @@ lemma set_tcb_cur_fpu_noop:
   apply safe
      apply (frule (2) pspace_relation_tcb_relation)
      apply (clarsimp simp: pspace_relation_update_abstract_tcb tcb_relation_def arch_tcb_relation_def)
-    apply (clarsimp simp: ghost_relation_of_heap pt_types_of_heap_def aobj_of_simps)
-    apply (subst fun_upd_idem)
-     apply (drule_tac s="pts_of a ||> pt_type" in sym)
-     apply (clarsimp simp: aobj_of_simps opt_map_def)
-    apply clarsimp
+    apply (clarsimp simp: ghost_relation_of_heap)
    apply (clarsimp simp: swp_def cte_wp_at_after_update' obj_at_def simp del: same_caps_simps)
   apply (clarsimp simp: caps_of_state_fun_upd obj_at_def simp del: same_caps_simps)
   done
 
-lemma set_arm_current_fpu_owner_corres[corres]:
+lemma set_x64_current_fpu_owner_corres[corres]:
   "corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu and none_top tcb_at new_owner) \<top>
-             (set_arm_current_fpu_owner new_owner) (modifyArchState (armKSCurFPUOwner_update (\<lambda>_. new_owner)))"
-  unfolding set_arm_current_fpu_owner_def modifyArchState_def maybeM_def
+             (set_x64_current_fpu_owner new_owner) (modifyArchState (x64KSCurFPUOwner_update (\<lambda>_. new_owner)))"
+  unfolding set_x64_current_fpu_owner_def modifyArchState_def maybeM_def
   apply corres_pre
   apply (rule corres_underlying_gets_pre_lhs)
   apply (rule corres_add_noop_rhs)
@@ -165,7 +86,7 @@ crunch load_fpu_state, save_fpu_state
   (wp: dmo_machine_state_lift)
 
 defs fpuOwner_asrt_def:
-  "fpuOwner_asrt \<equiv> \<lambda>s'. opt_tcb_at' (armKSCurFPUOwner (ksArchState s')) s'"
+  "fpuOwner_asrt \<equiv> \<lambda>s'. opt_tcb_at' (x64KSCurFPUOwner (ksArchState s')) s'"
 
 lemma fpuOwner_asrt_cross:
   "\<lbrakk>(s, s') \<in> state_relation; valid_cur_fpu s; pspace_aligned s; pspace_distinct s\<rbrakk> \<Longrightarrow> fpuOwner_asrt s'"
@@ -191,37 +112,16 @@ lemma lazyFpuRestore_corres[corres]:
           term_simp: tcb_relation_def Kernel_Config.config_HAVE_FPU_def
                  wp: hoare_drop_imps)
 
-crunch set_vm_root, vcpu_switch
-  for valid_cur_fpu[wp]: valid_cur_fpu
-  (simp: crunch_simps wp: crunch_wps)
+crunch set_vm_root
+  for x64_current_fpu_owner[wp]: "\<lambda>s. P (x64_current_fpu_owner (arch_state s))"
+  and valid_cur_fpu[wp]: valid_cur_fpu
+  (simp: crunch_simps wp: crunch_wps valid_cur_fpu_lift_arch)
 
 crunch tcbSchedAppend, tcbSchedDequeue, tcbSchedEnqueue
   for state_hyp_refs_of'[Schedule_R_assms, wp]: "\<lambda>s. P (state_hyp_refs_of' s)"
   (simp: unless_def crunch_simps obj_at'_def wp: getObject_tcb_wp)
 
-crunch vcpuEnable, vcpuDisable, vcpuSave, vcpuRestore, lazyFpuRestore
-  for typ_at' [wp]: "\<lambda>s. P (typ_at' T p s)"
-  (simp: crunch_simps
-     wp: crunch_wps getObject_inv loadObject_default_inv)
-
-lemma vcpuSwitch_typ_at'[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_ s. P (typ_at' T p s) \<rbrace>"
-  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
-
-lemma arch_switch_thread_tcb_at'[wp]:
-  "\<lbrace>tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
-  by (unfold X64_H.switchToThread_def, wp typ_at_lift_tcb')
-
-lemma updateASIDPoolEntry_pred_tcb_at'[wp]:
-  "updateASIDPoolEntry f asid \<lbrace>pred_tcb_at' proj P t'\<rbrace>"
-  unfolding updateASIDPoolEntry_def getPoolPtr_def
-  by (wpsimp wp: setASIDPool_pred_tcb_at' getASID_wp)
-
-crunch updateASIDPoolEntry
-  for tcbs_of'[wp]: "\<lambda>s. P (tcbs_of' s)"
-  (wp: getASID_wp crunch_wps)
-
-crunch setVMRoot, vcpuSwitch, lazyFpuRestore
+crunch setVMRoot, lazyFpuRestore
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t'"
   (simp: crunch_simps wp: crunch_wps)
 
@@ -257,33 +157,16 @@ crunch arch_switch_to_thread, arch_switch_to_idle_thread
   (wp: ready_qs_distinct_lift crunch_wps simp: crunch_simps)
 
 lemma arch_switchToThread_corres:
-  "corres dc (valid_arch_state and valid_objs and pspace_aligned and pspace_distinct
-              and valid_vspace_objs and pspace_in_kernel_window and valid_cur_fpu and tcb_at t)
+  "corres dc (valid_arch_state and valid_objs and valid_asid_map
+              and valid_vspace_objs and pspace_aligned and pspace_distinct
+              and valid_vs_lookup and valid_global_objs
+              and unique_table_refs o caps_of_state
+              and valid_cur_fpu and tcb_at t)
              (no_0_obj')
              (arch_switch_to_thread t) (Arch.switchToThread t)"
   unfolding arch_switch_to_thread_def X64_H.switchToThread_def
-  apply (corres corres: getObject_TCB_corres vcpuSwitch_corres
-                term_simp: tcb_relation_def arch_tcb_relation_def)
-       apply (wpsimp wp: vcpu_switch_pred_tcb_at getObject_tcb_wp simp: tcb_at_st_tcb_at)+
-   apply (clarsimp simp: valid_arch_state_def st_tcb_at_def obj_at_def get_tcb_def)
-   apply (rule conjI)
-    apply clarsimp
-    apply (erule (1) valid_objsE)
-    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_arch_tcb_def obj_at_def)
-   apply (clarsimp simp: cur_vcpu_def in_omonad)
-  apply normalise_obj_at'
-  apply (clarsimp simp: st_tcb_at_def obj_at_def is_tcb)
-  apply (frule (2) ko_tcb_cross[rotated], simp add: obj_at_def)
-  apply normalise_obj_at'
-  apply (rule conjI; clarsimp)
-   apply (rule vcpu_at_cross; assumption?)
-   apply (erule (1) valid_objsE)
-   apply (clarsimp simp: valid_obj_def valid_tcb_def valid_arch_tcb_def  tcb_relation_def
-                         arch_tcb_relation_def)
-  apply (rule vcpu_at_cross; assumption?)
-  apply (prop_tac "cur_vcpu s", clarsimp simp: valid_arch_state_def)
-  apply (clarsimp simp: state_relation_def arch_state_relation_def cur_vcpu_def in_omonad obj_at_def)
-  done
+  by (corres corres: getObject_TCB_corres
+             term_simp: tcb_relation_def arch_tcb_relation_def)
 
 (* use superset of arch_switchToThread_corres preconditions across the architectures as interface *)
 lemma arch_switchToThread_corres_interface[Schedule_R_assms]:
@@ -293,32 +176,18 @@ lemma arch_switchToThread_corres_interface[Schedule_R_assms]:
               and valid_vspace_objs and pspace_in_kernel_window and valid_cur_fpu and tcb_at t)
              (no_0_obj')
              (arch_switch_to_thread t) (Arch.switchToThread t)"
-  by (corres corres: arch_switchToThread_corres; simp)
-
-crunch vcpu_update, vgic_update, vcpu_disable, vcpu_restore, vcpu_enable
-  for valid_asid_map[wp]: valid_asid_map
-  (simp: crunch_simps wp: crunch_wps)
-
-lemma setGlobalUserVSpace_corres[corres]:
-  "corres dc valid_global_arch_objs \<top> set_global_user_vspace setGlobalUserVSpace"
-  unfolding set_global_user_vspace_def setGlobalUserVSpace_def
-  apply (subst o_def) (* unfold fun_comp on abstract side only to get global_pt abbrev *)
-  apply corres
-  done
+  by (corres corres: arch_switchToThread_corres; simp add: valid_arch_caps_def)
 
 lemma arch_switchToIdleThread_corres:
   "corres dc
-          (valid_arch_state and pspace_aligned and pspace_distinct)
-          (no_0_obj')
-          arch_switch_to_idle_thread Arch.switchToIdleThread"
-  unfolding arch_switch_to_idle_thread_def switchToIdleThread_def
-  apply (corres corres: vcpuSwitch_corres)
-   apply (clarsimp simp: valid_arch_state_def cur_vcpu_def in_omonad obj_at_def)
-  apply clarsimp
-  apply (rule vcpu_at_cross; assumption?)
-  apply (clarsimp simp: valid_arch_state_def cur_vcpu_def in_omonad obj_at_def state_relation_def
-                        arch_state_relation_def)
-  done
+        (valid_arch_state and valid_objs and valid_asid_map and unique_table_refs \<circ> caps_of_state
+           and valid_vs_lookup and valid_global_objs and pspace_aligned and pspace_distinct
+           and valid_vspace_objs and valid_idle)
+        (no_0_obj')
+        arch_switch_to_idle_thread Arch.switchToIdleThread"
+  unfolding arch_switch_to_idle_thread_def X64_H.switchToIdleThread_def
+  by (corres corres: setVMRoot_corres getIdleThread_corres)
+     (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def is_tcb)+
 
 (* use superset of arch_switchToIdleThread_corres preconditions across the architectures as interface *)
 lemma arch_switchToIdleThread_corres_interface[Schedule_R_assms]:
@@ -327,14 +196,14 @@ lemma arch_switchToIdleThread_corres_interface[Schedule_R_assms]:
       and valid_arch_caps and valid_global_objs and valid_vspace_objs and valid_objs)
      (no_0_obj')
      arch_switch_to_idle_thread Arch.switchToIdleThread"
-  by (rule corres_guard_imp, rule arch_switchToIdleThread_corres; simp)
+  by (rule corres_guard_imp, rule arch_switchToIdleThread_corres; simp add: valid_arch_caps_def)
 
 lemma threadSet_timeslice_invs[Schedule_R_assms]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> threadSet (tcbTimeSlice_update b) t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   by (wp threadSet_invs_trivial, simp_all add: inQ_def cong: conj_cong)
 
 lemma armKSCurFPUOwner_invs'[wp]:
-  "modifyArchState (armKSCurFPUOwner_update f) \<lbrace>invs'\<rbrace>"
+  "modifyArchState (x64KSCurFPUOwner_update f) \<lbrace>invs'\<rbrace>"
   apply (wpsimp simp: modifyArchState_def)
   by (clarsimp simp: invs'_def valid_state'_def valid_machine_state'_def
                      ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
@@ -357,17 +226,13 @@ lemma lazyFpuRestore_invs[wp]:
 
 lemma Arch_switchToThread_invs[Schedule_R_assms, wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  unfolding X64_H.switchToThread_def by (wpsimp wp: getObject_tcb_hyp_sym_refs)
+  unfolding X64_H.switchToThread_def by wpsimp
 
 crunch "Arch.switchToThread"
   for ksCurDomain[Schedule_R_assms, wp]: "\<lambda>s. P (ksCurDomain s)"
   and tcbDomain[Schedule_R_assms, wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'"
   and tcbState[Schedule_R_assms, wp]: "obj_at' (\<lambda>tcb. P (tcbState tcb)) t'"
   (simp: crunch_simps wp: crunch_wps getASID_wp)
-
-crunch vcpuSwitch, setVMRoot
-  for obj_at_tcb'[wp]: "obj_at' (\<lambda>tcb::tcb. P tcb) t"
-  (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemma threadSet_invs_no_cicd'_trivialT:
   assumes
@@ -382,7 +247,6 @@ lemma threadSet_invs_no_cicd'_trivialT:
     "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
     "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
     "\<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0"
-    "\<forall>tcb. atcbVCPUPtr (tcbArch (F tcb)) = atcbVCPUPtr (tcbArch tcb)"
   shows "threadSet F t \<lbrace>invs_no_cicd'\<rbrace>"
   apply (simp add: invs_no_cicd'_def valid_state'_def)
   apply (wp threadSet_valid_pspace'T
@@ -416,7 +280,7 @@ lemma asUser_invs_no_cicd'[wp]:
   done
 
 lemma armKSCurFPUOwner_invs_no_cicd'[wp]:
-  "modifyArchState (armKSCurFPUOwner_update f) \<lbrace>invs_no_cicd'\<rbrace>"
+  "modifyArchState (x64KSCurFPUOwner_update f) \<lbrace>invs_no_cicd'\<rbrace>"
   apply (wpsimp simp: modifyArchState_def)
   by (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_machine_state'_def
                      valid_arch_state'_def valid_global_refs'_def global_refs'_def
@@ -428,21 +292,7 @@ crunch lazyFpuRestore
 
 lemma Arch_switchToThread_invs_no_cicd'[Schedule_R_assms]:
   "Arch.switchToThread t \<lbrace>invs_no_cicd'\<rbrace>"
-  by (wpsimp wp: getObject_tcb_hyp_sym_refs setVMRoot_invs_no_cicd' simp: X64_H.switchToThread_def)
-     (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def)
-
-lemma setVCPU_cap_to'[wp]:
-  "\<lbrace>ex_nonz_cap_to' p\<rbrace> setObject p' (v::vcpu) \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
-  by (wp ex_nonz_cap_to_pres')
-
-crunch
-  vcpuDisable, vcpuRestore, vcpuEnable, vcpuSaveRegRange, vgicUpdateLR, vcpuSave, vcpuSwitch
-  for cap_to'[wp]: "ex_nonz_cap_to' p"
-  (ignore: doMachineOp wp: crunch_wps)
-
-crunch updateASIDPoolEntry
-  for cap_to'[wp]: "ex_nonz_cap_to' p"
-  (wp: crunch_wps ex_nonz_cap_to_pres' getASID_wp)
+  by (wpsimp wp: setVMRoot_invs_no_cicd' simp: X64_H.switchToThread_def)
 
 crunch "Arch.switchToThread"
   for cap_to'[wp]: "ex_nonz_cap_to' p"
@@ -484,12 +334,12 @@ lemma bitmapQ_lookupBitmapPriority_simp[Schedule_R_assms]:
 lemma switchToIdleThread_invs_no_cicd'[Schedule_R_assms]:
   "\<lbrace>invs_no_cicd'\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (clarsimp simp: Thread_H.switchToIdleThread_def X64_H.switchToIdleThread_def)
-  apply (wp setCurThread_invs_no_cicd'_idle_thread setVMRoot_invs_no_cicd' vcpuSwitch_it')
+  apply (wp setCurThread_invs_no_cicd'_idle_thread setVMRoot_invs_no_cicd')
   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_idle'_def)
   done
 
 crunch Arch.switchToIdleThread
-  for obj_at'[wp]: "obj_at' (P :: ('a :: no_vcpu) \<Rightarrow> bool) t"
+  for obj_at'[wp]: "obj_at' P t"
 
 crunch switchToThread, switchToIdleThread
   for it[Schedule_R_assms, wp]: "\<lambda>s. P (ksIdleThread s)"
@@ -512,9 +362,8 @@ lemma switchToIdleThread_activatable_2[Schedule_R_assms, wp]:
                         pred_tcb_at'_def obj_at'_def idle_tcb'_def)
   done
 
-lemmas [Schedule_R_assms] =
-   (* part of DetSchedSchedule_AI_assms but not interfaced (X64 only) *)
-   arch_switch_to_thread_valid_idle
+crunch arch_switch_to_thread, handle_spurious_irq
+  for valid_idle[Schedule_R_assms, wp]: valid_idle
 
 end (* Arch *)
 
@@ -598,40 +447,6 @@ lemma guarded_switch_to_chooseThread_fragment_corres[Schedule_R_2_assms]:
   apply (auto elim!: pred_tcb'_weakenE split: thread_state.splits
               simp: pred_tcb_at' runnable'_def all_invs_but_ct_idle_or_in_cur_domain'_def)
   done
-
-lemma vcpuInvalidateActive_corres[corres]:
-  "corres dc \<top> no_0_obj' vcpu_invalidate_active vcpuInvalidateActive"
-  unfolding vcpuInvalidateActive_def vcpu_invalidate_active_def
-  apply (corresKsimp  corres: vcpuDisable_corres
-                    corresK: corresK_modifyT
-                       simp: modifyArchState_def)
-  apply (clarsimp simp: state_relation_def arch_state_relation_def)
-  done
-
-lemma vcpuFlush_corres[corres]:
-  "corres dc valid_arch_state (pspace_aligned' and pspace_distinct' and no_0_obj')
-     vcpu_flush vcpuFlush"
-  unfolding vcpu_flush_def vcpuFlush_def
-  apply (rule stronger_corres_guard_imp)
-    apply (rule corres_split[OF corres_gets_current_vcpu])
-      apply clarsimp
-      apply (rule corres_when, simp)
-      apply (rule corres_split[OF vcpuSave_corres])
-        apply (rule vcpuInvalidateActive_corres)
-       apply wpsimp+
-   apply (clarsimp simp: valid_arch_state_def obj_at_def cur_vcpu_def in_omonad)
-  apply (clarsimp simp: state_relation_def arch_state_relation_def)
-  apply (rule aligned_distinct_relation_vcpu_atI'; assumption?)
-  apply (clarsimp simp: valid_arch_state_def obj_at_def cur_vcpu_def in_omonad)
-  done
-
-lemma vcpuFlush_invs'[wp]:
-  "vcpuFlush \<lbrace>invs'\<rbrace>"
-  unfolding vcpuFlush_def
-  by wpsimp
-
-crunch vcpu_flush
-  for valid_cur_fpu[wp]: valid_cur_fpu
 
 lemma prepareNextDomain_corres[corres]:
   "corres dc (valid_arch_state and pspace_aligned and pspace_distinct and valid_cur_fpu)
