@@ -66,7 +66,9 @@ method_setup eval_int_nat = \<open>Scan.succeed (fn ctxt => SIMPLE_METHOD'
         addsimprocs [@{simproc eval_nat}, @{simproc eval_int}])))\<close>
     "use code generator setup to simplify nats and ints in goals to values"
 
+(* FIXME isa: obsolete, add to try0 instead
 add_try_method eval_bool
+*)
 
 text \<open>Testing.\<close>
 definition
@@ -102,8 +104,7 @@ fun get_const_defs thy nm = Sign.consts_of thy
   |> filter (Thm.strip_shyps #> Thm.shyps_of #> null)
   |> tap (fn xs => tracing ("Installing " ^ string_of_int (length xs) ^ " code defs"))
 
-fun setup nm thy = fold (fn t => Code.add_eqn_global (t, true))
-    (get_const_defs thy nm) thy
+fun setup nm thy = Code.declare_eqns_global (map (rpair true) (get_const_defs thy nm)) thy
 
 end
 \<close>
