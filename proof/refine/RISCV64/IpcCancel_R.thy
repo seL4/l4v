@@ -6,11 +6,13 @@
 
 theory IpcCancel_R
 imports
-  Schedule_R
+  ArchSchedule_R
 begin
 
 arch_requalify_facts
-  valid_global_refs_lift'
+  asUser_sym_heap_sched_pointers (* free type variable *)
+
+lemmas [wp] = asUser_sym_heap_sched_pointers
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 

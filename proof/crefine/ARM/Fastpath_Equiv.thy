@@ -676,8 +676,8 @@ lemma fastpath_callKernel_SysCall_corres:
                                  apply (rule activateThread_simple_rewrite)
                                 apply (rule monadic_rewrite_refl)
                                apply wp
-                              apply (wp setCurThread_ct_in_state)
-                             apply (simp only: st_tcb_at'_def[symmetric])
+                              apply (wpsimp wp: setCurThread_ct_in_state simp: comp_def)
+                             apply (simp only: st_tcb_at'_def[simplified comp_def, symmetric])
                              apply (wp, clarsimp simp: cur_tcb'_def ct_in_state'_def)
                             apply (simp add: getThreadCallerSlot_def getThreadReplySlot_def
                                              locateSlot_conv ct_in_state'_def cur_tcb'_def)
