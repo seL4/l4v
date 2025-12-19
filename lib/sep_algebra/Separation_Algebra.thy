@@ -995,7 +995,7 @@ lemma sep_list_conj_filter_map:
 
 lemma sep_map_set_conj_restrict_predicate:
   "finite A \<Longrightarrow> (\<And>* x\<in>A. if T x then P x else \<box>) = (\<And>* x\<in>(Set.filter T A). P x)"
-  by (simp add: Set.filter_def sep.prod.inter_filter)
+  by (simp add: sep.prod.inter_filter)
 
 lemma distinct_filters:
   "\<lbrakk>distinct xs; \<And>x. (f x \<and> g x) = False\<rbrakk> \<Longrightarrow>
