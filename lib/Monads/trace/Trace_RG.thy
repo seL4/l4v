@@ -109,7 +109,7 @@ definition validI ::
 text \<open>
   We often reason about invariant predicates. The following provides shorthand syntax
   that avoids repeating potentially long predicates.\<close>
-abbreviation (input) invariantI ::
+abbreviation invariantI ::
   "('s,'a) tmonad \<Rightarrow> 's rg_pred \<Rightarrow> 's rg_pred \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
   ("_/ \<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>" [59,0] 60) where
   "invariantI f R G P \<equiv> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. P\<rbrace>"
@@ -153,7 +153,7 @@ abbreviation validI_no_guarantee ::
   ("(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)/ _ /(-,/ \<lbrace>_\<rbrace>)") where
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>Q\<rbrace> \<equiv> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>\<lambda>_ _. True\<rbrace>,\<lbrace>Q\<rbrace>"
 
-abbreviation (input) invariantI_no_guarantee ::
+abbreviation invariantI_no_guarantee ::
   "('s,'a) tmonad \<Rightarrow> 's rg_pred \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
   ("_/ \<lbrace>_\<rbrace>,/ -,/ \<lbrace>_\<rbrace>" [59,0] 60) where
   "f \<lbrace>R\<rbrace>, -, \<lbrace>P\<rbrace> \<equiv> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>\<lambda>_ _. True\<rbrace>,\<lbrace>\<lambda>_. P\<rbrace>"
