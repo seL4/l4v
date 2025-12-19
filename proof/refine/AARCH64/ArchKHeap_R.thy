@@ -134,9 +134,9 @@ proof -
   from ctes_of have "cte_wp_at' ((=) cte) p s"
     by (simp add: cte_wp_at_ctes_of)
   thus ?thesis using canonical canonical_bit_def
-    by (fastforce simp: pspace_canonical'_def tcb_cte_cases_def field_simps objBits_defs take_bit_Suc
+    by (fastforce simp: pspace_canonical'_def tcb_cte_cases_def objBits_defs field_simps
                  split: if_splits
-                  elim: cte_wp_atE' canonical_address_add)
+                 elim!: cte_wp_atE' canonical_address_add)
 qed
 
 lemma valid_updateCapDataI[Arch_assms]:
