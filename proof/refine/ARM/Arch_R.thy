@@ -812,7 +812,7 @@ shows
               apply (rule corres_splitEE)
                  apply (rule corres_whenE)
                    apply (subst conj_assoc [symmetric])
-                   apply (subst assocs_empty_dom_comp [symmetric])
+                   apply (subst assocs_empty_dom_comp[simplified, symmetric])
                    apply (rule dom_ucast_eq)
                   apply (rule corres_trivial)
                   apply simp
@@ -862,7 +862,7 @@ shows
          apply (simp only: bindE_assoc)
          apply (rule corres_splitEE)
             apply (rule corres_whenE)
-              apply (subst assocs_empty_dom_comp [symmetric])
+              apply (subst assocs_empty_dom_comp[simplified,symmetric])
               apply (simp add: o_def)
               apply (rule dom_ucast_eq_7)
              apply (rule corres_trivial, simp, simp)
@@ -905,7 +905,7 @@ shows
           apply (wp whenE_wp)+
       apply fastforce
      apply clarsimp
-     apply (simp add: null_def split_def asid_high_bits_def word_le_make_less)
+     apply (simp add: split_def asid_high_bits_def word_le_make_less)
      apply (subst hd_map, assumption)
      \<comment> \<open>need abstract guard to show list nonempty\<close>
      apply (simp add: word_le_make_less)
@@ -1588,7 +1588,7 @@ lemma arch_decodeInvocation_wf[wp]:
        apply (erule cte_wp_at_weakenE')
        apply (simp, drule_tac t="cteCap c" in sym, simp)
       apply (subst (asm) conj_assoc [symmetric])
-      apply (subst (asm) assocs_empty_dom_comp [symmetric])
+      apply (subst (asm) assocs_empty_dom_comp[simplified,symmetric])
       apply (drule dom_hd_assocsD)
       apply (simp add: capAligned_def)
       apply (elim conjE)
@@ -1624,7 +1624,7 @@ lemma arch_decodeInvocation_wf[wp]:
          apply (wp ensureNoChildren_sp whenE_throwError_wp|wpc)+
      apply clarsimp
      apply (rule conjI)
-      apply (clarsimp simp: null_def neq_Nil_conv)
+      apply (clarsimp simp: neq_Nil_conv)
       apply (drule filter_eq_ConsD)
       apply clarsimp
       apply (rule shiftl_less_t2n)

@@ -5171,7 +5171,7 @@ lemma insertNewCap_valid_global_refs':
    apply (rule hoare_use_eq [where f=gsMaxObjectSize])
     apply wp+
   apply (clarsimp simp: cte_wp_at_ctes_of cteCaps_of_def ball_ran_eq)
-  apply (frule power_increasing[where a=2], simp)
+  apply (frule power_increasing[where a="2::nat"], simp)
   apply (blast intro: order_trans)
   done
 

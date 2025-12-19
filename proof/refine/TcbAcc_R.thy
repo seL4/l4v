@@ -3402,14 +3402,14 @@ lemma setQueue_bitmapQ_no_L1_orphans[wp]:
   "\<lbrace> bitmapQ_no_L1_orphans \<rbrace>
        setQueue d p ts
    \<lbrace>\<lambda>rv. bitmapQ_no_L1_orphans \<rbrace>"
-  unfolding setQueue_def bitmapQ_no_L1_orphans_def null_def
+  unfolding setQueue_def bitmapQ_no_L1_orphans_def
   by (wp, auto)
 
 lemma setQueue_bitmapQ_no_L2_orphans[wp]:
   "\<lbrace> bitmapQ_no_L2_orphans \<rbrace>
        setQueue d p ts
    \<lbrace>\<lambda>rv. bitmapQ_no_L2_orphans \<rbrace>"
-  unfolding setQueue_def bitmapQ_no_L2_orphans_def null_def
+  unfolding setQueue_def bitmapQ_no_L2_orphans_def
   by (wp, auto)
 
 lemma setQueue_sets_queue[wp]:
@@ -4062,7 +4062,7 @@ lemma tcbSchedEnqueue_ct_not_inQ:
       apply (clarsimp)
       done
     show ?thesis
-      apply (simp add: tcbSchedEnqueue_def unless_def null_def)
+      apply (simp add: tcbSchedEnqueue_def unless_def)
       apply (wpsimp wp: ts sq hoare_vcg_imp_lift' getTCB_wp simp: threadGet_def)+
       done
   qed
@@ -4089,7 +4089,7 @@ lemma tcbSchedAppend_ct_not_inQ:
       apply (clarsimp)
       done
     show ?thesis
-      apply (simp add: tcbSchedAppend_def unless_def null_def)
+      apply (simp add: tcbSchedAppend_def unless_def)
       apply (wpsimp wp: ts sq hoare_vcg_imp_lift' getTCB_wp simp: threadGet_def)+
       done
   qed

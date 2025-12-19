@@ -779,7 +779,7 @@ lemma new_cap_addrs_distinct:
   unfolding new_cap_addrs_def
   apply (simp add: distinct_map)
   apply (rule comp_inj_on[where f=of_nat, unfolded o_def])
-   apply (rule subset_inj_on)
+   apply (rule inj_on_subset)
     apply (rule word_unat.Abs_inj_on)
    apply (clarsimp simp only: unats_def atLeastLessThan_iff
                   dest!: less_two_pow_divD)

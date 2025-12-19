@@ -812,7 +812,7 @@ lemma invalidateASID_valid_arch_state [wp]:
   apply (clarsimp simp: valid_arch_state'_def simp del: fun_upd_apply)
   apply (clarsimp simp: is_inv_None_upd fun_upd_def[symmetric] comp_upd_simp
                         inj_on_fun_upd_elsewhere valid_asid_map'_def)
-  apply (auto elim!: subset_inj_on dest!: ran_del_subset)[1]
+  apply (auto elim!: inj_on_subset dest!: ran_del_subset)[1]
   done
 
 crunch deleteASID
@@ -1191,7 +1191,7 @@ lemma findFreeHWASID_valid_arch [wp]:
     apply blast
    apply simp
   apply (rule conjI)
-   apply (erule subset_inj_on, clarsimp)
+   apply (erule inj_on_subset, clarsimp)
   apply (erule order_trans[rotated])
   apply clarsimp
   done

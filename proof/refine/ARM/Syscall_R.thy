@@ -140,22 +140,20 @@ lemma decodeDomainInvocation_corres:
   apply (case_tac "args", simp_all)
   apply (rule corres_guard_imp)
     apply (rule_tac r'="\<lambda>domain domain'. domain = domain'" and R="\<lambda>_. \<top>" and R'="\<lambda>_. \<top>"
-            in corres_splitEE)     apply (rule whenE_throwError_corres)
+            in corres_splitEE)
+       apply (rule whenE_throwError_corres)
          apply (simp+)[2]
        apply (rule corres_returnOkTT)
        apply simp
       apply (rule whenE_throwError_corres_initial)
         apply simp
-       apply (case_tac "cs")
-        apply ((case_tac "cs'", ((simp add: null_def)+)[2])+)[2]
+       apply (case_tac "cs"; case_tac "cs'"; simp)
       apply (subgoal_tac "cap_relation (fst (hd cs)) (fst (hd cs'))")
        apply (case_tac "fst (hd cs)")
                   apply (case_tac "fst (hd cs')", simp+, rule corres_returnOkTT)
             apply (simp add: inv_relation_def o_def uncurry_def)
            apply (case_tac "fst (hd cs')", fastforce+)
-      apply (case_tac "cs")
-       apply (case_tac "cs'", ((simp add: list_all2_map2 list_all2_map1)+)[2])
-      apply (case_tac "cs'", ((simp add: list_all2_map2 list_all2_map1)+)[2])
+      apply (case_tac "cs"; case_tac "cs'"; simp add: list_all2_map2 list_all2_map1)
      apply (wp | simp)+
   done
 
@@ -628,7 +626,7 @@ lemma dec_dom_inv_wf[wp]:
   apply clarsimp
   apply (drule_tac x = "hd excaps" in bspec)
    apply (rule hd_in_set)
-   apply (simp add:null_def)
+    apply simp
   apply (simp add:valid_cap'_def)
   apply (simp add:not_le)
   apply (simp del: Word.of_nat_unat flip: ucast_nat_def)

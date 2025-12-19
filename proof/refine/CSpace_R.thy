@@ -3221,8 +3221,8 @@ lemma untyped_ranges_zero_delta:
   apply (simp add: untyped_ranges_zero_inv_def urz[unfolded untyped_ranges_zero_inv_def])
   apply (rule sym, rule trans, rule_tac P="\<lambda>x. x \<in> set xs"
         and m="untypedZeroRange \<circ>\<^sub>m cteCaps_of s" in ran_split_eq)
-    apply (rule_tac B="dom (untypedZeroRange \<circ>\<^sub>m (\<lambda>cp. if valid_cap' cp s
-      then Some cp else None) \<circ>\<^sub>m cteCaps_of s)" in subset_inj_on[rotated])
+    apply (rule_tac A="dom (untypedZeroRange \<circ>\<^sub>m (\<lambda>cp. if valid_cap' cp s
+      then Some cp else None) \<circ>\<^sub>m cteCaps_of s)" in inj_on_subset[rotated])
      apply (clarsimp simp: map_comp_Some_iff cteCaps_of_def)
      apply (case_tac "the (ctes_of s x)", clarsimp)
      apply (frule ctes_of_valid_cap'[OF _ vobj])

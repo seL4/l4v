@@ -1322,7 +1322,7 @@ lemma invalidateASID_valid_arch_state [wp]:
   apply (rule conjI)
    apply (clarsimp simp: is_inv_None_upd fun_upd_def[symmetric] comp_upd_simp
                          inj_on_fun_upd_elsewhere valid_asid_map'_def)
-   apply (auto elim!: subset_inj_on dest!: ran_del_subset split: option.splits)
+   apply (auto elim!: inj_on_subset dest!: ran_del_subset split: option.splits)
   done
 
 crunch vcpuDisable, vcpuEnable, vcpuSave, vcpuRestore
@@ -1734,7 +1734,7 @@ lemma findFreeHWASID_valid_arch [wp]:
     apply blast
    apply simp
   apply (rule conjI)
-   apply (erule subset_inj_on, clarsimp)
+   apply (erule inj_on_subset, clarsimp)
   apply (erule order_trans[rotated])
   apply clarsimp
   done

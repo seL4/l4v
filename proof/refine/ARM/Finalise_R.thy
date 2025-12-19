@@ -2475,7 +2475,7 @@ lemma invalidateASIDEntry_invs' [wp]:
                     inj_on_fun_upd_elsewhere
                     valid_asid_map'_def
                     ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
-   subgoal by (auto elim!: subset_inj_on)
+   subgoal by (auto elim!: inj_on_subset)
   apply (clarsimp simp: invs'_def valid_state'_def)
   apply (rule conjI)
    apply (simp add: valid_global_refs'_def
