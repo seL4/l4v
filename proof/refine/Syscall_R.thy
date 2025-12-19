@@ -385,16 +385,13 @@ lemma decodeDomainSet_corres[corres]:
        apply simp
       apply (rule whenE_throwError_corres_initial)
         apply simp
-       apply (case_tac "cs")
-        apply ((case_tac "cs'", ((simp add: null_def)+)[2])+)[2]
+       apply (case_tac "cs"; case_tac "cs'"; simp)
       apply (subgoal_tac "cap_relation (fst (hd cs)) (fst (hd cs'))")
        apply (case_tac "fst (hd cs)")
                   apply (case_tac "fst (hd cs')", simp+, rule corres_returnOkTT)
             apply (simp add: domaininv_relation_def)
            apply (case_tac "fst (hd cs')", fastforce+)
-      apply (case_tac "cs")
-       apply (case_tac "cs'", ((simp add: list_all2_map2 list_all2_map1)+)[2])
-      apply (case_tac "cs'", ((simp add: list_all2_map2 list_all2_map1)+)[2])
+      apply (case_tac "cs"; case_tac "cs'"; simp add: list_all2_map2 list_all2_map1)
      apply (wp | simp)+
   done
 
