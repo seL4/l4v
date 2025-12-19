@@ -354,7 +354,7 @@ let
             fn thm =>
             (if Config.get lthy ML_Options.exception_trace then
               warning ("Could not solve subgoal: " ^
-                (Goal_Display.string_of_goal lthy thm))
+                (Goal_Display.pretty_goal lthy thm |> Pretty.string_of))
             else (); no_tac thm))]
 
     (* Solve the goal. *)
