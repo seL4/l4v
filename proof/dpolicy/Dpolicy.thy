@@ -754,7 +754,7 @@ lemma cdl_cdt_transform_rev:
   apply (clarsimp simp:cdt_transform map_lift_over_def split:if_split_asm)
   apply (rule_tac x=a in exI, rule_tac x=b in exI)
   apply (subst (asm) inv_into_f_f)
-    apply (rule subset_inj_on)
+    apply (rule inj_on_subset)
      apply (simp add:dom_def)+
   done
 
