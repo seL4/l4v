@@ -946,7 +946,7 @@ lemma equiv_relation_to_projection:
    apply clarsimp
    apply (metis equivE sym_def trans_def equiv)
   apply (clarsimp)
-  apply (metis UNIV_I equiv equivE mem_Collect_eq refl_on_def)
+  apply (metis equiv equivp_equiv equivp_reflp mem_Collect_eq)
   done
 
 lemma range_constant [simp]:

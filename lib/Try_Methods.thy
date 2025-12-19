@@ -8,10 +8,14 @@ theory Try_Methods
 
 imports Eisbach_Tools.Eisbach_Methods
 
+(*
 keywords "trym" :: diag
   and "add_try_method" :: thy_decl
+*)
 
 begin
+
+(* FIXME isa: obsolete, register methods with try/try0 instead
 
 text \<open>
 A collection of methods that can be "tried" against subgoals (similar
@@ -116,5 +120,6 @@ add_try_method metis
 
 method auto_metis = solves \<open>auto; metis\<close>
 add_try_method auto_metis
+*)
 
 end
