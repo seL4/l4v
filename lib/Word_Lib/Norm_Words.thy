@@ -15,20 +15,14 @@ text \<open>
   interval \<open>[0..2^len_of 'a)\<close>. Only for concrete word lengths.
 \<close>
 
-lemma bintrunc_numeral:
-  "(take_bit :: nat \<Rightarrow> int \<Rightarrow> int) (numeral k) x = of_bool (odd x) + 2 * (take_bit :: nat \<Rightarrow> int \<Rightarrow> int) (pred_numeral k) (x div 2)"
-  by (simp add: numeral_eq_Suc take_bit_Suc mod_2_eq_odd)
-
-lemma neg_num_bintr:
-  "(- numeral x :: 'a::len word) = word_of_int (take_bit LENGTH('a) (- numeral x))"
+lemma neg_numeral_eq:
+  \<open>- numeral n = (word_of_int (take_bit LENGTH('a) (- numeral n)) :: 'a::len word)\<close>
   by transfer simp
 
 ML \<open>
-  fun is_refl \<^Const_>\<open>Pure.eq _ for x y\<close> = (x = y)
-    | is_refl _ = false;
-
+local
   fun signed_dest_wordT \<^Type>\<open>word \<^Type>\<open>signed T\<close>\<close> = Word_Lib.dest_binT T
-    | signed_dest_wordT T = Word_Lib.dest_wordT T
+    | signed_dest_wordT T = Word_Lib.dest_wordT T;
 
   fun typ_size_of t = signed_dest_wordT (type_of (Thm.term_of t));
 
@@ -37,36 +31,46 @@ ML \<open>
     | num_len \<^Const_>\<open>Num.One\<close> = 1
     | num_len \<^Const_>\<open>numeral _ for t\<close> = num_len t
     | num_len \<^Const_>\<open>uminus _ for t\<close> = num_len t
-    | num_len t = raise TERM ("num_len", [t])
+    | num_len t = raise TERM ("num_len", [t]);
 
+  val expand_pos = mk_eq @{thm num_abs_bintr};
+  val expand_neg = mk_eq @{thm neg_numeral_eq};
+
+  fun expand is_neg ct =
+    [Thm.reflexive ct, if is_neg then expand_neg else expand_pos] MRS transitive_thm;
+
+  val ss = simpset_of (@{context} |> put_simpset HOL_ss
+    |> fold Simplifier.add_simp @{thms take_bit_0 take_bit_numeral_bit0 take_bit_numeral_bit1 take_bit_numeral_minus_bit0 take_bit_numeral_minus_bit1
+         pred_numeral_simps len_num0 len_num1 len_bit0 len_bit1 len_signed
+         arith_simps
+         mult_1 mult_1_right numeral_plus_one uminus_numeral_One take_bit_numeral_minus_1_eq
+         power_numeral Num.pow.simps Num.sqr.simps diff_numeral_special
+         word_of_int_numeral word_of_int_1});
+
+  fun norm ctxt = Simplifier.rewrite (put_simpset ss ctxt);
+in
+  (* will work in context of theory Word as well *)
   fun unsigned_norm is_neg _ ctxt ct =
-  (if is_neg orelse num_len (Thm.term_of ct) > typ_size_of ct then let
-      val btr = if is_neg
-                then @{thm neg_num_bintr} else @{thm num_abs_bintr}
-      val th = [Thm.reflexive ct, mk_eq btr] MRS transitive_thm
-
-      (* will work in context of theory Word as well *)
-      val ss = simpset_of (@{context} addsimps @{thms bintrunc_numeral} delsimps @{thms take_bit_minus_one_eq_mask})
-        (* TODO: completely explicitly determined simpset *)
-      val cnv = simplify (put_simpset ss ctxt) th
-    in if is_refl (Thm.prop_of cnv) then NONE else SOME cnv end
+    (if num_len (Thm.term_of ct) > typ_size_of ct orelse is_neg then
+      SOME ((expand is_neg then_conv norm ctxt) ct)
     else NONE)
-  handle TERM ("num_len", _) => NONE
-       | TYPE ("dest_binT", _, _) => NONE
+    handle TERM ("num_len", _) => NONE
+         | TYPE ("dest_binT", _, _) => NONE
+end
 \<close>
 
 simproc_setup
-  unsigned_norm ("numeral n::'a::len word") = \<open>unsigned_norm false\<close>
+  unsigned_norm (\<open>numeral n :: 'a::len word\<close>) = \<open>unsigned_norm false\<close>
 
 simproc_setup
-  unsigned_norm_neg0 ("-numeral (num.Bit0 num)::'a::len word") = \<open>unsigned_norm true\<close>
+  unsigned_norm_neg0 (\<open>- numeral (num.Bit0 n) :: 'a::len word\<close>) = \<open>unsigned_norm true\<close>
 
 simproc_setup
-  unsigned_norm_neg1 ("-numeral (num.Bit1 num)::'a::len word") = \<open>unsigned_norm true\<close>
+  unsigned_norm_neg1 (\<open>- numeral (num.Bit1 n) :: 'a::len word\<close>) = \<open>unsigned_norm true\<close>
 
 lemma minus_one_norm:
-  "(-1 :: 'a :: len word) = of_nat (2 ^ LENGTH('a) - 1)"
-  by (simp add:of_nat_diff)
+  \<open>(- 1 :: 'a :: len word) = word_of_nat (2 ^ LENGTH('a) - 1)\<close>
+  by simp
 
 lemmas minus_one_norm_num =
   minus_one_norm [where 'a="'b::len bit0"] minus_one_norm [where 'a="'b::len0 bit1"]
@@ -74,21 +78,32 @@ lemmas minus_one_norm_num =
 context
 begin
 
-private lemma "f (7 :: 2 word) = f 3" by simp
+declaration \<open>fn _ => Context.mapping I (put_simpset HOL_ss)\<close>
 
-private lemma "f 7 = f (3 :: 2 word)" by simp
+context
+  notes [[simproc add: unsigned_norm unsigned_norm_neg0 unsigned_norm_neg1]]
+begin
 
-private lemma "f (-2) = f (21 + 1 :: 3 word)" by simp
-
-private lemma "f (-2) = f (13 + 1 :: 'a::len word)"
+private lemma "- 2 = (13 + 1 :: 'a::len word)"
+  using numeral_plus_one [simp]
   apply simp (* does not touch generic word length *)
   oops
 
-private lemma "f (-2) = f (0xFFFFFFFE :: 32 word)" by simp
+private lemma "7 = (3 :: 2 word)"
+  by simp
 
-private lemma "(-1 :: 2 word) = 3" by simp
+private lemma "- 2 = (22 :: 3 word)" 
+  by simp
 
-private lemma "f (-2) = f (0xFFFFFFFE :: 32 signed word)" by simp
+private lemma "- 2 = (0xFFFFFFFE :: 32 word)"
+  by simp
+
+private lemma "- 2 = (0xFFFFFFFE :: 32 signed word)"
+  by simp
+
+end
+
+end
 
 text \<open>
   We leave @{term "-1"} untouched by default, because it is often useful
@@ -97,21 +112,23 @@ text \<open>
   The additional normalisation is restricted to concrete numeral word lengths,
   like the rest.
 \<close>
+
 context
   notes minus_one_norm_num [simp]
 begin
 
-private lemma "f (-1) = f (15 :: 4 word)" by simp
+private lemma "f (- 1) = f (15 :: 4 word)"
+  by simp
 
-private lemma "f (-1) = f (7 :: 3 word)" by simp
+private lemma "f (- 1) = f (7 :: 3 word)"
+  by simp
 
-private lemma "f (-1) = f (0xFFFF :: 16 word)" by simp
+private lemma "f (- 1) = f (0xFFFF :: 16 word)"
+  by simp
 
-private lemma "f (-1) = f (0xFFFF + 1 :: 'a::len word)"
+private lemma "f (- 1) = f (0xFFFF + 1 :: 'a::len word)"
   apply simp (* does not touch generic -1 *)
   oops
-
-end
 
 end
 

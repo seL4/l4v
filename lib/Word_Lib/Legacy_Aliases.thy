@@ -7,7 +7,7 @@
 section \<open>Legacy aliases\<close>
 
 theory Legacy_Aliases
-  imports "HOL-Library.Word"
+  imports "HOL-Library.Word" "Sgn_Abs"
 begin
 
 context abstract_boolean_algebra
@@ -135,5 +135,13 @@ lemma bit_clearBit_iff:
 
 lemmas less_def = less_eq [symmetric]
 lemmas le_def = not_less [symmetric, where ?'a = nat]
+
+lemma sgn_word_def:
+  \<open>sgn w = (if w = 0 then 0 else if 0 <s w then 1 else -1)\<close>
+  by (fact sgn_word_if)
+
+lemma abs_word_def:
+  \<open>abs w = (if w \<le>s 0 then -w else w)\<close>
+  by (fact abs_word_if)
 
 end
