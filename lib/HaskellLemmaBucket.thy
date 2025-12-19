@@ -175,7 +175,7 @@ lemma fun_is_in_assocs:
 
 lemma empty_set_is_null:
   "(set xs = {}) = null xs"
-  by (clarsimp simp: null_def)
+  by clarsimp
 
 lemma assert_into_when:
   "(assert P) = (when (\<not> P) (haskell_fail []))"
@@ -308,9 +308,5 @@ lemma findM_is_mapME:
   apply (simp add: bindE_assoc split: if_split)
   apply (simp add: liftE_bindE bind_assoc throwError_bind)
   done
-
-
-(* FIXME word_eqI: move up *)
-add_try_method word_eqI_solve
 
 end
