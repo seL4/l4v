@@ -220,9 +220,9 @@ lemma si_caps_at_take_2:
   apply (frule (1) object_at_real_object_at)
   apply (frule (1) object_at_real_object_at[where obj_id=spec_pt_section_ptr])
   apply (clarsimp simp: object_at_def is_pd_def is_frame_def is_pt_def split: cdl_object.split_asm)
-  by (metis sep_caps_at_split[where a="spec_pd_ptr"]
-            sep_caps_at_split[where a="spec_pt_section_ptr"]
-            cdl_object.exhaust mem_Collect_eq member_remove option.inject remove_def)
+  apply (rename_tac object obj_id, case_tac object; simp)
+  by (metis cdl_object.distinct(79) insert_Diff insert_iff mem_Collect_eq option.inject
+            sep_caps_at_split)
 
 lemma si_caps_at_take_2_not_object_at:
   "\<lbrakk>well_formed spec;
@@ -249,9 +249,9 @@ lemma si_caps_at_take_2':
   apply (frule (1) object_at_real_object_at)
   apply (frule (1) object_at_real_object_at[where obj_id=spec_pt_section_ptr])
   apply (clarsimp simp: object_at_def is_pd_def is_frame_def is_pt_def split: cdl_object.split_asm)
-  by (metis sep_caps_at_split[where a="spec_pd_ptr"]
-            sep_caps_at_split[where a="spec_pt_section_ptr"]
-            cdl_object.exhaust mem_Collect_eq member_remove option.inject remove_def)
+  apply (rename_tac object obj_id, case_tac object; simp)
+  by (metis cdl_object.distinct(71) insert_Diff insert_iff mem_Collect_eq option.inject
+            sep_caps_at_split)
 
 lemma frame_at_default_cap[simp]:
   "well_formed spec \<Longrightarrow>
@@ -1067,7 +1067,8 @@ lemma well_formed_pt_not_in_pd_empty_init:
   apply (clarsimp simp: object_at_def)
   apply (case_tac "cap \<noteq> NullCap")
    apply (frule well_formed_types_match[symmetric], fastforce+)
-   apply (fastforce dest: opt_cap_dom_slots_of
+   apply (fastforce del: opt_cap_dom_slots_of
+                    dest: opt_cap_dom_slots_of
                     simp: cap_at_def cap_ref_object_def object_at_def object_type_is_object)+
   done
 
@@ -1075,7 +1076,7 @@ lemma refl_on_pd_parent[simp]:
   "refl_on {pt_id. pt_at pt_id spec \<and>
                    (\<exists>obj. pd_at obj spec \<and> parent_obj_of obj pt_id spec)}
            (pd_equiv_class spec)"
-  by (clarsimp simp: pd_equiv_class_def refl_on_def, fastforce)
+  by (clarsimp simp: pd_equiv_class_def refl_on_def)
 
 lemma pt_parents_pd_pts_empty:
   "well_formed spec \<Longrightarrow>
@@ -1086,6 +1087,7 @@ lemma pt_parents_pd_pts_empty:
   apply (rule sym, subst sep_map_set_quotient_split[where R="pd_equiv_class spec"])
     apply fastforce
    apply (rule equivI; clarsimp simp: pd_equiv_sym[simplified fun_app_def] pd_equiv_trans)
+   apply (fastforce simp: pd_equiv_class_def)
   apply (clarsimp simp: slots_in_object_empty_def, rule sym, subst sep_map_set_squash)
     apply clarsimp
     apply (drule_tac x=x and y=y in pd_pts_inj_or_empty, clarsimp+)
@@ -1117,6 +1119,7 @@ lemma pt_parents_pd_pts_init:
   apply (rule sym, subst sep_map_set_quotient_split[where R="pd_equiv_class spec"])
     apply (clarsimp)
    apply (rule equivI; clarsimp simp: pd_equiv_sym[simplified fun_app_def] pd_equiv_trans)
+   apply (fastforce simp: pd_equiv_class_def)
   apply (clarsimp simp: slots_in_object_init_def, rule sym, subst sep_map_set_squash)
     apply clarsimp
     apply (drule_tac x=x and y=y in pd_pts_inj_or_empty, clarsimp+)

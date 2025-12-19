@@ -613,9 +613,8 @@ where
  ********************************************************)
 
 lemma orig_cap_rewrite:
-  "Set.filter (\<lambda>cap_ref. original_cap_at cap_ref spec \<and> cap_at cap_has_object cap_ref spec)
-               (SIGMA obj_id:{obj_id. cnode_at obj_id spec}.
-                      dom (slots_of obj_id spec)) =
+  "{a \<in> SIGMA obj_id:{obj_id. cnode_at obj_id spec}. dom (slots_of obj_id spec).
+      original_cap_at a spec \<and> cap_at cap_has_object a spec} =
    {cap_ref. original_cap_at cap_ref spec \<and> object_cap_ref cap_ref spec}"
   by (auto simp: object_cap_ref_def opt_cap_def object_at_def cap_at_def real_object_at_def
           split: option.splits)
@@ -681,9 +680,8 @@ lemma well_formed_irqhandler_cap_in_cnode_at:
 
 lemma irqhandler_cap_rewrite:
    "well_formed spec \<Longrightarrow>
-    Set.filter (\<lambda>irq. irqhandler_cap_at irq spec)
-                (SIGMA obj_id:{obj_id. cnode_at obj_id spec}.
-                       dom (slots_of obj_id spec)) =
+    {a \<in> SIGMA obj_id:{obj_id. cnode_at obj_id spec}. dom (slots_of obj_id spec).
+       irqhandler_cap_at a spec} =
     {cap_ref. irqhandler_cap_at cap_ref spec}"
    apply (clarsimp simp: object_cap_ref_def object_at_def cap_at_def
           split: option.splits)
@@ -905,8 +903,8 @@ lemma orig_cap_rewrite_v2:
 
 lemma rewrite_irqhandler_cap_at:
   "well_formed spec \<Longrightarrow>
-  Set.filter (\<lambda>cap_ref. irqhandler_cap_at cap_ref spec)
-             (SIGMA obj_id:{obj_id. cnode_at obj_id spec}. dom (slots_of obj_id spec)) =
+  {cap_ref \<in> SIGMA obj_id:{obj_id. cnode_at obj_id spec}. dom (slots_of obj_id spec).
+     irqhandler_cap_at cap_ref spec} =
   {(obj_id, slot). irqhandler_cap_at (obj_id, slot) spec}"
   apply (subst irqhandler_cap_at_simp [symmetric])
   by (auto simp: opt_cap_def cap_at_def)

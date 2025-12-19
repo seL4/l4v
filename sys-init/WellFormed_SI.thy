@@ -1503,7 +1503,7 @@ lemma fake_cap_rewrite:
               (SIGMA obj_id:{obj_id. pd_at obj_id spec}.
                      dom (slots_of obj_id spec))
    = {cap_ref. fake_pt_cap_at cap_ref spec}"
-  apply (clarsimp simp: Set.filter_def cap_at_def opt_cap_def
+  apply (clarsimp simp: cap_at_def opt_cap_def
                  split: option.splits)
   apply (rule)
    apply clarsimp
@@ -1638,7 +1638,7 @@ lemma update_cap_rights_and_data:
    apply (drule_tac m=8 in word_shift_zero, rule less_imp_le)
      apply (clarsimp simp: guard_bits_def word_of_nat_less)
     apply simp
-   apply (clarsimp simp: of_nat_0 guard_bits_def word_bits_def simp del: word_of_nat_eq_0_iff)
+   apply (clarsimp simp: of_nat_0 guard_bits_def word_bits_def)
    apply (clarsimp simp: badge_update_def cap_rights_def cap_data_def
                          guard_update_def guard_as_rawdata_def)
   apply (cut_tac p="word2 << 8" and d="of_nat nat1 << 3" and n=8 in is_aligned_add_or)
