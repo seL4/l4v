@@ -70,7 +70,7 @@ proof -
                      KHeap_D.cdt_parent_rel_def CSpaceAcc_A.cdt_parent_rel_def)
     apply (simp add: P)
     apply (subst trancl_image)
-     apply (rule subset_inj_on[OF inj])
+     apply (rule inj_on_subset[OF inj])
      apply (auto simp: KHeap_D.is_cdt_parent_def CSpaceAcc_A.is_cdt_parent_def)[1]
     apply safe
      apply (subst(asm) inj_on_eq_iff[OF inj'], simp_all)
@@ -2917,27 +2917,27 @@ proof -
                      ({slot_a, slot_b} \<union> dom (cdt s') \<union> ran (cdt s'))
                        \<and> cdt s' slot_a \<noteq> Some slot_a \<and> cdt s' slot_b \<noteq> Some slot_b")
            apply (elim conjE)
-           apply (subst map_lift_over_upd, erule subset_inj_on)
+           apply (subst map_lift_over_upd, erule inj_on_subset)
             apply (safe elim!: ranE, simp_all split: if_split_asm,
                    simp_all add: ranI)[1]
-           apply (subst map_lift_over_upd, erule subset_inj_on)
+           apply (subst map_lift_over_upd, erule inj_on_subset)
             apply (safe elim!: ranE, simp_all split: if_split_asm,
                    simp_all add: ranI)[1]
            apply (subst map_lift_over_if_eq_twice)
-            apply (erule subset_inj_on, fastforce)
+            apply (erule inj_on_subset, fastforce)
            apply (rule ext)
            apply (cases slot_a, cases slot_b)
            apply (simp split del: if_split)
            apply (intro if_cong[OF refl],
                   simp_all add: map_lift_over_eq_Some inj_on_eq_iff[where f=transform_cslot_ptr]
                                 ranI domI)[1]
-            apply (subst subset_inj_on, assumption, fastforce)+
+            apply (subst inj_on_subset, assumption, fastforce)+
             prefer 2
-            apply (subst subset_inj_on, assumption, fastforce)+
+            apply (subst inj_on_subset, assumption, fastforce)+
             apply (auto simp: map_lift_over_eq_Some inj_on_eq_iff[where f=transform_cslot_ptr]
                               ranI domI
                        intro: map_lift_over_f_eq[THEN iffD2, OF _ refl]
-                        elim: subset_inj_on)[2]
+                        elim: inj_on_subset)[2]
           apply (clarsimp simp: no_cdt_loop_mloop)
           apply (rule_tac s=s' in transform_cdt_slot_inj_on_cte_at[where P=\<top>])
           apply (auto simp: swp_def dest: mdb_cte_atD
