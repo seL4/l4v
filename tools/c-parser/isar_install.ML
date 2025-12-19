@@ -366,10 +366,10 @@ in
       val (globloc, ctxt) =
           Expression.add_locale loc_b loc_b [] ([], []) globs thy
       val thy = Local_Theory.exit_global ctxt
-      val _ = Output.state ("Created locale for globals (" ^ Binding.print loc_b ^
+      val _ = Output.state ["Created locale for globals (" ^ Binding.print loc_b ^
                        ")- with " ^ Int.toString (length globs) ^
-                       " globals elements")
-      val _ = app (fn e => Output.state ("-- " ^ HPInter.asm_to_string (Syntax.string_of_term ctxt) e))
+                       " globals elements"]
+      val _ = app (fn e => Output.state ["-- " ^ HPInter.asm_to_string (Syntax.string_of_term ctxt) e])
                   globs
       val mungedb = mk_mungedb vdecls
       val thy = CalculateState.store_mungedb (s, mungedb) thy
