@@ -772,7 +772,7 @@ lemma decodeARMVCPUInvocation_corres:
   apply (case_tac vcpui; simp split del: if_split)
       (* set_tcb *)
       apply (simp add: decode_vcpu_set_tcb_def decodeVCPUSetTCB_def Let_def isVCPUCap_def)
-      apply (cases excaps; simp add: null_def)
+      apply (cases excaps; simp)
       apply (frule list_all2_Cons)
       apply clarsimp
       apply (case_tac a; clarsimp simp add: cap_relation_def)
@@ -1062,7 +1062,7 @@ lemma arch_decodeInvocation_corres[Arch_assms]:
             apply (corres' \<open>fastforce\<close> simp: liftME_def bind_bindE_assoc)
                apply (clarsimp simp: asid_pool_relation_def)
                apply (subst conj_assoc [symmetric])
-               apply (subst assocs_empty_dom_comp [symmetric])
+               apply (subst assocs_empty_dom_comp[symmetric])
                apply (case_tac rv, simp)
                apply (clarsimp simp: o_def dom_ucast_eq)
               apply (frule dom_hd_assocsD)
@@ -1118,7 +1118,7 @@ lemma arch_decodeInvocation_corres[Arch_assms]:
             apply (clarsimp simp: state_relation_def arch_state_relation_def)
            apply (rule corres_splitEE)
               apply (rule corres_whenE)
-                apply (subst assocs_empty_dom_comp [symmetric])
+                apply (subst assocs_empty_dom_comp[symmetric])
                 apply (simp add: o_def)
                 apply (rule dom_ucast_eq_8)
                apply (rule corres_trivial, simp, simp)
@@ -1160,7 +1160,7 @@ lemma arch_decodeInvocation_corres[Arch_assms]:
         apply (rule conjI, fastforce)+
         apply (fastforce simp: asid_high_bits_def)
        apply clarsimp
-       apply (simp add: null_def split_def asid_high_bits_def  word_le_make_less)
+       apply (simp add: split_def asid_high_bits_def  word_le_make_less)
        apply (subst hd_map, assumption)
        (* need abstract guard to show list nonempty *)
        apply (simp add: word_le_make_less)
@@ -1594,7 +1594,7 @@ lemma decodeARMVCPUInvocation_valid_arch_inv'[wp]:
                       decodeVCPUWriteReg_def decodeVCPUAckVPPI_def
                 wp: getVCPU_wp
                 split_del: if_split)
-  apply (clarsimp simp: valid_arch_inv'_def valid_vcpuinv'_def isCap_simps null_def neq_Nil_conv)
+  apply (clarsimp simp: valid_arch_inv'_def valid_vcpuinv'_def isCap_simps neq_Nil_conv)
   apply (rename_tac t_slot excaps0 t)
   apply (rule conjI)
    apply (clarsimp simp: valid_cap'_def)
@@ -1654,7 +1654,7 @@ lemma arch_decodeInvocation_wf[wp]:
                    apply (wp ensureNoChildren_sp whenE_throwError_wp|wpc)+
         apply clarsimp
         apply (rule conjI)
-         apply (clarsimp simp: null_def neq_Nil_conv)
+         apply (clarsimp simp: neq_Nil_conv)
          apply (drule filter_eq_ConsD)
          apply clarsimp
          apply (rule shiftl_less_t2n)
@@ -1675,7 +1675,7 @@ lemma arch_decodeInvocation_wf[wp]:
         apply (erule cte_wp_at_weakenE')
         apply (simp, drule_tac t="cteCap c" in sym, simp add: isCap_simps)
        apply (subst (asm) conj_assoc [symmetric])
-       apply (subst (asm) assocs_empty_dom_comp [symmetric])
+       apply (subst (asm) assocs_empty_dom_comp[symmetric])
        apply (drule dom_hd_assocsD)
        apply (simp add: capAligned_def asid_wf_def mask_def)
        apply (elim conjE)

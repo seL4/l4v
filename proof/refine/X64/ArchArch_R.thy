@@ -1043,8 +1043,8 @@ shows
               apply (simp add: bindE_assoc)
               apply (rule corres_splitEE)
                  apply (rule corres_whenE)
-                   apply (subst conj_assoc [symmetric])
-                   apply (subst assocs_empty_dom_comp [symmetric])
+                   apply (subst conj_assoc[symmetric])
+                   apply (subst assocs_empty_dom_comp[symmetric])
                    apply (rule dom_ucast_eq)
                   apply (rule corres_trivial)
                   apply simp
@@ -1096,7 +1096,7 @@ shows
           apply (clarsimp simp: state_relation_def arch_state_relation_def)
          apply (rule corres_splitEE)
             apply (rule corres_whenE)
-              apply (subst assocs_empty_dom_comp [symmetric])
+              apply (subst assocs_empty_dom_comp[symmetric])
               apply (simp add: o_def)
               apply (rule dom_ucast_eq_8)
              apply (rule corres_trivial, simp, simp)
@@ -1135,8 +1135,7 @@ shows
           apply (simp add: o_def validE_R_def)
       apply (fastforce simp: asid_high_bits_def)
      apply clarsimp
-     apply (simp add: null_def split_def asid_high_bits_def
-                      word_le_make_less)
+     apply (simp add: split_def asid_high_bits_def word_le_make_less)
      apply (subst hd_map, assumption)
                    (* need abstract guard to show list nonempty *)
      apply (simp add: word_le_make_less)
@@ -1683,7 +1682,7 @@ lemma arch_decodeInvocation_wf[wp]:
        apply (erule cte_wp_at_weakenE')
        apply (simp, drule_tac t="cteCap c" in sym, simp add: isPML4Cap'_def)
       apply (subst (asm) conj_assoc [symmetric])
-      apply (subst (asm) assocs_empty_dom_comp [symmetric])
+      apply (subst (asm) assocs_empty_dom_comp[symmetric])
       apply (drule dom_hd_assocsD)
       apply (simp add: capAligned_def asid_wf_def)
       apply (elim conjE)
@@ -1717,7 +1716,7 @@ lemma arch_decodeInvocation_wf[wp]:
          apply (wp ensureNoChildren_sp whenE_throwError_wp|wpc)+
      apply clarsimp
      apply (rule conjI)
-      apply (clarsimp simp: null_def neq_Nil_conv)
+      apply (clarsimp simp: neq_Nil_conv)
       apply (drule filter_eq_ConsD)
       apply clarsimp
       apply (rule shiftl_less_t2n)

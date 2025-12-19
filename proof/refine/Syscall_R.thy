@@ -385,16 +385,13 @@ lemma decodeDomainSet_corres[corres]:
        apply simp
       apply (rule whenE_throwError_corres_initial)
         apply simp
-       apply (case_tac "cs")
-        apply ((case_tac "cs'", ((simp add: null_def)+)[2])+)[2]
+       apply (case_tac "cs"; case_tac "cs'"; simp)
       apply (subgoal_tac "cap_relation (fst (hd cs)) (fst (hd cs'))")
        apply (case_tac "fst (hd cs)")
                   apply (case_tac "fst (hd cs')", simp+, rule corres_returnOkTT)
             apply (simp add: domaininv_relation_def)
            apply (case_tac "fst (hd cs')", fastforce+)
-      apply (case_tac "cs")
-       apply (case_tac "cs'", ((simp add: list_all2_map2 list_all2_map1)+)[2])
-      apply (case_tac "cs'", ((simp add: list_all2_map2 list_all2_map1)+)[2])
+      apply (case_tac "cs"; case_tac "cs'"; simp add: list_all2_map2 list_all2_map1)
      apply (wp | simp)+
   done
 
@@ -909,7 +906,7 @@ lemma decodeDomainSet_inv_wf[wp]:
    \<lbrace>valid_domain_inv'\<rbrace>, -"
   unfolding decodeDomainSet_def
   apply (wpsimp split_del: if_split)
-  apply (clarsimp simp: null_def valid_domain_inv'_def)
+  apply (clarsimp simp: valid_domain_inv'_def)
   apply (drule_tac x="hd excaps" in bspec, simp)
   apply (simp del: Word.of_nat_unat flip: ucast_nat_def)
   apply (fastforce intro: word_of_nat_le simp: le_maxDomain_eq_less_numDomains valid_cap'_def)
