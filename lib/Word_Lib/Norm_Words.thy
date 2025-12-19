@@ -92,13 +92,13 @@ private lemma "- 2 = (13 + 1 :: 'a::len word)"
 private lemma "7 = (3 :: 2 word)"
   by simp
 
-private lemma "- 2 = (22 :: 3 word)" 
+private lemma "f (- 2) = f (22 :: 3 word)"
   by simp
 
-private lemma "- 2 = (0xFFFFFFFE :: 32 word)"
+private lemma "f (- 2) = f (0xFFFFFFFE :: 32 word)"
   by simp
 
-private lemma "- 2 = (0xFFFFFFFE :: 32 signed word)"
+private lemma "f (- 2) = f (0xFFFFFFFE :: 32 signed word)"
   by simp
 
 end
