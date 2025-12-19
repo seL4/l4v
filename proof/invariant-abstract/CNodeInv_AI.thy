@@ -2822,7 +2822,7 @@ function(sequential) red_zombie_will_fail :: "cap \<Rightarrow> bool"
 
 
 termination red_zombie_will_fail
-  by (rule red_zombie_will_fail.termination [OF Wellfounded.wf_empty])
+  by (rule red_zombie_will_fail.termination [OF wf_on_bot])
 
 
 context CNodeInv_AI_3 begin

@@ -173,7 +173,7 @@ lemma ucast_fst_hd_assocs:
    apply (rule sym, rule ucast_ucast_len)
    apply (drule hd_in_set)
    apply simp
-  apply (simp add: assocs_empty_dom_comp null_def split_def)
+  apply (simp add: assocs_empty_dom_comp split_def)
   apply (simp add: ucast_assocs[unfolded o_def] filter_map split_def)
   apply (simp cong: conj_cong add: ucast_ucast_len)
   done
