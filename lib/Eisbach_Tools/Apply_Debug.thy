@@ -874,7 +874,7 @@ ML \<open>val _ =
   Query_Operation.register {name = "print_state", pri = Task_Queue.urgent_pri}
     (fn {state = st, output_result, ...} =>
       case Apply_Debug.pretty_state st of
-        SOME prt => output_result (Markup.markup Markup.state (Pretty.string_of prt))
+        SOME prt => output_result [Markup.markup Markup.state (Pretty.string_of prt)]
       | NONE => ());\<close>
 
 end
