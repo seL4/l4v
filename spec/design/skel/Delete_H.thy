@@ -92,7 +92,7 @@ defs
  "cteDeleteOne \<equiv> cteDeleteOne'"
 
 termination cteDeleteOne'
-  by (rule cteDeleteOne'.termination[OF wf_empty], simp+)
+  by (rule cteDeleteOne'.termination[OF wf_on_bot], simp+)
 
 lemma cteDeleteOne_def:
  "cteDeleteOne =
