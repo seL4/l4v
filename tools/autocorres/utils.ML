@@ -885,7 +885,7 @@ fun THM_non_critical keep_going msg n thm =
 fun trace_rule ctxt goal rule =
   if Config.get ctxt Method.rule_trace then
   let
-    val _ = Goal_Display.string_of_goal ctxt goal |> tracing
+    val _ = Goal_Display.pretty_goal ctxt goal |> Pretty.string_of |> tracing
     val _ = (case guess_thm_name ctxt rule of
         SOME x => Pretty.str x
       | NONE => Thm.pretty_thm_item ctxt rule)
