@@ -168,7 +168,7 @@ proof -
       apply (rule ucast_le_maskI)
       apply (simp add: mask_def word_le_make_less)
      apply (simp add: ucast_ucast_mask cong: conj_cong)
-    apply (simp add: assocs_empty_dom_comp null_def split_def)
+    apply (simp add: assocs_empty_dom_comp split_def)
     apply (simp add: ucast_assocs[unfolded o_def] filter_map split_def)
     apply (simp cong: conj_cong add: ucast_ucast_mask2 is_down)
     done

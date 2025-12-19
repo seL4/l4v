@@ -78,7 +78,7 @@ proof -
                       {unat (args ! 4)..<unat (args ! 4) + unat (args ! 5)}"
     apply (simp add: comp_def)
     apply (rule inj_on_split)
-    apply (rule subset_inj_on [OF inj_on_nat_to_cref])
+    apply (rule inj_on_subset [OF inj_on_nat_to_cref])
      apply (clarsimp simp: is_cap_simps bits_of_def valid_cap_def
                            word_bits_def cap_aligned_def)
     apply clarsimp

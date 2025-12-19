@@ -39,8 +39,7 @@ lemma assocs_dom_comp:
 lemma assocs_empty_dom_comp:
   "(- dom f \<inter> Collect P = {}) = null (filter (\<lambda>(x, y). P x \<and> y = None) (assocs f))"
    apply (subst assocs_dom_comp [symmetric])
-   apply (subst empty_set_is_null)
-   apply (simp add: null_def)
+   apply (subst empty_set_is_null, simp)
    done
 
 
@@ -54,7 +53,7 @@ proof -
     unfolding filter_assocs_def
     by (simp add: assocs_empty_dom_comp)
   hence "hd (filter_assocs f) \<in> set (filter_assocs f)"
-    by (clarsimp simp: null_def neq_Nil_conv)
+    by (clarsimp simp: neq_Nil_conv)
   thus ?thesis
     unfolding filter_assocs_def
     by (clarsimp simp: in_assocs_is_fun)
