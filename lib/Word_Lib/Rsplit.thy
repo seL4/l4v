@@ -22,8 +22,8 @@ definition bin_split :: \<open>nat \<Rightarrow> int \<Rightarrow> int \<times> 
   where [simp]: \<open>bin_split n k = (drop_bit n k, take_bit n k)\<close>
 
 lemma [code]:
-  "bin_split (Suc n) w = (let (w1, w2) = bin_split n (w div 2) in (w1, of_bool (odd w) + 2 * w2))"
   "bin_split 0 w = (w, 0)"
+  "bin_split (Suc n) w = (let (w1, w2) = bin_split n (w div 2) in (w1, of_bool (odd w) + 2 * w2))"
   by (simp_all add: drop_bit_Suc take_bit_Suc mod_2_eq_odd)
 
 fun bin_rsplit_aux :: "nat \<Rightarrow> nat \<Rightarrow> int \<Rightarrow> int list \<Rightarrow> int list"
