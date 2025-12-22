@@ -181,7 +181,7 @@ lemma decodeDomainInvocation_ccorres:
                  cong: StateSpace.state.fold_congs globals.fold_congs)
       apply (rule syscall_error_throwError_ccorres_n)
       apply (simp add: syscall_error_to_H_cases)
-     apply (simp add: null_def excaps_map_def unat_numDomains_to_H)
+     apply (simp add: excaps_map_def unat_numDomains_to_H)
      apply (rule ccorres_Cond_rhs_Seq)
       apply (simp add: throwError_bind invocationCatch_def
                        interpret_excaps_test_null

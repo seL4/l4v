@@ -390,7 +390,7 @@ fun modifies_initial_tac ctxt n =
 
 (* Incremental nets. (Why isn't this standard??) *)
 type incr_net = (int * thm) Net.net * int;
-fun build_incr_net rls = (Tactic.build_net rls, length rls);
+fun build_incr_net rls = (Bires.build_net rls, length rls);
 fun add_to_incr_net th (net, sz) =
   (Net.insert_term (K false) (Thm.concl_of th, (sz + 1, th)) net, sz + 1); (* guessed from tactic.ML *)
 fun net_of (n: incr_net) = fst n;
@@ -408,17 +408,17 @@ fun modifies_call_tac (callee_modifies: incr_net) ctxt n = DETERM (
   resolve_tac ctxt @{thms valid_inv_weaken'} n THEN
   (* Then we can apply the modifies rule, which looks like:
      \<lbrace>\<lambda>s. s = ?\<sigma>\<rbrace> f ?args... \<lbrace>\<lambda>_ s. \<exists>x1... s = ?\<sigma>\<lparr>field1 := x1, ...\<rparr> \<rbrace> *)
-  DETERM (resolve_from_net_tac ctxt (net_of callee_modifies) n) THEN
+  DETERM (Bires.resolve_from_net_tac ctxt (net_of callee_modifies) n) THEN
   modifies_invariant_tac true ctxt n);
 
 (* VCG for trivial state invariants, such as globals modifies specs.
  * Takes vcg rules from "valid_inv". *)
 val valid_invN = Context.theory_name { long=true } @{theory} ^ ".valid_inv"
 fun modifies_vcg_tac leaf_tac ctxt n = let
-  val vcg_rules = Named_Theorems.get ctxt valid_invN |> Tactic.build_net;
+  val vcg_rules = Named_Theorems.get ctxt valid_invN |> Bires.build_net;
   fun vcg n st = Seq.make (fn () => let
         (* do not backtrack once we have matched vcg_rules *)
-        val st' = DETERM (resolve_from_net_tac ctxt vcg_rules n) st;
+        val st' = DETERM (Bires.resolve_from_net_tac ctxt vcg_rules n) st;
         in Seq.pull ((case Seq.pull st' of
                           NONE => leaf_tac ctxt n
                         | SOME _ => (K (K st') THEN_ALL_NEW vcg) n) st) end);

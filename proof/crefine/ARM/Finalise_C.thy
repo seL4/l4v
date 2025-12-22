@@ -2163,7 +2163,6 @@ lemma finaliseCap_ccorres:
    apply (rule ccorres_Cond_rhs_Seq)
     apply (clarsimp simp: cap_get_tag_isCap isCap_simps
                     cong: if_cong)
-    apply (clarsimp simp: word_sle_def)
     apply (rule ccorres_if_lhs)
      apply (rule ccorres_fail)
     apply (simp add: liftM_def del: Collect_const)

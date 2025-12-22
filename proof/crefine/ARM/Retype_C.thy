@@ -2922,9 +2922,9 @@ proof -
           apply (clarsimp simp: cregs_relation_def)
           subgoal for r
             by (case_tac r;
-                simp add: "StrictC'_register_defs" eval_nat_numeral atcbContext_def atcbContextGet_def
-                          newArchTCB_def newContext_def initContext_def take_bit_Suc
-                     del: unsigned_numeral)
+                simp add: "StrictC'_register_defs" atcbContext_def atcbContextGet_def
+                          newArchTCB_def newContext_def initContext_def;
+                simp add: eval_nat_numeral)
          apply (simp add: thread_state_lift_def index_foldr_update atcbContextGet_def)
         apply (fastforce intro: domrel)
        apply (simp add: Kernel_Config.timeSlice_def)

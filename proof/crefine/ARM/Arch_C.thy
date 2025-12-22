@@ -2774,7 +2774,7 @@ lemma decodeARMFrameInvocation_ccorres:
                          vm_page_size_defs neq_Nil_conv excaps_in_mem_def hd_conv_nth
                          length_ineq_not_Nil numeral_2_eq_2 does_not_throw_def
                          pptrBase_val
-                   simp del: unsigned_numeral)
+                   simp del: unat_bintrunc unsigned_numeral)
    apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
    apply (frule(1) slotcap_in_mem_PageDirectory)
    apply (clarsimp simp: mask_def[where n=4] typ_heap_simps' isCap_simps)
@@ -3417,7 +3417,7 @@ lemma decodeARMMMUInvocation_ccorres:
               apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws[rotated -1])
                  apply clarsimp
                  apply (rule conseqPre, vcg, rule subset_refl)
-                apply (clarsimp simp: asid_high_bits_word_bits asidHighBits_handy_convs null_def)
+                apply (clarsimp simp: asid_high_bits_word_bits asidHighBits_handy_convs)
                 apply (clarsimp split: list.split)
                 apply (clarsimp dest!: filter_eq_ConsD)
                apply (simp add: throwError_bind invocationCatch_def)
@@ -3517,9 +3517,9 @@ lemma decodeARMMMUInvocation_ccorres:
              apply (simp add: interpret_excaps_test_null excaps_map_def
                               list_case_If2 split_def
                          del: Collect_const)
-              apply (simp add: if_1_0_0 from_bool_0 hd_conv_nth length_ineq_not_Nil
+              apply (simp add: from_bool_0 hd_conv_nth length_ineq_not_Nil
                           del: Collect_const)
-              apply (clarsimp simp: eq_Nil_null[symmetric] asid_high_bits_word_bits hd_conv_nth mask_def)
+              apply (clarsimp simp: asid_high_bits_word_bits hd_conv_nth mask_def)
               apply wp+
             apply (simp add: cap_get_tag_isCap)
             apply (rule HoarePartial.SeqSwap)
@@ -3750,7 +3750,7 @@ lemma decodeARMMMUInvocation_ccorres:
            apply (simp add: if_to_top_of_bind del: Collect_const)
            apply (rule ccorres_if_cond_throws[where Q=\<top> and Q'=\<top>, rotated -1])
               apply vcg
-             apply (clarsimp simp: null_def split: list.split
+             apply (clarsimp split: list.split
                              dest!: filter_eq_ConsD)
              apply (simp add: asid_low_bits_def)
             apply (simp add: throwError_bind invocationCatch_def)
@@ -3859,7 +3859,7 @@ lemma decodeARMMMUInvocation_ccorres:
                           maskCapRights_def[where ?x1.0="ArchObjectCap cp" for cp]
                           ARM_H.maskCapRights_def
                    split: arch_capability.split_asm)
-    apply (clarsimp simp: null_def neq_Nil_conv mask_def field_simps
+    apply (clarsimp simp: neq_Nil_conv mask_def field_simps
                           asid_low_bits_word_bits
                    dest!: filter_eq_ConsD)
     apply (subst is_aligned_add_less_t2n[rotated], assumption+)
