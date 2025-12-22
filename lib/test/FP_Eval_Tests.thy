@@ -269,7 +269,7 @@ local
   fun eval eqns congs =
     FP_Eval.eval @{context} (FP_Eval.make_rules eqns congs);
   val input = (@{cterm "list_all (\<lambda>x::nat. x \<le> x) [100000, 314159, 2718281845]"}, Bound 0);
-  val basic_eqns = @{thms list_all_simps rel_simps simp_thms};
+  val basic_eqns = @{thms list_all_Nil_iff list_all_Cons_iff rel_simps simp_thms};
   fun get_counter cs x = the (Symtab.lookup (Symtab.make cs) x);
 in
   (* evaluate \<le> slowly *)
@@ -282,7 +282,7 @@ in
   val _ = @{assert} (length (distinct op= [counters1, counters2, counters3]) = 1);
 
   (* desired outcome *)
-  val ((r4, _), counters4) = eval @{thms list_all_simps simp_thms order.refl} @{thms} input;
+  val ((r4, _), counters4) = eval @{thms list_all_Nil_iff list_all_Cons_iff simp_thms order.refl} @{thms} input;
   val _ = @{assert} (get_counter counters4 "rewrites" < get_counter counters1 "rewrites");
 end
 \<close>
