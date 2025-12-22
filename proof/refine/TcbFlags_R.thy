@@ -13,7 +13,7 @@ begin
 
 lemma ex_tcbFlagToWord_bit:
   "\<exists>n<word_bits. tcbFlagToWord flag = bit n"
-  by (auto simp: tcbFlagToWord_def ex_nat_less_eq word_bits_conv split: tcb_flag.splits simp del: bit_def)
+  by (force simp: tcbFlagToWord_def word_bits_conv split: tcb_flag.splits simp del: bit_def)
 
 lemma ex_tcbFlagToWord:
   "tcbFlagMask !! n \<Longrightarrow> \<exists>flag. tcbFlagToWord flag = bit n"
