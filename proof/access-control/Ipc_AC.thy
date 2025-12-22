@@ -2047,7 +2047,7 @@ lemma transfer_caps_respects_in_ipc:
    apply (simp add: transfer_caps_def del: get_receive_slots.simps, wp, simp)
   apply (simp add: transfer_caps_def del: get_receive_slots.simps)
   apply (wp transfer_caps_loop_respects_in_ipc_autarch get_receive_slots_authorised
-         | wpc | rule hoare_drop_imps | simp add: null_def del: get_receive_slots.simps)+
+         | wpc | rule hoare_drop_imps | simp del: get_receive_slots.simps)+
   done
 
 lemma copy_mrs_respects_in_ipc:
@@ -2083,7 +2083,7 @@ lemma do_normal_transfer_respects_in_ipc:
                     lookup_extra_caps_authorised lookup_extra_caps_length hoare_vcg_const_Ball_lift
                     hoare_vcg_conj_liftE_R hoare_vcg_const_imp_lift lec_valid_cap'
          | rule hoare_drop_imps)+
-  apply (auto simp: null_def intro: st_tcb_at_tcb_at)
+  apply (auto intro: st_tcb_at_tcb_at)
   done
 
 lemma do_fault_transfer_respects_in_ipc:
