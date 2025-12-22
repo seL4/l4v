@@ -2200,7 +2200,7 @@ lemma decodeARMFrameInvocation_ccorres:
                apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
                   apply vcg
                  apply (solves \<open>clarsimp simp: pptrUserTop_val ccap_relation_FrameCap_Size
-                                               framesize_from_to_H word_less_nat_alt field_simps\<close>)
+                                               framesize_from_to_H word_less_nat_alt add_diff_eq\<close>)
                 apply (rule syscall_error_throwError_ccorres_n)
                 apply (simp add: syscall_error_to_H_cases)
                apply (clarsimp simp: liftE_bindE)
@@ -2870,7 +2870,7 @@ lemma decodeARMMMUInvocation_ccorres:
               apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws[rotated -1])
                  apply clarsimp
                  apply (rule conseqPre, vcg, rule subset_refl)
-                apply (clarsimp simp: asid_high_bits_word_bits asidHighBits_handy_convs null_def)
+                apply (clarsimp simp: asid_high_bits_word_bits asidHighBits_handy_convs)
                 apply (clarsimp split: list.split)
                 apply (fastforce dest!: filter_eq_ConsD)
                apply (simp add: throwError_bind invocationCatch_def)
@@ -2941,7 +2941,7 @@ lemma decodeARMMMUInvocation_ccorres:
                         apply (rule_tac Q'=UNIV and A'="{}" in conseqPost)
                           apply (vcg exspec=ensureEmptySlot_modifies)
                          apply (frule length_ineq_not_Nil)
-                         apply (clarsimp simp: null_def ThreadState_defs mask_def hd_conv_nth
+                         apply (clarsimp simp: ThreadState_defs mask_def hd_conv_nth
                                                isCap_simps rf_sr_ksCurThread cap_get_tag_UntypedCap
                                                word_le_make_less asid_high_bits_def
                                          split: list.split)
@@ -3177,7 +3177,7 @@ lemma decodeARMMMUInvocation_ccorres:
          apply ccorres_rewrite
          apply (rule ccorres_if_cond_throws[where Q=\<top> and Q'=\<top>, rotated -1])
             apply vcg
-           apply (clarsimp simp: null_def asid_low_bits_def split: list.split
+           apply (clarsimp simp: asid_low_bits_def split: list.split
                            dest!: filter_eq_ConsD)
           apply (simp add: throwError_bind invocationCatch_def)
           apply (rule syscall_error_throwError_ccorres_n)
@@ -3266,8 +3266,7 @@ lemma decodeARMMMUInvocation_ccorres:
       apply clarsimp
       apply (rule exI)+
       apply (rule conjI; assumption)
-     apply (clarsimp simp: null_def neq_Nil_conv)
-     apply (drule_tac f="\<lambda>xs. (a, bb) \<in> set xs" in arg_cong)
+     apply (drule_tac f="\<lambda>xs. (aa, bb) \<in> set xs" in arg_cong)
      apply (clarsimp simp: in_assocs_is_fun)
      apply (clarsimp simp: le_mask_asid_bits_helper)
     apply (simp add: is_aligned_shiftl_self)
@@ -3283,7 +3282,7 @@ lemma decodeARMMMUInvocation_ccorres:
     apply (cases extraCaps; simp)
     apply (clarsimp simp: excaps_in_mem_def slotcap_in_mem_def isPTCap'_def)
    apply (simp add: valid_cap'_def)
-   apply (clarsimp simp: null_def neq_Nil_conv mask_def field_simps
+   apply (clarsimp simp: neq_Nil_conv mask_def field_simps
                          asid_low_bits_word_bits asidInvalid_def asid_wf_def
                   dest!: filter_eq_ConsD)
    apply (subst is_aligned_add_less_t2n[rotated]; assumption?)
@@ -4079,7 +4078,7 @@ lemma decodeVCPUSetTCB_ccorres:
    apply (rule ccorres_Cond_rhs_Seq ; clarsimp)
     apply (rule ccorres_split_throws)
      apply (subgoal_tac "null extraCaps")
-      prefer 2 subgoal by (clarsimp simp: interpret_excaps_test_null excaps_map_def null_def)
+      prefer 2 subgoal by (clarsimp simp: interpret_excaps_test_null excaps_map_def)
      apply (simp add: throwError_bind invocationCatch_def)
      apply (rule syscall_error_throwError_ccorres_n)
      apply (simp add: syscall_error_to_H_cases)
@@ -4087,7 +4086,7 @@ lemma decodeVCPUSetTCB_ccorres:
    apply (subgoal_tac "extraCaps \<noteq> []")
      prefer 2 subgoal by (clarsimp simp: idButNot_def interpret_excaps_test_null
                                           excaps_map_def neq_Nil_conv)
-   apply (clarsimp simp: null_def bindE)
+   apply (clarsimp simp: bindE)
    (* lookup first slot in extracaps and its type *)
    apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
    apply (rule ccorres_move_c_guard_cte)

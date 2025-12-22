@@ -941,14 +941,10 @@ lemma ptr_span_disjoint_ptr_set_span:
   shows "y \<notin> ((+\<^sub>p) (Ptr p) \<circ> int) ` {k. k < b}
     \<longrightarrow> ptr_span y \<inter> {p ..+ b * 2 ^ n} = {}"
 proof -
-  from card b have word_bits: "n < word_bits"
-    using power_increasing[where n=word_bits and N=n and a=2]
-    apply (simp add: word_bits_def addr_card)
-    apply (rule ccontr, simp)
-    apply (cases b, simp_all)
-    apply (drule(1) order_less_le_trans)
-    apply simp
-    done
+  from card b
+  have word_bits: "n < word_bits"
+    by (metis addr_card_wb less_nat_zero_code less_num_simps(2) linorder_neqE_nat multi_lessD
+              one_less_numeral_iff power_strict_increasing_iff)
 
   note al_sub = aligned_sub_aligned_simple[OF al align]
 
