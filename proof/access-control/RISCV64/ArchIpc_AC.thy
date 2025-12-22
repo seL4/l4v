@@ -106,7 +106,7 @@ lemma store_word_offs_respects_in_ipc[Ipc_AC_assms]:
   apply (clarsimp simp: integrity_def integrity_asids_def)
   apply (subgoal_tac "\<forall>i \<in> set [0..7].
                       buf + of_nat r * of_nat word_size + of_int i \<in> ptr_range buf msg_align_bits")
-   apply (fastforce simp: word_rsplit_0 upto.simps atLeastAtMost_upto)
+   apply (fastforce simp: word_rsplit_0 upto.simps atLeast_eq_atLeastAtMost_top)
   apply (fastforce simp add: unat_def word_size_def of_nat_nat[symmetric] word_of_nat_less
                    simp del: of_nat_nat intro: ptr_range_off_off_mems)
   done
