@@ -842,7 +842,12 @@ definition
 
 section "Cap classification used to define invariants"
 
+text \<open>@{term PhysicalClass} is for caps to objects that consume physical
+memory. This includes anything that can be retyped from Untyped caps.
+@{term ReplyClass} is specifically for reply caps. @{term OtherCapClass} for
+anything else.\<close>
+
 datatype capclass =
-  PhysicalClass | ReplyClass "obj_ref" | IRQClass | ASIDMasterClass | NullClass | DomainClass | IOPortClass
+  PhysicalClass | ReplyClass "obj_ref" | OtherCapClass
 
 end

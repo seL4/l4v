@@ -82,9 +82,20 @@ lemma isArchFrameCap_non_arch[CSpace_I_assms]:
 definition arch_mdb_assert :: "cte_heap \<Rightarrow> bool" where
   "arch_mdb_assert m \<equiv> True"
 
+(* No arch caps with badges in this architecture. Written this strangely, because we want
+   arch_capBadge applied to a concrete cap being simplified,
+   but the abstract term "arch_capBadge acap" not being simplified. *)
+fun arch_capBadge :: "arch_capability \<Rightarrow> machine_word option" where
+  "arch_capBadge (ASIDPoolCap _ _) = None"
+| "arch_capBadge _ = None"
+
+lemma arch_capBadge_def:
+  "arch_capBadge acap = None"
+  by (cases acap; simp)
+
 end
 
-interpretation CSpace_I?: CSpace_I ARM_HYP.arch_capMasterCap
+interpretation CSpace_I?: CSpace_I ARM_HYP.arch_capMasterCap ARM_HYP.arch_capBadge
 proof goal_cases
   interpret Arch  .
   case 1 show ?case by (intro_locales; (unfold_locales; (fact CSpace_I_assms)?)?)
@@ -385,7 +396,7 @@ lemma cap_table_at_gsCNodes[CSpace_I_2_assms]:
 
 end
 
-interpretation CSpace_I_2?: CSpace_I_2 ARM_HYP.arch_capMasterCap
+interpretation CSpace_I_2?: CSpace_I_2 ARM_HYP.arch_capMasterCap ARM_HYP.arch_capBadge
 proof goal_cases
   interpret Arch  .
   case 1 show ?case by (intro_locales; (unfold_locales; (fact CSpace_I_2_assms)?)?)

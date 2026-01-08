@@ -1028,8 +1028,9 @@ lemma inv_ASIDPool: "inv ASIDPool = (\<lambda>v. case v of ASIDPool a \<Rightarr
   done
 
 lemma eq_arch_update':
-  "ArchObjectCap cp = cteCap cte \<Longrightarrow> is_arch_update' (ArchObjectCap cp) cte"
-  by (clarsimp simp: is_arch_update'_def isCap_simps)
+  "\<lbrakk> ArchObjectCap cp = cteCap cte; arch_capBadge cp = None \<rbrakk> \<Longrightarrow>
+   is_arch_update' (ArchObjectCap cp) cte"
+  by (drule sym, clarsimp simp: is_arch_update'_def isCap_simps)
 
 lemma decode_page_inv_wf[wp]:
   "cap = (arch_capability.FrameCap word vmrights vmpage_size d option) \<Longrightarrow>

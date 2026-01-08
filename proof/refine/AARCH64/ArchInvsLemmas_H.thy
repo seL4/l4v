@@ -385,6 +385,7 @@ lemma is_physical_cases:
              | ReplyCap r m cr                  \<Rightarrow> False
              | ArchObjectCap ASIDControlCap     \<Rightarrow> False
              | ArchObjectCap (SGISignalCap _ _) \<Rightarrow> False
+             | ArchObjectCap (SMCCap _)         \<Rightarrow> False
              | _                                \<Rightarrow> True)"
   by (simp split: capability.splits arch_capability.splits zombie_type.splits)
 
@@ -481,6 +482,10 @@ lemma objBitsT_koTypeOf:
   apply (rename_tac arch_kernel_object)
   apply (case_tac arch_kernel_object; simp add: archObjSize_def objBitsT_simps bit_simps')
   done
+
+lemma valid_arch_badges_implies_unordered:
+  "valid_arch_badges cap cap' node' \<Longrightarrow> unordered_valid_arch_badges cap cap' node'"
+  by (simp add: valid_arch_badges_def unordered_valid_arch_badges_def)
 
 end
 

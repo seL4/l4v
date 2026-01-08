@@ -17,6 +17,7 @@ arch_requalify_facts (H)
 
 locale CSpace_I =
   fixes arch_capMasterCap :: "arch_capability \<Rightarrow> arch_capability"
+  fixes arch_capBadge :: "arch_capability \<Rightarrow> machine_word option"
   assumes isPhysicalCap[simp]:
     "\<And>cap. isPhysicalCap cap = (capClass cap = PhysicalClass)"
   assumes isArchFrameCap_non_arch:
@@ -545,9 +546,12 @@ lemma isDomainCap[simp]:
   "isDomainCap cap = (cap = DomainCap)"
   by (rule gen_isCap_simps)
 
+context CSpace_I begin
+
 definition capBadge :: "capability \<Rightarrow> machine_word option" where
   "capBadge cap \<equiv> if isEndpointCap cap then Some (capEPBadge cap)
                   else if isNotificationCap cap then Some (capNtfnBadge cap)
+                  else if isArchObjectCap cap then arch_capBadge (capCap cap)
                   else None"
 
 lemma capBadge_simps[simp]:
@@ -559,13 +563,11 @@ lemma capBadge_simps[simp]:
   "capBadge (CNodeCap ref bits gd gs)          = None"
   "capBadge (ThreadCap ref)                    = None"
   "capBadge (Zombie ref b n)                   = None"
-  "capBadge (ArchObjectCap cap)                = None"
+  "capBadge (ArchObjectCap cap)                = arch_capBadge cap"
   "capBadge (IRQControlCap)                    = None"
   "capBadge (IRQHandlerCap irq)                = None"
   "capBadge (ReplyCap tcb master g)            = None"
   by (simp add: capBadge_def gen_isCap_defs)+
-
-context CSpace_I begin
 
 definition capMasterCap :: "capability \<Rightarrow> capability" where
   "capMasterCap cap \<equiv> case cap of

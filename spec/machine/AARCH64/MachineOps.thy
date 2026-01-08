@@ -485,5 +485,32 @@ consts' setVSpaceRoot_impl :: "paddr \<Rightarrow> machine_word \<Rightarrow> un
 definition setVSpaceRoot :: "paddr \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
   "setVSpaceRoot pt asid \<equiv> machine_op_lift $ setVSpaceRoot_impl pt asid"
 
+
+subsection "Secure Monitor Calls (SMC)"
+
+definition numSMCRegs :: nat where
+  "numSMCRegs \<equiv> 8"
+
+(* Tempting to use a list, but encoding the length requirement would make it ugly, and numSCMRegs
+   is only going to change when the SMC spec changes. *)
+type_synonym 'a eight_tuple = "'a \<times> 'a \<times>'a \<times> 'a \<times> 'a \<times> 'a \<times> 'a \<times> 'a"
+
+(* SMC calls can theoretically change any state in the machine. We assume here that they are well
+   behaved (that the secure monitor is implemented correctly), that they do not affect main memory
+   visible to the kernel, and that they do only affect machine_state_rest, i.e. no machine state
+   that is explicitly modelled such as the IRQ controller.
+
+   This will need to be extended in the future when things like core onlining/offlining are
+   modelled. *)
+consts' doSMC_mop_impl :: "machine_word eight_tuple \<Rightarrow> unit machine_rest_monad"
+consts' doSMC_mop_val :: "machine_word eight_tuple \<Rightarrow> machine_state \<Rightarrow> machine_word eight_tuple"
+definition doSMC_mop :: "machine_word eight_tuple \<Rightarrow> (machine_word eight_tuple) machine_monad"
+  where
+  "doSMC_mop args \<equiv> do
+     machine_op_lift (doSMC_mop_impl args);
+     gets (doSMC_mop_val args)
+  od"
+
+
 end
 end
