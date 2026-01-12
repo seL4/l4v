@@ -23,6 +23,7 @@ definition
     "check_cap_ref cap obj_set \<equiv> obj_refs cap \<subseteq> obj_set"
 
 term "ArchInvariants_AI.RISCV64.obj_addrs" (* should be used everywhere? *)
+term obj_ref_of
 
 fun
   check_tcb_state :: "thread_state \<Rightarrow> obj_ref set \<Rightarrow> bool"
@@ -276,26 +277,23 @@ defer
   apply (erule_tac x=a in allE)
   apply (erule_tac x="TCB tcb" in allE)
    apply (erule_tac x="(cur_domain s, _)" in ballE)
-  apply (erule impE)
-   apply simp
+  apply (frule_tac a=b and b=cap in ranI)
+   apply (clarsimp simp add: ran_tcb_cnode_map)
+  apply fastforce
+apply (erule impE)
   (*using ranI ran_tcb_cnode_map by force*)
 sorry
-
-lemma cap_insert_colour_maintained':
-  "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref new_cap (colour_oracle (cur_domain s))) and (\<lambda>s. a\<in>colour_oracle (cur_domain s)) and (\<lambda>s. valid_ptr_in_cur_domain a s) and (\<lambda>s. valid_ptr_in_cur_domain (fst dest_slot) s)\<rbrace>
-   cap_insert new_cap (a, b) dest_slot
-  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  apply (wpsimp simp: cap_insert_def update_cdt_def colour_invariant_def)
-            apply safe
-             apply (fold colour_invariant_def)
-             apply (wpsimp wp: set_cdt_colour_maintained)+
-  by (wpsimp simp: cte_wp_at_check_cap_ref wp: set_cdt_colour_maintained set_cap_colour_maintained set_untyped_cap_as_full_colour_maintained get_cap_wp set_untyped_cap_as_full_valid_ptr_in_cur_domain)+
 
 lemma cap_insert_colour_maintained:
   "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref new_cap (colour_oracle (cur_domain s))) and (\<lambda>s. fst (src_slot) \<in>colour_oracle (cur_domain s)) and (\<lambda>s. valid_ptr_in_cur_domain (fst src_slot) s) and (\<lambda>s. valid_ptr_in_cur_domain (fst dest_slot) s)\<rbrace>
 cap_insert new_cap src_slot dest_slot
 \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  by (cases src_slot; simp add: cap_insert_colour_maintained')
+  apply (cases src_slot)
+  apply (wpsimp simp: cap_insert_def update_cdt_def colour_invariant_def)
+            apply safe
+             apply (fold colour_invariant_def)
+             apply (wpsimp wp: set_cdt_colour_maintained)+
+  by (wpsimp simp: cte_wp_at_check_cap_ref wp: set_cdt_colour_maintained set_cap_colour_maintained set_untyped_cap_as_full_colour_maintained get_cap_wp set_untyped_cap_as_full_valid_ptr_in_cur_domain)+
 
 lemma hoare_weird_if:
   "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. Q\<rbrace>,-; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<not>(cond rv) \<longrightarrow> R rv s\<rbrace>,-\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. if cond rv then (\<lambda>s. Q s \<and> True) else (\<lambda>s. Q s \<and> R rv s)\<rbrace>,-"
@@ -364,18 +362,101 @@ apply (simp add: list.set_sel(2)
     by wpsimp+
 qed
 
+lemma resolve_address_bits_ret_colour:
+  "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref (fst args) (colour_oracle (cur_domain s)))\<rbrace>\<comment> \<open> and (\<lambda>s. (is_cnode_cap (fst args)) \<longrightarrow> valid_ptr_in_cur_domain (fst (the_cnode_cap (fst args))) s)\<close>
+    resolve_address_bits args
+    \<lbrace>\<lambda>rv s. (\<exists>x. rv = ((c, d), x)) \<longrightarrow>
+      (\<forall>cap. cte_wp_at ((=) cap)
+        (c, d) s \<longrightarrow>
+          check_cap_ref cap (colour_oracle (cur_domain s)) \<and>
+          c \<in> colour_oracle (cur_domain s) \<and>
+          c \<noteq> 0
+      )
+\<rbrace>,-"
+unfolding resolve_address_bits_def
+proof (induct args arbitrary: c d rule: resolve_address_bits'.induct)
+  case (1 z cap cref)
+  show ?case
+  apply (simp add: validE_R_def)
+  apply (rule use_spec)
+    apply (subst resolve_address_bits'.simps)
+    apply (cases cap, simp_all split del: if_split)
+            defer 6 (* CNode *)
+            apply (wp+)[11]
+    apply (simp add: split_def cong: if_cong split del: if_split)
+    apply (rule hoare_pre_spec_validE)
+  apply (wp hoare_strengthen_postE_R [OF "1.hyps"])
+                 apply (simp add: in_monad)+
+          apply (wpsimp wp: get_cap_wp)+
+apply safe
+apply ((clarsimp simp add: cte_wp_at_check_cap_ref
+    the_cnode_cap_def
+    valid_ptr_in_cur_domain_def)+)[3]
+apply (simp add: cte_wp_at_check_cap_ref the_cnode_cap_def)
+defer
+apply ((clarsimp simp add: cte_wp_at_check_cap_ref
+    the_cnode_cap_def
+    valid_ptr_in_cur_domain_def)+)[7]
+defer
+apply ((clarsimp simp add: cte_wp_at_check_cap_ref
+    the_cnode_cap_def
+    valid_ptr_in_cur_domain_def)+)[3]
+apply (frule cte_wp_at_check_cap_ref)
+apply simp
+apply (simp add: the_cnode_cap_def)
+apply (simp_all add: cte_wp_at_check_cap_ref)
+sorry
+qed
+
+lemma resolve_address_bits_ret_valid:
+  "\<lbrace>(\<lambda>s. check_cap_ref (fst args) (colour_oracle (cur_domain s)))\<rbrace>\<comment> \<open> and (\<lambda>s. (is_cnode_cap (fst args)) \<longrightarrow> valid_ptr_in_cur_domain (fst (the_cnode_cap (fst args))) s)\<close>
+    resolve_address_bits args
+    \<lbrace>\<lambda>rv s. \<forall>a. (\<exists>b.
+        rv = ((a, b), [])) \<longrightarrow> valid_ptr_in_cur_domain a s
+    \<rbrace>,-"
+unfolding resolve_address_bits_def
+proof (induct args arbitrary: c d rule: resolve_address_bits'.induct)
+  case (1 z cap cref)
+  show ?case
+  apply (simp add: validE_R_def)
+  apply (rule use_spec)
+    apply (subst resolve_address_bits'.simps)
+    apply (cases cap, simp_all split del: if_split)
+            defer 6 (* CNode *)
+            apply (wp+)[11]
+    apply (simp add: split_def cong: if_cong split del: if_split)
+    apply (rule hoare_pre_spec_validE)
+  apply (wp hoare_strengthen_postE_R [OF "1.hyps"])
+                 apply (simp add: in_monad)+
+          apply (wpsimp wp: get_cap_wp)+
+apply safe
+apply safe
+sorry
+qed
+
 lemma transfer_caps_colour_maintained:
-  "\<lbrace>colour_invariant and (\<lambda>s. (\<forall>(cap, o_ref, _)\<in>(set caps). check_cap_ref cap (colour_oracle (cur_domain s)) \<and> valid_ptr_in_cur_domain o_ref s))
-   \<rbrace>
+  "\<lbrace>colour_invariant and (\<lambda>s. (\<forall>(cap, o_ref, _)\<in>(set caps). check_cap_ref cap (colour_oracle (cur_domain s)) \<and> valid_ptr_in_cur_domain o_ref s)) and (\<lambda>s. check_cap_ref (tcb_ctable (the $ get_tcb receiver s)) (colour_oracle (cur_domain s)))\<rbrace>
  transfer_caps info caps endpoint receiver recv_buffer
 \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-find_theorems get_receive_slots
   apply (wpsimp simp: transfer_caps_def wp: transfer_caps_loop_colour_maintained)
   apply (wpsimp wp: hoare_vcg_op_lift weak_if_wp')
-find_theorems lookup_slot_for_cnode_op
-  find_theorems "\<lbrace>_\<rbrace>_\<lbrace>\<lambda>_. if _ then _ else _\<rbrace>"
-  apply (wp add: hoare_vcg_if_lift)
-sorry
+  apply (wpsimp simp: lookup_slot_for_cnode_op_def)
+  apply safe
+  apply wpsimp
+  apply (wpsimp wp: resolve_address_bits_ret_valid)+
+  apply (wpsimp simp: lookup_cap_def)
+  apply (wpsimp wp: get_cap_wp)
+  apply (wpsimp simp: lookup_slot_for_thread_def)
+  apply (wp add: hoare_vcg_all_liftE_R)
+  apply (rule_tac Q'="\<lambda>rv s.
+           (\<exists>x. rv = ((a, b), x)) \<longrightarrow>
+           (\<forall>cap. cte_wp_at ((=) cap)
+                   (a, b) s \<longrightarrow>
+                  check_cap_ref cap
+                   (colour_oracle
+(cur_domain s)) \<and> a \<in> colour_oracle (cur_domain s) \<and>
+          a \<noteq> 0)" in hoare_strengthen_postE_R)
+  by (wpsimp wp: resolve_address_bits_ret_colour)+
 
 lemma copy_mrs_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
@@ -387,8 +468,8 @@ lemma copy_mrs_colour_maintained:
   by (wpsimp wp: mapM_wp[where S="UNIV"] store_word_offs_colour_maintained load_word_offs_P as_user_colour_maintained)+
 
 lemma do_normal_transfer_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace>
- do_normal_transfer  sender sbuf endpoint badge grant receiver rbuf
+  "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref (tcb_ctable (the $ get_tcb sender s)) (colour_oracle (cur_domain s))) and (\<lambda>s. check_cap_ref (tcb_ctable (the $ get_tcb receiver s)) (colour_oracle (cur_domain s)))\<rbrace>
+ do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
 \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   apply (wpsimp simp: do_normal_transfer_def)
         apply (wp add: as_user_colour_maintained
@@ -396,11 +477,19 @@ lemma do_normal_transfer_colour_maintained:
                        transfer_caps_colour_maintained)+
      apply (wp add: copy_mrs_colour_maintained)
     apply (wpsimp simp: valid_ptr_in_cur_domain_def wp: hoare_vcg_op_lift copy_mrs_cur_domain)
-    apply wpsimp
-prefer 2
-  apply wpsimp
-find_theorems lookup_extra_caps
-find_theorems "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_ _. \<forall>_\<in>_. _\<rbrace>" set name: all
+  apply (wpsimp simp: copy_mrs_def)
+    apply (rule conjI)
+     apply (rule impI)
+  apply (wpsimp simp: store_word_offs_def as_user_def do_machine_op_def load_word_offs_def wp: mapM_wp[where S="UNIV"] load_word_offs_P)+
+  apply (simp add: get_tcb_def)
+  apply simp
+    apply (wpsimp simp: store_word_offs_def do_machine_op_def load_word_offs_def wp: mapM_wp[where S="UNIV"])
+       apply (simp add: get_tcb_def)
+      apply simp
+     apply (wpsimp simp: store_word_offs_def as_user_def do_machine_op_def load_word_offs_def wp: mapM_wp[where S="UNIV"] set_object_wp)
+apply (simp add: get_tcb_def)
+defer
+  apply wpsimp+
      apply (simp add: lookup_extra_caps_def
                       lookup_cap_and_slot_def
                       lookup_slot_for_thread_def)
@@ -410,16 +499,7 @@ find_theorems "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_ _. \<forall>_\<in>_. _\
          apply (wp add: get_cap_wp)
         apply wpsimp
          apply (wp add: hoare_vcg_all_liftE_R)
-(*  apply (induct rule: resolve_address_bits'.induct)
-  apply safe
-  apply wpsimp*)
-  oops
-thm resolve_address_bits'.induct
-  term "resolve_address_bits'"
-  term "real_cte_at"
-  find_theorems name: hoare_vcg name: "if"
-  find_theorems "resolve_address_bits"
-  find_theorems "lookup_slot_for_thread"
+  by (wpsimp wp: resolve_address_bits_ret_colour)+
 
 lemma set_mrs_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
