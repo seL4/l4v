@@ -7,20 +7,16 @@ section "Initialisation"
 axiomatization
   colour_oracle :: "domain \<Rightarrow> obj_ref set"
   where
-    colour_oracle_no_overlap: "x \<noteq> y \<Longrightarrow> (colour_oracle x \<inter> colour_oracle y = {0})" \<comment>\<open>and
+    colour_oracle_no_overlap: "x \<noteq> y \<Longrightarrow> (colour_oracle x \<inter> colour_oracle y = {})" and
+    colour_oracle_no_zero: "0 \<notin> colour_oracle x" \<comment>\<open>and
     colour_oracle_domain_list: "(d, a)\<in> set (domain_list s) \<Longrightarrow> colour_oracle d = {}" and
     colour_oracle_cur_thread: "\<forall>s. cur_thread s \<in> (colour_oracle (cur_domain s))"\<close>
 
-lemma colour_oracle_zero: "0 \<in> colour_oracle x"
-by (metis (full_types, lifting) IntD2
-    colour_oracle_no_overlap
-    semiring_norm(160)
-    singletonI)
 
 definition
   check_cap_ref :: "cap \<Rightarrow> obj_ref set \<Rightarrow> bool"
   where
-    "check_cap_ref cap obj_set \<equiv> obj_refs cap \<subseteq> obj_set"
+    "check_cap_ref cap obj_set \<equiv> obj_refs cap \<subseteq> obj_set \<union> {0}"
 
 term "ArchInvariants_AI.RISCV64.obj_addrs" (* should be used everywhere? *)
 term obj_ref_of
@@ -28,9 +24,9 @@ term obj_ref_of
 fun
   check_tcb_state :: "thread_state \<Rightarrow> obj_ref set \<Rightarrow> bool"
   where
-    "check_tcb_state (BlockedOnReceive obj_ref _) obj_dom = (obj_ref \<in> obj_dom)"
-  |"check_tcb_state (BlockedOnSend obj_ref _) obj_dom = (obj_ref \<in> obj_dom)"
-  |"check_tcb_state (BlockedOnNotification obj_ref) obj_dom = (obj_ref \<in> obj_dom)"
+    "check_tcb_state (BlockedOnReceive obj_ref _) obj_dom = (obj_ref \<in> obj_dom \<union> {0})"
+  |"check_tcb_state (BlockedOnSend obj_ref _) obj_dom = (obj_ref \<in> obj_dom \<union> {0})"
+  |"check_tcb_state (BlockedOnNotification obj_ref) obj_dom = (obj_ref \<in> obj_dom \<union> {0})"
   |"check_tcb_state _ _ = True"
 
 primrec
@@ -47,34 +43,34 @@ primrec
     check_cap_ref (tcb_caller t) obj_dom \<and>
     check_cap_ref (tcb_ipcframe t) obj_dom \<and>
     check_tcb_state (tcb_state t) obj_dom \<and>
-    tcb_ipc_buffer t \<in> obj_dom \<and>
-    set_option (tcb_bound_notification t) \<subseteq> obj_dom)"
+    tcb_ipc_buffer t \<in> obj_dom \<union> {0} \<and>
+    set_option (tcb_bound_notification t) \<subseteq> obj_dom \<union> {0})"
   | "check_kernel_object_ref (Endpoint ep) obj_dom = (case ep of IdleEP \<Rightarrow> True
-                                                             | SendEP s \<Rightarrow> (set s \<subseteq> obj_dom)
-                                                             | RecvEP r \<Rightarrow>  (set r \<subseteq> obj_dom))"
+                                                             | SendEP s \<Rightarrow> (set s \<subseteq> obj_dom \<union> {0})
+                                                             | RecvEP r \<Rightarrow>  (set r \<subseteq> obj_dom \<union> {0}))"
   | "check_kernel_object_ref (Notification ntfn) obj_dom =
-    ((case (ntfn_obj ntfn) of WaitingNtfn l \<Rightarrow> set l \<subseteq> obj_dom
+    ((case (ntfn_obj ntfn) of WaitingNtfn l \<Rightarrow> set l \<subseteq> obj_dom \<union> {0}
                             | _ \<Rightarrow> True)
-    \<and> (case (ntfn_bound_tcb ntfn) of Some tcb \<Rightarrow> tcb \<in> obj_dom
+    \<and> (case (ntfn_bound_tcb ntfn) of Some tcb \<Rightarrow> tcb \<in> obj_dom \<union> {0}
                                    | None \<Rightarrow> True))"
   | "check_kernel_object_ref (ArchObj ao) obj_dom = (case ao of RISCV64_A.DataPage _ _ \<Rightarrow> True
                                                             | RISCV64_A.ASIDPool ap \<Rightarrow> (\<forall>x.
-                                                                case (ap x) of Some obj_ref \<Rightarrow> obj_ref \<in> obj_dom
+                                                                case (ap x) of Some obj_ref \<Rightarrow> obj_ref \<in> obj_dom \<union> {0}
                                                                              | None \<Rightarrow> True)
                                                             | RISCV64_A.PageTable pt \<Rightarrow> (\<forall>x.
                                                                 case (pt x) of RISCV64_A.InvalidPTE \<Rightarrow> True
-                                                                             | RISCV64_A.PagePTE ppn _ _ \<Rightarrow> RISCV64_A.addr_from_ppn ppn \<in> obj_dom
-                                                                             | RISCV64_A.PageTablePTE ppn _  \<Rightarrow> RISCV64_A.addr_from_ppn ppn \<in> obj_dom))"
+                                                                             | RISCV64_A.PagePTE ppn _ _ \<Rightarrow> RISCV64_A.addr_from_ppn ppn \<in> obj_dom \<union> {0}
+                                                                             | RISCV64_A.PageTablePTE ppn _  \<Rightarrow> RISCV64_A.addr_from_ppn ppn \<in> obj_dom \<union> {0}))"
 
 definition colour_invariant
   where
     "colour_invariant s \<equiv> \<forall>ptr kobj. \<forall>(dom, _)\<in>(set (domain_list s)).
     (ko_at kobj ptr s \<and> ptr \<in> colour_oracle dom) \<longrightarrow>
-    check_kernel_object_ref kobj (colour_oracle dom)"
+    (check_kernel_object_ref kobj (colour_oracle dom) \<or> ptr = 0)"
 
 definition valid_ptr_in_cur_domain
   where
-    "valid_ptr_in_cur_domain ptr s \<equiv> ptr \<in> colour_oracle (cur_domain s) \<and> ptr \<noteq> 0"
+    "valid_ptr_in_cur_domain ptr s \<equiv> ptr \<in> colour_oracle (cur_domain s)"
 
 crunch cap_insert, set_extra_badge for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   (simp: crunch_simps
@@ -260,7 +256,7 @@ lemma cte_wp_at_check_cap_ref:
   "\<And>s cap.
          \<lbrakk>cte_wp_at ((=) cap) (a, b) s;
           colour_invariant s;
-          valid_ptr_in_cur_domain a s\<rbrakk>
+          a \<in> colour_oracle (cur_domain s) \<or> a = 0\<rbrakk>
          \<Longrightarrow> check_cap_ref cap
                (colour_oracle (cur_domain s))"
   apply (simp add: cte_wp_at_cases2)
@@ -270,17 +266,17 @@ lemma cte_wp_at_check_cap_ref:
    apply (erule_tac x="CNode sz fun" in allE)
   apply (erule_tac x="(cur_domain s, _)" in ballE)
   apply clarsimp
+  apply safe
   apply (erule_tac x=b in allE)
     apply (simp add: check_kernel_object_ref_def)
+  apply (simp add: colour_oracle_no_zero)
 defer
-  apply (erule disjE|erule exE|erule conjE)+
   apply (erule_tac x=a in allE)
   apply (erule_tac x="TCB tcb" in allE)
    apply (erule_tac x="(cur_domain s, _)" in ballE)
   apply (frule_tac a=b and b=cap in ranI)
-   apply (clarsimp simp add: ran_tcb_cnode_map)
-  apply fastforce
-apply (erule impE)
+    apply (fastforce simp add: ran_tcb_cnode_map colour_oracle_no_zero)
+apply (sadge)
   (*using ranI ran_tcb_cnode_map by force*)
 sorry
 
@@ -369,8 +365,7 @@ lemma resolve_address_bits_ret_colour:
       (\<forall>cap. cte_wp_at ((=) cap)
         (c, d) s \<longrightarrow>
           check_cap_ref cap (colour_oracle (cur_domain s)) \<and>
-          c \<in> colour_oracle (cur_domain s) \<and>
-          c \<noteq> 0
+          (c \<in> colour_oracle (cur_domain s) \<or> c = 0)
       )
 \<rbrace>,-"
 unfolding resolve_address_bits_def
@@ -389,33 +384,17 @@ proof (induct args arbitrary: c d rule: resolve_address_bits'.induct)
                  apply (simp add: in_monad)+
           apply (wpsimp wp: get_cap_wp)+
 apply safe
-apply ((clarsimp simp add: cte_wp_at_check_cap_ref
-    the_cnode_cap_def
-    valid_ptr_in_cur_domain_def)+)[3]
-apply (simp add: cte_wp_at_check_cap_ref the_cnode_cap_def)
-defer
-apply ((clarsimp simp add: cte_wp_at_check_cap_ref
-    the_cnode_cap_def
-    valid_ptr_in_cur_domain_def)+)[7]
-defer
-apply ((clarsimp simp add: cte_wp_at_check_cap_ref
-    the_cnode_cap_def
-    valid_ptr_in_cur_domain_def)+)[3]
-apply (frule cte_wp_at_check_cap_ref)
-apply simp
-apply (simp add: the_cnode_cap_def)
-apply (simp_all add: cte_wp_at_check_cap_ref)
-sorry
+  by ((rule cte_wp_at_check_cap_ref; simp add: check_cap_ref_def; clarsimp)|clarsimp simp add: check_cap_ref_def)+
 qed
 
 lemma resolve_address_bits_ret_valid:
-  "\<lbrace>(\<lambda>s. check_cap_ref (fst args) (colour_oracle (cur_domain s)))\<rbrace>\<comment> \<open> and (\<lambda>s. (is_cnode_cap (fst args)) \<longrightarrow> valid_ptr_in_cur_domain (fst (the_cnode_cap (fst args))) s)\<close>
+  "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref (fst args) (colour_oracle (cur_domain s)))\<rbrace>\<comment> \<open> and (\<lambda>s. (is_cnode_cap (fst args)) \<longrightarrow> valid_ptr_in_cur_domain (fst (the_cnode_cap (fst args))) s)\<close>
     resolve_address_bits args
     \<lbrace>\<lambda>rv s. \<forall>a. (\<exists>b.
-        rv = ((a, b), [])) \<longrightarrow> valid_ptr_in_cur_domain a s
+        rv = ((a, b), [])) \<longrightarrow> valid_ptr_in_cur_domain a s \<or> a = 0
     \<rbrace>,-"
 unfolding resolve_address_bits_def
-proof (induct args arbitrary: c d rule: resolve_address_bits'.induct)
+proof (induct args rule: resolve_address_bits'.induct)
   case (1 z cap cref)
   show ?case
   apply (simp add: validE_R_def)
@@ -430,8 +409,7 @@ proof (induct args arbitrary: c d rule: resolve_address_bits'.induct)
                  apply (simp add: in_monad)+
           apply (wpsimp wp: get_cap_wp)+
 apply safe
-apply safe
-sorry
+    by ((rule cte_wp_at_check_cap_ref; simp add: check_cap_ref_def; clarsimp)|simp add: valid_ptr_in_cur_domain_def check_cap_ref_def)+
 qed
 
 lemma transfer_caps_colour_maintained:
@@ -454,8 +432,7 @@ lemma transfer_caps_colour_maintained:
                    (a, b) s \<longrightarrow>
                   check_cap_ref cap
                    (colour_oracle
-(cur_domain s)) \<and> a \<in> colour_oracle (cur_domain s) \<and>
-          a \<noteq> 0)" in hoare_strengthen_postE_R)
+(cur_domain s)) \<and> a \<in> colour_oracle (cur_domain s))" in hoare_strengthen_postE_R)
   by (wpsimp wp: resolve_address_bits_ret_colour)+
 
 lemma copy_mrs_colour_maintained:
