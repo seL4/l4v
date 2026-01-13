@@ -28,6 +28,82 @@ method_setup not_visible =
   \<open>set context visibility to false for suppressing warnings in method execution\<close>
 
 
+section \<open>Attributes\<close>
+
+ML \<open>
+  (* Turn a parser that returns a proof context transformer into a unit context_parser *)
+  fun proof_context_parser (p : (Proof.context -> Proof.context) parser) : unit context_parser =
+    Scan.depend (fn context => p >> (fn f => (Context.map_proof f context, ())))
+
+  fun set_invisible invisible = Context_Position.set_visible (not invisible)
+
+  (* Set context visibility according to no_warn and return whether original context was visible *)
+  val no_warn_parser =
+    (Args.context >> Context_Position.is_visible)
+    --| proof_context_parser (Args.mode "no_warn" >> set_invisible)
+\<close>
+
+(* The better word form would be "declare" instead of "declaring", but that is already taken by
+   outer syntax. *)
+method_setup declaring =
+  \<open>no_warn_parser --| Attrib.thms --| Scan.lift (Args.$$$ "in") -- Method.text_closure >>
+     (fn (was_visible, m) => fn ctxt => fn facts =>
+        SIMPLE_METHOD (method_evaluate m (Context_Position.set_visible was_visible ctxt) facts) facts)\<close>
+  \<open>Evaluate method in supplied attribute context. Provides the equivalent of declare command as
+   a method for Eisbach method definitions.\<close>
+
+experiment
+  fixes x y
+  assumes foo: "x = y"
+begin
+
+(* Syntax:
+   - optional (no_warn) mode
+   - syntax for attributes admits a list of fact references with attributes as well as standalone
+     [[..]] attributes
+   - method needs cartouche if it is more than a single name
+*)
+lemma "x = y"
+  by (declaring (no_warn) foo[simp] foo[simp] in \<open>simp\<close>)
+
+method m =
+  declaring foo[simp] in simp
+
+lemma "x = y"
+  by m
+
+named_theorems test
+declare foo[test]
+
+method m2 uses test_del declares test =
+  declaring test_del[test del] in \<open>rule test\<close>
+
+lemma "x = y"
+  apply (fails \<open>m2 test_del: foo\<close>)
+  (* deletion overrides addition if done this way *)
+  apply (fails \<open>m2 test_del: foo test: foo\<close>)
+  apply m2
+  done
+
+(* Beware of name shadowing for attributes that are not named_theorems, i.e. when you have to use
+   "uses" instead of "declares". The name of the "uses" parameter will shadow the existing
+   attribute name, and "declaring" will be referring to the parameter set instead of the original
+   attribute. *)
+
+method m3 uses split =
+  declaring if_split[split del] in \<open>simp split: split\<close>
+
+method m4 uses simp_split =
+  declaring if_split[split del] in \<open>simp split: simp_split\<close>
+
+lemma "if P then a else b"
+  apply (fails \<open>m4\<close>)  (* This is correct -- no if_split applied, can't make progress *)
+  apply (m3) (* Applies if_split even though we wanted to delete it *)
+  oops
+
+end
+
+
 section \<open>Debugging methods\<close>
 
 method print_concl = (match conclusion in P for P \<Rightarrow> \<open>print_term P\<close>)
