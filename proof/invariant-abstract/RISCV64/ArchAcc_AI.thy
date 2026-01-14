@@ -2029,6 +2029,10 @@ lemma set_asid_pool_valid_asid_pool_caps[wp]:
   unfolding valid_asid_pool_caps_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
 
+lemma set_asid_pool_domain_ting[wp]:
+  "set_asid_pool p ap \<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
+  by (wpsimp simp: set_asid_pool_def wp: set_object_wp)
+
 lemma set_asid_pool_invs_restrict:
   "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and (\<lambda>s. \<exists>a. asid_table s a = Some p) and
     valid_asid_table and pspace_aligned\<rbrace>
@@ -2040,7 +2044,7 @@ lemma set_asid_pool_invs_restrict:
             set_asid_pool_vspace_objs_unmap  valid_irq_handlers_lift
             set_asid_pool_vs_lookup_unmap)
   apply (clarsimp simp: equal_kernel_mappings_def)
-  apply (rename_tac s pt_ptr hi_bits pt)
+  apply (rename_tac s pt_ptr a hi_bits pt)
   apply (clarsimp dest!: ran_restrictD)
   apply (rename_tac lo_bits)
   (* we can build an asid that resolves to pt_ptr, vref is irrelevant for asid_pool_level *)
@@ -2842,6 +2846,7 @@ lemma store_pte_invs:
   apply (wpsimp wp: store_pte_valid_global_vspace_mappings store_pte_valid_global_tables
                     store_pte_valid_vspace_objs store_pte_valid_arch_caps
                     store_pte_equal_kernel_mappings_no_kernel_slots)
+  apply (wpsimp simp: store_pte_def set_pt_def wp: set_object_wp)
   apply (clarsimp simp: valid_objs_caps valid_arch_caps_def)
   done
 

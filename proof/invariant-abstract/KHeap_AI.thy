@@ -1326,6 +1326,7 @@ lemma set_ntfn_minor_invs:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (wp set_simple_ko_valid_objs valid_irq_node_typ valid_irq_handlers_lift)
+  apply (wpsimp simp: set_simple_ko_def wp: set_object_wp get_object_wp)
   apply (clarsimp simp: ntfn_at_def2
                   elim!: rsubst[where P=sym_refs]
                  intro!: ext

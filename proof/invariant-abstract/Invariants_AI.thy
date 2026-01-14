@@ -1024,7 +1024,7 @@ definition
 
 definition
   invs :: "'z::state_ext state \<Rightarrow> bool" where
-  "invs \<equiv> valid_state and cur_tcb"
+  "invs \<equiv> valid_state and cur_tcb and (\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s))"
 
 
 subsection "Derived concepts"
@@ -1086,7 +1086,7 @@ abbreviation(input)
        and equal_kernel_mappings and valid_asid_map and valid_global_vspace_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and pspace_respects_device_region and cap_refs_respects_device_region
-       and cur_tcb"
+       and cur_tcb and (\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s))"
 
 
 \<comment> \<open>---------------------------------------------------------------------------\<close>
@@ -3508,6 +3508,10 @@ lemma valid_mask_vm_rights[simp]:
 lemma invs_pspace_in_kernel_window[elim!]:
   "invs s \<Longrightarrow> pspace_in_kernel_window s"
   by (simp add: invs_def valid_state_def)
+
+lemma invs_cur_domain_list[elim!]:
+  "invs s \<Longrightarrow> \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+  by (simp add: invs_def)
 
 lemmas invs_implies =
   invs_equal_kernel_mappings
