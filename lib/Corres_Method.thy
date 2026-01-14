@@ -54,16 +54,16 @@ method corres_split declares corres_splits = no_name_eta, rule corres_splits
    applied. At that point, there should be no schematic variables in those side condition goals.
    Despite that, we are still careful with simp etc here, in case the user does provide a corres
    rule that generates a schematic in those side condition goals. *)
-method corres_cleanup methods m uses simp simp_del split split_del cong intro =
+method corres_cleanup methods m uses simp simp_del simp_split split_del cong intro =
   #break "corres_cleanup",
   ( m
   | assumption
   | rule refl TrueI
-  | clarsimp simp del: corres_no_simp simp_del simp: simp split: split split del: split_del
+  | clarsimp simp del: corres_no_simp simp_del simp: simp split: simp_split split del: split_del
              cong: cong intro!: intro
   (* enables passing in conjI for terminal goals: *)
   | (rule intro;
-     corres_cleanup m simp: simp simp_del: simp_del split: split split_del: split_del
+     corres_cleanup m simp: simp simp_del: simp_del simp_split: simp_split split_del: split_del
                       cong: cong intro: intro))
 
 (* Apply a single corres rule and attempt to solve non-corres and non-wp side conditions.
@@ -72,14 +72,17 @@ method corres_cleanup methods m uses simp simp_del split split_del cong intro =
    allowed. If the rule is declared as a regular corres rule, unsolved side conditions as well as
    corres and wp side conditions will be left over unchanged. *)
 method corres_rule
-  methods m uses simp simp_del split split_del cong intro declares corres corres_term =
-  determ \<open>solves \<open>((rule corres_term | corres_rrel_pre, rule corres_term);
-                   solves \<open>corres_cleanup m simp: simp simp_del: simp_del split: split
-                                            split_del: split_del cong: cong\<close>)\<close>
-          | (rule corres | corres_rrel_pre, rule corres);
-            ((fails \<open>is_corres\<close>, fails \<open>is_wp\<close>,
-              solves \<open>corres_cleanup m simp: simp simp_del: simp_del split: split
-                                       split_del: split_del cong: cong\<close>)?)\<close>
+  methods m
+  uses simp simp_del simp_split split_del cong intro corres_del
+  declares corres corres_term =
+  declaring corres_del[corres del] in
+  \<open>determ \<open>solves \<open>((rule corres_term | corres_rrel_pre, rule corres_term);
+                    solves \<open>corres_cleanup m simp: simp simp_del: simp_del simp_split: simp_split
+                                             split_del: split_del cong: cong\<close>)\<close>
+           | (rule corres | corres_rrel_pre, rule corres);
+             ((fails \<open>is_corres\<close>, fails \<open>is_wp\<close>,
+               solves \<open>corres_cleanup m simp: simp simp_del: simp_del simp_split: simp_split
+                                        split_del: split_del cong: cong\<close>)?)\<close>\<close>
 
 (* For normalisation of corres terms, e.g. liftE *)
 named_theorems corres_simp
@@ -107,7 +110,7 @@ named_theorems corres_simp
 *)
 method corres'
   methods m
-  uses simp term_simp simp_del split split_del cong intro wp wp_del fallback
+  uses simp term_simp simp_del simp_split split_del cong intro wp wp_del fallback corres_del
   declares corres corres_term corres_splits =
   (((* debug breakpoint *)
     #break "corres",
@@ -116,21 +119,25 @@ method corres'
     (* fix up schematic guards if they contain constructor parameters *)
     | wpfix
     (* apply a single corres rule if possible *)
-    | corres_rule m simp: term_simp simp simp_del: simp_del split_del: split_del split: split
-                    cong: cong corres: corres corres_term: corres_term
+    | corres_rule m simp: term_simp simp simp_del: simp_del
+                    split_del: split_del simp_split: simp_split cong: cong
+                    corres: corres corres_del: corres_del corres_term: corres_term
     (* only split if we can apply a single corres rule afterwards *)
     | corres_split corres_splits: corres_splits,
-      corres_rule m simp: simp term_simp simp_del: simp_del split_del: split_del split: split
-                    cong: cong corres: corres corres_term: corres_term
+      corres_rule m simp: simp term_simp simp_del: simp_del
+                    split_del: split_del simp_split: simp_split cong: cong
+                    corres: corres corres_del: corres_del corres_term: corres_term
     (* apply potentially unsafe fallback rules if any are provided *)
-    | corres_rule m simp: simp term_simp simp_del: simp_del split_del: split_del split: split
-                    cong: cong corres: fallback
+    | corres_rule m simp: simp term_simp simp_del: simp_del
+                    split_del: split_del simp_split: simp_split cong: cong
+                    corres: fallback corres_del: corres_del
     (* simplify head corres goal, e.g. for things like liftM unfolding if the user provides such
        a rule as "simp". Not clarsimp, because clarsimp will still perform hypsubst on assumptions
        and might through that rewrite guards *)
     | is_corres,
-      simp (no_asm_use) cong: corres_weaker_cong cong split: split split del: if_split split_del
-                        add: simp corres_simp del: corres_no_simp simp_del
+      declaring (no_warn) if_split[split del] in
+      \<open>simp (no_asm_use) cong: corres_weaker_cong cong split: simp_split split del: split_del
+                         add: simp corres_simp del: corres_no_simp simp_del\<close>
     (* simplify any remaining side condition head goal (non-corres, non-wp). This is either a side
        condition that was not solved by corres_cleanup, or it is one of the two terminal implication
        goals. It is very likely that the method will stop after this and not have solved the goal,
@@ -138,8 +145,9 @@ method corres'
        means, overall we might solve a few more goals, and not be detrimental to interactive proof
        either. *)
     | fails \<open>is_corres\<close>, fails \<open>is_wp\<close>,
-      clarsimp cong: cong simp del: simp_del simp: simp split del: if_split split_del split: split
-               intro!: intro
+      declaring (no_warn) if_split[split del] in
+      \<open>clarsimp cong: cong simp del: simp_del simp: simp split del: split_del split: simp_split
+                intro!: intro\<close>
     (* if (and only if) we get to the state where all corres goals and side conditions are solved,
        attempt to solve all wp goals that were generated in order. We are not using then_all_new_fwd
        here, because we should only start solving wp goals once *all* corres goals are solved --
@@ -147,19 +155,20 @@ method corres'
        free schematic postcondition despite all these measures.
        *)
     | is_safe_wp,
-      (wpsimp wp: wp wp_del: wp_del simp: simp simp_del: simp_del split: split split_del: split_del
-              cong: cong)+
+      (wpsimp wp: wp wp_del: wp_del simp: simp simp_del: simp_del
+              split: simp_split split_del: split_del cong: cong)+
    )+)[1]
 
 (* Instance of the corres' method with default cleanup tactic. We provide "fail" as default to let
    the other cleanup tactis run. "succeed" would stop without progress (useful for debugging). *)
 method corres
-  uses simp term_simp simp_del split split_del cong intro wp wp_del fallback
+  uses simp term_simp simp_del simp_split split_del cong intro wp wp_del fallback corres_del
   declares corres corres_term corres_splits =
-  corres' \<open>fail\<close> simp: simp term_simp: term_simp simp_del: simp_del split: split
+  corres' \<open>fail\<close> simp: simp term_simp: term_simp simp_del: simp_del simp_split: simp_split
                  split_del: split_del cong: cong intro: intro wp: wp wp_del: wp_del
                  fallback: fallback
-                 corres: corres corres_term: corres_term corres_splits: corres_splits
+                 corres: corres corres_del: corres_del
+                 corres_term: corres_term corres_splits: corres_splits
 
 
 section \<open>Corres rule setup\<close>
