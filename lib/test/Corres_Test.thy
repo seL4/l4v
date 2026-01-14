@@ -168,6 +168,16 @@ lemma "corres (=) P \<top> (do x \<leftarrow> f; g x od) (do y \<leftarrow> f'; 
   finish
   done
 
+(* Testing corres_del: and if_split removal *)
+lemma "corres (=) P \<top> (do x \<leftarrow> f; g (if X then x else z) od) (do y \<leftarrow> f'; (if X then g' y else g' z) od)"
+  supply f[corres] g[corres]
+  apply (fails \<open>solves \<open>corres corres_del: g term_simp: t wp: Q\<close>\<close>) (* rule g is not available *)
+  apply corres (* "if" has not been split *)
+      apply (succeeds \<open>corres simp_split: if_split\<close>) (* adding if_split would make progress *)
+      apply (cases X; simp; corres term_simp: t)
+      apply (wpsimp wp: Q)+
+  done
+
 (* Rewriting corres terms *)
 lemma "corres (=) P \<top> (do x \<leftarrow> f; g x od) (do y \<leftarrow> liftM t f'; g' y od)"
   (* In this goal, corres will stop at liftM without finding a rule to apply. Unfolding
