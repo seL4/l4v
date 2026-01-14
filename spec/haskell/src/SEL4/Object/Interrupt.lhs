@@ -18,16 +18,8 @@ We use the C preprocessor to select a target architecture.
 >     decodeIRQControlInvocation, decodeIRQHandlerInvocation,
 >     performIRQControl, invokeIRQHandler,
 >     deletingIRQHandler, deletedIRQHandler,
-<<<<<<< HEAD
->     initInterruptController, handleInterrupt,
->     setIRQState, getIRQState, isIRQActive, setNextInterrupt
-||||||| 0d43d8dee
->     initInterruptController, handleInterrupt,
->     setIRQState, getIRQState, isIRQActive
-=======
 >     initInterruptController, maybeHandleInterrupt,
->     setIRQState, getIRQState, isIRQActive
->>>>>>> verification/master
+>     setIRQState, getIRQState, isIRQActive, setNextInterrupt
 >   ) where
 
 > {-# BOOT-IMPORTS: SEL4.Machine SEL4.Model SEL4.Object.Structures #-}

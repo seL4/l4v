@@ -45,10 +45,6 @@ lemma cte_map_in_cnode1:
   apply (rule of_bl_max)
   done
 
-lemma of_bl_shift_cte_level_bits:
-  "(of_bl z :: machine_word) << cte_level_bits \<le> mask (cte_level_bits + length z)"
-  by (simp add: le_mask_shiftl_le_mask of_bl_max)
-
 crunch setIRQState
   for cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
 
@@ -71,7 +67,7 @@ lemma dmo_clearMemory_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (clearMemory w sz) \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
   apply wp
-  apply (clarsimp simp: invs'_def valid_state'_def)
+  apply (clarsimp simp: invs'_def dmo_clearMemory_invs')
   apply (rule conjI)
    apply (simp add: valid_irq_masks'_def, elim allEI, clarsimp)
    apply (drule use_valid)
@@ -82,17 +78,6 @@ lemma dmo_clearMemory_invs'[wp]:
   done
 
 locale ArchAcc_R =
-  assumes pspace_aligned_cross:
-    "\<And>(s::det_state) s'.
-       \<lbrakk> pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> pspace_aligned' s'"
-  assumes obj_relation_cuts_range_mask_range:
-    "\<And>p p' P ko ko'.
-       \<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko'; is_aligned p (obj_bits ko) \<rbrakk>
-       \<Longrightarrow> p' \<in> mask_range p (obj_bits ko)"
-  assumes pspace_distinct_cross:
-    "\<And>(s::det_state) s'.
-     \<lbrakk> pspace_distinct s; pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk>
-     \<Longrightarrow> pspace_distinct' s'"
   assumes arch_cap_rights_update:
     "\<And>c c' msk.
      acap_relation c c' \<Longrightarrow>

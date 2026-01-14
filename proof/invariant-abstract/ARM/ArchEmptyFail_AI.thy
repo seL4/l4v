@@ -167,13 +167,7 @@ lemma deactivateInterrupt_empty_fail[wp]:
   unfolding deactivateInterrupt_def
   by wpsimp
 
-<<<<<<< HEAD
-crunch handle_event, activate_thread, check_budget
-||||||| 0d43d8dee
-crunch possible_switch_to, handle_event, activate_thread
-=======
-crunch possible_switch_to, handle_event, activate_thread, maybe_handle_interrupt
->>>>>>> verification/master
+crunch handle_event, activate_thread, maybe_handle_interrupt, check_budget
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits

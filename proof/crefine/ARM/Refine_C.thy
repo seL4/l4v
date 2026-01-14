@@ -87,71 +87,6 @@ lemma handleInterruptEntry_ccorres:
   apply cinit'
    apply (simp add: callKernel_def handleEvent_def minus_one_norm)
    apply (rule ccorres_stateAssert)
-<<<<<<< HEAD
-   apply (simp add: liftE_bind bind_assoc)
-    apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
-    apply wpc
-     apply simp
-     apply (rule ccorres_symb_exec_r)
-       apply (ctac (no_vcg) add: schedule_ccorres)
-        apply (rule ccorres_stateAssert_after)
-        apply (rule ccorres_add_return2)
-        apply (ctac (no_vcg) add: activateThread_ccorres)
-         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-         apply (rule allI, rule conseqPre, vcg)
-         apply (clarsimp simp: return_def)
-        apply (wp schedule_sch_act_wf schedule_invs'
-             | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
-      apply simp
-      apply vcg
-     apply vcg
-    apply (clarsimp simp: irq_type_never_invalid)
-    apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-      apply (ctac (no_vcg) add: schedule_ccorres)
-       apply (rule ccorres_stateAssert_after)
-       apply (rule ccorres_add_return2)
-       apply (ctac (no_vcg) add: activateThread_ccorres)
-        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-        apply (rule allI, rule conseqPre, vcg)
-        apply (clarsimp simp: return_def)
-       apply (wp schedule_sch_act_wf schedule_invs'
-             | strengthen invs_queues_imp invs_valid_objs_strengthen)+
-   apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> Kernel_Config.maxIRQ)" in hoare_post_imp)
-    apply (solves clarsimp)
-   apply (wp getActiveIRQ_le_maxIRQ | simp)+
-||||||| 0d43d8dee
-   apply (simp add: liftE_bind bind_assoc)
-    apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
-    apply wpc
-     apply simp
-     apply (rule ccorres_symb_exec_r)
-       apply (ctac (no_vcg) add: schedule_ccorres)
-        apply (rule ccorres_stateAssert_after)
-        apply (rule ccorres_add_return2)
-        apply (ctac (no_vcg) add: activateThread_ccorres)
-         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-         apply (rule allI, rule conseqPre, vcg)
-         apply (clarsimp simp: return_def)
-        apply (wp schedule_sch_act_wf schedule_invs'
-             | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
-      apply simp
-      apply vcg
-     apply vcg
-    apply (clarsimp simp: irq_type_never_invalid)
-    apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-     apply (ctac (no_vcg) add: schedule_ccorres)
-      apply (rule ccorres_stateAssert_after)
-      apply (rule ccorres_add_return2)
-      apply (ctac (no_vcg) add: activateThread_ccorres)
-       apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-       apply (rule allI, rule conseqPre, vcg)
-       apply (clarsimp simp: return_def)
-      apply (wp schedule_sch_act_wf schedule_invs'
-             | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
-   apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> Kernel_Config.maxIRQ)" in hoare_post_imp)
-    apply (solves clarsimp)
-   apply (wp getActiveIRQ_le_maxIRQ | simp)+
-=======
    apply (ctac (no_vcg) add: checkInterrupt_ccorres)
     apply (ctac (no_vcg) add: schedule_ccorres)
      apply (rule ccorres_stateAssert_after)
@@ -162,7 +97,6 @@ lemma handleInterruptEntry_ccorres:
       apply (clarsimp simp: return_def)
      apply (wp schedule_sch_act_wf schedule_invs'
             | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
->>>>>>> verification/master
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
 

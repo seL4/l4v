@@ -5,13 +5,7 @@
  *)
 
 theory Schedule_R
-<<<<<<< HEAD
 imports SchedContext_R InterruptAcc_R
-||||||| 0d43d8dee
-imports VSpace_R
-=======
-imports ArchVSpace_R
->>>>>>> verification/master
 begin
 
 crunch scReleased, getReprogramTimer, getCurTime, getRefills, getReleaseQueue, getRefillSufficient,
@@ -462,23 +456,6 @@ lemma tcbSchedEnqueue_valid_mdb'[wp]:
                     simp: ready_queue_relation_def ksReadyQueues_asrt_def)
   done
 
-<<<<<<< HEAD
-||||||| 0d43d8dee
-crunch tcbSchedEnqueue
-  for cur_tcb'[wp]: cur_tcb'
-  (wp: threadSet_cur)
-
-=======
-lemma tcbSchedEnqueue_valid_pspace'[wp]:
-  "tcbSchedEnqueue tcbPtr \<lbrace>valid_pspace'\<rbrace>"
-  unfolding valid_pspace'_def
-  by wpsimp
-
-crunch tcbSchedEnqueue
-  for cur_tcb'[wp]: cur_tcb'
-  (wp: threadSet_cur)
-
->>>>>>> verification/master
 lemma tcbSchedEnqueue_invs'[wp]:
   "tcbSchedEnqueue t \<lbrace>invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
@@ -884,7 +861,6 @@ lemma asUser_utr[wp]:
   apply (simp add: o_def)
   done
 
-<<<<<<< HEAD
 lemma switchToThread_invs'_helper:
   "do y \<leftarrow> RISCV64_H.switchToThread t;
       y \<leftarrow> tcbSchedDequeue t;
@@ -892,77 +868,6 @@ lemma switchToThread_invs'_helper:
    od
    \<lbrace>invs'\<rbrace>"
   by (wp setCurThread_invs' Arch_switchToThread_pred_tcb')
-||||||| 0d43d8dee
-lemma threadSet_invs_no_cicd'_trivialT:
-  assumes
-    "\<forall>tcb. \<forall>(getF,setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
-    "\<forall>tcb. tcbState (F tcb) = tcbState tcb \<and> tcbDomain (F tcb) = tcbDomain tcb"
-    "\<forall>tcb. is_aligned (tcbIPCBuffer tcb) msg_align_bits \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits"
-    "\<forall>tcb. tcbBoundNotification (F tcb) = tcbBoundNotification tcb"
-    "\<forall>tcb. tcbSchedPrev (F tcb) = tcbSchedPrev tcb"
-    "\<forall>tcb. tcbSchedNext (F tcb) = tcbSchedNext tcb"
-    "\<forall>tcb. tcbQueued (F tcb) = tcbQueued tcb"
-    "\<forall>tcb. tcbDomain tcb \<le> maxDomain \<longrightarrow> tcbDomain (F tcb) \<le> maxDomain"
-    "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
-    "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
-    "\<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0"
-  shows
-  "threadSet F t \<lbrace>invs_no_cicd'\<rbrace>"
-  apply (simp add: invs_no_cicd'_def valid_state'_def)
-  apply (wp threadSet_valid_pspace'T
-            threadSet_sch_actT_P[where P=False, simplified]
-            threadSet_state_refs_of'T[where f'=id]
-            threadSet_iflive'T
-            threadSet_ifunsafe'T
-            threadSet_idle'T
-            threadSet_global_refsT
-            irqs_masked_lift
-            valid_irq_node_lift
-            valid_irq_handlers_lift''
-            threadSet_ctes_ofT
-            threadSet_not_inQ
-            threadSet_ct_idle_or_in_cur_domain'
-            threadSet_valid_dom_schedule' threadSet_sched_pointers threadSet_valid_sched_pointers
-            threadSet_cur
-            untyped_ranges_zero_lift
-         | clarsimp simp: assms cteCaps_of_def | rule refl)+
-  by (auto simp: o_def)
-=======
-lemma threadSet_invs_no_cicd'_trivialT:
-  assumes
-    "\<forall>tcb. \<forall>(getF,setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
-    "\<forall>tcb. tcbState (F tcb) = tcbState tcb \<and> tcbDomain (F tcb) = tcbDomain tcb"
-    "\<forall>tcb. is_aligned (tcbIPCBuffer tcb) msg_align_bits \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits"
-    "\<forall>tcb. tcbBoundNotification (F tcb) = tcbBoundNotification tcb"
-    "\<forall>tcb. tcbSchedPrev (F tcb) = tcbSchedPrev tcb"
-    "\<forall>tcb. tcbSchedNext (F tcb) = tcbSchedNext tcb"
-    "\<forall>tcb. tcbQueued (F tcb) = tcbQueued tcb"
-    "\<forall>tcb. tcbDomain tcb \<le> maxDomain \<longrightarrow> tcbDomain (F tcb) \<le> maxDomain"
-    "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
-    "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
-    "\<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0"
-  shows
-  "threadSet F t \<lbrace>invs_no_cicd'\<rbrace>"
-  apply (simp add: invs_no_cicd'_def valid_state'_def)
-  apply (wp threadSet_valid_pspace'T
-            threadSet_sch_actT_P[where P=False, simplified]
-            threadSet_state_refs_of'T[where f'=id]
-            threadSet_iflive'T
-            threadSet_ifunsafe'T
-            threadSet_idle'T
-            threadSet_global_refsT
-            irqs_masked_lift
-            valid_irq_node_lift
-            valid_irq_handlers_lift''
-            threadSet_ctes_ofT
-            threadSet_not_inQ
-            threadSet_ct_idle_or_in_cur_domain'
-            threadSet_valid_dom_schedule' threadSet_sched_pointers threadSet_valid_sched_pointers
-            threadSet_cur
-            untyped_ranges_zero_lift
-         | clarsimp simp: assms cteCaps_of_def valid_arch_tcb'_def | rule refl)+
-  by (auto simp: o_def)
->>>>>>> verification/master
 
 lemma switchToThread_invs'[wp]:
   "switchToThread t \<lbrace>invs'\<rbrace>"

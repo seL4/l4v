@@ -345,37 +345,6 @@ lemma hyp_refs_of_live':
   "hyp_refs_of' ko \<noteq> {} \<Longrightarrow> live' ko"
   by (cases ko, simp_all add: live'_def hyp_refs_of_hyp_live')
 
-<<<<<<< HEAD
-lemmas valid_cap_simps' =
-  valid_cap'_def[split_simps capability.split arch_capability.split]
-
-||||||| 0d43d8dee
-lemmas valid_cap_simps' =
-  valid_cap'_def[split_simps capability.split arch_capability.split]
-
-lemma is_physical_cases:
- "(capClass cap = PhysicalClass) =
-  (case cap of NullCap                         \<Rightarrow> False
-             | DomainCap                       \<Rightarrow> False
-             | IRQControlCap                   \<Rightarrow> False
-             | IRQHandlerCap irq               \<Rightarrow> False
-             | ReplyCap r m cr                 \<Rightarrow> False
-             | ArchObjectCap ASIDControlCap    \<Rightarrow> False
-             | _                               \<Rightarrow> True)"
-  by (simp split: capability.splits arch_capability.splits zombie_type.splits)
-=======
-lemma is_physical_cases:
- "(capClass cap = PhysicalClass) =
-  (case cap of NullCap                         \<Rightarrow> False
-             | DomainCap                       \<Rightarrow> False
-             | IRQControlCap                   \<Rightarrow> False
-             | IRQHandlerCap irq               \<Rightarrow> False
-             | ReplyCap r m cr                 \<Rightarrow> False
-             | ArchObjectCap ASIDControlCap    \<Rightarrow> False
-             | _                               \<Rightarrow> True)"
-  by (simp split: capability.splits arch_capability.splits zombie_type.splits)
->>>>>>> verification/master
-
 (* FIXME arch-split RT: whole typ_at_lift section needs to be split *)
 lemma typ_at_lift_page_table_at'_strong:
   "(\<And>p. f \<lbrace>\<lambda>s. P (typ_at' (ArchT PTET) p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (page_table_at' p s)\<rbrace>"
@@ -606,62 +575,4 @@ lemmas gen_objBitsT_simps = objBitsT_simps(1-7)
 
 end
 
-<<<<<<< HEAD
-context Arch begin arch_global_naming
-
-lemma scBits_pos_power2:
-  assumes "minSchedContextBits + scSize sc < word_bits"
-  shows "(1::machine_word) < (2::machine_word) ^ (minSchedContextBits + scSize sc)"
-  apply (insert assms)
-  apply (subst word_less_nat_alt)
-  apply (clarsimp simp: minSchedContextBits_def)
-  by (auto simp: pow_mono_leq_imp_lt)
-
-lemma objBits_pos_power2[simp]:
-  assumes "objBits v < word_bits"
-  shows "(1::machine_word) < (2::machine_word) ^ objBits v"
-  unfolding objBits_simps'
-  apply (insert assms)
-  apply (case_tac "injectKO v"; simp)
-  by (simp add: pageBits_def pteBits_def objBits_simps scBits_pos_power2
-         split: arch_kernel_object.split)+
-
-lemma objBitsKO_no_overflow[simp, intro!]:
-  "objBitsKO ko < word_bits \<Longrightarrow> (1::machine_word) < (2::machine_word)^(objBitsKO ko)"
-  by (cases ko; simp add: objBits_simps' pageBits_def pteBits_def scBits_pos_power2
-                   split: arch_kernel_object.splits)
-
-end
-
-(* FIXME: arch-split RT *)
-arch_requalify_facts
-  scBits_pos_power2
-  objBits_pos_power2
-  objBitsKO_no_overflow
-
-declare objBits_pos_power2[simp] objBitsKO_no_overflow[simp, intro!]
-
-||||||| 0d43d8dee
-context Arch begin
-
-lemma objBits_less_word_bits:
-  "objBits v < word_bits"
-  unfolding objBits_simps'
-  apply (case_tac "injectKO v"; simp)
-  by (simp add: pageBits_def pteBits_def objBits_simps word_bits_def
-         split: arch_kernel_object.split)+
-
-lemma objBits_pos_power2[simp]:
-  assumes "objBits v < word_bits"
-  shows "(1::machine_word) < (2::machine_word) ^ objBits v"
-  unfolding objBits_simps'
-  apply (insert assms)
-  apply (case_tac "injectKO v"; simp)
-  by (simp add: pageBits_def pteBits_def objBits_simps
-         split: arch_kernel_object.split)+
-
-end
-
-=======
->>>>>>> verification/master
 end

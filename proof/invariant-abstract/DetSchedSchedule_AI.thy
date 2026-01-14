@@ -2366,82 +2366,12 @@ lemma cur_sc_more_than_ready_trivial[simp]:
 
 locale DetSchedSchedule_AI =
   fixes state_ext_t :: "'state_ext::state_ext itself"
-<<<<<<< HEAD
   assumes kernel_irq_timer_is_kernel_IRQ[simp]:
     "timerIRQ \<notin> non_kernel_IRQs"
   assumes arch_switch_to_thread_valid_sched_pred[wp]:
     "\<And>t P. arch_switch_to_thread t \<lbrace>valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes arch_switch_to_idle_thread_valid_sched_pred[wp]:
     "\<And>P. arch_switch_to_idle_thread \<lbrace>valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
-||||||| 0d43d8dee
-  assumes arch_switch_to_idle_thread_valid_queues'[wp]:
-    "\<lbrace>valid_queues\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_. valid_queues :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_thread_valid_queues'[wp]:
-    "\<And>t. \<lbrace>valid_queues\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. valid_queues :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_idle_thread_weak_valid_sched_action'[wp]:
-    "\<lbrace>weak_valid_sched_action\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_. weak_valid_sched_action :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_thread_weak_valid_sched_action'[wp]:
-    "\<And>t. \<lbrace>weak_valid_sched_action\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. weak_valid_sched_action :: det_state \<Rightarrow> _\<rbrace>"
-  assumes switch_to_idle_thread_ct_not_in_q[wp]:
-    "\<lbrace>valid_queues and valid_idle\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_not_in_q :: det_state \<Rightarrow> _\<rbrace>"
-  assumes switch_to_idle_thread_valid_sched_action[wp]:
-    "\<lbrace>valid_sched_action and valid_idle\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. valid_sched_action :: det_state \<Rightarrow> _\<rbrace>"
-  assumes switch_to_idle_thread_ct_in_cur_domain[wp]:
-    "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_in_cur_domain :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_thread_ct_not_in_q'[wp]:
-    "\<And>t. \<lbrace>ct_not_in_q\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. ct_not_in_q :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_thread_is_activatable'[wp]:
-    "\<And>t t'. \<lbrace>is_activatable t'\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. is_activatable t' :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_thread_valid_sched_action'[wp]:
-    "\<And>t. \<lbrace>valid_sched_action\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. valid_sched_action :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_thread_valid_sched'[wp]:
-    "\<And>t. \<lbrace>valid_sched\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_thread_ct_in_cur_domain_2[wp]:
-    "\<And>t' t.
-      \<lbrace>\<lambda>s. ct_in_cur_domain_2 t' (idle_thread s) (scheduler_action s) (cur_domain s) (etcbs_of s)\<rbrace>
-        arch_switch_to_thread t
-      \<lbrace>\<lambda>_ s::det_state. ct_in_cur_domain_2 t' (idle_thread s) (scheduler_action s) (cur_domain s) (etcbs_of s)\<rbrace>"
-  assumes arch_switch_to_thread_valid_blocked[wp]:
-    "\<And>t. \<lbrace>valid_blocked and ct_in_q\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. valid_blocked and ct_in_q :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_thread_etcbs_of[wp]:
-    "\<And>P t. arch_switch_to_thread t \<lbrace>\<lambda>s::det_state. P (etcbs_of s)\<rbrace>"
-  assumes arch_switch_to_thread_cur_domain[wp]:
-    "\<And>P t. arch_switch_to_thread t \<lbrace>\<lambda>s::det_state. P (cur_domain s)\<rbrace>"
-=======
-  assumes arch_switch_to_idle_thread_valid_queues'[wp]:
-    "\<lbrace>valid_queues\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_. valid_queues :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_thread_valid_queues'[wp]:
-    "\<And>t. \<lbrace>valid_queues\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. valid_queues :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_idle_thread_weak_valid_sched_action'[wp]:
-    "\<lbrace>weak_valid_sched_action\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_. weak_valid_sched_action :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_thread_weak_valid_sched_action'[wp]:
-    "\<And>t. \<lbrace>weak_valid_sched_action\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. weak_valid_sched_action :: det_state \<Rightarrow> _\<rbrace>"
-  assumes switch_to_idle_thread_ct_not_in_q[wp]:
-    "\<lbrace>valid_queues and valid_idle\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_not_in_q :: det_state \<Rightarrow> _\<rbrace>"
-  assumes switch_to_idle_thread_valid_sched_action[wp]:
-    "\<lbrace>valid_sched_action and valid_idle\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. valid_sched_action :: det_state \<Rightarrow> _\<rbrace>"
-  assumes switch_to_idle_thread_ct_in_cur_domain[wp]:
-    "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_in_cur_domain :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_thread_ct_not_in_q'[wp]:
-    "\<And>t. \<lbrace>ct_not_in_q\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. ct_not_in_q :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_thread_is_activatable'[wp]:
-    "\<And>t t'. \<lbrace>is_activatable t'\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. is_activatable t' :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_thread_valid_sched_action'[wp]:
-    "\<And>t. \<lbrace>valid_sched_action\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. valid_sched_action :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_thread_valid_sched'[wp]:
-    "\<And>t. \<lbrace>valid_sched\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_thread_ct_in_cur_domain_2[wp]:
-    "\<And>t' t.
-      \<lbrace>\<lambda>s. ct_in_cur_domain_2 t' (idle_thread s) (scheduler_action s) (cur_domain s) (etcbs_of s)\<rbrace>
-        arch_switch_to_thread t
-      \<lbrace>\<lambda>_ s::det_state. ct_in_cur_domain_2 t' (idle_thread s) (scheduler_action s) (cur_domain s) (etcbs_of s)\<rbrace>"
-  assumes arch_switch_to_thread_valid_blocked[wp]:
-    "\<And>t. \<lbrace>valid_blocked and ct_in_q\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. valid_blocked and ct_in_q :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_switch_to_thread_etcbs_of[wp]:
-    "\<And>P t. arch_switch_to_thread t \<lbrace>\<lambda>s::det_state. P (etcbs_of s)\<rbrace>"
-  assumes arch_switch_to_thread_cur_domain[wp]:
-    "\<And>P t. arch_switch_to_thread t \<lbrace>\<lambda>s::det_state. P (cur_domain s)\<rbrace>"
->>>>>>> verification/master
   assumes arch_switch_to_idle_thread_valid_idle[wp]:
     "arch_switch_to_idle_thread \<lbrace>valid_idle::'state_ext state \<Rightarrow> _\<rbrace>"
   assumes arch_finalise_cap_valid_sched_pred[wp]:
@@ -2540,187 +2470,11 @@ locale DetSchedSchedule_AI_det_ext = DetSchedSchedule_AI "TYPE(det_ext)" +
   assumes arch_switch_to_thread_valid_list'[wp]:
     "\<And>t P. arch_switch_to_thread t \<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace>"
   assumes arch_switch_to_idle_thread_valid_list'[wp]:
-<<<<<<< HEAD
     "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace>"
   assumes arch_switch_to_thread_exst[wp]:
     "\<And>P t. arch_switch_to_thread t \<lbrace>\<lambda>s::det_state. P (exst s)\<rbrace>"
-||||||| 0d43d8dee
-    "\<lbrace>valid_list\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  assumes prepare_thread_delete_idel_thread[wp] :
-    "\<And>t. prepare_thread_delete t \<lbrace>\<lambda>(s:: det_ext state). P (idle_thread s)\<rbrace>"
-  assumes prepare_thread_delete_ct_not_in_q'[wp]:
-    "\<And>t. \<lbrace>ct_not_in_q\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_. ct_not_in_q :: det_state \<Rightarrow> _\<rbrace>"
-  assumes prepare_thread_delete_simple_sched_action'[wp]:
-    "\<And>t. \<lbrace>simple_sched_action\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_. simple_sched_action :: det_state \<Rightarrow> _\<rbrace>"
-  assumes prepare_thread_delete_valid_sched'[wp]:
-    "\<And>t. \<lbrace>valid_sched\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes make_fault_arch_msg_not_cur_thread[wp] :
-    "\<And>ft t t'. make_arch_fault_msg ft t \<lbrace>not_cur_thread t' :: det_state \<Rightarrow> _\<rbrace>"
-  assumes make_fault_arch_msg_valid_sched[wp] :
-    "\<And>ft t. make_arch_fault_msg ft t \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes make_fault_arch_msg_scheduler_action[wp] :
-    "\<And>P ft t. make_arch_fault_msg ft t \<lbrace>\<lambda>s::det_state. P (scheduler_action s)\<rbrace>"
-  assumes make_fault_arch_msg_ready_queues[wp] :
-    "\<And>P ft t. make_arch_fault_msg ft t \<lbrace>\<lambda>s::det_state. P (ready_queues s)\<rbrace>"
-  assumes arch_get_sanitise_register_info_not_cur_thread[wp] :
-    "\<And>ft t'. arch_get_sanitise_register_info ft \<lbrace>not_cur_thread t' :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_get_sanitise_register_info_valid_sched[wp] :
-    "\<And>ft. arch_get_sanitise_register_info ft \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_get_sanitise_register_info_scheduler_action[wp] :
-    "\<And>P ft. arch_get_sanitise_register_info ft \<lbrace>\<lambda>s::det_state. P (scheduler_action s)\<rbrace>"
-  assumes arch_get_sanitise_register_info_ready_queues[wp] :
-    "\<And>P ft. arch_get_sanitise_register_info ft \<lbrace>\<lambda>s::det_state. P (ready_queues s)\<rbrace>"
-  assumes arch_get_sanitise_register_info_cur'[wp]:
-    "\<And>f. \<lbrace>cur_tcb :: det_ext state \<Rightarrow> bool\<rbrace> arch_get_sanitise_register_info f \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
-  assumes arch_post_modify_registers_not_cur_thread[wp] :
-    "\<And>c ft t'. arch_post_modify_registers c ft \<lbrace>not_cur_thread t' :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_modify_registers_valid_sched[wp] :
-    "\<And>c ft. arch_post_modify_registers c ft \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_modify_registers_scheduler_action[wp] :
-    "\<And>P c ft. arch_post_modify_registers c ft \<lbrace>\<lambda>s::det_state. P (scheduler_action s)\<rbrace>"
-  assumes arch_post_modify_registers_ready_queues[wp] :
-    "\<And>P c ft. arch_post_modify_registers c ft \<lbrace>\<lambda>s::det_state. P (ready_queues s)\<rbrace>"
-  assumes arch_post_modify_registers_cur'[wp]:
-    "\<And>c f. \<lbrace>cur_tcb :: det_ext state \<Rightarrow> bool\<rbrace> arch_post_modify_registers c f \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
-  assumes arch_post_modify_registers_not_idle_thread[wp]:
-    "\<And>c t. \<lbrace>\<lambda>s::det_ext state. t \<noteq> idle_thread s\<rbrace> arch_post_modify_registers c t \<lbrace>\<lambda>_ s. t \<noteq> idle_thread s\<rbrace>"
-  assumes arch_post_cap_deletion_valid_sched[wp] :
-    "\<And>c. arch_post_cap_deletion c \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_cap_deletion_ct_not_in_q[wp] :
-    "\<And>c. arch_post_cap_deletion c \<lbrace>ct_not_in_q :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_cap_deletion_simple_sched_action[wp] :
-    "\<And>c. arch_post_cap_deletion c \<lbrace>simple_sched_action :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_cap_deletion_not_cur_thread[wp] :
-    "\<And>c t. arch_post_cap_deletion c \<lbrace>not_cur_thread t :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_cap_deletion_sched_act_not[wp] :
-    "\<And>c t. arch_post_cap_deletion c \<lbrace>scheduler_act_not t :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_cap_deletion_not_queued[wp] :
-    "\<And>c t. arch_post_cap_deletion c \<lbrace>not_queued t :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_cap_deletion_weak_valid_sched_action[wp] :
-    "\<And>c. arch_post_cap_deletion c \<lbrace>weak_valid_sched_action :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_finalise_cap_idle_thread[wp] :
-    "\<And>P b t. arch_finalise_cap t b \<lbrace>\<lambda> (s:: det_ext state). P (idle_thread s)\<rbrace>"
-  assumes arch_invoke_irq_handler_valid_sched[wp]:
-    "\<And>i. arch_invoke_irq_handler i \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_mask_irq_signal_valid_sched[wp]:
-    "\<And>irq. arch_mask_irq_signal irq \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_prepare_next_domain_scheduler_action[wp]:
-    "\<And>P. arch_prepare_next_domain \<lbrace>\<lambda>s::det_state. P (scheduler_action s)\<rbrace>"
-  assumes arch_prepare_next_domain_valid_queues'[wp]:
-    "arch_prepare_next_domain \<lbrace>valid_queues :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_prepare_next_domain_valid_blocked[wp]:
-    "arch_prepare_next_domain \<lbrace>valid_blocked :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_prepare_next_domain_ct_in_q[wp]:
-    "arch_prepare_next_domain \<lbrace>ct_in_q :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_prepare_next_domain_etcb_at[wp]:
-    "\<And>P t. arch_prepare_next_domain \<lbrace>etcb_at P t :: det_state \<Rightarrow> _\<rbrace>"
-=======
-    "\<lbrace>valid_list\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  assumes prepare_thread_delete_idle_thread[wp]:
-    "\<And>P t. prepare_thread_delete t \<lbrace>\<lambda>s::det_state. P (idle_thread s)\<rbrace>"
-  assumes prepare_thread_delete_cur_thread[wp]:
-    "\<And>P t. prepare_thread_delete t \<lbrace>\<lambda>s::'state_ext state. P (cur_thread s)\<rbrace>"
-  assumes prepare_thread_delete_cur_domain[wp]:
-    "\<And>P t. prepare_thread_delete t \<lbrace>\<lambda>s::'state_ext state. P (cur_domain s)\<rbrace>"
-  assumes prepare_thread_delete_etcbs_of[wp]:
-    "\<And>P t. prepare_thread_delete t \<lbrace>\<lambda>s::'state_ext state. P (etcbs_of s)\<rbrace>"
-  assumes prepare_thread_delete_ct_not_in_q'[wp]:
-    "\<And>t. \<lbrace>ct_not_in_q\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_. ct_not_in_q :: det_state \<Rightarrow> _\<rbrace>"
-  assumes prepare_thread_delete_simple_sched_action'[wp]:
-    "\<And>t. \<lbrace>simple_sched_action\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_. simple_sched_action :: det_state \<Rightarrow> _\<rbrace>"
-  assumes prepare_thread_delete_valid_sched'[wp]:
-    "\<And>t. \<lbrace>valid_sched\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_get_sanitise_register_info_not_cur_thread[wp] :
-    "\<And>ft t'. arch_get_sanitise_register_info ft \<lbrace>not_cur_thread t' :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_get_sanitise_register_info_valid_sched[wp] :
-    "\<And>ft. arch_get_sanitise_register_info ft \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_get_sanitise_register_info_scheduler_action[wp] :
-    "\<And>P ft. arch_get_sanitise_register_info ft \<lbrace>\<lambda>s::det_state. P (scheduler_action s)\<rbrace>"
-  assumes arch_get_sanitise_register_info_ready_queues[wp] :
-    "\<And>P ft. arch_get_sanitise_register_info ft \<lbrace>\<lambda>s::det_state. P (ready_queues s)\<rbrace>"
-  assumes arch_get_sanitise_register_info_cur'[wp]:
-    "\<And>f. \<lbrace>cur_tcb :: det_ext state \<Rightarrow> bool\<rbrace> arch_get_sanitise_register_info f \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
-  assumes arch_post_modify_registers_not_cur_thread[wp] :
-    "\<And>c ft t'. arch_post_modify_registers c ft \<lbrace>not_cur_thread t' :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_modify_registers_valid_sched[wp] :
-    "\<And>c ft. arch_post_modify_registers c ft \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_modify_registers_scheduler_action[wp] :
-    "\<And>P c ft. arch_post_modify_registers c ft \<lbrace>\<lambda>s::det_state. P (scheduler_action s)\<rbrace>"
-  assumes arch_post_modify_registers_ready_queues[wp] :
-    "\<And>P c ft. arch_post_modify_registers c ft \<lbrace>\<lambda>s::det_state. P (ready_queues s)\<rbrace>"
-  assumes arch_post_modify_registers_cur'[wp]:
-    "\<And>c f. \<lbrace>cur_tcb :: det_ext state \<Rightarrow> bool\<rbrace> arch_post_modify_registers c f \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
-  assumes arch_post_modify_registers_not_idle_thread[wp]:
-    "\<And>c t. \<lbrace>\<lambda>s::det_ext state. t \<noteq> idle_thread s\<rbrace> arch_post_modify_registers c t \<lbrace>\<lambda>_ s. t \<noteq> idle_thread s\<rbrace>"
-  assumes arch_post_cap_deletion_valid_sched[wp] :
-    "\<And>c. arch_post_cap_deletion c \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_cap_deletion_ct_not_in_q[wp] :
-    "\<And>c. arch_post_cap_deletion c \<lbrace>ct_not_in_q :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_cap_deletion_simple_sched_action[wp] :
-    "\<And>c. arch_post_cap_deletion c \<lbrace>simple_sched_action :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_cap_deletion_not_cur_thread[wp] :
-    "\<And>c t. arch_post_cap_deletion c \<lbrace>not_cur_thread t :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_cap_deletion_sched_act_not[wp] :
-    "\<And>c t. arch_post_cap_deletion c \<lbrace>scheduler_act_not t :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_cap_deletion_not_queued[wp] :
-    "\<And>c t. arch_post_cap_deletion c \<lbrace>not_queued t :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_cap_deletion_weak_valid_sched_action[wp] :
-    "\<And>c. arch_post_cap_deletion c \<lbrace>weak_valid_sched_action :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_post_cap_deletion_etcbs_of[wp]:
-    "\<And>P c. arch_post_cap_deletion c \<lbrace>\<lambda>s::'state_ext state. P (etcbs_of s)\<rbrace>"
-  assumes arch_finalise_cap_idle_thread[wp] :
-    "\<And>P b t. arch_finalise_cap t b \<lbrace>\<lambda>s::det_state. P (idle_thread s)\<rbrace>"
-  assumes arch_finalise_cap_cur_thread[wp]:
-    "\<And>P b t. arch_finalise_cap t b \<lbrace>\<lambda>s::'state_ext state. P (cur_thread s)\<rbrace>"
-  assumes arch_finalise_cap_cur_domain[wp]:
-    "\<And>P b t. arch_finalise_cap t b \<lbrace>\<lambda>s::'state_ext state. P (cur_domain s)\<rbrace>"
-  assumes arch_finalise_cap_etcbs_of[wp]:
-    "\<And>P b t. arch_finalise_cap t b \<lbrace>\<lambda>s::'state_ext state. P (etcbs_of s)\<rbrace>"
-  assumes arch_invoke_irq_handler_valid_sched[wp]:
-    "\<And>i. arch_invoke_irq_handler i \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_mask_irq_signal_valid_sched[wp]:
-    "\<And>irq. arch_mask_irq_signal irq \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_prepare_next_domain_scheduler_action[wp]:
-    "\<And>P. arch_prepare_next_domain \<lbrace>\<lambda>s::det_state. P (scheduler_action s)\<rbrace>"
-  assumes arch_prepare_next_domain_valid_queues'[wp]:
-    "arch_prepare_next_domain \<lbrace>valid_queues :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_prepare_next_domain_valid_blocked[wp]:
-    "arch_prepare_next_domain \<lbrace>valid_blocked :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_prepare_next_domain_ct_in_q[wp]:
-    "arch_prepare_next_domain \<lbrace>ct_in_q :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_prepare_next_domain_etcb_at[wp]:
-    "\<And>P t. arch_prepare_next_domain \<lbrace>etcb_at P t :: det_state \<Rightarrow> _\<rbrace>"
->>>>>>> verification/master
   assumes arch_prepare_next_domain_valid_list[wp]:
     "arch_prepare_next_domain \<lbrace>valid_list :: det_state \<Rightarrow> _\<rbrace>"
-<<<<<<< HEAD
-||||||| 0d43d8dee
-  assumes arch_post_set_flags_valid_sched[wp]:
-    "\<And>t flags. arch_post_set_flags t flags \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_prepare_set_domain_valid_sched[wp]:
-    "\<And>t d. arch_prepare_set_domain t d \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_prepare_set_domain_idle_thread[wp]:
-    "\<And>t d P. arch_prepare_set_domain t d \<lbrace>\<lambda>s::det_state. P (idle_thread s)\<rbrace>"
-  assumes arch_prepare_set_domain_scheduler_action[wp]:
-    "\<And>t d P. arch_prepare_set_domain t d \<lbrace>\<lambda>s::det_state. P (scheduler_action s)\<rbrace>"
-  assumes arch_prepare_set_domain_valid_idle[wp]:
-    "\<And>t d. arch_prepare_set_domain t d \<lbrace>valid_idle :: det_state \<Rightarrow> _\<rbrace>"
-=======
-  assumes arch_post_set_flags_valid_sched[wp]:
-    "\<And>t flags. arch_post_set_flags t flags \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_prepare_set_domain_valid_sched[wp]:
-    "\<And>t d. arch_prepare_set_domain t d \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes arch_prepare_set_domain_idle_thread[wp]:
-    "\<And>t d P. arch_prepare_set_domain t d \<lbrace>\<lambda>s::det_state. P (idle_thread s)\<rbrace>"
-  assumes arch_prepare_set_domain_scheduler_action[wp]:
-    "\<And>t d P. arch_prepare_set_domain t d \<lbrace>\<lambda>s::det_state. P (scheduler_action s)\<rbrace>"
-  assumes arch_prepare_set_domain_valid_idle[wp]:
-    "\<And>t d. arch_prepare_set_domain t d \<lbrace>valid_idle :: det_state \<Rightarrow> _\<rbrace>"
-  assumes handle_spurious_irq_valid_sched[wp]:
-    "handle_spurious_irq \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  assumes handle_spurious_irq_valid_idle[wp]:
-    "handle_spurious_irq \<lbrace>valid_idle :: det_state \<Rightarrow> _\<rbrace>"
->>>>>>> verification/master
 
 context DetSchedSchedule_AI begin
 
@@ -3067,25 +2821,11 @@ lemma next_domain_valid_sched_pred[valid_sched_wp]:
   by (wpsimp simp: next_domain_def Let_def)
 
 crunch next_domain
-<<<<<<< HEAD
   for valid_sched_misc[wp]: "\<lambda>s. P (consumed_time s) (cur_sc s)
                                    (sc_tcbs_of s) (sc_replies_of s) (cur_time s) (cur_thread s)
                                    (idle_thread s) (ready_queues s) (release_queue s)
                                    (scheduler_action s) (kheap s)"
   (simp: Let_def wp: dxo_wp_weak)
-||||||| 0d43d8dee
-  for valid_queues: valid_queues
-  and valid_blocked: valid_blocked
-  and ct_in_q: ct_in_q
-  and ct_not_in_q: ct_not_in_q
-  (simp: Let_def ct_in_q_def wp: dxo_wp_weak)
-=======
-  for valid_queues[wp]: valid_queues
-  and valid_blocked[wp]: valid_blocked
-  and ct_in_q[wp]: ct_in_q
-  and ct_not_in_q[wp]: ct_not_in_q
-  (simp: Let_def ct_in_q_def wp: dxo_wp_weak)
->>>>>>> verification/master
 
 lemma next_domain_valid_sched_action:
   "\<lbrace>\<lambda>s. scheduler_action s = choose_new_thread\<rbrace> next_domain \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
@@ -3455,29 +3195,8 @@ lemma schedule_choose_new_thread_valid_sched_except_domain[valid_sched_wp]:
                               (sc_refill_cfgs_of s) (sc_replies_of s)
                               (ep_queues_of s) (ntfn_queues_of s) (prios_of s)\<rbrace>
    schedule_choose_new_thread
-<<<<<<< HEAD
    \<lbrace>\<lambda>rv. valid_sched_pred_strong P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   by (wpsimp simp: schedule_choose_new_thread_def wp: valid_sched_wp)
-||||||| 0d43d8dee
-   \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  unfolding schedule_choose_new_thread_def
-  apply (wpsimp wp_del: when_wp
-                 wp: set_scheduler_action_rct_valid_sched choose_thread_ct_not_queued
-                     choose_thread_ct_activatable choose_thread_cur_dom_or_idle
-                     hoare_vcg_disj_lift)+
-    apply (wpsimp wp: next_domain_valid_sched_action
-                      next_domain_valid_queues next_domain_valid_blocked next_domain_ct_in_q)+
-  done
-=======
-   \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  unfolding schedule_choose_new_thread_def
-  apply (wpsimp wp_del: when_wp
-                 wp: set_scheduler_action_rct_valid_sched choose_thread_ct_not_queued
-                     choose_thread_ct_activatable choose_thread_cur_dom_or_idle
-                     hoare_vcg_disj_lift)+
-    apply (wpsimp wp: next_domain_valid_sched_action)+
-  done
->>>>>>> verification/master
 
 lemma schedule_choose_new_thread_valid_ready_qs[wp]:
   "schedule_choose_new_thread \<lbrace>valid_ready_qs :: 'state_ext state \<Rightarrow> _\<rbrace>"
@@ -8183,7 +7902,6 @@ lemma set_priority_ready_or_release[wp]:
   apply (fastforce simp: st_tcb_at_def obj_at_def ready_or_release_def in_ready_q_def)
   done
 
-<<<<<<< HEAD
 lemma set_priority_valid_blocked[wp]:
   "set_priority tptr prio \<lbrace>valid_blocked\<rbrace>"
   unfolding set_priority_def
@@ -8641,85 +8359,19 @@ lemma cancel_all_ipc_released_sc_tcb_at[wp]:
 crunch cancel_all_ipc
   for misc[wp]: "\<lambda>s. P (tcb_scps_of s) (sc_tcbs_of s) (idle_thread s)"
   (simp: crunch_simps wp: crunch_wps)
-||||||| 0d43d8dee
-=======
-lemma set_object_tcb_etcb_at:
-  "\<lbrace> \<lambda>s. Q (etcb_at P p s) \<and> (p = r \<longrightarrow> Q (P (etcb_of tcb))) \<rbrace>
-   set_object r (TCB tcb)
-   \<lbrace> \<lambda>_ s. Q (etcb_at P p s) \<rbrace>"
-  by (auto simp: valid_def in_monad etcb_at_def etcbs_of'_def etcb_of_def set_object_def get_object_def
-              split: kernel_object.splits)
-
-lemma thread_set_no_change_etcb_at:
-  assumes x: "\<And>tcb. Q (P (etcb_of (f tcb))) = Q (P (etcb_of tcb))"
-  shows      "thread_set f t' \<lbrace>\<lambda>s. Q (etcb_at P t s)\<rbrace>"
-  unfolding thread_set_def
-  apply (wpsimp wp: set_object_tcb_etcb_at)
-  apply (clarsimp dest!: get_tcb_SomeD
-                   simp: etcb_at_def etcbs_of'_def x)
-  done
-
-lemma fault_handler_update_in_cur_domain[wp]:
-  "option_update_thread thread (tcb_fault_handler_update \<circ> f) opt \<lbrace>\<lambda>s. P (in_cur_domain t s)\<rbrace>"
-  unfolding option_update_thread_def in_cur_domain_def
-  by (wpsimp wp: thread_set_no_change_etcb_at | wps)+
-
-lemma fault_handler_update_state_hyp_refs_of[wp]:
-  "option_update_thread thread (tcb_fault_handler_update \<circ> f) opt \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
-  unfolding option_update_thread_def
-  by (fastforce intro: thread_set_hyp_refs_trivial split: option.splits)
-
-crunch option_update_thread
-  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
->>>>>>> verification/master
 
 context DetSchedSchedule_AI begin
 
-<<<<<<< HEAD
 crunch restart, install_tcb_frame_cap, install_tcb_cap, maybe_sched_context_unbind_tcb,
          maybe_sched_context_bind_tcb, bind_notification, invoke_sched_context,
          invoke_sched_control_configure_flags
   for current_time_bounded[wp]: "current_time_bounded :: 'state_ext state \<Rightarrow> _"
   (wp: crunch_wps check_cap_inv simp: crunch_simps)
-||||||| 0d43d8dee
-crunch
-  set_mcpriority, cap_insert, cap_delete, option_update_thread
-  for simple_sched_action[wp]: "simple_sched_action :: det_state \<Rightarrow> _"
-=======
-crunch set_mcpriority, cap_insert, cap_delete, option_update_thread
-  for simple_sched_action[wp]: "simple_sched_action :: det_state \<Rightarrow> _"
->>>>>>> verification/master
 
-<<<<<<< HEAD
 end
-||||||| 0d43d8dee
-crunch
-  option_update_thread, set_mcpriority, finalise_cap, cap_swap_for_delete
-  for idle_thread[wp]: "\<lambda>(s:: det_state). P (idle_thread s)"
-=======
-crunch option_update_thread, set_mcpriority, cap_swap_for_delete, deleting_irq_handler
-  for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
-  (wp: dxo_wp_weak)
->>>>>>> verification/master
 
-<<<<<<< HEAD
 context DetSchedSchedule_AI_det_ext begin
-||||||| 0d43d8dee
-crunch
-  preemption_point
-  for idle_thread[wp]: "\<lambda>(s:: det_state). P (idle_thread s)"
-  (ignore: OR_choiceE
-   simp: OR_choiceE_def wrap_ext_bool_det_ext_ext_def crunch_simps
-   wp: crunch_wps
-   ignore_del: preemption_point)
-=======
-crunch finalise_cap, preemption_point
-  for idle_thread[wp]: "\<lambda>s::det_state. P (idle_thread s)"
-  (wp: dxo_wp_weak OR_choiceE_weak_wp
-   ignore_del: preemption_point)
->>>>>>> verification/master
 
-<<<<<<< HEAD
 lemma install_tcb_cap_budget_sufficient[wp]:
   "\<lbrace>invs and tcb_at target and budget_sufficient t and active_scs_valid
     and current_time_bounded and released_ipc_queues and active_sc_tcb_at t\<rbrace>
@@ -8729,46 +8381,6 @@ lemma install_tcb_cap_budget_sufficient[wp]:
   by (wpsimp wp: check_cap_inv hoare_vcg_imp_lift'
                  cap_delete_fh_lift[where L="budget_sufficient t and current_time_bounded
                    and active_sc_tcb_at t and released_ipc_queues and active_scs_valid"])
-||||||| 0d43d8dee
-lemma rec_del_idle_thread[wp]:
-  "\<lbrace>\<lambda>(s:: det_ext state). P (idle_thread s)\<rbrace> rec_del call \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
-  apply (rule rec_del_preservation)
-      apply wp+
-  done
-
-crunch
-  cap_delete
-  for idle_thread[wp]: "\<lambda>(s:: det_state). P (idle_thread s)"
-=======
-lemma rec_del_idle_thread[wp]:
-  "rec_del call \<lbrace>\<lambda>s::det_state. P (idle_thread s)\<rbrace>"
-  apply (rule rec_del_preservation)
-      apply wp+
-  done
-
-lemma preemption_point_in_cur_domain[wp]:
-  "preemption_point \<lbrace>\<lambda>s. in_cur_domain (t (cur_thread s)) s\<rbrace>"
-  by (wpsimp wp: preemption_point_inv)
-
-crunch cap_swap_for_delete, empty_slot, finalise_cap
-  for cur_thread[wp]: "\<lambda>s::'state_ext state. P (cur_thread s)"
-  and cur_domain[wp]: "\<lambda>s::'state_ext state. P (cur_domain s)"
-  and etcbs_of[wp]: "\<lambda>s::'state_ext state. P (etcbs_of s)"
-  (wp: crunch_wps thread_set_etcbs dxo_wp_weak
-   simp: crunch_simps)
-
-lemma rec_del_in_cur_domain[wp]:
-  "rec_del call \<lbrace>\<lambda>s::'state_ext state. in_cur_domain (t (cur_thread s)) s\<rbrace>"
-  by (wpsimp wp: rec_del_preservation in_cur_domain_lift_weak | wps)+
-
-crunch cap_delete
-  for cur_thread[wp]: "\<lambda>s::'state_ext state. P (cur_thread s)"
-  and in_cur_domain[wp]: "\<lambda>s::'state_ext state. in_cur_domain (t (cur_thread s)) s"
-  (wp: preemption_point_inv simp: crunch_simps)
-
-crunch cap_delete
-  for idle_thread[wp]: "\<lambda>s::det_state. P (idle_thread s)"
->>>>>>> verification/master
 
 crunch cap_delete
   for valid_machine_time[wp]: "valid_machine_time :: det_state \<Rightarrow> _"
@@ -19854,47 +19466,9 @@ lemma handle_recv_not_cur_thread[wp]:
      apply (rule_tac Q'="\<lambda>_. not_cur_thread target" in hoare_strengthen_postE_R)
       by wpsimp+
 
-<<<<<<< HEAD
 crunch handle_fault,lookup_reply,lookup_cap
  for it[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: mapM_wp' maybeM_inv hoare_drop_imp simp: unless_def)
-||||||| 0d43d8dee
-lemma handle_event_valid_sched:
-  "\<lbrace>invs and valid_sched and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
-      and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
-   handle_event e
-   \<lbrace>\<lambda>rv. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  apply (cases e, simp_all)
-      apply (rename_tac syscall)
-      apply (case_tac syscall, simp_all add: handle_send_def handle_call_def)
-            apply ((rule hoare_pre, wp handle_invocation_valid_sched handle_recv_valid_sched'
-              handle_reply_valid_sched
-              | fastforce simp: invs_valid_objs invs_sym_refs valid_sched_ct_not_queued)+)[5]
-       apply (wp handle_fault_valid_sched hvmf_active hoare_drop_imps hoare_vcg_disj_lift
-                 handle_recv_valid_sched' handle_reply_valid_sched hoare_vcg_all_lift|
-              wpc |
-              clarsimp simp: ct_in_state_def valid_sched_ct_not_queued |
-              fastforce simp: valid_fault_def)+
-  done
-=======
-lemma handle_event_valid_sched:
-  "\<lbrace>invs and valid_sched and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
-      and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
-   handle_event e
-   \<lbrace>\<lambda>rv. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  apply (cases e, simp_all)
-      apply (rename_tac syscall)
-      apply (case_tac syscall, simp_all add: handle_send_def handle_call_def)
-            apply ((rule hoare_pre, wp handle_invocation_valid_sched handle_recv_valid_sched'
-              handle_reply_valid_sched
-              | fastforce simp: invs_valid_objs invs_sym_refs valid_sched_ct_not_queued)+)[5]
-       apply (wp handle_fault_valid_sched hvmf_active hoare_drop_imps hoare_vcg_disj_lift
-                 handle_recv_valid_sched' handle_reply_valid_sched hoare_vcg_all_lift|
-              wpc |
-              clarsimp simp: ct_in_state_def valid_sched_ct_not_queued maybe_handle_interrupt_def |
-              fastforce simp: valid_fault_def)+
-  done
->>>>>>> verification/master
 
 crunch receive_signal
  for it[wp]: "\<lambda>s. P (idle_thread s)"
@@ -21672,7 +21246,6 @@ lemma schedule_valid_list[wp]:
   by (wpsimp wp: tcb_sched_action_valid_list gts_wp hoare_drop_imps hoare_vcg_all_lift)
 
 lemma call_kernel_valid_list[wp]: "\<lbrace>valid_list\<rbrace> call_kernel e \<lbrace>\<lambda>_. valid_list\<rbrace>"
-<<<<<<< HEAD
   apply (simp add: call_kernel_def preemption_path_def)
   by (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift)+
 
@@ -27538,13 +27111,6 @@ lemma handle_event_preemption_path_valid_sched:
    apply (fastforce simp: ct_in_state_def runnable_eq_active pred_tcb_at_def obj_at_def)
   apply (fastforce intro: invs_strengthen_cur_sc_tcb_are_bound)
   done
-||||||| 0d43d8dee
-  apply (simp add: call_kernel_def)
-  by (wp | simp)+
-=======
-  unfolding call_kernel_def
-  by wpsimp
->>>>>>> verification/master
 
 lemma call_kernel_valid_sched:
   "\<lbrace>\<lambda>s. valid_sched s \<and> invs s \<and> schact_is_rct s
@@ -27555,7 +27121,6 @@ lemma call_kernel_valid_sched:
         \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>
    call_kernel e
    \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-<<<<<<< HEAD
   apply (simp add: call_kernel_def)
   apply (simp flip: bind_assoc)
   apply (rule bind_wp, wpsimp)
@@ -27588,35 +27153,6 @@ lemma call_kernel_valid_sched:
   apply (rule cur_sc_not_idle_sc_ptr;
          (fastforce simp: runnable_eq_active ct_in_state_def pred_tcb_at_def obj_at_def)?)
   apply (fastforce intro: invs_strengthen_cur_sc_tcb_are_bound simp: schact_is_rct_def)
-||||||| 0d43d8dee
-  apply (simp add: call_kernel_def)
-  apply (wp schedule_valid_sched activate_thread_valid_sched | simp)+
-     apply (rule_tac Q'="\<lambda>rv. invs" in hoare_strengthen_post)
-      apply wp
-     apply (erule invs_valid_idle)
-    apply (rule hoare_strengthen_post[where Q'="\<lambda>irq s. irq \<notin> Some ` non_kernel_IRQs \<and> valid_sched s \<and> invs s"])
-     apply (wpsimp wp: getActiveIRQ_neq_non_kernel)
-    apply auto[1]
-   apply (rule_tac Q'="\<lambda>rv. valid_sched and invs" and
-                   E'="\<lambda>rv. valid_sched and invs" in hoare_strengthen_postE)
-     apply (rule valid_validE)
-     apply (wp handle_event_valid_sched)
-    apply (force intro: active_from_running)+
-=======
-  apply (simp add: call_kernel_def maybe_handle_interrupt_def)
-  apply (wpsimp wp: schedule_valid_sched activate_thread_valid_sched)
-     apply (rule_tac Q'="\<lambda>rv. invs" in hoare_strengthen_post)
-      apply wp
-     apply (erule invs_valid_idle)
-    apply (rule hoare_strengthen_post[where Q'="\<lambda>irq s. irq \<notin> Some ` non_kernel_IRQs \<and> valid_sched s \<and> invs s"])
-     apply (wpsimp wp: getActiveIRQ_neq_non_kernel)
-    apply auto[1]
-   apply (rule_tac Q'="\<lambda>rv. valid_sched and invs" and
-                   E'="\<lambda>rv. valid_sched and invs" in hoare_strengthen_postE)
-     apply (rule valid_validE)
-     apply (wp handle_event_valid_sched)
-    apply (force intro: active_from_running)+
->>>>>>> verification/master
   done
 
 end

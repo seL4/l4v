@@ -82,30 +82,10 @@ lemma obj_relation_cutsE:
             split: Structures_A.kernel_object.splits kernel_object.splits if_splits
                    RISCV64_A.arch_kernel_obj.splits)
 
-<<<<<<< HEAD
-lemma is_other_obj_relation_type_CapTable[StateRelation_R_assms]:
-  "\<not> is_other_obj_relation_type (ACapTable n)"
-  by (simp add: is_other_obj_relation_type_def)
-
-lemma is_other_obj_relation_type_SchedContext:
-  "\<not> is_other_obj_relation_type (ASchedContext n)"
-  by (simp add: is_other_obj_relation_type_def)
-
-lemma is_other_obj_relation_type_Reply:
-  "\<not> is_other_obj_relation_type AReply"
-  by (simp add: is_other_obj_relation_type_def)
-
-lemma is_other_obj_relation_type_TCB[StateRelation_R_assms]:
-||||||| 0d43d8dee
-lemma is_other_obj_relation_type_CapTable[StateRelation_R_assms]:
-  "\<not> is_other_obj_relation_type (ACapTable n)"
-  by (simp add: is_other_obj_relation_type_def)
-
-lemma is_other_obj_relation_type_TCB[StateRelation_R_assms]:
-=======
 lemma is_other_obj_relation_type_gen[simp, StateRelation_R_assms]:
   "\<And>n. \<not> is_other_obj_relation_type (ACapTable n)"
->>>>>>> verification/master
+  "\<And>n. \<not> is_other_obj_relation_type (ASchedContext n)"
+  "\<not> is_other_obj_relation_type AReply"
   "\<not> is_other_obj_relation_type ATCB"
   "is_other_obj_relation_type AEndpoint"
   "is_other_obj_relation_type ANTFN"
@@ -199,14 +179,6 @@ lemma other_aobj_relation_aobj:
   unfolding other_aobj_relation_def is_ArchObj_def
   by (clarsimp split: Structures_A.kernel_object.splits)
 
-<<<<<<< HEAD
-||||||| 0d43d8dee
-lemma ghost_relation_wrapper_machine_state_upd_id[StateRelation_R_assms,simp]:
-  "ghost_relation_wrapper (s\<lparr>machine_state := ss\<rparr>) (s'\<lparr>ksMachineState := ss'\<rparr>)
-   = ghost_relation_wrapper s s'"
-  by simp
-
-=======
 lemma msgLabelBits_msg_label_bits[StateRelation_R_assms]:
   "msgLabelBits = msg_label_bits"
   by (simp add: msgLabelBits_def)
@@ -215,7 +187,6 @@ lemma msgInfoRegister_msg_info_register[StateRelation_R_assms]:
   "msgInfoRegister = msg_info_register"
   by (simp add: msg_info_register_def msgInfoRegister_def)
 
->>>>>>> verification/master
 end
 
 global_interpretation StateRelation_R?: StateRelation_R

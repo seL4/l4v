@@ -104,22 +104,12 @@ lemma obj_size_relation:
 lemma same_region_as_relation[CSpace1_R_assms]:
   "\<lbrakk> cap_relation c d; cap_relation c' d' \<rbrakk> \<Longrightarrow> same_region_as c c' = sameRegionAs d d'"
   apply (cases c)
-             apply clarsimp
-            apply (clarsimp simp: global.sameRegionAs_def isCap_simps Let_def is_physical_relation)
-            apply (auto simp: obj_ref_of_relation obj_size_relation cong: conj_cong)[1]
-           apply (cases c', auto simp: global.sameRegionAs_def isCap_simps Let_def)[1]
-          apply (cases c', auto simp: global.sameRegionAs_def isCap_simps Let_def)[1]
-         apply (cases c', auto simp: global.sameRegionAs_def isCap_simps Let_def)[1]
-        apply (cases c', auto simp: global.sameRegionAs_def isCap_simps Let_def bits_of_def)[1]
-       apply (cases c', auto simp: global.sameRegionAs_def isCap_simps Let_def)[1]
-      apply (cases c', auto simp: global.sameRegionAs_def isCap_simps Let_def)[1]
-     apply (cases c', auto simp: global.sameRegionAs_def isCap_simps Let_def)[1]
-    apply (cases c', auto simp: global.sameRegionAs_def isCap_simps Let_def)[1]
-   apply (cases c', auto simp: global.sameRegionAs_def isCap_simps Let_def)[1]
-  apply simp
-  apply (cases c')
-             apply (clarsimp simp: same_arch_region_as_relation |
-                    clarsimp simp: global.sameRegionAs_def isCap_simps Let_def)+
+               apply clarsimp
+              apply (clarsimp simp: global.sameRegionAs_def isCap_simps Let_def is_phyiscal_relation)
+              apply (auto simp: obj_ref_of_relation obj_size_relation cong: conj_cong)[1]
+             apply ((cases c', auto simp: global.sameRegionAs_def isCap_simps Let_def)+)[11]
+  apply (cases c'; (clarsimp simp: same_arch_region_as_relation |
+                    clarsimp simp: global.sameRegionAs_def isCap_simps Let_def)+)
   done
 
 lemma can_be_is[CSpace1_R_assms]:
@@ -414,14 +404,15 @@ lemma set_cap_not_quite_corres_prequel[CSpace1_R_assms]:
    apply (frule tcb_cases_related2)
    apply (clarsimp simp: set_cap_def2 split_def bind_def get_object_def
                          simpler_gets_def assert_def fail_def return_def
-                         set_object_def get_def put_def)
+                         set_object_def get_def put_def gets_the_def)
    apply (erule(2) pspace_relation_update_tcbs)
    apply (simp add: c)
   apply clarsimp
   apply (frule(5) cte_map_pulls_cte_to_abstract[OF p])
   apply (clarsimp simp: set_cap_def split_def bind_def get_object_def
                         simpler_gets_def assert_def a_type_def fail_def return_def
-                        set_object_def get_def put_def domI)
+                        set_object_def get_def put_def domI gets_the_def
+                        a_type_def[split_simps kernel_object.split arch_kernel_obj.split])
   apply (erule(1) valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_cs_def valid_cs_size_def exI)
   apply (rule conjI, clarsimp)
@@ -777,14 +768,10 @@ context Arch begin arch_global_naming
 named_theorems CSpace1_R_2_assms
 
 lemma weak_derived_updateCapData:
-  "\<lbrakk> (updateCapData P x c) \<noteq> NullCap; weak_derived' c c';
+  "\<lbrakk> updateCapData P x c \<noteq> NullCap; weak_derived' c c';
      capBadge (updateCapData P x c) = capBadge c' \<rbrakk>
   \<Longrightarrow> weak_derived' (updateCapData P x c) c'"
-  apply (clarsimp simp add: weak_derived'_def updateCapData_Master)
-  apply (clarsimp elim: impE dest!: iffD1[OF updateCapData_Reply])
-  apply (clarsimp simp: gen_isCap_simps)
-  apply (clarsimp simp: Let_def gen_isCap_simps global.updateCapData_def)
-  done
+  by (clarsimp simp add: weak_derived'_def updateCapData_Master)
 
 lemma updateMDB_pspace_relation[CSpace1_R_2_assms]:
   assumes "(x, s'') \<in> fst (updateMDB p f s')"
@@ -859,10 +846,10 @@ lemma is_derived_eq[CSpace1_R_2_assms]:
   apply (rule conjI)
    apply (clarsimp simp: is_cap_simps isCap_simps)
    apply (cases c, auto simp: isCap_simps cap_master_cap_def capMasterCap_def)[1]
-  apply (case_tac "isIRQControlCap d'")
+  apply (cases "isIRQControlCap d'")
    apply (frule(1) master_cap_relation)
    apply (clarsimp simp: isCap_simps cap_master_cap_def
-                         is_zombie_def is_reply_cap_def is_master_reply_cap_def
+                         is_zombie_def is_reply_cap_def
                   split: cap_relation_split_asm arch_cap.split_asm)[1]
   apply (frule(1) master_cap_relation)
   apply (frule(1) cap_badge_relation)

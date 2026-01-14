@@ -124,27 +124,16 @@ lemma setObject_modify:
                         assert_opt_def updateObject_default_def bind_assoc)
   apply (simp add: projectKO_def alignCheck_assert)
   apply (simp add: project_inject objBits_def)
-<<<<<<< HEAD
-  apply (clarsimp simp only: koTypeOf_injectKO)
-  apply (frule (1) in_magnitude_check[where s'=s])
+  apply (frule in_magnitude_check[where s'=s]; simp)
    apply blast
+  apply (clarsimp simp only: koTypeOf_injectKO)
   apply (simp add: magnitudeCheck_assert in_monad bind_def gets_def oassert_opt_def
                    get_def return_def)
-||||||| 0d43d8dee
-  apply (clarsimp simp only: objBitsT_koTypeOf[symmetric] koTypeOf_injectKO)
-  apply (frule(2) in_magnitude_check[where s'=s])
-  apply (simp add: magnitudeCheck_assert in_monad)
-=======
-  apply (frule in_magnitude_check[where s'=s]; simp)
-  apply (clarsimp simp only: objBitsT_koTypeOf[symmetric] koTypeOf_injectKO)
-  apply (simp add: magnitudeCheck_assert in_monad)
->>>>>>> verification/master
   apply (simp add: simpler_modify_def)
   done
 
 lemma getObject_return:
   fixes v :: "'a :: pspace_storable" shows
-<<<<<<< HEAD
   "\<lbrakk> \<And>q n ko. loadObject p q n ko =
                 (loadObject_default p q n ko :: 'a :: pspace_storable kernel_r);
      ko_at' v p s; (1 :: machine_word) < 2 ^ objBits v \<rbrakk> \<Longrightarrow>
@@ -154,29 +143,6 @@ lemma getObject_return:
                         lookupAround2_known1 loadObject_default_def in_omonad
                  split: option.splits)
   by (fastforce simp add: project_inject objBits_def)
-||||||| 0d43d8dee
-  "\<lbrakk> \<And>a b c d. (loadObject a b c d :: 'a kernel) = loadObject_default a b c d;
-        ko_at' v p s; (1 :: machine_word) < 2 ^ objBits v \<rbrakk> \<Longrightarrow> getObject p s = return v s"
-  apply (clarsimp simp: getObject_def split_def exec_gets
-                        obj_at'_def projectKOs lookupAround2_known1
-                        assert_opt_def loadObject_default_def)
-  apply (simp add: projectKO_def alignCheck_assert)
-  apply (simp add: project_inject objBits_def)
-  apply (frule(2) in_magnitude_check[where s'=s])
-  apply (simp add: magnitudeCheck_assert in_monad)
-  done
-=======
-  "\<lbrakk> \<And>a b c d. (loadObject a b c d :: 'a kernel) = loadObject_default a b c d;
-        ko_at' v p s; (1 :: machine_word) < 2 ^ objBits v \<rbrakk> \<Longrightarrow> getObject p s = return v s"
-  apply (clarsimp simp: getObject_def split_def exec_gets
-                        obj_at'_def lookupAround2_known1
-                        assert_opt_def loadObject_default_def)
-  apply (frule in_magnitude_check[where s'=s]; simp)
-  apply (simp add: projectKO_def alignCheck_assert)
-  apply (simp add: project_inject objBits_def)
-  apply (simp add: magnitudeCheck_assert in_monad)
-  done
->>>>>>> verification/master
 
 end
 
@@ -419,7 +385,6 @@ lemma getObject_get_assert:
   apply (rule ext)
   apply (rename_tac x)
   apply (case_tac "ksPSpace x p")
-<<<<<<< HEAD
    apply (clarsimp simp: obj_at'_def assert_opt_def assert_def split_def getObject_def2 deflt
                          loadObject_default_def gets_the_def  gets_def get_def bind_def return_def
                          fail_def in_omonad
@@ -431,39 +396,6 @@ lemma getObject_get_assert:
                  split: option.splits)
   apply (fastforce elim!: ps_clear_lookupAround2
                     simp: fail_def project_inject objBits_def)
-||||||| 0d43d8dee
-   apply (simp add: obj_at'_def assert_opt_def assert_def
-             split: option.split if_split)
-  apply (simp add: lookupAround2_known1 assert_opt_def
-                   obj_at'_def projectKO_def2
-            split: option.split)
-  apply (clarsimp simp: fail_set fst_return conj_comms project_inject
-                        objBits_def)
-  apply (simp only: assert2[symmetric],
-         rule bind_apply_cong[OF refl])
-  apply (clarsimp simp: in_monad)
-  apply (fold objBits_def)
-  apply (simp add: magnitudeCheck_assert2[OF _ objBits_2n])
-  apply (rule bind_apply_cong[OF refl])
-  apply (clarsimp simp: in_monad return_def simpler_gets_def)
-  apply (simp add: iffD2[OF project_inject refl])
-=======
-   apply (simp add: obj_at'_def assert_opt_def assert_def
-             split: option.split if_split)
-  apply (simp add: lookupAround2_known1 assert_opt_def
-                   obj_at'_def projectKO_def2
-            split: option.split)
-  apply (clarsimp simp: fail_set fst_return conj_comms project_inject
-                        objBits_def)
-  apply (simp only: assert2[symmetric],
-         rule bind_apply_cong[OF refl])
-  apply (clarsimp simp: in_monad)
-  apply (fold objBits_def)
-  apply (simp add: magnitudeCheck_assert2[OF _ objBits_pos_power2])
-  apply (rule bind_apply_cong[OF refl])
-  apply (clarsimp simp: in_monad return_def simpler_gets_def)
-  apply (simp add: iffD2[OF project_inject refl])
->>>>>>> verification/master
   done
 
 
@@ -1012,70 +944,26 @@ lemma bind_assoc:
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma setObject_modify_assert:
-<<<<<<< HEAD
   "\<lbrakk>updateObject v = updateObject_default v\<rbrakk>
    \<Longrightarrow> setObject p v = do f \<leftarrow> gets (obj_at' (\<lambda>v'. v = v' \<or> objBits v' = objBits v) p);
                           assert f; modify (ksPSpace_update (\<lambda>ps. ps(p \<mapsto> injectKO v)))
                        od"
-||||||| 0d43d8dee
-  "\<lbrakk> updateObject v = updateObject_default v \<rbrakk>
-    \<Longrightarrow> setObject p v = do f \<leftarrow> gets (obj_at' (\<lambda>v'. v = v' \<or> True) p);
-                         assert f; modify (ksPSpace_update (\<lambda>ps. ps(p \<mapsto> injectKO v))) od"
-  using objBits_2n[where obj=v]
-=======
-  "\<lbrakk> updateObject v = updateObject_default v \<rbrakk>
-    \<Longrightarrow> setObject p v = do f \<leftarrow> gets (obj_at' (\<lambda>v'. v = v' \<or> True) p);
-                         assert f; modify (ksPSpace_update (\<lambda>ps. ps(p \<mapsto> injectKO v))) od"
->>>>>>> verification/master
   apply (simp add: setObject_def split_def updateObject_default_def
                    bind_assoc projectKO_def alignCheck_assert)
   apply (rule ext, simp add: exec_gets)
-<<<<<<< HEAD
   apply (case_tac "obj_at' (\<lambda>v'. v = v' \<or> objBits v' = objBits v) p x")
-   apply (clarsimp simp: obj_at'_def lookupAround2_known1
-                         assert_opt_def)
-||||||| 0d43d8dee
-  apply (case_tac "obj_at' (\<lambda>v'. v = v' \<or> True) p x")
-   apply (clarsimp simp: obj_at'_def projectKOs lookupAround2_known1
-                         assert_opt_def)
-=======
-  apply (case_tac "obj_at' (\<lambda>v'. v = v' \<or> True) p x")
    apply (clarsimp simp: obj_at'_def lookupAround2_known1 assert_opt_def)
->>>>>>> verification/master
    apply (clarsimp simp: project_inject)
-<<<<<<< HEAD
-   apply (simp only: objBits_def  koTypeOf_injectKO)
-   apply (simp add: magnitudeCheck_assert2 simpler_modify_def)
+   apply (subst magnitudeCheck_assert2; simp?;
+          simp add: objBits_def koTypeOf_injectKO simpler_modify_def)
    apply (clarsimp simp: assert_def magnitudeCheck_assert2)
    apply (clarsimp simp: omonad_defs bind_def return_def)
    apply fastforce
-||||||| 0d43d8dee
-   apply (simp only: objBits_def objBitsT_koTypeOf[symmetric] koTypeOf_injectKO)
-   apply (simp add: magnitudeCheck_assert2 simpler_modify_def)
-=======
-   apply (subst magnitudeCheck_assert2; simp?;
-          simp add: objBits_def objBitsT_koTypeOf[symmetric] koTypeOf_injectKO simpler_modify_def)
->>>>>>> verification/master
   apply (clarsimp simp: assert_opt_def assert_def magnitudeCheck_assert2
-<<<<<<< HEAD
                  split: option.split)
   by (fastforce simp: omonad_defs gets_the_def get_def bind_def return_def assert_opt_def fail_def
-                      obj_at_simps project_inject
+                      obj_at_simps project_inject simp_thms
                split: option.splits)
-||||||| 0d43d8dee
-                 split: option.split if_split)
-  apply (clarsimp simp: obj_at'_def projectKOs)
-  apply (clarsimp simp: project_inject)
-  apply (simp only: objBits_def objBitsT_koTypeOf[symmetric]
-                    koTypeOf_injectKO simp_thms)
-  done
-=======
-                 split: option.split if_split)
-  apply (clarsimp simp: obj_at'_def)
-  apply (clarsimp simp: project_inject)
-  apply (simp add: objBits_def objBitsT_koTypeOf[symmetric] koTypeOf_injectKO)
-  done
->>>>>>> verification/master
 
 lemma setEndpoint_isolatable:
   "thread_actions_isolatable idx (setEndpoint p e)"

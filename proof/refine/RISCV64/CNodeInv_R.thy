@@ -6618,47 +6618,16 @@ lemma capSwap_rvk_prog:
   apply arith
   done
 
-<<<<<<< HEAD
 lemmas cancelAllIPC_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF cancelAllIPC_ctes_of]
 lemmas cancelAllSignals_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF cancelAllSignals_ctes_of]
-||||||| 0d43d8dee
-lemmas setObject_ASID_cteCaps_of[wp] = cteCaps_of_ctes_of_lift [OF setObject_ASID_ctes_of']
-lemmas cancelAllIPC_cteCaps_of[wp] = cteCaps_of_ctes_of_lift [OF cancelAllIPC_ctes_of]
-lemmas cancelAllSignals_cteCaps_of[wp] = cteCaps_of_ctes_of_lift [OF cancelAllSignals_ctes_of]
-lemmas setEndpoint_cteCaps_of[wp] = cteCaps_of_ctes_of_lift [OF set_ep_ctes_of]
-lemmas setNotification_cteCaps_of[wp] = cteCaps_of_ctes_of_lift [OF set_ntfn_ctes_of]
-=======
-lemmas cancelAllIPC_cteCaps_of[wp] = cteCaps_of_ctes_of_lift [OF cancelAllIPC_ctes_of]
-lemmas cancelAllSignals_cteCaps_of[wp] = cteCaps_of_ctes_of_lift [OF cancelAllSignals_ctes_of]
-lemmas setEndpoint_cteCaps_of[wp] = cteCaps_of_ctes_of_lift [OF set_ep_ctes_of]
-lemmas setNotification_cteCaps_of[wp] = cteCaps_of_ctes_of_lift [OF set_ntfn_ctes_of]
->>>>>>> verification/master
 
 lemmas emptySlot_rvk_prog' = emptySlot_rvk_prog[unfolded o_def]
-<<<<<<< HEAD
 lemmas threadSet_ctesCaps_of = ctes_of_cteCaps_of_lift[OF threadSet_ctes_of]
-||||||| 0d43d8dee
-lemmas threadSet_ctesCaps_of = cteCaps_of_ctes_of_lift[OF threadSet_ctes_of]
 
-lemmas storePTE_cteCaps_of[wp] = cteCaps_of_ctes_of_lift [OF storePTE_ctes]
-
-context begin interpretation Arch . (*FIXME: arch-split*)
-=======
-lemmas threadSet_ctesCaps_of = cteCaps_of_ctes_of_lift[OF threadSet_ctes_of]
-
-context begin interpretation Arch . (*FIXME: arch-split*)
->>>>>>> verification/master
-
-<<<<<<< HEAD
 context
 notes option.case_cong_weak[cong]
 begin
-||||||| 0d43d8dee
-=======
-lemmas setObject_ASID_cteCaps_of[wp] = cteCaps_of_ctes_of_lift [OF setObject_ASID_ctes_of']
-lemmas storePTE_cteCaps_of[wp] = cteCaps_of_ctes_of_lift [OF storePTE_ctes]
 
->>>>>>> verification/master
 crunch finaliseCap
  for rvk_prog': "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
   (wp: crunch_wps emptySlot_rvk_prog' threadSet_ctesCaps_of hoare_vcg_all_lift getObject_inv
@@ -8435,34 +8404,6 @@ proof
     apply (clarsimp simp: weak_derived'_def)
     done
 
-<<<<<<< HEAD
-||||||| 0d43d8dee
-  have "reply_masters_rvk_fb m" using valid ..
-  thus "reply_masters_rvk_fb m'" using neq parency
-    apply (simp add: m'_def n_def reply_masters_rvk_fb_def
-                     ball_ran_modify_map_eq)
-    apply (simp add: modify_map_apply m_p dest)
-    apply (intro ball_ran_fun_updI, simp_all)
-     apply (frule bspec, rule ranI, rule m_p)
-     apply (clarsimp simp: weak_derived'_def)
-     apply (drule master_eqE[where F=isReplyCap], simp add: isCap_Master)
-    apply (simp add: isCap_simps)+
-    done
-
-=======
-  have "reply_masters_rvk_fb m" using valid ..
-  thus "reply_masters_rvk_fb m'" using neq parency
-    apply (simp add: m'_def n_def reply_masters_rvk_fb_def
-                     ball_ran_modify_map_eq)
-    apply (simp add: modify_map_apply m_p dest)
-    apply (intro ball_ran_fun_updI, simp_all)
-     apply (frule bspec, rule ranI, rule m_p)
-     apply (clarsimp simp: weak_derived'_def)
-     apply (drule master_eqE[where F=isReplyCap], simp add: gen_isCap_Master)
-    apply (simp add: isCap_simps)+
-    done
-
->>>>>>> verification/master
 qed
 
 end

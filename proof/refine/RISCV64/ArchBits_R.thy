@@ -26,13 +26,6 @@ lemma atcbContext_set_set[Bits_R_assms, simp]:
   "atcbContextSet x (atcbContextSet y atcb) = atcbContextSet x atcb"
   by (cases atcb, simp add: atcbContextSet_def)
 
-lemma objBitsKO_less_word_bits[Bits_R_assms]:
-  "objBitsKO ko < word_bits"
-  unfolding objBits_def
-  by (case_tac ko;
-      simp add: pageBits_def pteBits_def objBits_simps' word_bits_def
-         split: arch_kernel_object.split)
-
 lemma objBitsKO_neq_0[Bits_R_assms]:
   "objBitsKO ko \<noteq> 0"
   unfolding objBits_def
@@ -50,15 +43,12 @@ lemma arch_isCap_simps:
 
 lemmas isCap_simps = gen_isCap_simps arch_isCap_simps
 
-<<<<<<< HEAD
-lemmas pte_ko_at_valid_objs_valid_pte' =
-  ko_at_valid_objs'_pre[where 'a=pte, simplified injectKO_pte valid_obj'_def]
-||||||| 0d43d8dee
-=======
 lemma pageBits_le_maxUntypedSizeBits[Bits_R_assms, simp]:
   "pageBits \<le> maxUntypedSizeBits"
   by (simp add: pageBits_def maxUntypedSizeBits_def)
->>>>>>> verification/master
+
+lemmas pte_ko_at_valid_objs_valid_pte' =
+  ko_at_valid_objs'_pre[where 'a=pte, simplified injectKO_pte valid_obj'_def]
 
 text \<open>Miscellaneous facts about low level constructs\<close>
 

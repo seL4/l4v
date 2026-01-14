@@ -1108,19 +1108,10 @@ lemma eq_trans_helper:
 text \<open>Architecture-specific requirements\<close>
 
 locale StateRelation_R =
-<<<<<<< HEAD
-  assumes is_other_obj_relation_type_CapTable:
-||||||| 0d43d8dee
-  (* ghost state relation must not depend on machine state *)
-  assumes ghost_relation_wrapper_machine_state_upd_id[simp]:
-    "\<And>s s' ss ss'.
-       ghost_relation_wrapper (s\<lparr>machine_state := ss\<rparr>) (s'\<lparr>ksMachineState := ss'\<rparr>)
-       = ghost_relation_wrapper s s'"
-  assumes is_other_obj_relation_type_CapTable:
-=======
   assumes is_other_obj_relation_type_gen[simp]:
->>>>>>> verification/master
     "\<And>n. \<not> is_other_obj_relation_type (ACapTable n)"
+    "\<And>n. \<not> is_other_obj_relation_type (ASchedContext n)"
+    "\<not> is_other_obj_relation_type AReply"
     "\<not> is_other_obj_relation_type ATCB"
     "is_other_obj_relation_type AEndpoint"
     "is_other_obj_relation_type ANTFN"

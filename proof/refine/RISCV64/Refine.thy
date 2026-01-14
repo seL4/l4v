@@ -238,7 +238,6 @@ lemma kernel_entry_invs_det_ext:
          | clarsimp simp add: tcb_cap_cases_def)+
   done
 
-<<<<<<< HEAD
 lemma kernel_entry_valid_sched:
   "\<lbrace>\<lambda>s. valid_sched s \<and> invs s \<and> schact_is_rct s
         \<and> cur_sc_active s \<and> ct_not_in_release_q s
@@ -253,50 +252,6 @@ lemma kernel_entry_valid_sched:
             hoare_weak_lift_imp hoare_vcg_disj_lift thread_set_not_state_valid_sched
          | clarsimp simp add: tcb_cap_cases_def)+
   done
-||||||| 0d43d8dee
-lemma activate_thread_sched_act:
-  "\<lbrace>ct_in_state activatable and (\<lambda>s. P (scheduler_action s))\<rbrace>
-  activate_thread
-  \<lbrace>\<lambda>rs s. P (scheduler_action (s::det_state))\<rbrace>"
-  by (simp add: activate_thread_def set_thread_state_def arch_activate_idle_thread_def
-      | (wp set_thread_state_sched_act gts_wp)+ | wpc)+
-
-lemma schedule_sched_act_rct[wp]:
-  "\<lbrace>\<top>\<rbrace> Schedule_A.schedule
-  \<lbrace>\<lambda>rs (s::det_state). scheduler_action s = resume_cur_thread\<rbrace>"
-  unfolding Schedule_A.schedule_def
-  by (wpsimp)
-
-lemma call_kernel_sched_act_rct[wp]:
-  "\<lbrace>einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)
-     and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
-  call_kernel e
-  \<lbrace>\<lambda>rs (s::det_state). scheduler_action s = resume_cur_thread\<rbrace>"
-  apply (simp add: call_kernel_def)
-  apply (wp activate_thread_sched_act | simp)+
-  apply (clarsimp simp: active_from_running)
-  done
-=======
-lemma activate_thread_sched_act:
-  "\<lbrace>ct_in_state activatable and (\<lambda>s. P (scheduler_action s))\<rbrace>
-  activate_thread
-  \<lbrace>\<lambda>rs s. P (scheduler_action (s::det_state))\<rbrace>"
-  by (simp add: activate_thread_def set_thread_state_def arch_activate_idle_thread_def
-      | (wp set_thread_state_sched_act gts_wp)+ | wpc)+
-
-lemma schedule_sched_act_rct[wp]:
-  "\<lbrace>\<top>\<rbrace> Schedule_A.schedule
-  \<lbrace>\<lambda>rs (s::det_state). scheduler_action s = resume_cur_thread\<rbrace>"
-  unfolding Schedule_A.schedule_def
-  by (wpsimp)
-
-lemma call_kernel_sched_act_rct[wp]:
-  "\<lbrace>einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
-   call_kernel e
-   \<lbrace>\<lambda>rs (s::det_state). scheduler_action s = resume_cur_thread\<rbrace>"
-  unfolding call_kernel_def
-  by (wpsimp wp: activate_thread_sched_act handle_spurious_irq_invs simp: active_from_running)
->>>>>>> verification/master
 
 abbreviation (input) mcs_invs where
   "mcs_invs s \<equiv> einvs s
@@ -540,12 +495,11 @@ lemma akernel_invariant:
   done
 
 lemma ckernel_invs:
-<<<<<<< HEAD
-  "\<lbrace>invs' and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> schedulable' (ksCurThread s) s)
-    and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
+  "\<lbrace>invs' and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> schedulable' (ksCurThread s) s) and
+    (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
    callKernel e
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: callKernel_def mcsPreemptionPoint_def)
+  unfolding callKernel_def mcsPreemptionPoint_def
   apply (wpsimp wp: hoare_drop_imp[where Q'="\<lambda>_. kernelExitAssertions"] activate_invs')
        apply (rule hoare_drop_imp)
        apply (wpsimp wp: schedule_invs')
@@ -554,30 +508,6 @@ lemma ckernel_invs:
     apply wp+
   apply clarsimp
   done
-||||||| 0d43d8dee
-  "\<lbrace>invs' and
-               (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s) and
-               (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
-  callKernel e
-  \<lbrace>\<lambda>rs. (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
-    and (invs' and (ct_running' or ct_idle'))\<rbrace>"
-  apply (simp add: callKernel_def)
-  apply (rule hoare_pre)
-   apply (wp activate_invs' activate_sch_act schedule_sch
-             schedule_sch_act_simple he_invs' schedule_invs'
-             hoare_drop_imps
-          | simp add: no_irq_getActiveIRQ)+
-  done
-=======
-  "\<lbrace>invs' and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s) and
-    (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
-   callKernel e
-   \<lbrace>\<lambda>rs. (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and (invs' and (ct_running' or ct_idle'))\<rbrace>"
-  unfolding callKernel_def
-  by (wpsimp wp: activate_invs' activate_sch_act schedule_sch schedule_sch_act_simple he_invs'
-                 schedule_invs' hoare_drop_imps
-             simp: no_irq_getActiveIRQ)
->>>>>>> verification/master
 
 (* nothing extra needed on this architecture *)
 defs fastpathKernelAssertions_def:
@@ -869,25 +799,14 @@ lemma kernel_corres':
              (do _ \<leftarrow> stateAssert cur_tcb'_asrt [];
                  _ \<leftarrow> runExceptT $
                       handleEvent event `~catchError~`
-<<<<<<< HEAD
                         (\<lambda>_. withoutPreemption $ do
-                               irq_opt <- doMachineOp (getActiveIRQ True);
                                _ \<leftarrow> mcsPreemptionPoint irq_opt;
-                               when (isJust irq_opt) $ handleInterrupt (fromJust irq_opt)
+                               maybeHandleInterrupt True
                              od);
                  _ \<leftarrow> stateAssert rct_imp_activatable'_asrt [];
-||||||| 0d43d8dee
-                        (\<lambda>_. withoutPreemption $ do
-                               irq <- doMachineOp (getActiveIRQ True);
-                               when (isJust irq) $ handleInterrupt (fromJust irq)
-                             od);
-=======
-                        (\<lambda>_. withoutPreemption $ maybeHandleInterrupt True);
->>>>>>> verification/master
                  _ \<leftarrow> ThreadDecls_H.schedule;
                  _ \<leftarrow> stateAssert rct_imp_activatable'_asrt [];
                  activateThread
-<<<<<<< HEAD
               od)" (is "corres _ ?P ?P' _ _")
   unfolding call_kernel_def
   apply add_cur_tcb'
@@ -1018,65 +937,6 @@ lemma kernel_corres':
   apply (frule schedulable'_runnableE)
    apply (clarsimp simp: cur_tcb'_def)
   apply (clarsimp simp: st_tcb_at'_def obj_at'_def ct_in_state'_def)
-||||||| 0d43d8dee
-              od)"
-  unfolding call_kernel_def callKernel_def
-  apply (simp add: call_kernel_def callKernel_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split)
-       apply (rule corres_split_handle[OF handleEvent_corres])
-         apply simp
-         apply (rule corres_split[OF corres_machine_op])
-            apply (rule corres_underlying_trivial)
-            apply (rule no_fail_getActiveIRQ)
-           apply clarsimp
-           apply (rule_tac x=irq in option_corres)
-            apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
-            apply (simp add: when_def)
-           apply (rule corres_when[simplified dc_def], simp)
-           apply simp
-           apply (rule handleInterrupt_corres[simplified dc_def])
-          apply simp
-          apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift simp: schact_is_rct_def)[1]
-         apply simp
-         apply (rule_tac Q'="\<lambda>irq s. invs' s \<and>
-                              (\<forall>irq'. irq = Some irq' \<longrightarrow>
-                                 intStateIRQTable (ksInterruptState s ) irq' \<noteq>
-                                 IRQInactive)"
-                      in hoare_post_imp)
-          apply simp
-         apply (wp doMachineOp_getActiveIRQ_IRQ_active handle_event_valid_sched | simp)+
-       apply (rule_tac Q'="\<lambda>_. \<top>" and E'="\<lambda>_. invs'" in hoare_strengthen_postE)
-         apply wpsimp+
-       apply (simp add: invs'_def valid_state'_def)
-      apply (rule corres_split[OF schedule_corres])
-        apply (rule activateThread_corres)
-       apply (wp handle_interrupt_valid_sched[unfolded non_kernel_IRQs_def, simplified]
-                 schedule_invs' hoare_vcg_if_lift2 hoare_drop_imps |simp)+
-     apply (rule_tac Q'="\<lambda>_. valid_sched and invs and valid_list" and
-                     E'="\<lambda>_. valid_sched and invs and valid_list"
-            in hoare_strengthen_postE)
-       apply (wp handle_event_valid_sched hoare_vcg_imp_lift' |simp)+
-   apply (clarsimp simp: active_from_running schact_is_rct_def)
-  apply (clarsimp simp: active_from_running')
-=======
-              od)"
-  unfolding call_kernel_def
-  apply (corres simp: irq_state_independent_def
-                corres: handleEvent_corres maybeHandleInterrupt_corres
-         | corres_cases_both)+
-        apply (wpsimp wp: handle_event_valid_sched)+
-      apply (corres corres: schedule_corres activateThread_corres)
-      apply (wpsimp wp: handle_interrupt_valid_sched[unfolded non_kernel_IRQs_def, simplified]
-                        schedule_invs' hoare_vcg_if_lift2 hoare_drop_imps handle_spurious_irq_invs
-                    simp: maybe_handle_interrupt_def)+
-     apply (rule_tac Q'="\<lambda>_. valid_sched and invs and valid_list" and
-                     E'="\<lambda>_. valid_sched and invs and valid_list"
-                     in hoare_strengthen_postE)
-       apply (wpsimp wp: handle_event_valid_sched)+
-   apply (clarsimp simp: active_from_running schact_is_rct_def)
-  apply (clarsimp simp: active_from_running')
->>>>>>> verification/master
   done
 
 lemma kernel_corres:

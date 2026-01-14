@@ -123,13 +123,7 @@ definition
 
 end
 
-<<<<<<< HEAD
-arch_requalify_consts (A) kernel_base idle_thread_ptr idle_sc_ptr
-||||||| 0d43d8dee
-arch_requalify_consts (A) kernel_base idle_thread_ptr
-=======
-arch_requalify_consts (A) kernel_base
->>>>>>> verification/master
+arch_requalify_consts (A) kernel_base idle_sc_ptr
 
 context Arch begin arch_global_naming (A)
 

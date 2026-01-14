@@ -996,7 +996,6 @@ lemma threadSetPriority_onRunning_corres:
                     apply (rule threadSet_not_queued_corres;
                            simp add: tcb_relation_def tcb_cap_cases_def tcb_cte_cases_def
                                      cteSizeBits_def)
-<<<<<<< HEAD
                    apply (rule corres_split_nor)
                       apply (rule tcbSchedEnqueue_corres, simp)
                      apply (rule rescheduleRequired_corres)
@@ -1034,57 +1033,6 @@ lemma threadSetPriority_onRunning_corres:
           apply (frule invs'_valid_tcbs')
           apply (fastforce simp: invs'_def valid_tcbs'_def valid_tcb'_def obj_at'_def)
          apply (wpsimp wp: thread_get_exs_valid)+
-||||||| 0d43d8dee
-        apply (rule corres_split[OF isRunnable_corres])
-          apply (erule corres_when)
-          apply(rule corres_split[OF getCurThread_corres])
-            apply (wp corres_if; clarsimp)
-             apply (rule rescheduleRequired_corres)
-            apply (rule possibleSwitchTo_corres)
-           apply ((clarsimp
-                   | wp hoare_weak_lift_imp hoare_vcg_if_lift hoare_wp_combs gts_wp
-                        isRunnable_wp)+)[4]
-       apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_if_lift hoare_vcg_all_lift
-                         thread_set_in_correct_ready_q_not_queued thread_set_no_change_tcb_state
-                         thread_set_no_change_tcb_state_converse thread_set_weak_valid_sched_action)+
-      apply ((wp hoare_vcg_imp_lift' hoare_vcg_all_lift
-                 isRunnable_wp threadSet_pred_tcb_no_state
-                 threadSet_valid_objs_tcbPriority_update threadSet_sched_pointers
-                 threadSet_valid_sched_pointers tcb_dequeue_not_queued tcbSchedDequeue_not_queued
-                 threadSet_weak_sch_act_wf
-              | simp add: tcb_relation_def
-              | strengthen valid_objs'_valid_tcbs'
-                obj_at'_weakenE[where P="Not \<circ> tcbQueued"]
-              | wps)+)
-   apply (force simp: tcb_at_st_tcb_at[symmetric] state_relation_def
-                dest: pspace_relation_tcb_at intro: st_tcb_at_opeqI)
-  apply clarsimp
-=======
-        apply (rule corres_split[OF isRunnable_corres])
-          apply (erule corres_when)
-          apply(rule corres_split[OF getCurThread_corres])
-            apply (wp corres_if; clarsimp)
-             apply (rule rescheduleRequired_corres)
-            apply (rule possibleSwitchTo_corres)
-           apply ((clarsimp
-                   | wp hoare_weak_lift_imp hoare_vcg_if_lift hoare_wp_combs gts_wp
-                        isRunnable_wp)+)[4]
-       apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_if_lift hoare_vcg_all_lift
-                         thread_set_in_correct_ready_q_not_queued thread_set_no_change_tcb_state
-                         thread_set_no_change_tcb_state_converse thread_set_weak_valid_sched_action)+
-      apply ((wp hoare_vcg_imp_lift' hoare_vcg_all_lift
-                 isRunnable_wp threadSet_pred_tcb_no_state
-                 threadSet_valid_objs_tcbPriority_update threadSet_sched_pointers
-                 threadSet_valid_sched_pointers tcb_dequeue_not_queued tcbSchedDequeue_not_queued
-                 threadSet_weak_sch_act_wf
-              | simp add: tcb_relation_def
-              | strengthen valid_objs'_valid_tcbs'
-                obj_at'_weakenE[where P="Not \<circ> tcbQueued"]
-              | wps)+)
-   apply (force simp: tcb_at_st_tcb_at[symmetric] state_relation_def
-                dest: tcb_at'_cross intro: st_tcb_at_opeqI)
-  apply clarsimp
->>>>>>> verification/master
   done
 
 lemma setPriority:
@@ -1173,118 +1121,7 @@ definition
                  tcb_relation (case_option id fn v tcb)
                               (case_option id fn' v' tcb'))"
 
-<<<<<<< HEAD
 end
-||||||| 0d43d8dee
-lemma out_corresT:
-  assumes x: "\<And>tcb v. \<forall>(getF, setF)\<in>ran tcb_cap_cases. getF (fn v tcb) = getF tcb"
-  assumes y: "\<And>v. \<forall>tcb. \<forall>(getF, setF)\<in>ran tcb_cte_cases. getF (fn' v tcb) = getF tcb"
-  assumes sched_pointers: "\<And>tcb v. tcbSchedPrev (fn' v tcb) = tcbSchedPrev tcb"
-                          "\<And>tcb v. tcbSchedNext (fn' v tcb) = tcbSchedNext tcb"
-  assumes flag: "\<And>d p tcb' v. inQ d p (fn' v tcb') = inQ d p tcb'"
-  shows
-  "out_rel fn fn' v v' \<Longrightarrow>
-     corres dc (tcb_at t and pspace_aligned and pspace_distinct)
-               \<top>
-       (option_update_thread t fn v)
-       (case_option (return ()) (\<lambda>x. threadSet (fn' x) t) v')"
-  apply (case_tac v, simp_all add: out_rel_def option_update_thread_def)
-  apply (clarsimp simp: threadset_corresT [OF _ x y sched_pointers flag])
-  done
-
-lemmas out_corres = out_corresT [OF _ all_tcbI, OF ball_tcb_cap_casesI ball_tcb_cte_casesI]
-
-lemma tcbSchedDequeue_sch_act_simple[wp]:
-  "tcbSchedDequeue t \<lbrace>sch_act_simple\<rbrace>"
-  by (wpsimp simp: sch_act_simple_def)
-
-lemma tcbSchedNext_update_tcb_cte_cases:
-  "(a, b) \<in> ran tcb_cte_cases \<Longrightarrow> a (tcbPriority_update f tcb) = a tcb"
-  unfolding tcb_cte_cases_def
-  by (case_tac tcb; fastforce simp: objBits_simps')
-
-lemma threadSet_priority_invs':
-  "\<lbrace>invs' and tcb_at' t and K (p \<le> maxPriority)\<rbrace>
-   threadSet (tcbPriority_update (\<lambda>_. p)) t
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (simp add: invs'_def valid_state'_def split del: if_split)
-  apply (wp threadSet_valid_pspace'
-            threadSet_sch_actT_P[where P=False, simplified]
-            threadSet_state_refs_of'T[where f'=id]
-            threadSet_iflive'T
-            threadSet_ifunsafe'T
-            threadSet_idle'T
-            valid_irq_node_lift
-            valid_irq_handlers_lift''
-            threadSet_ctes_ofT
-            threadSet_not_inQ
-            threadSet_ct_idle_or_in_cur_domain'
-            threadSet_cur
-            untyped_ranges_zero_lift
-            sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
-            threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of
-         | clarsimp simp: cteCaps_of_def tcbSchedNext_update_tcb_cte_cases | rule refl)+
-  apply (clarsimp simp: o_def)
-  by (auto simp: obj_at'_def)
-
-lemma setP_invs':
-  "\<lbrace>invs' and tcb_at' t and K (p \<le> maxPriority)\<rbrace> setPriority t p \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  unfolding setPriority_def
-  by (wpsimp wp: rescheduleRequired_invs' threadSet_priority_invs')
-=======
-lemma out_corresT:
-  assumes x: "\<And>tcb v. \<forall>(getF, setF)\<in>ran tcb_cap_cases. getF (fn v tcb) = getF tcb"
-  assumes y: "\<And>v. \<forall>tcb. \<forall>(getF, setF)\<in>ran tcb_cte_cases. getF (fn' v tcb) = getF tcb"
-  assumes sched_pointers: "\<And>tcb v. tcbSchedPrev (fn' v tcb) = tcbSchedPrev tcb"
-                          "\<And>tcb v. tcbSchedNext (fn' v tcb) = tcbSchedNext tcb"
-  assumes flag: "\<And>d p tcb' v. inQ d p (fn' v tcb') = inQ d p tcb'"
-  shows
-  "out_rel fn fn' v v' \<Longrightarrow>
-     corres dc (tcb_at t and pspace_aligned and pspace_distinct)
-               \<top>
-       (option_update_thread t fn v)
-       (case_option (return ()) (\<lambda>x. threadSet (fn' x) t) v')"
-  apply (case_tac v, simp_all add: out_rel_def option_update_thread_def)
-  apply (clarsimp simp: threadset_corresT [OF _ x y sched_pointers flag])
-  done
-
-lemmas out_corres = out_corresT [OF _ all_tcbI, OF ball_tcb_cap_casesI ball_tcb_cte_casesI]
-
-lemma tcbSchedDequeue_sch_act_simple[wp]:
-  "tcbSchedDequeue t \<lbrace>sch_act_simple\<rbrace>"
-  by (wpsimp simp: sch_act_simple_def)
-
-lemma threadSet_priority_invs':
-  "\<lbrace>invs' and tcb_at' t and K (p \<le> maxPriority)\<rbrace>
-   threadSet (tcbPriority_update (\<lambda>_. p)) t
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (simp add: invs'_def valid_state'_def split del: if_split)
-  apply (wp threadSet_valid_pspace'
-            threadSet_sch_actT_P[where P=False, simplified]
-            threadSet_state_refs_of'T[where f'=id]
-            threadSet_iflive'T
-            threadSet_ifunsafe'T
-            threadSet_idle'T
-            valid_irq_node_lift
-            valid_irq_handlers_lift''
-            threadSet_ctes_ofT
-            threadSet_not_inQ
-            threadSet_ct_idle_or_in_cur_domain'
-            threadSet_cur
-            untyped_ranges_zero_lift
-            sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
-            threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of
-         | clarsimp simp: cteCaps_of_def update_tcb_cte_cases | rule refl)+
-  apply (clarsimp simp: o_def)
-  by (auto simp: obj_at'_def)
-
-lemma setP_invs':
-  "\<lbrace>invs' and tcb_at' t and K (p \<le> maxPriority)\<rbrace> setPriority t p \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  unfolding setPriority_def
-  by (wpsimp wp: rescheduleRequired_invs' threadSet_priority_invs')
->>>>>>> verification/master
 
 crunch setPriority, setMCPriority
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
@@ -1573,29 +1410,9 @@ lemma threadSet_invs_trivialT2:
              threadSet_valid_dom_schedule'
              untyped_ranges_zero_lift
              sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
-<<<<<<< HEAD
              threadSet_tcbInReleaseQueue threadSet_tcbQueued
              threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of valid_bitmaps_lift
-          | clarsimp simp: assms cteCaps_of_def | rule refl)+
-||||||| 0d43d8dee
-             threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of
-             threadSet_sch_actT_P[where P=False, simplified]
-             threadSet_state_refs_of'T[where f'=id]
-             threadSet_idle'T
-             threadSet_not_inQ
-             threadSet_ct_idle_or_in_cur_domain'
-             threadSet_cur
-          | clarsimp simp: assms cteCaps_of_def | rule refl)+
-=======
-             threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of
-             threadSet_sch_actT_P[where P=False, simplified]
-             threadSet_state_refs_of'T[where f'=id]
-             threadSet_idle'T
-             threadSet_not_inQ
-             threadSet_ct_idle_or_in_cur_domain'
-             threadSet_cur
           | clarsimp simp: assms cteCaps_of_def valid_arch_tcb'_def | rule refl)+
->>>>>>> verification/master
   apply (clarsimp simp: o_def)
   by (auto simp: obj_at'_def)
 

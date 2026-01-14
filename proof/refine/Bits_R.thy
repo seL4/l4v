@@ -59,8 +59,6 @@ locale Bits_R =
     "\<And>t. atcbContextSet (atcbContextGet t) t = t"
   assumes atcbContext_set_set[simp]:
     "\<And>uc uc' atcb. atcbContextSet uc (atcbContextSet uc' atcb) = atcbContextSet uc atcb"
-  assumes objBitsKO_less_word_bits[simp]:
-    "\<And>ko. objBitsKO ko < word_bits"
   assumes objBitsKO_neq_0:
     "\<And>ko. objBitsKO ko \<noteq> 0"
   assumes pageBits_le_maxUntypedSizeBits[simp]:
@@ -73,13 +71,23 @@ lemma objBitsKO_pos_power2[simp]:
   using objBitsKO_neq_0
   by (simp add: objBitsKO_less_word_bits word_2p_lem word_bits_size)
 
-lemma objBits_less_word_bits:
-  "objBits v < word_bits"
-  unfolding objBits_def by (rule objBitsKO_less_word_bits)
+lemma scBits_pos_power2:
+  assumes "minSchedContextBits + scSize sc < word_bits"
+  shows "(1::machine_word) < (2::machine_word) ^ (minSchedContextBits + scSize sc)"
+  apply (insert assms)
+  apply (subst word_less_nat_alt)
+  apply (clarsimp simp: minSchedContextBits_def)
+  by (auto simp: pow_mono_leq_imp_lt)
 
 lemma objBits_pos_power2[simp]:
-  "(1::machine_word) < 2 ^ objBits v"
-  unfolding objBits_def by simp
+  assumes "objBits v < word_bits"
+  shows "(1::machine_word) < 2 ^ objBits v"
+  unfolding objBits_def by (simp add: scBits_pos_power2)
+
+lemma objBitsKO_no_overflow[simp, intro!]:
+  "objBitsKO ko < word_bits \<Longrightarrow> (1::machine_word) < 2 ^ objBitsKO ko"
+  by (cases ko; simp add: objBits_simps' pageBits_def pteBits_def scBits_pos_power2
+                   split: arch_kernel_object.splits)
 
 end
 

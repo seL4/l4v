@@ -5,7 +5,7 @@
  *)
 
 theory SchedContext_R
-imports VSpace_R InterruptAcc_R
+imports ArchVSpace_R InterruptAcc_R
 begin
 
 lemma live_sc'_scConsumed_update[simp]:

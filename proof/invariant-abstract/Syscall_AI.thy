@@ -1550,45 +1550,15 @@ lemma handle_invocation_not_blocking_not_calling_first_phase_ct_active[wp]:
   done
 
 lemma he_invs[wp]:
-<<<<<<< HEAD
-  "\<And>e.
-    \<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and>
-         scheduler_action s = resume_cur_thread \<and>
-         (ct_running s \<longrightarrow> ct_schedulable s)\<rbrace>
-    handle_event e
-    \<lbrace>\<lambda>_. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  apply (case_tac e, simp_all)
-       apply (rename_tac syscall)
-       apply (case_tac syscall, simp_all)
-                 by (wpsimp wp: hoare_vcg_imp_conj_lift' check_budget_restart_true
-                          comb: hoare_drop_imps hoare_drop_imp_conj'
-                          simp: if_apply_def2 valid_fault_def
-                     | wps | erule active_from_running
-                     | fastforce simp: tcb_at_invs ct_in_state_def valid_fault_def
-                                elim!: st_tcb_ex_cap dest: active_from_running)+
-||||||| 0d43d8dee
-  "\<And>e.
-    \<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
-      handle_event e
-    \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  apply (case_tac e, simp_all)
-      apply (rename_tac syscall)
-      apply (case_tac syscall, simp_all)
-      apply (((rule hoare_pre, wp hvmf_active hr_invs  ) |
-                 wpc | wp hoare_drop_imps hoare_vcg_all_lift |
-                 simp add: if_apply_def2 |
-                 fastforce simp: tcb_at_invs ct_in_state_def valid_fault_def
-                         elim!: st_tcb_ex_cap)+)
-  done
-=======
-  "\<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_active s) \<and>
+        scheduler_action s = resume_cur_thread \<and>
+        (ct_running s \<longrightarrow> ct_schedulable s)\<rbrace>
    handle_event e
    \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   by (case_tac e;
-      wpsimp wp: handle_spurious_irq_invs hvmf_active hr_invs;
+      wpsimp wp: handle_spurious_irq_invs check_budget_restart_true;
       fastforce simp: tcb_at_invs ct_in_state_def valid_fault_def
-                elim!: st_tcb_ex_cap)
->>>>>>> verification/master
+                elim!: st_tcb_ex_cap dest: active_from_running)
 
 end
 

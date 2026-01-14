@@ -383,25 +383,11 @@ where
     od
   od)"
 
-<<<<<<< HEAD
 | "handle_event Interrupt = (without_preemption $ do
     update_time_stamp;
     check_budget;
-    active \<leftarrow> do_machine_op $ getActiveIRQ False;
-    case active of
-       Some irq \<Rightarrow> handle_interrupt irq
-     | None \<Rightarrow> return ()
+    maybe_handle_interrupt False
   od)"
-||||||| 0d43d8dee
-| "handle_event Interrupt = (without_preemption $ do
-    active \<leftarrow> do_machine_op $ getActiveIRQ False;
-    case active of
-       Some irq \<Rightarrow> handle_interrupt irq
-     | None \<Rightarrow> return ()
-  od)"
-=======
-| "handle_event Interrupt = without_preemption (maybe_handle_interrupt False)"
->>>>>>> verification/master
 
 | "handle_event (VMFaultEvent fault_type) = (without_preemption $ do
     update_time_stamp;
@@ -428,7 +414,6 @@ text \<open>
 
 definition preemption_path where
   "preemption_path \<equiv> do
-      irq \<leftarrow> do_machine_op (getActiveIRQ True);
       ct \<leftarrow> gets cur_thread;
       schedulable \<leftarrow> gets (schedulable ct);
       if schedulable then do check_budget;
@@ -442,23 +427,13 @@ definition preemption_path where
                        od
                   else modify (\<lambda>s. s\<lparr>consumed_time := 0\<rparr>)
            od;
-      when (irq \<noteq> None) (handle_interrupt (the irq))
+      maybe_handle_interrupt True
    od"
 
 definition
   call_kernel :: "event \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "call_kernel ev \<equiv> do
-<<<<<<< HEAD
        handle_event ev <handle> (\<lambda>_. without_preemption preemption_path);
-||||||| 0d43d8dee
-       handle_event ev <handle>
-           (\<lambda>_. without_preemption $ do
-                  irq \<leftarrow> do_machine_op $ getActiveIRQ True;
-                  when (irq \<noteq> None) $ handle_interrupt (the irq)
-                od);
-=======
-       handle_event ev <handle> (\<lambda>_. without_preemption $ maybe_handle_interrupt True);
->>>>>>> verification/master
        schedule;
        activate_thread
    od"

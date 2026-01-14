@@ -138,17 +138,7 @@ lemma stit_activatable':
   apply (clarsimp simp: valid_idle_def ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
-<<<<<<< HEAD
 lemma switch_to_idle_thread_cur_thread_idle_thread [wp]:
-||||||| 0d43d8dee
-crunch set_vm_root
-  for it[wp]: "\<lambda>s. P (idle_thread s)"
-  (simp: crunch_simps)
-
-lemma switch_to_idle_thread_cur_thread_idle_thread [wp, DetSchedSchedule_AI_assms]:
-=======
-lemma switch_to_idle_thread_cur_thread_idle_thread [wp, DetSchedSchedule_AI_assms]:
->>>>>>> verification/master
   "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_ s. cur_thread s = idle_thread s\<rbrace>"
   by (wp | simp add:switch_to_idle_thread_def arch_switch_to_idle_thread_def)+
 
@@ -220,7 +210,6 @@ lemma switch_to_idle_thread_ct_not_in_release_q[wp]:
   apply wpsimp
   by (fastforce simp: valid_release_q_def not_in_release_q_def in_queue_2_def dest!: valid_idle_thread_state_contradiction)
 
-<<<<<<< HEAD
 crunch arch_switch_to_thread, arch_switch_to_idle_thread
   for sc_at_period[wp]: "sc_at_period P p::det_state \<Rightarrow> _"
   (simp: crunch_simps)
@@ -228,17 +217,6 @@ crunch arch_switch_to_thread, arch_switch_to_idle_thread
 lemma machine_state_detype[simp]:
   "machine_state (detype S s) = machine_state s"
   by (clarsimp simp: valid_machine_time_def detype_def)
-||||||| 0d43d8dee
-declare make_arch_fault_msg_inv[DetSchedSchedule_AI_assms]
-
-lemma arch_post_modify_registers_not_idle_thread[DetSchedSchedule_AI_assms]:
-  "\<lbrace>\<lambda>s::det_ext state. t \<noteq> idle_thread s\<rbrace> arch_post_modify_registers c t \<lbrace>\<lambda>_ s. t \<noteq> idle_thread s\<rbrace>"
-  by (wpsimp simp: arch_post_modify_registers_def)
-=======
-lemma arch_post_modify_registers_not_idle_thread[DetSchedSchedule_AI_assms]:
-  "\<lbrace>\<lambda>s::det_ext state. t \<noteq> idle_thread s\<rbrace> arch_post_modify_registers c t \<lbrace>\<lambda>_ s. t \<noteq> idle_thread s\<rbrace>"
-  by (wpsimp simp: arch_post_modify_registers_def)
->>>>>>> verification/master
 
 crunch handle_hypervisor_fault, handle_reserved_irq
   for valid_machine_time: valid_machine_time

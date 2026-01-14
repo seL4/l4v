@@ -885,23 +885,11 @@ lemma decodeUntyped_wf[wp]:
                and bits = "(APIType_capBits (toEnum (unat (args ! 0))) (unat (args ! 1)))"
                 in range_cover_stuff[where w=w and sz=sz and rv = idx,rotated -1]; simp?)
   apply (intro conjI; clarsimp simp add: image_def word_size)
-<<<<<<< HEAD
     apply (clarsimp simp: image_def isCap_simps nullPointer_def word_size field_simps)
     apply (drule_tac x=x in spec)+
     apply simp
-   apply (clarsimp simp: APIType_capBits_def)
-  apply (clarsimp simp: APIType_capBits_def sc_size_bounds_def)
-||||||| 0d43d8dee
-   apply (clarsimp simp: image_def isCap_simps nullPointer_def word_size field_simps)
-   apply (drule_tac x=x in spec)+
-   apply simp
-  apply (clarsimp simp: APIType_capBits_def)
-=======
-   apply (clarsimp simp: image_def isCap_simps nullPointer_def word_size field_simps)
-   apply (drule_tac x=x in spec)+
-   apply simp
-  apply (clarsimp simp: APIType_capBits_gen_def)
->>>>>>> verification/master
+   apply (clarsimp simp: APIType_capBits_gen_def)
+  apply (clarsimp simp: APIType_capBits_gen_def sc_size_bounds_def)
   done
 
 lemma corres_list_all2_mapM_':
@@ -3043,13 +3031,12 @@ lemma createNewCaps_range_helper:
   apply (frule range_cover.range_cover_n_less)
   apply (frule range_cover.unat_of_nat_n)
   apply (cases tp, simp_all split del: if_split)
-<<<<<<< HEAD
           apply (rename_tac apiobject_type)
           apply (case_tac apiobject_type, simp_all split del: if_split)
               \<comment>\<open>Untyped\<close>
               apply (rule hoare_pre, wp)
               apply (frule range_cover_not_zero[rotated -1],simp)
-              apply (clarsimp simp: APIType_capBits_def objBits_simps archObjSize_def ptr_add_def o_def)
+              apply (clarsimp simp: APIType_capBits_gen_def objBits_simps archObjSize_def ptr_add_def o_def)
               apply (subst upto_enum_red')
                apply unat_arith
               apply (clarsimp simp: o_def fromIntegral_def toInteger_nat fromInteger_nat)
@@ -3057,12 +3044,12 @@ lemma createNewCaps_range_helper:
              \<comment>\<open>TCB\<close>
              apply (rule hoare_pre, wp createObjects_ret2)
               apply (wpsimp simp: curDomain_def)
-             apply (clarsimp simp: APIType_capBits_def word_bits_def
+             apply (clarsimp simp: APIType_capBits_gen_def word_bits_def
                                    objBits_simps archObjSize_def ptr_add_def o_def)
              apply (fastforce simp: objBitsKO_def objBits_def)
              \<comment>\<open>other APIObjectType\<close>
             apply ((rule hoare_pre, wp createObjects_ret2,
-                    clarsimp simp: APIType_capBits_def word_bits_def
+                    clarsimp simp: APIType_capBits_gen_def word_bits_def
                                    objBits_simps archObjSize_def ptr_add_def o_def,
                     fastforce simp: objBitsKO_def objBits_def scBits_simps)+)[5]
         \<comment>\<open>Arch objects\<close>
@@ -3072,59 +3059,6 @@ lemma createNewCaps_range_helper:
                   split del: if_split
             | simp add: objBits_simps
             | (rule exI, (fastforce simp: bit_simps)))+
-||||||| 0d43d8dee
-      apply (rename_tac apiobject_type)
-      apply (case_tac apiobject_type, simp_all split del: if_split)
-          \<comment>\<open>Untyped\<close>
-          apply (rule hoare_pre, wp)
-          apply (frule range_cover_not_zero[rotated -1],simp)
-          apply (clarsimp simp: APIType_capBits_def objBits_simps ptr_add_def o_def)
-          apply (subst upto_enum_red')
-           apply unat_arith
-          apply (clarsimp simp: o_def fromIntegral_def toInteger_nat fromInteger_nat)
-          apply fastforce
-         \<comment>\<open>TCB\<close>
-         apply (rule hoare_pre, wp createObjects_ret2)
-          apply (wpsimp simp: curDomain_def)
-         apply (clarsimp simp: APIType_capBits_def word_bits_def objBits_simps ptr_add_def o_def)
-         apply (fastforce simp: objBitsKO_def objBits_def)
-        \<comment>\<open>other APIObjectType\<close>
-        apply ((rule hoare_pre, wp createObjects_ret2,
-                clarsimp simp: APIType_capBits_def word_bits_def objBits_simps ptr_add_def o_def,
-                fastforce simp: objBitsKO_def objBits_def)+)[3]
-     \<comment>\<open>Arch objects\<close>
-     by (wp createObjects_ret2
-         | clarsimp simp: APIType_capBits_def objBits_if_dev word_bits_def
-               split del: if_split
-         | simp add: objBits_simps
-         | (rule exI, (fastforce simp: bit_simps)))+
-=======
-      apply (rename_tac apiobject_type)
-      apply (case_tac apiobject_type, simp_all split del: if_split)
-          \<comment>\<open>Untyped\<close>
-          apply (rule hoare_pre, wp)
-          apply (frule range_cover_not_zero[rotated -1],simp)
-          apply (clarsimp simp: APIType_capBits_gen_def objBits_simps ptr_add_def o_def)
-          apply (subst upto_enum_red')
-           apply unat_arith
-          apply (clarsimp simp: o_def fromIntegral_def toInteger_nat fromInteger_nat)
-          apply fastforce
-         \<comment>\<open>TCB\<close>
-         apply (rule hoare_pre, wp createObjects_ret2)
-          apply (wpsimp simp: curDomain_def)
-         apply (clarsimp simp: APIType_capBits_gen_def word_bits_def objBits_simps ptr_add_def o_def)
-         apply (fastforce simp: objBitsKO_def objBits_def)
-        \<comment>\<open>other APIObjectType\<close>
-        apply ((rule hoare_pre, wp createObjects_ret2,
-                clarsimp simp: APIType_capBits_gen_def word_bits_def objBits_simps ptr_add_def o_def,
-                fastforce simp: objBitsKO_def objBits_def)+)[3]
-     \<comment>\<open>Arch objects\<close>
-     by (wp createObjects_ret2
-         | clarsimp simp: APIType_capBits_def objBits_if_dev word_bits_def
-               split del: if_split
-         | simp add: objBits_simps
-         | (rule exI, (fastforce simp: bit_simps)))+
->>>>>>> verification/master
 
 lemma createNewCaps_range_helper2:
   "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits tp us) n \<and> 0 < n

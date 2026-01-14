@@ -14,11 +14,8 @@ context Arch begin arch_global_naming
 
 named_theorems CSpace_I_assms
 
-lemma arch_capUntypedPtr_simps[simp]:
-  "Arch.capUntypedPtr (ASIDPoolCap r asid) = r"
-  "Arch.capUntypedPtr (FrameCap r rghts sz d mapdata) = r"
-  "Arch.capUntypedPtr (PageTableCap r mapdata2) = r"
-  by (auto simp: RISCV64_H.capUntypedPtr_def)
+lemmas arch_capUntypedPtr_simps[simp]
+  = RISCV64_H.capUntypedPtr_def[split_simps arch_capability.split, simplified PPtr_def id_def]
 
 lemma maskCapRights_allRights[simp]:
   "maskCapRights allRights c = c"
@@ -431,8 +428,6 @@ definition
   badge_derived' cap' cap \<and>
   (isUntypedCap cap \<longrightarrow> descendants_of' p m = {}) \<and>
   (isReplyCap cap = isReplyCap cap') \<and>
-  (isReplyCap cap \<longrightarrow> capReplyMaster cap) \<and>
-  (isReplyCap cap' \<longrightarrow> \<not> capReplyMaster cap') \<and>
   (vs_cap_ref' cap = vs_cap_ref' cap' \<or> isArchFrameCap cap) \<and>
   (isArchCap isPageTableCap cap \<longrightarrow> capASID cap = capASID cap' \<and> capASID cap \<noteq> None)"
 

@@ -3911,17 +3911,6 @@ lemma find_pd_for_asid_cap_to_multiple2[wp]:
   apply (simp add: lookup_pd_slot_add_eq)
   done
 
-<<<<<<< HEAD
-||||||| 0d43d8dee
-lemma unat_ucast_kernel_base_rshift:
-  "unat (ucast (kernel_base >> 20) :: 12 word)
-     = unat (kernel_base >> 20)"
-  by (simp add: kernel_base_def)
-
-=======
-lemmas unat_ucast_kernel_base_rshift = shiftr_20_unat_ucast[of kernel_base]
-
->>>>>>> verification/master
 lemma lookup_pd_slot_kernel_mappings_set_strg:
   "is_aligned pd pd_bits \<and> vmsz_aligned vptr ARMSuperSection
      \<and> vptr < kernel_base

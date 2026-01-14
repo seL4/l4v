@@ -23,6 +23,12 @@ lemmas page_table_at_obj_at'
   = page_table_at'_def[unfolded typ_at_to_obj_at_arches]
 
 lemma koType_objBitsKO[KHeap_R_assms]:
+  "\<lbrakk>koTypeOf k' = koTypeOf k; koTypeOf k = SchedContextT \<longrightarrow> objBitsKO k' = objBitsKO k\<rbrakk>
+   \<Longrightarrow> objBitsKO k' = objBitsKO k"
+  by (auto simp: objBitsKO_def archObjSize_def
+          split: kernel_object.splits arch_kernel_object.splits)
+
+lemma koType_objBitsKO[KHeap_R_assms]:
   "koTypeOf k = koTypeOf k' \<Longrightarrow> objBitsKO k = objBitsKO k'"
   by (auto simp: objBitsKO_def archObjSize_def
           split: kernel_object.splits arch_kernel_object.splits)
@@ -94,6 +100,7 @@ lemma obj_relation_cut_same_type:
   "\<lbrakk> (y, P) \<in> obj_relation_cuts ko x; P ko z;
     (y', P') \<in> obj_relation_cuts ko' x'; P' ko' z \<rbrakk>
      \<Longrightarrow> (a_type ko = a_type ko') \<or> (\<exists>n n'. a_type ko = ACapTable n \<and> a_type ko' = ACapTable n')
+         \<or> (\<exists>n n'. a_type ko = ASchedContext n \<and> a_type ko' = ASchedContext n')
          \<or> (\<exists>sz sz'. a_type ko = AArch (AUserData sz) \<and> a_type ko' = AArch (AUserData sz'))
          \<or> (\<exists>sz sz'. a_type ko = AArch (ADeviceData sz) \<and> a_type ko' = AArch (ADeviceData sz'))"
   apply (rule ccontr)
@@ -155,23 +162,35 @@ lemma setObject_other_corres:
                         kernel_object.split_asm)
   apply (insert a)
   apply (frule a_type_eq_is_ArchObj)
-  apply clarsimp
   apply (rule conjI)
-   apply (rule ballI, drule(1) bspec)
-   apply (drule domD)
-   apply (clarsimp simp: is_other_obj_relation_type t a)
-   apply (drule(1) bspec)
-   apply clarsimp
-   apply (frule_tac ko'=ko and x'=ptr in obj_relation_cut_same_type,
+   apply (rule conjI)
+    apply (rule ballI, drule(1) bspec)
+    apply (drule domD)
+    apply (clarsimp simp: is_other_obj_relation_type t a)
+    apply (drule(1) bspec)
+    apply clarsimp
+    apply (frule_tac ko'=ko and x'=ptr in obj_relation_cut_same_type,
            (fastforce simp add: is_other_obj_relation_type t)+)
-   apply (insert t)
-   apply ((erule disjE
-          | clarsimp simp: is_other_obj_relation_type is_other_obj_relation_type_def a_type_def)+)[1]
-  \<comment> \<open>ready_queues_relation\<close>
+    apply (insert t)
+    apply ((erule disjE
+           | clarsimp simp: is_other_obj_relation_type is_other_obj_relation_type_def a_type_def)+)[1]
+   (* sc_replies_relation *)
+   apply (simp add: sc_replies_relation_def)
+   apply (clarsimp simp: sc_replies_of_scs_def map_project_def scs_of_kh_def)
+   apply (drule_tac x=p in spec)
+   apply (rule conjI; clarsimp split: Structures_A.kernel_object.split_asm if_split_asm)
+    apply (clarsimp simp: a_type_def is_other_obj_relation_type_def)
+   apply (rename_tac sc n)
+   apply (drule replyPrevs_of_non_reply_update[simplified])
+    subgoal
+      by (clarsimp simp: other_obj_relation_def; cases ob; cases "injectKO ob'";
+          simp)
+   apply (clarsimp simp: opt_map_def)
+  \<comment> \<open>ready_queues_relation and release_queue_relation\<close>
   apply (prop_tac "koTypeOf (injectKO ob') \<noteq> TCBT")
    subgoal
      by (clarsimp simp: other_obj_relation_def; cases ob; cases "injectKO ob'";
-         simp)
+         simp split: arch_kernel_obj.split_asm)
   by (fastforce dest: tcbs_of'_non_tcb_update)
 
 (* analogous to setObject_other_corres, but for arch objects *)
@@ -223,19 +242,31 @@ lemma setObject_other_arch_corres:
                  split: Structures_A.kernel_object.split_asm if_split_asm
                         arch_kernel_obj.split_asm kernel_object.split_asm
                         arch_kernel_object.split_asm)
-  apply clarsimp
   apply (rule conjI)
-   apply (rule ballI, drule(1) bspec)
-   apply (drule domD)
-   apply (clarsimp simp: is_other_obj_relation_type t a)
-   apply (drule(1) bspec)
-   apply clarsimp
-   apply (frule_tac ko'=ko and x'=ptr in obj_relation_cut_same_type)
-   apply ((fastforce simp add: is_other_obj_relation_type t)+)[3] (* loops when folded into above *)
-   apply (insert t)
-   apply ((erule disjE
-          | clarsimp simp: is_other_obj_relation_type is_other_obj_relation_type_def a_type_def)+)[1]
-  \<comment> \<open>ready_queues_relation\<close>
+   apply (rule conjI)
+    apply (rule ballI, drule(1) bspec)
+    apply (drule domD)
+    apply (clarsimp simp: is_other_obj_relation_type t a)
+    apply (drule(1) bspec)
+    apply clarsimp
+    apply (frule_tac ko'=ko and x'=ptr in obj_relation_cut_same_type)
+    apply ((fastforce simp add: is_other_obj_relation_type t)+)[3] (* loops when folded into above *)
+    apply (insert t)
+    apply ((erule disjE
+           | clarsimp simp: is_other_obj_relation_type is_other_obj_relation_type_def a_type_def)+)[1]
+   (* sc_replies_relation *)
+   apply (simp add: sc_replies_relation_def)
+   apply (clarsimp simp: sc_replies_of_scs_def map_project_def scs_of_kh_def)
+   apply (drule_tac x=p in spec)
+   apply (rule conjI; clarsimp split: Structures_A.kernel_object.split_asm if_split_asm)
+    apply (clarsimp simp: a_type_def is_other_obj_relation_type_def)
+   apply (rename_tac sc n)
+   apply (drule replyPrevs_of_non_reply_update[simplified])
+    subgoal
+      by (clarsimp simp: other_aobj_relation_def; cases ob; cases "injectKO ob'";
+          simp split: arch_kernel_obj.split_asm)
+   apply (clarsimp simp: opt_map_def)
+  \<comment> \<open>ready_queues_relation and release_queue_relation\<close>
   apply (prop_tac "koTypeOf (injectKO ob') \<noteq> TCBT")
    subgoal
      by (clarsimp simp: other_aobj_relation_def; cases ob; cases "injectKO ob'";
@@ -257,45 +288,9 @@ lemma updateObject_objBitsKO:
   apply (erule koType_objBitsKO)
   done
 
-lemma setObject_distinct[wp]:
-  shows     "\<lbrace>pspace_distinct'\<rbrace> setObject p val \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
-  apply (clarsimp simp: setObject_def split_def valid_def in_monad lookupAround2_char1
-                        pspace_distinct'_def ps_clear_upd objBits_def[symmetric]
-                 split: if_split_asm
-                 dest!: updateObject_objBitsKO)
-   apply (fastforce dest: bspec[OF _ domI])
-  apply (fastforce dest: bspec[OF _ domI])
-  done
-
-lemma setObject_aligned[wp]:
-  shows     "\<lbrace>pspace_aligned'\<rbrace> setObject p val \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
-  apply (clarsimp simp: setObject_def split_def valid_def in_monad lookupAround2_char1
-                        pspace_aligned'_def ps_clear_upd objBits_def[symmetric]
-                 split: if_split_asm
-                 dest!: updateObject_objBitsKO)
-   apply (fastforce dest: bspec[OF _ domI])
-  apply (fastforce dest: bspec[OF _ domI])
-  done
-
-lemma setObject_canonical[wp]:
-  shows     "\<lbrace>pspace_canonical'\<rbrace> setObject p val \<lbrace>\<lambda>rv. pspace_canonical'\<rbrace>"
-  apply (clarsimp simp: setObject_def split_def valid_def in_monad lookupAround2_char1
-                        pspace_canonical'_def ps_clear_upd objBits_def[symmetric]
-                 split: if_split_asm
-                 dest!: updateObject_objBitsKO)
-   apply (fastforce dest: bspec[OF _ domI])
-  apply (fastforce dest: bspec[OF _ domI])
-  done
-
 lemma setObject_pspace_in_kernel_mappings'[wp]:
-  shows     "\<lbrace>pspace_in_kernel_mappings'\<rbrace> setObject p val \<lbrace>\<lambda>rv. pspace_in_kernel_mappings'\<rbrace>"
-  apply (clarsimp simp: setObject_def split_def valid_def in_monad lookupAround2_char1
-                        pspace_in_kernel_mappings'_def ps_clear_upd objBits_def[symmetric]
-                 split: if_split_asm
-                 dest!: updateObject_objBitsKO)
-   apply (fastforce dest: bspec[OF _ domI])
-  apply (fastforce dest: bspec[OF _ domI])
-  done
+  "setObject p val \<lbrace>pspace_in_kernel_mappings'\<rbrace>"
+  unfolding pspace_in_kernel_mappings'_def by (unfold_setObject_inmonad)
 
 crunch setEndpoint, getEndpoint, setNotification, getNotification
   for pspace_canonical'[wp]: "pspace_canonical'"
@@ -350,22 +345,6 @@ named_theorems KHeap_R_assms_2
 lemmas setEndpoint_valid_globals[KHeap_R_assms_2, wp]
   = valid_global_refs_lift'[OF set_ep_ctes_of set_ep_arch'
                                setEndpoint_it setEndpoint_ksInterruptState]
-
-lemma set_ntfn_global_refs'[KHeap_R_assms_2, wp]:
-  "\<lbrace>valid_global_refs'\<rbrace> setNotification ptr val \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
-  by (rule valid_global_refs_lift'; wp)
-
-crunch setEndpoint, setNotification
-  for valid_arch'[wp]: valid_arch_state'
-  (wp: valid_arch_state_lift')
-
-lemmas [KHeap_R_assms_2] = setEndpoint_valid_arch' setNotification_valid_arch'
-
-lemmas setObject_typ_ats[wp] = typ_at_lifts[OF setObject_typ_at']
-
-lemmas doMachineOp_typ_ats[wp] = typ_at_lifts[OF doMachineOp_typ_at']
-
-lemmas setEndpoint_typ_ats[wp] = typ_at_lifts[OF setEndpoint_typ_at']
 
 end
 

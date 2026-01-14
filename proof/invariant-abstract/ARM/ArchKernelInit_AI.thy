@@ -193,68 +193,26 @@ lemma pspace_aligned_init_A[simp]:
   apply (clarsimp simp: pspace_aligned_def state_defs wf_obj_bits [OF wf_empty_bits]
                         dom_if_Some cte_level_bits_def)
   apply (safe intro!: aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl],
-<<<<<<< HEAD
-           simp_all add: is_aligned_def word_bits_def kernel_base_def idle_sc_ptr_def
-                         min_sched_context_bits_def)[1]
-||||||| 0d43d8dee
-           simp_all add: is_aligned_def word_bits_def kernel_base_def)[1]
-=======
-         simp_all add: is_aligned_def word_bits_def init_objs_base_def)[1]
->>>>>>> verification/master
+         simp_all add: is_aligned_def word_bits_def kernel_base_def idle_sc_ptr_def
+                       min_sched_context_bits_def)[1]
   done
 
 lemma pspace_distinct_init_A[simp]:
   "pspace_distinct init_A_st"
-<<<<<<< HEAD
-  apply (clarsimp simp: pspace_distinct_def state_defs kernel_base_def cte_level_bits_def
+  apply (clarsimp simp: pspace_distinct_def state_defs init_objs_base_def cte_level_bits_def
                         linorder_not_le idle_sc_ptr_def)
-  apply (safe, simp_all add: init_irq_ptrs_all_ineqs
-                             [simplified kernel_base_def, simplified])[1]
-        apply (cut_tac x="init_irq_node_ptr + (ucast irq << cte_level_bits)" and
-                       y="init_irq_node_ptr + (ucast irqa << cte_level_bits)" and
-                       sz=cte_level_bits
-               in aligned_neq_into_no_overlap;
-               simp add: init_irq_node_ptr_def kernel_base_def cte_level_bits_def)
+  apply (safe,
+         simp_all add: init_irq_ptrs_all_ineqs[[unfolded init_objs_base_def, simplified])[1]
+        apply (cut_tac x="init_irq_node_ptr + (ucast irq << cte_level_bits)"
+                   and y="init_irq_node_ptr + (ucast irqa << cte_level_bits)"
+                   and sz=cte_level_bits
+                    in aligned_neq_into_no_overlap;
+               simp add: init_irq_node_ptr_def init_objs_base_def cte_level_bits_def)
           apply (rule aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl])
           apply (simp add: is_aligned_def)
          apply (rule aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl])
          apply (auto simp: is_aligned_def linorder_not_le min_sched_context_bits_def
                            init_irq_ptrs_all_ineqs(4)[simplified kernel_base_def, simplified])
-||||||| 0d43d8dee
-  apply (clarsimp simp: pspace_distinct_def state_defs pageBits_def
-                        empty_cnode_bits kernel_base_def
-                        linorder_not_le cte_level_bits_def
-                  cong: if_cong)
-  apply (safe,
-         simp_all add: init_irq_ptrs_all_ineqs
-                       [simplified kernel_base_def, simplified])[1]
-  apply (cut_tac x="init_irq_node_ptr + (ucast irq << cte_level_bits)"
-             and y="init_irq_node_ptr + (ucast irqa << cte_level_bits)"
-             and sz=cte_level_bits in aligned_neq_into_no_overlap;
-         simp add: init_irq_node_ptr_def kernel_base_def cte_level_bits_def)
-    apply (rule aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl])
-    apply (simp add: is_aligned_def)
-   apply (rule aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl])
-   apply (simp add: is_aligned_def)
-  apply (simp add: linorder_not_le)
-=======
-  apply (clarsimp simp: pspace_distinct_def state_defs pageBits_def
-                        empty_cnode_bits init_objs_base_def
-                        linorder_not_le cte_level_bits_def
-                  cong: if_cong)
-  apply (safe,
-         simp_all add: init_irq_ptrs_all_ineqs[unfolded init_objs_base_def, simplified])[1]
-  apply (cut_tac x="init_irq_node_ptr + (ucast irq << cte_level_bits)"
-             and y="init_irq_node_ptr + (ucast irqa << cte_level_bits)"
-             and sz=cte_level_bits
-              in aligned_neq_into_no_overlap;
-         simp add: init_irq_node_ptr_def init_objs_base_def cte_level_bits_def)
-    apply (rule aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl])
-    apply (simp add: is_aligned_def)
-   apply (rule aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl])
-   apply (simp add: is_aligned_def)
-  apply (simp add: linorder_not_le)
->>>>>>> verification/master
   done
 
 
@@ -295,29 +253,6 @@ lemma cap_refs_respects_device_region_init[simp]:
    apply (clarsimp simp: cte_wp_at_caps_of_state cap_range_respects_device_region_def)
    done
 
-<<<<<<< HEAD
-lemma replies_with_sc_init_A_st:
-  "replies_with_sc init_A_st = {}"
-  by (clarsimp simp: state_defs replies_with_sc_def sc_at_pred_n_def obj_at_def idle_sc_ptr_def
-                     default_sched_context_def)
-
-lemma starting_cur_thread_not_live:
-  "tcb_bound_notification tcb = None \<Longrightarrow>
-   tcb_yield_to tcb = None \<Longrightarrow>
-   (tcb_state tcb = Inactive \<or> tcb_state tcb = IdleThreadState)  \<Longrightarrow>
-   tcb_sched_context tcb = Some idle_sc_ptr \<Longrightarrow>
-   (live (TCB tcb) = False)"
-  by (clarsimp simp: live_def hyp_live_def arch_tcb_live_def)
-
-lemma starting_cur_sc_not_live:
-  "sc_yield_from sc = None \<Longrightarrow>
-   sc_ntfn sc = None \<Longrightarrow>
-   sc_replies sc = [] \<Longrightarrow>
-   sc_tcb sc = Some idle_thread_ptr \<Longrightarrow>
-   (live_sc sc = False)"
-  by (clarsimp simp: live_sc_def)
-||||||| 0d43d8dee
-=======
 lemma ARMSection_vmsz_aligned_init_objs_base[simp]:
   "vmsz_aligned (addrFromPPtr init_objs_base) ARMSection"
   unfolding vmsz_aligned_def
@@ -344,7 +279,27 @@ lemma valid_global_vspace_mappings_init_A[simp]:
   apply word_bitwise
   apply clarsimp
   done
->>>>>>> verification/master
+
+lemma replies_with_sc_init_A_st:
+  "replies_with_sc init_A_st = {}"
+  by (clarsimp simp: state_defs replies_with_sc_def sc_at_pred_n_def obj_at_def idle_sc_ptr_def
+                     default_sched_context_def)
+
+lemma starting_cur_thread_not_live:
+  "tcb_bound_notification tcb = None \<Longrightarrow>
+   tcb_yield_to tcb = None \<Longrightarrow>
+   (tcb_state tcb = Inactive \<or> tcb_state tcb = IdleThreadState)  \<Longrightarrow>
+   tcb_sched_context tcb = Some idle_sc_ptr \<Longrightarrow>
+   (live (TCB tcb) = False)"
+  by (clarsimp simp: live_def hyp_live_def arch_tcb_live_def)
+
+lemma starting_cur_sc_not_live:
+  "sc_yield_from sc = None \<Longrightarrow>
+   sc_ntfn sc = None \<Longrightarrow>
+   sc_replies sc = [] \<Longrightarrow>
+   sc_tcb sc = Some idle_thread_ptr \<Longrightarrow>
+   (live_sc sc = False)"
+  by (clarsimp simp: live_sc_def)
 
 lemma invs_A:
   "invs init_A_st"
@@ -364,48 +319,14 @@ lemma invs_A:
                           valid_sched_context_size_def min_sched_context_bits_def
                           untyped_max_bits_def)
     apply (rule conjI)
-<<<<<<< HEAD
-     apply (simp add: vmsz_aligned_def, rule is_aligned_addrFromPPtr_n;
-            clarsimp simp: is_aligned_def)
-    apply (rule conjI)
      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_sc_obj_def
                            valid_sched_context_size_def min_sched_context_bits_def
                            untyped_max_bits_def
-||||||| 0d43d8dee
-     apply (simp add: vmsz_aligned_def, rule is_aligned_addrFromPPtr_n;
-            clarsimp simp: is_aligned_def)
-    apply (rule conjI)
-     apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_master_reply_cap_def
-=======
-     apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_master_reply_cap_def
->>>>>>> verification/master
                            valid_cap_def obj_at_def valid_tcb_state_def valid_arch_tcb_def
                            cap_aligned_def word_bits_def valid_ipc_buffer_cap_simps)+
     apply (clarsimp simp: valid_cs_def word_bits_def cte_level_bits_def
                           init_irq_ptrs_all_ineqs valid_tcb_def
                    split: if_split_asm)
-<<<<<<< HEAD
-    apply (simp add: vmsz_aligned_def, rule is_aligned_addrFromPPtr_n;
-           clarsimp simp: is_aligned_def)
-   apply (rule conjI)
-    apply (clarsimp simp: pspace_aligned_def state_defs
-                          cte_level_bits_def idle_sc_ptr_def min_sched_context_bits_def)
-    apply (safe intro!: aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl],
-           simp_all add: is_aligned_def kernel_base_def)[1]
-   apply (rule conjI)
-    apply (clarsimp simp: pspace_distinct_init_A)
-||||||| 0d43d8dee
-    apply (simp add: vmsz_aligned_def, rule is_aligned_addrFromPPtr_n;
-           clarsimp simp: is_aligned_def)
-   apply (rule conjI)
-    apply (clarsimp simp: pspace_aligned_def state_defs wf_obj_bits [OF wf_empty_bits]
-                          dom_if_Some cte_level_bits_def)
-    apply (safe intro!: aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl],
-           simp_all add: is_aligned_def word_bits_def kernel_base_def)[1]
-   apply (rule conjI)
-    apply (simp add:pspace_distinct_init_A)
-=======
->>>>>>> verification/master
    apply (rule conjI)
     apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def state_defs)
     apply (rule conjI)
@@ -461,19 +382,7 @@ lemma invs_A:
    apply (clarsimp simp: valid_mdb_def init_cdt_def no_mloop_def
                          mdb_cte_at_def untyped_mdb_def caps_of_state_init_A_st_Null
                          untyped_inc_def ut_revocable_def
-<<<<<<< HEAD
                          irq_revocable_def descendants_inc_def)
-||||||| 0d43d8dee
-                         irq_revocable_def reply_master_revocable_def
-                         reply_mdb_def reply_caps_mdb_def
-                         reply_masters_mdb_def)
-   apply (simp add:descendants_inc_def)
-=======
-                         irq_revocable_def reply_master_revocable_def
-                         reply_mdb_def reply_caps_mdb_def
-                         reply_masters_mdb_def)
-   apply (simp add: descendants_inc_def)
->>>>>>> verification/master
   apply (rule conjI)
    apply (simp add: valid_ioc_def init_A_st_def init_ioc_def cte_wp_at_cases2)
    apply (intro allI impI, elim exE conjE)
@@ -531,14 +440,6 @@ lemma invs_A:
    apply (clarsimp simp: valid_global_objs_def state_defs)
    apply (clarsimp simp: valid_ao_at_def obj_at_def empty_table_def pde_ref_def
                          valid_pde_mappings_def valid_vso_at_def)
-<<<<<<< HEAD
-   apply (simp add: kernel_mapping_slots_def kernel_base_def idle_sc_ptr_def)
-   apply (rule is_aligned_addrFromPPtr_n; simp add: pageBits_def is_aligned_def)
-||||||| 0d43d8dee
-   apply (simp add: kernel_mapping_slots_def kernel_base_def)
-   apply (rule is_aligned_addrFromPPtr_n; simp add: pageBits_def is_aligned_def)
-=======
->>>>>>> verification/master
   apply (rule conjI)
    apply (simp add: valid_kernel_mappings_def state_defs valid_kernel_mappings_if_pd_def pde_ref_def
                     ran_def)
@@ -548,22 +449,11 @@ lemma invs_A:
   apply (rule conjI)
    apply (clarsimp simp: valid_asid_map_def state_defs)
   apply (rule conjI)
-<<<<<<< HEAD
-   apply (clarsimp simp: valid_global_vspace_mappings_def obj_at_def state_defs
-                         valid_pd_kernel_mappings_def mask_pde_mapping_bits idle_sc_ptr_def)
-   apply (simp add: valid_pde_kernel_mappings_def kernel_base_def)
-   apply (rule conjI)
-    apply (fastforce simp:pde_mapping_bits_def)
-   apply (intro ballI impI)
-   apply (clarsimp simp:pde_mapping_bits_def)
-   apply word_bitwise
-   apply clarsimp
-  apply (rule conjI)
    apply (clarsimp simp: pspace_in_kernel_window_def state_defs mask_def idle_sc_ptr_def
                          min_sched_context_bits_def)
-   apply (intro conjI impI; (rule in_kernel_base; simp)?)
+   apply (intro conjI impI; (rule in_init_objs_base; simp)?)
    apply (erule exE,drule sym,simp add:field_simps)
-   apply (rule in_kernel_base[simplified add.commute])
+   apply (rule in_init_objs_base[simplified add.commute])
     apply (rule word_less_add_right, simp add: cte_level_bits_def)
      apply (rule less_le_trans[OF shiftl_less_t2n'[OF ucast_less]],simp+)[1]
     apply simp
@@ -573,49 +463,6 @@ lemma invs_A:
     apply simp+
    apply (rule less_imp_le)
    apply (rule less_le_trans[OF shiftl_less_t2n'[OF ucast_less]],simp+)[1]
-||||||| 0d43d8dee
-   apply (clarsimp simp: valid_global_vspace_mappings_def obj_at_def state_defs
-                         valid_pd_kernel_mappings_def mask_pde_mapping_bits)
-   apply (simp add: valid_pde_kernel_mappings_def kernel_base_def)
-   apply (rule conjI)
-    apply (fastforce simp:pde_mapping_bits_def)
-   apply (intro ballI impI)
-   apply (clarsimp simp:pde_mapping_bits_def)
-   apply word_bitwise
-   apply clarsimp
-  apply (rule conjI)
-   apply (clarsimp simp: pspace_in_kernel_window_def state_defs mask_def)
-   apply (intro conjI impI)
-            apply (rule in_kernel_base|simp)+
-         apply (erule exE,drule sym,simp add:field_simps)
-         apply (rule in_kernel_base[simplified add.commute])
-          apply (rule word_less_add_right, simp add: cte_level_bits_def)
-           apply (rule less_le_trans[OF shiftl_less_t2n'[OF ucast_less]],simp+)[1]
-          apply simp
-         apply (simp add:cte_level_bits_def field_simps)
-         apply (subst add.commute)
-         apply (rule le_plus')
-          apply simp+
-          apply (rule less_imp_le)
-          apply (rule less_le_trans[OF shiftl_less_t2n'[OF ucast_less]],simp+)[1]
-     apply (rule in_kernel_base|simp)+
-=======
-   apply (clarsimp simp: pspace_in_kernel_window_def state_defs mask_def)
-   apply (intro conjI impI)
-            apply (rule in_init_objs_base|simp)+
-         apply (erule exE,drule sym,simp add:field_simps)
-         apply (rule in_init_objs_base[simplified add.commute])
-          apply (rule word_less_add_right, simp add: cte_level_bits_def)
-           apply (rule less_le_trans[OF shiftl_less_t2n'[OF ucast_less]],simp+)[1]
-          apply simp
-         apply (simp add:cte_level_bits_def field_simps)
-         apply (subst add.commute)
-         apply (rule le_plus')
-          apply simp+
-          apply (rule less_imp_le)
-          apply (rule less_le_trans[OF shiftl_less_t2n'[OF ucast_less]],simp+)[1]
-     apply (rule in_init_objs_base|simp)+
->>>>>>> verification/master
   apply (simp add: cap_refs_in_kernel_window_def caps_of_state_init_A_st_Null
                    valid_refs_def[unfolded cte_wp_at_caps_of_state])
   done

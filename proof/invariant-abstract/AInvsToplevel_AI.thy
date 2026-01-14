@@ -11,7 +11,7 @@
 
 theory AInvsToplevel_AI
 imports
-  ArchDetSchedSchedule_AI
+  AInvs
   ArchAInvsToplevel_AI
   KernelInit_AI
 begin
