@@ -283,6 +283,20 @@ defer
 apply (sadge)
   (*using ranI ran_tcb_cnode_map by force*)
 sorry
+find_theorems name: pptr_base
+term valid_global_vspace_mappings
+term pspace_in_kernel_window
+thm RISCV64.kernel_window_def
+locale_abbrev kernel_window :: "'z::state_ext state \<Rightarrow> obj_ref set" where
+  "kernel_window s \<equiv> kernel_window_2 (riscv_kernel_vspace (arch_state s))"
+term RISCV64.kernel_window
+term RISCV64.kernel_window_2
+find_theorems name: kernel_vspace
+term arch_state
+find_theorems arch_state invs
+find_theorems name: kernel_window name: def
+find_theorems pspace_in_kernel_window
+find_theorems pspace_in_kernel_window invs
 
 lemma cap_insert_colour_maintained:
   "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref new_cap (colour_oracle (cur_domain s))) and (\<lambda>s. valid_ptr_in_cur_domain (fst src_slot) s) and (\<lambda>s. valid_ptr_in_cur_domain (fst dest_slot) s)\<rbrace>
@@ -859,64 +873,24 @@ crunch call_kernel for colour_maintained: "colour_invariant"
   (simp: colour_invariant_def obj_at_update)
 
 context Arch begin arch_global_naming (A)
-lemma test2:
-  "\<lbrakk>\<forall>s. let P1 = (=) (cur_domain s) in
-      P1 (cur_domain s) \<longrightarrow>
-         (\<forall>x\<in>fst (f s).
-             case x of
-             (r, s') \<Rightarrow>
-               P1
-    (cur_domain s'));
-     \<forall>s. let P2 = (=) (domain_list s) in
-        P2 (domain_list s) \<longrightarrow>
-         (\<forall>x\<in>fst (f s).
-             case x of
-             (r, s') \<Rightarrow>
-               P2
-(domain_list s'))\<rbrakk> \<Longrightarrow>
-    \<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>
-      f
-    \<lbrace>\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
-  apply (simp add: valid_def)
-  by fastforce
-
-lemma test3:
-"\<lbrakk>\<forall>P. f \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>;
-  \<forall>P. f \<lbrace>\<lambda>s. P (domain_list s)\<rbrace>\<rbrakk>
-    \<Longrightarrow> f \<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
-  apply (rule test2)
-  by (simp add: valid_def)+
-
-lemma test4:
-  "invoke_untyped a \<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
-  apply (rule test3)
-  apply (rule allI)
-  apply (rule invoke_untyped_cur_domain)
-  apply (rule allI)
-  apply (rule_tac P=P in invoke_untyped_domain_list_inv)
-thm invoke_untyped_cur_domain
-thm invoke_untyped_domain_list_inv[unfolded valid_def]
-sorry
-
-crunch cap_insert, set_extra_badge for domain_ting: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch cap_insert, set_extra_badge for domain_ting[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
   (simp: crunch_simps
        wp: crunch_wps)
 
-lemma transfer_caps_loop_domain_ting:
+lemma transfer_caps_loop_domain_ting[wp]:
   "\<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>
    transfer_caps_loop ep rcv_buffer n caps slots mi
    \<lbrace>\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
-  by (rule transfer_caps_loop_pres[OF cap_insert_domain_ting set_extra_badge_domain_ting])
+  by (wpsimp wp: transfer_caps_loop_pres)
 
 crunch handle_fault,
         reply_from_kernel,
         send_signal,
-        do_reply_transfer for domain_ting: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+        do_reply_transfer for domain_ting[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
   (simp: crunch_simps
        wp: crunch_wps)
 
-
-lemma delete_objects_domain_ting:
+lemma delete_objects_domain_ting[wp]:
   "\<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>
    delete_objects a b
    \<lbrace>\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
@@ -924,40 +898,36 @@ lemma delete_objects_domain_ting:
   apply (clarsimp simp add: detype_def)
   by fastforce
 
-lemma reset_untyped_cap_domain_ting:
+lemma reset_untyped_cap_domain_ting[wp]:
   "\<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>
    reset_untyped_cap a
    \<lbrace>\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
-  apply (wpsimp simp: reset_untyped_cap_def do_machine_op_def wp: set_cap_domain_ting)
-      apply (wpsimp wp: mapME_x_wp[where S=UNIV] preemption_point_inv)
-        apply (wpsimp wp: set_cap_domain_ting)+
+  apply (wpsimp simp: reset_untyped_cap_def do_machine_op_def wp: mapME_x_wp[where S=UNIV] preemption_point_inv)
   apply safe
-     apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"])
-  apply (wpsimp wp: delete_objects_domain_ting)
-  apply safe
-  apply blast+
-    apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"])
-  apply (wpsimp wp: delete_objects_domain_ting)+
-   apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"])
-  apply (wpsimp wp: get_cap_inv)
-  by blast+
+     apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"], wpsimp+)+
+  by blast
 
-lemma invoke_untyped_domain_ting:
-  "\<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>
-   invoke_untyped a
-   \<lbrace>\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
-  apply (rule test2)
-   apply (simp add: invoke_untyped_cur_domain[unfolded valid_def])
-  apply (simp add: invoke_untyped_domain_list_inv[unfolded valid_def])
-oops
-
-crunch invoke_untyped for domain_ting: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch retype_region,
+       init_arch_objects,
+       create_cap,
+       restart,
+       arch_post_modify_registers,
+       suspend,
+       set_priority,
+       cap_delete,
+       set_mcpriority,
+       option_update_thread,
+       bind_notification,
+       invoke_domain,
+       cap_move,
+       cap_revoke,
+       invoke_irq_control,
+       invoke_irq_handler,
+       arch_perform_invocation for domain_ting[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
   (simp: crunch_simps
-       wp: crunch_wps)
+       wp: crunch_wps cap_revoke_preservation preemption_point_inv)
 
-find_theorems handle_invocation
-
-lemma handle_invocation_domain_ting:
+lemma handle_invocation_domain_ting[wp]:
   "\<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>
    handle_invocation a b
    \<lbrace>\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
@@ -965,31 +935,65 @@ lemma handle_invocation_domain_ting:
   apply (wp syscall_valid set_thread_state_ct_st
                | simp add: split_def | wpc
                | wp (once) hoare_drop_imps)
-  apply (wpsimp wp: handle_fault_domain_ting)
-  apply (wpsimp wp: reply_from_kernel_domain_ting)
-  apply (wpsimp wp: set_thread_state_domain_ting reply_from_kernel_domain_ting)
+  apply wpsimp+
   apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"])
   apply (wpsimp wp: get_thread_state_inv)
   apply simp
   apply (case_tac rv; wpsimp)
-  apply (rule valid_validE2)
-  prefer 2
+  apply (wpsimp simp: invoke_untyped_def)
+  apply (wpsimp simp: mapM_x_def[symmetric] wp: mapM_x_wp')
+  apply wpsimp+
+  apply (case_tac x5; wpsimp)
+  apply safe
+  apply wpsimp+
+  apply fast
+  apply (wpsimp wp: mapM_x_wp')+
+  apply safe
+  apply wpsimp+
+  apply safe
+  apply wpsimp+
+  apply fast
+  apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"])
+  apply wpsimp
   apply simp
-  prefer 2
+  apply (rule hoare_strengthen_postE[where Q'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)" and E'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"])
+  apply wpsimp+
+  apply (wpsimp simp: check_cap_at_def)
+  apply (rule hoare_strengthen_postE[where Q'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)" and E'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"])
+  apply wpsimp+
+  apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"])
+  apply (wpsimp simp: check_cap_at_def)
+  apply wpsimp+
+  apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"])
+  apply (wpsimp simp: check_cap_at_def)
+  apply wpsimp+
+  apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"])
+  apply wpsimp+
+  apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"])
+  apply wpsimp+
+  apply fast
+  apply (case_tac x72; wpsimp)
+  apply (wpsimp simp: invoke_cnode_def)
+  apply (safe; wpsimp)
+  apply wpsimp
+  apply (safe; wpsimp)
+  apply wpsimp
+  apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"])
+  apply wpsimp
   apply simp
-                    apply (rule test2)
-                     apply (simp add: invoke_untyped_cur_domain[unfolded valid_def])
-                    apply (simp add: invoke_untyped_domain_list_inv[unfolded valid_def])
-defer
-  apply (wpsimp wp: send_ipc_domain_ting)
-                   apply (wpsimp wp: gets_inv)
-                  apply (wpsimp wp: send_signal_domain_ting)
-                 apply (wpsimp wp: do_reply_transfer_domain_ting)
-                apply (wpsimp wp: gets_inv)
-find_theorems snd "_\<in>_"
-oops
+  apply wpsimp+
+  apply (wpsimp simp: cancel_badged_sends_def)
+  apply (wpsimp wp: filterM_preserved)
+  apply wpsimp+
+  apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"])
+  apply wpsimp+
+  apply blast
+  apply wpsimp+
+      apply (rule hoare_strengthen_postE_R[where Q'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"])
+  apply wpsimp+
+  by fast
 
-lemma next_domain_domain_ting:
+lemma next_domain_domain_ting[wp]:
   "\<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>
    next_domain
    \<lbrace>\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
@@ -1003,7 +1007,7 @@ lemma next_domain_domain_ting:
   by (meson length_pos_if_in_set
     mod_less_divisor)
 
-crunch call_kernel for domain_ting: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch call_kernel for domain_ting[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
   (simp: crunch_simps
        wp: crunch_wps)
 end
