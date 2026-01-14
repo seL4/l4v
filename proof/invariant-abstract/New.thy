@@ -256,7 +256,8 @@ lemma cte_wp_at_check_cap_ref:
   "\<And>s cap.
          \<lbrakk>cte_wp_at ((=) cap) (a, b) s;
           colour_invariant s;
-          valid_ptr_in_cur_domain a s\<rbrakk>
+          valid_ptr_in_cur_domain a s;
+          invs s\<rbrakk>
          \<Longrightarrow> check_cap_ref cap
                (colour_oracle (cur_domain s))"
   apply (simp add: cte_wp_at_cases2 valid_ptr_in_cur_domain_def)
@@ -275,28 +276,50 @@ defer
    apply (erule_tac x="CNode sz fun" in allE)
   apply (erule_tac x="(cur_domain s, _)" in ballE)
       apply clarsimp
+  apply (frule invs_pspace_in_kernel_window)
+  apply (simp add: RISCV64.pspace_in_kernel_window_def)
+  apply (erule_tac x=0 in allE)
+      apply (erule_tac x="CNode sz fun" in allE)
+  apply clarsimp
+  apply (simp add: RISCV64.kernel_window_def)
+  apply (frule RISCV64.invs_valid_uses)
+  apply (simp add: RISCV64.valid_uses_def)
+  apply (erule_tac x=0 in allE)
+  apply clarsimp
+  apply (simp add: subset_eq)
+  apply clarsimp
+  apply (erule_tac x=0 in ballE)
+  apply (simp add: RISCV64_A.pptr_base_def RISCV64.pptrBase_def RISCV64.canonical_bit_def)
+  apply simp
+defer
   apply (erule_tac x=a in allE)
   apply (erule_tac x="TCB tcb" in allE)
    apply (erule_tac x="(cur_domain s, _)" in ballE)
   apply (frule_tac a=b and b=cap in ranI)
     apply (fastforce simp add: ran_tcb_cnode_map colour_oracle_no_zero)
+defer
+     apply (erule_tac x=a in allE)
+   apply (erule_tac x="CNode sz fun" in allE)
+  apply (erule_tac x="(cur_domain s, _)" in ballE)
+      apply clarsimp
+  apply (frule invs_pspace_in_kernel_window)
+  apply (simp add: RISCV64.pspace_in_kernel_window_def)
+  apply (erule_tac x=0 in allE)
+      apply (erule_tac x="TCB tcb" in allE)
+  apply clarsimp
+  apply (simp add: RISCV64.kernel_window_def)
+  apply (frule RISCV64.invs_valid_uses)
+  apply (simp add: RISCV64.valid_uses_def)
+  apply (erule_tac x=0 in allE)
+  apply clarsimp
+  apply (simp add: subset_eq)
+  apply clarsimp
+  apply (erule_tac x=0 in ballE)
+  apply (simp add: RISCV64_A.pptr_base_def RISCV64.pptrBase_def RISCV64.canonical_bit_def)
+  apply simp
 apply (sadge)
   (*using ranI ran_tcb_cnode_map by force*)
 sorry
-find_theorems name: pptr_base
-term valid_global_vspace_mappings
-term pspace_in_kernel_window
-thm RISCV64.kernel_window_def
-locale_abbrev kernel_window :: "'z::state_ext state \<Rightarrow> obj_ref set" where
-  "kernel_window s \<equiv> kernel_window_2 (riscv_kernel_vspace (arch_state s))"
-term RISCV64.kernel_window
-term RISCV64.kernel_window_2
-find_theorems name: kernel_vspace
-term arch_state
-find_theorems arch_state invs
-find_theorems name: kernel_window name: def
-find_theorems pspace_in_kernel_window
-find_theorems pspace_in_kernel_window invs
 
 lemma cap_insert_colour_maintained:
   "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref new_cap (colour_oracle (cur_domain s))) and (\<lambda>s. valid_ptr_in_cur_domain (fst src_slot) s) and (\<lambda>s. valid_ptr_in_cur_domain (fst dest_slot) s)\<rbrace>
