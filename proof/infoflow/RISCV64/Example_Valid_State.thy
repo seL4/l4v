@@ -1876,6 +1876,10 @@ lemma respects_device_trivial:
   apply (clarsimp simp: s0_internal_def machine_state0_def)
   done
 
+lemma cur_domain_list_s0[simp]:
+  "\<exists>a. (cur_domain s0_internal, a) \<in> set (domain_list s0_internal)"
+  by (simp add: s0_internal_def)
+
 lemma einvs_s0:
   "einvs s0_internal"
   by (simp add: valid_state_def invs_def respects_device_trivial)
