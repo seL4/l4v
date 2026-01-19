@@ -540,7 +540,7 @@ lemma cap_insert_simple_invs:
    prefer 2
    apply (clarsimp simp: is_cap_simps safe_parent_for_def)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
-  apply (drule_tac p="(a,b)" in caps_of_state_valid_cap, fastforce)
+  apply (drule_tac p="(aa,b)" in caps_of_state_valid_cap, fastforce)
   apply (clarsimp dest!: is_cap_simps' [THEN iffD1])
   apply (auto simp add: valid_cap_def [where c="cap.Zombie a b x" for a b x]
               dest: obj_ref_is_tcb obj_ref_is_cap_table split: option.splits)

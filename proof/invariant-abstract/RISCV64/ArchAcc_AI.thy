@@ -2029,9 +2029,9 @@ lemma set_asid_pool_valid_asid_pool_caps[wp]:
   unfolding valid_asid_pool_caps_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
 
-lemma set_asid_pool_domain_ting[wp]:
-  "set_asid_pool p ap \<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
-  by (wpsimp simp: set_asid_pool_def wp: set_object_wp)
+crunch set_asid_pool for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+  (simp: crunch_simps
+     wp: crunch_wps)
 
 lemma set_asid_pool_invs_restrict:
   "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and (\<lambda>s. \<exists>a. asid_table s a = Some p) and
@@ -2818,6 +2818,10 @@ lemma store_pte_valid_arch_caps:
   unfolding valid_arch_caps_def
   by (wpsimp wp: store_pte_valid_vs_lookup store_pte_valid_table_caps)
 
+crunch store_pte for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+  (simp: crunch_simps
+     wp: crunch_wps)
+
 lemma store_pte_invs:
   "\<lbrace> invs
      and (\<lambda>s. table_base p \<notin> global_refs s)
@@ -2846,7 +2850,6 @@ lemma store_pte_invs:
   apply (wpsimp wp: store_pte_valid_global_vspace_mappings store_pte_valid_global_tables
                     store_pte_valid_vspace_objs store_pte_valid_arch_caps
                     store_pte_equal_kernel_mappings_no_kernel_slots)
-  apply (wpsimp simp: store_pte_def set_pt_def wp: set_object_wp)
   apply (clarsimp simp: valid_objs_caps valid_arch_caps_def)
   done
 

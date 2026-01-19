@@ -69,7 +69,7 @@ lemma device_update_invs:
     apply fastforce
    apply fastforce
   apply (clarsimp simp del: split_paired_All split_paired_Ex)
-  apply (drule_tac x = "(a,b)" in spec)
+  apply (drule_tac x = "(aa,b)" in spec)
   apply (erule notE)
   apply (erule cte_wp_at_weakenE)
   apply clarsimp

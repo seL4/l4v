@@ -435,6 +435,7 @@ locale Detype_AI_2 =
      ; invs s
      ; untyped_children_in_mdb s
      ; ct_active s
+     ; \<exists>a. (cur_domain s, a) \<in> set (domain_list s)
       \<rbrakk>
      \<Longrightarrow> (invs and untyped_children_in_mdb)
                (detype (untyped_range cap) (clear_um (untyped_range cap) s))"
@@ -813,11 +814,13 @@ end
 context detype_locale_gen_2 begin
 lemma invariants:
   assumes ct_act: "ct_active s"
+  and cur_domain_lst: "\<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
   shows "(invs and untyped_children_in_mdb)
          (detype (untyped_range cap) (clear_um (untyped_range cap) s))"
-  using detype_invs_lemmas detype_invs_assms ct_act
-  by (simp add: invs_def valid_state_def valid_pspace_def
+  using detype_invs_lemmas detype_invs_assms ct_act cur_domain_lst
+  apply (simp add: invs_def valid_state_def valid_pspace_def
                 detype_clear_um_independent clear_um.state_refs_update)
+  by (simp add: detype_def clear_um_def)
 
 end
 

@@ -2314,7 +2314,7 @@ lemma detype_descendants_range_in:
         using descendants_range
         apply (clarsimp simp: blah descendants_range_def2)
         apply (simp add: invs_untyped_children blah
-              invs_valid_reply_caps invs_valid_reply_masters)+
+              invs_valid_reply_caps invs_valid_reply_masters invs_cur_domain_list)+
   apply (subst valid_mdb_descendants_range_in)
    apply (clarsimp dest!:invs_mdb simp:detype_clear_um_independent)
   apply (frule detype_locale)
@@ -2334,7 +2334,7 @@ lemma detype_invs:
   apply (frule detype_invariants, simp_all)
       apply (clarsimp simp:blah descendants_range_def2)
       apply ((simp add: invs_untyped_children blah
-          invs_valid_reply_caps invs_valid_reply_masters)+)
+          invs_valid_reply_caps invs_valid_reply_masters invs_cur_domain_list)+)
   done
 
 lemmas simps
@@ -2711,7 +2711,29 @@ lemma set_untyped_cap_invs_simple:
     apply (clarsimp dest!:valid_global_refsD2 simp:cap_range_def)
    apply (simp add:valid_irq_node_def)
   apply (clarsimp simp:valid_irq_node_def)
+  apply blast
   done
+
+lemma delete_objects_cur_domain_list[wp]:
+  "\<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>
+   delete_objects a b
+   \<lbrace>\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
+  apply (wpsimp simp: delete_objects_def do_machine_op_def)
+  apply (clarsimp simp add: detype_def)
+  by fastforce
+
+lemma reset_untyped_cap_cur_domain_list[wp]:
+  "\<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>
+   reset_untyped_cap a
+   \<lbrace>\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
+  apply (wpsimp simp: reset_untyped_cap_def do_machine_op_def)
+      apply (subst mapME_x_mapME)
+      apply wp
+      apply (rule mapME_wp[where S=UNIV])
+  apply (wpsimp simp: reset_untyped_cap_def do_machine_op_def wp: preemption_point_inv)+
+  apply safe
+     apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"], wpsimp+)+
+  by blast
 
 lemma reset_untyped_cap_invs_etc:
   "\<lbrace>invs and valid_untyped_inv_wcap ui
@@ -3086,6 +3108,10 @@ lemma create_cap_refs_respects_device:
   apply (erule cte_wp_at_weakenE)
   apply (fastforce simp: is_cap_simps)
   done
+
+crunch create_cap for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+  (simp: crunch_simps
+   wp: crunch_wps)
 
 lemma (in Untyped_AI_nonempty_table) create_cap_invs[wp]:
   "\<lbrace>invs

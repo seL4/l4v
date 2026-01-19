@@ -1088,6 +1088,19 @@ abbreviation(input)
        and pspace_respects_device_region and cap_refs_respects_device_region
        and cur_tcb and (\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s))"
 
+abbreviation(input)
+ "all_invs_but_cur_domain_list
+    \<equiv> valid_ioc
+       and valid_mdb and valid_idle and only_idle and if_unsafe_then_cap
+       and valid_reply_caps and valid_reply_masters and valid_global_refs
+       and valid_arch_state and valid_machine_state and valid_irq_states
+       and valid_irq_node and valid_irq_handlers and valid_vspace_objs
+       and valid_arch_caps and valid_global_objs and valid_kernel_mappings
+       and equal_kernel_mappings and valid_asid_map and valid_global_vspace_mappings
+       and pspace_in_kernel_window and cap_refs_in_kernel_window
+       and pspace_respects_device_region and cap_refs_respects_device_region
+       and cur_tcb and valid_pspace"
+
 
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Lemmas"
@@ -3389,6 +3402,11 @@ lemma get_irq_slot_real_cte:
 lemma all_invs_but_sym_refs_check:
   "(all_invs_but_sym_refs and sym_refs \<circ> state_refs_of and sym_refs o state_hyp_refs_of) = invs"
   by (simp add: invs_def valid_state_def valid_pspace_def
+                o_def pred_conj_def conj_comms)
+
+lemma all_invs_but_cur_domain_list_check:
+  "(all_invs_but_cur_domain_list and (\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s))) = invs"
+  by (simp add: invs_def valid_state_def
                 o_def pred_conj_def conj_comms)
 
 

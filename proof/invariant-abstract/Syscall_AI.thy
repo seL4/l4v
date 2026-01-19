@@ -51,6 +51,21 @@ crunch next_domain
   and valid_idle[wp]: valid_idle
   (simp: crunch_simps)
 
+
+lemma next_domain_cur_domain_list[wp]:
+  "\<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>
+   next_domain
+   \<lbrace>\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
+  apply (wpsimp simp: next_domain_def Let_def)
+  apply (rule_tac x="snd
+   (domain_list s !
+    (Suc (domain_index s) mod
+     length (domain_list s)))" in exI)
+  apply clarsimp
+  apply (rule nth_mem)
+  by (meson length_pos_if_in_set
+    mod_less_divisor)
+
 lemma next_domain_invs[wp]:
   "next_domain \<lbrace> invs \<rbrace>"
   unfolding next_domain_def
@@ -58,6 +73,14 @@ lemma next_domain_invs[wp]:
   apply (simp add: invs_def cur_tcb_def valid_state_def
                    valid_mdb_def mdb_cte_at_def valid_ioc_def valid_irq_states_def
                    valid_machine_state_def)
+  apply (rule_tac x="snd
+   (domain_list s !
+    (Suc (domain_index s) mod
+     length (domain_list s)))" in exI)
+  apply clarsimp
+  apply (rule nth_mem)
+  apply (meson length_pos_if_in_set
+    mod_less_divisor)
   done
 
 crunch tcb_sched_action
@@ -98,8 +121,8 @@ lemma invs_domain_index_update[simp]:
   by (simp add: invs_def valid_state_def valid_mdb_def mdb_cte_at_def valid_ioc_def
                 valid_irq_states_def valid_machine_state_def cur_tcb_def)
 
-lemma invs_cur_domain_update[simp]:
-  "invs (cur_domain_update f s) = invs s"
+lemma all_invs_but_cur_domain_list_cur_domain_update[simp]:
+  "all_invs_but_cur_domain_list (cur_domain_update f s) = all_invs_but_cur_domain_list s"
   by (simp add: invs_def valid_state_def valid_mdb_def mdb_cte_at_def valid_ioc_def
                 valid_irq_states_def valid_machine_state_def cur_tcb_def)
 

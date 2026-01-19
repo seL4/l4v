@@ -471,6 +471,8 @@ crunch  make_arch_fault_msg
   for pred_tcb[wp, Ipc_AI_2_assms]: "pred_tcb_at proj P t"
 crunch  make_arch_fault_msg
   for cap_to[wp, Ipc_AI_2_assms]: "ex_nonz_cap_to p"
+crunch  make_arch_fault_msg
+  for cdl[wp, Ipc_AI_2_assms]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
 
 crunch  make_arch_fault_msg
   for obj_at[wp, Ipc_AI_2_assms]: "\<lambda>s. P (obj_at P' pd s)"

@@ -917,6 +917,7 @@ lemma post_retype_invs:
                      pspace_respects_device_region
                      cap_refs_respects_device_region
                      cap_refs_in_kernel_window valid_irq_states
+                     cur_domain_list
                split: if_split_asm)
   apply (simp add: valid_arch_state_def valid_pspace_def)
   done

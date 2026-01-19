@@ -593,6 +593,8 @@ locale Ipc_AI_2 = Ipc_AI state_ext_t some_t
     "\<And> ft t p. make_arch_fault_msg ft t \<lbrace>ex_nonz_cap_to p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_valid_irq_states[wp]:
     "\<And> ft t. make_arch_fault_msg ft t \<lbrace>valid_irq_states :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_cur_domain_list[wp]:
+    "\<And> ft t. make_arch_fault_msg ft t \<lbrace>\<lambda>s :: 'state_ext state. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
   assumes make_arch_fault_msg_cap_refs_respects_device_region[wp]:
     "\<And> ft t. make_arch_fault_msg ft t \<lbrace>cap_refs_respects_device_region :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_pred_tcb[wp]:
@@ -1166,6 +1168,27 @@ lemma transfer_caps_refs_respects_device_region[wp]:
   apply clarsimp+
   done
 
+crunch set_extra_badge for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+  (simp: crunch_simps
+   wp: crunch_wps)
+
+lemma transfer_caps_loop_cur_domain_list[wp]:
+  "\<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>
+   transfer_caps_loop ep rcv_buffer n caps slots mi
+   \<lbrace>\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
+proof (induct caps arbitrary: ep rcv_buffer n slots mi)
+  case Nil
+  then show ?case by wpsimp
+next
+  case (Cons a caps)
+  note Cons.hyps[wp]
+  show ?case
+  apply (cases a)
+  apply wpsimp
+  apply safe
+  by wpsimp+
+qed
+
 lemma transfer_caps_loop_invs[wp]:
   "\<And>slots.
     \<lbrace>\<lambda>s::'state_ext state. invs s
@@ -1176,7 +1199,7 @@ lemma transfer_caps_loop_invs[wp]:
     \<lbrace>\<lambda>rv. invs\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
   by (wpsimp wp: valid_irq_node_typ transfer_caps_loop_valid_vspace_objs
-                 transfer_caps_loop_valid_arch)
+                 transfer_caps_loop_valid_arch transfer_caps_loop_pres[OF cap_insert_cur_domain_list set_extra_badge_cur_domain_list])
 
 end
 
@@ -2629,6 +2652,10 @@ crunch do_ipc_transfer
   for valid_irq_states[wp]: "valid_irq_states :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps  simp: crunch_simps)
 
+crunch do_ipc_transfer for cdl[wp]: "\<lambda>s :: 'state_ext state. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+  (simp: crunch_simps
+   wp: crunch_wps)
+
 crunch do_fault_transfer
   for cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift
@@ -2698,6 +2725,11 @@ crunch as_user
 lemmas [wp] = as_user.valid_arch_state
 
 context Ipc_AI_3 begin
+
+crunch setup_caller_cap for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+  (simp: crunch_simps
+   wp: crunch_wps)
+
 lemma ri_invs':
   fixes Q t cap is_blocking
   notes if_split[split del]

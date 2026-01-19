@@ -665,7 +665,7 @@ lemma cap_insert_ap_invs:
    apply (clarsimp simp: obj_at_def a_type_def in_omonad)
    apply (clarsimp simp: valid_cap_def)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
-  apply (drule_tac p="(a,b)" in caps_of_state_valid_cap, fastforce)
+  apply (drule_tac p="(aa,b)" in caps_of_state_valid_cap, fastforce)
   apply (auto simp: obj_at_def is_tcb_def is_cap_table_def
                     valid_cap_def [where c="cap.Zombie a b x" for a b x]
               dest: obj_ref_is_tcb obj_ref_is_cap_table split: option.splits)
@@ -772,6 +772,10 @@ primrec(nonexhaustive)
   get_untyped_cap_idx :: "cap \<Rightarrow> nat"
 where
   "get_untyped_cap_idx (UntypedCap dev ref sz idx) = idx"
+
+crunch perform_asid_control_invocation for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+  (simp: crunch_simps
+   wp: crunch_wps)
 
 lemma aci_invs':
   assumes Q_ignores_arch[simp]: "\<And>f s. Q (arch_state_update f s) = Q s"

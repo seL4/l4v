@@ -891,7 +891,7 @@ abbreviation(input)
        and valid_asid_map and valid_global_vspace_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and pspace_respects_device_region and cap_refs_respects_device_region
-       and cur_tcb and valid_ioc and valid_machine_state"
+       and cur_tcb and valid_ioc and valid_machine_state and (\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s))"
 
 
 lemma all_invs_but_equal_kernel_mappings_restricted_eq:
@@ -1805,6 +1805,9 @@ lemma valid_reply_masters:
   "valid_reply_masters s \<Longrightarrow> valid_reply_masters s'"
   by (clarsimp simp: valid_reply_masters_def cte_retype is_cap_simps obj_at_pres is_master_reply_cap_to_def)
 
+lemma cur_domain_list:
+  "\<exists>a. (cur_domain s, a) \<in> set (domain_list s) \<Longrightarrow> \<exists>a. (cur_domain s', a) \<in> set (domain_list s')"
+  by (clarsimp simp: s'_def)
 end
 
 

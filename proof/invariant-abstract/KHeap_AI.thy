@@ -1316,6 +1316,10 @@ crunch set_simple_ko, set_cap, thread_set, set_thread_state, set_bound_notificat
   for valid_irq_states[wp]: "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps rule: valid_irq_states_triv)
 
+crunch set_simple_ko for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+  (simp: crunch_simps
+       wp: crunch_wps)
+
 lemma set_ntfn_minor_invs:
   "\<lbrace>invs and ntfn_at ptr
          and obj_at (\<lambda>ko. refs_of ko = ntfn_q_refs_of (ntfn_obj val) \<union> ntfn_bound_refs (ntfn_bound_tcb val)) ptr
@@ -1326,7 +1330,6 @@ lemma set_ntfn_minor_invs:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (wp set_simple_ko_valid_objs valid_irq_node_typ valid_irq_handlers_lift)
-  apply (wpsimp simp: set_simple_ko_def wp: set_object_wp get_object_wp)
   apply (clarsimp simp: ntfn_at_def2
                   elim!: rsubst[where P=sym_refs]
                  intro!: ext
