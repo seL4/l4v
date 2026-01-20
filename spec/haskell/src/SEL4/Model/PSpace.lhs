@@ -18,7 +18,7 @@ This module uses the C preprocessor to select a target architecture.
 >         PSpace, newPSpace, initPSpace,
 >         PSpaceStorable,
 >         objBits, injectKO, projectKO, makeObject, loadObject, updateObject,
->         getObject, setObject, deleteObjects, reserveFrame,
+>         getObject, setObject, getObjectInCurDomain, deleteObjects, reserveFrame,
 >         typeError, alignError, alignCheck, sizeCheck,
 >         loadWordUser, storeWordUser, placeNewObject,
 >     ) where

@@ -13,7 +13,7 @@ creating the "Capability" objects used at higher levels of the kernel.
 > module SEL4.Object.CNode (
 >         cteRevoke, cteDelete, cteInsert, cteDeleteOne,
 >         ensureNoChildren, ensureEmptySlot, slotCapLongRunningDelete,
->         getSlotCap, locateSlotTCB, locateSlotCNode, locateSlotCap,
+>         getSlotCap, getSlotCapInCurDomain, locateSlotTCB, locateSlotCNode, locateSlotCap,
 >         locateSlotBasic, getReceiveSlots, getCTE, setupReplyMaster,
 >         insertInitCap, decodeCNodeInvocation, invokeCNode,
 >         updateCap, isFinalCapability, createNewObjects,
