@@ -1,4 +1,4 @@
-theory New_R
+theory Colour_R
 imports
   "$L4V_ARCH/Refine"
   "$L4V_ARCH/RAB_FN"

@@ -1,4 +1,4 @@
-theory New
+theory ColourInv_AI
   imports
     KernelInit_AI
     "$L4V_ARCH/ArchDetSchedSchedule_AI"

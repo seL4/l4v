@@ -1199,7 +1199,7 @@ lemma transfer_caps_loop_invs[wp]:
     \<lbrace>\<lambda>rv. invs\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
   by (wpsimp wp: valid_irq_node_typ transfer_caps_loop_valid_vspace_objs
-                 transfer_caps_loop_valid_arch transfer_caps_loop_pres[OF cap_insert_cur_domain_list set_extra_badge_cur_domain_list])
+                 transfer_caps_loop_valid_arch)
 
 end
 
@@ -2652,7 +2652,7 @@ crunch do_ipc_transfer
   for valid_irq_states[wp]: "valid_irq_states :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps  simp: crunch_simps)
 
-crunch do_ipc_transfer for cdl[wp]: "cur_domain_list :: 'state_ext state \<Rightarrow> bool"
+crunch do_ipc_transfer for cur_domain_list[wp]: "cur_domain_list :: 'state_ext state \<Rightarrow> bool"
   (simp: crunch_simps
    wp: crunch_wps)
 
