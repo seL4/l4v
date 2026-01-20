@@ -37,9 +37,10 @@ record kernel_state =
   gsUntypedZeroRanges  :: "(machine_word \<times> machine_word) set"
   gsMaxObjectSize      :: nat
   ksDomScheduleIdx     :: nat
-  ksDomSchedule        :: "(domain \<times> machine_word) list"
+  ksDomScheduleStart   :: nat
+  ksDomSchedule        :: "domain_schedule_item list"
   ksCurDomain          :: domain
-  ksDomainTime         :: machine_word
+  ksDomainTime         :: ticks
   ksReadyQueues        :: "domain \<times> priority \<Rightarrow> ready_queue"
   ksReadyQueuesL1Bitmap :: "domain \<Rightarrow> machine_word"
   ksReadyQueuesL2Bitmap :: "domain \<times> nat \<Rightarrow> machine_word"
