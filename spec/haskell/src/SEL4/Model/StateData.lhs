@@ -63,15 +63,17 @@ The top-level kernel state structure is called "KernelState". It contains:
 >         gsCNodes :: Word -> (Maybe Int),
 >         gsUntypedZeroRanges :: Data.Set.Set (Word, Word),
 
-\item the cyclic domain schedule;
+\item the set of cyclic domain schedules; (0,0) is used as the end marker for an
+      individual schedule in the list.
 
 >         ksDomScheduleIdx :: Int,
->         ksDomSchedule :: [DomainSchedule],
+>         ksDomScheduleStart :: Int,
+>         ksDomSchedule :: [DomainScheduleItem],
 
 \item the active security domain and the number to ticks remaining before it changes;
 
 >         ksCurDomain :: Domain,
->         ksDomainTime :: Word,
+>         ksDomainTime :: Ticks,
 
 \item an array of ready queues, indexed by thread priority and domain (see "getQueue");
 
@@ -211,14 +213,18 @@ These functions access and modify the current domain and the number of ticks rem
 
 > nextDomain :: Kernel ()
 > nextDomain = modify (\ks ->
->   let ksDomScheduleIdx' = (ksDomScheduleIdx ks + 1) `mod` length (ksDomSchedule ks) in
+>   let indexInc = ksDomScheduleIdx ks + 1 in
+>   let ksDomScheduleIdx' = if indexInc >= length (ksDomSchedule ks) ||
+>                              ksDomSchedule ks !! indexInc == domainEndMarker
+>                           then ksDomScheduleStart ks
+>                           else indexInc in
 >   let next = ksDomSchedule ks !! ksDomScheduleIdx'
 >   in ks { ksWorkUnitsCompleted = 0,
 >           ksDomScheduleIdx = ksDomScheduleIdx',
 >           ksCurDomain = dschDomain next,
 >           ksDomainTime = dschLength next })
 
-> getDomainTime :: Kernel Word
+> getDomainTime :: Kernel Ticks
 > getDomainTime = gets ksDomainTime
 
 > decDomainTime :: Kernel ()
@@ -236,6 +242,7 @@ A new kernel state structure contains an empty physical address space, a set of 
 >         gsCNodes = (\_ -> Nothing),
 >         gsUntypedZeroRanges = Data.Set.empty,
 >         ksDomScheduleIdx = 0,
+>         ksDomScheduleStart = 0,
 >         ksDomSchedule = [(0, 15), (2, 42), (1, 73)],
 >         ksCurDomain = 0,
 >         ksDomainTime = 15,
