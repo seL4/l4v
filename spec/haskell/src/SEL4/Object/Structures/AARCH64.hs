@@ -110,6 +110,15 @@ asidHighBitsOf :: ASID -> ASID
 asidHighBitsOf asid = (asid `shiftR` asidLowBits) .&. mask asidHighBits
 
 
+{- Time -}
+
+parseTimeArg :: Int -> [Word] -> Ticks
+parseTimeArg i args = fromIntegral (args !! i)
+
+timeArgLen :: Int
+timeArgLen = 1
+
+
 {- VCPUs -}
 
 type VIRQ = Word

@@ -38,7 +38,7 @@ The following type can specify any kernel object invocation. It contains physica
 >         | InvokeEndpoint (PPtr Endpoint) Word Bool Bool
 >         | InvokeNotification (PPtr Notification) Word
 >         | InvokeReply (PPtr TCB) (PPtr CTE) Bool
->         | InvokeDomain (PPtr TCB) Domain
+>         | InvokeDomain DomainInvocation
 >         | InvokeTCB TCBInvocation
 >         | InvokeCNode CNodeInvocation
 >         | InvokeIRQControl IRQControlInvocation
@@ -124,6 +124,22 @@ The following data type defines the parameters expected for invocations of Untyp
 >             retypeNewSizeBits :: Int,
 >             retypeSlots :: [PPtr CTE],
 >             retypeIsDevice :: Bool }
+>         deriving Show
+
+\subsubsection{Domain Invocations}
+
+The following data type defines the set of possible Domain invocation operations.
+
+> data DomainInvocation
+>         = InvokeDomainSet {
+>             domThread :: PPtr TCB,
+>             domDomain :: Domain }
+>         | InvokeDomainScheduleSetStart {
+>             domIndex :: Int }
+>         | InvokeDomainScheduleConfigure {
+>             domIndex :: Int,
+>             domDomain :: Domain,
+>             domDuration :: DomainDuration }
 >         deriving Show
 
 \subsubsection{Interrupt Controller Invocations}
