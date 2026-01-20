@@ -1939,13 +1939,11 @@ lemma timer_tick_reads_respects_scheduler_cur_domain:
                     thread_set_no_change_tcb_state thread_set_valid_sched_action
                     thread_set_weak_valid_sched_action get_thread_state_reads_respects_scheduler gts_wp
          | wp (once) hoare_drop_imps)+
-  apply safe
-  apply (auto simp add: invs_def valid_state_def valid_idle_def pred_tcb_at_def obj_at_def
-                           guarded_pas_domain_def scheduler_equiv_def domain_fields_equiv_def
-                           valid_sched_def valid_sched_action_def silc_inv_not_cur_thread
-                split: option.splits)
-  apply (fastforce dest: domains_distinct[THEN pas_domains_distinct_inj])+
-  apply (frule silc_inv_not_cur_thread, auto simp add: invs_def valid_state_def valid_idle_def pred_tcb_at_def obj_at_def)+
+  apply (fastforce simp: invs_def valid_state_def valid_idle_def pred_tcb_at_def obj_at_def
+                         guarded_pas_domain_def scheduler_equiv_def domain_fields_equiv_def
+                         valid_sched_def valid_sched_action_def silc_inv_not_cur_thread
+                  split: option.splits
+                   dest: domains_distinct[THEN pas_domains_distinct_inj])
   done
 
 lemma thread_set_time_slice_globals_equiv_scheduler[wp]:
