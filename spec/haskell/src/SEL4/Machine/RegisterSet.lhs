@@ -22,6 +22,7 @@ We use the C preprocessor to select a target architecture. Also, this file makes
 > import Data.Bits
 > import Data.Array
 > import Data.Helpers
+> import qualified Data.Word
 > import Foreign.Storable
 
 > import Control.Monad.State(State,liftM)
@@ -159,11 +160,16 @@ Functions for getting and setting registers.
 > newContext = Arch.newContext
 
 
+\subsubsection{Time}
+
+Time values are always 64 bit, independent of the architecture.
+
+> type Ticks = Data.Word.Word64
+
+
 \subsubsection{Miscellaneous}
 
 The "mask" function is a trivial function which, given a number of bits, returns a word with that number of low-order bits set.
 
 > mask :: (Bits w, Num w) => Int -> w
 > mask bits = bit bits - 1
-
-

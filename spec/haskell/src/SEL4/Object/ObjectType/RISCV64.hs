@@ -216,9 +216,3 @@ capUntypedSize (ASIDPoolCap {}) = bit asidPoolBits
 
 prepareThreadDelete :: PPtr TCB -> Kernel ()
 prepareThreadDelete _ = return ()
-
--- No arch-specific operations needed before changing the domain of a TCB on
--- RISC-V.
-
-prepareSetDomain :: PPtr TCB -> Domain -> Kernel ()
-prepareSetDomain t newDom = return ()
