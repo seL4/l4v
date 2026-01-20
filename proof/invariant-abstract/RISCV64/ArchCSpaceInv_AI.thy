@@ -18,7 +18,7 @@ lemma set_cap_valid_arch_state[wp]:
   "set_cap cap ptr \<lbrace> valid_arch_state \<rbrace>"
   by (wp valid_arch_state_lift_aobj_at_no_caps set_cap.aobj_at)
 
-crunch set_cap for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch set_cap for cur_domain_list[wp]: "cur_domain_list"
   (simp: crunch_simps
    wp: crunch_wps)
 

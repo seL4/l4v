@@ -433,7 +433,7 @@ lemma arch_update_cap_invs_map:
   apply (rule conjI)
    apply (frule master_cap_obj_refs)
    apply (case_tac "table_cap_ref capa =
-                    table_cap_ref (ArchObjectCap aa)")
+                    table_cap_ref (ArchObjectCap a)")
     apply (frule unique_table_refs_no_cap_asidE[where S="{p}"])
      apply (simp add: valid_arch_caps_def)
     apply (simp add: no_cap_to_obj_with_diff_ref_def Ball_def)
@@ -1811,8 +1811,6 @@ lemma store_pte_invs_unreachable:
   apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_state_def
                    valid_arch_caps_def valid_objs_caps
               cong: conj_cong)
-  apply (rule conjI)
-  apply blast
   apply (rule conjI, fastforce dest!: vspace_for_asid_vs_lookup)
   apply (fastforce simp: valid_arch_state_def dest: riscv_global_pt_in_global_refs)
   done

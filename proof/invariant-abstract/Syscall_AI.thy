@@ -53,10 +53,10 @@ crunch next_domain
 
 
 lemma next_domain_cur_domain_list[wp]:
-  "\<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>
+  "\<lbrace>cur_domain_list\<rbrace>
    next_domain
-   \<lbrace>\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
-  apply (wpsimp simp: next_domain_def Let_def)
+   \<lbrace>\<lambda>_. cur_domain_list\<rbrace>"
+  apply (wpsimp simp: next_domain_def Let_def cur_domain_list_def)
   apply (rule_tac x="snd
    (domain_list s !
     (Suc (domain_index s) mod
@@ -72,7 +72,7 @@ lemma next_domain_invs[wp]:
   apply (wpsimp simp: Let_def)
   apply (simp add: invs_def cur_tcb_def valid_state_def
                    valid_mdb_def mdb_cte_at_def valid_ioc_def valid_irq_states_def
-                   valid_machine_state_def)
+                   valid_machine_state_def cur_domain_list_def)
   apply (rule_tac x="snd
    (domain_list s !
     (Suc (domain_index s) mod

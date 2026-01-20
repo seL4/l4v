@@ -56,7 +56,7 @@ definition all_invs_but_valid_irq_states_for where
   cap_refs_in_kernel_window and
   pspace_respects_device_region and
   cap_refs_respects_device_region and
-  cur_tcb and (\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s))"
+  cur_tcb and cur_domain_list"
 
 
 locale InterruptAcc_AI =

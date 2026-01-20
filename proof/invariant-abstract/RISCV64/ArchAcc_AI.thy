@@ -2029,7 +2029,7 @@ lemma set_asid_pool_valid_asid_pool_caps[wp]:
   unfolding valid_asid_pool_caps_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
 
-crunch set_asid_pool for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch set_asid_pool for cur_domain_list[wp]: "cur_domain_list"
   (simp: crunch_simps
      wp: crunch_wps)
 
@@ -2044,7 +2044,7 @@ lemma set_asid_pool_invs_restrict:
             set_asid_pool_vspace_objs_unmap  valid_irq_handlers_lift
             set_asid_pool_vs_lookup_unmap)
   apply (clarsimp simp: equal_kernel_mappings_def)
-  apply (rename_tac s pt_ptr a hi_bits pt)
+  apply (rename_tac s pt_ptr hi_bits pt)
   apply (clarsimp dest!: ran_restrictD)
   apply (rename_tac lo_bits)
   (* we can build an asid that resolves to pt_ptr, vref is irrelevant for asid_pool_level *)
@@ -2818,7 +2818,7 @@ lemma store_pte_valid_arch_caps:
   unfolding valid_arch_caps_def
   by (wpsimp wp: store_pte_valid_vs_lookup store_pte_valid_table_caps)
 
-crunch store_pte for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch store_pte for cur_domain_list[wp]: "cur_domain_list"
   (simp: crunch_simps
      wp: crunch_wps)
 

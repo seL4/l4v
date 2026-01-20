@@ -455,7 +455,7 @@ lemma thread_set_valid_ioc_trivial:
 
 context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
 
-crunch thread_set for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch thread_set for cur_domain_list[wp]: "cur_domain_list"
   (simp: crunch_simps
    wp: crunch_wps)
 
@@ -1481,7 +1481,7 @@ lemma set_bound_notification_valid_ioc[wp]:
 
 lemmas [wp] = sts.valid_arch_state sbn.valid_arch_state
 
-crunch set_thread_state for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch set_thread_state for cur_domain_list[wp]: "cur_domain_list"
   (simp: crunch_simps
    wp: crunch_wps)
 
@@ -1551,7 +1551,7 @@ lemma sts_invs_minor2:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done (* FIXME tidy *)
 
-crunch set_bound_notification for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch set_bound_notification for cur_domain_list[wp]: "cur_domain_list"
   (simp: crunch_simps
    wp: crunch_wps)
 
@@ -1955,7 +1955,7 @@ lemma thread_set_domain_valid_reply_masters[wp]:
   unfolding thread_set_domain_def
   by (wpsimp wp: thread_set_valid_reply_masters_trivial ball_tcb_cap_casesI)
 
-crunch thread_set_domain for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch thread_set_domain for cur_domain_list[wp]: "cur_domain_list"
   (simp: crunch_simps
    wp: crunch_wps)
 
@@ -2058,7 +2058,7 @@ lemma thread_set_priority_valid_reply_masters[wp]:
   unfolding thread_set_priority_def
   by (wpsimp wp: thread_set_valid_reply_masters_trivial ball_tcb_cap_casesI)
 
-crunch thread_set_priority for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch thread_set_priority for cur_domain_list[wp]: "cur_domain_list"
   (simp: crunch_simps
    wp: crunch_wps)
 

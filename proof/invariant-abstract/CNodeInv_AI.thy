@@ -1954,7 +1954,7 @@ lemma cap_swap_cap_refs_respects_device_region[wp]:
   apply fastforce
   done
 
-crunch cap_swap for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch cap_swap for cur_domain_list[wp]: "cur_domain_list"
   (simp: crunch_simps
    wp: crunch_wps)
 

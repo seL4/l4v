@@ -809,7 +809,7 @@ where
 crunch tcb_sched_action, possible_switch_to
   for valid_reply_caps[wp]: valid_reply_caps
   and valid_reply_masters[wp]: valid_reply_masters
-  and cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+  and cur_domain_list[wp]: "cur_domain_list"
 
 lemma cancel_all_invs_helper:
   "\<lbrace>all_invs_but_sym_refs

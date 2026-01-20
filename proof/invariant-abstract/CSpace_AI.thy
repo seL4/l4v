@@ -3869,7 +3869,7 @@ context CSpace_AI_cap_insert begin
 
 interpretation cap_insert_crunches .
 
-crunch cap_insert for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch cap_insert for cur_domain_list[wp]: "cur_domain_list"
   (simp: crunch_simps
    wp: crunch_wps)
 
@@ -4450,7 +4450,7 @@ crunch setup_reply_master
 
 context CSpace_AI begin
 
-crunch setup_reply_master for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch setup_reply_master for cur_domain_list[wp]: "cur_domain_list"
   (simp: crunch_simps
    wp: crunch_wps)
 

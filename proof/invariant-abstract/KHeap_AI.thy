@@ -1316,7 +1316,7 @@ crunch set_simple_ko, set_cap, thread_set, set_thread_state, set_bound_notificat
   for valid_irq_states[wp]: "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps rule: valid_irq_states_triv)
 
-crunch set_simple_ko for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch set_simple_ko for cur_domain_list[wp]: "cur_domain_list"
   (simp: crunch_simps
        wp: crunch_wps)
 

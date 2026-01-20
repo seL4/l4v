@@ -594,7 +594,7 @@ locale Ipc_AI_2 = Ipc_AI state_ext_t some_t
   assumes make_arch_fault_msg_valid_irq_states[wp]:
     "\<And> ft t. make_arch_fault_msg ft t \<lbrace>valid_irq_states :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_cur_domain_list[wp]:
-    "\<And> ft t. make_arch_fault_msg ft t \<lbrace>\<lambda>s :: 'state_ext state. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
+    "\<And> ft t. make_arch_fault_msg ft t \<lbrace>cur_domain_list :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_cap_refs_respects_device_region[wp]:
     "\<And> ft t. make_arch_fault_msg ft t \<lbrace>cap_refs_respects_device_region :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_pred_tcb[wp]:
@@ -1168,14 +1168,14 @@ lemma transfer_caps_refs_respects_device_region[wp]:
   apply clarsimp+
   done
 
-crunch set_extra_badge for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch set_extra_badge for cur_domain_list[wp]: "cur_domain_list"
   (simp: crunch_simps
    wp: crunch_wps)
 
 lemma transfer_caps_loop_cur_domain_list[wp]:
-  "\<lbrace>\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>
+  "\<lbrace>cur_domain_list\<rbrace>
    transfer_caps_loop ep rcv_buffer n caps slots mi
-   \<lbrace>\<lambda>_ s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)\<rbrace>"
+   \<lbrace>\<lambda>_. cur_domain_list\<rbrace>"
 proof (induct caps arbitrary: ep rcv_buffer n slots mi)
   case Nil
   then show ?case by wpsimp
@@ -2652,7 +2652,7 @@ crunch do_ipc_transfer
   for valid_irq_states[wp]: "valid_irq_states :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps  simp: crunch_simps)
 
-crunch do_ipc_transfer for cdl[wp]: "\<lambda>s :: 'state_ext state. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch do_ipc_transfer for cdl[wp]: "cur_domain_list :: 'state_ext state \<Rightarrow> bool"
   (simp: crunch_simps
    wp: crunch_wps)
 
@@ -2726,7 +2726,7 @@ lemmas [wp] = as_user.valid_arch_state
 
 context Ipc_AI_3 begin
 
-crunch setup_caller_cap for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch setup_caller_cap for cur_domain_list[wp]: "cur_domain_list"
   (simp: crunch_simps
    wp: crunch_wps)
 

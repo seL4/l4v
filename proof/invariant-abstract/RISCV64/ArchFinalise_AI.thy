@@ -184,7 +184,7 @@ lemma reachable_frame_cap_trans_state[simp]:
 
 lemmas [Finalise_AI_assms] = obj_refs_obj_ref_of (* used under name obj_ref_ofI *)
 
-crunch empty_slot for cur_domain_list[wp]: "\<lambda>s. \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+crunch empty_slot for cur_domain_list[wp]: "cur_domain_list"
   (simp: crunch_simps
    wp: crunch_wps)
 
@@ -255,7 +255,7 @@ lemma (* empty_slot_invs *) [Finalise_AI_assms]:
    apply (clarsimp simp: mdb_cte_at_def cte_wp_at_caps_of_state)
    apply (cases sl)
    apply (rule conjI, clarsimp)
-    apply (subgoal_tac "cdt s \<Turnstile> (ac,bb) \<rightarrow> (ac,bb)")
+    apply (subgoal_tac "cdt s \<Turnstile> (ab,bb) \<rightarrow> (ab,bb)")
      apply (simp add: no_mloop_def)
     apply (rule r_into_trancl)
     apply (simp add: cdt_parent_of_def)

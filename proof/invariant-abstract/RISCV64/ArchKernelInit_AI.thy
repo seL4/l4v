@@ -544,7 +544,7 @@ lemma invs_A:
   apply (simp add: invs_def)
   apply (rule conjI)
    prefer 2
-   apply (simp add: cur_tcb_def state_defs obj_at_def)
+   apply (simp add: cur_tcb_def state_defs obj_at_def cur_domain_list_def)
   apply (simp add: valid_state_def)
   apply (rule conjI)
    apply (simp add: valid_pspace_def)

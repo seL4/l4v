@@ -237,7 +237,6 @@ lemma set_untyped_cap_invs_simple[Untyped_AI_assms]:
   apply (drule_tac x = cref in spec)
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (fastforce simp: not_kernel_window_def)
-  apply blast
   done
 
 

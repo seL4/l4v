@@ -1877,8 +1877,8 @@ lemma respects_device_trivial:
   done
 
 lemma cur_domain_list_s0[simp]:
-  "\<exists>a. (cur_domain s0_internal, a) \<in> set (domain_list s0_internal)"
-  by (simp add: s0_internal_def)
+  "cur_domain_list s0_internal"
+  by (simp add: cur_domain_list_def s0_internal_def)
 
 lemma einvs_s0:
   "einvs s0_internal"
