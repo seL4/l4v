@@ -12,6 +12,7 @@ imports
   Endpoint_H
   Untyped_H
   Interrupt_H
+  Domain_H
 begin
 
 context Arch begin
@@ -26,7 +27,7 @@ requalify_consts (aliasing)
   hasCancelSendRights sameRegionAs isPhysicalCap
   sameObjectAs updateCapData maskCapRights
   createObject capUntypedPtr capUntypedSize
-  performInvocation decodeInvocation prepareThreadDelete prepareSetDomain
+  performInvocation decodeInvocation prepareThreadDelete
   isIRQControlCapDescendant
 
 context begin global_naming global
