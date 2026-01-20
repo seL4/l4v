@@ -16,9 +16,9 @@ context Arch begin arch_global_naming (H)
 #INCLUDE_SETTINGS keep_constructor=asidpool
 #INCLUDE_SETTINGS keep_constructor=arch_tcb
 
-#INCLUDE_HASKELL SEL4/Object/Structures/X64.lhs CONTEXT X64_H decls_only
+#INCLUDE_HASKELL SEL4/Object/Structures/X64.lhs CONTEXT X64_H decls_only NOT parseTimeArg timeArgLen
 #INCLUDE_HASKELL SEL4/Object/Structures/X64.lhs CONTEXT X64_H instanceproofs
-#INCLUDE_HASKELL SEL4/Object/Structures/X64.lhs CONTEXT X64_H bodies_only
+#INCLUDE_HASKELL SEL4/Object/Structures/X64.lhs CONTEXT X64_H bodies_only NOT parseTimeArg timeArgLen
 
 datatype arch_kernel_object_type =
     PDET

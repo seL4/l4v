@@ -43,10 +43,10 @@ where "syncBIFrame \<equiv> returnOk ()"
 #INCLUDE_HASKELL SEL4/Kernel/Init.lhs bodies_only NOT isAligned funArray newKernelState distinct rangesBy InitData doKernelOp runInit noInitFailure coverOf foldME
 
 consts
-  newKSDomSchedule :: "(domain \<times> machine_word) list"
+  newKSDomSchedule :: "(domain \<times> ticks) list"
   newKSDomScheduleIdx :: nat
   newKSCurDomain :: domain
-  newKSDomainTime :: machine_word
+  newKSDomainTime :: ticks
   newKernelState :: "machine_word \<Rightarrow> kernel_state"
 
 defs
@@ -58,6 +58,7 @@ newKernelState_def:
         gsUntypedZeroRanges = {},
         gsMaxObjectSize = card (UNIV :: machine_word set),
         ksDomScheduleIdx = newKSDomScheduleIdx,
+        ksDomScheduleStart = 0,
         ksDomSchedule = newKSDomSchedule,
         ksCurDomain = newKSCurDomain,
         ksDomainTime = newKSDomainTime,

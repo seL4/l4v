@@ -692,7 +692,8 @@ known_type_assignments = [
     'ready_queue',
     'user_monad',
     'fpustate',
-    'eight_tuple a'
+    'eight_tuple a',
+    'domain_schedule_item'
 ]
 
 
