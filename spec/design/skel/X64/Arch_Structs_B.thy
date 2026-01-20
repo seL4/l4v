@@ -10,13 +10,13 @@ chapter "Common, Architecture-Specific Data Types"
 
 theory Arch_Structs_B
 imports
-  Setup_Locale
-  MachineExports
+  Structs_B
 begin
 
 context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Model/StateData/X64.lhs CONTEXT X64_H ONLY X64VSpaceRegionUse
+#INCLUDE_HASKELL SEL4/Object/Structures/X64.lhs ONLY parseTimeArg
 
 end (* context X64 *)
 
