@@ -262,6 +262,7 @@ lemma performASIDControlInvocation_corres:
    apply (frule_tac ptr = "(p', slot')" in detype_invariants [rotated 3])
         apply fastforce
        apply simp
+        apply (simp add: invs_cur_domain_list)
       apply (simp add: cte_wp_at_caps_of_state)
      apply (simp add: is_cap_simps)
     apply (simp add:empty_descendants_range_in descendants_range_def2)
