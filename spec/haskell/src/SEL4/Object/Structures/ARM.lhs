@@ -173,6 +173,16 @@ ASIDs are mapped to address space roots by a global two-level table. The actual 
 > asidHighBitsOf :: ASID -> ASID
 > asidHighBitsOf asid = (asid `shiftR` asidLowBits) .&. mask asidHighBits
 
+
+\subsection{Time}
+
+> parseTimeArg :: Int -> [Word] -> Ticks
+> parseTimeArg i args = fromIntegral (args !! (i+1)) `shiftL` 32 + fromIntegral (args !! i)
+
+> timeArgLen :: Int
+> timeArgLen = 2
+
+
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 \subsection {VCPU}
 
