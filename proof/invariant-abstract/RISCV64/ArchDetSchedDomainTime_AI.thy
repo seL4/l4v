@@ -24,10 +24,12 @@ crunch
   arch_post_modify_registers, arch_post_cap_deletion, handle_vm_fault,
   arch_invoke_irq_handler, arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
+  and domain_start_index_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_start_index s)"
   (simp: crunch_simps)
 
 crunch arch_finalise_cap
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
+  and domain_start_index_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_start_index s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
 
 crunch
@@ -57,10 +59,8 @@ context Arch begin arch_global_naming
 
 crunch arch_perform_invocation
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_time s)"
-  (wp: crunch_wps check_cap_inv)
-
-crunch arch_perform_invocation
-  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
+  and domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
+  and domain_start_index_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_start_index s)"
   (wp: crunch_wps check_cap_inv)
 
 lemma timer_tick_valid_domain_time:
@@ -103,6 +103,7 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
 crunch handle_reserved_irq, arch_mask_irq_signal, handle_spurious_irq
   for domain_time_inv [wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
   and domain_list_inv [wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
+  and domain_start_index_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_start_index s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps)
 
 crunch handle_spurious_irq

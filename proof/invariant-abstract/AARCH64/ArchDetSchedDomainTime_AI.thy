@@ -19,10 +19,12 @@ crunch
   read_vcpu_register, write_vcpu_register
   for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
   and domain_time_inv[wp]: "\<lambda>s. P (domain_time s)"
+  and domain_start_index_inv[wp]: "\<lambda>s::det_state. P (domain_start_index s)"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch arch_finalise_cap
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
+  and domain_start_index_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_start_index s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
 
 crunch
@@ -34,6 +36,7 @@ crunch
   arch_invoke_irq_handler, arch_prepare_next_domain, arch_prepare_set_domain,
   arch_post_set_flags, handle_spurious_irq
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
+  and domain_start_index_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_start_index s)"
   (simp: crunch_simps isFpuEnable_def wp: mapM_wp' transfer_caps_loop_pres crunch_wps)
 
 crunch arch_finalise_cap
@@ -70,6 +73,7 @@ crunch arch_perform_invocation
 
 crunch arch_perform_invocation
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
+  and domain_start_index_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_start_index s)"
   (wp: crunch_wps check_cap_inv simp: if_apply_def2)
 
 lemma vgic_maintenance_valid_domain_time:
@@ -145,6 +149,7 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
 
 crunch handle_reserved_irq, arch_mask_irq_signal
   for domain_list_inv [wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
+  and domain_start_index_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_start_index s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps)
 
 end

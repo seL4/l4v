@@ -2789,6 +2789,13 @@ interpretation domain_index_update:
 
 sublocale Arch \<subseteq> domain_index_update: Arch_p_arch_idle_update_int_eq "domain_index_update f" ..
 
+interpretation domain_start_update:
+  p_arch_idle_update_int_eq "domain_start_index_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq>
+  domain_start_index_update: Arch_p_arch_idle_update_int_eq "domain_start_index_update f" ..
+
 interpretation cur_domain_update:
   p_arch_idle_update_int_eq "cur_domain_update f"
   by unfold_locales auto

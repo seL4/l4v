@@ -26,7 +26,7 @@ locale BCorres2_AI =
 definition all_but_exst where
   "all_but_exst P \<equiv> (\<lambda>s. P (kheap s) (cdt s) (is_original_cap s)
                       (cur_thread s) (idle_thread s)
-                      (scheduler_action s) (domain_list s) (domain_index s)
+                      (scheduler_action s) (domain_list s) (domain_index s) (domain_start_index s)
                       (cur_domain s) (domain_time s) (ready_queues s)
                       (machine_state s) (interrupt_irq_node s)
                       (interrupt_states s) (arch_state s))"
@@ -40,11 +40,12 @@ lemma ef_mk_ef: "empty_fail f \<Longrightarrow> mk_ef (f s) = f s"
 
 lemma all_but_obvious:
   "all_but_exst (\<lambda>kheap cdt is_original_cap cur_thread idle_thread
-       scheduler_action domain_list domain_index cur_domain domain_time
+       scheduler_action domain_list domain_index domain_start_index cur_domain domain_time
        ready_queues machine_state interrupt_irq_node interrupt_states arch_state.
        x = \<lparr>kheap = kheap, cdt = cdt, is_original_cap = is_original_cap, cur_thread = cur_thread,
             idle_thread = idle_thread, scheduler_action = scheduler_action,
-            domain_list = domain_list, domain_index = domain_index, cur_domain = cur_domain,
+            domain_list = domain_list, domain_index = domain_index,
+            domain_start_index = domain_start_index, cur_domain = cur_domain,
             domain_time = domain_time, ready_queues = ready_queues,
             machine_state = machine_state, interrupt_irq_node = interrupt_irq_node,
             interrupt_states = interrupt_states, arch_state = arch_state,
