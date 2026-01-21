@@ -31,10 +31,18 @@ crunch
   arch_invoke_irq_handler, arch_mask_irq_signal, arch_prepare_next_domain, arch_prepare_set_domain,
   arch_post_set_flags
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
+  and domain_start_index_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_start_index s)"
   (wp: crunch_wps)
+
+(* crunch chokes on the case distinction for InvalidPTE in the argument of mapM in this function *)
+lemma domain_start_index_inv[wp, DetSchedDomainTime_AI_assms]:
+  "flush_table pml4_ref vptr pt_ref asid \<lbrace> \<lambda>s::det_state. P (domain_start_index s) \<rbrace>"
+  unfolding flush_table_def
+  by (wpsimp wp: crunch_wps do_machine_op_domain_start_index_inv)
 
 crunch arch_finalise_cap
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
+  and domain_start_index_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_start_index s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
 
 crunch
@@ -61,17 +69,12 @@ context Arch begin arch_global_naming
 
 crunch arch_perform_invocation
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
-  (wp: crunch_wps check_cap_inv)
-
-crunch arch_perform_invocation
-  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_time s)"
+  and domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_time s)"
+  and domain_start_index_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_start_index s)"
   (wp: crunch_wps check_cap_inv)
 
 crunch do_machine_op
   for exst[wp]: "\<lambda>s. P (exst s)"
-
-crunch get_irq_slot
-  for inv[wp]: P
 
 lemma timer_tick_valid_domain_time:
   "\<lbrace> \<lambda>s :: det_ext state. 0 < domain_time s \<rbrace>
@@ -114,6 +117,7 @@ crunch handle_spurious_irq
   for domain_time_inv [wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
   and domain_list_inv [wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
   and scheduler_action[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (scheduler_action s)"
+  and domain_start_index_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_start_index s)"
 
 end
 
