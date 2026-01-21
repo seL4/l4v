@@ -3399,12 +3399,14 @@ lemma idle_not_reply_cap':
 context DetSchedSchedule_AI begin
 
 lemma invoke_domain_valid_sched[wp]:
-  "\<lbrace>valid_sched and tcb_at t and (\<lambda>s. t \<noteq> idle_thread s)
+  "\<lbrace>valid_sched and valid_domain_inv iv
                 and simple_sched_action and valid_idle\<rbrace>
-   invoke_domain t d
+   invoke_domain iv
    \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
   apply (simp add: invoke_domain_def)
-  apply (wpsimp wp: tcb_at_typ_at)
+  apply (wpsimp wp: tcb_at_typ_at reschedule_preserves_valid_sched
+                simp: invoke_set_domain_def domain_set_start_def domain_schedule_configure_def)
+  apply (simp add: valid_domain_inv_def)
   done
 
 lemma perform_invocation_valid_sched[wp]:
