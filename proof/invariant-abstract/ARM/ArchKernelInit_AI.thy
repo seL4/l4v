@@ -22,8 +22,9 @@ text \<open>
 
 lemma [simp]: "is_aligned (0x1000 :: word32) 9" by (simp add: is_aligned_def)
 lemma [simp]: "is_aligned (0x2000 :: word32) 9" by (simp add: is_aligned_def)
+lemma [simp]: "is_aligned (0x3000 :: word32) 9" by (simp add: is_aligned_def)
 
-lemmas ptr_defs = init_tcb_ptr_def idle_thread_ptr_def init_irq_node_ptr_def
+lemmas ptr_defs = init_tcb_ptr_def idle_thread_ptr_def idle_sc_ptr_def init_irq_node_ptr_def
                   init_globals_frame_def init_global_pd_def
 lemmas state_defs = init_A_st_def init_kheap_def init_arch_state_def ptr_defs
 
@@ -193,7 +194,7 @@ lemma pspace_aligned_init_A[simp]:
   apply (clarsimp simp: pspace_aligned_def state_defs wf_obj_bits [OF wf_empty_bits]
                         dom_if_Some cte_level_bits_def)
   apply (safe intro!: aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl],
-         simp_all add: is_aligned_def word_bits_def kernel_base_def idle_sc_ptr_def
+         simp_all add: is_aligned_def word_bits_def init_objs_base_def
                        min_sched_context_bits_def)[1]
   done
 
@@ -202,7 +203,7 @@ lemma pspace_distinct_init_A[simp]:
   apply (clarsimp simp: pspace_distinct_def state_defs init_objs_base_def cte_level_bits_def
                         linorder_not_le idle_sc_ptr_def)
   apply (safe,
-         simp_all add: init_irq_ptrs_all_ineqs[[unfolded init_objs_base_def, simplified])[1]
+         simp_all add: init_irq_ptrs_all_ineqs[unfolded init_objs_base_def, simplified])[1]
         apply (cut_tac x="init_irq_node_ptr + (ucast irq << cte_level_bits)"
                    and y="init_irq_node_ptr + (ucast irqa << cte_level_bits)"
                    and sz=cte_level_bits
@@ -212,7 +213,7 @@ lemma pspace_distinct_init_A[simp]:
           apply (simp add: is_aligned_def)
          apply (rule aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl])
          apply (auto simp: is_aligned_def linorder_not_le min_sched_context_bits_def
-                           init_irq_ptrs_all_ineqs(4)[simplified kernel_base_def, simplified])
+                           init_irq_ptrs_all_ineqs(4)[simplified init_objs_base_def, simplified])
   done
 
 
@@ -334,36 +335,35 @@ lemma invs_A:
      apply (erule exE)
      apply (rule conjI)
       apply (rule impI)
-      apply (subgoal_tac "kernel_base + 0x8000 + (UCAST(irq_len \<rightarrow> 32) irq << 4) \<noteq> ptr")
+      apply (subgoal_tac "init_objs_base + 0x8000 + (UCAST(irq_len \<rightarrow> 32) irq << 4) \<noteq> ptr")
        apply (clarsimp simp: cte_level_bits_def)
       apply (rule init_irq_ptrs_all_ineqs(10))
-      apply (clarsimp simp: kernel_base_def)
+      apply (clarsimp simp: init_objs_base_def)
      apply (rule impI)
      apply (rule conjI)
       apply (rule impI)
-      apply (subgoal_tac "kernel_base + 0x8000 + (UCAST(irq_len \<rightarrow> 32) irq << 4) \<noteq> ptr")
+      apply (subgoal_tac "init_objs_base + 0x8000 + (UCAST(irq_len \<rightarrow> 32) irq << 4) \<noteq> ptr")
        apply (clarsimp simp: cte_level_bits_def)
       apply (rule init_irq_ptrs_all_ineqs(10))
-      apply (clarsimp simp: kernel_base_def)
+      apply (clarsimp simp: init_objs_base_def)
      apply (rule impI)
      apply (rule conjI)
       apply (rule impI)
-      apply (subgoal_tac "kernel_base + 0x8000 + (UCAST(irq_len \<rightarrow> 32) irq << 4) \<noteq> ptr")
+      apply (subgoal_tac "init_objs_base + 0x8000 + (UCAST(irq_len \<rightarrow> 32) irq << 4) \<noteq> ptr")
        apply (clarsimp simp: cte_level_bits_def)
       apply (rule init_irq_ptrs_all_ineqs(9))
-      apply (clarsimp simp: kernel_base_def)
+      apply (clarsimp simp: init_objs_base_def)
      apply (rule impI)
      apply (rule conjI)
       apply (rule impI)
-      apply (subgoal_tac "kernel_base + 0x8000 + (UCAST(irq_len \<rightarrow> 32) irq << 4) \<noteq> ptr")
+      apply (subgoal_tac "init_objs_base + 0x8000 + (UCAST(irq_len \<rightarrow> 32) irq << 4) \<noteq> ptr")
        apply (clarsimp simp: cte_level_bits_def)
       apply (rule init_irq_ptrs_all_ineqs(10))
-      apply (clarsimp simp: idle_sc_ptr_def kernel_base_def)
+      apply (clarsimp simp: idle_sc_ptr_def init_objs_base_def)
      apply (clarsimp simp: live_def)
     apply (rule impI, rule conjI)+
-      apply (clarsimp simp: idle_sc_ptr_def)
-     apply (clarsimp simp: starting_cur_thread_not_live)
-    apply (clarsimp simp: idle_sc_ptr_def live_def hyp_live_def arch_tcb_live_def default_sched_context_def
+     apply (clarsimp simp: idle_sc_ptr_def starting_cur_thread_not_live starting_cur_sc_not_live)
+    apply (clarsimp simp: live_def hyp_live_def default_sched_context_def
                           starting_cur_sc_not_live[simplified idle_thread_ptr_def])
    apply (rule conjI)
     apply (clarsimp simp: zombies_final_def cte_wp_at_cases state_defs

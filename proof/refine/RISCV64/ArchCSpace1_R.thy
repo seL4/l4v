@@ -105,7 +105,7 @@ lemma same_region_as_relation[CSpace1_R_assms]:
   "\<lbrakk> cap_relation c d; cap_relation c' d' \<rbrakk> \<Longrightarrow> same_region_as c c' = sameRegionAs d d'"
   apply (cases c)
                apply clarsimp
-              apply (clarsimp simp: global.sameRegionAs_def isCap_simps Let_def is_phyiscal_relation)
+              apply (clarsimp simp: global.sameRegionAs_def isCap_simps Let_def is_physical_relation)
               apply (auto simp: obj_ref_of_relation obj_size_relation cong: conj_cong)[1]
              apply ((cases c', auto simp: global.sameRegionAs_def isCap_simps Let_def)+)[11]
   apply (cases c'; (clarsimp simp: same_arch_region_as_relation |
@@ -169,7 +169,7 @@ proof -
   apply (cases c)
             apply (simp_all add: simps)[5]
        defer
-       apply (simp_all add: simps)[4]
+       apply (simp_all add: simps)[7]
    apply (clarsimp simp: simps the_arch_cap_def)
    apply (rename_tac arch_cap)
    apply (case_tac arch_cap; simp add: simps arch_update_cap_data_def
@@ -750,9 +750,7 @@ lemma is_derived'_genD[CSpace1_R_assms]:
    \<not> isIRQControlCap cap' \<and>
    badge_derived' cap' cap \<and>
    (isUntypedCap cap \<longrightarrow> descendants_of' p m = {}) \<and>
-   (isReplyCap cap = isReplyCap cap') \<and>
-   (isReplyCap cap \<longrightarrow> capReplyMaster cap) \<and>
-   (isReplyCap cap' \<longrightarrow> \<not> capReplyMaster cap')"
+   (isReplyCap cap = isReplyCap cap')"
   by (simp add: RISCV64.is_derived'_def)
 
 end (* Arch *)
@@ -856,10 +854,9 @@ lemma is_derived_eq[CSpace1_R_2_assms]:
   apply (frule cap_asid_cap_relation)
   apply (frule(1) capBadge_ordering_relation)
   apply (case_tac d)
-             apply (simp_all add: isCap_simps is_cap_simps cap_master_cap_def
-                                  capMasterCap_def
-                           split: cap_relation_split_asm arch_cap.split_asm)
-      apply fastforce
+               apply (simp_all add: isCap_simps is_cap_simps cap_master_cap_def
+                                    capMasterCap_def
+                             split: cap_relation_split_asm arch_cap.split_asm)
      apply (auto simp: up_ucast_inj_eq split:arch_cap.splits arch_capability.splits option.splits)
   done
 

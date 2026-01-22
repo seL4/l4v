@@ -877,7 +877,7 @@ lemma decodeUntyped_wf[wp]:
      apply (drule_tac x=x in spec)+
      apply simp
     apply (clarsimp simp: APIType_capBits_def)
-    apply (clarsimp simp: APIType_capBits_def sc_size_bounds_def maxUntypedSizeBits_def)
+    apply (clarsimp simp: APIType_capBits_def objBits_defs sc_size_bounds_def maxUntypedSizeBits_def)
    apply clarsimp
   apply (clarsimp simp: image_def getFreeRef_def cte_level_bits_def objBits_simps' field_simps)
   apply (clarsimp simp: of_nat_shiftR word_le_nat_alt)
@@ -889,7 +889,7 @@ lemma decodeUntyped_wf[wp]:
     apply (drule_tac x=x in spec)+
     apply simp
    apply (clarsimp simp: APIType_capBits_gen_def)
-  apply (clarsimp simp: APIType_capBits_gen_def sc_size_bounds_def)
+  apply (clarsimp simp: APIType_capBits_gen_def objBits_defs sc_size_bounds_def)
   done
 
 lemma corres_list_all2_mapM_':

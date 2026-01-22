@@ -43,7 +43,7 @@ faults, and system calls; the set of possible events is defined in
 >     stateAssert cur_tcb'_asrt "`cur_tcb'`"
 >     runExceptT $ handleEvent ev
 >         `catchError` (\_ -> withoutPreemption $ do
->                       mcsPreemptionPoint irq_opt
+>                       mcsPreemptionPoint
 >                       maybeHandleInterrupt True)
 >     stateAssert rct_imp_activatable'_asrt
 >         "if the scheduler action is `ResumeCurrentThread`, then the current thread is `activatable'`"

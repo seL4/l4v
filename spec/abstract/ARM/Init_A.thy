@@ -33,6 +33,10 @@ definition
   "idle_thread_ptr = init_objs_base + 0x1000"
 
 definition
+  idle_sc_ptr :: vspace_ref where
+  "idle_sc_ptr = init_objs_base + 0x3000"
+
+definition
   init_tcb_ptr :: word32 where
   "init_tcb_ptr = init_objs_base + 0x2000"
 
@@ -135,5 +139,8 @@ definition
   \<rparr>"
 
 end
+
+(*FIXME: should this go somewhere else? Other arches have the definition and requalify in Machine_A*)
+arch_requalify_consts (A) idle_thread_ptr idle_sc_ptr
 
 end

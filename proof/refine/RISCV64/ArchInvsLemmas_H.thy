@@ -27,6 +27,7 @@ lemma wordSizeCase_simp[simp]: "wordSizeCase a b = b"
 
 lemmas objBits_defs =
   tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def replySizeBits_def
+  minSchedContextBits_def
 lemmas untypedBits_defs = minUntypedSizeBits_def maxUntypedSizeBits_def
 lemmas objBits_simps = objBits_def objBitsKO_def word_size_def archObjSize_def
 lemmas objBits_simps' = objBits_simps objBits_defs
@@ -369,13 +370,6 @@ lemma valid_arch_tcb_lift'_strong:
   shows "f \<lbrace>\<lambda>s. P (valid_arch_tcb' tcb s)\<rbrace>"
   by (clarsimp simp: valid_arch_tcb'_def, wp)
 
-(* FIXME arch-split RT: I think this is true for all architectures, if it isn't then
-                        typ_at'_valid_obj'_lift will need to be moved later, out of typ_at_lifts. *)
-lemma valid_arch_obj_lift'_strong:
-  assumes "\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
-  shows "f \<lbrace>\<lambda>s. P (valid_arch_obj' ako s)\<rbrace>"
-  by (clarsimp simp: valid_arch_obj'_def, wp)
-
 lemmas typ_at_lifts_strong =
   typ_at_lift_tcb'_strong typ_at_lift_ep'_strong
   typ_at_lift_ntfn'_strong typ_at_lift_cte'_strong
@@ -384,7 +378,6 @@ lemmas typ_at_lifts_strong =
   typ_at_lift_page_table_at'_strong
   typ_at_lift_frame_at'_strong
   valid_arch_tcb_lift'_strong
-  valid_arch_obj_lift'_strong
 
 lemma typ_at_lift_valid_irq_node':
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
@@ -545,6 +538,8 @@ end
 (* we expect typ_at' and sc_at'_n lemmas to be [wp], so this should be easy: *)
 method typ_at_props' = unfold_locales; wp?
 
+arch_requalify_facts typ_at_lift_valid_irq_node' (* FIXME arch-split RT *)
+
 
 context Arch begin arch_global_naming
 
@@ -553,8 +548,7 @@ lemma page_table_pte_atI':
   by (simp add: page_table_at'_def)
 
 lemmas bit_simps' = pteBits_def asidHighBits_def asidPoolBits_def asid_low_bits_def
-                    asid_high_bits_def minSchedContextBits_def
-                    replySizeBits_def ptBits_def bit_simps
+                    asid_high_bits_def ptBits_def bit_simps
 
 lemma objBitsT_simps:
   "objBitsT EndpointT = epSizeBits"

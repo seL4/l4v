@@ -4826,8 +4826,8 @@ lemma schedContextDonate_if_live_then_nonz_cap':
    schedContextDonate scPtr tcbPtr
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   unfolding schedContextDonate_def updateSchedContext_def
-  by (wpsimp wp: threadSet_iflive'T setSchedContext_iflive' hoare_vcg_all_lift threadSet_cap_to'
-           simp: conj_ac cong: conj_cong
+  by (wpsimp wp: RISCV64.threadSet_iflive'T setSchedContext_iflive' hoare_vcg_all_lift threadSet_cap_to'
+           simp: conj_ac cong: conj_cong (*FIXME arch-split RT*)
       | wp hoare_drop_imps
       | fastforce simp: update_tcb_cte_cases)+
 

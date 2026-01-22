@@ -190,7 +190,7 @@ lemma updateSchedContext_eq:
    apply assumption
   apply (frule_tac v="f sc" in setObject_eq_variable_size)
      apply simp
-    apply (simp add: objBits_simps')
+    apply (simp add: objBits_simps)
     using scBits_pos_power2 apply fastforce
    apply (simp add: obj_at'_def)
    apply (rule_tac x=sc in exI)

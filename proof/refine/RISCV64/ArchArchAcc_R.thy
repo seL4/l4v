@@ -61,10 +61,6 @@ lemmas storePTE_valid_objs'[wp] =
 lemmas storePTE_valid_pspace'[wp] =
   storePTE.valid_pspace'[simplified valid_obj'_def pred_conj_def valid_arch_obj'_def, simplified]
 
-end
-
-context begin interpretation Arch . (*FIXME: arch-split*)
-
 method readObject_arch_obj_at'_method
   =  clarsimp simp: readObject_def obind_def omonad_defs split_def loadObject_default_def obj_at'_def
                     objBits_simps bit_simps' typ_at_to_obj_at_arches
@@ -86,7 +82,7 @@ method no_ofail_readObject_method =
   clarsimp simp: obj_at'_def readObject_def obind_def omonad_defs split_def no_ofail_def,
   rule ps_clear_lookupAround2, assumption+, simp,
   blast intro: is_aligned_no_overflow,
-  clarsimp simp: bit_simps' project_inject obj_at_simps lookupAround2_known1 split: option.splits
+  clarsimp simp: bit_simps' project_inject gen_obj_at_simps lookupAround2_known1 split: option.splits
 
 lemma no_ofail_arch_obj_at'_readObject_pte[simp]:
   "no_ofail (obj_at' (P::pte \<Rightarrow> bool) p) (readObject p::pte kernel_r)"
@@ -121,9 +117,6 @@ lemmas storePTE_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePTE.ctes_of]
 lemma no_0_obj'_abstract:
   "(s, s') \<in> state_relation \<Longrightarrow> no_0_obj' s' \<Longrightarrow> kheap s 0 = None"
   by (auto intro: pspace_relation_None simp add: no_0_obj'_def)
-
-(* FIXME RT: remove *)
-declare if_cong[cong]
 
 lemma corres_gets_asid[corres]:
   "corres (\<lambda>a c. a = c o ucast) \<top> \<top> (gets (riscv_asid_table \<circ> arch_state)) (gets (riscvKSASIDTable \<circ> ksArchState))"

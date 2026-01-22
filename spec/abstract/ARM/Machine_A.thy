@@ -117,13 +117,9 @@ definition
   kernel_base :: "vspace_ref" where
   "kernel_base \<equiv> pptrBase"
 
-definition
-  idle_sc_ptr :: vspace_ref where
-  "idle_sc_ptr = kernel_base + 0x3000"
-
 end
 
-arch_requalify_consts (A) kernel_base idle_sc_ptr
+arch_requalify_consts (A) kernel_base
 
 context Arch begin arch_global_naming (A)
 

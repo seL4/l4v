@@ -340,7 +340,7 @@ lemma schedContextCancelYieldTo_valid_objs'[wp]:
   apply (wpsimp wp: threadSet_valid_objs' hoare_vcg_all_lift threadGet_wp
          | strengthen valid_tcb'_tcbYieldTo_update)+
   apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
-  by (fastforce simp: valid_obj'_def opt_map_def obj_at_simps valid_tcb'_def refillSize_def
+  by (fastforce simp: valid_obj'_def opt_map_def gen_obj_at_simps valid_tcb'_def refillSize_def
                       valid_sched_context'_def valid_sched_context_size'_def opt_pred_def)
 
 lemma schedContextCancelYieldTo_valid_mdb'[wp]:
@@ -361,8 +361,8 @@ lemma schedContextCancelYieldTo_if_live_then_nonz_cap'[wp]:
    schedContextCancelYieldTo tptr
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   apply (clarsimp simp: schedContextCancelYieldTo_def updateSchedContext_def)
-  apply (wpsimp wp: threadSet_iflive' setSchedContext_iflive' hoare_vcg_imp_lift' hoare_vcg_all_lift
-                    threadGet_wp)
+  apply (wpsimp wp: RISCV64.threadSet_iflive' setSchedContext_iflive' hoare_vcg_imp_lift' hoare_vcg_all_lift
+                    threadGet_wp) (*FIXME arch-split RT*)
   by (fastforce elim: if_live_then_nonz_capE'
                 simp: ko_wp_at'_def obj_at'_def live'_def live_sc'_def)
 
@@ -654,7 +654,7 @@ lemma state_relation_sc_relation:
   "\<lbrakk>(s, s') \<in> state_relation; sc_at ptr s; sc_at' ptr s'\<rbrakk> \<Longrightarrow>
    sc_relation (the ((scs_of2 s) ptr)) (obj_bits (the (kheap s ptr)) - min_sched_context_bits) (the ((scs_of' s') ptr))"
   supply projection_rewrites[simp]
-  apply (clarsimp simp: obj_at_simps is_sc_obj)
+  apply (clarsimp simp: gen_obj_at_simps is_sc_obj)
   apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation, rotated])
   by (clarsimp simp: sc_relation_def scBits_simps opt_map_red)
 
@@ -663,7 +663,7 @@ lemma state_relation_sc_relation':
   "\<lbrakk>(s, s') \<in> state_relation; sc_at ptr s; sc_at' ptr s'\<rbrakk> \<Longrightarrow>
    sc_relation (the ((scs_of2 s) ptr)) (objBits (the (scs_of' s' ptr)) - minSchedContextBits) (the ((scs_of' s') ptr))"
   supply projection_rewrites[simp]
-  apply (clarsimp simp: obj_at_simps is_sc_obj)
+  apply (clarsimp simp: gen_obj_at_simps is_sc_obj)
   apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation, rotated])
   by (clarsimp simp: sc_relation_def scBits_simps opt_map_red)
 
@@ -671,7 +671,7 @@ lemma state_relation_sc_replies_relation_sc:
   "\<lbrakk>(s, s') \<in> state_relation; sc_at ptr s; sc_at' ptr s'\<rbrakk>
    \<Longrightarrow> heap_ls (replyPrevs_of s') (scReplies_of s' ptr) (sc_replies (the ((scs_of2 s) ptr)))"
   supply projection_rewrites[simp] opt_map_red[simp]
-  apply (clarsimp simp: obj_at_simps is_sc_obj)
+  apply (clarsimp simp: gen_obj_at_simps is_sc_obj)
   by (fastforce dest!: sc_replies_relation_prevs_list[OF state_relation_sc_replies_relation])
 
 lemma sc_relation_updateRefillHd:
@@ -706,12 +706,12 @@ lemma updateRefillHd_corres:
   apply (clarsimp simp: update_refill_hd_def updateRefillHd_def)
   apply (rule corres_guard_imp)
     apply (rule updateSchedContext_no_stack_update_corres_Q[where Q=\<top> and Q'="sc_valid_refills'"])
-      apply (fastforce simp: is_sc_obj obj_at_simps opt_map_red opt_pred_def valid_refills'_def
+      apply (fastforce simp: is_sc_obj gen_obj_at_simps opt_map_red opt_pred_def valid_refills'_def
                       elim!: sc_relation_updateRefillHd)
       apply fastforce
-     apply (fastforce simp: obj_at_simps)
+     apply (fastforce simp: gen_obj_at_simps)
     apply fastforce
-   apply (fastforce simp: obj_at_simps is_sc_obj )
+   apply (fastforce simp: gen_obj_at_simps is_sc_obj )
   apply (clarsimp simp: valid_refills'_def in_omonad obj_at'_def)
   done
 
@@ -758,12 +758,12 @@ lemma updateRefillTl_corres:
   apply (clarsimp simp: update_refill_tl_def updateRefillTl_def)
   apply (rule corres_guard_imp)
     apply (rule updateSchedContext_no_stack_update_corres_Q[where Q=\<top> and Q'="sc_valid_refills'"])
-       apply (clarsimp simp: is_sc_obj obj_at_simps is_active_sc'_def valid_refills'_def
+       apply (clarsimp simp: is_sc_obj gen_obj_at_simps is_active_sc'_def valid_refills'_def
                              sc_relation_updateRefillTl)
       apply fastforce
-     apply (fastforce simp: obj_at_simps)
+     apply (fastforce simp: gen_obj_at_simps)
     apply fastforce
-   apply (fastforce simp: obj_at_simps is_sc_obj)
+   apply (fastforce simp: gen_obj_at_simps is_sc_obj)
   apply (clarsimp simp: valid_refills'_def in_omonad obj_at'_def)
   done
 
