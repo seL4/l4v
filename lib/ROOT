@@ -45,6 +45,7 @@ session Lib (lib) = Word_Lib +
     FP_Eval
     Insulin
     ExtraCorres
+    CorresWhile
     NICTATools
     BCorres_UL
     Qualify
