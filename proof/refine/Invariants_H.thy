@@ -409,6 +409,7 @@ definition state_hyp_refs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarro
      (\<lambda>p. case (ksPSpace s p) of
             None \<Rightarrow> {}
           | Some ko \<Rightarrow> (if is_aligned p (objBitsKO ko) \<and> ps_clear p (objBitsKO ko) s
+                           \<and> objBitsKO ko < word_bits
                        then hyp_refs_of' ko
                        else {}))"
 

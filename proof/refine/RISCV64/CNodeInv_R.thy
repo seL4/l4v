@@ -6635,8 +6635,6 @@ crunch finaliseCap
    ignore: setCTE threadSet)
 end
 
-end
-
 lemmas finalise_induct3 = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) s" for P]
 
@@ -7818,6 +7816,8 @@ lemma updateCap_valid_objs [wp]:
   apply clarsimp
   apply (erule cte_at_cte_wp_atD)
   done
+
+end
 
 lemma (in mdb_move) [intro!]:
   shows "mdb_chain_0 m" using valid

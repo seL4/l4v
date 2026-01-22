@@ -957,53 +957,52 @@ lemma deleteObjects_corres:
     apply (simp add: valid_pspace'_def)
     apply (rule state_relation_null_filterE, assumption,
            simp_all add: pspace_aligned'_cut pspace_distinct'_cut)[1]
-             apply (simp add: detype_def)
-            apply clarsimp
-            (* unification can't guess we want identity update on ksArchState s' *)
-            apply (repeat 3 \<open>rule exI\<close>, rule_tac x=id in exI)
-            apply fastforce
-           apply (rule ext, clarsimp simp add: null_filter_def)
+              apply (simp add: detype_def)
+             apply clarsimp
+             (* unification can't guess we want identity update on ksArchState s' *)
+             apply (repeat 3 \<open>rule exI\<close>, rule_tac x=id in exI)
+             apply fastforce
+            apply (rule ext, clarsimp simp add: null_filter_def)
+            apply (rule sym, rule ccontr, clarsimp)
+            apply (drule(4) cte_map_not_null_outside')
+             apply (fastforce simp add: cte_wp_at_caps_of_state)
+            apply simp
+           apply (rule ext, clarsimp simp add: null_filter'_def
+                              map_to_ctes_delete[simplified field_simps])
            apply (rule sym, rule ccontr, clarsimp)
-           apply (drule(4) cte_map_not_null_outside')
-            apply (fastforce simp add: cte_wp_at_caps_of_state)
-           apply simp
-          apply (rule ext, clarsimp simp add: null_filter'_def
-                             map_to_ctes_delete[simplified field_simps])
-          apply (rule sym, rule ccontr, clarsimp)
-          apply (frule(2) pspace_relation_cte_wp_atI
-                          [OF state_relation_pspace_relation])
-          apply (elim exE)
-          apply (frule(4) cte_map_not_null_outside')
-           apply (rule cte_wp_at_weakenE, erule conjunct1)
-           apply (case_tac y, clarsimp)
-           apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def
-                                  valid_nullcaps_def)
-          apply clarsimp
-          apply (frule_tac cref="(aa, ba)" in cte_map_untyped_range,
-                 erule cte_wp_at_weakenE[OF _ TrueI], assumption+)
+           apply (frule (2) pspace_relation_cte_wp_atI[OF state_relation_pspace_relation])
+           apply (elim exE)
+           apply (frule (4) cte_map_not_null_outside')
+            apply (rule cte_wp_at_weakenE, erule conjunct1)
+            apply (case_tac y, clarsimp)
+            apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def
+                                   valid_nullcaps_def)
+           apply clarsimp
+           apply (frule_tac cref="(aa, ba)" in cte_map_untyped_range,
+                  erule cte_wp_at_weakenE[OF _ TrueI], assumption+)
+           apply (simp add: add_mask_fold)
           apply (simp add: add_mask_fold)
-         apply (simp add: add_mask_fold)
-         apply (rule detype_pspace_relation[simplified],
-                simp_all add: state_relation_pspace_relation valid_pspace_def)[1]
-          apply (simp add: valid_cap'_def capAligned_def)
-         apply (clarsimp simp: valid_cap_def, assumption)
-        apply (rule detype_sc_replies_relation; blast?)
+          apply (rule detype_pspace_relation[simplified],
+                 simp_all add: state_relation_pspace_relation valid_pspace_def)[1]
+           apply (simp add: valid_cap'_def capAligned_def)
+          apply (clarsimp simp: valid_cap_def, assumption)
+         apply (rule detype_sc_replies_relation; blast?)
+           apply (clarsimp simp: deletionIsSafe_def)
+           apply (fastforce simp: add_mask_fold)
+          apply (erule state_relation_sc_replies_relation)
+         apply (fastforce simp add: detype_def add_mask_fold)
+        apply (rule detype_ready_queues_relation; blast?)
           apply (clarsimp simp: deletionIsSafe_def)
           apply (fastforce simp: add_mask_fold)
-         apply (erule state_relation_sc_replies_relation)
-        apply (fastforce simp add: detype_def add_mask_fold)
-       apply (rule detype_ready_queues_relation; blast?)
+         apply (frule state_relation_ready_queues_relation)
+         apply (simp add: ready_queues_relation_def Let_def)
+        apply (fastforce simp: add_mask_fold)
+       apply (rule detype_release_queue_relation; blast?)
          apply (clarsimp simp: deletionIsSafe_def)
          apply (fastforce simp: add_mask_fold)
-        apply (frule state_relation_ready_queues_relation)
-        apply (simp add: ready_queues_relation_def Let_def)
-        apply (clarsimp simp: state_relation_def)
+        apply (erule state_relation_release_queue_relation)
        apply (fastforce simp: add_mask_fold)
-      apply (rule detype_release_queue_relation; blast?)
-        apply (clarsimp simp: deletionIsSafe_def)
-        apply (fastforce simp: add_mask_fold)
-       apply (erule state_relation_release_queue_relation)
-      apply (fastforce simp: add_mask_fold)
+      apply (clarsimp simp: state_relation_def)
      apply (clarsimp simp: state_relation_def ghost_relation_of_heap detype_def)
      apply (drule_tac t="gsUserPages s'" in sym)
      apply (drule_tac t="gsCNodes s'" in sym)
@@ -1505,9 +1504,6 @@ proof (simp add: invs'_def valid_pspace'_def
   show "sym_refs (map_set (replies' ||> list_refs_of_reply'))"
     apply (insert pa pd bd pspace_distinct'_state' list_refs)
     by (subst list_refs_of_reply'_state'; blast?)
-
-  show "sym_refs (state_hyp_refs_of' ?s)"
-    by (simp add: sym_refs_def)
 
   show "if_live_then_nonz_cap' ?s" using iflive
     apply (clarsimp simp: if_live_then_nonz_cap'_def)

@@ -996,6 +996,12 @@ lemma tcbSchedPrev_update_iflive'[TcbAcc_R_2_assms]:
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
 
+lemma tcbInReleaseQueue_update_iflive'[TcbAcc_R_2_assms, wp]:
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
+   threadSet (tcbInReleaseQueue_update f) t
+   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
+  by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
+
 lemma tcbQueued_update_iflive'[TcbAcc_R_2_assms, wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
    threadSet (tcbQueued_update f) t
@@ -1012,6 +1018,14 @@ lemma sbn_iflive'[wp]:
    apply (wp threadSet_iflive' | simp)+
   apply auto
   done
+
+lemma tcbSchedNext_None_if_live_then_nonz_cap'[wp]:
+  "threadSet (tcbSchedNext_update (\<lambda>_. None)) tcbPtr \<lbrace>if_live_then_nonz_cap'\<rbrace>"
+  by (wpsimp wp: threadSet_iflive'T; fastforce simp: update_tcb_cte_cases)
+
+lemma tcbSchedPrev_None_if_live_then_nonz_cap'[wp]:
+  "threadSet (tcbSchedPrev_update (\<lambda>_. None)) tcbPtr \<lbrace>if_live_then_nonz_cap'\<rbrace>"
+  by (wpsimp wp: threadSet_iflive'T; fastforce simp: update_tcb_cte_cases)
 
 lemma storeWord_invs'[TcbAcc_R_2_assms, wp]:
   "\<lbrace>pointerInUserData p and invs'\<rbrace> doMachineOp (storeWord p w) \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -1037,11 +1051,6 @@ proof -
             split: if_split_asm)
   done
 qed
-
-crunch tcbSchedAppend
-  for pspace_in_kernel_mappings'[wp]: pspace_in_kernel_mappings'
-
-lemmas [TcbAcc_R_2_assms] = tcbSchedAppend_pspace_in_kernel_mappings'
 
 end (* Arch *)
 
@@ -1083,9 +1092,11 @@ arch_requalify_facts
   asUser_corres
   asUser_valid_objs
   asUser_invs
+  asUser_valid_tcbs'
 
 lemmas [wp] =
   asUser_valid_objs
   asUser_invs
+  asUser_valid_tcbs'
 
 end

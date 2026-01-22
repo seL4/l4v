@@ -555,7 +555,7 @@ lemma threadSet_sym_heap_tcbSCs:
   apply (prop_tac "((\<lambda>a. if a = t then Some (f tcb) else tcbs_of' s a) |>
               tcbSchedContext) = tcbSCs_of s")
    apply (rule ext)
-   apply (clarsimp simp: obj_at'_def projectKOs opt_map_def)
+   apply (clarsimp simp: obj_at'_def opt_map_def)
   apply simp
   done
 
@@ -641,10 +641,9 @@ lemma kernel_preemption_corres:
       and consumed_time_bounded and ct_not_in_release_q)
       invs'
      (liftE preemption_path)
-     (liftE (do irq_opt <- doMachineOp (getActiveIRQ True);
-                   _ <- mcsPreemptionPoint irq_opt;
-                   when (\<exists>y. irq_opt = Some y) (handleInterrupt (the irq_opt))
-                od))" (is "corres _ ?P ?P' _ _")
+     (liftE (do _ <- mcsPreemptionPoint;
+                maybeHandleInterrupt True
+             od))" (is "corres _ ?P ?P' _ _")
   apply (rule_tac Q'="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
    apply clarsimp
    apply (frule (1) cur_sc_tcb_sc_at_cur_sc[OF invs_valid_objs invs_cur_sc_tcb])
@@ -653,110 +652,81 @@ lemma kernel_preemption_corres:
   apply add_cur_tcb'
   apply (rule corres_guard_imp)
     apply (simp add: preemption_path_def mcsPreemptionPoint_def bind_assoc)
-    apply (rule corres_split[OF corres_machine_op])
-       apply (rule corres_underlying_trivial)
-       apply (rule no_fail_getActiveIRQ)
-      apply (clarsimp simp: dc_def[symmetric])
-      apply (rule corres_stateAssert_r)
-      apply (rule corres_split_eqr[OF getCurThread_corres])
-        apply (rule corres_split_eqr[OF getSchedulable_corres])
-          apply (rename_tac irq ct sched)
-          apply (rule corres_split[OF corres_if2])
-               apply simp
-              apply (rule_tac P="?P and (\<lambda>s. ct = cur_thread s) and (\<lambda>s. sched = schedulable ct s)
-                                 and K sched"
-                         and P'="?P' and (\<lambda>s. ct = ksCurThread s)
-                                 and (\<lambda>s. sched = schedulable' ct s)"
-                     in corres_inst)
-              apply (rule corres_gen_asm')
-              apply(rule corres_guard_imp)
-                apply (rule corres_split_eqr[OF checkBudget_corres])
-                  apply (simp only: K_bind_def)
-                  apply (rule corres_return_trivial)
-                 apply wpsimp
-                apply wpsimp
-               apply (clarsimp simp: valid_sched_def runnable_eq_active
-                                     schedulable_def2 active_sc_tcb_at_def2 tcb_at_kh_simps[symmetric]
-                                     pred_tcb_at_def obj_at_def)
-               apply (rename_tac scp tcb)
-               apply (prop_tac "cur_sc_tcb_are_bound s \<and> scp = cur_sc s")
-                apply (clarsimp simp: cur_sc_chargeable_def)
-                apply (drule_tac x=scp in spec, clarsimp simp: vs_all_heap_simps)
-               apply clarsimp
-              apply simp
-             apply (rule corres_split_eqr[OF getCurSc_corres])
-               apply (rule corres_split[OF scActive_corres], simp)
-                 apply (rule corres_if2)
-                   apply clarsimp
-                  apply (rule corres_split_eqr[OF getConsumedTime_corres])
-                    apply (rule chargeBudget_corres)
-                   apply wpsimp
-                  apply wpsimp
-                 apply (rule setConsumedTime_corres)
-                 apply simp
-                apply wpsimp
+    apply (rule corres_stateAssert_r)
+    apply (rule corres_split_eqr[OF getCurThread_corres])
+      apply (rule corres_split_eqr[OF getSchedulable_corres])
+        apply (rename_tac ct sched)
+        apply (rule corres_split[OF corres_if2])
+             apply simp
+            apply (rule_tac P="?P and (\<lambda>s. ct = cur_thread s) and (\<lambda>s. sched = schedulable ct s)
+                               and K sched"
+                       and P'="?P' and (\<lambda>s. ct = ksCurThread s)
+                               and (\<lambda>s. sched = schedulable' ct s)"
+                   in corres_inst)
+            apply (rule corres_gen_asm')
+            apply(rule corres_guard_imp)
+              apply (rule corres_split_eqr[OF checkBudget_corres])
+                apply (simp only: K_bind_def)
+                apply (rule corres_return_trivial)
                apply wpsimp
               apply wpsimp
-             apply wpsimp
-            apply (rule_tac x=irq in option_corres)
-              apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
-              apply (simp add: when_def)
-             apply (rule corres_when, simp)
-             apply simp
-             apply (rule handleInterrupt_corres)
+             apply (clarsimp simp: valid_sched_def runnable_eq_active
+                                   schedulable_def2 active_sc_tcb_at_def2 tcb_at_kh_simps[symmetric]
+                                   pred_tcb_at_def obj_at_def)
+             apply (rename_tac scp tcb)
+             apply (prop_tac "cur_sc_tcb_are_bound s \<and> scp = cur_sc s")
+              apply (clarsimp simp: cur_sc_chargeable_def)
+              apply (drule_tac x=scp in spec, clarsimp simp: vs_all_heap_simps)
+             apply clarsimp
             apply simp
-           apply (rule hoare_vcg_if_split)
-            apply (wpsimp wp: check_budget_valid_sched hoare_vcg_imp_lift')
-           apply (wpsimp wp: hoare_vcg_if_split)
-               apply (wpsimp wp: charge_budget_valid_sched hoare_vcg_imp_lift')
+           apply (rule corres_split_eqr[OF getCurSc_corres])
+             apply (rule corres_split[OF scActive_corres], simp)
+               apply (rule corres_if2)
+                 apply clarsimp
+                apply (rule corres_split_eqr[OF getConsumedTime_corres])
+                  apply (rule chargeBudget_corres)
+                 apply wpsimp
+                apply wpsimp
+               apply (rule setConsumedTime_corres)
+               apply simp
               apply wpsimp
              apply wpsimp
             apply wpsimp
            apply wpsimp
-          apply (rule_tac Q'="\<lambda>_ s. bound irq \<longrightarrow> invs' s \<and> (intStateIRQTable (ksInterruptState s) (the irq) \<noteq>
-                                   irqstate.IRQInactive)"
-                 in hoare_strengthen_post[rotated])
-           apply clarsimp
-          apply (wpsimp wp: hoare_vcg_imp_lift')
-         apply clarsimp
+          apply (rule maybeHandleInterrupt_corres)
+         apply (rule hoare_vcg_if_split)
+          apply (wpsimp wp: check_budget_valid_sched hoare_vcg_imp_lift')
+         apply (wpsimp wp: hoare_vcg_if_split)
+             apply (wpsimp wp: charge_budget_valid_sched hoare_vcg_imp_lift')
+            apply wpsimp
+           apply wpsimp
+          apply wpsimp
          apply wpsimp
-        apply (wpsimp wp: getSchedulable_wp cong: conj_cong imp_cong)
-       apply wpsimp
-      apply wpsimp
-     apply (rule_tac Q'="\<lambda>_ s. invs s \<and>  valid_sched s \<and> valid_list s \<and> scheduler_act_sane s \<and>
-                              consumed_time_bounded s \<and> ct_not_blocked s \<and> ct_not_in_release_q s \<and>
-                              current_time_bounded s \<and> cur_sc_chargeable s \<and>
-                              (cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s) \<and>
-                              (schact_is_rct s \<longrightarrow> cur_sc_active s) \<and> ct_not_queued s \<and>
-                              (schact_is_rct s \<longrightarrow> ct_in_state activatable s)"
-            in hoare_strengthen_post[rotated])
-      apply clarsimp
-      apply (frule ct_not_blocked_cur_sc_not_blocked, clarsimp)
-      apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_objs_valid_tcbs
-                            valid_sched_def cur_tcb_def ct_in_state_kh_simp[symmetric])
-      apply (intro conjI; clarsimp simp: schedulable_def2 ct_in_state_def)
-        apply (clarsimp simp: current_time_bounded_def)
-        apply (rule context_conjI)
-         apply (clarsimp simp: cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def is_sc_obj)
-         apply (erule (1) valid_sched_context_size_objsI)
-        apply (clarsimp simp: vs_all_heap_simps obj_at_def refill_ready_no_overflow_def)
-       apply (frule (1) cur_sc_chargeable_when_ct_active_sc)
-       apply (frule (1) active_sc_tcb_at_ct_cur_sc_active[THEN iffD2])
-       apply (clarsimp simp: current_time_bounded_def)
-      apply (rule context_conjI)
-       apply (clarsimp simp: vs_all_heap_simps obj_at_def)
-      apply (drule consumed_time_bounded_helper)
+        apply wpsimp
        apply clarsimp
-      apply clarsimp
+       apply wpsimp
+      apply (wpsimp wp: getSchedulable_wp cong: conj_cong imp_cong)
      apply wpsimp
-    apply (rule_tac Q'="\<lambda>irq s. invs' s \<and> sc_at' (ksCurSc s) s \<and> cur_tcb' s \<and>
-                                (\<forall>irq'. irq = Some irq' \<longrightarrow>
-                                        intStateIRQTable (ksInterruptState s ) irq' \<noteq> IRQInactive)"
-                 in hoare_post_imp)
-     apply (clarsimp simp: invs'_def valid_pspace'_def valid_objs'_valid_tcbs')
-    apply ((wp doMachineOp_getActiveIRQ_IRQ_active  | simp)+)[1]
+    apply wpsimp
    apply clarsimp
-  apply (clarsimp simp: invs'_def)
+   apply (frule ct_not_blocked_cur_sc_not_blocked, clarsimp)
+   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_objs_valid_tcbs
+                         valid_sched_def cur_tcb_def ct_in_state_kh_simp[symmetric])
+   apply (intro conjI; clarsimp simp: schedulable_def2 ct_in_state_def)
+     apply (clarsimp simp: current_time_bounded_def)
+     apply (rule context_conjI)
+      apply (clarsimp simp: cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def is_sc_obj)
+      apply (erule (1) valid_sched_context_size_objsI)
+     apply (clarsimp simp: vs_all_heap_simps obj_at_def refill_ready_no_overflow_def)
+    apply (frule (1) cur_sc_chargeable_when_ct_active_sc)
+    apply (frule (1) active_sc_tcb_at_ct_cur_sc_active[THEN iffD2])
+    apply (clarsimp simp: current_time_bounded_def)
+   apply (rule context_conjI)
+    apply (clarsimp simp: vs_all_heap_simps obj_at_def)
+   apply (drule consumed_time_bounded_helper)
+    apply clarsimp
+   apply clarsimp
+  apply clarsimp
   done
 
 lemma resume_cur_thread_cross:
@@ -769,7 +739,7 @@ lemma ct_running_cross:
   apply (clarsimp simp: ct_in_state_def ct_in_state'_def)
   apply (frule st_tcb_at_coerce_concrete)
      apply fastforce+
-  apply (clarsimp simp: obj_at_simps state_relation_def)
+  apply (clarsimp simp: state_relation_def)
   done
 
 lemma ct_idle_cross:
@@ -777,7 +747,7 @@ lemma ct_idle_cross:
   apply (clarsimp simp: ct_in_state_def ct_in_state'_def)
   apply (frule st_tcb_at_coerce_concrete)
      apply fastforce+
-  apply (clarsimp simp: obj_at_simps state_relation_def)
+  apply (clarsimp simp: state_relation_def)
   done
 
 lemma ct_running_or_idle_cross:
@@ -800,7 +770,7 @@ lemma kernel_corres':
                  _ \<leftarrow> runExceptT $
                       handleEvent event `~catchError~`
                         (\<lambda>_. withoutPreemption $ do
-                               _ \<leftarrow> mcsPreemptionPoint irq_opt;
+                               _ \<leftarrow> mcsPreemptionPoint;
                                maybeHandleInterrupt True
                              od);
                  _ \<leftarrow> stateAssert rct_imp_activatable'_asrt [];
@@ -877,7 +847,7 @@ lemma kernel_corres':
             apply simp
            apply (clarsimp simp: ct_in_state_def ct_in_state'_def)
            apply (drule (3) st_tcb_at_coerce_concrete[OF _ _ invs_psp_aligned invs_distinct])
-           apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs state_relation_def)
+           apply (clarsimp simp: pred_tcb_at'_def obj_at'_def state_relation_def)
            apply (rename_tac st; case_tac st; clarsimp)
           apply (wpsimp wp: schedule_valid_sched
                             schedule_cur_sc_active schedule_ct_activateable
@@ -892,7 +862,7 @@ lemma kernel_corres':
        apply (case_tac "scheduler_action s"; clarsimp)
       apply (drule schact_is_rct, clarsimp)
       apply (frule (3) st_tcb_at_coerce_concrete[OF _ _ invs_psp_aligned invs_distinct])
-      apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs state_relation_def)
+      apply (clarsimp simp: pred_tcb_at'_def obj_at'_def state_relation_def)
       apply (rename_tac st; case_tac st; clarsimp)
      apply wpsimp
       apply (wpsimp wp: preemption_path_valid_sched

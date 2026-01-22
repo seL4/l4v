@@ -1016,7 +1016,7 @@ lemma obj_at_empty_tableI:
     apply assumption
    apply (case_tac ko)
        apply ((erule_tac x="ucast (kernel_base >> 20) - 1" in allE,
-               simp add: kernel_base_def kernel_mapping_slots_def
+               simp add: kernel_base_def pptrBase_def kernel_mapping_slots_def
                     split: if_split_asm)+)[6]
    apply (rename_tac arch_kernel_obj)
    apply (case_tac arch_kernel_obj) defer 3

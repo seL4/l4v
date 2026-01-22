@@ -5012,8 +5012,8 @@ proof (intro impI allI)
 
   note ctes_of_retype' =
     ctes_of_retype
-     [where ?addrs="[regionBase]" and tp="?sctp", simplified,
-      OF mko pal pdst pal_ks_upd pdst_ks_upd, simplified, OF al szb regionBase_None]
+     [where ?addrs="[regionBase]" and tp="?sctp", OF mko, simplified,
+      OF pal pdst pal_ks_upd pdst_ks_upd, simplified, OF al szb regionBase_None]
 
   note projectKO_opt_retyp_same' =
     projectKO_opt_retyp_same[where sz=1, simplified new_cap_addrs_def, simplified]
@@ -6128,8 +6128,7 @@ lemma threadSet_domain_ccorres [corres]:
 
 lemma createObject_ccorres:
   notes APITypecapBits_simps[simp] =
-          APIType_capBits_def[split_simps
-          object_type.split apiobject_type.split]
+          APIType_capBits_gen_def[split_simps object_type.split apiobject_type.split]
   shows
     "ccorres ccap_relation ret__struct_cap_C_'
      (createObject_hs_preconds regionBase newType userSize isdev)
@@ -6192,7 +6191,7 @@ proof -
                           word_le_nat_alt split:
                           apiobject_type.splits object_type.splits)
    apply (subgoal_tac "\<exists>apiType. newType = APIObjectType apiType")
-    apply (clarsimp simp: APIType_capBits_gen_def)
+    apply clarsimp
     apply (rule ccorres_guard_imp)
       apply (rule_tac apiType=apiType in ccorres_apiType_split)
 
@@ -6253,7 +6252,7 @@ proof -
                             apiGetObjectSize_def
                             tcbBlockSizeBits_def new_cap_addrs_def projectKO_opt_tcb)
            apply (clarsimp simp: range_cover.aligned
-                                 region_actually_is_bytes_def APIType_capBits_def)
+                                 region_actually_is_bytes_def)
            apply (frule(1) ghost_assertion_size_logic_no_unat)
            apply (clarsimp simp: ccap_relation_def cap_to_H_def
                                  getObjectSize_def apiGetObjectSize_def
@@ -6325,7 +6324,7 @@ proof -
          apply (frule invs_pspace_aligned')
          apply (frule invs_pspace_distinct')
          apply (auto simp: getObjectSize_def objBits_simps word_bits_conv
-                           apiGetObjectSize_def APIType_capBits_gen_def ntfnSizeBits_def
+                           apiGetObjectSize_def ntfnSizeBits_def
                     elim!: is_aligned_no_wrap'
                    intro!: range_cover_simpleI)[1]
 
@@ -6365,8 +6364,7 @@ proof -
          apply (frule(1) ghost_assertion_size_logic_no_unat)
          apply (clarsimp simp: getObjectSize_def objBits_simps apiGetObjectSize_def
                                cteSizeBits_def word_bits_conv add.commute createObject_c_preconds_def
-                               region_actually_is_bytes_def APIType_capBits_gen_def
-                               invs_valid_objs' invs_urz
+                               region_actually_is_bytes_def invs_valid_objs' invs_urz
                         elim!: is_aligned_no_wrap'
                          dest: word_of_nat_le  intro!: range_coverI)[1]
         apply (clarsimp simp: createObject_hs_preconds_def hrs_htd_update isFrameType_def)
@@ -6440,7 +6438,7 @@ proof -
 
      apply simp
      apply auto[1]
-    apply (clarsimp simp: createObject_c_preconds_def APIType_capBits_gen_def)
+    apply (clarsimp simp: createObject_c_preconds_def)
     apply (clarsimp simp:nAPIOBjects_object_type_from_H)?
     apply (intro impI conjI, simp_all)[1]
    apply (clarsimp simp: nAPIObjects_def object_type_from_H_def Kernel_C_defs
@@ -7388,7 +7386,7 @@ lemma createObject_ct_active'[wp]:
         \<and> (ty = APIObjectType apiobject_type.SchedContextObject \<longrightarrow> sc_size_bounds us)\<rbrace>
    createObject ty ptr us dev
    \<lbrace>\<lambda>_ s. ct_active' s \<rbrace>"
-  apply (simp add:ct_in_state'_def createObject_def3)
+  apply (simp add: ct_in_state'_def createObject_def3)
   apply (rule hoare_pre)
    apply wp
    apply wps
@@ -8116,7 +8114,7 @@ lemma createObject_preserves_bytes:
          simp_all add: h_t_valid_field hrs_htd_update)
                apply (safe intro!: ptr_retyp_d ptr_retyps_out trans[OF ptr_retyp_d ptr_retyp_d]
                                    ptr_arr_retyps_eq_outside_dom)
-                 apply (simp_all add: object_type_from_H_def Kernel_C_defs APIType_capBits_def
+                 apply (simp_all add: object_type_from_H_def Kernel_C_defs APIType_capBits_gen_def
                                       objBits_simps' cte_C_size power_add ctcb_offset_def
                                       ctcb_size_bits_def byte_regions_unmodified_def
                                split: object_type.split_asm ArchTypes_H.apiobject_type.split_asm)
@@ -8517,8 +8515,7 @@ shows  "ccorres dc xfdc
            apply (simp only: unat_eq_0, clarsimp simp: unat_of_nat)
             apply (simp add: hrs_htd_update typ_region_bytes_actually_is_bytes)
            apply (frule range_cover_sz')
-           apply (clarsimp simp: Let_def hrs_htd_update
-                                 APIType_capBits_def[where ty="APIObjectType ArchTypes_H.apiobject_type.SchedContextObject"])
+           apply (clarsimp simp: Let_def hrs_htd_update APIType_capBits_gen_def)
           apply (frule range_cover_sz')
           apply (clarsimp simp: Let_def hrs_htd_update APIType_capBits_gen_def)
          apply (simp, subst range_cover.unat_of_nat_n)
@@ -8531,9 +8528,7 @@ shows  "ccorres dc xfdc
         apply (clarsimp simp del: imp_disjL)
         apply (rule conjI)
          apply (frule range_cover_sz')
-         apply (clarsimp simp: Let_def hrs_htd_update
-                               APIType_capBits_def[where ty="APIObjectType ArchTypes_H.apiobject_type.Untyped"]
-                               APIType_capBits_def[where ty="APIObjectType ArchTypes_H.apiobject_type.SchedContextObject"])
+         apply (clarsimp simp: Let_def hrs_htd_update APIType_capBits_gen_def)
          apply (simp add: unat_eq_def)
         apply (clarsimp simp del: imp_disjL)
         apply (frule(1) offset_intvl_first_chunk_subsets_unat,

@@ -20,7 +20,6 @@ arch_requalify_consts
   arch_tcb_relation
   aobj_relation_cuts
   is_other_obj_relation_type
-  ghost_relation
   ghost_relation_wrapper_2
   arch_state_relation
 
@@ -105,13 +104,6 @@ definition ep_relation :: "Structures_A.endpoint \<Rightarrow> Structures_H.endp
 definition fault_rel_optionation :: "ExceptionTypes_A.fault option \<Rightarrow> Fault_H.fault option \<Rightarrow> bool"
   where
   "fault_rel_optionation \<equiv> \<lambda>f f'. f' = map_option fault_map f"
-
-(* provided so that ghost_relation can be used within the generic definition of state_relation, by
-   passing in the union of fields needed by ghost_relation on all architectures and hiding any
-   specific arch fields needed *)
-abbreviation ghost_relation_wrapper :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "ghost_relation_wrapper s s' \<equiv>
-     ghost_relation_wrapper_2 (kheap s) (gsUserPages s') (gsCNodes s') (ksArchState s')"
 
 primrec thread_state_relation :: "Structures_A.thread_state \<Rightarrow> Structures_H.thread_state \<Rightarrow> bool"
   where

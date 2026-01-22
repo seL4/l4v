@@ -1077,8 +1077,8 @@ On some architectures, the thread context may include registers that may be modi
 >         setThreadState Restart ct
 >     return result
 
-> mcsPreemptionPoint :: Maybe IRQ -> Kernel ()
-> mcsPreemptionPoint irq_opt = do
+> mcsPreemptionPoint :: Kernel ()
+> mcsPreemptionPoint = do
 >     stateAssert cur_tcb'_asrt "`cur_tcb'`"
 >     curThread <- getCurThread
 >     isschedulable <- getSchedulable curThread

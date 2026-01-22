@@ -64,9 +64,10 @@ lemma weak_sch_act_wf_more_updates[simp]:
   "\<And>f. weak_sch_act_wf sa (ksDomScheduleIdx_update f s) = weak_sch_act_wf sa s"
   "\<And>f. weak_sch_act_wf sa (ksCurSc_update f s) = weak_sch_act_wf sa s"
   "\<And>f. weak_sch_act_wf sa (ksConsumedTime_update f s) = weak_sch_act_wf sa s"
+  "\<And>f. weak_sch_act_wf sa (ksMachineState_update f s) = weak_sch_act_wf sa s"
   by (auto simp: weak_sch_act_wf_def tcb_in_cur_domain'_def)
 
-crunch scAndTimer, setNextInterrupt, switchSchedContext, setCurSc, handleInterrupt
+crunch scAndTimer, setNextInterrupt, switchSchedContext, setCurSc, maybeHandleInterrupt
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
   (wp: crunch_wps)
 
@@ -88,35 +89,29 @@ lemma ucast_8_32_neq:
   by uint_arith (clarsimp simp: uint_up_ucast is_up)
 
 lemma checkInterrupt_ccorres:
-  "ccorres dc xfdc invs' UNIV []
-           (liftE (maybeHandleInterrupt inKernel)) (Call checkInterrupt_'proc)"
+  "ccorres dc xfdc (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)) UNIV []
+           (maybeHandleInterrupt inKernel) (Call checkInterrupt_'proc)"
   unfolding maybeHandleInterrupt_def
   apply cinit'
    apply (rule ccorres_guard_imp)
      apply (simp add: liftE_def bind_assoc)
      apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
-      apply (subst ccorres_seq_skip'[symmetric])
-      apply (rule ccorres_split_nothrow_novcg)
-          apply (rule_tac P="\<lambda>_. rv \<noteq> None" and R=\<top> in ccorres_cond_both)
-            apply (auto simp: irqInvalid_def Kernel_C.irqInvalid_def split: option.splits)[1]
-           apply (rule_tac P="rv \<noteq> None" in ccorres_gen_asm)
-           apply clarsimp
-           apply wpfix
-           apply (rule ccorres_call[where xf'=xfdc, OF handleInterrupt_ccorres]; simp)
-          apply (rule_tac P="rv = None" in ccorres_gen_asm)
-          apply (clarsimp simp: handleSpuriousIRQ_def)
-          apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
-          apply (rule allI, rule conseqPre, vcg)
-          apply (simp add: return_def)
-         apply ceqv
-        apply (rule_tac r=dc and xf=xfdc in ccorres_returnOk_skip[unfolded returnOk_def,simplified])
-       apply wp
-      apply (simp add: guard_is_UNIV_def)
-     apply (clarsimp simp: non_kernel_IRQs_def)
+      apply (rule_tac P="\<lambda>_. rv \<noteq> None" and R=\<top> in ccorres_cond_both)
+        apply (auto simp: irqInvalid_def Kernel_C.irqInvalid_def split: option.splits)[1]
+       apply (rule_tac P="rv \<noteq> None" in ccorres_gen_asm)
+       apply clarsimp
+       apply wpfix
+       apply (rule ccorres_call[where xf'=xfdc, OF handleInterrupt_ccorres]; simp)
+      apply (rule_tac P="rv = None" in ccorres_gen_asm)
+      apply (clarsimp simp: handleSpuriousIRQ_def)
+      apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
+      apply (rule allI, rule conseqPre, vcg)
+      apply (simp add: return_def)
+     apply simp
      apply (wpsimp wp: hoare_drop_imps)
     apply assumption
    apply assumption
-  apply (clarsimp simp: invs'_def valid_state'_def)
+  apply (clarsimp simp: invs'_def)
   done
 
 lemma handleInterruptEntry_ccorres:
@@ -134,40 +129,19 @@ lemma handleInterruptEntry_ccorres:
            apply (rule ccorres_rel_imp)
             apply (rule checkBudget_ccorres, fastforce+)
        apply ceqv
-      apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
-       apply (rename_tac irq_opt irq)
-       apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
-           apply (rule_tac P="irq_opt = None" in ccorres_cases)
-            apply clarsimp
-            \<comment> \<open>invalid irq; call handleSpuriousIRQ\<close>
-            apply (rule ccorres_cond_false)
-            apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
-            apply (rule allI, rule conseqPre, vcg)
-            apply (clarsimp simp: return_def)
-           apply clarsimp
-           apply (rule ccorres_cond_true)
-           apply (clarsimp simp: irqInvalid_def ucast_8_32_neq Kernel_C.irqInvalid_def)
-           apply wpfix
-           apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-          apply ceqv
-         apply (rule ccorres_stateAssert)+
-         apply (rule ccorres_rhs_assoc)+
-         apply (ctac (no_vcg) add: schedule_ccorres)
-          apply (rule ccorres_stateAssert)+
-          apply (rule ccorres_stateAssert_after)
-          apply (rule ccorres_add_return2)
-          apply (ctac (no_vcg) add: activateThread_ccorres)
-           apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-           apply (rule allI, rule conseqPre, vcg)
-           apply (clarsimp simp: return_def)
-          apply (wp schedule_sch_act_wf schedule_invs' hoare_drop_imps)+
-        apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> weak_sch_act_wf (ksSchedulerAction s) s"
-                     in hoare_post_imp)
-         apply wpsimp+
-       apply (clarsimp simp: guard_is_UNIV_def)
-      apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift simp: weak_sch_act_wf_def)+
+      apply (ctac (no_vcg) add: checkInterrupt_ccorres)
+       apply (rule ccorres_stateAssert)+
+       apply (rule ccorres_rhs_assoc)+
+       apply (ctac (no_vcg) add: schedule_ccorres)
+        apply (rule ccorres_stateAssert)+
+        apply (rule ccorres_stateAssert_after)
+        apply (rule ccorres_add_return2)
+        apply (ctac (no_vcg) add: activateThread_ccorres)
+         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+         apply (rule allI, rule conseqPre, vcg)
+         apply (clarsimp simp: return_def)
+        apply (wp schedule_sch_act_wf schedule_invs' hoare_drop_imps)+
     apply (clarsimp simp: guard_is_UNIV_def)
-    apply (clarsimp simp: irqInvalid_def Kernel_C.irqInvalid_def split: option.splits)
    apply wpsimp
   apply clarsimp
   done

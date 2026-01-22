@@ -673,7 +673,7 @@ lemma handleInterrupt_corres:
       apply (rule corres_split[OF getIRQSlot_corres])
         apply simp
         apply (rule corres_split[OF get_cap_corres,
-                                  where R="\<lambda>rv. einvs and valid_cap rv"
+                                  where R="\<lambda>rv. ?Q and valid_cap rv"
                                    and R'="\<lambda>rv. invs' and valid_cap' (cteCap rv)"])
           apply (rule corres_underlying_split[where r'=dc])
              apply (case_tac xb, simp_all add: doMachineOp_return)[1]
@@ -686,26 +686,10 @@ lemma handleInterrupt_corres:
            apply ((wp |simp)+)
      apply clarsimp
     apply fastforce
-   apply (rule corres_guard_imp)
-     apply (rule corres_split[OF getIRQSlot_corres])
-       apply simp
-       apply (rule corres_split[OF get_cap_corres,
-                                 where R="\<lambda>rv. ?Q and valid_cap rv"
-                                  and R'="\<lambda>rv. invs' and valid_cap' (cteCap rv)"])
-         apply (rule corres_underlying_split[where r'=dc])
-            apply (case_tac xb, simp_all add: doMachineOp_return)[1]
-             apply (clarsimp simp add: when_def doMachineOp_return)
-             apply (rule corres_guard_imp, rule sendSignal_corres)
-              apply (clarsimp simp: valid_cap_def valid_cap'_def do_machine_op_bind doMachineOp_bind
-                                    arch_mask_irq_signal_def maskIrqSignal_def)+
-           apply (rule corres_machine_op, rule corres_eq_trivial;
-                  (simp add:  no_fail_maskInterrupt no_fail_bind no_fail_ackInterrupt)+)+
-          apply ((wp | simp)+)
-    apply clarsimp
-   apply fastforce
-  apply (corresKsimp corres: corres_machine_op setReprogramTimer_corres
-                      simp: ackDeadlineIRQ_def ackInterrupt_def)
-  by fastforce
+   apply (corresKsimp corres: corres_machine_op setReprogramTimer_corres
+                       simp: ackDeadlineIRQ_def ackInterrupt_def)
+  apply (corres corres: corres_machine_op corres_eq_trivial)
+  done
 
 crunch rescheduleRequired, tcbSchedAppend
   for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"

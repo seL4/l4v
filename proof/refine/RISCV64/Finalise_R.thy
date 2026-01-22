@@ -2290,6 +2290,8 @@ crunch setBoundNotification
   and valid_sched_pointers[wp]: valid_sched_pointers
   (wp: valid_bitmaps_lift)
 
+context begin interpretation Arch . (*FIXME: arch-split*)
+
 lemma unbindNotification_invs[wp]:
   "unbindNotification tcb \<lbrace>invs'\<rbrace>"
   apply (simp add: unbindNotification_def invs'_def valid_dom_schedule'_def)
@@ -2338,6 +2340,8 @@ lemma unbindMaybeNotification_invs[wp]:
                  valid_ntfn'_def ko_wp_at'_def live'_def live_ntfn'_def o_def
           elim!: obj_atE' if_live_then_nonz_capE'
           split: option.splits ntfn.splits)
+
+end
 
 lemma setNotification_invs':
   "\<lbrace>invs'
@@ -4581,15 +4585,15 @@ lemma schedContextSetInactive_corres:
        apply (rule updateSchedContext_no_stack_update_corres)
           apply (clarsimp simp: sc_relation_def refills_map_def)
          apply (fastforce dest: state_relation_sc_replies_relation sc_replies_relation_prevs_list
-                          simp: sc_relation_def opt_map_def obj_at_simps is_sc_obj_def
+                          simp: sc_relation_def opt_map_def
                          split: Structures_A.kernel_object.splits)
-        apply (clarsimp simp: gen_objBits_simps)+
+        apply clarsimp+
       apply (rule updateSchedContext_no_stack_update_corres)
          apply (clarsimp simp: sc_relation_def)
         apply (fastforce dest: state_relation_sc_replies_relation sc_replies_relation_prevs_list
-                         simp: sc_relation_def opt_map_def obj_at_simps is_sc_obj_def
+                         simp: sc_relation_def opt_map_def
                         split: Structures_A.kernel_object.splits)
-       apply (clarsimp simp: gen_objBits_simps)
+       apply clarsimp
       apply (wpsimp wp: get_sched_context_wp getSchedContext_wp)+
   done
 

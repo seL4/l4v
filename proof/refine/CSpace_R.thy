@@ -3661,18 +3661,6 @@ locale CSpace_R_2 = CSpace_R +
                   (mdbPrev_update (\<lambda>a. src) src_node)))))
       src (cteMDBNode_update (mdbNext_update (\<lambda>a. dest))) \<turnstile> dest \<rightarrow> p =
      False"
-  assumes create_reply_master_corres:
-  "\<And>sl sl' rights thread.
-   \<lbrakk> sl' = cte_map sl ; AllowGrant \<in> rights \<rbrakk> \<Longrightarrow>
-   corres dc
-      (cte_wp_at ((=) cap.NullCap) sl and valid_pspace and valid_mdb and valid_list)
-      (cte_wp_at' (\<lambda>c. cteCap c = NullCap \<and> mdbPrev (cteMDBNode c) = 0) sl'
-       and valid_mdb' and valid_pspace')
-      (do
-         y \<leftarrow> set_original sl True;
-         set_cap (cap.ReplyCap thread True rights) sl
-       od)
-      (setCTE sl' (CTE (capability.ReplyCap thread True True) initMDBNode))"
   assumes capMaster_zobj_refs:
     "\<And>c c'. capMasterCap c = capMasterCap c' \<Longrightarrow> zobj_refs' c = zobj_refs' c'"
   assumes zobj_refs_Master:
@@ -4878,7 +4866,7 @@ crunch updateFreeIndex
   and pspace_distinct'[wp]: "pspace_distinct'"
   and pspace_bounded'[wp]: "pspace_bounded'"
   and no_0_obj[wp]: "no_0_obj'"
-  for pspace_canonical'[wp]: pspace_canonical'
+  and pspace_canonical'[wp]: pspace_canonical'
   and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
   and pred_tcb_at'[wp]: "pred_tcb_at' proj P p"
   and valid_replies'[wp]: "valid_replies'"

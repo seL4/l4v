@@ -287,6 +287,8 @@ lemma deriveCap_not_null:
   apply (simp add: deriveCap_def split del: if_split)
   by (case_tac cap; wpsimp simp: gen_isCap_simps)
 
+context begin interpretation Arch . (*FIXME: arch-split*)
+
 lemma deriveCap_derived_foo:
   "\<lbrace>\<lambda>s. \<forall>cap'. (cte_wp_at' (\<lambda>cte. badge_derived' cap (cteCap cte)
                      \<and> capASID cap = capASID (cteCap cte) \<and> cap_asid_base' cap = cap_asid_base' (cteCap cte)
@@ -375,9 +377,7 @@ lemma cteInsert_weak_cte_wp_at3:
 lemma maskedAsFull_null_cap[simp]:
   "(maskedAsFull x y = capability.NullCap) = (x = capability.NullCap)"
   "(capability.NullCap  = maskedAsFull x y) = (x = capability.NullCap)"
-  by (case_tac x, auto simp:maskedAsFull_def gen_isCap_simps )
-
-context begin interpretation Arch . (*FIXME: arch-split*)
+  by (case_tac x, auto simp:maskedAsFull_def gen_isCap_simps)
 
 lemma maskCapRights_eq_null:
   "(RetypeDecls_H.maskCapRights r xa = capability.NullCap) =

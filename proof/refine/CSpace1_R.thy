@@ -13,10 +13,6 @@ imports
   ArchCSpace_I
 begin
 
-(* FIXME: move *)
-crunch setCTE
-  for tcbQueued[wp]: "\<lambda>s. P (tcbQueued |< tcbs_of' s)"
-
 (* FIXME consider moving to word lib 32/64 *)
 (* same proof on all architectures *)
 lemma (in Arch) word_bits_gt_0[simp]:
@@ -186,9 +182,7 @@ locale CSpace1_R =
      \<not> isIRQControlCap cap' \<and>
      badge_derived' cap' cap \<and>
      (isUntypedCap cap \<longrightarrow> descendants_of' p m = {}) \<and>
-     (isReplyCap cap = isReplyCap cap') \<and>
-     (isReplyCap cap \<longrightarrow> capReplyMaster cap) \<and>
-     (isReplyCap cap' \<longrightarrow> \<not> capReplyMaster cap')"
+     (isReplyCap cap = isReplyCap cap')"
 
 lemma subtree_no_parent:
   assumes "m \<turnstile> p \<rightarrow> x"
@@ -326,7 +320,7 @@ lemma pspace_relation_caps_of_state_cross:
      caps_of_state s slot = Some c; pspace_aligned s; pspace_distinct s \<rbrakk>
    \<Longrightarrow> \<exists>cte. ctes_of s' (cte_map slot) = Some cte \<and> cap_relation c (cteCap cte)"
   for s' :: kernel_state
-  by (auto simp: cte_wp_at_caps_of_state clear_um.pspace
+  by (auto simp: cte_wp_at_caps_of_state
            intro!: pspace_relation_ctes_ofI pspace_aligned_cross pspace_distinct_cross)
 
 lemma caps_of_state_cross:
@@ -997,8 +991,6 @@ lemma updateMDB_no_0 [wp]:
    \<lbrace>\<lambda>rv s. no_0 (ctes_of s)\<rbrace>"
   by wpsimp
 
-context begin interpretation Arch . (*FIXME: arch-split*)
-
 lemma isMDBParentOf_next_update [simp]:
   "isMDBParentOf (cteMDBNode_update (mdbNext_update f) cte) cte' =
    isMDBParentOf cte cte'"
@@ -1617,11 +1609,11 @@ lemma updateCap_stuff:
   apply (intro conjI impI)
          apply (erule use_valid [OF _ setObject_aligned])
          apply (clarsimp simp: updateObject_cte in_monad typeError_def
-                               in_magnitude_check objBits_simps
+                               in_magnitude_check gen_objBits_simps
                         split: kernel_object.split_asm if_split_asm)
         apply (erule use_valid [OF _ setObject_distinct])
         apply (clarsimp simp: updateObject_cte in_monad typeError_def
-                              in_magnitude_check objBits_simps
+                              in_magnitude_check gen_objBits_simps
                        split: kernel_object.split_asm if_split_asm)
        apply (erule setObject_cte_replies_of'_use_valid_ksPSpace; simp)
       apply (erule setObject_cte_scs_of'_use_valid_ksPSpace; simp)
@@ -1683,7 +1675,7 @@ lemma no_fail_setObject_cte[wp]:
   apply (wp|wpc)+
   apply (clarsimp simp: cte_wp_at'_def getObject_def split_def
                         in_monad loadObject_cte readObject_def omonad_defs
-                 dest!: in_singleton split: option.splits split del: if_split)
+                 dest!: in_singleton split: option.splits split del: if_split cong: if_cong)
   by (fastforce simp: read_typeError_def gen_objBits_simps
                       read_magnitudeCheck_def ohaskell_assert_def
                split: kernel_object.split_asm if_split_asm
@@ -3061,7 +3053,7 @@ lemma setCTE_UntypedCap_corres:
   apply (rename_tac abs conc conc' abs')
 
   (* FIXME RT: replace this with whatever comes out of VER-1248. *)
-  apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
+  apply (extract_conjunct \<open>match conclusion in "ghost_relation_wrapper _ _" \<Rightarrow> -\<close>)
    apply (frule setCTE_pspace_only)
    apply (clarsimp simp: set_cap_a_type_inv ghost_relation_wrapper_same_concrete_set_cap)
 

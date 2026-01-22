@@ -11,7 +11,9 @@ Functions for cancelling IPC.
 chapter "IPC Cancelling"
 
 theory IpcCancel_A
-imports ArchIpcCancel_A
+imports
+  ArchIpcCancel_A
+  Init_A
 begin
 
 arch_requalify_consts (A)

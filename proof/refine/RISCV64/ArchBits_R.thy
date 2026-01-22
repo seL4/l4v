@@ -30,7 +30,7 @@ lemma objBitsKO_neq_0[Bits_R_assms]:
   "objBitsKO ko \<noteq> 0"
   unfolding objBits_def
   by (case_tac ko;
-      simp add: pageBits_def pteBits_def objBits_simps'
+      simp add: pageBits_def pteBits_def objBits_simps' minSchedContextBits_def
          split: arch_kernel_object.split)
 
 lemma arch_isCap_simps:

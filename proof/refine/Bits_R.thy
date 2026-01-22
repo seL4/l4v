@@ -66,11 +66,6 @@ locale Bits_R =
 
 context Bits_R begin
 
-lemma objBitsKO_pos_power2[simp]:
-  "(1::machine_word) < 2 ^ objBitsKO ko"
-  using objBitsKO_neq_0
-  by (simp add: objBitsKO_less_word_bits word_2p_lem word_bits_size)
-
 lemma scBits_pos_power2:
   assumes "minSchedContextBits + scSize sc < word_bits"
   shows "(1::machine_word) < (2::machine_word) ^ (minSchedContextBits + scSize sc)"
@@ -79,15 +74,17 @@ lemma scBits_pos_power2:
   apply (clarsimp simp: minSchedContextBits_def)
   by (auto simp: pow_mono_leq_imp_lt)
 
+lemma objBitsKO_pos_power2[simp, intro!]:
+  assumes "objBitsKO ko < word_bits"
+  shows "(1::machine_word) < 2 ^ objBitsKO ko"
+  using objBitsKO_neq_0
+  by (simp add: assms word_2p_lem word_bits_size)
+
 lemma objBits_pos_power2[simp]:
   assumes "objBits v < word_bits"
   shows "(1::machine_word) < 2 ^ objBits v"
-  unfolding objBits_def by (simp add: scBits_pos_power2)
-
-lemma objBitsKO_no_overflow[simp, intro!]:
-  "objBitsKO ko < word_bits \<Longrightarrow> (1::machine_word) < 2 ^ objBitsKO ko"
-  by (cases ko; simp add: objBits_simps' pageBits_def pteBits_def scBits_pos_power2
-                   split: arch_kernel_object.splits)
+  using assms
+  unfolding objBits_def by simp
 
 end
 

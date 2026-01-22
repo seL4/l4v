@@ -208,7 +208,7 @@ lemma retype_region_etcb_at[wp]:
   apply (simp add: retype_region_def)
   apply wp
   apply (clarsimp simp add: pred_tcb_at_def obj_at_def simp del: fun_upd_apply)
-  apply (clarsimp simp: etcbs_of'_def etcb_at'_def etcb_of_def)
+  apply (clarsimp simp: etcb_at'_def etcb_of_def pred_map_simps vs_heap_simps)
   apply (drule foldr_kh_eq)
   apply (auto simp: etcb_of_def split: if_split_asm option.splits elim!: rsubst[where P=P])
   done
@@ -244,20 +244,23 @@ lemma invoke_untyped_etcb_at':
   apply (cases ui)
   apply (simp add: mapM_x_def[symmetric] invoke_untyped_def)
   apply (wpsimp wp: mapM_x_wp'
-                    create_cap_no_pred_tcb_at typ_at_pred_tcb_at_lift
-                    hoare_convert_imp[OF create_cap_no_pred_tcb_at]
-                    hoare_convert_imp[OF _ init_arch_objects_etcbs_of]
+                    hoare_convert_imp[OF create_cap.cspace_pred_tcb_at[where P'=Not]]
+                    hoare_convert_imp[OF _ init_arch_objects_valid_sched_pred]
                     hoare_drop_impE_E)
   done
 
 lemma invoke_untyped_etcb_at:
-  "\<lbrace>\<lambda>s::'state_ext state. etcb_at P t s \<and> invs s \<and> st_tcb_at (Not o inactive and Not \<circ> idle) t s \<and> ct_active s \<and> valid_untyped_inv ui s\<rbrace>
+  "\<lbrace>\<lambda>s. etcb_at P t s \<and> invs s \<and> st_tcb_at (Not o inactive and Not \<circ> idle) t s
+        \<and> ct_active s \<and> valid_untyped_inv ui s \<and> scheduler_action s = resume_cur_thread\<rbrace>
    invoke_untyped ui
-   \<lbrace>\<lambda>_. etcb_at P t\<rbrace>"
+   \<lbrace>\<lambda>_. etcb_at P t :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (rule hoare_post_imp[where Q'="\<lambda>_ s. st_tcb_at (Not \<circ> inactive) t s \<and> (st_tcb_at (Not \<circ> inactive) t s \<longrightarrow> etcb_at P t s)"])
    apply simp
   apply (wpsimp wp: invoke_untyped_etcb_at')+
+  apply (fastforce elim: st_tcb_ex_cap st_tcb_weakenE split: thread_state.splits)
   done
+
+end
 
 lemma invoke_untyped_non_cspace_obj_at:
   assumes non_cspace: "cspace_agnostic_pred P"

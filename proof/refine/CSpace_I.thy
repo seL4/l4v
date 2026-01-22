@@ -691,10 +691,10 @@ lemma getObject_cte_det:
 lemma cte_wp_at_obj_cases':
   "cte_wp_at' P p s =
     (obj_at' P p s \<or> (\<exists>n \<in> dom tcb_cte_cases. obj_at' (P \<circ> (fst (the (tcb_cte_cases n)))) (p - n) s))"
-  apply (simp add: cte_wp_at_cases' obj_at'_def)
+  apply (simp add: cte_wp_at_cases' obj_at'_def cteSizeBits_cte_level_bits[symmetric])
   apply (rule iffI)
    apply (erule disjEI
-           | clarsimp simp: gen_objBits_simps cteSizeBits_cte_level_bits word_bits_def
+           | clarsimp simp: gen_objBits_simps obj_sizeBits_less_word_bits
            | rule rev_bexI, erule domI)+
   apply fastforce
   done
@@ -742,7 +742,7 @@ lemma valid_SchedContextCap_sc_at':
   "\<lbrakk>valid_cap' (SchedContextCap sc_ptr n) s\<rbrakk> \<Longrightarrow> sc_at' sc_ptr s"
   apply (clarsimp simp: valid_cap'_def obj_at'_real_def)
   apply (rule ko_wp_at'_weakenE)
-   apply (fastforce simp: objBits_simps
+   apply (fastforce simp: gen_objBits_simps
                    split: kernel_object.splits)+
   done
 

@@ -37,17 +37,6 @@ lemma liftE_return_bindE:
 crunch getIRQState
   for inv[wp]: P
 
-lemma dmo_invs_no_cicd_lift': (* FIXME AARCH64: move up *)
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>"
-  assumes "\<And>P p. f \<lbrace>\<lambda>s. P (underlying_memory s p)\<rbrace>"
-  shows "doMachineOp f \<lbrace>all_invs_but_ct_idle_or_in_cur_domain'\<rbrace>"
-  apply (wp dmo_invs_no_cicd' assms)
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid,
-         rule assms, rule refl)
-  apply simp
-  done
-
 lemma dmo_invs_lift': (* FIXME AARCH64: move up *)
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>"
   assumes "\<And>P p. f \<lbrace>\<lambda>s. P (underlying_memory s p)\<rbrace>"
@@ -97,30 +86,14 @@ lemma maskInterrupt_invs':
     and (\<lambda>s. \<not>b \<longrightarrow> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive)\<rbrace>
    doMachineOp (maskInterrupt b irq)
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-   by (wpsimp wp: maskInterrupt_irq_states' dmo_maskInterrupt simp: invs'_def valid_state'_def)
+   by (wpsimp wp: maskInterrupt_irq_states' dmo_maskInterrupt simp: invs'_def )
       (auto simp: valid_irq_states_def valid_irq_masks'_def valid_machine_state'_def
-                  ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+                  ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
+                  valid_dom_schedule'_def)
 
 lemma dmo'_gets_wp:
   "\<lbrace>\<lambda>s. Q (f (ksMachineState s)) s\<rbrace> doMachineOp (gets f) \<lbrace>Q\<rbrace>"
   unfolding doMachineOp_def by (wpsimp simp: in_monad)
-
-lemma maskInterrupt_invs_no_cicd':
-  "\<lbrace>invs_no_cicd'
-    and (\<lambda>s. \<not>b \<longrightarrow> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive)\<rbrace>
-   doMachineOp (maskInterrupt b irq)
-   \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  by (wpsimp wp: maskInterrupt_irq_states' dmo_maskInterrupt simp: invs_no_cicd'_def)
-     (auto simp: valid_irq_states_def valid_irq_masks'_def valid_machine_state'_def
-                 ct_not_inQ_def)
-
-lemma dmo_maskInterrupt_True_invs_no_cicd'[wp]:
-  "doMachineOp (maskInterrupt True irq) \<lbrace>invs_no_cicd'\<rbrace>"
-  apply (wp dmo_maskInterrupt)
-  apply (clarsimp simp: invs_no_cicd'_def valid_state'_def)
-  apply (simp add: valid_irq_masks'_def valid_machine_state'_def
-                   ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
-  done
 
 (* FIXME AARCH64: replacing getSlotCap_wp is probably going to be too much breakage, but
                    rename would be good *)

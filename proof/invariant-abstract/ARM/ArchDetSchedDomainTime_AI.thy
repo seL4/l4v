@@ -62,9 +62,6 @@ crunch handle_reserved_irq, handle_spurious_irq
   and domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps)
 
-crunch handle_spurious_irq
-  for scheduler_action[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (scheduler_action s)"
-
 end
 
 global_interpretation DetSchedDomainTime_AI_2?: DetSchedDomainTime_AI_2

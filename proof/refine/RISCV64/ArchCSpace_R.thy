@@ -512,7 +512,7 @@ lemma ex_nonz_tcb_cte_caps':
   apply (clarsimp simp: ex_nonz_cap_to'_def ex_cte_cap_to'_def cte_wp_at_ctes_of)
   apply (subgoal_tac "s \<turnstile>' cteCap cte")
    apply (rule_tac x=cref in exI, rule_tac x=cte in exI)
-   apply (clarsimp simp: valid_cap'_def obj_at'_def dom_def
+   apply (clarsimp simp: valid_cap'_def obj_at'_def dom_def RISCV64.typ_at_to_obj_at_arches ko_wp_at'_def
                   split: cte.split_asm capability.split_asm)
   apply (case_tac cte)
   apply (clarsimp simp: ctes_of_valid_cap')

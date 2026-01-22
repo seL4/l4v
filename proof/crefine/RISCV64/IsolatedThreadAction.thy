@@ -114,24 +114,6 @@ end
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
-lemma setObject_modify:
-  fixes v :: "'a :: pspace_storable" shows
-  "\<lbrakk> obj_at' (P :: 'a \<Rightarrow> bool) p s; updateObject v = updateObject_default v;
-         (1 :: machine_word) < 2 ^ objBits v; \<And>ko. P ko \<Longrightarrow> objBits ko = objBits v \<rbrakk>
-    \<Longrightarrow> setObject p v s
-      = modify (ksPSpace_update (\<lambda>ps. ps (p \<mapsto> injectKO v))) s"
-  apply (clarsimp simp: setObject_def split_def exec_gets obj_at'_def lookupAround2_known1
-                        assert_opt_def updateObject_default_def bind_assoc)
-  apply (simp add: projectKO_def alignCheck_assert)
-  apply (simp add: project_inject objBits_def)
-  apply (frule in_magnitude_check[where s'=s]; simp)
-   apply blast
-  apply (clarsimp simp only: koTypeOf_injectKO)
-  apply (simp add: magnitudeCheck_assert in_monad bind_def gets_def oassert_opt_def
-                   get_def return_def)
-  apply (simp add: simpler_modify_def)
-  done
-
 lemma getObject_return:
   fixes v :: "'a :: pspace_storable" shows
   "\<lbrakk> \<And>q n ko. loadObject p q n ko =
@@ -954,15 +936,15 @@ lemma setObject_modify_assert:
   apply (case_tac "obj_at' (\<lambda>v'. v = v' \<or> objBits v' = objBits v) p x")
    apply (clarsimp simp: obj_at'_def lookupAround2_known1 assert_opt_def)
    apply (clarsimp simp: project_inject)
-   apply (subst magnitudeCheck_assert2; simp?;
-          simp add: objBits_def koTypeOf_injectKO simpler_modify_def)
+   apply (simp only: objBits_def koTypeOf_injectKO)
+   apply (simp add: magnitudeCheck_assert2 simpler_modify_def)
    apply (clarsimp simp: assert_def magnitudeCheck_assert2)
    apply (clarsimp simp: omonad_defs bind_def return_def)
    apply fastforce
   apply (clarsimp simp: assert_opt_def assert_def magnitudeCheck_assert2
                  split: option.split)
   by (fastforce simp: omonad_defs gets_the_def get_def bind_def return_def assert_opt_def fail_def
-                      obj_at_simps project_inject simp_thms
+                      obj_at_simps project_inject
                split: option.splits)
 
 lemma setEndpoint_isolatable:

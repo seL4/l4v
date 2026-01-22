@@ -1745,7 +1745,8 @@ proof -
            rule cm_disj cm_disj_tcb cm_disj_cte cm_disj_user cm_disj_device, assumption+,
            simp_all add: objBits_simps' bit_simps
                          heap_to_user_data_restrict heap_to_device_data_restrict
-                         schedContextStructSize_sizeof[unfolded size_of_def, symmetric])[1],
+                         schedContextStructSize_sizeof[unfolded size_of_def, symmetric]
+                    del: minSchedContextBits_def)[1],
            (rule_tac y="2 ^ minSchedContextBits" in order_trans,
             rule schedContextStructSize_minSchedContextBits, fastforce)?)+
     apply (simp add: map_to_ctes_delete' cmap_relation_restrict_both_proj

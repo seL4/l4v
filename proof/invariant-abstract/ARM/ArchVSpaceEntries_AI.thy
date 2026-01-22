@@ -1672,7 +1672,7 @@ crunch activate_thread, switch_to_thread, switch_to_idle_thread, awaken
    wp: crunch_wps OR_choice_weak_wp select_ext_weak_wp)
 
 crunch handle_call, handle_recv, handle_send, handle_yield,
- handle_interrupt, handle_vm_fault, handle_hypervisor_fault
+  maybe_handle_interrupt, handle_vm_fault, handle_hypervisor_fault
   for valid_pdpt[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: hoare_vcg_if_lift2 hoare_drop_imps crunch_wps
    simp: crunch_simps Let_def whenE_def liftE_def
@@ -1688,9 +1688,6 @@ crunch check_domain_time
   for pred_tcb_at_ct[wp]: "\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s"
   and ct_running[wp]: ct_running
   (simp: crunch_simps wp: crunch_wps)
-
-crunch handle_spurious_irq
-  for valid_pdpt[wp]: "valid_pdpt_objs"
 
 lemma call_kernel_valid_pdpt[wp]:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_pdpt_objs
