@@ -232,4 +232,9 @@ lemma no_fail_grab_asm:
   "(G \<Longrightarrow> no_fail P f) \<Longrightarrow> no_fail (\<lambda>s. G \<and> P s) f"
   by (cases G; clarsimp)
 
+lemma no_fail_gen_asm_spec:
+  "\<lbrakk>\<And>s. P s \<Longrightarrow> S; S \<Longrightarrow> no_fail P Q\<rbrakk> \<Longrightarrow> no_fail P Q"
+  by (rule no_fail_pre)
+     (fastforce intro: no_fail_grab_asm)+
+
 end
