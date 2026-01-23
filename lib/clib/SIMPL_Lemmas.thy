@@ -390,6 +390,26 @@ lemma hoarep_conj_lift:
 
 lemmas hoarep_conj_lift_pre_fix = hoarep_conj_lift[where P=P and P'=P for P, simplified]
 
+lemma hoarep_gen_asm:
+  "\<lbrakk>F \<Longrightarrow> \<Gamma> \<turnstile> {s'. P s'} f {s'. Q s'}\<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> {s'. P s' \<and> F} f {s'. Q s'}"
+  apply (rule hoare_complete)
+  apply (clarsimp simp: cvalid_def HoarePartialDef.valid_def)
+  apply (rename_tac x)
+  apply (prop_tac "x \<in> Collect P", fastforce)
+  apply (frule (2) hoarep_exec)
+  apply fastforce
+  done
+
+lemma hoarep_gen_asm_spec:
+  "\<lbrakk>\<forall>s. s \<in> P \<longrightarrow> S; S \<Longrightarrow> \<Gamma> \<turnstile> P f Q\<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> P f Q"
+  apply (rule hoare_complete)
+  apply (clarsimp simp: cvalid_def HoarePartialDef.valid_def)
+  apply (rename_tac x)
+  apply (prop_tac "x \<in> P", fastforce)
+  apply (frule (1) hoarep_exec)
+   apply fastforce
+  by fastforce
+
 lemma exec_While_final_inv'':
   "\<lbrakk> \<Gamma> \<turnstile> \<langle>b, x\<rangle> \<Rightarrow> s'; b = While C B; x = Normal s;
     \<And>s. s \<notin> C \<Longrightarrow> I s (Normal s);
