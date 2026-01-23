@@ -2672,6 +2672,10 @@ lemma fst_subset:
   "fst ` A \<subseteq> fst ` B \<Longrightarrow> (r, q) \<in> A \<Longrightarrow> \<exists>t. (r,t) \<in> B"
   by fastforce
 
+lemma distinct_hd_not_in_tl:
+  "distinct xs \<Longrightarrow> hd xs \<notin> set (tl xs)"
+  by (case_tac xs; clarsimp)
+
 lemma option_Some_value_independent:
   "\<lbrakk> f x = Some v; \<And>v'. f x = Some v' \<Longrightarrow> f y = Some v' \<rbrakk> \<Longrightarrow> f y = Some v"
   by blast
@@ -2798,5 +2802,14 @@ lemma findIndex_member:
   apply (rule_tac x="a#ys" in exI)
   apply (clarsimp simp: findIndex_def findIndex'_app)
   done
+
+lemma wf_fst_size:
+  "wf {((r :: 'b list, s :: 'a), (r', s')). length r < length r'}"
+  apply (insert wf_inv_image[where r="{(m, n). m < n}" and f="\<lambda>(r :: 'b list, s :: 'a). length r"])
+  apply (fastforce intro: wf simp: inv_image_def wf_def)
+  done
+
+(* FIXME: use the name wf_fst_size instead of list_length_wf_helper *)
+lemmas list_length_wf_helper = wf_fst_size
 
 end
