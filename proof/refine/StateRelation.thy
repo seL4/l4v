@@ -20,7 +20,6 @@ arch_requalify_consts
   arch_tcb_relation
   aobj_relation_cuts
   is_other_obj_relation_type
-  ghost_relation
   ghost_relation_wrapper_2
   arch_state_relation
 

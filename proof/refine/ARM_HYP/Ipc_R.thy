@@ -370,7 +370,7 @@ lemma cteInsert_weak_cte_wp_at3:
 lemma maskedAsFull_null_cap[simp]:
   "(maskedAsFull x y = capability.NullCap) = (x = capability.NullCap)"
   "(capability.NullCap  = maskedAsFull x y) = (x = capability.NullCap)"
-  by (case_tac x, auto simp:maskedAsFull_def isCap_simps )
+  by (case_tac x, auto simp:maskedAsFull_def isCap_simps)
 
 lemma maskCapRights_eq_null:
   "(RetypeDecls_H.maskCapRights r xa = capability.NullCap) =
@@ -1987,7 +1987,7 @@ lemmas getSanitiseRegisterInfo_def2 = getSanitiseRegisterInfo_def[folded archThr
 lemma getSanitiseRegisterInfo_ct'[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> getSanitiseRegisterInfo t \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
   apply (simp add: getSanitiseRegisterInfo_def)
-  by (wpsimp simp: getObject_inv_tcb setObject_ct_inv)
+  by (wpsimp simp: setObject_ct_inv)
 
 crunch handleFaultReply
   for ct'[wp]: "\<lambda>s. P (ksCurThread s)"

@@ -836,7 +836,7 @@ context Arch begin arch_global_naming
 named_theorems CSpace1_R_2_assms
 
 lemma weak_derived_updateCapData:
-  "\<lbrakk> (updateCapData P x c) \<noteq> NullCap; weak_derived' c c';
+  "\<lbrakk> updateCapData P x c \<noteq> NullCap; weak_derived' c c';
      capBadge (updateCapData P x c) = capBadge c' \<rbrakk>
   \<Longrightarrow> weak_derived' (updateCapData P x c) c'"
   apply (clarsimp simp add: weak_derived'_def updateCapData_Master)
@@ -918,7 +918,7 @@ lemma is_derived_eq[CSpace1_R_2_assms]:
   apply (rule conjI)
    apply (clarsimp simp: is_cap_simps isCap_simps)
    apply (cases c, auto simp: isCap_simps cap_master_cap_def capMasterCap_def vsCapRef_def vs_cap_ref_def)[1]
-  apply (case_tac "isIRQControlCap d'")
+  apply (cases "isIRQControlCap d'")
    apply (frule(1) master_cap_relation)
    apply (clarsimp simp: isCap_simps cap_master_cap_def
                          is_zombie_def is_reply_cap_def is_master_reply_cap_def
