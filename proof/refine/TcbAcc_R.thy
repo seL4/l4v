@@ -247,27 +247,13 @@ lemma valid_tcbs'_obj_at':
   by (clarsimp simp add: valid_tcbs'_def ran_def typ_at'_def
                          ko_wp_at'_def valid_obj'_def valid_tcb'_def obj_at'_def)
 
-(* same derivation on all architectures *)
-lemma (in Arch) update_valid_tcb'[simp]:
-  "\<And>f. valid_tcb' tcb (ksReadyQueuesL1Bitmap_update f s) = valid_tcb' tcb s"
-  "\<And>f. valid_tcb' tcb (ksReadyQueuesL2Bitmap_update f s) = valid_tcb' tcb s"
-  "\<And>f. valid_tcb' tcb (ksReadyQueues_update f s) = valid_tcb' tcb s"
-  "\<And>f. valid_tcb' tcb (ksSchedulerAction_update f s) = valid_tcb' tcb s"
-  "\<And>f. valid_tcb' tcb (ksDomainTime_update f s) = valid_tcb' tcb s"
-  by (auto simp: valid_tcb'_def valid_tcb_state'_def valid_bound_tcb'_def valid_bound_ntfn'_def
-                 opt_tcb_at'_def valid_arch_tcb'_def
-          split: option.splits thread_state.splits)
+context pspace_update_eq' begin
 
-requalify_facts Arch.update_valid_tcb'
-lemmas [simp] = update_valid_tcb'
+lemma valid_tcb'_update'[iff]:
+  "valid_tcbs' (f s) = valid_tcbs' s"
+  by (simp add: valid_tcbs'_def pspace)
 
-lemma update_valid_tcbs'[simp]:
-  "\<And>f. valid_tcbs' (ksReadyQueuesL1Bitmap_update f s) = valid_tcbs' s"
-  "\<And>f. valid_tcbs' (ksReadyQueuesL2Bitmap_update f s) = valid_tcbs' s"
-  "\<And>f. valid_tcbs' (ksReadyQueues_update f s) = valid_tcbs' s"
-  "\<And>f. valid_tcbs' (ksSchedulerAction_update f s) = valid_tcbs' s"
-  "\<And>f. valid_tcbs' (ksDomainTime_update f s) = valid_tcbs' s"
-  by (simp_all add: valid_tcbs'_def)
+end
 
 lemma doMachineOp_irq_states':
   assumes masks: "\<And>P. \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
@@ -1079,30 +1065,17 @@ lemma threadSet_pred_tcb_no_state:
   shows   "threadSet f t \<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
   by (wpsimp wp: threadSet_obj_at'_no_state simp: pred_tcb_at'_def assms)
 
-lemma threadSet_ct[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
-  apply (simp add: threadSet_def)
-  apply (wp setObject_ct_inv)
-  done
+crunch threadSet
+  for ct[wp]: "\<lambda>s. P (ksCurThread s)"
+  and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
+  and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
+  and it[wp]: "\<lambda>s. P (ksIdleThread s)"
+  (wp: setObject_ct_inv setObject_cd_inv setObject_ksDomSchedule_inv setObject_it_inv)
 
-lemma threadSet_cd[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
-  apply (simp add: threadSet_def)
-  apply (wp setObject_cd_inv)
-  done
-
-
-lemma threadSet_ksDomSchedule[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
-  apply (simp add: threadSet_def)
-  apply (wp setObject_ksDomSchedule_inv)
-  done
-
-lemma threadSet_it[wp]:
-  "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. P (ksIdleThread s)\<rbrace>"
-  apply (simp add: threadSet_def)
-  apply (wp setObject_it_inv)
-  done
+crunch threadSet
+  for ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
+  and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  (wp: updateObject_default_inv simp: setObject_def)
 
 lemma threadSet_sch_act:
   "(\<And>tcb. tcbState (F tcb) = tcbState tcb \<and> tcbDomain (F tcb) = tcbDomain tcb) \<Longrightarrow>
@@ -1130,7 +1103,7 @@ lemma threadSet_sch_actT_P:
   apply (frule_tac P1="(=) (ksCurThread s)"
                 in use_valid [OF _ threadSet_ct], rule refl)
   apply (frule_tac P1="(=) (ksCurDomain s)"
-                in use_valid [OF _ threadSet_cd], rule refl)
+                in use_valid [OF _ threadSet_ksCurDomain], rule refl)
   apply (case_tac "ksSchedulerAction b",
          simp_all add: ct_in_state'_def pred_tcb_at'_def)
    apply (subgoal_tac "t \<noteq> ksCurThread s")
@@ -1194,22 +1167,12 @@ lemma threadSet_ct_idle_or_in_cur_domain':
   done
 
 crunch threadSet
-  for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
-  (wp: setObject_ksPSpace_only updateObject_default_inv)
-crunch threadSet
   for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: setObject_ksPSpace_only updateObject_default_inv)
 
-lemma setObject_tcb_ksDomScheduleIdx [wp]:
-  "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s) \<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>_ s. P (ksDomScheduleIdx s)\<rbrace>"
-  apply (simp add:setObject_def updateObject_default_def in_monad)
-  apply wpsimp
-  done
-
 lemma threadSet_valid_dom_schedule':
-  "\<lbrace> valid_dom_schedule'\<rbrace> threadSet F t \<lbrace>\<lambda>_. valid_dom_schedule'\<rbrace>"
-  unfolding threadSet_def
-  by (wp setObject_ksDomSchedule_inv hoare_Ball_helper)
+  "threadSet F t \<lbrace>valid_dom_schedule'\<rbrace>"
+  by (wp valid_dom_schedule'_lift)
 
 lemma threadSet_wp:
   "\<lbrace>\<lambda>s. \<forall>tcb. ko_at' tcb t s \<longrightarrow> P (s\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> injectKO (f tcb))\<rparr>)\<rbrace>
@@ -1780,9 +1743,9 @@ crunch tcbQueueRemove, tcbQueuePrepend, tcbQueueAppend, tcbQueueInsert,
 lemma set_tcb_queue_projs:
   "set_tcb_queue d p queue
    \<lbrace>\<lambda>s. P (kheap s) (cdt s) (is_original_cap s) (cur_thread s) (idle_thread s) (scheduler_action s)
-          (domain_list s) (domain_index s) (cur_domain s) (domain_time s) (machine_state s)
-          (interrupt_irq_node s) (interrupt_states s) (arch_state s) (caps_of_state s)
-          (work_units_completed s) (cdt_list s)\<rbrace>"
+          (domain_list s) (domain_index s) (domain_start_index s) (cur_domain s) (domain_time s)
+          (machine_state s) (interrupt_irq_node s) (interrupt_states s) (arch_state s)
+          (caps_of_state s) (work_units_completed s) (cdt_list s)\<rbrace>"
   by (wpsimp simp: set_tcb_queue_def)
 
 lemma set_tcb_queue_cte_at:
@@ -1802,6 +1765,7 @@ lemma set_tcb_queue_projs_inv:
    \<and> scheduler_action s = scheduler_action s'
    \<and> domain_list s = domain_list s'
    \<and> domain_index s = domain_index s'
+   \<and> domain_start_index s = domain_start_index s'
    \<and> cur_domain s = cur_domain s'
    \<and> domain_time s = domain_time s'
    \<and> machine_state s = machine_state s'
@@ -1862,6 +1826,7 @@ crunch setQueue, removeFromBitmap
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   and valid_machine_state'[wp]: valid_machine_state'
   and cur_tcb'[wp]: cur_tcb'
@@ -1889,6 +1854,7 @@ crunch tcbSchedEnqueue, tcbSchedAppend, tcbSchedDequeue, setQueue
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
@@ -2339,10 +2305,11 @@ lemma tcbSchedEnqueue_corres:
 
 end (* TcbAcc_R_2 *)
 
+
 definition weak_sch_act_wf :: "scheduler_action \<Rightarrow> kernel_state \<Rightarrow> bool" where
  "weak_sch_act_wf sa = (\<lambda>s. \<forall>t. sa = SwitchToThread t \<longrightarrow> st_tcb_at' runnable' t s
                                                          \<and> tcb_in_cur_domain' t s)"
-
+thm if_to_top_of_bind
 lemma weak_sch_act_wf_updateDomainTime[simp]:
   "weak_sch_act_wf m (ksDomainTime_update f s) = weak_sch_act_wf m s"
   by (simp add:weak_sch_act_wf_def tcb_in_cur_domain'_def )
@@ -3078,7 +3045,7 @@ lemma threadSet_runnable_sch_act:
                 in use_valid [OF _ threadSet_ct],
          rule refl)
   apply (frule_tac P1="(=) (ksCurDomain s)"
-                in use_valid [OF _ threadSet_cd],
+                in use_valid [OF _ threadSet_ksCurDomain],
          rule refl)
   apply (case_tac "ksSchedulerAction b",
          simp_all add: sch_act_simple_def ct_in_state'_def pred_tcb_at'_def)
@@ -4303,6 +4270,7 @@ lemma setBoundNotification_ksDomSchedule[wp]:
 
 crunch rescheduleRequired, setBoundNotification, setThreadState
   for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
 
 lemma sts_utr[wp]:
@@ -4867,7 +4835,7 @@ lemma sts_invs_minor':
   including no_pre
   apply (simp add: invs'_def valid_state'_def)
   apply (rule hoare_pre)
-   apply (wp valid_irq_node_lift irqs_masked_lift
+   apply (wp valid_irq_node_lift irqs_masked_lift valid_dom_schedule'_lift
              setThreadState_ct_not_inQ
             | simp add: cteCaps_of_def o_def)+
   apply (clarsimp simp: sch_act_simple_def)

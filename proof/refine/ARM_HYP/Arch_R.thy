@@ -2289,6 +2289,7 @@ lemma assoc_invs':
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
                     valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
                     setVCPU_valid_arch' valid_bitmaps_lift sym_heap_sched_pointers_lift
+                    valid_dom_schedule'_lift
               simp: objBits_simps archObjSize_def vcpu_bits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb valid_arch_tcb'_def
         | wp (once) hoare_vcg_imp_lift)+

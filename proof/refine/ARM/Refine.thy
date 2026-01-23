@@ -201,13 +201,14 @@ assumes rel: "(s,s') \<in> state_relation"
 shows "absKState s' = abs_state s"
   using assms
   apply (intro state.equality, simp_all add: absKState_def abs_state_def)
-                 apply (rule absHeap_correct; clarsimp elim!: state_relationE)
-                apply (rule absCDT_correct; clarsimp)
-               apply (rule absIsOriginalCap_correct; clarsimp)
+                  apply (rule absHeap_correct; clarsimp elim!: state_relationE)
+                 apply (rule absCDT_correct; clarsimp)
+                apply (rule absIsOriginalCap_correct; clarsimp)
+               apply (simp add: state_relation_def)
               apply (simp add: state_relation_def)
-             apply (simp add: state_relation_def)
-            apply (clarsimp simp: state_relation_def)
-            apply (rule absSchedulerAction_correct, simp add: state_relation_def)
+             apply (clarsimp simp: state_relation_def)
+             apply (rule absSchedulerAction_correct, simp add: state_relation_def)
+            apply (simp add: domSchedule_map_relation)
            apply (simp add: state_relation_def)
           apply (simp add: state_relation_def)
          apply (simp add: state_relation_def)
@@ -288,7 +289,7 @@ lemma kernel_entry_invs:
             thread_set_not_state_valid_sched
             hoare_vcg_disj_lift ct_in_state_thread_state_lift thread_set_no_change_tcb_state
             call_kernel_domain_time_inv_det_ext call_kernel_domain_list_inv_det_ext
-            hoare_weak_lift_imp
+            hoare_weak_lift_imp valid_domain_list_lift
       | clarsimp simp add: tcb_cap_cases_def active_from_running)+
   done
 
@@ -302,34 +303,25 @@ definition
                                  0 < domain_time s \<and> valid_domain_list s \<and>
                                  (scheduler_action s = resume_cur_thread)}"
 
-lemma do_user_op_valid_list:"\<lbrace>valid_list\<rbrace> do_user_op f tc \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  unfolding do_user_op_def
-  apply (wp | simp add: split_def)+
-  done
-
-lemma do_user_op_valid_sched:"\<lbrace>valid_sched\<rbrace> do_user_op f tc \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  unfolding do_user_op_def
-  apply (wp | simp add: split_def)+
-  done
-
-lemma do_user_op_sched_act:
-  "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> do_user_op f tc \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
-  unfolding do_user_op_def
-  apply (wp | simp add: split_def)+
-  done
+crunch do_user_op
+  for valid_list: valid_list
+  and valid_sched: valid_sched
+  and sched_act: "\<lambda>s. P (scheduler_action s)"
+  and domain_start_index[wp]: "\<lambda>s. P (domain_start_index s)"
 
 lemma do_user_op_invs2:
   "\<lbrace>einvs  and ct_running and (\<lambda>s. scheduler_action s = resume_cur_thread)
     and (\<lambda>s. 0 < domain_time s) and valid_domain_list \<rbrace>
-  do_user_op f tc
+   do_user_op f tc
    \<lbrace>\<lambda>_. (einvs  and ct_running and (\<lambda>s. scheduler_action s = resume_cur_thread))
         and (\<lambda>s. 0 < domain_time s) and valid_domain_list \<rbrace>"
   apply (rule_tac Q'="\<lambda>_. valid_list and valid_sched and
-   (\<lambda>s. scheduler_action s = resume_cur_thread) and (invs and ct_running) and
-   (\<lambda>s. 0 < domain_time s) and valid_domain_list"
-   in hoare_strengthen_post)
-  apply (wp do_user_op_valid_list do_user_op_valid_sched do_user_op_sched_act
-    do_user_op_invs | simp | force)+
+                          (\<lambda>s. scheduler_action s = resume_cur_thread) and (invs and ct_running) and
+                          (\<lambda>s. 0 < domain_time s) and valid_domain_list"
+                  in hoare_strengthen_post)
+   apply (wpsimp wp: do_user_op_valid_list do_user_op_valid_sched do_user_op_sched_act
+                     valid_domain_list_lift do_user_op_invs)
+  apply force
   done
 
 lemmas ext_init_def = ext_init_det_ext_ext_def ext_init_unit_def
@@ -401,12 +393,6 @@ lemma ckernel_invs:
                  schedule_invs' hoare_drop_imp[where Q'="\<lambda>_. kernelExitAssertions"]
              simp: no_irq_getActiveIRQ)+
 
-(* abstract and haskell have identical domain list fields *)
-abbreviation valid_domain_list' :: "'a kernel_state_scheme \<Rightarrow> bool" where
-  "valid_domain_list' \<equiv> \<lambda>s. valid_domain_list_2 (ksDomSchedule s)"
-
-lemmas valid_domain_list'_def = valid_domain_list_2_def
-
 lemma fastpathKernelAssertions_cross:
   "\<lbrakk> (s,s') \<in> state_relation; invs s; valid_arch_state' s'\<rbrakk> \<Longrightarrow> fastpathKernelAssertions s'"
   unfolding fastpathKernelAssertions_def
@@ -421,10 +407,10 @@ lemma corres_cross_over_fastpathKernelAssertions:
      (fastforce elim: fastpathKernelAssertions_cross)+
 
 defs kernelExitAssertions_def:
-  "kernelExitAssertions s \<equiv> 0 < ksDomainTime s \<and> valid_domain_list' s"
+  "kernelExitAssertions s \<equiv> 0 < ksDomainTime s"
 
 lemma callKernel_domain_time_left:
-  "\<lbrace> \<top> \<rbrace> callKernel e \<lbrace>\<lambda>_ s. 0 < ksDomainTime s \<and> valid_domain_list' s \<rbrace>"
+  "\<lbrace>\<top>\<rbrace> callKernel e \<lbrace>\<lambda>_ s. 0 < ksDomainTime s\<rbrace>"
   unfolding callKernel_def kernelExitAssertions_def by wpsimp
 
 lemma kernelEntry_invs':
@@ -432,19 +418,18 @@ lemma kernelEntry_invs':
            (ct_running' or ct_idle') and
            (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
            (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
-           (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' \<rbrace>
+           (\<lambda>s. 0 < ksDomainTime s) \<rbrace>
   kernelEntry e tc
   \<lbrace>\<lambda>rs. (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
          (invs' and (ct_running' or ct_idle')) and
          (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
-         (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' \<rbrace>"
+         (\<lambda>s. 0 < ksDomainTime s) \<rbrace>"
   apply (simp add: kernelEntry_def)
   apply (wp ckernel_invs callKernel_valid_duplicates' callKernel_domain_time_left
             threadSet_invs_trivial threadSet_ct_running'
             TcbAcc_R.dmo_invs' hoare_weak_lift_imp
             callKernel_domain_time_left
-         | clarsimp simp: user_memory_update_def no_irq_def tcb_at_invs'
-                          valid_domain_list'_def)+
+         | clarsimp simp: user_memory_update_def no_irq_def tcb_at_invs')+
   done
 
 lemma ptable_lift_abs_state[simp]:
@@ -491,11 +476,11 @@ crunch doMachineOp
 lemma doUserOp_invs':
   "\<lbrace>invs' and ex_abs einvs and
     (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running' and
-    (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'\<rbrace>
+    (\<lambda>s. 0 < ksDomainTime s)\<rbrace>
    doUserOp f tc
    \<lbrace>\<lambda>_. invs' and
         (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running' and
-        (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'\<rbrace>"
+        (\<lambda>s. 0 < ksDomainTime s)\<rbrace>"
   apply (simp add: doUserOp_def split_def ex_abs_def)
   apply (wp device_update_invs'
     | (wp (once) dmo_invs', wpsimp simp: no_irq_modify device_memory_update_def
@@ -519,7 +504,7 @@ text \<open>The top-level correspondence\<close>
 
 lemma kernel_corres':
   "corres dc (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle)
-               and (\<lambda>s. scheduler_action s = resume_cur_thread))
+               and (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_domain_list)
              (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and
               (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
               (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
@@ -538,9 +523,12 @@ lemma kernel_corres':
        apply (wpsimp wp: handle_interrupt_valid_sched[unfolded non_kernel_IRQs_def, simplified]
                          handle_spurious_irq_invs schedule_invs' hoare_vcg_if_lift2
                          hoare_drop_imps
+                         valid_domain_list_lift[of handle_spurious_irq]
+                         valid_domain_list_lift[of "handle_interrupt irq" for irq]
+                         valid_domain_list_lift[of "do_machine_op mop" for mop]
                      simp: maybe_handle_interrupt_def)+
-     apply (rule_tac Q'="\<lambda>_. valid_sched and invs and valid_list" and
-                     E'="\<lambda>_. valid_sched and invs and valid_list"
+     apply (rule_tac Q'="\<lambda>_. valid_domain_list and valid_sched and invs and valid_list" and
+                     E'="\<lambda>_. valid_domain_list and valid_sched and invs and valid_list"
                      in hoare_strengthen_postE)
        apply (wpsimp wp: handle_event_valid_sched)+
    apply (clarsimp simp: active_from_running schact_is_rct_def)
@@ -592,7 +580,7 @@ lemma entry_corres:
                   (\<lambda>s. 0 < domain_time s) and valid_domain_list and (ct_running or ct_idle) and
                   (\<lambda>s. scheduler_action s = resume_cur_thread))
                  (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
-                  (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' and (ct_running' or ct_idle') and
+                  (\<lambda>s. 0 < ksDomainTime s) and (ct_running' or ct_idle') and
                   (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
                   (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
           (kernel_entry event tc) (kernelEntry event tc)"
@@ -694,7 +682,7 @@ definition
                           (m = UserMode \<longrightarrow> ct_running' s) \<and>
                           (m = IdleMode \<longrightarrow> ct_idle' s) \<and>
                           (e \<noteq> None \<and> e \<noteq> Some Interrupt \<longrightarrow> ct_running' s) \<and>
-                          0 < ksDomainTime s \<and> valid_domain_list' s}"
+                          0 < ksDomainTime s}"
 
 lemma checkActiveIRQ_valid_duplicates':
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
@@ -719,7 +707,7 @@ lemma check_active_irq_corres:
     (invs and (ct_running or ct_idle) and einvs and (\<lambda>s. scheduler_action s = resume_cur_thread)
      and (\<lambda>s. 0 < domain_time s) and valid_domain_list)
     (invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
-      and (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' and (ct_running' or ct_idle')
+      and (\<lambda>s. 0 < ksDomainTime s) and (ct_running' or ct_idle')
       and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
     (check_active_irq) (checkActiveIRQ)"
   apply (rule corres_guard_imp)
@@ -731,7 +719,7 @@ lemma checkActiveIRQ_just_running_corres:
     (invs and ct_running and einvs and (\<lambda>s. scheduler_action s = resume_cur_thread)
       and (\<lambda>s. 0 < domain_time s) and valid_domain_list)
     (invs' and ct_running' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))
-      and (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'
+      and (\<lambda>s. 0 < ksDomainTime s)
       and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
     (check_active_irq) (checkActiveIRQ)"
   apply (rule corres_guard_imp)
@@ -743,7 +731,7 @@ lemma checkActiveIRQ_just_idle_corres:
     (invs and ct_idle and einvs and (\<lambda>s. scheduler_action s = resume_cur_thread)
       and (\<lambda>s. 0 < domain_time s)  and valid_domain_list)
     (invs' and ct_idle' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))
-      and (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'
+      and (\<lambda>s. 0 < ksDomainTime s)
       and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
     (check_active_irq) (checkActiveIRQ)"
   apply (rule corres_guard_imp)
@@ -789,15 +777,20 @@ lemma domain_time_rel_eq:
   "(a, c) \<in> state_relation \<Longrightarrow> P (ksDomainTime c) = P (domain_time a)"
   by (clarsimp simp: state_relation_def)
 
-lemma domain_list_rel_eq:
-  "(a, c) \<in> state_relation \<Longrightarrow> P (ksDomSchedule c) = P (domain_list a)"
-  by (clarsimp simp: state_relation_def)
+lemma valid_domain_list_2_cross:
+  "\<lbrakk>valid_dom_schedule'_2 sched idx start; domain_list_map dom_list = sched \<rbrakk>
+   \<Longrightarrow> valid_domain_list_2 start dom_list"
+  by (fastforce simp: valid_domain_list_2_def valid_dom_schedule'_2_def)
+
+lemma valid_domain_list_from_invs':
+  "\<lbrakk> (s, s') \<in> state_relation; invs' s' \<rbrakk> \<Longrightarrow> valid_domain_list s"
+  by (clarsimp simp: valid_domain_list_2_cross invs'_def valid_state'_def elim!: state_relationE)
 
 lemma ckernel_invariant:
   "ADT_H uop \<Turnstile> full_invs'"
   unfolding full_invs'_def
   supply word_neq_0_conv[simp]
-  supply domain_time_rel_eq[simp] domain_list_rel_eq[simp]
+  supply domain_time_rel_eq[simp]
   apply (rule invariantI)
    apply (clarsimp simp add: ADT_H_def)
    apply (subst conj_commute, simp)
@@ -815,7 +808,7 @@ lemma ckernel_invariant:
    apply (frule ckernel_init_ctr)
    apply (frule ckernel_init_domain_time)
    apply (frule ckernel_init_domain_list)
-   apply (fastforce simp: Init_H_def valid_domain_list'_def)
+   apply (fastforce simp: Init_H_def)
   apply (clarsimp simp: ADT_A_def ADT_H_def global_automaton_def)
 
   apply (erule_tac P="a \<and> (\<exists>x. b x)" for a b in disjE)
@@ -826,8 +819,12 @@ lemma ckernel_invariant:
                             [OF kernel_entry_invs entry_corres],
                             OF _ kernelEntry_invs'[THEN hoare_weaken_pre]])
      subgoal by fastforce
-    apply (fastforce simp: ex_abs_def sch_act_simple_def ct_running_related ct_idle_related
+    apply (clarsimp simp: ex_abs_def sch_act_simple_def ct_running_related ct_idle_related
                            sched_act_rct_related)
+    apply (rule exI, rule conjI, assumption)
+    apply simp
+    apply (fastforce simp: ex_abs_def sch_act_simple_def ct_running_related ct_idle_related
+                           sched_act_rct_related valid_domain_list_from_invs')
    apply (clarsimp simp: kernel_call_H_def)
    subgoal by (fastforce simp: ex_abs_def sch_act_simple_def ct_running_related ct_idle_related
                               sched_act_rct_related)
@@ -842,7 +839,7 @@ lemma ckernel_invariant:
      apply (rule doUserOp_invs'[THEN hoare_weaken_pre])
      apply (fastforce simp: ex_abs_def)
     apply (clarsimp simp: ex_abs_def, rule_tac x=s in exI,
-            clarsimp simp: ct_running_related sched_act_rct_related)
+            clarsimp simp: ct_running_related sched_act_rct_related valid_domain_list_from_invs')
    apply (clarsimp simp: ex_abs_def)
    apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related)
 
@@ -855,7 +852,8 @@ lemma ckernel_invariant:
       apply clarsimp
      apply (rule doUserOp_invs'[THEN hoare_weaken_pre])
      apply (fastforce simp: ex_abs_def)
-    apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related)
+    apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related
+                           valid_domain_list_from_invs')
    apply (fastforce simp: ex_abs_def)
 
   apply (erule_tac P="a \<and> b" for a b in disjE)
@@ -866,7 +864,8 @@ lemma ckernel_invariant:
      apply (rule valid_corres_combined[OF check_active_irq_invs_just_running checkActiveIRQ_just_running_corres])
      apply (rule checkActiveIRQ_invs'_just_running[THEN hoare_weaken_pre])
      apply (fastforce simp: ex_abs_def)
-    apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related)
+    apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related
+                           valid_domain_list_from_invs')
    apply (fastforce simp: ex_abs_def)
 
   apply (erule_tac P="a \<and> b" for a b in disjE)
@@ -878,7 +877,8 @@ lemma ckernel_invariant:
      apply (rule checkActiveIRQ_invs'_just_idle[THEN hoare_weaken_pre])
      apply clarsimp
      apply (fastforce simp: ex_abs_def)
-    apply (fastforce simp: ex_abs_def ct_idle_related sched_act_rct_related)
+    apply (fastforce simp: ex_abs_def ct_idle_related sched_act_rct_related
+                           valid_domain_list_from_invs')
    apply (fastforce simp: ex_abs_def)
 
   apply (clarsimp simp: check_active_irq_H_def)
@@ -889,7 +889,8 @@ lemma ckernel_invariant:
     apply (rule checkActiveIRQ_invs'[THEN hoare_weaken_pre])
     apply clarsimp
      apply (fastforce simp: ex_abs_def)
-   apply (fastforce simp: ex_abs_def ct_running_related ct_idle_related sched_act_rct_related)
+   apply (fastforce simp: ex_abs_def ct_running_related ct_idle_related sched_act_rct_related
+                          valid_domain_list_from_invs')
   apply (fastforce simp: ex_abs_def)
   done
 

@@ -1334,6 +1334,7 @@ crunch updateMDB, updateNewFreeIndex
   and cns'[wp]: "\<lambda>s. P (gsCNodes s)"
   and ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and ksWorkUnitsCompleted[wp]: "\<lambda>s. P (ksWorkUnitsCompleted s)"
   and ksMachineState[wp]: "\<lambda>s. P (ksMachineState s)"
   and ksArchState[wp]: "\<lambda>s. P (ksArchState s)"
@@ -1343,6 +1344,8 @@ crunch insertNewCap
   and norq[wp]: "\<lambda>s. P (ksReadyQueues s)"
   and ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
+  and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   and pspace_canonical'[wp]: pspace_canonical'
@@ -3626,7 +3629,7 @@ lemma updateFreeIndex_clear_invs':
       apply (simp add:updateCap_def)
       apply (wp setCTE_irq_handlers' getCTE_wp)
      apply (simp add:updateCap_def)
-     apply (wp irqs_masked_lift cur_tcb_lift ct_idle_or_in_cur_domain'_lift
+     apply (wp irqs_masked_lift cur_tcb_lift ct_idle_or_in_cur_domain'_lift valid_dom_schedule'_lift
                hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp valid_bitmaps_lift
               | wp (once) hoare_use_eq[where f="gsUntypedZeroRanges"]
               | simp add: getSlotCap_def
@@ -5319,7 +5322,7 @@ lemma insertNewCap_invs':
   apply (rule insertNewCap_nullcap)
   apply (simp add: invs'_def valid_state'_def)
   apply (rule hoare_pre)
-   apply (wp insertNewCap_valid_pspace' sch_act_wf_lift
+   apply (wp insertNewCap_valid_pspace' sch_act_wf_lift valid_dom_schedule'_lift
              cur_tcb_lift tcb_in_cur_domain'_lift valid_bitmaps_lift
              insertNewCap_valid_global_refs' sym_heap_sched_pointers_lift
              valid_irq_node_lift insertNewCap_valid_irq_handlers)

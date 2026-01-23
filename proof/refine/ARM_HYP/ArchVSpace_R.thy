@@ -536,6 +536,10 @@ lemma setObject_vcpu_ksDomScheduleIdx[wp]:
   "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
     by (wpsimp wp: updateObject_default_inv simp: setObject_def)
 
+lemma setObject_vcpu_ksDomScheduleStart[wp]:
+  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksDomScheduleStart s)\<rbrace>"
+  by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+
 lemma setObject_vcpu_gsUntypedZeroRanges[wp]:
   "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (gsUntypedZeroRanges s)\<rbrace>"
     by (wpsimp wp: updateObject_default_inv simp: setObject_def)
@@ -3628,6 +3632,7 @@ lemma setVCPU_regs_r_invs_cicd':
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
                     valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
                     setVCPU_regs_valid_arch' setVCPU_regs_vcpu_live valid_bitmaps_lift
+                    valid_dom_schedule'_lift
               simp: objBits_simps vcpu_bits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
   apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
@@ -3649,7 +3654,7 @@ lemma setVCPU_vgic_invs_cicd':
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
                     valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
-                    setVCPU_vgic_valid_arch' valid_bitmaps_lift
+                    setVCPU_vgic_valid_arch' valid_bitmaps_lift valid_dom_schedule'_lift
               simp: objBits_simps vcpu_bits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
   apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
@@ -3671,7 +3676,7 @@ lemma setVCPU_VPPIMasked_invs_cicd':
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
                     valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
-                    setVCPU_VPPIMasked_valid_arch' valid_bitmaps_lift
+                    setVCPU_VPPIMasked_valid_arch' valid_bitmaps_lift valid_dom_schedule'_lift
               simp: objBits_simps vcpu_bits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
   apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
@@ -3693,7 +3698,7 @@ lemma setVCPU_VTimer_invs_cicd':
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
                     valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
-                    setVCPU_VTimer_valid_arch' valid_bitmaps_lift
+                    setVCPU_VTimer_valid_arch' valid_bitmaps_lift valid_dom_schedule'_lift
               simp: objBits_simps vcpu_bits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
   apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
@@ -3937,7 +3942,7 @@ lemma setVCPU_vgic_invs':
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
                     valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
-                    setVCPU_vgic_valid_arch' valid_bitmaps_lift
+                    setVCPU_vgic_valid_arch' valid_bitmaps_lift valid_dom_schedule'_lift
               simp: objBits_simps vcpu_bits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
   apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
@@ -3957,7 +3962,7 @@ lemma setVCPU_regs_invs':
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
                     valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
-                    setVCPU_regs_valid_arch' valid_bitmaps_lift
+                    setVCPU_regs_valid_arch' valid_bitmaps_lift valid_dom_schedule'_lift
               simp: objBits_simps vcpu_bits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
   apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
@@ -3977,7 +3982,7 @@ lemma setVCPU_VPPIMasked_invs':
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
                     valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
-                    setVCPU_VPPIMasked_valid_arch' valid_bitmaps_lift
+                    setVCPU_VPPIMasked_valid_arch' valid_bitmaps_lift valid_dom_schedule'_lift
               simp: objBits_simps vcpu_bits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
   apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
@@ -3997,7 +4002,7 @@ lemma setVCPU_VTimer_invs':
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
                     valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
-                    setVCPU_VTimer_valid_arch' valid_bitmaps_lift
+                    setVCPU_VTimer_valid_arch' valid_bitmaps_lift valid_dom_schedule'_lift
               simp: objBits_simps vcpu_bits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
   apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
@@ -4534,6 +4539,10 @@ crunch storePDE
   for tcbs_of'[wp]: "\<lambda>s. P (tcbs_of' s)"
   (wp: crunch_wps)
 
+crunch storePDE, storePTE
+  for ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
+  (wp: crunch_wps updateObject_default_inv simp: setObject_def)
+
 lemma storePDE_invs[wp]:
   "\<lbrace>invs' and K (valid_pde' pde)
           and (\<lambda>s. valid_pde_mapping' (p && mask pdBits) pde)\<rbrace>
@@ -4542,7 +4551,7 @@ lemma storePDE_invs[wp]:
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (rule hoare_pre)
    apply (wp sch_act_wf_lift valid_global_refs_lift'
-             irqs_masked_lift
+             irqs_masked_lift valid_dom_schedule'_lift
              valid_arch_state_lift'_valid_pde_mappings' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift''
              untyped_ranges_zero_lift sym_heap_sched_pointers_lift valid_bitmaps_lift
@@ -4696,7 +4705,7 @@ lemma storePTE_invs [wp]:
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
             valid_arch_state_lift'_valid_pde_mappings' valid_irq_node_lift
-            cur_tcb_lift valid_irq_handlers_lift''
+            cur_tcb_lift valid_irq_handlers_lift'' valid_dom_schedule'_lift
             untyped_ranges_zero_lift valid_bitmaps_lift
           | simp add: cteCaps_of_def o_def)+
   apply clarsimp
@@ -4871,7 +4880,7 @@ lemma setASIDPool_invs [wp]:
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (rule hoare_pre)
    apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
-              valid_irq_node_lift
+              valid_irq_node_lift valid_dom_schedule'_lift
              cur_tcb_lift valid_irq_handlers_lift''
              untyped_ranges_zero_lift
              updateObject_default_inv valid_bitmaps_lift

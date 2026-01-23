@@ -5180,6 +5180,7 @@ crunch cteSwap
 
 crunch cteSwap
   for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
 
 crunch cteSwap
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
@@ -5199,8 +5200,8 @@ lemma cteSwap_invs'[wp]:
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def pred_conj_def)
   apply (rule hoare_pre)
-   apply (wp hoare_vcg_conj_lift sch_act_wf_lift
-             valid_queues_lift cur_tcb_lift
+   apply (wp hoare_vcg_conj_lift sch_act_wf_lift valid_dom_schedule'_lift
+             valid_queues_lift cur_tcb_lift valid_dom_schedule'_lift
              valid_irq_node_lift irqs_masked_lift tcb_in_cur_domain'_lift
              ct_idle_or_in_cur_domain'_lift2)
   apply (clarsimp simp: cte_wp_at_ctes_of weak_derived_zobj weak_derived_cte_refs
@@ -5667,7 +5668,7 @@ lemma make_zombie_invs':
   apply (wp updateCap_ctes_of_wp sch_act_wf_lift valid_queues_lift cur_tcb_lift
             updateCap_iflive' updateCap_ifunsafe' updateCap_idle'
             valid_arch_state_lift' valid_irq_node_lift ct_idle_or_in_cur_domain'_lift2
-            updateCap_untyped_ranges_zero_simple
+            updateCap_untyped_ranges_zero_simple valid_dom_schedule'_lift
        | simp)+
   apply clarsimp
   apply (intro conjI[rotated])
@@ -8707,7 +8708,7 @@ lemma cteMove_invs' [wp]:
    apply ((rule hoare_vcg_conj_lift, (wp cteMove_ifunsafe')[1])
                   | rule hoare_vcg_conj_lift[rotated])+
       apply (unfold cteMove_def)
-      apply (wp cur_tcb_lift valid_queues_lift haskell_assert_inv
+      apply (wp cur_tcb_lift valid_queues_lift haskell_assert_inv valid_dom_schedule'_lift
                 sch_act_wf_lift ct_idle_or_in_cur_domain'_lift2 tcb_in_cur_domain'_lift)+
   apply clarsimp
   done
@@ -8933,7 +8934,7 @@ lemma updateCap_noop_invs:
              updateCap_ifunsafe' updateCap_idle'
              valid_arch_state_lift' valid_irq_node_lift
              updateCap_noop_irq_handlers sch_act_wf_lift
-             untyped_ranges_zero_lift)
+             untyped_ranges_zero_lift valid_dom_schedule'_lift)
   apply (clarsimp simp: cte_wp_at_ctes_of modify_map_apply)
   apply (strengthen untyped_ranges_zero_delta[where xs=Nil, mk_strg I E])
   apply (case_tac cte)

@@ -883,13 +883,21 @@ definition
 abbreviation
   "untyped_ranges_zero' s \<equiv> untyped_ranges_zero_inv (cteCaps_of s) (gsUntypedZeroRanges s)"
 
-(* FIXME: this really should be a definition like the above. *)
-(* The schedule is invariant. *)
-abbreviation
+
+definition valid_dom_schedule'_2 :: "domain_schedule_item list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
+  "valid_dom_schedule'_2 sched idx start \<equiv>
+     (\<forall>(domain, duration) \<in> set sched. domain \<le> maxDomain \<and> duration \<le> maxDomainDuration \<and>
+                                       (duration = 0 \<longrightarrow> domain = 0)) \<and>
+     idx < length sched \<and>
+     start < length sched \<and>
+     sched ! start \<noteq> (0, 0)"
+
+abbreviation valid_dom_schedule' :: "kernel_state \<Rightarrow> bool" where
   "valid_dom_schedule' \<equiv>
-   \<lambda>s. ksDomSchedule s \<noteq> [] \<and> (\<forall>x\<in>set (ksDomSchedule s). dschDomain x \<le> maxDomain \<and> 0 < dschLength x)
-       \<and> ksDomSchedule s = ksDomSchedule (newKernelState undefined)
-       \<and> ksDomScheduleIdx s < length (ksDomSchedule (newKernelState undefined))"
+     \<lambda>s. valid_dom_schedule'_2 (ksDomSchedule s) (ksDomScheduleIdx s) (ksDomScheduleStart s)"
+
+lemmas valid_dom_schedule'_def = valid_dom_schedule'_2_def
+
 
 definition valid_state' :: "kernel_state \<Rightarrow> bool" where
   "valid_state' \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
@@ -2262,6 +2270,16 @@ lemma ex_cte_cap_to'_pres:
   apply simp
   done
 
+lemma ct_active_st_tcb_at_runnable':
+  "ct_active' s \<Longrightarrow> st_tcb_at' runnable' (ksCurThread s) s"
+  by (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
+
+lemma simple_valid_tcb_state'[simp]:
+  "valid_tcb_state' Restart s"
+  "valid_tcb_state' Running s"
+  "valid_tcb_state' Inactive s"
+  "valid_tcb_state' IdleThreadState s"
+  by (auto simp: valid_tcb_state'_def)
 
 section "kernel_state field update identities"
 
@@ -2319,6 +2337,11 @@ lemma pointerInDeviceData_update[iff]:
 lemma pspace_domain_valid_update [iff]:
   "pspace_domain_valid (f s) = pspace_domain_valid s"
   by (simp add: pspace_domain_valid_def pspace)
+
+lemma valid_tcb_state'_eq[iff]:
+  "valid_tcb_state' st (f s) = valid_tcb_state' st s"
+  unfolding valid_tcb_state'_def
+  by (cases st; fastforce intro: obj_at'_pspaceI simp: pspace)
 
 end
 
@@ -2483,6 +2506,13 @@ sublocale Arch \<subseteq> ksDomScheduleIdx:
 
 interpretation ksDomSchedule:
   p_arch_idle_int_cur_update_eq' "ksDomSchedule_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> ksDomSchedule:
+  Arch_p_arch_idle_int_cur_update_eq' "ksDomSchedule_update f" ..
+
+interpretation ksDomScheduleStart:
+  p_arch_idle_int_cur_update_eq' "ksDomScheduleStart_update f"
   by unfold_locales auto
 
 sublocale Arch \<subseteq> ksDomSchedule:
@@ -2836,6 +2866,10 @@ lemma invs_ksCurDomain_maxDomain' [elim!]:
   "invs' s \<Longrightarrow> ksCurDomain s \<le> maxDomain"
   by (simp add: invs'_def valid_state'_def)
 
+lemma invs_valid_dom_schedule'[elim!]:
+  "invs' s \<Longrightarrow> valid_dom_schedule' s"
+  by (simp add: invs'_def valid_state'_def)
+
 lemma simple_st_tcb_at_state_refs_ofD':
   "st_tcb_at' simple' t s \<Longrightarrow> bound_tcb_at' (\<lambda>x. tcb_bound_refs' x = state_refs_of' s t) t s"
   by (fastforce simp: pred_tcb_at'_def obj_at'_def state_refs_of'_def
@@ -2861,13 +2895,9 @@ lemma not_pred_tcb':
   "(\<not>pred_tcb_at' proj P t s) = (\<not>tcb_at' t s \<or> pred_tcb_at' proj (\<lambda>a. \<not>P a) t s)"
   by (auto simp: pred_tcb_at'_def obj_at'_def)
 
-lemma invs'_ksDomSchedule:
-  "invs' s \<Longrightarrow> KernelStateData_H.ksDomSchedule s = KernelStateData_H.ksDomSchedule (newKernelState undefined)"
-unfolding invs'_def valid_state'_def by clarsimp
-
 lemma invs'_ksDomScheduleIdx:
-  "invs' s \<Longrightarrow> KernelStateData_H.ksDomScheduleIdx s < length (KernelStateData_H.ksDomSchedule (newKernelState undefined))"
-unfolding invs'_def valid_state'_def by clarsimp
+  "invs' s \<Longrightarrow> ksDomScheduleIdx s < length (ksDomSchedule s)"
+  unfolding invs'_def valid_state'_def by (clarsimp simp: valid_dom_schedule'_def)
 
 lemma valid_bitmap_valid_bitmapQ_exceptE:
   "\<lbrakk> valid_bitmapQ_except d p s; bitmapQ d p s \<longleftrightarrow> \<not> tcbQueueEmpty (ksReadyQueues s (d,p));
