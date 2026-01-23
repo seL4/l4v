@@ -577,4 +577,8 @@ lemma case_list_when:
   "(case l of [] \<Rightarrow> return () | r # xs \<Rightarrow> f r xs) = (when (l \<noteq> []) $ f (hd l) (tl l))"
   by (clarsimp simp: list_case_If2)
 
+lemma in_filter_neq:
+  "\<lbrakk>t \<in> set ts; t \<noteq> t'\<rbrakk> \<Longrightarrow> t \<in> set (filter ((\<noteq>) t') ts)"
+  by fastforce
+
 end
