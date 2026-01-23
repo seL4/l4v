@@ -1306,23 +1306,19 @@ lemma setNotification_ct_not_inQ[wp]:
   apply (clarsimp simp add: updateObject_default_def in_monad comp_def)+
   done
 
-lemma setNotification_ksCurThread[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setNotification a b \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
-  apply (simp add: setNotification_def setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
+crunch setNotification, setEndpoint
+  for ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
+  and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
+  and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
+  (wp: updateObject_default_inv simp: setObject_def)
 
-lemma setNotification_ksDomSchedule[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> setNotification a b \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
-  apply (simp add: setNotification_def setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
-lemma setNotification_ksDomScheduleId[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setNotification a b \<lbrace>\<lambda>rv s. P (ksDomScheduleIdx s)\<rbrace>"
-  apply (simp add: setNotification_def setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
+lemma valid_dom_schedule'_lift:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ksDomScheduleStart s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
+  shows "f \<lbrace>valid_dom_schedule'\<rbrace>"
+  by (wps assms | wp assms)+
 
 lemma setNotification_ct_idle_or_in_cur_domain'[wp]:
   "\<lbrace> ct_idle_or_in_cur_domain' \<rbrace> setNotification ptr ntfn \<lbrace> \<lambda>_. ct_idle_or_in_cur_domain' \<rbrace>"
@@ -1463,12 +1459,6 @@ lemma setEndpoint_ksMachine:
 
 lemmas setEndpoint_valid_irq_states'  =
   valid_irq_states_lift' [OF setEndpoint_ksInterruptState setEndpoint_ksMachine]
-
-lemma setEndpoint_ct':
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setEndpoint a b \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
-  apply (simp add: setEndpoint_def setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
 
 lemma obj_at'_is_canonical:
   "\<lbrakk>pspace_canonical' s; obj_at' P t s\<rbrakk> \<Longrightarrow> canonical_address t"
@@ -2041,7 +2031,7 @@ lemma set_ntfn_minor_invs':
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (clarsimp simp: invs'_def valid_state'_def cteCaps_of_def)
   apply (wpsimp wp: irqs_masked_lift valid_irq_node_lift untyped_ranges_zero_lift
-                    sym_heap_sched_pointers_lift valid_bitmaps_lift
+                    sym_heap_sched_pointers_lift valid_bitmaps_lift valid_dom_schedule'_lift
               simp: o_def)
   apply (clarsimp elim!: rsubst[where P=sym_refs]
                     del: ext intro!: ext

@@ -1898,7 +1898,7 @@ lemma assoc_invs':
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
                     setObject_typ_at' cur_tcb_lift valid_bitmaps_lift sym_heap_sched_pointers_lift
-                    setVCPU_valid_arch'
+                    setVCPU_valid_arch' valid_dom_schedule'_lift
               simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb valid_arch_tcb'_def
         | wp (once) hoare_vcg_imp_lift)+
