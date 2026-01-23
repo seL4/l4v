@@ -380,6 +380,10 @@ lemma bind_assoc2:
   "(do x \<leftarrow> a; _ \<leftarrow> b; c x od) = (do x \<leftarrow> (do x' \<leftarrow> a; _ \<leftarrow> b; return x' od); c x od)"
   by (simp add: bind_assoc)
 
+lemma bind_assoc_group3:
+  "(do x \<leftarrow> a; y \<leftarrow> b x; z \<leftarrow> c y; f z od) = (do w \<leftarrow> (do x \<leftarrow> a; y \<leftarrow> b x; c y od); f w od)"
+  by (simp add: bind_assoc)
+
 lemma bind_assoc_return_reverse:
   "do x \<leftarrow> f;
       _ \<leftarrow> g x;
@@ -564,9 +568,25 @@ lemma assert_opt_If:
   "assert_opt v = If (v = None) fail (return (the v))"
   by (simp add: assert_opt_def split: option.split)
 
-lemma if_to_top_of_bind:
+lemma bind_if_distribL:
+  "(do rv \<leftarrow> w;
+       if P
+       then x rv
+       else y rv
+    od)
+   = (if P
+      then w >>= (\<lambda>rv. x rv)
+      else w >>= (\<lambda>rv. y rv))"
+  by (simp split: if_split)
+
+lemma bind_if_distribR:
   "(bind (If P x y) z) = If P (bind x z) (bind y z)"
   by (simp split: if_split)
+
+(* FIXME: replace uses of if_to_top_of_bind with bind_if_distribR *)
+lemmas if_to_top_of_bind = bind_if_distribR
+
+lemmas bind_if_distrib = bind_if_distribL bind_if_distribR
 
 lemma if_to_top_of_bindE:
   "(bindE (If P x y) z) = If P (bindE x z) (bindE y z)"

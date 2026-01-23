@@ -123,6 +123,11 @@ lemma hoare_ex_all:
    apply (fastforce simp: valid_def)+
   done
 
+lemma hoeare_ex_context_conj:
+  "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<exists>x. Q x rv s\<rbrace>; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x. Q x rv s \<longrightarrow> R x rv s\<rbrace>\<rbrakk>
+   \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<exists>x. Q x rv s \<and> R x rv s\<rbrace>"
+  by (fastforce simp: valid_def)
+
 lemma hoare_imp_eq_substR:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. rv = x \<longrightarrow> Q x s\<rbrace>,-"
   by (fastforce simp add: valid_def validE_R_def validE_def split: sum.splits)
