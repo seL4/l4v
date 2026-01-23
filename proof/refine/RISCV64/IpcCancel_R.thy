@@ -1729,7 +1729,7 @@ lemma rescheduleRequired_all_invs_but_ct_not_inQ:
   done
 
 lemma cancelAllIPC_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> cancelAllIPC ep_ptr \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "cancelAllIPC ep_ptr \<lbrace>invs'\<rbrace>"
   apply (simp add: cancelAllIPC_def ep'_Idle_case_helper cong del: if_cong)
   apply (rule bind_wp[OF _ stateAssert_sp])
   apply (wp rescheduleRequired_all_invs_but_ct_not_inQ

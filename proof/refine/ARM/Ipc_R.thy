@@ -359,7 +359,7 @@ lemma cteInsert_weak_cte_wp_at3:
 lemma maskedAsFull_null_cap[simp]:
   "(maskedAsFull x y = capability.NullCap) = (x = capability.NullCap)"
   "(capability.NullCap  = maskedAsFull x y) = (x = capability.NullCap)"
-  by (case_tac x, auto simp:maskedAsFull_def isCap_simps )
+  by (case_tac x, auto simp:maskedAsFull_def isCap_simps)
 
 lemma maskCapRights_eq_null:
   "(RetypeDecls_H.maskCapRights r xa = capability.NullCap) =

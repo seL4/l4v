@@ -112,5 +112,6 @@ definition
 
 end
 
+arch_requalify_consts (A) idle_thread_ptr
 
 end
