@@ -518,4 +518,8 @@ lemma filter_hd_equals_tl:
   apply (fastforce simp: filter_id_conv)
   done
 
+lemma in_filter_neq:
+  "\<lbrakk>t \<in> set ts; t \<noteq> t'\<rbrakk> \<Longrightarrow> t \<in> set (filter ((\<noteq>) t') ts)"
+  by fastforce
+
 end

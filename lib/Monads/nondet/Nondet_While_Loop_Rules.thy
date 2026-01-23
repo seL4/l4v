@@ -147,6 +147,17 @@ next
     done
 qed
 
+lemma whileLoop_terminates_weaken_cond:
+  "\<lbrakk>whileLoop_terminates C' B r s; \<And>r s. C r s \<Longrightarrow> C' r s\<rbrakk>
+   \<Longrightarrow> whileLoop_terminates C B r s"
+  apply (erule whileLoop_terminates.induct)
+   apply (fastforce intro: whileLoop_terminates.intros)
+  apply (rename_tac r s)
+  apply (case_tac "C r s")
+   apply (fastforce intro: whileLoop_terminates.intros(2))
+  apply (fastforce intro: whileLoop_terminates.intros(1))
+  done
+
 lemma whileLoop_cong[cong]:
   "\<lbrakk> \<And>r s. C r s = C' r s; \<And>r s. C r s \<Longrightarrow> B r s = B' r s \<rbrakk> \<Longrightarrow> whileLoop C B = whileLoop C' B'"
   by (clarsimp simp: whileLoop_def)

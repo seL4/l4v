@@ -58,6 +58,10 @@ lemma monadic_rewrite_from_simple:
   "P \<longrightarrow> f = g \<Longrightarrow> monadic_rewrite F E (\<lambda>_. P) f g"
   by (simp add: monadic_rewrite_def)
 
+lemma monadic_rewrite_req:
+  "\<lbrakk> \<And>s. P s \<Longrightarrow> Q; Q \<Longrightarrow> monadic_rewrite F E P f g \<rbrakk> \<Longrightarrow> monadic_rewrite F E P f g"
+  by (auto simp: monadic_rewrite_def)
+
 lemma monadic_rewrite_gen_asm:
   "\<lbrakk> P \<Longrightarrow> monadic_rewrite F E Q f g \<rbrakk> \<Longrightarrow> monadic_rewrite F E ((\<lambda>_. P) and Q) f g"
   by (auto simp add: monadic_rewrite_def)
@@ -191,6 +195,14 @@ lemma monadic_rewrite_drop_return:
 
 lemma monadic_rewrite_add_return:
   "monadic_rewrite F E P (do y \<leftarrow> return x; f od) g \<Longrightarrow> monadic_rewrite F E P f g "
+  by fastforce
+
+lemma monadic_rewrite_add_return_l:
+  "monadic_rewrite F E P (f >>= return) g \<Longrightarrow> monadic_rewrite F E P f g"
+  by fastforce
+
+lemma monadic_rewrite_add_return_r:
+  "monadic_rewrite F E P f (g >>= return) \<Longrightarrow> monadic_rewrite F E P f g"
   by fastforce
 
 (* FIXME: poorly named, super-specific (could do this with maybe one bind?), used in Ipc_C *)
@@ -438,6 +450,16 @@ lemmas monadic_rewrite_symb_exec_r_drop
   = monadic_rewrite_symb_exec_r_drop_E
     monadic_rewrite_symb_exec_r_drop_nE
 
+lemma monadic_rewrite_noop:
+  "\<lbrakk>\<And>P. \<lbrace>P and Q\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>; no_fail Q f; empty_fail f\<rbrakk>
+   \<Longrightarrow> monadic_rewrite F E Q f (return ())"
+  apply (rule monadic_rewrite_guard_imp)
+   apply (rule monadic_rewrite_add_return_l)
+   apply (rule monadic_rewrite_symb_exec_l'')
+       apply (rule monadic_rewrite_guard_arg_cong)
+       apply fastforce+
+  done
+
 text \<open>if\<close>
 
 lemma monadic_rewrite_if:
@@ -590,7 +612,7 @@ lemmas monadic_rewrite_select_pick_x
   = monadic_rewrite_bind_head[OF monadic_rewrite_select_x[where x=x], simplified,
                               THEN monadic_rewrite_trans] for x
 
-text \<open>get/gets\<close>
+text \<open>Basic accessor functions: get/gets and put\<close>
 
 lemma monadic_rewrite_add_get:
   "monadic_rewrite F E P (do x <- get; f od) (do x <- get; g od)
@@ -669,6 +691,10 @@ lemma gets_oapply_liftM_rewrite:
   unfolding monadic_rewrite_def
   by (simp add: liftM_def simpler_gets_def bind_def gets_map_def assert_opt_def return_def
            split: option.splits)
+
+lemma monadic_rewrite_put_noop:
+  "monadic_rewrite F E (\<lambda>s. s = s') (put s') (return ())"
+  by (clarsimp simp: monadic_rewrite_def put_def return_def)
 
 text \<open>Option cases\<close>
 
