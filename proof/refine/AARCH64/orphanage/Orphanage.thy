@@ -1828,10 +1828,29 @@ lemma setDomain_no_orphans [wp]:
   apply (fastforce simp: tcb_at_typ_at'  is_active_tcb_ptr_runnable')
   done
 
+lemma no_orphans_ksDomSchedule_update[simp]:
+  "no_orphans (ksDomSchedule_update f s) = no_orphans s"
+  by (simp add: no_orphans_def all_queued_tcb_ptrs_def all_active_tcb_ptrs_def is_active_tcb_ptr_def)
+
+lemma no_orphans_ksDomScheduleStart_update[simp]:
+  "no_orphans (ksDomScheduleStart_update f s) = no_orphans s"
+  by (simp add: no_orphans_def all_queued_tcb_ptrs_def all_active_tcb_ptrs_def is_active_tcb_ptr_def)
+
+lemma no_orphans_ksDomainTime_update[simp]:
+  "no_orphans (ksDomainTime_update f s) = no_orphans s"
+  by (simp add: no_orphans_def all_queued_tcb_ptrs_def all_active_tcb_ptrs_def is_active_tcb_ptr_def)
+
 crunch prepareSetDomain
-  for no_orphans[wp]: no_orphans
-  and cur_tcb'[wp]: cur_tcb'
+  for cur_tcb'[wp]: cur_tcb'
   (wp: cur_tcb_lift)
+
+crunch prepareSetDomain, domainSet, domainSetStart, domainScheduleConfigure
+  for no_orphans[wp]: no_orphans
+
+lemma invokeDomain_no_orphans[wp]:
+  "\<lbrace>no_orphans and cur_tcb' and valid_domain_inv' di \<rbrace> invokeDomain di \<lbrace>\<lambda>_. no_orphans\<rbrace>"
+  unfolding invokeDomain_def
+  by (wpsimp simp: valid_domain_inv'_def)
 
 lemma performInvocation_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> valid_invocation' i s \<and> ct_active' s \<and> sch_act_simple s \<rbrace>

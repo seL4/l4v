@@ -4987,6 +4987,8 @@ crunch cteSwap
 crunch cteSwap
   for it[wp]: "\<lambda>s. P (ksIdleThread s)"
 crunch cteSwap
+  for ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
+crunch cteSwap
   for tcbDomain_obj_at'[wp]: "obj_at' (\<lambda>tcb. x = tcbDomain tcb) t"
 
 lemma cteSwap_idle'[wp]:
@@ -5029,15 +5031,6 @@ lemma cteSwap_refs[wp]:
   apply (drule weak_derived_capRange_capBits)+
   apply (clarsimp simp: global_refs'_def Int_Un_distrib2)
   done
-
-crunch cteSwap
-  for ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
-
-crunch cteSwap
-  for ksArch[wp]: "\<lambda>s. P (ksArchState s)"
-
-crunch cteSwap
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
 lemma cteSwap_valid_irq_handlers[wp]:
   "\<lbrace>valid_irq_handlers' and cte_wp_at' (weak_derived' c \<circ> cteCap) c1
@@ -5101,6 +5094,8 @@ crunch cteSwap
   and pspace_domain_valid[wp]: "pspace_domain_valid"
   and ct_not_inQ[wp]: "ct_not_inQ"
   and ksDomScheduleIdx [wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart [wp]: "\<lambda>s. P (ksDomScheduleStart s)"
+  and typ_at'[wp]: "\<lambda>s. P (typ_at' Q p s)"
 
 crunch cteSwap
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
@@ -5120,7 +5115,7 @@ lemma cteSwap_invs'[wp]:
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def pred_conj_def)
   apply (rule hoare_pre)
-   apply (wp hoare_vcg_conj_lift sch_act_wf_lift
+   apply (wp hoare_vcg_conj_lift sch_act_wf_lift valid_dom_schedule'_lift
              valid_queues_lift cur_tcb_lift
              valid_irq_node_lift irqs_masked_lift tcb_in_cur_domain'_lift
              ct_idle_or_in_cur_domain'_lift2)
@@ -5598,7 +5593,7 @@ lemma make_zombie_invs':
   apply (wp updateCap_ctes_of_wp sch_act_wf_lift valid_queues_lift cur_tcb_lift
             updateCap_iflive' updateCap_ifunsafe' updateCap_idle'
             valid_arch_state_lift' valid_irq_node_lift ct_idle_or_in_cur_domain'_lift2
-            updateCap_untyped_ranges_zero_simple
+            updateCap_untyped_ranges_zero_simple valid_dom_schedule'_lift
        | simp split del: if_split)+
   apply (intro conjI[rotated])
           apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -8702,7 +8697,7 @@ lemma cteMove_invs' [wp]:
    apply ((rule hoare_vcg_conj_lift, (wp cteMove_ifunsafe')[1])
                   | rule hoare_vcg_conj_lift[rotated])+
       apply (unfold cteMove_def)
-      apply (wp cur_tcb_lift valid_queues_lift haskell_assert_inv
+      apply (wp cur_tcb_lift valid_queues_lift haskell_assert_inv valid_dom_schedule'_lift
                 sch_act_wf_lift ct_idle_or_in_cur_domain'_lift2 tcb_in_cur_domain'_lift)+
   apply clarsimp
   done
@@ -8934,7 +8929,7 @@ lemma updateCap_noop_invs:
                    valid_pspace'_def valid_mdb'_def)
   apply (rule hoare_pre)
    apply (wp updateCap_ctes_of_wp updateCap_iflive'
-             updateCap_ifunsafe' updateCap_idle'
+             updateCap_ifunsafe' updateCap_idle' valid_dom_schedule'_lift
              valid_arch_state_lift' valid_irq_node_lift
              updateCap_noop_irq_handlers sch_act_wf_lift
              untyped_ranges_zero_lift)
