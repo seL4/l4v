@@ -14,6 +14,7 @@ theory Monad_Lists
     Monads.Nondet_Det
     Monads.Nondet_Empty_Fail
     Monads.Nondet_No_Fail
+    Monads.Nondet_Monad_Equations
 begin
 
 lemma mapME_Cons:
@@ -93,6 +94,23 @@ lemma mapM_append_single:
 lemma mapM_x_Cons:
   "mapM_x m (x # xs) = (do m x; mapM_x m xs od)"
   by (simp add: mapM_x_def sequence_x_def)
+
+lemma mapM_x_whileLoop:
+  "mapM_x (\<lambda>t. B t) ls
+   = do whileLoop (\<lambda>ls _. ls \<noteq> []) (\<lambda>ls. do B (hd ls); return (tl ls) od) ls;
+        return ()
+     od"
+  apply (induct rule: length_induct)
+  apply (rename_tac xs)
+  apply (case_tac xs; clarsimp)
+   apply (simp add: mapM_x_Nil whileLoop_cond_fail bind_def return_def)
+  apply (rename_tac a list)
+  apply (drule_tac x=list in spec)
+  apply (simp add: mapM_x_Cons)
+  apply (subst bind_assoc[symmetric])
+  apply (rule bind_then_eq)
+  apply (fastforce simp: subst[OF whileLoop_unroll[symmetric]])
+  done
 
 lemma zipWithM_x_mapM_x:
   "zipWithM_x f as bs = mapM_x (\<lambda>(x, y). f x y) (zip as bs)"
