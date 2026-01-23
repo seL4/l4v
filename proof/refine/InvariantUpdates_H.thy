@@ -55,10 +55,24 @@ lemma valid_cap_update [iff]:
   "(f s) \<turnstile>' c = s \<turnstile>' c"
   by (auto intro: valid_cap'_pspaceI simp: pspace)
 
+lemma valid_bound_ntfn_update'[iff]:
+  "valid_bound_ntfn' ntfn (f s) = valid_bound_ntfn' ntfn s"
+  by (simp add: valid_bound_ntfn'_def split: option.splits)
+
+lemma opt_tcb_at'_update'[iff]:
+  "opt_tcb_at' t (f s) = opt_tcb_at' t s"
+  by (simp add: none_top_fun_update_eq)
+
 (* exports from Arch locale version which are safe for generic use *)
 interpretation Arch_pspace_update_eq' ..
 
 lemmas pspace_in_kernel_mappings_update'[iff] = pspace_in_kernel_mappings_update'
+lemmas valid_arch_tcb_update'[iff] = valid_arch_tcb_update'
+
+lemma valid_tcb_update'[iff]:
+  "valid_tcb' tcb (f s) = valid_tcb' tcb s"
+  unfolding valid_tcb'_def
+  by auto
 
 end
 
@@ -237,6 +251,10 @@ lemma valid_bitmaps_ksDomSchedule[simp]:
    "valid_bitmaps (ksDomSchedule_update f s) = valid_bitmaps s"
    by (simp add: valid_bitmaps_def bitmapQ_defs)
 
+lemma valid_bitmaps_ksDomScheduleStart[simp]:
+   "valid_bitmaps (ksDomScheduleStart_update f s) = valid_bitmaps s"
+   by (simp add: valid_bitmaps_def bitmapQ_defs)
+
 lemma valid_bitmaps_ksDomainTime[simp]:
   "valid_bitmaps (ksDomainTime_update f s) = valid_bitmaps s"
   by (simp add: valid_bitmaps_def bitmapQ_defs)
@@ -255,6 +273,10 @@ lemma valid_irq_node'_ksDomScheduleIdx[simp]:
 
 lemma valid_irq_node'_ksDomSchedule[simp]:
   "valid_irq_node' w (ksDomSchedule_update f s) = valid_irq_node' w s"
+  by (simp add: valid_irq_node'_def)
+
+lemma valid_irq_node'_ksDomScheduleStart[simp]:
+  "valid_irq_node' w (ksDomScheduleStart_update f s) = valid_irq_node' w s"
   by (simp add: valid_irq_node'_def)
 
 lemma valid_irq_node'_ksDomainTime[simp]:

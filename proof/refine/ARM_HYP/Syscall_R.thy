@@ -79,6 +79,27 @@ lemma syscall_valid':
 
 text \<open>Completing the relationship between abstract/haskell invocations\<close>
 
+definition domaininv_relation :: "Invocations_A.domain_invocation \<Rightarrow> domain_invocation \<Rightarrow> bool" where
+  "domaininv_relation di di' \<equiv> case di of
+     Invocations_A.InvokeDomainSet t d \<Rightarrow>
+       di' = InvokeDomainSet t d
+   | Invocations_A.InvokeDomainScheduleSetStart i \<Rightarrow>
+       di' = InvokeDomainScheduleSetStart i
+   | Invocations_A.InvokeDomainScheduleConfigure i domain duration \<Rightarrow>
+       di' = InvokeDomainScheduleConfigure i domain (ucast duration)"
+
+definition valid_domain_inv' :: "domain_invocation \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "valid_domain_inv' di \<equiv> case di of
+     InvokeDomainSet thread domain \<Rightarrow>
+       tcb_at' thread  and K (domain \<le> maxDomain)
+   | InvokeDomainScheduleSetStart start \<Rightarrow>
+       \<lambda>s. start < length (ksDomSchedule s) \<and> ksDomSchedule s ! start \<noteq> domainEndMarker
+   | InvokeDomainScheduleConfigure i domain duration \<Rightarrow>
+       \<lambda>s. i < length (ksDomSchedule s) \<and>
+           domain \<le> maxDomain \<and> duration \<le> maxDomainDuration \<and>
+           (i = ksDomScheduleStart s \<longrightarrow> duration \<noteq> 0) \<and>
+           (duration = 0 \<longrightarrow> domain = 0)"
+
 primrec
   inv_relation :: "Invocations_A.invocation \<Rightarrow> Invocations_H.invocation \<Rightarrow> bool"
 where
@@ -92,8 +113,8 @@ where
      (x = InvokeReply w (cte_map ptr) grant)"
 | "inv_relation (Invocations_A.InvokeTCB i) x =
      (\<exists>i'. tcbinv_relation i i' \<and> x = InvokeTCB i')"
-| "inv_relation (Invocations_A.InvokeDomain tptr domain) x =
-     (x = InvokeDomain tptr domain)"
+| "inv_relation (Invocations_A.InvokeDomain di) x =
+     (\<exists>di'. domaininv_relation di di' \<and> x = InvokeDomain di')"
 | "inv_relation (Invocations_A.InvokeIRQControl i) x =
      (\<exists>i'. irq_control_inv_relation i i' \<and> x = InvokeIRQControl i')"
 | "inv_relation (Invocations_A.InvokeIRQHandler i) x =
@@ -117,8 +138,7 @@ where
 | "valid_invocation' (Invocations_H.InvokeEndpoint w w2 b c) = (ep_at' w and ex_nonz_cap_to' w)"
 | "valid_invocation' (Invocations_H.InvokeNotification w w2) = (ntfn_at' w and ex_nonz_cap_to' w)"
 | "valid_invocation' (Invocations_H.InvokeTCB i) = tcb_inv_wf' i"
-| "valid_invocation' (Invocations_H.InvokeDomain thread domain) =
-   (tcb_at' thread  and K (domain \<le> maxDomain))"
+| "valid_invocation' (Invocations_H.InvokeDomain di) = valid_domain_inv' di"
 | "valid_invocation' (Invocations_H.InvokeReply thread slot grant) =
        (tcb_at' thread and cte_wp_at' (\<lambda>cte. \<exists>gr. cteCap cte = ReplyCap thread False gr) slot)"
 | "valid_invocation' (Invocations_H.InvokeIRQControl i) = irq_control_inv_valid' i"
@@ -127,20 +147,19 @@ where
 | "valid_invocation' (Invocations_H.InvokeArchObject i) = valid_arch_inv' i"
 
 
-(* FIXME: move *)
-lemma decodeDomainInvocation_corres:
-  shows "\<lbrakk> list_all2 cap_relation (map fst cs) (map fst cs');
-           list_all2 (\<lambda>p pa. snd pa = cte_map (snd p)) cs cs' \<rbrakk> \<Longrightarrow>
-        corres (ser \<oplus> ((\<lambda>x. inv_relation x \<circ> uncurry Invocations_H.invocation.InvokeDomain) \<circ> (\<lambda>(x,y). Invocations_A.invocation.InvokeDomain x y))) \<top> \<top>
-          (decode_domain_invocation label args cs)
-          (decodeDomainInvocation label args cs')"
-  apply (simp add: decode_domain_invocation_def decodeDomainInvocation_def)
-  apply (rule whenE_throwError_corres_initial)
-    apply (simp+)[2]
+lemma decodeDomainSet_corres[corres]:
+  "\<lbrakk> list_all2 cap_relation (map fst cs) (map fst cs');
+     list_all2 (\<lambda>p pa. snd pa = cte_map (snd p)) cs cs';
+     args' = args \<rbrakk> \<Longrightarrow>
+   corres (ser \<oplus> domaininv_relation) \<top> \<top>
+          (decode_domain_set args cs)
+          (decodeDomainSet args' cs')"
+  apply (simp add: decode_domain_set_def decodeDomainSet_def)
   apply (case_tac "args", simp_all)
   apply (rule corres_guard_imp)
     apply (rule_tac r'="\<lambda>domain domain'. domain = domain'" and R="\<lambda>_. \<top>" and R'="\<lambda>_. \<top>"
-            in corres_splitEE)     apply (rule whenE_throwError_corres)
+            in corres_splitEE)
+       apply (rule whenE_throwError_corres)
          apply (simp+)[2]
        apply (rule corres_returnOkTT)
        apply simp
@@ -151,13 +170,59 @@ lemma decodeDomainInvocation_corres:
       apply (subgoal_tac "cap_relation (fst (hd cs)) (fst (hd cs'))")
        apply (case_tac "fst (hd cs)")
                   apply (case_tac "fst (hd cs')", simp+, rule corres_returnOkTT)
-            apply (simp add: inv_relation_def o_def uncurry_def)
+            apply (simp add: domaininv_relation_def)
            apply (case_tac "fst (hd cs')", fastforce+)
       apply (case_tac "cs")
        apply (case_tac "cs'", ((simp add: list_all2_map2 list_all2_map1)+)[2])
       apply (case_tac "cs'", ((simp add: list_all2_map2 list_all2_map1)+)[2])
      apply (wp | simp)+
   done
+
+lemma gets_ksDomSchedule_corres[corres]:
+  "corres (\<lambda>dl sched. domain_list_map dl = sched) \<top> \<top>
+          (gets domain_list)
+          (gets ksDomSchedule)"
+  by (simp add: state_relation_def)
+
+lemma gets_ksDomScheduleStart_corres[corres]:
+  "corres (=) \<top> \<top>
+          (gets domain_start_index)
+          (gets ksDomScheduleStart)"
+  by (simp add: state_relation_def)
+
+lemma fst_snd_pairI:
+  "\<lbrakk> fst p = x; snd p = y \<rbrakk> \<Longrightarrow> p = (x, y)"
+  by auto
+
+lemma decodeDomainConfigure_corres[corres]:
+  "args' = args \<Longrightarrow>
+   corres (ser \<oplus> domaininv_relation) \<top> \<top>
+          (decode_domain_schedule_configure args)
+          (decodeDomainConfigure args' cs')"
+  unfolding decode_domain_schedule_configure_def decodeDomainConfigure_def
+  by (corres simp: max_domain_duration_def maxDomainDuration_def domaininv_relation_def
+                   ucast_ucast_le_mask
+             corres: corres_returnOkTT)
+
+lemma decodeDomainSetStart_corres[corres]:
+  "args' = args \<Longrightarrow>
+   corres (ser \<oplus> domaininv_relation) \<top> \<top>
+          (decode_domain_schedule_set_start args)
+          (decodeDomainSetStart args' cs')"
+  unfolding decode_domain_schedule_set_start_def decodeDomainSetStart_def
+  by (corres' \<open>fastforce simp: domain_end_marker_def domainEndMarker_def is_up ucast_eq_0
+                               split_def domaininv_relation_def
+                         intro: fst_snd_pairI\<close>
+              corres: corres_returnOkTT)
+
+lemma decodeDomainInvocation_corres:
+  "\<lbrakk> list_all2 cap_relation (map fst cs) (map fst cs');
+     list_all2 (\<lambda>p pa. snd pa = cte_map (snd p)) cs cs' \<rbrakk> \<Longrightarrow>
+   corres (ser \<oplus> domaininv_relation) \<top> \<top>
+          (decode_domain_invocation label args cs)
+          (decodeDomainInvocation label args cs')"
+  unfolding decode_domain_invocation_def decodeDomainInvocation_def
+  by (corres_cases_left; simp; corres)
 
 lemma decodeInvocation_corres:
   "\<lbrakk>cptr = to_bl cptr'; mi' = message_info_map mi;
@@ -213,7 +278,7 @@ lemma decodeInvocation_corres:
         apply (simp add: list_all2_map2 list_all2_map1)
        apply assumption
       \<comment> \<open>DomainCap\<close>
-      apply (simp add: isCap_defs)
+      apply (simp add: isCap_defs o_def)
       apply (rule corres_guard_imp)
       apply (rule decodeDomainInvocation_corres)
       apply (simp+)[4]
@@ -424,6 +489,50 @@ crunch prepareSetDomain
   and tcb_at'[wp]: "tcb_at' p"
   (wp: sch_act_simple_lift)
 
+lemma domainSet_corres[corres]:
+  "\<lbrakk> t' = t; d' = d \<rbrakk> \<Longrightarrow>
+   corres dc
+          (invs and valid_sched and tcb_at t)
+          (invs' and sch_act_simple and tcb_at' t' and K (d' \<le> maxDomain))
+          (invoke_set_domain t d) (domainSet t' d')"
+  unfolding invoke_set_domain_def domainSet_def
+  by (simp, corres corres: setDomain_corres; fastforce)
+
+lemma domainSetStart_corres[corres]:
+  "\<lbrakk> i' = i \<rbrakk> \<Longrightarrow>
+   corres dc
+          (weak_valid_sched_action and in_correct_ready_q and ready_qs_distinct and
+           pspace_aligned and pspace_distinct)
+          (sym_heap_sched_pointers and valid_sched_pointers and valid_tcbs')
+          (domain_set_start i) (domainSetStart i')"
+  unfolding domain_set_start_def domainSetStart_def
+  apply (corres corres: corres_modify_tivial rescheduleRequired_corres
+                term_simp: state_relation_def cdt_relation_def)
+   apply (simp add: ready_qs_distinct_def)
+  apply clarsimp
+  done
+
+lemma domainScheduleConfigure_corres[corres]:
+  "\<lbrakk> i' = i; domain' = domain; duration' = ucast duration \<rbrakk> \<Longrightarrow>
+   corres dc \<top> \<top>
+          (domain_schedule_configure i domain duration)
+          (domainScheduleConfigure i' domain' duration')"
+  unfolding domain_schedule_configure_def domainScheduleConfigure_def
+  by (corres corres: corres_modify_tivial
+             simp: state_relation_def cdt_relation_def map_update)
+
+lemma invokeDomain_corres[corres]:
+  "domaininv_relation di di' \<Longrightarrow>
+   corres dc
+          (invs and valid_sched and valid_domain_inv di)
+          (invs' and sch_act_simple and valid_domain_inv' di')
+          (invoke_domain di) (invokeDomain di')"
+  unfolding invoke_domain_def invokeDomain_def domaininv_relation_def
+  apply (corres_cases_both; (is_corres, corres)?)
+   apply (fastforce simp: valid_domain_inv_def valid_sched_def valid_sched_action_def)
+  apply (fastforce simp: valid_domain_inv'_def)
+  done
+
 lemma performInvocation_corres:
   "\<lbrakk> inv_relation i i'; call \<longrightarrow> block \<rbrakk> \<Longrightarrow>
    corres (dc \<oplus> (=))
@@ -480,13 +589,8 @@ lemma performInvocation_corres:
          apply (erule invokeTCB_corres)
         apply ((clarsimp dest!: schact_is_rct_simple)+)[2]
       \<comment> \<open>domain cap\<close>
-      apply (clarsimp simp: invoke_domain_def)
-      apply (rule corres_guard_imp)
-        apply (rule corres_split[OF prepareSetDomain_corres])
-          apply (rule corres_split[OF setDomain_corres])
-            apply (rule corres_trivial, simp)
-           apply wpsimp+
-       apply (fastforce+)[2]
+      apply (clarsimp simp: liftE_bind_return_bindE_returnOk)
+      apply corres
      \<comment> \<open>CNodes\<close>
      apply clarsimp
      apply (rule corres_guard_imp)
@@ -557,7 +661,7 @@ crunch InterruptDecls_H.invokeIRQHandler
 lemmas invokeIRQHandler_typ_ats[wp] =
   typ_at_lifts [OF invokeIRQHandler_typ_at']
 
-crunch setDomain
+crunch invokeDomain
   for tcb_at'[wp]: "tcb_at' tptr"
   (simp: crunch_simps)
 
@@ -597,7 +701,8 @@ lemma sts_mcpriority_tcb_at'[wp]:
 lemma sts_valid_inv'[wp]:
   "\<lbrace>valid_invocation' i\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_invocation' i\<rbrace>"
   apply (case_tac i, simp_all add: sts_valid_untyped_inv' sts_valid_arch_inv')
-         apply (wp | simp)+
+         apply wpsimp+
+      apply (rename_tac dom_inv, case_tac dom_inv; wpsimp simp: valid_domain_inv'_def)
      defer
      apply (rename_tac cnode_invocation)
      apply (case_tac cnode_invocation, simp_all add: cte_wp_at_ctes_of)
@@ -638,23 +743,38 @@ lemma decode_inv_inv'[wp]:
           clarsimp split: capability.split_asm simp: isCap_defs)+
   done
 
-(* FIXME: move to TCB *)
+lemma decodeDomainSet_inv_wf[wp]:
+  "\<lbrace>invs' and (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile>' fst x)\<rbrace>
+   decodeDomainSet args excaps
+   \<lbrace>valid_domain_inv'\<rbrace>, -"
+  unfolding decodeDomainSet_def
+  apply (wpsimp split_del: if_split)
+  apply (clarsimp simp: null_def valid_domain_inv'_def)
+  apply (drule_tac x="hd excaps" in bspec, simp)
+  apply (simp del: Word.of_nat_unat flip: ucast_nat_def)
+  apply (fastforce intro: word_of_nat_le simp: le_maxDomain_eq_less_numDomains valid_cap'_def)
+  done
+
+lemma decodeDomainSetStart_inv_wf[wp]:
+  "\<lbrace>\<top>\<rbrace> decodeDomainSetStart args excaps \<lbrace>valid_domain_inv'\<rbrace>, -"
+  unfolding decodeDomainSetStart_def
+  by (wpsimp simp: valid_domain_inv'_def)
+
+lemma decodeDomainConfigure_inv_wf[wp]:
+  "\<lbrace>\<top>\<rbrace> decodeDomainConfigure args excaps \<lbrace>valid_domain_inv'\<rbrace>, -"
+  unfolding decodeDomainConfigure_def
+  apply (wpsimp simp: valid_domain_inv'_def split_del: if_split)
+  apply (clarsimp simp: not_less not_le le_maxDomain_eq_less_numDomains unat_ucast)
+  using numDomains_fits_domainBits
+  apply (simp add: domainBits_def)
+  done
+
 lemma dec_dom_inv_wf[wp]:
   "\<lbrace>invs' and (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile>' fst x)\<rbrace>
-  decodeDomainInvocation label args excaps
-  \<lbrace>\<lambda>x s. tcb_at' (fst x) s \<and> snd x \<le> maxDomain\<rbrace>, -"
-  apply (simp add:decodeDomainInvocation_def)
-  apply (wp whenE_throwError_wp | wpc |simp)+
-  apply clarsimp
-  apply (drule_tac x = "hd excaps" in bspec)
-   apply (rule hd_in_set)
-   apply (simp add:null_def)
-  apply (simp add:valid_cap'_def)
-  apply (simp add:not_le)
-  apply (simp del: Word.of_nat_unat flip: ucast_nat_def)
-  apply (rule word_of_nat_le)
-  apply (simp add: le_maxDomain_eq_less_numDomains)
-  done
+   decodeDomainInvocation label args excaps
+   \<lbrace>valid_domain_inv'\<rbrace>, -"
+  unfolding decodeDomainInvocation_def
+  by wpsimp
 
 lemma decode_inv_wf'[wp]:
   "\<lbrace>valid_cap' cap and invs' and sch_act_simple
@@ -924,10 +1044,9 @@ lemma rescheduleRequired_all_invs_but_extra:
     rescheduleRequired \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
   apply (rule hoare_pre)
-  apply (wp add:rescheduleRequired_ct_not_inQ
-    rescheduleRequired_sch_act'
-    valid_irq_node_lift valid_irq_handlers_lift''
-    irqs_masked_lift cur_tcb_lift)
+  apply (wp add: rescheduleRequired_ct_not_inQ rescheduleRequired_sch_act'
+                 valid_irq_node_lift valid_irq_handlers_lift''
+                 irqs_masked_lift cur_tcb_lift valid_dom_schedule'_lift)
   apply auto
   done
 
@@ -982,11 +1101,14 @@ lemma setDomain_invs':
   (\<lambda>y. domain \<le> maxDomain))\<rbrace>
   setDomain ptr domain \<lbrace>\<lambda>y. invs'\<rbrace>"
   apply (simp add:setDomain_def )
-  apply (wp add: when_wp hoare_weak_lift_imp hoare_weak_lift_imp_conj rescheduleRequired_all_invs_but_extra
-    tcbSchedEnqueue_valid_action hoare_vcg_if_lift2)
+  apply (wp when_wp hoare_weak_lift_imp hoare_weak_lift_imp_conj
+            rescheduleRequired_all_invs_but_extra
+            tcbSchedEnqueue_valid_action hoare_vcg_if_lift2 valid_dom_schedule'_lift)
      apply (rule_tac Q'="\<lambda>r s. all_invs_but_sch_extra s \<and> curThread = ksCurThread s
-      \<and> (ptr \<noteq> curThread \<longrightarrow> ct_not_inQ s \<and> sch_act_wf (ksSchedulerAction s) s \<and> ct_idle_or_in_cur_domain' s)"
-      in hoare_strengthen_post[rotated])
+                               \<and> (ptr \<noteq> curThread \<longrightarrow> ct_not_inQ s
+                               \<and> sch_act_wf (ksSchedulerAction s) s
+                               \<and> ct_idle_or_in_cur_domain' s)"
+                     in hoare_strengthen_post[rotated])
       apply (clarsimp simp:invs'_def valid_state'_def st_tcb_at'_def[symmetric] valid_pspace'_def)
        apply simp
      apply (rule hoare_strengthen_post[OF hoare_vcg_conj_lift])
@@ -1002,7 +1124,7 @@ lemma setDomain_invs':
       in hoare_strengthen_post[rotated])
      apply (clarsimp simp:invs'_def valid_state'_def)
     apply (wp hoare_vcg_imp_lift)+
-  apply (clarsimp simp:invs'_def valid_pspace'_def valid_state'_def)+
+  apply (clarsimp simp:invs'_def valid_pspace'_def valid_state'_def valid_domain_inv'_def)+
   done
 
 crunch prepareSetDomain
@@ -1011,6 +1133,46 @@ crunch prepareSetDomain
   and ct_in_state'[wp]: "ct_in_state' P"
   (wp: ct_in_state_thread_state_lift' crunch_wps)
 
+lemma domainSetStart_invs[wp]:
+  "\<lbrace>invs' and valid_domain_inv' (InvokeDomainScheduleSetStart start)\<rbrace>
+   domainSetStart start
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding domainSetStart_def
+  apply wpsimp
+  apply (clarsimp simp: valid_domain_inv'_def invs'_def valid_state'_def valid_machine_state'_def
+                        ct_not_inQ_def ct_idle_or_in_cur_domain'_def cur_tcb'_def
+                        tcb_in_cur_domain'_def)
+  apply (clarsimp simp: valid_dom_schedule'_def domainEndMarker_def)
+  done
+
+lemma valid_dom_schedule'_update:
+  "\<lbrakk>i < length sched; i = start \<longrightarrow> duration \<noteq> 0; duration = 0 \<longrightarrow> domain = 0;
+    domain \<le> maxDomain; duration \<le> maxDomainDuration;
+    valid_dom_schedule'_2 sched idx start\<rbrakk>
+   \<Longrightarrow> valid_dom_schedule'_2 (sched[i := (domain, duration)]) idx start"
+  unfolding valid_dom_schedule'_def
+  by (clarsimp simp: nth_list_update all_set_conv_all_nth)
+
+lemma domainScheduleConfigure_invs[wp]:
+  "\<lbrace>invs' and valid_domain_inv' (InvokeDomainScheduleConfigure i domain duration)\<rbrace>
+   domainScheduleConfigure i domain duration
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding domainScheduleConfigure_def
+  apply wpsimp
+  apply (clarsimp simp: valid_domain_inv'_def invs'_def valid_state'_def valid_machine_state'_def
+                        ct_not_inQ_def ct_idle_or_in_cur_domain'_def cur_tcb'_def
+                        tcb_in_cur_domain'_def valid_dom_schedule'_update)
+  done
+
+lemma invokeDomain_invs[wp]:
+  "\<lbrace>invs' and sch_act_simple and ct_active' and valid_domain_inv' di\<rbrace>
+   invokeDomain di
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding invokeDomain_def domainSet_def
+  apply (wpsimp wp: setDomain_invs' simp: valid_domain_inv'_def)
+  apply fastforce
+  done
+
 lemma performInv_invs'[wp]:
   "\<lbrace>invs' and sch_act_simple and ct_active' and valid_invocation' i\<rbrace>
    RetypeDecls_H.performInvocation block call i
@@ -1018,7 +1180,7 @@ lemma performInv_invs'[wp]:
   unfolding performInvocation_def
   apply (cases i)
   apply (clarsimp simp: simple_sane_strg sch_act_simple_def sch_act_sane_def
-         | wp tcbinv_invs' arch_performInvocation_invs' setDomain_invs'
+         | wp tcbinv_invs' arch_performInvocation_invs'
          | rule conjI | erule active_ex_cap')+
   done
 
@@ -1781,7 +1943,7 @@ lemma handleSpuriousIRQ_corres[corres]:
   by (corres corres: corres_machine_op)
 
 lemma contract_all_imp_strg:
-  "P \<and> P' \<and> (\<forall>x. R x \<longrightarrow> Q x) \<Longrightarrow> \<forall>x. R x \<longrightarrow> P \<and> Q x \<and> P'"
+  "P \<and> P' \<and> P'' \<and> (\<forall>x. R x \<longrightarrow> Q x) \<Longrightarrow> \<forall>x. R x \<longrightarrow> P \<and> P' \<and> Q x \<and> P''"
   by blast
 
 lemma maybeHandleInterrupt_corres:

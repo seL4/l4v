@@ -1489,6 +1489,19 @@ lemma absExst_correct:
                            valid_pspace_def valid_sched_def valid_pspace'_def curry_def fun_eq_iff)
       done
 
+definition domSchedule_map ::
+  "domain_schedule_item list \<Rightarrow> (domain \<times> Structures_A.domain_duration) list"
+  where
+  "domSchedule_map \<equiv> map (\<lambda>(domain, duration). (domain, ucast duration))"
+
+lemma domSchedule_map_domain_list_map:
+  "domain_list_map dl = ds \<Longrightarrow> domSchedule_map ds = dl"
+  unfolding domSchedule_map_def
+  by (fastforce simp: mask_def intro!: ucast_ucast_le_mask map_idI)
+
+lemma domSchedule_map_relation:
+  "(s, s') \<in> state_relation \<Longrightarrow> domSchedule_map (ksDomSchedule s') = domain_list s"
+  by (fastforce elim: domSchedule_map_domain_list_map state_relationE)
 
 definition
   "absKState s \<equiv>
@@ -1497,8 +1510,9 @@ definition
     is_original_cap = absIsOriginalCap (cteMap (gsCNodes s)) (ksPSpace s),
     cur_thread = ksCurThread s, idle_thread = ksIdleThread s,
     scheduler_action = absSchedulerAction (ksSchedulerAction s),
-    domain_list = ksDomSchedule s,
+    domain_list = domSchedule_map (ksDomSchedule s),
     domain_index = ksDomScheduleIdx s,
+    domain_start_index = ksDomScheduleStart s,
     cur_domain = ksCurDomain s,
     domain_time = ksDomainTime s,
     ready_queues = (\<lambda>d p. heap_walk (tcbSchedNexts_of s) (tcbQueueHead (ksReadyQueues s (d, p))) []),
