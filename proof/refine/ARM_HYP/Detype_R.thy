@@ -1046,16 +1046,16 @@ lemma deleteObjects_corres:
                              dom_if_None Diff_Int_distrib)
   apply (simp add: delete_objects_def)
   apply (rule_tac Q="\<lambda>_ s. valid_objs s \<and> valid_list s \<and>
-           (\<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s \<and>
-                   descendants_range (cap.UntypedCap d base magnitude idx) cref s ) \<and>
-           s \<turnstile> cap.UntypedCap d base magnitude idx \<and> pspace_aligned s \<and>
-           valid_mdb s \<and> pspace_distinct s \<and> if_live_then_nonz_cap s \<and>
-           zombies_final s \<and> sym_refs (state_refs_of s) \<and> sym_refs (state_hyp_refs_of s) \<and>
-           untyped_children_in_mdb s \<and> if_unsafe_then_cap s \<and>
-           valid_global_refs s" and
-         Q'="\<lambda>_ s. s \<turnstile>' capability.UntypedCap d base magnitude idx \<and>
-                        valid_pspace' s \<and>
-                       deletionIsSafe_delete_locale base magnitude s" in corres_underlying_split)
+                           (\<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s \<and>
+                                   descendants_range (cap.UntypedCap d base magnitude idx) cref s) \<and>
+                           s \<turnstile> cap.UntypedCap d base magnitude idx \<and> pspace_aligned s \<and>
+                           valid_mdb s \<and> pspace_distinct s \<and> if_live_then_nonz_cap s \<and>
+                           zombies_final s \<and> sym_refs (state_refs_of s) \<and> sym_refs (state_hyp_refs_of s) \<and>
+                           untyped_children_in_mdb s \<and> if_unsafe_then_cap s \<and>
+                           valid_global_refs s"
+              and Q'="\<lambda>_ s. s \<turnstile>' capability.UntypedCap d base magnitude idx \<and>
+                            valid_pspace' s \<and> deletionIsSafe_delete_locale base magnitude s"
+               in corres_underlying_split)
      apply (rule corres_bind_return)
      apply (rule corres_guard_imp[where r=dc])
        apply (rule corres_split[OF _ cNodeNoPartialOverlap])
@@ -1063,40 +1063,40 @@ lemma deleteObjects_corres:
          apply (rule no_fail_freeMemory, simp+)
         apply (wp hoare_vcg_ex_lift)+
       apply auto[1]
-     apply (auto elim: is_aligned_weaken)
+     apply (auto elim: is_aligned_weaken)[1]
     apply (rule corres_modify)
     apply (simp add: valid_pspace'_def)
     apply (rule state_relation_null_filterE, assumption,
            simp_all add: pspace_aligned'_cut pspace_distinct'_cut)[1]
-           apply (simp add: detype_def)
-          apply clarsimp
-          (* unification can't guess we want identity update on ksArchState s' *)
-          apply (repeat 3 \<open>rule exI\<close>, rule_tac x=id in exI)
-          apply fastforce
-         apply (rule ext, clarsimp simp add: null_filter_def)
+            apply (simp add: detype_def)
+           apply clarsimp
+           (* unification can't guess we want identity update on ksArchState s' *)
+           apply (repeat 3 \<open>rule exI\<close>, rule_tac x=id in exI)
+           apply fastforce
+          apply (rule ext, clarsimp simp add: null_filter_def)
+          apply (rule sym, rule ccontr, clarsimp)
+          apply (drule(4) cte_map_not_null_outside')
+           apply (fastforce simp add: cte_wp_at_caps_of_state)
+          apply simp
+         apply (rule ext, clarsimp simp: null_filter'_def map_to_ctes_delete[simplified field_simps])
          apply (rule sym, rule ccontr, clarsimp)
-         apply (drule(4) cte_map_not_null_outside')
-          apply (fastforce simp add: cte_wp_at_caps_of_state)
+         apply (frule (2) pspace_relation_cte_wp_atI[OF state_relation_pspace_relation])
+         apply (elim exE)
+         apply (frule (4) cte_map_not_null_outside')
+          apply (rule cte_wp_at_weakenE, erule conjunct1)
+          apply (case_tac y, clarsimp)
+          apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def valid_nullcaps_def)
+         apply clarsimp
+         apply (frule_tac cref="(aa, ba)" in cte_map_untyped_range,
+                erule cte_wp_at_weakenE[OF _ TrueI], assumption+)
          apply simp
-        apply (rule ext, clarsimp simp: null_filter'_def map_to_ctes_delete[simplified field_simps])
-        apply (rule sym, rule ccontr, clarsimp)
-        apply (frule(2) pspace_relation_cte_wp_atI[OF state_relation_pspace_relation])
-        apply (elim exE)
-        apply (frule(4) cte_map_not_null_outside')
-         apply (rule cte_wp_at_weakenE, erule conjunct1)
-         apply (case_tac y, clarsimp)
-         apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def valid_nullcaps_def)
-        apply clarsimp
-        apply (frule_tac cref="(aa, ba)" in cte_map_untyped_range,
-               erule cte_wp_at_weakenE[OF _ TrueI], assumption+)
-        apply simp
-       apply (rule detype_pspace_relation[simplified],
-              simp_all add: state_relation_pspace_relation valid_pspace_def)[1]
-        apply (simp add: valid_cap'_def capAligned_def)
-       apply (clarsimp simp: valid_cap_def, assumption)
-      apply (rule detype_ready_queues_relation; blast?)
-       apply (clarsimp simp: deletionIsSafe_delete_locale_def)
-      apply (erule state_relation_ready_queues_relation)
+        apply (rule detype_pspace_relation[simplified],
+               simp_all add: state_relation_pspace_relation valid_pspace_def)[1]
+         apply (simp add: valid_cap'_def capAligned_def)
+        apply (clarsimp simp: valid_cap_def, assumption)
+       apply (rule detype_ready_queues_relation; blast?)
+        apply (clarsimp simp: deletionIsSafe_delete_locale_def)
+       apply (erule state_relation_ready_queues_relation)
       apply (clarsimp simp: state_relation_def)
      apply (clarsimp simp: state_relation_def ghost_relation_of_heap detype_def)
      apply (drule_tac t="gsUserPages s'" in sym)

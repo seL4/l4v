@@ -3598,7 +3598,8 @@ context DetSchedSchedule_AI_handle_hypervisor_fault begin
 
 lemma handle_interrupt_valid_sched[wp]:
   "\<lbrace>valid_sched and invs and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>
-  handle_interrupt irq \<lbrace>\<lambda>rv. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
+   handle_interrupt irq
+   \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
   unfolding handle_interrupt_def
   by (wpsimp wp: get_cap_wp hoare_drop_imps hoare_vcg_all_lift|rule conjI)+
 

@@ -443,8 +443,7 @@ proof (induct rule: resolveAddressBits.induct)
     apply (elim exE conjE)
     apply (simp only: split: if_split_asm)
      apply (clarsimp simp: in_monad locateSlot_conv stateAssert_def)
-     apply (cases cap)
-       apply (simp_all add: gen_isCap_simps)[12]
+     apply (cases cap; simp add: gen_isCap_simps)
      apply (clarsimp simp add: valid_cap'_def gen_objBits_simps cteSizeBits_cte_level_bits
                         split: option.split_asm)
     apply (simp only: in_bindE_R K_bind_def)
@@ -454,8 +453,7 @@ proof (induct rule: resolveAddressBits.induct)
      apply (simp only: in_bindE_R K_bind_def)
      apply (frule (12) 1 [OF refl], (assumption | rule refl)+)
      apply (clarsimp simp: in_monad locateSlot_conv gen_objBits_simps stateAssert_def)
-     apply (cases cap)
-       apply (simp_all add: gen_isCap_defs)[12]
+     apply (cases cap; simp add: gen_isCap_defs)
      apply (frule in_inv_by_hoareD [OF getSlotCap_inv])
      apply simp
      apply (frule (1) post_by_hoare [OF getSlotCap_valid_cap])
@@ -464,8 +462,7 @@ proof (induct rule: resolveAddressBits.induct)
      apply (drule (1) bspec)
      apply simp
     apply (clarsimp simp: in_monad locateSlot_conv gen_objBits_simps stateAssert_def)
-    apply (cases cap)
-     apply (simp_all add: gen_isCap_defs)[12]
+    apply (cases cap; simp add: gen_isCap_defs)
     apply (frule in_inv_by_hoareD [OF getSlotCap_inv])
     apply (clarsimp simp: valid_cap'_def cteSizeBits_cte_level_bits)
     done
@@ -964,10 +961,6 @@ lemma cteInsert_weak_cte_wp_at:
    apply (wp getCTE_ctes_wp)+
    apply (clarsimp simp: gen_isCap_simps split:if_split_asm| rule conjI)+
   done
-
-lemma setCTE_valid_cap:
-  "\<lbrace>valid_cap' c\<rbrace> setCTE ptr cte \<lbrace>\<lambda>r. valid_cap' c\<rbrace>"
-  by (rule gen_typ_at_lifts, rule setCTE_typ_at')
 
 (* FIXME: crunch *)
 lemma updateMDB_valid_cap:
@@ -1897,13 +1890,12 @@ lemma capClass_ztc_relation:
 lemma updateCap_corres:
   "\<lbrakk>cap_relation cap cap'; is_zombie cap \<or> is_cnode_cap cap \<or> is_thread_cap cap \<rbrakk>
    \<Longrightarrow> corres dc (\<lambda>s. invs s \<and>
-                     cte_wp_at (\<lambda>c. (is_zombie c \<or> is_cnode_cap c \<or>
-                                     is_thread_cap c) \<and>
-                                    is_final_cap' c s \<and>
-                                    obj_ref_of c = obj_ref_of cap \<and>
-                                    obj_size c = obj_size cap) slot s)
-                invs'
-                (set_cap cap slot) (updateCap (cte_map slot) cap')"
+                      cte_wp_at (\<lambda>c. (is_zombie c \<or> is_cnode_cap c \<or> is_thread_cap c) \<and>
+                                     is_final_cap' c s \<and>
+                                     obj_ref_of c = obj_ref_of cap \<and>
+                                     obj_size c = obj_size cap) slot s)
+                 invs'
+                 (set_cap cap slot) (updateCap (cte_map slot) cap')"
   apply (rule corres_stronger_no_failI)
    apply (rule no_fail_pre, wp)
    apply clarsimp
@@ -2388,20 +2380,7 @@ lemma subtree_next_0:
   shows "False" using s n
   by induct (auto simp: mdb_next_unfold)
 
-lemma isArchCap_simps[simp]:
-  "isArchCap P (capability.ThreadCap xc) = False"
-  "isArchCap P capability.NullCap = False"
-  "isArchCap P capability.DomainCap = False"
-  "isArchCap P (capability.NotificationCap xca xba xaa xd) = False"
-  "isArchCap P (capability.EndpointCap xda xcb xbb xab xe xi) = False"
-  "isArchCap P (capability.IRQHandlerCap xf) = False"
-  "isArchCap P (capability.Zombie xbc xac xg) = False"
-  "isArchCap P (capability.ArchObjectCap xh) = P xh"
-  "isArchCap P (capability.ReplyCap xad xi xia) = False"
-  "isArchCap P (capability.UntypedCap d xae xj f) = False"
-  "isArchCap P (capability.CNodeCap xfa xea xdb xcc) = False"
-  "isArchCap P capability.IRQControlCap = False"
-  by (simp add: isArchCap_def)+
+lemmas isArchCap_simps[simp] = isArchCap_def[split_simps capability.split]
 
 lemma zbits_map_eq[simp]:
   "(zbits_map zbits = zbits_map zbits') = (zbits = zbits')"
@@ -2772,10 +2751,9 @@ crunch set_untyped_cap_as_full
   for valid_list[wp]: valid_list
 
 lemma cte_map_inj_eq':
-  "\<lbrakk>(cte_map p = cte_map p');
-   cte_at p s \<and> cte_at p' s \<and>
-   valid_objs s \<and> pspace_aligned s \<and> pspace_distinct s\<rbrakk>
-   \<Longrightarrow> p = p'"
+  "\<lbrakk> cte_map p = cte_map p';
+     cte_at p s \<and> cte_at p' s \<and> valid_objs s \<and> pspace_aligned s \<and> pspace_distinct s\<rbrakk>
+  \<Longrightarrow> p = p'"
   by (rule cte_map_inj_eq; fastforce)
 
 lemma updateCap_no_0:
@@ -2941,10 +2919,7 @@ lemma updateMDB_the_lot':
          tcbSchedPrevs_of s'' = tcbSchedPrevs_of s' \<and>
          (\<forall>domain priority.
             (inQ domain priority |< tcbs_of' s'') = (inQ domain priority |< tcbs_of' s'))"
-  apply (rule updateMDB_the_lot)
-      using assms
-      apply fastforce+
-   done
+  by (rule updateMDB_the_lot; fastforce intro: assms)
 
 lemma updateUntypedCap_descendants_of:
   "\<lbrakk>m src = Some cte; isUntypedCap (cteCap cte)\<rbrakk>
@@ -5142,8 +5117,7 @@ lemma cteInsert_corres:
              apply (rule refl)
             apply (elim conjE exE)
             apply (rule bind_execI, assumption)
-            apply (subgoal_tac "mdb_insert_abs (cdt a) src dest")
-             prefer 2
+            apply (prop_tac "mdb_insert_abs (cdt a) src dest")
              apply (erule mdb_insert_abs.intro)
               apply (rule mdb_Null_None)
                apply (simp add: op_equal)
@@ -5151,8 +5125,7 @@ lemma cteInsert_corres:
              apply (rule mdb_Null_descendants)
               apply (simp add: op_equal)
              apply simp
-            apply (subgoal_tac "no_mloop (cdt a)")
-             prefer 2
+            apply (prop_tac "no_mloop (cdt a)")
              apply (simp add: valid_mdb_def)
             apply (clarsimp simp: exec_gets update_cdt_def bind_assoc set_cdt_def
                                   exec_get exec_put set_original_def modify_def
@@ -5166,11 +5139,9 @@ lemma cteInsert_corres:
             apply (drule (3) updateMDB_the_lot', simp, simp,  elim conjE)
             apply (clarsimp simp: cte_wp_at_ctes_of nullPointer_def
                              prev_update_modify_mdb_relation)
-            apply (subgoal_tac "cte_map dest \<noteq> 0")
-             prefer 2
+            apply (prop_tac "cte_map dest \<noteq> 0")
              apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def no_0_def)
-            apply (subgoal_tac "cte_map src \<noteq> 0")
-             prefer 2
+            apply (prop_tac "cte_map src \<noteq> 0")
              apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def no_0_def)
             apply (thin_tac "ksMachineState t = p" for p t)+
             apply (thin_tac "ksCurThread t = p" for p t)+
@@ -5189,13 +5160,11 @@ lemma cteInsert_corres:
               apply (case_tac "oldCTE")
               apply (rename_tac dest_node)
               apply (clarsimp simp: in_set_cap_cte_at_swp)
-              apply (subgoal_tac "cte_at src a \<and> is_derived (cdt a) src c src_cap")
-               prefer 2
+              apply (prop_tac "cte_at src a \<and> is_derived (cdt a) src c src_cap")
                apply (fastforce simp: cte_wp_at_def)
               apply (erule conjE)
-              apply (subgoal_tac "mdb_insert (ctes_of b) (cte_map src) (maskedAsFull src_cap' c') src_node
+              apply (prop_tac "mdb_insert (ctes_of b) (cte_map src) (maskedAsFull src_cap' c') src_node
                                  (cte_map dest) NullCap dest_node")
-               prefer 2
                apply (rule mdb_insert.intro)
                  apply (rule mdb_ptr.intro)
                   apply (rule vmdb.intro, simp add: valid_mdb_ctes_def)
@@ -5527,13 +5496,11 @@ lemma cteInsert_corres:
   apply (case_tac "oldCTE")
   apply (rename_tac dest_node)
   apply (clarsimp simp: in_set_cap_cte_at_swp)
-  apply (subgoal_tac "cte_at src a \<and> is_derived (cdt a) src c src_cap")
-   prefer 2
+  apply (prop_tac "cte_at src a \<and> is_derived (cdt a) src c src_cap")
    subgoal by (fastforce simp: cte_wp_at_def)
   apply (erule conjE)
-  apply (subgoal_tac "mdb_insert (ctes_of b) (cte_map src) (maskedAsFull src_cap' c') src_node
+  apply (prop_tac "mdb_insert (ctes_of b) (cte_map src) (maskedAsFull src_cap' c') src_node
                                  (cte_map dest) NullCap dest_node")
-   prefer 2
    apply (rule mdb_insert.intro)
      apply (rule mdb_ptr.intro)
       subgoal by (rule vmdb.intro, simp add: valid_mdb_ctes_def)
@@ -5552,12 +5519,10 @@ lemma cteInsert_corres:
    apply (rule mdb_insert_der_axioms.intro)
    apply (simp add: is_derived_eq)
   apply (simp (no_asm_simp) add: cdt_relation_def split: if_split)
-  apply (subgoal_tac "descendants_of dest (cdt a) = {}")
-   prefer 2
+  apply (prop_tac "descendants_of dest (cdt a) = {}")
    apply (drule mdb_insert.dest_no_descendants)
    subgoal by (fastforce simp add: cdt_relation_def)
-  apply (subgoal_tac "mdb_insert_abs (cdt a) src dest")
-   prefer 2
+  apply (prop_tac "mdb_insert_abs (cdt a) src dest")
    apply (erule mdb_insert_abs.intro)
     apply (rule mdb_None)
       apply (erule(1) mdb_insert.descendants_not_dest)

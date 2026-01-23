@@ -396,7 +396,7 @@ lemma threadGet_corres:
   done
 
 lemma threadGet_inv [wp]: "\<lbrace>P\<rbrace> threadGet f t \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (simp add: threadGet_def getObject_inv_tcb | wp)+
+  by (simp add: threadGet_def getObject_tcb_inv | wp)+
 
 lemma ball_tcb_cte_casesI:
   "\<lbrakk> P (tcbCTable, tcbCTable_update);
@@ -965,7 +965,7 @@ lemma threadSet_obj_at'_really_strongest:
     apply (rule hoare_post_imp[where Q'="\<lambda>rv s. \<not> tcb_at' t s \<and> tcb_at' t s"])
      apply simp
     apply (subst simp_thms(21)[symmetric], rule hoare_vcg_conj_lift)
-     apply (rule getObject_inv_tcb)
+     apply (rule getObject_tcb_inv)
     apply (rule hoare_strengthen_post [OF getObject_ko_at])
       apply simp
      apply (simp add: gen_objBits_simps)
@@ -1426,7 +1426,7 @@ lemma asUser_pred_tcb_at' [wp]:
 crunch asUser
   for ct[wp]: "\<lambda>s. P (ksCurThread s)"
   and cur_domain[wp]: "\<lambda>s. P (ksCurDomain s)"
-  (simp: crunch_simps wp: hoare_drop_imps getObject_inv_tcb setObject_ct_inv)
+  (simp: crunch_simps wp: hoare_drop_imps getObject_tcb_inv setObject_ct_inv)
 
 lemma asUser_tcb_in_cur_domain'[wp]:
   "\<lbrace>tcb_in_cur_domain' t'\<rbrace> asUser t m \<lbrace>\<lambda>_. tcb_in_cur_domain' t'\<rbrace>"
@@ -2050,6 +2050,14 @@ lemma in_ready_q_tcbQueued_eq:
                   split: option.splits)
   done
 
+lemma threadSet_ghost_relation_wrapper[wp]:
+  "threadSet f p \<lbrace>ghost_relation_wrapper t\<rbrace>"
+  unfolding threadSet_def setObject_def
+  by (wpsimp wp: getObject_tcb_wp simp: updateObject_default_def obj_at'_def)
+
+lemma removeFromBitmap_ghost_relation_wrapper[wp]:
+  "removeFromBitmap tdom prio \<lbrace>ghost_relation_wrapper s\<rbrace>"
+  by (wpsimp simp: bitmap_fun_defs)
 
 locale TcbAcc_R_2 = TcbAcc_R +
   assumes removeFromBitmap_valid_bitmapQ_except:
@@ -2114,15 +2122,7 @@ locale TcbAcc_R_2 = TcbAcc_R +
      corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
                (as_user t (setRegister r v))
                (asUser t (setRegister r v))"
-
-lemma threadSet_ghost_relation_wrapper[wp]:
-  "threadSet f p \<lbrace>ghost_relation_wrapper t\<rbrace>"
-  unfolding threadSet_def setObject_def updateObject_default_def
-  apply (wpsimp wp: getObject_tcb_wp simp: updateObject_default_def)
-  apply (clarsimp simp: obj_at'_def)
-  done
-
-context TcbAcc_R_2 begin
+begin
 
 crunch setQueue, tcbQueuePrepend, tcbQueueRemove, removeFromBitmap
   for ghost_relation_wrapper[wp]: "ghost_relation_wrapper t"
@@ -2442,12 +2442,7 @@ lemmas removeFromBitmap_weak_sch_act_wf[wp]
 lemmas addToBitmap_weak_sch_act_wf[wp]
   = weak_sch_act_wf_lift[OF addToBitmap_nosch]
 
-crunch removeFromBitmap
-  for st_tcb_at'[wp]: "st_tcb_at' P t"
-  and pred_tcb_at'[wp]: "\<lambda>s. Q (pred_tcb_at' proj P t s)"
-  and obj_at'[wp]: "\<lambda>s. Q (obj_at' P t s)"
-
-crunch addToBitmap
+crunch removeFromBitmap, addToBitmap
   for pred_tcb_at'[wp]: "\<lambda>s. Q (pred_tcb_at' proj P t s)"
   and obj_at'[wp]: "\<lambda>s. Q (obj_at' P t s)"
 
@@ -3709,9 +3704,7 @@ lemma gbn_sp':
 lemma tcbSchedDequeue_tcbState_obj_at'[wp]:
   "\<lbrace>obj_at' (P \<circ> tcbState) t'\<rbrace> tcbSchedDequeue t \<lbrace>\<lambda>rv. obj_at' (P \<circ> tcbState) t'\<rbrace>"
   apply (simp add: tcbSchedDequeue_def tcbQueueRemove_def)
-  apply (wpsimp wp: getObject_tcb_wp simp: o_def threadGet_def)
-  apply (clarsimp simp: obj_at'_def)
-  done
+  by (wpsimp wp: hoare_drop_imps simp: o_def cong: if_cong)
 
 lemma tcbSchedDequeue_pred_tcb_at'[wp]:
   "\<lbrace>\<lambda>s. P' (pred_tcb_at' proj P t' s)\<rbrace> tcbSchedDequeue t \<lbrace>\<lambda>_ s. P' (pred_tcb_at' proj P t' s)\<rbrace>"
@@ -3864,7 +3857,7 @@ lemma tcbQueueRemove_if_live_then_nonz_cap':
    tcbQueueRemove q tcbPtr
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   unfolding tcbQueueRemove_def
-  apply (wpsimp wp:  tcbSchedPrev_update_iflive' tcbSchedNext_update_iflive'
+  apply (wpsimp wp: tcbSchedPrev_update_iflive' tcbSchedNext_update_iflive'
                     hoare_vcg_imp_lift' getTCB_wp)
   apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
   by (force dest: sym_heapD2[where p'=tcbPtr] sym_heapD1[where p=tcbPtr]
@@ -3959,7 +3952,7 @@ crunch setThreadState, setBoundNotification
 
 crunch setThreadState, setBoundNotification
   for it' [wp]: "\<lambda>s. P (ksIdleThread s)"
-  (wp: getObject_inv_tcb
+  (wp: getObject_tcb_inv
    simp: updateObject_default_def unless_def crunch_simps)
 
 lemma sts_ctes_of [wp]:
@@ -4096,7 +4089,7 @@ lemma tcbSchedAppend_ct_not_inQ:
 
 end (* TcbAcc_R_2 *)
 
-lemma setSchedulerAction_direct:
+lemma setSchedulerAction_direct[wp]:
   "\<lbrace>\<top>\<rbrace> setSchedulerAction sa \<lbrace>\<lambda>_ s. ksSchedulerAction s = sa\<rbrace>"
   by (wpsimp simp: setSchedulerAction_def)
 
@@ -4105,7 +4098,7 @@ lemma rescheduleRequired_ct_not_inQ:
   apply (simp add: rescheduleRequired_def ct_not_inQ_def)
   apply (rule_tac Q'="\<lambda>_ s. ksSchedulerAction s = ChooseNewThread"
            in hoare_post_imp, clarsimp)
-  apply (wp setSchedulerAction_direct)
+  apply wp
   done
 
 lemma rescheduleRequired_sa_cnt[wp]:

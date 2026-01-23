@@ -6145,8 +6145,7 @@ lemma threadSet_domain_ccorres [corres]:
 
 lemma createObject_ccorres:
   notes APITypecapBits_simps[simp] =
-          APIType_capBits_def[split_simps
-          object_type.split apiobject_type.split]
+          APIType_capBits_gen_def[split_simps object_type.split apiobject_type.split]
   shows
     "ccorres ccap_relation ret__struct_cap_C_'
      (createObject_hs_preconds regionBase newType userSize isdev)
@@ -6205,7 +6204,7 @@ proof -
                           word_le_nat_alt split:
                           apiobject_type.splits object_type.splits)
    apply (subgoal_tac "\<exists>apiType. newType = APIObjectType apiType")
-    apply (clarsimp simp: APIType_capBits_gen_def)
+    apply clarsimp
     apply (rule ccorres_guard_imp)
       apply (rule_tac apiType=apiType in ccorres_apiType_split)
 
@@ -6264,8 +6263,7 @@ proof -
          apply (frule invs_pspace_aligned')
          apply (frule invs_pspace_distinct')
          apply (frule invs_sym')
-         apply (simp add: getObjectSize_def objBits_simps word_bits_conv
-                          apiGetObjectSize_def APIType_capBits_gen_def
+         apply (simp add: getObjectSize_def objBits_simps word_bits_conv apiGetObjectSize_def
                           tcbBlockSizeBits_def new_cap_addrs_def projectKO_opt_tcb)
          apply (clarsimp simp: range_cover.aligned region_actually_is_bytes_def)
          apply (frule(1) ghost_assertion_size_logic_no_unat)
@@ -6308,7 +6306,7 @@ proof -
         apply (frule invs_pspace_distinct')
         apply (frule invs_sym')
         apply (auto simp: getObjectSize_def objBits_simps apiGetObjectSize_def
-                          epSizeBits_def word_bits_conv APIType_capBits_gen_def
+                          epSizeBits_def word_bits_conv
                    elim!: is_aligned_no_wrap'
                   intro!: range_cover_simpleI)[1]
 
@@ -6344,8 +6342,7 @@ proof -
        apply (frule invs_pspace_aligned')
        apply (frule invs_pspace_distinct')
        apply (frule invs_sym')
-       apply (auto simp: getObjectSize_def objBits_simps
-                         apiGetObjectSize_def APIType_capBits_gen_def
+       apply (auto simp: getObjectSize_def objBits_simps apiGetObjectSize_def
                          ntfnSizeBits_def word_bits_conv
                   elim!: is_aligned_no_wrap'
                  intro!: range_cover_simpleI)[1]
@@ -6386,8 +6383,7 @@ proof -
        apply (frule invs_pspace_distinct')
        apply (frule invs_sym')
        apply (frule(1) ghost_assertion_size_logic_no_unat)
-       apply (clarsimp simp: getObjectSize_def objBits_simps
-                             apiGetObjectSize_def APIType_capBits_gen_def
+       apply (clarsimp simp: getObjectSize_def objBits_simps apiGetObjectSize_def
                              cteSizeBits_def word_bits_conv add.commute createObject_c_preconds_def
                              region_actually_is_bytes_def
                              invs_valid_objs' invs_urz
@@ -6398,11 +6394,10 @@ proof -
       apply (frule range_cover.strong_times_64[folded addr_card_wb], simp+)
       apply (subst h_t_array_valid_retyp, simp+)
        apply (simp add: power_add cte_C_size cteSizeBits_def)
-      apply (clarsimp simp: ccap_relation_def cap_to_H_def cap_cnode_cap_lift APIType_capBits_gen_def
+      apply (clarsimp simp: ccap_relation_def cap_to_H_def cap_cnode_cap_lift
                             getObjectSize_def apiGetObjectSize_def cteSizeBits_def
                             objBits_simps field_simps is_aligned_power2
                             addr_card_wb is_aligned_weaken[where y=2]
-                            is_aligned_neg_mask_weaken
                      split: option.splits)
       apply (rule conjI)
        apply (frule range_cover.aligned)
@@ -6413,7 +6408,7 @@ proof -
        apply (clarsimp simp: word_bits_conv)
       apply simp
      apply auto[1]
-    apply (clarsimp simp: createObject_c_preconds_def APIType_capBits_gen_def)
+    apply (clarsimp simp: createObject_c_preconds_def)
     apply (clarsimp simp:nAPIOBjects_object_type_from_H)?
     apply (intro impI conjI, simp_all)[1]
    apply (clarsimp simp: nAPIObjects_def object_type_from_H_def Kernel_C_defs
@@ -7332,17 +7327,17 @@ lemma createObject_sch_act_simple[wp]:
 
 lemma createObject_ct_active'[wp]:
   "\<lbrace>\<lambda>s. ct_active' s \<and> pspace_aligned' s \<and> pspace_distinct' s
-     \<and>  pspace_no_overlap' ptr (APIType_capBits ty us) s
-     \<and>  is_aligned ptr (APIType_capBits ty us) \<and> APIType_capBits ty us < word_bits
-    \<rbrace>createObject ty ptr us dev\<lbrace>\<lambda>r s. ct_active' s \<rbrace>"
- apply (simp add:ct_in_state'_def createObject_def3)
- apply (rule hoare_pre)
- apply wp
- apply wps
- apply (wp createNewCaps_pred_tcb_at')
- apply (intro conjI)
- apply (auto simp: range_cover_full createNewCaps_arch_ko_type_pre_non_arch)
- done
+        \<and> pspace_no_overlap' ptr (APIType_capBits ty us) s
+        \<and>  is_aligned ptr (APIType_capBits ty us) \<and> APIType_capBits ty us < word_bits\<rbrace>
+   createObject ty ptr us dev
+   \<lbrace>\<lambda>r s. ct_active' s \<rbrace>"
+  apply (simp add: ct_in_state'_def createObject_def3)
+  apply (rule hoare_pre)
+   apply wp
+   apply wps
+  apply (wp createNewCaps_pred_tcb_at')
+  apply (auto simp: range_cover_full createNewCaps_arch_ko_type_pre_non_arch)
+  done
 
 lemma createObject_notZombie[wp]:
   "\<lbrace>\<top>\<rbrace>createObject ty ptr us dev \<lbrace>\<lambda>r s. \<not> isZombie r\<rbrace>"

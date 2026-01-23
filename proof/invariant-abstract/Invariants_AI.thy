@@ -15,7 +15,6 @@ arch_requalify_types
 arch_requalify_consts (A)
   arch_cap_is_device
   ASIDPoolObj
-  idle_thread_ptr
 
 (* we need to know the sizes of arch objects in the generic context *)
 arch_requalify_facts (A)

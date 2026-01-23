@@ -342,8 +342,7 @@ definition APIType_map2_gen :: "apiobject_type \<Rightarrow> Structures_A.apiobj
      | ArchTypes_H.CapTableObject \<Rightarrow> Structures_A.CapTableObject"
 
 (* generic part of makeObjectKO *)
-definition
-  makeObjectKO_gen :: "domain \<Rightarrow> apiobject_type \<rightharpoonup> kernel_object" where
+definition makeObjectKO_gen :: "domain \<Rightarrow> apiobject_type \<rightharpoonup> kernel_object" where
   "makeObjectKO_gen d ty \<equiv> case ty of
        ArchTypes_H.TCBObject \<Rightarrow> Some (KOTCB (tcbDomain_update (\<lambda>_. d) makeObject))
      | ArchTypes_H.EndpointObject \<Rightarrow> Some (KOEndpoint makeObject)
@@ -1318,7 +1317,8 @@ lemma new_cap_addrs_fold':
 lemma getObject_tcb_gets:
   "getObject addr >>= (\<lambda>x::tcb. gets proj >>= (\<lambda>y. G x y))
    = gets proj >>= (\<lambda>y. getObject addr >>= (\<lambda>x. G x y))"
-  by (auto simp: exec_gets fun_eq_iff intro: bind_apply_cong dest!: in_inv_by_hoareD[OF getObject_inv_tcb])
+  by (auto simp: exec_gets fun_eq_iff intro: bind_apply_cong
+          dest!: in_inv_by_hoareD[OF getObject_tcb_inv])
 
 lemma setObject_tcb_gets_ksCurDomain:
   "setObject addr (tcb::tcb) >>= (\<lambda>_. gets ksCurDomain >>= G)
@@ -1327,7 +1327,7 @@ lemma setObject_tcb_gets_ksCurDomain:
   apply (rule bind_apply_cong)
    apply simp
   apply (drule_tac P1="\<lambda>cdom. cdom = ksCurDomain x" in use_valid[OF _ setObject_cd_inv])
-  apply (simp_all add: exec_gets)
+   apply (simp_all add: exec_gets)
   done
 
 lemma curDomain_mapM_x_futz:
@@ -1690,7 +1690,7 @@ locale Retype_R_2 = Retype_R +
      createObjects ptr n val gbits
      \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
   assumes createObjects_untyped_ranges_zero':
-    "\<And>val ptr sz n d ty gSize.
+    "\<And>val ptr sz n dev d ty gSize.
      makeObjectKO dev d ty = Some val \<Longrightarrow>
      \<lbrace>ct_active' and valid_pspace' and pspace_no_overlap' ptr sz and untyped_ranges_zero' and
       K (range_cover ptr sz (objBitsKO val + gSize) n \<and> n \<noteq> 0)\<rbrace>
@@ -2244,8 +2244,8 @@ lemma (in Retype_R_2) corres_retype:
     apply (rule corres_rel_imp)
     apply (rule corres_retype'[where g=id and ty=ty and sz = sz,OF not_zero aligned _ _ _ ko,
                                      simplified update_gs_id[OF tp] modify_id_return,simplified])
-        using assms
-        apply (simp_all add: objBits_def no_gs_types_CapTableObject)
+         using assms
+         apply (simp_all add: objBits_def no_gs_types_CapTableObject)
   apply auto
   done
 
@@ -2346,53 +2346,54 @@ lemma (in Retype_R) valid_untyped'_helper:
   and  range  : "caps_no_overlap'' ptr sz s"
   and  pres   : "isUntypedCap c \<longrightarrow> usableUntypedRange c \<inter>  {ptr..ptr + of_nat n * 2 ^ objBitsKO val - 1} = {}"
   shows "\<lbrakk>pspace_aligned' s; pspace_distinct' s; pspace_no_overlap' ptr sz s\<rbrakk>
- \<Longrightarrow> valid_cap' c (s\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr val) (new_cap_addrs n ptr val) (ksPSpace s)\<rparr>)"
-  proof -
-  note blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-        Int_atLeastAtMost atLeastatMost_empty_iff
-  assume pn : "pspace_aligned' s" "pspace_distinct' s"
-  and   no_overlap: "pspace_no_overlap' ptr sz s"
+         \<Longrightarrow> valid_cap' c (s\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr val)
+                                                      (new_cap_addrs n ptr val) (ksPSpace s)\<rparr>)"
+proof -
+  note [simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+                    Int_atLeastAtMost atLeastatMost_empty_iff
+  assume pn: "pspace_aligned' s" "pspace_distinct' s"
+    and no_overlap: "pspace_no_overlap' ptr sz s"
   show ?thesis
-  using pn pres no_overlap valid cover cte_wp_at_ctes_of[THEN iffD1,OF cte_at]
-        caps_no_overlapD''[OF cte_at range]
-  apply (clarsimp simp:valid_cap'_def retype_ko_wp_at')
-  apply (case_tac "cteCap cte";
-         simp add: valid_cap'_def cte_wp_at_obj_cases' valid_pspace'_def retype_obj_at_disj'
-            split: zombie_type.split_asm)
-   apply (simp add: valid_untyped'_helper_arch_cap)
-  unfolding valid_untyped'_def
-  apply (intro allI)
-  apply (rule ccontr)
-  apply clarify
-  using cover[unfolded range_cover_def]
-  apply (clarsimp simp: gen_isCap_simps retype_ko_wp_at' split:if_split_asm)
-   apply (thin_tac "\<forall>x. Q x" for Q)
-   apply (frule aligned_untypedRange_non_empty)
-    apply (simp add: gen_isCap_simps)
-   apply (elim disjE)
-    apply (frule(1) obj_range'_subset)
-    apply (erule impE)
-     apply (drule(1) psubset_subset_trans)
-     apply (drule Int_absorb1[OF psubset_imp_subset])
-     apply (drule aligned_untypedRange_non_empty)
+    using pn pres no_overlap valid cover cte_wp_at_ctes_of[THEN iffD1,OF cte_at]
+      caps_no_overlapD''[OF cte_at range]
+    apply (clarsimp simp:valid_cap'_def retype_ko_wp_at')
+    apply (case_tac "cteCap cte";
+           simp add: valid_cap'_def cte_wp_at_obj_cases' valid_pspace'_def retype_obj_at_disj'
+              split: zombie_type.split_asm)
+     apply (simp add: valid_untyped'_helper_arch_cap)
+    unfolding valid_untyped'_def
+    apply (intro allI)
+    apply (rule ccontr)
+    apply clarify
+    using cover[unfolded range_cover_def]
+    apply (clarsimp simp: gen_isCap_simps retype_ko_wp_at' split:if_split_asm)
+     apply (thin_tac "\<forall>x. Q x" for Q)
+     apply (frule aligned_untypedRange_non_empty)
       apply (simp add: gen_isCap_simps)
-     apply (simp add:Int_ac add_mask_fold)
+     apply (elim disjE)
+      apply (frule(1) obj_range'_subset)
+      apply (erule impE)
+       apply (drule(1) psubset_subset_trans)
+       apply (drule Int_absorb1[OF psubset_imp_subset])
+       apply (drule aligned_untypedRange_non_empty)
+        apply (simp add: gen_isCap_simps)
+       apply (simp add:Int_ac add_mask_fold)
+      apply (drule(1) subset_trans)
+      apply (simp only: add_mask_fold)
+     apply (frule(1) obj_range'_subset_strong)
+     apply (drule(1) non_disjoing_subset)
+     apply blast
+    apply (thin_tac "\<forall>x. Q x" for Q)
+    apply (frule aligned_untypedRange_non_empty)
+     apply (simp add: gen_isCap_simps)
+    apply (frule(1) obj_range'_subset)
     apply (drule(1) subset_trans)
+    apply (erule impE)
+     apply (clarsimp simp: add_mask_fold)
+     apply blast
     apply (simp only: add_mask_fold)
-   apply (frule(1) obj_range'_subset_strong)
-   apply (drule(1) non_disjoing_subset)
-   apply blast
-  apply (thin_tac "\<forall>x. Q x" for Q)
-  apply (frule aligned_untypedRange_non_empty)
-   apply (simp add: gen_isCap_simps)
-  apply (frule(1) obj_range'_subset)
-  apply (drule(1) subset_trans)
-  apply (erule impE)
-   apply (clarsimp simp: add_mask_fold)
-   apply blast
-  apply (simp only: add_mask_fold)
-  apply blast
-  done
+    apply blast
+    done
 qed
 
 lemma retype_canonical':
@@ -2592,9 +2593,8 @@ lemma (in Retype_R_2) createObjects_valid_pspace_untyped':
   shows "\<lbrace>\<lambda>s. pspace_no_overlap' ptr sz s \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s \<and> ptr \<noteq> 0
             \<and> caps_overlap_reserved' {ptr .. ptr + of_nat (n * 2^gbits * 2 ^ objBitsKO val ) - 1} s \<rbrace>
   createObjects' ptr n val gbits \<lbrace>\<lambda>r. valid_pspace'\<rbrace>"
-  apply (wp createObjects_valid_pspace' [OF mko max_d not_0 cover sz_limit ptr_cn ptr_km])
-  apply simp
-  done
+  using assms
+  by (wpsimp wp: createObjects_valid_pspace'[OF mko max_d not_0 cover])
 
 declare bleeding_obvious [simp]
 
@@ -3425,12 +3425,12 @@ proof -
 qed
 
 lemma (in Retype_R) createNewCaps_ct_idle_or_in_cur_domain':
-  "\<lbrace>ct_idle_or_in_cur_domain' and pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz and ct_active' and K (range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n) \<rbrace>
-    createNewCaps ty ptr n us dev
+  "\<lbrace>ct_idle_or_in_cur_domain' and pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz
+    and ct_active' and K (range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n) \<rbrace>
+   createNewCaps ty ptr n us dev
    \<lbrace>\<lambda>rv. ct_idle_or_in_cur_domain'\<rbrace>"
-  apply (wp ct_idle_or_in_cur_domain'_lift_futz createNewCaps_obj_at'[where sz=sz]
-         | simp add: createNewCaps_arch_ko_type_pre_non_arch)+
-  done
+  by (wp ct_idle_or_in_cur_domain'_lift_futz createNewCaps_obj_at'[where sz=sz]
+      | simp add: createNewCaps_arch_ko_type_pre_non_arch)+
 
 lemma sch_act_wf_lift_asm_futz:
   assumes tcb: "\<And>P t. \<lbrace>st_tcb_at' P t and Q \<rbrace> f \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
@@ -3462,14 +3462,14 @@ lemma sch_act_wf_lift_asm_futz:
   done
 
 lemma (in Retype_R) createNewCaps_sch_act_wf:
-  "\<lbrace>(\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz and K (range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n)\<rbrace>
-     createNewCaps ty ptr n us dev
+  "\<lbrace>(\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and pspace_aligned' and pspace_distinct'
+    and pspace_no_overlap' ptr sz and K (range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n)\<rbrace>
+   createNewCaps ty ptr n us dev
    \<lbrace>\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (wp sch_act_wf_lift_asm_futz
-            createNewCaps_pred_tcb_at'[where sz=sz]
-            createNewCaps_obj_at'[where sz=sz]
-       | simp add: createNewCaps_arch_ko_type_pre_non_arch)+
-  done
+  by (wp sch_act_wf_lift_asm_futz
+         createNewCaps_pred_tcb_at'[where sz=sz]
+         createNewCaps_obj_at'[where sz=sz]
+      | simp add: createNewCaps_arch_ko_type_pre_non_arch)+
 
 lemma (in Retype_R) createObjects_null_filter':
   "\<lbrace>\<lambda>s. P (null_filter' (ctes_of s)) \<and> makeObjectKO dev d ty = Some val \<and>
@@ -3595,9 +3595,7 @@ proof (rule hoare_gen_asm, elim conjE)
     using cover not_0
     apply (fastforce simp: valid_pspace'_def createNewCaps_arch_ko_type_pre_non_arch)
     done
-  show "\<lbrace>?P\<rbrace>
-     createNewCaps ty ptr n us dev
-   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  show "\<lbrace>?P\<rbrace> createNewCaps ty ptr n us dev \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def
                    pointerInUserData_def typ_at'_def)
     apply (rule hoare_pre)
