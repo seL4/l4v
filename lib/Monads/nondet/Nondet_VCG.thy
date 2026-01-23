@@ -326,6 +326,10 @@ lemma in_inv_by_hoareD:
   "\<lbrakk> \<And>P. f \<lbrace>P\<rbrace>; (x,s') \<in> fst (f s) \<rbrakk> \<Longrightarrow> s' = s"
   by (auto simp add: valid_def) blast
 
+lemma in_inv_by_hoareD':
+  "\<lbrakk> \<And>P. \<lbrace>P and Q\<rbrace> f \<lbrace>\<lambda>_ . P\<rbrace>; (x,s') \<in> fst (f s); Q s \<rbrakk> \<Longrightarrow> s' = s"
+  by (auto simp: valid_def) blast
+
 
 subsection \<open>Misc\<close>
 
@@ -1399,6 +1403,10 @@ lemma hoare_return_sp: (* FIXME lib: eliminate *)
 lemma assert_sp:
   "\<lbrace>P\<rbrace> assert Q \<lbrace>\<lambda>_ s. P s \<and> Q\<rbrace>"
   by (simp add: assert_def fail_def return_def valid_def)
+
+lemma assert_opt_sp:
+  "\<lbrace>P\<rbrace> assert_opt opt \<lbrace>\<lambda>rv s. P s \<and> opt = Some rv\<rbrace>"
+  by (simp add: assert_opt_def assert_def fail_def return_def valid_def split: option.splits)
 
 lemma hoare_gets_sp:
   "\<lbrace>P\<rbrace> gets f \<lbrace>\<lambda>rv s. rv = f s \<and> P s\<rbrace>"
