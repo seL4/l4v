@@ -1332,6 +1332,15 @@ lemma corres_add_noop_rhs:
    \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
   by simp
 
+lemma corres_noop_dc_rhs_eq:
+  "corres_underlying srel nf nf' dc P P' f g
+   \<longleftrightarrow> corres_underlying srel nf nf' dc P P' f (do g; return () od)"
+  by (force simp: corres_underlying_def bind_def return_def)
+
+lemmas corres_add_noop_rhs_dc = corres_noop_dc_rhs_eq[THEN iffD2]
+
+lemmas corres_remove_noop_rhs_dc = corres_noop_dc_rhs_eq[THEN iffD1]
+
 lemma corres_add_noop_rhs2:
   "corres_underlying sr nf nf' r P P' f (do _ \<leftarrow> g; return () od)
    \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"

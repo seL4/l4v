@@ -124,6 +124,19 @@ lemma det_wp_assert_opt :
   apply simp
   done
 
+lemma gets_the_det_wp[wp]:
+  "det_wp (\<lambda>s. \<exists>v. f s = Some v) (gets_the f)"
+  apply (simp add: gets_the_def)
+  apply (rule det_wp_pre)
+   apply (wpsimp wp: det_wp_assert_opt)
+  apply fastforce
+  done
+
+lemma gets_map_det_wp[wp]:
+  "det_wp (\<lambda>s. \<exists>y. f s p = Some y) (gets_map f p)"
+  unfolding gets_map_def
+  by (wpsimp wp: det_wp_assert_opt)
+
 lemma det_wp_def2:
   "det_wp P f = (\<forall>s. P s \<longrightarrow> (\<not> snd (f s)) \<and> (\<exists>r. r \<in> fst (f s) \<and> (\<forall>r'. r' \<in> fst (f s) \<longrightarrow> r' = r)))"
   apply (clarsimp simp: det_wp_def)

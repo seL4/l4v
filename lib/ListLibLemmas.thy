@@ -1149,6 +1149,55 @@ lemma sorted_last_leD:
   "\<lbrakk> sorted xs; y \<ge> last xs ; xs \<noteq> [] \<rbrakk> \<Longrightarrow> \<forall>x\<in>set xs. x \<le> y"
   by (fastforce dest: sorted_lastD)
 
+lemma sorted_wrt_subseq:
+  "\<lbrakk>sorted_wrt P ys; subseq xs ys\<rbrakk> \<Longrightarrow> sorted_wrt P xs"
+  apply (induct xs arbitrary: ys)
+   apply fastforce
+  apply (frule list_emb_ConsD)
+  apply (clarsimp simp: sorted_wrt_append simp flip: subseq_singleton_left)
+  done
+
+lemma sorted_wrt_prefix:
+  "\<lbrakk>sorted_wrt P ys; prefix xs ys\<rbrakk> \<Longrightarrow> sorted_wrt P xs"
+  by (fastforce intro: sorted_wrt_subseq)
+
+lemma sorted_wrt_suffix:
+  "\<lbrakk>sorted_wrt P ys; suffix xs ys\<rbrakk> \<Longrightarrow> sorted_wrt P xs"
+  by (fastforce intro: sorted_wrt_subseq)
+
+lemma sorted_wrt_insert:
+  "\<lbrakk>sorted_wrt P xs; prefix pfx xs; suffix sfx xs;
+    pfx \<noteq> [] \<longrightarrow> P (last pfx) x; sfx \<noteq> [] \<longrightarrow> P x (hd sfx); transp P\<rbrakk>
+   \<Longrightarrow> sorted_wrt P (pfx @ x # sfx)"
+  apply (clarsimp simp: sorted_wrt_append)
+  apply (prop_tac "\<forall>y \<in> set pfx. P y x")
+   apply (clarsimp, rename_tac y)
+   apply (frule set_list_mem_nonempty)
+   apply (case_tac "y = last pfx", fastforce)
+   apply (frule (1) sorted_wrt_prefix)
+   apply (clarsimp simp: in_set_conv_nth last_conv_nth)
+   apply (frule_tac i=i and j="length pfx - 1" and xs=pfx in sorted_wrt_nth_less)
+     apply (fastforce dest: le_neq_implies_less nat_le_Suc_less_imp)
+    apply clarsimp
+   apply (fastforce elim: transpE)
+  apply (frule (1) sorted_wrt_suffix)
+  apply clarsimp
+  apply (intro context_conjI impI)
+    apply (clarsimp simp: sorted_wrt_append prefix_def)
+   apply clarsimp
+   apply (rename_tac y)
+   apply (frule set_list_mem_nonempty)
+   apply (case_tac "y = hd sfx")
+    apply (fastforce simp: reflp_def)
+   apply (clarsimp simp: in_set_conv_nth)
+   apply (rename_tac i)
+   apply (frule_tac i=0 and j=i in sorted_wrt_nth_less[where xs=sfx])
+     apply (fastforce intro: gr0I simp: hd_conv_nth)
+    apply fastforce
+   apply (fastforce elim: transpE simp: hd_conv_nth)
+  apply (fastforce elim: transpE)
+  done
+
 lemma length_gt_1_imp_butlast_nonempty:
   "Suc 0 < length xs \<Longrightarrow> butlast xs \<noteq> []"
   by (cases xs; clarsimp)
@@ -1164,5 +1213,25 @@ lemma distinct_in_butlast_not_last:
   apply (induct ls; simp)
   apply force
   done
+
+lemma prefix_of_hd_nil:
+  "\<lbrakk>xs = ys @ hd xs # zs; distinct xs\<rbrakk> \<Longrightarrow> ys = []"
+  by (cases xs; cases ys; clarsimp)
+
+lemma suffix_last_nil:
+  "\<lbrakk>xs = ys @ last xs # zs; distinct xs\<rbrakk> \<Longrightarrow> zs = []"
+  apply (cases xs; cases ys; clarsimp split: if_splits)
+  by (metis append_butlast_last_id distinct_inj_middle)
+
+\<comment> \<open>@{thm split_list} uses # instead of @\<close>
+lemma split_list':
+  "x \<in> set xs \<Longrightarrow> \<exists>ys zs. xs = ys @ [x] @ zs"
+  by (fastforce dest: split_list)
+
+lemma distinct_prefix':
+  "\<lbrakk>distinct xs; prefix ys xs\<rbrakk> \<Longrightarrow> distinct ys"
+  apply (induct xs arbitrary: ys; clarsimp)
+  apply (rename_tac ys, case_tac ys; clarsimp)
+  by (fastforce simp: less_eq_list_def dest: set_mono_prefix)
 
 end

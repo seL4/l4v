@@ -112,6 +112,16 @@ lemma heap_path_prefix:
   apply (erule Prefix_Order.prefixE)
   by (metis append_butlast_last_id heap_path_append heap_path_non_nil_lookup_next list.case(1))
 
+lemma heap_ls_suffix:
+  "\<lbrakk> heap_ls hp (Some t) xs; heap_ls hp x ys; t \<in> set ys \<rbrakk> \<Longrightarrow> suffix xs ys"
+  apply (drule_tac xs1=ys in in_set_conv_decomp_first[THEN iffD1])
+  apply clarsimp
+  apply (rename_tac pfx zs)
+  apply (prop_tac "xs = t # zs")
+   apply (simp add: heap_ls_unique)
+  apply (clarsimp simp: suffix_def)
+  done
+
 lemma heap_path_butlast:
   "heap_path hp st ls ed \<Longrightarrow> ls \<noteq> [] \<Longrightarrow> heap_path hp st (butlast ls) (Some (last ls))"
   by (induct ls rule: rev_induct; simp)
@@ -136,9 +146,13 @@ lemma heap_path_takeWhile_lookup_next:
   apply (subgoal_tac "takeWhile ((\<noteq>) r) rs @ [r] \<le> rs", fastforce)
   by (fastforce dest!: in_list_decompose_takeWhile intro: Prefix_Order.prefixI)
 
+lemma heap_path_heap_upd_not_in_strong:
+  "\<lbrakk>heap_path hp st rs ed; \<forall>t \<in> set rs. hp' t = hp t\<rbrakk> \<Longrightarrow> heap_path hp' st rs ed"
+  by (induct rs arbitrary: st; clarsimp)
+
 lemma heap_path_heap_upd_not_in:
   "\<lbrakk>heap_path hp st rs ed; r \<notin> set rs\<rbrakk> \<Longrightarrow> heap_path (hp(r:= x)) st rs ed"
-  by (induct rs arbitrary: st; clarsimp)
+  by (fastforce elim: heap_path_heap_upd_not_in_strong)
 
 lemma heap_path_last_update:
   "\<lbrakk>heap_path hp st xs end; xs \<noteq> []; distinct xs\<rbrakk> \<Longrightarrow> heap_path (hp(last xs := new)) st xs new"
@@ -167,10 +181,14 @@ lemma heap_path_last_end:
 
 lemmas heap_ls_last_None = heap_path_last_end[where ?end=None]
 
+lemmas heap_ls_cong = rsubst3[where P=heap_ls]
+
 (* sym_heap *)
 
 definition sym_heap where
   "sym_heap hp hp' \<equiv> \<forall>p p'. hp p = Some p' \<longleftrightarrow> hp' p' = Some p"
+
+lemmas sym_heap_cong = rsubst2[where P=sym_heap]
 
 lemma sym_heapD1:
   "sym_heap hp hp' \<Longrightarrow> hp p = Some p' \<Longrightarrow> hp' p' = Some p"
