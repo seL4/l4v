@@ -1,3 +1,9 @@
+(*
+ * Copyright 2026, UNSW (ABN 57 195 873 179)
+ *
+ * SPDX-License-Identifier: GPL-2.0-only
+ *)
+
 theory Colour_R
 imports
   "$L4V_ARCH/Refine"
