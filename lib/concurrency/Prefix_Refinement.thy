@@ -2033,7 +2033,7 @@ lemma whenM_prefix_refinement:
   done
 
 
-section \<open>prefix_refinement rules for env_step, commit_step, interference and Await\<close>
+section \<open>prefix_refinement rules for env_step, commit_step, interference and await\<close>
 \<comment> \<open>FIXME: better name for section\<close>
 
 lemma Int_insert_left2:
@@ -2212,13 +2212,13 @@ lemma prefix_refinement_interference:
   apply (clarsimp simp: guar_cond_def)
   done
 
-lemma prefix_refinement_Await:
+lemma prefix_refinement_await:
   "\<lbrakk>env_stable AR R sr iosr Q; abs_rely_stable AR P;
     \<forall>s t. P s \<longrightarrow> Q t \<longrightarrow> iosr s t \<longrightarrow> G' t \<longrightarrow> G s;
     (\<exists>s. G' s) \<longrightarrow> (\<exists>s. G s)\<rbrakk>
    \<Longrightarrow> prefix_refinement sr iosr iosr (\<lambda>_ _. True) AR R (\<lambda>s0 s. s0 = s \<and> P s) (\<lambda>t0 t. t0 = t \<and> Q t)
-                         (Await G) (Await G')"
-  apply (simp add: Await_redef)
+                         (await G) (await G')"
+  apply (simp add: await_redef)
   apply pfx_refn_pre
     apply (rule prefix_refinement_bind[where intsr=iosr]
                 prefix_refinement_select[where rvr="\<lambda>s s'. G s = G' s'"]

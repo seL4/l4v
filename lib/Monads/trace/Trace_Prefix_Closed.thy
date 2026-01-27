@@ -283,8 +283,8 @@ lemma prefix_closed_interference[prefix_closed_terminal]:
   by (wpsimp simp: interference_def commit_step_def wp: prefix_closed_terminal)
 
 lemma prefix_closed_await[prefix_closed_terminal]:
-  "prefix_closed (Await c)"
-  by (wpsimp simp: Await_def wp: prefix_closed_terminal)
+  "prefix_closed (await c)"
+  by (wpsimp simp: await_def wp: prefix_closed_terminal)
 
 lemma prefix_closed_repeat_n[prefix_closed_cond]:
   "prefix_closed f \<Longrightarrow> prefix_closed (repeat_n n f)"

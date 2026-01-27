@@ -362,9 +362,9 @@ lemma last_st_tr_not_empty:
   apply (auto simp: last_st_tr_def)
   done
 
-lemma empty_fail_Await[empty_fail_term]:
-  "\<exists>s. c s \<Longrightarrow> empty_fail (Await c)"
-  by (clarsimp simp: Await_def last_st_tr_not_empty empty_fail_term empty_fail_cond)
+lemma empty_fail_await[empty_fail_term]:
+  "\<exists>s. c s \<Longrightarrow> empty_fail (await c)"
+  by (clarsimp simp: await_def last_st_tr_not_empty empty_fail_term empty_fail_cond)
 
 (* not everything [simp] by default, because side conditions can slow down simp a lot *)
 lemmas empty_fail[wp, intro!] = empty_fail_term empty_fail_cond

@@ -19,15 +19,15 @@ text \<open>
 abbreviation
   "interferences \<equiv> repeat interference"
 
-lemma triv_refinement_Await_env_steps:
-  "triv_refinement env_steps (Await P)"
-  apply (simp add: Await_def env_steps_def)
+lemma triv_refinement_await_env_steps:
+  "triv_refinement env_steps (await P)"
+  apply (simp add: await_def env_steps_def)
   apply (rule triv_refinement_mono_bind allI triv_refinement_select)+
   apply simp
   done
 
-lemmas prefix_refinement_env_steps_Await =
-  prefix_refinement_triv_refinement_conc[OF prefix_refinement_env_steps triv_refinement_Await_env_steps]
+lemmas prefix_refinement_env_steps_await =
+  prefix_refinement_triv_refinement_conc[OF prefix_refinement_env_steps triv_refinement_await_env_steps]
 
 lemma pfx_refn_interferences:
   "env_stable AR R sr iosr (\<lambda>_. True)

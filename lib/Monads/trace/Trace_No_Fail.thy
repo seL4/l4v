@@ -247,9 +247,9 @@ lemma no_fail_interference[wp]:
   "no_fail \<top> interference"
   by (wpsimp simp: interference_def commit_step_def env_steps_def)
 
-lemma no_fail_Await[wp]:
-  "\<exists>s. c s \<Longrightarrow> no_fail \<top> (Await c)"
-  by (wpsimp simp: Await_def)
+lemma no_fail_await[wp]:
+  "\<exists>s. c s \<Longrightarrow> no_fail \<top> (await c)"
+  by (wpsimp simp: await_def)
 
 lemma parallel_failed:
   "failed (parallel f g s) \<Longrightarrow> failed (f s) \<and> failed (g s)"

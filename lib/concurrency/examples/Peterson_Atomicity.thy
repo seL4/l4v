@@ -81,7 +81,7 @@ definition acquire_lock :: "ident \<Rightarrow> (('a, 'b) p_state, unit) tmonad"
      modify (\<lambda>s. s \<lparr> t_v := other_ident ident \<rparr>);
      modify (set_label ident Awaiting);
      interference;
-     Await (locked ident);
+     await (locked ident);
      modify (set_label ident Critical)
    od"
 
@@ -281,7 +281,7 @@ lemma acquire_lock_mutual_excl:
    \<lbrace>\<lambda>rv s0 s. peterson_rel ident s0 s \<and> invs s \<and> invs s0
               \<and> ab_label s ident = Critical \<and> csI (cs2_v s)\<rbrace>"
   apply (simp add: acquire_lock_def)
-  apply (wpsimp wp: Await_sync_twp)
+  apply (wpsimp wp: await_sync_twp)
   apply (strengthen peterson_rel_imp_assume_invs | simp)+
   apply (cases ident)
    apply (safe, simp_all)
@@ -408,12 +408,12 @@ lemma acquire_lock_refinement:
         apply (rule prefix_refinement_bind_sr)
            apply (rule prefix_refinement_interference_peterson)
           apply (rule prefix_refinement_bind_sr)
-             apply (rule prefix_refinement_Await[OF env_stable_peterson_sr abs_rely_stableT])
+             apply (rule prefix_refinement_await[OF env_stable_peterson_sr abs_rely_stableT])
               apply (clarsimp simp add: peterson_sr_def locked_def)
              apply (clarsimp simp add: peterson_sr_def locked_def)
             apply (rule pfx_refn_modifyT)
             apply (clarsimp simp add: peterson_sr_def set_label_def)
-           apply (wpsimp wp: Await_sync_twp)+
+           apply (wpsimp wp: await_sync_twp)+
   done
 
 lemma peterson_sr_invs[simp]:
@@ -511,7 +511,7 @@ lemma acquire_lock_wp:
    \<lbrace>\<top>\<top>\<rbrace>,
    \<lbrace>\<lambda>rv s0 s. invs s \<and> ab_label s ident = Critical\<rbrace>"
   apply (simp add: acquire_lock_def)
-  apply (wpsimp wp: Await_sync_twp)
+  apply (wpsimp wp: await_sync_twp)
   apply (subst (asm) peterson_rel_imp_label, assumption+)
   apply (drule(1) peterson_rel_imp_invs)
   apply (drule(1) peterson_rel_trans)
@@ -619,7 +619,7 @@ lemma peterson_proc_mutual_excl_helper':
    \<lbrace>\<lambda>rv s0 s. peterson_rel2 ident s0 s \<and> invs s \<and> ab_label s ident = Exited\<rbrace>"
   apply (simp add: peterson_proc_def acquire_lock_def release_lock_def
                    critical_section_def)
-  apply (wp Await_sync_twp | simp add: split_def
+  apply (wp await_sync_twp | simp add: split_def
          | rule rg_strengthen_guar[OF _ peterson_rel_peterson_rel2])+
   apply (clarsimp simp: imp_conjL)
   apply (strengthen peterson_rel_imp_assume_invs | simp)+
