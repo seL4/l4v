@@ -83,7 +83,7 @@ definition zeroed_intermediate_state :: global.kernel_state where
     ksDomSchedule = [],
     ksCurDomain = 0,
     ksDomainTime = 0,
-    ksReadyQueues = K (TcbQueue None None),
+    ksReadyQueues = K emptyQueue,
     ksReadyQueuesL1Bitmap = K 0,
     ksReadyQueuesL2Bitmap = K 0,
     ksCurThread = 0,
@@ -106,8 +106,8 @@ lemma non_empty_refine_state_relation:
   apply (intro conjI)
          apply (clarsimp simp: pspace_relation_def pspace_dom_def)
         apply (clarsimp simp: ready_queues_relation_def ready_queue_relation_def queue_end_valid_def
-                              opt_pred_def list_queue_relation_def tcbQueueEmpty_def
-                              prev_queue_head_def)
+                              opt_pred_def list_queue_relation_def emptyHeadEndPtrs_def Let_def
+                              headEndPtrsEmpty_def prev_queue_head_def)
        apply (clarsimp simp: ghost_relation_def)
       apply (fastforce simp: cdt_relation_def swp_def dest: cte_wp_at_domI)
      apply (clarsimp simp: cdt_list_relation_def map_to_ctes_def)

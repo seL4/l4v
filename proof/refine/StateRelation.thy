@@ -190,27 +190,6 @@ primrec sched_act_relation :: "Structures_A.scheduler_action \<Rightarrow> sched
   "sched_act_relation choose_new_thread a' = (a' = ChooseNewThread)" |
   "sched_act_relation (switch_thread x) a' = (a' = SwitchToThread x)"
 
-definition queue_end_valid :: "obj_ref list \<Rightarrow> tcb_queue \<Rightarrow> bool" where
-  "queue_end_valid ts q \<equiv>
-     (ts = [] \<longrightarrow> tcbQueueEnd q = None) \<and> (ts \<noteq> [] \<longrightarrow> tcbQueueEnd q = Some (last ts))"
-
-definition prev_queue_head :: "tcb_queue \<Rightarrow> (obj_ref \<rightharpoonup> 'a) \<Rightarrow> bool" where
-  "prev_queue_head q prevs \<equiv> \<forall>head. tcbQueueHead q = Some head \<longrightarrow> prevs head = None"
-
-lemma prev_queue_head_heap_upd:
-  "\<lbrakk>prev_queue_head q prevs; Some r \<noteq> tcbQueueHead q\<rbrakk> \<Longrightarrow> prev_queue_head q (prevs(r := x))"
-  by (clarsimp simp: prev_queue_head_def)
-
-definition list_queue_relation ::
-  "obj_ref list \<Rightarrow> tcb_queue \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool"
-  where
-  "list_queue_relation ts q nexts prevs \<equiv>
-     heap_ls nexts (tcbQueueHead q) ts \<and> queue_end_valid ts q \<and> prev_queue_head q prevs"
-
-lemma list_queue_relation_nil:
-  "list_queue_relation ts q nexts prevs \<Longrightarrow> ts = [] \<longleftrightarrow> tcbQueueEmpty q"
-  by (fastforce dest: heap_path_head simp: tcbQueueEmpty_def list_queue_relation_def)
-
 definition ready_queue_relation ::
   "Structures_A.domain \<Rightarrow> Structures_A.priority
    \<Rightarrow> Structures_A.ready_queue \<Rightarrow> ready_queue

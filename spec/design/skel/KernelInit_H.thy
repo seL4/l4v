@@ -61,7 +61,7 @@ newKernelState_def:
         ksDomSchedule = newKSDomSchedule,
         ksCurDomain = newKSCurDomain,
         ksDomainTime = newKSDomainTime,
-        ksReadyQueues = const (TcbQueue None None),
+        ksReadyQueues = const emptyQueue,
         ksReadyQueuesL1Bitmap = const 0,
         ksReadyQueuesL2Bitmap = const 0,
         ksCurThread = error [],

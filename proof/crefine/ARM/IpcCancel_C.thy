@@ -954,7 +954,7 @@ proof -
      apply (drule_tac x="tcbPriority tcb" in spec)
      apply clarsimp
      apply (frule (3) obj_at'_tcbQueueHead_ksReadyQueues)
-     apply (force dest!: tcbQueueHead_iff_tcbQueueEnd simp: tcbQueueEmpty_def obj_at'_def)
+     apply (force dest!: he_ptrs_head_iff_he_ptrs_end simp: tcbQueueEmpty_def obj_at'_def)
     apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
     apply (rule conjI)
      apply (clarsimp simp: maxDomain_def)
@@ -1090,7 +1090,7 @@ proof -
      apply clarsimp
      apply (frule (3) obj_at'_tcbQueueHead_ksReadyQueues)
      apply (frule (3) obj_at'_tcbQueueEnd_ksReadyQueues)
-     apply (force dest!: tcbQueueHead_iff_tcbQueueEnd simp: tcbQueueEmpty_def obj_at'_def)
+     apply (force dest!: he_ptrs_head_iff_he_ptrs_end simp: tcbQueueEmpty_def obj_at'_def)
     apply (clarsimp simp: typ_heap_simps ctcb_relation_def)
     apply (rule conjI)
      apply (clarsimp simp: maxDomain_def)
@@ -1394,13 +1394,13 @@ lemma tcb_queue_remove_ccorres:
   apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
   by (intro conjI impI;
       clarsimp simp: ctcb_queue_relation_def typ_heap_simps option_to_ctcb_ptr_def
-                     valid_tcb'_def valid_bound_tcb'_def)
+                     emptyHeadEndPtrs_def valid_tcb'_def)
 
 lemma tcbQueueRemove_tcb_at'_head:
   "\<lbrace>\<lambda>s. valid_objs' s \<and> (\<forall>head. tcbQueueHead queue = Some head \<longrightarrow> tcb_at' head s)\<rbrace>
    tcbQueueRemove queue t
    \<lbrace>\<lambda>rv s. \<not> tcbQueueEmpty rv \<longrightarrow> tcb_at' (the (tcbQueueHead rv)) s\<rbrace>"
-  unfolding tcbQueueRemove_def
+  unfolding tcbQueueRemove_def emptyHeadEndPtrs_def
   apply (wpsimp wp: getTCB_wp haskell_assert_wp hoare_vcg_imp_lift')
   apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
   apply (fastforce simp: valid_tcb'_def valid_bound_tcb'_def tcbQueueEmpty_def obj_at'_def)
@@ -1516,7 +1516,7 @@ proof -
      apply (drule_tac x="tcbPriority tcb" in spec)
      apply clarsimp
      apply (frule (3) obj_at'_tcbQueueHead_ksReadyQueues)
-     apply (force dest!: tcbQueueHead_iff_tcbQueueEnd simp: tcbQueueEmpty_def obj_at'_def)
+     apply (force dest!: he_ptrs_head_iff_he_ptrs_end simp: tcbQueueEmpty_def obj_at'_def)
     by (fastforce simp: word_less_nat_alt
                         cready_queues_index_to_C_def2 ctcb_relation_def
                         typ_heap_simps le_maxDomain_eq_less_numDomains(2) unat_trans_ucast_helper)

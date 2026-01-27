@@ -30,6 +30,8 @@ lemmas bitmap_fun_defs = addToBitmap_def removeFromBitmap_def
                           modifyReadyQueuesL1Bitmap_def modifyReadyQueuesL2Bitmap_def
                           getReadyQueuesL1Bitmap_def getReadyQueuesL2Bitmap_def
 
+lemmas tcbQueueEmpty_def = headEndPtrsEmpty_def
+
 (* lookupBitmapPriority is a cleaner version of getHighestPrio *)
 definition
   "lookupBitmapPriority d \<equiv> \<lambda>s.
@@ -2013,18 +2015,11 @@ lemma obj_at'_tcbQueueHead_ksReadyQueues:
   by (fastforce dest!: tcbQueueHead_ksReadyQueues intro: aligned'_distinct'_ko_wp_at'I
                  simp: obj_at'_real_def opt_map_def opt_pred_def split: option.splits)
 
-lemma tcbQueueHead_iff_tcbQueueEnd:
-  "list_queue_relation ts q nexts prevs \<Longrightarrow> tcbQueueHead q \<noteq> None \<longleftrightarrow> tcbQueueEnd q \<noteq> None"
-  apply (clarsimp simp: list_queue_relation_def queue_end_valid_def)
-  using heap_path_None
-  apply fastforce
-  done
-
 lemma tcbQueueEnd_ksReadyQueues:
   "\<lbrakk>list_queue_relation ts queue nexts prevs;
     \<forall>t. (inQ d p |< tcbs_of' s') t \<longleftrightarrow> t \<in> set ts\<rbrakk>
    \<Longrightarrow> \<not> tcbQueueEmpty queue \<longrightarrow> (inQ d p |< tcbs_of' s') (the (tcbQueueEnd queue))"
-  apply (frule tcbQueueHead_iff_tcbQueueEnd)
+  apply (frule he_ptrs_head_iff_he_ptrs_end)
   by (clarsimp simp: tcbQueueEmpty_def list_queue_relation_def queue_end_valid_def)
 
 lemma obj_at'_tcbQueueEnd_ksReadyQueues:
@@ -2231,10 +2226,10 @@ lemma tcbSchedEnqueue_corres:
     apply (force simp: obj_at_def)
    apply (force simp: obj_at'_def)
   apply (clarsimp split: if_splits)
-  apply (cut_tac ts="ready_queues s d p" in list_queue_relation_nil)
+  apply (cut_tac ts="ready_queues s d p" in list_queue_relation_Nil)
    apply (force dest!: spec simp: list_queue_relation_def)
   apply (cut_tac ts="ready_queues s (tcb_domain tcb) (tcb_priority tcb)"
-              in list_queue_relation_nil)
+              in list_queue_relation_Nil)
    apply (force dest!: spec simp: list_queue_relation_def)
   apply (cut_tac ts="ready_queues s (tcb_domain tcb) (tcb_priority tcb)" and s'=s'
               in obj_at'_tcbQueueEnd_ksReadyQueues)
@@ -2308,7 +2303,7 @@ lemma tcbSchedEnqueue_corres:
   apply (drule_tac x="tcb_domain tcb" in spec)
   apply (drule_tac x="tcb_priority tcb" in spec)
   apply (cut_tac ts="ready_queues s (tcb_domain tcb) (tcb_priority tcb)"
-              in tcbQueueHead_iff_tcbQueueEnd)
+              in he_ptrs_head_iff_he_ptrs_end)
    apply (force simp: list_queue_relation_def)
   apply (frule valid_tcbs'_maxDomain[where t=tcbPtr], simp add: obj_at'_def)
   apply (frule valid_tcbs'_maxPriority[where t=tcbPtr], simp add: obj_at'_def)
@@ -2319,7 +2314,7 @@ lemma tcbSchedEnqueue_corres:
 
    \<comment> \<open>the ready queue was originally empty\<close>
    apply (force simp: inQ_def in_opt_pred fun_upd_apply queue_end_valid_def prev_queue_head_def
-                      opt_map_red obj_at'_def
+                      opt_map_red obj_at'_def emptyHeadEndPtrs_def
                split: if_splits)
 
   \<comment> \<open>the ready queue was not originally empty\<close>
@@ -2588,16 +2583,6 @@ lemma tcb_sched_dequeue_monadic_rewrite:
 crunch removeFromBitmap
   for ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
 
-lemma list_queue_relation_neighbour_in_set:
-  "\<lbrakk>list_queue_relation ls q hp hp'; sym_heap hp hp'; p \<in> set ls\<rbrakk>
-   \<Longrightarrow> \<forall>nbr. (hp p = Some nbr \<longrightarrow> nbr \<in> set ls) \<and> (hp' p = Some nbr \<longrightarrow> nbr \<in> set ls)"
-  apply (rule heap_ls_neighbour_in_set)
-     apply (fastforce simp: list_queue_relation_def)
-    apply fastforce
-   apply (clarsimp simp: list_queue_relation_def prev_queue_head_def)
-  apply fastforce
-  done
-
 lemma in_queue_not_head_or_not_tail_length_gt_1:
   "\<lbrakk>tcbPtr \<in> set ls; tcbQueueHead q \<noteq> Some tcbPtr \<or> tcbQueueEnd q \<noteq> Some tcbPtr;
     list_queue_relation ls q nexts prevs\<rbrakk>
@@ -2626,7 +2611,7 @@ lemma tcbSchedDequeue_corres:
   apply (rule monadic_rewrite_corres_l[where P=P and Q=P for P, simplified])
    apply (rule monadic_rewrite_guard_imp[OF tcb_sched_dequeue_monadic_rewrite])
    apply (fastforce simp: in_correct_ready_q_def ready_qs_distinct_def)
-  apply (clarsimp simp: tcb_sched_dequeue'_def get_tcb_queue_def tcbSchedDequeue_def  getQueue_def
+  apply (clarsimp simp: tcb_sched_dequeue'_def get_tcb_queue_def tcbSchedDequeue_def getQueue_def
                         unless_def when_def)
   apply (rule corres_symb_exec_l[OF _ _ thread_get_sp]; wpsimp?)
   apply (rename_tac dom)
@@ -2660,7 +2645,7 @@ lemma tcbSchedDequeue_corres:
   apply (drule singleton_eqD)
   apply (drule set_tcb_queue_new_state)
   apply (wpsimp wp: threadSet_wp getObject_tcb_wp
-              simp: setQueue_def tcbQueueRemove_def
+              simp: setQueue_def tcbQueueRemove_def emptyHeadEndPtrs_def
          split_del: if_split)
   apply (clarsimp simp: obj_at_def)
   apply normalise_obj_at'
@@ -2683,7 +2668,7 @@ lemma tcbSchedDequeue_corres:
       apply force
      apply fastforce
     apply fastforce
-   apply (cut_tac ts="ready_queues s d p" in list_queue_relation_nil)
+   apply (cut_tac ts="ready_queues s d p" in list_queue_relation_Nil)
     apply fast
    apply (clarsimp simp: tcbQueueEmpty_def)
    apply (prop_tac "Some tcbPtr \<noteq> tcbQueueHead (ksReadyQueues s' (d, p))")
@@ -2794,7 +2779,7 @@ lemma tcbSchedDequeue_corres:
    apply (frule list_not_last)
    apply (clarsimp simp: tcb_queue_remove_def)
    apply (frule length_gt_1_imp_butlast_nonempty)
-   apply (frule (3) heap_ls_prev_of_last)
+   apply (frule (2) heap_path_prev_of_last)
    apply (clarsimp simp: obj_at'_def)
    apply (intro conjI impI; clarsimp?)
       apply (drule (1) heap_ls_remove_last_not_singleton)

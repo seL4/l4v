@@ -7,6 +7,7 @@
 theory ArchStructures_H
 imports
   "Lib.Lib"
+  "Lib.Heap_List"
   Types_H
   Hardware_H
 begin
