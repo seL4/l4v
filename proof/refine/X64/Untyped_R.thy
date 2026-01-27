@@ -1473,78 +1473,78 @@ shows
      apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
      apply (drule sameRegionAs_classes, simp)
     apply (rule corres_caps_decomposition)
-                                              prefer 3
-                                              apply wp+
-                                                 apply (rule hoare_post_imp, simp)
-                                                 apply (wp | assumption)+
-                                             defer
-                                             apply ((wp | simp)+)[1]
-                                            apply (simp add: create_cap_ext_def set_cdt_list_def update_cdt_list_def bind_assoc)
-                                            apply ((wp | simp)+)[1]
-                                           apply (wp updateMDB_ctes_of_cases
-                                                  | simp add: o_def split del: if_split)+
-            apply (clarsimp simp: cdt_relation_def cte_wp_at_ctes_of
-                     split del: if_split cong: if_cong simp del: id_apply)
-            apply (subst if_not_P, erule(1) valid_mdbD3')
-            apply (case_tac x, case_tac oldCTE)
-            apply (subst bluhr_descendants_of')
-             apply (rule mdb_insert_again_child.intro)
-              apply (rule mdb_insert_again.intro)
-                apply (rule mdb_ptr.intro)
-                 apply (simp add: valid_mdb'_def vmdb_def)
-                apply (rule mdb_ptr_axioms.intro)
-                apply simp
-               apply (rule mdb_ptr.intro)
-                apply (simp add: valid_mdb'_def vmdb_def)
-               apply (rule mdb_ptr_axioms.intro)
-               apply fastforce
-              apply (rule mdb_insert_again_axioms.intro)
-                       apply (clarsimp simp: nullPointer_def)+
-                apply (erule (1) ctes_of_valid_cap')
-               apply (simp add: valid_mdb'_def valid_mdb_ctes_def)
-              apply clarsimp
-             apply (rule mdb_insert_again_child_axioms.intro)
-             apply (clarsimp simp: isMDBParentOf_def)
-             apply (clarsimp simp: isCap_simps)
-             apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def
-                                   ut_revocable'_def)
-            apply (fold fun_upd_def)
-            apply (subst descendants_of_insert_child')
-               apply (erule(1) mdb_Null_descendants)
-              apply (clarsimp simp: cte_wp_at_def)
-             apply (erule(1) mdb_Null_None)
-            apply (subgoal_tac "cte_at (aa, bb) s")
-             prefer 2
-             apply (drule not_sym, clarsimp simp: cte_wp_at_caps_of_state split: if_split_asm)
-            apply (subst descendants_of_eq' [OF _ cte_wp_at_cte_at], assumption+)
-                 apply (clarsimp simp: state_relation_def)
-                apply assumption+
-            apply (subst cte_map_eq_subst [OF _ cte_wp_at_cte_at], assumption+)
-            apply (simp add: mdb_relation_simp)
-           defer
-           apply (clarsimp split del: if_split)+
-         apply (clarsimp simp add: revokable_relation_def cte_wp_at_ctes_of
-                        split del: if_split)
-         apply simp
-         apply (rule conjI)
-          apply clarsimp
-          apply (elim modify_map_casesE)
-             apply ((clarsimp split: if_split_asm cong: conj_cong
-                              simp: cte_map_eq_subst cte_wp_at_cte_at
-                                    revokable_relation_simp)+)[4]
+                                       prefer 3
+                                       apply wp+
+                                           apply (rule hoare_post_imp, simp)
+                                           apply (wp | assumption)+
+                                      defer
+                                      apply ((wp | simp)+)[1]
+                                     apply (simp add: create_cap_ext_def set_cdt_list_def update_cdt_list_def bind_assoc)
+                                     apply ((wp | simp)+)[1]
+                                    apply (wp updateMDB_ctes_of_cases
+                                           | simp add: o_def split del: if_split)+
+     apply (intro conjI; (solves \<open>simp add: state_relation_def\<close>)?)
+         apply (clarsimp simp: cdt_relation_def cte_wp_at_ctes_of
+                    split del: if_split cong: if_cong simp del: id_apply)
+         apply (subst if_not_P, erule(1) valid_mdbD3')
+         apply (case_tac x, case_tac oldCTE)
+         apply (subst bluhr_descendants_of')
+          apply (rule mdb_insert_again_child.intro)
+           apply (rule mdb_insert_again.intro)
+             apply (rule mdb_ptr.intro)
+              apply (simp add: valid_mdb'_def vmdb_def)
+             apply (rule mdb_ptr_axioms.intro)
+             apply simp
+            apply (rule mdb_ptr.intro)
+             apply (simp add: valid_mdb'_def vmdb_def)
+            apply (rule mdb_ptr_axioms.intro)
+            apply fastforce
+           apply (rule mdb_insert_again_axioms.intro)
+                    apply (clarsimp simp: nullPointer_def)+
+             apply (erule (1) ctes_of_valid_cap')
+            apply (simp add: valid_mdb'_def valid_mdb_ctes_def)
+           apply clarsimp
+          apply (rule mdb_insert_again_child_axioms.intro)
+          apply (clarsimp simp: isMDBParentOf_def)
+          apply (clarsimp simp: isCap_simps)
+          apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def
+                                ut_revocable'_def)
+         apply (fold fun_upd_def)
+         apply (subst descendants_of_insert_child')
+            apply (erule(1) mdb_Null_descendants)
+           apply (clarsimp simp: cte_wp_at_def)
+          apply (erule(1) mdb_Null_None)
+         apply (subgoal_tac "cte_at (aa, bb) s")
+          prefer 2
+          apply (drule not_sym, clarsimp simp: cte_wp_at_caps_of_state split: if_split_asm)
+         apply (subst descendants_of_eq' [OF _ cte_wp_at_cte_at], assumption+)
+              apply (clarsimp simp: state_relation_def)
+             apply assumption+
+         apply (subst cte_map_eq_subst [OF _ cte_wp_at_cte_at], assumption+)
+         apply (simp add: mdb_relation_simp)
+        defer
+        apply (clarsimp simp add: revokable_relation_def cte_wp_at_ctes_of
+                       split del: if_split)
+        apply simp
+        apply (rule conjI)
          apply clarsimp
-         apply (subgoal_tac "null_filter (caps_of_state s) (aa, bb) \<noteq> None")
-          prefer 2
-          apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state split: if_split_asm)
-         apply (subgoal_tac "cte_at (aa,bb) s")
-          prefer 2
-          apply clarsimp
-          apply (drule null_filter_caps_of_stateD)
-          apply (erule cte_wp_cte_at)
          apply (elim modify_map_casesE)
-            apply (clarsimp split: if_split_asm cong: conj_cong
-                            simp: cte_map_eq_subst cte_wp_at_cte_at revokable_relation_simp)+
-        apply (clarsimp simp: state_relation_def ghost_relation_of_heap)+
+            apply ((clarsimp split: if_split_asm cong: conj_cong
+                             simp: cte_map_eq_subst cte_wp_at_cte_at
+                                   revokable_relation_simp)+)[4]
+        apply clarsimp
+        apply (subgoal_tac "null_filter (caps_of_state s) (aa, bb) \<noteq> None")
+         prefer 2
+         apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state split: if_split_asm)
+        apply (subgoal_tac "cte_at (aa,bb) s")
+         prefer 2
+         apply clarsimp
+         apply (drule null_filter_caps_of_stateD)
+         apply (erule cte_wp_cte_at)
+        apply (elim modify_map_casesE)
+           apply (clarsimp split: if_split_asm cong: conj_cong
+                           simp: cte_map_eq_subst cte_wp_at_cte_at revokable_relation_simp)+
+       apply (clarsimp simp: state_relation_def ghost_relation_of_heap)+
      apply wp+
    apply (rule corres_guard_imp)
      apply (rule corres_underlying_symb_exec_l [OF gets_symb_exec_l])
@@ -1573,9 +1573,8 @@ shows
    apply (erule (2) valid_dlistEn)
    apply simp
   apply(simp only: cdt_list_relation_def valid_mdb_def2)
-  apply(subgoal_tac "finite_depth (cdt s)")
-   prefer 2
-   apply(simp add: finite_depth valid_mdb_def2[symmetric])
+  apply(prop_tac "finite_depth (cdt s)")
+   apply (fastforce intro: finite_depth simp: valid_mdb_def2)
   apply(intro impI allI)
   apply(subgoal_tac "mdb_insert_abs (cdt s) p (a, b)")
    prefer 2
@@ -1660,7 +1659,7 @@ lemma setCTE_cteCaps_of[wp]:
    \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
   apply (simp add: cteCaps_of_def)
   apply wp
-  apply (clarsimp elim!: rsubst[where P=P] intro!: ext)
+  apply (clarsimp elim!: rsubst[where P=P] del: ext intro!: ext)
   done
 
 lemma insertNewCap_wps[wp]:

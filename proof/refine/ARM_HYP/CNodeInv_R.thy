@@ -1202,7 +1202,7 @@ lemma ctes_of_strng:
 lemma updateCap_valid_cap [wp]:
   "\<lbrace>valid_cap' cap\<rbrace> updateCap ptr cap' \<lbrace>\<lambda>r. valid_cap' cap\<rbrace>"
   unfolding updateCap_def
-  by (wp setCTE_valid_cap getCTE_wp) (clarsimp dest!: cte_at_cte_wp_atD)
+  by (wp getCTE_wp) (clarsimp dest!: cte_at_cte_wp_atD)
 
 lemma mdb_chain_0_trancl:
   assumes chain: "mdb_chain_0 m"
@@ -5853,10 +5853,6 @@ lemma setQueue_cte_wp_at':
   unfolding setQueue_def
   by (wp, clarsimp elim!: cte_wp_at'_pspaceI)
 
-crunch suspend
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps getObject_inv_tcb simp: crunch_simps)
-
 lemma cte_wp_at_cteCap_norm:
   "(cte_wp_at' (\<lambda>c. P (cteCap c)) p s) = (\<exists>cap. cte_wp_at' (\<lambda>c. cteCap c = cap) p s \<and> P cap)"
   by (auto simp add: cte_wp_at'_def)
@@ -8879,51 +8875,6 @@ crunch updateCap
 crunch updateCap
   for rdyq_projs[wp]:
     "\<lambda>s. P (ksReadyQueues s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s) (\<lambda>d p. inQ d p |< tcbs_of' s)"
-
-lemma corres_null_cap_update:
-  "cap_relation cap cap' \<Longrightarrow>
-   corres dc (invs and cte_wp_at ((=) cap) slot)
-             (invs' and cte_at' (cte_map slot))
-        (set_cap cap slot) (updateCap (cte_map slot) cap')"
-  apply (rule corres_caps_decomposition[rotated])
-             apply (wp updateCap_ctes_of_wp)+
-          apply (clarsimp simp: cte_wp_at_ctes_of modify_map_apply
-                                fun_upd_def[symmetric])
-          apply (frule state_relation_pspace_relation)
-          apply (frule(1) pspace_relation_ctes_ofI, clarsimp+)
-          apply (drule(1) cap_relation_same)
-          apply (case_tac cte)
-          apply (clarsimp simp: cte_wp_at_caps_of_state fun_upd_idem)
-          apply (clarsimp simp: state_relation_def)
-          apply (erule_tac P="\<lambda>caps. cdt_relation caps m ctes" for m ctes in rsubst)
-          apply (rule ext, clarsimp simp: cte_wp_at_caps_of_state eq_commute)
-         apply(clarsimp simp: cdt_list_relation_def state_relation_def)
-         apply(case_tac "next_slot (a, b) (cdt_list s) (cdt s)")
-          apply(simp)
-         apply(clarsimp)
-         apply(erule_tac x=a in allE, erule_tac x=b in allE)
-         apply(simp)
-         apply(clarsimp simp: modify_map_def split: if_split_asm)
-         apply(case_tac z)
-         apply(clarsimp)
-        apply (simp add: state_relation_def)
-       apply (simp add: state_relation_def)
-      apply (clarsimp simp: state_relation_def fun_upd_def[symmetric]
-                            cte_wp_at_caps_of_state fun_upd_idem)
-     apply (clarsimp simp: state_relation_def)
-    apply (clarsimp simp: state_relation_def ghost_relation_of_heap)
-   apply (clarsimp simp: state_relation_def ghost_relation_of_heap)
-  apply (subst return_bind[where x="()", symmetric], subst updateCap_def,
-         rule corres_split_forwards')
-     apply (rule corres_guard_imp, rule getCTE_symb_exec_r, simp+)
-    prefer 3
-    apply clarsimp
-    apply (rule setCTE_corres)
-    apply (wp | simp)+
-   apply (fastforce elim!: cte_wp_at_weakenE)
-  apply wp
-  apply fastforce
-  done
 
 declare corres_False' [simp]
 

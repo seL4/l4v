@@ -132,10 +132,8 @@ proof (rule set_eqI, simp add: descendants_of'_def)
   show "m' \<turnstile> p \<rightarrow> x = m \<turnstile> p \<rightarrow> x" by blast
 qed
 
-lemma setCTE_pred_tcb_at':
-  "\<lbrace>pred_tcb_at' proj P t\<rbrace>
-     setCTE c cte
-   \<lbrace>\<lambda>rv. pred_tcb_at' proj P t\<rbrace>"
+lemma setCTE_pred_tcb_at'[wp]:
+  "setCTE c cte \<lbrace>pred_tcb_at' proj P t\<rbrace>"
   unfolding pred_tcb_at'_def setCTE_def
   apply (rule setObject_cte_obj_at_tcb')
    apply (simp add: tcb_to_itcb'_def)+
@@ -2480,10 +2478,6 @@ qed
 
 end (* CSpace_R *)
 
-crunch cteInsert
-  for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
-  (wp: crunch_wps)
-
 lemma setCTE_state_hyp_refs_of'[wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> setCTE p cte \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   unfolding setCTE_def
@@ -2494,7 +2488,8 @@ lemma setCTE_state_hyp_refs_of'[wp]:
   done
 
 crunch cteInsert
-  for state_hyp_refs_of'[wp]: "\<lambda>s. P (state_hyp_refs_of' s)"
+  for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
+  and state_hyp_refs_of'[wp]: "\<lambda>s. P (state_hyp_refs_of' s)"
   and aligned'[wp]: pspace_aligned'
   and distinct'[wp]: pspace_distinct'
   and pspace_canonical'[wp]: pspace_canonical'
@@ -3811,7 +3806,6 @@ lemma setupReplyMaster_wps[wp]:
   apply (rule_tac x=cte in exI)
   apply (clarsimp simp: tcbReplySlot_def gen_objBits_simps fun_upd_def cte_map_def
                         tcb_cnode_index_def shiftl_t2n' mult.commute)
-
   done
 
 crunch setupReplyMaster
@@ -4024,8 +4018,7 @@ lemma arch_update_setCTE_invs:
   apply (wp arch_update_setCTE_mdb setCTE_pspace_in_kernel_mappings'
             valid_queues_lift sch_act_wf_lift tcb_in_cur_domain'_lift ct_idle_or_in_cur_domain'_lift
             arch_update_setCTE_iflive arch_update_setCTE_ifunsafe
-            valid_irq_node_lift setCTE_typ_at' setCTE_irq_handlers'
-            setCTE_pred_tcb_at' irqs_masked_lift
+            valid_irq_node_lift setCTE_typ_at' setCTE_irq_handlers' irqs_masked_lift
             hoare_vcg_disj_lift untyped_ranges_zero_lift valid_bitmaps_lift
             setCTE_valid_arch
            | simp add: pred_tcb_at'_def)+
@@ -4888,7 +4881,6 @@ lemma updateCapFreeIndex_no_0:
   apply (rule mdb_inv_preserve_updateCap)
     apply (clarsimp simp:cte_wp_at_ctes_of)+
 done
-
 
 lemma ensureEmptySlot_stronger[wp]:
   "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>c. cteCap c = NullCap) p s \<longrightarrow> P s\<rbrace> ensureEmptySlot p \<lbrace>\<lambda>rv. P\<rbrace>, -"

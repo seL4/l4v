@@ -347,8 +347,10 @@ lemma deriveCap_untyped_derived:
   done
 
 lemma corres_caps_decomposition:
-  assumes x: "corres_underlying {(s, s'). pspace_relation (kheap s) (ksPSpace s')} False True r P P' f g"
-  assumes u: "\<And>P. \<lbrace>\<lambda>s. P (new_caps s)\<rbrace> f \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
+  assumes pspace_corres:
+    "corres_underlying {(s, s'). pspace_relation (kheap s) (ksPSpace s')} False True r P P' f g"
+  assumes updates:
+             "\<And>P. \<lbrace>\<lambda>s. P (new_caps s)\<rbrace> f \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_mdb s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cdt s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_list s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cdt_list (s))\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_rvk s)\<rbrace> f \<lbrace>\<lambda>rv s. P (is_original_cap s)\<rbrace>"
@@ -385,28 +387,27 @@ lemma corres_caps_decomposition:
              "\<And>P. \<lbrace>\<lambda>s. P (new_ds' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_cd' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_dt' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksDomainTime s)\<rbrace>"
-  assumes z: "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
-                       \<Longrightarrow> cdt_relation ((\<noteq>) None \<circ> new_caps s) (new_mdb s) (new_ctes s')"
-             "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
-                       \<Longrightarrow> cdt_list_relation (new_list s) (new_mdb s) (new_ctes s')"
-             "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
-                       \<Longrightarrow> sched_act_relation (new_action s) (new_sa' s')"
-             "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
-                       \<Longrightarrow> ready_queues_relation_2 (new_ready_queues s) (new_ksReadyQueues s')
-                                                   (new_tcbSchedNexts_of s') (new_tcbSchedPrevs_of s')
-                                                   (\<lambda>d p. new_inQs d p s')"
-             "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
-                       \<Longrightarrow> revokable_relation (new_rvk s) (null_filter (new_caps s)) (new_ctes s')"
-             "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
-                       \<Longrightarrow> (new_as s, new_as' s') \<in> arch_state_relation
-                            \<and> interrupt_state_relation (new_irqn s) (new_irqs s) (new_irqs' s')
-                            \<and> new_ct s = new_ct' s' \<and> new_id s = new_id' s'
-                            \<and> new_ms s = new_ms' s' \<and> new_di s = new_dsi' s'
-                            \<and> new_dl s = new_ds' s' \<and> new_cd s = new_cd' s' \<and> new_dt s = new_dt' s' \<and> new_wuc s = new_wuc' s'"
-             "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
-                       \<Longrightarrow> new_ups s = new_ups' s'"
-             "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
-                       \<Longrightarrow> new_cns s = new_cns' s'"
+  assumes updated_relations:
+    "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
+              \<Longrightarrow> cdt_relation ((\<noteq>) None \<circ> new_caps s) (new_mdb s) (new_ctes s')
+                  \<and> cdt_list_relation (new_list s) (new_mdb s) (new_ctes s')
+                  \<and> ready_queues_relation_2 (new_ready_queues s) (new_ksReadyQueues s')
+                                             (new_tcbSchedNexts_of s') (new_tcbSchedPrevs_of s')
+                                             (\<lambda>d p. new_inQs d p s')
+                  \<and> sched_act_relation (new_action s) (new_sa' s')
+                  \<and> revokable_relation (new_rvk s) (null_filter (new_caps s)) (new_ctes s')
+                  \<and> interrupt_state_relation (new_irqn s) (new_irqs s) (new_irqs' s')
+                  \<and> (new_as s, new_as' s') \<in> arch_state_relation
+                  \<and> new_ct s = new_ct' s'
+                  \<and> new_id s = new_id' s'
+                  \<and> new_ms s = new_ms' s'
+                  \<and> new_di s = new_dsi' s'
+                  \<and> new_dl s = new_ds' s'
+                  \<and> new_cd s = new_cd' s'
+                  \<and> new_dt s = new_dt' s'
+                  \<and> new_wuc s = new_wuc' s'
+                  \<and> new_ups s = new_ups' s'
+                  \<and> new_cns s = new_cns' s'"
   shows "corres r P P' f g"
 proof -
   have all_ext: "\<And>f f'. (\<forall>p. f p = f' p) = (f = f')"
@@ -416,7 +417,7 @@ proof -
                 f
             \<lbrace>\<lambda>rv s. \<exists>m ca. (\<forall>p. ca p = ((\<noteq>) None \<circ> caps_of_state s) p) \<and> m = cdt s
                             \<and> cdt_relation ca m ctes\<rbrace>"
-    apply (wp hoare_vcg_ex_lift hoare_vcg_all_lift u)
+    apply (wp hoare_vcg_ex_lift hoare_vcg_all_lift updates)
     apply (subst all_ext)
     apply (simp add: o_def)
     done
@@ -426,7 +427,7 @@ proof -
                 f
             \<lbrace>\<lambda>rv s. \<exists>m t. t = cdt_list s \<and> m = cdt s
                             \<and> cdt_list_relation t m ctes\<rbrace>"
-    apply (wp hoare_vcg_ex_lift hoare_vcg_all_lift u)
+    apply (wp hoare_vcg_ex_lift hoare_vcg_all_lift updates)
     apply (simp add: o_def)
     done
   note list_wp = list_wp' [simplified all_ext simp_thms]
@@ -436,15 +437,7 @@ proof -
             \<lbrace>\<lambda>rv s. revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) ctes\<rbrace>"
     unfolding revokable_relation_def
     apply (simp only: imp_conv_disj)
-    apply (wp hoare_vcg_ex_lift hoare_vcg_all_lift hoare_vcg_disj_lift u)
-    done
-  have exs_wp':
-    "\<And>ctes. \<lbrace>\<lambda>s. revokable_relation (new_rvk s) (null_filter (new_caps s)) ctes\<rbrace>
-                f
-            \<lbrace>\<lambda>rv s. revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) ctes\<rbrace>"
-    unfolding revokable_relation_def
-    apply (simp only: imp_conv_disj)
-    apply (wp hoare_vcg_ex_lift hoare_vcg_all_lift hoare_vcg_disj_lift u)
+    apply (wp hoare_vcg_ex_lift hoare_vcg_all_lift hoare_vcg_disj_lift updates)
     done
   note rvk_wp = rvk_wp' [simplified all_ext simp_thms]
   have swp_cte_at:
@@ -453,15 +446,17 @@ proof -
   have abs_irq_together':
     "\<And>P. \<lbrace>\<lambda>s. P (new_irqn s) (new_irqs s)\<rbrace> f
              \<lbrace>\<lambda>rv s. \<exists>irn. interrupt_irq_node s = irn \<and> P irn (interrupt_states s)\<rbrace>"
-    by (wp hoare_vcg_ex_lift u, simp)
+    by (wp hoare_vcg_ex_lift updates, simp)
   note abs_irq_together = abs_irq_together'[simplified]
   show ?thesis
     unfolding state_relation_def swp_cte_at
-    apply (rule corres_underlying_decomposition[OF x])
+    apply (rule corres_underlying_decomposition[OF pspace_corres])
      apply (simp add: ghost_relation_of_heap)
-     apply (wpsimp wp: hoare_vcg_conj_lift mdb_wp rvk_wp list_wp u abs_irq_together)+
-    apply (intro z[simplified o_def] conjI | simp add: state_relation_def swp_cte_at
-          | (drule (1) z(6), simp add: state_relation_def swp_cte_at))+
+     apply (wpsimp wp: hoare_vcg_conj_lift mdb_wp rvk_wp list_wp updates abs_irq_together)+
+    apply (frule updated_relations)
+      apply fastforce
+     apply (fastforce simp: state_relation_def swp_cte_at)
+    apply (clarsimp simp: o_def Let_def)
     done
 qed
 
@@ -478,56 +473,54 @@ lemma create_reply_master_corres[CSpace_R_2_assms]:
       (setCTE sl' (CTE (capability.ReplyCap thread True True) initMDBNode))"
   apply clarsimp
   apply (rule corres_caps_decomposition)
-                                              defer
-                                              apply (wp|simp)+
-           apply (clarsimp simp: o_def cdt_relation_def cte_wp_at_ctes_of
-                      split del: if_split cong: if_cong simp del: id_apply)
-           apply (case_tac cte, clarsimp)
-           apply (fold fun_upd_def)
-           apply (subst descendants_of_Null_update')
-                apply fastforce
-               apply fastforce
-              apply assumption
-             apply assumption
-            apply (simp add: nullPointer_def)
-           apply (subgoal_tac "cte_at (a, b) s")
-            prefer 2
-            apply (drule not_sym, clarsimp simp: cte_wp_at_caps_of_state
-                                          split: if_split_asm)
-           apply (simp add: state_relation_def cdt_relation_def)
-          apply (clarsimp simp: o_def cdt_list_relation_def cte_wp_at_ctes_of
-                     split del: if_split cong: if_cong simp del: id_apply)
-          apply (case_tac cte, clarsimp)
-          apply (clarsimp simp: state_relation_def cdt_list_relation_def)
-          apply (simp split: if_split_asm)
-          apply (erule_tac x=a in allE, erule_tac x=b in allE)
-          apply clarsimp
-          apply(case_tac "next_slot (a, b) (cdt_list s) (cdt s)")
-           apply(simp)
-          apply(simp)
-          apply(fastforce simp: valid_mdb'_def valid_mdb_ctes_def valid_nullcaps_def)
-         apply (clarsimp simp: state_relation_def)
-        apply (clarsimp simp: state_relation_def)
-       apply (clarsimp simp add: revokable_relation_def cte_wp_at_ctes_of
-                      split del: if_split)
+                                     defer
+                                     apply (solves \<open>wpsimp\<close>)+
+   apply (intro conjI; (solves \<open>simp add: state_relation_def\<close>)?)
+       apply (clarsimp simp: o_def cdt_relation_def cte_wp_at_ctes_of
+                  split del: if_split cong: if_cong simp del: id_apply)
+       apply (case_tac cte, clarsimp)
+       apply (fold fun_upd_def)
+       apply (subst descendants_of_Null_update')
+            apply fastforce
+           apply fastforce
+          apply assumption
+         apply assumption
+        apply (simp add: nullPointer_def)
+       apply (subgoal_tac "cte_at (a, b) s")
+        prefer 2
+        apply (drule not_sym, clarsimp simp: cte_wp_at_caps_of_state
+                                      split: if_split_asm)
+       apply (simp add: state_relation_def cdt_relation_def)
+      apply (clarsimp simp: o_def cdt_list_relation_def cte_wp_at_ctes_of
+                 split del: if_split cong: if_cong simp del: id_apply)
+      apply (case_tac cte, clarsimp)
+      apply (clarsimp simp: state_relation_def cdt_list_relation_def)
+      apply (simp split: if_split_asm)
+      apply (erule_tac x=a in allE, erule_tac x=b in allE)
+      apply clarsimp
+      apply(case_tac "next_slot (a, b) (cdt_list s) (cdt s)")
        apply simp
-       apply (rule conjI)
-        apply (clarsimp simp: initMDBNode_def)
-       apply clarsimp
-       apply (subgoal_tac "null_filter (caps_of_state s) (a, b) \<noteq> None")
-        prefer 2
-        apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state
-                       split: if_split_asm)
-       apply (subgoal_tac "cte_at (a,b) s")
-        prefer 2
-        apply clarsimp
-        apply (drule null_filter_caps_of_stateD)
-        apply (erule cte_wp_cte_at)
-       apply (clarsimp split: if_split_asm cong: conj_cong
-                        simp: cte_map_eq_subst revokable_relation_simp
-                              cte_wp_at_cte_at valid_pspace_def)
-      apply (clarsimp simp: state_relation_def)
-     apply (clarsimp elim!: state_relationE simp: ghost_relation_of_heap o_def)+
+      apply simp
+      apply (fastforce simp: valid_mdb'_def valid_mdb_ctes_def valid_nullcaps_def)
+     apply (clarsimp simp add: revokable_relation_def cte_wp_at_ctes_of
+                    split del: if_split)
+     apply simp
+     apply (rule conjI)
+      apply (clarsimp simp: initMDBNode_def)
+     apply clarsimp
+     apply (subgoal_tac "null_filter (caps_of_state s) (a, b) \<noteq> None")
+      prefer 2
+      apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state
+                     split: if_split_asm)
+     apply (subgoal_tac "cte_at (a,b) s")
+      prefer 2
+      apply clarsimp
+      apply (drule null_filter_caps_of_stateD)
+      apply (erule cte_wp_cte_at)
+     apply (clarsimp split: if_split_asm cong: conj_cong
+                      simp: cte_map_eq_subst revokable_relation_simp
+                            cte_wp_at_cte_at valid_pspace_def)
+    apply (clarsimp elim!: state_relationE simp: ghost_relation_of_heap o_def)+
   apply (rule corres_guard_imp)
     apply (rule corres_underlying_symb_exec_l [OF set_original_symb_exec_l'])
      apply (rule setCTE_corres)
