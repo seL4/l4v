@@ -34,6 +34,8 @@ lemmas bitmap_fun_defs = addToBitmap_def removeFromBitmap_def
                           modifyReadyQueuesL1Bitmap_def modifyReadyQueuesL2Bitmap_def
                           getReadyQueuesL1Bitmap_def getReadyQueuesL2Bitmap_def
 
+lemmas tcbQueueEmpty_def = headEndPtrsEmpty_def
+
 (* lookupBitmapPriority is a cleaner version of getHighestPrio *)
 definition
   "lookupBitmapPriority d \<equiv> \<lambda>s.
@@ -2062,18 +2064,11 @@ lemma obj_at'_tcbQueueHead_ksReadyQueues:
   by (fastforce dest!: tcbQueueHead_ksReadyQueues intro: aligned'_distinct'_ko_wp_at'I
                  simp: obj_at'_real_def opt_map_def opt_pred_def split: option.splits)
 
-lemma tcbQueueHead_iff_tcbQueueEnd:
-  "list_queue_relation ts q nexts prevs \<Longrightarrow> tcbQueueHead q \<noteq> None \<longleftrightarrow> tcbQueueEnd q \<noteq> None"
-  apply (clarsimp simp: list_queue_relation_def queue_end_valid_def)
-  using heap_path_None
-  apply fastforce
-  done
-
 lemma tcbQueueEnd_ksReadyQueues:
   "\<lbrakk>list_queue_relation ts queue nexts prevs;
     \<forall>t. (inQ d p |< tcbs_of' s') t \<longleftrightarrow> t \<in> set ts\<rbrakk>
    \<Longrightarrow> \<not> tcbQueueEmpty queue \<longrightarrow> (inQ d p |< tcbs_of' s') (the (tcbQueueEnd queue))"
-  apply (frule tcbQueueHead_iff_tcbQueueEnd)
+  apply (frule he_ptrs_head_iff_he_ptrs_end)
   by (clarsimp simp: tcbQueueEmpty_def list_queue_relation_def queue_end_valid_def)
 
 lemma obj_at'_tcbQueueEnd_ksReadyQueues:

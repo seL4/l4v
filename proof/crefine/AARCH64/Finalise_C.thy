@@ -28,7 +28,7 @@ lemmas ksReadyQueues_head_end_def = ksReadyQueues_head_end_2_def
 
 lemma ksReadyQueues_asrt_ksReadyQueues_head_end:
   "ksReadyQueues_asrt s \<Longrightarrow> ksReadyQueues_head_end s"
-  by (fastforce dest: tcbQueueHead_iff_tcbQueueEnd
+  by (fastforce dest: he_ptrs_head_iff_he_ptrs_end
                 simp: ready_queue_relation_def ksReadyQueues_asrt_def ksReadyQueues_head_end_def)
 
 lemma tcbSchedEnqueue_ksReadyQueues_head_end[wp]:

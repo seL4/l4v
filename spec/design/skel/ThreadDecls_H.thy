@@ -14,6 +14,6 @@ imports
   ArchThreadDecls_H
 begin
 
-#INCLUDE_HASKELL SEL4/Kernel/Thread.lhs decls_only NOT transferCapsToSlots
+#INCLUDE_HASKELL SEL4/Kernel/Thread.lhs decls_only NOT transferCapsToSlots tcbQueueEmpty
 
 end
