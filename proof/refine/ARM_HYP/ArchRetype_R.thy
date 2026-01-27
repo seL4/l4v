@@ -663,7 +663,7 @@ lemma createNewCaps_cte_wp_at2[Retype_R_assms]:
                     | clarsimp simp: curDomain_def APIType_capBits_def
                                      projectKO_opts_defs makeObject_tcb tcb_cte_cases_def
                                      cteSizeBits_def objBits_if_dev vspace_bits_defs
-                          split del: if_split
+                               split del: if_split
                     | simp add: objBits_simps')+
   done
 
@@ -1791,7 +1791,7 @@ lemma corres_retype_region_createNewCaps:
              apply ((simp add: range_cover_def APIType_map2_def
                                list_all2_same list_all2_map1 list_all2_map2)+)[4]
          \<comment> \<open>CapTable\<close>
-         apply (find_goal \<open>match premises in "_ = ArchTypes_H.apiobject_type.CapTableObject" \<Rightarrow> \<open>-\<close>\<close>)
+         apply (find_case \<open>CapTableObject\<close>)
          apply (subst bind_assoc_return_reverse[of "createObjects y n (KOCTE makeObject) us"])
          apply (subst liftM_def [of "map (\<lambda>addr. capability.CNodeCap addr us 0 0)", symmetric])
          apply simp

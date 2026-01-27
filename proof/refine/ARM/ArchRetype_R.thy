@@ -679,10 +679,10 @@ lemma createNewCaps_cte_wp_at2[Retype_R_assms]:
         apply (case_tac apiobject_type; simp split del: if_split)
             apply (rule hoare_pre, wp, simp add: createObjects_def)
   by (wpsimp wp: createObjects_orig_cte_wp_at2'[where sz = sz] mapM_x_wp' split_del: if_split
-           simp: curDomain_def APIType_capBits_def APIType_capBits_gen_def
+             simp: curDomain_def APIType_capBits_def APIType_capBits_gen_def
       | simp add: projectKO_opts_defs makeObject_tcb tcb_cte_cases_def Let_def
                   objBits_if_dev objBits_simps' vspace_bits_defs
-       split del: if_split
+             split del: if_split
       | simp)+
 
 lemma copyGlobalMappings_ko_wp_at:
@@ -1861,7 +1861,7 @@ lemma corres_retype_region_createNewCaps:
             apply ((simp add: range_cover_def APIType_map2_def
                               list_all2_same list_all2_map1 list_all2_map2)+)[4]
         \<comment> \<open>CapTable\<close>
-        apply (find_goal \<open>match premises in "_ = ArchTypes_H.apiobject_type.CapTableObject" \<Rightarrow> \<open>-\<close>\<close>)
+        apply (find_case \<open>CapTableObject\<close>)
         apply (subst bind_assoc_return_reverse[of "createObjects y n (KOCTE makeObject) us"])
         apply (subst liftM_def [of "map (\<lambda>addr. capability.CNodeCap addr us 0 0)", symmetric])
         apply simp
