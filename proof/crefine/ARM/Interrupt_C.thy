@@ -339,13 +339,22 @@ lemma Arch_invokeIRQControl_IssueIRQHandler_ccorres:
   apply (cinit lift: irq_' handlerSlot_' controlSlot_' trigger_'
                simp: ARM_H.performIRQControl_def IRQ_def)
    apply (rule ccorres_liftE)
-   apply (ctac (no_vcg) add: setIRQTrigger_ccorres)
+   apply csymbr (* make config_set(HAVE_SET_TRIGGER) available *)
+   apply (rule ccorres_split_nothrow_novcg)
+       apply (unfold when_def)[1]
+       apply (rule ccorres_cond_both'[where Q=\<top> and Q'=\<top>])
+         apply (clarsimp simp: Kernel_Config_haveSetTrigger_def) (* sync haveSetTrigger with C *)
+        apply (rule ccorres_call[where xf'=xfdc, OF setIRQTrigger_ccorres]; simp)
+       apply (rule ccorres_return[where R=\<top> and R'=UNIV])
+       apply vcg
+       apply simp
+      apply ceqv
      apply (rule ccorres_add_return2)
      apply (ctac (no_vcg) add: invokeIRQControl_expanded_ccorres)
-       apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-       apply (rule allI, rule conseqPre, vcg)
-       apply (clarsimp simp: return_def)
-      apply (wpsimp simp: guard_is_UNIV_def)+
+      apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+      apply (rule allI, rule conseqPre, vcg)
+      apply (clarsimp simp: return_def)
+     apply (wpsimp simp: guard_is_UNIV_def)+
   done
 
 lemma irqstate_to_C_inactive:
@@ -418,8 +427,8 @@ lemma checkIRQ_ret_good:
   by (clarsimp split: if_split)
 
 lemma sgi_target_valid_sgi_target_len:
-  "isSGITargetValid w = (w < 2^sgi_target_len)"
-  by (simp add: isSGITargetValid_def gicNumTargets_def sgi_target_len_def)
+  "isGICPlatform \<Longrightarrow> isSGITargetValid w = (w \<le> mask sgi_target_len)"
+  by (simp add: isSGITargetValid_def gicNumTargets_def sgi_target_len_def mask_def)
 
 lemma Arch_invokeIRQControl_IssueSGISignal_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -446,7 +455,8 @@ lemma Arch_invokeIRQControl_IssueSGISignal_ccorres:
                         cap_sgi_signal_cap_lift_def Let_def cap_tag_defs cap_to_H_def
                         sgi_target_valid_sgi_target_len numSGIs_def)
   apply (rule le_mask_imp_and_mask[symmetric])
-  apply (simp add: numSGIs_bits_def mask_def word_le_nat_alt word_less_nat_alt)
+  apply (simp add: numSGIs_bits_def mask_def word_le_nat_alt word_less_nat_alt
+              split: if_split_asm)
   done
 
 lemma toEnum_unat_maxIRQ:
@@ -494,6 +504,13 @@ lemma ucast_toEnum_unat_irq_t_leq_scast:
 lemmas maxIRQ_casts = toEnum_unat_irq_t_leq_scast ucast_toEnum_unat_irq_t_leq_ucast
                       maxIRQ_ucast_toEnum_eq_machine ucast_toEnum_unat_irq_t_leq_scast
 
+lemma ucast_ucast_machine_word_irq:
+  "irq \<le> Kernel_Config.maxIRQ \<Longrightarrow> ucast (ucast irq :: irq) = irq" for irq :: machine_word
+  apply (drule le_maxIRQ_machine_less_irqBits_val)
+  apply (simp add: ucast_ucast_mask and_mask_eq_iff_le_mask word_le_nat_alt)
+  apply (simp add: mask_def)
+  done
+
 lemma plat_SGITargetValid_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s}
        Call plat_SGITargetValid_'proc
@@ -502,9 +519,18 @@ lemma plat_SGITargetValid_spec:
   apply (hoare_rule HoarePartial.ProcNoRec1)
   apply vcg
   apply (simp add: isSGITargetValid_def gicNumTargets_def sgi_target_len_val
+                   Kernel_Config_isGICPlatform_def max_minus_one_word32
               flip: sgi_target_len_def
               split: if_split)
   done
+
+lemma valid_tcb_state'_Restart: (* FIXME: move to Refine *)
+  "valid_tcb_state' Restart s"
+  by (simp add: valid_tcb_state'_def)
+
+lemma ct_active_st_tcb_at_runnable': (* FIXME: move to Refine *)
+  "ct_active' s \<Longrightarrow> st_tcb_at' runnable' (ksCurThread s) s"
+  by (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
 
 lemma Arch_decodeIRQControlInvocation_ccorres:
   notes if_cong[cong]
@@ -547,10 +573,22 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
      apply (simp add: syscall_error_to_H_cases)
     apply ccorres_rewrite
     apply csymbr (* !config_set(HAVE_SET_TRIGGER) *)
-    apply ccorres_rewrite
     apply (simp add: interpret_excaps_test_null excaps_map_def
-                     word_less_nat_alt Let_def
+                     word_less_nat_alt Let_def length_ineq_not_Nil
                 del: Collect_const cong: call_ignore_cong)
+    apply (rule ccorres_cond_seq)
+    apply (rule ccorres_cond_both[where P="\<lambda>_. \<not>haveSetTrigger" and R=\<top>])
+      (* sync C condition *)
+      apply (simp add: Kernel_Config_haveSetTrigger_def)
+     (* \<not>haveSetTrigger *)
+     apply (rule ccorres_gen_asm[where P="\<not>haveSetTrigger"])
+     apply ccorres_rewrite
+     apply (simp add: throwError_bind invocationCatch_def)
+     apply (rule syscall_error_throwError_ccorres_n)
+     apply (simp add: syscall_error_to_H_cases)
+    (* haveSetTrigger *)
+    apply (rule ccorres_gen_asm[where P="haveSetTrigger"])
+    apply simp
     apply (rule ccorres_add_return)
     apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
       apply csymbr
@@ -671,6 +709,20 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
     apply (simp add: interpret_excaps_test_null excaps_map_def
                      word_less_nat_alt Let_def
                 cong: call_ignore_cong)
+    apply csymbr (* wrap_config_set(NUM_SGIS) *)
+    apply (rule ccorres_cond_seq)
+    apply (rule ccorres_cond_both[where P="\<lambda>_. numSGIs = 0" and R=\<top>])
+      apply (simp add: numSGIs_def Kernel_Config_isGICPlatform_def) (* sync C condition *)
+     apply (rule ccorres_gen_asm[where P="numSGIs = 0"])
+     apply (simp cong: call_ignore_cong ccorres_prog_only_cong)
+     apply ccorres_rewrite
+     apply (simp add: throwError_bind invocationCatch_def)
+     apply (rule syscall_error_throwError_ccorres_n)
+     apply (simp add: syscall_error_to_H_cases)
+    apply (rule ccorres_gen_asm[where P="numSGIs \<noteq> 0"])
+    apply (simp cong: call_ignore_cong ccorres_prog_only_cong) (* remove whenE (numSGIs = 0) *)
+    (* now in GIC case: *)
+    apply (prop_tac "isGICPlatform", simp add: numSGIs_def split: if_split_asm)
     apply (rule ccorres_add_return)
     apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
       apply (rule ccorres_add_return)
@@ -686,15 +738,23 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
               apply (simp add: rangeCheck_def unlessE_def
                                length_ineq_not_Nil hd_conv_nth
                           cong: call_ignore_cong ccorres_prog_only_cong)
-              apply (rule ccorres_Cond_rhs_Seq)
-               apply (prop_tac "\<not> args!0 \<le> of_nat (numSGIs - Suc 0)")
-                apply (solves \<open>clarsimp simp: numSGIs_def numSGIs_bits_def word_le_nat_alt\<close>)
+              apply csymbr (* wrap_config_set(NUM_SGIS) *)
+              apply (rule ccorres_cond_seq)
+              apply (rule ccorres_cond_both[where P="\<lambda>_. \<not> args!0 \<le> of_nat (numSGIs - Suc 0)"
+                                            and R=\<top>])
+                (* on non-GIC platforms the conditions are not in sync, but we can force them
+                   to be equal, because Kernel_Config_isGICPlatform_def gives us a contradiction
+                   with being on the isGICPlatform branch *)
+                apply (solves \<open>clarsimp simp: numSGIs_def numSGIs_bits_def word_le_nat_alt not_le
+                                              less_eq_Suc_le Kernel_Config_isGICPlatform_def\<close>)
+               apply (rule ccorres_gen_asm[where P="\<not> args!0 \<le> of_nat (numSGIs - Suc 0)"])
                apply (simp add: throwError_bind invocationCatch_def
                            cong: call_ignore_cong ccorres_prog_only_cong)
                apply (rule syscall_error_throwError_ccorres_n)
-               apply (simp add: syscall_error_to_H_cases numSGIs_def numSGIs_bits_def)
-              apply (prop_tac "args!0 \<le> of_nat (numSGIs - Suc 0)")
-               apply (solves \<open>clarsimp simp: numSGIs_def numSGIs_bits_def word_le_nat_alt\<close>)
+               (* same as above, for non-GIC platforms need to solve by contradiction *)
+               apply (solves \<open>simp add: syscall_error_to_H_cases numSGIs_def numSGIs_bits_def
+                                        Kernel_Config_isGICPlatform_def\<close>)
+              apply (rule ccorres_gen_asm[where P="args!0 \<le> of_nat (numSGIs - Suc 0)"])
               apply (simp cong: call_ignore_cong ccorres_prog_only_cong)
               apply csymbr
               apply (simp cong: call_ignore_cong ccorres_prog_only_cong)
@@ -702,8 +762,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
                apply (simp add: throwError_bind invocationCatch_def from_bool_0
                            cong: call_ignore_cong ccorres_prog_only_cong)
                apply (rule syscall_error_throwError_ccorres_n)
-               apply (simp add: syscall_error_to_H_cases
-                                mask_def)
+               apply (solves \<open>simp add: syscall_error_to_H_cases mask_def\<close>)
               apply (simp add: invocationCatch_use_injection_handler injection_handler_bindE
                                bindE_assoc
                           cong: call_ignore_cong ccorres_prog_only_cong)
@@ -756,40 +815,26 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
    apply (auto split: invocation_label.split arch_invocation_label.split
                intro: syscall_error_throwError_ccorres_n[simplified throwError_def o_def]
                simp: throwError_def invocationCatch_def syscall_error_to_H_cases invocation_eq_use_types)[1]
- apply (clarsimp simp: interpret_excaps_test_null excaps_map_def
+  apply (clarsimp simp: interpret_excaps_test_null excaps_map_def
                         Collect_const_mem word_sless_def word_sle_def
                         ThreadState_Restart_def unat_of_nat mask_def
                         sysargs_rel_to_n
                   cong: if_cong)
   apply (cut_tac unat_lt2p[where x="args ! 3"])
   apply (clarsimp simp: word_less_nat_alt unat_ucast)
-  (* this conjI construction gets the two Haskell conjuncts into adjacent goals for auto below *)
-  apply (rule conjI)
-   prefer 2
-   apply (rule conjI)
-    prefer 3
-    (* ARMIRQIssueIRQHandlerTrigger + ARMIRQIssueSGISignal Haskell *)
-    apply (auto simp: ct_in_state'_def word_bits_def
-                      excaps_in_mem_def slotcap_in_mem_def
-                      cte_wp_at_ctes_of numeral_eqs[symmetric]
-                      valid_tcb_state'_def neq_Nil_conv[where xs=extraCaps]
-                      Kernel_C_maxIRQ maxIRQ_ucast_toEnum_eq_irq irq_machine_le_maxIRQ_irq
-                      numSGIs_def numSGIs_bits_def not_le word_less_nat_alt
-               elim!: pred_tcb'_weakenE
-               dest!: st_tcb_at_idle_thread' interpret_excaps_eq)[2]
-  apply (rule conjI)
-   (* ARMIRQIssueIRQHandlerTrigger C *)
-   apply (clarsimp simp: neq_Nil_conv[where xs=extraCaps] from_bool_eq_if')
-   apply (drule interpret_excaps_eq[rule_format, where n=0], simp)
-   apply (clarsimp simp: rf_sr_ksCurThread ucast_toEnum_unat_maxIRQ_eq)
-   apply (simp (no_asm) add: numeral_2_eq_2 numeral_3_eq_3)
-  (* ARMIRQIssueSGISignal C *)
-  apply (clarsimp simp: neq_Nil_conv[where xs=extraCaps])
-  apply (drule interpret_excaps_eq[rule_format, where n=0], simp)
-  apply (subst numeral_3_eq_3)
-  apply (subst numeral_2_eq_2)
-  apply (fastforce simp: rf_sr_ksCurThread ucast_ucast_mask)
-  done
+  apply (prop_tac "0 < numSGIs \<longrightarrow> args ! 0 \<le> word_of_nat numSGIs - 1 \<longrightarrow>
+                   unat (args ! 0) < unat (word_of_nat numSGIs :: machine_word)")
+   apply (simp add: numSGIs_def numSGIs_bits_def word_le_nat_alt split: if_split)
+  apply (prop_tac "\<not> length args < 4 \<longrightarrow> args \<noteq> []", clarsimp)
+  apply (clarsimp simp: valid_tcb_state'_Restart invs_valid_objs' invs_pspace_aligned'
+                        invs_pspace_distinct' tcb_at_invs' invs_sch_act_wf'
+                        excaps_in_mem_def slotcap_in_mem_def ct_active_st_tcb_at_runnable'
+                        cte_wp_at_ctes_of numeral_eqs[symmetric] word_bits_def
+                        Kernel_C_maxIRQ maxIRQ_ucast_toEnum_eq_irq irq_machine_le_maxIRQ_irq)
+  by (fastforce simp: ct_in_state'_def  neq_Nil_conv[where xs=extraCaps]
+                      ucast_ucast_machine_word_irq rf_sr_ksCurThread from_bool_eq_if'
+                elim!: pred_tcb'_weakenE
+                dest!: interpret_excaps_eq)
 
 lemma decodeIRQControlInvocation_ccorres:
   notes if_cong[cong]
@@ -929,11 +974,10 @@ lemma decodeIRQControlInvocation_ccorres:
    apply (clarsimp simp: decodeIRQ_arch_helper)
    apply (simp add: liftME_invocationCatch)
    apply (rule ccorres_add_returnOk)
-   apply (ctac add: Arch_decodeIRQControlInvocation_ccorres)
-      apply (rule ccorres_return_CE, simp+)[1]
-     apply (rule ccorres_return_C_errorE, simp+)[1]
-    apply wp
-   apply (vcg exspec=Arch_decodeIRQControlInvocation_modifies)
+   apply (ctac (no_vcg) add: Arch_decodeIRQControlInvocation_ccorres)
+     apply (rule ccorres_return_CE, simp+)[1]
+    apply (rule ccorres_return_C_errorE, simp+)[1]
+   apply wp
   apply (simp add: syscall_error_to_H_cases)
   apply (clarsimp simp: interpret_excaps_test_null excaps_map_def
                         Collect_const_mem word_sless_def word_sle_def

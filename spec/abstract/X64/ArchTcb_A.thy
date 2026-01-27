@@ -51,6 +51,8 @@ definition arch_post_set_flags :: "obj_ref \<Rightarrow> tcb_flags \<Rightarrow>
   "arch_post_set_flags t flags \<equiv>
      when (FpuDisabled \<in> flags) (fpu_release t)"
 
+(* As opposed to hyp-enabled architectures, we can keep this here as it does not cause circular
+   function dependency. *)
 definition arch_prepare_set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> (unit, 'a::state_ext) s_monad" where
   "arch_prepare_set_domain t new_dom \<equiv> do
      cur_domain \<leftarrow> gets cur_domain;

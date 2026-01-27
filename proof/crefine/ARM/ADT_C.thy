@@ -751,8 +751,8 @@ lemma map_to_ctes_tcb_ctes:
   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKO_opt_tcb
                  split: kernel_object.splits)
   apply (case_tac ko, simp_all, clarsimp)
-  apply (clarsimp simp: objBits_type[of "KOTCB tcb" "KOTCB undefined"]
-                        objBits_type[of "KOTCB tcb'" "KOTCB undefined"])
+  apply (clarsimp simp: koType_objBitsKO[of "KOTCB tcb" "KOTCB undefined"]
+                        koType_objBitsKO[of "KOTCB tcb'" "KOTCB undefined"])
   apply (rule conjI)
    apply (drule ps_clear_def3[THEN iffD1,rotated 2],
           assumption, simp add: objBits_simps')+
@@ -765,7 +765,7 @@ lemma map_to_ctes_tcb_ctes:
           assumption, simp add: objBits_simps')
    apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
           assumption, simp add: objBits_simps')
-   apply (drule (1) ps_clear_16)+
+   apply (drule (1) ps_clear_32)+
    apply (simp add: is_aligned_add_helper[of _ 9 "0x10", simplified]
                     split_def objBits_simps')
   apply (rule conjI)
@@ -1233,16 +1233,6 @@ lemma ksPSpace_eq_imp_valid_tcb'_eq:
                  valid_tcb'_def valid_tcb_state'_def valid_bound_ntfn'_def valid_arch_tcb'_def
           split: thread_state.splits option.splits)
 
-lemma ksPSpace_eq_imp_valid_arch_obj'_eq:
-  assumes ksPSpace: "ksPSpace s' = ksPSpace s"
-  shows "valid_arch_obj' ao s' = valid_arch_obj' ao s"
-  apply (case_tac ao, simp)
-   apply (rename_tac pte)
-   apply (case_tac pte, simp_all add: valid_mapping'_def)
-  apply (rename_tac pde)
-  apply (case_tac pde, simp_all add: valid_mapping'_def)
-  done
-
 lemma ksPSpace_eq_imp_valid_objs'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
   shows "valid_objs' s' = valid_objs' s"
@@ -1251,7 +1241,6 @@ lemma ksPSpace_eq_imp_valid_objs'_eq:
                      ksPSpace_eq_imp_obj_at'_eq[OF ksPSpace]
                      ksPSpace_eq_imp_valid_tcb'_eq[OF ksPSpace]
                      ksPSpace_eq_imp_valid_cap'_eq[OF ksPSpace]
-                     ksPSpace_eq_imp_valid_arch_obj'_eq[OF ksPSpace]
                      valid_ntfn'_def valid_cte'_def valid_bound_tcb'_def
               split: kernel_object.splits endpoint.splits ntfn.splits option.splits)
 

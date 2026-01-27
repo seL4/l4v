@@ -8,7 +8,7 @@ theory Finalise_R
 imports
   IpcCancel_R
   InterruptAcc_R
-  Retype_R
+  ArchRetype_R
 begin
 context begin interpretation Arch . (*FIXME: arch-split*)
 
@@ -1266,8 +1266,8 @@ lemma not_Final_removeable:
     \<Longrightarrow> removeable' sl s cap"
   apply (erule not_FinalE)
    apply (clarsimp simp: removeable'_def gen_isCap_simps)
-  apply (clarsimp simp: cteCaps_of_def sameObjectAs_def2 removeable'_def
-                        cte_wp_at_ctes_of)
+  apply (clarsimp simp: cteCaps_of_def ARM_HYP.sameObjectAs_def2 removeable'_def
+                        cte_wp_at_ctes_of) (* FIXME arch-split *)
   apply fastforce
   done
 
@@ -1415,7 +1415,7 @@ lemma emptySlot_valid_global_refs[wp]:
   done
 
 lemmas doMachineOp_irq_handlers[wp]
-    = valid_irq_handlers_lift'' [OF doMachineOp_ctes doMachineOp_ksInterrupt]
+    = valid_irq_handlers_lift'' [OF doMachineOp_ctes doMachineOp_ksInterruptState]
 
 lemma deletedIRQHandler_irq_handlers'[wp]:
   "\<lbrace>\<lambda>s. valid_irq_handlers' s \<and> (IRQHandlerCap irq \<notin> ran (cteCaps_of s))\<rbrace>
@@ -1900,7 +1900,7 @@ where
 
 lemma final_matters_Master:
   "final_matters' (capMasterCap cap) = final_matters' cap"
-  by (simp add: capMasterCap_def split: capability.split arch_capability.split,
+  by (simp add: capMasterCap_def arch_capMasterCap_def split: capability.split arch_capability.split,
       simp add: final_matters'_def)
 
 lemma final_matters_sameRegion_sameObject:
@@ -1976,7 +1976,7 @@ lemma notFinal_prev_or_next:
    apply (subst final_matters_Master[symmetric])
    apply (subst(asm) final_matters_Master[symmetric])
    apply (clarsimp simp: sameObjectAs_def3)
-  apply (clarsimp simp: sameObjectAs_def3)
+  apply (clarsimp simp: sameObjectAs_def3 simp del: isArchFrameCap_capMasterCap)
   done
 
 lemma isFinal:
@@ -2073,8 +2073,9 @@ lemma (in vmdb) isFinal_no_subtree:
    apply (clarsimp simp: isFinal_def parentOf_def mdb_next_unfold cteCaps_of_def)
    apply (erule_tac x="mdbNext n" in allE)
    apply simp
-   apply (clarsimp simp: isMDBParentOf_CTE final_matters_sameRegion_sameObject)
-   apply (clarsimp simp: gen_isCap_simps sameObjectAs_def3)
+   (* FIXME arch-split *)
+   apply (clarsimp simp: ARM_HYP.isMDBParentOf_CTE final_matters_sameRegion_sameObject)
+   apply (clarsimp simp: gen_isCap_simps ARM_HYP.sameObjectAs_def3) (* FIXME arch-split *)
   apply clarsimp
   done
 
@@ -2525,15 +2526,6 @@ lemma deleteASIDPool_invs[wp]:
               | simp)+
   done
 
-lemma invalidateASIDEntry_valid_ap' [wp]:
-  "\<lbrace>valid_asid_pool' p\<rbrace> invalidateASIDEntry asid \<lbrace>\<lambda>r. valid_asid_pool' p\<rbrace>"
-  apply (simp add: invalidateASIDEntry_def invalidateASID_def
-                   invalidateHWASIDEntry_def bind_assoc)
-  apply (wp loadHWASID_wp | simp)+
-  apply (case_tac p)
-  apply (clarsimp simp del: fun_upd_apply)
-  done
-
 lemmas flushSpace_typ_ats' [wp] = typ_at_lifts [OF flushSpace_typ_at']
 
 lemma deleteASID_invs'[wp]:
@@ -2568,7 +2560,7 @@ lemma archThreadSet_valid_objs'[wp]:
   apply (wp setObject_tcb_valid_objs getObject_tcb_wp)
   apply clarsimp
   apply normalise_obj_at'
-  apply (drule (1) valid_objs_valid_tcb')
+  apply (drule (1) tcb_ko_at_valid_objs_valid_tcb')
   apply (clarsimp simp: valid_obj'_def valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs)
   done
 
@@ -2934,8 +2926,6 @@ lemma vcpuFinalise_unlive[wp]:
   apply (rule_tac x="KOArch (KOVCPU ko)" in exI)
   apply (clarsimp simp: live'_def hyp_live'_def arch_live'_def obj_at'_def projectKOs)
   done
-
-lemmas capMasterCap_simps_vcpu = capMasterCap_simps(14)
 
 lemma arch_finaliseCap_removeable[wp]:
   "\<lbrace>\<lambda>s. s \<turnstile>' ArchObjectCap cap \<and> invs' s

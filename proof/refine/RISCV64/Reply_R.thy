@@ -1143,9 +1143,9 @@ lemma sc_replies_relation_sc_with_reply_cross_eq_pred:
   apply (clarsimp simp: opt_map_def projectKO_opt_sc split: option.splits)
   apply (case_tac "scReplies_of s' scp", simp)
   apply (rename_tac p)
-  apply (drule pspace_relation_sc_at[where scp=scp])
+  apply (drule RISCV64.pspace_relation_sc_at[where scp=scp]) (*FIXME arch-split RT*)
    apply (clarsimp simp: opt_map_red)
-  apply (clarsimp simp: obj_at_simps is_sc_obj opt_map_red)
+  apply (clarsimp simp: gen_obj_at_simps is_sc_obj opt_map_red)
   apply (drule (1) sc_replies_relation_prevs_list', simp add: opt_map_red)
   apply (drule (1) heap_ls_unique, simp)
   done
@@ -1727,7 +1727,7 @@ proof -
   have z: "\<And>s x. reply_at' nrp s
                  \<Longrightarrow> map_to_ctes ((ksPSpace s) (nrp \<mapsto> KOReply (replyPrev_update Map.empty x)))
                      = map_to_ctes (ksPSpace s)"
-    by (clarsimp simp: obj_at_simps)
+    by (clarsimp simp: gen_obj_at_simps)
   show ?thesis using assms
     (* crossing information *)
     apply (rule_tac Q'="reply_at' rp and reply_at' nrp and sc_at' scp
@@ -1789,7 +1789,7 @@ proof -
       apply (rename_tac bb aa ba)
       apply (drule_tac x="(aa, ba)" in bspec, simp)
       apply (clarsimp simp: obj_at_def is_reply)
-      apply (frule_tac ko'="kernel_object.Reply reply" and x'=nrp in obj_relation_cut_same_type)
+      apply (frule_tac ko'="kernel_object.Reply reply" and x'=nrp in RISCV64.obj_relation_cut_same_type) (*FIXME arch-split RT*)
          apply simp+
       apply (clarsimp simp: reply_relation_def)
      apply (rule conjI)
@@ -1829,7 +1829,7 @@ proof -
       apply (clarsimp simp: obj_at_def a_type_def
                      split: Structures_A.kernel_object.splits if_split_asm)
      apply (clarsimp simp: caps_of_state_after_update cte_wp_at_after_update
-                           swp_def fun_upd_def obj_at_simps)
+                           swp_def fun_upd_def gen_obj_at_simps)
      apply (rule conjI)
       apply (clarsimp simp: ready_queues_relation_def ready_queue_relation_def Let_def
                             list_queue_relation_def)

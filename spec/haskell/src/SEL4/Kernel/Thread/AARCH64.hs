@@ -40,4 +40,6 @@ activateIdleThread :: PPtr TCB -> Kernel ()
 activateIdleThread _ = return ()
 
 prepareNextDomain :: Kernel ()
-prepareNextDomain = switchLocalFpuOwner Nothing
+prepareNextDomain = do
+    vcpuFlush
+    switchLocalFpuOwner Nothing

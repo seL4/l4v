@@ -20,8 +20,7 @@ lemma kernel_mappings_slots_eq:
   apply (fold word_le_nat_alt)
   apply (rule iffI)
    apply (simp add: le_shiftr)
-  apply (simp add: kernel_base_def)
-  apply word_bitwise
+  apply (simp add: kernel_base_def pptrBase_def split: if_split_asm; word_bitwise)
   done
 
 lemma valid_global_pd_mappingsE:

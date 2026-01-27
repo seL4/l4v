@@ -1554,6 +1554,14 @@ lemma handle_hypervisor_fault_corres:
            Syscall_D.handle_hypervisor_fault (do y \<leftarrow> local.handle_hypervisor_fault thread w; return () od)"
   by (cases w; simp add: Syscall_D.handle_hypervisor_fault_def returnOk_def2)
 
+lemma dcorres_handle_spurious_irq:
+  "dcorres dc \<top> \<top> (return ()) handle_spurious_irq"
+  unfolding handle_spurious_irq_def
+  apply clarsimp
+  apply (rule dcorres_machine_op_noop)
+  apply (wpsimp simp: handleSpuriousIRQ_mop_def)
+  done
+
 lemma handle_event_corres:
   "dcorres (dc \<oplus> dc) \<top>
      (invs and valid_pdpt_objs and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_running s))
@@ -1604,12 +1612,20 @@ lemma handle_event_corres:
        apply (frule (1) ct_running_not_idle_etc)
        apply (fastforce simp: st_tcb_at_def obj_at_def generates_pending_def valid_fault_def
                        split: thread_state.splits)+
-    apply (simp add:handle_pending_interrupts_def)
+    apply (simp add: handle_pending_interrupts_def maybe_handle_interrupt_def)
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF get_active_irq_corres])
-        apply (clarsimp simp:option.splits)
+        apply corres_cases_both
+         apply (rule dcorres_handle_spurious_irq)
+        apply clarsimp
         apply (rule handle_interrupt_corres)
-       apply (wp | simp)+
+       apply wpsimp
+      apply clarsimp
+      apply (rule hoare_drop_imp)
+      apply wpsimp
+     apply clarsimp
+     apply (rule TrueI)
+    apply clarsimp
    apply (rule corres_symb_exec_r)
       apply (rule corres_symb_exec_catch_r)
          apply (rule handle_fault_corres)

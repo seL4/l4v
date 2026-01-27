@@ -15,7 +15,7 @@ hypervisor extensions on ARM.
 
 \end{impdetails}
 
-> module SEL4.Object.VCPU.ARM(vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch, dissociateVCPUTCB, vgicMaintenance, vppiEvent, irqVPPIEventIndex) where
+> module SEL4.Object.VCPU.ARM(vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch, vcpuFlush, vcpuFlushIfCurrent, dissociateVCPUTCB, vgicMaintenance, vppiEvent, irqVPPIEventIndex) where
 
 \begin{impdetails}
 
@@ -42,10 +42,11 @@ hypervisor extensions on ARM.
 > import {-# SOURCE #-} SEL4.Object.Interrupt
 
 > import Data.Bits hiding (countTrailingZeros)
+> import Data.Helpers(mapMaybe)
 > import Data.Word(Word8, Word16, Word32, Word64)
 > import Data.WordLib(countTrailingZeros)
 > import Data.Array
-> import Data.Maybe
+> import Data.Maybe hiding (mapMaybe)
 
 \end{impdetails}
 
@@ -492,6 +493,19 @@ For initialisation, see makeVCPUObject.
 >                         doMachineOp isb
 >                         vcpuEnable new
 >                         modifyArchState (\s -> s { armHSCurVCPU = Just (new, True) })
+
+> vcpuFlush :: Kernel ()
+> vcpuFlush = do
+>     curVCPU <- gets (armHSCurVCPU . ksArchState)
+>     when (curVCPU /= Nothing) $ do
+>         vcpuSave curVCPU
+>         vcpuInvalidateActive
+
+> vcpuFlushIfCurrent :: PPtr TCB -> Kernel ()
+> vcpuFlushIfCurrent t = do
+>     curVCPU <- gets (armHSCurVCPU . ksArchState)
+>     tcbVCPU <- archThreadGet atcbVCPUPtr t
+>     when (tcbVCPU == mapMaybe fst curVCPU) vcpuFlush
 
 \subsection{VGICMaintenance}
 

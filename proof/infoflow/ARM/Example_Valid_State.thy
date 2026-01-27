@@ -8,6 +8,7 @@
 theory Example_Valid_State
 imports
   "ArchNoninterference"
+  "AInvs.ArchKernelInit_AI"
   "Lib.Distinct_Cmd"
 begin
 
@@ -194,30 +195,30 @@ the authority graph defined above and s0 is the state of Sys1 described above.
 subsubsection \<open>Defining the State\<close>
 
 
-definition "ntfn_ptr \<equiv> kernel_base + 0x10"
+definition "ntfn_ptr \<equiv> init_objs_base + 0x10"
 
-definition "Low_tcb_ptr \<equiv> kernel_base + 0x200"
-definition "High_tcb_ptr = kernel_base + 0x400"
-definition "idle_tcb_ptr = kernel_base + 0x1000"
+definition "Low_tcb_ptr \<equiv> init_objs_base + 0x200"
+definition "High_tcb_ptr = init_objs_base + 0x400"
+definition "idle_tcb_ptr = init_objs_base + 0x1000"
 
-definition "Low_pt_ptr = kernel_base + 0x800"
-definition "High_pt_ptr = kernel_base + 0xC00"
+definition "Low_pt_ptr = init_objs_base + 0x800"
+definition "High_pt_ptr = init_objs_base + 0xC00"
 
 
-(* init_globals_frame \<equiv> {kernel_base + 0x5000,... kernel_base + 0x5FFF} *)
+(* init_globals_frame \<equiv> {init_objs_base + 0x5000,... init_objs_base + 0x5FFF} *)
 
-definition "shared_page_ptr_virt = kernel_base + 0x6000"
+definition "shared_page_ptr_virt = init_objs_base + 0x6000"
 definition "shared_page_ptr_phys = addrFromPPtr shared_page_ptr_virt"
 
-definition "Low_pd_ptr = kernel_base + 0x20000"
-definition "High_pd_ptr = kernel_base + 0x24000"
+definition "Low_pd_ptr = init_objs_base + 0x20000"
+definition "High_pd_ptr = init_objs_base + 0x24000"
 
-definition "Low_cnode_ptr = kernel_base + 0x10000"
-definition "High_cnode_ptr = kernel_base + 0x14000"
-definition "Silc_cnode_ptr = kernel_base + 0x18000"
-definition "irq_cnode_ptr = kernel_base + 0x1C000"
+definition "Low_cnode_ptr = init_objs_base + 0x10000"
+definition "High_cnode_ptr = init_objs_base + 0x14000"
+definition "Silc_cnode_ptr = init_objs_base + 0x18000"
+definition "irq_cnode_ptr = init_objs_base + 0x1C000"
 
-(* init_global_pd \<equiv> {kernel_base + 0x60000,... kernel_base + 0x603555} *)
+(* init_global_pd \<equiv> {init_objs_base + 0x60000,... init_objs_base + 0x603555} *)
 
 definition "timer_irq \<equiv> 10" (* not sure exactly how this fits in *)
 
@@ -235,7 +236,7 @@ lemmas s0_ptr_defs =
   Low_pd_ptr_def High_pd_ptr_def Low_pt_ptr_def High_pt_ptr_def Low_tcb_ptr_def
   High_tcb_ptr_def idle_tcb_ptr_def timer_irq_def Low_prio_def High_prio_def Low_time_slice_def
   Low_domain_def High_domain_def init_irq_node_ptr_def init_globals_frame_def init_global_pd_def
-  kernel_base_def shared_page_ptr_virt_def
+  init_objs_base_def shared_page_ptr_virt_def
 
 (* Distinctness proof of kernel pointers. *)
 
@@ -833,7 +834,7 @@ definition arch_state0 :: "arch_state" where
                   arm_hwasid_table = Map.empty, arm_next_asid = 0, arm_asid_map = Map.empty,
                   arm_global_pd = init_global_pd, arm_global_pts = [],
                   arm_kernel_vspace =
-       \<lambda>ref. if ref \<in> {kernel_base..kernel_base + mask 20} then ArmVSpaceKernelWindow
+       \<lambda>ref. if ref \<in> {init_objs_base..init_objs_base + mask 20} then ArmVSpaceKernelWindow
                else ArmVSpaceInvalidRegion\<rparr>"
 
 definition
@@ -1234,7 +1235,7 @@ lemma valid_obj_s0[simp]:
   "valid_obj High_tcb_ptr   High_tcb s0_internal"
   "valid_obj idle_tcb_ptr   idle_tcb s0_internal"
   "valid_obj init_global_pd (ArchObj (PageDirectory ((\<lambda>_. InvalidPDE)
-            (ucast (kernel_base >> 20) := SectionPDE (addrFromPPtr kernel_base) {} 0 {}))))
+            (ucast (init_objs_base >> 20) := SectionPDE (addrFromPPtr init_objs_base) {} 0 {}))))
                                      s0_internal"
   "valid_obj init_globals_frame (ArchObj (DataPage False ARMSmallPage)) s0_internal"
                apply (simp_all add: valid_obj_def kh0_obj_def)
@@ -1248,7 +1249,7 @@ lemma valid_obj_s0[simp]:
                                 Low_pt_ptr_def High_pt_ptr_def
                                 shared_page_ptr_phys_def shared_page_ptr_virt_def
                                 valid_vm_rights_def vm_kernel_only_def
-                                kernel_base_def pageBits_def pt_bits_def vmsz_aligned_def
+                                init_objs_base_def pageBits_def pt_bits_def vmsz_aligned_def
                                 is_aligned_def[THEN iffD2]
                                 is_aligned_addrFromPPtr_n)+
      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_master_reply_cap_def
@@ -1256,7 +1257,7 @@ lemma valid_obj_s0[simp]:
            | simp add: obj_at_def s0_internal_def kh0_def kh0_obj_def is_ntfn_def
                        is_valid_vtable_root_def)+
   apply (simp add: valid_vm_rights_def vm_kernel_only_def
-                   kernel_base_def pageBits_def vmsz_aligned_def
+                   init_objs_base_def pageBits_def vmsz_aligned_def
                    is_aligned_def[THEN iffD2]
                    is_aligned_addrFromPPtr_n)
   done
@@ -1304,7 +1305,7 @@ lemma pspace_distinct_s0:
       apply simp
      apply (simp add: shiftl_def uint_shiftl word_size bintrunc_shiftl)
      apply (simp add: shiftl_int_def take_bit_eq_mod push_bit_eq_mult)
-    apply (frule_tac y="ucast irq << 4" in word_plus_mono_right[where x="0xE000800F"])
+    apply (frule_tac y="ucast irq << 4" in word_plus_mono_right[where x="0xF000800F"])
      apply (simp add: shiftl_t2n)
      apply (case_tac "(1::32 word) \<le> ucast irqa")
       apply (drule_tac i=1 and k="0x10" in word_mult_le_mono1)
@@ -1313,7 +1314,7 @@ lemma pspace_distinct_s0:
         apply simp
        apply (simp add: word_less_nat_alt)
       apply (simp add: mult.commute)
-      apply (drule_tac y="0x10" and x="0xE0007FFF" in word_plus_mono_right)
+      apply (drule_tac y="0x10" and x="0xF0007FFF" in word_plus_mono_right)
        apply (rule_tac sz=28 in machine_word_plus_mono_right_split)
         apply (simp add: unat_word_ariths mask_def)
         apply (cut_tac x=irqa and 'a=32 in ucast_less)
@@ -1324,8 +1325,8 @@ lemma pspace_distinct_s0:
      apply (simp add: lt1_neq0)
     apply (drule(1) order_trans_rules(23))
     apply clarsimp
-    apply (drule_tac a="0xE0008000 + (ucast irqa << 4)" and b="ucast irqa << 4"
-                 and c="0xE0007FFF + (ucast irqa << 4)" and d="ucast irqa << 4" in word_sub_mono)
+    apply (drule_tac a="0xF0008000 + (ucast irqa << 4)" and b="ucast irqa << 4"
+                 and c="0xF0007FFF + (ucast irqa << 4)" and d="ucast irqa << 4" in word_sub_mono)
        apply simp
       apply simp
       apply (rule_tac sz=28 in machine_word_plus_mono_right_split)
@@ -1352,7 +1353,7 @@ lemma pspace_distinct_s0:
       apply simp
      apply (simp add: shiftl_def uint_shiftl word_size bintrunc_shiftl)
      apply (simp add: shiftl_int_def take_bit_eq_mod push_bit_eq_mult)
-    apply (frule_tac y="ucast irqa << 4" in word_plus_mono_right[where x="0xE000800F"])
+    apply (frule_tac y="ucast irqa << 4" in word_plus_mono_right[where x="0xF000800F"])
      apply (simp add: shiftl_t2n)
      apply (case_tac "(1::32 word) \<le> ucast irq")
       apply (drule_tac i=1 and k="0x10" in word_mult_le_mono1)
@@ -1361,7 +1362,7 @@ lemma pspace_distinct_s0:
         apply simp
        apply (simp add: word_less_nat_alt)
       apply (simp add: mult.commute)
-      apply (drule_tac y="0x10" and x="0xE0007FFF" in word_plus_mono_right)
+      apply (drule_tac y="0x10" and x="0xF0007FFF" in word_plus_mono_right)
        apply (rule_tac sz=28 in machine_word_plus_mono_right_split)
         apply (simp add: unat_word_ariths mask_def)
         apply (cut_tac x=irq and 'a=32 in ucast_less)
@@ -1372,8 +1373,8 @@ lemma pspace_distinct_s0:
      apply (simp add: lt1_neq0)
     apply (drule(1) order_trans_rules(23))
     apply clarsimp
-    apply (drule_tac a="0xE0008000 + (ucast irq << 4)" and b="ucast irq << 4"
-                 and c="0xE0007FFF + (ucast irq << 4)" and d="ucast irq << 4" in word_sub_mono)
+    apply (drule_tac a="0xF0008000 + (ucast irq << 4)" and b="ucast irq << 4"
+                 and c="0xF0007FFF + (ucast irq << 4)" and d="ucast irq << 4" in word_sub_mono)
        apply simp
       apply simp
       apply (rule_tac sz=28 in machine_word_plus_mono_right_split)
@@ -1621,12 +1622,17 @@ lemma valid_arch_caps_s0[simp]:
   apply (drule s0_caps_of_state)+
   by auto
 
+lemma kernel_base_le_init_objs_base_shifted[simp]:
+  "UCAST(32 \<rightarrow> 12) (kernel_base >> 20) \<le> UCAST(32 \<rightarrow> 12) (init_objs_base >> 20)"
+  apply (intro ucast_mono_le le_shiftr init_objs_base_ge_kernel_base)
+  apply (simp add: init_objs_base_def)
+  done
+
 lemma valid_global_objs_s0[simp]:
   "valid_global_objs s0_internal"
   apply (clarsimp simp: valid_global_objs_def s0_internal_def arch_state0_def)
-  apply (force simp: valid_vso_at_def obj_at_def kh0_def kh0_obj_def
-                     is_aligned_addrFromPPtr kernel_base_aligned_pageBits
-                     kernel_mapping_slots_def empty_table_def pde_ref_def valid_pde_mappings_def)
+  apply (clarsimp simp: valid_vso_at_def obj_at_def kh0_def kh0_obj_def valid_pde_mappings_def
+                        kernel_mapping_slots_def empty_table_def pde_ref_def)
   done
 
 lemma valid_kernel_mappings_s0[simp]:
@@ -1635,7 +1641,7 @@ lemma valid_kernel_mappings_s0[simp]:
                  valid_kernel_mappings_if_pd_def split: kernel_object.splits
                                                         arch_kernel_obj.splits)
   apply (drule kh0_SomeD)
-  apply (clarsimp simp: arch_state0_def kernel_mapping_slots_def)
+  apply (clarsimp simp: arch_state0_def kernel_mapping_slots_def kernel_base_def pptrBase_def)
   apply (erule disjE | simp add: pde_ref_def s0_ptr_defs kh0_obj_def High_pd'_def Low_pd'_def
                           split: if_split_asm pde.splits)+
   done
@@ -1644,7 +1650,9 @@ lemma equal_kernel_mappings_s0[simp]:
   "equal_kernel_mappings s0_internal"
   apply (clarsimp simp: equal_kernel_mappings_def obj_at_def s0_internal_def)
   apply (drule kh0_SomeD)+
-  apply (force simp: kh0_obj_def High_pd'_def Low_pd'_def s0_ptr_defs kernel_mapping_slots_def)
+  apply (force simp: kh0_obj_def High_pd'_def Low_pd'_def s0_ptr_defs kernel_mapping_slots_def
+                     kernel_base_def pptrBase_def
+               split: if_split_asm)
   done
 
 lemma valid_asid_map_s0[simp]:
@@ -1661,11 +1669,11 @@ lemma valid_global_pd_mappings_s0[simp]:
    apply force
   apply clarsimp
   apply (subgoal_tac "xa - 0xFFFFF \<le> ucast x << 20")
-   apply (case_tac "ucast x << 20 > (0xE0000000::32 word)")
-    apply (subgoal_tac "(0xE0100000::32 word) \<le> ucast x << 20")
+   apply (case_tac "ucast x << 20 > (0xF0000000::32 word)")
+    apply (subgoal_tac "(0xF0100000::32 word) \<le> ucast x << 20")
      apply ((drule(1) order_trans_rules(23))+, force)
     apply (simp add: shiftl_t2n)
-    apply (cut_tac p="0xE0000000::32 word" and n=20 and m=20 and q="0x100000 * ucast x" in word_plus_power_2_offset_le)
+    apply (cut_tac p="0xF0000000::32 word" and n=20 and m=20 and q="0x100000 * ucast x" in word_plus_power_2_offset_le)
          apply (simp add: is_aligned_def)
         apply (simp add: is_aligned_def unat_word_ariths)
         apply (subst mod_mult_mult1[where c="2^20" and b="2^12", simplified])
@@ -1674,16 +1682,16 @@ lemma valid_global_pd_mappings_s0[simp]:
       apply simp
      apply simp
     apply simp
-   apply (case_tac "ucast x << 20 < (0xE0000000::32 word)")
-    apply (subgoal_tac "(0xE0000000::32 word) - 0x100000 \<ge> ucast x << 20")
-     apply (subgoal_tac "0xFFFFF + (ucast x << 20) \<le> 0xDFFFFFFF")
-      apply (drule_tac y="0xFFFFF + (ucast x << 20)" and z="0xDFFFFFFF::32 word" in order_trans_rules(23))
+   apply (case_tac "ucast x << 20 < (0xF0000000::32 word)")
+    apply (subgoal_tac "(0xF0000000::32 word) - 0x100000 \<ge> ucast x << 20")
+     apply (subgoal_tac "0xFFFFF + (ucast x << 20) \<le> 0xEFFFFFFF")
+      apply (drule_tac y="0xFFFFF + (ucast x << 20)" and z="0xEFFFFFFF::32 word" in order_trans_rules(23))
        apply simp
       apply ((drule(1) order_trans_rules(23))+, force)
      apply (simp add: add.commute)
-     apply (simp add: word_plus_mono_left[where x="0xFFFFF" and z="0xDFF00000", simplified])
+     apply (simp add: word_plus_mono_left[where x="0xFFFFF" and z="0xEFF00000", simplified])
     apply (simp add: shiftl_t2n)
-    apply (rule udvd_decr'[where K="0x100000" and q="0xE0000000" and ua=0, simplified])
+    apply (rule udvd_decr'[where K="0x100000" and q="0xF0000000" and ua=0, simplified])
        apply simp
       apply (simp add: uint_word_ariths)
       apply (subst mod_mult_mult1[where c="2^20" and b="2^12", simplified])

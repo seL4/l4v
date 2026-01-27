@@ -287,6 +287,8 @@ lemma deriveCap_not_null:
   apply (simp add: deriveCap_def split del: if_split)
   by (case_tac cap; wpsimp simp: gen_isCap_simps)
 
+context begin interpretation Arch . (*FIXME: arch-split*)
+
 lemma deriveCap_derived_foo:
   "\<lbrace>\<lambda>s. \<forall>cap'. (cte_wp_at' (\<lambda>cte. badge_derived' cap (cteCap cte)
                      \<and> capASID cap = capASID (cteCap cte) \<and> cap_asid_base' cap = cap_asid_base' (cteCap cte)
@@ -375,9 +377,7 @@ lemma cteInsert_weak_cte_wp_at3:
 lemma maskedAsFull_null_cap[simp]:
   "(maskedAsFull x y = capability.NullCap) = (x = capability.NullCap)"
   "(capability.NullCap  = maskedAsFull x y) = (x = capability.NullCap)"
-  by (case_tac x, auto simp:maskedAsFull_def gen_isCap_simps )
-
-context begin interpretation Arch . (*FIXME: arch-split*)
+  by (case_tac x, auto simp:maskedAsFull_def gen_isCap_simps)
 
 lemma maskCapRights_eq_null:
   "(RetypeDecls_H.maskCapRights r xa = capability.NullCap) =
@@ -4810,21 +4810,6 @@ lemma sai_invs'[wp]:
   apply (erule_tac x=ntfnptr in valid_objsE'[OF invs_valid_objs'])
    apply (fastforce simp: obj_at'_def)
   apply (fastforce simp: valid_obj'_def valid_ntfn'_def)
-  done
-
-lemma replyFromKernel_corres:
-  "corres dc (tcb_at t and invs) invs'
-             (reply_from_kernel t r) (replyFromKernel t r)"
-  apply (case_tac r)
-  apply (clarsimp simp: replyFromKernel_def reply_from_kernel_def
-                        badge_register_def badgeRegister_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr[OF lookupIPCBuffer_corres])
-      apply (rule corres_split[OF asUser_setRegister_corres])
-        apply (rule corres_split_eqr[OF setMRs_corres], simp)
-          apply (rule setMessageInfo_corres)
-          apply (wp hoare_case_option_wp hoare_valid_ipc_buffer_ptr_typ_at'
-                 | fastforce)+
   done
 
 crunch replyFromKernel

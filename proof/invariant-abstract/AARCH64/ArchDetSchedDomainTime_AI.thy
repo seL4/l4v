@@ -29,9 +29,10 @@ crunch
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply,
   arch_invoke_irq_control, arch_get_sanitise_register_info,
-  prepare_thread_delete, handle_hypervisor_fault, make_arch_fault_msg, init_arch_objects,
+  prepare_thread_delete, handle_hypervisor_fault, init_arch_objects,
   arch_post_modify_registers, arch_post_cap_deletion, handle_vm_fault,
-  arch_invoke_irq_handler, arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags
+  arch_invoke_irq_handler, arch_prepare_next_domain, arch_prepare_set_domain,
+  arch_post_set_flags, handle_spurious_irq
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
   (simp: crunch_simps isFpuEnable_def wp: mapM_wp' transfer_caps_loop_pres crunch_wps)
 
@@ -44,13 +45,14 @@ crunch
   handle_arch_fault_reply, init_arch_objects,
   arch_invoke_irq_control, arch_get_sanitise_register_info,
   prepare_thread_delete, handle_hypervisor_fault, handle_vm_fault,
-  arch_post_modify_registers, arch_post_cap_deletion, make_arch_fault_msg,
+  arch_post_modify_registers, arch_post_cap_deletion,
   arch_invoke_irq_handler, handle_reserved_irq, arch_mask_irq_signal,
-  arch_prepare_set_domain, arch_post_set_flags
+  arch_prepare_set_domain, arch_post_set_flags, handle_spurious_irq
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_time s)"
   (simp: crunch_simps wp: transfer_caps_loop_pres crunch_wps)
 
-declare make_arch_fault_msg_inv[DetSchedDomainTime_AI_assms]
+crunch handle_spurious_irq
+  for scheduler_action[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (scheduler_action s)"
 
 end
 

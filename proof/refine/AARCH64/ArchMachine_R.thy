@@ -14,6 +14,8 @@ begin
 
 context Arch begin arch_global_naming
 
+named_theorems Machine_R_assms
+
 lemma dmo_getirq_inv[wp]:
   "irq_state_independent_H P \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: getActiveIRQ_def doMachineOp_def split_def exec_gets
@@ -31,7 +33,7 @@ lemma getActiveIRQ_masked:
   apply (clarsimp simp: valid_irq_masks'_def)
   done
 
-lemma dmo_maskInterrupt:
+lemma dmo_maskInterrupt[Machine_R_assms]:
   "\<lbrace>\<lambda>s. P (ksMachineState_update (irq_masks_update (\<lambda>t. t (irq := m))) s)\<rbrace>
   doMachineOp (maskInterrupt m irq) \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
@@ -69,5 +71,21 @@ lemma getActiveIRQ_le_maxIRQ:
   apply (simp add: irqs_masked'_def valid_irq_states'_def)
   done
 
+lemma doMachineOp_getActiveIRQ_non_kernel[wp]:
+  "\<lbrace>\<top>\<rbrace> doMachineOp (getActiveIRQ True)
+   \<lbrace>\<lambda>rv s. \<forall>irq. rv = Some irq \<longrightarrow> irq \<in> non_kernel_IRQs \<longrightarrow> P irq s\<rbrace>"
+  unfolding doMachineOp_def
+  apply wpsimp
+  apply (drule use_valid, rule getActiveIRQ_neq_non_kernel, rule TrueI)
+  apply clarsimp
+  done
+
 end
+
+global_interpretation Machine_R?: Machine_R
+proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (intro_locales; (unfold_locales; fact Machine_R_assms)?)
+qed
+
 end

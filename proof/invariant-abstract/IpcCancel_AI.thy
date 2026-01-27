@@ -2254,28 +2254,6 @@ lemma ntfn_q_refs_no_TCBBound:
   "(x, TCBBound) \<notin> ntfn_q_refs_of ntfn"
   by (auto simp: ntfn_q_refs_of_def split:ntfn.splits)
 
-lemma ntfn_bound_tcb_at:
-  "\<lbrakk>sym_refs (state_refs_of s); valid_objs s; kheap s ntfnptr = Some (Notification ntfn);
-    ntfn_bound_tcb ntfn = Some tcbptr; P (Some ntfnptr)\<rbrakk>
-  \<Longrightarrow> bound_tcb_at P tcbptr s"
-  apply (drule_tac x=ntfnptr in sym_refsD[rotated])
-   apply (fastforce simp: state_refs_of_def)
-  apply (fastforce simp: pred_tcb_at_def obj_at_def valid_obj_def valid_ntfn_def is_tcb
-                         state_refs_of_def refs_of_rev
-                   simp del: refs_of_simps)
-  done
-
-lemma bound_tcb_bound_notification_at:
-  "\<lbrakk>sym_refs (state_refs_of s); valid_objs s; kheap s ntfnptr = Some (Notification ntfn);
-    bound_tcb_at (\<lambda>ptr. ptr = (Some ntfnptr)) tcbptr s \<rbrakk>
-  \<Longrightarrow> ntfn_bound_tcb ntfn = Some tcbptr"
-  apply (drule_tac x=tcbptr in sym_refsD[rotated])
-   apply (fastforce simp: state_refs_of_def pred_tcb_at_def obj_at_def)
-  apply (auto simp: pred_tcb_at_def obj_at_def valid_obj_def valid_ntfn_def is_tcb
-                    state_refs_of_def refs_of_rev
-          simp del: refs_of_simps)
-  done
-
 lemma set_tcb_obj_ref_valid_irq_node[wp]:
   "\<lbrace>valid_irq_node\<rbrace> set_tcb_obj_ref f t new \<lbrace>\<lambda>_. valid_irq_node\<rbrace>"
   apply (wpsimp simp: set_tcb_obj_ref_def get_tcb_def wp: set_object_wp

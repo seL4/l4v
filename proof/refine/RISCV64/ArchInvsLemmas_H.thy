@@ -27,6 +27,7 @@ lemma wordSizeCase_simp[simp]: "wordSizeCase a b = b"
 
 lemmas objBits_defs =
   tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def replySizeBits_def
+  minSchedContextBits_def
 lemmas untypedBits_defs = minUntypedSizeBits_def maxUntypedSizeBits_def
 lemmas objBits_simps = objBits_def objBitsKO_def word_size_def archObjSize_def
 lemmas objBits_simps' = objBits_simps objBits_defs
@@ -45,12 +46,6 @@ lemma valid_cap'_pspaceI[Invariants_H_pspaceI_assms]:
             simp: vspace_table_at'_defs valid_arch_cap'_def valid_arch_cap_ref'_def
            split: arch_capability.split zombie_type.split option.splits)
 
-(* FIXME arch-split: required since valid_arch_obj' takes state due to other arches *)
-lemma valid_arch_obj'_pspaceI:
-  "\<lbrakk>valid_arch_obj' obj s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> valid_arch_obj' obj s'"
-  unfolding valid_arch_obj'_def
-  by simp
-
 lemma valid_obj'_pspaceI[Invariants_H_pspaceI_assms]:
   "valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
   unfolding valid_obj'_def
@@ -60,7 +55,7 @@ lemma valid_obj'_pspaceI[Invariants_H_pspaceI_assms]:
                  valid_arch_tcb'_def
            split: Structures_H.endpoint.splits Structures_H.notification.splits
                   Structures_H.thread_state.splits ntfn.splits option.splits
-           intro: obj_at'_pspaceI valid_cap'_pspaceI typ_at'_pspaceI valid_arch_obj'_pspaceI)
+           intro: obj_at'_pspaceI valid_cap'_pspaceI typ_at'_pspaceI)
 
 lemma tcb_space_clear[Invariants_H_pspaceI_assms]:
   "\<lbrakk> tcb_cte_cases (y - x) = Some (getF, setF);
@@ -89,6 +84,20 @@ lemma pspace_in_kernel_mappings'_pspaceI[Invariants_H_pspaceI_assms]:
   "pspace_in_kernel_mappings' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> pspace_in_kernel_mappings' s'"
   unfolding pspace_in_kernel_mappings'_def
   by simp
+
+lemma range_cover_canonical_address[Invariants_H_pspaceI_assms]:
+  "\<lbrakk> range_cover ptr sz us n ; p < n ;
+     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
+   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
+  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
+  apply (subst add.commute)
+  apply (subst add.assoc)
+  apply (rule canonical_address_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
+   apply (drule (1) range_cover.range_cover_compare)
+   apply (clarsimp simp: word_less_nat_alt)
+   apply unat_arith
+  apply (simp add: canonical_bit_def)
+  done
 
 (* not interesting on this architecture *)
 lemmas [simp] = pspace_in_kernel_mappings'_pspaceI
@@ -282,20 +291,6 @@ lemma priority_mask_wordRadix_size:
   "unat ((w::priority) && mask wordRadix) < wordBits"
   by (rule mask_wordRadix_less_wordBits, simp add: wordRadix_def word_size)
 
-lemma range_cover_canonical_address:
-  "\<lbrakk> range_cover ptr sz us n ; p < n ;
-     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
-   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
-  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
-  apply (subst add.commute)
-  apply (subst add.assoc)
-  apply (rule canonical_address_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
-   apply (drule (1) range_cover.range_cover_compare)
-   apply (clarsimp simp: word_less_nat_alt)
-   apply unat_arith
-  apply (simp add: canonical_bit_def)
-  done
-
 lemma canonical_address_neq_mask:
   "\<lbrakk> canonical_address ptr ; sz \<le> maxUntypedSizeBits \<rbrakk>
    \<Longrightarrow> canonical_address (ptr && ~~ mask sz)"
@@ -351,10 +346,6 @@ lemma hyp_refs_of_live':
   "hyp_refs_of' ko \<noteq> {} \<Longrightarrow> live' ko"
   by (cases ko, simp_all add: live'_def hyp_refs_of_hyp_live')
 
-lemmas valid_cap_simps' =
-  valid_cap'_def[split_simps capability.split arch_capability.split]
-
-
 (* FIXME arch-split RT: whole typ_at_lift section needs to be split *)
 lemma typ_at_lift_page_table_at'_strong:
   "(\<And>p. f \<lbrace>\<lambda>s. P (typ_at' (ArchT PTET) p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (page_table_at' p s)\<rbrace>"
@@ -379,13 +370,6 @@ lemma valid_arch_tcb_lift'_strong:
   shows "f \<lbrace>\<lambda>s. P (valid_arch_tcb' tcb s)\<rbrace>"
   by (clarsimp simp: valid_arch_tcb'_def, wp)
 
-(* FIXME arch-split RT: I think this is true for all architectures, if it isn't then
-                        typ_at'_valid_obj'_lift will need to be moved later, out of typ_at_lifts. *)
-lemma valid_arch_obj_lift'_strong:
-  assumes "\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
-  shows "f \<lbrace>\<lambda>s. P (valid_arch_obj' ako s)\<rbrace>"
-  by (clarsimp simp: valid_arch_obj'_def, wp)
-
 lemmas typ_at_lifts_strong =
   typ_at_lift_tcb'_strong typ_at_lift_ep'_strong
   typ_at_lift_ntfn'_strong typ_at_lift_cte'_strong
@@ -394,7 +378,6 @@ lemmas typ_at_lifts_strong =
   typ_at_lift_page_table_at'_strong
   typ_at_lift_frame_at'_strong
   valid_arch_tcb_lift'_strong
-  valid_arch_obj_lift'_strong
 
 lemma typ_at_lift_valid_irq_node':
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
@@ -555,6 +538,8 @@ end
 (* we expect typ_at' and sc_at'_n lemmas to be [wp], so this should be easy: *)
 method typ_at_props' = unfold_locales; wp?
 
+arch_requalify_facts typ_at_lift_valid_irq_node' (* FIXME arch-split RT *)
+
 
 context Arch begin arch_global_naming
 
@@ -563,8 +548,7 @@ lemma page_table_pte_atI':
   by (simp add: page_table_at'_def)
 
 lemmas bit_simps' = pteBits_def asidHighBits_def asidPoolBits_def asid_low_bits_def
-                    asid_high_bits_def minSchedContextBits_def
-                    replySizeBits_def ptBits_def bit_simps
+                    asid_high_bits_def ptBits_def bit_simps
 
 lemma objBitsT_simps:
   "objBitsT EndpointT = epSizeBits"
@@ -584,39 +568,5 @@ lemma objBitsT_simps:
 lemmas gen_objBitsT_simps = objBitsT_simps(1-7)
 
 end
-
-context Arch begin arch_global_naming
-
-lemma scBits_pos_power2:
-  assumes "minSchedContextBits + scSize sc < word_bits"
-  shows "(1::machine_word) < (2::machine_word) ^ (minSchedContextBits + scSize sc)"
-  apply (insert assms)
-  apply (subst word_less_nat_alt)
-  apply (clarsimp simp: minSchedContextBits_def)
-  by (auto simp: pow_mono_leq_imp_lt)
-
-lemma objBits_pos_power2[simp]:
-  assumes "objBits v < word_bits"
-  shows "(1::machine_word) < (2::machine_word) ^ objBits v"
-  unfolding objBits_simps'
-  apply (insert assms)
-  apply (case_tac "injectKO v"; simp)
-  by (simp add: pageBits_def pteBits_def objBits_simps scBits_pos_power2
-         split: arch_kernel_object.split)+
-
-lemma objBitsKO_no_overflow[simp, intro!]:
-  "objBitsKO ko < word_bits \<Longrightarrow> (1::machine_word) < (2::machine_word)^(objBitsKO ko)"
-  by (cases ko; simp add: objBits_simps' pageBits_def pteBits_def scBits_pos_power2
-                   split: arch_kernel_object.splits)
-
-end
-
-(* FIXME: arch-split RT *)
-arch_requalify_facts
-  scBits_pos_power2
-  objBits_pos_power2
-  objBitsKO_no_overflow
-
-declare objBits_pos_power2[simp] objBitsKO_no_overflow[simp, intro!]
 
 end

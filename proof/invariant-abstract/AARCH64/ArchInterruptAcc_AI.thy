@@ -27,6 +27,9 @@ lemma dmo_maskInterrupt_invs [InterruptAcc_AI_assms]:
                         cur_tcb_def valid_irq_states_def valid_irq_masks_def)
   done
 
+crunch handle_spurious_irq
+  for invs: invs
+
 end
 
 global_interpretation InterruptAcc_AI?: InterruptAcc_AI

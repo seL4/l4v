@@ -16,7 +16,7 @@ begin
 context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs CONTEXT ARM_HYP_H
-#INCLUDE_HASKELL SEL4/Object/VCPU/ARM.lhs CONTEXT ARM_HYP_H ArchInv=Arch NOT vcpuUpdate vgicUpdate vgicUpdateLR vcpuSaveReg vcpuRestoreReg vcpuSaveRegRange vcpuRestoreRegRange vcpuWriteReg vcpuReadReg saveVirtTimer restoreVirtTimer vcpuDisable vcpuEnable vcpuRestore vcpuSave vcpuSwitch vcpuInvalidateActive vcpuCleanInvalidateActive countTrailingZeros virqSetEOIIRQEN vgicMaintenance vppiEvent irqVPPIEventIndex armvVCPUSave
+#INCLUDE_HASKELL SEL4/Object/VCPU/ARM.lhs CONTEXT ARM_HYP_H ArchInv=Arch NOT vcpuUpdate vgicUpdate vgicUpdateLR vcpuSaveReg vcpuRestoreReg vcpuSaveRegRange vcpuRestoreRegRange vcpuWriteReg vcpuReadReg saveVirtTimer restoreVirtTimer vcpuDisable vcpuEnable vcpuRestore vcpuSave vcpuSwitch vcpuFlush vcpuInvalidateActive vcpuCleanInvalidateActive countTrailingZeros virqSetEOIIRQEN vgicMaintenance vppiEvent irqVPPIEventIndex armvVCPUSave
 
 end
 end

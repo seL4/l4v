@@ -169,3 +169,20 @@
 - Updated SIMPL from the AFP
 - Ensure that umm_types.txt is saved relative to theory file
 - If cpp_path is relative, make it relative to the current theory
+
+
+## 1.22
+
+- Builds with Isabelle2025
+- Makefile: fail early if L4V_ARCH is not set
+- Suppress internal simpset warnings in Simpl vcg
+- Add more documentation in README
+- Do not export Separation Logic notation by default;
+  Separation Logic can be enabled manually using the command
+
+    unbundle C_seplog_syntax
+
+- The command install_C_file has a new option "no_modifies" for skipping
+  the generation of modifies proofs. Default behaviour is unchanged.
+- Allow the character ' in Isabelle identifiers in FNSPEC, so that for instance
+  the name StrictC'_f_spec can be used as a lemma identifier.

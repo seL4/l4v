@@ -32,6 +32,13 @@ lemma getCurrentTime_invs[wp]:
   by (simp add: do_machine_op_def modify_def in_get bind_assoc get_def put_def gets_def in_bind
                 split_def select_f_returns in_return)
 
+lemma handle_spurious_irq_invs:
+  "handle_spurious_irq \<lbrace>invs\<rbrace>"
+  unfolding handle_spurious_irq_def
+  apply (wpsimp wp: dmo_invs machine_op_lift_device_state simp: handleSpuriousIRQ_mop_def)
+  apply (clarsimp simp add: machine_op_lift_def machine_rest_lift_def in_monad select_f_def)
+  done
+
 end
 
 global_interpretation InterruptAcc_AI?: InterruptAcc_AI

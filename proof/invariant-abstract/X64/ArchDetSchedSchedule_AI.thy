@@ -350,8 +350,6 @@ crunch arch_get_sanitise_register_info, arch_post_modify_registers
 crunch arch_get_sanitise_register_info, arch_post_modify_registers
   for scheduler_action[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (scheduler_action s)"
 
-declare make_arch_fault_msg_inv[DetSchedSchedule_AI_assms]
-
 lemma arch_post_modify_registers_not_idle_thread[DetSchedSchedule_AI_assms]:
   "\<lbrace>\<lambda>s::det_ext state. t \<noteq> idle_thread s\<rbrace> arch_post_modify_registers c t \<lbrace>\<lambda>_ s. t \<noteq> idle_thread s\<rbrace>"
   by (wpsimp simp: arch_post_modify_registers_def)
@@ -382,11 +380,19 @@ crunch
   for idle_thread[wp, DetSchedSchedule_AI_assms]: "\<lambda> (s:: det_ext state). P (idle_thread s)"
   (wp: crunch_wps crunch_simps)
 
-declare make_arch_fault_msg_invs[DetSchedSchedule_AI_assms]
+crunch handle_spurious_irq
+  for valid_sched[wp, DetSchedSchedule_AI_assms]: valid_sched
+  and valid_idle[wp, DetSchedSchedule_AI_assms]: valid_idle
 
 crunch arch_switch_to_thread
-  for etcbs_of[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (etcbs_of s)"
+  for cur_domain[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_domain s)"
+  and etcbs_of[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (etcbs_of s)"
+
+crunch prepare_thread_delete, arch_post_cap_deletion, arch_finalise_cap
+  for cur_thread[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_thread s)"
   and cur_domain[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_domain s)"
+  and etcbs_of[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (etcbs_of s)"
+  (wp: mapM_x_wp_inv_weak crunch_wps simp: crunch_simps ignore: set_object)
 
 end
 

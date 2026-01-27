@@ -400,3 +400,10 @@ Notify the FPU when deleting a thread, in case that thread is using the FPU
 > prepareThreadDelete :: PPtr TCB -> Kernel ()
 > prepareThreadDelete threadPtr = fpuRelease threadPtr
 
+Save and clear any FPU state of a TCB before changing its domain, to ensure that
+we do not later write to cross-domain state.
+
+> prepareSetDomain :: PPtr TCB -> Domain -> Kernel ()
+> prepareSetDomain t newDom = do
+>     curDom <- curDomain
+>     when (curDom /= newDom) (fpuRelease t)

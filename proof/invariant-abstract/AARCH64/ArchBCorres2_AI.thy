@@ -45,17 +45,6 @@ lemma invoke_tcb_bcorres[wp]:
    apply (wp | wpc | simp)+
   done
 
-lemma transfer_caps_loop_bcorres[wp]:
- "bcorres (transfer_caps_loop ep buffer n caps slots mi) (transfer_caps_loop ep buffer n caps slots mi)"
-  apply (induct caps arbitrary: slots n mi ep)
-   apply simp
-   apply wp
-  apply (case_tac a)
-  apply simp
-  apply (intro impI conjI)
-             apply (wp | simp)+
-  done
-
 lemma invoke_irq_control_bcorres[wp]: "bcorres (invoke_irq_control a) (invoke_irq_control a)"
   apply (cases a)
    apply wpsimp
@@ -66,9 +55,9 @@ lemma invoke_irq_control_bcorres[wp]: "bcorres (invoke_irq_control a) (invoke_ir
 lemma invoke_irq_handler_bcorres[wp]: "bcorres (invoke_irq_handler a) (invoke_irq_handler a)"
   by (cases a; (wpsimp | rule conjI)+)
 
-lemma make_arch_fault_msg_bcorres[wp,BCorres2_AI_assms]:
-  "bcorres (make_arch_fault_msg a b) (make_arch_fault_msg a b)"
-  by (cases a; simp ; wp)
+crunch maybe_handle_interrupt
+  for (bcorres) bcorres[wp, BCorres2_AI_assms]: truncate_state
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma handle_arch_fault_reply_bcorres[wp,BCorres2_AI_assms]:
   "bcorres ( handle_arch_fault_reply a b c d) (handle_arch_fault_reply a b c d)"
@@ -132,19 +121,6 @@ crunch receive_ipc,receive_signal,delete_caller_cap
 
 lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fault a b)"
   unfolding handle_vm_fault_def by (cases b; wpsimp)
-
-lemma vgic_maintenance_bcorres[wp]:
-  "bcorres vgic_maintenance vgic_maintenance"
-  unfolding vgic_maintenance_def
-  by (wpsimp simp: vgic_update_lr_bcorres)
-
-lemma vppi_event_bcorres[wp]:
-  "bcorres (vppi_event irq) (vppi_event irq)"
-  unfolding vppi_event_def
-  by wpsimp
-
-lemma handle_reserved_irq_bcorres[wp]: "bcorres (handle_reserved_irq a) (handle_reserved_irq a)"
-  unfolding handle_reserved_irq_def by wpsimp
 
 crunch handle_hypervisor_fault, timer_tick
   for (bcorres) bcorres[wp]: truncate_state

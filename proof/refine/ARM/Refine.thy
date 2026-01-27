@@ -266,7 +266,7 @@ lemma call_kernel_sched_act_rct[wp]:
   call_kernel e
   \<lbrace>\<lambda>rs (s::det_state). scheduler_action s = resume_cur_thread\<rbrace>"
   apply (simp add: call_kernel_def)
-  apply (wp activate_thread_sched_act | simp)+
+  apply (wpsimp wp: activate_thread_sched_act handle_spurious_irq_invs)
   apply (clarsimp simp: active_from_running)
   done
 
@@ -396,13 +396,10 @@ lemma ckernel_invs:
   callKernel e
   \<lbrace>\<lambda>rs. (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
     and (invs' and (ct_running' or ct_idle'))\<rbrace>"
-  apply (simp add: callKernel_def)
-  apply (rule hoare_pre)
-   apply (wp activate_invs' activate_sch_act schedule_sch
-             schedule_sch_act_simple he_invs' schedule_invs'
-             hoare_drop_imp[where Q'="\<lambda>_. kernelExitAssertions"]
-          | simp add: no_irq_getActiveIRQ)+
-  done
+  unfolding callKernel_def
+  by (wpsimp wp: activate_invs' activate_sch_act schedule_sch schedule_sch_act_simple he_invs'
+                 schedule_invs' hoare_drop_imp[where Q'="\<lambda>_. kernelExitAssertions"]
+             simp: no_irq_getActiveIRQ)+
 
 (* abstract and haskell have identical domain list fields *)
 abbreviation valid_domain_list' :: "'a kernel_state_scheme \<Rightarrow> bool" where
@@ -529,50 +526,23 @@ lemma kernel_corres':
              (call_kernel event)
              (do _ \<leftarrow> runExceptT $
                       handleEvent event `~catchError~`
-                        (\<lambda>_. withoutPreemption $ do
-                               irq <- doMachineOp (getActiveIRQ True);
-                               when (isJust irq) $ handleInterrupt (fromJust irq)
-                             od);
+                        (\<lambda>_. withoutPreemption $ maybeHandleInterrupt True);
                  _ \<leftarrow> ThreadDecls_H.schedule;
                  activateThread
               od)"
-  unfolding call_kernel_def callKernel_def
-  apply (simp add: call_kernel_def callKernel_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split)
-       apply (rule corres_split_handle[OF handleEvent_corres])
-         apply simp
-         apply (rule corres_split[OF corres_machine_op])
-            apply (rule corres_underlying_trivial)
-            apply (rule no_fail_getActiveIRQ)
-           apply clarsimp
-           apply (rule_tac x=irq in option_corres)
-            apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
-            apply (simp add: when_def)
-           apply (rule corres_when[simplified dc_def], simp)
-           apply simp
-           apply (rule handleInterrupt_corres[simplified dc_def])
-          apply simp
-          apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift simp: schact_is_rct_def)[1]
-         apply simp
-         apply (rule_tac Q'="\<lambda>irq s. invs' s \<and>
-                              (\<forall>irq'. irq = Some irq' \<longrightarrow>
-                                 intStateIRQTable (ksInterruptState s ) irq' \<noteq>
-                                 IRQInactive)"
-                      in hoare_post_imp)
-          apply simp
-         apply (wp doMachineOp_getActiveIRQ_IRQ_active handle_event_valid_sched | simp)+
-       apply (rule_tac Q'="\<lambda>_. \<top>" and E'="\<lambda>_. invs'" in hoare_strengthen_postE)
-         apply wpsimp+
-       apply (simp add: invs'_def valid_state'_def)
+  apply (simp add: call_kernel_def)
+  apply (corres corres: handleEvent_corres maybeHandleInterrupt_corres)
+        apply (wp handle_event_valid_sched)+
       apply (rule corres_split[OF schedule_corres])
         apply (rule activateThread_corres)
-       apply (wp handle_interrupt_valid_sched[unfolded non_kernel_IRQs_def, simplified]
-                 schedule_invs' hoare_vcg_if_lift2 hoare_drop_imps |simp)+
+       apply (wpsimp wp: handle_interrupt_valid_sched[unfolded non_kernel_IRQs_def, simplified]
+                         handle_spurious_irq_invs schedule_invs' hoare_vcg_if_lift2
+                         hoare_drop_imps
+                     simp: maybe_handle_interrupt_def)+
      apply (rule_tac Q'="\<lambda>_. valid_sched and invs and valid_list" and
                      E'="\<lambda>_. valid_sched and invs and valid_list"
-            in hoare_strengthen_postE)
-       apply (wp handle_event_valid_sched hoare_vcg_imp_lift' |simp)+
+                     in hoare_strengthen_postE)
+       apply (wpsimp wp: handle_event_valid_sched)+
    apply (clarsimp simp: active_from_running schact_is_rct_def)
   apply (clarsimp simp: active_from_running')
   done

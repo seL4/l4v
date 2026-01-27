@@ -758,10 +758,10 @@ lemma state_vrefs_store_PageTablePTE:
     apply (clarsimp simp: pte_ref_def2 split: if_splits)
     apply (fastforce simp: empty_pt_def vs_refs_aux_def graph_of_def pte_ref2_def split: if_splits pt.splits)
    apply (drule_tac s=s and pte=pte and p=p in vs_lookup_PageTablePTE)
-              apply ((fastforce simp: ptes_of_pts_of_upd ptes_of_Some pts_of_Some aobjs_of_Some
-                              intro: ptes_of_pts_of_upd
-                               dest: pte_ptr_eq split: if_splits
-                     | clarsimp simp: opt_map_def fun_upd_def split: option.splits)+; fail)+
+              apply (((fastforce simp: ptes_of_pts_of_upd ptes_of_Some pts_of_Some aobjs_of_Some
+                                intro: ptes_of_pts_of_upd
+                                 dest: pte_ptr_eq split: if_splits
+                       | clarsimp simp: opt_map_def fun_upd_def split: option.splits)+; fail)+)[11]
    apply clarsimp
    apply (drule vs_lookup_level)
    apply (case_tac "lvl = asid_pool_level")
@@ -2224,7 +2224,7 @@ lemma vcpu_invalidate_active_integrity_hyp[wp]:
   unfolding vcpu_invalidate_active_def integrity_hyp_def vcpu_integrity_def vcpu_proj_of_state
   supply if_split[split del] if_split[where P="\<lambda>v. _ = v", simp]
   apply (wpsimp wp: vcpu_disable_vcpu_proj hoare_vcg_all_lift hoare_vcg_imp_lift')
-  apply (fastforce elim!: allE)
+  apply fastforce
   done
 
 lemma vcpu_invalidate_active_respects[wp]:
@@ -2232,6 +2232,41 @@ lemma vcpu_invalidate_active_respects[wp]:
    vcpu_invalidate_active
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   unfolding integrity_no_hyp_absorb by (wpsimp wp: hoare_vcg_all_lift)
+
+\<comment> \<open>Flush\<close>
+
+lemma vcpu_invalidate_active_vcpu_proj[wp]:
+  "\<lbrace>\<lambda>s. vopt = vcpu_proj r l True v a p s \<and> savedWhenDisabledRegs \<subseteq> r \<and> h\<rbrace>
+   vcpu_invalidate_active
+   \<lbrace>\<lambda>rv s. vopt = vcpu_proj r l h v a p s\<rbrace>"
+  supply if_split[split del] if_split_asm[split]
+  unfolding vcpu_invalidate_active_def
+  by wpsimp
+
+lemma vcpu_flush_integrity_hyp[wp]:
+  "\<lbrace>integrity_hyp aag subjects x st and valid_arch_state\<rbrace>
+   vcpu_flush
+   \<lbrace>\<lambda>_. integrity_hyp aag subjects x st\<rbrace>"
+  unfolding integrity_hyp_def vcpu_integrity_def vcpu_flush_def vcpu_proj_of_state
+  supply if_split[split del] if_split[where P="\<lambda>v. _ = v", simp]
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift'
+                    hoare_pre_cont[where f=vcpu_invalidate_active and P="\<lambda>_ s. arm_current_vcpu (arch_state s) = Some x" for x]
+         | strengthen None_Some_strg)+
+  apply (fastforce split: if_splits)
+  done
+
+crunch vcpu_flush
+  for integrity_no_hyp[wp]: "integrity_no_hyp aag X st"
+
+lemma vcpu_flush_respects[wp]:
+  "\<lbrace>integrity aag X st and valid_arch_state\<rbrace>
+   vcpu_flush
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  unfolding integrity_no_hyp_absorb by (wpsimp wp: hoare_vcg_all_lift)
+
+crunch vcpu_flush_if_current
+  for respects[wp]: "integrity aag X st"
+  (wp: arch_thread_get_wp simp: crunch_simps)
 
 
 lemma arch_thread_set_integrity_autarch:
@@ -2404,7 +2439,7 @@ lemma arch_thread_thread_st_auth[wp]:
   apply (clarsimp simp: thread_st_auth_def tcb_states_of_state_def get_tcb_def obj_at_def)
   done
 
-crunch perform_vcpu_invocation
+crunch perform_vcpu_invocation, vcpu_flush
   for irq_map_wellformed[wp]: "irq_map_wellformed aag"
   and state_irqs_to_policy[wp]: "\<lambda>s. P (state_irqs_to_policy aag s)"
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
@@ -2479,7 +2514,7 @@ crunch perform_vcpu_invocation
   (wp: crunch_wps as_user_wp_thread_set_helper)
 
 crunch set_vcpu, arch_thread_set, vgic_update, vcpu_switch,
-       vcpu_invalidate_active, perform_vcpu_invocation
+       vcpu_flush, perform_vcpu_invocation
   for state_vrefs[wp]: "\<lambda>s. P (state_vrefs s)"
   (wp: state_vrefs_lift)
 
@@ -2522,13 +2557,13 @@ lemma vcpu_update_state_hyp_refs:
   by (fastforce simp: state_hyp_refs_of_def opt_map_def obj_at_def
                 elim: rsubst[where P=P] split: if_splits)
 
-crunch vcpu_switch
+crunch vcpu_switch, vcpu_flush
   for state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
   (wp: crunch_wps vcpu_update_state_hyp_refs)
 
-crunch vcpu_switch
+crunch vcpu_switch, vcpu_flush
   for pas_refined[wp]: "pas_refined aag"
-  (simp: pas_refined_def state_objs_to_policy_def ignore: vcpu_switch)
+  (simp: pas_refined_def state_objs_to_policy_def ignore: vcpu_switch vcpu_flush)
 
 lemma associate_vcpu_tcb_pas_refined:
   "\<lbrace>pas_refined aag and K (is_subject aag vr \<and> is_subject aag t)\<rbrace>

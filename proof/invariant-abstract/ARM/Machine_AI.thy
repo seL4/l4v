@@ -767,6 +767,12 @@ lemma empty_fail_clearMemory [simp, intro!]:
   "\<And>a b. empty_fail (clearMemory a b)"
   by (fastforce simp: clearMemory_def mapM_x_mapM ef_storeWord)
 
+crunch handleSpuriousIRQ_mop
+  for (no_irq) no_irq[intro!, wp, simp]
+  and (no_fail) no_fail[intro!, wp, simp]
+  and underlying_memory_inv[wp]: "\<lambda>s. P (underlying_memory s)"
+  (wp: no_fail_machine_state_rest_T ignore: handleSpuriousIRQ_impl)
+
 end
 
 lemmas msgRegisters_A_unfold

@@ -1282,7 +1282,7 @@ lemma handleInvocation_corres:
                apply (wpsimp wp: hoare_case_option_wp)
               apply (drule sym[OF conjunct1], simp, wp)
              apply (clarsimp simp: when_def)
-             apply (rule replyFromKernel_corres)
+             apply (rule replyFromKernel_corres; simp)
             apply (rule corres_split [OF setThreadState_corres], simp)
               apply (rule corres_splitEE)
                  apply (rule performInvocation_corres; simp)
@@ -1293,7 +1293,7 @@ lemma handleInvocation_corres:
                   apply (fold dc_def)[1]
                   apply (rule corres_split [OF _ setThreadState_corres])
                      apply simp
-                     apply (rule corres_when [OF refl replyFromKernel_corres])
+                     apply (rule corres_when [OF refl replyFromKernel_corres]; simp)
                     apply simp
                    apply (clarsimp simp: pred_conj_def, strengthen valid_objs_valid_tcbs)
                    apply wpsimp
@@ -2229,8 +2229,32 @@ lemma handleHypervisorFault_corres:
   apply (cases fault; clarsimp simp add: handleHypervisorFault_def returnOk_def2)
   done
 
+lemma handleSpuriousIRQ_corres[corres]:
+  "corres dc \<top> \<top> handle_spurious_irq handleSpuriousIRQ"
+  by (simp add: handle_spurious_irq_def handleSpuriousIRQ_def)
+
+lemma contract_all_imp_strg:
+  "P \<and> P' \<and> (\<forall>x. R x \<longrightarrow> Q x) \<Longrightarrow> \<forall>x. R x \<longrightarrow> P \<and> Q x \<and> P'"
+  by blast
+
+lemma maybeHandleInterrupt_corres:
+  "corres dc
+     (einvs and current_time_bounded) invs'
+     (maybe_handle_interrupt in_kernel) (maybeHandleInterrupt in_kernel)"
+  unfolding maybe_handle_interrupt_def maybeHandleInterrupt_def
+  apply (corres corres: corres_machine_op handleInterrupt_corres[@lift_corres_args]
+                simp: irq_state_independent_def
+         | corres_cases_both)+
+     apply (wpsimp wp: hoare_drop_imp)
+    apply clarsimp
+    apply (strengthen contract_all_imp_strg[where P'=True, simplified])
+    apply (wpsimp wp: doMachineOp_getActiveIRQ_IRQ_active' hoare_vcg_all_lift)
+   apply clarsimp
+  apply (clarsimp simp: invs'_def)
+  done
+
 (* FIXME: move *)
-crunch handleVMFault,handleHypervisorFault
+crunch handleVMFault, handleHypervisorFault
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   and cap_to'[wp]: "ex_nonz_cap_to' t"
   and ksit[wp]: "\<lambda>s. P (ksIdleThread s)"
@@ -2423,6 +2447,14 @@ lemma schedulable'_runnableE:
   "schedulable' t s \<Longrightarrow> tcb_at' t s \<Longrightarrow> st_tcb_at' runnable' t s"
   unfolding schedulable'_def
   by (clarsimp simp: pred_tcb_at'_def obj_at'_def opt_pred_def opt_map_def)
+
+lemma handleSpuriousIRQ_invs'[wp]:
+  "handleSpuriousIRQ \<lbrace>invs'\<rbrace>"
+  by (simp add: handleSpuriousIRQ_def)
+
+crunch handleSpuriousIRQ, maybeHandleInterrupt
+  for invs'[wp]: invs'
+  (ignore: doMachineOp)
 
 lemma he_invs'[wp]:
   "\<lbrace>invs' and cur_tcb' and
@@ -2778,27 +2810,7 @@ proof -
       apply (rule corres_guard_imp)
         apply (rule corres_split[OF updateTimeStamp_corres])
           apply (rule corres_split[OF checkBudget_corres])
-            apply (rule corres_split_eqr[OF corres_machine_op])
-               apply (rule corres_Id, simp+)
-               apply wpsimp
-              apply clarsimp
-              apply (rename_tac active)
-              apply (rule corres_option_split)
-                apply simp
-               apply (rule corres_return[THEN iffD2, where P1=\<top> and P'1=\<top>])
-               apply clarsimp
-              apply (rule handleInterrupt_corres)
-             apply (wpsimp wp: hoare_case_option_wp)
-             apply (rule_tac Q'="\<lambda>_. einvs and current_time_bounded" in hoare_post_imp)
-              apply (clarsimp split: option.splits)
-             apply wpsimp
-            apply (rule_tac Q'="\<lambda>active. invs'
-                                         and (\<lambda>s. \<forall>irq. active = Some irq \<longrightarrow>
-                                                        intStateIRQTable (ksInterruptState s) irq
-                                                          \<noteq> irqstate.IRQInactive)"
-                         in hoare_post_imp)
-             apply (clarsimp split: option.splits)
-            apply (wpsimp wp:  hoare_vcg_all_lift doMachineOp_getActiveIRQ_IRQ_active')
+            apply (corres corres: maybeHandleInterrupt_corres)
            apply (wpsimp wp: check_budget_valid_sched)
           apply (rule_tac Q'="\<lambda>_. invs'" in hoare_post_imp)
            apply (clarsimp simp: invs'_def)

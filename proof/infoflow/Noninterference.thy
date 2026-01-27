@@ -681,6 +681,8 @@ locale Noninterference_1 =
   and dmo_getActive_IRQ_reads_respect_scheduler:
     "reads_respects_scheduler aag l (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s)
                              (do_machine_op (getActiveIRQ in_kernel))"
+  and handle_spurious_irq_reads_respects_scheduler[wp]:
+    "reads_respects_scheduler aag l \<top> handle_spurious_irq"
   (* FIXME IF: precludes ARM_HYP *)
   and getActiveIRQ_no_non_kernel_IRQs:
     "getActiveIRQ True = getActiveIRQ False"
@@ -3451,14 +3453,13 @@ lemma preemption_interrupt_scheduler_invisible:
                               and (\<lambda>s. ct_idle s \<longrightarrow> uc' = idle_context s)
                               and (\<lambda>s. \<not> reads_scheduler_cur_domain aag l s))
                        (handle_preemption_if uc) (kernel_entry_if Interrupt uc')"
-  apply (simp add: kernel_entry_if_def handle_preemption_if_def getActiveIRQ_no_non_kernel_IRQs)
+  apply (simp add: kernel_entry_if_def handle_preemption_if_def maybe_handle_interrupt_def
+                   getActiveIRQ_no_non_kernel_IRQs)
   apply (rule equiv_valid_2_bind_right)
        apply (rule equiv_valid_2_bind_right)
             apply (simp add: liftE_def bind_assoc)
             apply (simp only: option.case_eq_if)
             apply (rule equiv_valid_2_bind_pre[where R'="(=)"])
-                 apply (simp add: when_def split del: if_split)
-                 apply (subst if_swap)
                  apply (simp split del: if_split)
                  apply (rule equiv_valid_2_bind_pre[where R'="(=)" and Q="\<top>\<top>" and Q'="\<top>\<top>"])
                       apply (rule return_ev2)
@@ -3485,11 +3486,13 @@ lemma handle_preemption_reads_respects_scheduler:
                                            and domain_sep_inv False st and silc_inv aag st'
                                            and (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s))
                               (handle_preemption_if uc)"
-  apply (simp add: handle_preemption_if_def)
+  apply (simp add: handle_preemption_if_def maybe_handle_interrupt_def)
   apply (wp when_ev handle_interrupt_reads_respects_scheduler
             dmo_getActiveIRQ_return_axiom[simplified try_some_magic]
             dmo_getActive_IRQ_reads_respect_scheduler
-         | simp add: imp_conjR| wp (once) hoare_drop_imps)+
+         | simp add: imp_conjR all_conj_distrib
+         | wpc
+         | wp (once) hoare_drop_imps hoare_vcg_all_lift)+
   apply force
   done
 
@@ -3512,7 +3515,7 @@ lemma kernel_entry_scheduler_equiv_2:
                               and (\<lambda>s. ct_idle s \<longrightarrow> uc' = idle_context s)
                               and (\<lambda>s. reads_scheduler_cur_domain aag l s \<longrightarrow> uc = uc'))
                        (kernel_entry_if Interrupt uc) (kernel_entry_if Interrupt uc')"
-  apply (simp add: kernel_entry_if_def)
+  apply (simp add: kernel_entry_if_def maybe_handle_interrupt_def)
   apply (simp add: bind_assoc[symmetric])
   apply (rule equiv_valid_2_bind_pre[where R'="(=)"])
        apply (rule_tac P="\<top>" and P'="\<top>" in return_ev2)

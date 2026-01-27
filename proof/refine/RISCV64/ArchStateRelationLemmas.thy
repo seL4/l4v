@@ -82,21 +82,15 @@ lemma obj_relation_cutsE:
             split: Structures_A.kernel_object.splits kernel_object.splits if_splits
                    RISCV64_A.arch_kernel_obj.splits)
 
-lemma is_other_obj_relation_type_CapTable[StateRelation_R_assms]:
-  "\<not> is_other_obj_relation_type (ACapTable n)"
-  by (simp add: is_other_obj_relation_type_def)
-
-lemma is_other_obj_relation_type_SchedContext:
-  "\<not> is_other_obj_relation_type (ASchedContext n)"
-  by (simp add: is_other_obj_relation_type_def)
-
-lemma is_other_obj_relation_type_Reply:
+lemma is_other_obj_relation_type_gen[simp, StateRelation_R_assms]:
+  "\<And>n. \<not> is_other_obj_relation_type (ACapTable n)"
+  "\<And>n. \<not> is_other_obj_relation_type (ASchedContext n)"
   "\<not> is_other_obj_relation_type AReply"
-  by (simp add: is_other_obj_relation_type_def)
-
-lemma is_other_obj_relation_type_TCB[StateRelation_R_assms]:
   "\<not> is_other_obj_relation_type ATCB"
-  by (simp add: is_other_obj_relation_type_def)
+  "is_other_obj_relation_type AEndpoint"
+  "is_other_obj_relation_type ANTFN"
+  "\<And>n. \<not> is_other_obj_relation_type (AGarbage n)"
+  by (auto simp: is_other_obj_relation_type_def)
 
 lemma is_other_obj_relation_type_PageTable:
   "\<not> is_other_obj_relation_type (AArch APageTable)"
@@ -109,6 +103,23 @@ lemma is_other_obj_relation_type_UserData:
 lemma is_other_obj_relation_type_DeviceData:
   "\<not> is_other_obj_relation_type (AArch (ADeviceData sz))"
   unfolding is_other_obj_relation_type_def by simp
+
+lemma obj_relation_cuts_trivial[StateRelation_R_assms]:
+  "ptr \<in> fst ` obj_relation_cuts ty ptr"
+  apply (case_tac ty)
+      apply (rename_tac sz cs)
+      apply (clarsimp simp:image_def cte_map_def well_formed_cnode_n_def)
+      apply (rule_tac x = "replicate sz False" in exI)
+      apply clarsimp+
+  apply (rename_tac arch_kernel_obj)
+  apply (case_tac arch_kernel_obj)
+     apply clarsimp
+    apply (simp_all add:image_def pageBits_def)
+    apply (rule_tac x = 0 in exI, simp)+
+  apply (rule p2_gt_0[THEN iffD2])
+  apply (rename_tac vmpage_size)
+  by (case_tac vmpage_size;
+      clarsimp simp:pageBitsForSize_def bit_simps)
 
 lemma cap_relation_case':
   "cap_relation cap cap' = (case cap of
@@ -167,6 +178,14 @@ lemma other_aobj_relation_aobj:
   "other_aobj_relation ko ko' \<Longrightarrow> is_ArchObj ko"
   unfolding other_aobj_relation_def is_ArchObj_def
   by (clarsimp split: Structures_A.kernel_object.splits)
+
+lemma msgLabelBits_msg_label_bits[StateRelation_R_assms]:
+  "msgLabelBits = msg_label_bits"
+  by (simp add: msgLabelBits_def)
+
+lemma msgInfoRegister_msg_info_register[StateRelation_R_assms]:
+  "msgInfoRegister = msg_info_register"
+  by (simp add: msg_info_register_def msgInfoRegister_def)
 
 end
 

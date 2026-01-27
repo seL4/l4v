@@ -38,6 +38,12 @@ jobs:
             plat: zynq7000
           - arch: ARM
             plat: zynqmp
+          - arch: ARM
+            plat: omap3
+          - arch: ARM
+            plat: am335x
+          - arch: ARM
+            plat: bcm2837
 
           - arch: ARM_HYP
             plat: exynos5410

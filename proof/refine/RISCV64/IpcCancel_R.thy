@@ -11,6 +11,9 @@ imports
   "Lib.SimpStrategy"
 begin
 
+arch_requalify_facts
+  valid_global_refs_lift'
+
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 (* FIXME RT: remove *)
@@ -999,7 +1002,7 @@ lemma setSchedContext_pop_head_corres:
       apply simp
      apply clarsimp
      apply (fastforce simp: opt_map_red dest!: sc_at'_cross[OF state_relation_pspace_relation])
-    apply (clarsimp simp: opt_map_red obj_at_simps)+
+    apply (clarsimp simp: opt_map_red gen_obj_at_simps)+
   apply (rule corres_symb_exec_r)
      apply (rule_tac P'="ko_at' sc' ptr and ko_at' reply' rp
                          and pspace_aligned' and pspace_distinct' and  K (scReply sc' = Some rp)" in corres_inst)
@@ -1173,7 +1176,7 @@ lemma replyPop_corres:
          apply (erule exE, rename_tac list)
          apply (rule_tac F="case list of [] \<Rightarrow> replyPrev r' = None | a#_ \<Rightarrow> replyPrev r' = Some a"
                 in corres_req)
-          apply (clarsimp simp: obj_at_simps)
+          apply (clarsimp simp: gen_obj_at_simps)
           apply (drule (1) sc_replies_relation_prevs_list'[OF state_relation_sc_replies_relation])
           apply (clarsimp simp: opt_map_red del: opt_mapE)
           apply (case_tac list; simp)
@@ -1289,7 +1292,7 @@ lemma replyPop_corres:
                              apply (frule (3) bound_sc_tcb_at_cross)
                              apply (fastforce simp: vs_all_heap_simps obj_at_kh_kheap_simps
                                                     weak_valid_sched_action_no_sc_sched_act_not)
-                            apply (clarsimp simp: pred_tcb_at'_def opt_map_red obj_at_simps pred_tcb_at_def)
+                            apply (clarsimp simp: pred_tcb_at'_def opt_map_red gen_obj_at_simps pred_tcb_at_def)
                             apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation, where x=t])
                             apply (rename_tac tcb' sc')
                             apply (clarsimp simp: tcb_relation_cut_def tcb_relation_def)
@@ -1347,7 +1350,7 @@ lemma replyPop_corres:
                   apply (clarsimp simp: obj_at'_def  opt_map_red ps_clear_upd
                                  split: if_split)
                  apply (fastforce dest!: sym_refs_replyNext_replyPrev_sym[where rp'=rp and rp=rp, THEN iffD2]
-                                   simp: obj_at_simps opt_map_red)
+                                   simp: gen_obj_at_simps opt_map_red)
                 apply (clarsimp del: opt_mapE)
                 apply (drule (4) sym_refs_scReplies[simplified sym_heap_def, rule_format, THEN iffD1])
                 apply (clarsimp simp: obj_at'_def  opt_map_red)
@@ -1380,7 +1383,7 @@ lemma replyPop_corres:
    apply wpsimp
    apply (prop_tac "distinct (sc_replies sc)")
     apply (fastforce simp: valid_obj_def obj_at_def is_sc_obj valid_sched_context_def)
-   apply (clarsimp simp: obj_at_simps opt_map_red vs_all_heap_simps)
+   apply (clarsimp simp: gen_obj_at_simps opt_map_red vs_all_heap_simps)
   apply wpsimp
   apply (clarsimp simp: obj_at_def is_sc_obj)
   done
@@ -1747,7 +1750,7 @@ lemma cancel_ipc_corres:
           apply (rule cancelSignal_corres)
          apply simp+
        apply (wpsimp wp: thread_set_invs_fault_None thread_set_valid_ready_qs thread_set_no_change_tcb_state)
-      apply (wpsimp wp: threadSet_pred_tcb_no_state threadSet_invs_trivial)+
+      apply (wpsimp wp: threadSet_pred_tcb_no_state RISCV64.threadSet_invs_trivial)+ (*FIXME arch-split RT*)
      apply (wp gts_sp[where P="\<top>", simplified])+
     apply (rule hoare_strengthen_post)
      apply (rule gts_sp'[where P="\<top>"])
@@ -1950,7 +1953,7 @@ lemma blockedCancelIPC_invs':
 
 lemma threadSet_fault_invs':
   "threadSet (tcbFault_update upd) t \<lbrace>invs'\<rbrace>"
-  apply (wpsimp wp: threadSet_invs_trivial)
+  apply (wpsimp wp: RISCV64.threadSet_invs_trivial) (*FIXME arch-split RT*)
   done
 
 lemma cancelIPC_invs'[wp]:
@@ -2127,7 +2130,7 @@ lemma (in delete_one) suspend_corres:
   apply add_sym_refs
   apply (rule corres_stateAssert_add_assertion)
    prefer 2
-   apply (clarsimp simp: sym_refs_asrt_def)
+   apply clarsimp
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor[OF cancel_ipc_corres])
       apply (rule corres_split[OF getThreadState_corres], rename_tac state state')
@@ -2150,7 +2153,7 @@ lemma (in delete_one) suspend_corres:
                 apply (rule schedContextCancelYieldTo_corres)
                apply wpsimp+
           apply (wpsimp simp: update_restart_pc_def updateRestartPC_def wp: as_user_valid_tcbs)+
-       apply (rule hoare_post_imp[where Q'="\<lambda>rv s. invs s \<and> tcb_at t s \<and> valid_sched s"])
+       apply (rule hoare_post_imp[where Q'="\<lambda>_ s. invs s \<and> tcb_at t s \<and> valid_sched s"])
         apply (fastforce dest: valid_sched_valid_release_q valid_sched_valid_ready_qs)
        apply wp
       apply wpsimp
@@ -2324,7 +2327,7 @@ lemma restart_thread_if_no_fault_corres:
                                                       \<and> valid_sched_pointers s
                                                       \<and> pspace_aligned' s \<and> pspace_distinct' s
                                                       \<and> pspace_bounded' s", rotated])
-        apply (clarsimp simp: obj_at_simps)
+        apply (clarsimp simp: gen_obj_at_simps)
        apply (wpsimp wp: sts_st_tcb_at'_cases)
       apply (rule setThreadState_corres)
       apply clarsimp
@@ -2895,6 +2898,18 @@ lemma valid_pspace'_pspace_bounded'[elim!]:
   "valid_pspace' s \<Longrightarrow> pspace_bounded' s"
   by fastforce
 
+context Arch begin arch_global_naming
+
+lemma tcbSchedEnqueue_valid_pspace'[wp]:
+  "tcbSchedEnqueue tcbPtr \<lbrace>valid_pspace'\<rbrace>"
+  unfolding valid_pspace'_def
+  by wpsimp
+
+end
+
+arch_requalify_facts tcbSchedEnqueue_valid_pspace' (* FIXME arch-split: interface *)
+lemmas [wp] = tcbSchedEnqueue_valid_pspace'
+
 lemma cancel_all_invs'_helper:
   "\<lbrace>invs'
     and (\<lambda>s. (\<forall>x \<in> set q.
@@ -2917,7 +2932,8 @@ lemma cancel_all_invs'_helper:
   supply if_split[split del] comp_apply[simp del]
   unfolding valid_dom_schedule'_def invs'_def
   apply (rule mapM_x_inv_wp2)
-   apply clarsimp
+   (* FIXME arch-split: this helper lemma has different definition on hyp platforms *)
+   apply (clarsimp simp: RISCV64.non_hyp_state_hyp_refs_of')
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
                     hoare_vcg_const_Ball_lift sts_st_tcb'
                     possibleSwitchTo_sch_act_not_other)
@@ -3061,7 +3077,7 @@ lemma cancelAllIPC_invs'[wp]:
   apply (intro bind_wp[OF _ stateAssert_sp])
   apply (wpsimp wp: rescheduleRequired_invs' cancel_all_invs'_helper
                     hoare_vcg_const_Ball_lift
-                    valid_global_refs_lift' valid_arch_state_lift'
+                    valid_global_refs_lift'
                     valid_irq_node_lift ssa_invs' sts_sch_act' getEndpoint_wp
                     irqs_masked_lift)
      apply (clarsimp simp: invs'_def valid_ep'_def)

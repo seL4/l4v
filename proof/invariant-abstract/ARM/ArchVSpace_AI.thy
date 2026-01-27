@@ -20,7 +20,7 @@ lemma kernel_base_shift_cast_le:
   "(kernel_base >> 20 \<le> ucast x) =
         (ucast (kernel_base >> 20) \<le> x)"
   apply (simp add: word_le_def)
-  apply (subst uint_ucast, simp, simp add: kernel_base_def)
+  apply (subst uint_ucast, simp, simp add: kernel_base_def pptrBase_def)
   apply (simp only: ucast_def)
   apply (subst word_uint.Abs_inverse)
    apply (cut_tac x=x in word_uint.Rep)
@@ -2337,7 +2337,7 @@ lemma kernel_vsrefs_kernel_mapping_slots:
     (VSRef (p && mask pd_bits >> 2) (Some APageDirectory) \<in> kernel_vsrefs)"
   by (clarsimp simp: kernel_mapping_slots_def kernel_vsrefs_def
                      word_le_nat_alt unat_ucast_pd_bits_shift
-                     kernel_base_def)
+                     kernel_base_def pptrBase_def)
 
 lemma vs_lookup_typI:
   "\<lbrakk>(r \<rhd> p) s; valid_vspace_objs s; valid_asid_table (arm_asid_table (arch_state s)) s\<rbrakk>

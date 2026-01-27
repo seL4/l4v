@@ -771,7 +771,7 @@ lemma switchToThread_fp_ccorres:
    (* haskell precondition *)
    apply (clarsimp simp: cte_level_bits_def field_simps cte_wp_at_ctes_of
                          addrFromPPtr_canonical_in_kernel_window split: option.splits)
-   apply (erule (3) valid_tcb'_vcpuE[OF valid_objs_valid_tcb'])
+   apply (erule (3) valid_tcb'_vcpuE[OF tcb_ko_at_valid_objs_valid_tcb'])
   (* C precondition *)
   apply (clarsimp simp: typ_heap_simps' ctcb_relation_tcbVCPU
                         ucast_and_mask_drop[where n=16, simplified mask_def, simplified])

@@ -304,3 +304,12 @@ prepareThreadDelete thread = do
       Just ptr -> dissociateVCPUTCB ptr thread
       _ -> return ()
     fpuRelease thread
+
+-- Save and clear any FPU and VCPU state of a TCB before changing its domain, to
+-- ensure that we do not later write to cross-domain state.
+prepareSetDomain :: PPtr TCB -> Domain -> Kernel ()
+prepareSetDomain t newDom = do
+    curDom <- curDomain
+    when (curDom /= newDom) $ do
+        vcpuFlushIfCurrent t
+        fpuRelease t

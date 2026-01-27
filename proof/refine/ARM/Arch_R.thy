@@ -46,7 +46,7 @@ lemma safe_parent_strg':
    descendants_of' p (ctes_of s) = {} \<and>
    valid_pspace' s
   \<longrightarrow> safe_parent_for' (ctes_of s) p (ArchObjectCap (ASIDPoolCap frame base))"
-  apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
+  apply (clarsimp simp: safe_parent_for'_def safe_parent_for_arch'_def cte_wp_at_ctes_of)
   apply (case_tac cte)
   apply (simp add: isCap_simps)
   apply (subst conj_comms)
@@ -186,7 +186,7 @@ lemma performASIDControlInvocation_corres:
           apply (wp createObjects_valid_pspace'
                     [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
              apply (simp add: makeObjectKO_def)+
-           apply (simp add:objBits_simps archObjSize_def range_cover_full)+
+           apply (simp add:objBits_simps archObjSize_def range_cover_full canonical_address_def)+
           apply (clarsimp simp:valid_cap'_def)
           apply (wp createObject_typ_at'
                     createObjects_orig_cte_wp_at'[where sz = pageBits])
@@ -1306,22 +1306,25 @@ lemma sts_valid_arch_inv':
 lemma less_pptrBase_valid_pde_offset':
   "\<lbrakk> vptr < pptrBase; x = 0 \<or> is_aligned vptr 24; x \<le> 0xF \<rbrakk>
      \<Longrightarrow> valid_pde_mapping_offset' (((x * 4) + (vptr >> 20 << 2)) && mask pdBits)"
-  apply (clarsimp simp: pptrBase_def pdBits_def pageBits_def
+  apply (clarsimp simp: pdBits_def pageBits_def
                         valid_pde_mapping_offset'_def pd_asid_slot_def)
   apply (drule word_le_minus_one_leq, simp add: pdeBits_def)
   apply (drule le_shiftr[where u=vptr and n=20])
   apply (subst(asm) iffD2[OF mask_eq_iff_w2p])
     apply (simp add: word_size)
-   apply (simp add: shiftl_t2n unat_arith_simps iffD1[OF unat_mult_lem])
+   apply (simp add: shiftl_t2n unat_arith_simps iffD1[OF unat_mult_lem] pptrBase_def
+               split: if_split_asm)
   apply (erule disjE)
-   apply (simp add: shiftl_t2n unat_arith_simps iffD1[OF unat_mult_lem])
+   apply (simp add: shiftl_t2n unat_arith_simps iffD1[OF unat_mult_lem] pptrBase_def
+               split: if_split_asm)
   apply (frule arg_cong[where f="\<lambda>v. v && mask 6"])
   apply (subst(asm) field_simps, subst(asm) is_aligned_add_helper[where n=6],
          rule is_aligned_shiftl)
     apply (rule is_aligned_shiftr, simp)
    apply (simp add: unat_arith_simps iffD1[OF unat_mult_lem])
   apply (simp add: mask_def[where n=6])
-  apply (simp add: shiftl_t2n unat_arith_simps iffD1[OF unat_mult_lem])
+  apply (simp add: shiftl_t2n unat_arith_simps iffD1[OF unat_mult_lem] pptrBase_def
+              split: if_split_asm)
   done
 
 lemmas less_pptrBase_valid_pde_offset''
@@ -1802,6 +1805,7 @@ lemma ex_cte_not_in_untyped_range:
 lemma performASIDControlInvocation_invs' [wp]:
   "\<lbrace>invs' and ct_active' and valid_aci' aci\<rbrace>
   performASIDControlInvocation aci \<lbrace>\<lambda>y. invs'\<rbrace>"
+  supply canonical_address_def[simp]
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp: performASIDControlInvocation_def valid_aci'_def
     placeNewObject_def2 cte_wp_at_ctes_of

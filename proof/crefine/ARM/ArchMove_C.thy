@@ -120,10 +120,9 @@ where
     0 \<notin> ran pool \<and> (\<forall>x \<in> ran pool. is_aligned x pdBits))"
 
 lemma valid_eq_wf_asid_pool'[simp]:
-  "valid_asid_pool' pool = (\<lambda>s. wf_asid_pool' pool)"
+  "valid_asid_pool' pool = wf_asid_pool' pool"
   by (case_tac pool) simp
 declare valid_asid_pool'.simps[simp del]
-(*<<<*)
 
 lemma valid_untyped':
   notes usableUntypedRange.simps[simp del]

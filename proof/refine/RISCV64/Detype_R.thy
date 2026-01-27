@@ -6,7 +6,7 @@
  *)
 
 theory Detype_R
-imports Retype_R
+imports ArchRetype_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
@@ -957,49 +957,53 @@ lemma deleteObjects_corres:
     apply (simp add: valid_pspace'_def)
     apply (rule state_relation_null_filterE, assumption,
            simp_all add: pspace_aligned'_cut pspace_distinct'_cut)[1]
-             apply (simp add: detype_def)
-            apply (intro exI, fastforce)
-           apply (rule ext, clarsimp simp add: null_filter_def)
+              apply (simp add: detype_def)
+             apply clarsimp
+             (* unification can't guess we want identity update on ksArchState s' *)
+             apply (repeat 3 \<open>rule exI\<close>, rule_tac x=id in exI)
+             apply fastforce
+            apply (rule ext, clarsimp simp add: null_filter_def)
+            apply (rule sym, rule ccontr, clarsimp)
+            apply (drule(4) cte_map_not_null_outside')
+             apply (fastforce simp add: cte_wp_at_caps_of_state)
+            apply simp
+           apply (rule ext, clarsimp simp add: null_filter'_def
+                              map_to_ctes_delete[simplified field_simps])
            apply (rule sym, rule ccontr, clarsimp)
-           apply (drule(4) cte_map_not_null_outside')
-            apply (fastforce simp add: cte_wp_at_caps_of_state)
-           apply simp
-          apply (rule ext, clarsimp simp add: null_filter'_def
-                             map_to_ctes_delete[simplified field_simps])
-          apply (rule sym, rule ccontr, clarsimp)
-          apply (frule(2) pspace_relation_cte_wp_atI
-                          [OF state_relation_pspace_relation])
-          apply (elim exE)
-          apply (frule(4) cte_map_not_null_outside')
-           apply (rule cte_wp_at_weakenE, erule conjunct1)
-           apply (case_tac y, clarsimp)
-           apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def
-                                  valid_nullcaps_def)
-          apply clarsimp
-          apply (frule_tac cref="(aa, ba)" in cte_map_untyped_range,
-                 erule cte_wp_at_weakenE[OF _ TrueI], assumption+)
+           apply (frule(2) pspace_relation_cte_wp_atI
+                           [OF state_relation_pspace_relation])
+           apply (elim exE)
+           apply (frule(4) cte_map_not_null_outside')
+            apply (rule cte_wp_at_weakenE, erule conjunct1)
+            apply (case_tac y, clarsimp)
+            apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def
+                                   valid_nullcaps_def)
+           apply clarsimp
+           apply (frule_tac cref="(aa, ba)" in cte_map_untyped_range,
+                  erule cte_wp_at_weakenE[OF _ TrueI], assumption+)
+           apply (simp add: add_mask_fold)
           apply (simp add: add_mask_fold)
-         apply (simp add: add_mask_fold)
-         apply (rule detype_pspace_relation[simplified],
-                simp_all add: state_relation_pspace_relation valid_pspace_def)[1]
-          apply (simp add: valid_cap'_def capAligned_def)
-         apply (clarsimp simp: valid_cap_def, assumption)
-        apply (rule detype_sc_replies_relation; blast?)
+          apply (rule detype_pspace_relation[simplified],
+                 simp_all add: state_relation_pspace_relation valid_pspace_def)[1]
+           apply (simp add: valid_cap'_def capAligned_def)
+          apply (clarsimp simp: valid_cap_def, assumption)
+         apply (rule detype_sc_replies_relation; blast?)
+           apply (clarsimp simp: deletionIsSafe_def)
+           apply (fastforce simp: add_mask_fold)
+          apply (erule state_relation_sc_replies_relation)
+         apply (fastforce simp add: detype_def add_mask_fold)
+        apply (rule detype_ready_queues_relation; blast?)
           apply (clarsimp simp: deletionIsSafe_def)
           apply (fastforce simp: add_mask_fold)
-         apply (erule state_relation_sc_replies_relation)
-        apply (fastforce simp add: detype_def add_mask_fold)
-       apply (rule detype_ready_queues_relation; blast?)
+         apply (frule state_relation_ready_queues_relation)
+         apply (simp add: ready_queues_relation_def Let_def)
+        apply (fastforce simp: add_mask_fold)
+       apply (rule detype_release_queue_relation; blast?)
          apply (clarsimp simp: deletionIsSafe_def)
          apply (fastforce simp: add_mask_fold)
-        apply (frule state_relation_ready_queues_relation)
-        apply (simp add: ready_queues_relation_def Let_def)
+        apply (erule state_relation_release_queue_relation)
        apply (fastforce simp: add_mask_fold)
-      apply (rule detype_release_queue_relation; blast?)
-        apply (clarsimp simp: deletionIsSafe_def)
-        apply (fastforce simp: add_mask_fold)
-       apply (erule state_relation_release_queue_relation)
-      apply (fastforce simp: add_mask_fold)
+      apply (clarsimp simp: state_relation_def)
      apply (clarsimp simp: state_relation_def ghost_relation_of_heap detype_def)
      apply (drule_tac t="gsUserPages s'" in sym)
      apply (drule_tac t="gsCNodes s'" in sym)
@@ -5023,7 +5027,7 @@ lemma ArchCreateObject_pspace_no_overlap':
    apply (simp add:shiftl_t2n field_simps)
   apply (intro conjI allI)
       apply (clarsimp simp: field_simps word_bits_conv
-                            APIType_capBits_def shiftl_t2n objBits_simps bit_simps
+                            APIType_capBits_gen_def shiftl_t2n objBits_simps bit_simps
              | rule conjI | erule range_cover_le,simp)+
   done
 
@@ -5077,7 +5081,7 @@ lemma createObject_pspace_no_overlap':
   apply (frule range_cover_offset[rotated,where p = n])
    apply simp+
   by (auto simp: word_shiftl_add_distrib field_simps shiftl_t2n elim: range_cover_le)
-     (auto simp: APIType_capBits_def fromAPIType_def objBits_def scBits_simps objBits_simps
+     (auto simp: APIType_capBits_def fromAPIType_def APIType_capBits_gen_def objBits_def scBits_simps objBits_simps
           dest!: to_from_apiTypeD)
 
 lemma createObject_pspace_aligned_distinct':

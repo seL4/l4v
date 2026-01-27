@@ -247,8 +247,10 @@ lemma perform_asid_pool_invocation_silc_inv:
   apply (fastforce simp: authorised_asid_pool_inv_def silc_inv_def)
   done
 
-crunch perform_sgi_invocation
+crunch perform_sgi_invocation, handle_spurious_irq
   for silc_inv: "silc_inv aag st"
+
+declare handle_spurious_irq_silc_inv[wp, FinalCaps_assms]
 
 lemma arch_perform_invocation_silc_inv[FinalCaps_assms]:
   "\<lbrace>silc_inv aag st and invs and valid_arch_inv ai and authorised_arch_inv aag ai\<rbrace>

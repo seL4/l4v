@@ -3754,7 +3754,7 @@ lemma Arch_getSanitiseRegisterInfo_ccorres:
   apply (clarsimp simp: typ_heap_simps ctcb_relation_def carch_tcb_relation_def)
   apply (rule conjI)
    apply clarsimp
-   apply (drule (1) valid_objs_valid_tcb')
+   apply (drule (1) tcb_ko_at_valid_objs_valid_tcb')
    apply (clarsimp simp: valid_tcb'_def valid_arch_tcb'_def)
   apply (clarsimp simp: typ_heap_simps)
   apply (case_tac "atcbVCPUPtr (tcbArch tcb) \<noteq> None")

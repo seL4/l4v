@@ -5,7 +5,7 @@
  *)
 
 theory Schedule_R
-imports VSpace_R
+imports ArchVSpace_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
@@ -15,10 +15,16 @@ declare hoare_weak_lift_imp[wp_split del]
 (* Levity: added (20090713 10:04:12) *)
 declare sts_rel_idle [simp]
 
-lemma corres_if2:
+lemma corres_if:
  "\<lbrakk> G = G'; G \<Longrightarrow> corres r P P' a c; \<not> G' \<Longrightarrow> corres r Q Q' b d \<rbrakk>
     \<Longrightarrow> corres r (if G then P else Q) (if G' then P' else Q') (if G then a else b) (if G' then c else d)"
   by simp
+
+lemmas corres_if2 = corres_if[unfolded if_apply_def2]
+
+lemmas corres_when =
+    corres_if2[where b="return ()" and d="return ()" and Q="\<top>" and Q'="\<top>" and r=dc,
+               simplified, folded when_def]
 
 lemma findM_awesome':
   assumes x: "\<And>x xs. suffix (x # xs) xs' \<Longrightarrow>
@@ -45,7 +51,7 @@ proof -
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF x])
          apply assumption
-        apply (rule corres_if2)
+        apply (rule corres_if)
           apply (case_tac ra, clarsimp+)[1]
          apply (rule corres_trivial, clarsimp)
          apply (case_tac ra, simp_all)[1]
@@ -538,6 +544,11 @@ lemma tcbSchedEnqueue_valid_mdb'[wp]:
   apply (fastforce dest!: obj_at'_tcbQueueHead_ksReadyQueues
                     simp: ready_queue_relation_def ksReadyQueues_asrt_def obj_at'_def)
   done
+
+lemma tcbSchedEnqueue_valid_pspace'[wp]:
+  "tcbSchedEnqueue tcbPtr \<lbrace>valid_pspace'\<rbrace>"
+  unfolding valid_pspace'_def
+  by wpsimp
 
 crunch tcbSchedEnqueue
   for cur_tcb'[wp]: cur_tcb'
@@ -1443,7 +1454,7 @@ lemma bitmapL1_highest_lookup:
      apply (rule order_less_le_trans[OF word_log2_max], simp add: word_size wordRadix_def')
     apply (simp add: word_size)
     apply (drule (1) bitmapQ_no_L1_orphansD[where d=d and i="word_log2 _"])
-    apply (simp add: numPriorities_def wordBits_def word_size l2BitmapSize_def')
+    apply (simp add: numPriorities_def wordBits_def word_size l2BitmapSize_def' wordRadix_def')
    apply simp
   apply (rule prioToL1Index_le_index[rotated], simp)
   apply (frule (2) bitmapQ_from_bitmap_lookup)
@@ -1454,7 +1465,7 @@ lemma bitmapL1_highest_lookup:
      apply (rule order_less_le_trans[OF word_log2_max], simp add: word_size)
     apply (rule order_less_le_trans[OF word_log2_max], simp add: word_size wordRadix_def')
    apply (fastforce dest: bitmapQ_no_L1_orphansD
-                    simp: wordBits_def numPriorities_def word_size l2BitmapSize_def')
+                    simp: wordBits_def numPriorities_def word_size l2BitmapSize_def' wordRadix_def')
   apply (erule word_log2_maximum)
   done
 
@@ -1858,10 +1869,48 @@ lemma nextDomain_invs_no_cicd':
                         all_invs_but_ct_idle_or_in_cur_domain'_def)
   done
 
+lemma vcpuInvalidateActive_corres[corres]:
+  "corres dc \<top> no_0_obj' vcpu_invalidate_active vcpuInvalidateActive"
+  unfolding vcpuInvalidateActive_def vcpu_invalidate_active_def
+  apply (corresKsimp  corres: vcpuDisable_corres
+                    corresK: corresK_modifyT
+                       simp: modifyArchState_def)
+  apply (clarsimp simp: state_relation_def arch_state_relation_def)
+  done
+
+lemma vcpuFlush_corres[corres]:
+  "corres dc valid_arch_state (pspace_aligned' and pspace_distinct' and no_0_obj')
+     vcpu_flush vcpuFlush"
+  unfolding vcpu_flush_def vcpuFlush_def
+  apply (rule stronger_corres_guard_imp)
+    apply (rule corres_split[OF corres_gets_current_vcpu])
+      apply clarsimp
+      apply (rule corres_when, simp)
+      apply clarsimp
+      apply (rule corres_split[OF vcpuSave_corres])
+        apply (rule vcpuInvalidateActive_corres)
+       apply wpsimp+
+   apply (clarsimp simp: valid_arch_state_def obj_at_def is_vcpu_def in_omonad)
+  apply (clarsimp simp: state_relation_def arch_state_relation_def)
+  apply (rule aligned_distinct_relation_vcpu_atI'; assumption?)
+  apply (clarsimp simp: valid_arch_state_def obj_at_def is_vcpu_def in_omonad)
+  done
+
+lemma vcpuFlush_invs'[wp]:
+  "vcpuFlush \<lbrace>invs'\<rbrace>"
+  unfolding vcpuFlush_def
+  by wpsimp
+
+crunch vcpu_flush
+  for pspace_aligned[wp]: pspace_aligned
+  and pspace_distinct[wp]: pspace_distinct
+
 lemma prepareNextDomain_corres[corres]:
-  "corres dc (pspace_aligned and pspace_distinct) \<top>
+  "corres dc (valid_arch_state and pspace_aligned and pspace_distinct and valid_cur_fpu)
+             (pspace_aligned' and pspace_distinct' and no_0_obj')
              arch_prepare_next_domain prepareNextDomain"
-  by (clarsimp simp: arch_prepare_next_domain_def prepareNextDomain_def)
+  apply (clarsimp simp: arch_prepare_next_domain_def prepareNextDomain_def)
+  by corres
 
 crunch prepareNextDomain
   for invs'[wp]: invs'
@@ -2360,7 +2409,7 @@ lemma scheduleChooseNewThread_invs':
   "\<lbrace> invs' and (\<lambda>s. ksSchedulerAction s = ChooseNewThread) \<rbrace>
    scheduleChooseNewThread
    \<lbrace> \<lambda>_ s. invs' s \<rbrace>"
-  unfolding scheduleChooseNewThread_def
+  unfolding scheduleChooseNewThread_def prepareNextDomain_def
   apply (wpsimp wp: ssa_invs' chooseThread_invs_no_cicd' chooseThread_ct_not_queued_2
                     chooseThread_activatable_2 chooseThread_invs_no_cicd'
                     chooseThread_in_cur_domain' nextDomain_invs_no_cicd' chooseThread_ct_not_queued_2)
@@ -2441,7 +2490,7 @@ lemma scheduleChooseNewThread_ct_activatable'[wp]:
   "\<lbrace> invs' and (\<lambda>s. ksSchedulerAction s = ChooseNewThread) \<rbrace>
    scheduleChooseNewThread
    \<lbrace>\<lambda>_. ct_in_state' activatable'\<rbrace>"
-  unfolding scheduleChooseNewThread_def
+  unfolding scheduleChooseNewThread_def prepareNextDomain_def
   by (wpsimp simp: ct_in_state'_def
                 wp: ssa_invs' nextDomain_invs_no_cicd'
                     chooseThread_activatable_2[simplified ct_in_state'_def]

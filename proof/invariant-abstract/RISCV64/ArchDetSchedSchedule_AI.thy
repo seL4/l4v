@@ -314,10 +314,10 @@ lemma handle_hyp_fault_trivial[wp]:
   "handle_hypervisor_fault t fault \<lbrace>Q\<rbrace>"
   by (cases fault; wpsimp)
 
-crunch arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags
+crunch arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags, handle_spurious_irq
   for valid_sched_pred_strong[wp, DetSchedSchedule_AI_assms]: "valid_sched_pred_strong P"
 
-crunch arch_prepare_set_domain
+crunch arch_prepare_set_domain, handle_spurious_irq
   for valid_idle[wp]: "valid_idle"
 
 crunch arch_prepare_next_domain

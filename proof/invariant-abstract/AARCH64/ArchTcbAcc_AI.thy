@@ -268,6 +268,31 @@ lemma arch_thread_set_cur_fpu_sym_refs_hyp[wp]:
   "arch_thread_set (tcb_cur_fpu_update f) t \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
   by (wpsimp wp: arch_thread_set_sym_refs_hyp')
 
+lemma bound_tcb_bound_vcpu_at:
+  "\<lbrakk>sym_refs (state_hyp_refs_of s); valid_objs s;
+    arch_tcb_at (\<lambda>itcb. itcb_vcpu itcb = (Some vcpuptr)) tcbptr s \<rbrakk>
+  \<Longrightarrow> vcpu_tcbs_of s vcpuptr = Some tcbptr"
+  apply (drule_tac x=tcbptr in sym_refsD[rotated])
+   apply (fastforce simp: state_hyp_refs_of_def pred_tcb_at_def obj_at_def)
+  apply (clarsimp simp: pred_tcb_def2)
+  apply (frule (1) valid_tcb_objs)
+  apply (clarsimp simp: valid_tcb_def valid_arch_tcb_def typ_at_eq_kheap_obj)
+  apply (fastforce simp: in_omonad state_hyp_refs_of_def vcpu_tcb_refs_def
+                  split: option.splits)
+  done
+
+lemma bound_vcpu_bound_tcb_at:
+  "\<lbrakk>sym_refs (state_hyp_refs_of s); valid_objs s; vcpu_tcbs_of s vcpuptr = Some tcbptr\<rbrakk>
+   \<Longrightarrow> arch_tcb_at (\<lambda>itcb. itcb_vcpu itcb = (Some vcpuptr)) tcbptr s"
+  apply (drule_tac x=vcpuptr in sym_refsD[rotated])
+   apply (fastforce simp: state_hyp_refs_of_def pred_tcb_at_def obj_at_def in_omonad)
+  apply (clarsimp simp: in_omonad)
+  apply (erule (1) valid_objsE)
+  apply (clarsimp simp: valid_obj_def valid_vcpu_def typ_at_eq_kheap_obj)
+  apply (fastforce simp: pred_tcb_at_def obj_at_def state_hyp_refs_of_def tcb_vcpu_refs_def
+                  split: option.splits)
+  done
+
 end
 
 end

@@ -20,7 +20,6 @@ arch_requalify_consts
   arch_tcb_relation
   aobj_relation_cuts
   is_other_obj_relation_type
-  ghost_relation
   ghost_relation_wrapper_2
   arch_state_relation
 
@@ -105,13 +104,6 @@ definition ep_relation :: "Structures_A.endpoint \<Rightarrow> Structures_H.endp
 definition fault_rel_optionation :: "ExceptionTypes_A.fault option \<Rightarrow> Fault_H.fault option \<Rightarrow> bool"
   where
   "fault_rel_optionation \<equiv> \<lambda>f f'. f' = map_option fault_map f"
-
-(* provided so that ghost_relation can be used within the generic definition of state_relation, by
-   passing in the union of fields needed by ghost_relation on all architectures and hiding any
-   specific arch fields needed *)
-abbreviation ghost_relation_wrapper :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "ghost_relation_wrapper s s' \<equiv>
-     ghost_relation_wrapper_2 (kheap s) (gsUserPages s') (gsCNodes s') (ksArchState s')"
 
 primrec thread_state_relation :: "Structures_A.thread_state \<Rightarrow> Structures_H.thread_state \<Rightarrow> bool"
   where
@@ -455,6 +447,7 @@ definition irq_state_relation :: "irq_state \<Rightarrow> irqstate \<Rightarrow>
      (irq_state.IRQInactive, irqstate.IRQInactive) \<Rightarrow> True
    | (irq_state.IRQSignal, irqstate.IRQSignal) \<Rightarrow> True
    | (irq_state.IRQTimer, irqstate.IRQTimer) \<Rightarrow> True
+   | (irq_state.IRQReserved, irqstate.IRQReserved) \<Rightarrow> True
    | _ \<Rightarrow> False"
 
 definition interrupt_state_relation ::
@@ -489,6 +482,13 @@ primrec syscall_error_map :: "ExceptionTypes_A.syscall_error \<Rightarrow> Fault
 | "syscall_error_map ExceptionTypes_A.DeleteFirst           = Fault_H.DeleteFirst"
 | "syscall_error_map ExceptionTypes_A.RevokeFirst           = Fault_H.RevokeFirst"
 | "syscall_error_map (ExceptionTypes_A.NotEnoughMemory n)   = Fault_H.syscall_error.NotEnoughMemory n"
+
+(* provided so that ghost_relation can be used within the generic definition of state_relation, by
+   passing in the union of fields needed by ghost_relation on all architectures and hiding any
+   specific arch fields needed *)
+abbreviation ghost_relation_wrapper :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "ghost_relation_wrapper s s' \<equiv>
+     ghost_relation_wrapper_2 (kheap s) (gsUserPages s') (gsCNodes s') (ksArchState s')"
 
 definition state_relation :: "(det_state \<times> kernel_state) set" where
   "state_relation \<equiv> {(s, s').
@@ -1100,9 +1100,19 @@ lemma eq_trans_helper:
 text \<open>Architecture-specific requirements\<close>
 
 locale StateRelation_R =
-  assumes is_other_obj_relation_type_CapTable:
+  assumes is_other_obj_relation_type_gen[simp]:
     "\<And>n. \<not> is_other_obj_relation_type (ACapTable n)"
-  assumes is_other_obj_relation_type_TCB:
+    "\<And>n. \<not> is_other_obj_relation_type (ASchedContext n)"
+    "\<not> is_other_obj_relation_type AReply"
     "\<not> is_other_obj_relation_type ATCB"
+    "is_other_obj_relation_type AEndpoint"
+    "is_other_obj_relation_type ANTFN"
+    "\<And>n. \<not> is_other_obj_relation_type (AGarbage n)"
+  assumes msgLabelBits_msg_label_bits:
+    "msgLabelBits = msg_label_bits"
+  assumes msgInfoRegister_msg_info_register:
+    "msgInfoRegister = msg_info_register"
+  assumes obj_relation_cuts_trivial:
+    "\<And>ptr ty. ptr \<in> fst ` obj_relation_cuts ty ptr"
 
 end

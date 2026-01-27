@@ -73,14 +73,11 @@ session AInvs in "invariant-abstract" = ASpec +
   directories
     "$L4V_ARCH"
   theories [condition = "SKIP_AINVS_PROOFS", quick_and_dirty, skip_proofs]
-    "KernelInit_AI"
-    "AInvs"
+    "AInvsToplevel_AI"
   theories [condition = "AINVS_QUICK_AND_DIRTY", quick_and_dirty]
-    "KernelInit_AI"
-    "AInvs"
+    "AInvsToplevel_AI"
   theories
-    "KernelInit_AI"
-    "AInvs"
+    "AInvsToplevel_AI"
 
 (*
  * C Refinement proof.

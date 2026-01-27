@@ -253,7 +253,7 @@ end
     for f in glob.glob(os.path.join(target_dir, "autocorres", "tests", "parse-tests", "*.c")):
         gen_thy_file(f)
     subprocess.check_call([
-        "python",
+        "python3",
         os.path.join(args.repository, "misc", "scripts", "gen_isabelle_root.py"),
         "-T", "-o", os.path.join(target_dir, "autocorres", "tests", "AutoCorresTest.thy"),
         "-i", os.path.join(target_dir, "autocorres", "tests", "parse-tests"),

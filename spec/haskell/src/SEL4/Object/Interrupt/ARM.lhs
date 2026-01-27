@@ -26,7 +26,8 @@ This module defines the machine-specific interrupt handling routines.
 > import SEL4.API.Invocation
 > import SEL4.API.Invocation.ARM as ArchInv
 > import SEL4.API.InvocationLabels.ARM as ArchLabels
-> import SEL4.Machine.Hardware.ARM (config_ARM_GIC_V3, deactivateInterrupt)
+> import SEL4.Machine.Hardware.ARM (config_ARM_GIC_V3, haveSetTrigger, hasSpuriousIRQ_mop,
+>                                   handleSpuriousIRQ_mop, deactivateInterrupt)
 > import {-# SOURCE #-} SEL4.Object.Interrupt (setIRQState, isIRQActive)
 > import {-# SOURCE #-} SEL4.Kernel.CSpace
 > import {-# SOURCE #-} SEL4.Object.CNode
@@ -39,7 +40,7 @@ This module defines the machine-specific interrupt handling routines.
 \end{impdetails}
 
 > isSGITargetValid :: Word -> Bool
-> isSGITargetValid target = target < fromIntegral Arch.gicNumTargets
+> isSGITargetValid target = Arch.isGICPlatform && target <= fromIntegral Arch.gicNumTargets - 1
 
 > decodeIRQControlInvocation :: Word -> [Word] -> PPtr CTE -> [Capability] ->
 >         KernelF SyscallError ArchInv.IRQControlInvocation
@@ -47,6 +48,7 @@ This module defines the machine-specific interrupt handling routines.
 >     case (invocationType label, args, extraCaps) of
 
 >         (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler, irqW:triggerW:index:depth:_, cnode:_) -> do
+>             unless haveSetTrigger $ throw IllegalOperation
 >             checkIRQ irqW
 >             let irq = toEnum (fromIntegral irqW) :: IRQ
 >             irqActive <- withoutFailure $ isIRQActive irq
@@ -60,6 +62,7 @@ This module defines the machine-specific interrupt handling routines.
 
 >         (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal,
 >          irqW:targetW:index:depth:_, cnode:_) -> do
+>             when (Arch.numSGIs == 0) $ throw IllegalOperation
 >             rangeCheck irqW 0 (Arch.numSGIs - 1)
 >             unless (isSGITargetValid targetW) $ throw $ InvalidArgument 1
 >             sgiSlot <- lookupTargetSlot cnode (CPtr index) (fromIntegral depth)
@@ -73,7 +76,7 @@ This module defines the machine-specific interrupt handling routines.
 > performIRQControl :: ArchInv.IRQControlInvocation -> KernelP ()
 > performIRQControl (ArchInv.IssueIRQHandler (IRQ irq) destSlot srcSlot trigger) =
 >     withoutPreemption $ do
->         doMachineOp $ Arch.setIRQTrigger irq trigger
+>         when haveSetTrigger $ doMachineOp $ Arch.setIRQTrigger irq trigger
 >         -- do same thing as generic path in performIRQControl in Interrupt.lhs
 >         setIRQState IRQSignal (IRQ irq)
 >         cteInsert (IRQHandlerCap (IRQ irq)) srcSlot destSlot
@@ -108,6 +111,12 @@ This module defines the machine-specific interrupt handling routines.
 
 > checkIRQ :: Word -> KernelF SyscallError ()
 > checkIRQ irq = rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)
+
+> handleSpuriousIRQ :: Kernel ()
+> handleSpuriousIRQ =
+>     if hasSpuriousIRQ_mop
+>     then doMachineOp handleSpuriousIRQ_mop
+>     else return ()
 
 > handleReservedIRQ :: IRQ -> Kernel ()
 > handleReservedIRQ irq = do

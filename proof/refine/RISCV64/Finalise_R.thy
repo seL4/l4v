@@ -8,7 +8,7 @@ theory Finalise_R
 imports
   IpcCancel_R
   InterruptAcc_R
-  Retype_R
+  ArchRetype_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
@@ -1168,8 +1168,8 @@ lemma not_Final_removeable:
     \<Longrightarrow> removeable' sl s cap"
   apply (erule not_FinalE)
    apply (clarsimp simp: removeable'_def gen_isCap_simps)
-  apply (clarsimp simp: cteCaps_of_def sameObjectAs_def2 removeable'_def
-                        cte_wp_at_ctes_of)
+  apply (clarsimp simp: cteCaps_of_def RISCV64.sameObjectAs_def2 removeable'_def
+                        cte_wp_at_ctes_of) (* FIXME arch-split *)
   apply fastforce
   done
 
@@ -1807,7 +1807,7 @@ where
 
 lemma final_matters_Master:
   "final_matters' (capMasterCap cap) = final_matters' cap"
-  by (simp add: capMasterCap_def split: capability.split arch_capability.split,
+  by (simp add: capMasterCap_def arch_capMasterCap_def split: capability.split arch_capability.split,
       simp add: final_matters'_def)
 
 lemma final_matters_sameRegion_sameObject:
@@ -1883,7 +1883,7 @@ lemma notFinal_prev_or_next:
    apply (subst final_matters_Master[symmetric])
    apply (subst(asm) final_matters_Master[symmetric])
    apply (clarsimp simp: sameObjectAs_def3)
-  apply (clarsimp simp: sameObjectAs_def3)
+  apply (clarsimp simp: sameObjectAs_def3 simp del: isArchFrameCap_capMasterCap)
   done
 
 lemma isFinal:
@@ -1980,8 +1980,9 @@ lemma (in vmdb) isFinal_no_subtree:
    apply (clarsimp simp: isFinal_def parentOf_def mdb_next_unfold cteCaps_of_def)
    apply (erule_tac x="mdbNext n" in allE)
    apply simp
-   apply (clarsimp simp: isMDBParentOf_CTE final_matters_sameRegion_sameObject)
-   apply (clarsimp simp: gen_isCap_simps sameObjectAs_def3)
+   (* FIXME arch-split *)
+   apply (clarsimp simp: RISCV64.isMDBParentOf_CTE final_matters_sameRegion_sameObject)
+   apply (clarsimp simp: gen_isCap_simps RISCV64.sameObjectAs_def3) (* FIXME arch-split *)
   apply clarsimp
   done
 
@@ -2289,6 +2290,8 @@ crunch setBoundNotification
   and valid_sched_pointers[wp]: valid_sched_pointers
   (wp: valid_bitmaps_lift)
 
+context begin interpretation Arch . (*FIXME: arch-split*)
+
 lemma unbindNotification_invs[wp]:
   "unbindNotification tcb \<lbrace>invs'\<rbrace>"
   apply (simp add: unbindNotification_def invs'_def valid_dom_schedule'_def)
@@ -2337,6 +2340,8 @@ lemma unbindMaybeNotification_invs[wp]:
                  valid_ntfn'_def ko_wp_at'_def live'_def live_ntfn'_def o_def
           elim!: obj_atE' if_live_then_nonz_capE'
           split: option.splits ntfn.splits)
+
+end
 
 lemma setNotification_invs':
   "\<lbrace>invs'
@@ -4580,15 +4585,15 @@ lemma schedContextSetInactive_corres:
        apply (rule updateSchedContext_no_stack_update_corres)
           apply (clarsimp simp: sc_relation_def refills_map_def)
          apply (fastforce dest: state_relation_sc_replies_relation sc_replies_relation_prevs_list
-                          simp: sc_relation_def opt_map_def obj_at_simps is_sc_obj_def
+                          simp: sc_relation_def opt_map_def
                          split: Structures_A.kernel_object.splits)
-        apply (clarsimp simp: gen_objBits_simps)+
+        apply clarsimp+
       apply (rule updateSchedContext_no_stack_update_corres)
          apply (clarsimp simp: sc_relation_def)
         apply (fastforce dest: state_relation_sc_replies_relation sc_replies_relation_prevs_list
-                         simp: sc_relation_def opt_map_def obj_at_simps is_sc_obj_def
+                         simp: sc_relation_def opt_map_def
                         split: Structures_A.kernel_object.splits)
-       apply (clarsimp simp: gen_objBits_simps)
+       apply clarsimp
       apply (wpsimp wp: get_sched_context_wp getSchedContext_wp)+
   done
 

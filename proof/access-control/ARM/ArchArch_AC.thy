@@ -820,23 +820,6 @@ lemma create_mapping_entries_authorised_slots [wp]:
   apply (auto simp: pde_ref2_def vmsz_aligned_def lookup_pd_slot_add_eq)
   done
 
-lemma pageBitsForSize_le_t29:
-  "pageBitsForSize sz \<le> 29"
-  by (cases sz, simp_all)
-
-lemma x_t2n_sub_1_neg_mask:
-  "\<lbrakk> is_aligned x n; n \<le> m \<rbrakk>
-     \<Longrightarrow> x + 2 ^ n - 1 && ~~ mask m = x && ~~ mask m"
-  apply (erule is_aligned_get_word_bits)
-   apply (rule trans, rule mask_lower_twice[symmetric], assumption)
-   apply (subst add_diff_eq[symmetric], subst is_aligned_add_helper, assumption)
-    apply simp+
-  apply (simp add: mask_def power_overflow)
-  done
-
-lemmas vmsz_aligned_t2n_neg_mask =
-  x_t2n_sub_1_neg_mask[OF _ pageBitsForSize_le_t29, folded vmsz_aligned_def]
-
 lemma decode_arch_invocation_authorised[Arch_AC_assms]:
   "\<lbrace>invs and pas_refined aag and cte_wp_at ((=) (ArchObjectCap cap)) slot
          and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)
@@ -888,11 +871,10 @@ lemma decode_arch_invocation_authorised[Arch_AC_assms]:
       subgoal
        apply (clarsimp simp: cap_auth_conferred_def arch_cap_auth_conferred_def is_cap_simps is_page_cap_def
                              pas_refined_all_auth_is_owns)
-       apply (rule conjI)
-        apply (clarsimp simp: is_page_cap_def pas_refined_all_auth_is_owns
-                              aag_cap_auth_def cli_no_irqs cap_links_asid_slot_def)
-        apply (simp only: linorder_not_le kernel_base_less_observation
-                          vmsz_aligned_t2n_neg_mask simp_thms)
+        apply (rule conjI)
+         apply (clarsimp simp: is_page_cap_def pas_refined_all_auth_is_owns linorder_not_le
+                               aag_cap_auth_def cli_no_irqs cap_links_asid_slot_def
+                               aligned_sum_less_kernel_base)
          apply (clarsimp simp: cap_auth_conferred_def arch_cap_auth_conferred_def
                                vspace_cap_rights_to_auth_def mask_vm_rights_def
                                validate_vm_rights_def vm_read_only_def vm_kernel_only_def)

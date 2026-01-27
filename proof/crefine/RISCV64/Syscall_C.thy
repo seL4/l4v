@@ -2036,7 +2036,7 @@ lemma checkBudgetRestart_ccorres:
 
 lemma mcsPreemptionPoint_ccorres:
   "ccorres dc xfdc invs' UNIV hs
-     (mcsPreemptionPoint irq_opt) (Call mcsPreemptionPoint_'proc)"
+     mcsPreemptionPoint (Call mcsPreemptionPoint_'proc)"
   apply cinit
    apply (rule ccorres_stateAssert)
    apply (rule ccorres_pre_getCurThread)

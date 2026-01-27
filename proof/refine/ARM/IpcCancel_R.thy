@@ -9,6 +9,10 @@ imports
   Schedule_R
   "Lib.SimpStrategy"
 begin
+
+arch_requalify_facts
+  valid_global_refs_lift'
+
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch cancelAllIPC
@@ -774,9 +778,6 @@ crunch setEndpoint
 crunch setThreadState
   for ko_at'_pde[wp]: "\<lambda>s. P (ko_at' (pde::ARM_H.pde) p' s)"
 
-lemmas setEndpoint_valid_arch[wp]
-    = valid_arch_state_lift' [OF setEndpoint_typ_at' setEndpoint_ko_at'_pde set_ep_arch']
-
 crunch setEndpoint
   for sch_act_not[wp]: "sch_act_not t"
 
@@ -888,6 +889,7 @@ proof -
     apply (rule conjI)
      apply (clarsimp elim!: if_live_state_refsE split: Structures_H.endpoint.split_asm)
     apply (drule st_tcb_at_state_refs_ofD')
+    apply (thin_tac "sym_refs (state_hyp_refs_of' s)") (* FIXME arch-split: unclear what this triggers *)
     apply (clarsimp simp: ep_redux_simps3 valid_ep'_def
                    split: Structures_H.endpoint.split_asm
                     cong: list.case_cong)
@@ -911,7 +913,7 @@ proof -
      \<lbrace>\<lambda>rv. invs'\<rbrace>"
     unfolding getThreadReplySlot_def
     by (wp valid_irq_node_lift delete_one_invs hoare_drop_imps
-           threadSet_invs_trivial irqs_masked_lift
+           ARM.threadSet_invs_trivial irqs_masked_lift (* FIXME arch-split *)
       | simp add: o_def if_apply_def2
       | fastforce simp: inQ_def)+
   show ?thesis
@@ -1585,15 +1587,6 @@ proof -
   done
 qed
 
-context begin interpretation Arch .
-
-lemma tcbSchedEnqueue_valid_pspace'[wp]:
-  "tcbSchedEnqueue tcbPtr \<lbrace>valid_pspace'\<rbrace>"
-  unfolding valid_pspace'_def
-  by wpsimp
-
-end
-
 lemma cancel_all_invs'_helper:
   "\<lbrace>all_invs_but_sym_refs_ct_not_inQ' and (\<lambda>s. \<forall>x \<in> set q. tcb_at' x s)
          and (\<lambda>s. sym_refs (\<lambda>x. if x \<in> set q then {r \<in> state_refs_of' s x. snd r = TCBBound}
@@ -1605,7 +1598,8 @@ lemma cancel_all_invs'_helper:
                  od) q
    \<lbrace>\<lambda>rv. all_invs_but_ct_not_inQ'\<rbrace>"
   apply (rule mapM_x_inv_wp2)
-   apply clarsimp
+   (* FIXME arch-split: this helper lemma has different definition on hyp platforms *)
+   apply (clarsimp simp: ARM.non_hyp_state_hyp_refs_of')
   apply (rule hoare_pre)
    apply (wp valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
              hoare_vcg_const_Ball_lift untyped_ranges_zero_lift sts_st_tcb' sts_valid_objs'
@@ -1782,28 +1776,23 @@ lemma cancelAllIPC_invs'[wp]:
   apply (rule bind_wp[OF _ stateAssert_sp])
   apply (wp rescheduleRequired_all_invs_but_ct_not_inQ
             cancel_all_invs'_helper hoare_vcg_const_Ball_lift
-            valid_global_refs_lift' valid_arch_state_lift'
+            valid_global_refs_lift' getEndpoint_wp
             valid_irq_node_lift ssa_invs' sts_sch_act'
             irqs_masked_lift
-         | simp only: sch_act_wf.simps forM_x_def | simp)+
-   prefer 2
-   apply assumption
-  apply (rule hoare_strengthen_post [OF get_ep_sp'])
-  apply (rename_tac rv s)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_ep'_def)
+         | simp only: sch_act_wf.simps forM_x_def | simp del: fun_upd_apply)+
+  apply (clarsimp simp: invs'_def valid_state'_def valid_ep'_def state_hyp_refs_of'_ep)
   apply (frule obj_at_valid_objs', fastforce)
   apply (clarsimp simp: projectKOs valid_obj'_def)
   apply (rule conjI)
-   apply (case_tac rv, simp_all add: valid_ep'_def)[1]
+   apply (simp add: valid_ep'_def split: endpoint.splits)
   apply (rule conjI[rotated])
    apply (drule(1) sym_refs_ko_atD')
-   apply (case_tac rv, simp_all add: st_tcb_at_refs_of_rev')[1]
+   apply (case_tac ep, simp_all add: st_tcb_at_refs_of_rev')[1]
     apply (clarsimp elim!: if_live_state_refsE
            | drule(1) bspec | drule st_tcb_at_state_refs_ofD')+
   apply (drule(2) ep_q_refs_max)
   apply (erule delta_sym_refs)
-   apply (clarsimp dest!: symreftype_inverse' split: if_split_asm | drule(1) bspec subsetD)+
-  done
+   by (auto dest!: symreftype_inverse' split: if_split_asm | drule(1) bspec subsetD)
 
 lemma cancelAllSignals_invs'[wp]:
   "\<lbrace>invs'\<rbrace> cancelAllSignals ntfn \<lbrace>\<lambda>rv. invs'\<rbrace>"

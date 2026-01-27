@@ -27,7 +27,7 @@ crunch setHardwareASID, set_current_pd, invalidateLocalTLB_ASID, cleanByVA, inva
   cleanCacheRange_PoU, cleanInvalidateCacheRange_RAM, cleanInvalidateCacheRange_RAM,
   invalidateCacheRange_RAM, cleanCacheRange_RAM, setIRQTrigger, maskInterrupt, clearExMonitor,
   invalidateLocalTLB_VAASID, do_flush, storeWord, freeMemory, ackDeadlineIRQ, clearMemory,
-  getDFSR, getFAR, getIFSR, sendSGI
+  getDFSR, getFAR, getIFSR, sendSGI, handleSpuriousIRQ_mop
   for machine_times[wp]: "\<lambda>s. P (last_machine_time s) (time_state s)"
   (simp: isb_def writeTTBR0_def wp: crunch_wps
    ignore_del: setHardwareASID invalidateLocalTLB_ASID cleanByVA invalidateL2Range invalidateByVA
@@ -55,6 +55,7 @@ lemma misc_dmo_valid_sched_pred_strong[wp]:
                             setHardwareASID b
                          od) \<lbrace>valid_sched_pred_strong Q\<rbrace>"
   "\<And>a. do_machine_op (deactivateInterrupt a) \<lbrace>valid_sched_pred_strong Q\<rbrace>"
+  "do_machine_op handleSpuriousIRQ_mop \<lbrace>valid_sched_pred_strong Q\<rbrace>"
   apply (wpsimp wp: dmo_valid_sched_pred)+
   done
 
@@ -336,10 +337,11 @@ lemma handle_hyp_fault_trivial[wp]:
   "handle_hypervisor_fault t fault \<lbrace>Q\<rbrace>"
   by (cases fault; wpsimp)
 
-crunch arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags
+crunch arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags, handle_spurious_irq
   for valid_sched_pred_strong[wp, DetSchedSchedule_AI_assms]: "valid_sched_pred_strong P"
+  (ignore: do_machine_op wp: do_machine_op_valid_sched_pred_misc)
 
-crunch arch_prepare_set_domain
+crunch arch_prepare_set_domain, handle_spurious_irq
   for valid_idle[wp]: "valid_idle"
 
 crunch arch_prepare_next_domain

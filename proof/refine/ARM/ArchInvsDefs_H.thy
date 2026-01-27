@@ -138,27 +138,27 @@ lemmas [simp] = arch_valid_irq_def
 definition valid_arch_tcb' :: "Structures_H.arch_tcb \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_arch_tcb' \<equiv> \<lambda>t. \<top>"
 
-definition valid_mapping' :: "word32 \<Rightarrow> vmpage_size \<Rightarrow> kernel_state \<Rightarrow> bool" where
- "valid_mapping' x sz s \<equiv> is_aligned x (pageBitsForSize sz)
-                          \<and> ptrFromPAddr x \<noteq> 0"
+definition valid_mapping' :: "word32 \<Rightarrow> vmpage_size \<Rightarrow> bool" where
+ "valid_mapping' x sz \<equiv> is_aligned x (pageBitsForSize sz)
+                        \<and> ptrFromPAddr x \<noteq> 0"
 
-primrec valid_pte' :: "ARM_H.pte \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_pte' (InvalidPTE) = \<top>"
+primrec valid_pte' :: "ARM_H.pte \<Rightarrow> bool" where
+  "valid_pte' (InvalidPTE) = True"
 | "valid_pte' (LargePagePTE ptr _ _ _ _) = (valid_mapping' ptr ARMLargePage)"
 | "valid_pte' (SmallPagePTE ptr _ _ _ _) = (valid_mapping' ptr ARMSmallPage)"
 
-primrec valid_pde' :: "ARM_H.pde \<Rightarrow> kernel_state \<Rightarrow> bool" where
- "valid_pde' (InvalidPDE) = \<top>"
+primrec valid_pde' :: "ARM_H.pde \<Rightarrow> bool" where
+ "valid_pde' (InvalidPDE) = True"
 | "valid_pde' (SectionPDE ptr _ _ _ _ _ _) = (valid_mapping' ptr ARMSection)"
 | "valid_pde' (SuperSectionPDE ptr _ _ _ _ _) = (valid_mapping' ptr ARMSuperSection)"
-| "valid_pde' (PageTablePDE ptr _ _) = (\<lambda>_. is_aligned ptr ptBits)"
+| "valid_pde' (PageTablePDE ptr _ _) = is_aligned ptr ptBits"
 
-primrec valid_asid_pool' :: "asidpool \<Rightarrow> kernel_state \<Rightarrow> bool" where
+primrec valid_asid_pool' :: "asidpool \<Rightarrow> bool" where
  "valid_asid_pool' (ASIDPool pool)
-     = (\<lambda>s. dom pool \<subseteq> {0 .. 2^asid_low_bits - 1}
-            \<and> 0 \<notin> ran pool \<and> (\<forall>x \<in> ran pool. is_aligned x pdBits))"
+     = (dom pool \<subseteq> {0 .. 2^asid_low_bits - 1}
+        \<and> 0 \<notin> ran pool \<and> (\<forall>x \<in> ran pool. is_aligned x pdBits))"
 
-primrec valid_arch_obj' :: "arch_kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool" where
+primrec valid_arch_obj' :: "arch_kernel_object \<Rightarrow> bool" where
   "valid_arch_obj' (KOASIDPool pool) = valid_asid_pool' pool"
 | "valid_arch_obj' (KOPDE pde) = valid_pde' pde"
 | "valid_arch_obj' (KOPTE pte) = valid_pte' pte"

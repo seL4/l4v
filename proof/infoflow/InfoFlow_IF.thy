@@ -529,6 +529,10 @@ lemma equiv_for_guard_imp:
   "\<lbrakk> equiv_for P f s s'; \<And>x. Q x \<Longrightarrow> P x \<rbrakk> \<Longrightarrow> equiv_for Q f s s'"
   by(auto simp: equiv_for_def)
 
+lemma reads_respects_when:
+  "(P \<Longrightarrow> reads_respects aag l Q f) \<Longrightarrow> reads_respects aag l Q (when P f)"
+  by (wpsimp simp: when_def)
+
 
 context InfoFlow_IF_1 begin
 

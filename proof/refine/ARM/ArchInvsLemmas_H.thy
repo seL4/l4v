@@ -35,6 +35,9 @@ lemmas untypedBits_defs = minUntypedSizeBits_def maxUntypedSizeBits_def
 lemmas objBits_simps = objBits_def objBitsKO_def word_size_def archObjSize_def
 lemmas objBits_simps' = objBits_simps objBits_defs
 
+lemmas vspace_bits_defs = pd_bits_def pdeBits_def pt_bits_def pteBits_def pageBits_def
+                          ptBits_def pdBits_def
+
 lemma valid_cap'_pspaceI[Invariants_H_pspaceI_assms]:
   "s \<turnstile>' cap \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> s' \<turnstile>' cap"
   unfolding valid_cap'_def
@@ -45,21 +48,6 @@ lemma valid_cap'_pspaceI[Invariants_H_pspaceI_assms]:
             simp: vspace_table_at'_defs valid_arch_cap'_def
            split: arch_capability.split zombie_type.split option.splits)+
 
-(* FIXME arch-split: required since valid_arch_obj' takes state due to other arches *)
-lemma valid_arch_obj'_pspaceI:
-  "\<lbrakk>valid_arch_obj' obj s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> valid_arch_obj' obj s'"
-  apply (cases obj; simp)
-    apply (rename_tac asidpool)
-    apply (case_tac asidpool,
-           auto simp: page_directory_at'_def intro: typ_at'_pspaceI[rotated])[1]
-   apply (rename_tac pte)
-   apply (case_tac pte; simp add: valid_mapping'_def)
-  apply (rename_tac pde)
-  apply (case_tac pde;
-         auto simp: page_table_at'_def valid_mapping'_def
-             intro: typ_at'_pspaceI[rotated])
-  done
-
 lemma valid_obj'_pspaceI[Invariants_H_pspaceI_assms]:
   "valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
   unfolding valid_obj'_def
@@ -69,7 +57,7 @@ lemma valid_obj'_pspaceI[Invariants_H_pspaceI_assms]:
                  valid_bound_ntfn'_def valid_arch_tcb'_def
            split: Structures_H.endpoint.splits Structures_H.notification.splits
                   Structures_H.thread_state.splits ntfn.splits option.splits
-           intro: obj_at'_pspaceI valid_cap'_pspaceI typ_at'_pspaceI valid_arch_obj'_pspaceI)
+           intro: obj_at'_pspaceI valid_cap'_pspaceI typ_at'_pspaceI)
 
 lemma tcb_space_clear[Invariants_H_pspaceI_assms]:
   "\<lbrakk> tcb_cte_cases (y - x) = Some (getF, setF);
@@ -98,6 +86,12 @@ lemma pspace_in_kernel_mappings'_pspaceI[Invariants_H_pspaceI_assms]:
   "pspace_in_kernel_mappings' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> pspace_in_kernel_mappings' s'"
   unfolding pspace_in_kernel_mappings'_def
   by simp
+
+lemma range_cover_canonical_address[Invariants_H_pspaceI_assms]:
+  "\<lbrakk> range_cover ptr sz us n ; p < n ;
+     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
+   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
+  by (simp add: canonical_address_def)
 
 (* not interesting on this architecture *)
 lemmas [simp] = pspace_in_kernel_mappings'_pspaceI
@@ -317,9 +311,6 @@ lemma hyp_refs_of_live':
   "hyp_refs_of' ko \<noteq> {} \<Longrightarrow> live' ko"
   by (cases ko, simp_all add: live'_def hyp_refs_of_hyp_live')
 
-lemmas valid_cap_simps' =
-  valid_cap'_def[split_simps capability.split arch_capability.split]
-
 lemma is_physical_cases:
  "(capClass cap = PhysicalClass) =
   (case cap of NullCap                          \<Rightarrow> False
@@ -377,30 +368,13 @@ lemma valid_arch_tcb_lift':
   shows "\<lbrace>\<lambda>s. valid_arch_tcb' tcb s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_tcb' tcb s\<rbrace>"
   by (clarsimp simp add: valid_arch_tcb'_def, wp)
 
-lemma valid_pde_lift':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_pde' pde s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pde' pde s\<rbrace>"
-  by (cases pde) (simp add: valid_mapping'_def|wp x typ_at_lift_page_table_at')+
-
-lemma valid_pte_lift':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_pte' pte s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pte' pte s\<rbrace>"
-  by (cases pte) (simp add: valid_mapping'_def|wp x typ_at_lift_page_directory_at')+
-
-lemma valid_asid_pool_lift':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_asid_pool' ap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_asid_pool' ap s\<rbrace>"
-  by (cases ap) (simp|wp x typ_at_lift_page_directory_at' hoare_vcg_const_Ball_lift)+
-
 lemmas typ_at_lifts =
            typ_at_lift_tcb' typ_at_lift_ep' typ_at_lift_ntfn' typ_at_lift_cte' typ_at_lift_cte_at'
            typ_at_lift_valid_untyped' typ_at_lift_valid_cap' valid_bound_tcb_lift
            typ_at_lift_page_table_at'
            typ_at_lift_page_directory_at'
            typ_at_lift_asid_at'
-           valid_pde_lift'
-           valid_pte_lift'
-           valid_asid_pool_lift'
+           valid_arch_tcb_lift'
 
 lemmas bit_simps' = pteBits_def pdeBits_def asidHighBits_def asid_low_bits_def word_size_bits_def
                     asid_high_bits_def bit_simps
@@ -478,26 +452,6 @@ lemma valid_pspaceI'[intro]:
   "\<lbrakk>valid_objs' s; pspace_aligned' s; pspace_distinct' s; valid_mdb' s; no_0_obj' s\<rbrakk>
    \<Longrightarrow> valid_pspace' s"
   unfolding valid_pspace'_def by simp
-
-end
-
-context Arch begin
-
-lemma objBits_less_word_bits:
-  "objBits v < word_bits"
-  unfolding objBits_simps'
-  apply (case_tac "injectKO v"; simp)
-  by (simp add: pageBits_def pteBits_def pdeBits_def objBits_simps word_bits_def
-         split: arch_kernel_object.split)+
-
-lemma objBits_pos_power2[simp]:
-  assumes "objBits v < word_bits"
-  shows "(1::machine_word) < (2::machine_word) ^ objBits v"
-  unfolding objBits_simps'
-  apply (insert assms)
-  apply (case_tac "injectKO v"; simp)
-  by (simp add: pageBits_def pteBits_def pdeBits_def objBits_simps
-         split: arch_kernel_object.split)+
 
 end
 

@@ -477,10 +477,19 @@ crunch nextDomain
 crunch prepareNextDomain
   for valid_domain_list'[wp]: valid_domain_list'
 
+lemma Arch_prepareNextDomain_ccorres:
+  "ccorres dc xfdc invs' UNIV [] (return ()) (Call Arch_prepareNextDomain_'proc)"
+  apply cinit'
+   apply (rule_tac R=\<top> and R'=UNIV in ccorres_return)
+   apply vcg
+   apply clarsimp
+  apply clarsimp
+  done
+
 lemma prepareNextDomain_ccorres:
   "ccorres dc xfdc invs' UNIV [] prepareNextDomain (Call prepareNextDomain_'proc)"
   apply cinit
-  apply (rule ccorres_return_Skip)
+   apply (ctac add: Arch_prepareNextDomain_ccorres)
   by clarsimp
 
 lemma scheduleChooseNewThread_ccorres:
@@ -488,8 +497,8 @@ lemma scheduleChooseNewThread_ccorres:
      (\<lambda>s. invs' s \<and> valid_idle' s \<and> ksSchedulerAction s = ChooseNewThread \<and> valid_domain_list' s)
      UNIV hs
      (do domainTime \<leftarrow> getDomainTime;
-         y \<leftarrow> when (domainTime = 0) (do
-             y <- prepareNextDomain;
+         _ \<leftarrow> when (domainTime = 0) (do
+             _ <- prepareNextDomain;
              nextDomain
          od);
          chooseThread
