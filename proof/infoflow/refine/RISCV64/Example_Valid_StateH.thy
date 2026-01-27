@@ -1184,7 +1184,7 @@ definition s0H_internal :: "kernel_state" where
      ksDomSchedule = [(0, 10), (1, 10)],
      ksCurDomain = 0,
      ksDomainTime = 5,
-     ksReadyQueues = const (TcbQueue None None),
+     ksReadyQueues = const emptyQueue,
      ksReadyQueuesL1Bitmap = const 0,
      ksReadyQueuesL2Bitmap = const 0,
      ksCurThread = Low_tcb_ptr,
@@ -3440,7 +3440,8 @@ lemma s0H_invs:
    apply (fastforce simp: kh0H_obj_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_bitmaps_def valid_bitmapQ_def bitmapQ_def s0H_internal_def
-                         tcbQueueEmpty_def bitmapQ_no_L1_orphans_def bitmapQ_no_L2_orphans_def)
+                         emptyHeadEndPtrs_def headEndPtrsEmpty_def
+                         bitmapQ_no_L1_orphans_def bitmapQ_no_L2_orphans_def)
   apply (rule conjI)
    apply (clarsimp simp: ct_not_inQ_def obj_at'_def objBitsKO_def
                          s0H_internal_def s0_ptrs_aligned Low_tcbH_def)
@@ -3671,8 +3672,9 @@ lemma s0_srel:
                 apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def
                                       ready_queues_relation_def ready_queue_relation_def
                                       list_queue_relation_def queue_end_valid_def
-                                      prev_queue_head_def inQ_def tcbQueueEmpty_def
-                                      projectKOs opt_map_def opt_pred_def
+                                      prev_queue_head_def inQ_def
+                                      emptyHeadEndPtrs_def headEndPtrsEmpty_def
+                                      opt_map_def opt_pred_def
                                split: option.splits)
                 using kh0H_dom_tcb
                 apply (fastforce simp: kh0H_obj_def)

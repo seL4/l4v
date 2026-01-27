@@ -278,7 +278,7 @@ lemma tcbSchedAppend_corres:
     apply (force simp: obj_at_def)
    apply (force simp: obj_at'_def)
   apply (clarsimp split: if_splits)
-  apply (cut_tac ts="ready_queues s d p" in list_queue_relation_nil)
+  apply (cut_tac ts="ready_queues s d p" in list_queue_relation_Nil)
    apply (force dest!: spec simp: list_queue_relation_def)
   apply (cut_tac ts="ready_queues s (tcb_domain tcb) (tcb_priority tcb)"
               in obj_at'_tcbQueueEnd_ksReadyQueues)
@@ -350,7 +350,7 @@ lemma tcbSchedAppend_corres:
   apply (drule_tac x="tcb_domain tcb" in spec)
   apply (drule_tac x="tcb_priority tcb" in spec)
   apply (cut_tac ts="ready_queues s (tcb_domain tcb) (tcb_priority tcb)"
-              in tcbQueueHead_iff_tcbQueueEnd)
+              in he_ptrs_head_iff_he_ptrs_end)
    apply (force simp: list_queue_relation_def)
   apply (frule valid_tcbs'_maxDomain[where t=tcbPtr], simp add: obj_at'_def)
   apply (frule valid_tcbs'_maxPriority[where t=tcbPtr], simp add: obj_at'_def)
@@ -396,7 +396,7 @@ lemma tcbSchedAppend_valid_objs'[wp]:
   apply (drule_tac x="tcbDomain tcb" in spec)
   apply (drule_tac x="tcbPriority tcb" in spec)
   apply clarsimp
-  apply (frule tcbQueueHead_iff_tcbQueueEnd)
+  apply (frule he_ptrs_head_iff_he_ptrs_end)
   apply (force dest!: obj_at'_tcbQueueEnd_ksReadyQueues simp: tcbQueueEmpty_def obj_at'_def)
   done
 
@@ -617,7 +617,7 @@ lemma tcbSchedAppend_valid_bitmapQ[wp]:
                       threadGet_wp hoare_vcg_if_lift2)
   apply (clarsimp simp: ksReadyQueues_asrt_def split: if_splits)
   apply normalise_obj_at'
-  apply (force dest: tcbQueueHead_iff_tcbQueueEnd
+  apply (force dest: he_ptrs_head_iff_he_ptrs_end
                simp: valid_bitmaps_def valid_bitmapQ_def tcbQueueEmpty_def)
   done
 
@@ -1664,8 +1664,10 @@ lemma bitmap_lookup_queue_is_max_non_empty:
   apply (drule_tac x="ksCurDomain s'" in spec)
   apply (drule_tac x="Max {prio. \<not> tcbQueueEmpty (ksReadyQueues s' (ksCurDomain s', prio))}"
                 in spec)
-  using heap_path_head tcbQueueEmpty_def
-  by fastforce
+  apply clarsimp
+  apply (frule heap_path_head')
+  apply (clarsimp simp: headEndPtrsEmpty_def)
+  done
 
 lemma ksReadyQueuesL1Bitmap_return_wp:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s d) s \<rbrace> getReadyQueuesL1Bitmap d \<lbrace>\<lambda>rv s. P rv s\<rbrace>"
