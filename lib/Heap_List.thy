@@ -465,6 +465,90 @@ lemma heap_path_curtail_takeWhile:
 (* more on heap_path : end *)
 
 
+section \<open>
+  Definitions and lemmas for relating an Isabelle list to a pointer data structure that implements
+  a doubly-linked list with a separate head/end structure. This implementation is used as a queue
+  on seL4/master, but no longer represents an actual queue on seL4/MCS. Because of the former, many
+  of the names in the C and Haskell implementation refer to "queue" for this heap structure.\<close>
+
+datatype 'a head_end_ptrs =
+  HeadEndPtrs (he_ptrs_head : "'a option") (he_ptrs_end : "'a option")
+
+primrec he_ptrs_head_update :: "('a option \<Rightarrow> 'a option) \<Rightarrow> 'a head_end_ptrs \<Rightarrow> 'a head_end_ptrs" where
+  "he_ptrs_head_update f (HeadEndPtrs h e) = HeadEndPtrs (f h) e"
+
+primrec he_ptrs_end_update :: "('a option \<Rightarrow> 'a option) \<Rightarrow> 'a head_end_ptrs \<Rightarrow> 'a head_end_ptrs" where
+  "he_ptrs_end_update f (HeadEndPtrs h e) = HeadEndPtrs h (f e)"
+
+lemma he_ptrs_head_he_ptrs_head_update[simp]:
+  "he_ptrs_head (he_ptrs_head_update f v) = f (he_ptrs_head v)"
+  by (cases v) simp
+
+lemma he_ptrs_head_he_ptrs_end_update[simp]:
+  "he_ptrs_head (he_ptrs_end_update f v) = he_ptrs_head v"
+  by (cases v) simp
+
+lemma he_ptrs_end_he_ptrs_head_update[simp]:
+  "he_ptrs_end (he_ptrs_head_update f v) = he_ptrs_end v"
+  by (cases v) simp
+
+lemma he_ptrs_end_tcbQueueEnd_update[simp]:
+  "he_ptrs_end (he_ptrs_end_update f v) = f (he_ptrs_end v)"
+  by (cases v) simp
+
+definition emptyHeadEndPtrs :: "'a head_end_ptrs" where
+  "emptyHeadEndPtrs \<equiv> HeadEndPtrs None None"
+
+definition headEndPtrsEmpty :: "'a head_end_ptrs => bool" where
+  "headEndPtrsEmpty q \<equiv> he_ptrs_head q = None"
+
+definition queue_end_valid :: "'a list \<Rightarrow> 'a head_end_ptrs \<Rightarrow> bool" where
+  "queue_end_valid ts q \<equiv>
+     (ts = [] \<longrightarrow> he_ptrs_end q = None) \<and> (ts \<noteq> [] \<longrightarrow> he_ptrs_end q = Some (last ts))"
+
+definition prev_queue_head :: "'a head_end_ptrs \<Rightarrow> ('a \<rightharpoonup> 'a) \<Rightarrow> bool" where
+  "prev_queue_head q prevs \<equiv> \<forall>head. he_ptrs_head q = Some head \<longrightarrow> prevs head = None"
+
+lemma prev_queue_head_heap_upd:
+  "\<lbrakk>prev_queue_head q prevs; Some r \<noteq> he_ptrs_head q\<rbrakk> \<Longrightarrow> prev_queue_head q (prevs(r := x))"
+  by (clarsimp simp: prev_queue_head_def)
+
+definition list_queue_relation ::
+  "'a list \<Rightarrow> 'a head_end_ptrs \<Rightarrow> ('a \<rightharpoonup> 'a) \<Rightarrow> ('a \<rightharpoonup> 'a) \<Rightarrow> bool"
+  where
+  "list_queue_relation ts q nexts prevs \<equiv>
+     heap_ls nexts (he_ptrs_head q) ts \<and> queue_end_valid ts q \<and> prev_queue_head q prevs"
+
+lemmas list_queue_relation_cong = rsubst4[where P=list_queue_relation]
+
+lemma list_queue_relation_Nil:
+  "list_queue_relation ts q nexts prevs \<Longrightarrow> ts = [] \<longleftrightarrow> headEndPtrsEmpty q"
+  by (fastforce dest: heap_path_head simp: headEndPtrsEmpty_def list_queue_relation_def)
+
+lemma list_queue_relation_Nil_emptyQueue[simp]:
+  "list_queue_relation [] emptyHeadEndPtrs hp hp'"
+  by (clarsimp simp: list_queue_relation_def queue_end_valid_def prev_queue_head_def
+                     emptyHeadEndPtrs_def)
+
+lemma he_ptrs_head_iff_he_ptrs_end:
+  "list_queue_relation ts q nexts prevs
+   \<Longrightarrow> (\<exists>head. he_ptrs_head q = Some head) \<longleftrightarrow> (\<exists>end. he_ptrs_end q = Some end)"
+  apply (clarsimp simp: list_queue_relation_def queue_end_valid_def)
+  using heap_path_None
+  apply fastforce
+  done
+
+lemma list_queue_relation_neighbour_in_set:
+  "\<lbrakk>list_queue_relation ls q hp hp'; sym_heap hp hp'; p \<in> set ls\<rbrakk>
+   \<Longrightarrow> \<forall>nbr. (hp p = Some nbr \<longrightarrow> nbr \<in> set ls) \<and> (hp' p = Some nbr \<longrightarrow> nbr \<in> set ls)"
+  apply (rule heap_ls_neighbour_in_set)
+     apply (fastforce simp: list_queue_relation_def)
+    apply fastforce
+   apply (clarsimp simp: list_queue_relation_def prev_queue_head_def)
+  apply fastforce
+  done
+
+
 \<comment> \<open>Lemmas relating an update to the list to an update to the heap\<close>
 
 lemma heap_ls_prepend:

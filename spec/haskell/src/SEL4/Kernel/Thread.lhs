@@ -665,7 +665,7 @@ Remove a thread from a queue, which must originally contain the thread
 
 The queue is the singleton containing tcbPtr
 
->         then return $ TcbQueue { tcbQueueHead = Nothing, tcbQueueEnd = Nothing }
+>         then return emptyQueue
 >         else
 >             if tcbQueueHead queue == Just tcbPtr
 

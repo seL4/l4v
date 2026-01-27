@@ -240,8 +240,7 @@ A new kernel state structure contains an empty physical address space, a set of 
 >         ksCurDomain = 0,
 >         ksDomainTime = 15,
 >         ksReadyQueues =
->             funPartialArray (const (TcbQueue {tcbQueueHead = Nothing, tcbQueueEnd = Nothing}))
->                             ((0, 0), (fromIntegral numDomains, maxPriority)),
+>             funPartialArray (const emptyQueue) ((0, 0), (fromIntegral numDomains, maxPriority)),
 >         ksReadyQueuesL1Bitmap = funPartialArray (const 0) (0, fromIntegral numDomains),
 >         ksReadyQueuesL2Bitmap =
 >             funPartialArray (const 0)

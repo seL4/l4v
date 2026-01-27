@@ -497,6 +497,9 @@ Various operations on the free index of an Untyped cap.
 >     tcbQueueHead :: Maybe (PPtr TCB),
 >     tcbQueueEnd :: Maybe (PPtr TCB) }
 
+> emptyQueue :: TcbQueue
+> emptyQueue = TcbQueue { tcbQueueHead = Nothing, tcbQueueEnd = Nothing }
+
 \subsubsection{TCB Flags}
 
 > data TcbFlag = FpuDisabled
