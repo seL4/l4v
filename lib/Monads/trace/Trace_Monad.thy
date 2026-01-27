@@ -785,12 +785,15 @@ definition andM :: "('s, bool) tmonad \<Rightarrow> ('s, bool) tmonad \<Rightarr
   "andM a b = ifM a b (return False)"
 
 
-section "Await command"
+section "await command"
 
-text \<open>@{term "Await c f"} blocks the execution until @{term "c"} is true,
-      and then atomically executes @{term "f"}.\<close>
-definition Await :: "('s \<Rightarrow> bool) \<Rightarrow> ('s,unit) tmonad" where
-  "Await c \<equiv>
+text \<open>
+  @{term "await c"} blocks the execution until @{term "c"} is true, by including all traces
+  of environment steps that end in a state that satisfies @{term c}.
+  Note: this means that @{term "await False"} is the empty set and does not compose with other
+  monads.\<close>
+definition await :: "('s \<Rightarrow> bool) \<Rightarrow> ('s,unit) tmonad" where
+  "await c \<equiv>
   do
     s \<leftarrow> get;
     \<comment> \<open>Add unfiltered environment events, with the last one

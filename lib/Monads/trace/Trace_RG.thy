@@ -1369,13 +1369,13 @@ lemma interference_twp[wp]:
   apply (simp add: drop_Cons nat.split rely_cond_def guar_cond_def)
   done
 
-(* what Await does if we haven't committed our step is a little
+(* what await does if we haven't committed our step is a little
    strange. this assumes we have, which means s0 = s. we should
-   revisit this if we find a use for Await when this isn't the
+   revisit this if we find a use for await when this isn't the
    case *)
-lemma Await_sync_twp:
-  "\<lbrace>\<lambda>s0 s. s = s0 \<and> (\<forall>x. R\<^sup>*\<^sup>* s0 x \<and> c x \<longrightarrow> Q () x x)\<rbrace>,\<lbrace>R\<rbrace> Await c \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  apply (simp add: Await_def split_def)
+lemma await_sync_twp:
+  "\<lbrace>\<lambda>s0 s. s = s0 \<and> (\<forall>x. R\<^sup>*\<^sup>* s0 x \<and> c x \<longrightarrow> Q () x x)\<rbrace>,\<lbrace>R\<rbrace> await c \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  apply (simp add: await_def split_def)
   apply wp
   apply clarsimp
   apply (clarsimp simp: guar_cond_def trace_steps_rev_drop_nth rev_nth)
@@ -1775,14 +1775,14 @@ lemma UN_If_distrib:
    = ((\<Union>x \<in> S \<inter> {x. P x}. A x) \<union> (\<Union>x \<in> S \<inter> {x. \<not> P x}. B x))"
   by (fastforce split: if_split_asm)
 
-lemma Await_redef:
-  "Await P = do
+lemma await_redef:
+  "await P = do
      s1 \<leftarrow> select {s. P s};
      env_steps;
      s \<leftarrow> get;
      select (if P s then {()} else {})
    od"
-  apply (simp add: Await_def env_steps_def bind_assoc)
+  apply (simp add: await_def env_steps_def bind_assoc)
   apply (cases "{s. P s} = {}")
    apply (simp add: select_def bind_def get_def)
   apply (rule ext)
