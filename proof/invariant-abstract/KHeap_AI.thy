@@ -712,6 +712,34 @@ lemma no_fail_obj_at [wp]:
   apply (fastforce simp: obj_at_def)
   done
 
+crunch get_simple_ko
+  for (empty_fail) empty_fail[intro!, wp, simp]
+
+lemma ko_at_kheap_upd_id:
+  "ko_at ko p s \<Longrightarrow> s\<lparr>kheap := (kheap s)(p \<mapsto> ko)\<rparr> = s"
+  unfolding obj_at_def fun_upd_def
+  by (rule abstract_state.equality, rule ext; simp)
+
+lemma set_object_noop_rewrite:
+  "monadic_rewrite F E (ko_at obj ptr) (set_object ptr obj) (return ())"
+  apply (clarsimp simp: set_object_def)
+  apply monadic_rewrite_symb_exec_l+
+      apply (rule monadic_rewrite_put_noop)
+     apply (wpsimp wp: get_object_wp set_object_wp)+
+  apply (clarsimp simp: ko_at_kheap_upd_id obj_at_def)
+  done
+
+lemma set_object_idempotent_rewrite:
+  "monadic_rewrite F E \<top> (do set_object ptr obj; set_object ptr obj od) (set_object ptr obj)"
+  apply (rule monadic_rewrite_add_return_r)
+  apply (rule monadic_rewrite_bind_tail)
+   apply (fastforce intro: set_object_noop_rewrite)
+  apply (wpsimp wp: set_object_wp)
+  apply (clarsimp simp: obj_at_def)
+  done
+
+lemmas set_object_idempotent = monadic_rewrite_to_eq[OF set_object_idempotent_rewrite]
+
 lemma valid_irq_states_machine_state_updateI:
   "(\<And>irq. interrupt_states s irq = IRQInactive \<Longrightarrow> irq_masks m irq) \<Longrightarrow>
    valid_irq_states (s\<lparr>machine_state := m\<rparr>)"
