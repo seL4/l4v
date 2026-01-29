@@ -271,12 +271,12 @@ text \<open>Symbolic execution\<close>
 
 (* When `F=True`, we assume LHS does not fail and show the RHS does not fail. When adding `m` to the
    LHS this assumption extends to `m`, meaning we can assume `m` does not fail. *)
-lemma monadic_rewrite_symb_exec_l':
+lemma monadic_rewrite_symb_exec_l'':
   "\<lbrakk> \<And>rv. monadic_rewrite F E (Q rv) (x rv) y;
-     \<And>P. m \<lbrace>P\<rbrace>; empty_fail m;
+     \<And>P. \<lbrace>P and P''\<rbrace> m \<lbrace>\<lambda>_ . P\<rbrace>; empty_fail m;
      \<not> F \<longrightarrow> no_fail P' m;
      \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
-   \<Longrightarrow> monadic_rewrite F E (P and P') (m >>= (\<lambda>rv. x rv)) y"
+   \<Longrightarrow> monadic_rewrite F E (P and P' and P'') (m >>= (\<lambda>rv. x rv)) y"
   apply (cases E)
    subgoal (* E *)
      apply (clarsimp simp: monadic_rewrite_def bind_def prod_eq_iff)
@@ -284,32 +284,30 @@ lemma monadic_rewrite_symb_exec_l':
       apply (simp add: empty_fail_def, drule_tac x=s in spec)
       apply (prop_tac "\<forall>(rv, s') \<in> fst (m s). x rv s' = y s")
        apply clarsimp
-       apply (drule (1) in_inv_by_hoareD)
+       apply (drule (1) in_inv_by_hoareD')
        apply (frule (2) use_valid)
-       apply (clarsimp simp: Ball_def prod_eq_iff)
-      apply (rule conjI)
-       apply (rule equalityI)
-        apply (clarsimp simp: Ball_def)
-       apply (fastforce simp: Ball_def elim!: nonemptyE elim: rev_bexI)
-      apply (simp add: Bex_def Ball_def cong: conj_cong)
-      apply auto[1]
-     apply (clarsimp simp: no_fail_def)
-     done
+       apply fastforce
+      apply (fastforce dest: use_valid simp: Ball_def prod_eq_iff)
+     apply (simp add: Bex_def Ball_def cong: conj_cong)
+     apply auto[1]
+    apply (clarsimp simp: no_fail_def)
+    done
   subgoal (* \<not> E *)
     apply (clarsimp simp: monadic_rewrite_def bind_def)
     apply (prop_tac "\<not> snd (m s)")
      apply (fastforce simp: no_failD)
     apply (prop_tac "\<forall>v \<in> fst (m s). Q (fst v) (snd v) \<and> snd v = s")
      apply clarsimp
-     apply (frule(2) use_valid)
-     apply (frule use_valid, assumption, rule refl)
-     apply simp
-    apply clarsimp
+     apply (frule (2) use_valid)
+     apply (fastforce intro: in_inv_by_hoareD')
+    apply simp
     apply (frule (1) empty_failD2)
     apply (clarsimp simp: split_def)
-    apply fastforce
+    apply fast
     done
   done
+
+lemmas monadic_rewrite_symb_exec_l' = monadic_rewrite_symb_exec_l''[where P''=\<top>, simplified]
 
 (* as a lemma to preserve lambda binding erased by simplified *)
 lemma monadic_rewrite_symb_exec_l_F:
