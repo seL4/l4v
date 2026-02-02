@@ -638,7 +638,7 @@ lemma threadSet_all_invs_triv':
       apply (simp add: tcb_cte_cases_def cteSizeBits_def)
      apply (wp thread_set_invs_trivial thread_set_not_state_valid_sched
                threadSet_invs_trivial threadSet_ct_running' hoare_weak_lift_imp
-               thread_set_ct_in_state
+               thread_set_ct_in_state valid_domain_list_lift
             | simp add: tcb_cap_cases_def tcb_arch_ref_def
             | rule threadSet_ct_in_state'
             | wp (once) hoare_vcg_disj_lift)+

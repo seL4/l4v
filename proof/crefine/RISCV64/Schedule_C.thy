@@ -349,51 +349,96 @@ proof -
     done
 qed
 
-lemma ksDomSched_length_relation[simp]:
-  "\<lbrakk>cstate_relation s s'\<rbrakk> \<Longrightarrow> length (kernel_state.ksDomSchedule s) = unat (ksDomScheduleLength)"
-  apply (auto simp: cstate_relation_def cdom_schedule_relation_def Let_def ksDomScheduleLength_def)
-  done
+lemma cdom_schedule_relationD:
+  "\<lbrakk> cdom_schedule_relation asched csched; n < length asched \<rbrakk> \<Longrightarrow>
+   dom_schedule_entry_relation (asched ! n) (csched.[n])"
+  by (simp add: cdom_schedule_relation_def)
 
 lemma ksDomSched_length_dom_relation[simp]:
-  "\<lbrakk>cdom_schedule_relation (kernel_state.ksDomSchedule s) kernel_all_global_addresses.ksDomSchedule \<rbrakk> \<Longrightarrow> length (kernel_state.ksDomSchedule s) = unat (ksDomScheduleLength)"
-  apply (auto simp: cstate_relation_def cdom_schedule_relation_def Let_def ksDomScheduleLength_def)
+  "cdom_schedule_relation (ksDomSchedule s) csched \<Longrightarrow>
+   length (ksDomSchedule s) = unat domScheduleLength"
+  by (auto simp: cdom_schedule_relation_def domScheduleLength_def)
+
+lemma ksDomSched_length_relation[simp]:
+  "(s,s') \<in> rf_sr \<Longrightarrow> length (ksDomSchedule s) = unat domScheduleLength"
+  by (auto simp: rf_sr_def cstate_relation_def Let_def)
+
+lemma rf_sr_cdom_schedule_relation:
+  "(s, s') \<in> rf_sr \<Longrightarrow> cdom_schedule_relation (ksDomSchedule s) (ksDomSchedule_' (globals s'))"
+  by (simp add: rf_sr_def cstate_relation_def Let_def)
+
+lemma rf_sr_ksDomScheduleStart:
+  "(s, s') \<in> rf_sr \<Longrightarrow> ksDomScheduleStart s = unat (ksDomScheduleStart_' (globals s'))"
+  by (simp add: rf_sr_def cstate_relation_def Let_def)
+
+lemma rf_sr_ksDomScheduleIdx:
+  "(s, s') \<in> rf_sr \<Longrightarrow> ksDomScheduleIdx s = unat (ksDomScheduleIdx_' (globals s'))"
+  by (simp add: rf_sr_def cstate_relation_def Let_def)
+
+lemma ksDomScheduleStart_bounded:
+  "\<lbrakk>invs' s; (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow> ksDomScheduleStart_' (globals s') < scast domScheduleLength"
+  apply (drule invs_valid_dom_schedule')
+  apply (frule ksDomSched_length_relation)
+  apply (drule rf_sr_ksDomScheduleStart)
+  apply (simp add: valid_dom_schedule'_def word_less_nat_alt unat_scast_domScheduleLength)
+  done
+
+lemma ksDomScheduleIdx_bounded:
+  "\<lbrakk>invs' s; (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow> ksDomScheduleIdx_' (globals s') < scast domScheduleLength"
+  apply (drule invs_valid_dom_schedule')
+  apply (frule ksDomSched_length_relation)
+  apply (drule rf_sr_ksDomScheduleIdx)
+  apply (simp add: valid_dom_schedule'_def word_less_nat_alt unat_scast_domScheduleLength)
   done
 
 lemma nextDomain_ccorres:
   "ccorres dc xfdc invs' UNIV [] nextDomain (Call nextDomain_'proc)"
+  supply rf_sr_unfold = rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                        cmachine_state_relation_def dschDomain_def dschLength_def
+  supply idx_unat = word_le_nat_alt word_less_nat_alt less_domScheduleLength_plus_1
+                    unat_scast_domScheduleLength
+  supply word_less_1[simp del] less_Suc0[simp del]
   apply cinit
-   apply (simp add: ksDomScheduleLength_def sdiv_word_def sdiv_int_def)
    apply (rule_tac P=invs' and P'=UNIV in ccorres_from_vcg)
    apply (rule allI, rule conseqPre, vcg)
-   apply (clarsimp simp: simpler_modify_def Let_def
-                         rf_sr_def cstate_relation_def
-                         carch_state_relation_def cmachine_state_relation_def)
+   apply (simp only: if_P_then_t_else_f_eq_f) (* reduce if-explosion first *)
+   apply (simp add: if_P_then_t_else_f_eq_f cong: if_cong)
+   apply (clarsimp simp: simpler_modify_def Let_def not_le)
+   apply (frule (1) ksDomScheduleStart_bounded)
+   apply (frule (1) ksDomScheduleIdx_bounded)
+   apply (frule rf_sr_ksDomScheduleIdx)
+   apply (frule rf_sr_ksDomScheduleStart)
+   apply (frule rf_sr_cdom_schedule_relation)
+   apply (rule conjI; clarsimp)
+    (* idx + 1 \<ge> length; wrap to start *)
+    apply (simp add: idx_unat)
+    apply (clarsimp simp: rf_sr_unfold)
+    apply (frule_tac n="ksDomScheduleStart \<sigma>" in cdom_schedule_relationD, simp)
+    apply (simp add: dom_schedule_entry_relation_def mask_def domScheduleLength_def)
+   (* idx + 1 < length *)
    apply (rule conjI)
-    apply clarsimp
-    apply (subgoal_tac "ksDomScheduleIdx \<sigma> = unat (ksDomScheduleLength - 1)")
-     apply (fastforce simp add: cdom_schedule_relation_def dom_schedule_entry_relation_def dschDomain_def dschLength_def ksDomScheduleLength_def sdiv_word_def sdiv_int_def simp del: ksDomSched_length_dom_relation)
-    apply (simp add: ksDomScheduleLength_def)
-    apply (frule invs'_ksDomScheduleIdx)
-    apply (simp add: invs'_ksDomSchedule newKernelState_def)
-    apply (simp only: Abs_fnat_hom_1 Abs_fnat_hom_add)
-    apply (drule unat_le_helper)
-    apply (simp add: sdiv_int_def sdiv_word_def)
-    apply (clarsimp simp: cdom_schedule_relation_def)
-   apply (simp only: Abs_fnat_hom_1 Abs_fnat_hom_add word_not_le)
-   apply clarsimp
-   apply (subst (asm) of_nat_Suc[symmetric])
-   apply (drule iffD1[OF of_nat_mono_maybe'[where x=3, simplified, symmetric], rotated 2])
-     apply simp
-    apply (frule invs'_ksDomScheduleIdx)
-    apply (simp add: invs'_ksDomSchedule newKernelState_def)
-    apply (clarsimp simp: cdom_schedule_relation_def)
-   apply (clarsimp simp: ksDomScheduleLength_def)
-   apply (subst of_nat_Suc[symmetric])+
-   apply (subst unat_of_nat64)
-    apply (simp add: word_bits_def)
-   apply (subst unat_of_nat64)
-    apply (simp add: word_bits_def)
-   apply (fastforce simp add: cdom_schedule_relation_def dom_schedule_entry_relation_def dschDomain_def dschLength_def simp del: ksDomSched_length_dom_relation)
+    apply (simp add: domScheduleLength_def) (* array guard *)
+   apply (rule conjI, clarsimp)
+    (* sched ! idx + 1 = end marker; wrap to start *)
+    apply (rule conjI)
+     apply (simp add: domScheduleLength_def) (* array guard *)
+    apply (simp add: idx_unat)
+    apply (frule_tac n="Suc (ksDomScheduleIdx \<sigma>)" in cdom_schedule_relationD, simp)
+    apply (clarsimp simp: dom_schedule_entry_relation_domainEndMarker)
+    apply (clarsimp simp: rf_sr_unfold)
+    apply (frule_tac n="ksDomScheduleStart \<sigma>" in cdom_schedule_relationD, simp)
+    apply (clarsimp simp: dom_schedule_entry_relation_def mask_def)
+   (* idx + 1 < length, no end marker; advance to idx + 1 *)
+   (* In the numDomains = 1/domScheduleLength = 1 case, this case is a contradiction, because
+      idx + 1 can never become < length. We carefully do not let Isabelle discover the
+      contradiction until the very end where we unfold domScheduleLength_def, so that the proof
+      steps also work for numDomains > 1. *)
+   apply (clarsimp simp: idx_unat)
+   apply (frule_tac n="Suc (ksDomScheduleIdx \<sigma>)" in cdom_schedule_relationD, simp)
+   apply (clarsimp simp: dom_schedule_entry_relation_domainEndMarker)
+   apply (clarsimp simp: rf_sr_unfold idx_unat)
+   apply (frule_tac n="Suc (ksDomScheduleIdx \<sigma>)" in cdom_schedule_relationD, simp)
+   apply (clarsimp simp: dom_schedule_entry_relation_def mask_def domScheduleLength_def)
   apply simp
   done
 
