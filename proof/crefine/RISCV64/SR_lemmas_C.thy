@@ -1026,6 +1026,8 @@ lemma cstate_relation_only_t_hrs:
   phantom_machine_state_' s = phantom_machine_state_' t;
   ghost'state_' s = ghost'state_' t;
   ksDomScheduleIdx_' s = ksDomScheduleIdx_' t;
+  ksDomScheduleStart_' s = ksDomScheduleStart_' t;
+  ksDomSchedule_' s = ksDomSchedule_' t;
   ksCurDomain_' s = ksCurDomain_' t;
   ksDomainTime_' s = ksDomainTime_' t
   \<rbrakk>
@@ -1048,6 +1050,8 @@ lemma rf_sr_upd:
     "phantom_machine_state_' (globals x) = phantom_machine_state_' (globals y)"
     "ghost'state_' (globals x) = ghost'state_' (globals y)"
     "ksDomScheduleIdx_' (globals x) = ksDomScheduleIdx_' (globals y)"
+    "ksDomScheduleStart_' (globals x) = ksDomScheduleStart_' (globals y)"
+    "ksDomSchedule_' (globals x) = ksDomSchedule_' (globals y)"
     "ksCurDomain_' (globals x) = ksCurDomain_' (globals y)"
     "ksDomainTime_' (globals x) = ksDomainTime_' (globals y)"
   shows "((a, x) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
@@ -1064,6 +1068,8 @@ lemma rf_sr_upd_safe[simp]:
   and     it: "(ksIdleThread_' (globals (g y))) = (ksIdleThread_' (globals y))"
   and     ist: "intStateIRQTable_'(globals (g y)) = intStateIRQTable_' (globals y)"
   and     dsi: "ksDomScheduleIdx_' (globals (g y)) = ksDomScheduleIdx_' (globals y)"
+  and     dss: "ksDomScheduleStart_' (globals (g y)) = ksDomScheduleStart_' (globals y)"
+  and     ds: "ksDomSchedule_' (globals (g y)) = ksDomSchedule_' (globals y)"
   and     cdom: "ksCurDomain_' (globals (g y)) = ksCurDomain_' (globals y)"
   and     dt: "ksDomainTime_' (globals (g y)) = ksDomainTime_' (globals y)"
   and arch:
@@ -1072,7 +1078,7 @@ lemma rf_sr_upd_safe[simp]:
   and    gs: "ghost'state_' (globals (g y)) = ghost'state_' (globals y)"
   and     wu:  "(ksWorkUnitsCompleted_' (globals (g y))) = (ksWorkUnitsCompleted_' (globals y))"
   shows "((a, (g y)) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
-  using rl rq rqL1 rqL2 sa ct it ist arch wu gs dsi cdom dt by - (rule rf_sr_upd)
+  using assms by - (rule rf_sr_upd)
 
 (* More of a well-formed lemma, but \<dots> *)
 lemma valid_mdb_cslift_next:
@@ -2138,6 +2144,19 @@ lemma numDomains_sge_1_simp:
 lemma unat_scast_numDomains:
   "unat (SCAST(32 signed \<rightarrow> machine_word_len) Kernel_C.numDomains) = unat Kernel_C.numDomains"
   by (simp add: scast_eq sint_numDomains_to_H unat_numDomains_to_H numDomains_machine_word_safe)
+
+lemma dom_schedule_entry_relation_domainEndMarker:
+  "dom_schedule_entry_relation h_entry c_entry \<Longrightarrow> (h_entry = domainEndMarker) = (c_entry = 0)"
+  unfolding dom_schedule_entry_relation_def domainEndMarker_def
+  apply (rule iffI; clarsimp)
+   apply word_eqI
+   apply (erule allE, erule (1) impE)
+   apply (erule disjE, simp)
+   apply (erule_tac x="n-LENGTH(domain_duration_len)" in allE)
+   apply simp
+  apply (cases h_entry)
+  apply (simp add: ucast_0_eq mask_def)
+  done
 
 (* link up Kernel_Config loaded from the seL4 build system with physBase in C code *)
 lemma physBase_spec:

@@ -684,8 +684,9 @@ lemma cready_queues_to_H_correct:
    apply (drule kernel.tcb_at_not_NULL)+
    apply (fastforce simp: tcb_queue.expand kernel.ctcb_ptr_to_ctcb_ptr)
   apply (clarsimp simp: tcbQueueEmpty_def ctcb_queue_relation_def option_to_ctcb_ptr_def
-                 split: option.splits;
-         metis tcb_queue.exhaust_sel word_not_le)
+                 split: option.splits)
+   apply (metis tcb_queue.exhaust_sel)
+  apply (metis word_not_le)
   done
 
 (* showing that cpspace_relation is actually unique >>>*)
@@ -1406,34 +1407,25 @@ end
 context state_rel begin
 
 lemma cDomScheduleIdx_to_H_correct:
-  assumes valid: "valid_state' as"
-  assumes cstate_rel: "cstate_relation as cs"
-  assumes ms: "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)"
+  assumes "cstate_relation as cs"
   shows "unat (ksDomScheduleIdx_' cs) = ksDomScheduleIdx as"
   using assms
-  by (clarsimp simp: cstate_relation_def Let_def observable_memory_def valid_state'_def
-                     newKernelState_def unat_of_nat_eq cdom_schedule_relation_def)
+  by (clarsimp simp: cstate_relation_def Let_def valid_state'_def)
 
-definition
-  cDomSchedule_to_H :: "(dschedule_C['b :: finite]) \<Rightarrow> (8 word \<times> machine_word) list"
-where
+definition cDomSchedule_to_H :: "64 word[dom_schedule_len] \<Rightarrow> (domain \<times> domain_duration) list" where
   "cDomSchedule_to_H cs \<equiv> THE as. cdom_schedule_relation as cs"
 
-(* FIXME: The assumption of this is unnecessarily strong *)
 lemma cDomSchedule_to_H_correct:
-  assumes valid: "valid_state' as"
-  assumes cstate_rel: "cstate_relation as cs"
-  assumes ms: "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)"
-  shows "cDomSchedule_to_H kernel_all_global_addresses.ksDomSchedule = kernel_state.ksDomSchedule as"
-  using assms
-  apply (clarsimp simp: cstate_relation_def Let_def valid_state'_def newKernelState_def cDomSchedule_to_H_def cdom_schedule_relation_def)
+  "cstate_relation as cs \<Longrightarrow> cDomSchedule_to_H (ksDomSchedule_' cs) = ksDomSchedule as"
+  supply less_Suc0[simp del] (* avoid rewriting n < length when numDomains=1/domScheduleLength=1 *)
+  apply (clarsimp simp: cstate_relation_def Let_def cDomSchedule_to_H_def
+                        cdom_schedule_relation_def)
   apply (rule the_equality, simp)
-  apply (rule nth_equalityI)
-   apply simp
-  apply (clarsimp simp: dom_schedule_entry_relation_def)
+  apply (rule nth_equalityI, simp)
+  apply (simp add: dom_schedule_entry_relation_def)
   apply (drule_tac x=i in spec)+
   apply (rule prod_eqI)
-   apply (subst up_ucast_inj_eq[where 'b=64, symmetric])
+   apply (subst up_ucast_inj_eq[where 'b=64, symmetric]) (* 64 is dom schedule entry in C *)
     apply auto
   done
 
@@ -1506,7 +1498,8 @@ definition cstate_to_H :: "globals \<Rightarrow> kernel_state" where
     gsMaxObjectSize = (let v = unat (gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' s))
         in if v = 0 then card (UNIV :: machine_word set) else v),
     ksDomScheduleIdx = unat (ksDomScheduleIdx_' s),
-    ksDomSchedule = cDomSchedule_to_H kernel_all_global_addresses.ksDomSchedule,
+    ksDomScheduleStart = unat (ksDomScheduleStart_' s),
+    ksDomSchedule = cDomSchedule_to_H (ksDomSchedule_' s),
     ksCurDomain = ucast (ksCurDomain_' s),
     ksDomainTime = ksDomainTime_' s,
     ksReadyQueues = cready_queues_to_H (ksReadyQueues_' s),
@@ -1552,11 +1545,11 @@ lemma cstate_to_H_correct:
                   by (fastforce simp: cstate_relation_def cpspace_relation_def
                                       Let_def ghost_size_rel_def unat_eq_0
                               split: if_split)
-               using valid cstate_rel
+               using cstate_rel
                apply (rule cDomScheduleIdx_to_H_correct)
                using cstate_rel
                apply (clarsimp simp: cstate_relation_def Let_def)
-              using valid cstate_rel
+              using cstate_rel
               apply (rule cDomSchedule_to_H_correct)
               using cstate_rel
               apply (clarsimp simp: cstate_relation_def Let_def)
