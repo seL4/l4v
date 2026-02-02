@@ -114,6 +114,8 @@ lemma domain_sep_inv_updates[simp]:
   "\<And>f. domain_sep_inv irqs st (cdt_update f s) = domain_sep_inv irqs st s"
   "\<And>f. domain_sep_inv irqs st (scheduler_action_update f s) = domain_sep_inv irqs st s"
   "\<And>f. domain_sep_inv irqs st (domain_index_update f s) = domain_sep_inv irqs st s"
+  "\<And>f. domain_sep_inv irqs st (domain_start_index_update f s) = domain_sep_inv irqs st s"
+  "\<And>f. domain_sep_inv irqs st (domain_list_update f s) = domain_sep_inv irqs st s"
   "\<And>f. domain_sep_inv irqs st (cur_domain_update f s) = domain_sep_inv irqs st s"
   "\<And>f. domain_sep_inv irqs st (domain_time_update f s) = domain_sep_inv irqs st s"
   "\<And>f. domain_sep_inv irqs st (ready_queues_update f s) = domain_sep_inv irqs st s"
@@ -886,7 +888,6 @@ lemma checked_cap_insert_domain_sep_inv:
 crunch bind_notification, set_mcpriority, set_priority
   for domain_sep_inv[wp]: "domain_sep_inv irqs st"
   (ignore: thread_set)
-
 
 context DomainSepInv_1 begin
 
