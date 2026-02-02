@@ -524,14 +524,6 @@ lemma plat_SGITargetValid_spec:
               split: if_split)
   done
 
-lemma valid_tcb_state'_Restart: (* FIXME: move to Refine *)
-  "valid_tcb_state' Restart s"
-  by (simp add: valid_tcb_state'_def)
-
-lemma ct_active_st_tcb_at_runnable': (* FIXME: move to Refine *)
-  "ct_active' s \<Longrightarrow> st_tcb_at' runnable' (ksCurThread s) s"
-  by (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
-
 lemma Arch_decodeIRQControlInvocation_ccorres:
   notes if_cong[cong]
   shows
@@ -826,7 +818,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
                    unat (args ! 0) < unat (word_of_nat numSGIs :: machine_word)")
    apply (simp add: numSGIs_def numSGIs_bits_def word_le_nat_alt split: if_split)
   apply (prop_tac "\<not> length args < 4 \<longrightarrow> args \<noteq> []", clarsimp)
-  apply (clarsimp simp: valid_tcb_state'_Restart invs_valid_objs' invs_pspace_aligned'
+  apply (clarsimp simp: invs_valid_objs' invs_pspace_aligned'
                         invs_pspace_distinct' tcb_at_invs' invs_sch_act_wf'
                         excaps_in_mem_def slotcap_in_mem_def ct_active_st_tcb_at_runnable'
                         cte_wp_at_ctes_of numeral_eqs[symmetric] word_bits_def
