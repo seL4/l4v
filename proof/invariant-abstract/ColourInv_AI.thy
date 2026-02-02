@@ -26,6 +26,13 @@ definition
 term "ArchInvariants_AI.RISCV64.obj_addrs" (* should be used everywhere? *)
 term obj_ref_of
 
+fun tcb_state_ref :: "thread_state \<Rightarrow> obj_ref set"
+  where
+    "tcb_state_ref (BlockedOnReceive obj_ref _) = {obj_ref}"
+  |"tcb_state_ref (BlockedOnSend obj_ref _) = {obj_ref}"
+  |"tcb_state_ref (BlockedOnNotification obj_ref) = {obj_ref}"
+  |"tcb_state_ref _  = {}"
+
 fun
   check_tcb_state :: "thread_state \<Rightarrow> obj_ref set \<Rightarrow> bool"
   where
@@ -33,6 +40,33 @@ fun
   |"check_tcb_state (BlockedOnSend obj_ref _) obj_dom = (obj_ref \<in> obj_dom \<union> {0})"
   |"check_tcb_state (BlockedOnNotification obj_ref) obj_dom = (obj_ref \<in> obj_dom \<union> {0})"
   |"check_tcb_state _ _ = True"
+
+primrec
+  kernel_object_ref :: "kernel_object \<Rightarrow> obj_ref set"
+  where
+    "kernel_object_ref (CNode _ cs) = \<Union> ((\<lambda>x. case (cs x) of Some cap \<Rightarrow> obj_refs cap | None \<Rightarrow> {}) ` {x. True})"
+  | "kernel_object_ref (TCB t) =
+        (obj_refs (tcb_ctable t) \<union>
+        obj_refs (tcb_vtable t) \<union>
+        obj_refs (tcb_reply t) \<union>
+        obj_refs (tcb_caller t) \<union>
+        obj_refs (tcb_ipcframe t) \<union>
+        tcb_state_ref (tcb_state t) \<union>
+        {tcb_ipc_buffer t} \<union>
+        set_option (tcb_bound_notification t))"
+  | "kernel_object_ref (Endpoint ep) = (case ep of IdleEP \<Rightarrow> {}
+                                                 | SendEP s \<Rightarrow> set s
+                                                 | RecvEP r \<Rightarrow> set r)"
+  | "kernel_object_ref (Notification ntfn) =
+    ((case (ntfn_obj ntfn) of WaitingNtfn l \<Rightarrow> set l |
+                                          _ \<Rightarrow> {})
+    \<union> (case (ntfn_bound_tcb ntfn) of Some tcb \<Rightarrow> {tcb}
+                                   | None \<Rightarrow> {}))"
+  | "kernel_object_ref (ArchObj ao) = (case ao of RISCV64_A.DataPage _ _ \<Rightarrow> {}
+                                                | RISCV64_A.ASIDPool ap \<Rightarrow> \<Union> ((\<lambda>x. case (ap x) of Some obj_ref \<Rightarrow> {obj_ref} | None \<Rightarrow> {}) ` {x. True})
+                                                | RISCV64_A.PageTable pt \<Rightarrow> \<Union> ((\<lambda>x. case (pt x) of RISCV64_A.InvalidPTE \<Rightarrow> {}
+                                                                             | RISCV64_A.PagePTE ppn _ _ \<Rightarrow> {RISCV64_A.addr_from_ppn ppn}
+                                                                             | RISCV64_A.PageTablePTE ppn _  \<Rightarrow> {RISCV64_A.addr_from_ppn ppn}) ` {x. True}))"
 
 primrec
   check_kernel_object_ref :: "kernel_object \<Rightarrow> obj_ref set \<Rightarrow> bool"
@@ -67,11 +101,105 @@ primrec
                                                                              | RISCV64_A.PagePTE ppn _ _ \<Rightarrow> RISCV64_A.addr_from_ppn ppn \<in> obj_dom \<union> {0}
                                                                              | RISCV64_A.PageTablePTE ppn _  \<Rightarrow> RISCV64_A.addr_from_ppn ppn \<in> obj_dom \<union> {0}))"
 
+lemma kernel_object_ref_check:
+  "check_kernel_object_ref kobj obj_dom \<equiv> kernel_object_ref kobj \<subseteq> (obj_dom \<union> {0})"
+  apply (induct kobj)
+  apply simp
+  apply (subst check_cap_ref_def)
+  apply (rule iffI)
+  apply (safe)[1]
+  apply (erule_tac x=xa in allE)
+  apply simp
+  apply (case_tac "x2a xa"; simp add: check_cap_ref_def)
+  apply blast
+  apply (rule allI)
+  apply (case_tac "x2a x"; simp add: check_cap_ref_def)
+  apply (simp add: Union_eq)
+  apply (simp add: set_compre_unwrap)
+  apply (rule subsetI)
+  apply (erule_tac x=xa in allE)
+  apply (erule impE)
+  apply (rule_tac x=x in exI)
+  apply simp
+  apply simp
+  apply simp
+  apply (simp add: check_cap_ref_def)
+  apply (case_tac "tcb_state x"; simp, meson)
+  apply simp
+  apply (case_tac x; simp)
+  apply simp
+  apply (case_tac "ntfn_obj x"; case_tac "ntfn_bound_tcb x"; simp)
+  apply simp
+  apply (safe)
+  apply (simp add: RISCV64_A.arch_kernel_obj.inject RISCV64_A.arch_kernel_obj.distinct split: RISCV64_A.arch_kernel_obj.split_asm)
+  apply (safe)
+  apply (erule_tac x=xb in allE)
+  apply (case_tac "x1a xb")
+  apply simp
+  apply simp
+   apply (erule_tac x=xb in allE)
+  apply (simp split: RISCV64_A.pte.split_asm)
+  apply ((simp add: RISCV64_A.pte.simps)+)[6]
+  apply (simp add: RISCV64_A.arch_kernel_obj.inject RISCV64_A.arch_kernel_obj.distinct split: RISCV64_A.arch_kernel_obj.split_asm RISCV64_A.arch_kernel_obj.split)
+  apply safe
+  apply (case_tac "x1 xa"; simp add: check_cap_ref_def)
+  apply (simp add: Union_eq)
+    apply (simp add: set_compre_unwrap)
+  apply (erule_tac x=a in allE)
+  apply (erule impE)
+  apply (rule_tac x=xa in exI)
+  apply simp
+  apply simp
+    apply (simp split: RISCV64_A.pte.split)
+  apply safe
+  apply (simp add: Union_eq)
+    apply (simp add: set_compre_unwrap)
+  apply (erule_tac x="RISCV64_A.addr_from_ppn
+            x21" in allE)
+  apply (erule impE)
+  apply (rule_tac x=xa in exI)
+  apply simp
+  apply (simp add: RISCV64_A.pte.case(2))
+  apply blast
+  apply (simp add: Union_eq)
+    apply (simp add: set_compre_unwrap)
+  apply (erule_tac x=" RISCV64_A.addr_from_ppn
+            x31" in allE)
+  apply (erule impE)
+  apply (rule_tac x=xa in exI)
+  apply simp
+   apply (simp add: RISCV64_A.pte.case(3))
+  by blast
+
 definition colour_invariant
   where
     "colour_invariant s \<equiv> \<forall>ptr kobj. \<forall>(dom, _)\<in>(set (domain_list s)).
     (ko_at kobj ptr s \<and> ptr \<in> colour_oracle dom) \<longrightarrow>
     (check_kernel_object_ref kobj (colour_oracle dom) \<or> ptr = 0)"
+
+lemma colour_inv_cur_domain:
+  "\<lbrakk>invs s; colour_invariant s; ptr' \<in> kernel_object_ref kobj; ko_at kobj ptr s; ptr \<in> colour_oracle (cur_domain s)\<rbrakk> \<Longrightarrow> ptr' \<in> colour_oracle (cur_domain s) \<or> ptr' = 0"
+  apply (frule invs_cur_domain_list)
+  apply (simp add: cur_domain_list_def colour_invariant_def)
+  apply (erule exE)
+  apply (erule_tac x=ptr in allE)
+  apply (erule_tac x=kobj in allE)
+  apply (erule_tac x="(cur_domain s, a)" in ballE)
+  apply simp
+  apply safe
+  apply (simp add: kernel_object_ref_check subset_iff)
+  apply (erule_tac x=ptr' in allE)
+  apply simp
+  apply (frule invs_pspace_in_kernel_window)
+  apply (simp add: RISCV64.pspace_in_kernel_window_def obj_at_def)
+  apply (erule_tac x=0 in allE;
+         erule_tac x="kobj" in allE)
+  apply (simp add: RISCV64.kernel_window_def)
+  apply (frule RISCV64.invs_valid_uses)
+  apply (simp add: RISCV64.valid_uses_def)
+  apply (erule_tac x=0 in allE)
+  apply (simp add: subset_eq)
+  by (erule_tac x=0 in ballE; simp add: RISCV64_A.pptr_base_def RISCV64.pptrBase_def RISCV64.canonical_bit_def)
 
 definition valid_ptr_in_cur_domain
   where
@@ -361,7 +489,8 @@ find_theorems derive_cap NullCap
   apply (simp add: derive_cap_def cong: cap.case_cong)
    apply (wpsimp simp: RISCV64_A.arch_derive_cap_def)
   apply simp+
-apply (rule conjI)
+  apply safe[1]
+  apply (simp add: split_beta)
   apply clarsimp
   apply (erule_tac x="hd slots" in ballE)
   apply clarsimp
@@ -535,10 +664,13 @@ lemma setup_caller_cap_colour_maintained:
   setup_caller_cap sender receiver grant
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   apply (wpsimp simp: setup_caller_cap_def)
-  apply (rule conjI)
-   apply (rule impI)
-  by (wpsimp simp: colour_invariant_def obj_at_def check_cap_ref_def wp: cap_insert_colour_maintained set_thread_state_colour_maintained;
-        simp add: valid_ptr_in_cur_domain_def)+
+  apply (rule conjI; rule impI)
+  apply (wpsimp simp: colour_invariant_def obj_at_def check_cap_ref_def wp: cap_insert_colour_maintained set_thread_state_colour_maintained hoare_vcg_conj_lift)
+  apply (wpsimp simp: valid_ptr_in_cur_domain_def wp: sts_invs_minor)+
+  apply (simp add: check_cap_ref_def st_tcb_at_def obj_at_def)
+find_theorems "\<lbrace>_\<rbrace>set_thread_state _ _\<lbrace>_\<rbrace>" invs
+find_theorems setup_caller_cap valid
+thm st_tcb_at_reply_cap_valid
 
 lemma handle_double_fault_colour_maintained:
   "\<lbrace>colour_invariant and (\<lambda>s. valid_ptr_in_cur_domain tptr s)\<rbrace>
@@ -709,7 +841,7 @@ apply (wpsimp wp: setup_caller_cap_colour_maintained)
                        apply (wpsimp wp: set_thread_state_colour_maintained)
 apply (rule_tac Q'="\<lambda>_.
   colour_invariant and
-  valid_ptr_in_cur_domain thread and
+  valid_ptr_in_cur_domain thread and invs and
   (\<lambda>s. call \<longrightarrow>
     (if (can_grant \<or> can_grant_reply) then (valid_ptr_in_cur_domain x21)
     else (\<lambda>s. check_tcb_state Inactive (colour_oracle (cur_domain s)))) s)" in hoare_post_imp)
@@ -718,8 +850,8 @@ apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
 apply (wpsimp wp: possible_switch_to_colour_maintained)
 apply (wpsimp simp: valid_ptr_in_cur_domain_def)
 apply wpsimp
-apply safe
 apply (wpsimp simp: valid_ptr_in_cur_domain_def)+
+  apply safe
 apply (wpsimp wp: set_thread_state_colour_maintained)
 apply wpsimp
 prefer 2
@@ -732,6 +864,10 @@ prefer 2
 apply wpsimp
 apply (wpsimp simp: do_ipc_transfer_def)
 apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
+apply (wpsimp wp: set_thread_state_colour_maintained)
+apply (wpsimp wp: set_thread_state_colour_maintained)
+find_theorems set_thread_state invs valid
+
   apply (wpsimp wp: do_normal_transfer_colour_maintained)
   apply (rule_tac Q'="\<lambda>_ s. (x21 \<in> colour_oracle (cur_domain s) \<or> x21 = 0) \<and> (thread \<in> colour_oracle (cur_domain s) \<or> thread = 0)" in hoare_strengthen_post)
   apply wpsimp
