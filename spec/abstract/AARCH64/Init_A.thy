@@ -48,6 +48,7 @@ definition init_arch_state :: arch_state where
   "init_arch_state \<equiv> \<lparr>
      arm_asid_table = Map.empty,
      arm_kernel_vspace = init_vspace_uses,
+     arm_asid_map = Map.empty,
      arm_vmid_table = Map.empty,
      arm_next_vmid = 0,
      arm_us_global_vspace = arm_global_pt_ptr,
