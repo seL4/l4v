@@ -86,7 +86,7 @@ definition perform_asid_pool_invocation :: "asid_pool_invocation \<Rightarrow> (
        assert $ is_PageTableCap acap;
        set_cap (ArchObjectCap $ update_map_data acap $ Some (asid,0)) ct_slot;
        pt_base \<leftarrow> return $ acap_obj acap;
-       store_asid_pool_entry pool_ptr asid (Some (ASIDPoolVSpace None pt_base))
+       store_asid_pool_entry pool_ptr asid (Some (ASIDPoolVSpace pt_base))
      od"
 
 definition perform_pg_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad" where

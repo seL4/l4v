@@ -47,7 +47,6 @@ definition vspace_for_pool :: "obj_ref \<Rightarrow> asid \<Rightarrow> (obj_ref
      oreturn $ ap_vspace entry
    }"
 
-(* this is what asid_map encodes in ARM/ARM_HYP; getASIDPoolEntry in Haskell *)
 definition entry_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> asid_pool_entry option" where
   "entry_for_asid asid = do {
      pool_ptr \<leftarrow> pool_for_asid asid;
@@ -81,14 +80,22 @@ definition find_vspace_for_asid :: "asid \<Rightarrow> (obj_ref,'z::state_ext) l
 
 definition load_vmid :: "asid \<Rightarrow> (vmid option, 'z::state_ext) s_monad" where
   "load_vmid asid \<equiv> do
-     entry \<leftarrow> gets_the $ entry_for_asid asid;
-     return $ ap_vmid entry
+     asid_map \<leftarrow> gets asid_map;
+     return $ asid_map asid
+   od"
+
+
+definition update_asid_map :: "asid \<Rightarrow> vmid option \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "update_asid_map asid vmid_opt \<equiv> do
+     asid_map \<leftarrow> gets asid_map;
+     asid_map' \<leftarrow> return $ asid_map (asid := vmid_opt);
+     modify (\<lambda>s. s\<lparr>arch_state := arch_state s \<lparr>arm_asid_map := asid_map'\<rparr>\<rparr>)
    od"
 
 text \<open>Associate a VMID with an ASID.\<close>
 definition store_vmid :: "asid \<Rightarrow> vmid \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "store_vmid asid hw_asid \<equiv> do
-     update_asid_pool_entry (\<lambda>entry. Some $ ASIDPoolVSpace (Some hw_asid) (ap_vspace entry)) asid;
+     update_asid_map asid (Some hw_asid);
      vmid_table \<leftarrow> gets (arm_vmid_table \<circ> arch_state);
      vmid_table' \<leftarrow> return $ vmid_table (hw_asid \<mapsto> asid);
      modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> arm_vmid_table := vmid_table' \<rparr>\<rparr>)
@@ -116,8 +123,7 @@ definition invalidate_tlb_by_asid_va :: "asid \<Rightarrow> vspace_ref \<Rightar
 
 text \<open>Remove any mapping from this virtual ASID to a VMID.\<close>
 definition invalidate_asid :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "invalidate_asid asid \<equiv>
-     update_asid_pool_entry (\<lambda>entry. Some $ ASIDPoolVSpace None (ap_vspace entry)) asid"
+  "invalidate_asid asid \<equiv> update_asid_map asid None"
 
 text \<open>Remove any mapping from this VMID to an ASID.\<close>
 definition invalidate_vmid_entry :: "vmid \<Rightarrow> (unit,'z::state_ext) s_monad" where
@@ -260,7 +266,7 @@ definition delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::st
        None \<Rightarrow> return ()
      | Some pool_ptr \<Rightarrow> do
          pool \<leftarrow> get_asid_pool pool_ptr;
-         when (\<exists>vmid. pool (asid_low_bits_of asid) = Some (ASIDPoolVSpace vmid pt)) $ do
+         when (pool (asid_low_bits_of asid) = Some (ASIDPoolVSpace pt)) $ do
            invalidate_tlb_by_asid asid;
            invalidate_asid_entry asid;
            \<comment> \<open>re-read here, because @{text invalidate_asid_entry} changes the ASID pool:\<close>

@@ -35,6 +35,9 @@ lemmas asid_bits_of_defs = asid_high_bits_of_def asid_low_bits_of_def
 locale_abbrev asid_table :: "'z::state_ext state \<Rightarrow> asid_high_index \<rightharpoonup> obj_ref" where
   "asid_table \<equiv> \<lambda>s. arm_asid_table (arch_state s)"
 
+locale_abbrev asid_map :: "'z::state_ext state \<Rightarrow> asid \<rightharpoonup> vmid" where
+  "asid_map \<equiv> \<lambda>s. arm_asid_map (arch_state s)"
+
 section "Kernel Heap Accessors"
 
 (* declared in Arch as workaround for VER-1099 *)
