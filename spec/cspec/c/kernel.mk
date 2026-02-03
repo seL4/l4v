@@ -32,10 +32,6 @@ ifndef CONFIG
   CONFIG := ${SOURCE_ROOT}/configs/${SEL4_CONFIG_NAME}_verified.cmake
 endif
 
-ifndef CONFIG_DOMAIN_SCHEDULE
-  CONFIG_DOMAIN_SCHEDULE := ${CSPEC_DIR}/c/config_sched.c
-endif
-
 # Normally, this make file is used in a context where CONFIG_OPTIMISATION
 # is not set, and the CMake KernelOptimisation setting is taken from the
 # settings file named by the CONFIG variable (see above).
@@ -122,7 +118,6 @@ ${BUILD_DONE}: ${KERNEL_DEPS} ${CONFIG_DOMAIN_SCHEDULE} ${OVERLAY}
 	cmake -C ${CONFIG} \
 		-DCROSS_COMPILER_PREFIX=${TOOLPREFIX} \
 		-DCMAKE_TOOLCHAIN_FILE=${SOURCE_ROOT}/gcc.cmake \
-		-DKernelDomainSchedule=${CONFIG_DOMAIN_SCHEDULE} \
 		-DUMM_TYPES=$(abspath ${UMM_TYPES}) -DCSPEC_DIR=${CSPEC_DIR} \
 		${KERNEL_CMAKE_OPTIMISATION} ${KERNEL_CMAKE_EXTRA_OPTIONS} \
 		${OVERLAY_OPT} \
