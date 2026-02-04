@@ -19,6 +19,7 @@ This *colour invariant* is the main work attempted so far, with the end goal of 
 - As we need a determination of what colours are allocated to what PDs, and we don't have a concrete implementation yet, there is a colour *oracle* which can have properties added to it so that we can replace it with a concrete implementation satisfying those properties in the future, whilst using the oracle for proof work in the meantime
 - So far the only properties identified are that there should be no overlap between allocated colours, and 0/`NULL` is allocated to no colour (`retype_region` explicitly requires `NULL` to be a valid address referenced in any PD, but I found it was simpler to simply add that as a separate case in the invariant, rather than have that bit of overlap)
 - There will need to be some alignment properties added in the future most likely (something along the lines of entire pages are coloured the same)
+    - This will be needed for `Refine` as discussed below
 
 #### Main Invariant
 - With the oracle, the main invariant was stated, quantifying over all pointers and kernel objects, and all domains in the state
@@ -27,7 +28,7 @@ This *colour invariant* is the main work attempted so far, with the end goal of 
 #### Proofs
 - The proofs were standard Hoare logic style proofs making use of weakest preconditions
 - These were completed for `KHeap_A` and then a variety of methods above, working top down from `call_kernel`
-- `crunch`-ing `call_kernel` provides a lsit of the next methods to be approached, and in this manner I slowly worked down `handle_invocation`'s dependencies
+- `crunch`-ing `call_kernel` provides a list of the next methods to be approached, and in this manner I slowly worked down `handle_invocation`'s dependencies
 - To the best of my knowledge, the remaining methods to approach are: `cdl_intent_op`, `cdl_intent_cap`, `cdl_intent_extras`, `lookup_cap_and_slot`, `lookup_extra_cap`, `decode_invocation`, `mark_tcb_intent_error`, `perform_invocation`, `restart` and `corrupt_ipc_buffer` along with any dependencies that require separate proofs. These may not all need manual proofs as `crunch` may do its magic on some of them
     - In particular, `decode_invocation` and `perform_invocation` are likely to be the majority of the work
 

@@ -10,7 +10,7 @@ imports
   "$L4V_ARCH/RAB_FN"
   "$L4V_ARCH/EmptyFail_H"
   "$L4V_ARCH/Init_R"
-  "AInvs.New"
+  "AInvs.ColourInv_AI"
 begin
 
 axiomatization colourOracle :: "domain \<Rightarrow> obj_ref set"
@@ -23,7 +23,6 @@ section \<open>Colour Oracle Defn + Lemma\<close>
 definition isInDomainColour' :: "domain \<Rightarrow> machine_word \<Rightarrow> bool"
   where "isInDomainColour' d p \<equiv> p \<in> colourOracle d"
 
-find_theorems state_relation cur_domain
 lemma colour_invariant_isInDomColour':
   "\<lbrakk>(s, s')\<in>state_relation; ptr \<in> colour_oracle (cur_domain s)\<rbrakk> \<Longrightarrow> isInDomainColour' (ksCurDomain s') ptr"
   by (simp add: isInDomainColour'_def oracle_corres curdomain_relation)
@@ -47,7 +46,6 @@ od"
 consts' getCTEColoured :: "machine_word \<Rightarrow> cte kernel"
 defs getCTEColoured_def:
 "getCTEColoured \<equiv> getObjectColoured"
-
 
 consts' threadSetInCurDomain :: "(tcb \<Rightarrow> tcb) \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 defs threadSetInCurDomain_def:
@@ -101,22 +99,6 @@ lemma no_fail_setObject_tcb [wp]:
    apply simp
   apply (simp add: objBits_simps)
   done
-
-term "state_relation"
-term "pspace_relation"
-term "obj_relation_cuts"
-
-thm "corres_guard_imp"
-thm "stronger_corres_guard_imp"
-thm corres_cross_over_guard
-
-term state_assert
-find_theorems state_assert corres_underlying
-find_theorems stateAssert corres_underlying
-thm corres_stateAssert_r_cross (* look for other shit *)
-thm spec_corres_split'
-thm stronger_corres_guard_imp
-find_theorems "corres"
 
 lemma no_fail_getCTE_inCurDomain [wp]:
   "no_fail (cte_at' p and (\<lambda>s. isInDomainColour' (ksCurDomain s) p)) (getCTEColoured p)"
@@ -482,7 +464,6 @@ lemma get_cap_inCurDomain_corres_P':
           (cte_wp_at P cslot_ptr)
           (pspace_aligned' and pspace_distinct' and (\<lambda>s. isInDomainColour' (ksCurDomain s) (cte_map cslot_ptr)))
           (get_cap cslot_ptr) (getCTEColoured (cte_map cslot_ptr))"
-thm get_cap_corres_P
   apply (rule corres_stronger_no_failI)
    apply (rule no_fail_pre, wp)
    apply clarsimp
@@ -511,16 +492,6 @@ lemma get_cap_inCurDomain_corres_P:
   by (simp add: colour_invariant_isInDomColour' get_cap_inCurDomain_corres_P')+
 
 lemmas get_cap_inCurDomain_corres = get_cap_inCurDomain_corres_P[where P="\<top>", simplified]
-
-find_theorems getCTE corres
-find_theorems getSlotCap corres
-find_theorems lookupCapAndSlot corres
-find_theorems lookupSlotForThread corres
-find_theorems lookupCap corres
-find_theorems isInDomainColour name: def
-find_theorems getObjectInCurDomain name: def
-find_theorems threadSet name: def
-find_theorems threadSet corres
 
 lemma threadsetInCurDomain_corresT':
   assumes x: "\<And>tcb tcb'. tcb_relation tcb tcb' \<Longrightarrow>

@@ -9,6 +9,7 @@ theory ColourInv_AI
     KernelInit_AI
     "$L4V_ARCH/ArchDetSchedSchedule_AI"
 begin
+
 section "Initialisation"
 axiomatization
   colour_oracle :: "domain \<Rightarrow> obj_ref set"
@@ -22,9 +23,6 @@ definition
   check_cap_ref :: "cap \<Rightarrow> obj_ref set \<Rightarrow> bool"
   where
     "check_cap_ref cap obj_set \<equiv> obj_refs cap \<subseteq> obj_set \<union> {0}"
-
-term "ArchInvariants_AI.RISCV64.obj_addrs" (* should be used everywhere? *)
-term obj_ref_of
 
 fun tcb_state_ref :: "thread_state \<Rightarrow> obj_ref set"
   where
@@ -104,78 +102,59 @@ primrec
 lemma kernel_object_ref_check:
   "check_kernel_object_ref kobj obj_dom \<equiv> kernel_object_ref kobj \<subseteq> (obj_dom \<union> {0})"
   apply (induct kobj)
-  apply simp
-  apply (subst check_cap_ref_def)
-  apply (rule iffI)
-  apply (safe)[1]
-  apply (erule_tac x=xa in allE)
-  apply simp
-  apply (case_tac "x2a xa"; simp add: check_cap_ref_def)
-  apply blast
-  apply (rule allI)
-  apply (case_tac "x2a x"; simp add: check_cap_ref_def)
-  apply (simp add: Union_eq)
-  apply (simp add: set_compre_unwrap)
-  apply (rule subsetI)
-  apply (erule_tac x=xa in allE)
-  apply (erule impE)
-  apply (rule_tac x=x in exI)
-  apply simp
-  apply simp
-  apply simp
-  apply (simp add: check_cap_ref_def)
-  apply (case_tac "tcb_state x"; simp, meson)
-  apply simp
-  apply (case_tac x; simp)
-  apply simp
-  apply (case_tac "ntfn_obj x"; case_tac "ntfn_bound_tcb x"; simp)
-  apply simp
-  apply (safe)
-  apply (simp add: RISCV64_A.arch_kernel_obj.inject RISCV64_A.arch_kernel_obj.distinct split: RISCV64_A.arch_kernel_obj.split_asm)
-  apply (safe)
-  apply (erule_tac x=xb in allE)
-  apply (case_tac "x1a xb")
-  apply simp
-  apply simp
+      apply simp
+      apply (subst check_cap_ref_def)
+      apply (rule iffI)
+       apply (safe)[1]
+       apply (erule_tac x=xa in allE)
+       apply (case_tac "x2a xa"; simp add: check_cap_ref_def)
+       apply blast
+      apply (rule allI)
+      apply (case_tac "x2a x"; simp add: check_cap_ref_def)
+      apply (simp add: Union_eq set_compre_unwrap)
+      apply (rule subsetI)
+      apply (erule_tac x=xa in allE)
+      apply (erule impE)
+       apply (rule_tac x=x in exI)
+       apply (simp add: check_cap_ref_def)+
+     apply (case_tac "tcb_state x"; simp, meson)
+    apply (case_tac x; simp)
+   apply simp
+   apply (case_tac "ntfn_obj x"; case_tac "ntfn_bound_tcb x"; simp)
+  apply safe
+   apply (simp add: RISCV64_A.arch_kernel_obj.inject RISCV64_A.arch_kernel_obj.distinct split: RISCV64_A.arch_kernel_obj.split_asm)
+    apply safe
+    apply (erule_tac x=xb in allE)
+    apply (case_tac "x1a xb")
+     apply simp+
    apply (erule_tac x=xb in allE)
-  apply (simp split: RISCV64_A.pte.split_asm)
-  apply ((simp add: RISCV64_A.pte.simps)+)[6]
+   apply (simp add: RISCV64_A.pte.simps split: RISCV64_A.pte.split_asm)
   apply (simp add: RISCV64_A.arch_kernel_obj.inject RISCV64_A.arch_kernel_obj.distinct split: RISCV64_A.arch_kernel_obj.split_asm RISCV64_A.arch_kernel_obj.split)
+   apply safe
+   apply (case_tac "x1 xa"; simp add: check_cap_ref_def)
+   apply (simp add: Union_eq set_compre_unwrap)
+   apply (erule_tac x=a in allE)
+   apply (erule impE)
+    apply (rule_tac x=xa in exI)
+    apply (simp split: RISCV64_A.pte.split)+
   apply safe
-  apply (case_tac "x1 xa"; simp add: check_cap_ref_def)
-  apply (simp add: Union_eq)
-    apply (simp add: set_compre_unwrap)
-  apply (erule_tac x=a in allE)
+   apply (simp add: Union_eq set_compre_unwrap)
+   apply (erule_tac x="RISCV64_A.addr_from_ppn x21" in allE)
+   apply (erule impE)
+    apply (rule_tac x=xa in exI)
+    apply (simp add: RISCV64_A.pte.case)+
+  apply (simp add: Union_eq set_compre_unwrap)
+  apply (erule_tac x=" RISCV64_A.addr_from_ppn x31" in allE)
   apply (erule impE)
-  apply (rule_tac x=xa in exI)
-  apply simp
-  apply simp
-    apply (simp split: RISCV64_A.pte.split)
-  apply safe
-  apply (simp add: Union_eq)
-    apply (simp add: set_compre_unwrap)
-  apply (erule_tac x="RISCV64_A.addr_from_ppn
-            x21" in allE)
-  apply (erule impE)
-  apply (rule_tac x=xa in exI)
-  apply simp
-  apply (simp add: RISCV64_A.pte.case(2))
-  apply blast
-  apply (simp add: Union_eq)
-    apply (simp add: set_compre_unwrap)
-  apply (erule_tac x=" RISCV64_A.addr_from_ppn
-            x31" in allE)
-  apply (erule impE)
-  apply (rule_tac x=xa in exI)
-  apply simp
-   apply (simp add: RISCV64_A.pte.case(3))
-  by blast
+   apply (rule_tac x=xa in exI)
+   apply simp
+  by (simp add: RISCV64_A.pte.case)+
 
 definition colour_invariant
   where
     "colour_invariant s \<equiv> \<forall>ptr kobj. \<forall>(dom, _)\<in>(set (domain_list s)).
-    (ko_at kobj ptr s \<and> ptr \<in> colour_oracle dom) \<longrightarrow>
-    (check_kernel_object_ref kobj (colour_oracle dom) \<or> ptr = 0)"
+   (ko_at kobj ptr s \<and> ptr \<in> colour_oracle dom) \<longrightarrow>
+   (check_kernel_object_ref kobj (colour_oracle dom) \<or> ptr = 0)"
 
 lemma colour_inv_cur_domain:
   "\<lbrakk>invs s; colour_invariant s; ptr' \<in> kernel_object_ref kobj; ko_at kobj ptr s; ptr \<in> colour_oracle (cur_domain s)\<rbrakk> \<Longrightarrow> ptr' \<in> colour_oracle (cur_domain s) \<or> ptr' = 0"
@@ -184,16 +163,15 @@ lemma colour_inv_cur_domain:
   apply (erule exE)
   apply (erule_tac x=ptr in allE)
   apply (erule_tac x=kobj in allE)
-  apply (erule_tac x="(cur_domain s, a)" in ballE)
-  apply simp
-  apply safe
-  apply (simp add: kernel_object_ref_check subset_iff)
-  apply (erule_tac x=ptr' in allE)
-  apply simp
+  apply (erule_tac x="(cur_domain s, a)" in ballE; simp)
+   apply safe
+   apply (simp add: kernel_object_ref_check subset_iff)
+   apply (erule_tac x=ptr' in allE)
+   apply simp
   apply (frule invs_pspace_in_kernel_window)
   apply (simp add: RISCV64.pspace_in_kernel_window_def obj_at_def)
-  apply (erule_tac x=0 in allE;
-         erule_tac x="kobj" in allE)
+  apply (erule_tac x=0 in allE)
+  apply (erule_tac x="kobj" in allE)
   apply (simp add: RISCV64.kernel_window_def)
   apply (frule RISCV64.invs_valid_uses)
   apply (simp add: RISCV64.valid_uses_def)
@@ -205,29 +183,6 @@ definition valid_ptr_in_cur_domain
   where
     "valid_ptr_in_cur_domain ptr s \<equiv> ptr \<in> colour_oracle (cur_domain s) \<or> ptr = 0"
 
-crunch cap_insert, set_extra_badge for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
-  (simp: crunch_simps
-    wp: crunch_wps)
-
-lemma transfer_caps_loop_cur_domain[wp]:
-"\<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>
-  transfer_caps_loop a b c d e f
-\<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
-by (rule transfer_caps_loop_pres[OF cap_insert_cur_domain set_extra_badge_cur_domain])
-
-lemma make_fault_msg_cur_domain[wp]:
-  "\<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>
-    make_fault_msg fault thread
-  \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
-  apply (cases fault; wpsimp)
-       apply (rule conjI)
-        apply (rule impI)
-  by (wpsimp wp: as_user_cur_domain RISCV64.make_arch_fault_msg_inv)+
-
-crunch send_ipc for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
-  (simp: crunch_simps
-    wp: crunch_wps)
-
 lemma ptr_no_domain_overlap:
   "\<lbrakk>valid_ptr_in_cur_domain ptr s; ptr \<in> colour_oracle a\<rbrakk> \<Longrightarrow> a = cur_domain s"
   apply (simp add: valid_ptr_in_cur_domain_def)
@@ -236,6 +191,30 @@ lemma ptr_no_domain_overlap:
 
 crunch as_user, set_cap, set_untyped_cap_as_full for valid_ptr_in_cur_domain: "\<lambda>s. valid_ptr_in_cur_domain a s"
   (simp: valid_ptr_in_cur_domain_def)
+
+section "Current domain invariance"
+crunch cap_insert, set_extra_badge for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
+  (simp: crunch_simps
+    wp: crunch_wps)
+
+lemma transfer_caps_loop_cur_domain[wp]:
+  "\<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>
+  transfer_caps_loop a b c d e f
+\<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
+  by (rule transfer_caps_loop_pres[OF cap_insert_cur_domain set_extra_badge_cur_domain])
+
+lemma make_fault_msg_cur_domain[wp]:
+  "\<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>
+      make_fault_msg fault thread
+    \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
+  apply (cases fault; wpsimp)
+   apply (rule conjI)
+    apply (rule impI)
+  by (wpsimp wp: as_user_cur_domain RISCV64.make_arch_fault_msg_inv)+
+
+crunch send_ipc for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
+  (simp: crunch_simps
+    wp: crunch_wps)
 
 section "KHeap_A Colour Invariant"
 lemma set_object_colour_maintained:
@@ -293,7 +272,7 @@ lemma set_bound_notification_colour_maintained:
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   apply (wpsimp simp: set_bound_notification_thread_set colour_invariant_def obj_at_update wp: thread_set_wp)
   apply (drule ptr_no_domain_overlap)
-  apply simp
+   apply simp
   by fastforce
 
 lemma set_simple_ko_colour_maintained:
@@ -337,7 +316,7 @@ lemma as_user_colour_maintained:
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   by (wpsimp simp: as_user_def colour_invariant_def obj_at_update obj_at_def wp: set_object_wp, fastforce dest: get_tcb_SomeD)
 
-  \<comment>\<open>I suspect that a lot of the above can effectively be turned into crunches - might try that at some point\<close>
+\<comment>\<open>I suspect that a lot of the above can effectively be turned into crunches\<close>
 crunch reschedule_required,
   possible_switch_to,
   set_thread_state_act,
@@ -357,15 +336,15 @@ crunch store_word_offs,
   (simp: colour_invariant_def obj_at_update)
 
 lemma activate_thread_colour_maintained:
-  "\<lbrace>colour_invariant and (\<lambda>s. valid_ptr_in_cur_domain (cur_thread s) s) and (\<lambda>s. tcb_at (cur_thread s) s)\<rbrace> \<comment>\<open>(*yikes*)\<close>
+  "\<lbrace>colour_invariant and (\<lambda>s. valid_ptr_in_cur_domain (cur_thread s) s) and (\<lambda>s. tcb_at (cur_thread s) s)\<rbrace> \<comment>\<open>Try remove last precond\<close>
      activate_thread
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   apply (wpsimp simp: activate_thread_def wp: set_thread_state_colour_maintained as_user_colour_maintained as_user_valid_ptr_in_cur_domain)
-  apply (wpsimp simp: RISCV64_A.arch_activate_idle_thread_def)
-  apply (wpsimp simp: get_thread_state_def)
-  apply (wpsimp wp: thread_get_wp)+
+     apply (wpsimp simp: RISCV64_A.arch_activate_idle_thread_def)
+    apply (wpsimp simp: get_thread_state_def)
+    apply (wpsimp wp: thread_get_wp)+
   apply (simp add: tcb_at_def get_tcb_def obj_at_def is_tcb_def)
-using is_obj_defs(3) is_tcb_def
+  using is_obj_defs(3) is_tcb_def
   by presburger
 
 lemma set_cap_colour_maintained:
@@ -397,38 +376,38 @@ lemma cte_wp_at_check_cap_ref:
   apply (simp add: cte_wp_at_cases2 valid_ptr_in_cur_domain_def)
   apply (safe; frule invs_cur_domain_list; simp add: colour_invariant_def obj_at_def cur_domain_list_def)
      apply safe
-  apply (erule_tac x=a in allE,
-        erule_tac x="CNode sz fun" in allE,
-        erule_tac x="(cur_domain s, aa)" in ballE;
-          simp)
-  apply safe
-  apply (erule_tac x=b in allE)
-    apply (simp add: check_kernel_object_ref_def colour_oracle_no_zero)+
-     apply (erule_tac x=a in allE;
-            erule_tac x="CNode sz fun" in allE)
-  apply (frule invs_pspace_in_kernel_window)
-  apply (simp add: RISCV64.pspace_in_kernel_window_def)
-  apply (erule_tac x=0 in allE;
-         erule_tac x="CNode sz fun" in allE)
-  apply (simp add: RISCV64.kernel_window_def)
-  apply (frule RISCV64.invs_valid_uses)
-  apply (simp add: RISCV64.valid_uses_def)
-  apply (erule_tac x=0 in allE)
-  apply (simp add: subset_eq)
-  apply (erule_tac x=0 in ballE; simp add: RISCV64_A.pptr_base_def RISCV64.pptrBase_def RISCV64.canonical_bit_def)
-  apply (erule_tac x=a in allE,
-         erule_tac x="TCB tcb" in allE,
-         erule_tac x="(cur_domain s, aa)" in ballE;
-           simp)
-  apply (frule_tac a=b and b=cap in ranI)
-    apply (fastforce simp add: ran_tcb_cnode_map colour_oracle_no_zero)
-     apply (erule_tac x=a in allE)
-   apply (erule_tac x="TCB tcb" in allE)
+     apply (erule_tac x=a in allE,
+           erule_tac x="CNode sz fun" in allE,
+           erule_tac x="(cur_domain s, aa)" in ballE;
+             simp)
+     apply safe
+      apply (erule_tac x=b in allE)
+      apply (simp add: check_kernel_object_ref_def colour_oracle_no_zero)+
+    apply (erule_tac x=a in allE;
+           erule_tac x="CNode sz fun" in allE)
+    apply (frule invs_pspace_in_kernel_window)
+    apply (simp add: RISCV64.pspace_in_kernel_window_def)
+    apply (erule_tac x=0 in allE;
+           erule_tac x="CNode sz fun" in allE)
+    apply (simp add: RISCV64.kernel_window_def)
+    apply (frule RISCV64.invs_valid_uses)
+    apply (simp add: RISCV64.valid_uses_def)
+    apply (erule_tac x=0 in allE)
+    apply (simp add: subset_eq)
+    apply (erule_tac x=0 in ballE; simp add: RISCV64_A.pptr_base_def RISCV64.pptrBase_def RISCV64.canonical_bit_def)
+   apply (erule_tac x=a in allE,
+          erule_tac x="TCB tcb" in allE,
+          erule_tac x="(cur_domain s, aa)" in ballE;
+            simp)
+   apply (frule_tac a=b and b=cap in ranI)
+   apply (fastforce simp add: ran_tcb_cnode_map colour_oracle_no_zero)
+  apply (erule_tac x=a in allE)
+  apply (erule_tac x="TCB tcb" in allE)
   apply (erule_tac x="(cur_domain s, aa)" in ballE; simp)
   apply (frule invs_pspace_in_kernel_window)
   apply (simp add: RISCV64.pspace_in_kernel_window_def)
   apply (erule_tac x=0 in allE)
-      apply (erule_tac x="TCB tcb" in allE)
+  apply (erule_tac x="TCB tcb" in allE)
   apply (simp add: RISCV64.kernel_window_def)
   apply (frule RISCV64.invs_valid_uses)
   apply (simp add: RISCV64.valid_uses_def)
@@ -455,7 +434,7 @@ lemma hoare_weird_if:
    apply (rule hoare_strengthen_postE_R[where Q'="\<lambda>rv s. (\<not> cond rv \<longrightarrow> R rv s) \<and> Q s"])
   by (wpsimp wp: hoare_vcg_conj_liftE_R')+
 
-lemma transfer_caps_loop_colour_maintained:
+lemma transfer_caps_loop_colour_maintained: (* broken by invs *)
   "\<lbrace>colour_invariant and invs and
         (\<lambda>s.
             (
@@ -477,41 +456,37 @@ next
     apply (cases a)
     apply wpsimp
     apply safe
-      apply (wpsimp wp: set_extra_badge_colour_maintained)
-       apply (wpsimp simp: set_extra_badge_def valid_ptr_in_cur_domain_def)
-      apply (wpsimp simp: valid_ptr_in_cur_domain_def)+
-        apply (wpsimp wp: cap_insert_colour_maintained)
-       apply wpsimp+
+         apply (wpsimp wp: set_extra_badge_colour_maintained)
+          apply (wpsimp simp: set_extra_badge_def valid_ptr_in_cur_domain_def)
+         apply (wpsimp simp: valid_ptr_in_cur_domain_def)+
+           apply (wpsimp wp: cap_insert_colour_maintained)
+          apply wpsimp+
          apply (wpsimp wp: hoare_vcg_if_lift_ER hoare_vcg_conj_liftE_R' hoare_vcg_imp_liftE_R')
-find_theorems derive_cap NullCap
-    apply (wpsimp wp: hoare_FalseE)
-    apply (wpsimp wp: derive_cap_inv)
-  apply (simp add: derive_cap_def cong: cap.case_cong)
-   apply (wpsimp simp: RISCV64_A.arch_derive_cap_def)
-  apply simp+
-  apply safe[1]
-  apply (simp add: split_beta)
-  apply clarsimp
-  apply (erule_tac x="hd slots" in ballE)
-  apply clarsimp
-find_theorems derive_cap validE_R
-find_theorems arch_derive_cap name: def
-thm derive_cap_objrefs_iszombie
-    apply (rule conjI)
-       apply (simp add: valid_ptr_in_cur_domain_def)
-       apply (simp add: crunch_simps(1))
-      apply (rule conjI|rule impI)+
-  apply (simp add: valid_ptr_in_cur_domain_def)
-  apply (erule conjE)+
-apply (simp add: list.set_sel(2)
-    valid_ptr_in_cur_domain_def)
-  apply simp
-  apply safe
-  apply wpsimp
-      apply (wp add: set_extra_badge_colour_maintained)
-      apply (simp add: set_extra_badge_def valid_ptr_in_cur_domain_def)
-      apply wpsimp
-     apply (simp add: valid_ptr_in_cur_domain_def)
+           apply (wpsimp wp: hoare_FalseE)
+          apply (wpsimp wp: derive_cap_inv)
+         apply (simp add: derive_cap_def cong: cap.case_cong)
+         apply (wpsimp simp: RISCV64_A.arch_derive_cap_def)
+        apply simp+
+        apply safe[1]
+                          apply (simp add: split_beta)
+                          apply clarsimp
+                          apply (erule_tac x="hd slots" in ballE)
+                          apply clarsimp
+                          apply (rule conjI)
+                          apply (simp add: valid_ptr_in_cur_domain_def)
+                          apply (simp add: crunch_simps(1))
+                          apply (rule conjI|rule impI)+
+                          apply (simp add: valid_ptr_in_cur_domain_def)
+                          apply (erule conjE)+
+                          apply (simp add: list.set_sel(2)
+                              valid_ptr_in_cur_domain_def)
+                          apply simp
+                          apply safe
+                          apply wpsimp
+                          apply (wp add: set_extra_badge_colour_maintained)
+                          apply (simp add: set_extra_badge_def valid_ptr_in_cur_domain_def)
+                          apply wpsimp
+                          apply (simp add: valid_ptr_in_cur_domain_def)
     by wpsimp+
 qed
 
@@ -525,47 +500,47 @@ lemma resolve_address_bits_ret_colour:
           valid_ptr_in_cur_domain c s
       ))
 \<rbrace>,-"
-unfolding resolve_address_bits_def
+  unfolding resolve_address_bits_def
 proof (induct args arbitrary: c d rule: resolve_address_bits'.induct)
   case (1 z cap cref)
   show ?case
-  apply (simp add: validE_R_def)
-  apply (rule use_spec)
+    apply (simp add: validE_R_def)
+    apply (rule use_spec)
     apply (subst resolve_address_bits'.simps)
     apply (cases cap, simp_all split del: if_split)
-            defer 6 (* CNode *)
-            apply (wp+)[11]
+               defer 6 (* CNode *)
+               apply (wp+)[11]
     apply (simp add: split_def cong: if_cong split del: if_split)
     apply (rule hoare_pre_spec_validE)
-  apply (wp hoare_strengthen_postE_R [OF "1.hyps"])
+     apply (wp hoare_strengthen_postE_R [OF "1.hyps"])
                  apply (simp add: in_monad)+
-          apply (wpsimp wp: get_cap_wp)+
-apply safe
-             by ((rule cte_wp_at_check_cap_ref; simp add: check_cap_ref_def; clarsimp simp add: valid_ptr_in_cur_domain_def)|clarsimp simp add: check_cap_ref_def valid_ptr_in_cur_domain_def)+
+        apply (wpsimp wp: get_cap_wp)+
+    apply safe
+    by ((rule cte_wp_at_check_cap_ref; simp add: check_cap_ref_def; clarsimp simp add: valid_ptr_in_cur_domain_def)|clarsimp simp add: check_cap_ref_def valid_ptr_in_cur_domain_def)+
 qed
 
 lemma resolve_address_bits_ret_valid:
   "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref (fst args) (colour_oracle (cur_domain s))) and invs\<rbrace>
-    resolve_address_bits args
-    \<lbrace>\<lambda>rv s. \<forall>a. (\<exists>b.
-        rv = ((a, b), [])) \<longrightarrow> valid_ptr_in_cur_domain a s
-    \<rbrace>,-"
-unfolding resolve_address_bits_def
+resolve_address_bits args
+\<lbrace>\<lambda>rv s. \<forall>a. (\<exists>b.
+rv = ((a, b), [])) \<longrightarrow> valid_ptr_in_cur_domain a s
+\<rbrace>,-"
+  unfolding resolve_address_bits_def
 proof (induct args rule: resolve_address_bits'.induct)
   case (1 z cap cref)
   show ?case
-  apply (simp add: validE_R_def)
-  apply (rule use_spec)
+    apply (simp add: validE_R_def)
+    apply (rule use_spec)
     apply (subst resolve_address_bits'.simps)
     apply (cases cap, simp_all split del: if_split)
-            defer 6 (* CNode *)
-            apply (wp+)[11]
+               defer 6 (* CNode *)
+               apply (wp+)[11]
     apply (simp add: split_def cong: if_cong split del: if_split)
     apply (rule hoare_pre_spec_validE)
-  apply (wp hoare_strengthen_postE_R [OF "1.hyps"])
+     apply (wp hoare_strengthen_postE_R [OF "1.hyps"])
                  apply (simp add: in_monad)+
-          apply (wpsimp wp: get_cap_wp)+
-apply safe
+        apply (wpsimp wp: get_cap_wp)+
+    apply safe
     by ((rule cte_wp_at_check_cap_ref; simp add: check_cap_ref_def; clarsimp simp add: valid_ptr_in_cur_domain_def)|clarsimp simp add: check_cap_ref_def valid_ptr_in_cur_domain_def)+
 qed
 
@@ -574,22 +549,22 @@ lemma transfer_caps_colour_maintained:
  transfer_caps info caps endpoint receiver recv_buffer
 \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   apply (wpsimp simp: transfer_caps_def wp: transfer_caps_loop_colour_maintained)
-  apply (wpsimp wp: hoare_vcg_op_lift weak_if_wp')
-  apply (wpsimp simp: lookup_slot_for_cnode_op_def)
-  apply safe
-  apply wpsimp
-  apply (wpsimp wp: resolve_address_bits_ret_valid)+
-  apply (wpsimp simp: lookup_cap_def)
-  apply (wpsimp wp: get_cap_wp)
-  apply (wpsimp simp: lookup_slot_for_thread_def)
-  apply (wp add: hoare_vcg_all_liftE_R)
-  apply (rule_tac Q'="\<lambda>rv s. colour_invariant s \<and> invs s \<and>
-           ((\<exists>x. rv = ((a, b), x)) \<longrightarrow>
-           (\<forall>cap. cte_wp_at ((=) cap)
-                   (a, b) s \<longrightarrow>
-                  check_cap_ref cap
-                   (colour_oracle
-(cur_domain s)) \<and> valid_ptr_in_cur_domain a s))" in hoare_strengthen_postE_R)
+   apply (wpsimp wp: hoare_vcg_op_lift weak_if_wp')
+     apply (wpsimp simp: lookup_slot_for_cnode_op_def)
+     apply safe
+      apply wpsimp
+       apply (wpsimp wp: resolve_address_bits_ret_valid)+
+    apply (wpsimp simp: lookup_cap_def)
+     apply (wpsimp wp: get_cap_wp)
+    apply (wpsimp simp: lookup_slot_for_thread_def)
+     apply (wp add: hoare_vcg_all_liftE_R)
+     apply (rule_tac Q'="\<lambda>rv s. colour_invariant s \<and> invs s \<and>
+              ((\<exists>x. rv = ((a, b), x)) \<longrightarrow>
+              (\<forall>cap. cte_wp_at ((=) cap)
+                      (a, b) s \<longrightarrow>
+                     check_cap_ref cap
+                      (colour_oracle
+   (cur_domain s)) \<and> valid_ptr_in_cur_domain a s))" in hoare_strengthen_postE_R)
   by (wpsimp simp: valid_ptr_in_cur_domain_def wp: resolve_address_bits_ret_colour)+
 
 lemma copy_mrs_colour_maintained:
@@ -601,7 +576,7 @@ lemma copy_mrs_colour_maintained:
      apply (rule impI)
   by (wpsimp wp: mapM_wp[where S="UNIV"] store_word_offs_colour_maintained load_word_offs_P as_user_colour_maintained)+
 
-lemma do_normal_transfer_colour_maintained:
+lemma do_normal_transfer_colour_maintained: (* broken by invs *)
   "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref (tcb_ctable (the $ get_tcb sender s)) (colour_oracle (cur_domain s))) and (\<lambda>s. check_cap_ref (tcb_ctable (the $ get_tcb receiver s)) (colour_oracle (cur_domain s)))\<rbrace>
  do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
 \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -610,33 +585,34 @@ lemma do_normal_transfer_colour_maintained:
                        set_message_info_colour_maintained
                        transfer_caps_colour_maintained)+
      apply (wp add: copy_mrs_colour_maintained)
-    apply (wpsimp simp: valid_ptr_in_cur_domain_def wp: hoare_vcg_op_lift copy_mrs_cur_domain)
-  apply (wpsimp simp: copy_mrs_def)
-    apply (rule conjI)
-     apply (rule impI)
-  apply (wpsimp simp: store_word_offs_def as_user_def do_machine_op_def load_word_offs_def wp: mapM_wp[where S="UNIV"] load_word_offs_P)+
-  apply (simp add: get_tcb_def)
-  apply simp
-    apply (wpsimp simp: store_word_offs_def do_machine_op_def load_word_offs_def wp: mapM_wp[where S="UNIV"])
-       apply (simp add: get_tcb_def)
-      apply simp
-     apply (wpsimp simp: store_word_offs_def as_user_def do_machine_op_def load_word_offs_def wp: mapM_wp[where S="UNIV"] set_object_wp)
-apply (simp add: get_tcb_def)
-defer
-  apply wpsimp+
-     apply (simp add: lookup_extra_caps_def
-                      lookup_cap_and_slot_def
-                      lookup_slot_for_thread_def)
-     apply wpsimp
-      apply (wp add: mapME_set)
-         apply wpsimp
-         apply (wp add: get_cap_wp)
-        apply wpsimp
-         apply (wp add: hoare_vcg_all_liftE_R)
-  apply (wpsimp wp: resolve_address_bits_ret_colour[unfolded valid_ptr_in_cur_domain_def])+
-  apply (wpsimp wp: mapME_wp')
-  apply wpsimp+
+     apply (wpsimp simp: valid_ptr_in_cur_domain_def wp: hoare_vcg_op_lift copy_mrs_cur_domain)
+     apply (wpsimp simp: copy_mrs_def)
+      apply (rule conjI)
+       apply (rule impI)
+       apply (wpsimp simp: store_word_offs_def as_user_def do_machine_op_def load_word_offs_def wp: mapM_wp[where S="UNIV"] load_word_offs_P)+
+        apply (simp add: get_tcb_def)
+        apply simp
+        apply (wpsimp simp: store_word_offs_def do_machine_op_def load_word_offs_def wp: mapM_wp[where S="UNIV"])
+        apply (simp add: get_tcb_def)
+        apply simp
+        apply (wpsimp simp: store_word_offs_def as_user_def do_machine_op_def load_word_offs_def wp: mapM_wp[where S="UNIV"] set_object_wp)
+        apply (simp add: get_tcb_def)
+        defer
+        apply wpsimp+
+       apply (simp add: lookup_extra_caps_def
+                        lookup_cap_and_slot_def
+                        lookup_slot_for_thread_def)
+       apply wpsimp
+       apply (wp add: mapME_set)
+       apply wpsimp
+       apply (wp add: get_cap_wp)
+       apply wpsimp
+       apply (wp add: hoare_vcg_all_liftE_R)
+       apply (wpsimp wp: resolve_address_bits_ret_colour[unfolded valid_ptr_in_cur_domain_def])+
+       apply (wpsimp wp: mapME_wp')
+       apply wpsimp+
   by (cases "receiver = sender"; clarsimp)
+oops
 
 lemma set_mrs_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace>
@@ -665,17 +641,15 @@ lemma setup_caller_cap_colour_maintained:
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   apply (wpsimp simp: setup_caller_cap_def)
   apply (rule conjI; rule impI)
-  apply (wpsimp simp: colour_invariant_def obj_at_def check_cap_ref_def wp: cap_insert_colour_maintained set_thread_state_colour_maintained hoare_vcg_conj_lift)
-  apply (wpsimp simp: valid_ptr_in_cur_domain_def wp: sts_invs_minor)+
-  apply (simp add: check_cap_ref_def st_tcb_at_def obj_at_def)
-find_theorems "\<lbrace>_\<rbrace>set_thread_state _ _\<lbrace>_\<rbrace>" invs
-find_theorems setup_caller_cap valid
-thm st_tcb_at_reply_cap_valid
+   apply (wpsimp simp: colour_invariant_def obj_at_def check_cap_ref_def wp: cap_insert_colour_maintained set_thread_state_colour_maintained hoare_vcg_conj_lift)
+      apply (wpsimp simp: valid_ptr_in_cur_domain_def wp: sts_invs_minor)+
+   apply (simp add: check_cap_ref_def st_tcb_at_def obj_at_def)
+oops
 
 lemma handle_double_fault_colour_maintained:
   "\<lbrace>colour_invariant and (\<lambda>s. valid_ptr_in_cur_domain tptr s)\<rbrace>
-  handle_double_fault tptr ex1 ex2
-  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+   handle_double_fault tptr ex1 ex2
+   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   by (wpsimp simp: handle_double_fault_def wp: set_thread_state_colour_maintained)
 
 lemma retype_region_colour_maintained:
@@ -689,22 +663,22 @@ lemma retype_region_colour_maintained:
   apply (drule foldr_kh_eq)
   apply (case_tac "ptra \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api type o_bits)) ` {0..<numObjects}")
    apply (case_tac type)
-  apply (
-    simp
-      split:
-        RISCV64_A.aobject_type.splits
-      add:
-        colour_oracle_no_zero
-        default_object_def
-        default_tcb_def
-        check_cap_ref_def
-        default_ep_def
-        default_notification_def default_ntfn_def
-        empty_cnode_def
-        RISCV64_A.default_arch_object_def
-        RISCV64_A.arch_kernel_obj.case
-        RISCV64_A.pte.case
-  )+
+        apply (
+          simp
+            split:
+              RISCV64_A.aobject_type.splits
+            add:
+              colour_oracle_no_zero
+              default_object_def
+              default_tcb_def
+              check_cap_ref_def
+              default_ep_def
+              default_notification_def default_ntfn_def
+              empty_cnode_def
+              RISCV64_A.default_arch_object_def
+              RISCV64_A.arch_kernel_obj.case
+              RISCV64_A.pte.case
+        )+
   by fastforce
 
 lemma delete_objects_colour_maintained:
@@ -721,17 +695,17 @@ lemma reset_untyped_cap_colour_maintained:
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   apply (wpsimp simp: reset_untyped_cap_def wp: set_cap_colour_maintained)
        apply (wpsimp simp: valid_ptr_in_cur_domain_def wp: do_machine_op_colour_maintained)
-  apply (rule hoare_post_impE[where Q'="\<lambda>_. colour_invariant and (\<lambda>s. valid_ptr_in_cur_domain (fst src_slot) s)" and E'="\<lambda>_. colour_invariant and (\<lambda>s. valid_ptr_in_cur_domain (fst src_slot) s)"])
-  apply simp+
+      apply (rule hoare_post_impE[where Q'="\<lambda>_. colour_invariant and (\<lambda>s. valid_ptr_in_cur_domain (fst src_slot) s)" and E'="\<lambda>_. colour_invariant and (\<lambda>s. valid_ptr_in_cur_domain (fst src_slot) s)"])
+        apply simp+
       apply (wpsimp wp: mapME_x_wp[where S=UNIV] preemption_point_inv)
            apply (simp add: colour_invariant_def valid_ptr_in_cur_domain_def, simp add: colour_invariant_def valid_ptr_in_cur_domain_def)
          apply (wpsimp simp: irq_state_independent_A_def wp: preemption_point_inv)
           apply (simp add: colour_invariant_def valid_ptr_in_cur_domain_def, simp add: colour_invariant_def valid_ptr_in_cur_domain_def)
         apply (wpsimp wp: set_cap_colour_maintained set_cap_valid_ptr_in_cur_domain)
-  apply wp
-       apply (wp add: do_machine_op_colour_maintained)
-       apply (simp add: check_cap_ref_def)
-      apply (wpsimp simp: valid_ptr_in_cur_domain_def wp: do_machine_op_colour_maintained)+
+       apply wp
+        apply (wp add: do_machine_op_colour_maintained)
+        apply (simp add: check_cap_ref_def)
+        apply (wpsimp simp: valid_ptr_in_cur_domain_def wp: do_machine_op_colour_maintained)+
     apply (rule impI|rule conjI)+
      apply (wp add: delete_objects_colour_maintained)
      apply (wp add: hoare_vcg_imp_lift)
@@ -747,17 +721,17 @@ lemma reset_untyped_cap_colour_maintained:
    apply (wp add: hoare_vcg_imp_lift get_cap_cte_wp_at3 hoare_vcg_conj_lift hoare_vcg_disj_lift)
     apply (wpsimp simp: check_cap_ref_def)
    apply (wp add: hoare_vcg_imp_lift get_cap_cte_wp_at3)
-   by (clarsimp simp add: valid_ptr_in_cur_domain_def cte_wp_at_def)
+  by (clarsimp simp add: valid_ptr_in_cur_domain_def cte_wp_at_def)
 
 lemma syscall_colour_maintained:
   "\<lbrakk>\<lbrace>colour_invariant\<rbrace> param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>, \<lbrace>\<lambda>_. colour_invariant\<rbrace>;
-    \<forall>x. \<lbrace>colour_invariant\<rbrace> param_b x \<lbrace>\<lambda>_. colour_invariant\<rbrace>;
-    \<forall>x. \<lbrace>colour_invariant\<rbrace> param_c x \<lbrace>\<lambda>_. colour_invariant\<rbrace>, \<lbrace>\<lambda>_. colour_invariant\<rbrace>;
-    \<forall>x. \<lbrace>colour_invariant\<rbrace> param_d x \<lbrace>\<lambda>_. colour_invariant\<rbrace>;
-    \<forall>x. \<lbrace>colour_invariant\<rbrace> param_e x \<lbrace>\<lambda>_. colour_invariant\<rbrace>, \<lbrace>\<lambda>_. colour_invariant\<rbrace>\<rbrakk> \<Longrightarrow>
-    \<lbrace>colour_invariant\<rbrace>
-     syscall param_a param_b param_c param_d param_e
-    \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+   \<forall>x. \<lbrace>colour_invariant\<rbrace> param_b x \<lbrace>\<lambda>_. colour_invariant\<rbrace>;
+   \<forall>x. \<lbrace>colour_invariant\<rbrace> param_c x \<lbrace>\<lambda>_. colour_invariant\<rbrace>, \<lbrace>\<lambda>_. colour_invariant\<rbrace>;
+   \<forall>x. \<lbrace>colour_invariant\<rbrace> param_d x \<lbrace>\<lambda>_. colour_invariant\<rbrace>;
+   \<forall>x. \<lbrace>colour_invariant\<rbrace> param_e x \<lbrace>\<lambda>_. colour_invariant\<rbrace>, \<lbrace>\<lambda>_. colour_invariant\<rbrace>\<rbrakk> \<Longrightarrow>
+   \<lbrace>colour_invariant\<rbrace>
+    syscall param_a param_b param_c param_d param_e
+   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   apply (wp syscall_valid)
   by ((erule allE)+, simp)+
 
@@ -808,214 +782,73 @@ lemma schedule_colour_maintained:
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   apply (wpsimp simp: schedule_def temp2[symmetric] tcb_sched_action_def
   wp: schedule_choose_new_thread_colour_maintained set_scheduler_action_wp tcb_sched_action_colour_maintained guarded_switch_to_colour_maintained schedule_switch_thread_fastfail_inv hoare_vcg_op_lift)
-  apply (wpsimp wp: hoare_pre_cont)
-  apply (wpsimp wp: schedule_switch_thread_fastfail_inv)+
-  apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-  apply (wpsimp wp: hoare_pre_cont)
-  apply (wpsimp wp: schedule_switch_thread_fastfail_inv)+
-  apply (wpsimp wp: schedule_choose_new_thread_colour_maintained)+
-  apply (wpsimp wp: gts_drop_imp)
-  apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
+              apply (wpsimp wp: hoare_pre_cont)
+             apply (wpsimp wp: schedule_switch_thread_fastfail_inv)+
+           apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
+             apply (wpsimp wp: hoare_pre_cont)
+            apply (wpsimp wp: schedule_switch_thread_fastfail_inv)+
+       apply (wpsimp wp: schedule_choose_new_thread_colour_maintained)+
+    apply (wpsimp wp: gts_drop_imp)
+   apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
   by (clarsimp simp add: colour_invariant_def)
 
-\<comment>\<open>apply (rule bind_wp [OF _ get_simple_ko_inv])
-  apply (case_tac ep, simp_all)\<close>
-  find_theorems do_ipc_transfer tcb_at
-  find_theorems do_ipc_transfer "\<lbrace>_\<rbrace>_\<lbrace>\<lambda>_ _. obj_at _ _ _\<rbrace>"
-  find_theorems do_ipc_transfer scheduler_action
-thm do_ipc_transfer_scheduler_act[where P="\<lambda>s. s \<noteq> resume_cur_thread"]
-
-lemma send_ipc_colour_maintained:
+lemma send_ipc_colour_maintained: (* unfinished before *)
   "\<lbrace>colour_invariant and (\<lambda>s. valid_ptr_in_cur_domain (cur_thread s) s) and invs and (\<lambda>s. valid_ptr_in_cur_domain thread s)\<rbrace>
   send_ipc block call badge can_grant can_grant_reply thread epptr
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-                  apply (wpsimp simp: send_ipc_def wp: set_simple_ko_colour_maintained)
-                       apply (wpsimp simp: valid_ptr_in_cur_domain_def Let_def wp: set_thread_state_colour_maintained)
-           apply (wpsimp simp: set_thread_state_def set_thread_state_act_def set_scheduler_action_def get_thread_state_def thread_get_def set_object_def get_object_def gets_the_def)
-apply wpsimp+
-apply (wpsimp wp: set_simple_ko_colour_maintained)
-                       apply (wpsimp simp: valid_ptr_in_cur_domain_def Let_def wp: set_thread_state_colour_maintained)
-apply (wpsimp simp: set_thread_state_def set_thread_state_act_def set_scheduler_action_def get_thread_state_def thread_get_def set_object_def get_object_def gets_the_def)
-  apply wpsimp+
-apply (wpsimp wp: setup_caller_cap_colour_maintained)
-                       apply (wpsimp wp: set_thread_state_colour_maintained)
-apply (rule_tac Q'="\<lambda>_.
-  colour_invariant and
-  valid_ptr_in_cur_domain thread and invs and
-  (\<lambda>s. call \<longrightarrow>
-    (if (can_grant \<or> can_grant_reply) then (valid_ptr_in_cur_domain x21)
-    else (\<lambda>s. check_tcb_state Inactive (colour_oracle (cur_domain s)))) s)" in hoare_post_imp)
-  apply force
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-apply (wpsimp wp: possible_switch_to_colour_maintained)
-apply (wpsimp simp: valid_ptr_in_cur_domain_def)
-apply wpsimp
-apply (wpsimp simp: valid_ptr_in_cur_domain_def)+
-  apply safe
-apply (wpsimp wp: set_thread_state_colour_maintained)
-apply wpsimp
-prefer 2
-apply wpsimp
-prefer 2
-apply wpsimp
-prefer 2
-apply wpsimp
-prefer 2
-apply wpsimp
-apply (wpsimp simp: do_ipc_transfer_def)
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-apply (wpsimp wp: set_thread_state_colour_maintained)
-apply (wpsimp wp: set_thread_state_colour_maintained)
-find_theorems set_thread_state invs valid
+  apply (wpsimp simp: send_ipc_def wp: set_simple_ko_colour_maintained)
+       apply (wpsimp simp: valid_ptr_in_cur_domain_def Let_def wp: set_thread_state_colour_maintained)
+       apply (wpsimp simp: set_thread_state_def set_thread_state_act_def set_scheduler_action_def get_thread_state_def thread_get_def set_object_def get_object_def gets_the_def)
+      apply wpsimp+
+       apply (wpsimp wp: set_simple_ko_colour_maintained)
+      apply (wpsimp simp: valid_ptr_in_cur_domain_def Let_def wp: set_thread_state_colour_maintained)
+      apply (wpsimp simp: set_thread_state_def set_thread_state_act_def set_scheduler_action_def get_thread_state_def thread_get_def set_object_def get_object_def gets_the_def)
+     apply wpsimp+
+          apply (rule_tac Q'="\<lambda>_.
+            colour_invariant and
+            valid_ptr_in_cur_domain thread and invs and
+            (\<lambda>s. call \<longrightarrow>
+              (if (can_grant \<or> can_grant_reply) then (valid_ptr_in_cur_domain x21)
+              else (\<lambda>s. check_tcb_state Inactive (colour_oracle (cur_domain s)))) s)" in hoare_post_imp)
+           apply force
+          apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
+             apply safe
+                 apply (rule_tac Q'="\<lambda>_ s. (x21 \<in> colour_oracle (cur_domain s) \<or> x21 = 0) \<and> (thread \<in> colour_oracle (cur_domain s) \<or> thread = 0)" in hoare_strengthen_post)
+                  apply wpsimp
+                 apply (clarsimp simp add: valid_ptr_in_cur_domain_def)
+  oops
 
-  apply (wpsimp wp: do_normal_transfer_colour_maintained)
-  apply (rule_tac Q'="\<lambda>_ s. (x21 \<in> colour_oracle (cur_domain s) \<or> x21 = 0) \<and> (thread \<in> colour_oracle (cur_domain s) \<or> thread = 0)" in hoare_strengthen_post)
-  apply wpsimp
-        apply (clarsimp simp add: valid_ptr_in_cur_domain_def)
-  apply wpsimp
-  apply (wpsimp simp: do_fault_transfer_def)
-  apply (wpsimp wp: as_user_colour_maintained)
-  apply (rule_tac Q'="\<lambda>_ s. (x21 \<in> colour_oracle (cur_domain s) \<or> x21 = 0) \<and> (thread \<in> colour_oracle (cur_domain s) \<or> thread = 0)" in hoare_strengthen_post)
-  apply wpsimp
-        apply (clarsimp simp add: valid_ptr_in_cur_domain_def)
-  apply (wpsimp wp: set_message_info_colour_maintained set_mrs_colour_maintained make_fault_msg_colour_maintained thread_get_wp gts_wp)+
-  apply (wpsimp simp: set_simple_ko_def wp: set_object_wp get_object_wp get_simple_ko_wp)
-  apply clarsimp
-apply (wpsimp wp: get_simple_ko_wp)
-  apply clarsimp
-  apply (safe; clarsimp simp add: colour_oracle_no_zero valid_ptr_in_cur_domain_def)
-  apply (clarsimp simp add: obj_at_def)
-  apply (case_tac "xa = cur_thread s"; clarsimp simp add: st_tcb_at_def obj_at_def)
-  apply (frule tcb_at_invs)
-apply (clarsimp simp add: obj_at_def is_tcb_def)
-  apply (clarsimp simp add: obj_at_def)
-  apply (case_tac "xa = cur_thread s"; clarsimp simp add: st_tcb_at_def obj_at_def)
-  apply (frule tcb_at_invs)
-apply (clarsimp simp add: obj_at_def is_tcb_def)
-apply (clarsimp simp add: obj_at_def)
-  apply (case_tac "xa = cur_thread s"; clarsimp simp add: st_tcb_at_def obj_at_def)
-  apply (frule tcb_at_invs)
-apply (clarsimp simp add: obj_at_def is_tcb_def)
-apply (meson kernel_object.distinct(10)
-    ko_at_obj_congD tcb_at_invs
-    tcb_at_ko_at)
-apply (clarsimp simp add: obj_at_def)
-apply safe
-  find_theorems st_tcb_at -valid "st_tcb_at ((=) _) _ _"
-find_theorems -valid cur_thread
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-  apply (wpsimp wp: get_simple_ko_wp)
-apply (rule_tac Q'="\<lambda>_ s. colour_invariant s \<and> (block \<longrightarrow> valid_ptr_in_cur_domain thread s)" in hoare_strengthen_post)
-        apply (wpsimp wp: get_simple_ko_wp)
-  apply (clarsimp simp add: colour_oracle_no_zero valid_ptr_in_cur_domain_def)
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-        apply (wpsimp wp: get_simple_ko_wp)
-apply (rule_tac Q'="\<lambda>_ s. colour_invariant s \<and> (block \<longrightarrow> valid_ptr_in_cur_domain thread s)" in hoare_strengthen_post)
-        apply (wpsimp wp: get_simple_ko_wp)
-  apply (clarsimp simp add: colour_oracle_no_zero valid_ptr_in_cur_domain_def)
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-        apply (wpsimp wp: get_simple_ko_wp)
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-apply (wpsimp wp: get_simple_ko_wp)
-apply (rule_tac Q'="\<lambda>_ s. colour_invariant s \<and> (block \<longrightarrow> valid_ptr_in_cur_domain thread s)" in hoare_strengthen_post)
-        apply (wpsimp wp: get_simple_ko_wp)
-  apply (clarsimp simp add: colour_oracle_no_zero valid_ptr_in_cur_domain_def)
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-apply (wpsimp wp: get_simple_ko_wp)
-apply (rule_tac Q'="\<lambda>_ s. colour_invariant s \<and> (block \<longrightarrow> valid_ptr_in_cur_domain thread s)" in hoare_strengthen_post)
-        apply (wpsimp wp: get_simple_ko_wp)
-       apply (clarsimp simp add: colour_oracle_no_zero valid_ptr_in_cur_domain_def)
-      apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-apply (wpsimp wp: get_simple_ko_wp)
-apply (rule_tac Q'="\<lambda>_ s. colour_invariant s \<and> (block \<longrightarrow> valid_ptr_in_cur_domain thread s)" in hoare_strengthen_post)
-        apply (wpsimp wp: get_simple_ko_wp)
-       apply (clarsimp simp add: colour_oracle_no_zero valid_ptr_in_cur_domain_def)
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-apply (wpsimp wp: get_simple_ko_wp)
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-apply (wpsimp wp: get_simple_ko_wp)
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-apply (wpsimp wp: get_simple_ko_wp)
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-apply (wpsimp wp: get_simple_ko_wp)
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-apply (wpsimp wp: get_simple_ko_wp)
-apply (rule_tac Q'="\<lambda>_ s. colour_invariant s \<and> (block \<longrightarrow> valid_ptr_in_cur_domain (cur_thread s) s)" in hoare_strengthen_post)
-        apply (wpsimp wp: get_simple_ko_wp)
-       apply (clarsimp simp add: colour_oracle_no_zero valid_ptr_in_cur_domain_def)
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-apply (wpsimp wp: get_simple_ko_wp)
-apply (rule_tac Q'="\<lambda>_ s. colour_invariant s \<and> (block \<longrightarrow> valid_ptr_in_cur_domain (cur_thread s) s)" in hoare_strengthen_post)
-        apply (wpsimp wp: get_simple_ko_wp)
-       apply (clarsimp simp add: colour_oracle_no_zero valid_ptr_in_cur_domain_def)
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-  apply safe
-apply (clarsimp simp add: colour_oracle_no_zero valid_ptr_in_cur_domain_def)+
-apply safe
-  apply (simp add: obj_at_def)
-  apply clarsimp
-oops
-
-lemma handle_fault_colour_maintained:
+lemma handle_fault_colour_maintained: (* unfinished before *)
   "\<lbrace>colour_invariant and valid_ptr_in_cur_domain thread\<rbrace>
-      handle_fault thread ex
-    \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+        handle_fault thread ex
+      \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   apply (wpsimp simp: handle_fault_def handle_double_fault_def send_fault_ipc_def wp: set_thread_state_colour_maintained)
       apply (case_tac "handler_cap")
                  apply wpsimp+
-defer
-  apply (wpsimp simp: cap_fault_on_failure_def)+
-               apply safe
-defer
-defer
-apply wpsimp
-apply wpsimp
-  apply wpsimp
-                  apply (wpsimp simp: send_ipc_def wp: set_simple_ko_colour_maintained)
-                       apply (wpsimp simp: valid_ptr_in_cur_domain_def Let_def wp: set_thread_state_colour_maintained)
-           apply (wpsimp simp: set_thread_state_def set_thread_state_act_def set_scheduler_action_def)
-apply (wpsimp simp: get_thread_state_def thread_get_def)
-apply (wpsimp simp: set_object_def get_object_def)
-apply (wpsimp simp: gets_the_def)
-apply wpsimp
-apply simp
-apply wpsimp
-apply (wpsimp wp: set_simple_ko_colour_maintained)
-                       apply (wpsimp simp: valid_ptr_in_cur_domain_def Let_def wp: set_thread_state_colour_maintained)
-           apply (wpsimp simp: set_thread_state_def set_thread_state_act_def set_scheduler_action_def)
-apply (wpsimp simp: get_thread_state_def thread_get_def)
-apply (wpsimp simp: set_object_def get_object_def)
-apply (wpsimp simp: gets_the_def)
-apply (wpsimp wp: setup_caller_cap_colour_maintained)
-apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-apply (wpsimp wp: possible_switch_to_colour_maintained)
-apply (wpsimp simp: valid_ptr_in_cur_domain_def wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-apply (wpsimp simp: possible_switch_to_def)
-apply (wpsimp simp: possible_switch_to_def)
-apply (wpsimp simp: possible_switch_to_def valid_ptr_in_cur_domain_def)
-apply (wpsimp wp: set_thread_state_colour_maintained)
-apply (wpsimp simp: set_thread_state_def set_thread_state_act_def set_scheduler_action_def)
-apply (wpsimp simp: get_thread_state_def thread_get_def)
-apply (wpsimp simp: set_object_def get_object_def)
-apply (wpsimp simp: gets_the_def)
-apply wpsimp
-                         apply (rule_tac Q'="\<lambda>_ s.(\<exists>ko. kheap s x31 = Some ko \<and> a_type ko \<noteq> AEndpoint)" in hoare_post_imp)
-                          apply fastforce
-  apply (wpsimp wp: sts_obj_at_impossible)
-                         apply (rule_tac p=x31 and T=AEndpoint and P="\<lambda>x. \<not>x" in set_thread_state_typ_at[unfolded obj_at_def])
-defer
-  apply (wpsimp wp: hoare_vcg_op_lift)
-thm sts_typ_at[unfolded obj_at_def, where p=x31 and T=AEndpoint]
-thm sts_obj_at_impossible[unfolded obj_at_def, where P="\<lambda>k. a_type k \<noteq> AEndpoint"]
-  find_theorems set_thread_state obj_at
-thm sts_typ_ats
-defer
-oops
+               defer
+               apply (wpsimp simp: cap_fault_on_failure_def)+
+  apply safe
+     defer
+     defer
+     apply wpsimp
+    apply wpsimp
+   apply wpsimp
+     apply (wpsimp simp: send_ipc_def wp: set_simple_ko_colour_maintained)
+         apply (wpsimp simp: valid_ptr_in_cur_domain_def Let_def wp: set_thread_state_colour_maintained)
+         apply (wpsimp simp: set_thread_state_def set_thread_state_act_def set_scheduler_action_def)
+           apply (wpsimp simp: get_thread_state_def thread_get_def)
+          apply (wpsimp simp: set_object_def get_object_def)
+         apply (wpsimp simp: gets_the_def)
+        apply wpsimp
+       apply simp
+       apply wpsimp
+        apply (wpsimp wp: set_simple_ko_colour_maintained)
+       apply (wpsimp simp: valid_ptr_in_cur_domain_def Let_def wp: set_thread_state_colour_maintained)
+       apply (wpsimp simp: set_thread_state_def set_thread_state_act_def set_scheduler_action_def)
+         apply (wpsimp simp: get_thread_state_def thread_get_def)
+        apply (wpsimp simp: set_object_def get_object_def)
+       apply (wpsimp simp: gets_the_def)
+  oops
 
 crunch call_kernel for colour_maintained: "colour_invariant"
   (simp: colour_invariant_def obj_at_update)
