@@ -426,14 +426,6 @@ lemma cap_insert_colour_maintained:
              apply (wpsimp wp: set_cdt_colour_maintained)+
   by (wpsimp simp: cte_wp_at_check_cap_ref wp: set_cdt_colour_maintained set_cap_colour_maintained set_untyped_cap_as_full_colour_maintained get_cap_wp set_untyped_cap_as_full_valid_ptr_in_cur_domain)+
 
-lemma hoare_weird_if:
-  "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. Q\<rbrace>,-; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<not>(cond rv) \<longrightarrow> R rv s\<rbrace>,-\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. if cond rv then (\<lambda>s. Q s \<and> True) else (\<lambda>s. Q s \<and> R rv s)\<rbrace>,-"
-  apply (wpsimp wp: hoare_vcg_if_lift_ER hoare_vcg_conj_liftE_R' hoare_vcg_imp_liftE_R'[where Q'=P])
-     apply (wpsimp wp: hoare_FalseE)
-    apply wpsimp
-   apply (rule hoare_strengthen_postE_R[where Q'="\<lambda>rv s. (\<not> cond rv \<longrightarrow> R rv s) \<and> Q s"])
-  by (wpsimp wp: hoare_vcg_conj_liftE_R')+
-
 lemma transfer_caps_loop_colour_maintained: (* broken by invs *)
   "\<lbrace>colour_invariant and invs and
         (\<lambda>s.
@@ -461,13 +453,29 @@ next
          apply (wpsimp simp: valid_ptr_in_cur_domain_def)+
            apply (wpsimp wp: cap_insert_colour_maintained)
           apply wpsimp+
+           (*apply (wpsimp simp: derive_cap_def RISCV64_A.arch_derive_cap_def)
+          apply (wpsimp wp: derive_cap_inv)*) (* <- stuff below seems to increase cases... may want to delete from line below till safe (exclusive) *)
          apply (wpsimp wp: hoare_vcg_if_lift_ER hoare_vcg_conj_liftE_R' hoare_vcg_imp_liftE_R')
-           apply (wpsimp wp: hoare_FalseE)
+           apply (wpsimp simp: derive_cap_def RISCV64_A.arch_derive_cap_def)
           apply (wpsimp wp: derive_cap_inv)
+         apply (wpsimp wp: hoare_vcg_op_lift)
+          apply (wpsimp simp: derive_cap_def RISCV64_A.arch_derive_cap_def)
+         apply clarsimp
+         apply (wpsimp wp: derive_cap_inv)
+         apply (wpsimp wp: hoare_vcg_conj_liftE_R')
          apply (simp add: derive_cap_def cong: cap.case_cong)
          apply (wpsimp simp: RISCV64_A.arch_derive_cap_def)
-        apply simp+
-        apply safe[1]
+          apply (wpsimp wp: derive_cap_inv)
+         apply (wpsimp wp: hoare_vcg_conj_liftE_R' derived_cap_valid simp: tcb_cap_valid_def)
+apply (wpsimp wp: hoare_vcg_op_lift simp: st_tcb_at_def)
+find_theorems obj_at "\<lbrace>_\<rbrace>derive_cap _ _ \<lbrace>_\<rbrace>, -"
+         apply (simp add: derive_cap_def cong: cap.case_cong)
+         apply (wpsimp simp: RISCV64_A.arch_derive_cap_def)
+         apply (simp add: derive_cap_def cong: cap.case_cong)
+         apply (wpsimp simp: RISCV64_A.arch_derive_cap_def)
+thm RISCV64.transfer_caps_loop_cte_wp_at (* <- tried this proof approach for a bit, kinda got stuck in the same place with cap_insert but maybe it could be worked into a better place *)
+        apply simp
+        apply safe[1] (*slow, >250 cases *)
                           apply (simp add: split_beta)
                           apply clarsimp
                           apply (erule_tac x="hd slots" in ballE)
