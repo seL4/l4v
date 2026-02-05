@@ -416,22 +416,9 @@ lemma vcpu_hyp_live_of':
   apply (erule (1) pspace_no_overlapC[OF orth _ _ cover vp])
   done
 
-lemma dom_vmid_for_asid[simplified]:
-  "dom (vmid_for_asid s') = dom (vmid_for_asid s)"
-  apply (clarsimp simp: dom_def s'_def ps_def obj_at_def vmid_for_asid_def in_omonad
-                  split: if_split_asm)
-  apply (rule set_eqI)
-  apply (rule iffI; clarsimp simp: entry_for_pool_def in_omonad split: if_split_asm)
-   apply (fastforce simp: default_object_def default_arch_object_def default_vcpu_def tyunt
-                    split: apiobject_type.splits aobject_type.splits)
-  apply (fastforce elim: pspace_no_overlapC[OF orth _ _ cover vp])
-  done
-
 lemma vmid_inv':
   "vmid_inv s \<Longrightarrow> vmid_inv s'"
-  by (clarsimp simp: vmid_inv_def is_inv_def dom_vmid_for_asid)
-     (fastforce simp: s'_def ps_def vmid_for_asid_def entry_for_pool_def in_omonad
-                elim!: pspace_no_overlapC[OF orth _ _ cover vp])
+  by (clarsimp simp: vmid_inv_def is_inv_def)
 
 lemma valid_global_tables':
   "valid_global_tables s \<Longrightarrow> valid_global_tables s'"
@@ -736,13 +723,6 @@ lemma valid_kernel_mappings:
   "valid_kernel_mappings s \<Longrightarrow> valid_kernel_mappings s'"
   by (simp add: valid_kernel_mappings_def s'_def ball_ran_eq ps_def)
 
-lemma valid_asid_map:
-  "valid_asid_map s \<Longrightarrow> valid_asid_map s'"
-  apply (clarsimp simp: valid_asid_map_def entry_for_asid_def obind_None_eq pool_for_asid_def
-                        entry_for_pool_def)
-  apply (fastforce dest!: asid_pools_of')
-  done
-
 lemma vspace_for_asid:
   "vspace_for_asid asid s' = Some pt \<Longrightarrow> vspace_for_asid asid s = Some pt"
   apply (clarsimp simp: s'_def ps_def vspace_for_asid_def entry_for_asid_def pool_for_asid_def
@@ -750,6 +730,16 @@ lemma vspace_for_asid:
                   split: if_split_asm)
   apply (fastforce simp: default_object_def default_arch_object_def tyunt
                    split: apiobject_type.splits aobject_type.splits)
+  done
+
+lemma valid_asid_map:
+  "valid_asid_map s \<Longrightarrow> valid_asid_map s'"
+  apply (clarsimp simp: valid_asid_map_def)
+  apply (drule bspec, fastforce)
+  apply (fastforce simp: s'_def ps_def vspace_for_asid_def entry_for_asid_def pool_for_asid_def
+                         in_omonad entry_for_pool_def
+                   dest: orthr
+                   split: if_split_asm)
   done
 
 lemma equal_kernel_mappings:

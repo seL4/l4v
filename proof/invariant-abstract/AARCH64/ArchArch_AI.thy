@@ -396,8 +396,9 @@ lemma valid_arch_caps:
 
 lemma valid_asid_map':
   "valid_asid_map s \<Longrightarrow> valid_asid_map s'"
-  by (clarsimp simp: valid_asid_map_def entry_for_asid_def obind_None_eq pool_for_asid_def s'_def
-                     entry_for_pool_def ko)
+  using ko empty
+  by (force simp: valid_asid_map_def vspace_for_asid_def entry_for_asid_def obind_None_eq
+                  pool_for_asid_def s'_def entry_for_pool_def)
 
 lemma vspace_for_asid[simp]:
   "vspace_for_asid asid s' = vspace_for_asid asid s"
@@ -419,12 +420,6 @@ end
 
 context Arch begin arch_global_naming
 
-lemma vmid_for_asid_empty_update:
-  "\<lbrakk> asid_table s asid_high = None; asid_pools_of s ap = Some Map.empty \<rbrakk> \<Longrightarrow>
-   vmid_for_asid_2 asid ((asid_table s)(asid_high \<mapsto> ap)) (asid_pools_of s) = vmid_for_asid s asid"
-  by (clarsimp simp: vmid_for_asid_2_def obind_def entry_for_pool_def opt_map_def
-               split: option.splits)
-
 lemma valid_arch_state_strg:
   "valid_arch_state s \<and> ap \<notin> ran (asid_table s) \<and> asid_table s asid = None \<and>
    asid_pools_of s ap = Some Map.empty \<longrightarrow>
@@ -432,10 +427,9 @@ lemma valid_arch_state_strg:
   apply (clarsimp simp: valid_arch_state_def)
   apply (clarsimp simp: valid_asid_table_def ran_def valid_global_arch_objs_def)
   apply (prop_tac "vmid_inv (asid_table_update asid ap s)")
-   apply (fastforce simp: vmid_inv_def vmid_for_asid_empty_update ran_def)
+   apply (fastforce simp: vmid_inv_def ran_def)
   apply (fastforce intro!: inj_on_fun_updI simp: asid_pools_at_eq)
   done
-
 
 lemma valid_vs_lookup_at_upd_strg:
   "valid_vs_lookup s \<and>
@@ -583,8 +577,8 @@ lemma valid_asid_map_asid_upd_strg:
    asid_pools_of s ap = Some Map.empty \<and>
    asid_table s asid = None \<longrightarrow>
    valid_asid_map (asid_table_update asid ap s)"
-  by (simp add: valid_asid_map_def entry_for_asid_def obind_None_eq entry_for_pool_def
-                pool_for_asid_def)
+  by (force simp: valid_asid_map_def vspace_for_asid_def entry_for_asid_def obind_None_eq
+                  entry_for_pool_def pool_for_asid_def)
 
 lemma valid_vspace_objs_asid_upd_strg:
   "valid_vspace_objs s \<and>

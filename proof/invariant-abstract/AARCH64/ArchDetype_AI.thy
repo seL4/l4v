@@ -288,19 +288,12 @@ lemma entry_for_pool_detype_Some[simp]:
    (pool_ptr \<notin> S \<and> entry_for_pool pool_ptr asid pools = Some p)"
   by (clarsimp simp: entry_for_pool_def in_omonad)
 
-lemma vmid_for_asid_2_detype_Some[simp]:
-  "(vmid_for_asid_2 asid table (\<lambda>p. if p \<in> S then None else pools p) = Some p) =
-   ((\<exists>pool_ptr. table (asid_high_bits_of asid) = Some pool_ptr \<and> pool_ptr \<notin> S)
-    \<and> vmid_for_asid_2 asid table pools = Some p)"
-  by (fastforce simp: vmid_for_asid_def in_omonad)
-
 lemma vmid_inv_detype:
   "vmid_inv (detype (untyped_range cap) s)"
   apply (prop_tac "vmid_inv s")
    using valid_arch_state
    apply (simp add: valid_arch_state_def)
-  apply (fastforce simp: vmid_inv_def is_inv_def asid_pools_of_detype vmid_for_asid_def
-                         in_omonad asid_table_Some_not_untyped_range)
+  apply (fastforce simp: vmid_inv_def is_inv_def)
   done
 
 lemma vcpus_of_detype[simp]:
@@ -504,7 +497,7 @@ proof -
     using invs by (simp add: invs_def valid_state_def)
   thus ?thesis
     by (clarsimp simp: valid_asid_map_def entry_for_asid_def obind_None_eq pool_for_asid_def
-                       entry_for_pool_def)
+                       entry_for_pool_def vspace_for_asid_def asid_table_Some_not_untyped_range)
 qed
 
 lemma equal_kernel_mappings_detype[detype_invs_proofs]:

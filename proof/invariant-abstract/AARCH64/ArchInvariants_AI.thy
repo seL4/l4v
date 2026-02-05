@@ -644,28 +644,12 @@ locale_abbrev valid_uses :: "'z::state_ext state \<Rightarrow> bool" where
 
 lemmas valid_uses_def = valid_uses_2_def
 
-definition vmid_for_asid_2 ::
-  "asid \<Rightarrow> (asid_high_index \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> asid_pool, vmid) lookup" where
-  "vmid_for_asid_2 asid table \<equiv> do {
-     ap_ptr \<leftarrow> K $ table (asid_high_bits_of asid);
-     entry_for_pool ap_ptr asid |> ap_vmid
-   }"
-
-locale_abbrev vmid_for_asid :: "'z::state_ext state \<Rightarrow> asid \<rightharpoonup> vmid" where
-  "vmid_for_asid \<equiv> \<lambda>s asid. vmid_for_asid_2 asid (asid_table s) (asid_pools_of s)"
-
-lemmas vmid_for_asid_def = vmid_for_asid_2_def
-
-(* For name preservation with older proofs *)
-abbreviation (input) asid_map :: "'z::state_ext state \<Rightarrow> asid \<rightharpoonup> vmid" where
-  "asid_map \<equiv> vmid_for_asid"
-
 locale_abbrev
   "vmid_table s \<equiv> arm_vmid_table (arch_state s)"
 
-(* vmIDs stored in ASID pools form the inverse of the vmid_table *)
+(* vmIDs stored in the asid_map form the inverse of the vmid_table *)
 definition vmid_inv :: "'z::state_ext state \<Rightarrow> bool" where
-  "vmid_inv s \<equiv> is_inv (vmid_table s) (vmid_for_asid s)"
+  "vmid_inv s \<equiv> is_inv (vmid_table s) (asid_map s)"
 
 (* The vmID table never stores ASID 0 *)
 definition valid_vmid_table_2 :: "(vmid \<rightharpoonup> asid) \<Rightarrow> bool" where
@@ -758,11 +742,12 @@ lemmas hyp_refs_of_simps[simp] = hyp_refs_of_def[split_simps kernel_object.split
 definition state_hyp_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> reftype) set" where
   "state_hyp_refs_of \<equiv> \<lambda>s p. case_option {} (hyp_refs_of) (kheap s p)"
 
-
-(* Mostly covered by ASIDPool case of valid_vspace_obj and vmid_inv, but we still need to make sure
-   that ASID 0 is never mapped. *)
+(* Compared to ARM we do not duplicate the vspace pointer in the asid_map, but instead use the
+   existing vspace_for_asid function The invariant records that we only allocate a VMID for an
+   ASID if there also exists a VSpace for that ASID. Since vspace_for_asid already implies that
+   the ASID is not 0, we do not need that conjunct here. *)
 definition valid_asid_map :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_asid_map \<equiv> \<lambda>s. entry_for_asid 0 s = None"
+  "valid_asid_map \<equiv> \<lambda>s. \<forall>asid \<in> dom (asid_map s). vspace_for_asid asid s \<noteq> None"
 
 definition valid_global_objs :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_global_objs \<equiv> \<top>"
@@ -3079,11 +3064,18 @@ lemma hyp_refs_of_rev:
                  vcpu_tcb_refs_def refs_of_ao_def
            split: kernel_object.splits arch_kernel_obj.splits option.split)
 
+lemma valid_asid_map_0_None:
+  "valid_asid_map s \<Longrightarrow> asid_map s 0 = None"
+  unfolding valid_asid_map_def
+  by (fastforce dest: vspace_for_asid_0)
+
 lemma valid_asid_map_lift_strong:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_map s)\<rbrace>"
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_table s)\<rbrace>"
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
   shows "f \<lbrace>valid_asid_map\<rbrace>"
-  by (wpsimp simp: valid_asid_map_def wp: entry_for_asid_lift assms)
+  unfolding valid_asid_map_def
+  by (wpsimp wp: assms hoare_vcg_op_lift vspace_for_asid_lift | wps assms)+
 
 end
 
@@ -3183,10 +3175,6 @@ lemma vspace_for_asid_update[iff]:
 lemma vspace_at_asid_update[iff]:
   "vspace_at_asid asid pt (f s) =  vspace_at_asid asid pt s"
   by (simp add: vspace_at_asid_def)
-
-lemma vmid_for_asid_update[iff]:
-  "vmid_for_asid (f s) asid = vmid_for_asid s asid"
-  by (simp add: asid_table)
 
 lemma vs_lookup_update [iff]:
   "vs_lookup_table bot_level asid vptr (f s) = vs_lookup_table bot_level asid vptr s"

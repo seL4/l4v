@@ -42,6 +42,10 @@ lemma set_arm_current_fpu_owner_valid_pspace[wp]:
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_disjI1)
   by fastforce
 
+lemma valid_asid_map_arch_arm_current_fpu_owner_update[simp]: (* FIXME asid: locale? *)
+  "valid_asid_map (s\<lparr>arch_state := arch_state s\<lparr>arm_current_fpu_owner := x\<rparr>\<rparr>) = valid_asid_map s"
+  by (simp add: valid_asid_map_def)
+
 crunch set_arm_current_fpu_owner
   for valid_mdb[wp]: valid_mdb
   and valid_ioc[wp]: valid_ioc

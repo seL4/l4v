@@ -749,37 +749,10 @@ lemma valid_asid_table_inj:
   unfolding valid_asid_table_def
   by clarsimp (drule inj_onD; fastforce)
 
-lemma set_asid_pool_None_vmid[wp]:
-  "\<lbrace>\<lambda>s. valid_asid_table s \<and>
-        asid_pools_of s p = Some ap \<and>
-        (\<exists>asid_high. asid_table s asid_high = Some p \<and>
-                     P ((vmid_for_asid s) (asid_of asid_high asid_low := None)))\<rbrace>
-   set_asid_pool p (ap(asid_low := None))
-   \<lbrace>\<lambda>_ s. P (vmid_for_asid s)\<rbrace>"
-  apply (wp_pre, wps, wp)
-  apply (clarsimp simp del: fun_upd_apply)
-  apply (erule rsubst[where P=P])
-  apply (rule ext)
-  apply (clarsimp simp: vmid_for_asid_def obind_def simp del: fun_upd_apply split: option.splits)
-  apply (clarsimp simp: opt_map_left_None)
-  apply (rule opt_map_apply_left_eq)
-  apply (clarsimp simp: entry_for_pool_def obind_def split: option.splits)
-  apply (drule (2) valid_asid_table_inj, simp)
-  apply (erule notE)
-  apply (simp add: asid_bits_of_defs)
-  apply (word_eqI_solve simp: asid_high_bits_def asid_low_bits_def)
-  done
-
 lemma set_asid_pool_None_vmid_inv:
-  "\<lbrace>\<lambda>s. vmid_inv s \<and> valid_asid_table s \<and>
-        asid_pools_of s p = Some ap \<and>
-        (\<exists>asid_high. asid_table s asid_high = Some p \<and>
-                     vmid_for_asid s (asid_of asid_high asid_low) = None) \<rbrace>
-   set_asid_pool p (ap(asid_low := None))
-   \<lbrace>\<lambda>_. vmid_inv\<rbrace>"
+  "set_asid_pool p (ap(asid_low := None)) \<lbrace>vmid_inv\<rbrace>"
   unfolding vmid_inv_def
-  by (rule hoare_lift_Pf2[where f="\<lambda>s. arm_vmid_table (arch_state s)"]; wp)
-     (fastforce simp del: fun_upd_apply)
+  by wp
 
 lemma set_asid_pool_vcpus_of[wp]:
   "set_asid_pool p ap \<lbrace>\<lambda>s. P (vcpus_of s)\<rbrace>"
@@ -805,12 +778,7 @@ lemma set_asid_pool_valid_global_tables[wp]:
   by (wp_pre, wps, wp, clarsimp)
 
 lemma set_asid_pool_None_valid_arch:
-  "\<lbrace>\<lambda>s. valid_arch_state s \<and>
-        asid_pools_of s p = Some ap \<and>
-        (\<exists>asid_high. asid_table s asid_high = Some p \<and>
-                     vmid_for_asid s (asid_of asid_high asid_low) = None) \<rbrace>
-   set_asid_pool p (ap (asid_low := None))
-   \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  "set_asid_pool p (ap (asid_low := None)) \<lbrace>valid_arch_state\<rbrace>"
   unfolding valid_arch_state_def
   by (wpsimp wp: set_asid_pool_None_vmid_inv valid_global_arch_objs_lift cur_vcpu_typ_lift)
 
@@ -1992,14 +1960,35 @@ lemma set_asid_pool_valid_asid_pool_caps[wp]:
   unfolding valid_asid_pool_caps_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
 
+lemma set_asid_pool_None_vspace_for_asid:
+  "\<lbrace>\<lambda>s. valid_asid_table s \<and>
+        (\<exists>asid_high. asid_table s asid_high = Some p \<and> asid_pools_of s p = Some ap \<and>
+                     P ((\<lambda>asid. vspace_for_asid asid s)(asid_of asid_high asid_low := None))) \<rbrace>
+   set_asid_pool p (ap (asid_low := None))
+   \<lbrace>\<lambda>_ s. P (\<lambda>asid. vspace_for_asid asid s)\<rbrace>"
+  unfolding set_asid_pool_def
+  apply (wp set_object_wp)
+  apply clarsimp
+  apply (erule rsubst[where P=P])
+  apply (rule ext)
+  apply (clarsimp simp: vspace_for_asid_def obind_def entry_for_asid_def pool_for_asid_def
+                        entry_for_pool_def
+                  split: option.splits)
+  apply (prop_tac "asid_high_bits_of asid = asid_high")
+   apply (simp add: valid_asid_table_inj)
+  apply clarsimp
+  done
+
 lemma set_asid_pool_None_valid_asid_map[wp]:
-  "\<lbrace> valid_asid_map and (\<lambda>s. asid_pools_of s p = Some ap) \<rbrace>
+  "\<lbrace>valid_asid_map and valid_asid_table and
+    (\<lambda>s. \<exists>asid_high. asid_table s asid_high = Some p \<and> asid_pools_of s p = Some ap \<and>
+                     asid_map s (asid_of asid_high asid_low) = None) \<rbrace>
    set_asid_pool p (ap (asid_low := None))
    \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
-  unfolding valid_asid_map_def entry_for_asid_def
-  apply (clarsimp simp: obind_None_eq pool_for_asid_def)
-  apply (wp hoare_vcg_disj_lift hoare_vcg_ex_lift get_object_wp)
-  apply (fastforce simp: entry_for_pool_def obind_None_eq in_omonad split: if_split_asm)
+  unfolding valid_asid_map_def
+  supply fun_upd_apply[simp del]
+  apply (wpsimp wp: set_asid_pool_None_vspace_for_asid hoare_Ball_helper)
+  apply (fastforce simp: fun_upd_apply)
   done
 
 crunch set_asid_pool
@@ -2008,9 +1997,8 @@ crunch set_asid_pool
 
 lemma set_asid_pool_invs_unmap:
   "\<lbrace>invs and
-    (\<lambda>s. asid_pools_of s p = Some ap) and
-    (\<lambda>s. \<exists>asid_high. asid_table s asid_high = Some p \<and>
-                     vmid_for_asid s (asid_of asid_high asid_low) = None)\<rbrace>
+    (\<lambda>s. \<exists>asid_high. asid_table s asid_high = Some p \<and> asid_pools_of s p = Some ap \<and>
+                     asid_map s (asid_of asid_high asid_low) = None)\<rbrace>
    set_asid_pool p (ap (asid_low := None))
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def
@@ -2025,7 +2013,6 @@ lemma set_asid_pool_invs_unmap:
 
 lemmas set_asid_pool_cte_wp_at1[wp]
     = hoare_cte_wp_caps_of_state_lift [OF set_asid_pool_caps_of_state]
-
 
 lemma mdb_cte_at_set_asid_pool[wp]:
   "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)\<rbrace>
