@@ -13,7 +13,6 @@ theory Nondet_Monad_Equations
     Nondet_Empty_Fail
     Nondet_No_Fail
     Nondet_MonadEq_Lemmas
-    Nondet_Env
 begin
 
 lemmas assertE_assert = assertE_liftE

@@ -15,6 +15,7 @@ theory Nondet_Monad
   imports
     Fun_Pred_Syntax
     Monad_Lib
+    Env_State
 begin
 
 text \<open>
@@ -23,35 +24,6 @@ text \<open>
   State monads are used extensively in the seL4 specification. They are defined below.\<close>
 
 section "The Monad"
-
-record 'c monad_state_record =
-  env :: 'c
-
-type_synonym ('c, 's) monad_state = "('c, 's) monad_state_record_scheme"
-
-type_synonym ('c, 's) mpred = "('c, 's) monad_state \<Rightarrow> bool"
-
-abbreviation monad_state :: "'c \<Rightarrow> 's \<Rightarrow> ('c, 's) monad_state" where
-  "monad_state c \<equiv> \<lambda>s. \<lparr> env = c, \<dots> = s \<rparr>"
-
-abbreviation mstate :: "('c, 's) monad_state \<Rightarrow> 's" where
-  "mstate \<equiv> monad_state_record.more"
-
-abbreviation with_env_of :: "('c, 's) monad_state \<Rightarrow> 't \<Rightarrow> ('c, 't) monad_state" where
-  "with_env_of s \<equiv> monad_state (env s)"
-
-definition map_state :: "('s \<Rightarrow> 't) \<Rightarrow> ('c, 's) monad_state \<Rightarrow> ('c, 't) monad_state"
-  where
-  "map_state f \<equiv> \<lambda>s. with_env_of s (f (mstate s))"
-
-definition const_env ::
-  "(('c, 's) monad_state \<Rightarrow> ('d, 't) monad_state) \<Rightarrow> ('c, 's) monad_state \<Rightarrow> ('c, 't) monad_state"
-  where
-  "const_env f \<equiv> \<lambda>s. with_env_of s (mstate (f s))"
-
-definition is_const_env :: "(('c, 's) monad_state \<Rightarrow> ('c, 't) monad_state) \<Rightarrow> bool"
-  where
-  "is_const_env f \<equiv> \<forall>s. env (f s) = env s"
 
 text \<open>
   The basic type of the nondeterministic state monad with failure is
@@ -257,10 +229,6 @@ lemma bind_def':
                      snd (f s) \<or> (\<exists>(r', s') \<in> fst (f s). snd (g r' (with_env_of s s'))))"
   by (rule eq_reflection)
      (auto simp add: bind_def split_def Let_def)
-
-lemma with_env_of_mstate[simp]:
-  "with_env_of s (mstate s) = s"
-  by (cases s, auto)
 
 text \<open>Each monad satisfies at least the following three laws.\<close>
 
