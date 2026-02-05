@@ -38,11 +38,11 @@ lemma rg_pre_addE:
 
 lemma rg_name_pre_state:
   "\<lbrakk> \<And>s0 s. P s0 s \<Longrightarrow> \<lbrace>\<lambda>_. (=) s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; prefix_closed f \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  by (clarsimp simp: validI_def)
+  by (clarsimp simp: valid_rg_def)
 
 lemma rg_name_pre_stateE:
   "\<lbrakk>\<And>s0 s. P s0 s \<Longrightarrow> \<lbrace>\<lambda>_. (=) s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>; prefix_closed f\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  by (clarsimp simp: validIE_def2)
+  by (clarsimp simp: valid_rgE_def2)
 
 lemma rg_vcg_if_lift_strong:
   "\<lbrakk> \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>P\<rbrace>; \<lbrace>\<lambda>s0 s. \<not> P' s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. \<not> P rv s0 s\<rbrace>; \<lbrace>Q'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<lbrace>S'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace> \<rbrakk> \<Longrightarrow>
@@ -64,15 +64,15 @@ lemma rg_vcg_imp_lift_pre_add:
 
 lemma rg_pre_tautI:
   "\<lbrakk> \<lbrace>A and P\<rbrace>,\<lbrace>R\<rbrace> a \<lbrace>G\<rbrace>,\<lbrace>B\<rbrace>; \<lbrace>A and not P\<rbrace>,\<lbrace>R\<rbrace> a \<lbrace>G\<rbrace>,\<lbrace>B\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>A\<rbrace>,\<lbrace>R\<rbrace> a \<lbrace>G\<rbrace>,\<lbrace>B\<rbrace>"
-  by (fastforce simp: validI_def)
+  by (fastforce simp: valid_rg_def)
 
 lemma rg_lift_Pf_pre_conj:
   assumes P: "\<And>x. \<lbrace>\<lambda>s0 s. Q x s0 s\<rbrace>,\<lbrace>R\<rbrace> m \<lbrace>G\<rbrace>,\<lbrace>P x\<rbrace>"
   assumes f: "\<And>P. \<lbrace>\<lambda>s0 s. P (g s0 s) \<and> P' s0 s\<rbrace>,\<lbrace>R\<rbrace> m \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_ s0 s. P (f s0 s)\<rbrace>"
   shows "\<lbrace>\<lambda>s0 s. Q (g s0 s) s0 s \<and> P' s0 s\<rbrace>,\<lbrace>R\<rbrace> m \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. P (f s0 s) rv s0 s\<rbrace>"
-  apply (clarsimp simp: validI_def validI_prefix_closed[OF f] guar_by_rg[OF f])
-  apply (rule use_validI[OF _ P], simp)
-  apply (rule use_validI[OF _ f], simp+)
+  apply (clarsimp simp: valid_rg_def valid_rg_prefix_closed[OF f] guar_by_rg[OF f])
+  apply (rule use_valid_rg[OF _ P], simp)
+  apply (rule use_valid_rg[OF _ f], simp+)
   done
 
 lemmas rg_lift_Pf4 = rg_lift_Pf_pre_conj[where P'="\<top>\<top>", simplified]
@@ -87,7 +87,7 @@ lemmas rg_lift_Pf_pre_conj' = rg_lift_Pf2_pre_conj[where Q=P and P=P for P]
 lemma rg_if_r_and:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>r. if P' r then Q r else Q' r\<rbrace>
    = \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>r s0 s. (P' r \<longrightarrow> Q r s0 s) \<and> (\<not>P' r \<longrightarrow> Q' r s0 s)\<rbrace>"
-  by (fastforce simp: validI_def)
+  by (fastforce simp: valid_rg_def)
 
 lemma rg_convert_imp:
   "\<lbrakk> \<lbrace>\<lambda>s0 s. \<not> P s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. \<not> Q s0 s\<rbrace>; \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace> \<rbrakk>
@@ -103,24 +103,24 @@ lemma rg_case_option_wpR:
 
 lemma rg_exI_tuple:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>(rv,rv') s0 s. Q x rv rv' s0 s\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>(rv,rv') s0 s. \<exists>x. Q x rv rv' s0 s\<rbrace>"
-  by (fastforce simp: validI_def)
+  by (fastforce simp: valid_rg_def)
 
 lemma rg_ex_all:
   "(\<forall>x. \<lbrace>P x\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>) = \<lbrace>\<lambda>s0 s. \<exists>x. P x s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   apply (rule iffI)
-   apply (fastforce simp: validI_def)+
+   apply (fastforce simp: valid_rg_def)+
   done
 
 lemma rg_imp_eq_substR:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. rv = x \<longrightarrow> Q x s0 s\<rbrace>,\<lbrace>E\<rbrace>"
-  by (fastforce simp add: validI_def validIE_def split: sum.splits)
+  by (fastforce simp add: valid_rg_def valid_rgE_def split: sum.splits)
 
 lemma rg_split_bind_case_sum:
   assumes x: "\<And>rv. \<lbrace>E rv\<rbrace>,\<lbrace>R\<rbrace> g rv \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
              "\<And>rv. \<lbrace>Q' rv\<rbrace>,\<lbrace>R\<rbrace> h rv \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   assumes y: "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>,\<lbrace>E\<rbrace>"
   shows      "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f >>= case_sum g h \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  apply (rule bind_twp[OF _ y[unfolded validIE_def]])
+  apply (rule bind_twp[OF _ y[unfolded valid_rgE_def]])
   apply (wpsimp wp: x split: sum.splits)
   done
 
@@ -129,9 +129,9 @@ lemma rg_split_bind_case_sumE:
              "\<And>rv. \<lbrace>S rv\<rbrace>,\<lbrace>R\<rbrace> h rv \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   assumes y: "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>,\<lbrace>S'\<rbrace>"
   shows      "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f >>= case_sum g h \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  apply (unfold validIE_def)
-  apply (rule bind_twp[OF _ y[unfolded validIE_def]])
-  apply (wpsimp wp: x[unfolded validIE_def] split: sum.splits)
+  apply (unfold valid_rgE_def)
+  apply (rule bind_twp[OF _ y[unfolded valid_rgE_def]])
+  apply (wpsimp wp: x[unfolded valid_rgE_def] split: sum.splits)
   done
 
 lemma assertE_tsp:
@@ -196,7 +196,7 @@ lemma rg_vcg_if_lift2:
 
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. (Q' rv \<longrightarrow> X rv s0 s) \<and> (\<not> Q' rv \<longrightarrow> Y rv s0 s)\<rbrace> \<Longrightarrow>
    \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv. if Q' rv then X rv else Y rv\<rbrace>"
-  by (auto simp: validI_def)
+  by (auto simp: valid_rg_def)
 
 lemma rg_vcg_if_lift_ER: (* Required because of lack of rv in lifting rules *)
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. (Q rv s0 s \<longrightarrow> X rv s0 s) \<and> (\<not> Q rv s0 s \<longrightarrow> Y rv s0 s)\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow>
@@ -204,12 +204,12 @@ lemma rg_vcg_if_lift_ER: (* Required because of lack of rv in lifting rules *)
 
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. (Q' rv \<longrightarrow> X rv s0 s) \<and> (\<not> Q' rv \<longrightarrow> Y rv s0 s)\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow>
    \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv. if Q' rv then X rv else Y rv\<rbrace>,\<lbrace>E\<rbrace>"
-  by (auto simp: validI_def validIE_def)
+  by (auto simp: valid_rg_def valid_rgE_def)
 
 lemma rg_list_all_lift:
   "\<lbrakk>\<And>r. r \<in> set xs \<Longrightarrow> \<lbrace>Q r\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv. Q r\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<top>\<top>\<top>\<rbrace>\<rbrakk>
    \<Longrightarrow> \<lbrace>\<lambda>s0 s. list_all (\<lambda>r. Q r s0 s) xs \<and> P s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. list_all (\<lambda>r. Q r s0 s) xs\<rbrace>"
-  apply (rule validI_split[rotated, simplified pred_conj_def])
+  apply (rule valid_rg_split[rotated, simplified pred_conj_def])
    apply assumption
   apply (induct xs; simp)
    apply wpsimp
@@ -230,25 +230,25 @@ lemma rg_doesn't_grow_proof:
   assumes y: "\<And>s0 s. finite (S s0 s)"
   assumes x: "\<And>x. \<lbrace>\<lambda>s0 s. x \<notin> S s0 s \<and> P s0 s\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. x \<notin> S s0 s\<rbrace>"
   shows      "\<lbrace>\<lambda>s0 s. card (S s0 s) < n \<and> P s0 s\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. card (S s0 s) < n\<rbrace>"
-  apply (clarsimp simp: validI_def validI_prefix_closed[OF x])
+  apply (clarsimp simp: valid_rg_def valid_rg_prefix_closed[OF x])
   apply (erule le_less_trans[rotated])
   apply (rule card_mono[OF y])
   apply clarsimp
   apply (rule ccontr)
-  apply (drule (2) use_validI[OF _ x, OF _ conjI])
+  apply (drule (2) use_valid_rg[OF _ x, OF _ conjI])
   apply simp
   done
 
 lemma rg_vcg_propE_R:
   "prefix_closed f \<Longrightarrow> \<lbrace>\<lambda>s0 s. P\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. P\<rbrace>,-"
-  by (simp add: validIE_def validI_def split: sum.split)
+  by (simp add: valid_rgE_def valid_rg_def split: sum.split)
 
 lemma rg_set_preserved_proof:
   assumes y: "\<And>x. \<lbrace>\<lambda>s0 s. Q s0 s \<and> x \<in> S s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. x \<in> S s0 s\<rbrace>"
   assumes x: "\<And>x. \<lbrace>\<lambda>s0 s. Q s0 s \<and> x \<notin> S s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. x \<notin> S s0 s\<rbrace>"
   shows      "\<lbrace>\<lambda>s0 s. Q s0 s \<and> P (S s0 s)\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. P (S s0 s)\<rbrace>"
-  apply (clarsimp simp: validI_def)
-  by (metis (mono_tags, lifting) equalityI validI_prefix_closed post_by_rg guar_by_rg subsetI x y)
+  apply (clarsimp simp: valid_rg_def)
+  by (metis (mono_tags, lifting) equalityI valid_rg_prefix_closed post_by_rg guar_by_rg subsetI x y)
 
 (*If there is a use case which requires a specific guarantee then this rule could be extended with
   an extra assumption and precondition.*)
@@ -258,11 +258,11 @@ lemma rg_set_shrink_proof:
   "\<lbrace>\<lambda>s0 s. \<forall>S'. S' \<subseteq> S s0 s \<longrightarrow> P S'\<rbrace>,\<lbrace>R\<rbrace>
    f
    -,\<lbrace>\<lambda>rv s0 s. P (S s0 s)\<rbrace>"
-  apply (clarsimp simp: validI_def validI_prefix_closed[OF x])
+  apply (clarsimp simp: valid_rg_def valid_rg_prefix_closed[OF x])
   apply (drule spec, erule mp)
   apply (clarsimp simp: subset_iff)
   apply (rule ccontr)
-  apply (drule(1) use_validI [OF _ x])
+  apply (drule(1) use_valid_rg [OF _ x])
   apply simp
   done
 
@@ -272,37 +272,37 @@ lemma rg_shrinks_proof:
   assumes z: "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. x \<notin> S s0 s\<rbrace>"
   assumes w: "\<And>s0 s. P s0 s \<Longrightarrow> x \<in> S s0 s"
   shows      "\<lbrace>\<lambda>s0 s. card (S s0 s) \<le> n \<and> P s0 s\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. card (S s0 s) < n\<rbrace>"
-  apply (clarsimp simp: validI_def validI_prefix_closed[OF x])
+  apply (clarsimp simp: valid_rg_def valid_rg_prefix_closed[OF x])
   apply (erule less_le_trans[rotated])
   apply (rule psubset_card_mono[OF y])
   apply (rule psubsetI)
    apply clarsimp
    apply (rule ccontr)
-   apply (drule (2) use_validI[OF _ x, OF _ conjI])
+   apply (drule (2) use_valid_rg[OF _ x, OF _ conjI])
    apply simp
-  by (metis use_validI w z)
+  by (metis use_valid_rg w z)
 
-lemma use_validIE_R':
+lemma use_valid_rgE_R':
   "\<lbrakk>(tr, Result (Inr r, s')) \<in> rely f R s0 s; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>; P s0 s; s0' = last_st_tr tr s0\<rbrakk>
    \<Longrightarrow> Q r s0' s'"
-  unfolding validIE_def
-  by (frule(3) use_validI', simp)
+  unfolding valid_rgE_def
+  by (frule(3) use_valid_rg', simp)
 
-lemmas use_validIE_R = use_validIE_R'[OF _ _ _ refl]
+lemmas use_valid_rgE_R = use_valid_rgE_R'[OF _ _ _ refl]
 
-lemma use_validIE_guar:
+lemma use_valid_rgE_guar:
   "\<lbrakk>(tr, res) \<in> rely f R s0 s; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>; P s0 s\<rbrakk>
    \<Longrightarrow> guar_cond G s0 tr"
-  unfolding validIE_def
-  by (frule(2) use_validI_guar, simp)
+  unfolding valid_rgE_def
+  by (frule(2) use_valid_rg_guar, simp)
 
-lemma validI_preservation_ex:
+lemma valid_rg_preservation_ex:
   assumes x: "\<And>x P. \<lbrace>\<lambda>s0 s. P (f s0 s x :: 'b)\<rbrace>,\<lbrace>R\<rbrace> m \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. P (f s0 s x)\<rbrace>"
   shows      "\<lbrace>\<lambda>s0 s. P (f s0 s :: 'a \<Rightarrow> 'b)\<rbrace>,\<lbrace>R\<rbrace> m \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. P (f s0 s)\<rbrace>"
-  apply (clarsimp simp: validI_def validI_prefix_closed[OF x] guar_by_rg[OF x])
+  apply (clarsimp simp: valid_rg_def valid_rg_prefix_closed[OF x] guar_by_rg[OF x])
   apply (erule subst[rotated, where P=P])
   apply (rule ext)
-  apply (erule use_validI [OF _ x])
+  apply (erule use_valid_rg [OF _ x])
   apply simp
   done
 
@@ -324,13 +324,13 @@ lemma ifM_throwError_returnOkI:
 lemmas state_unchanged_rg = in_inv_by_rgD [THEN sym]
 lemmas last_state_unchanged_rg = last_st_in_inv_by_rgD [THEN sym]
 
-(*FIXME MC: name? move (both this one and validI in More_VCG)*)
-lemma validI_I:
+(*FIXME MC: move (both this one and validI in More_VCG)*)
+lemma valid_rgI:
   assumes px: "prefix_closed S"
   assumes gc: "\<And>s0 s tr res. \<lbrakk> P s0 s; (tr, res) \<in> (rely S R s0 s)\<rbrakk> \<Longrightarrow> guar_cond G s0 tr"
   assumes rl: "\<And>s0 s tr r s'. \<lbrakk> P s0 s; (tr, Result (r, s')) \<in> (rely S R s0 s) \<rbrakk> \<Longrightarrow> Q r (last_st_tr tr s0) s'"
   shows "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> S \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  unfolding validI_def using px gc rl by safe
+  unfolding valid_rg_def using px gc rl by safe
 
 lemma opt_return_pres_lift_rg:
   assumes x: "\<And>v. \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f v \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv. P\<rbrace>"
@@ -343,7 +343,7 @@ lemma rg_weak_lift_imp_conj:
   apply wp_pre
   apply (rule rg_vcg_conj_lift)
    apply (rule rg_weak_lift_imp; assumption)
-   apply (rule validI_split; assumption)
+   apply (rule valid_rg_split; assumption)
   apply clarsimp
   done
 
@@ -352,7 +352,7 @@ lemma rg_eq_P:
   shows "\<lbrace>\<lambda>_. (=) s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_ _. (=) s\<rbrace>"
   by (rule assms)
 
-lemma valid_case_option_post_twp:
+lemma valid_rg_case_option_post_twp:
   "\<lbrakk>\<And>x. \<lbrace>P x\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv. Q x\<rbrace>\<rbrakk> \<Longrightarrow>
    \<lbrace>\<lambda>s0 s. case ep of Some x \<Rightarrow> P x s0 s | _ \<Rightarrow> True\<rbrace>,\<lbrace>R\<rbrace>
    f
@@ -363,12 +363,12 @@ lemma P_bool_lift:
   assumes t: "\<lbrace>Q\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>r. Q\<rbrace>"
   assumes f: "\<lbrace>\<lambda>s0 s. \<not>Q s0 s\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>r s0 s. \<not>Q s0 s\<rbrace>"
   shows "\<lbrace>\<lambda>s0 s. P (Q s0 s)\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>r s0 s. P (Q s0 s)\<rbrace>"
-  apply (clarsimp simp: validI_def validI_prefix_closed[OF f])
+  apply (clarsimp simp: valid_rg_def valid_rg_prefix_closed[OF f])
   apply (rule back_subst[where P=P], assumption)
   apply (rule iffI)
-   apply (erule (1) use_validI [OF _ t])
+   apply (erule (1) use_valid_rg [OF _ t])
   apply (rule classical)
-  apply (drule (1) use_validI [OF _ f])
+  apply (drule (1) use_valid_rg [OF _ f])
   apply simp
   done
 
@@ -384,7 +384,7 @@ lemma rg_Ball_helper:
   assumes x: "\<And>x. \<lbrace>P x\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>Q x\<rbrace>"
   assumes y: "\<And>P. \<lbrace>\<lambda>s0 s. P (S s0 s)\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. P (S s0 s)\<rbrace>"
   shows "\<lbrace>\<lambda>s0 s. \<forall>x \<in> S s0 s. P x s0 s\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. \<forall>x \<in> S s0 s. Q x rv s0 s\<rbrace>"
-  apply (clarsimp simp: validI_def validI_prefix_closed[OF x])
+  apply (clarsimp simp: valid_rg_def valid_rg_prefix_closed[OF x])
   apply (drule bspec, erule back_subst[where P="\<lambda>A. x\<in>A" for x])
    apply (erule post_by_rg[OF y, rotated])
    apply (rule refl)
@@ -396,15 +396,15 @@ lemma handy_prop_divs_rg:
              "\<And>P. \<lbrace>\<lambda>s0 s. P (T s0 s) \<and> S s0 s\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. P (T' rv s0 s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s0 s. P (Q s0 s \<and> T s0 s) \<and> S s0 s\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. P (Q' rv s0 s \<and> T' rv s0 s)\<rbrace>"
              "\<lbrace>\<lambda>s0 s. P (Q s0 s \<or> T s0 s) \<and> S s0 s\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. P (Q' rv s0 s \<or> T' rv s0 s)\<rbrace>"
-   apply (clarsimp simp: validI_def validI_prefix_closed[OF x(1)]
+   apply (clarsimp simp: valid_rg_def valid_rg_prefix_closed[OF x(1)]
                   elim!: subst[rotated, where P=P])
-   apply (rule use_validI [OF _ x(1)], assumption)
-   apply (rule use_validI [OF _ x(2)], assumption)
+   apply (rule use_valid_rg [OF _ x(1)], assumption)
+   apply (rule use_valid_rg [OF _ x(2)], assumption)
    apply simp
-  apply (clarsimp simp: validI_def validI_prefix_closed[OF x(1)]
+  apply (clarsimp simp: valid_rg_def valid_rg_prefix_closed[OF x(1)]
                  elim!: subst[rotated, where P=P])
-  apply (rule use_validI [OF _ x(1)], assumption)
-  apply (rule use_validI [OF _ x(2)], assumption)
+  apply (rule use_valid_rg [OF _ x(1)], assumption)
+  apply (rule use_valid_rg [OF _ x(2)], assumption)
   apply simp
   done
 
@@ -420,7 +420,7 @@ lemma rg_set_preserved:
   assumes x: "\<And>x. \<lbrace>fn' x\<rbrace>,\<lbrace>R\<rbrace> m -,\<lbrace>\<lambda>rv. fn x\<rbrace>"
   shows      "\<lbrace>\<lambda>s0 s. set xs \<subseteq> {x. fn' x s0 s}\<rbrace>,\<lbrace>R\<rbrace> m -,\<lbrace>\<lambda>rv s0 s. set xs \<subseteq> {x. fn x s0 s}\<rbrace>"
   apply (induct xs)
-   apply (simp add: rg_TrueI validI_prefix_closed[OF x])
+   apply (simp add: rg_TrueI valid_rg_prefix_closed[OF x])
   apply simp
   apply (rule rg_vcg_conj_lift)
    apply (rule x)
@@ -429,23 +429,23 @@ lemma rg_set_preserved:
 
 lemma rg_ex_pre: (* safe, unlike rg_vcg_ex_lift *)
   "(\<And>x. \<lbrace>P x\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s0 s. \<exists>x. P x s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  by (fastforce simp: validI_def)
+  by (fastforce simp: valid_rg_def)
 
 lemma rg_ex_pre_conj:
   "\<lbrakk>\<And>x. \<lbrace>\<lambda>s0 s. P x s0 s \<and> P' s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>\<rbrakk>
    \<Longrightarrow> \<lbrace>\<lambda>s0 s. (\<exists>x. P x s0 s) \<and> P' s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  by (fastforce simp: validI_def)
+  by (fastforce simp: valid_rg_def)
 
 lemma rg_conj_lift_inv:
   "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<lbrace>\<lambda>s0 s. P' s0 s \<and> I s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv. I\<rbrace>;
     \<And>s0 s. P s0 s \<Longrightarrow> P' s0 s\<rbrakk>
    \<Longrightarrow> \<lbrace>\<lambda>s0 s. P s0 s \<and> I s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q rv s0 s \<and> I s0 s\<rbrace>"
-   by (fastforce simp: validI_def)
+   by (fastforce simp: valid_rg_def)
 
 lemma rg_in_rely_post:
   assumes x: "\<And>P. \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>x. P\<rbrace>"
   shows      "\<lbrace>\<top>\<top>\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>\<lambda>rv s0 s. (rv, s) \<in> mres (rely f R s0 s)\<rbrace>"
-  apply (clarsimp simp: validI_def validI_prefix_closed[OF x])
+  apply (clarsimp simp: valid_rg_def valid_rg_prefix_closed[OF x])
   apply (rule back_subst[where P="\<lambda>s0. x\<in>mres (rely f R s0 s)" for x s])
    apply (rule back_subst[where P="\<lambda>s. x\<in>mres (rely f R s0 s)" for x s0])
    apply (drule in_mres, assumption)
@@ -453,14 +453,14 @@ lemma rg_in_rely_post:
   apply (simp add: last_state_unchanged_rg[OF x])
   done
 
-lemma list_case_throw_validIE_R:
+lemma list_case_throw_valid_rgE_R:
   "\<lbrakk> \<And>y ys. xs = y # ys \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f y ys \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,- \<rbrakk> \<Longrightarrow>
    \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> case xs of [] \<Rightarrow> throwError e | x # xs \<Rightarrow> f x xs \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,-"
   apply (cases xs, simp_all)
   apply wp
   done
 
-lemma validI_set_take_helper:
+lemma valid_rg_set_take_helper:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. \<forall>x \<in> set (xs rv s0 s). Q x rv s0 s\<rbrace>
    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. \<forall>x \<in> set (take (n rv s0 s) (xs rv s0 s)). Q x rv s0 s\<rbrace>"
   apply (erule rg_strengthen_post)
@@ -506,14 +506,14 @@ lemma rg_grab_asm:
 lemma rg_grab_asm2:
   "\<lbrakk>P' \<Longrightarrow> \<lbrace>\<lambda>s0 s. P s0 s \<and> P'' s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<not> P' \<Longrightarrow> prefix_closed f\<rbrakk>
    \<Longrightarrow> \<lbrace>\<lambda>s0 s. P s0 s \<and> P' \<and> P'' s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  by (fastforce simp: validI_def)
+  by (fastforce simp: valid_rg_def)
 
 lemma rg_grab_exs:
   assumes x: "\<And>x. P x \<Longrightarrow> \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   assumes y: "prefix_closed f"
   shows      "\<lbrace>\<lambda>s0 s. \<exists>x. P x \<and> P' s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  apply (clarsimp simp: validI_def y use_validI_guar[OF _ x])
-  apply (erule(2) use_validI [OF _ x])
+  apply (clarsimp simp: valid_rg_def y use_valid_rg_guar[OF _ x])
+  apply (erule(2) use_valid_rg [OF _ x])
   done
 
 lemma rg_prop_E:
@@ -524,16 +524,16 @@ lemma rg_walk_assmsE:
   assumes x: "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv. P\<rbrace>" and y: "\<And>s0 s. P s0 s \<Longrightarrow> Q s0 s" and z: "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv. Q\<rbrace>"
   shows      "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> doE x \<leftarrow> f; g odE \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv. Q\<rbrace>"
   apply (wp z)
-   apply (simp add: validIE_def)
+   apply (simp add: valid_rgE_def)
    apply (rule rg_strengthen_post [OF x])
    apply (auto simp: y split: sum.splits)
   done
 
-(*FIXME MC: it is not immediately obvious what the validI equivalent of these rules should be, so I
+(*FIXME MC: it is not immediately obvious what the valid_rg equivalent of these rules should be, so I
           think it is best to leave them until we have a specific use case.
 lemma univ_twp:
   "prefix_closed f \<Longrightarrow> \<lbrace>\<lambda>s0 s. \<forall>(rv, s') \<in> mres (rely f R s0 s). Q rv s0 s'\<rbrace>,\<lbrace>R\<rbrace> f -,\<lbrace>Q\<rbrace>"
-  by (simp add: validI_def)
+  by (simp add: valid_rg_def)
 
 lemma univ_get_twp:
   assumes x: "\<And>P. \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv. P\<rbrace>"
@@ -567,21 +567,21 @@ lemma other_rg_in_monad_post:
 lemma weak_if_twp:
   "\<lbrakk> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace> \<rbrakk> \<Longrightarrow>
    \<lbrace>P and P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>r. if C r then Q r else Q' r\<rbrace>"
-  by (auto simp: validI_def)
+  by (auto simp: valid_rg_def)
 
 lemma weak_if_twp':
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>r. Q r and Q' r\<rbrace> \<Longrightarrow>
    \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>r. if C r then Q r else Q' r\<rbrace>"
-  by (auto simp: validI_def)
+  by (auto simp: valid_rg_def)
 
-lemma validE_R_abstract_rv:
+lemma valid_rgE_R_abstract_rv:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. \<forall>rv'. Q rv' s0 s\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   by (erule rg_strengthen_postE; simp)
 
-lemma validIE_cases_validI:
+lemma valid_rgE_cases_valid_rg:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q (Inr rv) s0 s\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q (Inl rv) s0 s\<rbrace>
    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  apply (simp add: validIE_def)
+  apply (simp add: valid_rgE_def)
   apply (erule rg_strengthen_post)
   apply (simp split: sum.split_asm)
   done
@@ -597,55 +597,55 @@ lemma liftM_pre_rg:
 
 lemma rg_gen_asm_conj:
   "\<lbrakk>P \<Longrightarrow> \<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<not> P \<Longrightarrow> prefix_closed f\<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s0 s. P' s0 s \<and> P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  by (fastforce simp: validI_def)
+  by (fastforce simp: valid_rg_def)
 
 lemma rg_add_K:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s0 s. P s0 s \<and> I\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q rv s0 s \<and> I\<rbrace>"
-  by (fastforce simp: validI_def)
+  by (fastforce simp: valid_rg_def)
 
-lemma valid_rv_lift:
+lemma valid_rg_rv_lift:
   "\<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. rv \<longrightarrow> Q rv s0 s\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s0 s. P \<and> P' s0 s\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. rv \<longrightarrow> P \<and> Q rv s0 s\<rbrace>"
-  by (fastforce simp: validI_def)
+  by (fastforce simp: valid_rg_def)
 
-lemma valid_rv_split:
+lemma valid_rg_rv_split:
   "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. rv \<longrightarrow> Q s0 s\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. \<not>rv \<longrightarrow> Q' s0 s\<rbrace>\<rbrakk>
    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. if rv then Q s0 s else Q' s0 s\<rbrace>"
-  by (fastforce simp: validI_def)
+  by (fastforce simp: valid_rg_def)
 
 lemma rg_rv_split:
   "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. rv \<longrightarrow> (Q rv s0 s)\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv s0 s. (\<not>rv) \<longrightarrow> (Q rv s0 s)\<rbrace>\<rbrakk>
    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  apply (clarsimp simp: validI_def)
+  apply (clarsimp simp: valid_rg_def)
   by (metis (full_types))
 
-lemma combine_validE:
+lemma combine_valid_rgE:
   "\<lbrakk> \<lbrace> P \<rbrace>,\<lbrace>R\<rbrace> x \<lbrace>G\<rbrace>,\<lbrace> Q \<rbrace>,\<lbrace> E \<rbrace>; \<lbrace> P' \<rbrace>,\<lbrace>R\<rbrace> x \<lbrace>G\<rbrace>,\<lbrace> Q' \<rbrace>,\<lbrace> E' \<rbrace> \<rbrakk>
    \<Longrightarrow> \<lbrace> P and P' \<rbrace>,\<lbrace>R\<rbrace> x \<lbrace>G\<rbrace>,\<lbrace> \<lambda>r. Q r and Q' r \<rbrace>,\<lbrace>\<lambda>r. E r and E' r \<rbrace>"
-  apply (clarsimp simp: validIE_def validI_def split: sum.splits)
+  apply (clarsimp simp: valid_rgE_def valid_rg_def split: sum.splits)
   done
 
-lemma validI_case_prod:
-  "\<lbrakk> \<And>x y. validI (P x y) R (f x y) G Q \<rbrakk> \<Longrightarrow> validI (case_prod P v) R (case_prod (\<lambda>x y. f x y) v) G Q"
+lemma valid_rg_case_prod:
+  "\<lbrakk> \<And>x y. valid_rg (P x y) R (f x y) G Q \<rbrakk> \<Longrightarrow> valid_rg (case_prod P v) R (case_prod (\<lambda>x y. f x y) v) G Q"
   by (simp add: split_def)
 
-lemma validIE_case_prod:
-  "\<lbrakk> \<And>x y. validIE (P x y) R (f x y) G Q E \<rbrakk> \<Longrightarrow> validIE (case_prod P v) R (case_prod (\<lambda>x y. f x y) v) G Q E"
+lemma valid_rgE_case_prod:
+  "\<lbrakk> \<And>x y. valid_rgE (P x y) R (f x y) G Q E \<rbrakk> \<Longrightarrow> valid_rgE (case_prod P v) R (case_prod (\<lambda>x y. f x y) v) G Q E"
   by (simp add: split_def)
 
-lemma rg_validIE_E_conjI:
+lemma rg_valid_rgE_E_conjI:
   "\<lbrakk> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E'\<rbrace> \<rbrakk>  \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>\<lambda>rv s0 s. E rv s0 s \<and> E' rv s0 s\<rbrace>"
-  by (fastforce simp: validIE_def validI_def split: sum.splits)
+  by (fastforce simp: valid_rgE_def valid_rg_def split: sum.splits)
 
-lemma validIE_R_post_conjD1:
+lemma valid_rgE_R_post_conjD1:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>r s0 s. Q r s0 s \<and> Q' r s0 s\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  by (fastforce simp: validIE_def validI_def split: sum.splits)
+  by (fastforce simp: valid_rgE_def valid_rg_def split: sum.splits)
 
-lemma validIE_R_post_conjD2:
+lemma valid_rgE_R_post_conjD2:
   "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>r s0 s. Q r s0 s \<and> Q' r s0 s\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>,\<lbrace>E\<rbrace>"
-  by (fastforce simp: validIE_def validI_def split: sum.splits)
+  by (fastforce simp: valid_rgE_def valid_rg_def split: sum.splits)
 
 lemma rg_name_pre_state2:
   "(\<And>s. \<lbrace>\<lambda>s0' s'. P s0' s' \<and> (s' = s)\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  by (auto simp: validI_def)
+  by (auto simp: valid_rg_def)
 
 end

@@ -414,7 +414,7 @@ qed
 
 section \<open>Using prefix refinement\<close>
 text \<open>
-  Using prefix refinement to map the validI Hoare quadruple
+  Using prefix refinement to map the valid_rg Hoare quadruple
   (precond/rely/guarantee/postcond). Proofs of quadruples for
   abstract programs imply related quadruples for concrete
   programs.\<close>
@@ -440,7 +440,7 @@ proof -
     done
 qed
 
-theorem prefix_refinement_validI:
+theorem prefix_refinement_valid_rg:
   "\<lbrakk>prefix_refinement sr isr osr rvr AR R prP' prP f g;
     \<lbrace>P'\<rbrace>,\<lbrace>AR\<rbrace> f \<lbrace>G'\<rbrace>,\<lbrace>Q'\<rbrace>;
     \<And>t0 t. P t0 t \<Longrightarrow> (\<exists>s0 s. P' s0 s \<and> prP' s0 s \<and> prP t0 t \<and> isr s t \<and> sr s0 t0);
@@ -448,13 +448,13 @@ theorem prefix_refinement_validI:
     \<And>s0 t0 s t. \<lbrakk>G' s0 s; sr s0 t0; sr s t\<rbrakk> \<Longrightarrow> G t0 t;
     \<And>rv rv' s0 t0 s t. \<lbrakk>Q' rv s0 s; sr s0 t0; osr s t; rvr rv rv'\<rbrakk> \<Longrightarrow> Q rv' t0 t; prefix_closed g\<rbrakk>
     \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  apply (subst validI_def, clarsimp simp: rely_def)
+  apply (subst valid_rg_def, clarsimp simp: rely_def)
   apply (drule meta_spec2, drule(1) meta_mp, clarsimp)
   apply (drule(6) prefix_refinement_rely_cond_trD[where AR=AR, simplified])
    apply blast
   apply clarsimp
   apply (rule conjI)
-   apply (frule(3) validI_GD)
+   apply (frule(3) valid_rg_GD)
    apply (simp add: guar_cond_def matching_tr_def)
    apply (erule_tac R'="\<lambda>s cs. sr s cs" in list_all2_all_trace_steps)
      apply (clarsimp simp: list_all2_conv_all_nth split_def)
@@ -462,7 +462,7 @@ theorem prefix_refinement_validI:
    apply clarsimp
   apply clarsimp
   apply (erule tmres.rel_cases; clarsimp)
-  apply (drule(1) validI_rvD, simp add: rely_def)
+  apply (drule(1) valid_rg_rvD, simp add: rely_def)
    apply simp
   apply (case_tac tr; clarsimp simp: list_all2_Cons2 matching_tr_def)
   done
@@ -736,12 +736,12 @@ lemmas rely_cond_append_split =
 lemmas guar_cond_append_split =
   guar_cond_append[where xs="take n xs" and ys="drop n xs" for n xs, simplified]
 
-lemma validI_drop_next_G:
+lemma valid_rg_drop_next_G:
   "\<lbrakk>\<lbrace>P\<rbrace>, \<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>, \<lbrace>Q\<rbrace>; P s0 s; (tr, res) \<in> f s; rely_cond R s0 (drop (n - m) tr);
     n = length tr; m < length tr\<rbrakk>
    \<Longrightarrow> fst (rev tr ! m) \<noteq> Env \<longrightarrow> G (last_st_tr (rev (take m (rev tr))) s0) (snd (rev tr ! m))"
   apply clarify
-  apply (drule(2) validI_GD_drop[where n="n - Suc m"])
+  apply (drule(2) valid_rg_GD_drop[where n="n - Suc m"])
    apply (simp add: drop_sub_Suc_is_Cons)
    apply (rule rely_cond_Cons; simp)
   apply (subst(asm) guar_cond_append_split[where n=1])
@@ -750,13 +750,13 @@ lemma validI_drop_next_G:
                    eq_Me_neq_Env rev_nth)
   done
 
-lemma tr_in_parallel_validI:
+lemma tr_in_parallel_valid_rg:
   assumes elem: "(tr, res) \<in> parallel (K {(f_tr, res)}) (K {(g_tr, res)}) s"
   and trs: "(f_tr, res) \<in> f s" "(g_tr, res) \<in> g s"
-  and validI: "\<lbrace>P\<rbrace>, \<lbrace>E or Gg\<rbrace> f \<lbrace>Gf\<rbrace>, \<lbrace>Q\<rbrace>" "\<lbrace>P\<rbrace>, \<lbrace>E or Gf\<rbrace> g \<lbrace>Gg\<rbrace>, \<lbrace>Q2\<rbrace>"
+  and valid_rg: "\<lbrace>P\<rbrace>, \<lbrace>E or Gg\<rbrace> f \<lbrace>Gf\<rbrace>, \<lbrace>Q\<rbrace>" "\<lbrace>P\<rbrace>, \<lbrace>E or Gf\<rbrace> g \<lbrace>Gg\<rbrace>, \<lbrace>Q2\<rbrace>"
   and P: "P s0 s" and rel: "rely_cond E s0 tr"
   shows "rely_cond (E or Gg) s0 f_tr \<and> rely_cond (E or Gf) s0 g_tr"
-  using parallel_rely_induct0[where R=E and G="\<top>\<top>", OF elem _ _ validI, OF P P]
+  using parallel_rely_induct0[where R=E and G="\<top>\<top>", OF elem _ _ valid_rg, OF P P]
   by (clarsimp simp: rel trs predicate2I)
 
 lemma env_closed_parallel_fragment:
@@ -821,7 +821,7 @@ lemma self_closed_parallel_fragment:
    apply clarsimp
    apply (frule(1) is_matching_fragment_trD[where f=g])
    apply clarsimp
-   apply (frule(3) validI_GD[where f=g])
+   apply (frule(3) valid_rg_GD[where f=g])
    apply (clarsimp simp: guar_cond_Cons_eq matching_tr_pfx_aCons)
    apply (drule_tac s'=s' in matching_env_closedD[where f=f], simp+)
     apply (simp add: last_st_tr_map_zip)
@@ -834,7 +834,7 @@ lemma self_closed_parallel_fragment:
   apply clarsimp
   apply (frule(1) is_matching_fragment_trD[where f=f])
   apply clarsimp
-  apply (frule(3) validI_GD[where f=f])
+  apply (frule(3) valid_rg_GD[where f=f])
   apply (clarsimp simp: guar_cond_Cons_eq matching_tr_pfx_aCons)
   apply (drule_tac s'=s' in matching_env_closedD[where f=g], simp+)
    apply (simp add: last_st_tr_map_zip)
@@ -842,14 +842,14 @@ lemma self_closed_parallel_fragment:
   apply (blast intro: in_fst_snd_image)
   done
 
-lemma is_matching_fragment_validI_disj:
+lemma is_matching_fragment_valid_rg_disj:
   "\<lbrakk>is_matching_fragment sr osr rvr b_tr bd_res s0 R s f; triv_refinement g f;
     G = \<top>\<top> \<or> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>\<rbrakk>
    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>"
   apply (frule is_matching_fragment_prefix_closed)
   apply (erule disjE)
    apply wpsimp
-  apply (erule(2) validI_triv_refinement)
+  apply (erule(2) valid_rg_triv_refinement)
   done
 
 theorem prefix_refinement_parallel:
@@ -862,7 +862,7 @@ theorem prefix_refinement_parallel:
    \<Longrightarrow> prefix_refinement sr isr osr rvr AE E P Q (parallel a c) (parallel b d)"
   apply (subst prefix_refinement_def, clarsimp)
   apply (drule tr_in_parallel, clarify)
-  apply (frule(6) tr_in_parallel_validI)
+  apply (frule(6) tr_in_parallel_valid_rg)
   apply (clarsimp simp: parallel_def3)
   apply (rename_tac b_tr d_tr bd_res)
   apply (drule(5) prefix_refinementD)+
@@ -873,8 +873,8 @@ theorem prefix_refinement_parallel:
    apply (simp add: parallel_def3 triv_refinement_def rely_def)
    apply blast
   apply (subst is_matching_fragment_def, clarsimp)
-  apply (frule(1) is_matching_fragment_validI_disj[where g=a and G=Ga], blast)
-  apply (frule(1) is_matching_fragment_validI_disj[where g=c and G=Gc], blast)
+  apply (frule(1) is_matching_fragment_valid_rg_disj[where g=a and G=Ga], blast)
+  apply (frule(1) is_matching_fragment_valid_rg_disj[where g=c and G=Gc], blast)
   apply (intro conjI prefix_closed_parallel prefix_closed_rely rely_self_closed,
          simp_all add: is_matching_fragment_prefix_closed)
      apply (rule self_closed_parallel_fragment,
@@ -1171,7 +1171,7 @@ theorem prefix_refinement_bind_general:
    apply (rule rev_bexI, drule spec, erule(1) subsetD)
    apply (clarsimp split: tmres.split_asm)
   apply (clarsimp split: tmres.split_asm)
-  apply (frule(2) validI_rvD, simp add: rely_cond_append)
+  apply (frule(2) valid_rg_rvD, simp add: rely_cond_append)
   apply (intro exI conjI)
    apply (rule is_matching_fragment_mbind_union[where aprog="b"],
           assumption, simp_all)[1]
@@ -1186,7 +1186,7 @@ theorem prefix_refinement_bind_general:
      apply (erule(1) matching_tr_pfx_last_st_tr)
      apply simp
     apply (erule disjE)
-     apply (drule(1) validI_rvD[OF validI_triv_refinement],
+     apply (drule(1) valid_rg_rvD[OF valid_rg_triv_refinement],
             erule is_matching_fragment_prefix_closed, assumption+)
     apply (drule(2) use_valid[OF in_mres valid_triv_refinement], blast, simp)
    apply (clarsimp simp: rely_cond_append hd_append hd_map cong: if_cong)
@@ -1249,7 +1249,7 @@ lemma prefix_refinement_bindE_general:
     \<lbrace>Q'\<rbrace>,\<lbrace>R\<rbrace> c \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>Q''\<rbrace>,\<lbrace>E'\<rbrace>;
     \<And>rv s0 s rv' t0 t. \<lbrakk>E rv s0 s; E' rv' t0 t; intsr s t\<rbrakk> \<Longrightarrow> osr s t\<rbrakk>
    \<Longrightarrow> prefix_refinement sr isr osr (f \<oplus> rvr) AR R (P and P') (Q and Q') (a >>=E (\<lambda>rv. b rv)) (c >>=E (\<lambda>rv'. d rv'))"
-  apply (unfold bindE_def validIE_def validE_def)
+  apply (unfold bindE_def valid_rgE_def validE_def)
   apply (erule prefix_refinement_bind_general)
     defer
     apply (erule disj_forward; assumption?)
@@ -1294,7 +1294,7 @@ lemma prefix_refinement_handle:
     \<And>ft ft'. rvr'' ft ft' \<Longrightarrow> prefix_refinement sr osr osr (rvr' \<oplus> rvr) AR R (E ft) (E' ft') (b ft) (d ft');
     \<lbrace>P'\<rbrace>,\<lbrace>AR\<rbrace> a -,-,\<lbrace>E\<rbrace>; \<lbrace>Q'\<rbrace>,\<lbrace>R\<rbrace> c -, -,\<lbrace>E'\<rbrace>\<rbrakk>
    \<Longrightarrow> prefix_refinement sr isr osr (rvr' \<oplus> rvr) AR R (P and P') (Q and Q') (a <handle> (\<lambda>ft. b ft)) (c <handle> (\<lambda>ft'. d ft'))"
-  apply (simp add: handleE_def handleE'_def validIE_def)
+  apply (simp add: handleE_def handleE'_def valid_rgE_def)
   apply (erule prefix_refinement_bind)
     defer
     apply assumption+
@@ -1308,7 +1308,7 @@ lemma prefix_refinement_catch:
     \<And>ft ft'. rvr' ft ft' \<Longrightarrow> prefix_refinement sr osr osr rvr AR R (E ft) (E' ft') (b ft) (d ft');
     \<lbrace>P'\<rbrace>,\<lbrace>AR\<rbrace> a -,-,\<lbrace>E\<rbrace>; \<lbrace>Q'\<rbrace>,\<lbrace>R\<rbrace> c -, -,\<lbrace>E'\<rbrace>\<rbrakk>
    \<Longrightarrow> prefix_refinement sr isr osr rvr AR R (P and P') (Q and Q') (a <catch> (\<lambda>ft. b ft)) (c <catch> (\<lambda>ft'. d ft'))"
-  apply (simp add: catch_def validIE_def)
+  apply (simp add: catch_def valid_rgE_def)
   apply (erule prefix_refinement_bind)
     defer
     apply assumption+
@@ -1324,7 +1324,7 @@ lemma prefix_refinement_handle_elseE:
     \<lbrace>P'\<rbrace>,\<lbrace>AR\<rbrace> a -,\<lbrace>P''\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>Q'\<rbrace>,\<lbrace>R\<rbrace> c -, \<lbrace>Q''\<rbrace>,\<lbrace>E'\<rbrace>\<rbrakk>
    \<Longrightarrow> prefix_refinement sr isr osr (fr \<oplus> rvr) AR R (P and P') (Q and Q')
                          (a <handle> (\<lambda>ft. b ft) <else> (\<lambda>rv. f rv)) (c <handle> (\<lambda>ft'. d ft') <else> (\<lambda>rv. g rv))"
-  apply (simp add: handle_elseE_def validIE_def)
+  apply (simp add: handle_elseE_def valid_rgE_def)
   apply (erule prefix_refinement_bind)
     defer
     apply assumption+
@@ -1585,7 +1585,7 @@ lemma prefix_refinement_symb_exec_l:
         apply (rule no_trace_gets)
        apply (rule nf)
       apply (rule no_fail_gets)
-     apply (rule valid_validI_wp[OF nt y])
+     apply (rule valid_valid_rg_wp[OF nt y])
     apply wp
    apply simp+
   done
@@ -1607,7 +1607,7 @@ lemma prefix_refinement_symb_exec_r:
        apply (rule no_fail_gets)
       apply (rule nf)
      apply wp
-    apply (rule valid_validI_wp[OF nt y])
+    apply (rule valid_valid_rg_wp[OF nt y])
    apply simp+
   done
 
@@ -1628,7 +1628,7 @@ proof -
       apply (subst return_bind[symmetric], rule prefix_refinement_bind[OF P])
         apply (rule z)
        apply wp
-      apply (rule valid_validI_wp[OF nt y])
+      apply (rule valid_valid_rg_wp[OF nt y])
      apply simp+
     done
 qed
@@ -1658,7 +1658,7 @@ lemma prefix_refinement_symb_exec_l':
     \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P P' (f >>= g) h"
   apply (drule prefix_refinement_bind)
      apply assumption
-    apply (erule valid_validI_wp)
+    apply (erule valid_valid_rg_wp)
     apply assumption
    apply wp
   apply clarsimp
@@ -1759,8 +1759,8 @@ lemmas pfx_refn_modifyT =
   prefix_refinement_modifyT[where sr=sr and isr=sr and osr=sr for sr]
 
 lemmas prefix_refinement_get_pre =
-  prefix_refinement_bind[OF prefix_refinement_get _ valid_validI_wp[OF _ get_sp]
-                            valid_validI_wp[OF _ get_sp],
+  prefix_refinement_bind[OF prefix_refinement_get _ valid_valid_rg_wp[OF _ get_sp]
+                            valid_valid_rg_wp[OF _ get_sp],
                          simplified pred_conj_def, simplified]
 
 lemma prefix_refinement_gets:
@@ -1937,7 +1937,7 @@ lemma prefix_refinement_mapM[rule_format]:
         apply (rule prefix_refinement_triv_pre, rule prefix_refinement_return_imp, simp)
        apply wp
        apply fastforce
-     apply (simp | wp | blast dest: validI_prefix_closed)+
+     apply (simp | wp | blast dest: valid_rg_prefix_closed)+
   done
 
 lemma prefix_refinement_mapME[rule_format]:
@@ -1961,7 +1961,7 @@ lemma prefix_refinement_mapME[rule_format]:
         apply (case_tac rv)
          apply (clarsimp simp: prefix_refinement_throwError_imp)
         apply (clarsimp simp: prefix_refinement_returnOk_imp)
-       apply (simp | wp | blast dest: validI_prefix_closed)+
+       apply (simp | wp | blast dest: valid_rg_prefix_closed)+
   done
 
 

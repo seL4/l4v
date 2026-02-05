@@ -224,9 +224,9 @@ lemma cs2_wp_apply_peterson[wp]:
   cs2
   \<lbrace>peterson_rel ident\<rbrace>,
   \<lbrace>Q\<rbrace>"
-  apply (rule validI_name_pre[OF cs_closed], clarsimp simp del: imp_disjL)
+  apply (rule valid_rg_name_pre[OF cs_closed], clarsimp simp del: imp_disjL)
   apply (rule rg_weaken_pre)
-   apply (rule validI_well_behaved[OF cs_closed])
+   apply (rule valid_rg_well_behaved[OF cs_closed])
      apply (rule rg_strengthen_post)
       apply (rule_tac s=s and ?s0.0=s0
                   and lockf="\<lambda>s. critical (ab_label s ident)"
@@ -597,7 +597,7 @@ lemma peterson_proc_mutual_excl_helper:
    peterson_proc ident
    \<lbrace>peterson_rel3 ident\<rbrace>,
    \<lbrace>\<lambda>rv s0 s. peterson_rel3 ident s0 s \<and> invs s \<and> ab_label s ident = Exited\<rbrace>"
-  apply (rule prefix_refinement_validI)
+  apply (rule prefix_refinement_valid_rg)
         apply (rule peterson_proc_refinement)
        apply (rule abs_peterson_proc_mutual_excl)
       apply clarsimp
@@ -636,7 +636,7 @@ lemma peterson_proc_mutual_excl:
    peterson_proc ident
    \<lbrace>peterson_rel ident\<rbrace>,
    \<lbrace>\<lambda>rv s0 s. peterson_rel ident s0 s \<and> invs s \<and> ab_label s ident = Exited\<rbrace>"
-  apply (rule rg_strengthen_guar, rule rg_strengthen_post, rule validI_guar_post_conj_lift)
+  apply (rule rg_strengthen_guar, rule rg_strengthen_post, rule valid_rg_guar_post_conj_lift)
      apply (rule peterson_proc_mutual_excl_helper)
     apply (rule peterson_proc_mutual_excl_helper')
    apply (clarsimp simp: peterson_rel_helpers)+
@@ -647,14 +647,14 @@ definition
      parallel (do repeat (abs_peterson_proc A); interference od)
               (do repeat (abs_peterson_proc B); interference od)"
 
-lemma validI_repeat_interference:
+lemma valid_rg_repeat_interference:
   "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. P\<rbrace>; \<forall>s0 s. P s0 s \<longrightarrow> (\<forall>s'. R\<^sup>*\<^sup>* s s' \<longrightarrow> Q () s' s') \<and> G s0 s\<rbrakk>
    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> do repeat f; interference od \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   apply (rule bind_twp)
    apply simp
    apply (rule interference_twp)
   apply (rule rg_strengthen_post)
-   apply (rule repeat_validI, assumption)
+   apply (rule repeat_valid_rg, assumption)
   apply simp
   done
 
@@ -666,10 +666,10 @@ lemma abs_peterson_proc_system_mutual_excl:
    \<lbrace>\<lambda>rv s0 s. invs s\<rbrace>"
   apply (rule rg_weaken_pre, rule rg_strengthen_post)
     apply (unfold abs_peterson_proc_system_def)
-    apply (rule rg_validI[where Qf="\<lambda>_ _. invs" and Qg="\<lambda>_ _. invs"])
-           apply (rule validI_repeat_interference[OF abs_peterson_proc_mutual_excl])
+    apply (rule parallel_valid_rg[where Qf="\<lambda>_ _. invs" and Qg="\<lambda>_ _. invs"])
+           apply (rule valid_rg_repeat_interference[OF abs_peterson_proc_mutual_excl])
            apply (clarsimp simp: peterson_rel_imp_invs)
-          apply (rule validI_repeat_interference[OF abs_peterson_proc_mutual_excl])
+          apply (rule valid_rg_repeat_interference[OF abs_peterson_proc_mutual_excl])
           apply (clarsimp simp: peterson_rel_imp_invs)
          apply (simp add: reflp_ge_eq)+
        apply (clarsimp simp: peterson_rel_def)+
@@ -732,19 +732,19 @@ theorem peterson_proc_system_refinement:
        apply (clarsimp intro!: par_tr_fin_bind par_tr_fin_interference)
       apply (clarsimp intro!: par_tr_fin_bind par_tr_fin_interference)
      apply (rule rg_weaken_pre, rule rg_weaken_rely)
-       apply (rule validI_repeat_interference; simp)
+       apply (rule valid_rg_repeat_interference; simp)
         apply (rule peterson_proc_mutual_excl)
        apply (simp+)[3]
     apply (rule rg_weaken_pre, rule rg_weaken_rely)
-      apply (rule validI_repeat_interference; simp)
+      apply (rule valid_rg_repeat_interference; simp)
        apply (rule peterson_proc_mutual_excl)
       apply (simp+)[3]
    apply (rule rg_weaken_pre, rule rg_weaken_rely)
-     apply (rule validI_repeat_interference; simp)
+     apply (rule valid_rg_repeat_interference; simp)
       apply (rule abs_peterson_proc_mutual_excl)
      apply (simp+)[3]
   apply (rule rg_weaken_pre, rule rg_weaken_rely)
-    apply (rule validI_repeat_interference; simp)
+    apply (rule valid_rg_repeat_interference; simp)
      apply (rule abs_peterson_proc_mutual_excl)
     apply (simp+)[3]
   done
@@ -760,7 +760,7 @@ theorem peterson_proc_system_mutual_excl:
    peterson_proc_system
    \<lbrace>\<lambda>s0 s. invs s0 \<longrightarrow> invs s\<rbrace>,
    \<lbrace>\<lambda>rv s0 s. invs s\<rbrace>"
-  apply (rule prefix_refinement_validI)
+  apply (rule prefix_refinement_valid_rg)
         apply (rule peterson_proc_system_refinement)
        apply (rule abs_peterson_proc_system_mutual_excl)
       apply (fastforce simp: peterson_rel_def peterson_sr_def)

@@ -98,7 +98,7 @@ corollary plus2_x_parallel:
    \<lbrace>\<lambda>s0 s. True\<rbrace>,\<lbrace>\<lambda>_ s0 s. mainv s = 4\<rbrace>"
   apply (rule rg_weaken_pre)
    apply (rule rg_strengthen_post)
-    apply ((rule rg_validI plus2_x_property[where tids="{1, 2}"])+; simp add: plus2_rel_def le_fun_def)
+    apply ((rule parallel_valid_rg plus2_x_property[where tids="{1, 2}"])+; simp add: plus2_rel_def le_fun_def)
    apply (clarsimp simp: plus2_inv_def)
   apply (clarsimp simp add: plus2_inv_def)
   done
@@ -132,14 +132,14 @@ lemma par_tr_fin_plus2_x:
 lemma prefix_closed_plus2:
   "prefix_closed plus2"
   apply (simp add: plus2_def)
-  apply (rule validI_prefix_closed_T, wpsimp)
+  apply (rule valid_rg_prefix_closed_T, wpsimp)
   done
 
 theorem plus2_parallel:
   "\<lbrace>\<lambda>s0 s. s = 0 \<and> s = s0\<rbrace>,\<lbrace>\<lambda>a b. a = b\<rbrace>
    parallel plus2 plus2
    \<lbrace>\<lambda>s0 s. True\<rbrace>,\<lbrace>\<lambda>_ s0 s. s = 4\<rbrace>"
-  apply (rule_tac sr="\<lambda>s t. t = mainv s" in prefix_refinement_validI)
+  apply (rule_tac sr="\<lambda>s t. t = mainv s" in prefix_refinement_valid_rg)
         apply (rule prefix_refinement_parallel_triv;
                ((rule par_tr_fin_plus2_x prefix_closed_plus2 twp_post_taut)+)?)
          apply (rule pfx_refn_plus2_x[where tid=1])
@@ -172,7 +172,7 @@ lemma plus2_x_n_parallel_induct:
    apply clarsimp
   apply (clarsimp split del: if_split)
   apply (rule rg_weaken_pre, rule rg_strengthen_post,
-         rule rg_validI, rule plus2_x_property[where tids="{..< N}"], assumption,
+         rule parallel_valid_rg, rule plus2_x_property[where tids="{..< N}"], assumption,
          (clarsimp simp: plus2_rel_def)+)
    apply (auto dest: less_Suc_eq[THEN iffD1])[1]
   apply clarsimp
@@ -235,7 +235,7 @@ theorem plus2_n_parallel:
    \<lbrace>\<lambda>s0 s. s = 0 \<and> s = s0\<rbrace>,\<lbrace>\<lambda>a b. a = b\<rbrace>
    fold parallel (replicate (n - 1) plus2) plus2
    \<lbrace>\<lambda>s0 s. True\<rbrace>,\<lbrace>\<lambda>_ s0 s. s = n * 2\<rbrace>"
-  apply (rule_tac sr="\<lambda>s t. t = mainv s" in prefix_refinement_validI)
+  apply (rule_tac sr="\<lambda>s t. t = mainv s" in prefix_refinement_valid_rg)
         apply (rule prefix_refinement_weaken_rely,
                rule_tac xs="map plus2_x [1 ..< n]" in fold_parallel_pfx_refn)
              apply (clarsimp simp: list_all2_conv_all_nth)
