@@ -4,9 +4,40 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-theory Nondet_Env
-  imports Nondet_Monad
+theory Env_State
+  imports Main
 begin
+
+section "The Environment State"
+
+record 'c monad_state_record =
+  env :: 'c
+
+type_synonym ('c, 's) monad_state = "('c, 's) monad_state_record_scheme"
+
+type_synonym ('c, 's) mpred = "('c, 's) monad_state \<Rightarrow> bool"
+
+abbreviation monad_state :: "'c \<Rightarrow> 's \<Rightarrow> ('c, 's) monad_state" where
+  "monad_state c \<equiv> \<lambda>s. \<lparr> env = c, \<dots> = s \<rparr>"
+
+abbreviation mstate :: "('c, 's) monad_state \<Rightarrow> 's" where
+  "mstate \<equiv> monad_state_record.more"
+
+abbreviation with_env_of :: "('c, 's) monad_state \<Rightarrow> 't \<Rightarrow> ('c, 't) monad_state" where
+  "with_env_of s \<equiv> monad_state (env s)"
+
+definition map_state :: "('s \<Rightarrow> 't) \<Rightarrow> ('c, 's) monad_state \<Rightarrow> ('c, 't) monad_state"
+  where
+  "map_state f \<equiv> \<lambda>s. with_env_of s (f (mstate s))"
+
+definition const_env ::
+  "(('c, 's) monad_state \<Rightarrow> ('d, 't) monad_state) \<Rightarrow> ('c, 's) monad_state \<Rightarrow> ('c, 't) monad_state"
+  where
+  "const_env f \<equiv> \<lambda>s. with_env_of s (mstate (f s))"
+
+definition is_const_env :: "(('c, 's) monad_state \<Rightarrow> ('c, 't) monad_state) \<Rightarrow> bool"
+  where
+  "is_const_env f \<equiv> \<forall>s. env (f s) = env s"
 
 subsection \<open>Basic properties about the Environment State\<close>
 
@@ -17,6 +48,10 @@ lemmas mstate_cong_unit = mstate_cong[where 'a=unit]
 lemma monad_state_unit_collapse[simp]:
   "monad_state () (mstate s) = s"
   by (cases s) simp
+
+lemma with_env_of_mstate[simp]:
+  "with_env_of s (mstate s) = s"
+  by (cases s, auto)
 
 lemma eq_with_env_of_mstate[simp]:
   "(s = with_env_of s s') = (mstate s = s')"

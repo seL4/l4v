@@ -20,6 +20,7 @@ session Monads (lib) = HOL +
     nondet
     reader_option
     trace
+    env_state
 
   theories
     Fun_Pred_Syntax

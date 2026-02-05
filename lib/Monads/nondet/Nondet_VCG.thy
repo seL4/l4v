@@ -8,7 +8,6 @@
 theory Nondet_VCG
   imports
     Nondet_Lemmas
-    Nondet_Env
     WPSimp
 begin
 
