@@ -84,7 +84,6 @@ definition load_vmid :: "asid \<Rightarrow> (vmid option, 'z::state_ext) s_monad
      return $ asid_map asid
    od"
 
-
 definition update_asid_map :: "asid \<Rightarrow> vmid option \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "update_asid_map asid vmid_opt \<equiv> do
      asid_map \<leftarrow> gets asid_map;
