@@ -132,6 +132,9 @@ crunch vcpu_disable, vcpu_restore, vcpu_save, set_vm_root
   for arch_tcb_at_cur_thread[wp]: "\<lambda>s. arch_tcb_at P (cur_thread s) s"
   (wp: crunch_wps ignore: set_object)
 
+crunch update_asid_map
+  for arm_current_vcpu[wp]: "\<lambda>s. P (arm_current_vcpu (arch_state s))"
+
 crunch vcpu_update, do_machine_op, invalidate_asid, invalidate_vmid_entry
   for active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
   (simp: active_cur_vcpu_of_def)
