@@ -37,22 +37,22 @@ lemma pfx_refn_interferences:
    apply wp+
   done
 
-lemma repeat_n_validI:
+lemma repeat_n_valid_rg:
   "\<lbrace>I\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. I\<rbrace> \<Longrightarrow> \<lbrace>I\<rbrace>,\<lbrace>R\<rbrace> repeat_n n f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. I\<rbrace>"
   apply (induct n)
    apply wpsimp+
   done
 
-lemma repeat_validI:
+lemma repeat_valid_rg:
   "\<lbrace>I\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. I\<rbrace> \<Longrightarrow> \<lbrace>I\<rbrace>,\<lbrace>R\<rbrace> repeat f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_. I\<rbrace>"
   apply (simp add: repeat_def)
-  apply (wpsimp wp: repeat_n_validI)
+  apply (wpsimp wp: repeat_n_valid_rg)
   done
 
 lemma interferences_twp[wp]:
   "\<lbrace>\<lambda>s0 s. (\<forall>s'. R\<^sup>*\<^sup>* s s' \<longrightarrow> Q () s' s') \<and> G s0 s \<and> reflp G \<and> Q () s0 s\<rbrace>,\<lbrace>R\<rbrace> interferences \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   (is "\<lbrace>?P\<rbrace>,\<lbrace>R\<rbrace> ?f \<lbrace>G\<rbrace>,\<lbrace>?Q\<rbrace>")
-  apply (rule rg_strengthen_post, rule repeat_validI)
+  apply (rule rg_strengthen_post, rule repeat_valid_rg)
    apply wp
    apply (clarsimp simp: reflpD[where R=G])
    apply (metis rtranclp_trans)
@@ -454,7 +454,7 @@ lemma rel_tr_refinement_bind_right_general:
    apply (strengthen bexI[mk_strg I _ E], simp)
    apply (auto simp: list_all2_same reflpD[where R=sr])[1]
   apply (clarsimp simp: rely_cond_append)
-  apply (drule validI_D, erule(1) conjI, assumption+, clarsimp)
+  apply (drule valid_rg_D, erule(1) conjI, assumption+, clarsimp)
   apply (drule spec, drule(3) rel_tr_refinementD,
          simp add: hd_append hd_map split: if_split_asm)
   apply (clarsimp simp: bind_def)
@@ -485,7 +485,7 @@ lemma rel_tr_refinement_comm_repeat_n[simplified K_bind_def]:
    apply (rule rel_tr_refinement_bind_right_general[rule_format])
      apply (metis equivpE)
     apply assumption
-   apply (wpsimp wp: repeat_n_validI)
+   apply (wpsimp wp: repeat_n_valid_rg)
   apply (drule_tac h="\<lambda>x. do f; return x od"
            in rel_tr_refinement_bind_left_general[rotated 2])
     apply (metis equivpE)
@@ -527,7 +527,7 @@ lemma rel_tr_refinement_rev_comm_repeat_n[simplified K_bind_def]:
    apply (rule rel_tr_refinement_bind_right_general[rule_format])
      apply (metis equivpE)
     apply assumption
-   apply (wpsimp wp: repeat_n_validI)
+   apply (wpsimp wp: repeat_n_valid_rg)
   apply (drule_tac h="\<lambda>x. do f; return x od"
            in rel_tr_refinement_bind_left_general[rotated 2])
     apply (metis equivpE)

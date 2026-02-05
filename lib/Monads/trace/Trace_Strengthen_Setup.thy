@@ -36,9 +36,9 @@ lemma strengthen_validE_E_cong[strg]:
    \<Longrightarrow> st F (\<longrightarrow>) (\<lbrace>P\<rbrace> f -, \<lbrace>S\<rbrace>) (\<lbrace>P\<rbrace> f -, \<lbrace>T\<rbrace>)"
   by (cases F, auto elim: hoare_strengthen_postE simp: validE_E_def)
 
-lemma strengthen_validI[strg]:
+lemma strengthen_valid_rg[strg]:
   "\<lbrakk>\<And>r s0 s. st F (\<longrightarrow>) (Q r s0 s) (Q' r s0 s)\<rbrakk>
-   \<Longrightarrow> st F (\<longrightarrow>) (\<lbrace>P\<rbrace>,\<lbrace>G\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>Q\<rbrace>) (\<lbrace>P\<rbrace>,\<lbrace>G\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>Q'\<rbrace>)"
+   \<Longrightarrow> st F (\<longrightarrow>) (\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>) (\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>)"
   by (cases F, auto elim: rg_strengthen_post)
 
 lemma wpfix_strengthen_hoare:

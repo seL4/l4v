@@ -103,9 +103,9 @@ lemma triv_refinement_alternative2:
   by (clarsimp simp: triv_refinement_def alternative_def)
 
 
-lemma validI_triv_refinement:
+lemma valid_rg_triv_refinement:
   "\<lbrakk>triv_refinement f g; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; prefix_closed g\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  unfolding rely_def triv_refinement_def validI_def
+  unfolding rely_def triv_refinement_def valid_rg_def
   by fastforce
 
 lemma valid_triv_refinement:
