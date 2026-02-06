@@ -122,6 +122,7 @@ lemma arch_activate_idle_thread_pas_refined[Syscall_AC_assms, wp]:
 
 lemma update_asid_pool_entry_valid_cur_vcpu[wp]:
   "update_asid_pool_entry f asid \<lbrace>valid_cur_vcpu\<rbrace>"
+  unfolding update_asid_pool_entry_def
   by (wpsimp wp: valid_cur_vcpu_lift_weak in_cur_domain_lift_weak)
 
 lemma valid_cur_vcpu_vmid_upd[simp]:
