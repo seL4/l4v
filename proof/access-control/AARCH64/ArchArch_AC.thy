@@ -1121,14 +1121,6 @@ lemma perform_pg_inv_get_addr_pas_refined [wp]:
   unfolding perform_pg_inv_get_addr_def
   by wp auto
 
-lemma store_pte_vmid_for_asid[wp]:
-  " store_pte pt_t p pte
-   \<lbrace>\<lambda>s. P (vmid_for_asid s asid)\<rbrace>"
-  apply (simp add: store_pte_def set_pt_def)
-  apply (wp get_object_wp set_object_wp)
-  by (auto simp: obj_at_def opt_map_def vmid_for_asid_def obind_def entry_for_pool_def
-          split: if_splits option.splits)
-
 lemma unmap_page_pas_refined:
   "\<lbrace>pas_refined aag and invs and K (vptr \<in> user_region)\<rbrace>
    unmap_page pgsz asid vptr pptr
@@ -1348,14 +1340,6 @@ lemma unmap_page_respects:
                           ucast_ucast_b ucast_up_ucast_id is_up_def source_size_def target_size_def)
   apply simp
   done
-
-lemma set_cap_vmid_for_asid[wp]:
-  "set_cap cap cslot
-   \<lbrace>\<lambda>s. P (vmid_for_asid s asid)\<rbrace>"
-  apply (simp add: set_cap_def)
-  apply (wpsimp wp: get_object_wp set_object_wp)
-  by (auto simp: obj_at_def opt_map_def vmid_for_asid_def obind_def entry_for_pool_def
-          split: if_splits option.splits)
 
 crunch isb, dsb
   for vcpu_state[wp]: "\<lambda>s. P (vcpu_state s)"
@@ -1624,7 +1608,7 @@ lemma store_pte_state_vrefs_unreachable:
 lemma store_asid_pool_entry_state_vrefs:
   "\<lbrace>\<lambda>s. P (\<lambda>x. if x = pool_ptr
                then vs_refs_aux asid_pool_level (ASIDPool (\<lambda>a. if a = asid_low_bits_of asid
-                                                               then Some (ASIDPoolVSpace None pt_base)
+                                                               then Some (ASIDPoolVSpace pt_base)
                                                                else the (asid_pools_of s pool_ptr) a))
                else if x = pt_base
                then vs_refs_aux max_pt_level (the (vspace_objs_of s x))
@@ -1634,7 +1618,7 @@ lemma store_asid_pool_entry_state_vrefs:
         (\<forall>pool. ako_at (ASIDPool pool) pool_ptr s \<longrightarrow> pool (asid_low_bits_of asid) = None) \<and>
         (\<forall>level. \<not>\<exists>\<rhd> (level, pt_base) s) \<and>
         (\<exists>pt. pts_of s pt_base = Some (empty_pt VSRootPT_T))\<rbrace>
-   store_asid_pool_entry pool_ptr asid (Some (ASIDPoolVSpace None pt_base))
+   store_asid_pool_entry pool_ptr asid (Some (ASIDPoolVSpace pt_base))
    \<lbrace>\<lambda>_ s. P (state_vrefs s)\<rbrace>"
   unfolding store_asid_pool_entry_def set_asid_pool_def
   apply (wpsimp wp: set_object_wp get_cap_wp)
@@ -1719,7 +1703,7 @@ lemma store_asid_pool_entry_pas_refined:
         (\<forall>level. \<not>\<exists>\<rhd> (level, pt_base) s) \<and>
         (\<forall>pool. ako_at (ASIDPool pool) pool_ptr s \<longrightarrow> pool (asid_low_bits_of asid) = None) \<and>
         (\<exists>pt. pts_of s pt_base = Some (empty_pt VSRootPT_T))\<rbrace>
-   store_asid_pool_entry pool_ptr asid (Some (ASIDPoolVSpace None pt_base))
+   store_asid_pool_entry pool_ptr asid (Some (ASIDPoolVSpace pt_base))
    \<lbrace>\<lambda>_ s. pas_refined aag s\<rbrace>"
   apply (clarsimp simp: pas_refined_def state_objs_to_policy_def)
   apply (rule hoare_pre)

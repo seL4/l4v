@@ -178,7 +178,7 @@ subsection \<open>How arch objects can change\<close>
 definition asid_pool_integrity ::
   "'a set \<Rightarrow> 'a PAS \<Rightarrow> (asid_low_index \<rightharpoonup> asid_pool_entry) \<Rightarrow> (asid_low_index \<rightharpoonup> asid_pool_entry) \<Rightarrow> bool" where
   "asid_pool_integrity subjects aag pool pool' \<equiv>
-     \<forall>x. option_map ap_vspace (pool' x) \<noteq> option_map ap_vspace (pool x)
+     \<forall>x. pool' x \<noteq> pool x
          \<longrightarrow> pool' x = None \<and> aag_subjects_have_auth_to subjects aag Control (ap_vspace (the (pool x)))"
 
 inductive arch_integrity_obj_atomic ::

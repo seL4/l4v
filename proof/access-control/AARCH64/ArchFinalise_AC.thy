@@ -57,7 +57,7 @@ lemma state_vrefs_set_asid_pool_vmid:
                   ArchObj
                    (ASIDPool
                      (\<lambda>a. if a = asid_low_bits_of asid
-                           then Some (ASIDPoolVSpace vmid (ap_vspace entry)) else pool a)))\<rparr>)
+                           then Some (ASIDPoolVSpace (ap_vspace entry)) else pool a)))\<rparr>)
             x
            \<subseteq> state_vrefs s x"
   (is "state_vrefs ?s' _ \<subseteq> state_vrefs _ _")
@@ -67,7 +67,7 @@ lemma state_vrefs_set_asid_pool_vmid:
           split: option.splits)
 
 lemma update_asid_pool_entry_vmid_pas_refined[wp]:
-  "update_asid_pool_entry (\<lambda>entry. Some (ASIDPoolVSpace vmid (ap_vspace entry))) asid \<lbrace>pas_refined aag\<rbrace>"
+  "update_asid_pool_entry (\<lambda>entry. Some (ASIDPoolVSpace (ap_vspace entry))) asid \<lbrace>pas_refined aag\<rbrace>"
   unfolding update_asid_pool_entry_def set_asid_pool_def
   apply (wpsimp wp: set_object_wp)+
   apply (erule pas_refined_subseteq; clarsimp?)
@@ -84,6 +84,10 @@ lemma update_asid_pool_entry_vmid_pas_refined[wp]:
   apply (rule thread_bound_ntfns_fun_upd)
   apply (clarsimp simp: asid_pools_of_ko_at get_tcb_def obj_at_def)
   done
+
+lemma pas_refined_asid_map_update[simp]:
+  "pas_refined aag (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_map := m\<rparr>\<rparr>) = pas_refined aag s"
+  by (fastforce elim: pas_refined_subseteq rev_subsetD[OF _ state_vrefs_subseteq])
 
 crunch set_vm_root, invalidate_asid_entry
   for pas_refined[wp]: "pas_refined aag"
@@ -378,7 +382,7 @@ lemma arch_cap_cleanup_wf[Finalise_AC_assms]:
 
 lemma update_asid_pool_entry_vmid_integrity:
   "\<lbrace>\<lambda>s. integrity aag X st s \<and> (vmid = None \<or> vmid_for_asid s asid = None)\<rbrace>
-   update_asid_pool_entry (\<lambda>entry. Some (ASIDPoolVSpace vmid (ap_vspace entry))) asid
+   update_asid_pool_entry (\<lambda>entry. Some (ASIDPoolVSpace (ap_vspace entry))) asid
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   unfolding update_asid_pool_entry_def set_asid_pool_def
   apply (wpsimp wp: set_object_wp simp_del: fun_upd_apply)
@@ -395,22 +399,6 @@ lemma update_asid_pool_entry_vmid_integrity:
   apply (erule allEI, erule trfpu_trans)
   apply (clarsimp simp: integrity_arch_kh_upds in_opt_map_eq)
   done
-
-lemma store_vmid_Some_integrity:
-  "\<lbrace>\<lambda>s. integrity aag X st s \<and> vmid_for_asid s asid = None\<rbrace>
-   store_vmid asid vmid
-   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  unfolding store_vmid_def
-  by (wpsimp wp: update_asid_pool_entry_vmid_integrity)
-
-crunch find_free_vmid
-  for respects[wp]: "integrity aag X st"
-  (wp: update_asid_pool_entry_vmid_integrity dmo_no_mem_respects ignore: update_asid_pool_entry)
-
-lemma get_vmid_respects[wp]:
-  "get_vmid asid \<lbrace>integrity aag X st\<rbrace>"
-  unfolding get_vmid_def
-  by (wpsimp wp: store_vmid_Some_integrity)
 
 crunch arm_context_switch, set_global_user_vspace, set_vm_root,
        invalidate_vmid_entry, invalidate_asid_entry, invalidate_tlb_by_asid
