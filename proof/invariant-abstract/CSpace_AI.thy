@@ -3863,6 +3863,10 @@ context CSpace_AI_cap_insert begin
 
 interpretation cap_insert_crunches .
 
+crunch cap_insert for cur_domain_list[wp]: "cur_domain_list"
+  (simp: crunch_simps
+   wp: crunch_wps)
+
 lemma cap_insert_invs[wp]:
   "\<And>dest cap src.
     \<lbrace>invs and cte_wp_at (\<lambda>c. c=Structures_A.NullCap) dest
@@ -4441,6 +4445,10 @@ crunch setup_reply_master
 
 
 context CSpace_AI begin
+
+crunch setup_reply_master for cur_domain_list[wp]: "cur_domain_list"
+  (simp: crunch_simps
+   wp: crunch_wps)
 
 lemma setup_reply_master_invs[wp]:
   "\<And>t.

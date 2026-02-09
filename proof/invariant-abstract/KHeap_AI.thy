@@ -1357,6 +1357,10 @@ crunch set_simple_ko
   for valid_cur_fpu[wp]: valid_cur_fpu
   (wp: valid_cur_fpu_lift)
 
+crunch set_simple_ko for cur_domain_list[wp]: "cur_domain_list"
+  (simp: crunch_simps
+       wp: crunch_wps)
+
 lemma set_ntfn_minor_invs:
   "\<lbrace>invs and ntfn_at ptr
          and obj_at (\<lambda>ko. refs_of ko = ntfn_q_refs_of (ntfn_obj val) \<union> ntfn_bound_refs (ntfn_bound_tcb val)) ptr

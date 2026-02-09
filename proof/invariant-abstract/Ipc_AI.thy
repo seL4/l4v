@@ -535,6 +535,82 @@ locale Ipc_AI_2 = Ipc_AI state_ext_t some_t
       \<lbrace>\<lambda>rv. in_user_frame p\<rbrace>"
   assumes make_arch_fault_msg_inv[wp]:
     "\<And>ft t. make_arch_fault_msg ft t \<lbrace>P :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_invs[wp]:
+    "\<And>ft t. make_arch_fault_msg ft t \<lbrace>invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_aligned[wp]:
+    "\<And>ft t. make_arch_fault_msg  ft t \<lbrace>pspace_aligned :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_distinct[wp]:
+    "\<And>ft t. make_arch_fault_msg  ft t \<lbrace>pspace_distinct :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_vmdb[wp]:
+    "\<And>ft t. make_arch_fault_msg  ft t \<lbrace>valid_mdb :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_ifunsafe[wp]:
+    "\<And>ft t. make_arch_fault_msg  ft t \<lbrace>if_unsafe_then_cap :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_iflive[wp]:
+    "\<And>ft t. make_arch_fault_msg  ft t \<lbrace>if_live_then_nonz_cap :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_state_refs_of[wp]:
+    "\<And>P ft t. make_arch_fault_msg ft t \<lbrace>\<lambda>s:: 'state_ext state. P (state_refs_of s)\<rbrace>"
+  assumes make_arch_fault_msg_ct[wp]:
+    "\<And>ft t.   make_arch_fault_msg ft t \<lbrace>cur_tcb :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_zombies[wp]:
+    "\<And>ft t.   make_arch_fault_msg ft t \<lbrace>zombies_final :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_it[wp]:
+    "\<And>P ft t. make_arch_fault_msg ft t \<lbrace>\<lambda>s :: 'state_ext state. P (idle_thread s)\<rbrace>"
+  assumes make_arch_fault_msg_valid_globals[wp]:
+    "\<And>ft t.   make_arch_fault_msg ft t \<lbrace>valid_global_refs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_valid_reply[wp]:
+    "\<And> ft t. make_arch_fault_msg ft t\<lbrace>valid_reply_caps :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_reply_masters[wp]:
+    "\<And>ft t. make_arch_fault_msg ft t \<lbrace>valid_reply_masters :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_valid_idle[wp]:
+    "\<And>ft t. make_arch_fault_msg ft t \<lbrace>valid_idle :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_arch[wp]:
+    "\<And>P ft t. make_arch_fault_msg ft t \<lbrace>\<lambda>s::'state_ext state. P (arch_state s)\<rbrace>"
+  assumes make_arch_fault_msg_typ_at[wp]:
+    "\<And>P ft t T p. make_arch_fault_msg ft t \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>"
+  assumes make_arch_fault_msg_irq_node[wp]:
+    "\<And>P ft t. make_arch_fault_msg ft t \<lbrace>\<lambda>s::'state_ext state. P (interrupt_irq_node s)\<rbrace>"
+  assumes make_arch_fault_msg_obj_at[wp]:
+    "\<And> P P' pd ft t. make_arch_fault_msg ft t \<lbrace>\<lambda>s::'state_ext state. P (obj_at P' pd s)\<rbrace>"
+  assumes make_arch_fault_msg_irq_handlers[wp]:
+    "\<And>ft t. make_arch_fault_msg ft t \<lbrace>valid_irq_handlers :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_vspace_objs[wp]:
+    "\<And>ft t. make_arch_fault_msg ft t \<lbrace>valid_vspace_objs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_arch_caps[wp]:
+    "\<And>ft t. make_arch_fault_msg ft t \<lbrace>valid_arch_caps :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_v_ker_map[wp]:
+    "\<And>ft t. make_arch_fault_msg ft t \<lbrace>valid_kernel_mappings :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_eq_ker_map[wp]:
+    "\<And>ft t. make_arch_fault_msg ft t \<lbrace>equal_kernel_mappings :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_asid_map [wp]:
+    "\<And>ft t. make_arch_fault_msg ft t \<lbrace>valid_asid_map :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_only_idle [wp]:
+    "\<And> ft t. make_arch_fault_msg ft t \<lbrace>only_idle :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_pspace_in_kernel_window[wp]:
+    "\<And> ft t. make_arch_fault_msg ft t \<lbrace>pspace_in_kernel_window :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_cap_refs_in_kernel_window[wp]:
+    "\<And> ft t. make_arch_fault_msg ft t \<lbrace>cap_refs_in_kernel_window :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_valid_objs[wp]:
+    "\<And> ft t. make_arch_fault_msg ft t \<lbrace>valid_objs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_valid_global_objs[wp]:
+    "\<And> ft t. make_arch_fault_msg ft t \<lbrace>valid_global_objs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_valid_global_vspace_mappings[wp]:
+    "\<And> ft t. make_arch_fault_msg ft t \<lbrace>valid_global_vspace_mappings :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_valid_ioc[wp]:
+    "\<And> ft t. make_arch_fault_msg ft t \<lbrace>valid_ioc :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_vms[wp]:
+    "\<And> ft t. make_arch_fault_msg ft t \<lbrace>valid_machine_state :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_st_tcb_at'[wp]:
+    "\<And> P p ft t . make_arch_fault_msg ft t \<lbrace>st_tcb_at P p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_cap_to[wp]:
+    "\<And> ft t p. make_arch_fault_msg ft t \<lbrace>ex_nonz_cap_to p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_valid_irq_states[wp]:
+    "\<And> ft t. make_arch_fault_msg ft t \<lbrace>valid_irq_states :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_cur_domain_list[wp]:
+    "\<And> ft t. make_arch_fault_msg ft t \<lbrace>cur_domain_list :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_cap_refs_respects_device_region[wp]:
+    "\<And> ft t. make_arch_fault_msg ft t \<lbrace>cap_refs_respects_device_region :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_pred_tcb[wp]:
+    "\<And> P (proj :: itcb \<Rightarrow> 't) ft t . make_arch_fault_msg ft t \<lbrace>pred_tcb_at proj P t :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes do_fault_transfer_invs[wp]:
     "\<And>receiver badge sender recv_buf.
       \<lbrace>invs and tcb_at receiver :: 'state_ext state \<Rightarrow> bool\<rbrace>
@@ -1100,6 +1176,27 @@ lemma transfer_caps_refs_respects_device_region[wp]:
 crunch transfer_caps_loop
   for valid_cur_fpu[wp]: "valid_cur_fpu ::'state_ext state \<Rightarrow> _"
   (rule: transfer_caps_loop_pres)
+
+crunch set_extra_badge for cur_domain_list[wp]: "cur_domain_list"
+  (simp: crunch_simps
+   wp: crunch_wps)
+
+lemma transfer_caps_loop_cur_domain_list[wp]:
+  "\<lbrace>cur_domain_list\<rbrace>
+   transfer_caps_loop ep rcv_buffer n caps slots mi
+   \<lbrace>\<lambda>_. cur_domain_list\<rbrace>"
+proof (induct caps arbitrary: ep rcv_buffer n slots mi)
+  case Nil
+  then show ?case by wpsimp
+next
+  case (Cons a caps)
+  note Cons.hyps[wp]
+  show ?case
+  apply (cases a)
+  apply wpsimp
+  apply safe
+  by wpsimp+
+qed
 
 lemma transfer_caps_loop_invs[wp]:
   "\<And>slots.
@@ -2564,6 +2661,10 @@ crunch do_ipc_transfer
   for valid_irq_states[wp]: "valid_irq_states :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps  simp: crunch_simps)
 
+crunch do_ipc_transfer for cur_domain_list[wp]: "cur_domain_list :: 'state_ext state \<Rightarrow> bool"
+  (simp: crunch_simps
+   wp: crunch_wps)
+
 crunch do_fault_transfer
   for cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift
@@ -2633,6 +2734,11 @@ crunch as_user
 lemmas [wp] = as_user.valid_arch_state
 
 context Ipc_AI_3 begin
+
+crunch setup_caller_cap for cur_domain_list[wp]: "cur_domain_list"
+  (simp: crunch_simps
+   wp: crunch_wps)
+
 lemma ri_invs':
   fixes Q t cap is_blocking
   notes if_split[split del]

@@ -2314,7 +2314,7 @@ lemma detype_descendants_range_in:
         using descendants_range
         apply (clarsimp simp: blah descendants_range_def2)
         apply (simp add: invs_untyped_children blah
-              invs_valid_reply_caps invs_valid_reply_masters)+
+              invs_valid_reply_caps invs_valid_reply_masters invs_cur_domain_list)+
   apply (subst valid_mdb_descendants_range_in)
    apply (clarsimp dest!:invs_mdb simp:detype_clear_um_independent)
   apply (frule detype_locale)
@@ -2334,7 +2334,7 @@ lemma detype_invs:
   apply (frule detype_invariants, simp_all)
       apply (clarsimp simp:blah descendants_range_def2)
       apply ((simp add: invs_untyped_children blah
-          invs_valid_reply_caps invs_valid_reply_masters)+)
+          invs_valid_reply_caps invs_valid_reply_masters invs_cur_domain_list)+)
   done
 
 lemmas simps
@@ -2713,6 +2713,17 @@ lemma set_untyped_cap_invs_simple:
   apply (clarsimp simp:valid_irq_node_def)
   done
 
+crunch delete_objects for cur_domain_list[wp]: "cur_domain_list"
+  (simp: crunch_simps detype_def
+   wp: crunch_wps)
+
+lemma reset_untyped_cap_cur_domain_list[wp]:
+  "\<lbrace>cur_domain_list\<rbrace>
+   reset_untyped_cap a
+   \<lbrace>\<lambda>_. cur_domain_list\<rbrace>"
+  apply (wpsimp simp: reset_untyped_cap_def do_machine_op_def mapME_x_mapME wp: mapME_wp' preemption_point_inv)
+     by (rule hoare_strengthen_post[where Q'="\<lambda>_. cur_domain_list"], wpsimp+)+
+
 lemma reset_untyped_cap_invs_etc:
   "\<lbrace>invs and valid_untyped_inv_wcap ui
       (Some (UntypedCap dev ptr sz idx))
@@ -3089,6 +3100,10 @@ lemma create_cap_refs_respects_device:
 
 crunch create_cap
   for valid_cur_fpu[wp]: valid_cur_fpu
+
+crunch create_cap for cur_domain_list[wp]: "cur_domain_list"
+  (simp: crunch_simps
+   wp: crunch_wps)
 
 lemma (in Untyped_AI_nonempty_table) create_cap_invs[wp]:
   "\<lbrace>invs

@@ -460,6 +460,10 @@ lemma thread_set_valid_cur_fpu:
 
 context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
 
+crunch thread_set for cur_domain_list[wp]: "cur_domain_list"
+  (simp: crunch_simps
+   wp: crunch_wps)
+
 lemma thread_set_invs_trivial:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
                   getF (f tcb) = getF tcb"
@@ -1504,6 +1508,10 @@ crunch set_thread_state
   for valid_cur_fpu[wp]: valid_cur_fpu
   (wp: valid_cur_fpu_lift)
 
+crunch set_thread_state for cur_domain_list[wp]: "cur_domain_list"
+  (simp: crunch_simps
+   wp: crunch_wps)
+
 lemma sts_invs_minor:
   "\<lbrace>st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = tcb_st_refs_of st) t
      and (\<lambda>s. \<not> halted st \<longrightarrow> ex_nonz_cap_to t s)
@@ -1575,6 +1583,10 @@ lemma set_bound_notification_arch_tcb_at[wp]:
   unfolding set_bound_notification_def
   apply (wpsimp wp: set_object_wp)
   by (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_SomeD)
+
+crunch set_bound_notification for cur_domain_list[wp]: "cur_domain_list"
+  (simp: crunch_simps
+   wp: crunch_wps)
 
 lemma sbn_invs_minor:
   "\<lbrace>bound_tcb_at (\<lambda>ntfn'. tcb_bound_refs ntfn' = tcb_bound_refs ntfn) t
@@ -1980,6 +1992,10 @@ crunch thread_set_domain, thread_set_priority
   for valid_cur_fpu[wp]: valid_cur_fpu
   (wp: thread_set_valid_cur_fpu)
 
+crunch thread_set_domain for cur_domain_list[wp]: "cur_domain_list"
+  (simp: crunch_simps
+   wp: crunch_wps)
+
 lemma thread_set_domain_invs[wp]:
   "thread_set_domain t d \<lbrace>invs ::'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
@@ -2078,6 +2094,10 @@ lemma thread_set_priority_valid_reply_masters[wp]:
   "thread_set_priority t d \<lbrace>valid_reply_masters\<rbrace>"
   unfolding thread_set_priority_def
   by (wpsimp wp: thread_set_valid_reply_masters_trivial ball_tcb_cap_casesI)
+
+crunch thread_set_priority for cur_domain_list[wp]: "cur_domain_list"
+  (simp: crunch_simps
+   wp: crunch_wps)
 
 lemma thread_set_priority_invs[wp]:
   "thread_set_priority t d \<lbrace>invs ::'state_ext state \<Rightarrow> _\<rbrace>"

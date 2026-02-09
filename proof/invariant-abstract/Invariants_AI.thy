@@ -1028,8 +1028,11 @@ definition
   "cur_tcb s \<equiv> tcb_at (cur_thread s) s"
 
 definition
+  "cur_domain_list s \<equiv> \<exists>a. (cur_domain s, a) \<in> set (domain_list s)"
+
+definition
   invs :: "'z::state_ext state \<Rightarrow> bool" where
-  "invs \<equiv> valid_state and cur_tcb"
+  "invs \<equiv> valid_state and cur_tcb and cur_domain_list"
 
 
 subsection "Derived concepts"
@@ -1091,7 +1094,20 @@ abbreviation(input)
        and equal_kernel_mappings and valid_asid_map and valid_global_vspace_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and pspace_respects_device_region and cap_refs_respects_device_region
-       and cur_tcb"
+       and cur_tcb and cur_domain_list"
+
+abbreviation(input)
+ "all_invs_but_cur_domain_list
+    \<equiv> valid_ioc
+       and valid_mdb and valid_idle and only_idle and if_unsafe_then_cap
+       and valid_reply_caps and valid_reply_masters and valid_global_refs
+       and valid_arch_state and valid_cur_fpu and valid_machine_state and valid_irq_states
+       and valid_irq_node and valid_irq_handlers and valid_vspace_objs
+       and valid_arch_caps and valid_global_objs and valid_kernel_mappings
+       and equal_kernel_mappings and valid_asid_map and valid_global_vspace_mappings
+       and pspace_in_kernel_window and cap_refs_in_kernel_window
+       and pspace_respects_device_region and cap_refs_respects_device_region
+       and cur_tcb and valid_pspace"
 
 
 \<comment> \<open>---------------------------------------------------------------------------\<close>
@@ -3189,6 +3205,23 @@ lemma valid_ioc_simps[simp]:
   "\<And>f. valid_ioc (domain_time_update f s) = valid_ioc s"
   by (simp_all add: valid_ioc_def)
 
+lemma cur_domain_list_simps[simp]:
+  "\<And>f. cur_domain_list (kheap_update f s) = cur_domain_list s"
+  "\<And>f. cur_domain_list (cdt_update f s) = cur_domain_list s"
+  "\<And>f. cur_domain_list (is_original_cap_update f s) = cur_domain_list s"
+  "\<And>f. cur_domain_list (cur_thread_update f s) = cur_domain_list s"
+  "\<And>f. cur_domain_list (idle_thread_update f s) = cur_domain_list s"
+  "\<And>f. cur_domain_list (scheduler_action_update f s) = cur_domain_list s"
+  "\<And>f. cur_domain_list (domain_index_update f s) = cur_domain_list s"
+  "\<And>f. cur_domain_list (domain_time_update f s) = cur_domain_list s"
+  "\<And>f. cur_domain_list (ready_queues_update f s) = cur_domain_list s"
+  "\<And>f. cur_domain_list (machine_state_update f s) = cur_domain_list s"
+  "\<And>f. cur_domain_list (interrupt_irq_node_update f s) = cur_domain_list s"
+  "\<And>f. cur_domain_list (interrupt_states_update f s) = cur_domain_list s"
+  "\<And>f. cur_domain_list (arch_state_update f s) = cur_domain_list s"
+  "\<And>f. cur_domain_list (trans_state f s) = cur_domain_list s"
+  by (simp_all add: cur_domain_list_def)
+
 lemma vms_ioc_update[iff]:
   "valid_machine_state (is_original_cap_update f s) = valid_machine_state s"
   by (simp add: valid_machine_state_def)+
@@ -3420,6 +3453,10 @@ lemma all_invs_but_sym_refs_check:
   by (simp add: invs_def valid_state_def valid_pspace_def
                 o_def pred_conj_def conj_comms)
 
+lemma all_invs_but_cur_domain_list_check:
+  "(all_invs_but_cur_domain_list and cur_domain_list) = invs"
+  by (simp add: invs_def valid_state_def
+                o_def pred_conj_def conj_comms)
 
 lemma invs_valid_asid_map[elim!]:
   "invs s \<Longrightarrow> valid_asid_map s"
@@ -3537,6 +3574,10 @@ lemma valid_mask_vm_rights[simp]:
 lemma invs_pspace_in_kernel_window[elim!]:
   "invs s \<Longrightarrow> pspace_in_kernel_window s"
   by (simp add: invs_def valid_state_def)
+
+lemma invs_cur_domain_list[elim!]:
+  "invs s \<Longrightarrow> cur_domain_list s"
+  by (simp add: invs_def)
 
 lemmas invs_implies =
   invs_equal_kernel_mappings
