@@ -184,6 +184,10 @@ lemma reachable_frame_cap_trans_state[simp]:
 
 lemmas [Finalise_AI_assms] = obj_refs_obj_ref_of (* used under name obj_ref_ofI *)
 
+crunch empty_slot for cur_domain_list[wp]: "cur_domain_list"
+  (simp: crunch_simps
+   wp: crunch_wps)
+
 lemma (* empty_slot_invs *) [Finalise_AI_assms]:
   "\<lbrace>\<lambda>s. invs s \<and> cte_wp_at (replaceable s sl cap.NullCap) sl s \<and>
         emptyable sl s \<and>

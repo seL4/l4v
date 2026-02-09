@@ -773,6 +773,10 @@ primrec(nonexhaustive)
 where
   "get_untyped_cap_idx (UntypedCap dev ref sz idx) = idx"
 
+crunch perform_asid_control_invocation for cur_domain_list[wp]: "cur_domain_list"
+  (simp: crunch_simps
+   wp: crunch_wps)
+
 lemma aci_invs':
   assumes Q_ignores_arch[simp]: "\<And>f s. Q (arch_state_update f s) = Q s"
   assumes Q_ignore_machine_state[simp]: "\<And>f s. Q (machine_state_update f s) = Q s"

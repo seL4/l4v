@@ -1880,6 +1880,10 @@ lemma respects_device_trivial:
   apply (clarsimp simp: s0_internal_def machine_state0_def)
   done
 
+lemma cur_domain_list_s0[simp]:
+  "cur_domain_list s0_internal"
+  by (simp add: cur_domain_list_def s0_internal_def)
+
 lemma einvs_s0:
   "einvs s0_internal"
   by (simp add: valid_state_def invs_def valid_cur_fpu_def respects_device_trivial)

@@ -2036,6 +2036,10 @@ lemma set_asid_pool_valid_asid_pool_caps[wp]:
   unfolding valid_asid_pool_caps_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
 
+crunch set_asid_pool for cur_domain_list[wp]: "cur_domain_list"
+  (simp: crunch_simps
+     wp: crunch_wps)
+
 lemma set_asid_pool_invs_restrict:
   "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and (\<lambda>s. \<exists>a. asid_table s a = Some p) and
     valid_asid_table and pspace_aligned\<rbrace>
@@ -2824,6 +2828,10 @@ lemma store_pte_valid_arch_caps:
    \<lbrace>\<lambda>_. valid_arch_caps \<rbrace>"
   unfolding valid_arch_caps_def
   by (wpsimp wp: store_pte_valid_vs_lookup store_pte_valid_table_caps)
+
+crunch store_pte for cur_domain_list[wp]: "cur_domain_list"
+  (simp: crunch_simps
+     wp: crunch_wps)
 
 lemma store_pte_invs:
   "\<lbrace> invs
