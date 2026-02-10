@@ -17,6 +17,13 @@ crunch_ignore (add:
   setObject getObject updateObject loadObject
   ifM andM orM whenM whileM haskell_assert) (*FIXME arch-split RT: can these be removed?*)
 
+(* same derivation on all architectures *)
+lemma (in Arch) wordBits_word_bits:
+  "wordBits = word_bits"
+  by (simp add: wordBits_def' word_bits_def)
+
+requalify_facts Arch.wordBits_word_bits
+
 lemma throwE_R: "\<lbrace>\<top>\<rbrace> throw f \<lbrace>P\<rbrace>,-"
   by (simp add: validE_R_def) wp
 
