@@ -16,6 +16,13 @@ crunch_ignore (add:
   emptyOnFailure unifyFailure maskInterrupt clearMemory clearMemoryVM  assertDerived
   setObject getObject updateObject loadObject)
 
+(* same derivation on all architectures *)
+lemma (in Arch) wordBits_word_bits:
+  "wordBits = word_bits"
+  by (simp add: wordBits_def' word_bits_def)
+
+requalify_facts Arch.wordBits_word_bits
+
 lemma throwE_R: "\<lbrace>\<top>\<rbrace> throw f \<lbrace>P\<rbrace>,-"
   by (simp add: validE_R_def) wp
 
