@@ -32,37 +32,56 @@ text \<open>
   traces would not be able to be matched up and the composed program
   would be trivially empty.\<close>
 
-definition
+record plus2_state = "unit monad_state_record" +
+  mainv :: nat
+
+definition plus2 :: "unit pmonad" where
   "plus2 \<equiv> do
      env_steps;
-     modify ((+) (1 :: nat));
+     modify (mainv_update ((+) 1));
      interference;
-     modify ((+) 1);
+     modify (mainv_update ((+) 1));
      interference
    od"
 
 section \<open>The ghost-extended program.\<close>
 
-record plus2_xstate =
-  mainv :: nat
+record plus2_xstate = "unit monad_state_record" +
+  mainv_x :: nat
   threadv :: "nat \<Rightarrow> nat"
+
+type_synonym 'a pmonad_x = "(unit, unit plus2_xstate_ext, 'a) tmonad"
 
 definition point_update :: "'a \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> (('a \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> 'b))" where
   "point_update x fup f = f (x := fup (f x))"
 
-definition
+definition plus2_x :: "nat \<Rightarrow> unit pmonad_x" where
   "plus2_x tid \<equiv> do
      env_steps;
-     modify (mainv_update ((+) 1) o threadv_update (point_update tid ((+) 1)));
+     modify (mainv_x_update ((+) 1) o threadv_update (point_update tid ((+) 1)));
      interference;
-     modify (mainv_update ((+) 1) o threadv_update (point_update tid ((+) 1)));
+     modify (mainv_x_update ((+) 1) o threadv_update (point_update tid ((+) 1)));
      interference
    od"
+
+(* FIXME: temporary simp rules for dealing with const_env *)
+declare is_const_env_id[simp]
+thm is_const_env_id
+
+lemma is_const_env_compose[simp]:
+  "is_const_env f \<Longrightarrow> is_const_env g \<Longrightarrow> is_const_env (\<lambda>s. f (g s))"
+  by (clarsimp simp: is_const_env_def)
+
+lemma [simp]:
+  "\<And>f. is_const_env (mainv_x_update f)"
+  "\<And>f. is_const_env (threadv_update f)"
+  "\<And>x fup f. is_const_env fup \<Longrightarrow> is_const_env f \<Longrightarrow> is_const_env (point_update x fup f)"
+  by (auto simp: is_const_env_def point_update_def)+
 
 section \<open>Verifying the extended @{term plus2}.\<close>
 text \<open>The RG-reasoning needed to verify the @{term plus2_x} program.\<close>
 definition
-  "plus2_inv tids s = (mainv s = sum (threadv s) tids)"
+  "plus2_inv tids s = (mainv_x s = sum (threadv s) tids)"
 
 definition
   "plus2_rel tids fix_tids s0 s =
@@ -77,7 +96,7 @@ lemma plus2_rel_trans[simp]:
 
 lemma plus2_inv_Suc[simp]:
   "\<lbrakk>tid \<in> tids; finite tids\<rbrakk>
-   \<Longrightarrow> plus2_inv tids (mainv_update Suc (threadv_update (point_update tid Suc) s))
+   \<Longrightarrow> plus2_inv tids (mainv_x_update Suc (threadv_update (point_update tid Suc) s))
        = plus2_inv tids s"
   apply (simp add: plus2_inv_def point_update_def)
   apply (simp add: sum.If_cases[where h=f and g=f and P="(=) tid" and A="tids" for f x, simplified])
@@ -93,9 +112,9 @@ theorem plus2_x_property:
   done
 
 corollary plus2_x_parallel:
-  "\<lbrace>\<lambda>s0 s. mainv s = 0 \<and> (\<forall>tid \<in> {1, 2}. threadv s tid = 0) \<and> s = s0\<rbrace>,\<lbrace>\<lambda>a b. a = b\<rbrace>
+  "\<lbrace>\<lambda>s0 s. mainv_x s = 0 \<and> (\<forall>tid \<in> {1, 2}. threadv s tid = 0) \<and> s = s0\<rbrace>,\<lbrace>\<lambda>a b. a = b\<rbrace>
    parallel (plus2_x 1) (plus2_x 2)
-   \<lbrace>\<lambda>s0 s. True\<rbrace>,\<lbrace>\<lambda>_ s0 s. mainv s = 4\<rbrace>"
+   \<lbrace>\<lambda>s0 s. True\<rbrace>,\<lbrace>\<lambda>_ s0 s. mainv_x s = 4\<rbrace>"
   apply (rule rg_weaken_pre)
    apply (rule rg_strengthen_post)
     apply ((rule parallel_valid_rg plus2_x_property[where tids="{1, 2}"])+; simp add: plus2_rel_def le_fun_def)
@@ -107,14 +126,14 @@ section \<open>Mapping across prefix refinement.\<close>
 text \<open>Proving prefix refinement of @{term plus2} and @{term plus2_x} and deriving the final result.\<close>
 
 lemma env_stable:
-  "env_stable AR R (\<lambda>s t. t = mainv s) (\<lambda>s t. t = mainv s) \<top>"
+  "env_stable AR R (\<lambda>s t. mainv t = mainv_x s) (\<lambda>s t. mainv t = mainv_x s) \<top>"
   apply (simp add: env_stable_def rely_stable_def env_rely_stable_iosr_def)
   apply (simp add: plus2_xstate.splits)
   done
 
 abbreviation (input)
   "p_refn rvr AR R P Q \<equiv>
-     prefix_refinement (\<lambda>s t. t = mainv s) (\<lambda>s t. t = mainv s) (\<lambda>s t. t = mainv s) rvr AR R P Q"
+     prefix_refinement (\<lambda>s t. mainv t = mainv_x s) (\<lambda>s t. mainv t = mainv_x s) (\<lambda>s t. mainv t = mainv_x s) rvr AR R P Q"
 
 theorem pfx_refn_plus2_x:
   "p_refn dc AR R (=) (\<top>\<top>) (plus2_x tid) plus2"
@@ -136,10 +155,10 @@ lemma prefix_closed_plus2:
   done
 
 theorem plus2_parallel:
-  "\<lbrace>\<lambda>s0 s. s = 0 \<and> s = s0\<rbrace>,\<lbrace>\<lambda>a b. a = b\<rbrace>
+  "\<lbrace>\<lambda>s0 s. mainv s = 0 \<and> s = s0\<rbrace>,\<lbrace>\<lambda>a b. a = b\<rbrace>
    parallel plus2 plus2
-   \<lbrace>\<lambda>s0 s. True\<rbrace>,\<lbrace>\<lambda>_ s0 s. s = 4\<rbrace>"
-  apply (rule_tac sr="\<lambda>s t. t = mainv s" in prefix_refinement_valid_rg)
+   \<lbrace>\<lambda>s0 s. True\<rbrace>,\<lbrace>\<lambda>_ s0 s. mainv s = 4\<rbrace>"
+  apply (rule_tac sr="\<lambda>s t. mainv t = mainv_x s" in prefix_refinement_valid_rg)
         apply (rule prefix_refinement_parallel_triv;
                ((rule par_tr_fin_plus2_x prefix_closed_plus2 twp_post_taut)+)?)
          apply (rule pfx_refn_plus2_x[where tid=1])
@@ -180,9 +199,9 @@ lemma plus2_x_n_parallel_induct:
 
 theorem plus2_x_n_parallel:
   "n > 0 \<Longrightarrow>
-   \<lbrace>\<lambda>s0 s. mainv s = 0 \<and> (\<forall>i < n. threadv s i = 0) \<and> s = s0\<rbrace>,\<lbrace>plus2_rel {..< n} {..< n}\<rbrace>
+   \<lbrace>\<lambda>s0 s. mainv_x s = 0 \<and> (\<forall>i < n. threadv s i = 0) \<and> s = s0\<rbrace>,\<lbrace>plus2_rel {..< n} {..< n}\<rbrace>
    fold parallel (map plus2_x [1 ..< n]) (plus2_x 0)
-   \<lbrace>\<lambda>s0 s. True\<rbrace>,\<lbrace>\<lambda>_ _ s. mainv s = (n * 2)\<rbrace>"
+   \<lbrace>\<lambda>s0 s. True\<rbrace>,\<lbrace>\<lambda>_ _ s. mainv_x s = (n * 2)\<rbrace>"
   apply (rule rg_weaken_pre, rule rg_strengthen_post,
          rule rg_strengthen_guar, erule plus2_x_n_parallel_induct)
      apply simp
@@ -232,10 +251,10 @@ lemmas fold_parallel_pfx_refn =
 
 theorem plus2_n_parallel:
   "n > 0 \<Longrightarrow>
-   \<lbrace>\<lambda>s0 s. s = 0 \<and> s = s0\<rbrace>,\<lbrace>\<lambda>a b. a = b\<rbrace>
+   \<lbrace>\<lambda>s0 s. mainv s = 0 \<and> s = s0\<rbrace>,\<lbrace>\<lambda>a b. a = b\<rbrace>
    fold parallel (replicate (n - 1) plus2) plus2
-   \<lbrace>\<lambda>s0 s. True\<rbrace>,\<lbrace>\<lambda>_ s0 s. s = n * 2\<rbrace>"
-  apply (rule_tac sr="\<lambda>s t. t = mainv s" in prefix_refinement_valid_rg)
+   \<lbrace>\<lambda>s0 s. True\<rbrace>,\<lbrace>\<lambda>_ s0 s. mainv s = n * 2\<rbrace>"
+  apply (rule_tac sr="\<lambda>s t. mainv t = mainv_x s" in prefix_refinement_valid_rg)
         apply (rule prefix_refinement_weaken_rely,
                rule_tac xs="map plus2_x [1 ..< n]" in fold_parallel_pfx_refn)
              apply (clarsimp simp: list_all2_conv_all_nth)
