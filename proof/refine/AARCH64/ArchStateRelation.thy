@@ -46,8 +46,9 @@ primrec acap_relation :: "arch_cap \<Rightarrow> arch_capability \<Rightarrow> b
 | "acap_relation (arch_cap.SMCCap smc_badge) c  = (c =
         arch_capability.SMCCap smc_badge)"
 
+(* The vmID component is handled in abs_asid_map *)
 definition abs_asid_entry :: "asidpool_entry \<Rightarrow> asid_pool_entry" where
-  "abs_asid_entry ap = AARCH64_A.ASIDPoolVSpace (apVMID ap) (apVSpace ap)"
+  "abs_asid_entry ap = AARCH64_A.ASIDPoolVSpace (apVSpace ap)"
 
 definition asid_pool_relation :: "asid_pool \<Rightarrow> asidpool \<Rightarrow> bool" where
   "asid_pool_relation \<equiv> \<lambda>p p'. p = map_option abs_asid_entry \<circ> inv ASIDPool p' \<circ> ucast"
@@ -120,6 +121,56 @@ definition is_other_obj_relation_type :: "a_type \<Rightarrow> bool" where
     | AGarbage _ \<Rightarrow> False
     | _ \<Rightarrow> True"
 
+type_synonym asidpool_content = "asid \<rightharpoonup> asidpool_entry"
+
+definition asid_pool_of' :: "arch_kernel_object \<rightharpoonup> asidpool_content" where
+  "asid_pool_of' ako \<equiv> case ako of KOASIDPool ap \<Rightarrow> Some (inv ASIDPool ap) | _ \<Rightarrow> None"
+
+lemmas asid_pool_of'_simps[simp] = asid_pool_of'_def[split_simps arch_kernel_object.split]
+
+lemma inv_ASIDPool_eq:
+  "(inv ASIDPool ako = pool) = (ako = ASIDPool pool)"
+  by (cases ako, simp)
+
+lemma asid_pool_of'_Some[iff]:
+  "(asid_pool_of' a = Some pool) = (a = KOASIDPool (ASIDPool pool))"
+  by (clarsimp simp: asid_pool_of'_def inv_ASIDPool_eq split: arch_kernel_object.splits)
+
+locale_abbrev asid_pools_of' :: "kernel_state \<Rightarrow> obj_ref \<rightharpoonup> asidpool_content" where
+  "asid_pools_of' \<equiv> \<lambda>s. aobjs_of' s |> asid_pool_of'"
+
+definition vmids_of_pool' :: "asidpool_content \<Rightarrow> (asid \<rightharpoonup> vmid)" where
+  "vmids_of_pool' pool \<equiv> pool |> apVMID"
+
+locale_abbrev vmids_of' :: "kernel_state \<Rightarrow> obj_ref \<rightharpoonup> (asid \<rightharpoonup> vmid)" where
+  "vmids_of' \<equiv> \<lambda>s. asid_pools_of' s ||> vmids_of_pool'"
+
+definition vmid_for_asid_2' :: "asid \<Rightarrow> (asid \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> (asid \<rightharpoonup> vmid)) \<rightharpoonup> vmid"
+  where
+  "vmid_for_asid_2' asid asid_table' \<equiv> do {
+     pool_ptr \<leftarrow> K $ asid_table' (asidHighBitsOf asid);
+     vmids \<leftarrow> oapply pool_ptr;
+     K $ vmids (asid && mask asidLowBits)
+   }"
+
+locale_abbrev vmid_for_asid' :: "kernel_state \<Rightarrow> asid \<rightharpoonup> vmid" where
+  "vmid_for_asid' \<equiv>
+    \<lambda>s asid. vmid_for_asid_2' asid (armKSASIDTable (ksArchState s)) (vmids_of' s)"
+
+lemmas vmid_for_asid'_def = vmid_for_asid_2'_def
+
+(* The definition of arch_state_relation works on arch states and aobjs_of' directly *)
+locale_abbrev (input) armKSASIDMap' ::
+  "Arch.kernel_state \<Rightarrow> (obj_ref \<rightharpoonup> arch_kernel_object) \<Rightarrow> AARCH64_A.asid \<rightharpoonup> vmid"
+  where
+  "armKSASIDMap' s aobjs \<equiv> \<lambda>asid. vmid_for_asid_2' (ucast (asid::AARCH64_A.asid))
+                                                   (armKSASIDTable s)
+                                                   (aobjs |> asid_pool_of' ||> vmids_of_pool')"
+
+(* Short name for proof goals that work on the entire state *)
+locale_abbrev armKSASIDMap :: "kernel_state \<Rightarrow> AARCH64_A.asid \<rightharpoonup> vmid" where
+  "armKSASIDMap \<equiv> \<lambda>s. armKSASIDMap' (ksArchState s) (aobjs_of' s)"
+
 definition ghost_relation ::
   "kheap \<Rightarrow> (machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow> (machine_word \<rightharpoonup> pt_type) \<Rightarrow> bool"
   where
@@ -139,8 +190,9 @@ definition ghost_relation_wrapper_2 ::
 (* inside Arch locale, we have no need for the wrapper *)
 lemmas ghost_relation_wrapper_def[simp] = ghost_relation_wrapper_2_def
 
-definition arch_state_relation :: "(arch_state \<times> AARCH64_H.kernel_state) set" where
-  "arch_state_relation \<equiv> {(s, s') .
+definition arch_state_relation ::
+  "(obj_ref \<rightharpoonup> arch_kernel_object) \<Rightarrow> (arch_state \<times> AARCH64_H.kernel_state) set" where
+  "arch_state_relation aobjs' \<equiv> {(s, s') .
          arm_asid_table s = armKSASIDTable s' \<circ> ucast
          \<and> arm_us_global_vspace s = armKSGlobalUserVSpace s'
          \<and> arm_next_vmid s = armKSNextVMID s'
@@ -148,7 +200,8 @@ definition arch_state_relation :: "(arch_state \<times> AARCH64_H.kernel_state) 
          \<and> arm_kernel_vspace s = armKSKernelVSpace s'
          \<and> arm_current_vcpu s = armHSCurVCPU s'
          \<and> arm_gicvcpu_numlistregs s = armKSGICVCPUNumListRegs s'
-         \<and> arm_current_fpu_owner s = armKSCurFPUOwner s'}"
+         \<and> arm_current_fpu_owner s = armKSCurFPUOwner s'
+         \<and> arm_asid_map s = armKSASIDMap' s' aobjs'}"
 
 locale_abbrev
   "pt_types_of s \<equiv> pts_of s ||> pt_type"

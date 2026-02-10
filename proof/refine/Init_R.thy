@@ -29,8 +29,9 @@ begin
 locale Init_R =
   fixes zeroed_arch_abstract_state :: arch_state
   fixes zeroed_arch_intermediate_state :: Arch.kernel_state
+  fixes aobjs
   assumes non_empty_refine_arch_state_relation:
-    "(zeroed_arch_abstract_state, zeroed_arch_intermediate_state) \<in> arch_state_relation"
+    "(zeroed_arch_abstract_state, zeroed_arch_intermediate_state) \<in> arch_state_relation Map.empty"
   (* the None maps are a result of unfolding zeroed_main_abstract_state *)
   assumes ghost_relation_wrapper_arch_intermediate_state:
     "ghost_relation_wrapper_2 (\<lambda>_. None) (\<lambda>_. None) (\<lambda>_. None) zeroed_arch_intermediate_state"

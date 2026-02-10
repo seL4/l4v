@@ -174,8 +174,10 @@ fun x64irqstate_to_abstract :: "x64irqstate \<Rightarrow> X64IRQState" where
 definition x64_irq_relation :: "(8 word \<Rightarrow> X64IRQState) \<Rightarrow> (8 word \<Rightarrow> x64irqstate) \<Rightarrow> bool" where
   "x64_irq_relation irq_states irq_states' \<equiv> irq_states = x64irqstate_to_abstract o irq_states'"
 
-definition arch_state_relation :: "(arch_state \<times> X64_H.kernel_state) set" where
-  "arch_state_relation \<equiv> {(s, s') .
+(* aobjs' argument unused on this architecture *)
+definition arch_state_relation ::
+  "(obj_ref \<rightharpoonup> arch_kernel_object) \<Rightarrow> (arch_state \<times> X64_H.kernel_state) set" where
+  "arch_state_relation aobjs' \<equiv> {(s, s') .
          x64_asid_table s = x64KSASIDTable s' o ucast
        \<and> x64_global_pml4 s = x64KSSKIMPML4 s'
        \<and> x64_global_pdpts s = x64KSSKIMPDPTs s'

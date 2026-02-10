@@ -18,6 +18,7 @@ definition zeroed_arch_abstract_state :: arch_state where
   "zeroed_arch_abstract_state \<equiv> \<lparr>
     arm_asid_table    = Map.empty,
     arm_kernel_vspace = K ArmVSpaceUserRegion,
+    arm_asid_map = Map.empty,
     arm_vmid_table = Map.empty,
     arm_next_vmid = 0,
     arm_us_global_vspace = 0,
@@ -38,9 +39,9 @@ lemma ghost_relation_wrapper_arch_intermediate_state[Init_R_assms]:
   by simp
 
 lemma non_empty_refine_arch_state_relation[Init_R_assms]:
-  "(zeroed_arch_abstract_state, zeroed_arch_intermediate_state) \<in> arch_state_relation"
+  "(zeroed_arch_abstract_state, zeroed_arch_intermediate_state) \<in> arch_state_relation Map.empty"
   unfolding zeroed_arch_abstract_state_def zeroed_arch_intermediate_state_def arch_state_relation_def
-  by simp
+  by (simp add: vmid_for_asid_2'_def obind_def)
 
 end (* Arch *)
 

@@ -100,8 +100,10 @@ definition ghost_relation_wrapper_2 ::
 (* inside Arch locale, we have no need for the wrapper *)
 lemmas ghost_relation_wrapper_def[simp] = ghost_relation_wrapper_2_def
 
-definition arch_state_relation :: "(arch_state \<times> RISCV64_H.kernel_state) set" where
-  "arch_state_relation \<equiv> {(s, s') .
+(* aobjs' argument unused on this architecture *)
+definition arch_state_relation ::
+  "(obj_ref \<rightharpoonup> arch_kernel_object) \<Rightarrow> (arch_state \<times> RISCV64_H.kernel_state) set" where
+  "arch_state_relation aobjs' \<equiv> {(s, s') .
          riscv_asid_table s = riscvKSASIDTable s' o ucast
          \<and> riscv_global_pts s = (\<lambda>l. set (riscvKSGlobalPTs s' (size l)))
          \<and> riscv_kernel_vspace s = riscvKSKernelVSpace s'}"

@@ -2048,6 +2048,10 @@ lemma removeFromBitmap_ghost_relation_wrapper[wp]:
   "removeFromBitmap tdom prio \<lbrace>ghost_relation_wrapper s\<rbrace>"
   by (wpsimp simp: bitmap_fun_defs)
 
+crunch threadSet
+  for aobjs_of'[wp]: "\<lambda>s. P (aobjs_of' s)"
+  and ksArch_aobjs_of'[wp]: "\<lambda>s. P (ksArchState s) (aobjs_of' s)"
+
 locale TcbAcc_R_2 = TcbAcc_R +
   assumes removeFromBitmap_valid_bitmapQ_except:
     "\<And>d p. removeFromBitmap d p \<lbrace>valid_bitmapQ_except d p \<rbrace>"
@@ -2167,8 +2171,10 @@ lemma setBoundNotification_state_refs_of'[wp]:
   by (simp add: Un_commute
       | wpsimp simp: fun_upd_def wp: threadSet_state_refs_of')+
 
-crunch setQueue, tcbQueuePrepend, tcbQueueRemove, removeFromBitmap
+crunch setQueue, tcbQueuePrepend, tcbQueueRemove, removeFromBitmap, tcbQueueAppend, tcbQueueAppend
   for ghost_relation_wrapper[wp]: "ghost_relation_wrapper t"
+  and aobjs_of'[wp]: "\<lambda>s. P (aobjs_of' s)"
+  and ksArch_aobjs_of'[wp]: "\<lambda>s. P (ksArchState s) (aobjs_of' s)"
   (wp: crunch_wps)
 
 lemma tcbSchedEnqueue_corres:

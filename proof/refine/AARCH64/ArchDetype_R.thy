@@ -267,9 +267,43 @@ end (* detype_locale' *)
 
 context Arch begin arch_global_naming
 
+lemma vmid_for_asid'_detype:
+  assumes table:
+    "\<And>(asid::asid_high_index) p. armKSASIDTable (ksArchState s') (ucast asid) = Some p \<Longrightarrow> \<not>P p"
+  shows "armKSASIDMap' (ksArchState s') ((\<lambda>x. if P x then None else ksPSpace s' x) |> aobj_of') =
+         armKSASIDMap' (ksArchState s') (aobjs_of' s')"
+  unfolding vmid_for_asid_2'_def
+  apply (subst neg_opt_filter_map_eq[symmetric])
+  apply (rule ext)
+  apply simp
+  apply (rule obind_eqI, rule refl)
+  apply (rule obind_eqI)
+   apply simp
+   apply (drule table)
+   apply (simp flip: opt_map_assoc add: opt_filter_map_apply)
+  apply (rule refl)
+  done
+
+lemma freeMemory_invs:
+  "\<lbrace>invs and K (is_aligned ptr bits \<and> word_size_bits \<le> bits \<and> bits \<le> word_bits)\<rbrace>
+   do_machine_op (freeMemory ptr bits)
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (simp add: freeMemory_def)
+  apply (rule hoare_pre)
+   apply (rule_tac P'="is_aligned ptr bits \<and> word_size_bits \<le> bits \<and> bits \<le> word_bits"
+                in hoare_grab_asm)
+   apply (simp add: mapM_storeWord_clear_um[unfolded word_size_def] word_size_def
+                    intvl_range_conv[where 'a=machine_word_len, folded word_bits_def])
+   apply wp
+  apply (clarsimp simp: invs_def valid_state_def valid_irq_states_def clear_um_def cur_tcb_def
+                        valid_machine_state_def)
+  done
+
 (* FIXME arch-split: some of this can be generalised; 3 is same on all arches *)
+(* FIXME: is_aligned base magnitude; magnitude \<ge> 3: both already follow from valid_cap in
+          the abstract precondition *)
 lemma deleteObjects_corres:
-  "is_aligned base magnitude \<Longrightarrow> magnitude \<ge> 3 \<Longrightarrow>
+  "\<lbrakk> is_aligned base magnitude; magnitude \<ge> 3 \<rbrakk> \<Longrightarrow>
    corres dc
       (\<lambda>s. einvs s
            \<and> s \<turnstile> (cap.UntypedCap d base magnitude idx)
@@ -314,7 +348,7 @@ lemma deleteObjects_corres:
       apply (rule corres_return_bind)
       apply (rule corres_split[OF pTableNoPartialOverlap])
         apply simp
-        apply (rule_tac P="\<lambda>s. valid_objs s \<and> valid_list s \<and>
+        apply (rule_tac P="\<lambda>s. invs s \<and> valid_objs s \<and> valid_list s \<and>
                                (\<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s \<and>
                                        descendants_range (cap.UntypedCap d base magnitude idx) cref s ) \<and>
                                s \<turnstile> cap.UntypedCap d base magnitude idx \<and> pspace_aligned s \<and>
@@ -358,9 +392,14 @@ lemma deleteObjects_corres:
             apply (erule state_relation_ready_queues_relation)
            apply (simp add: add_mask_fold)
           (* arch_state_relation *)
-          apply (fastforce simp: arch_state_relation_def update_gs_def comp_def
-                           dest!: state_relationD
-                           split: Structures_A.apiobject_type.splits aobject_type.splits)
+          apply (clarsimp simp: arch_state_relation_def
+                           dest!: state_relationD)
+          apply (rename_tac oref slot)
+          apply (rule vmid_for_asid'_detype[symmetric])
+          apply (prop_tac "detype_locale_arch (cap.UntypedCap d base magnitude idx) (oref, slot) s")
+           apply (simp add: detype_locale_arch_def detype_locale_def)
+          apply (drule detype_locale_arch.asid_table_Some_not_untyped_range, simp)
+          apply (simp add: untyped_range_def add_mask_fold)
          apply (clarsimp simp: state_relation_def ghost_relation_of_heap
                                detype_def)
          apply (drule_tac t="gsUserPages s'" in sym)
@@ -370,10 +409,10 @@ lemma deleteObjects_corres:
                            opt_map_def
                      split: option.splits kernel_object.splits)[1]
         apply (simp add: valid_mdb_def)
-       apply (wp hoare_vcg_ex_lift hoare_vcg_ball_lift | wps |
+       apply (wp hoare_vcg_ex_lift hoare_vcg_ball_lift freeMemory_invs | wps |
               simp add: invs_def valid_state_def valid_pspace_def
                         descendants_range_def | wp (once) hoare_drop_imps)+
-   apply fastforce
+   apply (fastforce simp: valid_cap_def cap_aligned_def word_size_bits_def)
   apply (wpsimp wp: hoare_vcg_op_lift)
   done
 

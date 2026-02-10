@@ -594,7 +594,7 @@ lemma state_relation_null_filterE:
      null_filter (caps_of_state t) = null_filter (caps_of_state s);
      null_filter' (ctes_of t') = null_filter' (ctes_of s');
      pspace_relation (kheap t) (ksPSpace t'); ready_queues_relation t t';
-     (arch_state t, ksArchState t') \<in> arch_state_relation;
+     (arch_state t, ksArchState t') \<in> arch_state_relation (aobjs_of' t');
      ghost_relation_wrapper t t';
      valid_list s;
      pspace_aligned' s'; pspace_distinct' s'; valid_objs s; valid_mdb s;

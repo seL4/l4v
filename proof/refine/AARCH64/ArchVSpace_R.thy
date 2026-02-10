@@ -224,12 +224,12 @@ lemma setObject_VCPU_corres:
                   (setObject vcpu vcpuObj')"
   apply (simp add: set_vcpu_def)
   apply (rule corres_guard_imp)
-    apply (rule setObject_other_arch_corres[where P="\<lambda>ko::vcpu. True"], simp)
+    apply (rule setObject_not_asidpool_corres[where P="\<lambda>ko::vcpu. True"], simp)
           apply (clarsimp simp: obj_at'_def)
           apply (erule map_to_ctes_upd_other, simp, simp)
          apply (simp add: a_type_def is_other_obj_relation_type_def)
-        apply (simp add: objBits_simps)+
-      apply (simp add: objBits_simps vcpuBits_def pageBits_def)+
+        apply (simp add: objBits_simps)
+       apply (simp add: objBits_simps vcpuBits_def pageBits_def)+
     apply (simp add: other_aobj_relation_def asid_pool_relation_def)
    apply (clarsimp simp: typ_at_to_obj_at'[symmetric] obj_at_def exs_valid_def
                          assert_def a_type_def return_def fail_def)
@@ -1359,35 +1359,53 @@ lemma mask_is_asid_low_bits_of[simp]:
   "(ucast asid :: machine_word) && mask asid_low_bits = ucast (asid_low_bits_of asid)"
   by (word_eqI_solve simp: asid_low_bits_of_def asid_low_bits_def)
 
-lemma getASIDPoolEntry_corres'[corres]:
-  "asid' = ucast asid \<Longrightarrow>
-   corres (\<lambda>r r'. r = map_option abs_asid_entry r')
-          (\<lambda>s. pspace_aligned s \<and> pspace_distinct s \<and>
-               (\<forall>p. pool_for_asid asid s = Some p \<longrightarrow> asid_pool_at p s) \<and> 0 < asid)
-          \<top>
-          (gets (entry_for_asid asid))
-          (getASIDPoolEntry asid')"
-  unfolding entry_for_asid_def getASIDPoolEntry_def
-  apply (clarsimp simp: gets_obind_bind_eq entry_for_pool_def obind_comp_dist
-                  cong: option.case_cong)
-  apply (corres corres: getPoolPtr_corres | corres_cases_both)+
-      apply (rule monadic_rewrite_corres_l)
-       apply (monadic_rewrite_l gets_oapply_liftM_rewrite)
-       apply (rule monadic_rewrite_refl)
-      apply (corres simp: liftM_def asid_pool_relation_def asid_pools_at_eq corres: corres_returnTT
-             | corres_cases)+
+lemma getObject_asidpool_no_fail[wp]:
+  "no_fail (asid_pool_at' p) (getObject p :: asidpool kernel)"
+  supply lookupAround2_same1[simp del]
+  apply (simp add: getObject_def split_def)
+  apply wp
+  apply (clarsimp simp add: obj_at'_def objBits_simps typ_at_to_obj_at_arches
+                      cong: conj_cong option.case_cong)
+  apply (rule ps_clear_lookupAround2; assumption?)
+    apply simp
+   apply (erule is_aligned_no_overflow)
+  apply clarsimp
   done
 
-lemma getASIDPoolEntry_get_the_corres[corres]:
-  "asid' = ucast asid \<Longrightarrow>
-   corres (\<lambda>r r'. map_option abs_asid_entry r' = Some r)
-          (\<lambda>s. pspace_aligned s \<and> pspace_distinct s \<and> entry_for_asid asid s \<noteq> None \<and> 0 < asid)
-          \<top>
-          (gets_the (entry_for_asid asid))
-          (getASIDPoolEntry asid')"
-  apply (simp add: gets_the_def cong: corres_weak_cong)
-  apply (rule corres_bind_return2)
-  apply (corres simp: entry_for_asid_def entry_for_pool_def in_omonad obj_at_def)
+lemma vspace_for_asid_cross:
+  "\<lbrakk> (s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s;
+     vspace_for_asid asid s \<noteq> None \<rbrakk> \<Longrightarrow>
+   0 < asid \<and>
+   (\<exists>ap pool. armKSASIDTable (ksArchState s') (ucast (asid_high_bits_of (ucast asid))) = Some ap \<and>
+              ko_at' (ASIDPool pool) ap s' \<and>
+              pool (ucast asid && mask asid_low_bits) \<noteq> None)"
+  apply (clarsimp simp: vspace_for_asid_def ex_abs_def entry_for_asid_def
+                        pool_for_asid_def entry_for_pool_def if_option_eq
+                        ucast_down_ucast_id is_down)
+  apply (erule state_relationE)
+  apply (fastforce simp: arch_state_relation_def asid_pool_relation_def
+                   dest!: asid_pool_of_ko_at'_cross)
+  done
+
+lemma asid_leq_asidRange[simp]:
+  "ucast (asid :: AARCH64_A.asid) \<le> snd asidRange"
+  apply (simp add: asidRange_def word_less_nat_alt unat_ucast_upcast is_up)
+  apply (unfold asid_bits_def)
+  apply (rule unat_lt2p)
+  done
+
+lemma loadVMID_no_fail[wp]:
+  "no_fail (\<lambda>s. 0 < asid \<and>
+                (\<exists>ap pool. armKSASIDTable (ksArchState s)
+                             (ucast (asid_high_bits_of (ucast asid))) = Some ap \<and>
+                           ko_at' (ASIDPool pool) ap s \<and>
+                           pool (ucast asid && mask asid_low_bits) \<noteq> None))
+           (loadVMID (ucast asid))"
+  for asid::AARCH64_A.asid
+  unfolding loadVMID_def
+  apply (wpsimp simp: if_apply_def2 getASIDPoolEntry_def getPoolPtr_def typ_at'_def wp: getASID_wp)
+  apply (simp add: is_down ucast_down_ucast_id)
+  apply (rule conjI, normalise_obj_at'+)
   done
 
 lemma loadVMID_corres[corres]:
@@ -1396,39 +1414,106 @@ lemma loadVMID_corres[corres]:
           (pspace_aligned and pspace_distinct and (\<lambda>s. vspace_for_asid asid s \<noteq> None))
           \<top>
           (load_vmid asid) (loadVMID asid')"
-  unfolding load_vmid_def loadVMID_def
-  apply corres
-      apply (corres_cases, rule corres_inst[where P=\<top> and P'=\<top>], clarsimp)
-      apply (corres_cases, rule corres_returnTT, clarsimp simp: abs_asid_entry_def)
-     apply wpsimp+
-   apply (clarsimp simp: vspace_for_asid_def)
-  apply clarsimp
+  apply (rule corres_from_valid)
+   apply wpsimp
+   apply (fastforce dest!: vspace_for_asid_cross simp: ex_abs_def)
+  apply (simp add: load_vmid_def loadVMID_def exec_gets return_def)
+  apply (wpsimp simp: getASIDPoolEntry_def getPoolPtr_def wp: getASID_wp)
+  apply (fastforce simp: arch_state_relation_def vmid_for_asid'_def vmids_of_pool'_def
+                         obind_def opt_map_def
+                   dest!: ko_at_asid_pools_of'
+                   elim!: state_relationE)
   done
 
-lemma updateASIDPoolEntry_corres[corres]:
+lemma updateASIDPoolEntry_no_fail[wp]:
+  "no_fail (\<lambda>s. 0 < asid \<and>
+                (\<exists>ap pool. armKSASIDTable (ksArchState s)
+                             (ucast (asid_high_bits_of (ucast asid))) = Some ap \<and>
+                           ko_at' (ASIDPool pool) ap s \<and>
+                           pool (ucast asid && mask asid_low_bits) \<noteq> None))
+           (updateASIDPoolEntry f (ucast asid))"
+  for asid::AARCH64_A.asid
+  unfolding updateASIDPoolEntry_def getPoolPtr_def
+  apply (wpsimp wp: getASID_wp)
+  apply (simp add: is_down ucast_down_ucast_id objBits_simps typ_at'_def)
+  apply (rule conjI, normalise_obj_at'+)
+  done
+
+lemma vmids_of_pool'_udpate[simp]:
+  "vmids_of_pool' (pool(asid := entry)) =
+   (vmids_of_pool' pool)(asid := case_option None apVMID entry)"
+  by (fastforce simp: vmids_of_pool'_def opt_map_def)
+
+lemma vmid_for_asid_2'_udpate:
+  "\<lbrakk> aps p = Some pool'; asidTable (ucast (asid_high_bits_of asid)) = Some p;
+     inj_on (asidTable \<circ> UCAST(asid_high_len \<rightarrow> machine_word_len))
+            (dom (asidTable \<circ> UCAST(asid_high_len \<rightarrow> machine_word_len)));
+     asid_low' = ucast (asid_low_bits_of asid); vmid_opt' = vmid_opt \<rbrakk> \<Longrightarrow>
+   (\<lambda>asid::AARCH64_A.asid. vmid_for_asid_2' (ucast asid) asidTable (aps ||> vmids_of_pool'))(asid := vmid_opt) =
+   (\<lambda>asid. vmid_for_asid_2' (ucast asid) asidTable ((aps ||> vmids_of_pool')(p \<mapsto> (vmids_of_pool' pool')(asid_low' := vmid_opt'))))"
+  apply (rule ext, rename_tac asid_x)
+  apply clarsimp
+  apply (rule conjI; clarsimp)
+   (* asid_x = asid *)
+   apply (clarsimp simp: vmid_for_asid_2'_def obind_def ucast_up_ucast is_up)
+  (* asid_x \<noteq> asid *)
+  apply (clarsimp simp: vmid_for_asid_2'_def obind_def ucast_up_ucast is_up split: option.splits)
+  apply (clarsimp simp: vmids_of_pool'_def in_omonad o_def)
+  apply (drule (2) inj_on_domD[rotated])
+  apply (simp add: up_ucast_inj_eq asid_high_low_inj)
+  done
+
+lemma updateASIDPoolEntry_asid_map_corres[corres]:
   assumes eq: "asid' = ucast asid"
-  assumes abs: "\<And>e. map_option abs_asid_entry (f' e) = f (abs_asid_entry e)"
+  assumes vmid: "\<And>e. map_option apVMID (f' e) = Some vmid_opt"
+  assumes vspace: "\<And>e. map_option apVSpace (f' e) = Some (apVSpace e)"
   shows "corres dc
-                ((\<lambda>s. entry_for_asid asid s \<noteq> None \<and> 0 < asid)
-                 and pspace_aligned and pspace_distinct)
+                (pspace_aligned and pspace_distinct and (\<lambda>s. vspace_for_asid asid s \<noteq> None) and
+                 valid_asid_table)
                 \<top>
-                (update_asid_pool_entry f asid)
+                (update_asid_map asid vmid_opt)
                 (updateASIDPoolEntry f' asid')"
-  unfolding update_asid_pool_entry_def updateASIDPoolEntry_def
-  apply (simp add: gets_the_def bind_assoc eq)
-  apply (corres simp: liftM_def
-                term_simp: asid_pool_relation_def asid_low_bits_of_def
-                           mask_asid_low_bits_ucast_ucast ucast_ucast_mask2
-                           is_down ucast_and_mask)
-             apply (rule ext)
-             apply (clarsimp simp: asid_pool_relation_def asid_low_bits_of_def
-                                   mask_asid_low_bits_ucast_ucast ucast_ucast_mask2
-                                   is_down ucast_and_mask abs)
-             apply (erule notE)
-             apply word_eqI_solve
-           apply wpsimp+
-   apply (clarsimp simp: entry_for_asid_def entry_for_pool_def asid_pools_at_eq)
-  apply simp
+  apply (rule corres_from_valid)
+   apply (wpsimp simp: eq)
+   apply (fastforce dest!: vspace_for_asid_cross simp: ex_abs_def)
+  apply (simp add: update_asid_map_def exec_gets simpler_modify_def)
+  apply (simp add: updateASIDPoolEntry_def getPoolPtr_def)
+  apply (wpsimp wp: setObject_asidpool_wp getASID_wp)
+  apply (rename_tac s s' vspace p ko' entry')
+  apply (rule conjI)
+   apply (simp add: typ_at'_def obj_at'_def ko_wp_at'_def)
+  apply (clarsimp simp: state_relation_def obj_at'_def ko_wp_at'_def eq ucast_up_ucast is_up)
+  apply (simp add: map_to_ctes_upd_other)
+  apply (prop_tac "tcbs_of' s' p = None")
+   apply (clarsimp simp: opt_map_def projectKO_opt_tcb)
+  apply (simp add: projectKO_opt_tcb)
+  apply (rule conjI)
+   (* pspace_relation unchanged because it does not talk about vmid *)
+   apply (clarsimp simp: pspace_relation_def in_omonad)
+   apply (rule conjI, fastforce)
+   apply clarsimp
+   apply (rename_tac ko)
+   apply (rule conjI; clarsimp)
+    apply (drule bspec, fastforce)
+    apply (drule bspec, fastforce)
+    apply clarsimp
+    apply (case_tac ko; clarsimp simp: other_obj_relation_def tcb_relation_cut_def cte_relation_def
+                                 split: if_split_asm)
+    apply (rename_tac ako)
+    apply (case_tac ako; clarsimp simp: other_aobj_relation_def pte_relation_def split: if_split_asm)
+    apply (clarsimp simp: asid_pool_relation_def)
+    apply (rule ext)
+    apply (cut_tac e=entry' in vspace)
+    apply (clarsimp simp: abs_asid_entry_def)
+   apply (drule bspec, fastforce)
+   apply (fastforce)
+    (* arch_state_relation *)
+  apply (case_tac ko', rename_tac pool')
+  apply (clarsimp simp: arch_state_relation_def)
+  apply (rule vmid_for_asid_2'_udpate; (simp add: in_omonad)?)
+   apply (clarsimp simp: valid_asid_table_def)
+  apply (cut_tac e=entry' in vmid)
+  apply clarsimp
   done
 
 lemma gets_armKSVMIDTable_corres[corres]:
@@ -1440,21 +1525,21 @@ lemma gets_armKSVMIDTable_corres[corres]:
 lemma storeVMID_corres[corres]:
   "\<lbrakk> asid' = ucast asid; vmid' = vmid \<rbrakk> \<Longrightarrow>
    corres dc
-          (pspace_aligned and pspace_distinct and (\<lambda>s. vspace_for_asid asid s \<noteq> None))
+          (pspace_aligned and pspace_distinct and (\<lambda>s. vspace_for_asid asid s \<noteq> None) and
+           valid_asid_table)
           \<top>
           (store_vmid asid vmid) (storeVMID asid' vmid')"
   unfolding store_vmid_def storeVMID_def
   apply (corres simp: abs_asid_entry_def corres: corres_modify_tivial)
         apply (fastforce simp: state_relation_def arch_state_relation_def)
        apply wpsimp+
-   apply (clarsimp simp: vspace_for_asid_def)
-  apply simp
   done
 
 lemma invalidateASID_corres[corres]:
   "asid' = ucast asid \<Longrightarrow>
    corres dc
-          ((\<lambda>s. entry_for_asid asid s \<noteq> None \<and> 0 < asid) and pspace_aligned and pspace_distinct)
+          ((\<lambda>s. vspace_for_asid asid s \<noteq> None) and pspace_aligned and pspace_distinct and
+           valid_asid_table)
           \<top>
           (invalidate_asid asid) (invalidateASID asid')"
   unfolding invalidate_asid_def invalidateASID_def
@@ -1489,7 +1574,8 @@ lemma valid_vmid_tableD:
 
 lemma findFreeVMID_corres[corres]:
   "corres (=)
-          (vmid_inv and valid_vmid_table and pspace_aligned and pspace_distinct)
+          (vmid_inv and valid_vmid_table and valid_asid_table and valid_asid_map and
+           pspace_aligned and pspace_distinct)
           \<top>
           find_free_vmid findFreeVMID"
   unfolding find_free_vmid_def findFreeVMID_def
@@ -1509,16 +1595,15 @@ lemma findFreeVMID_corres[corres]:
    apply (clarsimp simp: vmid_inv_def)
    apply (frule (1) valid_vmid_tableD)
    apply (drule (1) is_inv_SomeD)
-   apply (clarsimp simp: entry_for_asid_def)
-   apply (clarsimp simp: vmid_for_asid_2_def in_omonad entry_for_pool_def pool_for_asid_def
-                         if_option_eq)
+   apply (fastforce simp: valid_asid_map_def)
   apply simp
   done
 
 lemma getVMID_corres[corres]:
   "asid' = ucast asid \<Longrightarrow>
    corres (=)
-          (vmid_inv and valid_vmid_table and pspace_aligned and pspace_distinct
+          (vmid_inv and valid_vmid_table and valid_asid_table and valid_asid_map and
+           pspace_aligned and pspace_distinct
            and (\<lambda>s. vspace_for_asid asid s \<noteq> None))
           \<top>
           (get_vmid asid) (getVMID asid')"
@@ -1528,8 +1613,8 @@ lemma getVMID_corres[corres]:
 lemma armContextSwitch_corres[corres]:
   "asid' = ucast asid \<Longrightarrow>
    corres dc
-          (vmid_inv and valid_vmid_table and pspace_aligned and pspace_distinct
-           and (\<lambda>s. vspace_for_asid asid s \<noteq> None))
+          (vmid_inv and valid_vmid_table and valid_asid_table and valid_asid_map and
+           pspace_aligned and pspace_distinct and (\<lambda>s. vspace_for_asid asid s \<noteq> None))
           \<top>
           (arm_context_switch pt asid) (armContextSwitch pt asid')"
   unfolding arm_context_switch_def armContextSwitch_def
@@ -1537,10 +1622,10 @@ lemma armContextSwitch_corres[corres]:
 
 lemma setVMRoot_corres [corres]:
   assumes "t' = t"
-  shows "corres dc (tcb_at t and valid_vspace_objs and valid_asid_table and
+  shows "corres dc (tcb_at t and valid_vspace_objs and valid_asid_table and valid_asid_map and
                     vmid_inv and valid_vmid_table and pspace_aligned and pspace_distinct and
                     valid_objs and valid_global_arch_objs and pspace_in_kernel_window and valid_uses)
-                   (no_0_obj')
+                   no_0_obj'
                    (set_vm_root t) (setVMRoot t')"
 proof -
   have global:
@@ -1560,7 +1645,7 @@ proof -
                         objBitsKO_def tcb_cnode_index_def to_bl_1 assms cteSizeBits_def)
       apply (rule_tac  R="\<lambda>thread_root. valid_vspace_objs and valid_asid_table and vmid_inv and
                                         valid_vmid_table and pspace_aligned and pspace_distinct and
-                                        valid_objs and valid_global_arch_objs and
+                                        valid_objs and valid_global_arch_objs and valid_asid_map and
                                         pspace_in_kernel_window and valid_uses and
                                         cte_wp_at ((=) thread_root) thread_root_slot and
                                         tcb_at (fst thread_root_slot) and
@@ -1585,7 +1670,7 @@ proof -
         apply (rule corres_guard_imp)
           apply (rule_tac P="valid_vspace_objs and valid_asid_table and pspace_aligned and
                              valid_vmid_table and vmid_inv and pspace_distinct and valid_objs and
-                             pspace_in_kernel_window and valid_uses and
+                             pspace_in_kernel_window and valid_uses and valid_asid_map and
                              valid_global_arch_objs and cte_wp_at ((=) cap) thread_root_slot"
                           in corres_assert_gen_asm2)
           prefer 3
@@ -1617,12 +1702,6 @@ proof -
   done
 qed
 
-lemma dMo_armvKSASIDTable_inv[wp]:
-  "doMachineOp f \<lbrace>\<lambda>s. P (armKSASIDTable (ksArchState s))\<rbrace>"
-  apply (simp add: doMachineOp_def split_def)
-  apply wp
-  by (clarsimp)
-
 crunch vcpuDisable, vcpuEnable, vcpuSave, vcpuRestore, deleteASID
   for no_0_obj'[wp]: no_0_obj'
   (simp: crunch_simps wp: crunch_wps getObject_inv getObject_inv_vcpu loadObject_default_inv)
@@ -1651,42 +1730,155 @@ lemma invalidate_vmid_entry_entry_for_asid[wp]:
   unfolding invalidate_vmid_entry_def
   by wpsimp
 
+lemma setObject_other_arch_corres':
+  fixes ob' :: "'a :: pspace_storable"
+  assumes x: "updateObject ob' = updateObject_default ob'"
+  assumes z: "\<And>s. obj_at' Q ptr s
+               \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO ob')) = map_to_ctes (ksPSpace s)"
+  assumes t: "is_other_obj_relation_type (a_type ob)"
+  assumes b: "\<And>ko. Q ko \<Longrightarrow> objBits ko = objBits ob'"
+  assumes P: "\<And>v::'a::pspace_storable. (1 :: machine_word) < 2 ^ objBits v"
+  assumes a: "is_ArchObj ob"
+  assumes arch:
+    "\<And>s s'. \<lbrakk> (arch_state s, ksArchState s') \<in> arch_state_relation (aobjs_of' s');
+               typ_at' (koTypeOf (injectKO ob')) ptr s'; obj_at' Q  ptr s'; P s \<rbrakk> \<Longrightarrow>
+              (arch_state s, ksArchState s') \<in>
+                arch_state_relation ((aobjs_of' s')(ptr := aobj_of' (injectKO ob')))"
+  shows
+    "other_aobj_relation ob (injectKO (ob' :: 'a :: pspace_storable)) \<Longrightarrow>
+     corres dc (obj_at (\<lambda>ko. a_type ko = a_type ob) ptr and obj_at (same_caps ob) ptr and P)
+               (obj_at' (Q :: 'a \<Rightarrow> bool) ptr)
+               (set_object ptr ob) (setObject ptr ob')"
+  supply image_cong_simp[cong del] projectKOs[simp del]
+  apply (rule corres_no_failI)
+   apply (rule no_fail_pre)
+    apply wp
+    apply (rule x)
+   apply (clarsimp simp: b elim!: obj_at'_weakenE)
+  apply (unfold set_object_def setObject_def)
+  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def Bex_def
+                        put_def return_def modify_def get_object_def x
+                        projectKOs obj_at_def
+                        updateObject_default_def in_magnitude_check [OF _ P])
+  apply (rename_tac ko)
+  apply (clarsimp simp add: state_relation_def z)
+  apply (clarsimp simp add: caps_of_state_after_update cte_wp_at_after_update
+                            swp_def fun_upd_def obj_at_def)
+  apply (subst conj_assoc[symmetric])
+  apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _ _" \<Rightarrow> -\<close>)
+   apply (clarsimp simp add: ghost_relation_def)
+   apply (erule_tac x=ptr in allE)+
+   apply (clarsimp simp: obj_at_def a_type_def
+                   split: Structures_A.kernel_object.splits if_split_asm)
+   apply (simp split: arch_kernel_obj.splits if_splits)
+  apply (fold fun_upd_def)
+  apply (simp only: pspace_relation_def pspace_dom_update dom_fun_upd2 simp_thms)
+  apply (elim conjE)
+  apply (frule bspec, erule domI)
+  apply (prop_tac "is_ArchObj ko", clarsimp simp: a dest!: a_type_eq_is_ArchObj)
+  apply (prop_tac "typ_at' (koTypeOf (injectKO ob')) ptr b")
+   subgoal
+     by (clarsimp simp: typ_at'_def ko_wp_at'_def obj_at'_def projectKO_opts_defs
+                        is_other_obj_relation_type_def a_type_def other_aobj_relation_def
+                 split: Structures_A.kernel_object.split_asm if_split_asm
+                        arch_kernel_obj.split_asm kernel_object.split_asm
+                        arch_kernel_object.split_asm)
+  apply clarsimp
+  apply (rule conjI)
+   apply (rule ballI, drule(1) bspec)
+   apply (drule domD)
+   apply (clarsimp simp: is_other_obj_relation_type t a)
+   apply (drule(1) bspec)
+   apply clarsimp
+   apply (frule_tac ko'=ko and x'=ptr in obj_relation_cut_same_type)
+   apply ((fastforce simp add: is_other_obj_relation_type t)+)[3] (* loops when folded into above *)
+   apply (insert t)
+   apply ((erule disjE
+          | clarsimp simp: is_other_obj_relation_type is_other_obj_relation_type_def a_type_def)+)[1]
+  apply (simp add: arch)
+  \<comment> \<open>ready_queues_relation\<close>
+  apply (prop_tac "koTypeOf (injectKO ob') \<noteq> TCBT")
+   subgoal
+     by (clarsimp simp: other_aobj_relation_def; cases ob; cases "injectKO ob'";
+         simp split: arch_kernel_obj.split_asm)
+  by (fastforce dest: tcbs_of'_non_tcb_update)
+
+lemma setObject_ASIDPool_None_corres[corres]:
+  "\<lbrakk> p = p'; asid_pool_relation pool (asidpool.ASIDPool pool');
+     asid_low' = ucast (asid_low_bits_of asid) \<rbrakk> \<Longrightarrow>
+   corres dc ((\<lambda>s. asid_pools_of s p = Some pool \<and> asid_table s (asid_high_bits_of asid) = Some p \<and>
+                  asid_map s asid = None) and
+              pspace_aligned and pspace_distinct)
+             (\<lambda>s. ko_at' (ASIDPool pool') p' s)
+             (set_asid_pool p (pool(asid_low_bits_of asid := None)))
+             (setObject p' (ASIDPool (pool'(asid_low' := None))))"
+  apply (simp add: set_asid_pool_def)
+  apply (rule corres_underlying_symb_exec_l[where P=P and Q="\<lambda>_. P" for P])
+    apply (rule corres_no_failI; wpsimp)
+    apply (clarsimp simp: gets_map_def bind_def simpler_gets_def assert_opt_def fail_def return_def
+                          obj_at_def in_omonad
+                    split: option.splits)
+   prefer 2
+   apply wpsimp
+  apply (rule corres_guard_imp)
+    apply (rule setObject_other_arch_corres'[where
+                  Q="\<lambda>ko. ko = ASIDPool pool'" and
+                  P="\<lambda>s. asid_table s (asid_high_bits_of asid) = Some p \<and> asid_map s asid = None"])
+           apply simp
+          apply (clarsimp simp: obj_at'_def)
+          apply (erule map_to_ctes_upd_other, simp, simp)
+         apply (simp add: a_type_def is_other_obj_relation_type_def)
+        apply (simp add: objBits_simps)+
+       apply (simp add: objBits_simps pageBits_def)+
+     apply (drule ko_at_asid_pools_of')
+     apply (clarsimp simp: arch_state_relation_def)
+     apply (thin_tac "asid_map _ = _")
+     apply (clarsimp simp: vmid_for_asid_2'_def obind_def)
+     apply (rule ext)
+     apply (clarsimp split: option.splits)
+     (* needs a separate clarsimp step *)
+     apply (clarsimp simp: in_omonad)
+    apply (fastforce simp: other_aobj_relation_def asid_pool_relation_def up_ucast_inj_eq)
+   apply (simp add: obj_at_def in_omonad)
+  apply (simp add: typ_at'_def obj_at'_def ko_wp_at'_def)
+  done
+
 lemma invalidateASIDEntry_corres[corres]:
   "asid' = ucast asid \<Longrightarrow>
   corres dc
-         (pspace_aligned and pspace_distinct and (\<lambda>s. vspace_for_asid asid s \<noteq> None))
+         (pspace_aligned and pspace_distinct and valid_asid_table
+          and (\<lambda>s. vspace_for_asid asid s \<noteq> None))
          \<top>
          (invalidate_asid_entry asid) (invalidateASIDEntry asid')"
   unfolding invalidate_asid_entry_def invalidateASIDEntry_def
   by (corres simp: vspace_for_asid_def)
 
+lemma ASIDPool_inv_ASIDPool[simp]:
+  "ASIDPool (inv ASIDPool ko) = ko"
+  by (cases ko, simp)
+
 lemma deleteASID_corres [corres]:
   assumes "asid' = ucast asid" "pm' = pm"
-  shows "corres dc (invs and K (asid \<noteq> 0)) no_0_obj'
+  shows "corres dc
+                (invs and K (asid \<noteq> 0))
+                no_0_obj'
                 (delete_asid asid pm) (deleteASID asid' pm')"
   unfolding delete_asid_def deleteASID_def using assms
   apply simp
   apply (corres simp: liftM_def | corres_cases_both)+
          apply (simp add: mask_asid_low_bits_ucast_ucast asid_low_bits_of_def ucast_ucast_a is_down
                           asid_pool_relation_def abs_asid_entry_def split: option.splits)
-        apply corres
-                 apply (rule ext)
-                 apply (clarsimp simp: mask_asid_low_bits_ucast_ucast asid_low_bits_of_def
-                                       ucast_ucast_a is_down asid_pool_relation_def)
-                 apply (erule notE)
-                 apply word_eqI_solve
-                apply (corres corres: getCurThread_corres)
-               apply (wpsimp simp: cur_tcb_def[symmetric]
-                             wp: set_asid_pool_None_vmid_inv set_asid_pool_vspace_objs_unmap_single)
-              apply (wp getASID_wp)+
-           apply (rename_tac p pool pool' a b)
+        apply (corres wp: set_asid_pool_vspace_objs_unmap_single set_asid_pool_None_vmid_inv
+                          getASID_wp
+                      simp: cur_tcb_def[symmetric] ako_asid_pools_of)
+           apply (rename_tac p pool pool')
            apply (rule_tac Q'="\<lambda>_ s. invs s \<and>
-                                    (\<exists>high. asid_table s high = Some p \<and>
-                                            vmid_for_asid s (asid_of high (asid_low_bits_of asid)) =
-                                              None)" in hoare_strengthen_post)
-            apply (wp hoare_vcg_ex_lift invalidate_asid_entry_vmid_for_asid)
-           apply (fastforce simp: asid_pools_at_eq ako_asid_pools_of)
-          apply (wp hoare_drop_imp hoare_vcg_all_lift)
+                                     (asid_table s (asid_high_bits_of asid) = Some p \<and>
+                                      asid_map s asid = None)" in hoare_strengthen_post)
+            apply (wp hoare_vcg_ex_lift invalidate_asid_entry_asid_map)
+           apply fastforce
+          apply clarsimp
+          apply (wp hoare_drop_imp)
          apply (wp invalidate_tlb_by_asid_invs hoare_vcg_ex_lift)
         apply wp
        apply (clarsimp, wp)
@@ -1708,35 +1900,16 @@ lemma valid_arch_state_unmap_strg':
   apply (auto simp: ran_def split: if_split_asm option.splits)
   done
 
-crunch invalidateASIDEntry
-  for armKSASIDTable_inv[wp]: "\<lambda>s. P (armKSASIDTable (ksArchState s))"
-  (wp: getObject_inv crunch_wps simp: loadObject_default_def)
-
 lemma is_aligned_asid_low_bits_of_zero:
   "is_aligned asid asid_low_bits \<longleftrightarrow> asid_low_bits_of asid = 0"
   apply (simp add: is_aligned_mask word_eq_iff word_size asid_bits_defs asid_bits_of_defs nth_ucast)
   apply (intro iffI allI; drule_tac x=n in spec; fastforce)
   done
 
-lemma asid_high_bits_of_0[simp]:
-  "asid_high_bits_of 0 = 0"
-  by (simp add: asid_high_bits_of_def)
-
-lemma asid_low_bits_of_0[simp]:
-  "asid_low_bits_of 0 = 0"
-  by (simp add: asid_low_bits_of_def)
-
-lemma invalidate_asid_entry_asid_pool_doms[wp]:
-  "invalidate_asid_entry asid \<lbrace>\<lambda>s. P (asid_pools_of s ||> dom)\<rbrace>"
-  unfolding invalidate_asid_entry_def invalidate_asid_def invalidate_vmid_entry_def
-  apply wpsimp
-  apply (fastforce simp: opt_map_def split: option.splits elim!: rsubst[where P=P])
-  done
-
 lemma valid_asid_table_None_upd:
   "valid_asid_table_2 table pools \<Longrightarrow> valid_asid_table_2 (table(idx := None)) pools"
   unfolding valid_asid_table_2_def
-  by (auto simp: ran_def inj_on_def)
+  by (auto simp: ran_def inj_on_def asid_entry_def)
 
 lemma asid_low_le_mask_asidBits[simp]:
   "UCAST(asid_low_len \<rightarrow> asid_len) asid_low \<le> mask asid_low_bits"
@@ -1753,10 +1926,26 @@ lemma ucast_eq_from_zip_asid_low_bits:
                    asid_low_bits_def unat_of_nat_eq ucast_of_nat is_down ucast_of_nat_small)
   done
 
+lemma modify_armKSASIDTable_None_corres[corres]:
+  "asid_high' = ucast asid_high \<Longrightarrow>
+   corres dc
+          (\<lambda>s. table = asid_table s \<and> (\<forall>asid_low. asid_map s (asid_of asid_high asid_low) = None))
+          (\<lambda>s. table' = armKSASIDTable (ksArchState s))
+          (modify (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := table(asid_high := None)\<rparr>\<rparr>))
+          (modify (\<lambda>s. s\<lparr>ksArchState := armKSASIDTable_update (\<lambda>_. table'(asid_high' := None)) (ksArchState s)\<rparr>))"
+  apply (rule corres_modify)
+  apply (clarsimp simp: state_relation_def arch_state_relation_def simp del: fun_upd_apply)
+  apply (fastforce simp: vmid_for_asid_2'_def obind_def up_ucast_inj_eq)
+  done
+
+crunch invalidateASIDEntry, invalidateTLBByASID
+  for asidTable[wp]: "\<lambda>s. P (armKSASIDTable (ksArchState s))"
+  (wp: getASID_wp crunch_wps)
+
 lemma deleteASIDPool_corres:
   assumes "base' = ucast base" "ptr' = ptr"
   shows "corres dc (invs and K (is_aligned base asid_low_bits) and asid_pool_at ptr)
-                   (no_0_obj')
+                   no_0_obj'
                    (delete_asid_pool base ptr) (deleteASIDPool base' ptr)"
   using assms
   apply (simp add: delete_asid_pool_def deleteASIDPool_def)
@@ -1765,7 +1954,8 @@ lemma deleteASIDPool_corres:
              apply (rule_tac P="\<lambda>s. invs s \<and> pool_for_asid base s = Some ptr \<and>
                                     (asid_pools_of s ||> dom) ptr = Some (dom pool) \<and>
                                     is_aligned base asid_low_bits"
-                             and P'="no_0_obj'" in corres_mapM_x')
+                             and P'="no_0_obj'"
+                             in corres_mapM_x')
                 (* mapM_x body *)
                 apply corres
                    (* "when" condition *)
@@ -1781,20 +1971,17 @@ lemma deleteASIDPool_corres:
                                  dest!: set_zip_leftD)
                  apply (rule conjI, fastforce)
                  apply (clarsimp simp flip: word_neq_0_conv mask_2pm1)
-                 apply (prop_tac "valid_asid_map s", fastforce)
+                 apply (prop_tac "valid_asid_table s", fastforce)
                  apply (prop_tac "base = 0 \<and> low = 0")
                   apply (simp add: asid_low_bits_def)
                   apply (subst (asm) word_plus_and_or_coroll, word_eqI, force)
                   apply (fastforce simp: word_or_zero)
-                 apply (clarsimp simp: valid_asid_map_def entry_for_asid_def obind_None_eq
-                                       pool_for_asid_def entry_for_pool_def in_omonad)
+                 apply (clarsimp simp: valid_asid_table_def asid_entry_def obind_None_eq in_omonad)
                  apply blast
                 apply fastforce
                apply (wpsimp wp: invalidate_tlb_by_asid_invs)+
              apply (simp add: mask_def asid_low_bits_def)
-            apply (corres' \<open>fastforce simp: asid_high_bits_of_def asid_low_bits_def up_ucast_inj_eq
-                                            state_relation_def arch_state_relation_def\<close>
-                           corres: corres_modify_tivial)
+            apply (corres)
            (* mapM_x wp conditions *)
            apply (rename_tac table table' pool pool')
            apply (rule hoare_strengthen_post)
@@ -1802,16 +1989,20 @@ lemma deleteASIDPool_corres:
                                    pool_for_asid base s = Some ptr \<and>
                                    (asid_pools_of s ||> dom) ptr = Some (dom pool)" and
                             V="\<lambda>xs s. \<forall>asid_low \<in> set xs.
-                                         vmid_for_asid s (asid_of (asid_high_bits_of base)
-                                                                  (ucast asid_low)) = None"
+                                         asid_map s (asid_of (asid_high_bits_of base)
+                                                             (ucast asid_low)) = None"
                             in mapM_x_inv_wp3)
-            apply (wpsimp wp: invalidate_asid_entry_vmid_for_asid_add hoare_vcg_op_lift
+            apply (wpsimp wp: invalidate_asid_entry_asid_map_add hoare_vcg_op_lift
                               invalidate_tlb_by_asid_invs)
             apply (rule conjI; clarsimp)
              apply (drule arg_cong[where f=set], drule sym[where t="set xs" for xs])
              apply fastforce
-            apply (clarsimp simp: vmid_for_asid_def obind_None_eq)
+            apply (prop_tac "valid_asid_map s", fastforce)
+            apply (clarsimp simp: valid_asid_map_def)
             apply (rule ccontr)
+            apply clarsimp
+            apply (drule bspec, fastforce)
+            apply (clarsimp simp: vspace_for_asid_def entry_for_asid_def)
             apply (clarsimp simp: entry_for_pool_def in_omonad pool_for_asid_def)
             apply (fastforce dest: dom_eq_All)
            (* mapM_x invariant implies post condition;
@@ -1827,7 +2018,7 @@ lemma deleteASIDPool_corres:
            apply (fastforce simp: ucast_up_ucast_id is_up)
           apply (wpsimp wp: mapM_x_wp' getASID_wp)+
    apply (fastforce simp: is_aligned_asid_low_bits_of_zero pool_for_asid_def in_omonad)
-  apply (clarsimp simp: is_aligned_asid_low_bits_of_zero)
+  apply (fastforce simp: is_aligned_asid_low_bits_of_zero valid_asid_table'_def ran_def dom_def)
   done
 
 crunch setVMRoot
@@ -1957,10 +2148,12 @@ crunch unmapPage
   (wp: crunch_wps simp: crunch_simps)
 
 lemma vs_lookup_slot_vspace_for_asidD:
-  "\<lbrakk> vs_lookup_slot level asid vref s = Some (level, slot); level \<le> max_pt_level; valid_asid_map s \<rbrakk>
+  "\<lbrakk> vs_lookup_slot level asid vref s = Some (level, slot); level \<le> max_pt_level;
+     valid_asid_table s \<rbrakk>
    \<Longrightarrow> vspace_for_asid asid s \<noteq> None"
   by (fastforce simp: vs_lookup_slot_def vs_lookup_table_def vspace_for_asid_def in_omonad
-                      valid_asid_map_def entry_for_asid_def vspace_for_pool_def obind_None_eq
+                      valid_asid_table_def entry_for_asid_def vspace_for_pool_def obind_None_eq
+                      asid_entry_def entry_for_pool_def pool_for_asid_def
                 simp flip: word_neq_0_conv
                 split: if_split_asm)
 
@@ -2162,6 +2355,46 @@ definition
   | VCPUWriteRegister v _ _ \<Rightarrow> \<top>
   | VCPUAckVPPI v _ \<Rightarrow> \<top>"
 
+lemma setObject_ASIDPool_Some_vspace_corres[corres]:
+  "\<lbrakk>asid_low' = ucast (asid_low_bits_of asid); vs' = vs; asid_pool_relation pool (ASIDPool pool')\<rbrakk>
+   \<Longrightarrow> corres dc
+              (\<lambda>s. asid_pools_of s p = Some pool \<and> pool (asid_low_bits_of asid) = None)
+              (\<lambda>s. ko_at' (ASIDPool pool') p s)
+              (set_asid_pool p (pool(asid_low_bits_of asid \<mapsto> asid_pool_entry.ASIDPoolVSpace vs)))
+              (setObject p (ASIDPool (pool'(asid_low' \<mapsto> ASIDPoolVSpace None vs'))))"
+  apply (rule corres_assume_pre)
+  apply (prop_tac "pool' (ucast (asid_low_bits_of asid)) = None")
+   apply (fastforce simp: asid_pool_relation_def)
+  apply clarsimp
+  apply (thin_tac "_ \<in> state_relation")
+  apply (thin_tac "asid_pools_of _ _ = Some _")
+  apply (thin_tac "ko_at' _ _ _")
+  apply (simp add: set_asid_pool_def)
+  apply (rule corres_underlying_symb_exec_l[where P=P and Q="\<lambda>_. P" for P])
+    apply (rule corres_no_failI; wpsimp)
+    apply (clarsimp simp: gets_map_def bind_def simpler_gets_def assert_opt_def fail_def return_def
+                          obj_at_def in_omonad
+                    split: option.splits)
+   prefer 2
+   apply wpsimp
+  apply (rule corres_guard_imp)
+    apply (rule setObject_other_arch_corres[where P="\<lambda>ko. ko = ASIDPool pool'"])
+           apply simp
+          apply (clarsimp simp: obj_at'_def)
+          apply (erule map_to_ctes_upd_other, simp, simp)
+         apply (simp add: a_type_def is_other_obj_relation_type_def)
+        apply (simp add: objBits_simps)+
+       apply (simp add: objBits_simps pageBits_def)+
+     apply (drule ko_at_asid_pools_of')
+     apply (fastforce simp: arch_state_relation_def vmid_for_asid_2'_def obind_def in_omonad
+                            vmids_of_pool'_def opt_map_def
+                      split: option.split)
+    apply (fastforce simp: other_aobj_relation_def asid_pool_relation_def up_ucast_inj_eq
+                           abs_asid_entry_def)
+   apply (simp add: obj_at_def in_omonad)
+  apply (simp add: typ_at'_def obj_at'_def ko_wp_at'_def)
+  done
+
 lemma performASIDPoolInvocation_corres[corres]:
   "\<lbrakk> ap' = asid_pool_invocation_map ap \<rbrakk> \<Longrightarrow>
    corres dc
@@ -2171,17 +2404,18 @@ lemma performASIDPoolInvocation_corres[corres]:
           (performASIDPoolInvocation ap')"
   apply (clarsimp simp: perform_asid_pool_invocation_def performASIDPoolInvocation_def)
   apply (cases ap, simp add: asid_pool_invocation_map_def)
+  apply (rename_tac asid ap_ptr slot)
   apply (corres corres: getSlotCap_corres corres_assert_gen_asm_l updateCap_same_master
                 simp: liftM_def store_asid_pool_entry_def
+                wp: getASID_wp set_cap_typ_at get_cap_wp
+                    hoare_vcg_imp_lift'[where f="set_cap p cap" for p cap]
                 term_simp: cap.is_ArchObjectCap_def arch_cap.is_PageTableCap_def
                            update_map_data_def)
-          apply (fastforce simp: asid_pool_relation_def abs_asid_entry_def cap.is_ArchObjectCap_def
-                                 arch_cap.is_PageTableCap_def inv_def ucast_up_inj)
-         apply (wpsimp wp: set_cap_typ_at hoare_drop_imp get_cap_wp)+
    apply (clarsimp simp: valid_apinv_def cte_wp_at_caps_of_state cap_master_cap_simps is_cap_simps
-                         arch_cap.is_PageTableCap_def is_vsroot_cap_def update_map_data_def in_omonad)
+                         arch_cap.is_PageTableCap_def is_vsroot_cap_def update_map_data_def
+                         in_omonad)
    apply (drule (1) caps_of_state_valid_cap)
-   apply (simp add: valid_cap_def obj_at_def)
+   apply (simp add: valid_cap_def obj_at_def asid_low_bits_of_def)
   apply (clarsimp simp: valid_apinv'_def cte_wp_at_ctes_of)
   apply (fastforce intro!: pspace_aligned_cross pspace_distinct_cross)
   done

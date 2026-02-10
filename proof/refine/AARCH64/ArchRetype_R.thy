@@ -1014,17 +1014,21 @@ lemma retype_state_relation[Retype_R_2_assms]:
   have nc_dis: "distinct (new_cap_addrs m ptr ko)"
     by (rule new_cap_addrs_distinct [OF cover'])
 
+  have ksPSpace_None:
+    "\<And>p. p \<in> set (new_cap_addrs m ptr ko) \<Longrightarrow> ksPSpace s' p = None"
+    apply (drule subsetD [OF new_cap_addrs_subset [OF cover']])
+    apply (insert pspace_no_overlap_disjoint'[OF vs'(1) pn'])
+    apply (drule orthD1)
+     apply (simp add:ptr_add_def field_simps)
+    apply clarsimp
+    done
+
   note nc_al = bspec [OF new_cap_addrs_aligned [OF al']]
   note nc_al' = nc_al[unfolded objBits_def]
   show "null_filter' (map_to_ctes ?ps') = null_filter' (ctes_of s')"
     apply (rule null_filter_ctes_retype [OF ko vs' pa'' pd''])
      apply (simp add: nc_al)
-    apply clarsimp
-    apply (drule subsetD [OF new_cap_addrs_subset [OF cover']])
-    apply (insert pspace_no_overlap_disjoint'[OF vs'(1) pn'])
-    apply (drule orthD1)
-      apply (simp add:ptr_add_def field_simps)
-    apply clarsimp
+    apply (clarsimp simp: ksPSpace_None)
     done
 
   show "valid_objs s" using vs
@@ -1206,11 +1210,32 @@ lemma retype_state_relation[Retype_R_2_assms]:
     using retype_ready_queues_relation[OF _ vs' pn' ko cover num_r]
     by (clarsimp simp: ready_queues_relation_def Let_def)
 
-  have asr: "(arch_state s, ksArchState s') \<in> arch_state_relation" using sr
-    by (blast dest: state_relationD)
+  have [dest!]:
+    "\<And>pool. (makeObjectKO dev d ty = Some (KOArch (KOASIDPool (asidpool.ASIDPool pool)))) \<Longrightarrow>
+             (pool = Map.empty)"
+    by (simp add: makeObjectKO_def makeObject_asidpool const_def
+             split: sum.splits kernel_object.splits arch_kernel_object.splits object_type.splits
+                    apiobject_type.splits if_splits)
 
-  thus "(arch_state s, ksArchState ?t') \<in> arch_state_relation"
-    using asr
+  from ko
+  have vmid_for_asid':
+    "\<And>table.
+       (\<lambda>asid::AARCH64_A.asid. vmid_for_asid_2' (ucast asid) table
+                                                (asid_pools_of' s' ||> vmids_of_pool')) =
+       (\<lambda>asid. vmid_for_asid_2' (ucast asid) table
+                                (?ps' |> aobj_of' |> asid_pool_of' ||> vmids_of_pool'))"
+    apply (simp add: foldr_upd_app_if[folded data_map_insert_def])
+    apply (rule ext, rename_tac asid)
+    apply (clarsimp simp: vmid_for_asid_2'_def obind_def split: option.split)
+    apply (fastforce simp: in_omonad in_opt_map_None_eq ksPSpace_None vmids_of_pool'_def
+                     split: if_splits)
+    done
+
+  moreover
+  have asr: "(arch_state s, ksArchState s') \<in> arch_state_relation (aobjs_of' s')" using sr
+    by (blast dest: state_relationD)
+  ultimately
+  show "(arch_state s, ksArchState ?t') \<in> arch_state_relation (?ps' |> aobj_of')"
     by (clarsimp simp: arch_state_relation_def update_gs_def comp_def
                  split: Structures_A.apiobject_type.splits aobject_type.splits)
 qed

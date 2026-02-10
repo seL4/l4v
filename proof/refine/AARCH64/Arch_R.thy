@@ -112,6 +112,34 @@ lemma set_cap_device_and_range_aligned:
   apply (wp set_cap_device_and_range)
   done
 
+crunch cteInsert
+  for aobjs_of'[wp]: "\<lambda>s. P (aobjs_of' s)"
+  (wp: crunch_wps)
+
+lemma createObjects'_ap:
+  "\<lbrace>\<lambda>s. pspace_no_overlap' p sz s \<and> valid_pspace' s \<and> range_cover p sz pageBits (Suc 0)\<rbrace>
+   createObjects' p (Suc 0) (KOArch (KOASIDPool makeObject)) 0
+   \<lbrace>\<lambda>_ s. asid_pools_of' s p = Some (\<lambda>x. None)\<rbrace>"
+  apply (rule hoare_assume_pre)
+  apply (rule createObjects'_wp_subst)
+  apply (rule hoare_chain)
+    apply (rule hoare_vcg_conj_lift)
+     apply (rule createObjects_ko_at[where val="makeObject::asidpool"]; simp?)
+     apply (fastforce simp add: objBitsKO_def archObjSize_def)
+    apply (rule createObjects_ret; (simp add: word_bits_def)?)
+   apply simp
+  apply (clarsimp simp: makeObject_asidpool const_def ko_at_asid_pools_of')
+  done
+
+lemma vmid_for_asid'_new_ap:
+  "\<lbrakk> asid_pools_of' s' ap = Some Map.empty; armKSASIDTable (ksArchState s') asid_high = None \<rbrakk> \<Longrightarrow>
+   armKSASIDMap' (ksArchState s') (aobjs_of' s') =
+   (\<lambda>asid. vmid_for_asid_2' (ucast asid)
+                            ((armKSASIDTable (ksArchState s'))(asid_high \<mapsto> ap))
+                            (asid_pools_of' s' ||> vmids_of_pool'))"
+  by (auto simp: vmid_for_asid_2'_def obind_def in_omonad vmids_of_pool'_def
+           split: option.split)
+
 lemma performASIDControlInvocation_corres:
   "asid_ci_map i = i' \<Longrightarrow>
   corres dc
@@ -168,12 +196,15 @@ lemma performASIDControlInvocation_corres:
               apply (simp add: is_aligned_mask dc_def[symmetric])
               apply (rule corres_split[where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t = t' o ucast"])
                  apply (clarsimp simp: state_relation_def arch_state_relation_def)
-                apply (rule corres_trivial)
-                apply (rule corres_modify)
-                apply (thin_tac "x \<in> state_relation" for x)
-                apply (clarsimp simp: state_relation_def arch_state_relation_def o_def)
-                apply (rule ext)
-                apply (clarsimp simp: up_ucast_inj_eq)
+                apply (thin_tac "(s, s') \<in> state_relation")
+                apply (rule_tac P="\<lambda>s. arm_asid_table (arch_state s) (asid_high_bits_of word2) = None"
+                            and P'="\<lambda>s'. asid_pools_of' s' word1 = Some Map.empty \<and>
+                                         asidTable = armKSASIDTable (ksArchState s')"
+                             in corres_modify)
+                apply (rename_tac t t')
+                apply (clarsimp simp: state_relation_def arch_state_relation_def o_def up_ucast_inj_eq)
+                apply (fold fun_upd_apply)[1]
+                apply (erule (1) vmid_for_asid'_new_ap)
                apply wp+
            apply (strengthen safe_parent_strg[where idx = "2^pageBits"])
            apply (strengthen invs_valid_objs invs_distinct
@@ -191,9 +222,10 @@ lemma performASIDControlInvocation_corres:
           apply (clarsimp simp:valid_cap'_def)
           apply (wp createObject_typ_at'
                     createObjects_orig_cte_wp_at'[where sz = pageBits])
-          apply (rule descendants_of'_helper)
-          apply (wp createObjects_null_filter'
-                    [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
+          apply (wp (once) descendants_of'_helper)
+           apply (wp createObjects_null_filter'
+                     [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
+          apply (wp createObjects'_ap)
          apply (clarsimp simp: conj_comms obj_bits_api_def arch_kobj_size_def
                                objBits_simps default_arch_object_def pred_conj_def)
          apply (clarsimp simp: conj_comms
@@ -282,7 +314,8 @@ lemma performASIDControlInvocation_corres:
     apply fastforce
    apply (clarsimp simp: is_simple_cap_arch_def)
    apply (rule conjI, clarsimp)
-   apply (rule conjI, clarsimp simp: clear_um_def)
+   apply (rule conjI, clarsimp simp: clear_um_def) (* asid_table *)
+   apply (rule conjI, clarsimp simp: clear_um_def) (* descendants_of *)
    apply (simp add:detype_clear_um_independent)
    apply (rule conjI)
     apply clarsimp
@@ -314,10 +347,11 @@ lemma performASIDControlInvocation_corres:
          simp_all add: is_simple_cap'_def isCap_simps descendants_range'_def2
                        null_filter_descendants_of'[OF null_filter_simp']
                        capAligned_def asid_low_bits_def)
-       apply (erule descendants_range_caps_no_overlapI')
-        apply (fastforce simp:cte_wp_at_ctes_of is_aligned_neg_mask_eq)
-       apply (simp add:empty_descendants_range_in')
-      apply (simp add:word_bits_def bit_simps)
+        apply (erule descendants_range_caps_no_overlapI')
+         apply (fastforce simp:cte_wp_at_ctes_of is_aligned_neg_mask_eq)
+        apply (simp add:empty_descendants_range_in')
+       apply (simp add:word_bits_def bit_simps)
+      apply (simp add: range_cover_def word_and_mask_shift_eq_0 pageBits_def)
      apply (rule is_aligned_weaken)
       apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
      apply (simp add:pageBits_def)

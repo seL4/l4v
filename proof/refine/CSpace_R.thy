@@ -826,7 +826,7 @@ lemma set_cap_not_quite_corres':
   "valid_objs s" "pspace_aligned s" "pspace_distinct s" "cte_at p s"
   "pspace_aligned' s'" "pspace_distinct' s'"
   "interrupt_state_relation (interrupt_irq_node s) (interrupt_states s) (ksInterruptState s')"
-  "(arch_state s, ksArchState s') \<in> arch_state_relation"
+  "(arch_state s, ksArchState s') \<in> arch_state_relation (aobjs_of' s')"
   assumes c: "cap_relation c c'"
   assumes p: "p' = cte_map p"
   shows "\<exists>t. ((),t) \<in> fst (set_cap c p s) \<and>
@@ -838,7 +838,7 @@ lemma set_cap_not_quite_corres':
              is_original_cap t = is_original_cap s \<and>
              interrupt_state_relation (interrupt_irq_node t) (interrupt_states t)
                                       (ksInterruptState t') \<and>
-             (arch_state t, ksArchState t') \<in> arch_state_relation \<and>
+             (arch_state t, ksArchState t') \<in> arch_state_relation (aobjs_of' t') \<and>
              cur_thread t = ksCurThread t' \<and>
              idle_thread t = ksIdleThread t' \<and>
              machine_state t = ksMachineState t' \<and>
@@ -5316,6 +5316,7 @@ lemma updateCap_same_master:
         prefer 2
         apply (rule conjI)
          prefer 2
+         apply (frule in_setCTE_aobjs_of')
          apply (frule setCTE_pspace_only)
          apply clarsimp
          apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
