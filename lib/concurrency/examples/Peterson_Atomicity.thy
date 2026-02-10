@@ -52,16 +52,18 @@ text \<open>
 
 datatype label = Awaiting | Critical | Exited
 
-record ('a, 'b) p_state =
+record ('b, 'c) p_state = "unit monad_state_record" +
   ab_v :: "ident \<Rightarrow> bool"
   ab_label :: "ident \<Rightarrow> label"
   t_v :: "ident"
-  cs1_v :: "'a"
-  cs2_v :: "'b"
+  cs1_v :: "'b"
+  cs2_v :: "'c"
+
+type_synonym ('b, 'c, 'a) pmonad = "(unit, ('b, 'c, unit) p_state_ext, 'a) tmonad"
 
 locale mx_locale =
   fixes cs1 :: "'b \<Rightarrow> 'a"
-    and cs2 :: "(('a, 'b) p_state, unit) tmonad"
+    and cs2 :: "('a, 'b, unit) pmonad"
     and csI :: "'b \<Rightarrow> bool"
 begin
 
@@ -74,7 +76,7 @@ definition set_label :: "ident \<Rightarrow> label \<Rightarrow> ('a, 'b) p_stat
 definition locked :: "ident \<Rightarrow> ('a, 'b) p_state \<Rightarrow> bool" where
   "locked ident s = (ab_v s (other_ident ident) \<longrightarrow> t_v s = ident)"
 
-definition acquire_lock :: "ident \<Rightarrow> (('a, 'b) p_state, unit) tmonad" where
+definition acquire_lock :: "ident \<Rightarrow> ('a, 'b, unit) pmonad" where
   "acquire_lock ident = do
      interference;
      modify (set_ab ident True);
@@ -85,7 +87,7 @@ definition acquire_lock :: "ident \<Rightarrow> (('a, 'b) p_state, unit) tmonad"
      modify (set_label ident Critical)
    od"
 
-definition release_lock :: "ident \<Rightarrow> (('a, 'b) p_state, unit) tmonad" where
+definition release_lock :: "ident \<Rightarrow> ('a, 'b, unit) pmonad" where
   "release_lock ident = do
      modify (set_ab ident False);
      modify (set_label ident Exited);
@@ -93,7 +95,7 @@ definition release_lock :: "ident \<Rightarrow> (('a, 'b) p_state, unit) tmonad"
      return ()
    od"
 
-definition abs_critical_section :: "(('a, 'b) p_state, unit) tmonad" where
+definition abs_critical_section :: "('a, 'b, unit) pmonad" where
   "abs_critical_section = do
      interferences;
      modify (\<lambda>s. s \<lparr> cs1_v := cs1 (cs2_v s) \<rparr>);
@@ -101,14 +103,14 @@ definition abs_critical_section :: "(('a, 'b) p_state, unit) tmonad" where
      interference
    od"
 
-definition abs_peterson_proc :: "ident \<Rightarrow> (('a, 'b) p_state, unit) tmonad" where
+definition abs_peterson_proc :: "ident \<Rightarrow> ('a, 'b, unit) pmonad" where
   "abs_peterson_proc ident = do
      acquire_lock ident;
      abs_critical_section;
      release_lock ident
    od"
 
-definition critical_section :: "(('a, 'b) p_state, unit) tmonad" where
+definition critical_section :: "('a, 'b, unit) pmonad" where
   "critical_section = do
      interference;
      modify (\<lambda>s. s \<lparr> cs1_v := cs1 (cs2_v s) \<rparr>);
@@ -117,12 +119,28 @@ definition critical_section :: "(('a, 'b) p_state, unit) tmonad" where
      interference
    od"
 
-definition peterson_proc :: "ident \<Rightarrow> (('a, 'b) p_state, unit) tmonad" where
+definition peterson_proc :: "ident \<Rightarrow> ('a, 'b, unit) pmonad" where
   "peterson_proc ident = do
      acquire_lock ident;
      critical_section;
      release_lock ident
    od"
+
+(* FIXME: temporary simp rules for dealing with const_env *)
+declare is_const_env_id[simp]
+
+lemma is_const_env_compose[simp]:
+  "is_const_env f \<Longrightarrow> is_const_env g \<Longrightarrow> is_const_env (\<lambda>s. f (g s))"
+  by (clarsimp simp: is_const_env_def)
+
+lemma [simp]:
+  "\<And>f. is_const_env (cs1_v_update f)"
+  "\<And>f. is_const_env (cs2_v_update f)"
+  "\<And>f. is_const_env (t_v_update f)"
+  "\<And>ident trying. is_const_env (set_ab ident trying)"
+  "\<And>ident label. is_const_env (set_label ident label)"
+  "\<And>f. is_const_env (\<lambda>s. s\<lparr>cs1_v := f(cs2_v s)\<rparr>)"
+  by (auto simp: is_const_env_def set_ab_def set_label_def)+
 
 abbreviation "critical label \<equiv> label = Critical"
 
@@ -515,7 +533,7 @@ lemma acquire_lock_wp:
   apply (subst (asm) peterson_rel_imp_label, assumption+)
   apply (drule(1) peterson_rel_imp_invs)
   apply (drule(1) peterson_rel_trans)
-  apply (thin_tac "peterson_rel (other_ident ident) s'a x")
+  apply (thin_tac "peterson_rel (other_ident ident) s'a s'b")
   apply (frule peterson_rel_set_label)
    apply (fastforce simp: set_label_def set_ab_def
                           locked_def invs_def invs_defs)
