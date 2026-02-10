@@ -1734,6 +1734,12 @@ lemma ctes_of_valid:
 
 context CSpace1_R begin
 
+lemma in_setCTE_aobjs_of':
+  "(rv, s') \<in> fst (setCTE p v s) \<Longrightarrow> aobjs_of' s' =  aobjs_of' s"
+  apply (clarsimp simp: setCTE_def)
+  apply (drule use_valid[OF _ setObject_cte_aobjs_of']; fastforce)
+  done
+
 lemma set_cap_not_quite_corres:
   assumes cr:
   "pspace_relation (kheap s) (ksPSpace s')"
@@ -1750,7 +1756,7 @@ lemma set_cap_not_quite_corres:
   "valid_objs s" "pspace_aligned s" "pspace_distinct s" "cte_at p s"
   "pspace_aligned' s'" "pspace_distinct' s'"
   "interrupt_state_relation (interrupt_irq_node s) (interrupt_states s) (ksInterruptState s')"
-  "(arch_state s, ksArchState s') \<in> arch_state_relation"
+  "(arch_state s, ksArchState s') \<in> arch_state_relation (aobjs_of' s')"
   assumes c: "cap_relation c c'"
   assumes p: "p' = cte_map p"
   shows "\<exists>t. ((),t) \<in> fst (set_cap c p s) \<and>
@@ -1762,7 +1768,7 @@ lemma set_cap_not_quite_corres:
              is_original_cap t = is_original_cap s \<and>
              interrupt_state_relation (interrupt_irq_node t) (interrupt_states t)
                               (ksInterruptState t') \<and>
-             (arch_state t, ksArchState t') \<in> arch_state_relation \<and>
+             (arch_state t, ksArchState t') \<in> arch_state_relation (aobjs_of' t') \<and>
              cur_thread t = ksCurThread t' \<and>
              idle_thread t = ksIdleThread t' \<and>
              machine_state t = ksMachineState t' \<and>
@@ -1780,6 +1786,7 @@ lemma set_cap_not_quite_corres:
     apply simp
     apply (rule c)
    apply (rule p)
+  apply (frule in_setCTE_aobjs_of')
   apply (erule exEI)
   apply clarsimp
   apply (frule setCTE_pspace_only)
@@ -2931,6 +2938,9 @@ lemma maxFreeIndex_eq[simp]:
 
 context CSpace1_R_2 begin
 
+crunch updateMDB
+  for aobjs_of'[wp]: "\<lambda>s. P (aobjs_of' s)"
+
 lemma updateMDB_the_lot:
   fixes s :: "det_state"
   assumes "(x, s'') \<in> fst (updateMDB p f s')"
@@ -2957,6 +2967,7 @@ lemma updateMDB_the_lot:
          ksDomainTime s''       = ksDomainTime s' \<and>
          tcbSchedNexts_of s''   = tcbSchedNexts_of s' \<and>
          tcbSchedPrevs_of s''   = tcbSchedPrevs_of s' \<and>
+         aobjs_of' s''        = aobjs_of' s' \<and>
          (\<forall>domain priority.
             (inQ domain priority |< tcbs_of' s'') = (inQ domain priority |< tcbs_of' s'))"
   using assms
@@ -2997,6 +3008,7 @@ lemma updateMDB_the_lot':
          ksDomainTime s''       = ksDomainTime s' \<and>
          tcbSchedNexts_of s''   = tcbSchedNexts_of s' \<and>
          tcbSchedPrevs_of s''   = tcbSchedPrevs_of s' \<and>
+         aobjs_of' s''        = aobjs_of' s' \<and>
          (\<forall>domain priority.
             (inQ domain priority |< tcbs_of' s'') = (inQ domain priority |< tcbs_of' s'))"
   by (rule updateMDB_the_lot; fastforce intro: assms)
@@ -3079,6 +3091,7 @@ lemma setCTE_UntypedCap_corres:
     apply (clarsimp simp: cdt_list_relation_def cte_wp_at_ctes_of split: if_split_asm)
    apply (rule conjI)
     prefer 2
+    apply (frule in_setCTE_aobjs_of')
     apply (frule setCTE_pspace_only)
     apply clarsimp
     apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
@@ -5886,7 +5899,7 @@ lemma cteSwap_corres:
   apply (thin_tac "ksIdleThread t = p" for t p)+
   apply (thin_tac "pspace_relation s s'" for s s')+
   apply (thin_tac "interrupt_state_relation n s s'" for n s s')+
-  apply (thin_tac "(s,s') \<in> arch_state_relation" for s s')+
+  apply (thin_tac "(s,s') \<in> arch_state_relation aobjs" for s s' aobjs)+
   apply (rule conjI)
    apply (erule (2) ghost_relation_wrapper_set_cap_twice; rule refl)
   apply (thin_tac "ksArchState t = p" for t p)+

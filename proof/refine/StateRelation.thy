@@ -297,7 +297,7 @@ definition state_relation :: "(det_state \<times> kernel_state) set" where
        \<and> cdt_relation (swp cte_at s) (cdt s) (ctes_of s')
        \<and> cdt_list_relation (cdt_list s) (cdt s) (ctes_of s')
        \<and> revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) (ctes_of s')
-       \<and> (arch_state s, ksArchState s') \<in> arch_state_relation
+       \<and> (arch_state s, ksArchState s') \<in> arch_state_relation (aobjs_of' s')
        \<and> interrupt_state_relation (interrupt_irq_node s) (interrupt_states s) (ksInterruptState s')
        \<and> (cur_thread s = ksCurThread s')
        \<and> (idle_thread s = ksIdleThread s')
@@ -344,7 +344,7 @@ lemma state_relationD:
    cdt_relation (swp cte_at s) (cdt s) (ctes_of s') \<and>
    cdt_list_relation (cdt_list s) (cdt s) (ctes_of s') \<and>
    revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) (ctes_of s') \<and>
-   (arch_state s, ksArchState s') \<in> arch_state_relation \<and>
+   (arch_state s, ksArchState s') \<in> arch_state_relation (aobjs_of' s') \<and>
    interrupt_state_relation (interrupt_irq_node s) (interrupt_states s) (ksInterruptState s') \<and>
    cur_thread s = ksCurThread s' \<and>
    idle_thread s = ksIdleThread s' \<and>
@@ -366,7 +366,7 @@ lemma state_relationE [elim?]:
              cdt_relation (swp cte_at s) (cdt s) (ctes_of s') \<and>
              revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) (ctes_of s');
              cdt_list_relation (cdt_list s) (cdt s) (ctes_of s');
-             (arch_state s, ksArchState s') \<in> arch_state_relation;
+             (arch_state s, ksArchState s') \<in> arch_state_relation (aobjs_of' s');
              interrupt_state_relation (interrupt_irq_node s) (interrupt_states s) (ksInterruptState s');
              cur_thread s = ksCurThread s';
              idle_thread s = ksIdleThread s';

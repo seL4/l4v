@@ -259,7 +259,8 @@ crunch arch_switch_to_thread, arch_switch_to_idle_thread
 
 lemma arch_switchToThread_corres:
   "corres dc (valid_arch_state and valid_objs and pspace_aligned and pspace_distinct
-              and valid_vspace_objs and pspace_in_kernel_window and valid_cur_fpu and tcb_at t)
+              and valid_vspace_objs and pspace_in_kernel_window and valid_cur_fpu
+              and valid_asid_map and tcb_at t)
              (no_0_obj')
              (arch_switch_to_thread t) (Arch.switchToThread t)"
   unfolding arch_switch_to_thread_def AARCH64_H.switchToThread_def

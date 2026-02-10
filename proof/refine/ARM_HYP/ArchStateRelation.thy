@@ -175,8 +175,10 @@ definition ghost_relation_wrapper_2 ::
 (* inside Arch locale, we have no need for the wrapper *)
 lemmas ghost_relation_wrapper_def[simp] = ghost_relation_wrapper_2_def
 
-definition arch_state_relation :: "(arch_state \<times> ARM_HYP_H.kernel_state) set" where
-  "arch_state_relation \<equiv> {(s, s') .
+(* aobjs' argument unused on this architecture *)
+definition arch_state_relation ::
+  "(obj_ref \<rightharpoonup> arch_kernel_object) \<Rightarrow> (arch_state \<times> ARM_HYP_H.kernel_state) set" where
+  "arch_state_relation aobjs' \<equiv> {(s, s') .
          arm_asid_table s = armKSASIDTable s' o ucast
        \<and> arm_hwasid_table s = armKSHWASIDTable s'
        \<and> arm_next_asid s = armKSNextASID s'

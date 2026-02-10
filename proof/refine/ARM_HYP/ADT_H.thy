@@ -1563,17 +1563,12 @@ definition
       arm_kernel_vspace = kvspace, arm_us_global_pd = globalpd\<rparr>"
 
 lemma absArchState_correct:
-assumes rel:
-  "(s,s') \<in> state_relation"
-shows
-  "absArchState (ksArchState s') = arch_state s"
-apply (subgoal_tac "(arch_state s, ksArchState s') \<in> arch_state_relation")
- prefer 2
- using rel
- apply (simp add: state_relation_def)
-apply (clarsimp simp add: arch_state_relation_def)
-by (clarsimp simp add: absArchState_def
-             split: ARM_HYP_H.kernel_state.splits)
+  "(s,s') \<in> state_relation \<Longrightarrow> absArchState (ksArchState s') = arch_state s"
+  apply (prop_tac "(arch_state s, ksArchState s') \<in> arch_state_relation (aobjs_of' s')")
+   apply (simp add: state_relation_def)
+  apply (clarsimp simp add: arch_state_relation_def)
+  apply (clarsimp simp add: absArchState_def split: ARM_HYP_H.kernel_state.splits)
+  done
 
 definition absSchedulerAction where
   "absSchedulerAction action \<equiv>

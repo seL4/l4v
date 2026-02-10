@@ -1398,6 +1398,9 @@ crunch updateMDB, updateNewFreeIndex, setCTE
   for rdyq_projs[wp]:
     "\<lambda>s. P (ksReadyQueues s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s) (\<lambda>d p. inQ d p |< tcbs_of' s)"
 
+crunch updateNewFreeIndex
+  for aobjs_of'[wp]: "\<lambda>s. P (aobjs_of' s)"
+
 lemma insertNewCap_corres:
 notes if_cong[cong del] if_weak_cong[cong]
 shows

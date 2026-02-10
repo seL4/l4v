@@ -166,6 +166,17 @@ lemma obj_relation_cut_same_type:
 lemmas obj_at_simps = gen_obj_at_simps is_other_obj_relation_type_def
                       objBits_simps pageBits_def
 
+lemma arch_state_relation_vmids_cong:
+  "aobjs |> asid_pool_of' ||> vmids_of_pool' = aobjs' |> asid_pool_of' ||> vmids_of_pool' \<Longrightarrow>
+  ((s, s') \<in> arch_state_relation aobjs) = ((s, s') \<in> arch_state_relation aobjs')"
+  by (simp add: arch_state_relation_def)
+
+lemma typ_at_asid_pools_of'_None:
+  "\<lbrakk> typ_at' T p s; T \<noteq> ArchT ASIDPoolT \<rbrakk> \<Longrightarrow> asid_pools_of' s p = None"
+  unfolding typ_at'_def ko_wp_at'_def
+  by (clarsimp simp: opt_map_def aobj_of'_def asid_pool_of'_def
+               split: kernel_object.split arch_kernel_object.split)
+
 lemma setObject_other_corres:
   fixes ob' :: "'a :: pspace_storable"
   assumes x: "updateObject ob' = updateObject_default ob'"
@@ -225,6 +236,9 @@ lemma setObject_other_corres:
    apply (insert t)
    apply ((erule disjE
           | clarsimp simp: is_other_obj_relation_type is_other_obj_relation_type_def a_type_def)+)[1]
+  \<comment> \<open>aobjs_of' unchanged\<close>
+  apply (simp add: other_obj_is_ArchObj_isArchT_eq isArch_koTypeOf_aobj_of'[THEN iffD1]
+                   typ_at_aobjs_of'_None)
   \<comment> \<open>ready_queues_relation\<close>
   apply (prop_tac "koTypeOf (injectKO ob') \<noteq> TCBT")
    subgoal
@@ -240,9 +254,13 @@ lemma setObject_other_arch_corres:
                \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO ob')) = map_to_ctes (ksPSpace s)"
   assumes t: "is_other_obj_relation_type (a_type ob)"
   assumes b: "\<And>ko. P ko \<Longrightarrow> objBits ko = objBits ob'"
-  assumes e: "\<And>ko. P ko \<Longrightarrow> exst_same' (injectKO ko) (injectKO ob')"
   assumes P: "\<And>v::'a::pspace_storable. (1 :: machine_word) < 2 ^ objBits v"
   assumes a: "is_ArchObj ob"
+  assumes arch:
+    "\<And>s s'. \<lbrakk> (s, ksArchState s') \<in> arch_state_relation (aobjs_of' s');
+               typ_at' (koTypeOf (injectKO ob')) ptr s'; obj_at' P  ptr s' \<rbrakk> \<Longrightarrow>
+              (s, ksArchState s') \<in>
+                arch_state_relation ((aobjs_of' s')(ptr := aobj_of' (injectKO ob')))"
   shows      "other_aobj_relation ob (injectKO (ob' :: 'a :: pspace_storable)) \<Longrightarrow>
   corres dc (obj_at (\<lambda>ko. a_type ko = a_type ob) ptr and obj_at (same_caps ob) ptr)
             (obj_at' (P :: 'a \<Rightarrow> bool) ptr)
@@ -293,12 +311,43 @@ lemma setObject_other_arch_corres:
    apply (insert t)
    apply ((erule disjE
           | clarsimp simp: is_other_obj_relation_type is_other_obj_relation_type_def a_type_def)+)[1]
+  apply (simp add: arch)
   \<comment> \<open>ready_queues_relation\<close>
   apply (prop_tac "koTypeOf (injectKO ob') \<noteq> TCBT")
    subgoal
      by (clarsimp simp: other_aobj_relation_def; cases ob; cases "injectKO ob'";
          simp split: arch_kernel_obj.split_asm)
   by (fastforce dest: tcbs_of'_non_tcb_update)
+
+lemma setObject_not_asidpool_corres:
+  fixes ob' :: "'a :: pspace_storable"
+  assumes x: "updateObject ob' = updateObject_default ob'"
+  assumes z: "\<And>s. obj_at' P ptr s
+               \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO ob')) = map_to_ctes (ksPSpace s)"
+  assumes t: "is_other_obj_relation_type (a_type ob)"
+  assumes b: "\<And>ko. P ko \<Longrightarrow> objBits ko = objBits ob'"
+  assumes P: "\<And>v::'a::pspace_storable. (1 :: machine_word) < 2 ^ objBits v"
+  assumes a: "is_ArchObj ob"
+  assumes n: "koTypeOf (injectKO ob') \<noteq> ArchT ASIDPoolT"
+  shows      "other_aobj_relation ob (injectKO (ob' :: 'a :: pspace_storable)) \<Longrightarrow>
+  corres dc (obj_at (\<lambda>ko. a_type ko = a_type ob) ptr and obj_at (same_caps ob) ptr)
+            (obj_at' (P :: 'a \<Rightarrow> bool) ptr)
+            (set_object ptr ob) (setObject ptr ob')"
+  apply (rule setObject_other_arch_corres; (rule assms; assumption | assumption)?)
+  apply (subgoal_tac "(aobjs_of' s')(ptr := aobj_of' (injectKO ob')) |> asid_pool_of' =
+                      asid_pools_of' s'")
+   apply (simp add: arch_state_relation_def)
+  apply (frule typ_at_asid_pools_of'_None, rule n)
+  apply (prop_tac "isArchT (koTypeOf (injectKO ob'))")
+   apply (clarsimp simp: other_aobj_relation_def
+                   split: Structures_A.kernel_object.splits arch_kernel_obj.splits
+                          kernel_object.splits arch_kernel_object.splits)
+  apply (clarsimp simp: obj_at'_def typ_at'_def ko_wp_at'_def)
+  apply (case_tac "injectKO ob'"; simp)
+  using n
+  apply (rename_tac ako, case_tac ako; simp)
+  done
+
 
 lemmas [KHeap_R_assms] =
   setObject_other_corres[where 'a=endpoint]

@@ -439,7 +439,7 @@ lemma setObject_PT_corres:
    subgoal by (fastforce dest: tcbs_of'_non_tcb_update)
   apply (simp add: map_to_ctes_upd_other)
   apply (simp add: fun_upd_def)
-  apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
+  apply (clarsimp simp: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
   done
 
 lemma storePTE_corres[corres]:

@@ -406,6 +406,7 @@ lemma corres_caps_decomposition:
              "\<And>P. \<lbrace>\<lambda>s. P (new_ds' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_cd' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_dt' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksDomainTime s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_ao' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (aobjs_of' s)\<rbrace>"
   assumes updated_relations:
     "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
               \<Longrightarrow> cdt_relation ((\<noteq>) None \<circ> new_caps s) (new_mdb s) (new_ctes s')
@@ -416,7 +417,7 @@ lemma corres_caps_decomposition:
                   \<and> sched_act_relation (new_action s) (new_sa' s')
                   \<and> revokable_relation (new_rvk s) (null_filter (new_caps s)) (new_ctes s')
                   \<and> interrupt_state_relation (new_irqn s) (new_irqs s) (new_irqs' s')
-                  \<and> (new_as s, new_as' s') \<in> arch_state_relation
+                  \<and> (new_as s, new_as' s') \<in> arch_state_relation (new_ao' s')
                   \<and> new_ct s = new_ct' s'
                   \<and> new_id s = new_id' s'
                   \<and> new_ms s = new_ms' s'
@@ -470,6 +471,12 @@ proof -
     "\<And>P. \<lbrace>\<lambda>s. P (new_irqn s) (new_irqs s)\<rbrace> f
              \<lbrace>\<lambda>rv s. \<exists>irn. interrupt_irq_node s = irn \<and> P irn (interrupt_states s)\<rbrace>"
     by (wp hoare_vcg_ex_lift updates, simp)
+  have g_as_ao'[wp]:
+    "\<And>P. \<lbrace>\<lambda>s'. P (new_as' s') (new_ao' s')\<rbrace> g \<lbrace>\<lambda>_ s'. P (ksArchState s') (aobjs_of' s')\<rbrace>"
+    apply wp_pre
+     apply (wp updates | wps updates)+
+    apply simp
+    done
   note abs_irq_together = abs_irq_together'[simplified]
   show ?thesis
     unfolding state_relation_def swp_cte_at

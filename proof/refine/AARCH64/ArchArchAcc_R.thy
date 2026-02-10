@@ -19,6 +19,10 @@ lemma asid_pool_at_ko:
   "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (AARCH64_A.ASIDPool pool)) p s"
   by (clarsimp simp: asid_pools_at_eq obj_at_def elim!: opt_mapE)
 
+lemma ko_at_asid_pools_of':
+  "ko_at' (ASIDPool pool) p s \<Longrightarrow> asid_pools_of' s p = Some pool"
+  by (clarsimp simp: obj_at'_def ko_wp_at'_def in_omonad)
+
 lemma corres_gets_asid[corres]:
   "corres (\<lambda>a c. a = c o ucast) \<top> \<top> (gets asid_table) (gets (armKSASIDTable \<circ> ksArchState))"
   by (simp add: state_relation_def arch_state_relation_def)
@@ -163,12 +167,12 @@ lemma pspace_distinct_cross[ArchAcc_R_assms]:
   apply (erule (2) in_empty_interE)
   done
 
-lemma asid_pool_at_cross:
-  "\<lbrakk> asid_pool_at p s; pspace_relation (kheap s) (ksPSpace s');
+lemma asid_pool_of_ko_at'_cross:
+  "\<lbrakk> asid_pools_of s p = Some pool; pspace_relation (kheap s) (ksPSpace s');
      pspace_aligned s; pspace_distinct s \<rbrakk>
-   \<Longrightarrow> asid_pool_at' p s'"
+   \<Longrightarrow> \<exists>pool'. ko_at' (ASIDPool pool') p s' \<and> asid_pool_relation pool (ASIDPool pool')"
   apply (drule (2) pspace_distinct_cross)
-  apply (clarsimp simp: obj_at_def typ_at'_def ko_wp_at'_def)
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def in_omonad)
   apply (prop_tac "p \<in> pspace_dom (kheap s)")
    apply (clarsimp simp: pspace_dom_def)
    apply (rule bexI)
@@ -180,11 +184,18 @@ lemma asid_pool_at_cross:
   apply (clarsimp simp: other_aobj_relation_def objBits_simps
                   split: kernel_object.splits arch_kernel_object.splits)
   apply (frule (1) pspace_alignedD)
-  apply (rule conjI, simp add: bit_simps)
   apply (clarsimp simp: pspace_distinct'_def)
   apply (drule bspec, fastforce)
   apply (simp add: objBits_simps)
+  apply (metis asidpool.exhaust)
   done
+
+lemma asid_pool_at_cross:
+  "\<lbrakk> asid_pool_at p s; pspace_relation (kheap s) (ksPSpace s');
+     pspace_aligned s; pspace_distinct s \<rbrakk>
+   \<Longrightarrow> asid_pool_at' p s'"
+  by (fastforce simp: asid_pools_at_eq typ_at'_def ko_wp_at'_def obj_at'_def
+                dest!: asid_pool_of_ko_at'_cross)
 
 lemma corres_cross_over_asid_pool_at:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> asid_pool_at p s \<and> pspace_distinct s \<and> pspace_aligned s;
@@ -228,6 +239,15 @@ lemma getObject_ASIDPool_corres[corres]:
   apply (clarsimp simp: other_aobj_relation_def)
   done
 
+lemma setObject_asidpool_wp:
+  "\<lbrace>\<lambda>s. asid_pool_at' p s \<and>
+        Q () (ksPSpace_update (\<lambda>ps. ps(p \<mapsto> KOArch (KOASIDPool v))) s)\<rbrace>
+   setObject p v
+   \<lbrace>Q\<rbrace>"
+  apply (wpsimp wp: setObject_default_wp simp: objBits_simps bit_simps)
+  apply (simp add: typ_at_to_obj_at_arches)
+  done
+
 lemma storePTE_cte_wp_at'[wp]:
   "storePTE ptr val \<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>"
   apply (simp add: storePTE_def)
@@ -251,37 +271,6 @@ lemma storePTE_state_hyp_refs_of[wp]:
    \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   by (wpsimp wp: hoare_drop_imps setObject_state_hyp_refs_of_eq
              simp: storePTE_def updateObject_default_def in_monad)
-
-lemma setObject_ASIDPool_corres[corres]:
-  "\<lbrakk> p = p'; a = map_option abs_asid_entry o inv ASIDPool a' o ucast \<rbrakk> \<Longrightarrow>
-  corres dc (asid_pool_at p and pspace_aligned and pspace_distinct) \<top>
-            (set_asid_pool p a) (setObject p' a')"
-  apply (simp add: set_asid_pool_def)
-  apply (rule corres_underlying_symb_exec_l[where P=P and Q="\<lambda>_. P" for P])
-    apply (rule corres_no_failI; clarsimp)
-    apply (clarsimp simp: gets_map_def bind_def simpler_gets_def assert_opt_def fail_def return_def
-                          obj_at_def in_omonad
-                    split: option.splits)
-   prefer 2
-   apply wpsimp
-  apply (rule corres_cross_over_asid_pool_at, fastforce)
-  apply (rule corres_guard_imp)
-    apply (rule setObject_other_arch_corres[where P="\<lambda>ko::asidpool. True"])
-           apply simp
-          apply (clarsimp simp: obj_at'_def)
-          apply (erule map_to_ctes_upd_other, simp, simp)
-         apply (simp add: a_type_def is_other_obj_relation_type_def)
-        apply (simp add: objBits_simps)+
-      apply (simp add: objBits_simps pageBits_def)+
-    apply (simp add: other_aobj_relation_def asid_pool_relation_def)
-   apply (simp add: typ_at'_def obj_at'_def ko_wp_at'_def)
-   apply clarsimp
-   apply (rename_tac arch_kernel_object)
-   apply (case_tac arch_kernel_object; simp)
-   apply (clarsimp simp: obj_at_def exs_valid_def assert_def a_type_def return_def fail_def)
-   apply (auto split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_split_asm)[1]
-  apply (simp add: typ_at_to_obj_at_arches)
-  done
 
 lemma p_le_table_base:
   "is_aligned p pte_bits \<Longrightarrow> p + mask pte_bits \<le> table_base pt_t p + mask (table_size pt_t)"
@@ -438,6 +427,7 @@ lemma setObject_PT_corres:
      apply ((simp split: if_split_asm)+)[2]
     apply (simp add: other_obj_relation_def split: Structures_A.kernel_object.splits)
    apply (simp add: other_aobj_relation_def split: arch_kernel_obj.splits)
+  apply (simp add: typ_at_asid_pools_of'_None cong: arch_state_relation_vmids_cong)
   apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask (pt_bits (pt_type pt))" in allE)+

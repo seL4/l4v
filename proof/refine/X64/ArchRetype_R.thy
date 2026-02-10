@@ -1296,10 +1296,10 @@ lemma retype_state_relation[Retype_R_2_assms]:
     using retype_ready_queues_relation[OF _ vs' pn' ko cover num_r]
     by (clarsimp simp: ready_queues_relation_def Let_def)
 
-  have asr: "(arch_state s, ksArchState s') \<in> arch_state_relation" using sr
-    by (blast dest: state_relationD)
+  have asr: "\<And>aobjs. (arch_state s, ksArchState s') \<in> arch_state_relation aobjs" using sr
+    by (clarsimp dest!: state_relationD)
 
-  thus "(arch_state s, ksArchState ?t') \<in> arch_state_relation"
+  thus "\<And>aobjs. (arch_state s, ksArchState ?t') \<in> arch_state_relation aobjs"
     using asr
     by (clarsimp simp: arch_state_relation_def update_gs_def comp_def
                  split: Structures_A.apiobject_type.splits aobject_type.splits)
