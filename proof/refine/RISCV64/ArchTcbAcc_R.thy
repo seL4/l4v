@@ -46,8 +46,7 @@ lemma st_tcb_at_coerce_abstract[TcbAcc_R_assms]:
   apply (clarsimp simp: state_relation_def pred_tcb_at'_def obj_at'_def objBits_simps)
   apply (erule(1) pspace_dom_relatedE)
   apply (erule(1) obj_relation_cutsE, simp_all)
-  apply (fastforce simp: st_tcb_at_def obj_at_def other_obj_relation_def
-                         tcb_relation_def
+  apply (fastforce simp: st_tcb_at_def obj_at_def other_obj_relation_def tcb_relation_def
                    split: Structures_A.kernel_object.split_asm if_split_asm
                           RISCV64_A.arch_kernel_obj.split_asm)+
   done
@@ -200,18 +199,6 @@ lemma asUser_valid_tcbs'[wp]:
 
 lemmas addToBitmap_typ_ats[wp] = typ_at_lifts[OF addToBitmap_typ_at']
 lemmas removeFromBitmap_typ_ats[wp] = typ_at_lifts[OF removeFromBitmap_typ_at']
-
-lemma threadSet_ghost_relation[wp]:
-  "threadSet f tcbPtr \<lbrace>\<lambda>s'. ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')\<rbrace>"
-  unfolding threadSet_def setObject_def updateObject_default_def
-  apply (wpsimp wp: getObject_tcb_wp simp: updateObject_default_def)
-  apply (clarsimp simp: obj_at'_def)
-  done
-
-lemma removeFromBitmap_ghost_relation[wp]:
-  "removeFromBitmap tdom prio
-   \<lbrace>\<lambda>s'. ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')\<rbrace>"
-  by (rule_tac f=gsUserPages in hoare_lift_Pf2; wpsimp simp: bitmap_fun_defs)
 
 crunch tcbQueueRemove, tcbQueuePrepend, tcbQueueAppend, tcbQueueInsert,
          setQueue, removeFromBitmap
@@ -442,8 +429,7 @@ lemma user_getreg_inv'[TcbAcc_R_2_assms, wp]:
 lemma asUser_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> asUser t m \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: asUser_def split_def)
-  apply (wp hoare_drop_imps | simp)+
-  apply (wp threadSet_invs_trivial hoare_drop_imps | simp)+
+  apply (wpsimp wp: threadSet_invs_trivial threadGet_wp)
   done
 
 (* interface lemma, but can't be done via locale *)
@@ -846,10 +832,10 @@ proof -
                    od)
              (take (unat n) msgRegisters))"
     apply (rule corres_guard_imp)
-    apply (rule_tac S=Id in corres_mapM, simp+)
-        apply (rule corres_split_eqr[OF asUser_getRegister_corres asUser_setRegister_corres])
-        apply (wp | clarsimp simp: msg_registers_def msgRegisters_def)+
-        done
+      apply (rule_tac S=Id in corres_mapM, simp+)
+          apply (rule corres_split_eqr[OF asUser_getRegister_corres asUser_setRegister_corres])
+           apply (wp | clarsimp simp: msg_registers_def msgRegisters_def)+
+    done
 
   have wordSize[simp]: "of_nat wordSize = 8"
     by (simp add: wordSize_def wordBits_def word_size)
@@ -1020,8 +1006,8 @@ lemma tcbQueued_update_iflive'[TcbAcc_R_2_assms, wp]:
 lemma sbn_iflive'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
       \<and> (bound ntfn \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
-     setBoundNotification ntfn t
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
+   setBoundNotification ntfn t
+   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   apply (simp add: setBoundNotification_def)
   apply (rule hoare_pre)
    apply (wp threadSet_iflive' | simp)+
@@ -1099,8 +1085,8 @@ lemma sts_iflive'[TcbAcc_R_3_assms, wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
         \<and> (st \<noteq> Inactive \<and> \<not> idle' st \<longrightarrow> ex_nonz_cap_to' t s)
         \<and> pspace_aligned' s \<and> pspace_distinct' s\<rbrace>
-     setThreadState st t
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
+   setThreadState st t
+   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   apply (simp add: setThreadState_def setQueue_def)
   apply wpsimp
    apply (rule_tac Q'="\<lambda>rv. if_live_then_nonz_cap' and pspace_aligned' and pspace_distinct'"

@@ -86,7 +86,7 @@ lemma getObject_inv:
   shows      "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>(rv :: 'a :: pspace_storable). P\<rbrace>"
   by (simp add: getObject_def split_def | wp x)+
 
-lemma getObject_inv_tcb[wp]:
+lemma getObject_tcb_inv[wp]:
   "\<lbrace>P\<rbrace> getObject l \<lbrace>\<lambda>(_ :: Structures_H.tcb). P\<rbrace>"
   apply (rule getObject_inv)
   apply simp
@@ -125,7 +125,7 @@ lemma corres_get_tcb:
   apply (rule corres_no_failI)
    apply wp
   apply (clarsimp simp add: gets_def get_def return_def bind_def get_tcb_def)
-  apply (frule in_inv_by_hoareD [OF getObject_inv_tcb])
+  apply (frule in_inv_by_hoareD [OF getObject_tcb_inv])
   apply (clarsimp simp add: obj_at_def is_tcb obj_at'_def projectKO_def
                             projectKO_opt_tcb split_def
                             getObject_def loadObject_default_def in_monad)
@@ -719,7 +719,7 @@ lemma setObject_it[wp]:
   done
 
 \<comment>\<open>`idle_tcb_ps val` asserts that `val` is a pspace_storable value
-  which corresponds to an idle TCB.\<close>
+   which corresponds to an idle TCB.\<close>
 definition idle_tcb_ps :: "('a :: pspace_storable) \<Rightarrow> bool" where
   "idle_tcb_ps val \<equiv> (\<exists>tcb. projectKO_opt (injectKO val) = Some tcb \<and> idle_tcb' tcb)"
 
@@ -759,6 +759,13 @@ lemma dmo_return' [simp]:
                    bind_def modify_def put_def)
   done
 
+lemma no_fail_dmo'[wp]:
+  "no_fail P f \<Longrightarrow> no_fail (P o ksMachineState) (doMachineOp f)"
+  apply (simp add: doMachineOp_def split_def)
+  apply (rule no_fail_pre, wp)
+  apply simp
+  apply (simp add: no_fail_def)
+  done
 
 lemma setObject_ko_wp_at:
   fixes v :: "'a :: pspace_storable"
@@ -810,14 +817,6 @@ lemma setObject_idle':
    apply (wp z)
   apply (clarsimp simp add: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def idle_tcb_ps_def)
   apply (clarsimp simp add: project_inject)
-  done
-
-lemma no_fail_dmo'[wp]:
-  "no_fail P f \<Longrightarrow> no_fail (P o ksMachineState) (doMachineOp f)"
-  apply (simp add: doMachineOp_def split_def)
-  apply (rule no_fail_pre, wp)
-  apply simp
-  apply (simp add: no_fail_def)
   done
 
 lemma setEndpoint_nosch[wp]:
@@ -1006,7 +1005,7 @@ lemma setObject_state_refs_of':
 
 lemma set_ep_state_refs_of'[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of' s) (epptr := ep_q_refs_of' ep))\<rbrace>
-     setEndpoint epptr ep
+   setEndpoint epptr ep
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   unfolding setEndpoint_def
   by (wp setObject_state_refs_of',
@@ -1385,8 +1384,7 @@ lemma aligned_distinct_obj_atI':
    \<Longrightarrow> ko_at' v x s"
   apply (simp add: obj_at'_def project_inject pspace_distinct'_def pspace_aligned'_def)
   apply (drule bspec, erule domI)+
-  apply (clarsimp simp: gen_objBits_simps word_bits_def
-                 split: kernel_object.splits)
+  apply clarsimp
   done
 
 lemma aligned'_distinct'_ko_wp_at'I:
@@ -1605,6 +1603,9 @@ lemma setObject_canonical[wp]:
    apply (fastforce dest: bspec[OF _ domI])
   apply (fastforce dest: bspec[OF _ domI])
   done
+
+crunch setEndpoint, setNotification
+  for pspace_canonical'[wp]: "pspace_canonical'"
 
 lemma set_ep_aligned' [wp]:
   "\<lbrace>pspace_aligned'\<rbrace> setEndpoint ep v  \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
@@ -1959,8 +1960,8 @@ declare set_ep_arch' [wp]
 lemma set_ntfn_iflive'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
       \<and> (live' (KONotification v) \<longrightarrow> ex_nonz_cap_to' p s)\<rbrace>
-     setNotification p v
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
+   setNotification p v
+   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   apply (simp add: setNotification_def)
   apply (wp setObject_iflive'[where P="\<top>"])
        apply simp

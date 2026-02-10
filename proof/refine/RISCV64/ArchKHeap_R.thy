@@ -257,36 +257,6 @@ lemma updateObject_objBitsKO:
   apply (erule koType_objBitsKO)
   done
 
-lemma setObject_distinct[wp]:
-  shows     "\<lbrace>pspace_distinct'\<rbrace> setObject p val \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
-  apply (clarsimp simp: setObject_def split_def valid_def in_monad lookupAround2_char1
-                        pspace_distinct'_def ps_clear_upd objBits_def[symmetric]
-                 split: if_split_asm
-                 dest!: updateObject_objBitsKO)
-   apply (fastforce dest: bspec[OF _ domI])
-  apply (fastforce dest: bspec[OF _ domI])
-  done
-
-lemma setObject_aligned[wp]:
-  shows     "\<lbrace>pspace_aligned'\<rbrace> setObject p val \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
-  apply (clarsimp simp: setObject_def split_def valid_def in_monad lookupAround2_char1
-                        pspace_aligned'_def ps_clear_upd objBits_def[symmetric]
-                 split: if_split_asm
-                 dest!: updateObject_objBitsKO)
-   apply (fastforce dest: bspec[OF _ domI])
-  apply (fastforce dest: bspec[OF _ domI])
-  done
-
-lemma setObject_canonical[wp]:
-  shows     "\<lbrace>pspace_canonical'\<rbrace> setObject p val \<lbrace>\<lambda>rv. pspace_canonical'\<rbrace>"
-  apply (clarsimp simp: setObject_def split_def valid_def in_monad lookupAround2_char1
-                        pspace_canonical'_def ps_clear_upd objBits_def[symmetric]
-                 split: if_split_asm
-                 dest!: updateObject_objBitsKO)
-   apply (fastforce dest: bspec[OF _ domI])
-  apply (fastforce dest: bspec[OF _ domI])
-  done
-
 lemma setObject_pspace_in_kernel_mappings'[wp]:
   shows     "\<lbrace>pspace_in_kernel_mappings'\<rbrace> setObject p val \<lbrace>\<lambda>rv. pspace_in_kernel_mappings'\<rbrace>"
   apply (clarsimp simp: setObject_def split_def valid_def in_monad lookupAround2_char1
@@ -297,9 +267,8 @@ lemma setObject_pspace_in_kernel_mappings'[wp]:
   apply (fastforce dest: bspec[OF _ domI])
   done
 
-crunch setEndpoint, getEndpoint, setNotification, getNotification
-  for pspace_canonical'[wp]: "pspace_canonical'"
-  and pspace_in_kernel_mappings'[wp]: "pspace_in_kernel_mappings'"
+crunch setEndpoint, setNotification
+  for pspace_in_kernel_mappings'[wp]: "pspace_in_kernel_mappings'"
 
 declare setEndpoint_pspace_in_kernel_mappings'[KHeap_R_assms]
 
