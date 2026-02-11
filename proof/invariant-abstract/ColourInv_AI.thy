@@ -858,6 +858,400 @@ lemma handle_fault_colour_maintained: (* unfinished before *)
        apply (wpsimp simp: gets_the_def)
   oops
 
+(* Arch-specific ones trivial for RISCV64 - move to appropriate place *)
+
+lemma init_arch_objects_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace>
+    init_arch_objects param_a param_b param_c param_d param_e param_f 
+   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  unfolding RISCV64_A.init_arch_objects_def
+  by blast
+
+lemma arch_post_cap_deletion_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace> arch_post_cap_deletion param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  unfolding RISCV64_A.arch_post_cap_deletion_def
+  by blast
+
+lemma prepare_thread_delete_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace> prepare_thread_delete param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  unfolding RISCV64_A.prepare_thread_delete_def
+  by blast
+
+lemma arch_post_modify_registers_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace> arch_post_modify_registers param_a param_b \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  unfolding RISCV64_A.arch_post_modify_registers_def
+  by blast
+
+lemma arch_mask_irq_signal_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace> arch_mask_irq_signal irq \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  unfolding RISCV64_A.arch_mask_irq_signal_def
+  by blast
+
+lemma handle_reserved_irq_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  unfolding RISCV64_A.handle_reserved_irq_def
+  by blast
+
+(* Failed proofs found by crunch, in order of discovery (all arch ones first, then arch-agnostic).
+   Don't forget to re-check crunch after proving each of these if it required new preconditions,
+   using this crunch command:
+
 crunch call_kernel for colour_maintained: "colour_invariant"
-  (simp: colour_invariant_def obj_at_update)
+  (simp: colour_invariant_def obj_at_update crunch_simps
+     wp: crunch_wps RISCV64.arch_get_sanitise_register_info_inv
+         RISCV64.handle_arch_fault_reply_inv) *)
+
+(* Arch-specific *)
+
+lemma arch_finalise_cap_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace> arch_finalise_cap cap b \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  unfolding RISCV64_A.arch_finalise_cap_def
+  sorry
+
+lemma arch_invoke_irq_control_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace> arch_invoke_irq_control param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  sorry
+
+lemma arch_invoke_irq_handler_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace> arch_invoke_irq_handler param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  sorry
+
+lemma arch_perform_invocation_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace> arch_perform_invocation param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  unfolding RISCV64_A.arch_perform_invocation_def
+  sorry
+
+lemma handle_vm_fault_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace> handle_vm_fault t flt \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  unfolding RISCV64_A.handle_vm_fault_def
+  sorry
+
+lemma handle_hypervisor_fault_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace> handle_hypervisor_fault t flt \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  sorry
+
+(* Arch-agnostic *)
+
+lemma setup_caller_cap_colour_maintained:
+"\<lbrace>colour_invariant and valid_ptr_in_cur_domain param_a and
+ ((\<lambda>s. check_cap_ref
+         (ReplyCap param_a False
+           (if param_c then {AllowGrant, AllowWrite} else {AllowWrite}))
+         (colour_oracle (cur_domain s))) and
+  valid_ptr_in_cur_domain (fst (param_b, tcb_cnode_index 3)) and
+  invs)\<rbrace>
+setup_caller_cap param_a param_b param_c \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  sorry
+
+lemma handle_fault_colour_maintained:
+"\<lbrace>colour_invariant and
+ (valid_ptr_in_cur_domain param_a and
+  (\<lambda>s. let tcb = TCB (tcb_fault_update (\<lambda>_. Some param_b) $ the (get_tcb param_a s))
+        in check_kernel_object_ref tcb (colour_oracle (cur_domain s))) and
+  invs)\<rbrace>
+handle_fault param_a param_b \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  sorry
+
+lemma create_cap_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace> create_cap param_a param_b param_c param_d param_e 
+   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  sorry
+
+lemma invoke_untyped_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace> invoke_untyped param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma blocked_cancel_ipc_colour_maintained:
+  "\<lbrace>colour_invariant and valid_ptr_in_cur_domain param_b\<rbrace>
+   blocked_cancel_ipc param_a param_b \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  sorry
+
+lemma cancel_all_ipc_colour_maintained:
+  "\<lbrace>colour_invariant and valid_ptr_in_cur_domain param_a\<rbrace> cancel_all_ipc param_a 
+   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  sorry
+
+lemma unbind_maybe_notification_colour_maintained:
+  "\<lbrace>colour_invariant and valid_ptr_in_cur_domain param_a\<rbrace> unbind_maybe_notification param_a 
+   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  sorry
+
+lemma cancel_all_signals_colour_maintained:
+  "\<lbrace>colour_invariant and valid_ptr_in_cur_domain param_a\<rbrace> cancel_all_signals param_a 
+   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  sorry
+
+lemma empty_slot_colour_maintained:
+  "\<lbrace>colour_invariant and
+ ((valid_ptr_in_cur_domain $ fst param_a) and
+  (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s))))\<rbrace>
+empty_slot param_a param_b \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma cap_delete_one_colour_maintained:
+  "\<lbrace>colour_invariant and
+ ((valid_ptr_in_cur_domain $ fst param_a) and
+  (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s))))\<rbrace>
+cap_delete_one param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  sorry
+
+lemma reply_cancel_ipc_colour_maintained:
+  "\<lbrace>colour_invariant and valid_ptr_in_cur_domain param_a and
+ (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s)))\<rbrace>
+reply_cancel_ipc param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma cancel_signal_colour_maintained:
+  "\<lbrace>colour_invariant and valid_ptr_in_cur_domain param_b and
+ valid_ptr_in_cur_domain param_a\<rbrace>
+cancel_signal param_a param_b \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma cancel_ipc_colour_maintained:
+  "\<lbrace>colour_invariant and valid_ptr_in_cur_domain param_a and
+ (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s)))\<rbrace>
+cancel_ipc param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma update_waiting_ntfn_colour_maintained:
+  "\<lbrace>colour_invariant and valid_ptr_in_cur_domain param_a\<rbrace>
+update_waiting_ntfn param_a param_b param_c param_d \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma send_signal_colour_maintained:
+  "\<lbrace>colour_invariant and valid_ptr_in_cur_domain param_a and
+ (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s)))\<rbrace>
+send_signal param_a param_b \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma suspend_colour_maintained:
+  "\<lbrace>colour_invariant and
+ (valid_ptr_in_cur_domain param_a and
+  (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s))))\<rbrace>
+suspend param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma setup_reply_master_colour_maintained:
+  "\<lbrace>colour_invariant and
+ ((valid_ptr_in_cur_domain $ fst (param_a, tcb_cnode_index 2)) and
+  (\<lambda>s. check_cap_ref (ReplyCap param_a True {AllowGrant, AllowWrite})
+         (colour_oracle (cur_domain s))))\<rbrace>
+setup_reply_master param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma restart_colour_maintained:
+  "\<lbrace>colour_invariant and
+ (valid_ptr_in_cur_domain param_a and
+  (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s)))) and
+ (\<lambda>s. check_cap_ref (ReplyCap param_a True {AllowGrant, AllowWrite})
+        (colour_oracle (cur_domain s)))\<rbrace>
+restart param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  sorry
+
+lemma option_update_thread_colour_maintained:
+  "\<lbrace>colour_invariant and valid_ptr_in_cur_domain param_a\<rbrace>
+option_update_thread param_a param_b param_c \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma cap_swap_for_delete_colour_maintained:
+  "\<lbrace>colour_invariant and
+ ((valid_ptr_in_cur_domain $ fst param_a) and (valid_ptr_in_cur_domain $ fst param_b))\<rbrace>
+cap_swap_for_delete param_a param_b \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma deleting_irq_handler_colour_maintained:
+  "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s)))\<rbrace>
+deleting_irq_handler param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma rec_del_colour_maintained:
+  "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s)))\<rbrace>
+rec_del param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma check_cap_at_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace> check_cap_at param_a param_b param_c \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma send_ipc_colour_maintained:
+  "\<lbrace>colour_invariant and
+ (valid_ptr_in_cur_domain param_f and
+  (\<lambda>s. check_tcb_state
+         (BlockedOnSend param_g
+           \<lparr>sender_badge = param_c, sender_can_grant = param_d,
+              sender_can_grant_reply = param_e, sender_is_call = param_b\<rparr>)
+         (colour_oracle (cur_domain s)))) and
+ valid_ptr_in_cur_domain param_g and
+ (\<lambda>s. check_cap_ref (tcb_ctable (the $ get_tcb param_f s))
+        (colour_oracle (cur_domain s))) and
+ invs\<rbrace>
+send_ipc param_a param_b param_c param_d param_e param_f param_g \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  sorry
+
+lemma bind_notification_colour_maintained:
+  "\<lbrace>colour_invariant and valid_ptr_in_cur_domain param_b and
+ valid_ptr_in_cur_domain param_a\<rbrace>
+bind_notification param_a param_b \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma unbind_notification_colour_maintained:
+  "\<lbrace>colour_invariant and valid_ptr_in_cur_domain param_a\<rbrace> unbind_notification param_a 
+\<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  sorry
+
+lemma set_domain_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace> set_domain param_a param_b \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma handle_fault_reply_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace> handle_fault_reply param_a param_b param_c param_d 
+\<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma do_reply_transfer_colour_maintained:
+  "\<lbrace>colour_invariant and
+ ((\<lambda>s. check_cap_ref (tcb_ctable (the $ get_tcb param_a s))
+         (colour_oracle (cur_domain s))) and
+  (\<lambda>s. check_cap_ref (tcb_ctable (the $ get_tcb param_b s))
+         (colour_oracle (cur_domain s)))) and
+ ((valid_ptr_in_cur_domain $ fst param_c) and
+  (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s)))) and
+ valid_ptr_in_cur_domain param_b and
+ (\<lambda>s. let tcb = TCB (tcb_fault_update (\<lambda>_. None) $ the (get_tcb param_b s))
+       in check_kernel_object_ref tcb (colour_oracle (cur_domain s)))\<rbrace>
+do_reply_transfer param_a param_b param_c param_d \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma cap_move_colour_maintained:
+  "\<lbrace>colour_invariant and
+ ((valid_ptr_in_cur_domain $ fst param_c) and
+  (\<lambda>s. check_cap_ref param_a (colour_oracle (cur_domain s)))) and
+ ((valid_ptr_in_cur_domain $ fst param_b) and
+  (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s))))\<rbrace>
+cap_move param_a param_b param_c \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma cap_swap_colour_maintained:
+  "\<lbrace>colour_invariant and
+ ((valid_ptr_in_cur_domain $ fst param_b) and
+  (\<lambda>s. check_cap_ref param_c (colour_oracle (cur_domain s)))) and
+ ((valid_ptr_in_cur_domain $ fst param_d) and
+  (\<lambda>s. check_cap_ref param_a (colour_oracle (cur_domain s))))\<rbrace>
+cap_swap param_a param_b param_c param_d \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+  
+lemma cancel_badged_sends_colour_maintained:
+  "\<lbrace>colour_invariant and valid_ptr_in_cur_domain param_a\<rbrace>
+cancel_badged_sends param_a param_b \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma invoke_irq_control_colour_maintained:
+  "\<lbrace>colour_invariant and invs\<rbrace> invoke_irq_control param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma invoke_irq_handler_colour_maintained:
+  "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s))) and
+ invs\<rbrace>
+invoke_irq_handler param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma invoke_cnode_colour_maintained:
+  "\<lbrace>colour_invariant and invs and
+ (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s)))\<rbrace>
+invoke_cnode param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma handle_invocation_colour_maintained:
+  "\<lbrace>colour_invariant and invs and
+ (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s)))\<rbrace>
+handle_invocation param_a param_b \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma handle_reply_colour_maintained:
+  "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s)))\<rbrace>
+handle_reply \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma complete_signal_colour_maintained:
+  "\<lbrace>colour_invariant and valid_ptr_in_cur_domain param_a\<rbrace> complete_signal param_a param_b 
+\<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma timer_tick_colour_maintained:
+  "\<lbrace>colour_invariant\<rbrace> timer_tick \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma receive_ipc_colour_maintained:
+  "\<lbrace>colour_invariant and valid_ptr_in_cur_domain param_a and
+ (\<lambda>s. check_cap_ref (tcb_ctable (the $ get_tcb param_a s))
+        (colour_oracle (cur_domain s))) and
+ invs\<rbrace>
+receive_ipc param_a param_b param_c \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  sorry
+
+lemma receive_signal_colour_maintained:
+  "\<lbrace>colour_invariant and valid_ptr_in_cur_domain param_a\<rbrace>
+receive_signal param_a param_b param_c \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma handle_interrupt_colour_maintained:
+  "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s)))\<rbrace>
+handle_interrupt param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  sorry
+
+lemma handle_recv_colour_maintained:
+  "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s))) and
+ invs\<rbrace>
+handle_recv param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  sorry
+
+lemma handle_event_colour_maintained:
+  "\<lbrace>colour_invariant and
+ (invs and (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s))))\<rbrace>
+handle_event param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  sorry
+
+(* lemmas demanded by call_kernel itself *)
+
+lemma schedule_cur_thread_valid_in_cur_domain:
+  "\<lbrace>invs\<rbrace> schedule \<lbrace>\<lambda>rv s. valid_ptr_in_cur_domain (cur_thread s) s\<rbrace>"
+  unfolding schedule_def
+  sorry
+
+lemma schedule_tcb_at_cur_thread:
+  "\<lbrace>invs\<rbrace> schedule \<lbrace>\<lambda>rv s. tcb_at (cur_thread s) s\<rbrace>"
+  apply(rule_tac P="invs" in hoare_strengthen_post)
+   apply(rule schedule_invs)
+  apply(drule (1) tcb_at_invs)
+  done
+
+lemma check_cap_ref_null[intro!]:
+  "check_cap_ref NullCap oracle"
+  unfolding check_cap_ref_def
+  by force
+
+(* The crunch command used to discover all needed lemmas.
+crunch call_kernel for colour_maintained: "colour_invariant"
+  (simp: obj_at_update crunch_simps
+     wp: crunch_wps RISCV64.arch_get_sanitise_register_info_inv
+         RISCV64.handle_arch_fault_reply_inv
+         schedule_cur_thread_valid_in_cur_domain
+         schedule_tcb_at_cur_thread)
+*)
+
+(* Beyond what the crunch command tried to use, we also needed to add ct_active as a precondition *)
+theorem call_kernel_colour_maintained:
+  "\<lbrace>colour_invariant and
+     (invs and ct_active and (\<lambda>s. check_cap_ref NullCap (colour_oracle (cur_domain s)))) and
+     (\<lambda>s. valid_ptr_in_cur_domain (cur_thread s) s)\<rbrace>
+    call_kernel ev \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  unfolding call_kernel_def
+  apply(wpsimp simp:crunch_simps wp:crunch_wps
+    activate_thread_colour_maintained schedule_colour_maintained
+    schedule_cur_thread_valid_in_cur_domain schedule_tcb_at_cur_thread
+    handle_interrupt_colour_maintained do_machine_op_colour_maintained)
+   apply(wpsimp wp:handle_event_colour_maintained simp:check_cap_ref_null)
+  apply wpsimp
+  done
+
 end
