@@ -11,6 +11,8 @@ on:
     paths-ignore:
       - '**.md'
       - '**.txt'
+    branches-ignore:
+      - rt
   workflow_dispatch:
     inputs:
       NUM_DOMAINS:
