@@ -5,18 +5,14 @@
 name: Proof PR
 
 on:
-  push:
-    paths-ignore:
-      - '**.md'
-      - '**.txt'
-    branches:
-      - rt
   # this action needs access to secrets.
   # The actual test runs in a no-privilege VM, so it's Ok to run on untrusted PRs.
   pull_request_target:
     paths-ignore:
       - '**.md'
       - '**.txt'
+    branches-ignore:
+      - rt
   workflow_dispatch:
     inputs:
       NUM_DOMAINS:
