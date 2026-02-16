@@ -485,15 +485,15 @@ lemma td_names_ptr [simp]:
 lemma td_names_word8 [simp]:
   fixes x :: "byte itself"
   shows "td_names (typ_info_t x) = {''word00010''}"
- by (simp add: pad_typ_name_def nat_to_bin_string.simps)
+ by (simp add: pad_typ_name_def nat_to_bin_string.simps signed_or_unsigned)
 
 lemma td_names_word32 [simp]:
   "td_names (typ_info_t TYPE(32 word)) = {''word0000010''}"
-  by (simp add: pad_typ_name_def nat_to_bin_string.simps)
+  by (simp add: pad_typ_name_def nat_to_bin_string.simps signed_or_unsigned)
 
 lemma td_names_word64 [simp]:
   "td_names (typ_info_t TYPE(64 word)) = {''word00000010''}"
-  by (simp add: pad_typ_name_def nat_to_bin_string.simps)
+  by (simp add: pad_typ_name_def nat_to_bin_string.simps signed_or_unsigned)
 
 lemma td_names_export_uinfo [simp]:
   "td_names (export_uinfo td) = td_names td"
