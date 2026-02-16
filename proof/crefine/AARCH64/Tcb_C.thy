@@ -1755,21 +1755,6 @@ lemma valid_ipc_buffer_ptr_the_strengthen:
   "x \<noteq> None \<and> case_option \<top> valid_ipc_buffer_ptr' x s \<longrightarrow> valid_ipc_buffer_ptr' (the x) s"
   by clarsimp
 
-
-lemma lookupIPCBuffer_Some_0:
-  "\<lbrace>\<top>\<rbrace> lookupIPCBuffer w t \<lbrace>\<lambda>rv s. rv \<noteq> Some 0\<rbrace>"
-  apply (simp add: lookupIPCBuffer_def
-                   AARCH64_H.lookupIPCBuffer_def
-                   Let_def getThreadBufferSlot_def
-                   locateSlot_conv
-             cong: if_cong)
-  apply (wp haskell_assert_wp | wpc | simp)+
-  done
-
-lemma asUser_valid_ipc_buffer_ptr':
-  "\<lbrace> valid_ipc_buffer_ptr' p \<rbrace> asUser t m \<lbrace> \<lambda>rv s. valid_ipc_buffer_ptr' p s \<rbrace>"
-  by (simp add: valid_ipc_buffer_ptr'_def, wp, auto simp: valid_ipc_buffer_ptr'_def)
-
 lemma invokeTCB_ReadRegisters_ccorres:
 notes
   nat_min_simps [simp del]

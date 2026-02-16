@@ -39,6 +39,8 @@ arch_requalify_consts
   arch_mdb_preservation
   is_derived'
   capASID cap_asid_base' cap_vptr' (* needed to define weak_derived' *)
+  arch_capMasterCap
+  arch_capBadge
 
 defs archMDBAssertions_def:
   "archMDBAssertions s \<equiv> arch_mdb_assert (ctes_of s)"
@@ -192,6 +194,8 @@ locale CSpace1_R =
      (isReplyCap cap = isReplyCap cap') \<and>
      (isReplyCap cap \<longrightarrow> capReplyMaster cap) \<and>
      (isReplyCap cap' \<longrightarrow> \<not> capReplyMaster cap')"
+  assumes acap_relation_capBadge:
+    "\<And>acap acap'. acap_relation acap acap' \<Longrightarrow> arch_capBadge acap' = arch_cap_badge acap"
 
 lemma subtree_no_parent:
   assumes "m \<turnstile> p \<rightarrow> x"
@@ -2386,12 +2390,24 @@ lemma zbits_map_eq[simp]:
   "(zbits_map zbits = zbits_map zbits') = (zbits = zbits')"
   by (simp add: zbits_map_def split: option.split sum.split)
 
+context CSpace1_R begin
+
+lemma cap_relation_capBadge:
+  "cap_relation cap cap' \<Longrightarrow> capBadge cap' = cap_badge cap"
+  by (cases cap; clarsimp simp: acap_relation_capBadge)
+
+lemma cap_badge_relation:
+  "\<lbrakk> cap_relation c c'; cap_relation d d' \<rbrakk> \<Longrightarrow>
+   (capBadge c' = capBadge d') = (cap_badge c = cap_badge d)"
+  by (simp add: cap_relation_capBadge)
+
 lemma capBadge_ordering_relation:
   "\<lbrakk> cap_relation c c'; cap_relation d d' \<rbrakk> \<Longrightarrow>
    ((capBadge c', capBadge d') \<in> capBadge_ordering f) =
      ((cap_badge c, cap_badge d) \<in> capBadge_ordering f)"
-   by (cases c)
-      (auto simp add: cap_badge_def capBadge_ordering_def split: cap.splits)
+  by (simp add: cap_relation_capBadge)
+
+end
 
 lemma is_reply_cap_relation:
   "cap_relation c c' \<Longrightarrow> is_reply_cap c = (isReplyCap c' \<and> \<not> capReplyMaster c')"

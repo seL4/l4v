@@ -268,7 +268,8 @@ lemma perform_invocation_valid_vspace_objs'[wp]:
    \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
   apply (cases i; wpsimp)
    apply (wpsimp simp: arch_perform_invocation_def perform_vspace_invocation_def perform_flush_def
-                       perform_sgi_invocation_def)
+                       perform_sgi_invocation_def perform_smc_invocation_def
+                 simp_del: split_paired_Ex)
   apply (auto simp: valid_arch_inv_def intro: valid_objs_caps)
   done
 

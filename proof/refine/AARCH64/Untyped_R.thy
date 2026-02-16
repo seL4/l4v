@@ -479,54 +479,57 @@ lemma ctes_of_ko:
    \<comment> \<open>Arch cases\<close>
    apply (rename_tac arch_capability)
    apply (case_tac arch_capability)
-        \<comment> \<open>ASID control\<close>
-        apply clarsimp
-       \<comment> \<open>ASIDPool\<close>
-       apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def typ_at'_def ko_wp_at'_def)
-       apply (intro exI conjI, assumption)
-       apply (clarsimp simp: obj_range'_def archObjSize_def objBitsKO_def)
-       apply (case_tac ko; simp)
-       apply (rename_tac arch_kernel_object)
-       apply (case_tac arch_kernel_object;
-                simp add: archObjSize_def asid_low_bits_def bit_simps mask_def add_ac)
-     \<comment> \<open>Frame case\<close>
-      apply (rename_tac word vmrights vmpage_size option)
-      apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def typ_at'_def
-                            ko_wp_at'_def capAligned_def)
-      apply (frule_tac ptr = ptr and sz = "pageBits" in
-                       nasty_range[where 'a=machine_word_len, folded word_bits_def, rotated])
-         apply simp
-        apply (simp add: pbfs_atleast_pageBits)+
-      apply (clarsimp simp: frame_at'_def)
-      apply (drule_tac x = idx in spec, clarsimp simp: typ_at'_def ko_wp_at'_def)
+         \<comment> \<open>ASID control\<close>
+         apply clarsimp
+        \<comment> \<open>ASIDPool\<close>
+        apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def typ_at'_def ko_wp_at'_def)
+        apply (intro exI conjI, assumption)
+        apply (clarsimp simp: obj_range'_def archObjSize_def objBitsKO_def)
+        apply (case_tac ko; simp)
+        apply (rename_tac arch_kernel_object)
+        apply (case_tac arch_kernel_object;
+                 simp add: archObjSize_def asid_low_bits_def bit_simps mask_def add_ac)
+       \<comment> \<open>Frame case\<close>
+       apply (rename_tac word vmrights vmpage_size option)
+       apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def typ_at'_def
+                             ko_wp_at'_def capAligned_def)
+       apply (frule_tac ptr = ptr and sz = "pageBits" in
+                        nasty_range[where 'a=machine_word_len, folded word_bits_def, rotated])
+          apply simp
+         apply (simp add: pbfs_atleast_pageBits)+
+       apply (clarsimp simp: frame_at'_def)
+       apply (drule_tac x = idx in spec, clarsimp simp: typ_at'_def ko_wp_at'_def)
+       apply (intro exI conjI,assumption)
+       apply (clarsimp simp: obj_range'_def shiftl_t2n mask_def add_diff_eq)
+       apply (case_tac ko, simp_all split: if_splits,
+             (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n)+)[1]
+      \<comment> \<open>PT case\<close>
+      apply (rename_tac word pt_t option)
+      apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def obj_at'_def
+                            page_table_at'_def typ_at'_def ko_wp_at'_def)
+      apply (cut_tac ptr=ptr and bz="ptBits pt_t" and word=word and sz=pte_bits in
+                     nasty_range[where 'a=machine_word_len]; simp?)
+       apply (simp add: pt_bits_def)
+      apply clarsimp
+      apply (drule_tac x="ucast idx" in spec)
+      apply (clarsimp simp: pt_bits_def table_size_def le_mask_iff_lt_2n[THEN iffD1])
       apply (intro exI conjI,assumption)
-      apply (clarsimp simp: obj_range'_def shiftl_t2n mask_def add_diff_eq)
-      apply (case_tac ko, simp_all split: if_splits,
-            (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n)+)[1]
-     \<comment> \<open>PT case\<close>
-     apply (rename_tac word pt_t option)
-     apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def obj_at'_def
-                           page_table_at'_def typ_at'_def ko_wp_at'_def)
-     apply (cut_tac ptr=ptr and bz="ptBits pt_t" and word=word and sz=pte_bits in
-                    nasty_range[where 'a=machine_word_len]; simp?)
-      apply (simp add: pt_bits_def)
-     apply clarsimp
-     apply (drule_tac x="ucast idx" in spec)
-     apply (clarsimp simp: pt_bits_def table_size_def le_mask_iff_lt_2n[THEN iffD1])
-     apply (intro exI conjI,assumption)
-     apply (clarsimp simp: obj_range'_def)
-     apply (case_tac ko; simp)
+      apply (clarsimp simp: obj_range'_def)
+      apply (case_tac ko; simp)
+      apply (rename_tac arch_kernel_object)
+      apply (case_tac arch_kernel_object; simp)
+      apply (simp add: objBitsKO_def archObjSize_def bit_simps mask_def ucast_ucast_len field_simps
+                       shiftl_t2n)
+     \<comment> \<open>VCPU case\<close>
+     apply (clarsimp simp: valid_cap'_def typ_at'_def ko_wp_at'_def objBits_simps)
+     apply (intro exI conjI, assumption)
+     apply (clarsimp simp: obj_range'_def archObjSize_def objBitsKO_def)
+     apply (case_tac ko, simp+)[1]
      apply (rename_tac arch_kernel_object)
-     apply (case_tac arch_kernel_object; simp)
-     apply (simp add: objBitsKO_def archObjSize_def bit_simps mask_def ucast_ucast_len field_simps
-                      shiftl_t2n)
-    \<comment> \<open>VCPU case\<close>
-    apply (clarsimp simp: valid_cap'_def typ_at'_def ko_wp_at'_def objBits_simps)
-    apply (intro exI conjI, assumption)
-    apply (clarsimp simp: obj_range'_def archObjSize_def objBitsKO_def)
-    apply (case_tac ko, simp+)[1]
-    apply (rename_tac arch_kernel_object)
-    apply (case_tac arch_kernel_object;  simp add: archObjSize_def bit_simps mask_def add_ac)
+     apply (case_tac arch_kernel_object;  simp add: archObjSize_def bit_simps mask_def add_ac)
+
+    \<comment> \<open>SMCCap case\<close>
+    apply (clarsimp simp: valid_cap'_def)
 
    \<comment> \<open>SGISignalCap case\<close>
    apply (clarsimp simp: valid_cap'_def)
@@ -1995,7 +1998,7 @@ lemma valid_badges_n' [simp]: "valid_badges n'"
    apply (erule_tac x=parent in allE)
    apply simp
    apply (erule_tac x=p' in allE)
-   apply (clarsimp simp: isCap_simps)
+   apply (fastforce simp: isCap_simps)
   apply (erule_tac x=p in allE)
   apply (erule_tac x=p' in allE)
   apply simp

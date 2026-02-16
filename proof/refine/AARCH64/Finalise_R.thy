@@ -171,7 +171,27 @@ lemma no_0_no_0_lhs_rtrancl [simp]:
   "\<lbrakk> no_0 m; x \<noteq> 0 \<rbrakk> \<Longrightarrow> \<not> m \<turnstile> 0 \<leadsto>\<^sup>* x"
   by (clarsimp dest!: rtranclD)
 
+lemma valid_badges_def3: (* FIXME arch-split: interface; used in mdb_empty below and CNodeInv_R *)
+  "valid_badges m =
+   (\<forall>p p' cap node cap' node'.
+      m p = Some (CTE cap node) \<longrightarrow>
+      m p' = Some (CTE cap' node') \<longrightarrow>
+      m \<turnstile> p \<leadsto> p' \<longrightarrow>
+      (capMasterCap cap = capMasterCap cap' \<longrightarrow> capBadge cap \<noteq> None \<longrightarrow>
+       capBadge cap \<noteq> capBadge cap' \<longrightarrow> capBadge cap' \<noteq> Some 0 \<longrightarrow> mdbFirstBadged node') \<and>
+      unordered_valid_arch_badges cap cap' node')"
+  apply (simp add: valid_badges_def2)
+  apply (rule iffI; clarsimp simp: valid_arch_badges_implies_unordered)
+  apply (simp add: valid_arch_badges_def)
+  apply (rule conjI; clarsimp)
+   (* SGISignalCap *)
+   apply (fastforce simp: unordered_valid_arch_badges_def)
+  (* SMCCap *)
+  apply (fastforce simp: isCap_simps)
+  done
+
 end
+
 locale mdb_empty =
   mdb_ptr?: mdb_ptr m _ _ slot s_cap s_node
     for m slot s_cap s_node +
@@ -190,6 +210,7 @@ locale mdb_empty =
                slot (cteCap_update (%_. capability.NullCap)))
               slot (cteMDBNode_update (const nullMDBNode))"
 begin
+
 interpretation Arch . (*FIXME: arch-split*)
 
 lemmas m_slot_prev = m_p_prev
@@ -493,7 +514,7 @@ lemma valid_badges_n:
 proof -
   from valid_badges
   show ?thesis
-    apply (simp add: valid_badges_def2)
+    apply (simp add: valid_badges_def3)
     apply clarsimp
     apply (rule conjI)
      prefer 2
@@ -503,12 +524,12 @@ proof -
      apply (clarsimp simp: n_next_eq)
      apply (case_tac "p=slot", simp)
      apply clarsimp
-     apply (case_tac "p'=slot", simp add: isCap_simps)
+     apply (case_tac "p'=slot", simp add: unordered_valid_arch_badges_def)
      apply clarsimp
      apply (case_tac "p = mdbPrev s_node")
-      apply (clarsimp simp: valid_arch_badges_def)
+      apply (clarsimp simp: unordered_valid_arch_badges_def)
       apply blast
-     apply (fastforce simp: valid_arch_badges_def)
+     apply (fastforce simp: unordered_valid_arch_badges_def)
     apply (drule_tac p=p in n_cap)
     apply (frule n_cap)
     apply (drule n_badged)
@@ -529,7 +550,7 @@ proof -
            apply assumption+
          apply (simp add: sameRegionAs_def3)
          apply (intro disjI1)
-         apply (fastforce simp:isCap_simps capMasterCap_def split:capability.splits)
+         apply (fastforce simp: isCap_simps)
         apply clarsimp
        apply (clarsimp simp: isCap_simps mdb_chunked_arch_assms_def)
       apply clarsimp
@@ -596,11 +617,8 @@ lemma m_parent_of:
   apply (frule_tac p=p' in m_badged)
   apply (drule_tac p=p' in m_revokable)
   apply clarsimp
-  apply (simp split: if_split_asm;
-         clarsimp simp: isMDBParentOf_def isArchMDBParentOf_def2 isCap_simps
-                  split: if_split_asm
-                  cong: if_cong)
-  done
+  by (fastforce simp: isMDBParentOf_def isArchMDBParentOf_def2 isCap_simps
+                split: if_split_asm)
 
 lemma m_parent_of_next:
   "\<lbrakk> m \<turnstile> p parentOf mdbNext s_node; m \<turnstile> p parentOf slot; p \<noteq> slot; p\<noteq>mdbNext s_node \<rbrakk>
@@ -618,8 +636,10 @@ lemma m_parent_of_next:
   apply (frule_tac p="slot" in m_cap)
   apply (frule_tac p="slot" in m_badged)
   apply (drule_tac p="slot" in m_revokable)
-  by (auto simp: isMDBParentOf_def isArchMDBParentOf_def2 isCap_simps
-           split: if_split_asm cong: if_cong)
+  apply (clarsimp simp: isMDBParentOf_def isArchMDBParentOf_def2 split: if_split_asm)
+  apply (rule conjI, fastforce simp: isCap_simps)
+  apply (rule conjI, fastforce simp: isCap_simps)
+  by (rule conjI; fastforce simp: isCap_simps) (* slow *)
 
 lemma n_mdbNext:
   "\<lbrakk> n (mdbNext s_node) = Some (CTE cap node); mdbPrev s_node \<noteq> 0 \<rbrakk> \<Longrightarrow>
@@ -704,6 +724,8 @@ proof induct
      apply (case_tac cap'', simp_all add: isCap_simps)[1]
       apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
      apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
+     apply (rename_tac acap'')
+     apply (case_tac acap''; clarsimp simp: sameRegionAs_def3 isCap_simps)
     (* SGISignalCap *)
     apply (clarsimp simp: parentOf_def isCap_simps isMDBParentOf_CTE)
     apply (rename_tac next_node)
@@ -803,6 +825,8 @@ next
         apply (case_tac cap'', simp_all add: isCap_simps)[1]
          apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
         apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
+        apply (rename_tac acap'')
+        apply (case_tac acap''; clarsimp simp: sameRegionAs_def3 isCap_simps)
        (* SGISignalCap *)
        apply (rename_tac next_cap next_node)
        apply (clarsimp simp: isCap_simps)
@@ -1919,6 +1943,7 @@ where
   | ArchObjectCap acap \<Rightarrow> (case acap of
       FrameCap ref rghts sz d mapdata \<Rightarrow> False
     | ASIDControlCap \<Rightarrow> False
+    | SMCCap _ \<Rightarrow> False
     | SGISignalCap _ _ \<Rightarrow> False
     | _ \<Rightarrow> True)
   | _ \<Rightarrow> False"

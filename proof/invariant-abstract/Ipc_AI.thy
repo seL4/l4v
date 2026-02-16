@@ -164,10 +164,6 @@ lemma mapM_length[wp]:
   "\<lbrace>\<lambda>s. P (length xs)\<rbrace> mapM f xs \<lbrace>\<lambda>rv s. P (length rv)\<rbrace>"
   by (induct xs arbitrary: P) (wpsimp simp: mapM_Cons mapM_def sequence_def|assumption)+
 
-lemma cap_badge_rights_update[simp]:
-  "cap_badge (cap_rights_update rights cap) = cap_badge cap"
-  by (auto simp: cap_rights_update_def split: cap.split bool.splits)
-
 lemma get_cap_cte_wp_at_rv:
   "\<lbrace>cte_wp_at (\<lambda>cap. P cap cap) p\<rbrace> get_cap p \<lbrace>\<lambda>rv. cte_wp_at (P rv) p\<rbrace>"
   apply (wp get_cap_wp)
@@ -384,8 +380,14 @@ locale Ipc_AI =
                            \<and> valid_objs s\<rbrace>
         derive_cap slot c'
       \<lbrace>\<lambda>rv s. rv \<noteq> cap.NullCap \<longrightarrow> cte_wp_at (is_derived (cdt s) slot rv) slot s\<rbrace>, -"
+   assumes arch_cap_badge_rights_update[simp]:
+     "arch_cap_badge (acap_rights_update rights acap) = arch_cap_badge acap"
 
 context Ipc_AI begin
+
+lemma cap_badge_rights_update[simp]:
+  "cap_badge (cap_rights_update rights cap) = cap_badge cap"
+  by (auto simp: cap_rights_update_def split: cap.split bool.splits)
 
 lemma transfer_caps_loop_presM:
   fixes P vo em ex buffer slots caps n mi

@@ -165,11 +165,11 @@ primrec valid_arch_obj' :: "arch_kernel_object \<Rightarrow> bool" where
 
 primrec acapClass :: "arch_capability \<Rightarrow> capclass" where
   "acapClass (ASIDPoolCap x y)      = PhysicalClass"
-| "acapClass ASIDControlCap         = ASIDMasterClass"
+| "acapClass ASIDControlCap         = OtherCapClass"
 | "acapClass (PageCap d x y sz z)   = PhysicalClass"
 | "acapClass (PageTableCap x y)     = PhysicalClass"
 | "acapClass (PageDirectoryCap x y) = PhysicalClass"
-| "acapClass (SGISignalCap _ _ )    = IRQClass"
+| "acapClass (SGISignalCap _ _ )    = OtherCapClass"
 
 definition valid_arch_badges :: "capability \<Rightarrow> capability \<Rightarrow> mdbnode \<Rightarrow> bool" where
   "valid_arch_badges cap cap' node' \<equiv>

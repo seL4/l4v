@@ -25,6 +25,8 @@ import SEL4.Object.VCPU.AARCH64
 import SEL4.Object.Interrupt.AARCH64
 import {-# SOURCE #-} SEL4.Object.TCB
 import SEL4.Object.FPU.AARCH64
+import SEL4.API.InvocationLabels
+import SEL4.API.InvocationLabels.AARCH64
 
 import Data.Bits
 import Data.Word(Word16)
@@ -53,17 +55,24 @@ deriveCap _ c@ASIDControlCap = return $ ArchObjectCap c
 deriveCap _ (c@ASIDPoolCap {}) = return $ ArchObjectCap c
 deriveCap _ (c@VCPUCap {}) = return $ ArchObjectCap c
 deriveCap _ (c@SGISignalCap {}) = return $ ArchObjectCap c
+deriveCap _ (c@SMCCap {}) = return $ ArchObjectCap c
 -- TODO AARCH64 SMMU: SID/CB control caps, SID/CB caps
 
 isCapRevocable :: Capability -> Capability -> Bool
 isCapRevocable newCap srcCap = case newCap of
     ArchObjectCap (SGISignalCap {}) -> srcCap == IRQControlCap
+    ArchObjectCap (SMCCap badge) -> badge /= capSMCBadge (capCap srcCap)
     _ -> False
 
 -- Whether the first capability is a parent of the second one. Can assume that
 -- sameRegionAs is true for the two capabilities. If this function returns True,
 -- the remaining cases of generic isMDBParentOf are still checked.
 isArchMDBParentOf :: Capability -> Capability -> Bool -> Bool
+
+-- sameRegionAs only tells us that both caps are SMCCaps, so this is the full
+-- badge check as for endpoints
+isArchMDBParentOf (ArchObjectCap (SMCCap badge_a)) (ArchObjectCap (SMCCap badge_b)) firstBadged =
+    badge_a == 0 || (badge_a == badge_b && not firstBadged)
 
 -- We treat SGISignalCaps as a badged version of IRQControlCaps -- i.e. if both
 -- arguments are SGISignalCaps, we are in the corresponding Endpoint case where
@@ -74,6 +83,10 @@ isArchMDBParentOf (ArchObjectCap (SGISignalCap _ _)) (ArchObjectCap (SGISignalCa
 isArchMDBParentOf _ _ _ = True
 
 updateCapData :: Bool -> Word -> ArchCapability -> Capability
+updateCapData preserve newBadge (SMCCap badge) =
+    if not preserve && badge == 0
+    then ArchObjectCap (SMCCap newBadge)
+    else NullCap
 updateCapData _ _ c = ArchObjectCap c
 
 -- these seem to refer to extraction of fields from seL4_CNode_CapData
@@ -158,12 +171,14 @@ sameRegionAs (a@ASIDPoolCap {}) (b@ASIDPoolCap {}) =
     capASIDPool a == capASIDPool b
 sameRegionAs (a@VCPUCap {}) (b@VCPUCap {}) = capVCPUPtr a == capVCPUPtr b
 sameRegionAs (a@SGISignalCap {}) (b@SGISignalCap {}) = a == b
+sameRegionAs (SMCCap {}) (SMCCap {}) = True
 -- TODO AARCH64 SMMU: SID/CB caps and control caps (which work a bit strangely here)
 sameRegionAs _ _ = False
 
 isPhysicalCap :: ArchCapability -> Bool
 isPhysicalCap ASIDControlCap = False
 isPhysicalCap (SGISignalCap {}) = False
+isPhysicalCap (SMCCap {}) = False
 -- TODO AARCH64 SMMU: in C, SMMU caps default to False but this needs review
 isPhysicalCap _ = True
 
@@ -263,16 +278,34 @@ decodeInvocation label args capIndex slot cap extraCaps =
     case cap of
        VCPUCap {} -> decodeARMVCPUInvocation label args capIndex slot cap extraCaps
        SGISignalCap {} -> decodeSGISignalInvocation cap
+       SMCCap {} -> decodeSMCInvocation label args cap
        -- TODO AARCH64 SMMU: SID/CB control caps, SID/CB caps
        _ -> decodeARMMMUInvocation label args capIndex slot cap extraCaps
+
+decodeSMCInvocation :: Word -> [Word] -> ArchCapability -> KernelF SyscallError ArchInv.Invocation
+decodeSMCInvocation label args (SMCCap badge) = do
+    unless (invocationType label == ArchInvocationLabel ARMSMCCall) $ throw IllegalOperation
+    unless (length args >= numSMCRegs) $ throw TruncatedMessage
+    smcFuncID <- return $ args !! 0
+    when (badge /= 0 && badge /= smcFuncID) $ throw IllegalOperation
+    return $ ArchInv.InvokeSMCCall $ ArchInv.SMCCall (args !! 0, args !! 1, args !! 2, args !! 3,
+                                                      args !! 4, args !! 5, args !! 6, args !! 7)
+decodeSMCInvocation _ _ _ = fail "Unreachable"
 
 performInvocation :: ArchInv.Invocation -> KernelP [Word]
 performInvocation i =
     case i of
         ArchInv.InvokeVCPU iv -> withoutPreemption $ performARMVCPUInvocation iv
         ArchInv.InvokeSGISignal iv -> withoutPreemption $ performSGISignalGenerate iv
+        ArchInv.InvokeSMCCall iv -> withoutPreemption $ performSMCInvocation iv
         -- TODO AARCH64 SMMU: SID/CB control invocations, SID/CB invocations
         _ -> performARMMMUInvocation i
+
+performSMCInvocation :: ArchInv.SMCInvocation -> Kernel [Word]
+performSMCInvocation (ArchInv.SMCCall args) = do
+    (r0, r1, r2, r3, r4, r5, r6, r7) <- doMachineOp $ doSMC_mop args
+    return [r0, r1, r2, r3, r4, r5, r6, r7]
+
 
 {- Helper Functions -}
 
@@ -283,6 +316,7 @@ capUntypedPtr ASIDControlCap = error "ASID control has no pointer"
 capUntypedPtr (ASIDPoolCap { capASIDPool = PPtr p }) = PPtr p
 capUntypedPtr (VCPUCap { capVCPUPtr = PPtr p }) = PPtr p
 capUntypedPtr (SGISignalCap {}) = error "SGISignalCap has no pointer"
+capUntypedPtr (SMCCap {}) = error "SMCCap has no pointer"
 
 asidPoolBits :: Int
 asidPoolBits = 12
@@ -294,6 +328,7 @@ capUntypedSize (ASIDControlCap {}) = 0 -- invalid case, use C default
 capUntypedSize (ASIDPoolCap {}) = bit asidPoolBits
 capUntypedSize (VCPUCap {}) = bit vcpuBits
 capUntypedSize (SGISignalCap {}) = 0 -- invalid case, use C default
+capUntypedSize (SMCCap {}) = 0 -- invalid case, use C default
 
 -- Thread deletion requires associated FPU cleanup
 

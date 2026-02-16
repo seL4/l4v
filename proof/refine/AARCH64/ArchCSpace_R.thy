@@ -70,12 +70,12 @@ lemma valid_arch_badges_mdbPrev_update[simp, CSpace_R_assms]:
   "valid_arch_badges cap cap' (mdbPrev_update f node) = valid_arch_badges cap cap' node"
   by (simp add: valid_arch_badges_def)
 
-lemma valid_arch_badges_master_eq:
-  "capMasterCap src_cap = capMasterCap cap \<Longrightarrow>
-   valid_arch_badges src_cap cap' node = valid_arch_badges cap cap' node"
+lemma valid_arch_badges_master[CSpace_R_assms]:
+  "\<lbrakk> capMasterCap src_cap = capMasterCap cap;
+     (capBadge src_cap, capBadge cap) \<in> capBadge_ordering False;
+     valid_arch_badges src_cap cap' node \<rbrakk> \<Longrightarrow>
+   valid_arch_badges cap cap' node"
   by (auto simp: valid_arch_badges_def isCap_simps)
-
-lemmas valid_arch_badges_master[CSpace_R_assms] = valid_arch_badges_master_eq[THEN iffD1]
 
 lemma valid_arch_badges_firstBadged[CSpace_R_assms]:
   "\<lbrakk> valid_arch_badges cap cap' node; mdbFirstBadged node = mdbFirstBadged node' \<rbrakk> \<Longrightarrow>
@@ -101,6 +101,8 @@ lemma capMasterCap_valid_arch_badges_isCapRevocable[CSpace_R_assms]:
   apply (clarsimp simp add: valid_arch_badges_def)
   apply (clarsimp simp: AARCH64_H.isCapRevocable_def)
   apply (case_tac cap; clarsimp simp: isCap_simps)
+  apply (rename_tac acap)
+  apply (case_tac acap; clarsimp simp: isCap_simps)
   done
 
 lemma setCTE_valid_arch[CSpace_R_assms, wp]:
@@ -706,7 +708,7 @@ lemma arch_update_setCTE_mdb[CSpace_R_2_assms]:
    apply simp
    apply (simp add: sameRegionAs_def3 isCap_simps valid_arch_badges_def)
    apply (rule conjI, clarsimp, (rule conjI; solves clarsimp))+ (* fastforce takes too long *)
-   apply (solves clarsimp)
+   apply (rule conjI; solves clarsimp)
   apply (rule conjI)
    apply (clarsimp simp: caps_contained'_def simp del: fun_upd_apply)
    apply (cases oldcte)
@@ -1069,7 +1071,7 @@ lemma valid_badges'[simp]:
    apply blast
   (* valid_arch_badges *)
   apply (clarsimp simp: split: if_split_asm)
-    apply (clarsimp simp: Retype_H.isCapRevocable_def isCapRevocable_def safe_parent_for'_def
+    apply (fastforce simp: Retype_H.isCapRevocable_def isCapRevocable_def safe_parent_for'_def
                           safe_parent_for_arch'_def
                           isCap_simps valid_badges_def valid_arch_badges_def)
    apply (insert valid_badges)[1]
@@ -1077,7 +1079,8 @@ lemma valid_badges'[simp]:
    apply (erule_tac x=src in allE)
    apply simp
    apply (erule_tac x=p' in allE)
-   apply (clarsimp simp: safe_parent_for'_def isCap_simps valid_arch_badges_def)
+   apply (clarsimp simp: safe_parent_for'_def safe_parent_for_arch'_def isCap_simps
+                         valid_arch_badges_def is_simple_cap'_def)
   apply (insert valid_badges)[1]
   apply (simp add: valid_badges_def valid_arch_badges_def)
   apply blast

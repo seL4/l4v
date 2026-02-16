@@ -92,6 +92,7 @@ primrec azobj_refs' :: "arch_capability \<Rightarrow> obj_ref set" where
 | "azobj_refs' (PageTableCap _ _ _) = {}"
 | "azobj_refs' (VCPUCap v) = {v}"
 | "azobj_refs' (SGISignalCap _ _) = {}"
+| "azobj_refs' (SMCCap _) = {}"
 
 lemma azobj_refs'_only_vcpu:
   "(x \<in> azobj_refs' acap) = (acap = VCPUCap x)"
@@ -110,6 +111,7 @@ primrec acapBits :: "arch_capability \<Rightarrow> nat" where
 | "acapBits (PageTableCap _ pt_t _) = table_size pt_t"
 | "acapBits (VCPUCap v)             = vcpuBits"
 | "acapBits (SGISignalCap _ _)      = 0"
+| "acapBits (SMCCap _)              = 0"
 
 definition page_table_at' :: "pt_type \<Rightarrow> obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
  "page_table_at' pt_t p \<equiv> \<lambda>s.
@@ -151,7 +153,8 @@ definition valid_arch_cap_ref' :: "arch_capability \<Rightarrow> kernel_state \<
    | FrameCap r rghts sz dev mapdata \<Rightarrow> frame_at' r sz dev s
    | PageTableCap r pt_t mapdata \<Rightarrow> page_table_at' pt_t r s
    | VCPUCap r \<Rightarrow> vcpu_at' r s
-   | SGISignalCap _ _ \<Rightarrow> True"
+   | SGISignalCap _ _ \<Rightarrow> True
+   | SMCCap _ \<Rightarrow> True"
 
 lemmas valid_arch_cap_ref'_simps[simp] =
   valid_arch_cap_ref'_def[split_simps arch_capability.split]
@@ -196,14 +199,32 @@ primrec
   acapClass :: "arch_capability \<Rightarrow> capclass"
 where
   "acapClass (ASIDPoolCap _ _)    = PhysicalClass"
-| "acapClass ASIDControlCap       = ASIDMasterClass"
+| "acapClass ASIDControlCap       = OtherCapClass"
 | "acapClass (FrameCap _ _ _ _ _) = PhysicalClass"
 | "acapClass (PageTableCap _ _ _) = PhysicalClass"
 | "acapClass (VCPUCap _)          = PhysicalClass"
-| "acapClass (SGISignalCap _ _)   = IRQClass"
+| "acapClass (SGISignalCap _ _)   = OtherCapClass"
+| "acapClass (SMCCap _)           = OtherCapClass"
+
+locale_abbrev isArchSMCCap :: "capability \<Rightarrow> bool" where
+  "isArchSMCCap \<equiv> arch_cap'_pred is_SMCCap"
+
+locale_abbrev archSMCBadge :: "capability \<Rightarrow> machine_word" where
+  "archSMCBadge \<equiv> arch_cap'_fun_lift undefined capSMCBadge"
+
+lemma isArchSMCCap_simp:
+  "isArchSMCCap cap = (\<exists>smc_badge. cap = ArchObjectCap (SMCCap smc_badge))"
+  by (cases cap; simp add: is_SMCCap_def)
 
 definition valid_arch_badges :: "capability \<Rightarrow> capability \<Rightarrow> mdbnode \<Rightarrow> bool" where
   "valid_arch_badges cap cap' node' \<equiv>
+     (isArchSGISignalCap cap' \<longrightarrow> cap \<noteq> cap' \<longrightarrow> mdbFirstBadged node') \<and>
+     (isArchSMCCap cap \<longrightarrow> isArchSMCCap cap' \<longrightarrow>
+        archSMCBadge cap \<noteq> archSMCBadge cap' \<longrightarrow> archSMCBadge cap' \<noteq> 0 \<longrightarrow> mdbFirstBadged node')"
+
+(* The part of valid_arch_badges that cannot be expressed with capMasterCap/capBage ordering *)
+definition unordered_valid_arch_badges :: "capability \<Rightarrow> capability \<Rightarrow> mdbnode \<Rightarrow> bool" where
+  "unordered_valid_arch_badges cap cap' node' \<equiv>
      isArchSGISignalCap cap' \<longrightarrow> cap \<noteq> cap' \<longrightarrow> mdbFirstBadged node'"
 
 definition mdb_chunked_arch_assms :: "capability \<Rightarrow> bool" where

@@ -141,12 +141,10 @@ qed
 
 lemma valid_updateCapDataI[KHeap_R_assms]:
   "s \<turnstile>' c \<Longrightarrow> s \<turnstile>' updateCapData b x c"
-  apply (unfold global.updateCapData_def Let_def updateCapData_def)
-  apply (cases c)
-  apply (simp_all add: gen_isCap_defs valid_cap'_def global.capUntypedPtr_def gen_isCap_simps
-                       capAligned_def word_size word_bits_def word_bw_assocs
-                split: capability.splits)
-  done
+  unfolding global.updateCapData_def Let_def updateCapData_def
+  by (cases c, auto simp: gen_isCap_defs valid_cap'_def global.capUntypedPtr_def gen_isCap_simps
+                          capAligned_def word_size word_bits_def word_bw_assocs
+                    split: capability.splits arch_capability.splits)
 
 lemma obj_relation_cut_same_type:
   "\<lbrakk> (y, P) \<in> obj_relation_cuts ko x; P ko z;

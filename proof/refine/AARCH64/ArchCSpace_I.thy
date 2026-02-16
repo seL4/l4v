@@ -42,6 +42,7 @@ definition arch_capMasterCap :: "arch_capability \<Rightarrow> arch_capability" 
          PageTableCap ptr pt_t None
     | VCPUCap ptr \<Rightarrow>
          VCPUCap ptr
+    | SMCCap _ \<Rightarrow> SMCCap 0
     | _ \<Rightarrow> acap)"
 
 lemmas arch_capMasterCap_simps[simp] = arch_capMasterCap_def[split_simps arch_capability.split]
@@ -54,7 +55,7 @@ lemma acapClass_arch_capMasterCap[CSpace_I_assms,simp]:
 lemma capUntypedPtr_arch_capMasterCap[CSpace_I_assms, simp]:
   "Arch.capUntypedPtr (arch_capMasterCap acap) = Arch.capUntypedPtr acap"
   unfolding arch_capMasterCap_def
-  by (simp split: arch_capability.splits)
+  by (simp add: AARCH64_H.capUntypedPtr_def split: arch_capability.splits)
 
 lemma acapBits_arch_capMasterCap[CSpace_I_assms, simp]:
   "acapBits (arch_capMasterCap acap) = acapBits acap"
@@ -76,9 +77,21 @@ lemma isArchFrameCap_non_arch[CSpace_I_assms]:
 definition arch_mdb_assert :: "cte_heap \<Rightarrow> bool" where
   "arch_mdb_assert m \<equiv> True"
 
+definition arch_capBadge :: "arch_capability \<Rightarrow> machine_word option" where
+  "arch_capBadge acap \<equiv>
+     case acap of
+       SMCCap smc_badge \<Rightarrow> Some smc_badge
+     | _ \<Rightarrow> None"
+
+lemmas arch_capBadge_simps[simp] = arch_capBadge_def[split_simps arch_capability.split]
+
+lemma arch_capBadge_def2:
+  "arch_capBadge acap = (if is_SMCCap acap then Some (capSMCBadge acap) else None)"
+  by (cases acap; simp add: is_SMCCap_def)
+
 end
 
-interpretation CSpace_I?: CSpace_I AARCH64.arch_capMasterCap
+interpretation CSpace_I?: CSpace_I AARCH64.arch_capMasterCap AARCH64.arch_capBadge
 proof goal_cases
   interpret Arch  .
   case 1 show ?case by (intro_locales; (unfold_locales; (fact CSpace_I_assms)?)?)
@@ -120,6 +133,8 @@ lemma arch_capMasterCap_eqDs1:
    \<Longrightarrow> cap = ArchObjectCap (VCPUCap v)"
   "capMasterCap cap = ArchObjectCap (SGISignalCap sirq target)
    \<Longrightarrow> cap = ArchObjectCap (SGISignalCap sirq target)"
+  "capMasterCap cap = ArchObjectCap (SMCCap smc_badge)
+   \<Longrightarrow> smc_badge = 0 \<and> (\<exists>smc_badge. cap = ArchObjectCap (SMCCap smc_badge))"
   by (clarsimp simp: capMasterCap_def arch_capMasterCap_def
               split: capability.split_asm arch_capability.split_asm)+
 
@@ -375,7 +390,7 @@ lemma cap_table_at_gsCNodes[CSpace_I_2_assms]:
 
 end
 
-interpretation CSpace_I_2?: CSpace_I_2 AARCH64.arch_capMasterCap
+interpretation CSpace_I_2?: CSpace_I_2 AARCH64.arch_capMasterCap AARCH64.arch_capBadge
 proof goal_cases
   interpret Arch  .
   case 1 show ?case by (intro_locales; (unfold_locales; (fact CSpace_I_2_assms)?)?)
@@ -386,7 +401,11 @@ qed
 context Arch begin arch_global_naming
 
 definition arch_mdb_preservation :: "capability \<Rightarrow> capability \<Rightarrow> bool" where
-  "arch_mdb_preservation cap cap' \<equiv> isArchSGISignalCap cap = isArchSGISignalCap cap'"
+  "arch_mdb_preservation cap cap' \<equiv>
+     isArchSGISignalCap cap' = isArchSGISignalCap cap \<and>
+     (isArchSGISignalCap cap \<longrightarrow> cap' = cap) \<and>
+     isArchSMCCap cap'  = isArchSMCCap cap \<and>
+     (isArchSMCCap cap \<longrightarrow> cap' = cap)"
 
 definition vs_cap_ref_arch' :: "arch_capability \<Rightarrow> (asid \<times> vspace_ref) option" where
   "vs_cap_ref_arch' acap \<equiv>
@@ -394,12 +413,13 @@ definition vs_cap_ref_arch' :: "arch_capability \<Rightarrow> (asid \<times> vsp
        ASIDPoolCap _ asid \<Rightarrow> Some (asid, 0)
      | ASIDControlCap \<Rightarrow> None
      | FrameCap _ _ _ _ m \<Rightarrow> m
-     | PageTableCap _ _ m \<Rightarrow> m"
+     | PageTableCap _ _ m \<Rightarrow> m
+     | _ \<Rightarrow> None"
 
 lemmas vs_cap_ref_arch'_simps[simp] = vs_cap_ref_arch'_def[split_simps arch_capability.split]
 
 definition
-  "vs_cap_ref' = arch_cap'_fun_lift vs_cap_ref_arch' None"
+  "vs_cap_ref' = arch_cap'_fun_lift None vs_cap_ref_arch'"
 
 lemmas vs_cap_ref'_simps[simp] =
   vs_cap_ref'_def[THEN fun_cong, unfolded arch_cap'_fun_lift_def, split_simps capability.split]

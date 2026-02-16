@@ -3226,8 +3226,9 @@ lemma decodeARMMMUInvocation_ccorres:
    (* Can't reach *)
    apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
    apply (cases cp; simp add: isCap_simps)
-   apply (rename_tac pt_t m)
-   apply (case_tac pt_t; simp)
+    apply (rename_tac pt_t m)
+    apply (case_tac pt_t; simp)
+   apply (clarsimp simp: isCap_simps decodeARMMMUInvocation_def ccorres_fail)
   apply clarsimp
   apply (rule conjI) (* PTCap VSRoot *)
    apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -4405,6 +4406,293 @@ lemma decodeSGISignalInvocation_ccorres:
                          ucast_ucast_mask)
   done
 
+lemma doMachineOp_tcb_at_ksCurThread[wp]:
+  "doMachineOp mop \<lbrace>\<lambda>s. tcb_at' (ksCurThread s) s\<rbrace>"
+  by (wp_pre, wps, wpsimp, wpsimp)
+
+lemma ipc_buffer_case_rewrite:
+  "(x = (if option_to_ptr buffer \<noteq> NULL then y else unat n_msgRegisters)) =
+   ((buffer = None \<longrightarrow> x = unat n_msgRegisters) \<and>
+    (buffer = Some 0 \<longrightarrow> x = unat n_msgRegisters) \<and>
+    (\<forall>z. buffer = Some z \<longrightarrow> z \<noteq> 0 \<longrightarrow> x = y))"
+  by (cases buffer; clarsimp split: if_splits)
+
+(* 8 is the number of SMC arguments. This values is fixed by the Arm SMC spec. *)
+lemma word_of_nat_8_n_msgRegisters:
+  "(word_of_nat (if option_to_ptr buf \<noteq> (NULL :: machine_word ptr) then 8 else unat n_msgRegisters)
+     :: machine_word) =
+   (if option_to_ptr buf \<noteq> (NULL :: machine_word ptr) then 8 else scast n_msgRegisters)"
+  by (simp add: n_msgRegisters_def split: if_split)
+
+context begin
+
+(* unroll a counting while loop by one step with argument method for body *)
+private method while_unroll_gen for step::machine_word methods m =
+  (rule ccorres_basic_srnoop2, simp),
+  (rule ccorres_expand_while_iff_Seq[THEN iffD1]),
+  (rule ccorres_cond_true),
+  ((rule ccorres_rhs_assoc)+),
+  (rule ccorres_abstract_known[where xf'=i_' and val=step], ceqv),
+  simp,
+  m
+
+(* setMR body in while loop *)
+private method setmr_step =
+  (rule ccorres_Guard_Seq),
+  (ctac (no_vcg) add: setMR_ccorres_dc)
+
+(* unroll a counting while loop by one setMR step *)
+private method while_unroll_setmr for step::machine_word =
+  (while_unroll_gen step setmr_step)
+
+lemma invokeSMCCall_ccorres:
+  "ccorres (\<lambda>rv rv'. rv = Inr () \<and> rv' = scast EXCEPTION_NONE) ret__unsigned_long_'
+       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' ((=) Restart))
+       (\<lbrace>\<acute>smc_args = smc_args_to_C smc_inv \<rbrace> \<inter> \<lbrace>\<acute>call = from_bool isCall \<rbrace>)
+       hs
+       (do reply \<leftarrow> performSMCInvocation smc_inv;
+           liftE (replyOnRestart thread reply isCall) od)
+       (Call invokeSMCCall_'proc)"
+  apply (cases isCall)
+   (* isCall = False, no kernel reply *)
+   prefer 2
+   apply (cinit' lift: smc_args_' call_')
+    apply (simp add: performSMCInvocation_def Let_def bind_assoc)
+    apply (ctac add: doSMC_mop_ccorres)
+      apply clarsimp
+      apply (rule ccorres_liftE)
+      apply (clarsimp simp: replyOnRestart_def)
+      apply (rule getThreadState_ccorres_foo)
+      apply (rule ccorres_abstract_ksCurThread)
+       apply ceqv
+      apply (rule_tac P="rv = Restart" in ccorres_gen_asm)
+      apply (clarsimp cong: ccorres_abstract_cong)
+      apply (rule ccorres_add_return2)
+      apply (ctac (no_vcg) add: setThreadState_ccorres)
+       apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+       apply (rule allI, rule conseqPre, vcg)
+       apply (simp add: return_def)
+      apply wp
+     apply (wpsimp wp: hoare_vcg_op_lift)
+    apply vcg
+   apply (clarsimp simp: rf_sr_ksCurThread)
+   apply (rule conjI, fastforce)+
+   apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def)
+   apply (solves normalise_obj_at')
+
+  (* isCall, with reply protocol *)
+  apply (cinit' lift: smc_args_' call_')
+   apply (simp add: performSMCInvocation_def Let_def bind_assoc cong: ccorres_abstract_cong)
+   apply (ctac (no_vcg) add: doSMC_mop_ccorres)
+    apply (clarsimp cong: ccorres_abstract_cong)
+    apply (rename_tac x0 x1 x2 x3 x4 x5 x6 x7) (* smc_args *)
+    apply (rule ccorres_liftE)
+    apply (clarsimp simp: replyOnRestart_def cong: ccorres_abstract_cong)
+    apply (rule getThreadState_ccorres_foo)
+    apply (rule ccorres_abstract_ksCurThread)
+     apply ceqv
+    apply (rule_tac P="ct = thread" in ccorres_gen_asm)
+    apply ccorres_rewrite
+    apply (rule ccorres_rhs_assoc)+
+    apply csymbr
+    apply (rule_tac P="rv = Restart" in ccorres_gen_asm)
+    apply (clarsimp simp: replyFromKernel_def bind_assoc cong: ccorres_abstract_cong)
+    apply (ctac (no_vcg) add: lookupIPCBuffer_ccorres)
+     apply (ctac (no_vcg) add: setRegister_ccorres)
+      apply (clarsimp simp: setMRs_to_setMR msgMaxLength_def bind_assoc zipWithM_mapM
+                      cong: ccorres_abstract_cong)
+      apply (rule ccorres_stateAssert)
+      apply (simp add: whileAnno_def zip_upt_Cons mapM_Cons mapM_Nil bind_assoc
+                       smc_args_to_C_def)
+      (* The (no_vcg) for lookupIPCBuffer above generates insufficient parameters for the schematic
+         precondition to unify later, but we can fully solve everything we need for the C side and
+         can instantiate with UNIV instead. *)
+      apply (rule ccorres_guard_imp[where A'=UNIV and Q=A and A=A for A])
+        (* Unrolling the while loop, because we need to reason about the return value of the
+           last step in Haskell, which our existing rules do not cover. *)
+        apply (while_unroll_setmr 0)
+         apply (while_unroll_setmr 1)
+          apply (while_unroll_setmr 2)
+           apply (while_unroll_setmr 3)
+            apply (while_unroll_setmr 4)
+             apply (while_unroll_setmr 5)
+              apply (while_unroll_setmr 6)
+               apply (while_unroll_setmr 7)
+                apply (rename_tac msg_len xfdc_len)
+                apply (rule ccorres_basic_srnoop2, simp)
+                apply (rule ccorres_expand_while_iff_Seq[THEN iffD1])
+                apply (rule ccorres_cond_false)
+                (* This recreates the return value of the last setMR that we discarded above.
+                   Note that msg_len also occurs as parameter of the schematic C guard and the
+                   clarsimp below will substitute this term there as well. This wreaks havoc later
+                   with the rule application for setMessageInfo_ccorres where the term will be
+                   unified back into just msg_len which is the variable we wanted to get rid of.
+                   Rewriting with word_of_nat_8_n_msgRegisters makes the schematic parameter
+                   different from the message length parameter in the program and prevents that
+                   unwanted unification *)
+                apply (rule_tac P="msg_len = (if option_to_ptr rv \<noteq> (NULL :: machine_word ptr)
+                                              then 8 else unat n_msgRegisters)"
+                                in ccorres_gen_asm)
+                apply (clarsimp simp: word_of_nat_8_n_msgRegisters)
+                apply csymbr
+                apply csymbr
+                apply (rule ccorres_rhs_assoc2)
+                apply (ctac (no_vcg) add: setMessageInfo_ccorres)
+                  apply (rule ccorres_add_return2)
+                  apply (ctac (no_vcg) add: setThreadState_ccorres)
+                   apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+                   apply (rule allI, rule conseqPre, vcg)
+                   apply (simp add: return_def)
+                  apply wp
+                 apply wpsimp
+                apply clarsimp
+               apply (wpsimp simp: setMR_def length_of_msgRegisters)
+              apply (solves wpsimp)+
+      (* from ccorres_guard_imp above; C side *)
+      apply (clarsimp simp: message_info_to_H_def n_msgRegisters_def mask_def split: if_splits)
+     (* continue in the ccorres wp/vcg chain *)
+     apply (clarsimp cong: conj_cong simp: msgMaxLength_def)
+     apply (simp add: ipc_buffer_case_rewrite n_msgRegisters_def length_of_msgRegisters)
+     apply (wpsimp wp: hoare_drop_imp[where Q'="\<lambda>_. tcb_at' t" for t]
+                       hoare_case_option_wp asUser_valid_ipc_buffer_ptr')
+    apply (wpsimp wp: lookupIPCBuffer_Some_0 hoare_drop_imp)
+   apply (wpsimp wp: hoare_vcg_op_lift doMachineOp_sch_act_wf')
+  apply clarsimp
+  apply (rule conjI; clarsimp)
+   (* Haskell *)
+   apply (rule conjI, fastforce)+
+   apply (simp add: ct_in_state'_def st_tcb_at'_def)
+   apply (solves normalise_obj_at')
+  (* C *)
+  apply (clarsimp simp: C_register_defs badgeRegister_def AARCH64.badgeRegister_def)
+  done
+
+private method syscall_args_step for n::nat =
+  (rule ccorres_add_return),
+  (ctac add: getSyscallArg_ccorres_foo[where args=args and n=n and buffer=buffer]),
+  (rule ccorres_Guard_Seq),
+  csymbr
+
+private method while_unroll_syscall for step::machine_word =
+  (while_unroll_gen step \<open>syscall_args_step "unat step"\<close>)
+
+lemma performSMCInvocation_always_replies:
+  "do reply <- performSMCInvocation args;
+      if reply = [] then f reply else g reply
+   od =
+   do reply <- performSMCInvocation args;
+      g reply
+   od"
+  unfolding performSMCInvocation_def
+  by (simp add: bind_assoc Let_def) monad_eq
+
+lemma decodeSMCInvocation_ccorres:
+  "\<lbrakk> interpret_excaps extraCaps' = excaps_map extraCaps; isSMCCap cp \<rbrakk> \<Longrightarrow>
+   ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
+              and sysargs_rel args buffer
+              and (valid_cap' (ArchObjectCap cp)))
+       (\<lbrace>\<acute>label___unsigned_long = label\<rbrace> \<inter>
+        \<lbrace>unat \<acute>length___unsigned_long = length args\<rbrace> \<inter>
+        \<lbrace>ccap_relation (ArchObjectCap cp) \<acute>cap\<rbrace> \<inter>
+        \<lbrace>\<acute>call = from_bool isCall \<rbrace> \<inter>
+        \<lbrace>\<acute>buffer = option_to_ptr buffer\<rbrace>) hs
+       (decodeSMCInvocation label args cp
+              >>= invocationCatch thread isBlocking isCall InvokeArchObject)
+       (Call decodeARMSMCInvocation_'proc)"
+  apply (clarsimp simp: isCap_simps decodeSMCInvocation_def)
+  apply (cinit' lift:  label___unsigned_long_' length___unsigned_long_' cap_' call_' buffer_')
+
+   apply (rule ccorres_Cond_rhs_Seq)
+    (* label \<noteq> ARMSMCCall *)
+    apply ccorres_rewrite
+    apply (clarsimp simp: invocation_eq_use_types throwError_invocationCatch)
+    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+    apply (rule allI, rule conseqPre, vcg)
+    apply (clarsimp simp: fst_throwError_returnOk exception_defs syscall_error_rel_def
+                          syscall_error_to_H_cases)
+   apply (simp add: invocation_eq_use_types cong: ccorres_abstract_cong)
+
+   apply (rule ccorres_Cond_rhs_Seq)
+    (* \<not> numSMCRegs \<le> length args *)
+    apply ccorres_rewrite
+    apply (prop_tac "\<not> numSMCRegs \<le> length args")
+     apply (solves \<open>clarsimp simp: numSMCRegs_def word_less_nat_alt\<close>)
+    apply (clarsimp simp: throwError_invocationCatch)
+    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+    apply (rule allI, rule conseqPre, vcg)
+    apply (clarsimp simp: fst_throwError_returnOk exception_defs syscall_error_rel_def
+                          syscall_error_to_H_cases)
+
+   apply (prop_tac "numSMCRegs \<le> length args")
+    apply (solves \<open>clarsimp simp: numSMCRegs_def word_less_nat_alt\<close>)
+   apply (simp cong: ccorres_abstract_cong)
+   apply csymbr
+   apply csymbr
+   apply (rule ccorres_add_return)
+   apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
+     (* rewrite smc_func_id in schematic params into args!0 *)
+     apply (clarsimp cong: ccorres_abstract_cong)
+     apply (rule ccorres_Cond_rhs_Seq)
+      apply (prop_tac "smc_badge \<noteq> 0 \<and> smc_badge \<noteq> args ! 0")
+       apply (solves \<open>clarsimp simp: ccap_relation_SMCCap_lift_eq\<close>)
+      apply ccorres_rewrite
+      apply (clarsimp simp: throwError_invocationCatch)
+      apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+      apply (rule allI, rule conseqPre, vcg)
+      apply (clarsimp simp: fst_throwError_returnOk exception_defs syscall_error_rel_def
+                            syscall_error_to_H_cases)
+     apply (prop_tac "\<not>(smc_badge \<noteq> 0 \<and> smc_badge \<noteq> args ! 0)")
+      apply (solves \<open>clarsimp simp: ccap_relation_SMCCap_lift_eq\<close>)
+     apply (simp only:) (* Avoid rewriting condition above, so whenE can rewrite to False *)
+     apply (clarsimp simp: whileAnno_def)
+     apply csymbr
+     apply (while_unroll_syscall 0)
+       apply (while_unroll_syscall 1)
+         apply (while_unroll_syscall 2)
+           apply (while_unroll_syscall 3)
+             apply (while_unroll_syscall 4)
+               apply (while_unroll_syscall 5)
+                 apply (while_unroll_syscall 6)
+                   apply (while_unroll_syscall 7)
+                     apply (rule ccorres_basic_srnoop2, simp)
+                     apply (rule ccorres_expand_while_iff_Seq[THEN iffD1])
+                     apply (rule ccorres_cond_false)
+                     apply (clarsimp simp: returnOk_def ccorres_invocationCatch_Inr)
+                     apply (ctac (no_vcg) add: setThreadState_ccorres)
+                      apply (clarsimp simp: performInvocation_def AARCH64_H.performInvocation_def
+                                            liftE_bindE performSMCInvocation_always_replies)
+                      apply (rule ccorres_add_return2)
+                      apply (ctac (no_vcg) add: invokeSMCCall_ccorres)
+                       apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+                       apply (rule allI, rule conseqPre, vcg)
+                       apply (clarsimp simp: return_def)
+                      apply wp
+                     apply (wpsimp wp: sts_invs_minor' ct_in_state'_set)
+                   apply (wp,
+                          clarsimp, rule conseqPre,
+                          vcg exspec=getSyscallArg_modifies, rule subset_refl)+
+    apply wp
+    apply (clarsimp cong: conj_cong)
+    apply assumption
+   apply (vcg exspec=getSyscallArg_modifies)
+  apply (clarsimp simp: rf_sr_ksCurThread cap_get_tag_isCap_unfolded_H_cap2)
+  apply (rule conjI; clarsimp)
+   apply (prop_tac "8 \<le> length args", solves \<open>clarsimp simp: not_less word_le_nat_alt\<close>)
+   apply (prop_tac "args \<noteq> []", fastforce)
+   apply (clarsimp simp: sysargs_rel_to_n ct_active_st_tcb_at_minor')
+   apply fastforce
+  (* 8 times array update = smc_args_to_C *)
+  apply (rule drop_imp, rule allI)
+  apply (rename_tac smc_arg, case_tac smc_arg)
+  apply (clarsimp simp: smc_args_to_C_def intro!: array_ext)
+  apply (rename_tac i, case_tac i, simp)
+  apply (repeat 7 \<open>rename_tac i', case_tac i', simp add: eval_nat_numeral\<close>)
+  apply simp
+  done
+
+end (* of private method context *)
+
 lemma Arch_decodeInvocation_ccorres:
   notes if_cong[cong]
   assumes "interpret_excaps extraCaps' = excaps_map extraCaps"
@@ -4430,8 +4718,8 @@ proof -
   note trim_call = ccorres_trim_returnE[rotated 2, OF ccorres_call]
 
   have MMU_case_helper_eq:
-    "\<And>P Q R. \<lbrakk> \<not> isVCPUCap cp; \<not> isSGISignalCap cp \<rbrakk> \<Longrightarrow>
-           (case cp of VCPUCap x \<Rightarrow> P cp | SGISignalCap _ _ \<Rightarrow> R | _ \<Rightarrow> Q cp) = Q cp"
+    "\<And>P Q R S. \<lbrakk> \<not> isVCPUCap cp; \<not> isSGISignalCap cp; \<not>isSMCCap cp \<rbrakk> \<Longrightarrow>
+           (case cp of VCPUCap x \<Rightarrow> P cp | SGISignalCap _ _ \<Rightarrow> R | SMCCap _ \<Rightarrow> S | _ \<Rightarrow> Q cp) = Q cp"
     by (clarsimp simp: isCap_simps split: arch_capability.splits)
 
   from assms show ?thesis
@@ -4449,10 +4737,15 @@ proof -
       apply (rule ccorres_trim_returnE, simp+)
       apply (rule ccorres_call,
              rule decodeSGISignalInvocation_ccorres; simp add: isCap_simps)
+     apply (rule ccorres_Cond_rhs)
+      apply (wpc; (rule ccorres_inst[where P=\<top> and P'=UNIV], solves \<open>clarsimp simp: isCap_simps\<close>)?)
+      apply (rule ccorres_trim_returnE, simp+)
+      apply (rule ccorres_call,
+             rule decodeSMCInvocation_ccorres; simp add: isCap_simps)
 
      (* will not rewrite any other way, and we do not want to repeat proof for each MMU cap case
         of decodeARMMMUInvocation *)
-     apply (subst MMU_case_helper_eq, assumption, assumption)
+     apply (subst MMU_case_helper_eq, assumption, assumption, assumption)
      apply (rule ccorres_trim_returnE, simp+)
      apply (rule ccorres_call,
             rule decodeARMMMUInvocation_ccorres; simp)
