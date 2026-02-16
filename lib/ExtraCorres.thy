@@ -350,6 +350,20 @@ lemma gets_the_corres_relation:
   apply (fastforce intro: corres_u_nofail)
   done
 
+(* Mostly for use in DRefine for ignore concrete whenE conditions when the abstract side
+   is always allowed to nondeterministically throw. *)
+lemma whenE_throwError_alt_corres:
+  "\<lbrakk> corres_underlying sr nf nf' (er \<oplus> r) P P' (m \<sqinter> throwError e) m'; er e e' \<rbrakk> \<Longrightarrow>
+   corres_underlying sr nf nf' (er \<oplus> r) P P'
+                     (m \<sqinter> throwError e)
+                     (doE _ <- whenE Q (throwError e');
+                          m'
+                      odE)"
+  apply (cases Q; simp)
+  apply (rule corres_alternate2; simp)
+  done
+
+lemmas whenE_throwError_alt_corres_dc = whenE_throwError_alt_corres[where er=dc, simplified]
 
 text \<open>Some corres_underlying rules for monadic combinators\<close>
 

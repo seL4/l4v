@@ -62,6 +62,10 @@ lemma prod_injects:
   "p = (x,y) \<Longrightarrow> x = fst p \<and> y = snd p"
   by auto
 
+lemma prod_imp_fst_snd:
+  "(\<forall>a b. x = (a, b) \<longrightarrow> P a b) = P (fst x) (snd x)"
+  by auto
+
 primrec
   delete :: "'a \<Rightarrow> 'a list \<Rightarrow> 'a list"
 where
