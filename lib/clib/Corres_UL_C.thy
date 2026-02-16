@@ -1727,6 +1727,13 @@ lemma ccorres_assume_pre:
   apply blast
   done
 
+lemma ccorres_assume_pre_sr:
+  assumes "\<And>s s'. \<lbrakk>P s; (s, s') \<in> sr\<rbrakk> \<Longrightarrow> ccorres_underlying sr \<Gamma> rrel xf arrel axf P P' hs f g"
+  shows "ccorres_underlying sr \<Gamma> rrel xf arrel axf P P' hs f g"
+  using assms
+  unfolding ccorres_underlying_def
+  by fastforce
+
 lemma ccorres_name_pre:
   "(\<And>s. P s \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf r' xf' (\<lambda>s'. s' = s) P' hs H C)
     \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf r' xf'  P P' hs H C"
@@ -1736,6 +1743,24 @@ lemma ccorres_name_pre:
     apply simp
    apply simp
    done
+
+lemma ccorres_pre_gets:
+  assumes ccorres: "\<And>rv. Q rv \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf ar axf (P rv) (P' rv) hs (m rv) c"
+  assumes Q: "\<And>s s'. \<lbrakk> (s, s') \<in> sr; P (f s) s \<rbrakk> \<Longrightarrow> Q (f s)"
+  assumes R: "\<And>s s'. (s, s') \<in> sr \<Longrightarrow> R (f s) (f' s')"
+  shows "ccorres_underlying sr \<Gamma> r xf ar axf
+                            (\<lambda>s. \<forall>rv. f s = rv \<longrightarrow> P rv s)
+                            {s. \<forall>rv. R rv (f' s) \<longrightarrow> s \<in> P' rv} hs
+                            (gets f >>= m) c"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l[where Q="\<lambda>rv s. rv = f s \<and> P rv s" and Q'=P'])
+       apply (rule ccorres_assume_pre_sr)
+       apply (rule ccorres_guard_imp2, rule assms)
+        apply (simp add: Q)
+       apply simp
+      apply wpsimp+
+  apply (clarsimp simp: R)
+  done
 
 (* using subst bind_assoc[symmetric] works, but causes flex-flex pairs in ccorres proofs
    using simp won't create flex-flex pairs, but will rearrange everything *)
