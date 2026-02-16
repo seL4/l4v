@@ -245,6 +245,12 @@ fun remove_decl_typedefs env d =
     in
       (SOME (EnumDecl (sw, map ecmap ecs)), env)
     end
+  | StaticAssertion {condition, message} => let
+    in
+      (SOME (StaticAssertion { condition = (remove_expr_typedefs env) condition,
+                               message = message }),
+       env)
+    end
 
 val bogus = SourcePos.bogus
 

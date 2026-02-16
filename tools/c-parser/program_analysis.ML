@@ -1681,6 +1681,9 @@ in
       (puredecl d, pop_scope (set_proto_params fname (List.rev pm_vis0) e))
     end
   | EnumDecl eninfo => (puredecl d, process_enumdecl eninfo e)
+  (* nothing to be done *)
+  (* XXX: like process_enumdecl, use const_eval on the condition to check it? *)
+  | StaticAssertion {...} => (puredecl d, e)
 end
 
 type asm_stmt_elements = (string * bool * expr option * expr list)

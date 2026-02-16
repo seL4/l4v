@@ -44,6 +44,7 @@ datatype declaration =
                        params : (expr ctype * string option) list,
                        specs : fnspec list}
        | EnumDecl of string option wrap * (string wrap * expr option) list
+       | StaticAssertion of { condition: expr, message: string wrap }
 
 type namedstringexp = string option * string * expr
 
