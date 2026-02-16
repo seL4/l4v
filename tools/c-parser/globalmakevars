@@ -16,9 +16,10 @@ GLOB_PFX := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 CC ?= gcc
 
 SML_COMPILER ?= mlton
-#ifndef SML_COMPILER
-#SML_COMPILER := $(if $(shell which mlton),mlton,poly)
-#endif
+
+ifndef MLTON
+MLTON := $(shell $(GLOB_PFX)/../../isabelle/bin/isabelle getenv -b ISABELLE_MLTON)
+endif
 
 ifndef ML_HOME
 ML_HOME := $(shell $(GLOB_PFX)/../../isabelle/bin/isabelle getenv ML_HOME | perl -ne 'print (substr($$_,8))')

@@ -27,9 +27,6 @@ sudo apt-get install \
     rsync
 ```
 
-There is no package for the MLton compiler on Bullseye, so you will need to
-install it from the [MLton website](http://www.mlton.org).
-
 The Haskell Stack package is unavailable on Bullseye, so you will need to
 install it from the [Haskell Stack
 website](https://docs.haskellstack.org/en/stable/).
@@ -50,7 +47,7 @@ sudo apt-get install \
     ncurses-dev librsvg2-bin device-tree-compiler cmake \
     ninja-build curl zlib1g-dev texlive-fonts-recommended \
     texlive-latex-extra texlive-metapost texlive-bibtex-extra \
-    mlton-compiler haskell-stack repo
+    haskell-stack repo
 ```
 
 Continue with the [python setup step](#python) below.
@@ -64,7 +61,7 @@ To install the main dependencies and cross compilers, use the following steps:
 
 ```sh
 brew install git libxml2 ncurses librsvg dtc cmake ninja texlive rsync python ccache \
-     zstd haskell-stack mlton arm-none-eabi-gcc repo
+     zstd haskell-stack arm-none-eabi-gcc repo
 
 brew install --cask gcc-arm-embedded
 

@@ -74,47 +74,47 @@ AARCH64_MLB_PATH := -mlb-path-var 'L4V_ARCH AARCH64'
 X64_MLB_PATH := -mlb-path-var 'L4V_ARCH X64'
 RISCV64_MLB_PATH := -mlb-path-var 'L4V_ARCH RISCV64'
 
-PARSER_DEPS_ARM := $(shell mlton $(ARM_MLB_PATH) -stop f $(STP_PFX)/c-parser.mlb)
-PARSER_DEPS_ARM_HYP := $(shell mlton $(ARM_HYP_MLB_PATH) -stop f $(STP_PFX)/c-parser.mlb)
-PARSER_DEPS_AARCH64 := $(shell mlton $(AARCH64_MLB_PATH) -stop f $(STP_PFX)/c-parser.mlb)
-PARSER_DEPS_X64 := $(shell mlton $(X64_MLB_PATH) -stop f $(STP_PFX)/c-parser.mlb)
-PARSER_DEPS_RISCV64 := $(shell mlton $(RISCV64_MLB_PATH) -stop f $(STP_PFX)/c-parser.mlb)
+PARSER_DEPS_ARM := $(shell $(MLTON) $(ARM_MLB_PATH) -stop f $(STP_PFX)/c-parser.mlb)
+PARSER_DEPS_ARM_HYP := $(shell $(MLTON) $(ARM_HYP_MLB_PATH) -stop f $(STP_PFX)/c-parser.mlb)
+PARSER_DEPS_AARCH64 := $(shell $(MLTON) $(AARCH64_MLB_PATH) -stop f $(STP_PFX)/c-parser.mlb)
+PARSER_DEPS_X64 := $(shell $(MLTON) $(X64_MLB_PATH) -stop f $(STP_PFX)/c-parser.mlb)
+PARSER_DEPS_RISCV64 := $(shell $(MLTON) $(RISCV64_MLB_PATH) -stop f $(STP_PFX)/c-parser.mlb)
 
-TOKENIZER_DEPS_ARM := $(shell mlton $(ARM_MLB_PATH) -stop f $(STP_PFX)/tokenizer.mlb)
-TOKENIZER_DEPS_ARM_HYP := $(shell mlton $(ARM_HYP_MLB_PATH) -stop f $(STP_PFX)/tokenizer.mlb)
-TOKENIZER_DEPS_AARCH64 := $(shell mlton $(AARCH64_MLB_PATH) -stop f $(STP_PFX)/tokenizer.mlb)
-TOKENIZER_DEPS_X64 := $(shell mlton $(X64_MLB_PATH) -stop f $(STP_PFX)/tokenizer.mlb)
-TOKENIZER_DEPS_RISCV64 := $(shell mlton $(RISCV64_MLB_PATH) -stop f $(STP_PFX)/tokenizer.mlb)
+TOKENIZER_DEPS_ARM := $(shell $(MLTON) $(ARM_MLB_PATH) -stop f $(STP_PFX)/tokenizer.mlb)
+TOKENIZER_DEPS_ARM_HYP := $(shell $(MLTON) $(ARM_HYP_MLB_PATH) -stop f $(STP_PFX)/tokenizer.mlb)
+TOKENIZER_DEPS_AARCH64 := $(shell $(MLTON) $(AARCH64_MLB_PATH) -stop f $(STP_PFX)/tokenizer.mlb)
+TOKENIZER_DEPS_X64 := $(shell $(MLTON) $(X64_MLB_PATH) -stop f $(STP_PFX)/tokenizer.mlb)
+TOKENIZER_DEPS_RISCV64 := $(shell $(MLTON) $(RISCV64_MLB_PATH) -stop f $(STP_PFX)/tokenizer.mlb)
 
 $(STPARSER_ARM): $(PARSER_DEPS_ARM) | $(ARM_DIR)
-	mlton $(ARM_MLB_PATH) -output $@ $<
+	$(MLTON) $(ARM_MLB_PATH) -output $@ $<
 
 $(STPARSER_ARM_HYP): $(PARSER_DEPS_ARM_HYP) | $(ARM_HYP_DIR)
-	mlton $(ARM_HYP_MLB_PATH) -output $@ $<
+	$(MLTON) $(ARM_HYP_MLB_PATH) -output $@ $<
 
 $(STPARSER_AARCH64): $(PARSER_DEPS_AARCH64) | $(AARCH64_DIR)
-	mlton $(AARCH64_MLB_PATH) -output $@ $<
+	$(MLTON) $(AARCH64_MLB_PATH) -output $@ $<
 
 $(STPARSER_X64): $(PARSER_DEPS_X64) | $(X64_DIR)
-	mlton $(X64_MLB_PATH) -output $@ $<
+	$(MLTON) $(X64_MLB_PATH) -output $@ $<
 
 $(STPARSER_RISCV64): $(PARSER_DEPS_RISCV64) | $(RISCV64_DIR)
-	mlton $(RISCV64_MLB_PATH) -output $@ $<
+	$(MLTON) $(RISCV64_MLB_PATH) -output $@ $<
 
 $(TOKENIZER_ARM): $(TOKENIZER_DEPS_ARM) | $(ARM_DIR)
-	mlton $(ARM_MLB_PATH) -output $@ $<
+	$(MLTON) $(ARM_MLB_PATH) -output $@ $<
 
 $(TOKENIZER_ARM_HYP): $(TOKENIZER_DEPS_ARM_HYP) | $(ARM_HYP_DIR)
-	mlton $(ARM_HYP_MLB_PATH) -output $@ $<
+	$(MLTON) $(ARM_HYP_MLB_PATH) -output $@ $<
 
 $(TOKENIZER_AARCH64): $(TOKENIZER_DEPS_AARCH64) | $(AARCH64_DIR)
-	mlton $(AARCH64_MLB_PATH) -output $@ $<
+	$(MLTON) $(AARCH64_MLB_PATH) -output $@ $<
 
 $(TOKENIZER_X64): $(TOKENIZER_DEPS_X64) | $(X64_DIR)
-	mlton $(X64_MLB_PATH) -output $@ $<
+	$(MLTON) $(X64_MLB_PATH) -output $@ $<
 
 $(TOKENIZER_RISCV64): $(TOKENIZER_DEPS_RISCV64) | $(RISCV64_DIR)
-	mlton $(RISCV64_MLB_PATH) -output $@ $<
+	$(MLTON) $(RISCV64_MLB_PATH) -output $@ $<
 
 else ifeq ($(SML_COMPILER),poly)
 #
