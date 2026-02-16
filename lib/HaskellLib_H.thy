@@ -19,6 +19,8 @@ begin
 
 abbreviation (input) "flip \<equiv> swp"
 
+abbreviation (input) "listUpdate \<equiv> list_update"
+
 abbreviation(input) bind_drop :: "('a, 'c) nondet_monad \<Rightarrow> ('a, 'b) nondet_monad
                       \<Rightarrow> ('a, 'b) nondet_monad" (infixl ">>'_" 60)
   where "bind_drop \<equiv> (\<lambda>x y. Nondet_Monad.bind x (K_bind y))"
