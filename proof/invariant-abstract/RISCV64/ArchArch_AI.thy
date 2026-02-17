@@ -1312,6 +1312,47 @@ lemma arch_pinv_st_tcb_at:
   apply (wp perform_asid_control_invocation_st_tcb_at; fastforce elim!: pred_tcb_weakenE)+
   done
 
+crunch L2FlushAddr, tfence
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
+
+lemmas L2FlushAddr_irq_masks = no_irq[OF no_irq_L2FlushAddr]
+
+lemmas tfence_irq_masks = no_irq[OF no_irq_tfence]
+
+lemma dmo_L2FlushAddr[wp]:
+  "do_machine_op (L2FlushAddr x) \<lbrace>invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid)
+     apply ((clarsimp simp: L2FlushAddr_def | wp)+)[3]
+  apply(erule (1) use_valid[OF _ L2FlushAddr_irq_masks])
+  done
+
+lemma dmo_tfence[wp]:
+  "do_machine_op tfence \<lbrace>invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid)
+     apply ((clarsimp simp: tfence_def | wp)+)[3]
+  apply(erule (1) use_valid[OF _ tfence_irq_masks])
+  done
+
+lemma arch_domainswitch_flush_invs[wp]:
+  "arch_domainswitch_flush \<lbrace>invs\<rbrace>"
+ unfolding arch_domainswitch_flush_def
+ apply (simp add: mapM_x_mapM)
+ apply (wp mapM_wp')
+ done
+
+crunch arch_switch_domain_kernel
+  for interrupt_states[wp]: "\<lambda>ms. P (interrupt_states ms)"
+  (simp: crunch_simps)
+
+lemma arch_switch_domain_kernel_invs[wp]:
+  "arch_switch_domain_kernel newdom \<lbrace>invs\<rbrace>"
+  unfolding arch_switch_domain_kernel_def
+  by (wpsimp wp: get_cap_wp)
+
 end
 
 end

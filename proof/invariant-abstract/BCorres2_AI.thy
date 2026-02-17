@@ -22,6 +22,12 @@ locale BCorres2_AI =
     "\<And> a b.
       bcorres (make_arch_fault_msg a b :: 'a state \<Rightarrow> _)
               (make_arch_fault_msg a b)"
+  assumes arch_domainswitch_flush_bcorres[wp]:
+    "bcorres (arch_domainswitch_flush :: 'a state \<Rightarrow> _) arch_domainswitch_flush"
+  assumes arch_switch_domain_kernel_bcorres[wp]:
+    "\<And>nd.
+      bcorres (arch_switch_domain_kernel nd :: 'a state \<Rightarrow> _)
+              (arch_switch_domain_kernel nd)"
 
 definition all_but_exst where
   "all_but_exst P \<equiv> (\<lambda>s. P (kheap s) (cdt s) (is_original_cap s)
@@ -29,7 +35,9 @@ definition all_but_exst where
                       (scheduler_action s) (domain_list s) (domain_index s)
                       (cur_domain s) (domain_time s) (ready_queues s)
                       (machine_state s) (interrupt_irq_node s)
-                      (interrupt_states s) (arch_state s))"
+                      (interrupt_states s) (arch_state s)
+                      (domain_kimage_vspace s) (domain_kimage_asid s)
+                      (domain_irqs s) (shared_data_flush_paddrs s))"
 
 lemma ef_mk_ef: "empty_fail f \<Longrightarrow> mk_ef (f s) = f s"
   apply (clarsimp simp add: empty_fail_def mk_ef_def)
@@ -41,13 +49,18 @@ lemma ef_mk_ef: "empty_fail f \<Longrightarrow> mk_ef (f s) = f s"
 lemma all_but_obvious:
   "all_but_exst (\<lambda>kheap cdt is_original_cap cur_thread idle_thread
        scheduler_action domain_list domain_index cur_domain domain_time
-       ready_queues machine_state interrupt_irq_node interrupt_states arch_state.
+       ready_queues machine_state interrupt_irq_node interrupt_states arch_state
+       domain_kimage_vspace domain_kimage_asid domain_irqs shared_data_flush_paddrs.
        x = \<lparr>kheap = kheap, cdt = cdt, is_original_cap = is_original_cap, cur_thread = cur_thread,
             idle_thread = idle_thread, scheduler_action = scheduler_action,
             domain_list = domain_list, domain_index = domain_index, cur_domain = cur_domain,
             domain_time = domain_time, ready_queues = ready_queues,
             machine_state = machine_state, interrupt_irq_node = interrupt_irq_node,
             interrupt_states = interrupt_states, arch_state = arch_state,
+            domain_kimage_vspace = domain_kimage_vspace,
+            domain_kimage_asid = domain_kimage_asid,
+            domain_irqs = domain_irqs,
+            shared_data_flush_paddrs = shared_data_flush_paddrs,
          exst = (exst x)\<rparr>) x"
   apply (simp add: all_but_exst_def)
   done

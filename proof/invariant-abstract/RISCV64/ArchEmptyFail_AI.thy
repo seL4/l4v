@@ -14,11 +14,22 @@ named_theorems EmptyFail_AI_assms
 
 crunch_ignore (empty_fail)
   (add: setVSpaceRoot_impl sfence_impl hwASIDFlush_impl read_stval resetTimer_impl stval_val
-        pt_lookup_from_level setIRQTrigger_impl plic_complete_claim_impl)
+        pt_lookup_from_level setIRQTrigger_impl plic_complete_claim_impl
+        tfence_impl L2FlushAddr_impl)
 
 crunch
   loadWord, load_word_offs, storeWord, getRestartPC, get_mrs
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
+
+(* Pulled these back from proof/refine/RISCV64/EmptyFail_H.thy
+   TODO: Remove from Refine and find right place in AInvs session to put these. -robs *)
+lemmas forM_empty_fail[intro!, wp, simp] = empty_fail_mapM[simplified forM_def[symmetric]]
+lemmas forM_x_empty_fail[intro!, wp, simp] = empty_fail_mapM_x[simplified forM_x_def[symmetric]]
+
+crunch
+  arch_mask_interrupts, arch_switch_domain_kernel, arch_domainswitch_flush
+  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
+  (simp:crunch_simps wp:crunch_wps ignore:do_machine_op)
 
 end
 

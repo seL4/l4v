@@ -325,6 +325,12 @@ lemma no_irq_clearMemory: "no_irq (clearMemory a b)"
   apply (wp no_irq_mapM_x no_irq_storeWord)
   done
 
+lemma no_irq_L2FlushAddr: "no_irq (L2FlushAddr b)"
+  by (simp add: L2FlushAddr_def)
+
+lemma no_irq_tfence: "no_irq tfence"
+  by (simp add: tfence_def)
+
 lemma getActiveIRQ_le_maxIRQ':
   "\<lbrace>\<lambda>s. \<forall>irq > maxIRQ. irq_masks s irq\<rbrace>
     getActiveIRQ in_kernel

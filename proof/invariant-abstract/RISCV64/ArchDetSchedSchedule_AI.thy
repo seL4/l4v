@@ -18,9 +18,10 @@ crunch
 
 crunch
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info,
-  arch_post_modify_registers, arch_prepare_next_domain
+  arch_post_modify_registers, arch_prepare_next_domain,
+  arch_domainswitch_flush, arch_switch_domain_kernel
   for valid_queues[wp, DetSchedSchedule_AI_assms]: valid_queues
-  (simp: crunch_simps ignore: set_tcb_queue tcb_sched_action)
+  (simp: crunch_simps ignore: set_tcb_queue tcb_sched_action wp: crunch_wps)
 
 crunch
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers
@@ -72,7 +73,8 @@ lemma switch_to_idle_thread_ct_in_cur_domain [wp, DetSchedSchedule_AI_assms]:
       | wp
       | simp add: ct_in_cur_domain_def)+
 
-crunch arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers
+crunch arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers,
+  arch_domainswitch_flush, arch_switch_domain_kernel
   for ct_not_in_q[wp, DetSchedSchedule_AI_assms]: ct_not_in_q
   (simp: crunch_simps wp: crunch_wps)
 
@@ -80,15 +82,17 @@ crunch arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_
   for is_activatable[wp, DetSchedSchedule_AI_assms]: "is_activatable t"
   (simp: crunch_simps)
 
-crunch arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers
+crunch arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers,
+  arch_domainswitch_flush, arch_switch_domain_kernel
   for valid_sched_action[wp, DetSchedSchedule_AI_assms]: valid_sched_action
-  (simp: crunch_simps)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch
   arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers,
-  arch_prepare_next_domain, arch_post_set_flags, arch_prepare_set_domain
+  arch_prepare_next_domain, arch_post_set_flags, arch_prepare_set_domain,
+  arch_domainswitch_flush, arch_switch_domain_kernel
   for valid_sched[wp, DetSchedSchedule_AI_assms]: valid_sched
-  (simp: crunch_simps)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch set_vm_root
   for exst[wp]: "\<lambda>s. P (exst s)"
@@ -98,20 +102,20 @@ crunch arch_switch_to_thread
   for ct_in_cur_domain_2[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (etcbs_of s)"
   (simp: crunch_simps wp: assert_inv)
 
-crunch set_vm_root
-  for valid_blocked[wp]: valid_blocked
-  (simp: crunch_simps)
+crunch set_vm_root, arch_domainswitch_flush, arch_switch_domain_kernel
+  for valid_blocked[wp,DetSchedSchedule_AI_assms]: valid_blocked
+  (simp: crunch_simps wp: crunch_wps)
 
-crunch set_vm_root
-  for ct_in_q[wp]: ct_in_q
-  (simp: crunch_simps)
+crunch set_vm_root, arch_domainswitch_flush, arch_switch_domain_kernel
+  for ct_in_q[wp,DetSchedSchedule_AI_assms]: ct_in_q
+  (simp: crunch_simps wp: crunch_wps)
 
-crunch switch_to_thread
+crunch switch_to_thread, arch_domainswitch_flush, arch_switch_domain_kernel
   for etcb_at[wp, DetSchedSchedule_AI_assms]: "etcb_at P t"
   (wp: crunch_wps)
 
 crunch
-  arch_switch_to_idle_thread
+  arch_switch_to_idle_thread, arch_domainswitch_flush, arch_switch_domain_kernel
   for valid_idle[wp, DetSchedSchedule_AI_assms]: "valid_idle"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -119,9 +123,10 @@ crunch arch_switch_to_idle_thread, arch_prepare_next_domain
   for etcb_at[wp, DetSchedSchedule_AI_assms]: "etcb_at P t"
 
 crunch
-  arch_prepare_next_domain, arch_prepare_set_domain
+  arch_prepare_next_domain, arch_prepare_set_domain,
+  arch_domainswitch_flush, arch_switch_domain_kernel
   for scheduler_action[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (scheduler_action s)"
-  (simp: Let_def)
+  (simp: Let_def wp: crunch_wps)
 
 crunch arch_prepare_next_domain
   for ready_queues[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (ready_queues s)"
@@ -283,8 +288,10 @@ crunch arch_invoke_irq_control
   for valid_sched[wp, DetSchedSchedule_AI_assms]: "valid_sched"
 
 crunch
-  arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread, arch_prepare_next_domain
+  arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
+  arch_prepare_next_domain, arch_domainswitch_flush, arch_switch_domain_kernel
   for valid_list[wp, DetSchedSchedule_AI_assms]: "valid_list"
+  (wp: crunch_wps)
 
 crunch
   handle_arch_fault_reply, handle_vm_fault, arch_get_sanitise_register_info, arch_post_modify_registers

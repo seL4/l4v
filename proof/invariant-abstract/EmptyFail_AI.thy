@@ -333,6 +333,10 @@ locale EmptyFail_AI_schedule = EmptyFail_AI_cap_revoke state_ext_t
     "empty_fail (arch_switch_to_thread t :: (unit, 'state_ext) s_monad)"
   assumes arch_prepare_next_domain_empty_fail[wp]:
     "empty_fail (arch_prepare_next_domain :: (unit, 'state_ext) s_monad)"
+  assumes arch_domainswitch_flush_empty_fail[wp]:
+    "empty_fail (arch_domainswitch_flush :: (unit, 'state_ext) s_monad)"
+  assumes arch_switch_domain_kernel_empty_fail[wp]:
+    "empty_fail (arch_switch_domain_kernel nd :: (unit, 'state_ext) s_monad)"
 
 crunch set_scheduler_action, next_domain, reschedule_required
   for (empty_fail) empty_fail[wp]

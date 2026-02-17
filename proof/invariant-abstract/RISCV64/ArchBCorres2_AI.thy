@@ -30,7 +30,8 @@ crunch invoke_untyped
 
 crunch
   set_mcpriority, set_priority, arch_get_sanitise_register_info, arch_post_modify_registers,
-  set_flags, arch_post_set_flags, maybe_handle_interrupt
+  set_flags, arch_post_set_flags, maybe_handle_interrupt,
+  arch_domainswitch_flush, arch_switch_domain_kernel
   for (bcorres) bcorres[wp, BCorres2_AI_assms]: truncate_state
 
 lemma invoke_tcb_bcorres[wp]:

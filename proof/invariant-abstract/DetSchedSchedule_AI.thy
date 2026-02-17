@@ -914,6 +914,45 @@ locale DetSchedSchedule_AI =
   assumes handle_spurious_irq_valid_idle[wp]:
     "handle_spurious_irq \<lbrace>valid_idle :: det_state \<Rightarrow> _\<rbrace>"
 
+  assumes arch_switch_domain_kernel_valid_sched[wp]:
+    "\<And>nd. arch_switch_domain_kernel nd \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_domainswitch_flush_valid_sched[wp]:
+    "arch_domainswitch_flush \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_switch_domain_kernel_valid_idle[wp]:
+    "\<And>nd. arch_switch_domain_kernel nd \<lbrace>valid_idle :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_domainswitch_flush_valid_idle[wp]:
+    "arch_domainswitch_flush \<lbrace>valid_idle :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_switch_domain_kernel_valid_queues[wp]:
+    "\<And>nd. arch_switch_domain_kernel nd \<lbrace>valid_queues :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_domainswitch_flush_valid_queues[wp]:
+    "arch_domainswitch_flush \<lbrace>valid_queues :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_switch_domain_kernel_valid_blocked[wp]:
+    "\<And>nd. arch_switch_domain_kernel nd \<lbrace>valid_blocked :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_domainswitch_flush_valid_blocked[wp]:
+    "arch_domainswitch_flush \<lbrace>valid_blocked :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_switch_domain_kernel_ct_in_q[wp]:
+    "\<And>nd. arch_switch_domain_kernel nd \<lbrace>ct_in_q :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_domainswitch_flush_ct_in_q[wp]:
+    "arch_domainswitch_flush \<lbrace>ct_in_q :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_switch_domain_kernel_etcb_at[wp]:
+    "\<And>P t nd. arch_switch_domain_kernel nd \<lbrace>etcb_at P t:: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_domainswitch_flush_etcb_at[wp]:
+    "\<And>P t. arch_domainswitch_flush \<lbrace>etcb_at P t:: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_switch_domain_kernel_simple_sched_action[wp]:
+    "\<And>nd. arch_switch_domain_kernel nd \<lbrace>simple_sched_action :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_domainswitch_flush_simple_sched_action[wp]:
+    "arch_domainswitch_flush \<lbrace>simple_sched_action :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_switch_domain_kernel_valid_sched_action[wp]:
+    "\<And>nd. arch_switch_domain_kernel nd \<lbrace>valid_sched_action :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_domainswitch_flush_valid_sched_action[wp]:
+    "arch_domainswitch_flush \<lbrace>valid_sched_action :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_switch_domain_kernel_valid_list[wp]:
+    "\<And>nd. arch_switch_domain_kernel nd \<lbrace>valid_list :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_domainswitch_flush_valid_list[wp]:
+    "arch_domainswitch_flush \<lbrace>valid_list :: det_state \<Rightarrow> _\<rbrace>"
+
+
+
 context DetSchedSchedule_AI begin
 
 crunch switch_to_idle_thread, switch_to_thread
@@ -1345,7 +1384,7 @@ crunch next_domain
 
 context DetSchedSchedule_AI begin
 
-crunch arch_prepare_next_domain
+crunch arch_prepare_next_domain, arch_domainswitch_flush, arch_switch_domain_kernel
   for valid_idle_etcb[wp]: "valid_idle_etcb :: det_state \<Rightarrow> _"
   (wp: valid_idle_etcb_lift)
 
@@ -1447,7 +1486,7 @@ lemma schedule_choose_new_thread_valid_sched:
   apply (wpsimp wp_del: when_wp
                  wp: set_scheduler_action_rct_valid_sched choose_thread_ct_not_queued
                      choose_thread_ct_activatable choose_thread_cur_dom_or_idle
-                     hoare_vcg_disj_lift)+
+                     hoare_vcg_disj_lift hoare_drop_imps)+
     apply (wpsimp wp: next_domain_valid_sched_action)+
   done
 
@@ -3661,6 +3700,7 @@ context DetSchedSchedule_AI_handle_hypervisor_fault begin
 
 crunch schedule_choose_new_thread
   for valid_list[wp]: valid_list
+  (wp: crunch_wps)
 
 lemma schedule_valid_list[wp]: "\<lbrace>valid_list\<rbrace> Schedule_A.schedule \<lbrace>\<lambda>_. valid_list\<rbrace>"
   apply (simp add: Schedule_A.schedule_def)

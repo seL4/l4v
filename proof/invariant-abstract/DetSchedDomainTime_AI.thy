@@ -97,6 +97,14 @@ locale DetSchedDomainTime_AI =
     "\<And>P t d. arch_prepare_set_domain t d \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace>"
   assumes arch_post_set_flags_domain_time_inv'[wp]:
     "\<And>P t fs. arch_post_set_flags t fs \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace>"
+  assumes arch_domainswitch_flush_domain_time_inv'[wp]:
+    "\<And>P. arch_domainswitch_flush \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace>"
+  assumes arch_domainswitch_flush_domain_list_inv'[wp]:
+    "\<And>P. arch_domainswitch_flush \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
+  assumes arch_switch_domain_kernel_domain_time_inv'[wp]:
+    "\<And>P nd. arch_switch_domain_kernel nd \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace>"
+  assumes arch_switch_domain_kernel_domain_list_inv'[wp]:
+    "\<And>P nd. arch_switch_domain_kernel nd \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
 
 crunch update_restart_pc
   for domain_list[wp]: "\<lambda>s. P (domain_list s)"
@@ -151,7 +159,7 @@ crunch cap_delete, activate_thread
 
 crunch schedule
   for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
-  (wp: hoare_drop_imp dxo_wp_weak simp: Let_def)
+  (wp: hoare_drop_imp dxo_wp_weak crunch_wps simp: Let_def)
 
 end
 
@@ -433,7 +441,7 @@ lemma schedule_choose_new_thread_domain_time_left[wp]:
    schedule_choose_new_thread
    \<lbrace>\<lambda>_ s::det_state. 0 < domain_time s \<rbrace>"
   unfolding schedule_choose_new_thread_def
-  by (wpsimp simp: word_gt_0)
+  by (wpsimp wp: hoare_drop_imps simp: word_gt_0 next_domain_def)
 
 crunch tcb_sched_action
   for etcb_at[wp]: "etcb_at P t"

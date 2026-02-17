@@ -22,9 +22,10 @@ crunch
   arch_invoke_irq_control, arch_get_sanitise_register_info,
   prepare_thread_delete, handle_hypervisor_fault, init_arch_objects,
   arch_post_modify_registers, arch_post_cap_deletion, handle_vm_fault,
-  arch_invoke_irq_handler, arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags
+  arch_invoke_irq_handler, arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags,
+  arch_switch_domain_kernel, arch_domainswitch_flush
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
-  (simp: crunch_simps)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch arch_finalise_cap
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
@@ -36,9 +37,10 @@ crunch
   arch_invoke_irq_control, arch_get_sanitise_register_info,
   prepare_thread_delete, handle_hypervisor_fault, handle_vm_fault,
   arch_post_modify_registers, arch_post_cap_deletion,
-  arch_invoke_irq_handler, arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags
+  arch_invoke_irq_handler, arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags,
+  arch_switch_domain_kernel, arch_domainswitch_flush
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_time s)"
-  (simp: crunch_simps)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch do_machine_op
   for exst[wp]: "\<lambda>s. P (exst s)"

@@ -34,12 +34,16 @@ arch_requalify_facts
   sts_valid_arch_inv
   arch_decode_inv_wf
   arch_pinv_st_tcb_at
+  arch_domainswitch_flush_invs
+  arch_switch_domain_kernel_invs
 
 lemmas [wp] =
   arch_decode_invocation_inv
   lookup_cap_and_slot_inv
   invoke_arch_invs
   arch_decode_inv_wf
+  arch_domainswitch_flush_invs
+  arch_switch_domain_kernel_invs
 
 lemmas [simp] =
   data_to_cptr_def
@@ -138,9 +142,15 @@ proof -
     done
 qed
 
+crunch next_domain
+  for interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
+  and domain_irqs[wp]: "\<lambda>s. P (domain_irqs s)"
+  (simp: crunch_simps)
+
 lemma schedule_choose_new_thread_ct_activatable[wp]:
   "\<lbrace> invs \<rbrace> schedule_choose_new_thread \<lbrace>\<lambda>_. ct_in_state activatable \<rbrace>"
-    unfolding schedule_choose_new_thread_def by wpsimp
+    unfolding schedule_choose_new_thread_def
+  by (wpsimp wp: hoare_drop_imps)
 
 lemma guarded_switch_to_ct_in_state_activatable[wp]:
   "\<lbrace>\<top>\<rbrace> guarded_switch_to t \<lbrace>\<lambda>a. ct_in_state activatable\<rbrace>"
