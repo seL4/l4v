@@ -101,12 +101,7 @@ definition
        newdom \<leftarrow> gets cur_domain;
        assert (newdom \<noteq> olddom);
        irqs_of \<leftarrow> gets domain_irqs;
-       arch_mask_interrupts True (irqs_of olddom);
        arch_switch_domain_kernel newdom;
-       table \<leftarrow> gets interrupt_states;
-       forM_x (irqs_of newdom)
-           (\<lambda>irq. when (table irq \<noteq> IRQInactive)
-                  (do_machine_op $ maskInterrupt False irq));
        arch_domainswitch_flush
      od);
      choose_thread;
