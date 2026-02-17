@@ -73,7 +73,7 @@ lemma handle_vm_fault_integrity[Syscall_AC_assms]:
   unfolding handle_vm_fault_def
   by (cases vmfault_type; wpsimp wp: as_user_integrity_autarch dmo_wp)
 
-crunch ackInterrupt, resetTimer
+crunch ackInterrupt, resetTimer, tfence, L2FlushAddr
   for underlying_memory_inv[Syscall_AC_assms, wp]: "\<lambda>s. P (underlying_memory s)"
   (simp: maskInterrupt_def)
 
@@ -151,7 +151,8 @@ crunch
   arch_post_modify_registers, arch_invoke_irq_control,
   arch_invoke_irq_handler, arch_perform_invocation, arch_mask_irq_signal,
   handle_reserved_irq, handle_vm_fault, handle_hypervisor_fault, handle_arch_fault_reply,
-  arch_prepare_set_domain, arch_post_set_flags, arch_prepare_next_domain, handle_spurious_irq
+  arch_prepare_set_domain, arch_post_set_flags, arch_prepare_next_domain, handle_spurious_irq,
+  arch_domainswitch_flush, arch_switch_domain_kernel
   for cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
   and idle_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (idle_thread s)"
   and cur_domain[Syscall_AC_assms, wp]:  "\<lambda>s. P (cur_domain s)"
@@ -172,6 +173,18 @@ lemma maskInterrupt_integrity[Syscall_AC_assms,wp]:
   "do_machine_op (maskInterrupt m irq) \<lbrace>integrity aag X st\<rbrace>"
   by (wpsimp wp: dmo_no_mem_respects)
 
+lemma tfence_integrity[Syscall_AC_assms,wp]:
+  "do_machine_op tfence \<lbrace>integrity aag X st\<rbrace>"
+  by (wpsimp wp: dmo_no_mem_respects)
+
+lemma L2FlushAddr_integrity[Syscall_AC_assms,wp]:
+  "do_machine_op (L2FlushAddr b) \<lbrace>integrity aag X st\<rbrace>"
+  by (wpsimp wp: dmo_no_mem_respects)
+
+lemma setVSpaceRoot_integrity[Syscall_AC_assms,wp]:
+  "do_machine_op (setVSpaceRoot a b) \<lbrace>integrity aag X st\<rbrace>"
+  by (wpsimp wp: dmo_no_mem_respects)
+
 lemma resetTimer_integrity[Syscall_AC_assms,wp]:
   "do_machine_op resetTimer \<lbrace>integrity aag X st\<rbrace>"
   by (wpsimp wp: dmo_no_mem_respects)
@@ -184,12 +197,14 @@ lemma valid_cur_hyp_machine_state[Syscall_AC_assms]:
   "valid_cur_hyp (machine_state_update f s) = valid_cur_hyp s"
   by (simp add: valid_cur_hyp_def)
 
-crunch arch_prepare_next_domain
+crunch arch_prepare_next_domain,arch_switch_domain_kernel,arch_domainswitch_flush
   for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
   and integrity[Syscall_AC_assms, wp]: "integrity aag X st"
   and ct_not_in_q[Syscall_AC_assms, wp]: ct_not_in_q
   and valid_sched_action[Syscall_AC_assms, wp]: valid_sched_action
+  and valid_arch_state[Syscall_AC_assms, wp]: valid_arch_state
   and ct_in_cur_domain[Syscall_AC_assms, wp]: ct_in_cur_domain
+  (wp: crunch_wps ct_in_cur_domain_lift ignore: do_machine_op)
 
 crunch handle_spurious_irq
   for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"

@@ -581,6 +581,30 @@ locale Syscall_AC_1 =
     "\<And>t ivk. \<lbrace>\<lambda>s. in_cur_domain t s\<rbrace> arch_invoke_irq_control ivk -,\<lbrace>\<lambda>_ s :: det_state. in_cur_domain t s\<rbrace>"
   assumes arch_perform_invocation_in_cur_domainE[wp]:
     "\<And>t ai. \<lbrace>\<lambda>s. in_cur_domain t s\<rbrace> arch_perform_invocation ai -,\<lbrace>\<lambda>_ s :: det_state. in_cur_domain t s\<rbrace>"
+  assumes arch_domainswitch_flush_pas_refine[wp]:
+    "arch_domainswitch_flush \<lbrace>pas_refined aag\<rbrace>"
+  assumes arch_domainswitch_flush_pas_integrity[wp]:
+    "arch_domainswitch_flush \<lbrace>integrity aag X st\<rbrace>"
+  assumes arch_domainswitch_flush_ct_in_cur_domain[wp]:
+    "arch_domainswitch_flush \<lbrace>ct_in_cur_domain :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_domainswitch_flush_idle_thread[wp]:
+    "\<And>P. arch_domainswitch_flush \<lbrace>\<lambda>s :: det_state. P (idle_thread s)\<rbrace>"
+  assumes arch_domainswitch_flush_cur_domain[wp]:
+    "\<And>P. arch_domainswitch_flush \<lbrace>\<lambda>s :: det_state. P (cur_domain s)\<rbrace>"
+  and arch_domainswitch_flush_valid_arch_state[wp]:
+    "arch_domainswitch_flush \<lbrace>valid_arch_state :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_switch_domain_kernel_pas_refine[wp]:
+    "\<And>nd. arch_switch_domain_kernel nd \<lbrace>pas_refined aag\<rbrace>"
+  assumes arch_switch_domain_kernel_integrity[wp]:
+    "\<And>nd. arch_switch_domain_kernel nd \<lbrace>integrity aag X st\<rbrace>"
+  assumes arch_switch_domain_kernel_ct_in_cur_domain[wp]:
+    "\<And>nd. arch_switch_domain_kernel nd \<lbrace>ct_in_cur_domain :: det_state \<Rightarrow> _\<rbrace>"
+  assumes arch_switch_domain_kernel_idle_thread[wp]:
+    "\<And>P nd. arch_switch_domain_kernel nd \<lbrace>\<lambda>s :: det_state. P (idle_thread s)\<rbrace>"
+  assumes arch_switch_domain_kernel_cur_domain[wp]:
+    "\<And>P nd. arch_switch_domain_kernel nd \<lbrace>\<lambda>s :: det_state. P (cur_domain s)\<rbrace>"
+  assumes arch_switch_domain_kernel_valid_arch_state[wp]:
+    "\<And>nd. arch_switch_domain_kernel nd \<lbrace>valid_arch_state :: det_state \<Rightarrow> _\<rbrace>"
 
 sublocale Syscall_AC_1 \<subseteq> cap_move: gpd_wps' "cap_move new_cap src_slot dest_slot"
   by simp
@@ -913,7 +937,13 @@ lemma next_domain_valid_sched:
   apply (simp add: valid_sched_def)
   done
 
-text \<open>
+lemma next_domain_ct_in_cur_domain:
+  "\<lbrace>ct_in_cur_domain and (\<lambda>s. scheduler_action s = choose_new_thread)\<rbrace> next_domain \<lbrace>\<lambda>_. ct_in_cur_domain\<rbrace>"
+  apply (simp add: next_domain_def Let_def)
+  apply (wpsimp wp: dxo_wp_weak)
+  done
+
+ text \<open>
 We need to use the domain of t instead of @{term "is_subject aag t"}
 because t's domain may contain multiple labels. See the comment for
 @{thm tcb_sched_action_dequeue_integrity'}
@@ -952,8 +982,8 @@ lemma schedule_choose_new_thread_integrity:
    schedule_choose_new_thread
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   unfolding schedule_choose_new_thread_def
-  by (wpsimp wp: choose_thread_respects_pasMayEditReadyQueues
-                 next_domain_valid_sched next_domain_valid_queues
+  by (wpsimp wp: choose_thread_respects_pasMayEditReadyQueues next_domain_ct_in_cur_domain
+                 next_domain_valid_sched next_domain_valid_queues hoare_drop_imps
            simp: schedule_choose_new_thread_def valid_sched_def invs_arch_state)
 
 lemma schedule_integrity:

@@ -335,6 +335,11 @@ locale DomainSepInv_1 =
     "handle_arch_fault_reply vmf thread d ds \<lbrace>\<lambda>s :: det_state. domain_sep_inv irqs st s\<rbrace>"
   and handle_vm_fault_domain_sep_inv[wp]:
     "handle_vm_fault t vmf_t \<lbrace>\<lambda>s :: det_state. domain_sep_inv irqs st s\<rbrace>"
+  and arch_domainswitch_flush_domain_sep_inv[wp]:
+    "arch_domainswitch_flush \<lbrace>\<lambda>s :: det_state. domain_sep_inv irqs st s\<rbrace>"
+  and arch_switch_domain_kernel_domain_sep_inv[wp]:
+    "arch_switch_domain_kernel nd \<lbrace>\<lambda>s :: det_state. domain_sep_inv irqs st s\<rbrace>"
+
 begin
 
 lemma deleted_irq_handler_domain_sep_inv:
