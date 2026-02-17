@@ -648,6 +648,134 @@ lemma corres_symb_exec_r:
    apply simp+
   done
 
+
+
+
+lemma corres_underlying_split_r:
+  assumes ac: "corres_underlying s nf nf' r' G G' a c"
+  assumes valid: "\<lbrace>G\<rbrace> a \<lbrace>P\<rbrace>" "\<lbrace>G'\<rbrace> c \<lbrace>P'\<rbrace>"
+  assumes bd: "\<forall>rv rv'. r' rv rv' \<longrightarrow>
+                        corres_underlying s nf nf' r (P rv) (P' rv') (return rv) (d rv')"
+  shows "corres_underlying s nf nf' r G G' a (c >>= (\<lambda>rv'. d rv'))"
+  using corres_underlying_split[where b = "return"]
+  using ac bd valid
+  by (smt corres_bind_return corres_split') 
+
+lemma corres_underlying_split_l:
+  assumes ac: "corres_underlying s nf nf' r' G G' a c"
+  assumes valid: "\<lbrace>G\<rbrace> a \<lbrace>P\<rbrace>" "\<lbrace>G'\<rbrace> c \<lbrace>P'\<rbrace>"
+  assumes bd: "\<forall>rv rv'. r' rv rv' \<longrightarrow>
+                        corres_underlying s nf nf' r (P rv) (P' rv') (b rv) (return rv')"
+  shows "corres_underlying s nf nf' r G G' (a >>= (\<lambda>rv'. b rv')) c"
+  using corres_underlying_split[where d = "return"]
+  using ac bd valid
+  by (smt corres_bind_return2 corres_underlying_split)
+
+
+lemma corres_underlying_split_r_ret:
+  assumes ac: "corres_underlying s nf nf' r' G G' ( return() ) c"
+  assumes valid: "\<lbrace>G\<rbrace> return () \<lbrace>P\<rbrace>" "\<lbrace>G'\<rbrace> c \<lbrace>P'\<rbrace>"
+  assumes bd: "\<forall>rv rv'. r' rv rv' \<longrightarrow>
+                        corres_underlying s nf nf' r (P rv) (P' rv') b (d rv')"
+  shows "corres_underlying s nf nf' r G G' b (c >>= (\<lambda>rv'. d rv'))"
+  using corres_underlying_split[where a = "return ()" and b = "\<lambda>_. b"]
+  using ac bd valid
+  by (metis corres_add_noop_lhs)
+  
+
+lemma corres_if_noPreCond:
+  "\<lbrakk> \<forall>(s,t)\<in>sr. P s \<and> P' t \<longrightarrow>  G = G' ;
+     corres_underlying sr nf nf' r P P' a c; 
+     corres_underlying sr nf nf' r P P' b d \<rbrakk> \<Longrightarrow>
+    corres_underlying sr nf nf' r
+      P  P' (if G then a else b) (if G' then c else d)" 
+  unfolding  corres_underlying_def 
+  apply simp   unfolding case_prod_unfold
+  by auto 
+
+lemma corres_if_preCond:
+  "\<lbrakk> \<forall>(s,t)\<in>sr. P s \<and> P' t \<longrightarrow>  G = G' ;
+     G \<and> G' \<longrightarrow> corres_underlying sr nf nf' r P P' a c; 
+     \<not>(G \<and> G') \<longrightarrow> corres_underlying sr nf nf' r P P' b d \<rbrakk> \<Longrightarrow>
+    corres_underlying sr nf nf' r
+      P  P' (if G then a else b) (if G' then c else d)" 
+  unfolding  corres_underlying_def 
+  apply simp   unfolding case_prod_unfold
+  by auto
+
+
+lemma corres_if_condition_noPreCond : 
+  "\<lbrakk> \<forall>(s,t)\<in>sr. P s \<and> P' t \<longrightarrow>  G = G' t ;
+     corres_underlying sr nf nf' r P P' a c; 
+     corres_underlying sr nf nf' r P P' b d \<rbrakk> \<Longrightarrow>
+  corres_underlying sr nf nf' r
+      P  P' (if G then a else b) (condition G' c  d)"
+  unfolding  corres_underlying_def condition_def
+  apply simp  unfolding case_prod_unfold
+  by auto
+
+lemma corres_if_condition_preCond : 
+  "\<lbrakk> \<forall>(s,t)\<in>sr. P s \<and> P' t \<longrightarrow>  G = G' t ;
+     corres_underlying sr nf nf' r P (P' and G') a c; 
+     corres_underlying sr nf nf' r P (\<lambda>s. P' s \<and> \<not>(G' s)) b d \<rbrakk> \<Longrightarrow>
+  corres_underlying sr nf nf' r
+      P  P' (if G then a else b) (condition G' c  d)"
+  unfolding  corres_underlying_def condition_def
+  apply simp  unfolding case_prod_unfold
+  by auto
+
+lemma corres_if_condition_preCond2 : 
+  "\<lbrakk> \<forall>(s,t)\<in>sr. P s \<and> P' t \<longrightarrow>  G = G' t ;
+     corres_underlying sr nf nf' r (\<lambda>s. P s \<and> G) (P' and G') a c; 
+     corres_underlying sr nf nf' r P (\<lambda>s. P' s \<and> \<not>(G' s)) b d \<rbrakk> \<Longrightarrow>
+  corres_underlying sr nf nf' r
+      P  P' (if G then a else b) (condition G' c  d)"
+  unfolding  corres_underlying_def condition_def
+  apply simp  unfolding case_prod_unfold
+  by auto
+
+lemma corres_condition_noPreCond:
+  "\<lbrakk> \<forall>(s,t)\<in>sr. P s \<and> P' t \<longrightarrow>  G s = G' t;
+     corres_underlying sr nf nf' r P P' a c; 
+     corres_underlying sr nf nf' r P P' b d \<rbrakk> \<Longrightarrow>
+    corres_underlying sr nf nf' r
+      P  P'  (condition G a b) (condition G' c d)"
+  unfolding condition_def corres_underlying_def 
+  apply simp 
+  unfolding case_prod_unfold
+  by auto
+
+lemma corres_condition_preCond:
+  "\<lbrakk> \<forall>(s,t)\<in>sr. P s \<and> P' t \<longrightarrow>  G s = G' t;
+     corres_underlying sr nf nf' r (\<lambda>s. G s \<and> P s) (\<lambda>s. G' s \<and> P' s) a c; 
+     corres_underlying sr nf nf' r (\<lambda>s. \<not>G s \<and> P s) (\<lambda>s. \<not>G' s \<and> P' s) b d \<rbrakk> \<Longrightarrow>
+    corres_underlying sr nf nf' r
+      P  P' (condition G a b) (condition G' c d)"
+  unfolding condition_def corres_underlying_def 
+  apply simp 
+  unfolding case_prod_unfold
+  by auto
+
+lemma corres_condition_G : 
+  "\<lbrakk> \<forall>s. P' s \<longrightarrow> G' s ;
+     corres_underlying sr nf nf' r P P' a c \<rbrakk> \<Longrightarrow>
+     corres_underlying sr nf nf' r P  P' a (condition G' c  d)"
+  unfolding condition_def corres_underlying_def 
+  by simp
+
+lemma corres_condition_notG : 
+  "\<lbrakk> \<forall>s. P' s \<longrightarrow> \<not>G' s ;
+     corres_underlying sr nf nf' r P P' a d \<rbrakk> \<Longrightarrow>
+     corres_underlying sr nf nf' r P  P' a (condition G' c  d)"
+  unfolding condition_def corres_underlying_def 
+  by simp 
+
+
+
+
+
+
+
 lemma corres_symb_exec_r_conj:
   assumes z: "\<And>rv. corres_underlying sr nf nf' r Q (R' rv) x (y rv)"
   assumes y: "\<lbrace>Q'\<rbrace> m \<lbrace>R'\<rbrace>"
