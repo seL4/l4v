@@ -683,9 +683,9 @@ in
 end
 
 fun lookup_fld alist (s, f) =
-    case assoc(alist, s) of
+    case List.find (fn (recname, _, _) => recname = s) alist of
       NONE => error ("No struct information for type "^s)
-    | SOME flds => let
+    | SOME (_, _, flds) => let
       in
         case List.find (fn (fldname, ty, cty) => fldname = f) flds  of
           NONE => error ("No type information for fld "^f^" in struct "^s)
