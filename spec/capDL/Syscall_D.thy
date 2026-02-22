@@ -73,7 +73,7 @@ fun perform_invocation :: "bool \<Rightarrow> bool \<Rightarrow> cdl_invocation 
   | "perform_invocation is_call can_block (InvokeTcb tcb_params) =
        invoke_tcb tcb_params"
   | "perform_invocation is_call can_block (InvokeDomain domain_params) =
-       invoke_domain domain_params"
+       liftE (invoke_domain domain_params)"
   | "perform_invocation is_call can_block (InvokeCNode cnode_params) =
        invoke_cnode cnode_params"
   | "perform_invocation is_call can_block (InvokeIrqControl irq_params) =
