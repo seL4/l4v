@@ -18,7 +18,7 @@
  * a single invocation when being validated.
  *
  * Caps required by the intents are not stored in the intent themselves,
- * but passed seperately in when required. In some sense, the Intent
+ * but passed separately in when required. In some sense, the Intent
  * is the "data" part of an invocation, but not the "caps" part of it.
  *)
 
@@ -28,9 +28,10 @@ imports
   ExecSpec.Platform
 begin
 
-context begin interpretation Arch .
-requalify_types irq
-end
+arch_requalify_types irq
+
+type_synonym domain_duration_len = 56
+type_synonym domain_duration = "domain_duration_len word"
 
 (*
  * Entities in seL4 have particular rights to kernel objects, which
@@ -186,7 +187,12 @@ datatype cdl_notification_intent =
 datatype cdl_endpoint_intent =
     SendMessageIntent "cdl_cptr list"
 
-datatype cdl_domain_intent = DomainSetIntent word8
+datatype cdl_domain_intent =
+    DomainSetIntent (domint_domain : word8)
+  | DomainScheduleSetStartIntent (domint_index : nat)
+  | DomainScheduleConfigureIntent (domint_index : nat)
+                                  (domint_domain : word8)
+                                  (domint_duration : domain_duration)
 
 datatype cdl_intent =
     CNodeIntent cdl_cnode_intent

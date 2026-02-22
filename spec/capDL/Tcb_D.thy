@@ -299,11 +299,19 @@ where
     | SetTLSBase tcb \<Rightarrow> liftE $ corrupt_tcb_intent tcb
     | SetFlags tcb \<Rightarrow> liftE $ corrupt_tcb_intent tcb"
 
+
+(* Domain invocations *)
+
 definition
   decode_domain_invocation :: "(cdl_cap \<times> cdl_cap_ref) list \<Rightarrow> cdl_domain_intent \<Rightarrow> cdl_domain_invocation except_monad"
 where
   "decode_domain_invocation caps intent \<equiv> case intent of
-     DomainSetIntent d \<Rightarrow> returnOk (SetDomain (cap_object (fst (hd caps))) d) \<sqinter> throw"
+     DomainSetIntent d \<Rightarrow>
+       returnOk (InvokeSetDomain (cap_object (fst (hd caps))) d) \<sqinter> throw
+   | DomainScheduleSetStartIntent start \<Rightarrow>
+       returnOk (InvokeDomainScheduleSetStart start) \<sqinter> throw
+   | DomainScheduleConfigureIntent idx domain duration \<Rightarrow>
+       returnOk (InvokeDomainScheduleConfigure idx domain duration) \<sqinter> throw"
 
 definition
   set_domain :: "cdl_object_id \<Rightarrow> word8 \<Rightarrow> unit k_monad"
@@ -311,10 +319,23 @@ where
   "set_domain tcb d \<equiv> update_thread tcb (\<lambda>t. (t\<lparr>cdl_tcb_domain := d \<rparr>))"
 
 definition
-  invoke_domain :: "cdl_domain_invocation \<Rightarrow> unit preempt_monad"
+  dom_schedule_set_start :: "nat \<Rightarrow> unit k_monad"
+where
+  "dom_schedule_set_start start \<equiv> modify (\<lambda>s. s\<lparr> cdl_dom_start := start \<rparr>)"
+
+definition
+  dom_schedule_configure :: "nat \<Rightarrow> word8 \<Rightarrow> domain_duration \<Rightarrow> unit k_monad"
+where
+  "dom_schedule_configure idx domain duration \<equiv>
+     modify (\<lambda>s. s\<lparr> cdl_dom_schedule := (cdl_dom_schedule s)[idx := (domain, duration)] \<rparr>)"
+
+definition
+  invoke_domain :: "cdl_domain_invocation \<Rightarrow> unit k_monad"
 where
   "invoke_domain params \<equiv> case params of
-     SetDomain tcb d \<Rightarrow> liftE $ set_domain tcb d"
+     InvokeSetDomain tcb d \<Rightarrow> set_domain tcb d
+   | InvokeDomainScheduleSetStart start \<Rightarrow> dom_schedule_set_start start
+   | InvokeDomainScheduleConfigure idx domain duration \<Rightarrow> dom_schedule_configure idx domain duration"
 
 
 end
