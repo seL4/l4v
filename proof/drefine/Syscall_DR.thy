@@ -19,6 +19,21 @@ context begin interpretation Arch . (*FIXME: arch-split*)
  *)
 
 definition
+  translate_domain_invocation :: "domain_invocation \<Rightarrow> cdl_domain_invocation"
+where
+  "translate_domain_invocation di \<equiv>
+     case di of
+       Invocations_A.InvokeDomainSet t d \<Rightarrow>
+         Invocations_D.InvokeSetDomain t d
+     | Invocations_A.InvokeDomainScheduleSetStart start \<Rightarrow>
+         Invocations_D.InvokeDomainScheduleSetStart start
+     | Invocations_A.InvokeDomainScheduleConfigure idx domain duration \<Rightarrow>
+         Invocations_D.InvokeDomainScheduleConfigure idx domain duration"
+
+lemmas translate_domain_invocation_simps[simp] =
+  translate_domain_invocation_def[split_simps domain_invocation.split]
+
+definition
   translate_invocation :: "Invocations_A.invocation \<Rightarrow> cdl_invocation"
 where
   "translate_invocation x \<equiv>
@@ -40,12 +55,14 @@ where
               translate_cnode_invocation icn
       | Invocations_A.InvokeTCB itcb \<Rightarrow>
           Invocations_D.InvokeTcb $ translate_tcb_invocation itcb
-      | Invocations_A.InvokeDomain itcb d \<Rightarrow> Invocations_D.InvokeDomain $ SetDomain itcb d
+      | Invocations_A.InvokeDomain di \<Rightarrow>
+          Invocations_D.InvokeDomain $ translate_domain_invocation di
       | Invocations_A.InvokeIRQControl irqc \<Rightarrow>
           Invocations_D.InvokeIrqControl $ translate_irq_control_invocation irqc
       | Invocations_A.InvokeIRQHandler irrqh \<Rightarrow>
-          Invocations_D.InvokeIrqHandler $ translate_irq_handler_invocation irrqh
-  "
+          Invocations_D.InvokeIrqHandler $ translate_irq_handler_invocation irrqh"
+
+lemmas translate_invocation_simps = translate_invocation_def[split_simps invocation.split]
 
 definition
   cdl_invocation_relation :: "cdl_invocation \<Rightarrow> Invocations_A.invocation \<Rightarrow> bool"
@@ -216,24 +233,41 @@ lemma fst_hd_map_eq: "\<lbrakk> xs \<noteq> []; fst (hd xs) = x \<rbrakk> \<Long
   apply (auto simp: fst_def hd_def split: list.splits)
   done
 
-lemma decode_domain_corres:
-  "\<lbrakk> Some (DomainIntent i) = transform_intent (invocation_type label') args';
-     excaps = transform_cap_list excaps' \<rbrakk> \<Longrightarrow>
-   dcorres (dc \<oplus> ((\<lambda>x. cdl_invocation_relation x \<circ> (\<lambda>(x, y). Invocations_A.invocation.InvokeDomain x y)) \<circ> cdl_invocation.InvokeDomain)) \<top> \<top>
-     (Tcb_D.decode_domain_invocation excaps i)
-     (Decode_A.decode_domain_invocation label' args' excaps')"
-  apply (unfold Tcb_D.decode_domain_invocation_def Decode_A.decode_domain_invocation_def)
+lemma transform_intent_domain_set_Some[simp]:
+  "(transform_intent_domain_set args = Some i) =
+   (\<exists>d more_args. args = d # more_args \<and> i = DomainSetIntent (ucast d))"
+  by (auto simp: transform_intent_domain_set_def split: list.splits)
+
+lemma transform_intent_domain_set_start_Some[simp]:
+  "(transform_intent_domain_set_start args = Some i) =
+   (\<exists>start more_args. args = start # more_args \<and> i = DomainScheduleSetStartIntent (unat start))"
+  by (auto simp: transform_intent_domain_set_start_def split: list.splits)
+
+lemma transform_intent_domain_configure_Some: (* FIXME: arch-split, time args *)
+  "(transform_intent_domain_configure args = Some i) =
+   (\<exists>idx domain dur_l dur_h more_args.
+       args = idx # domain # dur_l # dur_h # more_args \<and>
+       i = DomainScheduleConfigureIntent (unat idx)
+                                         (ucast domain)
+                                         ((ucast dur_h << 32) + ucast dur_l))"
+  by (auto simp: transform_intent_domain_configure_def cdl_duration_arg_def
+           split: list.splits Option.bind_splits)
+
+lemma decode_domain_set_corres:
+  "\<lbrakk> Some (DomainIntent di) = transform_intent (invocation_type label') args';
+     di = DomainSetIntent d; excaps = transform_cap_list excaps' \<rbrakk> \<Longrightarrow>
+   dcorres (dc \<oplus> (\<lambda>inv inv'. inv = translate_domain_invocation inv')) \<top> \<top>
+     (Tcb_D.decode_domain_invocation excaps di)
+     (Decode_A.decode_domain_set args' excaps')"
+  apply (unfold Tcb_D.decode_domain_invocation_def Decode_A.decode_domain_set_def)
   apply (unfold transform_cap_list_def)
-  apply (case_labels "invocation_type label'"; simp add: gen_invocation_type_eq)
-                                            apply (clarsimp simp: transform_intent_def option_map_def
-                                                            split: option.splits)+
-                  defer
-                  apply (clarsimp simp: transform_intent_def option_map_def split: option.splits)+
-  apply (clarsimp simp: transform_intent_domain_def)
-  apply (case_tac "args'")
-   apply simp
+  apply simp
+  apply (case_labels "invocation_type label'";
+         clarsimp simp: gen_invocation_type_eq transform_intent_simps map_option_Some_eq2
+                        transform_intent_domain_configure_Some)
+  apply (rename_tac d' more_args)
   apply (clarsimp simp: bindE_def lift_def)
-  apply (rule_tac Q'="\<lambda>rv s. case rv of Inr b \<Rightarrow> ucast a = b | _ \<Rightarrow> True" in corres_symb_exec_r)
+  apply (rule_tac Q'="\<lambda>rv s. case rv of Inr b \<Rightarrow> ucast d' = b | _ \<Rightarrow> True" in corres_symb_exec_r)
      apply (case_tac "rv")
       apply (simp add: lift_def)
       apply (rule corres_alternate2, simp)
@@ -243,24 +277,89 @@ lemma decode_domain_corres:
       apply (rule corres_alternate2)
       apply simp
      apply (case_tac "fst (hd (excaps'))"; simp)
-               apply ((rule corres_alternate2, simp)+)[6]
-         apply (rule corres_alternate1)
-         apply (clarsimp simp: returnOk_def cdl_invocation_relation_def translate_invocation_def split: list.splits)
-         apply (simp add: fst_hd_map_eq)
-        apply (rule corres_alternate2, simp)+
-   apply (rule validE_cases_valid)
-   apply (wp whenE_inv| simp)+
+                apply ((rule corres_alternate2, simp)+)[6]
+          apply (rule corres_alternate1)
+          apply (clarsimp simp: returnOk_def cdl_invocation_relation_def translate_invocation_def
+                          split: list.splits)
+          apply (simp add: fst_hd_map_eq translate_domain_invocation_def)
+         apply (rule corres_alternate2, simp)+
+    apply (rule validE_cases_valid)
+    apply (wp whenE_inv| simp)+
+  done
+
+lemma decode_domain_set_start_corres:
+  "\<lbrakk> Some (DomainIntent di) = transform_intent (invocation_type label') args';
+     di = DomainScheduleSetStartIntent start \<rbrakk> \<Longrightarrow>
+   dcorres (dc \<oplus> (\<lambda>inv inv'. inv = translate_domain_invocation inv')) \<top> \<top>
+     (Tcb_D.decode_domain_invocation excaps di)
+     (Decode_A.decode_domain_schedule_set_start args')"
+  unfolding Tcb_D.decode_domain_invocation_def Decode_A.decode_domain_schedule_set_start_def
+  apply simp
+  apply (case_labels "invocation_type label'";
+         clarsimp simp: gen_invocation_type_eq transform_intent_simps map_option_Some_eq2
+                        transform_intent_domain_configure_Some)
+  apply (rename_tac start' more_args)
+  apply (clarsimp simp: liftE_bindE)
+  apply (rule dcorres_gets_all_param)
+  apply (rule whenE_throwError_alt_corres_dc)+
+  apply (rule corres_alternate1)
+  apply (clarsimp simp: returnOk_def translate_domain_invocation_def)
+  done
+
+lemma decode_domain_configure_corres:
+  "\<lbrakk> Some (DomainIntent di) = transform_intent (invocation_type label') args';
+     di = DomainScheduleConfigureIntent idx domain duration \<rbrakk> \<Longrightarrow>
+   dcorres (dc \<oplus> (\<lambda>inv inv'. inv = translate_domain_invocation inv')) \<top> \<top>
+     (Tcb_D.decode_domain_invocation excaps di)
+     (Decode_A.decode_domain_schedule_configure args')"
+  unfolding Tcb_D.decode_domain_invocation_def Decode_A.decode_domain_schedule_configure_def
+  apply simp
+  apply (case_labels "invocation_type label'";
+         clarsimp simp: gen_invocation_type_eq transform_intent_simps map_option_Some_eq2
+                        transform_intent_domain_configure_Some)
+  apply (rename_tac idx' domain' dur_h dur_l more_args)
+  apply (rule whenE_throwError_alt_corres_dc)
+  apply (clarsimp simp: liftE_bindE)
+  apply (rule dcorres_gets_all_param)
+  apply (rule whenE_throwError_alt_corres_dc)+
+  apply (rule dcorres_gets_all_param)
+  apply (rule whenE_throwError_alt_corres_dc)
+  apply (rule corres_alternate1)
+  apply (clarsimp simp: returnOk_def translate_domain_invocation_def parseTimeArg_def ucast_add
+                        ucast_up_ucast is_up ucast_shiftl[symmetric])
+  done
+
+lemma decode_domain_corres:
+  "\<lbrakk> Some (DomainIntent di) = transform_intent (invocation_type label') args';
+     excaps = transform_cap_list excaps' \<rbrakk> \<Longrightarrow>
+   dcorres (dc \<oplus> (\<lambda>inv inv'. inv = translate_domain_invocation inv')) \<top> \<top>
+     (Tcb_D.decode_domain_invocation excaps di)
+     (Decode_A.decode_domain_invocation label' args' excaps')"
+  supply transform_intent_simps[simp] map_option_Some_eq2[simp]
+  apply (simp add: decode_domain_invocation_def)
+  apply (case_labels "invocation_type label'";
+         (solves \<open>clarsimp simp: gen_invocation_type_eq
+                                 transform_intent_domain_configure_Some\<close>)?;
+         clarsimp simp: gen_invocation_type_def transform_intent_domain_configure_Some)
+    apply (rule decode_domain_set_corres[where label'=label']; simp)
+   apply (rule decode_domain_configure_corres[where label'=label'];
+           simp add: transform_intent_domain_configure_Some)
+  apply (rule decode_domain_set_start_corres[where label'=label']; simp)
   done
 
 lemma decode_domain_cap_label_not_match:
   "\<lbrakk>\<forall>ui. Some (DomainIntent ui) \<noteq> transform_intent (invocation_type label') args'\<rbrakk>
     \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_domain_invocation label' args' excaps' \<lbrace>\<lambda>r. \<bottom>\<rbrace>,\<lbrace>\<lambda>e. (=) s\<rbrace>"
-  apply (case_tac "invocation_type label' = GenInvocationLabel DomainSetSet")
-   apply (clarsimp simp: Decode_A.decode_domain_invocation_def transform_intent_def gen_invocation_type_eq)+
-   apply (clarsimp simp: transform_intent_domain_def split: option.splits list.splits)
-   apply wp
-  apply (simp add: Decode_A.decode_domain_invocation_def gen_invocation_type_eq)
-  apply wp
+  unfolding Decode_A.decode_domain_invocation_def
+  supply [simp] = transform_intent_simps map_option_Some_eq2 transform_intent_domain_configure_Some
+  apply (cases "gen_invocation_type label'"; simp; (solves wp)?)
+    apply (wpsimp simp: decode_domain_set_def gen_invocation_type_eq[symmetric])
+   apply (wpsimp simp: decode_domain_schedule_configure_def gen_invocation_type_eq[symmetric])
+   apply (simp add: timeArgLen_def)
+   apply (cases args'; simp)
+   apply (repeat 3 \<open>rename_tac more_args, case_tac more_args; simp\<close>)
+  apply (wpsimp simp: decode_domain_schedule_set_start_def gen_invocation_type_eq[symmetric])
+  apply (cases args'; simp)
   done
 
 lemma decode_invocation_domaincap_corres:
@@ -275,9 +374,13 @@ lemma decode_invocation_domaincap_corres:
   apply (case_tac "\<exists>ti. intent = (DomainIntent ti)")
    apply (clarsimp simp: Decode_A.decode_invocation_def Decode_D.decode_invocation_def)
    apply (clarsimp simp: throw_opt_def get_domain_intent_def split: cdl_intent.split)
-   apply (rule corres_rel_imp[OF decode_domain_corres],simp+)
-  apply (clarsimp simp:Decode_D.decode_invocation_def throw_opt_def get_domain_intent_def Decode_A.decode_invocation_def
-                  split:cdl_intent.splits)
+   apply (rule corres_rel_imp[OF decode_domain_corres]; simp?)
+   apply (rename_tac x y)
+   apply (case_tac x; clarsimp)
+   apply (simp add: cdl_invocation_relation_def translate_invocation_simps)
+  apply (clarsimp simp: Decode_D.decode_invocation_def throw_opt_def get_domain_intent_def
+                        Decode_A.decode_invocation_def
+                  split: cdl_intent.splits)
   apply (rule absorb_imp,clarsimp)+
   apply (rule dcorres_free_throw)
   apply (rule decode_domain_cap_label_not_match)
@@ -287,7 +390,6 @@ lemma decode_invocation_domaincap_corres:
 (* Decoding IRQ Control invocations is equivalent. *)
 lemma decode_invocation_irqcontrolcap_corres:
   "\<lbrakk> Some intent = transform_intent (invocation_type label') args';
-
      invoked_cap_ref = transform_cslot_ptr invoked_cap_ref';
      invoked_cap = transform_cap invoked_cap';
      excaps = transform_cap_list excaps';
@@ -444,23 +546,33 @@ lemma transform_intent_zombie_cap_None:
   apply (wp)
 done
 
+lemma transform_intent_domain_set_start_None[simp]:
+  "(transform_intent_domain_set_start args = None) = (args = [])"
+  unfolding transform_intent_domain_set_start_def
+  by (cases args; simp)
+
+lemma transform_intent_domain_set_None[simp]:
+  "(transform_intent_domain_set args = None) = (args = [])"
+  unfolding transform_intent_domain_set_def
+  by (cases args; simp)
+
+lemma transform_intent_domain_configure_None:
+  "(transform_intent_domain_configure args = None) = (length args < Suc (Suc timeArgLen))"
+  unfolding transform_intent_domain_configure_def cdl_duration_arg_def timeArgLen_def
+  apply (cases args; simp)
+  apply (rename_tac ls, case_tac ls; simp)+
+  done
+
 lemma transform_intent_domain_cap_None:
-  "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.DomainCap\<rbrakk>
-     \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap.DomainCap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. (=) s\<rbrace>"
-  including no_pre
-  supply gen_invocation_type_eq[symmetric, simp]
+  "transform_intent (invocation_type label) args = None \<Longrightarrow>
+   \<lbrace>(=) s\<rbrace>
+   Decode_A.decode_invocation label args cap_i slot DomainCap excaps
+   \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. (=) s\<rbrace>"
+  supply gen_invocation_type_eq[symmetric, simp] transform_intent_domain_configure_None[simp]
   apply (clarsimp simp: Decode_A.decode_invocation_def)
-  apply wp
-  apply (case_tac excaps, simp_all)
-   apply (clarsimp simp: decode_domain_invocation_def)
-   apply (case_tac args, simp_all)
-    apply (wp whenE_inv whenE_inv[THEN valid_validE] | simp)+
-  apply (clarsimp simp: decode_domain_invocation_def)
-  apply (case_tac args, simp_all)
-   apply ((wp whenE_inv whenE_inv[THEN valid_validE] | simp)+)[1]
-  apply (case_tac "invocation_type label \<noteq> GenInvocationLabel DomainSetSet", simp_all)
-   apply wp
-  apply (clarsimp simp: transform_intent_def transform_intent_domain_def)
+  apply (wpsimp simp: decode_domain_invocation_def decode_domain_set_def
+                      decode_domain_schedule_configure_def decode_domain_schedule_set_start_def)
+  apply (safe; clarsimp simp: transform_intent_simps)
   done
 
 lemma transform_intent_arch_cap_None:
@@ -618,34 +730,21 @@ lemma ct_running_not_idle_etc:
   apply (clarsimp simp: invs_def valid_state_def)
   done
 
-lemma ct_active_not_idle_etc:
-  "\<lbrakk> invs s; ct_active s \<rbrakk> \<Longrightarrow> not_idle_thread (cur_thread s) s"
-  apply (simp add: not_idle_thread_def ct_in_state_def)
-  apply (subgoal_tac "valid_idle s")
-   apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
-  apply (clarsimp simp: invs_def valid_state_def)
-  done
-
 lemma transform_full_intent_update_tcb_domain[simp]:
   "transform_full_intent ms p' (tcb\<lparr>tcb_domain := time\<rparr>) = transform_full_intent ms p' tcb"
   apply (simp add: transform_full_intent_def Let_def)
   apply (simp add: get_tcb_message_info_def get_tcb_mrs_def get_ipc_buffer_words_def)
   done
 
-lemma invoke_domain_corres:
-  "\<lbrakk> i = cdl_invocation.InvokeDomain (SetDomain word1 word2);
-     i' = Invocations_A.invocation.InvokeDomain word1 word2\<rbrakk>
-       \<Longrightarrow> dcorres (dc \<oplus> dc) (\<lambda>_. True)
-           (invs and ct_active and valid_pdpt_objs and
-            invocation_duplicates_valid (Invocations_A.invocation.InvokeDomain word1 word2) and
-            (tcb_at word1 and (\<lambda>s. word1 \<noteq> idle_thread s)))
-           (Tcb_D.invoke_domain (SetDomain word1 word2)) (Tcb_A.invoke_domain word1 word2)"
+lemma invoke_domain_set_corres[corres]:
+  "dcorres dc \<top>
+           (invs and (tcb_at t and (\<lambda>s. t \<noteq> idle_thread s)))
+           (Tcb_D.set_domain t d) (Tcb_A.invoke_set_domain t d)"
   supply if_cong[cong]
-  apply (clarsimp simp: Tcb_D.invoke_domain_def Tcb_A.invoke_domain_def arch_prepare_set_domain_def)
-  apply (rule corres_bind_return_r)
-  apply (clarsimp simp: Tcb_D.set_domain_def Tcb_A.set_domain_def)
+  apply (clarsimp simp: Tcb_D.set_domain_def Tcb_A.invoke_set_domain_def Tcb_A.set_domain_def
+                        arch_prepare_set_domain_def)
   apply (rule corres_symb_exec_r)
-     apply (rule_tac Q=\<top> and Q'="tcb_at word1 and (\<lambda>s. word1 \<noteq> idle_thread s)" in dcorres_rhs_noop_above)
+     apply (rule_tac Q=\<top> and Q'="tcb_at t and (\<lambda>s. t \<noteq> idle_thread s)" in dcorres_rhs_noop_above)
         apply (rule tcb_sched_action_dcorres)
        apply (rule dcorres_rhs_noop_below_True)
         apply (rule corres_noop)
@@ -655,7 +754,7 @@ lemma invoke_domain_corres:
         apply clarsimp
         apply (drule get_tcb_at)
         apply (clarsimp simp: opt_object_tcb transform_tcb_def)
-        apply (rule dcorres_set_object_tcb[simplified dc_def])
+        apply (rule dcorres_set_object_tcb)
           apply (frule get_tcb_SomeD)
           apply (clarsimp simp: transform_tcb_def)
          apply simp
@@ -669,6 +768,43 @@ lemma invoke_domain_corres:
    apply wp
   apply simp
   done
+
+lemmas transform_defs =
+  transform_def transform_objects_def transform_cdt_def transform_current_thread_def
+  transform_asid_table_def
+
+lemma domain_set_start_corres[corres]:
+  "start' = start \<Longrightarrow>
+   dcorres dc \<top> \<top>
+           (dom_schedule_set_start start) (domain_set_start start')"
+  unfolding dom_schedule_set_start_def domain_set_start_def
+  apply (rule corres_add_noop_lhs2)
+  apply corres_pre
+    apply corres_split
+       apply (rule corres_modify[where P=\<top> and P'=\<top>])
+       apply (fastforce simp: transform_defs)
+      apply clarsimp
+      apply (rule dcorres_symb_exec_r)
+        apply (rule reschedule_required_dcorres[where P=\<top> and P'=\<top>])
+       apply wpsimp+
+  done
+
+lemma domain_schedule_configure_corres[corres]:
+  "\<lbrakk> idx' = idx; domain' = domain; duration' = duration \<rbrakk> \<Longrightarrow>
+   dcorres dc \<top> \<top>
+           (dom_schedule_configure idx domain duration)
+           (domain_schedule_configure idx' domain' duration')"
+  unfolding domain_schedule_configure_def dom_schedule_configure_def
+  by (fastforce simp: transform_defs intro!: corres_modify)
+
+lemma invoke_domain_corres:
+  "di = translate_domain_invocation di'
+   \<Longrightarrow> dcorres dc \<top>
+               (invs and ct_active and valid_pdpt_objs and
+                invocation_duplicates_valid (InvokeDomain di') and valid_domain_inv di')
+               (Tcb_D.invoke_domain di) (Tcb_A.invoke_domain di')"
+  unfolding Tcb_D.invoke_domain_def Tcb_A.invoke_domain_def
+  by (cases di'; simp; corres simp: valid_domain_inv_def)
 
 (*
  * Show that invocation of a cap corresponds.
@@ -740,8 +876,8 @@ lemma perform_invocation_corres:
     done
 
   subgoal (* invoke_domain *)
-    apply (rule corres_guard_imp)
-      apply (rule invoke_domain_corres,simp+)
+    apply (rule corres_add_noop_lhs2)
+    apply (corres corres: invoke_domain_corres corres_return_dc)
     done
 
   subgoal (* invoke_cnode *)
