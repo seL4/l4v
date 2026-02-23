@@ -203,7 +203,9 @@ definition
    cdl_current_thread = undefined,
    cdl_irq_node = example_irq_node,
    cdl_asid_table = undefined,
-   cdl_current_domain = minBound\<rparr>"
+   cdl_current_domain = minBound,
+   cdl_dom_schedule = [(0, maxBound)],
+   cdl_dom_start = 0\<rparr>"
 
 
 lemmas cnode_defs = cnode_a1_def cnode_a2_def cnode_b_def cnode_extra_def
@@ -918,4 +920,3 @@ lemma well_formed_example:
 end
 
 end
-
