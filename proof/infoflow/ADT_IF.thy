@@ -792,7 +792,7 @@ lemma kernel_entry_if_invs:
            simp: arch_tcb_update_aux2 ran_tcb_cap_cases)+
 
 lemma kernel_entry_if_globals_equiv:
-  "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and globals_equiv st
+  "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and globals_equiv st and domain_sep_inv irqs st'
          and (\<lambda>s. ct_idle s \<longrightarrow> tc = idle_context s)\<rbrace>
    kernel_entry_if e tc
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
@@ -800,7 +800,7 @@ lemma kernel_entry_if_globals_equiv:
   apply (wp hoare_weak_lift_imp handle_event_globals_equiv
             thread_set_invs_trivial thread_set_context_globals_equiv
          | simp add: ran_tcb_cap_cases arch_tcb_update_aux2)+
-  apply (clarsimp simp: cur_thread_idle)
+  apply (fastforce simp: cur_thread_idle)
   done
 
 lemma thread_set_tcb_context_update_neg_cte_wp_at[wp]:
@@ -819,10 +819,6 @@ lemma thread_set_tcb_context_update_neg_cte_wp_at[wp]:
    apply (fastforce simp: tcb_cap_cases_def split: if_splits)
   apply (fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
-
-lemma thread_set_tcb_context_update_domain_sep_inv[wp]:
-  "thread_set (tcb_arch_update f) t \<lbrace>domain_sep_inv irqs st\<rbrace>"
-  by (wp domain_sep_inv_triv)
 
 
 subsection \<open>handle_preemption_if\<close>
@@ -954,7 +950,7 @@ locale ADT_IF_1 =
     "(Some irq, s') \<in> fst (do_machine_op (getActiveIRQ in_kernel) s)
      \<Longrightarrow> irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)) = Some irq"
   and kernel_entry_if_idle_equiv:
-    "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and idle_equiv st
+    "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and domain_sep_inv irqs st and idle_equiv st
            and (\<lambda>s. ct_idle s \<longrightarrow> tc = idle_context s)\<rbrace>
      kernel_entry_if e tc
      \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
@@ -1007,6 +1003,9 @@ locale ADT_IF_1 =
        \<Longrightarrow> thread_set f t \<lbrace>pas_refined aag\<rbrace>"
 begin
 
+lemmas do_user_op_if_no_domain_caps[wp] =
+  no_domain_caps_sep_inv_lift[OF do_user_op_if_domain_sep_inv]
+
 lemma kernel_entry_silc_inv[wp]:
   "\<lbrace>silc_inv aag st and einvs and simple_sched_action and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s)
                     and pas_refined (aag :: 'a subject_label PAS)
@@ -1040,6 +1039,9 @@ lemma kernel_entry_if_domain_sep_inv:
                wp: handle_event_domain_sep_inv hoare_weak_lift_imp
                    thread_set_invs_trivial thread_set_not_state_valid_sched)+
 
+lemmas kernel_entry_if_no_domain_caps[wp] =
+  no_domain_caps_sep_inv_lift_r2[OF kernel_entry_if_domain_sep_inv]
+
 lemma kernel_entry_if_valid_sched:
   "\<lbrace>valid_sched and invs and (ct_active or ct_idle)
                 and (\<lambda>s. (e \<noteq> Interrupt \<longrightarrow> ct_active s) \<and> scheduler_action s = resume_cur_thread)\<rbrace>
@@ -1056,6 +1058,11 @@ lemma kernel_entry_if_irq_masks:
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   by (simp add: kernel_entry_if_def ran_tcb_cap_cases arch_tcb_update_aux2
       | wp handle_event_irq_masks thread_set_invs_trivial | force)+
+
+lemma kernel_entry_if_valid_domain_list[wp]:
+  "\<lbrace>valid_domain_list and invs\<rbrace> kernel_entry_if e tc \<lbrace>\<lambda>_. valid_domain_list\<rbrace>"
+  unfolding kernel_entry_if_def
+  by (wpsimp wp: thread_set_invs_trivial simp: ran_tcb_cap_cases arch_tcb_update_aux2)
 
 crunch schedule_if
   for pas_refined[wp]: "pas_refined aag"
@@ -1111,6 +1118,9 @@ lemma handle_preemption_if_domain_sep_inv:
     apply (wpsimp wp: getActiveIRQ_rv_None)+
   done
 
+lemmas handle_preemption_if_no_domain_caps[wp] =
+  no_domain_caps_sep_inv_lift[OF handle_preemption_if_domain_sep_inv]
+
 lemma handle_kernel_interrupt_pas_refined:
   "\<lbrace>pas_refined aag and K (irq \<notin> non_kernel_IRQs)\<rbrace>
    handle_interrupt irq
@@ -1130,6 +1140,11 @@ lemma handle_preemption_if_pas_refined[wp]:
                 in hoare_strengthen_post)
     apply (wpsimp wp: getActiveIRQ_rv_None)+
   done
+
+lemma handle_preemption_if_valid_domain_list[wp]:
+  "handle_preemption_if tc \<lbrace>valid_domain_list\<rbrace>"
+  unfolding handle_preemption_if_def
+  by (wpsimp wp: valid_domain_list_lift)
 
 end
 
@@ -1364,7 +1379,7 @@ abbreviation internal_state_if :: "'a global_sys_state \<Rightarrow> 'a" where
 (*Weakened invs_if to properties only necessary for refinement*)
 definition full_invs_if :: "observable_if set" where
   "full_invs_if \<equiv>
-     {s. einvs (internal_state_if s) \<and>
+     {s. einvs (internal_state_if s) \<and> no_domain_caps (internal_state_if s) \<and>
          (snd s \<noteq> KernelSchedule True \<longrightarrow> domain_time (internal_state_if s) > 0) \<and>
          (domain_time (internal_state_if s) = 0
           \<longrightarrow> scheduler_action (internal_state_if s) = choose_new_thread) \<and>
@@ -1571,8 +1586,6 @@ crunch handle_yield
   for domain_fields[wp]: "domain_fields P"
 crunch activate_thread
   for domain_fields[wp]: "domain_fields P"
-crunch kernel_entry_if
-  for domain_list[wp]: "\<lambda>s::det_state. P (domain_list s)"
 crunch handle_preemption_if
   for domain_list[wp]: "\<lambda>s::det_state. P (domain_list s)"
 crunch schedule_if
@@ -1604,39 +1617,84 @@ lemma schedule_if_domain_time_nonzero:
   apply simp
   done
 
+lemma schedule_if_valid_domain_list[wp]:
+  "schedule_if tc \<lbrace>valid_domain_list\<rbrace>"
+  unfolding schedule_if_def
+  by (wpsimp wp: valid_domain_list_lift)
+
+lemma invoke_domain_false:
+  "\<lbrace>\<bottom>\<rbrace> invoke_domain di \<lbrace>Q\<rbrace>"
+  by wpsimp
+
+lemma perform_invocation_domain_time_inv:
+  "\<lbrace>(\<lambda>s. P (domain_time s)) and no_domain_caps and K (no_domain_inv iv)\<rbrace>
+   perform_invocation block call iv
+   \<lbrace>\<lambda>_ s::det_state. P (domain_time s)\<rbrace>"
+  unfolding no_domain_inv_def
+  by (cases iv; wpsimp wp: invoke_domain_false)
+
+lemma perform_invocation_domain_time_sep_inv:
+  "\<lbrace>(\<lambda>s. P (domain_time s)) and domain_sep_inv irqs st' and authorised_for_globals_inv iv\<rbrace>
+   perform_invocation block call iv
+   \<lbrace>\<lambda>_ s::det_state. P (domain_time s)\<rbrace>"
+  unfolding authorised_for_globals_inv_def
+  apply (wp perform_invocation_domain_time_inv)
+  apply (cases iv; clarsimp simp: no_domain_caps_strg)
+  done
+
+lemma handle_invocation_domain_time_inv:
+  "\<lbrace>(\<lambda>s. P (domain_time s)) and invs and no_domain_caps\<rbrace>
+   handle_invocation calling blocking
+   \<lbrace>\<lambda>_ s::det_state. P (domain_time s)\<rbrace>"
+  unfolding handle_invocation_def
+  by (wpsimp wp: perform_invocation_domain_time_inv
+                 no_domain_caps_sep_inv_lift[OF set_thread_state_domain_sep_inv]
+                 decode_invocation_no_domain_inv
+                 syscall_valid hoare_drop_imps
+             simp: prod_imp_fst_snd o_def
+             simp_del: split_paired_All)
+
+lemma maybe_handle_interrupt_false:
+  "\<lbrace>\<bottom>\<rbrace> maybe_handle_interrupt in_kernel \<lbrace>Q\<rbrace>"
+  by wpsimp
+
+lemma handle_event_noIRQ_domain_time_inv:
+  "e \<noteq> Interrupt \<Longrightarrow>
+   \<lbrace>invs and no_domain_caps and (\<lambda>s. P (domain_time s)) \<rbrace>
+   handle_event e
+   \<lbrace>\<lambda>_ s::det_state. P (domain_time s)\<rbrace>"
+  by (cases e; wpsimp wp: maybe_handle_interrupt_false handle_invocation_domain_time_inv
+                      simp: handle_call_def handle_send_def)
+
+lemma kernel_entry_if_noIRQ_domain_time_inv:
+  "e \<noteq> Interrupt \<Longrightarrow>
+   \<lbrace>invs and no_domain_caps and (\<lambda>s. P (domain_time s))\<rbrace>
+   kernel_entry_if e tc
+   \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
+  unfolding kernel_entry_if_def
+  by (wpsimp wp: handle_event_noIRQ_domain_time_inv thread_set_invs_trivial
+                 no_domain_caps_sep_inv_lift
+             simp: ran_tcb_cap_cases arch_tcb_update_aux2)
+
+lemma kernel_entry_if_noIRQ_domain_time_sep_inv:
+  "e \<noteq> Interrupt \<Longrightarrow>
+   \<lbrace>invs and domain_sep_inv irqs st and (\<lambda>s. P (domain_time s))\<rbrace>
+   kernel_entry_if e tc
+   \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
+  by (wpsimp wp: kernel_entry_if_noIRQ_domain_time_inv simp: no_domain_caps_strg)
 
 context ADT_IF_1 begin
-
-lemma handle_event_domain_fields:
-  "\<lbrace>domain_fields P and K (e \<noteq> Interrupt)\<rbrace>
-   handle_event e
-   \<lbrace>\<lambda>_. domain_fields P\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (rule hoare_pre)
-   apply (case_tac e)
-        apply (rename_tac syscall)
-        apply (case_tac syscall)
-               apply (wp | simp add: handle_call_def)+
-  done
-
-lemma kernel_entry_if_domain_fields:
-  "\<lbrace>domain_fields P and K (e \<noteq> Interrupt)\<rbrace>
-   kernel_entry_if e tc
-   \<lbrace>\<lambda>_. domain_fields P\<rbrace>"
-  apply (simp add: kernel_entry_if_def)
-  apply (wp handle_event_domain_fields | simp)+
-  done
 
 lemma kernel_entry_if_domain_time_sched_action:
   "\<lbrace>\<lambda>s. domain_time s > 0\<rbrace>
    kernel_entry_if e tc
    \<lbrace>\<lambda>_ s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
+  unfolding kernel_entry_if_def
   apply (case_tac "e = Interrupt")
    apply (simp add: kernel_entry_if_def maybe_handle_interrupt_def)
    apply (wp handle_interrupt_valid_domain_time| wpc | simp)+
       apply (rule_tac Q'="\<lambda>r s. domain_time s > 0" in hoare_strengthen_post)
-       apply (wp | simp)+
-      apply (wp hoare_false_imp kernel_entry_if_domain_fields | fastforce)+
+       apply wpsimp+
   done
 
 end
@@ -2000,8 +2058,9 @@ lemma invs_if_Step_ADT_A_if:
                        kernel_entry_pas_refined[where st=s0_internal]
                        kernel_entry_if_valid_sched kernel_entry_if_only_timer_irq_inv
                        kernel_entry_if_domain_sep_inv kernel_entry_if_guarded_pas_domain
-                       kernel_entry_if_domain_fields kernel_entry_if_idle_equiv
+                       kernel_entry_if_idle_equiv
                        kernel_entry_if_domain_time_sched_action
+                       kernel_entry_if_noIRQ_domain_time_sep_inv
                        hoare_false_imp ct_idle_lift
                     | clarsimp intro!: guarded_pas_is_subject_current_aag[rule_format]
                     | intro conjI)+
@@ -2031,12 +2090,14 @@ lemma invs_if_Step_ADT_A_if:
                       kernel_entry_if_valid_sched kernel_entry_if_only_timer_irq_inv
                       kernel_entry_if_domain_sep_inv kernel_entry_if_guarded_pas_domain
                       kernel_entry_if_domain_time_sched_action
+                      kernel_entry_if_noIRQ_domain_time_sep_inv
                       ct_idle_lift
-                   | clarsimp intro: guarded_pas_is_subject_current_aag
-                   | wp kernel_entry_if_domain_fields)+
+                   | clarsimp intro: guarded_pas_is_subject_current_aag)+
           apply (rule conjI, fastforce intro!: active_from_running)
           apply (simp add: schact_is_rct_def)
-          apply (rule guarded_pas_is_subject_current_aag,assumption+)
+          apply (rule conjI)
+           apply (rule guarded_pas_is_subject_current_aag,assumption+)
+          apply fastforce
          apply (simp_all only: silc_inv_cur pas_refined_cur guarded_pas_domain_cur)
          apply (simp | elim exE)+
          apply (elim exE conjE)
@@ -2178,7 +2239,7 @@ context valid_initial_state begin
 
 lemma invs_if_full_invs_if:
   "invs_if s \<Longrightarrow> s \<in> full_invs_if"
-  by (clarsimp simp: full_invs_if_def invs_if_def Invs_def)
+  by (clarsimp simp: full_invs_if_def invs_if_def Invs_def no_domain_caps_strg)
 
 end
 
@@ -2594,11 +2655,10 @@ lemma checked_insert_irq_state_of_state[wp]:
   by (wp | simp add: check_cap_at_def)+
 
 lemma irq_state_inv_invoke_domain[wp]:
-  "invoke_domain a b \<lbrace>irq_state_inv st\<rbrace>"
+  "invoke_domain di \<lbrace>irq_state_inv st\<rbrace>"
   apply (simp add: irq_state_inv_def[abs_def])
-  apply (rule hoare_pre)
-   apply wps
-   apply (wp | clarsimp)+
+  apply (wp_pre, wps, wpsimp)
+  apply clarsimp
   done
 
 crunch bind_notification

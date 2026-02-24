@@ -220,7 +220,7 @@ lemma invs_pd_not_idle_thread[intro]:
                       obj_at_def valid_idle_def pred_tcb_at_def empty_table_def)
 
 lemma kernel_entry_if_idle_equiv[ADT_IF_assms]:
-  "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and idle_equiv st
+  "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and domain_sep_inv irqs st' and idle_equiv st
          and (\<lambda>s. ct_idle s \<longrightarrow> tc = idle_context s)\<rbrace>
    kernel_entry_if e tc
    \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"

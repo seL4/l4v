@@ -23,6 +23,7 @@ definition domain_fields_equiv :: "det_state \<Rightarrow> det_state \<Rightarro
   "domain_fields_equiv s s' \<equiv> cur_domain s = cur_domain s'
                             \<and> domain_time s = domain_time s'
                             \<and> domain_index s = domain_index s'
+                            \<and> domain_start_index s = domain_start_index s'
                             \<and> domain_list s = domain_list s'"
 
 definition reads_scheduler where
@@ -94,7 +95,7 @@ locale Scheduler_IF_1 =
   and arch_switch_to_thread_domain_fields[wp]:
     "\<And>P t. arch_switch_to_thread t \<lbrace>\<lambda>s :: det_state. domain_fields P s\<rbrace>"
   and arch_switch_to_idle_thread_domain_fields[wp]:
-    "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_state. P (domain_time s) (domain_index s) (domain_list s)\<rbrace>"
+    "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_state. domain_fields P s\<rbrace>"
   and arch_switch_to_idle_thread_globals_equiv[wp]:
     "arch_switch_to_idle_thread \<lbrace>globals_equiv st\<rbrace>"
   and arch_switch_to_idle_thread_states_equiv_for[wp]:

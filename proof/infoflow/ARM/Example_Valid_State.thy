@@ -850,6 +850,7 @@ where
     scheduler_action = resume_cur_thread,
     domain_list = [(0, 10), (1, 10)],
     domain_index = 0,
+    domain_start_index = 0,
     cur_domain = 0,
     domain_time = 5,
     ready_queues = (const (const [])),

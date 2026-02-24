@@ -20,7 +20,8 @@ begin
 section \<open>Separation lemmas for the idle thread and domain fields\<close>
 
 abbreviation (input) domain_fields where
-  "domain_fields P (s :: det_state) \<equiv> P (domain_time s) (domain_index s) (domain_list s)"
+  "domain_fields P (s :: det_state) \<equiv>
+     P (domain_time s) (domain_index s) (domain_start_index s) (domain_list s)"
 
 lemma preemption_point_domain_fields[wp]:
   "preemption_point \<lbrace>domain_fields P\<rbrace>"
@@ -147,7 +148,9 @@ locale PasUpdates_2 = PasUpdates_1 +
 begin
 
 crunch
-  set_domain,possible_switch_to,set_priority,set_extra_badge,handle_send,handle_recv,handle_reply
+  possible_switch_to, set_priority, set_extra_badge, handle_recv, handle_reply, reply_from_kernel,
+  invoke_untyped, setup_reply_master, invoke_irq_control, invoke_irq_handler, invoke_tcb,
+  send_signal, invoke_set_domain
   for domain_fields[wp]: "domain_fields P"
   (wp: syscall_valid crunch_wps mapME_x_inv_wp
    simp: crunch_simps check_cap_at_def detype_def mapM_x_defsym
