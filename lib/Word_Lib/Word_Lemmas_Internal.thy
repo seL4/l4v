@@ -1062,4 +1062,9 @@ lemma ucast_ucast_le_mask:
   using of_nat_unat_le_mask_ucast
   by force
 
+lemma shiftr_le_mask:
+  fixes w :: "'a::len word"
+  shows "w >> n \<le> mask (LENGTH('a) - n)"
+  by (fastforce simp flip: shiftr_mask2 intro: le_shiftr)
+
 end
