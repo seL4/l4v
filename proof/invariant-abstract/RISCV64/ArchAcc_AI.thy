@@ -2030,11 +2030,9 @@ lemma set_asid_pool_vms[wp]:
                   split: kernel_object.splits arch_kernel_obj.splits)+
   done
 
-(* FIXME: example of crunch not being helpful *)
-lemma set_asid_pool_valid_asid_pool_caps[wp]:
-  "set_asid_pool p ap \<lbrace>valid_asid_pool_caps\<rbrace>"
-  unfolding valid_asid_pool_caps_def
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+crunch set_asid_pool
+  for valid_asid_pool_caps[wp]: valid_asid_pool_caps
+  (ignore: set_object)
 
 lemma set_asid_pool_invs_restrict:
   "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and (\<lambda>s. \<exists>a. asid_table s a = Some p) and
@@ -2074,10 +2072,6 @@ lemma mdb_cte_at_set_asid_pool[wp]:
   apply (simp only: imp_conv_disj)
   apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift)
 done
-
-crunch set_asid_pool
-  for valid_cur_fpu[wp]: valid_cur_fpu
-  (wp: valid_cur_fpu_lift)
 
 lemma set_asid_pool_invs_unmap:
   "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and (\<lambda>s. \<exists>a. asid_table s a = Some p) and

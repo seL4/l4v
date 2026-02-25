@@ -607,24 +607,10 @@ lemma lookup_pt_slot_pte [wp]:
   apply (rule order_le_less_trans, rule word_and_le1, simp)
   done
 
-lemma shiftr_w2p:
-  "x < len_of TYPE('a) \<Longrightarrow>
-  2 ^ x = (2^(len_of TYPE('a) - 1) >> (len_of TYPE('a) - 1 - x) :: 'a :: len word)"
-  apply simp
-  apply (rule word_eqI)
-  apply (auto simp: word_size nth_shiftr nth_w2p)
-  done
-
 lemma vptr_shiftr_le_2p:
-  "(vptr :: word32)  >> 20 < 2 ^ pageBits"
-  apply (rule le_less_trans[rotated])
-   apply (rule and_mask_less' [where w=max_word])
-   apply (simp add: pageBits_def)
-  apply (rule word_leI)
-  apply (simp add: word_size nth_shiftr)
-  apply (drule test_bit_size)
-  apply (simp add: pageBits_def word_size)
-  done
+  "(vptr :: machine_word) >> 20 < 2 ^ pageBits"
+  using shiftr_le_mask[where w=vptr and n=20]
+  by (fastforce simp: pageBits_def mask_def word_less_nat_alt word_le_nat_alt)
 
 lemma page_directory_pde_at_lookupI:
   "\<lbrakk>page_directory_at pd s; pspace_aligned s\<rbrakk> \<Longrightarrow> pde_at (lookup_pd_slot pd vptr) s"
@@ -2078,10 +2064,6 @@ lemma mdb_cte_at_set_asid_pool[wp]:
   apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift)
 done
 
-crunch set_asid_pool
-  for valid_cur_fpu[wp]: valid_cur_fpu
-  (wp: valid_cur_fpu_lift)
-
 lemma set_asid_pool_invs_unmap:
   "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and
     (\<lambda>s. \<forall>asid. asid \<le> mask asid_bits \<longrightarrow> ucast asid = x \<longrightarrow>
@@ -2099,12 +2081,6 @@ lemma valid_slots_typ_at:
   unfolding valid_slots_def
   by (cases m; clarsimp; wp x y hoare_vcg_const_Ball_lift valid_pte_lift
                             valid_pde_lift pte_at_atyp pde_at_atyp)
-
-
-lemma ucast_ucast_id:
-  "(len_of TYPE('a)) < (len_of TYPE('b)) \<Longrightarrow> ucast ((ucast (x::('a::len) word))::('b::len) word) = x"
-  by (auto intro: ucast_up_ucast_id simp: is_up_def source_size_def target_size_def word_size)
-
 
 lemma kernel_base_kernel_mapping_slots:
   "x < kernel_base \<Longrightarrow> ucast (x >> 20) \<notin> kernel_mapping_slots"
