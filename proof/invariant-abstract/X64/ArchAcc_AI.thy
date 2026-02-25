@@ -339,14 +339,6 @@ lemma set_aobj_valid_global[wp]:
   \<lbrace>\<lambda>_ s. valid_global_refs s\<rbrace>"
   by (wp valid_global_refs_cte_lift)
 
-lemma set_aobj_valid_kernel_mappings[wp]:
-  "\<lbrace>\<lambda>s. valid_kernel_mappings s \<and> valid_kernel_mappings_if_pm (set (second_level_tables (arch_state s))) (ArchObj obj)\<rbrace>
-  set_object ptr (ArchObj obj)
-  \<lbrace>\<lambda>_ s. valid_kernel_mappings s\<rbrace>"
-  apply (wp set_object_v_ker_map[THEN hoare_set_object_weaken_pre])
-  apply (clarsimp simp: valid_kernel_mappings_def valid_kernel_mappings_if_pm_def)
-  done
-
 lemma valid_vspace_obj_pre:
   "\<lbrakk>kheap s ptr = Some (ArchObj aobj);
    aa_type aobj = aa_type obj; valid_vspace_obj tobj s\<rbrakk>
@@ -1010,14 +1002,6 @@ lemma create_mapping_entries_valid_slots [wp]:
   apply (cases sz; simp; rule hoare_pre)
        apply (wp | clarsimp simp: valid_slots_def elim!: data_at_vmsz_aligned
                  | rule lookup_pt_slot_inv_any lookup_pd_slot_inv_any lookup_pdpt_slot_inv_any)+
-  done
-
-lemma shiftr_w2p:
-  "x < len_of TYPE('a) \<Longrightarrow>
-  2 ^ x = (2^(len_of TYPE('a) - 1) >> (len_of TYPE('a) - 1 - x) :: 'a :: len word)"
-  apply simp
-  apply (rule word_eqI)
-  apply (auto simp: word_size nth_shiftr nth_w2p)
   done
 
 lemma vptr_shiftr_le_2p:
@@ -1720,12 +1704,6 @@ lemma valid_slots_typ_at:
   apply (wp x y hoare_vcg_const_Ball_lift valid_pte_lift valid_pde_lift valid_pdpte_lift valid_pml4e_lift
              pte_at_atyp pde_at_atyp pdpte_at_atyp pml4e_at_atyp)+
   done
-
-
-lemma ucast_ucast_id:
-  "(len_of TYPE('a)) < (len_of TYPE('b)) \<Longrightarrow> ucast ((ucast (x::('a::len) word))::('b::len) word) = x"
-  by (auto intro: ucast_up_ucast_id simp: is_up_def source_size_def target_size_def word_size)
-
 
 lemma shiftr_shiftl_mask_pml4_bits:
   "((get_pml4_index vptr) << word_size_bits) && mask pml4_bits = (get_pml4_index vptr) << word_size_bits"
