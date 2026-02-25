@@ -439,6 +439,8 @@ lemmas thread_set_tcb_registers_caps_merge_default_tcb_domain_sep_inv[wp]
   = thread_set_domain_sep_inv_triv[where f="tcb_registers_caps_merge tcb" for tcb, simplified ran_tcb_cap_cases tcb_registers_caps_merge_def, simplified]
 lemmas thread_set_tcb_flags_update_domain_sep_inv[wp]
   = thread_set_domain_sep_inv_triv[where f="tcb_flags_update f" for f, simplified ran_tcb_cap_cases, simplified]
+lemmas thread_set_tcb_arch_update_domain_sep_inv[wp]
+  = thread_set_domain_sep_inv_triv[where f="tcb_arch_update f" for f, simplified ran_tcb_cap_cases, simplified]
 
 crunch as_user
   for domain_sep_inv[wp]: "domain_sep_inv irqs st"
@@ -1130,6 +1132,53 @@ lemma call_kernel_domain_sep_inv:
               simp: if_fun_split
       | strengthen invs_valid_objs invs_mdb invs_sym_refs
       | wp hoare_drop_imps)+
+
+end
+
+(* Occasionally it is useful to only require the absence of domain caps: *)
+
+definition no_domain_caps :: "'z::state_ext state \<Rightarrow> bool" where
+  "no_domain_caps \<equiv> \<lambda>s. \<exists>st::'z state. domain_sep_inv True st s"
+
+lemma no_domain_caps_def2:
+  "no_domain_caps s = (\<forall>slot. \<not> cte_wp_at ((=) DomainCap) slot s)"
+  unfolding no_domain_caps_def domain_sep_inv_def
+  by auto
+
+lemma no_domain_caps_strg:
+  "domain_sep_inv irqs st s \<Longrightarrow> no_domain_caps s"
+  unfolding no_domain_caps_def domain_sep_inv_def
+  by auto
+
+lemma no_domain_caps_sep_inv_lift_lr:
+  "(\<And>irqs st::'a::state_ext state.
+     \<lbrace>P and domain_sep_inv irqs st and Q\<rbrace> f \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>)
+   \<Longrightarrow> \<lbrace>P and no_domain_caps and Q\<rbrace> f \<lbrace>\<lambda>_. no_domain_caps\<rbrace>"
+  for P::"'a::state_ext state \<Rightarrow> bool"
+  unfolding no_domain_caps_def
+  by (wpsimp wp: hoare_vcg_op_lift | assumption)+
+
+lemmas no_domain_caps_sep_inv_lift =
+  no_domain_caps_sep_inv_lift_lr[where P=\<top> and Q=\<top>, simplified]
+lemmas no_domain_caps_sep_inv_lift_l =
+  no_domain_caps_sep_inv_lift_lr[where Q=\<top>, simplified]
+lemmas no_domain_caps_sep_inv_lift_r =
+  no_domain_caps_sep_inv_lift_lr[where P=\<top>, simplified, of P for P]
+
+(* pred_conj is not right-associative, so if we want to add terms on the right, we need to
+   manually apply associativity first. Provide forms for 2-4 terms for convenience. *)
+lemmas no_domain_caps_sep_inv_lift_r2 =
+  no_domain_caps_sep_inv_lift_r[of "P and Q" for P Q, simplified pred_conj_assoc]
+lemmas no_domain_caps_sep_inv_lift_r3 =
+  no_domain_caps_sep_inv_lift_r2[of _ "Q and R" for Q R, simplified pred_conj_assoc]
+lemmas no_domain_caps_sep_inv_lift_r4 =
+  no_domain_caps_sep_inv_lift_r3[of _ _ "R and S" for R S, simplified pred_conj_assoc]
+
+context pspace_update_eq begin
+
+lemma no_domain_caps_update[iff]:
+  "no_domain_caps (f s) = no_domain_caps s"
+  by (simp add: no_domain_caps_def2)
 
 end
 
