@@ -380,15 +380,15 @@ where
 
 lemma object_slot_initialisedI:
   "\<lbrakk>t obj_id = Some kernel_object_id; cdl_objects spec obj_id = Some spec_object;
-   ((kernel_object_id, slot) \<mapsto>s (object_initialised_state t spec_object)) s\<rbrakk>
-  \<Longrightarrow> object_slot_initialised spec t obj_id slot s"
-  by (fastforce simp: object_slot_initialised_def object_initialised_general_def )
+    ((kernel_object_id, slot) \<mapsto>s (object_initialised_state t spec_object)) s\<rbrakk>
+   \<Longrightarrow> object_slot_initialised spec t obj_id slot s"
+  by (fastforce simp: object_slot_initialised_def object_initialised_general_def)
 
 lemma object_slot_emptyI:
   "\<lbrakk>well_formed spec; t obj_id = Some kernel_object_id;
     cdl_objects spec obj_id = Some spec_object;
-   ((kernel_object_id, slot) \<mapsto>s (object_default_state spec_object)) s\<rbrakk>
-  \<Longrightarrow> object_slot_empty spec t obj_id slot s"
+    ((kernel_object_id, slot) \<mapsto>s (object_default_state spec_object)) s\<rbrakk>
+   \<Longrightarrow> object_slot_empty spec t obj_id slot s"
   apply (drule (1) well_formed_object_slots)
   apply (fastforce simp: object_slot_empty_def object_initialised_general_def)
   done
@@ -1083,11 +1083,11 @@ lemma cnode_slots_half_initialised_decomp':
   done
 
 lemma empty_slots_object_slots_initialised_object_empty_slots_initialised:
-  "dom (slots_of obj_id spec) = {} \<Longrightarrow> object_empty_slots_initialised spec t obj_id = object_slots_initialised spec t obj_id"
+  "dom (slots_of obj_id spec) = {} \<Longrightarrow>
+   object_empty_slots_initialised spec t obj_id = object_slots_initialised spec t obj_id"
   apply (rule ext, rename_tac s)
-  apply (clarsimp simp: object_slots_initialised_def
-            object_empty_slots_initialised_def object_initialised_general_def
-            object_initialised_state_def)
+  apply (clarsimp simp: object_slots_initialised_def object_empty_slots_initialised_def
+                        object_initialised_general_def object_initialised_state_def)
   apply (rule iffI)
    apply clarsimp
    apply (clarsimp simp: sep_map_S_def sep_map_S'_def sep_map_E_def slots_of_def
@@ -1464,12 +1464,12 @@ lemma cnode_fields_half_initialised_object_fields_initialised:
   \<Longrightarrow> cnode_fields_half_initialised spec t obj_id = object_fields_initialised spec t obj_id"
   apply (clarsimp simp: cnode_fields_half_initialised_def
                         object_fields_initialised_def object_initialised_general_def object_at_def)
-  apply(subst sep_map_f_object_initialised_state_alt)
-   apply(clarsimp simp add: cnode_half_def object_at_def is_cnode_def update_slots_def is_frame_def
-                  split: cdl_object.split_asm)
-  apply(subst sep_map_f_object_initialised_state_alt)
-   apply(clarsimp simp add: object_at_def is_cnode_def update_slots_def is_frame_def
-                  split: cdl_object.split_asm)
+  apply (subst sep_map_f_object_initialised_state_alt)
+   apply (clarsimp simp: cnode_half_def object_at_def is_cnode_def update_slots_def is_frame_def
+                   split: cdl_object.split_asm)
+  apply (subst sep_map_f_object_initialised_state_alt)
+   apply (clarsimp simp: object_at_def is_cnode_def update_slots_def is_frame_def
+                   split: cdl_object.split_asm)
   apply clarsimp
   done
 
@@ -1485,5 +1485,18 @@ lemma object_default_state_frame [simp]:
                      object_type_is_object object_type_def well_formed_frame_extra_def
                 split: cdl_object.splits
                 dest: well_formed_frame_extra_data)
+
+lemma sep_map_set_conj_set_append: (* FIXME: move to SepAlgebra *)
+  "distinct (xs@ys) \<Longrightarrow>
+   sep_map_set_conj P (set (xs @ ys)) = (sep_map_set_conj P (set xs) \<and>* sep_map_set_conj P (set ys))"
+  apply (induct xs; clarsimp)
+  apply (case_tac ys; clarsimp)
+  apply (rule ext; rule iffI; sep_solve)
+  done
+
+lemma sep_map_set_conj_set_take_drop: (* FIXME: move to SepAlgebra *)
+  "\<lbrakk> sep_map_set_conj P (set xs) s; distinct xs \<rbrakk> \<Longrightarrow>
+   (sep_map_set_conj P (set (take n xs)) \<and>*  sep_map_set_conj P (set (drop n xs))) s"
+  by (clarsimp simp flip: sep_map_set_conj_set_append append_take_drop_id[where n=n])
 
 end

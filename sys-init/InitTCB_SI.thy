@@ -115,8 +115,8 @@ lemma tcb_half_decomp':
          rule object_slots_object_initialised_state',
          simp add: object_slots_tcb_half tcb_slot_defs,
          fastforce simp: opt_cap_def slots_of_def object_slots_def)+
-  apply(subst sep_map_f_object_initialised_state_alt)
-   apply(simp add: tcb_half_def update_slots_def is_frame_def)
+  apply (subst sep_map_f_object_initialised_state_alt)
+   apply (simp add: tcb_half_def update_slots_def is_frame_def)
   apply (clarsimp simp: sep_conj_ac)
   done
 
@@ -313,11 +313,11 @@ lemma default_cap_update_cap_object_non_cnode:
   done
 
 lemma sep_map_f_eq_tcb_fault_endpoint:
-  "\<lbrakk>\<not> cdl_tcb_has_fault tcb; cdl_tcb_domain tcb = minBound; cdl_tcb_extra tcb = default_tcb_extra_data\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>\<not> cdl_tcb_has_fault tcb; cdl_tcb_domain tcb = minBound;
+    cdl_tcb_extra tcb = default_tcb_extra_data\<rbrakk> \<Longrightarrow>
    obj_id \<mapsto>f Tcb (update_tcb_fault_endpoint (cdl_tcb_fault_endpoint tcb) (default_tcb minBound)) =
    obj_id \<mapsto>f Tcb tcb"
-  apply (rule sep_map_f_eq_tcb)
-  by (auto simp: update_tcb_fault_endpoint_def default_tcb_def)
+  by (auto simp: update_tcb_fault_endpoint_def default_tcb_def intro!: sep_map_f_eq_tcb)
 
 lemma cnode_not_device[simp]:
   "is_cnode_cap spec_cspace_cap \<Longrightarrow> \<not> is_device_cap spec_cspace_cap"
@@ -423,9 +423,6 @@ lemma tcb_configure_post:
   apply (clarsimp simp: si_objects_def)
   apply (clarsimp simp: sep_conj_exists sep_conj_assoc)
   apply (clarsimp simp: si_cap_at_def sep_conj_assoc sep_conj_exists)
-
-thm tcb_half_decomp'
-
   apply (subst tcb_half_decomp' [where obj_id=obj_id and k_obj_id=k_obj_id],
          (assumption|simp)+)
   apply (subst (asm) sep_map_f_eq_tcb_fault_endpoint, assumption+,
@@ -473,7 +470,8 @@ thm tcb_half_decomp'
               obj_id="{vspace_kobj_id}" in default_cap_size_0, simp+)
   apply (cut_tac type="FrameType sz" and sz="(object_size_bits obja)" and
               obj_id="{buffer_frame_kobj_id}" in default_cap_size_0, simp+)
-  by sep_solve
+  apply sep_solve
+  done
 
 lemma tcb_cap_has_object [elim]:
   "is_tcb_cap tcb_cap \<Longrightarrow> cap_has_object tcb_cap"

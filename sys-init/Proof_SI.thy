@@ -45,11 +45,13 @@ lemma real_objects_some_type:
        \<not> frame_at obj_id spec} = {}"
   apply (clarsimp simp: object_at_def is_tcb_def is_cnode_def is_pd_def is_pt_def
                         is_ep_def is_ntfn_def is_asidpool_def is_frame_def is_untyped_def)
+  apply (rename_tac p)
   apply (clarsimp split: cdl_object.splits)
-  apply (drule_tac obj_id=x in well_formed_asidpool_at)
+  apply (drule_tac obj_id=p in well_formed_asidpool_at)
   apply (clarsimp simp: real_object_at_def object_at_def is_asidpool_def irq_nodes_def is_irq_node_def
                  split: cdl_object.splits)
-  by metis
+  apply metis
+  done
 
 lemma capdl_objects_by_parts:
   "well_formed spec \<Longrightarrow>
@@ -106,9 +108,9 @@ lemma objects_empty_objects_initialised_capless:
   apply (clarsimp simp: object_empty_object_initialised_capless)
   done
 
-lemma valid_case_prod'[wp]:
-  "(\<And>x y. \<lbrace>P x y\<rbrace> f x y \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>P (fst v) (snd v)\<rbrace> case v of (x, y) \<Rightarrow> f x y \<lbrace>Q\<rbrace>"
-  by (clarsimp split: prod.splits)
+lemma valid_case_prod': (* FIXME: move to Monads *)
+  "(\<And>x y. v = (x,y) \<Longrightarrow> \<lbrace>P x y\<rbrace> f x y \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>P (fst v) (snd v)\<rbrace> case v of (x, y) \<Rightarrow> f x y \<lbrace>Q\<rbrace>"
+  by (wpsimp | assumption)+
 
 lemma le_list_all:
   "\<lbrakk>unat start < 2 ^ si_cnode_size; unat (end - 1) < 2 ^ si_cnode_size\<rbrakk>
@@ -116,80 +118,70 @@ lemma le_list_all:
   apply (clarsimp simp: list_all_iff)
   apply (subst word_arith_power_alt)
   apply simp
-  by (metis (no_types) dual_order.strict_trans2 unat_less_2_si_cnode_size word_of_int_numeral word_of_int_power_hom)
+  apply (metis (no_types) dual_order.strict_trans2 unat_less_2_si_cnode_size)
+  done
 
-lemma card_eq_lengthI:
-  "set xs = ys \<Longrightarrow> distinct xs \<Longrightarrow> length xs = card ys"
+lemma card_eq_lengthI: (* FIXME: move to Lib *)
+  "\<lbrakk> set xs = ys; distinct xs \<rbrakk> \<Longrightarrow> length xs = card ys"
   by (induct xs arbitrary: ys; fastforce)
 
-lemma length_filter_card:
+lemma length_filter_card: (* FIXME: move to Lib *)
   "\<lbrakk>s_list = sorted_list_of_set s; finite s\<rbrakk>
    \<Longrightarrow> length (filter P s_list) = card {x \<in> s. P x}"
   by (fastforce intro: card_eq_lengthI)
 
-
-lemma the_map_of_zipE: "p \<in> set xs \<Longrightarrow> length xs \<le> length ys \<Longrightarrow> list_all P ys \<Longrightarrow> P (the (map_of (zip xs ys) p))"
+(* do not move to Lib, not a good interface *)
+lemma the_map_of_zipE:
+  "\<lbrakk> p \<in> set xs; length xs \<le> length ys; list_all P ys \<rbrakk> \<Longrightarrow> P (the (map_of (zip xs ys) p))"
   apply (induct xs arbitrary: ys; clarsimp)
-  by (metis (no_types, lifting) cons_set_intro length_Cons list.set_intros(2) list_all_spec the_map_of_zip_inR)
-
-
-lemma the_map_of_zipE': "p \<in> set xs \<Longrightarrow> length xs \<le> length ys \<Longrightarrow> list_all P (take (length xs) ys) \<Longrightarrow> P (the (map_of (zip xs ys) p))"
-  apply (induct xs arbitrary: ys; clarsimp)
-  apply (case_tac ys; clarsimp)
+  apply (metis (no_types, lifting) cons_set_intro length_Cons list.set_intros(2) list_all_spec
+                                   the_map_of_zip_inR)
   done
 
-lemma length_eq_set_eq: "set xs = set ys \<Longrightarrow> distinct xs \<Longrightarrow> distinct ys \<Longrightarrow> length xs = length ys"
+(* do not move to Lib, not a good interface *)
+lemma the_map_of_zipE':
+  "\<lbrakk> p \<in> set xs; length xs \<le> length ys; list_all P (take (length xs) ys) \<rbrakk> \<Longrightarrow>
+   P (the (map_of (zip xs ys) p))"
+  apply (induct xs arbitrary: ys; clarsimp)
+  apply (rename_tac ys, case_tac ys; clarsimp)
+  done
+
+lemma length_eq_set_eq: (* FIXME: move to Lib *)
+  "\<lbrakk> set xs = set ys; distinct xs; distinct ys \<rbrakk> \<Longrightarrow> length xs = length ys"
   by (metis distinct_card)
 
-lemma bij_betw_map_of': "set xs = S \<Longrightarrow> distinct xs \<Longrightarrow> distinct ys \<Longrightarrow> length xs = length ys \<Longrightarrow>  bij_betw (the \<circ> map_of (zip xs ys)) S  (set ys) "
+lemma bij_betw_map_of':
+  "\<lbrakk> set xs = S; distinct xs; distinct ys; length xs = length ys \<rbrakk> \<Longrightarrow>
+  bij_betw (the \<circ> map_of (zip xs ys)) S  (set ys) "
   apply (clarsimp simp: comp_def bij_betw_def)
   apply (intro conjI)
    apply (rule map_of_zip_inj'; clarsimp)
   apply (clarsimp simp: image_def; rule set_eqI, rule iffI; clarsimp)
    apply (erule the_map_of_zipE'; clarsimp)
    apply (clarsimp simp: list_all_def)
-  by (metis Some_to_the distinct_Ex1 map_of_zip_nth nth_mem)
-
-lemma prod_bind_simp: "(do (x, y) <- f; g x y od) = (do x <- f; g (fst x) (snd x) od)  "
-  by (rule ext, fastforce simp: bind_def split: prod.splits)
-
-lemma kbind_bind: "(do x <- f; g od) = (do f; g od)  "
-  by (rule ext, fastforce simp: bind_def split: prod.splits)
-
-abbreviation "map_lists xs ys \<equiv> map_of (zip xs ys)"
-notation map_lists ("(_ \<longmapsto> _)" [1000] 76)
-
-lemma map_lists_restrict[simp]: "length ns = length xs \<Longrightarrow> ns \<longmapsto> (xs @ ys) = ns \<longmapsto> xs"
-  apply (induct xs; clarsimp)
-  apply (rule ext)
-  by (metis append_Cons append_Nil2 length_Cons zip_Nil zip_append)
-
-
-lemma distinct_append_disjoint: "distinct xs \<Longrightarrow> xs = ys @ zs \<Longrightarrow> set ys \<inter> set zs = {}"
-  by (induct xs; clarsimp)
-
-lemma split_list_distinct: "xs = as @ bs @ cs \<Longrightarrow> distinct xs \<Longrightarrow> distinct as \<and> distinct bs \<and> distinct cs \<and> set as \<inter> set bs = {} \<and> set as \<inter> set cs = {} \<and>
-                                             set bs \<inter> set cs = {}"
-  apply (intro conjI; clarsimp)
-   apply blast
-  apply blast
+  apply (metis Some_to_the distinct_Ex1 map_of_zip_nth nth_mem)
   done
 
-lemma real_objects_are_objects[simp]: "{obj_id. real_object_at obj_id spec} \<subseteq> dom (cdl_objects spec)"
+lemma prod_bind_simp: (* FIXME: move to Lib *)
+  "do (x, y) \<leftarrow> f; g x y od = do x \<leftarrow> f; g (fst x) (snd x) od"
+  by monad_eq
+
+lemma real_objects_are_objects[simp]:
+  "{obj_id. real_object_at obj_id spec} \<subseteq> dom (cdl_objects spec)"
   by (metis (mono_tags) Collect_subset set_object_type(6))
 
 lemma concat_snd_collect_children[simp]:
   "List.concat (map snd untyped_derivations) = collect_children untyped_derivations"
-  apply (induction untyped_derivations)
-  by (auto simp: collect_children_def)
+  by (induct untyped_derivations)
+     (auto simp: collect_children_def)
 
 definition
   "valid_boot_info_sizes ustart uend fstart fend \<equiv>
-    unat ustart < 2 ^ si_cnode_size \<and>
-    unat (uend - 1) < 2 ^ si_cnode_size \<and>
-    unat fstart < 2 ^ si_cnode_size \<and>
-    unat (fend - 1) < 2 ^ si_cnode_size \<and>
-    uend \<noteq> 0 \<and> fend \<noteq> 0"
+     unat ustart < 2 ^ si_cnode_size \<and>
+     unat (uend - 1) < 2 ^ si_cnode_size \<and>
+     unat fstart < 2 ^ si_cnode_size \<and>
+     unat (fend - 1) < 2 ^ si_cnode_size \<and>
+     uend \<noteq> 0 \<and> fend \<noteq> 0"
 
 lemma valid_concat_regions_appends:
   "\<lbrakk>valid_concat_regions rg1 rg2; valid_concat_regions rg2 rg3;
@@ -198,6 +190,80 @@ lemma valid_concat_regions_appends:
    valid_concat_regions rg2 (rg3 @2 rg4 @2 rg5) \<and> valid_concat_regions rg3 (rg4 @2 rg5) \<and>
    valid_region rg1 \<and> valid_region rg2 \<and> valid_region rg3 \<and> valid_region rg4 \<and> valid_region rg5"
   by auto
+
+context begin
+
+(* Name extraction is dodgy, does not work in local contexts/experiment *)
+ML \<open>
+fun unfold_head_const t ctxt  =
+  let fun append s s' = s' ^ s;
+      val fun_term = Term.head_of t;
+  in
+    if is_Const fun_term
+    then
+      (fun_term |> dest_Const |> fst |> append "_def" |>
+       Proof_Context.get_thm ctxt |>
+       single |>
+       Method.unfold) ctxt
+    else Method.fail
+  end
+\<close>
+
+private method_setup unfold_head_const =
+  \<open>Args.term >> unfold_head_const\<close>
+  "Unfold const_def for terms of the form 'const args'"
+
+private method no_k_bind_term for P = match (P) in "K_bind _" \<Rightarrow> \<open>fail\<close> \<bar> _ \<Rightarrow> \<open>succeed\<close>
+private method no_k_bind = match conclusion in "g = g" for g \<Rightarrow> \<open>no_k_bind_term g, rule refl\<close>
+
+private lemma prop_forward:
+  "g = g \<Longrightarrow> \<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>rv s. rv = x\<rbrace> \<Longrightarrow> do x \<leftarrow> f; g x od = do f; g x od"
+  using post_by_hoare
+  by monad_eq fastforce
+
+(*
+  When a monad f returns a result x that is static (= does not depend on the state), then we can
+  turn "do rv \<leftarrow> f; g rv od" into "do f; g x od" instead, where x is now a term that no longer
+  depends on implicit monad state. This in turn means it can be simplified with assumptions without
+  unfolding f in the overall goal.
+
+  The following tactic attempts to find all such "bind" instances in the conclusion of the goal,
+  unfolds the monad f locally, attempts to compute x by proving a Hoare triple that instantiates x,
+  and substitutes the result back using the lemma "prop_forward" above.
+
+  The construction "g = g" is the hook for preventing looping:
+  The term "do f; g x od" stands for "bind f (K_bind (g x))". Using only "subst prop_forward" again
+  would apply to the term we have just applied our method to. Extracting the second argument of the
+  "bind" via "g = g" and checking "g" for the absence of "K_bind" as the head term allows us to
+  fail in that case and skip that unification result for subst, moving on to the next matching
+  instance in the overall conclusion. The check + unification backtrack is fast enough to work for
+  larg-ish terms.
+
+  Computing the result is done by trying wp (first without unfolding f, then with), then refl
+  (resulting from the rv = x in the post condition of prop_forward), potentially after removing
+  implications. This only finds relatively trivial static results, but is sufficient for here.
+  wpsimp takes too long.
+
+  We recurse the method into the unfolded f if wp itself was not successful, because multiple levels
+  of unfolding might be needed.
+*)
+private method compute_result for f methods m =
+  (* valid_case_prod' because we can't use wpsimp *)
+  declaring valid_case_prod'[wp] in \<open>
+    (wp | (unfold_head_const f, (wp | (m, wp)))),
+    (intro impI)?\<close>
+
+(* refl has to be outside "match", because "match" freezes schematics *)
+private method extract_static_monad_result =
+  changed \<open>
+    subst prop_forward,
+      no_k_bind,
+      match conclusion in "valid _ f _" for f \<Rightarrow> \<open>compute_result f \<open>extract_static_monad_result+\<close>\<close>,
+    rule refl\<close>
+
+method extract_static_monad_results = (extract_static_monad_result+)[1]
+
+end (* private method context *)
 
 lemma sys_init_explicit:
   "\<lbrakk>well_formed spec;
@@ -264,17 +330,17 @@ lemma sys_init_explicit:
                                  pd_id spec t) \<and>*
        R\<guillemotright> s \<rbrace>"
   apply (clarsimp simp: valid_boot_info_sizes_def)
-  apply (prop_tac "length (collect_children untyped_derivations) = length (filter (\<lambda>obj. real_object_at obj spec) obj_ids)")
-   apply (rule length_eq_set_eq; clarsimp)
+  apply (prop_tac "length (collect_children untyped_derivations) =
+                   length (filter (\<lambda>obj. real_object_at obj spec) obj_ids)")
+   apply (rule length_eq_set_eq; clarsimp simp: distinct_collection)
   apply (frule (1) le_list_all [where start = ustart])
   apply (frule (1) le_list_all [where start = fstart and ?end = fend])
   apply (frule well_formed_objects_card)
   apply (insert distinct_card [symmetric, where xs ="[obj\<leftarrow>obj_ids . cnode_or_tcb_at obj spec]"], simp)
   apply (clarsimp simp: init_system_def prod_bind_simp)
-  apply (timeit \<open>(monster_mash)\<close>)
   apply (frule (3) valid_concat_regions_appends, (erule conjE)+)
-  apply (clarsimp simp: kbind_bind well_formed_spec_used_irqs_compute parse_bootinfo_def
-              simp del: K_bind_def)
+  apply extract_static_monad_results
+  apply (clarsimp simp: well_formed_spec_used_irqs_compute parse_bootinfo_def)
   apply (wp sep_wp:
                  start_threads_sep[where t=t] init_cspace_sep[where t=t and free_cptrs=free_cptrs]
                  init_tcbs_sep[where t=t] init_vspace_sep[where t=t] init_pd_asids_sep[where t=t]
@@ -288,12 +354,12 @@ lemma sys_init_explicit:
   apply (clarsimp simp: objects_initialised_by_parts objects_empty_by_parts
                         objects_empty_objects_initialised_capless distinct_zipI1
                         sep_list_conj_sep_map_set_conj distinct_length_filter'
-                        valid_untypeds_def)
+                        valid_untypeds_def distinct_collection)
   apply (intro conjI allI impI pred_conjI | sep_cancel+)+
     apply (fastforce simp: ran_def elim: well_formed_object_domain)
    apply (clarsimp simp: valid_slot_region_append)
   apply (intro conjI allI impI pred_conjI | sep_cancel+ | clarsimp)+
-       apply (rule bij_betw_map_of'[simplified comp_def]; clarsimp)
+       apply (rule bij_betw_map_of'[simplified comp_def]; clarsimp simp: distinct_collection)
       apply blast
      apply (rule the_map_of_zipE)
        apply (metis pd_at_is_real)
@@ -392,7 +458,7 @@ lemma sys_init:
   apply (rule hoare_ex_pre)+
   apply (rule hoare_grab_asm)+
   apply (rename_tac
-           untyped_caps \<comment> \<open>fstart\<close> fend ustart uend real_free_cptrs irq_free_cptrs
+           untyped_caps fend ustart uend real_free_cptrs irq_free_cptrs
            dup_cap_free_cptrs shared_frame_cap_cptrs remaining_cptrs)
   apply (rule hoare_chain)
     apply (rule sys_init_explicit[where obj_ids="sorted_list_of_set (dom (cdl_objects spec))"
@@ -402,9 +468,9 @@ lemma sys_init:
     apply (subst fst_conv)
     apply clarsimp
   apply (frule (3) valid_concat_regions_appends, (erule conjE)+)
-   apply (simp add:length_filter_card)
-  apply (simp add: si_objects_extra_caps_def si_caps_at_def
-                        sep_conj_exists sep_conj_assoc)
+   apply (simp add: length_filter_card)
+  apply (simp add: si_objects_extra_caps_def si_caps_at_def distinct_collection
+                   sep_conj_exists sep_conj_assoc)
   apply (rule_tac x="map_of (zip_region [obj \<leftarrow> real_obj_ids. cnode_or_tcb_at obj spec] dup_cap_free_cptrs)"
          in exI)
   apply (rule_tac x="[ustart .e. uend - 1]" in exI)
@@ -415,26 +481,5 @@ lemma sys_init:
   apply (frule (3) valid_concat_regions_appends, (erule conjE)+)
   apply (clarsimp simp: sep_conj_ac)
   done
-
-(*
-definition injective :: "('a \<Rightarrow> 'b option) \<Rightarrow> bool"
-  where "injective f \<equiv> inj_on f (dom f)"
-
-lemma sys_init_paper:
-  "\<lbrakk>well_formed spec; obj_ids = sorted_list_of_set (dom (cdl_objects spec))\<rbrakk> \<Longrightarrow>
-     \<lbrace>\<guillemotleft>valid_boot_info bootinfo spec untyped_derivations t \<and>* R\<guillemotright>\<rbrace>
-     init_system spec bootinfo obj_ids untyped_derivations
-     \<lbrace>\<lambda>_ s. \<exists>\<phi>.
-      \<guillemotleft>objects_initialised spec \<phi> {obj_id. real_object_at obj_id spec} \<and>*
-       irqs_initialised spec \<phi> (used_irqs spec) \<and>*
-       si_final_objects spec \<phi> \<and>*
-       (EXS map. (SETSEPCONJ pd_id | pd_at pd_id spec. frame_duplicates_copied map pd_id spec \<phi>)) \<and>*
-       R\<guillemotright> s \<and>
-       injective \<phi> \<and> dom \<phi> = set obj_ids\<rbrace>"
-  apply (rule hoare_strengthen_post)
-  apply (fact sys_init)
-  apply (fastforce simp: injective_def)
-  done
-*)
 
 end

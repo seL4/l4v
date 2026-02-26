@@ -51,7 +51,7 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_helper_sep:
   apply (frule (2) well_formed_irq_ntfn_cap)
   apply (rule hoare_chain)
     apply (rule seL4_IRQHandler_SetEndpoint_wp [where
-              root_tcb = root_tcb
+               root_tcb = root_tcb
            and cnode_cap = si_cspace_cap
            and cnode_id = si_cnode_id
            and root_size = si_cnode_size
@@ -80,9 +80,10 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_helper_sep:
   apply (subst (asm) irq_node_fields_empty_initialised)
    apply (simp add: object_type_object_at)
   apply (simp add: object_fields_initialised_def object_initialised_general_def)
-  apply (sep_drule sep_map_s_sep_map_c [where obj_id = kernel_irq_id
-         and cap = "NotificationCap kernel_ntfn_id 0 {AllowRead, AllowWrite}"
-         and obj = "object_initialised_state t spec_irq"])
+  apply (sep_drule sep_map_s_sep_map_c [where
+                         obj_id = kernel_irq_id
+                     and cap = "NotificationCap kernel_ntfn_id 0 {AllowRead, AllowWrite}"
+                     and obj = "object_initialised_state t spec_irq"])
    apply simp
    apply (frule (1) object_slots_opt_capI)
    apply (subst object_slots_object_initialised_state,

@@ -17,11 +17,27 @@
 
 theory WellFormed_SI
 imports
-  "DSpecProofs.Kernel_DP"
-  "SepDSpec.Separation_SD"
-  "Lib.SimpStrategy"
-  "AInvs.Rights_AI"
+  DSpecProofs.Kernel_DP
+  SepDSpec.Separation_SD
+  Lib.SimpStrategy
+  Lib.Guess_ExI
+  AInvs.Rights_AI
 begin
+
+(* FIXME: make a separate library theory for the initialiser for things like these. *)
+lemma keep_if_eq[simp]:
+  "keep_if P R R = R"
+  by (simp add: keep_if_def)
+
+lemma keep_if_cond_l:
+  "P R \<Longrightarrow> keep_if P R S = R"
+  by (simp add: keep_if_def)
+
+lemma keep_if_cond_r:
+  "\<not>P R \<Longrightarrow> keep_if P R S = S"
+  by (simp add: keep_if_def)
+
+lemmas keep_if_cond = keep_if_cond_l keep_if_cond_r
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
@@ -45,12 +61,6 @@ lemma cap_has_object_not_irqhandler_cap:
 lemmas cap_has_object_not_irqhandler_cap_simp[simp] = cap_has_object_not_irqhandler_cap[OF ByAssum]
 lemmas cap_has_object_not_NullCap_simp[simp] = cap_has_object_not_NullCap[OF ByAssum]
 lemmas is_irqhandler_cap_not_NullCap_simp[simp] = is_irqhandler_cap_not_NullCap[OF ByAssum]
-
-
-
-
-
-
 
 definition
   cap_ref_object :: "cdl_cap_ref \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id"
@@ -110,12 +120,12 @@ definition well_formed_cap :: "cdl_cap \<Rightarrow> bool"
 where
   "well_formed_cap cap \<equiv> (case cap of
       EndpointCap _ b _       \<Rightarrow> b < 2 ^ badge_bits
-    | NotificationCap _ b r  \<Rightarrow> (b < 2 ^ badge_bits) \<and> (r \<subseteq> {AllowRead, AllowWrite})
-    | CNodeCap _ g gs sz      \<Rightarrow> (gs < guard_bits) \<and> (g < 2 ^ gs) \<and> (sz + gs \<le> 32)
+    | NotificationCap _ b r   \<Rightarrow> b < 2 ^ badge_bits \<and> (r \<subseteq> {AllowRead, AllowWrite})
+    | CNodeCap _ g gs sz      \<Rightarrow> gs < guard_bits \<and> g < 2 ^ gs \<and> sz + gs \<le> 32
     | TcbCap _                \<Rightarrow> True
-    | FrameCap _ _ r sz R ad     \<Rightarrow> r \<in> {vm_read_write, vm_read_only} \<and> ad = None  \<and>
+    | FrameCap _ _ r sz R ad  \<Rightarrow> r \<in> {vm_read_write, vm_read_only} \<and> ad = None \<and>
           ((\<exists>attr. (R = Fake attr) \<and> attr = validate_vm_attributes attr (pageForPageBits sz)) \<or> R = Real)
-    | PageTableCap  _ R ad    \<Rightarrow> ad = None  \<and>
+    | PageTableCap  _ R ad    \<Rightarrow> ad = None \<and>
           ((\<exists>attr. (R = Fake attr) \<and> attr = validate_pt_vm_attributes attr) \<or> R = Real)
     | PageDirectoryCap _ _ ad \<Rightarrow> ad = None
     | IrqHandlerCap _         \<Rightarrow> True
@@ -265,6 +275,7 @@ where
      is_tcb obj \<longrightarrow>
      \<not> tcb_has_fault obj \<and>
      tcb_domain obj = minBound \<and>
+     \<comment> \<open>FIXME: make capDL kernel model record the extra data, then this can be dropped:\<close>
      cdl_tcb_extra (obj_tcb obj) = default_tcb_extra_data \<and>
      (\<forall>slot cap. object_slots obj slot = Some cap \<longrightarrow>
      ((slot = tcb_cspace_slot \<longrightarrow> is_cnode_cap cap \<and>
@@ -279,9 +290,8 @@ where
      ((object_slots obj tcb_replycap_slot = Some (MasterReplyCap obj_id)) =
       (object_slots obj tcb_pending_op_slot = Some RestartCap))"
 
-(* NB: the executable loader will support arbitrary frame data, so this is a cheat. *)
-definition well_formed_frame_extra :: "cdl_state \<Rightarrow> cdl_object_id \<Rightarrow> cdl_object \<Rightarrow> bool"
-where
+(* The executable loader supports arbitrary frame data, but capDL does not model memory content *)
+definition well_formed_frame_extra :: "cdl_state \<Rightarrow> cdl_object_id \<Rightarrow> cdl_object \<Rightarrow> bool" where
   "well_formed_frame_extra spec obj_id obj \<equiv>
      case obj of
        Frame frame \<Rightarrow>
@@ -1197,8 +1207,8 @@ lemma well_formed_pt_cap_is_fake_pt_cap:
   by (frule (2) well_formed_pd, clarsimp+)
 
 lemma wf_cap_pt_cap[simp]:
-  "well_formed_cap (PageTableCap pt_id ty addr) \<longleftrightarrow> addr = None \<and>
-    ((\<exists>attr. ty = Fake attr  \<and> attr = validate_pt_vm_attributes attr) \<or> ty = Real)"
+  "well_formed_cap (PageTableCap pt_id ty addr) \<longleftrightarrow>
+   addr = None \<and> ((\<exists>attr. ty = Fake attr \<and> attr = validate_pt_vm_attributes attr) \<or> ty = Real)"
   by (clarsimp simp: well_formed_cap_def)
 
 lemma wf_frame_cap_frame_size_bits:
@@ -1209,7 +1219,7 @@ lemma wf_frame_cap_frame_size_bits:
   apply (clarsimp simp: opt_cap_def slots_of_def split: option.splits)
   apply (frule (2) well_formed_well_formed_cap_types_match, fastforce)
   apply (auto simp: well_formed_cap_types_match_def cap_object_def object_type_def)
-  by (metis (mono_tags) LeastI cdl_object.simps(105) cdl_object_type.inject option.inject)
+  done
 
 lemma wf_pd_cap_has_object:
   "\<lbrakk>well_formed spec;
@@ -1777,21 +1787,19 @@ lemma well_formed_frame_cap[simp]:
   done
 
 lemma wf_cap_in_pt_is_frame:
-  "well_formed spec \<Longrightarrow>
-   page_cap \<noteq> NullCap \<Longrightarrow>
-   pt_at pt_id spec \<Longrightarrow>
-   opt_cap (pt_id, slot) spec = Some page_cap \<Longrightarrow>
+  "\<lbrakk>well_formed spec; page_cap \<noteq> NullCap; pt_at pt_id spec;
+    opt_cap (pt_id, slot) spec = Some page_cap\<rbrakk> \<Longrightarrow>
    page_cap = fake_frame_cap False (cap_object page_cap)
                                    (validate_vm_rights (cap_rights page_cap))
                                    (cap_size_bits page_cap)
-                                   (validate_vm_attributes (cap_vmattrs page_cap) (pageForPageBits (cap_size_bits page_cap))) \<and>
-  (cap_size_bits page_cap = 12 \<or> cap_size_bits page_cap = 16)"
+                                   (validate_vm_attributes (cap_vmattrs page_cap) (pageForPageBits (cap_size_bits page_cap)))
+   \<and> (cap_size_bits page_cap = 12 \<or> cap_size_bits page_cap = 16)"
   apply (frule well_formed_frame_in_pt, fastforce+)
   apply (clarsimp simp: cap_type_def cap_rights_def cap_size_bits_def split: cdl_cap.splits)
-     apply (frule well_formed_well_formed_cap[where obj_id=pt_id])
-  apply (fastforce intro: object_slots_opt_capI)+
-   apply (drule well_formed_no_dev, clarsimp simp: cap_at_def cap_vmattrs_def)
-   apply (fastforce simp: fake_vm_cap_simp)
+  apply (frule well_formed_well_formed_cap[where obj_id=pt_id])
+     apply (fastforce intro: object_slots_opt_capI)+
+  apply (drule well_formed_no_dev, clarsimp simp: cap_at_def cap_vmattrs_def)
+  apply (fastforce simp: fake_vm_cap_simp)
   done
 
 lemma wf_frame_cap_in_pd:
