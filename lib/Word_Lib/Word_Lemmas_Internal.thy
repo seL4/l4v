@@ -1067,4 +1067,51 @@ lemma shiftr_le_mask:
   shows "w >> n \<le> mask (LENGTH('a) - n)"
   by (fastforce simp flip: shiftr_mask2 intro: le_shiftr)
 
+lemma word_upto_enum_sorted:
+  "sorted [(x::'a::len word) .e. y]"
+proof (induct "fromEnumAlt y" arbitrary: x y)
+  case 0
+  then show ?case by (simp add: upto_enum_def)
+next
+  case (Suc d)
+  then
+  have "unat (y - 1) = unat y - 1"
+    by (subst unat_minus_one; fastforce)
+  with Suc.hyps
+  have "d = fromEnumAlt (y - 1)"
+    by fastforce
+  moreover
+  note sorted_hyp = Suc.hyps(1)[OF this]
+  moreover
+  note Suc.hyps(2)
+  ultimately
+  show ?case
+    by (clarsimp simp: upto_enum_def sorted_append)
+       (metis atLeastLessThan_iff fromEnum_unat le_unat_uoi less_imp_le_nat sorted_hyp to_from_enum
+              upto_enum_red word_less_eq_iff_unsigned)
+qed
+
+lemma sorted_list_of_set_eq_filter:
+  fixes P::"'a::len word \<Rightarrow> bool"
+  shows "sorted_list_of_set {x. P x} = filter P [minBound .e. maxBound]" (is "_ = ?rhs")
+proof -
+  have rhs_sorted: "sorted ?rhs"
+    using sorted_wrt_filter word_upto_enum_sorted
+    by blast
+  moreover
+  have rhs_distinct: "distinct ?rhs"
+    by (intro distinct_filter distinct_enum_upto')
+  moreover
+  have enum_UNIV: "set [(minBound::'a word) .e. maxBound] = UNIV"
+    by (force simp: upto_enum_def minBound_word maxBound_word word_unat.univ unats_def
+                    unat_minus_one_word
+                    atLeastLessThan_def atLeast_def lessThan_def)
+  moreover
+  have rhs_set: "{x. P x} = set ?rhs"
+    by (simp only: set_filter enum_UNIV, blast)
+  ultimately
+  show ?thesis
+    by (metis sorted_list_of_set.idem_if_sorted_distinct)
+qed
+
 end
