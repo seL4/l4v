@@ -302,6 +302,11 @@ lemma pspace_in_kernel_mappings_update' [iff]:
   "pspace_in_kernel_mappings' (f s) = pspace_in_kernel_mappings' s"
   by (simp add: pspace_in_kernel_mappings'_def)
 
+lemma valid_arch_tcb_update'[iff]:
+  "valid_arch_tcb' atcb (f s) = valid_arch_tcb' atcb s"
+  unfolding valid_arch_tcb'_def
+  by simp
+
 end
 
 context Arch_p_arch_idle_update_eq'

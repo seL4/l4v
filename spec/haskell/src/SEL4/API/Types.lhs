@@ -25,7 +25,7 @@ We use the C preprocessor to select a target architecture. Also, this file makes
 > import SEL4.Machine
 
 > import Data.Bits
-> import Data.Word(Word8 , Word32)
+> import Data.Word(Word8 , Word32, Word64)
 > import Data.WordLib
 
 \end{impdetails}
@@ -120,9 +120,11 @@ A set of capability rights may be converted to or from a machine word.
 
 \subsection{Security Domains}
 
-The current security domain is represented by an 8-bit unsigned integer.
+The current security domain is represented by an 8-bit unsigned integer,
+duration by a 64 bit word. Only 64-8 = 56 bits will be used.
 
 > type Domain = Word8
+> type DomainDuration = Word64
 
 \subsection{Thread Priority}
 

@@ -1542,6 +1542,7 @@ crunch emptySlot
   and valid_sched_pointers[wp]: valid_sched_pointers
   and sched_projs[wp]: "\<lambda>s. P (tcbSchedNexts_of s) (tcbSchedPrevs_of s)"
   and valid_arch_state'[wp]: valid_arch_state'
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   (wp: valid_bitmaps_lift)
 
 lemma emptySlot_invs'[wp]:
@@ -1550,7 +1551,7 @@ lemma emptySlot_invs'[wp]:
      emptySlot sl info
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
-  apply (wp valid_irq_node_lift cur_tcb_lift)
+  apply (wp valid_irq_node_lift cur_tcb_lift valid_dom_schedule'_lift)
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
@@ -1658,6 +1659,7 @@ lemma emptySlot_corres:
   apply (drule (4) updateMDB_the_lot, elim conjE)
   apply clarsimp
   apply (drule_tac s'=s''a and c=cap.NullCap in set_cap_not_quite_corres)
+                      subgoal by simp
                      subgoal by simp
                     subgoal by simp
                    subgoal by simp
@@ -2362,7 +2364,7 @@ lemma unbindNotification_invs[wp]:
   apply clarsimp
   apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (rule hoare_pre)
-  apply (wp sbn'_valid_pspace'_inv sbn_sch_act' valid_irq_node_lift
+  apply (wp sbn'_valid_pspace'_inv sbn_sch_act' valid_irq_node_lift valid_dom_schedule'_lift
             irqs_masked_lift setBoundNotification_ct_not_inQ sym_heap_sched_pointers_lift
             untyped_ranges_zero_lift | clarsimp simp: cteCaps_of_def o_def)+
   apply (rule conjI)
@@ -2406,7 +2408,7 @@ lemma unbindMaybeNotification_invs[wp]:
   apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (rule hoare_pre)
    apply (wp sbn'_valid_pspace'_inv sbn_sch_act' sym_heap_sched_pointers_lift valid_irq_node_lift
-             irqs_masked_lift setBoundNotification_ct_not_inQ
+             irqs_masked_lift valid_dom_schedule'_lift setBoundNotification_ct_not_inQ
              untyped_ranges_zero_lift
              | wpc | clarsimp simp: cteCaps_of_def o_def)+
   apply safe[1]
@@ -3676,7 +3678,7 @@ crunch emptySlot
 lemma setEndpoint_sch_act_not_ct[wp]:
   "\<lbrace>\<lambda>s. sch_act_not (ksCurThread s) s\<rbrace>
    setEndpoint ptr val \<lbrace>\<lambda>_ s. sch_act_not (ksCurThread s) s\<rbrace>"
-  by (rule hoare_weaken_pre, wps setEndpoint_ct', wp, simp)
+  by (rule hoare_weaken_pre, wps, wp, simp)
 
 lemma sbn_ct_in_state'[wp]:
   "\<lbrace>ct_in_state' P\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>_. ct_in_state' P\<rbrace>"

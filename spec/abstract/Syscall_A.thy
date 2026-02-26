@@ -174,7 +174,11 @@ where
 
 | "perform_invocation block call (InvokeTCB i) = invoke_tcb i"
 
-| "perform_invocation block call (InvokeDomain tptr d) = invoke_domain tptr d"
+| "perform_invocation block call (InvokeDomain dom_inv) =
+    liftE (do
+      invoke_domain dom_inv;
+      return []
+    od)"
 
 | "perform_invocation block call (InvokeReply thread slot grant) =
     liftE (do

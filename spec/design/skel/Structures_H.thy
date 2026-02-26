@@ -12,7 +12,7 @@ chapter "Kernel Data Structures"
 
 theory Structures_H
 imports
-  Structs_B
+  Arch_Structs_B
   Config_H
   State_H
   Fault_H
@@ -34,6 +34,8 @@ arch_requalify_consts (H)
   PPtr
   atcbContextGet
   atcbContextSet
+
+type_synonym domain_schedule_item = "domain \<times> ticks"
 
 #INCLUDE_HASKELL SEL4/Object/Structures.lhs decls_only NOT isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap TcbFlag tcbFlagToWord tcbFlagMask
 #INCLUDE_HASKELL SEL4/Object/Structures.lhs bodies_only NOT kernelObjectTypeName isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap tcbFlagToWord tcbFlagMask

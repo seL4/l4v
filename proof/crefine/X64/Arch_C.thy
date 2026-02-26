@@ -4367,7 +4367,6 @@ lemma decodeX64MMUInvocation_ccorres:
                           invs_sch_act_wf' invs_pspace_aligned'
                     dest!: isCapDs(1))
     apply (intro conjI)
-           apply (simp add: valid_tcb_state'_def)
           apply (fastforce elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')
          apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
          apply (case_tac "tcbState obj", (simp add: runnable'_def)+)[1]

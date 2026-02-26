@@ -18,10 +18,12 @@ crunch
   read_vcpu_register, write_vcpu_register
   for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
   and domain_time_inv[wp]: "\<lambda>s. P (domain_time s)"
+  and domain_start_index_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_start_index s)"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch arch_finalise_cap
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
+  and domain_start_index_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_start_index s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
 
 crunch
@@ -32,6 +34,7 @@ crunch
   arch_post_modify_registers, arch_post_cap_deletion, handle_vm_fault,
   arch_invoke_irq_handler, arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags
   for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
+  and domain_start_index_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_start_index s)"
   (simp: crunch_simps wp: mapM_wp' transfer_caps_loop_pres crunch_wps)
 declare init_arch_objects_exst[DetSchedDomainTime_AI_assms]
 
@@ -49,6 +52,7 @@ crunch
   arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags,
   handle_spurious_irq
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_time s)"
+  and domain_start_index_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_start_index s)"
   (simp: crunch_simps wp: transfer_caps_loop_pres crunch_wps)
 
 crunch handle_spurious_irq
@@ -68,6 +72,7 @@ context Arch begin arch_global_naming
 crunch arch_perform_invocation
   for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_time s)"
   and domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
+  and domain_start_index_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_start_index s)"
   (wp: crunch_wps check_cap_inv)
 
 lemma vgic_maintenance_valid_domain_time:

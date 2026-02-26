@@ -304,10 +304,22 @@ crunch arch_prepare_set_domain
   for cur_fpu_in_cur_domain[wp]: cur_fpu_in_cur_domain
   (wp: crunch_wps simp: crunch_simps)
 
+lemma cur_fpu_in_cur_domain_domain_list_update[simp]:
+  "cur_fpu_in_cur_domain (domain_list_update f s) = cur_fpu_in_cur_domain s"
+  by (simp add: cur_fpu_in_cur_domain_def)
+
+lemma cur_fpu_in_cur_domain_domain_time_update[simp]:
+  "cur_fpu_in_cur_domain (domain_time_update f s) = cur_fpu_in_cur_domain s"
+  by (simp add: cur_fpu_in_cur_domain_def)
+
+lemma cur_fpu_in_cur_domain_domain_start_index_update[simp]:
+  "cur_fpu_in_cur_domain (domain_start_index_update f s) = cur_fpu_in_cur_domain s"
+  by (simp add: cur_fpu_in_cur_domain_def)
+
 lemma invoke_domain_cur_fpu_in_cur_domain[wp]:
-  "invoke_domain thread domain \<lbrace>cur_fpu_in_cur_domain\<rbrace>"
+  "invoke_domain di \<lbrace>cur_fpu_in_cur_domain\<rbrace>"
   unfolding invoke_domain_def
-  by wpsimp
+  by (wpsimp simp: invoke_set_domain_def domain_set_start_def domain_schedule_configure_def)
 
 crunch do_reply_transfer, handle_recv, handle_vm_fault
   for etcb_at[wp]: "etcb_at P t"

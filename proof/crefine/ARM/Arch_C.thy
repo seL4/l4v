@@ -3827,7 +3827,6 @@ lemma decodeARMMMUInvocation_ccorres:
     apply (clarsimp simp: ex_cte_cap_wp_to'_def cte_wp_at_ctes_of
                           invs_sch_act_wf' dest!: isCapDs(1))
     apply (intro conjI)
-             apply (simp add: valid_tcb_state'_def)
             apply (fastforce elim!: pred_tcb'_weakenE dest!:st_tcb_at_idle_thread')
            apply fastforce
           apply (clarsimp simp: st_tcb_at'_def obj_at'_def)

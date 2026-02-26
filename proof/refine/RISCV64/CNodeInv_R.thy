@@ -4967,24 +4967,22 @@ context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch cteSwap
   for tcb_at[wp]: "tcb_at' t"
-crunch cteSwap
-  for sch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
-crunch cteSwap
-  for inQ[wp]: "obj_at' (inQ d p) tcb"
-crunch cteSwap
-  for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
-crunch cteSwap
-  for sym[wp]: "\<lambda>s. sym_refs (state_refs_of' s)"
-crunch cteSwap
-  for cur[wp]: "\<lambda>s. P (ksCurThread s)"
-crunch cteSwap
-  for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
-crunch cteSwap
-  for ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
-crunch cteSwap
-  for it[wp]: "\<lambda>s. P (ksIdleThread s)"
-crunch cteSwap
-  for tcbDomain_obj_at'[wp]: "obj_at' (\<lambda>tcb. x = tcbDomain tcb) t"
+  and st_tcb_at'[wp]: "st_tcb_at' P p"
+  and sch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  and inQ[wp]: "obj_at' (inQ d p) tcb"
+  and ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
+  and sym[wp]: "\<lambda>s. sym_refs (state_refs_of' s)"
+  and cur[wp]: "\<lambda>s. P (ksCurThread s)"
+  and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
+  and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
+  and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
+  and it[wp]: "\<lambda>s. P (ksIdleThread s)"
+  and ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
+  and tcbDomain_obj_at'[wp]: "obj_at' (\<lambda>tcb. x = tcbDomain tcb) t"
+  and valid_arch_state'[wp]: "valid_arch_state'"
+  and typ_at'[wp]: "\<lambda>s. P (typ_at' Q p s)"
+  and ksMachineState[wp]: "\<lambda>s. P (ksMachineState s)"
 
 lemma cteSwap_idle'[wp]:
   "\<lbrace>valid_idle'\<rbrace>
@@ -5026,15 +5024,6 @@ lemma cteSwap_refs[wp]:
   apply (drule weak_derived_capRange_capBits)+
   apply (clarsimp simp: global_refs'_def Int_Un_distrib2)
   done
-
-crunch cteSwap
-  for ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
-
-crunch cteSwap
-  for ksArch[wp]: "\<lambda>s. P (ksArchState s)"
-
-crunch cteSwap
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
 lemma cteSwap_valid_irq_handlers[wp]:
   "\<lbrace>valid_irq_handlers' and cte_wp_at' (weak_derived' c \<circ> cteCap) c1
@@ -5083,36 +5072,12 @@ lemma cteSwap_urz[wp]:
   done
 
 crunch cteSwap
-  for valid_arch_state'[wp]: "valid_arch_state'"
-
-crunch cteSwap
-  for irq_states'[wp]: "valid_irq_states'"
-
-crunch cteSwap
-  for ksqsL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-
-crunch cteSwap
-  for ksqsL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
-
-crunch cteSwap
-  for st_tcb_at'[wp]: "st_tcb_at' P t"
-
-crunch cteSwap
-  for vms'[wp]: "valid_machine_state'"
-
-crunch cteSwap
-  for pspace_domain_valid[wp]: "pspace_domain_valid"
-
-crunch cteSwap
-  for ct_not_inQ[wp]: "ct_not_inQ"
-
-crunch cteSwap
-  for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
-
-crunch cteSwap
   for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
   and valid_sched_pointers[wp]: valid_sched_pointers
   and valid_bitmaps[wp]: valid_bitmaps
+  and valid_machine_state'[wp]: valid_machine_state'
+  and ct_not_inQ[wp]: ct_not_inQ
+  and pspace_domain_valid[wp]: pspace_domain_valid
   (rule: valid_bitmaps_lift)
 
 lemma cteSwap_invs'[wp]:
@@ -5127,8 +5092,8 @@ lemma cteSwap_invs'[wp]:
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def pred_conj_def)
   apply (rule hoare_pre)
-   apply (wp hoare_vcg_conj_lift sch_act_wf_lift
-             valid_queues_lift cur_tcb_lift
+   apply (wp hoare_vcg_conj_lift sch_act_wf_lift valid_dom_schedule'_lift
+             valid_queues_lift cur_tcb_lift valid_irq_states_lift'
              valid_irq_node_lift irqs_masked_lift tcb_in_cur_domain'_lift
              ct_idle_or_in_cur_domain'_lift2)
   apply (clarsimp simp: cte_wp_at_ctes_of weak_derived_zobj weak_derived_cte_refs
@@ -5598,7 +5563,7 @@ lemma make_zombie_invs':
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
                    valid_irq_handlers'_def irq_issued'_def)
   apply (wp updateCap_ctes_of_wp sch_act_wf_lift valid_queues_lift cur_tcb_lift
-            updateCap_iflive' updateCap_ifunsafe' updateCap_idle'
+            updateCap_iflive' updateCap_ifunsafe' updateCap_idle' valid_dom_schedule'_lift
             valid_arch_state_lift' valid_irq_node_lift ct_idle_or_in_cur_domain'_lift2
             updateCap_untyped_ranges_zero_simple
        | simp)+
@@ -8639,7 +8604,7 @@ lemma cteMove_invs' [wp]:
    apply ((rule hoare_vcg_conj_lift, (wp cteMove_ifunsafe')[1])
                   | rule hoare_vcg_conj_lift[rotated])+
       apply (unfold cteMove_def)
-      apply (wp cur_tcb_lift valid_queues_lift haskell_assert_inv
+      apply (wp cur_tcb_lift valid_queues_lift haskell_assert_inv valid_dom_schedule'_lift
                 sch_act_wf_lift ct_idle_or_in_cur_domain'_lift2 tcb_in_cur_domain'_lift)+
   apply clarsimp
   done
@@ -8873,7 +8838,7 @@ lemma updateCap_noop_invs:
              updateCap_ifunsafe' updateCap_idle'
              valid_arch_state_lift' valid_irq_node_lift
              updateCap_noop_irq_handlers sch_act_wf_lift
-             untyped_ranges_zero_lift)
+             untyped_ranges_zero_lift valid_dom_schedule'_lift)
   apply (clarsimp simp: cte_wp_at_ctes_of modify_map_apply)
   apply (strengthen untyped_ranges_zero_delta[where xs=Nil, mk_strg I E])
   apply (case_tac cte)

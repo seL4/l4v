@@ -41,7 +41,9 @@ lemma well_formed_empty:
   cdl_current_thread = undefined,
   cdl_irq_node = ucast,
   cdl_asid_table = undefined,
-  cdl_current_domain = undefined
+  cdl_current_domain = undefined,
+  cdl_dom_schedule = undefined,
+  cdl_dom_start = undefined
 \<rparr>"
   by (clarsimp simp: well_formed_def well_formed_orig_caps_unique_def cap_at_def
                      well_formed_irqhandler_caps_unique_def well_formed_irqhandler_caps_def
@@ -105,7 +107,9 @@ definition
    cdl_current_thread = undefined,
    cdl_irq_node = example_irq_node,
    cdl_asid_table = undefined,
-   cdl_current_domain = undefined\<rparr>"
+   cdl_current_domain = undefined,
+   cdl_dom_schedule = undefined,
+   cdl_dom_start = undefined\<rparr>"
 
 lemma cdl_irq_node_example_spec [simp]:
   "cdl_irq_node example_spec = example_irq_node"

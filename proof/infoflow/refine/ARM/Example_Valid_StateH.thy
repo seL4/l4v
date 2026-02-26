@@ -1088,6 +1088,7 @@ where
     gsUntypedZeroRanges = ran (map_comp untypedZeroRange (option_map cteCap o map_to_ctes kh0H)),
     gsMaxObjectSize = card (UNIV :: word32 set),
     ksDomScheduleIdx = 0,
+    ksDomScheduleStart = 0,
     ksDomSchedule = [(0 ,10), (1, 10)],
     ksCurDomain = 0,
     ksDomainTime = 5,
@@ -1165,15 +1166,9 @@ lemma not_in_range_cte_None:
   "\<lbrakk>x \<notin> tcb_offs_range idle_tcb_ptr\<rbrakk> \<Longrightarrow> idle_tcb_cte x = None"
   by (fastforce simp: cnode_offs_range_def tcb_offs_range_def s0_ptr_defs Low_cte_cte_def High_cte_cte_def Silc_cte_cte_def Low_tcb_cte_def High_tcb_cte_def idle_tcb_cte_def)+
 
-lemma mask_neg_le:
-  "x && ~~ mask n \<le> x"
-  apply (clarsimp simp: neg_mask_is_div)
-  apply (rule word_div_mult_le)
-  done
-
 lemma mask_in_tcb_offs_range:
   "x && ~~ mask 9 = ptr \<Longrightarrow> x \<in> tcb_offs_range ptr"
-  apply (clarsimp simp: tcb_offs_range_def mask_neg_le objBitsKO_def)
+  apply (clarsimp simp: tcb_offs_range_def word_and_le2 objBitsKO_def)
   apply (cut_tac and_neg_mask_plus_mask_mono[where p=x and n=9])
   apply (simp add: add.commute mask_def)
   done
@@ -1529,7 +1524,7 @@ lemma map_to_ctes_kh0H:
            clarsimp simp: s0_ptr_defs objBitsKO_def,
            erule notE[rotated],
             rule_tac x="x::word32" for x in less_imp_neq,
-           rule le_less_trans[OF mask_neg_le],
+           rule le_less_trans[OF word_and_le2],
            unat_arith,
           rule impI,
           clarsimp simp: option_update_range_def kh0H_dom_distinct[THEN set_mem_neq] not_in_range_cte_None,
@@ -2867,12 +2862,12 @@ lemma s0H_valid_pspace':
 end
 
 (* Instantiate the current, abstract domain scheduler into the
-   concrete scheduler required for this example *)
+   concrete scheduler required for this example
 axiomatization  where
   newKSDomSched: "newKSDomSchedule = [(0,0xA), (1, 0xA)]"
 
 axiomatization where
-  newKSDomainTime: "newKSDomainTime = 5"
+  newKSDomainTime: "newKSDomainTime = 5" *)
 
 (* kernel_data_refs is an undefined constant at the moment, and therefore
    cannot be referred to in valid_global_refs' and pspace_domain_valid.
@@ -3137,8 +3132,8 @@ lemma s0H_invs:
   (* unfold s0H_internal for remaining goals *)
   apply (clarsimp simp: s0H_internal_def cteCaps_of_def
                         untyped_ranges_zero_inv_def
-                        dschDomain_def dschLength_def)
-  apply (clarsimp simp: newKernelState_def newKSDomSched)
+                        dschDomain_def dschLength_def valid_dom_schedule'_def
+                        maxDomainDuration_def mask_def)
   apply (clarsimp simp: cur_tcb'_def obj_at'_def s0H_internal_def objBitsKO_def s0_ptrs_aligned)
   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
   apply (simp add: objBitsKO_def)
@@ -3169,7 +3164,7 @@ lemma kh0_pspace_dom:
    apply (rule_tac x=init_globals_frame in exI)
    apply (clarsimp simp: kh0_def kh0_obj_def s0_ptr_defs image_def)
    apply (rule_tac x=0 in exI)
-   apply simp
+   apply (simp add: pageBits_def)
   apply (rule conjI)
    apply (rule_tac x=idle_tcb_ptr in exI)
    apply (clarsimp simp: kh0_def kh0_obj_def s0_ptr_defs image_def)
@@ -3457,6 +3452,14 @@ lemma s0_srel:
 definition
   "s0H \<equiv> ((if ct_idle' s0H_internal then idle_context s0_internal else s0_context,s0H_internal),KernelExit)"
 
+lemma einvs_no_domain_caps_s0:
+  "(einvs and no_domain_caps) s0_internal"
+  using einvs_s0
+  apply (clarsimp simp: no_domain_caps_def2 cte_wp_at_caps_of_state)
+  apply (drule s0_caps_of_state)
+  apply simp
+  done
+
 lemma step_restrict_s0:
   "1 \<le> maxDomain \<Longrightarrow> step_restrict s0"
   supply option.case_cong[cong] if_cong[cong]
@@ -3476,8 +3479,8 @@ lemma step_restrict_s0:
   apply (rule conjI)
    apply (simp only: ex_abs_def)
    apply (rule_tac x="s0_internal" in exI)
-   apply (simp only: einvs_s0 s0_srel)
-  apply (simp add: s0H_internal_def valid_domain_list'_def)
+   apply (simp only: einvs_no_domain_caps_s0 s0_srel)
+  apply (simp add: s0H_internal_def)
   apply (rule conjI)
    apply (clarsimp simp: vs_valid_duplicates'_def split: option.splits)
    apply (frule kh0H_SomeD)

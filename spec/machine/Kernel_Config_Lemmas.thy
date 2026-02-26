@@ -27,4 +27,12 @@ lemma numDomains_machine_word_safe:
   "unat (of_nat numDomains :: machine_word) = numDomains"
   unfolding Kernel_Config.numDomains_def by simp
 
+(* C stores the domain field in the top 8 bits of domain schedule entries. *)
+definition domainBits :: nat where
+  "domainBits \<equiv> 8"
+
+lemma numDomains_fits_domainBits:
+  "numDomains < 2^domainBits"
+  by (simp add: Kernel_Config.numDomains_def domainBits_def)
+
 end

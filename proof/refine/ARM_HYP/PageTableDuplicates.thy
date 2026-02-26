@@ -2033,6 +2033,9 @@ lemma invokeTCB_valid_duplicates'[wp]:
     apply (simp add:invokeTCB_def invokeSetFlags_def | wp mapM_x_wp' | intro impI conjI | wpc)+
   done
 
+crunch invokeDomain
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+
 lemma performInvocation_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s) \<and> invs' s \<and> sch_act_simple s
     \<and> valid_invocation' i s \<and> ct_active' s\<rbrace>

@@ -280,6 +280,11 @@ lemma valid_global_pdpts_update' [iff]:
   "valid_global_pdpts' pdpts (f s) = valid_global_pdpts' pdpts s"
   by (simp add: valid_global_pdpts'_def)
 
+lemma valid_arch_tcb_update'[iff]:
+  "valid_arch_tcb' atcb (f s) = valid_arch_tcb' atcb s"
+  unfolding valid_arch_tcb'_def
+  by simp
+
 end
 
 context Arch_p_arch_idle_update_eq'

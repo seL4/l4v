@@ -1863,9 +1863,17 @@ lemma setObject_pte_ksDomScheduleIdx [wp]:
   "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setObject p (pte::pte) \<lbrace>\<lambda>_. \<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
   by (wp updateObject_default_inv|simp add:setObject_def | wpc)+
 
+lemma setObject_pte_ksDomScheduleStart[wp]:
+  "setObject p (pte::pte) \<lbrace>\<lambda>s. P (ksDomScheduleStart s)\<rbrace>"
+  by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+
 lemma setObject_pde_ksDomScheduleIdx [wp]:
   "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setObject p (pde::pde) \<lbrace>\<lambda>_. \<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
   by (wp updateObject_default_inv|simp add:setObject_def | wpc)+
+
+lemma setObject_pde_ksDomScheduleStart[wp]:
+  "setObject p (pde::pde) \<lbrace>\<lambda>s. P (ksDomScheduleStart s)\<rbrace>"
+  by (wpsimp wp: updateObject_default_inv simp: setObject_def)
 
 lemma storePDPTE_ct_not_inQ[wp]:
   "\<lbrace>ct_not_inQ\<rbrace> storePDPTE p pdpte \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
@@ -1888,6 +1896,10 @@ lemma setObject_pdpte_ksDomSchedule[wp]:
   apply (simp add: setObject_def split_def)
   apply (wp updateObject_default_inv | simp)+
   done
+
+lemma setObject_pdpte_ksDomScheduleStart[wp]:
+  "setObject p (pte::pdpte) \<lbrace>\<lambda>s. P (ksDomScheduleStart s)\<rbrace>"
+  by (wpsimp wp: updateObject_default_inv simp: setObject_def)
 
 lemma storePDPTE_cur_domain[wp]:
   "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> storePDPTE p pdpte \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
@@ -1946,6 +1958,10 @@ lemma storePML4E_ksDomSchedule[wp]:
   "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> storePML4E p pml4e \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
   by (simp add: storePML4E_def) wp
 
+lemma setObject_pml4e_ksDomScheduleStart[wp]:
+  "setObject p (pte::pml4e) \<lbrace>\<lambda>s. P (ksDomScheduleStart s)\<rbrace>"
+  by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+
 lemma storePML4E_tcb_obj_at'[wp]:
   "\<lbrace>obj_at' (P::tcb \<Rightarrow> bool) t\<rbrace> storePML4E p pml4e \<lbrace>\<lambda>_. obj_at' P t\<rbrace>"
   apply (simp add: storePML4E_def)
@@ -1967,6 +1983,7 @@ lemma setObject_pml4e_ksDomScheduleIdx [wp]:
 
 crunch storePTE, storePDE, storePDPTE, storePML4E
   for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and pspace_canonical'[wp]: "pspace_canonical'"
   and pspace_in_kernel_mappings'[wp]: "pspace_in_kernel_mappings'"
 
@@ -2006,8 +2023,8 @@ lemma storePDE_invs[wp]:
              valid_arch_state_lift' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift''
              untyped_ranges_zero_lift valid_bitmaps_lift
+             valid_dom_schedule'_lift
            | simp add: cteCaps_of_def o_def)+
-  apply clarsimp
   done
 
 lemma storePDPTE_invs[wp]:
@@ -2021,8 +2038,8 @@ lemma storePDPTE_invs[wp]:
              valid_arch_state_lift' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift''
              untyped_ranges_zero_lift valid_bitmaps_lift
+             valid_dom_schedule'_lift
            | simp add: cteCaps_of_def o_def)+
-  apply clarsimp
   done
 
 lemma storePML4E_invs[wp]:
@@ -2036,8 +2053,8 @@ lemma storePML4E_invs[wp]:
              valid_arch_state_lift' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift''
              untyped_ranges_zero_lift valid_bitmaps_lift
+             valid_dom_schedule'_lift
            | simp add: cteCaps_of_def o_def)+
-  apply clarsimp
   done
 
 lemma storePTE_valid_mdb [wp]:
@@ -2186,8 +2203,8 @@ lemma storePTE_invs [wp]:
              valid_arch_state_lift' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift''
              untyped_ranges_zero_lift valid_bitmaps_lift
+             valid_dom_schedule'_lift
            | simp add: cteCaps_of_def o_def)+
-  apply clarsimp
   done
 
 lemma setASIDPool_valid_objs [wp]:
@@ -2350,6 +2367,7 @@ lemma setASIDPool_invs [wp]:
              cur_tcb_lift valid_irq_handlers_lift''
              untyped_ranges_zero_lift
              updateObject_default_inv valid_bitmaps_lift
+             valid_dom_schedule'_lift
            | simp add: cteCaps_of_def
            | rule setObject_ksPSpace_only)+
   apply (clarsimp simp add: setObject_def o_def)

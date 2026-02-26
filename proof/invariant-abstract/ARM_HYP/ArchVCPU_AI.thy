@@ -712,11 +712,14 @@ lemma arch_prepare_set_domain_valid_cur_vcpu[wp]:
   done
 
 lemma invoke_domain_valid_cur_vcpu[wp]:
-  "\<lbrace>\<lambda>s. valid_cur_vcpu s \<and> sym_refs (state_hyp_refs_of s) \<and> in_cur_domain (cur_thread s) s \<and> t \<noteq> idle_thread s\<rbrace>
-   invoke_domain t new_dom
+  "\<lbrace>\<lambda>s. valid_cur_vcpu s \<and> sym_refs (state_hyp_refs_of s) \<and> in_cur_domain (cur_thread s) s \<and>
+        valid_domain_inv di s\<rbrace>
+   invoke_domain di
    \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
   unfolding invoke_domain_def
-  by (wpsimp | wps)+
+  apply (wpsimp simp: invoke_set_domain_def domain_set_start_def domain_schedule_configure_def | wps)+
+  apply (clarsimp simp: valid_domain_inv_def valid_cur_vcpu_def active_cur_vcpu_of_def)
+  done
 
 crunch perform_asid_control_invocation
   for active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"

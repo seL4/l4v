@@ -457,6 +457,18 @@ lemmas maxDomain_le_unat_ucast_explicit =
   numDomains_less_unat_ucast_explicit[simplified le_maxDomain_eq_less_numDomains(2)[symmetric],
                                       simplified]
 
+lemma unat_scast_domScheduleLength:
+  "unat (scast domScheduleLength :: machine_word) = unat domScheduleLength"
+  by (simp add: domScheduleLength_def)
+
+lemma domScheduleLength_le_unat:
+  "(scast domScheduleLength \<le> n) = (unat domScheduleLength \<le> unat n)" for n::machine_word
+  by (simp add: word_le_nat_alt unat_scast_domScheduleLength)
+
+lemma less_domScheduleLength_plus_1:
+  "unat n < unat domScheduleLength \<Longrightarrow> unat (n + 1) = Suc (unat n)" for n::machine_word
+  by (simp add: domScheduleLength_def unat_add_lem')
+
 end (* numDomain abstraction definitions and lemmas *)
 
 

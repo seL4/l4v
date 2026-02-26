@@ -305,6 +305,10 @@ abbreviation ghost_relation_wrapper :: "det_state \<Rightarrow> kernel_state \<R
   "ghost_relation_wrapper s s' \<equiv>
      ghost_relation_wrapper_2 (kheap s) (gsUserPages s') (gsCNodes s') (ksArchState s')"
 
+abbreviation domain_list_map ::
+  "(domain \<times> Structures_A.domain_duration) list \<Rightarrow> domain_schedule_item list" where
+  "domain_list_map \<equiv> map (\<lambda>(domain, duration). (domain, ucast duration))"
+
 definition state_relation :: "(det_state \<times> kernel_state) set" where
   "state_relation \<equiv> {(s, s').
          pspace_relation (kheap s) (ksPSpace s')
@@ -321,7 +325,8 @@ definition state_relation :: "(det_state \<times> kernel_state) set" where
        \<and> (machine_state s = ksMachineState s')
        \<and> (work_units_completed s = ksWorkUnitsCompleted s')
        \<and> (domain_index s = ksDomScheduleIdx s')
-       \<and> (domain_list s = ksDomSchedule s')
+       \<and> (domain_list_map (domain_list s) = ksDomSchedule s')
+       \<and> (domain_start_index s = ksDomScheduleStart s')
        \<and> (cur_domain s = ksCurDomain s')
        \<and> (domain_time s = ksDomainTime s')}"
 
@@ -367,7 +372,8 @@ lemma state_relationD:
    machine_state s = ksMachineState s' \<and>
    work_units_completed s = ksWorkUnitsCompleted s' \<and>
    domain_index s = ksDomScheduleIdx s' \<and>
-   domain_list s = ksDomSchedule s' \<and>
+   domain_list_map (domain_list s) = ksDomSchedule s' \<and>
+   domain_start_index s = ksDomScheduleStart s' \<and>
    cur_domain s = ksCurDomain s' \<and>
    domain_time s = ksDomainTime s'"
   unfolding state_relation_def by simp
@@ -388,7 +394,8 @@ lemma state_relationE [elim?]:
              machine_state s = ksMachineState s';
              work_units_completed s = ksWorkUnitsCompleted s';
              domain_index s = ksDomScheduleIdx s';
-             domain_list s = ksDomSchedule s';
+             domain_list_map (domain_list s) = ksDomSchedule s';
+             domain_start_index s = ksDomScheduleStart s';
              cur_domain s = ksCurDomain s';
              domain_time s = ksDomainTime s' \<rbrakk> \<Longrightarrow> R"
   shows "R"

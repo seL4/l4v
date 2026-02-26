@@ -271,13 +271,8 @@ lemma decode_invocation_IRQHandlerCap:
    decode_invocation label args cap_index slot cap blah
    \<lbrace>\<lambda>rv s. \<forall>x. rv = InvokeIRQHandler x
                \<longrightarrow> (\<exists>a b. cte_wp_at ((=) (IRQHandlerCap (irq_of_handler_inv x))) (a, b) s)\<rbrace>, -"
-  apply (simp add: decode_invocation_def split del: if_split)
-  apply (rule hoare_pre)
-   apply (wp | wpc | simp add: o_def)+
-       apply (rule hoare_strengthen_postE_R[where Q'="\<top>\<top>"])
-        apply wp
-       apply (clarsimp simp: uncurry_def)
-      apply (wp | wpc | simp add: decode_irq_handler_invocation_def o_def split del: if_split)+
+  unfolding decode_invocation_def
+  apply (wpsimp simp: decode_irq_handler_invocation_def o_def split_del: if_split)
   apply (safe | simp add: op_equal | rule exI[where x="fst slot"] exI[where x="snd slot"])+
   done
 

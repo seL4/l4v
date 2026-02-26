@@ -263,12 +263,39 @@ where
     | _ \<Rightarrow> Nothing)"
 
 definition
-  transform_intent_domain :: "word32 list \<Rightarrow> cdl_domain_intent option"
+  transform_intent_domain_set :: "word32 list \<Rightarrow> cdl_domain_intent option"
 where
-  "transform_intent_domain args =
+  "transform_intent_domain_set args =
      (case args of
          d#_ \<Rightarrow> Some (DomainSetIntent (ucast d :: word8))
        | _   \<Rightarrow> Nothing)"
+
+definition
+  transform_intent_domain_set_start :: "word32 list \<Rightarrow> cdl_domain_intent option"
+where
+  "transform_intent_domain_set_start args \<equiv>
+     case args of
+       start#_ \<Rightarrow> Some (DomainScheduleSetStartIntent (unat start))
+     | _   \<Rightarrow> None"
+
+definition
+  cdl_duration_arg :: "word32 list \<Rightarrow> domain_duration option"
+where
+  "cdl_duration_arg args \<equiv>
+     case args of
+       dur_low # dur_high # _ \<Rightarrow> Some ((ucast dur_high << 32) + ucast dur_low)
+     | _ \<Rightarrow> None"
+
+definition
+  transform_intent_domain_configure :: "word32 list \<Rightarrow> cdl_domain_intent option"
+where
+  "transform_intent_domain_configure args \<equiv>
+     case args of
+       idx # domain # more_args \<Rightarrow> do {
+         duration \<leftarrow> cdl_duration_arg more_args;
+         Some (DomainScheduleConfigureIntent (unat idx) (ucast domain) duration)
+       }
+     | _  \<Rightarrow> None"
 
 (* Added for IOAPIC patch *)
 definition
@@ -381,7 +408,16 @@ definition
     | ArchInvocationLabel ARMIRQIssueSGISignal \<Rightarrow>
                           map_option IrqControlIntent
                                    (arch_transform_intent_issue_sgi_signal args)
-    | GenInvocationLabel DomainSetSet \<Rightarrow> map_option DomainIntent (transform_intent_domain args)"
+    | GenInvocationLabel DomainSetSet \<Rightarrow>
+        map_option DomainIntent (transform_intent_domain_set args)
+    | GenInvocationLabel DomainScheduleSetStart \<Rightarrow>
+        map_option DomainIntent (transform_intent_domain_set_start args)
+    | GenInvocationLabel DomainScheduleConfigure \<Rightarrow>
+        map_option DomainIntent (transform_intent_domain_configure args)"
+
+lemmas transform_intent_simps =
+  transform_intent_def[split_simps invocation_label.split gen_invocation_labels.split
+                                   arch_invocation_label.split]
 
 lemmas transform_intent_tcb_defs =
   transform_intent_tcb_read_registers_def
@@ -443,17 +479,20 @@ lemma transform_tcb_intent_invocation:
     label \<noteq> ArchInvocationLabel ARMPDUnify_Instruction \<and>
     label \<noteq> ArchInvocationLabel ARMASIDControlMakePool \<and>
     label \<noteq> ArchInvocationLabel ARMIRQIssueSGISignal \<and>
-    label \<noteq> GenInvocationLabel DomainSetSet)"
+    label \<noteq> GenInvocationLabel DomainSetSet \<and>
+    label \<noteq> GenInvocationLabel DomainScheduleConfigure \<and>
+    label \<noteq> GenInvocationLabel DomainScheduleSetStart)"
   apply(intro conjI)
    apply(rule iffI,
          simp add: transform_intent_def transform_intent_tcb_defs split: list.split_asm,
          simp add: transform_intent_def transform_intent_tcb_defs
               split: gen_invocation_labels.split_asm invocation_label.split_asm
                      arch_invocation_label.split_asm list.split_asm)+
-                               (* 30 subgoals *)
-                               apply(simp add: transform_intent_def transform_intent_tcb_defs
-                                          split: gen_invocation_labels.split_asm invocation_label.split_asm
-                                                 arch_invocation_label.split_asm)+
+                               (* 33 subgoals *)
+                                  apply(simp add: transform_intent_def transform_intent_tcb_defs
+                                             split: gen_invocation_labels.split_asm
+                                                    invocation_label.split_asm
+                                                    arch_invocation_label.split_asm)+
   done
 
 lemma transform_intent_isnot_UntypedIntent:
@@ -1170,7 +1209,9 @@ where
     cdl_current_thread = transform_current_thread s,
     cdl_irq_node       = interrupt_irq_node s,
     cdl_asid_table     = transform_asid_table s,
-    cdl_current_domain = transform_current_domain s
+    cdl_current_domain = transform_current_domain s,
+    cdl_dom_schedule   = domain_list s,
+    cdl_dom_start      = domain_start_index s
     \<rparr>"
 
 end

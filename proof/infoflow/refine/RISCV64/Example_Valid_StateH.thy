@@ -1181,6 +1181,7 @@ definition s0H_internal :: "kernel_state" where
      gsUntypedZeroRanges = ran (map_comp untypedZeroRange (option_map cteCap o map_to_ctes kh0H)),
      gsMaxObjectSize = card (UNIV :: obj_ref set),
      ksDomScheduleIdx = 0,
+     ksDomScheduleStart = 0,
      ksDomSchedule = [(0, 10), (1, 10)],
      ksCurDomain = 0,
      ksDomainTime = 5,
@@ -1240,15 +1241,9 @@ lemma not_in_range_cte_None:
   by (fastforce simp: cnode_offs_range_def page_offs_range_def tcb_offs_range_def s0_ptr_defs Low_cte_cte_def
                       High_cte_cte_def Silc_cte_cte_def Low_tcb_cte_def High_tcb_cte_def idle_tcb_cte_def)+
 
-lemma mask_neg_le:
-  "x && ~~ mask n \<le> x"
-  apply (clarsimp simp: neg_mask_is_div)
-  apply (rule word_div_mult_le)
-  done
-
 lemma mask_in_tcb_offs_range:
   "x && ~~ mask 10 = ptr \<Longrightarrow> x \<in> tcb_offs_range ptr"
-  apply (clarsimp simp: tcb_offs_range_def mask_neg_le objBitsKO_def)
+  apply (clarsimp simp: tcb_offs_range_def word_and_le2 objBitsKO_def)
   apply (cut_tac and_neg_mask_plus_mask_mono[where p=x and n=10])
   apply (simp add: add.commute mask_def)
   done
@@ -3210,12 +3205,12 @@ end
 
 
 (* Instantiate the current, abstract domain scheduler into the
-   concrete scheduler required for this example *)
+   concrete scheduler required for this example
 axiomatization  where
   newKSDomSched: "newKSDomSchedule = [(0,0xA), (1, 0xA)]"
 
 axiomatization where
-  newKSDomainTime: "newKSDomainTime = 5"
+  newKSDomainTime: "newKSDomainTime = 5" *)
 
 (* kernel_data_refs is an undefined constant at the moment, and therefore
    cannot be referred to in valid_global_refs' and pspace_domain_valid.
@@ -3454,8 +3449,8 @@ lemma s0H_invs:
   apply (rule conjI)
    apply (clarsimp simp: kdr_pspace_domain_valid) (* use axiomatization for now *)
   apply (clarsimp simp: s0H_internal_def cteCaps_of_def untyped_ranges_zero_inv_def
-                        dschDomain_def dschLength_def)
-  apply (clarsimp simp: newKernelState_def newKSDomSched)
+                        dschDomain_def dschLength_def valid_dom_schedule'_def
+                        maxDomainDuration_def mask_def)
   apply (clarsimp simp: cur_tcb'_def obj_at'_def  s0H_internal_def objBitsKO_def s0_ptrs_aligned)
   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
   apply (simp add: objBitsKO_def)
@@ -3789,6 +3784,14 @@ lemma s0_srel:
 definition
   "s0H \<equiv> ((if ct_idle' s0H_internal then idle_context s0_internal else s0_context, s0H_internal), KernelExit)"
 
+lemma einvs_no_domain_caps_s0:
+  "(einvs and no_domain_caps) s0_internal"
+  using einvs_s0
+  apply (clarsimp simp: no_domain_caps_def2 cte_wp_at_caps_of_state)
+  apply (drule s0_caps_of_state)
+  apply simp
+  done
+
 lemma step_restrict_s0:
   "1 \<le> maxDomain \<Longrightarrow> step_restrict s0"
   supply option.case_cong[cong] if_cong[cong]
@@ -3808,8 +3811,8 @@ lemma step_restrict_s0:
   apply (rule conjI)
    apply (simp only: ex_abs_def)
    apply (rule_tac x="s0_internal" in exI)
-   apply (simp only: einvs_s0 s0_srel)
-  apply (simp add: s0H_internal_def valid_domain_list'_def)
+   apply (simp only: einvs_no_domain_caps_s0 s0_srel)
+  apply (simp add: s0H_internal_def)
   apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def obj_at'_def
                         s0H_internal_def objBits_simps' s0_ptrs_aligned Low_tcbH_def)
   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])

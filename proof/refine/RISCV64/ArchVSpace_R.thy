@@ -754,9 +754,7 @@ lemma storePTE_idle [wp]:
 
 crunch storePTE
   for arch'[wp]: "\<lambda>s. P (ksArchState s)"
-
-crunch storePTE
-  for cur'[wp]: "\<lambda>s. P (ksCurThread s)"
+  and cur'[wp]: "\<lambda>s. P (ksCurThread s)"
 
 lemma storePTE_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> storePTE pte p \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
@@ -820,12 +818,9 @@ lemma storePTE_ct_idle_or_in_cur_domain'[wp]:
   "\<lbrace>ct_idle_or_in_cur_domain'\<rbrace> storePTE p pte \<lbrace>\<lambda>_. ct_idle_or_in_cur_domain'\<rbrace>"
   by (wp ct_idle_or_in_cur_domain'_lift hoare_vcg_disj_lift)
 
-lemma setObject_pte_ksDomScheduleIdx [wp]:
-  "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setObject p (pte::pte) \<lbrace>\<lambda>_. \<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
-  by (wp updateObject_default_inv|simp add:setObject_def | wpc)+
-
 crunch storePTE
   for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: setObject_ksPSpace_only updateObject_default_inv)
@@ -852,7 +847,7 @@ lemma storePTE_invs[wp]:
   unfolding invs'_def valid_state'_def valid_pspace'_def
   by (wpsimp wp: sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift valid_arch_state_lift'
                  valid_irq_node_lift cur_tcb_lift valid_irq_handlers_lift'' untyped_ranges_zero_lift
-                 valid_bitmaps_lift
+                 valid_bitmaps_lift valid_dom_schedule'_lift
              simp: cteCaps_of_def o_def)
 
 lemma setASIDPool_valid_objs [wp]:
@@ -1025,7 +1020,7 @@ lemma setASIDPool_invs [wp]:
             valid_arch_state_lift' valid_irq_node_lift
             cur_tcb_lift valid_irq_handlers_lift''
             untyped_ranges_zero_lift
-            updateObject_default_inv valid_bitmaps_lift
+            updateObject_default_inv valid_bitmaps_lift valid_dom_schedule'_lift
           | simp add: cteCaps_of_def
           | rule setObject_ksPSpace_only)+
   apply (clarsimp simp:  o_def)

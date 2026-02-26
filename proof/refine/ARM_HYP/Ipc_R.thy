@@ -1007,23 +1007,15 @@ lemma tcts_zero_ranges[wp]:
   apply auto[1]
   done
 
-crunch setExtraBadge
+crunch transferCapsToSlots, setExtraBadge
   for ct_idle_or_in_cur_domain'[wp]: ct_idle_or_in_cur_domain'
-crunch transferCapsToSlots
-  for ct_idle_or_in_cur_domain'[wp]: ct_idle_or_in_cur_domain'
-crunch transferCapsToSlots
-  for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
-crunch setExtraBadge
-  for ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
-crunch setExtraBadge
-  for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
-crunch transferCapsToSlots
-  for ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
-crunch transferCapsToSlots
-  for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
+  and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
 
 crunch transferCapsToSlots
-  for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
+  for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
+  and sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
   and valid_sched_pointers[wp]: valid_sched_pointers
   and valid_bitmaps[wp]: valid_bitmaps
   (rule: sym_heap_sched_pointers_lift)
@@ -1038,7 +1030,7 @@ lemma transferCapsToSlots_invs[wp]:
     transferCapsToSlots ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
-  apply (wp valid_irq_node_lift)
+  apply (wp valid_irq_node_lift valid_dom_schedule'_lift)
   apply fastforce
   done
 
@@ -2614,7 +2606,6 @@ proof -
                    | clarsimp simp: is_cap_simps)+)[1]
              apply (simp add: pred_conj_def)
              apply (strengthen sch_act_wf_weak)
-             apply (simp add: valid_tcb_state'_def)
              apply (wp weak_sch_act_wf_lift_linear tcb_in_cur_domain'_lift hoare_drop_imps)[1]
             apply (wp gts_st_tcb_at)+
           apply (simp add: pred_conj_def cong: conj_cong)
@@ -2940,7 +2931,7 @@ lemma setThreadState_nonqueued_state_update:
    setThreadState st t
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
-  apply (rule hoare_pre, wp valid_irq_node_lift setThreadState_ct_not_inQ)
+  apply (rule hoare_pre, wp valid_irq_node_lift setThreadState_ct_not_inQ valid_dom_schedule'_lift)
   apply (clarsimp simp: pred_tcb_at')
   apply (rule conjI, fastforce simp: valid_tcb_state'_def)
   apply (drule simple_st_tcb_at_state_refs_ofD')
@@ -3008,6 +2999,7 @@ crunch setupCallerCap, asUser, setMRs, doIPCTransfer, possibleSwitchTo
 
 crunch setupCallerCap, doIPCTransfer, possibleSwitchTo
   for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   (wp: crunch_wps simp: zipWithM_x_mapM)
 
 lemma setThreadState_not_rct[wp]:
@@ -3052,9 +3044,7 @@ lemma cancelAllSignals_not_rct[wp]:
 
 crunch finaliseCapTrue_standin
   for not_rct[wp]: "\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread"
-(simp: Let_def)
-
-declare setEndpoint_ct' [wp]
+  (simp: Let_def)
 
 lemma cancelIPC_ResumeCurrentThread_imp_notct[wp]:
   "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
@@ -3134,7 +3124,7 @@ lemma sai_invs'[wp]:
      apply (clarsimp simp:conj_comms)
      apply (simp add: invs'_def valid_state'_def)
      apply (wp valid_irq_node_lift sts_valid_objs' setThreadState_ct_not_inQ
-               set_ntfn_valid_objs' cur_tcb_lift sts_st_tcb'
+               set_ntfn_valid_objs' cur_tcb_lift sts_st_tcb' valid_dom_schedule'_lift
                hoare_convert_imp [OF setNotification_nosch]
            | simp split del: if_split)+
 
@@ -3924,10 +3914,10 @@ lemma ri_invs' [wp]:
    apply (case_tac ep)
      \<comment> \<open>endpoint = RecvEP\<close>
      apply (simp add: invs'_def valid_state'_def)
-     apply (rule hoare_pre, wpc, wp valid_irq_node_lift)
+     apply (rule hoare_pre, wpc, wp valid_irq_node_lift valid_dom_schedule'_lift)
       apply (simp add: valid_ep'_def del: fun_upd_apply)
       apply (wp sts_sch_act' hoare_vcg_const_Ball_lift valid_irq_node_lift
-                setThreadState_ct_not_inQ
+                setThreadState_ct_not_inQ valid_dom_schedule'_lift
                 asUser_urz
            | simp add: doNBRecvFailedTransfer_def cteCaps_of_def del: fun_upd_apply)+
      apply (clarsimp simp: valid_tcb_state'_def pred_tcb_at' o_def)
@@ -3955,9 +3945,9 @@ lemma ri_invs' [wp]:
      apply (fastforce simp: valid_pspace'_def global'_no_ex_cap idle'_not_queued)
    \<comment> \<open>endpoint = IdleEP\<close>
     apply (simp add: invs'_def valid_state'_def)
-    apply (rule hoare_pre, wpc, wp valid_irq_node_lift)
+    apply (rule hoare_pre, wpc, wp valid_irq_node_lift valid_dom_schedule'_lift)
      apply (simp add: valid_ep'_def del: fun_upd_apply)
-     apply (wp sts_sch_act' valid_irq_node_lift
+     apply (wp sts_sch_act' valid_irq_node_lift valid_dom_schedule'_lift
                setThreadState_ct_not_inQ
                asUser_urz
           | simp add: doNBRecvFailedTransfer_def cteCaps_of_def del: fun_upd_apply)+
@@ -3982,10 +3972,10 @@ lemma ri_invs' [wp]:
    apply (rename_tac sender queue)
    apply (rule hoare_pre)
     apply (wp valid_irq_node_lift hoare_drop_imps setEndpoint_valid_mdb'
-              set_ep_valid_objs' sts_st_tcb' sts_sch_act'
+              set_ep_valid_objs' sts_st_tcb' sts_sch_act' valid_dom_schedule'_lift
               setThreadState_ct_not_inQ
               possibleSwitchTo_ct_not_inQ hoare_vcg_all_lift
-              setEndpoint_ksQ setEndpoint_ct'
+              setEndpoint_ksQ
          | simp add: valid_tcb_state'_def case_bool_If
                      case_option_If del: fun_upd_apply
               split del: if_split cong: if_cong
@@ -4050,7 +4040,7 @@ lemma rai_invs'[wp]:
     \<comment> \<open>ep = IdleNtfn\<close>
     apply (simp add: invs'_def valid_state'_def)
     apply (rule hoare_pre)
-     apply (wp valid_irq_node_lift sts_sch_act' typ_at_lifts
+     apply (wp valid_irq_node_lift sts_sch_act' typ_at_lifts valid_dom_schedule'_lift
                setThreadState_ct_not_inQ
                asUser_urz
             | simp add: valid_ntfn'_def doNBRecvFailedTransfer_def live'_def | wpc)+
@@ -4075,7 +4065,7 @@ lemma rai_invs'[wp]:
    apply (simp add: invs'_def valid_state'_def)
    apply (rule hoare_pre)
     apply (wp valid_irq_node_lift sts_valid_objs' typ_at_lifts hoare_weak_lift_imp
-              asUser_urz
+              asUser_urz valid_dom_schedule'_lift
          | simp add: valid_ntfn'_def)+
    apply (clarsimp simp: pred_tcb_at' valid_pspace'_def)
    apply (frule (1) ko_at_valid_objs')
@@ -4089,7 +4079,7 @@ lemma rai_invs'[wp]:
   apply (simp add: invs'_def valid_state'_def)
   apply (rule hoare_pre)
    apply (wp hoare_vcg_const_Ball_lift valid_irq_node_lift sts_sch_act'
-             setThreadState_ct_not_inQ typ_at_lifts
+             setThreadState_ct_not_inQ typ_at_lifts valid_dom_schedule'_lift
              asUser_urz
         | simp add: valid_ntfn'_def doNBRecvFailedTransfer_def live'_def | wpc)+
   apply (clarsimp simp: valid_tcb_state'_def)
@@ -4216,10 +4206,10 @@ lemma si_invs'[wp]:
      apply (rule_tac P="a\<noteq>t" in hoare_gen_asm)
      apply (wp valid_irq_node_lift
                sts_valid_objs' set_ep_valid_objs' setEndpoint_valid_mdb' sts_st_tcb' sts_sch_act'
-               possibleSwitchTo_sch_act_not setThreadState_ct_not_inQ
+               possibleSwitchTo_sch_act_not setThreadState_ct_not_inQ valid_dom_schedule'_lift
                possibleSwitchTo_ct_not_inQ hoare_vcg_all_lift
                hoare_convert_imp [OF doIPCTransfer_sch_act doIPCTransfer_ct']
-               hoare_convert_imp [OF setEndpoint_nosch setEndpoint_ct']
+               hoare_convert_imp [OF setEndpoint_nosch setEndpoint_ksCurThread]
                hoare_drop_imp [where f="threadGet tcbFault t"]
              | rule_tac f="getThreadState a" in hoare_drop_imp
              | wp (once) hoare_drop_imp[where Q'="\<lambda>_ _. call"]
@@ -4270,9 +4260,9 @@ lemma si_invs'[wp]:
    \<comment> \<open>epa = IdleEP\<close>
    apply (cases bl)
     apply (simp add: invs'_def valid_state'_def)
-    apply (rule hoare_pre, wp valid_irq_node_lift)
+    apply (rule hoare_pre, wp valid_irq_node_lift valid_dom_schedule'_lift)
      apply (simp add: valid_ep'_def del: fun_upd_apply)
-     apply (wp valid_irq_node_lift sts_sch_act' setThreadState_ct_not_inQ)
+     apply (wp valid_irq_node_lift sts_sch_act' setThreadState_ct_not_inQ valid_dom_schedule'_lift)
     apply (clarsimp simp: valid_tcb_state'_def pred_tcb_at' state_hyp_refs_of'_ep
                     simp del: fun_upd_apply)
     apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
@@ -4290,9 +4280,10 @@ lemma si_invs'[wp]:
   \<comment> \<open>epa = SendEP\<close>
   apply (cases bl)
    apply (simp add: invs'_def valid_state'_def)
-   apply (rule hoare_pre, wp valid_irq_node_lift)
+   apply (rule hoare_pre, wp valid_irq_node_lift valid_dom_schedule'_lift)
     apply (simp add: valid_ep'_def del: fun_upd_apply)
-    apply (wp hoare_vcg_const_Ball_lift valid_irq_node_lift sts_sch_act' setThreadState_ct_not_inQ)
+    apply (wp hoare_vcg_const_Ball_lift valid_irq_node_lift sts_sch_act' setThreadState_ct_not_inQ
+              valid_dom_schedule'_lift)
    apply (clarsimp simp: valid_tcb_state'_def pred_tcb_at' state_hyp_refs_of'_ep
                    simp del: fun_upd_apply)
    apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
@@ -4379,7 +4370,7 @@ lemma sts_invs_minor'':
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
   apply (rule hoare_pre)
-   apply (wp valid_irq_node_lift sts_sch_act' setThreadState_ct_not_inQ)
+   apply (wp valid_irq_node_lift sts_sch_act' setThreadState_ct_not_inQ valid_dom_schedule'_lift)
   apply clarsimp
   apply (rule conjI)
    apply fastforce
@@ -4420,8 +4411,6 @@ lemma gts_st_tcb':
   apply (rule gts_sp')
   apply simp
   done
-
-declare setEndpoint_ct' [wp]
 
 lemma setupCallerCap_pred_tcb_unchanged:
   "\<lbrace>pred_tcb_at' proj P t and K (t \<noteq> t')\<rbrace>

@@ -310,11 +310,10 @@ lemma invoke_tcb_silc_inv[FinalCaps_assms]:
          | wp (once) hoare_drop_imps
          | elim disjE; solves clarsimp)+
   (* also slow, ~30s *)
-  apply (intro impI conjI
-         | clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def
-                          authorised_tcb_inv_def emptyable_def
-                   split: cap.splits option.splits)+
-  done
+  by (intro impI conjI
+      | clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def
+                       authorised_tcb_inv_def emptyable_def
+                 split: cap.splits option.splits)+
 
 end
 

@@ -376,14 +376,14 @@ lemma ct_running_not_idle:
   by (clarsimp simp add: ct_in_state_def pred_tcb_at_def obj_at_def valid_idle_def)
 
 lemma kernel_entry_if_globals_equiv_scheduler:
-  "\<lbrace>globals_equiv_scheduler st and valid_arch_state and invs
+  "\<lbrace>globals_equiv_scheduler st and domain_sep_inv irqs st' and valid_arch_state and invs
                                and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
                                and (\<lambda>s. ct_idle s \<longrightarrow> tc = idle_context s)\<rbrace>
    kernel_entry_if e tc
    \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
   apply (wpsimp wp: globals_equiv_scheduler_inv' kernel_entry_if_globals_equiv)
    apply assumption
-  apply clarsimp
+  apply fastforce
   done
 
 lemma domain_fields_equiv_lift:
@@ -740,6 +740,68 @@ lemma kernel_entry_if_integrity:
   apply (rule ext, simp_all)
   done
 
+lemma lifted_domain_fields_equiv[wp]:
+  "handle_fault t f \<lbrace>domain_fields_equiv st\<rbrace>"
+  "reply_from_kernel t msg \<lbrace>domain_fields_equiv st\<rbrace>"
+  "handle_recv blocking \<lbrace>domain_fields_equiv st\<rbrace>"
+  "handle_reply \<lbrace>domain_fields_equiv st\<rbrace>"
+  "handle_yield \<lbrace>domain_fields_equiv st\<rbrace>"
+  "\<And>f. handle_vm_fault t f \<lbrace>domain_fields_equiv st\<rbrace>"
+  "\<And>f. handle_hypervisor_fault t f \<lbrace>domain_fields_equiv st\<rbrace>"
+  "set_thread_state t state \<lbrace>domain_fields_equiv st\<rbrace>"
+  "\<And>iv. invoke_untyped iv \<lbrace>domain_fields_equiv st\<rbrace>"
+  "\<And>iv. invoke_tcb iv \<lbrace>domain_fields_equiv st\<rbrace>"
+  "\<And>iv. invoke_cnode iv \<lbrace>domain_fields_equiv st\<rbrace>"
+  "\<And>iv. invoke_irq_control iv \<lbrace>domain_fields_equiv st\<rbrace>"
+  "\<And>iv. invoke_irq_handler iv \<lbrace>domain_fields_equiv st\<rbrace>"
+  "\<And>iv. arch_perform_invocation iv \<lbrace>domain_fields_equiv st\<rbrace>"
+  "send_ipc block call badge can_grant can_grant_reply thread epptr \<lbrace>domain_fields_equiv st\<rbrace>"
+  "send_signal ntfnptr badge \<lbrace>domain_fields_equiv st\<rbrace>"
+  "do_reply_transfer sender receiver slot grant \<lbrace>domain_fields_equiv st\<rbrace>"
+  by (wpsimp wp: domain_fields_equiv_lift)+
+
+lemma perform_invocation_domain_fields_equiv:
+  "\<lbrace>domain_fields_equiv st and domain_sep_inv irqs st' and authorised_for_globals_inv iv\<rbrace>
+   perform_invocation block call iv
+   \<lbrace>\<lambda>_. domain_fields_equiv st\<rbrace>"
+  unfolding authorised_for_globals_inv_def
+  by (cases iv; wpsimp wp: invoke_domain_false)
+
+lemma handle_invocation_domain_fields_equiv[wp]:
+  "\<lbrace>domain_fields_equiv st and invs and domain_sep_inv irqs st'\<rbrace>
+   handle_invocation calling blocking
+   \<lbrace>\<lambda>_. domain_fields_equiv st\<rbrace>"
+  unfolding handle_invocation_def
+  apply (wpsimp wp: perform_invocation_domain_fields_equiv[where st'=st' and irqs=irqs]
+                    sts_authorised_for_globals_inv
+                    decode_invocation_authorised_globals_inv
+                    syscall_valid
+                simp: prod_imp_fst_snd o_def
+                simp_del: split_paired_All
+                cong: conj_cong
+         | wp hoare_drop_imps)+
+  apply fastforce
+  done
+
+lemma handle_event_domain_fields_equiv:
+  "\<lbrace>domain_fields_equiv st and invs and domain_sep_inv irqs st' and K (ev \<noteq> Interrupt)\<rbrace>
+   handle_event ev
+   \<lbrace>\<lambda>_. domain_fields_equiv st\<rbrace>"
+  by (cases ev; wpsimp wp: maybe_handle_interrupt_false simp: handle_call_def handle_send_def)
+     fastforce
+
+lemma kernel_entry_if_domain_fields_equiv:
+  "\<lbrace>domain_fields_equiv st and invs and domain_sep_inv irqs st' and K (ev \<noteq> Interrupt)\<rbrace>
+   kernel_entry_if ev tc
+   \<lbrace>\<lambda>_. domain_fields_equiv st\<rbrace>"
+  unfolding kernel_entry_if_def
+  by (wpsimp wp: handle_event_domain_fields_equiv
+                 domain_fields_equiv_lift[where f="thread_set f t" for f t]
+                 thread_set_invs_trivial
+             simp: ran_tcb_cap_cases arch_tcb_update_aux2)
+     fastforce
+
+
 lemma kernel_entry_if_partitionIntegrity:
   "\<lbrace>silc_inv aag st and pas_refined aag and einvs and schact_is_rct
                     and is_subject aag \<circ> cur_thread and domain_sep_inv (pasMaySendIrqs aag) st'
@@ -754,15 +816,15 @@ lemma kernel_entry_if_partitionIntegrity:
    apply (wp hoare_vcg_conj_lift)
      apply (rule hoare_vcg_all_lift[OF kernel_entry_if_integrity[where st'=st']])
     apply (wp kernel_entry_if_cur_thread kernel_entry_if_globals_equiv_scheduler
-              kernel_entry_if_cur_domain domain_fields_equiv_lift[where R="\<top>"]
-              kernel_entry_if_domain_fields | simp)+
+              kernel_entry_if_cur_domain
+              kernel_entry_if_domain_fields_equiv[where st'=st' and irqs="pasMaySendIrqs aag"]
+           | simp)+
     apply (rule_tac P="pas_refined aag and einvs and schact_is_rct and
                        is_subject aag \<circ> cur_thread and domain_sep_inv (pasMaySendIrqs aag) st' and
                        (\<lambda> s. ev \<noteq> Interrupt \<longrightarrow> ct_active s)"
                  in silc_dom_equiv_from_silc_inv_valid')
     apply (wp kernel_entry_silc_inv[where st'=st'], simp add: schact_is_rct_simple)
-   apply (fastforce simp: pas_refined_pasMayActivate_update pas_refined_pasMayEditReadyQueues_update
-                          globals_equiv_scheduler_refl silc_dom_equiv_def equiv_for_refl
+   apply (fastforce simp: globals_equiv_scheduler_refl silc_dom_equiv_def equiv_for_refl
                           domain_fields_equiv_def ct_active_not_idle')
   apply (fastforce simp: partitionIntegrity_def)
   done

@@ -8,6 +8,9 @@ theory StateRelation_C
 imports Wellformed_C
 begin
 
+(* needs to be outside of locales *)
+declare domScheduleLength_def[code]
+
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
@@ -666,18 +669,20 @@ where
    | SwitchToThread p' \<Rightarrow> p = tcb_ptr_to_ctcb_ptr p'"
 
 definition
-  dom_schedule_entry_relation :: "8 word \<times> 32 word \<Rightarrow> dschedule_C \<Rightarrow> bool"
+  dom_schedule_entry_relation :: "domain \<times> domain_duration \<Rightarrow> 64 word \<Rightarrow> bool"
 where
   "dom_schedule_entry_relation adomSched cdomSched \<equiv>
-     ucast (fst adomSched) = dschedule_C.domain_C cdomSched \<and>
-     (snd adomSched) = dschedule_C.length_C cdomSched"
+     ucast (fst adomSched) = cdomSched >> LENGTH(domain_duration_len) \<and>
+     (snd adomSched) = cdomSched && mask LENGTH(domain_duration_len)"
+
+value_type dom_schedule_len = "unat domScheduleLength"
 
 definition
-  cdom_schedule_relation :: "(8 word \<times> 32 word) list \<Rightarrow> (dschedule_C['b :: finite]) \<Rightarrow> bool"
+  cdom_schedule_relation :: "(domain \<times> domain_duration) list \<Rightarrow> (64 word[dom_schedule_len]) \<Rightarrow> bool"
 where
   "cdom_schedule_relation adomSched cdomSched \<equiv>
-     length adomSched = card (UNIV :: 'b set) \<and>
-     (\<forall>n \<le> length adomSched. dom_schedule_entry_relation (adomSched ! n) (index cdomSched n))"
+     length adomSched = LENGTH(dom_schedule_len) \<and>
+     (\<forall>n < length adomSched. dom_schedule_entry_relation (adomSched ! n) (index cdomSched n))"
 
 definition
   ghost_size_rel :: "cghost_state \<Rightarrow> nat \<Rightarrow> bool"
@@ -792,9 +797,9 @@ where
        htd_safe domain (hrs_htd (t_hrs_' cstate)) \<and>
        -domain \<subseteq> kernel_data_refs \<and>
        globals_list_distinct (- kernel_data_refs) symbol_table globals_list \<and>
-       cdom_schedule_relation (ksDomSchedule astate)
-                              Kernel_C.kernel_all_global_addresses.ksDomSchedule \<and>
-       ksDomScheduleIdx_' cstate = of_nat (ksDomScheduleIdx astate) \<and>
+       cdom_schedule_relation (ksDomSchedule astate) (ksDomSchedule_' cstate) \<and>
+       unat (ksDomScheduleIdx_' cstate) = ksDomScheduleIdx astate \<and>
+       unat (ksDomScheduleStart_' cstate) = ksDomScheduleStart astate \<and>
        ksCurDomain_' cstate = ucast (ksCurDomain astate) \<and>
        ksDomainTime_' cstate = ksDomainTime astate"
 

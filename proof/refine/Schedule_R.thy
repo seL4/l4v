@@ -442,6 +442,7 @@ lemma tcbSchedEnqueue_invs'[wp]:
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
+                    valid_dom_schedule'_lift
                     untyped_ranges_zero_lift tcbSchedEnqueue_ct_not_inQ
               simp: cteCaps_of_def o_def)
   done
@@ -596,7 +597,7 @@ lemma tcbSchedAppend_invs'[wp]:
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
                     untyped_ranges_zero_lift tcbSchedAppend_ct_not_inQ
-                    ct_idle_or_in_cur_domain'_lift2 cur_tcb_lift
+                    ct_idle_or_in_cur_domain'_lift2 cur_tcb_lift valid_dom_schedule'_lift
               simp: cteCaps_of_def o_def)
   done
 
@@ -607,7 +608,7 @@ lemma tcbSchedAppend_all_invs_but_ct_not_inQ':
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
                     untyped_ranges_zero_lift tcbSchedAppend_ct_not_inQ
-                    ct_idle_or_in_cur_domain'_lift2 cur_tcb_lift
+                    ct_idle_or_in_cur_domain'_lift2 cur_tcb_lift valid_dom_schedule'_lift
               simp: cteCaps_of_def o_def)
   done
 
@@ -724,6 +725,7 @@ lemma (in Schedule_R) tcbSchedDequeue_invs'[wp]:
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
                     untyped_ranges_zero_lift ct_idle_or_in_cur_domain'_lift2 cur_tcb_lift
+                    valid_dom_schedule'_lift
               simp: cteCaps_of_def o_def)
   done
 
@@ -983,9 +985,8 @@ lemma tcbSchedDequeue_invs_no_cicd'[wp]:
   unfolding all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_pspace'_def
   apply (wp tcbSchedDequeue_ct_not_inQ sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
-            untyped_ranges_zero_lift
+            untyped_ranges_zero_lift valid_dom_schedule'_lift
         | simp add: cteCaps_of_def o_def)+
-  apply clarsimp
   done
 
 lemma switchToThread_invs_no_cicd':
@@ -1466,11 +1467,15 @@ lemma reset_work_units_equiv:
   by (clarsimp simp: reset_work_units_def[symmetric])
 
 lemma nextDomain_corres:
-  "corres dc \<top> \<top> next_domain nextDomain"
+  "corres dc valid_domain_list \<top> next_domain nextDomain"
   apply (clarsimp simp: next_domain_def nextDomain_def reset_work_units_equiv modify_modify)
   apply (rule corres_modify)
   apply (simp add: state_relation_def Let_def dschLength_def dschDomain_def cdt_relation_def)
-  done
+  apply clarsimp
+  apply (drule sym[where t="ksDomSchedule s" for s])
+  apply (clarsimp simp: valid_domain_list_def split_def domain_end_marker_def domainEndMarker_def
+                        all_set_conv_all_nth)
+  by (force simp: ucast_eq_0 is_up split_pairs2)
 
 lemma next_domain_valid_sched[wp]:
   "\<lbrace> valid_sched and (\<lambda>s. scheduler_action s  = choose_new_thread)\<rbrace> next_domain \<lbrace> \<lambda>_. valid_sched \<rbrace>"
@@ -1484,8 +1489,9 @@ lemma nextDomain_invs_no_cicd':
   apply (simp add: nextDomain_def Let_def dschLength_def dschDomain_def)
   apply wp
   apply (clarsimp simp: invs'_def valid_state'_def valid_machine_state'_def
-                        ct_not_inQ_def cur_tcb'_def ct_idle_or_in_cur_domain'_def dschDomain_def
-                        all_invs_but_ct_idle_or_in_cur_domain'_def)
+                        ct_not_inQ_def cur_tcb'_def ct_idle_or_in_cur_domain'_def
+                        all_invs_but_ct_idle_or_in_cur_domain'_def
+                        valid_dom_schedule'_def split_def)
   done
 
 lemma scheduleSwitchThreadFastfail_corres:
@@ -1594,7 +1600,7 @@ crunch reschedule_required
 locale Schedule_R_3 = Schedule_R_2 +
   assumes scheduleChooseNewThread_corres:
     "corres dc
-       (\<lambda>s. invs s \<and> valid_sched s \<and> scheduler_action s = choose_new_thread)
+       (\<lambda>s. invs s \<and> valid_domain_list s \<and> valid_sched s \<and> scheduler_action s = choose_new_thread)
        (\<lambda>s. invs' s \<and> ksSchedulerAction s = ChooseNewThread)
        schedule_choose_new_thread scheduleChooseNewThread"
   assumes scheduleChooseNewThread_invs':
@@ -1608,7 +1614,8 @@ locale Schedule_R_3 = Schedule_R_2 +
 begin
 
 lemma schedule_corres:
-  "corres dc (invs and valid_sched and valid_list) invs' (Schedule_A.schedule) ThreadDecls_H.schedule"
+  "corres dc (invs and valid_domain_list and valid_sched and valid_list) invs'
+          (Schedule_A.schedule) ThreadDecls_H.schedule"
   supply ssa_wp[wp del]
   supply tcbSchedEnqueue_invs'[wp del]
   supply tcbSchedEnqueue_invs'_not_ResumeCurrentThread[wp del]
@@ -1637,6 +1644,7 @@ lemma schedule_corres:
               apply (rule tcbSchedEnqueue_corres, simp)
              apply (rule scheduleChooseNewThread_corres, simp)
             apply (wp thread_get_wp' tcbSchedEnqueue_invs' hoare_vcg_conj_lift hoare_drop_imps
+                      valid_domain_list_lift
                    | clarsimp)+
         (* switch to thread *)
         apply (rule corres_split[OF thread_get_isRunnable_corres],
@@ -1664,12 +1672,12 @@ lemma schedule_corres:
                            apply (rule corres_split)
                               apply (rule setSchedulerAction_corres; simp)
                              apply (rule scheduleChooseNewThread_corres)
-                            apply (wp | simp)+
+                            apply (wp valid_domain_list_lift | simp)+
                             apply (simp add: valid_sched_def)
                             apply wp
                             apply (rule hoare_vcg_conj_lift)
                              apply (rule_tac t=t in set_scheduler_action_cnt_valid_blocked')
-                            apply (wpsimp wp: setSchedulerAction_invs')+
+                            apply (wpsimp wp: setSchedulerAction_invs' valid_domain_list_lift)+
                           apply (wp tcb_sched_action_enqueue_valid_blocked hoare_vcg_all_lift enqueue_thread_queued)
                          apply (wp tcbSchedEnqueue_invs'_not_ResumeCurrentThread)
                         apply (rule corres_if, fastforce)
@@ -1678,12 +1686,12 @@ lemma schedule_corres:
                            apply (rule corres_split)
                               apply (rule setSchedulerAction_corres; simp)
                              apply (rule scheduleChooseNewThread_corres)
-                            apply (wp | simp)+
+                            apply (wp valid_domain_list_lift | simp)+
                             apply (simp add: valid_sched_def)
                             apply wp
                             apply (rule hoare_vcg_conj_lift)
                              apply (rule_tac t=t in set_scheduler_action_cnt_valid_blocked')
-                            apply (wpsimp wp: setSchedulerAction_invs')+
+                            apply (wpsimp wp: setSchedulerAction_invs' valid_domain_list_lift)+
                           apply (wp tcb_sched_action_append_valid_blocked hoare_vcg_all_lift append_thread_queued)
                          apply (wp tcbSchedAppend_invs'_not_ResumeCurrentThread)
                         apply (rule corres_split[OF guarded_switch_to_corres], simp)
@@ -1696,7 +1704,7 @@ lemma schedule_corres:
                      apply ((wp (once) hoare_drop_imp)+)[1]
                     apply (wpsimp wp_del: thread_get_prio_wp)+
            apply (clarsimp simp: conj_commute conj_left_commute cong: conj_cong)
-           apply wp
+           apply (wp valid_domain_list_lift)
            apply (rule_tac Q'="\<lambda>_ s. valid_blocked_except t s \<and> scheduler_action s = switch_thread t"
                     in hoare_post_imp, fastforce)
            apply (wp add: tcb_sched_action_enqueue_valid_blocked_except

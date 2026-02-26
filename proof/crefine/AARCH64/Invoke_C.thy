@@ -132,21 +132,74 @@ lemma invokeDomainSetSet_ccorres:
   "ccorres dc xfdc
       (invs' and tcb_at' t and sch_act_simple
              and (\<lambda>s. d \<le> maxDomain))
-      (\<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace> \<inter> \<lbrace>\<acute>domain = ucast d\<rbrace>) []
-      (do x <- prepareSetDomain t d;
-               setDomain t d
-       od)
+      (\<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace> \<inter> \<lbrace>\<acute>domain = ucast d\<rbrace>) hs
+      (domainSet t d)
       (Call invokeDomainSetSet_'proc)"
-  apply (cinit' lift: tcb_' domain_')
+  apply (cinit lift: tcb_' domain_')
    apply (simp add: liftE_def bind_assoc)
    apply (ctac (no_vcg) add: prepareSetDomain_ccorres)
     apply (ctac (no_vcg) add: setDomain_ccorres)
    apply wpsimp+
   done
 
-lemma decodeDomainInvocation_ccorres:
-  notes Collect_const[simp del]
-  shows
+lemma invokeDomainScheduleSetStart_ccorres:
+  "ccorres dc xfdc invs' \<lbrace>unat \<acute>index = idx\<rbrace> hs
+           (domainSetStart idx)
+           (Call invokeDomainScheduleSetStart_'proc)"
+  apply (cinit lift: index_')
+   apply (rule ccorres_split_nothrow_novcg)
+       apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV and rrel=dc])
+       apply (rule allI, rule conseqPre, vcg)
+       apply (clarsimp simp: simpler_modify_def rf_sr_def cstate_relation_def Let_def
+                             carch_state_relation_def cmachine_state_relation_def)
+      apply ceqv
+     apply (rule ccorres_split_nothrow_novcg)
+         apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV and rrel=dc])
+         apply (rule allI, rule conseqPre, vcg)
+         apply (clarsimp simp: simpler_modify_def rf_sr_def cstate_relation_def Let_def
+                               carch_state_relation_def cmachine_state_relation_def)
+        apply ceqv
+       apply (ctac add: rescheduleRequired_ccorres)
+      apply wpsimp
+     apply (simp add: guard_is_UNIV_def)
+    apply wpsimp
+   apply (simp add: guard_is_UNIV_def)
+  apply clarsimp
+  apply (frule invs_weak_sch_act_wf)
+  apply (fastforce simp: weak_sch_act_wf_def tcb_in_cur_domain'_def)
+  done
+
+lemma invokeDomainScheduleConfigure_ccorres:
+  "ccorres dc xfdc
+           (valid_domain_inv' (InvokeDomainScheduleConfigure idx dm duration))
+           (\<lbrace>unat \<acute>index = idx\<rbrace> \<inter> \<lbrace>\<acute>domain = ucast dm\<rbrace> \<inter> \<lbrace>\<acute>duration = duration\<rbrace>)
+           hs
+           (domainScheduleConfigure idx dm duration)
+           (Call invokeDomainScheduleConfigure_'proc)"
+  (* avoid rewriting ArrayBounds guard for numDomains = 1: *)
+  supply word_less_1[simp del] less_Suc0[simp del]
+  apply (cinit lift: index_' domain_' duration_')
+   apply (rule ccorres_from_vcg
+               [where P="valid_domain_inv' (InvokeDomainScheduleConfigure idx dm duration)"
+                      and P'=UNIV
+                      and rrel=dc])
+   apply (rule allI, rule conseqPre, vcg)
+   apply (clarsimp simp: simpler_modify_def rf_sr_def cstate_relation_def Let_def
+                         carch_state_relation_def cmachine_state_relation_def
+                         valid_domain_inv'_def)
+   apply (simp add: cdom_schedule_relation_def word_less_nat_alt)
+   (* avoiding clarsimp/clarify for numDomains = 1 case *)
+   apply (rule allI, rule impI)
+   apply (rename_tac n)
+   apply (case_tac "idx = n"; simp)
+   apply (clarsimp simp: dom_schedule_entry_relation_def maxDomainDuration_def)
+   apply (rule conjI)
+    apply (clarsimp simp: le_mask_iff shiftr_over_or_dist and_mask2 word_size ucast_and_mask_drop)
+   apply (clarsimp simp: word_ao_dist and_mask_eq_iff_le_mask[symmetric])
+  apply simp
+  done
+
+lemma decodeDomainSetSetInvocation_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and (\<lambda>s. ksCurThread s = thread)
@@ -157,24 +210,14 @@ lemma decodeDomainInvocation_ccorres:
               and (\<lambda>s. \<forall>v \<in> set extraCaps.
                              s \<turnstile>' fst v)
               and sysargs_rel args buffer)
-       (UNIV
-             \<inter> {s. unat (length___unsigned_long_' s) = length args}
-             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
-             \<inter> {s. call_' s = from_bool isCall}
-             \<inter> {s. invLabel_' s = lab}
-             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
-       (decodeDomainInvocation lab args extraCaps
-           >>= invocationCatch thread isBlocking isCall (uncurry InvokeDomain))
-  (Call decodeDomainInvocation_'proc)"
-  supply gen_invocation_type_eq[simp]
-  apply (cinit' lift: length___unsigned_long_' current_extra_caps_' call_' invLabel_' buffer_'
-                simp: decodeDomainInvocation_def list_case_If2 whenE_def)
-   apply (rule ccorres_Cond_rhs_Seq)
-    apply (simp add: throwError_bind invocationCatch_def invocation_eq_use_types
-               cong: StateSpace.state.fold_congs globals.fold_congs)
-    apply (rule syscall_error_throwError_ccorres_n)
-    apply (simp add: syscall_error_to_H_cases)
-   apply (simp add: invocation_eq_use_types)
+       ({s. unat (length___unsigned_long_' s) = length args}
+        \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
+        \<inter> {s. buffer_' s = option_to_ptr buffer}) []
+   (decodeDomainSet args extraCaps >>= invocationCatch thread isBlocking isCall InvokeDomain)
+   (Call decodeDomainSetSetInvocation_'proc)"
+  supply Collect_const[simp del]
+  apply (cinit' lift: length___unsigned_long_' current_extra_caps_' buffer_'
+                simp: decodeDomainSet_def list_case_If2 whenE_def)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp add: throwError_bind invocationCatch_def
                cong: StateSpace.state.fold_congs globals.fold_congs)
@@ -222,11 +265,11 @@ lemma decodeDomainInvocation_ccorres:
         apply (rule syscall_error_throwError_ccorres_n)
         apply (simp add: syscall_error_to_H_cases)
        apply (simp add: Collect_const returnOk_def uncurry_def)
-       apply (simp (no_asm) add: ccorres_invocationCatch_Inr split_def
-                                 performInvocation_def liftE_bindE bind_assoc)
+       apply (simp (no_asm) add: ccorres_invocationCatch_Inr split_def invokeDomain_def
+                                 performInvocation_def bindE_assoc)
+       apply (simp (no_asm) add: liftE_bindE)
        apply (ctac add: setThreadState_ccorres)
          apply csymbr
-         apply (subst bind_assoc[symmetric])
          apply (ctac add: invokeDomainSetSet_ccorres)
            apply (rule ccorres_alternative2)
            apply (ctac add: ccorres_return_CE)
@@ -246,22 +289,348 @@ lemma decodeDomainInvocation_ccorres:
   apply (clarsimp simp: valid_tcb_state'_def invs_valid_objs'
                         invs_sch_act_wf' ct_in_state'_def pred_tcb_at'
                         rf_sr_ksCurThread word_sle_def word_sless_def sysargs_rel_to_n
-                        mask_eq_iff_w2p mask_eq_iff_w2p word_size ThreadState_defs)
+                        mask_eq_iff_w2p word_size ThreadState_defs)
   apply (rule conjI)
    apply (clarsimp simp: linorder_not_le isCap_simps)
    apply (rule conjI, clarsimp simp: unat64_eq_of_nat)
    apply clarsimp
    apply (drule_tac x="extraCaps ! 0" and P="\<lambda>v. valid_cap' (fst v) s" in bspec)
-    apply (clarsimp simp: nth_mem interpret_excaps_test_null excaps_map_def)
+    apply (clarsimp simp: interpret_excaps_test_null excaps_map_def)
    apply (clarsimp simp: valid_cap_simps' pred_tcb'_weakenE active_runnable')
    apply (intro conjI; fastforce?)
     apply (fastforce simp: tcb_st_refs_of'_def elim:pred_tcb'_weakenE)
    apply (simp add: word_le_nat_alt unat_ucast unat_numDomains_to_H le_maxDomain_eq_less_numDomains)
   apply (clarsimp simp: ccap_relation_def cap_to_H_simps cap_thread_cap_lift)
-  subgoal (* args ! 0 can be contained in a domain-sized word *)
-    by (clarsimp simp: not_le unat_numDomains_to_H ucast_ucast_len[simplified word_less_nat_alt]
-                 dest!: less_numDomains_is_domain)
+  (* args ! 0 can be contained in a domain-sized word *)
+  by (clarsimp simp: not_le unat_numDomains_to_H ucast_ucast_len[simplified word_less_nat_alt]
+               dest!: less_numDomains_is_domain)
+
+(* syscall_error_throwError_ccorres_n does not apply, because only the type of the syscall error
+   is being set *)
+lemma throw_syscall_error_type_ccorres:
+  "(\<And>exf lf. syscall_error_to_H (type_C_update (\<lambda>_. scast exc') exf) lf = Some exc) \<Longrightarrow>
+   ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+           \<top> UNIV [SKIP]
+           (throwError exc >>= invocationCatch thread isBlocking isCall InvokeDomain)
+           (\<acute>current_syscall_error :== type_C_update (\<lambda>_. scast exc') \<acute>current_syscall_error;;
+            return_C ret__unsigned_long_'_update (\<lambda>s. scast EXCEPTION_SYSCALL_ERROR))"
+  apply (simp add: throwError_bind invocationCatch_def)
+  apply (rule ccorres_from_vcg_throws)
+  apply (rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: throwError_def return_def syscall_error_rel_def exception_defs)
   done
+
+lemma throw_IllegalOperation_ccorres:
+  "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+           \<top> UNIV [SKIP]
+           (throwError IllegalOperation >>= invocationCatch thread isBlocking isCall InvokeDomain)
+           (\<acute>current_syscall_error :== type_C_update (\<lambda>_. scast seL4_IllegalOperation) \<acute>current_syscall_error;;
+            return_C ret__unsigned_long_'_update (\<lambda>s. scast EXCEPTION_SYSCALL_ERROR))"
+  apply (rule throw_syscall_error_type_ccorres)
+  apply (simp add: syscall_error_to_H_cases)
+  done
+
+lemma ccorres_pre_ksDomSchedule:
+  assumes "\<And>rv. length rv = unat domScheduleLength \<Longrightarrow> ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows "ccorres r xf
+                 (\<lambda>s. \<forall>rv. ksDomSchedule s = rv \<longrightarrow> P rv s)
+                 {s. \<forall>rv. cdom_schedule_relation rv (ksDomSchedule_' (globals s)) \<longrightarrow> s \<in> P' rv} hs
+                 (gets ksDomSchedule >>= f) c"
+  apply (rule ccorres_pre_gets, erule assms)
+   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cdom_schedule_relation_def
+                         dom_schedule_len_def[symmetric] dom_schedule_len_val)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+  done
+
+lemma ccorres_pre_ksDomScheduleStart:
+  assumes "\<And>domSchedStart. ccorres r xf (P domSchedStart) (P' domSchedStart) hs (f domSchedStart) c"
+  shows "ccorres r xf
+                 (\<lambda>s. \<forall>domSchedStart. ksDomScheduleStart s = domSchedStart \<longrightarrow> P domSchedStart s)
+                 {s. \<forall>domSchedStart. unat (ksDomScheduleStart_' (globals s)) = domSchedStart \<longrightarrow>
+                                     s \<in> P' domSchedStart} hs
+                 (gets ksDomScheduleStart >>= f) c"
+  by (rule ccorres_pre_gets[where Q=\<top>], rule assms;
+      clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+
+lemma dschedule_is_end_marker_ccorres:
+  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
+           (\<lambda>s. ksDomSchedule s = sched \<and> idx < length sched)
+           (\<lbrace>unat \<acute>index = idx\<rbrace>) hs
+           (return (sched ! idx = domainEndMarker)) (Call dschedule_is_end_marker_'proc)"
+  supply word_less_1[simp del] (* avoid rewriting ArrayBounds guard for numDomains = 1 *)
+  apply (rule ccorres_from_vcg)
+  apply (rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: return_def)
+  apply (rename_tac \<sigma> s)
+  apply (prop_tac "cdom_schedule_relation (ksDomSchedule \<sigma>) (ksDomSchedule_' (globals s))")
+   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+  apply (clarsimp simp: cdom_schedule_relation_def word_less_nat_alt to_bool_def
+                        dom_schedule_entry_relation_domainEndMarker
+                  cong: if_cong)
+  done
+
+lemma whenE_eq_return_whenE:
+  "(whenE P f >>=E m) >>= g = do rv \<leftarrow> return P; (whenE rv f >>=E m) >>= g od"
+  by simp
+
+lemma bind_returnOK_case_sum:
+  "doE y <- liftE m; returnOk x odE >>= case_sum (throwError \<circ> Inr) returnOk =
+   doE liftE m; returnOk x odE"
+  by monad_eq
+
+lemma decodeDomainScheduleSetStart_ccorres:
+  "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and (\<lambda>s. ksCurThread s = thread)
+              and sch_act_simple and ct_active'
+              and sysargs_rel args buffer)
+       ({s. unat (length___unsigned_long_' s) = length args}
+        \<inter> {s. buffer_' s = option_to_ptr buffer}) []
+   (decodeDomainSetStart args extraCaps >>= invocationCatch thread isBlocking isCall InvokeDomain)
+   (Call decodeDomainScheduleSetStart_'proc)"
+  supply Collect_const[simp del]
+  apply (cinit' lift: length___unsigned_long_' buffer_'
+                simp: decodeDomainSetStart_def)
+   apply (rule ccorres_Cond_rhs_Seq)
+    apply ccorres_rewrite
+    apply clarsimp
+    apply (rule throw_syscall_error_type_ccorres)
+    apply (simp add: syscall_error_to_H_cases)
+   apply ccorres_rewrite
+   apply (cases args; clarsimp simp: unat_eq_0)
+   apply (clarsimp simp: liftE_bindE bind_assoc)
+   apply (rule ccorres_pre_ksDomSchedule)
+   apply (rule ccorres_add_return)
+   apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
+     apply clarsimp
+     apply (rule ccorres_Cond_rhs_Seq)
+      apply ccorres_rewrite
+      apply (clarsimp simp: domScheduleLength_le_unat throwError_bind invocationCatch_def)
+      apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+      apply (rule ccorres_from_vcg_throws)
+      apply (rule allI, rule conseqPre, vcg)
+      apply (clarsimp simp: throwError_def return_def domScheduleLength_def exception_defs
+                            syscall_error_rel_def syscall_error_to_H_cases)
+     apply (clarsimp simp: domScheduleLength_le_unat)
+     apply (subst whenE_eq_return_whenE)
+     apply (ctac add: dschedule_is_end_marker_ccorres)
+       apply (clarsimp simp: to_bool_def)
+       apply (rule ccorres_Cond_rhs_Seq)
+        apply ccorres_rewrite
+        apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+        apply (clarsimp simp: to_bool_def throwError_bind invocationCatch_def)
+        apply (rule ccorres_from_vcg_throws)
+        apply (rule allI, rule conseqPre, vcg)
+        apply (clarsimp simp: throwError_def return_def domScheduleLength_def exception_defs
+                              syscall_error_rel_def syscall_error_to_H_cases)
+       apply (clarsimp simp: returnOk_bind invocationCatch_def liftE_bindE)
+       apply (ctac (no_vcg) add: setThreadState_ccorres)
+        apply (clarsimp simp: performInvocation_def bind_returnOK_case_sum bindE_assoc)
+        apply (clarsimp simp: liftE_bindE invokeDomain_def liftE_alternative returnOk_liftE[symmetric])
+        apply (ctac (no_vcg) add: invokeDomainScheduleSetStart_ccorres)
+         apply (rule ccorres_alternative2)
+         apply (rule ccorres_return_CE; simp)
+        apply (wp sts_invs_minor')
+       apply (wp sts_invs_minor')
+      apply (wp sts_invs_minor')
+     apply clarsimp
+     apply (vcg exspec=dschedule_is_end_marker_modifies)
+    apply (clarsimp simp: not_le word_less_nat_alt unat_scast_domScheduleLength)
+    apply (wp hoare_drop_imp)
+   apply clarsimp
+   apply (rule conseqPost[where A'="{}" and Q'="\<lbrace>\<acute>ksCurThread = tcb_ptr_to_ctcb_ptr thread\<rbrace>"])
+     apply (vcg exspec=getSyscallArg_modifies)
+    apply clarsimp
+   apply clarsimp
+  apply (clarsimp simp: sysargs_rel_to_n ct_in_state'_def pred_tcb_at' st_tcb_at'_def
+                        rf_sr_ksCurThread)
+  apply (rule conjI, clarsimp simp: unat_eq_0) (* args \<noteq> [] *)
+  apply (rule conjI, fastforce)+ (* invs' components *)
+  apply normalise_obj_at' (* obj_at' predicates on current thread *)
+  apply fastforce
+  done
+
+lemma mode_parseTimeArg_ccorres:
+  "ccorres (\<lambda>_ rv. rv = parseTimeArg n args) ret__unsigned_longlong_'
+     (sysargs_rel args buffer and sysargs_rel_n args buffer n)
+     (\<lbrace>unat \<acute>i = n\<rbrace> \<inter> \<lbrace>\<acute>buffer = option_to_ptr buffer\<rbrace>) []
+     (return ()) (Call mode_parseTimeArg_'proc)"
+  apply (cinit' lift: i_' buffer_')
+   apply (rule ccorres_add_return2)
+   apply (ctac add: getSyscallArg_ccorres_foo[where n=n and args=args and buffer=buffer])
+     apply (fastforce intro: ccorres_return_C)
+    apply wp
+   apply (vcg exspec=getSyscallArg_modifies)
+  apply (clarsimp simp: parseTimeArg_def)
+  done
+
+schematic_goal maxDomainDuration_fold:
+  "numeral ?n = unat maxDomainDuration"
+  by (simp add: maxDomainDuration_def mask_def)
+
+lemma unat_ucast_domain_len_numDomains:
+  "unat x < numDomains \<Longrightarrow> unat (ucast x :: domain) < numDomains" for x::machine_word
+  using numDomains_fits_domainBits
+  by (auto simp: unat_ucast_unat_id domainBits_def)
+
+lemma scast_numDomains_minus_one:
+  "scast (Kernel_C.numDomains - 1) = (word_of_nat (numDomains - Suc 0) :: machine_word)"
+  using numDomains_not_zero
+  apply (simp add: word_of_nat_minus scast_eq del: Word.of_int_sint)
+  apply (subst signed_arith_sint)
+   apply (cut_tac numDomains_fits_domainBits)
+   apply (simp add: sint_numDomains_to_H word_size domainBits_def)
+  apply (simp add: sint_numDomains_to_H)
+  done
+
+lemma decodeDomainScheduleConfigure_ccorres:
+  "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and (\<lambda>s. ksCurThread s = thread)
+              and sch_act_simple and ct_active'
+              and sysargs_rel args buffer)
+       ({s. unat (length___unsigned_long_' s) = length args}
+        \<inter> {s. buffer_' s = option_to_ptr buffer}) []
+   (decodeDomainConfigure args extraCaps >>= invocationCatch thread isBlocking isCall InvokeDomain)
+   (Call decodeDomainScheduleConfigure_'proc)"
+  supply Collect_const[simp del]
+  apply (cinit' lift: length___unsigned_long_' buffer_'
+                simp: decodeDomainConfigure_def)
+   apply (drule sym[where t="length args"])
+   apply (clarsimp simp: timeArgLen_def)
+   apply (rule ccorres_Cond_rhs_Seq)
+    apply ccorres_rewrite
+    apply (clarsimp simp: word_less_nat_alt)
+    apply (rule throw_syscall_error_type_ccorres)
+    apply (simp add: syscall_error_to_H_cases)
+   apply ccorres_rewrite
+   apply (clarsimp simp: word_less_nat_alt liftE_bindE bind_assoc)
+   apply (rule ccorres_pre_ksDomSchedule)
+   apply (rule ccorres_add_return)
+   apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
+     apply (rule ccorres_add_return)
+     apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=1 and buffer=buffer])
+       apply (rule ccorres_add_return)
+       apply (ctac add: mode_parseTimeArg_ccorres[where args=args and n=2 and buffer=buffer])
+         apply (clarsimp simp: word_le_nat_alt unat_scast_domScheduleLength)
+         apply (rule ccorres_Cond_rhs_Seq)
+          apply ccorres_rewrite
+          apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+          apply (clarsimp simp: throwError_bind invocationCatch_def)
+          apply (rule ccorres_from_vcg_throws)
+          apply (rule allI, rule conseqPre, vcg)
+          apply (clarsimp simp: throwError_def return_def domScheduleLength_def exception_defs
+                                syscall_error_rel_def syscall_error_to_H_cases)
+         apply (clarsimp simp: unat_scast_numDomains unat_numDomains_to_H sint_numDomains_to_H)
+         apply (rule ccorres_Cond_rhs_Seq)
+          apply ccorres_rewrite
+          apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+          apply (clarsimp simp: throwError_bind invocationCatch_def)
+          apply (rule ccorres_from_vcg_throws)
+          apply (rule allI, rule conseqPre, vcg)
+          apply (cut_tac numDomains_fits_domainBits)
+          apply (clarsimp simp: throwError_def return_def domScheduleLength_def exception_defs
+                                syscall_error_rel_def syscall_error_to_H_cases domainBits_def
+                                scast_numDomains_minus_one)
+         apply (clarsimp simp: maxDomainDuration_fold)
+         apply (rule ccorres_Cond_rhs_Seq)
+          apply ccorres_rewrite
+          apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+          apply (clarsimp simp: throwError_bind invocationCatch_def)
+          apply (rule ccorres_from_vcg_throws)
+          apply (rule allI, rule conseqPre, vcg)
+          apply (clarsimp simp: throwError_def return_def exception_defs
+                                syscall_error_rel_def syscall_error_to_H_cases)
+         apply clarsimp
+         apply (rule ccorres_Cond_rhs_Seq)
+          apply ccorres_rewrite
+          apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+          apply (clarsimp simp: throwError_bind invocationCatch_def)
+          apply (rule ccorres_from_vcg_throws)
+          apply (rule allI, rule conseqPre, vcg)
+          apply (clarsimp simp: throwError_def return_def exception_defs
+                                syscall_error_rel_def syscall_error_to_H_cases)
+         apply (clarsimp simp del: de_Morgan_conj simp: bind_assoc)
+         apply (rule ccorres_pre_ksDomScheduleStart)
+         apply (rule_tac C'="{s. unat (args ! 0) = domSchedStart \<and> parseTimeArg 2 args = 0}" and
+                         Q'="\<lbrace> domSchedStart = unat \<acute>ksDomScheduleStart\<rbrace>"
+                         in ccorres_rewrite_cond_sr_Seq[where Q=\<top>])
+          apply clarsimp
+         apply (rule ccorres_Cond_rhs_Seq)
+          apply ccorres_rewrite
+          apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+          apply (clarsimp simp: throwError_bind invocationCatch_def)
+          apply (rule ccorres_from_vcg_throws)
+          apply (rule allI, rule conseqPre, vcg)
+          apply (clarsimp simp: throwError_def return_def exception_defs
+                                syscall_error_rel_def syscall_error_to_H_cases)
+         apply (clarsimp simp del: de_Morgan_conj
+                         simp: returnOk_bind invocationCatch_def liftE_bindE)
+         apply (ctac (no_vcg) add: setThreadState_ccorres)
+          apply (clarsimp simp: performInvocation_def bind_returnOK_case_sum bindE_assoc)
+          apply (clarsimp simp: liftE_bindE invokeDomain_def liftE_alternative returnOk_liftE[symmetric])
+          apply (ctac (no_vcg) add: invokeDomainScheduleConfigure_ccorres)
+           apply (rule ccorres_alternative2)
+           apply (rule ccorres_return_CE; simp)
+          apply (wp sts_invs_minor')
+         apply (clarsimp simp: valid_domain_inv'_def)
+         apply wp
+        apply clarsimp
+        apply wp
+       apply clarsimp
+       apply (vcg exspec=mode_parseTimeArg_modifies)
+      apply clarsimp
+      apply wp
+     apply (vcg exspec=getSyscallArg_modifies)
+    apply wp
+   apply (vcg exspec=getSyscallArg_modifies)
+  apply (drule sym[where t="length args"])
+  apply (clarsimp simp: sysargs_rel_to_n ct_in_state'_def pred_tcb_at' st_tcb_at'_def
+                        rf_sr_ksCurThread not_less not_le le_maxDomain_eq_less_numDomains
+                        unat_ucast_domain_len_numDomains)
+  apply (rule conjI; clarsimp)
+   apply (clarsimp simp: word_le_nat_alt)
+   apply (rule conjI, fastforce)+
+   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cdom_schedule_relation_def
+                         domScheduleLength_def)
+  using numDomains_fits_domainBits
+  apply (simp add: word_less_nat_alt ucast_ucast_len domainBits_def)
+  done
+
+lemma decodeDomainInvocation_ccorres:
+  "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
+   ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and (\<lambda>s. ksCurThread s = thread)
+              and sch_act_simple and ct_active'
+              and (excaps_in_mem extraCaps \<circ> ctes_of)
+              and (\<lambda>s. \<forall>v \<in> set extraCaps. \<forall>y \<in> zobj_refs' (fst v).
+                              ex_nonz_cap_to' y s)
+              and (\<lambda>s. \<forall>v \<in> set extraCaps.
+                             s \<turnstile>' fst v)
+              and sysargs_rel args buffer)
+       ({s. unat (length___unsigned_long_' s) = length args}
+        \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
+        \<inter> {s. invLabel_' s = label}
+        \<inter> {s. buffer_' s = option_to_ptr buffer}) []
+   (decodeDomainInvocation label args extraCaps >>=
+      invocationCatch thread isBlocking isCall InvokeDomain)
+   (Call decodeDomainInvocation_'proc)"
+  supply gen_invocation_type_eq[simp] invocation_eq_use_types[simp]
+  apply (cinit' lift: length___unsigned_long_' current_extra_caps_' invLabel_' buffer_'
+                simp: decodeDomainInvocation_def)
+   apply (drule sym[where t=label])
+   apply (rule ccorres_Cond_rhs)
+    apply (rule ccorres_trim_returnE; simp?)
+    apply (rule ccorres_call[OF decodeDomainSetSetInvocation_ccorres]; simp)
+   apply (rule ccorres_Cond_rhs)
+    apply (rule ccorres_trim_returnE; simp?)
+    apply (rule ccorres_call[OF decodeDomainScheduleConfigure_ccorres]; simp)
+   apply (rule ccorres_Cond_rhs)
+    apply (rule ccorres_trim_returnE; simp?)
+    apply (rule ccorres_call[OF decodeDomainScheduleSetStart_ccorres]; simp)
+   apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+   apply (cases "gen_invocation_type label"; simp add: throw_IllegalOperation_ccorres)
+  apply clarsimp
+  done
+
 
 (************************************************************************)
 (*                                                                      *)
@@ -1340,9 +1709,8 @@ lemma decodeCNodeInvocation_ccorres:
                                apply (wp lsfco_cte_at')
                               apply (clarsimp simp: cte_wp_at_ctes_of weak_derived_updateCapData
                                                     capBadge_updateCapData_True)
-                              apply (simp add: valid_tcb_state'_def)
-                              apply (auto simp:updateCapData_Untyped
-                                elim!: valid_updateCapDataI[OF ctes_of_valid'])[1]
+                              apply (auto simp: updateCapData_Untyped
+                                          elim!: valid_updateCapDataI[OF ctes_of_valid'])[1]
                              apply (simp add: Collect_const_mem all_ex_eq_helper)
                              apply (vcg exspec=lookupPivotSlot_modifies)
                             apply simp

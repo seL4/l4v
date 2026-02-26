@@ -89,7 +89,12 @@ datatype cdl_page_directory_invocation =
 
 
 datatype cdl_domain_invocation =
-  SetDomain cdl_object_id word8
+    InvokeSetDomain (dominv_thread : cdl_object_id)
+                    (dominv_domain : word8)
+  | InvokeDomainScheduleSetStart (dominv_index : nat)
+  | InvokeDomainScheduleConfigure (dominv_index : nat)
+                                  (dominv_domain : word8)
+                                  (dominv_duration : domain_duration)
 
 datatype cdl_sgi_signal_invocation =
   SGISignalGenerate (* no params, machine op only *)
