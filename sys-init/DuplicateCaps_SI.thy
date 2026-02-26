@@ -147,7 +147,7 @@ lemma duplicate_cap_sep_helper_general:
                 spec dev obj_id \<and>*
     si_cap_at t orig_caps spec dev obj_id \<and>* si_objects \<and>* R\<guillemotright> s\<rbrace>"
   apply (rule hoare_assume_pre)
-  apply_trace (clarsimp simp: duplicate_cap_def si_cap_at_def sep_conj_exists)
+  apply (clarsimp simp: duplicate_cap_def si_cap_at_def sep_conj_exists)
   apply (frule map_of_zip_tuple_in, simp, simp)
   apply (frule in_set_zip1)
   apply (frule in_set_zip2)
@@ -183,7 +183,6 @@ lemma duplicate_cap_sep_general:
        well_formed_obj_filter obj_filter \<and>
        (obj_id, free_cptr) \<in> set (zip_region [obj\<leftarrow>real_obj_ids. obj_filter obj spec] free_cptrs) \<and>
        set real_obj_ids = {obj_id. real_object_at obj_id spec} \<and>
-       \<comment> \<open>length [obj\<leftarrow>real_obj_ids . obj_filter obj spec] \<le> length_region free_cptrs \<and>\<close>
        valid_slot_region free_cptrs)\<rbrace>
    duplicate_cap spec orig_caps (obj_id, free_cptr)
    \<lbrace>\<lambda>_.
@@ -257,7 +256,7 @@ lemma duplicate_caps_sep_helper:
 
 (* FIXME, move higher *)
 lemma distinct_card':
-  "\<lbrakk>distinct xs; set xs = A\<rbrakk> \<Longrightarrow> card (A) = length xs"
+  "\<lbrakk>distinct xs; set xs = A\<rbrakk> \<Longrightarrow> card A = length xs"
   by (clarsimp simp: distinct_card)
 
 (* FIXME, move higher *)
@@ -265,146 +264,29 @@ lemma distinct_length_filter':
   "distinct xs \<Longrightarrow> length [x\<leftarrow>xs. P x] = card {x \<in> set xs. P x}"
   by (metis distinct_card' distinct_filter set_filter)
 
-(* FIXME: these seem to no longer be used
-lemma duplicate_caps_sep_no_rv:
-  "\<lbrace>\<guillemotleft>si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
-     si_objects \<and>*
-     si_objects_extra_caps' (set real_obj_ids) free_cptrs untyped_cptrs \<and>*
-     R\<guillemotright> and
-    K (well_formed spec \<and> distinct real_obj_ids \<and> distinct free_cptrs \<and>
-       set real_obj_ids = {obj_id. real_object_at obj_id spec} \<and>
-       list_all (\<lambda>n. n < 2 ^ si_cnode_size) (map unat free_cptrs) \<and>
-       length real_obj_ids + card {obj_id. cnode_or_tcb_at obj_id spec} \<le> length free_cptrs \<and>
-       free_cptrs' = drop (length real_obj_ids) free_cptrs)\<rbrace>
-  duplicate_caps spec orig_caps real_obj_ids free_cptrs'
-  \<lbrace>\<lambda>rv s.
-    \<guillemotleft>si_caps_at t (fst rv) spec dev {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
-     si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
-     si_objects \<and>*
-     si_objects_extra_caps (dom (cdl_objects spec)) free_cptrs untyped_cptrs spec \<and>*
-     R\<guillemotright> s\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (rule hoare_chain)
-    apply (rule duplicate_caps_sep_helper[where t=t and
-           free_cptrs=free_cptrs' and
-           R="\<lambda>s. \<exists>untyped_caps all_available_ids.
-             ((\<And>* (cptr, y) \<in> set (zip untyped_cptrs untyped_caps). (si_cnode_id, unat cptr) \<mapsto>c y) \<and>*
-              (\<And>* obj_id\<in>all_available_ids. obj_id \<mapsto>o Untyped) \<and>*
-              (\<And>* map (\<lambda>free_cptr. (si_cnode_id, unat free_cptr) \<mapsto>c NullCap)
-                       (drop (card {obj_id. cnode_or_tcb_at obj_id spec})
-                       (drop (length real_obj_ids) free_cptrs))) \<and>* R) s"], simp+)
-   apply (clarsimp simp: Ball_set_list_all[symmetric] dest!: in_set_dropD)
-   apply (rule conjI)
-    apply (clarsimp simp: si_objects_extra_caps'_def sep_conj_exists sep_conj_assoc)
-    apply (rule_tac x=untyped_caps in exI)
-    apply (rule_tac x=all_available_ids in exI)
-    apply (subst sep_map_zip_snd_take, simp+)
-    apply (subst (asm) drop_take_drop[symmetric,
-           where a="card {obj_id. real_object_at obj_id spec}"
-             and b="length [obj\<leftarrow>real_obj_ids. cnode_or_tcb_at obj spec]"])
-    apply (subst take_drop)
-    apply clarsimp
-    apply (clarsimp simp: distinct_card' distinct_length_filter')
-    apply (subst sep_list_conj_sep_map_set_conj, simp)
-    apply (subst (asm) sep.prod.union_disjoint, simp+)
-     apply (simp add: drop_take)
-     apply (subst add.commute)
-     apply (erule distinct_take_drop_append)
-    apply sep_solve
-   apply (subst (asm) distinct_card [symmetric], simp+)+
-   apply (subst distinct_card [symmetric], simp+)+
-   apply (fastforce dest!: in_set_dropD)
-  apply (clarsimp simp: si_objects_extra_caps_def sep_conj_exists sep_conj_assoc)
-  apply (rule_tac x=untyped_caps in exI)
-  apply (rule_tac x=all_available_ids in exI)
-  apply (subst add.commute)
-  apply (subst (asm) distinct_card [symmetric], simp)+
-   apply (clarsimp simp: distinct_card' distinct_length_filter')
-  apply (subst (asm) sep_list_conj_sep_map_set_conj, simp)
-  apply sep_solve
-  done
-
-lemma duplicate_caps_rv:
-  "\<lbrace>\<guillemotleft>(si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
-      si_objects \<and>*
-      si_objects_extra_caps' (set real_obj_ids) free_cptrs untyped_cptrs \<and>* R)
-     and K (obj_ids' = filter (\<lambda>obj_id. cnode_or_tcb_at obj_id spec) real_obj_ids)\<guillemotright>\<rbrace>
-  duplicate_caps spec orig_caps real_obj_ids free_cptrs'
-   \<lbrace>\<lambda>rv _. rv = (map_of (zip obj_ids' free_cptrs'), drop (length obj_ids') free_cptrs')\<rbrace>"
-  apply (clarsimp simp: duplicate_caps_def)
-  apply wpsimp
-  done
-
-lemma duplicate_caps_sep[OF refl]:
-  "obj_ids' = filter (\<lambda>obj_id. cnode_or_tcb_at obj_id spec) real_obj_ids \<Longrightarrow>
-   \<lbrace>\<guillemotleft>(si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
-     si_objects \<and>*
-     si_objects_extra_caps' (dom (cdl_objects spec)) free_cptrs_orig untyped_cptrs \<and>* R) and
-      K (well_formed spec \<and>
-         distinct real_obj_ids \<and>
-         set real_obj_ids = {obj_id. real_object_at obj_id spec} \<and>
-         list_all (\<lambda>n. n < 2 ^ si_cnode_size) free_cptrs_orig \<and>
-         free_cptrs = drop (length real_obj_ids) free_cptrs_orig \<and>
-         distinct free_cptrs_orig \<and>
-         length real_obj_ids + card (set obj_ids') \<le> length free_cptrs_orig)\<guillemotright>\<rbrace>
-   duplicate_caps spec orig_caps real_obj_ids free_cptrs
-   \<lbrace>\<lambda>rv.
-    \<guillemotleft>(si_caps_at t (fst rv) spec dev {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
-      si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
-      si_objects \<and>*
-      si_objects_extra_caps (dom (cdl_objects spec)) free_cptrs_orig untyped_cptrs spec \<and>* R) and
-      K (rv = (map_of (zip obj_ids' free_cptrs), drop (length obj_ids') free_cptrs))\<guillemotright> \<rbrace>"
-  apply clarsimp
-  apply (rule hoare_gen_asm_conj)
-  apply (rule hoare_conjI, elim conjE)
-   apply (rule hoare_chain[OF duplicate_caps_sep_no_rv]; simp)
-    apply (simp add: list_all_iff unat_less_2_si_cnode_size' | rule conjI)+
-  apply (rule hoare_chain[OF duplicate_caps_rv]; simp)
-  done
-*)
-
-lemma sep_map_set_conj_set_append:
-  "distinct (xs@ys) \<Longrightarrow>
-   sep_map_set_conj P (set (xs @ ys)) = (sep_map_set_conj P (set xs) \<and>* sep_map_set_conj P (set ys))"
-  apply (induct xs; clarsimp)
-  apply (case_tac ys; clarsimp)
-  apply (rule ext; rule iffI; sep_solve)
-  done
-
-lemma sep_map_set_conj_set_take_drop:
-  "\<lbrakk>sep_map_set_conj P (set xs) s; distinct xs\<rbrakk> \<Longrightarrow>
-   (sep_map_set_conj P (set (take n xs)) \<and>*  sep_map_set_conj P (set (drop n xs))) s"
-  apply (clarsimp)
-  apply (subst (asm) append_take_drop_id[where n=n, symmetric])
-  apply (subst  sep_map_set_conj_set_append[symmetric])
-   apply (clarsimp)
-  apply (clarsimp)
-  done
-
-lemma map_zip_snd_take:
+lemma map_zip_snd_take': (* FIXME move to Lib *)
   "map (\<lambda>x. P (snd x)) (zip xs ys) = map P (take (length xs) ys)"
-  apply (induct xs arbitrary: ys; clarsimp)
-  apply (case_tac ys; clarsimp)
-  done
+  using map_zip_snd_take
+  by (metis (no_types, lifting) ext map2_map_map zip_map_fst_snd)
 
-lemma sep_map_zip_snd_take':
+lemma sep_map_zip_snd_take': (* FIXME move to SepAlgebra *)
   "distinct ys \<Longrightarrow>
    sep_map_set_conj (\<lambda>x. P (snd x)) (set (zip xs ys)) = sep_map_set_conj P (set (take (length xs) ys))"
   apply (subst sep_list_conj_sep_map_set_conj[symmetric])
    apply (erule distinct_zipI2)
   apply (subst sep_list_conj_sep_map_set_conj[symmetric])
    apply (erule distinct_take)
-  apply (simp add: map_zip_snd_take)
+  apply (simp add: map_zip_snd_take')
   done
 
-lemma sep_map_zip_snd_take'':
+lemma sep_map_zip_snd_take'': (* FIXME move to SepAlgebra *)
   "\<lbrakk>distinct ys; n = length xs\<rbrakk> \<Longrightarrow>
    sep_map_set_conj (\<lambda>x. P (snd x)) (set (zip xs ys)) = sep_map_set_conj P (set (take n ys))"
   apply (subst sep_list_conj_sep_map_set_conj[symmetric])
    apply (erule distinct_zipI2)
   apply (subst sep_list_conj_sep_map_set_conj[symmetric])
    apply (erule distinct_take)
-  apply (simp add: map_zip_snd_take)
+  apply (simp add: map_zip_snd_take')
   done
 
 lemma duplicate_caps_sep'[OF refl]:
@@ -453,4 +335,3 @@ lemma duplicate_caps_sep'[OF refl]:
   done
 
 end
-

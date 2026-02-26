@@ -50,12 +50,12 @@ lemma si_cnode_size_greater_than_2 [simp]:
 
 lemma unat_less_2_si_cnode_size:
   "unat (cptr::32 word) < 2 ^ si_cnode_size
-  \<Longrightarrow> cptr < 2 ^ si_cnode_size"
+   \<Longrightarrow> cptr < 2 ^ si_cnode_size"
   by (metis si_cnode_size_less_than_word_size unat_power_lower32 word_less_nat_alt)
 
 lemma unat_less_2_si_cnode_size':
   "(cptr::32 word) < 2 ^ si_cnode_size
-  \<Longrightarrow> unat cptr < 2 ^ si_cnode_size"
+   \<Longrightarrow> unat cptr < 2 ^ si_cnode_size"
   by (metis unat_less_helper word_unat_power)
 
 (* This is stored in the root TCB. *)
@@ -89,10 +89,9 @@ definition
   si_asid :: "sep_state \<Rightarrow> bool"
 where
   "si_asid \<equiv>
-  (si_cnode_id, unat seL4_CapInitThreadASIDPool) \<mapsto>c AsidPoolCap si_asidpool_id si_asidpool_base \<and>*
-    si_asidpool_id \<mapsto>f AsidPool empty_asid \<and>*
-   (\<And>* offset\<in>{offset. offset < 2 ^ asid_low_bits}.
-               (si_asidpool_id, offset) \<mapsto>c -)"
+     (si_cnode_id, unat seL4_CapInitThreadASIDPool) \<mapsto>c AsidPoolCap si_asidpool_id si_asidpool_base
+     \<and>* si_asidpool_id \<mapsto>f AsidPool empty_asid
+     \<and>* (\<And>* offset\<in>{offset. offset < 2 ^ asid_low_bits}. (si_asidpool_id, offset) \<mapsto>c -)"
 
 abbreviation "si_tcb_id \<equiv> root_tcb_id"
 
@@ -149,9 +148,7 @@ lemma si_objects_extra_caps'_si_objects_extra_caps:
   apply (clarsimp simp: sep_conj_ac)
   done
 
-definition
-  si_irq_nodes :: "cdl_state \<Rightarrow> sep_state \<Rightarrow> bool"
-where
+definition si_irq_nodes :: "cdl_state \<Rightarrow> sep_state \<Rightarrow> bool" where
   "si_irq_nodes spec \<equiv>
      (\<lambda>s. \<exists>k_irq_table. (\<And>* irq\<in>used_irqs spec. irq \<mapsto>irq k_irq_table irq \<and>*
                                                  k_irq_table irq \<mapsto>o IRQNode empty_irq_node) s)"
@@ -180,12 +177,10 @@ lemma cap_guard_size_si_cnode_cap_plus_si_cnode_size [simp]:
 lemma cap_object_si_cspace_cap [simp]:
   "cap_object si_cspace_cap = si_cnode_id"
   by (clarsimp simp: cap_object_def cap_has_object_def si_cspace_cap_def)
-     (metis (full_types) LeastI)
 
 lemma cap_object_si_cnode_cap [simp]:
   "cap_object si_cnode_cap = si_cnode_id"
   by (clarsimp simp: cap_object_def cap_has_object_def si_cnode_cap_def)
-     (metis (full_types) LeastI)
 
 lemma offset_slot_si_cnode_size:
   "slot < 2^si_cnode_size \<Longrightarrow> offset (of_nat slot) si_cnode_size = slot"
@@ -557,15 +552,6 @@ definition frame_duplicates_copied ::
      {slot \<in> dom (slots_of pd_id spec). cap_at (\<lambda>cap. cap \<noteq> NullCap \<and> frame_at (cap_object cap) spec)
                                                (pd_id, slot) spec}"
 
-(**********************************************************
- * The pre and post conditions of the system initialiser. *
- **********************************************************)
-
-
-(* That the boot info is valid, and that there are enough free slots to initialise a system. *)
-
-
-
 
 (********************************************************
  * Conversion of si_objs_caps_at to si_caps_at *
@@ -702,7 +688,6 @@ lemma si_caps_at_conversion:
   apply (clarsimp simp: cap_ref_object_def object_cap_ref_def si_obj_cap_at'_def)
   done
 
-
 lemma si_null_caps_at_conversion:
   "\<lbrakk>well_formed spec;
     real_ids = {obj_id. real_object_at obj_id spec};
@@ -767,11 +752,6 @@ lemma si_null_caps_at_simplified_helper:
   apply clarsimp
   done
 
-thm dom_def
-
-lemma the_dom_inj_on: "inj_on f S \<Longrightarrow> dom f = S \<Longrightarrow> inj_on (\<lambda>x. the (f x)) S"
-  by (metis (mono_tags, lifting) Some_the inj_on_def)
-
 lemma si_null_caps_at_simplified:
   "\<lbrakk>(si_spec_objs_null_caps_at t si_caps spec cnode_ids) s;
     well_formed spec;
@@ -786,23 +766,20 @@ lemma si_null_caps_at_simplified:
   apply (subst (asm) si_null_caps_at_conversion, assumption+)
   apply (drule si_null_caps_at_simplified_helper)
   apply (subst (asm) sep.prod.cong[OF refl, where h= "\<lambda>id. ((si_cnode_id, unat (the (si_caps id))) \<mapsto>c NullCap)"])
-  apply (rule ext, clarsimp, rule iffI; clarsimp?)
-  apply (clarsimp simp: bij_betw_def)
-  apply (metis (full_types) domIff mem_Collect_eq option.collapse)
+   apply (rule ext, clarsimp, rule iffI; clarsimp?)
+   apply (clarsimp simp: bij_betw_def)
+   apply (metis (full_types) domIff mem_Collect_eq option.collapse)
   apply (erule sep.prod.reindex_cong[THEN fun_cong,  THEN iffD2, rotated -1])
-prefer 3
-  apply (fastforce)
-  apply (metis bij_betw_imp_inj_on inj_on_imageI2 the_dom_inj_on)
- by (clarsimp simp: bij_betw_def)
-
+    prefer 3
+    apply fastforce
+   apply (simp add: bij_betw_def inj_on_def)
+  apply (clarsimp simp: bij_betw_def)
+  done
 
 lemma map_of_zip_range':
   "\<lbrakk>length xs = length ys; distinct xs; set xs = X\<rbrakk>
   \<Longrightarrow> (\<lambda>x. (the (map_of (zip xs ys) x))) ` X = set ys"
   by (metis map_of_zip_range)
-
-
-
 
 lemma si_irq_caps_at_conversion:
   "\<lbrakk>well_formed spec;
@@ -927,17 +904,10 @@ lemma si_irq_null_caps_at_simplified:
     apply clarsimp
     apply (subst zip_take_length[symmetric], subst map_of_zip_range'; simp)
    apply (rule ext)
-   apply rule
+   apply (rule iffI)
     apply clarsimp
-   apply (rule_tac x="the (map_of (zip_region irqs free_cptrs) a)" in exI)
-   apply (clarsimp simp del: map_of_eq_Some_iff)
-   apply (cut_tac x1="(cap_irq (the (opt_cap (aa, b) spec)))" and
-                  xs1=irqs and
-                  ys1="(list_take_region (length irqs) free_cptrs)"
-            in map_of_zip_is_Some'[THEN iffD1])
-     apply clarsimp
-    apply (fastforce simp: cap_at_def used_irqs_def all_caps_def)
-   apply (clarsimp simp: cap_ref_irq_def)
+   apply (metis (lifting) length_region_length map_of_zip_is_Some' not_None_eq option.collapse
+                          take_list_region well_formed_used_irqs_rewrite zip_take_length)
   apply simp
   done
 
@@ -961,15 +931,12 @@ lemma valid_slot_region_less[]:
   "\<lbrakk>valid_slot_region region; n \<in> set_region region \<rbrakk> \<Longrightarrow>
    n < 2 ^ si_cnode_size"
   apply (drule valid_slot_region_less_all)
-  by (clarsimp simp: Ball_set_list_all[symmetric])
+  apply (clarsimp simp: Ball_set_list_all[symmetric])
+  done
 
 lemma valid_slot_region_append[intro!]:
   "\<lbrakk>valid_slot_region rg1; valid_slot_region rg2; valid_concat_regions rg1 rg2\<rbrakk> \<Longrightarrow>
    valid_slot_region (rg1 @2 rg2)"
-  apply (clarsimp simp: valid_slot_region_def valid_concat_regions_defs append_region_def)
-  by auto
-
-\<comment> \<open>FIXME: move\<close>
-method try_solves methods m = (solves m)?
+  by (auto simp: valid_slot_region_def valid_concat_regions_defs append_region_def)
 
 end

@@ -32,11 +32,10 @@ declare
   object_at_cdl_objects[simp]
 
 (* Abbreviations for commonly appearing expressions involving virtual addresses and slots *)
-(* TODO: use pd_size, pt_size, small_frame_size instead of magic numbers *)
 abbreviation
   "pd_slot_of_pt_vaddr vaddr \<equiv> vaddr >> sectionBits :: machine_word"
 abbreviation
-  "pt_slot_of_vaddr vaddr \<equiv> (vaddr >> 12) && pt_slot_vaddr_mask :: machine_word"
+  "pt_slot_of_vaddr vaddr \<equiv> (vaddr >> smallPageBits) && pt_slot_vaddr_mask :: machine_word"
 abbreviation
   "pt_vaddr_of_pd_slot pd_slot \<equiv> of_nat pd_slot << sectionBits :: machine_word"
 abbreviation
@@ -44,13 +43,16 @@ abbreviation
     pt_vaddr_of_pd_slot pd_slot + (of_nat pt_slot << small_frame_size) :: machine_word"
 
 (* FIXME: MOVE (Lib) *)
-lemma singleton_eq[simp]: "(\<lambda>v. if v = x then Some y else None) = [x \<mapsto> y]"
-  by (clarsimp simp: fun_upd_def)
+lemma singleton_eq[simp]:
+  "(\<lambda>v. if v = x then Some y else None) = [x \<mapsto> y]"
+  by auto
 
-lemma map_add_simp [simp]: "(\<lambda>p. if p = p' then Some v else f p) = f ++ [p' \<mapsto> v] "
-  by (intro ext iffI; clarsimp simp: map_add_def split: option.splits)
+lemma map_add_simp [simp]:
+  "(\<lambda>p. if p = p' then Some v else f p) = f ++ [p' \<mapsto> v] "
+  by auto
 
-lemma list_all_spec: "list_all P xs \<Longrightarrow> x \<in> set xs \<Longrightarrow> P x"
+lemma list_all_spec:
+  "\<lbrakk> list_all P xs; x \<in> set xs \<rbrakk> \<Longrightarrow> P x"
   by (simp add: list_all_iff)
 (* /MOVE *)
 
@@ -103,7 +105,7 @@ lemma seL4_Page_Map_object_initialised_sep:
                                  (unat (pt_slot_of_vaddr vaddr)) \<and>
     sel4_pd < 2 ^ si_cnode_size \<and>
     object_slots (object_default_state cap_obj) (unat (pt_slot_of_vaddr vaddr)) = Some cap_slots \<and>
-    (n = 12 \<or> n = 16) \<and>
+    (n = smallPageBits \<or> n = largePageBits) \<and>
     t (cap_object pt_cap) = Some pt_ptr \<and>
     t spec_pd_ptr = Some pd_ptr \<and>
     t spec_page_ptr = Some page_ptr \<and>
@@ -172,7 +174,8 @@ lemma seL4_PageTable_Map_object_initialised_sep:
   apply (sep_drule sep_map_c_sep_map_s)
    apply (fastforce simp: object_default_state_def object_type_def default_object_def
                           object_slots_def empty_cap_map_shiftr_NullCap)
-  by sep_solve
+  apply sep_solve
+  done
 
 lemma assert_opt_validI:
   assumes w: "\<And>a. r = Some a \<Longrightarrow> \<lbrace>P\<rbrace> f a \<lbrace>Q\<rbrace>"
@@ -180,9 +183,10 @@ lemma assert_opt_validI:
   using w
   by (clarsimp simp:assert_opt_def split:option.split)
 
-lemma sep_caps_at_split: "a \<in> A \<Longrightarrow>
-  si_caps_at t orig_caps spec dev A = (
-  si_cap_at t orig_caps spec dev a \<and>* si_caps_at t orig_caps spec dev (A - {a}))"
+lemma sep_caps_at_split:
+  "a \<in> A \<Longrightarrow>
+   si_caps_at t orig_caps spec dev A =
+   (si_cap_at t orig_caps spec dev a \<and>* si_caps_at t orig_caps spec dev (A - {a}))"
   apply (simp add:si_caps_at_def)
   apply (subst sep.prod.union_disjoint [where A = "{a}", simplified, symmetric])
    apply simp
@@ -213,10 +217,11 @@ lemma duplicate_frame_cap_sep:
     apply sep_solve
    apply (fastforce simp: real_object_at_def irq_nodes_def object_at_def object_type_is_object)
   apply (clarsimp simp: valid_slot_region_def valid_region_def)
-  by (metis (mono_tags, opaque_lifting) add.commute inc_i inc_le nat_less_le olen_add_eqv
-                                        pow_mono_leq_imp_lt si_cnode_size_greater_than_1 unat_1
-                                        unat_less_2_si_cnode_size word_le_less_eq word_not_le
-                                        word_plus_mono_right2)
+  apply (metis (mono_tags, opaque_lifting) add.commute inc_i inc_le nat_less_le olen_add_eqv
+                                           pow_mono_leq_imp_lt si_cnode_size_greater_than_1 unat_1
+                                           unat_less_2_si_cnode_size word_le_less_eq word_not_le
+                                           word_plus_mono_right2)
+  done
 
 lemma si_caps_at_take_2:
   "\<lbrakk>well_formed spec;
@@ -259,40 +264,37 @@ lemma si_caps_at_take_2':
   apply (frule (1) object_at_real_object_at)
   apply (frule (1) object_at_real_object_at[where obj_id=spec_pt_section_ptr])
   apply (clarsimp simp: object_at_def is_pd_def is_frame_def is_pt_def split: cdl_object.split_asm)
-  by (metis sep_caps_at_split[where a="spec_pd_ptr"]
-            sep_caps_at_split[where a="spec_pt_section_ptr"]
-            cdl_object.exhaust mem_Collect_eq member_remove option.inject remove_def)
+  apply (metis sep_caps_at_split[where a="spec_pd_ptr"]
+               sep_caps_at_split[where a="spec_pt_section_ptr"]
+               cdl_object.exhaust mem_Collect_eq member_remove option.inject remove_def)
+  done
 
 lemma frame_at_default_cap[simp]:
-  "well_formed spec \<Longrightarrow>
-   is_frame frame \<Longrightarrow>
-   cdl_objects spec (cap_object frame_cap) = Some frame \<Longrightarrow>
-   opt_cap (parent_id, slot) spec = Some frame_cap \<Longrightarrow>
-   is_fake_frame_cap frame_cap \<Longrightarrow>
-   t (cap_object frame_cap) = Some ptr' \<Longrightarrow>
-   default_cap (object_type frame) {ptr'} (object_size_bits frame) False
-     = conjure_real_frame_cap frame_cap t"
+  "\<lbrakk> well_formed spec; is_frame frame; cdl_objects spec (cap_object frame_cap) = Some frame;
+     opt_cap (parent_id, slot) spec = Some frame_cap; is_fake_frame_cap frame_cap;
+     t (cap_object frame_cap) = Some ptr' \<rbrakk> \<Longrightarrow>
+   default_cap (object_type frame) {ptr'} (object_size_bits frame) False =
+   conjure_real_frame_cap frame_cap t"
   apply (clarsimp simp: si_caps_at_take_2  si_cap_at_def object_type_is_object object_at_def
                         default_cap_def object_type_def wf_frame_cap_frame_size_bits
-                        offset_slot_si_cnode_size' vm_read_write_def si_objects_def)
-  apply (clarsimp simp: is_frame_def split: cdl_object.splits)
-  apply (clarsimp split: cdl_cap.splits cdl_frame_cap_type.splits option.splits)
-  apply (drule_tac frame=x8 in wf_frame_cap_frame_size_bits)
-  by (fastforce simp: vm_read_write_def conjure_real_frame_cap_def dev_of_def)+
+                        offset_slot_si_cnode_size' vm_read_write_def si_objects_def is_frame_def
+                  split: cdl_cap.splits cdl_frame_cap_type.splits option.splits  cdl_object.splits)
+  apply (fastforce simp: vm_read_write_def conjure_real_frame_cap_def dev_of_def
+                   dest: wf_frame_cap_frame_size_bits)
+  done
 
 lemma is_frame_default_cap[simp]:
-  "well_formed spec \<Longrightarrow>
-   frame_at (cap_object frame_cap) spec \<Longrightarrow>
-   cdl_objects spec (cap_object frame_cap) = Some obj \<Longrightarrow>
-   opt_cap (parent_id, slot) spec = Some frame_cap \<Longrightarrow>
-   is_fake_frame_cap frame_cap \<Longrightarrow>
-   t (cap_object frame_cap) = Some ptr' \<Longrightarrow>
+  "\<lbrakk> well_formed spec; frame_at (cap_object frame_cap) spec;
+     cdl_objects spec (cap_object frame_cap) = Some obj;
+     opt_cap (parent_id, slot) spec = Some frame_cap; is_fake_frame_cap frame_cap;
+     t (cap_object frame_cap) = Some ptr' \<rbrakk> \<Longrightarrow>
    default_cap (object_type obj) {ptr'} (object_size_bits obj) False
      = conjure_real_frame_cap frame_cap t"
   by (fastforce dest!: frame_at_default_cap simp: object_at_def)
 
 lemma pt_slot_compute[simp]:
-  "pt_slot < 2 ^ pt_size_index \<Longrightarrow> unat (pt_slot_of_vaddr (frame_vaddr_of_slots pd_slot pt_slot)) = pt_slot"
+  "pt_slot < 2 ^ pt_size_index \<Longrightarrow>
+   unat (pt_slot_of_vaddr (frame_vaddr_of_slots pd_slot pt_slot)) = pt_slot"
   apply (clarsimp simp:pt_size_def small_frame_size_def)
   apply (rule of_nat_inverse)
    apply (drule of_nat_mono_maybe[rotated,where 'a=32])
@@ -303,8 +305,7 @@ lemma pt_slot_compute[simp]:
   done
 
 lemma pd_slot_compute_from_pt[simp]:
-  "pd_slot < 2 ^ pd_size_index \<Longrightarrow>
-   pt_slot < 2 ^ pt_size_index \<Longrightarrow>
+  "\<lbrakk> pd_slot < 2 ^ pd_size_index; pt_slot < 2 ^ pt_size_index \<rbrakk> \<Longrightarrow>
    unat (pd_slot_of_pt_vaddr (frame_vaddr_of_slots pd_slot pt_slot)) = pd_slot"
   apply (clarsimp simp: cdl_lookup_pd_slot_def pt_size_def small_frame_size_def)
   apply (rule of_nat_inverse)
@@ -331,13 +332,13 @@ lemma pd_slot_compute_inverse[simp]:
   done
 
 lemma object_slot_empty_translate_exists:
-  "(object_slot_empty spec t pt_id pt_slot) s \<Longrightarrow>
-   (object_slot_empty spec t pt_id pt_slot) s \<and> t pt_id \<noteq> None"
+  "object_slot_empty spec t pt_id pt_slot s \<Longrightarrow>
+   object_slot_empty spec t pt_id pt_slot s \<and> t pt_id \<noteq> None"
   by (clarsimp simp: object_slot_empty_def object_initialised_general_def)
 
 lemma object_slot_initialised_translate_exists:
-  "(object_slot_initialised spec t pt_id pt_slot) s \<Longrightarrow>
-   (object_slot_initialised spec t pt_id pt_slot) s \<and> t pt_id \<noteq> None"
+  "object_slot_initialised spec t pt_id pt_slot s \<Longrightarrow>
+   object_slot_initialised spec t pt_id pt_slot s \<and> t pt_id \<noteq> None"
   by (clarsimp simp: object_slot_initialised_def object_initialised_general_def)
 
 lemma si_cap_at_translate_exists:
@@ -349,16 +350,14 @@ lemmas translate_exists = si_cap_at_translate_exists object_slot_initialised_tra
                           object_slot_empty_translate_exists
 
 lemma si_caps_at_less_si_cnode_size:
-  "(si_caps_at t orig_caps spec dev xs \<and>* R) s \<Longrightarrow>
-   orig_caps ptr = Some v \<Longrightarrow>
-   ptr \<in> xs \<Longrightarrow>
+  "\<lbrakk> (si_caps_at t orig_caps spec dev xs \<and>* R) s;
+     orig_caps ptr = Some v; ptr \<in> xs \<rbrakk> \<Longrightarrow>
    v < 2 ^ si_cnode_size"
   by (clarsimp simp: sep_caps_at_split si_cap_at_def sep_conj_def)
 
 lemma si_caps_at_less_translate_exists:
-  "(si_caps_at t orig_caps spec dev xs \<and>* R) s \<Longrightarrow>
-  ptr \<in> xs \<Longrightarrow>
-  t ptr \<noteq> None"
+  "\<lbrakk> (si_caps_at t orig_caps spec dev xs \<and>* R) s; ptr \<in> xs \<rbrakk> \<Longrightarrow>
+   t ptr \<noteq> None"
   by (clarsimp simp: sep_caps_at_split si_cap_at_def sep_conj_def)
 
 lemma map_page_wp:
@@ -369,7 +368,7 @@ lemma map_page_wp:
       si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
       si_objects \<and>* R\<guillemotright> and
       K (page_cap = fake_frame_cap False page_id (validate_vm_rights rights) n attr \<and>
-         (n = 12 \<or> n = (16 :: nat)) \<and>
+         (n = smallPageBits \<or> n = largePageBits) \<and>
          opt_cap (spec_pd_ptr, pd_slot) spec = Some pt_cap \<and>
          pt_cap = PageTableCap pt_id (Fake a) None \<and>
          opt_cap (pt_id, pt_slot) spec = Some page_cap \<and>
@@ -505,10 +504,11 @@ lemma map_page_table_in_pd_wp:
          apply (sep_simp si_caps_at_take_2' si_cap_at_def offset_slot_si_cnode_size')
          apply sep_solve
         apply assumption+
-  by (sep_simp si_caps_at_less_si_cnode_size[rotated 2, OF pt_at_is_real]
-               si_caps_at_less_si_cnode_size[rotated 2, OF pd_at_is_real]
-               si_caps_at_less_translate_exists[rotated, OF pt_at_is_real]
-               si_caps_at_less_translate_exists[rotated, OF pd_at_is_real])+
+  apply (sep_simp si_caps_at_less_si_cnode_size[rotated 2, OF pt_at_is_real]
+                  si_caps_at_less_si_cnode_size[rotated 2, OF pd_at_is_real]
+                  si_caps_at_less_translate_exists[rotated, OF pt_at_is_real]
+                  si_caps_at_less_translate_exists[rotated, OF pd_at_is_real])+
+  done
 
 (***********************************************************
               * Mapping a page table slot *
@@ -527,7 +527,8 @@ lemma map_page_table_slot_wp:
       cptr_map (pt_id, pt_slot) = free_cptr \<and>
       pt_cap = PageTableCap pt_id (Fake a) None \<and>
       attr = validate_vm_attributes vmattribs (pageForPageBits n) \<and>
-      ((page_cap = fake_frame_cap False page_id (validate_vm_rights rights) n attr \<and> (n = 12 \<or> n = 16))
+      ((page_cap = fake_frame_cap False page_id (validate_vm_rights rights) n attr \<and>
+       (n = smallPageBits \<or> n = largePageBits))
        \<or> page_cap = NullCap) \<and>
       free_cptr < 2 ^ si_cnode_size \<and>
       pd_slot < 2 ^ pd_size_index \<and>
@@ -554,7 +555,8 @@ lemma map_page_table_slot_wp:
                                     pageForPageBits_def attribs_to_word_def attribs_from_word_def)
   apply (wp, clarsimp simp: conjure_real_frame_cap_def)
   apply sep_cancel+
-  by (fastforce simp: object_slot_empty_initialised_NullCap object_at_def is_tcb_def)
+  apply (fastforce simp: object_slot_empty_initialised_NullCap object_at_def is_tcb_def)
+  done
 
 (***********************************************************
   * Mapping a page directory slot that contains a frame *
@@ -624,8 +626,7 @@ lemma pt_NullCap_empty_init:
   done
 
 lemma pd_NullCap_empty_init:
-  "well_formed spec \<Longrightarrow>
-   pd_at obj_id spec \<Longrightarrow>  cap_at (\<lambda>x. x = NullCap) (obj_id, slot) spec \<Longrightarrow>
+  "\<lbrakk> well_formed spec; pd_at obj_id spec; cap_at (\<lambda>x. x = NullCap) (obj_id, slot) spec \<rbrakk> \<Longrightarrow>
    object_slot_empty spec t obj_id slot = object_slot_initialised spec t obj_id slot"
   apply (rule object_slot_empty_initialised_NullCap)
     apply clarsimp
@@ -638,19 +639,15 @@ lemma pd_NullCap_empty_init:
 * Mapping a page directory slot that contains a page table *
 ************************************************************)
 
-lemma fake_frame_cap_eqI:"\<lbrakk>x = x'; y = y'; z = z'; a = a'; b = b'\<rbrakk> \<Longrightarrow>
-   fake_frame_cap x y z a b = fake_frame_cap x' y' z' a' b'"
-  by (blast)
-
 lemma well_formed_pt_validate_attr:
-  "\<lbrakk>well_formed spec; pd_at pd_id spec;
-   opt_cap (pd_id, slot) spec = Some (PageTableCap pt_id (Fake attr) None)\<rbrakk> \<Longrightarrow>
+  "\<lbrakk> well_formed spec; pd_at pd_id spec;
+     opt_cap (pd_id, slot) spec = Some (PageTableCap pt_id (Fake attr) None) \<rbrakk> \<Longrightarrow>
    validate_pt_vm_attributes attr = attr"
-  apply (clarsimp simp: well_formed_def, elim allE[where x=pd_id])
-  apply (fastforce simp: object_at_def is_pd_def
-                         well_formed_caps_def opt_cap_def
-                         slots_of_def validate_pt_vm_attributes_def)
-  done
+  (* slow *)
+  by (clarsimp simp: well_formed_def, elim allE[where x=pd_id])
+     (fastforce simp: object_at_def is_pd_def
+                      well_formed_caps_def opt_cap_def
+                      slots_of_def validate_pt_vm_attributes_def)
 
 lemma map_page_directory_slot_pt_wp:
   "pt_at pt_id spec \<Longrightarrow>
@@ -663,53 +660,52 @@ lemma map_page_directory_slot_pt_wp:
        (\<forall>n \<in> range cptr_map. n < 2 ^ si_cnode_size) \<and>
        pt_cap = PageTableCap pt_id (Fake attr) None  \<and>
        well_formed spec \<and>
-       slot < (2 ^ pd_size_index) \<and> (n = 12 \<or> n = (16 :: nat)) \<and>
+       slot < (2 ^ pd_size_index) \<and> (n = smallPageBits \<or> n = largePageBits) \<and>
        pd_at pd_id spec \<and>
        page_slots = slots_of_list spec pt_id \<and>
-
        opt_cap (pd_id, slot) spec = Some pt_cap)\<rbrace>
-    map_page_directory_slot spec orig_caps pd_id  cptr_map slot
-    \<lbrace>\<lambda>_. \<guillemotleft>sep_map_list_conj (\<lambda>x. (si_cnode_id, unat (cptr_map (pt_id, x)))
-                                 \<mapsto>c conjure_real_frame_cap (the_cap spec pt_id x) t)
-                            [slot <- page_slots. cap_at ((\<noteq>) NullCap) (pt_id, slot) spec] \<and>*
-          object_initialised spec t pt_id  \<and>* object_slot_initialised spec t pd_id slot \<and>*
-          si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
-          si_objects \<and>* R\<guillemotright>\<rbrace>"
+   map_page_directory_slot spec orig_caps pd_id  cptr_map slot
+   \<lbrace>\<lambda>_. \<guillemotleft>sep_map_list_conj (\<lambda>x. (si_cnode_id, unat (cptr_map (pt_id, x)))
+                                \<mapsto>c conjure_real_frame_cap (the_cap spec pt_id x) t)
+                           [slot <- page_slots. cap_at ((\<noteq>) NullCap) (pt_id, slot) spec] \<and>*
+         object_initialised spec t pt_id  \<and>* object_slot_initialised spec t pd_id slot \<and>*
+         si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
+         si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: map_page_directory_slot_def)
   apply (rule hoare_name_pre_state)
   apply (wp map_page_table_slot_wp[where pt_cap=pt_cap,
                                    simplified sep_wp_simp, THEN sep_hoare_fold_mapM_x]
             map_page_table_in_pd_wp[where attr=attr, sep_wandise])+
-   apply (clarsimp, intro conjI impI)
-      apply sep_cancel+
-      apply (clarsimp simp: pt_size_def small_frame_size_def word_of_nat_less word_bits_def
-                            unat_of_nat32)
-      apply (sep_fold_cancel, rule sep_map_sep_foldI)
-       apply (clarsimp simp: map_def comp_def object_empty_decomp object_initialised_decomp
-                             object_empty_slots_empty_initialised object_fields_empty_initialised_pt
-                             object_slots_initialised_decomp object_slots_empty_decomp sep_conj_ac)
+  apply (clarsimp, intro conjI impI)
        apply sep_cancel+
-       apply (clarsimp simp: well_formed_finite sep.prod.union_diff2 sep_list_conj_sep_map_set_conj
-                             well_formed_distinct_slots_of_list
-                             sep_map_set_conj_set_cong
-                               [OF split_filter_set
-                                     [where xs="dom (slots_of pt_id spec)" and
-                                            P="\<lambda>slot. cap_at ((\<noteq>) NullCap) (pt_id, slot) spec"]])
-       apply sep_cancel+
-       apply (fastforce elim: sep_map_set_conj_match
-                        simp: pt_NullCap_empty_init not_cap_at_cap_not_at eq_commute)
-      apply clarsimp
-      apply (intro conjI, clarsimp simp: object_at_def cap_at_def)
+       apply (clarsimp simp: pt_size_def small_frame_size_def word_of_nat_less word_bits_def
+                             unat_of_nat32)
+       apply (sep_fold_cancel, rule sep_map_sep_foldI)
+        apply (clarsimp simp: map_def comp_def object_empty_decomp object_initialised_decomp
+                              object_empty_slots_empty_initialised object_fields_empty_initialised_pt
+                              object_slots_initialised_decomp object_slots_empty_decomp sep_conj_ac)
+        apply sep_cancel+
+        apply (clarsimp simp: well_formed_finite sep.prod.union_diff2 sep_list_conj_sep_map_set_conj
+                              well_formed_distinct_slots_of_list
+                              sep_map_set_conj_set_cong[
+                                OF split_filter_set[
+                                     where xs="dom (slots_of pt_id spec)"
+                                       and P="\<lambda>slot. cap_at ((\<noteq>) NullCap) (pt_id, slot) spec"]])
+        apply sep_cancel+
+        apply (fastforce elim: sep_map_set_conj_match
+                         simp: pt_NullCap_empty_init not_cap_at_cap_not_at eq_commute)
+       apply clarsimp
+       apply (intro conjI, clarsimp simp: object_at_def cap_at_def)
           apply (rule refl)
-  defer
-        apply clarsimp
-  apply (frule_tac page_cap="the (opt_cap (pt_id, x) spec)" in wf_cap_in_pt_is_frame)
-          apply (fastforce simp: cap_at_def)+
-      apply (frule well_formed_slot_object_size_bits_pt[where obj_id=pt_id,
-                                                        simplified is_pt_pt_size])
+         defer
+         apply clarsimp
+         apply (frule_tac page_cap="the (opt_cap (pt_id, x) spec)" in wf_cap_in_pt_is_frame)
+            apply (fastforce simp: cap_at_def)+
+        apply (frule well_formed_slot_object_size_bits_pt[where obj_id=pt_id,
+                                                          simplified is_pt_pt_size])
            apply (fastforce simp: cap_at_def opt_cap_def pt_size_def small_frame_size_def)+
-  apply (simp add: cap_vmattrs_def well_formed_pt_validate_attr)+
+   apply (simp add: cap_vmattrs_def well_formed_pt_validate_attr)+
   done
 
 (***********************************************************
@@ -839,21 +835,10 @@ lemma wf_split_slots_of_pd:
 lemma wf_pd_pt_obj_inj:
   "\<lbrakk>well_formed spec; pd_at pd_id spec\<rbrakk>
    \<Longrightarrow> inj_on (ref_obj spec pd_id)
-             {slot \<in> dom (slots_of pd_id spec). cap_object_from_slot pd_id slot pt_at spec}"
-  supply object_type_is_object[simp]
-  apply (clarsimp simp: inj_on_def cap_ref_object_def object_at_def)
-  apply (frule_tac obj_id=pd_id and slot=y in well_formed_types_match)
-     apply fastforce+
-  using object_type_is_object(9) object_type_object_at(9) wf_pd_cap_has_object apply blast
-  apply clarsimp+
-  apply (frule_tac obj_id=pd_id and slot=x in well_formed_types_match, fastforce+)
-  using object_type_is_object(9) object_type_object_at(9) wf_pd_cap_has_object apply blast
-  apply (clarsimp simp: cap_type_def split: cdl_cap.splits)
-  apply (frule_tac obj_id=pd_id and obj_id'=pd_id and slot=x and slot'=y in
-                   well_formed_fake_pt_caps_unique)
-         apply fastforce+
-     apply (erule well_formed_pt_cap_is_fake_pt_cap, fastforce+)
-    apply (erule well_formed_pt_cap_is_fake_pt_cap, fastforce+)
+              {slot \<in> dom (slots_of pd_id spec). cap_object_from_slot pd_id slot pt_at spec}"
+  apply (clarsimp simp: inj_on_def cap_ref_object_def object_at_def object_type_is_object)
+  apply (metis object_type_object_at(9) well_formed_fake_pt_caps_unique
+               well_formed_pt_cap_is_fake_pt_cap well_formed_types_match wf_pd_cap_has_object)
   done
 
 lemma sep_map_pd_slots_inj[simp]:
@@ -879,7 +864,8 @@ lemma sep_map_pd_slots_inj[simp]:
   apply (clarsimp simp: cap_ref_object_def)
   done
 
-lemma opt_cap_cap_at_simp: "(opt_cap ref spec = Some cap) = cap_at (\<lambda>x. x = cap) ref spec"
+lemma opt_cap_cap_at_simp:
+  "(opt_cap ref spec = Some cap) = cap_at (\<lambda>x. x = cap) ref spec"
   by (clarsimp simp: cap_at_def)
 
 (***********************************************************
@@ -971,7 +957,7 @@ lemma spec2s_default_tcb [simp]:
   apply clarsimp
   done
 
-(* MoveMe *)
+(* FIXEM: move *)
 lemma object_default_state_spec2s:
   "object_default_state obj = obj \<Longrightarrow> spec2s t obj = obj"
   apply (clarsimp simp: object_default_state_def2 split: cdl_object.splits)
@@ -1015,8 +1001,7 @@ definition pd_equiv_class :: "cdl_state \<Rightarrow> (cdl_object_id \<times> cd
 
 lemma pd_equiv_sym:
   "sym (pd_equiv_class spec)"
-  apply (clarsimp simp: sym_def pd_equiv_class_def)
-  by blast
+  by (auto simp: sym_def pd_equiv_class_def)
 
 lemma pt_parents_eq:
   "\<lbrakk>well_formed spec; pd_at obj_id spec; pd_at obj_id' spec; pt_at pt spec;
@@ -1034,10 +1019,9 @@ lemma pt_parents_eq:
 
 lemma pd_equiv_trans:
   "well_formed spec \<Longrightarrow> trans (pd_equiv_class spec)"
-  apply (clarsimp simp: trans_def pd_equiv_class_def)
-  apply (rule_tac x=obj in exI)
-  apply (clarsimp)
-  using pt_parents_eq by blast
+  using pt_parents_eq
+  by (clarsimp simp: trans_def pd_equiv_class_def)
+     blast
 
 abbreviation (input)
   "object_in_cap P ref spec \<equiv> cap_at (\<lambda>cap. cap \<noteq> NullCap \<and> P (cap_object cap)) ref spec"
@@ -1079,6 +1063,7 @@ lemma pd_quotient_eq_pts_of_pds:
                                     \<and> ref_obj spec obj slot = x))} // pd_equiv_class spec - {{}}"
   apply (clarsimp simp: image_def quotient_def Image_def cong: SUP_cong_simp)
   apply (intro set_eqI iffI; clarsimp simp: cap_at_def)
+   apply (rename_tac x' slot cap cm)
    apply (guess_exI)
    apply safe
      apply (fastforce simp: wf_pd_cap_has_object cap_ref_object_def)
@@ -1087,21 +1072,25 @@ lemma pd_quotient_eq_pts_of_pds:
     apply (intro conjI; fastforce simp: wf_pd_cap_has_object cap_ref_object_def
                                         cap_at_def parent_obj_of_def)
    apply (clarsimp simp: cap_ref_object_def)
-   apply (frule_tac pd=xa in wf_pd_equiv_parentD; clarsimp?)
+   apply (frule_tac pd=x' in wf_pd_equiv_parentD; clarsimp?)
     apply (fastforce simp: wf_pd_cap_has_object cap_ref_object_def cap_at_def parent_obj_of_def)
    apply (drule pd_equiv_ptsD, clarsimp simp: parent_obj_of_def cap_at_def)
-   apply (rule_tac x=slota in exI)
+   apply (rename_tac slot' cap' cm')
+   apply (rule_tac x=slot' in exI)
    apply (fastforce simp: wf_pd_cap_has_object cap_ref_object_def
                           pd_equiv_class_def cap_at_def parent_obj_of_def)
+  apply (rename_tac obj slot cm cap x)
   apply (rule_tac x=obj in exI)
   apply (clarsimp simp: cap_ref_object_def)
   apply (intro set_eqI iffI; clarsimp)
-   apply (frule_tac pd=obj and pt'=xa in wf_pd_equiv_parentD; clarsimp?)
+   apply (rename_tac x')
+   apply (frule_tac pd=obj and pt'=x' in wf_pd_equiv_parentD; clarsimp?)
     apply (fastforce simp: parent_obj_of_def cap_at_def)
    apply (drule pd_equiv_ptsD, clarsimp simp: parent_obj_of_def cap_at_def)
-   apply (rule_tac x=slota in exI)
+   apply (rename_tac slot' cap' cm')
+   apply (rule_tac x=slot' in exI)
    apply (fastforce simp: wf_pd_cap_has_object cap_ref_object_def
-      pd_equiv_class_def cap_at_def parent_obj_of_def)
+                          pd_equiv_class_def cap_at_def parent_obj_of_def)
   apply (clarsimp simp: pd_equiv_class_def)
   apply (rule_tac x=obj in exI)
   apply (clarsimp simp: parent_obj_of_def cap_at_def)
@@ -1123,6 +1112,7 @@ lemma well_formed_pt_not_in_pd_empty_init:
   apply (drule not_object_at, fastforce)
   apply (frule (2) well_formed_cap_to_non_empty_pt)
   apply clarsimp
+  apply (rename_tac pd_id slot cap)
   apply (erule_tac x=pd_id in allE, clarsimp)
   apply (clarsimp simp: object_at_def)
   apply (case_tac "cap \<noteq> NullCap")
@@ -1148,7 +1138,8 @@ lemma pt_parents_pd_pts_empty:
    apply (rule equivI; clarsimp simp: pd_equiv_sym[simplified fun_app_def] pd_equiv_trans)
   apply (clarsimp simp: slots_in_object_empty_def, rule sym, subst sep_map_set_squash)
     apply clarsimp
-    apply (drule_tac x=x and y=y in pd_pts_inj_or_empty, clarsimp+)
+    apply (rename_tac x y slot y')
+    apply (drule_tac x=x and y=y in pd_pts_inj_or_empty; clarsimp)
     apply blast
    apply fastforce
   apply (rule sym)
@@ -1179,6 +1170,7 @@ lemma pt_parents_pd_pts_init:
    apply (rule equivI; clarsimp simp: pd_equiv_sym[simplified fun_app_def] pd_equiv_trans)
   apply (clarsimp simp: slots_in_object_init_def, rule sym, subst sep_map_set_squash)
     apply clarsimp
+    apply (rename_tac x y slot y')
     apply (drule_tac x=x and y=y in pd_pts_inj_or_empty, clarsimp+)
     apply blast
    apply clarsimp
@@ -1228,8 +1220,7 @@ lemma init_vspace_sep:
          clarsimp simp: object_at_def object_type_is_object)+
   apply (clarsimp simp: init_vspace_def sep_conj_assoc)
   apply (wp sep_hoare_fold_mapM_x[OF map_page_directory_wp[simplified sep_wp_simp]], simp+)
-     apply (frule_tac obj_id=x in well_formed_pd_slots; clarsimp)
-  using Ball_set apply fastforce
+     apply (fastforce dest: well_formed_pd_slots simp flip: Ball_set)
     apply (frule valid_slot_region_less_all)
     apply (clarsimp simp: make_frame_cap_map_def si_cnode_size_def
                    split: option.splits)
@@ -1250,10 +1241,9 @@ lemma init_vspace_sep:
   apply (clarsimp simp: pt_parents_pd_pts_empty pt_parents_pd_pts_init, sep_cancel+)
   apply (subst (asm) sep_map_set_conj_subst[OF well_formed_pt_not_in_pd_empty_init])
      apply fastforce+
-   apply (clarsimp simp: parent_obj_of_def)
-   apply (erule_tac x=obj in allE, drule mp, assumption, clarsimp simp: cap_at_def)
-   apply (fastforce simp: cap_ref_object_def)
-  by sep_solve
+   apply (fastforce simp: parent_obj_of_def cap_ref_object_def cap_at_def)
+  apply sep_solve
+  done
 
 lemma init_pd_asids_sep:
   "\<lbrace>\<guillemotleft>si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*

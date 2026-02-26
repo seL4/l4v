@@ -23,7 +23,7 @@ definition parse_bootinfo ::
   od"
 
 (* Create a new object in the next free cnode slot using a given untyped.
-   Assuming an static allocation, we are sure it always returns success. *)
+   Assuming a static allocation, we are sure it always returns success. *)
 definition
   retype_untyped :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> cdl_object_type \<Rightarrow> nat \<Rightarrow> unit u_monad"
 where
@@ -61,10 +61,10 @@ definition lookup_cptr ::
     return $ the untyped_cptr_opt
   od"
 
-definition create_object :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option)
-                           \<Rightarrow> cdl_cptr \<Rightarrow> cdl_object_id
-                           \<Rightarrow> (cdl_object_id \<times> cdl_cptr) u_monad"
-where
+definition create_object ::
+  "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_cptr \<Rightarrow> cdl_object_id \<Rightarrow>
+   (cdl_object_id \<times> cdl_cptr) u_monad"
+  where
   "create_object spec free_cptr_map untyped_cptr child \<equiv> do
     object      \<leftarrow> get_spec_object spec child;
     object_type \<leftarrow> return $ object_type object;
@@ -75,30 +75,29 @@ where
     return (child, free_cptr)
   od"
 
-definition collect_children :: "('a \<times> ('b list)) list \<Rightarrow> 'b list"
-   where "collect_children xs = xs \<bind> snd"
+definition collect_children :: "('a \<times> ('b list)) list \<Rightarrow> 'b list" where
+  "collect_children xs = xs \<bind> snd"
 
-definition create_objects :: "cdl_state \<Rightarrow> (cdl_cptr \<times> bi_untyped_desc) list
-                           \<Rightarrow> bi_slot_region \<Rightarrow> (cdl_object_id \<times> (cdl_object_id list)) list
-                           \<Rightarrow> ((cdl_object_id \<Rightarrow> cdl_cptr option) \<times> bi_slot_region) u_monad"
-where
+definition create_objects ::
+  "cdl_state \<Rightarrow> (cdl_cptr \<times> bi_untyped_desc) list \<Rightarrow> bi_slot_region \<Rightarrow>
+   (cdl_object_id \<times> cdl_object_id list) list \<Rightarrow>
+   ((cdl_object_id \<Rightarrow> cdl_cptr option) \<times> bi_slot_region) u_monad"
+  where
   "create_objects spec untyped_list free_cptrs untyped_derivations \<equiv> do
-     si_caps <- return $ map_of $ zip_region (collect_children untyped_derivations)
-                                                  free_cptrs;
+     si_caps <- return $ map_of $ zip_region (collect_children untyped_derivations) free_cptrs;
      mapM_x (\<lambda>(parent, children).
-              do parent_cptr <- lookup_cptr untyped_list parent;
-                 mapM_x (create_object spec si_caps parent_cptr) children od)
+               do parent_cptr <- lookup_cptr untyped_list parent;
+                  mapM_x (create_object spec si_caps parent_cptr) children od)
             untyped_derivations;
      return (si_caps, drop_region' (collect_children untyped_derivations) free_cptrs)
-  od"
+   od"
 
 (* This makes the IRQ handler caps.
  * These caps are then used to set up the IRQs.
  * We need some predicate to say that they are there.
  * irq \<mapsto>c IrqHandlerCap cnode_id?
  *)
-definition create_irq_cap :: "cdl_state \<Rightarrow> (cdl_irq \<times> cdl_cptr) \<Rightarrow> unit u_monad"
-where
+definition create_irq_cap :: "cdl_state \<Rightarrow> (cdl_irq \<times> cdl_cptr) \<Rightarrow> unit u_monad" where
   "create_irq_cap spec \<equiv> \<lambda>(irq, free_cptr). do
     control_cap \<leftarrow> return seL4_CapIRQControl;
     root  \<leftarrow> return seL4_CapInitThreadCNode;
@@ -176,7 +175,7 @@ where
   od"
 
 (* As CNode caps can be moved, referencing the CNodes can be tricky.
- * Moving capabilities in a particular order would work for all be difficult circular cases,
+ * Moving capabilities in a particular order would work for all the difficult circular cases,
  * but just keeping a copy of the caps to all of the CNodes and using the copy is much easier.
  *
  * Thread caps are duplicated as the system initialiser needs to have them to start the threads

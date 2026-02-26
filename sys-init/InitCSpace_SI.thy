@@ -13,44 +13,13 @@ imports
   Mapped_Separating_Conjunction
 begin
 
-(****************************
- * Move me
- *****************************)
-
-lemma sum_less:
-  "\<lbrakk>(a::nat) \<le> a';  a' + b \<le> c\<rbrakk> \<Longrightarrow> a + b \<le> c"
-  by auto
-
-lemma mask_smaller:
-   "((x::word32) && mask n) \<le> x"
-   by (metis word_and_le2)
-
-(* Not used by might be useful someday *)
-lemma map_of_zip_is_Some2:
-  "\<lbrakk>length xs = length ys; distinct xs\<rbrakk>
-  \<Longrightarrow> (y \<in> set ys) = (\<exists>x. map_of (zip xs ys) x = Some y)"
-  apply (subst ran_map_of_zip [symmetric, where xs=xs and ys=ys], simp+)
-  apply (rule)
-   apply (metis map_of_SomeD ranE)
-  apply (clarsimp simp: ran_def)
-  done
-
-(* Not used by might be useful someday *)
-lemma map_of_zip_is_Some2':
-  "\<lbrakk>length xs \<le> length ys; distinct xs; map_of (zip xs ys) x = Some y\<rbrakk> \<Longrightarrow> y \<in> set ys"
-  apply (subst (asm) zip_take_length[symmetric])
-  apply (drule iffD2 [OF map_of_zip_is_Some2, rotated], fast)
-  apply (clarsimp simp: min_def)
-  by (rule in_set_takeD)
-
 (*********************
  Moved to capDL somewhere.
  *)
 
 lemma object_slot_spec2s:
-  "object_slots obj slot = object_slots obj' slot
-  \<Longrightarrow> object_slots (spec2s t obj) slot =
-      object_slots (spec2s t obj') slot"
+  "object_slots obj slot = object_slots obj' slot \<Longrightarrow>
+   object_slots (spec2s t obj) slot = object_slots (spec2s t obj') slot"
   apply (case_tac "has_slots obj")
    apply (case_tac "has_slots obj'")
    apply (clarsimp simp: spec2s_def)+
@@ -59,11 +28,9 @@ lemma object_slot_spec2s:
   done
 
 lemma object_slots_frame_case_lift:
-  "object_slots
-         (case obj of Frame frame \<Rightarrow> Frame (f frame) | _ \<Rightarrow> g)
-         slot =
+  "object_slots (case obj of Frame frame \<Rightarrow> Frame (f frame) | _ \<Rightarrow> g) slot =
    (case obj of Frame frame \<Rightarrow> None | _ \<Rightarrow> object_slots g slot)"
-by(cases obj; clarsimp simp add: object_slots_def)
+  by(cases obj; clarsimp simp add: object_slots_def)
 
 lemma object_slot_object_initialised_state:
   "object_slots obj slot = object_slots obj' slot
@@ -95,9 +62,7 @@ lemma default_cap_has_type:
 lemma cap_has_type_update_cap_object[simp]:
   "cap_has_type (update_cap_object client_object_id spec_cap)
   = cap_has_type spec_cap"
-  apply (case_tac spec_cap,
-         (fastforce simp: cap_type_def update_cap_object_def)+)
-  done
+  by simp
 
 lemma ep_related_cap_badge_of_default:
   "\<lbrakk>ep_related_cap spec_cap; cap_type spec_cap = Some type\<rbrakk>
@@ -123,9 +88,8 @@ lemma si_spec_irq_null_cap_at_si_spec_irq_cap_at_has_type:
 
 lemma cnode_at_not_tcb_at:
   "\<lbrakk>cnode_at obj_id spec \<rbrakk>\<Longrightarrow> \<not>tcb_at obj_id spec"
-  apply (clarsimp simp: object_at_def is_cnode_def is_tcb_def)
-  apply (case_tac object, simp_all)
-  done
+  using cnode_or_tcb_at_simps(2)
+  by blast
 
 lemma guard_size_well_formed:
   "\<lbrakk>guard_size < guard_bits; (g::word32) < 2 ^ guard_size\<rbrakk> \<Longrightarrow>
@@ -159,10 +123,7 @@ lemma well_formed_cap_valid_src_cap:
   apply (subst word_ao_dist)
   apply (subst shiftl_mask_is_0, simp)
   apply (clarsimp simp: word_bits_size word_bits_def)
-  apply (rule_tac a'="guard_size" in sum_less)
-   apply (cut_tac x="of_nat guard_size" and n=5 in mask_smaller)
-   apply (erule word_unat_less_le)
-  apply simp
+  apply (metis (no_types) add.commute add_le_mono1 order_trans unat_le_helper word_and_le2)
   done
 
 lemma well_formed_cap_has_object_has_type [simp]:
@@ -1741,11 +1702,6 @@ lemma init_cspace_sep':
   apply simp
   done
 
-lemma hoare_subst:
-  "\<lbrakk>\<lbrace>A\<rbrace> f \<lbrace>C\<rbrace>; A = B; C = D\<rbrakk> \<Longrightarrow> \<lbrace>B\<rbrace> f \<lbrace>D\<rbrace>"
-  by simp
-
-
 lemma si_caps_at_filter:
   "si_caps_at t si_caps spec dev (set xs) =
   (si_caps_at t si_caps spec dev (set [x\<leftarrow>xs. P x]) \<and>* si_caps_at t si_caps spec dev (set [x\<leftarrow>xs. \<not>P x]))"
@@ -1758,7 +1714,7 @@ lemma si_caps_at_restrict:
   (si_caps_at t si_caps spec dev {x \<in> xs. P x} \<and>* si_caps_at t si_caps spec dev {x \<in> xs. \<not>P x})"
   by (clarsimp simp: si_caps_at_def sep_map_set_conj_restrict)
 
-lemma length_Un_disjoint:
+lemma length_Un_disjoint: (* FIXME: move to Lib *)
   "\<lbrakk>distinct zs; distinct xs; distinct ys;
    set xs \<union> set ys = set zs; set xs \<inter> set ys = {}\<rbrakk>
   \<Longrightarrow> length xs + length ys = length zs"
@@ -1769,7 +1725,7 @@ lemma set_take_add:
    set (take i zs) \<union> set (take j (drop i zs)) = set (take k zs)"
   by (metis set_append take_add)
 
-lemma distinct_take_drop_take:
+lemma distinct_take_drop_take: (* FIXME: move to Lib *)
   "distinct xs \<Longrightarrow> set (take i (drop j xs)) \<inter> set (take j xs) = {}"
   by (metis distinct_append distinct_take inf_commute take_add)
 

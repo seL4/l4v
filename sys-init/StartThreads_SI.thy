@@ -23,14 +23,14 @@ lemma is_waiting_thread_at_real_object_at [simp]:
   by (metis is_waiting_thread_at_tcb_at real_object_not_irq_node(2))
 
 lemma is_waiting_thread_tcb_at [simp]:
-  "(tcb_at obj_id spec \<and> object_at is_waiting_thread obj_id spec) = object_at is_waiting_thread obj_id spec"
+  "(tcb_at obj_id spec \<and> object_at is_waiting_thread obj_id spec) =
+   object_at is_waiting_thread obj_id spec"
   by fastforce
 
 lemma is_waiting_thread_opt_cap_tcb_pending_op_slot [simp]:
   "\<lbrakk>cdl_objects spec obj_id = Some obj; is_waiting_thread obj\<rbrakk>
   \<Longrightarrow> opt_cap (obj_id, tcb_pending_op_slot) spec = Some RestartCap"
   by (clarsimp simp: is_waiting_thread_def opt_cap_def slots_of_def)
-
 
 lemma is_waiting_thread_opt_cap_tcb_replycap_slot [simp]:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_waiting_thread obj\<rbrakk>
@@ -44,7 +44,8 @@ lemma is_waiting_thread_opt_cap_tcb_boundntfn_slot[simp]:
   \<Longrightarrow> opt_cap (obj_id, tcb_boundntfn_slot) spec = Some NullCap"
   apply (clarsimp simp: is_waiting_thread_def opt_cap_def slots_of_def)
   apply (frule well_formed_tcb_boundntfn_cap [where obj_id=obj_id], simp add: object_at_def)
-  by (clarsimp simp: is_waiting_thread_def opt_cap_def slots_of_def)
+  apply (clarsimp simp: is_waiting_thread_def opt_cap_def slots_of_def)
+  done
 
 lemma cap_transform_RestartCap [simp]:
   "cap_transform t RestartCap = RestartCap"
@@ -61,8 +62,6 @@ lemma cap_transform_MasterReplyCap:
   apply (clarsimp simp: cap_transform_def cap_object_def update_cap_object_def)
   done
 
-
-
 lemma start_thread_sep:
   "\<lbrace>\<guillemotleft>tcb_half_initialised spec t obj_id \<and>*
      si_cap_at t dup_caps spec False obj_id \<and>*
@@ -73,8 +72,8 @@ lemma start_thread_sep:
         si_cap_at t dup_caps spec False obj_id \<and>*
         si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (clarsimp simp: start_thread_def object_initialised_def tcb_half_initialised_def object_initialised_general_def
-                        si_cap_at_def si_objects_def sep_conj_exists)
+  apply (clarsimp simp: start_thread_def object_initialised_def tcb_half_initialised_def
+                        object_initialised_general_def si_cap_at_def si_objects_def sep_conj_exists)
   apply (rule hoare_vcg_ex_lift | rule hoare_grab_asm | simp)+
   apply (subst tcb_half_decomp, (simp add: object_at_def)+)+
   apply (subst tcb_decomp, (simp add: object_at_def)+)+
@@ -87,8 +86,8 @@ lemma start_thread_sep:
          simp add: guard_equal_si_cspace_cap' is_tcb_default_cap)+
   apply (subst offset_slot_si_cnode_size', assumption)+
   apply (clarsimp simp: cap_transform_MasterReplyCap)
-  by sep_solve
-
+  apply sep_solve
+  done
 
 lemma tcb_half_id:
   "\<lbrakk>well_formed spec; is_tcb object; \<not> is_waiting_thread object;
@@ -121,11 +120,10 @@ lemma tcb_half_initialised_object_initialised':
   done
 
 lemma real_object_at_is_waiting_thread_at[simp]:
-  "(real_object_at obj_id spec \<and> is_waiting_thread_at obj_id spec) = is_waiting_thread_at obj_id spec"
-  unfolding real_object_at_def irq_nodes_def is_irq_node_def object_at_def
-            is_waiting_thread_def is_tcb_def
-  apply safe
-  by (auto split: cdl_object.splits)
+  "(real_object_at obj_id spec \<and> is_waiting_thread_at obj_id spec) =
+   is_waiting_thread_at obj_id spec"
+  using is_waiting_thread_tcb_at real_object_at_other_object
+  by blast
 
 lemma start_threads_sep:
   "\<lbrace>\<guillemotleft>tcbs_half_initialised spec t {obj_id. tcb_at obj_id spec} \<and>*
