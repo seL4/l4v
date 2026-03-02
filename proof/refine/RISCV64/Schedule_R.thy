@@ -3493,10 +3493,10 @@ lemma refillAddTail_corres:
           apply (clarsimp simp: updateRefillIndex_def)
           apply (rule corres_guard_imp)
             apply (rule monadic_rewrite_corres_r)
-             apply (rule monadic_rewrite_guard_imp)
-              apply (subst bind_dummy_ret_val)
-              apply (rule updateSchedContext_decompose[THEN monadic_rewrite_sym])
-             apply (fastforce simp: objBits_simps)
+             apply (subst bind_dummy_ret_val)
+             apply (rule updateSchedContext_decompose[THEN monadic_rewrite_sym])
+              apply fastforce
+             apply fastforce
             apply (rule_tac Q'="\<lambda>sc'. refillSize sc' < scRefillMax sc' \<and> sc_valid_refills' sc'
                                       \<and> next = refillNext sc' (scRefillTail sc')"
                          in updateSchedContext_no_stack_update_corres_Q[where Q=\<top>])

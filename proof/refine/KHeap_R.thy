@@ -106,6 +106,16 @@ lemma setObject_modify_variable_size:
   apply (simp add: simpler_modify_def)
   done
 
+lemma setObject_modify_variable_size_rewrite:
+  fixes v :: "'a :: pspace_storable"
+  assumes "updateObject v = updateObject_default v"
+  assumes "(1 :: machine_word) < 2 ^ objBits v"
+  shows "monadic_rewrite False True
+           (obj_at' (P :: 'a \<Rightarrow> bool) p and obj_at' (\<lambda>obj. objBits v = objBits obj) p)
+           (setObject p v) (modify (ksPSpace_update (\<lambda>ps. ps (p \<mapsto> injectKO v))))"
+  using assms
+  by (fastforce intro: setObject_modify_variable_size simp: monadic_rewrite_def obj_at'_def)
+
 lemma setObject_modify:
   fixes v :: "'a :: pspace_storable" shows
   "\<lbrakk>obj_at' (P :: 'a \<Rightarrow> bool) p s; updateObject v = updateObject_default v;
@@ -117,6 +127,17 @@ lemma setObject_modify:
   apply fastforce
   unfolding obj_at'_def
   by fastforce
+
+lemma setObject_modify_rewrite:
+  fixes v :: "'a :: pspace_storable"
+  assumes "updateObject v = updateObject_default v"
+  assumes "(1 :: machine_word) < 2 ^ objBits v"
+  assumes "\<And>ko. P ko \<Longrightarrow> objBits ko = objBits v"
+  shows "monadic_rewrite False True
+           (obj_at' (P :: 'a \<Rightarrow> bool) p)
+           (setObject p v) (modify (ksPSpace_update (\<lambda>ps. ps (p \<mapsto> injectKO v))))"
+  using assms
+  by (fastforce intro: setObject_modify_variable_size simp: monadic_rewrite_def obj_at'_def)
 
 lemma ovalid_readObject[wp]:
   assumes R:
@@ -1647,6 +1668,9 @@ lemma sch_act_simple[wp]:
 
 end
 
+crunch getObject
+  for (empty_fail) empty_fail[intro!, wp, simp]
+
 locale simple_ko' =
   fixes f :: "obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel"
     and g :: "obj_ref \<Rightarrow> 'a kernel"
@@ -1899,7 +1923,130 @@ lemma setObject_ko_at':
 
 lemmas set_ko_at' = setObject_ko_at'[folded f_def]
 
+lemma setObject_noop_rewrite:
+  fixes obj :: 'a
+  assumes "(1 :: machine_word) < 2 ^ objBits obj"
+  shows "monadic_rewrite False True (ko_at' obj ptr) (setObject ptr obj) (return ())"
+        (is "monadic_rewrite _ _ ?Q _ _")
+  apply (rule monadic_rewrite_guard_imp)
+   apply (rule monadic_rewrite_trans)
+    apply (rule setObject_modify_variable_size_rewrite)
+     apply (fastforce simp: default_update)
+    apply (fastforce simp: assms)
+   apply (rule monadic_rewrite_noop[where Q="?Q"])
+     apply wpsimp
+     apply (rename_tac P s)
+     apply (erule_tac P=P in rsubst)
+     apply (case_tac s; clarsimp)
+     apply (fastforce simp: obj_at'_def project_inject)
+    apply wpsimp
+   apply wpsimp
+  apply (fastforce simp: obj_at'_def)
+  done
+
+lemma no_ofail_readyObject:
+  "no_ofail (obj_at' (P::'a::pspace_storable \<Rightarrow> bool) p) (readObject p :: 'a kernel_r)"
+  apply (clarsimp simp: readObject_def obj_at'_def RISCV64_H.fromPPtr_def (* FIXME: arch split *)
+                        obind_def omonad_defs split_def no_ofail_def)
+  apply (erule (1) ps_clear_lookupAround2, simp+)
+   apply (blast intro: is_aligned_no_overflow)
+  apply (clarsimp split: option.splits)
+   apply (rule context_conjI)
+    apply (frule lookupAround2_known1)
+    apply fastforce
+   apply (force dest: lookupAround2_known1
+                simp: default_load obind_def gen_objBits_simps project_inject)
+  apply (rule context_conjI)
+   apply (frule lookupAround2_known1)
+   apply fastforce
+  apply (force dest: lookupAround2_known1
+               simp: default_load obind_def gen_objBits_simps project_inject)
+  done
+
+lemma no_fail_getObject:
+  "no_fail (obj_at' (P::'a::pspace_storable \<Rightarrow> bool) p) (getObject p::'a kernel)"
+  apply (clarsimp simp: getObject_def)
+  apply (rule no_ofail_gets_the)
+  apply (rule no_ofail_readyObject)
+  done
+
+lemma getObject_return_rewrite:
+  "monadic_rewrite False True (ko_at' (obj::'a) ptr) (getObject ptr) (return obj)"
+  apply (rule monadic_rewrite_add_return_l)
+  apply (rule monadic_rewrite_guard_imp)
+   apply (rule monadic_rewrite_symb_exec_l')
+       apply (rule monadic_rewrite_guard_arg_cong)
+       apply fastforce
+      apply (rule getObject_inv)
+     apply wpsimp
+    apply clarsimp
+    apply (rule no_fail_getObject)
+   apply (wpsimp wp: getObject_wp)
+  apply (fastforce simp: obj_at'_def)
+  done
+
+abbreviation (input) updateKernelObject :: "('a \<Rightarrow> 'a) \<Rightarrow> machine_word \<Rightarrow> unit kernel" where
+  "updateKernelObject upd ptr \<equiv> do
+     obj \<leftarrow> getObject ptr;
+     setObject ptr (upd obj)
+   od"
+
+lemma updateKernelObject_unbundle:
+  fixes obj :: 'a
+  assumes "\<And>v :: 'a. objBits (upd_1 v) = objBits v"
+  assumes "\<And>v :: 'a. objBits (upd_2 v) = objBits v"
+  shows "monadic_rewrite False True \<top>
+           (updateKernelObject (upd_2 o upd_1) ptr)
+           (do updateKernelObject upd_1 ptr;
+               updateKernelObject upd_2 ptr
+            od)"
+  apply (insert assms)
+  apply (clarsimp simp: bind_assoc)
+  apply (rule monadic_rewrite_guard_imp)
+   \<comment> \<open>getObject at the start of both sides; match and rename to obj\<close>
+   apply (rule monadic_rewrite_bind_tail)
+    apply (rename_tac obj)
+    apply (rule_tac P="(1 :: machine_word) < 2 ^ objBits obj" in monadic_rewrite_gen_asm)
+    \<comment> \<open>rewrite setObject on the LHS\<close>
+    apply (rule monadic_rewrite_trans)
+     apply (fastforce intro: setObject_modify_rewrite simp: assms default_update)
+    \<comment> \<open>rewrite setObject at the start on the RHS\<close>
+    apply (rule monadic_rewrite_transverse)
+     apply (rule monadic_rewrite_bind_head)
+     apply (fastforce intro: setObject_modify_rewrite simp: assms default_update)
+    \<comment> \<open>rewrite getObject in the middle of the RHS\<close>
+    apply (rule monadic_rewrite_transverse)
+     apply (rule monadic_rewrite_bind_tail)
+      apply (rule monadic_rewrite_bind_head)
+      apply (rule_tac obj="upd_1 obj" in getObject_return_rewrite)
+     apply wpsimp
+    \<comment> \<open>rewrite setObject at the end on the RHS\<close>
+    apply (rule monadic_rewrite_transverse)
+     apply (rule monadic_rewrite_bind_tail)
+      apply (rule monadic_rewrite_bind_tail)
+       apply (rename_tac obj')
+       apply (rule_tac P="(1 :: machine_word) < 2 ^ objBits obj'" in monadic_rewrite_gen_asm)
+       apply (fastforce intro: setObject_modify_rewrite simp: assms default_update)
+      apply wpsimp
+     apply wpsimp
+    \<comment> \<open>the getObject is now a return; use @{thm return_bind}\<close>
+    apply clarsimp
+    apply (rule monadic_rewrite_transverse)
+     \<comment> \<open>rewrite as one @{const modify}\<close>
+     apply (subst modify_modify)
+     apply (rule monadic_rewrite_refl)
+    apply (fastforce intro: monadic_rewrite_guard_arg_cong[where P=\<top>]
+                      simp: comp_def simp flip: fun_upd_def)
+   apply (wpsimp wp: getObject_wp)
+  apply (force simp: project_inject obj_at'_def objBits_def simp flip: fun_upd_def unfold_set_ko')
+  done
+
+lemmas updateKernelObect_bundle = monadic_rewrite_sym[OF updateKernelObject_unbundle]
+
+lemmas updateKernelObect_bundle_eq = monadic_rewrite_to_eq[OF updateKernelObject_unbundle]
+
 end
+
 locale simple_non_tcb_ko' = simple_ko' "f:: obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel"
                                        "g:: obj_ref \<Rightarrow> 'a kernel" for f g +
   assumes not_tcb: "projectKO_opt (KOTCB sc) = (None :: 'a option)"
@@ -2082,6 +2229,20 @@ interpretation threadSet: pspace_only' "threadSet f p"
 
 interpretation setBoundNotification: pspace_only' "setBoundNotification ntfnPtr tptr"
    by (simp add: setBoundNotification_def threadSet_pspace_only')
+
+lemma updateSchedContext_decompose:
+  "\<lbrakk>\<And>sc. objBits (g sc) = objBits sc; \<And>sc. objBits (f sc) = objBits sc\<rbrakk>
+   \<Longrightarrow> monadic_rewrite False True (sc_at' scPtr)
+         (updateSchedContext scPtr (g o f))
+         (do updateSchedContext scPtr f;
+             updateSchedContext scPtr g
+          od)"
+  apply (clarsimp simp: bind_assoc updateSchedContext_def getSchedContext_def setSchedContext_def)
+  apply (rule monadic_rewrite_guard_imp)
+   apply (subst bind_dummy_ret_val)+
+   apply (rule set_sc'.updateKernelObject_unbundle[simplified bind_assoc comp_def])
+    apply (clarsimp simp: gen_objBits_simps scBits_simps)+
+  done
 
 
 context begin interpretation Arch . (*FIXME: arch-split RT*)
