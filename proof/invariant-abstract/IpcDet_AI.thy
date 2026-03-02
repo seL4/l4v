@@ -56,11 +56,6 @@ lemmas replies_blocked_safe_kheap_updates[simp] =
        replies_blocked_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_consumed := v\<rparr>"]
        replies_blocked_kh_update_tcb[where f="\<lambda>sc v. sc\<lparr>tcb_arch := v\<rparr>", simplified]
 
-lemma ko_at_kheap_upd_id[simp]:
-  "ko_at ko p s \<Longrightarrow> (s\<lparr>kheap := (kheap s)(p \<mapsto> ko)\<rparr> = s)"
-  unfolding obj_at_def fun_upd_def
-  by (rule abstract_state.equality, rule ext; simp)
-
 crunch send_ipc
  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: hoare_drop_imps mapM_wp_inv maybeM_inv simp: crunch_simps)
@@ -1082,12 +1077,12 @@ lemma set_mrs_valid_replies[wp]:
   "set_mrs receiver recv_buffer x2 \<lbrace> valid_replies_pred P \<rbrace>"
   unfolding set_mrs_def
   by (wpsimp wp:zipWithM_x_inv' set_object_wp,
-      clarsimp dest!: get_tcb_SomeD simp: obj_at_def)
+      clarsimp dest!: get_tcb_SomeD simp: ko_at_kheap_upd_id obj_at_def)
 
 lemma sched_context_update_consumed_valid_replies[wp]:
   "sched_context_update_consumed p \<lbrace> valid_replies_pred P \<rbrace>"
   unfolding sched_context_update_consumed_def
-  by (wpsimp wp: update_sched_context_wp)
+  by (wpsimp wp: update_sched_context_wp simp: ko_at_kheap_upd_id)
 
 crunch do_ipc_transfer
  for valid_replies[wp]: "valid_replies_pred P"
