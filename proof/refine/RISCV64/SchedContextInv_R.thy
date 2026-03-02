@@ -902,36 +902,37 @@ lemma refillNew_corres:
                subst bind_assoc[symmetric],
                rule monadic_rewrite_bind_head,
                subst bind_dummy_ret_val,
-               rule updateSchedContext_decompose[THEN monadic_rewrite_sym])+
-        apply (rule corres_split)
-           (* use setSchedContext_corres *)
-           apply (rule monadic_rewrite_corres_l[OF update_sched_context_rewrite[where n=n]])
-           apply (simp add: updateSchedContext_def)
-           apply (rule corres_split[OF get_sc_corres_size[where n=n]])
-             apply (rename_tac sc sc')
-             apply (rule_tac P="ko_at (kernel_object.SchedContext sc n) sc_ptr
-                                and valid_objs and pspace_aligned and pspace_distinct"
-                         and P'="\<lambda>s'. ko_at' sc' sc_ptr s'
-                                      \<and> ((\<lambda>sc'. length (scRefills sc') =
-                                                 refillAbsoluteMax' (minSchedContextBits + n)
-                                                \<and> scSize sc' = n) |<
-                                         scs_of' s') sc_ptr"
-                          in corres_inst)
-             apply (rule_tac F="length (scRefills sc')
-                                = refillAbsoluteMax' (minSchedContextBits + scSize sc')"
-                          in corres_req)
-              apply (fastforce simp: obj_at_simps opt_map_red opt_pred_def)
-             apply (rule stronger_corres_guard_imp)
-               apply (rule setSchedContext_corres)
-                apply (clarsimp simp: sc_relation_def refills_map_def valid_refills_number'_def
-                                      refillSize_def wrap_slice_start_0
-                                      max_num_refills_eq_refillAbsoluteMax')
-                apply (case_tac "scRefills sc'"; simp add: updateAt_def null_def refill_map_def)
-               apply (clarsimp simp: sc_relation_def)
-              apply simp
-             apply (fastforce simp: obj_at_simps
-                             dest!: sc_replies_relation_prevs_list[OF state_relation_sc_replies_relation])
-            apply (wpsimp wp: getSchedContext_wp')+
+               rule updateSchedContext_decompose[THEN monadic_rewrite_sym],
+               fastforce, fastforce)+
+      apply (rule corres_split)
+         (* use setSchedContext_corres *)
+         apply (rule monadic_rewrite_corres_l[OF update_sched_context_rewrite[where n=n]])
+         apply (simp add: updateSchedContext_def)
+         apply (rule corres_split[OF get_sc_corres_size[where n=n]])
+           apply (rename_tac sc sc')
+           apply (rule_tac P="ko_at (kernel_object.SchedContext sc n) sc_ptr
+                              and valid_objs and pspace_aligned and pspace_distinct"
+                       and P'="\<lambda>s'. ko_at' sc' sc_ptr s'
+                                    \<and> ((\<lambda>sc'. length (scRefills sc') =
+                                               refillAbsoluteMax' (minSchedContextBits + n)
+                                              \<and> scSize sc' = n) |<
+                                       scs_of' s') sc_ptr"
+                        in corres_inst)
+           apply (rule_tac F="length (scRefills sc')
+                              = refillAbsoluteMax' (minSchedContextBits + scSize sc')"
+                        in corres_req)
+            apply (fastforce simp: obj_at_simps opt_map_red opt_pred_def)
+           apply (rule stronger_corres_guard_imp)
+             apply (rule setSchedContext_corres)
+              apply (clarsimp simp: sc_relation_def refills_map_def valid_refills_number'_def
+                                    refillSize_def wrap_slice_start_0
+                                    max_num_refills_eq_refillAbsoluteMax')
+              apply (case_tac "scRefills sc'"; simp add: updateAt_def null_def refill_map_def)
+             apply (clarsimp simp: sc_relation_def)
+            apply simp
+           apply (fastforce simp: obj_at_simps
+                           dest!: sc_replies_relation_prevs_list[OF state_relation_sc_replies_relation])
+          apply (wpsimp wp: getSchedContext_wp')+
         apply (rule maybeAddEmptyTail_corres[unfolded dc_def])
        apply (clarsimp simp: obj_at_simps opt_map_red opt_pred_def valid_refills_number'_def
                              refillSize_def)
@@ -986,7 +987,8 @@ lemma refillUpdate_corres:
            subst bind_assoc[symmetric],
            rule monadic_rewrite_bind_head,
            subst bind_dummy_ret_val,
-           rule updateSchedContext_decompose[THEN monadic_rewrite_sym])+
+           rule updateSchedContext_decompose[THEN monadic_rewrite_sym],
+           fastforce, fastforce)+
 
     apply (rule corres_split)
        (* now use setSchedContext_corres *)
@@ -1118,7 +1120,8 @@ lemma refillNew_invs':
    apply (rule monadic_rewrite_refine_valid,
           (subst bind_assoc[symmetric], rule monadic_rewrite_bind_head)?,
           subst bind_dummy_ret_val,
-          rule updateSchedContext_decompose)+
+          rule updateSchedContext_decompose,
+          fastforce, fastforce)+
         apply (wpsimp wp: updateSchedContext_invs')
        apply fastforce
       apply (wpsimp wp: updateSchedContext_wp)+

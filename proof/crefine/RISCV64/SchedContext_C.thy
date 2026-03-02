@@ -83,8 +83,8 @@ lemma refill_new_ccorres:
 
   apply (cinit lift: sc_' max_refills_' budget_' period_')
    apply (rule ccorres_pre_getCurTime, rename_tac curTime)
-  \<comment> \<open>bundle individual updateSchedContext steps updating the scPeriod, scRefillHead, scRefillTail,
-      and scRefillMax into one large updateSchedContext\<close>
+   \<comment> \<open>bundle individual updateSchedContext steps updating the scPeriod, scRefillHead, scRefillTail,
+       and scRefillMax into one large updateSchedContext\<close>
    apply (rule_tac Q5="?abs and (\<lambda>s. ksCurTime s = curTime)"
                 in monadic_rewrite_ccorres_assemble[rotated, where P=Q and Q=Q for Q, simplified],
           subst bind_assoc[symmetric],
@@ -92,6 +92,7 @@ lemma refill_new_ccorres:
           subst bind_dummy_ret_val,
           rule monadic_rewrite_guard_imp,
           rule updateSchedContext_decompose[THEN monadic_rewrite_sym],
+          fastforce, fastforce,
           clarsimp simp: objBits_simps active_sc_at'_rewrite)+
    apply (rule stronger_ccorres_guard_imp[where A'=Q' and Q'=Q' for Q', simplified])
      apply (rule ccorres_move_c_guard_sc)
@@ -294,6 +295,7 @@ lemma refill_update_ccorres:
             rule monadic_rewrite_bind_head, subst bind_dummy_ret_val,
             rule monadic_rewrite_guard_imp,
             rule updateSchedContext_decompose[THEN monadic_rewrite_sym],
+            fastforce, fastforce,
             clarsimp simp: objBits_simps active_sc_at'_rewrite, assumption)+
      apply (rule ccorres_rhs_assoc2)
      apply (rule ccorres_rhs_assoc2)
