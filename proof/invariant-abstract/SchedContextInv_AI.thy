@@ -1249,21 +1249,21 @@ lemma shows
    update_sched_context p (\<lambda>_. sc\<lparr>sc_sporadic := f \<rparr>)
    \<lbrace>\<lambda>rv. valid_replies_pred P\<rbrace>"
   by (wpsimp wp: update_sched_context_wp,
-      fastforce dest: ko_at_obj_congD)+
+      fastforce simp: ko_at_kheap_upd_id dest: ko_at_obj_congD)+
 
 lemma update_sc_refills_period_refill_max_valid_replies:
   "\<lbrace>valid_replies_pred P and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
    update_sched_context p (\<lambda>_. sc\<lparr>sc_period := period, sc_refill_max := m, sc_refills := r, sc_budget := b\<rparr>)
    \<lbrace>\<lambda>rv. valid_replies_pred P\<rbrace>"
   by (wpsimp wp: update_sched_context_wp,
-      fastforce dest: ko_at_obj_congD)
+      fastforce simp: ko_at_kheap_upd_id dest: ko_at_obj_congD)
 
 lemma update_sc_refills_valid_replies[wp]:
   "\<lbrace>valid_replies_pred P and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
    update_sched_context p (\<lambda>_. sc\<lparr>sc_refills := r\<rparr>)
    \<lbrace>\<lambda>rv. valid_replies_pred P\<rbrace>"
   by (wpsimp wp: update_sched_context_wp,
-      fastforce dest: ko_at_obj_congD)
+      fastforce simp: ko_at_kheap_upd_id dest: ko_at_obj_congD)
 
 lemma shows
   update_sc_badge_cur_sc_tcb:
@@ -1431,10 +1431,8 @@ lemma update_sched_context_sc_refills_update_invs:
                    update_sched_context_refs_of_same)
 
 lemma sc_consumed_add_valid_replies:
-  "\<lbrace> valid_replies \<rbrace>
-   update_sched_context scp (\<lambda>sc. sc\<lparr>sc_consumed := sc_consumed sc + consumed\<rparr>)
-   \<lbrace> \<lambda>_. valid_replies \<rbrace>"
-  by (wpsimp wp: update_sched_context_wp)
+  "update_sched_context scp (\<lambda>sc. sc\<lparr>sc_consumed := sc_consumed sc + consumed\<rparr>) \<lbrace>valid_replies\<rbrace>"
+  by (wpsimp wp: update_sched_context_wp simp: ko_at_kheap_upd_id)
 
 lemma sc_consumed_add_invs:
   "\<lbrace>\<lambda>s. invs s\<rbrace>
