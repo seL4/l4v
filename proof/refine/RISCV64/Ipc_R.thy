@@ -3367,13 +3367,22 @@ lemma tcb_release_enqueue_monadic_rewrite:
            apply (cut_tac s=s and y="tcb_ptr" and new=tcb_ptr in insort_partition_read_tcb_ready_time)
             apply fastforce
            apply (clarsimp simp: insort_filter_def insort_partition_def)
-           subgoal for rv s
-             by (cut_tac f="\<lambda>ptr. the (read_tcb_ready_time ptr s)"
-                     and ls="release_queue s" and sfx=rv
-                     and new=tcb_ptr
-                      in takeWhile_dropWhile_insert_list_before;
-                 (fastforce simp: sorted_release_q'_def map_fst_takeWhile_zip map_fst_dropWhile_zip
-                                  map_fst_filter_zip))
+           apply (cut_tac f=read_tcb_ready_time
+                      and ts="release_queue s"
+                      and R=less_eq
+                      and ptr="hd sfx"
+                      and t=tcb_ptr
+                      and val="the (read_tcb_ready_time tcb_ptr s)"
+                       in takeWhile_dropWhile_insert_list_before)
+                 apply fastforce
+                apply (clarsimp simp: suffix_def)
+               apply (fastforce simp: sorted_release_q'_def)
+              apply (fastforce simp: suffix_def sorted_release_q'_def map_fst_dropWhile_zip
+                                     map_fst_filter_zip)
+             apply (clarsimp simp: suffix_def valid_release_q_def)
+             apply (metis distinct_append distinct_inj_middle list.sel(1) min_list.cases)
+            apply fastforce
+           apply fastforce
           apply (wpsimp wp: find_time_after_sfx_nonempty find_time_after_sfx_sfx
                             find_time_after_pfx find_time_after_hd_relation)
          apply (wpsimp wp: get_tcb_ready_time_wp)
@@ -3513,7 +3522,7 @@ lemma findTimeAfter_corres:
                    dest!: release_queue_active_sc_tcb_at_cross)
   apply (rule stronger_corres_guard_imp)
     apply (rule_tac P="\<lambda>r s. ?abs s \<and> suffix r ls"
-                and P'="\<lambda>_. ?conc"
+                and P'="\<lambda>_ _. ?conc"
                  in corres_whileLoop_abs_ret)
           apply clarsimp
           apply (rule_tac f="time_after r newTime"

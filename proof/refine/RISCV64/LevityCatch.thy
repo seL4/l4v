@@ -9,6 +9,7 @@ imports
   "BaseRefine.Include"
   "Lib.LemmaBucket"
   "Lib.Corres_Method"
+  "Lib.CorresWhile"
 begin
 
 (* Try again, clagged from Include *)

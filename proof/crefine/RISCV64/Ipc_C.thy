@@ -4980,7 +4980,7 @@ lemma tcbReleaseEnqueue_ccorres:
    apply (clarsimp simp: ksReleaseQueue_asrt_def)
    apply (frule (3) obj_at'_tcbQueueHead_ksReleaseQueue)
    apply (frule (3) obj_at'_tcbQueueEnd_ksReleaseQueue)
-   apply (frule tcbQueueHead_iff_tcbQueueEnd)
+   apply (frule he_ptrs_head_iff_he_ptrs_end)
    apply (fastforce simp: opt_pred_def opt_map_def obj_at'_def simp: tcbQueueEmpty_def)
   apply (fastforce simp: ctcb_queue_relation_def option_to_ctcb_ptr_def tcbQueueEmpty_def
                   split: option.splits)

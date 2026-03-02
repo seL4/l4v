@@ -2672,10 +2672,6 @@ lemma fst_subset:
   "fst ` A \<subseteq> fst ` B \<Longrightarrow> (r, q) \<in> A \<Longrightarrow> \<exists>t. (r,t) \<in> B"
   by fastforce
 
-lemma distinct_hd_not_in_tl:
-  "distinct xs \<Longrightarrow> hd xs \<notin> set (tl xs)"
-  by (case_tac xs; clarsimp)
-
 lemma option_Some_value_independent:
   "\<lbrakk> f x = Some v; \<And>v'. f x = Some v' \<Longrightarrow> f y = Some v' \<rbrakk> \<Longrightarrow> f y = Some v"
   by blast
