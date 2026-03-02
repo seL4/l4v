@@ -375,7 +375,7 @@ lemma tcbSchedAppend_iflive'[wp]:
    apply (drule_tac x="tcbPriority tcb" in spec)
    apply clarsimp
    apply (frule (3) obj_at'_tcbQueueEnd_ksReadyQueues)
-   apply (frule tcbQueueHead_iff_tcbQueueEnd)
+   apply (frule he_ptrs_head_iff_he_ptrs_end)
    apply (clarsimp simp: ko_wp_at'_def inQ_def obj_at'_def tcbQueueEmpty_def live'_def)
   apply fastforce
   done

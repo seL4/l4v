@@ -2238,7 +2238,7 @@ lemma setNextInterrupt_ccorres:
                   apply (clarsimp simp: ksReleaseQueue_asrt_def)
                   apply (frule (3) obj_at'_tcbQueueHead_ksReleaseQueue)
                   apply (frule (3) obj_at'_tcbQueueEnd_ksReleaseQueue)
-                  apply (frule tcbQueueHead_iff_tcbQueueEnd)
+                  apply (frule he_ptrs_head_iff_he_ptrs_end)
                   apply (fastforce dest: obj_at'_typ_at' tcb_at_not_NULL
                                    simp: ctcb_queue_relation_def option_to_ctcb_ptr_def tcbQueueEmpty_def)
                  apply (rule ccorres_pre_threadGet, rename_tac rqSCOpt)

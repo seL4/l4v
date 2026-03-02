@@ -2102,7 +2102,7 @@ lemma tcbQueueEnd_ksReleaseQueue:
     \<forall>t. (tcbInReleaseQueue |< tcbs_of' s') t \<longleftrightarrow> t \<in> set ts\<rbrakk>
    \<Longrightarrow> \<not> tcbQueueEmpty (ksReleaseQueue s')
        \<longrightarrow> (tcbInReleaseQueue |< tcbs_of' s') (the (tcbQueueEnd (ksReleaseQueue s')))"
-  apply (frule tcbQueueHead_iff_tcbQueueEnd)
+  apply (frule he_ptrs_head_iff_he_ptrs_end)
   by (clarsimp simp: tcbQueueEmpty_def list_queue_relation_def queue_end_valid_def)
 
 lemma obj_at'_tcbQueueEnd_ksReleaseQueue:
@@ -2172,7 +2172,7 @@ lemma tcbQueuePrepend_list_queue_relation_other:
    \<lbrace>\<lambda>_ s. list_queue_relation ls queue (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
   unfolding tcbQueuePrepend_def list_queue_relation_def
   apply (wpsimp wp: threadSet_prev_queue_head_other threadSet_heap_ls_other hoare_vcg_ex_lift)
-  by (fastforce dest: list_queue_relation_nil[THEN arg_cong_Not, THEN iffD2, rotated] heap_path_head
+  by (fastforce dest: list_queue_relation_Nil[THEN arg_cong_Not, THEN iffD2, rotated] heap_path_head
                 simp: list_queue_relation_def)
 
 lemma tcbQueueAppend_list_queue_relation_other:
@@ -2184,7 +2184,7 @@ lemma tcbQueueAppend_list_queue_relation_other:
    \<lbrace>\<lambda>_ s. list_queue_relation ls queue (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
   unfolding tcbQueueAppend_def list_queue_relation_def
   apply (wpsimp wp: threadSet_prev_queue_head_other threadSet_heap_ls_other hoare_vcg_ex_lift)
-  by (fastforce dest: list_queue_relation_nil[THEN arg_cong_Not, THEN iffD2, rotated] heap_path_head
+  by (fastforce dest: list_queue_relation_Nil[THEN arg_cong_Not, THEN iffD2, rotated] heap_path_head
                 simp: list_queue_relation_def queue_end_valid_def)
 
 lemma tcbQueueInsert_list_queue_relation_other:
@@ -2299,7 +2299,8 @@ lemma tcbQueueRemove_list_queue_relation:
   apply (intro conjI impI allI)
      \<comment> \<open>ls is a singleton list containing tcbPtr\<close>
      apply (clarsimp simp: list_queue_relation_def queue_end_valid_def prev_queue_head_def
-                           tcb_queue_remove_def heap_ls_unique heap_path_last_end)
+                           tcb_queue_remove_def heap_ls_unique heap_path_last_end
+                           emptyHeadEndPtrs_def)
      apply (frule heap_ls_distinct)
      apply (cases ls; clarsimp)
     \<comment> \<open>tcbPtr is the head of ls\<close>
@@ -2328,16 +2329,15 @@ lemma tcbQueueRemove_list_queue_relation:
      apply (frule list_not_last)
      apply (clarsimp simp: tcb_queue_remove_def)
      apply (frule length_gt_1_imp_butlast_nonempty)
-     apply (frule (3) heap_ls_prev_of_last)
+     apply (frule (2) heap_path_prev_of_last)
      apply (intro conjI impI; clarsimp?)
       apply (cases ls; clarsimp)
      apply (drule (1) heap_ls_remove_last_not_singleton)
      apply (force elim!: rsubst3[where P=heap_ls] simp: opt_map_def obj_at'_def)
     apply (clarsimp simp: queue_end_valid_def tcb_queue_remove_def)
-    apply (frule heap_ls_prev_of_last)
-       apply (cases ls; clarsimp)
+    apply (frule heap_path_prev_of_last)
       apply (fastforce intro: butlast_nonempty_length)
-     apply fastforce
+     apply (cases ls; fastforce)
     apply (cases ls; force simp: opt_map_def obj_at'_def)
    apply (clarsimp simp: prev_queue_head_def opt_map_def obj_at'_def)
   \<comment> \<open>tcbPtr is in the middle of ls\<close>
@@ -4647,7 +4647,7 @@ lemma tcbQueueAppend_if_live_then_nonz_cap':
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   unfolding tcbQueueAppend_def tcbQueueEmpty_def
   apply (wpsimp wp: tcbSchedPrev_update_iflive' tcbSchedNext_update_iflive')
-  by (fastforce dest: tcbQueueHead_iff_tcbQueueEnd)
+  by (fastforce dest: he_ptrs_head_iff_he_ptrs_end)
 
 lemma tcbQueueInsert_if_live_then_nonz_cap':
   "\<lbrace>if_live_then_nonz_cap' and ex_nonz_cap_to' tcbPtr and valid_objs' and sym_heap_sched_pointers\<rbrace>

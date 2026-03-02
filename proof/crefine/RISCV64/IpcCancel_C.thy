@@ -1612,7 +1612,7 @@ lemma tcbQueueRemove_tcb_at'_head:
   unfolding tcbQueueRemove_def
   apply (wpsimp wp: getTCB_wp)
   apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
-  apply (clarsimp simp: valid_tcb'_def valid_bound_tcb'_def tcbQueueEmpty_def)
+  apply (clarsimp simp: valid_tcb'_def valid_bound_tcb'_def tcbQueueEmpty_def emptyHeadEndPtrs_def)
   done
 
 lemma tcbSchedDequeue_ccorres:
@@ -3346,7 +3346,7 @@ lemma tcbReleaseRemove_ccorres:
     apply (wpsimp wp: threadGet_wp)
    apply (vcg exspec=thread_state_get_tcbInReleaseQueue_modifies)
   apply normalise_obj_at'
-  apply (fastforce dest: tcbQueueHead_iff_tcbQueueEnd simp: ksReleaseQueue_asrt_def)
+  apply (fastforce dest: he_ptrs_head_iff_he_ptrs_end simp: ksReleaseQueue_asrt_def)
   done
 
 lemma schedContext_donate_ccorres:

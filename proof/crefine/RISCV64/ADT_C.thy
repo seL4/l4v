@@ -1566,8 +1566,8 @@ lemma cbitmap_L2_to_H_correct:
 
 definition tcb_queue_C_to_tcb_queue :: "tcb_queue_C \<Rightarrow> tcb_queue" where
   "tcb_queue_C_to_tcb_queue q \<equiv>
-     TcbQueue (if head_C q = NULL then None else Some (ctcb_ptr_to_tcb_ptr (head_C q)))
-              (if end_C q = NULL then None else Some (ctcb_ptr_to_tcb_ptr (end_C q)))"
+     HeadEndPtrs (if head_C q = NULL then None else Some (ctcb_ptr_to_tcb_ptr (head_C q)))
+                 (if end_C q = NULL then None else Some (ctcb_ptr_to_tcb_ptr (end_C q)))"
 
 definition cready_queues_to_H ::
   "tcb_queue_C[num_tcb_queues] \<Rightarrow> (domain \<times> priority \<Rightarrow> ready_queue)"
@@ -1577,7 +1577,7 @@ definition cready_queues_to_H ::
        if qdom \<le> maxDomain \<and> prio \<le> maxPriority
        then let cqueue = index cs (cready_queues_index_to_C qdom prio)
              in tcb_queue_C_to_tcb_queue cqueue
-       else TcbQueue None None"
+       else emptyQueue"
 
 lemma cready_queues_to_H_correct:
   "\<lbrakk>cready_queues_relation (ksReadyQueues s) (ksReadyQueues_' ch);
@@ -1595,18 +1595,21 @@ lemma cready_queues_to_H_correct:
   apply (clarsimp simp: tcbQueueEmpty_def)
   apply (frule (3) obj_at'_tcbQueueHead_ksReadyQueues)
   apply (frule (3) obj_at'_tcbQueueEnd_ksReadyQueues)
-  apply (frule tcbQueueHead_iff_tcbQueueEnd)
+  apply (frule he_ptrs_head_iff_he_ptrs_end)
   apply (rule conjI)
    apply (clarsimp simp: tcb_queue_C_to_tcb_queue_def ctcb_queue_relation_def option_to_ctcb_ptr_def)
    apply (case_tac "tcbQueueHead (ksReadyQueues s (d, p)) = None")
-    apply (clarsimp simp: tcb_queue.expand)
+    apply (clarsimp simp: head_end_ptrs.expand)
    apply clarsimp
    apply (rename_tac queue_head queue_end)
    apply (prop_tac "tcb_at' queue_head s", fastforce simp: tcbQueueEmpty_def)
    apply (prop_tac "tcb_at' queue_end s", fastforce simp: tcbQueueEmpty_def)
    apply (drule kernel.tcb_at_not_NULL)+
-   apply (fastforce simp: tcb_queue.expand kernel.ctcb_ptr_to_ctcb_ptr)
-  apply (metis tcb_queue.exhaust_sel word_not_le)
+   apply (fastforce simp: head_end_ptrs.expand kernel.ctcb_ptr_to_ctcb_ptr)
+  apply (clarsimp simp: emptyHeadEndPtrs_def tcbQueueEmpty_def
+                        ctcb_queue_relation_def option_to_ctcb_ptr_def
+                 split: option.splits;
+         metis head_end_ptrs.exhaust_sel word_not_le)
   done
 
 definition crelease_queue_to_H :: "tcb_queue_C \<Rightarrow> release_queue" where
@@ -1619,17 +1622,17 @@ lemma crelease_queue_to_H_correct:
   apply (clarsimp simp: crelease_queue_to_H_def ksReleaseQueue_asrt_def)
   apply (frule (3) obj_at'_tcbQueueHead_ksReleaseQueue)
   apply (frule (3) obj_at'_tcbQueueEnd_ksReleaseQueue)
-  apply (frule tcbQueueHead_iff_tcbQueueEnd)
+  apply (frule he_ptrs_head_iff_he_ptrs_end)
   apply (clarsimp simp: tcb_queue_C_to_tcb_queue_def ctcb_queue_relation_def option_to_ctcb_ptr_def)
   apply (case_tac "tcbQueueHead (ksReleaseQueue s) = None")
    apply clarsimp
-   apply (metis tcb_queue.collapse)
+   apply (metis head_end_ptrs.collapse)
   apply clarsimp
   apply (rename_tac queue_head queue_end)
   apply (prop_tac "tcb_at' queue_head s", fastforce simp: tcbQueueEmpty_def)
   apply (prop_tac "tcb_at' queue_end s", fastforce simp: tcbQueueEmpty_def)
   apply (drule kernel.tcb_at_not_NULL)+
-  apply (fastforce simp: tcb_queue.expand kernel.ctcb_ptr_to_ctcb_ptr)
+  apply (fastforce simp: head_end_ptrs.expand kernel.ctcb_ptr_to_ctcb_ptr)
   done
 
 definition
