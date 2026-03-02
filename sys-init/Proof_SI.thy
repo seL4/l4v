@@ -354,7 +354,8 @@ lemma sys_init_explicit:
   apply (clarsimp simp: objects_initialised_by_parts objects_empty_by_parts
                         objects_empty_objects_initialised_capless distinct_zipI1
                         sep_list_conj_sep_map_set_conj distinct_length_filter'
-                        valid_untypeds_def distinct_collection)
+                        valid_untypeds_def distinct_collection valid_concat_regions_empty_first
+                        drop_region_all)
   apply (intro conjI allI impI pred_conjI | sep_cancel+)+
     apply (fastforce simp: ran_def elim: well_formed_object_domain)
    apply (clarsimp simp: valid_slot_region_append)
