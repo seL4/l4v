@@ -116,6 +116,7 @@ fun decl_serial (VarDecl (ty, s, cls, init, atts))
   | decl_serial (EnumDecl (so, xs)) = Nm ("EnumDecl",
         [opt_serial Q (node so), list_serial (pair_serial "EnumElt" (Q o node)
             (opt_serial expr_serial)) xs])
+  | decl_serial (StaticAssertion dets) = Nm ("StaticAssertion", [Q (node (#message dets)), expr_serial (#condition dets)])
 
 fun stmt_serial s = let
     fun os2s (SOME s) = "Some (" ^ s ^ ")"
