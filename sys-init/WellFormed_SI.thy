@@ -131,7 +131,7 @@ where
     | IrqHandlerCap _         \<Rightarrow> True
 \<comment> \<open>LIMITATION: The following should probably eventually be true.\<close>
     | IrqControlCap           \<Rightarrow> False
-    | UntypedCap _ _ _          \<Rightarrow> False
+    | UntypedCap _ _ _        \<Rightarrow> False
     | AsidControlCap          \<Rightarrow> False
     | AsidPoolCap _ _         \<Rightarrow> False
     | SGISignalCap _ _        \<Rightarrow> False \<comment> \<open>FIXME SGI: eventually allow this\<close>
@@ -207,10 +207,6 @@ where
      cap \<noteq> NullCap \<longrightarrow>
         (well_formed_cap cap \<and>
         (original_cap_at (obj_id, slot) spec \<longrightarrow> well_formed_orig_cap cap) \<and>
-        \<comment> \<open>LIMITATION: This irqhandler_cap_at condition is so that the generated
-                initialiser can work with the wider CAmkES framework. The proofs would
-                still hold without it.\<close>
-        (original_cap_at (obj_id, slot) spec \<longrightarrow> irqhandler_cap_at (obj_id, slot) spec) \<and>
         (\<not>original_cap_at (obj_id, slot) spec \<longrightarrow> is_copyable_cap cap) \<and>
          well_formed_cdt spec (obj_id, slot) cap \<and>
          well_formed_cap_to_real_object spec cap \<and>
