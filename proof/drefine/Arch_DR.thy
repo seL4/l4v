@@ -818,9 +818,9 @@ next
                                       update_mapping_cap_status_def Types_D.cap_rights_def
                                       mask_vm_rights_def transform_mapping_def
                                       transform_vm_attributes_def)
-                     apply (case_tac pgsz)
-                        apply (simp add: pageForPageBits_def validate_vm_attributes_def
-                                         attribs_to_word_def attribs_from_word_def)+
+                     apply (case_tac pgsz;
+                            simp add: pageForPageBits_def validate_vm_attributes_def
+                                      attribs_to_word_def attribs_from_word_def)
                     apply wp+
                  apply simp
                 apply (rule hoare_pre, wp, auto)[1]
@@ -865,9 +865,9 @@ next
                                      transform_page_inv_def update_cap_rights_def
                                      update_mapping_cap_status_def Types_D.cap_rights_def
                                      mask_vm_rights_def transform_mapping_def transform_vm_attributes_def)
-                     apply (case_tac pgsz)
-                        apply (simp add: pageForPageBits_def validate_vm_attributes_def
-                                         attribs_to_word_def attribs_from_word_def)+
+                    apply (case_tac pgsz;
+                           simp add: pageForPageBits_def validate_vm_attributes_def
+                                     attribs_to_word_def attribs_from_word_def)
                    apply wp+
                 apply (simp)
                apply (rule hoare_pre, wp, auto)[1]
@@ -1706,15 +1706,15 @@ proof -
          apply (clarsimp simp: page_bits_def)
         apply (rule corres_symb_exec_r)
            apply (rule_tac F = "cdl_cap.UntypedCap False {frame..frame + 2 ^ pageBits - 1} {} =
-                                transform_cap (max_free_index_update pcap)" in corres_gen_asm2)
+                                transform_cap (max_free_index_update pcap)"
+                        in corres_gen_asm2)
            apply (rule corres_split)
               apply (rule set_cap_corres; simp)
              apply (rule generate_range_corres_subst[
-                                      where ty="ArchObject ASIDPoolObj" and ptr=frame and us=0,
-                                   simplified return_bind translate_object_type_def
-                                              obj_bits_api_def arch_kobj_size_def
-                                                 default_arch_object_def,
-                                      simplified])
+                           where ty="ArchObject ASIDPoolObj" and ptr=frame and us=0,
+                           unfolded return_bind translate_object_type_def obj_bits_api_def
+                                    arch_kobj_size_def default_arch_object_def,
+                           simplified])
              apply (rule corres_split[OF retype_dc[where ptr = frame and sz = pageBits]])
                apply (simp add: retype_addrs_def obj_bits_api_def default_arch_object_def
                                 retype_transform_obj_ref_def)

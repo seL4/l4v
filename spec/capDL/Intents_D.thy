@@ -18,7 +18,7 @@
  * a single invocation when being validated.
  *
  * Caps required by the intents are not stored in the intent themselves,
- * but passed seperately in when required. In some sense, the Intent
+ * but passed separately in when required. In some sense, the Intent
  * is the "data" part of an invocation, but not the "caps" part of it.
  *)
 
@@ -27,8 +27,6 @@ imports
   "ASpec.CapRights_A"
   "ASpec.VMAttributes_A"
 begin
-
-arch_requalify_types irq
 
 (*
  * Entities in seL4 have particular rights to kernel objects, which

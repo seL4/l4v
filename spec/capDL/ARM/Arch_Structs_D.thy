@@ -9,9 +9,9 @@ imports
   ExecSpec.MachineTypes
 begin
 
-context Arch begin global_naming ARM_D
+context Arch begin arch_global_naming (D)
 
-(* Sizes are duplicated from ARM ASpec and must be kept in sync *)
+(* Sizes are duplicated from ASpec and must be kept in sync *)
 
 definition slot_bits_cdl :: nat where
   "slot_bits_cdl \<equiv> 4"

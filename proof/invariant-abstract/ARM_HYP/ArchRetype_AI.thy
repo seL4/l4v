@@ -537,48 +537,25 @@ lemma valid_untyped_helper [Retype_AI_assms]:
      apply simp
      apply (drule(1) disjoint_subset2[rotated])
      apply (simp add: Int_ac)
-    apply (intro impI conjI)
-      apply (thin_tac "\<forall>x. Q x" for Q)
-      apply (simp add: cte_wp_at_caps_of_state)
-     apply (clarsimp simp: default_obj_range Int_ac tyunt
+    apply (simp add: is_cap_simps free_index_of_def)
+    apply (thin_tac "\<forall>x. Q x" for Q)
+    apply (clarsimp simp: default_obj_range Int_ac tyunt cap_aligned_def
                     split: if_split_asm)
+    apply (rule context_conjI)
+     apply clarsimp
      apply (frule retype_addrs_obj_range_subset[OF _ cover' tyunt])
-     apply (clarsimp simp: cap_aligned_def)
      apply (frule aligned_ranges_subset_or_disjoint)
-      apply (erule retype_addrs_aligned[where sz = sz])
-        apply (simp add: range_cover_def word_bits_def)+
-     apply (clarsimp simp: default_obj_range Int_ac tyunt
-                    split: if_split_asm)
+      apply (erule retype_addrs_aligned[where sz = sz]; simp add: range_cover_def word_bits_def)
+     apply (clarsimp simp: default_obj_range Int_ac tyunt)
      apply (erule disjE)
       apply (simp add: cte_wp_at_caps_of_state)
       apply (drule cn[unfolded caps_no_overlap_def,THEN bspec,OF ranI])
-      apply (simp add: p_assoc_help[symmetric])
-      apply (erule impE)
-       apply blast (* set arith *)
-      apply blast (* set arith *)
-     apply blast (* set arith  *)
-    apply (thin_tac "\<forall>x. Q x" for Q)
-    apply (simp add: cte_wp_at_caps_of_state)
-    apply (clarsimp simp: default_obj_range Int_ac tyunt
-                   split: if_split_asm)
-    apply (frule retype_addrs_obj_range_subset[OF _ cover' tyunt])
-    apply (clarsimp simp: cap_aligned_def)
-    apply (frule aligned_ranges_subset_or_disjoint)
-     apply (erule retype_addrs_aligned[where sz = sz])
-       apply (simp add: range_cover_def)
-      apply (simp add: range_cover_def word_bits_def)
-     apply (simp add: range_cover_def)
-    apply (clarsimp simp: default_obj_range Int_ac tyunt
-                   split: if_split_asm)
-    apply (erule disjE)
-     apply (drule cn[unfolded caps_no_overlap_def,THEN bspec,OF ranI])
-     apply (simp add: p_assoc_help[symmetric])
-     apply (erule impE)
-      apply blast (* set arith *)
-     apply blast (* set arith *)
-    apply blast (* set arith  *)
+      apply (simp flip: p_assoc_help)
+      apply blast
+     apply blast
+    apply simp
     done
-qed
+  qed
 
 lemma valid_default_arch_tcb:
   "\<And>s. valid_arch_tcb default_arch_tcb s"

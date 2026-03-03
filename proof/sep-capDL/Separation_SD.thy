@@ -275,6 +275,7 @@ where
           cap_guard' =  cap_guard cnode_cap
       in (cap_ptr >> remaining_size - guard_size) && mask guard_size = cap_guard'"
 
+(* FIXME: one missing precedence *)
 definition user_pointer_at :: "(cdl_size_bits * cdl_size_bits) \<Rightarrow> cdl_cap \<Rightarrow> cdl_cptr \<Rightarrow> cdl_cap \<Rightarrow> sep_pred " ("(\<box> _ : _ _ \<mapsto>u _)" [76,71] 76)
   where
    "user_pointer_at k_stuff cnode_cap cap_ptr cap  \<equiv> \<lambda>s.

@@ -18,26 +18,28 @@ unbundle l4v_word_context (* because of Lib.MonadicRewrite *)
 arch_requalify_consts
   second_level_tables
 
-primrec
-  valid_untyped_inv_wcap :: "Invocations_A.untyped_invocation \<Rightarrow> cap option
-    \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
- "valid_untyped_inv_wcap (Retype slot reset ptr_base ptr ty us slots dev)
-   = (\<lambda>co s. \<exists>sz idx. (cte_wp_at (\<lambda>c. c = (UntypedCap dev ptr_base sz idx)
-               \<and> (co = None \<or> co = Some c)) slot s
-          \<and> range_cover ptr sz (obj_bits_api ty us) (length slots)
-          \<and> (if reset then ptr = ptr_base else
-               (alignUp (ptr_base + of_nat idx) (obj_bits_api ty us) = ptr
+primrec valid_untyped_inv_wcap ::
+  "Invocations_A.untyped_invocation \<Rightarrow> cap option \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  where
+  "valid_untyped_inv_wcap (Retype slot reset ptr_base ptr ty us slots dev) = (\<lambda>co s.
+     \<exists>sz idx.
+       cte_wp_at (\<lambda>c. c = (UntypedCap dev ptr_base sz idx)
+                      \<and> (co = None \<or> co = Some c)) slot s
+       \<and> range_cover ptr sz (obj_bits_api ty us) (length slots)
+       \<and> (if reset
+          then ptr = ptr_base
+          else (alignUp (ptr_base + of_nat idx) (obj_bits_api ty us) = ptr
                 \<and> idx \<le> unat (ptr - ptr_base)))
-          \<and> (ptr && ~~ mask sz) = ptr_base)
-          \<and> (reset \<longrightarrow> descendants_of slot (cdt s) = {})
-          \<and> (ty = CapTableObject \<longrightarrow> us > 0)
-          \<and> (ty = Untyped \<longrightarrow> us \<ge> untyped_min_bits)
-          \<and> distinct (slot#slots)
-          \<and> (\<forall>slot\<in>set slots. cte_wp_at ((=) cap.NullCap) slot s
-                    \<and> ex_cte_cap_wp_to is_cnode_cap slot s \<and> real_cte_at slot s)
-          \<and> ty \<noteq> ArchObject ASIDPoolObj \<and> 0 < length slots
-          \<and> (dev \<longrightarrow> ((ty = Untyped) \<or> is_frame_type ty)))"
+       \<and> (ptr && ~~ mask sz) = ptr_base
+       \<and> (reset \<longrightarrow> descendants_of slot (cdt s) = {})
+       \<and> (ty = CapTableObject \<longrightarrow> us > 0)
+       \<and> (ty = Untyped \<longrightarrow> us \<ge> untyped_min_bits)
+       \<and> distinct (slot#slots)
+       \<and> (\<forall>slot\<in>set slots. cte_wp_at ((=) cap.NullCap) slot s
+                 \<and> ex_cte_cap_wp_to is_cnode_cap slot s \<and> real_cte_at slot s)
+       \<and> ty \<noteq> ArchObject ASIDPoolObj \<and> 0 < length slots
+       \<and> (dev \<longrightarrow> ((ty = Untyped) \<or> is_frame_type ty)))"
+
 abbreviation
   "valid_untyped_inv ui \<equiv> valid_untyped_inv_wcap ui None"
 
@@ -551,13 +553,13 @@ lemma le_mask_le_2p:
   done
 
 
-lemma diff_neg_mask[simp]:
+lemma diff_neg_mask[simp]: (* FIXME: move to Word_Lib *)
   "ptr - (ptr && ~~ mask sz) = (ptr && mask sz)"
   apply (subst word_plus_and_or_coroll2[symmetric,where w = "mask sz" and t = ptr])
   apply simp
   done
 
-lemma idx_no_overflow:
+lemma idx_no_overflow: (* FIXME: move to Word_Lib *)
   "idx \<le> unat (ptr && mask sz) \<Longrightarrow> ptr && ~~ mask sz \<le> (ptr && ~~ mask sz) + of_nat idx"
   by (metis AND_NOT_mask_plus_AND_mask_eq word_and_le2 word_of_nat_le word_random)
 
@@ -1993,14 +1995,13 @@ lemma cte_wp_at_pspace_no_overlapI:
   apply (erule impE)
    apply (rule ccontr)
    apply simp
-   apply (drule disjoint_subset2[rotated,
-     where B'="{ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"])
+   apply (drule disjoint_subset2[rotated, where B'="{ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"])
     apply clarsimp
     apply (rule word_and_le2)
    apply simp
   apply clarsimp
   apply (drule_tac A'="{ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"
-       in disjoint_subset[rotated])
+                in disjoint_subset[rotated])
    apply clarsimp
    apply (frule idx_no_overflow, clarsimp)
    apply (rule le_plus'[OF word_and_le2])
@@ -2074,7 +2075,7 @@ lemma cte_wp_at_caps_no_overlapI:
     apply (thin_tac "P\<longrightarrow>Q" for P Q)+
     apply (elim conjE)
     apply (drule disjoint_subset2[rotated,
-      where B' = "{ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"])
+                                  where B' = "{ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"])
      apply clarsimp
      apply (frule idx_no_overflow,clarsimp)
      apply (metis add.commute word_and_le2 word_of_nat_le word_plus_and_or_coroll2 word_plus_mcs_3)
@@ -2083,7 +2084,7 @@ lemma cte_wp_at_caps_no_overlapI:
    apply (clarsimp simp: word_and_le2)
   apply (thin_tac "P\<longrightarrow>Q" for P Q)+
   apply (drule disjoint_subset[rotated,
-       where A' = "{ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"])
+                               where A' = "{ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"])
    apply (clarsimp simp: word_and_le2 Int_ac)+
   done
 

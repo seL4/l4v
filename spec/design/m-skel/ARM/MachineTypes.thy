@@ -148,23 +148,6 @@ end
 
 arch_requalify_types vmpage_size
 
-arch_requalify_consts
-  pageBitsForSize
-  pageForPageBits
-  smallPageBits
-  largePageBits
-  sectionBits
-  superSectionBits
-  pt_size_index
-  pd_size_index
-  pt_slot_vaddr_mask
-
-arch_requalify_facts
-  pageForPageBits_def
-  pageBitsForSize_def
-  vmpage_size_simps
-
-
 context Arch begin arch_global_naming
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM instanceproofs ONLY HardwareASID VMFaultType VMPageSize HypFaultType

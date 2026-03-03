@@ -1214,7 +1214,6 @@ lemma reset_untyped_cap_corres:
         apply (simp add: word_unat.Rep_inject[symmetric])
         apply (subst unat_of_nat_eq, erule order_le_less_trans,
           rule power_strict_increasing, simp_all add: word_bits_def bits_of_def)[1]
-        apply (clarsimp)
         using neq0_conv apply fastforce
        apply (rule corres_trivial, rule corres_returnOk, simp)
       apply (rule_tac F="free_index_of capa \<noteq> 0" in corres_gen_asm2)
@@ -1366,7 +1365,6 @@ lemma generate_range_dcorres:
      apply (rule arg_cong)
      apply (clarsimp simp: generate_range_def retype_transform_obj_ref_def retype_addrs_def)
      apply (intro conjI impI)
-       apply (clarsimp)
        apply (clarsimp simp: obj_bits_api_def)
       apply (clarsimp simp: translate_object_type_def)
      apply (clarsimp simp: obj_bits_api_def translate_object_type_def)
@@ -1377,7 +1375,7 @@ lemma generate_range_dcorres:
 lemma generate_range_eq_retype_addrs:
   "ptr = ptr' \<Longrightarrow>
    generate_range ptr' (translate_object_type ty) (obj_bits_api ty us) n
-     = map (retype_transform_obj_ref ty us) (retype_addrs ptr ty n us)"
+   = map (retype_transform_obj_ref ty us) (retype_addrs ptr ty n us)"
   apply (clarsimp simp: generate_range_def retype_transform_obj_ref_def retype_addrs_def)
   apply (clarsimp simp: obj_bits_api_def translate_object_type_def
                   split: apiobject_type.splits aobject_type.splits)
@@ -1394,9 +1392,10 @@ lemma generate_range_corres_subst:
 lemma obj_bits_cdl_obj_bits_api:
   "obj_bits_cdl (translate_object_type ty) sz = obj_bits_api ty sz"
   by (cases ty; clarsimp simp: obj_bits_api_def default_arch_object_def translate_object_type_def
-                     slot_bits_cdl_def slot_bits_def pageBits_cdl_def pageBits_def obj_bits_cdl_def
-                     tcb_bits_cdl_def  endpoint_bits_cdl_def ntfn_bits_cdl_def
-               split: apiobject_type.splits aobject_type.splits)
+                               slot_bits_cdl_def slot_bits_def pageBits_cdl_def pageBits_def
+                               obj_bits_cdl_def tcb_bits_cdl_def endpoint_bits_cdl_def
+                               ntfn_bits_cdl_def pte_bits_def word_bits_def
+                         split: apiobject_type.splits aobject_type.splits)
 
 lemma obj_bits_api_nonzero:
   "(tp = apiobject_type.Untyped \<longrightarrow> untyped_min_bits \<le> us) \<Longrightarrow> obj_bits_api tp us \<noteq> 0"
@@ -1405,8 +1404,8 @@ lemma obj_bits_api_nonzero:
                split: apiobject_type.splits aobject_type.splits)
 
 lemma free_range_of_untyped_idx_in_range:
-  "idx \<le> 2 ^ sz - 1 \<Longrightarrow> (ptr \<le> ptr + of_nat idx) \<Longrightarrow>
-      free_range_of_untyped idx sz ptr = {ptr + of_nat idx .. ptr + 2 ^ sz - 1}"
+  "\<lbrakk>idx \<le> 2 ^ sz - 1; ptr \<le> ptr + of_nat idx\<rbrakk> \<Longrightarrow>
+   free_range_of_untyped idx sz ptr = {ptr + of_nat idx .. ptr + 2 ^ sz - 1}"
   by (clarsimp simp: free_range_of_untyped_def)
 
 lemma idx_size_helper:
@@ -1645,10 +1644,8 @@ lemma invoke_untyped_corres:
        apply (frule(1) valid_global_refsD2[OF _ invs_valid_global_refs])
        apply (strengthen refl subseteq_set_minus free_range_of_untyped_subseteq' caps_region_kernel_window_imp[where p=cref])+
        apply (cases reset; clarsimp)
-        apply (subgoal_tac " Min (get_range ((\<noteq>) {}) (free_range_of_untyped 0 sz ptr) {ptr..ptr + 2 ^ sz - 1})  = ptr")
-         apply (simp)
-         prefer 2
-         apply (clarsimp simp: free_range_of_untyped_def get_range_def)
+        apply (prop_tac "Min (keep_if ((\<noteq>) {}) (free_range_of_untyped 0 sz ptr) {ptr..ptr + 2 ^ sz - 1}) = ptr")
+         apply (clarsimp simp: free_range_of_untyped_def keep_if_def)
          apply (rule conjI, rule impI)
           apply (rule MinI; (fastforce simp: atLeastAtMost_iff)?)
          apply (clarsimp)+
@@ -1699,11 +1696,13 @@ lemma invoke_untyped_corres:
           apply (rule obj_bits_api_nonzero)
           using misc(2) apply blast
          apply (assumption)+
-       apply (subgoal_tac "Min {ptr && ~~ mask sz..(ptr && ~~ mask sz) + 2 ^ sz - 1} = ptr && ~~ mask sz", clarsimp)
-        prefer 2
+       apply (prop_tac "Min {ptr && ~~ mask sz..(ptr && ~~ mask sz) + 2 ^ sz - 1} = ptr && ~~ mask sz")
         apply (rule MinI; clarsimp simp: atLeastAtMost_iff)
-       apply (subgoal_tac "Min (get_range ((\<noteq>) {}) (free_range_of_untyped idx sz (ptr && ~~ mask sz)) {ptr && ~~ mask sz..(ptr && ~~ mask sz) + 2 ^ sz - 1}) = (ptr && ~~ mask sz) + of_nat idx")
-        prefer 2
+       apply clarsimp
+       apply (prop_tac "Min (keep_if ((\<noteq>) {})
+                                       (free_range_of_untyped idx sz (ptr && ~~ mask sz))
+                                       {ptr && ~~ mask sz..(ptr && ~~ mask sz) + 2 ^ sz - 1})
+                        = (ptr && ~~ mask sz) + of_nat idx")
         apply (subst free_range_of_untyped_idx_in_range)
          using idx_size_helper apply blast
          apply (erule idx_no_overflow, clarsimp simp: range_cover_def word_bits_def)
@@ -1770,8 +1769,9 @@ lemma invoke_untyped_corres:
          apply (clarsimp)
         using invoke_untyped_proofs.not_0_ptr apply blast
         apply (rule_tac s="(of_nat (length slots) * 2 ^ obj_bits_api tp us) + (ptr && mask sz)"
-                    and t="(ptr && mask sz) + of_nat (length slots) * 2 ^ obj_bits_api tp us" in
-                    subst, clarsimp)
+                    and t="(ptr && mask sz) + of_nat (length slots) * 2 ^ obj_bits_api tp us"
+                     in subst,
+               clarsimp)
         apply (rule neq_0_no_wrap)
          apply (subst unat_plus_simple)
          using range_cover_unat range_cover.unat_of_nat_shift
@@ -1786,8 +1786,8 @@ lemma invoke_untyped_corres:
      apply (clarsimp)
     apply (cut_tac vui1)
     apply (clarsimp simp add: etc ptrs)
-    apply (fastforce simp: ui cte_wp_at_caps_of_state
-                               valid_cap_simps free_index_of_def)
+    apply (fastforce simp: ui cte_wp_at_caps_of_state valid_cap_simps
+                           free_index_of_def)
     done
 qed
 
