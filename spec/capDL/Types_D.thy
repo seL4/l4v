@@ -21,8 +21,27 @@ imports
   "ExecSpec.Arch_Kernel_Config_Lemmas"
 begin
 
-arch_requalify_types irq sgi_irq sgi_target
-arch_requalify_consts numSGIs gicNumTargets
+arch_requalify_types
+  sgi_irq
+  sgi_target
+
+arch_requalify_consts
+  numSGIs
+  gicNumTargets
+  pageBitsForSize
+  pageForPageBits
+  smallPageBits
+  largePageBits
+  sectionBits
+  superSectionBits
+  pt_size_index
+  pd_size_index
+  pt_slot_vaddr_mask
+
+arch_requalify_facts
+  vmpage_size_simps
+  pageBitsForSize_def
+  pageForPageBits_def
 
 (* A hardware IRQ number. *)
 type_synonym cdl_irq = irq
@@ -490,7 +509,7 @@ where
 definition
   cap_vmattrs :: "cdl_cap \<Rightarrow> cdl_raw_vmattrs"
 where
-  "cap_vmattrs cap \<equiv> case cap of 
+  "cap_vmattrs cap \<equiv> case cap of
       FrameCap _ _ _ _ (Fake attr) _ \<Rightarrow> attr
     | PageTableCap _ (Fake attr) _ \<Rightarrow> attr"
 
@@ -710,7 +729,8 @@ where
                                       cdl_frame_fills = default_frame_fill_data \<rparr>)
       | IRQNodeType \<Rightarrow> Some (IRQNode empty_irq_node)"
 
-abbreviation "pick a \<equiv> SOME x. x\<in> a"
+(* FIXME: bad name; also shadows Random.pick *)
+abbreviation "pick S \<equiv> SOME x. x \<in> S"
 
 (* Construct a cap for a new object. *)
 definition

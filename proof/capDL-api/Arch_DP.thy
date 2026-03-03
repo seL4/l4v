@@ -57,44 +57,41 @@ definition
   "get_mapped_asid \<equiv> \<lambda>asid vaddr. option_map (\<lambda>x. (x,vaddr)) asid"
 
 lemma decode_page_map_intent_rv_sec_ssecc:
-  "\<lbrakk>n = sectionBits \<or> n = superSectionBits; attr' =  validate_vm_attributes attr (pageForPageBits n)\<rbrakk>
-  \<Longrightarrow> \<lbrace>\<lambda>s. R (InvokePage (PageMap (FrameCap dev frame_ptr rights n Real (get_mapped_asid asid' vaddr))
-         (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n (Fake attr') None) ref [cdl_lookup_pd_slot ptr vaddr])) \<rbrace>
-  decode_invocation (FrameCap dev frame_ptr rights n real_type asid) ref
-  [(PageDirectoryCap ptr real' asid',pdref)]
-  (PageIntent (PageMapIntent vaddr perms attr))
-  \<lbrace>\<lambda>r s. R r\<rbrace>, -"
+  "\<lbrakk>n = sectionBits \<or> n = superSectionBits; attr' = validate_vm_attributes attr (pageForPageBits n)\<rbrakk> \<Longrightarrow>
+   \<lbrace>\<lambda>s. R (InvokePage (PageMap (FrameCap dev frame_ptr rights n Real (get_mapped_asid asid' vaddr))
+          (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n (Fake attr') None) ref
+          [cdl_lookup_pd_slot ptr vaddr]))\<rbrace>
+   decode_invocation (FrameCap dev frame_ptr rights n real_type asid) ref
+     [(PageDirectoryCap ptr real' asid',pdref)]
+     (PageIntent (PageMapIntent vaddr perms attr))
+   \<lbrace>\<lambda>r s. R r\<rbrace>, -"
   apply (simp add: decode_invocation_def get_index_def get_page_intent_def throw_opt_def
                    cap_rights_def decode_page_invocation_def throw_on_none_def get_mapped_asid_def)
   apply (wp | wpc)+
      apply (rule validE_validE_R)
      apply wp
-     apply (simp add:cdl_page_mapping_entries_def split del:if_split | wp | wpc)+
-  apply (auto simp: pageForPageBits_def
-                    validate_vm_attributes_def vmpage_size_simps)
+     apply (simp add: cdl_page_mapping_entries_def split del:if_split | wp | wpc)+
+  apply (auto simp: pageForPageBits_def validate_vm_attributes_def vmpage_size_simps)
   done
 
 lemma decode_page_map_intent_rv_16_12:
-  "\<lbrakk>n = 12 \<or> n = 16; attr' =  validate_vm_attributes attr (pageForPageBits n)\<rbrakk>
-  \<Longrightarrow> \<lbrace>\<lambda>s. R (InvokePage (PageMap (FrameCap dev frame_ptr rights n Real (get_mapped_asid asid' vaddr))
-         (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n (Fake attr') None) ref
-         [(p, unat ((vaddr >> 12) && pt_slot_vaddr_mask))]))
-  \<and> <(ptr, unat (vaddr >> sectionBits)) \<mapsto>c PageTableCap p (Fake a) None \<and>* (\<lambda>s. True)> s\<rbrace>
-  decode_invocation (FrameCap dev frame_ptr rights n real_type asid) ref
-  [(PageDirectoryCap ptr real' asid',pdref)]
-  (PageIntent (PageMapIntent vaddr perms attr))
-  \<lbrace>\<lambda>r s. R r\<rbrace>, -"
-  apply (simp add:decode_invocation_def get_index_def
-    get_page_intent_def throw_opt_def cap_rights_def
-    decode_page_invocation_def throw_on_none_def
-    get_mapped_asid_def)
+  "\<lbrakk>n = 12 \<or> n = 16; attr' = validate_vm_attributes attr (pageForPageBits n)\<rbrakk> \<Longrightarrow>
+   \<lbrace>\<lambda>s. R (InvokePage (PageMap (FrameCap dev frame_ptr rights n Real (get_mapped_asid asid' vaddr))
+          (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n (Fake attr') None) ref
+          [(p, unat ((vaddr >> 12) && pt_slot_vaddr_mask))]))
+        \<and> <(ptr, unat (vaddr >> sectionBits)) \<mapsto>c PageTableCap p (Fake a) None \<and>* (\<lambda>s. True)> s\<rbrace>
+   decode_invocation (FrameCap dev frame_ptr rights n real_type asid) ref
+     [(PageDirectoryCap ptr real' asid',pdref)]
+     (PageIntent (PageMapIntent vaddr perms attr))
+   \<lbrace>\<lambda>r s. R r\<rbrace>, -"
+  apply (simp add: decode_invocation_def get_index_def get_page_intent_def throw_opt_def cap_rights_def
+                   decode_page_invocation_def throw_on_none_def get_mapped_asid_def)
   apply wp
   apply (rule validE_validE_R)
    apply wp
-    apply (simp add:cdl_page_mapping_entries_def)
+    apply (simp add: cdl_page_mapping_entries_def)
      apply (wp cdl_lookup_pt_slot_rv | wpc | simp)+
-    apply (auto simp: pageForPageBits_def
-                      validate_vm_attributes_def vmpage_size_simps)
+    apply (auto simp: pageForPageBits_def validate_vm_attributes_def vmpage_size_simps)
   done
 
 abbreviation(input)
@@ -161,8 +158,8 @@ lemma decode_page_table_rv:
   apply (rule hoare_pre)
    apply (wp throw_on_none_wp | wpc | simp)+
   apply (clarsimp split: option.splits
-                  simp: get_index_def cap_object_def get_mapped_asid_def Least_def)
-  by (metis (mono_tags, lifting) order_refl the_equality)
+                  simp: get_index_def cap_object_def get_mapped_asid_def)
+  done
 
 lemma seL4_Page_Table_Map:
   notes split_paired_Ex[simp del]

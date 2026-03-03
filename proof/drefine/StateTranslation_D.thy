@@ -31,13 +31,13 @@ definition
   transform_cptr :: "word32 \<Rightarrow> cdl_cptr" where
   "transform_cptr w \<equiv> w"
 
-definition
-  transform_vm_attributes :: "vm_attributes \<Rightarrow> vmpage_size \<Rightarrow> word32" where
-  "transform_vm_attributes attr sz \<equiv> case sz of
-    ARMSmallPage \<Rightarrow> attribs_to_word (attr - {Global, ParityEnabled})
-  | ARMLargePage \<Rightarrow> attribs_to_word (attr - {Global, ParityEnabled})
-  | ARMSection \<Rightarrow>attribs_to_word (attr - {Global})
-  | ARMSuperSection \<Rightarrow> attribs_to_word (attr - {Global})"
+definition transform_vm_attributes :: "vm_attributes \<Rightarrow> vmpage_size \<Rightarrow> word32" where
+  "transform_vm_attributes attr sz \<equiv>
+     case sz of
+       ARMSmallPage \<Rightarrow> attribs_to_word (attr - {Global, ParityEnabled})
+     | ARMLargePage \<Rightarrow> attribs_to_word (attr - {Global, ParityEnabled})
+     | ARMSection \<Rightarrow>attribs_to_word (attr - {Global})
+     | ARMSuperSection \<Rightarrow> attribs_to_word (attr - {Global})"
 
 (* transform an abstract-spec recv_slot description to a capDL one *)
 definition
@@ -624,12 +624,11 @@ where
  * Transform a cap in the abstract spec to an equivalent
  * CapDL cap.
  *)
-
-definition free_range_of_untyped :: "nat \<Rightarrow> nat \<Rightarrow> cdl_object_id \<Rightarrow> cdl_object_id set"
-  where
+definition free_range_of_untyped :: "nat \<Rightarrow> nat \<Rightarrow> cdl_object_id \<Rightarrow> cdl_object_id set" where
   "free_range_of_untyped \<equiv> (\<lambda>idx size_bits ptr.
-      if idx \<le> 2 ^ size_bits - 1 \<and> ptr \<le> ptr + of_nat idx
-      then {ptr + of_nat idx .. ptr + 2 ^ size_bits - 1} else {})"
+     if idx \<le> 2 ^ size_bits - 1 \<and> ptr \<le> ptr + of_nat idx
+     then {ptr + of_nat idx .. ptr + 2 ^ size_bits - 1}
+     else {})"
 
 
 definition

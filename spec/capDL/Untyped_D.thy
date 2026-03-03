@@ -55,11 +55,11 @@ where
            Some Untyped
          else cdl_objects s x)\<rparr>)"
 
-(* Return a list of n set for requested n objects;
- * if the object type is not UntypedType, sets contain the ptr for
- * new objects, otherwise, sets represent valid ptrs in each untypes. *)
-
-definition generate_range :: "cdl_object_id \<Rightarrow> cdl_object_type \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> cdl_object_id set list"
+(* Return a list of num_objects sets for requested the request number of objects;
+   if the object type is not UntypedType, the sets contain a singleton ptr for the
+   new objects, otherwise, the sets represent the valid ptrs in each untyped. *)
+definition generate_range ::
+  "cdl_object_id \<Rightarrow> cdl_object_type \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> cdl_object_id set list"
   where
   "generate_range start type sz num_objects \<equiv>
      map (\<lambda>ptr. if type = UntypedType then {ptr .. ptr + 2 ^ sz - 1} else {ptr}) $
@@ -88,28 +88,26 @@ where
     set_parent dest_slot parent_slot
   od"
 
-(* This returns the set of unused ptr while explicitly check for overflow *)
-definition
-  update_range :: "cdl_object_id set \<Rightarrow> cdl_object_id \<Rightarrow> nat \<Rightarrow> cdl_object_id set"
-where
+(* This returns the set of unused ptrs while explicitly checking for overflow *)
+definition update_range :: "cdl_object_id set \<Rightarrow> cdl_object_id \<Rightarrow> nat \<Rightarrow> cdl_object_id set" where
   "update_range old_range ptr idx \<equiv>
-   if idx = 0 then old_range
-   else if (ptr \<le> ptr + of_nat idx) then
-     old_range - {..<ptr + of_nat idx}
-   else {}"
+     if idx = 0
+     then old_range
+     else if (ptr \<le> ptr + of_nat idx)
+       then old_range - {..<ptr + of_nat idx}
+       else {}"
 
-definition
-  update_available_range :: "cdl_object_id \<Rightarrow> nat \<Rightarrow> cdl_cap_ref \<Rightarrow> cdl_cap \<Rightarrow> unit k_monad"
-where "update_available_range ptr idx cap_ref cap \<equiv>
+definition update_available_range ::
+  "cdl_object_id \<Rightarrow> nat \<Rightarrow> cdl_cap_ref \<Rightarrow> cdl_cap \<Rightarrow> unit k_monad"
+  where
+  "update_available_range ptr idx cap_ref cap \<equiv>
      let cap_range = untyped_cap_range cap;
          new_range = update_range cap_range ptr idx
-     in
-     set_cap cap_ref $ set_available_range cap new_range"
+     in set_cap cap_ref $ set_available_range cap new_range"
 
-definition
-  retype_region :: "nat \<Rightarrow> cdl_object_type \<Rightarrow> (cdl_object_id set list)
-  \<Rightarrow> ((cdl_object_id set) list) k_monad"
-where
+definition retype_region ::
+  "nat \<Rightarrow> cdl_object_type \<Rightarrow> (cdl_object_id set list) \<Rightarrow> ((cdl_object_id set) list) k_monad"
+  where
   "retype_region target_bits target_type target_object_ids \<equiv>
     do
       \<comment> \<open>Get a list of target locations. We are happy with any unused name

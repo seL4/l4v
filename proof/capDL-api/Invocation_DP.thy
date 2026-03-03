@@ -8,18 +8,14 @@ theory Invocation_DP
 imports KHeap_DP RWHelper_DP
 begin
 
-crunch update_available_range, update_thread,
-       mark_tcb_intent_error, corrupt_ipc_buffer, insert_cap_sibling,
-       insert_cap_child, move_cap, invoke_irq_control, invoke_irq_handler
+crunch update_available_range, update_thread, mark_tcb_intent_error, corrupt_ipc_buffer,
+       insert_cap_sibling, insert_cap_child, move_cap, invoke_irq_control, invoke_irq_handler
   for cdl_current_domain[wp]: "\<lambda>s. P (cdl_current_domain s)"
-(wp: crunch_wps unless_wp simp: Let_unfold split_def corrupt_intents_def)
+  (wp: crunch_wps simp: split_def corrupt_intents_def)
 
-crunch  corrupt_ipc_buffer
+crunch corrupt_ipc_buffer, mark_tcb_intent_error
   for cdl_irq_node[wp]: "\<lambda>s. P (cdl_irq_node s)"
-(wp: crunch_wps simp: corrupt_intents_def)
-crunch  mark_tcb_intent_error
-  for cdl_irq_node[wp]: "\<lambda>s. P (cdl_irq_node s)"
-(wp: crunch_wps)
+  (wp: crunch_wps simp: corrupt_intents_def)
 
 lemma all_scheduable_tcbs_corrupt[simp]:
   "all_scheduable_tcbs (cdl_objects (corrupt_intents xa x s)) = all_scheduable_tcbs (cdl_objects s)"
