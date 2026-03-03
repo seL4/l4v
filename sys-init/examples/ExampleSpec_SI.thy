@@ -19,9 +19,12 @@ begin
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma object_slots_empty_object [simp]:
-  "object_slots (Frame \<lparr>cdl_frame_size_bits = small_frame_size\<rparr>) slot = Some cap \<Longrightarrow> cap = NullCap"
-  "object_slots (PageDirectory \<lparr>cdl_page_directory_caps = empty_cap_map pd_size\<rparr>) slot = Some cap \<Longrightarrow> cap = NullCap"
-  "empty_cap_map obj_id slot = Some cap \<Longrightarrow> cap = NullCap"
+  "object_slots (Frame \<lparr>cdl_frame_size_bits = small_frame_size, cdl_frame_fills = fill\<rparr>) slot = Some cap
+   \<Longrightarrow> cap = NullCap"
+  "object_slots (PageDirectory \<lparr>cdl_page_directory_caps = empty_cap_map pd_size\<rparr>) slot = Some cap
+   \<Longrightarrow> cap = NullCap"
+  "empty_cap_map obj_id slot = Some cap
+   \<Longrightarrow> cap = NullCap"
   by (clarsimp simp: object_slots_def empty_cap_map_def
               split: if_split_asm)+
 
@@ -35,20 +38,19 @@ lemma object_type_simps [simp]:
 
 lemma well_formed_empty:
   "well_formed \<lparr>
-  cdl_arch = undefined,
-  cdl_objects = Map.empty,
-  cdl_cdt = undefined,
-  cdl_current_thread = undefined,
-  cdl_irq_node = ucast,
-  cdl_asid_table = undefined,
-  cdl_current_domain = undefined
-\<rparr>"
+     cdl_arch = undefined,
+     cdl_objects = Map.empty,
+     cdl_cdt = undefined,
+     cdl_current_thread = undefined,
+     cdl_irq_node = ucast,
+     cdl_asid_table = undefined,
+     cdl_current_domain = undefined
+   \<rparr>"
   by (clarsimp simp: well_formed_def well_formed_orig_caps_unique_def cap_at_def
                      well_formed_irqhandler_caps_unique_def well_formed_irqhandler_caps_def
                      well_formed_irq_table_def down_ucast_inj is_down
                      well_formed_fake_pt_caps_unique_def irq_nodes_def object_at_def
                      opt_cap_def slots_of_def bound_irqs_def)
-
 
 definition "tcb_id = 2000"
 definition "cnode_id = 2001"
@@ -72,7 +74,8 @@ definition
                      cdl_intent_extras = [],
                      cdl_intent_recv_slot = None\<rparr>,
    cdl_tcb_has_fault = False,
-   cdl_tcb_domain = minBound\<rparr>"
+   cdl_tcb_domain = minBound,
+   cdl_tcb_extra = default_tcb_extra_data\<rparr>"
 
 definition
   example_irq_node :: "cdl_irq \<Rightarrow> cdl_object_id"
@@ -100,7 +103,8 @@ definition
                         3 \<mapsto> FrameCap False frame_id {AllowRead, AllowWrite} small_frame_size Real None],
                                cdl_cnode_size_bits = 2\<rparr>),
                   pd_id \<mapsto> PageDirectory \<lparr>cdl_page_directory_caps = empty_cap_map pd_size\<rparr>,
-                  frame_id \<mapsto> Frame \<lparr>cdl_frame_size_bits = small_frame_size\<rparr>],
+                  frame_id \<mapsto> Frame \<lparr>cdl_frame_size_bits = small_frame_size,
+                                    cdl_frame_fills = default_frame_fill_data\<rparr>],
    cdl_cdt = Map.empty, \<comment> \<open>All caps are orig caps.\<close>
    cdl_current_thread = undefined,
    cdl_irq_node = example_irq_node,
@@ -129,9 +133,11 @@ lemma well_formed_tcb_example:
   apply (drule (1) example_spec_is_tcb, clarsimp)
   apply (clarsimp simp: example_tcb_def tcb_has_fault_def tcb_domain_def minBound_word
                         object_slots_def tcb_slot_defs cnode_id_not_in_irq_cnodes
-                        is_default_cap_def cap_type_def default_cap_def
+                        is_default_cap_def cap_type_def default_cap_def obj_tcb_def
                  split: if_split_asm)
   done
+
+declare Least_eq_trivial[simp]
 
 lemma well_formed_orig_caps_unique_example:
   "well_formed_orig_caps_unique example_spec"
@@ -268,6 +274,7 @@ lemma well_formed_cap_types_match_example [simp]:
 lemma well_formed_caps_example [simp]:
   "cdl_objects example_spec obj_id = Some obj \<Longrightarrow>
    well_formed_caps example_spec obj_id obj"
+   unfolding well_formed_caps_def
    apply (clarsimp simp: well_formed_caps_def)
    apply (clarsimp simp: example_spec_def empty_cap_map_def object_slots_def example_tcb_def is_fake_vm_cap_def
                   split: if_split_asm)
@@ -327,6 +334,12 @@ lemma well_formed_irq_table_example [simp]:
   apply (clarsimp simp: example_spec_def object_id_defs irq_len_val mask_def split: if_split_asm)
   done
 
+lemma well_formed_frame_extra_example:
+  "cdl_objects example_spec obj_id = Some obj
+   \<Longrightarrow> well_formed_frame_extra example_spec obj_id obj"
+  by (clarsimp simp: well_formed_frame_extra_def example_spec_def
+               split: if_split_asm)
+
 lemma well_formed_example:
   "well_formed example_spec"
   apply (clarsimp simp: well_formed_def)
@@ -340,6 +353,8 @@ lemma well_formed_example:
                         well_formed_orig_caps_unique_example)
    apply (rule conjI)
     apply (erule well_formed_tcb_example)
+   apply (rule conjI)
+    apply (fact well_formed_frame_extra_example)
    apply (rule conjI)
     apply (fact well_formed_vspace_example)
    apply (rule conjI)
@@ -359,6 +374,7 @@ lemma well_formed_example:
                          irq_nodes_def range_example_irq_node
                   split: if_split_asm)
   done
+
 end
 
 end

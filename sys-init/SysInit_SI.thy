@@ -444,11 +444,8 @@ where
     is_irqhandler_cap \<leftarrow> return (is_irqhandler_cap target_cap);
     target_cap_irq \<leftarrow> return (if is_irqhandler_cap then cap_irq target_cap else 0);
 
-    \<comment> \<open>IRQ Handler caps are moved, not copied.\<close>
-    \<comment> \<open>LIMITATION: This only moves irqhandler caps so that the generated
-            initialiser can work with the wider CAmkES framework. The proof would
-            still hold with original_cap_at.\<close>
-    move_cap \<leftarrow> return (irqhandler_cap_at (cnode_id, cnode_slot) spec);
+    \<comment> \<open>Any original caps (which includes IRQ Hander caps) are moved, not copied.\<close>
+    move_cap   \<leftarrow> return (original_cap_at (cnode_id, cnode_slot) spec);
 
     dest_obj   \<leftarrow> get_spec_object spec cnode_id;
     dest_size  \<leftarrow> return (object_size_bits dest_obj);
