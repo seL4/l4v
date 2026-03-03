@@ -1083,7 +1083,7 @@ text \<open>
   statement involving @{term While} where
 
    - the @{term whileLoop} condition uses a function in the reader monad, which must not fail,
-     necessitating the @{term no_ofail} assumption below. Removing this assumption would require a
+     necessitating the @{term no_ofail} assumption below: removing this assumption would require a
      variant of @{term whileLoop} which uses a reader monad function for the loop condition and
      which fails if this reader function fails.
 
@@ -1097,34 +1097,34 @@ text \<open>
 lemma ccorres_While:
   assumes body_ccorres:
     "\<And>r. ccorresG srel \<Gamma> rrel xf
-           (\<lambda>s. G r s \<and> C r s = Some True) (G' \<inter> C' \<inter> {s'. rrel r (xf s')}) []
+           (\<lambda>s. G r s \<and> C r s = Some True) (G' \<inter> C' r \<inter> {s'. rrel r (xf s')}) []
            (B r) B'"
   assumes cond_ccorres:
-    "\<And>r. ccorresG srel \<Gamma> (\<lambda>rv rv'. rv = to_bool rv') cond_xf
+    "\<And>r. ccorresG srel \<Gamma> (\<lambda>rv rv'. rv = (P rv')) cond_xf
            (G r) (G' \<inter> {s'. rrel r (xf s')}) []
            (gets_the (C r)) cond"
   assumes no_ofail: "\<And>r. no_ofail (G r) (C r)"
   assumes abs_body_inv: "\<And>r. \<lbrace>\<lambda>s. G r s \<and> C r s = Some True\<rbrace> B r \<lbrace>G\<rbrace>"
   assumes conc_body_inv:
-    "\<And>r s. \<Gamma> \<turnstile> {s'. s' \<in> G' \<and> (s, s') \<in> srel \<and> G r s \<and> rrel r (xf s') \<and> \<not> snd (B r s) \<and> s' \<in> C'
+    "\<And>r s. \<Gamma> \<turnstile> {s'. s' \<in> G' \<and> (s, s') \<in> srel \<and> G r s \<and> rrel r (xf s') \<and> \<not> snd (B r s) \<and> s' \<in> C' r
                      \<and> C r s = Some True}
                 B' G'"
   assumes cond_hoarep:
     "\<And>r s. \<Gamma> \<turnstile> {s'. s' \<in> G' \<and> (s, s') \<in> srel \<and> G r s \<and> rrel r (xf s')}
                 cond
-                {s'. s' \<in> G' \<and> (cond_xf s' \<noteq> 0 \<longrightarrow> s' \<in> C') \<and> rrel r (xf s')}"
+                {s'. s' \<in> G' \<and> (P (cond_xf s') \<longrightarrow> s' \<in> C' r) \<and> rrel r (xf s')}"
   shows
     "ccorresG srel \<Gamma> rrel xf (G r) (G' \<inter> {s'. rrel r (xf s')}) []
        (whileLoop (\<lambda>r s. the (C r s)) B r)
-       (cond;; While {s'. cond_xf s' \<noteq> 0} (B';; cond))"
+       (cond;; While {s'. P (cond_xf s')} (B';; cond))"
 proof -
   have cond_hoarep':
     "\<And>r s.
        \<Gamma> \<turnstile> {s' \<in> G'. (s, s') \<in> srel \<and> G r s \<and> rrel r (xf s')}
            cond
            {s'. (s' \<in> G' \<and> (s, s') \<in> srel \<and> G r s \<and> rrel r (xf s'))
-                \<and> (cond_xf s' \<noteq> 0 \<longrightarrow> (s' \<in> C' \<and> C r s = Some True))
-                \<and> C r s \<noteq> None \<and> the (C r s) = (cond_xf s' \<noteq> 0)}"
+                \<and> (P (cond_xf s') \<longrightarrow> s' \<in> C' r)
+                \<and> C r s \<noteq> None \<and> the (C r s) = (P (cond_xf s'))}"
     apply (insert cond_ccorres)
     apply (drule_tac x=r in meta_spec)
     apply (frule_tac s=s in ccorres_to_vcg_gets_the)
@@ -1139,7 +1139,7 @@ proof -
     apply (simp add: imp_conjR)
     apply (rule hoarep_conj_lift_pre_fix)
      apply (simp add: Collect_mono conseq_under_new_pre)
-    apply (rule_tac Q'="{s'. C r s \<noteq> None \<and> the (C r s) = (cond_xf s' \<noteq> 0)}"
+    apply (rule_tac Q'="{s'. C r s \<noteq> None \<and> the (C r s) = (P (cond_xf s'))}"
                  in conseqPost[rotated])
       apply fastforce
      apply fastforce
@@ -1149,7 +1149,7 @@ proof -
   have loop_body_to_Normal:
     "\<And>r s s' xstate.
       \<lbrakk>\<Gamma> \<turnstile> \<langle>B';; cond, Normal s'\<rangle> \<Rightarrow> xstate; (s, s') \<in> srel; rrel r (xf s'); G r s; s' \<in> G';
-       s' \<in> C'; the (C r s); \<not> snd (whileLoop (\<lambda>r s. the (C r s)) B r s)\<rbrakk>
+       s' \<in> C' r; the (C r s); \<not> snd (whileLoop (\<lambda>r s. the (C r s)) B r s)\<rbrakk>
       \<Longrightarrow> isNormal xstate"
     apply (frule intermediate_Normal_state)
       apply (rule hoarep_conj_lift[where Q'="\<lambda>s. s \<in> G'"])
@@ -1162,9 +1162,9 @@ proof -
 
   have helper:
     "\<And>s' xstate'.
-       \<Gamma> \<turnstile> \<langle>While {s'. cond_xf s' \<noteq> 0} (B';; cond), Normal s'\<rangle> \<Rightarrow> xstate' \<Longrightarrow>
-       \<forall>r s. ((s, s') \<in> srel \<and> (C r s \<noteq> None) \<and> (cond_xf s' \<noteq> 0) = the (C r s)
-              \<and> rrel r (xf s') \<and> G r s \<and> s' \<in> G' \<and> (cond_xf s' \<noteq> 0 \<longrightarrow> s' \<in> C')
+       \<Gamma> \<turnstile> \<langle>While {s'. P (cond_xf s')} (B';; cond), Normal s'\<rangle> \<Rightarrow> xstate' \<Longrightarrow>
+       \<forall>r s. ((s, s') \<in> srel \<and> (C r s \<noteq> None) \<and> (P (cond_xf s')) = the (C r s)
+              \<and> rrel r (xf s') \<and> G r s \<and> s' \<in> G' \<and> (P (cond_xf s') \<longrightarrow> s' \<in> C' r)
               \<and> \<not> snd (whileLoop (\<lambda>r s. the (C r s)) B r s))
              \<longrightarrow> (\<exists>t'. Normal t' = xstate'
                        \<and> (\<exists>rv s'. (rv, s') \<in> fst (whileLoop (\<lambda>r s. the (C r s)) B r s)
@@ -1217,7 +1217,7 @@ proof -
                   intro: ccorres_empty_handler_stackI cond_hoarep')
 qed
 
-lemmas ccorres_While' = ccorres_While[where C'=UNIV, simplified]
+lemmas ccorres_While' = ccorres_While[where C'="\<lambda>_. UNIV", simplified]
 
 
 \<comment> \<open>simp rules for rewriting common patterns in the return relations\<close>
