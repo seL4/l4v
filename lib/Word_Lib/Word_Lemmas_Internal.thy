@@ -1114,4 +1114,8 @@ proof -
     by (metis sorted_list_of_set.idem_if_sorted_distinct)
 qed
 
+lemma and_neg_mask_plus_le:
+  "w \<le> mask n \<Longrightarrow> p && ~~ mask n \<le> (p && ~~ mask n) + w"
+  using and_neg_mask_plus_mask_mono word_and_le word_plus_mono_right2 by blast
+
 end
