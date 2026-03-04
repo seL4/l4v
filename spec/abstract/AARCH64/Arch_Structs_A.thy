@@ -12,6 +12,7 @@ imports
   ExecSpec.Arch_Structs_B
   ExceptionTypes_A
   VMRights_A
+  ArchVMAttributes_A
   ExecSpec.Arch_Kernel_Config_Lemmas
 begin
 
@@ -67,12 +68,6 @@ definition update_map_data :: "arch_cap \<Rightarrow> (asid \<times> vspace_ref)
 section \<open>Architecture-specific objects\<close>
 
 subsection \<open>Page tables\<close>
-
-(* This datatype does not match up with the executable spec directly:
-   This one here models all "things" one can set on a page entry.
-   The attributes accessible to users are the ones returned by attribs_from_word. *)
-datatype vm_attribute = Global | Execute | Device
-type_synonym vm_attributes = "vm_attribute set"
 
 text \<open>
   The C field @{text base_addr} for next-level tables of @{text PagePTE}s is a 36 bit field-high

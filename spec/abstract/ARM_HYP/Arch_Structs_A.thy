@@ -15,7 +15,7 @@ imports
   ExecSpec.Arch_Structs_B
   ExceptionTypes_A
   VMRights_A
-  VMAttributes_A
+  ArchVMAttributes_A
   ExecSpec.Arch_Kernel_Config_Lemmas
 begin
 
