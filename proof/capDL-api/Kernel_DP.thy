@@ -110,7 +110,7 @@ where
 definition dummy_syscall :: "bool u_monad" where
   "dummy_syscall \<equiv> return True"
 
-definition seL4_TCB_Configure :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> cdl_raw_capdata \<Rightarrow> cdl_cptr \<Rightarrow> cdl_raw_capdata \<Rightarrow> word32 \<Rightarrow> cdl_cptr \<Rightarrow> bool u_monad"
+definition seL4_TCB_Configure :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> cdl_raw_capdata \<Rightarrow> cdl_cptr \<Rightarrow> cdl_raw_capdata \<Rightarrow> machine_word \<Rightarrow> cdl_cptr \<Rightarrow> bool u_monad"
 where
   "seL4_TCB_Configure tcb_cap fault_ep cspace_root cspace_root_data vspace_root vspace_root_data buffer_addr buffer_frame \<equiv>
     do_kernel_op $ call_kernel_with_intent
@@ -120,7 +120,7 @@ where
        cdl_intent_extras = [cspace_root, vspace_root, buffer_frame],
        cdl_intent_recv_slot = None\<rparr> True"
 
-definition seL4_TCB_SetIPCBuffer :: "cdl_cptr \<Rightarrow> word32 \<Rightarrow> cdl_cptr
+definition seL4_TCB_SetIPCBuffer :: "cdl_cptr \<Rightarrow> machine_word \<Rightarrow> cdl_cptr
   \<Rightarrow> bool u_monad"
 where
   "seL4_TCB_SetIPCBuffer tcb_cap buffer_addr buffer_frame \<equiv>
@@ -179,7 +179,7 @@ where
        cdl_intent_extras = [],
        cdl_intent_recv_slot = None\<rparr> True"
 
-definition seL4_TCB_WriteRegisters :: "cdl_cptr \<Rightarrow> bool \<Rightarrow> word8 \<Rightarrow> word32 \<Rightarrow> cdl_raw_usercontext \<Rightarrow> bool u_monad"
+definition seL4_TCB_WriteRegisters :: "cdl_cptr \<Rightarrow> bool \<Rightarrow> arch_flags \<Rightarrow> machine_word \<Rightarrow> cdl_raw_usercontext \<Rightarrow> bool u_monad"
 where
   "seL4_TCB_WriteRegisters tcb_cap resume_target arch_flags count regs \<equiv>
     do_kernel_op $ call_kernel_with_intent
@@ -189,18 +189,22 @@ where
        cdl_intent_extras = [],
        cdl_intent_recv_slot = None\<rparr> False"
 
-definition seL4_Untyped_Retype :: "cdl_cptr \<Rightarrow> cdl_object_type \<Rightarrow> word32 \<Rightarrow> cdl_cptr \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> bool u_monad"
-where
+definition seL4_Untyped_Retype ::
+  "cdl_cptr \<Rightarrow> cdl_object_type \<Rightarrow> machine_word \<Rightarrow> cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word
+   \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> bool u_monad"
+  where
   "seL4_Untyped_Retype untyped_cap type size_bits croot node_index node_depth node_offset node_window \<equiv>
     do_kernel_op $ call_kernel_with_intent
-      \<lparr>cdl_intent_op = Some $ UntypedIntent $ UntypedRetypeIntent type size_bits node_index node_depth node_offset node_window,
+      \<lparr>cdl_intent_op = Some $ UntypedIntent $ UntypedRetypeIntent type size_bits node_index
+                                                                  node_depth node_offset node_window,
        cdl_intent_error = False,
        cdl_intent_cap = untyped_cap,
        cdl_intent_extras = [croot],
        cdl_intent_recv_slot = None\<rparr> False"
 
-definition seL4_IRQControl_Get :: "cdl_cptr \<Rightarrow> cdl_irq \<Rightarrow> cdl_cptr \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> bool u_monad"
-where
+definition seL4_IRQControl_Get ::
+  "cdl_cptr \<Rightarrow> cdl_irq \<Rightarrow> cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> bool u_monad"
+  where
   "seL4_IRQControl_Get control_cap irq croot node_index node_depth \<equiv>
     do_kernel_op $ call_kernel_with_intent
       \<lparr>cdl_intent_op = Some $ IrqControlIntent $ IrqControlIssueIrqHandlerIntent irq node_index node_depth,
@@ -210,7 +214,8 @@ where
        cdl_intent_recv_slot = None\<rparr> True"
 
 definition seL4_IssueSGISignal ::
-  "cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> bool u_monad"
+  "cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word
+   \<Rightarrow> bool u_monad"
   where
   "seL4_IssueSGISignal control_cap irq target croot node_index node_depth \<equiv>
     do_kernel_op $ call_kernel_with_intent
@@ -241,7 +246,7 @@ where
        cdl_intent_extras = [pd],
        cdl_intent_recv_slot = None\<rparr> True"
 
-definition seL4_PageTable_Map :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> word32 \<Rightarrow> cdl_raw_vmattrs \<Rightarrow> bool u_monad"
+definition seL4_PageTable_Map :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> vptr \<Rightarrow> cdl_raw_vmattrs \<Rightarrow> bool u_monad"
 where
   "seL4_PageTable_Map sel4_page_table sel4_page_directory vaddr vmattribs \<equiv>
     do_kernel_op $ call_kernel_with_intent
@@ -251,7 +256,7 @@ where
        cdl_intent_extras = [sel4_page_directory],
        cdl_intent_recv_slot = None\<rparr> True"
 
-definition seL4_Page_Map :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> word32 \<Rightarrow> cdl_right set \<Rightarrow> cdl_raw_vmattrs \<Rightarrow> bool u_monad"
+definition seL4_Page_Map :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> vptr \<Rightarrow> cdl_right set \<Rightarrow> cdl_raw_vmattrs \<Rightarrow> bool u_monad"
 where
   "seL4_Page_Map sel4_page sel4_page_directory vaddr perms vmattribs \<equiv>
     do_kernel_op $ call_kernel_with_intent
@@ -261,8 +266,10 @@ where
        cdl_intent_extras = [sel4_page_directory],
        cdl_intent_recv_slot = None\<rparr> True"
 
-definition seL4_CNode_Move :: "cdl_cptr \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> cdl_cptr \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> bool u_monad"
-where
+definition seL4_CNode_Move ::
+  "cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word
+   \<Rightarrow> bool u_monad"
+  where
   "seL4_CNode_Move dest_root dest_index dest_depth src_root src_index src_depth \<equiv>
     do_kernel_op $ call_kernel_with_intent
       \<lparr>cdl_intent_op = Some $ CNodeIntent $ CNodeMoveIntent dest_index dest_depth src_index src_depth,
@@ -271,8 +278,10 @@ where
        cdl_intent_extras = [src_root],
        cdl_intent_recv_slot = None\<rparr> False"
 
-definition seL4_CNode_Copy :: "cdl_cptr \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> cdl_cptr \<Rightarrow> word32 \<Rightarrow> word32  \<Rightarrow> cdl_right set \<Rightarrow> bool u_monad"
-where
+definition seL4_CNode_Copy ::
+  "cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word
+   \<Rightarrow> cdl_right set \<Rightarrow> bool u_monad"
+  where
   "seL4_CNode_Copy dest_root dest_index dest_depth src_root src_index src_depth rights \<equiv>
     do_kernel_op $ call_kernel_with_intent
       \<lparr>cdl_intent_op = Some $ CNodeIntent $ CNodeCopyIntent dest_index dest_depth src_index src_depth rights,
@@ -281,8 +290,10 @@ where
        cdl_intent_extras = [src_root],
        cdl_intent_recv_slot = None\<rparr> True"
 
-definition seL4_CNode_Mint :: "cdl_cptr \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> cdl_cptr \<Rightarrow> word32 \<Rightarrow> word32  \<Rightarrow> cdl_right set \<Rightarrow> cdl_raw_capdata \<Rightarrow> bool u_monad"
-where
+definition seL4_CNode_Mint ::
+  "cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word
+   \<Rightarrow> cdl_right set \<Rightarrow> cdl_raw_capdata \<Rightarrow> bool u_monad"
+  where
   "seL4_CNode_Mint dest_root dest_index dest_depth src_root src_index src_depth rights data \<equiv>
     do_kernel_op $ call_kernel_with_intent
        \<lparr>cdl_intent_op = Some $ CNodeIntent $ CNodeMintIntent dest_index dest_depth src_index src_depth rights data,
@@ -291,8 +302,10 @@ where
        cdl_intent_extras = [src_root],
        cdl_intent_recv_slot = None\<rparr> True"
 
-definition seL4_CNode_Mutate :: "cdl_cptr \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> cdl_cptr \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> cdl_raw_capdata \<Rightarrow> bool u_monad"
-where
+definition seL4_CNode_Mutate ::
+  "cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word
+  \<Rightarrow> cdl_raw_capdata \<Rightarrow> bool u_monad"
+  where
   "seL4_CNode_Mutate dest_root dest_index dest_depth src_root src_index src_depth data \<equiv>
     do_kernel_op $ call_kernel_with_intent
       \<lparr>cdl_intent_op = Some $ CNodeIntent $ CNodeMutateIntent dest_index dest_depth src_index src_depth data,
@@ -304,4 +317,3 @@ where
 (* End of kernel call funtions *)
 
 end
-

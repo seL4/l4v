@@ -976,7 +976,7 @@ where
  * Deterministic version of update_cap_data used by the capDL kernel.
  * This is used in the specification of the CSpace kernel calls.
  *)
-definition guard_update :: "cdl_cap \<Rightarrow> word32 \<Rightarrow> cdl_cap"
+definition guard_update :: "cdl_cap \<Rightarrow> machine_word \<Rightarrow> cdl_cap"
 where "guard_update cap data  \<equiv>
   case cap of cdl_cap.CNodeCap oid _ _ sz \<Rightarrow>
     (let reserved_bits = 3; guard_bits = 18; guard_size_bits = 5; new_guard_size = unat ((data >> reserved_bits) && mask guard_size_bits);
