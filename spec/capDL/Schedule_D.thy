@@ -19,7 +19,7 @@ where
           \<and> ( ((cdl_tcb_caps a) tcb_pending_op_slot) = (Some RunningCap) \<or> ((cdl_tcb_caps a) tcb_pending_op_slot) = (Some RestartCap))}"
 
 definition
-  active_tcbs_in_domain :: "word8 \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id set"
+  active_tcbs_in_domain :: "domain \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id set"
 where
   "active_tcbs_in_domain domain state  = {x \<in> dom (cdl_objects state).
       \<exists> a. (cdl_objects state) x = Some (Tcb a)

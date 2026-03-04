@@ -614,7 +614,7 @@ where
  * to store for implementation reasons.
  *)
 definition
-  badge_update :: "word32 \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
+  badge_update :: "machine_word \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
 where
   "badge_update data cap \<equiv> update_cap_badge (data && mask badge_bits) cap"
 
@@ -630,7 +630,7 @@ where
 
 
 definition
-  update_cap_data :: "bool \<Rightarrow> word32 \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap k_monad"
+  update_cap_data :: "bool \<Rightarrow> machine_word \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap k_monad"
 where
   "update_cap_data preserve data cap \<equiv>
     return $ case cap of

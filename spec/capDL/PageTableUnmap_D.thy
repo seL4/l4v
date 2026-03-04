@@ -266,15 +266,14 @@ where
   od) s"
   by auto
 
-
-definition cdl_get_pde :: "(word32 \<times> nat)\<Rightarrow> cdl_cap k_monad"
+definition cdl_get_pde :: "cdl_cap_ref \<Rightarrow> cdl_cap k_monad"
 where "cdl_get_pde ptr \<equiv>
   KHeap_D.get_cap ptr"
 
-definition cdl_lookup_pd_slot :: "word32 \<Rightarrow> word32 \<Rightarrow> word32 \<times> nat "
+definition cdl_lookup_pd_slot :: "cdl_object_id \<Rightarrow> vptr \<Rightarrow> cdl_cap_ref"
   where "cdl_lookup_pd_slot pd vptr \<equiv> (pd, unat (vptr >> sectionBits))"
 
-definition cdl_lookup_pt_slot :: "word32 \<Rightarrow> word32 \<Rightarrow> (word32 \<times> nat) except_monad"
+definition cdl_lookup_pt_slot :: "cdl_object_id \<Rightarrow> vptr \<Rightarrow> cdl_cap_ref except_monad"
   where "cdl_lookup_pt_slot pd vptr \<equiv>
     doE pd_slot \<leftarrow> returnOk (cdl_lookup_pd_slot pd vptr);
         pdcap \<leftarrow> liftE $ cdl_get_pde pd_slot;
@@ -299,9 +298,10 @@ where
      | _ \<Rightarrow> throw
    odE "
 
-definition cdl_page_mapping_entries :: "32 word \<Rightarrow> nat \<Rightarrow> 32 word
-                                       \<Rightarrow> ((32 word \<times> nat) list) except_monad"
-  where "cdl_page_mapping_entries vptr pgsz pd \<equiv>
+definition cdl_page_mapping_entries ::
+  "vptr \<Rightarrow> nat \<Rightarrow> cdl_object_id \<Rightarrow> (cdl_cap_ref list) except_monad"
+  where
+  "cdl_page_mapping_entries vptr pgsz pd \<equiv>
   if pgsz = 12 then doE
     p \<leftarrow> cdl_lookup_pt_slot pd vptr;
          returnOk [p]
@@ -339,7 +339,7 @@ text \<open>
 \<close>
 
 definition
- "might_throw \<equiv> (returnOk ()) \<sqinter> throw"
+ "might_throw \<equiv> returnOk () \<sqinter> throw"
 
 definition
   unmap_page :: "cdl_mapped_addr  \<Rightarrow> cdl_object_id \<Rightarrow> nat \<Rightarrow> unit k_monad"
