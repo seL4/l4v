@@ -686,7 +686,7 @@ lemma decodeX64PageTableInvocation_corres:
              apply (rule corres_trivial)
              apply (rule corres_returnOk)
              apply (clarsimp simp: archinv_relation_def page_table_invocation_map_def)
-             apply (clarsimp simp: attribs_from_word_def filter_frame_attrs_def
+             apply (clarsimp simp: attribs_from_word_def filter_vm_attributes_def
                                    attribsFromWord_def Let_def)
             apply ((clarsimp cong: if_cong
                      | wp whenE_wp hoare_vcg_all_liftE_R getPDE_wp get_pde_wp
@@ -777,7 +777,7 @@ lemma decodeX64PageDirectoryInvocation_corres:
              apply (rule corres_trivial)
              apply (rule corres_returnOk)
              apply (clarsimp simp: archinv_relation_def page_directory_invocation_map_def)
-             apply (clarsimp simp: attribs_from_word_def filter_frame_attrs_def
+             apply (clarsimp simp: attribs_from_word_def filter_vm_attributes_def
                                    attribsFromWord_def Let_def)
             apply ((clarsimp cong: if_cong
                         | wp whenE_wp hoare_vcg_all_liftE_R getPDPTE_wp get_pdpte_wp
@@ -865,7 +865,7 @@ lemma decodeX64PDPointerTableInvocation_corres:
              apply (rule corres_trivial)
              apply (rule corres_returnOk)
              apply (clarsimp simp: archinv_relation_def pdpt_invocation_map_def)
-             apply (clarsimp simp: attribs_from_word_def filter_frame_attrs_def
+             apply (clarsimp simp: attribs_from_word_def filter_vm_attributes_def
                                    attribsFromWord_def Let_def)
             apply ((clarsimp cong: if_cong
                     | wp whenE_wp hoare_vcg_all_liftE_R getPML4E_wp get_pml4e_wp

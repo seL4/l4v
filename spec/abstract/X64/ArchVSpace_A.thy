@@ -30,7 +30,7 @@ text \<open>Save the set of entries that would be inserted into a page table or
 page directory to map various different sizes of frame at a given virtual
 address.\<close>
 primrec create_mapping_entries ::
-  "paddr \<Rightarrow> vspace_ref \<Rightarrow> vmpage_size \<Rightarrow> vm_rights \<Rightarrow> frame_attrs \<Rightarrow> obj_ref \<Rightarrow>
+  "paddr \<Rightarrow> vspace_ref \<Rightarrow> vmpage_size \<Rightarrow> vm_rights \<Rightarrow> vm_attributes \<Rightarrow> obj_ref \<Rightarrow>
   (vm_page_entry * obj_ref,'z::state_ext) se_monad"
 where
   "create_mapping_entries base vptr X64SmallPage vm_rights attrib pd =
@@ -447,16 +447,6 @@ check_valid_ipc_buffer :: "vspace_ref \<Rightarrow> cap \<Rightarrow> (unit,'z::
     returnOk ()
   odE
 | _ \<Rightarrow> throwError IllegalOperation"
-
-text \<open>Decode a user argument word describing the kind of VM attributes a
-mapping is to have.\<close>
-definition
-attribs_from_word :: "machine_word \<Rightarrow> frame_attrs" where
-"attribs_from_word w \<equiv>
-  let V = (if w !!0 then {PTAttr WriteThrough} else {});
-      V' = (if w!!1 then insert (PTAttr CacheDisabled) V else V)
-  in if w!!2 then insert PAT V' else V'"
-
 
 text \<open>Update the mapping data saved in a page or page table capability.\<close>
 definition
