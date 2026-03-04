@@ -69,7 +69,6 @@ EXCLUDE["AARCH64"]=[
     # Tools and unrelated content, removed for development
     "AutoCorres",
     "CamkesGlueSpec",
-    "Sep_Algebra",
     "Concurrency",
     "EVTutorial",
     "TakeGrant",
@@ -77,8 +76,9 @@ EXCLUDE["AARCH64"]=[
 
     # Longer-term exclusions
     "AutoCorresSEL4",
-    "DSpec",
     "DBaseRefine",
+    "DSpecProofs",
+    "SysInit",
     "CamkesGlueProofs",
     "AsmRefine",
     "SimplExportAndRefine"

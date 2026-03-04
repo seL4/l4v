@@ -10,15 +10,20 @@ chapter "System-Initialisation"
  * System Initialisation.
  *)
 
-session SysInit = DSpecProofs +
+(* Does not build on DSpecProofs image, because it needs only one thy from DSpecProofs *)
+session SysInitSpec in "spec" = SepDSpec +
   sessions
-    Sep_Algebra
-    SepDSpec
     DSpecProofs
   theories
-    "Proof_SI"
+    SysInit_SI
+
+session SysInit = DSpecProofs +
+  sessions
+    SysInitSpec
+  theories
+    Proof_SI
 
 session SysInitExamples in "examples" = SysInit +
   theories
-    "ExampleSpec_SI"
-    "ExampleSpecIRQ_SI"
+    ExampleSpec_SI
+    ExampleSpecIRQ_SI

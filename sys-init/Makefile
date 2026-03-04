@@ -14,6 +14,6 @@ all: images test
 # Setup heaps.
 #
 
-HEAPS += SysInit SysInitExamples
+HEAPS += SysInitSpec SysInit SysInitExamples
 
 include ../misc/isa-common.mk
