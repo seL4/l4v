@@ -522,4 +522,14 @@ lemma in_filter_neq:
   "\<lbrakk>t \<in> set ts; t \<noteq> t'\<rbrakk> \<Longrightarrow> t \<in> set (filter ((\<noteq>) t') ts)"
   by fastforce
 
+lemma Least_eq_trivial[simp]:
+  "(LEAST x. x = c) = (c :: 'a::preorder)"
+  unfolding Least_def
+  by (clarsimp cong: conj_cong)
+
+lemma Least_sym_eq_trivial[simp]:
+  "(LEAST x. c = x) = (c :: 'a::preorder)"
+  unfolding Least_def
+  by (clarsimp cong: conj_cong)
+
 end
