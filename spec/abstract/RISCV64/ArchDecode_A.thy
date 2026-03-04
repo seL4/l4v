@@ -58,10 +58,6 @@ definition arch_decode_irq_control_invocation ::
       else throwError TruncatedMessage
     else throwError IllegalOperation)"
 
-definition attribs_from_word :: "machine_word \<Rightarrow> vm_attributes"
-  where
-  "attribs_from_word w \<equiv> if \<not> w!!0 then {Execute} else {}"
-
 definition make_user_pte :: "vspace_ref \<Rightarrow> vm_attributes \<Rightarrow> vm_rights \<Rightarrow> pte"
   where
   "make_user_pte addr attr rights \<equiv>

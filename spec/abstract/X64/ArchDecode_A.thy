@@ -369,9 +369,9 @@ where
   else throwError IllegalOperation
  | _ \<Rightarrow> fail)"
 
-definition filter_frame_attrs :: "frame_attrs \<Rightarrow> table_attrs"
+definition filter_vm_attributes :: "vm_attributes \<Rightarrow> table_attrs"
 where
-  "filter_frame_attrs attrs \<equiv> {s. \<exists>s' \<in> attrs. s' = PTAttr s}"
+  "filter_vm_attributes attrs \<equiv> {s. \<exists>s' \<in> attrs. s' = PTAttr s}"
 
 definition
   decode_page_table_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow>
@@ -397,7 +397,7 @@ where
                old_pde \<leftarrow> liftE $ get_pde pd_slot;
                unlessE (old_pde = InvalidPDE) $ throwError DeleteFirst;
                pde \<leftarrow> returnOk (PageTablePDE (addrFromPPtr p)
-                                  (filter_frame_attrs $ attribs_from_word attr) vm_read_write);
+                                  (filter_vm_attributes $ attribs_from_word attr) vm_read_write);
                cap' <- returnOk $ ArchObjectCap $ PageTableCap p $ Some (asid, vaddr');
                returnOk $ InvokePageTable $ PageTableMap cap' cte pde pd_slot pml4
             odE
@@ -434,7 +434,7 @@ where
                old_pdpte \<leftarrow> liftE $ get_pdpte pdpt_slot;
                unlessE (old_pdpte = InvalidPDPTE) $ throwError DeleteFirst;
                pdpte \<leftarrow> returnOk (PageDirectoryPDPTE (addrFromPPtr p)
-                          (filter_frame_attrs $ attribs_from_word attr) vm_read_write);
+                          (filter_vm_attributes $ attribs_from_word attr) vm_read_write);
                cap' <- returnOk $ ArchObjectCap $ PageDirectoryCap p $ Some (asid, vaddr');
                returnOk $ InvokePageDirectory $ PageDirectoryMap cap' cte pdpte pdpt_slot pml4
         odE
@@ -471,7 +471,7 @@ where
                old_pml4e \<leftarrow> liftE $ get_pml4e pml_slot;
                unlessE (old_pml4e = InvalidPML4E) $ throwError DeleteFirst;
                pml4e \<leftarrow> returnOk (PDPointerTablePML4E (addrFromPPtr p)
-                          (filter_frame_attrs $ attribs_from_word attr) vm_read_write);
+                          (filter_vm_attributes $ attribs_from_word attr) vm_read_write);
                cap' <- returnOk $ ArchObjectCap $ PDPointerTableCap p $ Some (asid, vaddr');
                returnOk $ InvokePDPT $ PDPTMap cap' cte pml4e pml_slot pml4
             odE
