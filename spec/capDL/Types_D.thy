@@ -49,24 +49,24 @@ type_synonym cdl_irq = irq
 (*
  * How objects are named within the kernel.
  *
- * Objects are named by 32 bit words.
+ * Objects are named by machine words.
  * This name may correspond to the memory address of the object.
  *)
-type_synonym cdl_object_id = word32
+type_synonym cdl_object_id = machine_word
 
-type_synonym cdl_object_set = "(cdl_object_id set)"
+type_synonym cdl_object_set = "cdl_object_id set"
 
 (* The badge of an endpoint *)
-type_synonym cdl_badge = word32
+type_synonym cdl_badge = machine_word
 
 (* The guard of a CNode cap, and the number of bits the guard uses. *)
-type_synonym cdl_cap_guard = word32
+type_synonym cdl_cap_guard = machine_word
 type_synonym cdl_cap_guard_size = nat
 
 (* The type we use to represent object sizes. *)
 type_synonym cdl_size_bits = nat
 
-(* A single IA32 IO port. *)
+(* A single x86 IO port. *)
 type_synonym cdl_io_port = nat
 
 (* The depth of a particular IA32 pagetable. *)
@@ -78,11 +78,14 @@ type_synonym cdl_cnode_index = nat
 (* A reference to a capability slot. *)
 type_synonym cdl_cap_ref = "cdl_object_id \<times> cdl_cnode_index"
 
-(* A virtual ASID. *)
+(* A virtual ASID, encoding ASID high and low bits separately as a pair. *)
 type_synonym cdl_asid = "cdl_cnode_index \<times> cdl_cnode_index"
 
 (* mapped address  *)
-type_synonym cdl_mapped_addr = "(cdl_asid \<times> word32)"
+type_synonym cdl_mapped_addr = "cdl_asid \<times> machine_word"
+
+(* raw virtual user-space address *)
+type_synonym vptr = machine_word
 
 (* Number of bits of a badge we can use. *)
 definition
@@ -180,7 +183,7 @@ type_synonym cdl_cdt = "cdl_cap_ref \<Rightarrow> cdl_cap_ref option"
 translations
   (type) "cdl_cap_map" <=(type) "nat \<Rightarrow> cdl_cap option"
   (type) "cdl_cap_ref" <=(type) "cdl_object_id \<times> nat"
-  (type) "cdl_cap_ref" <=(type) "word32 \<times> nat"
+  (type) "cdl_cap_ref" <=(type) "machine_word \<times> nat"
   (type) "cdl_cdt"     <=(type) "cdl_cap_ref \<Rightarrow> cdl_cap_ref option"
 
 
@@ -190,8 +193,8 @@ translations
    but is required for generating an executable system initialiser
 *)
 record cdl_tcb_extra =
-  cdl_tcb_prio    :: word8
-  cdl_tcb_mcp     :: word8
+  cdl_tcb_prio    :: prio
+  cdl_tcb_mcp     :: prio
   cdl_tcb_ip      :: machine_word
   cdl_tcb_sp      :: machine_word
   cdl_tcb_ipc_buf :: machine_word
@@ -202,7 +205,7 @@ record cdl_tcb =
   cdl_tcb_fault_endpoint :: cdl_cptr
   cdl_tcb_intent         :: cdl_full_intent
   cdl_tcb_has_fault      :: bool
-  cdl_tcb_domain         :: word8
+  cdl_tcb_domain         :: domain
   cdl_tcb_extra          :: cdl_tcb_extra
 
 record cdl_cnode =
@@ -258,6 +261,7 @@ datatype cdl_arch = IA32 | ARM11
 (* The map of objects that are in the system. *)
 type_synonym cdl_heap = "cdl_object_id \<Rightarrow> cdl_object option"
 
+(* FIXME arch-split: this has to mention the actual number to work, needs to go into an Arch file *)
 translations
   (type) "cdl_heap" <=(type) "32 word \<Rightarrow> cdl_object option"
 
@@ -298,7 +302,7 @@ record cdl_state =
   cdl_current_thread :: "cdl_object_id option"
   cdl_irq_node       :: "cdl_irq \<Rightarrow> cdl_object_id"
   cdl_asid_table     :: cdl_cap_map
-  cdl_current_domain :: word8
+  cdl_current_domain :: domain
 
 (* Return the type of an object. *)
 definition
@@ -691,7 +695,7 @@ definition default_tcb_extra_data :: "cdl_tcb_extra" where
 
 (* Standard empty TCB object. *)
 definition
-  default_tcb :: "word8 \<Rightarrow> cdl_tcb"
+  default_tcb :: "domain \<Rightarrow> cdl_tcb"
 where
   "default_tcb current_domain = \<lparr>
     cdl_tcb_caps = \<lambda>n. if n \<in> tcb_slots then Some NullCap else None,
@@ -713,7 +717,7 @@ definition default_frame_fill_data :: "cdl_frame_fill list" where
 
 (* Return a newly constructed object of the given type. *)
 definition
-  default_object :: "cdl_object_type \<Rightarrow> nat \<Rightarrow> word8 \<Rightarrow> cdl_object option"
+  default_object :: "cdl_object_type \<Rightarrow> nat \<Rightarrow> domain \<Rightarrow> cdl_object option"
 where
   "default_object x y current_domain \<equiv>
     case x of

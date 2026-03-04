@@ -12,7 +12,7 @@ theory Tcb_D
 imports Invocations_D CSpace_D
 begin
 
-definition cdl_update_cnode_cap_data :: "cdl_cap \<Rightarrow> word32 \<Rightarrow> cdl_cap"
+definition cdl_update_cnode_cap_data :: "cdl_cap \<Rightarrow> machine_word \<Rightarrow> cdl_cap"
 where "cdl_update_cnode_cap_data cap data  \<equiv>
   case cap of cdl_cap.CNodeCap oid _ _ sz \<Rightarrow> if data\<noteq>0 then
     (let reserved_bits = 3; guard_bits = 18; guard_size_bits = 5; new_guard_size = unat ((data >> reserved_bits) && mask guard_size_bits);
@@ -306,7 +306,7 @@ where
      DomainSetIntent d \<Rightarrow> returnOk (SetDomain (cap_object (fst (hd caps))) d) \<sqinter> throw"
 
 definition
-  set_domain :: "cdl_object_id \<Rightarrow> word8 \<Rightarrow> unit k_monad"
+  set_domain :: "cdl_object_id \<Rightarrow> domain \<Rightarrow> unit k_monad"
 where
   "set_domain tcb d \<equiv> update_thread tcb (\<lambda>t. (t\<lparr>cdl_tcb_domain := d \<rparr>))"
 

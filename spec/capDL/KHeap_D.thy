@@ -224,7 +224,7 @@ where
  * may have an effect on how intents are interpreted.
  *)
 definition
-  corrupt_intents ::"(word32 \<Rightarrow> cdl_full_intent) \<Rightarrow> cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_state"
+  corrupt_intents ::"(machine_word \<Rightarrow> cdl_full_intent) \<Rightarrow> cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_state"
 where
   "corrupt_intents f bufp s \<equiv>
   let changed = (\<lambda>ptr. case cdl_objects s ptr of

@@ -22,8 +22,8 @@ datatype cdl_untyped_invocation =
         cdl_object_type cdl_size_bits "cdl_cap_ref list" bool nat
 
 datatype cdl_tcb_invocation =
-    WriteRegisters cdl_object_id bool "word32 list" nat
-  | ReadRegisters cdl_object_id bool word32 nat
+    WriteRegisters cdl_object_id bool "machine_word list" nat
+  | ReadRegisters cdl_object_id bool machine_word nat
   | CopyRegisters cdl_object_id cdl_object_id bool bool bool bool nat
   | ThreadControl cdl_object_id cdl_cap_ref
         "cdl_cptr option"
@@ -89,7 +89,7 @@ datatype cdl_page_directory_invocation =
 
 
 datatype cdl_domain_invocation =
-  SetDomain cdl_object_id word8
+  SetDomain cdl_object_id domain
 
 datatype cdl_sgi_signal_invocation =
   SGISignalGenerate (* no params, machine op only *)
