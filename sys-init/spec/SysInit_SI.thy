@@ -102,7 +102,7 @@ definition create_irq_cap :: "cdl_state \<Rightarrow> (cdl_irq \<times> cdl_cptr
     control_cap \<leftarrow> return seL4_CapIRQControl;
     root  \<leftarrow> return seL4_CapInitThreadCNode;
     index \<leftarrow> return $ free_cptr;
-    depth \<leftarrow> return (32::word32);
+    depth \<leftarrow> return $ of_nat word_bits;
 
     fail \<leftarrow> seL4_IRQControl_Get control_cap irq root index depth;
     assert (\<not>fail)
@@ -163,11 +163,11 @@ where
 
     dest_root  \<leftarrow> return seL4_CapInitThreadCNode;
     dest_index \<leftarrow> return $ free_slot;
-    dest_depth \<leftarrow> return (32::word32);
+    dest_depth \<leftarrow> return $ of_nat word_bits;
 
     src_root   \<leftarrow> return seL4_CapInitThreadCNode;
     src_index  \<leftarrow> assert_opt $ orig_caps obj_id;
-    src_depth  \<leftarrow> return (32::word32);
+    src_depth  \<leftarrow> return $ of_nat word_bits;
 
     fail \<leftarrow> seL4_CNode_Copy dest_root dest_index dest_depth
                             src_root src_index src_depth rights;
@@ -279,7 +279,7 @@ where
 (* Map a page into a page table or page directory *)
 definition map_page ::
   "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id
-   \<Rightarrow> cdl_object_id \<Rightarrow> cdl_right set \<Rightarrow> word32 \<Rightarrow> cdl_cptr \<Rightarrow> cdl_raw_vmattrs \<Rightarrow> unit u_monad"
+   \<Rightarrow> cdl_object_id \<Rightarrow> cdl_right set \<Rightarrow> vptr \<Rightarrow> cdl_cptr \<Rightarrow> cdl_raw_vmattrs \<Rightarrow> unit u_monad"
   where
   "map_page spec orig_caps page_id pd_id rights vaddr free_cptr vmattribs \<equiv> do
     cdl_page  \<leftarrow> assert_opt $ cdl_objects spec page_id;
@@ -295,7 +295,7 @@ definition map_page ::
 (* Map a page table into a page directory *)
 definition map_page_table ::
   "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id
-   \<Rightarrow> cdl_object_id \<Rightarrow> cdl_right set \<Rightarrow> word32 \<Rightarrow> cdl_raw_vmattrs \<Rightarrow> unit u_monad"
+   \<Rightarrow> cdl_object_id \<Rightarrow> cdl_right set \<Rightarrow> vptr \<Rightarrow> cdl_raw_vmattrs \<Rightarrow> unit u_monad"
   where
   "map_page_table spec orig_caps page_id pd_id rights vaddr vmattribs \<equiv> do
     cdl_page  \<leftarrow> assert_opt $ cdl_objects spec page_id;
@@ -309,7 +309,7 @@ definition map_page_table ::
 (* Map a page table slot *)
 definition map_page_table_slot ::
   "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id
-   \<Rightarrow> cdl_object_id \<Rightarrow> word32 \<Rightarrow> (cdl_cap_ref \<Rightarrow> cdl_cptr) \<Rightarrow> cdl_cnode_index \<Rightarrow> unit u_monad"
+   \<Rightarrow> cdl_object_id \<Rightarrow> vptr \<Rightarrow> (cdl_cap_ref \<Rightarrow> cdl_cptr) \<Rightarrow> cdl_cnode_index \<Rightarrow> unit u_monad"
   where
   "map_page_table_slot spec orig_caps pd_id pt_id pt_vaddr free_cptrs_map pt_slot  \<equiv> do
     frame_cap  \<leftarrow> assert_opt $ opt_cap (pt_id, pt_slot) spec;
@@ -394,7 +394,7 @@ definition get_frame_caps :: "cdl_state \<Rightarrow> cdl_object_id \<Rightarrow
 
 (* Construct a function to assign each frame cap a free cptr, mapping all other slots to 0 *)
 definition make_frame_cap_map ::
-  "cdl_object_id list \<Rightarrow> bi_slot_region \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id \<times> nat \<Rightarrow> word32"
+  "cdl_object_id list \<Rightarrow> bi_slot_region \<Rightarrow> cdl_state \<Rightarrow> cdl_cap_ref \<Rightarrow> machine_word"
   where
   "make_frame_cap_map obj_ids free_cptrs spec ref \<equiv>
      case_option 0 id
@@ -461,7 +461,7 @@ where
     src_index  \<leftarrow> assert_opt (if is_irqhandler_cap
                               then irq_caps target_cap_irq
                               else orig_caps target_cap_obj);
-    src_depth  \<leftarrow> return (32::word32);
+    src_depth  \<leftarrow> return $ of_nat word_bits;
 
     \<comment> \<open>If it's a NullCap, then there's no need to do anything.
      d If it's a cap that wants to be moved, and we want to move the cap, move (mutate) it.
