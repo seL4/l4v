@@ -26,6 +26,10 @@ To build from the `l4v/` directory for the ARM architecture, run:
 
     L4V_ARCH=ARM ./run_tests SysInit
 
+To build only the specification of the initialiser, from the `l4v/` directory, run:
+
+    L4V_ARCH=ARM ./run_tests SysInitSpec
+
 To build the example capDL specifications, from the `l4v/` directory, run:
 
     L4V_ARCH=ARM ./run_tests SysInitExamples
@@ -35,7 +39,7 @@ Important Theories
 ------------------
 
 * The specification for the algorithm of the system initialiser is in
-  [`SysInit_SI`](SysInit_SI.thy).
+  [`spec/SysInit_SI`](spec/SysInit_SI.thy).
 
 * The top-level statement of the correctness of the system-initialiser
   is found in [`Proof_SI`](Proof_SI.thy).
