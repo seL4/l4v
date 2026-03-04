@@ -25,7 +25,7 @@
 theory Intents_D
 imports
   "ASpec.CapRights_A"
-  "ASpec.VMAttributes_A"
+  "VMAttributes_D"
 begin
 
 (*

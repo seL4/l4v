@@ -10,7 +10,6 @@
 
 theory PageTable_D
 imports
-  "ASpec.VMAttributes_A"
   Invocations_D
   CSpace_D
 begin

@@ -6,9 +6,9 @@
 
 (* Abstract model of VM attributes. *)
 
-theory VMAttributes_A
+theory VMAttributes_D
 imports
-  ArchVMAttributes_A
+  ArchVMAttributes_D
 begin
 
 arch_requalify_types (A)
@@ -19,7 +19,6 @@ arch_requalify_consts (A)
   attribs_to_word
   validate_vm_attributes
   validate_pt_vm_attributes
-  default_vmattrs
 
 arch_requalify_facts (A)
   validate_vm_attributes_def
