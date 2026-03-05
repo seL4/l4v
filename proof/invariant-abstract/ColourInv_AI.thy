@@ -217,45 +217,45 @@ crunch send_ipc for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
     wp: crunch_wps)
 
 section "KHeap_A Colour Invariant"
-lemma set_object_colour_maintained:
+lemma set_object_colour_maintained[wp]:
   "\<lbrace>colour_invariant and (valid_ptr_in_cur_domain ptr) and (\<lambda>s. check_kernel_object_ref kobj (colour_oracle (cur_domain s)))\<rbrace>
    set_object ptr kobj
    \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   apply (wpsimp simp: colour_invariant_def obj_at_update wp: set_object_wp)
   by (drule ptr_no_domain_overlap, simp+)
 
-lemma thread_set_colour_maintained:
+lemma thread_set_colour_maintained[wp]:
   "\<lbrace>colour_invariant and (valid_ptr_in_cur_domain ptr) and (\<lambda>s. let tcb = TCB (f $ the (get_tcb ptr s)) in check_kernel_object_ref tcb (colour_oracle (cur_domain s)))\<rbrace>
    thread_set f ptr
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   apply (wpsimp simp: colour_invariant_def obj_at_update wp: thread_set_wp)
   by (drule ptr_no_domain_overlap, simp+)
 
-lemma thread_set_priority_colour_maintained:
+lemma thread_set_priority_colour_maintained[wp]:
   "\<lbrace>colour_invariant\<rbrace>
      thread_set_priority ptr prio
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   by (wpsimp simp: thread_set_priority_def colour_invariant_def obj_at_update wp: thread_set_wp, fastforce)
 
-lemma thread_set_time_slice_colour_maintained:
+lemma thread_set_time_slice_colour_maintained[wp]:
   "\<lbrace>colour_invariant\<rbrace>
      thread_set_time_slice ptr prio
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   by (wpsimp simp: thread_set_time_slice_def colour_invariant_def obj_at_update wp: thread_set_wp, fastforce)
 
-lemma thread_set_domain_colour_maintained:
+lemma thread_set_domain_colour_maintained[wp]:
   "\<lbrace>colour_invariant\<rbrace>
      thread_set_domain ptr prio
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   by (wpsimp simp: thread_set_domain_def colour_invariant_def obj_at_update wp: thread_set_wp, fastforce)
 
-lemma set_mcpriority_colour_maintained:
+lemma set_mcpriority_colour_maintained[wp]:
   "\<lbrace>colour_invariant\<rbrace>
      set_mcpriority ref mcp
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   by (wpsimp simp: set_mcpriority_def colour_invariant_def obj_at_update wp: thread_set_wp, fastforce)
 
-lemma arch_thread_set_colour_maintained:
+lemma arch_thread_set_colour_maintained[wp]:
   "\<lbrace>colour_invariant and (valid_ptr_in_cur_domain ptr) and (\<lambda>s.
         let tcb = the $ get_tcb ptr s in
         let arch_tcb = f $ tcb_arch tcb in
@@ -266,7 +266,7 @@ lemma arch_thread_set_colour_maintained:
   apply (wpsimp simp: colour_invariant_def obj_at_update wp: arch_thread_set_wp)
   by (drule ptr_no_domain_overlap, simp+)
 
-lemma set_bound_notification_colour_maintained:
+lemma set_bound_notification_colour_maintained[wp]:
   "\<lbrace>colour_invariant and (valid_ptr_in_cur_domain ptr) and (\<lambda>s. (set_option ntfn) \<subseteq> colour_oracle (cur_domain s))\<rbrace>
    set_bound_notification ptr ntfn
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -275,7 +275,7 @@ lemma set_bound_notification_colour_maintained:
    apply simp
   by fastforce
 
-lemma set_simple_ko_colour_maintained:
+lemma set_simple_ko_colour_maintained[wp]:
   "\<lbrace>colour_invariant and (valid_ptr_in_cur_domain ptr) and (\<lambda>s.
         let kobj = the $ kheap s ptr in
           is_simple_type kobj \<longrightarrow>
@@ -287,7 +287,7 @@ lemma set_simple_ko_colour_maintained:
   apply safe
   by (drule ptr_no_domain_overlap, simp+)+
 
-lemma throw_on_false_colour_maintained:
+lemma throw_on_false_colour_maintained[wp]:
   "\<lbrace>colour_invariant\<rbrace>
       f
     \<lbrace>\<lambda>_ . colour_invariant\<rbrace>
@@ -297,7 +297,7 @@ lemma throw_on_false_colour_maintained:
    \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   by (simp add: hoare_wp_splits(12) throw_on_false_wp)
 
-lemma set_thread_state_colour_maintained:
+lemma set_thread_state_colour_maintained[wp]:
   "\<lbrace>colour_invariant and (valid_ptr_in_cur_domain ref) and (\<lambda>s. check_tcb_state ts (colour_oracle (cur_domain s)))\<rbrace>
        set_thread_state ref ts
       \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -310,7 +310,7 @@ lemma set_thread_state_colour_maintained:
   apply (rule exI)
   using get_tcb_rev ptr_no_domain_overlap by fastforce
 
-lemma as_user_colour_maintained:
+lemma as_user_colour_maintained[wp]:
   "\<lbrace>colour_invariant\<rbrace>
      as_user ptr f
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -324,7 +324,7 @@ crunch reschedule_required,
   set_scheduler_action,
   tcb_sched_action,
   set_tcb_queue,
-  set_irq_state for colour_maintained: "colour_invariant"
+  set_irq_state for colour_maintained[wp]: "colour_invariant"
   (simp: colour_invariant_def obj_at_update)
 
 section "Top-Down Colour Invariant Work"
@@ -332,10 +332,10 @@ crunch store_word_offs,
   set_extra_badge,
   set_cdt,
   update_cdt,
-  set_message_info for colour_maintained: "colour_invariant"
+  set_message_info for colour_maintained[wp]: "colour_invariant"
   (simp: colour_invariant_def obj_at_update)
 
-lemma activate_thread_colour_maintained:
+lemma activate_thread_colour_maintained[wp]:
   "\<lbrace>colour_invariant and (\<lambda>s. valid_ptr_in_cur_domain (cur_thread s) s) and (\<lambda>s. tcb_at (cur_thread s) s)\<rbrace> \<comment>\<open>Try remove last precond\<close>
      activate_thread
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -347,7 +347,7 @@ lemma activate_thread_colour_maintained:
   using is_obj_defs(3) is_tcb_def
   by presburger
 
-lemma set_cap_colour_maintained:
+lemma set_cap_colour_maintained[wp]:
   "\<lbrace>colour_invariant and (valid_ptr_in_cur_domain $ fst cs_ptr) and (\<lambda>s. check_cap_ref cap (colour_oracle (cur_domain s)))\<rbrace>
    set_cap cap cs_ptr
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -355,14 +355,12 @@ lemma set_cap_colour_maintained:
   apply safe
   using ptr_no_domain_overlap by fastforce+
 
-lemma set_untyped_cap_as_full_colour_maintained:
+lemma set_untyped_cap_as_full_colour_maintained[wp]:
   "\<lbrace>colour_invariant and (valid_ptr_in_cur_domain $ fst src_slot) and (\<lambda>s. check_cap_ref src_cap (colour_oracle (cur_domain s)))\<rbrace>
      set_untyped_cap_as_full src_cap new_cap src_slot
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   apply (unfold set_untyped_cap_as_full_def)
   apply wpsimp
-    apply (wp add: set_cap_colour_maintained)
-   apply wpsimp
   by (simp add: check_cap_ref_def)
 
 lemma cte_wp_at_check_cap_ref:
@@ -415,7 +413,7 @@ lemma cte_wp_at_check_cap_ref:
   apply (simp add: subset_eq)
   by (erule_tac x=0 in ballE; simp add: RISCV64_A.pptr_base_def RISCV64.pptrBase_def RISCV64.canonical_bit_def)
 
-lemma cap_insert_colour_maintained:
+lemma cap_insert_colour_maintained[wp]:
   "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref new_cap (colour_oracle (cur_domain s))) and (\<lambda>s. valid_ptr_in_cur_domain (fst src_slot) s) and (\<lambda>s. valid_ptr_in_cur_domain (fst dest_slot) s) and invs\<rbrace>
     cap_insert new_cap src_slot dest_slot
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -495,6 +493,7 @@ thm RISCV64.transfer_caps_loop_cte_wp_at (* <- tried this proof approach for a b
                           apply (simp add: set_extra_badge_def valid_ptr_in_cur_domain_def)
                           apply wpsimp
                           apply (simp add: valid_ptr_in_cur_domain_def)
+    sorry
     by wpsimp+
 qed
 
@@ -552,7 +551,7 @@ proof (induct args rule: resolve_address_bits'.induct)
     by ((rule cte_wp_at_check_cap_ref; simp add: check_cap_ref_def; clarsimp simp add: valid_ptr_in_cur_domain_def)|clarsimp simp add: check_cap_ref_def valid_ptr_in_cur_domain_def)+
 qed
 
-lemma transfer_caps_colour_maintained:
+lemma transfer_caps_colour_maintained[wp]:
   "\<lbrace>colour_invariant and (\<lambda>s. (\<forall>(cap, o_ref, _)\<in>(set caps). check_cap_ref cap (colour_oracle (cur_domain s)) \<and> valid_ptr_in_cur_domain o_ref s)) and (\<lambda>s. check_cap_ref (tcb_ctable (the $ get_tcb receiver s)) (colour_oracle (cur_domain s))) and invs\<rbrace>
  transfer_caps info caps endpoint receiver recv_buffer
 \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -575,7 +574,7 @@ lemma transfer_caps_colour_maintained:
    (cur_domain s)) \<and> valid_ptr_in_cur_domain a s))" in hoare_strengthen_postE_R)
   by (wpsimp simp: valid_ptr_in_cur_domain_def wp: resolve_address_bits_ret_colour)+
 
-lemma copy_mrs_colour_maintained:
+lemma copy_mrs_colour_maintained[wp]:
   "\<lbrace>colour_invariant\<rbrace>
      copy_mrs  sender sbuf receiver rbuf n
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -619,10 +618,11 @@ lemma do_normal_transfer_colour_maintained: (* broken by invs *)
        apply (wpsimp wp: resolve_address_bits_ret_colour[unfolded valid_ptr_in_cur_domain_def])+
        apply (wpsimp wp: mapME_wp')
        apply wpsimp+
+  sorry
   by (cases "receiver = sender"; clarsimp)
 oops
 
-lemma set_mrs_colour_maintained:
+lemma set_mrs_colour_maintained[wp]:
   "\<lbrace>colour_invariant\<rbrace>
      set_mrs thread buf msgs
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -634,7 +634,7 @@ lemma set_mrs_colour_maintained:
   using check_kernel_object_ref.simps(2) apply blast
   by fastforce
 
-lemma make_fault_msg_colour_maintained:
+lemma make_fault_msg_colour_maintained[wp]:
   "\<lbrace>colour_invariant\<rbrace>
     make_fault_msg fault thread
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -660,7 +660,7 @@ lemma handle_double_fault_colour_maintained:
    \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   by (wpsimp simp: handle_double_fault_def wp: set_thread_state_colour_maintained)
 
-lemma retype_region_colour_maintained:
+lemma retype_region_colour_maintained[wp]:
   "\<lbrace>colour_invariant\<rbrace>
     retype_region ptr numObjects o_bits type dev
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -689,7 +689,7 @@ lemma retype_region_colour_maintained:
         )+
   by fastforce
 
-lemma delete_objects_colour_maintained:
+lemma delete_objects_colour_maintained[wp]:
   "\<lbrace>colour_invariant\<rbrace>
   delete_objects ptr bits
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -697,7 +697,7 @@ lemma delete_objects_colour_maintained:
   apply (clarsimp simp add: detype_def)
   by fastforce
 
-lemma reset_untyped_cap_colour_maintained:
+lemma reset_untyped_cap_colour_maintained[wp]:
   "\<lbrace>colour_invariant and (\<lambda>s. valid_ptr_in_cur_domain (fst src_slot) s)\<rbrace>
   reset_untyped_cap src_slot
   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
@@ -711,25 +711,16 @@ lemma reset_untyped_cap_colour_maintained:
           apply (simp add: colour_invariant_def valid_ptr_in_cur_domain_def, simp add: colour_invariant_def valid_ptr_in_cur_domain_def)
         apply (wpsimp wp: set_cap_colour_maintained set_cap_valid_ptr_in_cur_domain)
        apply wp
-        apply (wp add: do_machine_op_colour_maintained)
         apply (simp add: check_cap_ref_def)
         apply (wpsimp simp: valid_ptr_in_cur_domain_def wp: do_machine_op_colour_maintained)+
     apply (rule impI|rule conjI)+
      apply (wp add: delete_objects_colour_maintained)
      apply (wp add: hoare_vcg_imp_lift)
-     apply (simp add: check_cap_ref_def)
-     apply (wp add: delete_objects_colour_maintained)
-    apply wpsimp
-    apply (wp add: hoare_vcg_imp_lift)
-     apply (simp add: check_cap_ref_def)
-     apply (wp add: delete_objects_colour_maintained)
-    apply (wp add: hoare_vcg_imp_lift)
-    apply (wp add: delete_objects_colour_maintained)
-   apply wpsimp
-   apply (wp add: hoare_vcg_imp_lift get_cap_cte_wp_at3 hoare_vcg_conj_lift hoare_vcg_disj_lift)
     apply (wpsimp simp: check_cap_ref_def)
-   apply (wp add: hoare_vcg_imp_lift get_cap_cte_wp_at3)
-  by (clarsimp simp add: valid_ptr_in_cur_domain_def cte_wp_at_def)
+   apply (wpsimp wp: hoare_vcg_imp_lift get_cap_wp)
+  apply (clarsimp simp: check_cap_ref_def)
+  apply(clarsimp simp add: valid_ptr_in_cur_domain_def cte_wp_at_def)
+  by blast
 
 lemma syscall_colour_maintained:
   "\<lbrakk>\<lbrace>colour_invariant\<rbrace> param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>, \<lbrace>\<lambda>_. colour_invariant\<rbrace>;
@@ -743,62 +734,46 @@ lemma syscall_colour_maintained:
   apply (wp syscall_valid)
   by ((erule allE)+, simp)+
 
-lemma next_domain_colour_maintained:
+lemma next_domain_colour_maintained[wp]:
   "\<lbrace>colour_invariant\<rbrace>
       next_domain
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   by (wpsimp simp: next_domain_def colour_invariant_def Let_def)
 
-lemma temp: "colour_invariant s = colour_invariant (s\<lparr>cur_thread := thread\<rparr>)"
+lemma colour_invariant_cur_thread[simp]:
+  "colour_invariant (s\<lparr>cur_thread := thread\<rparr>) = colour_invariant s"
   by (simp add: colour_invariant_def)
 
-lemma switch_to_idle_thread_colour_maintained:
+lemma switch_to_idle_thread_colour_maintained[wp]:
   "\<lbrace>colour_invariant\<rbrace>
       switch_to_idle_thread
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  by (wpsimp simp: switch_to_idle_thread_def RISCV64_A.arch_switch_to_idle_thread_def RISCV64_A.set_vm_root_def temp[symmetric] RISCV64_A.find_vspace_for_asid_def
+  by (wpsimp simp: switch_to_idle_thread_def RISCV64_A.arch_switch_to_idle_thread_def RISCV64_A.set_vm_root_def RISCV64_A.find_vspace_for_asid_def
     wp: do_machine_op_colour_maintained hoare_vcg_op_lift get_cap_cte_wp_at3)
 
-lemma switch_to_thread_colour_maintained:
+lemma switch_to_thread_colour_maintained[wp]:
   "\<lbrace>colour_invariant\<rbrace>
       switch_to_thread t
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  by (wpsimp simp: switch_to_thread_def temp[symmetric] RISCV64_A.arch_switch_to_thread_def RISCV64_A.set_vm_root_def RISCV64_A.find_vspace_for_asid_def
+  by (wpsimp simp: switch_to_thread_def RISCV64_A.arch_switch_to_thread_def RISCV64_A.set_vm_root_def RISCV64_A.find_vspace_for_asid_def
   wp: tcb_sched_action_colour_maintained do_machine_op_colour_maintained hoare_vcg_op_lift get_cap_cte_wp_at3)
 
-lemma guarded_switch_to_colour_maintained:
+lemma guarded_switch_to_colour_maintained[wp]:
   "\<lbrace>colour_invariant\<rbrace>
       guarded_switch_to thread
     \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   by (wpsimp simp: guarded_switch_to_def
   wp: switch_to_thread_colour_maintained hoare_vcg_imp_lift[where P'=\<bottom>])
 
-lemma schedule_choose_new_thread_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace>
-      schedule_choose_new_thread
-    \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  apply (wpsimp simp: schedule_choose_new_thread_def choose_thread_def next_domain_def colour_invariant_def
-  wp: switch_to_idle_thread_colour_maintained set_scheduler_action_colour_maintained guarded_switch_to_colour_maintained hoare_vcg_op_lift)
-  by ((rule impI|rule conjI)+, clarsimp simp: Let_def)+
-
-lemma temp2: "colour_invariant s = colour_invariant (s\<lparr>scheduler_action := action\<rparr>)"
+lemma colour_invariant_scheduler_action[simp]:
+  "colour_invariant (s\<lparr>scheduler_action := action\<rparr>) = colour_invariant s"
   by (simp add: colour_invariant_def)
 
-lemma schedule_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace>
-      schedule
-    \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  apply (wpsimp simp: schedule_def temp2[symmetric] tcb_sched_action_def
-  wp: schedule_choose_new_thread_colour_maintained set_scheduler_action_wp tcb_sched_action_colour_maintained guarded_switch_to_colour_maintained schedule_switch_thread_fastfail_inv hoare_vcg_op_lift)
-              apply (wpsimp wp: hoare_pre_cont)
-             apply (wpsimp wp: schedule_switch_thread_fastfail_inv)+
-           apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-             apply (wpsimp wp: hoare_pre_cont)
-            apply (wpsimp wp: schedule_switch_thread_fastfail_inv)+
-       apply (wpsimp wp: schedule_choose_new_thread_colour_maintained)+
-    apply (wpsimp wp: gts_drop_imp)
-   apply (wpsimp wp: hoare_vcg_op_lift hoare_vcg_conj_lift)
-  by (clarsimp simp add: colour_invariant_def)
+context Arch begin
+
+crunch schedule_choose_new_thread, schedule
+  for colour_maintained[wp]: colour_invariant
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma send_ipc_colour_maintained: (* unfinished before *)
   "\<lbrace>colour_invariant and (\<lambda>s. valid_ptr_in_cur_domain (cur_thread s) s) and invs and (\<lambda>s. valid_ptr_in_cur_domain thread s)\<rbrace>
@@ -808,7 +783,6 @@ lemma send_ipc_colour_maintained: (* unfinished before *)
        apply (wpsimp simp: valid_ptr_in_cur_domain_def Let_def wp: set_thread_state_colour_maintained)
        apply (wpsimp simp: set_thread_state_def set_thread_state_act_def set_scheduler_action_def get_thread_state_def thread_get_def set_object_def get_object_def gets_the_def)
       apply wpsimp+
-       apply (wpsimp wp: set_simple_ko_colour_maintained)
       apply (wpsimp simp: valid_ptr_in_cur_domain_def Let_def wp: set_thread_state_colour_maintained)
       apply (wpsimp simp: set_thread_state_def set_thread_state_act_def set_scheduler_action_def get_thread_state_def thread_get_def set_object_def get_object_def gets_the_def)
      apply wpsimp+
@@ -850,7 +824,6 @@ lemma handle_fault_colour_maintained: (* unfinished before *)
         apply wpsimp
        apply simp
        apply wpsimp
-        apply (wpsimp wp: set_simple_ko_colour_maintained)
        apply (wpsimp simp: valid_ptr_in_cur_domain_def Let_def wp: set_thread_state_colour_maintained)
        apply (wpsimp simp: set_thread_state_def set_thread_state_act_def set_scheduler_action_def)
          apply (wpsimp simp: get_thread_state_def thread_get_def)
@@ -860,37 +833,10 @@ lemma handle_fault_colour_maintained: (* unfinished before *)
 
 (* Arch-specific ones trivial for RISCV64 - move to appropriate place *)
 
-lemma init_arch_objects_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace>
-    init_arch_objects param_a param_b param_c param_d param_e param_f 
-   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  unfolding RISCV64_A.init_arch_objects_def
-  by blast
-
-lemma arch_post_cap_deletion_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace> arch_post_cap_deletion param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  unfolding RISCV64_A.arch_post_cap_deletion_def
-  by blast
-
-lemma prepare_thread_delete_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace> prepare_thread_delete param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  unfolding RISCV64_A.prepare_thread_delete_def
-  by blast
-
-lemma arch_post_modify_registers_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace> arch_post_modify_registers param_a param_b \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  unfolding RISCV64_A.arch_post_modify_registers_def
-  by blast
-
-lemma arch_mask_irq_signal_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace> arch_mask_irq_signal irq \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  unfolding RISCV64_A.arch_mask_irq_signal_def
-  by blast
-
-lemma handle_reserved_irq_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  unfolding RISCV64_A.handle_reserved_irq_def
-  by blast
+crunch init_arch_objects, arch_post_cap_deletion, prepare_thread_delete,
+  arch_post_modify_registers, arch_mask_irq_signal, handle_reserved_irq
+  for colour_maintained[wp]: colour_invariant
+  (wp: crunch_wps simp: crunch_simps)
 
 (* Failed proofs found by crunch, in order of discovery (all arch ones first, then arch-agnostic).
    Don't forget to re-check crunch after proving each of these if it required new preconditions,
@@ -903,10 +849,99 @@ crunch call_kernel for colour_maintained: "colour_invariant"
 
 (* Arch-specific *)
 
-lemma arch_finalise_cap_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace> arch_finalise_cap cap b \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  unfolding RISCV64_A.arch_finalise_cap_def
-  sorry
+lemma colour_invariant_arch_state[simp]:
+  "colour_invariant (s\<lparr>arch_state := x\<rparr>) = colour_invariant s"
+  unfolding colour_invariant_def
+  by simp
+
+crunch set_pt
+  for colour_maintained[wp]: colour_invariant
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma store_pte_colour_maintained[wp]:
+  "\<lbrace>\<lambda>s. colour_invariant s \<and> invs s \<and>
+        \<comment> \<open>let's see how usable this ends up if we assert p and pte are coloured and not bogus\<close>
+        table_base p \<in> colour_oracle (cur_domain s) \<and>
+        \<comment> \<open>we can't just assert it *is* PagePTE, because otherwise unmap_page ends up with a
+           contradictory precondition where pte = InvalidPTE. so we have to handle that case\<close>
+        (case pte of InvalidPTE \<Rightarrow> True |
+           PagePTE ppn attr rights \<Rightarrow> addr_from_ppn ppn \<in> colour_oracle (cur_domain s) \<union> {0} |
+           PageTablePTE ppn x \<Rightarrow> addr_from_ppn ppn \<in> colour_oracle (cur_domain s) \<union> {0})\<rbrace>
+     store_pte p pte
+   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  unfolding store_pte_def
+  apply wpsimp
+  apply(frule invs_cur_domain_list)
+  apply(clarsimp simp:valid_ptr_in_cur_domain_def cur_domain_list_def colour_invariant_def)
+  apply(rename_tac s pt a x)
+  apply(drule_tac x="table_base p" in spec)
+  apply(drule_tac x="ArchObj (PageTable pt)" in spec)
+  apply(drule_tac x="(cur_domain s, a)" in bspec)
+   apply clarsimp
+  apply clarsimp
+  apply(metis colour_oracle_no_zero)
+  done
+
+lemma unmap_page_colour_maintained[wp]:
+  "\<lbrace>\<lambda>s. colour_invariant s \<and> invs s \<and>
+     (case vspace_for_asid asid s of Some pt \<Rightarrow>
+       (case pt_lookup_slot pt vptr (ptes_of s) of
+         Some (x, b) \<Rightarrow> table_base b \<in> colour_oracle (cur_domain s) |
+         None \<Rightarrow> True) |
+      None \<Rightarrow> True)\<rbrace>
+     unmap_page pgsz asid vptr pptr
+   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  unfolding unmap_page_def
+  by (wpsimp wp: crunch_wps simp: crunch_simps split:option.splits)
+
+lemma unmap_page_table_colour_maintained[wp]:
+  "\<lbrace>colour_invariant and invs\<rbrace>
+     unmap_page_table asid vaddr pt
+   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  unfolding unmap_page_table_def
+  apply wpsimp
+  sorry (* FIXME: recursive function, come back to this one *)
+
+crunch set_vm_root, set_asid_pool
+  for colour_maintained[wp]: colour_invariant
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma delete_asid_colour_maintained[wp]:
+  "\<lbrace>\<lambda>s. colour_invariant s \<and>
+     (case asid_table s (asid_high_bits_of asid) of None \<Rightarrow> True |
+       Some pool_ptr \<Rightarrow> pool_ptr \<in> colour_oracle (cur_domain s) \<and>
+         (\<forall>pool x. ako_at (ASIDPool pool) pool_ptr s \<longrightarrow>
+           (case pool x of None \<Rightarrow> True |
+             Some pt' \<Rightarrow> pt' \<in> colour_oracle (cur_domain s) \<union> {0})))\<rbrace>
+     delete_asid asid pt \<lbrace>\<lambda>_. colour_invariant\<rbrace> "
+  unfolding delete_asid_def
+  by (wpsimp simp:valid_ptr_in_cur_domain_def)
+
+crunch delete_asid_pool
+  for colour_maintained[wp]: colour_invariant
+  (wp: crunch_wps simp: crunch_simps valid_ptr_in_cur_domain_def colour_invariant_def)
+
+lemma arch_finalise_cap_colour_maintained[wp]:
+  "\<lbrace>colour_invariant and invs and
+    (\<lambda>s. case cap of FrameCap obj rights fsize is_dev (Some (asid, ref)) \<Rightarrow>
+      (case vspace_for_asid asid s of None \<Rightarrow> True |
+        Some pt \<Rightarrow> (case pt_lookup_slot pt ref (ptes_of s) of None \<Rightarrow> True |
+          Some (xa, b) \<Rightarrow> table_base b \<in> colour_oracle (cur_domain s))) |
+      PageTableCap obj (Some (asid, ref)) \<Rightarrow> if x \<and> vspace_for_asid asid s = Some obj
+        then (case asid_table s (asid_high_bits_of asid) of None \<Rightarrow> True |
+          Some pool_ptr \<Rightarrow> pool_ptr \<in> colour_oracle (cur_domain s) \<and>
+            (\<forall>pool y. ako_at (ASIDPool pool) pool_ptr s \<longrightarrow> (case pool y of  None \<Rightarrow> True |
+              Some pt' \<Rightarrow> pt' \<in> colour_oracle (cur_domain s) \<union> {0})))
+        else True)\<rbrace> arch_finalise_cap cap x \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  unfolding arch_finalise_cap_def
+  apply wpsimp
+  by (force split:option.splits)
+
+(* DOWN TO HERE
+crunch arch_invoke_irq_control
+  for colour_maintained[wp]: colour_invariant
+  (wp: crunch_wps simp: crunch_simps valid_ptr_in_cur_domain_def colour_invariant_def)
+*)
 
 lemma arch_invoke_irq_control_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace> arch_invoke_irq_control param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
