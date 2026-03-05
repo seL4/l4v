@@ -603,7 +603,7 @@ lemma receive_blocked_waiting_syncs:
     apply (clarsimp simp: transform_object_def
                    split: Structures_A.kernel_object.splits ARM_A.arch_kernel_obj.splits
                           option.splits nat.splits)
-    apply (clarsimp simp add: transform_tcb_def tcb_pending_op_slot_def
+    apply (clarsimp simp add: transform_tcb_def tcb_pending_op_slot_def tcb_boundvcpu_slot_def
                               tcb_boundntfn_slot_def infer_tcb_bound_notification_def
                        split: option.splits)
     apply (frule_tac tcb="x2a" in  bound_tcb_fold, simp)
@@ -620,7 +620,8 @@ lemma receive_blocked_waiting_syncs:
   apply (frule transform_objects_tcb)
    apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
   apply (clarsimp simp: transform_tcb_def tcb_pending_op_slot_def tcb_boundntfn_slot_def
-                        infer_tcb_pending_op_def infer_tcb_bound_notification_def receive_blocked_def
+                        tcb_boundvcpu_slot_def infer_tcb_pending_op_def
+                        infer_tcb_bound_notification_def receive_blocked_def
                  split: Structures_A.thread_state.splits)
   done
 

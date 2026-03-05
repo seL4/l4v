@@ -29,8 +29,15 @@ lemma cte_wp_at_zombie_not_idle:
   "\<lbrakk>cte_wp_at ((=) (cap.Zombie ptr' zbits n)) ptr s; invs s\<rbrakk> \<Longrightarrow> not_idle_thread ptr' s"
   by (auto dest!: zombie_cap_two_nonidles simp: cte_wp_at_caps_of_state not_idle_thread_def)
 
-lemmas tcb_slots = Types_D.tcb_caller_slot_def Types_D.tcb_cspace_slot_def Types_D.tcb_ipcbuffer_slot_def
-  Types_D.tcb_pending_op_slot_def Types_D.tcb_replycap_slot_def Types_D.tcb_vspace_slot_def Types_D.tcb_boundntfn_slot_def
+lemmas tcb_slots =
+  Types_D.tcb_caller_slot_def
+  Types_D.tcb_cspace_slot_def
+  Types_D.tcb_ipcbuffer_slot_def
+  Types_D.tcb_pending_op_slot_def
+  Types_D.tcb_replycap_slot_def
+  Types_D.tcb_vspace_slot_def
+  Types_D.tcb_boundntfn_slot_def
+  Types_D.tcb_boundvcpu_slot_def
 
 (* FIXME: MOVE *)
 lemma tcb_cap_casesE:
@@ -108,12 +115,15 @@ lemma tcb_cap_cases_slot_simps[simp]:
   by (simp add: tcb_slots)+
 
 lemma opt_cap_tcb:
-  "\<lbrakk> get_tcb y s = Some tcb; y \<noteq> idle_thread s \<rbrakk> \<Longrightarrow>
-  opt_cap (y, sl) (transform s) =
-  (if sl \<in> tcb_abstract_slots then (option_map (\<lambda>(getF, _, _). transform_cap (getF tcb)) (tcb_cap_cases (tcb_cnode_index sl)))
-  else (if sl = tcb_pending_op_slot then (Some (infer_tcb_pending_op y (tcb_state tcb)))
-   else (if sl = tcb_boundntfn_slot then (Some  (infer_tcb_bound_notification (tcb_bound_notification tcb))) else None)))"
-  by (fastforce simp add: opt_cap_def KHeap_D.slots_of_def opt_object_tcb object_slots_def transform_tcb_def tcb_slots)
+  "\<lbrakk> get_tcb p s = Some tcb; p \<noteq> idle_thread s \<rbrakk> \<Longrightarrow>
+   opt_cap (p, sl) (transform s) =
+    (if sl \<in> tcb_abstract_slots
+     then option_map (\<lambda>(getF, _, _). transform_cap (getF tcb)) (tcb_cap_cases (tcb_cnode_index sl))
+     else if sl = tcb_pending_op_slot then Some (infer_tcb_pending_op p (tcb_state tcb))
+     else if sl = tcb_boundntfn_slot then Some (infer_tcb_bound_notification (tcb_bound_notification tcb))
+     else if sl = tcb_boundvcpu_slot then Some cdl_cap.NullCap
+     else None)"
+  by (clarsimp simp: opt_cap_def slots_of_def opt_object_tcb object_slots_def transform_tcb_def tcb_slots)
 
 lemma cdl_objects_cnode:
   "\<lbrakk> kheap s' y = Some (CNode sz obj'); valid_idle s' ; sz \<noteq> 0\<rbrakk>
@@ -1530,7 +1540,7 @@ lemma store_word_corres_helper:
   apply (rule conjI)
    apply (clarsimp simp:restrict_map_def transform_object_def transform_tcb_def
                    split:cdl_object.split_asm Structures_A.kernel_object.split_asm if_split_asm)
-   apply (simp add:tcb_ipcframe_id_def tcb_boundntfn_slot_def tcb_ipcbuffer_slot_def split:if_split_asm)
+   apply (simp add:tcb_ipcframe_id_def tcb_boundntfn_slot_def tcb_ipcbuffer_slot_def tcb_boundvcpu_slot_def split:if_split_asm)
     apply (simp add:tcb_ipcbuffer_slot_def tcb_pending_op_slot_def)
    apply (frule_tac thread = thread in valid_tcb_objs)
     apply (simp add: get_tcb_rev)
@@ -1589,7 +1599,7 @@ lemma store_word_corres_helper:
   apply (rename_tac tcb)
   apply (simp add:transform_tcb_def)
   apply (drule sym)
-  apply (clarsimp simp:tcb_pending_op_slot_def restrict_map_def tcb_ipcbuffer_slot_def tcb_slot_defs split:if_splits)
+  apply (clarsimp simp: restrict_map_def tcb_slot_defs split:if_splits)
   apply (subgoal_tac "(get_tcb thread s) = Some tcb")
    apply (clarsimp dest!:get_tcb_SomeD)
    apply (subgoal_tac "tcb = the (get_tcb thread s)")
@@ -2063,9 +2073,12 @@ lemma corrupt_frame_include_self:
                   split: if_split)
   apply (clarsimp dest!:get_tcb_rev simp: transform_objects_tcb tcb_ipcbuffer_slot_def
                         tcb_pending_op_slot_def tcb_boundntfn_slot_def)
-  apply (clarsimp simp: tcb_ipcbuffer_slot_def tcb_ipcframe_id_def | rule conjI)+
-  apply (clarsimp simp:transform_def transform_object_def transform_tcb_def tcb_ipcframe_id_def
-        tcb_ipcbuffer_slot_def tcb_pending_op_slot_def tcb_boundntfn_slot_def dest!:get_tcb_SomeD)
+  apply (clarsimp simp: tcb_ipcbuffer_slot_def tcb_boundvcpu_slot_def tcb_ipcframe_id_def
+         | rule conjI)+
+  apply (clarsimp simp: transform_def transform_object_def transform_tcb_def tcb_ipcframe_id_def
+                        tcb_ipcbuffer_slot_def tcb_pending_op_slot_def tcb_boundntfn_slot_def
+                        tcb_boundvcpu_slot_def
+                  dest!: get_tcb_SomeD)
   done
 
 lemma corrupt_frame_include_self':
@@ -2096,7 +2109,7 @@ lemma corrupt_frame_include_self':
    apply (clarsimp simp: transform_objects_def)
    apply (clarsimp split:cap.splits arch_cap.splits)
   by (fastforce simp: transform_tcb_def tcb_ipcframe_id_def tcb_pending_op_slot_def
-                      tcb_ipcbuffer_slot_def tcb_boundntfn_slot_def)+
+                      tcb_ipcbuffer_slot_def tcb_boundntfn_slot_def tcb_boundvcpu_slot_def)+
 
 lemma dcorres_set_mrs:
   "dcorres dc \<top>

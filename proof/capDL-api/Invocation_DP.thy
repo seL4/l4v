@@ -282,6 +282,9 @@ lemma decode_asid_pool_invocation_inv[wp]:
    apply (wpc|wp |simp add:throw_on_none_def)+
   done
 
+crunch decode_vcpu_invocation
+  for inv[wp]: P
+
 lemma decode_invocation_inv[wp]:
   "\<lbrace>P\<rbrace> decode_invocation a b c d\<lbrace>\<lambda>_. P\<rbrace>, -"
   apply (simp add:decode_invocation_def)

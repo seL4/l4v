@@ -388,8 +388,9 @@ shows "\<lbrakk>opt_cap_wp_at P slot (transform s);valid_objs s\<rbrakk>
   apply (clarsimp simp:transform_objects_def restrict_map_Some_iff object_slots_def split:cdl_object.splits)
        apply (frule assms)
        apply (clarsimp simp: cte_wp_at_cases transform_object_def transform_tcb_def
-                             tcb_pending_op_slot_def tcb_boundntfn_slot_def
+                             tcb_pending_op_slot_def tcb_boundntfn_slot_def tcb_boundvcpu_slot_def
                        split: Structures_A.kernel_object.splits nat.splits if_splits)
+               apply (clarsimp simp: cap_counts_def)
               apply (clarsimp simp: cap_counts_def infer_tcb_bound_notification_def split:option.splits)
              apply (clarsimp simp:cap_counts_def infer_tcb_pending_op_def split:Structures_A.thread_state.splits nat.splits)
             using transform_tcb_slot_simp[simplified,symmetric]
@@ -639,7 +640,8 @@ lemma cdl_objects_tcb:
                tcb_caller_slot \<mapsto> transform_cap (tcb_caller tcb),
                tcb_ipcbuffer_slot \<mapsto> transform_cap (tcb_ipcframe tcb),
                tcb_pending_op_slot \<mapsto> infer_tcb_pending_op p (tcb_state tcb),
-               tcb_boundntfn_slot \<mapsto> infer_tcb_bound_notification (tcb_bound_notification tcb)],
+               tcb_boundntfn_slot \<mapsto> infer_tcb_bound_notification (tcb_bound_notification tcb),
+               tcb_boundvcpu_slot \<mapsto> cdl_cap.NullCap],
               cdl_tcb_fault_endpoint = of_bl (tcb_fault_handler tcb),
               cdl_tcb_intent = transform_full_intent (machine_state s') p tcb,
               cdl_tcb_has_fault = (tcb_has_fault tcb),

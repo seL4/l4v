@@ -143,6 +143,7 @@ where
           ((\<exists>attr. (R = Fake attr) \<and> attr = validate_pt_vm_attributes attr) \<or> R = Real)
     | PageDirectoryCap _ _ ad \<Rightarrow> ad = None
     | IrqHandlerCap _         \<Rightarrow> True
+    | VCPUCap _               \<Rightarrow> True
 \<comment> \<open>LIMITATION: The following should probably eventually be true.\<close>
     | IrqControlCap           \<Rightarrow> False
     | UntypedCap _ _ _        \<Rightarrow> False
@@ -296,7 +297,8 @@ where
       (slot = tcb_replycap_slot \<longrightarrow> cap = NullCap \<or> cap = MasterReplyCap obj_id) \<and>
       (slot = tcb_caller_slot \<longrightarrow> cap = NullCap) \<and>
       (slot = tcb_pending_op_slot \<longrightarrow> cap = NullCap \<or> cap = RestartCap) \<and>
-      (slot = tcb_boundntfn_slot \<longrightarrow> cap = NullCap) )) \<and>
+      (slot = tcb_boundntfn_slot \<longrightarrow> cap = NullCap) \<and>
+      (slot = tcb_boundvcpu_slot \<longrightarrow> cap = NullCap) )) \<and>
      ((object_slots obj tcb_replycap_slot = Some (MasterReplyCap obj_id)) =
       (object_slots obj tcb_pending_op_slot = Some RestartCap))"
 
@@ -1118,6 +1120,15 @@ lemma well_formed_tcb_boundntfn_cap:
   "\<lbrakk>well_formed spec; tcb_at obj_id spec\<rbrakk>
    \<Longrightarrow> opt_cap (obj_id, tcb_boundntfn_slot) spec = Some NullCap"
   apply (frule (1) well_formed_tcb_opt_cap [where slot=tcb_boundntfn_slot], simp add: tcb_slot_defs)
+  apply (elim exE)
+  apply (clarsimp simp: object_at_def)
+  apply (drule (1) well_formed_well_formed_tcb)
+  by (auto simp: well_formed_tcb_def opt_cap_def slots_of_def)
+
+lemma well_formed_tcb_boundvcpu_cap:
+  "\<lbrakk>well_formed spec; tcb_at obj_id spec\<rbrakk>
+   \<Longrightarrow> opt_cap (obj_id, tcb_boundvcpu_slot) spec = Some NullCap"
+  apply (frule (1) well_formed_tcb_opt_cap [where slot=tcb_boundvcpu_slot], simp add: tcb_slot_defs)
   apply (elim exE)
   apply (clarsimp simp: object_at_def)
   apply (drule (1) well_formed_well_formed_tcb)

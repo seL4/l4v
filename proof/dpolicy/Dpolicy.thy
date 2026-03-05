@@ -85,6 +85,7 @@ where
 | "cdl_obj_refs cdl_cap.AsidControlCap = {}"
 | "cdl_obj_refs (cdl_cap.ZombieCap ptr) = {ptr}"
 | "cdl_obj_refs (cdl_cap.BoundNotificationCap word) = {word}"
+| "cdl_obj_refs (cdl_cap.VCPUCap word) = {word}"
 | "cdl_obj_refs _ = {}"
 
 inductive cdl_cap_is_transferable for opt_cap
@@ -345,8 +346,9 @@ lemma caps_of_state_transform_opt_cap_rev:
     apply (rule nat_to_bl_to_bin, simp+)
    apply clarsimp
    apply (clarsimp simp:transform_tcb_def tcb_slot_defs split:if_split_asm)
-         apply (clarsimp simp: is_null_cap_def is_bound_ntfn_cap_def infer_tcb_bound_notification_def
-                         split: option.splits)
+          apply ((clarsimp simp: is_null_cap_def is_bound_ntfn_cap_def
+                                 infer_tcb_bound_notification_def
+                          split: option.splits)+)[2]
         apply (simp add:is_thread_state_cap_def infer_tcb_pending_op_def is_null_cap_def is_real_cap_def
                     split:Structures_A.thread_state.splits option.splits)
        apply (rule exI, rule conjI, simp, rule exI, rule conjI,

@@ -179,6 +179,7 @@ where
   | PendingSyncRecvCap _ f2 f3 \<Rightarrow> PendingSyncRecvCap obj_id f2 f3
   | PendingNtfnRecvCap _ \<Rightarrow> PendingNtfnRecvCap obj_id
   | BoundNotificationCap _ \<Rightarrow> BoundNotificationCap obj_id
+  | VCPUCap _ \<Rightarrow> VCPUCap obj_id
   | _ \<Rightarrow> cap"
 
 definition update_cap_objects :: "cdl_object_id set \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
@@ -328,7 +329,7 @@ lemma some_nat_None [simp]:
   "some_nat None = 0"
   by (simp add: some_nat_def)
 
-definition
+definition (* FIXME: use datatype package discriminators *)
   is_untyped :: "cdl_object \<Rightarrow> bool" where
  "is_untyped v \<equiv> case v of Untyped \<Rightarrow> True | _ \<Rightarrow> False"
 
@@ -368,6 +369,9 @@ definition
   is_frame :: "cdl_object \<Rightarrow> bool" where
  "is_frame v \<equiv> case v of Frame _ \<Rightarrow> True | _ \<Rightarrow> False"
 
+definition
+  is_vcpu :: "cdl_object \<Rightarrow> bool" where
+ "is_vcpu v \<equiv> case v of VCPU \<Rightarrow> True | _ \<Rightarrow> False"
 
 definition
   object_domain :: "cdl_object \<Rightarrow> word8"
@@ -386,8 +390,9 @@ lemma is_object_simps [simp]:
   "is_pd (PageDirectory pd)"
   "is_pt (PageTable pt)"
   "is_frame (Frame f)"
+  "is_vcpu VCPU"
   by (clarsimp simp: is_untyped_def is_ep_def is_ntfn_def is_tcb_def is_cnode_def
-                     is_asidpool_def is_pt_def is_pd_def is_frame_def)+
+                     is_asidpool_def is_pt_def is_pd_def is_frame_def is_vcpu_def)+
 
 
 (* These sizes are needed for ARM *)
@@ -464,6 +469,8 @@ abbreviation
   "pd_at \<equiv> object_at is_pd"
 abbreviation
   "frame_at \<equiv> object_at is_frame"
+abbreviation
+  "vcpu_at \<equiv> object_at is_vcpu"
 
 (* Threads that are waiting to run. *)
 definition
@@ -527,7 +534,8 @@ definition
 abbreviation
   "table_at \<equiv> \<lambda>obj_id s. pt_at obj_id s \<or> pd_at obj_id s"
 abbreviation
-  "capless_at \<equiv> \<lambda>obj_id s. untyped_at obj_id s \<or> ep_at obj_id s \<or> ntfn_at obj_id s \<or> frame_at obj_id s"
+  "capless_at \<equiv> \<lambda>obj_id s. untyped_at obj_id s \<or> ep_at obj_id s \<or> ntfn_at obj_id s \<or>
+                            frame_at obj_id s \<or> vcpu_at obj_id s"
 abbreviation
   "cnode_or_tcb_at \<equiv> \<lambda>obj_id spec. cnode_at obj_id spec \<or> tcb_at obj_id spec"
 abbreviation
@@ -536,7 +544,7 @@ abbreviation
 lemma capless_at_def2:
   "capless_at p s = object_at (\<lambda>obj. \<not> (has_slots obj)) p s"
   apply (clarsimp simp: has_slots_def object_at_def)
-  apply (fastforce simp: is_untyped_def is_ep_def is_ntfn_def is_frame_def
+  apply (fastforce simp: is_untyped_def is_ep_def is_ntfn_def is_frame_def is_vcpu_def
                  split: cdl_object.splits)
   done
 
@@ -566,7 +574,7 @@ lemma set_used_irq_list [simp]:
 lemma object_type_is_object:
   "is_untyped obj  = (object_type obj = UntypedType)"
   "is_ep obj       = (object_type obj = EndpointType)"
-  "is_ntfn obj      = (object_type obj = NotificationType)"
+  "is_ntfn obj     = (object_type obj = NotificationType)"
   "is_tcb obj      = (object_type obj = TcbType)"
   "is_cnode obj    = (object_type obj = CNodeType)"
   "is_irq_node obj = (object_type obj = IRQNodeType)"
@@ -574,7 +582,8 @@ lemma object_type_is_object:
   "is_pt obj       = (object_type obj = PageTableType)"
   "is_pd obj       = (object_type obj = PageDirectoryType)"
   "is_frame obj    = (\<exists>n. object_type obj = FrameType n)"
-  by (simp_all add: object_type_def is_untyped_def is_ep_def is_ntfn_def is_tcb_def
+  "is_vcpu obj     = (object_type obj = VCPUType)"
+  by (simp_all add: object_type_def is_untyped_def is_ep_def is_ntfn_def is_tcb_def is_vcpu_def
                     is_cnode_def is_irq_node_def is_asidpool_def is_pt_def is_pd_def is_frame_def
              split: cdl_object.splits)
 
@@ -1091,7 +1100,8 @@ lemma object_default_state_def2:
       | PageTable pt \<Rightarrow> PageTable \<lparr> cdl_page_table_caps = empty_cap_map pt_size_index \<rparr>
       | PageDirectory pd \<Rightarrow> PageDirectory \<lparr> cdl_page_directory_caps = empty_cap_map pd_size_index \<rparr>
       | Frame frame \<Rightarrow> Frame \<lparr> cdl_frame_size_bits = cdl_frame_size_bits frame,
-                               cdl_frame_fills = default_frame_fill_data \<rparr>)"
+                               cdl_frame_fills = default_frame_fill_data \<rparr>
+      | VCPU \<Rightarrow> VCPU)"
   by (clarsimp simp: object_default_state_def object_type_def default_object_def
                      object_size_bits_def object_domain_def
               split: cdl_object.splits)
