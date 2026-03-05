@@ -200,6 +200,7 @@ record cdl_tcb_extra =
   cdl_tcb_sp      :: machine_word
   cdl_tcb_ipc_buf :: machine_word
   cdl_tcb_init    :: "machine_word list"
+  cdl_tcb_flags   :: machine_word
 
 record cdl_tcb =
   cdl_tcb_caps           :: cdl_cap_map
@@ -706,7 +707,8 @@ definition default_tcb_extra_data :: "cdl_tcb_extra" where
      cdl_tcb_ip = 0,
      cdl_tcb_sp = 0,
      cdl_tcb_ipc_buf = 1,
-     cdl_tcb_init = []
+     cdl_tcb_init = [],
+     cdl_tcb_flags = 0
   \<rparr>"
 
 (* Standard empty TCB object. *)
