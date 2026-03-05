@@ -211,6 +211,16 @@ lemma zobj_refs'_capRange[TcbAcc_R_assms]:
   apply (case_tac aobj_cap; clarsimp dest!: is_aligned_no_overflow)
   done
 
+lemma capAligned_zobj_refs'_capRange[TcbAcc_R_assms]:
+  "capAligned c \<Longrightarrow> zobj_refs' c \<subseteq> capRange c"
+  apply (cases c; simp add: capAligned_def capRange_def is_aligned_no_overflow)
+  apply (rename_tac ac)
+  apply (case_tac ac; simp)
+  apply clarsimp
+  apply (drule is_aligned_no_overflow)
+  apply simp
+  done
+
 lemma atcbVCPUPtr_atcbContextSet_id[simp]:
   "atcbVCPUPtr (atcbContextSet f (tcbArch tcb)) = atcbVCPUPtr (tcbArch tcb)"
   by (simp add: atcbContextSet_def)

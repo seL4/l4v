@@ -196,6 +196,11 @@ locale CSpace1_R =
      (isReplyCap cap' \<longrightarrow> \<not> capReplyMaster cap')"
   assumes acap_relation_capBadge:
     "\<And>acap acap'. acap_relation acap acap' \<Longrightarrow> arch_capBadge acap' = arch_cap_badge acap"
+  assumes obj_relation_cuts_in_obj_range:
+    "\<And>y P ko x (s::det_state).
+     \<lbrakk> (y, P) \<in> obj_relation_cuts ko x; x \<in> obj_range x ko;
+       kheap s x = Some ko; valid_objs s; pspace_aligned s \<rbrakk>
+     \<Longrightarrow> y \<in> obj_range x ko"
 
 lemma subtree_no_parent:
   assumes "m \<turnstile> p \<rightarrow> x"
