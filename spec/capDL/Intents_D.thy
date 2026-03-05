@@ -133,8 +133,8 @@ datatype cdl_tcb_intent =
  |  TcbUnbindNTFNIntent
     (* SetTLSBase: (target) *)
  |  TcbSetTLSBaseIntent
-    (* SetFlags: (target) *)
- |  TcbSetFlagsIntent
+    (* SetFlags: (target) set_flags clear_flags *)
+ |  TcbSetFlagsIntent machine_word machine_word
 
 datatype cdl_untyped_intent =
     (* Retype: (target), (do_reset), type, size_bits, (root), node_index, node_depth, node_offset,
