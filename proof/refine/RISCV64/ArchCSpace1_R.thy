@@ -768,6 +768,47 @@ lemma acap_relation_capBadge[CSpace1_R_assms]:
   "acap_relation acap acap' \<Longrightarrow> arch_capBadge acap' = arch_cap_badge acap"
   by (simp add: arch_capBadge_def)
 
+lemma obj_relation_cuts_in_obj_range[CSpace1_R_assms]:
+  "\<lbrakk> (y, P) \<in> obj_relation_cuts ko x; x \<in> obj_range x ko;
+     kheap s x = Some ko; valid_objs s; pspace_aligned s \<rbrakk>
+   \<Longrightarrow> y \<in> obj_range x ko"
+  apply (cases ko; simp)
+   apply (clarsimp split: if_split_asm)
+   apply (subgoal_tac "cte_at (x, ya) s")
+    apply (drule(2) cte_at_cte_map_in_obj_bits)
+    apply (simp add: obj_range_def)
+   apply (fastforce intro: cte_wp_at_cteI)
+  apply (frule(1) pspace_alignedD)
+  apply (frule valid_obj_sizes, erule ranI)
+  apply (rename_tac arch_kernel_obj)
+  apply (case_tac arch_kernel_obj; simp)
+   apply (clarsimp simp only: obj_range_def atLeastAtMost_iff bit_simps
+                              obj_bits.simps arch_kobj_size.simps)
+   apply (rule context_conjI)
+    apply (erule is_aligned_no_wrap')
+    apply simp
+    apply (simp add: ucast_less_shiftl_helper')
+   apply (subst add_diff_eq[symmetric])
+   apply (rule word_plus_mono_right)
+    apply (subst word_less_sub_le, simp)
+    apply (simp add: ucast_less_shiftl_helper')
+   apply (simp add: field_simps)
+  apply (clarsimp simp only: obj_range_def atLeastAtMost_iff)
+  apply (rule conjI)
+   apply (erule is_aligned_no_wrap')
+   apply (simp add: shiftl_t2n mult_ac)
+   apply (erule word_less_power_trans2)
+    apply (rule pbfs_atleast_pageBits)
+   using pbfs_less_wb'
+   apply (simp add: word_bits_def)
+  apply (subst add_diff_eq[symmetric])
+  apply (rule word_plus_mono_right; simp add: add_diff_eq)
+  apply (simp add: shiftl_t2n mult_ac)
+  apply (rule word_less_power_trans2; (simp add: pbfs_atleast_pageBits)?)
+  using pbfs_less_wb'
+  apply (simp add: word_bits_def)
+  done
+
 end (* Arch *)
 
 interpretation CSpace1_R?: CSpace1_R
