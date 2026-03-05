@@ -5,12 +5,11 @@
  *)
 
 theory InitTCB_SI
-imports
-  "DSpecProofs.KHeap_DP"
-  "DSpecProofs.TCB_DP"
-  ObjectInitialised_SI
-  RootTask_SI
-  SysInit_SI
+  imports
+    DSpecProofs.TCB_DP
+    ObjectInitialised_SI
+    RootTask_SI
+    SysInitSpec.SysInit_SI
 begin
 
 lemma cap_has_type_cap_has_object [simp]:

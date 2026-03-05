@@ -8,7 +8,9 @@
  * The layout of the capability space and other parts of the system-initialiser.
  *)
 theory RootTask_SI
-imports WellFormed_SI SysInit_SI
+  imports
+    WellFormed_SI
+    SysInitSpec.SysInit_SI
 begin
 
 (******************************************************************
@@ -191,7 +193,8 @@ lemma offset_slot_si_cnode_size':
   by (clarsimp simp: offset_slot')
 
 lemma guard_equal_si_cspace_cap:
-  "src_index < 2 ^ si_cnode_size \<Longrightarrow> guard_equal si_cspace_cap src_index 32"
+  "src_index < 2 ^ si_cnode_size \<Longrightarrow> guard_equal si_cspace_cap src_index word_bits"
+  unfolding word_bits_def
   apply (clarsimp simp: si_cspace_cap_def guard_equal_def Let_unfold)
   apply (subst and_mask_eq_iff_shiftr_0 [THEN iffD1])
    apply (clarsimp simp: word_bits_def)
@@ -204,7 +207,8 @@ lemma guard_equal_si_cspace_cap':
   by (drule guard_equal_si_cspace_cap, simp add: word_bits_def)
 
 lemma guard_equal_si_cnode_cap:
-  "src_index < 2 ^ si_cnode_size \<Longrightarrow> guard_equal si_cnode_cap src_index 32"
+  "src_index < 2 ^ si_cnode_size \<Longrightarrow> guard_equal si_cnode_cap src_index word_bits"
+  unfolding word_bits_def
   apply (clarsimp simp: si_cnode_cap_def guard_equal_def Let_unfold)
   apply (subst and_mask_eq_iff_shiftr_0 [THEN iffD1])
    apply (clarsimp simp: word_bits_def)
@@ -221,7 +225,7 @@ lemma guard_equal_si_cspace_cap_seL4_CapInitThreadASIDPool [simp]:
   by (rule guard_equal_si_cspace_cap', simp)
 
 lemma si_cspace_cap_guard_equal:
-  "guard_equal si_cnode_cap src_index 32 \<Longrightarrow> src_index < 2 ^ si_cnode_size"
+  "guard_equal si_cnode_cap src_index word_bits \<Longrightarrow> src_index < 2 ^ si_cnode_size"
   apply (clarsimp simp: si_cnode_cap_def guard_equal_def
                         Let_unfold si_cnode_size_def)
   apply (subst (asm) shiftr_mask_eq')

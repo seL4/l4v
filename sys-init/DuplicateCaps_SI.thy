@@ -5,11 +5,11 @@
  *)
 
 theory DuplicateCaps_SI
-imports
-  "DSpecProofs.CNode_DP"
-  ObjectInitialised_SI
-  RootTask_SI
-  SysInit_SI
+  imports
+    DSpecProofs.CNode_DP
+    ObjectInitialised_SI
+    RootTask_SI
+    SysInitSpec.SysInit_SI
 begin
 
 lemma sep_map_zip_fst:
@@ -67,8 +67,8 @@ lemma seL4_CNode_Copy_sep_helper:
        (si_cnode_id, unat cap_ptr) \<mapsto>c default_cap (object_type obj) {kobj_id}
                                                      (object_size_bits obj) dev \<and>*
        (si_cnode_id, unat free_cptr) \<mapsto>c NullCap \<and>* R\<guillemotright> s\<rbrace>
-    seL4_CNode_Copy seL4_CapInitThreadCNode free_cptr 32
-                    seL4_CapInitThreadCNode cap_ptr 32 UNIV
+    seL4_CNode_Copy seL4_CapInitThreadCNode free_cptr (of_nat word_bits)
+                    seL4_CapInitThreadCNode cap_ptr (of_nat word_bits) UNIV
   \<lbrace>\<lambda>rv.\<guillemotleft>si_tcb_id \<mapsto>f root_tcb \<and>*
        (si_tcb_id, tcb_cspace_slot) \<mapsto>c si_cspace_cap \<and>*
        (si_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*
@@ -90,7 +90,7 @@ lemma seL4_CNode_Copy_sep_helper:
    apply (rule conjI)
     apply sep_solve
    apply (clarsimp simp: guard_equal_si_cspace_cap
-                         guard_equal_si_cnode_cap word_bits_def)
+                         guard_equal_si_cnode_cap)
   apply (simp add: well_formed_update_cap_rights_idem derived_cap_default)
   apply sep_solve
   done

@@ -4,21 +4,20 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-theory
-  InitVSpace_SI
-imports
-  "DSpecProofs.Invocation_DP"
-  "DSpecProofs.Arch_DP"
-  ObjectInitialised_SI
-  RootTask_SI
-  SysInit_SI
-  DuplicateCaps_SI
-  Sep_Algebra.Sep_Fold_Cancel
-  Sep_Algebra.Sep_Util
-  "HOL-Library.Multiset"
-  Mapped_Separating_Conjunction
-  AInvs.Rights_AI
-  Lib.Guess_ExI
+theory InitVSpace_SI
+  imports
+    "DSpecProofs.Invocation_DP"
+    "DSpecProofs.Arch_DP"
+    ObjectInitialised_SI
+    RootTask_SI
+    SysInitSpec.SysInit_SI
+    DuplicateCaps_SI
+    Sep_Algebra.Sep_Fold_Cancel
+    Sep_Algebra.Sep_Util
+    "HOL-Library.Multiset"
+    Mapped_Separating_Conjunction
+    AInvs.Rights_AI
+    Lib.Guess_ExI
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
@@ -121,7 +120,7 @@ lemma seL4_Page_Map_object_initialised_sep:
   apply (wp sep_wp: seL4_Page_Map_wp[where n=n and cnode_cap= si_cspace_cap and
                                            root_size = si_cnode_size and pt_ptr = pt_ptr])
           apply fastforce+
-     apply (simp add: word_bits_def guard_equal_si_cspace_cap)+
+     apply (simp add: guard_equal_si_cspace_cap)+
   apply clarsimp
   apply sep_cancel+
   apply (clarsimp simp: si_objects_def sep_conj_assoc sep_state_projection2_def root_tcb_def
@@ -166,7 +165,7 @@ lemma seL4_PageTable_Map_object_initialised_sep:
                                        and ptr = pt_ptr
                                        and pd_ptr = pd_ptr,
                                      sep_wandise])
-         apply (simp add: word_bits_def guard_equal_si_cspace_cap)+
+         apply (simp add: guard_equal_si_cspace_cap)+
   apply (clarsimp simp: si_objects_def  sep_state_projection2_def object_slot_empty_def
                         object_fields_empty_def object_initialised_general_def cdl_lookup_pd_slot_def
                         root_tcb_def update_slots_def)

@@ -39,6 +39,20 @@ lemma keep_if_cond_r:
 
 lemmas keep_if_cond = keep_if_cond_l keep_if_cond_r
 
+(* FIXME move to word setup *)
+lemma unat_of_nat_word_bits_machine[simp]:
+  "unat (of_nat word_bits :: machine_word) = word_bits"
+  by (simp add: word_bits_def)
+
+(* FIXME duplicate of CSpace1_R.word_bits_gt_0; move to word setup *)
+lemma word_bits_gt_0[simp]:
+  "0 < word_bits"
+  by (simp add: word_bits_def)
+
+(* FIXME move; potentially to machine. *)
+(* Useful for folding word_bits_def *)
+lemmas word_bits_num = word_bits_def[simplified]
+
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma cap_has_object_NullCap [simp]:

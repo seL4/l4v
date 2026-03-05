@@ -5,13 +5,13 @@
  *)
 
 theory CreateIRQCaps_SI
-imports
-  DSpecProofs.IRQ_DP
-  ObjectInitialised_SI
-  RootTask_SI
-  SysInit_SI
-  Mapped_Separating_Conjunction
-  Sep_Algebra.Sep_Fold_Cancel
+  imports
+    DSpecProofs.IRQ_DP
+    ObjectInitialised_SI
+    RootTask_SI
+    SysInitSpec.SysInit_SI
+    Mapped_Separating_Conjunction
+    Sep_Algebra.Sep_Fold_Cancel
 begin
 
 (*****************
@@ -151,7 +151,7 @@ lemma create_irq_cap_sep:
   apply (wp add: hoare_drop_imp sep_wp: seL4_IRQHandler_IRQControl_Get, simp)
   apply (rule conjI)
    apply sep_solve
-  apply (simp add: offset_slot_si_cnode_size' guard_equal_si_cspace_cap word_bits_def)
+  apply (simp add: offset_slot_si_cnode_size' guard_equal_si_cspace_cap)
   done
 
 lemma well_formed_spec_used_irqs_compute:
