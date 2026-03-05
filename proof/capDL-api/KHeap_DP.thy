@@ -80,6 +80,7 @@ lemma reset_cap_asid_simps2:
   "reset_cap_asid cap = PageTableCap aa rights ma \<Longrightarrow> \<exists>asid. cap = PageTableCap aa rights asid"
   "reset_cap_asid cap = PageDirectoryCap aa rights as \<Longrightarrow> \<exists>asid. cap = PageDirectoryCap aa rights asid"
   "\<And>irq target. reset_cap_asid cap = SGISignalCap irq target \<Longrightarrow> cap = SGISignalCap irq target"
+  "\<And>p. reset_cap_asid cap = VCPUCap p \<Longrightarrow> cap = VCPUCap p"
   by (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)+
 
 lemma sep_map_c_any:

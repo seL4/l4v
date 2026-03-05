@@ -30,6 +30,7 @@ lemma tcb_empty_decomp:
    (obj_id, tcb_caller_slot) \<mapsto>c NullCap \<and>*
    (obj_id, tcb_pending_op_slot) \<mapsto>c NullCap \<and>*
    (obj_id, tcb_boundntfn_slot) \<mapsto>c NullCap \<and>*
+   (obj_id, tcb_boundvcpu_slot) \<mapsto>c NullCap \<and>*
     obj_id \<mapsto>E Tcb (default_tcb (object_domain obj)))"
   apply (rule ext, rename_tac s)
   apply (clarsimp simp: is_tcb_def object_default_state_def2)
@@ -51,7 +52,8 @@ lemma tcb_decomp':
     opt_cap (obj_id, tcb_ipcbuffer_slot) spec = Some buffer_frame_cap;
     opt_cap (obj_id, tcb_replycap_slot) spec = Some reply_cap;
     opt_cap (obj_id, tcb_pending_op_slot) spec = Some pending_cap;
-    opt_cap (obj_id, tcb_boundntfn_slot) spec = Some bound_cap\<rbrakk>
+    opt_cap (obj_id, tcb_boundntfn_slot) spec = Some bound_cap;
+    opt_cap (obj_id, tcb_boundvcpu_slot) spec = Some vcpu_cap\<rbrakk>
   \<Longrightarrow> (k_obj_id \<mapsto>o object_initialised_state t obj) =
      (k_obj_id \<mapsto>f obj \<and>*
      (k_obj_id, tcb_cspace_slot)     \<mapsto>c cap_transform t cspace_cap \<and>*
@@ -61,6 +63,7 @@ lemma tcb_decomp':
      (k_obj_id, tcb_caller_slot)     \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_pending_op_slot) \<mapsto>c cap_transform t pending_cap \<and>*
      (k_obj_id, tcb_boundntfn_slot) \<mapsto>c cap_transform t bound_cap \<and>*
+     (k_obj_id, tcb_boundvcpu_slot) \<mapsto>c cap_transform t vcpu_cap \<and>*
       k_obj_id \<mapsto>E Tcb (default_tcb minBound))"
   apply (frule (1) well_formed_object_slots)
   apply (frule (1) well_formed_object_domain)
@@ -94,6 +97,7 @@ lemma tcb_half_decomp':
      (k_obj_id, tcb_caller_slot)     \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_pending_op_slot) \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_boundntfn_slot) \<mapsto>c NullCap \<and>*
+     (k_obj_id, tcb_boundvcpu_slot) \<mapsto>c NullCap \<and>*
       k_obj_id \<mapsto>E Tcb (default_tcb minBound))"
   apply (frule (1) well_formed_object_slots)
   apply (frule (1) well_formed_object_domain)
@@ -101,6 +105,7 @@ lemma tcb_half_decomp':
   apply (frule well_formed_tcb_caller_cap [where obj_id=obj_id], simp add: object_at_def)
   apply (frule well_formed_tcb_pending_op_cap [where obj_id=obj_id], simp add: object_at_def)
   apply (frule well_formed_tcb_boundntfn_cap [where obj_id=obj_id], simp add: object_at_def)
+  apply (frule well_formed_tcb_boundvcpu_cap [where obj_id=obj_id], simp add: object_at_def)
   apply (clarsimp simp: is_tcb_def object_domain_def object_default_state_def2)
   apply (case_tac obj, simp_all)
   apply (subst sep_map_o_decomp)
@@ -129,7 +134,8 @@ lemma tcb_decomp [simplified]:
      (k_obj_id, tcb_replycap_slot)   \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_replycap_slot) spec) \<and>*
      (k_obj_id, tcb_caller_slot)     \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_pending_op_slot) \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_pending_op_slot) spec) \<and>*
-     (k_obj_id, tcb_boundntfn_slot) \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_boundntfn_slot) spec) \<and>*
+     (k_obj_id, tcb_boundntfn_slot)  \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_boundntfn_slot) spec) \<and>*
+     (k_obj_id, tcb_boundvcpu_slot)  \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_boundvcpu_slot) spec) \<and>*
       k_obj_id \<mapsto>E Tcb (default_tcb minBound))"
   apply (simp add: is_tcb_obj_type)
   apply (frule (1) object_type_object_at)
@@ -140,14 +146,14 @@ lemma tcb_decomp [simplified]:
   apply (frule (1) well_formed_tcb_caller_cap)
   apply (frule (1) well_formed_tcb_pending_op_cap)
   apply (frule (1) well_formed_tcb_boundntfn_cap)
+  apply (frule (1) well_formed_tcb_boundvcpu_cap)
   apply clarsimp
   apply (subst tcb_decomp'
          [where cspace_cap = "the $ opt_cap (obj_id, tcb_cspace_slot) spec"
             and vspace_cap = "the $ opt_cap (obj_id, tcb_vspace_slot) spec"
             and buffer_frame_cap = "the $ opt_cap (obj_id, tcb_ipcbuffer_slot) spec"
             and reply_cap = "the $ opt_cap (obj_id, tcb_replycap_slot) spec"
-            and pending_cap = "the $ opt_cap (obj_id, tcb_pending_op_slot) spec"
-            and bound_cap = "the $ opt_cap (obj_id, tcb_boundntfn_slot) spec"],
+            and pending_cap = "the $ opt_cap (obj_id, tcb_pending_op_slot) spec"],
          (fastforce simp: is_tcb_obj_type)+)
   done
 
@@ -161,7 +167,8 @@ lemma tcb_half_decomp [simplified]:
      (k_obj_id, tcb_replycap_slot)   \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_caller_slot)     \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_pending_op_slot) \<mapsto>c NullCap \<and>*
-     (k_obj_id, tcb_boundntfn_slot) \<mapsto>c NullCap \<and>*
+     (k_obj_id, tcb_boundntfn_slot)  \<mapsto>c NullCap \<and>*
+     (k_obj_id, tcb_boundvcpu_slot)  \<mapsto>c NullCap \<and>*
       k_obj_id \<mapsto>E Tcb (default_tcb minBound))"
   apply (simp add: is_tcb_obj_type)
   apply (frule (1) object_type_object_at)
@@ -264,6 +271,7 @@ lemma tcb_configure_pre:
      (k_obj_id, tcb_caller_slot) \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_pending_op_slot) \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_boundntfn_slot) \<mapsto>c NullCap \<and>*
+     (k_obj_id, tcb_boundvcpu_slot) \<mapsto>c NullCap \<and>*
       k_obj_id \<mapsto>E Tcb (default_tcb minBound) \<and>*
       R\<guillemotright> s"
   apply clarsimp
@@ -392,6 +400,7 @@ lemma tcb_configure_post:
      (k_obj_id, tcb_caller_slot) \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_pending_op_slot) \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_boundntfn_slot) \<mapsto>c NullCap \<and>*
+     (k_obj_id, tcb_boundvcpu_slot) \<mapsto>c NullCap \<and>*
      k_obj_id \<mapsto>E Tcb (default_tcb minBound) \<and>* R\<guillemotright> s\<rbrakk>
   \<Longrightarrow> \<guillemotleft>tcb_half_initialised spec t obj_id \<and>*
        si_cap_at t orig_caps spec False obj_id \<and>*
@@ -699,6 +708,7 @@ lemma seL4_TCB_Configure_object_initialised_sep_helper:
                      (k_obj_id, tcb_caller_slot) \<mapsto>c NullCap \<and>*
                      (k_obj_id, tcb_pending_op_slot) \<mapsto>c NullCap \<and>*
                      (k_obj_id, tcb_boundntfn_slot) \<mapsto>c NullCap \<and>*
+                     (k_obj_id, tcb_boundvcpu_slot) \<mapsto>c NullCap \<and>*
                       k_obj_id \<mapsto>E Tcb (default_tcb minBound) \<and>* R"
                in seL4_TCB_Configure_sep,
                (assumption|simp|clarsimp)+)[1]

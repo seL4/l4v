@@ -47,6 +47,14 @@ lemma is_waiting_thread_opt_cap_tcb_boundntfn_slot[simp]:
   apply (clarsimp simp: is_waiting_thread_def opt_cap_def slots_of_def)
   done
 
+lemma is_waiting_thread_opt_cap_tcb_boundvcpu_slot[simp]:
+  "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_waiting_thread obj\<rbrakk>
+  \<Longrightarrow> opt_cap (obj_id, tcb_boundvcpu_slot) spec = Some NullCap"
+  apply (clarsimp simp: is_waiting_thread_def opt_cap_def slots_of_def)
+  apply (frule well_formed_tcb_boundvcpu_cap [where obj_id=obj_id], simp add: object_at_def)
+  apply (clarsimp simp: is_waiting_thread_def opt_cap_def slots_of_def)
+  done
+
 lemma cap_transform_RestartCap [simp]:
   "cap_transform t RestartCap = RestartCap"
   by (clarsimp simp: cap_transform_def cap_type_def update_cap_object_def)

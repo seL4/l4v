@@ -434,6 +434,7 @@ lemma spec2s_objects [simp]:
  "spec2s t Endpoint = Endpoint"
  "spec2s t Notification = Notification"
  "spec2s t (Frame f) = Frame f"
+ "spec2s t VCPU = VCPU"
   by (clarsimp simp: spec2s_def update_slots_def)+
 
 lemma object_initialised_general_decomp:

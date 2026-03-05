@@ -294,7 +294,7 @@ lemma caps_of_state_transform_opt_cap:
   apply (clarsimp simp: opt_cap_def transform_cslot_ptr_def slots_of_def
                         transform_def transform_objects_def object_slots_def
                         valid_irq_node_def obj_at_def is_cap_table_def
-                        transform_tcb_def tcb_slots tcb_cap_cases_def
+                        transform_tcb_def tcb_slot_defs tcb_cap_cases_def
                         bl_to_bin_tcb_cnode_index bl_to_bin_tcb_cnode_index_le0
                  split: if_split_asm)
   done
@@ -388,8 +388,9 @@ shows "\<lbrakk>opt_cap_wp_at P slot (transform s);valid_objs s\<rbrakk>
   apply (clarsimp simp:transform_objects_def restrict_map_Some_iff object_slots_def split:cdl_object.splits)
        apply (frule assms)
        apply (clarsimp simp: cte_wp_at_cases transform_object_def transform_tcb_def
-                             tcb_pending_op_slot_def tcb_boundntfn_slot_def
+                             tcb_pending_op_slot_def tcb_boundntfn_slot_def tcb_boundvcpu_slot_def
                        split: Structures_A.kernel_object.splits nat.splits if_splits)
+               apply (clarsimp simp: cap_counts_def)
               apply (clarsimp simp: cap_counts_def infer_tcb_bound_notification_def split:option.splits)
              apply (clarsimp simp:cap_counts_def infer_tcb_pending_op_def split:Structures_A.thread_state.splits nat.splits)
             using transform_tcb_slot_simp[simplified,symmetric]
@@ -639,7 +640,8 @@ lemma cdl_objects_tcb:
                tcb_caller_slot \<mapsto> transform_cap (tcb_caller tcb),
                tcb_ipcbuffer_slot \<mapsto> transform_cap (tcb_ipcframe tcb),
                tcb_pending_op_slot \<mapsto> infer_tcb_pending_op p (tcb_state tcb),
-               tcb_boundntfn_slot \<mapsto> infer_tcb_bound_notification (tcb_bound_notification tcb)],
+               tcb_boundntfn_slot \<mapsto> infer_tcb_bound_notification (tcb_bound_notification tcb),
+               tcb_boundvcpu_slot \<mapsto> cdl_cap.NullCap],
               cdl_tcb_fault_endpoint = of_bl (tcb_fault_handler tcb),
               cdl_tcb_intent = transform_full_intent (machine_state s') p tcb,
               cdl_tcb_has_fault = (tcb_has_fault tcb),
@@ -746,7 +748,7 @@ proof -
                         update_slots_def
                   split del: if_split)
   apply (case_tac "nat (bl_to_bin sl') = tcb_ipcbuffer_slot")
-   apply (simp add: tcb_slots)
+   apply (simp add: tcb_slot_defs)
    apply (clarsimp simp: bl_to_bin_tcb_cnode_index|rule conjI)+
      apply (rule corres_guard_imp)
        apply (rule select_pick_corres)
@@ -754,7 +756,7 @@ proof -
          apply (clarsimp simp: transform_tcb_def)
          apply (rule conjI)
           apply (rule ext)
-          apply (clarsimp simp: transform_tcb_def tcb_slots)
+          apply (clarsimp simp: transform_tcb_def tcb_slot_defs)
          apply (rule refl)
         apply assumption
        apply simp
@@ -765,11 +767,11 @@ proof -
       apply (clarsimp simp: transform_tcb_def)
       apply (rule conjI)
        apply (rule ext)
-       apply (clarsimp simp: transform_tcb_def tcb_slots)
+       apply (clarsimp simp: transform_tcb_def tcb_slot_defs)
       apply (erule transform_full_intent_same_cap)
      apply simp
     apply simp
-   apply ((clarsimp simp: bl_to_bin_tcb_cnode_index corres_free_fail|rule conjI)+)[1] (* sseefried: brittle. Try changing number on end *)
+   apply ((clarsimp simp: bl_to_bin_tcb_cnode_index corres_free_fail|rule conjI)+)[1]
   apply (simp add: bl_to_bin_tcb_cnode_index tcb_slot_defs)
   apply (rule conjI)
    apply (clarsimp simp: bl_to_bin_tcb_cnode_index)
@@ -807,10 +809,8 @@ lemma set_pending_cap_corres:
                         KHeap_D.set_object_def simpler_modify_def)
   apply (simp add: transform_def transform_current_thread_def)
   apply (rule ext)
-  apply (subst transform_objects_update_kheap_same_caps)
-     apply ((simp add: obj_at_def transform_tcb_def
-       not_generates_pending_is_null tcb_slots)+)[3]
-  apply (auto simp: obj_at_def not_generates_pending_is_null transform_tcb_def tcb_slots)
+  apply (auto simp: transform_objects_update_kheap_same_caps obj_at_def
+                    not_generates_pending_is_null transform_tcb_def tcb_slot_defs)
   done
 
 lemma transform_scheduler_action_update[simp]: "transform (s\<lparr> scheduler_action := a \<rparr>) = transform s"
@@ -1429,9 +1429,9 @@ lemma block_lift:
     | Structures_A.thread_state.BlockedOnSend p _ \<Rightarrow> ep = p
     | Structures_A.thread_state.BlockedOnNotification p \<Rightarrow> ep = p
     | _ \<Rightarrow> False)"
-  apply (clarsimp simp:is_thread_blocked_on_endpoint_def transform_tcb_def infer_tcb_pending_op_def infer_tcb_bound_notification_def tcb_slots)
-  apply (case_tac "tcb_state tcb_type")
-         apply (auto)
+  apply (clarsimp simp: is_thread_blocked_on_endpoint_def transform_tcb_def infer_tcb_pending_op_def
+                        infer_tcb_bound_notification_def tcb_slot_defs)
+  apply (cases "tcb_state tcb_type", auto)
   done
 
 (* Before we handle fast_finalise, we need sth form invs that can give us some preconditions of ep and ntfn *)
@@ -1477,7 +1477,7 @@ lemma ep_waiting_set_send_lift:
    apply (clarsimp simp: ep_waiting_set_send_def
                          transform_def transform_objects_def restrict_map_Some_iff)
    apply (clarsimp simp: infer_tcb_pending_op_def transform_object_def
-                         transform_tcb_def tcb_slots infer_tcb_bound_notification_def
+                         transform_tcb_def tcb_slot_defs infer_tcb_bound_notification_def
                    split: Structures_A.kernel_object.splits nat.splits
                           Structures_A.thread_state.splits)
    apply (simp split: arch_kernel_obj.splits)
@@ -1487,7 +1487,7 @@ lemma ep_waiting_set_send_lift:
   apply (clarsimp simp: restrict_map_Some_iff)
   apply (rule conjI)
    apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
-  apply (clarsimp simp: infer_tcb_pending_op_def transform_tcb_def tcb_slots)
+  apply (clarsimp simp: infer_tcb_pending_op_def transform_tcb_def tcb_slot_defs)
   done
 
 lemma ep_waiting_set_recv_lift:
@@ -1500,7 +1500,7 @@ lemma ep_waiting_set_recv_lift:
    apply (clarsimp simp: ep_waiting_set_recv_def
                          transform_def transform_objects_def)
    apply (clarsimp simp: restrict_map_Some_iff)
-   apply (clarsimp simp: infer_tcb_pending_op_def transform_object_def tcb_slots
+   apply (clarsimp simp: infer_tcb_pending_op_def transform_object_def tcb_slot_defs
                          transform_tcb_def restrict_map_Some_iff
                    split: Structures_A.kernel_object.splits nat.splits
                           Structures_A.thread_state.splits)
@@ -1510,7 +1510,7 @@ lemma ep_waiting_set_recv_lift:
                         transform_object_def restrict_map_Some_iff
                  split: option.splits)
   apply (clarsimp simp: valid_idle_def obj_at_def pred_tcb_at_def)
-  apply (clarsimp simp: infer_tcb_pending_op_def transform_tcb_def tcb_slots)
+  apply (clarsimp simp: infer_tcb_pending_op_def transform_tcb_def tcb_slot_defs)
   done
 
 lemma ntfn_waiting_set_lift:
@@ -1524,7 +1524,7 @@ lemma ntfn_waiting_set_lift:
    apply (clarsimp simp: transform_def transform_objects_def)
    apply (clarsimp simp: restrict_map_Some_iff)
    apply (clarsimp simp: infer_tcb_pending_op_def transform_object_def
-                         transform_tcb_def restrict_map_Some_iff tcb_slots
+                         transform_tcb_def restrict_map_Some_iff tcb_slot_defs
                   split: Structures_A.kernel_object.splits nat.splits
                          Structures_A.thread_state.splits)
     apply (clarsimp simp: ntfn_waiting_set_def)
@@ -1533,7 +1533,7 @@ lemma ntfn_waiting_set_lift:
                  split: Structures_A.kernel_object.splits)
   apply (clarsimp simp: valid_idle_def obj_at_def pred_tcb_at_def)
   apply (clarsimp simp: transform_def transform_object_def
-                        transform_tcb_def transform_objects_def tcb_slots
+                        transform_tcb_def transform_objects_def tcb_slot_defs
                         infer_tcb_pending_op_def map_add_def restrict_map_Some_iff
                  split: option.splits)
   done
@@ -1553,12 +1553,12 @@ lemma ntfn_bound_set_lift:
    apply (clarsimp simp: transform_def transform_objects_def)
    apply (clarsimp simp: restrict_map_Some_iff)
    apply (clarsimp simp: infer_tcb_bound_notification_def transform_object_def
-                         transform_tcb_def restrict_map_Some_iff tcb_slots
+                         transform_tcb_def restrict_map_Some_iff tcb_slot_defs
                   split: Structures_A.kernel_object.splits option.splits
                          Structures_A.thread_state.splits
                          ARM_A.arch_kernel_obj.splits)
    apply (clarsimp simp: transform_def transform_object_def
-                         transform_tcb_def transform_objects_def tcb_slots valid_idle_def obj_at_def
+                         transform_tcb_def transform_objects_def tcb_slot_defs valid_idle_def obj_at_def
                          infer_tcb_bound_notification_def map_add_def restrict_map_Some_iff pred_tcb_at_def
                   split: nat.splits option.splits)+
   done
@@ -2116,7 +2116,7 @@ lemma fast_finalise_no_effect:
   apply (clarsimp simp:slots_of_def transform_objects_def not_idle_thread_def restrict_map_def
                  split:option.splits if_splits)
   apply (clarsimp simp:object_slots_def transform_tcb_def)
-  apply (clarsimp simp:infer_tcb_pending_op_def tcb_slots
+  apply (clarsimp simp:infer_tcb_pending_op_def tcb_slot_defs
                  split:Structures_A.thread_state.splits)
   done
 
@@ -2198,7 +2198,7 @@ lemma fast_finalise_recv_ep:
      apply (drule get_tcb_rev)+
      apply  (clarsimp simp:lift_simp not_idle_thread_def)
      apply (auto simp: transform_tcb_def remove_pending_operation_def infer_tcb_pending_op_def
-                       restrict_map_def tcb_slots infer_tcb_bound_notification_def
+                       restrict_map_def tcb_slot_defs infer_tcb_bound_notification_def
                        map_add_def get_tcb_def
                  cong: transform_full_intent_cong split: option.splits)[1]
     apply (clarsimp simp:not_idle_thread_def | wp)+
@@ -2269,9 +2269,11 @@ lemma fast_finalise_send_ep:
      apply (clarsimp simp: ep_waiting_set_send_def)
      apply (drule get_tcb_rev)+
      apply  (clarsimp simp: lift_simp not_idle_thread_def)
-     apply (auto simp: transform_tcb_def remove_pending_operation_def infer_tcb_pending_op_def restrict_map_def infer_tcb_bound_notification_def tcb_slots
-                            map_add_def is_tcb get_tcb_def split: option.splits
-                      cong: transform_full_intent_cong)[1]
+     apply (auto simp: transform_tcb_def remove_pending_operation_def infer_tcb_pending_op_def
+                       restrict_map_def infer_tcb_bound_notification_def tcb_slot_defs
+                       map_add_def is_tcb get_tcb_def
+                 split: option.splits
+                 cong: transform_full_intent_cong)[1]
     apply clarsimp
     apply (clarsimp simp: not_idle_thread_def | wp)+
     apply (frule_tac a = "idle_thread s" in   pending_thread_in_send_not_idle)
@@ -2340,7 +2342,8 @@ lemma fast_finalise_wait_ntfn:
      apply (clarsimp simp:obj_at_def)
      apply (frule_tac epptr = epptr in get_notification_pick,simp,clarsimp simp:valid_ntfn_abstract_def)
      apply (clarsimp split:option.splits simp:lift_simp not_idle_thread_def transform_tcb_def)
-     apply (fastforce simp: remove_pending_operation_def transform_tcb_def infer_tcb_pending_op_def restrict_map_def infer_tcb_bound_notification_def tcb_slots
+     apply (fastforce simp: remove_pending_operation_def transform_tcb_def infer_tcb_pending_op_def
+                            restrict_map_def infer_tcb_bound_notification_def tcb_slot_defs
                             map_add_def is_tcb get_tcb_def split: option.splits
                       cong: transform_full_intent_cong)
     apply (clarsimp simp:not_idle_thread_def | wp)+
@@ -2446,15 +2449,15 @@ lemma set_boundntfn_cap_corres:
   apply (frule opt_object_tcb[rotated])
    apply (fastforce simp: get_tcb_def)
   apply (clarsimp simp: assert_opt_def has_slots_def
-    transform_tcb_def object_slots_def update_slots_def tcb_slots)
+    transform_tcb_def object_slots_def update_slots_def tcb_slot_defs)
   apply (clarsimp simp: corres_underlying_def in_monad
     set_object_def KHeap_D.set_object_def get_object_def simpler_modify_def)
   apply (simp add: transform_def transform_current_thread_def)
   apply (rule ext)
   apply (subst transform_objects_update_kheap_same_caps)
      apply ((simp add: obj_at_def transform_tcb_def
-       not_generates_pending_is_null tcb_slots)+)[3]
-  apply (auto simp: obj_at_def not_generates_pending_is_null transform_tcb_def tcb_slots)
+       not_generates_pending_is_null tcb_slot_defs)+)[3]
+  apply (auto simp: obj_at_def not_generates_pending_is_null transform_tcb_def tcb_slot_defs)
   done
 
 lemma set_bound_notification_corres:
@@ -2475,7 +2478,7 @@ lemma dcorres_unbind_notification:
                    get_bound_notification_def thread_get_def)
   apply (rule dcorres_gets_the)
    apply (clarsimp simp: opt_object_tcb transform_tcb_def not_idle_thread_def)
-   apply (clarsimp simp: opt_cap_tcb tcb_slots infer_tcb_bound_notification_def split: option.splits)
+   apply (clarsimp simp: opt_cap_tcb tcb_slot_defs infer_tcb_bound_notification_def split: option.splits)
    apply (clarsimp simp: get_simple_ko_def get_object_def gets_def bind_assoc)
    apply (rule dcorres_absorb_get_r)
    apply (clarsimp simp: assert_def corres_free_fail partial_inv_def a_type_def
@@ -2485,7 +2488,7 @@ lemma dcorres_unbind_notification:
      apply (rule corres_dummy_set_notification[THEN corres_guard_imp],simp+)
    apply (rule corres_guard_imp)
      apply (rule set_bound_notification_corres[where ntfn_opt=None, unfolded infer_tcb_bound_notification_def
-                                      not_idle_thread_def tcb_slots, simplified])
+                                      not_idle_thread_def tcb_slot_defs, simplified])
     apply simp
    apply (rule ccontr, clarsimp)
   apply (clarsimp simp: not_idle_thread_def opt_cap_tcb)
@@ -2524,9 +2527,11 @@ lemma dcorres_do_unbind_notification:
   apply (rule corres_guard_imp)
     apply (rule corres_dummy_return_pl[where b="()"])
     apply (rule corres_split[OF corres_dummy_set_notification])
-      apply (clarsimp simp: tcb_slots)
-      apply (rule set_bound_notification_corres[where ntfn_opt=None, unfolded infer_tcb_bound_notification_def
-                                       not_idle_thread_def tcb_slots, simplified])
+      apply (clarsimp simp: tcb_slot_defs)
+      apply (rule set_bound_notification_corres[where ntfn_opt=None,
+                                                unfolded infer_tcb_bound_notification_def
+                                                         not_idle_thread_def tcb_slot_defs,
+                                                simplified])
      apply wp+
    apply simp
   apply (clarsimp simp: not_idle_thread_def)

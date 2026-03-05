@@ -402,9 +402,12 @@ lemma transform_intent_thread_cap_None:
                      | wp+)+
          apply (clarsimp simp: transform_intent_def decode_set_space_def decode_bind_notification_def
                                decode_unbind_notification_def transform_intent_tcb_set_space_def
+                               decode_set_flags_def whenE_def
                         split: list.split_asm
-               , wp+
-               | clarsimp simp: transform_intent_def simp flip: gen_invocation_type_eq)+
+               | wp
+               | clarsimp simp: transform_intent_def transform_intent_tcb_set_flags_def
+                          simp flip: gen_invocation_type_eq
+                          split: list.split_asm)+
   done
 
 lemma transform_intent_irq_control_None:
@@ -1130,7 +1133,7 @@ lemma dcorres_reply_from_syscall:
     gets_def bind_assoc liftE_distrib')
   apply (rule dcorres_absorb_get_l)
   apply (clarsimp simp:opt_object_tcb not_idle_thread_def
-    liftE_bindE liftE_distrib' infer_tcb_pending_op_def tcb_slots
+    liftE_bindE liftE_distrib' infer_tcb_pending_op_def tcb_slot_defs
     transform_tcb_def assert_opt_def when_def returnOk_liftE[symmetric]
     split: Structures_A.thread_state.splits)
   apply (intro conjI impI)
@@ -1140,7 +1143,7 @@ lemma dcorres_reply_from_syscall:
             apply (rule corres_dummy_return_pr)
             apply (rule corres_split[OF dcorres_set_intent_error])
               apply (simp add:liftE_bindE returnOk_liftE)
-              apply (rule set_thread_state_corres[unfolded tcb_slots])
+              apply (rule set_thread_state_corres[unfolded tcb_slot_defs])
              apply (wp rfk_invs reply_from_kernel_error)+
           apply (simp add:not_idle_thread_def)
           apply (wp rfk_invs)
@@ -1151,7 +1154,7 @@ lemma dcorres_reply_from_syscall:
        apply (rule corres_guard_imp[OF corres_split[where r' = "dc"]])
             apply (rule dcorres_dummy_corrupt_ipc_buffer)
            apply (simp add: returnOk_liftE)
-           apply (rule set_thread_state_corres[unfolded tcb_slots])
+           apply (rule set_thread_state_corres[unfolded tcb_slot_defs])
           apply wp+
         apply simp
        apply (clarsimp simp: tcb_at_def invs_mdb st_tcb_at_def not_idle_thread_def obj_at_def

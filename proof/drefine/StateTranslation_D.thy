@@ -167,6 +167,12 @@ where
     Some (TcbSetSpaceIntent fault_ep croot_data vroot_data)
    | _ \<Rightarrow> None)"
 
+definition transform_intent_tcb_set_flags :: "machine_word list \<Rightarrow> cdl_tcb_intent option" where
+  "transform_intent_tcb_set_flags args \<equiv>
+     case args of flags_set # flags_clear # _ \<Rightarrow>
+       Some $ TcbSetFlagsIntent flags_set flags_clear
+     | _ \<Rightarrow> None"
+
 definition
   transform_cnode_index_and_depth :: "(word32 \<Rightarrow> word32 \<Rightarrow> 'a) \<Rightarrow> word32 list \<Rightarrow> 'a option"
 where
@@ -328,7 +334,9 @@ definition
     | GenInvocationLabel TCBBindNotification \<Rightarrow> Some (TcbIntent TcbBindNTFNIntent)
     | GenInvocationLabel TCBUnbindNotification \<Rightarrow> Some (TcbIntent TcbUnbindNTFNIntent)
     | GenInvocationLabel TCBSetTLSBase \<Rightarrow> Some (TcbIntent TcbSetTLSBaseIntent)
-    | GenInvocationLabel TCBSetFlags \<Rightarrow> Some (TcbIntent TcbSetFlagsIntent)
+    | GenInvocationLabel TCBSetFlags \<Rightarrow>
+          map_option TcbIntent
+                   (transform_intent_tcb_set_flags args)
     | GenInvocationLabel CNodeRevoke \<Rightarrow>
           map_option CNodeIntent
                    (transform_cnode_index_and_depth CNodeRevokeIntent args)
@@ -401,6 +409,7 @@ lemmas transform_intent_tcb_defs =
   transform_intent_tcb_set_sched_params_def
   transform_intent_tcb_set_ipc_buffer_def
   transform_intent_tcb_set_space_def
+  transform_intent_tcb_set_flags_def
 
 lemma transform_tcb_intent_invocation:
   "transform_intent label args = Some (TcbIntent ti)
@@ -418,7 +427,8 @@ lemma transform_tcb_intent_invocation:
    ((label = GenInvocationLabel TCBResume) = (ti = TcbResumeIntent)) \<and>
    ((label = GenInvocationLabel TCBBindNotification) = (ti = TcbBindNTFNIntent)) \<and>
    ((label = GenInvocationLabel TCBUnbindNotification) = (ti = TcbUnbindNTFNIntent)) \<and>
-   ((label = GenInvocationLabel TCBSetTLSBase) = (ti = TcbSetTLSBaseIntent))
+   ((label = GenInvocationLabel TCBSetTLSBase) = (ti = TcbSetTLSBaseIntent) \<and>
+   ((label = GenInvocationLabel TCBSetFlags) = (ti = TcbSetFlagsIntent (args ! 0) (args ! 1) \<and> length args \<ge> 2)))
    ) \<and>
    (
     label \<noteq> GenInvocationLabel InvalidInvocation \<and>
@@ -458,10 +468,10 @@ lemma transform_tcb_intent_invocation:
          simp add: transform_intent_def transform_intent_tcb_defs
               split: gen_invocation_labels.split_asm invocation_label.split_asm
                      arch_invocation_label.split_asm list.split_asm)+
-                               (* 30 subgoals *)
-                               apply(simp add: transform_intent_def transform_intent_tcb_defs
-                                          split: gen_invocation_labels.split_asm invocation_label.split_asm
-                                                 arch_invocation_label.split_asm)+
+                                (* 31 subgoals *)
+                                apply(simp add: transform_intent_def transform_intent_tcb_defs
+                                           split: gen_invocation_labels.split_asm invocation_label.split_asm
+                                                  arch_invocation_label.split_asm)+
   done
 
 lemma transform_intent_isnot_UntypedIntent:
@@ -553,12 +563,12 @@ lemma transform_intent_isnot_TcbIntent:
           (label = GenInvocationLabel TCBSetSchedParams \<longrightarrow> length args < 2) \<and>
           (label = GenInvocationLabel TCBSetIPCBuffer \<longrightarrow> length args < 1) \<and>
           (label = GenInvocationLabel TCBSetSpace \<longrightarrow> length args < 3) \<and>
+          (label = GenInvocationLabel TCBSetFlags \<longrightarrow> length args < 2) \<and>
           (label \<noteq> GenInvocationLabel TCBSuspend) \<and>
           (label \<noteq> GenInvocationLabel TCBResume) \<and>
           (label \<noteq> GenInvocationLabel TCBBindNotification) \<and>
           (label \<noteq> GenInvocationLabel TCBUnbindNotification) \<and>
-          (label \<noteq> GenInvocationLabel TCBSetTLSBase) \<and>
-          (label \<noteq> GenInvocationLabel TCBSetFlags))"
+          (label \<noteq> GenInvocationLabel TCBSetTLSBase))"
   apply(rule iffI)
     subgoal
       apply(erule contrapos_np)
@@ -839,7 +849,8 @@ where
                    tcb_caller_slot \<mapsto> (transform_cap $ tcb_caller tcb),
                    tcb_ipcbuffer_slot \<mapsto> (transform_cap $ tcb_ipcframe tcb),
                    tcb_pending_op_slot \<mapsto> (infer_tcb_pending_op ptr (tcb_state tcb)),
-                   tcb_boundntfn_slot \<mapsto> (infer_tcb_bound_notification (tcb_bound_notification tcb))
+                   tcb_boundntfn_slot \<mapsto> (infer_tcb_bound_notification (tcb_bound_notification tcb)),
+                   tcb_boundvcpu_slot \<mapsto> cdl_cap.NullCap
                  ],
 
                  cdl_tcb_fault_endpoint = (of_bl (tcb_fault_handler tcb)),

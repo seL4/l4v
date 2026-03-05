@@ -28,7 +28,7 @@ lemma object_types_distinct:
   "capless_at x s \<Longrightarrow> \<not> pd_at x s"
   "capless_at x s \<Longrightarrow> \<not> asidpool_at x s"
   by (clarsimp simp: object_at_def is_tcb_def is_cnode_def is_pd_def is_pt_def
-                     is_ep_def is_ntfn_def is_asidpool_def is_frame_def
+                     is_ep_def is_ntfn_def is_asidpool_def is_frame_def is_vcpu_def
                      is_untyped_def | rule conjI |
       clarsimp split: cdl_object.splits)+
 
@@ -42,13 +42,15 @@ lemma real_objects_some_type:
        \<not> untyped_at obj_id spec \<and>
        \<not> ep_at obj_id spec \<and>
        \<not> ntfn_at obj_id spec \<and>
-       \<not> frame_at obj_id spec} = {}"
+       \<not> frame_at obj_id spec \<and>
+       \<not> vcpu_at obj_id spec} = {}"
   apply (clarsimp simp: object_at_def is_tcb_def is_cnode_def is_pd_def is_pt_def
                         is_ep_def is_ntfn_def is_asidpool_def is_frame_def is_untyped_def)
   apply (rename_tac p)
   apply (clarsimp split: cdl_object.splits)
   apply (drule_tac obj_id=p in well_formed_asidpool_at)
   apply (clarsimp simp: real_object_at_def object_at_def is_asidpool_def irq_nodes_def is_irq_node_def
+                        is_vcpu_def
                  split: cdl_object.splits)
   apply metis
   done
@@ -96,7 +98,7 @@ lemma object_empty_object_initialised_capless:
   apply (fastforce simp: object_at_def update_slots_def object_initialised_state_def
                          object_default_state_def2 spec2s_def
                          is_ep_def is_ntfn_def is_asidpool_def
-                         is_frame_def is_untyped_def cdl_frame.splits
+                         is_frame_def is_untyped_def is_vcpu_def cdl_frame.splits
                   split: cdl_object.splits)
   done
 
