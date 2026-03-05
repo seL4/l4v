@@ -29,4 +29,37 @@ definition pageBits_cdl :: "nat" where
   "pageBits_cdl \<equiv> pageBits"
 
 end
+
+(* Machine-level base names *)
+context Arch begin arch_global_naming
+
+lemmas vmpage_size_simps = vmpage_size.simps
+
+(* These names are expected by other architectures, but unused for AARCH64 *)
+
+definition pd_size_index :: nat where
+  "pd_size_index \<equiv> undefined"
+
+definition pt_size_index :: nat where
+  "pt_size_index \<equiv> undefined"
+
+definition smallPageBits :: nat where
+  "smallPageBits = undefined"
+
+definition largePageBits :: nat where
+  "largePageBits = undefined"
+
+definition sectionBits :: nat where
+  "sectionBits = undefined"
+
+definition superSectionBits :: nat where
+  "superSectionBits = undefined"
+
+definition pt_slot_vaddr_mask :: machine_word where
+  "pt_slot_vaddr_mask = undefined"
+
+definition pageForPageBits :: "nat \<Rightarrow> vmpage_size" where
+  "pageForPageBits bits \<equiv> undefined"
+
+end
 end
