@@ -7,7 +7,7 @@
 (* Proofs about untyped invocations. *)
 
 theory Untyped_R
-imports Detype_R Invocations_R InterruptAcc_R
+imports ArchDetype_R Invocations_R InterruptAcc_R
 begin
 context begin interpretation Arch . (*FIXME: arch-split*)
 
