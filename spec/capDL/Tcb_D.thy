@@ -9,7 +9,7 @@
  *)
 
 theory Tcb_D
-imports Invocations_D CSpace_D
+imports Invocations_D CSpace_D ExecSpec.Structs_B
 begin
 
 definition cdl_update_cnode_cap_data :: "cdl_cap \<Rightarrow> machine_word \<Rightarrow> cdl_cap"
@@ -133,7 +133,7 @@ where
      | TcbUnbindNTFNIntent \<Rightarrow> returnOk (NotificationControl (cap_object target) None) \<sqinter> throw
      | TcbSetTLSBaseIntent \<Rightarrow> returnOk (SetTLSBase (cap_object target)) \<sqinter> throw
      | TcbSetFlagsIntent set_flags clear_flags \<Rightarrow>
-         returnOk (SetFlags (cap_object target) set_flags clear_flags) \<sqinter> throw"
+         returnOk (SetFlags (cap_object target) (set_flags && tcbFlagMask) (clear_flags && tcbFlagMask)) \<sqinter> throw"
 
 
 (* Delete the given slot of a TCB. *)
@@ -317,5 +317,15 @@ where
   "invoke_domain params \<equiv> case params of
      SetDomain tcb d \<Rightarrow> liftE $ set_domain tcb d"
 
+
+definition decode_vcpu_invocation ::
+  "cdl_object_id \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow> cdl_vcpu_invocation except_monad"
+  where
+  "decode_vcpu_invocation vcpu caps \<equiv>
+     returnOk (VCPUSetTCB vcpu (cap_object (fst (hd caps))) ) \<sqinter> throw"
+
+definition invoke_vcpu :: "cdl_vcpu_invocation \<Rightarrow> unit k_monad" where
+  "invoke_vcpu params \<equiv>
+     case params of VCPUSetTCB vcpu tcb \<Rightarrow> set_cap (tcb, tcb_boundvcpu_slot) (VCPUCap vcpu)"
 
 end
