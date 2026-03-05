@@ -15,6 +15,7 @@ theory Types_D
 imports
   "ASpec.VMRights_A"
   Intents_D
+  Arch_Structs_D
   "Lib.Lib"
   "Lib.SplitRule"
   "HOL-Combinatorics.Transposition" (* for Fun.swap *)
@@ -716,7 +717,7 @@ definition default_frame_fill_data :: "cdl_frame_fill list" where
   "default_frame_fill_data \<equiv> []"
 
 (* Return a newly constructed object of the given type. *)
-definition
+definition (* FIXME AARCH64 *)
   default_object :: "cdl_object_type \<Rightarrow> nat \<Rightarrow> domain \<Rightarrow> cdl_object option"
 where
   "default_object x y current_domain \<equiv>
