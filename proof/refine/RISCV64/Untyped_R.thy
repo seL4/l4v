@@ -7,7 +7,7 @@
 (* Proofs about untyped invocations. *)
 
 theory Untyped_R
-imports Detype_R Invocations_R InterruptAcc_R
+imports ArchDetype_R Invocations_R InterruptAcc_R
 begin
 
 unbundle l4v_word_context
