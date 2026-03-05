@@ -5,15 +5,15 @@
  *)
 
 theory CreateObjects_SI
-imports
-  StaticDerivations_SI
-  ObjectInitialised_SI
-  RootTask_SI
-  SysInit_SI
-  Sep_Algebra.Extended_Separation_Algebra
-  Sep_Algebra.Sep_Util
-  Sep_Algebra.Sep_Fold_Cancel
-  Mapped_Separating_Conjunction
+  imports
+    StaticDerivations_SI
+    ObjectInitialised_SI
+    RootTask_SI
+    SysInitSpec.SysInit_SI
+    Sep_Algebra.Extended_Separation_Algebra
+    Sep_Algebra.Sep_Util
+    Sep_Algebra.Sep_Fold_Cancel
+    Mapped_Separating_Conjunction
 begin
 
 lemma has_children_map_le:
@@ -65,7 +65,8 @@ lemma retype_untyped_wp_no_children:
                                                root_size=si_cnode_size and
                                                obj = new_object and
                                                obj_range=cover_ids and
-                                               tcb="obj_tcb root_tcb"]])
+                                               tcb="obj_tcb root_tcb",
+                            folded word_bits_num]])
                apply (fastforce)+
          apply (assumption
                 | simp add: unat_of_nat32
@@ -127,7 +128,8 @@ lemma retype_untyped_wp_has_children:
                                                dev = dev and
                                                obj = new_object and
                                                obj_range = cover_ids and
-                                               tcb = "obj_tcb root_tcb"]])
+                                               tcb = "obj_tcb root_tcb"],
+                            folded word_bits_num])
              apply (fastforce)+
          apply (simp add: unat_of_nat32 | rule offset_slot'[symmetric] guard_equal_si_cnode_cap)+
     apply (clarsimp)

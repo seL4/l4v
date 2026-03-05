@@ -5,11 +5,11 @@
  *)
 
 theory InitIRQ_SI
-imports
-  "DSpecProofs.IRQ_DP"
-  ObjectInitialised_SI
-  RootTask_SI
-  SysInit_SI
+  imports
+    DSpecProofs.IRQ_DP
+    ObjectInitialised_SI
+    RootTask_SI
+    SysInitSpec.SysInit_SI
 begin
 
 lemma seL4_IRQHandler_SetEndpoint_irq_initialised_helper_sep:
