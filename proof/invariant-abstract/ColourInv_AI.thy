@@ -894,14 +894,6 @@ lemma unmap_page_colour_maintained[wp]:
   unfolding unmap_page_def
   by (wpsimp wp: crunch_wps simp: crunch_simps split:option.splits)
 
-lemma unmap_page_table_colour_maintained[wp]:
-  "\<lbrace>colour_invariant and invs\<rbrace>
-     unmap_page_table asid vaddr pt
-   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  unfolding unmap_page_table_def
-  apply wpsimp
-  sorry (* FIXME: recursive function, come back to this one *)
-
 crunch set_vm_root, set_asid_pool
   for colour_maintained[wp]: colour_invariant
   (wp: crunch_wps simp: crunch_simps)
@@ -921,6 +913,14 @@ crunch delete_asid_pool
   for colour_maintained[wp]: colour_invariant
   (wp: crunch_wps simp: crunch_simps valid_ptr_in_cur_domain_def colour_invariant_def)
 
+lemma unmap_page_table_colour_maintained[wp]:
+  "\<lbrace>colour_invariant and invs\<rbrace>
+     unmap_page_table asid vaddr pt
+   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  unfolding unmap_page_table_def
+  apply wpsimp
+  sorry (* FIXME: recursive function, come back to this one *)
+
 lemma arch_finalise_cap_colour_maintained[wp]:
   "\<lbrace>colour_invariant and invs and
     (\<lambda>s. case cap of FrameCap obj rights fsize is_dev (Some (asid, ref)) \<Rightarrow>
@@ -937,46 +937,70 @@ lemma arch_finalise_cap_colour_maintained[wp]:
   apply wpsimp
   by (force split:option.splits)
 
-(* DOWN TO HERE
-crunch arch_invoke_irq_control
+lemma colour_invariant_interrupt_states[simp]:
+  "colour_invariant (s\<lparr>interrupt_states := x\<rparr>) = colour_invariant s"
+  unfolding colour_invariant_def
+  by simp
+
+lemma arch_invoke_irq_control_colour_maintained[wp]:
+  "\<lbrace>\<lambda>s. colour_invariant s \<and>
+       (\<forall> x. ((), x) \<in> fst (setIRQTrigger irq trigger (machine_state s)) \<longrightarrow>
+         invs (s\<lparr>machine_state := x, interrupt_states :=
+           (\<lambda>y. if y = irq then IRQSignal else (interrupt_states (s\<lparr>machine_state := x\<rparr>) y))\<rparr>)) \<and>
+       valid_ptr_in_cur_domain (fst control_slot) s \<and>
+       valid_ptr_in_cur_domain (fst handler_slot) s \<and>
+       check_cap_ref (IRQHandlerCap irq) (colour_oracle (cur_domain s))\<rbrace>
+     arch_invoke_irq_control (RISCVIRQControlInvocation irq handler_slot control_slot trigger)
+   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  apply(wpsimp wp:crunch_wps maskInterrupt_invs
+    simp:crunch_simps set_irq_state_def valid_ptr_in_cur_domain_def)
+   apply(wpsimp simp:do_machine_op_def)
+  by (clarsimp simp:valid_ptr_in_cur_domain_def)
+
+crunch arch_invoke_irq_handler
   for colour_maintained[wp]: colour_invariant
   (wp: crunch_wps simp: crunch_simps valid_ptr_in_cur_domain_def colour_invariant_def)
-*)
 
-lemma arch_invoke_irq_control_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace> arch_invoke_irq_control param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  sorry
-
-lemma arch_invoke_irq_handler_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace> arch_invoke_irq_handler param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  sorry
+crunch handle_vm_fault, handle_hypervisor_fault
+  for colour_maintained[wp]: colour_invariant
+  (wp: crunch_wps simp: crunch_simps valid_ptr_in_cur_domain_def colour_invariant_def)
 
 lemma arch_perform_invocation_colour_maintained:
   "\<lbrace>colour_invariant\<rbrace> arch_perform_invocation param_a \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   unfolding RISCV64_A.arch_perform_invocation_def
-  sorry
-
-lemma handle_vm_fault_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace> handle_vm_fault t flt \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  unfolding RISCV64_A.handle_vm_fault_def
-  sorry
-
-lemma handle_hypervisor_fault_colour_maintained:
-  "\<lbrace>colour_invariant\<rbrace> handle_hypervisor_fault t flt \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  sorry
+  apply wpsimp
+      apply(wpsimp simp:perform_page_table_invocation_def perform_pt_inv_map_def
+        wp:arch_update_cap_invs_map)
+      apply(wpsimp simp:perform_pt_inv_unmap_def check_cap_ref_def
+        wp:get_cap_inv hoare_vcg_conj_lift)
+      sorry (* FIXME: don't get what's going on here *)
 
 (* Arch-agnostic *)
 
+lemma set_thread_state_valid_cur_dom[wp]:
+  "set_thread_state ref ts \<lbrace>valid_ptr_in_cur_domain ref'\<rbrace>"
+  unfolding set_thread_state_def valid_ptr_in_cur_domain_def
+  by wpsimp
+
 lemma setup_caller_cap_colour_maintained:
-"\<lbrace>colour_invariant and valid_ptr_in_cur_domain param_a and
- ((\<lambda>s. check_cap_ref
-         (ReplyCap param_a False
-           (if param_c then {AllowGrant, AllowWrite} else {AllowWrite}))
-         (colour_oracle (cur_domain s))) and
-  valid_ptr_in_cur_domain (fst (param_b, tcb_cnode_index 3)) and
-  invs)\<rbrace>
-setup_caller_cap param_a param_b param_c \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  sorry
+  "\<lbrace>colour_invariant and valid_ptr_in_cur_domain sender and
+     ((\<lambda>s. check_cap_ref
+             (ReplyCap sender False
+               (if grant then {AllowGrant, AllowWrite} else {AllowWrite}))
+             (colour_oracle (cur_domain s)) \<and>
+        sender \<noteq> idle_thread s \<and>
+        st_tcb_at (\<lambda>st. \<not> halted st) sender s \<and>
+        st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = {}) sender s \<and>
+        ex_nonz_cap_to sender s) and
+      valid_ptr_in_cur_domain (fst (receiver, tcb_cnode_index 3)) and invs)\<rbrace>
+    setup_caller_cap sender receiver grant
+  \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  unfolding setup_caller_cap_def
+  apply wpsimp
+   apply(wpsimp wp:sts_invs_minor)
+  by clarsimp
+
+(* DOWN TO HERE *)
 
 lemma handle_fault_colour_maintained:
 "\<lbrace>colour_invariant and
