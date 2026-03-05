@@ -204,6 +204,12 @@ where
             liftME InvokeDomain $ decode_domain_invocation caps domain_intent
           odE
 
+       | VCPUCap vcpu \<Rightarrow>
+          doE
+            _ \<leftarrow> unlessE (intent = VCPUIntent) throw;
+            liftME InvokeVCPU $ decode_vcpu_invocation vcpu caps
+          odE
+
        \<comment> \<open>Don't support operations on other types of caps.\<close>
        | _ \<Rightarrow> throw"
 

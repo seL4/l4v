@@ -486,7 +486,8 @@ definition cdl_default_tcb :: "cdl_object" where
        tcb_caller_slot \<mapsto> cdl_cap.NullCap,
        tcb_ipcbuffer_slot \<mapsto> cdl_cap.NullCap,
        tcb_pending_op_slot \<mapsto> cdl_cap.NullCap,
-       tcb_boundntfn_slot \<mapsto> cdl_cap.NullCap],
+       tcb_boundntfn_slot \<mapsto> cdl_cap.NullCap,
+       tcb_boundvcpu_slot \<mapsto> cdl_cap.NullCap],
     cdl_tcb_fault_endpoint = 0,
     cdl_tcb_intent = \<lparr>
       cdl_intent_op = None,

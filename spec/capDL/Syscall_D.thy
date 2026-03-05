@@ -78,7 +78,8 @@ where
   | "perform_invocation is_call can_block (InvokeAsidControl asid_control_params) = liftE (invoke_asid_control asid_control_params)"
   | "perform_invocation is_call can_block (InvokeAsidPool asid_pool_params) = liftE (invoke_asid_pool asid_pool_params)"
   | "perform_invocation is_call can_block (InvokePageDirectory page_dir_params) = liftE (invoke_page_directory page_dir_params)"
-  | "perform_invocation is_call can_block (InvokeSGISignal sig_params) = liftE (invoke_sgi_signal_generate sig_params)"
+  | "perform_invocation is_call can_block (InvokeSGISignal sgi_params) = liftE (invoke_sgi_signal_generate sgi_params)"
+  | "perform_invocation is_call can_block (InvokeVCPU vcpu_params) = liftE (invoke_vcpu vcpu_params)"
 
 definition ep_related_cap :: "cdl_cap \<Rightarrow> bool"
 where "ep_related_cap cap \<equiv> case cap of
