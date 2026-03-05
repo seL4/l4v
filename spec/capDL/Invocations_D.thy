@@ -94,6 +94,9 @@ datatype cdl_domain_invocation =
 datatype cdl_sgi_signal_invocation =
   SGISignalGenerate (* no params, machine op only *)
 
+datatype cdl_vcpu_invocation =
+  VCPUSetTCB (vcpu_inv_vcpu : cdl_object_id) (vcpu_inv_tcb : cdl_object_id)
+
 datatype cdl_invocation =
     InvokeUntyped cdl_untyped_invocation
   | InvokeEndpoint cdl_endpoint_invocation
@@ -110,5 +113,6 @@ datatype cdl_invocation =
   | InvokeAsidControl cdl_asid_control_invocation
   | InvokeAsidPool cdl_asid_pool_invocation
   | InvokeSGISignal cdl_sgi_signal_invocation
+  | InvokeVCPU cdl_vcpu_invocation
 
 end

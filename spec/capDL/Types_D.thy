@@ -163,6 +163,9 @@ datatype cdl_cap =
   (* Bound NTFN caps signifying when a tcb is bound to an NTFN *)
   | BoundNotificationCap cdl_object_id
 
+  (* ARM_HYP/AARCH64 Hypervisor caps *)
+  | VCPUCap cdl_object_id
+
 (* A mapping from capability identifiers to capabilities. *)
 
 type_synonym cdl_cap_map = "cdl_cnode_index \<Rightarrow> cdl_cap option"
@@ -256,6 +259,7 @@ datatype cdl_object =
   | Frame cdl_frame
   | Untyped
   | IRQNode cdl_irq_node
+  | VCPU
 
 (* The architecture that we are modelling. *)
 datatype cdl_arch = AARCH32 | AARCH64 | RISCV32 | RISCV64 | IA32 | X64
@@ -336,12 +340,13 @@ where
       | AsidPool _ \<Rightarrow> AsidPoolType
       | PageTable _ \<Rightarrow> PageTableType
       | PageDirectory _ \<Rightarrow> PageDirectoryType
-      | Frame f \<Rightarrow> FrameType (cdl_frame_size_bits f)"
+      | Frame f \<Rightarrow> FrameType (cdl_frame_size_bits f)
+      | VCPU \<Rightarrow> VCPUType"
 
 lemmas object_type_simps = object_type_def[split_simps cdl_object.split]
 
 definition
-  asid_high_bits :: nat where
+  asid_high_bits :: nat where (* FIXME AARCH64 *)
   "asid_high_bits \<equiv> 7"
 definition
   asid_low_bits :: nat where
@@ -364,9 +369,14 @@ definition "tcb_caller_slot     = (3 :: cdl_cnode_index)"
 definition "tcb_ipcbuffer_slot  = (4 :: cdl_cnode_index)"
 definition "tcb_pending_op_slot = (5 :: cdl_cnode_index)"
 definition "tcb_boundntfn_slot  = (8 :: cdl_cnode_index)"
+definition "tcb_boundvcpu_slot  = (9 :: cdl_cnode_index)"
 
-definition "tcb_slots_list \<equiv> [0..<tcb_pending_op_slot + 1] @ [tcb_boundntfn_slot]"
-abbreviation "tcb_slots \<equiv> set tcb_slots_list"
+definition
+  "tcb_slots_list \<equiv> [0 ..< tcb_pending_op_slot + 1] @ [tcb_boundntfn_slot, tcb_boundvcpu_slot]"
+
+abbreviation
+  "tcb_slots \<equiv> set tcb_slots_list"
+
 lemmas tcb_slots_def = tcb_slots_list_def
 
 lemmas tcb_slot_defs =
@@ -377,6 +387,7 @@ lemmas tcb_slot_defs =
   tcb_ipcbuffer_slot_def
   tcb_pending_op_slot_def
   tcb_boundntfn_slot_def
+  tcb_boundvcpu_slot_def
   tcb_slots_list_def
 
 (*
@@ -407,6 +418,7 @@ where
   | "cap_objects (PendingSyncRecvCap x _ _) = {x}"
   | "cap_objects (PendingNtfnRecvCap x) = {x}"
   | "cap_objects (BoundNotificationCap x) = {x}"
+  | "cap_objects (VCPUCap x) = {x}"
   | "cap_objects _ = {}"
 
 definition
@@ -451,6 +463,7 @@ lemma cap_object_simps[simp]:
   "cap_object (PendingSyncRecvCap x t u) = x"
   "cap_object (PendingNtfnRecvCap x) = x"
   "cap_object (BoundNotificationCap x) = x"
+  "cap_object (VCPUCap x) = x"
   by (simp_all add:cap_object_def Nitpick.The_psimp cap_has_object_def)
       (metis (full_types) LeastI)+
 
@@ -603,40 +616,38 @@ where
  * Cap types *
  *************)
 
-
-
-
-definition cap_type :: "cdl_cap \<Rightarrow> cdl_object_type option"
-where
+definition cap_type :: "cdl_cap \<Rightarrow> cdl_object_type option" where
   "cap_type x \<equiv> case x of
-    UntypedCap _ _ _         \<Rightarrow> Some UntypedType
+    UntypedCap _ _ _       \<Rightarrow> Some UntypedType
   | EndpointCap _ _ _      \<Rightarrow> Some EndpointType
-  | NotificationCap _ _ _ \<Rightarrow> Some NotificationType
+  | NotificationCap _ _ _  \<Rightarrow> Some NotificationType
   | TcbCap _               \<Rightarrow> Some TcbType
   | CNodeCap _ _ _ _       \<Rightarrow> Some CNodeType
   | AsidPoolCap _ _        \<Rightarrow> Some AsidPoolType
   | PageTableCap _ _ _     \<Rightarrow> Some PageTableType
   | PageDirectoryCap _ _ _ \<Rightarrow> Some PageDirectoryType
-  | FrameCap _ _ _ f _ _     \<Rightarrow> Some (FrameType f)
+  | FrameCap _ _ _ f _ _   \<Rightarrow> Some (FrameType f)
   | IrqHandlerCap _        \<Rightarrow> Some IRQNodeType
+  | VCPUCap _              \<Rightarrow> Some VCPUType
   | _                      \<Rightarrow> None "
 
-abbreviation "is_untyped_cap cap    \<equiv> (cap_type cap = Some UntypedType)"
-abbreviation "is_ep_cap cap         \<equiv> (cap_type cap = Some EndpointType)"
-abbreviation "is_ntfn_cap cap        \<equiv> (cap_type cap = Some NotificationType)"
-abbreviation "is_tcb_cap cap        \<equiv> (cap_type cap = Some TcbType)"
-abbreviation "is_cnode_cap cap      \<equiv> (cap_type cap = Some CNodeType)"
-abbreviation "is_asidpool_cap cap   \<equiv> (cap_type cap = Some AsidPoolType)"
-abbreviation "is_pt_cap cap         \<equiv> (cap_type cap = Some PageTableType)"
-abbreviation "is_pd_cap cap         \<equiv> (cap_type cap = Some PageDirectoryType)"
-abbreviation "is_frame_cap cap      \<equiv> (\<exists>sz. cap_type cap = Some (FrameType sz))"
-abbreviation "is_irqhandler_cap cap \<equiv> (cap_type cap = Some IRQNodeType)"
-definition   "is_irqcontrol_cap cap \<equiv> (cap = IrqControlCap)"
+abbreviation "is_untyped_cap cap    \<equiv> cap_type cap = Some UntypedType"
+abbreviation "is_ep_cap cap         \<equiv> cap_type cap = Some EndpointType"
+abbreviation "is_ntfn_cap cap       \<equiv> cap_type cap = Some NotificationType"
+abbreviation "is_tcb_cap cap        \<equiv> cap_type cap = Some TcbType"
+abbreviation "is_cnode_cap cap      \<equiv> cap_type cap = Some CNodeType"
+abbreviation "is_asidpool_cap cap   \<equiv> cap_type cap = Some AsidPoolType"
+abbreviation "is_pt_cap cap         \<equiv> cap_type cap = Some PageTableType"
+abbreviation "is_pd_cap cap         \<equiv> cap_type cap = Some PageDirectoryType"
+abbreviation "is_frame_cap cap      \<equiv> \<exists>sz. cap_type cap = Some (FrameType sz)"
+abbreviation "is_irqhandler_cap cap \<equiv> cap_type cap = Some IRQNodeType"
+definition   "is_irqcontrol_cap cap \<equiv> cap = IrqControlCap"
+abbreviation "is_vcpu_cap cap       \<equiv> cap_type cap = Some VCPUType"
 
-lemma cap_type_simps [simp]:
+lemma cap_type_simps[simp]:
   "is_untyped_cap    (UntypedCap dev a a')"
   "is_ep_cap         (EndpointCap b c d)"
-  "is_ntfn_cap        (NotificationCap e f g)"
+  "is_ntfn_cap       (NotificationCap e f g)"
   "is_tcb_cap        (TcbCap h)"
   "is_cnode_cap      (CNodeCap j k l m)"
   "is_asidpool_cap   (AsidPoolCap n p)"
@@ -644,10 +655,12 @@ lemma cap_type_simps [simp]:
   "is_pt_cap         (PageTableCap u v w)"
   "is_frame_cap      (FrameCap dev a1 a2 a3 a4 a5)"
   "is_irqhandler_cap (IrqHandlerCap a6)"
+  "is_vcpu_cap       (VCPUCap b)"
   "cap_type (FrameCap dev obj_id rights sz rs asid) = Some (FrameType sz)"
   by (clarsimp simp: cap_type_def)+
 
-abbreviation "cap_has_type cap \<equiv> (\<exists>type. cap_type cap = Some type)"
+abbreviation cap_has_type :: "cdl_cap \<Rightarrow> bool" where
+  "cap_has_type cap \<equiv> \<exists>type. cap_type cap = Some type"
 
 lemma cap_type_update_cap_badge [simp]:
   "cap_type (update_cap_badge x cap) = cap_type cap"
@@ -734,22 +747,23 @@ definition default_frame_fill_data :: "cdl_frame_fill list" where
   "default_frame_fill_data \<equiv> []"
 
 (* Return a newly constructed object of the given type. *)
-definition (* FIXME AARCH64 *)
+definition
   default_object :: "cdl_object_type \<Rightarrow> nat \<Rightarrow> domain \<Rightarrow> cdl_object option"
 where
-  "default_object x y current_domain \<equiv>
-    case x of
+  "default_object ty sz current_domain \<equiv>
+    case ty of
         UntypedType \<Rightarrow> Some Untyped
       | EndpointType \<Rightarrow> Some Endpoint
       | NotificationType \<Rightarrow> Some Notification
       | TcbType \<Rightarrow> Some (Tcb (default_tcb current_domain))
-      | CNodeType \<Rightarrow> Some (CNode (empty_cnode y))
+      | CNodeType \<Rightarrow> Some (CNode (empty_cnode sz))
       | AsidPoolType \<Rightarrow> Some (AsidPool \<lparr> cdl_asid_pool_caps = empty_cap_map asid_low_bits \<rparr>)
       | PageTableType \<Rightarrow> Some (PageTable \<lparr> cdl_page_table_caps = empty_cap_map pt_size_index \<rparr>)
       | PageDirectoryType \<Rightarrow> Some (PageDirectory \<lparr> cdl_page_directory_caps = empty_cap_map pd_size_index \<rparr>)
       | FrameType sz \<Rightarrow> Some (Frame \<lparr> cdl_frame_size_bits = sz,
                                       cdl_frame_fills = default_frame_fill_data \<rparr>)
-      | IRQNodeType \<Rightarrow> Some (IRQNode empty_irq_node)"
+      | IRQNodeType \<Rightarrow> Some (IRQNode empty_irq_node)
+      | VCPUType \<Rightarrow> Some VCPU"
 
 (* FIXME: bad name; also shadows Random.pick *)
 abbreviation "pick S \<equiv> SOME x. x \<in> S"
@@ -769,6 +783,7 @@ where
       | AsidPoolType \<Rightarrow> AsidPoolCap (pick id_set) 0
       | PageTableType \<Rightarrow> PageTableCap (pick id_set) Real None
       | PageDirectoryType \<Rightarrow> PageDirectoryCap (pick id_set) Real None
-      | FrameType frame_size \<Rightarrow> FrameCap dev (pick id_set) {Read, Write} frame_size Real None"
+      | FrameType frame_size \<Rightarrow> FrameCap dev (pick id_set) {Read, Write} frame_size Real None
+      | VCPUType \<Rightarrow> VCPUCap (pick id_set)"
 
 end

@@ -76,6 +76,7 @@ datatype cdl_object_type =
   | PageTableType
   | PageDirectoryType
   | FrameType nat (* size in bits of desired page *)
+  | VCPUType
 
 datatype cdl_cnode_intent =
     (* Copy: (target), dest_index, dest_depth, (src_root), src_index, src_depth, rights *)
@@ -212,6 +213,7 @@ datatype cdl_intent =
   | NotificationIntent cdl_notification_intent
   | EndpointIntent cdl_endpoint_intent
   | DomainIntent cdl_domain_intent
+  | VCPUIntent unit
 
 record cdl_full_intent =
   cdl_intent_op        :: "cdl_intent option"

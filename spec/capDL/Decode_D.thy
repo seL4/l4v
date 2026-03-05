@@ -103,6 +103,10 @@ where
          DomainIntent x \<Rightarrow> Some x
        | _ \<Rightarrow> None"
 
+definition get_vcpu_intent :: "cdl_intent \<Rightarrow> unit option" where
+  "get_vcpu_intent intent \<equiv>
+     case intent of VCPUIntent x \<Rightarrow> Some x | _ \<Rightarrow> None"
+
 (*
  * Decode and validate the given intent, turning it into an
  * invocation.
@@ -202,6 +206,12 @@ where
           doE
             domain_intent \<leftarrow> throw_opt undefined $ get_domain_intent intent;
             liftME InvokeDomain $ decode_domain_invocation caps domain_intent
+          odE
+
+       | VCPUCap vcpu \<Rightarrow>
+          doE
+            _ \<leftarrow> throw_opt undefined $ get_vcpu_intent intent;
+            liftME InvokeVCPU $ decode_vcpu_invocation vcpu caps
           odE
 
        \<comment> \<open>Don't support operations on other types of caps.\<close>
