@@ -10,6 +10,11 @@ imports
   "SepDSpec.Frame_SD"
 begin
 
+(* These proofs only work for AARCH32 *)
+lemma cdl_ARCH_AARCH32:
+  "cdl_ARCH = AARCH32"
+  by (simp add: cdl_ARCH_all_defs)
+
 crunch_ignore (add:
   Nondet_Monad.bind return "when" get gets fail
   assert put modify unless select

@@ -415,7 +415,7 @@ shows "\<lbrakk>opt_cap_wp_at P slot (transform s);valid_objs s\<rbrakk>
                      split:option.splits Structures_A.kernel_object.splits nat.splits)
          apply (clarsimp simp:cte_wp_at_cases well_formed_cnode_invsI transform_cslot_ptr_def split:if_splits)
          apply (rule_tac x = x2b in exI,simp add: nat_to_bl_to_bin)
-       prefer 6 (* IRQ Node *)
+       prefer 5 (* IRQ Node *)
        apply (clarsimp split: Structures_A.kernel_object.splits nat.splits option.splits)
           apply (clarsimp simp:transform_cnode_contents_def option_map_join_def
                          split:option.splits Structures_A.kernel_object.splits nat.splits)

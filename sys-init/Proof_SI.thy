@@ -44,15 +44,13 @@ lemma real_objects_some_type:
        \<not> ntfn_at obj_id spec \<and>
        \<not> frame_at obj_id spec \<and>
        \<not> vcpu_at obj_id spec} = {}"
-  apply (clarsimp simp: object_at_def is_tcb_def is_cnode_def is_pd_def is_pt_def
-                        is_ep_def is_ntfn_def is_asidpool_def is_frame_def is_untyped_def)
-  apply (rename_tac p)
-  apply (clarsimp split: cdl_object.splits)
-  apply (drule_tac obj_id=p in well_formed_asidpool_at)
-  apply (clarsimp simp: real_object_at_def object_at_def is_asidpool_def irq_nodes_def is_irq_node_def
-                        is_vcpu_def
-                 split: cdl_object.splits)
-  apply metis
+  apply (clarsimp simp: real_object_at_def)
+  apply (rename_tac p obj)
+  apply (frule_tac obj_id=p in well_formed_asidpool_at)
+  apply (rename_tac obj)
+  apply (case_tac obj; clarsimp)
+   apply (fastforce dest: well_formed_level_pt_cases)
+  apply (clarsimp simp: object_at_def irq_nodes_def is_irq_node_def)
   done
 
 lemma capdl_objects_by_parts:

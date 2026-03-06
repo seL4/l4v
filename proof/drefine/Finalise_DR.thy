@@ -829,7 +829,7 @@ lemma flush_table_exec:
 
 
 lemma transform_cap_not_new_invented:
-  "transform_cap z \<noteq> cdl_cap.PageTableCap word (Fake attr) asid"
+  "transform_cap z \<noteq> cdl_cap.PageTableCap l word (Fake attr) asid"
   by (auto simp:transform_cap_def split:arch_cap.splits cap.splits)
 
 lemma page_table_not_idle:
@@ -946,7 +946,7 @@ lemma below_kernel_base_int:
 lemma slot_with_pd_pt_relation:
   "\<lbrakk>valid_idle s; pd_pt_relation a b y s; ucast (y && mask pd_bits >> 2) \<notin> kernel_mapping_slots\<rbrakk> \<Longrightarrow>
   (a, unat (y && mask pd_bits >> 2)) \<in>
-    (slots_with (\<lambda>x. \<exists>attr asid. x = cdl_cap.PageTableCap b (Fake attr) asid)) (transform s)"
+    (slots_with (\<lambda>x. \<exists>attr asid. x = cdl_cap.PageTableCap PT b (Fake attr) asid)) (transform s)"
   apply (clarsimp simp :pd_pt_relation_def)
   apply (frule page_directory_at_rev)
   apply (frule(1) page_directory_not_idle)
@@ -983,7 +983,7 @@ lemma slot_with_pd_section_relation:
 
 lemma opt_cap_page_table:
   "\<lbrakk> valid_idle s;pd_pt_relation a pt_id x s;ucast (x && mask pd_bits >> 2) \<notin> kernel_mapping_slots \<rbrakk>
-  \<Longrightarrow> \<exists>attr. opt_cap (a, unat (x && mask pd_bits >> 2)) (transform s) = Some (cdl_cap.PageTableCap pt_id (Fake attr) None)"
+  \<Longrightarrow> \<exists>attr. opt_cap (a, unat (x && mask pd_bits >> 2)) (transform s) = Some (cdl_cap.PageTableCap PT pt_id (Fake attr) None)"
   apply (clarsimp simp :pd_pt_relation_def opt_cap_def transform_def slots_of_def)
   apply (frule page_directory_at_rev)
   apply (frule(1) page_directory_not_idle)
@@ -1034,7 +1034,7 @@ lemma opt_cap_section:
 lemma opt_object_page_table:
   "\<lbrakk>valid_idle s; kheap s a = Some (ArchObj (arch_kernel_obj.PageTable fun))\<rbrakk>
   \<Longrightarrow> cdl_objects (transform s) a =
-        Some (cdl_object.PageTable \<lparr>cdl_page_table_caps = transform_page_table_contents fun\<rparr>)"
+        Some (cdl_object.PageTable PT (transform_page_table_contents fun))"
   apply (frule page_table_at_rev)
   apply (frule(1) page_table_not_idle)
   apply (clarsimp simp: transform_objects_def transform_def not_idle_thread_def restrict_map_def)
@@ -1043,7 +1043,7 @@ lemma opt_object_page_table:
 lemma opt_object_page_directory:
   "\<lbrakk>valid_idle s; kheap s a = Some (ArchObj (arch_kernel_obj.PageDirectory fun))\<rbrakk>
   \<Longrightarrow> cdl_objects (transform s) a =
-        Some (cdl_object.PageDirectory \<lparr>cdl_page_directory_caps = transform_page_directory_contents fun\<rparr>)"
+        Some (cdl_object.PageTable PD (transform_page_directory_contents fun))"
   apply (frule page_directory_at_rev)
   apply (frule(1) page_directory_not_idle)
   apply (clarsimp simp:transform_objects_def transform_def not_idle_thread_def restrict_map_def)
@@ -2371,7 +2371,8 @@ lemma dcorres_unmap_page:
                apply (rule corres_dummy_returnOk_l)
                apply (rule corres_splitEE)
                   apply simp
-                  apply (rule_tac F = "is_aligned xa 6" in corres_gen_asm2)
+                  apply (rename_tac x)
+                  apply (rule_tac F = "is_aligned x 6" in corres_gen_asm2)
                   apply (erule dcorres_unmap_large_page[where pg_id = pg])
                  apply (simp add:liftE_distrib[symmetric] returnOk_liftE)
                  apply (rule dcorres_symb_exec_r)
