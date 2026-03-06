@@ -465,14 +465,14 @@ lemma check_cap_ref_in_cur_domain:
 
 lemmas check_cap_ref_def2 = check_cap_ref_in_cur_domain
 
-lemma derive_cap_NullCap[wp]:
+lemma derive_cap_NullCap:
   "\<lbrace> \<lambda>s. is_Zombie cap \<or> is_ReplyCap cap \<or> cap = IRQControlCap \<or> cap = NullCap\<rbrace>
    derive_cap slot cap \<lbrace>\<lambda>rv s. rv = NullCap\<rbrace>, -"
   unfolding derive_cap_def RISCV64_A.arch_derive_cap_def
   apply wpsimp
   by fastforce
 
-lemma derive_cap_non_NullCap[wp]:
+lemma derive_cap_non_NullCap:
   "\<lbrace> \<lambda>s. \<not>(is_Zombie cap \<or> is_ReplyCap cap \<or> cap = IRQControlCap \<or> cap = NullCap)\<rbrace>
    derive_cap slot cap \<lbrace>\<lambda>rv s. rv \<noteq> NullCap\<rbrace>, -"
   unfolding derive_cap_def RISCV64_A.arch_derive_cap_def
@@ -486,18 +486,43 @@ lemma derive_cap_check_cap_ref[wp]:
   unfolding derive_cap_def RISCV64_A.arch_derive_cap_def
   apply wpsimp
   by (auto simp:check_cap_ref_def RISCV64_A.aobj_ref.simps RISCV64_A.arch_cap.sel)
+
 term get_cap
-(* DOWN TO HERE *)
+thm RISCV64.transfer_caps_loop_cte_wp_at
+thm derive_cap_inv
+thm derive_cap_is_derived
+thm derive_cap_is_derived_foo
+
+lemma hoare_vcg_imp_conj_liftE_R:
+  "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> Q' rv s\<rbrace>,-; \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. (Q rv s \<longrightarrow> Q'' rv s) \<and> Q''' rv s\<rbrace>,-\<rbrakk> \<Longrightarrow>
+   \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>rv s. (Q rv s \<longrightarrow> Q' rv s \<and> Q'' rv s) \<and> Q''' rv s\<rbrace>,-"
+  by (smt (verit, del_insts) case_prodE case_prodI2 inf_left_commute pred_conj_def(1)
+    pred_top_right_neutral prod.sel(1,2) validE_R_valid_eq valid_def)
+
+lemmas hoare_vcg_imp_conj_liftE_R' = hoare_vcg_imp_conj_liftE_R[where Q'''="\<top>\<top>", simplified]
+
+thm transfer_caps_loop_valid_objs
+thm transfer_caps_loop_invs
+
 lemma transfer_caps_loop_colour_maintained: (* broken by invs *)
   "\<lbrace>colour_invariant and invs and
         (\<lambda>s.
             (
-              (\<forall>(cap, o_ref, _)\<in>(set caps).
+              (\<forall>(cap, o_ref, cni)\<in>(set caps).
+                s \<turnstile> cap \<and>
+                cte_wp_at (\<lambda>c. cap \<noteq> NullCap \<longrightarrow> c = cap) (o_ref, cni) s \<and>
+                real_cte_at (o_ref, cni) s \<and>
                 check_cap_ref cap (colour_oracle (cur_domain s)) \<and>
+                \<comment> \<open>XXX: precond for transfer_caps_loop_cte_wp_at, actually doesn't apply here
+                \<not> is_UntypedCap cap \<and>\<close>
                 valid_ptr_in_cur_domain o_ref s)) \<and>
-              (\<forall>slot\<in>(set slots). valid_ptr_in_cur_domain (fst slot) s \<and>
-                cte_wp_at \<top> slot s \<comment> \<open>XXX: this isn't telling us enough\<close>
-                \<comment> \<open>(\<exists>cap. tcb_cap_valid cap slot s)\<close>)
+              (\<forall>slot\<in>set slots. valid_ptr_in_cur_domain (fst slot) s \<and>
+                ex_cte_cap_wp_to is_cnode_cap slot s \<and>
+                real_cte_at slot s \<and>
+                cte_wp_at (\<lambda>c. c = NullCap) slot s
+                \<comment> \<open>XXX: actually we should be able to get this from derive_cap_is_derived etc
+                cte_wp_at (\<lambda>c. \<not> is_UntypedCap c) slot s \<comment> \<open>XXX: this isn't telling us enough\<close>
+                \<comment> \<open>(\<exists>cap. tcb_cap_valid cap slot s)\<close>\<close>)
             )
    \<rbrace>
      transfer_caps_loop ep rcv_buffer n caps slots mi
@@ -517,18 +542,67 @@ next
            apply (wpsimp simp: set_extra_badge_def)
           apply(wpsimp wp:hoare_vcg_op_lift)
          apply fastforce
-        apply(wpsimp wp:hoare_vcg_op_lift)
+        apply(wpsimp wp:hoare_vcg_op_lift cap_insert_weak_cte_wp_at)
            (*apply (wpsimp simp: derive_cap_def RISCV64_A.arch_derive_cap_def)
           apply (wpsimp wp: derive_cap_inv)*) (* <- stuff below seems to increase cases... may want to delete from line below till safe (exclusive) *)
          apply (wpsimp wp: hoare_vcg_if_lift_ER)
-         apply (wpsimp wp:hoare_vcg_conj_liftE_R' hoare_vcg_imp_liftE_R')
-          apply (wpsimp wp:derive_cap_valid_cap)
-         apply (simp add: derive_cap_def cong: cap.case_cong)
-         apply (wpsimp simp: RISCV64_A.arch_derive_cap_def)
-         (* gave up trying to go through them one by one *)
-thm RISCV64.transfer_caps_loop_cte_wp_at (* <- tried this proof approach for a bit, kinda got stuck in the same place with cap_insert but maybe it could be worked into a better place *)
+         apply(strengthen cap_irqs_appropriate_strengthen)
+         apply(strengthen real_cte_tcb_valid)
+         apply (wpsimp wp:hoare_vcg_conj_liftE_R')
+          apply(wpsimp wp:hoare_drop_impE_R)
+         apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
+          apply(wpsimp wp:hoare_drop_impE_R)
+         apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
+          apply(wpsimp wp:hoare_drop_impE_R)
+         apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
+          apply(wpsimp wp:hoare_drop_impE_R)
+         apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
+          apply(wpsimp wp:hoare_drop_impE_R)
+         apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
+          apply(wpsimp wp:hoare_drop_impE_R)
+         apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
+          apply(wpsimp wp:hoare_drop_impE_R)
+         apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
+          apply(wpsimp wp:derive_cap_valid_cap)
+         apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
+          apply(wpsimp wp:hoare_drop_impE_R)
+         apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
+          apply(wpsimp wp:hoare_drop_impE_R)
+         apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
+          (* DOWN TO HERE.
+             FIXME: will need to bring the antecedent in to make this axiom usable:
+          apply(wpsimp wp:arch_derive_cap_objrefs_iszombie)
+          *)
+          apply(wpsimp wp:derive_cap_is_derived_foo)
+          (*
+          apply(rule hoare_drop_impE_R)
+          apply(wpsimp simp:Ball_def wp:hoare_vcg_all_liftE_R)
+           apply(wpsimp wp:derive_cap_is_derived_foo)
+          apply(wpsimp wp:hoare_vcg_all_liftE_R hoare_vcg_conj_liftE_R hoare_vcg_imp_liftE_R)
+          *)
+         apply(wpsimp wp:hoare_vcg_imp_conj_liftE_R')
+          apply(wpsimp wp:derive_cap_is_derived)
+         apply(wpsimp wp:derive_cap_is_derived_foo)
+(*
+         apply(wpsimp wp:hoare_vcg_imp_conj_liftE_R')
+          apply(wpsimp wp:hoare_vcg_imp_liftE_R')
+          apply(wpsimp wp:derive_cap_is_derived_foo)
+         apply(wpsimp wp:hoare_vcg_imp_liftE_R' hoare_vcg_all_liftE_R)
+           apply(wpsimp wp:derive_cap_is_derived_foo)
+          apply(wpsimp wp:derive_cap_is_derived_foo)
+         apply (wpsimp wp:hoare_vcg_conj_liftE_R')
+          apply(wpsimp wp:derive_cap_is_derived_foo)
+*)
         apply clarsimp
         apply(clarsimp simp:check_cap_ref_in_cur_domain split_beta)
+        apply(rule conjI)
+         apply(metis (mono_tags, lifting) cap_irqs_simps ex_cte_cap_wp_to_weakenE is_cap_simps(1)
+           list.set_sel(1))
+        apply(rule conjI)
+         apply clarsimp
+         (* broken because we should've used arch_derive_cap_objrefs_iszombie
+            to get rid of this when it was a postcondition earlier, I think.
+
         apply safe[1]
           (* XXX: hmm but setting \<top> is too permissive because we need it to be equal to NullCap*)
           apply(clarsimp simp:cte_wp_at_def)
@@ -553,6 +627,7 @@ thm RISCV64.transfer_caps_loop_cte_wp_at (* <- tried this proof approach for a b
                           apply (simp add: set_extra_badge_def valid_ptr_in_cur_domain_def)
                           apply wpsimp
                           apply (simp add: valid_ptr_in_cur_domain_def)
+*)
     oops
     by wpsimp+
 qed
