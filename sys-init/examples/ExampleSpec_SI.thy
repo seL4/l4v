@@ -18,23 +18,17 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
+declare object_type_simps[simp] (* FIXME: move to capDL setup *)
+
 lemma object_slots_empty_object [simp]:
   "object_slots (Frame \<lparr>cdl_frame_size_bits = small_frame_size, cdl_frame_fills = fill\<rparr>) slot = Some cap
    \<Longrightarrow> cap = NullCap"
-  "object_slots (PageDirectory \<lparr>cdl_page_directory_caps = empty_cap_map pd_size\<rparr>) slot = Some cap
+  "object_slots (PageTable PD (empty_cap_map pd_size)) slot = Some cap
    \<Longrightarrow> cap = NullCap"
   "empty_cap_map obj_id slot = Some cap
    \<Longrightarrow> cap = NullCap"
   by (clarsimp simp: object_slots_def empty_cap_map_def
               split: if_split_asm)+
-
-lemma object_type_simps [simp]:
-  "object_type (Tcb t) = TcbType"
-  "object_type (CNode c) = CNodeType"
-  "object_type (PageDirectory pd) = PageDirectoryType"
-  "object_type (PageTable pt) = PageTableType"
-  "object_type (Frame f) = FrameType (cdl_frame_size_bits f)"
-  by (clarsimp simp: object_type_def)+
 
 lemma well_formed_empty:
   "well_formed \<lparr>
@@ -61,7 +55,7 @@ lemmas object_id_defs = tcb_id_def cnode_id_def pd_id_def frame_id_def
 definition
   "example_tcb =
   \<lparr>cdl_tcb_caps = [tcb_cspace_slot \<mapsto> CNodeCap cnode_id 0 1 2,
-                   tcb_vspace_slot \<mapsto> PageDirectoryCap pd_id Real None,
+                   tcb_vspace_slot \<mapsto> PageTableCap PD pd_id Real None,
                    tcb_replycap_slot \<mapsto> NullCap,
                    tcb_caller_slot \<mapsto> NullCap,
                    tcb_ipcbuffer_slot \<mapsto> FrameCap False frame_id {AllowRead, AllowWrite} small_frame_size Real None,
@@ -100,10 +94,10 @@ definition
                   cnode_id \<mapsto> CNode (\<lparr>cdl_cnode_caps = (empty_cap_map 2) ++
                        [0 \<mapsto> TcbCap tcb_id,
                         1 \<mapsto> CNodeCap cnode_id 0 0 2,
-                        2 \<mapsto> PageDirectoryCap pd_id Real None,
+                        2 \<mapsto> PageTableCap PD pd_id Real None,
                         3 \<mapsto> FrameCap False frame_id {AllowRead, AllowWrite} small_frame_size Real None],
                                cdl_cnode_size_bits = 2\<rparr>),
-                  pd_id \<mapsto> PageDirectory \<lparr>cdl_page_directory_caps = empty_cap_map pd_size\<rparr>,
+                  pd_id \<mapsto> PageTable PD (empty_cap_map pd_size),
                   frame_id \<mapsto> Frame \<lparr>cdl_frame_size_bits = small_frame_size,
                                     cdl_frame_fills = default_frame_fill_data\<rparr>],
    cdl_cdt = Map.empty, \<comment> \<open>All caps are orig caps.\<close>
@@ -309,7 +303,7 @@ lemma well_formed_cap_to_non_empty_pt_example:
   "cdl_objects example_spec obj_id = Some obj \<Longrightarrow>
     well_formed_cap_to_non_empty_pt example_spec obj_id obj"
   by (clarsimp simp: well_formed_cap_to_non_empty_pt_def example_spec_def
-                     object_at_def is_pt_def
+                     object_at_def is_pt_def is_pd_def
               split: if_split_asm)
 
 lemma well_formed_vspace_example:
@@ -365,7 +359,7 @@ lemma well_formed_example:
                          object_slots_def empty_cap_map_def tcb_slot_defs
                          default_tcb_def example_tcb_def
                          small_frame_size_def object_at_def
-                         irq_nodes_def range_example_irq_node
+                         irq_nodes_def range_example_irq_node pt_type_index_bits_def
                   split: if_split_asm)
   apply (clarsimp simp: example_spec_def object_size_bits_def object_default_state_def2
                          pd_size_def word_bits_def empty_cnode_def is_cnode_def

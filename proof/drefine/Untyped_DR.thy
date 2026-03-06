@@ -380,8 +380,8 @@ where
   | ArchObject LargePageObj \<Rightarrow> FrameType 16
   | ArchObject SectionObj \<Rightarrow> FrameType 20
   | ArchObject SuperSectionObj \<Rightarrow> FrameType 24
-  | ArchObject PageTableObj \<Rightarrow> PageTableType
-  | ArchObject PageDirectoryObj \<Rightarrow> PageDirectoryType
+  | ArchObject PageTableObj \<Rightarrow> PageTableType PT
+  | ArchObject PageDirectoryObj \<Rightarrow> PageTableType PD
   | ArchObject ASIDPoolObj \<Rightarrow> AsidPoolType"
 
 definition
@@ -439,6 +439,7 @@ lemma transform_default_object:
               transform_page_table_contents_def o_def transform_pte_def
               transform_page_directory_contents_def transform_pde_def kernel_pde_mask_def
               transform_asid_pool_contents_def transform_asid_pool_entry_def asid_low_bits_def
+              pt_type_index_bits_def
            split: aobject_type.split nat.splits)
 
 lemma obj_bits_bound32:
@@ -1391,11 +1392,12 @@ lemma generate_range_corres_subst:
 
 lemma obj_bits_cdl_obj_bits_api:
   "obj_bits_cdl (translate_object_type ty) sz = obj_bits_api ty sz"
-  by (cases ty; clarsimp simp: obj_bits_api_def default_arch_object_def translate_object_type_def
-                               slot_bits_cdl_def slot_bits_def pageBits_cdl_def pageBits_def
-                               obj_bits_cdl_def tcb_bits_cdl_def endpoint_bits_cdl_def
-                               ntfn_bits_cdl_def pte_bits_def word_bits_def
-                         split: apiobject_type.splits aobject_type.splits)
+  by (cases ty;
+      clarsimp simp: obj_bits_api_def default_arch_object_def translate_object_type_def
+                     slot_bits_cdl_def slot_bits_def pageBits_cdl_def pageBits_def obj_bits_cdl_def
+                     tcb_bits_cdl_def  endpoint_bits_cdl_def ntfn_bits_cdl_def
+                     pt_type_index_bits_def pt_type_bits_def pte_bits_def word_bits_def
+               split: apiobject_type.splits aobject_type.splits)
 
 lemma obj_bits_api_nonzero:
   "(tp = apiobject_type.Untyped \<longrightarrow> untyped_min_bits \<le> us) \<Longrightarrow> obj_bits_api tp us \<noteq> 0"

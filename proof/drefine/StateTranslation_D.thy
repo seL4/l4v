@@ -61,12 +61,12 @@ where
     else if x = 2  then Some EndpointType
     else if x = 3  then Some NotificationType
     else if x = 4  then Some CNodeType
-    else if x = 5  then Some PageDirectoryType
+    else if x = 5  then Some (PageTableType PD)
     else if x = 6  then Some (FrameType 12)
     else if x = 7  then Some (FrameType 16)
     else if x = 8  then Some (FrameType 20)
     else if x = 9  then Some (FrameType 24)
-    else if x = 10 then Some PageTableType
+    else if x = 10 then Some (PageTableType PT)
     else None"
 
 definition
@@ -676,9 +676,9 @@ where
         | ARM_A.PageCap dev ptr cap_rights_ sz mp \<Rightarrow>
             Types_D.FrameCap dev ptr cap_rights_ (pageBitsForSize sz) Real (transform_mapping mp)
         | ARM_A.PageTableCap ptr mp \<Rightarrow>
-            Types_D.PageTableCap ptr Real (transform_mapping mp)
+            Types_D.PageTableCap PT ptr Real (transform_mapping mp)
         | ARM_A.PageDirectoryCap ptr mp \<Rightarrow>
-            Types_D.PageDirectoryCap ptr Real (option_map transform_asid mp)
+            Types_D.PageTableCap PD ptr Real (option_map (\<lambda>asid. (transform_asid asid, 0)) mp)
         | ARM_A.SGISignalCap irq target \<Rightarrow>
             Types_D.SGISignalCap irq target
         )
@@ -870,7 +870,7 @@ definition
 where
   "transform_asid_pool_entry p \<equiv> case p of
        None \<Rightarrow> Types_D.NullCap
-     | Some p \<Rightarrow> Types_D.PageDirectoryCap p (Fake undefined) None"
+     | Some p \<Rightarrow> Types_D.PageTableCap PD p (Fake undefined) None"
 
 (*
  * Transform an AsidPool.
@@ -922,7 +922,7 @@ where
   "transform_pde pde \<equiv> case pde of
            ARM_A.InvalidPDE \<Rightarrow> cdl_cap.NullCap
          | ARM_A.PageTablePDE ref attr _ \<Rightarrow>
-             Types_D.PageTableCap (transform_paddr ref) (Fake (attribs_to_word attr)) None
+             Types_D.PageTableCap PT (transform_paddr ref) (Fake (attribs_to_word attr)) None
          | ARM_A.SectionPDE ref attr _ rights_ \<Rightarrow>
              Types_D.FrameCap False (transform_paddr ref) rights_
                               (pageBitsForSize ARMSection) (Fake (attribs_to_word attr)) None
@@ -959,9 +959,9 @@ definition
          | Structures_A.ArchObj (ARM_A.ASIDPool ap) \<Rightarrow>
                 Types_D.AsidPool \<lparr>cdl_asid_pool_caps = (transform_asid_pool_contents ap)\<rparr>
          | Structures_A.ArchObj (ARM_A.PageTable ptx) \<Rightarrow>
-                Types_D.PageTable \<lparr>cdl_page_table_caps = (transform_page_table_contents ptx)\<rparr>
+                Types_D.PageTable PT (transform_page_table_contents ptx)
          | Structures_A.ArchObj (ARM_A.PageDirectory pd) \<Rightarrow>
-                Types_D.PageDirectory \<lparr>cdl_page_directory_caps = (transform_page_directory_contents pd)\<rparr>
+                Types_D.PageTable PD (transform_page_directory_contents pd)
          | Structures_A.ArchObj (ARM_A.DataPage dev sz) \<Rightarrow>
                 Types_D.Frame \<lparr>cdl_frame_size_bits = pageBitsForSize sz,
                                cdl_frame_fills = default_frame_fill_data\<rparr>"

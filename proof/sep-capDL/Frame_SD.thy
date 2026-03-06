@@ -91,10 +91,9 @@ lemma intent_reset_update_slots_single:
 
 lemma object_clean_update_slots_single:
   "object_clean (update_slots ((object_slots obj)(slot \<mapsto> cap)) obj)
-  = update_slots ((object_slots (object_clean obj))(slot \<mapsto> reset_cap_asid cap)) (object_clean obj)"
-  by (auto simp: object_clean_def intent_reset_def asid_reset_def
-                 update_slots_def object_slots_def fun_eq_iff
-          split: cdl_object.splits)
+   = update_slots ((object_slots (object_clean obj))(slot \<mapsto> reset_cap_asid cap)) (object_clean obj)"
+  unfolding object_clean_def intent_reset_def asid_reset_def object_slots_def update_slots_def
+  by (cases obj; simp add: fun_eq_iff)
 
 lemma ptr_in_obj_to_sep_dom:
   "(ptr,Slot y) \<in> dom (object_to_sep_state ptr obj {Slot y})"

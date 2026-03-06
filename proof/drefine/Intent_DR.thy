@@ -102,7 +102,7 @@ lemma tcb_cap_cases_slot_simps[simp]:
              | _ \<Rightarrow> is_reply_cap or ((=) cap.NullCap)))"
   "tcb_cap_cases (tcb_cnode_index tcb_ipcbuffer_slot) =
       Some (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_nondevice_page_cap or ((=) cap.NullCap)))"
-  by (simp add: tcb_slots)+
+  by (simp add: tcb_slot_defs)+
 
 lemma opt_cap_tcb:
   "\<lbrakk> get_tcb p s = Some tcb; p \<noteq> idle_thread s \<rbrakk> \<Longrightarrow>

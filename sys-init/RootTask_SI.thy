@@ -601,16 +601,19 @@ lemma well_formed_irqhandler_cap_in_cnode:
     is_irqhandler_cap cap; cdl_objects spec obj_id = Some obj\<rbrakk>
     \<Longrightarrow> is_cnode obj"
   apply (case_tac obj)
-            apply (fastforce simp: opt_cap_def slots_of_def object_slots_def
-                                   is_cnode_def object_at_def is_asidpool_def)+
-          apply (frule (3) slots_tcb)
-          apply (drule (1) well_formed_well_formed_tcb)
-          apply (clarsimp simp: well_formed_tcb_def opt_cap_def slots_of_def)
-          apply (erule allE [where x=slot])
-          apply (simp add: tcb_slot_defs cap_type_def split: cdl_cap.splits)
-         apply (fastforce simp: opt_cap_def slots_of_def object_slots_def
-                                is_cnode_def object_at_def is_asidpool_def)
-        apply (frule_tac obj_id=obj_id in well_formed_asidpool_at, simp add: object_at_def)
+           apply (fastforce simp: opt_cap_def slots_of_def object_slots_def
+                                  is_cnode_def object_at_def is_asidpool_def)+
+         apply (frule (3) slots_tcb)
+         apply (drule (1) well_formed_well_formed_tcb)
+         apply (clarsimp simp: well_formed_tcb_def opt_cap_def slots_of_def)
+         apply (erule allE [where x=slot])
+         apply (simp add: tcb_slot_defs cap_type_def split: cdl_cap.splits)
+        apply (fastforce simp: opt_cap_def slots_of_def object_slots_def
+                               is_cnode_def object_at_def is_asidpool_def)
+       apply (frule_tac obj_id=obj_id in well_formed_asidpool_at, simp add: object_at_def)
+      apply clarsimp
+      apply (frule (1) well_formed_level_pt_cases)
+      apply (erule disjE)
        apply (frule (1) well_formed_pt, simp add: object_at_def, simp+)
       apply (frule (1) well_formed_pd, simp add: object_at_def, simp+)
       apply (clarsimp simp: is_fake_pt_cap_def split: cdl_cap.splits)

@@ -428,7 +428,6 @@ lemma mint_pre:
    apply (frule (1) well_formed_object_size_bits)
    apply (cut_tac obj_id=dest_id and obj'=spec_obj in
                   sep_map_f_object_size_bits_cnode, (simp add: object_type_is_object)+)
-   apply (simp add: default_cap_cnode_dev)
    apply (sep_solve add: sep_any_imp )
   apply (clarsimp simp: one_lvl_lookup_def)
   apply (drule guard_equal_si_cspace_cap)
@@ -535,7 +534,6 @@ lemma move_pre_irq_handler:
       apply (fastforce simp: object_at_def object_type_is_object)
      apply assumption
     apply assumption
-   apply (simp add:default_cap_cnode_dev)
    apply (subst offset_slot, assumption, simp)
    apply (subst offset_slot', assumption)
    apply (subst offset_slot', assumption)
@@ -546,7 +544,6 @@ lemma move_pre_irq_handler:
    apply sep_solve
   apply (clarsimp simp: one_lvl_lookup_def)
   apply (drule guard_equal_si_cspace_cap)
-  apply (clarsimp simp: default_cap_def object_type_is_object)
   apply (cut_tac x="object_size_bits spec_obj" in unat_of_nat32)
    apply (insert n_less_equal_power_2 [where n=word_bits])
    apply (frule (1) well_formed_object_size_bits_word_bits)
@@ -618,7 +615,6 @@ lemma mint_post:
   apply (clarsimp simp: cap_rights_inter_default_cap_rights)
   apply (subst (asm) update_cap_rights_and_data,(assumption|clarsimp)+)
   apply (subst (asm) offset_slot', assumption)+
-  apply (clarsimp simp: default_cap_cnode_dev)
   apply sep_solve
   done
 
@@ -678,7 +674,6 @@ lemma mutate_post:
     apply (clarsimp simp: cap_has_object_not_irqhandler_cap)
    apply (erule well_formed_orig_caps, (simp add: slots_of_def)+)
   apply (subst (asm) offset_slot', assumption)+
-  apply (clarsimp simp: default_cap_cnode_dev)
   apply sep_solve
   done
 
@@ -728,7 +723,6 @@ lemma move_post:
   apply (subst sep_map_s_sep_map_c_eq [where cap="update_cap_object client_object_id spec_cap"])
    apply (rule object_slots_object_initialised_state, (clarsimp simp: opt_cap_def slots_of_def)+)
   apply (subst (asm) offset_slot', assumption)+
-  apply (clarsimp simp: default_cap_cnode_dev)
   apply sep_solve
   done
 
@@ -773,7 +767,6 @@ lemma move_post_irq_handler:
   apply (subst sep_map_s_sep_map_c_eq [where cap=spec_cap],
          (clarsimp simp: opt_cap_def slots_of_def)+)
   apply (subst (asm) offset_slot', assumption)+
-  apply (clarsimp simp: default_cap_cnode_dev)
   apply sep_solve
   done
 
