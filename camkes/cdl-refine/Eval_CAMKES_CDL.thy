@@ -195,7 +195,7 @@ lemma Collect_asid_high__eval_helper:
      apply (clarsimp simp: MiscMachine_A.asid_low_bits_def)
     apply (clarsimp simp: MiscMachine_A.asid_low_bits_def MiscMachine_A.asid_high_bits_def
                           word_of_nat_less)
-   apply (fold asid_high_bits_def)
+   apply (fold asid_high_bits_def[simplified])
    apply (subst less_mask_eq)
     apply (clarsimp simp: MiscMachine_A.asid_high_bits_def word_of_nat_less)
    apply (rule unat_of_nat_eq)
@@ -595,8 +595,6 @@ lemmas object_slots_eval_simps
     cdl_asid_pool.simps
     cdl_cnode.simps
     cdl_irq_node.simps
-    cdl_page_table.simps
-    cdl_page_directory.simps
     cdl_tcb.simps
 
 (* Main simpset and congs *)

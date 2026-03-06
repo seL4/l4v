@@ -54,7 +54,7 @@ lemmas ids [simp] = tcb_a_id_def tcb_b_id_def cnode_a1_id_def
 definition
   "tcb_a =
   \<lparr>cdl_tcb_caps = [tcb_cspace_slot \<mapsto> CNodeCap cnode_a1_id guard guard_size cnode_a1_size,
-                   tcb_vspace_slot \<mapsto> PageDirectoryCap pd_a_id Real None,
+                   tcb_vspace_slot \<mapsto> PageTableCap PD pd_a_id Real None,
                    tcb_replycap_slot \<mapsto> NullCap,
                    tcb_caller_slot \<mapsto> NullCap,
                    tcb_ipcbuffer_slot \<mapsto> FrameCap False frame_a1_id {AllowRead, AllowWrite} small_frame_size Real None,
@@ -71,7 +71,7 @@ definition
 definition
   "tcb_b =
   \<lparr>cdl_tcb_caps = [tcb_cspace_slot \<mapsto> CNodeCap cnode_b_id guard guard_size cnode_b_size,
-                   tcb_vspace_slot \<mapsto> PageDirectoryCap pd_b_id Real None,
+                   tcb_vspace_slot \<mapsto> PageTableCap PD pd_b_id Real None,
                    tcb_replycap_slot \<mapsto> NullCap,
                    tcb_caller_slot \<mapsto> NullCap,
                    tcb_ipcbuffer_slot \<mapsto> FrameCap False frame_b_id {AllowRead, AllowWrite} sectionBits Real None,
@@ -104,8 +104,8 @@ definition
    new_cnode cnode_a2_size
              [0 \<mapsto> EndpointCap ep_id 0 {Write},
               2 \<mapsto> CNodeCap cnode_a1_id guard guard_size cnode_a1_size,
-              3 \<mapsto> PageDirectoryCap pd_a_id Real None,
-              4 \<mapsto> PageTableCap pt_a_id Real None,
+              3 \<mapsto> PageTableCap PD pd_a_id Real None,
+              4 \<mapsto> PageTableCap PT pt_a_id Real None,
               8 \<mapsto> FrameCap False frame_a1_id {AllowRead, AllowWrite} small_frame_size Real None,
               10 \<mapsto> NotificationCap ntfn_id 0 {Read},
               11 \<mapsto> FrameCap False frame_a2_id {AllowRead, AllowWrite} small_frame_size Real None,
@@ -117,7 +117,7 @@ definition
              [0 \<mapsto> TcbCap tcb_b_id,
               2 \<mapsto> CNodeCap cnode_b_id guard guard_size cnode_b_size,
               4 \<mapsto> EndpointCap ep_id 0 {Read},
-              7 \<mapsto> PageDirectoryCap pd_b_id Real None,
+              7 \<mapsto> PageTableCap PD pd_b_id Real None,
               8 \<mapsto> FrameCap False frame_b_id {AllowRead, AllowWrite} sectionBits Real None,
               0x3F \<mapsto> IrqHandlerCap 0x3F]"
 
@@ -129,16 +129,16 @@ definition
               2 \<mapsto> NotificationCap ntfn_id 0 {Read, Write}]"
 
 definition
-  "pd_a \<equiv> \<lparr>cdl_page_directory_caps = new_cap_map pd_size [0 \<mapsto> PageTableCap pt_a_id (Fake 0) None]\<rparr>"
+  "pd_a \<equiv> new_cap_map pd_size [0 \<mapsto> PageTableCap PT pt_a_id (Fake 0) None]"
 
 definition
-  "pd_b \<equiv> \<lparr>cdl_page_directory_caps = new_cap_map pd_size
-           [2 \<mapsto> FrameCap False frame_b_id {AllowRead, AllowWrite} sectionBits (Fake 0) None]\<rparr>"
+  "pd_b \<equiv> new_cap_map pd_size
+           [2 \<mapsto> FrameCap False frame_b_id {AllowRead, AllowWrite} sectionBits (Fake 0) None]"
 
 definition
-  "pt_a \<equiv> \<lparr>cdl_page_table_caps = new_cap_map pt_size
+  "pt_a \<equiv> new_cap_map pt_size
            [0 \<mapsto> FrameCap False frame_a1_id {AllowRead, AllowWrite} small_frame_size (Fake 0) None,
-            255 \<mapsto> FrameCap False frame_a2_id {AllowRead, AllowWrite} small_frame_size (Fake 0) None]\<rparr>"
+            255 \<mapsto> FrameCap False frame_a2_id {AllowRead, AllowWrite} small_frame_size (Fake 0) None]"
 
 definition
   "empty_frame \<equiv> \<lparr>cdl_frame_size_bits = small_frame_size, cdl_frame_fills = default_frame_fill_data\<rparr>"
@@ -184,9 +184,9 @@ definition
   \<lparr>cdl_arch = ARM11,
    cdl_objects = [tcb_a_id    \<mapsto> Tcb tcb_a,
                   tcb_b_id    \<mapsto> Tcb tcb_b,
-                  pd_a_id     \<mapsto> PageDirectory pd_a,
-                  pt_a_id     \<mapsto> PageTable pt_a,
-                  pd_b_id     \<mapsto> PageDirectory pd_b,
+                  pd_a_id     \<mapsto> PageTable PD pd_a,
+                  pt_a_id     \<mapsto> PageTable PT pt_a,
+                  pd_b_id     \<mapsto> PageTable PD pd_b,
                   cnode_a1_id \<mapsto> CNode cnode_a1,
                   cnode_a2_id \<mapsto> CNode cnode_a2,
                   cnode_b_id  \<mapsto> CNode cnode_b,
@@ -255,8 +255,8 @@ lemma object_slots_empty_objects [simp]:
   by (clarsimp simp: object_slots_def)+
 
 lemma is_fake_pt_cap_simps:
-  "\<not> is_fake_pt_cap (PageTableCap obj_id Real asid)"
-  "is_fake_pt_cap (PageTableCap obj_id (Fake attr) asid)"
+  "\<not> is_fake_pt_cap (PageTableCap PT obj_id Real asid)"
+  "is_fake_pt_cap (PageTableCap PT obj_id (Fake attr) asid)"
   by (clarsimp simp: is_fake_pt_cap_def)+
 
 lemma frame_cap_not_cnode:
@@ -372,16 +372,7 @@ lemma onehundred_not_le_one:
   "\<not>(0x100 \<le> (1::32 word))"
   by unat_arith
 
-lemma object_type_simps [simp]:
-  "object_type (Tcb t) = TcbType"
-  "object_type (CNode c) = CNodeType"
-  "object_type (Endpoint) = EndpointType"
-  "object_type (Notification) = NotificationType"
-  "object_type (PageDirectory pd) = PageDirectoryType"
-  "object_type (PageTable pt) = PageTableType"
-  "object_type (Frame f) = FrameType (cdl_frame_size_bits f)"
-  "object_type (IRQNode empty_irq_node) = IRQNodeType"
-  by (clarsimp simp: object_type_def)+
+declare object_type_simps[simp] (* FIXME: move to capDL setup *)
 
 lemma cap_irq_simp [simp]:
   "cap_irq (IrqHandlerCap irq) = irq"
@@ -912,7 +903,7 @@ lemma well_formed_example:
                     pd_size_def word_bits_def empty_cnode_def is_cnode_def
                     object_slots_def empty_cap_map_def tcb_slot_defs slots_of_def
                     default_tcb_def obj_defs cap_at_def opt_cap_def
-                    small_frame_size_def pt_size_def
+                    small_frame_size_def pt_size_def pt_type_index_bits_def
                     new_cnode_def new_cap_map_def empty_irq_node_def
                     new_irq_node_def
              split: if_split_asm)

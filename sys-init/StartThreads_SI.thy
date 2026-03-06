@@ -67,7 +67,6 @@ lemma cap_transform_MasterReplyCap:
   "\<lbrakk>t obj_id = Some k_obj_id\<rbrakk>
   \<Longrightarrow> cap_transform t (MasterReplyCap obj_id) = MasterReplyCap k_obj_id"
   apply (frule cap_transform_update_cap_object [where cap="MasterReplyCap obj_id"], simp+)
-  apply (clarsimp simp: cap_transform_def cap_object_def update_cap_object_def)
   done
 
 lemma start_thread_sep:

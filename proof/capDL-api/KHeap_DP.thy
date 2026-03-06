@@ -12,8 +12,7 @@ lemma has_slots_simps:
   "has_slots (Tcb tcb)"
   "has_slots (CNode cnode)"
   "has_slots (AsidPool ap)"
-  "has_slots (PageTable pt)"
-  "has_slots (PageDirectory pd)"
+  "has_slots (PageTable l pt)"
   "\<not> has_slots Endpoint"
   "\<not> has_slots Notification"
   "\<not> has_slots (Frame f)"
@@ -24,19 +23,16 @@ lemma reset_cap_asid_id:
   "reset_cap_asid cap = reset_cap_asid cap'
   \<Longrightarrow> cap = cap'
      \<or> (\<exists>a b c d e f. cap = FrameCap f a b c d e)
-     \<or> (\<exists>a b c. cap = PageTableCap a b c)
-     \<or> (\<exists>a b c. cap = PageDirectoryCap a b c)"
+     \<or> (\<exists>l a b c. cap = PageTableCap l a b c)"
   by (case_tac cap, (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)+)
 
 (* Move to Helpers_SD *)
-definition is_memory_cap :: "cdl_cap \<Rightarrow> bool"
-where
-    "is_memory_cap cap \<equiv>
-       (case cap of
-           FrameCap _ _ _ _ _ _     \<Rightarrow> True
-         | PageTableCap _ _ _     \<Rightarrow> True
-         | PageDirectoryCap _ _ _ \<Rightarrow> True
-         | _                      \<Rightarrow> False)"
+definition is_memory_cap :: "cdl_cap \<Rightarrow> bool" where
+  "is_memory_cap cap \<equiv>
+     case cap of
+       FrameCap _ _ _ _ _ _     \<Rightarrow> True
+     | PageTableCap _ _ _ _     \<Rightarrow> True
+     | _                        \<Rightarrow> False"
 
 lemma reset_cap_asid_memory_cap [simp]:
   "\<not>is_memory_cap cap \<Longrightarrow> reset_cap_asid cap = cap"
@@ -77,8 +73,7 @@ lemma reset_cap_asid_simps2:
   "reset_cap_asid cap = ZombieCap a3 \<Longrightarrow> cap = ZombieCap a3"
   "reset_cap_asid cap = BoundNotificationCap a4 \<Longrightarrow> cap = BoundNotificationCap a4"
   "reset_cap_asid cap = FrameCap dev aa rghts sz rset ma \<Longrightarrow> \<exists>asid. cap = FrameCap dev aa rghts sz rset asid"
-  "reset_cap_asid cap = PageTableCap aa rights ma \<Longrightarrow> \<exists>asid. cap = PageTableCap aa rights asid"
-  "reset_cap_asid cap = PageDirectoryCap aa rights as \<Longrightarrow> \<exists>asid. cap = PageDirectoryCap aa rights asid"
+  "reset_cap_asid cap = PageTableCap pt_t aa rights ma \<Longrightarrow> \<exists>asid. cap = PageTableCap pt_t aa rights asid"
   "\<And>irq target. reset_cap_asid cap = SGISignalCap irq target \<Longrightarrow> cap = SGISignalCap irq target"
   "\<And>p. reset_cap_asid cap = VCPUCap p \<Longrightarrow> cap = VCPUCap p"
   by (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)+

@@ -459,7 +459,7 @@ lemma cap_transform_nullcap [simp]:
                      update_cap_object_def)
 
 lemma cap_transform_pt_simp [simp]:
-  "cap_transform t (PageTableCap x y z) = PageTableCap (the (t x)) y z"
+  "cap_transform t (PageTableCap l x y z) = PageTableCap l (the (t x)) y z"
   by (clarsimp simp: option.the_def cap_transform_def update_cap_object_def)
 
 lemma cap_transform_frame [simp]:
@@ -509,23 +509,33 @@ lemma is_default_cap_def2:
   apply (auto simp: default_cap_def cap_type_def)
   done
 
+lemma is_pt_type_cap:
+  "is_pt_type_cap t cap = (\<exists>p fr ma. cap = PageTableCap t p fr ma)"
+  by (cases cap; simp)
+
 lemma default_cap_update_cap_object:
   "\<lbrakk>is_default_cap cap; cap_type cap = Some type; cnode_cap_size cap \<le> 32;
     type \<noteq> UntypedType; type \<noteq> AsidPoolType; type \<noteq> IRQNodeType\<rbrakk>
   \<Longrightarrow> default_cap type {obj_id} (cnode_cap_size cap) (is_device_cap cap) = update_cap_object obj_id cap"
+  apply (case_tac "is_table_cap cap")
+   apply (clarsimp simp: is_default_cap_def2 is_pt_type_cap)
   apply (subst default_cap_cap_transform, simp_all)
-   apply (frule (1) default_cap_well_formed_cap2 [where obj_ids="cap_objects cap"
-     and sz = "(cnode_cap_size cap)" and dev = "is_device_cap cap"], simp+)
+   apply (frule (1) default_cap_well_formed_cap2[where obj_ids = "cap_objects cap" and
+                                                       sz = "cnode_cap_size cap" and
+                                                       dev = "is_device_cap cap"];
+          clarsimp?)
    apply (fastforce simp: is_default_cap_def2)
   apply (subst cap_transform_update_cap_object, simp_all)
   done
 
 lemma default_cap_update_cap_object_pd:
   "\<lbrakk>is_pd_cap cap; \<not> vm_cap_has_asid cap; \<not> is_fake_vm_cap cap\<rbrakk>
-  \<Longrightarrow> default_cap PageDirectoryType {obj_id} (cnode_cap_size cap) dev = update_cap_object obj_id cap"
-  by (clarsimp simp: default_cap_def update_cap_object_def cap_type_def
-                     vm_cap_has_asid_def is_fake_vm_cap_def not_Some_eq_tuple
-              split: cdl_cap.splits cdl_frame_cap_type.splits)
+  \<Longrightarrow> default_cap (PageTableType PD) {obj_id} (cnode_cap_size cap) dev = update_cap_object obj_id cap"
+  apply (clarsimp simp: default_cap_def update_cap_object_def cap_type_def
+                        vm_cap_has_asid_def is_fake_vm_cap_def not_Some_eq_tuple
+                  split: cdl_cap.splits cdl_frame_cap_type.splits)
+  apply (metis None_not_eq surj_pair)
+  done
 
 lemma object_type_spec2s [simp]:
   "object_type (spec2s t obj) = object_type obj"
@@ -872,7 +882,7 @@ lemma sep_map_f_object_size_bits_cnode:
   done
 
 lemma sep_map_f_object_size_bits_pt:
-  "\<lbrakk>object_type obj = PageTableType; object_type obj' = PageTableType\<rbrakk>
+  "\<lbrakk>object_type obj = PageTableType l; object_type obj' = PageTableType l\<rbrakk>
   \<Longrightarrow> obj_id \<mapsto>f obj = obj_id \<mapsto>f obj'"
   apply (clarsimp simp: sep_map_f_def sep_map_general_def split: sep_state.splits)
   apply (rule ext)
@@ -883,17 +893,7 @@ lemma sep_map_f_object_size_bits_pt:
                  split: cdl_object.splits)+
   done
 
-lemma sep_map_f_object_size_bits_pd:
-  "\<lbrakk>object_type obj = PageDirectoryType; object_type obj' = PageDirectoryType\<rbrakk>
-  \<Longrightarrow> obj_id \<mapsto>f obj = obj_id \<mapsto>f obj'"
-  apply (clarsimp simp: sep_map_f_def sep_map_general_def split: sep_state.splits)
-  apply (rule ext)
-apply (intro iffI ext |
-       clarsimp simp: object_type_def object_size_bits_def
-                      object_to_sep_state_def object_project_def intent_reset_def
-                      object_wipe_slots_def update_slots_def object_clean_def asid_reset_def
-               split: cdl_object.splits)+
-  done
+lemmas sep_map_f_object_size_bits_pd = sep_map_f_object_size_bits_pt
 
 (********************************************************
  * Object done, and other such predicate decompositions *

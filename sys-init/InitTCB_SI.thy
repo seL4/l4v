@@ -225,7 +225,7 @@ lemma tcb_configure_pre:
 
     tcb_cap = default_cap TcbType {k_obj_id} 0 False;
     k_cspace_cap = default_cap CNodeType {cspace_kobj_id} cnode_size False;
-    k_vspace_cap = default_cap PageDirectoryType {vspace_kobj_id} 0 False;
+    k_vspace_cap = default_cap (PageTableType PD) {vspace_kobj_id} 0 False;
     k_buffer_frame_cap = default_cap buffer_frame_type {buffer_frame_kobj_id} 0 False;
 
     \<guillemotleft>object_empty spec t obj_id \<and>*
@@ -290,8 +290,6 @@ lemma tcb_configure_pre:
   apply (frule (2) well_formed_types_match [where cap=vspace_cap], clarsimp)
   apply (frule (2) well_formed_types_match [where cap=buffer_frame_cap], clarsimp simp: cap_type_def)
   apply (clarsimp simp: object_type_is_object)
-  apply (subst (asm) (2) default_cap_size_0 [where type=TcbType], simp)
-  apply (subst (asm) (2) default_cap_size_0 [where type=PageDirectoryType], simp)
   apply (cut_tac type="FrameType sz" and sz="(object_size_bits obja)" and dev=False and
               obj_id="{buffer_frame_kobj_id}" in default_cap_size_0, simp+)
   apply sep_solve
@@ -336,6 +334,9 @@ lemma well_formed_nondevice_cap_in_tcb:
     by (simp add: well_formed_def)
 
 lemma tcb_configure_post:
+  notes update_cap_data_det_simps[simp del]
+  notes default_cap_simps[simp del]
+  shows
   "\<lbrakk>well_formed spec; tcb_at obj_id spec;
     cdl_objects spec obj_id = Some (Tcb spec_tcb);
     opt_cap (obj_id, tcb_cspace_slot) spec = Some spec_cspace_cap;
@@ -354,7 +355,7 @@ lemma tcb_configure_post:
     cap_data spec_vspace_cap = vspace_cap_data;
 
     cspace_cap = default_cap CNodeType {cspace_kobj_id} cnode_size False;
-    vspace_cap = default_cap PageDirectoryType {vspace_kobj_id} 0 False;
+    vspace_cap = default_cap (PageTableType PD) {vspace_kobj_id} 0 False;
     buffer_frame_cap = default_cap buffer_frame_type {buffer_frame_kobj_id} 0 False;
 
     orig_caps obj_id = Some tcb_index;
@@ -385,7 +386,7 @@ lemma tcb_configure_post:
      (si_cnode_id, offset cspace_index si_cnode_size) \<mapsto>c
           default_cap CNodeType {cspace_kobj_id} cnode_size False \<and>*
      (si_cnode_id, offset vspace_index si_cnode_size) \<mapsto>c
-          default_cap PageDirectoryType {vspace_kobj_id} 0 False \<and>*
+          default_cap (PageTableType PD) {vspace_kobj_id} 0 False \<and>*
      (si_cnode_id, offset buffer_frame_index si_cnode_size) \<mapsto>c buffer_frame_cap \<and>*
      (si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>*
       si_asid \<and>*
@@ -394,7 +395,7 @@ lemma tcb_configure_post:
                                                   (default_tcb minBound)) \<and>*
      (k_obj_id, tcb_cspace_slot) \<mapsto>c update_cap_data_det cspace_cap_data
                                     (default_cap CNodeType {cspace_kobj_id} cnode_size False) \<and>*
-     (k_obj_id, tcb_vspace_slot) \<mapsto>c default_cap PageDirectoryType {vspace_kobj_id} 0 False \<and>*
+     (k_obj_id, tcb_vspace_slot) \<mapsto>c default_cap (PageTableType PD) {vspace_kobj_id} 0 False \<and>*
      (k_obj_id, tcb_ipcbuffer_slot) \<mapsto>c buffer_frame_cap \<and>*
      (k_obj_id, tcb_replycap_slot) \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_caller_slot) \<mapsto>c NullCap \<and>*
@@ -463,8 +464,7 @@ lemma tcb_configure_post:
          assumption, assumption, simp+)
   apply (subst default_cap_update_cap_object_non_cnode,
          assumption, assumption, simp+)
-  apply (subst default_cap_update_cap_object_pd [where dev =False,THEN sym],
-         assumption, assumption, simp+)
+  apply (subst default_cap_update_cap_object_pd[where dev=False and cap=spec_vspace_cap,THEN sym]; simp)
   apply (cut_tac type = "FrameType sz"
              and obj_id = buffer_frame_kobj_id
              and sz = 0
@@ -474,7 +474,7 @@ lemma tcb_configure_post:
   apply (clarsimp simp: sep_conj_assoc)
   apply (clarsimp simp: object_type_simps)
   apply (subst default_cap_size_0 [where type=TcbType], simp)
-  apply (cut_tac type=PageDirectoryType and sz="(object_size_bits obj)" and dev = False and
+  apply (cut_tac type="PageTableType PD" and sz="object_size_bits obj" and dev = False and
               obj_id="{vspace_kobj_id}" in default_cap_size_0, simp+)
   apply (cut_tac type="FrameType sz" and sz="(object_size_bits obja)" and
               obj_id="{buffer_frame_kobj_id}" in default_cap_size_0, simp+)
@@ -696,7 +696,7 @@ lemma seL4_TCB_Configure_object_initialised_sep_helper:
                   cnode_cap' = si_cnode_cap and
                   tcb_cap = "default_cap TcbType {k_obj_id} 0 False" and
                   cspace_cap = "default_cap CNodeType {cspace_kobj_id} (object_size_bits spec_cnode) False" and
-                  vspace_cap = "default_cap PageDirectoryType {vspace_kobj_id} 0 False" and
+                  vspace_cap = "default_cap (PageTableType PD) {vspace_kobj_id} 0 False" and
                   buffer_frame_cap = "default_cap (FrameType sz) {buffer_frame_kobj_id} 0 False" and
                   cspace_root = cspace_index and
                   vspace_root = vspace_index and
