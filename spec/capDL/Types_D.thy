@@ -14,6 +14,7 @@
 theory Types_D
 imports
   "ASpec.VMRights_A"
+  ASpec.Machine_A
   Intents_D
   Arch_Structs_D
   "Lib.Lib"
@@ -43,6 +44,10 @@ arch_requalify_facts
   vmpage_size_simps
   pageBitsForSize_def
   pageForPageBits_def
+
+arch_requalify_types (A)
+  asid_high_len
+  asid_low_len
 
 (* A hardware IRQ number. *)
 type_synonym cdl_irq = irq
@@ -109,6 +114,13 @@ datatype cdl_frame_cap_type = Real | Fake cdl_raw_vmattrs
  * Caps have attributes such as the object they point to, the rights
  * they give the holder, or how the holder is allowed to interact with
  * the target object.
+ *
+ * Note that frame and page tables caps (and later objects) are generic in the architecture
+ * they model and parameterised in the type of object they represent (e.g. which level of
+ * page table object). Level 0 is the bottom level where page table walks end, and max_pt_level
+ * is the highest level where the root page table is. The model is essentially the same as in
+ * ASpec for AARCH64. See there for more documentation on how it works. capDL generalises levels
+ * to nat and page table types to all types that are used by any of the seL4 architectures.
  *)
 
 datatype cdl_cap =
@@ -116,9 +128,9 @@ datatype cdl_cap =
 
   (* Kernel object capabilities *)
   | UntypedCap bool cdl_object_set cdl_object_set
-  | EndpointCap cdl_object_id cdl_badge "cdl_right set"
-  | NotificationCap cdl_object_id cdl_badge "cdl_right set"
-  | ReplyCap cdl_object_id "cdl_right set" (* The id of the tcb of the target thread *)
+  | EndpointCap cdl_object_id (cap_badge : cdl_badge) (cdl_cap_rights : "cdl_right set")
+  | NotificationCap cdl_object_id (cap_badge : cdl_badge) (cdl_cap_rights : "cdl_right set")
+  | ReplyCap cdl_object_id (cdl_cap_rights : "cdl_right set") (* The id of the tcb of the target thread *)
   | MasterReplyCap cdl_object_id
   | CNodeCap cdl_object_id cdl_cap_guard cdl_cap_guard_size cdl_size_bits
   | TcbCap cdl_object_id
@@ -145,9 +157,15 @@ datatype cdl_cap =
   | SGISignalCap sgi_irq sgi_target
 
   (* Virtual memory capabilties *)
-  | FrameCap bool cdl_object_id "cdl_right set" nat cdl_frame_cap_type "cdl_mapped_addr option"
-  | PageTableCap cdl_object_id cdl_frame_cap_type "cdl_mapped_addr option"
-  | PageDirectoryCap cdl_object_id cdl_frame_cap_type "cdl_asid option"
+  | FrameCap bool (cdl_obj : cdl_object_id)
+                  (cdl_cap_rights : "cdl_right set")
+                  (cdl_frame_sz : nat)
+                  (cdl_frame_cap_type : cdl_frame_cap_type)
+                  (cdl_mapped_addr : "cdl_mapped_addr option")
+  | PageTableCap (cdl_cap_pt_type : cdl_pt_type)
+                 (cdl_obj : cdl_object_id)
+                 (cdl_frame_cap_type : cdl_frame_cap_type)
+                 (cdl_mapped_addr : "cdl_mapped_addr option")
   | AsidControlCap
   | AsidPoolCap cdl_object_id "cdl_cnode_index"
 
@@ -220,12 +238,6 @@ record cdl_cnode =
 record cdl_asid_pool =
   cdl_asid_pool_caps :: cdl_cap_map
 
-record cdl_page_table =
-  cdl_page_table_caps :: cdl_cap_map
-
-record cdl_page_directory =
-  cdl_page_directory_caps :: cdl_cap_map
-
 (* Extra "frame fill" data. The executable initialiser requires this
  * so that it can load pages for components. For now, we only support
  * FileData, which is copied from a linked cpio archive. *)
@@ -254,8 +266,7 @@ datatype cdl_object =
   | Tcb cdl_tcb
   | CNode cdl_cnode
   | AsidPool cdl_asid_pool
-  | PageTable cdl_page_table
-  | PageDirectory cdl_page_directory
+  | PageTable (cdl_pt_type : cdl_pt_type) (cdl_pt_map : cdl_cap_map)
   | Frame cdl_frame
   | Untyped
   | IRQNode cdl_irq_node
@@ -320,22 +331,23 @@ where
       | CNode _ \<Rightarrow> CNodeType
       | IRQNode _ \<Rightarrow> IRQNodeType
       | AsidPool _ \<Rightarrow> AsidPoolType
-      | PageTable _ \<Rightarrow> PageTableType
-      | PageDirectory _ \<Rightarrow> PageDirectoryType
+      | PageTable l _ \<Rightarrow> PageTableType l
       | Frame f \<Rightarrow> FrameType (cdl_frame_size_bits f)
       | VCPU \<Rightarrow> VCPUType"
 
 lemmas object_type_simps = object_type_def[split_simps cdl_object.split]
 
 definition
-  asid_high_bits :: nat where (* FIXME AARCH64 *)
-  "asid_high_bits \<equiv> 7"
+  asid_high_bits :: nat where
+  "asid_high_bits \<equiv> LENGTH(asid_high_len)"
+
 definition
   asid_low_bits :: nat where
-  "asid_low_bits \<equiv> 10 :: nat"
+  "asid_low_bits \<equiv> LENGTH(asid_low_len)"
+
 definition
   asid_bits :: nat where
-  "asid_bits \<equiv> 17 :: nat"
+  "asid_bits \<equiv> asid_high_bits + asid_low_bits"
 
 (*
  * Each TCB contains a number of cap slots, each with a specific
@@ -385,8 +397,7 @@ where
   | "cap_objects (IOSpaceCap x) = {x}"
   | "cap_objects (IOPortsCap x _) = {x}"
   | "cap_objects (AsidPoolCap x _) = {x}"
-  | "cap_objects (PageDirectoryCap x _ _) = {x}"
-  | "cap_objects (PageTableCap x _ _) = {x}"
+  | "cap_objects (PageTableCap _ x _ _) = {x}"
   | "cap_objects (FrameCap _ x _ _ _ _) = {x}"
   | "cap_objects (TcbCap x) = {x}"
   | "cap_objects (CNodeCap x _ _ _) = {x}"
@@ -431,8 +442,7 @@ lemma cap_object_simps[simp]:
   "cap_object (IOSpaceCap x) = x"
   "cap_object (IOPortsCap x a) = x"
   "cap_object (AsidPoolCap x b) = x"
-  "cap_object (PageDirectoryCap x c d) = x"
-  "cap_object (PageTableCap x e f) = x"
+  "cap_object (PageTableCap pt_t x e f) = x"
   "cap_object (FrameCap dev x g h i j) = x"
   "cap_object (TcbCap x) = x"
   "cap_object (CNodeCap x k l sz) = x"
@@ -447,33 +457,24 @@ lemma cap_object_simps[simp]:
   "cap_object (BoundNotificationCap x) = x"
   "cap_object (VCPUCap x) = x"
   by (simp_all add:cap_object_def Nitpick.The_psimp cap_has_object_def)
-      (metis (full_types) LeastI)+
+     (metis (full_types) LeastI)+
 
-primrec (nonexhaustive) cap_badge :: "cdl_cap \<Rightarrow> cdl_badge"
-where
-    "cap_badge (NotificationCap _ x _) = x"
-  | "cap_badge (EndpointCap _ x _) = x"
-
-definition
-  update_cap_badge :: "cdl_badge \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
-where
+definition update_cap_badge :: "cdl_badge \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap" where
   "update_cap_badge x c \<equiv> case c of
-      NotificationCap f1 _ f3 \<Rightarrow> NotificationCap f1 x f3
-    | EndpointCap f1 _ f3      \<Rightarrow> EndpointCap f1 x f3
-    | _ \<Rightarrow> c"
+     NotificationCap f1 _ f3 \<Rightarrow> NotificationCap f1 x f3
+   | EndpointCap f1 _ f3     \<Rightarrow> EndpointCap f1 x f3
+   | _ \<Rightarrow> c"
 
 definition all_cdl_rights :: "cdl_right set" where
   "all_cdl_rights = {Read, Write, Grant, GrantReply}"
 
-definition
-  cap_rights :: "cdl_cap \<Rightarrow> cdl_right set"
-where
+definition cap_rights :: "cdl_cap \<Rightarrow> cdl_right set" where
   "cap_rights c \<equiv> case c of
-      FrameCap _ _ x _ _ _ \<Rightarrow> x
-    | NotificationCap _ _ x \<Rightarrow> x
-    | EndpointCap _ _ x \<Rightarrow> x
-    | ReplyCap _ x \<Rightarrow> x
-    | _ \<Rightarrow> all_cdl_rights"
+     FrameCap _ _ _  _ _ _ \<Rightarrow> cdl_cap_rights c
+   | NotificationCap _ _ _ \<Rightarrow> cdl_cap_rights c
+   | EndpointCap _ _ _     \<Rightarrow> cdl_cap_rights c
+   | ReplyCap _ _          \<Rightarrow> cdl_cap_rights c
+   | _ \<Rightarrow> all_cdl_rights"
 
 definition
   update_cap_rights :: "cdl_right set \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
@@ -490,7 +491,7 @@ definition
 where
  "update_mapping_cap_status r c \<equiv> case c of
       FrameCap dev f1 f2 f3 _ f4 \<Rightarrow> FrameCap dev f1 f2 f3 r f4
-    | PageTableCap pt1 _ pt2 \<Rightarrow> PageTableCap pt1 r pt2
+    | PageTableCap l pt1 _ pt2 \<Rightarrow> PageTableCap l pt1 r pt2
     | _ \<Rightarrow> c"
 
 primrec (nonexhaustive) cap_guard :: "cdl_cap \<Rightarrow> cdl_cap_guard"
@@ -527,7 +528,7 @@ definition
 where
   "cap_vmattrs cap \<equiv> case cap of
       FrameCap _ _ _ _ (Fake attr) _ \<Rightarrow> attr
-    | PageTableCap _ (Fake attr) _ \<Rightarrow> attr"
+    | PageTableCap _ _ (Fake attr) _ \<Rightarrow> attr"
 
 definition
   frame_cap_size :: "cdl_cap \<Rightarrow> cdl_size_bits"
@@ -541,8 +542,7 @@ definition
   object_slots :: "cdl_object \<Rightarrow> cdl_cap_map"
 where
   "object_slots obj \<equiv> case obj of
-    PageDirectory x \<Rightarrow> cdl_page_directory_caps x
-  | PageTable x \<Rightarrow> cdl_page_table_caps x
+    PageTable _ x \<Rightarrow> x
   | AsidPool x \<Rightarrow> cdl_asid_pool_caps x
   | CNode x \<Rightarrow> cdl_cnode_caps x
   | Tcb x \<Rightarrow> cdl_tcb_caps x
@@ -553,8 +553,7 @@ definition
   update_slots :: "cdl_cap_map \<Rightarrow> cdl_object \<Rightarrow> cdl_object"
 where
   "update_slots new_val obj \<equiv> case obj of
-    PageDirectory x \<Rightarrow> PageDirectory (x\<lparr>cdl_page_directory_caps := new_val\<rparr>)
-  | PageTable x \<Rightarrow> PageTable (x\<lparr>cdl_page_table_caps := new_val\<rparr>)
+    PageTable l x \<Rightarrow> PageTable l new_val
   | AsidPool x \<Rightarrow> AsidPool (x\<lparr>cdl_asid_pool_caps := new_val\<rparr>)
   | CNode x \<Rightarrow> CNode (x\<lparr>cdl_cnode_caps := new_val\<rparr>)
   | Tcb x \<Rightarrow> Tcb (x\<lparr>cdl_tcb_caps := new_val\<rparr>)
@@ -565,8 +564,7 @@ definition
   has_slots :: "cdl_object \<Rightarrow> bool"
 where
   "has_slots obj \<equiv> case obj of
-    PageDirectory _ \<Rightarrow> True
-  | PageTable _ \<Rightarrow> True
+    PageTable _ _ \<Rightarrow> True
   | AsidPool _ \<Rightarrow> True
   | CNode _ \<Rightarrow> True
   | Tcb _ \<Rightarrow> True
@@ -606,8 +604,7 @@ definition cap_type :: "cdl_cap \<Rightarrow> cdl_object_type option" where
   | TcbCap _               \<Rightarrow> Some TcbType
   | CNodeCap _ _ _ _       \<Rightarrow> Some CNodeType
   | AsidPoolCap _ _        \<Rightarrow> Some AsidPoolType
-  | PageTableCap _ _ _     \<Rightarrow> Some PageTableType
-  | PageDirectoryCap _ _ _ \<Rightarrow> Some PageDirectoryType
+  | PageTableCap t _ _ _   \<Rightarrow> Some (PageTableType t)
   | FrameCap _ _ _ f _ _   \<Rightarrow> Some (FrameType f)
   | IrqHandlerCap _        \<Rightarrow> Some IRQNodeType
   | VCPUCap _              \<Rightarrow> Some VCPUType
@@ -620,8 +617,10 @@ abbreviation "is_ntfn_cap cap       \<equiv> cap_type cap = Some NotificationTyp
 abbreviation "is_tcb_cap cap        \<equiv> cap_type cap = Some TcbType"
 abbreviation "is_cnode_cap cap      \<equiv> cap_type cap = Some CNodeType"
 abbreviation "is_asidpool_cap cap   \<equiv> cap_type cap = Some AsidPoolType"
-abbreviation "is_pt_cap cap         \<equiv> cap_type cap = Some PageTableType"
-abbreviation "is_pd_cap cap         \<equiv> cap_type cap = Some PageDirectoryType"
+abbreviation "is_table_cap cap      \<equiv> \<exists>l. cap_type cap = Some (PageTableType l)"
+abbreviation "is_pt_type_cap l cap  \<equiv> cap_type cap = Some (PageTableType l)"
+abbreviation "is_pt_cap             \<equiv> is_pt_type_cap PT"
+abbreviation "is_pd_cap             \<equiv> is_pt_type_cap PD"
 abbreviation "is_frame_cap cap      \<equiv> \<exists>sz. cap_type cap = Some (FrameType sz)"
 abbreviation "is_irqhandler_cap cap \<equiv> cap_type cap = Some IRQNodeType"
 definition   "is_irqcontrol_cap cap \<equiv> cap = IrqControlCap"
@@ -634,12 +633,14 @@ lemma cap_type_simps[simp]:
   "is_tcb_cap        (TcbCap h)"
   "is_cnode_cap      (CNodeCap j k l m)"
   "is_asidpool_cap   (AsidPoolCap n p)"
-  "is_pd_cap         (PageDirectoryCap r s t)"
-  "is_pt_cap         (PageTableCap u v w)"
+  "is_pt_cap         (PageTableCap PT u v w)"
+  "is_pd_cap         (PageTableCap PD u v w)"
+  "is_table_cap      (PageTableCap t u v w)"
+  "is_pt_type_cap t  (PageTableCap t u v w)"
   "is_frame_cap      (FrameCap dev a1 a2 a3 a4 a5)"
   "is_irqhandler_cap (IrqHandlerCap a6)"
   "is_vcpu_cap       (VCPUCap b)"
-  "cap_type (FrameCap dev obj_id rights sz rs asid) = Some (FrameType sz)"
+  "cap_type          (FrameCap dev obj_id rights sz rs asid) = Some (FrameType sz)"
   by (clarsimp simp: cap_type_def)+
 
 abbreviation cap_has_type :: "cdl_cap \<Rightarrow> bool" where
@@ -729,6 +730,56 @@ where
 definition default_frame_fill_data :: "cdl_frame_fill list" where
   "default_frame_fill_data \<equiv> []"
 
+(* vsroot_size_index is so far only used on AARCH64, so we are directly making use of AARCH64
+   specific config values. If we start using vsroot_size_index for other architectures, this
+   will need a case distinction on architecture. *)
+definition vsroot_size_index :: nat where
+  "vsroot_size_index \<equiv> if config_ARM_PA_SIZE_BITS_40 then 10 else pt_size_index"
+
+definition pt_type_index_bits :: "cdl_pt_type \<Rightarrow> nat" where
+  "pt_type_index_bits pt_t \<equiv>
+     case pt_t of
+       PT     \<Rightarrow> pt_size_index
+     | PD     \<Rightarrow> pd_size_index
+     | VSROOT \<Rightarrow> vsroot_size_index
+     | PDPT   \<Rightarrow> pt_size_index
+     | PML4   \<Rightarrow> pt_size_index"
+
+definition
+  "max_pt_level \<equiv>
+     case cdl_ARCH of
+       AARCH32 \<Rightarrow> 1
+     | AARCH64 \<Rightarrow> if config_ARM_PA_SIZE_BITS_40 then 3 else 4
+     | RISCV32 \<Rightarrow> 1
+     | RISCV64 \<Rightarrow> 3
+     | IA32    \<Rightarrow> 1
+     | X64     \<Rightarrow> 3"
+
+definition cdl_level_type :: "nat \<Rightarrow> cdl_pt_type" where
+  "cdl_level_type \<equiv>
+     case cdl_ARCH of
+       AARCH32 \<Rightarrow> (\<lambda>_. PT) (max_pt_level := PD)
+     | AARCH64 \<Rightarrow> (\<lambda>_. PT) (max_pt_level := vspace_type)
+     | RISCV32 \<Rightarrow> (\<lambda>_. PT)
+     | RISCV64 \<Rightarrow> (\<lambda>_. PT)
+     | IA32    \<Rightarrow> (\<lambda>_. PT) (max_pt_level := PD)
+     | X64     \<Rightarrow> (\<lambda>_. PT) (1 := PD, 2 := PDPT, max_pt_level := PML4)"
+
+lemma max_pt_level_0[simp]:
+  "cdl_level_type 0 = PT"
+  unfolding cdl_level_type_def max_pt_level_def
+  by (clarsimp split: cdl_arch.split)
+
+lemma max_pt_level_vspace_type[simp]:
+  "cdl_level_type max_pt_level = vspace_type"
+  unfolding cdl_level_type_def max_pt_level_def vspace_type_def
+  by (clarsimp split: cdl_arch.split)
+
+abbreviation pt_translation_bits :: "nat \<Rightarrow> nat" where
+  "pt_translation_bits level \<equiv> pt_type_index_bits (cdl_level_type level)"
+
+lemmas pt_translation_bits_def = pt_type_index_bits_def cdl_level_type_def
+
 (* Return a newly constructed object of the given type. *)
 definition
   default_object :: "cdl_object_type \<Rightarrow> nat \<Rightarrow> domain \<Rightarrow> cdl_object option"
@@ -741,8 +792,7 @@ where
       | TcbType \<Rightarrow> Some (Tcb (default_tcb current_domain))
       | CNodeType \<Rightarrow> Some (CNode (empty_cnode sz))
       | AsidPoolType \<Rightarrow> Some (AsidPool \<lparr> cdl_asid_pool_caps = empty_cap_map asid_low_bits \<rparr>)
-      | PageTableType \<Rightarrow> Some (PageTable \<lparr> cdl_page_table_caps = empty_cap_map pt_size_index \<rparr>)
-      | PageDirectoryType \<Rightarrow> Some (PageDirectory \<lparr> cdl_page_directory_caps = empty_cap_map pd_size_index \<rparr>)
+      | PageTableType t \<Rightarrow> Some (PageTable t (empty_cap_map (pt_type_index_bits t)))
       | FrameType sz \<Rightarrow> Some (Frame \<lparr> cdl_frame_size_bits = sz,
                                       cdl_frame_fills = default_frame_fill_data \<rparr>)
       | IRQNodeType \<Rightarrow> Some (IRQNode empty_irq_node)
@@ -764,8 +814,7 @@ where
       | IRQNodeType \<Rightarrow> IrqHandlerCap undefined
       | UntypedType \<Rightarrow> UntypedCap dev id_set id_set
       | AsidPoolType \<Rightarrow> AsidPoolCap (pick id_set) 0
-      | PageTableType \<Rightarrow> PageTableCap (pick id_set) Real None
-      | PageDirectoryType \<Rightarrow> PageDirectoryCap (pick id_set) Real None
+      | PageTableType l \<Rightarrow> PageTableCap l (pick id_set) Real None
       | FrameType frame_size \<Rightarrow> FrameCap dev (pick id_set) {Read, Write} frame_size Real None
       | VCPUType \<Rightarrow> VCPUCap (pick id_set)"
 

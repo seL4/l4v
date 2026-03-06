@@ -33,11 +33,8 @@ where "cdl_same_arch_obj_as capa capb \<equiv>
   | FrameCap dev ra _ sa _ _ \<Rightarrow> (
        case capb of FrameCap dev' rb _ sb _ _ \<Rightarrow> rb = ra \<and> sb = sa \<and> dev = dev'
         | _ \<Rightarrow> False)
-  | cdl_cap.PageTableCap a _ _ \<Rightarrow> (
-       case capb of cdl_cap.PageTableCap b _ _ \<Rightarrow> b = a
-        | _ \<Rightarrow> False)
-  | cdl_cap.PageDirectoryCap a _ _ \<Rightarrow> (
-       case capb of cdl_cap.PageDirectoryCap b _ _ \<Rightarrow> b = a
+  | cdl_cap.PageTableCap l a _ _ \<Rightarrow> (
+       case capb of cdl_cap.PageTableCap l' b _ _ \<Rightarrow> b = a \<and> l' = l
         | _ \<Rightarrow> False)
   | _ \<Rightarrow> False"
 
