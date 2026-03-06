@@ -28,6 +28,32 @@ imports
   "VMAttributes_D"
 begin
 
+(* The architecture that we are modelling. *)
+datatype cdl_arch = AARCH32 | AARCH64 | RISCV32 | RISCV64 | IA32 | X64
+
+(* Older capDL versions use ARM11 instead of AARCH32. Provide an abbreviation for compatibility. *)
+abbreviation (input) "ARM11 \<equiv> AARCH32"
+
+(* Extract capDL arch from background kernel config. This is not the architecture of the capDL
+   specification object presented to the system initialiser as input, but the architecture of
+   the the underlying capDL semantics in the current proof run. *)
+definition cdl_ARCH :: cdl_arch where
+  "cdl_ARCH \<equiv>
+     if config_ARCH_AARCH32 then AARCH32
+     else if config_ARCH_AARCH64 then AARCH64
+     else if config_ARCH_RISCV32 then RISCV32
+     else if config_ARCH_RISCV64 then RISCV64
+     else if config_ARCH_X86_64 then X64
+     else IA32"
+
+lemmas cdl_ARCH_all_defs =
+  cdl_ARCH_def
+  Kernel_Config.config_ARCH_AARCH32_def
+  Kernel_Config.config_ARCH_AARCH64_def
+  Kernel_Config.config_ARCH_RISCV32_def
+  Kernel_Config.config_ARCH_RISCV64_def
+  Kernel_Config.config_ARCH_X86_64_def
+
 (*
  * Entities in seL4 have particular rights to kernel objects, which
  * affects how entities can interact with those particular objects.
@@ -64,6 +90,23 @@ type_synonym prio = word8
 (* Domains in the domain scheduler *)
 type_synonym domain = word8
 
+(* Union of seL4 page table types. We use a separate type, because storing the level is too
+   fine-grained for e.g. RISCV64, and storing the size is too coarse-grained for some configs
+   in AARCH64.
+
+   ARM/ARM_HYP/IA32 use PT/PD. RISCV64 uses PT. AARCH64 uses PT/VS_ROOT. X64 uses PT/PD/PDPT/PML4. *)
+datatype cdl_pt_type =
+  PT | PD | VSROOT | PDPT | PML4
+
+definition
+  "vspace_type \<equiv> case cdl_ARCH of
+     AARCH32 \<Rightarrow> PD
+   | AARCH64 \<Rightarrow> VSROOT
+   | RISCV32 \<Rightarrow> PT
+   | RISCV64 \<Rightarrow> PT
+   | IA32    \<Rightarrow> PD
+   | X64     \<Rightarrow> PML4"
+
 (* Kernel objects types. *)
 datatype cdl_object_type =
     EndpointType
@@ -73,8 +116,7 @@ datatype cdl_object_type =
   | IRQNodeType
   | UntypedType
   | AsidPoolType
-  | PageTableType
-  | PageDirectoryType
+  | PageTableType (cdl_pt_type : cdl_pt_type)
   | FrameType nat (* size in bits of desired page *)
   | VCPUType
 

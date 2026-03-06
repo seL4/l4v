@@ -150,6 +150,9 @@ where
 definition pte_bits :: nat where
   "pte_bits \<equiv> if word_bits = 32 then 2 else 3"
 
+definition pt_type_bits :: "cdl_pt_type \<Rightarrow> nat" where
+  "pt_type_bits pt_t \<equiv> pt_type_index_bits pt_t + pte_bits"
+
 definition obj_bits_cdl :: "cdl_object_type \<Rightarrow> nat \<Rightarrow> nat" where
   "obj_bits_cdl type obj_size_bits \<equiv>
      case type of
@@ -159,8 +162,7 @@ definition obj_bits_cdl :: "cdl_object_type \<Rightarrow> nat \<Rightarrow> nat"
      | NotificationType \<Rightarrow> ntfn_bits_cdl
      | CNodeType \<Rightarrow> obj_size_bits + slot_bits_cdl
      | FrameType sz \<Rightarrow> sz
-     | PageTableType \<Rightarrow> pt_size_index + pte_bits
-     | PageDirectoryType \<Rightarrow> pd_size_index + pte_bits
+     | PageTableType pt_t \<Rightarrow> pt_type_bits pt_t
      | AsidPoolType \<Rightarrow> pageBits_cdl"
 
 (* This definition mostly just wraps "If" so that if-splitting can be controlled separately. *)

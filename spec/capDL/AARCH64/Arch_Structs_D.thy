@@ -35,13 +35,25 @@ context Arch begin arch_global_naming
 
 lemmas vmpage_size_simps = vmpage_size.simps
 
+definition pageForPageBits :: "nat \<Rightarrow> vmpage_size" where
+  "pageForPageBits bits \<equiv>
+     if bits = pageBits then ARMSmallPage
+     else if bits = pageBits + ptTranslationBits NormalPT_T then ARMLargePage
+     else if bits = pageBits + 2 * ptTranslationBits NormalPT_T then ARMHugePage
+     else undefined"
+
+lemma pageForPageBits_pageBitsForSize[simp]:
+  "pageForPageBits (pageBitsForSize sz) = sz"
+  unfolding pageForPageBits_def pageBitsForSize_def
+  by (cases sz; simp add: ptTranslationBits_def)
+
+definition pt_size_index :: nat where
+  "pt_size_index \<equiv> 9"
+
 (* These names are expected by other architectures, but unused for AARCH64 *)
 
 definition pd_size_index :: nat where
   "pd_size_index \<equiv> undefined"
-
-definition pt_size_index :: nat where
-  "pt_size_index \<equiv> undefined"
 
 definition smallPageBits :: nat where
   "smallPageBits = undefined"
@@ -57,9 +69,6 @@ definition superSectionBits :: nat where
 
 definition pt_slot_vaddr_mask :: machine_word where
   "pt_slot_vaddr_mask = undefined"
-
-definition pageForPageBits :: "nat \<Rightarrow> vmpage_size" where
-  "pageForPageBits bits \<equiv> undefined"
 
 end
 end

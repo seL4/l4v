@@ -218,19 +218,19 @@ where
        od
        else return (NullCap, NullCap))"
 | "finalise_cap AsidControlCap           final = return (NullCap,NullCap)"
-| "finalise_cap (PageDirectoryCap ptr x (Some asid))   final = (
+| "finalise_cap (PageTableCap PD ptr x (Some (asid, _))) final = (
        if final \<and> x = Real then do
          delete_asid asid ptr;
          return (NullCap, NullCap)
        od
        else return (NullCap, NullCap))"
-| "finalise_cap (PageTableCap ptr x (Some asid))     final = (
+| "finalise_cap (PageTableCap PT ptr x (Some asid)) final = (
        if (final \<and> x = Real) then do
          unmap_page_table asid ptr;
          return (NullCap, NullCap)
        od
        else return (NullCap, NullCap))"
-| "finalise_cap (FrameCap dev ptr _ s x (Some asid))       final = (
+| "finalise_cap (FrameCap dev ptr _ s x (Some asid)) final = (
        if x = Real then do
          unmap_page asid ptr s;
          return (NullCap, NullCap)
@@ -518,8 +518,7 @@ fun
   reset_mem_mapping :: "cdl_cap \<Rightarrow> cdl_cap"
 where
   "reset_mem_mapping (FrameCap dev p rts sz b mp) = FrameCap dev p rts sz b None"
-| "reset_mem_mapping (PageTableCap ptr b mp) = PageTableCap ptr b None"
-| "reset_mem_mapping (PageDirectoryCap ptr b ma) = PageDirectoryCap ptr b None"
+| "reset_mem_mapping (PageTableCap l ptr b mp) = PageTableCap l ptr b None"
 | "reset_mem_mapping cap = cap"
 
 
@@ -675,8 +674,7 @@ where
    | IrqControlCap \<Rightarrow> returnOk NullCap
    | ZombieCap _ \<Rightarrow> returnOk NullCap
    | FrameCap dev p r sz b x \<Rightarrow> returnOk (FrameCap dev p r sz b None)
-   | PageTableCap _ _ _ \<Rightarrow> throw \<sqinter> returnOk cap
-   | PageDirectoryCap _ _ _ \<Rightarrow> throw \<sqinter> returnOk cap
+   | PageTableCap _ _ _ _ \<Rightarrow> throw \<sqinter> returnOk cap
    | _ \<Rightarrow> returnOk cap"
 
 
