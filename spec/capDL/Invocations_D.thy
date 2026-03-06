@@ -77,7 +77,7 @@ datatype flush =
    Clean | Invalidate | CleanInvalidate | Unify
 
 datatype cdl_page_invocation =
-    PageMap cdl_cap cdl_cap cdl_cap_ref "cdl_cap_ref list"
+    PageMap cdl_cap cdl_cap cdl_cap_ref cdl_cap_ref
   | PageUnmap "cdl_mapped_addr option" cdl_object_id "cdl_cap_ref" nat
   | PageFlushCaches flush
   | PageGetAddress

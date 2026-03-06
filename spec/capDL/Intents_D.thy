@@ -65,6 +65,23 @@ type_synonym prio = word8
 (* Domains in the domain scheduler *)
 type_synonym domain = word8
 
+(* Union of seL4 page table types. We use a separate type, because storing the level is too
+   fine-grained for e.g. RISCV64, and storing the size is too coarse-grained for some configs
+   in AARCH64.
+
+   ARM/ARM_HYP/IA32 use PT/PD. RISCV64 uses PT. AARCH64 uses PT/VS_ROOT. X64 uses PT/PD/PDPT/PML4. *)
+datatype cdl_pt_type =
+  PT | PD | VSROOT | PDPT | PML4
+
+definition
+  "vspace_type \<equiv> case cdl_ARCH of
+     AARCH32 \<Rightarrow> PD
+   | AARCH64 \<Rightarrow> VSROOT
+   | RISCV32 \<Rightarrow> PT
+   | RISCV64 \<Rightarrow> PT
+   | IA32    \<Rightarrow> PD
+   | X64     \<Rightarrow> PML4"
+
 (* Kernel objects types. *)
 datatype cdl_object_type =
     EndpointType
@@ -74,8 +91,7 @@ datatype cdl_object_type =
   | IRQNodeType
   | UntypedType
   | AsidPoolType
-  | PageTableType
-  | PageDirectoryType
+  | PageTableType (cdl_pt_type : cdl_pt_type)
   | FrameType nat (* size in bits of desired page *)
   | VCPUType
 

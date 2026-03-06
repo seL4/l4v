@@ -4,10 +4,9 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(*
- * Unmapping pages and page tables and what is needed for it:
- * short cut delete, revoke and finale of caps, ipc cancelling.
- *)
+(* Unmapping pages and page tables and what is needed for it: short cut delete, revoke and
+   finalisation of caps, IPC cancelling. This theory is for AArch32 only. Other
+   architectures do not model unmapping. *)
 
 theory PageTableUnmap_D
 imports
@@ -120,8 +119,7 @@ definition
                        | PendingSyncRecvCap r _ _ \<Rightarrow> True
                        | PendingNtfnRecvCap r \<Rightarrow> True
                        | DomainCap \<Rightarrow> True
-                       | PageDirectoryCap _ x _ \<Rightarrow> \<not>(x = Real)
-                       | PageTableCap _ x _ \<Rightarrow> \<not>(x = Real)
+                       | PageTableCap _ _ x _ \<Rightarrow> \<not>(x = Real)
                        | FrameCap _ _ _ _ x _ \<Rightarrow> \<not>(x = Real)
                        | _ \<Rightarrow> False"
 
@@ -148,8 +146,7 @@ where
 | "fast_finalise (PendingSyncRecvCap r _ _) final = return()"
 | "fast_finalise  (PendingNtfnRecvCap r) final = return()"
 | "fast_finalise DomainCap final = return ()"
-| "fast_finalise (PageDirectoryCap _ x _) _ = (if x = Real then fail else return())"
-| "fast_finalise (PageTableCap _ x _) _ = (if x = Real then fail else return())"
+| "fast_finalise (PageTableCap _ _ x _) _ = (if x = Real then fail else return())"
 | "fast_finalise (FrameCap _ _ _ _ x _) _ = (if x = Real then fail else return())"
 | "fast_finalise _ _ = fail"
 
@@ -175,8 +172,7 @@ definition
   | AsidControlCap \<Rightarrow> False
   | IOSpaceMasterCap \<Rightarrow> False
   | FrameCap _ _ _ _ c _ \<Rightarrow> c = Real
-  | PageTableCap _ c _ \<Rightarrow> c = Real
-  | PageDirectoryCap _ c _ \<Rightarrow> c = Real
+  | PageTableCap _ _ c _ \<Rightarrow> c = Real
   | _ \<Rightarrow> True)"
 
 definition
@@ -277,7 +273,7 @@ definition cdl_lookup_pt_slot :: "cdl_object_id \<Rightarrow> vptr \<Rightarrow>
   where "cdl_lookup_pt_slot pd vptr \<equiv>
     doE pd_slot \<leftarrow> returnOk (cdl_lookup_pd_slot pd vptr);
         pdcap \<leftarrow> liftE $ cdl_get_pde pd_slot;
-        (case pdcap of cdl_cap.PageTableCap ref (Fake _) None
+        (case pdcap of cdl_cap.PageTableCap PT ref (Fake _) None
          \<Rightarrow> ( doE pt \<leftarrow> returnOk ref;
               pt_index \<leftarrow> returnOk ((vptr >> 12) && pt_slot_vaddr_mask);
               returnOk (pt,unat pt_index)
@@ -291,35 +287,35 @@ where
   "cdl_find_pd_for_asid maddr \<equiv> doE
      asid_table \<leftarrow> liftE $ gets cdl_asid_table;
      asid_pool \<leftarrow> returnOk $ asid_table (fst (fst maddr));
-     pd_cap_ref \<leftarrow> (case asid_pool of Some (AsidPoolCap ptr _) \<Rightarrow> returnOk (ptr, (snd \<circ> fst) maddr)
-              | _ \<Rightarrow> throw );
+     pd_cap_ref \<leftarrow>
+       case asid_pool of
+         Some (AsidPoolCap ptr _) \<Rightarrow> returnOk (ptr, (snd \<circ> fst) maddr)
+       | _ \<Rightarrow> throw;
      pd_cap \<leftarrow> liftE $ get_cap pd_cap_ref;
-     case pd_cap of (PageDirectoryCap pd _ _) \<Rightarrow> returnOk pd
-     | _ \<Rightarrow> throw
+     case pd_cap of PageTableCap PD pd _ _ \<Rightarrow> returnOk pd | _ \<Rightarrow> throw
    odE "
 
 definition cdl_page_mapping_entries ::
-  "vptr \<Rightarrow> nat \<Rightarrow> cdl_object_id \<Rightarrow> (cdl_cap_ref list) except_monad"
+  "vptr \<Rightarrow> nat \<Rightarrow> cdl_object_id \<Rightarrow> cdl_cap_ref except_monad"
   where
   "cdl_page_mapping_entries vptr pgsz pd \<equiv>
-  if pgsz = 12 then doE
-    p \<leftarrow> cdl_lookup_pt_slot pd vptr;
-         returnOk [p]
-    odE
-
-  else if pgsz = 16 then doE
-    p \<leftarrow> cdl_lookup_pt_slot pd vptr;
-         returnOk [p]
-    odE
-  else if pgsz = sectionBits then doE
-    p \<leftarrow> returnOk $ (cdl_lookup_pd_slot pd vptr);
-         returnOk [p]
-    odE
-  else if pgsz = superSectionBits then doE
-    p \<leftarrow> returnOk $ (cdl_lookup_pd_slot pd vptr);
-         returnOk [p]
-    odE
-  else throw"
+   if pgsz = 12 then doE
+     p \<leftarrow> cdl_lookup_pt_slot pd vptr;
+          returnOk p
+   odE
+   else if pgsz = 16 then doE
+     p \<leftarrow> cdl_lookup_pt_slot pd vptr;
+          returnOk p
+     odE
+   else if pgsz = sectionBits then doE
+     p \<leftarrow> returnOk $ cdl_lookup_pd_slot pd vptr;
+          returnOk p
+   odE
+   else if pgsz = superSectionBits then doE
+     p \<leftarrow> returnOk $ cdl_lookup_pd_slot pd vptr;
+          returnOk p
+   odE
+   else throw"
 
 definition
   cdl_page_table_mapped :: "cdl_mapped_addr \<Rightarrow> cdl_object_id \<Rightarrow> (cdl_cap_ref option) k_monad"
@@ -329,7 +325,7 @@ where
      pd_slot \<leftarrow> returnOk (cdl_lookup_pd_slot pd (snd maddr));
      pdcap \<leftarrow> liftE $ cdl_get_pde pd_slot;
      (case pdcap of
-       cdl_cap.PageTableCap ref (Fake _) None \<Rightarrow>
+       cdl_cap.PageTableCap PT ref (Fake _) None \<Rightarrow>
          (returnOk $ if ref = pt_id then Some pd_slot else None)
      | _ \<Rightarrow> returnOk None )
    odE <catch> (K (return None))"
@@ -347,9 +343,9 @@ where
   "unmap_page maddr frame_id pgsz \<equiv>
     doE
       pd \<leftarrow> cdl_find_pd_for_asid maddr;
-      pslots \<leftarrow> cdl_page_mapping_entries (snd maddr) pgsz pd;
+      pslot \<leftarrow> cdl_page_mapping_entries (snd maddr) pgsz pd;
       might_throw;
-      liftE $ mapM_x delete_cap_simple pslots;
+      liftE $ delete_cap_simple pslot;
       returnOk ()
     odE <catch> (K $ return ())"
 
