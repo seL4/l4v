@@ -14,12 +14,6 @@ imports
   CSpace_D
 begin
 
-(* Return the set of free PD slots in the given PD. *)
-definition
-  free_pd_slots :: "cdl_object \<Rightarrow> cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_cap_ref set"
-where
-  "free_pd_slots pd pd_id state \<equiv> {(pd_id, y). (object_slots pd) y = Some NullCap}"
-
 (* Return the set of all PD/PT slots in the given PD. *)
 definition
   all_pd_pt_slots :: "cdl_object \<Rightarrow> cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_cap_ref set"
@@ -146,8 +140,6 @@ where
       PageDirectoryFlush flush  => return ()
     | PageDirectoryNothing => return ()
   "
-
-definition "option_exec f \<equiv> \<lambda>x. case x of Some a \<Rightarrow> f a | None \<Rightarrow> return ()"
 
 (* Invoke a page table. *)
 definition
