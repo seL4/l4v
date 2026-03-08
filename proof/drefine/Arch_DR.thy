@@ -971,7 +971,7 @@ next
           cdl_lookup_pd_slot_def cap_has_object_def
           neq_Nil_conv cap_aligned_def)
         apply (simp add: make_arch_duplicate_def transform_pd_slot_ref_def)
-        apply (clarsimp simp add: free_pd_slots_def opt_object_page_directory
+        apply (clarsimp simp add: opt_object_page_directory
                                   obj_at_def invs_valid_idle pd_shifting
                                   object_slots_def transform_page_directory_contents_def
                                   unat_map_def kernel_pde_mask_def
