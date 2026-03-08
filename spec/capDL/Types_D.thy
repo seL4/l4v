@@ -257,7 +257,22 @@ datatype cdl_object =
   | IRQNode cdl_irq_node
 
 (* The architecture that we are modelling. *)
-datatype cdl_arch = IA32 | ARM11
+datatype cdl_arch = AARCH32 | AARCH64 | RISCV32 | RISCV64 | IA32 | X64
+
+(* Older capDL versions use ARM11 instead of AARCH32. Provide an abbreviation for compatibility. *)
+abbreviation (input) "ARM11 \<equiv> AARCH32"
+
+(* Extract capDL arch from background kernel config. This is not the architecture of the capDL
+   specification object presented to the system initialiser as input, but the architecture of
+   the the underlying capDL semantics in the current proof run. *)
+definition cdl_ARCH :: cdl_arch where
+  "cdl_ARCH \<equiv>
+     if config_ARCH_AARCH32 then AARCH32
+     else if config_ARCH_AARCH64 then AARCH64
+     else if config_ARCH_RISCV32 then RISCV32
+     else if config_ARCH_RISCV64 then RISCV64
+     else if config_ARCH_X86_64 then X64
+     else IA32"
 
 (* The map of objects that are in the system. *)
 type_synonym cdl_heap = "cdl_object_id \<Rightarrow> cdl_object option"
