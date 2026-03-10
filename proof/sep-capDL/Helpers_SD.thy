@@ -1011,15 +1011,14 @@ where "guard_update cap data  \<equiv>
     in CNodeCap oid new_guard new_guard_size sz)
   | _ \<Rightarrow> cap"
 
-definition
-  update_cap_data_det :: "cdl_raw_capdata \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
-where
+definition update_cap_data_det :: "cdl_raw_capdata \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap" where
   "update_cap_data_det raw_data cap \<equiv>
-   case cap of
-        EndpointCap _ b _      \<Rightarrow> badge_update raw_data cap
-      | NotificationCap _ b _ \<Rightarrow> badge_update raw_data cap
-      | CNodeCap object g gs _  \<Rightarrow> guard_update cap raw_data
-      | _ \<Rightarrow> cap"
+     case cap of
+       EndpointCap _ b _      \<Rightarrow> badge_update raw_data cap
+     | NotificationCap _ b _  \<Rightarrow> badge_update raw_data cap
+     | CNodeCap object g gs _ \<Rightarrow> guard_update cap raw_data
+     | SMCCap b               \<Rightarrow> badge_update raw_data cap
+     | _ \<Rightarrow> cap"
 
 definition "valid_src_cap cap data \<equiv>
    is_cnode_cap cap \<longrightarrow> (
