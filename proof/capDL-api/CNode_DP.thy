@@ -126,8 +126,8 @@ lemma seL4_CNode_Mint_sep:
      dest_slot = offset dest_index dest_size \<and>
 
      cap' = update_cap_data_det data (update_cap_rights (cap_rights src_cap \<inter> rights) src_cap) \<and>
-     (is_ep_cap src_cap \<or> is_ntfn_cap src_cap \<longrightarrow> cap_badge src_cap = 0) \<and>
-     cap_has_type src_cap \<and> \<not> is_untyped_cap src_cap
+     (is_ep_cap src_cap \<or> is_ntfn_cap src_cap \<or> is_smc_cap src_cap \<longrightarrow> cap_badge src_cap = 0) \<and>
+     (cap_has_type src_cap \<or> is_smc_cap src_cap) \<and> \<not> is_untyped_cap src_cap
   \<rbrace>
   seL4_CNode_Mint dest_root dest_index dest_depth src_root src_index src_depth rights data
   \<lbrace>\<lambda>_. \<guillemotleft> root_tcb_id \<mapsto>f tcb \<and>*
@@ -149,8 +149,7 @@ lemma seL4_CNode_Mint_sep:
                apply assumption
               apply fastforce
              apply (clarsimp simp:sep_conj_assoc)
-             apply (rule hoare_post_imp[OF _
-             set_cap_wp])
+             apply (rule hoare_post_imp[OF _ set_cap_wp])
              apply (sep_select 5,assumption)
             apply wp[1]
            apply (rule_tac P = "root_tcb_id \<mapsto>f Tcb cdl_tcb \<and>*

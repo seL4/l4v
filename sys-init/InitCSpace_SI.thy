@@ -1356,6 +1356,10 @@ lemma ntfn_cap_default_cap:
   by (fastforce simp: cap_type_def default_cap_def
                split: cdl_cap.splits cdl_object_type.splits)
 
+lemma no_default_smc_cap[simp]:
+  "\<not>is_smc_cap (default_cap t id_set sz dev)"
+  by (cases t; simp)
+
 lemma seL4_CNode_Mint_object_slot_initialised_sep_helper:
   "\<lbrakk>well_formed spec;
     cnode_at obj_id spec;
