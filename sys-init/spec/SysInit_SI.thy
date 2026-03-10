@@ -1,4 +1,5 @@
 (*
+ * Copyright 2026, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -30,25 +31,6 @@ where
   "retype_untyped free_slot free_untyped type size_bits \<equiv>
     seL4_Untyped_Retype free_untyped type (of_nat size_bits)
                         seL4_CapInitThreadCNode 0 0 free_slot 1 >>= (assert o Not) "
-
-definition
-  inc_when :: "bool \<Rightarrow> nat \<Rightarrow> ('s,nat) nondet_monad"
-where
-  "inc_when P x \<equiv> return (if P then Suc x else x)"
-
-lemma inc_when_wp [wp]:
-  "\<lbrace>Q (if B then Suc x else x)\<rbrace> inc_when B x \<lbrace>Q\<rbrace>"
-  by (unfold inc_when_def, wp)
-
-definition
-  update_when :: "bool \<Rightarrow> ('a \<Rightarrow> 'b option) \<Rightarrow> 'a \<Rightarrow> 'b
-                  \<Rightarrow> ('s,('a \<Rightarrow> 'b option)) nondet_monad"
-where
-  "update_when P t a b \<equiv> return (if P then t(a \<mapsto> b) else t)"
-
-lemma update_when_wp [wp]:
-  "\<lbrace>Q (if B then t(a \<mapsto> b) else t)\<rbrace> update_when B t a b \<lbrace>Q\<rbrace>"
-  by (unfold update_when_def, wp)
 
 definition lookup_cptr ::
   "(cdl_cptr \<times> bi_untyped_desc) list \<Rightarrow> cdl_object_id \<Rightarrow> cdl_cptr u_monad"
@@ -276,33 +258,33 @@ where
     mapM_x (set_asid spec orig_caps) pd_ids
   od"
 
-(* Map a page into a page table or page directory *)
+(* Map a page into a page table *)
 definition map_page ::
   "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id
    \<Rightarrow> cdl_object_id \<Rightarrow> cdl_right set \<Rightarrow> vptr \<Rightarrow> cdl_cptr \<Rightarrow> cdl_raw_vmattrs \<Rightarrow> unit u_monad"
   where
-  "map_page spec orig_caps page_id pd_id rights vaddr free_cptr vmattribs \<equiv> do
+  "map_page spec orig_caps page_id vspace_id rights vaddr free_cptr vmattribs \<equiv> do
     cdl_page  \<leftarrow> assert_opt $ cdl_objects spec page_id;
     sel4_page \<leftarrow> assert_opt $ orig_caps page_id;
-    sel4_pd   \<leftarrow> assert_opt $ orig_caps pd_id;
+    sel4_vs   \<leftarrow> assert_opt $ orig_caps vspace_id;
     assert (frame_at page_id spec);
     \<comment> \<open>Copy the frame cap into a new slot for mapping, this enables shared frames\<close>
     duplicate_cap spec orig_caps (page_id, free_cptr);
-    seL4_Page_Map free_cptr sel4_pd vaddr rights vmattribs;
+    seL4_Page_Map free_cptr sel4_vs vaddr rights vmattribs;
     return ()
   od"
 
-(* Map a page table into a page directory *)
+(* Map a page table into another page table addressed via the VSpace object. *)
 definition map_page_table ::
   "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id
    \<Rightarrow> cdl_object_id \<Rightarrow> cdl_right set \<Rightarrow> vptr \<Rightarrow> cdl_raw_vmattrs \<Rightarrow> unit u_monad"
   where
-  "map_page_table spec orig_caps page_id pd_id rights vaddr vmattribs \<equiv> do
-    cdl_page  \<leftarrow> assert_opt $ cdl_objects spec page_id;
-    sel4_page \<leftarrow> assert_opt $ orig_caps page_id;
-    sel4_pd   \<leftarrow> assert_opt $ orig_caps pd_id;
-    assert (pt_at page_id spec);
-    seL4_PageTable_Map sel4_page sel4_pd vaddr vmattribs;
+  "map_page_table spec orig_caps pt_id vspace_id rights vaddr vmattribs \<equiv> do
+    cdl_page \<leftarrow> assert_opt $ cdl_objects spec pt_id;
+    sel4_pt  \<leftarrow> assert_opt $ orig_caps pt_id;
+    sel4_vs  \<leftarrow> assert_opt $ orig_caps vspace_id;
+    assert (cdl_ARCH = AARCH32 \<longrightarrow> pt_at pt_id spec);
+    seL4_PageTable_Map sel4_pt sel4_vs vaddr vmattribs;
     return ()
   od"
 
@@ -394,7 +376,7 @@ definition get_frame_caps :: "cdl_state \<Rightarrow> cdl_object_id \<Rightarrow
 
 (* Construct a function to assign each frame cap a free cptr, mapping all other slots to 0 *)
 definition make_frame_cap_map ::
-  "cdl_object_id list \<Rightarrow> bi_slot_region \<Rightarrow> cdl_state \<Rightarrow> cdl_cap_ref \<Rightarrow> machine_word"
+  "cdl_object_id list \<Rightarrow> bi_slot_region \<Rightarrow> cdl_state \<Rightarrow> cdl_cap_ref \<Rightarrow> cdl_cptr"
   where
   "make_frame_cap_map obj_ids free_cptrs spec ref \<equiv>
      case_option 0 id
@@ -402,19 +384,82 @@ definition make_frame_cap_map ::
                                 free_cptrs)
                ref)"
 
-(* Maps page directories and all their contents. *)
+(* Maps ARM/ARM_HYP page directories and all their contents. *)
+definition init_vspace_aarch32 ::
+  "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id list \<Rightarrow> bi_slot_region \<Rightarrow>
+   unit u_monad"
+  where
+  "init_vspace_aarch32 spec orig_caps obj_ids free_cptrs \<equiv> do
+     pd_ids \<leftarrow> return [obj_id \<leftarrow> obj_ids. pd_at obj_id spec];
+     cptr_map \<leftarrow> return $ make_frame_cap_map obj_ids free_cptrs spec;
+     mapM_x (map_page_directory spec orig_caps cptr_map) pd_ids
+   od"
+
+(* FIXME AARCH64: move to Helpers_SD *)
+abbreviation "type_pt_at pt \<equiv> object_at (is_type_pt pt)"
+abbreviation "vspace_at \<equiv> type_pt_at vspace_type"
+abbreviation "level_pt_at level \<equiv> type_pt_at (cdl_level_type level)"
+
+(* Initialise a page table at a given level. Assume that the table is reachable from the top-level
+   VSpace at vaddr_base (= 0 if the table is the VSpace table itself). For each slot in the spec
+   table, first extract slot data, then initialise the slot. If the slot points to a page table at
+   one level below, first map that currently still empty page table and then recursively initialise
+   it. If the slot points to a frame, map the frame. Otherwise do nothing.
+
+   The spec here models the C initialiser closely. C unrolls the definition for each level manually
+   whereas here we write it recursively. The old ARM/ARM_HYP procedure separates frame slots from
+   page table slots for nicer separation logic statements. This function does currently not do this
+   to stay more obviously close to the C implementation, but could easily be refactored to do the
+   same. *)
+fun init_level_pt ::
+  "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> (cdl_cap_ref \<Rightarrow> cdl_cptr) \<Rightarrow>
+   cdl_object_id \<Rightarrow> vptr \<Rightarrow>  nat \<Rightarrow> cdl_object_id \<Rightarrow> unit u_monad"
+  where
+  "init_level_pt spec orig_caps free_cptrs_map vspace_id vaddr_base level pt_id = do
+     map_slot \<leftarrow> return (\<lambda>slot_idx. do
+       slot_cap \<leftarrow> assert_opt $ opt_cap (pt_id, slot_idx) spec;
+       slot_obj_id \<leftarrow> return $ cap_object slot_cap;
+       slot_vaddr \<leftarrow> return $ vaddr_base + (of_nat slot_idx << pt_translation_bits level);
+       slot_rights \<leftarrow> return $ cap_rights slot_cap;
+       slot_attrs \<leftarrow> return $ cap_vmattrs slot_cap;
+
+       if 0 < level \<and> level_pt_at (level - 1) slot_obj_id spec
+       then do
+         map_page_table spec orig_caps slot_obj_id vspace_id slot_rights slot_vaddr slot_attrs;
+         init_level_pt spec orig_caps free_cptrs_map vspace_id slot_vaddr (level - 1) slot_obj_id
+       od
+       else if frame_at slot_obj_id spec
+       then do
+         cptr \<leftarrow> return $ free_cptrs_map (pt_id, slot_idx);
+         map_page spec orig_caps slot_obj_id vspace_id slot_rights slot_vaddr cptr slot_attrs
+       od
+       else
+         return ()
+     od);
+
+     mapM_x map_slot (slots_of_list spec pt_id)
+   od"
+
+(* Find all top-level page table objects and initialise them. Generic in architecture. Expects
+   VSpace objects to be recognisable by object type, which means that RISC-V needs to use
+   the VSROOT type in the cdl spec instead of only PT. This is similar to what the C initialiser
+   expects. *)
+definition init_vspace_gen ::
+  "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id list \<Rightarrow> bi_slot_region \<Rightarrow>
+   unit u_monad"
+  where
+  "init_vspace_gen spec orig_caps obj_ids free_cptrs \<equiv> do
+     vspaces \<leftarrow> return [obj_id \<leftarrow> obj_ids. vspace_at obj_id spec];
+     cptr_map \<leftarrow> return $ make_frame_cap_map obj_ids free_cptrs spec;
+     mapM_x (\<lambda>vs. init_level_pt spec orig_caps cptr_map vs 0 max_pt_level vs) vspaces
+   od"
+
 definition init_vspace ::
-  "cdl_state \<Rightarrow>
-  (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow>
-  cdl_object_id list \<Rightarrow>
-  bi_slot_region \<Rightarrow>
-  unit u_monad"
-where
-  "init_vspace spec orig_caps obj_ids free_cptrs \<equiv> do
-    pd_ids \<leftarrow> return [obj_id \<leftarrow> obj_ids. pd_at obj_id spec];
-    cptr_map \<leftarrow> return $ make_frame_cap_map obj_ids free_cptrs spec;
-    mapM_x (map_page_directory spec orig_caps cptr_map) pd_ids
-  od"
+  "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id list \<Rightarrow> bi_slot_region \<Rightarrow>
+   unit u_monad"
+  where
+  "init_vspace \<equiv> if cdl_ARCH = AARCH32 then init_vspace_aarch32 else init_vspace_gen"
+
 
 (**************************
  * CSpace Initialisation. *
