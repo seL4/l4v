@@ -491,7 +491,7 @@ lemma map_page_table_in_pd_wp:
           si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
           si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (clarsimp simp: map_page_table_def dest!: domE)
+  apply (clarsimp simp: map_page_table_def cdl_ARCH_AARCH32 dest!: domE)
   apply (intro assert_opt_validI)
   apply wp
     apply (clarsimp simp: object_at_def)
@@ -1216,7 +1216,7 @@ lemma init_vspace_sep:
   apply (clarsimp simp: objects_empty_def objects_initialised_def)
   apply (subst sep_map_set_conj_set_disjoint, simp+,
          clarsimp simp: object_at_def object_type_is_object)+
-  apply (clarsimp simp: init_vspace_def sep_conj_assoc)
+  apply (clarsimp simp: init_vspace_def cdl_ARCH_AARCH32 init_vspace_aarch32_def sep_conj_assoc)
   apply (wp sep_hoare_fold_mapM_x[OF map_page_directory_wp[simplified sep_wp_simp]], simp+)
      apply (fastforce dest: well_formed_pd_slots simp flip: Ball_set)
     apply (frule valid_slot_region_less_all)
