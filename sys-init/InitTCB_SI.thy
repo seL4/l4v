@@ -798,12 +798,13 @@ lemma init_tcb_sep':
    apply (frule well_formed_tcb_cspace_cap, fastforce)
    apply (frule well_formed_tcb_vspace_cap, fastforce)
    apply (frule well_formed_tcb_ipcbuffer_cap, fastforce)
-   apply (clarsimp simp: init_tcb_def)
+   apply (clarsimp simp: init_tcb_def cdl_ARCH_AARCH32 Kernel_Config.config_HAVE_FPU_def)
    apply (wpsimp wp: hoare_drop_imps seL4_TCB_Configure_object_initialised_sep
                              [where spec_cspace_cap=cspace_cap and
                                     spec_vspace_cap=vspace_cap and
                                     spec_buffer_frame_cap=tcb_ipcbuffer_cap]
-                 simp: seL4_TCB_SetSchedParams'_def seL4_TCB_SetSchedParams_def dummy_syscall_def)
+                 simp: seL4_TCB_SetSchedParams'_def seL4_TCB_SetSchedParams_def
+                       dummy_syscall_def)
    apply (fastforce simp: opt_thread_def cap_data_def
                           tcb_ipc_buffer_address_non_zero
                           si_cap_at_def sep_conj_exists)
