@@ -36,6 +36,7 @@ definition "seL4_CapIOPort              = (7 :: cdl_cptr)"
 definition "seL4_CapIOSpace             = (8 :: cdl_cptr)"
 definition "seL4_CapBootInfoFrame       = (9 :: cdl_cptr)"
 definition "seL4_CapInitThreadIPCBuffer = (10 :: cdl_cptr)"
+definition "seL4_CapSMC                 = (15 :: cdl_cptr)"
 
 (* This should be added as an axiom or something.
  * To be fixed when we have a better schedule story.
