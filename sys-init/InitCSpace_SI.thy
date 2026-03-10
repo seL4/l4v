@@ -1096,6 +1096,14 @@ lemma irq_handler_cap_not_device[simp]:
  "is_irqhandler_cap y \<Longrightarrow> is_device_cap y = False"
  by (auto simp:is_device_cap_def split:cdl_cap.splits)
 
+lemma well_formed_no_smc:
+  "\<lbrakk> well_formed spec; opt_cap cref spec = Some cap; cap \<noteq> NullCap; is_smc_cap cap \<rbrakk> \<Longrightarrow>
+   False"
+  apply (cases cref, simp)
+  apply (drule (2) well_formed_well_formed_cap')
+  apply (clarsimp simp: is_smc_cap_def well_formed_cap_def)
+  done
+
 lemma init_cnode_slot_move_original_sep:
   "\<lbrakk>well_formed spec; cnode_at obj_id spec;
     original_cap_at (obj_id, slot) spec;
@@ -1139,6 +1147,9 @@ lemma init_cnode_slot_move_original_sep:
                          si_spec_obj_null_cap_at_def si_spec_obj_null_cap_at'_def
                          si_spec_irq_cap_at_def si_spec_irq_cap_at'_def
                          si_spec_irq_null_cap_at_def si_spec_irq_null_cap_at'_def)
+   apply (rule conjI; clarsimp)
+    (* exclude SMC caps for now *)
+    apply (blast dest: well_formed_no_smc)
    apply (wp seL4_CNode_Mutate_object_slot_initialised_sep
              seL4_CNode_Move_object_slot_initialised_cap_has_object_sep |
           clarsimp)+
@@ -1167,6 +1178,7 @@ lemma init_cnode_slot_move_original_sep:
                         si_spec_irq_cap_at_def si_spec_irq_cap_at'_def
                         si_spec_irq_null_cap_at_def si_spec_irq_null_cap_at'_def)
   apply (wp seL4_CNode_Move_object_slot_initialised_irqhandler_cap_sep | clarsimp)+
+  apply (clarsimp simp: is_smc_cap_def)
   done
 
 lemma init_cnode_slot_move_not_original_inv:
@@ -1338,10 +1350,10 @@ lemma init_cspace_move_sep:
   done
 
 lemma init_cnode_slot_copy_original_sep:
-  "original_cap_at (obj_id, slot) spec \<Longrightarrow>
+  "\<lbrakk> original_cap_at (obj_id, slot) spec; well_formed spec \<rbrakk> \<Longrightarrow>
    \<lbrace>P\<rbrace> init_cnode_slot spec orig_caps dup_caps irq_caps Copy obj_id slot \<lbrace>\<lambda>_. P\<rbrace>"
   apply (clarsimp simp: init_cnode_slot_def cong: option.case_cong)
-  apply wpsimp
+  apply (wpsimp | fastforce dest!: well_formed_no_smc)+
   done
 
 lemma ep_cap_default_cap:
@@ -1494,6 +1506,8 @@ lemma init_cnode_slot_copy_not_original_sep_helper:
   apply (clarsimp simp: si_obj_cap_at_def si_obj_cap_at'_def)
   apply (frule well_formed_cap_object, assumption+)
   apply (clarsimp simp: init_cnode_slot_def cap_at_def)
+  apply (rule conjI; clarsimp)
+   apply (blast dest: well_formed_no_smc)
   apply (wp seL4_CNode_Mint_object_slot_initialised_sep)+
   apply (wp seL4_CNode_Mint_object_slot_initialised_sep | clarsimp)+
   apply (intro impI conjI, simp_all)
