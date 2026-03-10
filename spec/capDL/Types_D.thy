@@ -177,6 +177,9 @@ datatype cdl_cap =
   (* ARM_HYP/AARCH64 Hypervisor caps *)
   | VCPUCap cdl_object_id
 
+  (* AARCH64 SMC caps *)
+  | SMCCap (cap_badge : cdl_badge)
+
 (* A mapping from capability identifiers to capabilities. *)
 
 type_synonym cdl_cap_map = "cdl_cnode_index \<Rightarrow> cdl_cap option"
@@ -420,6 +423,7 @@ where
   | RestartCap        \<Rightarrow> False
   | RunningCap        \<Rightarrow> False
   | DomainCap         \<Rightarrow> False
+  | SMCCap _          \<Rightarrow> False
   | _                 \<Rightarrow> True"
 
 definition
@@ -456,6 +460,7 @@ definition update_cap_badge :: "cdl_badge \<Rightarrow> cdl_cap \<Rightarrow> cd
   "update_cap_badge x c \<equiv> case c of
      NotificationCap f1 _ f3 \<Rightarrow> NotificationCap f1 x f3
    | EndpointCap f1 _ f3     \<Rightarrow> EndpointCap f1 x f3
+   | SMCCap _                \<Rightarrow> SMCCap x
    | _ \<Rightarrow> c"
 
 definition all_cdl_rights :: "cdl_right set" where
@@ -617,6 +622,9 @@ abbreviation "is_frame_cap cap      \<equiv> \<exists>sz. cap_type cap = Some (F
 abbreviation "is_irqhandler_cap cap \<equiv> cap_type cap = Some IRQNodeType"
 definition   "is_irqcontrol_cap cap \<equiv> cap = IrqControlCap"
 abbreviation "is_vcpu_cap cap       \<equiv> cap_type cap = Some VCPUType"
+abbreviation "is_smc_cap cap        \<equiv> is_SMCCap cap"
+
+lemmas is_smc_cap_def = is_SMCCap_def
 
 lemma cap_type_simps[simp]:
   "is_untyped_cap    (UntypedCap dev a a')"
