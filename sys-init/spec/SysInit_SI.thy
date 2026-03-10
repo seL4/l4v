@@ -175,6 +175,10 @@ where
     return (map_of $ zip_region obj_ids' free_slots, drop_region' obj_ids' free_slots)
   od"
 
+definition cdl_tcb_isFPUDisabled :: "cdl_tcb \<Rightarrow> bool" where
+  "cdl_tcb_isFPUDisabled tcb \<equiv>
+     cdl_tcb_flags (cdl_tcb_extra tcb) && seL4_TCBFlag_fpuDisabled = seL4_TCBFlag_fpuDisabled"
+
 (* Initialise a single tcb (cspace, vspace and fault_ep). *)
 definition init_tcb :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id \<Rightarrow> unit u_monad"
 where
@@ -183,6 +187,7 @@ where
     cdl_cspace_root \<leftarrow> assert_opt $ opt_cap (tcb_id, tcb_cspace_slot) spec;
     cdl_vspace_root \<leftarrow> assert_opt $ opt_cap (tcb_id, tcb_vspace_slot) spec;
     cdl_ipcbuffer   \<leftarrow> assert_opt $ opt_cap (tcb_id, tcb_ipcbuffer_slot) spec;
+    cdl_vcpu        \<leftarrow> assert_opt $ opt_cap (tcb_id, tcb_boundvcpu_slot) spec;
     ipcbuf_addr     \<leftarrow> return $ cdl_tcb_ipc_buf (cdl_tcb_extra cdl_tcb);
     priority        \<leftarrow> return $ cdl_tcb_prio (cdl_tcb_extra cdl_tcb);
     mcp             \<leftarrow> return $ cdl_tcb_mcp (cdl_tcb_extra cdl_tcb);
@@ -202,7 +207,18 @@ where
                                   ipcbuf_addr sel4_ipcbuffer;
     assert (\<not>K fail ''init_tcb configure'');
     fail \<leftarrow> seL4_TCB_SetSchedParams' sel4_tcb seL4_CapInitThreadTCB mcp priority;
-    assert (\<not>K fail ''init_tcb set sched params'')
+    assert (\<not>K fail ''init_tcb set sched params'');
+
+    when (config_HAVE_FPU \<and> cdl_tcb_isFPUDisabled cdl_tcb) $ do
+      seL4_TCB_SetFlags sel4_tcb 0 seL4_TCBFlag_fpuDisabled;
+      return ()
+    od;
+
+    when (cdl_ARCH = AARCH64 \<and> is_vcpu_cap cdl_vcpu) $ do
+      sel4_vcpu \<leftarrow> assert_opt $ orig_caps (cap_object cdl_vcpu);
+      seL4_ARM_VCPU_SetTCB sel4_vcpu sel4_tcb;
+      return ()
+    od
   od"
 
 (* Set the registers of a single tcb (cspace, vspace and fault_ep). *)
