@@ -155,6 +155,7 @@ where
     | UntypedCap _ _ _        \<Rightarrow> False
     | AsidControlCap          \<Rightarrow> False
     | AsidPoolCap _ _         \<Rightarrow> False
+    | SMCCap _                \<Rightarrow> False
     | SGISignalCap _ _        \<Rightarrow> False \<comment> \<open>FIXME SGI: eventually allow this\<close>
     | _                       \<Rightarrow> False"
 

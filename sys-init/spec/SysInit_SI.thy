@@ -499,11 +499,12 @@ where
     target_cap_data \<leftarrow> return (cap_data target_cap);
 
     is_ep_cap   \<leftarrow> return (ep_related_cap target_cap);
+    is_smc_cap  \<leftarrow> return (is_smc_cap target_cap);
     is_irqhandler_cap \<leftarrow> return (is_irqhandler_cap target_cap);
     target_cap_irq \<leftarrow> return (if is_irqhandler_cap then cap_irq target_cap else 0);
 
     \<comment> \<open>Any original caps (which includes IRQ Hander caps) are moved, not copied.\<close>
-    move_cap   \<leftarrow> return (original_cap_at (cnode_id, cnode_slot) spec);
+    move_cap   \<leftarrow> return (original_cap_at (cnode_id, cnode_slot) spec \<and> \<not>is_smc_cap);
 
     dest_obj   \<leftarrow> get_spec_object spec cnode_id;
     dest_size  \<leftarrow> return (object_size_bits dest_obj);
@@ -518,13 +519,13 @@ where
     src_root   \<leftarrow> return seL4_CapInitThreadCNode;
     src_index  \<leftarrow> assert_opt (if is_irqhandler_cap
                               then irq_caps target_cap_irq
+                              else if is_smc_cap then Some seL4_CapSMC
                               else orig_caps target_cap_obj);
     src_depth  \<leftarrow> return $ of_nat word_bits;
 
     \<comment> \<open>If it's a NullCap, then there's no need to do anything.
-     d If it's a cap that wants to be moved, and we want to move the cap, move (mutate) it.
-      If it's a cap that wants to be copied, and we want to copy it, then copy (mint) it.
-     \<close>
+        If it's a cap that wants to be moved, and we want to move the cap, move (mutate) it.
+        If it's a cap that wants to be copied, and we want to copy it, then copy (mint) it.\<close>
     if (target_cap = NullCap) then
       return True
     else if (mode = Move \<and> move_cap) then (
