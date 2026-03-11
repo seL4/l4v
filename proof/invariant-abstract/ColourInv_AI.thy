@@ -499,10 +499,216 @@ lemma hoare_vcg_imp_conj_liftE_R:
   by (smt (verit, del_insts) case_prodE case_prodI2 inf_left_commute pred_conj_def(1)
     pred_top_right_neutral prod.sel(1,2) validE_R_valid_eq valid_def)
 
+lemma hoare_vcg_imp_all_commE_R:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. (\<forall>x. Q rv s \<longrightarrow> Q' rv x s)\<rbrace>,- \<Longrightarrow>
+   \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> (\<forall>x. Q' rv x s)\<rbrace>,-"
+  by (smt (verit, del_insts) case_prodE case_prodI2 inf_left_commute pred_conj_def(1)
+    pred_top_right_neutral prod.sel(1,2) validE_R_valid_eq valid_def)
+
+lemma hoare_vcg_imp_commE_R:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> R rv s \<longrightarrow> S rv s\<rbrace>,- \<Longrightarrow>
+   \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. R rv s \<longrightarrow> Q rv s \<longrightarrow> S rv s\<rbrace>,-"
+  by (smt (verit, del_insts) case_prodE case_prodI2 inf_left_commute pred_conj_def(1)
+    pred_top_right_neutral prod.sel(1,2) validE_R_valid_eq valid_def)
+
+lemma hoare_vcg_imp_all_liftE_R:
+  "(\<And>x. \<lbrace>P x\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> Q' rv x s\<rbrace>,-) \<Longrightarrow>
+   \<lbrace>\<lambda>s. \<forall>x. P x s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> (\<forall>x. Q' rv x s)\<rbrace>,-"
+  apply(rule hoare_vcg_imp_all_commE_R)
+  apply(rule hoare_vcg_all_liftE_R)
+  by blast
+
 lemmas hoare_vcg_imp_conj_liftE_R' = hoare_vcg_imp_conj_liftE_R[where Q'''="\<top>\<top>", simplified]
 
 thm transfer_caps_loop_valid_objs
 thm transfer_caps_loop_invs
+
+definition no_refs_zombies
+where
+  "no_refs_zombies c \<comment> \<open>slot\<close> s \<equiv> (\<forall>r\<in>obj_refs c.
+     \<forall>a b. \<comment> \<open>slot \<noteq> (a, b) \<and>\<close> cte_wp_at (\<lambda>cap'. r \<in> obj_refs cap') (a, b) s \<longrightarrow>
+           cte_wp_at (Not \<circ> is_zombie) (a, b) s \<and> \<not> is_zombie c)"
+
+(* the form used by this helper looks a lot less clunky *)
+thm get_cap_zombies_helper
+definition no_refs_zombies_weaker
+where
+  "no_refs_zombies_weaker cap s \<equiv> \<not> is_zombie cap \<longrightarrow>
+   (\<forall>r\<in>obj_refs cap.
+      \<forall>slot. cte_wp_at (\<lambda>cap'. r \<in> obj_refs cap') slot s \<longrightarrow>
+             cte_wp_at (Not \<circ> is_zombie) slot s)"
+
+(* but actually it's weaker... *)
+lemma no_refs_zombies_weaker:
+  "no_refs_zombies c s \<Longrightarrow> no_refs_zombies_weaker c s"
+  unfolding no_refs_zombies_def no_refs_zombies_weaker_def
+  by fast
+
+lemma no_refs_zombies_stronger:
+  "no_refs_zombies_weaker c s \<Longrightarrow> \<not> is_zombie c \<Longrightarrow> no_refs_zombies c s"
+  unfolding no_refs_zombies_def no_refs_zombies_weaker_def
+  by blast
+
+crunch set_extra_badge, update_cdt
+  for no_refs_zombies[wp]: "no_refs_zombies c"
+  (wp: crunch_wps simp: crunch_simps no_refs_zombies_def)
+
+lemma no_refs_zombies_trans_state[simp]:
+  "no_refs_zombies c (trans_state f s) = no_refs_zombies c s"
+  unfolding no_refs_zombies_def
+  by auto
+
+lemma no_refs_zombies_is_original_cap[simp]:
+  "no_refs_zombies c (s\<lparr>is_original_cap := x\<rparr>) = no_refs_zombies c s"
+  unfolding no_refs_zombies_def
+  by blast
+
+lemma get_cap_zombies_helper'[wp]:
+  "\<lbrace>zombies_final\<rbrace> get_cap slot \<lbrace>no_refs_zombies_weaker\<rbrace>"
+  unfolding no_refs_zombies_weaker_def
+  by (wp get_cap_zombies_helper)
+
+lemma get_cap_zombies_helper''[wp]:
+  "\<lbrace>zombies_final and cte_wp_at (\<lambda>c. \<not> is_zombie c) slot\<rbrace> get_cap slot \<lbrace>no_refs_zombies\<rbrace>"
+  apply(strengthen no_refs_zombies_stronger)
+  apply wpsimp
+   apply(wpsimp wp:get_cap_wp)
+  by (clarsimp simp:cte_wp_at_def)
+
+(* note: we prove a better lemma below *)
+lemma set_cap_no_refs_zombies_old:
+  "\<lbrace>no_refs_zombies c and no_refs_zombies c' and zombies_final
+    and cte_wp_at ((=) c') slot and K (\<not> is_zombie c) and K (\<not> is_zombie c')\<rbrace>
+     set_cap c slot \<lbrace>\<lambda>_. no_refs_zombies c\<rbrace>"
+  (* unfolding no_refs_zombies_def *)
+  apply(rule_tac Q'="\<lambda>_ s. cte_wp_at (\<lambda>c'. c' = c) slot s \<and> zombies_final s \<and> \<not> is_zombie c"
+    in hoare_strengthen_post)
+   apply(wp set_cap_sets)
+   (* new_cap_zombies is more promising than set_cap_zombies when
+      we can rely on the slots initially to be empty, but
+      set_untyped_cap_as_full will actually be taking a non-empty src_slot
+   apply(wp new_cap_zombies)
+   apply(clarsimp simp:no_refs_zombies_def) *)
+    (* set_cap_zombies should be usable when we know slot's cap isn't a zombie too *)
+    apply(wp set_cap_zombies)
+   apply clarsimp
+   apply(clarsimp simp:ex_zombie_refs_def2 no_refs_zombies_def)
+   apply(fastforce simp:cte_wp_at_def)
+  apply(clarsimp simp:cte_wp_at_def)
+  apply(rule use_valid[OF _ get_cap_zombies_helper''])
+   apply blast
+  apply(clarsimp simp:cte_wp_at_def)
+  done
+
+lemma no_refs_zombies_def2:
+  "no_refs_zombies c s \<equiv> \<forall>r\<in>obj_refs c.
+   \<forall>a b. (\<exists>cap. Some cap = caps_of_state s (a, b) \<and> r \<in> obj_refs cap) \<longrightarrow>
+         (\<exists>cap. Some cap = caps_of_state s (a, b) \<and> \<not> is_zombie cap) \<and> \<not> is_zombie c"
+  unfolding no_refs_zombies_def cte_wp_at_def
+  by (clarsimp simp:get_cap_caps_of_state)
+
+(* this is much more general than the earlier one we proved above,
+   and it doesn't need as many preconditions *)
+lemma set_cap_no_refs_zombies_other[wp]:
+  "\<lbrace>no_refs_zombies c and K (\<not> is_zombie c) and K (\<not> is_zombie c')\<rbrace>
+   set_cap c' slot \<lbrace>\<lambda>_. no_refs_zombies c\<rbrace>"
+  unfolding no_refs_zombies_def2
+  apply(wpsimp wp:set_cap_caps_of_state)
+  by blast
+
+lemma no_refs_zombies_max_free_index_update[simp]:
+  "no_refs_zombies (max_free_index_update cap) = no_refs_zombies cap"
+  unfolding no_refs_zombies_def
+  by simp
+
+lemma set_untyped_cap_as_full_no_refs_zombies_src:
+  "\<lbrace>no_refs_zombies src_cap and K (\<not> is_zombie src_cap)\<rbrace>
+     set_untyped_cap_as_full src_cap new_cap src_slot
+   \<lbrace>\<lambda>_. no_refs_zombies src_cap\<rbrace>"
+  unfolding set_untyped_cap_as_full_def
+  by wpsimp
+
+(* obj_ref_of isn't exhaustive enough to give us that the obj_refs are the same :( *)
+lemma
+  "obj_ref_of c = obj_ref_of c' \<Longrightarrow> no_refs_zombies c = no_refs_zombies c'"
+  unfolding no_refs_zombies_def
+  apply(case_tac c, simp_all)
+  apply(case_tac c', simp_all)
+  oops
+
+(* it is if they're both untyped, though *)
+lemma untyped_no_refs_zombies_eq:
+  "is_untyped_cap c \<Longrightarrow> is_untyped_cap c' \<Longrightarrow> obj_ref_of c = obj_ref_of c' \<Longrightarrow>
+   no_refs_zombies c = no_refs_zombies c'"
+  unfolding no_refs_zombies_def
+  apply(case_tac c, simp_all)
+  apply(case_tac c', simp_all)
+  done
+
+lemma set_untyped_cap_as_full_no_refs_zombies_new:
+  "\<lbrace>no_refs_zombies src_cap and no_refs_zombies new_cap
+    and K (\<not> is_zombie src_cap) and K (\<not> is_zombie new_cap)\<rbrace>
+     set_untyped_cap_as_full src_cap new_cap src_slot
+   \<lbrace>\<lambda>_. no_refs_zombies new_cap\<rbrace>"
+  unfolding set_untyped_cap_as_full_def
+  by wpsimp
+
+(* this is the most general one *)
+lemma set_untyped_cap_as_full_no_refs_zombies[wp]:
+  "\<lbrace>no_refs_zombies c and K (\<not> is_zombie c) and K (\<not> is_zombie src_cap)\<rbrace>
+     set_untyped_cap_as_full src_cap new_cap src_slot
+   \<lbrace>\<lambda>_. no_refs_zombies c\<rbrace>"
+  unfolding set_untyped_cap_as_full_def
+  by wpsimp
+
+(*
+crunch cap_insert
+  for no_refs_zombies[wp]: "no_refs_zombies c"
+  (wp: crunch_wps set_cap_no_refs_zombies simp: crunch_simps
+   ignore: set_cap set_untyped_cap_as_full)
+*)
+
+(*
+lemma no_refs_zombies_NullCap[intro]:
+  "no_refs_zombies NullCap s"
+  unfolding no_refs_zombies_def
+  by simp
+*)
+
+lemma cap_insert_no_refs_zombies[wp]:
+  "\<lbrace>no_refs_zombies c and cte_wp_at ((=) c') src_slot and
+    K (\<not> is_zombie c') and K (\<not> is_zombie c) and K (\<not> is_zombie c'')\<rbrace>
+   cap_insert c'' src_slot dest_slot
+   \<lbrace>\<lambda>_. no_refs_zombies c\<rbrace>"
+  unfolding cap_insert_def
+  apply wpsimp
+     apply(wpsimp wp:get_cap_wp)
+    apply wpsimp
+   apply(wpsimp wp:get_cap_wp)
+  apply clarsimp
+  apply(prop_tac "cap = c'")
+   using cte_wp_at_eqD2 apply blast
+  apply simp
+  done
+
+(*
+crunch cap_insert
+  for no_refs_zombies[wp]: "no_refs_zombies c slot"
+  (wp: crunch_wps simp: crunch_simps)
+*)
+
+lemmas hoare_post_impE_R = hoare_post_impE[where E="\<top>\<top>" and E'="\<top>\<top>",
+  simplified validE_R_def[symmetric], simplified]
+
+lemma hoare_absorb_impE_R:
+  "\<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>,- \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> Q' rv s\<rbrace>,-"
+  by (metis (mono_tags, lifting) hoare_post_impE_R)
+
+(* very ad-hoc but whatever *)
+lemma hoare_double_impE_R:
+  "\<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. (Q rv s \<longrightarrow> Q' rv s) \<and> (Q rv s \<longrightarrow> R rv s)\<rbrace>,- \<Longrightarrow>
+   \<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> Q' rv s \<longrightarrow> R rv s\<rbrace>,-"
+  using hoare_strengthen_postE_R by fastforce
 
 lemma transfer_caps_loop_colour_maintained: (* broken by invs *)
   "\<lbrace>colour_invariant and invs and
@@ -511,6 +717,7 @@ lemma transfer_caps_loop_colour_maintained: (* broken by invs *)
               (\<forall>(cap, o_ref, cni)\<in>(set caps).
                 s \<turnstile> cap \<and>
                 cte_wp_at (\<lambda>c. cap \<noteq> NullCap \<longrightarrow> c = cap) (o_ref, cni) s \<and>
+                no_refs_zombies cap s \<and> \<not> is_zombie cap \<and>
                 real_cte_at (o_ref, cni) s \<and>
                 check_cap_ref cap (colour_oracle (cur_domain s)) \<and>
                 \<comment> \<open>XXX: precond for transfer_caps_loop_cte_wp_at, actually doesn't apply here
@@ -540,16 +747,15 @@ next
          apply (wpsimp wp: set_extra_badge_colour_maintained)
           apply(wpsimp wp:hoare_vcg_conj_lift)
            apply (wpsimp simp: set_extra_badge_def)
-          apply(wpsimp wp:hoare_vcg_op_lift)
+          apply(wpsimp wp:hoare_vcg_const_Ball_lift)
          apply fastforce
         apply(wpsimp wp:hoare_vcg_op_lift cap_insert_weak_cte_wp_at)
+           apply(wpsimp wp:derive_cap_non_NullCap)
+          apply wpsimp
            (*apply (wpsimp simp: derive_cap_def RISCV64_A.arch_derive_cap_def)
           apply (wpsimp wp: derive_cap_inv)*) (* <- stuff below seems to increase cases... may want to delete from line below till safe (exclusive) *)
-         apply (wpsimp wp: hoare_vcg_if_lift_ER)
          apply(strengthen cap_irqs_appropriate_strengthen)
          apply(strengthen real_cte_tcb_valid)
-         apply (wpsimp wp:hoare_vcg_conj_liftE_R')
-          apply(wpsimp wp:hoare_drop_impE_R)
          apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
           apply(wpsimp wp:hoare_drop_impE_R)
          apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
@@ -569,19 +775,21 @@ next
          apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
           apply(wpsimp wp:hoare_drop_impE_R)
          apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
-          (* DOWN TO HERE.
-             FIXME: will need to bring the antecedent in to make this axiom usable:
-          apply(wpsimp wp:arch_derive_cap_objrefs_iszombie)
-          *)
-          apply(wpsimp wp:derive_cap_is_derived_foo)
-          (*
-          apply(rule hoare_drop_impE_R)
-          apply(wpsimp simp:Ball_def wp:hoare_vcg_all_liftE_R)
-           apply(wpsimp wp:derive_cap_is_derived_foo)
-          apply(wpsimp wp:hoare_vcg_all_liftE_R hoare_vcg_conj_liftE_R hoare_vcg_imp_liftE_R)
-          *)
-         apply(wpsimp wp:hoare_vcg_imp_conj_liftE_R')
-          apply(wpsimp wp:derive_cap_is_derived)
+          apply(wpsimp wp:arch_derive_cap_objrefs_iszombie simp:Ball_def)
+          apply(rule hoare_vcg_imp_all_liftE_R)
+          apply(rule hoare_double_impE_R)
+          apply(wpsimp wp:hoare_vcg_conj_liftE_R')
+           apply(wpsimp wp:derive_cap_objrefs)
+          apply(rule hoare_vcg_imp_all_liftE_R)
+          apply(rule hoare_vcg_imp_all_liftE_R)
+          apply(rule hoare_vcg_imp_commE_R)
+          apply(rule hoare_vcg_imp_liftE_R')
+           apply wpsimp
+          apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R' simp:comp_def)
+           apply(rule hoare_drop_impE_R)
+           apply wpsimp
+          apply(wpsimp simp:derive_cap_def)
+          apply(rule arch_derive_cap_objrefs_iszombie)
          apply(wpsimp wp:derive_cap_is_derived_foo)
 (*
          apply(wpsimp wp:hoare_vcg_imp_conj_liftE_R')
@@ -599,10 +807,13 @@ next
          apply(metis (mono_tags, lifting) cap_irqs_simps ex_cte_cap_wp_to_weakenE is_cap_simps(1)
            list.set_sel(1))
         apply(rule conjI)
-         apply clarsimp
-         (* broken because we should've used arch_derive_cap_objrefs_iszombie
-            to get rid of this when it was a postcondition earlier, I think.
-
+         (* hm, actually this is still no good. absorbing the imp such that
+            we end up demanding there's some arbitrary x in the obj_refs
+            is not what we want. DOWN TO HERE *)
+         apply(clarsimp simp:no_refs_zombies_def)
+         apply(rule conjI)
+          apply(clarsimp simp:cte_wp_at_def)
+(*
         apply safe[1]
           (* XXX: hmm but setting \<top> is too permissive because we need it to be equal to NullCap*)
           apply(clarsimp simp:cte_wp_at_def)
