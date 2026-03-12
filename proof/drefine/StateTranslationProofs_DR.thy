@@ -26,7 +26,7 @@ lemma asid_low_bits [simp]:
 
 lemma asid_bits [simp]:
   "Types_D.asid_bits = asid_bits"
-  by (simp add:Types_D.asid_bits_def asid_bits_def)
+  by (simp add:Types_D.asid_bits_def asid_bits_def asid_high_bits_def asid_low_bits_def)
 
 lemma get_obj_simps [simp]:
   "get_obj (s\<lparr>cur_thread := a\<rparr>) = get_obj s"

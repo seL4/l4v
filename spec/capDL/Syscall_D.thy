@@ -61,24 +61,40 @@ where
           perform_syscall_fn))
   "
 
-fun
-  perform_invocation :: "bool \<Rightarrow> bool \<Rightarrow> cdl_invocation \<Rightarrow> unit preempt_monad"
-where
-    "perform_invocation is_call can_block (InvokeUntyped untyped_params) = (invoke_untyped untyped_params)"
-  | "perform_invocation is_call can_block (InvokeEndpoint endpoint_params) = liftE (invoke_endpoint is_call can_block endpoint_params)"
-  | "perform_invocation is_call can_block (InvokeNotification ntfn_params) = liftE (invoke_notification ntfn_params)"
-  | "perform_invocation is_call can_block (InvokeReply reply_params) = liftE (invoke_reply reply_params)"
-  | "perform_invocation is_call can_block (InvokeTcb tcb_params) = (invoke_tcb tcb_params)"
-  | "perform_invocation is_call can_block (InvokeDomain domain_params) = (invoke_domain domain_params)"
-  | "perform_invocation is_call can_block (InvokeCNode cnode_params) = invoke_cnode cnode_params"
-  | "perform_invocation is_call can_block (InvokeIrqControl irq_params) = liftE (invoke_irq_control irq_params)"
-  | "perform_invocation is_call can_block (InvokeIrqHandler handler_params) = liftE (invoke_irq_handler handler_params)"
-  | "perform_invocation is_call can_block (InvokePageTable page_table_params) = liftE (invoke_page_table page_table_params)"
-  | "perform_invocation is_call can_block (InvokePage page_params) = liftE (invoke_page page_params)"
-  | "perform_invocation is_call can_block (InvokeAsidControl asid_control_params) = liftE (invoke_asid_control asid_control_params)"
-  | "perform_invocation is_call can_block (InvokeAsidPool asid_pool_params) = liftE (invoke_asid_pool asid_pool_params)"
-  | "perform_invocation is_call can_block (InvokePageDirectory page_dir_params) = liftE (invoke_page_directory page_dir_params)"
-  | "perform_invocation is_call can_block (InvokeSGISignal sig_params) = liftE (invoke_sgi_signal_generate sig_params)"
+fun perform_invocation :: "bool \<Rightarrow> bool \<Rightarrow> cdl_invocation \<Rightarrow> unit preempt_monad" where
+    "perform_invocation is_call can_block (InvokeUntyped untyped_params) =
+       invoke_untyped untyped_params"
+  | "perform_invocation is_call can_block (InvokeEndpoint endpoint_params) =
+       liftE (invoke_endpoint is_call can_block endpoint_params)"
+  | "perform_invocation is_call can_block (InvokeNotification ntfn_params) =
+       liftE (invoke_notification ntfn_params)"
+  | "perform_invocation is_call can_block (InvokeReply reply_params) =
+       liftE (invoke_reply reply_params)"
+  | "perform_invocation is_call can_block (InvokeTcb tcb_params) =
+       invoke_tcb tcb_params"
+  | "perform_invocation is_call can_block (InvokeDomain domain_params) =
+       invoke_domain domain_params"
+  | "perform_invocation is_call can_block (InvokeCNode cnode_params) =
+       invoke_cnode cnode_params"
+  | "perform_invocation is_call can_block (InvokeIrqControl irq_params) =
+       liftE (invoke_irq_control irq_params)"
+  | "perform_invocation is_call can_block (InvokeIrqHandler handler_params) =
+       liftE (invoke_irq_handler handler_params)"
+  | "perform_invocation is_call can_block (InvokePageTable page_table_params) =
+       liftE ((if cdl_ARCH = AARCH32 then invoke_page_table else gen_invoke_page_table)
+              page_table_params)"
+  | "perform_invocation is_call can_block (InvokePage page_params) =
+       liftE ((if cdl_ARCH = AARCH32 then invoke_page else gen_invoke_page) page_params)"
+  | "perform_invocation is_call can_block (InvokeAsidControl asid_control_params) =
+       liftE (invoke_asid_control asid_control_params)"
+  | "perform_invocation is_call can_block (InvokeAsidPool asid_pool_params) =
+       liftE (invoke_asid_pool asid_pool_params)"
+  | "perform_invocation is_call can_block (InvokePageDirectory page_dir_params) =
+       liftE (invoke_page_directory page_dir_params)"
+  | "perform_invocation is_call can_block (InvokeSGISignal sgi_params) =
+       liftE (invoke_sgi_signal_generate sgi_params)"
+  | "perform_invocation is_call can_block (InvokeVCPU vcpu_params) =
+       liftE (invoke_vcpu vcpu_params)"
 
 definition ep_related_cap :: "cdl_cap \<Rightarrow> bool"
 where "ep_related_cap cap \<equiv> case cap of

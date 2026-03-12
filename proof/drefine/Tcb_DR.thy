@@ -52,8 +52,10 @@ where
           Invocations_D.NotificationControl target_tcb opt
       | Invocations_A.SetTLSBase target_tcb x \<Rightarrow>
           Invocations_D.SetTLSBase target_tcb
-      | Invocations_A.SetFlags target_tcb x y \<Rightarrow>
-          Invocations_D.SetFlags target_tcb"
+      | Invocations_A.SetFlags target_tcb flags_set flags_clear \<Rightarrow>
+          Invocations_D.SetFlags target_tcb
+                                 (tcb_flags_to_word flags_set)
+                                 (tcb_flags_to_word flags_clear)"
 
 lemma decode_set_ipc_buffer_translate_tcb_invocation:
   "\<lbrakk>x \<noteq> [];excaps ! 0 = (a,b,c)\<rbrakk> \<Longrightarrow>
@@ -200,6 +202,7 @@ lemma decode_tcb_cap_label_not_match:
       apply (simp add: decode_read_registers_def decode_write_registers_def decode_set_ipc_buffer_def
                        decode_copy_registers_def decode_set_space_def decode_tcb_configure_def
                        decode_set_priority_def decode_set_mcpriority_def decode_set_sched_params_def
+                       decode_set_flags_def
             | wp)+
   done
 
@@ -222,6 +225,27 @@ lemma update_cnode_cap_data:
   apply (clarsimp simp:cdl_update_cnode_cap_data_def word_bits_def of_drop_to_bl
     word_size mask_twice dest!:leI)
 done
+
+lemma ex_tcbFlagToWord: (* FIXME: duplicate from Refine/TcbFlags_R.thy *)
+  "tcbFlagMask !! n \<Longrightarrow> \<exists>flag. tcbFlagToWord flag = bit n"
+  by (auto simp: tcbFlagToWord_def tcbFlagMask_def split: tcb_flag.splits if_splits)
+
+lemma tcb_flags_to_word_id: (* FIXME: duplicate from Refine/TcbFlags_R.thy *)
+  "tcb_flags_to_word (word_to_tcb_flags w) = w && tcbFlagMask"
+  unfolding tcb_flags_to_word_def word_to_tcb_flags_def
+  apply (rule the_equality; clarsimp simp: Collect_eq word_bw_lcs)
+  apply (rule ccontr)
+  apply (subst (asm) all_not_ex)
+  apply (erule notE)
+  apply (subst (asm) word_eq_iff)+
+  apply clarsimp
+  apply (prop_tac "tcbFlagMask !! n")
+   apply fastforce
+  apply (frule ex_tcbFlagToWord)
+  apply clarsimp
+  apply (rule_tac x=flag in exI)
+  apply (clarsimp simp: not_nth_is_and_eq_0[symmetric] word_bw_assocs[symmetric] word_bw_comms)
+  done
 
 lemma decode_tcb_corres:
   "\<lbrakk> Some (TcbIntent ui) = transform_intent (invocation_type label') args';
@@ -393,8 +417,7 @@ lemma decode_tcb_corres:
                         apply ((case_tac "excaps' ! 0",clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def hd_conv_nth)
                                  | clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw split del: if_split
                                  | wp get_simple_ko_wp
-                                 | (case_tac "excaps' ! 0", rule dcorres_alternative_throw)
-                                 | (case_tac "AllowRead \<in> rights", simp))+
+                                 | (case_tac "excaps' ! 0", rule dcorres_alternative_throw))+
 
       (* TCBUnbindNotification *)
       apply (clarsimp simp: decode_unbind_notification_def dcorres_alternative_throw whenE_def)
@@ -411,11 +434,9 @@ lemma decode_tcb_corres:
      apply (simp add: translate_tcb_invocation_def)
 
     (* TCBSetFlags *)
-    apply (clarsimp simp: transform_intent_def decode_set_flags_def whenE_def)
-    apply (rule conjI; clarsimp)
-     apply (rule dcorres_alternative_throw)
+    apply (clarsimp simp: decode_set_flags_def whenE_def)
     apply (rule corres_alternate1[OF dcorres_returnOk])
-    apply (simp add: translate_tcb_invocation_def)
+    apply (simp add: translate_tcb_invocation_def tcb_flags_to_word_id)
 
    (* ARMASIDPoolAssign *)
    apply (clarsimp simp: transform_intent_def)

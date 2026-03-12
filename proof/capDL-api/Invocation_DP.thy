@@ -282,11 +282,17 @@ lemma decode_asid_pool_invocation_inv[wp]:
    apply (wpc|wp |simp add:throw_on_none_def)+
   done
 
+crunch decode_vcpu_invocation
+  for inv[wp]: P
+
 lemma decode_invocation_inv[wp]:
-  "\<lbrace>P\<rbrace> decode_invocation a b c d\<lbrace>\<lambda>_. P\<rbrace>, -"
+  "\<lbrace>P\<rbrace> decode_invocation intent b c d \<lbrace>\<lambda>_. P\<rbrace>, -"
   apply (simp add:decode_invocation_def)
-  apply (case_tac a,simp_all)
-  apply (rule hoare_pre, (wp | simp add:throw_opt_def | wpc | intro conjI impI)+)+
+  apply (case_tac intent;
+         wpsimp wp: hoare_pre_cont[where f="gen_decode_page_invocation t p cs i" for t p cs i]
+                simp: throw_opt_def cdl_ARCH_AARCH32
+                split_del: if_split)
+  apply simp
   done
 
 crunch lookup_extra_caps
@@ -301,7 +307,7 @@ lemma decode_invocation_nonep:
   "\<lbrace>\<lambda>s. \<not> ep_related_cap cap \<rbrace>
    decode_invocation cap cap_ref extra_caps intent
    \<lbrace>\<lambda>rv s. nonep_invocation rv\<rbrace>, -"
-  apply (simp add: decode_invocation_def)
+  apply (simp add: decode_invocation_def cdl_ARCH_AARCH32)
   apply (wpsimp simp: o_def nonep_invocation_def wp: wp_post_tauts)
   apply (auto simp: ep_related_cap_def)
   done

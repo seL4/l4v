@@ -36,6 +36,7 @@ definition "seL4_CapIOPort              = (7 :: cdl_cptr)"
 definition "seL4_CapIOSpace             = (8 :: cdl_cptr)"
 definition "seL4_CapBootInfoFrame       = (9 :: cdl_cptr)"
 definition "seL4_CapInitThreadIPCBuffer = (10 :: cdl_cptr)"
+definition "seL4_CapSMC                 = (15 :: cdl_cptr)"
 
 (* This should be added as an axiom or something.
  * To be fixed when we have a better schedule story.
@@ -158,6 +159,18 @@ where
        cdl_intent_cap = tcb_cap,
        cdl_intent_extras = [cspace_root, vspace_root],
        cdl_intent_recv_slot = None\<rparr> False"
+
+definition seL4_TCBFlag_fpuDisabled :: machine_word where
+  "seL4_TCBFlag_fpuDisabled \<equiv> 1"
+
+definition seL4_TCB_SetFlags :: "cdl_cptr \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> bool u_monad" where
+  "seL4_TCB_SetFlags tcb_cap flags_clear flags_set \<equiv>
+     do_kernel_op $ call_kernel_with_intent
+     \<lparr>cdl_intent_op = Some $ TcbIntent $ TcbSetFlagsIntent flags_set flags_clear,
+      cdl_intent_error = False,
+      cdl_intent_cap = tcb_cap,
+      cdl_intent_extras = [],
+      cdl_intent_recv_slot = None\<rparr> False"
 
 definition seL4_TCB_Resume :: "cdl_cptr \<Rightarrow> bool u_monad"
 where
@@ -312,6 +325,15 @@ definition seL4_CNode_Mutate ::
        cdl_intent_error = False,
        cdl_intent_cap = dest_root,
        cdl_intent_extras = [src_root],
+       cdl_intent_recv_slot = None\<rparr> False"
+
+definition seL4_ARM_VCPU_SetTCB :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> bool u_monad" where
+  "seL4_ARM_VCPU_SetTCB sel4_vcpu sel4_tcb \<equiv>
+    do_kernel_op $ call_kernel_with_intent
+      \<lparr>cdl_intent_op = Some $ VCPUIntent (),
+       cdl_intent_error = False,
+       cdl_intent_cap = sel4_vcpu,
+       cdl_intent_extras = [sel4_tcb],
        cdl_intent_recv_slot = None\<rparr> False"
 
 (* End of kernel call funtions *)

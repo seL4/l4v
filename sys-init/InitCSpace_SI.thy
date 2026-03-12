@@ -428,7 +428,6 @@ lemma mint_pre:
    apply (frule (1) well_formed_object_size_bits)
    apply (cut_tac obj_id=dest_id and obj'=spec_obj in
                   sep_map_f_object_size_bits_cnode, (simp add: object_type_is_object)+)
-   apply (simp add: default_cap_cnode_dev)
    apply (sep_solve add: sep_any_imp )
   apply (clarsimp simp: one_lvl_lookup_def)
   apply (drule guard_equal_si_cspace_cap)
@@ -535,7 +534,6 @@ lemma move_pre_irq_handler:
       apply (fastforce simp: object_at_def object_type_is_object)
      apply assumption
     apply assumption
-   apply (simp add:default_cap_cnode_dev)
    apply (subst offset_slot, assumption, simp)
    apply (subst offset_slot', assumption)
    apply (subst offset_slot', assumption)
@@ -546,7 +544,6 @@ lemma move_pre_irq_handler:
    apply sep_solve
   apply (clarsimp simp: one_lvl_lookup_def)
   apply (drule guard_equal_si_cspace_cap)
-  apply (clarsimp simp: default_cap_def object_type_is_object)
   apply (cut_tac x="object_size_bits spec_obj" in unat_of_nat32)
    apply (insert n_less_equal_power_2 [where n=word_bits])
    apply (frule (1) well_formed_object_size_bits_word_bits)
@@ -618,7 +615,6 @@ lemma mint_post:
   apply (clarsimp simp: cap_rights_inter_default_cap_rights)
   apply (subst (asm) update_cap_rights_and_data,(assumption|clarsimp)+)
   apply (subst (asm) offset_slot', assumption)+
-  apply (clarsimp simp: default_cap_cnode_dev)
   apply sep_solve
   done
 
@@ -678,7 +674,6 @@ lemma mutate_post:
     apply (clarsimp simp: cap_has_object_not_irqhandler_cap)
    apply (erule well_formed_orig_caps, (simp add: slots_of_def)+)
   apply (subst (asm) offset_slot', assumption)+
-  apply (clarsimp simp: default_cap_cnode_dev)
   apply sep_solve
   done
 
@@ -728,7 +723,6 @@ lemma move_post:
   apply (subst sep_map_s_sep_map_c_eq [where cap="update_cap_object client_object_id spec_cap"])
    apply (rule object_slots_object_initialised_state, (clarsimp simp: opt_cap_def slots_of_def)+)
   apply (subst (asm) offset_slot', assumption)+
-  apply (clarsimp simp: default_cap_cnode_dev)
   apply sep_solve
   done
 
@@ -773,7 +767,6 @@ lemma move_post_irq_handler:
   apply (subst sep_map_s_sep_map_c_eq [where cap=spec_cap],
          (clarsimp simp: opt_cap_def slots_of_def)+)
   apply (subst (asm) offset_slot', assumption)+
-  apply (clarsimp simp: default_cap_cnode_dev)
   apply sep_solve
   done
 
@@ -1103,6 +1096,14 @@ lemma irq_handler_cap_not_device[simp]:
  "is_irqhandler_cap y \<Longrightarrow> is_device_cap y = False"
  by (auto simp:is_device_cap_def split:cdl_cap.splits)
 
+lemma well_formed_no_smc:
+  "\<lbrakk> well_formed spec; opt_cap cref spec = Some cap; cap \<noteq> NullCap; is_smc_cap cap \<rbrakk> \<Longrightarrow>
+   False"
+  apply (cases cref, simp)
+  apply (drule (2) well_formed_well_formed_cap')
+  apply (clarsimp simp: is_smc_cap_def well_formed_cap_def)
+  done
+
 lemma init_cnode_slot_move_original_sep:
   "\<lbrakk>well_formed spec; cnode_at obj_id spec;
     original_cap_at (obj_id, slot) spec;
@@ -1146,6 +1147,9 @@ lemma init_cnode_slot_move_original_sep:
                          si_spec_obj_null_cap_at_def si_spec_obj_null_cap_at'_def
                          si_spec_irq_cap_at_def si_spec_irq_cap_at'_def
                          si_spec_irq_null_cap_at_def si_spec_irq_null_cap_at'_def)
+   apply (rule conjI; clarsimp)
+    (* exclude SMC caps for now *)
+    apply (blast dest: well_formed_no_smc)
    apply (wp seL4_CNode_Mutate_object_slot_initialised_sep
              seL4_CNode_Move_object_slot_initialised_cap_has_object_sep |
           clarsimp)+
@@ -1174,6 +1178,7 @@ lemma init_cnode_slot_move_original_sep:
                         si_spec_irq_cap_at_def si_spec_irq_cap_at'_def
                         si_spec_irq_null_cap_at_def si_spec_irq_null_cap_at'_def)
   apply (wp seL4_CNode_Move_object_slot_initialised_irqhandler_cap_sep | clarsimp)+
+  apply (clarsimp simp: is_smc_cap_def)
   done
 
 lemma init_cnode_slot_move_not_original_inv:
@@ -1345,10 +1350,10 @@ lemma init_cspace_move_sep:
   done
 
 lemma init_cnode_slot_copy_original_sep:
-  "original_cap_at (obj_id, slot) spec \<Longrightarrow>
+  "\<lbrakk> original_cap_at (obj_id, slot) spec; well_formed spec \<rbrakk> \<Longrightarrow>
    \<lbrace>P\<rbrace> init_cnode_slot spec orig_caps dup_caps irq_caps Copy obj_id slot \<lbrace>\<lambda>_. P\<rbrace>"
   apply (clarsimp simp: init_cnode_slot_def cong: option.case_cong)
-  apply wpsimp
+  apply (wpsimp | fastforce dest!: well_formed_no_smc)+
   done
 
 lemma ep_cap_default_cap:
@@ -1362,6 +1367,10 @@ lemma ntfn_cap_default_cap:
   is_ntfn_cap (default_cap type ids sz dev) = is_ntfn_cap cap"
   by (fastforce simp: cap_type_def default_cap_def
                split: cdl_cap.splits cdl_object_type.splits)
+
+lemma no_default_smc_cap[simp]:
+  "\<not>is_smc_cap (default_cap t id_set sz dev)"
+  by (cases t; simp)
 
 lemma seL4_CNode_Mint_object_slot_initialised_sep_helper:
   "\<lbrakk>well_formed spec;
@@ -1497,6 +1506,8 @@ lemma init_cnode_slot_copy_not_original_sep_helper:
   apply (clarsimp simp: si_obj_cap_at_def si_obj_cap_at'_def)
   apply (frule well_formed_cap_object, assumption+)
   apply (clarsimp simp: init_cnode_slot_def cap_at_def)
+  apply (rule conjI; clarsimp)
+   apply (blast dest: well_formed_no_smc)
   apply (wp seL4_CNode_Mint_object_slot_initialised_sep)+
   apply (wp seL4_CNode_Mint_object_slot_initialised_sep | clarsimp)+
   apply (intro impI conjI, simp_all)

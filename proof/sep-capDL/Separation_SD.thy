@@ -50,8 +50,7 @@ definition
 where
   "reset_cap_asid \<equiv> \<lambda>c. case c of
       FrameCap dev f1 f2 f3 f4 ad \<Rightarrow> FrameCap dev f1 f2 f3 f4 None
-    | PageTableCap f1 f2 ad     \<Rightarrow> PageTableCap f1 f2 None
-    | PageDirectoryCap f1 f2 ad \<Rightarrow> PageDirectoryCap f1 f2 None
+    | PageTableCap l f1 f2 ad     \<Rightarrow> PageTableCap l f1 f2 None
     | _ \<Rightarrow> c"
 
 definition

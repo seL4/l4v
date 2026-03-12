@@ -395,16 +395,19 @@ lemma transform_intent_thread_cap_None:
   apply (cases "gen_invocation_type label"; simp; wp?)
                apply (clarsimp simp: transform_intent_def decode_read_registers_def decode_write_registers_def
                                      decode_copy_registers_def decode_tcb_configure_def decode_set_priority_def
-                                     decode_set_mcpriority_def decode_set_sched_params_def
+                                       decode_set_mcpriority_def decode_set_sched_params_def
                                      decode_set_ipc_buffer_def transform_intent_tcb_defs
                               simp flip: gen_invocation_type_eq
                               split: list.split_asm
                      | wp+)+
          apply (clarsimp simp: transform_intent_def decode_set_space_def decode_bind_notification_def
                                decode_unbind_notification_def transform_intent_tcb_set_space_def
+                               decode_set_flags_def whenE_def
                         split: list.split_asm
-               , wp+
-               | clarsimp simp: transform_intent_def simp flip: gen_invocation_type_eq)+
+               | wp
+               | clarsimp simp: transform_intent_def transform_intent_tcb_set_flags_def
+                          simp flip: gen_invocation_type_eq
+                          split: list.split_asm)+
   done
 
 lemma transform_intent_irq_control_None:

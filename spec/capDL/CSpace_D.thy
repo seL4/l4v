@@ -218,19 +218,19 @@ where
        od
        else return (NullCap, NullCap))"
 | "finalise_cap AsidControlCap           final = return (NullCap,NullCap)"
-| "finalise_cap (PageDirectoryCap ptr x (Some asid))   final = (
+| "finalise_cap (PageTableCap PD ptr x (Some (asid, _))) final = (
        if final \<and> x = Real then do
          delete_asid asid ptr;
          return (NullCap, NullCap)
        od
        else return (NullCap, NullCap))"
-| "finalise_cap (PageTableCap ptr x (Some asid))     final = (
+| "finalise_cap (PageTableCap PT ptr x (Some asid)) final = (
        if (final \<and> x = Real) then do
          unmap_page_table asid ptr;
          return (NullCap, NullCap)
        od
        else return (NullCap, NullCap))"
-| "finalise_cap (FrameCap dev ptr _ s x (Some asid))       final = (
+| "finalise_cap (FrameCap dev ptr _ s x (Some asid)) final = (
        if x = Real then do
          unmap_page asid ptr s;
          return (NullCap, NullCap)
@@ -486,7 +486,8 @@ definition cdl_default_tcb :: "cdl_object" where
        tcb_caller_slot \<mapsto> cdl_cap.NullCap,
        tcb_ipcbuffer_slot \<mapsto> cdl_cap.NullCap,
        tcb_pending_op_slot \<mapsto> cdl_cap.NullCap,
-       tcb_boundntfn_slot \<mapsto> cdl_cap.NullCap],
+       tcb_boundntfn_slot \<mapsto> cdl_cap.NullCap,
+       tcb_boundvcpu_slot \<mapsto> cdl_cap.NullCap],
     cdl_tcb_fault_endpoint = 0,
     cdl_tcb_intent = \<lparr>
       cdl_intent_op = None,
@@ -517,8 +518,7 @@ fun
   reset_mem_mapping :: "cdl_cap \<Rightarrow> cdl_cap"
 where
   "reset_mem_mapping (FrameCap dev p rts sz b mp) = FrameCap dev p rts sz b None"
-| "reset_mem_mapping (PageTableCap ptr b mp) = PageTableCap ptr b None"
-| "reset_mem_mapping (PageDirectoryCap ptr b ma) = PageDirectoryCap ptr b None"
+| "reset_mem_mapping (PageTableCap l ptr b mp) = PageTableCap l ptr b None"
 | "reset_mem_mapping cap = cap"
 
 
@@ -611,12 +611,16 @@ where
 
 (*
  * Update the badge of a cap, masking off bits the lower specs are unable
- * to store for implementation reasons.
+ * to store for implementation reasons for notification and endpoint caps.
  *)
 definition
   badge_update :: "machine_word \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
 where
-  "badge_update data cap \<equiv> update_cap_badge (data && mask badge_bits) cap"
+  "badge_update data cap \<equiv>
+     let
+       data' = if is_ep_cap cap \<or> is_ntfn_cap cap then data && mask badge_bits else data
+     in
+       update_cap_badge data' cap"
 
 (*
  * Transform a capability based on a request from the user.
@@ -627,34 +631,24 @@ where
  * implementations, to avoid messy implementation details of the CDT
  * in lower-level models.
  *)
-
-
-definition
-  update_cap_data :: "bool \<Rightarrow> machine_word \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap k_monad"
-where
+definition update_cap_data :: "bool \<Rightarrow> machine_word \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap k_monad" where
   "update_cap_data preserve data cap \<equiv>
     return $ case cap of
-        EndpointCap _ b _ \<Rightarrow>
-          if b = 0 \<and> \<not> preserve then
-            badge_update data cap
-          else
-            NullCap
-      | NotificationCap _ b _ \<Rightarrow>
-          if b = 0 \<and> \<not> preserve then
-            badge_update data cap
-          else
-            NullCap
+        EndpointCap _ b _ \<Rightarrow> if b = 0 \<and> \<not> preserve then badge_update data cap else NullCap
+      | NotificationCap _ b _ \<Rightarrow> if b = 0 \<and> \<not> preserve then badge_update data cap else NullCap
       | CNodeCap object guard guard_size sz \<Rightarrow>
           let
             reserved_bits = 3;
             guard_bits = 18;
             guard_size_bits = 5;
-
             new_guard_size = unat ((data >> reserved_bits) && mask guard_size_bits);
-            new_guard = (data >> (reserved_bits + guard_size_bits)) && mask (min (unat ((data >> reserved_bits) && mask guard_size_bits)) guard_bits)
+            new_guard = (data >> (reserved_bits + guard_size_bits)) &&
+                        mask (min (unat ((data >> reserved_bits) && mask guard_size_bits)) guard_bits)
           in
-            if new_guard_size + sz > word_bits then NullCap else
-            (CNodeCap object new_guard new_guard_size sz)
+            if new_guard_size + sz > word_bits
+            then NullCap
+            else CNodeCap object new_guard new_guard_size sz
+      | SMCCap b \<Rightarrow> if b = 0 \<and> \<not> preserve then badge_update data cap else NullCap
       | _ \<Rightarrow> cap"
 
 (*
@@ -674,8 +668,7 @@ where
    | IrqControlCap \<Rightarrow> returnOk NullCap
    | ZombieCap _ \<Rightarrow> returnOk NullCap
    | FrameCap dev p r sz b x \<Rightarrow> returnOk (FrameCap dev p r sz b None)
-   | PageTableCap _ _ _ \<Rightarrow> throw \<sqinter> returnOk cap
-   | PageDirectoryCap _ _ _ \<Rightarrow> throw \<sqinter> returnOk cap
+   | PageTableCap _ _ _ _ \<Rightarrow> throw \<sqinter> returnOk cap
    | _ \<Rightarrow> returnOk cap"
 
 

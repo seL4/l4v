@@ -61,12 +61,12 @@ where
     else if x = 2  then Some EndpointType
     else if x = 3  then Some NotificationType
     else if x = 4  then Some CNodeType
-    else if x = 5  then Some PageDirectoryType
+    else if x = 5  then Some (PageTableType PD)
     else if x = 6  then Some (FrameType 12)
     else if x = 7  then Some (FrameType 16)
     else if x = 8  then Some (FrameType 20)
     else if x = 9  then Some (FrameType 24)
-    else if x = 10 then Some PageTableType
+    else if x = 10 then Some (PageTableType PT)
     else None"
 
 definition
@@ -166,6 +166,12 @@ where
   (case args of fault_ep#croot_data#vroot_data#_ \<Rightarrow>
     Some (TcbSetSpaceIntent fault_ep croot_data vroot_data)
    | _ \<Rightarrow> None)"
+
+definition transform_intent_tcb_set_flags :: "machine_word list \<Rightarrow> cdl_tcb_intent option" where
+  "transform_intent_tcb_set_flags args \<equiv>
+     case args of flags_set # flags_clear # _ \<Rightarrow>
+       Some $ TcbSetFlagsIntent flags_set flags_clear
+     | _ \<Rightarrow> None"
 
 definition
   transform_cnode_index_and_depth :: "(word32 \<Rightarrow> word32 \<Rightarrow> 'a) \<Rightarrow> word32 list \<Rightarrow> 'a option"
@@ -328,7 +334,9 @@ definition
     | GenInvocationLabel TCBBindNotification \<Rightarrow> Some (TcbIntent TcbBindNTFNIntent)
     | GenInvocationLabel TCBUnbindNotification \<Rightarrow> Some (TcbIntent TcbUnbindNTFNIntent)
     | GenInvocationLabel TCBSetTLSBase \<Rightarrow> Some (TcbIntent TcbSetTLSBaseIntent)
-    | GenInvocationLabel TCBSetFlags \<Rightarrow> Some (TcbIntent TcbSetFlagsIntent)
+    | GenInvocationLabel TCBSetFlags \<Rightarrow>
+          map_option TcbIntent
+                   (transform_intent_tcb_set_flags args)
     | GenInvocationLabel CNodeRevoke \<Rightarrow>
           map_option CNodeIntent
                    (transform_cnode_index_and_depth CNodeRevokeIntent args)
@@ -401,6 +409,7 @@ lemmas transform_intent_tcb_defs =
   transform_intent_tcb_set_sched_params_def
   transform_intent_tcb_set_ipc_buffer_def
   transform_intent_tcb_set_space_def
+  transform_intent_tcb_set_flags_def
 
 lemma transform_tcb_intent_invocation:
   "transform_intent label args = Some (TcbIntent ti)
@@ -418,7 +427,8 @@ lemma transform_tcb_intent_invocation:
    ((label = GenInvocationLabel TCBResume) = (ti = TcbResumeIntent)) \<and>
    ((label = GenInvocationLabel TCBBindNotification) = (ti = TcbBindNTFNIntent)) \<and>
    ((label = GenInvocationLabel TCBUnbindNotification) = (ti = TcbUnbindNTFNIntent)) \<and>
-   ((label = GenInvocationLabel TCBSetTLSBase) = (ti = TcbSetTLSBaseIntent))
+   ((label = GenInvocationLabel TCBSetTLSBase) = (ti = TcbSetTLSBaseIntent) \<and>
+   ((label = GenInvocationLabel TCBSetFlags) = (ti = TcbSetFlagsIntent (args ! 0) (args ! 1) \<and> length args \<ge> 2)))
    ) \<and>
    (
     label \<noteq> GenInvocationLabel InvalidInvocation \<and>
@@ -458,10 +468,10 @@ lemma transform_tcb_intent_invocation:
          simp add: transform_intent_def transform_intent_tcb_defs
               split: gen_invocation_labels.split_asm invocation_label.split_asm
                      arch_invocation_label.split_asm list.split_asm)+
-                               (* 30 subgoals *)
-                               apply(simp add: transform_intent_def transform_intent_tcb_defs
-                                          split: gen_invocation_labels.split_asm invocation_label.split_asm
-                                                 arch_invocation_label.split_asm)+
+                                (* 31 subgoals *)
+                                apply(simp add: transform_intent_def transform_intent_tcb_defs
+                                           split: gen_invocation_labels.split_asm invocation_label.split_asm
+                                                  arch_invocation_label.split_asm)+
   done
 
 lemma transform_intent_isnot_UntypedIntent:
@@ -553,12 +563,12 @@ lemma transform_intent_isnot_TcbIntent:
           (label = GenInvocationLabel TCBSetSchedParams \<longrightarrow> length args < 2) \<and>
           (label = GenInvocationLabel TCBSetIPCBuffer \<longrightarrow> length args < 1) \<and>
           (label = GenInvocationLabel TCBSetSpace \<longrightarrow> length args < 3) \<and>
+          (label = GenInvocationLabel TCBSetFlags \<longrightarrow> length args < 2) \<and>
           (label \<noteq> GenInvocationLabel TCBSuspend) \<and>
           (label \<noteq> GenInvocationLabel TCBResume) \<and>
           (label \<noteq> GenInvocationLabel TCBBindNotification) \<and>
           (label \<noteq> GenInvocationLabel TCBUnbindNotification) \<and>
-          (label \<noteq> GenInvocationLabel TCBSetTLSBase) \<and>
-          (label \<noteq> GenInvocationLabel TCBSetFlags))"
+          (label \<noteq> GenInvocationLabel TCBSetTLSBase))"
   apply(rule iffI)
     subgoal
       apply(erule contrapos_np)
@@ -666,9 +676,9 @@ where
         | ARM_A.PageCap dev ptr cap_rights_ sz mp \<Rightarrow>
             Types_D.FrameCap dev ptr cap_rights_ (pageBitsForSize sz) Real (transform_mapping mp)
         | ARM_A.PageTableCap ptr mp \<Rightarrow>
-            Types_D.PageTableCap ptr Real (transform_mapping mp)
+            Types_D.PageTableCap PT ptr Real (transform_mapping mp)
         | ARM_A.PageDirectoryCap ptr mp \<Rightarrow>
-            Types_D.PageDirectoryCap ptr Real (option_map transform_asid mp)
+            Types_D.PageTableCap PD ptr Real (option_map (\<lambda>asid. (transform_asid asid, 0)) mp)
         | ARM_A.SGISignalCap irq target \<Rightarrow>
             Types_D.SGISignalCap irq target
         )
@@ -839,7 +849,8 @@ where
                    tcb_caller_slot \<mapsto> (transform_cap $ tcb_caller tcb),
                    tcb_ipcbuffer_slot \<mapsto> (transform_cap $ tcb_ipcframe tcb),
                    tcb_pending_op_slot \<mapsto> (infer_tcb_pending_op ptr (tcb_state tcb)),
-                   tcb_boundntfn_slot \<mapsto> (infer_tcb_bound_notification (tcb_bound_notification tcb))
+                   tcb_boundntfn_slot \<mapsto> (infer_tcb_bound_notification (tcb_bound_notification tcb)),
+                   tcb_boundvcpu_slot \<mapsto> cdl_cap.NullCap
                  ],
 
                  cdl_tcb_fault_endpoint = (of_bl (tcb_fault_handler tcb)),
@@ -859,7 +870,7 @@ definition
 where
   "transform_asid_pool_entry p \<equiv> case p of
        None \<Rightarrow> Types_D.NullCap
-     | Some p \<Rightarrow> Types_D.PageDirectoryCap p (Fake undefined) None"
+     | Some p \<Rightarrow> Types_D.PageTableCap PD p (Fake undefined) None"
 
 (*
  * Transform an AsidPool.
@@ -911,7 +922,7 @@ where
   "transform_pde pde \<equiv> case pde of
            ARM_A.InvalidPDE \<Rightarrow> cdl_cap.NullCap
          | ARM_A.PageTablePDE ref attr _ \<Rightarrow>
-             Types_D.PageTableCap (transform_paddr ref) (Fake (attribs_to_word attr)) None
+             Types_D.PageTableCap PT (transform_paddr ref) (Fake (attribs_to_word attr)) None
          | ARM_A.SectionPDE ref attr _ rights_ \<Rightarrow>
              Types_D.FrameCap False (transform_paddr ref) rights_
                               (pageBitsForSize ARMSection) (Fake (attribs_to_word attr)) None
@@ -948,9 +959,9 @@ definition
          | Structures_A.ArchObj (ARM_A.ASIDPool ap) \<Rightarrow>
                 Types_D.AsidPool \<lparr>cdl_asid_pool_caps = (transform_asid_pool_contents ap)\<rparr>
          | Structures_A.ArchObj (ARM_A.PageTable ptx) \<Rightarrow>
-                Types_D.PageTable \<lparr>cdl_page_table_caps = (transform_page_table_contents ptx)\<rparr>
+                Types_D.PageTable PT (transform_page_table_contents ptx)
          | Structures_A.ArchObj (ARM_A.PageDirectory pd) \<Rightarrow>
-                Types_D.PageDirectory \<lparr>cdl_page_directory_caps = (transform_page_directory_contents pd)\<rparr>
+                Types_D.PageTable PD (transform_page_directory_contents pd)
          | Structures_A.ArchObj (ARM_A.DataPage dev sz) \<Rightarrow>
                 Types_D.Frame \<lparr>cdl_frame_size_bits = pageBitsForSize sz,
                                cdl_frame_fills = default_frame_fill_data\<rparr>"

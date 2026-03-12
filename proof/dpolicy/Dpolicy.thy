@@ -51,8 +51,7 @@ where
     | cdl_cap.IrqControlCap \<Rightarrow> {Control}
     | cdl_cap.IrqHandlerCap irq \<Rightarrow> {Control}
     | cdl_cap.FrameCap dev oref r sz is_real asid \<Rightarrow> vspace_cap_rights_to_auth r
-    | cdl_cap.PageTableCap oref is_real asid\<Rightarrow> {Control}
-    | cdl_cap.PageDirectoryCap oref is_real asid \<Rightarrow> {Control}
+    | cdl_cap.PageTableCap l oref is_real asid\<Rightarrow> {Control}
     | cdl_cap.AsidControlCap \<Rightarrow> {Control}
     | cdl_cap.AsidPoolCap oref asid \<Rightarrow> {Control}
     | cdl_cap.SGISignalCap irq target \<Rightarrow> {Control}
@@ -79,12 +78,12 @@ where
 | "cdl_obj_refs cdl_cap.IrqControlCap = {}"
 | "cdl_obj_refs (cdl_cap.IrqHandlerCap irq) = {}"
 | "cdl_obj_refs (cdl_cap.FrameCap dev x rs sz is_real asid) = ptr_range x sz"
-| "cdl_obj_refs (cdl_cap.PageDirectoryCap x is_real asid) = {x}"
-| "cdl_obj_refs (cdl_cap.PageTableCap x is_real asid) = {x}"
+| "cdl_obj_refs (cdl_cap.PageTableCap _ x is_real asid) = {x}"
 | "cdl_obj_refs (cdl_cap.AsidPoolCap p asid) = {p}"
 | "cdl_obj_refs cdl_cap.AsidControlCap = {}"
 | "cdl_obj_refs (cdl_cap.ZombieCap ptr) = {ptr}"
 | "cdl_obj_refs (cdl_cap.BoundNotificationCap word) = {word}"
+| "cdl_obj_refs (cdl_cap.VCPUCap word) = {word}"
 | "cdl_obj_refs _ = {}"
 
 inductive cdl_cap_is_transferable for opt_cap
@@ -135,8 +134,7 @@ fun
   cdl_cap_asid' :: "cdl_cap \<Rightarrow> asid set"
 where
     "cdl_cap_asid' (Types_D.FrameCap _ _ _ _ _ asid) = (transform_asid_rev o fst) ` set_option asid"
-  | "cdl_cap_asid' (Types_D.PageTableCap _ _ asid) = (transform_asid_rev o fst) ` set_option asid"
-  | "cdl_cap_asid' (Types_D.PageDirectoryCap _ _ asid) = transform_asid_rev ` set_option asid"
+  | "cdl_cap_asid' (Types_D.PageTableCap _ _ _ asid) = (transform_asid_rev o fst) ` set_option asid"
   | "cdl_cap_asid' (Types_D.AsidPoolCap _ asid) =
                                         {x. fst (transform_asid x) = asid \<and> x \<noteq> 0}"
   | "cdl_cap_asid' (Types_D.AsidControlCap) = UNIV"
@@ -289,8 +287,7 @@ definition
 where
   "is_real_cap cap \<equiv> case cap of
     cdl_cap.FrameCap _ _ _ _ (Fake _) _ \<Rightarrow> False
-  | cdl_cap.PageTableCap _ (Fake _) _ \<Rightarrow> False
-  | cdl_cap.PageDirectoryCap _ (Fake _) _ \<Rightarrow> False
+  | cdl_cap.PageTableCap _ _ (Fake _) _ \<Rightarrow> False
   | _ \<Rightarrow> True"
 
 lemma is_real_cap_transform:
@@ -345,8 +342,9 @@ lemma caps_of_state_transform_opt_cap_rev:
     apply (rule nat_to_bl_to_bin, simp+)
    apply clarsimp
    apply (clarsimp simp:transform_tcb_def tcb_slot_defs split:if_split_asm)
-         apply (clarsimp simp: is_null_cap_def is_bound_ntfn_cap_def infer_tcb_bound_notification_def
-                         split: option.splits)
+          apply ((clarsimp simp: is_null_cap_def is_bound_ntfn_cap_def
+                                 infer_tcb_bound_notification_def
+                          split: option.splits)+)[2]
         apply (simp add:is_thread_state_cap_def infer_tcb_pending_op_def is_null_cap_def is_real_cap_def
                     split:Structures_A.thread_state.splits option.splits)
        apply (rule exI, rule conjI, simp, rule exI, rule conjI,
@@ -371,7 +369,7 @@ lemma caps_of_state_transform_opt_cap_rev:
 abbreviation
   "get_size cap \<equiv> case cap of
      cdl_cap.FrameCap _ _ _ sz _ _ \<Rightarrow> sz
-   | cdl_cap.PageTableCap _ _ _ \<Rightarrow> 0"
+   | cdl_cap.PageTableCap _ _ _ _ \<Rightarrow> 0"
 
 lemma opt_cap_None_word_bits:
   "\<lbrakk> einvs s; snd ptr \<ge> 2 ^ word_bits \<rbrakk> \<Longrightarrow> opt_cap ptr (transform s) = None"
@@ -1002,7 +1000,7 @@ lemma state_asids_transform:
    apply (case_tac aa, simp_all add:vs_refs_no_global_pts_def)
    apply (rename_tac arch_kernel_obj)
    apply (case_tac arch_kernel_obj, simp_all add:graph_of_def, safe)
-   apply (rule_tac pdcap="cdl_cap.PageDirectoryCap b (Fake undefined) None" in csata_asid_lookup)
+   apply (rule_tac pdcap="cdl_cap.PageTableCap PD b (Fake undefined) None" in csata_asid_lookup)
        apply (simp add: asid_table_entry_transform)
       apply (simp add: is_null_cap_def transform_asid_table_entry_def)
      apply (simp add: is_null_cap_def transform_asid_table_entry_def)

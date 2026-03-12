@@ -10,9 +10,14 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
+(* Some of the proofs in this file are specific to AARCH32 *)
+lemma cdl_ARCH_AARCH32:
+  "cdl_ARCH = AARCH32"
+  by (simp add: cdl_ARCH_all_defs)
+
 definition
  "make_arch_duplicate cap attr \<equiv> case cap of
-    cdl_cap.PageTableCap oid _ mp \<Rightarrow> cdl_cap.PageTableCap oid (Fake attr) None
+    cdl_cap.PageTableCap PT oid _ mp \<Rightarrow> cdl_cap.PageTableCap PT oid (Fake attr) None
   | cdl_cap.FrameCap dev oid rghts sz _ mp \<Rightarrow> cdl_cap.FrameCap dev oid rghts sz (Fake attr) None"
 
 definition
@@ -56,12 +61,12 @@ where "transform_page_dir_inv invok \<equiv> case invok of
 
 definition transform_page_inv :: "ARM_A.page_invocation \<Rightarrow> cdl_page_invocation option"
 where "transform_page_inv invok \<equiv> case invok of
-  ARM_A.page_invocation.PageMap asid cap ct_slot entries \<Rightarrow>
+  ARM_A.page_invocation.PageMap asid cap ct_slot slot \<Rightarrow>
    Some (cdl_page_invocation.PageMap (transform_cap cap)
-        (case_sum (transform_pte \<circ> fst) (transform_pde \<circ> fst) entries)
+        (case_sum (transform_pte \<circ> fst) (transform_pde \<circ> fst) slot)
         (transform_cslot_ptr ct_slot)
-        (case_sum (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
-          (\<lambda>pair. [(transform_pd_slot_ref \<circ> hd \<circ> snd) pair]) entries))
+        (case_sum (\<lambda>pair. (transform_pt_slot_ref \<circ> hd \<circ> snd) pair)
+          (\<lambda>pair. (transform_pd_slot_ref \<circ> hd \<circ> snd) pair) slot))
 | ARM_A.page_invocation.PageUnmap (arch_cap.PageCap _ a _ sz asid) ref \<Rightarrow>
     Some (cdl_page_invocation.PageUnmap (transform_mapping asid) a (transform_cslot_ptr ref) (pageBitsForSize sz))
 | ARM_A.page_invocation.PageFlush flush _ _ _ _ _ \<Rightarrow>
@@ -211,8 +216,8 @@ lemma create_mapping_entries_dcorres:
       and vp_aligned: "vmsz_aligned vptr pgsz"
       and kb: "vptr < kernel_base"
   shows
-  "dcorres (dc \<oplus> (\<lambda>rv rv'. rv = case_sum (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
-                                 (\<lambda>pair. [(transform_pd_slot_ref \<circ> hd \<circ> snd) pair]) rv'
+  "dcorres (dc \<oplus> (\<lambda>rv rv'. rv = case_sum (\<lambda>pair. (transform_pt_slot_ref \<circ> hd \<circ> snd) pair)
+                                 (\<lambda>pair. (transform_pd_slot_ref \<circ> hd \<circ> snd) pair) rv'
                      \<and> case_sum (transform_pte \<circ> fst) (transform_pde \<circ> fst) rv'
                            = FrameCap False (ptrFromPAddr base)
                                vm_rights (pageBitsForSize pgsz) (Fake (transform_vm_attributes attrib pgsz)) None))
@@ -238,25 +243,23 @@ proof -
 
   show ?thesis using pdid vp_aligned
     apply hypsubst_thin
-    proof (induct pgsz)
-      case ARMSmallPage
-      show ?case using ARMSmallPage.prems
-        apply (simp add: liftME_def[symmetric] o_def transform_pte_def
-                                     lookup_error_injection dc_def[symmetric])
-        apply (rule dcorres_injection_handler_rhs)
-        apply (simp add:liftE_bindE cdl_page_mapping_entries_def)
-        apply (rule corres_dummy_returnOk_r)
-        apply (rule corres_guard_imp)
-          apply (rule corres_splitEE)
-            apply (rule dcorres_lookup_pt_slot)
-           apply (rule dcorres_returnOk; clarsimp simp: transform_vm_attributes_def)
-          apply wp+
-         apply simp
-        apply (clarsimp simp:
-          dest!:page_directory_at_aligned_pd_bits )
-        apply (frule less_kernel_base_mapping_slots_both[OF kb,where x = 0])
-         apply simp
-        apply (simp add:pageBits_def pd_bits_def)
+  proof (induct pgsz)
+    case ARMSmallPage
+    show ?case using ARMSmallPage.prems
+      apply (simp add: liftME_def[symmetric] o_def transform_pte_def
+                                   lookup_error_injection dc_def[symmetric])
+      apply (rule dcorres_injection_handler_rhs)
+      apply (simp add:liftE_bindE cdl_page_mapping_entries_def)
+      apply (rule corres_guard_imp, rule corres_rel_imp)
+         apply (rule dcorres_lookup_pt_slot)
+        apply (clarsimp simp: transform_vm_attributes_def)
+       apply wp+
+      apply simp
+      apply (clarsimp simp:
+        dest!:page_directory_at_aligned_pd_bits )
+      apply (frule less_kernel_base_mapping_slots_both[OF kb,where x = 0])
+       apply simp
+      apply (simp add:pageBits_def pd_bits_def)
       done
     next
       case ARMLargePage
@@ -266,6 +269,7 @@ proof -
         apply (rule dcorres_injection_handler_rhs)
         apply (simp add:liftE_bindE cdl_page_mapping_entries_def largePagePTE_offsets_def)
         apply (rule corres_dummy_returnOk_r)
+        apply (rule corres_dummy_returnOk_l)
         apply (rule corres_guard_imp)
           apply (rule corres_splitEE)
              apply (rule dcorres_lookup_pt_slot)
@@ -632,6 +636,7 @@ proof (induct x)
                      split: cap.split arch_cap.split option.split)
     apply (clarsimp simp: get_index_def transform_cap_list_def
                           throw_on_none_def split_beta bindE_assoc
+                          is_vspace_cap_def vspace_type_def cdl_ARCH_AARCH32
                           dc_def[symmetric])
     apply (rule corres_guard_imp)
       apply (rule corres_symb_exec_r)
@@ -755,7 +760,7 @@ next
   case (PageCap dev base rights pgsz asid)
   thus ?case
     supply option.case_cong[cong] if_cong[cong]
-    apply (simp add: Decode_D.decode_invocation_def
+    apply (simp add: Decode_D.decode_invocation_def cdl_ARCH_AARCH32
                      decode_invocation_def arch_decode_invocation_def
                split del: if_split)
     apply (clarsimp simp: get_page_intent_def transform_intent_def
@@ -931,7 +936,7 @@ next
   case (PageTableCap ptr asid)
   thus ?case
     supply if_cong[cong]
-    apply (simp add: Decode_D.decode_invocation_def
+    apply (simp add: Decode_D.decode_invocation_def cdl_ARCH_AARCH32
                      decode_invocation_def arch_decode_invocation_def
                split del: if_split)
     apply (clarsimp simp: get_page_table_intent_def transform_intent_def
@@ -971,7 +976,7 @@ next
           cdl_lookup_pd_slot_def cap_has_object_def
           neq_Nil_conv cap_aligned_def)
         apply (simp add: make_arch_duplicate_def transform_pd_slot_ref_def)
-        apply (clarsimp simp add: free_pd_slots_def opt_object_page_directory
+        apply (clarsimp simp add: opt_object_page_directory
                                   obj_at_def invs_valid_idle pd_shifting
                                   object_slots_def transform_page_directory_contents_def
                                   unat_map_def kernel_pde_mask_def
@@ -994,11 +999,10 @@ next
   case (PageDirectoryCap pd_ptr asid)
   thus ?case
   (* abandon hope, all who enter here *)
-  apply (simp add: Decode_D.decode_invocation_def
-  decode_invocation_def arch_decode_invocation_def
-  get_page_directory_intent_def transform_intent_def
-  isPDFlushLabel_def
-  split del: if_split)
+  apply (simp add: Decode_D.decode_invocation_def cdl_ARCH_AARCH32
+                   decode_invocation_def arch_decode_invocation_def
+                   get_page_directory_intent_def transform_intent_def isPDFlushLabel_def
+              split del: if_split)
   apply (clarsimp simp: get_page_directory_intent_def transform_intent_def
            map_option_Some_eq2 throw_opt_def decode_page_directory_invocation_def
     split: label_split_asm  cdl_intent.splits
@@ -1850,7 +1854,8 @@ lemma invoke_asid_pool_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split)
        apply (rule get_cap_corres; simp)
-      apply (clarsimp split: cap.splits arch_cap.splits simp: corres_free_fail)
+      apply (clarsimp split: cap.splits arch_cap.splits
+                      simp: corres_free_fail vspace_type_def cdl_ARCH_AARCH32)
       apply (rule dcorres_symb_exec_r)
         apply (rule_tac F = "rv = pool" in corres_gen_asm2)
         apply (rule corres_split)
@@ -1875,7 +1880,7 @@ lemma invoke_arch_corres:
   apply (clarsimp simp: arch_perform_invocation_def valid_arch_inv_def)
   apply (case_tac arch_invok)
        apply (simp_all add:arch_invocation_relation_def translate_arch_invocation_def)
-       apply (clarsimp simp:liftE_def bind_assoc)
+       apply (clarsimp simp:liftE_def bind_assoc cdl_ARCH_AARCH32)
        apply (rule corres_guard_imp)
          apply (rule corres_split)
             apply (rule invoke_page_table_corres; simp)
@@ -1886,7 +1891,7 @@ lemma invoke_arch_corres:
         apply (rule corres_split)
            apply (rule invoke_page_directory_corres; simp)
           apply (rule corres_trivial[OF corres_free_return])
-         apply (wp | clarsimp)+
+         apply (wp | clarsimp simp: cdl_ARCH_AARCH32)+
      apply (rule corres_guard_imp)
        apply (rule invoke_page_corres)
        apply (wp | clarsimp simp:invocation_duplicates_valid_def)+

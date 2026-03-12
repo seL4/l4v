@@ -10,6 +10,7 @@ imports
   CNode_D
   Interrupt_D
   PageTable_D
+  GenPageTable_D
   Tcb_D
   Untyped_D
 begin
@@ -103,6 +104,10 @@ where
          DomainIntent x \<Rightarrow> Some x
        | _ \<Rightarrow> None"
 
+definition get_vcpu_intent :: "cdl_intent \<Rightarrow> unit option" where
+  "get_vcpu_intent intent \<equiv>
+     case intent of VCPUIntent x \<Rightarrow> Some x | _ \<Rightarrow> None"
+
 (*
  * Decode and validate the given intent, turning it into an
  * invocation.
@@ -183,25 +188,39 @@ where
        | FrameCap _ _ _ _ _ _ \<Rightarrow>
            doE
              page_intent \<leftarrow> throw_opt undefined $ get_page_intent intent;
-             liftME InvokePage $ decode_page_invocation
-                 invoked_cap invoked_cap_ref caps page_intent
+             liftME InvokePage $
+                      (if cdl_ARCH = AARCH32
+                       then decode_page_invocation
+                       else gen_decode_page_invocation)
+                      invoked_cap invoked_cap_ref caps page_intent
            odE
-       | PageTableCap _ _ _ \<Rightarrow>
-           doE
-             page_table_intent \<leftarrow> throw_opt undefined $ get_page_table_intent intent;
-             liftME InvokePageTable $ decode_page_table_invocation
-                 invoked_cap invoked_cap_ref caps page_table_intent
-           odE
-       | PageDirectoryCap _ _ _ \<Rightarrow>
-          doE
-             page_directory_intent \<leftarrow> throw_opt undefined $ get_page_directory_intent intent;
-             liftME InvokePageDirectory $ decode_page_directory_invocation
-                 invoked_cap invoked_cap_ref caps page_directory_intent
+       | PageTableCap pt_t _ _ _ \<Rightarrow>
+           if cdl_ARCH = AARCH32 then
+             if pt_t = PT then doE
+               page_table_intent \<leftarrow> throw_opt undefined $ get_page_table_intent intent;
+               liftME InvokePageTable $ decode_page_table_invocation
+                                          invoked_cap invoked_cap_ref caps page_table_intent
+             odE
+             else if pt_t = PD then doE
+               page_directory_intent \<leftarrow> throw_opt undefined $ get_page_directory_intent intent;
+               liftME InvokePageDirectory $ decode_page_directory_invocation
+                                              invoked_cap invoked_cap_ref caps page_directory_intent
+             odE
+             else fail
+           else doE
+             page_table_intent \<leftarrow> throw_on_none $ get_page_table_intent intent;
+             liftME InvokePageTable $ gen_decode_page_table_invocation
+                                        invoked_cap invoked_cap_ref caps page_table_intent
            odE
        | DomainCap \<Rightarrow>
           doE
             domain_intent \<leftarrow> throw_opt undefined $ get_domain_intent intent;
             liftME InvokeDomain $ decode_domain_invocation caps domain_intent
+          odE
+       | VCPUCap vcpu \<Rightarrow>
+          doE
+            _ \<leftarrow> throw_opt undefined $ get_vcpu_intent intent;
+            liftME InvokeVCPU $ decode_vcpu_invocation vcpu caps
           odE
 
        \<comment> \<open>Don't support operations on other types of caps.\<close>

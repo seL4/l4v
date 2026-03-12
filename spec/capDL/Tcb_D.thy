@@ -9,7 +9,7 @@
  *)
 
 theory Tcb_D
-imports Invocations_D CSpace_D
+imports Invocations_D CSpace_D ExecSpec.Structs_B
 begin
 
 definition cdl_update_cnode_cap_data :: "cdl_cap \<Rightarrow> machine_word \<Rightarrow> cdl_cap"
@@ -33,11 +33,8 @@ where "cdl_same_arch_obj_as capa capb \<equiv>
   | FrameCap dev ra _ sa _ _ \<Rightarrow> (
        case capb of FrameCap dev' rb _ sb _ _ \<Rightarrow> rb = ra \<and> sb = sa \<and> dev = dev'
         | _ \<Rightarrow> False)
-  | cdl_cap.PageTableCap a _ _ \<Rightarrow> (
-       case capb of cdl_cap.PageTableCap b _ _ \<Rightarrow> b = a
-        | _ \<Rightarrow> False)
-  | cdl_cap.PageDirectoryCap a _ _ \<Rightarrow> (
-       case capb of cdl_cap.PageDirectoryCap b _ _ \<Rightarrow> b = a
+  | cdl_cap.PageTableCap l a _ _ \<Rightarrow> (
+       case capb of cdl_cap.PageTableCap l' b _ _ \<Rightarrow> b = a \<and> l' = l
         | _ \<Rightarrow> False)
   | _ \<Rightarrow> False"
 
@@ -132,7 +129,8 @@ where
          odE \<sqinter> throw
      | TcbUnbindNTFNIntent \<Rightarrow> returnOk (NotificationControl (cap_object target) None) \<sqinter> throw
      | TcbSetTLSBaseIntent \<Rightarrow> returnOk (SetTLSBase (cap_object target)) \<sqinter> throw
-     | TcbSetFlagsIntent \<Rightarrow> returnOk (SetFlags (cap_object target)) \<sqinter> throw"
+     | TcbSetFlagsIntent set_flags clear_flags \<Rightarrow>
+         returnOk (SetFlags (cap_object target) (set_flags && tcbFlagMask) (clear_flags && tcbFlagMask)) \<sqinter> throw"
 
 
 (* Delete the given slot of a TCB. *)
@@ -297,7 +295,7 @@ where
              Some ntfn_id \<Rightarrow> bind_notification tcb ntfn_id
            | None \<Rightarrow> unbind_notification tcb)
     | SetTLSBase tcb \<Rightarrow> liftE $ corrupt_tcb_intent tcb
-    | SetFlags tcb \<Rightarrow> liftE $ corrupt_tcb_intent tcb"
+    | SetFlags tcb set_flags clear_flags \<Rightarrow> liftE $ corrupt_tcb_intent tcb"
 
 definition
   decode_domain_invocation :: "(cdl_cap \<times> cdl_cap_ref) list \<Rightarrow> cdl_domain_intent \<Rightarrow> cdl_domain_invocation except_monad"
@@ -316,5 +314,15 @@ where
   "invoke_domain params \<equiv> case params of
      SetDomain tcb d \<Rightarrow> liftE $ set_domain tcb d"
 
+
+definition decode_vcpu_invocation ::
+  "cdl_object_id \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow> cdl_vcpu_invocation except_monad"
+  where
+  "decode_vcpu_invocation vcpu caps \<equiv>
+     returnOk (VCPUSetTCB vcpu (cap_object (fst (hd caps))) ) \<sqinter> throw"
+
+definition invoke_vcpu :: "cdl_vcpu_invocation \<Rightarrow> unit k_monad" where
+  "invoke_vcpu params \<equiv>
+     case params of VCPUSetTCB vcpu tcb \<Rightarrow> set_cap (tcb, tcb_boundvcpu_slot) (VCPUCap vcpu)"
 
 end

@@ -40,6 +40,9 @@ where
            (cap_objects untyped_cap) target_slot base
        odE \<sqinter> throw"
 
+definition is_vspace_cap :: "cdl_cap \<Rightarrow> bool" where
+  "is_vspace_cap cap \<equiv> is_pt_cap cap \<and> cdl_cap_pt_type cap = vspace_type"
+
 definition
   decode_asid_pool_invocation :: "cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow>
       cdl_asid_pool_intent \<Rightarrow> cdl_asid_pool_invocation except_monad"
@@ -47,16 +50,14 @@ where
   "decode_asid_pool_invocation target target_ref caps intent \<equiv> case intent of
      AsidPoolAssignIntent \<Rightarrow>
        doE
-         (pd_cap, pd_cap_ref) \<leftarrow> throw_on_none $ get_index caps 0;
-         (case pd_cap of
-             PageDirectoryCap _ _ _ \<Rightarrow> returnOk ()
-           | _ \<Rightarrow> throw);
+         (vs_cap, vs_cap_ref) \<leftarrow> throw_on_none $ get_index caps 0;
+         unlessE (is_vspace_cap vs_cap) throw;
 
          base \<leftarrow> (case target of
              AsidPoolCap p base \<Rightarrow> returnOk $ base
            | _ \<Rightarrow> throw);
          offset \<leftarrow> liftE $ select {x. x < 2 ^ asid_low_bits};
-         returnOk $ Assign (base, offset) pd_cap_ref (cap_object target, offset)
+         returnOk $ Assign (base, offset) vs_cap_ref (cap_object target, offset)
        odE \<sqinter> throw"
 
 definition
@@ -93,12 +94,13 @@ definition
 where
   "invoke_asid_pool params \<equiv>
      case params of
-       Assign asid pd_cap_ref ap_target_slot \<Rightarrow> do
-         pd_cap \<leftarrow> get_cap pd_cap_ref;
-         case pd_cap of
-           PageDirectoryCap pd_id _ _ \<Rightarrow> do
-             set_cap pd_cap_ref (PageDirectoryCap pd_id Real (Some asid));
-             set_cap ap_target_slot (PageDirectoryCap pd_id (Fake undefined) None)
+       Assign asid vs_cap_ref ap_target_slot \<Rightarrow> do
+         vs_cap \<leftarrow> get_cap vs_cap_ref;
+         case vs_cap of
+           PageTableCap pt_t vs_id _ _ \<Rightarrow> do
+             assert (pt_t = vspace_type);
+             set_cap vs_cap_ref (PageTableCap vspace_type vs_id Real (Some (asid, 0)));
+             set_cap ap_target_slot (PageTableCap vspace_type vs_id (Fake undefined) None)
            od
          | _ \<Rightarrow> fail
        od"
