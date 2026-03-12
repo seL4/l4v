@@ -479,6 +479,12 @@ lemma derive_cap_non_NullCap:
   apply wpsimp
   by fastforce
 
+lemma derive_cap_not_in_objrefs:
+  "\<lbrace>\<lambda>s. x \<notin> obj_refs cap\<rbrace> derive_cap (b, c) cap \<lbrace>\<lambda>r s. x \<notin> obj_refs r\<rbrace>, -"
+  unfolding derive_cap_def RISCV64_A.arch_derive_cap_def
+  apply wpsimp
+  by (force simp add: RISCV64_A.aobj_ref.simps(3) RISCV64_A.arch_cap.sel(2))
+
 lemma derive_cap_check_cap_ref[wp]:
   "\<lbrace>\<lambda>s. check_cap_ref cap (colour_oracle (cur_domain s))\<rbrace>
    derive_cap (b, c) cap
@@ -705,7 +711,7 @@ lemma hoare_absorb_impE_R:
   by (metis (mono_tags, lifting) hoare_post_impE_R)
 
 (* very ad-hoc but whatever *)
-lemma hoare_double_impE_R:
+lemma hoare_absorb_double_impE_R:
   "\<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. (Q rv s \<longrightarrow> Q' rv s) \<and> (Q rv s \<longrightarrow> R rv s)\<rbrace>,- \<Longrightarrow>
    \<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> Q' rv s \<longrightarrow> R rv s\<rbrace>,-"
   using hoare_strengthen_postE_R by fastforce
@@ -744,11 +750,13 @@ next
     apply (cases a)
     apply wpsimp
     apply safe
+         (* case 1 of 6 *)
          apply (wpsimp wp: set_extra_badge_colour_maintained)
           apply(wpsimp wp:hoare_vcg_conj_lift)
            apply (wpsimp simp: set_extra_badge_def)
           apply(wpsimp wp:hoare_vcg_const_Ball_lift)
          apply fastforce
+        (* case 2 of 6 *)
         apply(wpsimp wp:hoare_vcg_op_lift cap_insert_weak_cte_wp_at)
            apply(wpsimp wp:derive_cap_non_NullCap)
           apply wpsimp
@@ -756,6 +764,7 @@ next
           apply (wpsimp wp: derive_cap_inv)*) (* <- stuff below seems to increase cases... may want to delete from line below till safe (exclusive) *)
          apply(strengthen cap_irqs_appropriate_strengthen)
          apply(strengthen real_cte_tcb_valid)
+         (* FIXME: there's probably a better helper for these to get rid of this repetition *)
          apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
           apply(wpsimp wp:hoare_drop_impE_R)
          apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
@@ -777,9 +786,9 @@ next
          apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
           apply(wpsimp wp:arch_derive_cap_objrefs_iszombie simp:Ball_def)
           apply(rule hoare_vcg_imp_all_liftE_R)
-          apply(rule hoare_double_impE_R)
-          apply(wpsimp wp:hoare_vcg_conj_liftE_R')
-           apply(wpsimp wp:derive_cap_objrefs)
+          apply(rule hoare_vcg_imp_commE_R)
+          apply(rule hoare_vcg_imp_liftE_R')
+           apply(wpsimp wp:derive_cap_not_in_objrefs)
           apply(rule hoare_vcg_imp_all_liftE_R)
           apply(rule hoare_vcg_imp_all_liftE_R)
           apply(rule hoare_vcg_imp_commE_R)
@@ -791,7 +800,7 @@ next
           apply(wpsimp simp:derive_cap_def)
           apply(rule arch_derive_cap_objrefs_iszombie)
          apply(wpsimp wp:derive_cap_is_derived_foo)
-(*
+         (* TBD: will we need to get any more specific here to help the proofs below?
          apply(wpsimp wp:hoare_vcg_imp_conj_liftE_R')
           apply(wpsimp wp:hoare_vcg_imp_liftE_R')
           apply(wpsimp wp:derive_cap_is_derived_foo)
@@ -800,47 +809,57 @@ next
           apply(wpsimp wp:derive_cap_is_derived_foo)
          apply (wpsimp wp:hoare_vcg_conj_liftE_R')
           apply(wpsimp wp:derive_cap_is_derived_foo)
-*)
+         *)
         apply clarsimp
         apply(clarsimp simp:check_cap_ref_in_cur_domain split_beta)
         apply(rule conjI)
          apply(metis (mono_tags, lifting) cap_irqs_simps ex_cte_cap_wp_to_weakenE is_cap_simps(1)
            list.set_sel(1))
         apply(rule conjI)
-         (* hm, actually this is still no good. absorbing the imp such that
-            we end up demanding there's some arbitrary x in the obj_refs
-            is not what we want. DOWN TO HERE *)
          apply(clarsimp simp:no_refs_zombies_def)
          apply(rule conjI)
           apply(clarsimp simp:cte_wp_at_def)
-(*
-        apply safe[1]
-          (* XXX: hmm but setting \<top> is too permissive because we need it to be equal to NullCap*)
-          apply(clarsimp simp:cte_wp_at_def)
-          oops
-        apply safe[1] (*slow, >250 cases *)
-                          apply (simp add: split_beta)
-                          apply clarsimp
-                          apply (erule_tac x="hd slots" in ballE)
-                          apply clarsimp
-                          apply (rule conjI)
-                          apply (simp add: valid_ptr_in_cur_domain_def)
-                          apply (simp add: crunch_simps(1))
-                          apply (rule conjI|rule impI)+
-                          apply (simp add: valid_ptr_in_cur_domain_def)
-                          apply (erule conjE)+
-                          apply (simp add: list.set_sel(2)
-                              valid_ptr_in_cur_domain_def)
-                          apply simp
-                          apply safe
-                          apply wpsimp
-                          apply (wp add: set_extra_badge_colour_maintained)
-                          apply (simp add: set_extra_badge_def valid_ptr_in_cur_domain_def)
-                          apply wpsimp
-                          apply (simp add: valid_ptr_in_cur_domain_def)
-*)
-    oops
-    by wpsimp+
+         apply fastforce
+        apply clarsimp
+        (* DOWN TO HERE *)
+        apply(rule conjI)
+         apply(clarsimp simp:cte_wp_at_def)
+         defer (* FIXME *)
+        apply(rule conjI) 
+         apply(clarsimp simp:cte_wp_at_def)
+         defer (* FIXME *)
+        apply(rule conjI)
+         apply clarsimp
+         defer (* FIXME *)
+        apply(rule conjI)
+         defer (* FIXME *)
+        apply(rule conjI)
+         apply clarsimp
+         apply(rule conjI)
+          apply clarsimp
+          defer (* FIXME *)
+         apply clarsimp
+         defer (* FIXME *)
+        apply clarsimp
+        defer (* FIXME *)
+       (* case 3 of 6 *)
+       apply(wpsimp wp:hoare_vcg_op_lift cap_insert_weak_cte_wp_at)
+          apply(wpsimp wp:derive_cap_non_NullCap)
+         apply wpsimp
+        (* this is looking very similar to last case. try to factor out? *)
+        defer (* FIXME *)
+       defer
+      (* case 4 of 6 *)
+      (* this one's just like case 1 *)
+      apply (wpsimp wp: set_extra_badge_colour_maintained)
+       apply(wpsimp wp:hoare_vcg_conj_lift)
+        apply (wpsimp simp: set_extra_badge_def)
+       apply(wpsimp wp:hoare_vcg_const_Ball_lift)
+      apply fastforce
+     (* the 5th and 6th cases are free! *)
+     apply wpsimp
+    apply wpsimp
+    sorry
 qed
 
 lemma resolve_address_bits_ret_colour:
@@ -909,6 +928,7 @@ lemma transfer_caps_colour_maintained[wp]:
      apply (wpsimp simp: lookup_slot_for_cnode_op_def)
      apply safe
       apply wpsimp
+       (* FIXME *)
        apply (wpsimp wp: resolve_address_bits_ret_valid)+
     apply (wpsimp simp: lookup_cap_def)
      apply (wpsimp wp: get_cap_wp)
