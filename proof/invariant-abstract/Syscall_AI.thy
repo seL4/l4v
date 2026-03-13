@@ -177,7 +177,7 @@ where
 | "valid_invocation (InvokeEndpoint w w2 b gr) = (ep_at w and ex_nonz_cap_to w)"
 | "valid_invocation (InvokeNotification w w2) = (ntfn_at w and ex_nonz_cap_to w)"
 | "valid_invocation (InvokeTCB i) = Tcb_AI.tcb_inv_wf i"
-| "valid_invocation (InvokeDomain thread domain) = (tcb_at thread and (\<lambda>s. thread \<noteq> idle_thread s))"
+| "valid_invocation (InvokeDomain di) = valid_domain_inv di"
 | "valid_invocation (InvokeReply thread slot grant) =
        (tcb_at thread and cte_wp_at (\<lambda>cap. \<exists> R. cap = ReplyCap thread False R) slot)"
 | "valid_invocation (InvokeIRQControl i) = irq_control_inv_valid i"
@@ -198,12 +198,12 @@ lemma sts_Restart_invs[wp]:
   done
 
 lemma invoke_tcb_tcb[wp]:
-  "\<lbrace>tcb_at tptr\<rbrace> invoke_tcb i \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
-  by (simp add: tcb_at_typ invoke_tcb_typ_at [where P=id, simplified])
+  "invoke_tcb i \<lbrace>tcb_at tptr\<rbrace>"
+  by (simp add: tcb_at_typ invoke_tcb_typ_at[where P=id, simplified])
 
 lemma invoke_domain_tcb[wp]:
-  "\<lbrace>tcb_at tptr\<rbrace> invoke_domain thread domain \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
-  by (simp add: tcb_at_typ invoke_domain_typ_at [where P=id, simplified])
+  "invoke_domain di \<lbrace>tcb_at tptr\<rbrace>"
+  by (simp add: tcb_at_typ invoke_domain_typ_at[where P=id, simplified])
 
 lemma simple_from_active:
   "st_tcb_at active t s \<Longrightarrow> st_tcb_at simple t s"
@@ -630,9 +630,17 @@ lemma sts_tcb_inv_wf [wp]:
          | safe
          | wp sts_obj_at_impossible)+
 
+crunch set_thread_state
+  for domain_list_inv'[wp]: "\<lambda>s. P (domain_list s)"
+  and domain_start_inv'[wp]: "\<lambda>s. P (domain_start_index s)"
+  (wp: get_object_wp)
+
+lemma set_thread_state_valid_domain_inv[wp]:
+  "set_thread_state t st \<lbrace>valid_domain_inv di\<rbrace>"
+  by (cases di; wpsimp simp: valid_domain_inv_def)
 
 lemma sts_valid_inv[wp]:
-  "\<lbrace>valid_invocation i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_invocation i\<rbrace>"
+  "set_thread_state t st \<lbrace>valid_invocation i\<rbrace>"
   by (cases i; wpsimp simp: sts_valid_untyped_inv sts_valid_arch_inv;
       rename_tac i'; case_tac i'; simp;
       wpsimp wp: set_thread_state_valid_cap sts_nasty_bit
@@ -654,7 +662,7 @@ lemma decode_inv_inv[wp]:
   shows
   "\<lbrace>P\<rbrace> decode_invocation label args cap_index slot cap excaps \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (case_tac cap, simp_all add: decode_invocation_def,
-    (wpsimp wp: decode_tcb_inv_inv decode_domain_inv_inv)+)
+    (wpsimp wp: decode_tcb_inv_inv decode_domain_invocation_inv)+)
   done
 
 lemma cnode_eq_strg:

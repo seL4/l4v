@@ -69,7 +69,7 @@ where
   | "perform_invocation is_call can_block (InvokeNotification ntfn_params) = liftE (invoke_notification ntfn_params)"
   | "perform_invocation is_call can_block (InvokeReply reply_params) = liftE (invoke_reply reply_params)"
   | "perform_invocation is_call can_block (InvokeTcb tcb_params) = (invoke_tcb tcb_params)"
-  | "perform_invocation is_call can_block (InvokeDomain domain_params) = (invoke_domain domain_params)"
+  | "perform_invocation is_call can_block (InvokeDomain domain_params) = liftE (invoke_domain domain_params)"
   | "perform_invocation is_call can_block (InvokeCNode cnode_params) = invoke_cnode cnode_params"
   | "perform_invocation is_call can_block (InvokeIrqControl irq_params) = liftE (invoke_irq_control irq_params)"
   | "perform_invocation is_call can_block (InvokeIrqHandler handler_params) = liftE (invoke_irq_handler handler_params)"

@@ -28,6 +28,9 @@ imports
   "VMAttributes_D"
 begin
 
+type_synonym domain_duration_len = 56
+type_synonym domain_duration = "domain_duration_len word"
+
 (*
  * Entities in seL4 have particular rights to kernel objects, which
  * affects how entities can interact with those particular objects.
@@ -196,7 +199,12 @@ datatype cdl_notification_intent =
 datatype cdl_endpoint_intent =
     SendMessageIntent "cdl_cptr list"
 
-datatype cdl_domain_intent = DomainSetIntent domain
+datatype cdl_domain_intent =
+    DomainSetIntent (domint_domain : domain)
+  | DomainScheduleSetStartIntent (domint_index : nat)
+  | DomainScheduleConfigureIntent (domint_index : nat)
+                                  (domint_domain : domain)
+                                  (domint_duration : domain_duration)
 
 datatype cdl_intent =
     CNodeIntent cdl_cnode_intent

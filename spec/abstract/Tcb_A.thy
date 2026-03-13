@@ -273,13 +273,21 @@ definition
      when (tptr = cur) reschedule_required
    od"
 
-definition invoke_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> (data list,'z::state_ext) p_monad" where
-  "invoke_domain thread domain \<equiv>
-     liftE $ do
-       arch_prepare_set_domain thread domain;
-       set_domain thread domain;
-       return []
-     od"
+definition invoke_set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "invoke_set_domain thread domain \<equiv> do
+     arch_prepare_set_domain thread domain;
+     set_domain thread domain
+   od"
+
+definition invoke_domain :: "domain_invocation \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "invoke_domain dom_inv \<equiv>
+     case dom_inv of
+       InvokeDomainSet thread domain \<Rightarrow>
+         invoke_set_domain thread domain
+     | InvokeDomainScheduleSetStart index \<Rightarrow>
+         domain_set_start index
+     | InvokeDomainScheduleConfigure index domain duration \<Rightarrow>
+         domain_schedule_configure index domain duration"
 
 text \<open>Get all of the message registers, both from the sending thread's current
 register file and its IPC buffer.\<close>

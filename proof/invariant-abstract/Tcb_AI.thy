@@ -1245,7 +1245,31 @@ lemma real_cte_at_not_tcb_at:
   "real_cte_at (x, y) s \<Longrightarrow> \<not> tcb_at x s"
   by (clarsimp simp: obj_at_def is_tcb is_cap_table)
 
+definition
+  "valid_domain_inv di \<equiv> case di of
+     InvokeDomainSet t domain \<Rightarrow>
+       \<lambda>s. tcb_at t s \<and> t \<noteq> idle_thread s
+   | InvokeDomainScheduleSetStart i \<Rightarrow>
+       \<lambda>s. i < length (domain_list s) \<and> domain_list s ! i \<noteq> domain_end_marker
+   | InvokeDomainScheduleConfigure i domain duration \<Rightarrow>
+       \<lambda>s. i < length (domain_list s) \<and>
+           (i = domain_start_index s \<longrightarrow> duration \<noteq> 0) \<and>
+           (duration = 0 \<longrightarrow> domain = 0)"
+
+(* Most of the conditions above are for DetSchedDomainTime_AI; invs itself does not depend on
+   domain schedule contents: *)
+lemma invs_domain_list_update[simp]:
+  "invs (domain_list_update f s) = invs s"
+  by (simp add: invs_def cur_tcb_def valid_state_def valid_mdb_def valid_irq_states_def
+                valid_irq_masks_def valid_ioc_def mdb_cte_at_def valid_machine_state_def)
+
+lemma invs_domain_start_index_update[simp]:
+  "invs (domain_start_index_update f s) = invs s"
+  by (simp add: invs_def cur_tcb_def valid_state_def valid_mdb_def valid_irq_states_def
+                valid_irq_masks_def valid_ioc_def mdb_cte_at_def valid_machine_state_def)
+
 context Tcb_AI begin
+
 lemma decode_bind_notification_wf:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t
        and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> (fst x) \<and> (\<forall>y \<in> zobj_refs (fst x). ex_nonz_cap_to y s))\<rbrace>
@@ -1301,28 +1325,44 @@ lemma decode_tcb_inv_wf:
 crunch invoke_domain
   for typ_at[wp]: "\<lambda>s::'state_ext state. P (typ_at T p s)"
   and invs[wp]: "invs :: 'state_ext state \<Rightarrow> _"
-end
 
-lemma decode_domain_inv_inv:
-  "\<lbrace>P\<rbrace>
-     decode_domain_invocation label args excs
-   \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (simp add: decode_domain_invocation_def whenE_def split del: if_split | wp hoare_vcg_if_splitE | wpc)+
+end (* context TCB_AI *)
+
+crunch decode_domain_invocation
+  for inv: P
+  (simp: crunch_simps)
+
+lemma decode_domain_set_inv_wf[wp]:
+  "\<lbrace>valid_objs and valid_global_refs and
+     (\<lambda>s. \<forall>x\<in>set excs. s \<turnstile> fst x) and
+     (\<lambda>s. \<forall>x\<in>set excs. \<forall>r\<in>zobj_refs (fst x). ex_nonz_cap_to r s)\<rbrace>
+   decode_domain_set args excs
+   \<lbrace>valid_domain_inv\<rbrace>, -"
+  unfolding decode_domain_set_def
+  apply wpsimp
+  apply (fastforce simp: valid_domain_inv_def valid_cap_simps
+                   dest: idle_no_ex_cap
+                   elim: ballE[where x="hd excs"])
+  done
+
+lemma decode_domain_schedule_configure_inv_wf[wp]:
+  "\<lbrace>\<top>\<rbrace> decode_domain_schedule_configure args \<lbrace>valid_domain_inv\<rbrace>, -"
+  unfolding decode_domain_schedule_configure_def
+  by (wpsimp simp: valid_domain_inv_def ucast_0_eq max_domain_duration_def)
+
+lemma decode_domain_schedule_set_start[wp]:
+  "\<lbrace>\<top>\<rbrace> decode_domain_schedule_set_start args \<lbrace>valid_domain_inv\<rbrace>, -"
+  unfolding decode_domain_schedule_set_start_def
+  by (wpsimp simp: valid_domain_inv_def)
 
 lemma decode_domain_inv_wf:
   "\<lbrace>valid_objs and valid_global_refs and
      (\<lambda>s. \<forall>x\<in>set excs. s \<turnstile> fst x) and
      (\<lambda>s. \<forall>x\<in>set excs. \<forall>r\<in>zobj_refs (fst x). ex_nonz_cap_to r s)\<rbrace>
      decode_domain_invocation label args excs
-   \<lbrace>\<lambda>(t, d) s. tcb_at t s \<and> t \<noteq> idle_thread s\<rbrace>, -"
-  apply (clarsimp simp: decode_domain_invocation_def whenE_def split del: if_split
-        | wp hoare_vcg_if_splitE | wpc)+
-  apply (erule ballE[where x="hd excs"])
-   apply (clarsimp simp: valid_cap_simps)
-   apply (drule(1) idle_no_ex_cap)
-   apply (erule ballE[where x="hd excs"])
-    apply simp+
-    done
+   \<lbrace>valid_domain_inv\<rbrace>, -"
+  unfolding decode_domain_invocation_def
+  by wpsimp
 
 lemma tcb_bound_refs_no_NTFNBound:
   "(x, NTFNBound) \<notin> tcb_bound_refs a"

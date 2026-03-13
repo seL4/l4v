@@ -500,6 +500,9 @@ locale Retype_R =
   assumes createNewCaps_ksDomScheduleIdx[wp]:
     "\<And>t regionBase numObjects userSize dev P.
      createNewCaps t regionBase numObjects userSize dev \<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
+  assumes createNewCaps_ksDomScheduleStart[wp]:
+    "\<And>t regionBase numObjects userSize dev P.
+     createNewCaps t regionBase numObjects userSize dev \<lbrace>\<lambda>s. P (ksDomScheduleStart s)\<rbrace>"
   assumes createNewCaps_gsUntypedZeroRanges[wp]:
     "\<And>t regionBase numObjects userSize dev P.
      createNewCaps t regionBase numObjects userSize dev \<lbrace>\<lambda>s. P (gsUntypedZeroRanges s)\<rbrace>"
@@ -3618,6 +3621,7 @@ proof (rule hoare_gen_asm, elim conjE)
                createNewCaps_sched_queues[OF cover not_0]
                createNewCaps_valid_sched_pointers
                createNewCaps_valid_bitmaps
+               valid_dom_schedule'_lift
            | simp)+
   using not_0
   apply (clarsimp simp: valid_pspace'_def createNewCaps_arch_ko_type_pre_non_arch)

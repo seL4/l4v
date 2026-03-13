@@ -34,6 +34,7 @@ We use the C preprocessor to select a target architecture.
 > import SEL4.Object.Endpoint
 > import SEL4.Object.Notification
 > import SEL4.Object.Interrupt
+> import SEL4.Object.Domain
 > import {-# SOURCE #-} SEL4.Object.TCB
 > import {-# SOURCE #-} SEL4.Kernel.Thread
 
@@ -404,7 +405,7 @@ The "decodeInvocation" function parses the message, determines the operation tha
 >     liftM InvokeTCB $ decodeTCBInvocation label args cap slot extraCaps
 >
 > decodeInvocation label args _ _ DomainCap extraCaps =
->     liftM (uncurry InvokeDomain) $ decodeDomainInvocation label args extraCaps
+>     liftM InvokeDomain $ decodeDomainInvocation label args extraCaps
 >
 > decodeInvocation
 >         label args _ _ cap@(CNodeCap {}) extraCaps =
@@ -439,42 +440,41 @@ This function just dispatches invocations to the type-specific invocation functi
 >
 > performInvocation _ _ (InvokeUntyped invok) = do
 >     invokeUntyped invok
->     return $ []
+>     return []
 >
 > performInvocation block call (InvokeEndpoint ep badge canGrant canGrantReply) =
 >   withoutPreemption $ do
 >     thread <- getCurThread
 >     sendIPC block call badge canGrant canGrantReply thread ep
->     return $ []
+>     return []
 >
 > performInvocation _ _ (InvokeNotification ep badge) = do
 >     withoutPreemption $ sendSignal ep badge
->     return $ []
+>     return []
 >
 > performInvocation _ _ (InvokeReply thread slot canGrant) =
 >   withoutPreemption $ do
 >     sender <- getCurThread
 >     doReplyTransfer sender thread slot canGrant
->     return $ []
+>     return []
 >
 > performInvocation _ _ (InvokeTCB invok) = invokeTCB invok
 >
-> performInvocation _ _ (InvokeDomain thread domain) = withoutPreemption $ do
->     Arch.prepareSetDomain thread domain
->     setDomain thread domain
->     return $ []
+> performInvocation _ _ (InvokeDomain invok) = do
+>     withoutPreemption $ invokeDomain invok
+>     return []
 >
 > performInvocation _ _ (InvokeCNode invok) = do
 >     invokeCNode invok
->     return $ []
+>     return []
 >
 > performInvocation _ _ (InvokeIRQControl invok) = do
 >     performIRQControl invok
->     return $ []
+>     return []
 >
 > performInvocation _ _ (InvokeIRQHandler invok) = do
 >     withoutPreemption $ invokeIRQHandler invok
->     return $ []
+>     return []
 >
 > performInvocation _ _ (InvokeArchObject invok) = Arch.performInvocation invok
 

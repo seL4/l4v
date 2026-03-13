@@ -1118,4 +1118,16 @@ lemma and_neg_mask_plus_le:
   "w \<le> mask n \<Longrightarrow> p && ~~ mask n \<le> (p && ~~ mask n) + w"
   using and_neg_mask_plus_mask_mono word_and_le word_plus_mono_right2 by blast
 
+lemma ucast_0_eq_left:
+  "x \<le> mask LENGTH('b::len) \<Longrightarrow> (UCAST('a \<rightarrow> 'b) x = 0) = (x = 0)" for x::"'a::len word"
+  using ucast_ucast_le_mask
+  by fastforce
+
+lemma ucast_0_eq_right:
+  "x \<le> mask LENGTH('b::len) \<Longrightarrow> (0 = UCAST('a \<rightarrow> 'b) x) = (x = 0)" for x::"'a::len word"
+  using ucast_ucast_le_mask
+  by fastforce
+
+lemmas ucast_0_eq = ucast_0_eq_left ucast_0_eq_right
+
 end
