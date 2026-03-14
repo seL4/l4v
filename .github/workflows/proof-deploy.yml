@@ -146,11 +146,6 @@ jobs:
         xml: ${{ needs.code.outputs.xml }}
       env:
         GH_SSH: ${{ secrets.CI_SSH }}
-    - name: Trigger binary verification
-      uses: seL4/ci-actions/bv-trigger@master
-      with:
-        token: ${{ secrets.PRIV_REPO_TOKEN }}
-        tag: "l4v/proof-deploy/${{ github.event_name }}"
 
   mcs-deploy:
     name: Deploy MCS manifest
