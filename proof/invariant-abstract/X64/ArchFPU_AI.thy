@@ -316,6 +316,10 @@ lemma cur_fpu_in_cur_domain_domain_start_index_update[simp]:
   "cur_fpu_in_cur_domain (domain_start_index_update f s) = cur_fpu_in_cur_domain s"
   by (simp add: cur_fpu_in_cur_domain_def)
 
+lemma cur_fpu_in_cur_domain_domain_index_update[simp]:
+  "cur_fpu_in_cur_domain (domain_index_update f s) = cur_fpu_in_cur_domain s"
+  by (simp add: cur_fpu_in_cur_domain_def)
+
 lemma invoke_domain_cur_fpu_in_cur_domain[wp]:
   "invoke_domain di \<lbrace>cur_fpu_in_cur_domain\<rbrace>"
   unfolding invoke_domain_def

@@ -888,9 +888,10 @@ definition valid_dom_schedule'_2 :: "domain_schedule_item list \<Rightarrow> nat
   "valid_dom_schedule'_2 sched idx start \<equiv>
      (\<forall>(domain, duration) \<in> set sched. domain \<le> maxDomain \<and> duration \<le> maxDomainDuration \<and>
                                        (duration = 0 \<longrightarrow> domain = 0)) \<and>
-     idx < length sched \<and>
+     Suc idx < length sched \<and>
      start < length sched \<and>
-     sched ! start \<noteq> (0, 0)"
+     sched ! start \<noteq> (0, 0) \<and>
+     sched ! (length sched - 1) = (0, 0)"
 
 abbreviation valid_dom_schedule' :: "kernel_state \<Rightarrow> bool" where
   "valid_dom_schedule' \<equiv>

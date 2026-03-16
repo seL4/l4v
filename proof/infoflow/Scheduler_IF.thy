@@ -92,10 +92,6 @@ locale Scheduler_IF_1 =
     "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_state. P (idle_thread s)\<rbrace>"
   and arch_switch_to_idle_thread_cur_domain[wp]:
     "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_state. P (cur_domain s)\<rbrace>"
-  and arch_switch_to_thread_domain_fields[wp]:
-    "\<And>P t. arch_switch_to_thread t \<lbrace>\<lambda>s :: det_state. domain_fields P s\<rbrace>"
-  and arch_switch_to_idle_thread_domain_fields[wp]:
-    "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_state. domain_fields P s\<rbrace>"
   and arch_switch_to_idle_thread_globals_equiv[wp]:
     "arch_switch_to_idle_thread \<lbrace>globals_equiv st\<rbrace>"
   and arch_switch_to_idle_thread_states_equiv_for[wp]:
@@ -123,8 +119,6 @@ locale Scheduler_IF_1 =
     "\<And>P. arch_activate_idle_thread t \<lbrace>\<lambda>s :: det_state. P (idle_thread s)\<rbrace>"
   and arch_activate_idle_thread_irq_state_of_state[wp]:
     "\<And>P. arch_activate_idle_thread t \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and arch_activate_idle_thread_domain_fields[wp]:
-    "\<And>P. arch_activate_idle_thread t \<lbrace>domain_fields P\<rbrace>"
   and arch_prepare_next_domain_kheap[wp]:
     "\<And>P. arch_prepare_next_domain \<lbrace>\<lambda>s :: det_state. P (kheap s)\<rbrace>"
   and arch_prepare_next_domain_idle_thread[wp]:

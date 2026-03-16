@@ -157,9 +157,20 @@ lemma invokeDomainScheduleSetStart_ccorres:
          apply (clarsimp simp: simpler_modify_def rf_sr_def cstate_relation_def Let_def
                                carch_state_relation_def cmachine_state_relation_def)
         apply ceqv
-       apply (ctac add: rescheduleRequired_ccorres)
+       apply (rule ccorres_Guard_Seq)
+       apply (rule ccorres_lhs_assoc)
+       apply (rule ccorres_split_nothrow_novcg)
+           apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV and rrel=dc and xf=xfdc])
+           apply (rule allI, rule conseqPre, vcg)
+           apply (clarsimp simp: simpler_modify_def rf_sr_def cstate_relation_def Let_def
+                                 carch_state_relation_def cmachine_state_relation_def exec_gets
+                                 domScheduleLength_def cdom_schedule_relation_def)
+          apply ceqv
+         apply (ctac add: rescheduleRequired_ccorres)
+        apply wpsimp
+       apply (simp add: guard_is_UNIV_def)
       apply wpsimp
-     apply (simp add: guard_is_UNIV_def)
+     apply (simp add: guard_is_UNIV_def domScheduleLength_def)
     apply wpsimp
    apply (simp add: guard_is_UNIV_def)
   apply clarsimp
@@ -486,7 +497,7 @@ lemma decodeDomainScheduleConfigure_ccorres:
         \<inter> \<lbrace>\<acute>buffer = option_to_ptr buffer\<rbrace>) []
    (decodeDomainConfigure args extraCaps >>= invocationCatch thread isBlocking isCall InvokeDomain)
    (Call decodeDomainScheduleConfigure_'proc)"
-  supply Collect_const[simp del]
+  supply Collect_const[simp del] unat_scast_domScheduleLength_m1[simp]
   apply (cinit' lift: length___unsigned_long_' buffer_'
                 simp: decodeDomainConfigure_def)
    apply (drule sym[where t="length args"])
@@ -506,10 +517,11 @@ lemma decodeDomainScheduleConfigure_ccorres:
        apply (rule ccorres_add_return)
        apply (ctac add: mode_parseTimeArg_ccorres[where args=args and n=2 and buffer=buffer])
          apply (clarsimp simp: word_le_nat_alt unat_scast_domScheduleLength)
+         apply (rule ccorres_Guard_Seq)
          apply (rule ccorres_Cond_rhs_Seq)
           apply ccorres_rewrite
           apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
-          apply (clarsimp simp: throwError_bind invocationCatch_def)
+          apply (clarsimp simp: throwError_bind invocationCatch_def unat_scast_domScheduleLength)
           apply (rule ccorres_from_vcg_throws)
           apply (rule allI, rule conseqPre, vcg)
           apply (clarsimp simp: throwError_def return_def domScheduleLength_def exception_defs
@@ -587,7 +599,7 @@ lemma decodeDomainScheduleConfigure_ccorres:
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cdom_schedule_relation_def
                          domScheduleLength_def)
   using numDomains_fits_domainBits
-  apply (simp add: word_less_nat_alt ucast_ucast_len domainBits_def)
+  apply (simp add: word_less_nat_alt ucast_ucast_len domainBits_def domScheduleLength_def)
   done
 
 lemma decodeDomainInvocation_ccorres:

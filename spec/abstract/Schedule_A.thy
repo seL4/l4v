@@ -54,8 +54,7 @@ definition
   "next_domain \<equiv> do
     modify (\<lambda>s.
       let index_inc = domain_index s + 1;
-          index' = if index_inc \<ge> length (domain_list s) \<or>
-                      domain_list s ! index_inc = domain_end_marker
+          index' = if domain_list s ! index_inc = domain_end_marker
                    then domain_start_index s
                    else index_inc;
           dom_entry = domain_list s ! index'
@@ -169,6 +168,10 @@ definition domain_set_start :: "nat \<Rightarrow> (unit,'z::state_ext) s_monad" 
   "domain_set_start index \<equiv> do
      modify (\<lambda>s. s\<lparr>domain_start_index := index\<rparr>);
      modify (\<lambda>s. s\<lparr>domain_time := 0\<rparr>);
+     \<comment> \<open>Set the index such that after increment in @{const next_domain}, it will point to
+         the last domain schedule item, which is reserved to be an end marker.\<close>
+     domain_list_len \<leftarrow> gets (length \<circ> domain_list);
+     modify (\<lambda>s. s\<lparr>domain_index := domain_list_len - 2\<rparr>);
      reschedule_required
    od"
 

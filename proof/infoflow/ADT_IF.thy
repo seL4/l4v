@@ -931,10 +931,6 @@ locale ADT_IF_1 =
     "\<And>P. arch_activate_idle_thread t \<lbrace>\<lambda>s :: det_state. P (cur_thread s)\<rbrace>"
   and arch_activate_idle_thread_scheduler_action[wp]:
     "\<And>P. arch_activate_idle_thread t \<lbrace>\<lambda>s :: det_state. P (scheduler_action s)\<rbrace>"
-  and handle_vm_fault_domain_fields[wp]:
-    "\<And>P. handle_vm_fault t vmft \<lbrace>domain_fields P\<rbrace>"
-  and handle_hypervisor_fault_domain_fields[wp]:
-    "\<And>P. handle_hypervisor_fault t hft \<lbrace>domain_fields P\<rbrace>"
   and handle_reserved_irq_non_kernel_IRQs:
     "\<And>P. \<lbrace>P and K (irq \<notin> non_kernel_IRQs)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_ s :: det_state. P s\<rbrace>"
   and arch_perform_invocation_noErr[wp]:
@@ -1620,7 +1616,7 @@ lemma schedule_if_domain_time_nonzero:
 lemma schedule_if_valid_domain_list[wp]:
   "schedule_if tc \<lbrace>valid_domain_list\<rbrace>"
   unfolding schedule_if_def
-  by (wpsimp wp: valid_domain_list_lift)
+  by wpsimp
 
 lemma invoke_domain_false:
   "\<lbrace>\<bottom>\<rbrace> invoke_domain di \<lbrace>Q\<rbrace>"

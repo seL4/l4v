@@ -1840,6 +1840,10 @@ lemma no_orphans_ksDomainTime_update[simp]:
   "no_orphans (ksDomainTime_update f s) = no_orphans s"
   by (simp add: no_orphans_def all_queued_tcb_ptrs_def all_active_tcb_ptrs_def is_active_tcb_ptr_def)
 
+lemma no_orphans_ksDomScheduleIdx_update[simp]:
+  "no_orphans (ksDomScheduleIdx_update f s) = no_orphans s"
+  by (simp add: no_orphans_def all_queued_tcb_ptrs_def all_active_tcb_ptrs_def is_active_tcb_ptr_def)
+
 crunch prepareSetDomain
   for cur_tcb'[wp]: cur_tcb'
   (wp: cur_tcb_lift)

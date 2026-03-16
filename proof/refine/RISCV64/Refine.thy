@@ -298,7 +298,7 @@ crunch do_user_op
   for valid_list: valid_list
   and valid_sched: valid_sched
   and sched_act: "\<lambda>s. P (scheduler_action s)"
-  and domain_start_index[wp]: "\<lambda>s. P (domain_start_index s)"
+  and domain_fields_inv[wp]: "domain_fields P"
 
 lemma do_user_op_invs2:
   "\<lbrace>einvs  and ct_running and (\<lambda>s. scheduler_action s = resume_cur_thread)
@@ -487,6 +487,10 @@ lemma doUserOp_invs':
 
 
 text \<open>The top-level correspondence\<close>
+
+lemma contract_all_imp_strg':
+  "P \<and> P' \<and> P'' \<and> (\<forall>x. R x \<longrightarrow> Q x) \<Longrightarrow> \<forall>x. R x \<longrightarrow> P \<and> Q x \<and> P' \<and> P''"
+  by blast
 
 lemma kernel_corres':
   "corres dc (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle)
@@ -758,8 +762,9 @@ crunch doUserOp, checkActiveIRQ
 
 lemma valid_domain_list_2_cross:
   "\<lbrakk>valid_dom_schedule'_2 sched idx start; domain_list_map dom_list = sched \<rbrakk>
-   \<Longrightarrow> valid_domain_list_2 start dom_list"
-  by (fastforce simp: valid_domain_list_2_def valid_dom_schedule'_2_def)
+   \<Longrightarrow> valid_domain_list_2 start idx dom_list"
+  by (fastforce simp: valid_domain_list_2_def valid_dom_schedule'_2_def ucast_eq_0 is_up
+                split: prod.splits)
 
 lemma valid_domain_list_from_invs':
   "\<lbrakk> (s, s') \<in> state_relation; invs' s' \<rbrakk> \<Longrightarrow> valid_domain_list s"

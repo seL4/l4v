@@ -43,9 +43,16 @@ domainScheduleConfigure :: Int -> Domain -> DomainDuration -> Kernel ()
 domainScheduleConfigure index domain duration =
     modify (\s -> s { ksDomSchedule = listUpdate (ksDomSchedule s) index (domain, duration) })
 
+domainSetStart :: Int -> Kernel ()
 domainSetStart start = do
+    -- order of modify calls matches C assignemtns
     modify (\s -> s { ksDomScheduleStart = start })
     modify (\s -> s { ksDomainTime = 0 })
+    -- set the index such that after increment in nextDomain, it will point to
+    -- the last domain schedule item, which is reserved to be an end marker.
+    schedule <- gets ksDomSchedule
+    before_end_index <- return $ length schedule - 2
+    modify (\s -> s { ksDomScheduleIdx = before_end_index })
     rescheduleRequired
 
 invokeDomain :: DomainInvocation -> Kernel ()
@@ -79,7 +86,7 @@ decodeDomainConfigure args extraCaps = do
     domain <- return $ args !! 1
     duration <- return $ parseTimeArg 2 args
     sched <- withoutFailure $ gets ksDomSchedule
-    when (index >= length sched) $ throw $ RangeError 0 (fromIntegral (length sched - 1))
+    when (index >= length sched - 1) $ throw $ RangeError 0 (fromIntegral (length sched - 2))
     when (fromIntegral domain >= numDomains)  $ throw $ RangeError 0 (fromIntegral (numDomains - 1))
     when (duration > maxDomainDuration) $ throw $ InvalidArgument 2
     when (duration == 0 && domain /= 0) $ throw $ InvalidArgument 1

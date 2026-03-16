@@ -1254,7 +1254,7 @@ definition
    | InvokeDomainScheduleSetStart i \<Rightarrow>
        \<lambda>s. i < length (domain_list s) \<and> domain_list s ! i \<noteq> domain_end_marker
    | InvokeDomainScheduleConfigure i domain duration \<Rightarrow>
-       \<lambda>s. i < length (domain_list s) \<and>
+       \<lambda>s. i < length (domain_list s) - 1 \<and>
            (i = domain_start_index s \<longrightarrow> duration \<noteq> 0) \<and>
            (duration = 0 \<longrightarrow> domain = 0)"
 
