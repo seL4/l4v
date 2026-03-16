@@ -776,6 +776,10 @@ lemmas transform_defs =
   transform_def transform_objects_def transform_cdt_def transform_current_thread_def
   transform_asid_table_def
 
+lemma transform_domain_index_update[simp]:
+  "transform (domain_index_update f s) = transform s"
+  by (simp add: transform_defs)
+
 lemma domain_set_start_corres[corres]:
   "start' = start \<Longrightarrow>
    dcorres dc \<top> \<top>
@@ -788,8 +792,10 @@ lemma domain_set_start_corres[corres]:
        apply (fastforce simp: transform_defs)
       apply clarsimp
       apply (rule dcorres_symb_exec_r)
-        apply (rule reschedule_required_dcorres[where P=\<top> and P'=\<top>])
-       apply wpsimp+
+        apply (rule dcorres_symb_exec_r)
+          apply (rule dcorres_symb_exec_r)
+            apply (rule reschedule_required_dcorres[where P=\<top> and P'=\<top>])
+           apply wpsimp+
   done
 
 lemma domain_schedule_configure_corres[corres]:

@@ -531,6 +531,10 @@ lemma unat_scast_domScheduleLength:
   "unat (scast domScheduleLength :: machine_word) = unat domScheduleLength"
   by (simp add: domScheduleLength_def)
 
+lemma unat_scast_domScheduleLength_m1:
+  "unat (scast (domScheduleLength - 1) :: machine_word) = unat domScheduleLength - Suc 0"
+  by (simp add: domScheduleLength_def)
+
 lemma domScheduleLength_le_unat:
   "(scast domScheduleLength \<le> n) = (unat domScheduleLength \<le> unat n)" for n::machine_word
   by (simp add: word_le_nat_alt unat_scast_domScheduleLength)

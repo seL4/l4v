@@ -447,7 +447,8 @@ definition decode_domain_schedule_configure ::
      domain \<leftarrow> returnOk $ args ! 1;
      duration \<leftarrow> returnOk $ parseTimeArg 2 args;
      sched \<leftarrow> liftE $ gets domain_list;
-     whenE (index \<ge> length sched) $ throwError $ RangeError 0 (of_nat (length sched - 1));
+     \<comment> \<open>Item at @{term \<open>length sched - 1\<close>} is reserved to always be an end marker\<close>
+     whenE (index \<ge> length sched - 1) $ throwError $ RangeError 0 (of_nat (length sched - 2));
      whenE (unat domain \<ge> numDomains) $ throwError $ RangeError 0 (of_nat (numDomains - 1));
      whenE (duration > max_domain_duration) $ throwError $ InvalidArgument 2;
      whenE (duration = 0 \<and> domain \<noteq> 0) $ throwError $ InvalidArgument 1;

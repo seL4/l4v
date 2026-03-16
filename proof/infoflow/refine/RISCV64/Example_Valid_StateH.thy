@@ -1182,7 +1182,7 @@ definition s0H_internal :: "kernel_state" where
      gsMaxObjectSize = card (UNIV :: obj_ref set),
      ksDomScheduleIdx = 0,
      ksDomScheduleStart = 0,
-     ksDomSchedule = [(0, 10), (1, 10)],
+     ksDomSchedule = [(0, 10), (1, 10), (0, 0)],
      ksCurDomain = 0,
      ksDomainTime = 5,
      ksReadyQueues = const emptyQueue,

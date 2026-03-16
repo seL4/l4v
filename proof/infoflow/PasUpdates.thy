@@ -17,53 +17,6 @@ imports
     "AInvs.EmptyFail_AI"
 begin
 
-section \<open>Separation lemmas for the idle thread and domain fields\<close>
-
-abbreviation (input) domain_fields where
-  "domain_fields P (s :: det_state) \<equiv>
-     P (domain_time s) (domain_index s) (domain_start_index s) (domain_list s)"
-
-lemma preemption_point_domain_fields[wp]:
-  "preemption_point \<lbrace>domain_fields P\<rbrace>"
-  by (simp add: preemption_point_def
-      | wp OR_choiceE_weak_wp modify_wp dxo_wp_weak
-      | wpc
-      | simp add: reset_work_units_def update_work_units_def)+
-
-
-locale PasUpdates_1 =
-  fixes aag :: "'a subject_label PAS"
-  assumes arch_post_cap_deletion_domain_fields[wp]:
-    "arch_post_cap_deletion acap \<lbrace>domain_fields P\<rbrace>"
-  and arch_finalise_cap_domain_fields[wp]:
-    "arch_finalise_cap acap b \<lbrace>domain_fields P\<rbrace>"
-  and prepare_thread_delete_domain_fields[wp]:
-    "prepare_thread_delete p \<lbrace>domain_fields P\<rbrace>"
-begin
-
-crunch
-  create_cap_ext, cap_insert_ext, cap_move_ext, empty_slot_ext,
-  cap_swap_ext, set_thread_state_act, tcb_sched_action, reschedule_required, cap_swap_for_delete,
-  finalise_cap, cap_move, cap_swap, cap_delete, cancel_badged_sends, cap_insert
-  for domain_fields[wp]: "domain_fields P"
-  (    wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp
-     simp: crunch_simps check_cap_at_def filterM_mapM unless_def
-   ignore: without_preemption filterM rec_del check_cap_at cap_revoke
-   ignore_del: create_cap_ext cap_insert_ext cap_move_ext
-               empty_slot_ext cap_swap_ext set_thread_state_act tcb_sched_action reschedule_required)
-
-lemma cap_revoke_domain_fields[wp]:
-  "cap_revoke a \<lbrace>domain_fields P\<rbrace>"
-  by (rule cap_revoke_preservation2; wp)
-
-lemma invoke_cnode_domain_fields[wp]:
-  "invoke_cnode a \<lbrace>domain_fields P\<rbrace>"
-  unfolding invoke_cnode_def
-  by (wpsimp wp: get_cap_wp hoare_vcg_all_lift hoare_vcg_imp_lift | rule conjI)+
-
-end
-
-
 section \<open>PAS wellformedness property for non-interference\<close>
 
 definition pas_wellformed_noninterference where
@@ -119,20 +72,10 @@ lemma tcb_domain_map_wellformed_pasSubject_update:
   by (clarsimp simp: tcb_domain_map_wellformed_aux_def)
 
 
-locale PasUpdates_2 = PasUpdates_1 +
-  assumes arch_perform_invocation_domain_fields[wp]:
-    "arch_perform_invocation i \<lbrace>domain_fields P\<rbrace>"
-  and arch_invoke_irq_control_domain_fields[wp]:
-    "arch_invoke_irq_control ci \<lbrace>domain_fields P\<rbrace>"
-  and arch_invoke_irq_handler_domain_fields[wp]:
-    "arch_invoke_irq_handler hi \<lbrace>domain_fields P\<rbrace>"
-  and arch_post_modify_registers_domain_fields[wp]:
-    "arch_post_modify_registers cur t \<lbrace>domain_fields P\<rbrace>"
-  and handle_arch_fault_reply_domain_fields[wp]:
-    "handle_arch_fault_reply vmf thread x y \<lbrace>domain_fields P\<rbrace>"
-  and init_arch_objects_domain_fields[wp]:
-    "init_arch_objects typ dev ptr num sz refs \<lbrace>domain_fields P\<rbrace>"
-  and state_asids_to_policy_pasSubject_update:
+(* FIXME: rename PasUpdates_2 to PasUpdates_1; original PasUpdates_1 was removed *)
+locale PasUpdates_2 =
+  fixes aag :: "'a subject_label PAS"
+  assumes state_asids_to_policy_pasSubject_update:
     "state_asids_to_policy (aag\<lparr>pasSubject := subject\<rparr>) s =
      state_asids_to_policy aag s"
   and state_asids_to_policy_pasMayActivate_update:
@@ -141,22 +84,10 @@ locale PasUpdates_2 = PasUpdates_1 +
   and state_asids_to_policy_pasMayEditReadyQueues_update:
     "state_asids_to_policy (aag\<lparr>pasMayEditReadyQueues := b\<rparr>) s =
      state_asids_to_policy aag s"
-  and arch_prepare_set_domain_domain_fields[wp]:
-    "arch_prepare_set_domain t new_dom \<lbrace>domain_fields P\<rbrace>"
-  and arch_post_set_flags_domain_fields[wp]:
-    "arch_post_set_flags t flags \<lbrace>domain_fields P\<rbrace>"
 begin
 
-crunch
-  possible_switch_to, set_priority, set_extra_badge, handle_recv, handle_reply, reply_from_kernel,
-  invoke_untyped, setup_reply_master, invoke_irq_control, invoke_irq_handler, invoke_tcb,
-  send_signal, invoke_set_domain
+crunch send_signal
   for domain_fields[wp]: "domain_fields P"
-  (wp: syscall_valid crunch_wps mapME_x_inv_wp
-   simp: crunch_simps check_cap_at_def detype_def mapM_x_defsym
-   ignore: check_cap_at syscall
-   ignore_del: set_domain set_priority possible_switch_to
-   rule: transfer_caps_loop_pres)
 
 lemma pas_refined_pasSubject_update':
   "\<lbrakk> pas_refined aag s; pas_wellformed (aag\<lparr>pasSubject := x\<rparr>) \<rbrakk>

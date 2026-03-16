@@ -1493,7 +1493,8 @@ lemma nextDomain_invs_no_cicd':
   apply (clarsimp simp: invs'_def valid_state'_def valid_machine_state'_def
                         ct_not_inQ_def cur_tcb'_def ct_idle_or_in_cur_domain'_def
                         all_invs_but_ct_idle_or_in_cur_domain'_def
-                        valid_dom_schedule'_def split_def)
+                        valid_dom_schedule'_def split_def domainEndMarker_def)
+  apply (metis diff_Suc_Suc linorder_neqE_nat minus_nat.diff_0 not_less_eq)
   done
 
 lemma scheduleSwitchThreadFastfail_corres:

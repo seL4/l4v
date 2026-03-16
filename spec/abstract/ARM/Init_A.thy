@@ -111,7 +111,7 @@ definition
     cur_thread = idle_thread_ptr,
     idle_thread = idle_thread_ptr,
     scheduler_action = resume_cur_thread,
-    domain_list = [(0,-1)],
+    domain_list = [(0, -1), (0, 0)],
     domain_index = 0,
     domain_start_index = 0,
     cur_domain = 0,

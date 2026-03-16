@@ -93,11 +93,6 @@ lemma schedule_invs[wp]:
               simp: if_apply_def2 set_scheduler_action_def)
   done
 
-lemma invs_domain_index_update[simp]:
-  "invs (domain_index_update f s) = invs s"
-  by (simp add: invs_def valid_state_def valid_mdb_def mdb_cte_at_def valid_ioc_def
-                valid_irq_states_def valid_machine_state_def cur_tcb_def)
-
 lemma invs_cur_domain_update[simp]:
   "invs (cur_domain_update f s) = invs s"
   by (simp add: invs_def valid_state_def valid_mdb_def mdb_cte_at_def valid_ioc_def

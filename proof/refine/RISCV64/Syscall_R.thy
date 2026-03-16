@@ -95,7 +95,7 @@ definition valid_domain_inv' :: "domain_invocation \<Rightarrow> kernel_state \<
    | InvokeDomainScheduleSetStart start \<Rightarrow>
        \<lambda>s. start < length (ksDomSchedule s) \<and> ksDomSchedule s ! start \<noteq> domainEndMarker
    | InvokeDomainScheduleConfigure i domain duration \<Rightarrow>
-       \<lambda>s. i < length (ksDomSchedule s) \<and>
+       \<lambda>s. Suc i < length (ksDomSchedule s) \<and>
            domain \<le> maxDomain \<and> duration \<le> maxDomainDuration \<and>
            (i = ksDomScheduleStart s \<longrightarrow> duration \<noteq> 0) \<and>
            (duration = 0 \<longrightarrow> domain = 0)"
@@ -487,6 +487,10 @@ lemma domainSet_corres[corres]:
   unfolding invoke_set_domain_def domainSet_def
   by (simp, corres corres: setDomain_corres; fastforce)
 
+lemma gets_comp_eq_return: (* FIXME dom: move to Monads *)
+  "gets (f \<circ> g) = do x \<leftarrow> gets g; return (f x) od"
+  by monad_eq
+
 lemma domainSetStart_corres[corres]:
   "\<lbrakk> i' = i \<rbrakk> \<Longrightarrow>
    corres dc
@@ -496,6 +500,7 @@ lemma domainSetStart_corres[corres]:
           (domain_set_start i) (domainSetStart i')"
   unfolding domain_set_start_def domainSetStart_def
   apply (corres corres: corres_modify_tivial rescheduleRequired_corres
+                simp: gets_comp_eq_return
                 term_simp: state_relation_def cdt_relation_def)
    apply (simp add: ready_qs_distinct_def)
   apply clarsimp
@@ -1109,11 +1114,11 @@ lemma domainSetStart_invs[wp]:
   apply (clarsimp simp: valid_domain_inv'_def invs'_def valid_state'_def valid_machine_state'_def
                         ct_not_inQ_def ct_idle_or_in_cur_domain'_def cur_tcb'_def
                         tcb_in_cur_domain'_def)
-  apply (clarsimp simp: valid_dom_schedule'_def domainEndMarker_def)
+  apply (fastforce simp: valid_dom_schedule'_def domainEndMarker_def)
   done
 
 lemma valid_dom_schedule'_update:
-  "\<lbrakk>i < length sched; i = start \<longrightarrow> duration \<noteq> 0; duration = 0 \<longrightarrow> domain = 0;
+  "\<lbrakk>Suc i < length sched; i = start \<longrightarrow> duration \<noteq> 0; duration = 0 \<longrightarrow> domain = 0;
     domain \<le> maxDomain; duration \<le> maxDomainDuration;
     valid_dom_schedule'_2 sched idx start\<rbrakk>
    \<Longrightarrow> valid_dom_schedule'_2 (sched[i := (domain, duration)]) idx start"
