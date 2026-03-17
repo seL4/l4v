@@ -537,9 +537,14 @@ thm transfer_caps_loop_invs
 
 definition no_refs_zombies
 where
-  "no_refs_zombies c \<comment> \<open>slot\<close> s \<equiv> (\<forall>r\<in>obj_refs c.
-     \<forall>a b. \<comment> \<open>slot \<noteq> (a, b) \<and>\<close> cte_wp_at (\<lambda>cap'. r \<in> obj_refs cap') (a, b) s \<longrightarrow>
+  "no_refs_zombies c s \<equiv> (\<forall>r\<in>obj_refs c.
+     \<forall>a b. cte_wp_at (\<lambda>cap'. r \<in> obj_refs cap') (a, b) s \<longrightarrow>
            cte_wp_at (Not \<circ> is_zombie) (a, b) s \<and> \<not> is_zombie c)"
+
+definition no_refs_to
+where
+  "no_refs_to c slot s \<equiv> (\<forall>r\<in>obj_refs c.
+     \<forall>a b. cte_wp_at (\<lambda>cap'. r \<in> obj_refs cap') (a, b) s \<longrightarrow> (a, b) \<noteq> slot)"
 
 (* the form used by this helper looks a lot less clunky *)
 thm get_cap_zombies_helper
@@ -563,16 +568,27 @@ lemma no_refs_zombies_stronger:
 
 crunch set_extra_badge, update_cdt
   for no_refs_zombies[wp]: "no_refs_zombies c"
-  (wp: crunch_wps simp: crunch_simps no_refs_zombies_def)
+  and no_refs_to[wp]: "no_refs_to c slot"
+  (wp: crunch_wps simp: crunch_simps no_refs_zombies_def no_refs_to_def)
 
 lemma no_refs_zombies_trans_state[simp]:
   "no_refs_zombies c (trans_state f s) = no_refs_zombies c s"
   unfolding no_refs_zombies_def
   by auto
 
+lemma no_refs_to_trans_state[simp]:
+  "no_refs_to c slot (trans_state f s) = no_refs_to c slot s"
+  unfolding no_refs_to_def
+  by auto
+
 lemma no_refs_zombies_is_original_cap[simp]:
   "no_refs_zombies c (s\<lparr>is_original_cap := x\<rparr>) = no_refs_zombies c s"
   unfolding no_refs_zombies_def
+  by blast
+
+lemma no_refs_to_is_original_cap[simp]:
+  "no_refs_to c slot (s\<lparr>is_original_cap := x\<rparr>) = no_refs_to c slot s"
+  unfolding no_refs_to_def
   by blast
 
 lemma get_cap_zombies_helper'[wp]:
@@ -628,6 +644,19 @@ lemma set_cap_no_refs_zombies_other[wp]:
   apply(wpsimp wp:set_cap_caps_of_state)
   by blast
 
+lemma no_refs_to_def2:
+  "no_refs_to c slot s \<equiv> \<forall>r\<in>obj_refs c.
+   \<forall>a b. (\<exists>cap. Some cap = caps_of_state s (a, b) \<and> r \<in> obj_refs cap) \<longrightarrow> (a, b) \<noteq> slot"
+  unfolding no_refs_to_def cte_wp_at_def
+  by (clarsimp simp:get_cap_caps_of_state)
+
+lemma set_cap_no_refs_to[wp]:
+  "\<lbrace>no_refs_to c slot and K (slot' \<noteq> slot)\<rbrace>
+   set_cap c' slot' \<lbrace>\<lambda>_. no_refs_to c slot\<rbrace>"
+  unfolding no_refs_to_def2
+  apply(wpsimp wp:set_cap_caps_of_state)
+  by blast
+
 lemma no_refs_zombies_max_free_index_update[simp]:
   "no_refs_zombies (max_free_index_update cap) = no_refs_zombies cap"
   unfolding no_refs_zombies_def
@@ -673,15 +702,19 @@ lemma set_untyped_cap_as_full_no_refs_zombies[wp]:
   unfolding set_untyped_cap_as_full_def
   by wpsimp
 
-(*
+lemma set_untyped_cap_as_full_no_refs_to[wp]:
+  "\<lbrace>no_refs_to c slot and K (src_slot \<noteq> slot)\<rbrace>
+     set_untyped_cap_as_full src_cap new_cap src_slot
+   \<lbrace>\<lambda>_. no_refs_to c slot\<rbrace>"
+  unfolding set_untyped_cap_as_full_def
+  by wpsimp
+
 crunch cap_insert
-  for no_refs_zombies[wp]: "no_refs_zombies c"
-  (wp: crunch_wps set_cap_no_refs_zombies simp: crunch_simps
-   ignore: set_cap set_untyped_cap_as_full)
-*)
+  for no_refs_to[wp]: "no_refs_to c slot"
+  (wp: crunch_wps set_cap_no_refs_to simp: crunch_simps)
 
 (*
-lemma no_refs_zombies_NullCap[intro]:
+-- lemma no_refs_zombies_NullCap[intro]:
   "no_refs_zombies NullCap s"
   unfolding no_refs_zombies_def
   by simp
@@ -704,7 +737,7 @@ lemma cap_insert_no_refs_zombies[wp]:
   done
 
 (*
-crunch cap_insert
+-- crunch cap_insert
   for no_refs_zombies[wp]: "no_refs_zombies c slot"
   (wp: crunch_wps simp: crunch_simps)
 *)
@@ -722,28 +755,30 @@ lemma hoare_absorb_double_impE_R:
    \<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> Q' rv s \<longrightarrow> R rv s\<rbrace>,-"
   using hoare_strengthen_postE_R by fastforce
 
-lemma transfer_caps_loop_colour_maintained: (* broken by invs *)
-  "\<lbrace>colour_invariant and \<comment> \<open>invs and\<close>
+crunch store_word_offs
+  for valid_cap[wp]: "\<lambda>s. s \<turnstile> c"
+
+lemma transfer_caps_loop_colour_maintained:
+  "\<lbrace>colour_invariant and
     cur_domain_list and pspace_in_kernel_window and RISCV64.valid_uses and
         (\<lambda>s.
             (
+              distinct (map snd caps) \<and>
+              distinct slots \<and>
               (\<forall>(cap, o_ref, cni)\<in>(set caps).
                 s \<turnstile> cap \<and>
-                cte_wp_at (\<lambda>c. \<not> is_zombie c) \<comment> \<open>cap \<noteq> NullCap \<longrightarrow> c = cap\<close> (o_ref, cni) s \<and>
-                (o_ref, cni) \<notin> set slots \<and>
+                cte_wp_at ((=) cap) (o_ref, cni) s \<and>
+                (o_ref, cni) \<notin> set slots \<and> \<comment> \<open>XXX: actually needed? test later\<close>
                 no_refs_zombies cap s \<and> \<not> is_zombie cap \<and>
+                no_refs_to cap (o_ref, cni) s \<and>
                 real_cte_at (o_ref, cni) s \<and>
                 check_cap_ref cap (colour_oracle (cur_domain s)) \<and>
-                \<comment> \<open>XXX: precond for transfer_caps_loop_cte_wp_at, actually doesn't apply here
-                \<not> is_UntypedCap cap \<and>\<close>
                 valid_ptr_in_cur_domain o_ref s)) \<and>
               (\<forall>slot\<in>set slots. valid_ptr_in_cur_domain (fst slot) s \<and>
                 ex_cte_cap_wp_to is_cnode_cap slot s \<and>
                 real_cte_at slot s \<and>
-                cte_wp_at (\<lambda>c. c = NullCap) slot s
-                \<comment> \<open>XXX: actually we should be able to get this from derive_cap_is_derived etc
-                cte_wp_at (\<lambda>c. \<not> is_UntypedCap c) slot s \<comment> \<open>XXX: this isn't telling us enough\<close>
-                \<comment> \<open>(\<exists>cap. tcb_cap_valid cap slot s)\<close>\<close>)
+                cte_wp_at (\<lambda>c. c = NullCap) slot s \<and>
+                (fst slot, snd slot) \<notin> set (map snd caps) \<comment> \<open>XXX: actually needed? test later\<close>)
             )
    \<rbrace>
      transfer_caps_loop ep rcv_buffer n caps slots mi
@@ -761,11 +796,7 @@ next
          (* case 1 of 6 *)
          apply (wpsimp wp: set_extra_badge_colour_maintained)
           apply(wpsimp wp:hoare_vcg_conj_lift)
-           apply (wpsimp simp: set_extra_badge_def)
-           apply(wpsimp wp:hoare_vcg_op_lift)
-           apply(wp hoare_vcg_conj_lift)
-            defer (* FIXME *)
-           apply wpsimp
+           apply(wpsimp simp:set_extra_badge_def wp:hoare_vcg_op_lift)
           apply(wpsimp wp:hoare_vcg_const_Ball_lift)
          apply fastforce
         (* case 2 of 6 *)
@@ -789,39 +820,56 @@ next
          *)
          apply (wp hoare_vcg_imp_conj_liftE_R', wp hoare_drop_impE_R)
          apply (wp hoare_vcg_imp_conj_liftE_R', wp hoare_drop_impE_R)
+         apply(wp derive_cap_objrefs_iszombie)
+         (* XXX can we delete?
          (* NB: no longer demanded since we stopped asking for all the invs
          apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
           apply(wpsimp wp:derive_cap_valid_cap) *)
-         (* use this when not needing to reason specifically at the cap at hd slots *)
-         apply(wp derive_cap_objrefs_iszombie)
+         (* use this when not needing to reason specifically at the cap at hd slots
+         apply(wp derive_cap_objrefs_iszombie)  *)
+         apply (wp hoare_vcg_imp_conj_liftE_R', wp hoare_drop_impE_R)
+         apply (wp hoare_vcg_imp_conj_liftE_R', wp hoare_drop_impE_R)
+         apply (wp hoare_vcg_imp_conj_liftE_R', wp hoare_drop_impE_R)
+         apply (wp hoare_vcg_imp_conj_liftE_R', wp hoare_drop_impE_R)
+         apply (wp hoare_vcg_imp_conj_liftE_R', wp hoare_drop_impE_R)
+         apply (wp hoare_vcg_imp_conj_liftE_R', wp hoare_drop_impE_R)
+         apply (wp hoare_vcg_imp_conj_liftE_R', wp hoare_drop_impE_R)
+         apply (wp hoare_vcg_imp_conj_liftE_R', wp hoare_drop_impE_R)
          (* XXX: might need the below working if we ever need to strengthen the
             cte_wp_at predicate for the caps set again:
-         (* see if we can get away without rv \<noteq> NullCap for a sec
-         apply(wpsimp wp:hoare_drop_impE_R) *)
+         (* see if we can get away without rv \<noteq> NullCap for a sec?
+         apply(wpsimp wp:hoare_drop_impE_R) *) *)
+          apply(wp derive_cap_objrefs_iszombie)
+
          apply (wpsimp wp:hoare_vcg_imp_conj_liftE_R')
+
           apply(clarsimp simp:Ball_def)
           apply(rule hoare_vcg_imp_all_liftE_R)+
           apply(rule hoare_vcg_imp_commE_R)
           apply(rule hoare_vcg_imp_liftE_R)
            apply wpsimp
+
           apply(wpsimp wp:hoare_vcg_imp_conj_liftE_R')
-           apply(rule hoare_vcg_imp_commE_R)
-           apply(rule hoare_vcg_imp_liftE_R)
-            apply wpsimp
-           apply(wpsimp wp:hoare_vcg_imp_conj_liftE_R')
-            apply(wpsimp wp:hoare_vcg_imp_liftE_R derive_cap_NullCap)
-           apply(wpsimp wp:hoare_vcg_imp_conj_liftE_R')
+           apply(wpsimp wp:hoare_vcg_imp_liftE_R derive_cap_NullCap)
+          apply(rule hoare_vcg_imp_commE_R)
+          apply(rule hoare_vcg_imp_liftE_R)
+           apply wpsimp
+
+          apply(wpsimp wp:hoare_vcg_imp_conj_liftE_R')
+           apply(wpsimp wp:hoare_vcg_imp_liftE_R derive_cap_NullCap)
+(*
+          apply(wpsimp wp:hoare_vcg_imp_conj_liftE_R')
             (* this produces noise but I don't see an easier way *)
             apply(wpsimp simp: derive_cap_def RISCV64_A.arch_derive_cap_def)
+*)
            apply(wp derive_cap_objrefs_iszombie)
           apply(wp derive_cap_objrefs_iszombie)
          apply(wp derive_cap_objrefs_iszombie) *)
         apply clarsimp
-        apply(clarsimp simp:check_cap_ref_in_cur_domain split_beta)
+        apply(clarsimp simp:check_cap_ref_in_cur_domain split_beta no_refs_to_def)
         apply(rule conjI)
-         apply(prop_tac "(\<exists>c'. cte_wp_at ((=) c') (b, c) s \<and> \<not> is_zombie c')")
-          using cte_wp_at_norm
-          apply blast
+         apply(meson distinct_tl)
+        apply(rule conjI)
          apply clarsimp
          apply(rule conjI)
           apply clarsimp
@@ -829,18 +877,24 @@ next
          apply clarsimp
          apply(drule (1) bspec)
          apply clarsimp
+         apply(rename_tac aa b c s aaa ab ba)
+         (* cap aaa is in `caps` at slot (ab, ba) *)
+         (* cap aa is at slot (b, c) and it came from `caps`. *)
+         (* We are being asked to show that slot (ab, ba) \<noteq> (b, c).
+            I think we should have this if all slots in `caps` are distinct. *)
+         apply(rule context_conjI)
+          apply(metis image_eqI prod.sel(2))
          apply(rule conjI)
-          defer (* FIXME - need to think a bit harder about this one *)
+          apply(meson list.set_sel(2))
+         apply(rule conjI)
+          apply blast
          apply clarsimp
-         apply(meson list.set_sel(2))
         apply clarsimp
+        apply(rename_tac aa b c s ab ba)
         apply(drule_tac x="(ab, ba)" in bspec)
          apply(meson list.set_sel(2))
         apply clarsimp
-        apply(rule context_conjI)
-         defer (* FIXME - this one too *)
-        apply clarsimp
-        apply(meson list.set_sel(2))
+        apply(metis distinct.simps(2) list.collapse)
        (* case 3 of 6 *)
        apply(wpsimp wp:hoare_vcg_op_lift cap_insert_weak_cte_wp_at)
         apply(wpsimp wp: hoare_vcg_if_lift_ER)
@@ -854,6 +908,8 @@ next
        apply clarsimp
        apply(clarsimp simp:check_cap_ref_in_cur_domain split_beta)
        apply(rule conjI)
+        apply(meson distinct_tl)
+       apply(rule conjI)
         apply(prop_tac "(\<exists>c'. cte_wp_at ((=) c') (b, c) s \<and> \<not> is_zombie c')")
          using cte_wp_at_norm
          apply blast
@@ -864,32 +920,24 @@ next
         apply clarsimp
         apply(drule (1) bspec)
         apply clarsimp
-        apply(rule conjI)
-         defer (* FIXME - duplicate of the 1st from case 2 *)
-        apply clarsimp
+        apply(rule context_conjI)
+         apply(metis image_eqI prod.sel(2))
         apply(meson list.set_sel(2))
        apply clarsimp
        apply(drule_tac x="(ab, ba)" in bspec)
         apply(meson list.set_sel(2))
        apply clarsimp
-       apply(rule context_conjI)
-        defer (* FIXME - duplicate of the 2nd from case 2 *)
-       apply clarsimp
-       apply(meson list.set_sel(2))
+       apply(metis distinct.simps(2) list.collapse)
       (* case 4 of 6 *)
       (* this one's just like case 1 *)
       apply (wpsimp wp: set_extra_badge_colour_maintained)
-       apply (wpsimp simp: set_extra_badge_def)
-       apply(wpsimp wp:hoare_vcg_op_lift)
-       apply(wp hoare_vcg_conj_lift)
-        defer (* FIXME - duplicate of the one from case 1 *)
-       apply wpsimp
+       apply(wpsimp simp: set_extra_badge_def wp:hoare_vcg_op_lift)
       apply(wpsimp wp:hoare_vcg_const_Ball_lift)
       apply fastforce
      (* the 5th and 6th cases are free! *)
      apply wpsimp
     apply wpsimp
-    sorry
+    done
 qed
 
 lemma resolve_address_bits_ret_colour:
@@ -984,7 +1032,7 @@ lemma transfer_caps_colour_maintained[wp]:
      apply wpsimp
     apply (wpsimp simp: lookup_cap_def)
    apply wpsimp
-   sorry (* FIXME
+   sorry (* FIXME: DOWN TO HERE
    apply(clarsimp simp:pred_conj_def)
    apply(wpsimp wp:hoare_vcg_if_lift)
    (*
@@ -1271,7 +1319,7 @@ crunch init_arch_objects, arch_post_cap_deletion, prepare_thread_delete,
    Don't forget to re-check crunch after proving each of these if it required new preconditions,
    using this crunch command:
 
-crunch call_kernel for colour_maintained: "colour_invariant"
+-- crunch call_kernel for colour_maintained: "colour_invariant"
   (simp: colour_invariant_def obj_at_update crunch_simps
      wp: crunch_wps RISCV64.arch_get_sanitise_register_info_inv
          RISCV64.handle_arch_fault_reply_inv) *)
@@ -1282,7 +1330,6 @@ crunch set_pt
   for colour_maintained[wp]: colour_invariant
   (wp: crunch_wps simp: crunch_simps)
 
-thm valid_ptr_in_cur_domain_def
 lemma store_pte_colour_maintained[wp]:
   "\<lbrace>\<lambda>s. colour_invariant s \<and> invs s \<and>
         \<comment> \<open>let's see how usable this ends up if we assert p and pte are coloured and not bogus\<close>
@@ -1764,7 +1811,7 @@ crunch maybe_handle_interrupt for colour_maintained[wp]: "colour_invariant"
   (wp: crunch_wps simp: crunch_simps)
 
 (* The crunch command used to discover all needed lemmas.
-crunch call_kernel for colour_maintained: "colour_invariant"
+-- crunch call_kernel for colour_maintained: "colour_invariant"
   (simp: obj_at_update crunch_simps
      wp: crunch_wps RISCV64.arch_get_sanitise_register_info_inv
          RISCV64.handle_arch_fault_reply_inv
