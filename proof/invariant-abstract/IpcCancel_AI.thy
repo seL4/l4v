@@ -605,14 +605,17 @@ lemma tcb_sched_action_invs[wp]:
   "\<lbrace>invs\<rbrace> tcb_sched_action action thread \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp simp: tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def)
 
+crunch tcb_sched_action
+  for has_reply_cap[wp]: "\<lambda>s. P (has_reply_cap t s)"
+
 lemma (in delete_one_abs) suspend_invs[wp]:
   "\<lbrace>invs and tcb_at t and (\<lambda>s. t \<noteq> idle_thread s)\<rbrace>
    (suspend t :: (unit,'a) s_monad)
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
+   \<lbrace>\<lambda>_. invs\<rbrace>"
   by (wp sts_invs_minor user_getreg_inv as_user_invs sts_invs_minor cancel_ipc_invs
          cancel_ipc_no_reply_cap
-     | strengthen no_refs_simple_strg
-     | simp add: suspend_def)+
+      | strengthen no_refs_simple_strg
+      | simp add: suspend_def)+
 
 context IpcCancel_AI begin
 
