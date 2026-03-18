@@ -5,8 +5,9 @@
  *)
 
 theory Arch_Structs_D
-imports
-  ExecSpec.MachineTypes
+  imports
+    Setup_D
+    ExecSpec.MachineTypes
 begin
 
 context Arch begin arch_global_naming (D)
@@ -29,4 +30,12 @@ definition pageBits_cdl :: "nat" where
   "pageBits_cdl \<equiv> smallPageBits"
 
 end
+
+(* For capDL proofs that only work on AARCH32. This lemma only exists on ARM/ARM_HYP, but must be
+   visible outside the Arch context, because many of the existing capDL proofs are currently not
+   inside an Arch context. *)
+lemma cdl_ARCH_AARCH32:
+  "cdl_ARCH = AARCH32"
+  by (simp add: cdl_ARCH_all_defs)
+
 end

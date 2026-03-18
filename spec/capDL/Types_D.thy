@@ -256,9 +256,6 @@ datatype cdl_object =
   | Untyped
   | IRQNode cdl_irq_node
 
-(* The architecture that we are modelling. *)
-datatype cdl_arch = IA32 | ARM11
-
 (* The map of objects that are in the system. *)
 type_synonym cdl_heap = "cdl_object_id \<Rightarrow> cdl_object option"
 
