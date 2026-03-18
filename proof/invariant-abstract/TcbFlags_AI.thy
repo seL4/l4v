@@ -4,11 +4,10 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(* Lemmas connecting how the design and abstract specifications represent TCB flags.
-   That is, bitwise with a word in the design spec and as a set in the abstract spec. *)
+(* Lemmas connecting bitwise and set representation of TCB flags for use in DRefine and Refine. *)
 
-theory TcbFlags_R
-imports BaseRefine.Include Move_R
+theory TcbFlags_AI
+imports Include_AI
 begin
 
 lemma ex_tcbFlagToWord_bit:
@@ -67,7 +66,7 @@ lemma tcb_flags_to_word_id:
   apply (rule the_equality; clarsimp simp: Collect_eq word_bw_lcs)
   apply (rule ccontr)
   apply (subst (asm) all_not_ex)
-  apply (erule FalseI)
+  apply (erule notE)
   apply (subst (asm) word_eq_iff)+
   apply clarsimp
   apply (prop_tac "tcbFlagMask !! n")
@@ -77,11 +76,6 @@ lemma tcb_flags_to_word_id:
   apply (rule_tac x=flag in exI)
   apply (clarsimp simp: not_nth_is_and_eq_0[symmetric] word_bw_assocs[symmetric] word_bw_comms)
   done
-
-lemma isFlagSet_in_word_to_tcb_flags[simp]:
-  "flag \<in> word_to_tcb_flags tcbFlagMask \<Longrightarrow> isFlagSet flag flags = (flag \<in> word_to_tcb_flags flags)"
-  by (drule tcbFlagToWord_and_tcbFlagMask_eq)
-     (clarsimp simp: isFlagSet_def word_to_tcb_flags_def word_bw_lcs intro!: eq_eqI word_bw_comms)
 
 lemma FpuDisabled_in_tcbFlagMask[simp]:
   "config_HAVE_FPU \<Longrightarrow> FpuDisabled \<in> word_to_tcb_flags tcbFlagMask"
