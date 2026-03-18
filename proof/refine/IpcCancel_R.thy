@@ -1265,12 +1265,11 @@ lemma (in delete_one_gen) suspend_corres:
              apply (case_tac state; simp)
             apply (rule update_restart_pc_corres)
            apply corres
-          apply (rule corres_split_nor[OF setThreadState_corres])
-             apply wpsimp
-            apply (rule tcbSchedDequeue_corres, simp)
+          apply (rule corres_split_nor[OF tcbSchedDequeue_corres], simp)
+            apply (rule setThreadState_corres, simp)
            apply wp
-          apply (wpsimp wp: sts_valid_objs')
-          apply (wpsimp simp: update_restart_pc_def updateRestartPC_def valid_tcb_state'_def)+
+          apply wpsimp
+         apply (wpsimp simp: update_restart_pc_def updateRestartPC_def valid_tcb_state'_def)+
        apply (rule hoare_post_imp[where Q'="\<lambda>rv s. einvs s \<and> tcb_at t s"])
         apply (simp add: invs_implies invs_strgs valid_queues_in_correct_ready_q
                          valid_queues_ready_qs_distinct valid_sched_def)
@@ -1299,7 +1298,8 @@ lemma (in delete_one_conc_pre) cancelIPC_it[wp]:
 
 crunch tcbSchedDequeue
   for ct_idle_or_in_cur_domain'[wp]: ct_idle_or_in_cur_domain'
-  (wp: crunch_wps)
+  and sch_act_simple[wp]: sch_act_simple
+  (wp: crunch_wps sch_act_simple_lift)
 
 lemma asUser_sch_act_simple[wp]:
   "\<lbrace>sch_act_simple\<rbrace> asUser s t \<lbrace>\<lambda>_. sch_act_simple\<rbrace>"
@@ -1309,12 +1309,13 @@ lemma asUser_sch_act_simple[wp]:
 
 lemma (in delete_one_conc) suspend_invs'[wp]:
   "\<lbrace>invs' and sch_act_simple and tcb_at' t and (\<lambda>s. t \<noteq> ksIdleThread s)\<rbrace>
-   ThreadDecls_H.suspend t \<lbrace>\<lambda>rv. invs'\<rbrace>"
+   ThreadDecls_H.suspend t
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: suspend_def)
   apply (wpsimp wp: sts_invs_minor' gts_wp' simp: updateRestartPC_def
          | strengthen no_refs_simple_strg')+
    apply (rule_tac Q'="\<lambda>_. invs' and sch_act_simple and st_tcb_at' simple' t
-                          and (\<lambda>s. t \<noteq> ksIdleThread s)"
+                           and (\<lambda>s. t \<noteq> ksIdleThread s)"
                 in hoare_post_imp)
     apply clarsimp
    apply wpsimp
@@ -2176,6 +2177,10 @@ lemma cancelBadgedSends_corres:
 crunch updateRestartPC
   for tcb_at'[wp]: "tcb_at' t"
   (simp: crunch_simps)
+
+crunch setThreadState
+  for obj_at'_tcbQueued[wp]: "\<lambda>s. Q (obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t s)"
+  (wp: threadSet_obj_at'_no_state crunch_wps simp: crunch_simps)
 
 lemma suspend_unqueued:
   "\<lbrace>\<top>\<rbrace> suspend t \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"

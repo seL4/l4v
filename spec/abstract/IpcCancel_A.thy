@@ -371,8 +371,8 @@ where
      cancel_ipc thread;
      state \<leftarrow> get_thread_state thread;
      (if state = Running then update_restart_pc thread else return ());
-     set_thread_state thread Inactive;
-     tcb_sched_action (tcb_sched_dequeue) thread
+     tcb_sched_action (tcb_sched_dequeue) thread;
+     set_thread_state thread Inactive
    od"
 
 end
