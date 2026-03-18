@@ -473,6 +473,18 @@ lemma setThreadState_isRestart_no_orphans:
   apply (auto simp: is_active_thread_state_def st_tcb_at_double_neg' st_tcb_at_neg')
   done
 
+lemma setThreadState_not_is_active_thread_state_no_orphans:
+  "\<lbrace>almost_no_orphans tcb_ptr and not K (is_active_thread_state state)\<rbrace>
+   setThreadState state tcb_ptr
+   \<lbrace>\<lambda>_ . no_orphans\<rbrace>"
+  unfolding setThreadState_def
+  apply (wpsimp wp: ssa_no_orphans)
+   apply (unfold no_orphans_disj almost_no_orphans_disj)
+   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
+             threadSet_all_queued_tcb_ptrs hoare_drop_imps
+          | fastforce)+
+  done
+
 lemma setThreadState_almost_no_orphans [wp]:
   "\<lbrace>no_orphans\<rbrace> setThreadState state tcb_ptr \<lbrace>\<lambda>_. almost_no_orphans tcb_ptr\<rbrace>"
   unfolding setThreadState_def
@@ -1389,17 +1401,12 @@ lemma updateRestartPC_no_orphans[wp]:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   by (wpsimp simp: updateRestartPC_def asUser_no_orphans)
 
-lemma suspend_no_orphans [wp]:
-  "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<and> tcb_at' t s \<rbrace>
-   suspend t
-   \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
+lemma suspend_no_orphans[wp]:
+  "\<lbrace>no_orphans and invs' and tcb_at' t\<rbrace> suspend t \<lbrace>\<lambda>_. no_orphans\<rbrace>"
   unfolding suspend_def
-  apply (wp | clarsimp simp: unless_def | rule conjI)+
-      apply (clarsimp simp: is_active_tcb_ptr_def is_active_thread_state_def st_tcb_at_neg2)
-      apply (wp setThreadState_not_active_no_orphans hoare_disjI1 setThreadState_st_tcb
-             | clarsimp simp: is_active_thread_state_def isRunning_def isRestart_def)+
-    apply (wp hoare_drop_imp)+
-  apply auto
+  apply (wpsimp wp: setThreadState_not_is_active_thread_state_no_orphans gts_wp'
+                    hoare_vcg_all_lift hoare_drop_imps)
+  apply (fastforce simp: is_active_thread_state_def isRunning_def isRestart_def)
   done
 
 lemma deleteASIDPool_no_orphans [wp]:

@@ -1673,8 +1673,9 @@ lemma set_thread_state_not_runnable_valid_sched_action:
   done
 
 lemma set_thread_state_not_runnable_valid_blocked:
-  "\<lbrace>valid_blocked and K (\<not> runnable ts)\<rbrace>
-      set_thread_state ref ts \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
+  "\<lbrace>valid_blocked_except ref and K (\<not> runnable ts)\<rbrace>
+   set_thread_state ref ts
+   \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   apply (simp add: set_thread_state_def set_thread_state_act_def)
   apply (simp add: set_object_def get_object_def | wp)+
        apply (rule hoare_strengthen_post)
@@ -1719,36 +1720,6 @@ lemma (in DetSchedSchedule_AI) cancel_ipc_valid_sched[wp]:
   apply (fastforce intro: st_tcb_at_get_lift)
   done
 
-(* valid_queues with thread not runnable *)
-lemma tcb_sched_action_dequeue_strong_valid_sched:
-  "\<lbrace>ct_not_in_q and valid_sched_action and ct_in_cur_domain and
-    valid_blocked and st_tcb_at (\<lambda>st. \<not> runnable st) thread and
-    (\<lambda>es. \<forall>d p. (\<forall>t\<in>set (ready_queues es d p). is_etcb_at' t (etcbs_of es) \<and>
-        etcb_at (\<lambda>t. etcb_priority t = p \<and> etcb_domain t = d) t es \<and>
-        (t \<noteq> thread \<longrightarrow> st_tcb_at runnable t es)) \<and> distinct (ready_queues es d p)) and
-    valid_idle_etcb\<rbrace>
-    tcb_sched_action tcb_sched_dequeue thread
-   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply (simp add: tcb_sched_action_def unless_def set_tcb_queue_def)
-  apply wp
-  apply (clarsimp simp: etcb_at_def valid_sched_def split: option.split)
-  apply (rule conjI)
-   apply (fastforce simp: etcb_at_def etcbs_of'_def is_etcb_at_def valid_queues_def2
-                          tcb_sched_dequeue_def obj_at_def)
-  apply (rule conjI)
-   apply (fastforce simp: ct_not_in_q_def not_queued_def tcb_sched_dequeue_def)
-  apply (clarsimp simp: valid_blocked_def tcb_sched_dequeue_def)
-  apply (case_tac "t=thread")
-   apply simp
-   apply (force simp: st_tcb_at_def obj_at_def)
-  apply (erule_tac x=t in allE)
-  apply (erule impE)
-   apply (clarsimp simp: not_queued_def split: if_split_asm)
-   apply (erule_tac x=d in allE)
-   apply force
-  apply force
-  done
-
 lemma set_scheduler_action_simple_sched_action[wp]:
   "\<lbrace>K $ simple_sched_action_2 action\<rbrace>
     set_scheduler_action action
@@ -1771,28 +1742,33 @@ crunch finalise_cap
   (wp: hoare_drop_imps mapM_x_wp mapM_wp subset_refl
    simp: unless_def if_fun_split)
 
+lemma set_thread_not_queued_valid_queues:
+  "\<lbrace>valid_queues and not_queued ref\<rbrace> set_thread_state ref ts \<lbrace>\<lambda>_. valid_queues\<rbrace>"
+  apply (simp add: set_thread_state_def)
+  apply (wpsimp simp: set_object_def get_object_def)
+  apply (clarsimp simp: valid_queues_def st_tcb_at_kh_if_split not_queued_def)
+  done
+
+lemma set_thread_state_simple_sched_action_valid_sched_action:
+  "\<lbrace>valid_sched_action and simple_sched_action\<rbrace>
+   set_thread_state ref ts
+   \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
+  unfolding set_thread_state_def set_thread_state_act_def
+  apply (wpsimp simp: valid_sched_action_def wp: set_object_wp gts_wp)
+  apply (clarsimp simp: simple_sched_action_def is_activatable_def st_tcb_at_def
+                        obj_at_def st_tcb_at_kh_def obj_at_kh_def
+                 split: scheduler_action.splits)
+  done
+
 lemma suspend_valid_sched[wp]:
-  notes bind_wp_fwd_inv = bind_wp_fwd[where P=I and Q'="\<lambda>_. I" for I]
-  shows "\<lbrace>valid_sched and simple_sched_action\<rbrace> suspend t \<lbrace>\<lambda>rv. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  apply (simp add: suspend_def)
-  apply (rule bind_wp_fwd_inv)
-   apply wpsimp
-  apply (rule bind_wp_fwd_inv)
-   apply wp
-  apply (rule bind_wp_fwd_inv)
-   apply wpsimp
-  apply (wp tcb_sched_action_dequeue_strong_valid_sched
-       | simp)+
-   apply (simp add: set_thread_state_def)
-   apply (wp gts_wp | wpc |
-          simp add: set_thread_state_def set_thread_state_act_def
-                    reschedule_required_def set_scheduler_action_def
-                    tcb_sched_action_def set_object_def get_object_def)+
-  apply (simp only: st_tcb_at_kh_simp[symmetric])
-  apply (clarsimp simp: valid_sched_def valid_queues_def st_tcb_at_kh_if_split
-                        valid_sched_action_def simple_sched_action_def
-                        is_activatable_def valid_blocked_def
-                  split: scheduler_action.splits)+
+  "\<lbrace>valid_sched and simple_sched_action\<rbrace> suspend t \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding suspend_def
+  apply forward_inv_step+
+  apply (wpsimp simp: valid_sched_def
+                  wp: set_thread_not_queued_valid_queues
+                      set_thread_state_simple_sched_action_valid_sched_action
+                      set_thread_state_not_runnable_valid_blocked
+                      tcb_sched_action_dequeue_valid_blocked_except)
   done
 
 crunch finalise_cap

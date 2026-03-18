@@ -2811,6 +2811,13 @@ crunch updateRestartPC, cancelIPC
   for valid_sched_pointers[wp]: valid_sched_pointers
   (simp: crunch_simps wp: crunch_wps)
 
+lemma setThreadState_tcbSchedNext_tcbSchedPrev_None_obj_at'[wp]:
+  "setThreadState ref ts \<lbrace>\<lambda>s. obj_at' (\<lambda>tcb. tcbSchedNext tcb = None \<and> tcbSchedPrev tcb = None) t s\<rbrace>"
+  unfolding setThreadState_def
+  apply (wpsimp wp: threadSet_wp getTCB_wp)
+  apply (fastforce simp: obj_at'_def gen_objBits_simps)
+  done
+
 lemma suspend_tcbSchedNext_tcbSchedPrev_None:
   "\<lbrace>invs'\<rbrace> suspend t \<lbrace>\<lambda>_ s. obj_at' (\<lambda>tcb. tcbSchedNext tcb = None \<and> tcbSchedPrev tcb = None) t s\<rbrace>"
   unfolding suspend_def
