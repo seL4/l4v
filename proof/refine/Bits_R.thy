@@ -508,4 +508,9 @@ lemma constOnFailure_wp :
   apply (wp|simp)+
   done
 
+lemma isFlagSet_in_word_to_tcb_flags[simp]:
+  "flag \<in> word_to_tcb_flags tcbFlagMask \<Longrightarrow> isFlagSet flag flags = (flag \<in> word_to_tcb_flags flags)"
+  by (drule tcbFlagToWord_and_tcbFlagMask_eq)
+     (clarsimp simp: isFlagSet_def word_to_tcb_flags_def word_bw_lcs intro!: eq_eqI word_bw_comms)
+
 end

@@ -14,7 +14,6 @@ imports
   LevityCatch
   "AInvs.ArchDetSchedSchedule_AI"
   "Lib.Heap_List"
-  TcbFlags_R
 begin
 
 section \<open>Locale Setup for kernel_state Field Update Identities\<close>
