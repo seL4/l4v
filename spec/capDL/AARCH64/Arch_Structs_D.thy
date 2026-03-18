@@ -5,8 +5,9 @@
  *)
 
 theory Arch_Structs_D
-imports
-  ExecSpec.MachineTypes
+  imports
+    Setup_D
+    ExecSpec.MachineTypes
 begin
 
 context Arch begin arch_global_naming (D)
