@@ -1057,27 +1057,15 @@ lemma ko_at'_not_NULL:
 crunch setQueue
   for ksReadyQueuesL1Bitmap[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
 
-lemma sts_running_ksReadyQueuesL1Bitmap[wp]:
-  "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace>
-   setThreadState Structures_H.thread_state.Running t
-   \<lbrace>\<lambda>_ s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
+lemma setThreadState_ksReadyQueuesL1Bitmap[wp]:
+  "setThreadState st t \<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
   unfolding setThreadState_def
-  apply wp
-       apply (rule hoare_pre_cont)
-      apply (wpsimp simp: if_apply_def2
-                    wp: hoare_drop_imps hoare_vcg_disj_lift threadSet_tcbState_st_tcb_at')+
-  done
+  by (wpsimp wp: hoare_drop_imps)
 
 lemma sts_running_ksReadyQueuesL2Bitmap[wp]:
-  "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace>
-   setThreadState Structures_H.thread_state.Running t
-   \<lbrace>\<lambda>_ s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
+  "setThreadState st t \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
   unfolding setThreadState_def
-  apply wp
-       apply (rule hoare_pre_cont)
-      apply (wpsimp simp: if_apply_def2
-                    wp: hoare_drop_imps hoare_vcg_disj_lift threadSet_tcbState_st_tcb_at')+
-  done
+  by (wpsimp wp: hoare_drop_imps)
 
 lemma asUser_obj_at_not_queued[wp]:
   "\<lbrace>obj_at' (\<lambda>tcb. \<not> tcbQueued tcb) p\<rbrace> asUser t m \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. \<not> tcbQueued tcb) p\<rbrace>"

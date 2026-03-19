@@ -334,9 +334,9 @@ crunch tcbSchedAppend
   (simp: unless_def crunch_simps obj_at'_def wp: getObject_tcb_wp)
 
 lemma tcbSchedEnqueue_vms'[wp]:
-  "\<lbrace>valid_machine_state'\<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
+  "tcbSchedEnqueue t \<lbrace>valid_machine_state'\<rbrace>"
   apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
-  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift tcbSchedEnqueue_ksMachine)
+  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
   done
 
 lemma tcbSchedEnqueue_tcb_in_cur_domain'[wp]:
@@ -2014,8 +2014,13 @@ lemma rescheduleRequired_sch_act_sane[wp]:
                    setSchedulerAction_def)
   by (wp | wpc | clarsimp)+
 
+lemma setSchedulerAction_ChooseNewThread_sch_act_sane[wp]:
+  "\<lbrace>\<top>\<rbrace> setSchedulerAction ChooseNewThread \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
+  apply (wp ssa_wp)
+  by (clarsimp simp: sch_act_sane_def)
+
 lemma sts_sch_act_sane:
-  "\<lbrace>sch_act_sane\<rbrace> setThreadState st t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
+  "setThreadState st t \<lbrace>sch_act_sane\<rbrace>"
   apply (simp add: setThreadState_def)
   including no_pre
   apply (wp hoare_drop_imps
@@ -2027,6 +2032,10 @@ lemma sbn_sch_act_sane:
   apply (simp add: setBoundNotification_def)
   apply (wp | simp add: threadSet_sch_act_sane)+
   done
+
+crunch rescheduleRequired
+  for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
+  and valid_sched_pointers[wp]: valid_sched_pointers
 
 lemma possibleSwitchTo_corres:
   "corres dc

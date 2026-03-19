@@ -1990,7 +1990,7 @@ lemma scheduleTCB_ccorres':
       return (runnable, curThread, action) od;
       when (\<not> runnable \<and>
               curThread = thread \<and> action = ResumeCurrentThread)
-       rescheduleRequired
+           (setSchedulerAction ChooseNewThread)
   od)
   (Call scheduleTCB_'proc)"
   supply empty_fail_cond[simp]
@@ -2004,7 +2004,8 @@ lemma scheduleTCB_ccorres':
        apply (intro allI impI)
        apply (unfold mem_simps)[1]
        apply assumption
-      apply (ctac add: rescheduleRequired_ccorres)
+      apply (rule ccorres_setSchedulerAction)
+      apply (clarsimp simp: cscheduler_action_relation_def)
      prefer 4
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_pre_getCurThread)
@@ -2047,7 +2048,8 @@ lemma scheduleTCB_ccorres_valid_queues'_pre:
                                              action \<leftarrow> getSchedulerAction;
                                              return (runnable, curThread, action)
                                           od;
-         when (\<not> runnable \<and> curThread = thread \<and> action = ResumeCurrentThread) rescheduleRequired
+         when (\<not> runnable \<and> curThread = thread \<and> action = ResumeCurrentThread)
+              (setSchedulerAction ChooseNewThread)
       od)
      (Call scheduleTCB_'proc)"
   supply empty_fail_cond[simp]
@@ -2061,7 +2063,8 @@ lemma scheduleTCB_ccorres_valid_queues'_pre:
        apply (intro allI impI)
        apply (unfold mem_simps)[1]
        apply assumption
-      apply (ctac add: rescheduleRequired_ccorres)
+      apply (rule ccorres_setSchedulerAction)
+      apply (clarsimp simp: cscheduler_action_relation_def)
      prefer 4
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_pre_getCurThread)
@@ -2097,41 +2100,6 @@ lemma scheduleTCB_ccorres_valid_queues'_pre:
 lemmas scheduleTCB_ccorres_valid_queues'
     = scheduleTCB_ccorres_valid_queues'_pre[unfolded bind_assoc return_bind split_conv]
 
-lemma rescheduleRequired_ccorres_valid_queues'_simple:
-  "ccorresG rf_sr \<Gamma> dc xfdc
-     sch_act_simple UNIV []
-     rescheduleRequired (Call rescheduleRequired_'proc)"
-  apply cinit
-   apply (rule ccorres_symb_exec_l)
-      apply (rule ccorres_split_nothrow_novcg[where r'=dc and xf'=xfdc])
-          apply (simp add: scheduler_action_case_switch_to_if
-                      cong: if_weak_cong split del: if_split)
-          apply (rule_tac R="\<lambda>s. action = ksSchedulerAction s \<and> sch_act_simple s"
-                     in ccorres_cond)
-            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                                  cscheduler_action_relation_def)
-            apply (clarsimp simp: weak_sch_act_wf_def tcb_at_1 tcb_at_not_NULL
-                           split: scheduler_action.split_asm dest!: st_tcb_strg'[rule_format])
-           apply (ctac add: tcbSchedEnqueue_ccorres)
-          apply (rule ccorres_return_Skip)
-         apply ceqv
-        apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
-        apply (rule allI, rule conseqPre, vcg)
-        apply (clarsimp simp: setSchedulerAction_def simpler_modify_def)
-        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                              cscheduler_action_relation_def
-                              carch_state_relation_def cmachine_state_relation_def
-                              )
-       apply wp
-      apply (simp add: guard_is_UNIV_def)
-     apply wp+
-   apply (simp add: getSchedulerAction_def)
-  apply (clarsimp simp: weak_sch_act_wf_def rf_sr_def cstate_relation_def
-                        Let_def cscheduler_action_relation_def)
-  by (auto simp: tcb_at_not_NULL tcb_at_1
-                    tcb_at_not_NULL[THEN not_sym] tcb_at_1[THEN not_sym]
-                 split: scheduler_action.split_asm)
-
 lemma scheduleTCB_ccorres_valid_queues'_pre_simple:
   "ccorresG rf_sr \<Gamma> dc xfdc
      (tcb_at' thread and st_tcb_at' (not runnable') thread and valid_queues' and sch_act_simple)
@@ -2141,7 +2109,8 @@ lemma scheduleTCB_ccorres_valid_queues'_pre_simple:
                                              action \<leftarrow> getSchedulerAction;
                                              return (runnable, curThread, action)
                                           od;
-         when (\<not> runnable \<and> curThread = thread \<and> action = ResumeCurrentThread) rescheduleRequired
+         when (\<not> runnable \<and> curThread = thread \<and> action = ResumeCurrentThread)
+              (setSchedulerAction ChooseNewThread)
       od)
      (Call scheduleTCB_'proc)"
   supply empty_fail_cond[simp]
@@ -2155,7 +2124,8 @@ lemma scheduleTCB_ccorres_valid_queues'_pre_simple:
        apply (intro allI impI)
        apply (unfold mem_simps)[1]
        apply assumption
-      apply (ctac add: rescheduleRequired_ccorres_valid_queues'_simple)
+      apply (rule ccorres_setSchedulerAction)
+      apply (clarsimp simp: cscheduler_action_relation_def)
      prefer 4
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_pre_getCurThread)

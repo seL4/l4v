@@ -1069,7 +1069,7 @@ lemma setBoundNotification_tcb_in_cur_domain'[wp]:
 lemma setThreadState_tcbDomain_obj_at'[wp]:
   "setThreadState ts t \<lbrace>obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace>"
   unfolding setThreadState_def
-  by wpsimp
+  by (wpsimp wp: hoare_drop_imps)
 
 crunch cancelSignal
   for tcbDomain_obj_at'[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'"
@@ -1128,7 +1128,8 @@ lemma sts_weak_sch_act_wf[wp]:
   including classic_wp_pre
   apply (simp add: setThreadState_def)
   apply (wp rescheduleRequired_weak_sch_act_wf)
-  apply (rule_tac Q'="\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s" in hoare_post_imp, simp)
+  apply (rule_tac Q'="\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s" in hoare_post_imp)
+   apply (simp add: weak_sch_act_wf_def)
   apply (simp add: weak_sch_act_wf_def)
   apply (wp hoare_vcg_all_lift)
    apply (wps threadSet_nosch)
@@ -1811,7 +1812,13 @@ crunch rescheduleRequired
 end
 
 crunch rescheduleRequired
-  for valid_machine_state'[wp]: "valid_machine_state'"
+  for valid_machine_state'[wp]: valid_machine_state'
+  and if_unsafe_then_cap'[wp]: if_unsafe_then_cap'
+  and valid_arch_state'[wp]: valid_arch_state'
+  and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
+  and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
+  and valid_irq_states'[wp]: valid_irq_states'
+  and pspace_domain_valid[wp]: pspace_domain_valid
 
 lemma sch_act_wf_weak[elim!]:
   "sch_act_wf sa s \<Longrightarrow> weak_sch_act_wf sa s"
