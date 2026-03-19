@@ -8,6 +8,7 @@ theory ColourInv_AI
   imports
     KernelInit_AI
     "$L4V_ARCH/ArchDetSchedSchedule_AI"
+    MSpec_AI
 begin
 
 section "Initialisation"
@@ -517,6 +518,12 @@ lemma hoare_vcg_imp_all_commE_R:
   by (smt (verit, del_insts) case_prodE case_prodI2 inf_left_commute pred_conj_def(1)
     pred_top_right_neutral prod.sel(1,2) validE_R_valid_eq valid_def)
 
+lemma hoare_vcg_double_imp_all_commE_R:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. (\<forall>x. Q rv s \<longrightarrow> R rv s \<longrightarrow> Q' rv x s)\<rbrace>,- \<Longrightarrow>
+   \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> R rv s \<longrightarrow> (\<forall>x. Q' rv x s)\<rbrace>,-"
+  by (smt (verit, del_insts) case_prodE case_prodI2 inf_left_commute pred_conj_def(1)
+    pred_top_right_neutral prod.sel(1,2) validE_R_valid_eq valid_def)
+
 lemma hoare_vcg_imp_commE_R:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> R rv s \<longrightarrow> S rv s\<rbrace>,- \<Longrightarrow>
    \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. R rv s \<longrightarrow> Q rv s \<longrightarrow> S rv s\<rbrace>,-"
@@ -755,6 +762,11 @@ lemma hoare_absorb_double_impE_R:
    \<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> Q' rv s \<longrightarrow> R rv s\<rbrace>,-"
   using hoare_strengthen_postE_R by fastforce
 
+lemma hoare_absorb_double_keep_impE_R:
+  "\<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. (Q rv s \<longrightarrow> Q' rv s) \<and> (Q rv s \<longrightarrow> Q' rv s \<longrightarrow> R rv s)\<rbrace>,- \<Longrightarrow>
+   \<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> Q' rv s \<longrightarrow> R rv s\<rbrace>,-"
+  using hoare_strengthen_postE_R by fastforce
+
 crunch store_word_offs
   for valid_cap[wp]: "\<lambda>s. s \<turnstile> c"
 
@@ -990,39 +1002,165 @@ proof (induct args rule: resolve_address_bits'.induct)
     by ((rule cte_wp_at_check_cap_ref; simp add: check_cap_ref_def; clarsimp simp add: valid_ptr_in_cur_domain_def)|clarsimp simp add: check_cap_ref_def valid_ptr_in_cur_domain_def)+
 qed
 
-(* XXX
-lemma resolve_address_bits_ret_distinct:
-  "\<lbrace>colour_invariant and (\<lambda>s. check_cap_ref (fst args) (colour_oracle (cur_domain s)))
-    and cur_domain_list and pspace_in_kernel_window and RISCV64.valid_uses\<rbrace>
-resolve_address_bits args
-\<lbrace>\<lambda>rv s.
-rv = ((a, b), []) \<longrightarrow> valid_ptr_in_cur_domain a s
-\<rbrace>,-"
-  unfolding resolve_address_bits_def
-proof (induct args rule: resolve_address_bits'.induct)
-  case (1 z cap cref)
-  show ?case
-    apply (simp add: validE_R_def)
-    apply (rule use_spec)
-    apply (subst resolve_address_bits'.simps)
-    apply (cases cap, simp_all split del: if_split)
-               defer 6 (* CNode *)
-               apply (wp+)[11]
-    apply (simp add: split_def cong: if_cong split del: if_split)
-    apply (rule hoare_pre_spec_validE)
-     apply (wp hoare_strengthen_postE_R [OF "1.hyps"])
-                 apply (simp add: in_monad)+
-        apply (wpsimp wp: get_cap_wp)+
-    apply safe
-    by ((rule cte_wp_at_check_cap_ref; simp add: check_cap_ref_def; clarsimp simp add: valid_ptr_in_cur_domain_def)|clarsimp simp add: check_cap_ref_def valid_ptr_in_cur_domain_def)+
-qed
-*)
-
 lemma hoare_strengthen_post_impE_R:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q' rv s \<longrightarrow> R rv s\<rbrace>,-; \<And>rv s. Q rv s \<Longrightarrow> Q' rv s \<rbrakk> \<Longrightarrow>
    \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> R rv s\<rbrace>,-"
   unfolding validE_R_def
   by (simp add: hoare_strengthen_postE)
+
+lemma hoare_strengthen_imp_postE_R:
+  "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> R' rv s \<and> R rv s\<rbrace>,-\<rbrakk> \<Longrightarrow>
+   \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> R rv s\<rbrace>,-"
+  unfolding validE_R_def
+  by (simp add: hoare_strengthen_postE)
+
+(* duplicate from MSpec_AI, for tweaking. turns out it's the same cn_ref *)
+lemma resolve_address_bits'_cte_wp_at_succeed:
+  "\<lbrace>\<lambda>s. (\<exists>sz_bits. fst args = CNodeCap cn_ref sz_bits guard \<and>
+       length (snd args) = sz_bits + size guard \<and>
+       \<comment> \<open>the guard is a prefix of the raw 64-bit list given via the args\<close>
+       guard \<le> snd args \<and>
+       cte_wp_at ((=) mycap) (cn_ref, drop (size guard) (snd args)) s)\<rbrace>
+     resolve_address_bits' z args
+   \<lbrace>\<lambda>rv s. cte_wp_at ((=) mycap) (cn_ref, drop (size guard) (snd args)) s\<rbrace>,
+   \<lbrace>\<lambda>rv s. False\<rbrace>"
+proof (induct args rule: resolve_address_bits'.induct)
+  case (1 z cap cref)
+  show ?case
+    apply (clarsimp simp add: validE_R_def validE_def valid_def split: sum.split)
+    apply (subst (asm) resolve_address_bits'.simps)
+    apply (cases cap)
+              defer 6 (* cnode *)
+          apply (auto simp: in_monad)[11]
+    apply (simp only: cap.simps)
+    apply(rule conjI)
+     apply (clarsimp simp add: in_monad Let_def)
+     apply(force simp:fail_def in_returnOk split:if_splits)
+    apply(rename_tac obj_ref nat list)
+    apply (case_tac "nat + length list = 0")
+     apply (simp add: fail_def)
+    apply (simp only: if_False)
+    apply clarify
+    apply (simp only: K_bind_def in_bindE_R)
+    apply (elim conjE exE)
+    apply (simp only: split: if_split_asm)
+     (* case: rest = [], so returnOk ((obj_ref, offset), []) happens *)
+     apply (clarsimp simp add: in_monad Let_def)
+    (* for microkit caps, we don't hit the other cases *)
+    apply(clarsimp simp:in_monad)
+    done
+qed
+
+thm resolve_address_bits'_specific
+lemma resolve_address_bits'_cte_wp_at:
+  "\<lbrace>cte_wp_at ((=) mycap) (cn_ref, drop (size guard) (snd args)) and
+      K (fst args = CNodeCap cn_ref sz_bits guard \<and>
+         length (snd args) = sz_bits + size guard \<and>
+         guard \<le> snd args)\<rbrace>
+     resolve_address_bits' z args
+   \<lbrace>\<lambda>rv s. cte_wp_at ((=) mycap) (fst rv) s\<rbrace>,-"
+proof (induct args rule: resolve_address_bits'.induct)
+  case (1 z cap cref)
+  show ?case
+    apply (clarsimp simp add: validE_R_def validE_def valid_def split: sum.split)
+    apply (subst (asm) resolve_address_bits'.simps)
+    apply (cases cap)
+              defer 6 (* cnode *)
+          apply (auto simp: in_monad)[11]
+    apply(force simp:fail_def in_returnOk split:if_splits)
+    done
+qed
+
+lemma resolve_address_bits_cte_wp_at:
+  "\<lbrace>cte_wp_at ((=) mycap) (cn_ref, drop (size guard) (snd args)) and
+      K (fst args = CNodeCap cn_ref sz_bits guard \<and>
+         length (snd args) = sz_bits + size guard \<and>
+         guard \<le> snd args)\<rbrace>
+     resolve_address_bits args
+   \<lbrace>\<lambda>rv s. cte_wp_at ((=) mycap) (fst rv) s\<rbrace>,-"
+  unfolding resolve_address_bits_def
+  by (wp resolve_address_bits'_cte_wp_at)
+
+lemma resolve_address_bits'_cte_wp_at':
+  "\<lbrace>cte_wp_at ((=) mycap) (cn_ref, cni) and
+      K (\<exists> guard sz_bits. cap = CNodeCap cn_ref sz_bits guard \<and>
+         length cref = sz_bits + size guard)\<rbrace>
+     resolve_address_bits' z (cap, cref)
+   \<lbrace>\<lambda>rv s. fst rv = (cn_ref, cni) \<longrightarrow> cte_wp_at ((=) mycap) (cn_ref, cni) s\<rbrace>,-"
+proof (induct "(cap, cref)" rule: resolve_address_bits'.induct)
+  case (1 z)
+  show ?case
+    apply (clarsimp simp add: validE_R_def validE_def valid_def split: sum.split)
+    apply (subst (asm) resolve_address_bits'.simps)
+    apply (cases cap)
+              defer 6 (* cnode *)
+          apply (auto simp: in_monad)[11]    
+    apply(clarsimp simp:fail_def in_returnOk split:if_splits)
+    by (metis in_monad(7,8) whenE_bindE_throwError_to_if)
+qed
+
+lemma resolve_address_bits_cte_wp_at':
+  "\<lbrace>cte_wp_at ((=) mycap) (cn_ref, cni) and
+      K (\<exists>guard sz_bits. cap = CNodeCap cn_ref sz_bits guard \<and>
+         length cref = sz_bits + size guard)\<rbrace>
+     resolve_address_bits (cap, cref)
+   \<lbrace>\<lambda>rv s. fst rv = (cn_ref, cni) \<longrightarrow> cte_wp_at ((=) mycap) (cn_ref, cni) s\<rbrace>,-"
+  unfolding resolve_address_bits_def
+  by (wp resolve_address_bits'_cte_wp_at')
+
+lemma resolve_address_bits'_P_rv:
+  "\<lbrace>P cn_ref cni and
+      K (\<exists> guard sz_bits. cap = CNodeCap cn_ref sz_bits guard \<and>
+         length cref = sz_bits + size guard)\<rbrace>
+     resolve_address_bits' z (cap, cref)
+   \<lbrace>\<lambda>rv s. fst rv = (cn_ref, cni) \<longrightarrow> P cn_ref cni s\<rbrace>,-"
+proof (induct "(cap, cref)" rule: resolve_address_bits'.induct)
+  case (1 z)
+  show ?case
+    apply (clarsimp simp add: validE_R_def validE_def valid_def split: sum.split)
+    apply (subst (asm) resolve_address_bits'.simps)
+    apply (cases cap)
+              defer 6 (* cnode *)
+          apply (auto simp: in_monad)[11]    
+    apply(clarsimp simp:fail_def in_returnOk split:if_splits)
+    by (metis in_monad(7,8) whenE_bindE_throwError_to_if)
+qed
+
+lemma resolve_address_bits_P_rv:
+  "\<lbrace>P cn_ref cni and
+      K (\<exists>guard sz_bits. cap = CNodeCap cn_ref sz_bits guard \<and>
+         length cref = sz_bits + size guard)\<rbrace>
+     resolve_address_bits (cap, cref)
+   \<lbrace>\<lambda>rv s. fst rv = (cn_ref, cni) \<longrightarrow> P cn_ref cni s\<rbrace>,-"
+  unfolding resolve_address_bits_def
+  by (wp resolve_address_bits'_P_rv)
+
+lemma resolve_address_bits'_cte_wp_at_P_rv:
+  "\<lbrace>(\<lambda>s. cte_wp_at ((=) mycap) (cn_ref, cni) s \<longrightarrow> P cn_ref cni s) and
+      K (\<exists> guard sz_bits. cap = CNodeCap cn_ref sz_bits guard \<and>
+         length cref = sz_bits + size guard)\<rbrace>
+     resolve_address_bits' z (cap, cref)
+   \<lbrace>\<lambda>rv s. fst rv = (cn_ref, cni) \<longrightarrow> cte_wp_at ((=) mycap) (cn_ref, cni) s \<longrightarrow> P cn_ref cni s\<rbrace>,-"
+proof (induct "(cap, cref)" rule: resolve_address_bits'.induct)
+  case (1 z)
+  show ?case
+    apply (clarsimp simp add: validE_R_def validE_def valid_def split: sum.split)
+    apply (subst (asm) resolve_address_bits'.simps)
+    apply (cases cap)
+              defer 6 (* cnode *)
+          apply (auto simp: in_monad)[11]    
+    apply(clarsimp simp:fail_def in_returnOk split:if_splits)
+    by (metis in_monad(7,8) whenE_bindE_throwError_to_if)
+qed
+
+lemma resolve_address_bits_cte_wp_at_P_rv:
+  "\<lbrace>(\<lambda>s. cte_wp_at ((=) mycap) (cn_ref, cni) s \<longrightarrow> P cn_ref cni s) and
+      K (\<exists>guard sz_bits. cap = CNodeCap cn_ref sz_bits guard \<and>
+         length cref = sz_bits + size guard)\<rbrace>
+     resolve_address_bits (cap, cref)
+   \<lbrace>\<lambda>rv s. fst rv = (cn_ref, cni) \<longrightarrow> cte_wp_at ((=) mycap) (cn_ref, cni) s \<longrightarrow> P cn_ref cni s\<rbrace>,-"
+  unfolding resolve_address_bits_def
+  by (wp resolve_address_bits'_cte_wp_at_P_rv)
 
 lemma transfer_caps_colour_maintained[wp]:
   "\<lbrace>colour_invariant and
@@ -1049,20 +1187,32 @@ lemma transfer_caps_colour_maintained[wp]:
        apply wpsimp
         apply(rule hoare_vcg_all_liftE_R)
         apply(rule hoare_vcg_all_liftE_R)
+        apply(rule_tac Q'="\<lambda>rv s. fst rv = (a, b)"
+          in hoare_strengthen_post_impE_R)
+         prefer 2
+         apply clarsimp
+        apply(rule_tac R'="\<lambda>rv s. cte_wp_at \<top> (a, b) s"
+          in hoare_strengthen_imp_postE_R)
+        apply(wp resolve_address_bits_P_rv)
+        (* XXX old
+        (* the first couple have nothing to do with rv *)
+        apply(wp hoare_vcg_imp_conj_liftE_R')
+         apply(wp hoare_drop_impE_R)
+        apply(wp hoare_vcg_imp_conj_liftE_R')
+         apply(wp hoare_drop_impE_R)
+        (* rewrite a, b in terms of rv so we can drop the imp that equates them *)
         apply(rule_tac Q'="\<lambda>rv s. a = fst (fst rv) \<and> b = snd (fst rv)"
           in hoare_strengthen_post_impE_R)
          prefer 2
          apply clarsimp
         apply clarsimp
-        (* now that all a, b are rewritten in terms of rv, we can drop the imp *)
         apply(wp hoare_drop_impE_R)
-        apply(wp hoare_vcg_conj_liftE_R)
-         defer
         apply(wp hoare_vcg_conj_liftE_R)
          apply(wp resolve_address_bits_ret_valid)
         apply(wp hoare_vcg_conj_liftE_R)
          apply(wp rab_cte_cap_to)
         apply(wp resolve_address_bits_real_cte_at)
+        *)
        apply wpsimp+
      apply (wpsimp simp: lookup_cap_def)
       apply (wpsimp wp: get_cap_wp)
@@ -1082,25 +1232,46 @@ lemma transfer_caps_colour_maintained[wp]:
      apply (wpsimp simp: valid_ptr_in_cur_domain_def wp: resolve_address_bits_ret_colour)
      *)
       (* I suspect again we don't need to know anything about snd rv *)
-      apply(rule_tac Q'="\<lambda>rv s. a = fst (fst rv) \<and> b = snd (fst rv)"
+      apply(rule_tac Q'="\<lambda>rv s. fst rv = (a, b)"
         in hoare_strengthen_post_impE_R)
        prefer 2
        apply clarsimp
+      apply(rule hoare_vcg_imp_commE_R)
+      apply(rule_tac P="0 < unat (ct_receive_depth ct) \<and> \<not> word_bits < unat (ct_receive_depth ct)"
+        in hoare_gen_asmE)
       apply clarsimp
-      apply(wp hoare_drop_impE_R)
+      (* XXX: these now have nothing to do with a, b; just this mysterious x, xa *)
+      apply(rule hoare_vcg_imp_all_commE_R)
       apply(wp hoare_vcg_all_liftE_R)
+      (* XXX old
+      apply(wp hoare_absorb_double_impE_R)
+      apply(rule hoare_vcg_conj_liftE_R)
+       (* NB: had to pull in a version of the rab lemma I proved for the kugap work *)
+       apply(wp resolve_address_bits_cte_wp_at')
+      (* these couple have nothing to do with the rv and the cap it equals *)
       apply(wp hoare_vcg_imp_conj_liftE_R')
-       (* these ones have nothing to do with the rv and the cap it equals *)
        apply(wp hoare_drop_impE_R)
-      (* some of these mention the cap *)
-      apply(wp hoare_absorb_impE_R)
-      apply(wp hoare_vcg_conj_liftE_R)
-       defer (* FIXME *)
+      apply(wp hoare_vcg_imp_conj_liftE_R')
+       apply(wp hoare_drop_impE_R)
+      (* some of these mention the cap, but hopefully the rab lemma's preconds will
+         give us enough info about it for later *)
+      apply(wp hoare_drop_impE_R)
+      *)
+      apply(wp hoare_vcg_double_imp_all_commE_R)
+      apply(wp hoare_vcg_all_liftE_R)
+      apply(wp hoare_vcg_double_imp_all_commE_R)
+      apply(wp hoare_vcg_all_liftE_R)
+      apply(rule hoare_drop_impE_R)
+      apply(rule hoare_drop_impE_R)
       apply wpsimp
      apply wpsimp
     apply wpsimp
+    apply(wpsimp wp:hoare_vcg_op_lift)
+     defer (* FIXME
+     apply(wpsimp simp:load_cap_transfer_def captransfer_from_words_def) *)
+    defer (* FIXME *)
    apply clarsimp
-   (* the precondition inferred for the cap should tell us enough about
+   (* the precondition inferred for the cap needs to tell us enough about
       it to solve the rest of these goals *)
    (* DOWN TO HERE *)
    sorry
@@ -1114,7 +1285,6 @@ lemma copy_mrs_colour_maintained[wp]:
      apply (rule impI)
   by (wpsimp wp: mapM_wp[where S="UNIV"] store_word_offs_colour_maintained load_word_offs_P as_user_colour_maintained)+
 
-. (* FIXME: broken below this
 lemma do_normal_transfer_colour_maintained:
   "\<lbrace>colour_invariant and cur_domain_list and pspace_in_kernel_window and RISCV64.valid_uses and
     (\<lambda>s. check_cap_ref (tcb_ctable (the $ get_tcb sender s)) (colour_oracle (cur_domain s))) and
@@ -1123,6 +1293,7 @@ lemma do_normal_transfer_colour_maintained:
    \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   apply (wpsimp simp: do_normal_transfer_def)
      apply (wpsimp simp: valid_ptr_in_cur_domain_def wp: hoare_vcg_op_lift copy_mrs_cur_domain)
+      sorry (* FIXME *)
      apply (wpsimp simp: copy_mrs_def)
       apply (rule conjI)
        apply (rule impI)
@@ -1569,15 +1740,9 @@ lemma send_ipc_colour_maintained:
      apply wpsimp
      apply(wpsimp simp:get_thread_state_def wp:thread_get_wp)
     apply(wpsimp wp:hoare_vcg_op_lift | rule conjI)+
-        apply(wpsimp simp:set_simple_ko_def wp:set_object_wp get_object_wp)
-       apply wpsimp
-      apply wpsimp
       apply(wpsimp simp:set_simple_ko_def wp:set_object_wp get_object_wp)
-     apply wpsimp
      apply(wpsimp simp:set_simple_ko_def wp:set_object_wp get_object_wp)
-    apply wpsimp
     apply(wpsimp simp:set_simple_ko_def wp:set_object_wp get_object_wp)
-   apply wpsimp
    apply(wpsimp simp:get_simple_ko_def wp:get_object_wp)
   apply clarsimp
   (* FIXME - a bit horrendous due to use of low-level wp rules above *)
