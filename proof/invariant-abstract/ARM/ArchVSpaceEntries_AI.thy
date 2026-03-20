@@ -1626,7 +1626,7 @@ crunch set_thread_state_act
 lemma set_thread_state_duplicates_valid[wp]:
   "\<lbrace>invocation_duplicates_valid i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. invocation_duplicates_valid i\<rbrace>"
   apply (simp add: set_thread_state_def set_thread_state_act_def set_scheduler_action_def
-                   get_thread_state_def thread_get_def set_object_def get_object_def)
+                   get_thread_state_def thread_get_def set_object_def thread_set_def get_object_def)
   apply wpsimp
   apply (clarsimp simp: invocation_duplicates_valid_def pti_duplicates_valid_def
                         page_inv_duplicates_valid_def page_inv_entries_safe_def

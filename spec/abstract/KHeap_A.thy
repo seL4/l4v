@@ -42,6 +42,22 @@ definition tcbs_of_kh :: "('obj_ref \<rightharpoonup> kernel_object) \<Rightarro
 abbreviation tcbs_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> tcb" where
   "tcbs_of s \<equiv> tcbs_of_kh (kheap s)"
 
+definition sc_fields_of :: "kernel_object \<rightharpoonup> (sched_context \<times> nat)" where
+  "sc_fields_of ko \<equiv> case ko of SchedContext sc n \<Rightarrow> Some (sc, n) | _ \<Rightarrow> None"
+
+lemmas sc_fields_of [simp] = sc_fields_of_def [split_simps kernel_object.split]
+
+lemma sc_fields_of_Some:
+  "sc_fields_of ko = Some (sc, n) \<longleftrightarrow> ko = SchedContext sc n"
+  by (cases ko; simp)
+
+lemma sc_fields_of_None:
+  "sc_fields_of ko = None \<longleftrightarrow> (\<forall>sc n. ko \<noteq> SchedContext sc n)"
+  by (cases ko; simp)
+
+abbreviation scs_fields_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> (sched_context \<times> nat)" where
+  "scs_fields_of \<equiv> \<lambda>s. kheap s |> sc_fields_of"
+
 definition sc_of :: "kernel_object \<rightharpoonup> sched_context" where
   "sc_of ko \<equiv> case ko of SchedContext sc _ \<Rightarrow> Some sc | _ \<Rightarrow> None"
 
@@ -55,13 +71,39 @@ lemma sc_of_None:
   "sc_of ko = None \<longleftrightarrow> (\<forall>sc n. ko \<noteq> SchedContext sc n)"
  by (cases ko; simp)
 
-(* FIXME RT: Consider eliminating in favour of a direct definition below in terms of kheap.
-             Note that this definition is used as part of the pred_map locale setup. *)
+\<comment> \<open>
+  FIXME RT: Consider eliminating in favour of a definition using @{const scs_fields_of}.
+  Note that this definition is used as part of the pred_map locale setup.\<close>
 definition scs_of_kh :: "('obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> 'obj_ref \<rightharpoonup> sched_context" where
   "scs_of_kh kh \<equiv> kh |> sc_of"
 
 abbreviation scs_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> sched_context" where
   "scs_of s \<equiv> scs_of_kh (kheap s)"
+
+abbreviation sc_sizes_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> nat" where
+  "sc_sizes_of s \<equiv> scs_fields_of s ||> snd"
+
+definition cnode_of :: "kernel_object \<rightharpoonup> (nat \<times> cnode_contents)" where
+  "cnode_of ko \<equiv> case ko of CNode sz cnode \<Rightarrow> Some (sz, cnode) | _ \<Rightarrow> None"
+
+lemmas cnode_of_simps [simp] = cnode_of_def [split_simps kernel_object.split]
+
+lemma cnode_of_Some:
+  "cnode_of ko = Some (sz, cnode) \<longleftrightarrow> ko = CNode sz cnode"
+  by (cases ko; simp)
+
+lemma cnode_of_None:
+  "cnode_of ko = None \<longleftrightarrow> (\<forall>sz cnode. ko \<noteq> CNode sz cnode)"
+  by (cases ko; simp)
+
+abbreviation cnodes_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> (nat \<times> cnode_contents)" where
+  "cnodes_of \<equiv> \<lambda>s. kheap s |> cnode_of"
+
+abbreviation cnode_sizes_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> nat" where
+  "cnode_sizes_of s \<equiv> cnodes_of s ||> fst"
+
+abbreviation cnode_contents_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> cnode_contents" where
+  "cnode_contents_of s \<equiv> cnodes_of s ||> snd"
 
 
 section "General Object Access"
@@ -104,6 +146,8 @@ where
         TCB tcb \<Rightarrow> Some tcb
       | _       \<Rightarrow> None)"
 
+(* FIXME RT: consider replacing this definition with thread_read f t s = (tcbs_of s ||> f) ts,
+   also removing get_tcb. *)
 definition
   thread_read :: "(tcb \<Rightarrow> 'a) \<Rightarrow> obj_ref \<Rightarrow> ('a,'z::state_ext) r_monad" where
   "thread_read f tptr \<equiv> oliftM f (get_tcb tptr)"
@@ -476,7 +520,8 @@ where
      d \<leftarrow> thread_get tcb_domain thread;
      prio \<leftarrow> thread_get tcb_priority thread;
      queue \<leftarrow> get_tcb_queue d prio;
-     set_tcb_queue d prio (action thread queue)
+     queue' \<leftarrow> return (action thread queue);
+     set_tcb_queue d prio queue'
    od"
 
 definition
@@ -496,14 +541,16 @@ definition
   tcb_sched_dequeue :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list" where
   "tcb_sched_dequeue thread queue \<equiv> filter ((\<noteq>) thread) queue"
 
-definition
-  tcb_release_remove :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
+abbreviation set_release_queue :: "obj_ref list \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "set_release_queue queue \<equiv> modify (\<lambda>s. s\<lparr>release_queue := queue\<rparr>)"
+
+definition tcb_release_remove :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "tcb_release_remove tcb_ptr \<equiv> do
      qs \<leftarrow> gets release_queue;
      when (qs \<noteq> [] \<and> hd qs = tcb_ptr) $
          modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>);
-     modify (\<lambda>s. s\<lparr>release_queue := tcb_sched_dequeue tcb_ptr qs\<rparr>)
+     qs' \<leftarrow> return (tcb_sched_dequeue tcb_ptr qs);
+     set_release_queue qs'
   od"
 
 definition
@@ -581,12 +628,9 @@ where
 
 (***)
 
-definition
-  set_thread_state :: "obj_ref \<Rightarrow> thread_state \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+definition set_thread_state :: "obj_ref \<Rightarrow> thread_state \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_thread_state ref ts \<equiv> do
-     tcb \<leftarrow> gets_the $ get_tcb ref;
-     set_object ref (TCB (tcb \<lparr> tcb_state := ts \<rparr>));
+     thread_set (\<lambda>tcb. tcb\<lparr>tcb_state := ts\<rparr>) ref;
      set_thread_state_act ref
    od"
 

@@ -252,6 +252,18 @@ where
          | Some f \<Rightarrow> do_fault_transfer badge sender receiver recv_buffer
    od"
 
+definition send_ipc_blocked ::
+  "obj_ref \<Rightarrow> obj_ref \<Rightarrow> badge \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> ('a::state_ext state, unit) nondet_monad"
+  where
+  "send_ipc_blocked thread epptr badge can_grant can_grant_reply call \<equiv> do
+     set_thread_state thread (BlockedOnSend epptr
+                                \<lparr> sender_badge = badge,
+                                  sender_can_grant = can_grant,
+                                  sender_can_grant_reply = can_grant_reply,
+                                  sender_is_call = call \<rparr>);
+     tcb_ep_append thread epptr False
+   od"
+
 text \<open>Handle a message send operation performed on an endpoint by a thread.
 If a receiver is waiting then transfer the message. If no receiver is available
 and the thread is willing to block waiting to send then put it in the endpoint
@@ -263,28 +275,12 @@ where
   "send_ipc block call badge can_grant can_grant_reply can_donate thread epptr \<equiv> do
      ep \<leftarrow> get_endpoint epptr;
      case (ep, block) of
-         (IdleEP, True) \<Rightarrow> do
-               set_thread_state thread (BlockedOnSend epptr
-                                   \<lparr> sender_badge = badge,
-                                     sender_can_grant = can_grant,
-                                     sender_can_grant_reply = can_grant_reply,
-                                     sender_is_call = call \<rparr>);
-               set_endpoint epptr $ SendEP [thread]
-             od
-       | (SendEP queue, True) \<Rightarrow> do
-               set_thread_state thread (BlockedOnSend epptr
-                                   \<lparr> sender_badge = badge,
-                                     sender_can_grant = can_grant,
-                                     sender_can_grant_reply = can_grant_reply,
-                                     sender_is_call = call\<rparr>);
-               qs' \<leftarrow> tcb_ep_append thread queue;
-               set_endpoint epptr $ SendEP qs'
-             od
+         (IdleEP, True) \<Rightarrow> send_ipc_blocked thread epptr badge can_grant can_grant_reply call
+       | (SendEP queue, True) \<Rightarrow> send_ipc_blocked thread epptr badge can_grant can_grant_reply call
        | (IdleEP, False) \<Rightarrow> return ()
        | (SendEP queue, False) \<Rightarrow> return ()
        | (RecvEP (dest # queue), _) \<Rightarrow> do
-                set_endpoint epptr $ (case queue of [] \<Rightarrow> IdleEP
-                                                     | _ \<Rightarrow> RecvEP queue);
+                tcb_ep_dequeue dest epptr;
                 recv_state \<leftarrow> get_thread_state dest;
                 reply \<leftarrow> case recv_state
                   of (BlockedOnReceive _ reply data) \<Rightarrow> return reply
@@ -356,13 +352,22 @@ definition is_timeout_fault :: "fault \<Rightarrow> bool" where
   "is_timeout_fault f \<equiv>
     (case f of Timeout _ \<Rightarrow> True | _ \<Rightarrow> False)"
 
-definition
-  receive_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Rightarrow> cap \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
+definition receive_ipc_blocked ::
+  "bool \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> ('a::state_ext state, unit) nondet_monad"
+  where
+  "receive_ipc_blocked is_blocking thread epptr reply \<equiv>
+     if is_blocking
+     then do set_thread_state thread (BlockedOnReceive epptr reply \<lparr>receiver_can_grant = False\<rparr>);
+             maybeM (\<lambda>r. set_reply_obj_ref reply_tcb_update r (Some thread)) reply;
+             tcb_ep_append thread epptr True
+          od
+     else do_nbrecv_failed_transfer thread"
+
+definition receive_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Rightarrow> cap \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "receive_ipc thread cap is_blocking reply_cap \<equiv> do
-     (epptr,rights) \<leftarrow> (case cap
-                       of EndpointCap ref badge rights \<Rightarrow> return (ref,rights)
-                        | _ \<Rightarrow> fail);
+     (epptr, rights) \<leftarrow> (case cap of
+                           EndpointCap ref badge rights \<Rightarrow> return (ref,rights)
+                         | _ \<Rightarrow> fail);
      reply \<leftarrow> (case reply_cap of
                  ReplyCap r _ \<Rightarrow> do
                    tptr \<leftarrow> get_reply_tcb r;
@@ -380,30 +385,10 @@ where
      else do
        when (ntfnptr \<noteq> None \<and> is_blocking) $ maybe_return_sc (the ntfnptr) thread;
        case ep
-         of IdleEP \<Rightarrow> (case is_blocking of
-              True \<Rightarrow> do
-                  set_thread_state thread (BlockedOnReceive epptr reply \<lparr>receiver_can_grant = (AllowGrant \<in> rights)\<rparr>);
-                  when (reply \<noteq> None) $
-                    set_reply_obj_ref reply_tcb_update (the reply) (Some thread);
-                  set_endpoint epptr (RecvEP [thread])
-                od
-              | False \<Rightarrow> do_nbrecv_failed_transfer thread)
-            | RecvEP queue \<Rightarrow> (case is_blocking of
-              True \<Rightarrow> do
-                  set_thread_state thread (BlockedOnReceive epptr reply
-                                                            \<lparr>receiver_can_grant = (AllowGrant \<in> rights)\<rparr>);
-                  when (reply \<noteq> None) $ set_reply_obj_ref reply_tcb_update (the reply) (Some thread);
-                  \<^cancel>\<open>FIXME RT: schedule_tcb?\<close>
-                  qs' \<leftarrow> tcb_ep_append thread queue;
-                  set_endpoint epptr (RecvEP qs')
-                od
-              | False \<Rightarrow> do_nbrecv_failed_transfer thread)
-          | SendEP q \<Rightarrow> do
+         of SendEP q \<Rightarrow> do
               assert (q \<noteq> []);
-              queue \<leftarrow> return $ tl q;
               sender \<leftarrow> return $ hd q;
-              set_endpoint epptr $
-                (case queue of [] \<Rightarrow> IdleEP | _ \<Rightarrow> SendEP queue);
+              tcb_ep_dequeue sender epptr;
               sender_state \<leftarrow> get_thread_state sender;
               data \<leftarrow> (case sender_state
                        of BlockedOnSend ref data \<Rightarrow> return data
@@ -429,6 +414,7 @@ where
               \<^cancel>\<open>FIXME RT: the C code has a test here for (refiil_sufficient sender'sc \<or> sender's sc is None)\<close>
               od
             od
+           | _  \<Rightarrow> receive_ipc_blocked is_blocking thread epptr reply
      od
    od"
 
@@ -436,17 +422,12 @@ section \<open>Asynchronous Message Transfers\<close>
 
 text \<open>Helper function to handle a signal operation in the case
 where a receiver is waiting.\<close>
-definition
-  update_waiting_ntfn :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref option \<Rightarrow> obj_ref option \<Rightarrow> badge \<Rightarrow>
-                         (unit, 'z::state_ext) s_monad"
-where
-  "update_waiting_ntfn ntfnptr queue bound_tcb sc_ptr badge \<equiv> do
+definition update_waiting_ntfn :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> badge \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  where
+  "update_waiting_ntfn ntfnptr queue badge \<equiv> do
      assert (queue \<noteq> []);
-     (dest,rest) \<leftarrow> return $ (hd queue, tl queue);
-     set_notification ntfnptr $ \<lparr>
-         ntfn_obj = (case rest of [] \<Rightarrow> IdleNtfn | _ \<Rightarrow> WaitingNtfn rest),
-         ntfn_bound_tcb = bound_tcb,
-         ntfn_sc = sc_ptr \<rparr>;
+     dest \<leftarrow> return $ hd queue;
+     tcb_ntfn_dequeue dest ntfnptr;
      set_thread_state dest Running;
      as_user dest $ setRegister badge_register badge;
      maybe_donate_sc dest ntfnptr;
@@ -490,49 +471,42 @@ where
                   else set_notification ntfnptr $ ntfn_obj_update (K (ActiveNtfn badge)) ntfn
             od
        | (IdleNtfn, None) \<Rightarrow> set_notification ntfnptr $ ntfn_obj_update (K (ActiveNtfn badge)) ntfn
-       | (WaitingNtfn queue, bound_tcb) \<Rightarrow> update_waiting_ntfn ntfnptr queue bound_tcb (ntfn_sc ntfn) badge
+       | (WaitingNtfn queue, bound_tcb) \<Rightarrow> update_waiting_ntfn ntfnptr queue badge
        | (ActiveNtfn badge', _) \<Rightarrow>
            set_notification ntfnptr $ ntfn_obj_update (K (ActiveNtfn (combine_ntfn_badges badge badge'))) ntfn
    od"
 
 
+definition receive_signal_blocked ::
+  "obj_ref \<Rightarrow> obj_ref \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  where
+  "receive_signal_blocked thread ntfnptr is_blocking \<equiv>
+     if is_blocking
+     then do set_thread_state thread (BlockedOnNotification ntfnptr);
+             tcb_ntfn_append thread ntfnptr;
+             maybe_return_sc ntfnptr thread
+          od
+     else do_nbrecv_failed_transfer thread"
+
 text \<open>Handle a receive operation performed on a notification object by a
 thread. If a message is waiting then perform the transfer, otherwise put the
 thread in the endpoint's receiving queue.\<close>
-definition
-  receive_signal :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
+definition receive_signal :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad" where
    "receive_signal thread cap is_blocking \<equiv> do
     ntfnptr \<leftarrow>
       case cap
         of NotificationCap ntfnptr badge rights \<Rightarrow> return ntfnptr
          | _ \<Rightarrow> fail;
     ntfn \<leftarrow> get_notification ntfnptr;
-    case ntfn_obj ntfn
-      of IdleNtfn \<Rightarrow>
-                   (case is_blocking of
-                     True \<Rightarrow> do
-                          set_thread_state thread (BlockedOnNotification ntfnptr);
-                          set_notification ntfnptr $ ntfn_obj_update (K (WaitingNtfn [thread])) ntfn;
-                          maybe_return_sc ntfnptr thread
-                        od
-                   | False \<Rightarrow> do_nbrecv_failed_transfer thread)
-       | WaitingNtfn queue \<Rightarrow>
-                   (case is_blocking of
-                     True \<Rightarrow> do
-                          set_thread_state thread (BlockedOnNotification ntfnptr);
-                          qs' \<leftarrow> tcb_ep_append thread queue;
-                          set_notification ntfnptr $ ntfn_obj_update (K (WaitingNtfn qs')) ntfn;
-                          maybe_return_sc ntfnptr thread
-                        od
-                   | False \<Rightarrow> do_nbrecv_failed_transfer thread)
-       | ActiveNtfn badge \<Rightarrow> do
+    case ntfn_obj ntfn of
+        ActiveNtfn badge \<Rightarrow> do
                      as_user thread $ setRegister badge_register badge;
                      set_notification ntfnptr $ ntfn_obj_update (K IdleNtfn) ntfn;
                      maybe_donate_sc thread ntfnptr;
                      sc_ptr \<leftarrow> get_tcb_obj_ref tcb_sched_context thread;
                      if_sporadic_cur_sc_test_refill_unblock_check sc_ptr
                    od
+      | _ \<Rightarrow> receive_signal_blocked thread ntfnptr is_blocking
     od"
 
 section \<open>Sending Fault Messages\<close>
