@@ -3649,6 +3649,34 @@ lemma obj_ref_is_tcb:
           split: cap.splits
            dest: obj_ref_is_arch)
 
+lemma valid_cap_ep_at_ep_cap:
+  "\<lbrakk>r \<in> obj_refs cap; ep_at r s; s \<turnstile> cap\<rbrakk> \<Longrightarrow> is_ep_cap cap"
+  by (auto simp: valid_cap_def is_cap_simps obj_at_def is_obj_defs a_type_def
+          split: cap.splits option.splits
+           dest: obj_ref_is_arch)
+
+lemma valid_cap_ntfn_at_ntfn_cap:
+  "\<lbrakk>r \<in> obj_refs cap; ntfn_at r s; s \<turnstile> cap\<rbrakk> \<Longrightarrow> is_ntfn_cap cap"
+  by (auto simp: valid_cap_def is_cap_simps obj_at_def is_obj_defs a_type_def
+          split: cap.splits option.splits
+           dest: obj_ref_is_arch)
+
+lemma valid_cap_sc_at_sc_cap:
+  "\<lbrakk>r \<in> obj_refs cap; sc_at r s; s \<turnstile> cap\<rbrakk> \<Longrightarrow> is_sched_context_cap cap"
+  by (fastforce simp: valid_cap_def is_cap_simps obj_at_def is_obj_defs a_type_def
+               split: cap.splits option.splits
+                dest: obj_ref_is_arch)
+
+lemma valid_cap_reply_at_reply_cap:
+  "\<lbrakk>r \<in> obj_refs cap; reply_at r s; s \<turnstile> cap\<rbrakk> \<Longrightarrow> is_reply_cap cap"
+  by (fastforce simp: valid_cap_def is_cap_simps obj_at_def is_obj_defs a_type_def
+               split: cap.splits option.splits
+                dest: obj_ref_is_arch)
+
+lemma zobj_refs_subseteq_obj_refs:
+  "zobj_refs cap \<subseteq> obj_refs cap"
+  by (cases cap; clarsimp)
+
 lemma obj_ref_is_cap_table:
   "\<lbrakk> r \<in> obj_refs cap; cap_table_at n r s; s \<turnstile> cap \<rbrakk> \<Longrightarrow>
   is_cnode_cap cap \<or> is_zombie cap"

@@ -259,18 +259,21 @@ where
     od
   od"
 
-text \<open>Getting and setting endpoint queues.\<close>
-definition
-  get_ep_queue :: "endpoint \<Rightarrow> (obj_ref list,'z::state_ext) s_monad"
-where
- "get_ep_queue ep \<equiv> case ep of IdleEP \<Rightarrow> fail
-                              | _ \<Rightarrow> return (ep_queue ep)"
+text \<open>Getting and setting endpoint and notification queues.\<close>
 
-primrec (nonexhaustive)
-  update_ep_queue :: "endpoint \<Rightarrow> obj_ref list \<Rightarrow> endpoint"
-where
-  "update_ep_queue (RecvEP q) q' = RecvEP q'"
-| "update_ep_queue (SendEP q) q' = SendEP q'"
+definition get_ep_queue :: "endpoint \<Rightarrow> (obj_ref list,'z::state_ext) s_monad" where
+  "get_ep_queue ep \<equiv> return (ep_queue ep)"
+
+definition get_ntfn_queue :: "notification \<Rightarrow> (obj_ref list,'z::state_ext) s_monad" where
+  "get_ntfn_queue ntfn \<equiv> return (ntfn_queue (ntfn_obj ntfn))"
+
+primrec update_ep_queue :: "endpoint \<Rightarrow> obj_ref list \<Rightarrow> bool \<Rightarrow> endpoint" where
+   "update_ep_queue (RecvEP q) q' _ = RecvEP q'"
+ | "update_ep_queue (SendEP q) q' _ = SendEP q'"
+ | "update_ep_queue IdleEP q' is_recv = (if is_recv then RecvEP q' else SendEP q')"
+
+primrec (nonexhaustive) update_ntfn_queue :: "ntfn \<Rightarrow> obj_ref list \<Rightarrow> ntfn" where
+   "update_ntfn_queue (WaitingNtfn q) q' = WaitingNtfn q'"
 
 
 text \<open>The endpoint a TCB is blocked on\<close>
@@ -290,51 +293,92 @@ where
     BlockedOnNotification r \<Rightarrow> Some r
   | _ \<Rightarrow> None"
 
-definition tcb_ep_dequeue :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> (obj_ref list, 'z::state_ext) s_monad" where
-  "tcb_ep_dequeue tptr qs \<equiv> return $ filter ((\<noteq>) tptr) qs"
+definition tcb_dequeue :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> (obj_ref list, 'z::state_ext) s_monad" where
+  "tcb_dequeue tptr qs \<equiv> return $ filter ((\<noteq>) tptr) qs"
 
-definition tcb_ep_append :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> (obj_ref list, 'z::state_ext) s_monad" where
-  "tcb_ep_append tptr qs \<equiv> do
-     prio \<leftarrow> thread_get tcb_priority tptr;
-     prios \<leftarrow> mapM (thread_get tcb_priority) qs;
-     zprios \<leftarrow> return $ zip qs prios;
-     zprios' \<leftarrow> return $ filter (\<lambda>(_, p). p \<ge> prio) zprios
-                         @ [(tptr, prio)]
-                         @ filter (\<lambda>(_, p). p < prio) zprios;
-     return (map fst zprios')
+definition tcb_ep_dequeue :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "tcb_ep_dequeue tptr ep_ptr = do
+     ep \<leftarrow> get_endpoint ep_ptr;
+     q \<leftarrow> get_ep_queue ep;
+     assert (tptr \<in> set q);
+     q' \<leftarrow> tcb_dequeue tptr q;
+     ep' \<leftarrow> return (case q' of [] \<Rightarrow> IdleEP
+                            |  _ \<Rightarrow> update_ep_queue ep q' True);
+     set_endpoint ep_ptr ep'
+   od"
+
+definition tcb_ntfn_dequeue :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "tcb_ntfn_dequeue tptr ntfn_ptr \<equiv> do
+     notification \<leftarrow> get_notification ntfn_ptr;
+     q \<leftarrow> get_ntfn_queue notification;
+     assert (tptr \<in> set q);
+     q' \<leftarrow> tcb_dequeue tptr q;
+     notification' \<leftarrow> return $
+       ntfn_obj_update (K (case q' of [] \<Rightarrow> IdleNtfn
+                                    | _  \<Rightarrow> WaitingNtfn q'))
+                       notification;
+     set_notification ntfn_ptr notification'
+   od"
+
+text \<open>
+  Performs an ordered insert of the item t into the list ts, according to the values given by
+  the function f, and the ordering R, assuming that ts is originally sorted.\<close>
+definition ordered_insert ::
+  "'a \<Rightarrow> 'a list \<Rightarrow> ('a \<Rightarrow> ('b, 'z::state_ext) r_monad) \<Rightarrow> ('b \<Rightarrow> 'b \<Rightarrow> bool)
+   \<Rightarrow> ('a list, 'z::state_ext) s_monad"
+  where
+  "ordered_insert t ts f R \<equiv> do
+     val \<leftarrow> gets_the (f t);
+     vals \<leftarrow> mapM (\<lambda>t'. gets_the (f t')) ts;
+     zip \<leftarrow> return $ zip ts vals;
+     zip' \<leftarrow> return $ takeWhile (\<lambda>(t', val'). R val' val) zip
+                      @ [(t, val)]
+                      @ dropWhile (\<lambda>(t', val'). R val' val) zip;
+     return (map fst zip')
+   od"
+
+definition tcb_append :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> (obj_ref list, 'z::state_ext) s_monad" where
+  "tcb_append tptr qs \<equiv> ordered_insert tptr qs (thread_read tcb_priority) (\<ge>)"
+
+definition tcb_ep_append :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "tcb_ep_append tptr ep_ptr is_recv \<equiv> do
+     ep \<leftarrow> get_endpoint ep_ptr;
+     q \<leftarrow> get_ep_queue ep;
+     q' \<leftarrow> tcb_append tptr q;
+     set_endpoint ep_ptr (update_ep_queue ep q' is_recv)
+   od"
+
+definition tcb_ntfn_append :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "tcb_ntfn_append tptr ntfn_ptr \<equiv> do
+     notification \<leftarrow> get_notification ntfn_ptr;
+     qs \<leftarrow> get_ntfn_queue notification;
+     qs' \<leftarrow> tcb_append tptr qs;
+     set_notification ntfn_ptr (notification \<lparr> ntfn_obj := WaitingNtfn qs' \<rparr>)
    od"
 
 text \<open>Bring endpoint queue back into priority order\<close>
-definition
-  reorder_ep :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
+definition reorder_ep :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "reorder_ep ep_ptr tptr = do
-    ep \<leftarrow> get_endpoint ep_ptr;
-    qs \<leftarrow> get_ep_queue ep;
-    qs' \<leftarrow> tcb_ep_dequeue tptr qs;
-    qs'' \<leftarrow> tcb_ep_append tptr qs';
-    set_endpoint ep_ptr (update_ep_queue ep qs'')
-  od"
-
-text \<open>Extract list of TCBs waiting on this notification\<close>
-definition
-  get_ntfn_queue :: "notification \<Rightarrow> obj_ref list option"
-where
-  "get_ntfn_queue ntfn \<equiv> case ntfn_obj ntfn of
-     WaitingNtfn qs \<Rightarrow> Some qs
-   | _ \<Rightarrow> None"
+     ep \<leftarrow> get_endpoint ep_ptr;
+     assert (ep \<noteq> IdleEP);
+     qs \<leftarrow> get_ep_queue ep;
+     assert (qs \<noteq> []);
+     qs' \<leftarrow> tcb_dequeue tptr qs;
+     qs'' \<leftarrow> tcb_append tptr qs';
+     set_endpoint ep_ptr (update_ep_queue ep qs'' True)
+   od"
 
 text \<open>Bring notification queue back into priority order\<close>
-definition
-  reorder_ntfn :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
+definition reorder_ntfn :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "reorder_ntfn ntfn_ptr tptr = do
-    ntfn \<leftarrow> get_notification ntfn_ptr;
-    qs \<leftarrow> assert_opt $ get_ntfn_queue ntfn;
-    qs' \<leftarrow> tcb_ep_dequeue tptr qs;
-    qs'' \<leftarrow> tcb_ep_append tptr qs';
-    set_notification ntfn_ptr (ntfn \<lparr> ntfn_obj := WaitingNtfn qs'' \<rparr>)
-  od"
+     ntfn \<leftarrow> get_notification ntfn_ptr;
+     assert (is_WaitingNtfn (ntfn_obj ntfn));
+     qs \<leftarrow> get_ntfn_queue ntfn;
+     assert (qs \<noteq> []);
+     qs' \<leftarrow> tcb_dequeue tptr qs;
+     qs'' \<leftarrow> tcb_append tptr qs';
+     set_notification ntfn_ptr (ntfn \<lparr> ntfn_obj := WaitingNtfn qs'' \<rparr>)
+   od"
 
 text \<open>Set new priority for a TCB\<close>
 definition
@@ -377,13 +421,15 @@ where
      else set_thread_state t Inactive
    od"
 
-definition
-  "cancel_all_ipc_loop_body t \<equiv> do
+definition remove_and_restart_ep_queued_thread ::
+  "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "remove_and_restart_ep_queued_thread t epptr \<equiv> do
+     tcb_ep_dequeue t epptr;
      st \<leftarrow> get_thread_state t;
-     reply_opt \<leftarrow> case st of
-                    Structures_A.thread_state.BlockedOnReceive x r_opt xa \<Rightarrow> return r_opt
-                  | _ \<Rightarrow> return None;
-     when (reply_opt \<noteq> None) $ reply_unlink_tcb t (the reply_opt);
+     reply_opt \<leftarrow> return (if is_blocked_on_receive st then reply_object st else None);
+     case reply_opt of
+         None \<Rightarrow> return ()
+       | Some reply \<Rightarrow> reply_unlink_tcb t reply;
      restart_thread_if_no_fault t
    od"
 
@@ -391,16 +437,13 @@ text \<open>Cancel all message operations on threads currently queued within thi
 synchronous message endpoint. Threads so queued are placed in the Restart state.
 Once scheduled they will reattempt the operation that previously caused them
 to be queued here.\<close>
-definition
-  cancel_all_ipc :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+definition cancel_all_ipc :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "cancel_all_ipc epptr \<equiv> do
      ep \<leftarrow> get_endpoint epptr;
      case ep of IdleEP \<Rightarrow> return ()
        | _ \<Rightarrow> do
          queue \<leftarrow> get_ep_queue ep;
-         set_endpoint epptr IdleEP;
-         mapM_x (\<lambda>t. cancel_all_ipc_loop_body t) $ queue;
+         mapM_x (\<lambda>t. remove_and_restart_ep_queued_thread t epptr) $ queue;
          reschedule_required
       od
    od"
@@ -411,32 +454,26 @@ primrec (nonexhaustive)
 where
   "blocking_ipc_badge (BlockedOnSend t payload) = sender_badge payload"
 
+definition remove_and_restart_badged_thread ::
+  "obj_ref \<Rightarrow> obj_ref \<Rightarrow> badge \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "remove_and_restart_badged_thread t epptr badge \<equiv> do
+     st \<leftarrow> get_thread_state t;
+     when (blocking_ipc_badge st = badge)
+       (do tcb_ep_dequeue t epptr;
+           restart_thread_if_no_fault t
+        od)
+   od"
+
 text \<open>Cancel all message send operations on threads queued in this endpoint
 and using a particular badge.\<close>
-definition
-  cancel_badged_sends :: "obj_ref \<Rightarrow> badge \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
+definition cancel_badged_sends :: "obj_ref \<Rightarrow> badge \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "cancel_badged_sends epptr badge \<equiv> do
-    ep \<leftarrow> get_endpoint epptr;
-    case ep of
-          IdleEP \<Rightarrow> return ()
-        | RecvEP _ \<Rightarrow>  return ()
-        | SendEP queue \<Rightarrow>  do
-            set_endpoint epptr IdleEP;
-            queue' \<leftarrow> (swp filterM queue) (\<lambda> t. do
-                st \<leftarrow> get_thread_state t;
-                if blocking_ipc_badge st = badge then do
-                  restart_thread_if_no_fault t;
-                  return False
-                od
-                else return True
-            od);
-            ep' \<leftarrow> return (case queue' of
-                           [] \<Rightarrow> IdleEP
-                         | _ \<Rightarrow> SendEP queue');
-            set_endpoint epptr ep';
-            reschedule_required
-        od
+     ep \<leftarrow> get_endpoint epptr;
+     case ep of
+         SendEP queue \<Rightarrow>  do mapM_x (\<lambda>t. remove_and_restart_badged_thread t epptr badge) queue;
+                             reschedule_required
+                          od
+       | _ \<Rightarrow> return ()
   od"
 
 text \<open>Remove the binding between a notification and a TCB. This is avoids double reads
@@ -472,20 +509,24 @@ where
 
 text \<open>Cancel all message operations on threads queued in a notification endpoint.\<close>
 
-definition
-  cancel_all_signals :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
+definition remove_and_restart_ntfn_queued_thread ::
+  "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "remove_and_restart_ntfn_queued_thread t ntfnptr \<equiv> do
+     tcb_ntfn_dequeue t ntfnptr;
+     set_thread_state t Restart;
+     sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context t;
+     if_sporadic_cur_sc_assert_refill_unblock_check sc_opt;
+     possible_switch_to t
+   od"
+
+definition cancel_all_signals :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "cancel_all_signals ntfnptr \<equiv> do
      ntfn \<leftarrow> get_notification ntfnptr;
-     case ntfn_obj ntfn of WaitingNtfn queue \<Rightarrow> do
-                      _ \<leftarrow> set_notification ntfnptr $ ntfn_obj_update (K IdleNtfn) ntfn;
-                      mapM_x (\<lambda>t. do set_thread_state t Restart;
-                                     sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context t;
-                                     if_sporadic_cur_sc_assert_refill_unblock_check sc_opt;
-                                     possible_switch_to t od) queue;
-                      reschedule_required
-                     od
-               | _ \<Rightarrow> return ()
+     case ntfn_obj ntfn of
+         WaitingNtfn queue \<Rightarrow> do mapM_x (\<lambda>t. remove_and_restart_ntfn_queued_thread t ntfnptr) queue;
+                                 reschedule_required
+                              od
+       | _ \<Rightarrow> return ()
    od"
 
 text \<open>The endpoint pointer stored by a thread waiting for a message to be
@@ -502,12 +543,7 @@ definition blocked_cancel_ipc ::
   where
   "blocked_cancel_ipc state tptr reply_opt \<equiv> do
      epptr \<leftarrow> get_blocking_object state;
-     ep \<leftarrow> get_endpoint epptr;
-     queue \<leftarrow> get_ep_queue ep;
-     queue' \<leftarrow> return $ remove1 tptr queue;
-     ep' \<leftarrow> return (case queue' of [] \<Rightarrow> IdleEP
-                                |  _ \<Rightarrow> update_ep_queue ep queue');
-     set_endpoint epptr ep';
+     tcb_ep_dequeue tptr epptr;
      case reply_opt of
          None \<Rightarrow> return ()
        | Some r \<Rightarrow> reply_unlink_tcb tptr r;
@@ -630,13 +666,7 @@ definition
   cancel_signal :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "cancel_signal threadptr ntfnptr \<equiv> do
-     ntfn \<leftarrow> get_notification ntfnptr;
-     queue \<leftarrow> (case ntfn_obj ntfn of WaitingNtfn queue \<Rightarrow> return queue
-                        | _ \<Rightarrow> fail);
-     queue' \<leftarrow> return $ remove1 threadptr queue;
-     newNTFN \<leftarrow> return $ ntfn_obj_update (K (case queue' of [] \<Rightarrow> IdleNtfn
-                                                      | _  \<Rightarrow> WaitingNtfn queue')) ntfn;
-     set_notification ntfnptr newNTFN;
+     tcb_ntfn_dequeue threadptr ntfnptr;
      set_thread_state threadptr Inactive
    od"
 

@@ -174,19 +174,18 @@ crunch complete_yield_to
   (wp: maybeM_inv lookup_ipc_buffer_inv hoare_drop_imps crunch_wps simp: crunch_simps)
 
 lemma set_thread_state_bound_yt_tcb_at[wp]:
-  "\<lbrace>bound_yt_tcb_at P t\<rbrace> set_thread_state p ts \<lbrace>\<lambda>_. bound_yt_tcb_at P t\<rbrace>"
+  "set_thread_state p ts \<lbrace>bound_yt_tcb_at P t\<rbrace>"
   unfolding set_thread_state_def
-  by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def wp: set_object_wp)
+  apply (wpsimp wp: thread_set_wp)
+  by (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
 
 crunch set_thread_state_act
   for kheap_cur[wp]: "\<lambda>s. P (kheap s) (cur_thread s)"
   and obj_at_cur[wp]: "\<lambda>s. P (obj_at (Q (cur_thread s)) p s)"
 
 lemma set_thread_state_bound_yt_tcb_at_ct[wp]:
-  "\<lbrace>\<lambda>s. bound_yt_tcb_at P (cur_thread s) s\<rbrace>
-     set_thread_state p ts \<lbrace>\<lambda>_ s. bound_yt_tcb_at P (cur_thread s) s\<rbrace>"
-  unfolding set_thread_state_def
-  by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def wp: set_object_wp)
+  "set_thread_state p ts \<lbrace>\<lambda>s. bound_yt_tcb_at P (cur_thread s) s\<rbrace>"
+  by (rule hoare_lift_Pf2[where f=cur_thread]; wpsimp)
 
 lemma sssc_sc_yf_update_bound_yt_tcb_at_ct[wp]:
   "\<lbrace>\<lambda>s. bound_yt_tcb_at P (cur_thread s) s\<rbrace>
@@ -309,11 +308,10 @@ lemma complete_yield_to_bound_yt_tcb_a_ct[wp]:
   done
 
 lemma sts_sc_tcb_sc_at_not_ct[wp]:
-  "\<lbrace> \<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>
-   set_thread_state t s \<lbrace> \<lambda>rv s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>"
+  "set_thread_state t s \<lbrace>\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>"
   apply (simp add: set_thread_state_def)
-  apply (wp set_object_wp | simp add: sc_tcb_sc_at_def)+
-  by (clarsimp simp: obj_at_def is_tcb get_tcb_def split: kernel_object.splits)
+  apply (wpsimp wp: thread_set_wp simp: sc_tcb_sc_at_def)
+  by (clarsimp simp: obj_at_def get_tcb_def)
 
 lemma ssyf_sc_tcb_sc_at_not_ct[wp]:
   "\<lbrace> \<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>

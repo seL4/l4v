@@ -98,6 +98,18 @@ locale_abbrev ptes_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpo
   where
   "ptes_of s \<equiv> \<lambda>p. pte_of p (pts_of s)"
 
+definition data_page_flag_of :: "arch_kernel_obj \<rightharpoonup> bool" where
+  "data_page_flag_of ko \<equiv> case ko of DataPage dev sz \<Rightarrow> Some dev | _ \<Rightarrow> None"
+
+locale_abbrev data_page_flags_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> bool" where
+  "data_page_flags_of \<equiv> \<lambda>s. aobjs_of s |> data_page_flag_of"
+
+definition data_page_size_of :: "arch_kernel_obj \<rightharpoonup> vmpage_size" where
+  "data_page_size_of ko \<equiv> case ko of DataPage dev sz \<Rightarrow> Some sz | _ \<Rightarrow> None"
+
+locale_abbrev data_page_sizes_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> vmpage_size" where
+  "data_page_sizes_of \<equiv> \<lambda>s. aobjs_of s |> data_page_size_of"
+
 text \<open>The following function takes a pointer to a PTE in kernel memory and returns the PTE.\<close>
 locale_abbrev get_pte :: "obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad"
   where

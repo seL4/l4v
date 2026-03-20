@@ -489,7 +489,7 @@ lemma valid_arch_mdb_cap_swap:
             ((caps_of_state s)(a \<mapsto> c', b \<mapsto> c))"
   by (auto simp: valid_arch_mdb_def)
 
-lemma do_ipc_transfer_valid_arch[Ipc_AI_3_assms]:
+lemma do_ipc_transfer_valid_arch[wp, Ipc_AI_3_assms]:
   "\<lbrace>valid_arch_state and valid_objs and valid_mdb \<rbrace>
    do_ipc_transfer s ep bg grt r
    \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"

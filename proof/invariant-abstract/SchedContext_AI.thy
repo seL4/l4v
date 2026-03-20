@@ -1267,7 +1267,7 @@ crunch sched_context_bind_tcb, update_sk_obj_ref
   for arch_state[wp]: "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps simp: is_round_robin_def crunch_simps)
 
-crunch get_tcb_queue, get_sc_time, get_sc_obj_ref
+crunch get_tcb_queue, get_sc_obj_ref
   for inv[wp]: "P"
   (wp: hoare_drop_imps)
 
@@ -1287,9 +1287,9 @@ lemma test_possible_switch_to_valid_replies[wp]:
   "test_possible_switch_to tcb_ptr \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp simp: test_possible_switch_to_def)
 
-lemma tcb_release_enqueue_valid_replies[wp]:
-  "tcb_release_enqueue tcb_ptr \<lbrace> valid_replies_pred P \<rbrace>"
-  by (wpsimp simp: tcb_release_enqueue_def wp: mapM_wp' cong: if_cong)
+crunch tcb_release_enqueue
+  for valid_replies[wp]: "valid_replies_pred P"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma postpone_valid_replies[wp]:
   "postpone sc_ptr \<lbrace> valid_replies_pred P \<rbrace>"
@@ -1315,11 +1315,9 @@ lemma cur_sc_tcb_release_queue_update[simp]:
   "cur_sc_tcb (release_queue_update f s) = cur_sc_tcb s"
   by (clarsimp simp: cur_sc_tcb_def sc_tcb_sc_at_def)
 
-lemma tcb_release_enqueue_cur_sc_tcb[wp]:
-  "\<lbrace>cur_sc_tcb\<rbrace> tcb_release_enqueue tcb_ptr \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
-  by (wpsimp simp: tcb_release_enqueue_def get_sc_time_def get_tcb_sc_def get_tcb_obj_ref_def
-                   thread_get_def
-             cong: if_cong wp: mapM_wp_inv)
+crunch tcb_release_enqueue
+  for cur_sc_tcb[wp]: cur_sc_tcb
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma postpone_cur_sc_tcb[wp]:
   "\<lbrace>cur_sc_tcb\<rbrace> postpone sc \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
