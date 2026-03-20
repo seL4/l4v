@@ -238,13 +238,13 @@ lemma dxo_wp_weak[wp]:
 crunch set_thread_state
   for ct[wp]: "\<lambda>s. P (cur_thread s)"
 
-crunch set_scheduler_action, get_thread_state
+crunch set_scheduler_action, get_thread_state, thread_set
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
 
 lemma set_thread_state_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_thread_state t s \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   unfolding set_thread_state_def set_thread_state_act_def
-  by (wpsimp wp: set_object_typ_at)
+  by wpsimp
 
 lemmas set_thread_state_typ_ats[wp] = abs_typ_at_lifts[OF set_thread_state_typ_at]
 
@@ -1196,7 +1196,8 @@ lemma ep_redux_simps:
   by (fastforce split: list.splits option.splits
                  simp: valid_ep_def valid_ntfn_def valid_bound_obj_def)+
 
-lemma update_ep_queue_triv[simp]: "ep \<noteq> IdleEP \<Longrightarrow> update_ep_queue ep (ep_queue ep) = ep"
+lemma update_ep_queue_triv[simp]:
+  "ep \<noteq> IdleEP \<Longrightarrow> update_ep_queue ep (ep_queue ep) is_recv = ep"
   by (cases ep; clarsimp simp: ep_queue_def)
 
 crunch set_simple_ko
@@ -1769,7 +1770,7 @@ lemma shows
     "as_user p f \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
 
   unfolding set_thread_state_def set_tcb_obj_ref_def as_user_def set_object_def get_object_def
-            set_mrs_def
+            set_mrs_def thread_set_def
   apply (all \<open>(wp | wpc | simp)+ ; clarsimp, erule rsubst[where P=P], rule cte_wp_caps_of_lift\<close>)
   by (auto simp: cte_wp_at_cases2 tcb_cnode_map_def dest!: get_tcb_SomeD)
 

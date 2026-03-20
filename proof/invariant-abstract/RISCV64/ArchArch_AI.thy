@@ -933,7 +933,7 @@ crunch set_thread_state_act
 lemma sts_aobjs_of[wp]:
   "set_thread_state t st \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
   unfolding set_thread_state_def
-  apply (wpsimp wp: set_object_wp)
+  apply (wpsimp wp: thread_set_wp)
   apply (erule rsubst[where P=P])
   apply (auto dest!: get_tcb_SomeD simp: opt_map_def split: option.splits)
   done

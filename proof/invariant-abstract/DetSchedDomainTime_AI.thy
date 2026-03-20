@@ -202,11 +202,15 @@ lemma reply_push_domain_list_inv[wp]:
   by (wpsimp simp: reply_push_def bind_sc_reply_def split_del: if_split
     wp: hoare_vcg_if_lift2 hoare_vcg_all_lift hoare_drop_imp get_sched_context_wp)
 
+crunch tcb_ep_append, tcb_ntfn_append, tcb_ep_dequeue, tcb_ntfn_dequeue
+  for domain_list[wp]: "\<lambda>s. P (domain_list s)"
+  (wp: crunch_wps)
+
 lemma send_ipc_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>
    send_ipc block call badge can_grant can_reply_grant can_donate thread epptr
    \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  by (wpsimp simp: send_ipc_def wp: hoare_drop_imp hoare_vcg_all_lift)
+  by (wpsimp simp: send_ipc_def send_ipc_blocked_def wp: hoare_drop_imp hoare_vcg_all_lift)
 
 lemma send_fault_ipc_domain_list_inv[wp]:
  "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> send_fault_ipc param_a param_b param_c param_d \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
