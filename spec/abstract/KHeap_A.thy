@@ -63,6 +63,54 @@ definition scs_of_kh :: "('obj_ref \<rightharpoonup> kernel_object) \<Rightarrow
 abbreviation scs_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> sched_context" where
   "scs_of s \<equiv> scs_of_kh (kheap s)"
 
+definition sc_size_of :: "Structures_A.kernel_object \<rightharpoonup> nat" where
+  "sc_size_of ko \<equiv> case ko of Structures_A.SchedContext _ n \<Rightarrow> Some n | _ \<Rightarrow> None"
+
+lemmas sc_size_of_simps [simp] = sc_size_of_def [split_simps kernel_object.split]
+
+lemma sc_size_of_Some[simp]:
+  "sc_size_of ko = Some n \<longleftrightarrow> (\<exists>sc. ko = Structures_A.SchedContext sc n)"
+  by (cases ko; simp)
+
+lemma sc_size_of_None:
+  "sc_size_of ko = None \<longleftrightarrow> (\<forall>sc n. ko \<noteq> Structures_A.SchedContext sc n)"
+  by (cases ko; simp)
+
+abbreviation sc_sizes_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> nat" where
+  "sc_sizes_of \<equiv> (\<lambda>s. kheap s |> sc_size_of)"
+
+definition cnode_of :: "Structures_A.kernel_object \<rightharpoonup> cnode_contents" where
+  "cnode_of ko \<equiv> case ko of Structures_A.CNode _ cnode \<Rightarrow> Some cnode | _ \<Rightarrow> None"
+
+lemmas cnode_of_simps [simp] = cnode_of_def [split_simps kernel_object.split]
+
+lemma cnode_of_Some[simp]:
+  "cnode_of ko = Some cnode \<longleftrightarrow> (\<exists>sz. ko = Structures_A.CNode sz cnode)"
+  by (cases ko; simp)
+
+lemma cnode_of_None:
+  "cnode_of ko = None \<longleftrightarrow> (\<forall>sz cnode. ko \<noteq> Structures_A.CNode sz cnode)"
+  by (cases ko; simp)
+
+abbreviation cnodes_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> cnode_contents" where
+  "cnodes_of \<equiv> (\<lambda>s. kheap s |> cnode_of)"
+
+definition cnode_size_of :: "Structures_A.kernel_object \<rightharpoonup> nat" where
+  "cnode_size_of ko \<equiv> case ko of Structures_A.CNode sz _ \<Rightarrow> Some sz | _ \<Rightarrow> None"
+
+lemmas cnode_size_of_simps [simp] = cnode_size_of_def [split_simps kernel_object.split]
+
+lemma cnode_size_of_Some[simp]:
+  "cnode_size_of ko = Some sz \<longleftrightarrow> (\<exists>cnode. ko = Structures_A.CNode sz cnode)"
+  by (cases ko; simp)
+
+lemma cnode_size_of_None:
+  "cnode_size_of ko = None \<longleftrightarrow> (\<forall>sz cnode. ko \<noteq> Structures_A.CNode sz cnode)"
+  by (cases ko; simp)
+
+abbreviation cnode_sizes_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> nat" where
+  "cnode_sizes_of \<equiv> (\<lambda>s. kheap s |> cnode_size_of)"
+
 
 section "General Object Access"
 
@@ -476,7 +524,8 @@ where
      d \<leftarrow> thread_get tcb_domain thread;
      prio \<leftarrow> thread_get tcb_priority thread;
      queue \<leftarrow> get_tcb_queue d prio;
-     set_tcb_queue d prio (action thread queue)
+     queue' \<leftarrow> return (action thread queue);
+     set_tcb_queue d prio queue'
    od"
 
 definition
@@ -496,14 +545,16 @@ definition
   tcb_sched_dequeue :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list" where
   "tcb_sched_dequeue thread queue \<equiv> filter ((\<noteq>) thread) queue"
 
-definition
-  tcb_release_remove :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
+abbreviation set_release_queue :: "obj_ref list \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "set_release_queue queue \<equiv> modify (\<lambda>s. s\<lparr>release_queue := queue\<rparr>)"
+
+definition tcb_release_remove :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "tcb_release_remove tcb_ptr \<equiv> do
      qs \<leftarrow> gets release_queue;
      when (qs \<noteq> [] \<and> hd qs = tcb_ptr) $
          modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>);
-     modify (\<lambda>s. s\<lparr>release_queue := tcb_sched_dequeue tcb_ptr qs\<rparr>)
+     qs' \<leftarrow> return (tcb_sched_dequeue tcb_ptr qs);
+     set_release_queue qs'
   od"
 
 definition
@@ -581,12 +632,9 @@ where
 
 (***)
 
-definition
-  set_thread_state :: "obj_ref \<Rightarrow> thread_state \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+definition set_thread_state :: "obj_ref \<Rightarrow> thread_state \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_thread_state ref ts \<equiv> do
-     tcb \<leftarrow> gets_the $ get_tcb ref;
-     set_object ref (TCB (tcb \<lparr> tcb_state := ts \<rparr>));
+     thread_set (\<lambda>tcb. tcb\<lparr>tcb_state := ts\<rparr>) ref;
      set_thread_state_act ref
    od"
 

@@ -662,14 +662,12 @@ lemma pred_map_compose':
   by (fastforce simp: pred_map_compose)
 
 lemma tcb_ready_times_of_eq_bound_sc_obj_tcb_at_lift:
-  assumes "\<And>rt. bound_sc_obj_tcb_at (\<lambda>sc. sc_ready_time sc = rt) t s
-                 = bound_sc_obj_tcb_at (\<lambda>sc. sc_ready_time sc = rt) t s'"
-  shows "tcb_ready_times_of s t = tcb_ready_times_of s' t"
-  apply (rule heap_eq_x_pred_map_eq_lift[where x=t], rename_tac rt)
-  apply (clarsimp simp: tcb_sc_refill_cfgs_2_def sc_ready_times_2_def pred_map_eq_def pred_map_compose')
-  apply (rule rsubst[where P="\<lambda>P. bound_sc_obj_tcb_at P t s = bound_sc_obj_tcb_at P t s'"])
-  apply (rule_tac rt=rt in assms)
-  by fastforce
+  "\<lbrakk>bound_sc_obj_tcb_at (\<lambda>sc. sc_ready_time sc = rt \<and> scrc_refills sc \<noteq> []) t s;
+    bound_sc_obj_tcb_at (\<lambda>sc. sc_ready_time sc = rt) t s'\<rbrakk>
+   \<Longrightarrow> tcb_ready_times_of s t = tcb_ready_times_of s' t"
+  by (fastforce simp: tcb_sc_refill_cfgs_2_def sc_ready_times_2_def case_map_def opt_map_def
+                      tcbs_of_kh_def scs_of_kh_def
+               split: option.splits)
 
 lemma non_empty_sc_replies_nonz_cap:
   assumes "if_live_then_nonz_cap s"
@@ -712,21 +710,18 @@ lemma ntfn_queues_of_ntfn_at_pred:
      (fastforce split: kernel_object.splits)
 
 lemma in_ep_queue_st_tcb_at:
-  "\<lbrakk>ep_queues_of s ep_ptr = Some q; t \<in> set q; valid_objs s; sym_refs (state_refs_of s)\<rbrakk>
+  "\<lbrakk>ep_queues_of s ep_ptr = Some q; sym_refs (state_refs_of s); t \<in> set q\<rbrakk>
    \<Longrightarrow> st_tcb_at (\<lambda>st. (\<exists>data. st = BlockedOnSend ep_ptr data)
                        \<or> (\<exists>data pl. st = BlockedOnReceive ep_ptr data pl)) t s"
-  apply (clarsimp simp: opt_map_def eps_of_kh_def split: option.splits)
-  apply (erule (1) valid_objsE)
-  apply (clarsimp simp: valid_obj_def valid_ep_def)
-  apply (clarsimp simp: sym_refs_def)
-  apply (erule_tac x=ep_ptr in allE)
-  apply (fastforce simp: state_refs_of_def is_tcb obj_at_def pred_tcb_at_def tcb_st_refs_of_def
-                         get_refs_def2
-                  split: thread_state.splits if_splits endpoint.splits)
+  apply (clarsimp simp: eps_of_kh_def opt_map_def split: option.splits)
+  apply (rename_tac ep)
+  apply (case_tac ep; clarsimp)
+   apply (fastforce dest: in_send_ep_queue_st_tcb_at elim: st_tcb_weakenE)
+  apply (fastforce dest: in_receive_ep_queue_st_tcb_at elim: st_tcb_weakenE)
   done
 
 lemma in_ntfn_queue_st_tcb_at:
-  "\<lbrakk>ntfn_queues_of s ntfn_ptr = Some q; t \<in> set q; valid_objs s; sym_refs (state_refs_of s)\<rbrakk>
+  "\<lbrakk>ntfn_queues_of s ntfn_ptr = Some q; sym_refs (state_refs_of s); t \<in> set q\<rbrakk>
    \<Longrightarrow> st_tcb_at (\<lambda>st. st = BlockedOnNotification ntfn_ptr) t s"
   apply (clarsimp simp: opt_map_def split: option.splits)
   apply (frule st_in_waitingntfn[where q=q]; fastforce?)
@@ -742,6 +737,16 @@ lemma tcb_at_priority_Some:
 lemma prios_of_etcb_at:
   "(prios_of s t = Some prio) \<longleftrightarrow> (tcb_at t s \<and> etcb_at (\<lambda>etcb. etcb_priority etcb = prio) t s)"
   by (fastforce simp add: etcb_at_def2 in_opt_map_eq vs_all_heap_simps obj_at_def is_tcb_def)
+
+(* this is not really an "E" lemma... *)
+lemma active_scs_validE:
+  "\<lbrakk>pred_map active_scrc (sc_refill_cfgs_of s) scp; active_scs_valid s\<rbrakk> \<Longrightarrow> valid_refills scp s"
+  by (clarsimp simp: active_scs_valid_def)
+
+lemma valid_refills_nonempty_refills:
+  "valid_refills sc_ptr s \<Longrightarrow> sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s"
+  by (fastforce simp: sc_at_ppred_def vs_all_heap_simps sc_valid_refills_def
+                      rr_valid_refills_def obj_at_def)
 
 \<comment> \<open>Used for retyping Untyped memory, including ASID pool creation. Retyping may destroy objects
     if the Untyped memory is reset. But under the invariants, destruction can only occur for objects
@@ -844,12 +849,18 @@ lemma valid_sched_tcb_state_preservation_gen:
     apply simp
    apply (erule sorted_release_q_2_eq_lift[THEN iffD1, rotated])
    apply (drule (1) bspec, clarsimp)
-   apply (prop_tac "\<exists>rt. bound_sc_obj_tcb_at (\<lambda>sc. sc_ready_time sc = rt) t s"
-          , fastforce simp: obj_at_kh_kheap_simps vs_all_heap_simps, clarsimp)
+   apply (frule_tac scp=ref' in active_scs_validE[rotated])
+    apply (clarsimp simp: obj_at_kh_kheap_simps)
+   apply (frule valid_refills_nonempty_refills)
+   apply (prop_tac "\<exists>rt. bound_sc_obj_tcb_at (\<lambda>sc. sc_ready_time sc = rt \<and> scrc_refills sc \<noteq> []) t s")
+    apply (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps)
    apply (frule (1) runnable_nonz_cap_to)
+   apply clarsimp
    apply (frule use_valid,
-          (rule_tac t=t and I=I and P="\<lambda>sc. sc_ready_time sc = rt" in bound_sc_obj_tcb_at_nonz_cap_lift
-           ; simp add: I bound_sc sc_refill_cfg), simp)
+          (rule_tac t=t and I=I and P="\<lambda>sc. sc_ready_time sc = rt \<and> scrc_refills sc \<noteq> []"
+                 in bound_sc_obj_tcb_at_nonz_cap_lift;
+           simp add: I bound_sc sc_refill_cfg),
+          simp)
    apply (rule tcb_ready_times_of_eq_bound_sc_obj_tcb_at_lift)
    by (auto simp: vs_all_heap_simps)
   apply (prop_tac "valid_sched_action s'")
@@ -999,7 +1010,7 @@ lemma valid_sched_tcb_state_preservation_gen:
        apply (drule_tac x=t in bspec, fastforce)
        apply (frule invs_valid_objs)
        apply (frule invs_sym_refs)
-       apply (frule (3) in_ep_queue_st_tcb_at)
+       apply (frule (2) in_ep_queue_st_tcb_at)
        apply (frule use_valid[OF _ st_tcb], fastforce)
        apply (frule st_tcb_at_tcb_at)
        apply (frule tcb_at_priority_Some)
@@ -1039,7 +1050,6 @@ lemma valid_sched_tcb_state_preservation_gen:
       apply (frule (4) ex_nonz_cap_to_tcb_in_waitingntfn)
       apply (drule_tac x=t in bspec, fastforce)
       apply (frule_tac ntfn_ptr=ptr in in_ntfn_queue_st_tcb_at[rotated])
-         apply fastforce
         apply fastforce
        apply (force simp: ntfn_at_pred_def opt_map_def split: option.splits)
       apply (frule use_valid[OF _ st_tcb], fastforce)
@@ -1830,11 +1840,6 @@ lemma valid_refills_def2:
   "valid_refills scp s = (\<exists>sc n. kheap s scp = Some (SchedContext sc n) \<and> sc_valid_refills sc)"
   by (clarsimp simp: valid_refills_def vs_all_heap_simps)
 
-(* this is not really an "E" lemma... *)
-lemma active_scs_validE:
-  "pred_map active_scrc (sc_refill_cfgs_of s) scp \<Longrightarrow> active_scs_valid s \<Longrightarrow> valid_refills scp s"
-  by (clarsimp simp: active_scs_valid_def)
-
 lemma active_scs_valid_tcb_at:
   "\<lbrakk>active_scs_valid s; active_sc_tcb_at tp s\<rbrakk> \<Longrightarrow> valid_refills_tcb_at tp s"
   apply (clarsimp simp: active_sc_tcb_at_def2 valid_refills_tcb_at_def op_equal)
@@ -1856,11 +1861,6 @@ lemma valid_refills_budget_sufficient:
   "valid_refills_tcb_at tp s \<Longrightarrow> budget_sufficient tp s"
   by (fastforce simp: valid_refills_tcb_at_def budget_sufficient_def2 obj_at_def op_equal
               intro!: valid_refills_refill_sufficient)
-
-lemma valid_refills_nonempty_refills:
-  "valid_refills sc_ptr s \<Longrightarrow> sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s"
-  by (fastforce simp: sc_at_ppred_def vs_all_heap_simps sc_valid_refills_def
-                      rr_valid_refills_def obj_at_def)
 
 lemma sporadic_implies_active:
   "\<lbrakk>active_scs_valid s; (sc_sporadic |< (scs_of s)) sc_ptr\<rbrakk>
