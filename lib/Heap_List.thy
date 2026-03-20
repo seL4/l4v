@@ -525,6 +525,15 @@ lemma list_queue_relation_Nil:
   "list_queue_relation ts q nexts prevs \<Longrightarrow> ts = [] \<longleftrightarrow> headEndPtrsEmpty q"
   by (fastforce dest: heap_path_head simp: headEndPtrsEmpty_def list_queue_relation_def)
 
+lemma list_queue_relation_Nil_iff_emptyHeadEndPtrs:
+  "list_queue_relation ls q hp hp' \<Longrightarrow> (ls = []) \<longleftrightarrow> q = emptyHeadEndPtrs"
+  apply (frule list_queue_relation_Nil)
+  apply (clarsimp simp: headEndPtrsEmpty_def emptyHeadEndPtrs_def
+                        list_queue_relation_def queue_end_valid_def)
+  apply (case_tac "he_ptrs_head q"; clarsimp)
+  apply (metis head_end_ptrs.collapse)
+  done
+
 lemma list_queue_relation_Nil_emptyQueue[simp]:
   "list_queue_relation [] emptyHeadEndPtrs hp hp'"
   by (clarsimp simp: list_queue_relation_def queue_end_valid_def prev_queue_head_def
