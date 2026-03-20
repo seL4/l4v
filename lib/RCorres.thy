@@ -141,7 +141,7 @@ section \<open>Symbolic execution and assertions\<close>
 
 lemma rcorres_symb_exec_l:
   "\<lbrakk>\<And>s'. \<lbrace>\<lambda>s. R s s'\<rbrace> a \<lbrace>\<lambda>rv s. Q rv s s'\<rbrace>; \<And>s s'. R s s' \<Longrightarrow> \<lbrace>(=) s\<rbrace> a \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>;
-    \<And>rv. rcorres (\<lambda>s s'. R s s' \<and> Q rv s s') (b rv) c R'\<rbrakk>
+    \<And>rv. rcorres (\<lambda>s s'. Q rv s s') (b rv) c R'\<rbrakk>
    \<Longrightarrow> rcorres R (a >>= b) c R'"
   apply (clarsimp simp: rcorres_def bind_def exs_valid_def)
   apply (rename_tac s s' rv' t')
@@ -173,9 +173,9 @@ lemma rcorres_assert_r:
   by (fastforce intro: rcorres_assume_pre)
 
 lemma rcorres_assert_r_fwd:
-  "\<lbrakk>\<And>s s'. R s s' \<Longrightarrow> P; rcorres (\<lambda>s s'. R s s' \<and> P) a (c ()) R'\<rbrakk>
+  "rcorres (\<lambda>s s'. R s s' \<and> P) a (c ()) R'
    \<Longrightarrow> rcorres R a (assert P >>= c) R'"
-  by (fastforce intro: rcorres_assume_pre)
+  by (fastforce intro: rcorres_symb_exec_r[OF assert_sp])
 
 lemma rcorres_stateAssert_l:
   "rcorres R (b ()) c R' \<Longrightarrow> rcorres (\<lambda>s s'. R s s' \<and> P s) (stateAssert P xs >>= b) c R'"
@@ -344,7 +344,7 @@ lemma rcorres_conj_lift_fwd:
 lemma rcorres_imp_lift:
   "\<lbrakk>rcorres P' f f' (\<lambda>rv rv' s s'. \<not> P rv rv' s s'); rcorres Q' f f' Q\<rbrakk>
    \<Longrightarrow> rcorres
-         (\<lambda>s s'. (\<not> P' s s' \<longrightarrow> Q' s s') \<and> R s s')
+         (\<lambda>s s'. \<not> P' s s' \<longrightarrow> Q' s s')
          f f' (\<lambda>rv rv' s s'. P rv rv' s s' \<longrightarrow> Q rv rv' s s')"
   by (fastforce simp: rcorres_def det_wp_def)
 
