@@ -1839,11 +1839,11 @@ proof -
     have cn_no_overlap:
       "\<And>p n. gsCNodes s p = Some n \<Longrightarrow> p \<notin> {ptr..+2 ^ bits}
           \<Longrightarrow> {p ..+ 2 ^ (n + cte_level_bits)} \<inter> {ptr..+2 ^ bits} = {}"
-      apply (simp add: cNodePartialOverlap_def)
+      apply (simp add: cNodePartialOverlap_def )
       apply (elim allE, drule(1) mp)
       apply (clarsimp simp flip: add_mask_fold)
       apply (frule base_member_set, simp add: word_bits_def)
-      apply (clarsimp simp only: upto_intvl_eq[symmetric] field_simps)
+      apply (clarsimp simp only: upto_intvl_eq[symmetric] field_simps )
       apply blast
       done
 

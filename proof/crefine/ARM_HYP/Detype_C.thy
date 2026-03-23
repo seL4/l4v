@@ -309,7 +309,9 @@ proof -
   hence "?oran \<inter> ?ran = {}"
   proof (rule pspace_no_overlapD'[where p = ptr and bits = bits,simplified])
     from invs have "valid_pspace' s" ..
-    with vu al show "pspace_no_overlap' ptr bits ?s" by (rule valid_untyped_no_overlap)
+    with vu al show "pspace_no_overlap' ptr bits ?s"
+      using valid_untyped_no_overlap
+      by (clarsimp simp: mask_def add_diff_eq)
   qed
 
   hence "?oran' \<inter> ?ran' = {}" by simp
@@ -693,7 +695,9 @@ proof -
       unfolding objBits_def
     proof (rule pspace_no_overlapD'[where p = ptr and bits = bits,simplified])
       from invs have "valid_pspace' s" ..
-      with vu al show "pspace_no_overlap' ptr bits ?s" by (rule valid_untyped_no_overlap)
+      with vu al show "pspace_no_overlap' ptr bits ?s"
+        using valid_untyped_no_overlap
+        by (clarsimp simp: mask_def add_diff_eq)
     qed
     hence "?oran' \<inter> ?ran' = {}" by simp
     thus ?thesis by (simp add: objBits_simps' size_of_def)
@@ -793,7 +797,9 @@ proof -
   hence "?oran \<inter> ?ran = {}"
   proof (rule pspace_no_overlapD'[where p = ptr and bits = bits,simplified])
     from invs have "valid_pspace' s" ..
-    with vu al show "pspace_no_overlap' ptr bits ?s" by (rule valid_untyped_no_overlap)
+    with vu al show "pspace_no_overlap' ptr bits ?s"
+      using valid_untyped_no_overlap
+      by (clarsimp simp: mask_def add_diff_eq)
   qed
 
   hence "?oran' \<inter> ?ran' = {}" by simp
@@ -856,7 +862,9 @@ proof -
   hence "?oran \<inter> ?ran = {}"
   proof (rule pspace_no_overlapD'[where p = ptr and bits = bits,simplified])
     from invs have "valid_pspace' s" ..
-    with vu al show "pspace_no_overlap' ptr bits ?s" by (rule valid_untyped_no_overlap)
+    with vu al show "pspace_no_overlap' ptr bits ?s"
+      using valid_untyped_no_overlap
+      by (clarsimp simp: mask_def add_diff_eq)
   qed
 
   hence "?oran' \<inter> ?ran' = {}" by simp
@@ -1547,7 +1555,7 @@ lemma deleteObjects_ccorres':
   apply (clarsimp simp: simpler_modify_def)
 proof -
   let ?mmu = "(\<lambda>h x. if ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1 then 0 else h x)"
-  let ?psu = "(\<lambda>h x. if ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1 then None else h x)"
+  let ?psu = "(\<lambda>h x. if ptr \<le> x \<and> x \<le> ptr + mask bits then None else h x)"
 
   fix s s'
   assume al: "is_aligned ptr bits"
@@ -1557,7 +1565,7 @@ proof -
     and "sch_act_simple s" and wb: "bits < word_bits" and b2: "4 \<le> bits"
     and "deletionIsSafe ptr bits s"
     and cNodePartial: "\<not> cNodePartialOverlap (gsCNodes s)
-        (\<lambda>x. ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1)"
+        (\<lambda>x. ptr \<le> x \<and> x \<le> ptr + mask bits)"
     and sr: "(s, s') \<in> rf_sr"
     and safe_asids:
           "ksASIDMapSafe
@@ -1580,7 +1588,7 @@ proof -
   have psu_restrict: "\<forall>h. ?psu h = h |` (- {ptr..+2 ^ bits})"
     apply (intro allI ext)
     apply (subst upto_intvl_eq [OF al])
-    apply (clarsimp)
+    apply (clarsimp simp: mask_2pm1 add_diff_eq)
     done
 
   have ks': "?ks = ?ks'" by (simp add: psu_restrict)
@@ -1595,7 +1603,7 @@ proof -
      apply clarsimp
     apply (rule ext)
     apply (subst upto_intvl_eq [OF al])
-    apply clarsimp
+    apply (clarsimp simp: mask_2pm1 add_diff_eq)
     done
 
   note cm_disj = cmap_relation_disjoint [OF D.valid_untyped invs, atomize]
@@ -1608,8 +1616,8 @@ proof -
             (\<forall>ko. P ko \<longrightarrow> live' ko) \<longrightarrow> p \<notin> {ptr..ptr + 2 ^ bits - 1}"
     apply (intro allI impI conjI)
     apply (elim conjE)
-    apply (erule D.live_notRange [simplified field_simps])
-    apply clarsimp
+    using D.live_notRange
+    apply (clarsimp simp: mask_def add_diff_eq)
     done
 
   note cmaptcb = cmap_relation_tcb [OF sr]
@@ -1738,7 +1746,7 @@ proof -
       apply (drule pds)
       apply (subgoal_tac "pde_at' (pd_ptr + 0x3FC0) (s\<lparr>ksPSpace := ?ks\<rparr>)")
        apply (cut_tac p="pd_ptr + 0x3FC0" in D.typ_at' [of "ArchT PDET", simplified field_simps])
-       apply (simp add: upto_intvl_eq [OF al])
+       apply (simp add: upto_intvl_eq[simplified add_mask_fold, OF al])
       apply (clarsimp simp: page_directory_at'_def)
       apply (erule_tac x="0x3FC0 >> 3" in allE)
       apply simp
@@ -1765,6 +1773,7 @@ proof -
                           (?mmu (underlying_memory (ksMachineState s))) =
         heap_to_user_data (?psu (ksPSpace s))
                           (underlying_memory (ksMachineState s))"
+    supply mask_2pm1[simp] add_diff_eq[simp]
     apply (subst heap_to_user_data_update_region
                  [where S="{ptr..ptr + 2 ^ bits - 1}", simplified])
      prefer 2
@@ -1817,6 +1826,7 @@ proof -
                           (?mmu (underlying_memory (ksMachineState s))) =
         heap_to_device_data (?psu (ksPSpace s))
                           (underlying_memory (ksMachineState s))"
+    supply mask_2pm1[simp] add_diff_eq[simp]
     apply (subst heap_to_device_data_update_region
                  [where S="{ptr..ptr + 2 ^ bits - 1}", simplified])
      prefer 2
@@ -1885,12 +1895,13 @@ proof -
 
     note upto_rew = upto_intvl_eq[OF al, THEN eqset_imp_iff, symmetric, simplified]
 
-    from cNodePartial[simplified upto_rew] have cn_no_overlap:
+    from cNodePartial[folded add_mask_fold, simplified upto_rew]
+    have cn_no_overlap:
       "\<And>p n. gsCNodes s p = Some n \<Longrightarrow> p \<notin> {ptr..+2 ^ bits}
           \<Longrightarrow> {p ..+ 2 ^ (n + cte_level_bits)} \<inter> {ptr..+2 ^ bits} = {}"
-      apply (simp add: cNodePartialOverlap_def)
+      apply (simp add: cNodePartialOverlap_def )
       apply (elim allE, drule(1) mp)
-      apply clarsimp
+      apply (clarsimp simp flip: add_mask_fold)
       apply (frule base_member_set, simp add: word_bits_def)
       apply (clarsimp simp only: upto_intvl_eq[symmetric] field_simps)
       apply blast

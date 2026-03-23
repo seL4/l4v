@@ -1851,7 +1851,7 @@ lemma deleteObjects_gsCNodes_at_pt:
     deleteObjects ptr_base sz
        \<lbrace>\<lambda>rv s. P (gsCNodes s ptr)\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (simp add: deleteObjects_def2)
+  apply (simp add: deleteObjects_def2 add_mask_fold)
   apply (wp | simp cong: conj_cong
         | wp (once) hoare_drop_imps)+
   done
