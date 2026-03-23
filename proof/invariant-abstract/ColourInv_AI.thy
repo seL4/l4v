@@ -500,15 +500,15 @@ lemma derive_cap_check_cap_ref[wp]:
   apply wpsimp
   by (auto simp:check_cap_ref_def RISCV64_A.aobj_ref.simps RISCV64_A.arch_cap.sel)
 
-term get_cap
-thm RISCV64.transfer_caps_loop_cte_wp_at
-thm derive_cap_inv
-thm derive_cap_is_derived
-thm derive_cap_is_derived_foo
-
 lemma hoare_vcg_imp_conj_liftE_R:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> Q' rv s\<rbrace>,-; \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. (Q rv s \<longrightarrow> Q'' rv s) \<and> Q''' rv s\<rbrace>,-\<rbrakk> \<Longrightarrow>
    \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>rv s. (Q rv s \<longrightarrow> Q' rv s \<and> Q'' rv s) \<and> Q''' rv s\<rbrace>,-"
+  by (smt (verit, del_insts) case_prodE case_prodI2 inf_left_commute pred_conj_def(1)
+    pred_top_right_neutral prod.sel(1,2) validE_R_valid_eq valid_def)
+
+lemma hoare_vcg_imp_all_comm:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. (\<forall>x. Q rv s \<longrightarrow> Q' rv x s)\<rbrace> \<Longrightarrow>
+   \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> (\<forall>x. Q' rv x s)\<rbrace>"
   by (smt (verit, del_insts) case_prodE case_prodI2 inf_left_commute pred_conj_def(1)
     pred_top_right_neutral prod.sel(1,2) validE_R_valid_eq valid_def)
 
@@ -521,6 +521,12 @@ lemma hoare_vcg_imp_all_commE_R:
 lemma hoare_vcg_double_imp_all_commE_R:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. (\<forall>x. Q rv s \<longrightarrow> R rv s \<longrightarrow> Q' rv x s)\<rbrace>,- \<Longrightarrow>
    \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> R rv s \<longrightarrow> (\<forall>x. Q' rv x s)\<rbrace>,-"
+  by (smt (verit, del_insts) case_prodE case_prodI2 inf_left_commute pred_conj_def(1)
+    pred_top_right_neutral prod.sel(1,2) validE_R_valid_eq valid_def)
+
+lemma hoare_vcg_imp_comm:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> R rv s \<longrightarrow> S rv s\<rbrace> \<Longrightarrow>
+   \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. R rv s \<longrightarrow> Q rv s \<longrightarrow> S rv s\<rbrace>"
   by (smt (verit, del_insts) case_prodE case_prodI2 inf_left_commute pred_conj_def(1)
     pred_top_right_neutral prod.sel(1,2) validE_R_valid_eq valid_def)
 
@@ -1162,6 +1168,69 @@ lemma resolve_address_bits_cte_wp_at_P_rv:
   unfolding resolve_address_bits_def
   by (wp resolve_address_bits'_cte_wp_at_P_rv)
 
+lemma get_receive_slots_valid_ptr_in_cur_domain[wp]:
+  "\<lbrace>\<lambda>s. valid_ptr_in_cur_domain buf s\<rbrace> get_receive_slots rcvr (Some buf)
+   \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. valid_ptr_in_cur_domain (fst x) s\<rbrace>"
+  apply (simp add: split_def whenE_def split del: if_split)
+  apply wpsimp
+      apply(wpsimp wp:get_cap_wp)
+     apply(wpsimp simp: lookup_slot_for_cnode_op_def)
+     apply safe
+      apply wpsimp
+       apply(wp add:hoare_vcg_all_liftE_R)
+       apply(rule_tac Q'="\<lambda>rv s. fst rv = (a, b)" in hoare_strengthen_post_impE_R)
+        prefer 2
+        apply clarsimp
+       apply(wp resolve_address_bits_P_rv)
+      apply wpsimp
+     apply wpsimp
+    apply wpsimp
+    apply(wpsimp simp:lookup_cap_def)
+     apply(wpsimp wp:get_cap_wp)
+    apply(wpsimp simp:lookup_slot_for_thread_def)
+     apply(wp add:hoare_vcg_all_liftE_R)
+     apply(rule_tac Q'="\<lambda>rv s. fst rv = (a, b)" in hoare_strengthen_post_impE_R)
+      prefer 2
+      apply clarsimp
+     apply(wp resolve_address_bits_P_rv)
+    apply wpsimp
+   apply clarsimp
+   apply(rule hoare_vcg_imp_lift)
+   apply wp
+   apply(rule hoare_vcg_all_lift)
+   apply(rule hoare_vcg_conj_lift)
+    apply(rule hoare_vcg_imp_all_comm)
+    apply(rule hoare_vcg_all_lift)
+    apply(rule hoare_vcg_imp_all_comm)
+    apply(rule hoare_vcg_all_lift)
+    apply(rule hoare_vcg_imp_comm)
+    apply(rule hoare_drop_imp) (* XXX: risky *)
+    apply(rule hoare_vcg_imp_all_comm)
+    apply(rule hoare_vcg_all_lift)
+    apply(rule hoare_vcg_imp_conj_lift')
+     (* FIXME: don't have enough to prove this, we need to know something about xb *)
+     defer
+    (* FIXME: it feels like this amounts to knowing that the `ct_receive_depth rv`
+       which is loaded from (buf + word_size*2) is greater than `length guard` *)
+    defer
+   (* FIXME: now this is asking that `length (ct_receive_root rv)` is also of that width *)
+   defer
+  (* FIXME: cleanup once we've figured out the preconditions *)
+  sorry
+
+find_theorems get_receive_slots valid
+
+declare get_receive_slots.simps[simp del]
+
+lemma hoare_vcg_rv_Ball_conj_lift:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>r\<in>set rv. Q r s\<rbrace> \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>r\<in>set rv. Q' r s\<rbrace> \<Longrightarrow>
+   \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>r\<in>set rv. Q r s \<and> Q' r s\<rbrace>"
+  unfolding valid_def
+  by fast
+
+thm get_receive_slots.simps
+term "c::captransfer"
+
 lemma transfer_caps_colour_maintained[wp]:
   "\<lbrace>colour_invariant and
      (\<lambda>s. distinct (map snd caps) \<and>
@@ -1176,12 +1245,24 @@ lemma transfer_caps_colour_maintained[wp]:
         check_cap_ref cap (colour_oracle (cur_domain s)) \<and>
         valid_ptr_in_cur_domain o_ref s)) and
      (\<lambda>s. check_cap_ref (tcb_ctable (the $ get_tcb receiver s)) (colour_oracle (cur_domain s)))
-     and cur_domain_list and pspace_in_kernel_window and RISCV64.valid_uses\<rbrace>
+     and cur_domain_list and pspace_in_kernel_window and RISCV64.valid_uses and valid_objs\<rbrace>
  transfer_caps info caps endpoint receiver recv_buffer
 \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   unfolding transfer_caps_def
   apply (wpsimp wp: transfer_caps_loop_colour_maintained)
    apply (wpsimp wp: hoare_vcg_op_lift weak_if_wp')
+   apply(wp hoare_vcg_conj_lift)
+    (* FIXME: we're currently missing something that tells us this *)
+    defer
+   apply(wp hoare_vcg_conj_lift)
+   apply(wpsimp wp:hoare_vcg_rv_Ball_conj_lift get_receive_slots_valid_ptr_in_cur_domain
+     get_rs_real_cte_at get_rs_cap_to)
+    (* XXX: why does this not apply? *)
+    thm get_receive_slots_valid_ptr_in_cur_domain
+    defer
+   apply(wpsimp wp:hoare_vcg_rv_Ball_conj_lift)
+  apply wpsimp
+  sorry (* Old proof
      apply (wpsimp simp: lookup_slot_for_cnode_op_def)
      apply safe
        apply wpsimp
@@ -1275,6 +1356,7 @@ lemma transfer_caps_colour_maintained[wp]:
       it to solve the rest of these goals *)
    (* DOWN TO HERE *)
    sorry
+*)
 
 lemma copy_mrs_colour_maintained[wp]:
   "\<lbrace>colour_invariant\<rbrace>
