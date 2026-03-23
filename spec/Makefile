@@ -28,7 +28,8 @@ HEAPS += ASpec ExecSpec DSpec CKernel CSpec TakeGrant ASepSpec
 # and therefore depends on `design-spec`.
 CKernel CSpec: c-kernel design-spec
 
-ExecSpec DSpec : design-spec
+ExecSpec DSpec: design-spec
+DSpec: ASpec-files
 
 ASPEC_VERSION_FILE=abstract/document/VERSION.tex
 ASPEC_GITREV_FILE=abstract/document/gitrev.tex
