@@ -1170,8 +1170,9 @@ lemma createNewObjects_no_orphans:
          \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)\<rbrace>
    createNewObjects tp cref slots ptr us d
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
+  supply objSize_eq_capBits[simp]
   apply (rule hoare_name_pre_state)
-  apply clarsimp
+  apply (clarsimp simp: add_mask_fold)
   apply (rule hoare_pre)
    apply (rule createNewObjects_wp_helper; simp?)
    apply (simp add:insertNewCaps_def)

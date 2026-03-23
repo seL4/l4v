@@ -711,7 +711,7 @@ lemma valid_global_refsD2':
   by (blast dest: valid_global_refsD')
 
 lemma cte_cap_in_untyped_range:
-  "\<lbrakk> ptr \<le> x; x \<le> ptr + 2 ^ bits - 1; cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap d ptr bits idx) cref s;
+  "\<lbrakk> ptr \<le> x; x \<le> ptr + mask bits; cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap d ptr bits idx) cref s;
      descendants_of' cref (ctes_of s) = {}; invs' s;
      ex_cte_cap_to' x s; valid_global_refs' s \<rbrakk> \<Longrightarrow> False"
   apply (clarsimp simp: ex_cte_cap_to'_def cte_wp_at_ctes_of)
@@ -720,11 +720,11 @@ lemma cte_cap_in_untyped_range:
   apply (frule ctes_of_valid_cap', clarsimp)
   apply (case_tac "\<exists>irq. cap = IRQHandlerCap irq")
    apply (drule (1) equals0D[where a=x, OF valid_global_refsD2'[where p=cref]])
-   apply (clarsimp simp: irq_nodes_global)
+   apply (clarsimp simp: irq_nodes_global add_mask_fold)
   apply (frule_tac p=crefa and p'=cref in caps_containedD', assumption)
      apply (clarsimp dest!: isCapDs)
     apply (rule_tac x=x in notemptyI)
-    apply (simp add: subsetD [OF cte_refs_capRange])
+    apply (simp add: subsetD[OF cte_refs_capRange] add_mask_fold)
    apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def valid_mdb_ctes_def)
   apply (frule_tac p=cref and p'=crefa in untyped_mdbD', assumption)
       apply (simp_all add: isUntypedCap_def)
@@ -760,6 +760,7 @@ lemma decodeUntyped_wf[wp]:
        (UntypedCap d w sz idx) cs
    \<lbrace>valid_untyped_inv'\<rbrace>,-"
   unfolding decodeUntypedInvocation_def
+  supply objSize_eq_capBits[simp]
   apply (simp add: unlessE_def[symmetric] unlessE_whenE rangeCheck_def whenE_def[symmetric]
                    returnOk_liftE[symmetric] Let_def cap_case_CNodeCap_True_throw
                 split del: if_split cong: if_cong list.case_cong)
@@ -4274,7 +4275,7 @@ lemma resetUntypedCap_corres:
          apply (rule corres_split_nor)
             apply (simp add: unless_def)
             apply (rule corres_when, simp)
-            apply (rule corres_machine_op)
+            apply (rule corres_machine_op')
             apply (rule corres_Id, simp, simp, wp)
            apply (rule updateFreeIndex_corres, simp)
            apply (simp add: free_index_of_def)
@@ -4296,7 +4297,7 @@ lemma resetUntypedCap_corres:
               in mapME_x_corres_same_xs)
            apply (rule corres_guard_imp)
              apply (rule corres_split_nor)
-                apply (rule corres_machine_op)
+                apply (rule corres_machine_op')
                 apply (rule corres_Id)
                   apply (simp add: shiftL_nat getFreeRef_def shiftl_t2n mult.commute)
                  apply simp
@@ -4401,7 +4402,7 @@ lemma resetUntypedCap_corres:
   apply (frule if_unsafe_then_capD'[OF ctes_of_cte_wpD], clarsimp+)
   apply (frule(1) descendants_range_ex_cte'[OF empty_descendants_range_in' _ order_refl],
     (simp add: isCap_simps)+)
-  apply (auto simp: descendants_range_in'_def valid_untyped'_def)
+  apply (auto simp: descendants_range_in'_def valid_untyped'_def add_mask_fold)
   done
 
 end
@@ -4425,7 +4426,7 @@ lemma deleteObjects_ex_cte_cap_wp_to':
   apply (rule_tac x=cref in exI, simp)
   apply (frule_tac p=cref in if_unsafe_then_capD'[OF ctes_of_cte_wpD], clarsimp+)
   apply (frule descendants_range_ex_cte'[rotated, OF _ order_refl, where p=p],
-    (simp add: isCap_simps empty_descendants_range_in')+)
+    (simp add: isCap_simps empty_descendants_range_in' add_mask_fold)+)
   apply auto
   done
 
@@ -4544,7 +4545,7 @@ lemma resetUntypedCap_invs_etc:
    apply (erule rev_mp[where P="Ball S f" for S f]
                 rev_mp[where P="ex_cte_cap_wp_to' P p s" for P p s])+
    apply (strengthen descendants_range_ex_cte'[rotated, OF _ order_refl, mk_strg D _ E])
-   apply (clarsimp simp: isCap_simps empty_descendants_range_in')
+   apply (clarsimp simp: isCap_simps empty_descendants_range_in' add_mask_fold)
    apply auto[1]
   apply (cases "dev \<or> sz < resetChunkBits")
    apply (simp add: pred_conj_def unless_def)
@@ -4687,6 +4688,7 @@ lemma inv_untyped_corres':
      (einvs and valid_untyped_inv ui and ct_active and schact_is_rct)
      (invs' and valid_untyped_inv' ui' and ct_active')
      (invoke_untyped ui) (invokeUntyped ui')"
+  supply objSize_eq_capBits[simp]
   apply (cases ui)
   apply (rule corres_name_pre)
   apply (clarsimp simp only: valid_untyped_inv_wcap
@@ -4869,6 +4871,9 @@ lemma inv_untyped_corres':
     have maxDomain:"ksCurDomain s' \<le> maxDomain"
       using invs'
       by (simp add:invs'_def valid_state'_def)
+
+    have ptr_cn[simp]: "canonical_address (ptr && ~~ mask sz)"
+      using vc' unfolding valid_cap'_def by simp
 
     have sz_mask_less:
       "unat (ptr && mask sz) < 2 ^ sz"
@@ -5644,7 +5649,7 @@ lemma invokeUntyped_invs'':
      apply auto[1]
     apply (rule hoare_pre)
      apply (wp createNewObjects_wp_helper[where sz = sz])
-            apply (simp add: slots)+
+            apply (simp add: slots objSize_eq_capBits)+
            apply (rule cover)
           apply (simp add: slots)+
         apply (clarsimp simp:insertNewCaps_def)
@@ -5696,6 +5701,7 @@ lemma invokeUntyped_invs'':
                           invs_valid_pspace' invs_ksCurDomain_maxDomain'
                           invokeUntyped_proofs.caps_no_overlap'
                           invokeUntyped_proofs.usableRange_disjoint
+                          objSize_eq_capBits
                split del: if_split)
     apply (strengthen refl)
     apply simp

@@ -740,6 +740,7 @@ lemma decodeUntyped_wf[wp]:
        (UntypedCap d w sz idx) cs
    \<lbrace>valid_untyped_inv'\<rbrace>,-"
   unfolding decodeUntypedInvocation_def
+  supply objSize_eq_capBits[simp]
   apply (simp add: unlessE_def[symmetric] unlessE_whenE rangeCheck_def whenE_def[symmetric]
                    returnOk_liftE[symmetric] Let_def cap_case_CNodeCap_True_throw
               split del: if_split cong: if_cong list.case_cong)
@@ -4268,7 +4269,7 @@ lemma resetUntypedCap_corres:
          apply (rule corres_split_nor)
             apply (simp add: unless_def)
             apply (rule corres_when, simp)
-            apply (rule corres_machine_op)
+            apply (rule corres_machine_op')
             apply (rule corres_Id, simp, simp, wp)
            apply (rule updateFreeIndex_corres, simp)
            apply (simp add: free_index_of_def)
@@ -4290,7 +4291,7 @@ lemma resetUntypedCap_corres:
               in mapME_x_corres_same_xs)
            apply (rule corres_guard_imp)
              apply (rule corres_split_nor)
-                apply (rule corres_machine_op)
+                apply (rule corres_machine_op')
                 apply (rule corres_Id)
                   apply (simp add: shiftL_nat getFreeRef_def shiftl_t2n mult.commute)
                  apply simp
@@ -4931,6 +4932,7 @@ lemma inv_untyped_corres':
     show " corres (dc \<oplus> (=)) ((=) s) ((=) s')
            (invoke_untyped ?ui)
            (invokeUntyped ?ui')"
+      supply objSize_eq_capBits[simp]
       apply (clarsimp simp:invokeUntyped_def invoke_untyped_def getSlotCap_def bind_assoc)
       apply (insert cover)
       apply (rule corres_guard_imp)
@@ -5567,7 +5569,7 @@ lemma invokeUntyped_invs'':
      apply auto[1]
     apply (rule hoare_pre)
      apply (wp createNewObjects_wp_helper[where sz = sz])
-            apply (simp add: slots)+
+            apply (simp add: slots objSize_eq_capBits)+
            apply (rule cover)
           apply (simp add: slots)+
         apply (clarsimp simp:insertNewCaps_def)
@@ -5619,6 +5621,7 @@ lemma invokeUntyped_invs'':
                           invs_valid_pspace' invs_ksCurDomain_maxDomain'
                           invokeUntyped_proofs.caps_no_overlap'
                           invokeUntyped_proofs.usableRange_disjoint
+                          objSize_eq_capBits
                split del: if_split)
     apply (strengthen refl)
     apply simp

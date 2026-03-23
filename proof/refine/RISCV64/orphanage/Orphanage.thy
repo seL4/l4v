@@ -1170,6 +1170,7 @@ lemma createNewObjects_no_orphans:
          \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address ptr \<and> ptr \<in> kernel_mappings\<rbrace>
    createNewObjects tp cref slots ptr us d
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
+  supply objSize_eq_capBits[simp]
   apply (rule hoare_name_pre_state)
   apply clarsimp
   apply (rule hoare_pre)

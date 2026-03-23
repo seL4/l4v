@@ -1010,6 +1010,7 @@ lemma createObject_valid_duplicates'[wp]:
    and K (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> us < 28)\<rbrace>
   RetypeDecls_H.createObject ty ptr us d
   \<lbrace>\<lambda>xa s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
+  supply objSize_eq_capBits[simp]
   apply (rule hoare_gen_asm)
   apply (simp add:createObject_def)
   apply (rule hoare_pre)
@@ -1141,6 +1142,68 @@ crunch createNewObjects
   for arch_inv[wp]: "\<lambda>s. P (armKSGlobalPD (ksArchState s))"
   (simp: crunch_simps zipWithM_x_mapM wp: crunch_wps unless_wp)
 
+lemma createNewObjects_pspace_no_overlap':
+  "\<lbrace>pspace_no_overlap' ptr sz and pspace_aligned' and pspace_distinct'
+  and K (range_cover ptr sz (Types_H.getObjectSize ty us) (Suc (length dests)))
+  and K (ptr \<noteq> 0)
+  and K (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> us < 28)\<rbrace>
+  createNewObjects ty src dests ptr us d
+  \<lbrace>\<lambda>rv s.  pspace_aligned' s \<and> pspace_distinct' s \<and>
+  pspace_no_overlap' ((of_nat (length dests) << APIType_capBits ty us) + ptr) sz s\<rbrace>"
+  apply (rule hoare_gen_asm)+
+  proof (induct rule:rev_induct )
+    case Nil
+    show ?case
+      by (simp add:createNewObjects_def zipWithM_x_mapM mapM_Nil | wp)+
+   next
+   case (snoc dest dests)
+   have rc:"range_cover ptr sz (Types_H.getObjectSize ty us) (Suc (length dests))"
+      apply (rule range_cover_le)
+      apply (rule snoc)
+      apply simp
+      done
+   show ?case
+     using rc
+     supply objSize_eq_capBits[simp]
+     apply (subst createNewObjects_Cons)
+      apply (drule range_cover.weak)
+      apply (simp add: word_bits_def)
+     apply (wp pspace_no_overlap'_lift)
+      apply (simp add: conj_comms)
+      apply (rule hoare_vcg_conj_lift)
+       apply (rule hoare_post_imp[OF _ createObject_pspace_aligned_distinct'])
+       apply simp
+      apply (rule hoare_vcg_conj_lift)
+       apply (rule hoare_post_imp[OF _ createObject_pspace_aligned_distinct'])
+       apply simp
+      apply (simp add:field_simps)
+      apply (wp createObject_pspace_no_overlap')
+     apply (clarsimp simp: conj_comms)
+     apply (rule hoare_pre)
+      apply (rule hoare_vcg_conj_lift)
+       apply (rule hoare_post_imp[OF _ snoc.hyps])
+       apply (simp add:snoc)+
+      apply (rule hoare_vcg_conj_lift)
+       apply (rule hoare_post_imp[OF _ snoc.hyps])
+       apply (simp add:snoc)+
+      apply wp
+     apply (simp add: conj_comms field_simps)
+     apply (rule hoare_post_imp)
+     apply (erule context_conjI)
+      apply (intro conjI)
+        apply (rule aligned_add_aligned[OF range_cover.aligned
+                                           is_aligned_shiftl_self])
+          apply simp
+         apply simp
+        apply simp
+       apply (erule pspace_no_overlap'_le)
+       apply (simp add: range_cover.sz[where 'a=32, folded word_bits_def])+
+     apply (rule hoare_post_imp[OF _ snoc.hyps])
+     apply (simp add:field_simps snoc)+
+    using snoc
+    apply simp
+  done
+qed
 
 lemma createNewObjects_valid_duplicates'[wp]:
  "\<lbrace> (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_no_overlap' ptr sz
@@ -1156,6 +1219,7 @@ lemma createNewObjects_valid_duplicates'[wp]:
    next
    case (snoc dest dests)
    show ?case
+     supply objSize_eq_capBits[simp]
      apply (rule hoare_gen_asm)
      apply clarsimp
      apply (frule range_cover.weak)
@@ -1220,13 +1284,14 @@ lemma valid_duplicates'_diffI:
 
 lemma valid_duplicates_deleteObjects_helper:
   assumes vd:"vs_valid_duplicates' (m::(word32 \<rightharpoonup> Structures_H.kernel_object))"
-  assumes inc: "\<And>p ko. \<lbrakk>m p = Some (KOArch ko);p \<in> {ptr .. ptr + 2 ^ sz - 1}\<rbrakk>
+  assumes inc: "\<And>p ko. \<lbrakk>m p = Some (KOArch ko);p \<in> mask_range ptr sz\<rbrakk>
   \<Longrightarrow> 6 \<le> sz"
   assumes aligned:"is_aligned ptr sz"
   notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
           atLeastAtMost_iff
-  shows "vs_valid_duplicates'  (\<lambda>x. if x \<in> {ptr .. ptr + 2 ^ sz - 1} then None else m x)"
+  shows "vs_valid_duplicates'  (\<lambda>x. if x \<in> mask_range ptr sz then None else m x)"
+  supply objSize_eq_capBits[simp]
   apply (rule valid_duplicates'_diffI,rule vd)
   apply (clarsimp simp: vs_valid_duplicates'_def split:option.splits)
   apply (clarsimp simp: vs_valid_duplicates'_def split:option.splits)
@@ -1242,8 +1307,7 @@ lemma valid_duplicates_deleteObjects_helper:
      apply clarsimp
      apply (drule(1) inc)
      apply (drule(1) mask_out_first_mask_some)
-      apply (simp add:mask_lower_twice)
-     apply (simp add: mask_in_range[OF aligned,symmetric])
+     apply (fastforce simp: mask_lower_twice simp flip: neg_mask_in_mask_range[OF aligned])
     apply (drule_tac p' = y in valid_duplicates'_D[OF vd])
       apply simp
      apply (simp add:vs_ptr_align_def)
@@ -1259,8 +1323,7 @@ lemma valid_duplicates_deleteObjects_helper:
      apply (simp add:vs_ptr_align_def)
     apply (drule(1) inc)
     apply (drule(1) mask_out_first_mask_some)
-    apply (simp add:mask_lower_twice)
-    apply (simp add: mask_in_range[OF aligned,symmetric])
+    apply (fastforce simp: mask_lower_twice simp flip: neg_mask_in_mask_range[OF aligned])
    apply (drule_tac p' = y in valid_duplicates'_D[OF vd])
      apply simp
     apply (simp add:vs_ptr_align_def)
@@ -1286,7 +1349,7 @@ lemma deleteObjects_valid_duplicates'[wp]:
   apply clarsimp
   apply (simp add:deletionIsSafe_def)
   apply (erule valid_duplicates_deleteObjects_helper)
-   apply fastforce
+   apply (fastforce simp: arch_deletionIsSafe_def)
   apply simp
   done
 
@@ -1361,7 +1424,7 @@ lemma invokeUntyped_valid_duplicates[wp]:
   apply (frule invokeUntyped_proofs.not_0_ptr)
   apply (strengthen is_aligned_armKSGlobalPD)
   apply (frule cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD], clarsimp+)
-  apply (clarsimp simp add: isCap_simps valid_cap_simps' capAligned_def)
+  apply (clarsimp simp add: isCap_simps valid_cap_simps' capAligned_def objSize_eq_capBits)
   apply (auto split: if_split_asm)
   done
 
@@ -1891,6 +1954,16 @@ lemma performPageInvocation_valid_duplicates'[wp]:
    apply (wp |wpc |simp)+
   apply (clarsimp simp:valid_page_inv'_def
       valid_arch_inv'_def valid_cap'_def invs_valid_objs' invs_pspace_aligned')
+  done
+
+lemma pspace_no_overlapD3':
+  "\<lbrakk>pspace_no_overlap' ptr sz s;ksPSpace s p = Some obj;is_aligned ptr sz\<rbrakk>
+  \<Longrightarrow> obj_range' p obj \<inter> {ptr..ptr + 2 ^ sz - 1} = {}"
+  apply (unfold pspace_no_overlap'_def)
+  apply (drule spec)+
+  apply (erule(1) impE)
+  apply (simp only: is_aligned_neg_mask_eq obj_range'_def p_assoc_help)
+  apply (simp only: add_diff_eq ptr_range_mask_range)
   done
 
 lemma placeASIDPool_valid_duplicates'[wp]:
