@@ -779,6 +779,7 @@ crunch setEndpoint
 
 crunch setThreadState
   for ko_at'_pde[wp]: "\<lambda>s. P (ko_at' (pde::ARM_H.pde) p' s)"
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch setEndpoint
   for sch_act_not[wp]: "sch_act_not t"

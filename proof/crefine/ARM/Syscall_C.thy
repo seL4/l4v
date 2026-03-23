@@ -192,7 +192,7 @@ lemma decodeInvocation_ccorres:
        apply (vcg exspec=performInvocation_Endpoint_modifies)
       apply simp
       apply (rule hoare_use_eq[where f=ksCurThread])
-       apply (wp sts_invs_minor' sts_st_tcb_at'_cases
+       apply (wp sts_invs_minor' sts_st_tcb_at'_cases sts_sch_act_sane
                  setThreadState_ct' hoare_vcg_all_lift)+
      apply simp
      apply (vcg exspec=setThreadState_modifies)

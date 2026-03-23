@@ -1462,7 +1462,7 @@ lemma deleteCallerCap_nonz_cap:
 
 crunch cteDeleteOne
   for sch_act_sane[wp]: sch_act_sane
-  (wp: crunch_wps loadObject_default_inv getObject_inv
+  (wp: sts_sch_act_sane crunch_wps loadObject_default_inv getObject_inv
    simp: crunch_simps unless_def
    rule: sch_act_sane_lift)
 
@@ -1840,11 +1840,10 @@ crunch doIPCTransfer
 
 lemma doReplyTransfer_sane:
   "\<lbrace>\<lambda>s. sch_act_sane s \<and> t' \<noteq> ksCurThread s\<rbrace>
-  doReplyTransfer t t' callerSlot g \<lbrace>\<lambda>rv. sch_act_sane\<rbrace>"
-  apply (simp add: doReplyTransfer_def liftM_def)
-  apply (wp possibleSwitchTo_sane hoare_drop_imps hoare_vcg_all_lift|wpc)+
-  apply simp
-  done
+   doReplyTransfer t t' callerSlot g
+   \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
+  unfolding doReplyTransfer_def
+  by (wpsimp wp: sts_sch_act_sane possibleSwitchTo_sane hoare_drop_imps)
 
 lemma handleReply_sane:
   "\<lbrace>sch_act_sane\<rbrace> handleReply \<lbrace>\<lambda>rv. sch_act_sane\<rbrace>"

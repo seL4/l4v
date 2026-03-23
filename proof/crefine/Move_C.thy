@@ -1062,7 +1062,7 @@ lemma setThreadState_ksReadyQueuesL1Bitmap[wp]:
   unfolding setThreadState_def
   by (wpsimp wp: hoare_drop_imps)
 
-lemma sts_running_ksReadyQueuesL2Bitmap[wp]:
+lemma setThreadState_ksReadyQueuesL2Bitmap[wp]:
   "setThreadState st t \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
   unfolding setThreadState_def
   by (wpsimp wp: hoare_drop_imps)

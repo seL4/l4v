@@ -453,10 +453,10 @@ lemma setThreadState_current_no_orphans:
    setThreadState state tcb_ptr
    \<lbrace>\<lambda>_. no_orphans\<rbrace>"
   unfolding setThreadState_def
-  apply wpsimp
+  apply (wpsimp wp: ssa_no_orphans)
   unfolding no_orphans_disj
-   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
-             threadSet_all_queued_tcb_ptrs
+   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
+                     threadSet_all_queued_tcb_ptrs hoare_drop_imps
           | fastforce)+
   done
 
@@ -465,10 +465,10 @@ lemma setThreadState_isRestart_no_orphans:
    setThreadState state tcb_ptr
    \<lbrace>\<lambda>_ . no_orphans\<rbrace>"
   unfolding setThreadState_def
-  apply wpsimp
+  apply (wpsimp wp: ssa_no_orphans)
    unfolding no_orphans_disj
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
-             threadSet_all_queued_tcb_ptrs
+             threadSet_all_queued_tcb_ptrs hoare_drop_imps
           | fastforce)+
   apply (auto simp: is_active_thread_state_def st_tcb_at_double_neg' st_tcb_at_neg')
   done
@@ -476,30 +476,30 @@ lemma setThreadState_isRestart_no_orphans:
 lemma setThreadState_almost_no_orphans [wp]:
   "\<lbrace>no_orphans\<rbrace> setThreadState state tcb_ptr \<lbrace>\<lambda>_. almost_no_orphans tcb_ptr\<rbrace>"
   unfolding setThreadState_def
-  apply wpsimp
+  apply (wpsimp wp: hoare_drop_imps)
    apply (unfold no_orphans_disj almost_no_orphans_disj)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
-             threadSet_all_queued_tcb_ptrs
+             threadSet_all_queued_tcb_ptrs hoare_drop_imps
           | fastforce)+
   done
 
 lemma setThreadState_not_active_no_orphans:
   "\<not> is_active_thread_state state \<Longrightarrow> setThreadState state tcb_ptr \<lbrace>no_orphans\<rbrace>"
   unfolding setThreadState_def
-  apply wpsimp
+  apply (wpsimp wp: ssa_no_orphans)
    apply (unfold no_orphans_disj)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
-             threadSet_all_queued_tcb_ptrs
+             threadSet_all_queued_tcb_ptrs hoare_drop_imps
           | fastforce)+
   done
 
 lemma setThreadState_not_active_almost_no_orphans:
   "\<not> is_active_thread_state state \<Longrightarrow> setThreadState state tcb_ptr \<lbrace>almost_no_orphans thread\<rbrace>"
   unfolding setThreadState_def
-  apply wpsimp
+  apply (wpsimp wp: ssa_no_orphans)
    apply (unfold almost_no_orphans_disj)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
-             threadSet_all_queued_tcb_ptrs
+             threadSet_all_queued_tcb_ptrs hoare_drop_imps
           | fastforce)+
   done
 
