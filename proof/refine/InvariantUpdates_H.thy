@@ -18,6 +18,7 @@ arch_requalify_facts
   tcb_at_cte_at'
   gen_objBitsT_simps
   objBitsT_koTypeOf (* FIXME arch-split: consider declaring [simp] here rather than Schedule_R *)
+  hyp_refs_of_live'
 
 (* arch-specific typ_at_lifts in Arch *)
 lemmas gen_typ_at_lifts =
