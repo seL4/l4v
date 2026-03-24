@@ -1,5 +1,6 @@
 (*
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2023, Proofcraft Pty Ltd
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
@@ -19,13 +20,6 @@ defs arch_deletionIsSafe_def:
 defs ksASIDMapSafe_def:
   "ksASIDMapSafe \<equiv> \<lambda>s. True"
 
-defs pTablePartialOverlap_def:
-  "pTablePartialOverlap \<equiv> \<lambda>pts inRange.
-     \<exists>p pt_t. pts p = Some pt_t \<and>
-              (\<not> is_aligned p (pt_bits pt_t) \<or>
-                (\<not> mask_range p (pt_bits pt_t) \<subseteq> {p. inRange p} \<and>
-                 \<not> mask_range p (pt_bits pt_t) \<subseteq> {p. \<not> inRange p}))"
-
 (* FIXME: move *)
 lemma deleteObjects_def2:
   "is_aligned ptr bits \<Longrightarrow>
@@ -34,17 +28,12 @@ lemma deleteObjects_def2:
      stateAssert (deletionIsSafe_delete_locale ptr bits) [];
      doMachineOp (freeMemory ptr bits);
      stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) (\<lambda>x. x \<in> mask_range ptr bits)) [];
-     stateAssert (\<lambda>s. \<not> pTablePartialOverlap (gsPTTypes (ksArchState s)) (\<lambda>x. x \<in> mask_range ptr bits)) [];
      modify (\<lambda>s. s \<lparr> ksPSpace := \<lambda>x. if x \<in> mask_range ptr bits
                                         then None else ksPSpace s x,
                      gsUserPages := \<lambda>x. if x \<in> mask_range ptr bits
                                            then None else gsUserPages s x,
                      gsCNodes := \<lambda>x. if x \<in> mask_range ptr bits
-                                        then None else gsCNodes s x,
-                     ksArchState := gsPTTypes_update (\<lambda>_ x. if x \<in> mask_range ptr bits
-                                                            then Nothing
-                                                            else gsPTTypes (ksArchState s) x)
-                                                     (ksArchState s)\<rparr>);
+                                        then None else gsCNodes s x\<rparr>);
      stateAssert ksASIDMapSafe []
    od"
   apply (simp add: deleteObjects_def is_aligned_mask[symmetric] unless_def deleteGhost_def o_def)
@@ -58,18 +47,12 @@ lemma deleteObjects_def2:
                              NOT_eq[symmetric] neg_mask_in_mask_range exec_gets)
   apply (clarsimp simp: simpler_modify_def)
   apply (simp add: data_map_filterWithKey_def split: if_split_asm)
-  apply (rule arg_cong2[where f=ksArchState_update])
-   apply (rule ext)
-   apply clarsimp
-   apply (rename_tac s, case_tac s, clarsimp)
-   apply (rename_tac ksArch ksMachine, case_tac ksArch, clarsimp)
-   apply (simp add: NOT_eq[symmetric] mask_in_range ext)
   apply (rule arg_cong2[where f=gsCNodes_update])
    apply (simp add: NOT_eq[symmetric] mask_in_range ext)
   apply (rule arg_cong2[where f=gsUserPages_update])
    apply (simp add: NOT_eq[symmetric] mask_in_range ext)
   apply (rule arg_cong[where f="\<lambda>f. ksPSpace_update f s" for s])
-  apply (simp add: NOT_eq[symmetric] mask_in_range ext split: option.split)
+  apply (simp add: NOT_eq[symmetric] mask_in_range ext   split: option.split)
   done
 
 (* deleteObjects_def2 but with is_aligned folded into definition as an assertion *)
@@ -81,17 +64,12 @@ lemma deleteObjects_def3:
      stateAssert (deletionIsSafe_delete_locale ptr bits) [];
      doMachineOp (freeMemory ptr bits);
      stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) (\<lambda>x. x \<in> mask_range ptr bits)) [];
-     stateAssert (\<lambda>s. \<not> pTablePartialOverlap (gsPTTypes (ksArchState s)) (\<lambda>x. x \<in> mask_range ptr bits)) [];
      modify (\<lambda>s. s \<lparr> ksPSpace := \<lambda>x. if x \<in> mask_range ptr bits
                                               then None else ksPSpace s x,
                      gsUserPages := \<lambda>x. if x \<in> mask_range ptr bits
                                            then None else gsUserPages s x,
                      gsCNodes := \<lambda>x. if x \<in> mask_range ptr bits
-                                        then None else gsCNodes s x,
-                     ksArchState := gsPTTypes_update (\<lambda>_ x. if x \<in> mask_range ptr bits
-                                                            then Nothing
-                                                            else gsPTTypes (ksArchState s) x)
-                                                     (ksArchState s) \<rparr>);
+                                        then None else gsCNodes s x\<rparr>);
      stateAssert ksASIDMapSafe []
    od"
   apply (cases "is_aligned ptr bits")
@@ -114,22 +92,16 @@ lemma obj_relation_cuts_in_obj_range[Detype_R_assms]:
   apply (frule valid_obj_sizes, erule ranI)
   apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj; simp)
-   apply (clarsimp simp only: obj_range_def atLeastAtMost_iff
+   apply (clarsimp simp only: obj_range_def atLeastAtMost_iff bit_simps
                               obj_bits.simps arch_kobj_size.simps)
    apply (rule context_conjI)
     apply (erule is_aligned_no_wrap')
-    apply (simp add: table_size_def)
-    apply (rule shiftl_less_t2n)
-     apply (erule order_le_less_trans)
-     apply (simp add: bit_simps mask_def)
-    apply (simp add: bit_simps)
+    apply simp
+    apply (simp add: ucast_less_shiftl_helper')
    apply (subst add_diff_eq[symmetric])
    apply (rule word_plus_mono_right)
-    apply (subst word_less_sub_le, simp add: bit_simps)
-    apply (rule shiftl_less_t2n)
-     apply (erule order_le_less_trans)
-     apply (simp add: bit_simps mask_def)
-    apply (simp add: bit_simps)
+    apply (subst word_less_sub_le, simp)
+    apply (simp add: ucast_less_shiftl_helper')
    apply (simp add: field_simps)
   apply (clarsimp simp only: obj_range_def atLeastAtMost_iff)
   apply (rule conjI)
@@ -149,13 +121,7 @@ lemma obj_relation_cuts_in_obj_range[Detype_R_assms]:
 
 lemma zobj_refs_capRange[Detype_R_assms]:
   "capAligned c \<Longrightarrow> zobj_refs' c \<subseteq> capRange c"
-  apply (cases c; simp add: capAligned_def capRange_def is_aligned_no_overflow)
-  apply (rename_tac ac)
-  apply (case_tac ac; simp)
-  apply clarsimp
-  apply (drule is_aligned_no_overflow)
-  apply simp
-  done
+  by (cases c; simp add: capAligned_def capRange_def is_aligned_no_overflow)
 
 lemma arch_deletionIsSafe:
   assumes al: "is_aligned base magnitude"
@@ -167,42 +133,8 @@ lemma arch_deletionIsSafe:
 
 lemma state_rel_ghost:
   "(s,s') \<in> state_relation \<Longrightarrow>
-   ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') (gsPTTypes (ksArchState s'))"
+   ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')"
   by (erule state_relationE[simplified ghost_relation_wrapper_def])
-
-lemma ghost_PTTypes:
-  "\<lbrakk> ghost_relation kh gsu gsc pt_Ts; pt_Ts p = Some pt_t \<rbrakk> \<Longrightarrow>
-   (\<exists>pt. kh p = Some (ArchObj (PageTable pt)) \<and> pt_t = pt_type pt)"
-  by (clarsimp simp: ghost_relation_def)
-
-lemma pTableNoPartialOverlap:
-  "corres dc
-          (\<lambda>s. \<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s \<and>
-                      valid_objs s \<and> pspace_aligned s)
-          \<top>
-          (return x)
-          (stateAssert (\<lambda>s. \<not> pTablePartialOverlap (gsPTTypes (ksArchState s))
-                                                   (\<lambda>x. base \<le> x \<and> x \<le> base + mask magnitude)) [])"
-  apply (simp add: stateAssert_def assert_def)
-  apply (rule corres_symb_exec_r[OF _ get_sp])
-    apply (rule corres_req[rotated], subst if_P, assumption)
-     apply simp
-    apply (clarsimp simp: pTablePartialOverlap_def)
-    apply (frule state_rel_ghost)
-    apply (drule (1) ghost_PTTypes)
-    apply clarsimp
-    apply (drule(1) cte_wp_valid_cap)
-    apply (clarsimp simp: valid_cap_def valid_untyped_def)
-    apply (frule(1) pspace_alignedD)
-    apply (simp add: add_mask_fold)
-    apply (elim allE, drule(1) mp, simp add: obj_range_def valid_obj_def cap_aligned_def)
-    apply (clarsimp simp: pt_bits_def)
-    apply (erule is_aligned_get_word_bits[where 'a=machine_word_len, folded word_bits_def])
-     apply (clarsimp simp: is_aligned_no_overflow_mask add_mask_fold)
-     apply (blast intro: order_trans)
-    apply (simp add: is_aligned_no_overflow_mask power_overflow word_bits_def)
-   apply wp+
-  done
 
 lemma objSize_eq_capBits[Detype_R_assms]:
   "Types_H.getObjectSize ty us = APIType_capBits ty us"
@@ -230,8 +162,8 @@ lemma valid_cap_ctes_pre:
                       \<forall>x. ref + (x && mask bits) * 2^cteSizeBits \<in> capRange c
                     | Zombie ref (ZombieCNode bits) n \<Rightarrow>
                       \<forall>x. ref + (x && mask bits) * 2^cteSizeBits \<in> capRange c
-                    | ArchObjectCap (PageTableCap ref pt_t data) \<Rightarrow>
-                      \<forall>x. x \<le> mask (ptTranslationBits pt_t) \<longrightarrow> ref + (x << pte_bits) \<in> capRange c
+                    | ArchObjectCap (PageTableCap ref data) \<Rightarrow>
+                      \<forall>x::pt_index. ref + (ucast x << pte_bits) \<in> capRange c
                     | ArchObjectCap (FrameCap ref r sz d m) \<Rightarrow>
                       \<forall>p<2 ^ (pageBitsForSize sz - pageBits). ref + (p << pageBits) \<in> capRange c
                     | _ \<Rightarrow> True"
@@ -245,11 +177,8 @@ lemma valid_cap_ctes_pre:
    apply (clarsimp simp add: capRange_def capAligned_def shiftl_t2n
                    simp del: atLeastAtMost_iff capBits.simps)
    apply (simp del: atLeastAtMost_iff)
-   apply (drule_tac bits="pte_bits" and x="ucast x" in pre_helper2; simp add: mult_ac)
-    apply (simp add: bit_simps)
-   apply (simp add: table_size_def)
-   apply (erule order_le_less_trans)
-   apply (simp add: mask_def bit_simps)
+   apply (drule_tac bits="pte_bits" and x="ucast x" in pre_helper2; simp add: bit_simps mult_ac)
+   apply (rule ucast_less[where 'b=pt_index_len, simplified], simp)
   apply (clarsimp simp add: capRange_def capAligned_def
                   simp del: atLeastAtMost_iff capBits.simps)
   using pre_helper[where a=cteSizeBits]
@@ -279,26 +208,6 @@ lemma valid_cap':
   apply (case_tac arch_cap; simp del: atLeastAtMost_iff add: frame_at'_def page_table_at'_def)
    apply blast
   apply blast
-  done
-
-lemma sym_refs_VCPU_hyp_live':
- "\<lbrakk>ko_wp_at' ((=) (KOArch (KOVCPU v))) p s'; sym_refs (state_hyp_refs_of' s'); vcpuTCBPtr v = Some t\<rbrakk>
-  \<Longrightarrow> ko_wp_at' (\<lambda>ko. koTypeOf ko = TCBT \<and> hyp_live' ko) t s'"
-  apply (drule (1) sym_hyp_refs_ko_wp_atD)
-  apply (clarsimp)
-  apply (drule state_hyp_refs_of'_elemD)
-  apply (simp add: ko_wp_at'_def)
-  apply (clarsimp simp: hyp_refs_of_rev' hyp_live'_def)
-  done
-
-lemma sym_refs_TCB_hyp_live':
- "\<lbrakk>ko_wp_at' ((=) (KOTCB t)) p s'; sym_refs (state_hyp_refs_of' s'); atcbVCPUPtr (tcbArch t) = Some v\<rbrakk>
-  \<Longrightarrow> ko_wp_at' (\<lambda>ko. koTypeOf ko = ArchT VCPUT \<and> hyp_live' ko) v s'"
-  apply (drule (1) sym_hyp_refs_ko_wp_atD)
-  apply (clarsimp)
-  apply (drule state_hyp_refs_of'_elemD)
-  apply (simp add: ko_wp_at'_def)
-  apply (clarsimp simp: hyp_refs_of_rev' hyp_live'_def arch_live'_def)
   done
 
 lemma irq_nodes_range:
@@ -342,6 +251,10 @@ end (* detype_locale' *)
 
 context Arch begin arch_global_naming
 
+lemma sym_refs_hyp_refs_triv[simp]: "sym_refs (state_hyp_refs_of s')"
+  apply (clarsimp simp: state_hyp_refs_of_def sym_refs_def)
+  by (case_tac "kheap s' x"; simp)
+
 (* FIXME arch-split: some of this can be generalised; 3 is same on all arches *)
 lemma deleteObjects_corres:
   "is_aligned base magnitude \<Longrightarrow> magnitude \<ge> 3 \<Longrightarrow>
@@ -376,80 +289,73 @@ lemma deleteObjects_corres:
                 in detype_locale'.deletionIsSafe,
           simp_all add: detype_locale'_def detype_locale_def invs_valid_pspace)[1]
    apply (simp add: valid_cap_simps)
-  apply (simp add: ksASIDMapSafe_def)
+  apply (simp add: bind_assoc[symmetric] ksASIDMapSafe_def)
   apply (simp add: delete_objects_def)
-  apply (rule corres_underlying_split[where r'=dc])
+  apply (rule_tac Q="\<lambda>_ s. valid_objs s \<and> valid_list s \<and>
+                           (\<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s \<and>
+                           descendants_range (cap.UntypedCap d base magnitude idx) cref s ) \<and>
+                           s \<turnstile> cap.UntypedCap d base magnitude idx \<and> pspace_aligned s \<and>
+                           valid_mdb s \<and> pspace_distinct s \<and> if_live_then_nonz_cap s \<and>
+                           zombies_final s \<and> sym_refs (state_refs_of s) \<and>
+                           untyped_children_in_mdb s \<and> if_unsafe_then_cap s \<and>
+                           valid_global_refs s"
+              and Q'="\<lambda>_ s. s \<turnstile>' capability.UntypedCap d base magnitude idx \<and>
+                            valid_pspace' s \<and> deletionIsSafe_delete_locale base magnitude s"
+               in corres_underlying_split)
+     apply (rule corres_bind_return)
      apply (rule corres_guard_imp[where r=dc])
-       apply (rule corres_machine_op'[OF corres_Id]; simp)
-       apply (rule no_fail_freeMemory; simp)
-      apply simp
+       apply (rule corres_split[OF _ cNodeNoPartialOverlap])
+         apply (rule corres_machine_op'[OF corres_Id], simp+)
+         apply (rule no_fail_freeMemory, simp+)
+        apply (wp hoare_vcg_ex_lift)+
+      apply auto[1]
      apply (auto elim: is_aligned_weaken)[1]
-    apply (rule corres_return_bind)
-    apply (rule corres_split[OF cNodeNoPartialOverlap])
-      apply (rule corres_return_bind)
-      apply (rule corres_split[OF pTableNoPartialOverlap])
-        apply simp
-        apply (rule_tac P="\<lambda>s. valid_objs s \<and> valid_list s \<and>
-                               (\<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s \<and>
-                                       descendants_range (cap.UntypedCap d base magnitude idx) cref s ) \<and>
-                               s \<turnstile> cap.UntypedCap d base magnitude idx \<and> pspace_aligned s \<and>
-                               valid_mdb s \<and> pspace_distinct s \<and> if_live_then_nonz_cap s \<and>
-                               zombies_final s \<and> sym_refs (state_refs_of s) \<and> sym_refs (state_hyp_refs_of s) \<and>
-                               untyped_children_in_mdb s \<and> if_unsafe_then_cap s \<and>
-                               valid_global_refs s"
-                    and P'="\<lambda>s. s \<turnstile>' capability.UntypedCap d base magnitude idx \<and>
-                                valid_pspace' s \<and> deletionIsSafe_delete_locale base magnitude s"
-                     in corres_modify)
-        apply (simp add: valid_pspace'_def)
-        apply (rule state_relation_null_filterE, assumption,
-               simp_all add: pspace_aligned'_cut pspace_distinct'_cut)[1]
-                apply (simp add: detype_def)
-               apply (intro exI, fastforce)
-              apply (rule ext, clarsimp simp add: null_filter_def)
-              apply (rule sym, rule ccontr, clarsimp)
-              apply (drule(4) cte_map_not_null_outside')
-               apply (fastforce simp add: cte_wp_at_caps_of_state)
-              apply simp
-             apply (rule ext, clarsimp simp: null_filter'_def map_to_ctes_delete)
-             apply (rule sym, rule ccontr, clarsimp)
-             apply (frule (2) pspace_relation_cte_wp_atI[OF state_relation_pspace_relation])
-             apply (elim exE)
-             apply (frule (4) cte_map_not_null_outside')
-              apply (rule cte_wp_at_weakenE, erule conjunct1)
-              apply (case_tac y, clarsimp)
-              apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def
-                                    valid_nullcaps_def)
-             apply clarsimp
-             apply (frule_tac cref="(aa, ba)" in cte_map_untyped_range,
-                    erule cte_wp_at_weakenE[OF _ TrueI], assumption+)
-             apply (simp add: add_mask_fold)
-            apply (simp add: add_mask_fold)
-            apply (rule detype_pspace_relation[simplified],
-                   simp_all add: state_relation_pspace_relation valid_pspace_def)[1]
-             apply (simp add: valid_cap'_def capAligned_def)
-            apply (clarsimp simp: valid_cap_def, assumption)
-           apply (rule detype_ready_queues_relation; blast?)
-             apply (clarsimp simp: deletionIsSafe_delete_locale_def)
-            apply (erule state_relation_ready_queues_relation)
-           apply (simp add: add_mask_fold)
-          (* arch_state_relation *)
-          apply (fastforce simp: arch_state_relation_def update_gs_def comp_def
-                           dest!: state_relationD
-                           split: Structures_A.apiobject_type.splits aobject_type.splits)
-         apply (clarsimp simp: state_relation_def ghost_relation_of_heap
-                               detype_def)
-         apply (drule_tac t="gsUserPages s'" in sym)
-         apply (drule_tac t="gsCNodes s'" in sym)
-         apply (drule_tac t="gsPTTypes (ksArchState s')" in sym)
-         apply (auto simp: ups_of_heap_def cns_of_heap_def ext pt_types_of_heap_def add_mask_fold
-                           opt_map_def
-                     split: option.splits kernel_object.splits)[1]
-        apply (simp add: valid_mdb_def)
-       apply (wp hoare_vcg_ex_lift hoare_vcg_ball_lift | wps |
-              simp add: invs_def valid_state_def valid_pspace_def
-                        descendants_range_def | wp (once) hoare_drop_imps)+
-   apply fastforce
-  apply (wpsimp wp: hoare_vcg_op_lift)
+    apply (rule corres_modify)
+    apply (simp add: valid_pspace'_def)
+    apply (rule state_relation_null_filterE, assumption,
+           simp_all add: pspace_aligned'_cut pspace_distinct'_cut)[1]
+            apply (simp add: detype_def)
+           apply clarsimp
+           (* unification can't guess we want identity update on ksArchState s' *)
+           apply (repeat 3 \<open>rule exI\<close>, rule_tac x=id in exI)
+           apply fastforce
+          apply (rule ext, clarsimp simp add: null_filter_def)
+          apply (rule sym, rule ccontr, clarsimp)
+          apply (drule(4) cte_map_not_null_outside')
+           apply (fastforce simp add: cte_wp_at_caps_of_state)
+          apply simp
+         apply (rule ext, clarsimp simp: null_filter'_def map_to_ctes_delete)
+         apply (rule sym, rule ccontr, clarsimp)
+         apply (frule (2) pspace_relation_cte_wp_atI[OF state_relation_pspace_relation])
+         apply (elim exE)
+         apply (frule (4) cte_map_not_null_outside')
+          apply (rule cte_wp_at_weakenE, erule conjunct1)
+          apply (case_tac y, clarsimp)
+          apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def valid_nullcaps_def)
+         apply clarsimp
+         apply (frule_tac cref="(aa, ba)" in cte_map_untyped_range,
+                erule cte_wp_at_weakenE[OF _ TrueI], assumption+)
+         apply (simp add: add_mask_fold)
+        apply (simp add: add_mask_fold)
+        apply (rule detype_pspace_relation[simplified],
+               simp_all add: state_relation_pspace_relation valid_pspace_def)[1]
+         apply (simp add: valid_cap'_def capAligned_def)
+        apply (clarsimp simp: valid_cap_def, assumption)
+       apply (simp add: add_mask_fold)
+       apply (rule detype_ready_queues_relation; blast?)
+        apply (clarsimp simp: deletionIsSafe_delete_locale_def)
+       apply (erule state_relation_ready_queues_relation)
+      apply (clarsimp simp: state_relation_def)
+     apply (clarsimp simp: state_relation_def ghost_relation_of_heap detype_def)
+     apply (drule_tac t="gsUserPages s'" in sym)
+     apply (drule_tac t="gsCNodes s'" in sym)
+     apply (auto simp: ups_of_heap_def cns_of_heap_def ext add_mask_fold
+                split: option.splits kernel_object.splits)[1]
+    apply (simp add: valid_mdb_def)
+   apply (wp hoare_vcg_ex_lift hoare_vcg_ball_lift | wps |
+          simp add: invs_def valid_state_def valid_pspace_def
+                    descendants_range_def | wp (once) hoare_drop_imps)+
+  apply fastforce
   done
 
 end (* Arch *)
@@ -461,18 +367,12 @@ lemma valid_arch_tcb':
      valid_arch_tcb' (tcbArch tcb) s' \<rbrakk>
    \<Longrightarrow> valid_arch_tcb' (tcbArch tcb) state'"
    using sym_hyp_refs
-   apply (clarsimp simp add: valid_arch_tcb'_def split: option.split_asm)
-   apply (drule (1) sym_refs_TCB_hyp_live'[rotated])
-    apply (clarsimp simp: ko_wp_at'_def objBits_simps; (rule conjI|assumption)+)
-   apply (drule live_notRange, clarsimp simp: live'_def)
-    apply (case_tac ko; simp)
-   apply clarsimp
-   done
+   by (clarsimp simp add: valid_arch_tcb'_def split: option.split_asm)
 
 lemma pspace_in_kernel_mappings':
   "pspace_in_kernel_mappings' state'"
   using pkm
-  by (simp add: dom_def)
+  by (simp add: pspace_in_kernel_mappings'_def dom_def)
 
 lemma valid_global_refs':
   "valid_global_refs' state'"
@@ -483,9 +383,15 @@ lemma valid_global_refs':
 lemma valid_arch_state':
   "valid_arch_state' state'"
   using arch global_refs2
-  apply (simp add: valid_arch_state'_def global_refs'_def)
-  apply (case_tac "armHSCurVCPU (ksArchState s')"; clarsimp simp add: split_def)
-  apply (drule live_notRange, clarsimp, case_tac ko; simp add: is_vcpu'_def live'_def)
+    apply (simp add: valid_arch_state'_def global_refs'_def)
+  apply (simp add: valid_global_pts'_def subset_iff page_table_at'_def table_refs'_def)
+  apply clarsimp
+  apply (erule_tac x="p + (ucast i << pte_bits)" in allE,
+         erule impE, rule exI, rule bexI[rotated], assumption)
+   apply (clarsimp simp: image_iff)
+   apply (rule bexI, rule refl)
+   apply (simp add: bit_simps ucast_leq_mask)
+  apply simp
   done
 
 end (* Arch_delete_locale *)
@@ -562,7 +468,6 @@ proof -
   apply (subgoal_tac "is_aligned ptr bits \<and> 3 \<le> bits \<and> bits < word_bits",simp)
    apply clarsimp
    apply (frule(2) delete_locale.intro, simp_all)[1]
-   apply (simp add: ksASIDMapSafe_def invs'_gsTypes_update)
    apply (rule subst[rotated, where P=invs'], erule delete_locale.delete_invs')
    apply (simp add: field_simps mask_def)
   apply clarsimp
@@ -686,7 +591,7 @@ lemma createObject_cte_wp_at'[Detype_R_2_assms]:
                           unless_def placeNewObject_def2 objBits_simps range_cover_full
                           curDomain_def bit_simps
                           getObjSize_simps apiGetObjectSize_def tcbBlockSizeBits_def
-                          epSizeBits_def ntfnSizeBits_def cteSizeBits_def updatePTType_def
+                          epSizeBits_def ntfnSizeBits_def cteSizeBits_def
          | intro conjI impI)+
   done
 
@@ -867,25 +772,6 @@ lemma placeNewObject_valid_arch_state:
   apply (erule(1) range_cover_full)
   done
 
-lemma setCTE_updatePTType_commute:
-  "monad_commute \<top> (setCTE src cte) (updatePTType p pt_t)"
-  unfolding updatePTType_def
-  apply (clarsimp simp: monad_commute_def)
-  apply (clarsimp simp: setCTE_def setObject_def bind_assoc exec_gets exec_modify)
-  apply (case_tac "lookupAround2 src (ksPSpace s)"; clarsimp simp: bind_assoc)
-  apply (simp add: assert_opt_def bind_assoc simpler_updateObject_def
-                   simpler_modify_def simpler_gets_def return_def split_def fail_def
-              split: option.splits)
-  apply (clarsimp simp: bind_def fail_def)
-  apply (case_tac s, rename_tac arch mach, case_tac arch, simp)
-  apply fastforce
-  done
-
-crunch updatePTType
-  for cte_wp_at'[wp]: "\<lambda>s. Q (cte_wp_at' P p s)"
-  and pspace_aligned'[wp]: pspace_aligned'
-  and pspace_distinct'[wp]: pspace_distinct'
-
 lemma createObject_setCTE_commute[Detype_R_2_assms]:
   "monad_commute
      (cte_wp_at' (\<lambda>_. True) src and
@@ -945,7 +831,6 @@ lemma createObject_setCTE_commute[Detype_R_2_assms]:
                      setCTE_doMachineOp_commute
                      setCTE_when_doMachineOp_commute
                      setCTE_placeNewObject_commute
-                     setCTE_updatePTType_commute
                      monad_commute_if_weak_r
                  | wp placeNewObject_pspace_distinct'
                       placeNewObject_pspace_aligned'
@@ -955,16 +840,6 @@ lemma createObject_setCTE_commute[Detype_R_2_assms]:
                  | simp add: objBits_simps word_bits_def mult_2 add.assoc
                              pageBits_less_word_bits[unfolded word_bits_def, simplified])+)+)
   apply (simp add: bit_simps)
-  done
-
-lemma monad_commute_gsUntyped_updatePTType:
-  "monad_commute \<top> (modify (\<lambda>s. s\<lparr>gsUntypedZeroRanges := f (gsUntypedZeroRanges s)\<rparr>))
-                   (updatePTType ptr pt_t)"
-  unfolding updatePTType_def
-  apply (clarsimp simp: monad_commute_def exec_gets exec_modify bind_assoc)
-  apply (clarsimp simp: return_def)
-  apply (case_tac s, rename_tac arch mach, case_tac arch)
-  apply fastforce
   done
 
 lemma createObject_gsUntypedZeroRanges_commute[Detype_R_2_assms]:
@@ -985,7 +860,7 @@ lemma createObject_gsUntypedZeroRanges_commute[Detype_R_2_assms]:
                  createObjects_gsUntypedZeroRanges_commute'[THEN commute_commute]
                  return_commute return_commute[THEN commute_commute]
                  threadSet_gsUntypedZeroRanges_commute'[THEN commute_commute]
-                 monad_commute_gsUntyped_updatePTType dmo_gsUntypedZeroRanges_commute
+                 dmo_gsUntypedZeroRanges_commute
           split: option.split prod.split cong: if_cong)+
   apply (simp add: curDomain_def monad_commute_def exec_modify exec_gets)
   done
@@ -1059,6 +934,44 @@ lemma createNewCaps_pspace_no_overlap'[Detype_R_3_assms]:
                     mapM_x_wp_inv
                | assumption | clarsimp simp: word_bits_def
                | intro conjI range_cover_le[where n = "Suc n"] range_cover.aligned)+)
+
+lemma dmo'_createObjects'_comm:
+  assumes ef: "empty_fail f"
+  shows "do _ \<leftarrow> doMachineOp f; x \<leftarrow> createObjects' ptr n obj us; m x od =
+         do x \<leftarrow> createObjects' ptr n obj us; _ \<leftarrow> doMachineOp f; m x od"
+  apply (simp add: createObjects'_def bind_assoc split_def unless_def
+                   alignError_def dmo'_when_fail_comm[OF ef]
+                   dmo'_gets_ksPSpace_comm
+                   dmo'_ksPSpace_update_comm'[OF ef, symmetric])
+  apply (rule arg_cong_bind1)
+  apply (rule arg_cong_bind1)
+  apply (rename_tac u w)
+  apply (case_tac "fst (lookupAround2 (ptr + of_nat (shiftL n (objBitsKO obj +
+                                         us) - Suc 0)) w)", clarsimp+)
+  apply (simp add: assert_into_when dmo'_when_fail_comm[OF ef])
+  done
+
+lemma dmo'_gsUserPages_upd_comm:
+  assumes "empty_fail f"
+  shows "doMachineOp f >>= (\<lambda>x. modify (gsUserPages_update g) >>= (\<lambda>_. m x)) =
+         modify (gsUserPages_update g) >>= (\<lambda>_. doMachineOp f >>= m)"
+proof -
+  have ksMachineState_ksPSpace_update:
+    "\<forall>s. ksMachineState (gsUserPages_update g s) = ksMachineState s"
+    by simp
+  have updates_independent:
+    "\<And>f. gsUserPages_update g \<circ> ksMachineState_update f =
+          ksMachineState_update f \<circ> gsUserPages_update g"
+    by (rule ext) simp
+  from assms
+  show ?thesis
+    apply (simp add: doMachineOp_def split_def bind_assoc)
+    apply (simp add: gets_modify_comm2[OF ksMachineState_ksPSpace_update])
+    apply (rule arg_cong_bind1)
+    apply (simp add: empty_fail_def select_f_walk[OF empty_fail_modify]
+                     modify_modify_bind updates_independent)
+    done
+qed
 
 lemma createNewCaps_ret_len[Detype_R_3_assms]:
   "\<lbrace>K (n < 2 ^ word_bits \<and> n \<noteq> 0)\<rbrace>
@@ -1238,150 +1151,91 @@ proof -
           apply (rule ext)
           apply simp
 
-         apply (in_case "HugePageObject")
-         apply (simp add: Arch_createNewCaps_def
-                          Retype_H.createObject_def createObjects_def bind_assoc
-                          RISCV64_H.toAPIType_def
-                          RISCV64_H.createObject_def placeNewDataObject_def)
-         apply (intro conjI impI)
-          apply (subst monad_eq, rule createObjects_Cons)
-                apply (simp_all add: field_simps shiftl_t2n pageBits_def
-                                     getObjectSize_def objBits_simps)[6]
-          apply (simp add: bind_assoc placeNewObject_def2 objBits_simps
-                           getObjectSize_def bit_simps
-                           add.commute append mapM_x_append mapM_x_singleton)
-          apply ((subst gsUserPages_update gsCNodes_update
-                        gsUserPages_upd_createObjects'_comm
-                        monad_commute_simple'[OF map_dmo'_createObjects'_comm]
-                        monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
-                     | simp add: modify_modify_bind o_def)+)[1]
-
-         apply (subst monad_eq, rule createObjects_Cons)
-               apply (simp_all add: field_simps shiftl_t2n pageBits_def
-                                    getObjectSize_def objBits_simps)[6]
-         apply (simp add: bind_assoc placeNewObject_def2 objBits_simps
-                          getObjectSize_def
-                          pageBits_def add.commute append mapM_x_append mapM_x_singleton)
-         apply (subst gsUserPages_update gsCNodes_update
-                      gsUserPages_upd_createObjects'_comm
-                      monad_commute_simple'[OF map_dmo'_createObjects'_comm]
-                      monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
-                    | simp add: modify_modify_bind o_def)+
-
-        apply (in_case "VSpaceObject")
-        apply (simp add: Arch_createNewCaps_def Retype_H.createObject_def createObjects_def
-                         bind_assoc RISCV64_H.toAPIType_def RISCV64_H.createObject_def)
-        apply (subst monad_eq, rule createObjects_Cons)
-              apply ((simp add: field_simps shiftl_t2n
-                                getObjectSize_def bit_simps objBits_simps ptBits_def)+)[6]
-        apply (simp add: bind_assoc placeNewObject_def2)
-        apply (simp add: field_simps updatePTType_def bind_assoc gets_modify_def
-                         getObjectSize_def placeNewObject_def2 objBits_simps append mapM_x_append
-                         mapM_x_singleton)
-        apply (subst ksArchState_update ksArchState_upd_createObjects'_comm
-                     monad_commute_simple'[OF map_dmo'_createObjects'_comm]
-                     monad_commute_simple'[OF map_dmo'_ksArchState_upd_comm]
-               | simp add: modify_modify_bind o_def
-               | simp only: o_def cong: if_cong)+
-        apply (rule bind_apply_cong, simp)
-        apply (rule bind_apply_cong, simp)
-        apply (rule monad_eq_split_tail, simp)
-        apply (rule fun_cong, rule arg_cong[where f=modify])
-        apply (simp flip: if_eq)
-        apply (simp cong: if_cong del: if_eq)
-        apply (rule ext)
-        apply (rename_tac s', case_tac s')
-        apply (rename_tac ksArch ksMachine, case_tac ksArch)
-        apply fastforce
-
-       apply (in_case "SmallPageObject")
+       \<comment> \<open>SmallPageObject\<close>
        apply (simp add: Arch_createNewCaps_def
                         Retype_H.createObject_def createObjects_def bind_assoc
-                        toAPIType_def
+                        RISCV64_H.toAPIType_def
                         RISCV64_H.createObject_def placeNewDataObject_def)
        apply (intro conjI impI)
         apply (subst monad_eq, rule createObjects_Cons)
-              apply (simp_all add: field_simps shiftl_t2n bit_simps
-                                   getObjectSize_def objBits_simps)[6]
-        apply (simp add: bind_assoc placeNewObject_def2 objBits_simps bit_simps
-                         getObjectSize_def add.commute append mapM_x_append mapM_x_singleton)
+              apply (simp_all add: field_simps shiftl_t2n pageBits_def
+                         getObjectSize_def
+                         objBits_simps)[6]
+        apply (simp add: bind_assoc placeNewObject_def2 objBits_simps
+                         getObjectSize_def bit_simps
+                         add.commute append)
         apply ((subst gsUserPages_update gsCNodes_update
-                      gsUserPages_upd_createObjects'_comm
-                      monad_commute_simple'[OF map_dmo'_createObjects'_comm]
-                      monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
+                    gsUserPages_upd_createObjects'_comm
+                    dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
                    | simp add: modify_modify_bind o_def)+)[1]
        apply (subst monad_eq, rule createObjects_Cons)
              apply (simp_all add: field_simps shiftl_t2n pageBits_def
-                                 RISCV64_H.getObjectSize_def objBits_simps)[6]
+                        getObjectSize_def objBits_simps)[6]
        apply (simp add: bind_assoc placeNewObject_def2 objBits_simps
-                         RISCV64_H.getObjectSize_def
-                        pageBits_def add.commute append mapM_x_append mapM_x_singleton)
+                        getObjectSize_def
+                        pageBits_def add.commute append)
        apply (subst gsUserPages_update gsCNodes_update
-                    gsUserPages_upd_createObjects'_comm
-                    monad_commute_simple'[OF map_dmo'_createObjects'_comm]
-                    monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
-              | simp add: modify_modify_bind o_def)+
-
-      apply (in_case "LargePageObject")
+                   gsUserPages_upd_createObjects'_comm
+                   dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
+                  | simp add: modify_modify_bind o_def)+
+      \<comment> \<open>LargePageObject\<close>
       apply (simp add: Arch_createNewCaps_def
                        Retype_H.createObject_def createObjects_def bind_assoc
-                       toAPIType_def RISCV64_H.createObject_def placeNewDataObject_def)
+                       toAPIType_def
+                       RISCV64_H.createObject_def placeNewDataObject_def)
       apply (intro conjI impI)
        apply (subst monad_eq, rule createObjects_Cons)
-             apply (simp_all add: field_simps shiftl_t2n pageBits_def
+             apply (simp_all add: field_simps shiftl_t2n bit_simps
                         getObjectSize_def objBits_simps)[6]
        apply (simp add: bind_assoc placeNewObject_def2 objBits_simps bit_simps
-                        getObjectSize_def add.commute append mapM_x_append mapM_x_singleton)
+                        getObjectSize_def add.commute append)
        apply ((subst gsUserPages_update gsCNodes_update
-                     gsUserPages_upd_createObjects'_comm
-                     monad_commute_simple'[OF map_dmo'_createObjects'_comm]
-                     monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
-               | simp add: modify_modify_bind o_def)+)[1]
+                   gsUserPages_upd_createObjects'_comm
+                   dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
+                  | simp add: modify_modify_bind o_def)+)[1]
       apply (subst monad_eq, rule createObjects_Cons)
             apply (simp_all add: field_simps shiftl_t2n pageBits_def
                        RISCV64_H.getObjectSize_def objBits_simps)[6]
       apply (simp add: bind_assoc placeNewObject_def2 objBits_simps
-                       getObjectSize_def bit_simps add.commute append mapM_x_append mapM_x_singleton)
+                        RISCV64_H.getObjectSize_def
+                       pageBits_def add.commute append)
       apply (subst gsUserPages_update gsCNodes_update
                    gsUserPages_upd_createObjects'_comm
-                   monad_commute_simple'[OF map_dmo'_createObjects'_comm]
-                   monad_commute_simple'[OF dmo'_gsUserPages_upd_map_commute]
+                   dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
              | simp add: modify_modify_bind o_def)+
-
-     apply (in_case "PageTableObject")
-     apply (simp add: Arch_createNewCaps_def Retype_H.createObject_def createObjects_def bind_assoc
-                      RISCV64_H.toAPIType_def RISCV64_H.createObject_def)
+     \<comment> \<open>HugePageObject\<close>
+     apply (simp add: Arch_createNewCaps_def
+                      Retype_H.createObject_def createObjects_def bind_assoc
+                      toAPIType_def RISCV64_H.createObject_def placeNewDataObject_def)
+     apply (intro conjI impI)
+      apply (subst monad_eq, rule createObjects_Cons)
+            apply (simp_all add: field_simps shiftl_t2n pageBits_def
+                       getObjectSize_def objBits_simps)[6]
+      apply (simp add: bind_assoc placeNewObject_def2 objBits_simps bit_simps
+                       getObjectSize_def add.commute append)
+      apply ((subst gsUserPages_update gsCNodes_update
+                    gsUserPages_upd_createObjects'_comm
+                    dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
+              | simp add: modify_modify_bind o_def)+)[1]
      apply (subst monad_eq, rule createObjects_Cons)
-           apply ((simp add: field_simps shiftl_t2n
-                             getObjectSize_def bit_simps objBits_simps ptBits_def)+)[6]
-     apply (simp add: bind_assoc placeNewObject_def2)
-     apply (simp add: field_simps updatePTType_def bind_assoc gets_modify_def
-                      getObjectSize_def placeNewObject_def2 objBits_simps append mapM_x_append
-                      mapM_x_singleton)
-     apply (subst ksArchState_update ksArchState_upd_createObjects'_comm
-                  monad_commute_simple'[OF map_dmo'_createObjects'_comm]
-                  monad_commute_simple'[OF map_dmo'_ksArchState_upd_comm]
-            | simp add: modify_modify_bind o_def
-            | simp only: o_def cong: if_cong)+
-     apply (rule bind_apply_cong, simp)
-     apply (rule bind_apply_cong, simp)
-     apply (rule monad_eq_split_tail, simp)
-     apply (rule fun_cong, rule arg_cong[where f=modify])
-     apply (simp flip: if_eq)
-     apply (simp cong: if_cong del: if_eq)
-     apply (rule ext)
-     apply (rename_tac s', case_tac s')
-     apply (rename_tac ksArch ksMachine, case_tac ksArch)
-     apply fastforce
-    apply (in_case "VCPUObject")
-    apply (simp add: Arch_createNewCaps_def Retype_H.createObject_def
-                     createObjects_def bind_assoc RISCV64_H.toAPIType_def
-                     RISCV64_H.createObject_def)
-    apply (subst monad_eq, rule createObjects_Cons)
-          apply ((simp add: field_simps shiftl_t2n getObjectSize_def
-                            bit_simps objBits_simps ptBits_def)+)[6]
-    apply (simp add: bind_assoc placeNewObject_def2)
-    apply (simp add: add_ac bit_simps getObjectSize_def objBits_simps append)
+           apply (simp_all add: field_simps shiftl_t2n pageBits_def
+                      RISCV64_H.getObjectSize_def objBits_simps)[6]
+     apply (simp add: bind_assoc placeNewObject_def2 objBits_simps
+                      getObjectSize_def bit_simps add.commute append)
+     apply (subst gsUserPages_update gsCNodes_update
+                  gsUserPages_upd_createObjects'_comm
+                  dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
+            | simp add: modify_modify_bind o_def)+
+   \<comment> \<open>PageTableObject\<close>
+    apply (simp add:Arch_createNewCaps_def Retype_H.createObject_def
+            createObjects_def bind_assoc RISCV64_H.toAPIType_def
+            RISCV64_H.createObject_def)
+    apply (subst monad_eq,rule createObjects_Cons)
+          apply ((simp add: field_simps shiftl_t2n
+            getObjectSize_def bit_simps objBits_simps ptBits_def)+)[6]
+    apply (simp add:bind_assoc placeNewObject_def2)
+    apply (simp add: field_simps bit_simps
+          getObjectSize_def placeNewObject_def2 objBits_simps append)
     done
 qed
 
@@ -1396,7 +1250,7 @@ lemma createObject_def2[Detype_R_3_assms]:
                              placeNewObject_def2 objBits_simps bind_assoc
                              clearMemory_def clearMemoryVM_def fun_upd_def[symmetric]
                              word_size mapM_x_singleton storeWordVM_def
-                             updatePTType_def gets_modify_def)+)[6]
+                             gets_modify_def)+)[4]
   apply (rename_tac apiobject_type)
   apply (case_tac apiobject_type)
       apply (clarsimp simp: Arch_createNewCaps_def createObjects_def shiftL_nat
@@ -1404,9 +1258,6 @@ lemma createObject_def2[Detype_R_3_assms]:
                             clearMemory_def clearMemoryVM_def word_size mapM_x_singleton
                             storeWordVM_def)+
   done
-
-crunch updatePTType
-  for pspace_no_overlap'[wp]: "pspace_no_overlap' p n"
 
 lemma ArchCreateObject_pspace_no_overlap'[Detype_R_3_assms]:
   "\<lbrace>\<lambda>s. pspace_no_overlap'
@@ -1470,8 +1321,6 @@ lemma createObject_pspace_aligned_distinct':
    and K (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> us < 28)\<rbrace>
   createObject ty ptr us d
   \<lbrace>\<lambda>xa s. pspace_aligned' s \<and> pspace_distinct' s\<rbrace>"
-  (* FIXME: work around warning due to vcpuBits_def being in both bit_simps and objBits_simps' *)
-  supply vcpuBits_def[bit_simps del]
   apply (rule hoare_pre)
    apply (wp placeNewObject_pspace_aligned' unless_wp
              placeNewObject_pspace_distinct'
