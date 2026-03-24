@@ -435,7 +435,8 @@ lemma nextDomain_ccorres:
    apply (clarsimp simp: rf_sr_unfold idx_unat valid_dom_schedule'_def)
    apply (frule_tac n="Suc (ksDomScheduleIdx \<sigma>)" in cdom_schedule_relationD, simp)
    apply (clarsimp simp: dom_schedule_entry_relation_def mask_def domScheduleLength_def)
-   apply (drule sym[where s="ucast x" and t="w >> n" for x w n], simp)
+   (* "?", because the goal is already solved above for NUM_DOMAINS=1 on 32-bit architectures: *)
+   apply (drule sym[where s="ucast x" and t="w >> n" for x w n], simp)?
   apply simp
   done
 
