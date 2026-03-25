@@ -2351,18 +2351,6 @@ lemma rescheduleRequired_corres:
   apply (clarsimp split: scheduler_action.splits)
   done
 
-lemma rescheduleRequired_corres_simple:
-  "corres dc \<top> sch_act_simple
-     (set_scheduler_action choose_new_thread) rescheduleRequired"
-  apply (simp add: rescheduleRequired_def)
-  apply (rule corres_symb_exec_r[where Q'="\<lambda>rv s. rv = ResumeCurrentThread \<or> rv = ChooseNewThread"])
-     apply (rule corres_symb_exec_r)
-        apply (rule setSchedulerAction_corres, simp)
-       apply (wp | clarsimp split: scheduler_action.split)+
-    apply (wp | clarsimp simp: sch_act_simple_def split: scheduler_action.split)+
-  apply (simp add: getSchedulerAction_def)
-  done
-
 end (* TcbAcc_R_2 *)
 
 lemma weak_sch_act_wf_lift:
@@ -2811,10 +2799,8 @@ context TcbAcc_R_2 begin
 lemma setThreadState_corres:
   "thread_state_relation ts ts' \<Longrightarrow>
    corres dc
-          (tcb_at t and pspace_aligned and pspace_distinct)
-          \<top>
-          (set_thread_state t ts) (setThreadState ts' t)"
-  (is "?tsr \<Longrightarrow> corres dc ?Pre ?Pre' ?sts ?sts'")
+     (tcb_at t and pspace_aligned and pspace_distinct) \<top>
+     (set_thread_state t ts) (setThreadState ts' t)"
   apply (simp add: set_thread_state_def setThreadState_def)
   apply (simp add: set_thread_state_act_def[abs_def])
   apply (subst bind_assoc[symmetric], subst thread_set_def[simplified, symmetric])
@@ -2829,9 +2815,9 @@ lemma setThreadState_corres:
             apply (rule corres_if[where Q=\<top> and Q'=\<top>])
               apply (rule iffI)
                apply clarsimp+
-              apply (case_tac rva,simp_all)[1]
-             apply (wp rescheduleRequired_corres_simple corres_return_trivial | simp)+
-    apply (wp hoare_vcg_conj_lift[where Q'="\<top>\<top>"] | simp add: sch_act_simple_def)+
+              apply (rename_tac sa, case_tac sa; simp)
+             apply (rule setSchedulerAction_corres)
+             apply wpsimp+
   done
 
 lemma setBoundNotification_corres:
@@ -2919,13 +2905,10 @@ lemma tcbSchedDequeue_valid_objs'[wp]:
   by (wpsimp wp: threadSet_valid_objs')
 
 lemma sts_valid_objs':
-  "\<lbrace>valid_objs' and valid_tcb_state' st and pspace_aligned' and pspace_distinct'\<rbrace>
+  "\<lbrace>valid_objs' and valid_tcb_state' st\<rbrace>
    setThreadState st t
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (wpsimp simp: setThreadState_def wp: threadSet_valid_objs')
-   apply (rule_tac Q'="\<lambda>_. valid_objs' and pspace_aligned' and pspace_distinct'" in hoare_post_imp)
-    apply fastforce
-   apply (wpsimp wp: threadSet_valid_objs')
   apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs)
   done
 
@@ -3567,10 +3550,9 @@ crunch rescheduleRequired
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
 
 lemma setThreadState_st_tcb':
-  "\<lbrace>\<top>\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. st_tcb_at' (\<lambda>s. s = st) t\<rbrace>"
-  apply (simp add: setThreadState_def)
-  apply (wp threadSet_pred_tcb_at_state | simp add: if_apply_def2)+
-  done
+  "\<lbrace>\<top>\<rbrace> setThreadState st t \<lbrace>\<lambda>_. st_tcb_at' (\<lambda>s. s = st) t\<rbrace>"
+  unfolding setThreadState_def
+  by (wpsimp wp: threadSet_pred_tcb_at_state hoare_drop_imps)
 
 lemma setThreadState_st_tcb:
   "\<lbrace>\<lambda>s. P st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
@@ -3598,11 +3580,18 @@ lemma setBoundNotification_bound_tcb:
 
 context TcbAcc_R_2 begin
 
+lemma setSchedulerAction_ct'[wp]:
+  "setSchedulerAction sa \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace>"
+  unfolding setSchedulerAction_def
+  by wpsimp
+
 crunch rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
   for ct'[wp]: "\<lambda>s. P (ksCurThread s)"
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
   for typ_at'[wp]:  "\<lambda>s. P (typ_at' T p s)"
+  (simp: crunch_simps wp: crunch_wps)
 
 end (* TcbAcc_R_2 *)
 
@@ -3636,7 +3625,7 @@ lemma sts_valid_idle'[wp]:
    setThreadState ts t
    \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   apply (simp add: setThreadState_def)
-  apply (wpsimp wp: threadSet_idle' simp: idle_tcb'_def)
+  apply (wpsimp wp: threadSet_idle' hoare_drop_imps simp: idle_tcb'_def)
   done
 
 lemma sbn_valid_idle'[wp]:
@@ -3692,7 +3681,7 @@ lemma sts_st_tcb':
          simp_all add: setThreadState_def
                   split del: if_split)
    apply ((wp threadSet_pred_tcb_at_state | simp)+)[1]
-  apply (wp threadSet_obj_at'_really_strongest
+  apply (wp threadSet_obj_at'_really_strongest hoare_drop_imps
               | simp add: pred_tcb_at'_def)+
   done
 
@@ -3704,7 +3693,7 @@ lemma sts_bound_tcb_at':
          simp_all add: setThreadState_def
                   split del: if_split)
    apply ((wp threadSet_pred_tcb_at_state | simp)+)[1]
-   apply (wp threadSet_obj_at'_really_strongest
+   apply (wp threadSet_obj_at'_really_strongest hoare_drop_imps
                | simp add: pred_tcb_at'_def)+
   done
 
@@ -3743,6 +3732,7 @@ crunch setThreadState, setBoundNotification
   for aligned'[wp]: pspace_aligned'
   and distinct'[wp]: pspace_distinct'
   and cte_wp_at'[wp]: "cte_wp_at' P p"
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch rescheduleRequired
   for refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
@@ -3754,7 +3744,7 @@ lemma setThreadState_state_refs_of'[wp]:
      setThreadState st t
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   by (simp add: setThreadState_def fun_upd_def
-        | wp threadSet_state_refs_of')+
+        | wp threadSet_state_refs_of' hoare_drop_imps)+
 
 context TcbAcc_R_2 begin
 
@@ -3896,6 +3886,7 @@ end (* TcbAcc_R_2 *)
 
 crunch setThreadState, setBoundNotification
   for ifunsafe'[wp]: "if_unsafe_then_cap'"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma st_tcb_ex_cap'':
   "\<lbrakk> st_tcb_at' P t s; if_live_then_nonz_cap' s;
@@ -3913,17 +3904,17 @@ lemma bound_tcb_ex_cap'':
 
 crunch setThreadState, setBoundNotification
   for arch' [wp]: "\<lambda>s. P (ksArchState s)"
-  (simp: unless_def crunch_simps)
+  (simp: unless_def crunch_simps wp: crunch_wps)
 
 crunch setThreadState, setBoundNotification
   for it' [wp]: "\<lambda>s. P (ksIdleThread s)"
-  (wp: getObject_tcb_inv
+  (wp: getObject_tcb_inv crunch_wps
    simp: updateObject_default_def unless_def crunch_simps)
 
 lemma sts_ctes_of [wp]:
   "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> setThreadState st t \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   apply (simp add: setThreadState_def)
-  apply (wp threadSet_ctes_ofT | simp add: tcb_cte_cases_def tcb_cte_cases_neqs)+
+  apply (wp threadSet_ctes_ofT hoare_drop_imps | simp add: tcb_cte_cases_def tcb_cte_cases_neqs)+
   done
 
 lemma sbn_ctes_of [wp]:
@@ -3934,11 +3925,11 @@ lemma sbn_ctes_of [wp]:
 
 crunch setThreadState, setBoundNotification
   for ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
-  (simp: unless_def crunch_simps)
+  (simp: unless_def crunch_simps wp: crunch_wps)
 
 crunch setThreadState, setBoundNotification
   for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
-  (simp: unless_def crunch_simps wp: setObject_ksPSpace_only updateObject_default_inv)
+  (simp: unless_def crunch_simps wp: setObject_ksPSpace_only updateObject_default_inv crunch_wps)
 
 lemmas setThreadState_irq_handlers[wp]
     = valid_irq_handlers_lift'' [OF sts_ctes_of setThreadState_ksInterruptState]
@@ -3956,11 +3947,12 @@ lemma sbn_global_reds' [wp]:
 
 crunch setThreadState, setBoundNotification
   for irq_states' [wp]: valid_irq_states'
-  (simp: unless_def crunch_simps)
+  (simp: unless_def crunch_simps wp: crunch_wps)
 
 crunch setThreadState, setBoundNotification
   for ksMachine[wp]: "\<lambda>s. P (ksMachineState s)"
   and pspace_domain_valid[wp]: "pspace_domain_valid"
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma (in TcbAcc_R_2) setThreadState_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> setThreadState F t \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
@@ -4222,16 +4214,14 @@ lemma rescheduleRequired_ksDomSchedule[wp]:
   by (simp add: rescheduleRequired_def) wpsimp
 
 lemma setThreadState_ksCurDomain[wp]:
-  "\<lbrace> \<lambda>s. P (ksCurDomain s) \<rbrace> setThreadState st tptr \<lbrace>\<lambda>_ s. P (ksCurDomain s) \<rbrace>"
-  apply (simp add: setThreadState_def)
-  apply wpsimp
-  done
+  "setThreadState st tptr \<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace>"
+  unfolding setThreadState_def
+  by (wpsimp wp: hoare_drop_imps)
 
 lemma setThreadState_ksDomSchedule[wp]:
-  "\<lbrace> \<lambda>s. P (ksDomSchedule s) \<rbrace> setThreadState st tptr \<lbrace>\<lambda>_ s. P (ksDomSchedule s) \<rbrace>"
-  apply (simp add: setThreadState_def)
-  apply wpsimp
-  done
+  "setThreadState st tptr \<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace>"
+  unfolding setThreadState_def
+  by (wpsimp wp: hoare_drop_imps)
 
 end (* TcbAcc_R_2 *)
 
@@ -4257,6 +4247,7 @@ crunch rescheduleRequired, setBoundNotification, setThreadState
   for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma sts_utr[wp]:
   "\<lbrace>untyped_ranges_zero'\<rbrace> setThreadState st t \<lbrace>\<lambda>_. untyped_ranges_zero'\<rbrace>"
@@ -4367,7 +4358,7 @@ lemma tcbSchedEnqueue_valid_bitmaps[wp]:
 
 crunch rescheduleRequired, threadSet, setThreadState
   for valid_bitmaps[wp]: valid_bitmaps
-  (rule: valid_bitmaps_lift)
+  (rule: valid_bitmaps_lift wp: crunch_wps simp: crunch_simps)
 
 end (* TcbAcc_R_2 *)
 
@@ -4638,11 +4629,10 @@ lemma sts_cap_to'[wp]:
 
 lemma sts_pred_tcb_neq':
   "\<lbrace>pred_tcb_at' proj P t and K (t \<noteq> t')\<rbrace>
-  setThreadState st t'
-  \<lbrace>\<lambda>_. pred_tcb_at' proj P t\<rbrace>"
-  apply (simp add: setThreadState_def)
-  apply (wp threadSet_pred_tcb_at_state | simp)+
-  done
+   setThreadState st t'
+   \<lbrace>\<lambda>_. pred_tcb_at' proj P t\<rbrace>"
+  unfolding setThreadState_def
+  by (wpsimp wp: threadSet_pred_tcb_at_state hoare_drop_imps)
 
 lemma sbn_pred_tcb_neq':
   "\<lbrace>pred_tcb_at' proj P t and K (t \<noteq> t')\<rbrace>

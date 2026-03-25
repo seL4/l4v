@@ -552,7 +552,7 @@ When setting the scheduler state, we check for blocking of the current thread; i
 >         curThread <- getCurThread
 >         action <- getSchedulerAction
 >         when (not runnable && curThread == tptr && action == ResumeCurrentThread) $
->             rescheduleRequired
+>             setSchedulerAction ChooseNewThread
 
 \subsubsection{Bound Notificaion objects}
 

@@ -749,6 +749,11 @@ lemma ntfn_q_refs'_no_NTFNBound[simp]:
 
 crunch setThreadState
   for pspace_canonical'[wp]: pspace_canonical'
+  (simp: crunch_simps wp: crunch_wps)
+
+crunch tcbSchedEnqueue
+  for ep_obj_at'[wp]: "obj_at' (P :: endpoint \<Rightarrow> bool) ptr"
+  (simp: unless_def)
 
 lemma cancelBadgedSends_ccorres:
   "ccorres dc xfdc (invs' and ep_at' ptr)

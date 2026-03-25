@@ -1530,7 +1530,7 @@ lemma invokeArch_tcb_at':
 
 crunch setThreadState
   for pspace_no_overlap'[wp]: "pspace_no_overlap' w s"
-  (simp: unless_def)
+  (simp: unless_def crunch_simps wp: crunch_wps)
 
 lemma sts_cte_cap_to'[wp]:
   "\<lbrace>ex_cte_cap_to' p\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. ex_cte_cap_to' p\<rbrace>"
