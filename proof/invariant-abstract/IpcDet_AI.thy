@@ -274,7 +274,7 @@ lemma tcb_append_rv_wf:
   unfolding tcb_append_def
   by (wpsimp wp: ordered_insert_set)
 
-crunch tcb_append, tcb_dequeue, ready_times_append
+crunch tcb_append, ready_times_append
   for inv[wp]: P
   (wp: crunch_wps)
 
@@ -303,46 +303,21 @@ lemma tcb_append_distinct[wp]:
   unfolding tcb_append_def
   by wpsimp
 
-lemma tcb_dequeue_valid_SendEP:
-  "\<lbrace>valid_ep (SendEP q) and K (t \<in> set q)\<rbrace> tcb_dequeue t q \<lbrace>\<lambda>q'. valid_ep (SendEP (t # q'))\<rbrace>"
-  supply if_split[split del]
-  apply (case_tac q; simp)
-  apply (wpsimp simp: tcb_dequeue_def valid_ep_def)
-  apply (fastforce split: if_splits)
-  done
-
-lemma tcb_dequeue_valid_RecvEP:
-  "\<lbrace>valid_ep (RecvEP q) and K (t \<in> set q)\<rbrace> tcb_dequeue t q \<lbrace>\<lambda>q'. valid_ep (RecvEP (t # q'))\<rbrace>"
-  supply if_split[split del]
-  apply (case_tac q; simp)
-  apply (wpsimp simp: tcb_dequeue_def valid_ep_def)
-  apply (fastforce split: if_splits)
-  done
-
-lemma tcb_dequeue_valid_ep:
+lemma removeAll_valid_ep:
   "\<lbrace>valid_ep (update_ep_queue ep q is_recv) and K (ep \<noteq> IdleEP \<and> t \<in> set q)\<rbrace>
-   tcb_dequeue t q
+   return $ removeAll t q
    \<lbrace>\<lambda>q'. valid_ep (update_ep_queue ep (t # q') is_recv)\<rbrace>"
-  by (cases ep) (wpsimp wp: tcb_dequeue_valid_SendEP tcb_dequeue_valid_RecvEP)+
+  by (cases ep)
+     (wpsimp simp: valid_ep_def removeAll_filter_not_eq)+
 
 lemma tcb_dequeue_rv_wf:
-  "\<lbrace>\<lambda>_. t \<in> set q \<and> distinct q\<rbrace> tcb_dequeue t q \<lbrace>\<lambda>rv s. set rv = set q - {t}\<rbrace>"
-  apply (wpsimp simp: tcb_dequeue_def)
-  apply (fastforce dest: findIndex_member)
-  done
+  "\<lbrace>\<lambda>_. t \<in> set q \<and> distinct q\<rbrace> return $ removeAll t q \<lbrace>\<lambda>rv s. set rv = set q - {t}\<rbrace>"
+  by wpsimp
 
 lemma tcb_dequeue_rv_wf':
-  "\<lbrace>P (set q - {t}) and K (t \<in> set q \<and> distinct q)\<rbrace> tcb_dequeue t q \<lbrace>\<lambda>rv. P (set rv)\<rbrace>"
-  apply (clarsimp simp: valid_def)
-  apply (frule use_valid[OF _ tcb_dequeue_rv_wf], simp, simp)
-  apply (frule use_valid[OF _ tcb_dequeue_inv, where P = "P (set q - {t})"], simp+)
-  done
-
-lemma tcb_dequeue_rv_wf'':
-  "\<lbrace>P (ep_q_refs_of (update_ep_queue ep q is_recv)) and K (t \<in> set q \<and> distinct q \<and> ep \<noteq> IdleEP)\<rbrace>
-   tcb_dequeue t q
-   \<lbrace>\<lambda>rv. P (ep_q_refs_of (update_ep_queue ep (t # rv) is_recv))\<rbrace>"
-  by (cases ep; wpsimp wp: tcb_dequeue_rv_wf' simp: Times_Diff_distrib1 insert_absorb)
+  "\<lbrace>P (set q - {t}) and K (t \<in> set q \<and> distinct q)\<rbrace> return $ removeAll t q \<lbrace>\<lambda>rv. P (set rv)\<rbrace>"
+  apply (clarsimp simp: removeAll_filter_not_eq valid_def return_def)
+  by (metis remove1_filter set_filter set_remove1_eq)
 
 lemma gt_reply_sp:
   "\<lbrace>P\<rbrace> get_reply_obj_ref reply_tcb rptr
@@ -440,11 +415,11 @@ abbreviation reply_at_tcb_in ::
   "reply_at_tcb_in tcbs \<equiv> reply_tcb_reply_at (\<lambda>t. set_option t \<subseteq> tcbs)"
 
 global_interpretation tcb_ep_dequeue: non_reply_op "tcb_ep_dequeue tptr ep_ptr"
-  by unfold_locales (wpsimp simp: tcb_ep_dequeue_def tcb_dequeue_def
+  by unfold_locales (wpsimp simp: tcb_ep_dequeue_def
                               wp: hoare_vcg_if_lift2 hoare_drop_imps)
 
 global_interpretation tcb_ntfn_dequeue: non_reply_op "tcb_ntfn_dequeue tptr ntfn_ptr"
-  by unfold_locales (wpsimp simp: tcb_ntfn_dequeue_def tcb_dequeue_def get_ntfn_queue_def
+  by unfold_locales (wpsimp simp: tcb_ntfn_dequeue_def
                               wp: hoare_vcg_if_lift2 hoare_drop_imps)
 
 lemma cancel_ipc_reply_at_tcb_in:
@@ -544,10 +519,6 @@ global_interpretation set_reply_tcb_obj_ref:
   non_reply_sc_op "set_reply_obj_ref reply_tcb_update ref new"
   by unfold_locales (wpsimp wp: update_sk_obj_ref_wp  simp: reply_sc_reply_at_def obj_at_def)
 
-lemma get_ep_queue_wp':
-  "\<lbrace> \<lambda>s. \<forall>q. (ep_queue ep = q) \<longrightarrow> Q q s \<rbrace> get_ep_queue ep \<lbrace> Q \<rbrace>"
-  by (cases ep; wpsimp simp: get_ep_queue_def)
-
 lemma ep_queue_update_ep_q[simp]:
   "ep_queue (update_ep_queue ep q is_recv) = q"
   by (cases ep; simp add: ep_queue_def)
@@ -558,6 +529,7 @@ lemma receive_ipc_blocked_invs:
   "\<lbrace>receive_ipc_preconds t ep_ptr reply reply_opt ep invs\<rbrace>
    receive_ipc_blocked is_blocking t ep_ptr reply_opt
    \<lbrace>\<lambda>_. invs\<rbrace>"
+  supply if_split[split del]
   proof -
     have ep_valid:
       "\<And>s. \<lbrakk>invs s;  st_tcb_at active t s; ko_at (Endpoint ep) ep_ptr s\<rbrakk> \<Longrightarrow> t \<notin> set (ep_queue ep)"
@@ -577,7 +549,7 @@ lemma receive_ipc_blocked_invs:
                              sts_valid_replies sts_fault_tcbs_valid_states
                              tcb_append_rv_wf''' tcb_append_valid_ep' get_simple_ko_wp
                              hoare_drop_imp[where Q="\<lambda>_. ex_nonz_cap_to ep_ptr"]
-                             hoare_vcg_imp_lift' hoare_vcg_all_lift get_ep_queue_wp' hoare_vcg_ex_lift
+                             hoare_vcg_imp_lift' hoare_vcg_all_lift hoare_vcg_ex_lift
                        simp: receive_ipc_blocked_def tcb_ep_append_def
                              do_nbrecv_failed_transfer_def\<close>)
       apply (all \<open>frule (2) ep_valid\<close>)
@@ -1479,7 +1451,7 @@ lemma tcb_ep_dequeue_ko_at_tail:
   "\<lbrace>\<lambda>s. ko_at (Endpoint (mk_ep SendEP (sender # queue))) ep_ptr s \<and> sender \<notin> set queue\<rbrace>
    tcb_ep_dequeue sender ep_ptr
    \<lbrace>\<lambda>_ s. ko_at (Endpoint (mk_ep SendEP queue)) ep_ptr s\<rbrace>"
-  unfolding tcb_ep_dequeue_def tcb_dequeue_def get_ep_queue_def
+  unfolding tcb_ep_dequeue_def
   apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp)
   apply (clarsimp simp: obj_at_def ep_at_pred_def mk_ep_def split: list.splits)
   apply (prop_tac "filter ((\<noteq>) sender) queue = queue")
@@ -1492,7 +1464,7 @@ lemma tcb_ep_dequeue_sym_refs:
   "\<lbrace>\<lambda>s. sym_refs (state_refs_of s) \<and> ko_at (Endpoint (SendEP (sender # queue))) ep_ptr s\<rbrace>
    tcb_ep_dequeue sender ep_ptr
    \<lbrace>\<lambda>_ s. sym_refs (\<lambda>p. if p = ep_ptr then set (sender # queue) \<times> {EPSend} else state_refs_of s p)\<rbrace>"
-  unfolding tcb_ep_dequeue_def tcb_dequeue_def get_ep_queue_def
+  unfolding tcb_ep_dequeue_def
   apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp)
   by (fastforce elim: delta_sym_refs simp: state_refs_of_def obj_at_def  split: if_splits)
 
@@ -2367,7 +2339,7 @@ lemma tcb_ep_append_valid_objs[wp]:
   "\<lbrace>valid_objs and tcb_at tptr and ep_at_pred (\<lambda>ep. tptr \<notin> set (ep_queue ep)) ep_ptr\<rbrace>
    tcb_ep_append tptr ep_ptr is_recv
    \<lbrace>\<lambda>_. valid_objs\<rbrace>"
-  unfolding tcb_ep_append_def tcb_append_def get_ep_queue_def
+  unfolding tcb_ep_append_def tcb_append_def
   apply (rule bind_wp[OF _ get_simple_ko_sp], rename_tac ep)
   apply (wpsimp wp: hoare_drop_imps simp: valid_ep_def endpoint_IdleEP_split
              split: if_splits)
@@ -2387,7 +2359,7 @@ lemma send_ipc_blocked_invs_Q:
     and ep_at_pred (\<lambda>ep. ep = IdleEP \<or> (\<exists>q. ep = SendEP q)) epptr\<rbrace>
    send_ipc_blocked tptr epptr ba cg crg call
    \<lbrace>\<lambda>_ s. invs s \<and> Q s\<rbrace>"
-  unfolding send_ipc_blocked_def tcb_ep_append_def tcb_ep_dequeue_def get_ep_queue_def
+  unfolding send_ipc_blocked_def tcb_ep_append_def tcb_ep_dequeue_def
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (wpsimp wp: valid_irq_node_typ tcb_append_valid_ep
                     tcb_append_rv_wf'''  sts_valid_replies sts_fault_tcbs_valid_states
@@ -2449,7 +2421,7 @@ lemma si_invs':
   apply (case_tac list; simp)
   apply (rename_tac dest tail)
   apply (wpsimp wp: si_invs'_helper[simplified] get_simple_ko_wp
-              simp: tcb_ep_dequeue_def tcb_dequeue_def get_ep_queue_def)
+              simp: tcb_ep_dequeue_def)
   apply (drule (1) ko_at_obj_congD)
   apply (frule invs_valid_objs)
   apply (frule (1) valid_objs_ko_at)
@@ -2466,7 +2438,8 @@ lemma si_invs':
    apply (clarsimp simp: obj_at_def)
    apply (fastforce dest: in_receive_ep_queue_st_tcb_at)
   apply (rule delta_sym_refs, assumption)
-   apply (fastforce simp: obj_at_def state_refs_of_def split: list.splits if_splits)
+   apply (fastforce simp: removeAll_filter_not_eq obj_at_def state_refs_of_def
+                   split: list.splits if_splits)
   apply clarsimp
   apply (intro conjI)
    apply (fastforce simp: valid_obj_def valid_ep_def is_tcb obj_at_def)
@@ -2486,7 +2459,7 @@ lemma si_invs':
    apply (frule (1) sym_refs_ko_atD[unfolded obj_at_def, simplified])
    apply (clarsimp simp: is_tcb get_refs_def2 tcb_st_refs_of_def
                   split: thread_state.splits if_splits)
-  apply (clarsimp simp: sym_refs_ko_atD obj_at_def split: list.splits)
+  apply (clarsimp simp: removeAll_filter_not_eq sym_refs_ko_atD obj_at_def split: list.splits)
   done
 
 lemmas si_invs = si_invs'[where Q=\<top>,OF hoare_TrueI hoare_TrueI hoare_TrueI hoare_TrueI,simplified]
@@ -2504,7 +2477,7 @@ lemma send_ipc_blocked_invs_Q_fault:
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (wpsimp wp: valid_irq_node_typ tcb_append_valid_ep'
                     hoare_drop_imp[where Q="\<lambda>_. ex_nonz_cap_to epptr"]
-                    tcb_append_rv_wf''' get_ep_queue_wp' get_simple_ko_wp)
+                    tcb_append_rv_wf''' get_simple_ko_wp)
    apply (wpsimp simp: valid_ep_def
                    wp: hoare_vcg_const_Ball_lift sts_only_idle valid_irq_node_typ
                        hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_ex_lift
@@ -2565,7 +2538,7 @@ lemma si_invs'_fault:
   apply (case_tac list; simp)
   apply (rename_tac dest tail)
   apply (wpsimp wp: si_invs'_helper_fault[simplified] get_simple_ko_wp
-              simp: tcb_ep_dequeue_def tcb_dequeue_def get_ep_queue_def)
+              simp: tcb_ep_dequeue_def)
   apply (drule (1) ko_at_obj_congD)
   apply (clarsimp simp: is_ep obj_at_def)
   apply (frule (1) valid_objs_valid_ep)
@@ -2576,7 +2549,8 @@ lemma si_invs'_fault:
    apply (clarsimp simp: valid_obj_def valid_ep_def)
    apply (fastforce simp: filter_id_conv)
   apply (rule delta_sym_refs, assumption)
-   apply (fastforce simp: obj_at_def state_refs_of_def split: list.splits if_splits)
+   apply (fastforce simp: removeAll_filter_not_eq obj_at_def state_refs_of_def
+                   split: list.splits if_splits)
   apply clarsimp
   apply (intro conjI)
    apply (fastforce simp: valid_obj_def valid_ep_def is_tcb obj_at_def)
@@ -2596,7 +2570,7 @@ lemma si_invs'_fault:
    apply (frule (1) sym_refs_ko_atD[unfolded obj_at_def, simplified])
    apply (clarsimp simp: is_tcb get_refs_def2 tcb_st_refs_of_def
                   split: thread_state.splits if_splits)
-  apply (clarsimp simp: sym_refs_ko_atD obj_at_def split: list.splits)
+  apply (clarsimp simp: removeAll_filter_not_eq sym_refs_ko_atD obj_at_def split: list.splits)
   done
 
 lemma hf_invs':
@@ -2802,7 +2776,7 @@ lemma tcb_ntfn_append_empty_rewrite:
     (\<lambda>s. ko_at (Notification ntfn) ntfn_ptr s \<and> ntfn_queue (ntfn_obj ntfn) = [] \<and> tcb_at tptr s)
     (tcb_ntfn_append tptr ntfn_ptr)
     (set_notification ntfn_ptr $ ntfn_obj_update (K (WaitingNtfn [tptr])) ntfn)"
-  apply (clarsimp simp: tcb_ntfn_append_def get_ntfn_queue_def)
+  apply (clarsimp simp: tcb_ntfn_append_def)
   apply (monadic_rewrite_symb_exec_l, rename_tac notification)
     apply (rule monadic_rewrite_trans)
      apply (rule monadic_rewrite_bind_head)
@@ -2875,13 +2849,13 @@ lemma rai_invs':
                        valid_irq_node_typ[where f="as_user t f" for t f]
                        get_simple_ko_wp hoare_vcg_all_lift hoare_vcg_imp_lift'
                  simp: invs_def valid_state_def valid_pspace_def valid_tcb_state_def
-                       live_ntfn_def live_def get_ntfn_queue_def do_nbrecv_failed_transfer_def)+
+                       live_ntfn_def live_def do_nbrecv_failed_transfer_def)+
     apply (frule (1) valid_objs_ko_at)
     apply (clarsimp simp: valid_obj_def valid_ntfn_def)
     apply (intro conjI impI)
      apply (intro allI impI)
      apply (drule (1) ko_at_obj_congD)
-     apply (clarsimp simp: get_ntfn_queue_def)
+     apply clarsimp
      apply (rule conjI, clarsimp simp: is_ntfn obj_at_def)
      apply (rule conjI, clarsimp simp: st_tcb_at_def obj_at_def is_tcb)
      apply (rule conjI)

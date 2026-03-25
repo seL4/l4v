@@ -2102,10 +2102,10 @@ definition sc_ready_time :: "sc_refill_cfg \<rightharpoonup> time" where
   "sc_ready_time cfg \<equiv>
      (if scrc_refills cfg = [] then None else Some (r_time (hd (scrc_refills cfg))))"
 
-definition sc_ready_times_2 :: "(obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> obj_ref \<rightharpoonup> time" where
+abbreviation sc_ready_times_2 :: "(obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> obj_ref \<rightharpoonup> time" where
   "sc_ready_times_2 hp \<equiv> hp |> sc_ready_time"
 
-lemmas tcb_ready_times_defs = tcb_sc_refill_cfgs_2_def sc_ready_times_2_def sc_ready_time_def
+lemmas tcb_ready_times_defs = tcb_sc_refill_cfgs_2_def sc_ready_time_def
 
 (* FIXME: these abbreviations don't fire in the right order when printing *)
 abbreviation "sc_ready_times_of_kh kh \<equiv> sc_ready_times_2 (sc_refill_cfgs_of_kh kh)"

@@ -1698,7 +1698,7 @@ lemma blocked_cancel_ipc_unlive:
   apply (rule hoare_gen_asm, clarsimp)
   apply (rule_tac Q'="\<lambda>rv. obj_at (\<lambda>ko. \<not>live ko \<and> is_reply ko) reply" in hoare_strengthen_post[rotated]
          , fastforce simp: obj_at_def)
-  apply (simp add: blocked_cancel_ipc_def tcb_ep_dequeue_def tcb_dequeue_def get_ep_queue_def)
+  apply (simp add: blocked_cancel_ipc_def tcb_ep_dequeue_def)
   apply (rule bind_wp[OF _ gbi_ep_sp])
   by (wpsimp wp: sts_obj_at_impossible reply_unlink_tcb_not_live
                  get_simple_ko_wp hoare_vcg_all_lift

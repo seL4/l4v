@@ -42,6 +42,22 @@ definition tcbs_of_kh :: "('obj_ref \<rightharpoonup> kernel_object) \<Rightarro
 abbreviation tcbs_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> tcb" where
   "tcbs_of s \<equiv> tcbs_of_kh (kheap s)"
 
+definition sc_fields_of :: "kernel_object \<rightharpoonup> (sched_context \<times> nat)" where
+  "sc_fields_of ko \<equiv> case ko of SchedContext sc n \<Rightarrow> Some (sc, n) | _ \<Rightarrow> None"
+
+lemmas sc_fields_of [simp] = sc_fields_of_def [split_simps kernel_object.split]
+
+lemma sc_fields_of_Some:
+  "sc_fields_of ko = Some (sc, n) \<longleftrightarrow> ko = SchedContext sc n"
+  by (cases ko; simp)
+
+lemma sc_fields_of_None:
+  "sc_fields_of ko = None \<longleftrightarrow> (\<forall>sc n. ko \<noteq> SchedContext sc n)"
+  by (cases ko; simp)
+
+abbreviation scs_fields_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> (sched_context \<times> nat)" where
+  "scs_fields_of \<equiv> \<lambda>s. kheap s |> sc_fields_of"
+
 definition sc_of :: "kernel_object \<rightharpoonup> sched_context" where
   "sc_of ko \<equiv> case ko of SchedContext sc _ \<Rightarrow> Some sc | _ \<Rightarrow> None"
 
@@ -55,61 +71,39 @@ lemma sc_of_None:
   "sc_of ko = None \<longleftrightarrow> (\<forall>sc n. ko \<noteq> SchedContext sc n)"
  by (cases ko; simp)
 
-(* FIXME RT: Consider eliminating in favour of a direct definition below in terms of kheap.
-             Note that this definition is used as part of the pred_map locale setup. *)
+\<comment> \<open>
+  FIXME RT: Consider eliminating in favour of a definition using @{const scs_fields_of}.
+  Note that this definition is used as part of the pred_map locale setup.\<close>
 definition scs_of_kh :: "('obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> 'obj_ref \<rightharpoonup> sched_context" where
   "scs_of_kh kh \<equiv> kh |> sc_of"
 
 abbreviation scs_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> sched_context" where
   "scs_of s \<equiv> scs_of_kh (kheap s)"
 
-definition sc_size_of :: "Structures_A.kernel_object \<rightharpoonup> nat" where
-  "sc_size_of ko \<equiv> case ko of Structures_A.SchedContext _ n \<Rightarrow> Some n | _ \<Rightarrow> None"
-
-lemmas sc_size_of_simps [simp] = sc_size_of_def [split_simps kernel_object.split]
-
-lemma sc_size_of_Some[simp]:
-  "sc_size_of ko = Some n \<longleftrightarrow> (\<exists>sc. ko = Structures_A.SchedContext sc n)"
-  by (cases ko; simp)
-
-lemma sc_size_of_None:
-  "sc_size_of ko = None \<longleftrightarrow> (\<forall>sc n. ko \<noteq> Structures_A.SchedContext sc n)"
-  by (cases ko; simp)
-
 abbreviation sc_sizes_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> nat" where
-  "sc_sizes_of \<equiv> (\<lambda>s. kheap s |> sc_size_of)"
+  "sc_sizes_of s \<equiv> scs_fields_of s ||> snd"
 
-definition cnode_of :: "Structures_A.kernel_object \<rightharpoonup> cnode_contents" where
-  "cnode_of ko \<equiv> case ko of Structures_A.CNode _ cnode \<Rightarrow> Some cnode | _ \<Rightarrow> None"
+definition cnode_of :: "kernel_object \<rightharpoonup> (nat \<times> cnode_contents)" where
+  "cnode_of ko \<equiv> case ko of CNode sz cnode \<Rightarrow> Some (sz, cnode) | _ \<Rightarrow> None"
 
 lemmas cnode_of_simps [simp] = cnode_of_def [split_simps kernel_object.split]
 
-lemma cnode_of_Some[simp]:
-  "cnode_of ko = Some cnode \<longleftrightarrow> (\<exists>sz. ko = Structures_A.CNode sz cnode)"
+lemma cnode_of_Some:
+  "cnode_of ko = Some (sz, cnode) \<longleftrightarrow> ko = CNode sz cnode"
   by (cases ko; simp)
 
 lemma cnode_of_None:
-  "cnode_of ko = None \<longleftrightarrow> (\<forall>sz cnode. ko \<noteq> Structures_A.CNode sz cnode)"
+  "cnode_of ko = None \<longleftrightarrow> (\<forall>sz cnode. ko \<noteq> CNode sz cnode)"
   by (cases ko; simp)
 
-abbreviation cnodes_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> cnode_contents" where
-  "cnodes_of \<equiv> (\<lambda>s. kheap s |> cnode_of)"
-
-definition cnode_size_of :: "Structures_A.kernel_object \<rightharpoonup> nat" where
-  "cnode_size_of ko \<equiv> case ko of Structures_A.CNode sz _ \<Rightarrow> Some sz | _ \<Rightarrow> None"
-
-lemmas cnode_size_of_simps [simp] = cnode_size_of_def [split_simps kernel_object.split]
-
-lemma cnode_size_of_Some[simp]:
-  "cnode_size_of ko = Some sz \<longleftrightarrow> (\<exists>cnode. ko = Structures_A.CNode sz cnode)"
-  by (cases ko; simp)
-
-lemma cnode_size_of_None:
-  "cnode_size_of ko = None \<longleftrightarrow> (\<forall>sz cnode. ko \<noteq> Structures_A.CNode sz cnode)"
-  by (cases ko; simp)
+abbreviation cnodes_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> (nat \<times> cnode_contents)" where
+  "cnodes_of \<equiv> \<lambda>s. kheap s |> cnode_of"
 
 abbreviation cnode_sizes_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> nat" where
-  "cnode_sizes_of \<equiv> (\<lambda>s. kheap s |> cnode_size_of)"
+  "cnode_sizes_of s \<equiv> cnodes_of s ||> fst"
+
+abbreviation cnode_contents_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> cnode_contents" where
+  "cnode_contents_of s \<equiv> cnodes_of s ||> snd"
 
 
 section "General Object Access"
@@ -152,6 +146,9 @@ where
         TCB tcb \<Rightarrow> Some tcb
       | _       \<Rightarrow> None)"
 
+\<comment> \<open>
+  Consider replacing this definition with thread_read f t s = (tcbs_of s ||> f) t, also removing
+  get_tcb.\<close>
 definition
   thread_read :: "(tcb \<Rightarrow> 'a) \<Rightarrow> obj_ref \<Rightarrow> ('a,'z::state_ext) r_monad" where
   "thread_read f tptr \<equiv> oliftM f (get_tcb tptr)"

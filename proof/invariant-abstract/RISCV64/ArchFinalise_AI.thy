@@ -640,7 +640,9 @@ lemma set_thread_state_not_live:
    \<lbrace>\<lambda>_. obj_at (Not \<circ> live) t\<rbrace>"
   unfolding set_thread_state_def
   apply (wpsimp wp: thread_set_wp)
-  by (clarsimp simp: obj_at_def pred_tcb_at_def get_tcb_def arch_tcb_live_def live_def hyp_live_def)
+  apply (clarsimp simp: obj_at_def pred_tcb_at_def get_tcb_def arch_tcb_live_def live_def
+                        hyp_live_def)
+  done
 
 lemma sched_context_cancel_yield_to_unlive:
   "\<lbrace>bound_tcb_at ((=) None) t and bound_sc_tcb_at ((=) None) t and st_tcb_at ((=) Inactive) t\<rbrace>
