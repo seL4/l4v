@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-theory IpcCancel_R
+theory ArchIpcCancel_R
 imports
-  ArchSchedule_R
+  IpcCancel_R
 begin
 
 arch_requalify_facts
