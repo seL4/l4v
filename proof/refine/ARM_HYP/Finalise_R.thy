@@ -493,6 +493,7 @@ lemma valid_badges_n:
 proof -
   from valid_badges
   show ?thesis
+    supply if_cong[cong]
     apply (simp add: valid_badges_def2)
     apply clarsimp
     apply (rule conjI)
@@ -570,6 +571,7 @@ lemma to_slot_eq [simp]:
 
 lemma n_parent_of:
   "\<lbrakk> n \<turnstile> p parentOf p'; p \<noteq> slot; p' \<noteq> slot \<rbrakk> \<Longrightarrow> m \<turnstile> p parentOf p'"
+  supply if_cong[cong]
   apply (clarsimp simp: parentOf_def)
   apply (case_tac cte, case_tac cte')
   apply clarsimp
@@ -585,6 +587,7 @@ lemma n_parent_of:
 
 lemma m_parent_of:
   "\<lbrakk> m \<turnstile> p parentOf p'; p \<noteq> slot; p' \<noteq> slot; p\<noteq>p'; p'\<noteq>mdbNext s_node \<rbrakk> \<Longrightarrow> n \<turnstile> p parentOf p'"
+  supply if_cong[cong]
   apply (clarsimp simp add: parentOf_def)
   apply (case_tac cte, case_tac cte')
   apply clarsimp
@@ -2375,6 +2378,11 @@ lemma ntfn_q_refs_of'_mult:
   "ntfn_q_refs_of' ntfn = (case ntfn of Structures_H.WaitingNtfn q \<Rightarrow> set q | _ \<Rightarrow> {}) \<times> {NTFNSignal}"
   by (cases ntfn, simp_all)
 
+lemma tcb_st_not_Bound:
+  "(p, NTFNBound) \<notin> tcb_st_refs_of' ts"
+  "(p, TCBBound) \<notin> tcb_st_refs_of' ts"
+  by (auto simp: tcb_st_refs_of'_def split: Structures_H.thread_state.split)
+
 crunch setBoundNotification
   for valid_bitmaps[wp]: valid_bitmaps
   and tcbSchedNexts_of[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
@@ -2406,7 +2414,7 @@ lemma unbindNotification_invs[wp]:
   apply normalise_obj_at'
   apply (subst delta_sym_refs, assumption)
     apply (auto split: if_split_asm)[1]
-   apply (auto simp: ntfn_q_refs_of'_mult split: if_split_asm)[1]
+   apply (auto simp: tcb_st_not_Bound ntfn_q_refs_of'_mult split: if_split_asm)[1]
   apply (frule obj_at_valid_objs', clarsimp+)
   apply (simp add: valid_ntfn'_def valid_obj'_def projectKOs live'_def
             split: ntfn.splits)
@@ -3400,8 +3408,8 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
   apply (rule hoare_pre)
    apply (wp prepares_delete_helper'' [OF cancelAllIPC_unlive]
              prepares_delete_helper'' [OF cancelAllSignals_unlive]
-             suspend_isFinal prepareThreadDelete_unqueued
-             prepareThreadDelete_inactive prepareThreadDelete_isFinal
+             suspend_isFinal ARM_HYP.prepareThreadDelete_unqueued (* FIXME arch-split: interface *)
+             ARM_HYP.prepareThreadDelete_inactive prepareThreadDelete_isFinal
              suspend_makes_inactive
              deletingIRQHandler_removeable'
              deletingIRQHandler_final[where slot=slot ]
@@ -4154,7 +4162,7 @@ lemma finaliseCap_corres:
        apply (rule corres_split[OF unbindNotification_corres])
          apply (rule corres_split[OF suspend_corres])
             apply (clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric] zbits_map_def)
-          apply (rule prepareThreadDelete_corres)
+          apply (rule ARM_HYP.prepareThreadDelete_corres, rule refl) (* FIXME arch-split: interface *)
         apply (wp unbind_notification_invs unbind_notification_simple_sched_action
                   delete_one_conc_fr.suspend_objs')+
       apply (simp add: valid_cap_def)

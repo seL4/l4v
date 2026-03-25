@@ -160,6 +160,12 @@ definition update_gs :: "Structures_A.apiobject_type \<Rightarrow> nat \<Rightar
          (\<lambda>ups x. if x \<in> ptrs then Some RISCVHugePage else ups x)
      | _ \<Rightarrow> id"
 
+(* non-hyp arches only *)
+lemma sym_refs_empty[simp]:
+  "sym_refs (\<lambda>p. {}) = True"
+  unfolding sym_refs_def
+  by simp
+
 lemma ksPSpace_update_gs_eq[Retype_R_assms, simp]:
   "ksPSpace (update_gs ty us ptrs s) = ksPSpace s"
   by (simp add: update_gs_def
@@ -1413,8 +1419,6 @@ proof -
       apply (rule hoare_vcg_conj_lift)
        apply (simp add: createObjects_def)
        apply (wp createObjects_state_hyp_refs_of'')
-      apply (rule hoare_vcg_conj_lift)
-       apply (simp add: createObjects_def)
        apply (wp createObjects_iflive')
       apply (wp createObjects_no_cte_ifunsafe' assms)
       apply (rule hoare_vcg_conj_lift)

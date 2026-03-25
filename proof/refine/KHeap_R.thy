@@ -1512,7 +1512,10 @@ locale KHeap_R_2 = KHeap_R +
     "\<And>p ko. setEndpoint p ko \<lbrace>valid_arch_state'\<rbrace>"
   assumes setNotification_valid_arch'[wp]:
     "\<And>p ko. setNotification p ko \<lbrace>valid_arch_state'\<rbrace>"
-
+  assumes setEndpoint_valid_globals[wp]:
+    "\<And>p ep.
+     (\<And>P. setEndpoint p ep \<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace>)
+     \<Longrightarrow> setEndpoint p ep \<lbrace>valid_global_refs'\<rbrace>"
 
 context KHeap_R begin
 
