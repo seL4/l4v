@@ -356,14 +356,12 @@ definition receive_ipc_blocked ::
   "bool \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> ('a::state_ext state, unit) nondet_monad"
   where
   "receive_ipc_blocked is_blocking thread epptr reply \<equiv>
-     case is_blocking of
-       True \<Rightarrow> do _ \<leftarrow> set_thread_state
-                        thread (BlockedOnReceive epptr reply \<lparr>receiver_can_grant = False\<rparr>);
-                  _ \<leftarrow> when (\<exists>r. reply = Some r)
-                            (set_reply_obj_ref reply_tcb_update (the reply) (Some thread));
-                  tcb_ep_append thread epptr True
-               od
-     | False \<Rightarrow> do_nbrecv_failed_transfer thread"
+     if is_blocking
+     then do set_thread_state thread (BlockedOnReceive epptr reply \<lparr>receiver_can_grant = False\<rparr>);
+             maybeM (\<lambda>r. set_reply_obj_ref reply_tcb_update r (Some thread)) reply;
+             tcb_ep_append thread epptr True
+          od
+     else do_nbrecv_failed_transfer thread"
 
 definition receive_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Rightarrow> cap \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "receive_ipc thread cap is_blocking reply_cap \<equiv> do
@@ -483,12 +481,12 @@ definition receive_signal_blocked ::
   "obj_ref \<Rightarrow> obj_ref \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
   where
   "receive_signal_blocked thread ntfnptr is_blocking \<equiv>
-     case is_blocking of
-         True \<Rightarrow> do set_thread_state thread (BlockedOnNotification ntfnptr);
-                    tcb_ntfn_append thread ntfnptr;
-                    maybe_return_sc ntfnptr thread
-                 od
-       | False \<Rightarrow> do_nbrecv_failed_transfer thread"
+     if is_blocking
+     then do set_thread_state thread (BlockedOnNotification ntfnptr);
+             tcb_ntfn_append thread ntfnptr;
+             maybe_return_sc ntfnptr thread
+          od
+     else do_nbrecv_failed_transfer thread"
 
 text \<open>Handle a receive operation performed on a notification object by a
 thread. If a message is waiting then perform the transfer, otherwise put the

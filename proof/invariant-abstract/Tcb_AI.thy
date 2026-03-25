@@ -1715,11 +1715,11 @@ lemma set_notification_obj_at_impossible:
 
 lemma reorder_ntfn_sc_tcb_sc_at[wp]:
   "reorder_ntfn ntfn_ptr tptr \<lbrace>\<lambda>s. Q (sc_tcb_sc_at P t s)\<rbrace>"
-  by (wpsimp wp: get_simple_ko_wp simp: reorder_ntfn_def get_ntfn_queue_def)
+  by (wpsimp wp: get_simple_ko_wp simp: reorder_ntfn_def)
 
 lemma reorder_ep_sc_tcb_sc_at[wp]:
   "reorder_ep ntfn_ptr tptr \<lbrace>\<lambda>s. Q (sc_tcb_sc_at P t s)\<rbrace>"
-  by (wpsimp wp: get_simple_ko_wp simp: reorder_ntfn_def reorder_ep_def get_ep_queue_def)
+  by (wpsimp wp: get_simple_ko_wp simp: reorder_ntfn_def reorder_ep_def)
 
 lemma thread_set_priority_ex_nonz_cap_to[wp]:
   "thread_set_priority t p \<lbrace>ex_nonz_cap_to p'\<rbrace>"
@@ -1770,22 +1770,19 @@ lemma ordered_insert_singleton[wp]:
   by (wpsimp wp: mapM_gets_the_wp')
 
 lemma tcb_dequeue_append_valid_ntfn_rv:
-  "\<lbrace>valid_ntfn ntfn and K (ntfn_obj ntfn = WaitingNtfn qs \<and> t \<in> set qs)\<rbrace>
-   do qs' \<leftarrow> tcb_dequeue t qs;
-      tcb_append t qs'
-   od
+  "\<lbrace>valid_ntfn ntfn and K (t \<in> set (ntfn_queue_of ntfn))\<rbrace>
+   tcb_append t (removeAll t (ntfn_queue_of ntfn))
    \<lbrace>\<lambda>rv s. valid_ntfn (ntfn_set_obj ntfn (WaitingNtfn rv)) s\<rbrace>"
   unfolding valid_ntfn_def
-  apply (clarsimp simp: tcb_dequeue_def tcb_append_def)
+  apply (clarsimp simp: tcb_append_def)
   apply (wpsimp wp: hoare_case_option_wp2)
-  apply (clarsimp split: option.splits)
+  apply (fastforce simp: removeAll_filter_not_eq split: option.splits ntfn.splits)
   done
 
 lemma reorder_ntfn_invs[wp]:
   "\<lbrace>invs and st_tcb_at (\<lambda>st. ntfn_blocked st = Some nptr) tptr\<rbrace> reorder_ntfn nptr tptr \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: reorder_ntfn_def get_ntfn_queue_def)
+  apply (simp add: reorder_ntfn_def)
   apply (rule bind_wp[OF _ get_simple_ko_sp])
-  apply (subst bind_assoc[symmetric, where m="tcb_dequeue tptr _"])
   apply (rule bind_wp)+
      \<comment> \<open>tcb_ep_dequeue_append_valid_ntfn_rv requires that the postcondition conjunctions are
         carefully managed, so that the bind is not split too early\<close>
@@ -1794,13 +1791,13 @@ lemma reorder_ntfn_invs[wp]:
                simp: live_def live_ntfn_def pred_conj_def)+
   apply (frule valid_objs_ko_at[rotated], fastforce)
   apply (clarsimp simp: valid_obj_def valid_ntfn_def obj_at_def pred_tcb_at_def cong: conj_cong)
-  apply (case_tac "tcb_state tcb"; clarsimp simp: ntfn_blocked_def get_ntfn_queue_def split: ntfn.splits)
+  apply (case_tac "tcb_state tcb"; clarsimp simp: ntfn_blocked_def split: ntfn.splits)
   apply (rule context_conjI)
    apply (fastforce simp: refs_of_rev obj_at_def get_refs_def
                     dest: invs_sym_refs sym_refs_ko_atD[rotated]
                    split: option.splits)
   apply (intro conjI)
-     apply fastforce
+     subgoal by (fastforce simp: get_refs_def2 pred_tcb_at_def obj_at_def)
     apply (fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def dest: invs_valid_idle)
    apply (erule_tac x="idle_thread s" in ballE; clarsimp?)
    apply (frule_tac p="nptr" in sym_refs_ko_atD[OF _ invs_sym_refs, rotated])
@@ -1824,32 +1821,25 @@ lemma set_ep_minor_invs:
   done
 
 lemma reorder_ep_invs[wp]:
-  "\<lbrace>invs and st_tcb_at (\<lambda>st. ep_blocked st = Some nptr) tptr\<rbrace> reorder_ep nptr tptr \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp only: reorder_ep_def get_ep_queue_def endpoint.case_eq_if if_cancel)
-  apply (rule bind_wp[OF _ get_simple_ko_sp])
-  apply (wp set_ep_minor_invs hoare_drop_imps tcb_dequeue_rv_wf'
-            tcb_dequeue_valid_ep tcb_dequeue_inv tcb_dequeue_rv_wf''
-            tcb_append_valid_ep tcb_append_inv tcb_append_rv_wf''')
+  "\<lbrace>invs and st_tcb_at (\<lambda>st. ep_blocked st = Some ep_ptr) tptr\<rbrace> reorder_ep ep_ptr tptr \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (simp only: reorder_ep_def endpoint.case_eq_if if_cancel)
+  apply (rule bind_wp[OF _ get_simple_ko_sp], rename_tac ep)
+  apply (wp set_ep_minor_invs hoare_drop_imps tcb_append_valid_ep tcb_append_rv_wf''')
   apply (clarsimp cong: conj_cong)
   apply (rename_tac ep s)
   apply (frule valid_objs_ko_at[rotated], fastforce)
-  apply (clarsimp simp: valid_obj_def valid_ep_def endpoint.case_eq_if pred_tcb_at_def obj_at_def cong: conj_cong)
+  apply (clarsimp simp: removeAll_filter_not_eq valid_obj_def valid_ep_def endpoint.case_eq_if
+                        pred_tcb_at_def obj_at_def
+                  cong: conj_cong)
   apply (subgoal_tac "tptr \<in> set (ep_queue ep)")
-   apply (rule context_conjI; clarsimp)
-   apply (intro conjI allI)
-    apply (erule_tac x="idle_thread s" in ballE)
-     apply (frule_tac p=nptr in sym_refs_ko_atD[OF _ invs_sym_refs, rotated])
-      apply (simp add: obj_at_def)
-     apply (clarsimp simp: refs_of_rev obj_at_def is_tcb_def)
-     apply (erule_tac x="(idle_thread s, typ)" in ballE; simp)
-     apply (fastforce simp: refs_of_rev valid_idle_def pred_tcb_at_def obj_at_def dest: invs_valid_idle)
-    apply (case_tac ep; clarsimp simp: ep_queue_def)
-   apply (fastforce simp: if_live_then_nonz_cap_def obj_at_def live_def live_ntfn_def dest: invs_iflive)
+   apply (case_tac ep;
+          fastforce intro: if_live_then_nonz_capD2
+                     dest: not_idle_tcb_in_SendEp not_idle_tcb_in_RecvEp
+                     simp: live_def)
   apply (frule invs_sym_refs)
-  apply (drule_tac p=tptr in sym_refs_ko_atD[rotated])
-   apply (simp add: obj_at_def)
-  apply (clarsimp simp: ep_blocked_def obj_at_def ep_queue_def
-                 split: if_splits endpoint.splits thread_state.splits)
+  apply (case_tac ep;
+         fastforce dest: sym_ref_BlockedOnReceive_RecvEP sym_ref_BlockedOnSend_SendEP
+                   simp: ep_blocked_def split: thread_state.splits)
   done
 
 lemma set_priority_invs[wp]:

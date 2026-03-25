@@ -2236,7 +2236,7 @@ lemma update_waiting_notification_sym_refs_helper:
                         (case list of
                              [] \<Rightarrow> IdleNtfn
                            | aa # lista \<Rightarrow> WaitingNtfn
-                                            (filter ((\<noteq>) (hd (a # list))) (ntfn_queue (ntfn_obj ntfn))))
+                                            (removeAll (hd (a # list)) (ntfn_queue (ntfn_obj ntfn))))
                         \<union> get_refs NTFNBound (ntfn_bound_tcb ntfn)
                         \<union> get_refs NTFNSchedContext (ntfn_sc ntfn)
                    else state_refs_of s b)"
@@ -2264,8 +2264,7 @@ lemma update_waiting_invs:
    update_waiting_ntfn ntfnptr q bdg
    \<lbrace>\<lambda>_. invs\<rbrace>"
   supply if_split[split del] if_cong[cong] distinct_append[simp del]
-  apply (simp add: update_waiting_ntfn_def tcb_ntfn_dequeue_def tcb_dequeue_def
-                   get_ntfn_queue_def bind_assoc)
+  apply (simp add: update_waiting_ntfn_def tcb_ntfn_dequeue_def bind_assoc)
   apply (rule bind_wp[OF _ assert_sp])
   apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (rule bind_wp[OF _ assert_sp])
@@ -2279,14 +2278,9 @@ lemma update_waiting_invs:
   apply (rename_tac a list)
   apply (erule (1) pspace_valid_objsE; clarsimp simp: valid_obj_def valid_ntfn_def)
   apply (rule conjI)
-   apply (clarsimp simp: valid_ntfn_def get_ntfn_queue_def split: option.splits list.splits)
-   apply (prop_tac "set (filter ((\<noteq>) a) list) \<subseteq> set list")
+   apply (clarsimp simp: valid_ntfn_def split: option.splits list.splits)
+  apply (prop_tac "set (filter ((\<noteq>) a) list) \<subseteq> set list")
     apply (rule filter_is_subset)
-   apply (intro conjI impI allI ballI)
-      apply fastforce
-     apply force
-    apply (metis distinct.simps distinct_filter)
-   apply (metis distinct.simps distinct_filter)
   apply (rule conjI, fastforce simp: live_def live_ntfn_def elim!: if_live_then_nonz_capD2)
   apply (rename_tac head tail)
   apply (rule conjI)
@@ -2304,7 +2298,6 @@ lemma update_waiting_invs:
   apply clarsimp
   apply (prop_tac "filter ((\<noteq>) head) tail = tail")
    apply (fastforce simp: filter_id_conv)
-  apply clarsimp
   apply (fastforce dest!: update_waiting_notification_sym_refs_helper)
   done
 
@@ -2734,9 +2727,8 @@ lemma hoare_drop_imp_under_All:
 
 lemma receive_ipc_cap_to[wp]:
   "receive_ipc thread cap is_blocking reply_cap \<lbrace>ex_nonz_cap_to p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  supply if_cong[cong]
+  supply if_cong[cong] if_split[split del]
   by (wpsimp simp: receive_ipc_def receive_ipc_blocked_def tcb_ep_append_def tcb_ep_dequeue_def
-                   tcb_dequeue_def
                wp: hoare_drop_imps fail_wp cancel_ipc_cap_to hoare_drop_imp_under_All)
 
 end
@@ -2809,17 +2801,18 @@ lemma rai_pred_tcb_neq:
   "\<lbrace>pred_tcb_at proj P t' and K (t \<noteq> t')\<rbrace>
    receive_signal t cap is_blocking
    \<lbrace>\<lambda>_. pred_tcb_at proj P t'\<rbrace>"
+  supply if_split[split del]
   unfolding receive_signal_def receive_signal_blocked_def
   apply (case_tac cap; simp)
   apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_obj rv"; simp)
    apply (case_tac is_blocking; simp)
-    apply (wpsimp simp: tcb_ntfn_append_def tcb_append_def get_ntfn_queue_def
+    apply (wpsimp simp: tcb_ntfn_append_def tcb_append_def
                     wp: maybe_return_sc_pred_tcb_at sts_st_tcb_at_neq
                         hoare_drop_imps)
    apply (wpsimp simp: do_nbrecv_failed_transfer_def)
    apply (case_tac is_blocking; simp)
-    apply (wpsimp simp: tcb_ntfn_append_def tcb_append_def get_ntfn_queue_def
+    apply (wpsimp simp: tcb_ntfn_append_def tcb_append_def
                     wp: maybe_return_sc_pred_tcb_at sts_st_tcb_at_neq
                         hoare_drop_imps)
    apply (wpsimp simp: do_nbrecv_failed_transfer_def)
@@ -2842,7 +2835,8 @@ crunch receive_signal
 context Ipc_AI_2 begin
 
 lemma receive_ipc_typ_at[wp]:
-  "\<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace> receive_ipc thread cap is_blocking reply_cap \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
+  "receive_ipc thread cap is_blocking reply_cap \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>"
+  supply if_split[split del]
   by (wpsimp simp: receive_ipc_def receive_ipc_blocked_def tcb_ep_append_def
                wp: hoare_drop_imps hoare_drop_imp_under_All)
 

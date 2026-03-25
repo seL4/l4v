@@ -259,18 +259,15 @@ where
     od
   od"
 
-text \<open>Getting and setting endpoint and notification queues.\<close>
-
-definition get_ep_queue :: "endpoint \<Rightarrow> (obj_ref list,'z::state_ext) s_monad" where
-  "get_ep_queue ep \<equiv> return (ep_queue ep)"
-
-definition get_ntfn_queue :: "notification \<Rightarrow> (obj_ref list,'z::state_ext) s_monad" where
-  "get_ntfn_queue ntfn \<equiv> return (ntfn_queue (ntfn_obj ntfn))"
+text \<open>Updating endpoint and notification queues.\<close>
 
 primrec update_ep_queue :: "endpoint \<Rightarrow> obj_ref list \<Rightarrow> bool \<Rightarrow> endpoint" where
    "update_ep_queue (RecvEP q) q' _ = RecvEP q'"
  | "update_ep_queue (SendEP q) q' _ = SendEP q'"
  | "update_ep_queue IdleEP q' is_recv = (if is_recv then RecvEP q' else SendEP q')"
+
+abbreviation ntfn_queue_of :: "notification \<Rightarrow> obj_ref list" where
+  "ntfn_queue_of notification \<equiv> ntfn_queue (ntfn_obj notification)"
 
 primrec (nonexhaustive) update_ntfn_queue :: "ntfn \<Rightarrow> obj_ref list \<Rightarrow> ntfn" where
    "update_ntfn_queue (WaitingNtfn q) q' = WaitingNtfn q'"
@@ -293,15 +290,12 @@ where
     BlockedOnNotification r \<Rightarrow> Some r
   | _ \<Rightarrow> None"
 
-definition tcb_dequeue :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> (obj_ref list, 'z::state_ext) s_monad" where
-  "tcb_dequeue tptr qs \<equiv> return $ filter ((\<noteq>) tptr) qs"
-
 definition tcb_ep_dequeue :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "tcb_ep_dequeue tptr ep_ptr = do
      ep \<leftarrow> get_endpoint ep_ptr;
-     q \<leftarrow> get_ep_queue ep;
+     q \<leftarrow> return (ep_queue ep);
      assert (tptr \<in> set q);
-     q' \<leftarrow> tcb_dequeue tptr q;
+     q' \<leftarrow> return $ removeAll tptr q;
      ep' \<leftarrow> return (case q' of [] \<Rightarrow> IdleEP
                             |  _ \<Rightarrow> update_ep_queue ep q' True);
      set_endpoint ep_ptr ep'
@@ -310,9 +304,9 @@ definition tcb_ep_dequeue :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,
 definition tcb_ntfn_dequeue :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "tcb_ntfn_dequeue tptr ntfn_ptr \<equiv> do
      notification \<leftarrow> get_notification ntfn_ptr;
-     q \<leftarrow> get_ntfn_queue notification;
+     q \<leftarrow> return (ntfn_queue_of notification);
      assert (tptr \<in> set q);
-     q' \<leftarrow> tcb_dequeue tptr q;
+     q' \<leftarrow> return $ removeAll tptr q;
      notification' \<leftarrow> return $
        ntfn_obj_update (K (case q' of [] \<Rightarrow> IdleNtfn
                                     | _  \<Rightarrow> WaitingNtfn q'))
@@ -343,7 +337,7 @@ definition tcb_append :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> (obj_
 definition tcb_ep_append :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "tcb_ep_append tptr ep_ptr is_recv \<equiv> do
      ep \<leftarrow> get_endpoint ep_ptr;
-     q \<leftarrow> get_ep_queue ep;
+     q \<leftarrow> return (ep_queue ep);
      q' \<leftarrow> tcb_append tptr q;
      set_endpoint ep_ptr (update_ep_queue ep q' is_recv)
    od"
@@ -351,7 +345,7 @@ definition tcb_ep_append :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> bool \<
 definition tcb_ntfn_append :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "tcb_ntfn_append tptr ntfn_ptr \<equiv> do
      notification \<leftarrow> get_notification ntfn_ptr;
-     qs \<leftarrow> get_ntfn_queue notification;
+     qs \<leftarrow> return (ntfn_queue_of notification);
      qs' \<leftarrow> tcb_append tptr qs;
      set_notification ntfn_ptr (notification \<lparr> ntfn_obj := WaitingNtfn qs' \<rparr>)
    od"
@@ -361,9 +355,9 @@ definition reorder_ep :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z:
   "reorder_ep ep_ptr tptr = do
      ep \<leftarrow> get_endpoint ep_ptr;
      assert (ep \<noteq> IdleEP);
-     qs \<leftarrow> get_ep_queue ep;
+     qs \<leftarrow> return (ep_queue ep);
      assert (qs \<noteq> []);
-     qs' \<leftarrow> tcb_dequeue tptr qs;
+     qs' \<leftarrow> return $ removeAll tptr qs;
      qs'' \<leftarrow> tcb_append tptr qs';
      set_endpoint ep_ptr (update_ep_queue ep qs'' True)
    od"
@@ -373,9 +367,9 @@ definition reorder_ntfn :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, '
   "reorder_ntfn ntfn_ptr tptr = do
      ntfn \<leftarrow> get_notification ntfn_ptr;
      assert (is_WaitingNtfn (ntfn_obj ntfn));
-     qs \<leftarrow> get_ntfn_queue ntfn;
+     qs \<leftarrow> return (ntfn_queue_of ntfn);
      assert (qs \<noteq> []);
-     qs' \<leftarrow> tcb_dequeue tptr qs;
+     qs' \<leftarrow> return $ removeAll tptr qs;
      qs'' \<leftarrow> tcb_append tptr qs';
      set_notification ntfn_ptr (ntfn \<lparr> ntfn_obj := WaitingNtfn qs'' \<rparr>)
    od"
@@ -422,14 +416,13 @@ where
    od"
 
 definition remove_and_restart_ep_queued_thread ::
-  "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+  where
   "remove_and_restart_ep_queued_thread t epptr \<equiv> do
      tcb_ep_dequeue t epptr;
      st \<leftarrow> get_thread_state t;
      reply_opt \<leftarrow> return (if is_blocked_on_receive st then reply_object st else None);
-     case reply_opt of
-         None \<Rightarrow> return ()
-       | Some reply \<Rightarrow> reply_unlink_tcb t reply;
+     maybeM (reply_unlink_tcb t) reply_opt;
      restart_thread_if_no_fault t
    od"
 
@@ -442,8 +435,8 @@ definition cancel_all_ipc :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad
      ep \<leftarrow> get_endpoint epptr;
      case ep of IdleEP \<Rightarrow> return ()
        | _ \<Rightarrow> do
-         queue \<leftarrow> get_ep_queue ep;
-         mapM_x (\<lambda>t. remove_and_restart_ep_queued_thread t epptr) $ queue;
+         queue \<leftarrow> return (ep_queue ep);
+         mapM_x (\<lambda>t. remove_and_restart_ep_queued_thread t epptr) queue;
          reschedule_required
       od
    od"
@@ -455,7 +448,8 @@ where
   "blocking_ipc_badge (BlockedOnSend t payload) = sender_badge payload"
 
 definition remove_and_restart_badged_thread ::
-  "obj_ref \<Rightarrow> obj_ref \<Rightarrow> badge \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "obj_ref \<Rightarrow> obj_ref \<Rightarrow> badge \<Rightarrow> (unit,'z::state_ext) s_monad"
+  where
   "remove_and_restart_badged_thread t epptr badge \<equiv> do
      st \<leftarrow> get_thread_state t;
      when (blocking_ipc_badge st = badge)

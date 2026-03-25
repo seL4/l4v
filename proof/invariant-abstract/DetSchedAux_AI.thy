@@ -665,7 +665,7 @@ lemma tcb_ready_times_of_eq_bound_sc_obj_tcb_at_lift:
   "\<lbrakk>bound_sc_obj_tcb_at (\<lambda>sc. sc_ready_time sc = rt \<and> scrc_refills sc \<noteq> []) t s;
     bound_sc_obj_tcb_at (\<lambda>sc. sc_ready_time sc = rt) t s'\<rbrakk>
    \<Longrightarrow> tcb_ready_times_of s t = tcb_ready_times_of s' t"
-  by (fastforce simp: tcb_sc_refill_cfgs_2_def sc_ready_times_2_def case_map_def opt_map_def
+  by (fastforce simp: tcb_sc_refill_cfgs_2_def case_map_def opt_map_def
                       tcbs_of_kh_def scs_of_kh_def
                split: option.splits)
 
@@ -738,7 +738,7 @@ lemma prios_of_etcb_at:
   "(prios_of s t = Some prio) \<longleftrightarrow> (tcb_at t s \<and> etcb_at (\<lambda>etcb. etcb_priority etcb = prio) t s)"
   by (fastforce simp add: etcb_at_def2 in_opt_map_eq vs_all_heap_simps obj_at_def is_tcb_def)
 
-(* this is not really an "E" lemma... *)
+(* FIXME RT: this is not really an "E" lemma... *)
 lemma active_scs_validE:
   "\<lbrakk>pred_map active_scrc (sc_refill_cfgs_of s) scp; active_scs_valid s\<rbrakk> \<Longrightarrow> valid_refills scp s"
   by (clarsimp simp: active_scs_valid_def)
