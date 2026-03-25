@@ -9,7 +9,6 @@ imports
   "BaseRefine.Include"
   "Lib.AddUpdSimps"
   "Lib.LemmaBucket"
-  "Lib.SimpStrategy"
   "Lib.Corres_Method"
 begin
 
