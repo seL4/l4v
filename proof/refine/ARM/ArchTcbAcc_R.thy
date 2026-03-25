@@ -315,7 +315,12 @@ named_theorems TcbAcc_R_2_assms
 
 lemmas asUser_typ_ats[wp] = typ_at_lifts[OF asUser_typ_at']
 
-lemma threadSet_invs_trivialT:
+lemma tcb_hyp_refs'_valid_arch_tcb'_eq[TcbAcc_R_2_assms]:
+  "tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)
+   \<Longrightarrow> valid_arch_tcb' (tcbArch (F tcb)) s = valid_arch_tcb' (tcbArch tcb) s"
+  by (auto simp: valid_arch_tcb'_def)
+
+lemma threadSet_invs_trivialT[TcbAcc_R_2_assms]:
   assumes
     "\<forall>tcb. \<forall>(getF,setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
     "\<forall>tcb. tcbState (F tcb) = tcbState tcb"
@@ -329,6 +334,7 @@ lemma threadSet_invs_trivialT:
     "\<forall>tcb. tcbPriority (F tcb) = tcbPriority tcb"
     "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
     "\<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0"
+    "\<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)"
   shows "threadSet F t \<lbrace>invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def split del: if_split)
   apply (wp threadSet_valid_pspace'T
@@ -354,9 +360,6 @@ lemma threadSet_invs_trivialT:
          | clarsimp simp: assms cteCaps_of_def valid_arch_tcb'_def | rule refl)+
   apply (clarsimp simp: o_def)
   by (auto simp: assms obj_at'_def)
-
-lemmas threadSet_invs_trivial =
-    threadSet_invs_trivialT [OF all_tcbI all_tcbI all_tcbI all_tcbI, OF ball_tcb_cte_casesI]
 
 (* interface lemma, but can't be done via locale *)
 lemma asUser_corres':
@@ -439,13 +442,6 @@ lemma user_getreg_inv'[TcbAcc_R_2_assms, wp]:
   "\<lbrace>P\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>x. P\<rbrace>"
   apply (rule asUser_inv)
    apply (simp_all add: getRegister_def)
-  done
-
-(* interface lemma, but can't be done via locale *)
-lemma asUser_invs[wp]:
-  "\<lbrace>invs' and tcb_at' t\<rbrace> asUser t m \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: asUser_def split_def)
-  apply (wpsimp wp: threadSet_invs_trivial threadGet_wp)
   done
 
 (* interface lemma, but can't be done via locale *)
@@ -1109,6 +1105,13 @@ lemma sts_iflive'[TcbAcc_R_3_assms, wp]:
     apply clarsimp
    apply (wpsimp wp: threadSet_iflive')
   apply fastforce
+  done
+
+(* interface lemma, but can't be done via locale *)
+lemma asUser_invs[wp]:
+  "\<lbrace>invs' and tcb_at' t\<rbrace> asUser t m \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  apply (wpsimp wp: threadSet_invs_trivial threadGet_wp)
   done
 
 lemmas setThreadState_typ_ats[wp] = typ_at_lifts [OF setThreadState_typ_at']
