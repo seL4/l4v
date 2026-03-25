@@ -12,34 +12,30 @@ begin
 
 text \<open> This theory contains operations on scheduling contexts and scheduling control. \<close>
 
-definition get_tcb_sc :: "obj_ref \<Rightarrow> (sched_context,'z::state_ext) s_monad" where
-  "get_tcb_sc tcb_ptr = do
-     sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context tcb_ptr;
-     sc_ptr \<leftarrow> assert_opt sc_opt;
-     get_sched_context sc_ptr
-   od"
+definition read_ready_time :: "obj_ref \<Rightarrow> (time, 'z::state_ext) r_monad" where
+  "read_ready_time sc_ptr \<equiv> do {
+     head \<leftarrow> read_refill_head sc_ptr;
+     oreturn (r_time head)
+   }"
 
-definition get_sc_time :: "obj_ref \<Rightarrow> (time, 'z::state_ext) s_monad" where
-  "get_sc_time tcb_ptr = do
-     sc \<leftarrow> get_tcb_sc tcb_ptr;
-     return $ r_time (refill_hd sc)
-   od"
+definition read_tcb_ready_time :: "obj_ref \<Rightarrow> (time, 'z::state_ext) r_monad" where
+  "read_tcb_ready_time tcb_ptr \<equiv> do {
+     sc_ptr_opt \<leftarrow> thread_read tcb_sched_context tcb_ptr;
+     oassert (sc_ptr_opt \<noteq> None);
+     read_ready_time (the sc_ptr_opt)
+   }"
 
-abbreviation set_release_queue :: "obj_ref list \<Rightarrow> (unit, 'z::state_ext) s_monad" where
-  "set_release_queue queue \<equiv> modify (\<lambda>s. s\<lparr>release_queue := queue\<rparr>)"
+definition ready_times_append ::
+  "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> (obj_ref list, 'z::state_ext) s_monad" where
+  "ready_times_append tptr qs \<equiv> ordered_insert tptr qs read_tcb_ready_time (\<le>)"
 
-text \<open>Enqueue a TCB in the release queue, sorted by release time of the associated scheduling context.\<close>
+text \<open>Enqueue a TCB in the release queue, sorted by ready time of the associated scheduling context.\<close>
 definition tcb_release_enqueue :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "tcb_release_enqueue tcb_ptr \<equiv> do
-     time \<leftarrow> get_sc_time tcb_ptr;
-     qs \<leftarrow> gets release_queue;
-     times \<leftarrow> mapM get_sc_time qs;
-     qst \<leftarrow> return $ zip qs times;
-     qst' \<leftarrow> return $ filter (\<lambda>(_, t). t \<le> time) qst
-                      @ [(tcb_ptr,time)]
-                      @ filter (\<lambda>(_, t). \<not> t \<le> time) qst;
-     when (filter (\<lambda>(_, t). t \<le> time) qst = []) $ modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>);
-     set_release_queue (map fst qst')
+     q \<leftarrow> gets release_queue;
+     q' \<leftarrow> ready_times_append tcb_ptr q;
+     set_release_queue q';
+     when (q = [] \<or> hd q' \<noteq> hd q) (modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>))
    od"
 
 definition
@@ -469,10 +465,10 @@ where
      cancel_ipc thread;
      state \<leftarrow> get_thread_state thread;
      when (state = Running) $ update_restart_pc thread;
-     set_thread_state thread Inactive;
      tcb_sched_action (tcb_sched_dequeue) thread;
      tcb_release_remove thread;
-     sched_context_cancel_yield_to thread
+     sched_context_cancel_yield_to thread;
+     set_thread_state thread Inactive
    od"
 
 end

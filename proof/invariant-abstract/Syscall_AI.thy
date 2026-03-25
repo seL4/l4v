@@ -624,13 +624,10 @@ lemma sts_no_cap_asid[wp]:
                 cte_wp_at_caps_of_state, wp)
 
 lemma sts_mcpriority_tcb_at[wp]:
-  "\<lbrace>mcpriority_tcb_at P t\<rbrace> set_thread_state p ts \<lbrace>\<lambda>rv. mcpriority_tcb_at P t\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def get_object_def)
-  apply (wp | simp)+
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  apply (drule get_tcb_SomeD)
-  apply clarsimp
-  done
+  "set_thread_state p ts \<lbrace>mcpriority_tcb_at P t\<rbrace>"
+  unfolding set_thread_state_def
+  apply (wpsimp wp: thread_set_wp)
+  by (clarsimp dest!: get_tcb_SomeD simp: pred_tcb_at_def obj_at_def)
 
 lemma sts_mcpriority_tcb_at_ct[wp]:
   "\<lbrace>\<lambda>s. mcpriority_tcb_at P (cur_thread s) s\<rbrace> set_thread_state p ts \<lbrace>\<lambda>rv s. mcpriority_tcb_at P (cur_thread s) s\<rbrace>"
@@ -1071,9 +1068,9 @@ lemma stsa_schedulable_scheduler_action:
 lemma sts_schedulable_scheduler_action:
   "\<lbrace>\<lambda>s. P (scheduler_action s) \<and> schedulable thread s\<rbrace>
    set_thread_state thread Restart
-  \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
+   \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
   unfolding set_thread_state_def
-  apply (wpsimp wp: stsa_schedulable_scheduler_action set_object_wp simp: set_thread_state_def)
+  apply (wpsimp wp: stsa_schedulable_scheduler_action thread_set_wp)
   by (force simp: schedulable_def opt_pred_def opt_map_def tcbs_of_kh_def scs_of_kh_def
                   get_tcb_def
            split: option.splits)
@@ -1356,8 +1353,7 @@ crunch check_budget_restart, handle_fault_reply, reply_remove
 
 crunch check_budget_restart
   for cur_sc[wp]: "\<lambda>s :: 'state_ext state. P (cur_sc s)"
-  (wp: transfer_caps_loop_pres mapM_wp' hoare_drop_imps
-   simp: crunch_simps)
+  (wp: transfer_caps_loop_pres crunch_wps simp: crunch_simps)
 
 crunch
   possible_switch_to, do_ipc_transfer, maybe_donate_sc, handle_fault_reply, postpone,
@@ -1366,9 +1362,7 @@ crunch
   (rule: ct_in_state_thread_state_lift wp: crunch_wps simp: crunch_simps)
 
 lemma update_waiting_ntfn_ct_active[wp]:
-  "\<lbrace>ct_active\<rbrace>
-     update_waiting_ntfn ntfnptr queue bound_tcb sc_ptr badge
-   \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  "update_waiting_ntfn ntfnptr queue bound_tcb \<lbrace>ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: update_waiting_ntfn_def)
   by (wpsimp wp: set_thread_state_ct_in_state hoare_drop_imps)
 
@@ -1379,7 +1373,7 @@ lemma send_signal_ct_active[wp]:
   apply (simp add: send_signal_def)
   by (wpsimp wp: set_thread_state_ct_in_state hoare_drop_imps)
 
-crunch reply_push
+crunch reply_push, tcb_ep_append, tcb_ntfn_append
   for ct_active[wp]: "ct_active :: 'state_ext state \<Rightarrow> _"
   (wp: sts_ctis_neq crunch_wps simp: crunch_simps)
 
@@ -1390,8 +1384,8 @@ lemma send_ipc_not_cur_ct_active[wp]:
   apply (simp add: send_ipc_def)
   apply (rule bind_wp[OF _ get_simple_ko_inv])
   apply (case_tac ep; simp)
-    apply (wpsimp wp: set_thread_state_ct_st)
-   apply (wpsimp wp: set_thread_state_ct_st)
+    apply (wpsimp wp: set_thread_state_ct_st simp: send_ipc_blocked_def)
+   apply (wpsimp wp: set_thread_state_ct_st simp: send_ipc_blocked_def)
   apply (rename_tac list)
   apply (case_tac list; simp)
   apply (wpsimp wp: set_thread_state_ct_st hoare_drop_imps hoare_vcg_all_lift
@@ -1635,7 +1629,7 @@ lemma send_ipc_st_tcb_at_runnable:
   "\<lbrace>st_tcb_at runnable t and (\<lambda>s. sym_refs (state_refs_of s)) and K (thread \<noteq> t)\<rbrace>
    send_ipc block call badge can_grant can_grant_reply can_donate thread epptr
    \<lbrace>\<lambda>_. st_tcb_at runnable t\<rbrace>"
-  unfolding send_ipc_def
+  unfolding send_ipc_def send_ipc_blocked_def
   supply if_split[split del]
   apply (wpsimp wp: sts_st_tcb_at_other get_tcb_obj_ref_wp hoare_vcg_all_lift hoare_vcg_if_lift
                     reply_unlink_runnable get_simple_ko_wp | wp (once) hoare_drop_imp)+

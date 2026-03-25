@@ -1568,10 +1568,6 @@ crunch test_reschedule, tcb_release_remove
   and obj_at[wp]: "\<lambda>s. P (obj_at Q p s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch tcb_ep_dequeue, tcb_ep_append
-  for inv[wp]: P
-  (wp: crunch_wps)
-
 lemmas complete_yield_to_final_cap[wp] =
     final_cap_lift [OF complete_yield_to_caps_of_state]
 
@@ -1596,41 +1592,42 @@ lemma cancel_ipc_bound_sc_tcb_at_None:
   by (wpsimp simp: cancel_ipc_def
                wp: get_sk_obj_ref_wp gts_wp thread_set_no_change_tcb_pred hoare_drop_imps)
 
-lemma unbind_maybe_notification_not_live_helper:
-  "\<lbrace>obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_sc ntfn = None) ptr\<rbrace>
-      unbind_maybe_notification ptr
-   \<lbrace>\<lambda>rv. obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and>
-                                 ntfn_bound_tcb ntfn = None \<and>
-                                 ntfn_sc ntfn = None) ptr\<rbrace>"
-  apply (simp add: unbind_maybe_notification_def maybeM_def get_sk_obj_ref_def)
-  apply (rule hoare_pre)
-   apply (wp get_simple_ko_wp sbn_obj_at_impossible simple_obj_set_prop_at
-            | wpc
-            | simp add: update_sk_obj_ref_def)+
-  apply (clarsimp simp: obj_at_def)
+lemma unbind_maybe_notification_not_live_helper[wp]:
+  "\<lbrace>\<top>\<rbrace>
+   unbind_maybe_notification ptr
+   \<lbrace>\<lambda>_. ntfn_at_pred (\<lambda>ntfn. ntfn_bound_tcb ntfn = None) ptr\<rbrace>"
+  unfolding unbind_maybe_notification_def
+  apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp set_tcb_obj_ref_wp
+         | simp add: update_sk_obj_ref_def get_sk_obj_ref_def)+
+  apply (clarsimp simp: ntfn_at_pred_def obj_at_def)
   done
 
-lemma sched_context_maybe_unbind_ntfn_not_bound_sc:
-  "\<lbrace>ntfn_at ptr\<rbrace> sched_context_maybe_unbind_ntfn ptr
-    \<lbrace>\<lambda>y. obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and>
-                         ntfn_sc ntfn = None) ptr\<rbrace>"
-    apply (simp add: sched_context_maybe_unbind_ntfn_def maybeM_def get_sk_obj_ref_def)
-  apply (rule hoare_pre)
-   apply (wp get_simple_ko_wp update_sched_context_obj_at_impossible simple_obj_set_prop_at
-             | wpc
-             | simp add: update_sk_obj_ref_def)+
-  apply (clarsimp simp: obj_at_def)
+lemma sched_context_maybe_unbind_ntfn_not_bound_sc[wp]:
+  "\<lbrace>\<top>\<rbrace>
+   sched_context_maybe_unbind_ntfn ptr
+   \<lbrace>\<lambda>_. ntfn_at_pred (\<lambda>ntfn. ntfn_sc ntfn = None) ptr\<rbrace>"
+  unfolding sched_context_maybe_unbind_ntfn_def
+  apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp set_tcb_obj_ref_wp
+         | simp add: update_sk_obj_ref_def get_sk_obj_ref_def)+
+  apply (clarsimp simp: ntfn_at_pred_def obj_at_def)
   done
+
+lemma unbind_maybe_notification_ntfn_sc[wp]:
+  "unbind_maybe_notification ptr \<lbrace>\<lambda>s. Q (ntfn_at_pred (\<lambda>ntfn. P (ntfn_sc ntfn)) ptr s)\<rbrace>"
+  unfolding unbind_maybe_notification_def
+  apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp set_tcb_obj_ref_wp
+         | simp add: update_sk_obj_ref_def get_sk_obj_ref_def)+
+  by (clarsimp simp: ntfn_at_pred_def obj_at_def)
 
 lemma sc_unbind_not_live_helper:
-  "\<lbrace>ntfn_at ptr\<rbrace>
-       do sched_context_maybe_unbind_ntfn ptr;
-           unbind_maybe_notification ptr
-       od
-   \<lbrace>\<lambda>rv. obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and>
-                                 ntfn_bound_tcb ntfn = None \<and>
-                                 ntfn_sc ntfn = None) ptr\<rbrace>"
-  by (wpsimp wp: unbind_maybe_notification_not_live_helper sched_context_maybe_unbind_ntfn_not_bound_sc)
+  "\<lbrace>\<top>\<rbrace>
+   do sched_context_maybe_unbind_ntfn ptr;
+      unbind_maybe_notification ptr
+   od
+   \<lbrace>\<lambda>_. ntfn_at_pred (\<lambda>ntfn. ntfn_bound_tcb ntfn = None) ptr
+        and ntfn_at_pred (\<lambda>ntfn. ntfn_sc ntfn = None) ptr\<rbrace>"
+  by (wpsimp wp: unbind_maybe_notification_not_live_helper
+                 sched_context_maybe_unbind_ntfn_not_bound_sc)
 
 lemma reply_unlink_sc_not_live:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> reply_tcb r = None) reply and invs\<rbrace>
@@ -1701,7 +1698,7 @@ lemma blocked_cancel_ipc_unlive:
   apply (rule hoare_gen_asm, clarsimp)
   apply (rule_tac Q'="\<lambda>rv. obj_at (\<lambda>ko. \<not>live ko \<and> is_reply ko) reply" in hoare_strengthen_post[rotated]
          , fastforce simp: obj_at_def)
-  apply (simp add: blocked_cancel_ipc_def)
+  apply (simp add: blocked_cancel_ipc_def tcb_ep_dequeue_def)
   apply (rule bind_wp[OF _ gbi_ep_sp])
   by (wpsimp wp: sts_obj_at_impossible reply_unlink_tcb_not_live
                  get_simple_ko_wp hoare_vcg_all_lift
@@ -1733,45 +1730,6 @@ lemma reply_unlink_sc_not_live':
     reply_unlink_sc sc_ptr reply
   \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) reply\<rbrace>"
   by (rule hoare_strengthen_post, rule reply_unlink_sc_not_live, clarsimp simp: obj_at_def)
-
-lemma set_tcb_yt_update_bound_tcb_at[wp]:
-  "set_tcb_obj_ref tcb_yield_to_update scp tcb \<lbrace>bound_tcb_at P t\<rbrace>"
-  by (wpsimp simp: set_tcb_obj_ref_def pred_tcb_at_def obj_at_def get_tcb_rev wp: set_object_wp)
-
-lemma sched_context_cancel_yield_to_bound_tcb_at[wp]:
-  "sched_context_cancel_yield_to scptr \<lbrace>bound_tcb_at P t\<rbrace>"
-  by (wpsimp simp: sched_context_cancel_yield_to_def wp: hoare_drop_imp)
-
-lemma complete_yield_to_bound_tcb_at[wp]:
-  "complete_yield_to scptr \<lbrace>bound_tcb_at P t\<rbrace>"
-  by (wpsimp simp: complete_yield_to_def wp: hoare_drop_imp)
-
-lemma sched_context_cancel_yield_to_bound_sc_tcb_at[wp]:
-  "sched_context_cancel_yield_to scptr \<lbrace>bound_sc_tcb_at P t\<rbrace>"
-  by (wpsimp simp: sched_context_cancel_yield_to_def wp: hoare_drop_imp)
-
-lemma complete_yield_to_bound_sc_tcb_at[wp]:
-  "complete_yield_to scptr \<lbrace>bound_sc_tcb_at P t\<rbrace>"
-  by (wpsimp simp: complete_yield_to_def wp: hoare_drop_imp)
-
-lemma ssc_bound_yt_tcb_at[wp]:
-  "set_tcb_obj_ref tcb_sched_context_update tcb ntfn \<lbrace>bound_yt_tcb_at P t\<rbrace>"
-  apply (simp add: set_tcb_obj_ref_def)
-  apply (wp set_object_wp)
-  apply (auto simp: pred_tcb_at_def obj_at_def get_tcb_def)
-  done
-
-lemma sched_context_unbind_tcb_bound_tcb_at[wp]:
-  "sched_context_unbind_tcb a \<lbrace>bound_tcb_at P t\<rbrace>"
-  by (wpsimp simp: sched_context_unbind_tcb_def wp: get_sched_context_wp)
-
-lemma sched_context_unbind_tcb_bound_yt_tcb_at[wp]:
-  "sched_context_unbind_tcb a \<lbrace>bound_yt_tcb_at P t\<rbrace>"
-  by (wpsimp simp: sched_context_unbind_tcb_def wp: get_sched_context_wp)
-
-lemma unbind_from_sc_bound_tcb_at[wp]:
-  "unbind_from_sc x \<lbrace>bound_tcb_at P t\<rbrace>"
-  by (wpsimp simp: unbind_from_sc_def wp: hoare_drop_imps hoare_vcg_all_lift)
 
 lemma sched_context_unbind_tcb_bound_sc_tcb_at_None:
   "\<lbrace>\<lambda>s. obj_at (\<lambda>obj. \<exists>n na. obj = SchedContext n na \<and> sc_tcb n = Some tcbptr) sc s \<rbrace>
