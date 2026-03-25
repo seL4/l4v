@@ -7,7 +7,7 @@
 
 theory Finalise_R
 imports
-  IpcCancel_R
+  ArchIpcCancel_R
   InterruptAcc_R
   ArchRetype_R
 begin
