@@ -146,9 +146,8 @@ where
         TCB tcb \<Rightarrow> Some tcb
       | _       \<Rightarrow> None)"
 
-\<comment> \<open>
-  Consider replacing this definition with thread_read f t s = (tcbs_of s ||> f) t, also removing
-  get_tcb.\<close>
+(* Consider replacing this definition with thread_read f t s = (tcbs_of s ||> f) ts,
+   also removing get_tcb. *)
 definition
   thread_read :: "(tcb \<Rightarrow> 'a) \<Rightarrow> obj_ref \<Rightarrow> ('a,'z::state_ext) r_monad" where
   "thread_read f tptr \<equiv> oliftM f (get_tcb tptr)"

@@ -5569,7 +5569,7 @@ lemma sched_context_set_inactive_valid_release_q_unbound_sc:
    \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
   unfolding sched_context_set_inactive_def
   apply (wpsimp wp: update_sched_context_wp)
-  by (fastforce simp:  case_map_def tcb_sc_refill_cfgs_2_def opt_map_def
+  by (fastforce simp: case_map_def tcb_sc_refill_cfgs_2_def opt_map_def
                       map_join_def map_project_def obj_at_def vs_all_heap_simps sc_ready_time_def
                       sc_refill_cfgs_of_scs_def
                elim!: valid_release_qE sorted_release_qE split: option.splits)
