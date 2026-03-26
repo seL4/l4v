@@ -663,6 +663,7 @@ lemma createObject_cte_wp_at'[Detype_R_assms]:
    RetypeDecls_H.createObject ty ptr us d
    \<lbrace>\<lambda>r s. cte_wp_at' (\<lambda>c. P c) slot s \<rbrace>"
   unfolding global.createObject_def
+  supply objSize_eq_capBits[simp del]
   apply (wpsimp wp: createObjects_orig_cte_wp_at'[where sz = "(Types_H.getObjectSize ty us)"]
                     threadSet_cte_wp_at'
          | clarsimp simp: ARM_HYP_H.createObject_def placeNewDataObject_def
@@ -1099,6 +1100,7 @@ lemma createObject_setCTE_commute[Detype_R_assms]:
         K (Types_H.getObjectSize ty us < word_bits))
      (RetypeDecls_H.createObject ty ptr us d)
      (setCTE src cte)"
+  supply objSize_eq_capBits[simp del]
   apply (rule commute_grab_asm)+
   apply (subgoal_tac "ptr && mask (Types_H.getObjectSize ty us) = 0")
    prefer 2
@@ -1227,6 +1229,7 @@ lemma createNewCaps_pspace_no_overlap'[Detype_R_2_assms]:
    \<lbrace>\<lambda>r s. pspace_no_overlap'
              (ptr + (1 + of_nat n << Types_H.getObjectSize ty us))
              (Types_H.getObjectSize ty us) s\<rbrace>"
+  supply objSize_eq_capBits[simp del]
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp: createNewCaps_def)
   apply (subgoal_tac "pspace_no_overlap' (ptr + (1 + of_nat n << (Types_H.getObjectSize ty us)))
@@ -1409,6 +1412,7 @@ proof -
 
   show ?thesis
     using assms
+    supply objSize_eq_capBits[simp del]
     apply (clarsimp simp:valid_pspace'_def)
     apply (frule range_cover.aligned)
     apply (frule(3) pspace_no_overlap'_tail)

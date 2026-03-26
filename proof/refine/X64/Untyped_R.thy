@@ -785,7 +785,6 @@ lemma decodeUntyped_wf[wp]:
        (UntypedCap d w sz idx) cs
    \<lbrace>valid_untyped_inv'\<rbrace>,-"
   unfolding decodeUntypedInvocation_def
-  supply objSize_eq_capBits[simp]
   apply (simp add: unlessE_def[symmetric] unlessE_whenE rangeCheck_def whenE_def[symmetric]
                    returnOk_liftE[symmetric] Let_def cap_case_CNodeCap_True_throw
               split del: if_split cong: if_cong list.case_cong)
@@ -4731,7 +4730,6 @@ lemma inv_untyped_corres':
      (einvs and valid_untyped_inv ui and ct_active and schact_is_rct)
      (invs' and valid_untyped_inv' ui' and ct_active')
      (invoke_untyped ui) (invokeUntyped ui')"
-  supply objSize_eq_capBits[simp]
   apply (cases ui)
   apply (rule corres_name_pre)
   apply (clarsimp simp only: valid_untyped_inv_wcap

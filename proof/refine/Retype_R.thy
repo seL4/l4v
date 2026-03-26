@@ -421,7 +421,7 @@ locale Retype_R =
     "\<And>ty x. (toAPIType ty = Some x) = (ty = APIObjectType x)"
   assumes object_type_inject[simp]:
     "\<And>x y. (APIObjectType x = APIObjectType y) = (x = y)"
-  assumes objSize_eq_capBits:
+  assumes objSize_eq_capBits[simp]:
     "\<And>ty us. Types_H.getObjectSize ty us = APIType_capBits ty us"
   assumes objBits_le_obj_bits_api:
     "\<And>dev d ty ko us.

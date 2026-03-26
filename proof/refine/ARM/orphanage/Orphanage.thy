@@ -1163,7 +1163,6 @@ lemma createNewObjects_no_orphans:
          \<and> slots \<noteq> [] \<and> distinct slots \<and> ptr \<noteq> 0\<rbrace>
    createNewObjects tp cref slots ptr us d
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  supply objSize_eq_capBits[simp]
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp: add_mask_fold)
   apply (rule hoare_pre)

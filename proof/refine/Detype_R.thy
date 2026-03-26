@@ -3093,9 +3093,9 @@ lemma pspace_no_overlap'_modify:
    apply (clarsimp simp:blah field_simps)
   apply (clarsimp simp: not_le)
   apply (rule word_leq_le_minus_one)
-   apply (clarsimp simp: power_add[symmetric] shiftl_t2n field_simps objSize_eq_capBits)
+   apply (clarsimp simp: power_add[symmetric] shiftl_t2n field_simps)
   apply (rule neq_0_no_wrap)
-   apply (clarsimp simp: power_add[symmetric] shiftl_t2n field_simps objSize_eq_capBits)
+   apply (clarsimp simp: power_add[symmetric] shiftl_t2n field_simps)
   apply simp
   done
 qed
@@ -3628,6 +3628,7 @@ lemma createNewObjects_def2:
     ksCurDomain s \<le> maxDomain\<rbrakk>
    \<Longrightarrow> createNewObjects ty parent dslots ptr us d s =
        insertNewCaps ty parent dslots ptr us d s"
+  supply objSize_eq_capBits[simp del]
   apply (clarsimp simp:insertNewCaps_def createNewObjects_def neq_Nil_conv)
   proof -
   fix y ys
@@ -3882,7 +3883,6 @@ lemma createNewObjects_Cons:
     qed
 
     show ?thesis
-    supply objSize_eq_capBits[simp]
     using dlength
     apply (case_tac "dest = []")
      apply (simp add: zipWithM_x_def createNewObjects_def

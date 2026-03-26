@@ -71,7 +71,7 @@ lemma APIType_capBits_generic[Retype_R_assms, simp]:
   "APIType_capBits (APIObjectType api) us = APIType_capBits_gen api us"
   by (simp add: APIType_capBits_raw_def)
 
-lemma objSize_eq_capBits[Retype_R_assms]:
+lemma objSize_eq_capBits[simp, Retype_R_assms]:
   "Types_H.getObjectSize ty us = APIType_capBits ty us"
   by (cases ty;
       clarsimp simp: getObjectSize_def objBits_simps bit_simps

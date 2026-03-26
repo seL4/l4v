@@ -1010,7 +1010,6 @@ lemma createObject_valid_duplicates'[wp]:
    and K (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> us < 28)\<rbrace>
   RetypeDecls_H.createObject ty ptr us d
   \<lbrace>\<lambda>xa s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  supply objSize_eq_capBits[simp]
   apply (rule hoare_gen_asm)
   apply (simp add:createObject_def)
   apply (rule hoare_pre)
@@ -1164,7 +1163,6 @@ lemma createNewObjects_pspace_no_overlap':
       done
    show ?case
      using rc
-     supply objSize_eq_capBits[simp]
      apply (subst createNewObjects_Cons)
       apply (drule range_cover.weak)
       apply (simp add: word_bits_def)
@@ -1219,7 +1217,6 @@ lemma createNewObjects_valid_duplicates'[wp]:
    next
    case (snoc dest dests)
    show ?case
-     supply objSize_eq_capBits[simp]
      apply (rule hoare_gen_asm)
      apply clarsimp
      apply (frule range_cover.weak)
@@ -1291,7 +1288,6 @@ lemma valid_duplicates_deleteObjects_helper:
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
           atLeastAtMost_iff
   shows "vs_valid_duplicates'  (\<lambda>x. if x \<in> mask_range ptr sz then None else m x)"
-  supply objSize_eq_capBits[simp]
   apply (rule valid_duplicates'_diffI,rule vd)
   apply (clarsimp simp: vs_valid_duplicates'_def split:option.splits)
   apply (clarsimp simp: vs_valid_duplicates'_def split:option.splits)

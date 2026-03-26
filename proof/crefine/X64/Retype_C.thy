@@ -14,8 +14,6 @@ begin
 
 declare word_neq_0_conv [simp del]
 
-declare objSize_eq_capBits[simp] (* proofs expect this in CRefine *)
-
 instance cte_C :: array_outer_max_size
   by intro_classes simp
 
