@@ -190,6 +190,10 @@ lemma zobj_refs'_capRange[TcbAcc_R_assms]:
   "s \<turnstile>' cap \<Longrightarrow> zobj_refs' cap \<subseteq> capRange cap"
   by (cases cap; simp add: valid_cap'_def capAligned_def capRange_def is_aligned_no_overflow)
 
+lemma capAligned_zobj_refs'_capRange[TcbAcc_R_assms]:
+  "capAligned c \<Longrightarrow> zobj_refs' c \<subseteq> capRange c"
+  by (cases c; simp add: capAligned_def capRange_def is_aligned_no_overflow)
+
 lemma asUser_valid_tcbs'[wp]:
   "asUser t f \<lbrace>valid_tcbs'\<rbrace>"
   apply (simp add: asUser_def split_def)
@@ -285,6 +289,7 @@ lemmas [TcbAcc_R_assms] =
   getActiveIRQ_masked
   tcb_at'_cross
   pspace_relation_update_tcbs
+
 
 end (* Arch *)
 

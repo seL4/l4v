@@ -108,19 +108,6 @@ lemma descendants_range_inD':
   apply (auto simp:descendants_range_in'_def cte_wp_at_ctes_of dest!:bspec)
   done
 
-locale Detype_R =
-  assumes obj_relation_cuts_in_obj_range:
-    "\<And>y P ko x (s::det_state).
-     \<lbrakk> (y, P) \<in> obj_relation_cuts ko x; x \<in> obj_range x ko;
-       kheap s x = Some ko; valid_objs s; pspace_aligned s \<rbrakk>
-     \<Longrightarrow> y \<in> obj_range x ko"
-  assumes zobj_refs_capRange:
-    "\<And>c. capAligned c \<Longrightarrow> zobj_refs' c \<subseteq> capRange c"
-  assumes objSize_eq_capBits:
-    "\<And>ty us. Types_H.getObjectSize ty us = APIType_capBits ty us"
-  assumes object_type_inject[simp]:
-    "\<And>x y. (APIObjectType x = APIObjectType y) = (x = y)"
-
 lemma descendants_range'_def2:
   "descendants_range' cap p = descendants_range_in' (capRange cap) p"
   by (simp add: descendants_range_in'_def descendants_range'_def)
@@ -144,8 +131,6 @@ defs cNodePartialOverlap_def:
               \<or> cte_level_bits + n \<ge> word_bits
               \<or> (\<not> mask_range p (cte_level_bits + n) \<subseteq> {p. inRange p}
                  \<and> \<not> mask_range p (cte_level_bits + n) \<subseteq> {p. \<not> inRange p}))"
-
-context Detype_R begin
 
 lemma obj_relation_cuts_eqv_base_in_detype_range:
   "\<lbrakk> (y, P) \<in> obj_relation_cuts ko x; kheap s x = Some ko;
@@ -227,8 +212,6 @@ proof -
       done
   qed
 qed
-
-end (* Detype_R *)
 
 lemma cte_map_obj_range_helper:
   "\<lbrakk> cte_at cref s; pspace_aligned s; valid_objs s \<rbrakk>
@@ -628,12 +611,10 @@ lemma not_nullMDBNode:
 end (* delete_locale *)
 
 locale delete_locale_gen = delete_locale +
-  assumes zobj_refs_capRange: (* assumption shared with Detype_R *)
-    "\<And>c. capAligned c \<Longrightarrow> zobj_refs' c \<subseteq> capRange c"
   assumes irq_nodes_range:
     "\<forall>irq :: irq. irq_node' s' + (ucast irq << cteSizeBits) \<notin> base_bits"
 
-(* delete_locale_gen needs Detype_R, meaning to prove these assumptions we need results of both *)
+(* delete_locale_gen needs results from Arch which depend on delete_locale_gen; need results of both *)
 locale delete_locale_gen_2 = delete_locale_gen +
   assumes valid_arch_tcb':
     "\<And>p tcb.
@@ -658,7 +639,7 @@ lemma ex_nonz_cap_notRange:
   apply (clarsimp simp: ex_nonz_cap_to'_def cte_wp_at_ctes_of)
   apply (case_tac "isUntypedCap (cteCap cte)")
    apply (clarsimp simp: gen_isCap_simps)
-  apply (drule subsetD[OF zobj_refs_capRange, rotated])
+  apply (drule subsetD[OF capAligned_zobj_refs'_capRange, rotated])
    apply (rule valid_capAligned, erule ctes_of_valid)
   apply (drule(1) objRefs_notrange)
   apply (drule_tac a=p in equals0D)
@@ -2497,7 +2478,7 @@ lemma case_eq_if_isUntypedCap:
    = (if isUntypedCap c then x else y)"
   by (cases c, simp_all add: gen_isCap_simps)
 
-locale Detype_R_2 = Detype_R +
+locale Detype_R = (* FIXME arch-split: need to drop numbers by 1 *)
   assumes deleteObjects_null_filter:
     "\<And>d ptr bits idx p P.
      \<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p
@@ -2546,7 +2527,7 @@ locale Detype_R_2 = Detype_R +
      \<lbrace>\<top>\<rbrace>
      createNewCaps ty ptr n us d \<lbrace>\<lambda>r s. (\<forall>cap\<in>set r. cap \<noteq> capability.NullCap)\<rbrace>"
 
-context Detype_R_2 begin
+context Detype_R begin
 
 lemma deleteObjects_descendants:
   "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p
@@ -3588,9 +3569,9 @@ lemma curDomain_twice_simp:
   apply (case_tac x)
   by (auto simp: simpler_gets_def bind_def curDomain_def)
 
-end (* Detype_R_2 *)
+end (* Detype_R *)
 
-locale Detype_R_3 = Detype_R_2 +
+locale Detype_R_2 = Detype_R +
   assumes createObject_def2:
     "\<And>ty ptr us dev.
      (RetypeDecls_H.createObject ty ptr us dev >>= (\<lambda>x. return [x])) =
@@ -3628,7 +3609,7 @@ locale Detype_R_3 = Detype_R_2 +
                   (ptr + (1 + of_nat n << APIType_capBits ty userSize)) sz\<rbrace>"
 
 
-context Detype_R_3 begin
+context Detype_R_2 begin
 
 lemma createNewObjects_def2:
   "\<lbrakk>dslots \<noteq> []; length ( dslots ) < 2^word_bits;
@@ -3931,7 +3912,7 @@ lemma insertNewCap_wps[wp]:
   apply (fastforce elim!: rsubst[where P=P])
   done
 
-end (* Detype_R_3 *)
+end (* Detype_R_2 *)
 
 crunch insertNewCap
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"

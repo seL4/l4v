@@ -85,6 +85,8 @@ locale TcbAcc_R =
      \<lbrace>\<lambda>s. P (global_refs' s)\<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>rv s. P (global_refs' s)\<rbrace>"
   assumes zobj_refs'_capRange:
     "\<And>s cap. s \<turnstile>' cap \<Longrightarrow> zobj_refs' cap \<subseteq> capRange cap"
+  assumes capAligned_zobj_refs'_capRange:
+    "\<And>c. capAligned c \<Longrightarrow> zobj_refs' c \<subseteq> capRange c"
   assumes pspace_relation_update_tcbs:
     "\<And>s s' x tcb tcb' otcb otcb'.
      \<lbrakk> pspace_relation s s'; s x = Some (TCB otcb); s' x = Some (KOTCB otcb');

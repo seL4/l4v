@@ -11,8 +11,6 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Detype_R_assms
-
 (* no extra constraints on this architecture *)
 defs arch_deletionIsSafe_def:
   "arch_deletionIsSafe ptr bits s p \<equiv> True"
@@ -77,86 +75,6 @@ lemma deleteObjects_def3:
                    unless_def alignError_def)
   done
 
-lemma obj_relation_cuts_in_obj_range[Detype_R_assms]:
-  "\<lbrakk> (y, P) \<in> obj_relation_cuts ko x; x \<in> obj_range x ko;
-     kheap s x = Some ko; valid_objs s; pspace_aligned s \<rbrakk>
-   \<Longrightarrow> y \<in> obj_range x ko"
-  apply (cases ko, simp_all)
-   apply (clarsimp split: if_split_asm)
-   apply (subgoal_tac "cte_at (x, ya) s")
-    apply (drule(2) cte_at_cte_map_in_obj_bits)
-    apply (simp add: obj_range_def)
-   apply (fastforce intro: cte_wp_at_cteI)
-  apply (frule(1) pspace_alignedD)
-  apply (frule valid_obj_sizes, erule ranI)
-  apply (rename_tac arch_kernel_obj)
-  apply (case_tac arch_kernel_obj, simp_all)
-      apply (clarsimp simp only: obj_range_def field_simps atLeastAtMost_iff bit_simps
-                                  obj_bits.simps arch_kobj_size.simps)
-      apply (rule context_conjI)
-       apply (erule is_aligned_no_wrap')
-       apply simp
-       apply (simp add: ucast_less_shiftl_helper')
-      apply (subst add_diff_eq[symmetric])
-      apply (rule word_plus_mono_right)
-       apply (subst word_less_sub_le, simp)
-       apply (simp add: ucast_less_shiftl_helper')
-      apply (simp add: field_simps)
-     apply (clarsimp simp only: obj_range_def field_simps atLeastAtMost_iff bit_simps
-                                obj_bits.simps arch_kobj_size.simps)
-     apply (rule context_conjI)
-      apply (erule is_aligned_no_wrap')
-      apply simp
-      apply (simp add: ucast_less_shiftl_helper')
-     apply (subst add_diff_eq[symmetric])
-     apply (rule word_plus_mono_right)
-      apply (subst word_less_sub_le, simp)
-      apply (simp add: ucast_less_shiftl_helper')
-     apply (simp add: field_simps)
-    apply (clarsimp simp only: obj_range_def field_simps atLeastAtMost_iff bit_simps
-                                  obj_bits.simps arch_kobj_size.simps)
-    apply (rule context_conjI)
-     apply (erule is_aligned_no_wrap')
-     apply simp
-     apply (simp add: ucast_less_shiftl_helper')
-    apply (subst add_diff_eq[symmetric])
-    apply (rule word_plus_mono_right)
-     apply (subst word_less_sub_le, simp)
-     apply (simp add: ucast_less_shiftl_helper')
-    apply (simp add: field_simps)
-   apply (clarsimp simp only: obj_range_def field_simps atLeastAtMost_iff bit_simps
-                                 obj_bits.simps arch_kobj_size.simps)
-   apply (rule context_conjI)
-    apply (erule is_aligned_no_wrap')
-    apply simp
-    apply (simp add: ucast_less_shiftl_helper')
-   apply (subst add_diff_eq[symmetric])
-   apply (rule word_plus_mono_right)
-    apply (subst word_less_sub_le, simp)
-    apply (simp add: ucast_less_shiftl_helper')
-   apply (simp add: field_simps)
-  apply (rename_tac vmpage_size)
-  apply (clarsimp simp only: obj_range_def field_simps atLeastAtMost_iff bit_simps
-                             obj_bits.simps arch_kobj_size.simps)
-  apply (subgoal_tac "n * 2 ^ pageBits < 2 ^ pageBitsForSize vmpage_size")
-   apply (rule context_conjI)
-    apply (erule is_aligned_no_wrap')
-    apply (simp add: bit_simps)
-   apply (subst add_diff_eq[symmetric])
-   apply (rule word_plus_mono_right)
-    apply (subst word_less_sub_le, simp add: word_bits_def)
-    apply (simp add: bit_simps)
-   apply (simp add: field_simps)
-  apply (simp only: pageBits_def)
-  apply (erule word_less_power_trans2)
-   apply (case_tac vmpage_size, simp_all add: pageBits_def)[1]
-  apply (simp add: word_bits_def)
-  done
-
-lemma zobj_refs_capRange[Detype_R_assms]:
-  "capAligned c \<Longrightarrow> zobj_refs' c \<subseteq> capRange c"
-  by (cases c, simp_all add: capRange_def capAligned_def is_aligned_no_overflow)
-
 lemma arch_deletionIsSafe:
   assumes al: "is_aligned base magnitude"
   shows
@@ -169,19 +87,6 @@ lemma state_rel_ghost:
   "(s,s') \<in> state_relation \<Longrightarrow>
    ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')"
   by (erule state_relationE[simplified ghost_relation_wrapper_def])
-
-lemma objSize_eq_capBits[Detype_R_assms]:
-  "Types_H.getObjectSize ty us = APIType_capBits ty us"
-  by (cases ty;
-      clarsimp simp: getObjectSize_def objBits_simps bit_simps
-                     APIType_capBits_def apiGetObjectSize_def ptBits_def
-               split: apiobject_type.splits)
-
-(* safe for generic context, and requalifying object_type.inject would yield "inject" *)
-(* FIXME arch-split: can go much much earlier *)
-lemma object_type_inject[Detype_R_assms]:
-  "(APIObjectType x = APIObjectType y) = (x = y)"
-  by simp
 
 end (* Arch *)
 
@@ -284,12 +189,6 @@ lemma irq_nodes_range:
 
 end (* Arch_delete_locale *)
 
-interpretation Detype_R?: Detype_R
-proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Detype_R_assms)?)?)
-qed
-
 context delete_locale begin
 
 (* Equivalent to doing an Arch_delete_locale interpretation and re-exporting, but as we don't need
@@ -298,7 +197,7 @@ lemmas irq_nodes =
   Arch_delete_locale.irq_nodes_range[of s' base bits, simplified Arch_delete_locale_def,
                                      OF delete_locale_axioms]
 
-sublocale delete_locale_gen by (unfold_locales; fact zobj_refs_capRange irq_nodes)
+sublocale delete_locale_gen by (unfold_locales; fact irq_nodes)
 
 (* used by proof below as these names in delete_locale *)
 lemmas deletionIsSafe_delete_locale_holds = deletionIsSafe_delete_locale_holds
@@ -503,13 +402,13 @@ end
 
 context Arch begin arch_global_naming
 
-named_theorems Detype_R_2_assms
+named_theorems Detype_R_assms
 
 (* FIXME arch-split: some lemmas in this block use deleteObjects_def3, which leaks some arch details.
    Not all of them need to deal with these arch details, so if the def2/def3 lemmas can be
    generalised or wrapped, some of the lemmas in this block can become generic. *)
 
-lemma deleteObjects_null_filter[Detype_R_2_assms]:
+lemma deleteObjects_null_filter[Detype_R_assms]:
   "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p
      and invs' and ct_active' and sch_act_simple
      and (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s))
@@ -529,7 +428,7 @@ lemma deleteObjects_null_filter[Detype_R_2_assms]:
   apply (unfold_locales, simp_all)
   done
 
-lemma deleteObjects_invs'[Detype_R_2_assms]:
+lemma deleteObjects_invs'[Detype_R_assms]:
   "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p
      and invs' and ct_active' and sch_act_simple
      and (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s))
@@ -561,7 +460,7 @@ proof -
   done
 qed
 
-lemma deleteObjects_st_tcb_at'[Detype_R_2_assms]:
+lemma deleteObjects_st_tcb_at'[Detype_R_assms]:
   "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p
      and invs' and ct_active' and sch_act_simple
      and (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s))
@@ -660,7 +559,7 @@ lemma deleteObjects_nosch:
 
 lemmas getObjSize_simps = X64_H.getObjectSize_def[split_simps X64_H.object_type.split apiobject_type.split]
 
-lemma createObject_cte_wp_at'[Detype_R_2_assms]:
+lemma createObject_cte_wp_at'[Detype_R_assms]:
   "\<lbrace>\<lambda>s. Types_H.getObjectSize ty us < word_bits \<and>
         is_aligned ptr (Types_H.getObjectSize ty us) \<and>
         pspace_no_overlap' ptr (Types_H.getObjectSize ty us) s \<and>
@@ -1401,7 +1300,7 @@ lemma placeNewObject_pml4_at':
   apply simp
   done
 
-lemma createObject_setCTE_commute[Detype_R_2_assms]:
+lemma createObject_setCTE_commute[Detype_R_assms]:
   "monad_commute
      (cte_wp_at' (\<lambda>_. True) src and
         pspace_aligned' and pspace_distinct' and
@@ -1494,7 +1393,7 @@ lemma copyGlobalMappings_gsUntypedZeroRanges_commute':
   apply simp
   done
 
-lemma createObject_gsUntypedZeroRanges_commute[Detype_R_2_assms]:
+lemma createObject_gsUntypedZeroRanges_commute[Detype_R_assms]:
   "monad_commute
      \<top>
      (RetypeDecls_H.createObject ty ptr us dev)
@@ -1518,7 +1417,7 @@ lemma createObject_gsUntypedZeroRanges_commute[Detype_R_2_assms]:
   apply (simp add: curDomain_def monad_commute_def exec_modify exec_gets)
   done
 
-lemma createNewCaps_not_nc[Detype_R_2_assms]:
+lemma createNewCaps_not_nc[Detype_R_assms]:
   "\<lbrace>\<top>\<rbrace>
    createNewCaps ty ptr n us d
    \<lbrace>\<lambda>r s. (\<forall>cap\<in>set r. cap \<noteq> capability.NullCap)\<rbrace>"
@@ -1527,15 +1426,15 @@ lemma createNewCaps_not_nc[Detype_R_2_assms]:
 
 end (* Arch *)
 
-interpretation Detype_R_2?: Detype_R_2
+interpretation Detype_R?: Detype_R
 proof goal_cases
   interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Detype_R_2_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact Detype_R_assms)?)?)
 qed
 
 context Arch begin arch_global_naming
 
-named_theorems Detype_R_3_assms
+named_theorems Detype_R_2_assms
 
 lemma copyGlobalMappings_pspace_no_overlap':
   "\<lbrace>pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz\<rbrace>
@@ -1547,7 +1446,7 @@ lemma copyGlobalMappings_pspace_no_overlap':
   apply clarsimp
   done
 
-lemma createNewCaps_pspace_no_overlap'[Detype_R_3_assms]:
+lemma createNewCaps_pspace_no_overlap'[Detype_R_2_assms]:
   "\<lbrace>\<lambda>s. range_cover ptr sz (Types_H.getObjectSize ty us) (Suc (Suc n)) \<and>
         pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_no_overlap' ptr sz s \<and>
         ptr \<noteq> 0\<rbrace>
@@ -1599,7 +1498,7 @@ lemma createNewCaps_pspace_no_overlap'[Detype_R_3_assms]:
                | assumption | clarsimp simp: word_bits_def
                | intro conjI range_cover_le[where n = "Suc n"] range_cover.aligned)+)
 
-lemma createNewCaps_ret_len[Detype_R_3_assms]:
+lemma createNewCaps_ret_len[Detype_R_2_assms]:
   "\<lbrace>K (n < 2 ^ word_bits \<and> n \<noteq> 0)\<rbrace>
    createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv s. n = length rv\<rbrace>"
@@ -1717,7 +1616,7 @@ lemma createObjects'_page_map_l4_at':
   apply (case_tac arch_kernel_object; simp)
   done
 
-lemma createNewCaps_Cons[Detype_R_3_assms]:
+lemma createNewCaps_Cons[Detype_R_2_assms]:
   assumes cover:"range_cover ptr sz (Types_H.getObjectSize ty us) (Suc (Suc n))"
   and "valid_pspace' s" "valid_arch_state' s"
   and "pspace_no_overlap' ptr sz s"
@@ -2086,7 +1985,7 @@ proof -
   done
 qed
 
-lemma createObject_def2[Detype_R_3_assms]:
+lemma createObject_def2[Detype_R_2_assms]:
   "(RetypeDecls_H.createObject ty ptr us dev >>= (\<lambda>x. return [x])) =
    createNewCaps ty ptr (Suc 0) us dev"
   apply (clarsimp simp: global.createObject_def createNewCaps_def placeNewObject_def2)
@@ -2106,7 +2005,7 @@ lemma createObject_def2[Detype_R_3_assms]:
                             storeWordVM_def)+
   done
 
-lemma ArchCreateObject_pspace_no_overlap'[Detype_R_3_assms]:
+lemma ArchCreateObject_pspace_no_overlap'[Detype_R_2_assms]:
   "\<lbrace>\<lambda>s. pspace_no_overlap'
           (ptr + (of_nat n << APIType_capBits ty userSize)) sz s \<and>
         pspace_aligned' s \<and> pspace_distinct' s \<and>
@@ -2183,10 +2082,10 @@ lemma createObject_pspace_aligned_distinct':
 
 end (* Arch *)
 
-interpretation Detype_R_3?: Detype_R_3
+interpretation Detype_R_2?: Detype_R_2
 proof goal_cases
   interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Detype_R_3_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact Detype_R_2_assms)?)?)
 qed
 
 end
