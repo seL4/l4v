@@ -781,10 +781,12 @@ lemma transfer_caps_loop_colour_maintained:
     cur_domain_list and pspace_in_kernel_window and RISCV64.valid_uses and
         (\<lambda>s.
             (
-              distinct ((map snd caps) @ slots) \<and>
+              distinct (map snd caps) \<and> 
+              distinct slots \<and>
               (\<forall>(cap, o_ref, cni)\<in>(set caps).
                 s \<turnstile> cap \<and>
                 cte_wp_at ((=) cap) (o_ref, cni) s \<and>
+                cap \<noteq> NullCap \<and>
                 no_refs_zombies cap s \<and> \<not> is_zombie cap \<and>
                 no_refs_to cap (o_ref, cni) s \<and>
                 real_cte_at (o_ref, cni) s \<and>
@@ -792,6 +794,7 @@ lemma transfer_caps_loop_colour_maintained:
                 valid_ptr_in_cur_domain o_ref s)) \<and>
               (\<forall>slot\<in>set slots. valid_ptr_in_cur_domain (fst slot) s \<and>
                 ex_cte_cap_wp_to is_cnode_cap slot s \<and>
+                cte_wp_at ((=) NullCap) slot s \<and>
                 real_cte_at slot s)
             )
    \<rbrace>
@@ -883,13 +886,18 @@ next
         apply(clarsimp simp:check_cap_ref_in_cur_domain split_beta no_refs_to_def)
         apply(rule conjI)
          apply(meson distinct_tl)
+        (* old, when we were assuming caps and slots were disjoint sets
         apply(rule conjI)
          apply(meson disjoint_iff list.set_sel(2))
+        *)
         apply(rule conjI)
          apply clarsimp
          apply(rule conjI)
           apply clarsimp
+          apply (metis (mono_tags, opaque_lifting) cte_wp_at_eqD2 hd_in_set prod_injects(2))
+          (* old, when we were assuming caps and slots disjoint
           apply (metis (no_types, lifting) list.set_sel(1) map_set_in orthD1 prod.sel(2))
+          *)
          apply clarsimp
          apply(drule (1) bspec)
          apply clarsimp
@@ -908,6 +916,7 @@ next
         apply(drule_tac x="(ab, ba)" in bspec)
          apply(meson list.set_sel(2))
         apply clarsimp
+        apply (metis (full_types, opaque_lifting) cte_wp_at_eqD2 distinct.simps(2) list.collapse)
        (* case 3 of 6 *)
        apply(wpsimp wp:hoare_vcg_op_lift cap_insert_weak_cte_wp_at)
         apply(wpsimp wp: hoare_vcg_if_lift_ER)
@@ -922,8 +931,10 @@ next
        apply(clarsimp simp:check_cap_ref_in_cur_domain split_beta)
        apply(rule conjI)
         apply(meson distinct_tl)
+       (* old, when we were assuming caps and slots disjoint
        apply(rule conjI)
         apply(meson disjoint_iff list.set_sel(2))
+       *)
        apply(rule conjI)
         apply(prop_tac "(\<exists>c'. cte_wp_at ((=) c') (b, c) s \<and> \<not> is_zombie c')")
          using cte_wp_at_norm
@@ -931,7 +942,10 @@ next
         apply clarsimp
         apply(rule conjI)
          apply clarsimp
+         apply (metis (mono_tags, opaque_lifting) cte_wp_at_eqD2 hd_in_set prod_injects(2))
+         (* old, when we were assuming caps and slots disjoint
          apply (metis (no_types, lifting) list.set_sel(1) map_set_in orthD1 prod.sel(2))
+         *)
         apply clarsimp
         apply(drule (1) bspec)
         apply clarsimp
@@ -942,6 +956,7 @@ next
        apply(drule_tac x="(ab, ba)" in bspec)
         apply(meson list.set_sel(2))
        apply clarsimp
+       apply (metis (full_types, opaque_lifting) cte_wp_at_eqD2 distinct.simps(2) list.collapse)
       (* case 4 of 6 *)
       (* this one's just like case 1 *)
       apply (wpsimp wp: set_extra_badge_colour_maintained)
@@ -1115,9 +1130,8 @@ lemma resolve_address_bits_cte_wp_at':
   by (wp resolve_address_bits'_cte_wp_at')
 
 lemma resolve_address_bits'_P_rv:
-  "\<lbrace>P cn_ref cni and
-      K (\<exists> guard sz_bits. cap = CNodeCap cn_ref sz_bits guard \<and>
-         length cref = sz_bits + size guard)\<rbrace>
+  "\<lbrace>\<lambda>s. P cn_ref cni s \<and> cap = CNodeCap cn_ref sz_bits guard \<and>
+       length cref = sz_bits + size guard \<and> cref = cni\<rbrace>
      resolve_address_bits' z (cap, cref)
    \<lbrace>\<lambda>rv s. fst rv = (cn_ref, cni) \<longrightarrow> P cn_ref cni s\<rbrace>,-"
 proof (induct "(cap, cref)" rule: resolve_address_bits'.induct)
@@ -1133,13 +1147,94 @@ proof (induct "(cap, cref)" rule: resolve_address_bits'.induct)
 qed
 
 lemma resolve_address_bits_P_rv:
-  "\<lbrace>P cn_ref cni and
-      K (\<exists>guard sz_bits. cap = CNodeCap cn_ref sz_bits guard \<and>
-         length cref = sz_bits + size guard)\<rbrace>
+  "\<lbrace>\<lambda>s. P cn_ref cni s \<and> cap = CNodeCap cn_ref sz_bits guard \<and>
+       length cref = sz_bits + size guard \<and> cref = cni\<rbrace>
      resolve_address_bits (cap, cref)
    \<lbrace>\<lambda>rv s. fst rv = (cn_ref, cni) \<longrightarrow> P cn_ref cni s\<rbrace>,-"
   unfolding resolve_address_bits_def
   by (wp resolve_address_bits'_P_rv)
+
+lemma resolve_address_bits'_P_rv_concise:
+  "\<lbrace>\<lambda>s. P (cn_ref, drop (length guard) cref) s \<and> cap = CNodeCap cn_ref sz_bits guard \<and>
+       length cref = sz_bits + size guard\<rbrace>
+     resolve_address_bits' z (cap, cref)
+   \<lbrace>\<lambda>rv s. P (fst rv) s\<rbrace>,-"
+proof (induct "(cap, cref)" rule: resolve_address_bits'.induct)
+  case (1 z)
+  show ?case
+    apply (clarsimp simp add: validE_R_def validE_def valid_def split: sum.split)
+    apply (subst (asm) resolve_address_bits'.simps)
+    apply (cases cap)
+              defer 6 (* cnode *)
+          apply (auto simp: in_monad)[11]    
+    apply(clarsimp simp:fail_def in_returnOk whenE_def split:if_splits)
+    apply(simp add: in_monad(8))
+    done
+qed
+
+lemma resolve_address_bits_P_rv_concise:
+  "\<lbrace>\<lambda>s. P (cn_ref, drop (length guard) cref) s \<and> cap = CNodeCap cn_ref sz_bits guard \<and>
+       length cref = sz_bits + size guard\<rbrace>
+     resolve_address_bits (cap, cref)
+   \<lbrace>\<lambda>rv s. P (fst rv) s\<rbrace>,-"
+  unfolding resolve_address_bits_def
+  by (wp resolve_address_bits'_P_rv_concise)
+
+lemma resolve_address_bits'_P_refonly:
+  "\<lbrace>\<lambda>s. P cn_ref s \<and>
+         cap = CNodeCap cn_ref sz_bits guard \<and>
+         length cref = sz_bits + size guard\<rbrace>
+     resolve_address_bits' z (cap, cref)
+   \<lbrace>\<lambda>rv s. (\<exists> cni. fst rv = (cn_ref, cni)) \<longrightarrow> P cn_ref s\<rbrace>,-"
+proof (induct "(cap, cref)" rule: resolve_address_bits'.induct)
+  case (1 z)
+  show ?case
+    apply (clarsimp simp add: validE_R_def validE_def valid_def split: sum.split)
+    apply (subst (asm) resolve_address_bits'.simps)
+    apply (cases cap)
+              defer 6 (* cnode *)
+          apply (auto simp: in_monad)[11]    
+    apply(clarsimp simp:fail_def in_returnOk split:if_splits)
+    by (smt (z3) fst_conv in_monad(6,7,8) sum.simps(2) throwError_def whenE_def)
+    (* old:
+    by (metis (full_types) in_monad(7,8) whenE_bindE_throwError_to_if) *)
+qed
+
+lemma resolve_address_bits_P_refonly:
+  "\<lbrace>\<lambda>s. P cn_ref s \<and>
+         cap = CNodeCap cn_ref sz_bits guard \<and>
+         length cref = sz_bits + size guard\<rbrace>
+     resolve_address_bits (cap, cref)
+   \<lbrace>\<lambda>rv s. (\<exists> cni. fst rv = (cn_ref, cni)) \<longrightarrow> P cn_ref s\<rbrace>,-"
+  unfolding resolve_address_bits_def
+  by (wp resolve_address_bits'_P_refonly)
+
+lemma resolve_address_bits'_P_refonly_concise:
+  "\<lbrace>\<lambda>s. P cn_ref s \<and>
+      cap = CNodeCap cn_ref sz_bits guard \<and>
+      length cref = sz_bits + size guard\<rbrace>
+     resolve_address_bits' z (cap, cref)
+   \<lbrace>\<lambda>rv s. P (fst (fst rv)) s\<rbrace>,-"
+proof (induct "(cap, cref)" rule: resolve_address_bits'.induct)
+  case (1 z)
+  show ?case
+    apply (clarsimp simp add: validE_R_def validE_def valid_def split: sum.split)
+    apply (subst (asm) resolve_address_bits'.simps)
+    apply (cases cap)
+              defer 6 (* cnode *)
+          apply (auto simp: in_monad)[11]    
+    apply(clarsimp simp:fail_def in_returnOk split:if_splits)
+    by (smt (z3) fst_conv in_monad(6,7,8) sum.simps(2) throwError_def whenE_def)
+qed
+
+lemma resolve_address_bits_P_refonly_concise:
+  "\<lbrace>\<lambda>s. P cn_ref s \<and>
+         cap = CNodeCap cn_ref sz_bits guard \<and>
+         length cref = sz_bits + size guard\<rbrace>
+     resolve_address_bits (cap, cref)
+   \<lbrace>\<lambda>rv s. P (fst (fst rv)) s\<rbrace>,-"
+  unfolding resolve_address_bits_def
+  by (wp resolve_address_bits'_P_refonly_concise)
 
 lemma resolve_address_bits'_cte_wp_at_P_rv:
   "\<lbrace>(\<lambda>s. cte_wp_at ((=) mycap) (cn_ref, cni) s \<longrightarrow> P cn_ref cni s) and
@@ -1168,59 +1263,206 @@ lemma resolve_address_bits_cte_wp_at_P_rv:
   unfolding resolve_address_bits_def
   by (wp resolve_address_bits'_cte_wp_at_P_rv)
 
-lemma get_receive_slots_valid_ptr_in_cur_domain[wp]:
-  "\<lbrace>\<lambda>s. valid_ptr_in_cur_domain buf s\<rbrace> get_receive_slots rcvr (Some buf)
-   \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. valid_ptr_in_cur_domain (fst x) s\<rbrace>"
+term obj_at
+lemma lookup_slot_for_cnode_op_valid_ptr_in_cur_domain:
+  "\<lbrace>\<lambda>s. croot = CNodeCap cn_ref sz_bits guard \<and> 
+      obj_at ((=) (CNode sz_bits contents)) cn_ref s \<and>
+      length ptr = sz_bits + length guard \<and>
+      length ptr \<le> depth \<and>
+      valid_ptr_in_cur_domain cn_ref s\<rbrace>
+   lookup_slot_for_cnode_op is_source croot ptr depth
+  \<lbrace>\<lambda>rv s. valid_ptr_in_cur_domain (fst rv) s\<rbrace>,-"
+  unfolding lookup_slot_for_cnode_op_def
+  apply wp
+     (* NB: wpsimp here introduces a forall, so avoid it *)
+     apply clarsimp
+     apply wp
+      (* NB: wpsimp here introduces a forall, so avoid it
+      apply wpsimp *)
+      apply clarsimp
+      apply wpsimp
+     apply clarsimp
+     apply wpsimp
+     apply(rule hoare_drop_impE_R)
+     apply(wp resolve_address_bits_P_refonly_concise)
+    apply wp
+   apply wp
+  by auto
+
+definition load_cap_transfer_preconds :: "64 word \<Rightarrow> nat \<Rightarrow> bool list \<Rightarrow> cap_ref \<Rightarrow> cap_ref \<Rightarrow>
+  'a state \<Rightarrow> bool"
+where
+  "load_cap_transfer_preconds buffer sz_bits guard root_cr index_cr s \<equiv>
+   \<forall>x\<in>fst (loadWord
+           (buffer + word_of_nat (msg_max_length + msg_max_extra_caps + 2) * word_size)
+           (machine_state s)).
+    \<forall>xa xb.
+       x = (xa, xb) \<longrightarrow>
+       data_to_cptr xa = root_cr \<and>
+       (\<forall>x\<in>fst (loadWord
+                  (buffer +
+                   word_of_nat (msg_max_length + msg_max_extra_caps + 2) * word_size +
+                   word_size)
+                  (machine_state (s\<lparr>machine_state := xb\<rparr>))).
+           \<forall>xa xb.
+              x = (xa, xb) \<longrightarrow>
+              buffer + word_of_nat (msg_max_length + msg_max_extra_caps + 2) * word_size +
+              2 * word_size &&
+              mask 3 =
+              0 \<longrightarrow>
+              (unat::64 word \<Rightarrow> nat)
+               (word_rcat
+                 (map (\<lambda>i. underlying_memory xb
+                             (buffer +
+                              word_of_nat (msg_max_length + msg_max_extra_caps + 2) *
+                              word_size +
+                              2 * word_size +
+                              (7 - word_of_int i)))
+                   [0..7])) =
+              sz_bits + length guard \<and>
+              data_to_cptr xa = index_cr \<and>
+              sz_bits + length guard = 64)"
+
+definition ct_receive_conds
+where
+  "ct_receive_conds cts root_cr index_cr depth \<equiv>
+     unat (ct_receive_depth cts) = depth \<and>
+     ct_receive_root cts = root_cr \<and>
+     length (ct_receive_root cts) = depth \<and>
+     \<comment> \<open>ct_receive_index cts = index_cr \<and>\<close>
+     length (ct_receive_index cts) = depth"
+
+lemma load_cap_transfer_receive_conds:
+  "\<lbrace>\<lambda>s. load_cap_transfer_preconds buffer sz_bits guard root_cr index_cr s\<rbrace>
+   load_cap_transfer buffer
+   \<lbrace>\<lambda>rv s. ct_receive_conds rv root_cr index_cr (sz_bits + length guard)\<rbrace>"
+  unfolding load_cap_transfer_def captransfer_from_words_def
+  apply wpsimp
+      apply(wpsimp simp:RISCV64.loadWord_def)
+     apply wpsimp
+     apply(wpsimp simp:do_machine_op_def)
+    apply(wpsimp simp:do_machine_op_def)
+   apply wpsimp
+  apply(clarsimp simp:load_cap_transfer_preconds_def ct_receive_conds_def)
+  by fastforce
+
+lemma get_cap_specific:
+  "\<lbrace>\<lambda>s.(kheap s (fst c) = Some (CNode sz contents) \<and> well_formed_cnode_n sz contents
+       \<and> contents (snd c) = Some cap) \<or>
+     (kheap s (fst c) = Some (TCB tcb) \<and> tcb_cnode_map tcb (snd c) = Some cap)\<rbrace>
+   get_cap c
+   \<lbrace>\<lambda>rv s. rv = cap\<rbrace>"
+  unfolding get_cap_def get_object_def
+  apply wpsimp
+  by fastforce
+
+lemma get_cap_tcb:
+  "\<lbrace>\<lambda>s. kheap s (fst c) = Some (TCB tcb) \<and> tcb_cnode_map tcb (snd c) = Some cap\<rbrace>
+     get_cap c
+   \<lbrace>\<lambda>rv s. rv = cap\<rbrace>"
+  unfolding get_cap_def get_object_def
+  by wpsimp
+
+term do_ipc_transfer
+  (* the recv_buffer comes from `lookup_ipc_buffer True receiver` *)
+  term lookup_ipc_buffer (* this consults a ArchObjectCap FrameCap of the receiver's *)
+  term aobj_ref
+term do_normal_transfer
+term get_receive_slots
+term transfer_caps
+term load_cap_transfer
+term captransfer_from_words
+lemma get_receive_slots_valid_ptr_in_cur_domain_Some[wp]:
+  "\<lbrace>\<lambda>s. invs s \<and> colour_invariant s \<and>
+     valid_ptr_in_cur_domain receiver s \<and>
+     valid_ptr_in_cur_domain cn_ref s \<and>
+     get_tcb receiver s = Some tcb \<and>
+     \<comment> \<open>This is the cnode that lookup_slot_for_thread (called by get_receive_slots
+       via lookup_cap) receives to call resolve_address_bits on\<close>
+     tcb_ctable tcb = CNodeCap cn_ref sz_bits guard \<and>
+     obj_at ((=) (CNode sz_bits contents)) cn_ref s \<and>
+     contents (drop (length guard) root_cr) = Some (CNodeCap cn_ref sz_bits guard) \<and>
+     well_formed_cnode_n sz_bits contents \<and>
+     load_cap_transfer_preconds buffer sz_bits guard root_cr index_cr s \<and>
+     sz_bits + length guard = 64\<rbrace>
+   get_receive_slots receiver (Some buffer)
+   \<lbrace>\<lambda>rv s. \<forall>slot \<in> set rv. valid_ptr_in_cur_domain (fst slot) s\<rbrace>"
   apply (simp add: split_def whenE_def split del: if_split)
   apply wpsimp
-      apply(wpsimp wp:get_cap_wp)
-     apply(wpsimp simp: lookup_slot_for_cnode_op_def)
-     apply safe
-      apply wpsimp
-       apply(wp add:hoare_vcg_all_liftE_R)
-       apply(rule_tac Q'="\<lambda>rv s. fst rv = (a, b)" in hoare_strengthen_post_impE_R)
-        prefer 2
-        apply clarsimp
-       apply(wp resolve_address_bits_P_rv)
-      apply wpsimp
+      (* perhaps avoid get_cap_wp because it introduces forall-quantified cte_wp_at.
+         furthermore we can just drop the rv precond and use get_cap_inv.
+      apply(wpsimp wp:get_cap_wp) *)
+      apply(wp hoare_drop_imp)
+     apply wp
+     apply(wp lookup_slot_for_cnode_op_valid_ptr_in_cur_domain[where
+       sz_bits=sz_bits and guard=guard and cn_ref=cn_ref and contents=contents])
+    (* NB: lookup_cap called by get_receive_slots *)
+    apply(clarsimp simp:lookup_cap_def)
+    (* note, there's a lot of avoiding wpsimp at certain points from here
+       to prevent introducing unwanted forall-quantifiers *)
+    apply wp
+     apply clarsimp
      apply wpsimp
+     apply(rule hoare_vcg_conj_lift)
+      apply(rule get_cap_specific[where sz=sz_bits and contents=contents and tcb=tcb])
+     apply wp
+    apply clarsimp
+    apply wp
+    (* NB: lookup_slot_for_thread called by get_receive_slots via lookup_cap *)
+    apply(clarsimp simp:lookup_slot_for_thread_def)
     apply wpsimp
-    apply(wpsimp simp:lookup_cap_def)
-     apply(wpsimp wp:get_cap_wp)
-    apply(wpsimp simp:lookup_slot_for_thread_def)
-     apply(wp add:hoare_vcg_all_liftE_R)
-     apply(rule_tac Q'="\<lambda>rv s. fst rv = (a, b)" in hoare_strengthen_post_impE_R)
-      prefer 2
-      apply clarsimp
-     apply(wp resolve_address_bits_P_rv)
+     apply(wp resolve_address_bits_P_rv_concise[where sz_bits=sz_bits and guard=guard and cn_ref=cn_ref])
     apply wpsimp
-   apply clarsimp
+   apply wpsimp
    apply(rule hoare_vcg_imp_lift)
-   apply wp
-   apply(rule hoare_vcg_all_lift)
-   apply(rule hoare_vcg_conj_lift)
-    apply(rule hoare_vcg_imp_all_comm)
-    apply(rule hoare_vcg_all_lift)
-    apply(rule hoare_vcg_imp_all_comm)
-    apply(rule hoare_vcg_all_lift)
-    apply(rule hoare_vcg_imp_comm)
-    apply(rule hoare_drop_imp) (* XXX: risky *)
-    apply(rule hoare_vcg_imp_all_comm)
-    apply(rule hoare_vcg_all_lift)
-    apply(rule hoare_vcg_imp_conj_lift')
-     (* FIXME: don't have enough to prove this, we need to know something about xb *)
-     defer
-    (* FIXME: it feels like this amounts to knowing that the `ct_receive_depth rv`
-       which is loaded from (buf + word_size*2) is greater than `length guard` *)
-    defer
-   (* FIXME: now this is asking that `length (ct_receive_root rv)` is also of that width *)
-   defer
-  (* FIXME: cleanup once we've figured out the preconditions *)
-  sorry
+    apply wp
+   apply(rule_tac Q'="\<lambda>rv s. ct_receive_conds rv root_cr index_cr (sz_bits + length guard) \<and>
+     valid_ptr_in_cur_domain cn_ref s \<and>
+     tcb_ctable (the (get_tcb receiver s)) = CNodeCap cn_ref sz_bits guard \<and>
+     obj_at ((=) (CNode sz_bits contents)) cn_ref s \<and>
+     kheap s receiver = Some (TCB tcb) \<and>
+     contents (drop (length guard) root_cr) = Some (CNodeCap cn_ref sz_bits guard) \<and>
+     well_formed_cnode_n sz_bits contents"
+     in hoare_strengthen_post)
+    apply(wp hoare_vcg_conj_lift)
+     apply(wp load_cap_transfer_receive_conds)
+    apply wpsimp
+   apply(clarsimp simp:ct_receive_conds_def)
+   apply(clarsimp simp:obj_at_def)
+  apply clarsimp
+  apply(clarsimp simp:get_tcb_def split:option.splits kernel_object.splits)
+  done
 
-find_theorems get_receive_slots valid
+lemma get_receive_slots_valid_ptr_in_cur_domain_None[wp]:
+  "\<lbrace>\<top>\<rbrace> get_receive_slots receiver None
+   \<lbrace>\<lambda>rv s. \<forall>slot \<in> set rv. valid_ptr_in_cur_domain (fst slot) s\<rbrace>"
+  apply wpsimp
+  done
 
 declare get_receive_slots.simps[simp del]
+
+lemma get_receive_slots_valid_ptr_in_cur_domain[wp]:
+  "\<lbrace>\<lambda>s. case rbuf of Some buffer \<Rightarrow>
+     (invs s \<and> colour_invariant s \<and>
+     valid_ptr_in_cur_domain receiver s \<and>
+     valid_ptr_in_cur_domain cn_ref s \<and>
+     get_tcb receiver s = Some tcb \<and>
+     \<comment> \<open>This is the cnode that lookup_slot_for_thread (called by get_receive_slots
+       via lookup_cap) receives to call resolve_address_bits on\<close>
+     tcb_ctable tcb = CNodeCap cn_ref sz_bits guard \<and>
+     obj_at ((=) (CNode sz_bits contents)) cn_ref s \<and>
+     contents (drop (length guard) root_cr) = Some (CNodeCap cn_ref sz_bits guard) \<and>
+     well_formed_cnode_n sz_bits contents \<and>
+     load_cap_transfer_preconds buffer sz_bits guard root_cr index_cr s \<and>
+     sz_bits + length guard = 64) | None \<Rightarrow> True\<rbrace>
+   get_receive_slots receiver rbuf
+   \<lbrace>\<lambda>rv s. \<forall>slot \<in> set rv. valid_ptr_in_cur_domain (fst slot) s\<rbrace>"
+  apply(case_tac rbuf)
+   prefer 2
+   apply clarsimp
+   apply wpsimp
+  apply wpsimp
+  done
 
 lemma hoare_vcg_rv_Ball_conj_lift:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>r\<in>set rv. Q r s\<rbrace> \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>r\<in>set rv. Q' r s\<rbrace> \<Longrightarrow>
@@ -1232,131 +1474,59 @@ thm get_receive_slots.simps
 term "c::captransfer"
 
 lemma transfer_caps_colour_maintained[wp]:
-  "\<lbrace>colour_invariant and
+  "\<lbrace>case rbuf of Some buffer \<Rightarrow> colour_invariant and
      (\<lambda>s. distinct (map snd caps) \<and>
         (\<forall>(cap, o_ref, cni)\<in>(set caps).
         \<comment> \<open>Also asked for by transfer_caps_loop_colour_maintained:\<close>
         s \<turnstile> cap \<and>
         cte_wp_at ((=) cap) (o_ref, cni) s \<and>
+        cap \<noteq> NullCap \<and>
         no_refs_zombies cap s \<and> \<not> is_zombie cap \<and>
         no_refs_to cap (o_ref, cni) s \<and>
         real_cte_at (o_ref, cni) s \<and>
         \<comment> \<open>Here originally:\<close>
         check_cap_ref cap (colour_oracle (cur_domain s)) \<and>
         valid_ptr_in_cur_domain o_ref s)) and
-     (\<lambda>s. check_cap_ref (tcb_ctable (the $ get_tcb receiver s)) (colour_oracle (cur_domain s)))
-     and cur_domain_list and pspace_in_kernel_window and RISCV64.valid_uses and valid_objs\<rbrace>
- transfer_caps info caps endpoint receiver recv_buffer
-\<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+     (\<lambda>s. check_cap_ref (tcb_ctable (the $ get_tcb receiver s)) (colour_oracle (cur_domain s)) \<and>
+        \<comment> \<open>Stuff now asked for by get_receive_slots_valid_ptr_in_cur_domain\<close>
+        valid_ptr_in_cur_domain receiver s \<and>
+        valid_ptr_in_cur_domain cn_ref s \<and>
+        get_tcb receiver s = Some tcb \<and>
+        tcb_ctable tcb = CNodeCap cn_ref sz_bits guard \<and>
+        obj_at ((=) (CNode sz_bits contents)) cn_ref s \<and>
+        contents (drop (length guard) root_cr) = Some (CNodeCap cn_ref sz_bits guard) \<and>
+        well_formed_cnode_n sz_bits contents \<and>
+        load_cap_transfer_preconds buffer sz_bits guard root_cr index_cr s \<and>
+        sz_bits + length guard = 64)
+     and invs
+     | None \<Rightarrow> colour_invariant\<rbrace>
+   transfer_caps info caps endpoint receiver rbuf
+   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
   unfolding transfer_caps_def
+  apply(case_tac rbuf)
+   (* FIXME: the only reason this is not an issue is its preconds aren't conditional on rbuf,
+      but this is sort of a flaky way to go about things *)
+   apply (wpsimp wp: transfer_caps_loop_colour_maintained)
   apply (wpsimp wp: transfer_caps_loop_colour_maintained)
-   apply (wpsimp wp: hoare_vcg_op_lift weak_if_wp')
-   apply(wp hoare_vcg_conj_lift)
-    (* FIXME: we're currently missing something that tells us this *)
-    defer
-   apply(wp hoare_vcg_conj_lift)
-   apply(wpsimp wp:hoare_vcg_rv_Ball_conj_lift get_receive_slots_valid_ptr_in_cur_domain
-     get_rs_real_cte_at get_rs_cap_to)
-    (* XXX: why does this not apply? *)
-    thm get_receive_slots_valid_ptr_in_cur_domain
-    defer
-   apply(wpsimp wp:hoare_vcg_rv_Ball_conj_lift)
-  apply wpsimp
-  sorry (* Old proof
-     apply (wpsimp simp: lookup_slot_for_cnode_op_def)
-     apply safe
-       apply wpsimp
-        apply(rule hoare_vcg_all_liftE_R)
-        apply(rule hoare_vcg_all_liftE_R)
-        apply(rule_tac Q'="\<lambda>rv s. fst rv = (a, b)"
-          in hoare_strengthen_post_impE_R)
-         prefer 2
-         apply clarsimp
-        apply(rule_tac R'="\<lambda>rv s. cte_wp_at \<top> (a, b) s"
-          in hoare_strengthen_imp_postE_R)
-        apply(wp resolve_address_bits_P_rv)
-        (* XXX old
-        (* the first couple have nothing to do with rv *)
-        apply(wp hoare_vcg_imp_conj_liftE_R')
-         apply(wp hoare_drop_impE_R)
-        apply(wp hoare_vcg_imp_conj_liftE_R')
-         apply(wp hoare_drop_impE_R)
-        (* rewrite a, b in terms of rv so we can drop the imp that equates them *)
-        apply(rule_tac Q'="\<lambda>rv s. a = fst (fst rv) \<and> b = snd (fst rv)"
-          in hoare_strengthen_post_impE_R)
-         prefer 2
-         apply clarsimp
-        apply clarsimp
-        apply(wp hoare_drop_impE_R)
-        apply(wp hoare_vcg_conj_liftE_R)
-         apply(wp resolve_address_bits_ret_valid)
-        apply(wp hoare_vcg_conj_liftE_R)
-         apply(wp rab_cte_cap_to)
-        apply(wp resolve_address_bits_real_cte_at)
-        *)
-       apply wpsimp+
-     apply (wpsimp simp: lookup_cap_def)
-      apply (wpsimp wp: get_cap_wp)
-     apply (wpsimp simp: lookup_slot_for_thread_def)
-      apply (wp add: hoare_vcg_all_liftE_R)
-     (* this was a way to invoke resolve_address_bits_ret_colour but we might
-        try breaking it down manually here
-     apply(rename_tac x xa tcb a b)
-     apply (rule_tac Q'="\<lambda>rv s. colour_invariant s \<and> cur_domain_list s \<and>
-              pspace_in_kernel_window s \<and> RISCV64.valid_uses s \<and>
-              ((\<exists>x. rv = ((a, b), x)) \<longrightarrow>
-              (\<forall>cap. cte_wp_at ((=) cap)
-                      (a, b) s \<longrightarrow>
-                     check_cap_ref cap
-                      (colour_oracle (cur_domain s)) \<and> valid_ptr_in_cur_domain a s))"
-            in hoare_strengthen_postE_R)
-     apply (wpsimp simp: valid_ptr_in_cur_domain_def wp: resolve_address_bits_ret_colour)
-     *)
-      (* I suspect again we don't need to know anything about snd rv *)
-      apply(rule_tac Q'="\<lambda>rv s. fst rv = (a, b)"
-        in hoare_strengthen_post_impE_R)
-       prefer 2
-       apply clarsimp
-      apply(rule hoare_vcg_imp_commE_R)
-      apply(rule_tac P="0 < unat (ct_receive_depth ct) \<and> \<not> word_bits < unat (ct_receive_depth ct)"
-        in hoare_gen_asmE)
-      apply clarsimp
-      (* XXX: these now have nothing to do with a, b; just this mysterious x, xa *)
-      apply(rule hoare_vcg_imp_all_commE_R)
-      apply(wp hoare_vcg_all_liftE_R)
-      (* XXX old
-      apply(wp hoare_absorb_double_impE_R)
-      apply(rule hoare_vcg_conj_liftE_R)
-       (* NB: had to pull in a version of the rab lemma I proved for the kugap work *)
-       apply(wp resolve_address_bits_cte_wp_at')
-      (* these couple have nothing to do with the rv and the cap it equals *)
-      apply(wp hoare_vcg_imp_conj_liftE_R')
-       apply(wp hoare_drop_impE_R)
-      apply(wp hoare_vcg_imp_conj_liftE_R')
-       apply(wp hoare_drop_impE_R)
-      (* some of these mention the cap, but hopefully the rab lemma's preconds will
-         give us enough info about it for later *)
-      apply(wp hoare_drop_impE_R)
-      *)
-      apply(wp hoare_vcg_double_imp_all_commE_R)
-      apply(wp hoare_vcg_all_liftE_R)
-      apply(wp hoare_vcg_double_imp_all_commE_R)
-      apply(wp hoare_vcg_all_liftE_R)
-      apply(rule hoare_drop_impE_R)
-      apply(rule hoare_drop_impE_R)
-      apply wpsimp
-     apply wpsimp
-    apply wpsimp
-    apply(wpsimp wp:hoare_vcg_op_lift)
-     defer (* FIXME
-     apply(wpsimp simp:load_cap_transfer_def captransfer_from_words_def) *)
-    defer (* FIXME *)
-   apply clarsimp
-   (* the precondition inferred for the cap needs to tell us enough about
-      it to solve the rest of these goals *)
-   (* DOWN TO HERE *)
-   sorry
-*)
+   (* This was needed when we didn't case split on whether rbuf = (Some buffer)
+   apply (wpsimp wp: hoare_vcg_op_lift weak_if_wp') *)
+   apply(rule hoare_vcg_rv_Ball_conj_lift)
+    apply(rule get_receive_slots_valid_ptr_in_cur_domain[where
+      cn_ref=cn_ref and tcb=tcb and sz_bits=sz_bits and guard=guard and contents=contents and
+      root_cr=root_cr and index_cr=index_cr])
+   apply(wp hoare_vcg_rv_Ball_conj_lift)
+  apply clarsimp
+  apply(frule invs_valid_objs)
+  apply(frule RISCV64.invs_valid_uses)
+  apply(clarsimp simp:invs_def valid_state_def)
+  done
+
+lemma transfer_caps_colour_maintained_None[wp]:
+  "\<lbrace>colour_invariant\<rbrace>
+     transfer_caps info caps endpoint receiver None
+   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  unfolding transfer_caps_def
+  by wpsimp
 
 lemma copy_mrs_colour_maintained[wp]:
   "\<lbrace>colour_invariant\<rbrace>
@@ -1367,17 +1537,22 @@ lemma copy_mrs_colour_maintained[wp]:
      apply (rule impI)
   by (wpsimp wp: mapM_wp[where S="UNIV"] store_word_offs_colour_maintained load_word_offs_P as_user_colour_maintained)+
 
-lemma do_normal_transfer_colour_maintained:
-  "\<lbrace>colour_invariant and cur_domain_list and pspace_in_kernel_window and RISCV64.valid_uses and
-    (\<lambda>s. check_cap_ref (tcb_ctable (the $ get_tcb sender s)) (colour_oracle (cur_domain s))) and
-    (\<lambda>s. check_cap_ref (tcb_ctable (the $ get_tcb receiver s)) (colour_oracle (cur_domain s)))\<rbrace>
-     do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
-   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
-  apply (wpsimp simp: do_normal_transfer_def)
-     apply (wpsimp simp: valid_ptr_in_cur_domain_def wp: hoare_vcg_op_lift copy_mrs_cur_domain)
-      sorry (* FIXME *)
-     apply (wpsimp simp: copy_mrs_def)
-      apply (rule conjI)
+(* XXX briefly considered this, but not sure about it. might still be a reasonable idea
+lemma copy_mrs_receiver_tcb:
+  "\<lbrace>\<lambda>s. check_cap_ref (tcb_ctable (the (get_tcb receiver s))) (colour_oracle (cur_domain s))\<rbrace>
+     copy_mrs sender sbuf receiver rbuf n
+    \<lbrace>\<lambda>_ s. check_cap_ref (tcb_ctable (the (get_tcb receiver s))) (colour_oracle (cur_domain s))\<rbrace>"
+  unfolding copy_mrs_def
+  apply wpsimp
+  oops
+
+lemma copy_mrs_sender_tcb:
+  "\<lbrace>\<lambda>s. P (get_tcb sender s) (cur_domain s)\<rbrace>
+     copy_mrs sender sbuf receiver rbuf n
+    \<lbrace>\<lambda>_ s. P (get_tcb sender s) (cur_domain s)\<rbrace>"
+  unfolding copy_mrs_def
+  apply wpsimp
+        apply (rule conjI)
        apply (rule impI)
        apply (wpsimp simp: store_word_offs_def as_user_def do_machine_op_def load_word_offs_def wp: mapM_wp[where S="UNIV"] load_word_offs_P)+
         apply (simp add: get_tcb_def)
@@ -1389,6 +1564,12 @@ lemma do_normal_transfer_colour_maintained:
         apply (simp add: get_tcb_def)
         defer
         apply wpsimp+
+  apply (cases "receiver = sender"; clarsimp)
+   apply(fastforce simp:RISCV64.pspace_in_kernel_window_def RISCV64.kernel_window_2_def
+     split:option.splits kernel_object.splits)
+  apply(fastforce simp:RISCV64.pspace_in_kernel_window_def RISCV64.kernel_window_2_def
+    split:option.splits kernel_object.splits)
+  try0
        apply (simp add: lookup_extra_caps_def
                         lookup_cap_and_slot_def
                         lookup_slot_for_thread_def)
@@ -1401,12 +1582,74 @@ lemma do_normal_transfer_colour_maintained:
        apply (wpsimp wp: resolve_address_bits_ret_colour[unfolded valid_ptr_in_cur_domain_def])+
        apply (wpsimp wp: mapME_wp')
        apply wpsimp+
+*)
+
+lemma do_normal_transfer_colour_maintained:
+  "\<lbrace>colour_invariant and invs and
+    (case rbuf of Some rbuffer \<Rightarrow>
+     \<lambda>s. check_cap_ref (tcb_ctable (the (get_tcb receiver s))) (colour_oracle (cur_domain s))
+      | None \<Rightarrow> \<top>) and
+    (case sbuf of Some sbuffer \<Rightarrow>
+     \<lambda>s. check_cap_ref (tcb_ctable (the (get_tcb sender s))) (colour_oracle (cur_domain s))
+      | None \<Rightarrow> \<top>)\<rbrace>
+     do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
+   \<lbrace>\<lambda>_. colour_invariant\<rbrace>"
+  apply(case_tac "rbuf = None")
+   prefer 2 (* Important to do the Some case first as the None cases have trivial preconds *)
+   apply (wpsimp simp: do_normal_transfer_def)
+      apply(rule hoare_vcg_conj_lift)
+       apply(wpsimp wp:hoare_vcg_op_lift copy_mrs_cur_domain)
+       defer (* FIXME: new preconditions demanded by transfer_caps_loop_colour_maintained *)
+      apply(wpsimp wp:hoare_vcg_conj_lift)
+       apply (wpsimp simp: copy_mrs_def)
+        apply (rule conjI)
+         apply (rule impI)
+         apply (wpsimp simp: store_word_offs_def as_user_def do_machine_op_def load_word_offs_def
+           wp: mapM_wp[where S="UNIV"] load_word_offs_P)+
+          apply (simp add: get_tcb_def)
+         apply simp
+        apply (wpsimp simp: store_word_offs_def do_machine_op_def load_word_offs_def
+           wp: mapM_wp[where S="UNIV"])
+         apply (simp add: get_tcb_def)
+        apply simp
+       apply (wpsimp simp: store_word_offs_def as_user_def do_machine_op_def load_word_offs_def
+         wp: mapM_wp[where S="UNIV"] set_object_wp)
+        apply (simp add: get_tcb_def)
+        apply (cases "receiver = sender"; clarsimp)
+       apply simp
+      (* FIXME: new preconditions demanded by get_receive_slots_valid_ptr_in_cur_domain *)
+      defer
+     apply wpsimp
+      apply(rule hoare_vcg_conj_liftE_R)
+       defer (* FIXME: distinctness req is new *)
+      apply (simp add: lookup_extra_caps_def
+                       lookup_cap_and_slot_def
+                       lookup_slot_for_thread_def)
+      apply wpsimp
+       apply (wp add: mapME_set)
+           (* again, avoid some wpsimps and get_cap_wp to avoid introduced forall quantifiers? *)
+           apply clarsimp
+           apply wp
+           apply wpsimp
+           apply (wp add: get_cap_wp)
+          apply wpsimp
+           apply (wp add: hoare_vcg_all_liftE_R)
+           apply(wp resolve_address_bits_P_rv_concise)
+          apply wpsimp
+          defer (* FIXME: new reqs *)
+         apply wpsimp+
+       apply (wpsimp wp: mapME_wp')
+      apply (wpsimp simp: store_word_offs_def do_machine_op_def load_word_offs_def wp: mapM_wp[where S="UNIV"])
+     apply wpsimp+
+  (* trivial case where rbuf = None *)
+  apply(wpsimp simp: do_normal_transfer_def)
+  (* XXX: old final steps by Sai, not sure what these were targeted at
   apply (cases "receiver = sender"; clarsimp)
    apply(fastforce simp:RISCV64.pspace_in_kernel_window_def RISCV64.kernel_window_2_def
      split:option.splits kernel_object.splits)
   apply(fastforce simp:RISCV64.pspace_in_kernel_window_def RISCV64.kernel_window_2_def
-    split:option.splits kernel_object.splits)
-  done
+    split:option.splits kernel_object.splits) *)
+  sorry
 
 lemma set_mrs_colour_maintained[wp]:
   "\<lbrace>colour_invariant\<rbrace>
@@ -1420,6 +1663,7 @@ lemma set_mrs_colour_maintained[wp]:
   using check_kernel_object_ref.simps(2) apply blast
   by fastforce
 
+(* FIXME: broken now that do_normal_transfer_colour_maintained has new reqs *)
 crunch make_fault_msg, do_ipc_transfer
   for colour_maintained[wp]: colour_invariant
   (wp: crunch_wps simp: crunch_simps)
