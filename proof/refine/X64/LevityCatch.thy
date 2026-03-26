@@ -59,9 +59,15 @@ lemma updateObject_default_inv:
 
 context Arch begin arch_global_naming
 
-lemma to_from_apiType[simp]: "toAPIType (fromAPIType x) = Some x"
+lemma to_from_apiType[simp]:
+  "toAPIType (fromAPIType x) = Some x"
   by (cases x) (auto simp add: fromAPIType_def toAPIType_def)
 
 end
+
+arch_requalify_facts
+  to_from_apiType (* FIXME arch-split: LevityCatch not split yet *)
+
+lemmas [simp] = to_from_apiType
 
 end

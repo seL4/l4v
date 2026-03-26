@@ -50,7 +50,7 @@ lemma deleteObjects_def2:
   apply (rule arg_cong2[where f=gsUserPages_update])
    apply (simp add: NOT_eq[symmetric] mask_in_range ext)
   apply (rule arg_cong[where f="\<lambda>f. ksPSpace_update f s" for s])
-  apply (simp add: NOT_eq[symmetric] mask_in_range ext   split: option.split)
+  apply (simp add: NOT_eq[symmetric] mask_in_range ext split: option.split)
   done
 
 lemma deleteObjects_def3:
@@ -83,6 +83,7 @@ lemma arch_deletionIsSafe:
      \<Longrightarrow> arch_deletionIsSafe base magnitude s' p"
   by (simp add: arch_deletionIsSafe_def) (* trivial on this architecture *)
 
+(* FIXME: move *)
 lemma state_rel_ghost:
   "(s,s') \<in> state_relation \<Longrightarrow>
    ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')"
@@ -719,8 +720,9 @@ lemma modify_pde_psp_no_overlap':
    modify (ksPSpace_update (\<lambda>ps. ps(ptr \<mapsto> KOArch (KOPDE new_pde))))
    \<lbrace>\<lambda>a. pspace_no_overlap' ptr' sz\<rbrace>"
   proof -
-  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  note [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
+                    atLeastatMost_subset_iff atLeastLessThan_iff
+                    Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   show ?thesis
   apply (clarsimp simp:simpler_modify_def ko_wp_at'_def
     valid_def typ_at'_def)
@@ -745,9 +747,9 @@ lemma koTypeOf_pde:
   done
 
 lemma cte_wp_at_modify_pde:
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
+  notes [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
+                     atLeastatMost_subset_iff atLeastLessThan_iff
+                     Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   shows
   "\<lbrakk>ksPSpace s ptr' = Some (KOArch (KOPDE pde)); pspace_aligned' s;cte_wp_at' \<top> ptr s\<rbrakk>
        \<Longrightarrow> cte_wp_at' \<top> ptr (s\<lparr>ksPSpace := (ksPSpace s)(ptr' \<mapsto> (KOArch (KOPDE pde')))\<rparr>)"
@@ -1036,8 +1038,9 @@ lemma modify_pml4e_psp_no_overlap':
    modify (ksPSpace_update (\<lambda>ps. ps(ptr \<mapsto> KOArch (KOPML4E new_pml4e))))
    \<lbrace>\<lambda>a. pspace_no_overlap' ptr' sz\<rbrace>"
   proof -
-  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  note [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
+                    atLeastatMost_subset_iff atLeastLessThan_iff
+                    Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   show ?thesis
   apply (clarsimp simp:simpler_modify_def ko_wp_at'_def
     valid_def typ_at'_def)
@@ -1157,9 +1160,9 @@ lemma storePML4E_placeNewObject_commute:
    done
 
 lemma cte_wp_at_modify_pml4e:
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
+  notes [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
+                     atLeastatMost_subset_iff atLeastLessThan_iff
+                     Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   shows
   "\<lbrakk>ksPSpace s ptr' = Some (KOArch (KOPML4E pml4e)); pspace_aligned' s;cte_wp_at' \<top> ptr s\<rbrakk>
        \<Longrightarrow> cte_wp_at' \<top> ptr (s\<lparr>ksPSpace := (ksPSpace s)(ptr' \<mapsto> (KOArch (KOPML4E pml4e')))\<rparr>)"
@@ -1194,9 +1197,9 @@ lemma cte_wp_at_modify_pml4e:
   done
 
 lemma storePML4E_setCTE_commute:
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
+  notes [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
+                     atLeastatMost_subset_iff atLeastLessThan_iff
+                     Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   shows "monad_commute
      (pml4e_at' ptr and pspace_distinct' and pspace_aligned' and
       cte_wp_at' (\<lambda>_. True) src)
@@ -1404,18 +1407,18 @@ lemma createObject_gsUntypedZeroRanges_commute[Detype_R_assms]:
                    placeNewDataObject_def
                    placeNewObject_def2 bind_assoc fail_commute
                    return_commute toAPIType_def
-              split: option.split apiobject_type.split object_type.split)
+            split: option.split apiobject_type.split object_type.split)
   apply (strengthen monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"],
-          OF _ _ hoare_vcg_prop, THEN commute_commute]
-      monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"],
-          OF _ _ hoare_vcg_prop]
-     | simp add: modify_commute createObjects_gsUntypedZeroRanges_commute'
-                 createObjects_gsUntypedZeroRanges_commute'[THEN commute_commute]
-                 return_commute return_commute[THEN commute_commute]
-                 threadSet_gsUntypedZeroRanges_commute'[THEN commute_commute]
-                 dmo_gsUntypedZeroRanges_commute
-                 copyGlobalMappings_gsUntypedZeroRanges_commute'[THEN commute_commute]
-          split: option.split prod.split cong: if_cong)+
+                                            OF _ _ hoare_vcg_prop, THEN commute_commute]
+                    monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"],
+                                            OF _ _ hoare_vcg_prop]
+         | simp add: modify_commute createObjects_gsUntypedZeroRanges_commute'
+                     createObjects_gsUntypedZeroRanges_commute'[THEN commute_commute]
+                     return_commute return_commute[THEN commute_commute]
+                     threadSet_gsUntypedZeroRanges_commute'[THEN commute_commute]
+                     dmo_gsUntypedZeroRanges_commute
+                     copyGlobalMappings_gsUntypedZeroRanges_commute'[THEN commute_commute]
+              split: option.split prod.split cong: if_cong)+
   apply (simp add: curDomain_def monad_commute_def exec_modify exec_gets)
   done
 

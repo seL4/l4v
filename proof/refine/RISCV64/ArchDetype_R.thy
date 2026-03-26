@@ -50,7 +50,7 @@ lemma deleteObjects_def2:
   apply (rule arg_cong2[where f=gsUserPages_update])
    apply (simp add: NOT_eq[symmetric] mask_in_range ext)
   apply (rule arg_cong[where f="\<lambda>f. ksPSpace_update f s" for s])
-  apply (simp add: NOT_eq[symmetric] mask_in_range ext   split: option.split)
+  apply (simp add: NOT_eq[symmetric] mask_in_range ext split: option.split)
   done
 
 (* deleteObjects_def2 but with is_aligned folded into definition as an assertion *)
@@ -84,6 +84,7 @@ lemma arch_deletionIsSafe:
      \<Longrightarrow> arch_deletionIsSafe base magnitude s' p"
   by (simp add: arch_deletionIsSafe_def) (* trivial on this architecture *)
 
+(* FIXME: move *)
 lemma state_rel_ghost:
   "(s,s') \<in> state_relation \<Longrightarrow>
    ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')"
@@ -185,9 +186,10 @@ end (* detype_locale' *)
 
 context Arch begin arch_global_naming
 
-lemma sym_refs_hyp_refs_triv[simp]: "sym_refs (state_hyp_refs_of s')"
-  apply (clarsimp simp: state_hyp_refs_of_def sym_refs_def)
-  by (case_tac "kheap s' x"; simp)
+lemma sym_refs_hyp_refs_triv[simp]:
+  "sym_refs (state_hyp_refs_of s')"
+  by (clarsimp simp: state_hyp_refs_of_def sym_refs_def)
+     (case_tac "kheap s' x"; simp)
 
 (* FIXME arch-split: some of this can be generalised; 3 is same on all arches *)
 lemma deleteObjects_corres:
@@ -787,17 +789,17 @@ lemma createObject_gsUntypedZeroRanges_commute[Detype_R_assms]:
                    placeNewDataObject_def
                    placeNewObject_def2 bind_assoc fail_commute
                    return_commute toAPIType_def
-              split: option.split apiobject_type.split object_type.split)
+            split: option.split apiobject_type.split object_type.split)
   apply (strengthen monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"],
-          OF _ _ hoare_vcg_prop, THEN commute_commute]
-      monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"],
-          OF _ _ hoare_vcg_prop]
-     | simp add: modify_commute createObjects_gsUntypedZeroRanges_commute'
-                 createObjects_gsUntypedZeroRanges_commute'[THEN commute_commute]
-                 return_commute return_commute[THEN commute_commute]
-                 threadSet_gsUntypedZeroRanges_commute'[THEN commute_commute]
-                 dmo_gsUntypedZeroRanges_commute
-          split: option.split prod.split cong: if_cong)+
+                                            OF _ _ hoare_vcg_prop, THEN commute_commute]
+                    monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"],
+                                            OF _ _ hoare_vcg_prop]
+         | simp add: modify_commute createObjects_gsUntypedZeroRanges_commute'
+                     createObjects_gsUntypedZeroRanges_commute'[THEN commute_commute]
+                     return_commute return_commute[THEN commute_commute]
+                     threadSet_gsUntypedZeroRanges_commute'[THEN commute_commute]
+                     dmo_gsUntypedZeroRanges_commute
+              split: option.split prod.split cong: if_cong)+
   apply (simp add: curDomain_def monad_commute_def exec_modify exec_gets)
   done
 

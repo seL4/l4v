@@ -772,12 +772,12 @@ lemma createObject_valid_duplicates'[wp]:
 
 lemma createNewObjects_pspace_no_overlap':
   "\<lbrace>pspace_no_overlap' ptr sz and pspace_aligned' and pspace_distinct'
-  and K (range_cover ptr sz (Types_H.getObjectSize ty us) (Suc (length dests)))
-  and K (ptr \<noteq> 0)
-  and K (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> us < 28)\<rbrace>
+    and K (range_cover ptr sz (Types_H.getObjectSize ty us) (Suc (length dests)))
+    and K (ptr \<noteq> 0)
+    and K (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> us < 28)\<rbrace>
   createNewObjects ty src dests ptr us d
-  \<lbrace>\<lambda>rv s.  pspace_aligned' s \<and> pspace_distinct' s \<and>
-  pspace_no_overlap' ((of_nat (length dests) << APIType_capBits ty us) + ptr) sz s\<rbrace>"
+  \<lbrace>\<lambda>rv s.  pspace_aligned' s \<and> pspace_distinct' s
+           \<and> pspace_no_overlap' ((of_nat (length dests) << APIType_capBits ty us) + ptr) sz s\<rbrace>"
   apply (rule hoare_gen_asm)+
   proof (induct rule:rev_induct )
     case Nil

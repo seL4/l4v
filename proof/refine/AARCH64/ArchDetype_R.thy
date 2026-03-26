@@ -107,11 +107,13 @@ lemma arch_deletionIsSafe:
      \<Longrightarrow> arch_deletionIsSafe base magnitude s' p"
   by (simp add: arch_deletionIsSafe_def) (* trivial on this architecture *)
 
+(* FIXME: move *)
 lemma state_rel_ghost:
   "(s,s') \<in> state_relation \<Longrightarrow>
    ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') (gsPTTypes (ksArchState s'))"
   by (erule state_relationE[simplified ghost_relation_wrapper_def])
 
+(* FIXME: move *)
 lemma ghost_PTTypes:
   "\<lbrakk> ghost_relation kh gsu gsc pt_Ts; pt_Ts p = Some pt_t \<rbrakk> \<Longrightarrow>
    (\<exists>pt. kh p = Some (ArchObj (PageTable pt)) \<and> pt_t = pt_type pt)"
@@ -901,17 +903,17 @@ lemma createObject_gsUntypedZeroRanges_commute[Detype_R_assms]:
                    placeNewDataObject_def
                    placeNewObject_def2 bind_assoc fail_commute
                    return_commute toAPIType_def
-              split: option.split apiobject_type.split object_type.split)
+            split: option.split apiobject_type.split object_type.split)
   apply (strengthen monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"],
-          OF _ _ hoare_vcg_prop, THEN commute_commute]
-      monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"],
-          OF _ _ hoare_vcg_prop]
-     | simp add: modify_commute createObjects_gsUntypedZeroRanges_commute'
-                 createObjects_gsUntypedZeroRanges_commute'[THEN commute_commute]
-                 return_commute return_commute[THEN commute_commute]
-                 threadSet_gsUntypedZeroRanges_commute'[THEN commute_commute]
-                 monad_commute_gsUntyped_updatePTType dmo_gsUntypedZeroRanges_commute
-          split: option.split prod.split cong: if_cong)+
+                                            OF _ _ hoare_vcg_prop, THEN commute_commute]
+                    monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"],
+                                            OF _ _ hoare_vcg_prop]
+         | simp add: modify_commute createObjects_gsUntypedZeroRanges_commute'
+                     createObjects_gsUntypedZeroRanges_commute'[THEN commute_commute]
+                     return_commute return_commute[THEN commute_commute]
+                     threadSet_gsUntypedZeroRanges_commute'[THEN commute_commute]
+                     monad_commute_gsUntyped_updatePTType dmo_gsUntypedZeroRanges_commute
+              split: option.split prod.split cong: if_cong)+
   apply (simp add: curDomain_def monad_commute_def exec_modify exec_gets)
   done
 

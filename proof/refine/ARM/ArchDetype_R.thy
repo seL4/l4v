@@ -101,7 +101,7 @@ lemma arch_deletionIsSafe:
       (s, s') \<in> state_relation\<rbrakk>
      \<Longrightarrow> arch_deletionIsSafe base magnitude s' p"
   unfolding arch_deletionIsSafe_def
-  supply [simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
+  supply [simp del] = atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
           atLeastAtMost_iff
     apply (clarsimp simp flip: add_mask_fold)
@@ -144,10 +144,11 @@ lemma arch_deletionIsSafe:
                                 split: if_splits)
     apply (rename_tac arch_kernel_obj,
            case_tac arch_kernel_obj;
-          simp add: arch_kobj_size_def vspace_bits_defs pageBitsForSize_def
-               split: if_splits)+
+           simp add: arch_kobj_size_def vspace_bits_defs pageBitsForSize_def
+                split: if_splits)+
     done
 
+(* FIXME: move *)
 lemma state_rel_ghost:
   "(s,s') \<in> state_relation \<Longrightarrow>
    ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')"
@@ -263,6 +264,7 @@ end (* detype_locale' *)
 
 context Arch begin arch_global_naming
 
+(* conjunction is used to unify with a single schematic in deleteObjects_corres *)
 lemma ksASIDMapSafeI:
   "\<lbrakk> (s,s') \<in> state_relation; invs s; pspace_aligned' s' \<and> pspace_distinct' s' \<rbrakk>
   \<Longrightarrow> ksASIDMapSafe s'"
@@ -869,8 +871,9 @@ lemma modify_pde_psp_no_overlap':
    modify (ksPSpace_update (\<lambda>ps. ps(ptr \<mapsto> KOArch (KOPDE new_pde))))
    \<lbrace>\<lambda>a. pspace_no_overlap' ptr' sz\<rbrace>"
   proof -
-  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  note [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
+                    atLeastatMost_subset_iff atLeastLessThan_iff
+                    Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   show ?thesis
   apply (clarsimp simp:simpler_modify_def ko_wp_at'_def
     valid_def typ_at'_def)
@@ -990,9 +993,9 @@ lemma storePDE_placeNewObject_commute:
    done
 
 lemma cte_wp_at_modify_pde:
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
+  notes [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
+                     atLeastatMost_subset_iff atLeastLessThan_iff
+                     Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   shows
   "\<lbrakk>ksPSpace s ptr' = Some (KOArch (KOPDE pde)); pspace_aligned' s;cte_wp_at' \<top> ptr s\<rbrakk>
        \<Longrightarrow> cte_wp_at' \<top> ptr (s\<lparr>ksPSpace := (ksPSpace s)(ptr' \<mapsto> (KOArch (KOPDE pde')))\<rparr>)"
@@ -1027,9 +1030,9 @@ lemma cte_wp_at_modify_pde:
   done
 
 lemma storePDE_setCTE_commute:
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
+  notes [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
+                     atLeastatMost_subset_iff atLeastLessThan_iff
+                     Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   shows "monad_commute
      (pde_at' ptr and pspace_distinct' and pspace_aligned' and
       cte_wp_at' (\<lambda>_. True) src)
@@ -1272,18 +1275,18 @@ lemma createObject_gsUntypedZeroRanges_commute[Detype_R_assms]:
                    placeNewDataObject_def
                    placeNewObject_def2 bind_assoc fail_commute
                    return_commute toAPIType_def
-              split: option.split apiobject_type.split object_type.split)
+            split: option.split apiobject_type.split object_type.split)
   apply (strengthen monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"],
-          OF _ _ hoare_vcg_prop, THEN commute_commute]
-      monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"],
-          OF _ _ hoare_vcg_prop]
-     | simp add: modify_commute createObjects_gsUntypedZeroRanges_commute'
-                 createObjects_gsUntypedZeroRanges_commute'[THEN commute_commute]
-                 return_commute return_commute[THEN commute_commute]
-                 threadSet_gsUntypedZeroRanges_commute'[THEN commute_commute]
-                 dmo_gsUntypedZeroRanges_commute
-                 copyGlobalMappings_gsUntypedZeroRanges_commute'[THEN commute_commute]
-          split: option.split prod.split cong: if_cong)+
+                                            OF _ _ hoare_vcg_prop, THEN commute_commute]
+                    monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"],
+                                            OF _ _ hoare_vcg_prop]
+         | simp add: modify_commute createObjects_gsUntypedZeroRanges_commute'
+                     createObjects_gsUntypedZeroRanges_commute'[THEN commute_commute]
+                     return_commute return_commute[THEN commute_commute]
+                     threadSet_gsUntypedZeroRanges_commute'[THEN commute_commute]
+                     dmo_gsUntypedZeroRanges_commute
+                     copyGlobalMappings_gsUntypedZeroRanges_commute'[THEN commute_commute]
+              split: option.split prod.split cong: if_cong)+
   apply (simp add: curDomain_def monad_commute_def exec_modify exec_gets)
   done
 
@@ -1334,7 +1337,7 @@ lemma createNewCaps_pspace_no_overlap'[Detype_R_2_assms]:
      apply (rule pspace_no_overlap'_tail)
          apply simp+
     apply (simp add:range_cover_def)
-   apply (simp add:range_cover.sz(1)[where 'a=32, folded word_bits_def])
+   apply (simp add:range_cover.sz(1)[where 'a=machine_word_len, folded word_bits_def])
   apply (rule_tac Q'="\<lambda>r. pspace_no_overlap' (ptr + (1 + of_nat n << Types_H.getObjectSize ty us))
                                               (Types_H.getObjectSize ty us) and
                            pspace_aligned' and pspace_distinct'" in hoare_strengthen_post)

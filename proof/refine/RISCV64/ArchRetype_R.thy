@@ -823,7 +823,8 @@ lemma createNewCaps_pspace_domain_valid[Retype_R_assms, wp]:
   apply (auto simp: objBits_simps APIType_capBits_def field_simps mult_2_right bit_simps)
   done
 
-(* safe for generic context, and requalifying object_type.inject would yield "inject" *)
+(* safe for generic context, and we can't requalify object_type.inject as that would
+   result in it being named "inject" *)
 lemma object_type_inject[Retype_R_assms]:
   "(APIObjectType x = APIObjectType y) = (x = y)"
   by simp

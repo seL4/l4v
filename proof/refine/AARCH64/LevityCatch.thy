@@ -49,9 +49,15 @@ lemmas makeObject_simps =
   makeObject_endpoint makeObject_notification makeObject_cte
   makeObject_tcb makeObject_user_data makeObject_pte makeObject_asidpool
 
-lemma to_from_apiType[simp]: "toAPIType (fromAPIType x) = Some x"
+lemma to_from_apiType[simp]:
+  "toAPIType (fromAPIType x) = Some x"
   by (cases x) (auto simp: fromAPIType_def toAPIType_def)
 
 end
+
+arch_requalify_facts
+  to_from_apiType (* FIXME arch-split: LevityCatch not split yet *)
+
+lemmas [simp] = to_from_apiType
 
 end

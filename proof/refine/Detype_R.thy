@@ -9,8 +9,6 @@ theory Detype_R
 imports ArchRetype_R
 begin
 
-arch_requalify_facts to_from_apiType (* FIXME arch-split: LevityCatch not split yet *)
-
 (* FIXME arch-split: move, but where to? *)
 lemmas unat_of_nat_eq_mw = unat_of_nat_eq[where 'a=machine_word_len, folded word_bits_def]
 lemmas unat_minus_one_word_mw = unat_minus_one_word[where 'a=machine_word_len, folded word_bits_def]
@@ -768,7 +766,7 @@ lemma non_null_present:
   apply blast
   done
 
-lemma cte_cap:
+lemma delete_ex_cte_cap_to':
   "ex_cte_cap_to' p s' \<Longrightarrow> ex_cte_cap_to' p state'"
   apply (clarsimp simp: ex_cte_cap_to'_def)
   apply (frule non_null_present [OF cte_wp_at_weakenE'])
@@ -862,15 +860,15 @@ lemma is_chunk[elim!]:
   done
 
 lemma delete_ko_wp_at':
-  assumes    objs: "ko_wp_at' P p s' \<and> ex_nonz_cap_to' p s'"
-  shows      "ko_wp_at' P p state'"
+  assumes objs: "ko_wp_at' P p s' \<and> ex_nonz_cap_to' p s'"
+  shows "ko_wp_at' P p state'"
   using objs
   by (clarsimp simp: ko_wp_at'_def ps_clear_def dom_if_None Diff_Int_distrib
     dest!: ex_nonz_cap_notRange)
 
 lemma null_filter':
-  assumes  descs: "Q (null_filter' (ctes_of s'))"
-  shows    "Q (null_filter' (ctes_of state'))"
+  assumes descs: "Q (null_filter' (ctes_of s'))"
+  shows "Q (null_filter' (ctes_of state'))"
   using descs ifunsafe
   apply (clarsimp elim!: rsubst[where P=Q])
   apply (rule ext)
@@ -885,12 +883,6 @@ lemma null_filter':
    apply (case_tac y,simp)
   apply simp
   done
-
-lemma delete_ex_cte_cap_to':
-  assumes  exc: "ex_cte_cap_to' p s'"
-  shows    "ex_cte_cap_to' p state'"
-  using exc
-  by (clarsimp elim!: cte_cap)
 
 end (* delete_locale_gen *)
 
@@ -1025,7 +1017,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
 
   from ifunsafe show "if_unsafe_then_cap' ?s"
     by (clarsimp simp: if_unsafe_then_cap'_def
-               intro!: cte_cap)
+               intro!: delete_ex_cte_cap_to')
 
   from idle_notRange refs
   have "ksIdleThread s' \<notin> ?ran"
@@ -1268,11 +1260,13 @@ qed
 end (* delete_locale_gen_2 *)
 
 lemma cNodeNoPartialOverlap:
-  "corres dc (\<lambda>s. \<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s
-                     \<and> valid_objs s \<and> pspace_aligned s)
+  "corres dc
+     (\<lambda>s. \<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s
+                 \<and> valid_objs s \<and> pspace_aligned s)
      \<top>
-    (return x) (stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s)
-       (\<lambda>x. base \<le> x \<and> x \<le> base + mask magnitude)) [])"
+     (return x)
+     (stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s)
+                  (\<lambda>x. base \<le> x \<and> x \<le> base + mask magnitude)) [])"
   apply (simp add: stateAssert_def assert_def)
   apply (rule corres_symb_exec_r[OF _ get_sp])
     apply (rule corres_req[rotated], subst if_P, assumption)
@@ -2082,9 +2076,9 @@ lemma setCTE_placeNewObject_commute:
 
 lemma doMachineOp_upd_heap_commute:
   "monad_commute \<top> (doMachineOp x) (modify (ksPSpace_update P))"
-  apply (clarsimp simp:doMachineOp_def split_def simpler_modify_def
-    gets_def get_def return_def bind_def select_f_def)
-  apply (clarsimp simp:monad_commute_def bind_def return_def)
+  apply (clarsimp simp: doMachineOp_def split_def simpler_modify_def
+                        gets_def get_def return_def bind_def select_f_def)
+  apply (clarsimp simp: monad_commute_def bind_def return_def)
   apply fastforce
   done
 
@@ -2439,6 +2433,7 @@ lemma createObjects_gsUntypedZeroRanges_commute':
   apply (simp add: monad_commute_def exec_modify exec_gets assert_def)
   done
 
+(* FIXME: move *)
 lemma assert_commute2:
   "empty_fail f \<Longrightarrow> monad_commute \<top> (assert G) f"
   apply (clarsimp simp:assert_def monad_commute_def)
@@ -2468,6 +2463,7 @@ lemma dmo_gsUntypedZeroRanges_commute:
   apply monad_eq
   by (auto simp: select_f_def)
 
+(* FIXME: move *)
 lemma monad_commute_If_rhs:
   "monad_commute P a b \<Longrightarrow> monad_commute Q a c
    \<Longrightarrow> monad_commute (\<lambda>s. (R \<longrightarrow> P s) \<and> (\<not> R \<longrightarrow> Q s)) a (if R then b else c)"
@@ -2524,8 +2520,7 @@ locale Detype_R = (* FIXME arch-split: need to drop numbers by 1 *)
        (modify (\<lambda>s. s \<lparr> gsUntypedZeroRanges := f (gsUntypedZeroRanges s) \<rparr> ))"
   assumes createNewCaps_not_nc:
     "\<And>ty ptr n us d.
-     \<lbrace>\<top>\<rbrace>
-     createNewCaps ty ptr n us d \<lbrace>\<lambda>r s. (\<forall>cap\<in>set r. cap \<noteq> capability.NullCap)\<rbrace>"
+     \<lbrace>\<top>\<rbrace> createNewCaps ty ptr n us d \<lbrace>\<lambda>r s. (\<forall>cap\<in>set r. cap \<noteq> capability.NullCap)\<rbrace>"
 
 context Detype_R begin
 
@@ -2544,28 +2539,28 @@ lemma deleteObjects_descendants:
 
 lemma deleteObjects_invs_derivatives:
   "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p
-     and invs' and ct_active' and sch_act_simple
-     and (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s))
-     and K (bits < word_bits \<and> is_aligned ptr bits)\<rbrace>
-     deleteObjects ptr bits
+    and invs' and ct_active' and sch_act_simple
+    and (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s))
+    and K (bits < word_bits \<and> is_aligned ptr bits)\<rbrace>
+   deleteObjects ptr bits
    \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p
-     and invs' and ct_active' and sch_act_simple
-     and (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s))
-     and K (bits < word_bits \<and> is_aligned ptr bits)\<rbrace>
-     deleteObjects ptr bits
+    and invs' and ct_active' and sch_act_simple
+    and (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s))
+    and K (bits < word_bits \<and> is_aligned ptr bits)\<rbrace>
+   deleteObjects ptr bits
    \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
   "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p
-     and invs' and ct_active' and sch_act_simple
-     and (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s))
-     and K (bits < word_bits \<and> is_aligned ptr bits)\<rbrace>
-     deleteObjects ptr bits
+    and invs' and ct_active' and sch_act_simple
+    and (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s))
+    and K (bits < word_bits \<and> is_aligned ptr bits)\<rbrace>
+   deleteObjects ptr bits
    \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
   "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p
-     and invs' and ct_active' and sch_act_simple
-     and (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s))
-     and K (bits < word_bits \<and> is_aligned ptr bits)\<rbrace>
-     deleteObjects ptr bits
+    and invs' and ct_active' and sch_act_simple
+    and (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s))
+    and K (bits < word_bits \<and> is_aligned ptr bits)\<rbrace>
+   deleteObjects ptr bits
    \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
   by (safe intro!: hoare_strengthen_post[OF deleteObjects_invs'])
 
@@ -3607,9 +3602,7 @@ locale Detype_R_2 = Detype_R +
        (ptr + (of_nat n << APIType_capBits ty userSize)) userSize d
      \<lbrace>\<lambda>archCap. pspace_no_overlap'
                   (ptr + (1 + of_nat n << APIType_capBits ty userSize)) sz\<rbrace>"
-
-
-context Detype_R_2 begin
+begin
 
 lemma createNewObjects_def2:
   "\<lbrakk>dslots \<noteq> []; length ( dslots ) < 2^word_bits;
@@ -3853,7 +3846,7 @@ lemma createObject_pspace_no_overlap':
   apply (frule range_cover_offset[rotated,where p = n])
    apply simp+
   by (auto simp: word_shiftl_add_distrib field_simps shiftl_t2n elim: range_cover_le)
-     (auto simp: gen_objBits_simps APIType_capBits_generic APIType_capBits_gen_def to_from_apiType)
+     (auto simp: gen_objBits_simps APIType_capBits_generic APIType_capBits_gen_def)
 
 lemma createNewObjects_Cons:
   assumes dlength: "length dest < 2 ^ word_bits"
