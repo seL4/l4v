@@ -325,20 +325,20 @@ lemma performASIDControlInvocation_corres:
         apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
        apply (simp add: pageBits_def)
       apply (simp add: pageBits_def)
-     apply (simp add: pageBits_def)
+     apply clarsimp
+     apply (drule(1) cte_cap_in_untyped_range)
+          apply (fastforce simp: cte_wp_at_ctes_of)
+         apply assumption+
+      apply fastforce
+     apply simp
     apply clarsimp
-    apply (drule(1) cte_cap_in_untyped_range)
+    apply (drule (1) cte_cap_in_untyped_range)
          apply (fastforce simp: cte_wp_at_ctes_of)
         apply assumption+
+      apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
      apply fastforce
     apply simp
-   apply clarsimp
-   apply (drule (1) cte_cap_in_untyped_range)
-        apply (fastforce simp add: cte_wp_at_ctes_of)
-       apply assumption+
-     apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
-    apply fastforce
-   apply simp
+   apply (simp add: pageBits_def)
   apply clarsimp
   done
 
@@ -1989,7 +1989,7 @@ lemma ex_cte_not_in_untyped_range:
   "\<lbrakk>(ctes_of s) cref = Some (CTE (capability.UntypedCap d ptr bits idx) mnode);
     descendants_of' cref (ctes_of s) = {}; invs' s;
     ex_cte_cap_wp_to' (\<lambda>_. True) x s; valid_global_refs' s\<rbrakk>
-   \<Longrightarrow> x \<notin> {ptr .. ptr + 2 ^ bits - 1}"
+   \<Longrightarrow> x \<notin> {ptr .. ptr + mask bits}"
   apply clarsimp
   apply (drule(1) cte_cap_in_untyped_range)
    apply (fastforce simp:cte_wp_at_ctes_of)+

@@ -114,10 +114,8 @@ crunch cteInsert
   (wp: crunch_wps simp: cte_wp_at_ctes_of)
 
 crunch cteInsert
-  for valid_arch_state'[wp]: valid_arch_state'
+  for valid_arch_state'[CSpace_R_assms, wp]: valid_arch_state'
   (wp: crunch_wps)
-
-declare cteInsert_valid_arch_state'[CSpace_R_assms]
 
 end (* Arch *)
 

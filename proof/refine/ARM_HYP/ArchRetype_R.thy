@@ -71,6 +71,13 @@ lemma APIType_capBits_generic[Retype_R_assms, simp]:
   "APIType_capBits (APIObjectType api) us = APIType_capBits_gen api us"
   by (simp add: APIType_capBits_raw_def)
 
+lemma objSize_eq_capBits[simp, Retype_R_assms]:
+  "Types_H.getObjectSize ty us = APIType_capBits ty us"
+  by (cases ty;
+      clarsimp simp: getObjectSize_def objBits_simps
+                     APIType_capBits_def apiGetObjectSize_def vspace_bits_defs
+               split: apiobject_type.splits)
+
 definition makeObjectKO :: "bool \<Rightarrow> domain \<Rightarrow> (kernel_object + ARM_HYP_H.object_type) \<rightharpoonup> kernel_object"
   where
   makeObjectKO_raw_def:
@@ -958,6 +965,12 @@ lemma createNewCaps_pspace_domain_valid[Retype_R_assms, wp]:
             split: object_type.splits)
   apply (auto simp: objBits_simps APIType_capBits_def field_simps mult_2_right vspace_bits_defs)
   done
+
+(* safe for generic context, and we can't requalify object_type.inject as that would
+   result in it being named "inject" *)
+lemma object_type_inject[Retype_R_assms]:
+  "(APIObjectType x = APIObjectType y) = (x = y)"
+  by simp
 
 end (* Arch *)
 

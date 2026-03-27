@@ -782,9 +782,10 @@ locale CSpace_I_2 = CSpace_I +
      \<Longrightarrow> distinct_zombies (m(x \<mapsto> cte'))"
   assumes capMasterCap_maskCapRights[simp]:
     "\<And>msk cap. capMasterCap (maskCapRights msk cap) = capMasterCap cap"
-  assumes cap_table_at_gsCNodes:
+  assumes cap_table_at_gsCNodes_eq:
     "\<And>bits ptr s s'.
-     \<lbrakk> cap_table_at bits ptr s; (s, s') \<in> state_relation \<rbrakk> \<Longrightarrow> gsCNodes s' ptr = Some bits"
+     (s, s') \<in> state_relation
+     \<Longrightarrow> (gsCNodes s' ptr = Some bits) = cap_table_at bits ptr s"
   assumes distinct_zombies_copyMasterE:
     "\<And>m x cte cte' y.
      \<lbrakk> distinct_zombies m; m x = Some cte;
@@ -792,6 +793,9 @@ locale CSpace_I_2 = CSpace_I +
        \<Longrightarrow> capMasterCap (cteCap cte) = capMasterCap (cteCap cte');
        isZombie (cteCap cte') \<Longrightarrow> x = y \<rbrakk>
      \<Longrightarrow> distinct_zombies (m (y \<mapsto> cte'))"
+  assumes cte_refs_capRange:
+    "\<And>s c x.
+     \<lbrakk> s \<turnstile>' c; \<forall>irq. c \<noteq> IRQHandlerCap irq \<rbrakk> \<Longrightarrow> cte_refs' c x \<subseteq> capRange c"
 
 context CSpace_I_2 begin
 
@@ -799,6 +803,11 @@ lemma isMDBParent_Null[simp]:
   "isMDBParentOf c (CTE NullCap m) = False"
   "isMDBParentOf (CTE NullCap m) c = False"
   unfolding isMDBParentOf_def by (auto split: cte.splits)
+
+lemma cap_table_at_gsCNodes:
+  "\<lbrakk> cap_table_at bits ptr s; (s, s') \<in> state_relation \<rbrakk>
+   \<Longrightarrow> gsCNodes s' ptr = Some bits"
+  by (simp add: cap_table_at_gsCNodes_eq)
 
 lemma caps_no_overlap'_no_region:
   "\<lbrakk> caps_no_overlap' m (capRange cap); valid_objs' s;

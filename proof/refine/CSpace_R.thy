@@ -920,6 +920,8 @@ locale CSpace_R =
      \<lbrace>valid_cap' (ArchObjectCap arch_cap)\<rbrace> Arch.deriveCap u arch_cap \<lbrace>\<lambda>rv. valid_cap' rv\<rbrace>,-"
   assumes setCTE_valid_arch[wp]:
     "\<And>p c. setCTE p c \<lbrace>valid_arch_state'\<rbrace>"
+  assumes updateMDB_valid_arch_state':
+    "\<And>slot f. updateMDB slot f \<lbrace>valid_arch_state'\<rbrace>"
 begin
 
 (* this locale should satisfy all the assumptions of mdb_move_gen, so we can treat it like the

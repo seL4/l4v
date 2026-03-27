@@ -151,10 +151,8 @@ lemma setCTE_global_refs[CSpace_R_assms, wp]:
 crunch cteInsert
   for arch[wp]: "\<lambda>s. P (ksArchState s)"
   and ko_at'_pde[wp]: "\<lambda>s. P (ko_at' (pde::ARM_H.pde) p' s)"
-  and valid_arch_state'[wp]: valid_arch_state'
+  and valid_arch_state'[CSpace_R_assms, wp]: valid_arch_state'
   (wp: crunch_wps simp: cte_wp_at_ctes_of)
-
-declare cteInsert_valid_arch_state'[CSpace_R_assms]
 
 end (* Arch *)
 

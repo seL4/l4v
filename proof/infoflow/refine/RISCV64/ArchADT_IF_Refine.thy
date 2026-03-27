@@ -167,7 +167,7 @@ lemma do_user_op_if_corres[ADT_IF_Refine_assms]:
     apply (rule corres_split[where r'="(=)"])
        apply (clarsimp simp: select_def corres_underlying_def)
       apply clarsimp
-      apply (rule corres_split[OF corres_machine_op,where r'="(=)"])
+      apply (rule corres_split[OF corres_machine_op', where r'="(=)"])
          apply (rule corres_underlying_trivial)
          apply (clarsimp simp: user_memory_update_def)
          apply (rule no_fail_modify)
