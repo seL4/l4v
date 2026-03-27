@@ -2475,7 +2475,7 @@ lemma case_eq_if_isUntypedCap:
    = (if isUntypedCap c then x else y)"
   by (cases c, simp_all add: gen_isCap_simps)
 
-locale Detype_R = (* FIXME arch-split: need to drop numbers by 1 *)
+locale Detype_R =
   assumes deleteObjects_null_filter:
     "\<And>d ptr bits idx p P.
      \<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p

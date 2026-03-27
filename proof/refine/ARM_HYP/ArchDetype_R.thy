@@ -266,7 +266,7 @@ lemmas irq_nodes =
 
 sublocale delete_locale_gen by (unfold_locales; fact irq_nodes)
 
-(* used by proof below as these names in delete_locale *)
+(* re-bind these lemma names into delete_locale so that later proofs can refer to them *)
 lemmas deletionIsSafe_delete_locale_holds = deletionIsSafe_delete_locale_holds
 lemmas null_filter' = null_filter'
 lemmas delete_ko_wp_at' = delete_ko_wp_at'

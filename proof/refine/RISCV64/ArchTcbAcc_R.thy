@@ -290,7 +290,6 @@ lemmas [TcbAcc_R_assms] =
   tcb_at'_cross
   pspace_relation_update_tcbs
 
-
 end (* Arch *)
 
 interpretation TcbAcc_R?: TcbAcc_R
