@@ -13,6 +13,7 @@ begin
 lemmas unat_of_nat_eq_mw = unat_of_nat_eq[where 'a=machine_word_len, folded word_bits_def]
 lemmas unat_minus_one_word_mw = unat_minus_one_word[where 'a=machine_word_len, folded word_bits_def]
 
+(* FIXME: move to Lib *)
 lemma exists_disj:
   "((\<exists>a. P a \<and> Q a) \<or> (\<exists>a. P a \<and> Q' a)) = (\<exists>a. P a \<and> (Q a \<or> Q' a))"
   by auto
@@ -1435,7 +1436,7 @@ lemma getCTE_commute:
   assumes cte_at_modify:
    "\<And>Q. \<lbrace>\<lambda>s. P s \<and> cte_wp_at' Q dest s \<rbrace> f \<lbrace>\<lambda>a s. cte_wp_at' Q dest s\<rbrace>"
   shows "monad_commute (P and cte_at' dest) (getCTE dest) f"
-  proof -
+proof -
    have getsame: "\<And>x y s. (x,y)\<in> fst (getCTE dest s) \<Longrightarrow> y = s"
      apply (drule use_valid)
      prefer 3
@@ -2254,7 +2255,7 @@ lemma setCTE_modify_tcbDomain_commute:
   "monad_commute
     (tcb_at' ptr and cte_wp_at' (\<lambda>_. True) src and pspace_distinct' and pspace_aligned') (setCTE src cte)
     (threadSet (tcbDomain_update (\<lambda>_. ra)) ptr)"
-  proof -
+proof -
     note blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
           atLeastAtMost_iff
@@ -2910,7 +2911,7 @@ qed
 lemma pspace_no_overlap'_le2:
   assumes "pspace_no_overlap' ptr sz s" "ptr \<le> ptr'"  "ptr' &&~~ mask sz = ptr && ~~ mask sz"
   shows "pspace_no_overlap' ptr' sz s"
-  proof -
+proof -
   note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   show ?thesis
@@ -3062,7 +3063,7 @@ lemma pspace_no_overlap'_modify:
    \<lbrace>\<lambda>r. pspace_no_overlap'
           (((1::machine_word) + of_nat n << objBitsKO val + us) + ptr)
           (objBitsKO val + us)\<rbrace>"
-  proof -
+proof -
   note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   show ?thesis
@@ -3621,9 +3622,9 @@ lemma createNewObjects_def2:
     ksCurDomain s \<le> maxDomain\<rbrakk>
    \<Longrightarrow> createNewObjects ty parent dslots ptr us d s =
        insertNewCaps ty parent dslots ptr us d s"
-  supply objSize_eq_capBits[simp del]
-  apply (clarsimp simp:insertNewCaps_def createNewObjects_def neq_Nil_conv)
-  proof -
+proof (clarsimp simp: insertNewCaps_def createNewObjects_def neq_Nil_conv
+                simp del: objSize_eq_capBits)
+  note objSize_eq_capBits[simp del]
   fix y ys
   have list_inc:  "\<And>n. [0.e.Suc n] = [0 .e. n] @ [n+1]"
     by simp
@@ -3855,7 +3856,7 @@ lemma createNewObjects_Cons:
      (RetypeDecls_H.createObject ty ((of_nat (length dest) << APIType_capBits ty us) + ptr) us d
        >>= insertNewCap src lt)
   od"
-  proof -
+proof -
     from dlength
     have expand:"dest\<noteq>[] \<longrightarrow> [(0::machine_word) .e. of_nat (length dest)]
       = [0.e.of_nat (length dest - 1)] @ [of_nat (length dest)]"

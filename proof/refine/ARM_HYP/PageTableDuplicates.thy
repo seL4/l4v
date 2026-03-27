@@ -778,8 +778,7 @@ lemma createNewObjects_pspace_no_overlap':
   createNewObjects ty src dests ptr us d
   \<lbrace>\<lambda>rv s.  pspace_aligned' s \<and> pspace_distinct' s
            \<and> pspace_no_overlap' ((of_nat (length dests) << APIType_capBits ty us) + ptr) sz s\<rbrace>"
-  apply (rule hoare_gen_asm)+
-  proof (induct rule:rev_induct )
+proof ((rule hoare_gen_asm)+, induct rule: rev_induct )
     case Nil
     show ?case
       by (simp add:createNewObjects_def zipWithM_x_mapM mapM_Nil | wp)+

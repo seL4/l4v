@@ -870,7 +870,7 @@ lemma modify_pde_psp_no_overlap':
   "\<lbrace>pde_at' ptr and pspace_no_overlap' ptr' sz\<rbrace>
    modify (ksPSpace_update (\<lambda>ps. ps(ptr \<mapsto> KOArch (KOPDE new_pde))))
    \<lbrace>\<lambda>a. pspace_no_overlap' ptr' sz\<rbrace>"
-  proof -
+proof -
   note [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
                     atLeastatMost_subset_iff atLeastLessThan_iff
                     Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
@@ -888,7 +888,7 @@ lemma modify_pde_psp_no_overlap':
   apply (drule(1) pspace_no_overlapD')+
   apply (simp add: field_simps mask_def)
   done
-  qed
+qed
 
 lemma koTypeOf_pde:
   "koTypeOf ko = ArchT PDET \<Longrightarrow> \<exists>pde. ko = KOArch (KOPDE pde)"
@@ -900,7 +900,7 @@ lemma koTypeOf_pde:
 lemma doMachineOp_storePDE_commute:
   "monad_commute (pde_at' src) (doMachineOp f)
                  (storePDE src (new_pde::ARM_H.pde))"
-  proof -
+proof -
   have  eq_fail: "\<And>sa ks. snd (doMachineOp f (sa\<lparr>ksPSpace := ks\<rparr>)) = snd (doMachineOp f sa)"
     apply (clarsimp simp:doMachineOp_def bind_def return_def gets_def
       get_def simpler_modify_def select_def)
@@ -939,7 +939,7 @@ lemma doMachineOp_storePDE_commute:
     apply (clarsimp simp:eq_fail)
    apply auto
   done
-  qed
+qed
 
 lemma storePDE_placeNewObject_commute:
   "monad_commute
@@ -993,13 +993,12 @@ lemma storePDE_placeNewObject_commute:
    done
 
 lemma cte_wp_at_modify_pde:
-  notes [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
-                     atLeastatMost_subset_iff atLeastLessThan_iff
-                     Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-  shows
   "\<lbrakk>ksPSpace s ptr' = Some (KOArch (KOPDE pde)); pspace_aligned' s;cte_wp_at' \<top> ptr s\<rbrakk>
        \<Longrightarrow> cte_wp_at' \<top> ptr (s\<lparr>ksPSpace := (ksPSpace s)(ptr' \<mapsto> (KOArch (KOPDE pde')))\<rparr>)"
   supply projectKOs[simp del]
+  supply [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
+                      atLeastatMost_subset_iff atLeastLessThan_iff
+                      Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   apply (simp add:cte_wp_at_obj_cases_mask obj_at'_real_def)
   apply (frule(1) pspace_alignedD')
   apply (elim disjE)
@@ -1030,13 +1029,13 @@ lemma cte_wp_at_modify_pde:
   done
 
 lemma storePDE_setCTE_commute:
-  notes [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
-                     atLeastatMost_subset_iff atLeastLessThan_iff
-                     Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-  shows "monad_commute
+  "monad_commute
      (pde_at' ptr and pspace_distinct' and pspace_aligned' and
       cte_wp_at' (\<lambda>_. True) src)
      (setCTE src cte) (storePDE ptr (new_pde::ARM_H.pde))"
+  supply [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
+                      atLeastatMost_subset_iff atLeastLessThan_iff
+                      Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   apply (rule commute_name_pre_state)
   apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
   apply (case_tac ko,simp_all)
