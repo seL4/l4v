@@ -725,6 +725,7 @@ end
             struct_fields wrap * struct_id_decl wrap list
         | struct_declaration of struct_fields wrap * struct_id_decl wrap list
         | type_definition  of declaration
+        | static_assert_declaration of declaration wrap
         | elementary_type of expr ctype
         | integral_type of inttype wrap
         | type_name of expr ctype wrap
@@ -842,6 +843,7 @@ end
     | DONT_TRANSLATE
     | STRING_LITERAL of string
     | SPEC_BLOCKEND
+    | STATIC_ASSERT
     | GCC_ATTRIBUTE
     | YASM
     | YREGISTER
@@ -997,6 +999,13 @@ declaration
                  end) *)
 | declaration_specifiers init_declarator_list YSEMI
                 (make_declaration declaration_specifiers init_declarator_list)
+| static_assert_declaration ([static_assert_declaration])
+
+(* 6.7.10 and/or §A.2.2 ``static_assert-declaration: _Static_assert ( constant-expression , string-literal ) ;'' *)
+(* constant-expression is modelled as rexpression (c.f. "enumerator") *)
+static_assert_declaration
+: STATIC_ASSERT LPAREN rexpression YCOMMA cstring_literal RPAREN YSEMI
+                (wrap(StaticAssertion { condition = rexpression, message = cstring_literal }, eleft rexpression, eright rexpression))
 
 declaration_specifiers
 : storage_class_specifier
@@ -1187,6 +1196,8 @@ struct_declaration
                          left basetype, right struct_declarator_list),
                     sdecls)
                  end)
+(* per the C11 spec this should be allowed but let's not for simplicity *)
+(* | static_assert_declaration () *)
 
 struct_declarator_list :
    struct_declarator (wrap ([node struct_declarator], left struct_declarator,
