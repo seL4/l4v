@@ -1164,10 +1164,10 @@ lemma createNewObjects_no_orphans:
    createNewObjects tp cref slots ptr us d
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (rule hoare_name_pre_state)
-  apply clarsimp
+  apply (clarsimp simp: add_mask_fold)
   apply (rule hoare_pre)
    apply (rule createNewObjects_wp_helper)
-       apply simp+
+       apply (simp add: canonical_address_def)+
    apply (simp add:insertNewCaps_def)
    apply wp
     apply (rule_tac P = "length caps = length slots" in hoare_gen_asm)
@@ -1856,7 +1856,8 @@ lemma performASIDControlInvocation_no_orphans [wp]:
   apply (clarsimp simp: is_active_thread_state_def makeObject_tcb valid_aci'_def
                         cte_wp_at_ctes_of invs_pspace_aligned' invs_pspace_distinct'
                         projectKO_opt_tcb isRunning_def isRestart_def conj_comms
-                        invs_valid_pspace' vc objBits_simps archObjSize_def range_cover.aligned)
+                        invs_valid_pspace' vc objBits_simps archObjSize_def range_cover.aligned
+                        add_mask_fold)
   apply (intro conjI)
     apply (rule vc)
    apply (simp add:descendants_range'_def2)
