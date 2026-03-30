@@ -1004,7 +1004,7 @@ lemma setThreadState_state_hyp_refs_of'[TcbAcc_R_2_assms, wp]:
      setThreadState st t
    \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   apply (simp add: setThreadState_def fun_upd_def
-        | wp threadSet_state_hyp_refs_of')+
+        | wp threadSet_state_hyp_refs_of' hoare_drop_imps)+
   done
 
 lemma setBoundNotification_state_refs_of'[wp]:
