@@ -233,23 +233,38 @@ def parse_physBase(l4v_arch: str, devices_gen_h_file: str) -> str:
 
 def parse_maxIRQ(l4v_arch: str, platform_gen_h_file: str) -> str:
     """
-    Parse platform_gen.h for Arm platforms to extract the value of maxIRQ.
+    Parse platform_gen.h to extract the value of maxIRQ.
     This value is expected to be set to a number literal in an enum.
     """
-    # fixed value on X64, and different way of setting the value on RISCV64
-    if l4v_arch == 'X64' or l4v_arch == 'RISCV64':
+    # fixed value on X64
+    if l4v_arch == 'X64':
         return None
 
-    maxIRQ_re = re.compile(r'maxIRQ[\t ]+= ([0-9]+)')
+    if l4v_arch == 'ARM' or l4v_arch == 'ARM_HYP' or l4v_arch == 'AARCH64':
+        maxIRQ_re = re.compile(r'maxIRQ[\t ]+= ([0-9]+)')
+    elif l4v_arch == 'RISCV64':
+        maxIRQ_re = re.compile(r'PLIC_MAX_IRQ = PLIC_IRQ_OFFSET \+ \(([0-9]+)\)')
+    else:
+        raise Exception(f'Unsupported architecture {l4v_arch} for parsing maxIRQ')
 
+    maxIRQ = None
     with open(platform_gen_h_file, 'r') as f:
         for line in f:
             line = line.strip()
             m = maxIRQ_re.match(line)
             if m:
-                return m.group(1)
+                maxIRQ = m.group(1)
 
-    raise Exception(f'Could not find maxIRQ in {platform_gen_h_file}')
+    if maxIRQ is None:
+        raise Exception(f'Could not find maxIRQ in {platform_gen_h_file}')
+
+    if l4v_arch == 'RISCV64':
+        # On RISC-V, maxIRQ is defined as PLIC_MAX_IRQ + 1. PLIC_MAX_IRQ is the
+        # number we have just extracted (because PLIC_IRQ_OFFSET is 0), so we
+        # still need to add 1.
+        maxIRQ = str(int(maxIRQ) + 1)
+
+    return maxIRQ
 
 
 def parse_irqBits(l4v_arch: str, platform_gen_h_file: str) -> str:
