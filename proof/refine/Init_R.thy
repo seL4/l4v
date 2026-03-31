@@ -1,5 +1,6 @@
 (*
  * Copyright 2021, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2023, Proofcraft Pty Ltd
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
@@ -7,10 +8,7 @@
 theory Init_R
 imports
   ArchKHeap_R
-
 begin
-
-context begin interpretation Arch . (*FIXME: arch-split*)
 
 (*
   This provides a very simple witness that the state relation used in the first refinement proof is
@@ -28,20 +26,15 @@ context begin interpretation Arch . (*FIXME: arch-split*)
   system.
 *)
 
-definition zeroed_arch_abstract_state :: arch_state where
-  "zeroed_arch_abstract_state \<equiv> \<lparr>
-    x64_asid_table         = Map.empty,
-    x64_global_pml4        = 0,
-    x64_kernel_vspace      = K X64VSpaceUserRegion,
-    x64_global_pts         = [],
-    x64_global_pdpts       = [],
-    x64_global_pds         = [],
-    x64_current_cr3        = cr3 0 0 ,
-    x64_allocated_io_ports = \<bottom>,
-    x64_num_ioapics        = 0,
-    x64_ioapic_nirqs       = K 0,
-    x64_irq_state          = K IRQFree,
-    x64_current_fpu_owner = None\<rparr>"
+locale Init_R =
+  fixes zeroed_arch_abstract_state :: arch_state
+  fixes zeroed_arch_intermediate_state :: Arch.kernel_state
+  assumes non_empty_refine_arch_state_relation:
+    "(zeroed_arch_abstract_state, zeroed_arch_intermediate_state) \<in> arch_state_relation"
+  (* the None maps are a result of unfolding zeroed_main_abstract_state *)
+  assumes ghost_relation_wrapper_arch_intermediate_state:
+    "ghost_relation_wrapper_2 (\<lambda>_. None) (\<lambda>_. None) (\<lambda>_. None) zeroed_arch_intermediate_state"
+begin
 
 definition zeroed_main_abstract_state :: abstract_state where
   "zeroed_main_abstract_state \<equiv> \<lparr>
@@ -60,8 +53,7 @@ definition zeroed_main_abstract_state :: abstract_state where
     machine_state = init_machine_state,
     interrupt_irq_node = (\<lambda>irq. ucast irq << cte_level_bits),
     interrupt_states = (K irq_state.IRQInactive),
-    arch_state = zeroed_arch_abstract_state
-  \<rparr>"
+    arch_state = zeroed_arch_abstract_state\<rparr>"
 
 definition zeroed_extended_state :: det_ext where
   "zeroed_extended_state \<equiv> \<lparr>
@@ -72,10 +64,6 @@ definition zeroed_extended_state :: det_ext where
 definition zeroed_abstract_state :: det_state where
   "zeroed_abstract_state \<equiv> abstract_state.extend zeroed_main_abstract_state
                            (state.fields zeroed_extended_state)"
-
-definition zeroed_arch_intermediate_state :: Arch.kernel_state where
-  "zeroed_arch_intermediate_state \<equiv> X64KernelState Map.empty 0 [] [] [] (CR3 0 0)
-     (K X64VSpaceUserRegion) \<bottom> 0 (K 0) (K X64IRQFree) None"
 
 definition zeroed_intermediate_state :: global.kernel_state where
   "zeroed_intermediate_state \<equiv> \<lparr>
@@ -102,9 +90,8 @@ definition zeroed_intermediate_state :: global.kernel_state where
   \<rparr>"
 
 lemmas zeroed_state_defs = zeroed_main_abstract_state_def zeroed_abstract_state_def
-                           zeroed_arch_abstract_state_def zeroed_extended_state_def
+                           zeroed_extended_state_def
                            zeroed_intermediate_state_def abstract_state.defs
-                           zeroed_arch_intermediate_state_def
 
 lemma non_empty_refine_state_relation:
   "(zeroed_abstract_state, zeroed_intermediate_state) \<in> state_relation"
@@ -114,13 +101,14 @@ lemma non_empty_refine_state_relation:
         apply (clarsimp simp: ready_queues_relation_def ready_queue_relation_def queue_end_valid_def
                               opt_pred_def list_queue_relation_def emptyHeadEndPtrs_def Let_def
                               headEndPtrsEmpty_def prev_queue_head_def)
-       apply (clarsimp simp: ghost_relation_def)
+       apply (clarsimp simp: ghost_relation_wrapper_arch_intermediate_state)
       apply (fastforce simp: cdt_relation_def swp_def dest: cte_wp_at_domI)
      apply (clarsimp simp: cdt_list_relation_def map_to_ctes_def)
     apply (clarsimp simp: revokable_relation_def map_to_ctes_def)
-   apply (fastforce simp: zeroed_state_defs arch_state_relation_def cr3_relation_def x64_irq_relation_def)
+   apply (clarsimp simp: zeroed_state_defs non_empty_refine_arch_state_relation)
   apply (clarsimp simp: interrupt_state_relation_def irq_state_relation_def cte_level_bits_def)
   done
 
-end
+end (* Init_R *)
+
 end
