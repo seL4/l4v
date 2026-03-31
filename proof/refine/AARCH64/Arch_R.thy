@@ -809,6 +809,16 @@ lemma get_vcpu_LR_corres[corres]:
   apply (clarsimp simp: vcpu_relation_def vgic_map_def)
   done
 
+lemma isVIRQActive_eq[simp]:
+  "isVIRQActive = is_virq_active"
+  unfolding isVIRQActive_def is_virq_active_def
+  by simp
+
+lemma makeVIRQ_eq[simp]:
+  "makeVIRQ = make_virq"
+  unfolding make_virq_def makeVIRQ_def
+  by (clarsimp simp: virq_type_shift_def eoiirqen_shift_def virqTypeShift_def eoiirqenShift_def)
+
 lemma decodeARMVCPUInvocation_corres:
   "\<lbrakk>acap_relation arch_cap arch_cap'; list_all2 cap_relation (map fst excaps) (map fst excaps');
     list_all2 (\<lambda>s s'. s' = cte_map s) (map snd excaps) (map snd excaps')\<rbrakk> \<Longrightarrow>

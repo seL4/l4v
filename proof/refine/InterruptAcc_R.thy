@@ -1,5 +1,7 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2023, Proofcraft Pty Ltd
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
@@ -7,6 +9,22 @@
 theory InterruptAcc_R
 imports TcbAcc_R
 begin
+
+arch_requalify_facts
+  no_fail_maskInterrupt (* from Machine_AI *)
+  no_fail_getActiveIRQ (* from Machine_AI *)
+
+lemmas [wp] = no_fail_maskInterrupt no_fail_getActiveIRQ
+
+(* FIXME: move to Nondet_Monad_Equations *)
+lemma exec_liftE_get:
+  "(liftE get >>=E f) x = f x x"
+  by monad_eq
+
+(* FIXME: move to Nondet_Monad_Equations *)
+lemma liftE_get_whenE:
+  "(doE rv \<leftarrow> liftE get; whenE (P rv) g odE) = (doE rv \<leftarrow> liftE (gets P); whenE rv g odE)"
+  by monad_eq
 
 lemma getIRQSlot_corres:
   "corres (\<lambda>sl sl'. sl' = cte_map sl) \<top> \<top> (get_irq_slot irq) (getIRQSlot irq)"
@@ -17,13 +35,6 @@ lemma getIRQSlot_corres:
   apply (simp add: cte_map_def cte_level_bits_def
                    ucast_nat_def shiftl_t2n)
   done
-
-crunch get_irq_slot
-  for inv[wp]: "P"
-crunch getIRQSlot
-  for inv[wp]: "P"
-
-context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma setIRQState_corres:
   "irq_state_relation state state' \<Longrightarrow>
@@ -41,30 +52,29 @@ lemma setIRQState_corres:
         apply (clarsimp simp: interrupt_state_relation_def)
        apply (rule corres_machine_op)
        apply (rule corres_Id | simp)+
-       apply (rule no_fail_maskInterrupt)
-      apply (wp | simp)+
+      apply wpsimp+
   apply (clarsimp simp: irq_state_relation_def
                  split: irq_state.split_asm irqstate.split_asm)
   done
 
 lemma setIRQState_invs[wp]:
-  "\<lbrace>\<lambda>s. invs' s \<and> (state \<noteq> IRQSignal \<longrightarrow> IRQHandlerCap irq \<notin> ran (cteCaps_of s)) \<and> (state \<noteq> IRQInactive \<longrightarrow> irq \<le> maxIRQ)\<rbrace>
+  "\<lbrace>\<lambda>s. invs' s \<and> (state \<noteq> IRQSignal \<longrightarrow> IRQHandlerCap irq \<notin> ran (cteCaps_of s)) \<and>
+        (state \<noteq> IRQInactive \<longrightarrow> irq \<le> maxIRQ)\<rbrace>
       setIRQState state irq
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: setIRQState_def setInterruptState_def getInterruptState_def)
   apply (wp dmo_maskInterrupt)
   apply (clarsimp simp: invs'_def valid_state'_def cur_tcb'_def
                         valid_idle'_def valid_irq_node'_def
-                        valid_arch_state'_def valid_global_refs'_def
-                        global_refs'_def valid_machine_state'_def
+                        valid_global_refs'_def valid_machine_state'_def
                         if_unsafe_then_cap'_def ex_cte_cap_to'_def
                         valid_irq_handlers'_def irq_issued'_def
                         cteCaps_of_def valid_irq_masks'_def
-                        bitmapQ_defs valid_bitmaps_def)
+                        bitmapQ_defs valid_bitmaps_def
+                  split: option.splits)
   apply (rule conjI, clarsimp)
   apply (clarsimp simp: irqs_masked'_def ct_not_inQ_def)
-  apply (rule conjI)
-   apply fastforce
+  apply (rule conjI, fastforce)
   apply (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
   done
 
@@ -72,8 +82,8 @@ lemma getIRQSlot_real_cte[wp]:
   "\<lbrace>invs'\<rbrace> getIRQSlot irq \<lbrace>real_cte_at'\<rbrace>"
   apply (simp add: getIRQSlot_def getInterruptState_def locateSlot_conv)
   apply wp
-  apply (clarsimp simp: invs'_def valid_state'_def valid_irq_node'_def
-                        cte_level_bits_def ucast_nat_def cteSizeBits_def shiftl_t2n)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_irq_node'_def shiftl_t2n
+                        cteSizeBits_cte_level_bits)
   done
 
 lemma getIRQSlot_cte_at[wp]:
@@ -94,20 +104,6 @@ lemma work_units_and_irq_state_state_relationI [intro!]:
     s' \<lparr> ksWorkUnitsCompleted := n, ksMachineState := ksMachineState s' \<lparr> irq_state := f (irq_state (ksMachineState s')) \<rparr>\<rparr>)
    \<in> state_relation"
   by (simp add: state_relation_def swp_def)
-
-lemma preemptionPoint_corres:
-  "corres (dc \<oplus> dc) \<top> \<top> preemption_point preemptionPoint"
-  apply (simp add: preemption_point_def preemptionPoint_def)
-  by (auto simp: preemption_point_def preemptionPoint_def o_def gets_def liftE_def whenE_def getActiveIRQ_def
-                 corres_underlying_def select_def bind_def get_def bindE_def select_f_def modify_def
-                 alternative_def throwError_def returnOk_def return_def lift_def doMachineOp_def split_def
-                 put_def getWorkUnits_def setWorkUnits_def modifyWorkUnits_def do_machine_op_def
-
-                 update_work_units_def wrap_ext_bool_det_ext_ext_def work_units_limit_def workUnitsLimit_def
-                 work_units_limit_reached_def OR_choiceE_def reset_work_units_def mk_ef_def
-           elim: state_relationE)
-  (* what? *)
-  (* who says our proofs are not automatic.. *)
 
 lemma preemptionPoint_inv:
   assumes "(\<And>f s. P (ksWorkUnitsCompleted_update f s) = P s)"
@@ -148,9 +144,9 @@ lemma invs'_irq_state_independent [simp, intro!]:
           valid_queues_def sym_refs_def state_refs_of'_def
           if_live_then_nonz_cap'_def if_unsafe_then_cap'_def
           valid_idle'_def valid_global_refs'_def
-          valid_arch_state'_def valid_irq_node'_def
+          valid_irq_node'_def
           valid_irq_handlers'_def valid_irq_states'_def
-          irqs_masked'_def bitmapQ_defs valid_pde_mappings'_def
+          irqs_masked'_def bitmapQ_defs valid_bitmaps_def
           pspace_domain_valid_def cur_tcb'_def
           valid_machine_state'_def tcb_in_cur_domain'_def
           ct_not_inQ_def ct_idle_or_in_cur_domain'_def
@@ -166,5 +162,31 @@ lemma preemptionPoint_invs [wp]:
   "\<lbrace>invs'\<rbrace> preemptionPoint \<lbrace>\<lambda>_. invs'\<rbrace>"
   by (wp preemptionPoint_inv | clarsimp)+
 
-end
+lemma setWorkUnits_corres[corres]:
+  "corres dc \<top> \<top> reset_work_units (setWorkUnits 0)"
+  unfolding reset_work_units_def setWorkUnits_def
+  by (rule corres_modify_tivial)
+     (clarsimp simp: state_relation_def)
+
+lemma preemptionPoint_corres:
+  "corres (dc \<oplus> dc) \<top> \<top> preemption_point preemptionPoint"
+  unfolding preemption_point_def preemptionPoint_def
+  (* we need to transform the OR_choice_E into a gets + whenE to match concrete side *)
+  apply (clarsimp simp: OR_choiceE_def split_def wrap_ext_bool_det_ext_ext_def ef_mk_ef
+                        select_from_gets
+                        work_units_limit_reached_def[simplified gets_return_gets_eq])
+  apply (simp add: liftE_get_whenE flip: returnOk_liftE whenE_def)
+  (* update_work_units *)
+  apply (rule corres_initial_splitE[where r'=dc])
+     apply (corres simp: update_work_units_def modifyWorkUnits_def)
+    (* consolidate whenE conditions *)
+    apply (clarsimp simp: getWorkUnits_def liftE_bindE)
+    apply (rule_tac r'="\<lambda>ex workUnits. ex = (FaultMonad_H.workUnitsLimit \<le> workUnits)"
+                 in corres_split[where P=\<top> and P'=\<top>])
+       apply (clarsimp dest!: state_relationD simp: work_units_limit_def workUnitsLimit_def)
+      (* whenE + body *)
+      apply (corres corres: corres_machine_op_Id_eq corres_returnOk
+             | corres_cases_both)+
+  done
+
 end

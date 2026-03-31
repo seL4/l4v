@@ -784,6 +784,11 @@ lemma not_pred_tcb':
   "(\<not>pred_tcb_at' proj P t s) = (\<not>tcb_at' t s \<or> pred_tcb_at' proj (\<lambda>a. \<not>P a) t s)"
   by (auto simp: pred_tcb_at'_def obj_at'_def)
 
+lemma virqSetEOIIRQEN_eq[simp]:
+  "AARCH64_H.virqSetEOIIRQEN = AARCH64_A.virqSetEOIIRQEN"
+  unfolding virqSetEOIIRQEN_def AARCH64_A.virqSetEOIIRQEN_def eoiirqenShift_def eoiirqen_shift_def
+  by (simp cong: if_cong)
+
 lemma vgic_maintenance_corres [corres]:
   "corres dc einvs
     (\<lambda>s. invs' s \<and> sch_act_not (ksCurThread s) s)

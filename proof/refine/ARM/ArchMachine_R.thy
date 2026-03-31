@@ -16,7 +16,7 @@ context Arch begin arch_global_naming
 
 named_theorems Machine_R_assms
 
-lemma dmo_getirq_inv[wp]:
+lemma dmo_getirq_inv[Machine_R_assms, wp]:
   "irq_state_independent_H P \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: getActiveIRQ_def doMachineOp_def split_def exec_gets
                    select_f_select[simplified liftM_def]

@@ -183,6 +183,11 @@ lemma msgInfoRegister_msg_info_register[StateRelation_R_assms]:
   "msgInfoRegister = msg_info_register"
   by (simp add: msg_info_register_def msgInfoRegister_def)
 
+lemma virqType_eq[simp]:
+  "virqType = virq_type"
+  unfolding virqType_def virq_type_def virq_type_shift_def virqTypeShift_def
+  by simp
+
 end
 
 global_interpretation StateRelation_R?: StateRelation_R
