@@ -259,8 +259,8 @@ lemma tcb_append_valid_ep':
         \<and> valid_ep ep s\<rbrace>
    tcb_append t q
    \<lbrace>\<lambda>q'. valid_ep (update_ep_queue ep q' is_recv)\<rbrace>"
-  unfolding tcb_append_def valid_ep_def
-  apply (cases ep; cases is_recv; wpsimp simp: tcb_append_def valid_ep_def ep_at_pred_def)
+  apply (wpsimp wp: tcb_append_valid_ep)
+  apply (cases ep; clarsimp simp: valid_ep_def ep_at_pred_def)
   done
 
 lemma ordered_insert_set:

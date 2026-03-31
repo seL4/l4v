@@ -4978,6 +4978,7 @@ lemma set_notification_sorted_ipc_queues[wp]:
   apply (clarsimp simp: obj_at_def eps_of_kh_def tcbs_of_kh_def)
   done
 
+(* FIXME RT: maybe move up *)
 lemma img_ord_Some':
   "\<lbrakk>f t' = Some val'; f t = Some val\<rbrakk> \<Longrightarrow> img_ord f (opt_ord_rel R) t' t = R val' val"
   by (clarsimp simp: img_ord_def)

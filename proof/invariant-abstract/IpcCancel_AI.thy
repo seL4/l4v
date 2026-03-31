@@ -525,7 +525,7 @@ lemmas sym_refs_insert_delete' =
   sym_refs_insert_delete[simplified fun_upd_def]
 
 lemma valid_objs_valid_ep:
-  "\<lbrakk>kheap s ep_ptr = Some (Structures_A.kernel_object.Endpoint ep); valid_objs s\<rbrakk> \<Longrightarrow> valid_ep ep s"
+  "\<lbrakk>kheap s ep_ptr = Some (Endpoint ep); valid_objs s\<rbrakk> \<Longrightarrow> valid_ep ep s"
   by (fastforce simp: valid_objs_def valid_obj_def valid_ep_def)
 
 lemma blocked_cancel_ipc_invs:
@@ -2682,24 +2682,24 @@ lemma cancel_all_signals_unlive[wp]:
   apply (rule bind_wp [OF _ get_simple_ko_sp], rename_tac ntfn)
   apply (case_tac "ntfn_obj ntfn"; clarsimp)
     apply (find_goal \<open>match premises in "_ = WaitingNtfn _" \<Rightarrow> \<open>-\<close>\<close>)
-    defer
-    apply wpsimp
-    apply (clarsimp simp: ntfn_at_pred_def obj_at_def live_def live_ntfn_def)
+    \<comment>\<open>break off @{const reschedule_required}\<close>
+    apply (rule bind_wp, wp)
+    apply (rule hoare_weaken_pre)
+     apply (rule mapM_x_inv_wp2[
+                   where I="valid_objs
+                            and ntfn_at_pred (\<lambda>ntfn. ntfn_bound_tcb ntfn = None) ntfnptr
+                            and ntfn_at_pred (\<lambda>ntfn. ntfn_sc ntfn = None) ntfnptr"
+                     and V="\<lambda>xs. ntfn_at_pred (\<lambda>ntfn. ntfn_queue (ntfn_obj ntfn) = xs) ntfnptr"])
+      apply (fastforce simp: ntfn_at_pred_def obj_at_def valid_obj_def valid_ntfn_def live_def
+                             live_ntfn_def)
+     apply (wpsimp wp: tcb_ntfn_dequeue_dequeues_head
+                 simp: remove_and_restart_ntfn_queued_thread_def)
+     apply (fastforce simp: ntfn_at_pred_def valid_obj_def valid_ntfn_def split: ntfn.splits)
+    apply (clarsimp simp: ntfn_at_pred_def obj_at_def)
    apply wpsimp
    apply (clarsimp simp: ntfn_at_pred_def obj_at_def live_def live_ntfn_def)
-  \<comment>\<open>break off @{const reschedule_required}\<close>
-  apply (rule bind_wp, wp)
-  apply (rule hoare_weaken_pre)
-   apply (rule mapM_x_inv_wp2[
-                 where I="valid_objs
-                          and ntfn_at_pred (\<lambda>ntfn. ntfn_bound_tcb ntfn = None) ntfnptr
-                          and ntfn_at_pred (\<lambda>ntfn. ntfn_sc ntfn = None) ntfnptr"
-                   and V="\<lambda>xs. ntfn_at_pred (\<lambda>ntfn. ntfn_queue (ntfn_obj ntfn) = xs) ntfnptr"])
-    apply (fastforce simp: ntfn_at_pred_def obj_at_def valid_obj_def valid_ntfn_def live_def
-                           live_ntfn_def)
-   apply (wpsimp wp: tcb_ntfn_dequeue_dequeues_head simp: remove_and_restart_ntfn_queued_thread_def)
-   apply (fastforce simp: ntfn_at_pred_def valid_obj_def valid_ntfn_def split: ntfn.splits)
-  apply (clarsimp simp: ntfn_at_pred_def obj_at_def)
+  apply wpsimp
+  apply (clarsimp simp: ntfn_at_pred_def obj_at_def live_def live_ntfn_def)
   done
 
 crunch cancel_all_ipc

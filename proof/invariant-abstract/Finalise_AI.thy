@@ -1598,7 +1598,7 @@ lemma unbind_maybe_notification_not_live_helper[wp]:
    \<lbrace>\<lambda>_. ntfn_at_pred (\<lambda>ntfn. ntfn_bound_tcb ntfn = None) ptr\<rbrace>"
   unfolding unbind_maybe_notification_def
   apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp set_tcb_obj_ref_wp
-         | simp add: update_sk_obj_ref_def get_sk_obj_ref_def)+
+              simp: update_sk_obj_ref_def get_sk_obj_ref_def)
   apply (clarsimp simp: ntfn_at_pred_def obj_at_def)
   done
 
@@ -1608,7 +1608,7 @@ lemma sched_context_maybe_unbind_ntfn_not_bound_sc[wp]:
    \<lbrace>\<lambda>_. ntfn_at_pred (\<lambda>ntfn. ntfn_sc ntfn = None) ptr\<rbrace>"
   unfolding sched_context_maybe_unbind_ntfn_def
   apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp set_tcb_obj_ref_wp
-         | simp add: update_sk_obj_ref_def get_sk_obj_ref_def)+
+              simp: update_sk_obj_ref_def get_sk_obj_ref_def)
   apply (clarsimp simp: ntfn_at_pred_def obj_at_def)
   done
 
@@ -1616,8 +1616,9 @@ lemma unbind_maybe_notification_ntfn_sc[wp]:
   "unbind_maybe_notification ptr \<lbrace>\<lambda>s. Q (ntfn_at_pred (\<lambda>ntfn. P (ntfn_sc ntfn)) ptr s)\<rbrace>"
   unfolding unbind_maybe_notification_def
   apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp set_tcb_obj_ref_wp
-         | simp add: update_sk_obj_ref_def get_sk_obj_ref_def)+
-  by (clarsimp simp: ntfn_at_pred_def obj_at_def)
+              simp: update_sk_obj_ref_def get_sk_obj_ref_def)
+  apply (clarsimp simp: ntfn_at_pred_def obj_at_def)
+  done
 
 lemma sc_unbind_not_live_helper:
   "\<lbrace>\<top>\<rbrace>
