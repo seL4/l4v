@@ -2098,6 +2098,22 @@ locale TcbAcc_R_2 = TcbAcc_R +
      corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
                (as_user t (setRegister r v))
                (asUser t (setRegister r v))"
+  assumes threadSet_invs_trivialT:
+    "\<And>F.
+     \<lbrakk>\<forall>tcb. \<forall>(getF, setF)\<in>ran tcb_cte_cases. getF (F tcb) = getF tcb; \<forall>tcb. tcbState (F tcb) = tcbState tcb;
+      \<forall>tcb. is_aligned (tcbIPCBuffer tcb) msg_align_bits \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits;
+      \<forall>tcb. tcbBoundNotification (F tcb) = tcbBoundNotification tcb;
+      \<forall>tcb. tcbSchedPrev (F tcb) = tcbSchedPrev tcb; \<forall>tcb. tcbSchedNext (F tcb) = tcbSchedNext tcb;
+      \<forall>tcb. tcbQueued (F tcb) = tcbQueued tcb; \<forall>tcb. tcbDomain (F tcb) = tcbDomain tcb;
+      \<forall>tcb. tcbPriority (F tcb) = tcbPriority tcb;
+      \<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority;
+      \<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0;
+      \<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)\<rbrakk>
+     \<Longrightarrow> threadSet F t \<lbrace>invs'\<rbrace>"
+  assumes tcb_hyp_refs'_valid_arch_tcb'_eq:
+    "\<And>F tcb s.
+     tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)
+     \<Longrightarrow> valid_arch_tcb' (tcbArch (F tcb)) s = valid_arch_tcb' (tcbArch tcb) s"
 begin
 
 crunch setQueue, tcbQueuePrepend, tcbQueueRemove, removeFromBitmap
@@ -2299,6 +2315,9 @@ lemma tcbSchedEnqueue_corres:
    apply (clarsimp simp: prev_queue_head_def fun_upd_apply opt_map_def split: if_splits)
   by (auto dest!: hd_in_set simp: inQ_def in_opt_pred opt_map_def fun_upd_apply
            split: if_splits option.splits)
+
+lemmas threadSet_invs_trivial =
+    threadSet_invs_trivialT[OF all_tcbI all_tcbI all_tcbI all_tcbI, OF ball_tcb_cte_casesI]
 
 end (* TcbAcc_R_2 *)
 

@@ -103,10 +103,6 @@ lemma arch_switchToIdleThread_corres_interface[Schedule_R_assms]:
      arch_switch_to_idle_thread Arch.switchToIdleThread"
   by (rule corres_guard_imp, rule arch_switchToIdleThread_corres; simp)
 
-lemma threadSet_timeslice_invs[Schedule_R_assms]:
-  "\<lbrace>invs' and tcb_at' t\<rbrace> threadSet (tcbTimeSlice_update b) t \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  by (wp threadSet_invs_trivial, simp_all add: inQ_def cong: conj_cong)
-
 lemma Arch_switchToThread_invs[Schedule_R_assms, wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   unfolding RISCV64_H.switchToThread_def by wpsimp

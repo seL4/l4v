@@ -7,7 +7,7 @@
 
 theory Finalise_R
 imports
-  IpcCancel_R
+  ArchIpcCancel_R
   InterruptAcc_R
   ArchRetype_R
 begin
@@ -514,6 +514,7 @@ lemma valid_badges_n:
 proof -
   from valid_badges
   show ?thesis
+    supply if_cong[cong]
     apply (simp add: valid_badges_def3)
     apply clarsimp
     apply (rule conjI)
@@ -591,6 +592,7 @@ lemma to_slot_eq [simp]:
 
 lemma n_parent_of:
   "\<lbrakk> n \<turnstile> p parentOf p'; p \<noteq> slot; p' \<noteq> slot \<rbrakk> \<Longrightarrow> m \<turnstile> p parentOf p'"
+  supply if_cong[cong]
   apply (clarsimp simp: parentOf_def)
   apply (case_tac cte, case_tac cte')
   apply clarsimp
@@ -606,6 +608,7 @@ lemma n_parent_of:
 
 lemma m_parent_of:
   "\<lbrakk> m \<turnstile> p parentOf p'; p \<noteq> slot; p' \<noteq> slot; p\<noteq>p'; p'\<noteq>mdbNext s_node \<rbrakk> \<Longrightarrow> n \<turnstile> p parentOf p'"
+  supply if_cong[cong]
   apply (clarsimp simp add: parentOf_def)
   apply (case_tac cte, case_tac cte')
   apply clarsimp
@@ -3380,8 +3383,8 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
   apply (rule hoare_pre)
    apply (wp prepares_delete_helper'' [OF cancelAllIPC_unlive]
              prepares_delete_helper'' [OF cancelAllSignals_unlive]
-             suspend_isFinal prepareThreadDelete_unqueued
-             prepareThreadDelete_inactive prepareThreadDelete_isFinal
+             suspend_isFinal AARCH64.prepareThreadDelete_unqueued (* FIXME arch-split: interface *)
+             AARCH64.prepareThreadDelete_inactive prepareThreadDelete_isFinal
              suspend_makes_inactive
              deletingIRQHandler_removeable'
              deletingIRQHandler_final[where slot=slot ]
@@ -4120,7 +4123,7 @@ lemma finaliseCap_corres:
        apply (rule corres_split[OF unbindNotification_corres])
          apply (rule corres_split[OF suspend_corres])
            apply (clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric] zbits_map_def)
-           apply (rule prepareThreadDelete_corres, simp)
+           apply (rule AARCH64.prepareThreadDelete_corres, simp) (* FIXME arch-split: interface *)
           apply (wp unbind_notification_invs unbind_notification_simple_sched_action
                     delete_one_conc_fr.suspend_objs')+
       apply (clarsimp simp add: valid_cap_def)

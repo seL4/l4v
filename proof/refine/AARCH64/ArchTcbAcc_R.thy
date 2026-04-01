@@ -147,7 +147,7 @@ lemma setObject_tcb_refs'[TcbAcc_R_assms, wp]:
   apply (simp add: global_refs'_def)
   done
 
-lemma threadSet_state_hyp_refs_of':
+lemma threadSet_state_hyp_refs_of'_vcpu:
   assumes y: "\<And>tcb. atcbVCPUPtr (tcbArch (F tcb)) = atcbVCPUPtr (tcbArch tcb)"
   shows      "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> threadSet F t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   apply (simp add: threadSet_def)
@@ -155,6 +155,15 @@ lemma threadSet_state_hyp_refs_of':
     simp: gen_objBits_simps obj_at'_def state_hyp_refs_of'_def)
   apply (clarsimp simp: gen_objBits_simps y state_hyp_refs_of'_def
                  elim!: rsubst[where P=P] del: ext intro!: ext)+
+  done
+
+lemma threadSet_state_hyp_refs_of':
+  assumes y: "\<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)"
+  shows      "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> threadSet F t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  apply (rule threadSet_state_hyp_refs_of'_vcpu)
+  using y
+  apply (clarsimp simp: tcb_vcpu_refs'_def)
+  apply (metis empty_not_insert ex_in_conv mem_Sigma_iff option.set_cases set_empty_eq)
   done
 
 lemma threadSet_iflive'T:
@@ -324,7 +333,18 @@ named_theorems TcbAcc_R_2_assms
 
 lemmas asUser_typ_ats[wp] = typ_at_lifts[OF asUser_typ_at']
 
-lemma threadSet_invs_trivialT:
+lemma tcb_hyp_refs'_valid_arch_tcb'_eq[TcbAcc_R_2_assms]:
+  "tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)
+   \<Longrightarrow> valid_arch_tcb' (tcbArch (F tcb)) s = valid_arch_tcb' (tcbArch tcb) s"
+  by (auto simp: valid_arch_tcb'_def tcb_vcpu_refs'_def)
+
+lemma tcb_hyp_refs'_atcbVCPUPtr_eq:
+  "tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)
+   \<Longrightarrow> atcbVCPUPtr (tcbArch (F tcb)) = atcbVCPUPtr (tcbArch tcb)"
+  by (simp add: tcb_vcpu_refs'_def)
+     (metis Times_eq_cancel2 empty_not_insert ex_in_conv option.set_cases set_empty_eq)
+
+lemma threadSet_invs_trivialT[TcbAcc_R_2_assms]:
   assumes
     "\<forall>tcb. \<forall>(getF,setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
     "\<forall>tcb. tcbState (F tcb) = tcbState tcb"
@@ -338,8 +358,9 @@ lemma threadSet_invs_trivialT:
     "\<forall>tcb. tcbPriority (F tcb) = tcbPriority tcb"
     "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
     "\<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0"
-    "\<forall>tcb. atcbVCPUPtr (tcbArch (F tcb)) = atcbVCPUPtr (tcbArch tcb)"
+    "\<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)"
   shows "threadSet F t \<lbrace>invs'\<rbrace>"
+  supply tcb_hyp_refs_of'_simps[simp del]
   apply (simp add: invs'_def valid_state'_def split del: if_split)
   apply (wp threadSet_valid_pspace'T
             threadSet_sch_actT_P[where P=False, simplified]
@@ -361,12 +382,11 @@ lemma threadSet_invs_trivialT:
             sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
             threadSet_tcbQueued
             threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of valid_bitmaps_lift
-         | clarsimp simp: assms cteCaps_of_def valid_arch_tcb'_def | rule refl)+
-  apply (clarsimp simp: o_def)
-  by (auto simp: assms obj_at'_def)
-
-lemmas threadSet_invs_trivial =
-    threadSet_invs_trivialT [OF all_tcbI all_tcbI all_tcbI all_tcbI, OF ball_tcb_cte_casesI]
+         | clarsimp simp: assms cteCaps_of_def tcb_hyp_refs'_valid_arch_tcb'_eq[where F=F]
+         | rule refl)+
+  apply (clarsimp simp: o_def tcb_hyp_refs_of'_simps)
+  apply (auto simp: assms obj_at'_def tcb_hyp_refs'_atcbVCPUPtr_eq)
+  done
 
 (* interface lemma, but can't be done via locale *)
 lemma asUser_corres':
@@ -449,12 +469,6 @@ lemma user_getreg_inv'[TcbAcc_R_2_assms, wp]:
   "\<lbrace>P\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>x. P\<rbrace>"
   apply (rule asUser_inv)
    apply (simp_all add: getRegister_def)
-  done
-
-lemma asUser_invs[wp]:
-  "\<lbrace>invs' and tcb_at' t\<rbrace> asUser t m \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: asUser_def split_def)
-  apply (wpsimp wp: threadSet_invs_trivial threadGet_wp)
   done
 
 (* interface lemma, but can't be done via locale *)
@@ -1119,6 +1133,13 @@ lemma sts_iflive'[TcbAcc_R_3_assms, wp]:
     apply clarsimp
    apply (wpsimp wp: threadSet_iflive')
   apply fastforce
+  done
+
+(* interface lemma, but can't be done via locale *)
+lemma asUser_invs[wp]:
+  "\<lbrace>invs' and tcb_at' t\<rbrace> asUser t m \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  apply (wpsimp wp: threadSet_invs_trivial threadGet_wp)
   done
 
 lemmas setThreadState_typ_ats[wp] = typ_at_lifts [OF setThreadState_typ_at']

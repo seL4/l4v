@@ -198,10 +198,6 @@ lemma arch_switchToIdleThread_corres_interface[Schedule_R_assms]:
      arch_switch_to_idle_thread Arch.switchToIdleThread"
   by (rule corres_guard_imp, rule arch_switchToIdleThread_corres; simp add: valid_arch_caps_def)
 
-lemma threadSet_timeslice_invs[Schedule_R_assms]:
-  "\<lbrace>invs' and tcb_at' t\<rbrace> threadSet (tcbTimeSlice_update b) t \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  by (wp threadSet_invs_trivial, simp_all add: inQ_def cong: conj_cong)
-
 lemma armKSCurFPUOwner_invs'[wp]:
   "modifyArchState (x64KSCurFPUOwner_update f) \<lbrace>invs'\<rbrace>"
   apply (wpsimp simp: modifyArchState_def)

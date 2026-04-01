@@ -6,7 +6,7 @@
 
 theory Finalise_R
 imports
-  IpcCancel_R
+  ArchIpcCancel_R
   InterruptAcc_R
   ArchRetype_R
 begin
@@ -486,6 +486,7 @@ lemma valid_badges_n:
 proof -
   from valid_badges
   show ?thesis
+    supply if_cong[cong]
     apply (simp add: valid_badges_def2 valid_arch_badges_def) (* FIXME arch-split; take AARCH64 version *)
     apply clarsimp
     apply (drule_tac p=p in n_cap)
@@ -548,6 +549,7 @@ lemma to_slot_eq [simp]:
 
 lemma n_parent_of:
   "\<lbrakk> n \<turnstile> p parentOf p'; p \<noteq> slot; p' \<noteq> slot \<rbrakk> \<Longrightarrow> m \<turnstile> p parentOf p'"
+  supply if_cong[cong]
   apply (clarsimp simp: parentOf_def)
   apply (case_tac cte, case_tac cte')
   apply clarsimp
@@ -564,6 +566,7 @@ lemma n_parent_of:
 
 lemma m_parent_of:
   "\<lbrakk> m \<turnstile> p parentOf p'; p \<noteq> slot; p' \<noteq> slot; p\<noteq>p'; p'\<noteq>mdbNext s_node \<rbrakk> \<Longrightarrow> n \<turnstile> p parentOf p'"
+  supply if_cong[cong]
   apply (clarsimp simp add: parentOf_def)
   apply (case_tac cte, case_tac cte')
   apply clarsimp
@@ -2913,8 +2916,8 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
   apply (rule hoare_pre)
    apply (wp prepares_delete_helper'' [OF cancelAllIPC_unlive]
              prepares_delete_helper'' [OF cancelAllSignals_unlive]
-             suspend_isFinal prepareThreadDelete_unqueued
-             prepareThreadDelete_inactive prepareThreadDelete_isFinal
+             suspend_isFinal X64.prepareThreadDelete_unqueued (* FIXME arch-split: interface *)
+             X64.prepareThreadDelete_inactive prepareThreadDelete_isFinal
              suspend_makes_inactive
              deletingIRQHandler_removeable'
              deletingIRQHandler_final[where slot=slot ]
@@ -3152,7 +3155,7 @@ lemma cancelAllIPC_mapM_x_tcbDomain_obj_at':
                  tcbSchedEnqueue t
                od) q
   \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace>"
-  by (wpsimp wp: mapM_x_wp' setThreadState_oa_queued)
+  by (wpsimp wp: mapM_x_wp' X64.setThreadState_oa_queued) (* FIXME arch-split: X64 only lemma *)
 
 lemma rescheduleRequired_oa_queued':
   "\<lbrace>obj_at' (\<lambda>tcb. Q (tcbDomain tcb) (tcbPriority tcb)) t'\<rbrace>
@@ -3633,7 +3636,7 @@ lemma finaliseCap_corres:
        apply (rule corres_split[OF unbindNotification_corres])
          apply (rule corres_split[OF suspend_corres])
            apply (clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric] zbits_map_def)
-           apply (rule prepareThreadDelete_corres, simp)
+           apply (rule X64.prepareThreadDelete_corres, simp) (* FIXME arch-split: interface *)
           apply (wp unbind_notification_invs unbind_notification_simple_sched_action
                     delete_one_conc_fr.suspend_objs')+
       apply (simp add: valid_cap_def)

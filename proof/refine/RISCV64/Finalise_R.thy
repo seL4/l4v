@@ -6,7 +6,7 @@
 
 theory Finalise_R
 imports
-  IpcCancel_R
+  ArchIpcCancel_R
   InterruptAcc_R
   ArchRetype_R
 begin
@@ -498,6 +498,7 @@ lemma valid_badges_n:
 proof -
   from valid_badges
   show ?thesis
+    supply if_cong[cong]
     apply (simp add: valid_badges_def2 valid_arch_badges_def) (* FIXME arch-split; take AARCH64 version *)
     apply clarsimp
     apply (drule_tac p=p in n_cap)
@@ -560,6 +561,7 @@ lemma to_slot_eq [simp]:
 
 lemma n_parent_of:
   "\<lbrakk> n \<turnstile> p parentOf p'; p \<noteq> slot; p' \<noteq> slot \<rbrakk> \<Longrightarrow> m \<turnstile> p parentOf p'"
+  supply if_cong[cong]
   apply (clarsimp simp: parentOf_def)
   apply (case_tac cte, case_tac cte')
   apply clarsimp
@@ -576,6 +578,7 @@ lemma n_parent_of:
 
 lemma m_parent_of:
   "\<lbrakk> m \<turnstile> p parentOf p'; p \<noteq> slot; p' \<noteq> slot; p\<noteq>p'; p'\<noteq>mdbNext s_node \<rbrakk> \<Longrightarrow> n \<turnstile> p parentOf p'"
+  supply if_cong[cong]
   apply (clarsimp simp add: parentOf_def)
   apply (case_tac cte, case_tac cte')
   apply clarsimp
@@ -2838,8 +2841,8 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
   apply (rule hoare_pre)
    apply (wp prepares_delete_helper'' [OF cancelAllIPC_unlive]
              prepares_delete_helper'' [OF cancelAllSignals_unlive]
-             suspend_isFinal prepareThreadDelete_unqueued
-             prepareThreadDelete_inactive prepareThreadDelete_isFinal
+             suspend_isFinal RISCV64.prepareThreadDelete_unqueued (* FIXME arch-split: interface *)
+             RISCV64.prepareThreadDelete_inactive prepareThreadDelete_isFinal
              suspend_makes_inactive
              deletingIRQHandler_removeable'
              deletingIRQHandler_final[where slot=slot ]
@@ -3504,6 +3507,28 @@ global_interpretation delete_one
    apply auto
   done
 
+lemma no_idle_thread_cap:
+  "\<lbrakk> cte_wp_at ((=) (cap.ThreadCap (idle_thread s))) sl s; valid_global_refs s \<rbrakk> \<Longrightarrow> False"
+  apply (cases sl)
+  apply (clarsimp simp: valid_global_refs_def valid_refs_def cte_wp_at_caps_of_state)
+  apply ((erule allE)+, erule (1) impE)
+  apply (clarsimp simp: cap_range_def)
+  done
+
+lemmas getCTE_no_0_obj'_helper
+  = getCTE_inv
+    hoare_strengthen_post[where Q'="\<lambda>_. no_0_obj'" and P=no_0_obj' and f="getCTE slot" for slot]
+
+context begin interpretation Arch . (*FIXME: arch-split*)
+context
+notes option.case_cong_weak[cong]
+begin
+crunch ThreadDecls_H.suspend, unbindNotification
+  for no_0_obj'[wp]: no_0_obj'
+  (simp: crunch_simps wp: crunch_wps getCTE_no_0_obj'_helper)
+end
+end
+
 lemma finaliseCap_corres:
   "\<lbrakk> final_matters' cap' \<Longrightarrow> final = final'; cap_relation cap cap';
           flag \<longrightarrow> can_fast_finalise cap \<rbrakk>
@@ -3514,6 +3539,7 @@ lemma finaliseCap_corres:
                  (final_matters' cap' \<longrightarrow>
                       final' = isFinal cap' (cte_map sl) (cteCaps_of s)))
            (finalise_cap cap final) (finaliseCap cap' final' flag)"
+  supply invs_no_0_obj'[simp]
   apply (cases cap, simp_all add: finaliseCap_def gen_isCap_simps
                                   corres_liftM2_simp[unfolded liftM_def]
                                   o_def dc_def[symmetric] when_def
@@ -3535,11 +3561,17 @@ lemma finaliseCap_corres:
      apply (clarsimp simp add: final_matters'_def getThreadCSpaceRoot
                                liftM_def[symmetric] o_def zbits_map_def
                                dc_def[symmetric])
+     apply (rename_tac t)
+     apply (rule_tac P="\<lambda>s. t \<noteq> idle_thread s" and P'="\<lambda>s. t \<noteq> ksIdleThread s" in corres_add_guard)
+      apply clarsimp
+      apply (rule context_conjI)
+       apply (clarsimp dest!: no_idle_thread_cap)
+      apply (clarsimp simp: state_relation_def)
      apply (rule corres_guard_imp)
        apply (rule corres_split[OF unbindNotification_corres])
          apply (rule corres_split[OF suspend_corres])
             apply (clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric] zbits_map_def)
-          apply (rule prepareThreadDelete_corres)
+          apply (rule RISCV64.prepareThreadDelete_corres, rule refl) (* FIXME arch-split: interface *)
         apply (wp unbind_notification_invs unbind_notification_simple_sched_action)+
       apply (simp add: valid_cap_def)
      apply (simp add: valid_cap'_def)

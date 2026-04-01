@@ -552,8 +552,6 @@ locale Schedule_R =
     "\<And>t. Arch.switchToThread t \<lbrace>sym_heap_sched_pointers\<rbrace>"
   assumes Arch_switchToThread_valid_objs'[wp]:
     "\<And>t. Arch.switchToThread t \<lbrace>valid_objs'\<rbrace>"
-  assumes threadSet_timeslice_invs:
-    "\<And>b t. \<lbrace>invs' and tcb_at' t\<rbrace> threadSet (tcbTimeSlice_update b) t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   assumes Arch_switchToThread_invs[wp]:
     "\<And>t. \<lbrace>invs' and tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   assumes Arch_switchToThread_invs_no_cicd'[wp]:
@@ -961,6 +959,10 @@ lemma setCurThread_ct_in_state:
   "\<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace> setCurThread t \<lbrace>\<lambda>rv. ct_in_state' P\<rbrace>"
   by (wpsimp simp: setCurThread_def)
      (simp add: ct_in_state'_def pred_tcb_at'_def o_def)
+
+lemma threadSet_timeslice_invs:
+  "\<lbrace>invs' and tcb_at' t\<rbrace> threadSet (tcbTimeSlice_update b) t \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  by (wp threadSet_invs_trivial, simp_all add: inQ_def cong: conj_cong)
 
 context Schedule_R begin
 
