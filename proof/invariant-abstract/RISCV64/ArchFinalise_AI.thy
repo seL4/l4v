@@ -635,13 +635,14 @@ lemma prepare_thread_delete_unlive[wp]:
   done
 
 lemma set_thread_state_not_live:
-  "\<lbrace>bound_tcb_at ((=) None) t and bound_sc_tcb_at ((=) None) t
-    and bound_yt_tcb_at ((=) None) t\<rbrace>
+  "\<lbrace>bound_tcb_at ((=) None) t and bound_sc_tcb_at ((=) None) t and bound_yt_tcb_at ((=) None) t\<rbrace>
    set_thread_state t Inactive
-   \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) t\<rbrace>"
-  by (wpsimp simp: set_thread_state_def obj_at_def pred_tcb_at_def get_tcb_def live_def hyp_live_def
-                   arch_tcb_live_def
-             wp: set_object_wp)
+   \<lbrace>\<lambda>_. obj_at (Not \<circ> live) t\<rbrace>"
+  unfolding set_thread_state_def
+  apply (wpsimp wp: thread_set_wp)
+  apply (clarsimp simp: obj_at_def pred_tcb_at_def get_tcb_def arch_tcb_live_def live_def
+                        hyp_live_def)
+  done
 
 lemma sched_context_cancel_yield_to_unlive:
   "\<lbrace>bound_tcb_at ((=) None) t and bound_sc_tcb_at ((=) None) t and st_tcb_at ((=) Inactive) t\<rbrace>
@@ -658,11 +659,7 @@ lemma suspend_unlive':
    suspend t
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) t\<rbrace>"
   unfolding suspend_def
-  apply (simp flip: bind_assoc)
-  apply (rule bind_wp[OF sched_context_cancel_yield_to_unlive])
-  apply (simp add: bind_assoc)
-  apply (wpsimp wp: get_object_wp cancel_ipc_bound_sc_tcb_at_None)
-  done
+  by (wpsimp wp: set_thread_state_not_live)
 
 method hammer = ((clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
                                  ran_tcb_cap_cases is_cap_simps
@@ -691,7 +688,7 @@ lemma finalise_cap_replaceable [Finalise_AI_assms]:
                                valid_vspace_objs s \<and>
                                valid_arch_state s \<and>
                                valid_arch_caps s)\<rbrace>
-     finalise_cap cap x
+   finalise_cap cap x
    \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) cap\<rbrace>"
   apply (cases "is_arch_cap cap")
    apply (clarsimp simp: is_cap_simps)
@@ -715,15 +712,15 @@ lemma finalise_cap_replaceable [Finalise_AI_assms]:
                        wp (once) reply_unlink_sc_not_live'[unfolded o_def]
                                  cancel_all_ipc_unlive[unfolded o_def]
                                  cancel_all_signals_unlive[unfolded o_def]))+)[2]
-             apply fastforce
            \<comment> \<open>ntfn\<close>
-            apply ((wpsimp wp: unbind_maybe_notification_not_live_helper sched_context_maybe_unbind_ntfn_not_bound_sc
-                    | hammer
-                    | (wp (once) hoare_drop_imps, wp (once) reply_unlink_sc_not_live'[unfolded o_def]
-                            cancel_all_ipc_unlive[unfolded o_def]
-                            cancel_all_signals_unlive[unfolded o_def]))+)[1]
+           apply ((wpsimp wp: unbind_maybe_notification_not_live_helper
+                              sched_context_maybe_unbind_ntfn_not_bound_sc
+                   | hammer
+                   | (wp (once) hoare_drop_imps,
+                      wp (once) reply_unlink_sc_not_live'[unfolded o_def]
+                                cancel_all_ipc_unlive[unfolded o_def]
+                                cancel_all_signals_unlive[unfolded o_def]))+)[1]
            \<comment> \<open>reply\<close>
-           apply ((wpsimp wp: unbind_maybe_notification_not_live_helper sched_context_maybe_unbind_ntfn_not_bound_sc | hammer)+)[1]
                      apply (wp (once) hoare_drop_imps, rule hoare_vcg_conj_lift,
                              wp (once) cancel_ipc_unlive_reply_receive[unfolded o_def], hammer)
                     apply ((wpsimp wp: gts_wp get_simple_ko_wp | hammer | wp (once) hoare_drop_imps, rule hoare_vcg_conj_lift,

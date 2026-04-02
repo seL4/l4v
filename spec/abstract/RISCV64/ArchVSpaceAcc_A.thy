@@ -98,6 +98,28 @@ locale_abbrev ptes_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpo
   where
   "ptes_of s \<equiv> \<lambda>p. pte_of p (pts_of s)"
 
+definition page_of :: "arch_kernel_obj \<rightharpoonup> (bool \<times> vmpage_size)" where
+  "page_of ko \<equiv> case ko of DataPage dev sz \<Rightarrow> Some (dev, sz) | _ \<Rightarrow> None"
+
+lemmas page_of_simps [simp] = page_of_def [split_simps arch_kernel_obj.split]
+
+lemma page_of_Some:
+  "page_of ko = Some (dev, sz) \<longleftrightarrow> ko = DataPage dev sz"
+  by (cases ko; simp)
+
+lemma page_of_None:
+  "page_of ko = None \<longleftrightarrow> (\<forall>dev sz. ko \<noteq> DataPage dev sz)"
+  by (cases ko; simp)
+
+abbreviation pages_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> (bool \<times> vmpage_size)" where
+  "pages_of \<equiv> \<lambda>s. aobjs_of s |> page_of"
+
+abbreviation page_devs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> bool" where
+  "page_devs_of s \<equiv> pages_of s ||> fst"
+
+abbreviation page_sizes_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> vmpage_size" where
+  "page_sizes_of s \<equiv> pages_of s ||> snd"
+
 text \<open>The following function takes a pointer to a PTE in kernel memory and returns the PTE.\<close>
 locale_abbrev get_pte :: "obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad"
   where

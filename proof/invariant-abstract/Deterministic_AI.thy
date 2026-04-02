@@ -3915,8 +3915,8 @@ lemma set_thread_state_cdt_cdt_list[wp]:
   by (wpsimp simp: set_thread_state_act_def)
 
 lemma sts_cdt_cdt_list[wp]:
-  "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> set_thread_state t ts \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
-  by (wpsimp simp: set_thread_state_def wp: set_object_wp)
+  "set_thread_state t ts \<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace>"
+  by (wpsimp simp: set_thread_state_def wp: thread_set_wp)
 
 lemma update_sk_obj_ref_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> update_sk_obj_ref C f p v \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
@@ -4027,9 +4027,14 @@ lemma cap_revoke_valid_list[wp]:"\<lbrace>valid_list\<rbrace> cap_revoke a \<lbr
 
 end
 
+crunch tcb_ep_dequeue, tcb_ntfn_dequeue, tcb_ep_append, tcb_ntfn_append
+  for valid_list[wp]: valid_list
+  (wp: crunch_wps)
+
 lemma cancel_badged_sends_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> cancel_badged_sends a b \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: cancel_badged_sends_def wp: filterM_preserved hoare_drop_imp)
+  by (wpsimp simp: cancel_badged_sends_def remove_and_restart_badged_thread_def
+               wp: mapM_x_wp' hoare_drop_imp)
 
 context Deterministic_AI_1 begin
 
@@ -4073,7 +4078,8 @@ crunch transfer_caps,do_normal_transfer,do_ipc_transfer,refill_unblock_check
 
 lemma send_ipc_valid_list[wp]:
   "send_ipc block call badge can_grant can_reply_grant can_donate thread epptr \<lbrace>valid_list\<rbrace>"
-   by (wpsimp simp: send_ipc_def wp: thread_get_inv hoare_drop_imp get_simple_ko_wp)
+   by (wpsimp simp: send_ipc_def send_ipc_blocked_def
+                wp: thread_get_inv hoare_drop_imp get_simple_ko_wp)
 
 crunch send_fault_ipc, handle_timeout
   for valid_list[wp]: valid_list
@@ -4085,8 +4091,8 @@ crunch tcb_release_enqueue
  for (empty_fail) empty_fail[wp]
 
 crunch tcb_release_enqueue
- for valid_list[wp]: "valid_list"
-  (simp: thread_get_def crunch_simps wp: get_object_wp mapM_wp hoare_drop_imp ignore: )
+  for valid_list[wp]: "valid_list"
+  (simp: crunch_simps wp: hoare_drop_imp)
 
 lemma postpone_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> postpone r \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -4135,10 +4141,6 @@ crunch handle_fault
   (simp: thread_get_def unless_def wp: get_object_wp)
 
 end
-
-crunch tcb_release_enqueue
- for valid_list[wp]: "valid_list"
-  (simp: thread_get_def wp: get_object_wp mapM_wp hoare_drop_imp ignore: )
 
 crunch test_possible_switch_to
  for (empty_fail) empty_fail[wp]

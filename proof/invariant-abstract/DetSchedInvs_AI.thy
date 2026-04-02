@@ -2098,12 +2098,14 @@ definition tcb_sc_refill_cfgs_2 ::
 abbreviation "tcb_sc_refill_cfgs_of_kh kh \<equiv> tcb_sc_refill_cfgs_2 (tcb_scps_of_kh kh) (sc_refill_cfgs_of_kh kh)"
 abbreviation "tcb_sc_refill_cfgs_of s \<equiv> tcb_sc_refill_cfgs_2 (tcb_scps_of s) (sc_refill_cfgs_of s)"
 
-definition "sc_ready_time \<equiv> r_time \<circ> hd \<circ> scrc_refills"
+definition sc_ready_time :: "sc_refill_cfg \<rightharpoonup> time" where
+  "sc_ready_time cfg \<equiv>
+     (if scrc_refills cfg = [] then None else Some (r_time (hd (scrc_refills cfg))))"
 
-definition sc_ready_times_2 :: "(obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> obj_ref \<rightharpoonup> time" where
-  "sc_ready_times_2 \<equiv> map_project sc_ready_time"
+abbreviation sc_ready_times_2 :: "(obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> obj_ref \<rightharpoonup> time" where
+  "sc_ready_times_2 hp \<equiv> hp |> sc_ready_time"
 
-lemmas tcb_ready_times_defs = tcb_sc_refill_cfgs_2_def sc_ready_times_2_def sc_ready_time_def
+lemmas tcb_ready_times_defs = tcb_sc_refill_cfgs_2_def sc_ready_time_def
 
 (* FIXME: these abbreviations don't fire in the right order when printing *)
 abbreviation "sc_ready_times_of_kh kh \<equiv> sc_ready_times_2 (sc_refill_cfgs_of_kh kh)"
@@ -2129,12 +2131,6 @@ lemma bound_sc_obj_tcb_at_eqI:
   shows "bound_sc_obj_tcb_at ((=) (sc_refill_cfg_of sc)) t s"
   using assms by (auto simp: vs_all_heap_simps)
 
-lemma budget_sufficient_has_ready_time:
-  assumes "bound_sc_obj_tcb_at P t s"
-  shows "\<exists>rt. tcb_ready_times_of s t = Some rt"
-  using assms
-  by (auto simp: opt_map_simps map_join_simps map_project_simps pred_map_simps tcb_ready_times_defs)
-
 (* FIXME: move *)
 lemma map_snd_zip':
   "length xs \<ge> length ys \<Longrightarrow> map snd (zip xs ys) = ys"
@@ -2151,11 +2147,6 @@ qed auto
 lemma f_sort_snd_zip:
   "sorted_wrt (img_ord f op) ls \<longleftrightarrow> sorted_wrt (img_ord snd op) (zip ls (map f ls))"
   by (induction ls; simp add: img_ord_def Ball_zip_P_snd)
-
-lemma get_sc_time_wp:
-  "\<lbrace>\<lambda>s. \<forall>rt. tcb_ready_times_of s t = Some rt \<longrightarrow> P rt s\<rbrace> get_sc_time t \<lbrace>P\<rbrace>"
-  apply (wpsimp simp: get_sc_time_def get_tcb_sc_def tcb_ready_times_defs wp: get_tcb_obj_ref_wp)
-  by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps map_project_simps opt_map_simps map_join_simps)
 
 (* FIXME: move *)
 lemma mapM_wp_lift:
@@ -2174,32 +2165,11 @@ proof (induct xs arbitrary: ys)
   case (Cons x xs) thus ?case by (cases ys) auto
 qed auto
 
-lemma mapM_get_sc_time_wp:
-  "\<lbrace>\<lambda>s. \<forall>rt. map (tcb_ready_times_of s) ts = map Some rt \<longrightarrow> P rt s\<rbrace> mapM get_sc_time ts \<lbrace>P\<rbrace>"
-  by (wpsimp wp: mapM_wp_lift get_sc_time_wp simp: list_all2_eq_iff_map_eq_map)
-
-(* FIXME move *)
-lemma get_sc_time_sp:
-  "\<lbrace>P\<rbrace> get_sc_time t \<lbrace>\<lambda>rv s. P s \<and> tcb_ready_times_of s t = Some rv\<rbrace>"
-  by (wpsimp wp: get_sc_time_wp)
-
-lemma get_sc_time_sp':
-  "\<lbrace>P\<rbrace> get_sc_time t \<lbrace>\<lambda>rv s. P s \<and> rv = tcb_ready_time t s\<rbrace>"
-  by (wpsimp wp: get_sc_time_wp)
-
-lemma mapM_get_sc_time_sp:
-  "\<lbrace>P\<rbrace> mapM get_sc_time ts \<lbrace>\<lambda>rv s. P s \<and> map (tcb_ready_times_of s) ts = map Some rv\<rbrace>"
-  by (wpsimp wp: mapM_get_sc_time_wp)
-
 (* FIXME: move *)
 lemma map_Some_implies_map_the:
   assumes "xs = map Some ys"
   shows "ys = map the xs"
   using assms by auto
-
-lemma mapM_get_sc_time_sp':
-  "\<lbrace>P\<rbrace> mapM get_sc_time ts \<lbrace>\<lambda>rv s. P s \<and> rv = map (\<lambda>t. tcb_ready_time t s) ts\<rbrace>"
-  by (wpsimp wp: mapM_get_sc_time_wp) (auto dest!: map_Some_implies_map_the)
 
 (* FIXME move *)
 lemma filter_zip_split:
@@ -2579,11 +2549,6 @@ where
                       IdleEP \<Rightarrow> None
                     | SendEP x \<Rightarrow> Some x
                     | RecvEP x \<Rightarrow> Some x"
-
-(* FIXME RT: move *)
-lemma get_ep_queue_wp':
-  "\<lbrace> \<lambda>s. \<forall>q. ep_queue_of ep = Some q \<longrightarrow> Q q s \<rbrace> get_ep_queue ep \<lbrace> Q \<rbrace>"
-  by (wpsimp simp: get_ep_queue_def ep_queue_of_def)
 
 (* FIXME RT: move *)
 lemma valid_ep_distinct_queue:
@@ -3338,19 +3303,6 @@ lemma tcb_ready_time_thread_state_update[simp]:
 lemmas tcb_ready_time_thread_state_update'[simp]
   = tcb_ready_time_thread_state_update[unfolded fun_upd_def]
 
-lemma tcb_ready_time_kh_tcb_sc_update:
-  "\<lbrakk>kheap s tp = Some (TCB tcb);
-    tcb_sched_context tcb = Some scp; kheap s scp = Some (SchedContext sc n);
-    scopt = Some scp'; kheap s scp' = Some (SchedContext sc' n');
-    r_time (refill_hd sc) = r_time (refill_hd sc') \<rbrakk> \<Longrightarrow>
-   tcb_ready_times_of_kh
-            ((kheap s)(tp \<mapsto> TCB (tcb\<lparr>tcb_sched_context := scopt\<rparr>)))
-        = tcb_ready_times_of s"
-  by (auto intro!: map_eqI
-             simp: fun_upd_def vs_all_heap_simps tcb_ready_times_defs
-                   map_project_simps opt_map_simps map_join_simps
-            split: if_splits)
-
 lemma tcb_at_simple_type_update[iff]:
   "\<lbrakk>obj_at is_simple_type epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
       tcbs_of_kh ((kheap s)(epptr \<mapsto> ko)) = tcbs_of s"
@@ -3415,18 +3367,6 @@ lemmas sorted_release_qE = sorted_release_q_2_eq_lift[THEN iffD2, rotated]
 lemma opt_eq_iff:
   "opt' = opt \<longleftrightarrow> (opt' = None \<longleftrightarrow> opt = None) \<and> (\<forall>x. opt' = Some x \<longleftrightarrow> opt = Some x)"
   by blast
-
-\<comment> \<open>This makes the equality accessible to heap simplification rules, without creating a loop.\<close>
-lemmas sc_ready_time_eq_iff'
-  = opt_eq_iff[where opt'="sc_ready_times_2 _ _" and opt="sc_ready_times_2 _ _"]
-
-lemma sc_ready_time_eq_iff:
-  "sc_ready_times_2 heap' t' = sc_ready_times_2 heap t
-   \<longleftrightarrow> (heap' t' = None \<longleftrightarrow> heap t = None)
-        \<and> (\<forall>rt. map_project sc_ready_time heap' t' = Some rt
-                 \<longleftrightarrow> map_project sc_ready_time heap t = Some rt)"
-  unfolding sc_ready_time_eq_iff'
-  by (auto simp: sc_ready_times_2_def map_project_simps)
 
 lemma sorted_release_q_2_valid_lift:
   assumes r: "\<And>P t. t \<in> set queue \<Longrightarrow> \<lbrace>\<lambda>s. P (sc_ready_times_2 (heap s) t) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (sc_ready_times_2 (heap s) t)\<rbrace>"
@@ -3786,14 +3726,6 @@ lemma budget_sufficient_def2:
   "budget_sufficient t s = ((\<exists>scp. bound_sc_tcb_at (\<lambda>p. p = Some scp) t s \<and> is_refill_sufficient 0 scp s))"
   by (clarsimp simp: vs_all_heap_simps tcb_at_kh_simps)
 
-lemma budget_ready_def3:
-  "active_sc_tcb_at t s \<Longrightarrow> budget_ready t s \<longleftrightarrow> tcb_ready_time t s \<le> cur_time s"
-  by (auto simp: vs_all_heap_simps refill_ready_def tcb_ready_times_defs
-                 opt_map_def map_project_def map_join_def pred_map_simps
-                 tcb_scps_of_tcbs_def tcbs_of_kh_def
-                 sc_refill_cfgs_of_scs_def scs_of_kh_def
-          split: option.split)
-
 lemma active_sc_tcb_at_fold:
   "(\<exists>scp. bound_sc_tcb_at (\<lambda>x. x = Some scp) t s \<and> sc_at_pred sc_active scp s)
    = active_sc_tcb_at t s"
@@ -3979,5 +3911,32 @@ begin
   lemmas bound_sc_tcb_at_cur_thread [wp] = pre_conj.bound_sc_tcb_at_cur_thread [simplified]
   lemmas fault_tcb_at_cur_thread    [wp] = pre_conj.fault_tcb_at_cur_thread    [simplified]
 end
+
+\<comment> \<open>An alternative approach to dealing with the ready times.\<close>
+
+abbreviation tcb_scs_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> obj_ref" where
+  "tcb_scs_of s \<equiv> tcbs_of s |> tcb_sched_context"
+
+abbreviation sc_refills_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> refill list" where
+  "sc_refills_of s \<equiv> scs_of s ||> sc_refills"
+
+abbreviation sc_refill_ready_times_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> obj_ref" where
+  "sc_refill_ready_times_of s \<equiv> sc_refills_of s |> hd_opt ||> r_time"
+
+abbreviation tcb_refill_ready_times_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> obj_ref" where
+  "tcb_refill_ready_times_of s \<equiv> tcb_scs_of s |> sc_refill_ready_times_of s"
+
+lemma read_tcb_ready_time_read_tcb_ready_times_of:
+  "read_tcb_ready_time t s = tcb_refill_ready_times_of s t"
+  by (clarsimp simp: read_tcb_ready_time_def obind_def thread_read_def oliftM_def get_tcb_def
+                     tcbs_of_kh_def opt_map_def scs_of_kh_def read_ready_time_def
+                     read_refill_head_def read_sched_context_def
+              split: option.splits kernel_object.splits)
+
+lemma tcb_ready_times_of_tcb_refill_ready_times_of:
+  "tcb_ready_times_of s = tcb_refill_ready_times_of s"
+  by (fastforce simp: tcb_ready_times_defs opt_map_def sc_refill_cfgs_of_scs_def
+                      tcb_scps_of_tcbs_def map_project_def map_join_def
+               split: option.splits)
 
 end
