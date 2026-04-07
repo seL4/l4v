@@ -3609,20 +3609,6 @@ lemma tcbSchedEnqueue_corres:
 
 end (* TcbAcc_R_2 *)
 
-definition weak_sch_act_wf :: "scheduler_action \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "weak_sch_act_wf sa s \<equiv> \<forall>t. sa = SwitchToThread t \<longrightarrow> tcb_at' t s"
-
-defs weak_sch_act_wf_asrt_def:
-  "weak_sch_act_wf_asrt \<equiv> \<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
-
-declare weak_sch_act_wf_asrt_def[simp]
-
-lemma weak_sch_act_wf_updates[simp]:
-  "\<And>f. weak_sch_act_wf sa (ksDomainTime_update f s) = weak_sch_act_wf sa s"
-  "\<And>f. weak_sch_act_wf sa (ksReprogramTimer_update f s) = weak_sch_act_wf sa s"
-  "\<And>f. weak_sch_act_wf sa (ksReleaseQueue_update f s) = weak_sch_act_wf sa s"
-  by (auto simp: weak_sch_act_wf_def tcb_in_cur_domain'_def)
-
 lemma (in TcbAcc_R) setSchedulerAction_corres:
   "sched_act_relation sa sa'
     \<Longrightarrow> corres dc \<top> \<top> (set_scheduler_action sa) (setSchedulerAction sa')"

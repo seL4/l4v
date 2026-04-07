@@ -1084,9 +1084,9 @@ lemma decodeRISCVPageTableInvocation_ccorres:
   subgoal for _ v1
     (* RISCVPageTableUnmap: Haskell preconditions *)
     apply (drule_tac s="capability.ArchObjectCap _" in sym)
-    apply (clarsimp simp: ct_in_state'_def isCap_simps valid_tcb_state'_def)
+    apply (clarsimp simp: ct_in_state'_def isCap_simps)
     apply (case_tac v1; clarsimp) (* is PT mapped *)
-     apply (auto simp: ct_in_state'_def isCap_simps valid_tcb_state'_def valid_cap'_def
+     apply (auto simp: ct_in_state'_def isCap_simps valid_cap'_def
                        wellformed_mapdata'_def weak_sch_act_wf_def sch_act_simple_def
                 elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')
     done
@@ -1100,7 +1100,7 @@ lemma decodeRISCVPageTableInvocation_ccorres:
     apply (prop_tac "s \<turnstile>' fst (extraCaps ! 0)")
      apply (clarsimp simp: neq_Nil_conv excaps_in_mem_def
                            slotcap_in_mem_def dest!: ctes_of_valid')
-    by (auto simp: ct_in_state'_def pred_tcb_at' mask_def valid_tcb_state'_def
+    by (auto simp: ct_in_state'_def pred_tcb_at' mask_def
                    valid_cap'_def wellformed_acap'_def wellformed_mapdata'_def
                    weak_sch_act_wf_def sch_act_simple_def
              elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')[1]
@@ -1326,7 +1326,7 @@ lemma performPageGetAddress_ccorres:
   shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' ((=) Restart)
-       and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s))
+       and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
       (UNIV \<inter> \<lbrace>\<acute>vbase_ptr = Ptr ptr\<rbrace> \<inter> \<lbrace>\<acute>call = from_bool isCall\<rbrace>) []
       (do reply \<leftarrow> performPageInvocation (PageGetAddr ptr);
           liftE (replyOnRestart thread reply isCall) od)
@@ -2103,7 +2103,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
    subgoal for _ _ v2
      by (cases v2; clarsimp simp: bit_simps')
   subgoal
-    by (auto simp: ct_in_state'_def pred_tcb_at' mask_def valid_tcb_state'_def
+    by (auto simp: ct_in_state'_def pred_tcb_at' mask_def
                    valid_cap'_def wellformed_acap'_def wellformed_mapdata'_def
                    weak_sch_act_wf_def sch_act_simple_def
              elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')
@@ -2111,7 +2111,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
   (* RISCVPageUnMap, Haskell side *)
   apply (rule conjI)
   subgoal
-    by (auto simp: isCap_simps comp_def ct_in_state'_def pred_tcb_at' mask_def valid_tcb_state'_def
+    by (auto simp: isCap_simps comp_def ct_in_state'_def pred_tcb_at' mask_def
                    valid_cap'_def wellformed_acap'_def wellformed_mapdata'_def
                    weak_sch_act_wf_def sch_act_simple_def
              elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')
@@ -2841,7 +2841,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
     apply (rule conjI; clarsimp)
     apply (frule invs_arch_state')
     apply (rule conjI, clarsimp simp: valid_arch_state'_def valid_asid_table'_def)
-    apply (clarsimp simp: neq_Nil_conv excaps_map_def valid_tcb_state'_def
+    apply (clarsimp simp: neq_Nil_conv excaps_map_def
                           unat_lt2p[where 'a=machine_word_len, folded word_bits_def])
     apply (frule interpret_excaps_eq[rule_format, where n=1], simp)
     apply (rule conjI; clarsimp)+
@@ -2865,7 +2865,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
      apply (clarsimp simp: le_mask_asid_bits_helper)
     apply (simp add: is_aligned_shiftl_self)
    (* RISCVASIDPoolAssign *)
-   apply (clarsimp simp: isCap_simps valid_tcb_state'_def)
+   apply (clarsimp simp: isCap_simps)
    apply (frule invs_arch_state', clarsimp)
    apply (intro conjI)
            apply (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)

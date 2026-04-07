@@ -887,7 +887,7 @@ lemma finaliseSlot_ccorres:
                                    \<and> (expo \<or> ex_cte_cap_to' slot' s)
                                    \<and> cte_wp_at' (\<lambda>cte. cteCap cte = cteCap rv) slot' s"
                      in hoare_vcg_conj_lift)
-           apply (wp hoare_vcg_disj_lift finaliseCap_invs[where sl=slot'])[1]
+           apply (wp hoare_vcg_disj_lift finaliseCap_invs)[1]
           apply (rule hoare_vcg_conj_lift)
            apply (rule finaliseCap_cte_refs)
           apply (rule finaliseCap_replaceable[where slot=slot'])

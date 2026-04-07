@@ -972,9 +972,7 @@ crunch setQueue
 lemma sts_running_ksReadyQueuesL1Bitmap[wp]:
   "setThreadState Running t \<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
   unfolding setThreadState_def scheduleTCB_def rescheduleRequired_def
-  apply wpsimp
-         apply (rule hoare_pre_cont)
-        by (wpsimp wp: hoare_drop_imps getSchedulable_wp)+
+  by (wpsimp wp: getSchedulable_wp hoare_drop_imps)
 
 lemma asUser_obj_at_not_queued[wp]:
   "\<lbrace>obj_at' (\<lambda>tcb. \<not> tcbQueued tcb) p\<rbrace> asUser t m \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. \<not> tcbQueued tcb) p\<rbrace>"
@@ -1127,13 +1125,6 @@ lemma empty_fail_getEndpoint:
   "empty_fail (getEndpoint ep)"
   unfolding getEndpoint_def
   by (auto intro: empty_fail_getObject)
-
-lemma ko_at_valid_ep':
-  "\<lbrakk>ko_at' ep p s; valid_objs' s\<rbrakk> \<Longrightarrow> valid_ep' ep s"
-  apply (erule obj_atE')
-  apply (erule (1) valid_objsE')
-   apply (simp add: projectKOs valid_obj'_def)
-   done
 
 lemma cap_case_EndpointCap_NotificationCap:
   "(case cap of EndpointCap v0 v1 v2 v3 v4 v5 \<Rightarrow> f v0 v1 v2 v3 v4 v5

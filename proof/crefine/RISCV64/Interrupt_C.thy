@@ -267,12 +267,12 @@ lemma decodeIRQHandlerInvocation_ccorres:
                         sysargs_rel_n_def word_less_nat_alt)
   apply (clarsimp simp: cte_wp_at_ctes_of neq_Nil_conv sysargs_rel_def n_msgRegisters_def
                     excaps_map_def excaps_in_mem_def word_less_nat_alt hd_conv_nth
-                    slotcap_in_mem_def valid_tcb_state'_def
+                    slotcap_in_mem_def
              dest!: interpret_excaps_eq split: bool.splits)
   apply (intro conjI impI allI)
                  apply (clarsimp simp: cte_wp_at_ctes_of neq_Nil_conv sysargs_rel_def n_msgRegisters_def
                                    excaps_map_def excaps_in_mem_def word_less_nat_alt hd_conv_nth
-                                   slotcap_in_mem_def valid_tcb_state'_def
+                                   slotcap_in_mem_def
                             dest!: interpret_excaps_eq split: bool.splits)+
             apply (auto dest: st_tcb_at_idle_thread' ctes_of_valid')[6]
       apply fastforce
@@ -645,7 +645,6 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
    apply (auto simp: ct_in_state'_def neq_Nil_conv word_bits_def
                      excaps_in_mem_def slotcap_in_mem_def
                      cte_wp_at_ctes_of numeral_eqs[symmetric]
-                     valid_tcb_state'_def
               elim!: pred_tcb'_weakenE cte_wp_at_weakenE'
               dest!: st_tcb_at_idle_thread' interpret_excaps_eq)[1]
   apply (clarsimp simp: neq_Nil_conv)
@@ -814,7 +813,6 @@ lemma decodeIRQControlInvocation_ccorres:
    apply (auto simp: ct_in_state'_def neq_Nil_conv word_bits_def
                      excaps_in_mem_def slotcap_in_mem_def
                      cte_wp_at_ctes_of numeral_eqs[symmetric]
-                     valid_tcb_state'_def
               elim!: pred_tcb'_weakenE cte_wp_at_weakenE'
               dest!: st_tcb_at_idle_thread' interpret_excaps_eq)[1]
   apply (clarsimp simp: neq_Nil_conv)

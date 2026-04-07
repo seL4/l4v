@@ -394,6 +394,29 @@ lemma sch_act_simple_ksReadyQueuesL2Bitmap[simp]:
   apply (simp add: sch_act_simple_def)
   done
 
+lemma sch_act_simple_ks_updates[simp]:
+  "sch_act_simple (ksArchState_update f s) = sch_act_simple s"
+  "sch_act_simple (ksReprogramTimer_update g s) = sch_act_simple s"
+  "sch_act_simple (ksReleaseQueue_update h s) = sch_act_simple s"
+  "sch_act_simple (ksMachineState_update i s) = sch_act_simple s"
+  "sch_act_simple (ksCurTime_update j s) = sch_act_simple s"
+  "sch_act_simple (ksConsumedTime_update k s) = sch_act_simple s"
+  "sch_act_simple (ksDomainTime_update l s) = sch_act_simple s"
+  by (clarsimp simp: sch_act_simple_def)+
+
+lemma weak_sch_act_wf_ks_updates[simp]:
+  "weak_sch_act_wf sa (ksArchState_update f s) = weak_sch_act_wf sa s"
+  "weak_sch_act_wf sa (gsUntypedZeroRanges_update g s) = weak_sch_act_wf sa s"
+  "weak_sch_act_wf sa (ksInterruptState_update h s) = weak_sch_act_wf sa s"
+  "weak_sch_act_wf sa (ksWorkUnitsCompleted_update i s) = weak_sch_act_wf sa s"
+  "weak_sch_act_wf sa (ksMachineState_update j s) = weak_sch_act_wf sa s"
+  "weak_sch_act_wf sa (ksCurTime_update k s) = weak_sch_act_wf sa s"
+  "weak_sch_act_wf sa (ksConsumedTime_update l s) = weak_sch_act_wf sa s"
+  "weak_sch_act_wf sa (ksDomainTime_update m s) = weak_sch_act_wf sa s"
+  "weak_sch_act_wf sa (ksReprogramTimer_update n s) = weak_sch_act_wf sa s"
+  "weak_sch_act_wf sa (ksReleaseQueue_update p s) = weak_sch_act_wf sa s"
+  by (clarsimp simp: weak_sch_act_wf_def)+
+
 lemma valid_machine_state'_ksDomainTime[simp]:
   "valid_machine_state' (ksDomainTime_update f s) = valid_machine_state' s"
   by (simp add:valid_machine_state'_def)

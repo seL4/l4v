@@ -31,19 +31,6 @@ begin
 
 declare liftE_handle [simp]
 
-crunch setConsumedTime
-  for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
-  (wp: crunch_wps)
-
-lemma commitTime_sch_act_wf[wp]:
-  "commitTime \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  unfolding commitTime_def
-  by (wpsimp wp: isRoundRobin_wp split: if_splits)
-
-crunch setNextInterrupt, switchSchedContext
-  for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
-  (wp: crunch_wps)
-
 lemma schedule_ct_activatable'[wp]:
   "\<lbrace>\<top>\<rbrace> schedule \<lbrace>\<lambda>_. ct_in_state' activatable'\<rbrace>"
   unfolding schedule_def ct_activatable'_asrt_def
@@ -148,11 +135,6 @@ lemma handleInterruptEntry_ccorres:
 
 crunch handleFault, checkBudgetRestart, updateTimeStamp, handleVMFault
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
-  (wp: sch_act_wf_lift)
-
-crunch updateTimeStamp
-  for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
-  (wp: sch_act_wf_lift)
 
 lemma handleUnknownSyscall_ccorres:
   "ccorres dc xfdc
@@ -193,7 +175,7 @@ lemma handleUnknownSyscall_ccorres:
    apply (rule_tac Q'="\<lambda> _ s. invs' s \<and> ct_in_state' active' s
                               \<and> weak_sch_act_wf (ksSchedulerAction s) s"
                 in hoare_post_imp)
-    apply (fastforce simp: ct_in_state'_def)
+    apply (fastforce simp: ct_in_state'_def runnable_eq_active')
    apply wpsimp
   apply (fastforce simp: weak_sch_act_wf_def ct_in_state'_def runnable_eq_active'
                          st_tcb_at'_def obj_at'_def cfault_rel_def seL4_Fault_UnknownSyscall_lift
@@ -253,7 +235,7 @@ lemma handleVMFaultEvent_ccorres:
    apply (rule_tac Q'="\<lambda> _ s. invs' s \<and> ct_in_state' active' s
                               \<and> weak_sch_act_wf (ksSchedulerAction s) s"
                 in hoare_post_imp)
-    apply (fastforce simp: ct_in_state'_def)
+    apply (fastforce simp: ct_in_state'_def runnable_eq_active')
    apply wpsimp
   by (auto simp: weak_sch_act_wf_def ct_in_state'_def cfault_rel_def is_cap_fault_def
            elim: pred_tcb'_weakenE
@@ -298,7 +280,7 @@ lemma handleUserLevelFault_ccorres:
    apply (rule_tac Q'="\<lambda> _ s. invs' s \<and> ct_in_state' active' s
                               \<and> weak_sch_act_wf (ksSchedulerAction s) s"
                 in hoare_post_imp)
-    apply (fastforce simp: ct_in_state'_def)
+    apply (fastforce simp: ct_in_state'_def runnable_eq_active')
    apply wpsimp
   apply (fastforce elim: pred_tcb'_weakenE
                    simp: ct_in_state'_def weak_sch_act_wf_def cfault_rel_def
@@ -309,10 +291,6 @@ lemmas syscall_defs =
   Kernel_C.SysSend_def Kernel_C.SysNBSend_def
   Kernel_C.SysCall_def Kernel_C.SysRecv_def Kernel_C.SysNBRecv_def
   Kernel_C.SysReplyRecv_def Kernel_C.SysYield_def
-
-lemma ct_active_not_idle'_strengthen:
-  "valid_idle' s \<and> ct_active' s \<longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
-  by clarsimp
 
 lemma handleSyscall_ccorres:
   "ccorres dc xfdc
@@ -909,7 +887,7 @@ lemma dmo_domain_user_mem'[wp]:
 
 lemma do_user_op_corres_C:
   "corres_underlying rf_sr False False (=)
-     ((invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
+     ((invs' and cross_valid_objs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
       and ksReadyQueues_asrt and ksReleaseQueue_asrt)
       and ex_abs einvs) \<top>
      (doUserOp f tc) (doUserOp_C f tc)"
@@ -999,6 +977,82 @@ lemma check_active_irq_corres_C:
    apply (wp|simp)+
   done
 
+lemma cross_valid_tcbs'_cross:
+  "\<lbrakk>pspace_relation (kheap s) (ksPSpace s'); valid_objs s;
+    pspace_aligned s; pspace_distinct s; no_0_obj' s'\<rbrakk>
+   \<Longrightarrow> cross_valid_tcbs' s'"
+  apply (clarsimp simp: cross_valid_tcbs'_def tcb_st_refs_of'_def map_comp_def split: option.splits)
+  apply (rename_tac tcb' ref tp)
+  apply (clarsimp simp: pspace_relation_heap_pspace_relation)
+  apply (frule heap_pspace_relation_tcbs_relation)
+  apply (frule (1) tcbs_relation_tcb_relation_conc)
+  apply clarsimp
+  apply (rename_tac tcb)
+  apply (prop_tac "valid_tcb p tcb s")
+   apply (force simp: valid_objs_def valid_obj_def)
+  apply (clarsimp simp: valid_tcb_def valid_tcb_state_def tcb_relation_def)
+  by (case_tac "tcbState tcb'"; case_tac "tcb_state tcb";
+      fastforce dest!: reply_at_cross
+                 simp: word_greater_zero_iff
+            simp flip: pspace_relation_heap_pspace_relation
+                split: if_splits)
+
+lemma cross_valid_sched_contexts'_cross:
+  "\<lbrakk>pspace_relation (kheap s) (ksPSpace s'); sc_replies_relation s s';
+    valid_objs s; pspace_aligned s; pspace_distinct s\<rbrakk>
+   \<Longrightarrow> cross_valid_sched_contexts' s'"
+  apply (clarsimp simp: cross_valid_sched_contexts'_def map_comp_def split: option.splits)
+  apply (fastforce elim: reply_at'_scReply)
+  done
+
+lemma cross_valid_eps'_cross:
+  "\<lbrakk>(s, s') \<in> state_relation; ep_queues_blocked s; valid_objs s; pspace_aligned s; pspace_distinct s\<rbrakk>
+   \<Longrightarrow> cross_valid_eps' s'"
+  apply (clarsimp simp: cross_valid_eps'_def map_comp_def split: option.splits)
+  apply (rename_tac epPtr ep')
+  apply (frule state_relation_pspace_relation)
+  apply (clarsimp simp: pspace_relation_heap_pspace_relation)
+  apply (frule heap_pspace_relation_eps_relation)
+  apply (frule (1) eps_relation_ep_relation_conc)
+  apply (frule state_relation_ep_queues_relation)
+  apply (clarsimp simp: ep_queues_relation_def)
+  apply (drule_tac x=epPtr in spec)
+  apply (rule list_queue_relation_tcb_queue_head_end_valid)
+  apply (fastforce simp: opt_map_red eps_of_kh_def)
+  apply (frule_tac p=epPtr in in_ep_queue_sched_flag_set; fastforce simp: opt_map_red eps_of_kh_def)
+  done
+
+lemma cross_valid_ntfns'_cross:
+  "\<lbrakk>(s, s') \<in> state_relation; ntfn_queues_blocked s;
+    valid_objs s; pspace_aligned s; pspace_distinct s\<rbrakk>
+   \<Longrightarrow> cross_valid_ntfns' s'"
+  apply (clarsimp simp: cross_valid_ntfns'_def map_comp_def split: option.splits)
+  apply (rename_tac ntfnPtr ntfn')
+  apply (frule state_relation_pspace_relation)
+  apply (clarsimp simp: pspace_relation_heap_pspace_relation)
+  apply (frule heap_pspace_relation_ntfns_relation)
+  apply (frule (1) ntfns_relation_ntfn_relation_conc)
+  apply (frule state_relation_ntfn_queues_relation)
+  apply (clarsimp simp: ntfn_queues_relation_def)
+  apply (drule_tac x=ntfnPtr in spec)
+  apply (rule list_queue_relation_tcb_queue_head_end_valid)
+  apply (fastforce simp: opt_map_red eps_of_kh_def)
+  apply (frule_tac p=ntfnPtr in in_ntfn_queue_sched_flag_set; fastforce simp: opt_map_red eps_of_kh_def)
+  done
+
+lemma cross_valid_objs'_cross:
+  "\<lbrakk>(s, s') \<in> state_relation; ep_queues_blocked s; ntfn_queues_blocked s; no_0_obj' s';
+    valid_objs s; pspace_aligned s; pspace_distinct s\<rbrakk>
+   \<Longrightarrow> cross_valid_objs' s'"
+  apply (frule state_relation_pspace_relation)
+  apply (frule state_relation_sc_replies_relation)
+  apply (frule state_relation_ep_queues_relation)
+  apply (frule state_relation_ntfn_queues_relation)
+  apply (clarsimp simp: cross_valid_objs'_def)
+  apply (force intro: cross_valid_tcbs'_cross cross_valid_sched_contexts'_cross
+                      cross_valid_eps'_cross cross_valid_ntfns'_cross)
+  done
+
 lemma refinement2_both:
   "fp = False \<Longrightarrow> \<comment> \<open>FIXME: fastpath\<close>
   \<lparr> Init = Init_C, Fin = Fin_C,
@@ -1021,17 +1075,21 @@ lemma refinement2_both:
    apply (clarsimp simp: cstate_to_A_def)
    apply (subst cstate_to_H_correct)
          apply (fastforce simp: full_invs'_def invs'_def)
-        apply (clarsimp simp: lift_state_relation_def full_invs_def)
-        apply (rule sch_act_wf_cross)
-            apply force
-           subgoal by (clarsimp simp: valid_sched_def)
-          apply fastforce+
+        apply (clarsimp simp: lift_state_relation_def full_invs_def full_invs'_def)
+        apply (frule sym_refs_ep_queues_blocked[OF invs_sym_refs])
+        apply (frule sym_refs_ntfn_queues_blocked[OF invs_sym_refs])
+        apply (erule (2) cross_valid_objs'_cross, fastforce+)[1]
+       apply (clarsimp simp: lift_state_relation_def full_invs_def)
+       apply (rule sch_act_wf_cross)
+           apply force
+          subgoal by (clarsimp simp: valid_sched_def)
+         apply fastforce+
       apply (clarsimp simp: lift_state_relation_def full_invs_def)
       apply (rule ksReadyQueues_asrt_cross)
-      apply (erule state_relation_ready_queues_relation)
-     apply (clarsimp simp: lift_state_relation_def full_invs_def)
+         apply (erule state_relation_ready_queues_relation, fastforce+)
+     apply (clarsimp simp: lift_state_relation_def full_invs_def full_invs'_def)
      apply (rule ksReleaseQueue_asrt_cross)
-     apply (erule state_relation_release_queue_relation)
+        apply (erule state_relation_release_queue_relation, fastforce+)
     apply (clarsimp simp: rf_sr_def)
     apply (clarsimp simp: lift_state_relation_def full_invs_def)
    apply (simp add:absKState_def observable_memory_def absExst_def)
@@ -1056,7 +1114,8 @@ lemma refinement2_both:
      apply (clarsimp simp: ex_abs_def full_invs_def)
      apply (intro conjI)
          apply (frule_tac s=abstract_state in invs_sym_refs)
-         apply (frule_tac s'=haskell_state in state_refs_of_cross_eq)
+         apply (frule_tac s'=haskell_state in sym_refs_cross)
+            apply fastforce
            apply fastforce
           apply fastforce
          apply clarsimp
@@ -1074,12 +1133,15 @@ lemma refinement2_both:
       apply (frule_tac a=abstract_state in resume_cur_thread_cross; fastforce)
      apply (clarsimp simp: state_relation_def)
     apply (fastforce simp: ct_running'_C)
-   apply (fastforce simp: full_invs_def full_invs'_def all_invs'_def
-                   intro: resume_cur_thread_cross)
+   apply (clarsimp simp: all_invs'_def)
+   apply (rule_tac x=abstract_state in exI)
+   apply (clarsimp simp: full_invs_def ex_abs_def full_invs'_def all_invs'_def
+                   dest!: resume_cur_thread_cross)
 
   apply (erule_tac P="a \<and> b \<and> c \<and> d \<and> e" for a b c d e in disjE)
    apply (clarsimp simp add: do_user_op_C_def do_user_op_H_def monad_to_transition_def)
-   apply (rule rev_mp, rule_tac f="uop" and tc=af in do_user_op_corres_C)
+   apply (rename_tac abs_state uc)
+   apply (rule rev_mp, rule_tac f="uop" and tc=uc in do_user_op_corres_C)
    apply (clarsimp simp: corres_underlying_def invs_def ex_abs_def)
    apply (drule bspec)
     apply fastforce
@@ -1087,22 +1149,31 @@ lemma refinement2_both:
    apply (elim impE)
     apply (clarsimp simp: full_invs'_def ex_abs_def)
     apply (intro conjI)
+        apply (clarsimp simp: lift_state_relation_def full_invs_def full_invs'_def)
+        apply (frule sym_refs_ep_queues_blocked[OF invs_sym_refs])
+        apply (frule sym_refs_ntfn_queues_blocked[OF invs_sym_refs])
+        apply (erule (2) cross_valid_objs'_cross, fastforce+)[1]
        apply (rule_tac s=s in sch_act_wf_cross; fastforce?)
        subgoal by (clarsimp simp: valid_sched_def)
       apply (clarsimp simp: lift_state_relation_def full_invs_def)
       apply (rule ksReadyQueues_asrt_cross)
-      apply (erule state_relation_ready_queues_relation)
+         apply (erule state_relation_ready_queues_relation, fastforce+)
      apply (clarsimp simp: lift_state_relation_def full_invs_def)
-     apply (frule state_relation_ready_queues_relation)
-     apply (clarsimp simp: ready_queues_relation_def Let_def tcbQueueEmpty_def)
      apply (rule ksReleaseQueue_asrt_cross)
-     apply (erule state_relation_release_queue_relation)
-    apply fastforce
-   apply fastforce
+        apply (erule state_relation_release_queue_relation)
+       apply fastforce
+      apply fastforce
+     apply fastforce
+    apply (clarsimp simp: lift_state_relation_def full_invs_def)
+    apply (rule_tac x=abs_state in exI)
+    apply force
+   apply force
 
+  (* this block is very similar to the previous block *)
   apply (erule_tac P="a \<and> b \<and> c \<and> (\<exists>x. e x)" for a b c d e in disjE)
    apply (clarsimp simp add: do_user_op_C_def do_user_op_H_def monad_to_transition_def)
-   apply (rule rev_mp, rule_tac f="uop" and tc=af in do_user_op_corres_C)
+   apply (rename_tac abs_state uc eo)
+   apply (rule rev_mp, rule_tac f=uop and tc=uc in do_user_op_corres_C)
    apply (clarsimp simp: corres_underlying_def invs_def ex_abs_def)
    apply (drule bspec)
     apply fastforce
@@ -1110,15 +1181,25 @@ lemma refinement2_both:
    apply (elim impE)
     apply (clarsimp simp: full_invs'_def ex_abs_def)
     apply (intro conjI)
+        apply (clarsimp simp: lift_state_relation_def full_invs_def full_invs'_def)
+        apply (frule sym_refs_ep_queues_blocked[OF invs_sym_refs])
+        apply (frule sym_refs_ntfn_queues_blocked[OF invs_sym_refs])
+        apply (erule (2) cross_valid_objs'_cross, fastforce+)[1]
         apply (rule_tac s=s in sch_act_wf_cross; fastforce?)
-        subgoal by (clarsimp simp: valid_sched_def)
+       subgoal by (clarsimp simp: valid_sched_def)
       apply (clarsimp simp: lift_state_relation_def full_invs_def)
       apply (rule ksReadyQueues_asrt_cross)
-      apply (erule state_relation_ready_queues_relation)
+         apply (erule state_relation_ready_queues_relation, fastforce+)
+     apply (clarsimp simp: lift_state_relation_def full_invs_def)
      apply (rule ksReleaseQueue_asrt_cross)
-     apply (erule state_relation_release_queue_relation)
-    apply fastforce
-   apply fastforce
+        apply (erule state_relation_release_queue_relation)
+       apply fastforce
+      apply fastforce
+     apply fastforce
+    apply (clarsimp simp: lift_state_relation_def full_invs_def)
+    apply (rule_tac x=abs_state in exI)
+    apply force
+   apply force
 
   apply (clarsimp simp: check_active_irq_C_def check_active_irq_H_def)
   apply (rule rev_mp, rule check_active_irq_corres_C)

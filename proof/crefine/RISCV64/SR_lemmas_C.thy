@@ -1196,26 +1196,6 @@ lemma ccap_relation_NullCap_iff:
                      cap_to_H_def cap_lift_def Let_def cap_tag_defs
               split: if_split)
 
-(* MOVE *)
-lemma ntfn_blocked_in_queueD:
-  "\<lbrakk> st_tcb_at' ((=) (Structures_H.thread_state.BlockedOnNotification ntfn)) thread \<sigma>;
-     ko_at' ntfn' ntfn \<sigma>; invs' \<sigma> ; sym_refs (state_refs_of' \<sigma>)\<rbrakk>
-   \<Longrightarrow> thread \<in> set (ntfnQueue (ntfnObj ntfn')) \<and> isWaitingNtfn (ntfnObj ntfn')"
-  apply (drule sym_refs_st_tcb_atD')
-   apply clarsimp
-  apply (clarsimp simp: obj_at'_def ko_wp_at'_def
-                        refs_of_rev'[where ko = "KONotification ntfn'", simplified])
-  apply (cases "ntfnObj ntfn'")
-    apply (simp_all add: isWaitingNtfn_def)
-    done
-
-(* MOVE *)
-lemma valid_ntfn_isWaitingNtfnD:
-  "\<lbrakk> valid_ntfn' ntfn s; isWaitingNtfn (ntfnObj ntfn) \<rbrakk>
-  \<Longrightarrow> ntfnQueue (ntfnObj ntfn) \<noteq> [] \<and> (\<forall>t\<in>set (ntfnQueue (ntfnObj ntfn)). tcb_at' t s)"
-  unfolding valid_ntfn'_def isWaitingNtfn_def
-  by (clarsimp split: Structures_H.notification.splits ntfn.splits)
-
 lemma cmap_relation_ko_atD:
   fixes ko :: "'a :: pspace_storable" and  mp :: "word32 \<rightharpoonup> 'a"
   assumes ps: "cmap_relation (projectKO_opt \<circ>\<^sub>m (ksPSpace s)) (cslift s') f rel"
@@ -1245,28 +1225,6 @@ lemma cmap_relation_ko_atE:
   apply (clarsimp)
   apply (erule (1) rl)
   done
-
-lemma ntfn_to_ep_queue:
-  assumes ko: "ko_at' ntfn' ntfn s"
-  and     waiting: "isWaitingNtfn (ntfnObj ntfn')"
-  and     rf: "(s, s') \<in> rf_sr"
-  shows "ep_queue_relation' (cslift s') (ntfnQueue (ntfnObj ntfn'))
-              (Ptr (ntfnQueue_head_CL
-                     (notification_lift (the (cslift s' (Ptr ntfn))))))
-              (Ptr (ntfnQueue_tail_CL
-                     (notification_lift (the (cslift s' (Ptr ntfn))))))"
-proof -
-  from rf have
-    "cmap_relation (map_to_ntfns (ksPSpace s)) (cslift s') Ptr (cnotification_relation (cslift s'))"
-    by (rule cmap_relation_ntfn)
-
-  thus ?thesis using ko waiting
-    apply -
-    apply (erule (1) cmap_relation_ko_atE)
-    apply (clarsimp simp: cnotification_relation_def Let_def isWaitingNtfn_def
-                   split: Structures_H.notification.splits ntfn.splits)
-    done
-qed
 
 lemma map_to_tcbs_from_tcb_at:
   "tcb_at' thread s \<Longrightarrow> map_to_tcbs (ksPSpace s) thread \<noteq> None"
@@ -1466,72 +1424,6 @@ lemma threadSet_eq:
   apply simp
   done
 
-definition
-  "tcb_null_ep_ptrs a \<equiv> a \<lparr> tcbEPNext_C := NULL, tcbEPPrev_C := NULL \<rparr>"
-
-definition
-  "tcb_null_sched_ptrs a \<equiv> a \<lparr> tcbSchedNext_C := NULL, tcbSchedPrev_C := NULL \<rparr>"
-
-definition
-  "tcb_null_queue_ptrs a \<equiv> a \<lparr> tcbSchedNext_C := NULL, tcbSchedPrev_C := NULL, tcbEPNext_C := NULL, tcbEPPrev_C := NULL\<rparr>"
-
-lemma null_sched_queue:
-  "map_option tcb_null_sched_ptrs \<circ> mp = map_option tcb_null_sched_ptrs \<circ> mp'
-  \<Longrightarrow> map_option tcb_null_queue_ptrs \<circ> mp = map_option tcb_null_queue_ptrs \<circ> mp'"
-  apply (rule ext)
-  apply (erule_tac x = x in map_option_comp_eqE)
-   apply simp
-  apply (clarsimp simp: tcb_null_queue_ptrs_def tcb_null_sched_ptrs_def)
-  done
-
-lemma null_ep_queue:
-  "map_option tcb_null_ep_ptrs \<circ> mp = map_option tcb_null_ep_ptrs \<circ> mp'
-  \<Longrightarrow> map_option tcb_null_queue_ptrs \<circ> mp = map_option tcb_null_queue_ptrs \<circ> mp'"
-  apply (rule ext)
-  apply (erule_tac x = x in map_option_comp_eqE)
-   apply simp
-  apply (case_tac v, case_tac v')
-  apply (clarsimp simp: tcb_null_queue_ptrs_def tcb_null_ep_ptrs_def)
-  done
-
-lemma null_sched_epD:
-  assumes om: "map_option tcb_null_sched_ptrs \<circ> mp = map_option tcb_null_sched_ptrs \<circ> mp'"
-  shows "map_option tcbEPNext_C \<circ> mp = map_option tcbEPNext_C \<circ> mp' \<and>
-         map_option tcbEPPrev_C \<circ> mp = map_option tcbEPPrev_C \<circ> mp'"
-  using om
-  apply -
-  apply (rule conjI)
-   apply (rule ext)
-   apply (erule_tac x = x in map_option_comp_eqE )
-    apply simp
-   apply (case_tac v, case_tac v')
-   apply (clarsimp simp: tcb_null_sched_ptrs_def)
-  apply (rule ext)
-  apply (erule_tac x = x in map_option_comp_eqE )
-   apply simp
-  apply (case_tac v, case_tac v')
-  apply (clarsimp simp: tcb_null_sched_ptrs_def)
-  done
-
-lemma null_ep_schedD:
-  assumes om: "map_option tcb_null_ep_ptrs \<circ> mp = map_option tcb_null_ep_ptrs \<circ> mp'"
-  shows "map_option tcbSchedNext_C \<circ> mp = map_option tcbSchedNext_C \<circ> mp' \<and>
-         map_option tcbSchedPrev_C \<circ> mp = map_option tcbSchedPrev_C \<circ> mp'"
-  using om
-  apply -
-  apply (rule conjI)
-   apply (rule ext)
-   apply (erule_tac x = x in map_option_comp_eqE )
-    apply simp
-   apply (case_tac v, case_tac v')
-   apply (clarsimp simp: tcb_null_ep_ptrs_def)
-  apply (rule ext)
-  apply (erule_tac x = x in map_option_comp_eqE )
-   apply simp
-  apply (case_tac v, case_tac v')
-  apply (clarsimp simp: tcb_null_ep_ptrs_def)
-  done
-
 lemma cmap_relation_cong:
   assumes adom: "dom am = dom am'"
   and     cdom: "dom cm = dom cm'"
@@ -1573,19 +1465,6 @@ lemma cmap_relation_cong:
    apply (erule subsetD)
    apply (erule imageI)
    done
-
-lemma ctcb_relation_null_ep_ptrs:
-  assumes rel: "cmap_relation mp mp' tcb_ptr_to_ctcb_ptr ctcb_relation"
-  and same: "map_option tcb_null_ep_ptrs \<circ> mp'' = map_option tcb_null_ep_ptrs \<circ> mp'"
-  shows "cmap_relation mp mp'' tcb_ptr_to_ctcb_ptr ctcb_relation"
-  using rel
-  apply (rule iffD1 [OF cmap_relation_cong, OF _ map_option_eq_dom_eq, rotated -1])
-    apply simp
-   apply (rule same [symmetric])
-  apply (drule compD [OF same])
-  apply (case_tac b, case_tac b')
-  apply (simp add: ctcb_relation_def tcb_null_ep_ptrs_def)
-  done
 
 lemma map_to_ctes_upd_tcb_no_ctes:
   "\<lbrakk>ko_at' tcb thread s ; \<forall>x\<in>ran tcb_cte_cases. (\<lambda>(getF, setF). getF tcb' = getF tcb) x \<rbrakk>
@@ -1795,7 +1674,7 @@ lemma obj_at_cslift_tcb:
 lemma obj_at_cslift_ntfn:
   "\<lbrakk>obj_at' P ntfn s; (s, s') \<in> rf_sr\<rbrakk>
    \<Longrightarrow> \<exists>ko ko'. ko_at' ko ntfn s \<and> P ko \<and> cslift s' (Ptr ntfn) = Some ko'
-                \<and> cnotification_relation (cslift s') ko ko'"
+                \<and> cnotification_relation ko ko'"
   apply (frule obj_at_ko_at')
   apply clarsimp
   apply (frule cmap_relation_ntfn)
