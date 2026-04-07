@@ -34,8 +34,8 @@ text \<open>
   goal when the postcondition of the rcorres goal mentions only the return value and state from
   one of the two monads. These lifting rules often require @{const no_fail} assumptions, and so when
   lifting an rcorres goal with a concrete function that is a @{const Nondet_Monad.bind} of other
-  functions, we will immediately be required to show @{const no_fail} for the composite function
-  anyway. Therefore, we have chosen to keep failure separate. The section below regarding
+  functions, we will immediately be required to show @{const no_fail} for the composite concrete
+  function anyway. Therefore, we have chosen to keep failure separate. The section below regarding
   interactions with @{const no_fail} includes a rule that allows us to show @{const no_fail} for
   composite functions by transforming complex predicates with rcorres. The section below regarding
   @{const corres_underlying} shows the relation between rcorres and @{const corres_underlying}.\<close>
@@ -305,11 +305,13 @@ lemmas rcorres_if_r_fwd = rcorres_if_r[where T=R and F=R for R, simplified]
 
 section \<open>Lifting rules\<close>
 
+named_theorems rcorres_op_lifts
+
 text \<open>
   We would like a lifting rule for conjunctions, and so a rule with assumptions including
   @{const rcorres} statements for the postconditions @{term R'} and @{term Q'} separately, with
-  conclusion an @{term rcorres} statement for the conjunction @{term "R' \<and> Q'"}, roughly speaking.
-  The inclusion of the @{term det_wp} assumption in the following rule warrants some explanation.
+  conclusion an @{const rcorres} statement for the conjunction @{term "R' \<and> Q'"}, roughly speaking.
+  The inclusion of the @{const det_wp} assumption in the following rule warrants some explanation.
 
   Noting the definition of @{const rcorres}, suppose that we have two states @{term s} and @{term s'}
   which satisfy the precondition of the conclusion, as well as a pair @{term "(rv', t')"} in the
@@ -327,10 +329,10 @@ text \<open>
   It does not seem possible for us to state an adequate lifting rule for conjunction for
   @{const rcorres} with a nondeterministic abstract monadic function, and so in such a situation,
   it may be necessary to unfold the definition of @{const rcorres}.\<close>
-lemma rcorres_conj_lift:
-  "\<lbrakk>det_wp P f; rcorres Q f f' R'; rcorres R f f' Q'\<rbrakk>
+lemma rcorres_conj_lift[rcorres_op_lifts]:
+  "\<lbrakk>det_wp P f; rcorres R f f' R'; rcorres Q f f' Q'\<rbrakk>
    \<Longrightarrow> rcorres
-         (\<lambda>s s'. P s \<and> Q s s' \<and> R s s')
+         (\<lambda>s s'. P s \<and> R s s' \<and> Q s s')
          f f' (\<lambda>rv rv' s s'. R' rv rv' s s' \<and> Q' rv rv' s s')"
   by (fastforce simp: rcorres_def det_wp_def)
 
@@ -341,7 +343,7 @@ lemma rcorres_conj_lift_fwd:
   apply (fastforce intro!: rcorres_weaken_pre[OF rcorres_conj_lift])
   done
 
-lemma rcorres_imp_lift:
+lemma rcorres_imp_lift[rcorres_op_lifts]:
   "\<lbrakk>rcorres P' f f' (\<lambda>rv rv' s s'. \<not> P rv rv' s s'); rcorres Q' f f' Q\<rbrakk>
    \<Longrightarrow> rcorres
          (\<lambda>s s'. \<not> P' s s' \<longrightarrow> Q' s s')
@@ -354,10 +356,14 @@ lemma rcorres_imp_lift_fwd:
    \<Longrightarrow> rcorres R f f' (\<lambda>rv rv' s s'. A s s' \<longrightarrow> R' rv rv' s s')"
   by (rule rcorres_weaken_pre, rule rcorres_imp_lift, fastforce+)
 
+lemma rcorres_drop_imp:
+  "rcorres P f f' Q \<Longrightarrow> rcorres P f f' (\<lambda>rv rv' s s'. Q' rv rv' s s' \<longrightarrow> Q rv rv' s s')"
+  by (fastforce simp: rcorres_def)
+
 text
   \<open>As with @{thm rcorres_conj_lift}, the @{const det_wp} assumption seems necessary in order
    to state an adequate lifting rule for @{const All}.\<close>
-lemma rcorres_allI:
+lemma rcorres_allI[rcorres_op_lifts]:
   "\<lbrakk>det_wp P f; \<And>x. rcorres (\<lambda>s s'. R x s s') f f' (\<lambda>rv rv' s s'. R' x rv rv' s s')\<rbrakk>
    \<Longrightarrow> rcorres (\<lambda>s s'. P s \<and> (\<forall>x. R x s s')) f f' (\<lambda>rv rv' s s'. \<forall>x. R' x rv rv' s s')"
   by (fastforce simp: rcorres_def det_wp_def singleton_iff)
@@ -369,8 +375,18 @@ lemma rcorres_allI_fwd:
   apply (fastforce intro!: rcorres_weaken_pre[OF rcorres_allI])
   done
 
+lemma rcorres_exI[rcorres_op_lifts]:
+  "rcorres R f f' (\<lambda>rv rv' s s'. R' (x rv rv' s s') rv rv' s s')
+   \<Longrightarrow> rcorres R f f' (\<lambda>rv rv' s s'. \<exists>x. R' x rv rv' s s')"
+  by (fastforce simp: rcorres_def)
+
+lemma rcorres_exI_abs_rv:
+  "rcorres R f f' (\<lambda>rv rv' s s'. R' rv rv rv' s s')
+   \<Longrightarrow> rcorres R f f' (\<lambda>rv rv' s s'. \<exists>x. R' x rv rv' s s')"
+  by (rule rcorres_exI)
+
 lemma rcorres_prop:
-  "\<lbrakk>no_fail (\<lambda>s. Q s) f; empty_fail f\<rbrakk> \<Longrightarrow> rcorres (\<lambda>s s'. Q s \<and> R')  f f' (\<lambda>_ _ _ _. R')"
+  "\<lbrakk>no_fail Q f; empty_fail f\<rbrakk> \<Longrightarrow> rcorres (\<lambda>s s'. Q s \<and> R')  f f' (\<lambda>_ _ _ _. R')"
   by (fastforce simp: rcorres_def no_fail_def empty_fail_def)
 
 lemma rcorres_prop_fwd:
@@ -476,13 +492,16 @@ method rcorres uses rcorres_del rcorres_lift_del wp simp declares rcorres rcorre
 
 text \<open>
   This method is intended to be used to solve or make progress with @{const rcorres} goals via
-  lifting, when the precondition is not schematic.\<close>
-method rcorres_conj_lift methods solve uses rule simp wp =
+  lifting, when the precondition is not schematic.
+
+  The user may specify a set to the argument rule: so that side conditions such as @{const no_fail},
+  @{const empty_fail}, and @{const det_wp} can be solved more directly.\<close>
+method rcorres_conj_lift methods solve_final_imp uses rule simp wp =
   (rule rcorres_conj_lift_fwd,
    (solves \<open>rule det_wp_pre, rule rule, clarsimp\<close> | solves \<open>wpsimp wp: wp simp: simp\<close>))?,
   rule rcorres_weaken_pre,
   (rule rcorres_lift, (solves \<open>rule rule\<close> | solves \<open>wpsimp wp: wp simp: simp\<close>)+)[1],
-  solves solve
+  solves solve_final_imp
 
 experiment
   fixes f f' :: "('s, 'r) nondet_monad"
