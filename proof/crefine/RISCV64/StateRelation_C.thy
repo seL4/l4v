@@ -209,14 +209,6 @@ where
 lemma ccte_relation_c_valid_cte: "ccte_relation  c c' \<Longrightarrow> c_valid_cte c'"
   by (simp add: ccte_relation_def)
 
-
-definition
-  tcb_queue_relation' :: "(tcb_C \<Rightarrow> tcb_C ptr) \<Rightarrow> (tcb_C \<Rightarrow> tcb_C ptr) \<Rightarrow> (tcb_C ptr \<Rightarrow> tcb_C option) \<Rightarrow> machine_word list \<Rightarrow> tcb_C ptr \<Rightarrow> tcb_C ptr \<Rightarrow> bool"
-  where
-  "tcb_queue_relation' getNext getPrev hp queue qhead end \<equiv>
-  (end = (if queue = [] then NULL else (tcb_ptr_to_ctcb_ptr (last queue))))
-  \<and> tcb_queue_relation getNext getPrev hp queue NULL qhead"
-
 fun
   register_from_H :: "register \<Rightarrow> register_idx"
   where
@@ -284,7 +276,7 @@ where
 | "cthread_state_relation_lifted (Structures_H.BlockedOnReceive oref cg replyobj) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReceive
         \<and> oref = blockingObject_CL (fst ts')
-        \<and> cg = to_bool (blockingIPCCanGrant_CL (fst ts'))
+        \<and> cg = False \<comment> \<open>unused for BlockedOnReceive\<close>
         \<and> option_to_0 replyobj = replyObject_CL (fst ts'))"
 | "cthread_state_relation_lifted (Structures_H.BlockedOnSend oref badge cg cgr isc) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnSend
@@ -509,41 +501,50 @@ definition creply_relation :: "Structures_H.reply \<Rightarrow> reply_C \<Righta
         else 0)
        = (callStackPtr_CL \<circ> call_stack_lift \<circ> replyNext_C) creply"
 
-abbreviation
-  "ep_queue_relation' \<equiv> tcb_queue_relation' tcbEPNext_C tcbEPPrev_C"
+definition epstate_to_C :: "epstate \<Rightarrow> machine_word" where
+  "epstate_to_C state \<equiv>
+     case state of
+         IdleEPState \<Rightarrow> scast EPState_Idle
+       | ReceiveEPState \<Rightarrow> scast EPState_Recv
+       | SendEPState \<Rightarrow> scast EPState_Send"
 
-definition
-  cendpoint_relation :: "tcb_C typ_heap \<Rightarrow> Structures_H.endpoint \<Rightarrow> endpoint_C \<Rightarrow> bool"
-where
-  "cendpoint_relation h ntfn cep \<equiv>
+definition cendpoint_state_relation :: "epstate \<Rightarrow> machine_word \<Rightarrow> bool" where
+  "cendpoint_state_relation st cstate \<equiv> epstate_to_C st = cstate"
+
+definition tcb_queue_to_tcb_queue_C :: "tcb_queue \<Rightarrow> tcb_queue_C" where
+  "tcb_queue_to_tcb_queue_C q \<equiv>
+     tcb_queue_C (option_to_ctcb_ptr (tcbQueueHead q)) (option_to_ctcb_ptr (tcbQueueEnd q))"
+
+definition ctcb_queue_relation :: "tcb_queue \<Rightarrow> tcb_queue_C \<Rightarrow> bool" where
+  "ctcb_queue_relation aqueue cqueue \<equiv> cqueue = tcb_queue_to_tcb_queue_C aqueue"
+
+definition cendpoint_relation :: "Structures_H.endpoint \<Rightarrow> endpoint_C \<Rightarrow> bool" where
+  "cendpoint_relation ep cep \<equiv>
      let cstate = endpoint_CL.state_CL (endpoint_lift cep);
          chead  = (Ptr o epQueue_head_CL o endpoint_lift) cep;
-         cend   = (Ptr o epQueue_tail_CL o endpoint_lift) cep in
-       case ntfn of
-         IdleEP \<Rightarrow> cstate = scast EPState_Idle \<and> ep_queue_relation' h [] chead cend
-       | SendEP q \<Rightarrow> cstate = scast EPState_Send \<and> ep_queue_relation' h q chead cend
-       | RecvEP q \<Rightarrow> cstate = scast EPState_Recv \<and> ep_queue_relation' h q chead cend"
+         cend   = (Ptr o epQueue_tail_CL o endpoint_lift) cep;
+         cqueue = tcb_queue_C chead cend in
+     cendpoint_state_relation (epState ep) cstate
+     \<and> ctcb_queue_relation (epQueue ep) cqueue"
 
-definition
-  cnotification_relation :: "tcb_C typ_heap \<Rightarrow> Structures_H.notification \<Rightarrow>
-                              notification_C \<Rightarrow> bool"
-where
-  "cnotification_relation h antfn cntfn \<equiv>
+definition cnotification_relation :: "Structures_H.notification \<Rightarrow> notification_C \<Rightarrow> bool" where
+  "cnotification_relation antfn cntfn \<equiv>
      let cntfn'  = notification_lift cntfn;
          cstate = notification_CL.state_CL cntfn';
          chead  = (Ptr o ntfnQueue_head_CL) cntfn';
          cend   = (Ptr o ntfnQueue_tail_CL) cntfn';
+         cqueue = tcb_queue_C chead cend;
          cboundtcb = ((Ptr o ntfnBoundTCB_CL) cntfn' :: tcb_C ptr);
-         cboundsc = ((Ptr o ntfnSchedContext_CL) cntfn' :: sched_context_C ptr)
-     in
-       (case ntfnObj antfn of
-         IdleNtfn \<Rightarrow> cstate = scast NtfnState_Idle \<and> ep_queue_relation' h [] chead cend
-       | WaitingNtfn q \<Rightarrow> cstate = scast NtfnState_Waiting \<and> ep_queue_relation' h q chead cend
-       | ActiveNtfn msgid \<Rightarrow> cstate = scast NtfnState_Active \<and>
-                           msgid = ntfnMsgIdentifier_CL cntfn' \<and>
-                           ep_queue_relation' h [] chead cend)
-       \<and> option_to_ctcb_ptr (ntfnBoundTCB antfn) = cboundtcb
-       \<and> option_to_ptr (ntfnSc antfn) = cboundsc"
+         cboundsc = ((Ptr o ntfnSchedContext_CL) cntfn' :: sched_context_C ptr) in
+     (case ntfnState antfn of
+         IdleNtfnState \<Rightarrow> cstate = scast NtfnState_Idle
+       | Waiting \<Rightarrow> cstate = scast NtfnState_Waiting
+       | Active \<Rightarrow> cstate = scast NtfnState_Active
+                            \<and> (\<forall>msg. ntfnMsgIdentifier antfn = Some msg
+                                     \<longrightarrow> msg = ntfnMsgIdentifier_CL cntfn'))
+     \<and> ctcb_queue_relation (ntfnQueue antfn) cqueue
+     \<and> option_to_ctcb_ptr (ntfnBoundTCB antfn) = cboundtcb
+     \<and> option_to_ptr (ntfnSc antfn) = cboundsc"
 
 definition
   "user_from_vm_rights R \<equiv> case R of
@@ -649,10 +650,10 @@ abbreviation
   "cpspace_tcb_relation ah ch \<equiv> cmap_relation (map_to_tcbs ah) (clift ch) tcb_ptr_to_ctcb_ptr ctcb_relation"
 
 abbreviation
-  "cpspace_ep_relation ah ch \<equiv> cmap_relation (map_to_eps ah) (clift ch) Ptr (cendpoint_relation (clift ch))"
+  "cpspace_ep_relation ah ch \<equiv> cmap_relation (map_to_eps ah) (clift ch) Ptr cendpoint_relation"
 
 abbreviation
-  "cpspace_ntfn_relation ah ch \<equiv> cmap_relation (map_to_ntfns ah) (clift ch) Ptr (cnotification_relation (clift ch))"
+  "cpspace_ntfn_relation ah ch \<equiv> cmap_relation (map_to_ntfns ah) (clift ch) Ptr cnotification_relation"
 
 abbreviation cpspace_sched_context_relation ::
   "(obj_ref \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> heap_raw_state \<Rightarrow> bool"
@@ -693,9 +694,6 @@ where
     cpspace_pte_array_relation ah ch"
 
 abbreviation
-  "sched_queue_relation' \<equiv> tcb_queue_relation' tcbSchedNext_C tcbSchedPrev_C"
-
-abbreviation
   end_C :: "tcb_queue_C \<Rightarrow> tcb_C ptr"
 where
  "end_C == tcb_queue_C.end_C"
@@ -704,11 +702,6 @@ definition
   cready_queues_index_to_C :: "domain \<Rightarrow> priority \<Rightarrow> nat"
 where
   "cready_queues_index_to_C qdom prio \<equiv> (unat qdom) * numPriorities + (unat prio)"
-
-definition ctcb_queue_relation :: "tcb_queue \<Rightarrow> tcb_queue_C \<Rightarrow> bool" where
-   "ctcb_queue_relation aqueue cqueue \<equiv>
-      head_C cqueue = option_to_ctcb_ptr (tcbQueueHead aqueue)
-      \<and> end_C cqueue = option_to_ctcb_ptr (tcbQueueEnd aqueue)"
 
 definition cready_queues_relation ::
   "(domain \<times> priority \<Rightarrow> ready_queue) \<Rightarrow> (tcb_queue_C[num_tcb_queues]) \<Rightarrow>  bool"

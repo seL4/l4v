@@ -170,19 +170,6 @@ definition
   where
   "tcb_ptr_to_ctcb_ptr p \<equiv> Ptr (p + ctcb_offset)"
 
-primrec
-  tcb_queue_relation :: "(tcb_C \<Rightarrow> tcb_C ptr) \<Rightarrow> (tcb_C \<Rightarrow> tcb_C ptr) \<Rightarrow>
-                         (tcb_C ptr \<Rightarrow> tcb_C option) \<Rightarrow> word64 list \<Rightarrow>
-                         tcb_C ptr \<Rightarrow> tcb_C ptr \<Rightarrow> bool"
-where
-  "tcb_queue_relation getNext getPrev hp [] qprev qhead = (qhead = NULL)"
-| "tcb_queue_relation getNext getPrev hp (x#xs) qprev qhead =
-     (qhead = tcb_ptr_to_ctcb_ptr x \<and>
-      (\<exists>tcb. (hp qhead = Some tcb \<and> getPrev tcb = qprev \<and> tcb_queue_relation getNext getPrev hp xs qhead (getNext tcb))))"
-
-abbreviation
-  "ep_queue_relation \<equiv> tcb_queue_relation tcbEPNext_C tcbEPPrev_C"
-
 definition
 wordSizeCase :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" where
 "wordSizeCase a b \<equiv> (if bitSize (undefined::machine_word) = 32
@@ -404,6 +391,10 @@ lemma ptr_val_tcb_ptr_mask2:
   apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def)
   apply (simp add: is_aligned_add_helper ctcb_offset_defs objBits_simps')
   done
+
+lemma tcb_ptr_to_ctcb_ptr_inj:
+  "tcb_ptr_to_ctcb_ptr x = tcb_ptr_to_ctcb_ptr y \<Longrightarrow> x = y"
+  by (auto simp: tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
 
 
 section \<open>Domains\<close>

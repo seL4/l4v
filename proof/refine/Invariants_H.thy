@@ -1201,6 +1201,14 @@ defs sch_act_wf_asrt_def:
 
 declare sch_act_wf_asrt_def[simp]
 
+definition weak_sch_act_wf :: "scheduler_action \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "weak_sch_act_wf sa s \<equiv> \<forall>t. sa = SwitchToThread t \<longrightarrow> tcb_at' t s"
+
+defs weak_sch_act_wf_asrt_def:
+  "weak_sch_act_wf_asrt \<equiv> \<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+
+declare weak_sch_act_wf_asrt_def[simp]
+
 definition sch_act_simple :: "kernel_state \<Rightarrow> bool" where
   "sch_act_simple \<equiv> \<lambda>s. (ksSchedulerAction s = ResumeCurrentThread) \<or>
                          (ksSchedulerAction s = ChooseNewThread)"
@@ -3190,6 +3198,10 @@ declare badgeBits_def [simp]
 lemma simple_sane_strg:
   "sch_act_simple s \<longrightarrow> sch_act_sane s"
   by (simp add: sch_act_sane_def sch_act_simple_def)
+
+lemma sch_act_simple_weak_sch_act_wf[elim!]:
+  "sch_act_simple s \<Longrightarrow>  weak_sch_act_wf (ksSchedulerAction s) s"
+  by (clarsimp simp: sch_act_simple_def weak_sch_act_wf_def)
 
 lemma sch_act_wf_cases:
   "sch_act_wf action = (case action of

@@ -476,7 +476,7 @@ lemma refill_capacity_ccorres:
     apply wpsimp
    apply (clarsimp simp: active_sc_at'_rewrite)
    apply vcg
-  apply wpsimp
+  apply clarsimp
   apply (intro context_conjI)
    apply (clarsimp simp: active_sc_at'_rewrite)
   apply (clarsimp simp: active_sc_at'_def)
@@ -525,7 +525,6 @@ crunch updateTimeStamp, setWorkUnits
   and valid_objs'[wp]: valid_objs'
   and no_0_obj'[wp]: no_0_obj'
   and ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
-  (simp: active_sc_at'_def)
 
 crunch
   scActive, getRefillSufficient, getConsumedTime, isCurDomainExpired, getCurSc
@@ -667,7 +666,7 @@ lemma preemptionPoint_ccorres:
            apply wpsimp
           apply (clarsimp simp: guard_is_UNIV_def)
          apply (rule_tac Q'="\<lambda>_. valid_objs' and no_0_obj'" in hoare_post_imp)
-          apply (clarsimp simp: active_sc_at'_def obj_at'_def)
+          apply (clarsimp simp: obj_at'_def)
          apply wpsimp
         apply (wpsimp wp: hoare_drop_imps)
        apply wpsimp

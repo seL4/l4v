@@ -878,10 +878,10 @@ lemma isValidVTableRoot_def2:
   by (auto split: capability.splits arch_capability.splits option.splits)
 
 lemma setVMRoot_ccorres:
-  "ccorres dc xfdc
-      (invs' and tcb_at' thread)
-      (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr thread}) hs
-      (setVMRoot thread) (Call setVMRoot_'proc)"
+  "ccorres dc xfdc invs' \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr thread\<rbrace> hs
+     (setVMRoot thread) (Call setVMRoot_'proc)"
+  unfolding setVMRoot_def
+  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)
   supply Collect_const[simp del]
   apply (cinit lift: tcb_')
    apply (rule ccorres_move_array_assertion_tcb_ctes)
@@ -1013,7 +1013,7 @@ lemma setRegister_ccorres:
     apply (rule heap_update_field_hrs, simp)
      apply (fastforce intro: typ_heap_simps)
     apply simp
-   apply (erule(1) rf_sr_tcb_update_no_queue2,
+   apply (erule(1) rf_sr_tcb_update2,
                (simp add: typ_heap_simps')+)
     apply (rule ball_tcb_cte_casesI, simp+)
    apply (clarsimp simp: ctcb_relation_def ccontext_relation_def cregs_relation_def

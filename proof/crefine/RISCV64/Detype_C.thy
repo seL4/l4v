@@ -953,193 +953,6 @@ lemma refill_disjoint:
   apply force
   done
 
-lemma tcb_queue_relation_live_restrict':
-  assumes vuc: "s \<turnstile>' capability.UntypedCap d ptr bits idx"
-  and     rel: "\<forall>t \<in> set q. tcb_at' t s"
-  and    live: "\<forall>t \<in> set q. ko_wp_at' live' t s"
-  and      rl: "\<forall>(p :: machine_word) P. ko_wp_at' P p s \<and> (\<forall>ko. P ko \<longrightarrow> live' ko) \<longrightarrow> p \<notin> {ptr..ptr + 2 ^ bits - 1}"
-  shows "tcb_queue_relation getNext getPrev (cm |` (- Ptr ` {ptr..+2 ^ bits})) q prev chead =
-         tcb_queue_relation getNext getPrev cm q prev chead"
-proof (rule tcb_queue_relation_cong [OF refl refl refl])
-  fix p
-  assume "p \<in> tcb_ptr_to_ctcb_ptr ` set q"
-
-  hence pin: "ctcb_ptr_to_tcb_ptr p \<in> set q" by (rule tcb_ptr_to_ctcb_ptr_imageD)
-
-  with rel have "tcb_at' (ctcb_ptr_to_tcb_ptr p) s" ..
-  then obtain tcb :: tcb where koat: "ko_at' tcb (ctcb_ptr_to_tcb_ptr p) s"
-    by (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
-
-  from live pin have "ko_wp_at' live' (ctcb_ptr_to_tcb_ptr p) s" ..
-  hence notin: "(ctcb_ptr_to_tcb_ptr p) \<notin> {ptr..ptr + 2 ^ bits - 1}"
-    by (fastforce intro!: rl [rule_format])
-
-  from vuc have al: "is_aligned ptr bits" and wb: "bits < word_bits"
-    by (auto elim!: valid_untyped_capE)
-
-  hence ran': " {ptr..+2 ^ bits} = {ptr..ptr + 2 ^ bits - 1}" by (simp add: upto_intvl_eq)
-
-  hence "p \<in> - Ptr ` {ptr..+2 ^ bits}" using vuc koat notin
-    apply -
-    apply (erule contrapos_np)
-    apply (erule (1) valid_untyped_cap_ctcb_member)
-    apply fastforce
-    done
-
-  thus "(cm |` (- Ptr ` {ptr..+2 ^ bits})) p = cm p" by simp
-qed
-
-lemma tcb_queue_relation_live_restrict:
-  assumes vuc: "s \<turnstile>' capability.UntypedCap d ptr bits idx"
-  and     rel: "\<forall>t \<in> set q. tcb_at' t s"
-  and    live: "\<forall>t \<in> set q. ko_wp_at' live' t s"
-  and      rl: "\<forall>(p :: machine_word) P. ko_wp_at' P p s \<and> (\<forall>ko. P ko \<longrightarrow> live' ko) \<longrightarrow> p \<notin> {ptr..ptr + 2 ^ bits - 1}"
-  shows "tcb_queue_relation' getNext getPrev (cm |` (- Ptr ` {ptr..+2 ^ bits})) q cend chead =
-         tcb_queue_relation' getNext getPrev cm q cend chead"
-  using assms
-  by (fastforce simp: tcb_queue_relation'_def tcb_queue_relation_live_restrict')
-
-fun
-  epQ :: "endpoint \<Rightarrow> machine_word list"
-  where
-  "epQ IdleEP = []"
-  | "epQ (RecvEP ts) = ts"
-  | "epQ (SendEP ts) = ts"
-
-lemma ep_queue_live:
-  assumes invs: "invs' s"
-  and sym_refs: "sym_refs (state_refs_of' s)"
-  and     koat: "ko_at' ep p s"
-  shows   "\<forall>t \<in> set (epQ ep). ko_wp_at' live' t s"
-proof
-  fix t
-  assume tin: "t \<in> set (epQ ep)"
-
-  from invs sym_refs koat tin show "ko_wp_at' live' t s"
-    apply -
-    apply (drule sym_refs_ko_atD')
-     apply clarsimp
-    apply (cases ep)
-    by (auto elim!: ko_wp_at'_weakenE [OF _ refs_of_live'])
-qed
-
-fun
-  ntfnQ :: "ntfn \<Rightarrow> machine_word list"
-  where
-  "ntfnQ (WaitingNtfn ts) = ts"
-  | "ntfnQ _ = []"
-
-lemma ntfn_queue_live:
-  assumes invs: "invs' s"
-  and sym_refs: "sym_refs (state_refs_of' s)"
-  and     koat: "ko_at' ntfn p s"
-  shows   "\<forall>t \<in> set (ntfnQ (ntfnObj ntfn)). ko_wp_at' live' t s"
-proof
-  fix t
-  assume tin: "t \<in> set (ntfnQ (ntfnObj ntfn))"
-
-  from invs sym_refs koat tin show "ko_wp_at' live' t s"
-    apply -
-    apply (drule sym_refs_ko_atD')
-     apply clarsimp
-    apply (cases "ntfnObj ntfn")
-      apply (auto elim!: ko_wp_at'_weakenE [OF _ refs_of_live']
-                  dest!: bspec)
-    done
-qed
-
-lemma cendpoint_relation_restrict:
-  assumes  vuc: "s \<turnstile>' capability.UntypedCap d ptr bits idx"
-  and     invs: "invs' s"
-  and sym_refs: "sym_refs (state_refs_of' s)"
-  and       rl: "\<forall>(p :: machine_word) P. ko_wp_at' P p s \<and> (\<forall>ko. P ko \<longrightarrow> live' ko) \<longrightarrow> p \<notin> {ptr..ptr + 2 ^ bits - 1}"
-  and     meps: "map_to_eps (ksPSpace s) p = Some ep"
-  shows "cendpoint_relation (cslift s' |` (- Ptr ` {ptr..+2 ^ bits})) ep b = cendpoint_relation (cslift s') ep b"
-proof -
-  from invs have "valid_objs' s" ..
-  with meps have vep: "valid_ep' ep s"
-    apply -
-    apply (clarsimp simp add: map_comp_Some_iff)
-    apply (erule (1) valid_objsE')
-    apply (simp add: valid_obj'_def)
-    done
-
-  from meps have koat: "ko_at' ep p s" by (rule map_to_ko_atI') fact+
-
-  show ?thesis
-  proof (cases ep)
-    case (RecvEP ts)
-
-    from vep RecvEP have tats: "\<forall>t \<in> set ts. tcb_at' t s"
-      by (simp add: valid_ep'_def)
-
-    have tlive: "\<forall>t\<in>set ts. ko_wp_at' live' t s" using RecvEP invs sym_refs koat
-      apply -
-      apply (drule (2) ep_queue_live)
-      apply simp
-      done
-
-    show ?thesis using RecvEP
-      unfolding cendpoint_relation_def Let_def
-      by (simp add: tcb_queue_relation_live_restrict [OF vuc tats tlive rl])
-  next
-    case (SendEP ts)
-
-    from vep SendEP have tats: "\<forall>t \<in> set ts. tcb_at' t s"
-      by (simp add: valid_ep'_def)
-
-    have tlive: "\<forall>t\<in>set ts. ko_wp_at' live' t s" using SendEP invs sym_refs koat
-      apply -
-      apply (drule (2) ep_queue_live)
-      apply simp
-      done
-
-    show ?thesis using SendEP
-      unfolding cendpoint_relation_def Let_def
-      by (simp add: tcb_queue_relation_live_restrict [OF vuc tats tlive rl])
-  next
-    case IdleEP
-    thus ?thesis unfolding cendpoint_relation_def Let_def by simp
-  qed
-qed
-
-lemma cnotification_relation_restrict:
-  assumes  vuc: "s \<turnstile>' capability.UntypedCap d ptr bits idx"
-  and     invs: "invs' s"
-  and sym_refs: "sym_refs (state_refs_of' s)"
-  and       rl: "\<forall>p P. ko_wp_at' P p s \<and> (\<forall>ko. P ko \<longrightarrow> live' ko) \<longrightarrow> p \<notin> {ptr..ptr + 2 ^ bits - 1}"
-  and     meps: "map_to_ntfns (ksPSpace s) p = Some ntfn"
-  shows "cnotification_relation (cslift s' |` (- Ptr ` {ptr..+2 ^ bits})) ntfn b = cnotification_relation (cslift s') ntfn b"
-proof -
-  from invs have "valid_objs' s" ..
-  with meps have vep: "valid_ntfn' ntfn s"
-    apply -
-    apply (clarsimp simp add: map_comp_Some_iff)
-    apply (erule (1) valid_objsE')
-    apply (simp add: valid_obj'_def)
-    done
-
-  from meps have koat: "ko_at' ntfn p s" by (rule map_to_ko_atI') fact+
-
-  show ?thesis
-  proof (cases "ntfnObj ntfn")
-    case (WaitingNtfn ts)
-
-    with vep have tats: "\<forall>t \<in> set ts. tcb_at' t s"
-      by (simp add: valid_ntfn'_def)
-
-    have tlive: "\<forall>t\<in>set ts. ko_wp_at' live' t s" using WaitingNtfn invs sym_refs koat
-      apply -
-      apply (drule (2) ntfn_queue_live)
-      apply simp
-      done
-
-    show ?thesis using WaitingNtfn
-      unfolding cnotification_relation_def Let_def
-      by (simp add: tcb_queue_relation_live_restrict [OF vuc tats tlive rl])
-  qed (simp_all add: cnotification_relation_def Let_def)
-qed
-
 declare bij_Ptr[simp]
 
 lemma surj_tcb_ptr_to_ctcb_ptr [simp]:
@@ -1646,7 +1459,7 @@ proof -
   assume al: "is_aligned ptr bits"
     and cte: "cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap d ptr bits idx) p s"
     and desc_range: "descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s)"
-    and invs: "invs' s" and "ct_active' s" and "valid_idle' s"
+    and invs: "invs' s" and "ct_active' s" and "valid_idle' s" "if_live_then_nonz_cap' s"
     and sym_refs: "sym_refs (state_refs_of' s)"
     and "sch_act_simple s" and wb: "bits < word_bits" and b2: "4 \<le> bits"
     and "deletionIsSafe ptr bits s"
@@ -1735,8 +1548,6 @@ proof -
     by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
   hence "cpspace_relation ?ks' (underlying_memory (ksMachineState s)) ?th_s"
     unfolding cpspace_relation_def
-    using cendpoint_relation_restrict [OF D.valid_untyped invs sym_refs rl]
-      cnotification_relation_restrict [OF D.valid_untyped invs sym_refs rl]
     using  cmap_array[simplified bit_simps]
     supply sched_context_C_size[simp del] sched_context_C_size_of[simp del]
     apply -
@@ -1753,19 +1564,8 @@ proof -
                      cmap_relation_restrict_both cmap_array_helper hrs_htd_update
                      bit_simps cmap_array)
     apply (frule cmap_relation_restrict_both_proj[where f = tcb_ptr_to_ctcb_ptr], simp)
-    apply (intro conjI)
-       apply (erule iffD1[OF cpspace_tcb_relation_address_subset,
-                           OF D.valid_untyped invs cmaptcb])
-      apply (subst cmap_relation_cong [OF refl refl,
-                      where rel' = "cendpoint_relation (cslift s')"])
-       apply (clarsimp simp: restrict_map_Some_iff image_iff
-                             map_comp_restrict_map_Some_iff)
-      apply (simp add: cmap_relation_restrict_both_proj)
-     apply (subst cmap_relation_cong[OF refl refl,
-                    where rel' = "cnotification_relation (cslift s')"])
-      apply (clarsimp simp: restrict_map_Some_iff image_iff
-                            map_comp_restrict_map_Some_iff)
-     apply (simp add: cmap_relation_restrict_both_proj)
+    apply (erule iffD1[OF cpspace_tcb_relation_address_subset,
+                       OF D.valid_untyped invs cmaptcb])
     done
 
   moreover
@@ -1779,8 +1579,7 @@ proof -
   from sr have
     "ctcb_queue_relation (ksReleaseQueue s) (ksReleaseQueue_' (globals s'))"
     unfolding rf_sr_def cstate_relation_def cpspace_relation_def
-    apply (simp add: tcb_queue_relation_live_restrict')
-    apply (clarsimp simp: Let_def all_conj_distrib)
+    apply (clarsimp simp: Let_def)
     done
 
   moreover

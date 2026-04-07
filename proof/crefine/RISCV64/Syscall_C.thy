@@ -16,11 +16,6 @@ imports
   SchedContext_C
 begin
 
-context begin interpretation Arch . (*FIXME: arch-split*)
-crunch replyFromKernel
-  for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
-end
-
 context kernel_m begin
 
 lemma ccorres_If_False:
@@ -53,7 +48,8 @@ lemma cap_cases_one_on_true_sum:
 
 lemma performInvocation_Endpoint_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-     (invs' and st_tcb_at' simple' thread and ep_at' epptr
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+            and st_tcb_at' simple' thread and ep_at' epptr
             and sch_act_sane and (\<lambda>s. thread = ksCurThread s))
      (\<lbrace>\<acute>block = from_bool blocking\<rbrace>
       \<inter> \<lbrace>\<acute>call = from_bool do_call\<rbrace>
@@ -96,7 +92,8 @@ lemma performInvocation_Notification_ccorres:
 
 lemma sendFaultIPC_ccorres:
   "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
-     (st_tcb_at' simple' tptr and valid_cap' handlerCap)
+     ((\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+      and st_tcb_at' simple' tptr and valid_cap' handlerCap)
      (\<lbrace>cfault_rel (Some fault) (seL4_Fault_lift \<acute>current_fault)
                   (lookup_fault_lift
                     (h_val (hrs_mem \<acute>t_hrs)
@@ -127,12 +124,10 @@ lemma sendFaultIPC_ccorres:
          apply vcg
         apply (clarsimp simp: typ_heap_simps' rf_sr_tcb_update_twice)
         apply (rule_tac ctcb="tcbFault_C_update (\<lambda>_. current_fault_' (globals s')) tcb'"
-                     in rf_sr_tcb_update_no_queue2)
-              apply fastforce
-             apply fastforce
-            apply (simp add: typ_heap_simps' rf_sr_def)
+                     in rf_sr_tcb_update2)
+            apply fastforce
            apply fastforce
-          apply fastforce
+          apply (simp add: typ_heap_simps' rf_sr_def)
          apply (rule ball_tcb_cte_casesI, simp+)
         apply (simp add: ctcb_relation_def cthread_state_relation_def)
         apply (case_tac "tcbState tcb", simp+)
@@ -146,7 +141,8 @@ lemma sendFaultIPC_ccorres:
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: return_def to_bool_def)
       apply wpsimp
-     apply (rule_tac Q'="\<lambda>_. st_tcb_at' simple' tptr and valid_cap' handlerCap"
+     apply (rule_tac Q'="\<lambda>_. invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+                             and st_tcb_at' simple' tptr and valid_cap' handlerCap"
                   in hoare_post_imp)
       apply (clarsimp simp: valid_cap'_def)
      apply (wpsimp wp: threadSet_fault_invs' threadSet_st_tcb_at2)
@@ -169,7 +165,7 @@ crunch isValidTimeoutHandler
 
 lemma handleTimeout_ccorres:
   "ccorres dc xfdc
-     \<top>
+     (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
      (\<lbrace>cfault_rel (Some fault) (seL4_Fault_lift \<acute>current_fault)
                   (lookup_fault_lift
                     (h_val (hrs_mem \<acute>t_hrs)
@@ -251,9 +247,6 @@ lemma handleFault_ccorres:
     apply (wpsimp wp: hoare_vcg_all_lift hoare_drop_imps getSlotCap_wp)
    apply vcg
   apply clarsimp
-  apply (frule invs_iflive')
-  apply (frule (1) st_tcb_ex_cap'')
-   apply fastforce
   apply (frule st_tcb_strg'[rule_format])
   apply normalise_obj_at'
   apply (frule cap_in_tcbFaultHandlerSlot)
@@ -501,7 +494,7 @@ lemma doReplyTransfer_ccorres:
                       apply vcg
                      apply (rename_tac tcb tcb')
                      apply (clarsimp simp: typ_heap_simps')
-                     apply (erule(1) rf_sr_tcb_update_no_queue2,
+                     apply (erule(1) rf_sr_tcb_update2,
                             (simp add: typ_heap_simps')+, simp_all?)[1]
                       apply (rule ball_tcb_cte_casesI, simp+)
                      apply (clarsimp simp: ctcb_relation_def seL4_Fault_lift_NullFault
@@ -625,9 +618,10 @@ lemma doReplyTransfer_ccorres:
                        apply clarsimp
                        apply (rename_tac scPtr)
                        apply (rule_tac Q'="\<lambda>_. sc_at' scPtr and pspace_aligned' and pspace_distinct'
-                                               and no_0_obj'"
+                                               and pspace_bounded' and no_0_obj'
+                                               and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)"
                                     in hoare_post_imp)
-                        apply fastforce
+                        apply clarsimp
                        apply (wpsimp simp: isValidTimeoutHandler_def)
                       apply (vcg exspec=validTimeoutHandler_modifies)
                      apply wpsimp
@@ -636,7 +630,8 @@ lemma doReplyTransfer_ccorres:
                                           seL4_Fault_lift_def csched_context_relation_def)
                    apply (rule_tac Q'="\<lambda>_ s. tcb_at' (the (replyTCB reply)) s
                                              \<and> sc_at' (the scOpt') s
-                                             \<and> pspace_aligned' s \<and> pspace_distinct' s \<and> no_0_obj' s
+                                             \<and> pspace_aligned' s \<and> pspace_distinct' s
+                                             \<and> pspace_bounded' s \<and> no_0_obj' s
                                              \<and> ksCurDomain s \<le> maxDomain
                                              \<and> weak_sch_act_wf (ksSchedulerAction s) s"
                                 in hoare_post_imp)
@@ -662,17 +657,17 @@ lemma doReplyTransfer_ccorres:
                      exspec=setThreadState_modifies
                      exspec=handleFaultReply_modifies)
          apply (rule_tac Q'="\<lambda>_ s. valid_pspace' s \<and> ksCurDomain s \<le> maxDomain
-                                   \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> cur_tcb' s
+                                   \<and> weak_sch_act_wf (ksSchedulerAction s) s
                                    \<and> (the (replyTCB reply) \<noteq> sender)
                                    \<and> tcb_at' sender s"
                       in hoare_post_imp)
-          apply (fastforce simp: valid_tcb_state'_def obj_at'_def)
+          apply (fastforce simp: obj_at'_def)
          apply wpsimp
         apply (clarsimp simp: guard_is_UNIV_def seL4_Faults ctcb_relation_def)
         apply (rename_tac fault, case_tac fault; clarsimp simp: seL4_Faults typ_heap_simps)
         apply (rename_tac arch_fault, case_tac arch_fault; clarsimp simp: seL4_Arch_Faults)
        apply (rule_tac Q'="\<lambda>_ s. valid_pspace' s \<and> ksCurDomain s \<le> maxDomain
-                                 \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> cur_tcb' s
+                                 \<and> weak_sch_act_wf (ksSchedulerAction s) s
                                  \<and> (the (replyTCB reply) \<noteq> sender) \<and> tcb_at' sender s"
                     in hoare_post_imp)
         apply (fastforce simp: obj_at'_def)
@@ -957,15 +952,16 @@ lemma decodeInvocation_ccorres:
   apply (frule simple_sane_strg[rule_format])
   apply clarsimp
   apply (prop_tac "st_tcb_at' (\<lambda>st'. st' \<noteq> thread_state.Inactive  \<and> st' \<noteq> IdleThreadState
-                                     \<and> (\<forall>rptr. st' \<noteq> BlockedOnReply rptr)) (ksCurThread s) s")
+                                     \<and> (\<forall>rptr. st' \<noteq> BlockedOnReply rptr)
+                                     \<and> \<not> inIPCQueueThreadState st')
+                              (ksCurThread s) s")
    apply (fastforce simp: ct_in_state'_def st_tcb_at'_def obj_at'_def split: thread_state.splits)
-  apply clarsimp
   apply (rule conjI)
    apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (rule conjI)
    apply (clarsimp simp: valid_cap'_def isCap_simps cte_wp_at_ctes_of)
    apply (intro conjI impI allI TrueI; clarsimp?)
-     apply (fastforce simp: cte_wp_at_ctes_of)
+        apply (fastforce elim!: pred_tcb'_weakenE)+
     apply (fastforce intro: sc_at'_n_sc_at')
    apply force
   apply (rule conjI)
@@ -1719,7 +1715,9 @@ sorry (* FIXME RT: handleRecv_ccorres
   done *)
 
 lemma endTimeslice_ccorres:
-  "ccorres dc xfdc (invs' and ct_active') \<lbrace>\<acute>can_timeout_fault = from_bool canTimeoutFault\<rbrace> hs
+  "ccorres dc xfdc
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and ct_active')
+     \<lbrace>\<acute>can_timeout_fault = from_bool canTimeoutFault\<rbrace> hs
      (endTimeslice canTimeoutFault) (Call endTimeslice_'proc)"
   supply Collect_const[simp del]
   apply (cinit lift: can_timeout_fault_')
@@ -1767,7 +1765,9 @@ lemma endTimeslice_ccorres:
             apply (ctac add: postpone_ccorres)
            apply wpsimp+
        apply (vcg exspec=refill_ready_modifies)
-      apply (rule_tac Q'="\<lambda>_. no_0_obj' and pspace_aligned' and pspace_distinct' and tcb_at' ct"
+      apply (rule_tac Q'="\<lambda>_. (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and no_0_obj'
+                              and pspace_aligned' and pspace_distinct' and pspace_bounded'
+                              and tcb_at' ct"
                    in hoare_post_imp)
        apply clarsimp
       apply wpsimp
@@ -1793,6 +1793,17 @@ crunch endTimeslice, setConsumedTime, refillResetRR, refillBudgetCheck, checkBud
 
 crunch getIdleSC
  for (empty_fail) empty_fail[wp]
+
+crunch updateSchedContext, refillResetRR, refillBudgetCheck
+  for cur_tbc'[wp]: cur_tcb'
+  and no_0_obj'[wp]: no_0_obj'
+  (rule: cur_tcb_lift)
+
+lemma updateSchedContext_scConsumed_invs'[wp]:
+  "updateSchedContext scPtr (\<lambda>sc. scConsumed_update (f sc) sc) \<lbrace>invs'\<rbrace>"
+  apply (wpsimp wp: updateSchedContext_invs')
+  apply (fastforce dest: invs'_ko_at_valid_sched_context')
+  done
 
 lemma chargeBudget_ccorres:
   "ccorres dc xfdc
@@ -1972,15 +1983,14 @@ lemma chargeBudget_ccorres:
       apply ((wpsimp simp: cur_tcb'_def[symmetric] wp: hoare_vcg_imp_lift'
               | rule hoare_lift_Pf2[where f=ksCurThread])+)[1]
      apply vcg
-    apply ((wpsimp wp: updateSchedContext_invs'_indep hoare_vcg_imp_lift'
-                       updateSchedContext_schedulable' isRoundRobin_wp
-            | strengthen invs'_implies | wps)+)[1]
+    apply ((wpsimp wp: hoare_vcg_imp_lift' updateSchedContext_schedulable' isRoundRobin_wp
+            | wps)+)[1]
    apply (vcg exspec=isRoundRobin_modifies exspec=refill_budget_check_modifies)
   apply (rule conjI)
    apply (clarsimp simp: active_sc_at'_rewrite cong: conj_cong split: if_splits)
    apply normalise_obj_at'
    apply (frule (1) sc_ko_at_valid_objs_valid_sc'[OF _ invs_valid_objs'])
-   apply (fastforce intro!: schedulable'_imp_ct_active'
+   apply (fastforce intro!: ksCurThread_schedulable'_ct_active'
                       simp: valid_sched_context'_def is_active_sc'_def
                             opt_pred_def opt_map_def obj_at'_def)
   apply (clarsimp simp: active_sc_at'_def)
@@ -1990,10 +2000,12 @@ lemma chargeBudget_ccorres:
   apply (frule (1) obj_at_cslift_sc)
   apply (frule rf_sr_refill_buffer_relation)
   apply (frule_tac n="scRefillHead sc" in h_t_valid_refill; fastforce?)
-    apply (clarsimp simp: valid_sched_context'_def)
+    apply (fastforce simp: valid_sched_context'_def is_active_sc'_def opt_pred_def opt_map_def
+                           obj_at'_def)
    apply fastforce
   apply (frule_tac n="scRefillTail sc" in h_t_valid_refill; fastforce?)
-    apply (clarsimp simp: valid_sched_context'_def)
+    apply (fastforce simp: valid_sched_context'_def is_active_sc'_def opt_pred_def opt_map_def
+                           obj_at'_def)
    apply fastforce
   apply (frule rf_sr_ksCurSC)
   apply (fastforce simp: csched_context_relation_def crefill_relation_def typ_heap_simps
@@ -2002,7 +2014,7 @@ lemma chargeBudget_ccorres:
 
 crunch checkBudget
   for cur_tcb'[wp]: cur_tcb'
-  (wp: crunch_wps simp: crunch_simps threadSet_cur)
+  (wp: cur_tcb_lift)
 
 lemma checkBudget_ccorres:
   "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
@@ -2186,11 +2198,13 @@ lemma handleYield_ccorres:
   apply (frule (1) obj_at_cslift_sc)
   apply (frule rf_sr_refill_buffer_relation)
   apply (frule_tac n="scRefillHead sc" in h_t_valid_refill; fastforce?)
-    apply (clarsimp simp: valid_sched_context'_def)
-   apply fastforce
+    apply (fastforce simp: valid_sched_context'_def is_active_sc'_def opt_pred_def opt_map_def
+                           obj_at'_def)
+   apply (fastforce dest: no_0_obj_at'_eq)
   apply (frule_tac n="scRefillTail sc" in h_t_valid_refill; fastforce?)
-    apply (clarsimp simp: valid_sched_context'_def)
-   apply fastforce
+    apply (fastforce simp: valid_sched_context'_def is_active_sc'_def opt_pred_def opt_map_def
+                           obj_at'_def)
+   apply (fastforce dest: no_0_obj_at'_eq)
   apply (frule rf_sr_ksCurSC)
   apply (fastforce simp: csched_context_relation_def crefill_relation_def typ_heap_simps
                          h_val_field_from_bytes' sc_ptr_to_crefill_ptr_def)

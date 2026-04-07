@@ -1486,8 +1486,8 @@ proof (intro impI allI)
     by (simp add: ko_def makeObjectKO_def)
 
   have relrl:
-    "cendpoint_relation (cslift x) makeObject (from_bytes (replicate (size_of TYPE(endpoint_C)) 0))"
-    unfolding cendpoint_relation_def
+    "cendpoint_relation makeObject (from_bytes (replicate (size_of TYPE(endpoint_C)) 0))"
+    unfolding cendpoint_relation_def epstate_to_C_def cendpoint_state_relation_def
     apply (simp add: Let_def makeObject_endpoint size_of_def endpoint_lift_def)
     apply (simp add: from_bytes_def)
     apply (simp add: typ_info_simps endpoint_C_tag_def endpoint_lift_def
@@ -1500,7 +1500,8 @@ proof (intro impI allI)
     apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine
                      size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
                      ti_typ_pad_combine_def ti_typ_combine_def empty_typ_info_def)
-    apply (simp add: EPState_Idle_def update_ti_t_machine_word_0s)
+    apply (simp add: EPState_Idle_def ctcb_queue_relation_def tcb_queue_to_tcb_queue_C_def
+                     option_to_ctcb_ptr_def emptyHeadEndPtrs_def update_ti_t_machine_word_0s)
     done
 
   (* /obj specific *)
@@ -1608,21 +1609,23 @@ proof (intro impI allI)
                         = Some ko" by (simp add: ko_def makeObjectKO_def)
 
   have relrl:
-    "cnotification_relation (cslift x) makeObject (from_bytes (replicate (size_of TYPE(notification_C)) 0))"
+    "cnotification_relation makeObject (from_bytes (replicate (size_of TYPE(notification_C)) 0))"
     unfolding cnotification_relation_def
     apply (simp add: Let_def makeObject_notification size_of_def notification_lift_def)
     apply (simp add: from_bytes_def)
     apply (simp add: typ_info_simps notification_C_tag_def notification_lift_def
       size_td_lt_final_pad size_td_lt_ti_typ_pad_combine Let_def size_of_def)
-    apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine Let_def
-      size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
-      ti_typ_pad_combine_def Let_def ti_typ_combine_def empty_typ_info_def)
+    apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine
+                     size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
+                     ti_typ_pad_combine_def ti_typ_combine_def empty_typ_info_def)
     apply (simp add: typ_info_array array_tag_def eval_nat_numeral)
     apply (simp add: array_tag_n.simps)
-    apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine Let_def
-      size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
-      ti_typ_pad_combine_def Let_def ti_typ_combine_def empty_typ_info_def)
+    apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine
+                     size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
+                     ti_typ_pad_combine_def ti_typ_combine_def empty_typ_info_def)
     apply (simp add: update_ti_t_machine_word_0s NtfnState_Idle_def option_to_ctcb_ptr_def)
+    apply (simp add: EPState_Idle_def ctcb_queue_relation_def tcb_queue_to_tcb_queue_C_def
+                     option_to_ctcb_ptr_def emptyHeadEndPtrs_def update_ti_t_machine_word_0s)
     done
 
   (* /obj specific *)
@@ -2839,19 +2842,6 @@ proof -
   thus "newContext \<equiv> ?UC" by simp
 qed
 
-lemma tcb_queue_update_other:
-  "\<lbrakk> ctcb_ptr_to_tcb_ptr p \<notin> set tcbs \<rbrakk> \<Longrightarrow>
-  tcb_queue_relation next prev (mp(p \<mapsto> v)) tcbs qe qh =
-  tcb_queue_relation next prev mp tcbs qe qh"
-  apply (induct tcbs arbitrary: qh qe)
-   apply simp
-  apply (rename_tac a tcbs qh qe)
-  apply simp
-  apply (subgoal_tac "p \<noteq> tcb_ptr_to_ctcb_ptr a")
-   apply (simp cong: conj_cong)
-  apply clarsimp
-  done
-
 lemma cmap_relation_cong':
   "\<lbrakk>am = am'; cm = cm';
    \<And>p a a' b b'.
@@ -2859,13 +2849,6 @@ lemma cmap_relation_cong':
       \<Longrightarrow> rel a b = rel' a' b'\<rbrakk>
     \<Longrightarrow> cmap_relation am cm f rel = cmap_relation am' cm' f rel'"
   by (rule cmap_relation_cong, simp_all)
-
-lemma tcb_queue_update_other':
-  "\<lbrakk> ctcb_ptr_to_tcb_ptr p \<notin> set tcbs \<rbrakk> \<Longrightarrow>
-  tcb_queue_relation' next prev (mp(p \<mapsto> v)) tcbs qe qh =
-  tcb_queue_relation' next prev mp tcbs qe qh"
-  unfolding tcb_queue_relation'_def
-  by (simp add: tcb_queue_update_other)
 
 lemma c_guard_tcb:
   assumes al: "is_aligned (ctcb_ptr_to_tcb_ptr p) tcbBlockSizeBits"
@@ -3348,7 +3331,6 @@ proof -
        tcbYieldTo_C := sched_context_Ptr 0,
        tcbIPCBuffer_C := 0,
        tcbSchedNext_C := tcb_Ptr 0, tcbSchedPrev_C := tcb_Ptr 0,
-       tcbEPNext_C := tcb_Ptr 0, tcbEPPrev_C := tcb_Ptr 0,
        tcbBoundNotification_C := ntfn_Ptr 0,
        tcbFlags_C := 0\<rparr>"
 
@@ -3392,40 +3374,6 @@ proof -
 
   have pks: "ks (ctcb_ptr_to_tcb_ptr p) = None"
     by (rule pspace_no_overlap_base' [OF pal pno al, simplified])
-
-  have ep1 [simplified]: "\<And>p' list. map_to_eps (ksPSpace ?sp) p' = Some (Structures_H.endpoint.RecvEP list)
-       \<Longrightarrow> ctcb_ptr_to_tcb_ptr p \<notin> set list"
-    using symref pks pal pds pbound
-    apply -
-    apply (frule (3) map_to_ko_atI)
-    apply (drule (1) sym_refs_ko_atD')
-    apply clarsimp
-    apply (drule (1) bspec)
-    apply (simp add: ko_wp_at'_def)
-    done
-
-  have ep2 [simplified]: "\<And>p' list. map_to_eps (ksPSpace ?sp) p' = Some (Structures_H.endpoint.SendEP list)
-       \<Longrightarrow> ctcb_ptr_to_tcb_ptr p \<notin> set list"
-    using symref pks pal pds pbound
-    apply -
-    apply (frule (3) map_to_ko_atI)
-    apply (drule (1) sym_refs_ko_atD')
-    apply clarsimp
-    apply (drule (1) bspec)
-    apply (simp add: ko_wp_at'_def)
-    done
-
-  have ep3 [simplified]: "\<And>p' list boundTCB boundSC. map_to_ntfns (ksPSpace ?sp) p'
-                                                      = Some (Structures_H.notification.NTFN (Structures_H.ntfn.WaitingNtfn list) boundTCB boundSC)
-       \<Longrightarrow> ctcb_ptr_to_tcb_ptr p \<notin> set list"
-    using symref pks pal pds pbound
-    apply -
-    apply (frule (3) map_to_ko_atI)
-    apply (drule (1) sym_refs_ko_atD')
-    apply clarsimp
-    apply (drule_tac x="(ctcb_ptr_to_tcb_ptr p, NTFNSignal)" in bspec, simp)
-    apply (simp add: ko_wp_at'_def)
-    done
 
   have pks': "ksPSpace \<sigma> (ctcb_ptr_to_tcb_ptr p) = None" using pks kssub dom_def
     apply fastforce
@@ -3529,30 +3477,12 @@ proof -
      apply (erule cmap_relation_retype2)
      apply (simp add:ccte_relation_nullCap nullMDBNode_def nullPointer_def)
     \<comment> \<open>tcb\<close>
-     apply (clarsimp simp: map_comp_update)
-     apply (erule cmap_relation_updI2 [where dest = "ctcb_ptr_to_tcb_ptr p" and f = "tcb_ptr_to_ctcb_ptr", simplified])
-     apply (rule map_comp_simps)
-     apply (rule pks)
-     apply (rule tcb_rel[simplified FLAGS_default_eq, simplified])
-    \<comment> \<open>ep\<close>
-     apply (erule iffD2 [OF cmap_relation_cong, OF refl refl, rotated -1])
-     apply (simp add: cendpoint_relation_def Let_def)
-     apply (subst endpoint.case_cong)
-       apply (rule refl)
-      apply (simp add: tcb_queue_update_other' ep1)
-     apply (simp add: tcb_queue_update_other' del: tcb_queue_relation'_empty)
-    apply (simp add: tcb_queue_update_other' ep2)
-   apply clarsimp
-  \<comment> \<open>ntfn\<close>
-   apply (erule iffD2 [OF cmap_relation_cong, OF refl refl, rotated -1])
-   apply (simp add: cnotification_relation_def Let_def)
-     apply (subst ntfn.case_cong)
-      apply (rule refl)
-     apply (simp add: tcb_queue_update_other' del: tcb_queue_relation'_empty)
-    apply (simp add: tcb_queue_update_other' del: tcb_queue_relation'_empty)
-   apply (case_tac a, simp add: tcb_queue_update_other' ep3)
-  apply (clarsimp simp: typ_heap_simps)
-  done
+    apply (clarsimp simp: map_comp_update)
+    apply (erule cmap_relation_updI2 [where dest = "ctcb_ptr_to_tcb_ptr p" and f = "tcb_ptr_to_ctcb_ptr", simplified])
+    apply (rule map_comp_simps)
+    apply (rule pks)
+    apply (rule tcb_rel[simplified FLAGS_default_eq, simplified])
+    done
 
   moreover have "cte_array_relation \<sigma> ?gs
     \<and> tcb_cte_array_relation ?s ?gs"
@@ -3577,8 +3507,7 @@ proof -
     apply (simp add: cl_cte [simplified] cl_tcb [simplified] cl_rest [simplified] tag_disj_via_td_name)
     apply (clarsimp simp: cready_queues_relation_def Let_def
                           htd_safe[simplified] kernel_data_refs_domain_eq_rotate)
-    by (simp add: heap_updates_def tcb_queue_update_other'
-                  tcb_queue_update_other hrs_htd_update
+    by (simp add: heap_updates_def hrs_htd_update
                   ptr_retyp_to_array[simplified] irq[simplified])
 qed
 
@@ -6090,15 +6019,6 @@ lemma cmap_relation_updI:
   apply simp
   done
 
-lemma cep_relations_drop_fun_upd:
-  "\<lbrakk> f x = Some v; tcbEPNext_C v' = tcbEPNext_C v; tcbEPPrev_C v' = tcbEPPrev_C v \<rbrakk>
-      \<Longrightarrow> cendpoint_relation (f (x \<mapsto> v')) = cendpoint_relation f"
-  "\<lbrakk> f x = Some v; tcbEPNext_C v' = tcbEPNext_C v; tcbEPPrev_C v' = tcbEPPrev_C v \<rbrakk>
-      \<Longrightarrow> cnotification_relation (f (x \<mapsto> v')) = cnotification_relation f"
-  by (intro ext cendpoint_relation_upd_tcb_no_queues[where thread=x]
-                cnotification_relation_upd_tcb_no_queues[where thread=x]
-          | simp split: if_split)+
-
 lemma threadSet_domain_ccorres [corres]:
   "ccorres dc xfdc
            (tcb_at' thread)
@@ -6117,8 +6037,7 @@ lemma threadSet_domain_ccorres [corres]:
                         refill_buffer_relation_def)
   apply (clarsimp simp: update_tcb_map_tos typ_heap_simps')
   apply (simp add: map_to_ctes_upd_tcb_no_ctes map_to_tcbs_upd tcb_cte_cases_def cteSizeBits_def)
-  apply (simp add: cep_relations_drop_fun_upd
-                   cvariable_relation_upd_const ko_at_projectKO_opt)
+  apply (simp add: cvariable_relation_upd_const ko_at_projectKO_opt)
   apply (drule ko_at_projectKO_opt)
   apply (erule (2) cmap_relation_upd_relI)
     subgoal by (simp add: ctcb_relation_def)

@@ -217,7 +217,7 @@ lemma refill_new_ccorres:
                    in hoare_post_imp)
        apply (fastforce simp: obj_at'_def objBits_simps opt_map_def ps_clear_def)
       apply ((rule hoare_vcg_conj_lift
-              | wpsimp wp: updateSchedContext_refills_invs'
+              | wpsimp wp: updateSchedContext_invs'
               | wpsimp simp: updateRefillHd_def
                          wp: updateSchedContext_wp)+)[1]
      apply vcg
@@ -514,7 +514,7 @@ lemma refill_update_ccorres:
        apply (vcg exspec=refill_ready_modifies)
       apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> active_sc_at' scPtr s" in hoare_post_imp)
        apply fastforce
-      apply (wpsimp wp: updateSchedContext_refills_invs' updateSchedContext_active_sc_at')
+      apply (wpsimp wp: updateSchedContext_invs' updateSchedContext_active_sc_at')
      apply (vcg exspec=refill_index_modifies)
     apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> active_sc_at' scPtr s \<and> 0 < newMaxRefills
                              \<and> obj_at' (\<lambda>sc. newMaxRefills \<le> refillAbsoluteMax' (objBits sc)) scPtr s"
@@ -526,7 +526,7 @@ lemma refill_update_ccorres:
      apply (frule (1) sc_ko_at_valid_objs_valid_sc'[OF _ invs_valid_objs'])
      apply (clarsimp simp: valid_sched_context'_def refillSize_def objBits_simps word_bits_def
                            obj_at'_def)
-    apply (wpsimp wp: updateSchedContext_refills_invs' updateSchedContext_active_sc_at'
+    apply (wpsimp wp: updateSchedContext_invs' updateSchedContext_active_sc_at'
                       updateSchedContext_wp)
    apply (vcg exspec=refill_index_modifies)
   apply normalise_obj_at'
@@ -767,7 +767,7 @@ lemma invokeSchedContext_Bind_ThreadCap_ccorres:
 
 lemma invokeSchedContext_Bind_NotificationCap_ccorres:
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and sc_at' scPtr)
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and sc_at' scPtr and ntfn_at' ptr)
      (\<lbrace>\<acute>sc = sched_context_Ptr scPtr\<rbrace>
       \<inter> \<lbrace>ccap_relation (NotificationCap ptr badge canSend canReceive) \<acute>cap\<rbrace>) hs
      (liftE (invokeSchedContext
@@ -1021,7 +1021,8 @@ crunch schedContextUnbindNtfn, schedContextUnbindAllTCBs
 
 lemma invokeSchedContext_Unbind_ccorres:
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-     (invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and sc_at' scPtr and ex_nonz_cap_to' scPtr)
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+      and sc_at' scPtr and ex_nonz_cap_to' scPtr)
      \<lbrace>\<acute>sc = sched_context_Ptr scPtr\<rbrace> []
      (liftE (invokeSchedContext (InvokeSchedContextUnbind scPtr)))
      (Call invokeSchedContext_Unbind_'proc)"
@@ -1044,9 +1045,6 @@ lemma invokeSchedContext_Unbind_ccorres:
     apply ((wpsimp | strengthen invs'_implies)+)[1]
    apply (vcg exspec=schedContext_unbindAllTCBs_modifies)
   apply clarsimp
-  apply (frule global'_sc_no_ex_cap[OF invs_valid_global'])
-   apply fastforce
-  apply fastforce
   done
 
 crunch replyFromKernel, schedContextUpdateConsumed
@@ -1055,7 +1053,7 @@ crunch replyFromKernel, schedContextUpdateConsumed
 lemma invokeSchedContext_Consumed_ccorres:
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
      (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' ((=) Restart)
-      and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s))
+      and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
      (\<lbrace>\<acute>sc = sched_context_Ptr scPtr\<rbrace> \<inter> \<lbrace>\<acute>call = from_bool isCall\<rbrace>) hs
      (do reply \<leftarrow> returnConsumed scPtr;
          liftE (replyOnRestart thread reply isCall)
@@ -1119,7 +1117,7 @@ crunch schedContextResume
 lemma invokeSchedContext_YieldTo_ccorres:
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
      (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' ((=) Restart)
-      and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s))
+      and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
      (\<lbrace>\<acute>sc = sched_context_Ptr scPtr\<rbrace> \<inter> \<lbrace>\<acute>call = from_bool isCall\<rbrace>) hs
      (doE reply \<leftarrow> liftE (schedContextYieldTo scPtr);
           if reply = []
@@ -1208,7 +1206,7 @@ lemma invokeSchedContext_YieldTo_ccorres:
                     apply (frule (1) obj_at_cslift_tcb)
                     apply (frule rf_sr_ksCurThread)
                     subgoal
-                      by (fastforce intro!: rf_sr_tcb_update_no_queue2
+                      by (fastforce intro!: rf_sr_tcb_update2
                                       simp: typ_heap_simps' tcb_cte_cases_def cteSizeBits_def
                                             ctcb_relation_def)
                    apply simp
@@ -1301,7 +1299,7 @@ lemma invokeSchedContext_YieldTo_ccorres:
          apply clarsimp
          apply (rule ccorres_alternative2)
          apply (rule ccorres_return_CE, simp+)[1]
-        apply (rule_tac Q'="\<lambda>_ s. cur_tcb' s \<and> no_0_obj' s \<and> pspace_aligned' s \<and> pspace_distinct' s
+        apply (rule_tac Q'="\<lambda>_ s. no_0_obj' s \<and> pspace_aligned' s \<and> pspace_distinct' s
                                   \<and> st_tcb_at' ((=) Restart) thread s
                                   \<and> weak_sch_act_wf (ksSchedulerAction s) s"
                      in hoare_post_imp)
@@ -1312,7 +1310,7 @@ lemma invokeSchedContext_YieldTo_ccorres:
                   exspec=tcbSchedEnqueue_modifies
                   exspec=tcbSchedDequeue_modifies)
       apply (rule_tac Q'="\<lambda>_ s. obj_at' (\<lambda>sc'. scTCB sc' = scTCB sc) scPtr s
-                                \<and> invs' s \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> cur_tcb' s
+                                \<and> invs' s \<and> weak_sch_act_wf (ksSchedulerAction s) s
                                 \<and> st_tcb_at' ((=) Restart) thread s"
                    in hoare_post_imp)
        apply normalise_obj_at'
@@ -1332,7 +1330,7 @@ lemma invokeSchedContext_YieldTo_ccorres:
 
 lemma decodeSchedContext_YieldTo_ccorres:
   "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-     (invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and (\<lambda>s. ksCurThread s = thread)
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and (\<lambda>s. ksCurThread s = thread)
       and ct_active' and sc_at' scPtr and sch_act_simple)
      (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace>
       \<inter> \<lbrace>\<acute>call = from_bool isCall\<rbrace>) hs
@@ -1437,7 +1435,7 @@ lemma decodeSchedContext_YieldTo_ccorres:
 lemma decodeSchedContextInvocation_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc)  (liftxf errstate id (K ()) ret__unsigned_long_')
-     (invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and sch_act_simple
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and sch_act_simple
       and (\<lambda>s. ksCurThread s = thread) and ct_active' and sc_at' scPtr and ex_nonz_cap_to' scPtr
       and (excaps_in_mem extraCaps o ctes_of)
       and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)
@@ -1827,7 +1825,7 @@ lemma MIN_BUDGET_def2:
 lemma decodeSchedControl_ConfigureFlags_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc)  (liftxf errstate id (K ()) ret__unsigned_long_')
-     (\<lambda>s. (invs' s \<and> sch_act_wf (ksSchedulerAction s) s
+     (\<lambda>s. (invs' s \<and> weak_sch_act_wf (ksSchedulerAction s) s
            \<and> ksCurThread s = thread \<and> ct_active' s
            \<and> (excaps_in_mem extraCaps (ctes_of s))
            \<and> (\<forall>v \<in> set extraCaps. s \<turnstile>' fst v)
@@ -2141,7 +2139,7 @@ lemma decodeSchedControl_ConfigureFlags_ccorres:
 lemma decodeSchedControlInvocation_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc)  (liftxf errstate id (K ()) ret__unsigned_long_')
-     (invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and sch_act_simple
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and sch_act_simple
       and (\<lambda>s. ksCurThread s = thread) and ct_active'
       and (excaps_in_mem extraCaps o ctes_of)
       and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)

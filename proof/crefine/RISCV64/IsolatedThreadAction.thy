@@ -652,6 +652,17 @@ lemma cap_case_isPageTableCap:
   apply (case_tac option; simp)
   done
 
+lemma stateAssert_tcb_at'_isolatable:
+  "thread_actions_isolatable idx (stateAssert (tcb_at' t) [])"
+  unfolding stateAssert_def kernelExitAssertions_def
+  apply (clarsimp simp: thread_actions_isolatable_def get_def assert_def bind_def)
+  apply (simp add: isolate_thread_actions_def select_f_returns liftM_def bind_assoc)
+  apply (clarsimp simp: monadic_rewrite_def getSchedulerAction_def)
+  apply (fastforce simp: simpler_gets_def return_def fail_def modify_def get_def
+                         put_def ksPSpace_update_partial_id o_def bind_def select_f_def
+                         obj_at_partial_overwrite_If)
+  done
+
 lemma setVMRoot_isolatable:
   "thread_actions_isolatable idx (setVMRoot t)"
   supply if_split[split del]
@@ -659,11 +670,12 @@ lemma setVMRoot_isolatable:
                    locateSlot_conv getSlotCap_def
                    if_bool_simps cap_case_isPageTableCap
                    whenE_def liftE_def
-                   stateAssert_def2 assert_def
+                   assert_def bind_assoc
              cong: if_cong)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_weaken_pre]
                thread_actions_isolatable_bindE[OF _ _ hoare_weaken_pre]
                thread_actions_isolatable_catch[OF _ _ hoare_weaken_pre]
+               stateAssert_tcb_at'_isolatable
                thread_actions_isolatable_if thread_actions_isolatable_returns
                thread_actions_isolatable_fail
                gets_isolatable getCTE_isolatable
@@ -883,28 +895,10 @@ lemma setThreadState_tcbPriority_obj_at'[wp]:
   done
 
 (* FIXME RT: move following lemmas about tcbPriority to Refine or possibly DInvs (see VER-1299) *)
-crunch unbindMaybeNotification, blockedCancelIPC, replyRemoveTCB, cancelSignal
+crunch unbindMaybeNotification, blockedCancelIPC, replyRemoveTCB, cancelSignal, cancelIPC,
+       schedContextDonate
   for tcbPriority_obj_at'[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'"
-  (wp: hoare_vcg_all_lift crunch_wps simp: crunch_simps)
-
-lemma cancelIPC_tcbPriority[wp]:
-  "cancelIPC tptr \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
-  apply (simp add: cancelIPC_def unless_def)
-  by (wpsimp wp: threadSet_obj_at' gts_wp' hoare_drop_imps)
-
-lemma tcbSchedContext_update_tcbPriority[wp]:
-  "threadSet (tcbSchedContext_update f) t' \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
-  by (wpsimp wp: threadSet_obj_at' gts_wp' hoare_drop_imps)
-
-lemma tcbReleaseRemove_tcbPriority[wp]:
-  "tcbReleaseRemove tcbPtr \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
-  apply (clarsimp simp: tcbReleaseRemove_def tcbQueueRemove_def)
-  by (wpsimp wp: threadSet_obj_at' gts_wp' hoare_drop_imps)
-
-lemma schedContextDonate_tcbPriority[wp]:
-  "schedContextDonate scPtr tcbPtr \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
-  apply (simp add: schedContextDonate_def updateSchedContext_def)
-  by (wpsimp wp: hoare_drop_imps)
+  (wp: hoare_vcg_all_lift crunch_wps threadSet_obj_at'_no_state simp: crunch_simps)
 
 lemma asUser_obj_at_unchangedT:
   assumes x: "\<forall>tcb con con'. con' \<in> fst (m con)
@@ -1475,9 +1469,6 @@ lemma lookupIPCBuffer_isolatable:
 crunch getSchedulable
   for (empty_fail) empty_fail[wp]
 
-crunch getSchedulerAction
-  for (no_fail) no_fail[wp]
-
 lemma setThreadState_rewrite_simple:
   "monadic_rewrite False True
      (\<lambda>s. runnable' st
@@ -1498,7 +1489,7 @@ lemma setThreadState_rewrite_simple:
      apply (rule monadic_rewrite_symb_exec_l_drop)+
            apply (rule monadic_rewrite_refl)
           apply (wpsimp simp: getCurThread_def
-                          wp: hoare_vcg_disj_lift threadSet_valid_tcbs')+
+                          wp: no_fail_getSchedulable hoare_vcg_disj_lift threadSet_valid_tcbs')+
    apply (rule monadic_rewrite_refl)
   apply clarsimp
   apply (intro conjI impI allI)
@@ -1506,7 +1497,7 @@ lemma setThreadState_rewrite_simple:
                            active_sc_tcb_at'_def
                     split: option.splits if_splits)
    apply (fastforce intro: valid_tcb'_tcbState_update
-                     simp: valid_tcb_state'_def split: thread_state.splits)
+                    split: thread_state.splits)
   apply fastforce
   done
 
