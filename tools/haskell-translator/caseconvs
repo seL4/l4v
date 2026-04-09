@@ -429,8 +429,8 @@ case \x of Arch.Types.APIObjectType _ -> Arch.Types.SmallPageObject -> Arch.Type
 case \x of (srcIndex:srcDepth:args, srcRootCap:_) | label < 4 -> (_, _) | label == 4 -> (_, _) | label == 5 -> (_, _) | label == 6 -> (pivotNewData:pivotIndex:pivotDepth:srcNewData:srcIndex:srcDepth:_, pivotRootCap:srcRootCap:_) | label == 7 -> (_, _) | label > 7 -> _ ->  ---> let (\v0\, \v1\) = \x
  in if length \v0\ >= 2 & length \v1\ >= 1 & label < 4 then let srcIndex = \v0\ !! 0; srcDepth = \v0\ !! 1; args = drop 2 \v0\; srcRootCap = \v1\ !! 0 in ->1 else if label = 4 then ->2 else if label = 5 then ->3 else if label = 6 then ->4 else if length \v0\ >= 6 & length \v1\ >= 2 & label = 7 then let pivotNewData = \v0\ !! 0; pivotIndex = \v0\ !! 1; pivotDepth = \v0\ !! 2; srcNewData = \v0\ !! 3; srcIndex = \v0\ !! 4; srcDepth = \v0\ !! 5; pivotRootCap = \v1\ !! 0; srcRootCap = \v1\ !! 1 in ->5 else if label > 7 then ->6 else ->7
 
-case \x of IdleEP | blocking -> SendEP queue | blocking -> IdleEP -> SendEP _ -> RecvEP (dest:queue) -> RecvEP [] ->  ---> case \x of
- IdleEP \<Rightarrow> if blocking then ->1 else ->3 | SendEP queue \<Rightarrow> if blocking then ->2 else ->4 | RecvEP \v0\ \<Rightarrow> (case \v0\ of dest # queue \<Rightarrow> ->5 | [] \<Rightarrow> ->6 )
+case \x of IdleEPState | blocking -> SendEPState | blocking -> IdleEPState -> SendEPState -> ReceiveEPState ->  ---> case \x of
+ IdleEPState \<Rightarrow> if blocking then ->1 else ->3 | SendEPState \<Rightarrow> if blocking then ->2 else ->4 | ReceiveEPState \<Rightarrow> ->5
 
 case \x of Zombie {} -> cap@(UntypedCap {}) -> ReplyCap {} -> ArchObjectCap cap -> cap ->  --->     let cap = \x
       in case cap of

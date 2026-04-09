@@ -276,14 +276,6 @@ lemma obj_at_valid_objs':
   apply simp
   done
 
-lemma tcb_in_valid_state':
-  "\<lbrakk> st_tcb_at' P t s; valid_objs' s \<rbrakk> \<Longrightarrow> \<exists>st. P st \<and> valid_tcb_state' st s"
-  apply (clarsimp simp: pred_tcb_at'_def)
-  apply (drule obj_at_valid_objs')
-   apply fastforce
-  apply (fastforce simp add: valid_obj'_def valid_tcb'_def)
-  done
-
 lemma getCurThread_corres[corres]:
   "corres (=) \<top> \<top> (gets cur_thread) getCurThread"
   by (simp add: getCurThread_def curthread_relation)

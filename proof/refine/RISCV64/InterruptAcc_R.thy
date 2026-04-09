@@ -163,6 +163,46 @@ lemma no_ofail_readRefillSufficient[wp]:
 lemmas no_fail_getRefillSufficient[wp] =
   no_ofail_gets_the[OF no_ofail_readRefillSufficient, simplified getRefillSufficient_def[symmetric]]
 
+lemma getRefillHead_rcorres:
+  "sc_ptr = scPtr \<Longrightarrow>
+   rcorres
+     (\<lambda>s s'. is_active_sc sc_ptr s \<and> sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s
+             \<and> valid_objs s \<and> scs_relation s s')
+     (get_refill_head sc_ptr) (getRefillHead scPtr)
+     (\<lambda>rv rv' _ _. refill_map rv' = rv)"
+  apply (clarsimp simp: get_refill_head_def getRefillHead_def read_refill_head_def
+                        readRefillHead_def read_sched_context_get_sched_context
+                        readSchedContext_def ohaskell_state_assert_def gets_the_ostate_assert
+             simp flip: getObject_def)
+  apply (rule rcorres_symb_exec_l[OF get_sched_context_sp])
+   apply (rule get_sched_context_exs_valid)
+   apply (clarsimp simp: vs_all_heap_simps)
+  apply (rule rcorres_stateAssert_r_fwd[simplified HaskellLib_H.stateAssert_def])+
+  apply (rule rcorres_assert_l_fwd)
+   apply (clarsimp simp: sc_at_ppred_def obj_at_def is_sc_obj_def)
+  apply (rule rcorres_symb_exec_r[OF set_sc'.getObject_sp])
+  apply (rule rcorres_return)
+  apply clarsimp
+  apply (rename_tac n)
+  apply (rule_tac n=n in refill_hd_relation[symmetric])
+   apply (clarsimp simp: obj_at_def)
+   apply (frule (1) scs_relation_sc_relation_abs)
+   apply (clarsimp simp: obj_at'_def)
+  apply (frule valid_objs'_valid_refills'[where scp=scPtr])
+   apply (fastforce intro: active_sc_at'_cross_valid_objs active_sc_at'_imp_is_active_sc')
+  apply (clarsimp simp: obj_at'_def in_omonad valid_refills'_def)
+  done
+
+lemmas no_fail_getRefillHead[wp] =
+  no_ofail_gets_the[OF no_ofail_readRefillHead, simplified getRefillHead_def[symmetric]]
+
+lemma get_refill_heap_det_wp[wp]:
+  "det_wp (sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr) (get_refill_head sc_ptr)"
+  unfolding get_refill_head_def
+  apply wpsimp
+  apply (fastforce intro: no_ofailD[OF no_ofail_read_refill_head])
+  done
+
 lemma getRefillHead_corres:
   "sc_ptr = scPtr \<Longrightarrow>
    corres (\<lambda>rv rv'. refill_map rv' = rv)
@@ -170,27 +210,19 @@ lemma getRefillHead_corres:
       and is_active_sc sc_ptr and sc_at sc_ptr and sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr)
      valid_objs'
      (get_refill_head sc_ptr) (getRefillHead scPtr)"
+  supply ghost_relation_wrapper_def[simp del] (*FIXME arch-split RT: not necessary after arch-split*)
+         heap_ghost_relation_wrapper_def[simp del] (*FIXME arch-split RT: not necessary after arch-split*)
   apply (add_active_sc_at' scPtr)
-  apply (clarsimp simp: get_refill_head_def getRefillHead_def read_refill_head_def
-                        readRefillHead_def read_sched_context_get_sched_context
-                        readSchedContext_def ohaskell_state_assert_def gets_the_ostate_assert
-             simp flip: getSchedContext_def getObject_def)
-  apply (rule corres_stateAssert_ignore[simplified HaskellLib_H.stateAssert_def], simp)+
-  apply (rule stronger_corres_guard_imp)
-    apply (rule corres_split[OF get_sc_corres])
-      apply (rule corres_assert_assume_l)
-      apply clarsimp
-      apply (rule refill_hd_relation[symmetric])
-       apply simp
-      apply simp
-     apply wpsimp
-    apply wpsimp
-   apply (clarsimp simp: sc_at_ppred_def obj_at_def is_sc_obj_def)
-   apply (fastforce intro: valid_objs_valid_sched_context_size)
+  apply (rule_tac Q'=pspace_bounded' in corres_cross_add_guard)
+   apply (fastforce intro: pspace_relation_pspace_bounded')
+  apply (rule corres_underlying_from_rcorres)
+   apply wpsimp
+  apply (clarsimp simp: state_relation_def ghost_relation_heap_ghost_relation
+                        pspace_relation_heap_pspace_relation heap_pspace_relation_def)
+  apply (rcorres_conj_lift \<open>fastforce\<close>)+
+  apply (rcorres rcorres: getRefillHead_rcorres)
   apply clarsimp
-  apply (frule (4) active_sc_at'_cross_valid_objs)
-  by (fastforce dest: valid_objs'_valid_refills'
-                simp: active_sc_at'_def obj_at'_def is_active_sc'_def in_omonad valid_refills'_def)
+  done
 
 lemma getRefillCapacity_corres:
   "sc_ptr = scPtr \<Longrightarrow>

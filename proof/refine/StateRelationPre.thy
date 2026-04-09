@@ -25,4 +25,13 @@ text \<open>
 type_synonym obj_relation_cut = "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"
 type_synonym obj_relation_cuts = "(machine_word \<times> obj_relation_cut) set"
 
+text \<open>
+  An analogue of cmap_relation in CRefine, used to formulate predicates stating that all kernel
+  objects of some type are in a particular relation, in the case where for every abstract kernel
+  object, there is exactly one associated concrete kernel object.\<close>
+definition map_relation :: "(obj_ref \<rightharpoonup> 'a) \<Rightarrow> (obj_ref \<rightharpoonup> 'b) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> bool" where
+  "map_relation ah ch rel \<equiv>
+     dom ah = dom ch
+     \<and> (\<forall>p obj obj'. ah p = Some obj \<and> ch p = Some obj' \<longrightarrow> rel obj obj')"
+
 end

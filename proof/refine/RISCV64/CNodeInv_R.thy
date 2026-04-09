@@ -4852,26 +4852,6 @@ lemma cteSwap_ifunsafe'[wp]:
   apply fastforce
   done
 
-lemma cteSwap_iflive'[wp]:
-  "\<lbrace>if_live_then_nonz_cap'
-        and cte_wp_at' (\<lambda>cte. zobj_refs' (cteCap cte) = zobj_refs' c) c1
-        and cte_wp_at' (\<lambda>cte. zobj_refs' (cteCap cte) = zobj_refs' c') c2\<rbrace>
-     cteSwap c c1 c' c2
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: cteSwap_def)
-  apply (wp | simp)+
-   apply (rule hoare_post_imp,
-          simp only: if_live_then_nonz_cap'_def imp_conv_disj
-                     ex_nonz_cap_to'_def)
-   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift
-             hoare_vcg_ex_lift updateCap_cte_wp_at_cases hoare_weak_lift_imp)+
-  apply (clarsimp simp: cte_wp_at_ctes_of)
-  apply (drule(1) if_live_then_nonz_capE')
-  apply (clarsimp simp: ex_nonz_cap_to'_def cte_wp_at_ctes_of)
-  apply (rule_tac x="(id (c1 := c2, c2 := c1)) cref" in exI)
-  apply auto
-  done
-
 crunch updateMDB, updateCap
   for valid_replies'[wp]: valid_replies'
   (wp: valid_replies'_lift)
@@ -4892,8 +4872,7 @@ lemma cteSwap_valid_pspace'[wp]:
    apply wp
           apply (wp getCTE_inv getCTE_wp)
          apply (strengthen imp_consequent, strengthen ctes_of_strng)
-         apply ((wp sch_act_wf_lift updateCap_no_0  updateCap_ctes_of_wp
-                    hoare_vcg_ex_lift getCTE_wp
+         apply ((wp updateCap_no_0 updateCap_ctes_of_wp hoare_vcg_ex_lift getCTE_wp
                   | simp add: cte_wp_at_ctes_ofI o_def
                   | rule hoare_drop_imps)+)[6]
   apply (clarsimp simp: valid_pspace_no_0[unfolded valid_pspace'_def valid_mdb'_def]
@@ -4948,14 +4927,6 @@ crunch cteSwap
   and it  [wp]: "\<lambda>s. P (ksIdleThread s)"
   and ksIdleSC[wp]: "\<lambda>s. P (ksIdleSC s)"
   and tcbDomain_obj_at'[wp]: "obj_at' (\<lambda>tcb. x = tcbDomain tcb) t"
-
-lemma cteSwap_idle'[wp]:
-  "\<lbrace>valid_idle'\<rbrace>
-     cteSwap c c1 c' c2
-   \<lbrace>\<lambda>rv s. valid_idle' s\<rbrace>"
-  apply (simp add: cteSwap_def)
-  apply (wp updateCap_idle' | simp)+
-  done
 
 lemma weak_derived_zobj:
   "weak_derived' c c' \<Longrightarrow> zobj_refs' c' = zobj_refs' c"
@@ -5053,7 +5024,6 @@ crunch cteSwap
   and st_tcb_at'[wp]: "st_tcb_at' P t"
   and vms'[wp]:  "valid_machine_state'"
   and pspace_domain_valid[wp]:  "pspace_domain_valid"
-  and ct_not_inQ[wp]:  "ct_not_inQ"
   and ksDomScheduleIdx[wp]:  "\<lambda>s. P (ksDomScheduleIdx s)"
   and replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
   and sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
@@ -5063,12 +5033,6 @@ crunch cteSwap
   and valid_sched_pointers[wp]: valid_sched_pointers
   and valid_bitmaps[wp]: valid_bitmaps
   (wp: valid_bitmaps_lift)
-
-crunch cteSwap
-  for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
-  and valid_sched_pointers[wp]: valid_sched_pointers
-  and valid_bitmaps[wp]: valid_bitmaps
-  (rule: valid_bitmaps_lift)
 
 lemma cteSwap_invs'[wp]:
   "\<lbrace>invs' and valid_cap' c and valid_cap' c' and
@@ -5082,9 +5046,7 @@ lemma cteSwap_invs'[wp]:
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_dom_schedule'_def pred_conj_def)
   apply (rule hoare_pre)
-   apply (wp hoare_vcg_conj_lift sch_act_wf_lift
-             valid_irq_node_lift irqs_masked_lift tcb_in_cur_domain'_lift
-             ct_idle_or_in_cur_domain'_lift2)
+   apply (wp hoare_vcg_conj_lift valid_irq_node_lift irqs_masked_lift)
   apply (clarsimp simp: cte_wp_at_ctes_of weak_derived_zobj weak_derived_cte_refs
                         weak_derived_capRange_capBits o_def)
   done
@@ -5523,10 +5485,6 @@ lemma updateCap_untyped_ranges_zero_simple:
   done
 
 crunch updateCap
-  for tcb_in_cur_domain'[wp]: "tcb_in_cur_domain' t"
-  (wp: crunch_wps simp: crunch_simps rule: tcb_in_cur_domain'_lift)
-
-crunch updateCap
   for valid_bitmaps[wp]: valid_bitmaps
   (rule: valid_bitmaps_lift)
 
@@ -5554,7 +5512,7 @@ lemma make_zombie_invs':
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def valid_mdb'_def
                    valid_irq_handlers'_def irq_issued'_def valid_dom_schedule'_def)
-  apply (wp updateCap_ctes_of_wp sch_act_wf_lift updateCap_iflive' updateCap_ifunsafe'
+  apply (wp updateCap_ctes_of_wp updateCap_ifunsafe'
             valid_arch_state_lift' valid_irq_node_lift updateCap_untyped_ranges_zero_simple
             valid_bitmaps_lift
        | simp)+
@@ -5582,18 +5540,6 @@ lemma make_zombie_invs':
      apply (clarsimp simp: cte_wp_at_ctes_of)
      apply (drule bspec[where x=sl], simp)
      apply (clarsimp simp: isCap_simps)
-
-    apply (clarsimp simp: cte_wp_at_ctes_of)
-    apply (subgoal_tac "st_tcb_at' ((=) Inactive) p' s
-                                \<and> obj_at' (Not \<circ> tcbQueued) p' s
-                                \<and> bound_tcb_at' ((=) None) p' s
-                                \<and> bound_sc_tcb_at' (\<lambda>sco. sco = None \<or> sco = Some idle_sc_ptr) p' s
-                                \<and> bound_yt_tcb_at' ((=) None) p' s
-                                \<and> obj_at' (\<lambda>tcb. tcbSchedNext tcb = None
-                                                 \<and> tcbSchedPrev tcb = None) p' s
-                                \<and> obj_at' (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) p' s")
-     apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def live'_def hyp_live'_def)
-    subgoal by (auto dest!: isCapDs)
 
    apply (simp only: fold_list_refs_of_replies')
 
@@ -5833,8 +5779,8 @@ lemma cteDeleteOne_cap_to'[wp]:
   done
 
 crunch cancelSignal
-  for cap_to'[wp]: "ex_cte_cap_wp_to' P p"
-  (simp: crunch_simps wp: crunch_wps)
+  for ex_cte_cap_wp_to'[wp]: "ex_cte_cap_wp_to' P p"
+  (simp: crunch_simps wp: ex_cte_cap_to'_pres crunch_wps)
 
 lemma emptySlot_deletes [wp]:
   "\<lbrace>\<top>\<rbrace> emptySlot p opt \<lbrace>\<lambda>rv s. cte_wp_at' (\<lambda>c. cteCap c = NullCap) p s\<rbrace>"
@@ -6139,24 +6085,6 @@ crunch schedContextCompleteYieldTo, unbindMaybeNotification, schedContextMaybeUn
          setQueue
   for ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
 
-lemma cancelAllIPC_sch_act_simple:
-  "\<lbrace>\<lambda>s. obj_at' ((=) IdleEP) ep_ptr s \<longrightarrow> sch_act_simple s\<rbrace>
-   cancelAllIPC ep_ptr
-   \<lbrace>\<lambda>_. sch_act_simple\<rbrace>"
-  unfolding cancelAllIPC_def
-  apply (wpsimp wp: getEndpoint_wp)
-  apply (clarsimp simp: obj_at'_def)
-  done
-
-lemma cancelAllSignals_sch_act_simple:
-  "\<lbrace>\<lambda>s. obj_at' ((isIdleNtfn or isActiveNtfn) o ntfnObj) ntfn_ptr s \<longrightarrow> sch_act_simple s\<rbrace>
-   cancelAllSignals ntfn_ptr
-   \<lbrace>\<lambda>_. sch_act_simple\<rbrace>"
-  unfolding cancelAllSignals_def
-  apply (wpsimp wp: getNotification_wp)
-  apply (case_tac "ntfnObj ko"; clarsimp simp: isIdleNtfn_def isActiveNtfn_def obj_at'_def)
-  done
-
 lemma finaliseSlot_invs':
   assumes finaliseCap:
     "\<And>cap final sl. \<lbrace>no_cte_prop Pr and invs'
@@ -6249,7 +6177,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
                                  \<and> cte_wp_at' (\<lambda>cte. cteCap cte = cteCap rv) sl s
                                  \<and> (q = sl \<or> exp \<or> cte_wp_at' (?P) q s)"
                    in hoare_vcg_conj_lift)
-         apply (wp hoare_vcg_disj_lift finaliseCap finaliseCap_invs[where sl=sl])
+         apply (wp hoare_vcg_disj_lift finaliseCap finaliseCap_invs)
          apply (rule finaliseCap_zombie_cap')
         apply (rule hoare_vcg_conj_lift)
          apply (rule finaliseCap_cte_refs)
@@ -7107,7 +7035,7 @@ next
                                     \<and> (exposed \<or> ex_cte_cap_to' (cte_map slot) s)
                                     \<and> cte_wp_at' (\<lambda>cte. cteCap cte = cteCap rv') (cte_map slot) s"
                       in hoare_vcg_conj_lift)
-            apply (wp hoare_vcg_disj_lift finaliseCap_invs[where sl="cte_map slot"])[1]
+            apply (wp hoare_vcg_disj_lift finaliseCap_invs)[1]
            apply (rule hoare_vcg_conj_lift)
             apply (rule finaliseCap_replaceable[where slot="cte_map slot"])
            apply (rule finaliseCap_cte_refs)
@@ -7131,7 +7059,7 @@ next
      apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cte_wp_at_def)
      apply (subst split_paired_Ex[symmetric])
      apply (solves \<open>auto\<close>)[1]
-    apply (clarsimp simp: cte_wp_at_ctes_of invs'_def valid_pspace'_def sch_act_wf_weak)
+    apply (clarsimp simp: cte_wp_at_ctes_of invs'_def valid_pspace'_def)
     apply (frule(1) ctes_of_valid')
     apply fastforce
     done
@@ -8411,28 +8339,6 @@ end
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
-lemma cteMove_iflive'[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
-      \<and> cte_wp_at' (\<lambda>c. weak_derived' (cteCap c) cap) src s
-      \<and> cte_wp_at' (\<lambda>c. cteCap c \<noteq> NullCap) src s
-      \<and> cte_wp_at' (\<lambda>c. cteCap c = NullCap) dest s\<rbrace>
-     cteMove cap src dest
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  unfolding cteMove_def
-  apply simp
-  apply wp
-        apply (simp only: if_live_then_nonz_cap'_def imp_conv_disj
-                          ex_nonz_cap_to'_def)
-        apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift
-                  hoare_vcg_ex_lift updateCap_cte_wp_at_cases
-                  getCTE_wp hoare_weak_lift_imp)+
-  apply (clarsimp simp: cte_wp_at_ctes_of)
-  apply (drule(1) if_live_then_nonz_capE')
-  apply (clarsimp simp: ex_nonz_cap_to'_def cte_wp_at_ctes_of)
-  apply (drule_tac x="(id (src := dest, dest := src)) cref" in spec)
-  apply (clarsimp dest!: weak_derived_zobj split: if_split_asm)
-  done
-
 lemma cteMove_valid_pspace' [wp]:
   "\<lbrace>\<lambda>x. valid_pspace' x \<and>
             cte_wp_at' (\<lambda>c. weak_derived' (cteCap c) capability) word1 x \<and>
@@ -8444,7 +8350,7 @@ lemma cteMove_valid_pspace' [wp]:
   \<lbrace>\<lambda>y. valid_pspace'\<rbrace>"
   unfolding cteMove_def
   apply (simp add: pred_conj_def valid_pspace'_def valid_mdb'_def)
-  apply (wp sch_act_wf_lift updateCap_no_0  updateCap_ctes_of_wp getCTE_wp | simp)+
+  apply (wp updateCap_no_0 updateCap_ctes_of_wp getCTE_wp | simp)+
   apply (clarsimp simp: invs'_def)+
   apply (clarsimp dest!: cte_at_cte_wp_atD)
   apply (rule_tac x = cte in exI)
@@ -8488,16 +8394,6 @@ lemma cteMove_ifunsafe':
     apply (clarsimp simp add: cte_wp_at_ctes_of modify_map_def
                        split: if_split_asm)
    apply simp+
-  done
-
-lemma cteMove_idle'[wp]:
-  "\<lbrace>\<lambda>s. valid_idle' s\<rbrace>
-     cteMove cap src dest
-   \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
-  apply (simp add: cteMove_def)
-  apply (wp updateCap_idle' | simp)+
-  apply (wp getCTE_wp')
-  apply (clarsimp simp: valid_idle'_def cte_wp_at_ctes_of weak_derived'_def)
   done
 
 crunch cteMove
@@ -8771,21 +8667,15 @@ lemma updateCap_noop_irq_handlers:
                 add: modify_map_apply fun_upd_idem)
   done
 
-crunch updateCap
-  for ct_idle_or_in_cur_domain'[wp]: ct_idle_or_in_cur_domain'
-  and cur_tcb'[wp]: "cur_tcb'"
-  (rule: ct_idle_or_in_cur_domain'_lift2)
-
 lemma updateCap_noop_invs:
   "\<lbrace>invs' and cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot\<rbrace>
-     updateCap slot cap
-   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+   updateCap slot cap
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_dom_schedule'_def valid_pspace'_def valid_mdb'_def)
   apply (rule hoare_pre)
-   apply (wp updateCap_ctes_of_wp updateCap_iflive'
-             updateCap_ifunsafe' updateCap_idle'
+   apply (wp updateCap_ctes_of_wp updateCap_ifunsafe'
              valid_arch_state_lift' valid_irq_node_lift
-             updateCap_noop_irq_handlers sch_act_wf_lift
+             updateCap_noop_irq_handlers
              untyped_ranges_zero_lift)
   apply (clarsimp simp: cte_wp_at_ctes_of modify_map_apply)
   apply (strengthen untyped_ranges_zero_delta[where xs=Nil, mk_strg I E])

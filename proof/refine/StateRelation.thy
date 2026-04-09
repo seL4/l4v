@@ -89,17 +89,17 @@ definition cte_relation :: "cap_ref \<Rightarrow> obj_relation_cut" where
 definition ntfn_relation :: "Structures_A.notification \<Rightarrow> Structures_H.notification \<Rightarrow> bool" where
   "ntfn_relation \<equiv> \<lambda>ntfn ntfn'.
      (case ntfn_obj ntfn of
-        Structures_A.IdleNtfn      \<Rightarrow> ntfnObj ntfn' = Structures_H.IdleNtfn
-      | Structures_A.WaitingNtfn q \<Rightarrow> ntfnObj ntfn' = Structures_H.WaitingNtfn q
-      | Structures_A.ActiveNtfn b  \<Rightarrow> ntfnObj ntfn' = Structures_H.ActiveNtfn b)
-                                      \<and> ntfn_bound_tcb ntfn = ntfnBoundTCB ntfn'
-                                      \<and> ntfn_sc ntfn = ntfnSc ntfn'"
+        Structures_A.IdleNtfn      \<Rightarrow> ntfnState ntfn' = IdleNtfnState
+      | Structures_A.WaitingNtfn q \<Rightarrow> ntfnState ntfn' = Waiting
+      | Structures_A.ActiveNtfn w  \<Rightarrow> ntfnState ntfn' = Active \<and> ntfnMsgIdentifier ntfn' = Some w)
+     \<and> ntfn_bound_tcb ntfn = ntfnBoundTCB ntfn'
+     \<and> ntfn_sc ntfn = ntfnSc ntfn'"
 
 definition ep_relation :: "Structures_A.endpoint \<Rightarrow> Structures_H.endpoint \<Rightarrow> bool" where
  "ep_relation \<equiv> \<lambda>ep ep'. case ep of
-    Structures_A.IdleEP   \<Rightarrow> ep' = Structures_H.IdleEP
-  | Structures_A.RecvEP q \<Rightarrow> ep' = Structures_H.RecvEP q
-  | Structures_A.SendEP q \<Rightarrow> ep' = Structures_H.SendEP q"
+    Structures_A.IdleEP   \<Rightarrow> epState ep' = IdleEPState
+  | Structures_A.RecvEP q \<Rightarrow> epState ep' = ReceiveEPState
+  | Structures_A.SendEP q \<Rightarrow> epState ep' = SendEPState"
 
 definition fault_rel_optionation :: "ExceptionTypes_A.fault option \<Rightarrow> Fault_H.fault option \<Rightarrow> bool"
   where
@@ -241,13 +241,14 @@ lemma valid_refills'_nonzero_scRefillCount:
   by (clarsimp simp: valid_refills'_def opt_pred_def refillSize_def split: option.splits)
 
 lemma valid_objs'_valid_refills':
-  "\<lbrakk>valid_objs' s'; sc_at' scp s'; is_active_sc' scp s'\<rbrakk> \<Longrightarrow> valid_refills' scp s'"
-  apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_opt_sc
-                 split: option.split_asm)
-  apply (case_tac ko; clarsimp)
+  "\<lbrakk>valid_objs' s'; is_active_sc' scp s'\<rbrakk> \<Longrightarrow> valid_refills' scp s'"
+  apply (clarsimp simp: is_active_sc'_def opt_pred_def opt_map_def
+                 split: option.splits kernel_object.splits)
   apply (erule (1) valid_objsE')
-  by (clarsimp simp: valid_refills'_def valid_obj'_def valid_sched_context'_def opt_pred_def
-                     is_active_sc'_def opt_map_red projectKO_opt_sc)
+  apply (clarsimp simp: valid_refills'_def valid_obj'_def valid_sched_context'_def opt_pred_def
+                        opt_map_red projectKO_opts_defs
+                 split: kernel_object.splits)
+  done
 
 lemma
   valid_refills'_ksSchedulerAction_update[simp]:
@@ -270,24 +271,17 @@ definition reply_relation :: "Structures_A.reply \<Rightarrow> Structures_H.repl
   "reply_relation \<equiv> \<lambda>reply reply'.
      reply_sc reply = replySC reply' \<and> reply_tcb reply = replyTCB reply'"
 
-\<comment> \<open>
-  A pair of objects @{term "(obj, obj')"} should satisfy the following relation when, under further
-  mild assumptions, a @{term corres_underlying} lemma for @{term "set_object obj"}
-  and @{term "setObject obj'"} can be stated: see setObject_other_corres in KHeap_R.
-
-  Scheduling context objects and reply objects do not satisfy this relation because of the
-  reply stack (see sc_replies_relation below). TCBs do not satisfy this relation because the
-  tcbSchedPrev and tcbSchedNext fields of a TCB are used to model the ready queues and the release
-  queue, and so an update to such a field would correspond to an update to a ready queue or the
-  release queue (see ready_queues_relation and release_queue_relation below).\<close>
-definition
-  other_obj_relation :: "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"
-where
-  "other_obj_relation obj obj' \<equiv>
+definition ep_relation_cut :: "Structures_A.kernel_object \<Rightarrow> kernel_object \<Rightarrow> bool" where
+  "ep_relation_cut obj obj' \<equiv>
    case (obj, obj') of
-      (Endpoint ep, KOEndpoint ep') \<Rightarrow> ep_relation ep ep'
-    | (Notification ntfn, KONotification ntfn') \<Rightarrow> ntfn_relation ntfn ntfn'
-    | _ \<Rightarrow> False"
+       (Structures_A.Endpoint t, KOEndpoint t') \<Rightarrow> ep_relation t t'
+     | _ \<Rightarrow> False"
+
+definition ntfn_relation_cut :: "Structures_A.kernel_object \<Rightarrow> kernel_object \<Rightarrow> bool" where
+  "ntfn_relation_cut obj obj' \<equiv>
+   case (obj, obj') of
+       (Structures_A.Notification t, KONotification t') \<Rightarrow> ntfn_relation t t'
+     | _ \<Rightarrow> False"
 
 abbreviation sc_relation_cut :: "Structures_A.kernel_object \<Rightarrow> kernel_object \<Rightarrow> bool" where
   "sc_relation_cut obj obj' \<equiv>
@@ -313,17 +307,12 @@ primrec obj_relation_cuts :: "Structures_A.kernel_object \<Rightarrow> machine_w
       then {(cte_map (x, y), cte_relation y) | y. y \<in> dom cs}
       else {(x, \<bottom>\<bottom>)})"
 | "obj_relation_cuts (TCB tcb) x = {(x, tcb_relation_cut)}"
-| "obj_relation_cuts (Endpoint ep) x = {(x, other_obj_relation)}"
-| "obj_relation_cuts (Notification ntfn) x = {(x, other_obj_relation)}"
+| "obj_relation_cuts (Structures_A.Endpoint ep) x = {(x, ep_relation_cut)}"
+| "obj_relation_cuts (Structures_A.Notification ntfn) x = {(x, ntfn_relation_cut)}"
 | "obj_relation_cuts (Structures_A.SchedContext sc n) x =
      (if valid_sched_context_size n then {(x, sc_relation_cut)} else {(x, \<bottom>\<bottom>)})"
 | "obj_relation_cuts (Structures_A.Reply _) x = {(x, reply_relation_cut)}"
 | "obj_relation_cuts (ArchObj ao) x = aobj_relation_cuts ao x"
-
-lemma other_obj_relation_not_aobj:
-  "other_obj_relation ko ko' \<Longrightarrow> \<not> is_ArchObj ko"
-  unfolding other_obj_relation_def is_ArchObj_def
-  by clarsimp
 
 definition pspace_dom :: "Structures_A.kheap \<Rightarrow> machine_word set" where
   "pspace_dom ps \<equiv> \<Union>x\<in>dom ps. fst ` (obj_relation_cuts (the (ps x)) x)"
@@ -404,6 +393,34 @@ abbreviation release_queue_relation :: "det_state \<Rightarrow> kernel_state \<R
 
 lemmas release_queue_relation_def = release_queue_relation_2_def
 
+definition ep_queues_relation_2 ::
+  "(obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> tcb_queue) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref)
+   \<Rightarrow> bool"
+  where
+  "ep_queues_relation_2 ep_qs epQs nexts prevs \<equiv>
+     \<forall>p ls q. ep_qs p = Some ls \<longrightarrow> epQs p = Some q \<longrightarrow> list_queue_relation ls q nexts prevs"
+
+abbreviation ep_queues_relation :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "ep_queues_relation s s' \<equiv>
+     ep_queues_relation_2
+       (ep_queues_of s) (epQueues_of s') (tcbSchedNexts_of s') (tcbSchedPrevs_of s')"
+
+lemmas ep_queues_relation_def = ep_queues_relation_2_def
+
+definition ntfn_queues_relation_2 ::
+  "(obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> tcb_queue) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref)
+   \<Rightarrow> bool"
+  where
+  "ntfn_queues_relation_2 ntfn_qs ntfnQs nexts prevs \<equiv>
+     \<forall>p ls q. ntfn_qs p = Some ls \<longrightarrow> ntfnQs p = Some q \<longrightarrow> list_queue_relation ls q nexts prevs"
+
+abbreviation ntfn_queues_relation :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "ntfn_queues_relation s s' \<equiv>
+     ntfn_queues_relation_2
+       (ntfn_queues_of s) (ntfnQueues_of s') (tcbSchedNexts_of s') (tcbSchedPrevs_of s')"
+
+lemmas ntfn_queues_relation_def = ntfn_queues_relation_2_def
+
 definition cdt_relation :: "(cslot_ptr \<Rightarrow> bool) \<Rightarrow> cdt \<Rightarrow> cte_heap \<Rightarrow> bool" where
   "cdt_relation \<equiv> \<lambda>cte_at m m'.
      \<forall>c. cte_at c \<longrightarrow> cte_map ` descendants_of c m = descendants_of' (cte_map c) m'"
@@ -472,10 +489,12 @@ abbreviation ghost_relation_wrapper :: "det_state \<Rightarrow> kernel_state \<R
 definition state_relation :: "(det_state \<times> kernel_state) set" where
   "state_relation \<equiv> {(s, s').
          pspace_relation (kheap s) (ksPSpace s')
-       \<and> sc_replies_relation s s'
-       \<and> sched_act_relation (scheduler_action s) (ksSchedulerAction s')
+       \<and> ep_queues_relation s s'
+       \<and> ntfn_queues_relation s s'
        \<and> ready_queues_relation s s'
        \<and> release_queue_relation s s'
+       \<and> sc_replies_relation s s'
+       \<and> sched_act_relation (scheduler_action s) (ksSchedulerAction s')
        \<and> ghost_relation_wrapper s s'
        \<and> cdt_relation (swp cte_at s) (cdt s) (ctes_of s')
        \<and> cdt_list_relation (cdt_list s) (cdt s) (ctes_of s')
@@ -527,6 +546,14 @@ lemma state_relation_release_queue_relation[elim!]:
   "(s,s') \<in> state_relation \<Longrightarrow> release_queue_relation s s'"
   by (clarsimp simp: state_relation_def)
 
+lemma state_relation_ep_queues_relation[elim!]:
+  "(s,s') \<in> state_relation \<Longrightarrow> ep_queues_relation s s'"
+  by (clarsimp simp: state_relation_def)
+
+lemma state_relation_ntfn_queues_relation[elim!]:
+  "(s,s') \<in> state_relation \<Longrightarrow> ntfn_queues_relation s s'"
+  by (clarsimp simp: state_relation_def)
+
 lemma state_relation_sc_replies_relation:
   "(s,s') \<in> state_relation \<Longrightarrow> sc_replies_relation s s'"
   using state_relation_def by blast
@@ -543,6 +570,8 @@ lemma state_relationD:
    sched_act_relation (scheduler_action s) (ksSchedulerAction s') \<and>
    ready_queues_relation s s' \<and>
    release_queue_relation s s' \<and>
+   ep_queues_relation s s' \<and>
+   ntfn_queues_relation s s' \<and>
    ghost_relation_wrapper s s' \<and>
    cdt_relation (swp cte_at s) (cdt s) (ctes_of s') \<and>
    cdt_list_relation (cdt_list s) (cdt s) (ctes_of s') \<and>
@@ -571,6 +600,8 @@ lemma state_relationE [elim?]:
             sched_act_relation (scheduler_action s) (ksSchedulerAction s');
             ready_queues_relation s s';
             release_queue_relation s s';
+            ep_queues_relation s s';
+            ntfn_queues_relation s s';
             ghost_relation_wrapper s s';
             cdt_relation (swp cte_at s) (cdt s) (ctes_of s') \<and>
             revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) (ctes_of s');
@@ -1084,8 +1115,8 @@ locale StateRelation_R =
     "\<And>n. \<not> is_other_obj_relation_type (ASchedContext n)"
     "\<not> is_other_obj_relation_type AReply"
     "\<not> is_other_obj_relation_type ATCB"
-    "is_other_obj_relation_type AEndpoint"
-    "is_other_obj_relation_type ANTFN"
+    "\<not> is_other_obj_relation_type AEndpoint"
+    "\<not> is_other_obj_relation_type ANTFN"
     "\<And>n. \<not> is_other_obj_relation_type (AGarbage n)"
   assumes msgLabelBits_msg_label_bits:
     "msgLabelBits = msg_label_bits"

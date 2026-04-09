@@ -50,8 +50,8 @@ lemma valid_obj'_pspaceI[Invariants_H_pspaceI_assms]:
   "valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
   unfolding valid_obj'_def
   by (cases obj)
-     (auto simp: valid_ep'_def valid_ntfn'_def valid_tcb'_def valid_cte'_def
-                 valid_tcb_state'_def valid_bound_obj'_def valid_sched_context'_def valid_reply'_def
+     (auto simp: valid_ntfn'_def valid_ntfn'_def valid_tcb'_def valid_cte'_def
+                 valid_bound_obj'_def valid_sched_context'_def valid_reply'_def
                  valid_arch_tcb'_def
            split: Structures_H.endpoint.splits Structures_H.notification.splits
                   Structures_H.thread_state.splits ntfn.splits option.splits
@@ -374,7 +374,6 @@ lemmas typ_at_lifts_strong =
   typ_at_lift_tcb'_strong typ_at_lift_ep'_strong
   typ_at_lift_ntfn'_strong typ_at_lift_cte'_strong
   typ_at_lift_reply'_strong typ_at_lift_sc'_strong
-  typ_at_lift_valid_tcb_state'_strong
   typ_at_lift_page_table_at'_strong
   typ_at_lift_frame_at'_strong
   valid_arch_tcb_lift'_strong
@@ -467,15 +466,8 @@ lemma typ_at'_valid_obj'_lift:
   shows      "\<lbrace>\<lambda>s. valid_obj' obj s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj' obj s\<rbrace>"
   supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (cases obj; simp add: valid_obj'_def hoare_TrueI)
-        apply (rename_tac endpoint)
-        apply (case_tac endpoint; simp add: valid_ep'_def, wp)
-       apply (rename_tac notification)
-       apply (case_tac "ntfnObj notification";
-               simp add: valid_ntfn'_def split: option.splits;
-               (wpsimp|rule conjI)+)
-      apply (rename_tac tcb)
-      apply (case_tac "tcbState tcb";
-             simp add: valid_tcb'_def valid_tcb_state'_def split_def opt_tcb_at'_def;
+       apply wpsimp
+      apply (simp add: valid_tcb'_def split_def opt_tcb_at'_def;
              wpsimp wp: sz hoare_case_option_wp)
      apply (wpsimp simp: valid_cte'_def sz)
     apply (rename_tac arch_kernel_object)

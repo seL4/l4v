@@ -8,8 +8,17 @@
 
 theory KHeap_R
 imports
-  ArchMachine_R
+  ArchMachine_R ArchHeapStateRelationLemmas
 begin
+
+(* requalify interface lemmas which can't be locale assumptions due to free type variable *)
+arch_requalify_facts
+  aobjs_relation_lift_rcorres
+  heap_ghost_relation_lift_rcorres
+
+declare aobjs_relation_lift_rcorres[rcorres_lift]
+
+declare heap_ghost_relation_lift_rcorres[rcorres_lift]
 
 translations
   (type) "'a kernel" <=(type) "kernel_state \<Rightarrow> ('a \<times> kernel_state) set \<times> bool"
@@ -320,7 +329,7 @@ lemma pspace_relation_tcb_at:
   shows "tcb_at t s"
   using assms
   by  (fastforce elim!: pspace_dom_relatedE obj_relation_cutsE
-                  simp: other_obj_relation_def obj_at_def is_tcb_def opt_map_def
+                  simp: obj_at_def is_tcb_def opt_map_def
                  split: Structures_A.kernel_object.split_asm if_split_asm option.splits)
 
 lemma pspace_relation_sc_at:
@@ -329,7 +338,7 @@ lemma pspace_relation_sc_at:
   shows "sc_at scp s"
   using assms
   by (fastforce elim!: pspace_dom_relatedE obj_relation_cutsE
-                 simp: other_obj_relation_def other_aobj_relation_def is_sc_obj obj_at_def opt_map_def
+                 simp: other_aobj_relation_def is_sc_obj obj_at_def opt_map_def
                 split: Structures_A.kernel_object.split_asm if_split_asm option.splits
                        arch_kernel_obj.splits kernel_object.splits)
 
@@ -642,11 +651,12 @@ lemma setObject_tcb_strongest:
                         updateObject_default_def ps_clear_upd)
   done
 
-method setObject_easy_cases =
+method setObject_easy_cases uses simp =
   clarsimp simp: setObject_def in_monad split_def valid_def lookupAround2_char1,
   erule rsubst[where P=P'], rule ext,
   clarsimp simp: updateObject_cte updateObject_default_def in_monad
                  typeError_def opt_map_def opt_pred_def projectKO_opts_defs
+                 simp
           split: if_split_asm
                  Structures_H.kernel_object.split_asm
 
@@ -704,9 +714,68 @@ lemma setObject_cte_inQ[wp]:
   supply inQ_def[simp]
   by setObject_easy_cases
 
+lemma setObject_cte_tcbStates_of'[wp]:
+  "setObject c (cte :: cte) \<lbrace>\<lambda>s. P' (tcbStates_of' s)\<rbrace>"
+  by setObject_easy_cases
+
 lemma setObject_reply_tcbs_of'[wp]:
   "setObject c (reply :: reply) \<lbrace>\<lambda>s. P' (tcbs_of' s)\<rbrace>"
   by setObject_easy_cases
+
+lemma setObject_cte_tcbSCs_of[wp]:
+  "setObject c (cte::cte) \<lbrace>\<lambda>s. P' (tcbSCs_of s)\<rbrace>"
+  by setObject_easy_cases
+
+lemma setObject_ntfns_of'[wp]:
+  "setObject c (cte :: cte) \<lbrace>\<lambda>s. P' (ntfns_of' s)\<rbrace>"
+  "setObject c (reply :: reply) \<lbrace>\<lambda>s. P' (ntfns_of' s)\<rbrace>"
+  "setObject c (tcb :: tcb) \<lbrace>\<lambda>s. P' (ntfns_of' s)\<rbrace>"
+  "setObject c (sched_context :: sched_context) \<lbrace>\<lambda>s. P' (ntfns_of' s)\<rbrace>"
+  "setObject c (endpoint :: endpoint) \<lbrace>\<lambda>s. P' (ntfns_of' s)\<rbrace>"
+  by setObject_easy_cases+
+
+lemma setObject_eps_of'[wp]:
+  "setObject c (cte :: cte) \<lbrace>\<lambda>s. P' (eps_of' s)\<rbrace>"
+  "setObject c (reply :: reply) \<lbrace>\<lambda>s. P' (eps_of' s)\<rbrace>"
+  "setObject c (tcb :: tcb) \<lbrace>\<lambda>s. P' (eps_of' s)\<rbrace>"
+  "setObject c (sched_context :: sched_context) \<lbrace>\<lambda>s. P' (eps_of' s)\<rbrace>"
+  "setObject c (notification :: notification) \<lbrace>\<lambda>s. P' (eps_of' s)\<rbrace>"
+  by setObject_easy_cases+
+
+lemma setObject_ctes_of'[wp]:
+  "setObject c (sc :: sched_context) \<lbrace>\<lambda>s. P' (ctes_of' s)\<rbrace>"
+  "setObject c (reply :: reply) \<lbrace>\<lambda>s. P' (ctes_of' s)\<rbrace>"
+  "setObject c (tcb :: tcb) \<lbrace>\<lambda>s. P' (ctes_of' s)\<rbrace>"
+  "setObject c (notification :: notification) \<lbrace>\<lambda>s. P' (ctes_of' s)\<rbrace>"
+  "setObject c (endpoint :: endpoint) \<lbrace>\<lambda>s. P' (ctes_of' s)\<rbrace>"
+  by setObject_easy_cases+
+
+lemma setObject_kernelData_at[wp]:
+  "setObject c (sc::sched_context) \<lbrace>\<lambda>s. P' (kernelData_at s)\<rbrace>"
+  "setObject c (reply::reply) \<lbrace>\<lambda>s. P' (kernelData_at s)\<rbrace>"
+  "setObject c (tcb::tcb) \<lbrace>\<lambda>s. P' (kernelData_at s)\<rbrace>"
+  "setObject c (notification::notification) \<lbrace>\<lambda>s. P' (kernelData_at s)\<rbrace>"
+  "setObject c (endpoint::endpoint) \<lbrace>\<lambda>s. P' (kernelData_at s)\<rbrace>"
+  "setObject c (cte::cte) \<lbrace>\<lambda>s. P' (kernelData_at s)\<rbrace>"
+  by (setObject_easy_cases simp: gen_objBits_simps; fastforce)+
+
+lemma setObject_userDataDevice_at[wp]:
+  "setObject c (sc::sched_context) \<lbrace>\<lambda>s. P' (userDataDevice_at s)\<rbrace>"
+  "setObject c (reply::reply) \<lbrace>\<lambda>s. P' (userDataDevice_at s)\<rbrace>"
+  "setObject c (tcb::tcb) \<lbrace>\<lambda>s. P' (userDataDevice_at s)\<rbrace>"
+  "setObject c (notification::notification) \<lbrace>\<lambda>s. P' (userDataDevice_at s)\<rbrace>"
+  "setObject c (endpoint::endpoint) \<lbrace>\<lambda>s. P' (userDataDevice_at s)\<rbrace>"
+  "setObject c (cte::cte) \<lbrace>\<lambda>s. P' (userDataDevice_at s)\<rbrace>"
+  by (setObject_easy_cases simp: gen_objBits_simps; fastforce)+
+
+lemma setObject_userData_at[wp]:
+  "setObject c (sc::sched_context) \<lbrace>\<lambda>s. P' (userData_at s)\<rbrace>"
+  "setObject c (reply::reply) \<lbrace>\<lambda>s. P' (userData_at s)\<rbrace>"
+  "setObject c (tcb::tcb) \<lbrace>\<lambda>s. P' (userData_at s)\<rbrace>"
+  "setObject c (notification::notification) \<lbrace>\<lambda>s. P' (userData_at s)\<rbrace>"
+  "setObject c (endpoint::endpoint) \<lbrace>\<lambda>s. P' (userData_at s)\<rbrace>"
+  "setObject c (cte::cte) \<lbrace>\<lambda>s. P' (userData_at s)\<rbrace>"
+  by (setObject_easy_cases simp: gen_objBits_simps; fastforce)+
 
 \<comment>\<open> Warning: this may not be a weakest precondition. `setObject c`
     asserts that there's already a correctly-typed object at `c`,
@@ -735,6 +804,15 @@ lemma setObject_scs_of'[wp]:
   "setObject c (notification::notification) \<lbrace>\<lambda>s. P' (scs_of' s)\<rbrace>"
   "setObject c (endpoint::endpoint) \<lbrace>\<lambda>s. P' (scs_of' s)\<rbrace>"
   by setObject_easy_cases+
+
+lemma setObject_aobjs_of'[wp]:
+  "setObject c (sc :: sched_context) \<lbrace>\<lambda>s. P' (aobjs_of' s)\<rbrace>"
+  "setObject c (reply :: reply) \<lbrace>\<lambda>s. P' (aobjs_of' s)\<rbrace>"
+  "setObject c (tcb :: tcb) \<lbrace>\<lambda>s. P' (aobjs_of' s)\<rbrace>"
+  "setObject c (notification :: notification) \<lbrace>\<lambda>s. P' (aobjs_of' s)\<rbrace>"
+  "setObject c (endpoint :: endpoint) \<lbrace>\<lambda>s. P' (aobjs_of' s)\<rbrace>"
+  "setObject c (cte :: cte) \<lbrace>\<lambda>s. P' (aobjs_of' s)\<rbrace>"
+  by (setObject_easy_cases simp: aobj_of'_def)+
 
 lemmas setReply_replies_of' = setObject_reply_replies_of'[folded setReply_def]
 
@@ -819,10 +897,6 @@ begin
 private method getObject_valid_obj =
   rule hoare_chain,
   rule getObject_valid_obj; clarsimp simp: gen_objBits_simps valid_obj'_def scBits_pos_power2
-
-lemma get_ep'_valid_ep[wp]:
-  "\<lbrace> valid_objs' \<rbrace> getEndpoint ep \<lbrace> valid_ep' \<rbrace>"
-  unfolding getEndpoint_def by getObject_valid_obj
 
 lemma get_ntfn'_valid_ntfn[wp]:
   "\<lbrace> valid_objs' \<rbrace> getNotification ep \<lbrace> valid_ntfn' \<rbrace>"
@@ -1066,7 +1140,7 @@ lemma getEndpoint_corres:
   apply (clarsimp simp: state_relation_def pspace_relation_def obj_at'_def)
   apply (drule bspec)
    apply blast
-  apply (simp add: other_obj_relation_def)
+  apply (simp add: ep_relation_def ep_relation_cut_def)
   done
 
 declare magnitudeCheck_inv [wp]
@@ -1185,8 +1259,8 @@ lemma typ_at'_koTypeOf:
   "ko_at' ob' ptr b \<Longrightarrow> typ_at' (koTypeOf (injectKO ob')) ptr b"
   by (auto simp: typ_at'_def ko_wp_at'_def obj_at'_def project_inject)
 
-lemmas gen_obj_at_simps = obj_at_def obj_at'_def map_to_ctes_upd_other
-                      a_type_def gen_objBits_simps other_obj_relation_def
+lemmas gen_obj_at_simps =
+  obj_at_def obj_at'_def map_to_ctes_upd_other a_type_def gen_objBits_simps
 
 lemma get_reply_corres:
   "corres reply_relation (reply_at ptr) (reply_at' ptr)
@@ -1201,7 +1275,7 @@ lemma get_reply_corres:
   apply (clarsimp simp add: state_relation_def pspace_relation_def obj_at'_def)
   apply (drule bspec)
    apply blast
-  apply (simp add: other_obj_relation_def)
+  apply simp
   done
 
 lemma getReply_TCB_corres:
@@ -1210,23 +1284,6 @@ lemma getReply_TCB_corres:
   apply clarsimp
   apply (rule get_reply_corres[THEN corres_rel_imp])
   apply (clarsimp simp: reply_relation_def)
-  done
-
-lemma get_sc_corres:
-  "corres (\<lambda>sc sc'. \<exists>n. sc_relation sc n sc') (sc_at ptr) (sc_at' ptr)
-     (get_sched_context ptr) (getSchedContext ptr)"
-  apply (rule corres_no_failI)
-   apply wp
-  apply (simp add: get_sched_context_def getSchedContext_def get_object_def
-                   getObject_def bind_assoc gets_the_def)
-  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def
-                 dest!: readObject_misc_ko_at')
-  apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_sc_obj_def
-                 split: Structures_A.kernel_object.splits)
-  apply (clarsimp simp add: state_relation_def pspace_relation_def obj_at'_def)
-  apply (drule bspec)
-   apply blast
-  apply (fastforce simp add: other_obj_relation_def)
   done
 
 lemma get_sc_corres_size:
@@ -1244,7 +1301,7 @@ lemma get_sc_corres_size:
   apply (clarsimp simp: state_relation_def pspace_relation_def obj_at'_def)
   apply (drule bspec)
    apply blast
-  apply (clarsimp simp: other_obj_relation_def scBits_simps sc_relation_def gen_objBits_simps)
+  apply (clarsimp simp: scBits_simps sc_relation_def gen_objBits_simps)
   done
 
 lemma setObject_qs[wp]:
@@ -1264,13 +1321,6 @@ lemma setObject_qsL1[wp]:
 lemma setObject_qsL2[wp]:
   assumes x: "\<And>q n obj. \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> updateObject v obj p q n \<lbrace>\<lambda>rv s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> setObject p v \<lbrace>\<lambda>rv s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
-  apply (simp add: setObject_def split_def)
-  apply (wp x | simp)+
-  done
-
-lemma setObject_it[wp]:
-  assumes x: "\<And>p q n ko. \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv s. P (ksIdleThread s)\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> setObject t val \<lbrace>\<lambda>rv s. P (ksIdleThread s)\<rbrace>"
   apply (simp add: setObject_def split_def)
   apply (wp x | simp)+
   done
@@ -1380,56 +1430,6 @@ lemma setObject_ko_wp_at:
                  split: if_split_asm)
   done
 
-lemma setObject_idle':
-  fixes v :: "'a :: pspace_storable"
-  assumes R: "\<And>ko s y n.
-              (updateObject v ko ptr y n s) = (updateObject_default v ko ptr y n s)"
-  assumes z: "\<And>P p q n ko.
-              \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace>
-              updateObject v p q n ko
-              \<lbrace>\<lambda>rv s. P (ksIdleThread s)\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. valid_idle' s
-                   \<and> (ptr = ksIdleThread s
-                        \<longrightarrow> (\<exists>val :: 'a. idle_tcb_ps val)
-                        \<longrightarrow> idle_tcb_ps v)
-                   \<and> (ptr = idle_sc_ptr
-                        \<longrightarrow> (\<exists>val :: 'a. idle_sc_ps val)
-                        \<longrightarrow> idle_sc_ps v)\<rbrace>
-              setObject ptr v
-              \<lbrace>\<lambda>rv s. valid_idle' s\<rbrace>"
-  apply (simp add: valid_idle'_def pred_tcb_at'_def o_def)
-  apply (rule hoare_pre)
-   apply (rule hoare_lift_Pf2 [where f="ksIdleThread"])
-    apply (simp add: pred_tcb_at'_def obj_at'_real_def)
-    apply (wpsimp wp: setObject_ko_wp_at[OF R])
-   apply (wp z)
-  apply (rule conjI)
-   apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def idle_tcb_ps_def
-                         idle_sc_ps_def)
-   apply (rename_tac tcb sc obj)
-   apply (drule_tac x=obj and y=tcb in spec2, clarsimp simp: project_inject)
-  apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def idle_tcb_ps_def
-                        idle_sc_ps_def)
-  apply (rename_tac tcb sc obj)
-  apply (drule_tac x=obj and y=sc in spec2, clarsimp simp: project_inject)
-  done
-
-lemma getNotification_corres:
-  "corres ntfn_relation (ntfn_at ptr) (ntfn_at' ptr)
-     (get_notification ptr) (getNotification ptr)"
-  apply (rule corres_no_failI)
-   apply wp
-  apply (simp add: get_simple_ko_def getNotification_def get_object_def
-                   getObject_def bind_assoc gets_the_def)
-  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def
-                 dest!: readObject_misc_ko_at')
-  apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_ntfn partial_inv_def)
-  apply (clarsimp simp add: state_relation_def pspace_relation_def obj_at'_def)
-  apply (drule bspec)
-   apply blast
-  apply (simp add: other_obj_relation_def)
-  done
-
 lemma ct_in_state_thread_state_lift':
   assumes ct: "\<And>P. \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
   assumes st: "\<And>t. \<lbrace>st_tcb_at' P t\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
@@ -1439,61 +1439,6 @@ lemma ct_in_state_thread_state_lift':
   apply (frule (1) use_valid [OF _ ct])
   apply (drule (1) use_valid [OF _ st], assumption)
   done
-
-lemma sch_act_wf_lift:
-  assumes tcb: "\<And>P t. \<lbrace>st_tcb_at' P t\<rbrace> f \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
-  assumes tcb_cd: "\<And>t. \<lbrace> tcb_in_cur_domain' t\<rbrace> f \<lbrace>\<lambda>_ . tcb_in_cur_domain' t \<rbrace>"
-  assumes kCT: "\<And>P. \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
-  assumes ksA: "\<And>P. \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
-  shows
-  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
-  f
-  \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (clarsimp simp: valid_def)
-  apply (frule (1) use_valid [OF _ ksA])
-  apply (case_tac "ksSchedulerAction b", simp_all)
-  apply (drule (2) use_valid [OF _ ct_in_state_thread_state_lift' [OF kCT tcb]])
-  apply (clarsimp)
-  apply (rule conjI)
-  apply (drule (2) use_valid [OF _ tcb])
-  apply (drule (2) use_valid [OF _ tcb_cd])
-  done
-
-lemma tcb_in_cur_domain'_lift:
-  assumes a: "\<And>P. \<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"
-  assumes b: "\<And>x. \<lbrace>obj_at' (\<lambda>tcb. x = tcbDomain tcb) t\<rbrace> f \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. x = tcbDomain tcb) t\<rbrace>"
-  shows "\<lbrace> tcb_in_cur_domain' t \<rbrace> f \<lbrace> \<lambda>_. tcb_in_cur_domain' t \<rbrace>"
-  apply (simp add: tcb_in_cur_domain'_def)
-  apply (rule_tac f="ksCurDomain" in  hoare_lift_Pf)
-   apply (rule b)
-  apply (rule a)
-  done
-
-lemma ct_idle_or_in_cur_domain'_lift:
-  assumes a: "\<And>P. \<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace>       f \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"
-  assumes b: "\<And>P. \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
-  assumes c: "\<And>P. \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace>      f \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
-  assumes d: "\<And>P. \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace>       f \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
-  assumes e: "\<And>d t t'. \<lbrace>\<lambda>s. t = t' \<or> obj_at' (\<lambda>tcb. d = tcbDomain tcb) t s\<rbrace>
-                            f
-                       \<lbrace>\<lambda>_ s. t = t' \<or> obj_at' (\<lambda>tcb. d = tcbDomain tcb) t s\<rbrace>"
-  shows "\<lbrace> ct_idle_or_in_cur_domain' \<rbrace> f \<lbrace> \<lambda>_. ct_idle_or_in_cur_domain' \<rbrace>"
-  apply (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
-  apply (rule_tac f="ksCurThread" in  hoare_lift_Pf)
-   apply (rule_tac f="ksIdleThread" in hoare_lift_Pf)
-    apply (rule_tac f="ksSchedulerAction" in  hoare_lift_Pf)
-     apply (rule_tac f="ksCurDomain" in  hoare_lift_Pf)
-      apply (wp hoare_vcg_imp_lift)
-       apply (rule e)
-      apply simp
-     apply (rule a)
-    apply (rule b)
-   apply (rule c)
-  apply (rule d)
-  done
-
-lemmas cur_tcb_lift =
-  hoare_lift_Pf [where f = ksCurThread and P = tcb_at', folded cur_tcb'_def]
 
 lemma valid_mdb'_lift:
   "(\<And>P. f \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>) \<Longrightarrow> f \<lbrace>valid_mdb'\<rbrace>"
@@ -1564,14 +1509,6 @@ lemma setObject_pspace_domain_valid[wp]:
                      in_monad lookupAround2_char1 updateObject_size
               split: if_split_asm)
 
-lemma ct_not_inQ_lift:
-  assumes sch_act: "\<And>P. \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
-      and not_inQ: "\<lbrace>\<lambda>s. obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s\<rbrace>
-                    f \<lbrace>\<lambda>_ s. obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s\<rbrace>"
-  shows "\<lbrace>ct_not_inQ\<rbrace> f \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
-  unfolding ct_not_inQ_def
-  by (rule hoare_convert_imp [OF sch_act not_inQ])
-
 lemma obj_at'_ignoring_obj:
   "obj_at' (\<lambda>_ :: 'a :: pspace_storable. P) p s = (obj_at' (\<lambda>_ :: 'a. True) p s \<and> P)"
   by (rule iffI; clarsimp simp: obj_at'_def)
@@ -1636,6 +1573,7 @@ locale pspace_only' =
 begin
 
 lemma it[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace>"
+  and ksIdleSC[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksIdleSC s)\<rbrace>"
   and ct[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace>"
   and cur_domain[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace>"
   and ksDomSchedule[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace>"
@@ -1749,8 +1687,6 @@ lemma valid_machine_state'[wp]:
 lemma pspace_domain_valid[wp]:
   "f ptr val \<lbrace>pspace_domain_valid\<rbrace>"
   unfolding f_def by (wpsimp simp: default_update updateObject_default_def in_monad)
-
-lemmas x = ct_not_inQ_lift[OF ksSchedulerAction]
 
 lemma setObject_wp:
   "\<lbrace>\<lambda>s. P (set_obj' ptr obj s)\<rbrace>
@@ -2079,35 +2015,13 @@ lemma valid_bitmaps[wp]:
   "f p v \<lbrace>valid_bitmaps\<rbrace>"
   by (wpsimp wp: valid_bitmaps_lift)
 
-lemma tcb_in_cur_domain'[wp]:
-  "f p v \<lbrace>tcb_in_cur_domain' t\<rbrace>"
-  by (rule tcb_in_cur_domain'_lift; wp)
-
 lemma pred_tcb_at'[wp]:
   "f p v \<lbrace> \<lambda>s. Q (pred_tcb_at' proj P t s) \<rbrace>"
   unfolding pred_tcb_at'_def by wp
 
-lemma sch_act_wf[wp]:
-  "f p v \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  by (wp sch_act_wf_lift)
-
-lemma cur_tcb'[wp]:
-  "f p v \<lbrace>cur_tcb'\<rbrace>"
-  by (wp cur_tcb_lift)
-
 lemma cap_to'[wp]:
   "f p' v \<lbrace>ex_nonz_cap_to' p\<rbrace>"
   by (wp ex_nonz_cap_to_pres')
-
-lemma ct_not_inQ[wp]:
-  "f p v \<lbrace>ct_not_inQ\<rbrace>"
-  apply (rule ct_not_inQ_lift, wp)
-  apply (rule hoare_lift_Pf[where f=ksCurThread]; wp)
-  done
-
-lemma ct_idle_or_in_cur_domain'[wp]:
-  "f p v \<lbrace> ct_idle_or_in_cur_domain' \<rbrace>"
-  by (rule ct_idle_or_in_cur_domain'_lift; wp)
 
 end
 
@@ -2176,18 +2090,6 @@ locale simple_non_tcb_non_sc_ko' =
                      "g:: obj_ref \<Rightarrow> 'a kernel" +
    simple_non_tcb_ko' "f:: obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel"
                       "g:: obj_ref \<Rightarrow> 'a kernel" for f g
-begin
-
-\<comment>\<open> preservation of valid_idle' requires us to not be touching either of an SC or a TCB \<close>
-
-lemma idle'[wp]:
-  "f p v \<lbrace>valid_idle'\<rbrace>"
-  unfolding f_def
-  apply (wp setObject_idle'
-         ; simp add: default_update updateObject_default_inv idle_tcb_ps_def idle_sc_ps_def)
-  done
-
-end
 
 locale simple_non_tcb_non_sc_non_reply_ko' =
    simple_non_tcb_non_sc_ko' "f:: obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel"
@@ -2310,12 +2212,6 @@ lemmas set_reply_valid_objs'[wp] =
 lemmas set_sc_valid_objs'[wp] =
   set_sc'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
 
-lemma set_ep_state_refs_of'[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (epptr := ep_q_refs_of' ep))\<rbrace>
-   setEndpoint epptr ep
-   \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
-  by (wp set_ep'.state_refs_of') (simp flip: fun_upd_def)
-
 lemma setObject_state_hyp_refs_of':
   assumes x: "updateObject val = updateObject_default val"
   assumes y: "(1 :: machine_word) < 2 ^ objBits val"
@@ -2359,14 +2255,6 @@ lemma set_ep_state_hyp_refs_of'[wp]:
   apply (rule setObject_gen_obj_at, simp)
   apply (wp setObject_state_hyp_refs_of'; simp add: gen_objBits_simps state_hyp_refs_of'_ep)
   done
-
-lemma set_ntfn_state_refs_of'[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (p := ntfn_q_refs_of' (ntfnObj ntfn) \<union>
-                                    get_refs NTFNBound (ntfnBoundTCB ntfn) \<union>
-                                    get_refs NTFNSchedContext (ntfnSc ntfn)))\<rbrace>
-   setNotification p ntfn
-   \<lbrace>\<lambda>_ s. P (state_refs_of' s)\<rbrace>"
-  by (wp set_ntfn'.state_refs_of') (simp flip: fun_upd_def)
 
 lemma state_hyp_refs_of'_ntfn:
   "ntfn_at' ntfn s \<Longrightarrow> (state_hyp_refs_of' s) (ntfn := {}) = state_hyp_refs_of' s"
@@ -2484,25 +2372,42 @@ lemma setObject_tcb_pspace_no_overlap':
 
 end
 
+lemma get_object_det_wp[wp]:
+  "det_wp (\<lambda>s. \<exists>v. kheap s ptr = Some v) (get_object ptr)"
+  unfolding get_object_def
+  by wpsimp
+
+lemma put_det_wp[wp]:
+  "det_wp \<top> (put s)"
+  unfolding put_def
+  by (clarsimp simp: det_wp_def)
+
+lemma set_object_det_wp[wp]:
+  "det_wp (obj_at (\<lambda>k. a_type obj = a_type k) ptr) (set_object ptr obj)"
+  unfolding set_object_def
+  apply (wpsimp wp: get_object_wp)
+  apply (clarsimp simp: obj_at_def)
+  done
+
+lemma in_set_notification:
+  "(rv, s') \<in> fst (set_notification ptr ntfn s)
+   \<Longrightarrow> s' = s\<lparr>kheap := (kheap s)(ptr \<mapsto> kernel_object.Notification ntfn)\<rparr>"
+  by (clarsimp simp: set_simple_ko_def set_object_def get_object_def in_monad)
+
+lemma in_set_endpoint:
+  "(rv, s') \<in> fst (set_endpoint ptr ep s)
+   \<Longrightarrow> s' = s\<lparr>kheap := (kheap s)(ptr \<mapsto> kernel_object.Endpoint ep)\<rparr>"
+  by (clarsimp simp: set_simple_ko_def set_object_def get_object_def in_monad)
+
 lemma sym_heap_sched_pointers_lift:
   assumes prevs: "\<And>P. f \<lbrace>\<lambda>s. P (tcbSchedPrevs_of s)\<rbrace>"
   assumes nexts: "\<And>P. f \<lbrace>\<lambda>s. P (tcbSchedNexts_of s)\<rbrace>"
   shows "f \<lbrace>sym_heap_sched_pointers\<rbrace>"
   by (rule_tac f=tcbSchedPrevs_of in hoare_lift_Pf2; wpsimp wp: assms)
 
-lemma ep_redux_simps':
-  "ep_q_refs_of' (case xs of [] \<Rightarrow> IdleEP | y # ys \<Rightarrow> SendEP xs)
-        = (set xs \<times> {EPSend})"
-  "ep_q_refs_of' (case xs of [] \<Rightarrow> IdleEP | y # ys \<Rightarrow> RecvEP xs)
-        = (set xs \<times> {EPRecv})"
-  "ntfn_q_refs_of' (case xs of [] \<Rightarrow> IdleNtfn | y # ys \<Rightarrow> WaitingNtfn xs)
-        = (set xs \<times> {NTFNSignal})"
-  by (fastforce split: list.splits
-                simp: valid_ep_def valid_ntfn_def)+
-
 lemma endpoint_live':
-  "\<lbrakk>ko_at' ep ptr s; ep \<noteq> IdleEP\<rbrakk> \<Longrightarrow> ko_wp_at' live' ptr s"
-  by (clarsimp simp: ko_wp_at'_def obj_at'_def live'_def)
+  "\<lbrakk>ko_at' ep ptr s; epState ep \<noteq> IdleEPState\<rbrakk> \<Longrightarrow> ko_wp_at' live' ptr s"
+  by (clarsimp simp: live'_def ko_wp_at'_def obj_at'_def)
 
 lemma aligned_distinct_obj_atI':
   "\<lbrakk> ksPSpace s x = Some ko; pspace_aligned' s; pspace_distinct' s; pspace_bounded' s; ko = injectKO v \<rbrakk>
@@ -2603,26 +2508,30 @@ lemma obj_relation_cuts_range_limit:
   "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko' \<rbrakk>
    \<Longrightarrow> \<exists>x n. p' = p + x \<and> is_aligned x n \<and> n \<le> obj_bits ko \<and> x \<le> mask (obj_bits ko)"
   apply (erule (1) obj_relation_cutsE; clarsimp)
-         apply (drule (1) wf_cs_nD)
-         apply (clarsimp simp: cte_map_def)
-         apply (rule_tac x=cte_level_bits in exI)
-         apply (simp add: is_aligned_shift of_bl_shift_cte_level_bits)
-        apply (rule_tac x=minSchedContextBits in exI)
-        apply (simp add: objBits_simps' min_sched_context_bits_def)
-       apply (rule_tac x=replySizeBits in exI)
-       apply (simp add: replySizeBits_def)
-      apply (rule_tac x=tcbBlockSizeBits in exI)
-      apply (simp add: tcbBlockSizeBits_def)
-     apply (rule_tac x=pteBits in exI)
-     apply (simp add: bit_simps is_aligned_shift mask_def pteBits_def)
-     apply word_bitwise
-    apply (rule_tac x=pageBits in exI)
-    apply (simp add: is_aligned_shift pbfs_atleast_pageBits is_aligned_mult_triv2)
-    apply (simp add: mask_def shiftl_t2n mult_ac)
-    apply (frule word_less_power_trans2, rule pbfs_atleast_pageBits)
-     apply (simp add: pbfs_less_wb'[unfolded word_bits_def, simplified])
+          apply (drule (1) wf_cs_nD)
+          apply (clarsimp simp: cte_map_def)
+          apply (rule_tac x=cte_level_bits in exI)
+          apply (simp add: is_aligned_shift of_bl_shift_cte_level_bits)
+         apply (rule_tac x=minSchedContextBits in exI)
+         apply (simp add: objBits_simps' min_sched_context_bits_def)
+        apply (rule_tac x=replySizeBits in exI)
+        apply (simp add: replySizeBits_def)
+       apply (rule_tac x=tcbBlockSizeBits in exI)
+       apply (simp add: tcbBlockSizeBits_def)
+      apply (rule_tac x=epSizeBits in exI)
+      apply (simp add: epSizeBits_def)
+     apply (rule_tac x=ntfnSizeBits in exI)
+     apply (simp add: ntfnSizeBits_def)
+    apply (rule_tac x=pteBits in exI)
+    apply (simp add: bit_simps is_aligned_shift mask_def pteBits_def)
+    apply word_bitwise
+   apply (rule_tac x=pageBits in exI)
+   apply (simp add: is_aligned_shift pbfs_atleast_pageBits is_aligned_mult_triv2)
+   apply (simp add: mask_def shiftl_t2n mult_ac)
+   apply (frule word_less_power_trans2, rule pbfs_atleast_pageBits)
     apply (simp add: pbfs_less_wb'[unfolded word_bits_def, simplified])
-   apply fastforce+
+   apply (simp add: pbfs_less_wb'[unfolded word_bits_def, simplified])
+  apply fastforce+
   done
 
 lemma obj_relation_cuts_range_mask_range:
@@ -2643,7 +2552,7 @@ lemma obj_relation_cuts_obj_bits:
                          pbfs_atleast_pageBits[simplified bit_simps] pteBits_def
                          table_size_def pte_bits_def ptTranslationBits_def pageBits_def
                          sc_relation_def)
-  apply (cases ko; simp add: other_obj_relation_def other_aobj_relation_def objBits_defs
+  apply (cases ko; simp add: other_aobj_relation_def objBits_defs
                       split: kernel_object.splits)
   apply (case_tac ako; case_tac ko';
          clarsimp simp: archObjSize_def other_aobj_relation_def is_other_obj_relation_type_def
@@ -2664,38 +2573,6 @@ lemma cte_at'_same_type:
   apply (elim exE disjE)
    apply (rule disjI1, clarsimp simp: typ_at'_same_type)
   apply (rule disjI2, rule_tac x=n in exI, clarsimp simp: typ_at'_same_type)
-  done
-
-lemma valid_ep'_ep_update:
-  "\<lbrakk> valid_objs' s; valid_ep' ep s; ep_at' epPtr s; ksPSpace s x = Some (KOEndpoint obj) \<rbrakk>
-     \<Longrightarrow> valid_ep' obj (s\<lparr>ksPSpace := (ksPSpace s)(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
-  apply (erule (1) valid_objsE')
-  apply (fastforce simp: valid_objs'_def valid_obj'_def obj_at'_def valid_ep'_def
-                  split: endpoint.splits)
-  done
-
-lemma valid_cap'_ep_update:
-  "\<lbrakk> valid_cap' cap s; valid_objs' s; valid_ep' ep s; ep_at' epPtr s \<rbrakk>
-     \<Longrightarrow> valid_cap' cap (s\<lparr>ksPSpace := (ksPSpace s)(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
-  supply ps_clear_upd[simp]
-  apply (clarsimp simp: typ_at'_same_type ko_wp_at'_def cte_at'_same_type
-                        valid_cap'_def obj_at'_def objBits_simps
-                 split: endpoint.splits capability.splits)
-         apply fastforce+
-       apply (clarsimp split: zombie_type.splits simp: obj_at'_def typ_at'_same_type)
-       apply (intro conjI impI; clarsimp)
-        apply (drule_tac x=addr in spec, clarsimp)
-       apply (drule_tac x=addr in spec, clarsimp)
-      apply (clarsimp simp: objBits_simps page_table_at'_def frame_at'_def
-                            valid_arch_cap'_def valid_arch_cap_ref'_def
-                     split: arch_capability.splits  option.splits if_split_asm
-           | rule_tac ko="KOEndpoint obj" in typ_at'_same_type[where p'=epPtr]
-           | simp)+
-     apply fastforce
-    apply (clarsimp simp: valid_untyped'_def ko_wp_at'_def obj_range'_def split: if_split_asm)
-     apply (drule_tac x=epPtr in spec, fastforce simp: objBits_simps)+
-   apply (drule_tac x=addr in spec, fastforce)
-  apply fastforce
   done
 
 lemma valid_cap'_reply_update:
@@ -2732,8 +2609,7 @@ lemma sym_ref_Receive_or_Reply_replyTCB':
   apply (clarsimp simp: ko_wp_at'_def)
   apply (erule disjE; clarsimp)
   apply (rename_tac koa; case_tac koa;
-         simp add: get_refs_def2 ep_q_refs_of'_def ntfn_q_refs_of'_def
-                   tcb_st_refs_of'_def tcb_bound_refs'_def
+         simp add: get_refs_def2 tcb_st_refs_of'_def tcb_bound_refs'_def
             split: endpoint.split_asm ntfn.split_asm thread_state.split_asm if_split_asm)+
   done
 
@@ -2745,59 +2621,8 @@ lemma sym_ref_replyTCB_Receive_or_Reply:
   apply (clarsimp simp: state_refs_of'_def pred_tcb_at'_def obj_at'_def)
   apply (clarsimp simp: ko_wp_at'_def)
   apply (rename_tac tcb; case_tac tcb;
-         simp add: get_refs_def2 ntfn_q_refs_of'_def
-                   tcb_st_refs_of'_def tcb_bound_refs'_def
+         simp add: get_refs_def2 tcb_st_refs_of'_def tcb_bound_refs'_def
             split: ntfn.split_asm thread_state.split_asm)+
-  done
-
-lemma sym_ref_BlockedOnSend_SendEP':
-  "\<lbrakk> sym_refs (state_refs_of' s); st_tcb_at' ((=) (BlockedOnSend eptr p1 p2 p3 p4)) tp s\<rbrakk>
-      \<Longrightarrow> \<exists>list. ko_wp_at' ((=) (KOEndpoint (SendEP list))) eptr s"
-  apply (simp add: pred_tcb_at'_def)
-  apply (drule (1) sym_refs_obj_atD'[rotated, where p=tp])
-  apply (clarsimp simp: state_refs_of'_def obj_at'_def)
-  apply (drule sym[where s="BlockedOnSend _ _ _ _ _"])
-  apply (clarsimp simp: ko_wp_at'_def)
-  apply (rename_tac ko; case_tac ko;
-         simp add: get_refs_def2 ep_q_refs_of'_def ntfn_q_refs_of'_def
-                   tcb_st_refs_of'_def tcb_bound_refs'_def
-            split: endpoint.split_asm ntfn.split_asm thread_state.split_asm if_split_asm)+
-  done
-
-lemma sym_ref_BlockedOnReceive_RecvEP':
-  "\<lbrakk> sym_refs (state_refs_of' s); st_tcb_at' ((=) (BlockedOnReceive eptr pl ropt)) tp s\<rbrakk>
-     \<Longrightarrow> \<exists>list. ko_wp_at' ((=) (KOEndpoint (RecvEP list))) eptr s"
-  apply (simp add: pred_tcb_at'_def)
-  apply (drule (1) sym_refs_obj_atD'[rotated, where p=tp])
-  apply (clarsimp simp: state_refs_of'_def obj_at'_def)
-  apply (drule sym[where s="BlockedOnReceive _ _ _"])
-  apply (clarsimp simp: ko_wp_at'_def split: if_split_asm)
-   apply (rename_tac ko koa; case_tac ko;
-          simp add: get_refs_def2 ep_q_refs_of'_def ntfn_q_refs_of'_def
-                    tcb_st_refs_of'_def tcb_bound_refs'_def
-             split: endpoint.split_asm ntfn.split_asm thread_state.split_asm if_split_asm)
-  apply (rename_tac ko; case_tac ko;
-         simp add: get_refs_def2 ep_q_refs_of'_def ntfn_q_refs_of'_def
-                   tcb_st_refs_of'_def tcb_bound_refs'_def
-            split: endpoint.split_asm ntfn.split_asm thread_state.split_asm if_split_asm)
-  done
-
-lemma Receive_or_Send_ep_at':
-  "\<lbrakk> st = BlockedOnReceive epPtr pl rp \<or> st = BlockedOnSend epPtr p1 p2 p3 p4;
-     valid_objs' s; st_tcb_at' ((=) st) t s\<rbrakk>
-       \<Longrightarrow> ep_at' epPtr s"
-  apply (drule (1) tcb_in_valid_state')
-  by (fastforce simp: obj_at'_def valid_tcb_state'_def)
-
-lemma ep_queued_st_tcb_at':
-  "\<And>P. \<lbrakk>ko_at' ep ptr s; \<exists>rt. (t, rt) \<in> ep_q_refs_of' ep;
-         valid_objs' s; sym_refs (state_refs_of' s);
-         \<And>bo bbadge bgrant breply bcall r. P (Structures_H.BlockedOnSend bo bbadge bgrant breply bcall) \<and>
-                         P (Structures_H.BlockedOnReceive bo bgrant r) \<rbrakk>
-    \<Longrightarrow> st_tcb_at' P t s"
-  apply (case_tac ep, simp_all)
-  apply (frule(1) sym_refs_ko_atD', clarsimp, erule (1) my_BallE,
-         clarsimp simp: pred_tcb_at'_def refs_of_rev' obj_at'_def ko_wp_at'_def)+
   done
 
 (* cross lemmas *)
@@ -2828,10 +2653,10 @@ lemma pspace_aligned_cross:
          apply (rule is_aligned_weaken)
           apply (rule is_aligned_shiftl_self, simp)
 
-        \<comment>\<open>SchedContext, Reply, TCB\<close>
+        \<comment>\<open>SchedContext, Reply, TCB, EP, Ntfn\<close>
         apply ((clarsimp simp: minSchedContextBits_def min_sched_context_bits_def replySizeBits_def
-                               sc_relation_def tcbBlockSizeBits_def
-                        elim!: is_aligned_weaken)+)[3]
+                               sc_relation_def tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def
+                        elim!: is_aligned_weaken)+)[5]
 
      \<comment>\<open>PageTable\<close>
      apply (clarsimp simp: archObjSize_def pteBits_def table_size_def ptTranslationBits_def pte_bits_def)
@@ -2847,7 +2672,6 @@ lemma pspace_aligned_cross:
    apply (rule is_aligned_shift)
 
    \<comment>\<open>Other non-arch\<close>
-   apply (simp add: other_obj_relation_def)
    apply (clarsimp simp: bit_simps' tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def
                    split: kernel_object.splits Structures_A.kernel_object.splits)
   \<comment>\<open>Other arch\<close>
@@ -2875,7 +2699,6 @@ lemma pspace_relation_pspace_bounded':
                    elim!: is_aligned_weaken)
 
    \<comment>\<open>other_obj_relation\<close>
-   apply (simp add: other_obj_relation_def)
    apply (clarsimp simp: bit_simps' tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def
                   split: kernel_object.splits Structures_A.kernel_object.splits)
 
@@ -2896,7 +2719,7 @@ lemma pspace_distinct_cross:
   apply (frule (1) pspace_alignedD')
   apply (frule (1) pspace_alignedD)
   apply (frule pspace_relation_pspace_bounded')
-    apply (frule (1) pspace_boundedD')
+  apply (frule (1) pspace_boundedD')
   apply (rule ps_clearI, assumption)
    apply (case_tac ko';
           simp add: scBits_pos_power2 objBits_simps' bit_simps'
@@ -2911,17 +2734,15 @@ lemma pspace_distinct_cross:
   apply (case_tac "p = x")
    apply clarsimp
    apply (erule (1) obj_relation_cutsE; clarsimp)
-       apply (clarsimp simp: cte_relation_def cte_map_def objBits_simps)
-       apply (rule_tac n=cteSizeBits in is_aligned_add_step_le'; assumption?)
-      apply (clarsimp simp: pte_relation_def objBits_simps)
-      apply (rule_tac n=pteBits in is_aligned_add_step_le'; assumption?)
-     apply (simp add: objBitsKO_Data)
-     apply (rule_tac n=pageBits in is_aligned_add_step_le'; assumption?)
-    apply (case_tac ko; simp split: if_split_asm)
-    apply (rename_tac ako,
-           case_tac ako;
-           simp add: is_other_obj_relation_type_def a_type_def split: if_split_asm)
-   apply (case_tac ako; simp add: is_other_obj_relation_type_def split: if_split_asm)
+      apply (clarsimp simp: cte_relation_def cte_map_def objBits_simps)
+      apply (rule_tac n=cteSizeBits in is_aligned_add_step_le'; assumption?)
+     apply (clarsimp simp: pte_relation_def objBits_simps)
+     apply (rule_tac n=pteBits in is_aligned_add_step_le'; assumption?)
+    apply (simp add: objBitsKO_Data)
+    apply (rule_tac n=pageBits in is_aligned_add_step_le'; assumption?)
+   apply (rename_tac ako,
+          case_tac ako;
+          simp add: is_other_obj_relation_type_def a_type_def split: if_split_asm)
   apply (frule (1) obj_relation_cuts_obj_bits)
   apply (drule (2) obj_relation_cuts_range_mask_range)+
   apply (prop_tac "x' \<in> mask_range p' (objBitsKO ko')", simp add: mask_def add_diff_eq)
@@ -2935,6 +2756,325 @@ lemma obj_at'_is_canonical:
   by (force simp: obj_at'_def pspace_canonical'_def)
 
 end
+
+lemma tcbs_relation_tcb_relation_abs:
+  "\<lbrakk>kheap s ptr = Some (TCB tcb); tcbs_relation s s'\<rbrakk>
+   \<Longrightarrow> \<exists>tcb'. ksPSpace s' ptr = Some (KOTCB tcb') \<and> tcb_relation tcb tcb'"
+  by (fastforce simp: map_relation_def opt_map_def tcbs_of_kh_def split: option.splits)
+
+lemma tcbs_relation_tcb_relation_abs_obj_at':
+  "\<lbrakk>kheap s ptr = Some (TCB tcb); tcbs_relation s s'; pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
+   \<Longrightarrow> \<exists>tcb'. ko_at' tcb' ptr s' \<and> tcb_relation tcb tcb'"
+  apply (frule (1) tcbs_relation_tcb_relation_abs)
+  apply (fastforce dest: aligned'_distinct'_ko_at'I[where 'a=tcb])
+  done
+
+lemma tcbs_relation_tcb_relation_conc:
+  "\<lbrakk>ksPSpace s' ptr = Some (KOTCB tcb'); tcbs_relation s s'\<rbrakk>
+   \<Longrightarrow> \<exists>tcb. kheap s ptr = Some (TCB tcb) \<and> tcb_relation tcb tcb'"
+  by (force simp: map_relation_def opt_map_def tcbs_of_kh_def split: option.splits)
+
+lemma tcb_at_cross_tcbs_relation:
+  "\<lbrakk>tcb_at tcb_ptr s; tcbs_relation s s'; pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
+   \<Longrightarrow> tcb_at' tcb_ptr s'"
+  apply (clarsimp simp: obj_at_def is_tcb_def)
+  apply (clarsimp split: Structures_A.kernel_object.splits)
+  apply (frule (3) tcbs_relation_tcb_relation_abs_obj_at')
+  apply (clarsimp simp: obj_at'_def)
+  done
+
+lemma eps_relation_ep_relation_abs:
+  "\<lbrakk>kheap s ptr = Some (kernel_object.Endpoint ep); eps_relation s s'\<rbrakk>
+   \<Longrightarrow> \<exists>ep'. ksPSpace s' ptr = Some (KOEndpoint ep') \<and> ep_relation ep ep'"
+  by (fastforce simp: map_relation_def opt_map_def eps_of_kh_def split: option.splits )
+
+lemma eps_relation_ep_relation_abs_obj_at':
+  "\<lbrakk>kheap s ptr = Some (kernel_object.Endpoint ep); eps_relation s s';
+    pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
+   \<Longrightarrow> \<exists>ep'. ko_at' ep' ptr s' \<and> ep_relation ep ep'"
+  apply (frule (1) eps_relation_ep_relation_abs)
+  apply (fastforce dest: aligned'_distinct'_ko_at'I[where 'a=endpoint])
+  done
+
+lemma eps_relation_ep_relation_conc:
+  "\<lbrakk>ksPSpace s' ptr = Some (KOEndpoint ep'); eps_relation s s'\<rbrakk>
+   \<Longrightarrow> \<exists>ep. kheap s ptr = Some (kernel_object.Endpoint ep) \<and> ep_relation ep ep'"
+  by (force simp: map_relation_def opt_map_def eps_of_kh_def split: option.splits)
+
+lemma ntfns_relation_ntfn_relation_abs:
+  "\<lbrakk>kheap s ptr = Some (Structures_A.Notification ntfn); ntfns_relation s s'\<rbrakk>
+   \<Longrightarrow> \<exists>ntfn'. ksPSpace s' ptr = Some (KONotification ntfn') \<and> ntfn_relation ntfn ntfn'"
+  by (fastforce simp: map_relation_def opt_map_def tcbs_of_kh_def split: option.splits)
+
+lemma ntfns_relation_ntfn_relation_abs_obj_at':
+  "\<lbrakk>kheap s ptr = Some (Structures_A.Notification ntfn); ntfns_relation s s';
+    pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
+   \<Longrightarrow> \<exists>ntfn'. ko_at' ntfn' ptr s' \<and> ntfn_relation ntfn ntfn'"
+  apply (frule (1) ntfns_relation_ntfn_relation_abs)
+  apply (fastforce dest: aligned'_distinct'_ko_at'I[where 'a=notification])
+  done
+
+lemma ntfns_relation_ntfn_relation_conc:
+  "\<lbrakk>ksPSpace s' ptr = Some (KONotification ntfn'); ntfns_relation s s'\<rbrakk>
+   \<Longrightarrow> \<exists>ntfn. kheap s ptr = Some (Structures_A.Notification ntfn) \<and> ntfn_relation ntfn ntfn'"
+  by (force simp: map_relation_def opt_map_def split: option.splits)
+
+lemma scs_relation_sc_relation_abs:
+  "\<lbrakk>kheap s ptr = Some (Structures_A.SchedContext sc n); scs_relation s s'\<rbrakk>
+   \<Longrightarrow> \<exists>sc'. ksPSpace s' ptr = Some (KOSchedContext sc')
+             \<and> valid_sched_context_size n  \<and> sc_relation sc n sc'"
+  apply (clarsimp simp: scs_relation_def)
+  apply (drule_tac x=ptr in spec)
+  apply (prop_tac "ptr \<in> dom (scs_of s)", force simp: opt_map_def scs_of_kh_def)
+  apply (clarsimp simp: opt_map_def scs_of_kh_def split: option.splits kernel_object.splits)
+  done
+
+lemma scs_relation_sc_relation_abs_obj_at':
+  "\<lbrakk>kheap s ptr = Some (Structures_A.SchedContext sc n); scs_relation s s';
+    pspace_aligned' s'; pspace_distinct' s'; pspace_bounded' s'\<rbrakk>
+   \<Longrightarrow> \<exists>sc'. ko_at' sc' ptr s' \<and> valid_sched_context_size n \<and> sc_relation sc n sc'"
+  apply (frule (1) scs_relation_sc_relation_abs)
+  apply (fastforce dest: aligned'_distinct'_ko_at'I[where 'a=sched_context])
+  done
+
+lemma scs_relation_sc_relation_conc:
+  "\<lbrakk>ksPSpace s' ptr = Some (KOSchedContext sc'); scs_relation s s'\<rbrakk>
+   \<Longrightarrow> \<exists>sc n. kheap s ptr = Some (Structures_A.SchedContext sc n) \<and> sc_relation sc n sc'"
+  apply (clarsimp simp: scs_relation_def)
+  apply (drule_tac x=ptr in spec)
+  apply (prop_tac "ptr \<in> dom (scs_of' s')", force simp: opt_map_red)
+  apply (drule sym[where s="dom _"])
+  apply (clarsimp simp: scs_of_kh_def opt_map_def split: option.splits)
+  done
+
+lemma sc_at_cross_scs_relation:
+  "\<lbrakk>sc_at sc_ptr s; scs_relation s s'; pspace_aligned' s'; pspace_distinct' s'; pspace_bounded' s'\<rbrakk>
+   \<Longrightarrow> sc_at' sc_ptr s'"
+  apply (clarsimp simp: obj_at_def is_sc_obj_def)
+  apply (clarsimp split: Structures_A.kernel_object.splits)
+  apply (frule (4) scs_relation_sc_relation_abs_obj_at')
+  apply (clarsimp simp: obj_at'_def)
+  done
+
+lemma replies_relation_reply_relation_abs:
+  "\<lbrakk>kheap s ptr = Some (Structures_A.Reply reply); replies_relation s s'\<rbrakk>
+   \<Longrightarrow> \<exists>reply'. ksPSpace s' ptr = Some (KOReply reply') \<and> reply_relation reply reply'"
+  apply (clarsimp simp: map_relation_def)
+  apply (drule_tac x=ptr in spec)
+  apply (prop_tac "ptr \<in> dom (replies_of s)", force simp: opt_map_red)
+  apply (clarsimp simp: scs_of_kh_def opt_map_def split: option.splits)
+  done
+
+lemma replies_relation_reply_relation_abs_obj_at':
+  "\<lbrakk>kheap s ptr = Some (Structures_A.Reply reply); replies_relation s s';
+    pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
+   \<Longrightarrow> \<exists>reply'. ko_at' reply' ptr s' \<and> reply_relation reply reply'"
+  apply (frule (1) replies_relation_reply_relation_abs)
+  apply (fastforce dest: aligned'_distinct'_ko_at'I[where 'a=reply])
+  done
+
+lemma replies_relation_reply_relation_conc:
+  "\<lbrakk>ksPSpace s' ptr = Some (KOReply reply'); replies_relation s s'\<rbrakk>
+   \<Longrightarrow> \<exists>reply. kheap s ptr = Some (Structures_A.Reply reply) \<and> reply_relation reply reply'"
+  apply (clarsimp simp: map_relation_def)
+  apply (drule_tac x=ptr in spec)
+  apply (prop_tac "ptr \<in> dom (replies_of' s')", force simp: opt_map_def)
+  apply (drule sym[where s="dom _"])
+  apply (clarsimp simp: opt_map_def split: option.splits)
+  done
+
+lemma getNotification_corres:
+  "corres ntfn_relation (ntfn_at ptr and pspace_aligned and pspace_distinct) \<top>
+     (get_notification ptr) (getNotification ptr)"
+  apply (rule_tac Q'="ntfn_at' ptr" in corres_cross_add_guard)
+   apply (frule state_relation_pspace_relation)
+   apply (clarsimp simp: pspace_relation_heap_pspace_relation)
+   apply (frule heap_pspace_relation_ntfns_relation)
+   apply (clarsimp simp: obj_at_def is_ntfn_def)
+   apply (rename_tac ko; case_tac ko; clarsimp)
+   apply (fastforce dest!: ntfns_relation_ntfn_relation_abs_obj_at'
+                   intro!: pspace_aligned_cross pspace_distinct_cross
+                     simp: obj_at'_def)
+  apply (rule corres_no_failI)
+   apply wpsimp
+  apply (simp add: get_simple_ko_def getNotification_def get_object_def
+                   getObject_def bind_assoc gets_the_def)
+  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def
+                 dest!: readObject_misc_ko_at')
+  apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_ntfn partial_inv_def)
+  apply (clarsimp simp add: state_relation_def pspace_relation_def obj_at'_def)
+  apply (drule bspec)
+   apply blast
+  apply (simp add: ntfn_relation_cut_def ntfn_relation_def)
+  done
+
+lemma state_relation_sc_relation'':
+  "\<lbrakk>(s, s') \<in> state_relation; kheap s ptr = Some (kernel_object.SchedContext sc n); sc_at ptr s;
+    ko_at' sc' ptr s'\<rbrakk>
+   \<Longrightarrow> \<exists>n. sc_relation sc n sc'"
+  apply (clarsimp simp: gen_obj_at_simps is_sc_obj)
+  apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation, rotated])
+  apply (fastforce simp: obj_at_def is_sc_obj_def)
+  done
+
+lemma get_sc_corres:
+  "corres (\<lambda>sc sc'. \<exists>n. sc_relation sc n sc')
+     (sc_at ptr and pspace_aligned and pspace_distinct) \<top>
+     (get_sched_context ptr) (getSchedContext ptr)"
+  apply (rule_tac Q'="sc_at' ptr" in corres_cross_add_guard)
+   apply (frule state_relation_pspace_relation)
+   apply (clarsimp simp: pspace_relation_heap_pspace_relation)
+   apply (frule heap_pspace_relation_scs_relation)
+   apply (clarsimp simp: obj_at_def is_sc_obj_def)
+   apply (rename_tac ko n; case_tac ko; clarsimp)
+   apply (fastforce dest!: scs_relation_sc_relation_abs_obj_at'
+                   intro!: pspace_aligned_cross pspace_distinct_cross pspace_relation_pspace_bounded'
+                     simp: obj_at'_def)
+  apply (subst corres_bind_return)
+   apply (subst corres_bind_return2)
+    apply (rule corres_symb_exec_l[OF _ _ get_sched_context_sp])
+      apply (rule corres_symb_exec_r[OF _ get_sc_sp'])
+        apply (fastforce intro: state_relation_sc_relation'' simp: obj_at_def is_sc_obj_def)
+       apply wpsimp
+      apply wpsimp
+     apply (rule get_sched_context_exs_valid)
+     apply (fastforce intro: sc_atD1)
+    apply wpsimp
+    apply (fastforce intro: sc_atD1)
+   apply simp+
+  done
+
+lemma aligned'_distinct'_obj_at'_propI:
+  "\<lbrakk>ksPSpace s' x = Some ko;  pspace_aligned' s'; pspace_distinct' s';
+    if koTypeOf ko  = SchedContextT then pspace_bounded' s' else True;
+    ko = injectKO (v:: 'a :: pspace_storable); P v\<rbrakk>
+   \<Longrightarrow> obj_at' P x s'"
+  by (fastforce elim: aligned'_distinct'_ko_wp_at'I simp: obj_at'_real_def project_inject)
+
+lemma st_tcb_at_coerce_abstract':
+  "\<lbrakk>st_tcb_at' P t s'; tcbs_relation s s'\<rbrakk>
+   \<Longrightarrow> st_tcb_at (\<lambda>st. \<exists>st'. thread_state_relation st st' \<and> P st') t s"
+  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+  apply (frule (1) tcbs_relation_tcb_relation_conc)
+  by (fastforce simp: st_tcb_at_def obj_at_def tcb_relation_def)
+
+definition ready_queues_runnable_except_set :: "obj_ref set \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "ready_queues_runnable_except_set except s \<equiv>
+     \<forall>d p. \<forall>t\<in>set (ready_queues s d p). t \<notin> except \<longrightarrow> st_tcb_at runnable t s"
+
+abbreviation "ready_queues_runnable s \<equiv> ready_queues_runnable_except_set {} s"
+
+lemmas ready_queues_runnable_def = ready_queues_runnable_except_set_def
+
+definition release_q_runnable_except_set :: "obj_ref set \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "release_q_runnable_except_set except s \<equiv>
+     \<forall>t\<in>set (release_queue s). t \<notin> except \<longrightarrow> st_tcb_at runnable t s"
+
+abbreviation "release_q_runnable s \<equiv> release_q_runnable_except_set {} s"
+
+lemmas release_q_runnable_def = release_q_runnable_except_set_def
+
+definition in_correct_ready_q :: "'z state \<Rightarrow> bool" where
+  "in_correct_ready_q s \<equiv>
+     \<forall>d p. \<forall>t\<in>set (ready_queues s d p).
+            pred_map (\<lambda>t. etcb_priority t = p \<and> etcb_domain t = d) (etcbs_of s) t"
+
+definition ready_qs_distinct :: "'z state \<Rightarrow> bool" where
+  "ready_qs_distinct s \<equiv> \<forall>d p. distinct (ready_queues s d p)"
+
+lemma in_correct_ready_q_lift:
+  assumes e: "\<And>P. f \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace>"
+  assumes r: "\<And>P. f \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace>"
+  shows "f \<lbrace>in_correct_ready_q\<rbrace>"
+  unfolding in_correct_ready_q_def
+  apply (rule hoare_pre)
+   apply (wps assms | wpsimp)+
+  done
+
+lemma in_correct_ready_qD:
+  "\<lbrakk>tcb_ptr \<in> set (ready_queues s d p); kheap s tcb_ptr = Some (TCB tcb); in_correct_ready_q s\<rbrakk>
+   \<Longrightarrow> tcb_domain tcb = d \<and> tcb_priority tcb = p "
+  by (fastforce simp: in_correct_ready_q_def vs_all_heap_simps)
+
+lemma in_correct_ready_q_in_ready_q:
+  "\<lbrakk>kheap s tcb_ptr = Some (TCB tcb); in_correct_ready_q s\<rbrakk>
+   \<Longrightarrow> tcb_ptr \<in> set (ready_queues s (tcb_domain tcb) (tcb_priority tcb))
+       = in_ready_q tcb_ptr s"
+  by (fastforce simp: in_correct_ready_q_def in_ready_q_def vs_all_heap_simps)
+
+lemma in_set_ready_queues_inQ_eq:
+  "ready_queues_relation s s' \<Longrightarrow> t \<in> set (ready_queues s d p) \<longleftrightarrow> (inQ d p |< tcbs_of' s') t"
+  by (clarsimp simp: ready_queues_relation_def ready_queue_relation_def Let_def)
+
+lemma in_ready_q_tcbQueued_eq:
+  "ready_queues_relation s s' \<Longrightarrow> in_ready_q t s \<longleftrightarrow> (tcbQueued |< tcbs_of' s') t"
+  apply (intro iffI)
+   apply (clarsimp simp: in_ready_q_def)
+   apply (frule in_set_ready_queues_inQ_eq)
+   apply (fastforce simp: inQ_def opt_map_def opt_pred_def split: option.splits)
+  apply (fastforce simp: ready_queues_relation_def ready_queue_relation_def Let_def inQ_def
+                         opt_pred_def in_ready_q_def
+                  split: option.splits)
+  done
+
+lemma in_release_q_tcbInReleaseQueue_eq:
+  "release_queue_relation s s' \<Longrightarrow> in_release_queue t s \<longleftrightarrow> (tcbInReleaseQueue |< tcbs_of' s') t"
+  by (clarsimp simp: release_queue_relation_def list_queue_relation_def in_release_q_def)
+
+lemma sched_flag_set_live:
+  "\<lbrakk>kheap s ptr = Some (TCB tcb); sched_flag_set s' ptr; tcbs_relation s s';
+    ready_queues_relation s s'; release_queue_relation s s'; ready_queues_runnable s;
+    in_correct_ready_q s; release_q_runnable s; pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
+   \<Longrightarrow> live (TCB tcb)"
+  apply (frule (1) tcbs_relation_tcb_relation_abs)
+  apply clarsimp
+  apply (elim disjE)
+    apply (frule (1) in_ready_q_tcbQueued_eq[THEN iffD2])
+    apply (clarsimp simp: live_def ready_queues_runnable_def)
+    apply (drule_tac x="tcb_domain tcb" in spec)
+    apply (drule_tac x="tcb_priority tcb" in spec)
+    apply (drule_tac x=ptr in bspec)
+     apply (force simp: in_correct_ready_qD in_ready_q_def)
+    apply (fastforce simp: pred_tcb_at_def obj_at_def split: Structures_A.thread_state.splits)
+   apply (frule (1) in_release_q_tcbInReleaseQueue_eq[THEN iffD2])
+   apply (fastforce simp: live_def release_q_runnable_def in_release_q_def
+                          pred_tcb_at_def obj_at_def)
+  apply (prop_tac "st_tcb_at' inIPCQueueThreadState ptr s'")
+   apply (fastforce intro: aligned'_distinct'_obj_at'_propI
+                     simp: st_tcb_at'_def opt_pred_def opt_map_red)
+  apply (fastforce dest: st_tcb_at_coerce_abstract' simp: pred_tcb_at_def obj_at_def live_def)
+  done
+
+lemma live'_sc_cross:
+  "\<lbrakk>live_sc' sc'; kheap s ptr = Some (kernel_object.SchedContext sc n);
+    ksPSpace s' ptr = Some (KOSchedContext sc'); sc_relation sc n sc'; sc_replies_relation s s'\<rbrakk>
+   \<Longrightarrow> live (kernel_object.SchedContext sc n)"
+  apply (clarsimp simp: live_sc'_def)
+  apply (elim disjE)
+     apply (clarsimp simp: sc_relation_def live_def live_sc_def)
+    apply (clarsimp simp: sc_relation_def live_def live_sc_def)
+   apply (clarsimp simp: sc_relation_def live_def live_sc_def)
+  apply (clarsimp simp: obj_at_def live_def live_sc_def sc_replies_relation_def)
+  apply (drule_tac x=ptr in spec)
+  apply (fastforce simp: sc_replies_of_scs_def map_project_def scs_of_kh_def opt_map_def)
+  done
+
+lemma live'_reply_cross:
+  "\<lbrakk>live_reply' reply'; kheap s ptr = Some (kernel_object.Reply reply);
+    ksPSpace s' ptr = Some (KOReply reply'); reply_relation reply reply'; valid_replies' s';
+    pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
+   \<Longrightarrow> live (kernel_object.Reply reply)"
+  apply (clarsimp simp: reply_relation_def live_def live_reply_def live_reply'_def
+                        valid_replies'_def)
+  apply (drule_tac x=ptr in spec)
+  apply (elim disjE)
+   apply (clarsimp simp: opt_map_red)
+   apply (prop_tac "\<exists>y. replyNexts_of s' ptr = Some y")
+    apply (clarsimp simp: opt_map_red)
+    apply (rename_tac reply_next, case_tac reply_next; clarsimp)
+   apply (clarsimp simp: opt_map_red)
+  apply (fastforce dest: spec[where x=ptr] simp: opt_map_red)
+  done
 
 locale KHeap_R =
   assumes koType_objBitsKO:
@@ -2957,24 +3097,6 @@ locale KHeap_R =
     "\<And>p ko. setEndpoint p ko \<lbrace>pspace_in_kernel_mappings'\<rbrace>"
   assumes setNotification_pspace_in_kernel_mappings'[wp]:
     "\<And>p ko. setNotification p ko \<lbrace>pspace_in_kernel_mappings'\<rbrace>"
-  assumes setObject_other_corres_ep:
-    "\<And>(P :: endpoint \<Rightarrow> bool) ptr ob (ob' :: endpoint).
-     \<lbrakk>updateObject ob' = updateObject_default ob';
-      \<And>s. obj_at' P ptr s \<Longrightarrow> map_to_ctes ((ksPSpace s)(ptr \<mapsto> injectKO ob')) = ctes_of s;
-      is_other_obj_relation_type (a_type ob); \<And>ko. P ko \<Longrightarrow> objBits ko = objBits ob';
-      \<And>(v :: endpoint). (1 :: machine_word) < 2 ^ objBits v;
-      \<not> is_ArchObj ob; other_obj_relation ob (injectKO ob')\<rbrakk>
-     \<Longrightarrow> corres dc (typ_at (a_type ob) ptr and obj_at (same_caps ob) ptr) (obj_at' P ptr)
-                  (set_object ptr ob) (setObject ptr ob')"
-  assumes setObject_other_corres_ntfn:
-    "\<And>(P :: notification \<Rightarrow> bool) ptr ob (ob' :: notification).
-     \<lbrakk>updateObject ob' = updateObject_default ob';
-      \<And>s. obj_at' P ptr s \<Longrightarrow> map_to_ctes ((ksPSpace s)(ptr \<mapsto> injectKO ob')) = ctes_of s;
-      is_other_obj_relation_type (a_type ob); \<And>ko. P ko \<Longrightarrow> objBits ko = objBits ob';
-      \<And>(v :: notification). (1 :: machine_word) < 2 ^ objBits v;
-      \<not> is_ArchObj ob; other_obj_relation ob (injectKO ob')\<rbrakk>
-     \<Longrightarrow> corres dc (typ_at (a_type ob) ptr and obj_at (same_caps ob) ptr) (obj_at' P ptr)
-                  (set_object ptr ob) (setObject ptr ob')"
   assumes st_tcb_at_coerce_abstract:
     "\<And>P t c a.
      \<lbrakk>st_tcb_at' P t c; (a, c) \<in> state_relation\<rbrakk>
@@ -3035,38 +3157,6 @@ lemma ctes_of_setObject_cte:
 
 declare foldl_True[simp]
 
-lemma setNotification_corres:
-  "ntfn_relation ae ae' \<Longrightarrow>
-  corres dc (ntfn_at ptr) (ntfn_at' ptr)
-            (set_notification ptr ae) (setNotification ptr ae')"
-  apply (simp add: set_simple_ko_def setNotification_def is_ntfn_def[symmetric])
-       apply (corresK_search search: setObject_other_corres_ntfn[where P="\<lambda>_. True"])
-  apply (corresKsimp wp: get_object_ret get_object_wp)+
-  by (fastforce simp: is_ntfn gen_obj_at_simps partial_inv_def)
-
-lemma setObject_iflive':
-  fixes v :: "'a :: pspace_storable"
-  assumes R: "\<And>ko s y n. (updateObject v ko ptr y n s)
-                   = (updateObject_default v ko ptr y n s)"
-  assumes x: "\<And>x n tcb s t. \<lbrakk> t \<in> fst (updateObject v (KOTCB tcb) ptr x n s); P s;
-                               lookupAround2 ptr (ksPSpace s) = (Some (x, KOTCB tcb), n) \<rbrakk>
-                  \<Longrightarrow> \<exists>tcb'. t = (KOTCB tcb', s) \<and> (\<forall>(getF, setF) \<in> ran tcb_cte_cases. getF tcb' = getF tcb)"
-  assumes y: "\<And>x n cte s. fst (updateObject v (KOCTE cte) ptr x n s) = {}"
-  shows      "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> (live' (injectKO v) \<longrightarrow> ex_nonz_cap_to' ptr s) \<and> P s\<rbrace>
-                setObject ptr v
-              \<lbrace>\<lambda>rv s. if_live_then_nonz_cap' s\<rbrace>"
-  unfolding if_live_then_nonz_cap'_def ex_nonz_cap_to'_def
-  apply (rule hoare_pre)
-   apply (simp only: imp_conv_disj)
-   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
-    apply (rule setObject_ko_wp_at [OF R])
-   apply (rule hoare_vcg_ex_lift)
-   apply (rule setObject_cte_wp_at'[where Q = P, OF x y])
-      apply assumption+
-  apply clarsimp
-  apply (clarsimp simp: ko_wp_at'_def)
-  done
-
 lemma setObject_ifunsafe':
   fixes v :: "'a :: pspace_storable"
   assumes x: "\<And>x n tcb s t. \<lbrakk> t \<in> fst (updateObject v (KOTCB tcb) ptr x n s); P s;
@@ -3118,30 +3208,6 @@ lemma setObject_state_hyp_refs_of_eq:
   apply (frule x, drule updateObject_size)
   apply (simp add: state_hyp_refs_of'_def ps_clear_upd
              cong: option.case_cong if_cong)
-  done
-
-lemma setEndpoint_iflive'[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
-      \<and> (v \<noteq> IdleEP \<longrightarrow> ex_nonz_cap_to' p s)\<rbrace>
-   setEndpoint p v
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  unfolding setEndpoint_def
-  by (wpsimp wp: setObject_iflive'[where P="\<top>"]
-           simp: updateObject_default_def in_monad
-                 gen_objBits_simps bind_def live'_def)
-
-lemma set_ntfn_iflive'[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
-      \<and> (live' (KONotification v) \<longrightarrow> ex_nonz_cap_to' p s)\<rbrace>
-   setNotification p v
-   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: setNotification_def)
-  apply (wp setObject_iflive'[where P="\<top>"])
-     apply simp
-    apply (simp add: gen_objBits_simps)
-    apply (clarsimp simp: updateObject_default_def in_monad)
-   apply (clarsimp simp: updateObject_default_def in_monad bind_def)
-  apply clarsimp
   done
 
 lemma valid_refs'_def2:
