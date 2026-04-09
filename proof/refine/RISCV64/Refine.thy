@@ -77,7 +77,8 @@ lemma typ_at_UserDataI:
   apply clarsimp
   apply (subst mask_lower_twice [where n = pageBits, OF pbfs_atleast_pageBits, symmetric])
   apply (clarsimp simp: obj_relation_cuts_def2 pte_relation_def other_aobj_relation_def
-                        cte_relation_def other_obj_relation_def tcb_relation_cut_def
+                        cte_relation_def tcb_relation_cut_def
+                        ep_relation_cut_def ntfn_relation_cut_def
               split: Structures_A.kernel_object.split_asm
                      Structures_H.kernel_object.split_asm
                      if_split_asm arch_kernel_obj.split_asm)
@@ -107,7 +108,8 @@ lemma typ_at_DeviceDataI:
   apply clarsimp
   apply (subst mask_lower_twice [where n = pageBits, OF pbfs_atleast_pageBits, symmetric])
   apply (clarsimp simp: obj_relation_cuts_def2 pte_relation_def other_aobj_relation_def
-                        cte_relation_def other_obj_relation_def tcb_relation_cut_def
+                        cte_relation_def tcb_relation_cut_def
+                        ep_relation_cut_def ntfn_relation_cut_def
               split: Structures_A.kernel_object.split_asm
                      Structures_H.kernel_object.split_asm
                      if_split_asm arch_kernel_obj.split_asm)
@@ -904,7 +906,7 @@ lemma kernel_corres':
                           invs_strengthen_cur_sc_tcb_are_bound)
    apply simp
   apply clarsimp
-  apply (frule schedulable'_runnableE)
+  apply (frule ksCurThread_schedulable'_ct_active')
    apply (clarsimp simp: cur_tcb'_def)
   apply (clarsimp simp: st_tcb_at'_def obj_at'_def ct_in_state'_def)
   done
@@ -1197,10 +1199,6 @@ lemma ckernel_invariant:
      apply (rename_tac s' s)
      apply (frule_tac a=s and b=s' in curthread_relation)
      apply (intro conjI)
-        apply (frule_tac s=s in invs_sym_refs)
-        apply (frule_tac s'=s' in state_refs_of_cross_eq)
-          apply fastforce
-         apply fastforce
         apply clarsimp
         apply (erule (1) ct_running_cross)
          apply fastforce

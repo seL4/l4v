@@ -494,13 +494,13 @@ text \<open>
   This method is intended to be used to solve or make progress with @{const rcorres} goals via
   lifting, when the precondition is not schematic.
 
-  The user may specify a set to the argument rule: so that side conditions such as @{const no_fail},
+  The user may specify a set to the argument intro: so that side conditions such as @{const no_fail},
   @{const empty_fail}, and @{const det_wp} can be solved more directly.\<close>
-method rcorres_conj_lift methods solve_final_imp uses rule simp wp =
+method rcorres_conj_lift methods solve_final_imp uses intro simp wp =
   (rule rcorres_conj_lift_fwd,
-   (solves \<open>rule det_wp_pre, rule rule, clarsimp\<close> | solves \<open>wpsimp wp: wp simp: simp\<close>))?,
+   (solves \<open>rule det_wp_pre, rule intro, clarsimp\<close> | solves \<open>wpsimp wp: wp simp: simp\<close>))?,
   rule rcorres_weaken_pre,
-  (rule rcorres_lift, (solves \<open>rule rule\<close> | solves \<open>wpsimp wp: wp simp: simp\<close>)+)[1],
+  (rule rcorres_lift, (solves \<open>rule intro\<close> | solves \<open>wpsimp wp: wp simp: simp\<close>)+)[1],
   solves solve_final_imp
 
 experiment
@@ -561,7 +561,7 @@ lemma "rcorres (\<lambda>s _. P s) f f' (\<lambda>_ _ s _. P s)"
 
 text \<open>A typical example of the rcorres_conj_lift method.\<close>
 lemma "rcorres (\<lambda>s s'. V s s' \<and> P s) f f' (\<lambda>_ _ s s'. V s s' \<and> W s s')"
-  apply (rcorres_conj_lift \<open>clarsimp\<close>) \<comment> \<open>breaks off the first conjunct and solves it with @{thm lift}\<close>
+  apply (rcorres_conj_lift clarsimp) \<comment> \<open>breaks off the first conjunct and solves it with @{thm lift}\<close>
   oops \<comment> \<open>leaves the goal with the same precondition, and the second conjunct as the postcondition\<close>
 
 end

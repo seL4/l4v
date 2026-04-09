@@ -115,9 +115,9 @@ runnable; this is to prevent it being inserted in the scheduler queue.
 
 > readSchedulable :: PPtr TCB -> KernelR Bool
 > readSchedulable tcbPtr = do
+>     readStateAssert valid_tcbs'_asrt "`valid_tcbs'`"
 >     runnable <- readRunnable tcbPtr
 >     scPtrOpt <- threadRead tcbSchedContext tcbPtr
->     readStateAssert valid_tcbs'_asrt "`valid_tcbs'`"
 >     if scPtrOpt == Nothing
 >         then return False
 >         else do
@@ -145,10 +145,10 @@ When a thread is suspended, either explicitly by a TCB invocation or implicitly 
 >     cancelIPC target
 >     state <- getThreadState target
 >     if state == Running then updateRestartPC target else return ()
->     setThreadState Inactive target
 >     tcbSchedDequeue target
 >     tcbReleaseRemove target
 >     schedContextCancelYieldTo target
+>     setThreadState Inactive target
 
 \subsubsection{Restarting a Blocked Thread}
 
@@ -489,7 +489,8 @@ Note also that the level 2 bitmap array is stored in reverse in order to get bet
 >     curThread <- getCurThread
 >     action <- getSchedulerAction
 >     schedulable <- getSchedulable tcbPtr
->     when (tcbPtr == curThread && action == ResumeCurrentThread && not schedulable) $ rescheduleRequired
+>     when (tcbPtr == curThread && action == ResumeCurrentThread && not schedulable) $
+>         setSchedulerAction ChooseNewThread
 
 \subsubsection{Switching Threads}
 
@@ -562,7 +563,6 @@ The following function is used to alter the priority of a thread.
 
 > setPriority :: PPtr TCB -> Priority -> Kernel ()
 > setPriority tptr prio = do
->     stateAssert ready_qs_runnable "threads in the ready queues are runnable'"
 >     assert (prio <= maxPriority) "prio must be at most maxPriority"
 >     ts <- getThreadState tptr
 >     case ts of
@@ -700,6 +700,7 @@ The following two functions place a thread at the beginning or end of its priori
 
 > tcbQueuePrepend :: TcbQueue -> PPtr TCB -> Kernel TcbQueue
 > tcbQueuePrepend queue tcbPtr = do
+>     stateAssert (tcbQueueAdd_asrt queue tcbPtr) ""
 >     q <- if tcbQueueEmpty queue
 >              then return $ queue { tcbQueueEnd = Just tcbPtr }
 >              else do
@@ -711,6 +712,7 @@ The following two functions place a thread at the beginning or end of its priori
 
 > tcbQueueAppend :: TcbQueue -> PPtr TCB -> Kernel TcbQueue
 > tcbQueueAppend queue tcbPtr = do
+>     stateAssert (tcbQueueAdd_asrt queue tcbPtr) ""
 >     q <- if tcbQueueEmpty queue
 >              then return $ queue { tcbQueueHead = Just tcbPtr }
 >              else do
@@ -724,6 +726,8 @@ Insert a thread into the middle of a queue, immediately before afterPtr, where a
 
 > tcbQueueInsert :: PPtr TCB -> PPtr TCB -> Kernel ()
 > tcbQueueInsert tcbPtr afterPtr = do
+>    stateAssert sym_heap_sched_pointers_asrt ""
+>    stateAssert (tcbQueueInsert_asrt tcbPtr afterPtr) ""
 >    tcb <- getObject afterPtr
 >    beforePtrOpt <- return $ tcbSchedPrev tcb
 >    assert (beforePtrOpt /= Nothing) "afterPtr must not be the head of the list"
@@ -739,6 +743,8 @@ Remove a thread from a queue, which must originally contain the thread
 
 > tcbQueueRemove :: TcbQueue -> PPtr TCB -> Kernel TcbQueue
 > tcbQueueRemove queue tcbPtr = do
+>     stateAssert sym_heap_sched_pointers_asrt ""
+>     stateAssert (tcbQueueRemove_asrt queue tcbPtr) ""
 >     tcb <- getObject tcbPtr
 >     beforePtrOpt <- return $ tcbSchedPrev tcb
 >     afterPtrOpt <- return $ tcbSchedNext tcb
@@ -788,6 +794,8 @@ tcbPtr is in the middle of the queue
 >     stateAssert ksReadyQueues_asrt ""
 >     stateAssert ksReleaseQueue_asrt ""
 >     stateAssert valid_tcbs'_asrt "`valid_tcbs'`"
+>     stateAssert pspace_aligned'_asrt ""
+>     stateAssert pspace_distinct'_asrt ""
 >     runnable <- isRunnable thread
 >     assert runnable "thread must be runnable"
 >     queued <- threadGet tcbQueued thread
@@ -808,6 +816,8 @@ tcbPtr is in the middle of the queue
 >     stateAssert ksReadyQueues_asrt ""
 >     stateAssert ksReleaseQueue_asrt ""
 >     stateAssert valid_tcbs'_asrt "`valid_tcbs'`"
+>     stateAssert pspace_aligned'_asrt ""
+>     stateAssert pspace_distinct'_asrt ""
 >     runnable <- isRunnable thread
 >     assert runnable "thread must be runnable"
 >     queued <- threadGet tcbQueued thread

@@ -154,7 +154,7 @@ declare valid_arch_tcb'_ksMachineState_update[simp]
 
 lemma valid_tcb'_ksMachineState_update[simp]:
   "valid_tcb' tcb (ksMachineState_update f s) = valid_tcb' tcb s"
-  by (auto simp: valid_tcb'_def valid_tcb_state'_def valid_bound_obj'_def
+  by (auto simp: valid_tcb'_def valid_bound_obj'_def
           split: option.splits thread_state.splits)
 
 lemma invs'_wu[simp]:
@@ -448,12 +448,6 @@ lemma ct_idle_or_in_cur_domain'_ksReleaseQueue[simp]:
   "ct_idle_or_in_cur_domain' (ksReleaseQueue_update f s) = ct_idle_or_in_cur_domain' s"
   unfolding ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
   by simp
-
-lemma valid_tcb_state'_update[simp]:
-  "\<And>f. valid_tcb_state' ts (ksReadyQueues_update f s) = valid_tcb_state' ts s"
-  "\<And>f. valid_tcb_state' ts (ksReadyQueuesL1Bitmap_update f s) = valid_tcb_state' ts s"
-  "\<And>f. valid_tcb_state' ts (ksReadyQueuesL2Bitmap_update f s) = valid_tcb_state' ts s"
-  by (auto simp: valid_tcb_state'_def valid_bound_obj'_def split: thread_state.splits option.splits)
 
 lemma ct_not_inQ_ksReleaseQueue_upd[simp]:
   "ct_not_inQ (ksReleaseQueue_update f s) = ct_not_inQ s"
