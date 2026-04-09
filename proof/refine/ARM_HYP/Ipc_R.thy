@@ -3006,13 +3006,8 @@ lemma setThreadState_not_rct[wp]:
   "\<lbrace>\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread \<rbrace>
    setThreadState st t
    \<lbrace>\<lambda>_ s. ksSchedulerAction s \<noteq> ResumeCurrentThread \<rbrace>"
-  apply (simp add: setThreadState_def)
-  apply (wp)
-       apply (rule hoare_post_imp [OF _ rescheduleRequired_notresume], simp)
-      apply (simp)
-      apply (wp)+
-  apply simp
-  done
+  unfolding setThreadState_def
+  by (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imps)
 
 lemma cancelAllIPC_not_rct[wp]:
   "\<lbrace>\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread \<rbrace>
