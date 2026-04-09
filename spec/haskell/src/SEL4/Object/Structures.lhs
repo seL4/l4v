@@ -173,27 +173,18 @@ When stored in the physical memory model (described in \autoref{sec:model.pspace
 Synchronous endpoints are represented in the physical memory model
 using the "Endpoint" data structure.
 
-> data Endpoint
-
 There are three possible states for a synchronous endpoint:
-\begin{itemize}
 
-\item waiting for one or more receive operations to complete, with
-a list of pointers to waiting threads.
+> data EPState
+>     = IdleEPState
+>     | SendEPState
+>     | ReceiveEPState
+>     deriving (Show, Eq)
 
->         = RecvEP { epQueue :: [PPtr TCB] }
-
-\item idle;
-
->         | IdleEP
-
-\item or waiting for one or more send operations to complete, with a
-list of pointers to waiting threads;
-
->         | SendEP { epQueue :: [PPtr TCB] }
+> data Endpoint = Endpoint {
+>     epState :: EPState,
+>     epQueue :: TcbQueue }
 >     deriving Show
-
-\end{itemize}
 
 \subsubsection{SchedContext Objects}
 
@@ -274,29 +265,21 @@ list of pointers to waiting threads;
 Notification objects are represented in the physical memory model
 using the "Notification" data structure.
 
-> data NTFN
-
 There are three possible states for a notification:
-\begin{itemize}
-\item idle;
 
->         = IdleNtfn
+> data NTFNState
+>     = IdleNtfnState
+>     | Active
+>     | Waiting
+>     deriving (Show, Eq)
 
-\item active, ready to deliver a notification message consisting of one data word and one message identifier word.
-
->         | ActiveNtfn { ntfnMsgIdentifier :: Word }
-
-\item or waiting for one or more send operations to complete, with a list of pointers to the waiting threads;
-
->         | WaitingNtfn { ntfnQueue :: [PPtr TCB] }
->     deriving Show
-
-> data Notification = NTFN {
->     ntfnObj :: NTFN,
+> data Notification = Notification {
+>     ntfnState :: NTFNState,
+>     ntfnQueue :: TcbQueue,
+>     ntfnMsgIdentifier :: Maybe Word,
 >     ntfnBoundTCB :: Maybe (PPtr TCB),
 >     ntfnSc :: Maybe (PPtr SchedContext) }
-
-\end{itemize}
+>     deriving Show
 
 \subsubsection{Capability Table Entry}
 
@@ -555,6 +538,10 @@ Each entry in the domain schedule specifies a domain and a length (a number of t
 > isSend (BlockedOnSend _ _ _ _ _) = True
 > isSend _ = False
 
+> isNtfn :: ThreadState -> Bool
+> isNtfn (BlockedOnNotification _) = True
+> isNtfn _ = False
+
 > isReply :: ThreadState -> Bool
 > isReply (BlockedOnReply _) = True
 > isReply _ = False
@@ -593,6 +580,7 @@ Various operations on the free index of an Untyped cap.
 > data TcbQueue = TcbQueue {
 >     tcbQueueHead :: Maybe (PPtr TCB),
 >     tcbQueueEnd :: Maybe (PPtr TCB) }
+>     deriving (Show, Eq)
 
 > emptyQueue :: TcbQueue
 > emptyQueue = TcbQueue { tcbQueueHead = Nothing, tcbQueueEnd = Nothing }

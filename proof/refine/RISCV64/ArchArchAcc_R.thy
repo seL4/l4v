@@ -295,7 +295,7 @@ lemma getObject_PTE_corres[corres]:
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def in_magnitude_check objBits_simps bit_simps)
   apply (clarsimp simp: state_relation_def pspace_relation_def elim!: opt_mapE)
   apply (drule bspec, blast)
-  apply (clarsimp simp: other_obj_relation_def pte_relation_def)
+  apply (clarsimp simp: pte_relation_def)
   apply (erule_tac x="table_index p" in allE)
   apply (clarsimp simp: mask_pt_bits_inner_beauty[simplified bit_simps] bit_simps obj_at'_def)
   done
@@ -360,11 +360,7 @@ lemma setObject_PT_corres:
    apply (drule bspec, assumption)
    apply clarsimp
    apply (erule (1) obj_relation_cutsE)
-          apply simp
-         apply simp
-        apply clarsimp
-       apply simp
-      apply clarsimp
+          apply simp+
      apply (frule (1) pspace_alignedD)
      apply (drule_tac p=x in pspace_alignedD, assumption)
      apply simp
@@ -376,26 +372,30 @@ lemma setObject_PT_corres:
       apply (clarsimp simp: word_size bit_simps)
       apply arith
      apply ((simp split: if_split_asm)+)[2]
-    apply (simp add: other_obj_relation_def split: Structures_A.kernel_object.splits)
+    apply (simp add: split: Structures_A.kernel_object.splits)
    apply (simp add: other_aobj_relation_def split: arch_kernel_obj.splits)
-  apply (rule conjI)
+  apply (extract_conjunct \<open>match conclusion in "sc_replies_relation_2 _ _ _" \<Rightarrow> -\<close>)
    apply (fastforce simp: sc_replies_relation_def sc_replies_of_scs_def map_project_def
                           scs_of_kh_def opt_map_def projectKO_opts_defs)
   apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pt_bits" in allE)+
    apply fastforce
-  apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
    apply (prop_tac "typ_at' (koTypeOf (injectKO pte')) p b")
     apply (simp add: typ_at'_def ko_wp_at'_def)
+  apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
    subgoal by (fastforce dest: tcbs_of'_non_tcb_update)
   apply (extract_conjunct \<open>match conclusion in "release_queue_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
-   apply (prop_tac "typ_at' (koTypeOf (injectKO pte')) p b")
-    apply (simp add: typ_at'_def ko_wp_at'_def)
    subgoal by (fastforce dest: tcbs_of'_non_tcb_update)
   apply (simp add: map_to_ctes_upd_other)
   apply (simp add: fun_upd_def)
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
+  apply (fold fun_upd_def)
+  apply (extract_conjunct \<open>match conclusion in "ep_queues_relation_2 _ _ _ _" \<Rightarrow> -\<close>)
+   apply (clarsimp simp: ep_queues_relation_def eps_of_kh_def projectKO_opts_defs obj_at'_def
+                         opt_map_def)
+  \<comment> \<open>ntfn_queues_relation\<close>
+  apply (clarsimp simp: projectKO_opts_defs opt_map_def)
   done
 
 lemma storePTE_corres[corres]:

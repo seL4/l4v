@@ -262,19 +262,6 @@ lemma cap_asid_base_mask'[simp]:
          simp_all add: RISCV64_H.maskCapRights_def isCap_simps Let_def)
   done
 
-lemma tcb_cases_related2:
-  "tcb_cte_cases (v - x) = Some (getF, setF) \<Longrightarrow>
-   \<exists>getF' setF' restr. tcb_cap_cases (tcb_cnode_index (unat ((v - x) >> cte_level_bits))) = Some (getF', setF', restr)
-          \<and> cte_map (x, tcb_cnode_index (unat ((v - x) >> cte_level_bits))) = v
-          \<and> (\<forall>tcb tcb'. tcb_relation tcb tcb' \<longrightarrow> cap_relation (getF' tcb) (cteCap (getF tcb')))
-          \<and> (\<forall>tcb tcb' cap cte. tcb_relation tcb tcb' \<longrightarrow> cap_relation cap (cteCap cte)
-                        \<longrightarrow> tcb_relation (setF' (\<lambda>x. cap) tcb) (setF (\<lambda>x. cte) tcb'))"
-  apply (clarsimp simp: tcb_cte_cases_def tcb_relation_def cte_level_bits_def cteSizeBits_def
-                        tcb_cap_cases_simps[simplified]
-                 split: if_split_asm)
-  apply (simp_all add: tcb_cnode_index_def cte_level_bits_def cte_map_def field_simps to_bl_1)
-  done
-
 lemma cte_map_pulls_tcb_to_abstract:
   "\<lbrakk> y = cte_map z; pspace_relation (kheap s) (ksPSpace s');
      ksPSpace s' x = Some (KOTCB tcb);
@@ -284,7 +271,7 @@ lemma cte_map_pulls_tcb_to_abstract:
                   \<and> (z = (x, tcb_cnode_index (unat ((y - x) >> cte_level_bits))))"
   apply (rule pspace_dom_relatedE, assumption+)
   apply (erule(1) obj_relation_cutsE;
-         clarsimp simp: other_obj_relation_def other_aobj_relation_def
+         clarsimp simp: other_aobj_relation_def
                   split: Structures_A.kernel_object.split_asm
                          RISCV64_A.arch_kernel_obj.split_asm if_split_asm)
   apply (drule tcb_cases_related2)
@@ -379,8 +366,6 @@ proof -
      apply (clarsimp simp: cte_relation_def rel)
     apply (rule obj_relation_cutsE, assumption+, simp_all add: s'')
      apply (clarsimp simp: cte_relation_def)
-    apply (clarsimp simp: is_other_obj_relation_type other_obj_relation_def
-                   split: Structures_A.kernel_object.split_asm)
     done
 qed
 
@@ -447,15 +432,13 @@ lemma pspace_relation_cte_wp_atI'[CSpace1_R_assms]:
    apply (simp split: if_split_asm)
   apply (erule(1) pspace_dom_relatedE)
   apply (erule(1) obj_relation_cutsE, simp_all split: if_split_asm)
-   apply (subgoal_tac "n = x - y", clarsimp)
-    apply (drule tcb_cases_related2, clarsimp)
-    apply (intro exI, rule conjI)
-     apply (erule(1) cte_wp_at_tcbI[where t="(a, b)" for a b, simplified])
-     apply fastforce
-    apply simp
-   apply clarsimp
-  apply (simp add: other_obj_relation_def
-            split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm)
+  apply (subgoal_tac "n = x - y", clarsimp)
+   apply (drule tcb_cases_related2, clarsimp)
+   apply (intro exI, rule conjI)
+    apply (erule(1) cte_wp_at_tcbI[where t="(a, b)" for a b, simplified])
+    apply fastforce
+   apply simp
+  apply clarsimp
   done
 
 lemma same_region_as_final_matters[CSpace1_R_assms]:
@@ -790,8 +773,7 @@ lemma updateMDB_pspace_relation[CSpace1_R_2_assms]:
    apply (rule pspace_dom_relatedE, assumption+)
    apply (rule obj_relation_cutsE, assumption+;
           clarsimp split: Structures_A.kernel_object.split_asm
-                          RISCV64_A.arch_kernel_obj.split_asm if_split_asm
-                    simp: other_obj_relation_def)
+                          RISCV64_A.arch_kernel_obj.split_asm if_split_asm)
    apply (frule(1) tcb_cte_cases_aligned_helpers(1))
    apply (frule(1) tcb_cte_cases_aligned_helpers(2))
    apply (clarsimp simp del: diff_neg_mask)

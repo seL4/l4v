@@ -262,36 +262,6 @@ lemma check_active_irq_invs_just_idle:
         and (\<lambda>s. 0 < domain_time s) and valid_domain_list \<rbrace>"
   by (wpsimp simp: check_active_irq_def ct_in_state_def)
 
-lemma sym_ref_BlockedOnReceive_RecvEP:
-  "\<lbrakk> sym_refs (state_refs_of s); kheap s tp = Some (TCB tcb);
-   tcb_state tcb = Structures_A.BlockedOnReceive eptr ropt pl \<rbrakk> \<Longrightarrow>
-     \<exists>list. kheap s eptr = Some (Structures_A.Endpoint (Structures_A.RecvEP list))"
-  apply (drule sym_refs_obj_atD[rotated, where p=tp])
-   apply (clarsimp simp: obj_at_def, simp)
-  apply (clarsimp simp: state_refs_of_def)
-  apply (drule_tac x="(eptr, TCBBlockedRecv)" in bspec)
-   apply (fastforce split: if_split_asm)
-  apply (clarsimp simp: obj_at_def)
-  apply (rename_tac koa; case_tac koa;
-         clarsimp simp: ep_q_refs_of_def get_refs_def2)
-  apply (rename_tac ep; case_tac ep; simp)
-  done
-
-lemma sym_ref_BlockedOnSend_SendEP:
-  "\<lbrakk> sym_refs (state_refs_of s); kheap s tp = Some (TCB tcb);
-   tcb_state tcb = Structures_A.BlockedOnSend eptr pl \<rbrakk> \<Longrightarrow>
-     \<exists>list. kheap s eptr = Some (Structures_A.Endpoint (Structures_A.SendEP list))"
-  apply (drule sym_refs_obj_atD[rotated, where p=tp])
-   apply (clarsimp simp: obj_at_def, simp)
-  apply (clarsimp simp: state_refs_of_def)
-  apply (drule_tac x="(eptr, TCBBlockedSend)" in bspec)
-   apply (fastforce split: if_split_asm)
-  apply (clarsimp simp: obj_at_def)
-  apply (rename_tac koa; case_tac koa;
-         clarsimp simp: ep_q_refs_of_def get_refs_def2)
-  apply (rename_tac ep; case_tac ep; simp)
-  done
-
 lemma Receive_or_Send_ep_at:
   "\<lbrakk> st = Structures_A.thread_state.BlockedOnReceive epPtr rp p' \<or>
      st = Structures_A.thread_state.BlockedOnSend epPtr p;

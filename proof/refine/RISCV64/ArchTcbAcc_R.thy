@@ -116,7 +116,9 @@ lemma setObject_update_TCB_corres'[TcbAcc_R_assms]:
    apply (fastforce simp: opt_map_def)
   apply (prop_tac "(tcbSchedPrevs_of s')(ptr := tcbSchedPrev new_tcb') = tcbSchedPrevs_of s'")
    apply (fastforce simp: opt_map_def)
-  by (clarsimp simp: ready_queue_relation_def opt_pred_def opt_map_def split: option.splits)
+  by (clarsimp simp: ready_queue_relation_def ep_queues_relation_def ntfn_queues_relation_def
+                     eps_of_kh_def opt_pred_def opt_map_def
+              split: option.splits)
 
 lemma setObject_tcb_refs'[TcbAcc_R_assms, wp]:
   "\<lbrace>\<lambda>s. P (global_refs' s)\<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>rv s. P (global_refs' s)\<rbrace>"
@@ -131,52 +133,6 @@ lemma threadSet_state_hyp_refs_of':
   apply (wpsimp wp: setObject_state_hyp_refs_of' getObject_tcb_wp
                 simp: gen_objBits_simps obj_at'_def state_hyp_refs_of'_def)
   done
-
-lemma threadSet_iflive'T:
-  assumes x: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
-  shows
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
-      \<and> ((\<exists>tcb. \<not> bound (tcbBoundNotification tcb) \<and> bound (tcbBoundNotification (F tcb))
-              \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
-      \<and> ((\<exists>tcb. \<not> bound (tcbYieldTo tcb) \<and> bound (tcbYieldTo (F tcb))
-              \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
-      \<and> ((\<exists>tcb. (\<not> bound (tcbSchedContext tcb) \<or> tcbSchedContext tcb = Some idle_sc_ptr)
-              \<and> bound (tcbSchedContext (F tcb)) \<and> tcbSchedContext (F tcb) \<noteq> Some idle_sc_ptr
-              \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
-      \<and> ((\<exists>tcb. tcbSchedNext tcb = None \<and> tcbSchedNext (F tcb) \<noteq> None
-              \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
-      \<and> ((\<exists>tcb. tcbSchedPrev tcb = None \<and> tcbSchedPrev (F tcb) \<noteq> None
-              \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
-      \<and> ((\<exists>tcb. (tcbState tcb = Inactive \<or> tcbState tcb = IdleThreadState)
-              \<and> tcbState (F tcb) \<noteq> Inactive
-              \<and> tcbState (F tcb) \<noteq> IdleThreadState
-              \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
-      \<and> ((\<exists>tcb. \<not> tcbQueued tcb \<and> tcbQueued (F tcb)
-              \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
-      \<and> ((\<exists>tcb. \<not> tcbInReleaseQueue tcb \<and> tcbInReleaseQueue (F tcb)
-              \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
-     threadSet F t
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: threadSet_def)
-  apply (wp setObject_tcb_iflive' getObject_tcb_wp)
-  apply (clarsimp simp: obj_at'_def live'_def hyp_live'_def)
-  apply (subst conj_assoc[symmetric], subst imp_disjL[symmetric])
-  apply (subst conj_assoc[symmetric], subst imp_disjL[symmetric])
-  apply (subst conj_assoc[symmetric], subst imp_disjL[symmetric])
-  apply (subst conj_assoc[symmetric], subst imp_disjL[symmetric])
-  apply (rule conjI)
-   apply (rule impI, clarsimp)
-   apply (erule if_live_then_nonz_capE')
-   apply (clarsimp simp: ko_wp_at'_def live'_def hyp_live'_def)
-  apply (intro conjI)
-     apply (clarsimp, clarsimp elim!: notE if_live_then_nonz_capE' simp: ko_wp_at'_def live'_def)
-    apply (clarsimp, clarsimp elim!: notE if_live_then_nonz_capE' simp: ko_wp_at'_def live'_def)
-   apply (clarsimp, clarsimp elim!: if_live_then_nonz_capE' simp: ko_wp_at'_def live'_def)
-  apply (clarsimp simp: bspec_split [OF spec [OF x]])
-  done
-
-lemmas threadSet_iflive' =
-    threadSet_iflive'T [OF all_tcbI, OF ball_tcb_cte_casesI]
 
 lemmas threadSet_typ_at_lifts[wp] = typ_at_lifts[OF threadSet_typ_at']
 
@@ -313,7 +269,6 @@ lemma threadSet_invs_trivialT:
   apply (simp add: invs'_def split del: if_split)
   apply (wp threadSet_valid_pspace'T
             threadSet_state_hyp_refs_of'
-            threadSet_iflive'T
             threadSet_ifunsafe'T
             threadSet_global_refsT
             irqs_masked_lift
@@ -323,11 +278,10 @@ lemma threadSet_invs_trivialT:
             threadSet_valid_dom_schedule'
             untyped_ranges_zero_lift
             sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
-            threadSet_tcbInReleaseQueue threadSet_tcbQueued
-            threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of valid_bitmaps_lift
+            threadSet_field_opt_pred threadSet_field_inv  valid_bitmaps_lift
          | clarsimp simp: assms cteCaps_of_def valid_arch_tcb'_def | rule refl)+
   apply (clarsimp simp: o_def)
-  by (auto simp: assms obj_at'_def)
+  done
 
 lemmas threadSet_invs_trivial =
     threadSet_invs_trivialT [OF all_tcbI all_tcbI all_tcbI all_tcbI, OF ball_tcb_cte_casesI]
@@ -416,7 +370,7 @@ lemma user_getreg_inv'[TcbAcc_R_2_assms, wp]:
   done
 
 lemma asUser_invs[wp]:
-  "\<lbrace>invs' and tcb_at' t\<rbrace> asUser t m \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "asUser t m \<lbrace>invs'\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wpsimp wp: threadSet_invs_trivial threadGet_wp)
   done
@@ -440,11 +394,6 @@ lemma asUser_st_hyp_refs_of'[wp]:
   "asUser t m \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
   unfolding asUser_def
   by (wpsimp wp: threadSet_state_hyp_refs_of' hoare_drop_imps simp: atcbContextSet_def)
-
-lemma asUser_iflive'[wp]:
-  "asUser t m \<lbrace>if_live_then_nonz_cap'\<rbrace> "
-  unfolding asUser_def
-  by (wpsimp wp: threadSet_iflive' hoare_drop_imps, auto)
 
 lemma asUser_setRegister_corres[TcbAcc_R_2_assms]:
   "corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
@@ -984,49 +933,6 @@ lemma setBoundNotification_state_hyp_refs_of'[wp]:
   by (simp add: setBoundNotification_def fun_upd_def
         | wp threadSet_state_hyp_refs_of')+
 
-lemma tcbSchedNext_update_iflive'[TcbAcc_R_2_assms]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
-   threadSet (tcbSchedNext_update f) t
-   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
-
-lemma tcbSchedPrev_update_iflive'[TcbAcc_R_2_assms]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
-   threadSet (tcbSchedPrev_update f) t
-   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
-
-lemma tcbInReleaseQueue_update_iflive'[TcbAcc_R_2_assms, wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
-   threadSet (tcbInReleaseQueue_update f) t
-   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
-
-lemma tcbQueued_update_iflive'[TcbAcc_R_2_assms, wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
-   threadSet (tcbQueued_update f) t
-   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
-
-lemma sbn_iflive'[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
-      \<and> (bound ntfn \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
-   setBoundNotification ntfn t
-   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: setBoundNotification_def)
-  apply (rule hoare_pre)
-   apply (wp threadSet_iflive' | simp)+
-  apply auto
-  done
-
-lemma tcbSchedNext_None_if_live_then_nonz_cap'[wp]:
-  "threadSet (tcbSchedNext_update (\<lambda>_. None)) tcbPtr \<lbrace>if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: threadSet_iflive'T; fastforce simp: update_tcb_cte_cases)
-
-lemma tcbSchedPrev_None_if_live_then_nonz_cap'[wp]:
-  "threadSet (tcbSchedPrev_update (\<lambda>_. None)) tcbPtr \<lbrace>if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: threadSet_iflive'T; fastforce simp: update_tcb_cte_cases)
-
 lemma storeWord_invs'[TcbAcc_R_2_assms, wp]:
   "\<lbrace>pointerInUserData p and invs'\<rbrace> doMachineOp (storeWord p w) \<lbrace>\<lambda>rv. invs'\<rbrace>"
 proof -
@@ -1062,29 +968,10 @@ qed
 
 context Arch begin arch_global_naming
 
-named_theorems TcbAcc_R_3_assms
-
-lemma sts_iflive'[TcbAcc_R_3_assms, wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
-        \<and> (st \<noteq> Inactive \<and> \<not> idle' st \<longrightarrow> ex_nonz_cap_to' t s)
-        \<and> pspace_aligned' s \<and> pspace_distinct' s\<rbrace>
-   setThreadState st t
-   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: setThreadState_def setQueue_def)
-  apply (wpsimp wp: threadSet_iflive')+
-  apply auto
-  done
-
 lemmas setThreadState_typ_ats[wp] = typ_at_lifts [OF setThreadState_typ_at']
 lemmas setBoundNotification_typ_ats[wp] = typ_at_lifts [OF setBoundNotification_typ_at']
 
 end (* Arch *)
-
-interpretation TcbAcc_R_3?: TcbAcc_R_3
-proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact TcbAcc_R_3_assms)?)?)
-qed
 
 (* requalify interface lemmas which can't be locale assumptions due to free type variable *)
 arch_requalify_facts

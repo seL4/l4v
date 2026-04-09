@@ -55,7 +55,10 @@ definition pte_relation :: "pt_index \<Rightarrow> Structures_A.kernel_object \<
  "pte_relation y \<equiv> \<lambda>ko ko'. \<exists>pt pte. ko = ArchObj (PageTable pt) \<and> ko' = KOArch (KOPTE pte)
                                       \<and> pte_relation' (pt y) pte"
 
-(* this is the arch version of other_obj_relation *)
+\<comment> \<open>
+  A pair of objects @{term "(obj, obj')"} should satisfy the following relation when, under further
+  mild assumptions, a @{term corres_underlying} lemma for @{term "set_object obj"}
+  and @{term "setObject obj'"} can be stated: see setObject_other_arch_corres in ArchKHeap_R.\<close>
 definition other_aobj_relation ::
   "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool" where
   "other_aobj_relation obj obj' \<equiv>
@@ -79,6 +82,8 @@ definition is_other_obj_relation_type :: "a_type \<Rightarrow> bool" where
     | ASchedContext n \<Rightarrow> False
     | AReply \<Rightarrow> False
     | ATCB \<Rightarrow> False
+    | AEndpoint \<Rightarrow> False
+    | ANTFN \<Rightarrow> False
     | AArch APageTable \<Rightarrow> False
     | AArch (AUserData _) \<Rightarrow> False
     | AArch (ADeviceData _) \<Rightarrow> False

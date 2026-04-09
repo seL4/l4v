@@ -32,7 +32,8 @@ This module uses the C preprocessor to select a target architecture.
 >         schedContextUnbindReply, schedContextSetInactive, unbindFromSC,
 >         schedContextCancelYieldTo, refillAbsoluteMax, schedContextUpdateConsumed,
 >         scReleased, setConsumed, refillResetRR, preemptionPoint, refillHdInsufficient,
->         mergeNonoverlappingHeadRefill, headInsufficientLoop, maxReleaseTime, readScActive, scActive
+>         mergeNonoverlappingHeadRefill, headInsufficientLoop, maxReleaseTime, readScActive, scActive,
+>         orderedInsert
 >     ) where
 
 \begin{impdetails}
@@ -500,9 +501,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > schedContextBindNtfn :: PPtr SchedContext -> PPtr Notification -> Kernel ()
 > schedContextBindNtfn scPtr ntfnPtr = do
->     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
->     ntfn <- getNotification ntfnPtr
->     setNotification ntfnPtr (ntfn { ntfnSc = Just scPtr })
+>     updateNotification ntfnPtr (\ntfn -> ntfn { ntfnSc = Just scPtr })
 >     updateSchedContext scPtr (\sc -> sc { scNtfn = Just ntfnPtr })
 
 > schedContextUnbindTCB :: PPtr SchedContext -> Kernel ()
@@ -516,6 +515,7 @@ This module uses the C preprocessor to select a target architecture.
 >     let tptrOpt = scTCB sc
 >     assert (tptrOpt /= Nothing) "schedContextUnbind: option of TCB pointer must not be Nothing"
 >     let tptr = fromJust tptrOpt
+>     stateAssert (tcb_at'_asrt tptr) ""
 >     cur <- getCurThread
 >     when (tptr == cur) $ rescheduleRequired
 >     tcbSchedDequeue tptr
@@ -530,8 +530,7 @@ This module uses the C preprocessor to select a target architecture.
 >     case scNtfn sc of
 >         Nothing -> return ()
 >         Just ntfnPtr -> do
->             ntfn <- getNotification ntfnPtr
->             setNotification ntfnPtr (ntfn { ntfnSc = Nothing })
+>             updateNotification ntfnPtr (\ntfn -> ntfn { ntfnSc = Nothing })
 >             updateSchedContext scPtr (\sc -> sc { scNtfn = Nothing })
 
 > schedContextMaybeUnbindNtfn :: PPtr Notification -> Kernel ()
@@ -575,6 +574,7 @@ This module uses the C preprocessor to select a target architecture.
 >     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
 >     sc <- getSchedContext scPtr
 >     replyPtrOpt <- return $ scReply sc
+>     stateAssert (valid_bound_reply'_asrt replyPtrOpt) ""
 >     when (replyPtrOpt /= Nothing) $ do
 >         replyPtr <- return $ fromJust replyPtrOpt
 >         updateReply replyPtr (\reply -> reply { replyNext = Nothing })
@@ -818,33 +818,58 @@ This module uses the C preprocessor to select a target architecture.
 >     assert active "the sc must be active"
 >     readReadyTime (fromJust scPtrOpt)
 
-> getTCBReadyTime :: PPtr TCB -> Kernel Time
-> getTCBReadyTime tcbPtr = getsJust (readTCBReadyTime tcbPtr)
-
-> timeAfter :: Maybe (PPtr TCB) -> Time -> KernelR Bool
-> timeAfter tcbPtrOpt newTime = do
->     if (tcbPtrOpt /= Nothing)
+> compareVals :: Ord b => b -> Maybe (PPtr TCB) -> (PPtr TCB -> KernelR b) -> (b -> b -> Bool) -> KernelR Bool
+> compareVals val ptrOpt f r = do
+>     if (ptrOpt /= Nothing)
 >         then do
->           tcbPtr <- return $ fromJust tcbPtrOpt
->           time <- readTCBReadyTime (fromJust tcbPtrOpt)
->           return $ time <= newTime
+>             ptr <- return $ fromJust ptrOpt
+>             val' <- f ptr
+>             return $ r val' val
 >         else return False
 
-> findTimeAfter :: Maybe (PPtr TCB) -> Time -> Kernel (Maybe (PPtr TCB))
-> findTimeAfter tcbPtrOpt newTime = do
->     stateAssert tcbInReleaseQueue_imp_active_sc_tcb_at'_asrt
->         "every thread in the release queue is associated with \
->          an active scheduling context"
->     whileLoop (\afterPtrOpt -> fromJust . runReaderT (timeAfter afterPtrOpt newTime))
->               (\afterPtrOpt -> do
->                   tcb <- getObject (fromJust afterPtrOpt)
->                   return $ tcbSchedNext tcb)
->               tcbPtrOpt
+> findInsertionPoint :: Ord b => b -> Maybe (PPtr TCB) -> (PPtr TCB -> KernelR b) -> (b -> b -> Bool) -> Kernel (Maybe (PPtr TCB))
+> findInsertionPoint val ptrOpt f r =
+>     whileLoop (\ptrOpt -> fromJust . runReaderT (compareVals val ptrOpt f r))
+>               (\ptrOpt -> do
+>                    tcb <- getObject (fromJust ptrOpt)
+>                    return $ tcbSchedNext tcb)
+>               ptrOpt
+
+> orderedInsert :: Ord b => PPtr TCB -> TcbQueue -> (PPtr TCB -> KernelR b) -> (b -> b -> Bool) -> Kernel TcbQueue
+> orderedInsert t q f r = do
+>     stateAssert sym_heap_sched_pointers_asrt ""
+>     val <- getsJust (f t)
+>     test <- if (tcbQueueEmpty q)
+>                 then return True
+>                 else do
+>                     assert (tcbQueueHead q /= Nothing) "the head of q cannot be Nothing"
+>                     head <- return $ fromJust $ tcbQueueHead q
+>                     headVal <- getsJust (f head)
+>                     return (r val headVal && val /= headVal)
+>     if test
+>         then tcbQueuePrepend q t
+>         else do
+>             assert (tcbQueueHead q /= Nothing) "the head of q cannot be Nothing"
+>             end <- return $ fromJust $ tcbQueueEnd q
+>             endVal <- getsJust (f end)
+>             if (r endVal val)
+>                 then tcbQueueAppend q t
+>                 else do
+>                     ptrOpt <- findInsertionPoint val (tcbQueueHead q) f r
+>                     assert (ptrOpt /= Nothing) "the pointer found must not be Nothing"
+>                     ptr <- return $ fromJust ptrOpt
+>                     stateAssert (insertionPoint_asrt q ptr) ""
+>                     tcbQueueInsert t ptr
+>                     return q
 
 > tcbReleaseEnqueue :: PPtr TCB -> Kernel ()
 > tcbReleaseEnqueue tcbPtr = do
+
+>     stateAssert tcbInReleaseQueue_imp_active_sc_tcb_at'_asrt
+>         "every thread in the release queue is associated with an active scheduling context"
 >     stateAssert ready_or_release'_asrt "`ready_or_release'`"
->     stateAssert (not_tcbQueued_asrt tcbPtr) "`tcbPtr` must not have the `tcbQueued` flag set"
+>     stateAssert (not_tcbQueued_asrt tcbPtr)
+>         "tcbPtr must not have the tcbQueued flag set"
 >     stateAssert ksReadyQueues_asrt ""
 >     stateAssert ksReleaseQueue_asrt ""
 >     stateAssert valid_objs'_asrt "`valid_objs'`"
@@ -852,31 +877,13 @@ This module uses the C preprocessor to select a target architecture.
 >     assert runnable "thread must be runnable"
 >     tcb <- getObject tcbPtr
 >     assert (tcbInReleaseQueue tcb == False) "tcbPtr must not already be in the release queue"
->     newTime <- getTCBReadyTime tcbPtr
+
 >     queue <- getReleaseQueue
->     ifM (orM (return (tcbQueueEmpty queue))
->              (do
->                headTime <- getTCBReadyTime (fromJust $ tcbQueueHead queue)
->                return (newTime < headTime)))
->         (do
->           newQueue <- tcbQueuePrepend queue tcbPtr
->           setReleaseQueue newQueue
->           setReprogramTimer True)
->         (do
->           assert (tcbQueueHead queue /= Nothing && tcbQueueEnd queue /= Nothing) "the queue is nonempty"
->           lastTime <- getTCBReadyTime (fromJust $ tcbQueueEnd queue)
->           if lastTime <= newTime
->               then do
->                   newQueue <- tcbQueueAppend queue tcbPtr
->                   setReleaseQueue newQueue
->               else do
->                   afterPtrOpt <- findTimeAfter (tcbQueueHead queue) newTime
->                   assert (afterPtrOpt /= Nothing) "the afterPtr must be in the queue"
->                   afterPtr <- return $ fromJust afterPtrOpt
->                   stateAssert (findTimeAfter_asrt afterPtr)
->                       "`tcbPtr` must be in the release queue"
->                   tcbQueueInsert tcbPtr afterPtr)
+>     queue' <- orderedInsert tcbPtr queue readTCBReadyTime (<=)
+>     setReleaseQueue queue'
 >     threadSet (\t -> t { tcbInReleaseQueue = True }) tcbPtr
+>     queue'' <- getReleaseQueue
+>     when (tcbQueueHead queue /= tcbQueueHead queue'') (setReprogramTimer True)
 
 In preemptible code, the kernel may explicitly mark a preemption point with the "preemptionPoint" function. The preemption will only be taken if an interrupt has occurred and the preemption point has been called "workUnitsLimit" times.
 

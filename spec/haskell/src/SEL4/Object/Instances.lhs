@@ -35,7 +35,7 @@ The following are the instances of "Storable" for the four main types of kernel 
 \subsubsection{Synchronous IPC Endpoint}
 
 > instance PSpaceStorable Endpoint where
->     makeObject = IdleEP
+>     makeObject = Endpoint IdleEPState emptyQueue
 >     injectKO   = KOEndpoint
 >     projectKO o = case o of
 >         KOEndpoint e -> return e
@@ -44,7 +44,7 @@ The following are the instances of "Storable" for the four main types of kernel 
 \subsubsection{Notification objects}
 
 > instance PSpaceStorable Notification where
->     makeObject = NTFN IdleNtfn Nothing Nothing
+>     makeObject = Notification IdleNtfnState emptyQueue Nothing Nothing Nothing
 >     injectKO   = KONotification
 >     projectKO o = case o of
 >         KONotification e -> return e

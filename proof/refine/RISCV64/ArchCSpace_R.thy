@@ -380,6 +380,8 @@ lemma corres_caps_decomposition:
              "\<And>P. \<lbrace>\<lambda>s. P (new_release_queue s)\<rbrace> f \<lbrace>\<lambda>rv s. P (release_queue s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_ksReleaseQueue s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksReleaseQueue s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_sc_replies_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (sc_replies_of s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_ep_queues_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ep_queues_of s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_ntfn_queues_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ntfn_queues_of s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_scs_of' s) (new_replies_of' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (scs_of' s) (replies_of' s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_ksReleaseQueue s) (new_tcbSchedNexts_of s) (new_tcbSchedPrevs_of s)
                           (new_tcbInReleaseQueue s)\<rbrace>
@@ -389,6 +391,10 @@ lemma corres_caps_decomposition:
                           (\<lambda>d p. new_inQs d p s)\<rbrace>
                    g \<lbrace>\<lambda>rv s. P (ksReadyQueues s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
                                (\<lambda>d p. inQ d p |< tcbs_of' s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_epQueues_of s) (new_tcbSchedNexts_of s) (new_tcbSchedPrevs_of s)\<rbrace>
+                   g \<lbrace>\<lambda>rv s. P (epQueues_of s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_ntfnQueues_of s) (new_tcbSchedNexts_of s) (new_tcbSchedPrevs_of s)\<rbrace>
+                   g \<lbrace>\<lambda>rv s. P (ntfnQueues_of s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_di s)\<rbrace> f \<lbrace>\<lambda>rv s. P (domain_index s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_dl s)\<rbrace> f \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_cd s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_domain s)\<rbrace>"
@@ -411,6 +417,10 @@ lemma corres_caps_decomposition:
                   \<and> cdt_list_relation (new_list s) (new_mdb s) (new_ctes s')
                   \<and> sc_replies_relation_2 (new_sc_replies_of s) (new_scs_of' s' |> scReply)
                       (new_replies_of' s' |> replyPrev)
+                  \<and> ep_queues_relation_2 (new_ep_queues_of s) (new_epQueues_of s')
+                                          (new_tcbSchedNexts_of s') (new_tcbSchedPrevs_of s')
+                  \<and> ntfn_queues_relation_2 (new_ntfn_queues_of s) (new_ntfnQueues_of s')
+                                            (new_tcbSchedNexts_of s') (new_tcbSchedPrevs_of s')
                   \<and> ready_queues_relation_2 (new_ready_queues s) (new_ksReadyQueues s')
                                              (new_tcbSchedNexts_of s') (new_tcbSchedPrevs_of s')
                                              (\<lambda>d p. new_inQs d p s')

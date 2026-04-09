@@ -5,7 +5,7 @@
  *)
 
 theory Corres
-imports StateRelation "CorresK.CorresK_Lemmas"
+imports StateRelation "CorresK.CorresK_Lemmas" "Lib.RCorres"
 begin
 
 text \<open>Instantiating the corres framework to this particular state relation.\<close>
@@ -32,5 +32,8 @@ lemmas sr_inv_def = sr_inv_ul_def
 lemmas sr_inv_imp = sr_inv_ul_imp[of state_relation]
 
 lemmas sr_inv_bind = sr_inv_ul_bind[where sr=state_relation]
+
+lemmas rcorres_from_corres =
+  rcorres_from_corres_underlying[where nf=False and nf'=True and srel=state_relation, simplified]
 
 end

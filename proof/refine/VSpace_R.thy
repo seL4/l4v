@@ -142,7 +142,7 @@ lemma message_info_from_data_eqv:
                      msgLabelBits_msg_label_bits msgMaxLength_def mask_def)
 
 lemma set_mi_invs'[wp]:
-  "\<lbrace>invs' and tcb_at' t\<rbrace> setMessageInfo t a \<lbrace>\<lambda>x. invs'\<rbrace>"
+  "setMessageInfo t a \<lbrace>invs'\<rbrace>"
   by (simp add: setMessageInfo_def) wp
 
 lemma setMessageInfo_corres:

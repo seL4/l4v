@@ -265,6 +265,7 @@ unmapPage size asid vptr pptr = ignoreFailure $ do
 
 setVMRoot :: PPtr TCB -> Kernel ()
 setVMRoot tcb = do
+    stateAssert (tcb_at'_asrt tcb) ""
     threadRootSlot <- getThreadVSpaceRoot tcb
     threadRoot <- getSlotCap threadRootSlot
     {- We use this in C to remove the check for isMapped: -}

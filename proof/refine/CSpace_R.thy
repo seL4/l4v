@@ -836,7 +836,9 @@ lemma set_cap_not_quite_corres':
              cur_time t = ksCurTime t' \<and>
              cur_sc t = ksCurSc t' \<and>
              reprogram_timer t = ksReprogramTimer t' \<and>
-             sc_replies_of t = sc_replies_of s"
+             sc_replies_of t = sc_replies_of s \<and>
+             ep_queues_of t = ep_queues_of s \<and>
+             ntfn_queues_of t = ntfn_queues_of s"
   using cr
   by (rule set_cap_not_quite_corres; fastforce simp: c p)
 
@@ -2548,51 +2550,6 @@ lemma setCTE_ko_wp_at_live[wp]:
   apply (clarsimp simp: ps_clear_upd gen_objBits_simps live'_def)
   done
 
-lemma setCTE_iflive':
-  "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte'. \<forall>p'\<in>zobj_refs' (cteCap cte')
-                          - zobj_refs' (cteCap cte).
-                                ko_wp_at' (Not \<circ> live') p' s) p s
-      \<and> if_live_then_nonz_cap' s\<rbrace>
-     setCTE p cte
-   \<lbrace>\<lambda>rv s. if_live_then_nonz_cap' s\<rbrace>"
-  unfolding if_live_then_nonz_cap'_def ex_nonz_cap_to'_def
-  apply (rule hoare_pre)
-   apply (simp only: imp_conv_disj)
-   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift
-             hoare_vcg_ex_lift setCTE_weak_cte_wp_at)
-  apply clarsimp
-  apply (drule spec, drule(1) mp)
-  apply clarsimp
-  apply (rule_tac x=cref in exI)
-  apply (clarsimp simp: cte_wp_at'_def)
-  apply (rule ccontr)
-  apply (drule bspec, fastforce)
-  apply (clarsimp simp: ko_wp_at'_def)
-  done
-
-lemma updateMDB_iflive'[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s\<rbrace>
-     updateMDB p m
-   \<lbrace>\<lambda>rv s. if_live_then_nonz_cap' s\<rbrace>"
-  apply (clarsimp simp: updateMDB_def)
-  apply (rule bind_wp [OF _ getCTE_sp])
-  apply (wp setCTE_iflive')
-  apply (clarsimp elim!: cte_wp_at_weakenE')
-  done
-
-lemma updateCap_iflive':
-  "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte'. \<forall>p'\<in>zobj_refs' (cteCap cte')
-                          - zobj_refs' cap.
-                                ko_wp_at' (Not \<circ> live') p' s) p s
-      \<and> if_live_then_nonz_cap' s\<rbrace>
-     updateCap p cap
-   \<lbrace>\<lambda>rv s. if_live_then_nonz_cap' s\<rbrace>"
-  apply (simp add: updateCap_def)
-  apply (rule bind_wp [OF _ getCTE_sp])
-  apply (wp setCTE_iflive')
-  apply (clarsimp elim!: cte_wp_at_weakenE')
-  done
-
 lemma setCTE_ko_wp_at_not_live[wp]:
   "\<lbrace>\<lambda>s. P (ko_wp_at' (Not \<circ> live') p' s)\<rbrace>
     setCTE p v
@@ -2631,45 +2588,9 @@ lemma zobj_refs'_capFreeIndex_update[simp]:
    zobj_refs' (capFreeIndex_update f (ctecap)) = zobj_refs' ctecap"
   by (case_tac ctecap,auto simp: gen_isCap_simps)
 
-lemma setUntypedCapAsFull_if_live_then_nonz_cap':
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> cte_wp_at' ((=) srcCTE) src s\<rbrace>
-   setUntypedCapAsFull (cteCap srcCTE) cap src
-   \<lbrace>\<lambda>rv s. if_live_then_nonz_cap' s\<rbrace>"
-  apply (clarsimp simp:if_live_then_nonz_cap'_def)
-  apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift)
-   apply (clarsimp simp:setUntypedCapAsFull_def split del: if_split)
-   apply (wp hoare_vcg_if_split)
-    apply (clarsimp simp:ex_nonz_cap_to'_def cte_wp_at_ctes_of)
-    apply (wp updateCap_ctes_of_wp)+
-  apply clarsimp
-  apply (elim allE impE)
-   apply (assumption)
-  apply (clarsimp simp:ex_nonz_cap_to'_def cte_wp_at_ctes_of modify_map_def split:if_splits)
-  apply (rule_tac x = cref in exI)
-  apply (intro conjI impI; clarsimp)
-  done
-
 lemma maskedAsFull_simps[simp]:
   "maskedAsFull capability.NullCap cap =  capability.NullCap"
   by (auto simp:maskedAsFull_def)
-
-lemma cteInsert_iflive'[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
-      \<and> cte_wp_at' (\<lambda>c. cteCap c = NullCap) dest s\<rbrace>
-     cteInsert cap src dest
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: cteInsert_def split del: if_split)
-  apply (wp updateCap_iflive' hoare_drop_imps)
-       apply (clarsimp simp:cte_wp_at_ctes_of)
-       apply (wp hoare_vcg_conj_lift hoare_vcg_ex_lift hoare_vcg_ball_lift getCTE_wp
-                 setUntypedCapAsFull_ctes_of setUntypedCapAsFull_if_live_then_nonz_cap')+
-  apply (clarsimp simp:cte_wp_at_ctes_of)
-  apply (intro conjI)
-  apply (rule_tac x = "case (ctes_of s dest) of Some a \<Rightarrow>a" in exI)
-    apply (clarsimp)
-    apply (case_tac cte,simp)
-  apply clarsimp+
-  done
 
 lemma ifunsafe'_def2:
   "if_unsafe_then_cap' =
@@ -3059,20 +2980,6 @@ crunch cteInsert
   for pspace_domain_valid[wp]: "pspace_domain_valid"
   (wp: crunch_wps)
 
-lemma setCTE_ct_not_inQ[wp]:
-  "\<lbrace>ct_not_inQ\<rbrace> setCTE ptr cte \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
-  apply (rule ct_not_inQ_lift [OF setCTE_nosch])
-  apply (simp add: setCTE_def ct_not_inQ_def)
-  apply (rule hoare_weaken_pre)
-   apply (wps setObject_cte_ct)
-   apply (rule setObject_cte_obj_at_tcb')
-       apply (clarsimp simp add: obj_at'_def)+
-  done
-
-crunch cteInsert
-  for ct_not_inQ[wp]: "ct_not_inQ"
-  (simp: crunch_simps wp: hoare_drop_imp)
-
 lemma setCTE_ksCurDomain[wp]:
   "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace>
    setCTE p cte
@@ -3123,12 +3030,6 @@ lemma setCTE_tcbPriority_inv[wp]:
 crunch cteInsert
   for tcbPriority_inv[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
   (wp: crunch_simps hoare_drop_imps)
-
-lemma cteInsert_ct_idle_or_in_cur_domain'[wp]:
-  "\<lbrace> ct_idle_or_in_cur_domain' \<rbrace> cteInsert a b c \<lbrace> \<lambda>_. ct_idle_or_in_cur_domain' \<rbrace>"
-  apply (rule ct_idle_or_in_cur_domain'_lift)
-  apply (wp hoare_vcg_disj_lift)+
-  done
 
 lemma setObject_cte_domIdx:
   "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setObject t (v::cte) \<lbrace>\<lambda>rv s. P (ksDomScheduleIdx s)\<rbrace>"
@@ -3768,14 +3669,6 @@ lemma capMaster_same_refs:
   apply (rule master_eqI, rule zobj_refs_Master, simp)
   done
 
-lemma arch_update_setCTE_iflive:
-  "\<lbrace>cte_wp_at' (is_arch_update' cap) p and cte_wp_at' ((=) oldcte) p and if_live_then_nonz_cap'\<rbrace>
-   setCTE p (cteCap_update (\<lambda>_. cap) oldcte)
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (wp setCTE_iflive')
-  apply (clarsimp simp: cte_wp_at_ctes_of is_arch_update'_def dest!: capMaster_zobj_refs)
-  done
-
 lemma arch_update_setCTE_ifunsafe:
   "\<lbrace>cte_wp_at' (is_arch_update' cap) p and cte_wp_at' ((=) oldcte) p and if_unsafe_then_cap'\<rbrace>
    setCTE p (cteCap_update (\<lambda>_. cap) oldcte)
@@ -3809,10 +3702,7 @@ lemma arch_update_setCTE_invs:
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (wp arch_update_setCTE_mdb setCTE_pspace_in_kernel_mappings' valid_bitmaps_lift
-            sch_act_wf_lift tcb_in_cur_domain'_lift
-            ct_idle_or_in_cur_domain'_lift
-            arch_update_setCTE_iflive arch_update_setCTE_ifunsafe
-            valid_irq_node_lift setCTE_typ_at' setCTE_irq_handlers'
+            arch_update_setCTE_ifunsafe valid_irq_node_lift setCTE_typ_at' setCTE_irq_handlers'
             irqs_masked_lift
             setCTE_norq hoare_vcg_disj_lift untyped_ranges_zero_lift valid_replies'_lift
             sym_heap_sched_pointers_lift setCTE_valid_arch
@@ -5043,6 +4933,32 @@ lemma cteInsert_simple_invs:
               elim: valid_capAligned)
   done
 
+lemma setCTE_set_cap_ep_queues_relation_valid_corres:
+  assumes pre: "ep_queues_relation s s'"
+      and step_abs: "(x, t) \<in> fst (set_cap cap slot s)"
+      and step_conc: "(y, t') \<in> fst (setCTE slot' cap' s')"
+  shows "ep_queues_relation t t'"
+  apply (insert pre)
+  apply (rule use_valid[OF step_abs set_cap.valid_sched_pred])
+  apply (rule use_valid[OF step_conc setCTE_eps_of'])
+  apply (rule use_valid[OF step_conc setCTE_tcbSchedNexts_of])
+  apply (rule use_valid[OF step_conc setCTE_tcbSchedPrevs_of])
+  apply clarsimp
+  done
+
+lemma setCTE_set_cap_ntfn_queues_relation_valid_corres:
+  assumes pre: "ntfn_queues_relation s s'"
+      and step_abs: "(x, t) \<in> fst (set_cap cap slot s)"
+      and step_conc: "(y, t') \<in> fst (setCTE slot' cap' s')"
+  shows "ntfn_queues_relation t t'"
+  apply (insert pre)
+  apply (rule use_valid[OF step_abs set_cap.valid_sched_pred])
+  apply (rule use_valid[OF step_conc setCTE_ntfns_of'])
+  apply (rule use_valid[OF step_conc setCTE_tcbSchedNexts_of])
+  apply (rule use_valid[OF step_conc setCTE_tcbSchedPrevs_of])
+  apply clarsimp
+  done
+
 lemma updateCap_same_master:
   "\<lbrakk> cap_relation cap cap' \<rbrakk> \<Longrightarrow>
    corres dc (valid_objs and pspace_aligned and pspace_distinct and
@@ -5079,6 +4995,10 @@ lemma updateCap_same_master:
         subgoal by (erule setCTE_set_cap_ready_queues_relation_valid_corres; assumption)
        apply (extract_conjunct \<open>match conclusion in "release_queue_relation a b" for a b \<Rightarrow> -\<close>)
         subgoal by (erule setCTE_set_cap_release_queue_relation_valid_corres; assumption)
+       apply (extract_conjunct \<open>match conclusion in "ep_queues_relation a b" for a b \<Rightarrow> -\<close>)
+        subgoal by (erule setCTE_set_cap_ep_queues_relation_valid_corres; assumption)
+       apply (extract_conjunct \<open>match conclusion in "ntfn_queues_relation a b" for a b \<Rightarrow> -\<close>)
+        subgoal by (erule setCTE_set_cap_ntfn_queues_relation_valid_corres; assumption)
        apply (rule conjI)
         apply (frule setCTE_pspace_only)
         apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def)
@@ -5181,7 +5101,7 @@ lemma updateFreeIndex_forward_invs':
     apply (simp add: valid_pspace'_def, wp updateFreeIndex_forward_valid_objs'
              updateFreeIndex_forward_valid_mdb')
    apply (simp add: updateFreeIndex_def updateTrackedFreeIndex_def)
-   apply (wp valid_bitmaps_lift updateCap_iflive' sym_heap_sched_pointers_lift
+   apply (wp valid_bitmaps_lift sym_heap_sched_pointers_lift
            | simp add: pred_tcb_at'_def)+
       apply (rule hoare_vcg_conj_lift)
 
@@ -5193,7 +5113,7 @@ lemma updateFreeIndex_forward_invs':
        apply (simp add:updateCap_def)
        apply (wp setCTE_irq_handlers' getCTE_wp)
       apply (simp add:updateCap_def)
-      apply (wp irqs_masked_lift cur_tcb_lift ct_idle_or_in_cur_domain'_lift
+      apply (wp irqs_masked_lift cur_tcb_lift
                 hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp
                 sym_heap_sched_pointers_lift valid_bitmaps_lift
                | wp (once) hoare_use_eq[where f="gsUntypedZeroRanges"]

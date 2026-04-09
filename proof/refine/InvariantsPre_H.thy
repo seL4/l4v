@@ -134,4 +134,10 @@ lemma (in Arch) cteSizeBits_cte_level_bits:
 requalify_facts
   Arch.cteSizeBits_cte_level_bits
 
+definition aobj_of' :: "kernel_object \<rightharpoonup> arch_kernel_object" where
+  "aobj_of' ko \<equiv> case ko of KOArch aobj \<Rightarrow> Some aobj | _ \<Rightarrow> None"
+
+abbreviation aobjs_of' :: "kernel_state \<Rightarrow> obj_ref \<rightharpoonup> arch_kernel_object" where
+  "aobjs_of' s \<equiv> ksPSpace s |> aobj_of'"
+
 end

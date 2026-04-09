@@ -82,9 +82,10 @@ proof -
     by corres
 
   show ?thesis
-  unfolding set_vm_root_def setVMRoot_def catchFailure_def withoutFailure_def throw_def
+  unfolding set_vm_root_def setVMRoot_def catchFailure_def withoutFailure_def throw_def K_bind_def
   apply (rule corres_cross_over_guard[where Q="no_0_obj' and pspace_distinct' and pspace_aligned'"])
    apply (clarsimp simp add: pspace_distinct_cross pspace_aligned_cross state_relation_def)
+  apply (rule corres_stateAssert_ignore, fastforce intro!: tcb_at_cross simp: assms)
   apply (rule corres_guard_imp)
     apply (rule corres_split[where r'="(=) \<circ> cte_map" and P=\<top> and P'=\<top>])
        apply (simp add: getThreadVSpaceRoot_def locateSlotTCB_def locateSlotBasic_def
@@ -295,11 +296,6 @@ crunch unmapPageTable, unmapPage
   (simp: crunch_simps
    wp: crunch_wps getObject_inv)
 
-crunch storePTE
-  for no_0_obj'[wp]: no_0_obj'
-  and valid_arch'[wp]: valid_arch_state'
-  and cur_tcb'[wp]: cur_tcb'
-
 lemma no_fail_sfence[intro!,simp,wp]:
   "no_fail \<top> sfence"
   by (simp add: sfence_def)
@@ -402,7 +398,7 @@ definition
   | PageGetAddr ptr \<Rightarrow> \<top>"
 
 lemma set_mrs_invs'[wp]:
-  "\<lbrace> invs' and tcb_at' receiver \<rbrace> setMRs receiver recv_buf mrs \<lbrace>\<lambda>rv. invs' \<rbrace>"
+  "setMRs receiver recv_buf mrs \<lbrace>invs'\<rbrace>"
   apply (simp add: setMRs_def)
   apply (wp dmo_invs' no_irq_mapM no_irq_storeWord crunch_wps|
          simp add: zipWithM_x_mapM split_def)+
@@ -672,15 +668,6 @@ crunch deleteASID
   (simp: crunch_simps loadObject_default_def updateObject_default_def
    wp: getObject_inv)
 
-lemma storePTE_iflive [wp]:
-  "\<lbrace>if_live_then_nonz_cap'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: storePTE_def)
-  apply (rule hoare_pre)
-   apply (rule setObject_iflive' [where P=\<top>], simp)
-      apply (simp add: objBits_simps)
-     apply (auto simp: updateObject_default_def in_monad live'_def hyp_live'_def)
-  done
-
 method valid_idle'_setObject uses simp =
   simp add: valid_idle'_def, rule hoare_lift_Pf [where f="ksIdleThread"]; wpsimp?;
   (wpsimp wp: obj_at_setObject2[where P="idle_tcb'", simplified] hoare_drop_imp
@@ -711,11 +698,9 @@ lemma storePTE_invs[wp]:
   "storePTE p pte \<lbrace>invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (rule hoare_pre)
-   apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
-             valid_arch_state_lift' valid_irq_node_lift
-             cur_tcb_lift valid_irq_handlers_lift''
-             untyped_ranges_zero_lift sym_heap_sched_pointers_lift
-           | simp add: cteCaps_of_def o_def)+
+   apply (wp valid_global_refs_lift' irqs_masked_lift valid_arch_state_lift' valid_irq_node_lift
+             valid_irq_handlers_lift'' untyped_ranges_zero_lift sym_heap_sched_pointers_lift
+          | simp add: cteCaps_of_def o_def)+
   apply (clarsimp simp: valid_arch_obj'_def)
   done
 
@@ -737,23 +722,14 @@ lemma setASIDPool_state_refs' [wp]:
   apply (simp split: option.split)
   done
 
-lemma setASIDPool_iflive [wp]:
-  "\<lbrace>if_live_then_nonz_cap'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (rule hoare_pre)
-   apply (rule setObject_iflive' [where P=\<top>], simp)
-      apply (simp add: objBits_simps)
-     apply (auto simp: updateObject_default_def in_monad pageBits_def live'_def hyp_live'_def)
-  done
-
 lemma setASIDPool_invs [wp]:
   "setObject p (ap::asidpool) \<lbrace>invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
-  apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
-            valid_arch_state_lift' valid_irq_node_lift
-            cur_tcb_lift valid_irq_handlers_lift''
-            untyped_ranges_zero_lift updateObject_default_inv sym_heap_sched_pointers_lift
-          | simp add: cteCaps_of_def
-          | rule setObject_ksPSpace_only)+
+  apply (wp valid_global_refs_lift' irqs_masked_lift valid_arch_state_lift' valid_irq_node_lift
+            valid_irq_handlers_lift'' untyped_ranges_zero_lift updateObject_default_inv
+            sym_heap_sched_pointers_lift
+         | simp add: cteCaps_of_def
+         | rule setObject_ksPSpace_only)+
   apply (clarsimp simp:  o_def)
   done
 
