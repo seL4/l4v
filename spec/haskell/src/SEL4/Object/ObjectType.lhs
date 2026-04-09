@@ -171,6 +171,7 @@ Threads are treated as special capability nodes; they also become zombies when t
 >     return (Zombie cte_ptr ZombieTCB 5, NullCap)
 
 > finaliseCap (SchedContextCap { capSchedContextPtr = scPtr }) True _ = do
+>     stateAssert sch_act_simple_asrt "`sch_act_simple` must hold"
 >     schedContextUnbindAllTCBs scPtr
 >     schedContextUnbindNtfn scPtr
 >     schedContextUnbindReply scPtr

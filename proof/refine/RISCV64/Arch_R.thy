@@ -997,12 +997,7 @@ context begin interpretation Arch .
 
 crunch setThreadState
  for pspace_no_overlap'[wp]: "pspace_no_overlap' w s"
-  (simp: unless_def wp: crunch_wps)
-
-
-crunch setThreadState
-  for sc_at'_n[wp]: "sc_at'_n n p"
-  (simp: crunch_simps wp: crunch_wps)
+  (simp: unless_def crunch_simps wp: crunch_wps)
 
 lemma sts_valid_arch_inv':
   "\<lbrace>valid_arch_inv' ai\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_arch_inv' ai\<rbrace>"

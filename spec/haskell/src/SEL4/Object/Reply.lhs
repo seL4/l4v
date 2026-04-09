@@ -45,6 +45,7 @@ This module specifies the behavior of reply objects.
 >     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
 >     sc <- getSchedContext scPtr
 >     scReplyOpt <- return $ scReply sc
+>     stateAssert (valid_bound_reply'_asrt scReplyOpt) ""
 >     when (scReplyOpt /= Nothing) $ do
 >         scReplyPtr <- return $ fromJust scReplyOpt
 >         stateAssert (valid_replies'_sc_asrt scReplyPtr)
@@ -60,6 +61,10 @@ This module specifies the behavior of reply objects.
 >         "`valid_replies'_sc` holds for `replyPtr`"
 >     stateAssert valid_idle'_asrt "`valid_idle'`"
 >     stateAssert valid_objs'_asrt "`valid_objs'`"
+>     stateAssert (not_sched_linked_asrt callerPtr) ""
+>     reply <- getReply replyPtr
+>     assert (replyTCB reply == Nothing) "the reply must not be linked to a TCB"
+>     stateAssert (reply_object_asrt callerPtr) ""
 >     scPtrOptDonated <- threadGet tcbSchedContext callerPtr
 >     scPtrOptCallee <- threadGet tcbSchedContext calleePtr
 

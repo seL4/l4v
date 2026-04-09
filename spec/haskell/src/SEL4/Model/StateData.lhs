@@ -478,11 +478,37 @@ activatable' after schedule runs. We add an assertion that this is the case.
 > ct_activatable'_asrt :: KernelState -> Bool
 > ct_activatable'_asrt _ = True
 
-An assert that will say that the return value of findTimeAfter
-is a pointer in the release queue.
+An assert that will say that there is an abstract list with which the given
+TcbQueue is in `list_queue_relation`, that the given TCB pointer is not an
+element of the list, and that all elements of the list satisfy the predicate
+`sched_flag_set`.
 
-> findTimeAfter_asrt :: PPtr TCB -> KernelState -> Bool
-> findTimeAfter_asrt _ _ = True
+> tcbQueueAdd_asrt :: TcbQueue -> PPtr TCB -> KernelState -> Bool
+> tcbQueueAdd_asrt _ _ _ = True
+
+An assert that will say that there is an abstract list and a TcbQueue
+which are in `list_queue_relation`, that the TCB pointer to be inserted is
+not an element of the list, that the TCB pointer before which we insert the
+new TCB pointer is in the list, and that all elements of the list satisfy
+the predicate `sched_flag_set`.
+
+> tcbQueueInsert_asrt :: PPtr TCB -> PPtr TCB -> KernelState -> Bool
+> tcbQueueInsert_asrt _ _ _ = True
+
+An assert that will say that there is an abstract list with which the given
+TcbQueue is in `list_queue_relation`, that the given TCB pointer is an
+element of the list, and that all elements of the list except the given TCB
+pointer satisfy the predicate `sched_flag_set`.
+
+> tcbQueueRemove_asrt :: TcbQueue -> PPtr TCB -> KernelState -> Bool
+> tcbQueueRemove_asrt _ _ _ = True
+
+An assert that will say that there is an abstract list with which the given
+TcbQueue is in `list_queue_relation`, and that the given TCB pointer is an
+element of the list.
+
+> insertionPoint_asrt :: TcbQueue -> PPtr TCB -> KernelState -> Bool
+> insertionPoint_asrt _ _ _ = True
 
 An assert that will say that `ready_or_release'` holds. That is, no thread
 has both the tcbQueued and tcbInReleaseQueue flag set.
@@ -537,6 +563,11 @@ An assert that will say that there is a scheduling context at the given pointer
 > sc_at'_asrt :: PPtr SchedContext -> KernelState -> Bool
 > sc_at'_asrt _ _ = True
 
+An assert that will say that there is an endpoint at the given pointer
+
+> ep_at'_asrt :: PPtr Endpoint -> KernelState -> Bool
+> ep_at'_asrt _ _ = True
+
 An assert that will say that there is an active scheduling context at the given pointer
 
 > active_sc_at'_asrt :: PPtr SchedContext -> KernelState -> Bool
@@ -582,12 +613,75 @@ An assert that will say that sch_act_simple holds
 > sch_act_simple_asrt :: KernelState -> Bool
 > sch_act_simple_asrt _ = True
 
-An assert that will say that priority_ordered' holds of the given list
-
-> priority_ordered'_asrt :: [PPtr TCB] -> KernelState -> Bool
-> priority_ordered'_asrt _ _ = True
-
 An assert that will say that valid_domain_list' holds
 
 > valid_domain_list'_asrt :: KernelState -> Bool
 > valid_domain_list'_asrt _ = True
+
+An assert that will say that pspace_aligned' holds
+
+> pspace_aligned'_asrt :: KernelState -> Bool
+> pspace_aligned'_asrt _ = True
+
+An assert that will say that pspace_distinct' holds
+
+> pspace_distinct'_asrt :: KernelState -> Bool
+> pspace_distinct'_asrt _ = True
+
+An assert that will say that valid_bound_ep' holds
+
+> valid_bound_ep'_asrt :: Maybe (PPtr Endpoint) -> KernelState -> Bool
+> valid_bound_ep'_asrt _ _ = True
+
+An assert that will say that valid_bound_ntfn' holds
+
+> valid_bound_ntfn'_asrt :: Maybe (PPtr Notification) -> KernelState -> Bool
+> valid_bound_ntfn'_asrt _ _ = True
+
+An assert that will say that valid_bound_tcb' holds
+
+> valid_bound_tcb'_asrt :: Maybe (PPtr TCB) -> KernelState -> Bool
+> valid_bound_tcb'_asrt _ _ = True
+
+An assert that will say that valid_bound_sc' holds
+
+> valid_bound_sc'_asrt :: Maybe (PPtr SchedContext) -> KernelState -> Bool
+> valid_bound_sc'_asrt _ _ = True
+
+An assert that will say that valid_bound_reply' holds
+
+> valid_bound_reply'_asrt :: Maybe (PPtr Reply) -> KernelState -> Bool
+> valid_bound_reply'_asrt _ _ = True
+
+An assert that will say that sym_heap_sched_pointers holds
+
+> sym_heap_sched_pointers_asrt :: KernelState -> Bool
+> sym_heap_sched_pointers_asrt _ = True
+
+An assert that will say that if_live_then_nonz_cap' holds
+
+> if_live_then_nonz_cap'_asrt :: KernelState -> Bool
+> if_live_then_nonz_cap'_asrt _ = True
+
+An assert that will say that the given thread is not `is_sched_linked`
+
+> not_sched_linked_asrt :: PPtr TCB -> KernelState -> Bool
+> not_sched_linked_asrt _ _ = True
+
+An assert that will say that if a thread's state is either blocked on
+receive or blocked on reply, then its reply object is none
+
+> reply_object_asrt :: PPtr TCB -> KernelState -> Bool
+> reply_object_asrt _ _ = True
+
+An assert that will say that tcb_queue_head_end_valid holds of the
+given tcb_queue
+
+> tcb_queue_head_end_valid_asrt :: TcbQueue -> KernelState -> Bool
+> tcb_queue_head_end_valid_asrt _ _ = True
+
+An assert regarding many properties that are true when we call
+orderedInsert and traverse the list backwards
+
+> orderedInsertBackwards_asrt :: PPtr TCB -> TcbQueue -> (PPtr TCB -> KernelR b) -> (b -> b -> Bool) -> KernelState -> Bool
+> orderedInsertBackwards_asrt _ _ _ _ _ = True

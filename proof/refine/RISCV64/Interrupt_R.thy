@@ -732,14 +732,14 @@ lemma hint_invs[wp]:
   "handleInterrupt irq \<lbrace>invs'\<rbrace>"
   apply (simp add: handleInterrupt_def getSlotCap_def cong: irqstate.case_cong)
   apply (rule conjI; rule impI)
-   apply (wp dmo_maskInterrupt_True getCTE_wp'
-          | wpc | simp add: doMachineOp_bind maskIrqSignal_def )+
-      apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_post_imp)
-       apply (clarsimp simp: cte_wp_at_ctes_of ex_nonz_cap_to'_def)
-       apply fastforce
+   apply (wpsimp wp: dmo_maskInterrupt_True getCTE_wp'
+               simp: doMachineOp_bind maskIrqSignal_def
+          | wpc)+
+      apply (rule_tac Q'="\<lambda>_. invs'" in hoare_post_imp)
+       apply clarsimp
       apply (wp threadSet_invs_trivial | simp add: inQ_def handleReservedIRQ_def)+
    apply (wp hoare_post_comb_imp_conj hoare_drop_imp getIRQState_inv)
-  apply (assumption)+
+  apply fastforce
   done
 
 end

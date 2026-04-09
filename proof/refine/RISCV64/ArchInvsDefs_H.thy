@@ -208,5 +208,19 @@ lemma valid_sz_simps:
                      pteBits_def wordSizeCase_def wordBits_def replySizeBits_def
               split: arch_kernel_object.splits)
 
+text \<open>Heap projections:\<close>
+
+definition asid_pool_of' :: "arch_kernel_object \<rightharpoonup> asidpool" where
+  "asid_pool_of' ko \<equiv> case ko of KOASIDPool pool \<Rightarrow> Some pool | _ \<Rightarrow> None"
+
+abbreviation asid_pools_of' :: "kernel_state \<Rightarrow> obj_ref \<rightharpoonup> asidpool" where
+  "asid_pools_of' \<equiv> \<lambda>s. aobjs_of' s |> asid_pool_of'"
+
+definition pte_of' :: "arch_kernel_object \<rightharpoonup> pte" where
+  "pte_of' ko \<equiv> case ko of KOPTE pte \<Rightarrow> Some pte | _ \<Rightarrow> None"
+
+abbreviation ptes_of' :: "kernel_state \<Rightarrow> obj_ref \<rightharpoonup> pte" where
+  "ptes_of' \<equiv> \<lambda>s. aobjs_of' s |> pte_of'"
+
 end
 end

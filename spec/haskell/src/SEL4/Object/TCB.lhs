@@ -26,13 +26,13 @@ This module uses the C preprocessor to select a target architecture.
 >         archThreadSet, archThreadGet,
 >         decodeSchedContextInvocation, decodeSchedControlInvocation,
 >         checkBudget, chargeBudget, checkBudgetRestart, mcsPreemptionPoint, commitTime, awaken, switchSchedContext,
->         updateAt, tcbEPAppend, tcbEPDequeue, isBlocked, isStopped
+>         updateAt, isBlocked, isStopped
 >     ) where
 
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.API.Types SEL4.API.Failures SEL4.Machine SEL4.Model SEL4.Object.Structures SEL4.API.Invocation #-}
-% {-# BOOT-EXPORTS: threadRead threadGet threadSet asUser setMRs replyFromKernel setMessageInfo getThreadCSpaceRoot getThreadVSpaceRoot decodeTCBInvocation invokeTCB getThreadBufferSlot decodeDomainInvocation archThreadSet archThreadGet sanitiseRegister decodeSchedContextInvocation decodeSchedControlInvocation checkBudget chargeBudget updateAt tcbEPAppend tcbEPDequeue #-}
+% {-# BOOT-EXPORTS: threadRead threadGet threadSet asUser setMRs replyFromKernel setMessageInfo getThreadCSpaceRoot getThreadVSpaceRoot decodeTCBInvocation invokeTCB getThreadBufferSlot decodeDomainInvocation archThreadSet archThreadGet sanitiseRegister decodeSchedContextInvocation decodeSchedControlInvocation checkBudget chargeBudget updateAt #-}
 
 > import Prelude hiding (Word)
 > import SEL4.Config
@@ -406,9 +406,12 @@ This is to ensure that the source capability is not made invalid by the deletion
 >     -- check if notification is bound
 >     -- check if anything is waiting on the notification
 >     notification <- withoutFailure $ getNotification ntfnPtr
->     case (ntfnObj notification, ntfnBoundTCB notification) of
->         (IdleNtfn, Nothing) -> return ()
->         (ActiveNtfn _, Nothing) -> return ()
+>     q <- return $ ntfnQueue notification
+>     assert ((tcbQueueEmpty q) == (ntfnState notification /= Waiting)) "the queue must be nonempty only when the state is Waiting"
+>     stateAssert (tcb_queue_head_end_valid_asrt q) ""
+>     case (ntfnState notification, ntfnBoundTCB notification) of
+>         (IdleNtfnState, Nothing) -> return ()
+>         (Active, Nothing) -> return ()
 >         _ -> throw IllegalOperation
 >     return NotificationControl {
 >         notificationTCB = tcb,
@@ -1153,15 +1156,3 @@ On some architectures, the thread context may include registers that may be modi
 >         "every thread in the release queue is associated with \
 >          an active scheduling context"
 >     whileLoop (const (fromJust . runReaderT releaseQNonEmptyAndReady)) (const tcbReleaseDequeue) ()
-
-> tcbEPAppend :: PPtr TCB -> [PPtr TCB] -> Kernel [PPtr TCB]
-> tcbEPAppend tptr queue = do
->     stateAssert (priority_ordered'_asrt queue) "queue must be ordered by priority"
->     prio <- threadGet tcbPriority tptr
->     prios <- mapM (threadGet tcbPriority) queue
->     zprios <- return $ zip queue prios
->     zprios' <- return $ filter (\(t, p) -> p >= prio) zprios ++ [(tptr, prio)] ++ filter (\(t, p) -> p < prio) zprios
->     return (map fst zprios')
-
-> tcbEPDequeue :: PPtr TCB -> [PPtr TCB] -> Kernel [PPtr TCB]
-> tcbEPDequeue tptr queue = return $ filter (\t -> t /= tptr) queue

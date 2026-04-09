@@ -1415,15 +1415,15 @@ crunch updateMDB, updateNewFreeIndex, setCTE
            (tcbInReleaseQueue |< tcbs_of' s)"
   and rdyq_projs[wp]:
     "\<lambda>s. P (ksReadyQueues s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s) (\<lambda>d p. inQ d p |< tcbs_of' s)"
+  and epqs_projs[wp]:
+    "\<lambda>s. P (epQueues_of s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s)"
+  and ntfnqs_projs[wp]:
+    "\<lambda>s. P (ntfnQueues_of s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s)"
 
 crunch set_cap, set_cdt
   for domain_index[wp]: "\<lambda>s. P (domain_index s)"
   and reprogram_timer[wp]: "\<lambda>s. P (reprogram_timer s)"
   (wp: crunch_wps)
-
-crunch updateMDB, updateNewFreeIndex, setCTE
-  for rdyq_projs[wp]:
-    "\<lambda>s. P (ksReadyQueues s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s) (\<lambda>d p. inQ d p |< tcbs_of' s)"
 
 lemma insertNewCap_corres:
 notes if_cong[cong del] if_weak_cong[cong]
@@ -3669,10 +3669,9 @@ lemma updateFreeIndex_clear_invs':
   apply (clarsimp simp:invs'_def valid_dom_schedule'_def)
   apply (wp updateFreeIndex_valid_pspace_no_overlap')
    apply (simp add: updateFreeIndex_def updateTrackedFreeIndex_def)
-   apply (wp updateFreeIndex_valid_pspace_no_overlap' sch_act_wf_lift
-             updateCap_iflive' tcb_in_cur_domain'_lift
+   apply (wp updateFreeIndex_valid_pspace_no_overlap'
              sym_heap_sched_pointers_lift valid_bitmaps_lift
-            | simp add: pred_tcb_at'_def)+
+          | simp add: pred_tcb_at'_def)+
       apply (rule hoare_vcg_conj_lift)
        apply (simp add: ifunsafe'_def3 cteInsert_def setUntypedCapAsFull_def
                split del: if_split)
@@ -3682,7 +3681,7 @@ lemma updateFreeIndex_clear_invs':
        apply (simp add:updateCap_def)
        apply (wp setCTE_irq_handlers' getCTE_wp)
       apply (simp add:updateCap_def)
-      apply (wp irqs_masked_lift cur_tcb_lift ct_idle_or_in_cur_domain'_lift
+      apply (wp irqs_masked_lift cur_tcb_lift
                 hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp
              | wp (once) hoare_use_eq[where f="gsUntypedZeroRanges"]
              | simp add: getSlotCap_def
@@ -4722,8 +4721,13 @@ lemma inv_untyped_corres':
   "\<lbrakk> untypinv_relation ui ui' \<rbrakk> \<Longrightarrow>
    corres (dc \<oplus> (=))
      (einvs and valid_machine_time and valid_untyped_inv ui and ct_active and schact_is_rct)
-     (invs' and valid_untyped_inv' ui' and ct_active' and (\<lambda>s. sym_refs (state_refs_of' s)))
+     (invs' and valid_untyped_inv' ui' and ct_active')
      (invoke_untyped ui) (invokeUntyped ui')"
+  apply add_sym_refs
+  apply add_sch_act_wf
+  apply (rule_tac Q'="\<lambda>s. sym_refs (state_refs_of' s)" in corres_cross_add_guard, simp)
+  apply (rule_tac Q'="\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s" in corres_cross_add_guard)
+   apply (clarsimp simp: weak_sch_act_wf_def)
   apply (cases ui)
   apply (rule corres_name_pre)
   apply (clarsimp simp only: valid_untyped_inv_wcap
@@ -4742,6 +4746,7 @@ lemma inv_untyped_corres':
     assume invs: "invs (s :: det_state)" "ct_active s" "valid_list s" "valid_sched s"
                  "schact_is_rct s" "valid_machine_time s"
     and   invs': "invs' s'" "ct_active' s'" "sym_refs (state_refs_of' s')"
+                 "weak_sch_act_wf (ksSchedulerAction s') s'"
     and      sr: "(s, s') \<in> state_relation"
     and     vui: "valid_untyped_inv_wcap ?ui (Some (cap.UntypedCap dev (ptr && ~~ mask sz) sz idx)) s"
                  (is "valid_untyped_inv_wcap _ (Some ?cap) s")
@@ -5242,13 +5247,6 @@ lemma insertNewCap_ifunsafe'[wp]:
 crunch updateNewFreeIndex
   for if_live_then_nonz_cap'[wp]: "if_live_then_nonz_cap'"
 
-lemma insertNewCap_iflive'[wp]:
-  "\<lbrace>if_live_then_nonz_cap'\<rbrace> insertNewCap parent slot cap \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: insertNewCap_def)
-  apply (wp setCTE_iflive' getCTE_wp')
-  apply (clarsimp elim!: cte_wp_at_weakenE')
-  done
-
 lemma insertNewCap_cte_wp_at'':
   "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p and K (\<not> P NullCap)\<rbrace>
      insertNewCap parent slot cap
@@ -5307,15 +5305,6 @@ lemma insertNewCap_valid_irq_handlers:
   apply (clarsimp simp: cteCaps_of_def cte_wp_at_ctes_of ran_def)
   apply auto
   done
-
-lemma insertNewCap_ct_idle_or_in_cur_domain'[wp]:
-  "\<lbrace>ct_idle_or_in_cur_domain' and ct_active'\<rbrace> insertNewCap parent slot cap \<lbrace>\<lambda>_. ct_idle_or_in_cur_domain'\<rbrace>"
-apply (wp ct_idle_or_in_cur_domain'_lift_futz[where Q=\<top>])
-apply (rule_tac Q'="\<lambda>_. obj_at' (\<lambda>tcb. tcbState tcb \<noteq> Structures_H.thread_state.Inactive) t and obj_at' (\<lambda>tcb. d = tcbDomain tcb) t"
-             in hoare_strengthen_post)
-apply (wp | clarsimp elim: obj_at'_weakenE)+
-apply (auto simp: obj_at'_def)
-done
 
 crunch insertNewCap
   for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
@@ -5698,7 +5687,7 @@ lemma invokeUntyped_invs'[wp]:
   done
 
 lemma resetUntypedCap_st_tcb_at':
-  "\<lbrace>invs' and (\<lambda>s. sym_refs (state_refs_of' s))
+  "\<lbrace>invs'
       and st_tcb_at' (P and ((\<noteq>) Inactive) and ((\<noteq>) IdleThreadState)) t
       and cte_wp_at' (\<lambda>cp. isUntypedCap (cteCap cp)) slot
       and ct_active' and sch_act_simple and (\<lambda>s. descendants_of' slot (ctes_of s) = {})\<rbrace>
@@ -5706,7 +5695,7 @@ lemma resetUntypedCap_st_tcb_at':
    \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
   apply (rule_tac
-          P'="\<lambda>s. \<exists>d v0 v1 f. invs' s \<and> sym_refs (state_refs_of' s)
+          P'="\<lambda>s. \<exists>d v0 v1 f. invs' s
                              \<and> st_tcb_at' (P and (\<noteq>) Structures_H.thread_state.Inactive and
                                             (\<noteq>) Structures_H.thread_state.IdleThreadState) t s
                              \<and> (cte_wp_at' (\<lambda>cp. cteCap cp = capability.UntypedCap d v0 v1 f) slot s)

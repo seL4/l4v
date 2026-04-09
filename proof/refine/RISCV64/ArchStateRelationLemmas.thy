@@ -26,12 +26,13 @@ lemma obj_relation_cuts_def2:
                  if valid_sched_context_size n then {(x, sc_relation_cut)} else {(x, \<bottom>\<bottom>)}
              | Structures_A.Reply reply \<Rightarrow> {(x, reply_relation_cut)}
              | TCB tcb \<Rightarrow> {(x, tcb_relation_cut)}
+             | Structures_A.Endpoint endpoint \<Rightarrow> {(x, ep_relation_cut)}
+             | Structures_A.Notification notification \<Rightarrow> {(x, ntfn_relation_cut)}
              | ArchObj (PageTable pt) \<Rightarrow> (\<lambda>y. (x + (ucast y << pteBits), pte_relation y)) ` UNIV
              | ArchObj (DataPage dev sz) \<Rightarrow>
                  {(x + (n << pageBits),  \<lambda>_ obj. obj =(if dev then KOUserDataDevice else KOUserData))
                   | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
-             | ArchObj _ \<Rightarrow> {(x, other_aobj_relation)}
-             | _ \<Rightarrow> {(x, other_obj_relation)})"
+             | ArchObj _ \<Rightarrow> {(x, other_aobj_relation)})"
   by (simp split: Structures_A.kernel_object.split
                   RISCV64_A.arch_kernel_obj.split)
 
@@ -43,14 +44,15 @@ lemma obj_relation_cuts_def3:
         if valid_sched_context_size n then {(x, sc_relation_cut)} else {(x, \<bottom>\<bottom>)}
     | AReply \<Rightarrow> {(x, reply_relation_cut)}
     | ATCB \<Rightarrow> {(x, tcb_relation_cut)}
+    | AEndpoint \<Rightarrow> {(x, ep_relation_cut)}
+    | ANTFN \<Rightarrow> {(x, ntfn_relation_cut)}
     | AArch APageTable \<Rightarrow> (\<lambda>y. (x + (ucast y << pteBits), pte_relation y)) ` UNIV
     | AArch (AUserData sz) \<Rightarrow> {(x + (n << pageBits), \<lambda>_ obj. obj = KOUserData)
                                | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
     | AArch (ADeviceData sz) \<Rightarrow> {(x + (n << pageBits), \<lambda>_ obj. obj = KOUserDataDevice )
                                  | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
     | AArch _ \<Rightarrow> {(x, other_aobj_relation)}
-    | AGarbage _ \<Rightarrow> {(x, \<bottom>\<bottom>)}
-    | _ \<Rightarrow> {(x, other_obj_relation)})"
+    | AGarbage _ \<Rightarrow> {(x, \<bottom>\<bottom>)})"
   by (simp add: obj_relation_cuts_def2 a_type_def well_formed_cnode_n_def length_set_helper
            split: Structures_A.kernel_object.split RISCV64_A.arch_kernel_obj.split)
 
@@ -68,17 +70,22 @@ lemma obj_relation_cutsE:
               \<Longrightarrow> R;
      \<And>tcb tcb'. \<lbrakk> y = x; ko = TCB tcb; ko' = KOTCB tcb'; tcb_relation tcb tcb' \<rbrakk>
               \<Longrightarrow> R;
+     \<And>ep ep'. \<lbrakk> y = x; ko = Structures_A.Endpoint ep; ko' = KOEndpoint ep'; ep_relation ep ep' \<rbrakk>
+              \<Longrightarrow> R;
+     \<And>ntfn ntfn'. \<lbrakk> y = x; ko = Structures_A.Notification ntfn; ko' = KONotification ntfn';
+                    ntfn_relation ntfn ntfn' \<rbrakk>
+              \<Longrightarrow> R;
      \<And>pt (z :: pt_index) pte'. \<lbrakk> ko = ArchObj (PageTable pt); y = x + (ucast z << pteBits);
                                  ko' = KOArch (KOPTE pte'); pte_relation' (pt z) pte' \<rbrakk>
               \<Longrightarrow> R;
      \<And>sz dev n. \<lbrakk> ko = ArchObj (DataPage dev sz);
                   ko' = (if dev then KOUserDataDevice else KOUserData);
                   y = x + (n << pageBits); n < 2 ^ (pageBitsForSize sz - pageBits) \<rbrakk> \<Longrightarrow> R;
-     \<And>ako. \<lbrakk> ko \<noteq> ArchObj ako; y = x; other_obj_relation ko ko'; is_other_obj_relation_type (a_type ko) \<rbrakk> \<Longrightarrow> R;
      \<And>ako. \<lbrakk> ko = ArchObj ako; y = x; other_aobj_relation ko ko'; is_other_obj_relation_type (a_type ko) \<rbrakk> \<Longrightarrow> R
     \<rbrakk> \<Longrightarrow> R"
   by (force simp: obj_relation_cuts_def2 is_other_obj_relation_type_def a_type_def
-                  tcb_relation_cut_def cte_relation_def pte_relation_def
+                  tcb_relation_cut_def ep_relation_cut_def ntfn_relation_cut_def
+                  cte_relation_def pte_relation_def
             split: Structures_A.kernel_object.splits kernel_object.splits if_splits
                    RISCV64_A.arch_kernel_obj.splits)
 
@@ -87,8 +94,8 @@ lemma is_other_obj_relation_type_gen[simp, StateRelation_R_assms]:
   "\<And>n. \<not> is_other_obj_relation_type (ASchedContext n)"
   "\<not> is_other_obj_relation_type AReply"
   "\<not> is_other_obj_relation_type ATCB"
-  "is_other_obj_relation_type AEndpoint"
-  "is_other_obj_relation_type ANTFN"
+  "\<not> is_other_obj_relation_type AEndpoint"
+  "\<not> is_other_obj_relation_type ANTFN"
   "\<And>n. \<not> is_other_obj_relation_type (AGarbage n)"
   by (auto simp: is_other_obj_relation_type_def)
 
@@ -155,7 +162,7 @@ lemmas isCap_defs =
 
 lemma is_other_obj_relation_type:
   "is_other_obj_relation_type (a_type ko)
-   \<Longrightarrow> obj_relation_cuts ko x = {(x, if is_ArchObj ko then other_aobj_relation else other_obj_relation)}"
+   \<Longrightarrow> obj_relation_cuts ko x = {(x, other_aobj_relation)}"
   by (clarsimp simp add: obj_relation_cuts_def3 is_other_obj_relation_type_def
                split: a_type.splits aa_type.splits)
 
