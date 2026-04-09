@@ -1063,7 +1063,7 @@ lemma restore_virt_timer_valid_irq_states[wp]:
   apply (repeat_unless \<open>rule bind_wp[OF _ is_irq_active_sp]\<close>
                        \<open>rule bind_wp_fwd_skip,
                         wpsimp wp: dmo_valid_irq_states
-                             simp: isb_def setHCR_def read_cntpct_def\<close>)
+                             simp: isb_def setHCR_def\<close>)
   apply (wpsimp simp: do_machine_op_def is_irq_active_def get_irq_state_def
                 wp_del: dmo_valid_irq_states)
   apply (clarsimp simp: valid_irq_states_def valid_irq_masks_def maskInterrupt_def in_monad)
@@ -1088,7 +1088,7 @@ lemma associate_vcpu_tcb_valid_irq_states[wp]:
 crunch associate_vcpu_tcb
   for cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
   (wp: crunch_wps cap_refs_respects_device_region_dmo
-   simp: read_cntpct_def get_irq_state_def maskInterrupt_def)
+   simp: get_irq_state_def maskInterrupt_def)
 
 lemma arm_current_vcpu_update_valid_global_objs[simp]:
   "valid_global_objs (s\<lparr>arch_state := arm_current_vcpu_update f (arch_state s)\<rparr>) = valid_global_objs s"

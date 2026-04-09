@@ -571,12 +571,6 @@ lemma vcpu_write_if_live_then_nonz_cap[wp]:
   "vcpu_write_reg vcpu_ptr reg val \<lbrace>if_live_then_nonz_cap\<rbrace>"
   unfolding vcpu_write_reg_def by (wpsimp cong: vcpu_state.fold_congs)
 
-lemma vcpu_update_vtimer_if_live_then_nonz_cap[wp]:
-  "vcpu_update vcpu_ptr (vcpu_vtimer_update f) \<lbrace>if_live_then_nonz_cap\<rbrace>"
-  unfolding vcpu_update_def
-  by (wpsimp wp: set_vcpu_if_live_then_nonz_cap_same_refs get_vcpu_wp)
-     (simp add: obj_at_def in_omonad)
-
 crunch vcpu_disable, vcpu_invalidate_active
   for if_live_then_nonz_cap[wp]: if_live_then_nonz_cap
   (ignore: vcpu_update)
@@ -597,7 +591,7 @@ crunch dissociate_vcpu_tcb
 crunch dissociate_vcpu_tcb
   for cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
   (wp: crunch_wps cap_refs_respects_device_region_dmo
-   simp: crunch_simps read_cntpct_def maskInterrupt_def
+   simp: crunch_simps maskInterrupt_def
    ignore: do_machine_op)
 
 crunch dissociate_vcpu_tcb
@@ -661,7 +655,7 @@ crunch vcpu_save_reg, vgic_update, vcpu_disable
   (wp: dmo_maskInterrupt_True_valid_irq_states dmo_valid_irq_states
    simp: isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def getSCTLR_def
          get_gic_vcpu_ctrl_hcr_def dsb_def readVCPUHardwareReg_def writeVCPUHardwareReg_def
-         read_cntpct_def maskInterrupt_def check_export_arch_timer_def)
+         maskInterrupt_def check_export_arch_timer_def)
 
 lemma dmo_writeVCPUHardwareReg_valid_machine_state[wp]:
   "do_machine_op (writeVCPUHardwareReg r v) \<lbrace>valid_machine_state\<rbrace>"
@@ -672,7 +666,7 @@ crunch vgic_update, vcpu_update, vcpu_write_reg, vcpu_save_reg, save_virt_timer
   for in_user_frame[wp]: "in_user_frame p"
   and valid_machine_state[wp]: valid_machine_state
   and underlying_memory[wp]: "\<lambda>s. P (underlying_memory (machine_state s))"
-  (simp: readVCPUHardwareReg_def read_cntpct_def
+  (simp: readVCPUHardwareReg_def
    wp: writeVCPUHardwareReg_underlying_memory_inv dmo_machine_state_lift
    ignore: do_machine_op)
 

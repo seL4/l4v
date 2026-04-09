@@ -966,10 +966,7 @@ lemma vcpu_save_reg_vcpu_tcbs_of[wp]:
 lemma save_virt_timer_vcpu_tcbs_of[wp]:
   "save_virt_timer vcpu_ptr \<lbrace>\<lambda>s. P (vcpu_tcbs_of s)\<rbrace>"
   unfolding save_virt_timer_def
-  apply wpsimp
-         apply (rule hoare_post_imp[where Q'="\<lambda>_ s. P (vcpu_tcbs_of s)"])
-          apply (fastforce simp: opt_map_def elim!: rsubst[where P=P])
-         by wpsimp+
+  by wpsimp
 
 crunch vcpu_disable, vcpu_restore, vcpu_save
   for vcpu_tcbs_of[wp]: "\<lambda>s. P (vcpu_tcbs_of s)"

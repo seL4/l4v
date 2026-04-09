@@ -334,7 +334,6 @@ crunch
   writeFpuState,
   readVCPUHardwareReg,
   writeVCPUHardwareReg,
-  read_cntpct,
   sendSGI,
   readFpuState
   for (no_fail) no_fail[intro!, wp, simp]

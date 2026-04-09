@@ -328,14 +328,6 @@ lemma vgic_update_hyp_live[wp]:
   "\<lbrace>obj_at hyp_live p\<rbrace> vgic_update vcpuptr f \<lbrace>\<lambda>_. obj_at hyp_live p\<rbrace>"
   by (wpsimp wp: vgic_update_obj_at simp: in_omonad obj_at_def)
 
-lemma hyp_live_vcpu_vtimer_idem[simp]:
-  "hyp_live (ArchObj (VCPU (vcpu_vtimer_update f vcpu))) = hyp_live (ArchObj (VCPU vcpu))"
-  by (simp add: hyp_live_def arch_live_def)
-
-lemma vcpu_update_vtimer_hyp_live[wp]:
-  "vcpu_update vcpu_ptr (vcpu_vtimer_update f) \<lbrace> obj_at hyp_live p \<rbrace>"
-  by (wpsimp wp: vcpu_update_obj_at simp: obj_at_def in_omonad)
-
 crunch vcpu_save_reg, vcpu_write_reg
   for vcpu_hyp_live[wp]: "\<lambda>s. P (vcpu_hyp_live_of s)"
   (simp_del: fun_upd_apply simp: opt_map_upd_triv)
@@ -343,7 +335,7 @@ crunch vcpu_save_reg, vcpu_write_reg
 crunch vcpu_save_reg_range, vgic_update_lr, vcpu_disable, vcpu_save, vcpu_restore,
          save_virt_timer, restore_virt_timer
   for vcpu_hyp_live[wp]: "\<lambda>s. P (vcpu_hyp_live_of s)"
-  (wp: vcpu_update_vtimer_hyp_live vcpu_update_obj_at crunch_wps
+  (wp: vcpu_update_obj_at crunch_wps
    simp_del: fun_upd_apply
    simp: opt_map_upd_triv)
 
@@ -2887,7 +2879,6 @@ lemma vcpu_update_trivial_invs:
   done
 
 lemmas vcpu_update_invs[wp] =
-  vcpu_update_trivial_invs[where upd="vcpu_vtimer_update", simplified]
   vcpu_update_trivial_invs[where upd="vcpu_regs_update", simplified]
   vcpu_update_trivial_invs[where upd="vcpu_vppi_masked_update", simplified]
   vcpu_update_trivial_invs[where upd="vcpu_vgic_update", simplified]
@@ -2905,7 +2896,7 @@ lemma vcpu_write_reg_invs[wp]:
 
 lemma save_virt_timer_invs[wp]:
   "save_virt_timer vcpu_ptr \<lbrace>invs\<rbrace>"
-  unfolding save_virt_timer_def read_cntpct_def
+  unfolding save_virt_timer_def
   by (wpsimp wp: set_vcpu_invs_eq_hyp get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift' dmo_invs_lift)
 
 (* migrated from ArchInterrupt_AI, which is not visible from here *)
@@ -2922,8 +2913,7 @@ crunch vcpu_restore_reg
 
 lemma restore_virt_timer_invs[wp]:
   "\<lbrace>\<lambda> s. invs s\<rbrace> restore_virt_timer vcpu_ptr \<lbrace>\<lambda>_ . invs\<rbrace>"
-  unfolding restore_virt_timer_def read_cntpct_def
-             is_irq_active_def get_irq_state_def
+  unfolding restore_virt_timer_def is_irq_active_def get_irq_state_def
   by (wpsimp wp: set_vcpu_invs_eq_hyp get_vcpu_wp hoare_vcg_all_lift hoare_drop_imp
                  maskInterrupt_invs)
 
@@ -3012,12 +3002,6 @@ lemma vcpu_write_reg_hyp_refs_of[wp]:
   "vcpu_write_reg vcpu_ptr reg val \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
   unfolding vcpu_write_reg_def by (wpsimp cong: vcpu_state.fold_congs)
 
-lemma vcpu_update_vtimer_hyp_refs_of[wp]:
-  "vcpu_update vcpu_ptr (vcpu_vtimer_update f) \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
-  unfolding vcpu_update_def
-  by (wpsimp wp: set_vcpu_hyp_refs_of get_vcpu_wp)
-     (simp add: obj_at_def in_omonad)
-
 crunch save_virt_timer, vcpu_disable, vcpu_invalidate_active, vcpu_restore, vcpu_save, vcpu_switch
   for hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
   (ignore: vcpu_update wp: crunch_wps)
@@ -3105,7 +3089,7 @@ crunch vcpu_enable, vcpu_write_reg, vcpu_update, vcpu_restore, vcpu_enable, vcpu
   for pspace_respects_device_region[wp]: "pspace_respects_device_region"
   (wp: crunch_wps dmo_maskInterrupt_pspace_respects_device_region
        pspace_respects_device_region_dmo
-   simp: crunch_simps read_cntpct_def)
+   simp: crunch_simps)
 
 lemma set_vcpu_nonvcpu_at: (* generalise? this holds except when the ko is a vcpu *)
   "\<lbrace>\<lambda>s. P (ko_at ko x s) \<and> a_type ko \<noteq> AArch AVCPU\<rbrace>
