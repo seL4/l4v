@@ -130,9 +130,6 @@ data GICVCPUInterface = VGICInterface {
                            vgicLR :: Array Int VIRQ }
     deriving Show
 
-data VirtTimer = VirtTimer { vtimerLastPCount :: Word64 }
-    deriving Show
-
 data VPPIEventIRQ = VPPIEventIRQ_VTimer
     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
@@ -140,8 +137,7 @@ data VCPU = VCPUObj {
                 vcpuTCBPtr :: Maybe (PPtr TCB)
                 ,vcpuVGIC :: GICVCPUInterface
                 ,vcpuRegs :: Array VCPUReg Word
-                ,vcpuVPPIMasked :: Array VPPIEventIRQ Bool
-                ,vcpuVTimer :: VirtTimer }
+                ,vcpuVPPIMasked :: Array VPPIEventIRQ Bool }
     deriving Show
 
 vcpuSCTLR vcpu = vcpuRegs vcpu ! VCPURegSCTLR
@@ -161,7 +157,6 @@ makeVCPUObject =
                         }
         , vcpuRegs = funArray (const 0) // [(VCPURegSCTLR, sctlrEL1VM)]
         , vcpuVPPIMasked = funArray (const False)
-        , vcpuVTimer = VirtTimer 0
         }
 
 
