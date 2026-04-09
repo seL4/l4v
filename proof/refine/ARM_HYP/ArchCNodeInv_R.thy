@@ -298,15 +298,14 @@ crunch vcpuUpdate, vcpuWriteReg, vcpuSaveReg, vcpuRestoreReg, vcpuReadReg
 lemma saveVirtTimer_irq_states'[wp]:
   "saveVirtTimer vcpu_ptr \<lbrace>valid_irq_states'\<rbrace>"
   unfolding saveVirtTimer_def
-  by (wpsimp simp: read_cntpct_def
-             wp: doMachineOp_irq_states')
+  by (wpsimp wp: doMachineOp_irq_states')
 
 lemma restoreVirtTimer_irq_states'[wp]:
   "restoreVirtTimer vcpu_ptr \<lbrace>valid_irq_states'\<rbrace>"
   unfolding restoreVirtTimer_def isIRQActive_def
   by (simp add: liftM_bind)
      (wpsimp wp: maskInterrupt_irq_states' getIRQState_wp hoare_vcg_imp_lift' doMachineOp_irq_states'
-             simp: if_apply_def2 read_cntpct_def set_cntv_off_64_def set_cntv_cval_64_def)
+             simp: if_apply_def2 set_cntv_off_64_def set_cntv_cval_64_def)
 
 crunch
   vcpuDisable, vcpuEnable, vcpuRestore, vcpuRestoreReg, vcpuSaveReg,

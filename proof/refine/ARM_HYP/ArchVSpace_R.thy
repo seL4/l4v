@@ -810,8 +810,9 @@ lemma vcpuReadReg_corres[corres]:
   done
 
 lemma vcpuWriteReg_corres[corres]:
-  "corres dc (vcpu_at v) (vcpu_at' v and no_0_obj')
-          (vcpu_write_reg v r val) (vcpuWriteReg v r val)"
+  "\<lbrakk> val' = val; r' = r \<rbrakk> \<Longrightarrow>
+   corres dc (vcpu_at v) (vcpu_at' v and no_0_obj')
+          (vcpu_write_reg v r val) (vcpuWriteReg v r' val')"
   apply (simp add: vcpu_write_reg_def vcpuWriteReg_def)
   apply (rule corres_guard_imp)
     apply (rule corres_assert_gen_asm2)
@@ -868,21 +869,7 @@ lemma saveVirtTimer_corres[corres]:
   "corres dc (vcpu_at vcpu_ptr) (vcpu_at' vcpu_ptr and no_0_obj')
              (save_virt_timer vcpu_ptr) (saveVirtTimer vcpu_ptr)"
   unfolding save_virt_timer_def saveVirtTimer_def
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_dc[OF vcpuSaveReg_corres], simp)
-      apply (rule corres_split_dc[OF corres_machine_op], (rule corres_Id; simp))
-        apply (rule corres_split_eqr[OF corres_machine_op], (rule corres_Id; simp))+
-            apply (rule corres_split_dc[OF vcpuWriteReg_corres], simp)+
-                    apply (rule corres_split_dc[OF vcpuSaveReg_corres], simp)
-                      apply (rule corres_split_eqr[OF corres_machine_op], simp)
-                         apply (rule corres_Id; simp)
-                        apply (rule corres_split_eqr[OF corres_machine_op], simp)
-                           apply (rule corres_Id; simp)
-                          apply (fold dc_def)
-                          apply (rule vcpuUpdate_corres)
-                          apply (simp add: vcpu_relation_def)
-                         apply wpsimp+
-  done
+  by corres
 
 lemma isIRQActive_corres:
   "corres (=) \<top> \<top> (is_irq_active irqVTimerEvent) (isIRQActive irqVTimerEvent)"
@@ -894,30 +881,20 @@ lemma isIRQActive_corres:
   apply (fastforce split: irq_state.splits irqstate.splits)
   done
 
+lemma dmo_maskInterrupt_corres[corres]:
+  "vcpu_vppi_masked vcpu = vcpuVPPIMasked vcpu' \<Longrightarrow>
+   corres dc \<top> \<top>
+          (do_machine_op (maskInterrupt (vcpu_vppi_masked vcpu VPPIEventIRQ_VTimer) irqVTimerEvent))
+          (doMachineOp (maskInterrupt (vcpuVPPIMasked vcpu' VPPIEventIRQ_VTimer) irqVTimerEvent))"
+  by (corres corres: corres_machine_op corres_Id)
+
 lemma restoreVirtTimer_corres[corres]:
   "corres dc (vcpu_at vcpu_ptr) (vcpu_at' vcpu_ptr and no_0_obj')
              (restore_virt_timer vcpu_ptr) (restoreVirtTimer vcpu_ptr)"
   unfolding restore_virt_timer_def restoreVirtTimer_def IRQ_def
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr[OF vcpuReadReg_corres], simp)
-      apply (rule corres_split_eqr[OF vcpuReadReg_corres])
-        apply (rule corres_split_eqr[OF corres_machine_op], (rule corres_Id; simp))
-          apply (rule corres_split_dc[OF vcpuRestoreReg_corres])
-            apply (rule corres_split_eqr[OF corres_machine_op], (rule corres_Id; simp))
-              apply (rule corres_split[OF getObject_vcpu_corres])
-                apply (rule corres_split_eqr[OF vcpuReadReg_corres])
-                  apply (rule corres_split_eqr[OF vcpuReadReg_corres])
-                    apply (clarsimp simp: vcpu_relation_def)
-                    apply (rule corres_split_dc[OF vcpuWriteReg_corres])+
-                        apply (rule corres_split_dc[OF corres_machine_op])
-                           apply (rule corres_Id; simp)
-                          apply (rule corres_split_eqr[OF isIRQActive_corres])
-                            apply (rule corres_split_dc[OF corres_when], simp)
-                               apply (simp add: irq_vppi_event_index_def irqVPPIEventIndex_def IRQ_def)
-                               apply (rule corres_machine_op, simp)
-                               apply (rule corres_Id; wpsimp)
-                              apply (rule vcpuRestoreReg_corres)
-                             apply (wpsimp simp: if_apply_def2 isIRQActive_def)+
+  apply (corres corres: getObject_vcpu_corres isIRQActive_corres
+                simp: vcpu_relation_def irq_vppi_event_index_def irqVPPIEventIndex_def IRQ_def)
+            apply (wpsimp simp: if_apply_def2 isIRQActive_def)+
   done
 
 lemma vcpuSave_corres:
@@ -3362,10 +3339,6 @@ lemma hyp_live'_vcpu_VPPIMasked[simp]:
   "hyp_live' (KOArch (KOVCPU (vcpuVPPIMasked_update f' vcpu))) = hyp_live' (KOArch (KOVCPU vcpu))"
     by (simp add: hyp_live'_def arch_live'_def)
 
-lemma hyp_live'_vcpu_VTimer[simp]:
-  "hyp_live' (KOArch (KOVCPU (vcpuVTimer_update f' vcpu))) = hyp_live' (KOArch (KOVCPU vcpu))"
-    by (simp add: hyp_live'_def arch_live'_def)
-
 lemma live'_vcpu_regs[simp]:
   "live' (KOArch (KOVCPU (vcpuRegs_update f vcpu))) = live' (KOArch (KOVCPU vcpu))"
     by (simp add: live'_def)
@@ -3376,10 +3349,6 @@ lemma live'_vcpu_vgic[simp]:
 
 lemma live'_vcpu_VPPIMasked[simp]:
   "live' (KOArch (KOVCPU (vcpuVPPIMasked_update f' vcpu))) = live' (KOArch (KOVCPU vcpu))"
-    by (simp add: live'_def)
-
-lemma live'_vcpu_VTimer[simp]:
-  "live' (KOArch (KOVCPU (vcpuVTimer_update f' vcpu))) = live' (KOArch (KOVCPU vcpu))"
     by (simp add: live'_def)
 
 lemma setVCPU_regs_vcpu_live:
@@ -3403,15 +3372,6 @@ lemma setVCPU_vgic_vcpu_live[wp]:
 lemma setVCPU_VPPIMasked_vcpu_live[wp]:
   "\<lbrace>ko_wp_at' (is_vcpu' and hyp_live') p and ko_at' vcpu v\<rbrace>
    setObject v (vcpuVPPIMasked_update f vcpu) \<lbrace>\<lambda>_. ko_wp_at' (is_vcpu' and hyp_live') p\<rbrace>"
-  apply (wp setObject_ko_wp_at, simp)
-    apply (simp add: objBits_simps)
-   apply (clarsimp simp: vcpu_bits_def pageBits_def)
-  apply (clarsimp simp: pred_conj_def is_vcpu'_def ko_wp_at'_def obj_at'_real_def)
-  done
-
-lemma setVCPU_VTimer_vcpu_live[wp]:
-  "\<lbrace>ko_wp_at' (is_vcpu' and hyp_live') p and ko_at' vcpu v\<rbrace>
-   setObject v (vcpuVTimer_update f vcpu) \<lbrace>\<lambda>_. ko_wp_at' (is_vcpu' and hyp_live') p\<rbrace>"
   apply (wp setObject_ko_wp_at, simp)
     apply (simp add: objBits_simps)
    apply (clarsimp simp: vcpu_bits_def pageBits_def)
@@ -3462,14 +3422,6 @@ lemma setVCPU_vgic_valid_arch':
 
 lemma setVCPU_VPPIMasked_valid_arch':
   "\<lbrace>valid_arch_state' and ko_at' vcpu v\<rbrace> setObject v (vcpuVPPIMasked_update f vcpu) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  apply (simp add: valid_arch_state'_def valid_asid_table'_def option_case_all_conv)
-    apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift setVCPU_vgic_vcpu_live
-           | rule hoare_lift_Pf[where f=ksArchState])
-  apply (clarsimp simp: pred_conj_def o_def)
-  done
-
-lemma setVCPU_VTimer_valid_arch':
-  "\<lbrace>valid_arch_state' and ko_at' vcpu v\<rbrace> setObject v (vcpuVTimer_update f vcpu) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   apply (simp add: valid_arch_state'_def valid_asid_table'_def option_case_all_conv)
     apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift setVCPU_vgic_vcpu_live
            | rule hoare_lift_Pf[where f=ksArchState])
@@ -3676,28 +3628,6 @@ lemma setVCPU_VPPIMasked_invs_cicd':
   apply (fastforce simp: ko_wp_at'_def)
   done
 
-lemma setVCPU_VTimer_invs_cicd':
-  "\<lbrace>invs_no_cicd' and ko_at' vcpu v\<rbrace>
-   setObject v (vcpuVTimer_update f vcpu)
-   \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
-  unfolding valid_state'_def valid_pspace'_def valid_mdb'_def invs_no_cicd'_def
-            valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
-  supply fun_upd_apply[simp del]
-  apply (wpsimp wp: setObject_vcpu_no_tcb_update
-                      [where f="\<lambda>vcpu. (vcpuVTimer_update f vcpu)"]
-                    sch_act_wf_lift tcb_in_cur_domain'_lift valid_queues_lift
-                    setObject_state_refs_of' setObject_state_hyp_refs_of' valid_global_refs_lift'
-                    valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
-                    cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
-                    valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
-                    valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
-                    setVCPU_VTimer_valid_arch' valid_bitmaps_lift valid_dom_schedule'_lift
-              simp: objBits_simps vcpu_bits_def pageBits_def
-                    state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
-  apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
-  apply (fastforce simp: ko_wp_at'_def)
-  done
-
 lemma readVCPUHardwareReg_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (readVCPUHardwareReg r) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   by (wpsimp wp: dmo_invs_no_cicd' no_irq_readVCPUHardwareReg no_irq
@@ -3751,9 +3681,8 @@ lemma check_export_arch_timer_no_cicd'[wp]:
 
 lemma saveVirtTimer_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> saveVirtTimer vcpu_ptr \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
-  by (wpsimp simp: saveVirtTimer_def vcpuUpdate_def read_cntpct_def get_cntv_off_64_def
-                   get_cntv_cval_64_def
-             wp: setVCPU_VTimer_invs_cicd' dmo'_gets_wp)+
+  by (wpsimp simp: saveVirtTimer_def get_cntv_off_64_def get_cntv_cval_64_def
+             wp: dmo'_gets_wp)+
 
 lemma set_cntv_off_64_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_cntv_off_64 v) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
@@ -3775,9 +3704,8 @@ lemma set_cntv_cval_64_invs_no_cicd'[wp]:
 
 lemma restoreVirtTimer_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> restoreVirtTimer vcpu_ptr \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
-  by (wpsimp simp: restoreVirtTimer_def vcpuUpdate_def read_cntpct_def if_apply_def2
-                   isIRQActive_def
-             wp: setVCPU_VTimer_invs_cicd' maskInterrupt_invs_no_cicd' getIRQState_wp dmo'_gets_wp)
+  by (wpsimp simp: restoreVirtTimer_def if_apply_def2 isIRQActive_def
+             wp: maskInterrupt_invs_no_cicd' getIRQState_wp)
 
 lemma vcpuEnable_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> vcpuEnable v \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
@@ -3982,26 +3910,6 @@ lemma setVCPU_VPPIMasked_invs':
   apply (fastforce simp: ko_wp_at'_def)
   done
 
-lemma setVCPU_VTimer_invs':
-  "\<lbrace>invs' and ko_at' vcpu v\<rbrace> setObject v (vcpuVTimer_update f vcpu) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  unfolding invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
-            valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
-  supply fun_upd_apply[simp del]
-  apply (wpsimp wp: setObject_vcpu_no_tcb_update
-                      [where f="\<lambda>vcpu. vcpuVTimer_update f vcpu"]
-                    sch_act_wf_lift tcb_in_cur_domain'_lift valid_queues_lift
-                    setObject_state_refs_of' setObject_state_hyp_refs_of' valid_global_refs_lift'
-                    valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
-                    cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
-                    valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
-                    valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
-                    setVCPU_VTimer_valid_arch' valid_bitmaps_lift valid_dom_schedule'_lift
-              simp: objBits_simps vcpu_bits_def pageBits_def
-                    state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
-  apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
-  apply (fastforce simp: ko_wp_at'_def)
-  done
-
 lemma read_writeVCPUHardwareReg_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (writeVCPUHardwareReg r v) \<lbrace>\<lambda>rv. invs'\<rbrace>"
   "\<lbrace>invs'\<rbrace> doMachineOp (readVCPUHardwareReg r) \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -4027,9 +3935,7 @@ lemma saveVirtTimer_invs'[wp]:
   "saveVirtTimer vcpu_ptr \<lbrace>invs'\<rbrace>"
   unfolding saveVirtTimer_def
   by (wpsimp wp: dmo'_gets_wp setVCPU_vgic_invs' setVCPU_regs_invs' dmo_maskInterrupt_True
-                 setVCPU_VTimer_invs'
-             simp: doMachineOp_bind vcpuUpdate_def read_cntpct_def  get_cntv_off_64_def
-                   get_cntv_cval_64_def)
+             simp: doMachineOp_bind get_cntv_off_64_def get_cntv_cval_64_def)
 
 lemma vcpuDisable_invs'[wp]:
   "vcpuDisable v \<lbrace>invs'\<rbrace>"
@@ -4143,8 +4049,8 @@ lemma maskInterrupt_invs':
 lemma restoreVirtTimer_invs'[wp]:
   "restoreVirtTimer vcpu_ptr \<lbrace> invs'\<rbrace>"
   unfolding restoreVirtTimer_def
-  by (wpsimp wp: maskInterrupt_invs' getIRQState_wp dmo'_gets_wp dmo_machine_op_lift_invs'
-             simp: IRQ_def if_apply_def2 set_cntv_off_64_def read_cntpct_def set_cntv_cval_64_def
+  by (wpsimp wp: maskInterrupt_invs' getIRQState_wp dmo_machine_op_lift_invs'
+             simp: IRQ_def if_apply_def2 set_cntv_off_64_def set_cntv_cval_64_def
                    isIRQActive_def)
 
 lemma vcpuEnable_invs'[wp]:
