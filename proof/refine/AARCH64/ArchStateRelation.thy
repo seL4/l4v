@@ -66,8 +66,7 @@ definition vcpu_relation :: "AARCH64_A.vcpu \<Rightarrow> vcpu \<Rightarrow> boo
   "vcpu_relation \<equiv> \<lambda>v v'. vcpu_tcb v = vcpuTCBPtr v' \<and>
                            vgic_map (vcpu_vgic v) = vcpuVGIC v' \<and>
                            vcpu_regs v = vcpuRegs v' \<and>
-                           vcpu_vppi_masked v = vcpuVPPIMasked v' \<and>
-                           vcpu_vtimer v = vcpuVTimer v'"
+                           vcpu_vppi_masked v = vcpuVPPIMasked v'"
 
 definition arch_tcb_relation :: "Structures_A.arch_tcb \<Rightarrow> Structures_H.arch_tcb \<Rightarrow> bool" where
   "arch_tcb_relation \<equiv>
