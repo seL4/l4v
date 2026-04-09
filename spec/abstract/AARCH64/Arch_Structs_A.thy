@@ -148,7 +148,6 @@ qualify AARCH64_A (in Arch)
 record vcpu = AARCH64.vcpu_state +
   vcpu_tcb  :: "obj_ref option"
   vcpu_vppi_masked :: "vppievent_irq \<Rightarrow> bool"
-  vcpu_vtimer :: virt_timer
 
 end_qualify
 
@@ -170,8 +169,7 @@ definition
       vcpu_vgic   = default_gic_vcpu_interface,
       vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrEL1VM),
       vcpu_tcb    = None,
-      vcpu_vppi_masked = (\<lambda>_. False),
-      vcpu_vtimer = VirtTimer 0
+      vcpu_vppi_masked = (\<lambda>_. False)
    \<rparr>"
 
 (* produce discriminators and selectors even though no field names are mentioned *)

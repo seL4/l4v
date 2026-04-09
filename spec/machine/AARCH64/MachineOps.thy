@@ -355,10 +355,6 @@ definition check_export_arch_timer :: "unit machine_monad" where
      machine_op_lift check_export_arch_timer_impl
    od"
 
-consts' read_cntpct_val :: "machine_state \<Rightarrow> 64 word"
-definition read_cntpct :: "64 word machine_monad" where
-  "read_cntpct \<equiv> gets read_cntpct_val"
-
 
 subsection "Hypervisor Banked Registers"
 
