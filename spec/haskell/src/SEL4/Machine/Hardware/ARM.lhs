@@ -889,9 +889,6 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 > set_cntv_off_64 :: Word64 -> MachineMonad ()
 > set_cntv_off_64 = error "FIXME ARMHYP Unimplemented callback"
 
-> read_cntpct :: MachineMonad Word64
-> read_cntpct = error "FIXME ARMHYP Unimplemented callback"
-
 > check_export_arch_timer :: MachineMonad ()
 > check_export_arch_timer = error "FIXME ARMHYP Unimplemented callback"
 

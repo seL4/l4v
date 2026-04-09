@@ -196,9 +196,6 @@ ASIDs are mapped to address space roots by a global two-level table. The actual 
 >                        }
 >     deriving Show
 
-> data VirtTimer = VirtTimer { vtimerLastPCount :: Word64 }
->     deriving Show
-
 > data VPPIEventIRQ = VPPIEventIRQ_VTimer
 >     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
@@ -207,7 +204,6 @@ ASIDs are mapped to address space roots by a global two-level table. The actual 
 >                 ,vcpuVGIC :: GICVCPUInterface
 >                 ,vcpuRegs :: Array VCPUReg Word
 >                 ,vcpuVPPIMasked :: Array VPPIEventIRQ Bool
->                 ,vcpuVTimer :: VirtTimer
 >                 }
 >     deriving Show
 
@@ -229,7 +225,6 @@ makeObject specialised to VCPUs.
 >         , vcpuRegs = funArray (const 0) // [(VCPURegSCTLR, sctlrDefault)
 >                                            ,(VCPURegACTLR, actlrDefault)]
 >         , vcpuVPPIMasked = funArray (const False)
->         , vcpuVTimer = VirtTimer 0
 >         }
 
 #endif
