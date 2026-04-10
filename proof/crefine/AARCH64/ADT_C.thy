@@ -1025,8 +1025,7 @@ lemma cpspace_vcpu_relation_unique:
   apply (simp add: cvcpu_relation_def Let_def cvgic_relation_def cvcpu_vppi_masked_relation_def
               split: vcpu.splits)
   apply (case_tac x, case_tac y)
-  apply (rename_tac t vgic regs vppimask vtimer
-                     t' vgic' regs' vppimask' vtimer')
+  apply (rename_tac t vgic regs vppimask t' vgic' regs' vppimask')
   apply (clarsimp simp: cvcpu_regs_relation_def vcpuSCTLR_def option_to_ctcb_ptr_inj)
   apply (rule conjI)
    apply (case_tac vgic, case_tac vgic')
@@ -1034,11 +1033,7 @@ lemma cpspace_vcpu_relation_unique:
    apply (rule ext)
    apply (rename_tac r)
    apply (case_tac "max_armKSGICVCPUNumListRegs \<le> r"; simp)
-  apply (rule conjI)
-   apply (rule ext, blast)
-  apply (rule conjI, blast)
-  apply (case_tac vtimer, case_tac vtimer')
-  apply clarsimp
+  apply blast
   done
 
 lemma ksPSpace_valid_pspace_ntfnBoundTCB_nonzero:
