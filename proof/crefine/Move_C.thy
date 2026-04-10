@@ -1039,6 +1039,7 @@ lemma suspend_st_tcb_at':
   "\<lbrace>\<lambda>s. (t\<noteq>t' \<longrightarrow> st_tcb_at' P t' s) \<and> (t=t' \<longrightarrow> P Inactive)\<rbrace>
   suspend t
   \<lbrace>\<lambda>_. st_tcb_at' P t'\<rbrace>"
+  supply if_split[split del]
   apply (simp add: suspend_def unless_def)
   unfolding updateRestartPC_def
   apply (cases "t=t'")

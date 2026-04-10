@@ -127,8 +127,8 @@ When a thread is suspended, either explicitly by a TCB invocation or implicitly 
 >     cancelIPC target
 >     state <- getThreadState target
 >     if state == Running then updateRestartPC target else return ()
->     setThreadState Inactive target
 >     tcbSchedDequeue target
+>     setThreadState Inactive target
 
 \subsubsection{Restarting a Blocked Thread}
 

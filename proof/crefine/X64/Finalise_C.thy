@@ -754,15 +754,10 @@ lemma suspend_ccorres:
           apply (ctac (no_vcg) add: updateRestartPC_ccorres)
          apply (rule ccorres_return_Skip)
         apply ceqv
-       apply (ctac(no_vcg) add: setThreadState_ccorres_simple)
-        apply (ctac add: tcbSchedDequeue_ccorres)
-       apply (rule_tac Q'="\<lambda>_. valid_objs' and tcb_at' thread and pspace_aligned' and pspace_distinct'"
-                    in hoare_post_imp)
-        apply clarsimp
-       apply (wp sts_valid_objs')[1]
-      apply clarsimp
-      apply (wpsimp simp: valid_tcb_state'_def)
-     apply clarsimp
+       apply (ctac (no_vcg) add: tcbSchedDequeue_ccorres)
+        apply (ctac add: setThreadState_ccorres_simple)
+       apply wpsimp
+      apply (wp sts_valid_objs')
      apply (rule conseqPre, vcg exspec=updateRestartPC_modifies)
      apply (rule subset_refl)
     apply clarsimp
