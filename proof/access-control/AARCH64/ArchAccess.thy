@@ -111,20 +111,28 @@ lemmas integrity_asids_def = integrity_asids_2_def
 
 subsection \<open>How VCPUs can change\<close>
 
+definition cur_vcpu_of_2 :: "(obj_ref \<times> bool) option \<Rightarrow> obj_ref \<Rightarrow> bool option" where
+  "cur_vcpu_of_2 vopt ptr \<equiv> case vopt of
+     None \<Rightarrow> None
+   | Some (ptr',b) \<Rightarrow> if ptr = ptr' then Some b else None"
+
+locale_abbrev
+  "cur_vcpu_of s \<equiv> cur_vcpu_of_2 (arm_current_vcpu (arch_state s))"
+
+lemmas cur_vcpu_of_def = cur_vcpu_of_2_def
+
+locale_abbrev vcpu_mask where
+  "vcpu_mask n \<equiv> vcpu_vgic_update (vgic_lr_update (\<lambda>f r. if r \<ge> n then undefined else f r))"
+
 definition vcpu_of_state ::
-  "vcpu_state \<Rightarrow> (obj_ref \<times> bool) option \<Rightarrow> nat \<Rightarrow> (obj_ref \<Rightarrow> vcpu option) \<Rightarrow> obj_ref \<Rightarrow> vcpu option"
+  "vcpu_state \<Rightarrow> bool option \<Rightarrow> nat \<Rightarrow> vcpu option \<Rightarrow> vcpu option"
 where
-  "vcpu_of_state vst cv n vcpus vcpu_ptr \<equiv>
-     \<comment> \<open>Ignore some values\<close>
-     let vmask = vcpu_vtimer_update (\<lambda>_. undefined)
-               \<circ> vcpu_regs_update (\<lambda>f r. if r = VCPURegCNTVOFF then undefined else f r)
-               \<circ> vcpu_vgic_update (vgic_lr_update (\<lambda>f r. if r \<ge> n then undefined else f r))
-     in case (vcpus vcpu_ptr, cv) of
-       (None,_) \<Rightarrow> None \<comment> \<open>No VCPU\<close>
-     | (Some vcpu,None) \<Rightarrow> Some (vmask vcpu) \<comment> \<open>No current VCPU\<close>
-     | (Some vcpu, Some (vcpu_ptr',enabled)) \<Rightarrow> Some (vmask
-         (if vcpu_ptr' = vcpu_ptr \<comment> \<open>Current VCPU = VCPU\<close>
-          then vcpu\<lparr>vcpu_regs := \<lambda>reg. if vcpuRegSavedWhenDisabled reg \<and> \<not>enabled
+  "vcpu_of_state vst cv n vopt \<equiv>
+     case (vopt, cv) of
+       (None, _) \<Rightarrow> None \<comment> \<open>No VCPU\<close>
+     | (Some vcpu, None) \<Rightarrow> Some (vcpu_mask n vcpu) \<comment> \<open>No current VCPU\<close>
+     | (Some vcpu, Some enabled) \<Rightarrow> Some (vcpu_mask n
+         (vcpu\<lparr>vcpu_regs := \<lambda>reg. if vcpuRegSavedWhenDisabled reg \<and> \<not>enabled
                                        then vcpu_regs vcpu reg \<comment> \<open>Register saved when VCPU disabled\<close>
                                        else vcpu_regs vst reg,
                     vcpu_vgic := (vcpu_vgic vcpu)
@@ -133,12 +141,11 @@ where
                                    else vgic_hcr (vcpu_vgic vst),
                        vgic_vmcr := vgic_vmcr (vcpu_vgic vst),
                        vgic_apr := vgic_apr (vcpu_vgic vst),
-                       vgic_lr := vgic_lr (vcpu_vgic vst)\<rparr>\<rparr>
-          else vcpu))" \<comment> \<open>Not current VCPU\<close>
+                       vgic_lr := vgic_lr (vcpu_vgic vst)\<rparr>\<rparr>))"
 
 definition vcpu_integrity where
-   "vcpu_integrity aag subjects x hv hv' cv cv' n n' vcpus vcpus' \<equiv>
-    (pasObjectAbs aag x \<notin> subjects \<longrightarrow> vcpu_of_state hv cv n vcpus x = vcpu_of_state hv' cv' n' vcpus' x)"
+   "vcpu_integrity hv hv' cv cv' n n' vopt vopt' \<equiv>
+      vcpu_of_state hv cv n vopt = vcpu_of_state hv' cv' n' vopt'"
 
 definition integrity_hyp_2 ::
   "'a PAS \<Rightarrow> 'a set \<Rightarrow> obj_ref \<Rightarrow> machine_state \<Rightarrow> machine_state \<Rightarrow> arch_state \<Rightarrow> arch_state
@@ -146,10 +153,11 @@ definition integrity_hyp_2 ::
 where
   "integrity_hyp_2 aag subjects x ms ms' as as' aobjs aobjs' \<equiv>
      arm_gicvcpu_numlistregs as = arm_gicvcpu_numlistregs as' \<and>
-     vcpu_integrity aag subjects x (vcpu_state ms) (vcpu_state ms')
-                                        (arm_current_vcpu as) (arm_current_vcpu as')
-                                        (arm_gicvcpu_numlistregs as) (arm_gicvcpu_numlistregs as')
-                                        (aobjs |> vcpu_of) (aobjs' |> vcpu_of)"
+     (pasObjectAbs aag x \<notin> subjects \<longrightarrow>
+      vcpu_integrity (vcpu_state ms) (vcpu_state ms')
+                     (cur_vcpu_of_2 (arm_current_vcpu as) x) (cur_vcpu_of_2 (arm_current_vcpu as') x)
+                     (arm_gicvcpu_numlistregs as) (arm_gicvcpu_numlistregs as')
+                     ((aobjs |> vcpu_of) x) ((aobjs' |> vcpu_of) x))"
 
 lemmas integrity_hyp_def = integrity_hyp_2_def
 

@@ -190,8 +190,8 @@ lemma set_lrs_integrity_autarch:
    apply (wp dmo_wp)
   apply (clarsimp simp: integrity_def)
   apply (erule allE, erule trhyp_trans)
-  apply (clarsimp simp: integrity_hyp_def vcpu_integrity_def vcpu_of_state_def
-                split: option.splits)
+  apply (clarsimp simp: integrity_hyp_def vcpu_integrity_def vcpu_of_state_def cur_vcpu_of_def
+                 split: option.splits)
   done
 
 lemma vgic_maintenance_integrity_autarch:
