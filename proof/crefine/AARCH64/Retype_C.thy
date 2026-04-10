@@ -5406,8 +5406,7 @@ lemma magnitudeCheck_assert2':
 
 (* VCPU when recast from memset 0 *)
 abbreviation (input) fromzeroVCPU :: vcpu where
-  "fromzeroVCPU \<equiv> vcpu.VCPUObj None (VGICInterface 0 0 0 (\<lambda>_. 0)) (const 0) (const False)
-                               (VirtTimer 0)"
+  "fromzeroVCPU \<equiv> vcpu.VCPUObj None (VGICInterface 0 0 0 (\<lambda>_. 0)) (const 0) (const False)"
 
 lemma monadic_rewrite_setObject_vcpu_as_init:
   defines "vcpu0 \<equiv> fromzeroVCPU"
@@ -5417,31 +5416,24 @@ lemma monadic_rewrite_setObject_vcpu_as_init:
   "monadic_rewrite True False (K (v \<noteq> 0) and ko_at' fromzeroVCPU v)
      (setObject v makeVCPUObject)
      (do vcpuWriteReg v VCPURegSCTLR sctlrEL1VM;
-         vgicUpdate v (vgicHCR_update (\<lambda>_. vgicHCREN));
-         vcpuUpdate v (\<lambda>vcpu. vcpu\<lparr> vcpuVTimer := VirtTimer 0 \<rparr>)
+         vgicUpdate v (vgicHCR_update (\<lambda>_. vgicHCREN))
       od)"
   supply fun_upd_apply[simp del]
   apply simp
   apply (rule monadic_rewrite_gen_asm)
   apply monadic_rewrite_pre
    apply (simp add: vcpuWriteReg_def vgicUpdate_def bind_assoc)
-    apply (clarsimp simp: vcpuUpdate_def bind_assoc)
+   apply (clarsimp simp: vcpuUpdate_def bind_assoc)
    (* explicitly state the vcpu we are setting for each setObject by rewriting the getObject to a return *)
    apply (rule monadic_rewrite_trans[rotated])
     apply (monadic_rewrite_symb_exec_r_known vcpu0)
      apply (rule monadic_rewrite_bind_tail)
       apply (monadic_rewrite_symb_exec_r_known vcpu1)
-       apply (rule monadic_rewrite_bind_tail)
-        apply (monadic_rewrite_symb_exec_r_known vcpu2)
-         apply (rule monadic_rewrite_refl)
-        apply (wpsimp wp: getObject_vcpu_prop simp: vcpu2_def vcpu1_def vcpu0_def)+
-       apply (wp setObject_sets_object_vcpu)
-      apply (wpsimp wp: getObject_vcpu_prop)+
-     apply (wpsimp wp: getObject_vcpu_prop simp: vcpu2_def vcpu1_def vcpu0_def)+
+       apply (rule monadic_rewrite_refl)
+      apply (wpsimp wp: getObject_vcpu_prop simp: vcpu2_def vcpu1_def vcpu0_def)+
      apply (wp setObject_sets_object_vcpu)
     apply (wpsimp wp: getObject_vcpu_prop)+
    (* now we have four setObjects in a row, fold them up using setObject-combining *)
-   apply (monadic_rewrite_r_method \<open>rule monadic_rewrite_setObject_vcpu_twice[simplified]\<close> wpsimp)
    apply (monadic_rewrite_r_method \<open>rule monadic_rewrite_setObject_vcpu_twice[simplified]\<close> wpsimp)
    apply (rule monadic_rewrite_is_refl)
    apply (fastforce simp: vcpu2_def vcpu1_def vcpu0_def makeVCPUObject_def)
@@ -5551,7 +5543,7 @@ proof -
                      ti_typ_combine_empty_ti ti_typ_combine_td
                      align_of_def padup_def replicate_def update_ti_t_array_rep
                      final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def
-                     align_td_array' size_td_array vTimer_C_tag_def\<close>)
+                     align_td_array' size_td_array\<close>)
     apply (clarsimp simp: cvcpu_relation_def cvcpu_regs_relation_def option_to_ctcb_ptr_def
                           cvgic_relation_def cvcpu_vppi_masked_relation_def virq_to_H_def)
     apply (rule conjI, clarsimp)
@@ -5775,8 +5767,7 @@ proof -
         apply (rule ccorres_call[OF armv_vcpu_init_ccorres]; solves simp)
        apply (clarsimp simp: vgicHCREN_def)
        apply (ctac (no_vcg) pre: ccorres_move_c_guard_vcpu add: vgicUpdate_HCR_ccorres)
-         apply (ctac pre: ccorres_move_c_guard_vcpu add: vgicUpdate_virtTimer_pcount_ccorres)
-        apply (wpsimp simp: guard_is_UNIV_def)+
+      apply (wpsimp simp: guard_is_UNIV_def)+
     apply (fastforce simp: const_def ko_at_vcpu_at'D)
     done
 qed

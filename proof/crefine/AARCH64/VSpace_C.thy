@@ -2309,15 +2309,6 @@ lemma vgicUpdate_HCR_ccorres:
      vcpuUpdate_ccorres
 
 (* FIXME AARCH64 consider moving this inline *)
-lemma vgicUpdate_virtTimer_pcount_ccorres:
-  "ccorres dc xfdc \<top> UNIV hs
-        (vcpuUpdate vcpuptr (vcpuVTimer_update (\<lambda>_. VirtTimer pcount)))
-        (Basic_heap_update
-          (\<lambda>_. PTR(64 word) &(PTR(vTimer_C) &(vcpu_Ptr vcpuptr\<rightarrow>[''virtTimer_C''])\<rightarrow>[''last_pcount_C'']))
-          (\<lambda>_. pcount))"
-  by vcpuUpdate_ccorres
-
-(* FIXME AARCH64 consider moving this inline *)
 lemma vgicUpdate_APR_ccorres:
   "ccorres dc xfdc \<top> UNIV hs
         (vgicUpdate vcpuptr (vgicAPR_update (\<lambda>_. hcr)))
@@ -2569,44 +2560,23 @@ lemma restore_virt_timer_ccorres:
    apply (rename_tac vcpu)
    apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)
     apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)
-     apply csymbr
-     apply (ctac (no_vcg) add: read_cntpct_ccorres)
-      apply (rename_tac current_cntpct)
+     apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)
       apply (rule ccorres_pre_getObject_vcpu)
-      apply (rename_tac vcpu_obj)
-      apply (rule ccorres_move_c_guard_vcpu)
-      apply (rule_tac xf'=pcount_delta_' and
-                      R=\<top> and
-                      R'="{s. \<exists>vcpu'. cslift s vcpu = Some vcpu' \<and> cvcpu_relation vcpu_obj vcpu'}" and
-                      F="\<lambda>s. s = current_cntpct - vtimerLastPCount (vcpuVTimer vcpu_obj)"
-                      in ccorres_symb_exec_r_rv_abstract)
-         apply (rule conseqPre, vcg)
-         apply (clarsimp simp: typ_heap_simps cvcpu_relation_def)
-        apply ceqv
-       apply (ctac (no_vcg) add: vcpu_read_reg_ccorres)
-        apply csymbr
-        apply csymbr
-        apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
-         apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)
-          apply (rule ccorres_pre_getObject_vcpu)
-          apply (ctac add: isIRQActive_ccorres)
-            apply (clarsimp simp: when_def simp del: Collect_const)
-            apply (rule ccorres_Cond_rhs_Seq; clarsimp)
-             apply (rule ccorres_rhs_assoc)+
-             apply csymbr
-             apply clarsimp
-             apply (rule ccorres_move_const_guards)
-             apply (rule ccorres_move_c_guard_vcpu)
-             apply (ctac (no_vcg) add: maskInterrupt_ccorres)
-              apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)
-             apply wp
-            apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)
-           apply (wpsimp simp: irqVPPIEventIndex_def IRQ_def irqVTimerEvent_def fromEnum_def
-                               enum_vppievent_irq)
-          apply (vcg exspec=isIRQActive_modifies)
-         apply (wpsimp wp: hoare_drop_imp)
-        apply wp+
-      apply vcg
+      apply (ctac add: isIRQActive_ccorres)
+        apply (clarsimp simp: when_def simp del: Collect_const)
+        apply (rule ccorres_Cond_rhs_Seq; clarsimp)
+         apply (rule ccorres_rhs_assoc)+
+         apply csymbr
+         apply clarsimp
+         apply (rule ccorres_move_const_guards)
+         apply (rule ccorres_move_c_guard_vcpu)
+         apply (ctac (no_vcg) add: maskInterrupt_ccorres)
+          apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)
+         apply wp
+        apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)
+       apply (wpsimp simp: irqVPPIEventIndex_def IRQ_def irqVTimerEvent_def fromEnum_def
+                           enum_vppievent_irq)
+      apply (vcg exspec=isIRQActive_modifies)
      apply (wpsimp wp: hoare_drop_imp)
     apply wp+
   (* deal with irqVTimerEvent \<le> maxIRQ before unfolding irqVTimerEvent_def *)
@@ -2616,20 +2586,6 @@ lemma restore_virt_timer_ccorres:
                         fromEnum_def enum_vppievent_irq
                         cvcpu_relation_def cvcpu_vppi_masked_relation_def
                  split: if_split)
-  apply (erule_tac x=VPPIEventIRQ_VTimer in allE)+
-  apply (clarsimp simp: irqVPPIEventIndex_def fromEnum_def enum_vppievent_irq)
-  done
-
-lemma vcpuUpdate_vTimer_pcount_ccorres:
-  "ccorres dc xfdc (vcpu_at' vcpuptr) UNIV hs
-        (vcpuUpdate vcpuptr (vcpuVTimer_update (\<lambda>_. VirtTimer v)))
-        (Guard C_Guard {s. s \<Turnstile>\<^sub>c vcpu_Ptr vcpuptr}
-          (Basic_heap_update
-            (\<lambda>_. PTR(64 word) &(PTR(vTimer_C) &(vcpu_Ptr vcpuptr\<rightarrow>[''virtTimer_C''])\<rightarrow>[''last_pcount_C''])) (\<lambda>_. v)))"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_move_c_guard_vcpu)
-    apply vcpuUpdate_ccorres
-    apply simp+
   done
 
 lemma save_virt_timer_ccorres:
@@ -2644,10 +2600,7 @@ lemma save_virt_timer_ccorres:
       apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
        apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
         apply (ctac (no_vcg) add: check_export_arch_timer_ccorres)
-         apply (ctac (no_vcg) add: read_cntpct_ccorres)
-          apply clarsimp
-          apply (rule vcpuUpdate_vTimer_pcount_ccorres)
-         apply wpsimp+
+       apply wpsimp+
   apply (simp add: vcpureg_eq_use_types[where reg=VCPURegCNTV_CVAL, simplified, symmetric]
                    vcpureg_eq_use_types[where reg=VCPURegCNTV_CTL, simplified, symmetric]
                    vcpureg_eq_use_types[where reg=VCPURegCNTVOFF, simplified, symmetric]
