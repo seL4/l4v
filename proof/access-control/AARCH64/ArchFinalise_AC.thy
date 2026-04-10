@@ -158,10 +158,10 @@ locale_abbrev machine_fpu :: "'a :: state_ext state \<Rightarrow> fpu_state" whe
   "machine_fpu \<equiv> \<lambda>s. fpu_state (machine_state s)"
 
 locale_abbrev tcb_cur_fpu_of :: "'a :: state_ext state \<Rightarrow> obj_ref \<rightharpoonup> bool" where
-  "tcb_cur_fpu_of \<equiv> \<lambda>s t. option_map (tcb_cur_fpu o tcb_arch) (get_tcb t s)"
+  "tcb_cur_fpu_of \<equiv> \<lambda>s t. map_option (tcb_cur_fpu o tcb_arch) (get_tcb t s)"
 
 locale_abbrev tcb_fpu_of :: "'a :: state_ext state \<Rightarrow> obj_ref \<rightharpoonup> fpu_state" where
-  "tcb_fpu_of \<equiv> \<lambda>s t. option_map (user_fpu_state o tcb_context o tcb_arch) (get_tcb t s)"
+  "tcb_fpu_of \<equiv> \<lambda>s t. map_option (user_fpu_state o tcb_context o tcb_arch) (get_tcb t s)"
 
 locale_abbrev tcb_vcpu_of :: "'a :: state_ext state \<Rightarrow> obj_ref \<rightharpoonup> obj_ref" where
   "tcb_vcpu_of \<equiv> \<lambda>s. (\<lambda>t. get_tcb t s) |> tcb_vcpu o tcb_arch"
