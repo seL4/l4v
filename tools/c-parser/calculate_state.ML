@@ -33,7 +33,7 @@ sig
   val mk_thy_types :
       csenv -> bool -> theory ->
       theory *
-      (string * (string * typ * int ctype) list) list
+      (string * typ * (string * typ * int ctype) list) list
 
   val mk_thy_decls :
       staterep -> {mstate_ty : typ,gstate_ty : typ, owners : string list} ->
@@ -432,7 +432,7 @@ fun mk_thy_types cse install thy = let
   fun new_rcdinfo (recname,flds) thy = let
     fun fldtys (fldname, cty) = (fldname, ctype_to_typ (thy,cty), cty)
   in
-    (recname, map fldtys flds)
+    (recname, ctype_to_typ (thy, StructTy recname), map fldtys flds)
   end
 
   fun rcddecls_phase0 (recflds, thy) = let
@@ -535,11 +535,11 @@ fun mk_thy_types cse install thy = let
   end
 
   fun rcddecl_phase1 (p as (recname, _ (* flds *)), (thy, st, rcdacc)) = let
-    val rcdinfo = new_rcdinfo p thy
+    val rcdinfo as (recname, _, flds) = new_rcdinfo p thy
     val (st, thy1) =
         if install then
           (informStr (2, "Proving UMM properties for struct "^recname);
-           struct_type cse {struct_type = rcdinfo, state = st}
+           struct_type cse {struct_type = (recname, flds), state = st}
                        thy)
         else (st, thy)
   in
