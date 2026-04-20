@@ -11,6 +11,8 @@ imports
   ArchSchedule_R
 begin
 
+arch_requalify_consts (H) prepareThreadDelete
+
 arch_requalify_facts
   asUser_sym_heap_sched_pointers (* free type variable *)
 
@@ -396,6 +398,10 @@ locale IpcCancel_R =
     "\<And>acap. arch_post_cap_deletion acap \<lbrace>\<lambda>s::det_state. pspace_distinct s\<rbrace>"
   assumes arch_post_cap_deletion_pspace_aligned[wp]:
     "\<And>acap. arch_post_cap_deletion acap \<lbrace>\<lambda>s::det_state. pspace_aligned s\<rbrace>"
+  assumes prepareThreadDelete_corres[corres]:
+    "\<And>t t'. t' = t \<Longrightarrow>
+            corres dc (invs and tcb_at t) no_0_obj'
+                   (prepare_thread_delete t) (prepareThreadDelete t')"
 
 context IpcCancel_R begin
 
@@ -2182,7 +2188,7 @@ crunch setThreadState
   for obj_at'_tcbQueued[wp]: "\<lambda>s. Q (obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t s)"
   (wp: threadSet_obj_at'_no_state crunch_wps simp: crunch_simps)
 
-lemma suspend_unqueued:
+lemma suspend_unqueued[wp]:
   "\<lbrace>\<top>\<rbrace> suspend t \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
   unfolding suspend_def
   by (wpsimp simp: comp_def wp: tcbSchedDequeue_not_tcbQueued)

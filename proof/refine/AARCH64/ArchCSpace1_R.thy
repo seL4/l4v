@@ -793,6 +793,28 @@ lemma valid_badges_def2[CSpace1_R_assms]:
   apply (auto simp: isCap_simps valid_arch_badges_SMC)
   done
 
+(* FIXME arch-split: theoretically, valid_badges_def3 could be an interface lemma, but:
+   unordered_valid_arch_badges is on AARCH64 only, and this rule is always used with
+   unordered_valid_arch_badges_def, which defeats any attempt at using it generically  *)
+lemma valid_badges_def3:
+  "valid_badges m =
+   (\<forall>p p' cap node cap' node'.
+      m p = Some (CTE cap node) \<longrightarrow>
+      m p' = Some (CTE cap' node') \<longrightarrow>
+      m \<turnstile> p \<leadsto> p' \<longrightarrow>
+      (capMasterCap cap = capMasterCap cap' \<longrightarrow> capBadge cap \<noteq> None \<longrightarrow>
+       capBadge cap \<noteq> capBadge cap' \<longrightarrow> capBadge cap' \<noteq> Some 0 \<longrightarrow> mdbFirstBadged node') \<and>
+      unordered_valid_arch_badges cap cap' node')"
+  apply (simp add: valid_badges_def2)
+  apply (rule iffI; clarsimp simp: valid_arch_badges_implies_unordered)
+  apply (simp add: valid_arch_badges_def)
+  apply (rule conjI; clarsimp)
+   (* SGISignalCap *)
+   apply (fastforce simp: unordered_valid_arch_badges_def)
+  (* SMCCap *)
+  apply (fastforce simp: isCap_simps)
+  done
+
 lemma capRange_SMC[simp]:
   "capRange (ArchObjectCap (SMCCap smc_badge)) = {}"
   by (simp add: capRange_def)

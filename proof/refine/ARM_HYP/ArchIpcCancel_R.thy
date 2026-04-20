@@ -137,7 +137,7 @@ lemma sym_refs_tcb_vcpu:
   apply (case_tac koa; simp add: vcpu_tcb_refs_def split: option.splits)
   done
 
-lemma prepareThreadDelete_corres[corres]:
+lemma prepareThreadDelete_corres[IpcCancel_R_assms, corres]:
   "t' = t \<Longrightarrow>
    corres dc (invs and tcb_at t) no_0_obj'
           (prepare_thread_delete t) (prepareThreadDelete t')"

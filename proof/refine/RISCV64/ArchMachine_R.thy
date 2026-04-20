@@ -51,10 +51,8 @@ lemma dmo_maskInterrupt_True:
                    ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
   done
 
-lemma setIRQState_irq_states':
-  "\<lbrace>valid_irq_states'\<rbrace>
-      setIRQState state irq
-   \<lbrace>\<lambda>rv. valid_irq_states'\<rbrace>"
+lemma setIRQState_irq_states'[Machine_R_assms, wp]:
+  "setIRQState state irq \<lbrace>valid_irq_states'\<rbrace>"
   apply (simp add: setIRQState_def setInterruptState_def getInterruptState_def)
   apply (wp dmo_maskInterrupt)
   apply (simp add: valid_irq_masks'_def)
