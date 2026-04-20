@@ -71,7 +71,7 @@ proof -
               corres: getObject_TCB_corres setObject_update_TCB_corres')
 qed
 
-lemma prepareThreadDelete_corres[corres]:
+lemma prepareThreadDelete_corres[IpcCancel_R_assms, corres]:
   "t' = t \<Longrightarrow>
    corres dc (invs and tcb_at t) no_0_obj'
           (prepare_thread_delete t) (prepareThreadDelete t')"

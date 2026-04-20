@@ -2114,7 +2114,24 @@ locale TcbAcc_R_2 = TcbAcc_R +
     "\<And>F tcb s.
      tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)
      \<Longrightarrow> valid_arch_tcb' (tcbArch (F tcb)) s = valid_arch_tcb' (tcbArch tcb) s"
+  assumes setBoundNotification_state_hyp_refs_of'[wp]:
+    "\<And>ntfn t P. setBoundNotification ntfn t \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
+  assumes sbn_iflive'[wp]:
+    "\<And>ntfn t.
+     \<lbrace>\<lambda>s. if_live_then_nonz_cap' s
+          \<and> (bound ntfn \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
+     setBoundNotification ntfn t
+     \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
 begin
+
+lemma setBoundNotification_state_refs_of'[wp]:
+  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := tcb_bound_refs' ntfn
+                               \<union> {r \<in> state_refs_of' s t. snd r \<noteq> TCBBound}))\<rbrace>
+   setBoundNotification ntfn t
+   \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
+  unfolding setBoundNotification_def
+  by (simp add: Un_commute
+      | wpsimp simp: fun_upd_def wp: threadSet_state_refs_of')+
 
 crunch setQueue, tcbQueuePrepend, tcbQueueRemove, removeFromBitmap
   for ghost_relation_wrapper[wp]: "ghost_relation_wrapper t"

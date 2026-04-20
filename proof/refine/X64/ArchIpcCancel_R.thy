@@ -72,7 +72,7 @@ lemma fpuRelease_corres[corres]:
    corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu) \<top> (fpu_release t) (fpuRelease t')"
   by (corres simp: fpu_release_def fpuRelease_def)
 
-lemma prepareThreadDelete_corres[corres]:
+lemma prepareThreadDelete_corres[IpcCancel_R_assms, corres]:
   "t' = t \<Longrightarrow>
    corres dc (invs and tcb_at t) no_0_obj'
           (prepare_thread_delete t) (prepareThreadDelete t')"

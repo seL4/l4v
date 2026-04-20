@@ -37,5 +37,7 @@ locale Machine_R =
   assumes dmo_getirq_inv[wp]:
     "\<And>P in_kernel.
      irq_state_independent_H P \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv. P\<rbrace>"
+  assumes setIRQState_irq_states'[wp]:
+    "\<And>state irq. setIRQState state irq \<lbrace>valid_irq_states'\<rbrace>"
 
 end

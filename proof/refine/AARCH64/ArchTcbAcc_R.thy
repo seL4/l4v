@@ -1010,15 +1010,7 @@ lemma setThreadState_state_hyp_refs_of'[TcbAcc_R_2_assms, wp]:
         | wp threadSet_state_hyp_refs_of' hoare_drop_imps)+
   done
 
-lemma setBoundNotification_state_refs_of'[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := tcb_bound_refs' ntfn
-                                 \<union> {r \<in> state_refs_of' s t. snd r \<noteq> TCBBound}))\<rbrace>
-     setBoundNotification ntfn t
-   \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
-  by (simp add: setBoundNotification_def Un_commute fun_upd_def
-        | wp threadSet_state_refs_of' )+
-
-lemma setBoundNotification_state_hyp_refs_of'[wp]:
+lemma setBoundNotification_state_hyp_refs_of'[TcbAcc_R_2_assms, wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>
      setBoundNotification ntfn t
    \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
@@ -1043,7 +1035,7 @@ lemma tcbQueued_update_iflive'[TcbAcc_R_2_assms, wp]:
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
 
-lemma sbn_iflive'[wp]:
+lemma sbn_iflive'[TcbAcc_R_2_assms, wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
       \<and> (bound ntfn \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
    setBoundNotification ntfn t
