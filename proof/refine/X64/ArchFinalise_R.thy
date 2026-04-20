@@ -4,12 +4,11 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-theory Finalise_R
+theory ArchFinalise_R
 imports
-  ArchIpcCancel_R
-  InterruptAcc_R
-  ArchRetype_R
+  Finalise_R
 begin
+
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 declare doUnbindNotification_def[simp]

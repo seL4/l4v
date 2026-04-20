@@ -6,7 +6,7 @@
  *)
 
 theory Ipc_R
-imports Finalise_R
+imports ArchFinalise_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)

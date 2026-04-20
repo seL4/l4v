@@ -10,7 +10,7 @@
 *)
 
 theory Arch_R
-imports Untyped_R Finalise_R
+imports Untyped_R ArchFinalise_R
 begin
 
 unbundle l4v_word_context
