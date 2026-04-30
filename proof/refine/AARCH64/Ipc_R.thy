@@ -637,6 +637,7 @@ lemma cteInsert_weak_cte_wp_at2:
     "\<lbrace>\<lambda>s. if p = dest then P cap else cte_wp_at' (\<lambda>c. P (cteCap c)) p s\<rbrace>
      cteInsert cap src dest
      \<lbrace>\<lambda>uu. cte_wp_at' (\<lambda>c. P (cteCap c)) p\<rbrace>"
+  supply if_cong[cong]
   apply (rule hoare_pre)
    apply (rule hoare_use_eq_irq_node' [OF cteInsert_ksInterruptState])
    apply (clarsimp simp:cteInsert_def)
@@ -1443,6 +1444,7 @@ lemma doNormalTransfer_corres:
    and case_option \<top> valid_ipc_buffer_ptr' recv_buf)
   (do_normal_transfer sender send_buf ep badge can_grant receiver recv_buf)
   (doNormalTransfer sender send_buf ep badge can_grant receiver recv_buf)"
+  supply if_cong[cong]
   apply (simp add: do_normal_transfer_def doNormalTransfer_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_mapr[OF getMessageInfo_corres])
@@ -2629,6 +2631,7 @@ lemma valid_sched_weak_strg:
 lemma sendSignal_corres:
   "corres dc (einvs and ntfn_at ep) (invs' and ntfn_at' ep)
              (send_signal ep bg) (sendSignal ep bg)"
+  supply if_cong[cong]
   apply (simp add: send_signal_def sendSignal_def Let_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF getNotification_corres,
@@ -3595,6 +3598,7 @@ lemma cteInsert_cap_to':
   "\<lbrace>ex_nonz_cap_to' p and cte_wp_at' (\<lambda>c. cteCap c = NullCap) dest\<rbrace>
      cteInsert cap src dest
    \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
+  supply if_cong[cong]
   apply (simp add: cteInsert_def ex_nonz_cap_to'_def updateCap_def setUntypedCapAsFull_def)
   apply (wpsimp wp: updateMDB_weak_cte_wp_at setCTE_weak_cte_wp_at hoare_vcg_ex_lift
          | rule hoare_drop_imps
@@ -4029,6 +4033,7 @@ lemma si_invs'[wp]:
   sendIPC bl call ba cg cgr t ep
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   supply if_split[split del]
+  supply if_cong[cong]
   apply (simp add: sendIPC_def)
   apply (rule bind_wp [OF _ get_ep_sp'])
   apply (case_tac epa)

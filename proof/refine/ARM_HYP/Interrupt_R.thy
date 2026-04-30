@@ -415,6 +415,7 @@ lemma invokeIRQHandler_corres:
              (invs' and irq_handler_inv_valid' i')
      (invoke_irq_handler i)
      (InterruptDecls_H.invokeIRQHandler i')"
+  supply if_cong[cong]
   apply (cases i; simp add: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def theIRQ_def
                        split del: if_split)
     apply (corres corres: corres_machine_op)
@@ -695,6 +696,7 @@ lemma timerTick_corres:
   "corres dc
      (cur_tcb and valid_sched and pspace_aligned and pspace_distinct) invs'
      timer_tick timerTick"
+  supply if_cong[cong]
   apply (simp add: timerTick_def timer_tick_def)
   apply (simp add: thread_state_case_if threadState_case_if)
   apply (rule_tac Q="cur_tcb and valid_sched and pspace_aligned and pspace_distinct"

@@ -662,6 +662,7 @@ lemma pinv_tcb'[wp]:
 
 lemma sts_cte_at[wp]:
   "\<lbrace>cte_at' p\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. cte_at' p\<rbrace>"
+  supply if_cong[cong]
   apply (simp add: setThreadState_def)
   apply (wp|simp)+
   done
@@ -675,6 +676,7 @@ lemma sts_mcpriority_tcb_at'[wp]:
   "\<lbrace>mcpriority_tcb_at' P t\<rbrace>
     setThreadState st t'
    \<lbrace>\<lambda>_. mcpriority_tcb_at' P t\<rbrace>"
+  supply if_cong[cong]
   apply (cases "t = t'",
          simp_all add: setThreadState_def
                   split del: if_split)
@@ -748,6 +750,7 @@ lemma decodeDomainSetStart_inv_wf[wp]:
 lemma decodeDomainConfigure_inv_wf[wp]:
   "\<lbrace>\<top>\<rbrace> decodeDomainConfigure args excaps \<lbrace>valid_domain_inv'\<rbrace>, -"
   unfolding decodeDomainConfigure_def
+  supply if_cong[cong]
   apply (wpsimp simp: valid_domain_inv'_def split_del: if_split)
   apply (clarsimp simp: not_less not_le le_maxDomain_eq_less_numDomains unat_ucast)
   using numDomains_fits_domainBits
@@ -1351,8 +1354,12 @@ crunch rescheduleRequired
   for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: setObject_ksInterrupt updateObject_default_inv)
 
+context notes if_cong[cong] begin
+
 crunch setThreadState
   for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+
+end
 
 crunch reply_from_kernel
   for pspace_aligned[wp]: pspace_aligned

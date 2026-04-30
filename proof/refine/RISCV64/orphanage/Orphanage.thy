@@ -478,6 +478,7 @@ lemma setThreadState_not_is_active_thread_state_no_orphans:
    setThreadState state tcb_ptr
    \<lbrace>\<lambda>_ . no_orphans\<rbrace>"
   unfolding setThreadState_def
+  supply if_cong[cong]
   apply (wpsimp wp: ssa_no_orphans)
    apply (unfold no_orphans_disj almost_no_orphans_disj)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
@@ -498,6 +499,7 @@ lemma setThreadState_almost_no_orphans [wp]:
 lemma setThreadState_not_active_no_orphans:
   "\<not> is_active_thread_state state \<Longrightarrow> setThreadState state tcb_ptr \<lbrace>no_orphans\<rbrace>"
   unfolding setThreadState_def
+  supply if_cong[cong]
   apply (wpsimp wp: ssa_no_orphans)
    apply (unfold no_orphans_disj)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
@@ -508,6 +510,7 @@ lemma setThreadState_not_active_no_orphans:
 lemma setThreadState_not_active_almost_no_orphans:
   "\<not> is_active_thread_state state \<Longrightarrow> setThreadState state tcb_ptr \<lbrace>almost_no_orphans thread\<rbrace>"
   unfolding setThreadState_def
+  supply if_cong[cong]
   apply (wpsimp wp: ssa_no_orphans)
    apply (unfold almost_no_orphans_disj)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
@@ -571,6 +574,7 @@ lemma tcbSchedDequeue_no_orphans[wp]:
    \<lbrace>\<lambda>_. no_orphans\<rbrace>"
   supply disj_not1[simp del]
   unfolding no_orphans_disj almost_no_orphans_disj
+  supply if_cong[cong]
   apply (rule hoare_allI)
   apply (rename_tac tcb_ptr)
   apply (case_tac "tcb_ptr = tcbPtr")
@@ -705,6 +709,7 @@ lemma chooseThread_no_orphans [wp]:
   (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
   unfolding chooseThread_def Let_def
   supply if_split[split del]
+  supply if_cong[cong]
   apply (simp only: return_bind, simp)
   apply (intro bind_wp[OF _ stateAssert_sp])
   apply (rule bind_wp[where Q'="\<lambda>rv s. ?PRE s \<and> ksReadyQueues_asrt s \<and> ready_qs_runnable s
@@ -1321,7 +1326,7 @@ lemma unbindNotification_no_orphans[wp]:
   "\<lbrace>\<lambda>s. no_orphans s\<rbrace>
     unbindNotification t
    \<lbrace> \<lambda>rv s. no_orphans s\<rbrace>"
-  unfolding unbindNotification_def
+  unfolding unbindNotification_def doUnbindNotification_def
   apply (rule bind_wp[OF _ gbn_sp'])
   apply (case_tac ntfnPtr, simp_all, wp, simp)
   apply (rule bind_wp[OF _ get_ntfn_sp'])
@@ -1332,7 +1337,7 @@ lemma unbindMaybeNotification_no_orphans[wp]:
   "\<lbrace>\<lambda>s. no_orphans s\<rbrace>
     unbindMaybeNotification a
    \<lbrace> \<lambda>rv s. no_orphans s\<rbrace>"
-  unfolding unbindMaybeNotification_def
+  unfolding unbindMaybeNotification_def doUnbindNotification_def
   by (wp getNotification_wp | simp | wpc)+
 
 lemma finaliseCapTrue_standin_no_orphans[wp]:

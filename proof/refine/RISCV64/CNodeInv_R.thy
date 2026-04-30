@@ -322,7 +322,7 @@ lemma decodeCNodeInvocation_corres:
                  apply (intro conjI)
                   apply (erule cap_map_update_data)+
                 apply (wp hoare_drop_imps)+
-          apply simp
+          apply (simp cong: if_cong)
           apply (wp lsfco_cte_at' lookup_cap_valid lookup_cap_valid')
          apply (simp add: if_apply_def2)
          apply (wp hoare_drop_imps)
@@ -6244,7 +6244,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
        apply (erule disjE[where P="F \<and> G" for F G])
         apply (clarsimp simp: capRemovable_def cte_wp_at_ctes_of)
         apply (rule conjI, clarsimp)
-        apply (case_tac b; case_tac "cteCap rv"; simp add: post_cap_delete_pre'_def)
+        apply (case_tac b; case_tac "cteCap rv"; simp add: arch_cap_has_cleanup'_def post_cap_delete_pre'_def)
          apply (clarsimp simp: final_IRQHandler_no_copy)
          apply (drule (1) ctes_of_valid'[OF _ invs_valid_objs'])
          apply (clarsimp simp: valid_cap'_def)

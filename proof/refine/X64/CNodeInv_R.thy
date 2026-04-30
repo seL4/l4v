@@ -322,7 +322,7 @@ lemma decodeCNodeInvocation_corres:
                  apply (intro conjI)
                   apply (erule cap_map_update_data)+
                 apply (wp hoare_drop_imps)+
-          apply simp
+          apply (simp cong: if_cong)
           apply (wp lsfco_cte_at' lookup_cap_valid lookup_cap_valid')
          apply (simp add: if_apply_def2)
          apply (wp hoare_drop_imps)
@@ -6707,6 +6707,8 @@ lemma capSwap_rvk_prog:
   apply simp
   apply arith
   done
+
+lemmas ctes_of_cteCaps_of_lift = cteCaps_of_ctes_of_lift (* FIXME *)
 
 lemmas cancelAllIPC_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF cancelAllIPC_ctes_of]
 lemmas cancelAllSignals_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF cancelAllSignals_ctes_of]

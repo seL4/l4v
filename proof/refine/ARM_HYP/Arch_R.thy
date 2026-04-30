@@ -1169,7 +1169,7 @@ shows
                   in corres_gen_asm2)
          apply (rule corres_split[OF isFinalCapability_corres[where ptr=slot]])
            apply (drule mp)
-            apply (clarsimp simp: isCap_simps final_matters'_def)
+            apply (clarsimp simp: isCap_simps final_matters'_def arch_final_matters'_def)
            apply (rule whenE_throwError_corres)
              apply simp
             apply simp
@@ -2098,13 +2098,9 @@ crunch "Arch.finaliseCap"
   for aligned': pspace_aligned'
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
-lemmas arch_finalise_cap_aligned' = finaliseCap_aligned'
-
 crunch "Arch.finaliseCap"
   for distinct': pspace_distinct'
   (wp: crunch_wps getASID_wp simp: crunch_simps)
-
-lemmas arch_finalise_cap_distinct' = finaliseCap_distinct'
 
 crunch "Arch.finaliseCap"
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"

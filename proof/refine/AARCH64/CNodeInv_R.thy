@@ -329,7 +329,7 @@ lemma decodeCNodeInvocation_corres:
                  apply (intro conjI)
                   apply (erule cap_map_update_data)+
                 apply (wp hoare_drop_imps)+
-          apply simp
+          apply (simp cong: if_cong)
           apply (wp lsfco_cte_at' lookup_cap_valid lookup_cap_valid')
          apply (simp add: if_apply_def2)
          apply (wp hoare_drop_imps)
@@ -6322,6 +6322,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
     by (simp add: no_cte_prop_def finalise_prop_stuff_def)
   note stuff'[unfolded finalise_prop_stuff_def, simp]
   show ?case
+    supply arch_cap_has_cleanup'_def[simp]
     apply (subst finaliseSlot'.simps)
     apply (fold reduceZombie_def[unfolded cteDelete_def finaliseSlot_def])
     apply (unfold split_def)

@@ -321,7 +321,7 @@ lemma decodeCNodeInvocation_corres:
                  apply (intro conjI)
                   apply (erule cap_map_update_data)+
                 apply (wp hoare_drop_imps)+
-          apply simp
+          apply (simp cong: if_cong)
           apply (wp lsfco_cte_at' lookup_cap_valid lookup_cap_valid')
          apply (simp add: if_apply_def2)
          apply (wp hoare_drop_imps)
@@ -5691,6 +5691,7 @@ lemma make_zombie_invs':
                                               \<and> tcbSchedPrev tcb = None) p s)) sl s\<rbrace>
     updateCap sl cap
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  supply if_cong[cong]
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
                    valid_irq_handlers'_def irq_issued'_def)
   apply (wp updateCap_ctes_of_wp sch_act_wf_lift valid_queues_lift cur_tcb_lift
@@ -6799,6 +6800,8 @@ lemma capSwap_rvk_prog:
   apply arith
   done
 
+lemmas ctes_of_cteCaps_of_lift = cteCaps_of_ctes_of_lift (* FIXME *)
+
 lemmas cancelAllIPC_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF cancelAllIPC_ctes_of]
 lemmas cancelAllSignals_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF cancelAllSignals_ctes_of]
 lemmas setEndpoint_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF set_ep_ctes_of]
@@ -6824,16 +6827,12 @@ lemma vcpuFinalise_rvk_prog':
   "vcpuFinalise v \<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option capToRPO (cteCaps_of s x))\<rbrace>"
   by (wpsimp simp: cteCaps_of_def)
 
-context
-notes option.case_cong_weak[cong]
-begin
 crunch finaliseCap
   for rvk_prog': "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
   (wp: crunch_wps threadSet_ctesCaps_of getObject_inv
-       loadObject_default_inv dissociateVCPUTCB_isFinal
+       loadObject_default_inv ctes_of_cteCaps_of_lift[OF dissociateVCPUTCB_ctes_of]
    simp: crunch_simps o_def
    ignore: threadSet)
-end
 
 lemmas finalise_induct3 = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) s" for P]

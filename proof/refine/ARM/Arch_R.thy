@@ -1032,7 +1032,7 @@ shows
                in corres_gen_asm2)
         apply (rule corres_split[OF isFinalCapability_corres[where ptr=slot]])
           apply (drule mp)
-           apply (clarsimp simp: isCap_simps final_matters'_def)
+           apply (clarsimp simp: isCap_simps final_matters'_def arch_final_matters'_def)
           apply (rule whenE_throwError_corres)
             apply simp
            apply simp
@@ -1769,10 +1769,6 @@ crunch performPageDirectoryInvocation, performPageTableInvocation, performPageIn
             performASIDPoolInvocation
   for st_tcb_at': "st_tcb_at' P t"
   (wp: crunch_wps getASID_wp getObject_cte_inv simp: crunch_simps)
-
-lemmas arch_finalise_cap_aligned' = finaliseCap_aligned'
-
-lemmas arch_finalise_cap_distinct' = finaliseCap_distinct'
 
 crunch "Arch.finaliseCap"
   for st_tcb_at'[wp]: "st_tcb_at' P t"
