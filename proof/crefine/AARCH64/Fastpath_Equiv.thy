@@ -33,9 +33,13 @@ lemma getEndpoint_obj_at':
 
 lemmas setEndpoint_obj_at_tcb' = setEndpoint_obj_at'_tcb
 
+context notes if_cong[cong] begin
+
 crunch tcbSchedEnqueue
   for tcbContext[wp]: "obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t"
   (simp: tcbQueuePrepend_def)
+
+end
 
 lemma setCTE_tcbContext:
   "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
@@ -1082,9 +1086,13 @@ crunch emptySlot, asUser
   for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
   (wp: crunch_wps)
 
+context notes if_cong[cong] begin (* FIXME arch-split: WTF *)
+
 crunch possibleSwitchTo
   for tcbContext[wp]: "obj_at' (\<lambda>tcb. P ( (atcbContextGet o tcbArch) tcb)) t"
   (wp: crunch_wps simp_del: comp_apply)
+
+end
 
 crunch doFaultTransfer
   for only_cnode_caps[wp]: "\<lambda>s. P (only_cnode_caps (ctes_of s))"
@@ -1415,9 +1423,13 @@ lemma valid_objs_ntfn_at_tcbBoundNotification:
   apply clarsimp
   done
 
+context notes if_cong[cong] begin
+
 crunch setThreadState
   for bound_tcb_at'_Q[wp]: "\<lambda>s. Q (bound_tcb_at' P t s)"
   (wp: threadSet_pred_tcb_no_state crunch_wps simp: unless_def)
+
+end
 
 lemmas emptySlot_pred_tcb_at'_Q[wp] = lift_neg_pred_tcb_at'[OF emptySlot_typ_at' emptySlot_pred_tcb_at']
 

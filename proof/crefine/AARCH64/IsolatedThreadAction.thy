@@ -266,7 +266,7 @@ lemma map_to_ctes_partial_overwrite:
   "\<forall>x. tcb_at' (idx x) s \<Longrightarrow>
    map_to_ctes (partial_overwrite idx tsrs (ksPSpace s))
      = ctes_of s"
-  supply if_split[split del]
+  supply if_split[split del] if_cong[cong]
   apply (rule ext)
   apply (frule dom_partial_overwrite[where tsrs=tsrs])
   apply (simp add: map_to_ctes_def partial_overwrite_def
@@ -1279,7 +1279,8 @@ lemma oblivious_switchToThread_schact:
                    getQueue_def setQueue_def storeWordUser_def setRegister_def
                    pointerInUserData_def isRunnable_def isStopped_def
                    getThreadState_def tcbSchedDequeue_def bitmap_fun_defs
-                   tcbQueueRemove_def ksReadyQueues_asrt_def)
+                   tcbQueueRemove_def ksReadyQueues_asrt_def
+              cong: if_cong)
   by (safe intro!: oblivious_bind
               | simp_all add: ready_qs_runnable_def idleThreadNotQueued_def
                               oblivious_setVMRoot_schact oblivious_vcpuSwitch_schact
@@ -1324,9 +1325,13 @@ lemma tcbSchedEnqueue_tcbPriority[wp]:
   apply (wp | simp cong: if_cong)+
   done
 
+context notes if_cong[cong] begin
+
 crunch cteDeleteOne
   for obj_at_prio[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
   (wp: crunch_wps setEndpoint_obj_at'_tcb setNotification_tcb simp: crunch_simps unless_def)
+
+end
 
 lemma setThreadState_no_sch_change:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s) \<and> (runnable' st \<or> t \<noteq> ksCurThread s)\<rbrace>
