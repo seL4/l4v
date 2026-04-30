@@ -961,13 +961,9 @@ lemma activateThread_simple_rewrite:
 
 end
 
-context notes if_cong[cong] begin
-
 crunch setBoundNotification, cteDeleteOne
   for obj_at_prio[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
-  (wp: crunch_wps simp: crunch_simps)
-
-end
+  (wp: crunch_wps simp: crunch_simps cong: if_cong)
 
 lemma setThreadState_no_sch_change:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s) \<and> (runnable' st \<or> t \<noteq> ksCurThread s)\<rbrace>

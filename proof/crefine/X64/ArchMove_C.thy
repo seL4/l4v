@@ -108,12 +108,9 @@ lemma Arch_switchToThread_obj_at_pre:
   apply (wpsimp wp: asUser_obj_at_notQ doMachineOp_obj_at hoare_drop_imps simp: comp_def)
   done
 
-context notes if_cong[cong] begin
-
 crunch setThreadState
   for pspace_canonical'[wp]: pspace_canonical'
-
-end
+  (cong: if_cong)
 
 lemma word_shift_by_3:
   "x * 8 = (x::'a::len word) << 3"

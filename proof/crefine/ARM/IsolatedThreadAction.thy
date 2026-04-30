@@ -918,12 +918,9 @@ crunch cteDeleteOne
   (wp: crunch_wps setEndpoint_obj_at'_tcb setNotification_tcb
    simp: crunch_simps unless_def setBoundNotification_def doUnbindNotification_def)
 
-context
-notes if_cong[cong]
-begin
 crunch rescheduleRequired
   for obj_at_dom[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
-end
+  (cong: if_cong)
 
 lemma setThreadState_no_sch_change:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s) \<and> (runnable' st \<or> t \<noteq> ksCurThread s)\<rbrace>

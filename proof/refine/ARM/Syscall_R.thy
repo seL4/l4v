@@ -1354,12 +1354,9 @@ crunch rescheduleRequired
   for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: setObject_ksInterrupt updateObject_default_inv)
 
-context notes if_cong[cong] begin
-
 crunch setThreadState
   for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-
-end
+  (cong: if_cong)
 
 crunch reply_from_kernel
   for pspace_aligned[wp]: pspace_aligned

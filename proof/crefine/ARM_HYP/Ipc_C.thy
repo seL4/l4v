@@ -4336,20 +4336,16 @@ lemma handleFaultReply_ccorres [corres]:
   apply (fastforce simp: seL4_Faults seL4_Arch_Faults)
   done
 
-context
-notes if_cong[cong]
-begin
-
 crunch emptySlot, tcbSchedEnqueue, rescheduleRequired
   for tcbFault: "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
   (wp: threadSet_obj_at'_strongish crunch_wps
-    simp: crunch_simps unless_def)
+   simp: crunch_simps unless_def
+   cong: if_cong)
 
 crunch setThreadState, cancelAllIPC, cancelAllSignals
   for tcbFault: "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
-  (wp: threadSet_obj_at'_strongish crunch_wps)
-
-end
+  (wp: threadSet_obj_at'_strongish crunch_wps
+   cong: if_cong)
 
 lemma sbn_tcbFault:
   "\<lbrace>obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>

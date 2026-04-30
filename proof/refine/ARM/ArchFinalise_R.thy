@@ -937,13 +937,9 @@ lemma archThreadSet_tcbSchedPrevNext[wp]:
   apply auto
   done
 
-context notes if_cong[cong] begin
-
 crunch asUser
   for tcbSchedPrevNext[wp]: "obj_at' (\<lambda>tcb. P (tcbSchedNext tcb) (tcbSchedPrev tcb)) t"
-  (wp: threadGet_wp)
-
-end
+  (wp: threadGet_wp cong: if_cong)
 
 crunch prepareThreadDelete
   for tcbSchedPrevNext[wp]: "obj_at' (\<lambda>tcb. P (tcbSchedNext tcb) (tcbSchedPrev tcb)) t"
@@ -1220,14 +1216,11 @@ crunch unmapPageTable
   (wp: crunch_wps getObject_inv hoare_vcg_all_lift hoare_vcg_if_lift3
    simp: loadObject_default_def updateObject_default_def)
 
-context notes if_cong[cong] begin
-
 crunch Arch_finaliseCap
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_inv simp: loadObject_default_def updateObject_default_def
-   rule: ARM_H.finaliseCap_def)
-
-end
+   rule: ARM_H.finaliseCap_def
+   cong: if_cong)
 
 crunch deletingIRQHandler, finaliseCap
   for sch_act_simple[wp]: sch_act_simple

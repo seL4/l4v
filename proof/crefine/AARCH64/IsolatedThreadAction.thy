@@ -1325,13 +1325,9 @@ lemma tcbSchedEnqueue_tcbPriority[wp]:
   apply (wp | simp cong: if_cong)+
   done
 
-context notes if_cong[cong] begin
-
 crunch cteDeleteOne
   for obj_at_prio[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
-  (wp: crunch_wps setEndpoint_obj_at'_tcb setNotification_tcb simp: crunch_simps unless_def)
-
-end
+  (wp: crunch_wps setEndpoint_obj_at'_tcb setNotification_tcb simp: crunch_simps unless_def cong: if_cong)
 
 lemma setThreadState_no_sch_change:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s) \<and> (runnable' st \<or> t \<noteq> ksCurThread s)\<rbrace>
