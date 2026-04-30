@@ -592,14 +592,11 @@ lemma switchToIdleThread_no_orphans' [wp]:
   apply (force simp: is_active_tcb_ptr_def st_tcb_at_neg' typ_at_tcb')
   done
 
-context notes if_cong[cong] begin
-
 crunch getVMID, Arch.switchToThread
   for ksCurThread[wp]: "\<lambda> s. P (ksCurThread s)"
   (wp: crunch_wps getObject_inv loadObject_default_inv findVSpaceForASID_vs_at_wp
-   simp: getThreadVSpaceRoot_def if_distribR)
-
-end
+   simp: getThreadVSpaceRoot_def if_distribR
+   cong: if_cong)
 
 crunch lazyFpuRestore
   for tcbQueued[wp]: "\<lambda>s. Q (obj_at' (\<lambda>tcb. P (tcbQueued tcb)) tcb_ptr s)"

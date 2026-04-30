@@ -291,12 +291,9 @@ lemma asUser_getRegister_discarded:
                         return_def fail_def stateAssert_def)
   done
 
-context notes if_cong[cong] begin
-
 crunch setThreadState
   for pspace_canonical'[wp]: pspace_canonical'
-
-end
+  (cong: if_cong)
 
 lemma obj_at_kernel_mappings':
   "\<lbrakk>pspace_in_kernel_mappings' s; obj_at' P p s\<rbrakk>

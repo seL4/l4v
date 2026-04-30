@@ -199,13 +199,10 @@ lemma setupReplyMaster_weak_sch_act_wf[wp]:
   apply assumption
   done
 
-context notes if_cong[cong] begin
-
 crunch setup_reply_master
   for pspace_aligned[wp]: pspace_aligned
   and pspace_distinct[wp]: pspace_distinct
-
-end
+  (cong: if_cong)
 
 lemma restart_corres:
   "corres dc (einvs  and tcb_at t) (invs' and tcb_at' t and ex_nonz_cap_to' t)

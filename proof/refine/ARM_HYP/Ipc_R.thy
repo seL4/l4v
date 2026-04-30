@@ -3764,13 +3764,9 @@ crunch setupCallerCap
   for irq_states'[wp]: valid_irq_states'
   (wp: crunch_wps)
 
-context notes if_cong[cong] begin
-
 crunch setupCallerCap
   for pde_mappings'[wp]: valid_pde_mappings'
-  (wp: crunch_wps)
-
-end
+  (wp: crunch_wps cong: if_cong)
 
 crunch receiveIPC
   for irqs_masked'[wp]: "irqs_masked'"
