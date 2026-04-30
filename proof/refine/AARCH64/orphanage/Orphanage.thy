@@ -478,7 +478,7 @@ lemma setThreadState_not_is_active_thread_state_no_orphans:
    apply (unfold no_orphans_disj almost_no_orphans_disj)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
              threadSet_all_queued_tcb_ptrs hoare_drop_imps
-          | fastforce)+
+          | fastforce cong: if_cong)+
   done
 
 lemma setThreadState_almost_no_orphans [wp]:
@@ -498,7 +498,7 @@ lemma setThreadState_not_active_no_orphans:
    apply (unfold no_orphans_disj)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
              threadSet_all_queued_tcb_ptrs hoare_drop_imps
-          | fastforce)+
+          | fastforce cong: if_cong)+
   done
 
 lemma setThreadState_not_active_almost_no_orphans:
@@ -508,7 +508,7 @@ lemma setThreadState_not_active_almost_no_orphans:
    apply (unfold almost_no_orphans_disj)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
              threadSet_all_queued_tcb_ptrs hoare_drop_imps
-          | fastforce)+
+          | fastforce cong: if_cong)+
   done
 
 lemma activateThread_no_orphans [wp]:
@@ -576,6 +576,7 @@ lemma tcbSchedDequeue_no_orphans[wp]:
    apply wpsimp
    apply (clarsimp simp: st_tcb_at'_def obj_at'_def is_active_tcb_ptr_def disj_not1)
   apply (wpsimp wp: tcbQueued_update_False_all_queued_tcb_ptrs hoare_vcg_disj_lift
+              cong: if_cong
               simp: tcbSchedDequeue_def)
   done
 
@@ -591,10 +592,14 @@ lemma switchToIdleThread_no_orphans' [wp]:
   apply (force simp: is_active_tcb_ptr_def st_tcb_at_neg' typ_at_tcb')
   done
 
+context notes if_cong[cong] begin
+
 crunch getVMID, Arch.switchToThread
   for ksCurThread[wp]: "\<lambda> s. P (ksCurThread s)"
   (wp: crunch_wps getObject_inv loadObject_default_inv findVSpaceForASID_vs_at_wp
    simp: getThreadVSpaceRoot_def if_distribR)
+
+end
 
 crunch lazyFpuRestore
   for tcbQueued[wp]: "\<lambda>s. Q (obj_at' (\<lambda>tcb. P (tcbQueued tcb)) tcb_ptr s)"
@@ -718,7 +723,7 @@ lemma chooseThread_no_orphans [wp]:
    \<lbrace>\<lambda>_. no_orphans\<rbrace>"
   (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
   unfolding chooseThread_def Let_def
-  supply if_split[split del]
+  supply if_split[split del] if_cong[cong]
   apply (simp only: return_bind, simp)
   apply (intro bind_wp[OF _ stateAssert_sp])
   apply (rule bind_wp[where Q'="\<lambda>rv s. ?PRE s \<and> ksReadyQueues_asrt s \<and> ready_qs_runnable s
@@ -1216,7 +1221,8 @@ lemma deleteObjects_no_orphans [wp]:
   apply wpsimp
   apply (clarsimp simp: no_orphans_def all_active_tcb_ptrs_def
                         all_queued_tcb_ptrs_def is_active_tcb_ptr_def
-                        ksMachineState_ksPSpace_upd_comm)
+                        ksMachineState_ksPSpace_upd_comm
+                   cong: if_cong)
   apply (drule_tac x=tcb_ptr in spec)
   apply (clarsimp simp: pred_tcb_at'_def obj_at_delete')
   done

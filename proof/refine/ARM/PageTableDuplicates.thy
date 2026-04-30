@@ -85,6 +85,7 @@ lemma mapM_x_storePTE_updates:
      \<and> Q (\<lambda>x. if (x \<in> set xs) then Some (KOArch (KOPTE pte)) else (ksPSpace s) x) \<rbrace>
      mapM_x (swp storePTE pte) xs
    \<lbrace>\<lambda>r s. Q (ksPSpace s)\<rbrace>"
+  supply if_cong[cong]
   apply (induct xs)
    apply (simp add: mapM_x_Nil)
   apply (simp add: mapM_x_Cons)
@@ -381,6 +382,7 @@ lemma mapM_x_storePDE_updates:
      \<and> Q (\<lambda>x. if (x \<in> set xs) then Some (KOArch (KOPDE pte)) else (ksPSpace s) x) \<rbrace>
      mapM_x (swp storePDE pte) xs
    \<lbrace>\<lambda>r s. Q (ksPSpace s)\<rbrace>"
+  supply if_cong[cong]
   apply (induct xs)
    apply (simp add: mapM_x_Nil)
   apply (simp add: mapM_x_Cons)
@@ -1104,6 +1106,7 @@ lemma createObject_valid_duplicates'[wp]:
    apply (rule none_in_new_cap_addrs[where us =12,simplified]
      ,(simp add: objBits_simps pageBits_def word_bits_conv archObjSize_def pdeBits_def)+)[1]
   supply APIType_capBits_generic[simp del]
+  supply if_cong[cong]
   apply (intro conjI impI allI)
       apply simp
      apply clarsimp

@@ -757,7 +757,7 @@ lemma decodeARMPageTableInvocation_corres:
                                  in corres_gen_asm2)
         apply (rule corres_split[OF isFinalCapability_corres[where ptr=slot]])
           apply (drule mp)
-           apply (clarsimp simp: isCap_simps final_matters'_def)
+           apply (clarsimp simp: isCap_simps final_matters'_def arch_final_matters'_def)
           apply (rule whenE_throwError_corres; simp)
           apply (rule option_corres)
             apply (cases opt; simp add: mdata_map_def)
@@ -1876,10 +1876,6 @@ lemma performASIDControlInvocation_st_tcb_at':
        apply simp
   apply auto
   done
-
-lemmas arch_finalise_cap_aligned' = ArchRetypeDecls_H_AARCH64_H_finaliseCap_aligned'
-
-lemmas arch_finalise_cap_distinct' = ArchRetypeDecls_H_AARCH64_H_finaliseCap_distinct'
 
 crunch "Arch.finaliseCap"
   for st_tcb_at'[wp]: "st_tcb_at' P t"

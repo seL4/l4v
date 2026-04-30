@@ -199,9 +199,13 @@ lemma setupReplyMaster_weak_sch_act_wf[wp]:
   apply assumption
   done
 
+context notes if_cong[cong] begin
+
 crunch setup_reply_master
   for pspace_aligned[wp]: pspace_aligned
   and pspace_distinct[wp]: pspace_distinct
+
+end
 
 lemma restart_corres:
   "corres dc (einvs  and tcb_at t) (invs' and tcb_at' t and ex_nonz_cap_to' t)
@@ -943,6 +947,7 @@ lemma checked_insert_tcb_invs'[wp]:
       (checkCapAt (ThreadCap target) slot'
        (assertDerived src_slot new_cap (cteInsert new_cap src_slot slot))) \<lbrace>\<lambda>rv. invs'\<rbrace>"
   supply o_apply[simp del]
+  supply if_cong[cong]
   apply (simp add: checkCapAt_def liftM_def assertDerived_def stateAssert_def)
   apply (wp getCTE_cteCap_wp cteInsert_invs)
   apply (clarsimp split: option.splits)

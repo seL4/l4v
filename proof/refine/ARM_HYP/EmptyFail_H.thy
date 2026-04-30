@@ -105,8 +105,7 @@ lemma ArchRetypeDecls_H_deriveCap_empty_fail[intro!, wp, simp]:
   "isPageTableCap y \<or> isPageDirectoryCap y \<or> isPageCap y
    \<or> isASIDControlCap y \<or> isASIDPoolCap y \<or> isVCPUCap y \<or> isSGISignalCap y
    \<Longrightarrow> empty_fail (Arch.deriveCap x y)"
-  apply (simp add: ARM_HYP_H.deriveCap_def)
-  by auto
+  by (auto simp: ARM_HYP_H.deriveCap_def cong: if_cong)
 
 crunch ensureNoChildren
   for (empty_fail) empty_fail[intro!, wp, simp]
@@ -274,6 +273,7 @@ crunch
 
 lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   "empty_fail schedule"
+  supply if_cong[cong]
   apply (simp add: schedule_def)
   apply (clarsimp simp: scheduleChooseNewThread_def split: if_split | wp | wpc)+
   done
