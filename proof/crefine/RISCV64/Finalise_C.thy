@@ -809,7 +809,7 @@ lemma doUnbindNotification_ccorres:
     (UNIV \<inter> {s. ntfnPtr_' s = ntfn_Ptr ntfnptr} \<inter> {s. tcbptr_' s = tcb_ptr_to_ctcb_ptr tcb}) []
    (do ntfn \<leftarrow> getNotification ntfnptr; doUnbindNotification ntfnptr ntfn tcb od)
    (Call doUnbindNotification_'proc)"
-  apply (cinit' lift: ntfnPtr_' tcbptr_')
+  apply (cinit' lift: ntfnPtr_' tcbptr_' simp: doUnbindNotification_def)
    apply (rule ccorres_symb_exec_l [OF _ get_ntfn_inv' _ empty_fail_getNotification])
     apply (rule_tac P="invs' and ko_at' ntfn ntfnptr" and P'=UNIV
              in ccorres_split_nothrow_novcg)
@@ -858,7 +858,7 @@ lemma doUnbindNotification_ccorres':
     (UNIV \<inter> {s. ntfnPtr_' s = ntfn_Ptr ntfnptr} \<inter> {s. tcbptr_' s = tcb_ptr_to_ctcb_ptr tcb}) []
    (doUnbindNotification ntfnptr ntfn tcb)
    (Call doUnbindNotification_'proc)"
-  apply (cinit' lift: ntfnPtr_' tcbptr_')
+  apply (cinit' lift: ntfnPtr_' tcbptr_' simp: doUnbindNotification_def)
     apply (rule_tac P="invs' and ko_at' ntfn ntfnptr" and P'=UNIV
                 in ccorres_split_nothrow_novcg)
         apply (rule ccorres_from_vcg[where rrel=dc and xf=xfdc])
