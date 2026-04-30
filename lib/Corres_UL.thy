@@ -958,6 +958,9 @@ lemma corres_assert_gen_asm_cross:
   \<Longrightarrow> corres_underlying sr nf nf' r (P and P') (Q and Q') f (assert A >>= g)"
   by (metis corres_assert_assume corres_assume_pre corres_weaker_disj_division)
 
+lemmas corres_assert_gen_asm_cross_forwards =
+  corres_assert_gen_asm_cross[where P=P' and P'=P' for P', where Q=Q' and Q'=Q' for Q', simplified]
+
 lemma corres_state_assert:
   "corres_underlying sr nf nf' rr P Q f (g ()) \<Longrightarrow>
    (\<And>s. Q s \<Longrightarrow> R s) \<Longrightarrow>
