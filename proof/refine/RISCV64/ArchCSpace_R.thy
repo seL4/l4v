@@ -299,12 +299,12 @@ context Arch begin arch_global_naming
 
 named_theorems CSpace_R_2_assms
 
-lemma deriveCap_derived:
+lemma deriveCap_derived[CSpace_R_2_assms]:
   "\<lbrace>\<lambda>s. c'\<noteq> capability.NullCap \<longrightarrow> cte_wp_at' (\<lambda>cte. badge_derived' c' (cteCap cte)
-                           \<and> capASID c' = capASID (cteCap cte)
-                           \<and> cap_asid_base' c' = cap_asid_base' (cteCap cte)
-                           \<and> cap_vptr' c' = cap_vptr' (cteCap cte)) slot s
-       \<and> valid_objs' s\<rbrace>
+        \<and> capASID c' = capASID (cteCap cte)
+        \<and> cap_asid_base' c' = cap_asid_base' (cteCap cte)
+        \<and> cap_vptr' c' = cap_vptr' (cteCap cte)) slot s
+        \<and> valid_objs' s\<rbrace>
   deriveCap slot c'
   \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow>
           cte_wp_at' (is_derived' (ctes_of s) slot rv \<circ> cteCap) slot s\<rbrace>, -"
@@ -329,25 +329,15 @@ lemma deriveCap_derived:
                   | clarsimp split: option.split_asm)+)
   done
 
-lemma arch_deriveCap_untyped_derived[wp]:
+lemma arch_deriveCap_untyped_derived[CSpace_R_2_assms, wp]:
   "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte. untyped_derived_eq c' (cteCap cte)) slot s\<rbrace>
-     RISCV64_H.deriveCap slot (capCap c')
+   RISCV64_H.deriveCap slot (capCap c')
    \<lbrace>\<lambda>rv s. cte_wp_at' (untyped_derived_eq rv o cteCap) slot s\<rbrace>, -"
   apply (wpsimp simp: RISCV64_H.deriveCap_def Let_def untyped_derived_eq_ArchObjectCap
            split_del: if_split
                   wp: undefined_validE_R)
   apply(clarsimp simp: cte_wp_at_ctes_of isCap_simps untyped_derived_eq_def)
   by (case_tac "capCap c'"; fastforce)
-
-lemma deriveCap_untyped_derived:
-  "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte. untyped_derived_eq c' (cteCap cte)) slot s\<rbrace>
-  deriveCap slot c'
-  \<lbrace>\<lambda>rv s. cte_wp_at' (untyped_derived_eq rv o cteCap) slot s\<rbrace>, -"
-  apply (simp add: global.deriveCap_def split del: if_split cong: if_cong)
-  apply (rule hoare_pre)
-   apply (wp arch_deriveCap_inv | simp add: o_def untyped_derived_eq_ArchObjectCap)+
-  apply (clarsimp simp: cte_wp_at_ctes_of gen_isCap_simps untyped_derived_eq_def)
-  done
 
 lemma corres_caps_decomposition:
   assumes pspace_corres:
@@ -620,7 +610,7 @@ crunch setupReplyMaster
   for valid_arch'[wp]: "valid_arch_state'"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma ex_nonz_tcb_cte_caps':
+lemma ex_nonz_tcb_cte_caps'[CSpace_R_2_assms]:
   "\<lbrakk>ex_nonz_cap_to' t s; tcb_at' t s; valid_objs' s; sl \<in> dom tcb_cte_cases\<rbrakk> \<Longrightarrow>
    ex_cte_cap_to' (t + sl) s"
   apply (clarsimp simp: ex_nonz_cap_to'_def ex_cte_cap_to'_def cte_wp_at_ctes_of)
@@ -1308,7 +1298,7 @@ lemmas [CSpace_R_3_assms] =
   master_cap_relation
   updateMDB_pspace_in_kernel_mappings'
 
-lemma derived'_not_Null:
+lemma derived'_not_Null[CSpace_R_3_assms, simp]:
   "\<not> is_derived' m p c capability.NullCap"
   "\<not> is_derived' m p capability.NullCap c"
   by (clarsimp simp: is_derived'_def badge_derived'_def)+

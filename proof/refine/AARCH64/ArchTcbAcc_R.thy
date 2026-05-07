@@ -497,6 +497,7 @@ lemma asUser_valid_objs[wp]:
              simp: valid_tcb'_def tcb_cte_cases_def valid_arch_tcb'_def cteSizeBits_def
                    atcbContextSet_def)+
 
+(* interface lemma, but can't be done via locale *)
 lemma asUser_valid_pspace'[wp]:
   "\<lbrace>valid_pspace'\<rbrace> asUser t m \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   apply (simp add: asUser_def)
@@ -504,11 +505,13 @@ lemma asUser_valid_pspace'[wp]:
                 simp: atcbContextSet_def valid_arch_tcb'_def)+
   done
 
+(* interface lemma, but can't be done via locale *)
 lemma asUser_st_hyp_refs_of'[wp]:
   "asUser t m \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
   unfolding asUser_def
   by (wpsimp wp: threadSet_state_hyp_refs_of' hoare_drop_imps simp: atcbContextSet_def)
 
+(* interface lemma, but can't be done via locale *)
 lemma asUser_iflive'[wp]:
   "asUser t m \<lbrace>if_live_then_nonz_cap'\<rbrace> "
   unfolding asUser_def
@@ -873,7 +876,7 @@ context Arch begin arch_global_naming
 
 named_theorems TcbAcc_R_3_assms
 
-lemma setMRs_corres:
+lemma setMRs_corres[TcbAcc_R_3_assms]:
   assumes m: "mrs' = mrs"
   shows
   "corres (=) (tcb_at t and pspace_aligned and pspace_distinct and case_option \<top> in_user_frame buf)
@@ -960,6 +963,13 @@ lemma asUser_invs[wp]:
 crunch storeWordUser
   for pred_tcb_at'[wp]: "\<lambda>s. pred_tcb_at' proj P p s"
 
+lemma set_mrs_invs'[TcbAcc_R_3_assms, wp]:
+  "\<lbrace> invs' and tcb_at' receiver \<rbrace> setMRs receiver recv_buf mrs \<lbrace>\<lambda>rv. invs' \<rbrace>"
+  apply (simp add: setMRs_def)
+  apply (wp dmo_invs' no_irq_mapM no_irq_storeWord crunch_wps|
+         simp add: zipWithM_x_mapM split_def)+
+  done
+
 lemmas setThreadState_typ_ats[wp] = typ_at_lifts [OF setThreadState_typ_at']
 lemmas setBoundNotification_typ_ats[wp] = typ_at_lifts [OF setBoundNotification_typ_at']
 
@@ -978,10 +988,16 @@ arch_requalify_facts
   asUser_valid_objs
   asUser_invs
   storeWordUser_pred_tcb_at'
+  asUser_valid_pspace'
+  asUser_st_hyp_refs_of'
+  asUser_iflive'
 
 lemmas [wp] =
   asUser_valid_objs
   asUser_invs
   storeWordUser_pred_tcb_at'
+  asUser_valid_pspace'
+  asUser_st_hyp_refs_of'
+  asUser_iflive'
 
 end
