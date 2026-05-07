@@ -11,7 +11,7 @@
 *)
 
 theory CNodeInv_R
-imports Ipc_R Invocations_R
+imports ArchIpc_R Invocations_R
 begin
 
 unbundle l4v_word_context

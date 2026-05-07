@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-theory Ipc_R
-imports ArchFinalise_R
+theory ArchIpc_R
+imports Ipc_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)

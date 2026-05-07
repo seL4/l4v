@@ -10,7 +10,7 @@
 *)
 
 theory Interrupt_R
-imports Ipc_R Invocations_R
+imports ArchIpc_R Invocations_R
 begin
 
 context Arch begin
