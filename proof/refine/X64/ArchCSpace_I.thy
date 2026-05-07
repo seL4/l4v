@@ -291,7 +291,7 @@ lemma capMasterCap_maskCapRights[simp, CSpace_I_2_assms]:
   apply (case_tac arch_capability; simp add: maskCapRights_def Let_def isCap_simps)
   done
 
-lemma capBadge_maskCapRights[simp]:
+lemma capBadge_maskCapRights[simp, CSpace_I_2_assms]:
   "capBadge (maskCapRights msk cap) = capBadge cap"
   apply (cases cap; simp add: global.maskCapRights_def Let_def gen_isCap_simps capBadge_def)
   apply (rename_tac arch_capability)

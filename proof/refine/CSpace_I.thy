@@ -796,8 +796,9 @@ locale CSpace_I_2 = CSpace_I +
   assumes cte_refs_capRange:
     "\<And>s c x.
      \<lbrakk> s \<turnstile>' c; \<forall>irq. c \<noteq> IRQHandlerCap irq \<rbrakk> \<Longrightarrow> cte_refs' c x \<subseteq> capRange c"
-
-context CSpace_I_2 begin
+  assumes capBadge_maskCapRights[simp]:
+    "\<And>msk cap. capBadge (maskCapRights msk cap) = capBadge cap"
+begin
 
 lemma isMDBParent_Null[simp]:
   "isMDBParentOf c (CTE NullCap m) = False"

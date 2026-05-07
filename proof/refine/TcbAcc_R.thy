@@ -4996,8 +4996,8 @@ lemma (in TcbAcc_R_2) setThreadState_tcb_in_cur_domain'[wp]:
   apply (wpsimp wp: threadSet_ct_idle_or_in_cur_domain' hoare_drop_imps)+
   done
 
-lemma (in TcbAcc_R_2) asUser_global_refs':
-  "\<lbrace>valid_global_refs'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
+lemma (in TcbAcc_R_2) asUser_global_refs'[wp]:
+  "asUser t f \<lbrace>valid_global_refs'\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wpsimp wp: threadSet_global_refs select_f_inv)
   done
@@ -5057,8 +5057,8 @@ lemma get_cap_corres_all_rights_P:
   apply fastforce
   done
 
-lemma asUser_irq_handlers':
-  "\<lbrace>valid_irq_handlers'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_irq_handlers'\<rbrace>"
+lemma asUser_irq_handlers'[wp]:
+  "asUser t f \<lbrace>valid_irq_handlers'\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wpsimp wp: threadSet_irq_handlers' [OF all_tcbI, OF ball_tcb_cte_casesI] select_f_inv)
   done
@@ -5074,6 +5074,15 @@ locale TcbAcc_R_3 = TcbAcc_R_2 +
           \<and> pspace_aligned' s \<and> pspace_distinct' s\<rbrace>
      setThreadState st t
      \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
+  assumes set_mrs_invs'[wp]:
+    "\<And>receiver recv_buf mrs.
+     \<lbrace>invs' and tcb_at' receiver\<rbrace> setMRs receiver recv_buf mrs \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  assumes setMRs_corres:
+    "\<And>mrs' mrs t buf.
+     mrs' = mrs \<Longrightarrow>
+     corres (=) (tcb_at t and pspace_aligned and pspace_distinct and case_option \<top> in_user_frame buf)
+                (case_option \<top> valid_ipc_buffer_ptr' buf)
+                (set_mrs t buf mrs) (setMRs t buf mrs')"
 begin
 
 lemma sts_invs_minor':

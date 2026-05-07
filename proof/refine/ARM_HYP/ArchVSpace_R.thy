@@ -2688,13 +2688,6 @@ crunch updateCap
 
 lemmas setMRs_typ_at_lifts[wp] = typ_at_lifts [OF setMRs_typ_at']
 
-lemma set_mrs_invs'[wp]:
-  "\<lbrace> invs' and tcb_at' receiver \<rbrace> setMRs receiver recv_buf mrs \<lbrace>\<lambda>rv. invs' \<rbrace>"
-  apply (simp add: setMRs_def)
-  apply (wp dmo_invs' no_irq_mapM no_irq_storeWord crunch_wps|
-         simp add: zipWithM_x_mapM split_def)+
-  done
-
 lemma same_refs_vs_cap_ref_eq:
   assumes "valid_slots entries s"
   assumes "same_refs entries cap s"
