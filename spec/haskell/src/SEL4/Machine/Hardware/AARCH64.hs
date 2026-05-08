@@ -445,9 +445,6 @@ set_gic_vcpu_ctrl_lr = error "Unimplemented - machine op"
 
 {- Virtual timer interface -}
 
-read_cntpct :: MachineMonad Word64
-read_cntpct = error "Unimplemented - machine op"
-
 check_export_arch_timer :: MachineMonad ()
 check_export_arch_timer = error "Unimplemented - machine op"
 
