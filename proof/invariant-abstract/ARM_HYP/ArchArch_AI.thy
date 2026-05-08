@@ -1054,7 +1054,7 @@ lemma restore_virt_timer_valid_irq_states[wp]:
   apply (repeat_unless \<open>rule bind_wp[OF _ is_irq_active_sp]\<close>
                        \<open>rule bind_wp_fwd_skip,
                         wpsimp wp: dmo_valid_irq_states
-                             simp: isb_def setHCR_def set_cntv_cval_64_def read_cntpct_def
+                             simp: isb_def setHCR_def set_cntv_cval_64_def
                                    set_cntv_off_64_def\<close>)
   apply (wpsimp simp: do_machine_op_def is_irq_active_def get_irq_state_def)
   apply (clarsimp simp: valid_irq_states_def valid_irq_masks_def maskInterrupt_def in_monad)
@@ -1079,7 +1079,7 @@ lemma associate_vcpu_tcb_valid_irq_states[wp]:
 crunch associate_vcpu_tcb
   for cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
   (wp: crunch_wps cap_refs_respects_device_region_dmo
-   simp: set_cntv_cval_64_def read_cntpct_def set_cntv_off_64_def
+   simp: set_cntv_cval_64_def set_cntv_off_64_def
          get_irq_state_def maskInterrupt_def)
 
 lemma arm_current_vcpu_update_valid_global_objs[simp]:
@@ -1109,7 +1109,6 @@ lemma associate_vcpu_tcb_valid_arch_state[wp]:
 
 lemma dmo_valid_machine_state[wp]:
   "do_machine_op (set_cntv_cval_64 w) \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op read_cntpct \<lbrace>valid_machine_state\<rbrace>"
   "do_machine_op (set_cntv_off_64 w') \<lbrace>valid_machine_state\<rbrace>"
   "do_machine_op (maskInterrupt m irq) \<lbrace>valid_machine_state\<rbrace>"
   "do_machine_op (setHCR word) \<lbrace>valid_machine_state\<rbrace>"
@@ -1123,7 +1122,7 @@ lemma dmo_valid_machine_state[wp]:
   "do_machine_op get_gic_vcpu_ctrl_apr \<lbrace>valid_machine_state\<rbrace>"
   "do_machine_op get_gic_vcpu_ctrl_vmcr \<lbrace>valid_machine_state\<rbrace>"
   "do_machine_op get_gic_vcpu_ctrl_hcr \<lbrace>valid_machine_state\<rbrace>"
-  unfolding valid_machine_state_def set_cntv_cval_64_def read_cntpct_def set_cntv_off_64_def
+  unfolding valid_machine_state_def set_cntv_cval_64_def set_cntv_off_64_def
             maskInterrupt_def setHCR_def set_gic_vcpu_ctrl_hcr_def set_gic_vcpu_ctrl_lr_def
             set_gic_vcpu_ctrl_apr_def set_gic_vcpu_ctrl_vmcr_def get_gic_vcpu_ctrl_lr_def
             get_gic_vcpu_ctrl_apr_def get_gic_vcpu_ctrl_vmcr_def get_gic_vcpu_ctrl_hcr_def
