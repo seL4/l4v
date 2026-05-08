@@ -33,7 +33,6 @@ defs makeVCPUObject_def:
         , vcpuRegs= funArray (const 0)  aLU  [(VCPURegSCTLR, sctlrDefault)
                                              ,(VCPURegACTLR, actlrDefault)]
         , vcpuVPPIMasked= (\<lambda>_. False)
-        , vcpuVTimer= VirtTimer 0
         \<rparr>"
 
 datatype arch_kernel_object_type =

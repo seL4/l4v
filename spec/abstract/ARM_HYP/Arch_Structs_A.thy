@@ -140,7 +140,6 @@ record vcpu =
   vcpu_vgic  :: gic_vcpu_interface
   vcpu_regs :: "vcpureg \<Rightarrow> machine_word"
   vcpu_vppi_masked :: "vppievent_irq \<Rightarrow> bool"
-  vcpu_vtimer :: virt_timer
 
 end_qualify
 
@@ -165,8 +164,7 @@ definition
       vcpu_vgic   = default_gic_vcpu_interface,
       vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrDefault
                              , VCPURegACTLR := actlrDefault),
-      vcpu_vppi_masked = (\<lambda>_. False),
-      vcpu_vtimer = VirtTimer 0
+      vcpu_vppi_masked = (\<lambda>_. False)
       \<rparr>"
 
 
