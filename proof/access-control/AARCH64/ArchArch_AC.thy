@@ -1897,7 +1897,7 @@ lemma integrity_no_hyp_arm_current_vcpu[simp]:
    integrity_no_hyp aag X st s"
   by (simp add: integrity_no_hyp_def integrity_asids_def integrity_fpu_def)
 
-crunch readVCPUHardwareReg, writeVCPUHardwareReg, read_cntpct,
+crunch readVCPUHardwareReg, writeVCPUHardwareReg,
        check_export_arch_timer, maskInterrupt, setHCR, setSCTLR, enableFpuEL01,
        set_gic_vcpu_ctrl_hcr, set_gic_vcpu_ctrl_vmcr, set_gic_vcpu_ctrl_apr, set_gic_vcpu_ctrl_lr,
        get_gic_vcpu_ctrl_hcr, get_gic_vcpu_ctrl_vmcr, get_gic_vcpu_ctrl_apr, get_gic_vcpu_ctrl_lr
@@ -1953,7 +1953,7 @@ lemma dmo_lift_vcpu_proj:
    apply (wps r | wp dmo_machine_state_lift | simp)+
   done
 
-crunch maskInterrupt, read_cntpct, setHCR, get_gic_vcpu_ctrl_lr
+crunch maskInterrupt, setHCR, get_gic_vcpu_ctrl_lr
   for vcpu_state[wp]: "\<lambda>ms. P (vcpu_state ms)"
 
 crunch get_gic_vcpu_ctrl_hcr, get_gic_vcpu_ctrl_vmcr, get_gic_vcpu_ctrl_apr
