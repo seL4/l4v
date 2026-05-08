@@ -271,7 +271,7 @@ crunch_ignore (valid, empty_fail, no_fail)
    with the following manual interventions:
    - remove false positives: get_def, gets, gets_def, getFPUState, getRegister, getRestartPC,
                              getDeviceRegions_val, getFaultAddress_val, getKernelDevices_val
-   - add read_cntpct and readFpuState
+   - add readFpuState
    - remove final comma
    - getActiveIRQ does not preserve no_irq *)
 crunch

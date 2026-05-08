@@ -281,7 +281,7 @@ crunch_ignore (valid, empty_fail, no_fail)
    grep -oE "(\w+_impl)|(get\w+)" MachineOps.thy|sort|uniq|sed "s/_impl//;s/$/,/;s/^/  /"
    with the following manual interventions:
    - remove false positives: get_def, gets, gets_def, getFPUState, getRegister, getRestartPC
-   - add read_cntpct and readFpuState
+   - add readFpuState
    - remove final comma
    - getActiveIRQ does not preserve no_irq *)
 crunch
