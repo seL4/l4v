@@ -132,12 +132,11 @@ definition
    | KOPDE _ \<Rightarrow>
        if is_aligned a pd_bits then Some (PageDirectory (absPageDirectory h a))
        else None
-   | KOVCPU (VCPUObj tcb vgic regs vppimask vtimer) \<Rightarrow>
+   | KOVCPU (VCPUObj tcb vgic regs vppimask) \<Rightarrow>
        Some (VCPU \<lparr> vcpu_tcb    = tcb,
                     vcpu_vgic   = absVGIC vgic,
                     vcpu_regs   = regs,
-                    vcpu_vppi_masked = vppimask,
-                    vcpu_vtimer = vtimer \<rparr>))"
+                    vcpu_vppi_masked = vppimask \<rparr>))"
 
 definition
   "EndpointMap ep \<equiv> case ep of
