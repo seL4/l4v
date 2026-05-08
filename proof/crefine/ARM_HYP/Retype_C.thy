@@ -5273,21 +5273,18 @@ lemma magnitudeCheck_assert2':
 abbreviation (input)
   fromzeroVCPU :: vcpu
 where
-  "fromzeroVCPU \<equiv> vcpu.VCPUObj None (VGICInterface 0 0 0 (\<lambda>_. 0)) (const 0) (const False)
-                               (VirtTimer 0)"
+  "fromzeroVCPU \<equiv> vcpu.VCPUObj None (VGICInterface 0 0 0 (\<lambda>_. 0)) (const 0) (const False)"
 
 lemma monadic_rewrite_setObject_vcpu_as_init:
   defines "vcpu0 \<equiv> fromzeroVCPU"
   defines "vcpu1 \<equiv> (vcpuRegs_update (\<lambda>_. (vcpuRegs vcpu0)(VCPURegSCTLR := sctlrDefault)) vcpu0)"
   defines "vcpu2 \<equiv> (vcpuRegs_update (\<lambda>_. (vcpuRegs vcpu1)(VCPURegACTLR := actlrDefault)) vcpu1)"
-  defines "vcpu3 \<equiv> (vcpuVGIC_update (\<lambda>_. vgicHCR_update (\<lambda>_. vgicHCREN) (vcpuVGIC vcpu2)) vcpu2)"
   shows
   "monadic_rewrite True False (K (v \<noteq> 0) and ko_at' fromzeroVCPU v)
      (setObject v makeVCPUObject)
      (do vcpuWriteReg v VCPURegSCTLR sctlrDefault;
          vcpuWriteReg v VCPURegACTLR actlrDefault;
-         vgicUpdate v (vgicHCR_update (\<lambda>_. vgicHCREN));
-         vcpuUpdate v (\<lambda>vcpu. vcpu\<lparr> vcpuVTimer := VirtTimer 0 \<rparr>)
+         vgicUpdate v (vgicHCR_update (\<lambda>_. vgicHCREN))
       od)
      "
   supply fun_upd_apply[simp del]
@@ -5295,32 +5292,26 @@ lemma monadic_rewrite_setObject_vcpu_as_init:
   apply (rule monadic_rewrite_gen_asm)
   apply monadic_rewrite_pre
    apply (simp add: vcpuWriteReg_def vgicUpdate_def bind_assoc)
-    apply (clarsimp simp: vcpuUpdate_def bind_assoc)
-    (* explicitly state the vcpu we are setting for each setObject *)
+   apply (clarsimp simp: vcpuUpdate_def bind_assoc)
+   (* explicitly state the vcpu we are setting for each setObject *)
    apply (rule monadic_rewrite_trans[rotated])
     apply (monadic_rewrite_symb_exec_r_known vcpu0)
      apply (rule monadic_rewrite_bind_tail)
       apply (monadic_rewrite_symb_exec_r_known vcpu1)
        apply (rule monadic_rewrite_bind_tail)
         apply (monadic_rewrite_symb_exec_r_known vcpu2)
-         apply (rule monadic_rewrite_bind_tail)
-          apply (monadic_rewrite_symb_exec_r_known vcpu3)
-           apply (rule monadic_rewrite_refl)
-                  apply (wpsimp wp: getObject_vcpu_prop simp: vcpu1_def vcpu2_def vcpu3_def vcpu0_def)+
-               apply (wp setObject_sets_object_vcpu)
-              apply (wpsimp wp: getObject_vcpu_prop)+
-           apply (wpsimp wp: getObject_vcpu_prop simp: vcpu1_def vcpu2_def vcpu0_def)+
-           apply (wp setObject_sets_object_vcpu)
-          apply (wpsimp wp: getObject_vcpu_prop)+
-       apply (wpsimp wp: getObject_vcpu_prop simp: vcpu1_def vcpu2_def vcpu0_def)+
-               apply (wp setObject_sets_object_vcpu)
-       apply (wpsimp wp: getObject_vcpu_prop simp: vcpu1_def vcpu2_def vcpu0_def)+
+         apply (rule monadic_rewrite_refl)
+        apply (wpsimp wp: getObject_vcpu_prop simp: vcpu1_def vcpu2_def vcpu0_def)+
+       apply (wp setObject_sets_object_vcpu)
+      apply (wpsimp wp: getObject_vcpu_prop)+
+     apply (wpsimp wp: getObject_vcpu_prop simp: vcpu1_def vcpu2_def vcpu0_def)+
+     apply (wp setObject_sets_object_vcpu)
+    apply (wpsimp wp: getObject_vcpu_prop)+
    (* now we have four setObjects in a row, fold them up using setObject-combining *)
    apply (monadic_rewrite_r_method \<open>rule monadic_rewrite_setObject_vcpu_twice[simplified]\<close> wpsimp)
    apply (monadic_rewrite_r_method \<open>rule monadic_rewrite_setObject_vcpu_twice[simplified]\<close> wpsimp)
-   apply (monadic_rewrite_r_method \<open>rule monadic_rewrite_setObject_vcpu_twice[simplified]\<close> wpsimp)
    apply (rule monadic_rewrite_is_refl)
-   apply (fastforce simp: vcpu3_def vcpu2_def vcpu1_def vcpu0_def makeVCPUObject_def)
+   apply (fastforce simp: vcpu2_def vcpu1_def vcpu0_def makeVCPUObject_def)
   apply (fastforce simp: vcpu0_def ko_at_vcpu_at'D)
   done
 
@@ -5338,7 +5329,7 @@ lemma ptr_retyp_fromzeroVCPU:
   assumes cor: "caps_overlap_reserved' {p ..+ 2 ^ vcpu_bits} \<sigma>"
   assumes ptr0: "p \<noteq> 0"
   assumes kdr: "{p ..+ 2 ^ vcpu_bits} \<inter> kernel_data_refs = {}"
-  assumes subr: "{p ..+ 464} \<subseteq> {p ..+ 2 ^ vcpu_bits}" (is "{_ ..+ ?vcpusz} \<subseteq> _")
+  assumes subr: "{p ..+ size_of TYPE(vcpu_C)} \<subseteq> {p ..+ 2 ^ vcpu_bits}" (is "{_ ..+ ?vcpusz} \<subseteq> _")
   assumes act_bytes: "region_actually_is_bytes p (2 ^ vcpu_bits) \<sigma>'"
   assumes rep0: "heap_list (hrs_mem (t_hrs_' (globals \<sigma>'))) (2 ^ vcpu_bits) p = replicate (2 ^ vcpu_bits) 0"
   assumes "\<not> snd (placeNewObject p vcpu0 0 \<sigma>)"
@@ -5355,18 +5346,14 @@ proof -
   let ?htdret = "(hrs_htd_update (ptr_retyp (vcpu_Ptr p)) (t_hrs_' (globals \<sigma>')))"
   let ?zeros = "from_bytes (replicate (size_of TYPE(vcpu_C)) 0) :: vcpu_C"
 
-  (* sanity check for the value of ?vcpusz *)
-  have "size_of TYPE(vcpu_C) = ?vcpusz"
-    by simp
-
   have ptr_al:
     "ptr_aligned (vcpu_Ptr p)" using al
     by (auto simp: align_of_def vcpu_bits_def pageBits_def
-           intro!: is_aligned_ptr_aligned[of _ 3]
+           intro!: is_aligned_ptr_aligned[of _ 2]
             elim!: is_aligned_weaken)
 
   have "c_null_guard (vcpu_Ptr p)" using ptr0 al
-    by (auto simp: c_null_guard_def vcpu_bits_def pageBits_def vcpu_C_size
+    by (auto simp: c_null_guard_def vcpu_bits_def pageBits_def
             elim!: intvl_nowrap[where x = 0, simplified] is_aligned_no_wrap_le)
 
   have cguard: "c_guard (vcpu_Ptr p)"
@@ -5387,7 +5374,7 @@ proof -
     (is "?hl = ?rep0")
     using retyp_p' rep0
     apply (simp add: lift_t_if h_val_def)
-    apply (subst take_heap_list_le[where k="?vcpusz" and n="2^vcpu_bits", symmetric])
+    apply (subst take_heap_list_le[where k="?vcpusz" and n="2^vcpu_bits", simplified, symmetric])
      apply (simp add: vcpu_bits_def')+
     done
 
@@ -5431,7 +5418,7 @@ proof -
                      ti_typ_combine_empty_ti ti_typ_combine_td
                      align_of_def padup_def replicate_def update_ti_t_array_rep
                      final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def
-                     align_td_array' size_td_array vTimer_C_tag_def\<close>)
+                     align_td_array' size_td_array\<close>)
     apply (clarsimp simp: cvcpu_relation_def cvcpu_regs_relation_def option_to_ctcb_ptr_def
                           cvgic_relation_def cvcpu_vppi_masked_relation_def virq_to_H_def)
     apply (rule conjI, clarsimp)
@@ -5570,10 +5557,10 @@ proof -
     apply (clarsimp simp: ko_vcpu_def vcpu0_def)
     apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def
                           cmachine_state_relation_def Let_def h_t_valid_clift_Some_iff)
-    apply (subgoal_tac "region_is_bytes p ?vcpusz \<sigma>'")
-     prefer 2
+    apply (prop_tac "region_is_bytes p ?vcpusz \<sigma>'")
      apply (fastforce simp: region_actually_is_bytes[OF act_bytes]
-                            region_is_bytes_subset[OF _ subr])
+                            region_is_bytes_subset[OF _ subr]
+                      simp del: vcpu_C_size)
     apply (simp add: projectKO_opt_retyp_other' objBitsKO_vcpu cl_vcpu
                      htd_safe[simplified] kernel_data_refs_domain_eq_rotate)
     apply (subst ptr_retyp_gen_one[symmetric])+
@@ -5600,7 +5587,7 @@ lemma placeNewObject_vcpu_fromzero_ccorres:
   apply (rule ccorres_from_vcg_nofail, clarsimp)
   apply (rule conseqPre, vcg)
   apply (clarsimp simp: rf_sr_htd_safe)
-  apply (subgoal_tac "{regionBase..+464} \<subseteq> {regionBase..+2^vcpu_bits}")
+  apply (subgoal_tac "{regionBase ..+ size_of TYPE(vcpu_C)} \<subseteq> {regionBase ..+ 2^vcpu_bits}")
    prefer 2
    apply clarsimp
    apply (drule intvlD, clarsimp)
@@ -5652,8 +5639,7 @@ proof -
         apply (rule ccorres_call[OF armv_vcpu_init_ccorres]; solves simp)
        apply (clarsimp simp: vgicHCREN_def)
        apply (ctac (no_vcg) pre: ccorres_move_c_guard_vcpu add: vgicUpdate_HCR_ccorres)
-         apply (ctac pre: ccorres_move_c_guard_vcpu add: vgicUpdate_virtTimer_pcount_ccorres)
-        apply (wpsimp simp: guard_is_UNIV_def)+
+      apply (wpsimp simp: guard_is_UNIV_def)+
     apply (fastforce simp: const_def ko_at_vcpu_at'D)
     done
 qed

@@ -132,11 +132,6 @@ assumes check_export_arch_timer_ccorres:
            (doMachineOp check_export_arch_timer)
            (Call check_export_arch_timer_'proc)"
 
-assumes read_cntpct_ccorres:
-    "ccorres (=) ret__unsigned_longlong_' \<top> UNIV []
-           (doMachineOp read_cntpct)
-           (Call read_cntpct_'proc)"
-
 (* TLB and Cache ops *)
 
 assumes addressTranslateS1_ccorres:
