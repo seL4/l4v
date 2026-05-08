@@ -61,7 +61,7 @@ crunch set_irq_state, arch_post_cap_deletion, handle_arch_fault_reply
   for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp simp: crunch_simps maskInterrupt_def)
 
-crunch readVCPUHardwareReg, read_cntpct, check_export_arch_timer, writeVCPUHardwareReg,
+crunch readVCPUHardwareReg, check_export_arch_timer, writeVCPUHardwareReg,
   maskInterrupt, enableFpuEL01, isb, dsb, setHCR, setSCTLR,
   set_gic_vcpu_ctrl_hcr, set_gic_vcpu_ctrl_lr, set_gic_vcpu_ctrl_apr, set_gic_vcpu_ctrl_vmcr,
   get_gic_vcpu_ctrl_hcr, get_gic_vcpu_ctrl_lr, get_gic_vcpu_ctrl_apr, get_gic_vcpu_ctrl_vmcr,
