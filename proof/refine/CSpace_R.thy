@@ -73,6 +73,26 @@ lemmas capBadgeNone = capBadgeNone
 
 end
 
+(* same proof on all architectures *)
+lemma (in Arch) cte_map_nat_to_cref:
+  "\<lbrakk> n < 2 ^ b; b < word_bits \<rbrakk> \<Longrightarrow>
+   cte_map (p, nat_to_cref b n) = p + (of_nat n * 2^cte_level_bits)"
+  apply (clarsimp simp: cte_map_def nat_to_cref_def shiftl_t2n
+                 dest!: less_is_drop_replicate)
+  apply (subst mult_ac)
+  apply (rule arg_cong [where f="\<lambda>x. x * 2^cte_level_bits"])
+  apply (subst of_drop_to_bl)
+  apply (simp add: word_bits_def)
+  apply (subst mask_eq_iff_w2p)
+   apply (simp add: word_size)
+  apply (simp add: word_less_nat_alt word_size word_bits_def)
+  apply (rule order_le_less_trans; assumption?)
+  apply (subst unat_of_nat)
+  apply (rule mod_less_eq_dividend)
+  done
+
+requalify_facts Arch.cte_map_nat_to_cref
+
 lemma same_master_descendants:
   assumes slot: "m slot = Some cte"
   assumes master: "capMasterCap (cteCap cte) = capMasterCap cap'"

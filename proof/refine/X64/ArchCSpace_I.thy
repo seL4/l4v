@@ -27,7 +27,7 @@ lemma capUntypedPtr_simps[simp]:
   "Arch.capUntypedPtr (X64_H.PML4Cap r mapdata5) = r"
   by (auto simp: X64_H.capUntypedPtr_def)
 
-lemma maskCapRights_allRights[simp]:
+lemma maskCapRights_allRights[CSpace_I_assms, simp]:
   "maskCapRights allRights c = c"
   unfolding global.maskCapRights_def isCap_defs allRights_def maskCapRights_def maskVMRights_def
   by (cases c) (simp_all add: Let_def split: arch_capability.split vmrights.split)
@@ -236,7 +236,7 @@ lemma sameRegionAsE:
    \<rbrakk> \<Longrightarrow> R"
    by  (simp add: sameRegionAs_def3, fastforce)
 
-lemma sameObjectAsE:
+lemma sameObjectAsE[CSpace_I_2_assms]:
   "\<lbrakk> sameObjectAs cap cap';
      \<lbrakk> capMasterCap cap = capMasterCap cap'; \<not> isNullCap cap; \<not> isZombie cap;
        \<not> isUntypedCap cap;

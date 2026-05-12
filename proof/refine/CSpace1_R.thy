@@ -201,6 +201,46 @@ locale CSpace1_R =
      \<lbrakk> (y, P) \<in> obj_relation_cuts ko x; x \<in> obj_range x ko;
        kheap s x = Some ko; valid_objs s; pspace_aligned s \<rbrakk>
      \<Longrightarrow> y \<in> obj_range x ko"
+  assumes arch_updateCapData_Master:
+    "\<And>P d acap.
+     Arch.updateCapData P d acap \<noteq> NullCap \<Longrightarrow>
+     capMasterCap (Arch.updateCapData P d acap) = capMasterCap (ArchObjectCap acap)"
+  assumes updateCapData_Reply[simp]:
+    "\<And>P x c. isReplyCap (updateCapData P x c) = isReplyCap c"
+  assumes maskCap_valid[simp]:
+    "\<And>s R cap. s \<turnstile>' global.maskCapRights R cap = s \<turnstile>' cap"
+  assumes cap_map_update_data:
+    "\<And>c c' p x. cap_relation c c' \<Longrightarrow> cap_relation (update_cap_data p x c) (updateCapData p x c')"
+  assumes capASID_mask[simp]:
+    "\<And>x c. capASID (maskCapRights x c) = capASID c"
+  assumes cap_vptr_mask'[simp]:
+    "\<And>x c. cap_vptr' (maskCapRights x c) = cap_vptr' c"
+  assumes cap_asid_base_mask'[simp]:
+    "\<And>x c. cap_asid_base' (maskCapRights x c) = cap_asid_base' c"
+  assumes capASID_update[simp]:
+    "\<And>P x c. capASID (RetypeDecls_H.updateCapData P x c) = capASID c"
+  assumes cap_vptr_update'[simp]:
+    "\<And>P x c. cap_vptr' (RetypeDecls_H.updateCapData P x c) = cap_vptr' c"
+  assumes cap_asid_base_update'[simp]:
+    "\<And>P x c. cap_asid_base' (RetypeDecls_H.updateCapData P x c) = cap_asid_base' c"
+  assumes descendants_of_update_ztc:
+    "\<And>m slot P cte cap c.
+     \<lbrakk>\<And>x. \<lbrakk>m \<turnstile> x \<rightarrow> slot; \<not> P\<rbrakk>
+          \<Longrightarrow> \<exists>cte'.
+               m x = Some cte' \<and>
+               capMasterCap (cteCap cte') \<noteq> capMasterCap (cteCap cte) \<and>
+               global.sameRegionAs (cteCap cte') (cteCap cte);
+      m slot = Some cte; isZombie cap \<or> isCNodeCap cap \<or> isThreadCap cap;
+      \<And>x cte'.
+         \<lbrakk>m x = Some cte'; x \<noteq> slot; P\<rbrakk>
+         \<Longrightarrow> isUntypedCap (cteCap cte') \<or>
+           capClass (cteCap cte') \<noteq> PhysicalClass \<or>
+           global.capUntypedPtr (cteCap cte') \<noteq> global.capUntypedPtr (cteCap cte);
+      capRange (cteCap cte) = capRange cap \<and> global.capUntypedPtr (cteCap cte) = global.capUntypedPtr cap;
+      capAligned (cteCap cte); isZombie (cteCap cte) \<or> isCNodeCap (cteCap cte) \<or> isThreadCap (cteCap cte);
+      no_loops m\<rbrakk>
+     \<Longrightarrow> (c \<noteq> slot \<or> P \<longrightarrow> descendants_of' c m \<subseteq> descendants_of' c (m(slot \<mapsto> cteCap_update (\<lambda>_. cap) cte))) \<and>
+       (P \<longrightarrow> descendants_of' c (m(slot \<mapsto> cteCap_update (\<lambda>_. cap) cte)) \<subseteq> descendants_of' c m)"
 
 lemma subtree_no_parent:
   assumes "m \<turnstile> p \<rightarrow> x"
@@ -265,6 +305,19 @@ qed
 lemma subtree_trans:
   "\<lbrakk> s \<turnstile> a \<rightarrow> b; s \<turnstile> b \<rightarrow> c \<rbrakk> \<Longrightarrow> s \<turnstile> a \<rightarrow> c"
   by (rule subtree_trans_lemma)
+
+lemma updateCapData_Master:
+  "updateCapData P d cap \<noteq> NullCap \<Longrightarrow> capMasterCap (updateCapData P d cap) = capMasterCap cap"
+  by (cases cap;
+      simp add: global.updateCapData_def gen_isCap_simps Let_def arch_updateCapData_Master
+           split: if_split_asm)
+
+lemma weak_derived_updateCapData:
+  "\<lbrakk> updateCapData P x c \<noteq> NullCap; weak_derived' c c';
+     capBadge (updateCapData P x c) = capBadge c' \<rbrakk>
+   \<Longrightarrow> weak_derived' (updateCapData P x c) c'"
+  by (clarsimp simp: weak_derived'_def updateCapData_Master)
+     (clarsimp simp: gen_isCap_simps Let_def global.updateCapData_def)
 
 end (* CSpace1_R *)
 
