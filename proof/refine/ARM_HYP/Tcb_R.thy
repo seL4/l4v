@@ -5,7 +5,7 @@
  *)
 
 theory Tcb_R
-imports CNodeInv_R
+imports ArchCNodeInv_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)

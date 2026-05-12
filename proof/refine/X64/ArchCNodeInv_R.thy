@@ -9,8 +9,8 @@
   recursive revoke and delete operations.
 *)
 
-theory CNodeInv_R
-imports ArchIpc_R Invocations_R
+theory ArchCNodeInv_R
+imports CNodeInv_R
 begin
 
 unbundle l4v_word_context
