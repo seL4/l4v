@@ -765,7 +765,7 @@ lemma decodeRISCVPageTableInvocation_ccorres:
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeRISCVPageTableInvocation_'proc)"
    (is "_ \<Longrightarrow> _ \<Longrightarrow> ccorres _ _ ?pre ?pre' _ _ _")
-  supply Collect_const[simp del] if_cong[cong] option.case_cong[cong]
+  supply Collect_const[simp del] if_cong[cong] option.case_cong[cong] tl_drop_1[simp]
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_'
                       current_extra_caps_' cap_' buffer_'
@@ -2288,7 +2288,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
        (decodeRISCVMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeRISCVMMUInvocation_'proc)"
-  supply ccorres_prog_only_cong[cong]
+  supply ccorres_prog_only_cong[cong] tl_drop_1[simp]
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_'
                       current_extra_caps_' cap_' buffer_' call_')
    apply csymbr

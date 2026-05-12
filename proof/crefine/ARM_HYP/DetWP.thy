@@ -136,20 +136,22 @@ lemma det_wp_getMRs:
   apply (clarsimp simp: getMRs_def)
   apply (rule det_wp_pre)
    apply (wp det_mapM det_getRegister order_refl det_wp_mapM)
+   apply (fold word_size_bits_def)
    apply (simp add: word_size)
    apply (wp asUser_inv mapM_wp' getRegister_inv)
   apply clarsimp
+  apply (simp add: wordSize_word_size pointerInUserData_def)
   apply (rule conjI)
-   apply (simp add: pointerInUserData_def wordSize_def' word_size)
    apply (erule valid_ipc_buffer_ptr'D2)
+   apply (simp add: pointerInUserData_def word_size_def)
     apply (rule word_mult_less_mono1)
       apply (erule order_le_less_trans)
       apply (simp add: msgMaxLength_def max_ipc_words)
      apply simp
     apply (simp add: max_ipc_words)
-   apply (simp add: is_aligned_mult_triv2 [where n = 2, simplified] word_bits_conv)
-  apply (erule valid_ipc_buffer_ptr_aligned_2)
-  apply (simp add: wordSize_def' is_aligned_mult_triv2 [where n = 2, simplified] word_bits_conv)
+   apply (simp add: word_size_word_size_bits is_aligned_mult_triv2[where n = word_size_bits])
+  apply (erule valid_ipc_buffer_ptr_aligned_word_size_bits)
+  apply (simp add: word_size_word_size_bits is_aligned_mult_triv2[where n = word_size_bits])
   done
 
 end
