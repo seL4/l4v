@@ -998,6 +998,7 @@ lemma decodeCNodeInvocation_ccorres:
            >>= invocationCatch thread isBlocking isCall InvokeCNode)
   (Call decodeCNodeInvocation_'proc)"
   supply if_cong[cong]
+  supply tl_drop_1[simp]
   apply (cases "\<not>isCNodeCap cp")
    apply (simp add: decodeCNodeInvocation_def
               cong: conj_cong)

@@ -543,6 +543,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
      (Arch.decodeIRQControlInvocation label args slot (map fst extraCaps)
         >>= invocationCatch thread isBlocking isCall (InvokeIRQControl o ArchIRQControl))
      (Call Arch_decodeIRQControlInvocation_'proc)"
+  supply tl_drop_1[simp]
   apply (cinit' lift: invLabel_' srcSlot_' length___unsigned_long_' current_extra_caps_' buffer_')
    apply (simp add: ARM_H.decodeIRQControlInvocation_def invocation_eq_use_types
                del: Collect_const
@@ -829,7 +830,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
                 dest!: interpret_excaps_eq)
 
 lemma decodeIRQControlInvocation_ccorres:
-  notes if_cong[cong]
+  notes if_cong[cong] tl_drop_1[simp]
   shows
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')

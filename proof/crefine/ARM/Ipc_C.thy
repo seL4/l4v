@@ -2374,7 +2374,7 @@ lemma transferCapsLoop_ccorres:
            (W ep caps')"
 unfolding W_def check1_def check2_def split_def
 proof (rule ccorres_gen_asm, induct caps arbitrary: n slots mi)
-  note if_split[split]
+  note if_split[split] tl_drop_1[simp]
   case Nil
   thus ?case
     apply (simp only: transferCapsToSlots.simps)
@@ -2464,14 +2464,6 @@ next
     apply (wp |clarsimp|rule conjI)+
     done
 
-  have mask_right_eq_null:
-    "\<And>r cap. (maskCapRights r cap = NullCap) = (cap = NullCap)"
-    apply (case_tac cap)
-     apply (simp_all add:maskCapRights_def isCap_simps)
-    apply (rename_tac acap)
-    apply (case_tac acap)
-     apply (simp add:ARM_H.maskCapRights_def isPageCap_def)+
-    done
   note if_split[split del]
   note if_cong[cong]
   note extra_sle_sless_unfolds [simp del]
@@ -2660,7 +2652,7 @@ next
                                 option_to_0_def cap_to_H_def Let_def split:cap_CL.splits split:if_splits)
             apply clarsimp
            apply (simp only:badge_derived_mask capASID_mask cap_asid_base_mask'
-             cap_vptr_mask' maskCap_valid mask_right_eq_null)
+             cap_vptr_mask' maskCap_valid)
            apply (simp only:is_the_ep_fold relative_fold)
            apply (clarsimp simp:Collect_const_mem if_1_0_0
              split del:if_split)

@@ -1011,7 +1011,7 @@ lemma decodeX64PageTableInvocation_ccorres:
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeX86PageTableInvocation_'proc)"
    (is "_ \<Longrightarrow> _ \<Longrightarrow> ccorres _ _ ?pre _ _ _ _")
-  supply Collect_const[simp del] if_cong[cong]
+  supply Collect_const[simp del] if_cong[cong] tl_drop_1[simp]
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
                 simp: decodeX64MMUInvocation_def invocation_eq_use_types decodeX64PageTableInvocation_def)
@@ -2983,7 +2983,7 @@ lemma decodeX64PageDirectoryInvocation_ccorres:
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeX64PageDirectoryInvocation_'proc)"
    (is "_ \<Longrightarrow> _ \<Longrightarrow> ccorres _ _ ?pre _ _ _ _")
-  supply Collect_const[simp del] if_cong[cong]
+  supply Collect_const[simp del] if_cong[cong] tl_drop_1[simp]
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
                 simp: decodeX64MMUInvocation_def invocation_eq_use_types decodeX64PageDirectoryInvocation_def)
@@ -3458,7 +3458,7 @@ lemma decodeX64PDPTInvocation_ccorres:
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeX64PDPTInvocation_'proc)"
      (is "_ \<Longrightarrow> _ \<Longrightarrow> ccorres _ _ ?pre ?cpre _ _ _")
-  supply Collect_const[simp del] if_cong[cong]
+  supply Collect_const[simp del] if_cong[cong] tl_drop_1[simp]
          from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp] ccorres_IF_True[simp]
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
@@ -3807,6 +3807,7 @@ lemma decodeX64MMUInvocation_ccorres:
        (decodeX64MMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeX86MMUInvocation_'proc)"
+  supply tl_drop_1[simp]
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_'
                       current_extra_caps_' cap_' buffer_' call_')
    apply csymbr
