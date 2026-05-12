@@ -560,6 +560,8 @@ locale Retype_R =
       K (range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n) and valid_machine_state'\<rbrace>
      createNewCaps ty ptr n us dev
      \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
+  assumes valid_arch_badges_not_arch:
+    "\<And>cap cap' node. \<not>isArchObjectCap cap' \<Longrightarrow> valid_arch_badges cap cap' node"
 begin
 
 lemma valid_obj_makeObject_tcb[simp]:

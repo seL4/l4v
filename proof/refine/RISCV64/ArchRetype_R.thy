@@ -509,7 +509,7 @@ lemmas object_splits =
   RISCV64_H.object_type.split_asm
   arch_kernel_object.split_asm
 
-lemma valid_arch_badges_not_arch:
+lemma valid_arch_badges_not_arch[Retype_R_assms]:
   "\<not>isArchObjectCap cap' \<Longrightarrow> valid_arch_badges cap cap' node"
   by (auto simp: isCap_simps valid_arch_badges_def)
 

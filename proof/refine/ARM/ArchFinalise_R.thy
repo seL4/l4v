@@ -72,7 +72,7 @@ definition
 definition arch_cap_has_cleanup' :: "arch_capability \<Rightarrow> bool" where
   "arch_cap_has_cleanup' _ \<equiv> False"
 
-definition
+definition post_cap_delete_pre' :: "capability \<Rightarrow> paddr \<Rightarrow> (paddr \<Rightarrow> capability option) \<Rightarrow> bool" where
   "post_cap_delete_pre' cap sl cs \<equiv> case cap of
      IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ \<and> (\<forall>sl'. sl \<noteq> sl' \<longrightarrow> cs sl' \<noteq> Some cap)
    | _ \<Rightarrow> False"
@@ -573,7 +573,7 @@ lemma (in vmdb) isFinal_no_subtree:
 
 lemma (in vmdb) isFinal_untypedParent:
   assumes x: "m slot = Some cte" "isFinal (cteCap cte) slot (option_map cteCap o m)"
-             "final_matters' (cteCap cte) \<and> \<not> isIRQHandlerCap (cteCap cte)"
+             "final_matters' (cteCap cte) \<and> \<not> isIRQHandlerCap (cteCap cte) \<and> \<not> isArchObjectCap (cteCap cte)"
   shows
   "m \<turnstile> x \<rightarrow> slot \<Longrightarrow>
   (\<exists>cte'. m x = Some cte' \<and> isUntypedCap (cteCap cte') \<and> RetypeDecls_H.sameRegionAs (cteCap cte') (cteCap cte))"
@@ -595,15 +595,14 @@ lemma (in vmdb) isFinal_untypedParent:
   apply simp
   apply (frule ARM.final_matters_mdb_chunked_arch_assms)
   apply (rule classical, simp)
-  apply (simp add: ARM.final_matters_sameRegion_sameObject2
-                   sameObjectAs_sym)
+  apply (simp add: ARM.final_matters_sameRegion_sameObject2 sameObjectAs_sym)
   done
 
 context Arch begin arch_global_naming
 
-lemma isFinal_no_descendants:
+lemma isFinal_no_descendants[Finalise_R_2_assms]:
   "\<lbrakk> isFinal cap sl (cteCaps_of s); ctes_of s sl = Some (CTE cap n);
-      valid_mdb' s; final_matters' cap \<rbrakk>
+     valid_mdb' s; final_matters' cap \<rbrakk>
   \<Longrightarrow> descendants_of' sl (ctes_of s) = {}"
   apply (clarsimp simp add: descendants_of'_def cteCaps_of_def)
   apply (erule(3) vmdb.isFinal_no_subtree[rotated])
@@ -925,6 +924,12 @@ crunch prepareThreadDelete
   for cte_wp_at'[Finalise_R_2_assms, wp]: "cte_wp_at' P p"
   and valid_cap'[Finalise_R_2_assms, wp]: "valid_cap' cap"
 
+lemma prepareThreadDelete_hyp_unlive:
+  "\<lbrace>tcb_at' t\<rbrace> prepareThreadDelete t \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> hyp_live') t\<rbrace>"
+  unfolding prepareThreadDelete_def archThreadGet_def
+  by (wpsimp wp: getObject_tcb_wp hoare_vcg_imp_lift' hoare_vcg_ex_lift)
+     (auto simp: ko_wp_at'_def obj_at'_def hyp_live'_def)
+
 crunch prepareThreadDelete
   for invs[Finalise_R_2_assms, wp]: "invs'"
   (ignore: doMachineOp simp: crunch_simps)
@@ -970,25 +975,12 @@ lemma finaliseCap_valid_cap[Finalise_R_2_assms, wp]:
   "\<lbrace>\<top>\<rbrace> Arch.finaliseCap cap final \<lbrace>\<lambda>rv. valid_cap' (fst rv)\<rbrace>"
   by (wpsimp simp: ARM_H.finaliseCap_def split_del: if_split)
 
-lemma finaliseCap_cases[wp]:
-  "\<lbrace>\<top>\<rbrace>
-   finaliseCap cap final flag
-   \<lbrace>\<lambda>rv s. fst rv = NullCap \<and> (snd rv \<noteq> NullCap \<longrightarrow> final \<and> cap_has_cleanup' cap \<and> snd rv = cap)
-           \<or> isZombie (fst rv) \<and> final \<and> \<not> flag \<and> snd rv = NullCap
-             \<and> capUntypedPtr (fst rv) = capUntypedPtr cap
-             \<and> (isThreadCap cap \<or> isCNodeCap cap \<or> isZombie cap)\<rbrace>"
-  apply (simp add: finaliseCap_def ARM_H.finaliseCap_def Let_def
-                   getThreadCSpaceRoot
-             cong: if_cong split del: if_split)
-  apply (rule hoare_pre)
-   apply ((wp | simp add: gen_isCap_simps split del: if_split
-              | wpc
-              | simp only: valid_NullCap fst_conv snd_conv)+)[1]
-  apply (simp only: simp_thms fst_conv snd_conv option.simps if_cancel
-                    o_def)
-  apply (intro allI impI conjI TrueI)
-  apply (auto simp add: gen_isCap_simps cap_has_cleanup'_def)
-  done
+lemma arch_finaliseCap_cases[Finalise_R_2_assms, wp]:
+  "\<lbrace>\<top>\<rbrace> Arch.finaliseCap v0 final
+   \<lbrace>\<lambda>rv s. fst rv = capability.NullCap \<and>
+           (snd rv \<noteq> capability.NullCap
+            \<longrightarrow> final \<and> arch_cap_has_cleanup' v0 \<and> snd rv = capability.ArchObjectCap v0)\<rbrace>"
+  by (wpsimp simp: ARM_H.finaliseCap_def split_del: if_split)
 
 lemmas [Finalise_R_2_assms] =
   cancelAllIPC_cte_wp_at' cancelAllSignals_cte_wp_at' unbindMaybeNotification_cte_wp_at'
@@ -1004,9 +996,10 @@ proof goal_cases
   case 1 show ?case by (intro_locales; (unfold_locales; (fact Finalise_R_2_assms)?)?)
 qed
 
-(* this is the only arch-specific lemma in delete_one_conc_pre so far;
+(* This is the only arch-specific lemma in delete_one_conc_pre so far;
    save processing time by not creating an extra Arch_delete_one_conc_pre locale
-   by directly requalifying instead *)
+   by directly requalifying instead.
+   This lemma statement must be the same on all architectures. *)
 lemma (in delete_one_conc_pre) finaliseCap_replaceable:
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot s
        \<and> (final_matters' cap \<longrightarrow> (final = isFinal cap slot (cteCaps_of s)))
@@ -1026,6 +1019,7 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
             \<and> (\<forall>p \<in> threadCapRefs cap. st_tcb_at' ((=) Inactive) p s
                      \<and> obj_at' (Not \<circ> tcbQueued) p s
                      \<and> bound_tcb_at' ((=) None) p s
+                     \<and> ko_wp_at' (Not \<circ> hyp_live') p s
                      \<and> obj_at' (\<lambda>tcb. tcbSchedNext tcb = None \<and> tcbSchedPrev tcb = None) p s))\<rbrace>"
   supply [wp] = ARM.prepareThreadDelete_bound_tcb_at'
                 ARM.prepareThreadDelete_tcbSchedPrevNext
@@ -1036,6 +1030,7 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
              prepares_delete_helper'' [OF cancelAllSignals_unlive]
              suspend_isFinal ARM.prepareThreadDelete_unqueued
              ARM.prepareThreadDelete_inactive ARM.prepareThreadDelete_isFinal
+             ARM.prepareThreadDelete_hyp_unlive
              suspend_makes_inactive
              deletingIRQHandler_removeable'
              deletingIRQHandler_final[where slot=slot ]
@@ -1068,9 +1063,9 @@ context Arch begin arch_global_naming
 
 named_theorems Finalise_R_3_assms
 
-lemma finaliseCap_cte_refs:
+lemma finaliseCap_cte_refs[Finalise_R_3_assms]:
   "\<lbrace>\<lambda>s. s \<turnstile>' cap\<rbrace>
-     finaliseCap cap final flag
+   finaliseCap cap final flag
    \<lbrace>\<lambda>rv s. fst rv \<noteq> NullCap \<longrightarrow> cte_refs' (fst rv) = cte_refs' cap\<rbrace>"
   apply (simp add: global.finaliseCap_def Let_def getThreadCSpaceRoot finaliseCap_def
              cong: if_cong split del: if_split)
@@ -1085,15 +1080,16 @@ lemma finaliseCap_cte_refs:
   apply (fastforce simp: mask_def capAligned_def gen_objBits_simps shiftL_nat)
   done
 
-lemma emptySlot_invs'[wp]:
+lemma emptySlot_invs'[Finalise_R_3_assms, wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' (\<lambda>cte. removeable' sl s (cteCap cte)) sl s
-            \<and> (\<forall>sl'. info \<noteq> NullCap \<longrightarrow> sl' \<noteq> sl \<longrightarrow> cteCaps_of s sl' \<noteq> Some info)\<rbrace>
-     emptySlot sl info
+        \<and> (info \<noteq> NullCap \<longrightarrow> post_cap_delete_pre' info sl (cteCaps_of s))\<rbrace>
+   emptySlot sl info
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (wp valid_irq_node_lift cur_tcb_lift valid_dom_schedule'_lift)
-  apply (clarsimp simp: cte_wp_at_ctes_of)
-  done
+  apply (clarsimp simp: cte_wp_at_ctes_of post_cap_delete_pre'_def cteCaps_of_def
+                 split: capability.split_asm)
+  by auto
 
 lemma cteDeleteOne_invs[Finalise_R_3_assms, wp]:
   "cteDeleteOne ptr \<lbrace>invs'\<rbrace>"
@@ -1216,13 +1212,14 @@ crunch unmapPageTable
   (wp: crunch_wps getObject_inv hoare_vcg_all_lift hoare_vcg_if_lift3
    simp: loadObject_default_def updateObject_default_def)
 
-crunch Arch_finaliseCap
+crunch Arch_finaliseCap, prepareThreadDelete
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  and sch_act_simple[Finalise_R_3_assms, wp]: sch_act_simple
   (wp: crunch_wps getObject_inv simp: loadObject_default_def updateObject_default_def
-   rule: ARM_H.finaliseCap_def
+   rule: ARM_H.finaliseCap_def sch_act_simple_lift
    cong: if_cong)
 
-crunch deletingIRQHandler, finaliseCap
+crunch deletingIRQHandler
   for sch_act_simple[wp]: sch_act_simple
   (simp: crunch_simps
    rule: sch_act_simple_lift
@@ -1264,7 +1261,9 @@ lemmas deleteCallerCap_typ_ats[wp] = typ_at_lifts[OF deleteCallerCap_typ_at']
 
 end (* Arch *)
 
-interpretation Finalise_R_3?: Finalise_R_3 arch_final_matters' arch_cap_has_cleanup'
+arch_requalify_consts post_cap_delete_pre'
+
+interpretation Finalise_R_3?: Finalise_R_3 arch_final_matters' arch_cap_has_cleanup' post_cap_delete_pre'
 proof goal_cases
   interpret Arch  .
   case 1 show ?case by (intro_locales; (unfold_locales; (fact Finalise_R_3_assms)?)?)

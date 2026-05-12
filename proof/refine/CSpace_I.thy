@@ -31,6 +31,8 @@ locale CSpace_I =
   assumes isArchFrameCap_arch_capMasterCap[simp]:
     "\<And>acap. isArchFrameCap (ArchObjectCap (arch_capMasterCap acap))
             = isArchFrameCap (ArchObjectCap acap)"
+  assumes maskCapRights_allRights[simp]:
+    "\<And>c. maskCapRights allRights c = c"
 
 lemma gen_capUntypedPtr_simps[simp]:
   "capUntypedPtr (ThreadCap r) = r"
@@ -772,7 +774,7 @@ locale CSpace_I_2 = CSpace_I +
     "\<And>cap. capBits (capMasterCap cap) = capBits cap"
   assumes capUntyped_Master:
     "\<And>cap. capUntypedPtr (capMasterCap cap) = capUntypedPtr cap"
-  assumes isArchFrameCap_capMasterCap:
+  assumes isArchFrameCap_capMasterCap[simp]:
     "\<And>cap. isArchFrameCap (capMasterCap cap) = isArchFrameCap cap"
   assumes distinct_zombies_sameMasterE:
     "\<And>cte cte' m x.
@@ -798,6 +800,12 @@ locale CSpace_I_2 = CSpace_I +
      \<lbrakk> s \<turnstile>' c; \<forall>irq. c \<noteq> IRQHandlerCap irq \<rbrakk> \<Longrightarrow> cte_refs' c x \<subseteq> capRange c"
   assumes capBadge_maskCapRights[simp]:
     "\<And>msk cap. capBadge (maskCapRights msk cap) = capBadge cap"
+  assumes sameObjectAsE:
+    "\<And>cap cap' R.
+     \<lbrakk> sameObjectAs cap cap';
+       \<lbrakk> capMasterCap cap = capMasterCap cap'; \<not> isNullCap cap; \<not> isZombie cap;
+         \<not> isUntypedCap cap;
+         isArchFrameCap cap \<Longrightarrow> capRange cap \<noteq> {} \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
 begin
 
 lemma isMDBParent_Null[simp]:

@@ -1110,6 +1110,14 @@ lemma emptySlot_cteCaps_of:
 crunch deletedIRQHandler
   for cteCaps_of[wp]: "\<lambda>s. P (cteCaps_of s)"
 
+definition cap_has_cleanup' :: "capability \<Rightarrow> bool" where
+  "cap_has_cleanup' cap \<equiv> case cap of
+     IRQHandlerCap _ \<Rightarrow> True
+   | ArchObjectCap acap \<Rightarrow> arch_cap_has_cleanup' acap
+   | _ \<Rightarrow> False"
+
+lemmas cap_has_cleanup'_simps[simp] = cap_has_cleanup'_def[split_simps capability.split]
+
 end (* Finalise_R *)
 
 locale Finalise_R_2 = Finalise_R +
@@ -1151,6 +1159,16 @@ locale Finalise_R_2 = Finalise_R +
     "\<And>cap final. \<lbrace>\<lambda>_. True\<rbrace> Arch.finaliseCap cap final \<lbrace>\<lambda>rv. valid_cap' (fst rv)\<rbrace>"
   assumes not_Final_removeable:
     "\<And>cap sl s. \<not> isFinal cap sl (cteCaps_of s) \<Longrightarrow> removeable' sl s cap"
+  assumes arch_finaliseCap_cases[wp]:
+  "\<lbrace>\<top>\<rbrace> Arch.finaliseCap v0 final
+   \<lbrace>\<lambda>rv s. fst rv = capability.NullCap \<and>
+           (snd rv \<noteq> capability.NullCap
+            \<longrightarrow> final \<and> arch_cap_has_cleanup' v0 \<and> snd rv = capability.ArchObjectCap v0)\<rbrace>"
+  assumes isFinal_no_descendants:
+    "\<And>cap sl s n.
+     \<lbrakk> isFinal cap sl (cteCaps_of s); ctes_of s sl = Some (CTE cap n);
+       valid_mdb' s; final_matters' cap \<rbrakk>
+    \<Longrightarrow> descendants_of' sl (ctes_of s) = {}"
   (* This is the expanded form of mdb_insert.vmdb_n which needs Arch to prove (via mdb_insert_gen).
      The original form contracts this significantly via internal locale variables from mdb_empty. *)
   assumes mdb_empty_vmdb_n:
@@ -1194,6 +1212,19 @@ lemma emptySlot_valid_global_refs[wp]:
   apply (clarsimp simp: valid_global_refs'_def)
   apply (frule(1) cte_at_valid_cap_sizes_0)
   apply (clarsimp simp: valid_refs'_cteCaps valid_cap_sizes_cteCaps ball_ran_eq)
+  done
+
+lemma finaliseCap_cases[wp]:
+  "\<lbrace>\<top>\<rbrace>
+   finaliseCap cap final flag
+   \<lbrace>\<lambda>rv s. fst rv = NullCap \<and> (snd rv \<noteq> NullCap \<longrightarrow> final \<and> cap_has_cleanup' cap \<and> snd rv = cap)
+           \<or> isZombie (fst rv) \<and> final \<and> \<not> flag \<and> snd rv = NullCap
+             \<and> capUntypedPtr (fst rv) = capUntypedPtr cap
+             \<and> (isThreadCap cap \<or> isCNodeCap cap \<or> isZombie cap)\<rbrace>"
+  apply (simp add: finaliseCap_def Let_def getThreadCSpaceRoot
+             cong: if_cong split del: if_split)
+  apply (wpsimp simp: gen_isCap_simps valid_NullCap)
+  apply (auto simp add: gen_isCap_simps cap_has_cleanup'_def)
   done
 
 end (* Finalise_R_2 *)
@@ -1723,14 +1754,6 @@ lemmas cancelAllSignals_typs[wp] = gen_typ_at_lifts[OF cancelAllSignals_typ_at']
 lemmas suspend_typs[wp] = gen_typ_at_lifts[OF suspend_typ_at']
 
 context Finalise_R begin
-
-definition cap_has_cleanup' :: "capability \<Rightarrow> bool" where
-  "cap_has_cleanup' cap \<equiv> case cap of
-     IRQHandlerCap _ \<Rightarrow> True
-   | ArchObjectCap acap \<Rightarrow> arch_cap_has_cleanup' acap
-   | _ \<Rightarrow> False"
-
-lemmas cap_has_cleanup'_simps[simp] = cap_has_cleanup'_def[split_simps capability.split]
 
 crunch finaliseCap
   for aligned'[wp]: "pspace_aligned'"
@@ -2807,6 +2830,7 @@ sublocale delete_one_conc_pre
 end (* Finalise_R_2 *)
 
 locale Finalise_R_3 = Finalise_R_2 +
+  fixes post_cap_delete_pre' :: "capability \<Rightarrow> paddr \<Rightarrow> (paddr \<Rightarrow> capability option) \<Rightarrow> bool"
   assumes isFinalCapability_corres':
     "\<And>cap ptr cte.
      final_matters' (cteCap cte) \<Longrightarrow>
@@ -2816,7 +2840,7 @@ locale Finalise_R_3 = Finalise_R_2 +
   assumes cteDeleteOne_invs[wp]:
     "\<And>ptr. cteDeleteOne ptr \<lbrace>invs'\<rbrace>"
   assumes arch_finaliseCap_corres:
-    "\<And>cap cap' final final'.
+    "\<And>cap cap' final final' sl.
      \<lbrakk>final_matters' (ArchObjectCap cap') \<Longrightarrow> final = final'; acap_relation cap cap'\<rbrakk>
      \<Longrightarrow> corres (\<lambda>r r'. cap_relation (fst r) (fst r') \<and> cap_relation (snd r) (snd r'))
                (\<lambda>s. invs s \<and> s \<turnstile> cap.ArchObjectCap cap
@@ -2827,10 +2851,31 @@ locale Finalise_R_3 = Finalise_R_2 +
                     (final_matters' (ArchObjectCap cap') \<longrightarrow>
                      final' = isFinal (ArchObjectCap cap') (cte_map sl) (cteCaps_of s)))
                (arch_finalise_cap cap final) (Arch.finaliseCap cap' final')"
+  assumes emptySlot_invs'[wp]:
+    "\<And>sl info.
+     \<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' (\<lambda>cte. removeable' sl s (cteCap cte)) sl s
+          \<and> (info \<noteq> NullCap \<longrightarrow> post_cap_delete_pre' info sl (cteCaps_of s) )\<rbrace>
+     emptySlot sl info
+     \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  assumes Arch_finaliseCap_sch_act_simple[wp]:
+    "\<And>acap b. Arch.finaliseCap acap b \<lbrace>sch_act_simple\<rbrace>"
+  assumes prepareThreadDelete_sch_act_simple[wp]:
+    "\<And>t. prepareThreadDelete t \<lbrace>sch_act_simple\<rbrace>"
+  assumes finaliseCap_cte_refs:
+    "\<And>cap final flag.
+     \<lbrace>\<lambda>s. s \<turnstile>' cap\<rbrace>
+     finaliseCap cap final flag
+     \<lbrace>\<lambda>rv s. fst rv \<noteq> NullCap \<longrightarrow> cte_refs' (fst rv) = cte_refs' cap\<rbrace>"
 begin
 
 sublocale delete_one_conc_fr: delete_one_conc
   by unfold_locales (wp cteDeleteOne_invs)
+
+crunch finaliseCap
+  for sch_act_simple[wp]: sch_act_simple
+  (simp: crunch_simps
+   rule: sch_act_simple_lift
+   wp: crunch_wps)
 
 lemma finaliseCap_valid_cap[wp]:
   "\<lbrace>valid_cap' cap\<rbrace> finaliseCap cap final flag \<lbrace>\<lambda>rv. valid_cap' (fst rv)\<rbrace>"
