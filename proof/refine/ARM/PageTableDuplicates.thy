@@ -1756,7 +1756,7 @@ declare withoutPreemption_lift [wp del]
 lemma valid_duplicates_finalise_prop_stuff:
   "no_cte_prop (vs_valid_duplicates' \<circ> ksPSpace) = vs_valid_duplicates' \<circ> ksPSpace"
   "finalise_prop_stuff (vs_valid_duplicates' \<circ> ksPSpace)"
-  by (simp_all add: no_cte_prop_def finalise_prop_stuff_def
+  by (simp_all add: no_cte_prop_def finalise_prop_stuff_def arch_finalise_prop_stuff_def
                     setCTE_valid_duplicates' o_def)
 
 lemma finaliseSlot_valid_duplicates'[wp]:

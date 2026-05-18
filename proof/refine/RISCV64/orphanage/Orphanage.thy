@@ -1490,7 +1490,7 @@ declare withoutPreemption_lift [wp del]
 lemma no_orphans_finalise_prop_stuff:
   "no_cte_prop no_orphans = no_orphans"
   "finalise_prop_stuff no_orphans"
-  by (simp_all add: no_cte_prop_def finalise_prop_stuff_def
+  by (simp_all add: no_cte_prop_def finalise_prop_stuff_def arch_finalise_prop_stuff_def
                     setCTE_no_orphans,
     simp_all add: no_orphans_def all_active_tcb_ptrs_def
                   is_active_tcb_ptr_def all_queued_tcb_ptrs_def)

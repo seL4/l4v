@@ -269,7 +269,7 @@ lemma catchError_empty_fail[intro!, wp, simp]:
 crunch
   chooseThread, getDomainTime, nextDomain, isHighestPrio, prepareNextDomain
   for (empty_fail) empty_fail[intro!, wp, simp]
-  (wp: empty_fail_catch)
+  (wp: empty_fail_catch ignore: get_gic_vcpu_ctrl_apr get_gic_vcpu_ctrl_vmcr)
 
 lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   "empty_fail schedule"
