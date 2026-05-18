@@ -1763,7 +1763,7 @@ lemma decodeCNodeInvocation_ccorres:
         apply simp
         apply (wp injection_wp_E[OF refl] hoare_vcg_const_imp_liftE_R
                   hoare_vcg_all_liftE_R lsfco_cte_at' hoare_weak_lift_imp
-                | simp add: hasCancelSendRights_not_Null ctes_of_valid_strengthen
+                | simp add: hasCancelSendRights_isEndpointCap ctes_of_valid_strengthen
                       cong: conj_cong
                 | wp (once) hoare_drop_imps)+
        apply (simp add: all_ex_eq_helper)
@@ -1798,7 +1798,7 @@ lemma decodeCNodeInvocation_ccorres:
                              ccte_relation_def c_valid_cte_def
                              cl_valid_cte_def c_valid_cap_def
                              map_option_Some_eq2 neq_Nil_conv ccap_relation_def
-                             numeral_eqs hasCancelSendRights_not_Null
+                             numeral_eqs hasCancelSendRights_isEndpointCap
                              ccap_relation_NullCap_iff[symmetric]
                              interpret_excaps_test_null mdbRevocable_CL_cte_to_H
             | clarsimp simp: typ_heap_simps'

@@ -262,7 +262,7 @@ lemma decodeInvocation_corres:
                     split del: if_split cong: if_cong)
         apply (clarsimp simp add: o_def)
         apply (rule corres_guard_imp)
-          apply (rule_tac F="length list \<le> 32" in corres_gen_asm)
+          apply (rule_tac F="length list \<le> word_bits" in corres_gen_asm)
           apply (rule decodeCNodeInvocation_corres, simp+)
          apply (simp add: valid_cap_def word_bits_def)
         apply simp
