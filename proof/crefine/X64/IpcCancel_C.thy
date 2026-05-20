@@ -2733,11 +2733,11 @@ lemma cancelIPC_ccorres1:
             apply (simp add: word_sle_def ccorres_cond_iffs cong: call_ignore_cong)
             apply (rule ccorres_rhs_assoc)+
             apply csymbr
-            apply csymbr
             apply (rule ccorres_pre_getEndpoint)
             apply (rule ccorres_assert)
             apply (rule ccorres_symb_exec_r) \<comment> \<open>ptr_get lemmas don't work so well :(\<close>
               apply (rule ccorres_symb_exec_r)
+                apply csymbr
                 apply (simp only: fun_app_def simp_list_case_return
                                   return_bind ccorres_seq_skip)
                 apply (rule ccorres_rhs_assoc2)
@@ -2835,11 +2835,11 @@ lemma cancelIPC_ccorres1:
       \<comment> \<open>clag\<close>
       apply (rule ccorres_rhs_assoc)+
       apply csymbr
-      apply csymbr
       apply (rule ccorres_pre_getEndpoint)
       apply (rule ccorres_assert)
       apply (rule ccorres_symb_exec_r) \<comment> \<open>ptr_get lemmas don't work so well :(\<close>
         apply (rule ccorres_symb_exec_r)
+          apply csymbr
           apply (simp only: fun_app_def simp_list_case_return return_bind ccorres_seq_skip)
           apply (rule ccorres_rhs_assoc2)
           apply (rule ccorres_rhs_assoc2)
