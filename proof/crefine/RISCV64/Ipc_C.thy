@@ -4654,11 +4654,8 @@ lemma tcbReadyTime_ccorres:
   unfolding readTCBReadyTime_def readReadyTime_def gets_the_ohaskell_assert
             gets_the_obind threadGet_def[symmetric]
             getRefillHead_def[symmetric]
-  apply (rule ccorres_symb_exec_l'[OF _ _ threadGet_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[OF _ _ assert_sp]; (solves wpsimp)?)
-  unfolding  Nondet_Reader_Option.gets_the_return return_bind fun_app_def scActive_def[symmetric]
-  apply (rule ccorres_symb_exec_l'[OF _ _ scActive_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[OF _ _ assert_sp]; (solves wpsimp)?)
+            Nondet_Reader_Option.gets_the_return return_bind fun_app_def scActive_def[symmetric]
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: threadGet_sp scActive_sp)+
   apply (cinit' lift: tcb_')
    apply (rule ccorres_move_c_guard_tcb)
    apply (rule_tac xf'="\<lambda>s. h_val (hrs_mem (t_hrs_' (globals s))) (ret__ptr_to_struct_refill_C_' s)"
@@ -4963,13 +4960,8 @@ lemma tcbReleaseEnqueue_ccorres:
      (no_0_obj' and pspace_aligned' and pspace_distinct' and pspace_bounded')
      \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace> hs
      (tcbReleaseEnqueue tcbPtr) (Call tcbReleaseEnqueue_'proc)"
-  unfolding tcbReleaseEnqueue_def K_bind_apply haskell_assert_def
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
-  apply (rule ccorres_symb_exec_l'[OF _ _ isRunnable_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[OF _ _ assert_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[OF _ _ get_tcb_sp']; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[OF _ _ assert_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[OF _ _ getReleaseQueue_sp]; (solves wpsimp)?)
+  unfolding tcbReleaseEnqueue_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: isRunnable_sp get_tcb_sp' getReleaseQueue_sp)+
   apply (rename_tac queue)
   apply (cinit' lift: tcb_' simp: orderedInsert_def)
    apply (rule_tac xf'=queue_'
@@ -5678,12 +5670,10 @@ lemma tcbAppend_ccorres[corres]:
      (valid_objs' and pspace_canonical' and tcb_at' tcbPtr)
      (\<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace> \<inter> \<lbrace>ctcb_queue_relation q \<acute>queue\<rbrace>) hs
      (tcbAppend tcbPtr q) (Call tcbAppend_'proc)"
+  unfolding tcbAppend_def orderedInsert_def
   supply Collect_const[simp del]
-  unfolding tcbAppend_def orderedInsert_def K_bind_apply
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
-  apply (rule ccorres_symb_exec_l'[OF _ _ gets_the_sp]; (solves wpsimp)?)
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: gets_the_sp)+
   apply (rename_tac val)
-  apply (subst bind_dummy_ret_val)+
   apply (cinit' lift: tcb_' queue_')
    apply (rule ccorres_move_c_guard_tcb)
    apply (rule_tac xf'=priority_'
@@ -5844,12 +5834,11 @@ lemma tcbEPAppend_ccorres[corres]:
      (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace> \<inter> \<lbrace>\<acute>epptr = ep_Ptr epPtr\<rbrace>
       \<inter> \<lbrace>cendpoint_state_relation state \<acute>ep_state\<rbrace>) hs
      (tcbEPAppend thread epPtr state) (Call tcbEPAppend_'proc)"
-  unfolding tcbEPAppend_def haskell_assert_def K_bind_apply fun_app_def
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[OF _ _ get_ep_sp']; (solves wpsimp)?)
-  apply (rename_tac endpoint)
+  unfolding tcbEPAppend_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: get_ep_sp')+
   apply (cinit' lift: thread_' epptr_' ep_state_')
    apply clarsimp
+   apply (rename_tac endpoint ep_state)
    apply (rule_tac xf'=queue_'
                and val="tcb_queue_to_tcb_queue_C (epQueue endpoint)"
                and R="ko_at' endpoint epPtr and valid_objs'"
@@ -5861,7 +5850,6 @@ lemma tcbEPAppend_ccorres[corres]:
                         simp: cendpoint_relation_def ctcb_queue_relation_def
                               tcb_queue_to_tcb_queue_C_def typ_heap_simps)
      apply ceqv
-    apply (rule ccorres_stateAssert)
     apply (ctac add: tcbAppend_ccorres)
       apply (rename_tac q' new_queue)
       apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
@@ -6832,11 +6820,10 @@ lemma maybeReturnSchedContext_ccorres:
      (\<lbrace>\<acute>ntfnPtr = Ptr ntfnPtr\<rbrace> \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) hs
      (maybeReturnSc ntfnPtr tcbPtr) (Call maybeReturnSchedContext_'proc)"
   supply Collect_const[simp del]
-  unfolding maybeReturnSc_def K_bind_apply liftM_def nested_bind fun_app_def
-  apply (rule ccorres_symb_exec_l'[rotated, OF _ stateAssert_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[rotated, OF _ get_ntfn_sp']; (solves wpsimp)?)
-  apply (rename_tac ntfn)
-  apply (rule ccorres_symb_exec_l'[rotated, OF _ threadGet_sp]; (solves wpsimp)?)
+  unfolding maybeReturnSc_def
+  apply (ccorres_exec_l_pre unfold: liftM_def nested_bind
+                            ccorres_exec_l_pre: get_ntfn_sp' threadGet_sp)+
+  apply (rename_tac ntfn tscOpt)
   apply (cinit' lift: ntfnPtr_' tcb_')
    apply (rule ccorres_rhs_assoc2)
    apply (rule_tac xf'=sc_'
@@ -7628,9 +7615,8 @@ lemma sendSignal_ccorres[corres]:
      (\<lbrace>\<acute>ntfnPtr = Ptr ntfnPtr\<rbrace> \<inter> \<lbrace>\<acute>badge___unsigned_long = badge\<rbrace>) hs
      (sendSignal ntfnPtr badge) (Call sendSignal_'proc)"
   supply Collect_const[simp del]
-  unfolding sendSignal_def K_bind_apply haskell_assert_def
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[OF _ _ get_ntfn_sp']; (solves wpsimp)?)
+  unfolding sendSignal_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: get_ntfn_sp')+
   apply (rename_tac ntfn)
   apply (cinit' lift: ntfnPtr_' badge___unsigned_long_')
    apply (rule_tac xf'=ret__unsigned_longlong_'
@@ -7976,11 +7962,11 @@ lemma tcbNTFNAppend_ccorres[corres]:
      (valid_objs' and pspace_canonical' and tcb_at' thread)
      (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace> \<inter> \<lbrace>\<acute>ntfnPtr = ntfn_Ptr ntfnPtr\<rbrace>) hs
      (tcbNTFNAppend thread ntfnPtr) (Call tcbNTFNAppend_'proc)"
-  unfolding tcbNTFNAppend_def haskell_assert_def K_bind_apply fun_app_def
-  apply (rule ccorres_symb_exec_l'[OF _ _ get_ntfn_sp']; (solves wpsimp)?)
-  apply (rename_tac ntfn)
+  unfolding tcbNTFNAppend_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: get_ntfn_sp')+
   apply (cinit' lift: thread_' ntfnPtr_')
    apply clarsimp
+   apply (rename_tac ntfn)
    apply (rule_tac xf'=queue_'
                and val="tcb_queue_to_tcb_queue_C (ntfnQueue ntfn)"
                and R="ko_at' ntfn ntfnPtr and valid_objs'"
@@ -7992,7 +7978,6 @@ lemma tcbNTFNAppend_ccorres[corres]:
                         simp: cnotification_relation_def Let_def ctcb_queue_relation_def
                               tcb_queue_to_tcb_queue_C_def typ_heap_simps)
      apply ceqv
-    apply (rule ccorres_stateAssert)
     apply (ctac add: tcbAppend_ccorres)
       apply (rename_tac q' new_queue)
             apply (rule_tac P'="\<lambda>s. ntfn_at' ntfnPtr s \<and> pspace_canonical' s
@@ -8046,11 +8031,7 @@ lemma receiveSignal_ccorres[corres]:
   unfolding receiveSignal_def K_bind_def haskell_assert_def return_bind
   supply Collect_const[simp del]
   apply (rule ccorres_grab_asm)
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
-  apply (rule ccorres_symb_exec_l'[OF _ _ isRunnable_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[OF _ _ assert_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
-  apply (rule ccorres_symb_exec_l'[OF _ _ get_ntfn_sp']; (solves wpsimp)?)
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: isRunnable_sp get_ntfn_sp')+
   apply (cinit' lift: thread_' cap_' isBlocking_')
    apply (subst ntfn_Active_split)
    apply (subst if_swap)

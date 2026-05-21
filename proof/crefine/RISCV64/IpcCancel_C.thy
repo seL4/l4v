@@ -522,7 +522,7 @@ lemma tcb_queue_prepend_ccorres:
      (tcbQueuePrepend queue tcbPtr) (Call tcb_queue_prepend_'proc)"
   supply if_split[split del]
   unfolding tcbQueuePrepend_def
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)
+  apply ccorres_exec_l_pre
   apply (cinit lift: tcb_')
    \<comment> \<open>cinit is not able to lift queue_' because queue_' is later modified in the C program\<close>
    apply (rule_tac xf'=queue_' in ccorres_abstract, ceqv, rename_tac cqueue)
@@ -607,7 +607,7 @@ lemma tcb_queue_append_ccorres:
      (tcbQueueAppend queue tcbPtr) (Call tcb_queue_append_'proc)"
   supply if_split[split del]
   unfolding tcbQueueAppend_def
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)
+  apply ccorres_exec_l_pre
   apply (cinit lift: tcb_')
    \<comment> \<open>cinit is not able to lift queue_' because queue_' is later modified in the C program\<close>
    apply (rule_tac xf'=queue_' in ccorres_abstract, ceqv, rename_tac cqueue)
@@ -740,8 +740,8 @@ proof -
   note word_less_1[simp del]
 
   show ?thesis
-    unfolding tcbSchedEnqueue_def K_bind_apply
-    apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
+    unfolding tcbSchedEnqueue_def
+    apply ccorres_exec_l_pre+
     apply (cinit' lift: tcb_')
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_assert)
@@ -877,7 +877,7 @@ proof -
 
   show ?thesis
     unfolding tcbSchedAppend_def K_bind_apply
-    apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
+    apply ccorres_exec_l_pre+
     apply (cinit' lift: tcb_')
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_assert)
@@ -1114,8 +1114,8 @@ lemma tcb_queue_remove_ccorres:
      (tcbQueueRemove queue tcbPtr) (Call tcb_queue_remove_'proc)"
   (is "ccorres _ _ ?abs _ _ _ _")
   supply if_split[split del] return_bind[simp del]
-  unfolding tcbQueueRemove_def K_bind_apply
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
+  unfolding tcbQueueRemove_def
+  apply ccorres_exec_l_pre+
   apply (cinit' lift: tcb_')
    apply (rename_tac tcb')
     \<comment> \<open>cinit is not able to lift queue_' because queue_' is later modified in the C program\<close>
@@ -1436,8 +1436,8 @@ proof -
   note word_less_1[simp del]
 
   show ?thesis
-    unfolding tcbSchedDequeue_def K_bind_apply
-    apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
+    unfolding tcbSchedDequeue_def
+    apply ccorres_exec_l_pre+
     apply (cinit' lift: tcb_')
      apply (rule_tac r'="\<lambda>rv rv'. rv = to_bool rv'" and xf'="ret__unsigned_longlong_'"
                   in ccorres_split_nothrow)
@@ -2351,8 +2351,8 @@ lemma tcbNTFNDequeue_ccorres[corres]:
      (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace> \<inter> \<lbrace>\<acute>ntfnPtr = ntfn_Ptr ntfnPtr\<rbrace>) hs
      (tcbNTFNDequeue thread ntfnPtr) (Call tcbNTFNDequeue_'proc)"
   supply if_split[split del]
-  unfolding tcbNTFNDequeue_def haskell_assert_def K_bind_apply fun_app_def
-  apply (rule ccorres_symb_exec_l'[OF _ _ get_ntfn_sp']; (solves wpsimp)?)
+  unfolding tcbNTFNDequeue_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: get_ntfn_sp')
   apply (rename_tac notification)
   apply (cinit' lift: thread_' ntfnPtr_')
    apply (rule_tac xf'=queue_'
@@ -3407,8 +3407,9 @@ lemma tcbEPDequeue_ccorres[corres]:
      (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace> \<inter> \<lbrace>\<acute>epptr = ep_Ptr epPtr\<rbrace>) hs
      (tcbEPDequeue thread epPtr) (Call tcbEPDequeue_'proc)"
   supply if_split[split del]
-  unfolding tcbEPDequeue_def haskell_assert_def K_bind_apply fun_app_def
-  apply (rule ccorres_symb_exec_l'[OF _ _ get_ep_sp']; (solves \<open>wpsimp wp: empty_fail_getEndpoint\<close>)?)
+  unfolding tcbEPDequeue_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: get_ep_sp'
+                                            wp: empty_fail_getEndpoint)
   apply (rename_tac endpoint)
   apply (cinit' lift: thread_' epptr_')
    apply (rule_tac xf'=queue_'

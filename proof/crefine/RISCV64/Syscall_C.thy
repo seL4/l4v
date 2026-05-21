@@ -172,10 +172,8 @@ lemma handleTimeout_ccorres:
                       (Ptr &(tcb_ptr_to_ctcb_ptr tptr\<rightarrow>[''tcbLookupFailure_C'']))))\<rbrace>
       \<inter> \<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr tptr\<rbrace>) hs
      (handleTimeout tptr fault) (Call handleTimeout_'proc)"
-  unfolding handleTimeout_def K_bind_apply haskell_assert_def
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
-  apply (rule ccorres_symb_exec_l'[OF _ _ isValidTimeoutHandler_sp]; (solves \<open>wpsimp\<close>)?)
-  apply (rule ccorres_symb_exec_l'[OF _ _ assert_sp]; (solves wpsimp)?)
+  unfolding handleTimeout_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: isValidTimeoutHandler_sp)+
   apply (cinit' lift: tptr_')
    apply (simp add: getThreadTimeoutHandlerSlot_def locateSlot_conv cte_C_size)
    apply ccorres_remove_UNIV_guard
@@ -306,8 +304,8 @@ lemma doReplyTransfer_ccorres:
     (doReplyTransfer sender replyPtr grant)
     (Call doReplyTransfer_'proc)"
   supply Collect_const[simp del]
-  unfolding doReplyTransfer_def K_bind_apply
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
+  unfolding doReplyTransfer_def
+  apply ccorres_exec_l_pre+
   apply (cinit' lift: sender_' reply_' grant_' simp: liftM_def)
    apply (rule ccorres_pre_getObject_reply, rename_tac reply)
    apply (simp add: option.case_eq_if)
@@ -368,6 +366,7 @@ lemma doReplyTransfer_ccorres:
         apply (clarsimp simp: creply_relation_def typ_heap_simps)
        apply ceqv
       apply (ctac add: reply_remove_ccorres, rename_tac xfdc')
+        apply simp
         apply (rule ccorres_pre_threadGet)
         apply (rule ccorres_move_c_guard_tcb)
         apply (rule ccorres_rhs_assoc2)
@@ -1812,11 +1811,8 @@ lemma chargeBudget_ccorres:
      (chargeBudget consumed canTimeoutFault) (Call chargeBudget_'proc)"
   supply sched_context_C_size[simp del] refill_C_size[simp del]
   supply Collect_const[simp del]
-  unfolding chargeBudget_def K_bind_apply
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
-  apply (rule ccorres_symb_exec_l'[OF _ _ getCurSc_sp]; (solves wpsimp)?)+
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[OF _ _ getIdleSC_sp]; (solves wpsimp)?)
+  unfolding chargeBudget_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getCurSc_sp getIdleSC_sp)+
   apply (cinit' lift: consumed_' canTimeoutFault_')
    apply (rule ccorres_split_nothrow)
        apply (clarsimp simp: when_def)
@@ -2148,14 +2144,9 @@ lemma handleYield_ccorres:
      (handleYield) (Call handleYield_'proc)"
   supply sched_context_C_size[simp del] refill_C_size[simp del]
   supply Collect_const[simp del]
-  unfolding handleYield_def K_bind_apply
-  apply (rule ccorres_symb_exec_l'[OF _ _ getCurSc_sp]; (solves wpsimp)?)
-  apply (rename_tac scPtr)
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[OF _ _ get_sc_sp']; (solves wpsimp)?)
-  apply (rename_tac sc)
-  apply (rule ccorres_symb_exec_l'[OF _ _ getConsumedTime_sp]; (solves wpsimp)?)
-  apply (rename_tac consumed)
+  unfolding handleYield_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getCurSc_sp get_sc_sp' getConsumedTime_sp)+
+  apply (rename_tac scPtr rv sc consumed)
   apply cinit'
    apply (rule ccorres_Guard_Seq)
    apply (rule_tac val="scConsumed sc + consumed"

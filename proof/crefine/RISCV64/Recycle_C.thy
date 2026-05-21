@@ -788,9 +788,8 @@ lemma cancelBadgedSends_ccorres:
   "ccorres dc xfdc
      invs' (\<lbrace>\<acute>epptr = ep_Ptr epptr\<rbrace> \<inter> \<lbrace>\<acute>badge___unsigned_long = badge\<rbrace>) hs
      (cancelBadgedSends epptr badge) (Call cancelBadgedSends_'proc)"
-  unfolding cancelBadgedSends_def K_bind_apply haskell_assert_def
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
-  apply (rule ccorres_symb_exec_l'[OF _ _ get_ep_sp']; (solves wpsimp)?)
+  unfolding cancelBadgedSends_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: get_ep_sp')+
   apply (rename_tac ep)
   apply (cinit' lift: epptr_' badge___unsigned_long_')
    apply (rule_tac xf'=ret__unsigned_longlong_'
@@ -862,7 +861,7 @@ lemma cancelBadgedSends_ccorres:
                              and P'="{s'. thread = tcb_ptr_to_ctcb_ptr t}"
                               in ccorres_split_nothrow)
                      apply (rule ccorres_add_return2)
-                     apply (rule ccorres_symb_exec_l'[OF _ _ threadGet_sp]; (solves wpsimp)?)
+                     apply (ccorres_exec_l_pre ccorres_exec_l_pre: threadGet_sp)
                      apply (rule ccorres_from_vcg)
                      apply (rule allI, rule conseqPre, vcg)
                      apply (clarsimp simp: return_def)
