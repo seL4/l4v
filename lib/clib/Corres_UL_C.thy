@@ -1241,6 +1241,24 @@ lemma ccorres_symb_exec_l2:
   apply (fastforce simp: in_monad')
   done
 
+text \<open>
+  The following method is intended to be used on ccorres goals that have non-schematic guards,
+  consuming a line of the abstract function via a strongest postcondition rule, and adding
+  information directly to the abstract guard. The user may add their own strongest postcondition
+  rules to the ccorres_exec_l_pre argument of the method, and may add their own unfolding rules to
+  the unfold argument.\<close>
+
+named_theorems ccorres_exec_l_pre
+
+lemmas [ccorres_exec_l_pre] = assert_sp
+lemmas [ccorres_exec_l_pre] = stateAssert_sp
+lemmas [ccorres_exec_l_pre] = stateAssert_sp[unfolded HaskellLib_H.stateAssert_def]
+
+method ccorres_exec_l_pre uses unfold wp simp declares ccorres_exec_l_pre =
+  (simp only: unfold haskell_assert_def K_bind_apply fun_app_def)?,
+  (rule ccorres_exec_l_pre[THEN ccorres_symb_exec_l'[rotated 2]];
+   (solves \<open>wpsimp wp: wp simp: simp\<close>)?)
+
 lemma exec_handlers_SkipD:
   "\<Gamma>\<turnstile>\<^sub>h \<langle>SKIP # hs, s\<rangle> \<Rightarrow> (n, s') \<Longrightarrow> s' = Normal s \<and> n = length hs"
   apply (erule exec_handlers.cases)
