@@ -80,9 +80,7 @@ lemma refill_ready_ccorres:
   supply sched_context_C_size[simp del] refill_C_size[simp del]
   unfolding refillReady_def readRefillReady_def gets_the_obind ohaskell_state_assert_def
             gets_the_ostate_assert
-  apply (rule ccorres_symb_exec_l'
-               [OF _ _ stateAssert_sp[simplified HaskellLib_H.stateAssert_def]];
-         (solves wpsimp)?)+
+  apply ccorres_exec_l_pre+
   apply (cinit' lift: sc_'
                 simp: readCurTime_def gets_the_ogets getRefillHead_def[symmetric]
                       getCurTime_def[symmetric])
@@ -121,9 +119,7 @@ lemma refill_next_ccorres:
   supply len_bit0[simp del]
   unfolding getRefillNext_def readRefillNext_def gets_the_obind ohaskell_state_assert_def
             gets_the_ostate_assert
-  apply (rule ccorres_symb_exec_l'
-               [OF _ _ stateAssert_sp[simplified HaskellLib_H.stateAssert_def]];
-         (solves wpsimp)?)+
+  apply ccorres_exec_l_pre+
   apply (cinit' lift: sc_' index_'
                 simp: refillNext_def readSchedContext_def getObject_def[symmetric]
                       getSchedContext_def[symmetric])
@@ -157,8 +153,8 @@ lemma refill_pop_head_ccorres:
      no_0_obj' \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
      (refillPopHead scPtr) (Call refill_pop_head_'proc)"
   supply sched_context_C_size[simp del] refill_C_size[simp del]
-  unfolding refillPopHead_def K_bind_apply
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
+  unfolding refillPopHead_def
+  apply ccorres_exec_l_pre+
   apply (cinit' lift: sc_')
    apply (rule ccorres_symb_exec_r)
      apply (rule_tac xf'="\<lambda>s. h_val (hrs_mem (t_hrs_' (globals s))) (ret__ptr_to_struct_refill_C_' s)"
@@ -790,8 +786,7 @@ lemma cancelAllIPC_ccorres:
   "ccorres dc xfdc invs' \<lbrace>\<acute>epptr = ep_Ptr epptr\<rbrace> hs
      (cancelAllIPC epptr) (Call cancelAllIPC_'proc)"
   unfolding cancelAllIPC_def K_bind_apply haskell_assert_def
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
-  apply (rule ccorres_symb_exec_l'[OF _ _ get_ep_sp']; (solves wpsimp)?)
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: get_ep_sp')+
   apply (rename_tac ep)
   apply (subst endpoint_IdleEPState_split)
   apply (cinit' lift: epptr_')
@@ -864,7 +859,7 @@ lemma cancelAllIPC_ccorres:
                             and P'="\<lbrace>thread = tcb_ptr_to_ctcb_ptr t\<rbrace>"
                              in ccorres_split_nothrow)
                     apply (rule ccorres_add_return2)
-                    apply (rule ccorres_symb_exec_l'[OF _ _ threadGet_sp]; (solves wpsimp)?)
+                    apply (ccorres_exec_l_pre ccorres_exec_l_pre: threadGet_sp)
                     apply (rule ccorres_from_vcg)
                     apply (rule allI, rule conseqPre, vcg)
                     apply (clarsimp simp: return_def)
@@ -1023,9 +1018,8 @@ lemma cancelAllSignals_ccorres:
   "ccorres dc xfdc
      invs' \<lbrace>\<acute>ntfnPtr = ntfn_Ptr ntfnPtr\<rbrace> hs
      (cancelAllSignals ntfnPtr) (Call cancelAllSignals_'proc)"
-  unfolding cancelAllSignals_def K_bind_apply haskell_assert_def
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)+
-  apply (rule ccorres_symb_exec_l'[OF _ _ get_ntfn_sp']; (solves wpsimp)?)
+  unfolding cancelAllSignals_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: get_ntfn_sp')+
   apply (rename_tac ntfn)
   apply (subst ntfn_Waiting_split)
   apply (cinit' lift: ntfnPtr_')
@@ -1099,7 +1093,7 @@ lemma cancelAllSignals_ccorres:
                              and P'="{s'. thread = tcb_ptr_to_ctcb_ptr t}"
                               in ccorres_split_nothrow)
                      apply (rule ccorres_add_return2)
-                     apply (rule ccorres_symb_exec_l'[OF _ _ threadGet_sp]; (solves wpsimp)?)
+                     apply (ccorres_exec_l_pre ccorres_exec_l_pre: threadGet_sp)
                      apply (rule ccorres_from_vcg)
                      apply (rule allI, rule conseqPre, vcg)
                      apply (clarsimp simp: return_def)
@@ -1251,8 +1245,8 @@ lemma schedContext_cancelYieldTo_ccorres:
      (tcb_at' tptr and no_0_obj')
      \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tptr\<rbrace> []
      (schedContextCancelYieldTo tptr) (Call schedContext_cancelYieldTo_'proc)"
-  unfolding schedContextCancelYieldTo_def K_bind_apply
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)
+  unfolding schedContextCancelYieldTo_def
+  apply ccorres_exec_l_pre
   apply (cinit' lift: tcb_')
    apply csymbr
    apply simp
@@ -1448,7 +1442,7 @@ lemma unbindNotification_ccorres:
     invs' \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace> hs
     (unbindNotification tcbPtr) (Call unbindNotification_'proc)"
   unfolding unbindNotification_def getBoundNotification_def
-  apply (rule ccorres_symb_exec_l'[OF _ _ threadGet_sp]; (solves wpsimp)?)
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: threadGet_sp)
   apply (rename_tac ntfnPtrOpt)
   apply (subst case_option_If2)
   apply (cinit' lift: tcb_')
@@ -2489,8 +2483,7 @@ lemma cteDeleteOne_ccorres:
     \<inter> {s. slot_' s = Ptr slot}) []
    (cteDeleteOne slot) (Call cteDeleteOne_'proc)"
   unfolding cteDeleteOne_def
-  apply (rule ccorres_symb_exec_l'
-                [OF _ getCTE_inv getCTE_sp empty_fail_getCTE])
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getCTE_sp)
   apply (cinit' lift: slot_' cong: call_ignore_cong)
    apply (rule ccorres_move_c_guard_cte)
    apply csymbr

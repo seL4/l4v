@@ -108,8 +108,8 @@ lemma switchToThread_ccorres:
            hs
            (switchToThread t)
            (Call switchToThread_'proc)"
-  apply (clarsimp simp: switchToThread_def)
-  apply (rule ccorres_symb_exec_l'[OF _ _ isRunnable_sp]; wpsimp)
+  unfolding switchToThread_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: isRunnable_sp)
   apply (cinit' lift: thread_')
    apply (rule ccorres_assert2)
    apply (rule ccorres_stateAssert)+
@@ -130,10 +130,8 @@ lemma activateThread_ccorres:
   "ccorres dc xfdc
      (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)) UNIV hs
      activateThread (Call activateThread_'proc)"
-  unfolding activateThread_def K_bind_apply
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[OF _ _ getCurThread_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[OF _ _ threadGet_sp]; (solves wpsimp)?)
+  unfolding activateThread_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getCurThread_sp threadGet_sp)+
   apply cinit'
    apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
    apply (rule ccorres_abstract_ksCurThread, ceqv)
@@ -714,11 +712,8 @@ lemma refill_add_tail_ccorres:
      (refillAddTail scPtr new) (Call refill_add_tail_'proc)"
   supply sched_context_C_size[simp del] refill_C_size[simp del] len_bit0[simp del]
 
-  unfolding refillAddTail_def K_bind_apply haskell_assert_def
-  apply (rule ccorres_symb_exec_l'[rotated, OF _ stateAssert_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[rotated, OF _ getRefillSize_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[rotated, OF _ get_sc_sp']; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[rotated, OF _ assert_sp]; (solves wpsimp)?)
+  unfolding refillAddTail_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getRefillSize_sp get_sc_sp')+
 
   apply (cinit' lift: sc_' refill_' simp: updateRefillIndex_def)
    apply (rule ccorres_move_c_guard_sc)
@@ -792,9 +787,8 @@ lemma schedule_used_ccorres:
      (scheduleUsed scPtr new) (Call schedule_used_'proc)"
   (is "ccorres _ _ ?abs _ _ _ _")
   supply sched_context_C_size[simp del] refill_C_size[simp del]
-  unfolding scheduleUsed_def haskell_assert_def
-  apply (rule ccorres_symb_exec_l'[OF _ _ scActive_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[OF _ _ assert_sp]; (solves wpsimp)?)
+  unfolding scheduleUsed_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: scActive_sp)+
   apply (cinit' lift: sc_' new_')
    apply (rule_tac xf'="\<lambda>s. h_val (hrs_mem (t_hrs_' (globals s))) (ret__ptr_to_struct_refill_C_' s)"
                 in ccorres_split_nothrow_call)
@@ -1335,12 +1329,8 @@ lemma refill_budget_check_ccorres:
      (refillBudgetCheck usage) (Call refill_budget_check_'proc)"
   supply sched_context_C_size[simp del] refill_C_size[simp del]
          Collect_const [simp del]
-  unfolding refillBudgetCheck_def haskell_assert_def K_bind_def
-  apply (rule ccorres_symb_exec_l'[rotated, OF _ getCurSc_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[rotated, OF _ scActive_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[rotated, OF _ assert_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[rotated, OF _ isRoundRobin_sp]; (solves wpsimp)?)
-  apply (rule ccorres_symb_exec_l'[rotated, OF _ assert_sp]; (solves wpsimp)?)
+  unfolding refillBudgetCheck_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getCurSc_sp scActive_sp isRoundRobin_sp)+
   apply (cinit' simp: max_minus_one_word64 runReaderT_def whileAnno_def)
    apply (rule_tac xf'=sc_'
                and val="Ptr scPtr"
@@ -1939,7 +1929,7 @@ lemma release_q_non_empty_and_ready_ccorres:
             releaseQNonEmptyAndReady_def gets_the_if_distrib readReleaseQueue_def
             gets_the_ogets ohaskell_state_assert_def gets_the_ostate_assert
             getReleaseQueue_def[symmetric]
-  apply (rule ccorres_symb_exec_l'[OF _ _ getReleaseQueue_sp]; (solves wpsimp)?)
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getReleaseQueue_sp)
   apply cinit'
    apply (simp add: releaseQNonEmptyAndReady_def gets_the_if_distrib readReleaseQueue_def
                     gets_the_ogets ohaskell_state_assert_def gets_the_ostate_assert

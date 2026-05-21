@@ -707,7 +707,7 @@ lemma checkCapAt_ccorres:
                 h_val (hrs_mem \<acute>t_hrs) (cap_Ptr &(slot'\<rightarrow>[''cap_C'']))));;c)"
   apply (rule ccorres_gen_asm2)+
   apply (simp add: checkCapAt_def liftM_def bind_assoc del: Collect_const)
-  apply (rule ccorres_symb_exec_l' [OF _ getCTE_inv getCTE_sp empty_fail_getCTE])
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getCTE_sp)
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_move_c_guard_cte)
    apply (rule_tac xf'=ret__unsigned_long_' and val="from_bool (sameObjectAs cap (cteCap x))"
@@ -719,7 +719,7 @@ lemma checkCapAt_ccorres:
       apply (rule exI, rule conjI, assumption)
       apply (clarsimp simp: typ_heap_simps dest!: ccte_relation_ccap_relation)
       apply (rule exI, rule conjI, assumption)
-      apply (auto intro: valid_capAligned dest: ctes_of_valid')[1]
+      subgoal by (auto intro: valid_capAligned dest: ctes_of_valid')
      apply assumption
     apply (simp only: when_def if_to_top_of_bind)
     apply (rule ccorres_if_lhs)

@@ -1151,7 +1151,7 @@ lemma storeWordUser_ccorres:
           (Basic (\<lambda>s. globals_update (t_hrs_'_update
            (hrs_mem_update (heap_update (ptr' s) (w' s)))) s)))"
   apply (simp add: storeWordUser_def)
-  apply (rule ccorres_symb_exec_l'[OF _ stateAssert_inv stateAssert_sp empty_fail_stateAssert])
+  apply ccorres_exec_l_pre
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_Guard)
    apply (rule storeWord_ccorres[unfolded fun_app_def])

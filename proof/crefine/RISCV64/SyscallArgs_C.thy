@@ -434,9 +434,8 @@ lemma refill_capacity_ccorres:
      no_0_obj' (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace> \<inter> \<lbrace>\<acute>usage = usage\<rbrace>) hs
      (getRefillCapacity scPtr usage) (Call refill_capacity_'proc)"
   unfolding getRefillCapacity_def readRefillCapacity_def gets_the_obind ohaskell_state_assert_def
-            gets_the_ostate_assert K_bind_apply
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp[unfolded HaskellLib_H.stateAssert_def]];
-         (solves wpsimp)?)+
+            gets_the_ostate_assert
+  apply ccorres_exec_l_pre+
   apply (cinit' lift: usage_')
    apply (clarsimp simp: getRefillHead_def[symmetric] refillCapacity_def)
    apply (clarsimp simp: if_distrib)

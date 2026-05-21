@@ -881,7 +881,7 @@ lemma setVMRoot_ccorres:
   "ccorres dc xfdc invs' \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr thread\<rbrace> hs
      (setVMRoot thread) (Call setVMRoot_'proc)"
   unfolding setVMRoot_def
-  apply (rule ccorres_symb_exec_l'[OF _ _ stateAssert_sp]; (solves wpsimp)?)
+  apply ccorres_exec_l_pre
   supply Collect_const[simp del]
   apply (cinit lift: tcb_')
    apply (rule ccorres_move_array_assertion_tcb_ctes)
