@@ -147,9 +147,7 @@ lemma bind_K_bind [polish]: "A >>= (\<lambda>x :: unit. B) = (A >>= K_bind B)"
 lemma obind_K_bind [polish]: "A |>> (\<lambda>x :: unit. B) = (A  |>> K_bind B)"
   by clarsimp
 
-lemma K_bind_apply [polish]:
-    "K_bind a b = a"
-  by simp
+declare K_bind_apply[polish]
 
 lemma condition_to_if [polish]:
   "condition (\<lambda>s. C) (return a) (return b) = return (if C then a else b)"

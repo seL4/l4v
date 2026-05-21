@@ -182,6 +182,10 @@ lemma liftE_alternative:
   "liftE (a \<sqinter> b) = (liftE a \<sqinter> liftE b)"
   by (simp add: liftE_def alternative_bind)
 
+lemma K_bind_apply:
+  "K_bind a b = a"
+  by simp
+
 
 subsection \<open>Lifting and Alternative Basic Definitions\<close>
 
