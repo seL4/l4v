@@ -12,9 +12,9 @@ theory ColourInv_AI
 begin
 
 section "Initialisation"
-axiomatization
-  colour_oracle :: "domain \<Rightarrow> obj_ref set"
-  where
+locale domain_colouring =
+  fixes colour_oracle :: "domain \<Rightarrow> obj_ref set"
+  assumes
     colour_oracle_no_overlap: "x \<noteq> y \<Longrightarrow> (colour_oracle x \<inter> colour_oracle y = {})" and
     colour_oracle_no_zero: "0 \<notin> colour_oracle x" \<comment>\<open>and
     colour_oracle_domain_list: "(d, a)\<in> set (domain_list s) \<Longrightarrow> colour_oracle d = {}" and
@@ -150,6 +150,9 @@ lemma kernel_object_ref_check:
    apply (rule_tac x=xa in exI)
    apply simp
   by (simp add: RISCV64_A.pte.case)+
+
+context domain_colouring
+begin
 
 definition colour_invariant
   where
@@ -1797,7 +1800,11 @@ lemma colour_invariant_machine_state[simp]:
   unfolding colour_invariant_def
   by clarsimp
 
-context Arch begin
+end
+
+locale ArchDomainColoured = Arch +
+  domain_colouring
+begin
 
 crunch schedule_choose_new_thread, schedule
   for colour_maintained[wp]: colour_invariant
@@ -2378,5 +2385,7 @@ theorem call_kernel_colour_maintained:
    apply(wpsimp wp:handle_event_colour_maintained simp:check_cap_ref_null)
   apply wpsimp
   done
+
+end
 
 end
