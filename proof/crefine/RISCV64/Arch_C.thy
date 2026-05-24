@@ -1213,20 +1213,6 @@ lemma framesize_from_H_eqs:
   "(framesize_from_H vsz = scast Kernel_C.RISCV_Giga_Page) = (vsz = RISCVHugePage)"
   by (simp add: framesize_from_H_def vm_page_size_defs split: vmpage_size.split)+
 
-lemma ccorres_pre_getObject_pte:
-  "(\<And>rv. ccorresG rf_sr \<Gamma> r xf (P rv) (P' rv) hs (f rv) c) \<Longrightarrow>
-   ccorresG rf_sr \<Gamma> r xf (\<lambda>s. \<forall>pte. ko_at' pte p s \<longrightarrow> P pte s)
-            {s. \<forall>pte pte'. cslift s (pte_Ptr p) = Some pte' \<and> cpte_relation pte pte' \<longrightarrow> s \<in> P' pte} hs
-     (getObject p >>= f) c"
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_symb_exec_l)
-      apply (rule_tac P="ko_at' rv p" in ccorres_cross_over_guard)
-      apply assumption
-     apply (wpsimp wp: getObject_inv getPTE_wp empty_fail_getObject)+
-  apply (erule cmap_relationE1[OF rf_sr_cpte_relation], erule ko_at_projectKO_opt)
-  apply clarsimp
-  done
-
 lemma ptr_add_uint_of_nat [simp]:
   "a  +\<^sub>p uint (of_nat b :: machine_word) = a  +\<^sub>p (int b)"
   by (clarsimp simp: CTypesDefs.ptr_add_def)

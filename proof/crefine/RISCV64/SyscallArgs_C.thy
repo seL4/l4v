@@ -107,23 +107,11 @@ context kernel_m begin
 lemma ccorres_pre_getWorkUnits:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows "ccorres r xf
-   (\<lambda>s. \<forall>rv. ksWorkUnitsCompleted s = rv \<longrightarrow> P rv s)
-   {s. \<forall>rv. s \<in> P' rv} hs (getWorkUnits >>= f) c"
-  apply (simp add: getWorkUnits_def)
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule gets_sp)
-     apply (clarsimp simp: empty_fail_def simpler_gets_def)
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply clarsimp
+           (\<lambda>s. \<forall>rv. ksWorkUnitsCompleted s = rv \<longrightarrow> P rv s) {s. \<forall>rv. s \<in> P' rv} hs
+           (getWorkUnits >>= f) c"
+  unfolding getWorkUnits_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: gets_sp)
+  apply (fastforce intro: stronger_ccorres_guard_imp cc)
   done
 
 lemma rf_sr_ksCurTime:
@@ -133,23 +121,11 @@ lemma rf_sr_ksCurTime:
 lemma ccorres_pre_getCurTime:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. ksCurTime s = rv \<longrightarrow> P rv s))
-                  {s. \<forall>rv. ksCurTime_' (globals s) = rv \<longrightarrow> s \<in> P' rv }
-                          hs (getCurTime >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule getCurTime_sp)
-     apply (clarsimp simp: empty_fail_def getCurTime_def simpler_gets_def)
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply (clarsimp simp: rf_sr_ksCurTime)
+             (\<lambda>s. \<forall>rv. ksCurTime s = rv \<longrightarrow> P rv s)
+             {s. \<forall>rv. ksCurTime_' (globals s) = rv \<longrightarrow> s \<in> P' rv} hs
+             (getCurTime >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getCurTime_sp)
+  apply (force intro: stronger_ccorres_guard_imp cc dest!: rf_sr_ksCurTime)
   done
 
 lemma rf_sr_ksConsumed:
@@ -159,23 +135,11 @@ lemma rf_sr_ksConsumed:
 lemma ccorres_pre_getConsumedTime:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. ksConsumedTime s = rv \<longrightarrow> P rv s))
-                  {s. \<forall>rv. ksConsumed_' (globals s) = rv \<longrightarrow> s \<in> P' rv }
-                          hs (getConsumedTime >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule getConsumedTime_sp)
-     apply (clarsimp simp: empty_fail_def getConsumedTime_def simpler_gets_def)
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply (clarsimp simp: rf_sr_ksConsumed)
+             (\<lambda>s. \<forall>rv. ksConsumedTime s = rv \<longrightarrow> P rv s)
+             {s. \<forall>rv. ksConsumed_' (globals s) = rv \<longrightarrow> s \<in> P' rv} hs
+             (getConsumedTime >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getConsumedTime_sp)
+  apply (force intro: stronger_ccorres_guard_imp cc dest!: rf_sr_ksConsumed)
   done
 
 (* FIXME RT: move to Refine *)
@@ -247,44 +211,11 @@ lemma rf_sr_ksCurSC:
 lemma ccorres_pre_getCurSc:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. ksCurSc s = rv \<longrightarrow> P rv s))
-                  {s. \<forall>rv. ksCurSC_' (globals s) = Ptr rv \<longrightarrow> s \<in> P' rv }
-                          hs (getCurSc >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule getCurSc_sp)
-     apply (clarsimp simp: empty_fail_def getCurSc_def simpler_gets_def)
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply (clarsimp simp: rf_sr_ksCurSC)
-  done
-
-lemma ccorres_pre_getObject_sc:
-  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
-  shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>sc. ko_at' sc p s \<longrightarrow> P sc s))
-                  {s. \<forall> sc sc'. cslift s (Ptr p) = Some sc' \<and> csched_context_relation sc sc'
-                           \<longrightarrow> s \<in> P' sc}
-                          hs (getSchedContext p >>= (\<lambda>rv :: sched_context. f rv)) c"
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_symb_exec_l)
-      apply (rule ccorres_guard_imp2)
-       apply (rule cc)
-      apply (rule conjI)
-       apply (rule_tac Q="ko_at' rv p s" in conjunct1)
-       apply assumption
-      apply assumption
-     apply (wpsimp wp: set_sc'.getObject_wp empty_fail_getObject simp: getSchedContext_def)+
-  apply (erule cmap_relationE1[OF cmap_relation_sched_context],
-         erule ko_at_projectKO_opt)
-  apply simp
+             (\<lambda>s. \<forall>rv. ksCurSc s = rv \<longrightarrow> P rv s)
+             {s. \<forall>rv. ksCurSC_' (globals s) = Ptr rv \<longrightarrow> s \<in> P' rv} hs
+             (getCurSc >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getCurSc_sp)
+  apply (force intro: stronger_ccorres_guard_imp cc dest!: rf_sr_ksCurSC)
   done
 
 lemma sc_active_ccorres:
@@ -524,10 +455,6 @@ crunch updateTimeStamp, setWorkUnits
   and valid_objs'[wp]: valid_objs'
   and no_0_obj'[wp]: no_0_obj'
   and ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
-
-crunch
-  scActive, getRefillSufficient, getConsumedTime, isCurDomainExpired, getCurSc
- for (empty_fail) empty_fail[wp]
 
 lemma preemptionPoint_ccorres:
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_') invs' UNIV []

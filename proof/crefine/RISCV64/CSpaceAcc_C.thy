@@ -12,6 +12,12 @@ theory CSpaceAcc_C
 imports "Refine.EmptyFail" Ctac_lemmas_C
 begin
 
+crunch
+  scActive, getRefillSufficient, getConsumedTime, isCurDomainExpired, getCurSc, getCurThread,
+  getCurTime, getQueue, getReply, getReadyQueuesL1Bitmap, getReadyQueuesL2Bitmap, getIdleSC,
+  getIRQState
+  for (empty_fail) empty_fail[wp]
+
 (* For resolving schematics *)
 lemma lift_t_cslift:
   "cslift x p = Some y \<Longrightarrow>
@@ -23,47 +29,24 @@ context kernel begin
 lemma ccorres_pre_getNotification:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-           (\<lambda>s. \<forall>ntfn. ko_at' ntfn p s \<longrightarrow> P ntfn s)
-           ({s'. \<forall>ntfn s. (s, s') \<in> rf_sr \<and> ko_at' ntfn p s \<longrightarrow> s' \<in> P' ntfn})
-           hs (getNotification p >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule get_ntfn_sp')
-     apply simp
-    apply assumption
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply simp
-   apply assumption
-  apply fastforce
+             (\<lambda>s. \<forall>ntfn. ko_at' ntfn p s \<longrightarrow> P ntfn s)
+             {s'. \<forall>ntfn s. (s, s') \<in> rf_sr \<and> ko_at' ntfn p s \<longrightarrow> s' \<in> P' ntfn} hs
+             (getNotification p >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: get_ntfn_sp')
+  apply (fastforce intro: stronger_ccorres_guard_imp cc)
   done
 
 lemma ccorres_pre_getCTE:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>cte. ctes_of s p = Some cte \<longrightarrow> P cte s))
-                  {s. \<forall>cte'. (cte_lift \<circ>\<^sub>m cslift s) (Ptr p) = Some cte' \<and> cl_valid_cte cte' \<longrightarrow> s \<in> P' (cte_to_H cte') }
-                          hs (getCTE p >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule getCTE_sp)
-     apply simp
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply (simp add: cte_wp_at_ctes_of)
-   apply assumption
-  apply (simp add: cte_wp_at_ctes_of)
-  apply (drule (1) rf_sr_ctes_of_clift)
-  apply clarsimp
-  apply (simp add: c_valid_cte_eq)
+             (\<lambda>s. \<forall>cte. ctes_of s p = Some cte \<longrightarrow> P cte s)
+             {s. \<forall>cte'. (cte_lift \<circ>\<^sub>m cslift s) (Ptr p) = Some cte' \<and> cl_valid_cte cte'
+                        \<longrightarrow> s \<in> P' (cte_to_H cte')} hs
+             (getCTE p >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getCTE_sp)
+  apply (fastforce intro: stronger_ccorres_guard_imp cc
+                    dest: rf_sr_ctes_of_clift
+                    simp: cte_wp_at_ctes_of c_valid_cte_eq)
   done
 
 lemmas ccorres_getCTE = ccorres_pre_getCTE
@@ -82,24 +65,11 @@ lemma rf_sr_ksCurThread:
 lemma ccorres_pre_getCurThread:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. ksCurThread s = rv \<longrightarrow> P rv s))
-                  {s. \<forall>rv. ksCurThread_' (globals s) = tcb_ptr_to_ctcb_ptr rv
-                                 \<longrightarrow> s \<in> P' rv }
-                          hs (getCurThread >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule getCurThread_sp)
-     apply (clarsimp simp: empty_fail_def getCurThread_def simpler_gets_def)
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply (clarsimp simp: rf_sr_ksCurThread)
+             (\<lambda>s. \<forall>rv. ksCurThread s = rv \<longrightarrow> P rv s)
+             {s. \<forall>rv. ksCurThread_' (globals s) = tcb_ptr_to_ctcb_ptr rv \<longrightarrow> s \<in> P' rv} hs
+             (getCurThread >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getCurThread_sp)
+  apply (fastforce intro: stronger_ccorres_guard_imp cc dest: rf_sr_ksCurThread)
   done
 
 lemma getSchedulerAction_sp:
@@ -109,24 +79,12 @@ lemma getSchedulerAction_sp:
 lemma ccorres_pre_getSchedulerAction:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. ksSchedulerAction s = rv \<longrightarrow> P rv s))
-                  {s. \<forall>rv. cscheduler_action_relation rv (ksSchedulerAction_' (globals s))
-                                 \<longrightarrow> s \<in> P' rv }
-                          hs (getSchedulerAction >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule getSchedulerAction_sp)
-     apply simp
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply (clarsimp dest!: rf_sr_sched_action_relation)
+             (\<lambda>s. \<forall>rv. ksSchedulerAction s = rv \<longrightarrow> P rv s)
+             {s. \<forall>rv. cscheduler_action_relation rv (ksSchedulerAction_' (globals s))
+                      \<longrightarrow> s \<in> P' rv} hs
+             (getSchedulerAction >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getSchedulerAction_sp)
+  apply (fastforce intro: stronger_ccorres_guard_imp cc dest: rf_sr_sched_action_relation)
   done
 
 lemma rf_sr_ksDomainTime:
@@ -136,25 +94,11 @@ lemma rf_sr_ksDomainTime:
 lemma ccorres_pre_getDomainTime:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. ksDomainTime s = rv \<longrightarrow> P rv s))
-                  {s. \<forall>rv. ksDomainTime_' (globals s) = rv
-                                 \<longrightarrow> s \<in> P' rv }
-                          hs (getDomainTime >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (simp add: getDomainTime_def)
-      apply (rule gets_sp)
-     apply (clarsimp simp: empty_fail_def getDomainTime_def simpler_gets_def)
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply (clarsimp simp: rf_sr_ksDomainTime)
+             (\<lambda>s. \<forall>rv. ksDomainTime s = rv \<longrightarrow> P rv s)
+             {s. \<forall>rv. ksDomainTime_' (globals s) = rv \<longrightarrow> s \<in> P' rv} hs
+             (getDomainTime >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getDomainTime_sp)
+  apply (fastforce intro: stronger_ccorres_guard_imp cc dest: rf_sr_ksDomainTime)
   done
 
 lemma rf_sr_ksIdleThread:
@@ -169,24 +113,11 @@ lemma getIdleThread_sp:
 lemma ccorres_pre_getIdleThread:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. ksIdleThread s = rv \<longrightarrow> P rv s))
-                  {s. \<forall>rv. ksIdleThread_' (globals s) = tcb_ptr_to_ctcb_ptr rv
-                                 \<longrightarrow> s \<in> P' rv }
-                          hs (getIdleThread >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule getIdleThread_sp)
-     apply (clarsimp simp: empty_fail_def getIdleThread_def simpler_gets_def)
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply (clarsimp simp: rf_sr_ksIdleThread)
+             (\<lambda>s. \<forall>rv. ksIdleThread s = rv \<longrightarrow> P rv s)
+             {s. \<forall>rv. ksIdleThread_' (globals s) = tcb_ptr_to_ctcb_ptr rv \<longrightarrow> s \<in> P' rv} hs
+             (getIdleThread >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getIdleThread_sp)
+  apply (fastforce intro: stronger_ccorres_guard_imp cc dest: rf_sr_ksIdleThread)
   done
 
 lemma curDomain_sp:
@@ -203,24 +134,11 @@ lemma rf_sr_ksCurDomain:
 lemma ccorres_pre_curDomain:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. ksCurDomain s = rv \<longrightarrow> P rv s))
-                  {s. \<forall>rv. ksCurDomain_' (globals s) = ucast rv
-                                 \<longrightarrow> s \<in> P' rv }
-                          hs (curDomain >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule curDomain_sp)
-     apply (clarsimp simp: empty_fail_def curDomain_def simpler_gets_def)
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply (clarsimp simp: rf_sr_ksCurDomain)
+             (\<lambda>s. \<forall>rv. ksCurDomain s = rv \<longrightarrow> P rv s)
+             {s. \<forall>rv. ksCurDomain_' (globals s) = ucast rv \<longrightarrow> s \<in> P' rv} hs
+             (curDomain >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: curDomain_sp)
+  apply (fastforce intro: stronger_ccorres_guard_imp cc dest: rf_sr_ksCurDomain)
   done
 
 lemma scast_EXCPT_NONE [simp]: "scast EXCEPTION_NONE = EXCEPTION_NONE"
@@ -334,43 +252,19 @@ lemma getSlotCap_h_val_ccorres [corres]:
 lemma ccorres_pre_gets_riscvKSASIDTable_ksArchState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. riscvKSASIDTable (ksArchState s) = rv  \<longrightarrow> P rv s))
-                  {s. \<forall>rv. s \<in> P' rv } hs
-                  (gets (riscvKSASIDTable \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule gets_sp)
-     apply (clarsimp simp: empty_fail_def simpler_gets_def)
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply clarsimp
+             (\<lambda>s. \<forall>rv. riscvKSASIDTable (ksArchState s) = rv  \<longrightarrow> P rv s)
+             {s. \<forall>rv. s \<in> P' rv} hs
+             (gets (riscvKSASIDTable \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: gets_sp)
+  apply (fastforce intro: stronger_ccorres_guard_imp cc)
   done
 
 lemma ccorres_pre_gets_riscvKSASIDTable_ksArchState':
   assumes cc: "\<And>rv. ccorres r xf (P and (\<lambda>s. rv = (riscvKSASIDTable \<circ> ksArchState) s)) (P' rv) hs (f rv) c"
-  shows   "ccorres r xf P {s. \<forall>rv. s \<in> P' rv } hs
-                   (gets (riscvKSASIDTable \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule gets_sp)
-     apply (clarsimp simp: empty_fail_def simpler_gets_def)
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply clarsimp
+  shows   "ccorres r xf P {s. \<forall>rv. s \<in> P' rv} hs
+             (gets (riscvKSASIDTable \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: gets_sp)
+  apply (fastforce intro: stronger_ccorres_guard_imp cc)
   done
 
 end

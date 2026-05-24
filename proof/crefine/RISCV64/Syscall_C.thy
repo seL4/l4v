@@ -2211,30 +2211,13 @@ lemma getIRQState_sp:
 lemma ccorres_pre_getIRQState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. irq \<le> ucast Kernel_C.maxIRQ \<and> P (intStateIRQTable (ksInterruptState s) irq) s)
-                  {s. \<forall>rv. index (intStateIRQTable_' (globals s)) (unat irq) = irqstate_to_C rv \<longrightarrow> s \<in> P' rv }
-                          hs (getIRQState irq >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply (simp add: getIRQState_def getInterruptState_def)
-       apply wp
-       apply simp
-      apply (rule getIRQState_sp)
-     apply (simp add: getIRQState_def getInterruptState_def)
-    apply assumption
-   prefer 2
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply simp
-   apply assumption
-  apply clarsimp
-  apply (erule allE)
-  apply (erule impE)
-   prefer 2
-   apply assumption
-  apply (clarsimp simp: rf_sr_def cstate_relation_def
-                        Let_def cinterrupt_relation_def)
+             (\<lambda>s. irq \<le> ucast Kernel_C.maxIRQ \<and> P (intStateIRQTable (ksInterruptState s) irq) s)
+             {s. \<forall>rv. index (intStateIRQTable_' (globals s)) (unat irq) = irqstate_to_C rv
+                      \<longrightarrow> s \<in> P' rv} hs
+             (getIRQState irq >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getIRQState_sp)
+  apply (fastforce intro: stronger_ccorres_guard_imp cc
+                    simp: rf_sr_def cstate_relation_def Let_def cinterrupt_relation_def)
   done
 
 (* FIXME: move *)

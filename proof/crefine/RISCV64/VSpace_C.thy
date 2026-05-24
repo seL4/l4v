@@ -658,22 +658,14 @@ abbreviation
 lemma ccorres_pre_getObject_asidpool:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>asidpool. ko_at' asidpool p s \<longrightarrow> P asidpool s))
-                  {s. \<forall> asidpool asidpool'. cslift s (ap_Ptr p) = Some asidpool' \<and> casid_pool_relation asidpool asidpool'
-                           \<longrightarrow> s \<in> P' asidpool}
-                          hs (getObject p >>= (\<lambda>rv :: asidpool. f rv)) c"
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_symb_exec_l)
-      apply (rule ccorres_guard_imp2)
-       apply (rule cc)
-      apply (rule conjI)
-       apply (rule_tac Q="ko_at' rv p s" in conjunct1)
-       apply assumption
-      apply assumption
-     apply (wpsimp wp: getASID_wp empty_fail_getObject)+
-  apply (erule cmap_relationE1 [OF rf_sr_cpspace_asidpool_relation],
-         erule ko_at_projectKO_opt)
-  apply simp
+             (\<lambda>s. \<forall>asidpool. ko_at' asidpool p s \<longrightarrow> P asidpool s)
+             {s. \<forall> asidpool asidpool'. cslift s (ap_Ptr p) = Some asidpool'
+                                       \<and> casid_pool_relation asidpool asidpool'
+                                       \<longrightarrow> s \<in> P' asidpool} hs
+             (getObject p >>= (\<lambda>rv :: asidpool. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: get_asidpool_sp' wp: getASID_wp)
+  apply (force intro: stronger_ccorres_guard_imp cc
+                elim: cmap_relationE1[OF rf_sr_cpspace_asidpool_relation] ko_at_projectKO_opt)
   done
 
 lemma asid_wf_table_guard[unfolded asid_high_bits_def, simplified]:
@@ -765,24 +757,11 @@ lemma findVSpaceForASID_ccorres:
 lemma ccorres_pre_gets_riscvKSGlobalPT_ksArchState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. riscvKSGlobalPT (ksArchState s) = rv  \<longrightarrow> P rv s))
-                  (P' (ptr_val riscvKSGlobalPT_Ptr))
-                  hs (gets (riscvKSGlobalPT \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule gets_sp)
-     apply (clarsimp simp: empty_fail_def simpler_gets_def)
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply (drule rf_sr_riscvKSGlobalPT)
-  apply simp
+             (\<lambda>s. \<forall>rv. riscvKSGlobalPT (ksArchState s) = rv  \<longrightarrow> P rv s)
+             (P' (ptr_val riscvKSGlobalPT_Ptr)) hs
+             (gets (riscvKSGlobalPT \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: gets_sp wp: getASID_wp)
+  apply (force intro: stronger_ccorres_guard_imp cc dest: rf_sr_riscvKSGlobalPT)
   done
 
 (* FIXME move *)
@@ -1115,23 +1094,13 @@ lemma setMessageInfo_ccorres:
 lemma ccorres_pre_getObject_pte:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>pte. ko_at' pte p s \<longrightarrow> P pte s))
-                  {s. \<forall>pte pte'. cslift s (pte_Ptr p) = Some pte' \<and> cpte_relation pte pte'
-                           \<longrightarrow> s \<in> P' pte}
-                          hs (getObject p >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_symb_exec_l)
-      apply (rule ccorres_guard_imp2)
-       apply (rule cc)
-      apply (rule conjI)
-       apply (rule_tac Q="ko_at' rv p s" in conjunct1)
-       apply assumption
-      apply assumption
-     apply (wp getPTE_wp empty_fail_getObject | simp)+
-  apply clarsimp
-  apply (erule cmap_relationE1 [OF rf_sr_cpte_relation],
-         erule ko_at_projectKO_opt)
-  apply simp
+             (\<lambda>s. \<forall>pte. ko_at' pte p s \<longrightarrow> P pte s)
+             {s. \<forall>pte pte'. cslift s (pte_Ptr p) = Some pte' \<and> cpte_relation pte pte'
+                            \<longrightarrow> s \<in> P' pte} hs
+             (getObject p >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: get_pte_sp')
+  apply (force intro: stronger_ccorres_guard_imp cc
+                elim: cmap_relationE1[OF rf_sr_cpte_relation] ko_at_projectKO_opt)
   done
 
 lemmas unfold_checkMapping_return

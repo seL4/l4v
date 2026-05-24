@@ -4862,21 +4862,9 @@ lemma ccorres_pre_getReleaseQueue:
                     \<and> ctcb_queue_relation rv (ksReleaseQueue_' (globals s'))
                    \<longrightarrow> s' \<in> P' rv} hs
        (getReleaseQueue >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule getReleaseQueue_sp)
-     apply wpsimp
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-  apply fast
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getReleaseQueue_sp)
+  apply (fastforce intro: stronger_ccorres_guard_imp cc
+                    dest: rf_sr_ctcb_queue_relation_release_queue)
   done
 
 lemma tcbQueuePrepend_tcb_at'_head[wp]:
