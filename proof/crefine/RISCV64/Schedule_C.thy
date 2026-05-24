@@ -238,31 +238,6 @@ lemmas ccorres_remove_tail_Guard_Skip
 
 lemmas word_log2_max_word_word_size = word_log2_max[where 'a=machine_word_len, simplified word_size, simplified]
 
-lemma ccorres_pre_getQueue:
-  assumes cc: "\<And>queue. ccorres r xf (P queue) (P' queue) hs (f queue) c"
-  shows   "ccorres r xf (\<lambda>s. P (ksReadyQueues s (d, p)) s \<and> d \<le> maxDomain \<and> p \<le> maxPriority)
-                        {s'. \<forall>queue. (let cqueue = index (ksReadyQueues_' (globals s'))
-                                                         (cready_queues_index_to_C d p) in
-                                      ctcb_queue_relation queue cqueue) \<longrightarrow> s' \<in> P' queue}
-           hs (getQueue d p >>= (\<lambda>queue. f queue)) c"
-  apply (rule ccorres_guard_imp2)
-  apply (rule ccorres_symb_exec_l2)
-     defer
-     defer
-     apply (rule gq_sp)
-    defer
-    apply (rule ccorres_guard_imp)
-    apply (rule cc)
-     apply clarsimp
-     apply assumption
-    apply assumption
-   apply (clarsimp simp: getQueue_def gets_exs_valid)
-  apply clarsimp
-  apply (drule spec, erule mp)
-  apply (erule rf_sr_ctcb_queue_relation)
-   apply (simp add: maxDom_to_H maxPrio_to_H)+
-  done
-
 lemma lookupBitmapPriority_le_maxPriority:
   "\<lbrakk> ksReadyQueuesL1Bitmap s d \<noteq> 0 ;
      \<forall>d p. d > maxDomain \<or> p > maxPriority \<longrightarrow> tcbQueueEmpty (ksReadyQueues s (d, p));
@@ -553,9 +528,6 @@ lemma refill_size_length_scRefills_helper:
   apply (fastforce dest: length_scRefills_bounded
                    simp: refillSizeBytes_def word_bits_def)
   done
-
-crunch getSchedContext, isRoundRobin
- for (empty_fail) empty_fail[wp]
 
 lemma refill_size_ccorres:
   "ccorres (\<lambda>rv rv'. rv = unat rv') ret__unsigned_long_'
@@ -1613,23 +1585,11 @@ lemma rf_sr_ksIdleSC:
 lemma ccorres_pre_getIdleSC:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. ksIdleSC s = rv \<longrightarrow> P rv s))
-                  {s. \<forall>rv. ksIdleSC_' (globals s) = Ptr rv \<longrightarrow> s \<in> P' rv }
-                          hs (getIdleSC >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule getIdleSC_sp)
-     apply (clarsimp simp: empty_fail_def getIdleSC_def simpler_gets_def)
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply (clarsimp simp: rf_sr_ksIdleSC)
+             (\<lambda>s. \<forall>rv. ksIdleSC s = rv \<longrightarrow> P rv s)
+             {s. \<forall>rv. ksIdleSC_' (globals s) = Ptr rv \<longrightarrow> s \<in> P' rv} hs
+             (getIdleSC >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getIdleSC_sp)
+  apply (fastforce intro: stronger_ccorres_guard_imp cc dest: rf_sr_ksIdleSC)
   done
 
 crunch updateRefillHd, updateRefillTl, refillBudgetCheckRoundRobin, refillBudgetCheck
@@ -2317,24 +2277,12 @@ lemma setNextInterrupt_ccorres:
 lemma ccorres_pre_getReprogramTimer:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. ksReprogramTimer s = rv \<longrightarrow> P rv s))
-                  {s. \<forall>rv. to_bool (ksReprogram_' (globals s)) = rv \<longrightarrow> s \<in> P' rv }
-                          hs (getReprogramTimer >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (simp add: getReprogramTimer_def)
-      apply (rule gets_sp)
-     apply (clarsimp simp: empty_fail_def getReprogramTimer_def simpler_gets_def)
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply (clarsimp simp: rf_sr_ksReprogramTimer)
+             (\<lambda>s. \<forall>rv. ksReprogramTimer s = rv \<longrightarrow> P rv s)
+             {s. \<forall>rv. to_bool (ksReprogram_' (globals s)) = rv \<longrightarrow> s \<in> P' rv} hs
+             (getReprogramTimer >>= (\<lambda>rv. f rv)) c"
+  unfolding getReprogramTimer_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: gets_sp)
+  apply (fastforce intro: stronger_ccorres_guard_imp cc dest: rf_sr_ksReprogramTimer)
   done
 
 lemma setSchedulerAction_valid_idle'[wp]:

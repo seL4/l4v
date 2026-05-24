@@ -16,26 +16,14 @@ lemma ccorres_pre_threadGet_P:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (g rv) c"
   shows "ccorres r xf
            (\<lambda>s. \<forall>tcb. ko_at' tcb p s \<longrightarrow> P (f tcb) s)
-           ({s'. \<forall>s tcb ctcb. (s, s') \<in> rf_sr \<and> ko_at' tcb p s \<and> P (f tcb) s
-                               \<and> cslift s' (tcb_ptr_to_ctcb_ptr p) = Some ctcb
-                               \<and> ctcb_relation tcb ctcb
-                              \<longrightarrow> s' \<in> P' (f tcb)})
-           hs (threadGet f p >>= (\<lambda>rv. g rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule threadGet_sp)
-     apply simp
-    apply assumption
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply clarsimp
-  apply (frule (1) obj_at_cslift_tcb)
-  by fastforce
+           {s'. \<forall>s tcb ctcb. (s, s') \<in> rf_sr \<and> ko_at' tcb p s \<and> P (f tcb) s
+                              \<and> cslift s' (tcb_ptr_to_ctcb_ptr p) = Some ctcb
+                              \<and> ctcb_relation tcb ctcb
+                             \<longrightarrow> s' \<in> P' (f tcb)} hs
+           (threadGet f p >>= (\<lambda>rv. g rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: threadGet_sp)
+  apply (force intro: stronger_ccorres_guard_imp cc dest: obj_at_cslift_tcb)
+  done
 
 lemmas ccorres_pre_gettcbYieldTo_P = ccorres_pre_threadGet_P[where f=tcbYieldTo]
 
@@ -56,27 +44,15 @@ lemmas ccorres_pre_gettcbYieldTo = ccorres_pre_threadGet[where f=tcbYieldTo]
 lemma ccorres_pre_archThreadGet:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (g rv) c"
   shows   "ccorres r xf
-           (\<lambda>s. \<forall>tcb. ko_at' tcb p s \<longrightarrow> P (f (tcbArch tcb)) s)
-           ({s'. \<forall>tcb ctcb. cslift s' (tcb_ptr_to_ctcb_ptr p) = Some ctcb
-                            \<and> ctcb_relation tcb ctcb \<longrightarrow> s' \<in> P' (f (tcbArch tcb))})
-           hs (archThreadGet f p >>= (\<lambda>rv. g rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule atg_sp')
-     apply simp
-    apply assumption
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-    apply (frule obj_at_ko_at')
-    apply clarsimp
-  apply assumption
-  apply clarsimp
-  apply (frule (1) obj_at_cslift_tcb)
-  apply clarsimp
+             (\<lambda>s. \<forall>tcb. ko_at' tcb p s \<longrightarrow> P (f (tcbArch tcb)) s)
+             {s'. \<forall>tcb ctcb. cslift s' (tcb_ptr_to_ctcb_ptr p) = Some ctcb
+                             \<and> ctcb_relation tcb ctcb \<longrightarrow> s' \<in> P' (f (tcbArch tcb))} hs
+             (archThreadGet f p >>= (\<lambda>rv. g rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: atg_sp')
+  apply (rule stronger_ccorres_guard_imp)
+    apply (rule cc)
+   apply (force dest: obj_at_cslift_tcb)
+  apply (force dest: obj_at_cslift_tcb)
   done
 
 lemma threadGet_eq:
@@ -265,22 +241,12 @@ lemma sanitiseRegister_spec:
 lemma ccorres_pre_getObject_tcb:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>tcb. ko_at' tcb p s \<longrightarrow> P tcb s))
-                  {s. \<forall> tcb tcb'. cslift s (tcb_ptr_to_ctcb_ptr p) = Some tcb' \<and> ctcb_relation tcb tcb'
-                           \<longrightarrow> s \<in> P' tcb}
-                          hs (getObject p >>= (\<lambda>rv :: tcb. f rv)) c"
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_symb_exec_l)
-      apply (rule ccorres_guard_imp2)
-       apply (rule cc)
-      apply (rule conjI)
-       apply (rule_tac Q="ko_at' rv p s" in conjunct1)
-       apply assumption
-      apply assumption
-     apply (wpsimp wp: empty_fail_getObject getTCB_wp)+
-    apply (erule cmap_relationE1[OF cmap_relation_tcb],
-           erule ko_at_projectKO_opt)
-  apply simp
+             (\<lambda>s. \<forall>tcb. ko_at' tcb p s \<longrightarrow> P tcb s)
+             {s. \<forall> tcb tcb'. cslift s (tcb_ptr_to_ctcb_ptr p) = Some tcb' \<and> ctcb_relation tcb tcb'
+                             \<longrightarrow> s \<in> P' tcb} hs
+             (getObject p >>= (\<lambda>rv :: tcb. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: get_tcb_sp')
+  apply (force intro: stronger_ccorres_guard_imp cc dest: obj_at_cslift_tcb)
   done
 
 (* FIXME: MOVE, probably to CSpace_RAB  *)

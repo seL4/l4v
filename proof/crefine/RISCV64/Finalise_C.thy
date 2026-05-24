@@ -550,22 +550,11 @@ crunch getEndpoint
 lemma ccorres_pre_getEndpoint:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-           (\<lambda>s. \<forall>ep. ko_at' ep p s \<longrightarrow> P ep s)
-           ({s'. \<forall>ep s. (s, s') \<in> rf_sr \<and> ko_at' ep p s \<longrightarrow> s' \<in> P' ep})
-           hs (getEndpoint p >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule get_ep_sp')
-     apply (rule getEndpoint_empty_fail)
-    apply assumption
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply simp
-   apply assumption
-  apply fastforce
+             (\<lambda>s. \<forall>ep. ko_at' ep p s \<longrightarrow> P ep s)
+             {s'. \<forall>ep s. (s, s') \<in> rf_sr \<and> ko_at' ep p s \<longrightarrow> s' \<in> P' ep} hs
+             (getEndpoint p >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: get_ep_sp')
+  apply (fastforce intro: stronger_ccorres_guard_imp cc)
   done
 
 lemma restart_thread_if_no_fault_ccorres:

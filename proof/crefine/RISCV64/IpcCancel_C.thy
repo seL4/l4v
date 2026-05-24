@@ -294,27 +294,14 @@ lemma threadSet_queued_ccorres [corres]:
 
 lemma ccorres_pre_getQueue:
   assumes cc: "\<And>queue. ccorres r xf (P queue) (P' queue) hs (f queue) c"
-  shows   "ccorres r xf (\<lambda>s. P (ksReadyQueues s (d, p)) s \<and> d \<le> maxDomain \<and> p \<le> maxPriority)
-                        {s'. \<forall>queue. (let cqueue = index (ksReadyQueues_' (globals s'))
-                                                         (cready_queues_index_to_C d p) in
-                                      ctcb_queue_relation queue cqueue) \<longrightarrow> s' \<in> P' queue}
-           hs (getQueue d p >>= (\<lambda>queue. f queue)) c"
-  apply (rule ccorres_guard_imp2)
-  apply (rule ccorres_symb_exec_l2)
-     defer
-     defer
-     apply (rule gq_sp)
-    defer
-    apply (rule ccorres_guard_imp)
-    apply (rule cc)
-     apply clarsimp
-     apply assumption
-    apply assumption
-   apply (clarsimp simp: getQueue_def gets_exs_valid)
-  apply clarsimp
-  apply (drule spec, erule mp)
-  apply (erule rf_sr_ctcb_queue_relation)
-   apply (simp add: maxDom_to_H maxPrio_to_H)+
+  shows   "ccorres r xf
+             (\<lambda>s. P (ksReadyQueues s (d, p)) s \<and> d \<le> maxDomain \<and> p \<le> maxPriority)
+             {s'. \<forall>queue. (let cqueue = index (ksReadyQueues_' (globals s'))
+                                              (cready_queues_index_to_C d p) in
+                          ctcb_queue_relation queue cqueue) \<longrightarrow> s' \<in> P' queue} hs
+             (getQueue d p >>= (\<lambda>queue. f queue)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: gq_sp)
+  apply (fastforce intro: stronger_ccorres_guard_imp cc dest: rf_sr_ctcb_queue_relation)
   done
 
 (* FIXME: move *)
@@ -1749,26 +1736,13 @@ lemma getReadyQueuesL1Bitmap_sp:
 lemma ccorres_pre_getReadyQueuesL1Bitmap:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. d \<le> maxDomain \<and> (\<forall>rv. ksReadyQueuesL1Bitmap s d = rv \<longrightarrow> P rv s))
-                  {s. \<forall>rv. (ksReadyQueuesL1Bitmap_' (globals s)).[unat d] = ucast rv
-                                 \<longrightarrow> s \<in> P' rv }
-                          hs (getReadyQueuesL1Bitmap d >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-  apply (rule ccorres_symb_exec_l2)
-      defer
-      defer
-      apply (rule getReadyQueuesL1Bitmap_sp)
-     apply blast
-    apply clarsimp
-    prefer 3
-    apply (clarsimp simp: bitmap_fun_defs gets_exs_valid)
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply blast
-   apply assumption
-  apply (drule rf_sr_cbitmap_L1_relation)
-  apply (clarsimp simp: cbitmap_L1_relation_def)
+             (\<lambda>s. (\<forall>rv. ksReadyQueuesL1Bitmap s d = rv \<longrightarrow> P rv s) \<and> d \<le> maxDomain)
+             {s. \<forall>rv. (ksReadyQueuesL1Bitmap_' (globals s)).[unat d] = ucast rv \<longrightarrow> s \<in> P' rv} hs
+             (getReadyQueuesL1Bitmap d >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getReadyQueuesL1Bitmap_sp)
+  apply (fastforce intro: stronger_ccorres_guard_imp cc
+                    dest: rf_sr_cbitmap_L1_relation
+                    simp: cbitmap_L1_relation_def)
   done
 
 lemma getReadyQueuesL2Bitmap_sp:
@@ -1781,27 +1755,14 @@ lemma getReadyQueuesL2Bitmap_sp:
 lemma ccorres_pre_getReadyQueuesL2Bitmap:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. d \<le> maxDomain \<and> i < l2BitmapSize
-                       \<and> (\<forall>rv. ksReadyQueuesL2Bitmap s (d,i) = rv \<longrightarrow> P rv s))
-                  {s. \<forall>rv. (ksReadyQueuesL2Bitmap_' (globals s)).[unat d].[i] = ucast rv
-                                 \<longrightarrow> s \<in> P' rv }
-                          hs (getReadyQueuesL2Bitmap d i >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-  apply (rule ccorres_symb_exec_l2)
-      defer
-      defer
-      apply (rule getReadyQueuesL2Bitmap_sp)
-     apply blast
-    apply clarsimp
-    prefer 3
-    apply (clarsimp simp: bitmap_fun_defs gets_exs_valid)
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply blast
-   apply assumption
-  apply (drule rf_sr_cbitmap_L2_relation)
-  apply (clarsimp simp: cbitmap_L2_relation_def)
+             (\<lambda>s. (\<forall>rv. ksReadyQueuesL2Bitmap s (d,i) = rv \<longrightarrow> P rv s)
+                  \<and> d \<le> maxDomain \<and> i < l2BitmapSize)
+             {s. \<forall>rv. (ksReadyQueuesL2Bitmap_' (globals s)).[unat d].[i] = ucast rv \<longrightarrow> s \<in> P' rv} hs
+             (getReadyQueuesL2Bitmap d i >>= (\<lambda>rv. f rv)) c"
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getReadyQueuesL2Bitmap_sp)
+  apply (fastforce intro: stronger_ccorres_guard_imp cc
+                    dest: rf_sr_cbitmap_L2_relation
+                    simp: cbitmap_L2_relation_def)
   done
 
 lemma rf_sr_ksReadyQueuesL1Bitmap_simp:
@@ -2618,21 +2579,12 @@ lemma ccorres_pre_getObject_reply:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows
     "ccorres r xf
-       (\<lambda>s. (\<forall>sc. ko_at' sc p s \<longrightarrow> P sc s))
-       {s. \<forall> sc sc'. cslift s (Ptr p) = Some sc' \<and> creply_relation sc sc' \<longrightarrow> s \<in> P' sc} hs
+       (\<lambda>s. \<forall>reply. ko_at' reply p s \<longrightarrow> P reply s)
+       {s. \<forall> reply reply'. cslift s (Ptr p) = Some reply' \<and> creply_relation reply reply'
+                           \<longrightarrow> s \<in> P' reply} hs
        (getReply p >>= (\<lambda>rv :: reply. f rv)) c"
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_symb_exec_l)
-      apply (rule ccorres_guard_imp2)
-       apply (rule cc)
-      apply (rule conjI)
-       apply (rule_tac Q="ko_at' rv p s" in conjunct1)
-       apply assumption
-      apply assumption
-     apply (wpsimp wp: empty_fail_getObject simp: getReply_def)+
-  apply (erule cmap_relationE1[OF cmap_relation_reply],
-         erule ko_at_projectKO_opt)
-  apply simp
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: get_reply_sp')
+  apply (force intro: stronger_ccorres_guard_imp cc dest: obj_at_cslift_reply)
   done
 
 (* FIXME RT: improve naming of this and other ccorres lemmas for updateSchedContext *)
