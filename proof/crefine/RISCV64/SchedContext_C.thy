@@ -1071,6 +1071,7 @@ lemma invokeSchedContext_Consumed_ccorres:
    apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
        apply (ctac add: setConsumed_returnConsumed_ccorres)
       apply ceqv
+     apply (rule ccorres_stateAssert)
      apply (ctac add: setThreadState_ccorres)
        apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
        apply (rule allI, rule conseqPre, vcg)
@@ -1287,13 +1288,14 @@ lemma invokeSchedContext_YieldTo_ccorres:
           apply (subst bind_assoc[symmetric])
           apply (rule ccorres_rhs_assoc)+
           apply (ctac add: setConsumed_returnConsumed_ccorres)
+            apply (rule ccorres_stateAssert)
             apply (rule ccorres_add_returnOk)
             apply (rule ccorres_liftE_Seq)
             apply (ctac add: setThreadState_ccorres)
               apply (rule ccorres_return_CE, simp+)[1]
              apply wpsimp
             apply (vcg exspec=setThreadState_modifies)
-           apply (wpsimp simp: returnConsumed_def wp: hoare_vcg_if_lift2)
+           apply (wpsimp simp: returnConsumed_def wp: hoare_vcg_if_lift2 hoare_drop_imps)
           apply (vcg exspec=setConsumed_modifies)
          apply ccorres_rewrite
          apply clarsimp

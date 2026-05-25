@@ -52,6 +52,7 @@ The normal (blocking) version of the send operation will remove a recipient from
 >         stateAssert valid_idle'_asrt "`valid_idle'`"
 >         stateAssert (active_tcb_at'_asrt thread)
 >             "`thread` has an `active'` thread state"
+>         stateAssert (bound_sc_tcb_at_asrt canDonate thread) ""
 >         ep <- getEndpoint epptr
 >         case epState ep of
 

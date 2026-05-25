@@ -2480,11 +2480,12 @@ shows
                           apply csymbr
                           apply (rule ccorres_rhs_assoc2)
                           apply (ctac (no_vcg) add: setMessageInfo_ccorres)
+                            apply (rule ccorres_stateAssert)
                             apply (ctac (no_vcg))
                              apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
                              apply (rule allI, rule conseqPre, vcg)
                              apply (clarsimp simp: return_def)
-                            apply (wp | simp)+
+                            apply (wp hoare_drop_imps | simp)+
                           apply (clarsimp simp: ThreadState_defs mask_def)
                          apply (rule mapM_x_wp')
                          apply (rule hoare_pre)
@@ -2533,6 +2534,7 @@ shows
                                  "StrictC'_register_defs")
                 apply (vcg exspec=lookupIPCBuffer_modifies)
                apply simp
+               apply (rule ccorres_stateAssert)
                apply (ctac(no_vcg) add: setThreadState_ccorres)
                 apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                 apply (rule allI, rule conseqPre, vcg)
@@ -5367,6 +5369,7 @@ lemma invokeTCB_SetFlags_ccorres:
         apply (rule getThreadState_ccorres_foo, rename_tac tstate)
         apply (rule_tac P="tstate = Restart" in ccorres_gen_asm)
         apply clarsimp
+        apply (rule ccorres_stateAssert)
         apply (ctac (no_vcg) add: setThreadState_ccorres)
        apply (rule ccorres_rhs_assoc)+
        apply (clarsimp simp: replyOnRestart_def liftE_def bind_assoc)
@@ -5384,8 +5387,9 @@ lemma invokeTCB_SetFlags_ccorres:
              apply ctac
                apply simp
                apply (ctac add: setRegister_ccorres)
+                 apply (rule ccorres_stateAssert)
                  apply (ctac add: setThreadState_ccorres)
-                apply wpsimp
+                apply (wpsimp wp: hoare_drop_imps)
                apply (vcg exspec=setRegister_modifies)
               apply wpsimp
              apply clarsimp
@@ -5400,7 +5404,9 @@ lemma invokeTCB_SetFlags_ccorres:
         apply wpsimp
        apply clarsimp
        apply (vcg exspec=lookupIPCBuffer_modifies)
-      apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' threadSet_pred_tcb_no_state
+      apply (wpsimp wp: hoare_vcg_all_lift
+                        hoare_drop_imp[where Q'="\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s"]
+                        hoare_vcg_imp_lift' threadSet_pred_tcb_no_state
              | strengthen invs_valid_objs')+
      apply vcg
     apply clarsimp

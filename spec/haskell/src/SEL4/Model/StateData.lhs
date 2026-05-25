@@ -685,3 +685,9 @@ orderedInsert and traverse the list backwards
 
 > orderedInsertBackwards_asrt :: PPtr TCB -> TcbQueue -> (PPtr TCB -> KernelR b) -> (b -> b -> Bool) -> KernelState -> Bool
 > orderedInsertBackwards_asrt _ _ _ _ _ = True
+
+An assert that will say that when the given flag is true, the given
+thread is bound to a scheduling context
+
+> bound_sc_tcb_at_asrt :: Bool -> PPtr TCB -> KernelState -> Bool
+> bound_sc_tcb_at_asrt _ _ _ = True
