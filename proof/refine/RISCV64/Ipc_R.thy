@@ -2979,6 +2979,11 @@ lemma bound_sc_tcb_at_cross':
    \<Longrightarrow> bound_sc_tcb_at' P t s'"
   by (fastforce dest!: bound_sc_tcb_at_cross simp: pred_tcb_at'_def obj_at'_def opt_map_red)
 
+defs bound_sc_tcb_at_asrt_def:
+  "bound_sc_tcb_at_asrt flag t s \<equiv> flag \<longrightarrow> bound_sc_tcb_at' (\<lambda>a. \<exists>y. a = Some y) t s"
+
+declare bound_sc_tcb_at_asrt_def[simp]
+
 (* call is only true if called in handleSyscall SysCall, which is always blocking. *)
 lemma sendIPC_corres:
   assumes "call \<longrightarrow> bl"
@@ -3005,6 +3010,8 @@ lemma sendIPC_corres:
   apply (rule_tac Q'="st_tcb_at' runnable' t" in corres_cross_add_guard)
    apply (fastforce intro!: st_tcb_at_runnable_cross)
   apply (rule corres_stateAssert_add_assertion[rotated], simp add: runnable_eq_active')
+  apply (rule corres_stateAssert_add_assertion[rotated])
+   apply (force intro: bound_sc_tcb_at_cross')
   apply (rule_tac Q'="\<lambda>s'. \<not> (tcbQueued |< tcbs_of' s') t" in corres_cross_add_guard)
    apply (frule state_relation_ready_queues_relation)
    apply (frule in_ready_q_tcbQueued_eq[where t=t])
@@ -3416,12 +3423,7 @@ lemma sendIPC_corres:
     apply (fastforce intro!: sendIPC_corres_sym_refs_helper)
    apply (clarsimp simp: obj_at_def pred_tcb_at_def)
   apply (clarsimp simp: invs'_def valid_pspace'_def)
-  apply (intro conjI impI allI)
-      apply (fastforce intro: tcb_at_cross)
-     apply (fastforce intro: tcb_at_cross)
-    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-   apply (fastforce intro!: sym_refs_tcbSCs)
-  apply (fastforce dest!: bound_sc_tcb_at_cross')
+  apply (fastforce intro!: tcb_at_cross sym_refs_tcbSCs)
   done
 
 end
@@ -5942,6 +5944,8 @@ lemma sendFaultIPC_corres:
   apply (rule corres_gen_asm)
   apply (rule corres_gen_asm)
   apply (rule corres_stateAssert_ignore, clarsimp)
+  apply (rule corres_assert_gen_asm_cross_forwards)
+   apply (fastforce dest: cap_rel_valid_fh)
   apply (cases cap; simp add: valid_fault_handler_def tcb_relation_def)
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split)
@@ -6691,7 +6695,7 @@ lemma replyUnlink_obj_at_tcb_none:
   by (auto simp: obj_at'_def objBitsKO_def)
 
 lemma si_invs'[wp]:
-  "\<lbrace>invs' and st_tcb_at' runnable' t and (\<lambda>s. cd \<longrightarrow> bound_sc_tcb_at' (\<lambda>a. a \<noteq> None) t s)\<rbrace>
+  "\<lbrace>invs' and st_tcb_at' runnable' t\<rbrace>
    sendIPC bl call ba cg cgr cd t ep
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   supply if_split[split del]
@@ -6768,7 +6772,7 @@ lemma si_invs'[wp]:
   done
 
 lemma sendFaultIPC_invs':
-  "\<lbrace>invs' and st_tcb_at' runnable' t and (\<lambda>s. canDonate \<longrightarrow> bound_sc_tcb_at' (\<lambda>a. a \<noteq> None) t s)\<rbrace>
+  "\<lbrace>invs' and st_tcb_at' runnable' t\<rbrace>
    sendFaultIPC t cap f canDonate
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding sendFaultIPC_def

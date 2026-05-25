@@ -245,6 +245,7 @@ The following function implements the "Send" and "Call" system calls. It determi
 >     stateAssert ct_not_inQ_asrt "`ct_not_inQ`"
 >     stateAssert valid_idle'_asrt "`valid_idle'`"
 >     stateAssert cur_tcb'_asrt "`cur_tcb'`"
+>     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
 >     thread <- withoutPreemption getCurThread
 >     info <- withoutPreemption $ getMessageInfo thread
 >     syscall
@@ -285,6 +286,7 @@ While the system call is running, the thread's state is set to "Restart", so any
 >                 case state of
 >                     Restart -> do
 >                         when isCall $ replyFromKernel thread (0, reply)
+>                         stateAssert weak_sch_act_wf_asrt ""
 >                         setThreadState Running thread
 >                     _ -> return ())
 

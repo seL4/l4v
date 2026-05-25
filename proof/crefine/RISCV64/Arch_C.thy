@@ -1331,6 +1331,8 @@ lemma performPageGetAddress_ccorres:
       apply (rule_tac P="tstate = Restart" in ccorres_gen_asm)
       apply clarsimp
       apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
+      apply (clarsimp simp: bind_assoc)
+      apply (rule ccorres_stateAssert)
       apply (ctac (no_vcg) add: setThreadState_ccorres)
        apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
        apply clarsimp
@@ -1354,6 +1356,7 @@ lemma performPageGetAddress_ccorres:
            apply ctac
              apply simp
              apply (ctac add: setRegister_ccorres)
+               apply (rule ccorres_stateAssert)
                apply (ctac add: setThreadState_ccorres)
                  apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
                  apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
@@ -1361,7 +1364,7 @@ lemma performPageGetAddress_ccorres:
                  apply (clarsimp simp: return_def)
                 apply (rule hoare_TrueI[of \<top>])
                apply (vcg exspec=setThreadState_modifies)
-              apply wpsimp
+              apply (wpsimp wp: hoare_drop_imps)
              apply (vcg exspec=setRegister_modifies)
             apply wpsimp
            apply clarsimp

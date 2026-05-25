@@ -35,6 +35,7 @@ where
   do state \<leftarrow> getThreadState thread;
      when (state = Restart) (do
        _ \<leftarrow> when isCall (replyFromKernel thread (0, reply));
+       stateAssert (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) [];
        setThreadState Running thread
      od)
   od"
@@ -49,13 +50,9 @@ lemma replyOnRestart_invs'[wp]:
   "replyOnRestart thread reply isCall \<lbrace>invs'\<rbrace>"
   including no_pre
   apply (simp add: replyOnRestart_def)
-  apply (wp setThreadState_nonqueued_state_update rfk_invs' hoare_weak_lift_imp)
-   apply (rule hoare_strengthen_post, rule gts_sp')
-  apply (clarsimp simp: pred_tcb_at')
-  apply (auto elim!: pred_tcb'_weakenE st_tcb_ex_cap''
-               dest: st_tcb_at_idle_thread')
+  apply (wpsimp wp: setThreadState_nonqueued_state_update hoare_drop_imps hoare_vcg_if_lift2 gts_wp')
+  apply (fastforce elim!: pred_tcb'_weakenE)
   done
-
 
 declare psubset_singleton[simp]
 

@@ -2981,7 +2981,10 @@ lemma replyFromKernel_consumed_ccorres:
 lemma replyOnRestart_replyFromKernel_rewrite:
   "monadic_rewrite False True (st_tcb_at' ((=) Restart) tcbPtr)
      (replyOnRestart tcbPtr reply isCall)
-     (do when isCall (replyFromKernel tcbPtr (0, reply)); setThreadState Running tcbPtr od)"
+     (do when isCall (replyFromKernel tcbPtr (0, reply));
+         stateAssert (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) [];
+         setThreadState Running tcbPtr
+      od)"
   apply (clarsimp simp: replyOnRestart_def when_def)
   apply monadic_rewrite_symb_exec_l
     apply (monadic_rewrite_l monadic_rewrite_if_l_True)
