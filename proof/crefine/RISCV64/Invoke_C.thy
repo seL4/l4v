@@ -1707,14 +1707,30 @@ a loop which progressively zeros the memory, ultimately establishing @{term zero
 for the full @{term Untyped} range. Since @{term zero_ranges_are_zero} also requires
 @{term region_actually_is_bytes}, the loop must remember that we retyped the whole range before
 entering the loop. It is sufficient to know that @{term hrs_htd} is preserved, and for most
-contents of the loop, this is straightforward. On RISCV64, @{term preemptionPoint_'proc} contains
-inline assembly, so we must appeal to the axiomatisation of inline assembly to show that
-@{term hrs_htd} is preserved.
+contents of the loop, this is straightforward. @{term updateTimestamp_'proc} and
+@{term isIRQPending_'proc} contain inline assembly, so we must appeal to the axiomatisation of
+inline assembly to show that heap type information @{term hrs_htd} is preserved.
 \<close>
+lemma updateTimestamp_hrs_htd:
+  "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call updateTimestamp_'proc \<lbrace>hrs_htd \<acute>t_hrs = hrs_htd \<^bsup>\<sigma>\<^esup>t_hrs\<rbrace>"
+  by (rule allI, rule conseqPre, vcg, clarsimp simp: asm_spec_enabled elim!: asm_specE)
+
+lemma isIRQPending_hrs_htd:
+  "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call isIRQPending_'proc \<lbrace>hrs_htd \<acute>t_hrs = hrs_htd \<^bsup>\<sigma>\<^esup>t_hrs\<rbrace>"
+  by (rule allI, rule conseqPre, vcg, clarsimp simp: asm_spec_enabled elim!: asm_specE)
+
+lemma refill_sufficient_hrs_htd:
+  "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call refill_sufficient_'proc \<lbrace>hrs_htd \<acute>t_hrs = hrs_htd \<^bsup>\<sigma>\<^esup>t_hrs\<rbrace>"
+  by (rule allI, rule conseqPre, vcg, clarsimp)
+
 lemma preemptionPoint_hrs_htd:
   "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call preemptionPoint_'proc \<lbrace>hrs_htd \<acute>t_hrs = hrs_htd \<^bsup>\<sigma>\<^esup>t_hrs\<rbrace>"
-  apply (rule allI, rule conseqPre, vcg, clarsimp simp: asm_spec_enabled elim!: asm_specE)
-sorry (* FIXME RT: preemptionPoint_hrs_htd *)
+  apply (rule allI, rule conseqPre)
+   apply (vcg exspec=updateTimestamp_hrs_htd
+              exspec=isIRQPending_hrs_htd
+              exspec=refill_sufficient_hrs_htd)
+  apply clarsimp
+  done
 
 lemma resetUntypedCap_ccorres:
   notes upt.simps[simp del] Collect_const[simp del] replicate_numeral[simp del]
