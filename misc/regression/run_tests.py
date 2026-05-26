@@ -163,7 +163,7 @@ status_name = ['RUNNING (***bug***)',
                'TIMEOUT',
                'STUCK',
                'CANCELLED']
-status_maxlen = max(len(s) for s in status_name[1:]) + len(" *")
+status_maxlen = max(len(s) for s in status_name[1:])
 
 
 def run_test(test, status_queue, kill_switch,
@@ -411,8 +411,6 @@ def print_test_line(test_name, color, status, status_extra=None, real_time=None,
     # Print status line.
     front = '  Finished %-25s ' % test_name
     status_str = status_name[status]
-    if status is not PASSED:
-        status_str += " *"
     print(front +
           output_color(color, "{:<{}} ".format(status_str, status_maxlen)) +
           ('(%s)' % extras if extras else '') +
