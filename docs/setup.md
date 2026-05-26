@@ -161,7 +161,7 @@ If you are looking to use the proofs for a specific release version of seL4, use
 the `-m` option to select the corresponding manifest file in the
 [verification-manifest] repository.
 
-[repo]: https://gerrit.googlesource.com/git-repo/+/HEAD/README.md
+[repo]: https://gerrit.googlesource.com/git-repo/
 [verification-manifest]: https://github.com/seL4/verification-manifest
 
 ## Isabelle Setup

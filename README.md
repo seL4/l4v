@@ -36,11 +36,11 @@ Setup
 -----
 
 This repository is meant to be used as part of a Google [repo][5] setup. Instead
-of cloning it directly, please follow the directions for software dependencies
-and Isabelle installation in the [setup.md](docs/setup.md) file in the `docs`
-directory.
+of cloning the l4v repository directly, please follow the directions for
+software dependencies and Isabelle installation in the [setup.md](docs/setup.md)
+file in the `docs` directory.
 
-[5]: https://gerrit.googlesource.com/git-repo/+/HEAD/README.md
+[5]: https://gerrit.googlesource.com/git-repo/
 
 Contributing
 ------------
