@@ -3291,7 +3291,8 @@ lemma deriveCap_valid[wp]:
 
 end (* CSpace_R *)
 
-lemma lookup_cap_valid':
+(* FIXME: change name, eliminate existing uses as argument to wp method *)
+lemma lookup_cap_valid'[wp]:
   "\<lbrace>valid_objs'\<rbrace> lookupCap t c \<lbrace>valid_cap'\<rbrace>, -"
   apply (simp add: lookupCap_def lookupCapAndSlot_def
                    lookupSlotForThread_def split_def)
@@ -3684,6 +3685,25 @@ locale CSpace_R_2 = CSpace_R +
      \<lbrakk>is_simple_cap' c'; safe_parent_for' m p c'; m p = Some cte;
       cteCap cte = (maskedAsFull src_cap' a)\<rbrakk>
      \<Longrightarrow> isCapRevocable c' (maskedAsFull src_cap' a) = isCapRevocable c' src_cap'"
+  assumes deriveCap_derived:
+    "\<And>c' slot.
+     \<lbrace>\<lambda>s. c'\<noteq> capability.NullCap \<longrightarrow> cte_wp_at' (\<lambda>cte. badge_derived' c' (cteCap cte)
+          \<and> capASID c' = capASID (cteCap cte)
+          \<and> cap_asid_base' c' = cap_asid_base' (cteCap cte)
+          \<and> cap_vptr' c' = cap_vptr' (cteCap cte)) slot s
+          \<and> valid_objs' s\<rbrace>
+    deriveCap slot c'
+    \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow>
+            cte_wp_at' (is_derived' (ctes_of s) slot rv \<circ> cteCap) slot s\<rbrace>, -"
+  assumes arch_deriveCap_untyped_derived[wp]:
+    "\<And>c' slot.
+     \<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte. untyped_derived_eq c' (cteCap cte)) slot s\<rbrace>
+     Arch.deriveCap slot (capCap c')
+     \<lbrace>\<lambda>rv s. cte_wp_at' (untyped_derived_eq rv o cteCap) slot s\<rbrace>, -"
+  assumes ex_nonz_tcb_cte_caps':
+    "\<And>t s sl.
+     \<lbrakk>ex_nonz_cap_to' t s; tcb_at' t s; valid_objs' s; sl \<in> dom tcb_cte_cases\<rbrakk> \<Longrightarrow>
+     ex_cte_cap_to' (t + sl) s"
 begin
 
 (* this locale should satisfy all the assumptions of mdb_insert_simple_gen, so we can treat it like
@@ -3729,6 +3749,15 @@ lemma setupReplyMaster_corres:
    apply (fastforce elim: tcb_at_cte_at)
   apply (clarsimp simp: cte_at'_obj_at' tcb_cte_cases_def cte_map_def)
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
+  done
+
+lemma deriveCap_untyped_derived:
+  "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte. untyped_derived_eq c' (cteCap cte)) slot s\<rbrace>
+   deriveCap slot c'
+   \<lbrace>\<lambda>rv s. cte_wp_at' (untyped_derived_eq rv o cteCap) slot s\<rbrace>, -"
+  apply (simp add: global.deriveCap_def split del: if_split cong: if_cong)
+  apply (wpsimp wp: arch_deriveCap_inv simp: o_def untyped_derived_eq_ArchObjectCap)
+  apply (clarsimp simp: cte_wp_at_ctes_of gen_isCap_simps untyped_derived_eq_def)
   done
 
 end (* CSpace_R_2 *)
@@ -5063,7 +5092,7 @@ lemma updateFreeIndex_forward_valid_mdb':
          auto simp add: gen_isCap_simps valid_cap_simps' capAligned_def)
   done
 
-lemma no_fail_getSlotCap:
+lemma no_fail_getSlotCap[wp]:
   "no_fail (cte_at' p) (getSlotCap p)"
   apply (rule no_fail_pre)
   apply (simp add: getSlotCap_def | wp)+
@@ -5114,6 +5143,9 @@ locale CSpace_R_3 = CSpace_R_2 +
      \<Longrightarrow> (capMasterCap c' = capMasterCap d') = (cap_master_cap c = cap_master_cap d)"
   assumes updateMDB_pspace_in_kernel_mappings'[wp]:
     "\<And>x f. updateMDB x f \<lbrace>pspace_in_kernel_mappings'\<rbrace>"
+  assumes derived'_not_Null[simp]:
+    "\<And>m p c. \<not> is_derived' m p c capability.NullCap"
+    "\<And>m p c. \<not> is_derived' m p capability.NullCap c"
 begin
 
 lemma cteInsert_simple_mdb':

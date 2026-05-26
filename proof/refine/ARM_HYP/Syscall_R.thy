@@ -1857,6 +1857,16 @@ lemma getHDFAR_invs'[wp]:
   "valid invs' (doMachineOp getHDFAR) (\<lambda>_. invs')"
   by (simp add: getHDFAR_def doMachineOp_def split_def select_f_returns | wp)+
 
+lemma dmo_addressTranslateS1_invs'[wp]:
+  "doMachineOp (addressTranslateS1 pc) \<lbrace>invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_addressTranslateS1 no_irq)
+  apply clarsimp
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+    apply (clarsimp simp: addressTranslateS1_def machine_op_lift_def
+                          machine_rest_lift_def split_def | wp)+
+  done
+
 lemma hv_invs'[wp]: "\<lbrace>invs' and tcb_at' t'\<rbrace> handleVMFault t' vptr \<lbrace>\<lambda>r. invs'\<rbrace>"
   apply (simp add: ARM_HYP_H.handleVMFault_def
              cong: vmfault_type.case_cong)
@@ -2227,6 +2237,17 @@ crunch handleVMFault
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   and norq[wp]: "\<lambda>s. P (ksReadyQueues s)"
   (ignore: getFAR getDFSR getIFSR)
+
+(* only needed on ARM_HYP *)
+lemma setupCallerCap_cap_to'[wp]:
+  "setupCallerCap a b c \<lbrace>ex_nonz_cap_to' p\<rbrace>"
+  unfolding setupCallerCap_def getThreadCallerSlot_def getThreadReplySlot_def
+  apply (wp cteInsert_cap_to')
+       apply (rule_tac Q'="\<lambda>rv. ex_nonz_cap_to' p
+                           and cte_wp_at' (\<lambda>c. (cteCap c) = rv) callerSlot"
+                    in hoare_post_imp)
+       apply (wpsimp simp: cte_wp_at_ctes_of wp: getSlotCap_cte_wp_at hoare_drop_imps)+
+  done
 
 crunch handleVMFault, handleHypervisorFault
   for cap_to'[wp]: "ex_nonz_cap_to' t"

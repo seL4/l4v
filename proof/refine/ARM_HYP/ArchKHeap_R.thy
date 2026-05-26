@@ -326,6 +326,11 @@ lemma pspace_in_kernel_mappings'_wp[wp]:
   unfolding pspace_in_kernel_mappings'_def
   by wp
 
+(* only on arches without kernel mappings, used for arch interface assumptions *)
+lemma pspace_in_kernel_mappings'_inv:
+  "f \<lbrace>pspace_in_kernel_mappings'\<rbrace>"
+  by wp
+
 lemma setEndpoint_pspace_in_kernel_mappings'[KHeap_R_assms]:
   "setEndpoint p ko \<lbrace>pspace_in_kernel_mappings'\<rbrace>"
   by wp

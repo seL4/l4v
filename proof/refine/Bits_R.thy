@@ -16,12 +16,23 @@ crunch_ignore (add:
   emptyOnFailure unifyFailure maskInterrupt clearMemory clearMemoryVM  assertDerived
   setObject getObject updateObject loadObject)
 
+(* FIXME: move to WordLib *)
+lemma word_of_nat_word_size[simp]:
+  "word_of_nat word_size = word_size"
+  by (simp add: word_size_def)
+
 (* same derivation on all architectures *)
 lemma (in Arch) wordBits_word_bits:
   "wordBits = word_bits"
   by (simp add: wordBits_def' word_bits_def)
-
 requalify_facts Arch.wordBits_word_bits
+
+(* same derivation on all architectures *)
+lemma (in Arch) wordSize_word_size:
+  "wordSize = word_size"
+  unfolding wordSize_def word_size_def wordBits_word_bits
+  by (simp add: word_bits_def)
+requalify_facts Arch.wordSize_word_size
 
 lemma throwE_R: "\<lbrace>\<top>\<rbrace> throw f \<lbrace>P\<rbrace>,-"
   by (simp add: validE_R_def) wp
@@ -343,7 +354,7 @@ lemmas unifyFailure_injection_corres
 lemmas unifyFailure_discard
    = unifyFailure_injection_corres [OF id_injection, simplified]
 
-lemmas unifyFailure_wp = injection_wp [OF unifyFailure_injection]
+lemmas unifyFailure_wp[wp] = injection_wp[OF unifyFailure_injection]
 
 lemmas unifyFailure_wp_E[wp] = injection_wp_E [OF unifyFailure_injection]
 
@@ -502,7 +513,7 @@ lemma corres_const_on_failure:
    apply simp+
   done
 
-lemma constOnFailure_wp :
+lemma constOnFailure_wp[wp]:
   "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>, \<lbrace>\<lambda>rv. Q n\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> constOnFailure n m \<lbrace>Q\<rbrace>"
   apply (simp add: constOnFailure_def const_def)
   apply (wp|simp)+

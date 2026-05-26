@@ -2374,7 +2374,7 @@ lemma transferCapsLoop_ccorres:
            (W ep caps')"
 unfolding W_def check1_def check2_def split_def
 proof (rule ccorres_gen_asm, induct caps arbitrary: n slots mi)
-  note if_split[split]
+  note if_split[split] tl_drop_1[simp]
   case Nil
   thus ?case
     apply (simp only: transferCapsToSlots.simps)
@@ -2464,14 +2464,6 @@ next
     apply (wp |clarsimp|rule conjI)+
     done
 
-  have mask_right_eq_null:
-    "\<And>r cap. (maskCapRights r cap = NullCap) = (cap = NullCap)"
-    apply (case_tac cap)
-     apply (simp_all add:maskCapRights_def isCap_simps)
-    apply (rename_tac acap)
-    apply (case_tac acap)
-     apply (simp add:ARM_H.maskCapRights_def isPageCap_def)+
-    done
   note if_split[split del]
   note if_cong[cong]
   note extra_sle_sless_unfolds [simp del]
@@ -2660,7 +2652,7 @@ next
                                 option_to_0_def cap_to_H_def Let_def split:cap_CL.splits split:if_splits)
             apply clarsimp
            apply (simp only:badge_derived_mask capASID_mask cap_asid_base_mask'
-             cap_vptr_mask' maskCap_valid mask_right_eq_null)
+             cap_vptr_mask' maskCap_valid)
            apply (simp only:is_the_ep_fold relative_fold)
            apply (clarsimp simp:Collect_const_mem if_1_0_0
              split del:if_split)
@@ -4747,7 +4739,6 @@ lemma sendIPC_ccorres [corres]:
         apply (clarsimp simp: from_bool_def split: bool.split)
        \<comment> \<open>blocking case\<close>
        apply (intro ccorres_rhs_assoc)
-       apply csymbr
        apply (simp only:)
        \<comment> \<open>apply (ctac (trace, no_vcg,c_lines 6) add: sendIPC_block_ccorres_helper)\<close>
        apply (rule ccorres_rhs_assoc2)
@@ -4760,6 +4751,7 @@ lemma sendIPC_ccorres [corres]:
            apply (rule sendIPC_block_ccorres_helper)
           apply ceqv
          apply (simp only: K_bind_def fun_app_def)
+         apply csymbr
          apply (rule_tac ep=IdleEP in sendIPC_enqueue_ccorres_helper)
         apply (simp add: valid_ep'_def)
         apply (wp sts_st_tcb')
@@ -4772,7 +4764,6 @@ lemma sendIPC_ccorres [corres]:
        apply (clarsimp simp: from_bool_def split: bool.split)
       \<comment> \<open>blocking case\<close>
       apply (intro ccorres_rhs_assoc)
-      apply csymbr
       \<comment> \<open>apply (ctac (no_vcg,c_lines 6) add: sendIPC_block_ccorres_helper)\<close>
       apply (rule ccorres_rhs_assoc2)
       apply (rule ccorres_rhs_assoc2)
@@ -4786,6 +4777,7 @@ lemma sendIPC_ccorres [corres]:
           apply (rule sendIPC_block_ccorres_helper)
          apply ceqv
         apply (simp only: K_bind_def fun_app_def)
+        apply csymbr
         apply (rule_tac ep="SendEP list" in sendIPC_enqueue_ccorres_helper)
        apply (simp add: valid_ep'_def)
        apply (wp sts_st_tcb')
@@ -5338,7 +5330,6 @@ lemma receiveIPC_ccorres [corres]:
            apply wpc
             \<comment> \<open>RecvEP case\<close>
             apply (rule ccorres_cond_true)
-            apply csymbr
             apply (simp only: case_bool_If from_bool_neq_0)
             apply (rule ccorres_Cond_rhs, simp cong: Collect_cong split del: if_split)
              apply (intro ccorres_rhs_assoc)
@@ -5351,6 +5342,7 @@ lemma receiveIPC_ccorres [corres]:
                 apply ceqv
                apply simp
                apply (rename_tac list NOo)
+               apply csymbr
                apply (rule_tac ep="RecvEP list" in receiveIPC_enqueue_ccorres_helper[simplified])
               apply (simp add: valid_ep'_def)
               apply (wp sts_st_tcb')
@@ -5361,7 +5353,6 @@ lemma receiveIPC_ccorres [corres]:
              apply (ctac add: doNBRecvFailedTransfer_ccorres)
            \<comment> \<open>IdleEP case\<close>
            apply (rule ccorres_cond_true)
-           apply csymbr
            apply (simp only: case_bool_If from_bool_neq_0)
            apply (rule ccorres_Cond_rhs, simp cong: Collect_cong split del: if_split)
             apply (intro ccorres_rhs_assoc)
@@ -5373,6 +5364,7 @@ lemma receiveIPC_ccorres [corres]:
                 apply (rule receiveIPC_block_ccorres_helper[unfolded ptr_val_def, simplified])
                apply ceqv
               apply simp
+              apply csymbr
               apply (rule_tac ep=IdleEP in receiveIPC_enqueue_ccorres_helper[simplified])
              apply (simp add: valid_ep'_def)
              apply (wp sts_st_tcb')
@@ -6124,7 +6116,6 @@ lemma receiveSignal_ccorres [corres]:
      apply wpc
        \<comment> \<open>IdleNtfn case\<close>
        apply (rule ccorres_cond_true)
-       apply csymbr
        apply (simp only: case_bool_If from_bool_neq_0)
        apply (rule ccorres_Cond_rhs, simp cong: Collect_cong)
         apply (intro ccorres_rhs_assoc)
@@ -6134,6 +6125,7 @@ lemma receiveSignal_ccorres [corres]:
             apply (rule receiveSignal_block_ccorres_helper[simplified])
            apply ceqv
           apply (simp only: K_bind_def)
+          apply csymbr
           apply (rule receiveSignal_enqueue_ccorres_helper[simplified])
          apply (simp add: valid_ntfn'_def)
          apply (wp sts_st_tcb')
@@ -6190,7 +6182,6 @@ lemma receiveSignal_ccorres [corres]:
      \<comment> \<open>WaitingNtfn case\<close>
      apply (rename_tac list)
      apply (rule ccorres_cond_true)
-     apply csymbr
      apply (simp only: case_bool_If from_bool_neq_0)
      apply (rule ccorres_Cond_rhs, simp cong: Collect_cong)
       apply (intro ccorres_rhs_assoc)
@@ -6201,6 +6192,7 @@ lemma receiveSignal_ccorres [corres]:
           apply (rule receiveSignal_block_ccorres_helper[simplified])
          apply ceqv
         apply (simp only: K_bind_def)
+        apply csymbr
         apply (rule_tac ntfn="ntfn" in receiveSignal_enqueue_ccorres_helper[simplified])
        apply (simp add: valid_ntfn'_def)
        apply (wp sts_st_tcb')

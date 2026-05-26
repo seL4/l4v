@@ -643,7 +643,7 @@ lemma decodeARMPageTableInvocation_ccorres:
        (decodeARMMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeARMPageTableInvocation_'proc)"
-  supply if_cong[cong]
+  supply if_cong[cong] tl_drop_1[simp]
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
                 simp: decodeARMMMUInvocation_def invocation_eq_use_types)
@@ -3663,7 +3663,7 @@ lemma decodeARMMMUInvocation_ccorres:
        (decodeARMMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeARMMMUInvocation_'proc)"
-  supply if_cong[cong]
+  supply if_cong[cong] tl_drop_1[simp]
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_'
                       current_extra_caps_' cap_' buffer_' call_')
    apply csymbr

@@ -495,7 +495,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
      (Arch.decodeIRQControlInvocation label args srcSlot (map fst extraCaps)
         >>= invocationCatch thread isBlocking isCall (InvokeIRQControl o ArchIRQControl))
      (Call Arch_decodeIRQControlInvocation_'proc)"
-  supply maxIRQ_casts[simp]
+  supply maxIRQ_casts[simp] tl_drop_1[simp]
   supply gen_invocation_type_eq[simp] if_cong[cong] Collect_const[simp del]
   apply (cinit' lift: invLabel_' length___unsigned_long_' srcSlot_' current_extra_caps_' buffer_'
                 simp: ArchInterrupt_H.RISCV64_H.decodeIRQControlInvocation_def)
@@ -670,7 +670,7 @@ lemma decodeIRQControlInvocation_ccorres:
             >>= invocationCatch thread isBlocking isCall InvokeIRQControl)
      (Call decodeIRQControlInvocation_'proc)"
   supply gen_invocation_type_eq[simp] if_cong[cong] Collect_const[simp del]
-  supply maxIRQ_casts[simp]
+  supply maxIRQ_casts[simp] tl_drop_1[simp]
   apply (cinit' lift: invLabel_' srcSlot_' length___unsigned_long_' current_extra_caps_' buffer_')
    apply (simp add: decodeIRQControlInvocation_def invocation_eq_use_types
               cong: StateSpace.state.fold_congs globals.fold_congs)
