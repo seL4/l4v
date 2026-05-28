@@ -205,13 +205,15 @@ crunch vcpuEnable, vcpuDisable, vcpuSave, vcpuRestore, lazyFpuRestore
   (simp: crunch_simps
      wp: crunch_wps getObject_inv loadObject_default_inv)
 
+lemmas lazyFpuRestore_typ_ats[wp] = typ_at_lifts[OF lazyFpuRestore_typ_at']
+
 lemma vcpuSwitch_typ_at'[wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_ s. P (typ_at' T p s) \<rbrace>"
   by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
 lemma arch_switch_thread_tcb_at'[wp]:
   "\<lbrace>tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
-  by (unfold AARCH64_H.switchToThread_def, wp typ_at_lift_tcb')
+  by (unfold AARCH64_H.switchToThread_def, wp)
 
 lemma updateASIDPoolEntry_pred_tcb_at'[wp]:
   "updateASIDPoolEntry f asid \<lbrace>pred_tcb_at' proj P t'\<rbrace>"
@@ -228,6 +230,8 @@ crunch setVMRoot, vcpuSwitch, lazyFpuRestore
 
 crunch Arch.switchToThread
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+
+lemmas saveFpuState_typ_ats[wp] = typ_at_lifts[OF saveFpuState_typ_at']
 
 lemma Arch_switchToThread_pred_tcb'[wp]:
   "Arch.switchToThread t \<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
@@ -346,7 +350,7 @@ crunch loadFpuState, saveFpuState
 lemma switchLocalFpuOwner_invs[wp]:
   "\<lbrace>invs' and opt_tcb_at' newOwner\<rbrace> switchLocalFpuOwner newOwner \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding switchLocalFpuOwner_def
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' typ_at_lifts simp: fpuOwner_asrt_def)
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' simp: fpuOwner_asrt_def)
 
 lemma lazyFpuRestore_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> lazyFpuRestore t \<lbrace>\<lambda>_. invs'\<rbrace>"

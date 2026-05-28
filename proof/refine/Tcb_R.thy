@@ -1779,8 +1779,7 @@ lemma bindNotification_invs':
   apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (rule hoare_pre)
    apply (wp set_ntfn_valid_pspace' sbn_sch_act' valid_irq_node_lift
-             setBoundNotification_ct_not_inQ valid_bound_ntfn_lift
-             untyped_ranges_zero_lift valid_dom_schedule'_lift
+             setBoundNotification_ct_not_inQ untyped_ranges_zero_lift valid_dom_schedule'_lift
           | clarsimp dest!: global'_no_ex_cap simp: cteCaps_of_def)+
   apply (clarsimp simp: valid_pspace'_def)
   apply (cases "tcbptr = ntfnptr")

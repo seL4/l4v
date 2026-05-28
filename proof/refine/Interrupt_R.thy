@@ -666,7 +666,7 @@ lemma invoke_irq_control_invs'[wp]:
   "\<lbrace>invs' and irq_control_inv_valid' i\<rbrace> performIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (cases i, simp_all add: performIRQControl_def)
   apply (rule hoare_pre)
-   apply_trace (wp cteInsert_simple_invs | simp add: cte_wp_at_ctes_of)+
+   apply (wp cteInsert_simple_invs | simp add: cte_wp_at_ctes_of)+
   apply (clarsimp simp: cte_wp_at_ctes_of arch_valid_irq_le_maxIRQ
                         gen_isCap_simps is_simple_cap'_IRQHandlerCap
                         safe_parent_for'_def arch_valid_irq_valid_IRQHandlerCap)
