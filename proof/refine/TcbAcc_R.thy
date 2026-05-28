@@ -1052,11 +1052,8 @@ lemma threadSet_obj_at'_no_state:
   assumes "\<And>tcb. P' (f tcb) = P' tcb"
   shows   "threadSet f t \<lbrace>\<lambda>s. P (obj_at' P' t' s)\<rbrace>"
 proof -
-  have pos: "\<And>t' t.
-            \<lbrace>obj_at' P' t'\<rbrace> threadSet f t \<lbrace>\<lambda>rv. obj_at' P' t'\<rbrace>"
-    apply (wp threadSet_obj_at'_strongish)
-    apply clarsimp
-    apply (erule obj_at'_weakenE)
+  have pos: "\<And>t' t. threadSet f t \<lbrace>obj_at' P' t'\<rbrace>"
+    apply (wpsimp wp: threadSet_obj_at'_strongish)
     apply (insert assms)
     apply clarsimp
     done
@@ -1064,15 +1061,10 @@ proof -
     apply (rule_tac P=P in P_bool_lift)
      apply (rule pos)
     apply (rule_tac Q'="\<lambda>_ s. \<not> tcb_at' t' s \<or> obj_at' (\<lambda>tcb. \<not> P' tcb) t' s"
-             in hoare_post_imp)
-     apply (erule disjE)
-      apply (clarsimp simp: obj_at'_def)
-     apply (clarsimp)
-     apply (frule_tac P=P' and Q="\<lambda>tcb. \<not> P' tcb" in obj_at_conj')
-      apply (clarsimp)+
-    apply (wp hoare_convert_imp)
-      apply (simp add: typ_at_tcb' [symmetric])
-      apply (wp pos)+
+                 in hoare_post_imp)
+     apply (clarsimp simp: obj_at'_def)
+    apply (simp add: typ_at_tcb'[symmetric])
+    apply (wpsimp wp: hoare_convert_imp)
     apply (clarsimp simp: not_obj_at' assms elim!: obj_at'_weakenE)
     done
 qed

@@ -3801,13 +3801,12 @@ lemma ri_invs' [wp]:
    apply (case_tac ep)
      \<comment> \<open>endpoint = RecvEP\<close>
      apply (simp add: invs'_def valid_state'_def)
-     apply (rule hoare_pre, wpc, wp valid_irq_node_lift valid_dom_schedule'_lift)
-      apply (simp add: valid_ep'_def)
-      apply (wp sts_sch_act' hoare_vcg_const_Ball_lift valid_irq_node_lift valid_dom_schedule'_lift
-                setThreadState_ct_not_inQ
-                asUser_urz
+     apply (rule hoare_pre, wpc, wp sts_sch_act' valid_irq_node_lift valid_dom_schedule'_lift)
+      apply simp
+      apply (wp hoare_vcg_const_Ball_lift valid_irq_node_lift valid_dom_schedule'_lift
+                setThreadState_ct_not_inQ asUser_urz
            | simp add: doNBRecvFailedTransfer_def cteCaps_of_def)+
-     apply (clarsimp simp: valid_tcb_state'_def pred_tcb_at' o_def)
+     apply (clarsimp simp: valid_ep'_def valid_tcb_state'_def pred_tcb_at' o_def)
      apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
      apply (frule obj_at_valid_objs')
       apply (clarsimp simp: valid_pspace'_def)
@@ -3828,13 +3827,12 @@ lemma ri_invs' [wp]:
      apply (fastforce simp: valid_pspace'_def global'_no_ex_cap idle'_not_queued)
    \<comment> \<open>endpoint = IdleEP\<close>
     apply (simp add: invs'_def valid_state'_def)
-    apply (rule hoare_pre, wpc, wp valid_irq_node_lift valid_dom_schedule'_lift)
-     apply (simp add: valid_ep'_def)
-     apply (wp sts_sch_act' valid_irq_node_lift valid_dom_schedule'_lift
-               setThreadState_ct_not_inQ
-               asUser_urz
+    apply (rule hoare_pre, wpc, wp sts_sch_act' valid_irq_node_lift valid_dom_schedule'_lift)
+     apply simp
+     apply (wp valid_irq_node_lift valid_dom_schedule'_lift
+               setThreadState_ct_not_inQ asUser_urz
           | simp add: doNBRecvFailedTransfer_def cteCaps_of_def)+
-    apply (clarsimp simp: pred_tcb_at' valid_tcb_state'_def o_def)
+    apply (clarsimp simp: valid_ep'_def pred_tcb_at' valid_tcb_state'_def o_def)
     apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
     apply (subgoal_tac "t \<noteq> capEPPtr cap")
      apply (drule simple_st_tcb_at_state_refs_ofD')
@@ -3854,16 +3852,16 @@ lemma ri_invs' [wp]:
    apply (case_tac list, simp_all split del: if_split)
    apply (rename_tac sender queue)
    apply (rule hoare_pre)
-    apply (wp valid_irq_node_lift hoare_drop_imps setEndpoint_valid_mdb'
+    apply (wp valid_irq_node_lift setEndpoint_valid_mdb'
               set_ep_valid_objs' sts_st_tcb' sts_sch_act' valid_dom_schedule'_lift
               setThreadState_ct_not_inQ
               possibleSwitchTo_ct_not_inQ hoare_vcg_all_lift
               setEndpoint_ksQ
-         | simp add: valid_tcb_state'_def case_bool_If
-                     case_option_If
-              split del: if_split cong: if_cong
-        | wp (once) sch_act_sane_lift hoare_vcg_conj_lift hoare_vcg_all_lift
-                  untyped_ranges_zero_lift)+
+           | simp add: valid_tcb_state'_def case_bool_If
+                       case_option_If
+                  split del: if_split cong: if_cong
+           | wp (once) hoare_drop_imps sch_act_sane_lift hoare_vcg_conj_lift hoare_vcg_all_lift
+                       untyped_ranges_zero_lift)+
    apply (clarsimp split del: if_split simp: pred_tcb_at')
    apply (frule obj_at_valid_objs')
     apply (clarsimp simp: valid_pspace'_def)
@@ -4090,10 +4088,10 @@ lemma si_invs'[wp]:
    \<comment> \<open>epa = IdleEP\<close>
    apply (cases bl)
     apply (simp add: invs'_def valid_state'_def)
-    apply (rule hoare_pre, wp valid_irq_node_lift valid_dom_schedule'_lift)
-     apply (simp add: valid_ep'_def)
-     apply (wp valid_irq_node_lift valid_dom_schedule'_lift sts_sch_act' setThreadState_ct_not_inQ)
-    apply (clarsimp simp: valid_tcb_state'_def pred_tcb_at')
+    apply (rule hoare_pre, wp sts_sch_act' valid_irq_node_lift valid_dom_schedule'_lift)
+     apply simp
+     apply (wp valid_irq_node_lift valid_dom_schedule'_lift setThreadState_ct_not_inQ)
+    apply (clarsimp simp: valid_ep'_def valid_tcb_state'_def pred_tcb_at')
     apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
     apply (subgoal_tac "ep \<noteq> t")
      apply (drule simple_st_tcb_at_state_refs_ofD' ko_at_state_refs_ofD'
@@ -4109,11 +4107,11 @@ lemma si_invs'[wp]:
   \<comment> \<open>epa = SendEP\<close>
   apply (cases bl)
    apply (simp add: invs'_def valid_state'_def)
-   apply (rule hoare_pre, wp valid_irq_node_lift valid_dom_schedule'_lift)
-    apply (simp add: valid_ep'_def)
-    apply (wp hoare_vcg_const_Ball_lift valid_irq_node_lift sts_sch_act' setThreadState_ct_not_inQ
+   apply (rule hoare_pre, wp sts_sch_act' valid_irq_node_lift valid_dom_schedule'_lift)
+    apply simp
+    apply (wp hoare_vcg_const_Ball_lift valid_irq_node_lift setThreadState_ct_not_inQ
               valid_dom_schedule'_lift)
-   apply (clarsimp simp: valid_tcb_state'_def pred_tcb_at')
+   apply (clarsimp simp: valid_ep'_def valid_tcb_state'_def pred_tcb_at')
    apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
    apply (frule obj_at_valid_objs', clarsimp)
    apply (frule(1) sym_refs_ko_atD')
