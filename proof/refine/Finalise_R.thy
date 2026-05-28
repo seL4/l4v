@@ -2040,8 +2040,6 @@ lemma unbindNotification_valid_objs'_helper':
   by (clarsimp simp: valid_bound_tcb'_def valid_ntfn'_def
                   split: option.splits ntfn.splits)
 
-lemmas setNotification_valid_tcb' = typ_at'_valid_tcb'_lift [OF setNotification_typ_at']
-
 lemma unbindNotification_valid_objs'[wp]:
   "\<lbrace>valid_objs'\<rbrace>
      unbindNotification t
@@ -2049,7 +2047,7 @@ lemma unbindNotification_valid_objs'[wp]:
   apply (simp add: unbindNotification_def)
   apply (rule hoare_pre)
   apply (wpsimp wp: threadSet_valid_objs' gbn_wp' set_ntfn_valid_objs' hoare_vcg_all_lift
-                    setNotification_valid_tcb' getNotification_wp
+                    getNotification_wp
                 simp: setBoundNotification_def unbindNotification_valid_objs'_helper
                       doUnbindNotification_def)
   apply (clarsimp elim!: obj_atE')
@@ -2065,7 +2063,7 @@ lemma unbindMaybeNotification_valid_objs'[wp]:
   apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (rule hoare_pre)
   apply (wpsimp wp: threadSet_valid_objs' gbn_wp' set_ntfn_valid_objs' hoare_vcg_all_lift
-                    setNotification_valid_tcb' getNotification_wp
+                    getNotification_wp
                 simp: setBoundNotification_def unbindNotification_valid_objs'_helper
                       doUnbindNotification_def)+
   apply (clarsimp elim!: obj_atE')

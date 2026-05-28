@@ -1078,11 +1078,8 @@ lemma threadSet_obj_at'_no_state:
   assumes "\<And>tcb. P' (f tcb) = P' tcb"
   shows   "threadSet f t \<lbrace>\<lambda>s. P (obj_at' P' t' s)\<rbrace>"
 proof -
-  have pos: "\<And>t' t.
-            \<lbrace>obj_at' P' t'\<rbrace> threadSet f t \<lbrace>\<lambda>rv. obj_at' P' t'\<rbrace>"
-    apply (wp threadSet_obj_at'_strongish)
-    apply clarsimp
-    apply (erule obj_at'_weakenE)
+  have pos: "\<And>t' t. threadSet f t \<lbrace>obj_at' P' t'\<rbrace>"
+    apply (wpsimp wp: threadSet_obj_at'_strongish)
     apply (insert assms)
     apply clarsimp
     done
@@ -1090,15 +1087,10 @@ proof -
     apply (rule_tac P=P in P_bool_lift)
      apply (rule pos)
     apply (rule_tac Q'="\<lambda>_ s. \<not> tcb_at' t' s \<or> obj_at' (\<lambda>tcb. \<not> P' tcb) t' s"
-             in hoare_post_imp)
-     apply (erule disjE)
-      apply (clarsimp simp: obj_at'_def)
-     apply (clarsimp)
-     apply (frule_tac P=P' and Q="\<lambda>tcb. \<not> P' tcb" in obj_at_conj')
-      apply (clarsimp)+
-    apply (wp hoare_convert_imp)
-      apply (simp add: typ_at_tcb' [symmetric])
-      apply (wp pos)+
+                 in hoare_post_imp)
+     apply (clarsimp simp: obj_at'_def)
+    apply (simp add: typ_at_tcb'[symmetric])
+    apply (wpsimp wp: hoare_convert_imp)
     apply (clarsimp simp: not_obj_at' assms elim!: obj_at'_weakenE)
     done
 qed
@@ -1306,11 +1298,6 @@ lemma threadSet_valid_objs':
   apply (clarsimp elim!: obj_at'_weakenE)
   done
 
-lemmas typ_at'_valid_tcb'_lift =
-  typ_at'_valid_obj'_lift[where obj="KOTCB tcb" for tcb, unfolded valid_obj'_def, simplified]
-
-lemmas setObject_valid_tcb' = typ_at'_valid_tcb'_lift[OF setObject_typ_at']
-
 lemma setObject_valid_tcbs':
   assumes preserve_valid_tcb': "\<And>s s' ko ko' x n tcb tcb'.
             \<lbrakk> (ko', s') \<in> fst (updateObject val ko ptr x n s); P s;
@@ -1323,7 +1310,7 @@ lemma setObject_valid_tcbs':
   apply (rename_tac s s' ptr' tcb)
   apply (prop_tac "\<forall>tcb'. valid_tcb' tcb s \<longrightarrow> valid_tcb' tcb s'")
    apply clarsimp
-   apply (erule (1) use_valid[OF _ setObject_valid_tcb'])
+   apply (erule (1) use_valid[OF _ valid_tcb'_typ_at_lift[OF setObject_typ_at']])
   apply (drule spec, erule mp)
   apply (clarsimp simp: setObject_def in_monad split_def lookupAround2_char1)
   apply (rename_tac s ptr' new_tcb' ptr'' old_tcb_ko' s' f)
@@ -1349,9 +1336,7 @@ lemma threadSet_valid_tcb':
   "\<lbrace>valid_tcb' tcb and (\<lambda>s. \<forall>tcb. valid_tcb' tcb s \<longrightarrow> valid_tcb' (f tcb) s)\<rbrace>
    threadSet f t
    \<lbrace>\<lambda>_. valid_tcb' tcb\<rbrace>"
-  apply (simp add: threadSet_def)
-  apply (wpsimp wp: setObject_valid_tcb')
-  done
+  by (wpsimp simp: threadSet_def)
 
 lemma threadSet_valid_tcbs':
   "\<lbrace>valid_tcbs' and (\<lambda>s. \<forall>tcb. valid_tcb' tcb s \<longrightarrow> valid_tcb' (f tcb) s)\<rbrace>

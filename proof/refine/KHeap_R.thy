@@ -1313,7 +1313,7 @@ lemma set_ntfn_maxObj [wp]:
   by (simp add: setNotification_def | wp setObject_ksPSpace_only updateObject_default_inv)+
 
 lemmas valid_irq_node_lift =
-    hoare_use_eq_irq_node' [OF _ typ_at_lift_valid_irq_node']
+    hoare_use_eq_irq_node' [OF _ valid_irq_node'_typ_at_lift]
 
 lemmas untyped_ranges_zero_lift
     = hoare_use_eq[where f="gsUntypedZeroRanges"
@@ -1754,8 +1754,6 @@ lemma setNotification_corres:
   apply (corresKsimp wp: get_object_ret get_object_wp)+
   by (fastforce simp: is_ntfn gen_obj_at_simps partial_inv_def)
 
-lemmas setObject_valid_obj = typ_at'_valid_obj'_lift [OF setObject_typ_at']
-
 lemma setObject_valid_objs':
   assumes x: "\<And>x n ko s ko' s'.
        \<lbrakk> (ko', s') \<in> fst (updateObject val ko ptr x n s); P s;
@@ -1766,7 +1764,7 @@ lemma setObject_valid_objs':
   apply (subgoal_tac "\<forall>ko. valid_obj' ko s \<longrightarrow> valid_obj' ko b")
    defer
    apply clarsimp
-   apply (erule(1) use_valid [OF _ setObject_valid_obj])
+   apply (erule(1) use_valid [OF _ valid_obj'_typ_at_lift[OF setObject_typ_at']])
   apply (clarsimp simp: setObject_def split_def in_monad
                         lookupAround2_char1)
   apply (simp add: valid_objs'_def)
