@@ -13,18 +13,10 @@ arch_requalify_facts
   cte_wp_atE'
   cte_wp_at_cteI'
   tcb_at_cte_at'
-  typ_at_lift_valid_cap'
-  valid_arch_tcb_lift'
   tcb_at_cte_at'
   gen_objBitsT_simps
   objBitsT_koTypeOf (* FIXME arch-split: consider declaring [simp] here rather than Schedule_R *)
   hyp_refs_of_live'
-
-(* arch-specific typ_at_lifts in Arch *)
-lemmas gen_typ_at_lifts =
-         typ_at_lift_tcb' typ_at_lift_ep' typ_at_lift_ntfn' typ_at_lift_cte' typ_at_lift_cte_at'
-         typ_at_lift_valid_untyped' typ_at_lift_valid_cap' valid_bound_tcb_lift
-         valid_arch_tcb_lift'
 
 (* these depend on interpretations in ArchInvLemmas_H *)
 context pspace_update_eq'

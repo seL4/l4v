@@ -1750,26 +1750,6 @@ lemma setNotification_corres:
   apply (corresKsimp wp: get_object_ret get_object_wp)+
   by (fastforce simp: is_ntfn gen_obj_at_simps partial_inv_def)
 
-lemma typ_at'_valid_obj'_lift:
-  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_const_Ball_lift gen_typ_at_lifts[OF P]
-  shows      "\<lbrace>\<lambda>s. valid_obj' obj s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj' obj s\<rbrace>"
-  apply (cases obj; simp add: valid_obj'_def hoare_TrueI)
-      apply (rename_tac endpoint)
-      apply (case_tac endpoint; simp add: valid_ep'_def, wp)
-     apply (rename_tac notification)
-     apply (case_tac "ntfnObj notification";
-            simp add: valid_ntfn'_def split: option.splits,
-            (wpsimp|rule conjI)+)
-    apply (rename_tac tcb)
-    apply (case_tac "tcbState tcb";
-           simp add: valid_tcb'_def valid_tcb_state'_def split_def opt_tcb_at'_def
-                     valid_bound_ntfn'_def;
-           wpsimp wp: hoare_case_option_wp hoare_case_option_wp2 valid_arch_tcb_lift' P;
-           (clarsimp split: option.splits)?)
-   apply (wpsimp simp: valid_cte'_def)+
-  done
-
 lemmas setObject_valid_obj = typ_at'_valid_obj'_lift [OF setObject_typ_at']
 
 lemma setObject_valid_objs':
