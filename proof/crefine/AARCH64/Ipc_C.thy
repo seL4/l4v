@@ -4167,7 +4167,7 @@ lemma doNormalTransfer_local_slots:
     doNormalTransfer sender sendBuffer ep badge grant receiver receiveBuffer
    \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>cte. P (cteCap cte)) slot\<rbrace>"
   apply (simp add: doNormalTransfer_def)
-  apply (wp transferCaps_local_slots weak copyMRs_typ_at'[where T=CTET, unfolded typ_at_cte]
+  apply (wp transferCaps_local_slots weak copyMRs_typ_at'[where T=CTET, unfolded typ_at_cte']
     | simp)+
   done
 
