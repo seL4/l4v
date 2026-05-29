@@ -17,7 +17,10 @@ begin
 (* FIXME RT: too much internal error-monad going on for the translator to figure it out on its own. Rewrite. *)
 defs handleRecv_def:
 "handleRecv isBlocking canReply\<equiv> (do
+    stateAssert weak_sch_act_wf_asrt [];
+    stateAssert sch_act_sane_asrt [];
     thread \<leftarrow> getCurThread;
+    stateAssert (active_tcb_at'_asrt thread) [];
     epCptr \<leftarrow> asUser thread $ liftM CPtr $ getRegister capRegister;
     ((doE
         epCap \<leftarrow> capFaultOnFailure epCptr True (lookupCap thread epCptr);

@@ -1063,6 +1063,7 @@ On some architectures, the thread context may include registers that may be modi
 
 > checkBudget :: Kernel Bool
 > checkBudget = do
+>     stateAssert weak_sch_act_wf_asrt ""
 >     csc <- getCurSc
 >     consumed <- getConsumedTime
 >     sufficient <- getRefillSufficient csc consumed
@@ -1078,6 +1079,7 @@ On some architectures, the thread context may include registers that may be modi
 > checkBudgetRestart :: Kernel Bool
 > checkBudgetRestart = do
 >     stateAssert cur_tcb'_asrt "`cur_tcb'`"
+>     stateAssert weak_sch_act_wf_asrt ""
 >     result <- checkBudget
 >     ct <- getCurThread
 >     runnable <- isRunnable ct

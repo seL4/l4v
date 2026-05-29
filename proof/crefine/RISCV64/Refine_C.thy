@@ -76,9 +76,9 @@ lemma ucast_8_32_neq:
   by uint_arith (clarsimp simp: uint_up_ucast is_up)
 
 lemma checkInterrupt_ccorres:
-  "ccorres dc xfdc (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)) UNIV []
-           (maybeHandleInterrupt inKernel) (Call checkInterrupt_'proc)"
+  "ccorres dc xfdc invs' UNIV [] (maybeHandleInterrupt inKernel) (Call checkInterrupt_'proc)"
   unfolding maybeHandleInterrupt_def
+  apply ccorres_exec_l_pre
   apply cinit'
    apply (rule ccorres_guard_imp)
      apply (simp add: liftE_def bind_assoc)
@@ -102,8 +102,7 @@ lemma checkInterrupt_ccorres:
   done
 
 lemma handleInterruptEntry_ccorres:
-  "ccorres dc xfdc (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)) UNIV []
-     (callKernel Interrupt) (Call handleInterruptEntry_'proc)"
+  "ccorres dc xfdc invs' UNIV [] (callKernel Interrupt) (Call handleInterruptEntry_'proc)"
   supply Collect_const[simp del]
   apply cinit'
    apply (simp add: callKernel_def handleEvent_def minus_one_norm)
@@ -116,18 +115,21 @@ lemma handleInterruptEntry_ccorres:
            apply (rule ccorres_rel_imp)
             apply (rule checkBudget_ccorres, fastforce+)
        apply ceqv
-      apply (ctac (no_vcg) add: checkInterrupt_ccorres)
-       apply (rule ccorres_stateAssert)+
-       apply (rule ccorres_rhs_assoc)+
-       apply (ctac (no_vcg) add: schedule_ccorres)
+      apply (ctac add: checkInterrupt_ccorres)
         apply (rule ccorres_stateAssert)+
-        apply (rule ccorres_stateAssert_after)
-        apply (rule ccorres_add_return2)
-        apply (ctac (no_vcg) add: activateThread_ccorres)
-         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-         apply (rule allI, rule conseqPre, vcg)
-         apply (clarsimp simp: return_def)
+        apply (rule ccorres_rhs_assoc)+
+        apply (ctac (no_vcg) add: schedule_ccorres)
+         apply (rule ccorres_stateAssert)+
+         apply (ctac (no_vcg) add: activateThread_ccorres)
+          apply (rule ccorres_add_return2)
+          apply (rule ccorres_stateAssert)
+          apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+          apply (rule allI, rule conseqPre, vcg)
+          apply (clarsimp simp: return_def)
+         apply wpsimp
         apply (wp schedule_sch_act_wf schedule_invs' hoare_drop_imps)+
+      apply (vcg exspec=checkInterrupt_modifies)
+     apply wpsimp
     apply (clarsimp simp: guard_is_UNIV_def)
    apply wpsimp
   apply clarsimp
@@ -290,157 +292,324 @@ lemma handleUserLevelFault_ccorres:
 lemmas syscall_defs =
   Kernel_C.SysSend_def Kernel_C.SysNBSend_def
   Kernel_C.SysCall_def Kernel_C.SysRecv_def Kernel_C.SysNBRecv_def
-  Kernel_C.SysReplyRecv_def Kernel_C.SysYield_def
+  Kernel_C.SysReplyRecv_def Kernel_C.SysYield_def Kernel_C.SysWait_def
+  Kernel_C.SysNBWait_def Kernel_C.SysNBSendRecv_def Kernel_C.SysNBSendWait_def
+
+crunch mcsPreemptionPoint
+  for invs'[wp]: invs'
+  and weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+  (wp: crunch_wps)
+
+lemma getNBSendRecvDest_ccorres[corres]:
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV hs
+     (getCapReg MachineExports.nbsendRecvDest) (Call getNBSendRecvDest_'proc)"
+  unfolding getCapReg_def
+  apply (ccorres_exec_l_pre ccorres_exec_l_pre: getCurThread_sp)
+  apply cinit'
+   apply (rule ccorres_add_return2)
+   apply ctac
+     apply (fastforce intro: ccorres_return_C)
+    apply wpsimp
+   apply (vcg exspec=getRegister_modifies)
+  apply (frule rf_sr_ksCurThread)
+  apply (clarsimp simp: Kernel_C.nbsendRecvDest_def RISCV64_H.nbsendRecvDest_def C_register_defs
+                        RISCV64.nbsendRecvDest_def)
+  done
 
 lemma handleSyscall_ccorres:
-  "ccorres dc xfdc
-           (invs' and
-               sch_act_simple and ct_running' and
-               (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
-           (UNIV \<inter> {s. syscall_' s = syscall_from_H sysc }) []
-           (callKernel (SyscallEvent sysc)) (Call handleSyscall_'proc)"
+  "ccorres dc xfdc invs' \<lbrace>\<acute>syscall___unsigned_long = syscall_from_H sysc\<rbrace> []
+     (callKernel (SyscallEvent sysc)) (Call handleSyscall_'proc)"
   supply if_cong[cong] option.case_cong[cong]
-  apply (cinit' lift: syscall_')
-sorry (* FIXME RT: handleSyscall_ccorres
+  apply (cinit' lift: syscall_' simp: getCapReg_def)
    apply (simp add: callKernel_def handleEvent_def minus_one_norm)
-   apply (rule ccorres_stateAssert)
+   apply (rule ccorres_stateAssert)+
    apply (simp add: handleE_def handleE'_def)
-   apply (rule ccorres_split_nothrow_novcg)
-       apply wpc
-              prefer 3
-              \<comment> \<open>SysSend\<close>
-              apply (clarsimp simp: syscall_from_H_def syscall_defs)
-              apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
-              apply (simp add: handleSend_def)
-              apply (rule ccorres_split_nothrow_case_sum)
-                   apply (ctac (no_vcg) add: handleInvocation_ccorres)
-                  apply ceqv
+   apply (clarsimp simp: liftE_bindE_assoc bind_assoc)
+   apply (ctac add: updateTimestamp_ccorres)
+     apply (ctac add: checkBudgetRestart_ccorres)
+       apply (clarsimp simp: whenE_def)
+       \<comment> \<open>group together handleEvent and the preemption path\<close>
+       apply (subst bind_assoc[symmetric])
+       apply (rule ccorres_split_nothrow_novcg)
+           apply (clarsimp simp: if_to_top_of_bind)
+           apply (rule ccorres_cond[where R=\<top>])
+             apply (clarsimp simp: to_bool_def split: if_splits)
+            prefer 2
+            apply (clarsimp simp: returnOk_def)
+            apply (rule ccorres_returnOk_skip[simplified returnOk_def comp_def])
+           apply (rule ccorres_Catch)
+           apply ccorres_rewrite
+           apply wpc
+                     apply (find_case SysSend)
+                     apply ccorres_rewrite
+                     apply (clarsimp simp: syscall_from_H_def syscall_defs)
+                     apply (rule ccorres_cond_empty | rule ccorres_cond_univ)+
+                     apply (simp add: handleSend_def)
+                     apply (rule ccorres_split_nothrow_case_sum)
+                          apply (clarsimp simp: liftE_bindE getCapReg_def bind_assoc)
+                          apply (rule ccorres_pre_getCurThread)
+                          apply (ctac (no_vcg))
+                           apply (ctac (no_vcg) add: handleInvocation_ccorres)
+                          apply wpsimp
+                         apply ceqv
+                        apply clarsimp
+                        apply (rule ccorres_cond_empty)
+                        apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
+                       apply ccorres_rewrite
+                       apply (rule ccorres_liftE')
+                       apply (ctac (no_vcg) add: mcsPreemptionPoint_ccorres)
+                        apply (rule ccorres_rel_imp[where r'=dc and xf'=xfdc])
+                         apply (rule ccorres_handlers_weaken2)
+                         apply (rule ccorres_call[where xf'=xfdc, OF checkInterrupt_ccorres]; simp)
+                        apply fastforce
+                       apply wpsimp
+                      apply (rule_tac Q'=invs' in hoare_post_impE_E_dc)
+                       apply wpsimp
+                      apply simp
+                     apply clarsimp
+                     apply (vcg exspec=handleInvocation_modifies)
+                    apply (find_case SysNBSend)
+                    apply (clarsimp simp: syscall_from_H_def syscall_defs)
+                    apply (rule ccorres_cond_empty | rule ccorres_cond_univ)+
+                    apply (simp add: handleSend_def)
+                    apply (rule ccorres_split_nothrow_case_sum)
+                         apply (clarsimp simp: liftE_bindE getCapReg_def bind_assoc)
+                         apply (rule ccorres_pre_getCurThread)
+                         apply (ctac (no_vcg))
+                          apply (ctac (no_vcg) add: handleInvocation_ccorres)
+                         apply wpsimp
+                        apply ceqv
+                       apply clarsimp
+                       apply (rule ccorres_cond_empty)
+                       apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
+                      apply ccorres_rewrite
+                      apply (rule ccorres_liftE')
+                      apply (ctac (no_vcg) add: mcsPreemptionPoint_ccorres)
+                       apply (rule ccorres_rel_imp[where r'=dc and xf'=xfdc])
+                        apply (rule ccorres_handlers_weaken2)
+                        apply (rule ccorres_call[where xf'=xfdc, OF checkInterrupt_ccorres]; simp)
+                       apply fastforce
+                      apply wpsimp
+                     apply (rule_tac Q'=invs' in hoare_post_impE_E_dc)
+                      apply wpsimp
+                     apply (simp add: invs'_def)
+                    apply clarsimp
+                    apply (vcg exspec=handleInvocation_modifies)
+                   apply (find_case SysCall)
+                   apply (clarsimp simp: syscall_from_H_def syscall_defs)
+                   apply (rule ccorres_cond_empty | rule ccorres_cond_univ)+
+                   apply (simp add: handleCall_def)
+                   apply (rule ccorres_split_nothrow_case_sum)
+                        apply (clarsimp simp: stateAssertE_def liftE_bindE)
+                        apply (rule ccorres_stateAssert)
+                        apply (clarsimp simp: liftE_bindE getCapReg_def bind_assoc)
+                        apply (rule ccorres_pre_getCurThread)
+                        apply (ctac (no_vcg))
+                         apply (ctac (no_vcg) add: handleInvocation_ccorres)
+                        apply wpsimp
+                       apply ceqv
+                      apply clarsimp
+                      apply (rule ccorres_cond_empty)
+                      apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
+                     apply ccorres_rewrite
+                     apply (rule ccorres_liftE')
+                     apply (ctac (no_vcg) add: mcsPreemptionPoint_ccorres)
+                      apply (rule ccorres_rel_imp[where r'=dc and xf'=xfdc])
+                       apply (rule ccorres_handlers_weaken2)
+                       apply (rule ccorres_call[where xf'=xfdc, OF checkInterrupt_ccorres]; simp)
+                      apply fastforce
+                     apply wpsimp
+                    apply (wpsimp simp: stateAssertE_def)
+                   apply (vcg exspec=handleInvocation_modifies)
+                  apply (find_case SysRecv)
+                  apply (clarsimp simp: syscall_from_H_def syscall_defs)
+                  apply (rule ccorres_cond_empty | rule ccorres_cond_univ)+
+                  apply (simp add: liftE_bind)
+                  apply (rule ccorres_seq_skip'[THEN iffD1])
+                  apply (ctac (no_vcg) add: handleRecv_ccorres)
+                   apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
+                  apply wp
+                 apply (find_case SysYield)
+                 apply (clarsimp simp: syscall_from_H_def syscall_defs)
+                 apply (rule ccorres_cond_empty | rule ccorres_cond_univ)+
+                 apply (simp add: liftE_bind)
+                 apply (rule ccorres_seq_skip'[THEN iffD1])
+                 apply (ctac (no_vcg) add: handleYield_ccorres)
+                  apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
+                 apply wp
+                apply (find_case SysReplyRecv)
+                apply (clarsimp simp: syscall_from_H_def syscall_defs)
+                apply (rule ccorres_cond_empty | rule ccorres_cond_univ)+
+                apply (clarsimp simp: liftE_bindE getCapReg_def bind_assoc)
+                apply (rule ccorres_pre_getCurThread)
+                apply (rule ccorres_rhs_assoc)+
+                apply (ctac (no_vcg))
+                 \<comment> \<open>isolate handleInvocation\<close>
+                 apply (subst bindE_bind_linearise)
                  apply clarsimp
-                 apply (rule ccorres_cond_empty)
-                 apply (rule ccorres_returnOk_skip[unfolded returnOk_def,simplified])
-                apply ccorres_rewrite
-                apply (rule ccorres_call[where xf'=xfdc, OF checkInterrupt_ccorres]; simp)
-               apply (rule_tac Q'="invs'" in hoare_post_impE_E_dc, wp)
-               apply (simp add: invs'_def valid_state'_def)
-              apply clarsimp
-              apply (vcg exspec=handleInvocation_modifies)
-             prefer 3
-             \<comment> \<open>SysNBSend\<close>
-             apply (clarsimp simp: syscall_from_H_def syscall_defs)
-             apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
-             apply (simp add: handleSend_def)
-             apply (rule ccorres_split_nothrow_case_sum)
-                  apply (ctac (no_vcg) add: handleInvocation_ccorres)
-                 apply ceqv
-                apply clarsimp
-                apply (rule ccorres_cond_empty)
-                apply (rule ccorres_returnOk_skip[unfolded returnOk_def,simplified])
-               apply ccorres_rewrite
-               apply (rule ccorres_call[where xf'=xfdc, OF checkInterrupt_ccorres]; simp)
-              apply (rule_tac Q'="invs'" in hoare_post_impE_E_dc, wp)
-              apply (simp add: invs'_def valid_state'_def)
-             apply clarsimp
-             apply (vcg exspec=handleInvocation_modifies)
-            \<comment> \<open>SysCall\<close>
-            apply (clarsimp simp: syscall_from_H_def syscall_defs)
-            apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
-            apply (simp add: handleCall_def)
-            apply (rule ccorres_split_nothrow_case_sum)
-                 apply (ctac (no_vcg) add: handleInvocation_ccorres)
-                apply ceqv
+                 apply (rule ccorres_split_nothrow_case_sum)
+                      apply (ctac (no_vcg) add: handleInvocation_ccorres)
+                     apply ceqv
+                    apply (clarsimp simp: stateAssertE_def liftE_bindE bind_assoc)
+                    apply (rule ccorres_stateAssert)+
+                    apply (clarsimp simp: liftE_case_sum)
+                    apply (rule ccorres_seq_skip'[THEN iffD1])
+                    apply (ctac (no_vcg) add: handleRecv_ccorres)
+                     apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
+                    apply wpsimp
+                   apply clarsimp
+                   apply (rule ccorres_liftE')
+                   apply (rule ccorres_rhs_assoc)+
+                   apply (ctac (no_vcg) add: mcsPreemptionPoint_ccorres)
+                    apply ccorres_rewrite
+                    apply (rule ccorres_seq_skip'[THEN iffD1])
+                    apply (rule ccorres_rel_imp[where r'=dc and xf'=xfdc])
+                     apply (rule ccorres_rhs_assoc)+
+                     apply (rule ccorres_add_return2)
+                     apply (ctac add: checkInterrupt_ccorres)
+                       apply (clarsimp simp: cbreak_def)
+                       apply ccorres_rewrite
+                       apply (clarsimp simp flip: cbreak_def)
+                       apply (fastforce intro: ccorres_break_return[where P=\<top> and P'=UNIV])
+                      apply wpsimp
+                     apply (vcg exspec=checkInterrupt_modifies)
+                    apply fastforce
+                   apply wpsimp
+                  apply (wpsimp wp: hoare_drop_imps)
+                 apply (vcg exspec=handleInvocation_modifies)
+                apply wpsimp
+               apply (find_case SysNBSendRecv)
+               apply (clarsimp simp: syscall_from_H_def syscall_defs)
+               apply (rule ccorres_cond_empty | rule ccorres_cond_univ)+
+               apply (clarsimp simp: liftE_bindE bind_assoc)
+               apply (rule ccorres_rhs_assoc)+
+               apply (ctac add: getNBSendRecvDest_ccorres)
+                 \<comment> \<open>isolate handleInvocation\<close>
+                 apply (subst bindE_bind_linearise)
+                 apply clarsimp
+                 apply (rule ccorres_split_nothrow_case_sum)
+                      apply (ctac (no_vcg) add: handleInvocation_ccorres)
+                     apply ceqv
+                    apply (clarsimp simp: stateAssertE_def liftE_bindE bind_assoc)
+                    apply (rule ccorres_stateAssert)+
+                    apply (clarsimp simp: liftE_case_sum)
+                    apply (rule ccorres_seq_skip'[THEN iffD1])
+                    apply (ctac (no_vcg) add: handleRecv_ccorres)
+                     apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
+                    apply wpsimp
+                   apply clarsimp
+                   apply (rule ccorres_liftE')
+                   apply (rule ccorres_rhs_assoc)+
+                   apply (ctac (no_vcg) add: mcsPreemptionPoint_ccorres)
+                    apply ccorres_rewrite
+                    apply (rule ccorres_seq_skip'[THEN iffD1])
+                    apply (rule ccorres_rel_imp[where r'=dc and xf'=xfdc])
+                     apply (rule ccorres_rhs_assoc)+
+                     apply (rule ccorres_add_return2)
+                     apply (ctac add: checkInterrupt_ccorres)
+                       apply (clarsimp simp: cbreak_def)
+                       apply ccorres_rewrite
+                       apply (clarsimp simp flip: cbreak_def)
+                       apply (fastforce intro: ccorres_break_return[where P=\<top> and P'=UNIV])
+                      apply wpsimp
+                     apply (vcg exspec=checkInterrupt_modifies)
+                    apply fastforce
+                   apply wpsimp
+                  apply (wpsimp wp: hoare_drop_imps)
+                 apply (vcg exspec=handleInvocation_modifies)
+                apply wpsimp
+               apply (vcg exspec=getNBSendRecvDest_modifies)
+              apply (find_case SysNBSendWait)
+              apply (clarsimp simp: syscall_from_H_def syscall_defs)
+              apply (rule ccorres_cond_empty | rule ccorres_cond_univ)+
+              apply (clarsimp simp: liftE_bindE getCapReg_def bind_assoc)
+              apply (rule ccorres_pre_getCurThread)
+              apply (rule ccorres_rhs_assoc)+
+              apply (ctac (no_vcg))
+               \<comment> \<open>isolate handleInvocation\<close>
+               apply (subst bindE_bind_linearise)
                apply clarsimp
-               apply (rule ccorres_cond_empty)
-               apply (rule ccorres_returnOk_skip[unfolded returnOk_def,simplified])
-              apply ccorres_rewrite
-              apply (rule ccorres_call[where xf'=xfdc, OF checkInterrupt_ccorres]; simp)
-             apply (rule_tac Q'="invs'" in hoare_post_impE_E_dc, wp)
-             apply (simp add: invs'_def valid_state'_def)
-            apply clarsimp
-            apply (vcg exspec=handleInvocation_modifies)
-           prefer 2
-           \<comment> \<open>SysRecv\<close>
+               apply (rule ccorres_split_nothrow_case_sum)
+                    apply (ctac (no_vcg) add: handleInvocation_ccorres)
+                   apply ceqv
+                  apply (clarsimp simp: stateAssertE_def liftE_bindE bind_assoc)
+                  apply (rule ccorres_stateAssert)+
+                  apply (clarsimp simp: liftE_case_sum)
+                  apply (rule ccorres_seq_skip'[THEN iffD1])
+                  apply (ctac (no_vcg) add: handleRecv_ccorres)
+                   apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
+                  apply wpsimp
+                 apply clarsimp
+                 apply (rule ccorres_liftE')
+                 apply (rule ccorres_rhs_assoc)+
+                 apply (ctac (no_vcg) add: mcsPreemptionPoint_ccorres)
+                  apply ccorres_rewrite
+                  apply (rule ccorres_seq_skip'[THEN iffD1])
+                  apply (rule ccorres_rel_imp[where r'=dc and xf'=xfdc])
+                   apply (rule ccorres_rhs_assoc)+
+                   apply (rule ccorres_add_return2)
+                   apply (ctac add: checkInterrupt_ccorres)
+                     apply (clarsimp simp: cbreak_def)
+                     apply ccorres_rewrite
+                     apply (clarsimp simp flip: cbreak_def)
+                     apply (fastforce intro: ccorres_break_return[where P=\<top> and P'=UNIV])
+                    apply wpsimp
+                   apply (vcg exspec=checkInterrupt_modifies)
+                  apply fastforce
+                 apply wpsimp
+                apply (wpsimp wp: hoare_drop_imps)
+               apply (vcg exspec=handleInvocation_modifies)
+              apply wpsimp
+             apply (find_goal \<open>match premises in "sysc = SysWait" \<Rightarrow> succeed\<close>)
+             apply (clarsimp simp: syscall_from_H_def syscall_defs)
+             apply (rule ccorres_cond_empty | rule ccorres_cond_univ)+
+             apply (simp add: liftE_bind)
+             apply (rule ccorres_seq_skip'[THEN iffD1])
+             apply (ctac (no_vcg) add: handleRecv_ccorres)
+              apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
+             apply wp
+            apply (find_case SysNBWait)
+            apply (clarsimp simp: syscall_from_H_def syscall_defs)
+            apply (rule ccorres_cond_empty | rule ccorres_cond_univ)+
+            apply (simp add: liftE_bind)
+            apply (rule ccorres_seq_skip'[THEN iffD1])
+            apply (ctac (no_vcg) add: handleRecv_ccorres)
+             apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
+            apply wp
+           apply (find_case SysNBRecv)
            apply (clarsimp simp: syscall_from_H_def syscall_defs)
-           apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
+           apply (rule ccorres_cond_empty | rule ccorres_cond_univ)+
            apply (simp add: liftE_bind)
-           apply (subst ccorres_seq_skip'[symmetric])
+           apply (rule ccorres_seq_skip'[THEN iffD1])
            apply (ctac (no_vcg) add: handleRecv_ccorres)
             apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
            apply wp
-          prefer 2
-          \<comment> \<open>SysReply\<close>
-          apply (clarsimp simp: syscall_from_H_def syscall_defs)
-          apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
-          apply (simp add: liftE_bind)
-          apply (subst ccorres_seq_skip'[symmetric])
-          apply (ctac (no_vcg) add: handleReply_ccorres)
-           apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
+          \<comment> \<open>rest of body\<close>
+          apply ceqv
+         apply (rule ccorres_stateAssert)
+         apply (ctac (no_vcg) add: schedule_ccorres)
+         apply (rule ccorres_stateAssert)
+          apply (rule ccorres_stateAssert_after)
+          apply (rule ccorres_add_return2)
+          apply (ctac (no_vcg) add: activateThread_ccorres)
+           apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+           apply (rule allI, rule conseqPre, vcg)
+           apply (clarsimp simp: return_def)
           apply wp
-         \<comment> \<open>SysReplyRecv\<close>
-         apply (clarsimp simp: syscall_from_H_def syscall_defs)
-         apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
-         apply (simp add: liftE_bind bind_assoc)
-         apply (ctac (no_vcg) add: handleReply_ccorres)
-          apply (subst ccorres_seq_skip'[symmetric])
-          apply (ctac (no_vcg) add: handleRecv_ccorres)
-           apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
-          apply wp[1]
-         apply clarsimp
-         apply wp
-         apply (rule_tac Q'="\<lambda>rv s. ct_in_state' simple' s \<and> sch_act_sane s"
-                              in hoare_post_imp)
-          apply (simp add: ct_in_state'_def)
-         apply (wp handleReply_sane)
-        \<comment> \<open>SysYield\<close>
-        apply (clarsimp simp: syscall_from_H_def syscall_defs)
-        apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
-        apply (simp add: liftE_bind)
-        apply (subst ccorres_seq_skip'[symmetric])
-        apply (ctac (no_vcg) add: handleYield_ccorres)
-         apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
-        apply wp
-       \<comment> \<open>SysNBRecv\<close>
-       apply (clarsimp simp: syscall_from_H_def syscall_defs)
-       apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
-       apply (simp add: liftE_bind)
-       apply (subst ccorres_seq_skip'[symmetric])
-       apply (ctac (no_vcg) add: handleRecv_ccorres)
-        apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
-       apply wp
-      \<comment> \<open>rest of body\<close>
-      apply ceqv
-     apply (ctac (no_vcg) add: schedule_ccorres)
-      apply (rule ccorres_stateAssert_after)
-      apply (rule ccorres_add_return2)
-      apply (ctac (no_vcg) add: activateThread_ccorres)
-       apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-       apply (rule allI, rule conseqPre, vcg)
-       apply (clarsimp simp: return_def)
-      apply (wp schedule_invs' schedule_sch_act_wf
-             | strengthen invs_valid_objs_strengthen invs_pspace_aligned' invs_pspace_distinct')+
-     apply (simp
-          | wpc
-          | wp hoare_drop_imp handleReply_sane handleReply_nonz_cap_to_ct schedule_invs'
-          | strengthen ct_active_not_idle'_strengthen invs_valid_objs_strengthen)+
-      apply (rule_tac Q'="\<lambda>rv. invs' and ct_active'" in hoare_post_imp, simp)
-      apply (wp hy_invs')
-     apply (clarsimp simp add: liftE_def)
-     apply wp
-     apply (rule_tac Q'="\<lambda>rv. invs' and ct_active'" in hoare_post_imp, simp)
-     apply (wp hy_invs')
-    apply (clarsimp simp: liftE_def)
-    apply (wp)
-    apply (rule_tac Q'="\<lambda>_. invs'" in hoare_post_imp, simp)
-    apply (wp hw_invs')
-   apply (simp add: guard_is_UNIV_def)
-  apply clarsimp
-  apply (drule active_from_running')
-  apply (frule active_ex_cap')
-   apply (clarsimp simp: invs'_def valid_state'_def)
-  apply (clarsimp simp: simple_sane_strg ct_in_state'_def st_tcb_at'_def obj_at'_def
-                        isReply_def irqInvalid_def Kernel_C.irqInvalid_def)
-  apply (auto simp: syscall_from_H_def Kernel_C.SysSend_def
-              split: option.split_asm)
-  done *)
+         apply (wpsimp wp: schedule_invs' hoare_drop_imp)
+        apply ((wpsimp wp: hy_invs' hoare_drop_imp
+                     simp: handleSend_def handleCall_def stateAssertE_def
+                | wpc)+)[1]
+       apply (simp add: guard_is_UNIV_def)
+      apply (rule_tac Q'="\<lambda>_. invs'" in hoare_post_imp)
+       apply clarsimp
+      apply wpsimp
+     apply (vcg exspec=checkBudgetRestart_modifies)
+    apply wpsimp
+   apply (vcg exspec=updateTimestamp_modifies)
+  apply (clarsimp simp: RISCV64.capRegister_def capRegister_def C_register_defs
+                        Kernel_C.replyRegister_def RISCV64.replyRegister_def cur_tcb'_def)
+  done
 
 lemma ccorres_corres_u:
   "\<lbrakk> ccorres dc xfdc P (Collect P') [] H C; no_fail P H \<rbrakk> \<Longrightarrow>
@@ -505,8 +674,7 @@ lemma no_fail_callKernel:
   done
 
 lemma handleHypervisorEvent_ccorres:
-  "ccorres dc xfdc (invs' and sch_act_simple) UNIV hs
-     (callKernel (HypervisorEvent t)) handleHypervisorEvent_C"
+  "ccorres dc xfdc invs' UNIV hs (callKernel (HypervisorEvent t)) handleHypervisorEvent_C"
   apply (simp add: callKernel_def handleEvent_def handleHypervisorEvent_C_def)
   apply (simp add: liftE_def bind_assoc)
   apply (rule ccorres_guard_imp)
@@ -538,11 +706,9 @@ lemma callKernel_corres_C:
         apply simp
         apply (rule ccorres_guard_imp)
           apply (rule handleInterruptEntry_ccorres)
-         apply (clarsimp simp: all_invs'_def sch_act_simple_def weak_sch_act_wf_def)
-         apply (frule state_relation_sched_act_relation)
-         apply (fastforce intro!: resume_cur_thread_cross)
-        apply simp
-       apply assumption
+         apply (clarsimp simp: all_invs'_def)
+        apply fastforce
+       apply simp
       prefer 2
       apply (rule ccorres_corres_u [rotated], assumption)
       apply simp
@@ -572,14 +738,11 @@ lemma callKernel_corres_C:
    apply (rule ccorres_guard_imp)
      apply (rule ccorres_call)
         apply (rule handleSyscall_ccorres)
-       apply (clarsimp simp: all_invs'_def sch_act_simple_def)+
-    apply (fastforce intro!: resume_cur_thread_cross ct_running_cross)
-   apply fastforce
+       apply (clarsimp simp: all_invs'_def)+
   apply (rule ccorres_corres_u [rotated], assumption)
   apply (rule ccorres_guard_imp)
     apply (rule handleHypervisorEvent_ccorres)
-   apply (clarsimp simp: all_invs'_def sch_act_simple_def)
-   apply (fastforce intro!: resume_cur_thread_cross)
+   apply (clarsimp simp: all_invs'_def)
   apply simp
   done
 
@@ -956,8 +1119,8 @@ lemma do_user_op_corres_C:
 
 lemma check_active_irq_corres_C:
   "corres_underlying rf_sr False True (=)
-             (invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ex_abs valid_state) \<top>
-             (checkActiveIRQ) (checkActiveIRQ_C)"
+     (invs' and ex_abs valid_state) \<top>
+     (checkActiveIRQ) (checkActiveIRQ_C)"
   apply (simp add: checkActiveIRQ_C_def checkActiveIRQ_def getActiveIRQ_C_def)
   apply (rule corres_guard_imp)
     apply (subst bind_assoc[symmetric])

@@ -38,14 +38,17 @@ lemma activateIdle_invs':
   by (simp add: activateIdleThread_def)
 
 lemma activateThread_corres:
- "corres dc (invs and ct_in_state activatable) (invs' and ct_in_state' activatable')
-            activate_thread activateThread"
+ "corres dc
+    (invs and weak_valid_sched_action and ct_in_state activatable) invs'
+    activate_thread activateThread"
   supply subst_all [simp del]
   apply add_cur_tcb'
   apply (simp add: activate_thread_def activateThread_def)
   apply (rule corres_stateAssert_ignore)
    apply (fastforce intro: ct_in_state'_activatable_coerce_concrete)
-  apply (rule corres_guard_imp)
+  apply (rule corres_stateAssert_ignore)
+   apply (fastforce intro: weak_sch_act_wf_cross)
+  apply (rule stronger_corres_guard_imp)
     apply (rule corres_split_eqr[OF getCurThread_corres])
       apply (rule corres_split[OF get_tcb_yield_to_corres])
         apply (rule corres_split[OF corres_when])
@@ -77,10 +80,9 @@ lemma activateThread_corres:
         apply (wpsimp wp: schedContextCompleteYieldTo_invs' hoare_drop_imp)
        apply (wp gts_st_tcb gts_st_tcb' gts_st_tcb_at complete_yield_to_invs
                  get_tcb_obj_ref_wp threadGet_wp)+
-   apply (clarsimp simp: ct_in_state_def tcb_at_invs invs_def valid_state_def valid_pspace_def
-                  elim!: st_tcb_weakenE)
-  apply (fastforce simp: ct_in_state'_def pred_tcb_at'_def obj_at'_def
-                  elim!: pred_tcb'_weakenE)
+   apply (clarsimp simp: ct_in_state_def tcb_at_invs invs_def valid_state_def valid_pspace_def)
+  apply (fastforce dest: ct_in_state'_activatable_coerce_concrete
+                   simp: ct_in_state'_def)
   done
 
 lemma bindNotification_corres:

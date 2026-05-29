@@ -1048,7 +1048,8 @@ where
   | SysYield \<Rightarrow> scast Kernel_C.SysYield
   | SysNBRecv \<Rightarrow> scast Kernel_C.SysNBRecv
   | SysWait \<Rightarrow> scast Kernel_C.SysWait
-  | SysNBWait \<Rightarrow> scast Kernel_C.SysNBWait"
+  | SysNBWait \<Rightarrow> scast Kernel_C.SysNBWait
+  | SysReplyRecv \<Rightarrow> scast Kernel_C.SysReplyRecv"
 
 lemma (in kernel) cmap_relation_cs_atD:
   "\<lbrakk> cmap_relation as cs addr_fun rel; cs (addr_fun x) = Some y; inj addr_fun \<rbrakk> \<Longrightarrow>

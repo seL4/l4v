@@ -6978,8 +6978,8 @@ lemma ep_SendEPState_split:
 
 lemma receiveIPC_ccorres[corres]:
   "ccorres dc xfdc
-     (invs' and st_tcb_at' simple' thread and sch_act_not thread
-      and valid_cap' cap and valid_cap' replyCap and K (isEndpointCap cap))
+     (invs' and sch_act_not thread and valid_cap' cap and valid_cap' replyCap
+      and K (isEndpointCap cap))
      (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>
       \<inter> \<lbrace>ccap_relation cap \<acute>cap\<rbrace>
       \<inter> \<lbrace>\<acute>isBlocking = from_bool isBlocking\<rbrace>
@@ -7554,6 +7554,8 @@ lemma receiveIPC_ccorres[corres]:
    apply clarsimp
    apply (frule (1) ccap_relation_reply_helpers[where cap=replyCap])
    apply fastforce
+  apply (prop_tac "st_tcb_at' active' thread s \<longrightarrow> st_tcb_at' simple' thread s")
+   apply (fastforce elim: pred_tcb'_weakenE)
   by (clarsimp simp: isCap_simps option_to_ctcb_ptr_def option_to_0_def option_to_ptr_def
               split: if_splits option.splits,
       fastforce dest: reply_ko_at_valid_objs_valid_reply'[OF _ invs_valid_objs']
