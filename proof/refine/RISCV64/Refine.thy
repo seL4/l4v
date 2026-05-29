@@ -768,8 +768,7 @@ lemma kernel_corres':
               and valid_domain_list)
              invs'
              (call_kernel event)
-             (do _ \<leftarrow> stateAssert cur_tcb'_asrt [];
-                 _ \<leftarrow> runExceptT $
+             (do _ \<leftarrow> runExceptT $
                       handleEvent event `~catchError~`
                         (\<lambda>_. withoutPreemption $ do
                                _ \<leftarrow> mcsPreemptionPoint;
@@ -797,8 +796,6 @@ lemma kernel_corres':
   apply (rule_tac Q'="ct_running' or ct_idle'" in corres_cross_add_guard)
    apply (simp only: pred_disj_def)
    apply (rule ct_running_or_idle_cross, fastforce+)
-  apply (rule corres_stateAssert_ignore)
-   apply (clarsimp simp: cur_tcb'_asrt_def)
   apply simp
   apply (rule corres_guard_imp)
     apply (rule corres_split)
@@ -845,7 +842,7 @@ lemma kernel_corres':
            apply (rule corres_stateAssert_add_assertion)
             apply (rule corres_guard_imp)
               apply (rule activateThread_corres)
-             apply simp
+             apply fastforce
             apply simp
            apply (clarsimp simp: ct_in_state_def ct_in_state'_def)
            apply (drule (3) st_tcb_at_coerce_concrete[OF _ _ invs_psp_aligned invs_distinct])
@@ -921,9 +918,12 @@ lemma kernel_corres:
               and valid_domain_list)
              invs'
              (call_kernel event) (callKernel event)"
-  unfolding callKernel_def K_bind_def
+  apply add_cur_tcb'
+  unfolding callKernel_def K_bind_apply
   apply (rule corres_cross_over_fastpathKernelAssertions, blast+)
-  apply (rule corres_stateAssert_r)
+  apply (rule corres_stateAssert_ignore, solves simp)+
+  apply (rule corres_stateAssert_ignore)
+   apply (force intro!: weak_sch_act_wf_cross)
   apply (rule corres_guard_imp)
     apply (rule corres_add_noop_lhs2)
     apply (simp only: bind_assoc[symmetric])

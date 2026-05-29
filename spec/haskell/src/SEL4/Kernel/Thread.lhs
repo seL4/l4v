@@ -81,6 +81,7 @@ The "activateThread" function is used to prepare a thread to run. If the thread 
 > activateThread :: Kernel ()
 > activateThread = do
 >         stateAssert ct_activatable'_asrt "`ct_in_state' activatable'`"
+>         stateAssert weak_sch_act_wf_asrt ""
 >         thread <- getCurThread
 >         scPtrOpt <- threadGet tcbYieldTo thread
 >         when (scPtrOpt /= Nothing) $ do

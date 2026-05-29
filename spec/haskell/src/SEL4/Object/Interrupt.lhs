@@ -174,6 +174,7 @@ empty). Otherwise, we handle the interrupt.
 
 > maybeHandleInterrupt :: Bool -> Kernel ()
 > maybeHandleInterrupt inKernel = do
+>     stateAssert weak_sch_act_wf_asrt ""
 >     maybeIRQ <- doMachineOp (getActiveIRQ inKernel)
 >     case maybeIRQ of
 >         Nothing -> handleSpuriousIRQ

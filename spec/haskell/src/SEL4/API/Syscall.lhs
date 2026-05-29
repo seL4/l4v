@@ -204,7 +204,10 @@ The "Recv" system call blocks waiting to receive a message through a specified e
 
 > handleRecv :: Bool -> Bool -> Kernel ()
 > handleRecv isBlocking canReply = do
+>     stateAssert weak_sch_act_wf_asrt ""
+>     stateAssert sch_act_sane_asrt ""
 >     thread <- getCurThread
+>     stateAssert (active_tcb_at'_asrt thread) "the current thread has an `active'` thread state"
 >     epCptr <- asUser thread $ liftM CPtr $ getRegister capRegister
 >     (do
 >         epCap <- capFaultOnFailure epCptr True (lookupCap thread epCptr)
@@ -246,7 +249,9 @@ The following function implements the "Send" and "Call" system calls. It determi
 >     stateAssert valid_idle'_asrt "`valid_idle'`"
 >     stateAssert cur_tcb'_asrt "`cur_tcb'`"
 >     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
+>     stateAssert sch_act_rct'_asrt ""
 >     thread <- withoutPreemption getCurThread
+>     stateAssert (schedulable'_asrt thread) ""
 >     info <- withoutPreemption $ getMessageInfo thread
 >     syscall
 
@@ -297,6 +302,7 @@ While the system call is running, the thread's state is set to "Restart", so any
 
 > lookupReply :: KernelF Fault Capability
 > lookupReply = do
+>     stateAssert cur_tcb'_asrt "`cur_tcb'`"
 >     cref <- withoutFailure $ getCapReg replyRegister
 >     ct <- withoutFailure $ getCurThread
 >     cap <- capFaultOnFailure cref True $ lookupCap ct cref

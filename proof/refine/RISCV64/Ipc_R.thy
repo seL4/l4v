@@ -5119,7 +5119,10 @@ lemma receiveIPC_corres:
   apply (simp add: receive_ipc_def receiveIPC_def)
   apply (case_tac cap, simp_all add: isEndpointCap_def)
   apply (rename_tac epptr badge right)
-  apply (rule corres_stateAssert_assume[rotated], simp)+
+  apply (rule corres_stateAssert_add_assertion[rotated], solves simp)+
+  apply (rule corres_stateAssert_add_assertion[rotated])
+   apply (fastforce dest: st_tcb_at_coerce_concrete
+                    elim: pred_tcb'_weakenE)
   apply (rule corres_assert_gen_asm_cross_forwards)
    apply (cases reply_cap; clarsimp simp: is_reply_cap_def isCap_simps)
   apply (rule stronger_corres_guard_imp)
@@ -6509,9 +6512,7 @@ lemma getBoundNotification_tcb_at'[wp]:
 
 (* t = ksCurThread s *)
 lemma ri_invs' [wp]:
-  "\<lbrace>invs' and st_tcb_at' active' t\<rbrace>
-   receiveIPC t cap isBlocking replyCap
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  "receiveIPC t cap isBlocking replyCap \<lbrace>invs'\<rbrace>"
   supply if_split[split del]
   apply (clarsimp simp: receiveIPC_def
                  split: if_split)

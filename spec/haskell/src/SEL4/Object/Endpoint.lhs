@@ -152,6 +152,7 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >         stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
 >         stateAssert sch_act_wf_asrt "`sch_act_wf (ksSchedulerAction s) s`"
 >         stateAssert valid_idle'_asrt "`valid_idle'`"
+>         stateAssert (active_tcb_at'_asrt thread) "`thread` has an `active'` thread state"
 >         assert (isReplyCap replyCap || isNullCap replyCap) "replyCap must be either a reply cap or a null cap"
 >         replyOpt <- (case replyCap of
 >             ReplyCap r _ -> return (Just r)

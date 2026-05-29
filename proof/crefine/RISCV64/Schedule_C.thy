@@ -127,9 +127,7 @@ lemma switchToThread_ccorres:
   done
 
 lemma activateThread_ccorres:
-  "ccorres dc xfdc
-     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)) UNIV hs
-     activateThread (Call activateThread_'proc)"
+  "ccorres dc xfdc invs' UNIV hs activateThread (Call activateThread_'proc)"
   unfolding activateThread_def
   apply (ccorres_exec_l_pre ccorres_exec_l_pre: getCurThread_sp threadGet_sp)+
   apply cinit'

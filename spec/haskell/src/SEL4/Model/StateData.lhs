@@ -578,6 +578,11 @@ An assert that will say that there is a TCB with active' thread state at the giv
 > active_tcb_at'_asrt :: PPtr TCB -> KernelState -> Bool
 > active_tcb_at'_asrt _ _ = True
 
+An assert that will say that there is a "schedulable'" TCB at the given pointer
+
+> schedulable'_asrt :: PPtr TCB -> KernelState -> Bool
+> schedulable'_asrt _ _ = True
+
 An assert that will say that the current thread is associated with an active scheduling context
 
 > active_sc_tcb_at'_ct_asrt :: KernelState -> Bool
@@ -612,6 +617,11 @@ An assert that will say that sch_act_simple holds
 
 > sch_act_simple_asrt :: KernelState -> Bool
 > sch_act_simple_asrt _ = True
+
+An assert that will say that the scheduler action is ResumeCurrentThread
+
+> sch_act_rct'_asrt :: KernelState -> Bool
+> sch_act_rct'_asrt _ = True
 
 An assert that will say that valid_domain_list' holds
 
