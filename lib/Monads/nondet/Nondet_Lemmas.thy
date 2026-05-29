@@ -166,6 +166,10 @@ lemma liftE_handleE[simp]:
   "(liftE a <handle> b) = liftE a"
   unfolding handleE_def by simp
 
+lemma liftE_case_sum:
+  "liftE f >>= case_sum e g = f >>= g"
+  by (simp add:liftE_def)
+
 lemma alternative_bind:
   "((a \<sqinter> b) >>= c) = ((a >>= c) \<sqinter> (b >>= c))"
   by (fastforce simp add: alternative_def bind_def split_def)
