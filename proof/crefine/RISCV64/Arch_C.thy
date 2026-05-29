@@ -2244,11 +2244,6 @@ lemma injection_handler_liftE:
   "injection_handler a (liftE f) = liftE f"
   by (simp add:injection_handler_def)
 
-
-lemma liftE_case_sum:
-  "liftE f >>= case_sum (throwError \<circ> Inr) g = f >>= g"
-  by (simp add:liftE_def)
-
 lemma framesize_from_H_mask2:
   "framesize_from_H a && mask 2 = framesize_from_H a"
   apply (rule less_mask_eq)
