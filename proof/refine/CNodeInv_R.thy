@@ -362,6 +362,8 @@ locale CNodeInv_R =
     "\<And>acap b. Arch.finaliseCap acap b \<lbrace>valid_irq_states'\<rbrace>"
   assumes cap_relation_trans:
     "\<And>cap cap' cap''. \<lbrakk> cap_relation cap cap'; cap_relation cap cap'' \<rbrakk> \<Longrightarrow> cap' = cap''"
+  assumes getThreadVSpaceRoot_irq_states'[wp]:
+    "\<And>t. getThreadVSpaceRoot t \<lbrace>valid_irq_states'\<rbrace>"
 begin
 
 definition

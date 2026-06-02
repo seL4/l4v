@@ -141,6 +141,8 @@ lemma threadSet_state_hyp_refs_of':
                 simp: gen_objBits_simps obj_at'_def state_hyp_refs_of'_def)
   done
 
+(* FIXME arch-split: if this lemma statement can be phrased generically by using tcb_hyp_refs',
+   then it can become an assumption, and make threadSet_tcbPriority_if_live_then_nonz_cap generic *)
 lemma threadSet_iflive'T:
   assumes x: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
   shows
@@ -183,6 +185,7 @@ lemma capAligned_zobj_refs'_capRange[TcbAcc_R_assms]:
   "capAligned c \<Longrightarrow> zobj_refs' c \<subseteq> capRange c"
   by (cases c, simp_all add: capRange_def capAligned_def is_aligned_no_overflow)
 
+(* interface lemma, but can't be done via locale *)
 lemma asUser_valid_tcbs'[wp]:
   "asUser t f \<lbrace>valid_tcbs'\<rbrace>"
   apply (simp add: asUser_def split_def)
@@ -320,43 +323,43 @@ lemma tcb_hyp_refs'_valid_arch_tcb'_eq[TcbAcc_R_2_assms]:
 lemma threadSet_invs_trivialT[TcbAcc_R_2_assms]:
   assumes
     "\<forall>tcb. \<forall>(getF,setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
-    "\<forall>tcb. tcbState (F tcb) = tcbState tcb"
+    "\<forall>tcb. tcbState (F tcb) = tcbState tcb \<and> tcbDomain (F tcb) = tcbDomain tcb"
     "\<forall>tcb. is_aligned (tcbIPCBuffer tcb) msg_align_bits
            \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits"
     "\<forall>tcb. tcbBoundNotification (F tcb) = tcbBoundNotification tcb"
     "\<forall>tcb. tcbSchedPrev (F tcb) = tcbSchedPrev tcb"
     "\<forall>tcb. tcbSchedNext (F tcb) = tcbSchedNext tcb"
     "\<forall>tcb. tcbQueued (F tcb) = tcbQueued tcb"
-    "\<forall>tcb. tcbDomain (F tcb) = tcbDomain tcb"
-    "\<forall>tcb. tcbPriority (F tcb) = tcbPriority tcb"
+    "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
     "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
     "\<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0"
     "\<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)"
   shows "threadSet F t \<lbrace>invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def split del: if_split)
+  supply tcb_hyp_refs_of'_simps[simp del]
+  apply (simp add: invs'_def valid_state'_def)
   apply (wp threadSet_valid_pspace'T
-            threadSet_sch_actT_P[where P=False, simplified]
-            threadSet_state_refs_of'T[where f'=id]
-            threadSet_state_hyp_refs_of'
             threadSet_iflive'T
             threadSet_ifunsafe'T
-            threadSet_idle'T
             threadSet_global_refsT
-            irqs_masked_lift
             valid_irq_node_lift
             valid_irq_handlers_lift''
             threadSet_ctes_ofT
-            threadSet_not_inQ
-            threadSet_ct_idle_or_in_cur_domain'
             threadSet_valid_dom_schedule'
-            threadSet_cur
             untyped_ranges_zero_lift
             sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
-            threadSet_tcbQueued
-            threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of valid_bitmaps_lift
-         | clarsimp simp: assms cteCaps_of_def valid_arch_tcb'_def | rule refl)+
-  apply (clarsimp simp: o_def)
-  by (auto simp: assms obj_at'_def)
+            threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of
+            threadSet_sch_actT_P[where P=False, simplified]
+            threadSet_state_refs_of'T[where f'=id]
+            threadSet_state_hyp_refs_of'
+            threadSet_idle'T
+            threadSet_not_inQ
+            threadSet_ct_idle_or_in_cur_domain'
+            threadSet_cur
+            valid_bitmaps_lift
+         | clarsimp simp: assms cteCaps_of_def tcb_hyp_refs'_valid_arch_tcb'_eq[where F=F] | rule refl)+
+  apply (clarsimp simp: o_def tcb_hyp_refs_of'_simps)
+  apply (auto simp: assms obj_at'_def)
+  done
 
 (* interface lemma, but can't be done via locale *)
 lemma asUser_corres':
@@ -641,10 +644,6 @@ lemma UserContext_fold:
   apply (metis user_context.sel)
   done
 
-lemma cte_at_tcb_at_32': (* FIXME arch-split: can't be generic with this 32 *)
-  "tcb_at' t s \<Longrightarrow> cte_at' (t + 32) s"
-  by (simp add: cte_at'_obj_at' tcb_cte_cases_def cteSizeBits_def)
-
 lemmas valid_ipc_buffer_cap_simps = valid_ipc_buffer_cap_def [split_simps cap.split arch_cap.split]
 
 lemma lookupIPCBuffer_corres'[TcbAcc_R_2_assms]:
@@ -704,6 +703,7 @@ crunch rescheduleRequired, tcbSchedEnqueue
   (simp: unless_def crunch_simps wp: threadSet_state_hyp_refs_of' ignore: threadSet)
 
 lemmas [TcbAcc_R_2_assms] =
+  getThreadBufferSlot_inv
   lookupIPCBuffer_inv
   rescheduleRequired_hyp_refs_of'
   tcbSchedEnqueue_hyp_refs_of'
@@ -938,6 +938,7 @@ arch_requalify_facts
   asUser_valid_pspace'
   asUser_st_hyp_refs_of'
   asUser_iflive'
+  asUser_valid_tcbs'
 
 lemmas [wp] =
   asUser_valid_objs
@@ -946,5 +947,6 @@ lemmas [wp] =
   asUser_valid_pspace'
   asUser_st_hyp_refs_of'
   asUser_iflive'
+  asUser_valid_tcbs'
 
 end

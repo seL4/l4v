@@ -968,9 +968,9 @@ lemmas threadSet_typ_at_lifts[wp] = gen_typ_at_lifts[OF threadSet_typ_at']
 
 crunch threadSet
   for irq_states'[wp]: valid_irq_states'
-
-crunch threadSet
-  for pspace_domain_valid[wp]: "pspace_domain_valid"
+  and pspace_domain_valid[wp]: "pspace_domain_valid"
+  and irqs_masked'[wp]: "irqs_masked'"
+  (rule: irqs_masked_lift)
 
 lemma threadSet_obj_at'_really_strongest:
   "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> obj_at' (\<lambda>obj. if t = t' then P (f obj) else P obj)
@@ -2113,16 +2113,18 @@ locale TcbAcc_R_2 = TcbAcc_R +
                (asUser t (setRegister r v))"
   assumes threadSet_invs_trivialT:
     "\<And>F.
-     \<lbrakk>\<forall>tcb. \<forall>(getF, setF)\<in>ran tcb_cte_cases. getF (F tcb) = getF tcb; \<forall>tcb. tcbState (F tcb) = tcbState tcb;
-      \<forall>tcb. is_aligned (tcbIPCBuffer tcb) msg_align_bits \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits;
+     \<lbrakk>\<forall>tcb. \<forall>(getF, setF)\<in>ran tcb_cte_cases. getF (F tcb) = getF tcb;
+      \<forall>tcb. tcbState (F tcb) = tcbState tcb \<and> tcbDomain (F tcb) = tcbDomain tcb;
+      \<forall>tcb. is_aligned (tcbIPCBuffer tcb) msg_align_bits
+            \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits;
       \<forall>tcb. tcbBoundNotification (F tcb) = tcbBoundNotification tcb;
       \<forall>tcb. tcbSchedPrev (F tcb) = tcbSchedPrev tcb; \<forall>tcb. tcbSchedNext (F tcb) = tcbSchedNext tcb;
-      \<forall>tcb. tcbQueued (F tcb) = tcbQueued tcb; \<forall>tcb. tcbDomain (F tcb) = tcbDomain tcb;
-      \<forall>tcb. tcbPriority (F tcb) = tcbPriority tcb;
+      \<forall>tcb. tcbQueued (F tcb) = tcbQueued tcb;
+      \<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority;
       \<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority;
       \<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0;
-      \<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)\<rbrakk>
-     \<Longrightarrow> threadSet F t \<lbrace>invs'\<rbrace>"
+      \<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)\<rbrakk> \<Longrightarrow>
+     threadSet F t \<lbrace>invs'\<rbrace>"
   assumes tcb_hyp_refs'_valid_arch_tcb'_eq:
     "\<And>F tcb s.
      tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)
@@ -2152,6 +2154,8 @@ locale TcbAcc_R_2 = TcbAcc_R +
             (tcb_at t and pspace_aligned and pspace_distinct) \<top>
             (thread_get (arch_tcb_get_registers \<circ> tcb_arch) t)
             (asUser t (mapM getRegister msgRegisters))"
+  assumes getThreadBufferSlot_inv[wp]:
+    "\<And>t. getThreadBufferSlot t \<lbrace>P\<rbrace>"
 begin
 
 lemma setBoundNotification_state_refs_of'[wp]:

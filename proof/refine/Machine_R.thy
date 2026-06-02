@@ -39,5 +39,11 @@ locale Machine_R =
      irq_state_independent_H P \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv. P\<rbrace>"
   assumes setIRQState_irq_states'[wp]:
     "\<And>state irq. setIRQState state irq \<lbrace>valid_irq_states'\<rbrace>"
+  assumes frameRegisters_def':
+    "frameRegisters = MachineExports.frameRegisters"
+  assumes gpRegisters_def':
+    "gpRegisters = MachineExports.gpRegisters"
+  assumes tlsBaseRegister_def':
+    "tlsBaseRegister = MachineExports.tlsBaseRegister"
 
 end
