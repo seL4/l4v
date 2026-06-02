@@ -59,42 +59,54 @@ lemma pptr_base_num:
   "pptr_base = 0xFFFFFFC000000000"
   by (simp add: pptr_base_def pptrBase_def canonical_bit_def)
 
-(* IRQ nodes occupy 11 bits of address space in this RISCV example state:
-   6 for irq number, 5 for cte_level_bits. *)
+(* Depends on irq_len_val, but needs cte_level_bits. If irq_len is so large that this is not true,
+   other things will have broken before here, so using _val is safe at this point. *)
+lemma irq_cte_len_leq_word:
+  "irq_len + cte_level_bits < LENGTH(machine_word_len)"
+  by (simp add: irq_len_val cte_level_bits_def)
+
+(* IRQ nodes occupy (irq_len + cte_level_bits) bits of address space in this RISCV example state. *)
 lemma init_irq_ptrs_ineqs:
   "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) \<ge> init_irq_node_ptr"
   "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) + mask cte_level_bits
-                \<le> init_irq_node_ptr + mask 11"
+                \<le> init_irq_node_ptr + mask (irq_len + cte_level_bits)"
   "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits)
-                \<le> init_irq_node_ptr + mask 11"
+                \<le> init_irq_node_ptr + mask (irq_len + cte_level_bits)"
 proof -
-  have P: "ucast irq < (2 ^ (11 - cte_level_bits) :: machine_word)"
-    apply (rule order_le_less_trans[OF
-        ucast_le_ucast[where 'a=6 and 'b=64, simplified, THEN iffD2, OF word_n1_ge]])
-    apply (simp add: cte_level_bits_def minus_one_norm)
+  have [simplified, simp]:
+    "unat (mask (irq_len + cte_level_bits) :: machine_word) + unat init_irq_node_ptr
+     < 2 ^ LENGTH(machine_word_len)"
+    apply (simp only: add.commute)
+    apply (rule is_aligned_mask_offset_unat, rule is_aligned_init_irq_cte)
+    apply (simp add: mask_def add.commute)
     done
-  show "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) \<ge> init_irq_node_ptr"
-    apply (rule is_aligned_no_wrap'[where sz=11])
-     apply (simp add: is_aligned_def init_irq_node_ptr_def pptr_base_num)
-    apply (rule shiftl_less_t2n[OF P])
-    apply simp
+  show "init_irq_node_ptr + (ucast irq << cte_level_bits) \<ge> init_irq_node_ptr"
+    apply (rule is_aligned_no_wrap'[where sz="irq_len + cte_level_bits"])
+     apply (rule is_aligned_init_irq_cte)
+    apply (rule shiftl_less_t2n)
+     apply (simp add: ucast_irq_bounded_machine_word)
+    apply (rule irq_cte_len_leq_word)
     done
-  show Q: "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) + mask cte_level_bits
-                \<le> init_irq_node_ptr + mask 11"
-    apply (simp only: add_diff_eq[symmetric] add.assoc)
+  show Q: "init_irq_node_ptr + (ucast irq << cte_level_bits) + mask cte_level_bits
+                \<le> init_irq_node_ptr + mask (irq_len + cte_level_bits)"
+    apply (simp only: add.assoc)
     apply (rule word_add_le_mono2)
      apply (simp only: trans [OF shiftl_t2n mult.commute] mask_def mult_1)
-     apply (rule nasty_split_lt[OF P])
-      apply (auto simp: cte_level_bits_def init_irq_node_ptr_def mask_def pptr_base_num)
+     apply (rule nasty_split_lt)
+       apply (simp add: ucast_irq_bounded_machine_word)
+      apply simp
+     apply (rule irq_cte_len_leq_word)
+    apply simp
     done
-  show "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits)
-                \<le> init_irq_node_ptr + mask 11"
+  show "init_irq_node_ptr + (ucast irq << cte_level_bits)
+                \<le> init_irq_node_ptr + mask (irq_len + cte_level_bits)"
     apply (simp only: add_diff_eq[symmetric] mask_def mult_1 shiftl_t2n mult.commute)
     apply (rule word_add_le_mono2)
      apply (rule word_le_minus_one_leq)
-     apply (rule shiftl_less_t2n[OF P, simplified shiftl_t2n mult.commute])
-     apply simp
-    apply (simp add: cte_level_bits_def init_irq_node_ptr_def pptr_base_num)
+     apply (rule shiftl_less_t2n[simplified shiftl_t2n mult.commute])
+      apply (simp add: ucast_irq_bounded_machine_word)
+     apply (rule irq_cte_len_leq_word)
+    apply (simp flip: mask_2pm1)
     done
 qed
 
@@ -505,20 +517,7 @@ lemma irq_node_in_kernel_window_init_arch_state':
      m \<le> mask (size (irq::irq)) << cte_level_bits\<rbrakk>
    \<Longrightarrow> x \<in> kernel_window_2 (riscv_kernel_vspace init_arch_state)"
   apply (clarsimp simp: kernel_window_def init_vspace_uses_def init_arch_state_def)
-  apply (rule conjI)
-   apply (clarsimp simp: state_defs)
-   apply (rule ccontr, simp add:not_le)
-   apply (drule(1) le_less_trans)
-   apply (cut_tac is_aligned_no_wrap'[where ptr=pptr_base
-                                      and off="0x3000 + m"
-                                      and sz=canonical_bit, simplified])
-     apply (simp add: add_ac)
-     apply (auto simp: pptr_base_kernel_elf_base irq_node_pptr_base_kernel_elf_base)[1]
-    apply (simp add: pptr_base_num canonical_bit_def is_aligned_def)
-   apply (simp add: pptr_base_num cte_level_bits_def canonical_bit_def mask_def word_size)
-   apply unat_arith
-  apply clarsimp
-  apply (thin_tac "kernel_elf_base \<le> x \<longrightarrow> P" for x P)
+  apply (subgoal_tac "pptr_base \<le> x \<and> x < pptr_base + 2 ^ kernel_window_bits", simp)
   apply (simp add: cte_level_bits_def canonical_bit_def mask_def init_irq_node_ptr_def
                    pptr_base_num word_size kernel_window_bits_def)
   apply unat_arith

@@ -25,10 +25,17 @@ section \<open>Example\<close>
 
 consts s0_context :: user_context
 
-(* define the irqs to come regularly every 10 *)
+definition timer_irq :: "'a::numeral" where
+  "timer_irq \<equiv> 1" (* not equal to irqInvalid and \<le> maxIRQ, otherwise arbitrary *)
 
+lemma timer_irq_le_maxIRQ:
+  "(timer_irq::irq) \<le> Kernel_Config.maxIRQ"
+  unfolding Kernel_Config.maxIRQ_def timer_irq_def
+  by simp
+
+(* define the irqs to come regularly every 10 *)
 axiomatization where
-  irq_oracle_def: "RISCV64.irq_oracle \<equiv> \<lambda>pos. if pos mod 10 = 0 then 10 else 0"
+  irq_oracle_def: "RISCV64.irq_oracle \<equiv> \<lambda>pos. if pos mod 10 = 0 then timer_irq else 0"
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
@@ -222,8 +229,6 @@ definition "irq_cnode_ptr = pptr_base + 0x28000"
 
 definition "shared_page_ptr_virt = pptr_base + 0x200000"
 definition "shared_page_ptr_phys = addrFromPPtr shared_page_ptr_virt"
-
-definition "timer_irq \<equiv> 10" (* not sure exactly how this fits in *)
 
 definition "Low_mcp \<equiv> 5 :: priority"
 definition "Low_prio \<equiv> 5 :: priority"
@@ -631,7 +636,7 @@ definition
   "shared_page \<equiv> ArchObj (DataPage False RISCVLargePage)"
 
 definition kh0 :: kheap where
-  "kh0 \<equiv> (\<lambda>x. if \<exists>irq :: irq. init_irq_node_ptr + (ucast irq << 5) = x
+  "kh0 \<equiv> (\<lambda>x. if \<exists>irq :: irq. init_irq_node_ptr + (ucast irq << cte_level_bits) = x
                then Some (CNode 0 (empty_cnode 0))
                else None)
          (Low_cnode_ptr  \<mapsto> Low_cnode,
@@ -651,67 +656,68 @@ definition kh0 :: kheap where
           shared_page_ptr_virt \<mapsto> shared_page,
           riscv_global_pt_ptr \<mapsto> init_global_pt)"
 
-lemma irq_node_offs_min:
-  "init_irq_node_ptr \<le> init_irq_node_ptr + (ucast (irq :: irq) << 5)"
-  apply (rule_tac sz=59 in machine_word_plus_mono_right_split)
-   apply (simp add: unat_word_ariths mask_def shiftl_t2n s0_ptr_defs)
-   apply (cut_tac x=irq and 'a=64 in ucast_less)
-    apply simp
-   apply (simp add: word_less_nat_alt)
-  apply (simp add: word_bits_def)
-  done
+definition
+  "irq_node_size \<equiv> 2^(irq_len + cte_level_bits)"
+
+lemma init_irq_node_ptr_plus_size_neg_mask[simp]:
+  "init_irq_node_ptr + irq_node_size && ~~ mask (irq_len + cte_level_bits) =
+   init_irq_node_ptr + irq_node_size"
+  by (simp add: s0_ptr_defs irq_node_size_def irq_len_val cte_level_bits_def mask_def)
 
 lemma irq_node_offs_max:
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) < init_irq_node_ptr + 0x7E1"
-  apply (simp add: s0_ptr_defs shiftl_t2n)
-  apply (cut_tac x=irq and 'a=64 in ucast_less)
+  "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) < init_irq_node_ptr + irq_node_size"
+  apply (simp add: s0_ptr_defs cte_level_bits_def shiftl_t2n)
+  apply (cut_tac x=irq and 'a=machine_word_len in ucast_less)
    apply simp
-  apply (simp add: word_less_nat_alt unat_word_ariths)
+  apply (simp add: word_less_nat_alt unat_word_ariths
+                   irq_node_size_def cte_level_bits_def irq_len_val)
   done
 
-definition irq_node_offs_range where
-  "irq_node_offs_range \<equiv> {x. init_irq_node_ptr \<le> x \<and> x < init_irq_node_ptr + 0x7E1}
-                       \<inter> {x. is_aligned x 5}"
+definition irq_node_offs_range :: "obj_ref set" where
+  "irq_node_offs_range \<equiv> {x. init_irq_node_ptr \<le> x \<and> x < init_irq_node_ptr + irq_node_size} \<inter>
+                         {x. is_aligned x cte_level_bits}"
+
+declare is_aligned_init_irq_cte[simp]
+
+lemma is_aligned_init_irq_cte_level_bits[simp]:
+  "is_aligned init_irq_node_ptr cte_level_bits"
+  by (rule is_aligned_weaken, rule is_aligned_init_irq_cte, simp)
 
 lemma irq_node_offs_in_range:
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<in> irq_node_offs_range"
-  apply (clarsimp simp: irq_node_offs_min irq_node_offs_max irq_node_offs_range_def)
+  "init_irq_node_ptr + (ucast (irq:: irq) << cte_level_bits) \<in> irq_node_offs_range"
+  apply (clarsimp simp: irq_node_offs_max init_irq_ptrs_ineqs irq_node_offs_range_def)
   apply (rule is_aligned_add[OF _ is_aligned_shift])
-  apply (simp add: is_aligned_def s0_ptr_defs)
+  apply simp
   done
 
 lemma irq_node_offs_range_correct:
   "x \<in> irq_node_offs_range
-   \<Longrightarrow> \<exists>irq. x = init_irq_node_ptr + (ucast (irq:: irq) << 5)"
-  apply (clarsimp simp: irq_node_offs_min irq_node_offs_max irq_node_offs_range_def s0_ptr_defs)
-  apply (rule_tac x="ucast ((x - 0xFFFFFFC000003000) >> 5)" in exI)
-  apply (clarsimp simp: ucast_ucast_mask)
+   \<Longrightarrow> \<exists>irq. x = init_irq_node_ptr + (ucast (irq:: irq) << cte_level_bits)"
+  unfolding irq_node_offs_range_def
+  apply clarsimp
+  apply (rule_tac x="ucast ((x - init_irq_node_ptr) >> cte_level_bits)" in exI)
+  apply (simp add: ucast_ucast_mask)
   apply (subst aligned_shiftr_mask_shiftl)
    apply (rule aligned_sub_aligned)
      apply assumption
-    apply (simp add: is_aligned_def)
-   apply simp
-  apply simp
-  apply (rule_tac n=11 in mask_eqI)
+    apply (simp add: is_aligned_def s0_ptr_defs cte_level_bits_def)
+   apply (simp add: cte_level_bits_def)
+  apply (rule_tac n="irq_len + cte_level_bits" in mask_eqI)
    apply (subst mask_add_aligned)
-    apply (simp add: is_aligned_def)
-   apply (simp add: mask_twice)
+    apply (simp add: is_aligned_def s0_ptr_defs cte_level_bits_def irq_len_val)
+   apply (simp add: mask_twice irq_len_val cte_level_bits_def)
    apply (simp add: diff_conv_add_uminus del: add_uminus_conv_diff)
    apply (subst add.commute[symmetric])
    apply (subst mask_add_aligned)
-    apply (simp add: is_aligned_def)
+    apply (simp add: is_aligned_def s0_ptr_defs cte_level_bits_def irq_len_val)
    apply simp
   apply (simp add: diff_conv_add_uminus del: add_uminus_conv_diff)
   apply (subst add_mask_lower_bits)
-    apply (simp add: is_aligned_def)
-   apply clarsimp
-  apply (cut_tac x=x and y="0xFFFFFFC0000037E0" and n=14 in neg_mask_mono_le)
-   apply (force dest: word_less_sub_1)
-  apply (drule_tac n=11 in aligned_le_sharp)
-   apply (simp add: is_aligned_def)
-  apply (simp add: mask_def is_aligned_mask)
-  apply word_bitwise
-  apply fastforce
+    apply (simp add: is_aligned_def s0_ptr_defs cte_level_bits_def irq_len_val)
+   apply (clarsimp simp: cte_level_bits_def irq_len_val)
+  apply (erule (1) aligned_intvl_neg_mask_start)
+   apply (simp add: is_aligned_def s0_ptr_defs cte_level_bits_def irq_len_val)
+  apply (simp add: irq_node_size_def cte_level_bits_def irq_len_val)
   done
 
 lemma irq_node_offs_range_distinct[simp]:
@@ -731,25 +737,26 @@ lemma irq_node_offs_range_distinct[simp]:
   "idle_tcb_ptr \<notin> irq_node_offs_range"
   "riscv_global_pt_ptr \<notin> irq_node_offs_range"
   "shared_page_ptr_virt \<notin> irq_node_offs_range"
-  by(simp add:irq_node_offs_range_def s0_ptr_defs)+
+  by (simp add: irq_node_offs_range_def irq_node_size_def irq_len_val cte_level_bits_def
+                s0_ptr_defs)+
 
 lemma irq_node_offs_distinct[simp]:
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> Low_cnode_ptr"
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> High_cnode_ptr"
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> Low_pool_ptr"
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> High_pool_ptr"
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> Silc_cnode_ptr"
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> ntfn_ptr"
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> irq_cnode_ptr"
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> Low_pd_ptr"
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> High_pd_ptr"
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> Low_pt_ptr"
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> High_pt_ptr"
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> Low_tcb_ptr"
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> High_tcb_ptr"
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> idle_tcb_ptr"
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> riscv_global_pt_ptr"
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> shared_page_ptr_virt"
+  "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> Low_cnode_ptr"
+  "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> High_cnode_ptr"
+  "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> Low_pool_ptr"
+  "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> High_pool_ptr"
+  "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> Silc_cnode_ptr"
+  "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> ntfn_ptr"
+  "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> irq_cnode_ptr"
+  "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> Low_pd_ptr"
+  "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> High_pd_ptr"
+  "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> Low_pt_ptr"
+  "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> High_pt_ptr"
+  "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> Low_tcb_ptr"
+  "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> High_tcb_ptr"
+  "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> idle_tcb_ptr"
+  "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> riscv_global_pt_ptr"
+  "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> shared_page_ptr_virt"
   by (simp add:not_inD[symmetric, OF _ irq_node_offs_in_range])+
 
 lemma kh0_dom:
@@ -831,7 +838,7 @@ definition s0_internal :: "det_ext state" where
      domain_time = 5,
      ready_queues = (const (const [])),
      machine_state = machine_state0,
-     interrupt_irq_node = (\<lambda>irq. init_irq_node_ptr + (ucast irq << 5)),
+     interrupt_irq_node = (\<lambda>irq. init_irq_node_ptr + (ucast irq << cte_level_bits)),
      interrupt_states = (\<lambda>_. irq_state.IRQInactive) (timer_irq := irq_state.IRQTimer),
      arch_state = arch_state0,
      exst = exst0
@@ -1110,7 +1117,7 @@ lemma Sys1_pas_refined:
   apply (intro conjI)
        apply (simp add: Sys1_pas_wellformed)
       apply (clarsimp simp: irq_map_wellformed_aux_def s0_internal_def Sys1AgentMap_def Sys1PAS_def)
-      apply (clarsimp simp: s0_ptr_defs ptr_range_def)
+      apply (clarsimp simp: s0_ptr_defs ptr_range_def pageBits_def ptTranslationBits_def cte_level_bits_def)
       apply word_bitwise
      apply (clarsimp simp: tcb_domain_map_wellformed_aux_def minBound_word High_domain_def Low_domain_def
                            Sys1PAS_def Sys1AgentMap_def default_domain_def)
@@ -1208,23 +1215,24 @@ lemma silc_inv_s0:
                                    cap_points_to_label_def split: if_split_asm)+)[8]
     apply (clarsimp simp: intra_label_cap_def cap_points_to_label_def)
     apply (drule cte_wp_at_caps_of_state' s0_caps_of_state)+
-    apply ((erule disjE |
-          clarsimp simp: Sys1PAS_def Sys1AgentMap_simps
-              the_nat_to_bl_def nat_to_bl_def ctes_wp_at_def cte_wp_at_cases
-              s0_internal_def kh0_def kh0_obj_def Silc_caps_well_formed obj_refs_def
-         | simp add: Silc_caps_def)+)[1]
-  apply (clarsimp simp: Sys1PAS_def Sys1AgentMap_def)
+    subgoal
+      by (erule disjE
+          | clarsimp simp: Sys1PAS_def Sys1AgentMap_simps
+                           the_nat_to_bl_def nat_to_bl_def ctes_wp_at_def cte_wp_at_cases
+                           s0_internal_def kh0_def kh0_obj_def Silc_caps_well_formed obj_refs_def
+          | simp add: Silc_caps_def)+
+   apply (clarsimp simp: Sys1PAS_def Sys1AgentMap_def)
   apply (intro conjI)
   apply (clarsimp simp: all_children_def s0_internal_def silc_dom_equiv_def equiv_for_refl)
   apply (clarsimp simp: all_children_def s0_internal_def silc_dom_equiv_def equiv_for_refl)
   apply (clarsimp simp: Invariants_AI.cte_wp_at_caps_of_state )
   by (auto simp:is_transferable.simps dest:s0_caps_of_state)
 
-
 lemma only_timer_irq_s0:
   "only_timer_irq timer_irq s0_internal"
   apply (clarsimp simp: only_timer_irq_def s0_internal_def irq_is_recurring_def is_irq_at_def
-                        irq_at_def Let_def irq_oracle_def machine_state0_def timer_irq_def)
+                        irq_at_def Let_def irq_oracle_def machine_state0_def timer_irq_def
+                        irqInvalid_def)
   apply presburger
   done
 
@@ -1344,15 +1352,12 @@ lemma pspace_distinct_s0:
    apply clarsimp
    apply (clarsimp simp: s0_ptr_defs cte_level_bits_def)
    apply word_bitwise
-   apply auto[1]
-  apply (elim disjE)
-  (* slow *)
-  by (simp | clarsimp simp: kh0_obj_def cte_level_bits_def s0_ptr_defs pte_bits_def bit_simps
-           | fastforce
-           | clarsimp simp: irq_node_offs_range_def s0_ptr_defs,
-             drule_tac x="0x1F" in word_plus_strict_mono_right, simp, simp add: add.commute,
-             drule(1) notE[rotated, OF less_trans, OF _ _ leD, rotated 2]
-           | drule(1) notE[rotated, OF le_less_trans, OF _ _ leD, rotated 2], simp, assumption)+
+   subgoal by auto
+  (* slow, 289 subgoals after disjE *)
+  by (elim disjE,
+      simp_all add: kh0_obj_def cte_level_bits_def s0_ptr_defs pte_bits_def bit_simps;
+      (clarsimp simp: s0_ptr_defs irq_node_offs_range_def irq_node_size_def irq_len_val
+                      cte_level_bits_def, unat_arith))
 
 lemma valid_pspace_s0[simp]:
   "valid_pspace s0_internal"
@@ -1500,20 +1505,16 @@ lemma valid_irq_node_s0[simp]:
    apply (rule injI)
    apply simp
    apply (rule ccontr)
-   apply (rule_tac bnd="0x40" and 'a=64 in shift_distinct_helper[rotated 3])
+   apply (rule_tac bnd="2^irq_len" and 'a=machine_word_len in shift_distinct_helper[rotated 3])
         apply assumption
-       apply simp
-      apply simp
-     apply (rule ucast_less[where 'b=6, simplified])
-     apply simp
-    apply (rule ucast_less[where 'b=6, simplified])
-    apply simp
+       apply (simp add: cte_level_bits_def)
+      (* safe when irq_len < word_size - cte_level_bits *)
+      apply (simp add: cte_level_bits_def irq_len_val)
+     apply (simp add: ucast_irq_bounded_machine_word)
+    apply (simp add: ucast_irq_bounded_machine_word)
    apply (rule notI)
-   apply (drule ucast_up_inj)
-    apply simp
-   apply simp
-  apply (clarsimp simp: obj_at_def s0_internal_def)
-  apply (force simp: kh0_def is_cap_table_def well_formed_cnode_n_def dom_empty_cnode)
+   apply (simp add: ucast_up_inj)
+  apply (force simp: obj_at_def s0_internal_def kh0_def is_cap_table_def well_formed_cnode_n_def)
   done
 
 lemma valid_irq_handlers_s0[simp]:
