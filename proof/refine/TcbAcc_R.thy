@@ -960,11 +960,11 @@ crunch threadSet
 crunch threadSet
   for ksArchState[wp]: "\<lambda>s. P (ksArchState s)"
 
-lemma threadSet_typ_at'[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> threadSet t F \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  by (simp add: threadSet_def, wp setObject_typ_at')
+crunch threadSet
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
-lemmas threadSet_typ_at_lifts[wp] = gen_typ_at_lifts[OF threadSet_typ_at']
+global_interpretation threadSet: gen_typ_at_props' _ "threadSet tptr f"
+  by typ_at_props'
 
 crunch threadSet
   for irq_states'[wp]: valid_irq_states'
@@ -1349,11 +1349,12 @@ proof -
     done
 qed
 
-lemma asUser_typ_at' [wp]:
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> asUser t' f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  by (simp add: asUser_def bind_assoc split_def, wp select_f_inv)
+crunch asUser
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  (wp: crunch_wps)
 
-lemmas asUser_typ_ats[wp] = gen_typ_at_lifts[OF asUser_typ_at']
+global_interpretation asUser: gen_typ_at_props' _ "asUser tptr f"
+  by typ_at_props'
 
 lemma asUser_nosch[wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> asUser t m \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
@@ -1643,16 +1644,14 @@ lemma removeFromBitmap_corres_noop:
 
 end (* TcbAcc_R *)
 
-crunch addToBitmap
+crunch addToBitmap, removeFromBitmap
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: hoare_drop_imps setCTE_typ_at')
 
-crunch removeFromBitmap
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: hoare_drop_imps setCTE_typ_at')
+global_interpretation addToBitmap: gen_typ_at_props' _ "addToBitmap tdom prio"
+  by typ_at_props'
 
-lemmas addToBitmap_typ_ats [wp] = gen_typ_at_lifts[OF addToBitmap_typ_at']
-lemmas removeFromBitmap_typ_ats [wp] = gen_typ_at_lifts[OF removeFromBitmap_typ_at']
+global_interpretation removeFromBitmap: gen_typ_at_props' _ "removeFromBitmap tdom prio"
+  by typ_at_props'
 
 lemma pspace_relation_tcb_domain_priority:
   "\<lbrakk>pspace_relation (kheap s) (ksPSpace s'); kheap s t = Some (TCB tcb);
@@ -2903,7 +2902,21 @@ lemma setBoundNotification_corres:
 end (* TcbAcc_R_2 *)
 
 crunch rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
-  for tcb'[wp]: "tcb_at' addr"
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
+  (wp: crunch_wps)
+
+global_interpretation rescheduleRequired: gen_typ_at_props' _ "rescheduleRequired"
+  by typ_at_props'
+
+global_interpretation tcbSchedDequeue: gen_typ_at_props' _ "tcbSchedDequeue thread"
+  by typ_at_props'
+
+global_interpretation setThreadState: gen_typ_at_props' _ "setThreadState st p"
+  by typ_at_props'
+
+global_interpretation setBoundNotification: gen_typ_at_props' _ "setBoundNotification v p"
+  by typ_at_props'
 
 lemma tcbSchedNext_update_valid_objs'[wp]:
   "\<lbrace>valid_objs' and valid_bound_tcb' ptrOpt\<rbrace>
@@ -3802,13 +3815,6 @@ lemma sbn_bound_tcb_at':
    apply (wp threadSet_obj_at'_really_strongest
                | simp add: pred_tcb_at'_def)+
   done
-
-context TcbAcc_R_2 begin
-
-lemmas setThreadState_typ_ats[wp] = gen_typ_at_lifts[OF setThreadState_typ_at']
-lemmas setBoundNotification_typ_ats[wp] = gen_typ_at_lifts[OF setBoundNotification_typ_at']
-
-end (* TcbAcc_R_2 *)
 
 crunch setThreadState, setBoundNotification
   for aligned'[wp]: pspace_aligned'

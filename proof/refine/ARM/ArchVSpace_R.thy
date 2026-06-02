@@ -1086,23 +1086,52 @@ proof -
     done
 qed
 
-crunch armv_contextSwitch
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (simp: crunch_simps)
+crunch unmapPageTable, unmapPage, setVMRoot, setMessageInfo, setMRs, performPageTableInvocation,
+       performPageDirectoryInvocation, performASIDPoolInvocation, performPageInvocation
+  for typ_at' [wp]: "\<lambda>s. P (typ_at' T p s)"
+  (wp: crunch_wps getASID_wp simp: crunch_simps)
 
-crunch setVMRoot
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (simp: crunch_simps)
+sublocale unmapPageTable: typ_at_props' "unmapPageTable asid vaddr pt"
+  by typ_at_props'
 
-lemmas setVMRoot_typ_ats [wp] = typ_at_lifts [OF setVMRoot_typ_at']
+sublocale unmapPage: typ_at_props' "unmapPage magnitude asid vptr ptr"
+  by typ_at_props'
 
-lemmas loadHWASID_typ_ats [wp] = typ_at_lifts [OF loadHWASID_inv]
+sublocale setVMRoot: typ_at_props' "setVMRoot tcb"
+  by typ_at_props'
 
-crunch setVMRootForFlush
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: hoare_drop_imps)
+sublocale loadHWASID: typ_at_props' "loadHWASID asid"
+  by typ_at_props'
 
-lemmas setVMRootForFlush_typ_ats' [wp] = typ_at_lifts [OF setVMRootForFlush_typ_at']
+sublocale setVMRootForFlush: typ_at_props' "setVMRootForFlush pd asid"
+  by typ_at_props'
+
+sublocale setMessageInfo: typ_at_props' "setMessageInfo thread info"
+  by typ_at_props'
+
+sublocale setMRs: typ_at_props' "setMRs thread buffer messageData"
+  by typ_at_props'
+
+sublocale performPageTableInvocation: typ_at_props' "performPageTableInvocation iv"
+  by typ_at_props'
+
+sublocale performPageDirectoryInvocation: typ_at_props' "performPageDirectoryInvocation iv"
+  by typ_at_props'
+
+sublocale performPageInvocation: typ_at_props' "performPageInvocation iv"
+  by typ_at_props'
+
+sublocale performASIDPoolInvocation: typ_at_props' "performASIDPoolInvocation iv"
+  by typ_at_props'
+
+sublocale flushTable: typ_at_props' "flushTable pd asid vptr"
+  by typ_at_props'
+
+sublocale findPDForASID: typ_at_props' "findPDForASID asid"
+  by typ_at_props'
+
+sublocale flushPage: typ_at_props' "flushPage m pd asid vptr"
+  by typ_at_props'
 
 crunch setVMRootForFlush
   for aligned'[wp]: pspace_aligned'
@@ -1316,14 +1345,6 @@ lemma flushPage_corres:
               | clarsimp simp: cur_tcb_def [symmetric] cur_tcb'_def [symmetric])+
   done
 
-crunch flushTable
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps)
-
-lemmas flushTable_typ_ats' [wp] = typ_at_lifts [OF flushTable_typ_at']
-
-lemmas findPDForASID_typ_ats' [wp] = typ_at_lifts [OF findPDForASID_inv]
-
 crunch unmapPageTable
   for aligned'[wp]: "pspace_aligned'"
   (simp: crunch_simps
@@ -1424,12 +1445,6 @@ lemma unmapPageTable_corres:
    apply (auto elim: simp: empty_table_def valid_pde_mappings_def pde_ref_def obj_at_def
                      vs_refs_pages_def graph_of_def split: if_splits)
   done
-
-crunch flushPage
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps hoare_drop_imps)
-
-lemmas flushPage_typ_ats' [wp] = typ_at_lifts [OF flushPage_typ_at']
 
 crunch flushPage
   for valid_objs'[wp]: "valid_objs'"
@@ -2036,8 +2051,6 @@ crunch updateCap
   for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
-lemmas setMRs_typ_at_lifts[wp] = typ_at_lifts [OF setMRs_typ_at']
-
 lemma same_refs_vs_cap_ref_eq:
   assumes "valid_slots entries s"
   assumes "same_refs entries cap s"
@@ -2324,10 +2337,6 @@ lemma clear_page_table_corres:
                     pteBits_def)
   apply simp
   done
-
-crunch unmapPageTable
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-lemmas unmapPageTable_typ_ats[wp] = typ_at_lifts[OF unmapPageTable_typ_at']
 
 lemma performPageTableInvocation_corres:
   "page_table_invocation_map pti pti' \<Longrightarrow>
@@ -2630,34 +2639,6 @@ lemma valid_slots_lift':
   apply safe
    apply (rule hoare_pre, wp hoare_vcg_const_Ball_lift t, simp)+
   done
-
-crunch performPageTableInvocation
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps)
-
-crunch performPageDirectoryInvocation
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps)
-
-crunch performPageInvocation
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps)
-
-crunch performASIDPoolInvocation
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: getObject_cte_inv getASID_wp)
-
-lemmas performPageTableInvocation_typ_ats' [wp] =
-  typ_at_lifts [OF performPageTableInvocation_typ_at']
-
-lemmas performPageDirectoryInvocation_typ_ats' [wp] =
-  typ_at_lifts [OF performPageDirectoryInvocation_typ_at']
-
-lemmas performPageInvocation_typ_ats' [wp] =
-  typ_at_lifts [OF performPageInvocation_typ_at']
-
-lemmas performASIDPoolInvocation_typ_ats' [wp] =
-  typ_at_lifts [OF performASIDPoolInvocation_typ_at']
 
 lemma storePDE_pred_tcb_at' [wp]:
   "\<lbrace>pred_tcb_at' proj P t\<rbrace> storePDE p pde \<lbrace>\<lambda>_. pred_tcb_at' proj P t\<rbrace>"
@@ -3323,8 +3304,6 @@ lemma mapM_storePDE_invs:
 crunch unmapPage
   for cte_wp_at': "\<lambda>s. P (cte_wp_at' P' p s)"
   (wp: crunch_wps simp: crunch_simps)
-
-lemmas unmapPage_typ_ats [wp] = typ_at_lifts [OF unmapPage_typ_at']
 
 lemma flushPage_invs' [wp]:
   "\<lbrace>invs'\<rbrace> flushPage sz pd asid vptr \<lbrace>\<lambda>_. invs'\<rbrace>"

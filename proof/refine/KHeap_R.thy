@@ -1476,7 +1476,8 @@ crunch doMachineOp
 crunch doMachineOp
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
-lemmas doMachineOp_gen_typ_ats[wp] = gen_typ_at_lifts[OF doMachineOp_typ_at']
+global_interpretation doMachineOp: gen_typ_at_props' _ "doMachineOp mop"
+  by typ_at_props'
 
 lemma doMachineOp_invs_bits[wp]:
   "doMachineOp m \<lbrace>valid_pspace'\<rbrace>"
@@ -1600,11 +1601,12 @@ lemma setObject_typ_at_not:
   apply fastforce
   done
 
-lemma setObject_typ_at':
-  "\<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace> setObject p v \<lbrace>\<lambda>r s. P (typ_at' T p' s)\<rbrace>"
+lemma setObject_typ_at'[wp]:
+  "setObject p v \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
   by (blast intro: P_bool_lift setObject_typ_at_inv setObject_typ_at_not)
 
-lemmas setObject_gen_typ_ats[wp] = gen_typ_at_lifts[OF setObject_typ_at']
+sublocale setObject: gen_typ_at_props' _ "setObject p v"
+  by typ_at_props'
 
 lemma setObject_cte_wp_at':
   assumes x: "\<And>x n tcb s t. \<lbrakk> t \<in> fst (updateObject v (KOTCB tcb) ptr x n s); Q s;
@@ -1680,17 +1682,9 @@ lemma setNotification_cte_wp_at':
                      intro!: set_eqI)+
   done
 
-lemma setObject_ep_tcb':
-  "\<lbrace>tcb_at' t\<rbrace> setObject p (e::endpoint) \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
-  by (rule setObject_gen_typ_ats)
-
-lemma setObject_ntfn_tcb':
-  "\<lbrace>tcb_at' t\<rbrace> setObject p (e::Structures_H.notification) \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
-  by (rule setObject_gen_typ_ats)
-
-lemma set_ntfn_tcb' [wp]:
+lemma set_ntfn_tcb'[wp]:
   "\<lbrace> tcb_at' t \<rbrace> setNotification ntfn v \<lbrace> \<lambda>rv. tcb_at' t \<rbrace>"
-  by (simp add: setNotification_def setObject_ntfn_tcb')
+  by (wpsimp simp: setNotification_def)
 
 lemma ctes_of_from_cte_wp_at:
   assumes x: "\<And>P P' p. \<lbrace>\<lambda>s. P (cte_wp_at' P' p s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>r s. P (cte_wp_at' P' p s)\<rbrace>"
@@ -1942,7 +1936,8 @@ lemma setEndpoint_typ_at'[wp]:
   unfolding setEndpoint_def
   by (rule setObject_typ_at')
 
-lemmas setEndpoint_gen_typ_ats[wp] = gen_typ_at_lifts[OF setEndpoint_typ_at']
+sublocale setEndpoint: gen_typ_at_props' _ "setEndpoint ptr val"
+  by typ_at_props'
 
 lemma setEndpoint_iflive'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s

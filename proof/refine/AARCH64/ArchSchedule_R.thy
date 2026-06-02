@@ -200,12 +200,16 @@ crunch tcbSchedAppend, tcbSchedDequeue, tcbSchedEnqueue
   for state_hyp_refs_of'[Schedule_R_assms, wp]: "\<lambda>s. P (state_hyp_refs_of' s)"
   (simp: unless_def crunch_simps obj_at'_def wp: getObject_tcb_wp)
 
-crunch vcpuEnable, vcpuDisable, vcpuSave, vcpuRestore, lazyFpuRestore
+crunch vcpuEnable, vcpuDisable, vcpuSave, vcpuRestore, lazyFpuRestore, saveFpuState
   for typ_at' [wp]: "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps
      wp: crunch_wps getObject_inv loadObject_default_inv)
 
-lemmas lazyFpuRestore_typ_ats[wp] = typ_at_lifts[OF lazyFpuRestore_typ_at']
+sublocale lazyFpuRestore: typ_at_props' "lazyFpuRestore t"
+  by typ_at_props'
+
+sublocale saveFpuState: typ_at_props' "saveFpuState t"
+  by typ_at_props'
 
 lemma vcpuSwitch_typ_at'[wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_ s. P (typ_at' T p s) \<rbrace>"
@@ -230,8 +234,6 @@ crunch setVMRoot, vcpuSwitch, lazyFpuRestore
 
 crunch Arch.switchToThread
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-
-lemmas saveFpuState_typ_ats[wp] = typ_at_lifts[OF saveFpuState_typ_at']
 
 lemma Arch_switchToThread_pred_tcb'[wp]:
   "Arch.switchToThread t \<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>"

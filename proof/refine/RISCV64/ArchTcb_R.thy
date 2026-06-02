@@ -47,6 +47,11 @@ lemma threadSet_tcbPriority_if_live_then_nonz_cap'[Tcb_R_assms]:
   by (wpsimp wp: RISCV64.threadSet_iflive'T)
      (fastforce simp: tcb_cte_cases_def tcb_cte_cases_neqs)+
 
+sublocale setPriority: typ_at_props' "setPriority t prio"
+  by typ_at_props'
+sublocale setMCPriority: typ_at_props' "setMCPriority t prio"
+  by typ_at_props'
+
 lemma sameObject_corres2[Tcb_R_assms]:
   "\<lbrakk> cap_relation c c'; cap_relation d d' \<rbrakk>
    \<Longrightarrow> same_object_as c d = sameObjectAs c' d'"

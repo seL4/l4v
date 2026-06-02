@@ -385,7 +385,7 @@ lemma valid_arch_state_lift':
   including no_pre
   apply (wp hoare_vcg_const_Ball_lift)
   apply (case_tac "armHSCurVCPU x"; simp add: split_def; wp?)
-  apply (wpsimp wp: vcpu typ_at_lifts typs pds valid_pde_mappings'_lift')+
+  apply (wpsimp wp: vcpu typs pds valid_pde_mappings'_lift')+
   done
 
 lemma valid_arch_state_lift'_valid_pde_mappings':
@@ -461,8 +461,6 @@ crunch setEndpoint, setNotification
   for valid_arch'[wp]: valid_arch_state'
   (wp: valid_arch_state_lift')
 
-lemmas setObject_typ_ats[wp] = typ_at_lifts[OF setObject_typ_at']
-
 lemma setObject_ko_wp_at':
   fixes v :: "'a :: pspace_storable"
   assumes x: "\<And>v :: 'a. updateObject v = updateObject_default v"
@@ -478,9 +476,14 @@ lemma setObject_ko_wp_at':
 
 lemmas [KHeap_R_assms_2] = setEndpoint_valid_arch' setNotification_valid_arch'
 
-lemmas doMachineOp_typ_ats[wp] = typ_at_lifts[OF doMachineOp_typ_at']
+sublocale setObject: typ_at_props' "setObject p v"
+  by typ_at_props'
 
-lemmas setEndpoint_typ_ats[wp] = typ_at_lifts[OF setEndpoint_typ_at']
+sublocale doMachineOp: typ_at_props' "doMachineOp mop"
+  by typ_at_props'
+
+sublocale setEndpoint: typ_at_props' "setEndpoint ptr val"
+  by typ_at_props'
 
 end
 

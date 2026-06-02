@@ -128,9 +128,11 @@ crunch setVMRoot, lazyFpuRestore
 crunch Arch.switchToThread
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
-lemmas lazyFpuRestore_typ_ats[wp] = typ_at_lifts[OF lazyFpuRestore_typ_at']
+sublocale lazyFpuRestore: typ_at_props' "lazyFpuRestore t"
+  by typ_at_props'
 
-lemmas saveFpuState_typ_ats[wp] = typ_at_lifts[OF saveFpuState_typ_at']
+sublocale saveFpuState: typ_at_props' "saveFpuState t"
+  by typ_at_props'
 
 lemma Arch_switchToThread_pred_tcb'[wp]:
   "Arch.switchToThread t \<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>"

@@ -1339,9 +1339,14 @@ crunch cteInsert
   for ct[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: setObject_cte_ct hoare_drop_imps)
 
-lemmas updateMDB_typ_ats[wp] = gen_typ_at_lifts[OF updateMDB_typ_at']
-lemmas updateCap_typ_ats[wp] = gen_typ_at_lifts[OF updateCap_typ_at']
-lemmas cteInsert_typ_ats[wp] = gen_typ_at_lifts[OF cteInsert_typ_at']
+global_interpretation updateMDB: gen_typ_at_props' _ "updateMDB slot f"
+  by typ_at_props'
+
+global_interpretation updateCap: gen_typ_at_props' _ "updateCap slot newCap"
+  by typ_at_props'
+
+global_interpretation cteInsert: gen_typ_at_props' _ "cteInsert newCap srcSlot destSlot"
+  by typ_at_props'
 
 context mdb_insert begin
 

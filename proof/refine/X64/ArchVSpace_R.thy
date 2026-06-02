@@ -165,8 +165,7 @@ lemma handleVMFault_corres:
          apply (rule asUser_getRegister_corres)
         apply (cases fault; simp)
        apply (simp, wp as_user_typ_at)
-      apply (simp, wp asUser_typ_ats)
-     apply wpsimp+
+      apply wpsimp+
   done
 
 lemma set_current_cr3_corres [corres]:
@@ -470,11 +469,52 @@ lemma deleteASIDPool_corres:
   apply clarsimp
   done
 
-crunch setVMRoot
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (simp: crunch_simps)
+crunch unmapPageTable, unmapPage, unmapPDPT, setVMRoot, setMessageInfo, setMRs, performPageTableInvocation,
+       performPageDirectoryInvocation, performASIDPoolInvocation, performPageInvocation, performPDPTInvocation
+  for typ_at' [wp]: "\<lambda>s. P (typ_at' T p s)"
+  (wp: crunch_wps getASID_wp simp: crunch_simps)
 
-lemmas setVMRoot_typ_ats [wp] = typ_at_lifts [OF setVMRoot_typ_at']
+sublocale unmapPageTable: typ_at_props' "unmapPageTable asid vaddr pt"
+  by typ_at_props'
+
+sublocale unmapPageDirectory: typ_at_props' "unmapPageDirectory asid vaddr pt"
+  by typ_at_props'
+
+sublocale unmapPDPT: typ_at_props' "unmapPDPT asid vaddr pt"
+  by typ_at_props'
+
+sublocale unmapPage: typ_at_props' "unmapPage magnitude asid vptr ptr"
+  by typ_at_props'
+
+sublocale setVMRoot: typ_at_props' "setVMRoot tcb"
+  by typ_at_props'
+
+sublocale setMessageInfo: typ_at_props' "setMessageInfo thread info"
+  by typ_at_props'
+
+sublocale setMRs: typ_at_props' "setMRs thread buffer messageData"
+  by typ_at_props'
+
+sublocale performPageTableInvocation: typ_at_props' "performPageTableInvocation iv"
+  by typ_at_props'
+
+sublocale performPageDirectoryInvocation: typ_at_props' "performPageDirectoryInvocation iv"
+  by typ_at_props'
+
+sublocale performPDPTInvocation: typ_at_props' "performPDPTInvocation iv"
+  by typ_at_props'
+
+sublocale performPageInvocation: typ_at_props' "performPageInvocation iv"
+  by typ_at_props'
+
+sublocale performASIDPoolInvocation: typ_at_props' "performASIDPoolInvocation iv"
+  by typ_at_props'
+
+sublocale flushTable: typ_at_props' "flushTable vspace vptr pt asid"
+  by typ_at_props'
+
+sublocale findVSpaceForASID: typ_at_props' "findVSpaceForASID asid"
+  by typ_at_props'
 
 crunch flushTable
   for no_0_obj'[wp]: "no_0_obj'"
@@ -531,14 +571,6 @@ lemma flushTable_corres:
       apply (simp add: bit_simps)
       done
   qed
-
-crunch flushTable
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (simp: assertE_def when_def wp: crunch_wps)
-
-lemmas flushTable_typ_ats' [wp] = typ_at_lifts [OF flushTable_typ_at']
-
-lemmas findVSpaceForASID_typ_ats' [wp] = typ_at_lifts [OF findVSpaceForASID_inv]
 
 crunch unmapPageTable, unmapPageDirectory, unmapPDPT
   for aligned'[wp]: "pspace_aligned'"
@@ -795,8 +827,6 @@ lemma set_cap_valid_page_map_inv:
   apply (clarsimp simp: cte_wp_at_def parent_for_refs_def)
   apply (auto simp: is_pt_cap_def is_pg_cap_def is_pd_cap_def is_pdpt_cap_def split: vm_page_entry.splits)
   done
-
-lemmas setMRs_typ_at_lifts[wp] = typ_at_lifts [OF setMRs_typ_at']
 
 lemma same_refs_vs_cap_ref_eq:
   assumes "valid_slots entries s"
@@ -1059,14 +1089,6 @@ lemma clear_pdpt_corres:
    apply (simp add: bit_simps word_less_nat_alt word_le_nat_alt unat_of_nat)
   apply simp
   done
-
-crunch invalidatePageStructureCacheASID, unmapPageTable, unmapPageDirectory, unmapPDPT
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps hoare_vcg_all_liftE_R)
-
-lemmas unmapPageTable_typ_ats[wp] = typ_at_lifts[OF unmapPageTable_typ_at']
-lemmas unmapPageDirectory_typ_ats[wp] = typ_at_lifts[OF unmapPageDirectory_typ_at']
-lemmas unmapPDPT_typ_ats[wp] = typ_at_lifts[OF unmapPDPT_typ_at']
 
 lemma performPageTableInvocation_corres:
   "page_table_invocation_map pti pti' \<Longrightarrow>
@@ -1521,31 +1543,6 @@ crunch deleteASIDPool, flushTable, deleteASID, storePTE, storePDE, storePDPTE, s
   for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def updateObject_default_def
    wp: getObject_inv mapM_wp' setObject_idle' hoare_drop_imps mapM_x_wp')
-
-crunch performPageTableInvocation, performPageDirectoryInvocation, performPDPTInvocation,
-       performPageInvocation
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps simp: crunch_simps)
-
-lemma performASIDPoolInvocation_typ_at' [wp]:
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> performASIDPoolInvocation api \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
-  by (wpsimp simp: performASIDPoolInvocation_def
-               wp: getASID_wp hoare_vcg_imp_lift[where P'=\<bottom>, simplified])
-
-lemmas performPageTableInvocation_typ_ats' [wp] =
-  typ_at_lifts [OF performPageTableInvocation_typ_at']
-
-lemmas performPageDirectoryInvocation_typ_ats' [wp] =
-  typ_at_lifts [OF performPageDirectoryInvocation_typ_at']
-
-lemmas performPDPTInvocation_typ_ats' [wp] =
-  typ_at_lifts [OF performPDPTInvocation_typ_at']
-
-lemmas performPageInvocation_typ_ats' [wp] =
-  typ_at_lifts [OF performPageInvocation_typ_at']
-
-lemmas performASIDPoolInvocation_typ_ats' [wp] =
-  typ_at_lifts [OF performASIDPoolInvocation_typ_at']
 
 lemma storePDE_pred_tcb_at' [wp]:
   "\<lbrace>pred_tcb_at' proj P t\<rbrace> storePDE p pde \<lbrace>\<lambda>_. pred_tcb_at' proj P t\<rbrace>"
@@ -2441,8 +2438,6 @@ lemma perform_pdpti_invs [wp]:
 crunch unmapPage
   for cte_wp_at': "\<lambda>s. P (cte_wp_at' P' p s)"
   (wp: crunch_wps simp: crunch_simps)
-
-lemmas unmapPage_typ_ats [wp] = typ_at_lifts [OF unmapPage_typ_at']
 
 lemma unmapPage_invs' [wp]:
   "\<lbrace>invs'\<rbrace> unmapPage sz asid vptr pptr \<lbrace>\<lambda>_. invs'\<rbrace>"

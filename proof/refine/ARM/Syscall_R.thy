@@ -626,25 +626,32 @@ lemma invokeTCB_typ_at'[wp]:
           | wpcw)+
   done
 
-lemmas invokeTCB_typ_ats[wp] = typ_at_lifts [OF invokeTCB_typ_at']
-
-crunch doReplyTransfer
+crunch restart, bindNotification, performTransfer, setFlags, postSetFlags, invokeTCB, doReplyTransfer,
+         performIRQControl, InterruptDecls_H.invokeIRQHandler, sendIPC, handleFault
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: hoare_drop_imps)
+  (simp: crunch_simps
+   wp: crunch_wps checkCap_inv hoare_vcg_all_lift
+   ignore: checkCapAt)
 
-lemmas doReplyTransfer_typ_ats[wp] = typ_at_lifts [OF doReplyTransfer_typ_at']
+end
 
-crunch "performIRQControl"
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+(*FIXME: arch-split*)
+sublocale Arch < invokeTCB: typ_at_props' "invokeTCB i"
+  by typ_at_props'
+sublocale Arch < doReplyTransfer: typ_at_props' "doReplyTransfer s r sl g"
+  by typ_at_props'
+sublocale Arch < performIRQControl: typ_at_props' "performIRQControl i"
+  by typ_at_props'
+sublocale Arch < arch_invokeIRQHandler: typ_at_props' "Arch.invokeIRQHandler i"
+  by typ_at_props'
+sublocale Arch < invokeIRQHandler: typ_at_props' "invokeIRQHandler i"
+  by typ_at_props'
+sublocale Arch < sendIPC: typ_at_props' "sendIPC bl call bdg cg cgr t' ep"
+  by typ_at_props'
+sublocale Arch < handleFault: typ_at_props' "handleFault t ex"
+  by typ_at_props'
 
-lemmas invokeIRQControl_typ_ats[wp] =
-  typ_at_lifts [OF performIRQControl_typ_at']
-
-crunch InterruptDecls_H.invokeIRQHandler
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-
-lemmas invokeIRQHandler_typ_ats[wp] =
-  typ_at_lifts [OF invokeIRQHandler_typ_at']
+context begin interpretation Arch . (*FIXME: arch-split*)
 
 crunch invokeDomain
   for tcb_at'[wp]: "tcb_at' tptr"
@@ -704,13 +711,11 @@ lemma sts_valid_inv'[wp]:
      apply (wp hoare_vcg_ex_lift ex_cte_cap_to'_pres | simp)+
   apply (rename_tac tcbinvocation)
   apply (case_tac tcbinvocation,
-      simp_all add: setThreadState_tcb',
-      auto  intro!: hoare_vcg_conj_lift hoare_vcg_disj_lift
-      simp only: imp_conv_disj simp_thms pred_conj_def,
-      auto  intro!: hoare_vcg_prop
-      sts_cap_to' sts_cte_cap_to'
-      setThreadState_typ_ats
-      split: option.splits)[1]
+         simp_all,
+         auto  intro!: hoare_vcg_conj_lift hoare_vcg_disj_lift
+            simp only: imp_conv_disj simp_thms pred_conj_def,
+         auto  intro!: hoare_vcg_prop sts_cap_to' sts_cte_cap_to'
+                split: option.splits)[1]
     apply (wp sts_bound_tcb_at' hoare_vcg_all_lift hoare_vcg_const_imp_lift)+
   done
 
@@ -1514,12 +1519,6 @@ lemma hinv_invs'[wp]:
                        elim!: pred_tcb'_weakenE st_tcb_ex_cap''
                         dest: st_tcb_at_idle_thread')+
   done
-
-crunch handleFault
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps)
-
-lemmas handleFault_typ_ats[wp] = typ_at_lifts [OF handleFault_typ_at']
 
 lemma handleSend_corres:
   "corres (dc \<oplus> dc)

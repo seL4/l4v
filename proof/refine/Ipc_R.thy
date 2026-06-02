@@ -447,16 +447,13 @@ lemma corres_set_extra_badge:
   done
 
 crunch setExtraBadge
-  for typ_at': "\<lambda>s. P (typ_at' T p s)"
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and valid_pspace'[wp]: valid_pspace'
+  and cte_wp_at'[wp]: "cte_wp_at' P p"
+  and ipc_buffer'[wp]: "valid_ipc_buffer_ptr' buffer"
 
-lemmas setExtraBadge_gen_typ_ats' [wp] = gen_typ_at_lifts[OF setExtraBadge_typ_at']
-
-crunch setExtraBadge
-  for valid_pspace'[wp]: valid_pspace'
-crunch setExtraBadge
-  for cte_wp_at'[wp]: "cte_wp_at' P p"
-crunch setExtraBadge
-  for ipc_buffer'[wp]: "valid_ipc_buffer_ptr' buffer"
+global_interpretation setExtraBadge: gen_typ_at_props' _ "setExtraBadge buffer badge n"
+  by typ_at_props'
 
 crunch getExtraCPtr
   for inv'[wp]: P (wp: dmo_inv' loadWord_inv)
@@ -1323,7 +1320,8 @@ end (* Ipc_R *)
 crunch transferCaps
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
-lemmas transferCaps_gen_typ_ats[wp] = gen_typ_at_lifts [OF transferCaps_typ_at']
+global_interpretation transferCaps: gen_typ_at_props' _ "transferCaps info caps endpoint receiver receiveBuffer"
+  by typ_at_props'
 
 lemma capReplyMaster_mask[simp]:
   "isReplyCap c \<Longrightarrow> capReplyMaster (maskCapRights R c) = capReplyMaster c"
@@ -1361,11 +1359,12 @@ lemma get_mrs_inv'[wp]:
   by (wpsimp wp: dmo_inv' loadWord_inv mapM_wp' asUser_inv det_mapM[where S=UNIV]
              simp: getMRs_def load_word_offs_def getRegister_inv)
 
-lemma copyMRs_typ_at':
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> copyMRs s sb r rb n \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  by (simp add: copyMRs_def | wp mapM_wp [where S=UNIV, simplified] | wpc)+
+crunch copyMRs
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  (wp: crunch_wps)
 
-lemmas copyMRs_gen_typ_at_lifts[wp] = gen_typ_at_lifts[OF copyMRs_typ_at']
+global_interpretation copyMRs: gen_typ_at_props' _ "copyMRs s sb r rb n"
+  by typ_at_props'
 
 lemma copy_mrs_invs'[wp]:
   "\<lbrace> invs' and tcb_at' s and tcb_at' r \<rbrace> copyMRs s sb r rb n \<lbrace>\<lambda>rv. invs' \<rbrace>"
@@ -1581,7 +1580,8 @@ lemmas corres_ipc_thread_helper =
 crunch doNormalTransfer
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
-lemmas doNormal_gen_typ_at_lifts[wp] = gen_typ_at_lifts[OF doNormalTransfer_typ_at']
+global_interpretation doNormalTransfer: gen_typ_at_props' _ "doNormalTransfer s sb e b g r rb"
+  by typ_at_props'
 
 crunch doNormalTransfer
   for aligned'[wp]: pspace_aligned'
@@ -1846,22 +1846,18 @@ lemma doIPCTransfer_corres:
 
 crunch doIPCTransfer
   for ifunsafe[wp]: "if_unsafe_then_cap'"
-  (wp: crunch_wps hoare_vcg_const_Ball_lift get_rs_cte_at' ignore: transferCapsToSlots
-    simp: zipWithM_x_mapM ball_conj_distrib )
-crunch doIPCTransfer
-  for iflive[wp]: "if_live_then_nonz_cap'"
-  (wp: crunch_wps hoare_vcg_const_Ball_lift get_rs_cte_at' ignore: transferCapsToSlots
-    simp: zipWithM_x_mapM ball_conj_distrib )
+  and iflive[wp]: "if_live_then_nonz_cap'"
+  and sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
+  and state_refs_of[wp]: "\<lambda>s. P (state_refs_of' s)"
+  and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
+  and valid_arch_state'[wp]: "valid_arch_state'"
+  (wp: crunch_wps
+   simp: zipWithM_x_mapM ball_conj_distrib)
 
 crunch doIPCTransfer
   for vp[wp]: "valid_pspace'"
   (wp: crunch_wps hoare_vcg_const_Ball_lift get_rs_cte_at' wp: transferCapsToSlots_vp simp:ball_conj_distrib )
-crunch doIPCTransfer
-  for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
-  (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots  simp: zipWithM_x_mapM)
-crunch doIPCTransfer
-  for state_refs_of[wp]: "\<lambda>s. P (state_refs_of' s)"
-  (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots  simp: zipWithM_x_mapM)
 crunch doIPCTransfer
   for state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of' s)"
   (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots  simp: zipWithM_x_mapM)
@@ -1872,22 +1868,8 @@ crunch doIPCTransfer
   for idle'[wp]: "valid_idle'"
   (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots  simp: zipWithM_x_mapM)
 
-crunch doIPCTransfer
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps  simp: zipWithM_x_mapM)
-
-lemmas dit'_gen_typ_at_lifts[wp] = gen_typ_at_lifts[OF doIPCTransfer_typ_at']
-
-crunch doIPCTransfer
-  for irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
-  (wp: crunch_wps simp: crunch_simps)
-
-lemmas dit_irq_node'[wp]
-    = valid_irq_node_lift [OF doIPCTransfer_irq_node' doIPCTransfer_typ_at']
-
-crunch doIPCTransfer
-  for valid_arch_state'[wp]: "valid_arch_state'"
-  (wp: crunch_wps simp: crunch_simps)
+sublocale doIPCTransfer: gen_typ_at_props' _ "doIPCTransfer s e b g r"
+  by typ_at_props'
 
 crunch doIPCTransfer
   for objs'[wp]: "valid_objs'"
@@ -1968,7 +1950,8 @@ lemma handleFaultReply_corres:
                           handle_fault_reply_registers_corres)
      (corres corres: handleArchFaultReply_corres)
 
-lemmas hfr_gen_typ_at_lifts[wp] = gen_typ_at_lifts[OF handleFaultReply_typ_at']
+sublocale handleFaultReply: gen_typ_at_props' _ "handleFaultReply x t l m"
+  by typ_at_props'
 
 lemma doIPCTransfer_sch_act_simple [wp]:
   "\<lbrace>sch_act_simple\<rbrace> doIPCTransfer sender endpoint badge grant receiver \<lbrace>\<lambda>_. sch_act_simple\<rbrace>"
@@ -2544,7 +2527,7 @@ proof -
                 apply (wp | simp)+
                 apply (wp sts_cur_tcb set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at_cases)
                apply (wp sts_weak_sch_act_wf sts_valid_objs'
-                         sts_cur_tcb' setThreadState_tcb' sts_st_tcb_at'_cases)[1]
+                         sts_cur_tcb' sts_st_tcb_at'_cases)[1]
               apply (simp add: valid_tcb_state_def pred_conj_def)
               apply (strengthen reply_cap_doesnt_exist_strg disjI2_strg
                                 valid_queues_in_correct_ready_q valid_queues_ready_qs_distinct
@@ -2615,7 +2598,7 @@ proof -
                apply ((wp sts_cur_tcb set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at_cases |
                           simp add: if_apply_def2 split del: if_split)+)[1]
               apply (wp sts_weak_sch_act_wf sts_valid_objs'
-                        sts_cur_tcb' setThreadState_tcb' sts_st_tcb_at'_cases)
+                        sts_cur_tcb' sts_st_tcb_at'_cases)
              apply (simp add: valid_tcb_state_def pred_conj_def)
              apply ((wp hoare_drop_imps do_ipc_transfer_tcb_caps  weak_valid_sched_action_lift
                      | clarsimp simp: is_cap_simps
@@ -2646,8 +2629,6 @@ proof -
    apply (clarsimp simp: ep_at_def2)+
   done
 qed
-
-lemmas setMessageInfo_gen_typ_at_lifts[wp] = gen_typ_at_lifts[OF setMessageInfo_typ_at']
 
 crunch cancel_ipc
   for cur[wp]: "cur_tcb"
@@ -3468,20 +3449,16 @@ lemma handleDoubleFault_corres:
        apply (wpsimp wp: asUser_inv getRestartPC_inv dmo_inv' no_fail_getRestartPC)+
   done
 
-crunch sendFaultIPC
-  for tcb'[wp]: "tcb_at' t" (wp: crunch_wps)
-
-crunch receiveIPC
+crunch sendFaultIPC, receiveIPC, receiveSignal
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
 
-crunch receiveSignal
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps)
-
-lemmas receiveIPC_gen_typ_at_lifts[wp] = gen_typ_at_lifts[OF receiveIPC_typ_at']
-
-lemmas receiveAIPC_gen_typ_at_lifts[wp] = gen_typ_at_lifts[OF receiveSignal_typ_at']
+sublocale sendFaultIPC: gen_typ_at_props' _ "sendFaultIPC tptr fault"
+  by typ_at_props'
+sublocale receiveIPC: gen_typ_at_props' _ "receiveIPC t cap b"
+  by typ_at_props'
+sublocale receiveSignal: gen_typ_at_props' _ "receiveSignal t cap b"
+  by typ_at_props'
 
 crunch setupCallerCap
   for aligned'[wp]: "pspace_aligned'"
@@ -3801,8 +3778,7 @@ lemma ri_invs' [wp]:
    apply (case_tac ep)
      \<comment> \<open>endpoint = RecvEP\<close>
      apply (simp add: invs'_def valid_state'_def)
-     apply (rule hoare_pre, wpc, wp sts_sch_act' valid_irq_node_lift valid_dom_schedule'_lift)
-      apply simp
+     apply (wpsimp wp: sts_sch_act' valid_irq_node_lift valid_dom_schedule'_lift)
       apply (wp hoare_vcg_const_Ball_lift valid_irq_node_lift valid_dom_schedule'_lift
                 setThreadState_ct_not_inQ asUser_urz
            | simp add: doNBRecvFailedTransfer_def cteCaps_of_def)+
@@ -3827,8 +3803,7 @@ lemma ri_invs' [wp]:
      apply (fastforce simp: valid_pspace'_def global'_no_ex_cap idle'_not_queued)
    \<comment> \<open>endpoint = IdleEP\<close>
     apply (simp add: invs'_def valid_state'_def)
-    apply (rule hoare_pre, wpc, wp sts_sch_act' valid_irq_node_lift valid_dom_schedule'_lift)
-     apply simp
+    apply (wpsimp wp: sts_sch_act' valid_irq_node_lift valid_dom_schedule'_lift)
      apply (wp valid_irq_node_lift valid_dom_schedule'_lift
                setThreadState_ct_not_inQ asUser_urz
           | simp add: doNBRecvFailedTransfer_def cteCaps_of_def)+
@@ -3919,9 +3894,8 @@ lemma rai_invs'[wp]:
     \<comment> \<open>ep = IdleNtfn\<close>
     apply (simp add: invs'_def valid_state'_def)
     apply (rule hoare_pre)
-     apply (wp valid_irq_node_lift sts_sch_act' gen_typ_at_lifts valid_dom_schedule'_lift
-               setThreadState_ct_not_inQ
-               asUser_urz
+     apply (wp valid_irq_node_lift sts_sch_act' valid_dom_schedule'_lift
+               setThreadState_ct_not_inQ asUser_urz
             | simp add: valid_ntfn'_def doNBRecvFailedTransfer_def live'_def | wpc)+
     apply (clarsimp simp: pred_tcb_at' valid_tcb_state'_def)
     apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
@@ -3943,7 +3917,7 @@ lemma rai_invs'[wp]:
    \<comment> \<open>ep = ActiveNtfn\<close>
    apply (simp add: invs'_def valid_state'_def)
    apply (rule hoare_pre)
-    apply (wp valid_irq_node_lift sts_valid_objs' gen_typ_at_lifts hoare_weak_lift_imp
+    apply (wp valid_irq_node_lift sts_valid_objs' hoare_weak_lift_imp
               asUser_urz valid_dom_schedule'_lift
          | simp add: valid_ntfn'_def)+
    apply (clarsimp simp: pred_tcb_at' valid_pspace'_def)
@@ -3958,8 +3932,7 @@ lemma rai_invs'[wp]:
   apply (simp add: invs'_def valid_state'_def)
   apply (rule hoare_pre)
    apply (wp hoare_vcg_const_Ball_lift valid_irq_node_lift sts_sch_act'
-             setThreadState_ct_not_inQ gen_typ_at_lifts valid_dom_schedule'_lift
-             asUser_urz
+             setThreadState_ct_not_inQ valid_dom_schedule'_lift asUser_urz
         | simp add: valid_ntfn'_def doNBRecvFailedTransfer_def live'_def | wpc)+
   apply (clarsimp simp: valid_tcb_state'_def)
   apply (frule_tac t=t in not_in_ntfnQueue)
@@ -4088,8 +4061,7 @@ lemma si_invs'[wp]:
    \<comment> \<open>epa = IdleEP\<close>
    apply (cases bl)
     apply (simp add: invs'_def valid_state'_def)
-    apply (rule hoare_pre, wp sts_sch_act' valid_irq_node_lift valid_dom_schedule'_lift)
-     apply simp
+    apply (wpsimp wp: sts_sch_act' valid_irq_node_lift valid_dom_schedule'_lift)
      apply (wp valid_irq_node_lift valid_dom_schedule'_lift setThreadState_ct_not_inQ)
     apply (clarsimp simp: valid_ep'_def valid_tcb_state'_def pred_tcb_at')
     apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
@@ -4107,8 +4079,7 @@ lemma si_invs'[wp]:
   \<comment> \<open>epa = SendEP\<close>
   apply (cases bl)
    apply (simp add: invs'_def valid_state'_def)
-   apply (rule hoare_pre, wp sts_sch_act' valid_irq_node_lift valid_dom_schedule'_lift)
-    apply simp
+   apply (wpsimp wp: sts_sch_act' valid_irq_node_lift valid_dom_schedule'_lift)
     apply (wp hoare_vcg_const_Ball_lift valid_irq_node_lift setThreadState_ct_not_inQ
               valid_dom_schedule'_lift)
    apply (clarsimp simp: valid_ep'_def valid_tcb_state'_def pred_tcb_at')

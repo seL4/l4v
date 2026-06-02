@@ -278,6 +278,25 @@ lemma dmo_addressTranslateS1_valid_machine_state'[wp]:
                     addressTranslateS1_underlying_memory
                     hoare_vcg_disj_lift)
 
+sublocale setExtraBadge: typ_at_props' "setExtraBadge buffer badge n"
+  by typ_at_props'
+sublocale transferCaps: typ_at_props' "transferCaps info caps endpoint receiver receiveBuffer"
+  by typ_at_props'
+sublocale copyMRs: typ_at_props' "copyMRs s sb r rb n"
+  by typ_at_props'
+sublocale doNormalTransfer: typ_at_props' "doNormalTransfer s sb e b g r rb"
+  by typ_at_props'
+sublocale doIPCTransfer: typ_at_props' "doIPCTransfer s e b g r"
+  by typ_at_props'
+sublocale handleFaultReply: typ_at_props' "handleFaultReply x t l m"
+  by typ_at_props'
+sublocale sendFaultIPC: typ_at_props' "sendFaultIPC tptr fault"
+  by typ_at_props'
+sublocale receiveIPC: typ_at_props' "receiveIPC t cap b"
+  by typ_at_props'
+sublocale receiveSignal: typ_at_props' "receiveSignal t cap b"
+  by typ_at_props'
+
 end (* Arch *)
 
 end

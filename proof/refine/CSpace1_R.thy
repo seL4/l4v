@@ -898,17 +898,11 @@ lemma setObject_cte_obj_at_tcb':
                         Structures_H.kernel_object.split_asm)
   done
 
-lemma setCTE_typ_at':
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> setCTE c cte \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
-  by (clarsimp simp add: setCTE_def) (wp setObject_typ_at')
+crunch setCTE
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
-lemmas setObject_typ_at [wp] = setObject_typ_at' [where P=id, simplified]
-
-lemma setCTE_typ_at [wp]:
-  "\<lbrace>typ_at' T p\<rbrace> setCTE c cte \<lbrace>\<lambda>_. typ_at' T p\<rbrace>"
-  by (clarsimp simp add: setCTE_def) wp
-
-lemmas gen_setCTE_typ_ats[wp] = gen_typ_at_lifts[OF setCTE_typ_at']
+global_interpretation setCTE: gen_typ_at_props' _ "setCTE c cte"
+  by typ_at_props'
 
 lemma setObject_cte_ksCurDomain[wp]:
   "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> setObject ptr (cte::cte) \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"

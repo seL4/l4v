@@ -609,7 +609,8 @@ end (* mdb_empty *)
 
 text \<open>Properties about empty_slot/emptySlot\<close>
 
-lemmas clearUntypedFreeIndex_gen_typ_ats[wp] = gen_typ_at_lifts[OF clearUntypedFreeIndex_typ_at']
+global_interpretation clearUntypedFreeIndex: gen_typ_at_props' _ "clearUntypedFreeIndex slot"
+  by typ_at_props'
 
 lemma case_Null_If:
   "(case c of NullCap \<Rightarrow> a | _ \<Rightarrow> b) = (if c = NullCap then a else b)"
@@ -1749,33 +1750,25 @@ crunch cteDeleteOne, suspend
    simp: crunch_simps unless_def o_def
    ignore_del: setObject)
 
-lemmas cancelAllIPC_typs[wp] = gen_typ_at_lifts[OF cancelAllIPC_typ_at']
-lemmas cancelAllSignals_typs[wp] = gen_typ_at_lifts[OF cancelAllSignals_typ_at']
-lemmas suspend_typs[wp] = gen_typ_at_lifts[OF suspend_typ_at']
+global_interpretation cancelIPC: gen_typ_at_props' _ "cancelIPC tptr" by typ_at_props'
+global_interpretation cancelAllIPC: gen_typ_at_props' _ "cancelAllIPC epptr" by typ_at_props'
+global_interpretation cancelAllSignals: gen_typ_at_props' _ "cancelAllSignals ntfnPtr" by typ_at_props'
+global_interpretation suspend: gen_typ_at_props' _ "suspend target" by typ_at_props'
 
 context Finalise_R begin
 
 crunch finaliseCap
-  for aligned'[wp]: "pspace_aligned'"
-  (simp: crunch_simps assertE_def unless_def o_def
-     wp: getObject_inv loadObject_default_inv crunch_wps)
+  for aligned'[wp]: pspace_aligned'
+  and distinct'[wp]: pspace_distinct'
+  and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
+  (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
-crunch finaliseCap
-  for distinct'[wp]: "pspace_distinct'"
-  (simp: crunch_simps assertE_def unless_def o_def
-     wp: getObject_inv loadObject_default_inv crunch_wps)
+sublocale finaliseCap: gen_typ_at_props' _ "finaliseCap cap final x"
+  by typ_at_props'
 
-crunch finaliseCap
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (simp: crunch_simps assertE_def
-     wp: getObject_inv loadObject_default_inv crunch_wps)
-
-lemmas finaliseCap_typ_ats[wp] = gen_typ_at_lifts[OF finaliseCap_typ_at']
-
-crunch finaliseCap
-  for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
-  (wp: mapM_x_wp_inv mapM_wp' hoare_drop_imps getObject_inv loadObject_default_inv
-   simp: crunch_simps updateObject_default_def o_def)
+sublocale unbindNotification: gen_typ_at_props' _ "unbindNotification tcb"
+  by typ_at_props'
 
 end (* Finalise_R *)
 
@@ -2349,7 +2342,8 @@ lemma cteDeleteOne_reply_pred_tcb_at:
   apply (intro impI conjI, (wp | simp)+)
   done
 
-lemmas setNotification_typ_at'[wp] = gen_typ_at_lifts[OF setNotification_typ_at']
+global_interpretation setNotification: gen_typ_at_props' _ "setNotification p ko"
+  by typ_at_props'
 
 crunch setBoundNotification, setNotification
   for sch_act_simple[wp]: sch_act_simple
@@ -2821,7 +2815,8 @@ crunch deleteCallerCap
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
 
-lemmas deleteCallerCap_gen_typ_ats[wp] = gen_typ_at_lifts[OF deleteCallerCap_typ_at']
+sublocale deleteCallerCap: gen_typ_at_props' _ "deleteCallerCap receiver"
+  by typ_at_props'
 
 sublocale delete_one_conc_pre
   by (unfold_locales, wp)
