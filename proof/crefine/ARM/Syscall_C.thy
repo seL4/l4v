@@ -589,8 +589,7 @@ lemma sendFaultIPC_ccorres:
               apply (ctac (no_vcg) add: sendIPC_ccorres)
                apply (ctac (no_vcg) add: ccorres_return_CE [unfolded returnOk_def comp_def])
               apply wp
-             apply (wpsimp wp: threadSet_invs_trivial)
-             apply (wpsimp wp: threadSet_pred_tcb_no_state threadSet_typ_at_lifts)
+             apply (wpsimp wp: threadSet_invs_trivial threadSet_pred_tcb_no_state)
 
             apply (clarsimp simp: guard_is_UNIV_def)
             apply (subgoal_tac "capEPBadge epcap && mask 28 = capEPBadge epcap")

@@ -674,8 +674,7 @@ lemma sendFaultIPC_ccorres:
               apply (ctac (no_vcg) add: sendIPC_ccorres)
                apply (ctac (no_vcg) add: ccorres_return_CE [unfolded returnOk_def comp_def])
               apply wp
-             apply (wpsimp wp: threadSet_invs_trivial)
-             apply (wpsimp wp: threadSet_pred_tcb_no_state threadSet_typ_at_lifts)
+             apply (wpsimp wp: threadSet_invs_trivial threadSet_pred_tcb_no_state)
 
             apply (clarsimp simp: guard_is_UNIV_def)
             apply (subgoal_tac "capEPBadge epcap && mask 28 = capEPBadge epcap")
@@ -1213,20 +1212,6 @@ lemma option_to_ctcb_ptr_valid_ntfn:
   apply (cases "ntfnBoundTCB ntfn", simp_all add: option_to_ctcb_ptr_def)
   apply (clarsimp simp: valid_ntfn'_def tcb_at_not_NULL)
   done
-
-
-lemma deleteCallerCap_valid_ntfn'[wp]:
-  "\<lbrace>\<lambda>s. valid_ntfn' x s\<rbrace> deleteCallerCap c \<lbrace>\<lambda>rv s. valid_ntfn' x s\<rbrace>"
-  apply (wp hoare_vcg_ex_lift hoare_vcg_all_lift hoare_vcg_ball_lift hoare_vcg_imp_lift
-            | simp add: valid_ntfn'_def split: ntfn.splits)+
-   apply auto
-  done
-
-lemma hoare_vcg_imp_liftE:
-  "\<lbrakk>\<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>, \<lbrace>E\<rbrace>; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>\<rbrakk> \<Longrightarrow>  \<lbrace>\<lambda>s. P' s \<or> Q' s\<rbrace> f \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>, \<lbrace>E\<rbrace>"
-  apply (simp add: validE_def valid_def split_def split: sum.splits)
-  done
-
 
 lemma not_obj_at'_ntfn:
   "(\<not>obj_at' (P::Structures_H.notification \<Rightarrow> bool) t s) = (\<not> typ_at' NotificationT t s \<or> obj_at' (Not \<circ> P) t s)"

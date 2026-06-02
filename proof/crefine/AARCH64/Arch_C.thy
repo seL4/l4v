@@ -4542,6 +4542,7 @@ lemma invokeSMCCall_ccorres:
                    apply (rule allI, rule conseqPre, vcg)
                    apply (simp add: return_def)
                   apply wp
+                 apply clarsimp
                  apply wpsimp
                 apply clarsimp
                apply (wpsimp simp: setMR_def length_of_msgRegisters)

@@ -568,7 +568,7 @@ lemma handleFaultReply':
                                    asUser_return submonad_asUser.fn_stateAssert
                   | rule monadic_rewrite_bind_tail monadic_rewrite_refl
                          monadic_rewrite_symb_exec_l[OF _ stateAssert_inv]
-                  | wp asUser_typ_ats)+)+
+                  | wp)+)+
        apply (case_tac "msgLength tag < scast n_msgRegisters")
         apply (erule disjE[OF word_less_cases],
                   ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
@@ -583,7 +583,7 @@ lemma handleFaultReply':
                          monadic_rewrite_symb_exec_l[OF _ stateAssert_inv]
                          monadic_rewrite_threadGet_return
                          monadic_rewrite_getSanitiseRegisterInfo_return
-                  | wp asUser_typ_ats mapM_wp')+)+
+                  | wp mapM_wp')+)+
        apply (simp add: n_msgRegisters_def word_le_nat_alt n_syscallMessage_def
                         linorder_not_less syscallMessage_unfold)
        apply (clarsimp | frule neq0_conv[THEN iffD2, THEN not0_implies_Suc,
@@ -626,7 +626,7 @@ lemma handleFaultReply':
                                monadic_rewrite_threadGet_return
                                monadic_rewrite_getSanitiseRegisterInfo_return
                                monadic_rewrite_getSanitiseRegisterInfo_drop
-                        | wp asUser_typ_ats empty_fail_loadWordUser)+)+
+                        | wp empty_fail_loadWordUser)+)+
        apply (clarsimp simp: upto_enum_word word_le_nat_alt simp del: upt.simps cong: if_weak_cong)
        apply (cut_tac i="unat n" and j="Suc (unat (scast n_syscallMessage :: machine_word))"
                                  and k="Suc msgMaxLength" in upt_add_eq_append')
@@ -4167,8 +4167,7 @@ lemma doNormalTransfer_local_slots:
     doNormalTransfer sender sendBuffer ep badge grant receiver receiveBuffer
    \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>cte. P (cteCap cte)) slot\<rbrace>"
   apply (simp add: doNormalTransfer_def)
-  apply (wp transferCaps_local_slots weak copyMRs_typ_at'[where T=CTET, unfolded typ_at_cte']
-    | simp)+
+  apply (wpsimp wp: transferCaps_local_slots weak)
   done
 
 lemma doIPCTransfer_local_slots:
