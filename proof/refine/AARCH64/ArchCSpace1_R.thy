@@ -246,7 +246,8 @@ proof -
   done
 qed
 
-lemmas setCTE_typ_ats[wp] = typ_at_lifts[OF setCTE_typ_at']
+sublocale setCTE: typ_at_props' "setCTE c cte"
+  by typ_at_props'
 
 lemma arch_updateCapData_Master[CSpace1_R_assms]:
   "Arch.updateCapData P d acap \<noteq> NullCap \<Longrightarrow>

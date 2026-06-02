@@ -2236,7 +2236,8 @@ lemma caps_overlap_reserved'_D:
   apply fastforce
   done
 
-lemmas updateNewFreeIndex_typ_ats[wp] = gen_typ_at_lifts[OF updateNewFreeIndex_typ_at']
+global_interpretation updateNewFreeIndex: gen_typ_at_props' "updateNewFreeIndex slot"
+  by typ_at_props'
 
 lemma updateNewFreeIndex_valid_objs[wp]:
   "\<lbrace>valid_objs'\<rbrace> updateNewFreeIndex slot \<lbrace>\<lambda>_. valid_objs'\<rbrace>"

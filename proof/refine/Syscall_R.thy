@@ -810,17 +810,33 @@ lemma invokeTCB_typ_at'[wp]:
           | wpcw)+
   done
 
-lemmas invokeTCB_typ_ats[wp] = gen_typ_at_lifts[OF invokeTCB_typ_at']
-
-crunch doReplyTransfer, invokeIRQHandler, performIRQControl
+crunch restart, bindNotification, performTransfer, setFlags, postSetFlags, invokeTCB, doReplyTransfer,
+       performIRQControl, invokeIRQHandler, sendIPC, handleFault
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: hoare_drop_imps)
+  (simp: crunch_simps
+   wp: crunch_wps checkCap_inv hoare_vcg_all_lift
+   ignore: checkCapAt)
 
-lemmas doReplyTransfer_typ_ats[wp] = gen_typ_at_lifts[OF doReplyTransfer_typ_at']
+sublocale invokeTCB: gen_typ_at_props' "invokeTCB i"
+  by typ_at_props'
 
-lemmas invokeIRQControl_typ_ats[wp] = gen_typ_at_lifts[OF performIRQControl_typ_at']
+sublocale doReplyTransfer: gen_typ_at_props' "doReplyTransfer s r sl g"
+  by typ_at_props'
 
-lemmas invokeIRQHandler_typ_ats[wp] = gen_typ_at_lifts[OF invokeIRQHandler_typ_at']
+sublocale performIRQControl: gen_typ_at_props' "performIRQControl i"
+  by typ_at_props'
+
+sublocale arch_invokeIRQHandler: gen_typ_at_props' "Arch.invokeIRQHandler i"
+  by typ_at_props'
+
+sublocale invokeIRQHandler: gen_typ_at_props' "invokeIRQHandler i"
+  by typ_at_props'
+
+sublocale sendIPC: gen_typ_at_props' "sendIPC bl call bdg cg cgr t' ep"
+  by typ_at_props'
+
+sublocale handleFault: gen_typ_at_props' "handleFault t ex"
+  by typ_at_props'
 
 crunch invokeDomain
   for tcb_at'[wp]: "tcb_at' tptr"
@@ -872,12 +888,10 @@ lemma sts_valid_inv'[wp]:
      apply (wp hoare_vcg_ex_lift ex_cte_cap_to'_pres | simp)+
   apply (rename_tac tcbinvocation)
   apply (case_tac tcbinvocation,
-         simp_all add: setThreadState_tcb',
+         simp_all,
          auto  intro!: hoare_vcg_conj_lift hoare_vcg_disj_lift
             simp only: imp_conv_disj simp_thms pred_conj_def,
-         auto  intro!: hoare_vcg_prop
-                       sts_cap_to' sts_cte_cap_to'
-                       setThreadState_typ_ats
+         auto  intro!: hoare_vcg_prop sts_cap_to' sts_cte_cap_to'
                 split: option.splits)[1]
     apply (wp sts_bound_tcb_at' hoare_vcg_all_lift hoare_vcg_const_imp_lift)+
   done
@@ -1502,12 +1516,6 @@ lemma rfk_ksQ[wp]:
   apply (simp add: replyFromKernel_def)
   apply (wp)
   done
-
-crunch handleFault
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps)
-
-lemmas handleFault_typ_ats[wp] = gen_typ_at_lifts[OF handleFault_typ_at']
 
 context Syscall_R begin
 

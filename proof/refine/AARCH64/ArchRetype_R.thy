@@ -320,7 +320,7 @@ proof -
 
            apply (in_case "HugePageObject")
            apply (subst doMachineOp_mapM_x[unfolded o_def, simplified, symmetric], simp)
-           apply (wp hoare_vcg_op_lift doMachineOp_typ_ats)
+           apply (wp hoare_vcg_op_lift)
             apply (simp add: valid_cap'_def capAligned_def n_less_word_bits ball_conj_distrib)
             apply (wp createObjects_aligned2 createObjects_nonzero'
                       cwo_ret'[where bs="2 * ptTranslationBits NormalPT_T", simplified]
@@ -329,7 +329,7 @@ proof -
 
           apply (in_case "VSpaceObject")
           apply (subst doMachineOp_mapM_x[unfolded o_def, simplified, symmetric], simp)
-          apply (wp hoare_vcg_op_lift doMachineOp_typ_ats)
+          apply (wp hoare_vcg_op_lift)
            apply (simp add: valid_cap'_def capAligned_def n_less_word_bits)
            apply (rule hoare_chain)
              apply (rule hoare_vcg_conj_lift)
@@ -351,7 +351,7 @@ proof -
 
          apply (in_case "SmallPageObject")
          apply (subst doMachineOp_mapM_x[unfolded o_def, simplified, symmetric], simp)
-         apply (wp hoare_vcg_op_lift doMachineOp_typ_ats)
+         apply (wp hoare_vcg_op_lift)
           apply (simp add: valid_cap'_def capAligned_def n_less_word_bits ball_conj_distrib)
           apply (wp createObjects_aligned2 createObjects_nonzero'
                     cwo_ret'[where bs=0, simplified]
@@ -360,7 +360,7 @@ proof -
 
         apply (in_case \<open>LargePageObject\<close>)
         apply (subst doMachineOp_mapM_x[unfolded o_def, simplified, symmetric], simp)
-        apply (wp hoare_vcg_op_lift doMachineOp_typ_ats)
+        apply (wp hoare_vcg_op_lift)
          apply (simp add: valid_cap'_def capAligned_def n_less_word_bits ball_conj_distrib)
          apply (wp createObjects_aligned2 createObjects_nonzero'
                    cwo_ret'[where bs="ptTranslationBits NormalPT_T", simplified]
@@ -369,7 +369,7 @@ proof -
 
        apply (in_case \<open>PageTableObject\<close>)
        apply (subst doMachineOp_mapM_x[unfolded o_def, simplified, symmetric], simp)
-       apply (wp hoare_vcg_op_lift doMachineOp_typ_ats)
+       apply (wp hoare_vcg_op_lift)
         apply (simp add: valid_cap'_def capAligned_def n_less_word_bits)
         apply (rule hoare_chain)
           apply (rule hoare_vcg_conj_lift)

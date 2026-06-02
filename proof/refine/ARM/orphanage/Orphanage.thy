@@ -1722,7 +1722,6 @@ lemma tc_no_orphans:
   apply (rule hoare_walk_assmsE)
     apply (cases mcp; clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s" for s])
      apply ((wp case_option_wp threadSet_no_orphans threadSet_invs_trivial setMCPriority_invs'
-                typ_at_lifts[OF setMCPriority_typ_at']
                 threadSet_cap_to' hoare_vcg_all_lift hoare_weak_lift_imp | clarsimp simp: inQ_def)+)[3]
   apply ((simp only: simp_thms cong: conj_cong
           | wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
