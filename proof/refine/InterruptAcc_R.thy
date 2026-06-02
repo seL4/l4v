@@ -14,7 +14,7 @@ arch_requalify_facts
   no_fail_maskInterrupt (* from Machine_AI *)
   no_fail_getActiveIRQ (* from Machine_AI *)
 
-lemmas [wp] = no_fail_maskInterrupt no_fail_getActiveIRQ
+lemmas [wp, simp] = no_fail_maskInterrupt no_fail_getActiveIRQ
 
 (* FIXME: move to Nondet_Monad_Equations *)
 lemma exec_liftE_get:
