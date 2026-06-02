@@ -894,7 +894,7 @@ lemma fastpath_callKernel_SysCall_corres:
 
   apply (prop_tac "cte_wp_at' (\<lambda>_. True) (hd (epQueue ep) + 2 ^ cte_level_bits * tcbVTableSlot) s")
    apply (solves \<open>clarsimp simp: valid_ep'_def isRecvEP_endpoint_case tcbVTableSlot_def
-                                 cte_level_bits_def cte_at_tcb_at_32'\<close>)
+                                 cteSizeBits_cte_level_bits[symmetric] cte_at_tcb_at_2p_cteSizeBits\<close>)
   apply clarsimp
   apply (frule_tac cte=ctea in ctes_of_valid, fastforce)
   apply (clarsimp simp: isValidVTableRoot_def2 valid_cap'_def wellformed_mapdata'_def

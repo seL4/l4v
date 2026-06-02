@@ -953,8 +953,8 @@ lemma setVMRoot_ccorres:
    apply vcg
   apply (clarsimp simp: Collect_const_mem)
   apply (rule conjI)
-   apply (frule cte_at_tcb_at_32', drule cte_at_cte_wp_atD)
-   apply (clarsimp simp: cte_level_bits_def tcbVTableSlot_def)
+   apply (frule cte_at_tcb_at_2p_cteSizeBits, drule cte_at_cte_wp_atD)
+   apply (clarsimp simp: cteSizeBits_cte_level_bits tcbVTableSlot_def)
    apply (rule_tac x="cteCap cte" in exI)
    apply (rule conjI, erule cte_wp_at_weakenE', simp)
    apply (clarsimp simp: invs_cicd_no_0_obj' invs_cicd_arch_state' isCap_simps)
