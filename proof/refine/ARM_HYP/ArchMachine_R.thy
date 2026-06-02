@@ -88,6 +88,15 @@ lemma tlsBaseRegister_def'[Machine_R_assms]:
   "tlsBaseRegister = MachineExports.tlsBaseRegister"
   by (simp add: tlsBaseRegister_def)
 
+(* FIXME arch-split: missing crunches in Machine_AI compared to other architectures *)
+crunch resetTimer, ackInterrupt
+  for underlying_memory_inv[wp]: "\<lambda>s. P (underlying_memory s)"
+
+(* FIXME arch-split: missing crunches in Machine_AI compared to other architectures *)
+crunch setIRQTrigger
+  for (no_fail) no_fail[intro!, wp, simp]
+  (ignore: setIRQTrigger_impl)
+
 end
 
 global_interpretation Machine_R?: Machine_R
