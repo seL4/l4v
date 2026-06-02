@@ -851,6 +851,9 @@ lemma set_cap_not_quite_corres':
   using cr
   by (rule set_cap_not_quite_corres; fastforce simp: c p)
 
+defs noReplyCapsFor_def:
+  "noReplyCapsFor \<equiv> \<lambda>t s. \<forall>sl m r. \<not> cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t m r) sl s"
+
 locale CSpace_R =
   assumes mdb_move_parent_preserved: (* mdb_move.parent_preserved, needs Arch *)
     "\<And>m src src_cap src_node dest cap' old_dest_node cte'.
@@ -942,6 +945,8 @@ locale CSpace_R =
     "\<And>p c. setCTE p c \<lbrace>valid_arch_state'\<rbrace>"
   assumes updateMDB_valid_arch_state':
     "\<And>slot f. updateMDB slot f \<lbrace>valid_arch_state'\<rbrace>"
+  assumes acapClass_not_Reply:
+    "\<And>acap t. acapClass acap \<noteq> ReplyClass t"
 begin
 
 (* this locale should satisfy all the assumptions of mdb_move_gen, so we can treat it like the
@@ -3258,6 +3263,12 @@ lemma valid_NullCap:
   "valid_cap' NullCap = \<top>"
   by (rule ext, simp add: valid_cap_simps' capAligned_def word_bits_def)
 
+lemma valid_nullcapsE:
+  "\<lbrakk> valid_nullcaps m; m p = Some (CTE NullCap n);
+    \<lbrakk> mdbPrev n = 0; mdbNext n = 0 \<rbrakk> \<Longrightarrow> P \<rbrakk>
+  \<Longrightarrow> P"
+  by (fastforce simp: valid_nullcaps_def nullMDBNode_def nullPointer_def)
+
 context CSpace_R begin
 
 lemma cteInsert_invs:
@@ -3307,6 +3318,36 @@ lemma deriveCap_valid[wp]:
    apply (wp arch_deriveCap_valid | simp add: o_def)+
   apply (simp add: valid_NullCap)
   apply (clarsimp simp: gen_isCap_simps)
+  done
+
+lemma (in CSpace_R) setupReplyMaster_valid_mdb:
+  "slot = t + 2 ^ objBits (undefined :: cte) * tcbReplySlot \<Longrightarrow>
+   \<lbrace>valid_mdb' and valid_pspace' and tcb_at' t\<rbrace>
+   setupReplyMaster t
+   \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
+  supply stateAssert_wp[wp]
+  apply (clarsimp simp: setupReplyMaster_def locateSlot_conv
+                        nullMDBNode_def)
+  apply (fold initMDBNode_def)
+  apply (wp setCTE_valid_mdb getCTE_wp')
+  apply clarsimp
+  apply (intro conjI)
+      apply (case_tac cte)
+      apply (fastforce simp: cte_wp_at_ctes_of valid_mdb'_def valid_mdb_ctes_def
+                            no_mdb_def
+                      elim: valid_nullcapsE)
+     apply (frule obj_at_aligned')
+      apply (clarsimp simp: gen_objBits_simps valid_cap'_def capAligned_def
+                            obj_sizeBits_less_word_bits)+
+    apply (clarsimp simp: valid_pspace'_def)
+   apply (clarsimp simp: caps_no_overlap'_def capRange_def)
+  apply (clarsimp simp: fresh_virt_cap_class_def
+                 elim!: ranE)
+  apply (clarsimp simp add: noReplyCapsFor_def cte_wp_at_ctes_of)
+  apply (case_tac x)
+  apply (rename_tac capability mdbnode)
+  apply (case_tac capability; simp add: acapClass_not_Reply[symmetric])
+  apply fastforce
   done
 
 end (* CSpace_R *)
@@ -3523,12 +3564,6 @@ lemma updateMDB_ctes_of_cases:
   apply (case_tac y, simp)
   done
 
-lemma valid_nullcapsE:
-  "\<lbrakk> valid_nullcaps m; m p = Some (CTE NullCap n);
-    \<lbrakk> mdbPrev n = 0; mdbNext n = 0 \<rbrakk> \<Longrightarrow> P \<rbrakk>
-  \<Longrightarrow> P"
-  by (fastforce simp: valid_nullcaps_def nullMDBNode_def nullPointer_def)
-
 lemma valid_nullcaps_prev:
   "\<lbrakk> m (mdbPrev n) = Some (CTE NullCap n'); m p = Some (CTE c n);
     no_0 m; valid_dlist m; valid_nullcaps m \<rbrakk> \<Longrightarrow> False"
@@ -3546,9 +3581,6 @@ lemma valid_nullcaps_next:
    apply clarsimp
   apply clarsimp
   done
-
-defs noReplyCapsFor_def:
-  "noReplyCapsFor \<equiv> \<lambda>t s. \<forall>sl m r. \<not> cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t m r) sl s"
 
 lemma pspace_relation_no_reply_caps:
   fixes s :: det_state
@@ -3724,6 +3756,8 @@ locale CSpace_R_2 = CSpace_R +
     "\<And>t s sl.
      \<lbrakk>ex_nonz_cap_to' t s; tcb_at' t s; valid_objs' s; sl \<in> dom tcb_cte_cases\<rbrakk> \<Longrightarrow>
      ex_cte_cap_to' (t + sl) s"
+  assumes setupReplyMaster_invs'[wp]:
+    "\<And>t. \<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t\<rbrace> setupReplyMaster t \<lbrace>\<lambda>rv. invs'\<rbrace>"
 begin
 
 (* this locale should satisfy all the assumptions of mdb_insert_simple_gen, so we can treat it like

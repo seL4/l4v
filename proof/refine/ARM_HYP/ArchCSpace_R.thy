@@ -165,6 +165,10 @@ crunch cteInsert
   for valid_arch_state'[CSpace_R_assms, wp]: valid_arch_state'
   (wp: crunch_wps)
 
+lemma acapClass_not_Reply[CSpace_R_assms]:
+  "acapClass acap \<noteq> ReplyClass t"
+  by (cases acap; simp)
+
 end (* Arch *)
 
 context Arch_mdb_move begin
@@ -599,37 +603,6 @@ lemma setupReplyMaster_global_refs[wp]:
                  split: capability.split_asm)
   done
 
-lemma setupReplyMaster_valid_mdb:
-  "slot = t + 2 ^ objBits (undefined :: cte) * tcbReplySlot \<Longrightarrow>
-   \<lbrace>valid_mdb' and valid_pspace' and tcb_at' t\<rbrace>
-   setupReplyMaster t
-   \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
-  apply (clarsimp simp: setupReplyMaster_def locateSlot_conv
-                        nullMDBNode_def)
-  apply (fold initMDBNode_def)
-  apply (wp setCTE_valid_mdb getCTE_wp')
-  apply clarsimp
-  apply (intro conjI)
-      apply (case_tac cte)
-      apply (fastforce simp: cte_wp_at_ctes_of valid_mdb'_def valid_mdb_ctes_def
-                            no_mdb_def
-                      elim: valid_nullcapsE)
-     apply (frule obj_at_aligned')
-      apply (simp add: valid_cap'_def capAligned_def
-                       objBits_simps' word_bits_def)+
-    apply (clarsimp simp: valid_pspace'_def)
-   apply (clarsimp simp: caps_no_overlap'_def capRange_def)
-  apply (clarsimp simp: fresh_virt_cap_class_def
-                 elim!: ranE)
-  apply (clarsimp simp add: noReplyCapsFor_def cte_wp_at_ctes_of)
-  apply (case_tac x)
-  apply (rename_tac capability mdbnode)
-  apply (case_tac capability; simp)
-   apply (rename_tac arch_capability)
-   apply (case_tac arch_capability; simp)
-  apply fastforce
-  done
-
 lemma setupReplyMaster_valid_pspace':
   "\<lbrace>valid_pspace' and tcb_at' t\<rbrace>
    setupReplyMaster t
@@ -673,7 +646,7 @@ lemma ex_nonz_cap_not_global':
   apply (clarsimp simp: ctes_of_valid_cap')
   done
 
-lemma setupReplyMaster_invs'[wp]:
+lemma setupReplyMaster_invs'[CSpace_R_2_assms, wp]:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t\<rbrace>
    setupReplyMaster t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"

@@ -524,4 +524,16 @@ lemma isFlagSet_in_word_to_tcb_flags[simp]:
   by (drule tcbFlagToWord_and_tcbFlagMask_eq)
      (clarsimp simp: isFlagSet_def word_to_tcb_flags_def word_bw_lcs intro!: eq_eqI word_bw_comms)
 
+(* same proof for all machine word sizes *)
+lemma (in Arch) eq_ucast_word8[simp]:
+  "((ucast (x :: 8 word) :: machine_word) = ucast y) = (x = y)"
+  apply safe
+  apply (drule_tac f="ucast :: (machine_word \<Rightarrow> 8 word)" in arg_cong)
+  apply (simp add: ucast_up_ucast_id is_up_def
+                   source_size_def target_size_def)
+  done
+
+requalify_facts Arch.eq_ucast_word8
+lemmas [simp] = eq_ucast_word8
+
 end

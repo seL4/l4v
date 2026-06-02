@@ -78,6 +78,18 @@ lemma doMachineOp_getActiveIRQ_non_kernel[wp]:
   apply clarsimp
   done
 
+lemma frameRegisters_def'[Machine_R_assms]:
+  "frameRegisters = MachineExports.frameRegisters"
+  by (simp add: frameRegisters_def)
+
+lemma gpRegisters_def'[Machine_R_assms]:
+  "gpRegisters = MachineExports.gpRegisters"
+  by (simp add: gpRegisters_def)
+
+lemma tlsBaseRegister_def'[Machine_R_assms]:
+  "tlsBaseRegister = MachineExports.tlsBaseRegister"
+  by (simp add: tlsBaseRegister_def)
+
 end
 
 global_interpretation Machine_R?: Machine_R

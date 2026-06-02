@@ -221,8 +221,8 @@ crunch getSanitiseRegisterInfo
   for tcb_at'[wp]: "tcb_at' t"
 
 crunch arch_get_sanitise_register_info
-  for pspace_distinct[wp]: pspace_distinct
-  and pspace_aligned[wp]: pspace_aligned
+  for pspace_distinct[Ipc_R_assms, wp]: pspace_distinct
+  and pspace_aligned[Ipc_R_assms, wp]: pspace_aligned
 
 lemma sanitiseRegister_sanitise_register[Ipc_R_assms]:
   "sanitiseRegister = sanitise_register"

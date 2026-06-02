@@ -288,6 +288,10 @@ assumes arch_getSanitiseRegisterInfo_corres:
     "\<And>msg P. debugPrint msg \<lbrace>P\<rbrace>"
   assumes no_fail_debugPrint[intro!, wp, simp]:
     "\<And>msg. no_fail \<top> (debugPrint msg)"
+  assumes arch_get_sanitise_register_info_pspace_distinct[wp]:
+    "\<And>t. arch_get_sanitise_register_info t \<lbrace>pspace_distinct :: det_state \<Rightarrow> bool\<rbrace>"
+  assumes arch_get_sanitise_register_info_pspace_aligned[wp]:
+    "\<And>t. arch_get_sanitise_register_info t \<lbrace>pspace_aligned :: det_state \<Rightarrow> bool\<rbrace>"
 begin
 
 lemma maskCapRights_eq_null[simp]:
