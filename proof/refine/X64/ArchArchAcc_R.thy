@@ -1477,32 +1477,21 @@ lemma lookupPTSlot_corres:
        apply (wpsimp wp: getPDE_wp | wp (once) hoare_drop_imps)+
   done
 
-crunch storePML4E
+crunch storePML4E, storePDPTE, storePDE, storePTE
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
 
-crunch storePDPTE
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
+sublocale storePML4E: typ_at_props' "storePML4E slot pml4e"
+  by typ_at_props'
 
-crunch storePDE
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
+sublocale storePDPTE: typ_at_props' "storePDPTE slot pdpte"
+  by typ_at_props'
 
-crunch storePTE
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
+sublocale storePDE: typ_at_props' "storePDE slot pde"
+  by typ_at_props'
 
-lemmas storePML4E_typ_ats[wp] = typ_at_lifts [OF storePML4E_typ_at']
-lemmas storePDPTE_typ_ats[wp] = typ_at_lifts [OF storePDPTE_typ_at']
-lemmas storePDE_typ_ats[wp] = typ_at_lifts [OF storePDE_typ_at']
-lemmas storePTE_typ_ats[wp] = typ_at_lifts [OF storePTE_typ_at']
-
-lemma setObject_asid_typ_at' [wp]:
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> setObject p' (v::asidpool) \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
-  by (wp setObject_typ_at')
-
-lemmas setObject_asid_typ_ats' [wp] = typ_at_lifts [OF setObject_asid_typ_at']
+sublocale storePTE: typ_at_props' "storePTE slot pte"
+  by typ_at_props'
 
 lemma getObject_pte_inv[wp]:
   "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>rv :: pte. P\<rbrace>"
@@ -1524,7 +1513,8 @@ crunch copyGlobalMappings
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: mapM_x_wp')
 
-lemmas copyGlobalMappings_typ_ats[wp] = typ_at_lifts [OF copyGlobalMappings_typ_at']
+sublocale copyGlobalMappings: typ_at_props' "copyGlobalMappings newPT"
+  by typ_at_props'
 
 lemma corres_gets_global_pml4 [corres]:
   "corres (=) \<top> \<top> (gets (x64_global_pml4 \<circ> arch_state)) (gets (x64KSSKIMPML4 \<circ> ksArchState))"

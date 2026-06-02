@@ -33,9 +33,14 @@ lemma capAligned_master[CSpace_R_assms]:
    apply (clarsimp simp: capAligned_def)+
   done
 
-lemmas updateMDB_typ_ats[wp] = typ_at_lifts[OF updateMDB_typ_at']
-lemmas updateCap_typ_ats[wp] = typ_at_lifts[OF updateCap_typ_at']
-lemmas cteInsert_typ_ats[wp] = typ_at_lifts[OF cteInsert_typ_at']
+sublocale updateMDB: typ_at_props' "updateMDB slot f"
+  by typ_at_props'
+
+sublocale updateCap: typ_at_props' "updateCap slot newCap"
+  by typ_at_props'
+
+sublocale cteInsert: typ_at_props' "cteInsert newCap srcSlot destSlot"
+  by typ_at_props'
 
 lemma maskedAsFull_derived'[CSpace_R_assms]:
   "\<lbrakk>m src = Some (CTE s_cap s_node); is_derived' m ptr b c\<rbrakk>

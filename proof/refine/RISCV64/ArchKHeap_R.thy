@@ -302,7 +302,7 @@ lemma valid_arch_state_lift':
   apply (simp add: valid_arch_state'_def valid_asid_table'_def valid_global_pts'_def
                    vspace_table_at'_defs)
   apply (rule hoare_lift_Pf [where f="ksArchState"])
-   apply (wp typs hoare_vcg_all_lift hoare_vcg_ball_lift arch typ_at_lifts)+
+   apply (wp typs hoare_vcg_all_lift hoare_vcg_ball_lift arch)+
   done
 
 lemma idle_is_global[KHeap_R_assms, intro!]:
@@ -348,11 +348,14 @@ lemma setObject_ko_wp_at':
 
 lemmas [KHeap_R_assms_2] = setEndpoint_valid_arch' setNotification_valid_arch'
 
-lemmas setObject_typ_ats[wp] = typ_at_lifts[OF setObject_typ_at']
+sublocale setObject: typ_at_props' "setObject p v"
+  by typ_at_props'
 
-lemmas doMachineOp_typ_ats[wp] = typ_at_lifts[OF doMachineOp_typ_at']
+sublocale doMachineOp: typ_at_props' "doMachineOp mop"
+  by typ_at_props'
 
-lemmas setEndpoint_typ_ats[wp] = typ_at_lifts[OF setEndpoint_typ_at']
+sublocale setEndpoint: typ_at_props' "setEndpoint ptr val"
+  by typ_at_props'
 
 end
 

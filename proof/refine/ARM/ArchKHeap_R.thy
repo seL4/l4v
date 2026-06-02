@@ -325,7 +325,7 @@ lemma valid_arch_state_lift':
                    page_table_at'_def
                    All_less_Ball)
   apply (rule hoare_lift_Pf [where f="ksArchState"])
-   apply (wp typs pds valid_pde_mappings'_lift' hoare_vcg_const_Ball_lift arch typ_at_lifts)+
+   apply (wp typs pds valid_pde_mappings'_lift' hoare_vcg_const_Ball_lift arch)+
   done
 
 lemma valid_arch_state_lift'_valid_pde_mappings':
@@ -385,8 +385,6 @@ crunch setEndpoint, setNotification
   for valid_arch'[wp]: valid_arch_state'
   (wp: valid_arch_state_lift')
 
-lemmas setObject_typ_ats[wp] = typ_at_lifts[OF setObject_typ_at']
-
 lemma setObject_ko_wp_at':
   fixes v :: "'a :: pspace_storable"
   assumes x: "\<And>v :: 'a. updateObject v = updateObject_default v"
@@ -402,9 +400,14 @@ lemma setObject_ko_wp_at':
 
 lemmas [KHeap_R_assms_2] = setEndpoint_valid_arch' setNotification_valid_arch'
 
-lemmas doMachineOp_typ_ats[wp] = typ_at_lifts[OF doMachineOp_typ_at']
+sublocale setObject: typ_at_props' "setObject p v"
+  by typ_at_props'
 
-lemmas setEndpoint_typ_ats[wp] = typ_at_lifts[OF setEndpoint_typ_at']
+sublocale doMachineOp: typ_at_props' "doMachineOp mop"
+  by typ_at_props'
+
+sublocale setEndpoint: typ_at_props' "setEndpoint ptr val"
+  by typ_at_props'
 
 end
 

@@ -421,4 +421,23 @@ proof goal_cases
   case 1 show ?case by (intro_locales; (unfold_locales; (fact CNodeInv_R_assms)?)?)
 qed
 
+context Arch begin arch_global_naming
+
+sublocale cteDelete: typ_at_props' "cteDelete slot exposed"
+  by typ_at_props'
+
+sublocale reduceZombie: typ_at_props' "reduceZombie cap slot x"
+  by typ_at_props'
+
+sublocale finaliseSlot: typ_at_props' "finaliseSlot ptr exposed"
+  by typ_at_props'
+
+sublocale invokeCNode: typ_at_props' "invokeCNode i"
+  by typ_at_props'
+
+sublocale cteMove: typ_at_props' "cteMove cap src dest"
+  by typ_at_props'
+
+end  (* Arch *)
+
 end
