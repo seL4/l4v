@@ -34,8 +34,4 @@ definition handle_spurious_irq :: "(unit,'z::state_ext) s_monad"
 
 end
 
-(* On Arm architectures, maxIRQ is defined in Kernel_Config. On X64 it is defined manually. *)
-arch_requalify_consts
-  maxIRQ
-
 end

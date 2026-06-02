@@ -94,7 +94,7 @@ proof -
                     ghost_assertion_data_set_def)
   apply (clarsimp simp: cte_at_irq_node' ucast_nat_def)
   apply (clarsimp simp: cte_wp_at_ctes_of badge_derived'_def
-                        Collect_const_mem unat_gt_0 valid_cap_simps' X64.maxIRQ_def)
+                        Collect_const_mem unat_gt_0 valid_cap_simps' maxIRQ_def)
   apply (drule word_le_nat_alt[THEN iffD1])
   apply clarsimp
   apply (drule valid_globals_ex_cte_cap_irq[where irq=irq])
@@ -279,7 +279,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
      apply (auto dest: st_tcb_at_idle_thread' ctes_of_valid')[6]
     apply (drule ctes_of_valid')
      apply fastforce
-    apply (clarsimp simp add:valid_cap_simps' X64.maxIRQ_def)
+    apply (clarsimp simp add:valid_cap_simps' maxIRQ_def)
     apply (erule order.trans,simp)
   apply (auto dest: st_tcb_at_idle_thread' ctes_of_valid')
   done
@@ -373,8 +373,8 @@ lemma isIRQActive_ccorres:
   done
 
 lemma Platform_maxIRQ:
-  "X64.maxIRQ = scast Kernel_C.maxIRQ"
-   by (simp add: X64.maxIRQ_def Kernel_C.maxIRQ_def)
+  "maxIRQ = scast Kernel_C.maxIRQ"
+   by (simp add: maxIRQ_def Kernel_C.maxIRQ_def)
 
 lemma le_maxirq_ucast_explicit:
   "irq \<le> 0x7D \<Longrightarrow> UCAST(8 \<rightarrow> 64) irq < 0x7E"

@@ -24,9 +24,9 @@ context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM_H ONLY wordFromPDE wordFromPTE
 
-(* Kernel_Config provides a generic numeral, Haskell expects type irq *)
+(* Platform provides a generic numeral, Haskell expects type irq *)
 abbreviation (input) maxIRQ :: irq where
-  "maxIRQ == Kernel_Config.maxIRQ"
+  "maxIRQ \<equiv> Platform.maxIRQ"
 
 (* provide ARM/ARM_HYP machine op in _H global_prefix for arch-split *)
 abbreviation (input) initIRQController where

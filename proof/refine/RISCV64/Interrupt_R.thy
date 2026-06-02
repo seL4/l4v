@@ -164,7 +164,7 @@ lemma checkIRQ_corres:
   "corres (ser \<oplus> dc) \<top> \<top> (arch_check_irq irq) (checkIRQ irq)"
   unfolding arch_check_irq_def checkIRQ_def rangeCheck_def
   apply (rule corres_guard_imp)
-    apply (clarsimp simp: minIRQ_def unlessE_whenE not_le)
+    apply (clarsimp simp: minIRQ_def maxIRQ_def unlessE_whenE not_le)
     apply (rule corres_whenE)
       apply (fastforce simp: ucast_nat_def)+
   done
@@ -183,10 +183,10 @@ crunch arch_check_irq, checkIRQ
 
 lemma arch_check_irq_valid:
   "\<lbrace>\<top>\<rbrace> arch_check_irq y \<lbrace>\<lambda>_. (\<lambda>s. unat y \<le> unat maxIRQ \<and> unat y \<noteq> unat irqInvalid)\<rbrace>, -"
-  unfolding arch_check_irq_def
+  unfolding arch_check_irq_def maxIRQ_def
   apply (wpsimp simp: validE_R_def wp: whenE_throwError_wp)
   apply (rule conjI)
-   apply (metis unat_ucast_up_simp[where 'a=6 and 'b=64, simplified] word_le_nat_alt word_le_not_less)
+   apply (clarsimp simp: not_less word_le_nat_alt)
   apply (simp add: unat_ucast_up_simp[where 'a=6 and 'b=64, simplified] irqInvalid_def)
   apply (rule unat_mono[where a=0, simplified])
   apply (simp add: word_neq_0_conv)
@@ -266,9 +266,9 @@ lemma decodeIRQControlInvocation_corres:
                simp: minIRQ_def o_def length_Suc_conv whenE_rangeCheck_eq ucast_nat_def
                split: list.splits)[1]
   apply (rule corres_guard_imp)
-    apply (rule whenE_throwError_corres, clarsimp, clarsimp)
+    apply (rule whenE_throwError_corres, clarsimp simp: maxIRQ_def, clarsimp simp: maxIRQ_def)
     apply (rule_tac F="unat y \<le> unat maxIRQ" in corres_gen_asm)
-    apply (clarsimp simp add: minIRQ_def maxIRQ_def ucast_nat_def)
+    apply (clarsimp simp add: minIRQ_def maxIRQ_def ucast_nat_def toEnum_unat_ucast maxIRQ_def)
     apply (rule corres_split_eqr[OF is_irq_active_corres])
       apply (rule whenE_throwError_corres, clarsimp, clarsimp)
       apply (rule corres_splitEE)
@@ -278,7 +278,7 @@ lemma decodeIRQControlInvocation_corres:
           apply (clarsimp simp: arch_irq_control_inv_relation_def)
          apply (wpsimp wp: isIRQActive_inv arch_check_irq_valid' checkIRQ_inv
                      simp: invs_valid_objs invs_psp_aligned invs_valid_objs'
-                           invs_pspace_aligned' invs_pspace_distinct'
+                           invs_pspace_aligned' invs_pspace_distinct' maxIRQ_def
                 | strengthen invs_valid_objs invs_psp_aligned
                 | wp (once) hoare_drop_imps arch_check_irq_inv)+
    apply (auto split: arch_invocation_label.splits invocation_label.splits
@@ -309,7 +309,8 @@ lemma arch_decode_irq_control_valid'[wp]:
           | wpc
           | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
-                        not_less unat_le_helper unat_of_nat irqInvalid_def unat_ucast_mask)
+                        not_less unat_le_helper unat_of_nat irqInvalid_def unat_ucast_mask
+                        maxIRQ_def)
   apply (rule conjI)
    apply (meson le_trans word_and_le2 word_less_eq_iff_unsigned)
   apply clarsimp
@@ -330,7 +331,8 @@ lemma decode_irq_control_valid'[wp]:
                 simp: o_def
          | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
-                        not_less unat_le_helper unat_of_nat irqInvalid_def unat_ucast_mask)
+                        not_less unat_le_helper unat_of_nat irqInvalid_def unat_ucast_mask
+                        maxIRQ_def)
   apply (rule conjI)
    apply (meson le_trans word_and_le2 word_less_eq_iff_unsigned)
   apply clarsimp
@@ -717,7 +719,7 @@ lemma handleInterrupt_corres:
      (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive))
      (handle_interrupt irq) (handleInterrupt irq)"
   (is "corres dc ?P ?P' ?f ?g")
-  apply (simp add: handle_interrupt_def handleInterrupt_def)
+  apply (simp add: handle_interrupt_def handleInterrupt_def maxIRQ_def)
   apply (rule conjI[rotated]; rule impI)
    apply (rule corres_guard_imp)
      apply (rule corres_split[OF getIRQState_corres,

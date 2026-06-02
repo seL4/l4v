@@ -12,6 +12,10 @@ theory ArchMove_C
 imports Move_C
 begin
 
+(* FIXME arch-split: CRefine was before Kernel_Config.maxIRQ was wrapped in Platform.maxIRQ_def *)
+arch_requalify_facts maxIRQ_def
+declare maxIRQ_def[simp]
+
 lemma ps_clear_is_aligned_ksPSpace_None:
   "\<lbrakk>ps_clear p n s; is_aligned p n; 0<d; d \<le> mask n\<rbrakk>
    \<Longrightarrow> ksPSpace s (p + d) = None"

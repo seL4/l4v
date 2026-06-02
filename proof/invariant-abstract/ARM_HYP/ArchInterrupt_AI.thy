@@ -51,7 +51,7 @@ lemma decode_irq_control_valid [Interrupt_AI_assms]:
   apply (wpsimp wp: ensure_empty_stronger simp: cte_wp_at_eq_simp arch_irq_control_inv_valid_def
         | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: linorder_not_less word_le_nat_alt unat_ucast mod_le_nat)
-  apply (cases caps ; fastforce simp: cte_wp_at_eq_simp)
+  apply (cases caps ; fastforce simp: cte_wp_at_eq_simp maxIRQ_def)
   done
 
 lemma get_irq_slot_different_ARCH[Interrupt_AI_assms]:

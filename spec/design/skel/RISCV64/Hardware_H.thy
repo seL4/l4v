@@ -25,10 +25,9 @@ context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/RISCV64.hs CONTEXT RISCV64_H ONLY wordFromPTE
 
-(* Unlike on Arm architectures, maxIRQ comes from Platform definitions.
-   We provide this abbreviation to match arch-split expectations. *)
+(* Platform provides a generic numeral, Haskell expects type irq *)
 abbreviation (input) maxIRQ :: irq where
-  "maxIRQ \<equiv> Platform.RISCV64.maxIRQ"
+  "maxIRQ \<equiv> Platform.maxIRQ"
 
 end (* context RISCV64 *)
 

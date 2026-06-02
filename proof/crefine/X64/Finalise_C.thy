@@ -2682,7 +2682,7 @@ lemma finaliseCap_ccorres:
    apply (rule ccorres_if_lhs)
     apply (simp add: Collect_False Collect_True Let_def
                 del: Collect_const)
-    apply (rule_tac P="(capIRQ cap) \<le>  X64.maxIRQ" in ccorres_gen_asm)
+    apply (rule_tac P="(capIRQ cap) \<le> maxIRQ" in ccorres_gen_asm)
     apply (rule ccorres_rhs_assoc)+
     apply csymbr
     apply csymbr
@@ -2743,13 +2743,13 @@ lemma finaliseCap_ccorres:
    apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
    apply (frule(1) ccap_relation_IRQHandler_mask)
    apply (clarsimp simp: isCap_simps irqInvalid_def
-                      valid_cap'_def X64.maxIRQ_def
+                      valid_cap'_def maxIRQ_def
                       Kernel_C.maxIRQ_def)
     apply (rule irq_opt_relation_Some_ucast'[simplified Kernel_C.maxIRQ_def, simplified])
      apply fastforce
     apply simp
     apply (clarsimp simp: isCap_simps irqInvalid_def
-                      valid_cap'_def X64.maxIRQ_def
+                      valid_cap'_def maxIRQ_def
                       Kernel_C.maxIRQ_def)
    apply fastforce
   apply clarsimp

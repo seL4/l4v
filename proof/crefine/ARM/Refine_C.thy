@@ -72,7 +72,7 @@ lemma checkInterrupt_ccorres:
     apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> Kernel_Config.maxIRQ)"
                     in hoare_post_imp)
      apply (solves clarsimp)
-    apply (wpsimp wp: getActiveIRQ_le_maxIRQ)
+    apply (wpsimp wp: getActiveIRQ_le_maxIRQ[simplified])
     apply assumption
    apply assumption
   apply (clarsimp simp: invs'_def valid_state'_def)

@@ -172,7 +172,7 @@ definition minIRQ :: "irq"
   where
   "minIRQ \<equiv> 0"
 
-definition maxIRQ :: "irq"
+definition maxIRQ :: "'a::numeral"
   where
   "maxIRQ \<equiv> 54"
 
@@ -186,4 +186,9 @@ definition pageColourBits :: nat
   "pageColourBits \<equiv> undefined" \<comment> \<open>not implemented on this platform\<close>
 
 end
+
+(* we want to use the Platform constant in the global context instead of the arch-specific one from
+   Kernel_Config *)
+arch_requalify_consts (aliasing) maxIRQ
+
 end

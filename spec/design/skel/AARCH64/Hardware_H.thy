@@ -54,9 +54,9 @@ context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64_H ONLY wordFromPTE
 
-(* Kernel_Config provides a generic numeral, Haskell expects type irq *)
+(* Platform provides a generic numeral, Haskell expects type irq *)
 abbreviation (input) maxIRQ :: irq where
-  "maxIRQ \<equiv> Kernel_Config.maxIRQ"
+  "maxIRQ \<equiv> Platform.maxIRQ"
 
 end (* context AARCH64 *)
 
