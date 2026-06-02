@@ -767,7 +767,7 @@ lemma handleFaultReply':
                                monadic_rewrite_threadGet_return
                                monadic_rewrite_getSanitiseRegisterInfo_return
                                monadic_rewrite_getSanitiseRegisterInfo_drop
-                        | wp asUser_typ_ats empty_fail_loadWordUser)+)+
+                        | wp empty_fail_loadWordUser)+)+
        apply (clarsimp simp: upto_enum_word word_le_nat_alt simp del: upt.simps cong: if_weak_cong)
        apply (cut_tac i="unat n" and j="Suc (unat (scast n_syscallMessage :: word32))"
                                  and k="Suc msgMaxLength" in upt_add_eq_append')
@@ -4404,8 +4404,7 @@ lemma doNormalTransfer_local_slots:
     doNormalTransfer sender sendBuffer ep badge grant receiver receiveBuffer
    \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>cte. P (cteCap cte)) slot\<rbrace>"
   apply (simp add: doNormalTransfer_def)
-  apply (wp transferCaps_local_slots weak copyMRs_typ_at'[where T=CTET, unfolded typ_at_cte']
-    | simp)+
+  apply (wpsimp wp: transferCaps_local_slots weak)
   done
 
 lemma doIPCTransfer_local_slots:

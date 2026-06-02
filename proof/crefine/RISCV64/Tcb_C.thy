@@ -430,7 +430,7 @@ lemma setPriority_ccorres:
     apply (simp add: guard_is_UNIV_def)
    apply (rule hoare_strengthen_post[
                  where Q'="\<lambda>rv s.
-                          obj_at' (\<lambda>_. True) t s \<and>
+                          tcb_at' t s \<and>
                           priority \<le> maxPriority \<and>
                           ksCurDomain s \<le> maxDomain \<and>
                           valid_objs' s \<and>
