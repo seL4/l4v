@@ -172,9 +172,9 @@ definition minIRQ :: "irq"
   where
   "minIRQ \<equiv> 0"
 
-definition maxIRQ :: "'a::numeral"
-  where
-  "maxIRQ \<equiv> 54"
+(* maxIRQ is defined via Kernel_Config on this architecture *)
+definition maxIRQ :: "'a::numeral" where
+  "maxIRQ \<equiv> Kernel_Config.maxIRQ"
 
 (* Reserved by C to represent "not an IRQ" *)
 definition irqInvalid :: "irq"
