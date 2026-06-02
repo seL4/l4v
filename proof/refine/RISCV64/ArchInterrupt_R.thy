@@ -1,5 +1,5 @@
 (*
- * Copyright 2014, General Dynamics C4 Systems
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
@@ -8,8 +8,8 @@
    Refinement for interrupt controller operations
 *)
 
-theory Interrupt_R
-imports ArchIpc_R Invocations_R
+theory ArchInterrupt_R
+imports Interrupt_R
 begin
 
 context Arch begin
@@ -34,6 +34,14 @@ requalify_facts
 end
 end
 
+context begin interpretation Arch .
+
+(* FIXME RISCV: consider defining this on all arches and moving to spec/machine/MachineExports.thy *)
+requalify_consts
+  irqInvalid
+
+end
+
 primrec
   irq_handler_inv_relation :: "irq_handler_invocation \<Rightarrow> irqhandler_invocation \<Rightarrow> bool"
 where
@@ -45,10 +53,8 @@ where
 primrec
   arch_irq_control_inv_relation :: "arch_irq_control_invocation \<Rightarrow> Arch.irqcontrol_invocation \<Rightarrow> bool"
 where
-  "arch_irq_control_inv_relation (X64_A.IssueIRQHandlerIOAPIC i ptr1 ptr2 a b c d e) x =
-     (x = X64_H.IssueIRQHandlerIOAPIC i (cte_map ptr1) (cte_map ptr2) a b c d e)"
-| "arch_irq_control_inv_relation (X64_A.IssueIRQHandlerMSI i p p' a b c d) x =
-     ( x = X64_H.IssueIRQHandlerMSI i (cte_map p) (cte_map p') a b c d)"
+  "arch_irq_control_inv_relation (RISCV64_A.RISCVIRQControlInvocation i ptr ptr' t) x =
+     (x = RISCV64_H.IssueIRQHandler i (cte_map ptr) (cte_map ptr') t)"
 
 primrec
   irq_control_inv_relation :: "irq_control_invocation \<Rightarrow> irqcontrol_invocation \<Rightarrow> bool"
@@ -73,26 +79,21 @@ where
 primrec
   arch_irq_control_inv_valid' :: "Arch.irqcontrol_invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
-  "arch_irq_control_inv_valid' (X64_H.IssueIRQHandlerIOAPIC irq p p' a b c d e) =
-                (cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) p and
-                 cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) p' and
-                 ex_cte_cap_to' p and real_cte_at' p and
-                (Not o irq_issued' irq) and K (irq \<le> maxIRQ))"
-| "arch_irq_control_inv_valid' (X64_H.IssueIRQHandlerMSI irq p p' a b c d) =
-                (cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) p and
-                 cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) p' and
-                 ex_cte_cap_to' p and real_cte_at' p and
-                (Not o irq_issued' irq) and K (irq \<le> maxIRQ))"
+  "arch_irq_control_inv_valid' (RISCV64_H.IssueIRQHandler irq ptr ptr' t) =
+     (cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) ptr and
+      cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) ptr' and
+      ex_cte_cap_to' ptr and real_cte_at' ptr and
+      (Not o irq_issued' irq) and K (irq \<le> maxIRQ \<and> irq \<noteq> irqInvalid))"
 
 primrec
   irq_control_inv_valid' :: "irqcontrol_invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "irq_control_inv_valid' (ArchIRQControl ivk) = arch_irq_control_inv_valid' ivk"
 | "irq_control_inv_valid' (IssueIRQHandler irq ptr ptr') =
-       (cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) ptr and
-        cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) ptr' and
-        ex_cte_cap_to' ptr and real_cte_at' ptr and
-        (Not o irq_issued' irq) and K (irq \<le> maxIRQ))"
+     (cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) ptr and
+      cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) ptr' and
+      ex_cte_cap_to' ptr and real_cte_at' ptr and
+      (Not o irq_issued' irq) and K (irq \<le> maxIRQ \<and> irq \<noteq> irqInvalid))"
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
@@ -159,52 +160,41 @@ lemma isIRQActive_wp:
   apply (clarsimp simp: irq_issued'_def)
   done
 
+lemma checkIRQ_corres:
+  "corres (ser \<oplus> dc) \<top> \<top> (arch_check_irq irq) (checkIRQ irq)"
+  unfolding arch_check_irq_def checkIRQ_def rangeCheck_def
+  apply (rule corres_guard_imp)
+    apply (clarsimp simp: minIRQ_def maxIRQ_def unlessE_whenE not_le)
+    apply (rule corres_whenE)
+      apply (fastforce simp: ucast_nat_def)+
+  done
+
 lemma whenE_rangeCheck_eq:
   "(rangeCheck (x :: 'a :: {linorder, integral}) y z) =
     (whenE (x < fromIntegral y \<or> fromIntegral z < x)
       (throwError (RangeError (fromIntegral y) (fromIntegral z))))"
   by (simp add: rangeCheck_def unlessE_whenE linorder_not_le[symmetric])
 
-(* 125 = maxIRQ *)
-lemma unat_ucast_ucast_shenanigans[simp]:
-  "unat (yf :: machine_word) \<le> (125::nat) \<Longrightarrow> ucast ((ucast yf) :: word8) = yf"
-  apply (subgoal_tac "unat yf \<le> unat 125")
-  apply (thin_tac "unat yf \<le> 125")
-  apply (subst (asm) word_le_nat_alt[symmetric])
-  apply (simp add: ucast_ucast_mask mask_def)
-   by (word_bitwise, auto)
+lemmas irq_const_defs = maxIRQ_def minIRQ_def
 
-lemma toEnum_unat_ucast_helper_64_8:
-  "unat yf \<le> 107 \<Longrightarrow> toEnum (unat (UCAST(64 \<rightarrow> 8) yf) + 16) = UCAST(64 \<rightarrow> 8) yf + 16"
-  apply (subgoal_tac "unat (UCAST (64 \<rightarrow> 8) yf) = unat yf")
-  apply (subst unat_ucast)
-  apply (simp add: ucast_nat_def)
-  apply (subst unat_ucast)
-  apply simp
+crunch arch_check_irq, checkIRQ
+  for inv: "P"
+  (simp: crunch_simps)
+
+lemma arch_check_irq_valid:
+  "\<lbrace>\<top>\<rbrace> arch_check_irq y \<lbrace>\<lambda>_. (\<lambda>s. unat y \<le> unat maxIRQ \<and> unat y \<noteq> unat irqInvalid)\<rbrace>, -"
+  unfolding arch_check_irq_def maxIRQ_def
+  apply (wpsimp simp: validE_R_def wp: whenE_throwError_wp)
+  apply (rule conjI)
+   apply (clarsimp simp: not_less word_le_nat_alt)
+  apply (simp add: unat_ucast_up_simp[where 'a=6 and 'b=64, simplified] irqInvalid_def)
+  apply (rule unat_mono[where a=0, simplified])
+  apply (simp add: word_neq_0_conv)
   done
 
-lemma toEnum_unat_ucast'_helper_64_8:
-  "unat yf \<le> 107 \<Longrightarrow> toEnum (16 + unat (UCAST(64 \<rightarrow> 8) yf)) = 16 + UCAST(64 \<rightarrow> 8) yf"
-  apply (subst add.commute)
-  apply (subst add.commute[where a="0x10"])
-  using toEnum_unat_ucast_helper_64_8
-  apply simp
-  done
-
-lemma unat_add_ucast_helper:
-  "unat xm \<le> 107 \<Longrightarrow> unat (0x10 + UCAST(64 \<rightarrow> 8) xm) \<le> 125"
-  apply (subgoal_tac "unat (UCAST(64 \<rightarrow> 8) xm) = unat xm")
-   apply (rule le_trans, rule unat_plus_gt, simp)
-  apply (simp add: unat_ucast)
-  done
-
-lemmas irq_const_defs =
-  maxIRQ_def minIRQ_def
-  X64.maxUserIRQ_def X64.minUserIRQ_def X64_H.maxUserIRQ_def X64_H.minUserIRQ_def
-
-lemma corres_gets_ioapic_nirqs [corres]:
-  "corres (=) \<top> \<top> (gets (x64_ioapic_nirqs \<circ> arch_state)) (gets (x64KSIOAPICnIRQs \<circ> ksArchState))"
-  by (simp add: state_relation_def arch_state_relation_def)
+lemma arch_check_irq_valid':
+  "\<lbrace>\<top>\<rbrace> arch_check_irq y \<lbrace>\<lambda>_ _. unat y \<le> unat maxIRQ \<and> unat y \<noteq> unat irqInvalid\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"
+  by (wp arch_check_irq_valid)
 
 lemma arch_decodeIRQControlInvocation_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
@@ -212,65 +202,38 @@ lemma arch_decodeIRQControlInvocation_corres:
      (invs and (\<lambda>s. \<forall>cp \<in> set caps. s \<turnstile> cp))
      (invs' and (\<lambda>s. \<forall>cp \<in> set caps'. s \<turnstile>' cp))
      (arch_decode_irq_control_invocation label args slot caps)
-     (X64_H.decodeIRQControlInvocation label args (cte_map slot) caps')"
-  apply (clarsimp simp: arch_decode_irq_control_invocation_def X64_H.decodeIRQControlInvocation_def Let_def)
-  apply (rule conjI, clarsimp)
+     (RISCV64_H.decodeIRQControlInvocation label args (cte_map slot) caps')"
+  apply (clarsimp simp: arch_decode_irq_control_invocation_def
+                        RISCV64_H.decodeIRQControlInvocation_def Let_def)
+  apply (rule conjI; clarsimp)
    prefer 2
-   apply clarsimp
-   apply (cases caps, simp)
-    apply (auto split: arch_invocation_label.splits list.splits invocation_label.splits
-                 simp: length_Suc_conv list_all2_Cons1 whenE_rangeCheck_eq liftE_bindE split_def)[2]
+   apply (cases caps
+          ; fastforce split: arch_invocation_label.splits list.splits invocation_label.splits
+                       simp: length_Suc_conv list_all2_Cons1 whenE_rangeCheck_eq liftE_bindE)
   apply (cases caps, simp split: list.split)
-  apply (case_tac "\<exists>n. length args = Suc (Suc (Suc (Suc (Suc (Suc (Suc n))))))",
-              clarsimp simp: length_Suc_conv list_all2_Cons1 whenE_rangeCheck_eq
-                             liftE_bindE split_def)
-   prefer 2 apply (auto split: list.split)[1]
-  apply (rule conjI, clarsimp)
-   \<comment> \<open>MSI\<close>
-   apply (rule corres_guard_imp)
-     apply (rule whenE_throwError_corres)
-       apply (simp add: irq_const_defs)
-      apply (simp add: irq_const_defs)
-     apply (simp add: linorder_not_less )
-     apply (simp add: irq_const_defs word_le_nat_alt)
-     apply (simp add: ucast_nat_def Groups.ab_semigroup_add_class.add.commute toEnum_unat_ucast_helper_64_8)
-     apply (rule corres_split_eqr[OF is_irq_active_corres])
-       apply (rule whenE_throwError_corres, simp, simp)
-       apply (rule corres_splitEE)
-          apply (rule lookupSlotForCNodeOp_corres; simp)
-         apply (rule corres_splitEE[OF ensureEmptySlot_corres])
-            apply simp
-           apply (rule whenE_throwError_corres, ((simp add: maxPCIBus_def maxPCIDev_def maxPCIFunc_def)+)[2])+
-           apply (rule corres_returnOkTT)
-           apply (clarsimp simp: arch_irq_control_inv_relation_def )
-           apply (wpsimp wp: isIRQActive_inv
-                       simp: invs_valid_objs invs_psp_aligned invs_valid_objs'
-                             invs_pspace_aligned' invs_pspace_distinct'
-                  | wp (once) hoare_drop_imps)+
-    \<comment> \<open>IOAPIC\<close>
+  apply (case_tac "\<exists>n. length args = Suc (Suc (Suc (Suc n)))",
+         clarsimp simp: length_Suc_conv list_all2_Cons1 whenE_rangeCheck_eq liftE_bindE)
+   prefer 2 apply (fastforce split: list.split)
+  \<comment>\<open>ARMIRQIssueIRQHandler\<close>
   apply (rule conjI, clarsimp)
    apply (rule corres_guard_imp)
-     apply (rule whenE_throwError_corres)
-       apply (simp add: irq_const_defs)
-      apply (simp add: irq_const_defs)
-     apply (simp add: linorder_not_less )
-     apply (simp add: irq_const_defs word_le_nat_alt)
-     apply (simp add: ucast_nat_def add.commute toEnum_unat_ucast_helper_64_8)
-     apply (rule corres_split_eqr[OF is_irq_active_corres])
-       apply (rule whenE_throwError_corres, simp, simp)
-       apply (rule corres_splitEE)
-          apply (rule lookupSlotForCNodeOp_corres; simp)
-         apply (rule corres_splitEE[OF ensureEmptySlot_corres])
-            apply simp
-           apply (rule corres_split[OF corres_gets_num_ioapics])
-             apply (rule corres_split[OF corres_gets_ioapic_nirqs])
-               apply (rule whenE_throwError_corres, ((simp add: ioapicIRQLines_def)+)[2])+
-               apply (rule corres_returnOkTT)
-               apply (clarsimp simp: arch_irq_control_inv_relation_def )
-              apply (wpsimp wp: isIRQActive_inv
-                          simp: invs_valid_objs invs_psp_aligned invs_valid_objs' invs_pspace_aligned' invs_pspace_distinct'
-                     | wp (once) hoare_drop_imps)+
-  by (auto split: arch_invocation_label.splits invocation_label.splits)
+     apply (rule corres_splitEE[OF checkIRQ_corres])
+       apply (rule_tac F="unat y \<le> unat maxIRQ \<and> unat y \<noteq> unat irqInvalid" in corres_gen_asm)
+       apply (clarsimp simp add: minIRQ_def maxIRQ_def ucast_nat_def)
+       apply (rule corres_split_eqr[OF is_irq_active_corres])
+         apply (rule whenE_throwError_corres, clarsimp, clarsimp)
+         apply (rule corres_splitEE)
+            apply (rule lookupSlotForCNodeOp_corres; clarsimp)
+           apply (rule corres_splitEE[OF ensureEmptySlot_corres], simp)
+             apply (rule corres_returnOkTT)
+             apply (clarsimp simp: arch_irq_control_inv_relation_def)
+            apply (wpsimp wp: isIRQActive_inv arch_check_irq_valid' checkIRQ_inv
+                        simp: invs_valid_objs invs_psp_aligned invs_valid_objs'
+                              invs_pspace_aligned' invs_pspace_distinct'
+                   | strengthen invs_valid_objs invs_psp_aligned
+                   | wp (once) hoare_drop_imps arch_check_irq_inv)+
+  apply (auto split: arch_invocation_label.splits invocation_label.splits)
+  done
 
 lemma irqhandler_simp[simp]:
   "gen_invocation_type label \<noteq> IRQIssueIRQHandler \<Longrightarrow>
@@ -284,9 +247,8 @@ lemma decodeIRQControlInvocation_corres:
      (decode_irq_control_invocation label args slot caps)
      (decodeIRQControlInvocation label args (cte_map slot) caps')"
   apply (clarsimp simp: decode_irq_control_invocation_def decodeIRQControlInvocation_def
-                        arch_check_irq_def X64_H.checkIRQ_def
-             split del: if_split cong: if_cong
-                 split: )
+                        arch_check_irq_def RISCV64_H.checkIRQ_def
+             split del: if_split cong: if_cong)
   apply clarsimp
   apply (rule conjI, clarsimp)
    apply (rule conjI, clarsimp)
@@ -294,9 +256,33 @@ lemma decodeIRQControlInvocation_corres:
     apply (case_tac "\<exists>n. length args = Suc (Suc (Suc n))")
      apply (clarsimp simp: list_all2_Cons1 Let_def split_def liftE_bindE
                            length_Suc_conv checkIRQ_def)
-    apply (subgoal_tac "length args \<le> 2", clarsimp split: list.split)
-    apply arith
-  apply (auto intro!: corres_guard_imp[OF arch_decodeIRQControlInvocation_corres] dest!: not_le_imp_less simp: o_def length_Suc_conv split: list.splits)
+     defer
+     apply (prop_tac "length args \<le> 2", arith)
+     apply (clarsimp split: list.split)
+    apply (simp add: minIRQ_def o_def)
+    apply (auto intro!: corres_guard_imp[OF arch_decodeIRQControlInvocation_corres])[1]
+   apply (auto intro!: corres_guard_imp[OF arch_decodeIRQControlInvocation_corres]
+               dest!: not_le_imp_less
+               simp: minIRQ_def o_def length_Suc_conv whenE_rangeCheck_eq ucast_nat_def
+               split: list.splits)[1]
+  apply (rule corres_guard_imp)
+    apply (rule whenE_throwError_corres, clarsimp simp: maxIRQ_def, clarsimp simp: maxIRQ_def)
+    apply (rule_tac F="unat y \<le> unat maxIRQ" in corres_gen_asm)
+    apply (clarsimp simp add: minIRQ_def maxIRQ_def ucast_nat_def toEnum_unat_ucast maxIRQ_def)
+    apply (rule corres_split_eqr[OF is_irq_active_corres])
+      apply (rule whenE_throwError_corres, clarsimp, clarsimp)
+      apply (rule corres_splitEE)
+         apply (rule lookupSlotForCNodeOp_corres; clarsimp)
+        apply (rule corres_splitEE[OF ensureEmptySlot_corres], simp)
+          apply (rule corres_returnOkTT)
+          apply (clarsimp simp: arch_irq_control_inv_relation_def)
+         apply (wpsimp wp: isIRQActive_inv arch_check_irq_valid' checkIRQ_inv
+                     simp: invs_valid_objs invs_psp_aligned invs_valid_objs'
+                           invs_pspace_aligned' invs_pspace_distinct' maxIRQ_def
+                | strengthen invs_valid_objs invs_psp_aligned
+                | wp (once) hoare_drop_imps arch_check_irq_inv)+
+   apply (auto split: arch_invocation_label.splits invocation_label.splits
+                simp: not_less unat_le_helper)
   done
 
 crunch "InterruptDecls_H.decodeIRQControlInvocation"
@@ -306,38 +292,29 @@ crunch "InterruptDecls_H.decodeIRQControlInvocation"
 (* Levity: added (20090201 10:50:27) *)
 declare ensureEmptySlot_stronger [wp]
 
-lemma lsfco_real_cte_at'[wp]:
-  "\<lbrace>valid_objs' and valid_cap' croot\<rbrace>
-     lookupSlotForCNodeOp is_src croot ptr depth
-   \<lbrace>\<lambda>rv s. real_cte_at' rv s\<rbrace>,-"
-  apply (simp add: lookupSlotForCNodeOp_def split_def unlessE_def
-                   whenE_def
-               split del: if_split
-             cong: if_cong list.case_cong capability.case_cong)
-  apply (rule hoare_pre)
-   apply (wp resolveAddressBits_real_cte_at'
-            | simp
-            | wpc | wp (once) hoare_drop_imps)+
-  done
-
 lemma arch_decode_irq_control_valid'[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> (\<forall>cap \<in> set caps. s \<turnstile>' cap)
         \<and> (\<forall>cap \<in> set caps. \<forall>r \<in> cte_refs' cap (irq_node' s). ex_cte_cap_to' r s)
         \<and> cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) slot s\<rbrace>
-     X64_H.decodeIRQControlInvocation label args slot caps
+     RISCV64_H.decodeIRQControlInvocation label args slot caps
    \<lbrace>arch_irq_control_inv_valid'\<rbrace>,-"
-   apply (clarsimp simp add: X64_H.decodeIRQControlInvocation_def Let_def split_def checkIRQ_def
-                   rangeCheck_def unlessE_whenE
-                split del: if_split cong: if_cong list.case_cong prod.case_cong
-                                          arch_invocation_label.case_cong)
+  apply (clarsimp simp add: RISCV64_H.decodeIRQControlInvocation_def Let_def split_def
+                            rangeCheck_def unlessE_whenE
+                 split del: if_split
+                      cong: if_cong list.case_cong prod.case_cong arch_invocation_label.case_cong)
   apply (rule hoare_pre)
-   apply (simp add: rangeCheck_def unlessE_whenE cong: list.case_cong prod.case_cong
+   apply (simp add: rangeCheck_def unlessE_whenE checkIRQ_def
+              cong: list.case_cong prod.case_cong
           | wp whenE_throwError_wp isIRQActive_wp ensureEmptySlot_stronger
           | wpc
           | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
-                        toEnum_unat_ucast_helper_64_8 maxIRQ_def)
-  apply (fastforce simp add: toEnum_unat_ucast'_helper_64_8 unat_add_ucast_helper)+
+                        not_less unat_le_helper unat_of_nat irqInvalid_def unat_ucast_mask
+                        maxIRQ_def)
+  apply (rule conjI)
+   apply (meson le_trans word_and_le2 word_less_eq_iff_unsigned)
+  apply clarsimp
+  apply (drule ucast_down_0; simp)
   done
 
 lemma decode_irq_control_valid'[wp]:
@@ -350,17 +327,22 @@ lemma decode_irq_control_valid'[wp]:
                    rangeCheck_def unlessE_whenE
                 split del: if_split cong: if_cong list.case_cong
                                           gen_invocation_labels.case_cong)
-  apply (rule hoare_pre)
-   apply (wp ensureEmptySlot_stronger isIRQActive_wp
-             whenE_throwError_wp
-                | simp add: o_def | wpc
-                | wp (once) hoare_drop_imps)+
+  apply (wpsimp wp: ensureEmptySlot_stronger isIRQActive_wp whenE_throwError_wp
+                simp: o_def
+         | wp (once) hoare_drop_imps)+
+  apply (clarsimp simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
+                        not_less unat_le_helper unat_of_nat irqInvalid_def unat_ucast_mask
+                        maxIRQ_def)
+  apply (rule conjI)
+   apply (meson le_trans word_and_le2 word_less_eq_iff_unsigned)
+  apply clarsimp
+  apply (drule ucast_down_0; simp)
   done
 
 lemma valid_globals_ex_cte_cap_irq:
   "\<lbrakk> ex_cte_cap_wp_to' isCNodeCap ptr s; valid_global_refs' s;
          valid_objs' s \<rbrakk>
-       \<Longrightarrow> ptr \<noteq> intStateIRQNode (ksInterruptState s) + 2 ^ cte_level_bits * ucast (irq :: 8 word)"
+       \<Longrightarrow> ptr \<noteq> intStateIRQNode (ksInterruptState s) + 2 ^ cte_level_bits * ucast (irq :: irq)"
   apply (clarsimp simp: cte_wp_at_ctes_of ex_cte_cap_wp_to'_def)
   apply (drule(1) ctes_of_valid'[rotated])
   apply (drule(1) valid_global_refsD')
@@ -368,9 +350,21 @@ lemma valid_globals_ex_cte_cap_irq:
    apply (clarsimp simp: isCap_simps)
   apply (subgoal_tac "irq_node' s + 2 ^ cte_level_bits * ucast irq \<in> global_refs' s")
    apply blast
-  apply (simp add: global_refs'_def cte_level_bits_def
-    mult.commute mult.left_commute)
+  apply (simp add: global_refs'_def cte_level_bits_def cteSizeBits_def shiftl_t2n mult.commute mult.left_commute)
   done
+
+lemma no_fail_plic_complete_claim [simp, wp]:
+  "no_fail \<top> (RISCV64.plic_complete_claim irw)"
+  unfolding RISCV64.plic_complete_claim_def
+  by (rule no_fail_machine_op_lift)
+
+lemma arch_invokeIRQHandler_corres:
+  "irq_handler_inv_relation i i' \<Longrightarrow>
+   corres dc \<top> \<top> (arch_invoke_irq_handler i) (RISCV64_H.invokeIRQHandler i')"
+  apply (cases i; clarsimp simp: RISCV64_H.invokeIRQHandler_def)
+  apply (rule corres_machine_op, rule corres_Id; simp?)
+  done
+
 
 lemma invokeIRQHandler_corres:
   "irq_handler_inv_relation i i' \<Longrightarrow>
@@ -378,9 +372,9 @@ lemma invokeIRQHandler_corres:
              (invs' and irq_handler_inv_valid' i')
      (invoke_irq_handler i)
      (InterruptDecls_H.invokeIRQHandler i')"
-  apply (cases i, simp_all add: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def)
-    apply (rule corres_guard_imp, rule corres_machine_op)
-      apply (rule corres_Id, simp_all)
+  supply arch_invoke_irq_handler.simps[simp del]
+  apply (cases i; simp add: Interrupt_H.invokeIRQHandler_def)
+    apply (rule corres_guard_imp, rule arch_invokeIRQHandler_corres; simp)
    apply (rename_tac word cap prod)
    apply clarsimp
    apply (rule corres_guard_imp)
@@ -413,7 +407,7 @@ lemma ntfn_badge_derived_enough_strg:
   "cte_wp_at' (\<lambda>cte. isNotificationCap cap \<and> badge_derived' cap (cteCap cte)) ptr s
         \<longrightarrow> cte_wp_at' (is_derived' ctes ptr cap \<circ> cteCap) ptr s"
   by (clarsimp simp: cte_wp_at_ctes_of isCap_simps
-                     badge_derived'_def is_derived'_def vsCapRef_def)
+                     badge_derived'_def is_derived'_def)
 
 lemma cteDeleteOne_ex_cte_cap_to'[wp]:
   "\<lbrace>ex_cte_cap_wp_to' P p\<rbrace> cteDeleteOne ptr \<lbrace>\<lambda>rv. ex_cte_cap_wp_to' P p\<rbrace>"
@@ -438,34 +432,42 @@ lemma isnt_irq_handler_strg:
   "(\<not> isIRQHandlerCap cap) \<longrightarrow> (\<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> P irq)"
   by (clarsimp simp: isCap_simps)
 
-lemma safe_ioport_insert'_ntfn_strg:
-  "isNotificationCap cap \<longrightarrow> safe_ioport_insert' cap cap' s"
-  by (clarsimp simp: isCap_simps)
+lemma plic_complete_claim_irq_masks[wp]:
+  "RISCV64.plic_complete_claim irq \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>"
+  unfolding RISCV64.plic_complete_claim_def by wp
+
+lemma dmo_plic_complete_claim_invs'[wp]:
+  "doMachineOp (RISCV64.plic_complete_claim irq) \<lbrace>invs'\<rbrace>"
+  apply (wp dmo_invs')
+  apply (clarsimp simp: in_monad RISCV64.plic_complete_claim_def machine_op_lift_def machine_rest_lift_def select_f_def)
+  done
+
+lemma invoke_arch_irq_handler_invs'[wp]:
+  "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace> RISCV64_H.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  by (cases i; wpsimp simp: RISCV64_H.invokeIRQHandler_def)
 
 lemma invoke_irq_handler_invs'[wp]:
   "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace>
     InterruptDecls_H.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (cases i, simp_all add: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def)
-    apply (wp dmo_maskInterrupt)
-    apply (clarsimp simp: invs'_def valid_state'_def valid_irq_masks'_def
-                          valid_machine_state'_def ct_not_inQ_def)
+  apply (cases i; simp add: Interrupt_H.invokeIRQHandler_def)
+    apply wpsimp
    apply (wp cteInsert_invs)+
-   apply (strengthen ntfn_badge_derived_enough_strg isnt_irq_handler_strg safe_ioport_insert'_ntfn_strg)
-   apply (wp cteDeleteOne_other_cap cteDeleteOne_other_cap[unfolded o_def])
-  apply (rename_tac word1 cap word2)
-  apply (simp add: getInterruptState_def getIRQSlot_def locateSlot_conv)
-  apply wp
+    apply (strengthen ntfn_badge_derived_enough_strg isnt_irq_handler_strg)
+    apply (wp cteDeleteOne_other_cap cteDeleteOne_other_cap[unfolded o_def])
+   apply (rename_tac word1 cap word2)
+   apply (simp add: getInterruptState_def getIRQSlot_def locateSlot_conv)
+   apply wp
   apply (rename_tac word1 cap word2 s)
   apply (clarsimp simp: ucast_nat_def)
   apply (drule_tac irq=word1 in valid_globals_ex_cte_cap_irq)
     apply clarsimp+
   apply (clarsimp simp: cte_wp_at_ctes_of ex_cte_cap_to'_def
                         isCap_simps untyped_derived_eq_def)
-  apply (fastforce simp: cte_level_bits_def badge_derived'_def cteSizeBits_def shiftl_t2n)
+  apply (fastforce simp: cte_level_bits_def cteSizeBits_def shiftl_t2n)+
   done
 
 lemma IRQHandler_valid':
-  "(s' \<turnstile>' IRQHandlerCap irq) = (irq \<le> maxIRQ)"
+  "(s' \<turnstile>' IRQHandlerCap irq) = (irq \<le> maxIRQ \<and> irq \<noteq> irqInvalid)"
   by (simp add: valid_cap'_def capAligned_def word_bits_conv)
 
 crunch setIRQState
@@ -474,38 +476,22 @@ crunch setIRQState
 method do_machine_op_corres
   = (rule corres_machine_op, rule corres_Id, rule refl, simp, wp)
 
-lemma updateIRQState_corres[wp]:
-  "state = x64irqstate_to_abstract state' \<Longrightarrow>
-     corres dc \<top> \<top>
-       (update_irq_state irq state)
-       (updateIRQState irq state')"
-  apply (clarsimp simp: update_irq_state_def updateIRQState_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split[OF corres_gets_x64_irq_state])
-      apply (rule corres_modify[where P=\<top> and P'=\<top>])
-      apply (auto simp: state_relation_def arch_state_relation_def x64_irq_relation_def)
-  done
+lemma no_fail_setIRQTrigger: "no_fail \<top> (setIRQTrigger irq trig)"
+  by (simp add: setIRQTrigger_def)
 
-crunch updateIRQState
-  for pspace_distinct'[wp]: "pspace_distinct'"
-  and pspace_aligned'[wp]: "pspace_aligned'"
-  and cte_wp_at'[wp]: "cte_wp_at' a b"
-  and valid_mdb'[wp]: "valid_mdb'"
-  and ksPSpace[wp]: "\<lambda>s. P (ksPSpace s)"
-  and real_cte_at'[wp]: "real_cte_at' x"
-  and valid_cap'[wp]: "valid_cap' a"
-  and ctes_of[wp]: "\<lambda>s. P (ctes_of s a)"
-  and ksPSpace[wp]: "\<lambda>s. P (ksPSpace s)"
-  and inv[wp]: "\<lambda>s. P"
-  and ex_cte_cap_wp_to'[wp]: "ex_cte_cap_wp_to' a b"
-  (simp: ex_cte_cap_wp_to'_def valid_mdb'_def)
+lemma setIRQTrigger_corres:
+  "corres dc \<top> \<top> (do_machine_op (setIRQTrigger irq t)) (doMachineOp (setIRQTrigger irq t))"
+  apply (rule corres_machine_op)
+  apply (rule corres_guard_imp)
+    apply (rule corres_rel_imp)
+     apply (wp
+            | rule corres_underlying_trivial
+            | rule no_fail_setIRQTrigger
+            | simp add: dc_def)+
+  done
 
 crunch set_irq_state
   for valid_arch_state[wp]: valid_arch_state
-
-lemma maxUserIRQ_le_maxIRQ:
-  "X64.maxUserIRQ \<le> maxIRQ"
-  by (simp add: X64.maxUserIRQ_def maxIRQ_def)
 
 lemma arch_performIRQControl_corres:
   "arch_irq_control_inv_relation x2 ivk' \<Longrightarrow> corres (dc \<oplus> dc)
@@ -513,46 +499,21 @@ lemma arch_performIRQControl_corres:
           (invs' and arch_irq_control_inv_valid' ivk')
           (arch_invoke_irq_control x2)
           (Arch.performIRQControl ivk')"
-  apply (cases x2; simp add: X64_H.performIRQControl_def arch_invoke_irq_control_def)
-   apply (rule corres_guard_imp)
-     apply (rule corres_split_nor)
-        apply do_machine_op_corres
-       apply (rule corres_split_nor)
-          apply (wpsimp simp: IRQ_def)
-         apply (rule corres_split_nor)
-            apply (rule setIRQState_corres)
-            apply (simp add: irq_state_relation_def)
-           apply (rule cteInsert_simple_corres)
-             apply (wpsimp simp: IRQHandler_valid IRQHandler_valid'
-                    | strengthen invs_arch_state
-                    | wps)+
-    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cte_wp_at_caps_of_state
-                          is_simple_cap_def is_cap_simps arch_irq_control_inv_valid_def
-                          maxIRQ_def[symmetric]
-                          safe_parent_for_def order_trans[OF _ maxUserIRQ_le_maxIRQ])
-   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def IRQHandler_valid
-                      IRQHandler_valid' is_simple_cap'_def isCap_simps IRQ_def)
-   apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
-   apply (case_tac ctea)
-   apply (clarsimp simp: isCap_simps sameRegionAs_def3)
-   apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
+  apply (cases x2; simp add: RISCV64_H.performIRQControl_def invoke_irq_control.cases IRQ_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor)
-       apply (wpsimp simp: IRQ_def)
+       apply (rule setIRQTrigger_corres)
       apply (rule corres_split_nor)
          apply (rule setIRQState_corres)
          apply (simp add: irq_state_relation_def)
-        apply (rule cteInsert_simple_corres)
-           apply (wpsimp simp: IRQHandler_valid IRQHandler_valid'
-                  | strengthen invs_arch_state
-                 | wps)+
+        apply (rule cteInsert_simple_corres; simp)
+       apply (wp | simp add: irq_state_relation_def IRQHandler_valid IRQHandler_valid')+
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cte_wp_at_caps_of_state
-                            is_simple_cap_def is_cap_simps arch_irq_control_inv_valid_def
-                            maxIRQ_def[symmetric]
-                            safe_parent_for_def order_trans[OF _ maxUserIRQ_le_maxIRQ])
+                         is_simple_cap_def is_cap_simps arch_irq_control_inv_valid_def
+                         safe_parent_for_def is_simple_cap_arch_def)
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def IRQHandler_valid
-                      IRQHandler_valid' is_simple_cap'_def isCap_simps IRQ_def)
-  apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
+                        IRQHandler_valid' is_simple_cap'_def isCap_simps IRQ_def)
+  apply (clarsimp simp: safe_parent_for'_def safe_parent_for_arch'_def cte_wp_at_ctes_of)
   apply (case_tac ctea)
   apply (clarsimp simp: isCap_simps sameRegionAs_def3)
   apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
@@ -571,7 +532,7 @@ lemma performIRQControl_corres:
        apply (rule cteInsert_simple_corres)
          apply (wp | simp add: IRQHandler_valid IRQHandler_valid')+
     apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
-                          cte_wp_at_caps_of_state is_simple_cap_def
+                          cte_wp_at_caps_of_state is_simple_cap_def is_simple_cap_arch_def
                           is_cap_simps safe_parent_for_def)
    apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
                          IRQHandler_valid  IRQHandler_valid' is_simple_cap'_def
@@ -601,59 +562,33 @@ lemma setIRQState_issued[wp]:
   apply clarsimp
   done
 
-lemma updateIRQState_invs'[wp]:
-  "\<lbrace>invs' and K (irq \<le> maxIRQ)\<rbrace>
-   updateIRQState irq state
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (clarsimp simp: updateIRQState_def)
-  apply wp
-  apply (fastforce simp: invs'_def valid_state'_def cur_tcb'_def
-                         valid_idle'_def valid_irq_node'_def
-                         valid_arch_state'_def valid_global_refs'_def
-                         global_refs'_def valid_machine_state'_def
-                         if_unsafe_then_cap'_def ex_cte_cap_to'_def
-                         valid_irq_handlers'_def irq_issued'_def
-                         cteCaps_of_def valid_irq_masks'_def
-                         bitmapQ_defs  valid_x64_irq_state'_def
-                         all_ioports_issued'_def issued_ioports'_def)
-  done
-
-lemma dmo_ioapicMapPinToVector_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (ioapicMapPinToVector a b c d e) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_ioapicMapPinToVector no_irq)
+lemma dmo_setIRQTrigger_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (setIRQTrigger irq t) \<lbrace>\<lambda>r. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_setIRQTrigger no_irq)
   apply clarsimp
   apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
          in use_valid[where P=P and Q="\<lambda>_. P" for P])
-    apply (simp add: ioapicMapPinToVector_def machine_op_lift_def
-                     machine_rest_lift_def split_def | wp)+
+    apply (wpsimp simp: setIRQTrigger_def machine_op_lift_def machine_rest_lift_def split_def)+
   done
 
 lemma arch_invoke_irq_control_invs'[wp]:
-  "\<lbrace>invs' and arch_irq_control_inv_valid' i\<rbrace> X64_H.performIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: X64_H.performIRQControl_def)
+  "\<lbrace>invs' and arch_irq_control_inv_valid' i\<rbrace> RISCV64_H.performIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (simp add: RISCV64_H.performIRQControl_def)
   apply (rule hoare_pre)
-   apply (wp cteInsert_simple_invs
-            | simp add: cte_wp_at_ctes_of isCap_simps
-            | wpc)+
-  apply (clarsimp simp: cte_wp_at_ctes_of IRQHandler_valid'
-                        is_simple_cap'_def isCap_simps
-                        safe_parent_for'_def sameRegionAs_def3)
+   apply (wpsimp wp: cteInsert_simple_invs simp: cte_wp_at_ctes_of isCap_simps IRQ_def)
+  apply (clarsimp simp: cte_wp_at_ctes_of IRQHandler_valid' is_simple_cap'_def isCap_simps
+                        safe_parent_for'_def safe_parent_for_arch'_def sameRegionAs_def3)
   apply (rule conjI, clarsimp simp: cte_wp_at_ctes_of)
-   apply (case_tac ctea)
-   apply (auto dest: valid_irq_handlers_ctes_ofD
-               simp: invs'_def valid_state'_def IRQ_def)[1]
-  apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (case_tac ctea)
   apply (auto dest: valid_irq_handlers_ctes_ofD
-              simp: invs'_def valid_state'_def IRQ_def)[1]
+              simp: invs'_def valid_state'_def IRQ_def)
   done
 
 lemma invoke_irq_control_invs'[wp]:
   "\<lbrace>invs' and irq_control_inv_valid' i\<rbrace> performIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (cases i, simp_all add: performIRQControl_def)
   apply (rule hoare_pre)
-   apply (wp cteInsert_simple_invs
-           | simp add: cte_wp_at_ctes_of isCap_simps)+
+   apply (wp cteInsert_simple_invs | simp add: cte_wp_at_ctes_of)+
   apply (clarsimp simp: cte_wp_at_ctes_of IRQHandler_valid'
                         is_simple_cap'_def isCap_simps
                         safe_parent_for'_def sameRegionAs_def3)
@@ -699,9 +634,10 @@ lemma ready_qs_distinct_domain_time_update[simp]:
   by (clarsimp simp: ready_qs_distinct_def)
 
 lemma timerTick_corres:
-  "corres dc (cur_tcb and valid_sched and pspace_aligned and pspace_distinct)
-             invs'
-             timer_tick timerTick"
+  "corres dc
+     (cur_tcb and valid_sched and pspace_aligned and pspace_distinct) invs'
+     timer_tick timerTick"
+  supply if_cong[cong]
   apply (simp add: timerTick_def timer_tick_def)
   apply (simp add: thread_state_case_if threadState_case_if)
   apply (rule_tac Q="cur_tcb and valid_sched and pspace_aligned and pspace_distinct"
@@ -712,7 +648,7 @@ lemma timerTick_corres:
         apply simp
         apply (rule corres_split[OF getThreadState_corres])
           apply (rename_tac state state')
-          apply (rule corres_split[where r' = dc ])
+          apply (rule corres_split[where r' = dc])
              apply (rule corres_if[where Q = \<top> and Q' = \<top>])
                apply (case_tac state,simp_all)[1]
               apply (rule_tac r'="(=)" in corres_split[OF threadGet_corres])
@@ -750,8 +686,7 @@ lemma timerTick_corres:
            apply (wpsimp wp: hoare_weak_lift_imp threadSet_timeslice_invs
                              tcbSchedAppend_valid_objs'
                              threadSet_pred_tcb_at_state threadSet_weak_sch_act_wf
-                             rescheduleRequired_weak_sch_act_wf
-                         split_del: if_split)+
+                             rescheduleRequired_weak_sch_act_wf)+
               apply (strengthen valid_queues_in_correct_ready_q valid_queues_ready_qs_distinct)
               apply (wpsimp wp: thread_set_valid_queues thread_set_weak_valid_sched_action)
              apply ((wpsimp wp: thread_set_valid_queues
@@ -791,11 +726,10 @@ lemma handleInterrupt_corres:
                                where R="\<lambda>rv. ?P"
                                  and R'="\<lambda>rv. invs' and (\<lambda>s. rv \<noteq> IRQInactive)"])
        defer
-       apply (wp getIRQState_prop getIRQState_inv do_machine_op_bind doMachineOp_bind | simp add: do_machine_op_bind doMachineOp_bind )+
-   apply (rule corres_guard_imp)
-     apply (rule corres_split)
-        apply (rule corres_machine_op, rule corres_eq_trivial ; (simp add: dc_def no_fail_maskInterrupt no_fail_bind no_fail_ackInterrupt)+)+
-      apply ((wp | simp)+)[4]
+       apply (wp getIRQState_prop getIRQState_inv do_machine_op_bind doMachineOp_bind
+              | simp add: do_machine_op_bind doMachineOp_bind valid_sched_def)+
+   apply (corres corres: corres_machine_op)
+
   apply (rule corres_gen_asm2)
   apply (case_tac st, simp_all add: irq_state_relation_def split: irqstate.split_asm)
     apply (simp add: getSlotCap_def bind_assoc)
@@ -804,28 +738,28 @@ lemma handleInterrupt_corres:
         apply simp
         apply (rule corres_split[OF get_cap_corres,
                                   where R="\<lambda>rv. einvs and valid_cap rv"
-                                    and R'="\<lambda>rv. invs' and valid_cap' (cteCap rv)"])
+                                   and R'="\<lambda>rv. invs' and valid_cap' (cteCap rv)"])
           apply (rule corres_underlying_split[where r'=dc])
-              apply (case_tac xb, simp_all add: doMachineOp_return)[1]
+             apply (case_tac xb, simp_all add: doMachineOp_return)[1]
               apply (clarsimp simp add: when_def doMachineOp_return)
               apply (rule corres_guard_imp, rule sendSignal_corres)
-                apply (clarsimp simp: valid_cap_def valid_cap'_def do_machine_op_bind doMachineOp_bind
-                                      arch_mask_irq_signal_def maskIrqSignal_def)+
-            apply (rule corres_split)
-                apply (rule corres_machine_op, rule corres_eq_trivial ; (simp add:  no_fail_maskInterrupt no_fail_bind no_fail_ackInterrupt)+)+
-              apply ((wp |simp)+)
-      apply clarsimp
+               apply (clarsimp simp: valid_cap_def valid_cap'_def arch_mask_irq_signal_def
+                                     maskIrqSignal_def do_machine_op_bind doMachineOp_bind)+
+            apply (rule corres_machine_op, rule corres_eq_trivial;
+                    (simp add: no_fail_ackInterrupt)+)+
+           apply ((wp |simp)+)
+     apply clarsimp
     apply fastforce
-    apply (rule corres_guard_imp)
-      apply (rule corres_split)
+   apply (rule corres_guard_imp)
+     apply (rule corres_split)
+        apply simp
         apply (rule corres_split[OF timerTick_corres corres_machine_op])
-          apply (rule corres_eq_trivial, simp+)
-          apply wp+
-        apply (rule corres_machine_op)
-        apply (rule corres_eq_trivial, (simp add: no_fail_ackInterrupt)+)
+          apply (rule corres_eq_trivial, wpsimp+)
+       apply (rule corres_machine_op)
+       apply (rule corres_eq_trivial, (simp add: no_fail_ackInterrupt)+)
       apply wp+
-    apply fastforce
-    apply clarsimp
+    apply (clarsimp simp: invs_distinct invs_psp_aligned schact_is_rct_def)
+   apply clarsimp
   apply (corres corres: corres_machine_op corres_eq_trivial)
   done
 
@@ -847,19 +781,14 @@ lemma updateTimeSlice_valid_pspace[wp]:
   "\<lbrace>valid_pspace'\<rbrace> threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
   \<lbrace>\<lambda>r. valid_pspace'\<rbrace>"
   apply (wp threadSet_valid_pspace'T)
-  apply (auto simp: tcb_cte_cases_def tcb_cte_cases_neqs)
+  apply (auto simp:tcb_cte_cases_def cteSizeBits_def)
   done
 
-(* catch up tcbSchedAppend to tcbSchedEnqueue, which has these from crunches on possibleSwitchTo *)
 crunch tcbSchedAppend
   for irq_handlers'[wp]: valid_irq_handlers'
-  (simp: unless_def tcb_cte_cases_def tcb_cte_cases_neqs wp: crunch_wps)
-crunch tcbSchedAppend
-  for irqs_masked'[wp]: irqs_masked'
-  (simp: unless_def wp: crunch_wps)
-crunch tcbSchedAppend
-  for ct[wp]: cur_tcb'
-  (wp: cur_tcb_lift crunch_wps)
+  and irqs_masked'[wp]: irqs_masked'
+  and ct[wp]: cur_tcb'
+  (simp: unless_def tcb_cte_cases_def cteSizeBits_def wp: crunch_wps cur_tcb_lift)
 
 lemma timerTick_invs'[wp]:
   "timerTick \<lbrace>invs'\<rbrace>"
@@ -909,6 +838,7 @@ lemma dmo_ackInterrupt[wp]:
                            machine_rest_lift_def split_def | wp)+)[3]
   done
 
+(* FIXME arch-split: imposing a stronger precondition affects InfoFlow refinement *)
 lemma hint_invs[wp]:
   "\<lbrace>invs'\<rbrace> handleInterrupt irq \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: handleInterrupt_def getSlotCap_def
@@ -916,7 +846,7 @@ lemma hint_invs[wp]:
   apply (rule conjI; rule impI)
 
    apply (wp dmo_maskInterrupt_True getCTE_wp'
-          | wpc | simp add: doMachineOp_bind maskIrqSignal_def)+
+    | wpc | simp add: doMachineOp_bind maskIrqSignal_def )+
     apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_post_imp)
      apply (clarsimp simp: cte_wp_at_ctes_of ex_nonz_cap_to'_def)
      apply fastforce
