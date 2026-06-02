@@ -1,5 +1,6 @@
 (*
- * Copyright 2014, General Dynamics C4 Systems
+ * Copyright 2023, Proofcraft Pty Ltd
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
@@ -8,8 +9,8 @@
    Refinement for interrupt controller operations
 *)
 
-theory Interrupt_R
-imports ArchIpc_R Invocations_R
+theory ArchInterrupt_R
+imports Interrupt_R
 begin
 
 context Arch begin
@@ -42,16 +43,13 @@ where
 | "irq_handler_inv_relation (Invocations_A.SetIRQHandler irq cap ptr) x =
        (\<exists>cap'. x = SetIRQHandler irq cap' (cte_map ptr) \<and> cap_relation cap cap')"
 
-consts
-  interrupt_control_relation :: "arch_irq_control_invocation \<Rightarrow> Arch.irqcontrol_invocation \<Rightarrow> bool"
-
 primrec
   arch_irq_control_inv_relation :: "arch_irq_control_invocation \<Rightarrow> Arch.irqcontrol_invocation \<Rightarrow> bool"
 where
-  "arch_irq_control_inv_relation (ARM_A.ArchIRQControlIssue i ptr1 ptr2 t) x =
-     (x = ARM_H.IssueIRQHandler i (cte_map ptr1) (cte_map ptr2) t)"
-| "arch_irq_control_inv_relation (ARM_A.IssueSGISignal irq target ptr ptr') x =
-     (x = ARM_H.IssueSGISignal (ucast irq) (ucast target) (cte_map ptr) (cte_map ptr'))"
+  "arch_irq_control_inv_relation (AARCH64_A.ARMIRQControlInvocation i ptr ptr' t) x =
+     (x = AARCH64_H.IssueIRQHandler i (cte_map ptr) (cte_map ptr') t)"
+| "arch_irq_control_inv_relation (AARCH64_A.IssueSGISignal irq target ptr ptr') x =
+     (x = AARCH64_H.IssueSGISignal (ucast irq) (ucast target) (cte_map ptr) (cte_map ptr'))"
 
 primrec
   irq_control_inv_relation :: "irq_control_invocation \<Rightarrow> irqcontrol_invocation \<Rightarrow> bool"
@@ -76,25 +74,26 @@ where
 primrec
   arch_irq_control_inv_valid' :: "Arch.irqcontrol_invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
-  "arch_irq_control_inv_valid' (ARM_H.IssueIRQHandler irq p p' t) =
-                (cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) p and
-                 cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) p' and
-                 ex_cte_cap_to' p and real_cte_at' p and
-                (Not o irq_issued' irq) and K (irq \<le> maxIRQ))"
-| "arch_irq_control_inv_valid' (ARM_H.IssueSGISignal irq target src_slot sgi_slot) =
+  "arch_irq_control_inv_valid' (AARCH64_H.IssueIRQHandler irq ptr ptr' t) =
+     (cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) ptr and
+      cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) ptr' and
+      ex_cte_cap_to' ptr and real_cte_at' ptr and
+      (Not o irq_issued' irq) and K (irq \<le> maxIRQ))"
+| "arch_irq_control_inv_valid' (AARCH64_H.IssueSGISignal irq target src_slot sgi_slot) =
      (cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) sgi_slot and
       cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) src_slot and
       ex_cte_cap_to' sgi_slot and real_cte_at' sgi_slot)"
+
 
 primrec
   irq_control_inv_valid' :: "irqcontrol_invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "irq_control_inv_valid' (ArchIRQControl ivk) = arch_irq_control_inv_valid' ivk"
 | "irq_control_inv_valid' (IssueIRQHandler irq ptr ptr') =
-       (cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) ptr and
-        cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) ptr' and
-        ex_cte_cap_to' ptr and real_cte_at' ptr and
-        (Not o irq_issued' irq) and K (irq \<le> maxIRQ))"
+     (cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) ptr and
+      cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) ptr' and
+      ex_cte_cap_to' ptr and real_cte_at' ptr and
+      (Not o irq_issued' irq) and K (irq \<le> maxIRQ))"
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
@@ -176,55 +175,38 @@ lemma whenE_rangeCheck_eq:
       (throwError (RangeError (fromIntegral y) (fromIntegral z))))"
   by (simp add: rangeCheck_def unlessE_whenE linorder_not_le[symmetric])
 
-(* 125 = maxIRQ *)
-lemma unat_ucast_ucast_shenanigans[simp]:
-  "unat (yf :: machine_word) \<le> (125::nat) \<Longrightarrow> ucast ((ucast yf) :: word8) = yf"
-  apply (subgoal_tac "unat yf \<le> unat 125")
-   apply (thin_tac "unat yf \<le> 125")
-   apply (subst (asm) word_le_nat_alt[symmetric])
-   apply (simp add: ucast_ucast_mask mask_def)
-  by (word_bitwise, auto)
-
 lemmas irq_const_defs = minIRQ_def
 
 crunch arch_check_irq, checkIRQ
   for inv: "P"
   (simp: crunch_simps)
 
-lemma arch_check_irq_maxIRQ_valid:
-  "\<lbrace>\<top>\<rbrace> arch_check_irq irq \<lbrace>\<lambda>_ s. irq \<le> Kernel_Config.maxIRQ\<rbrace>, -"
+lemma arch_check_irq_valid:
+  "\<lbrace>\<top>\<rbrace> arch_check_irq irq \<lbrace>\<lambda>_. (\<lambda>s. irq \<le> Kernel_Config.maxIRQ)\<rbrace>, -"
   unfolding arch_check_irq_def
   apply (wpsimp simp: validE_R_def wp: whenE_throwError_wp)
-  apply (simp add: word_not_le maxIRQ_def)
+  apply (simp add: not_less word_le_nat_alt maxIRQ_def)
   done
 
-lemma arch_check_irq_maxIRQ_valid':
+lemma arch_check_irq_valid':
   "\<lbrace>\<top>\<rbrace> arch_check_irq irq \<lbrace>\<lambda>_ _. irq \<le> Kernel_Config.maxIRQ\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"
-  by (wp arch_check_irq_maxIRQ_valid)
+  by (wp arch_check_irq_valid)
 
 lemma isSGITargetValid_eq:
   "isSGITargetValid w = sgi_target_valid w"
   unfolding isSGITargetValid_def sgi_target_valid_def
   by simp
 
-lemma zero_less_numSGIs_isGIC:
-  "0 < numSGIs \<Longrightarrow> isGICPlatform"
-  by (simp add: numSGIs_def split: if_split_asm)
-
 lemma sgi_target_cast[simp]:
-  "\<lbrakk> sgi_target_valid w; 0 < numSGIs \<rbrakk> \<Longrightarrow> ucast (ucast w :: sgi_target) = w"
+  "sgi_target_valid w \<Longrightarrow> ucast (ucast w :: sgi_target) = w"
   unfolding sgi_target_valid_def gicNumTargets_def
-  by (simp flip: sgi_target_len_def add: ucast_ucast_le_mask mask_def sgi_target_len_val
-                 zero_less_numSGIs_isGIC
-           split: if_splits)
+  by (simp flip: sgi_target_len_def add: ucast_ucast_le_mask mask_def sgi_target_len_val)
 
 lemma sgi_irq_cast:
-  "\<lbrakk> w \<le> word_of_nat numSGIs - 1;  0 < numSGIs \<rbrakk> \<Longrightarrow>
-   ucast (ucast w :: sgi_irq) = (w :: machine_word)"
+  "w \<le> word_of_nat numSGIs - 1 \<Longrightarrow> ucast (ucast w :: sgi_irq) = (w :: machine_word)"
   unfolding numSGIs_def
   by (simp flip: sgi_irq_len_def
-           add: ucast_ucast_len sgi_irq_len_val word_le_nat_alt word_less_nat_alt
-           split: if_split_asm)
+           add: ucast_ucast_len sgi_irq_len_val word_le_nat_alt word_less_nat_alt)
 
 lemma arch_decodeIRQControlInvocation_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
@@ -232,18 +214,18 @@ lemma arch_decodeIRQControlInvocation_corres:
      (invs and (\<lambda>s. \<forall>cp \<in> set caps. s \<turnstile> cp))
      (invs' and (\<lambda>s. \<forall>cp \<in> set caps'. s \<turnstile>' cp))
      (arch_decode_irq_control_invocation label args slot caps)
-     (ARM_H.decodeIRQControlInvocation label args (cte_map slot) caps')"
-  apply (clarsimp simp: arch_decode_irq_control_invocation_def ARM_H.decodeIRQControlInvocation_def Let_def)
-  apply (rule conjI, clarsimp)
+     (Arch.decodeIRQControlInvocation label args (cte_map slot) caps')"
+  apply (clarsimp simp: arch_decode_irq_control_invocation_def
+                        AARCH64_H.decodeIRQControlInvocation_def Let_def)
+  apply (rule conjI; clarsimp)
    prefer 2
-   apply clarsimp
-   apply (cases caps, simp)
-    apply (auto split: arch_invocation_label.splits list.splits invocation_label.splits
-                 simp: length_Suc_conv list_all2_Cons1 whenE_rangeCheck_eq liftE_bindE split_def)[2]
+   apply (cases caps
+          ; fastforce split: arch_invocation_label.splits list.splits invocation_label.splits
+                       simp: length_Suc_conv list_all2_Cons1 whenE_rangeCheck_eq liftE_bindE)
   apply (cases caps, simp split: list.split)
   apply (case_tac "\<exists>n. length args = Suc (Suc (Suc (Suc n)))",
-              clarsimp simp: length_Suc_conv list_all2_Cons1 liftE_bindE split_def)
-   prefer 2 apply (auto split: list.split)[1]
+         clarsimp simp: length_Suc_conv list_all2_Cons1 liftE_bindE)
+   prefer 2 apply (fastforce split: list.split)
   \<comment>\<open>ARMIRQIssueSGISignal\<close>
   apply (rule conjI, clarsimp)
    apply (simp add: range_check_def rangeCheck_def)
@@ -253,25 +235,23 @@ lemma arch_decodeIRQControlInvocation_corres:
    apply fastforce
   \<comment>\<open>ARMIRQIssueIRQHandler\<close>
   apply (rule impI, rule conjI, clarsimp)
-  \<comment>\<open>ARMIRQIssueIRQHandler\<close>
    apply (rule corres_guard_imp)
-     apply corres
      apply (rule corres_splitEE[OF checkIRQ_corres])
        apply (rule_tac F="y \<le> Kernel_Config.maxIRQ" in corres_gen_asm)
        apply (clarsimp simp: toEnum_unat_ucast le_maxIRQ_machine_less_irqBits_val)
        apply (rule corres_split_eqr[OF is_irq_active_corres])
          apply (rule whenE_throwError_corres, clarsimp, clarsimp)
          apply (rule corres_splitEE)
-            apply (rule lookupSlotForCNodeOp_corres; simp)
-           apply (rule corres_splitEE)
-              apply (rule ensureEmptySlot_corres; simp)
+            apply (rule lookupSlotForCNodeOp_corres; clarsimp)
+           apply (rule corres_splitEE[OF ensureEmptySlot_corres], simp)
              apply (rule corres_returnOkTT)
-             apply (clarsimp simp: arch_irq_control_inv_relation_def )
-            apply ((wpsimp wp: isIRQActive_inv arch_check_irq_maxIRQ_valid' checkIRQ_inv
-                           simp: invs_valid_objs invs_psp_aligned invs_valid_objs'
-                                 invs_pspace_aligned' invs_pspace_distinct'
+             apply (clarsimp simp: arch_irq_control_inv_relation_def)
+            apply (wp del: arch_check_irq_inv
+                   | wpsimp wp: isIRQActive_inv checkIRQ_inv arch_check_irq_valid'
+                          simp: invs_valid_objs invs_psp_aligned invs_valid_objs'
+                                invs_pspace_aligned' invs_pspace_distinct'
                    | strengthen invs_valid_objs invs_psp_aligned
-                   | wp (once) hoare_drop_imps arch_check_irq_inv)+)
+                   | wp (once) hoare_drop_imps arch_check_irq_inv)+
   apply (auto split: arch_invocation_label.splits invocation_label.splits)
   done
 
@@ -280,8 +260,6 @@ lemma irqhandler_simp[simp]:
    (case gen_invocation_type label of IRQIssueIRQHandler \<Rightarrow> b | _ \<Rightarrow> c) = c"
   by (clarsimp split: gen_invocation_labels.splits)
 
-lemmas unat_le_mono = word_le_nat_alt [THEN iffD1]
-
 lemma decodeIRQControlInvocation_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
    corres (ser \<oplus> irq_control_inv_relation)
@@ -289,82 +267,65 @@ lemma decodeIRQControlInvocation_corres:
      (decode_irq_control_invocation label args slot caps)
      (decodeIRQControlInvocation label args (cte_map slot) caps')"
   apply (clarsimp simp: decode_irq_control_invocation_def decodeIRQControlInvocation_def
-                        arch_check_irq_def ARM_H.checkIRQ_def
-                  split del: if_split cong: if_cong
-                  split: )
+                        arch_check_irq_def AARCH64_H.checkIRQ_def
+             split del: if_split cong: if_cong)
   apply clarsimp
   apply (rule conjI, clarsimp)
    apply (rule conjI, clarsimp)
     apply (cases caps, simp split: list.split)
     apply (case_tac "\<exists>n. length args = Suc (Suc (Suc n))")
      apply (clarsimp simp: list_all2_Cons1 Let_def split_def liftE_bindE
-                           length_Suc_conv checkIRQ_def )
+                           length_Suc_conv checkIRQ_def)
      defer
-     apply (subgoal_tac "length args \<le> 2", clarsimp split: list.split)
-     apply arith
+     apply (prop_tac "length args \<le> 2", arith)
+     apply (clarsimp split: list.split)
     apply (simp add: minIRQ_def o_def)
     apply (auto intro!: corres_guard_imp[OF arch_decodeIRQControlInvocation_corres])[1]
    apply (auto intro!: corres_guard_imp[OF arch_decodeIRQControlInvocation_corres]
                dest!: not_le_imp_less
-               simp: minIRQ_def o_def length_Suc_conv whenE_rangeCheck_eq ucast_nat_def
+               simp: minIRQ_def o_def maxIRQ_def length_Suc_conv whenE_rangeCheck_eq ucast_nat_def
                split: list.splits)[1]
-  apply (simp add: minIRQ_def maxIRQ_def o_def length_Suc_conv whenE_rangeCheck_eq)
   apply (rule corres_guard_imp)
-    apply (rule whenE_throwError_corres, clarsimp, clarsimp)
+    apply (simp add: whenE_rangeCheck_eq maxIRQ_def)
+    apply (rule whenE_throwError_corres, clarsimp, fastforce)
     apply (rule_tac F="y \<le> Kernel_Config.maxIRQ" in corres_gen_asm)
     apply (clarsimp simp: toEnum_unat_ucast le_maxIRQ_machine_less_irqBits_val)
     apply (rule corres_split_eqr[OF is_irq_active_corres])
       apply (rule whenE_throwError_corres, clarsimp, clarsimp)
       apply (rule corres_splitEE)
-         apply (rule lookupSlotForCNodeOp_corres; simp)
-        apply (rule corres_splitEE)
-           apply (rule ensureEmptySlot_corres; simp)
+         apply (rule lookupSlotForCNodeOp_corres; clarsimp)
+        apply (rule corres_splitEE[OF ensureEmptySlot_corres], simp)
           apply (rule corres_returnOkTT)
-          apply (clarsimp simp: arch_irq_control_inv_relation_def )
-         apply (wpsimp wp: isIRQActive_inv arch_check_irq_maxIRQ_valid' checkIRQ_inv
-                       simp: invs_valid_objs invs_psp_aligned invs_valid_objs'
-                             invs_pspace_aligned' invs_pspace_distinct'
+          apply (clarsimp simp: arch_irq_control_inv_relation_def)
+         apply (wpsimp wp: isIRQActive_inv arch_check_irq_valid' checkIRQ_inv
+                     simp: invs_valid_objs invs_psp_aligned invs_valid_objs'
+                           invs_pspace_aligned' invs_pspace_distinct'
                 | strengthen invs_valid_objs invs_psp_aligned
                 | wp (once) hoare_drop_imps arch_check_irq_inv)+
    apply (auto split: arch_invocation_label.splits invocation_label.splits
-               simp: not_less unat_le_helper)
+                simp: not_less unat_le_helper)
   done
 
 crunch "InterruptDecls_H.decodeIRQControlInvocation"
   for inv[wp]: "P"
-  (simp: crunch_simps)
-
+  (simp: crunch_simps wp: crunch_wps)
 
 (* Levity: added (20090201 10:50:27) *)
 declare ensureEmptySlot_stronger [wp]
-
-lemma lsfco_real_cte_at'[wp]:
-  "\<lbrace>valid_objs' and valid_cap' croot\<rbrace>
-     lookupSlotForCNodeOp is_src croot ptr depth
-   \<lbrace>\<lambda>rv s. real_cte_at' rv s\<rbrace>,-"
-  apply (simp add: lookupSlotForCNodeOp_def split_def unlessE_def
-                   whenE_def
-               split del: if_split
-             cong: if_cong list.case_cong capability.case_cong)
-  apply (rule hoare_pre)
-   apply (wp resolveAddressBits_real_cte_at'
-            | simp
-            | wpc | wp (once) hoare_drop_imps)+
-  done
 
 lemma arch_decode_irq_control_valid'[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> (\<forall>cap \<in> set caps. s \<turnstile>' cap)
         \<and> (\<forall>cap \<in> set caps. \<forall>r \<in> cte_refs' cap (irq_node' s). ex_cte_cap_to' r s)
         \<and> cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) slot s\<rbrace>
-     ARM_H.decodeIRQControlInvocation label args slot caps
+     Arch.decodeIRQControlInvocation label args slot caps
    \<lbrace>arch_irq_control_inv_valid'\<rbrace>,-"
-  apply (clarsimp simp add: ARM_H.decodeIRQControlInvocation_def Let_def split_def
+  apply (clarsimp simp add: AARCH64_H.decodeIRQControlInvocation_def Let_def split_def
                             rangeCheck_def unlessE_whenE
-                  split del: if_split
-                  cong: if_cong list.case_cong prod.case_cong arch_invocation_label.case_cong)
+                 split del: if_split
+                      cong: if_cong list.case_cong prod.case_cong arch_invocation_label.case_cong)
   apply (rule hoare_pre)
    apply (simp add: rangeCheck_def unlessE_whenE checkIRQ_def
-               cong: list.case_cong prod.case_cong
+              cong: list.case_cong prod.case_cong
           | wp whenE_throwError_wp isIRQActive_wp ensureEmptySlot_stronger
           | wpc
           | wp (once) hoare_drop_imps)+
@@ -401,8 +362,7 @@ lemma valid_globals_ex_cte_cap_irq:
    apply (clarsimp simp: isCap_simps)
   apply (subgoal_tac "irq_node' s + 2 ^ cte_level_bits * ucast irq \<in> global_refs' s")
    apply blast
-  apply (simp add: global_refs'_def cte_level_bits_def
-                   mult.commute mult.left_commute cteSizeBits_def shiftl_t2n)
+  apply (simp add: global_refs'_def cte_level_bits_def cteSizeBits_def shiftl_t2n mult.commute mult.left_commute)
   done
 
 lemma no_fail_deactivateInterrupt[wp, simp]:
@@ -412,9 +372,9 @@ lemma no_fail_deactivateInterrupt[wp, simp]:
 
 lemma arch_invokeIRQHandler_corres:
   "irq_handler_inv_relation i i' \<Longrightarrow>
-   corres dc \<top> \<top> (arch_invoke_irq_handler i) (ARM_H.invokeIRQHandler i')"
-  apply (cases i; clarsimp simp: ARM_H.invokeIRQHandler_def theIRQ_def)
-  apply (intro conjI impI; rule corres_machine_op, rule corres_Id; simp add: no_fail_maskInterrupt)
+   corres dc \<top> \<top> (arch_invoke_irq_handler i) (Arch.invokeIRQHandler i')"
+  apply (cases i; clarsimp simp: AARCH64_H.invokeIRQHandler_def theIRQ_def)
+  apply (intro conjI impI; rule corres_machine_op, rule corres_Id; simp?)
   done
 
 
@@ -459,7 +419,7 @@ lemma ntfn_badge_derived_enough_strg:
   "cte_wp_at' (\<lambda>cte. isNotificationCap cap \<and> badge_derived' cap (cteCap cte)) ptr s
         \<longrightarrow> cte_wp_at' (is_derived' ctes ptr cap \<circ> cteCap) ptr s"
   by (clarsimp simp: cte_wp_at_ctes_of isCap_simps
-                     badge_derived'_def is_derived'_def vsCapRef_def)
+                     badge_derived'_def is_derived'_def)
 
 lemma cteDeleteOne_ex_cte_cap_to'[wp]:
   "\<lbrace>ex_cte_cap_wp_to' P p\<rbrace> cteDeleteOne ptr \<lbrace>\<lambda>rv. ex_cte_cap_wp_to' P p\<rbrace>"
@@ -484,9 +444,9 @@ lemma isnt_irq_handler_strg:
   "(\<not> isIRQHandlerCap cap) \<longrightarrow> (\<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> P irq)"
   by (clarsimp simp: isCap_simps)
 
-lemma dmo_maskInterrupt:
-  "\<lbrace>\<lambda>s. invs' s \<and> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive\<rbrace>
-   doMachineOp (maskInterrupt m irq)
+lemma doMachineOp_maskInterrupt_False[wp]:
+  "\<lbrace> \<lambda>s. invs' s \<and> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive \<rbrace>
+   doMachineOp (maskInterrupt False irq)
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (wp dmo_maskInterrupt)
   apply (clarsimp simp: invs'_def valid_state'_def)
@@ -499,13 +459,11 @@ lemma doMachineOp_deactivateInterrupt[wp]:
    doMachineOp (deactivateInterrupt irq)
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding deactivateInterrupt_def
-  by (cases config_ARM_GIC_V3; wpsimp wp: dmo_maskInterrupt)
+  by (cases config_ARM_GIC_V3; wpsimp)
 
 lemma invoke_arch_irq_handler_invs'[wp]:
-  "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace> ARM_H.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (cases i; wpsimp simp: ARM_H.invokeIRQHandler_def theIRQ_def)
-  apply (rule conjI; wpsimp wp: dmo_maskInterrupt)
-  done
+  "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace> Arch.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  by (cases i; (wpsimp simp: AARCH64_H.invokeIRQHandler_def theIRQ_def | rule conjI)+)
 
 lemma invoke_irq_handler_invs'[wp]:
   "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace>
@@ -513,18 +471,18 @@ lemma invoke_irq_handler_invs'[wp]:
   apply (cases i; simp add: Interrupt_H.invokeIRQHandler_def)
     apply wpsimp
    apply (wp cteInsert_invs)+
-   apply (strengthen ntfn_badge_derived_enough_strg isnt_irq_handler_strg)
-   apply (wp cteDeleteOne_other_cap cteDeleteOne_other_cap[unfolded o_def])
-  apply (rename_tac word1 cap word2)
-  apply (simp add: getInterruptState_def getIRQSlot_def locateSlot_conv)
-  apply wp
+    apply (strengthen ntfn_badge_derived_enough_strg isnt_irq_handler_strg)
+    apply (wp cteDeleteOne_other_cap cteDeleteOne_other_cap[unfolded o_def])
+   apply (rename_tac word1 cap word2)
+   apply (simp add: getInterruptState_def getIRQSlot_def locateSlot_conv)
+   apply wp
   apply (rename_tac word1 cap word2 s)
   apply (clarsimp simp: ucast_nat_def)
   apply (drule_tac irq=word1 in valid_globals_ex_cte_cap_irq)
     apply clarsimp+
   apply (clarsimp simp: cte_wp_at_ctes_of ex_cte_cap_to'_def
                         isCap_simps untyped_derived_eq_def)
-  apply (fastforce simp: cte_level_bits_def badge_derived'_def cteSizeBits_def shiftl_t2n)
+  apply (fastforce simp: cte_level_bits_def cteSizeBits_def shiftl_t2n)+
   done
 
 lemma IRQHandler_valid':
@@ -534,10 +492,8 @@ lemma IRQHandler_valid':
 crunch setIRQState
   for valid_mdb'[wp]: "valid_mdb'"
 
-lemma no_fail_setIRQTrigger[wp]:
-  "no_fail \<top> (setIRQTrigger irq t)"
-  unfolding setIRQTrigger_def
-  by wpsimp
+method do_machine_op_corres
+  = (rule corres_machine_op, rule corres_Id, rule refl, simp, wp)
 
 lemma setIRQTrigger_corres:
   "corres dc \<top> \<top> (do_machine_op (setIRQTrigger irq t)) (doMachineOp (setIRQTrigger irq t))"
@@ -546,6 +502,7 @@ lemma setIRQTrigger_corres:
     apply (rule corres_rel_imp)
      apply (wp
             | rule corres_underlying_trivial
+            | rule no_fail_setIRQTrigger
             | simp add: dc_def)+
   done
 
@@ -557,28 +514,33 @@ lemma SGISignalCap_valid[simp, intro!]:
   by (simp add: valid_cap'_def capAligned_def word_bits_def)
 
 lemma arch_performIRQControl_corres:
-  "arch_irq_control_inv_relation ivk ivk' \<Longrightarrow> corres (dc \<oplus> dc)
-          (einvs and arch_irq_control_inv_valid ivk)
+  "arch_irq_control_inv_relation x2 ivk' \<Longrightarrow> corres (dc \<oplus> dc)
+          (einvs and arch_irq_control_inv_valid x2)
           (invs' and arch_irq_control_inv_valid' ivk')
-          (arch_invoke_irq_control ivk)
+          (arch_invoke_irq_control x2)
           (Arch.performIRQControl ivk')"
-  apply (cases ivk; simp add: ARM_H.performIRQControl_def invoke_irq_control.cases IRQ_def)
-  apply (corres corres: setIRQTrigger_corres setIRQState_corres cteInsert_simple_corres
-                simp: irq_state_relation_def)
-       apply (wpsimp simp: irq_state_relation_def IRQHandler_valid IRQHandler_valid')+
+  apply (cases x2; simp add: AARCH64_H.performIRQControl_def invoke_irq_control.cases IRQ_def)
+   apply (rule corres_guard_imp)
+     apply (rule corres_split_nor)
+        apply (rule setIRQTrigger_corres)
+       apply (rule corres_split_nor)
+          apply (rule setIRQState_corres)
+          apply (simp add: irq_state_relation_def)
+         apply (rule cteInsert_simple_corres; simp)
+        apply (wp | simp add: irq_state_relation_def IRQHandler_valid IRQHandler_valid')+
     apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cte_wp_at_caps_of_state
                           is_simple_cap_def is_cap_simps arch_irq_control_inv_valid_def
-                          safe_parent_for_def)
+                          safe_parent_for_def is_simple_cap_arch_def)
    apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def IRQHandler_valid
                          IRQHandler_valid' is_simple_cap'_def isCap_simps IRQ_def)
    apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
-   apply (rename_tac cte', case_tac cte')
+   apply (case_tac ctea)
    apply (clarsimp simp: isCap_simps sameRegionAs_def3)
    apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
   apply (corres corres: cteInsert_simple_corres)
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cte_wp_at_caps_of_state
                          is_simple_cap_def is_cap_simps arch_irq_control_inv_valid_def
-                         safe_parent_for_def is_irq_control_descendant_def)
+                         safe_parent_for_def is_simple_cap_arch_def is_irq_control_descendant_def)
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
                         is_simple_cap'_def isCap_simps)
   apply (clarsimp simp: safe_parent_for'_def safe_parent_for_arch'_def cte_wp_at_ctes_of)
@@ -598,7 +560,7 @@ lemma performIRQControl_corres:
        apply (rule cteInsert_simple_corres)
          apply (wp | simp add: IRQHandler_valid IRQHandler_valid')+
     apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
-                          cte_wp_at_caps_of_state is_simple_cap_def
+                          cte_wp_at_caps_of_state is_simple_cap_def is_simple_cap_arch_def
                           is_cap_simps safe_parent_for_def)
    apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
                          IRQHandler_valid  IRQHandler_valid' is_simple_cap'_def
@@ -634,17 +596,14 @@ lemma dmo_setIRQTrigger_invs'[wp]:
   apply clarsimp
   apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
          in use_valid[where P=P and Q="\<lambda>_. P" for P])
-    apply (simp add: setIRQTrigger_def machine_op_lift_def
-                     machine_rest_lift_def split_def | wp)+
+    apply (wpsimp simp: setIRQTrigger_def machine_op_lift_def machine_rest_lift_def split_def)+
   done
 
 lemma arch_invoke_irq_control_invs'[wp]:
-  "\<lbrace>invs' and arch_irq_control_inv_valid' i\<rbrace> ARM_H.performIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: ARM_H.performIRQControl_def)
+  "\<lbrace>invs' and arch_irq_control_inv_valid' i\<rbrace> Arch.performIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (simp add: AARCH64_H.performIRQControl_def)
   apply (rule hoare_pre)
-   apply (wp cteInsert_simple_invs
-          | simp add: cte_wp_at_ctes_of isCap_simps IRQ_def
-          | wpc)+
+   apply (wpsimp wp: cteInsert_simple_invs simp: cte_wp_at_ctes_of isCap_simps IRQ_def)
   apply (clarsimp simp: cte_wp_at_ctes_of IRQHandler_valid' is_simple_cap'_def isCap_simps
                         safe_parent_for'_def safe_parent_for_arch'_def sameRegionAs_def3)
   apply (clarsimp simp: capRange_def)
@@ -775,33 +734,262 @@ lemma timerTick_corres:
   apply fastforce
   done
 
+lemma corres_return_VGICMaintenance [corres]:
+  "corres ((=) o arch_fault_map) (K (a=b)) \<top>
+          (return (AARCH64_A.VGICMaintenance a)) (return (AARCH64_H.VGICMaintenance b))"
+  by simp
+
+lemmas corres_gets_numlistregs [corres] = corres_gets_gicvcpu_numlistregs (* FIXME AARCH64: de-duplicate *)
+
 lemmas corres_eq_trivial = corres_Id[where f = h and g = h for h, simplified]
 
-(* FIXME arch-split: architectures with hypervisor support impose stronger guards *)
+lemma countTrailingZeros_simp[simp]:
+  "countTrailingZeros = word_ctz"
+  unfolding countTrailingZeros_def word_ctz_def
+  by (simp add: to_bl_upt)
+
+crunch doMachineOp
+   for sch_act_ct_rq[wp]: "\<lambda>s. P (ksSchedulerAction s) (ksCurThread s) (ksReadyQueues s)"
+   and pred_tcb_at'_ct[wp]: "\<lambda>s. pred_tcb_at' proj test (ksCurThread s) s"
+   and ex_nonz_cap_to'[wp]: "\<lambda>s. P (ex_nonz_cap_to' (ksCurThread s) s)"
+
+lemma dmo_wp_no_rest:
+  "\<lbrace>K((\<forall>s f. P s = (P (machine_state_update (machine_state_rest_update f) s)))) and P\<rbrace>
+   do_machine_op (machine_op_lift f)
+   \<lbrace>\<lambda>_. P\<rbrace>"
+  apply (simp add: do_machine_op_def machine_op_lift_def bind_assoc)
+  apply wpsimp
+  apply (clarsimp simp add: machine_rest_lift_def in_monad select_f_def ignore_failure_def)
+  apply (clarsimp split: if_splits)
+  apply (drule_tac x=s in spec)
+  apply (drule_tac x="\<lambda>_. b" in spec)
+  apply simp
+  apply (erule rsubst[OF _ arg_cong[where f=P]])
+  apply clarsimp
+  done
+
+lemma dmo_gets_wp:
+  "\<lbrace>\<lambda>s. P (f (machine_state s)) s\<rbrace> do_machine_op (gets f) \<lbrace>P\<rbrace>"
+  by (wpsimp simp: submonad_do_machine_op.gets)
+
+crunch vgicUpdateLR
+  for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
+
+lemma not_pred_tcb':
+  "(\<not>pred_tcb_at' proj P t s) = (\<not>tcb_at' t s \<or> pred_tcb_at' proj (\<lambda>a. \<not>P a) t s)"
+  by (auto simp: pred_tcb_at'_def obj_at'_def)
+
+lemma virqSetEOIIRQEN_eq[simp]:
+  "AARCH64_H.virqSetEOIIRQEN = AARCH64_A.virqSetEOIIRQEN"
+  unfolding virqSetEOIIRQEN_def AARCH64_A.virqSetEOIIRQEN_def eoiirqenShift_def eoiirqen_shift_def
+  by (simp cong: if_cong)
+
+lemma vgic_maintenance_corres [corres]:
+  "corres dc einvs
+    (\<lambda>s. invs' s \<and> sch_act_not (ksCurThread s) s)
+    vgic_maintenance vgicMaintenance"
+proof -
+  (* hoare_lift_Pf-style rules match too often, slowing down proof unless specialised *)
+  note vilr = hoare_lift_Pf2[where f=cur_thread and m="vgic_update_lr v i virq" for v i virq]
+  note vilr' = hoare_lift_Pf2[where f=ksCurThread and m="vgicUpdateLR v i virq" for v i virq]
+  note wplr = vilr[where P="st_tcb_at active"]
+              vilr[where P="ex_nonz_cap_to"]
+  note wplr' = vilr'[where P="sch_act_not"]
+               vilr'[where P="ex_nonz_cap_to'"]
+               vilr'[where P="st_tcb_at' simple'"]
+  show ?thesis
+    unfolding vgic_maintenance_def vgicMaintenance_def isRunnable_def Let_def
+    apply (rule corres_guard_imp)
+      apply (rule corres_split[OF corres_gets_current_vcpu], simp, rename_tac hsCurVCPU)
+        (* we only care about the one case we do something: active current vcpu *)
+        apply (rule_tac R="hsCurVCPU = None" in corres_cases')
+         apply (rule corres_trivial, simp)
+        apply (clarsimp, rename_tac vcpu_ptr active)
+        apply wpfix
+        apply (rule_tac R="\<not> active" in corres_cases')
+         apply (rule corres_trivial, simp)
+        apply clarsimp
+
+        apply (rule corres_split_eqr[OF corres_machine_op],
+               (rule corres_Id; wpsimp simp: get_gic_vcpu_ctrl_misr_def
+                                             get_gic_vcpu_ctrl_eisr1_def
+                                             get_gic_vcpu_ctrl_eisr0_def))+
+              apply (rename_tac eisr0 eisr1 flags)
+              apply (rule corres_split[OF corres_gets_numlistregs])
+                apply (rule corres_split[where r'="\<lambda>rv rv'. rv' = arch_fault_map rv"])
+                   apply (rule corres_if[rotated -1])
+                     apply (rule corres_trivial, simp)
+                    apply clarsimp
+                   apply (rule corres_if, simp)
+                    apply (rule corres_trivial, simp)
+                   supply if_split[split del]
+                   apply (clarsimp simp: bind_assoc cong: if_cong)
+                   apply (rule corres_split_eqr[OF corres_machine_op])
+                      apply (rule corres_Id; wpsimp)
+                     apply (rule corres_split_dc[OF corres_machine_op])
+                        apply (rule corres_Id; wpsimp)
+                       apply clarsimp
+                       apply (rule corres_split_dc[OF vgicUpdateLR_corres])
+                         apply (rule corres_trivial, simp)
+                        apply wpsimp+
+                  apply (rule corres_split_eqr[OF getCurThread_corres])
+                    apply (rule corres_split[OF getThreadState_corres])
+                      apply (fold dc_def)
+                      apply (rule corres_when)
+                       apply clarsimp
+                       apply (rename_tac threadState threadState')
+                       apply (case_tac threadState; simp)
+                      apply (rule handleFault_corres)
+                      apply clarsimp
+                     apply clarsimp
+                     apply (wp gts_wp)
+                    apply (wp gts_wp')
+                   apply (rule_tac
+                            Q'="\<lambda>rv. tcb_at rv and einvs
+                                    and (\<lambda>_. valid_fault (ExceptionTypes_A.fault.ArchFault rva))"
+                            in hoare_post_imp)
+                    apply (clarsimp cong: imp_cong conj_cong simp: not_pred_tcb runnable_eq pred_conj_def)
+                    apply (strengthen st_tcb_ex_cap'[where P=active], clarsimp)
+                    apply (fastforce simp: pred_tcb_at_def obj_at_def)
+                   apply wp
+                  apply clarsimp
+                  apply (rule_tac Q'="\<lambda>rv x. tcb_at' rv x
+                                            \<and> invs' x
+                                            \<and> sch_act_not rv x"
+                           in hoare_post_imp)
+                   apply (rename_tac rv s)
+                   apply clarsimp
+                   apply (strengthen st_tcb_ex_cap''[where P=active'])
+                   apply (strengthen invs_iflive')
+                   apply (clarsimp cong: imp_cong conj_cong simp: not_pred_tcb')
+                   apply (clarsimp simp: pred_tcb_at'_def)
+                   apply (rule conjI, erule_tac p=rv in obj_at'_weakenE,
+                          fastforce split: thread_state.splits)
+                   apply (erule_tac p=rv in obj_at'_weakenE, fastforce split: thread_state.splits)
+                  apply wp
+                 apply (wpsimp wp: wplr wplr' hoare_vcg_all_lift
+                                   hoare_vcg_imp_lift' dmo_gets_wp dmo'_gets_wp
+                               simp: get_gic_vcpu_ctrl_misr_def if_apply_def2
+                                     get_gic_vcpu_ctrl_eisr1_def
+                                     get_gic_vcpu_ctrl_eisr0_def
+                        | strengthen tcb_at_invs tcb_at_invs')+
+
+     apply (frule invs_arch_state)
+     apply (clarsimp simp: valid_arch_state_def valid_fault_def obj_at_def cur_vcpu_def in_omonad)
+    apply (clarsimp simp: tcb_at_invs')
+    apply (frule invs_arch_state')
+    apply (clarsimp simp: valid_arch_state'_def vcpu_at_is_vcpu')
+    apply (erule ko_wp_at'_weakenE, simp)
+    done
+qed
+
+lemma vppiEvent_corres:
+  "corres dc einvs
+    (\<lambda>s. invs' s \<and> sch_act_not (ksCurThread s) s)
+    (vppi_event irq) (vppiEvent irq)"
+  unfolding vppi_event_def vppiEvent_def isRunnable_def
+  supply [[simproc del: defined_all]]
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF corres_gets_current_vcpu])
+      apply (clarsimp simp del: subst_all (* avoid destroying useful name of rv *))
+      (* we only care about the one case we do something: active current vcpu *)
+      apply (rule_tac R="hsCurVCPU = None" in corres_cases')
+       apply (rule corres_trivial, simp)
+      apply (clarsimp, rename_tac vcpu_ptr active)
+      apply wpfix
+      apply (rule_tac R="\<not> active" in corres_cases')
+       apply (rule corres_trivial, simp)
+      apply clarsimp
+
+      apply (rule corres_split_dc[OF corres_machine_op])
+         apply (rule corres_Id; wpsimp)
+        apply (rule corres_split_dc[OF vcpuUpdate_corres])
+           apply (fastforce simp: vcpu_relation_def irq_vppi_event_index_def
+                                  irqVPPIEventIndex_def IRQ_def)
+          apply (rule corres_split_eqr[OF getCurThread_corres])
+            apply (rule corres_split[OF getThreadState_corres], rename_tac gts gts')
+              apply (fold dc_def)
+              apply (rule corres_when)
+               apply (case_tac gts; fastforce)
+              apply (rule handleFault_corres, simp)
+             apply (wp gts_st_tcb_at hoare_vcg_imp_lift')
+            apply (wp gts_st_tcb_at' hoare_vcg_imp_lift')
+             (* on both sides, we check that the current thread is runnable, then have to know it
+                is runnable directly afterwards, which is obvious and should not propagate further;
+                clean up the postconditions of the thread_get and threadGet *)
+           apply (rule_tac
+                    Q'="\<lambda>rv. tcb_at rv and einvs
+                            and (\<lambda>_. valid_fault (ExceptionTypes_A.fault.ArchFault
+                                                    (AARCH64_A.VPPIEvent irq)))"
+                    in hoare_post_imp)
+            apply (clarsimp cong: imp_cong conj_cong simp: not_pred_tcb runnable_eq pred_conj_def)
+            apply (strengthen st_tcb_ex_cap'[where P=active], fastforce)
+           apply wp
+          apply (clarsimp cong: imp_cong conj_cong simp: pred_conj_def)
+          apply (rule_tac Q'="\<lambda>rv x. tcb_at' rv x
+                                    \<and> invs' x
+                                    \<and> sch_act_not rv x" in hoare_post_imp)
+           apply (rename_tac rv s)
+           apply (strengthen st_tcb_ex_cap''[where P=active'])
+           apply (strengthen invs_iflive')
+           apply (clarsimp cong: imp_cong conj_cong simp: not_pred_tcb')
+           apply (clarsimp simp: pred_tcb_at'_def)
+           apply (rule conjI, erule_tac p=rv in obj_at'_weakenE, fastforce split: thread_state.splits)
+           apply (erule_tac p=rv in obj_at'_weakenE, fastforce split: thread_state.splits)
+          apply wp
+         apply (wpsimp wp: vcpu_update_tcb_at hoare_vcg_all_lift hoare_vcg_imp_lift'
+                       cong: vcpu.fold_congs)+
+         apply (strengthen tcb_at_invs)
+         apply (wpsimp wp: dmo_maskInterrupt_True maskInterrupt_invs
+                           setVCPU_VPPIMasked_invs' simp: vcpuUpdate_def
+                | wps)+
+   apply (frule invs_arch_state)
+   apply (simp add: valid_arch_state_def valid_fault_def tcb_at_invs)
+   apply (clarsimp simp: obj_at_def cur_vcpu_def in_omonad)
+  apply clarsimp
+  apply (frule invs_arch_state')
+  apply (rule conjI)
+   apply (clarsimp simp: valid_arch_state'_def vcpu_at_is_vcpu')
+   apply (erule ko_wp_at'_weakenE, simp)
+  apply (simp add: tcb_at_invs')
+  done
+
 lemma handle_reserved_irq_corres[corres]:
-  "corres dc einvs invs' (handle_reserved_irq irq) (handleReservedIRQ irq)"
-  unfolding handle_reserved_irq_def handleReservedIRQ_def by corres
+  "corres dc einvs
+      (\<lambda>s. invs' s \<and> (irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s))
+      (handle_reserved_irq irq) (handleReservedIRQ irq)"
+  apply (clarsimp simp: handle_reserved_irq_def handleReservedIRQ_def irqVPPIEventIndex_def
+                        irq_vppi_event_index_def non_kernel_IRQs_def IRQ_def irqVGICMaintenance_def
+                        irqVTimerEvent_def)
+  apply (rule conjI; clarsimp)
+   apply (rule corres_guard_imp, rule vppiEvent_corres, assumption, fastforce)
+  apply (rule corres_guard_imp)
+    apply (rule corres_when)
+     apply (fastforce intro: vgic_maintenance_corres simp: unat_arith_simps)+
+  done
 
 lemma handleInterrupt_corres:
   "corres dc
-     (einvs) (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive))
+     einvs (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive)
+                  and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s))
      (handle_interrupt irq) (handleInterrupt irq)"
-  (is "corres dc (einvs) ?P' ?f ?g")
+  (is "corres dc _ (invs' and _ and ?P') _ _")
   apply (simp add: handle_interrupt_def handleInterrupt_def maxIRQ_def)
   apply (rule conjI[rotated]; rule impI)
 
    apply (rule corres_guard_imp)
      apply (rule corres_split[OF getIRQState_corres,
                                where R="\<lambda>rv. einvs"
-                                 and R'="\<lambda>rv. invs' and (\<lambda>s. rv \<noteq> IRQInactive)"])
+                                 and R'="\<lambda>rv. invs' and ?P' and (\<lambda>s. rv \<noteq> IRQInactive)"])
        defer
        apply (wp getIRQState_prop getIRQState_inv do_machine_op_bind doMachineOp_bind | simp add: do_machine_op_bind doMachineOp_bind )+
    apply (rule corres_guard_imp)
      apply (rule corres_split)
-        apply (rule corres_machine_op, rule corres_eq_trivial ; (simp add: dc_def no_fail_maskInterrupt no_fail_bind no_fail_ackInterrupt)+)+
+        apply (rule corres_machine_op, rule corres_eq_trivial; simp)+
       apply ((wp | simp)+)[4]
+
   apply (rule corres_gen_asm2)
-  apply (case_tac st, simp_all add: irq_state_relation_def split: irqstate.split_asm)
+  apply (case_tac st, simp_all add: irq_state_relation_def bind_assoc split: irqstate.split_asm)
     apply (simp add: getSlotCap_def bind_assoc)
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF getIRQSlot_corres])
@@ -813,21 +1001,14 @@ lemma handleInterrupt_corres:
              apply (case_tac xb, simp_all add: doMachineOp_return)[1]
               apply (clarsimp simp add: when_def doMachineOp_return)
               apply (rule corres_guard_imp, rule sendSignal_corres)
-               apply (clarsimp simp: valid_cap_def valid_cap'_def)+
-            apply (clarsimp simp: arch_mask_irq_signal_def maskIrqSignal_def)
-            apply (corres corres: corres_machine_op corres_eq_trivial intro: no_fail_ackInterrupt)
-           apply wpsimp+
+               apply (clarsimp simp: valid_cap_def valid_cap'_def arch_mask_irq_signal_def
+                                     maskIrqSignal_def do_machine_op_bind doMachineOp_bind)+
+            apply corres
+              apply (rule corres_machine_op, rule corres_eq_trivial; simp)+
+             apply wpsimp+
     apply fastforce
-   apply (corres corres: timerTick_corres corres_machine_op simp: bind_assoc)
-    apply fastforce
-   apply clarsimp
+   apply (corres corres: timerTick_corres simp: invs_distinct invs_psp_aligned)
   apply (corres corres: corres_machine_op corres_eq_trivial)
-  done
-
-lemma threadSet_ksDomainTime[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace> threadSet f ptr \<lbrace>\<lambda>rv s. P (ksDomainTime s)\<rbrace>"
-  apply (simp add: threadSet_def setObject_def split_def)
-  apply (wp crunch_wps | simp add:updateObject_default_def)+
   done
 
 crunch rescheduleRequired
@@ -842,25 +1023,31 @@ lemma updateTimeSlice_valid_pspace[wp]:
   "\<lbrace>valid_pspace'\<rbrace> threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
   \<lbrace>\<lambda>r. valid_pspace'\<rbrace>"
   apply (wp threadSet_valid_pspace'T)
-  apply (auto simp: tcb_cte_cases_def tcb_cte_cases_neqs)
+  apply (auto simp:tcb_cte_cases_def cteSizeBits_def)
   done
 
-lemma updateTimeSlice_sch_act_wf[wp]:
-  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
-   \<lbrace>\<lambda>r s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  by (wp threadSet_sch_act,simp)
+lemma dom_upd_eq:
+  "f t = Some y \<Longrightarrow> dom (\<lambda>a. if a = t then Some x else f a) = dom f"
+  by (auto split: if_split_asm)
 
-(* catch up tcbSchedAppend to tcbSchedEnqueue, which has these from crunches on possibleSwitchTo *)
+lemma updateTimeSlice_hyp_refs[wp]:
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>
+   threadSet (tcbTimeSlice_update f) thread
+  \<lbrace>\<lambda>r s. P (state_hyp_refs_of' s)\<rbrace>"
+  unfolding threadSet_def
+  apply (clarsimp simp: setObject_def split_def)
+  apply (wp getObject_tcb_wp | simp add: updateObject_default_def)+
+  apply (clarsimp simp: state_hyp_refs_of'_def obj_at'_def)
+  apply (erule subst[where P=P, rotated])
+  apply (rule ext)
+  apply (clarsimp simp: objBitsKO_def ps_clear_def dom_upd_eq split: option.splits)
+  done
+
 crunch tcbSchedAppend
   for irq_handlers'[wp]: valid_irq_handlers'
-  (simp: unless_def tcb_cte_cases_def tcb_cte_cases_neqs wp: crunch_wps)
-crunch tcbSchedAppend
-  for irqs_masked'[wp]: irqs_masked'
-  (simp: unless_def wp: crunch_wps)
-crunch tcbSchedAppend
-  for ct[wp]: cur_tcb'
-  (wp: cur_tcb_lift crunch_wps)
+  and irqs_masked'[wp]: irqs_masked'
+  and ct[wp]: cur_tcb'
+  (simp: unless_def tcb_cte_cases_def cteSizeBits_def wp: crunch_wps cur_tcb_lift)
 
 lemma timerTick_invs'[wp]:
   "timerTick \<lbrace>invs'\<rbrace>"
@@ -885,6 +1072,7 @@ lemma timerTick_invs'[wp]:
            apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
           apply (wpsimp simp: invs'_def valid_state'_def valid_pspace'_def sch_act_wf_weak)+
       apply (wp gts_wp')+
+  apply (frule invs_pspace_in_kernel_mappings')
   apply (auto simp: invs'_def st_tcb_at'_def obj_at'_def valid_state'_def cong: conj_cong)
   done
 
@@ -910,22 +1098,88 @@ lemma dmo_ackInterrupt[wp]:
                            machine_rest_lift_def split_def | wp)+)[3]
   done
 
-(* FIXME arch-split: imposing a stronger precondition affects InfoFlow refinement *)
-lemma hint_invs[wp]:
-  "\<lbrace>invs'\<rbrace> InterruptDecls_H.handleInterrupt irq \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: Interrupt_H.handleInterrupt_def getSlotCap_def
-             cong: irqstate.case_cong)
-  apply (rule conjI; rule impI)
-   apply (wp dmo_maskInterrupt_True getCTE_wp'
-          | wpc | simp add: doMachineOp_bind maskIrqSignal_def )+
-      apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_post_imp)
-       apply (clarsimp simp: cte_wp_at_ctes_of ex_nonz_cap_to'_def)
-       apply fastforce
-      apply (wp threadSet_invs_trivial | simp add: inQ_def handleReservedIRQ_def)+
-   apply (wp hoare_post_comb_imp_conj hoare_drop_imp getIRQState_inv)
-  apply (assumption)+
+lemma runnable'_eq:
+  "runnable' st = (st = Running \<or> st = Restart)"
+  by (cases st; simp)
+
+lemma vgicMaintenance_invs'[wp]:
+  "\<lbrace>invs' and (\<lambda>s. sch_act_not (ksCurThread s) s)\<rbrace>
+   vgicMaintenance
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  supply if_split[split del]
+  apply (clarsimp simp: vgicMaintenance_def get_gic_vcpu_ctrl_misr_def
+                        get_gic_vcpu_ctrl_eisr1_def get_gic_vcpu_ctrl_eisr0_def)
+  apply (wpsimp simp: if_apply_def2 wp: hoare_vcg_const_imp_lift)
+            apply (strengthen st_tcb_ex_cap''[where P=active'])
+            apply (strengthen invs_iflive')
+            apply (clarsimp cong: imp_cong conj_cong simp: pred_conj_def)
+            apply (rule_tac Q'="\<lambda>_ s. tcb_at' (ksCurThread s) s
+                                      \<and> invs' s
+                                      \<and> sch_act_not (ksCurThread s) s"
+                    in hoare_post_imp)
+             apply (clarsimp cong: imp_cong conj_cong simp: not_pred_tcb')
+             apply (clarsimp simp: st_tcb_at'_def obj_at'_def runnable'_eq)
+             apply (rule conjI)
+              apply (fastforce elim!: st_tcb_ex_cap'' simp: valid_state'_def valid_pspace'_def)
+             apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def obj_at'_def idle_tcb'_def)
+            apply wps
+            apply (wpsimp simp: if_apply_def2
+                          wp: hoare_vcg_const_imp_lift hoare_drop_imps dmo'_gets_wp
+                   | wps)+
+  apply (clarsimp cong: conj_cong imp_cong split: if_split)
+  apply (strengthen st_tcb_ex_cap''[where P=active'])
+  apply (strengthen invs_iflive')
+  apply (clarsimp cong: conj_cong imp_cong split: if_split)
+  apply (rule conjI)
+   apply (clarsimp simp: st_tcb_at'_def obj_at'_def runnable'_eq)
+   apply (rule conjI)
+    apply (fastforce elim!: st_tcb_ex_cap'' simp: valid_state'_def valid_pspace'_def)
+   apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def obj_at'_def idle_tcb'_def)
+  apply clarsimp
   done
 
+lemma vppiEvent_invs'[wp]:
+  "\<lbrace>invs' and (\<lambda>s. sch_act_not (ksCurThread s) s)\<rbrace>
+    vppiEvent irq \<lbrace>\<lambda>y. invs'\<rbrace>"
+  supply if_split[split del]
+  apply (clarsimp simp: vppiEvent_def doMachineOp_bind)
+  apply (wpsimp simp: if_apply_def2 wp: hoare_vcg_const_imp_lift)
+            apply (strengthen st_tcb_ex_cap''[where P=active'])
+            apply (strengthen invs_iflive')
+            apply (clarsimp cong: imp_cong conj_cong simp: pred_conj_def)
+            apply (rule_tac Q'="\<lambda>_ s. tcb_at' (ksCurThread s) s
+                                      \<and> invs' s
+                                      \<and> sch_act_not (ksCurThread s) s"
+                    in hoare_post_imp)
+             apply (clarsimp cong: imp_cong conj_cong simp: not_pred_tcb')
+             apply (clarsimp simp: st_tcb_at'_def obj_at'_def runnable'_eq)
+             apply (rule conjI)
+              apply (fastforce elim!: st_tcb_ex_cap'' simp: valid_state'_def valid_pspace'_def)
+             apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def obj_at'_def idle_tcb'_def)
+            apply wps
+            apply (wpsimp simp: if_apply_def2 vcpuUpdate_def
+                          wp: hoare_vcg_const_imp_lift hoare_drop_imps
+                              setVCPU_VPPIMasked_invs' dmo_maskInterrupt_True
+                   | wps)+
+  done
+
+lemma hint_invs[wp]:
+  "\<lbrace>invs' and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s)\<rbrace>
+    handleInterrupt irq \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (simp add: handleInterrupt_def getSlotCap_def cong: irqstate.case_cong)
+  apply (rule conjI; rule impI)
+   apply (wp dmo_maskInterrupt_True getCTE_wp' | wpc | simp add: doMachineOp_bind maskIrqSignal_def)+
+    apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_post_imp)
+     apply (clarsimp simp: cte_wp_at_ctes_of ex_nonz_cap_to'_def)
+     apply fastforce
+    apply (wpsimp wp: threadSet_invs_trivial getIRQState_wp
+                  simp: inQ_def handleReservedIRQ_def if_apply_def2 irqVPPIEventIndex_def
+                        IRQ_def irqVTimerEvent_def irqVGICMaintenance_def  unat_arith_simps
+                  split_del: if_split)+
+    apply (clarsimp split: if_split_asm)+
+  apply (clarsimp simp: non_kernel_IRQs_def irqVTimerEvent_def irqVGICMaintenance_def
+                        unat_arith_simps)
+  done
 
 crunch timerTick
   for st_tcb_at'[wp]: "st_tcb_at' P t"
