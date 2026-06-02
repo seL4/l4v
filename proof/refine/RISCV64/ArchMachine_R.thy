@@ -62,11 +62,9 @@ lemma getActiveIRQ_le_maxIRQ:
   "\<lbrace>irqs_masked' and valid_irq_states'\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
   apply wp
-  apply clarsimp
+  apply (clarsimp simp: maxIRQ_def)
   apply (drule use_valid, rule getActiveIRQ_le_maxIRQ')
-   prefer 2
-   apply simp
-  apply (simp add: irqs_masked'_def valid_irq_states'_def)
+   apply (simp add: irqs_masked'_def valid_irq_states'_def maxIRQ_def)+
   done
 
 lemma frameRegisters_def'[Machine_R_assms]:

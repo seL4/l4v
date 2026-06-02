@@ -87,6 +87,8 @@ primrec cr3pcid_update :: "(word64 \<Rightarrow> word64) \<Rightarrow> cr3 \<Rig
 where
   "cr3pcid_update f (X64CR3 v0 v1) = (X64CR3 v0 (f v1))"
 
-
 end
+
+arch_requalify_consts maxIRQ
+
 end

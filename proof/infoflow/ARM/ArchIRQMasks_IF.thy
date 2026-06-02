@@ -88,7 +88,7 @@ lemma dmo_getActiveIRQ_return_axiom[IRQMasks_IF_assms, wp]:
   apply (rule hoare_pre, rule dmo_wp)
    apply (insert irq_oracle_max_irq)
    apply (wp dmo_getActiveIRQ_irq_masks)
-  apply clarsimp
+  apply (clarsimp simp: maxIRQ_def)
   done
 
 crunch activate_thread, handle_spurious_irq

@@ -164,7 +164,7 @@ lemma checkIRQ_corres:
   "corres (ser \<oplus> dc) \<top> \<top> (arch_check_irq irq) (checkIRQ irq)"
   unfolding arch_check_irq_def checkIRQ_def rangeCheck_def
   apply (rule corres_guard_imp)
-    apply (clarsimp simp: minIRQ_def unlessE_whenE not_le)
+    apply (clarsimp simp: minIRQ_def maxIRQ_def unlessE_whenE not_le)
     apply (rule corres_whenE)
       apply fastforce+
   done
@@ -185,7 +185,7 @@ lemma arch_check_irq_valid:
   "\<lbrace>\<top>\<rbrace> arch_check_irq irq \<lbrace>\<lambda>_. (\<lambda>s. irq \<le> Kernel_Config.maxIRQ)\<rbrace>, -"
   unfolding arch_check_irq_def
   apply (wpsimp simp: validE_R_def wp: whenE_throwError_wp)
-  apply (simp add: not_less word_le_nat_alt)
+  apply (simp add: not_less word_le_nat_alt maxIRQ_def)
   done
 
 lemma arch_check_irq_valid':
@@ -283,10 +283,10 @@ lemma decodeIRQControlInvocation_corres:
     apply (auto intro!: corres_guard_imp[OF arch_decodeIRQControlInvocation_corres])[1]
    apply (auto intro!: corres_guard_imp[OF arch_decodeIRQControlInvocation_corres]
                dest!: not_le_imp_less
-               simp: minIRQ_def o_def length_Suc_conv whenE_rangeCheck_eq ucast_nat_def
+               simp: minIRQ_def o_def maxIRQ_def length_Suc_conv whenE_rangeCheck_eq ucast_nat_def
                split: list.splits)[1]
   apply (rule corres_guard_imp)
-    apply (simp add: whenE_rangeCheck_eq)
+    apply (simp add: whenE_rangeCheck_eq maxIRQ_def)
     apply (rule whenE_throwError_corres, clarsimp, fastforce)
     apply (rule_tac F="y \<le> Kernel_Config.maxIRQ" in corres_gen_asm)
     apply (clarsimp simp: toEnum_unat_ucast le_maxIRQ_machine_less_irqBits_val)
@@ -330,7 +330,7 @@ lemma arch_decode_irq_control_valid'[wp]:
           | wpc
           | wp (once) hoare_drop_imps)+
   apply (clarsimp, rule conjI; clarsimp)
-  apply (clarsimp simp: invs_valid_objs' toEnum_unat_ucast
+  apply (clarsimp simp: invs_valid_objs' toEnum_unat_ucast maxIRQ_def
                         le_maxIRQ_machine_less_irqBits_val irq_machine_le_maxIRQ_irq)
   done
 
@@ -347,7 +347,7 @@ lemma decode_irq_control_valid'[wp]:
   apply (wpsimp wp: ensureEmptySlot_stronger isIRQActive_wp whenE_throwError_wp
                 simp: o_def
          | wp (once) hoare_drop_imps)+
-  apply (clarsimp simp: invs_valid_objs' toEnum_unat_ucast
+  apply (clarsimp simp: invs_valid_objs' toEnum_unat_ucast maxIRQ_def
                         le_maxIRQ_machine_less_irqBits_val irq_machine_le_maxIRQ_irq)
   done
 
@@ -980,7 +980,7 @@ lemma handleInterrupt_corres:
                   and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s))
      (handle_interrupt irq) (handleInterrupt irq)"
   (is "corres dc _ (invs' and _ and ?P') _ _")
-  apply (simp add: handle_interrupt_def handleInterrupt_def)
+  apply (simp add: handle_interrupt_def handleInterrupt_def maxIRQ_def)
   apply (rule conjI[rotated]; rule impI)
 
    apply (rule corres_guard_imp)

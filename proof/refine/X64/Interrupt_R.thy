@@ -335,7 +335,8 @@ lemma arch_decode_irq_control_valid'[wp]:
           | wp whenE_throwError_wp isIRQActive_wp ensureEmptySlot_stronger
           | wpc
           | wp (once) hoare_drop_imps)+
-  apply (clarsimp simp add: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt toEnum_unat_ucast_helper_64_8)
+  apply (clarsimp simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
+                        toEnum_unat_ucast_helper_64_8 maxIRQ_def)
   apply (fastforce simp add: toEnum_unat_ucast'_helper_64_8 unat_add_ucast_helper)+
   done
 
@@ -527,6 +528,7 @@ lemma arch_performIRQControl_corres:
                     | wps)+
     apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cte_wp_at_caps_of_state
                           is_simple_cap_def is_cap_simps arch_irq_control_inv_valid_def
+                          maxIRQ_def[symmetric]
                           safe_parent_for_def order_trans[OF _ maxUserIRQ_le_maxIRQ])
    apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def IRQHandler_valid
                       IRQHandler_valid' is_simple_cap'_def isCap_simps IRQ_def)
@@ -546,6 +548,7 @@ lemma arch_performIRQControl_corres:
                  | wps)+
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cte_wp_at_caps_of_state
                             is_simple_cap_def is_cap_simps arch_irq_control_inv_valid_def
+                            maxIRQ_def[symmetric]
                             safe_parent_for_def order_trans[OF _ maxUserIRQ_le_maxIRQ])
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def IRQHandler_valid
                       IRQHandler_valid' is_simple_cap'_def isCap_simps IRQ_def)
@@ -781,7 +784,7 @@ lemma handleInterrupt_corres:
      (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive))
      (handle_interrupt irq) (handleInterrupt irq)"
   (is "corres dc ?P ?P' ?f ?g")
-  apply (simp add: handle_interrupt_def handleInterrupt_def)
+  apply (simp add: handle_interrupt_def handleInterrupt_def maxIRQ_def)
   apply (rule conjI[rotated]; rule impI)
    apply (rule corres_guard_imp)
      apply (rule corres_split[OF getIRQState_corres,

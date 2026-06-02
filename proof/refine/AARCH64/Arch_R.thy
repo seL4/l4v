@@ -863,8 +863,8 @@ lemma decodeARMVCPUInvocation_corres:
   (* ack vppi *)
   apply (simp add: decode_vcpu_ack_vppi_def decodeVCPUAckVPPI_def isVCPUCap_def)
   apply (cases args; clarsimp simp: isCap_simps)
-  apply (simp add: arch_check_irq_def rangeCheck_def ucast_nat_def unlessE_def word_le_not_less)
-  apply (clarsimp simp: irq_vppi_event_index_def irqVPPIEventIndex_def IRQ_def toEnum_unat_ucast
+  apply (clarsimp simp: arch_check_irq_def rangeCheck_def whenE_def maxIRQ_def not_less)
+  apply (clarsimp simp: irq_vppi_event_index_def irqVPPIEventIndex_def unlessE_def IRQ_def
                         le_maxIRQ_machine_less_irqBits_val not_less)
   apply (fastforce simp: archinv_relation_def vcpu_invocation_map_def
                    intro: corres_returnOk

@@ -295,7 +295,7 @@ lemma cirqstate_cancel:
 definition
   "cint_state_to_H cnode cirqs \<equiv>
    InterruptState (ptr_val cnode)
-     (\<lambda>i::6 word. if i \<le> scast RISCV64.maxIRQ then cirqstate_to_H (index cirqs (unat i))
+     (\<lambda>i::6 word. if i \<le> maxIRQ then cirqstate_to_H (index cirqs (unat i))
                 else irqstate.IRQInactive)"
 
 lemma cint_rel_to_H:
@@ -306,7 +306,7 @@ lemma cint_rel_to_H:
   apply (cases "ksInterruptState s")
   apply (rename_tac "fun")
   apply (clarsimp simp: cinterrupt_relation_def cint_state_to_H_def
-                        RISCV64.maxIRQ_def Kernel_C.maxIRQ_def)
+                        maxIRQ_def Kernel_C.maxIRQ_def)
   apply (rule ext)
   apply clarsimp
   apply (drule spec, erule impE, assumption)

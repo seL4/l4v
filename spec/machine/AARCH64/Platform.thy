@@ -29,6 +29,10 @@ context Arch begin global_naming AARCH64
 value_type irq_len = Kernel_Config.irqBits (* IRQ_CNODE_SLOT_BITS *)
 type_synonym irq = "irq_len word"
 
+(* maxIRQ is defined via Kernel_Config on this architecture *)
+definition maxIRQ :: "'a::numeral" where
+  "maxIRQ \<equiv> Kernel_Config.maxIRQ"
+
 (* Software-generated interrupts *)
 definition numSGIs_bits :: nat where
   "numSGIs_bits = 4"
@@ -196,5 +200,9 @@ value_type pt_array_len = "(2::nat) ^ LENGTH(pt_index_len)"
 value_type vs_array_len = "(2::nat) ^ vs_index_bits"
 
 end
+
+(* we want to use the Platform constant in the global context instead of the arch-specific one from
+   Kernel_Config *)
+arch_requalify_consts (aliasing) maxIRQ
 
 end
