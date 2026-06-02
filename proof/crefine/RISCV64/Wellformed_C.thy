@@ -323,7 +323,7 @@ cl_valid_cap :: "cap_CL \<Rightarrow> bool"
 where
 "cl_valid_cap c \<equiv>
    case c of
-     Cap_irq_handler_cap fc \<Rightarrow> ((capIRQ_CL fc) && mask 6 = capIRQ_CL fc)
+     Cap_irq_handler_cap fc \<Rightarrow> ((capIRQ_CL fc) && mask irqBits = capIRQ_CL fc)
    | Cap_frame_cap fc \<Rightarrow> capFSize_CL fc < 3 \<and> capFVMRights_CL fc < 4 \<and> capFVMRights_CL fc \<noteq> 0
    | x \<Rightarrow> True"
 
@@ -498,8 +498,11 @@ text \<open>maxIRQ interface\<close>
 
 declare Kernel_C.maxIRQ_def[code]
 
-(* FIXME: compute maxIRQ for kernel config instead *)
-value_type irq_array_size = "Suc (unat Kernel_C.maxIRQ)"
+lemma Kernel_C_maxIRQ:
+  "Kernel_C.maxIRQ = Kernel_Config.maxIRQ"
+  by (simp add: Kernel_C.maxIRQ_def Kernel_Config.maxIRQ_def)
+
+value_type irq_array_size = "Suc Kernel_Config.maxIRQ"
 
 
 text \<open>TCBFlags interface\<close>
