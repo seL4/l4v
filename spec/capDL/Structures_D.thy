@@ -5,8 +5,8 @@
  *)
 
 theory Structures_D
-imports
-  Arch_Structs_D
+  imports
+    Arch_Structs_D
 begin
 
 arch_requalify_consts (D)

@@ -7,8 +7,8 @@
 (* Definition of architecture-dependent VM attribute validation. *)
 
 theory ArchVMAttributes_D
-imports
-  ASpec.ArchVMAttributes_A
+  imports
+    ASpec.ArchVMAttributes_A
 begin
 
 context Arch begin arch_global_naming (A)
