@@ -1426,7 +1426,6 @@ lemma invoke_page_directory_corres:
    apply (simp_all add:perform_page_invocation_def)
    apply (simp_all add: when_def  transform_page_dir_inv_def)
    apply safe
-   apply (clarsimp)
    apply (rule corres_dummy_return_r)
    apply (rule dcorres_symb_exec_r[OF corres_free_return[where P=\<top> and P'=\<top>]])
     apply wp

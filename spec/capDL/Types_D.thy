@@ -4,23 +4,18 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(*
- * CapDL Types
- *
- * This file introduces many of the high-level types used in this
- * specification.
- *)
+(* High-level types (caps, objects) used in the capDL model *)
 
 theory Types_D
-imports
-  "ASpec.VMRights_A"
-  ASpec.Machine_A
-  Intents_D
-  Arch_Structs_D
-  "Lib.Lib"
-  "Lib.SplitRule"
-  "HOL-Combinatorics.Transposition" (* for Fun.swap *)
-  "ExecSpec.Arch_Kernel_Config_Lemmas"
+  imports
+    ASpec.VMRights_A
+    ASpec.Machine_A
+    Intents_D
+    Arch_Structs_D
+    Lib.Lib
+    Lib.SplitRule
+    "HOL-Combinatorics.Transposition" (* for Fun.swap *)
+    ExecSpec.Arch_Kernel_Config_Lemmas
 begin
 
 arch_requalify_types
@@ -94,9 +89,7 @@ type_synonym cdl_mapped_addr = "cdl_asid \<times> machine_word"
 type_synonym vptr = machine_word
 
 (* Number of bits of a badge we can use. *)
-definition
-  badge_bits :: nat
-where
+definition badge_bits :: nat where
   "badge_bits \<equiv> 28"
 
 (* FrameCaps, PageTableCaps and PageDirectoryCaps can either be
@@ -105,24 +98,19 @@ where
  *)
 datatype cdl_frame_cap_type = Real | Fake cdl_raw_vmattrs
 
-(*
- * Kernel capabilities.
- *
- * Such capabilities (or "caps") give the holder particular rights to
- * a kernel object or system hardware.
- *
- * Caps have attributes such as the object they point to, the rights
- * they give the holder, or how the holder is allowed to interact with
- * the target object.
- *
- * Note that frame and page tables caps (and later objects) are generic in the architecture
- * they model and parameterised in the type of object they represent (e.g. which level of
- * page table object). Level 0 is the bottom level where page table walks end, and max_pt_level
- * is the highest level where the root page table is. The model is essentially the same as in
- * ASpec for AARCH64. See there for more documentation on how it works. capDL generalises levels
- * to nat and page table types to all types that are used by any of the seL4 architectures.
- *)
+(* Kernel capabilities.
 
+   They give the holder particular rights to a kernel object or system hardware.
+
+   Caps have attributes such as the object they point to, the rights they give the holder, or how
+   the holder is allowed to interact with the target object.
+
+   Note that frame and page tables caps (and later objects) are generic in the architecture
+   they model and parameterised in the type of object they represent (e.g. which level of
+   page table object). Level 0 is the bottom level where page table walks end, and max_pt_level
+   is the highest level where the root page table is. The model is essentially the same as in
+   ASpec for AARCH64. See there for more documentation on how it works. capDL generalises levels
+   to nat and page table types to all types that are used by any of the seL4 architectures. *)
 datatype cdl_cap =
     NullCap
 
@@ -136,9 +124,7 @@ datatype cdl_cap =
   | TcbCap cdl_object_id
   | DomainCap
 
-  (*
-   * Capabilities representing threads waiting in endpoint queues.
-   *)
+  (* Capabilities representing threads waiting in endpoint queues. *)
   (* thread, badge, is call, can grant, can grant reply, is fault ipc *)
   | PendingSyncSendCap cdl_object_id cdl_badge bool bool bool bool
   (* thread, is waiting for reply, can grant *)
@@ -191,18 +177,16 @@ datatype cdl_cap =
 
 type_synonym cdl_cap_map = "cdl_cnode_index \<Rightarrow> cdl_cap option"
 
-(*
- * The cap derivation tree (CDT).
- *
- * This tree records how certain caps are derived from others. This
- * information is important because it affects how caps are revoked; if an
- * entity revokes a particular cap, all of the cap's children (as
- * recorded in the CDT) are also revoked.
- *
- * At this point in time, we leave the definition of the CDT quite
- * abstract. This may be made more concrete in the future allowing us to
- * reason about revocation.
- *)
+(* The cap derivation tree (CDT).
+
+   This tree records how certain caps are derived from others. This
+   information is important because it affects how caps are revoked; if an
+   entity revokes a particular cap, all of the cap's children (as
+   recorded in the CDT) are also revoked.
+
+   At this point in time, we leave the definition of the CDT quite
+   abstract. This may be made more concrete in the future allowing us to
+   reason about revocation. *)
 type_synonym cdl_cdt = "cdl_cap_ref \<Rightarrow> cdl_cap_ref option"
 
 translations
@@ -215,8 +199,7 @@ translations
 (* Kernel objects *)
 
 (* Extra data carried in the capDL state that holds no meaning in the proofs,
-   but is required for generating an executable system initialiser
-*)
+   but is required for generating an executable system initialiser *)
 record cdl_tcb_extra =
   cdl_tcb_prio    :: prio
   cdl_tcb_mcp     :: prio
@@ -241,9 +224,8 @@ record cdl_cnode =
 record cdl_asid_pool =
   cdl_asid_pool_caps :: cdl_cap_map
 
-(* Extra "frame fill" data. The executable initialiser requires this
- * so that it can load pages for components. For now, we only support
- * FileData, which is copied from a linked cpio archive. *)
+(* Extra "frame fill" data. The executable initialiser requires this so that it can load pages for
+   components. For now, we only support FileData, which is copied from a linked cpio archive. *)
 record cdl_frame_fill =
   cdl_frame_fill_filename :: string
   cdl_frame_fill_file_offset :: machine_word
@@ -257,12 +239,10 @@ record cdl_frame =
 record cdl_irq_node =
   cdl_irq_node_caps :: cdl_cap_map
 
-(*
- * Kernel objects.
- *
- * These are in-memory objects that may, over the course of the system
- * execution, be created or deleted by users.
- *)
+(* Kernel objects.
+
+   These are in-memory objects that may, over the course of the system execution, be created or
+   deleted by users. *)
 datatype cdl_object =
     Endpoint
   | Notification
@@ -282,45 +262,43 @@ type_synonym cdl_heap = "cdl_object_id \<Rightarrow> cdl_object option"
 translations
   (type) "cdl_heap" <=(type) "32 word \<Rightarrow> cdl_object option"
 
-(*
- * The current state of the system.
- *
- * The state record contains the following primary pieces of information:
- *
- * arch:
- *   The architecture of the system. This affects what capabilities and
- *   kernel objects could possibly be present. In the current kernel
- *   arch will not change at runtime.
- *
- * objects:
- *   The objects that currently exist in the system.
- *
- * cdt:
- *   The cap derivation tree of the system.
- *
- * current_thread:
- *   The currently running thread. Operations will always be performed
- *   on behalf of this thread.
- *
- * irq_node:
- *   Which IRQs are mapped to which notifications.
- *
- * asid_table:
- *   The first level of the asid table, containing capabilities to all
- *   of the ASIDPools.
- *
- * current_domain:
- *   The currently running domain.
- *
- * dom_schedule:
- *   The domain schedule.
- *
- * dom_start:
- *   The start index in cdl_dom_schedule to resume at when the domain end marker is reached.
- *
- * Since scheduling in capDL is fully non-determinist, we do not need to model the current index
- * in the domain schedule.
- *)
+(* The current state of the system.
+
+   The state record contains the following primary pieces of information:
+
+   arch:
+     The architecture of the system. This affects what capabilities and
+     kernel objects could possibly be present. In the current kernel
+     arch will not change at runtime.
+
+   objects:
+     The objects that currently exist in the system.
+
+   cdt:
+     The cap derivation tree of the system.
+
+   current_thread:
+     The currently running thread. Operations will always be performed
+     on behalf of this thread.
+
+   irq_node:
+     Which IRQs are mapped to which notifications.
+
+   asid_table:
+     The first level of the asid table, containing capabilities to all
+     of the ASIDPools.
+
+   current_domain:
+     The currently running domain.
+
+   dom_schedule:
+     The domain schedule.
+
+   dom_start:
+     The start index in cdl_dom_schedule to resume at when the domain end marker is reached.
+
+   Since scheduling in capDL is fully non-deterministic, we do not need to model the current index
+   in the domain schedule. *)
 record cdl_state =
   cdl_arch           :: cdl_arch
   cdl_objects        :: cdl_heap
@@ -333,9 +311,7 @@ record cdl_state =
   cdl_dom_start      :: nat
 
 (* Return the type of an object. *)
-definition
-  object_type :: "cdl_object \<Rightarrow> cdl_object_type"
-where
+definition object_type :: "cdl_object \<Rightarrow> cdl_object_type" where
   "object_type x \<equiv>
     case x of
         Untyped \<Rightarrow> UntypedType
@@ -351,25 +327,19 @@ where
 
 lemmas object_type_simps = object_type_def[split_simps cdl_object.split]
 
-definition
-  asid_high_bits :: nat where
+definition asid_high_bits :: nat where
   "asid_high_bits \<equiv> LENGTH(asid_high_len)"
 
-definition
-  asid_low_bits :: nat where
+definition asid_low_bits :: nat where
   "asid_low_bits \<equiv> LENGTH(asid_low_len)"
 
-definition
-  asid_bits :: nat where
+definition asid_bits :: nat where
   "asid_bits \<equiv> asid_high_bits + asid_low_bits"
 
-(*
- * Each TCB contains a number of cap slots, each with a specific
- * purpose. These constants define the purpose of each slot.
- *
- * The specific list of slots is chosen to be consistent with the output
- * of the CapDL-tool.
- *)
+(* Each TCB contains a number of cap slots, each with a specific purpose. These constants define
+   the purpose of each slot.
+
+   The specific list of slots is chosen to be consistent with the output of the capDL-tool. *)
 definition "tcb_cspace_slot     = (0 :: cdl_cnode_index)"
 definition "tcb_vspace_slot     = (1 :: cdl_cnode_index)"
 definition "tcb_replycap_slot   = (2 :: cdl_cnode_index)"
@@ -379,10 +349,10 @@ definition "tcb_pending_op_slot = (5 :: cdl_cnode_index)"
 definition "tcb_boundntfn_slot  = (8 :: cdl_cnode_index)"
 definition "tcb_boundvcpu_slot  = (9 :: cdl_cnode_index)"
 
-definition
+definition tcb_slots_list :: "cdl_cnode_index list" where
   "tcb_slots_list \<equiv> [0 ..< tcb_pending_op_slot + 1] @ [tcb_boundntfn_slot, tcb_boundvcpu_slot]"
 
-abbreviation
+abbreviation tcb_slots :: "cdl_cnode_index set" where
   "tcb_slots \<equiv> set tcb_slots_list"
 
 lemmas tcb_slots_def = tcb_slots_list_def
@@ -398,15 +368,9 @@ lemmas tcb_slot_defs =
   tcb_boundvcpu_slot_def
   tcb_slots_list_def
 
-(*
- * Getters and setters for various data types.
- *)
+(* Getters and setters for various data types. *)
 
-(* Capability getters / setters *)
-
-fun
-  cap_objects :: "cdl_cap \<Rightarrow> cdl_object_id set"
-where
+fun cap_objects :: "cdl_cap \<Rightarrow> cdl_object_id set" where
     "cap_objects (IOPageTableCap x) = {x}"
   | "cap_objects (IOSpaceCap x) = {x}"
   | "cap_objects (IOPortsCap x _) = {x}"
@@ -419,7 +383,7 @@ where
   | "cap_objects (ReplyCap x _) = {x}"
   | "cap_objects (NotificationCap x _ _) = {x}"
   | "cap_objects (EndpointCap x _ _) = {x}"
-  | "cap_objects (UntypedCap _ x a) = x"
+  | "cap_objects (UntypedCap _ x _) = x"
   | "cap_objects (ZombieCap x) = {x}"
   | "cap_objects (PendingSyncSendCap x _ _ _ _ _) = {x}"
   | "cap_objects (PendingSyncRecvCap x _ _) = {x}"
@@ -428,29 +392,24 @@ where
   | "cap_objects (VCPUCap x) = {x}"
   | "cap_objects _ = {}"
 
-definition
-  cap_has_object :: "cdl_cap \<Rightarrow> bool"
-where
-  "cap_has_object cap \<equiv> case cap of
-     NullCap          \<Rightarrow> False
-  | IrqControlCap     \<Rightarrow> False
-  | IrqHandlerCap _   \<Rightarrow> False
-  | SGISignalCap _ _  \<Rightarrow> False
-  | AsidControlCap    \<Rightarrow> False
-  | IOSpaceMasterCap  \<Rightarrow> False
-  | RestartCap        \<Rightarrow> False
-  | RunningCap        \<Rightarrow> False
-  | DomainCap         \<Rightarrow> False
-  | SMCCap _          \<Rightarrow> False
-  | _                 \<Rightarrow> True"
+definition cap_has_object :: "cdl_cap \<Rightarrow> bool" where
+  "cap_has_object cap \<equiv>
+     case cap of
+       NullCap           \<Rightarrow> False
+     | IrqControlCap     \<Rightarrow> False
+     | IrqHandlerCap _   \<Rightarrow> False
+     | SGISignalCap _ _  \<Rightarrow> False
+     | AsidControlCap    \<Rightarrow> False
+     | IOSpaceMasterCap  \<Rightarrow> False
+     | RestartCap        \<Rightarrow> False
+     | RunningCap        \<Rightarrow> False
+     | DomainCap         \<Rightarrow> False
+     | SMCCap _          \<Rightarrow> False
+     | _                 \<Rightarrow> True"
 
-definition
-  cap_object :: "cdl_cap \<Rightarrow> cdl_object_id"
-where
-  "cap_object cap \<equiv>
-     if cap_has_object cap
-     then (LEAST c. c \<in> cap_objects cap)
-     else undefined"
+(* Untypeds contain a set of cap_objects; return the smallest of these for increased determinism *)
+definition cap_object :: "cdl_cap \<Rightarrow> cdl_object_id" where
+  "cap_object cap \<equiv> if cap_has_object cap then LEAST c. c \<in> cap_objects cap else undefined"
 
 lemma cap_object_simps[simp]:
   "cap_object (IOPageTableCap x) = x"
@@ -475,156 +434,138 @@ lemma cap_object_simps[simp]:
      (metis (full_types) LeastI)+
 
 definition update_cap_badge :: "cdl_badge \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap" where
-  "update_cap_badge x c \<equiv> case c of
-     NotificationCap f1 _ f3 \<Rightarrow> NotificationCap f1 x f3
-   | EndpointCap f1 _ f3     \<Rightarrow> EndpointCap f1 x f3
-   | SMCCap _                \<Rightarrow> SMCCap x
-   | _ \<Rightarrow> c"
+  "update_cap_badge x c \<equiv>
+     case c of
+       NotificationCap f1 _ f3 \<Rightarrow> NotificationCap f1 x f3
+     | EndpointCap f1 _ f3     \<Rightarrow> EndpointCap f1 x f3
+     | SMCCap _                \<Rightarrow> SMCCap x
+     | _ \<Rightarrow> c"
 
 definition all_cdl_rights :: "cdl_right set" where
   "all_cdl_rights = {Read, Write, Grant, GrantReply}"
 
 definition cap_rights :: "cdl_cap \<Rightarrow> cdl_right set" where
-  "cap_rights c \<equiv> case c of
-     FrameCap _ _ _  _ _ _ \<Rightarrow> cdl_cap_rights c
-   | NotificationCap _ _ _ \<Rightarrow> cdl_cap_rights c
-   | EndpointCap _ _ _     \<Rightarrow> cdl_cap_rights c
-   | ReplyCap _ _          \<Rightarrow> cdl_cap_rights c
-   | _ \<Rightarrow> all_cdl_rights"
+  "cap_rights c \<equiv>
+     case c of
+       FrameCap _ _ _  _ _ _ \<Rightarrow> cdl_cap_rights c
+     | NotificationCap _ _ _ \<Rightarrow> cdl_cap_rights c
+     | EndpointCap _ _ _     \<Rightarrow> cdl_cap_rights c
+     | ReplyCap _ _          \<Rightarrow> cdl_cap_rights c
+     | _                     \<Rightarrow> all_cdl_rights"
 
-definition
-  update_cap_rights :: "cdl_right set \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
-where
-  "update_cap_rights r c \<equiv> case c of
-      FrameCap dev f1 _ f2 f3 f4 \<Rightarrow> FrameCap dev f1 (validate_vm_rights r) f2 f3 f4
-    | NotificationCap f1 f2 _ \<Rightarrow> NotificationCap f1 f2 (r - {Grant, GrantReply})
-    | EndpointCap f1 f2 _ \<Rightarrow> EndpointCap f1 f2 r
-    | ReplyCap f1 _ \<Rightarrow> ReplyCap f1 (r - {Read, GrantReply} \<union> {Write})
-    | _ \<Rightarrow> c"
+definition update_cap_rights :: "cdl_right set \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap" where
+  "update_cap_rights r c \<equiv>
+     case c of
+       FrameCap dev f1 _ f2 f3 f4 \<Rightarrow> FrameCap dev f1 (validate_vm_rights r) f2 f3 f4
+     | NotificationCap f1 f2 _ \<Rightarrow> NotificationCap f1 f2 (r - {Grant, GrantReply})
+     | EndpointCap f1 f2 _ \<Rightarrow> EndpointCap f1 f2 r
+     | ReplyCap f1 _ \<Rightarrow> ReplyCap f1 (r - {Read, GrantReply} \<union> {Write})
+     | _ \<Rightarrow> c"
 
-definition
-  update_mapping_cap_status :: "cdl_frame_cap_type \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
-where
- "update_mapping_cap_status r c \<equiv> case c of
+definition update_mapping_cap_status :: "cdl_frame_cap_type \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap" where
+ "update_mapping_cap_status r c \<equiv>
+    case c of
       FrameCap dev f1 f2 f3 _ f4 \<Rightarrow> FrameCap dev f1 f2 f3 r f4
     | PageTableCap l pt1 _ pt2 \<Rightarrow> PageTableCap l pt1 r pt2
     | _ \<Rightarrow> c"
 
-primrec (nonexhaustive) cap_guard :: "cdl_cap \<Rightarrow> cdl_cap_guard"
-where
+primrec (nonexhaustive) cap_guard :: "cdl_cap \<Rightarrow> cdl_cap_guard" where
   "cap_guard (CNodeCap _ x _ _) = x"
 
-definition
-  update_cap_guard :: "cdl_cap_guard \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
-where
-  "update_cap_guard x c \<equiv> case c of
-      CNodeCap f1 _ f3 f4 \<Rightarrow> CNodeCap f1 x f3 f4
-    | _ \<Rightarrow> c"
+definition update_cap_guard :: "cdl_cap_guard \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap" where
+  "update_cap_guard x c \<equiv>
+     case c of
+       CNodeCap f1 _ f3 f4 \<Rightarrow> CNodeCap f1 x f3 f4
+     | _ \<Rightarrow> c"
 
-primrec (nonexhaustive) cap_guard_size :: "cdl_cap \<Rightarrow> cdl_cap_guard_size"
-where
+primrec (nonexhaustive) cap_guard_size :: "cdl_cap \<Rightarrow> cdl_cap_guard_size" where
   "cap_guard_size (CNodeCap _ _ x _ ) = x"
 
-definition
-  cnode_cap_size :: "cdl_cap \<Rightarrow> cdl_size_bits"
-where
-  "cnode_cap_size cap \<equiv> case cap of
-      CNodeCap _ _ _ x \<Rightarrow> x
-    | _ \<Rightarrow> 0"
+definition cnode_cap_size :: "cdl_cap \<Rightarrow> cdl_size_bits" where
+  "cnode_cap_size cap \<equiv>
+     case cap of
+       CNodeCap _ _ _ x \<Rightarrow> x
+     | _ \<Rightarrow> 0"
 
-definition
-  update_cap_guard_size :: "cdl_cap_guard_size \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
-where
-  "update_cap_guard_size x c \<equiv> case c of
-      CNodeCap f1 f2 _ f3 \<Rightarrow> CNodeCap f1 f2 x f3
-    | _ \<Rightarrow> c"
+definition update_cap_guard_size :: "cdl_cap_guard_size \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap" where
+  "update_cap_guard_size x c \<equiv>
+     case c of
+       CNodeCap f1 f2 _ f3 \<Rightarrow> CNodeCap f1 f2 x f3
+     | _ \<Rightarrow> c"
 
-definition
-  cap_vmattrs :: "cdl_cap \<Rightarrow> cdl_raw_vmattrs"
-where
-  "cap_vmattrs cap \<equiv> case cap of
-      FrameCap _ _ _ _ (Fake attr) _ \<Rightarrow> attr
-    | PageTableCap _ _ (Fake attr) _ \<Rightarrow> attr"
+definition cap_vmattrs :: "cdl_cap \<Rightarrow> cdl_raw_vmattrs" where
+  "cap_vmattrs cap \<equiv>
+     case cap of
+       FrameCap _ _ _ _ (Fake attr) _ \<Rightarrow> attr
+     | PageTableCap _ _ (Fake attr) _ \<Rightarrow> attr"
 
-definition
-  frame_cap_size :: "cdl_cap \<Rightarrow> cdl_size_bits"
-where
-  "frame_cap_size cap \<equiv> case cap of
-      FrameCap _ _ _ x _ _ \<Rightarrow> x
-    | _ \<Rightarrow> 0"
+definition frame_cap_size :: "cdl_cap \<Rightarrow> cdl_size_bits" where
+  "frame_cap_size cap \<equiv>
+     case cap of
+       FrameCap _ _ _ x _ _ \<Rightarrow> x
+     | _ \<Rightarrow> 0"
 
 (* Kernel object getters / setters *)
-definition
-  object_slots :: "cdl_object \<Rightarrow> cdl_cap_map"
-where
-  "object_slots obj \<equiv> case obj of
-    PageTable _ x \<Rightarrow> x
-  | AsidPool x \<Rightarrow> cdl_asid_pool_caps x
-  | CNode x \<Rightarrow> cdl_cnode_caps x
-  | Tcb x \<Rightarrow> cdl_tcb_caps x
-  | IRQNode x \<Rightarrow> cdl_irq_node_caps x
-  | _ \<Rightarrow> Map.empty"
+definition object_slots :: "cdl_object \<Rightarrow> cdl_cap_map" where
+  "object_slots obj \<equiv>
+     case obj of
+       PageTable _ x \<Rightarrow> x
+     | AsidPool x \<Rightarrow> cdl_asid_pool_caps x
+     | CNode x \<Rightarrow> cdl_cnode_caps x
+     | Tcb x \<Rightarrow> cdl_tcb_caps x
+     | IRQNode x \<Rightarrow> cdl_irq_node_caps x
+     | _ \<Rightarrow> Map.empty"
 
-definition
-  update_slots :: "cdl_cap_map \<Rightarrow> cdl_object \<Rightarrow> cdl_object"
-where
-  "update_slots new_val obj \<equiv> case obj of
-    PageTable l x \<Rightarrow> PageTable l new_val
-  | AsidPool x \<Rightarrow> AsidPool (x\<lparr>cdl_asid_pool_caps := new_val\<rparr>)
-  | CNode x \<Rightarrow> CNode (x\<lparr>cdl_cnode_caps := new_val\<rparr>)
-  | Tcb x \<Rightarrow> Tcb (x\<lparr>cdl_tcb_caps := new_val\<rparr>)
-  | IRQNode x \<Rightarrow> IRQNode (x\<lparr>cdl_irq_node_caps := new_val\<rparr>)
-  | _ \<Rightarrow> obj"
+definition update_slots :: "cdl_cap_map \<Rightarrow> cdl_object \<Rightarrow> cdl_object" where
+  "update_slots new_val obj \<equiv>
+     case obj of
+       PageTable l x \<Rightarrow> PageTable l new_val
+     | AsidPool x \<Rightarrow> AsidPool (x\<lparr>cdl_asid_pool_caps := new_val\<rparr>)
+     | CNode x \<Rightarrow> CNode (x\<lparr>cdl_cnode_caps := new_val\<rparr>)
+     | Tcb x \<Rightarrow> Tcb (x\<lparr>cdl_tcb_caps := new_val\<rparr>)
+     | IRQNode x \<Rightarrow> IRQNode (x\<lparr>cdl_irq_node_caps := new_val\<rparr>)
+     | _ \<Rightarrow> obj"
 
-definition
-  has_slots :: "cdl_object \<Rightarrow> bool"
-where
-  "has_slots obj \<equiv> case obj of
-    PageTable _ _ \<Rightarrow> True
-  | AsidPool _ \<Rightarrow> True
-  | CNode _ \<Rightarrow> True
-  | Tcb _ \<Rightarrow> True
-  | IRQNode _ \<Rightarrow> True
-  | _ \<Rightarrow> False"
+definition has_slots :: "cdl_object \<Rightarrow> bool" where
+  "has_slots obj \<equiv>
+     case obj of
+       PageTable _ _ \<Rightarrow> True
+     | AsidPool _ \<Rightarrow> True
+     | CNode _ \<Rightarrow> True
+     | Tcb _ \<Rightarrow> True
+     | IRQNode _ \<Rightarrow> True
+     | _ \<Rightarrow> False"
 
 
-definition
-  cap_free_ids :: "cdl_cap \<Rightarrow> cdl_object_id set"
-where
-  "cap_free_ids cap \<equiv> (case cap of
-     UntypedCap _ _ free_ids \<Rightarrow> free_ids
-   | _ \<Rightarrow> {})"
+definition cap_free_ids :: "cdl_cap \<Rightarrow> cdl_object_id set" where
+  "cap_free_ids cap \<equiv> case cap of UntypedCap _ _ free_ids \<Rightarrow> free_ids | _ \<Rightarrow> {}"
 
-definition
-  remove_free_ids :: "cdl_cap \<Rightarrow> cdl_object_id set \<Rightarrow> cdl_cap"
-where
-  "remove_free_ids cap obj_ids \<equiv> case cap of
-     UntypedCap dev c a \<Rightarrow> UntypedCap dev c (a - obj_ids)
-   | _ \<Rightarrow> cap"
+definition remove_free_ids :: "cdl_cap \<Rightarrow> cdl_object_id set \<Rightarrow> cdl_cap" where
+  "remove_free_ids cap obj_ids \<equiv>
+     case cap of
+       UntypedCap dev c a \<Rightarrow> UntypedCap dev c (a - obj_ids)
+     | _ \<Rightarrow> cap"
 
-definition cap_irq :: "cdl_cap \<Rightarrow> cdl_irq"
-where
-  "cap_irq cap \<equiv> case cap of
-      IrqHandlerCap x \<Rightarrow> x
-    | _ \<Rightarrow> undefined"
+definition cap_irq :: "cdl_cap \<Rightarrow> cdl_irq" where
+  "cap_irq cap \<equiv> case cap of IrqHandlerCap x \<Rightarrow> x | _ \<Rightarrow> undefined"
 
-(*************
- * Cap types *
- *************)
+
+(* Cap types *)
 
 definition cap_type :: "cdl_cap \<Rightarrow> cdl_object_type option" where
-  "cap_type x \<equiv> case x of
-    UntypedCap _ _ _       \<Rightarrow> Some UntypedType
-  | EndpointCap _ _ _      \<Rightarrow> Some EndpointType
-  | NotificationCap _ _ _  \<Rightarrow> Some NotificationType
-  | TcbCap _               \<Rightarrow> Some TcbType
-  | CNodeCap _ _ _ _       \<Rightarrow> Some CNodeType
-  | AsidPoolCap _ _        \<Rightarrow> Some AsidPoolType
-  | PageTableCap t _ _ _   \<Rightarrow> Some (PageTableType t)
-  | FrameCap _ _ _ f _ _   \<Rightarrow> Some (FrameType f)
-  | IrqHandlerCap _        \<Rightarrow> Some IRQNodeType
-  | VCPUCap _              \<Rightarrow> Some VCPUType
-  | _                      \<Rightarrow> None "
+  "cap_type x \<equiv>
+     case x of
+       UntypedCap _ _ _       \<Rightarrow> Some UntypedType
+     | EndpointCap _ _ _      \<Rightarrow> Some EndpointType
+     | NotificationCap _ _ _  \<Rightarrow> Some NotificationType
+     | TcbCap _               \<Rightarrow> Some TcbType
+     | CNodeCap _ _ _ _       \<Rightarrow> Some CNodeType
+     | AsidPoolCap _ _        \<Rightarrow> Some AsidPoolType
+     | PageTableCap t _ _ _   \<Rightarrow> Some (PageTableType t)
+     | FrameCap _ _ _ f _ _   \<Rightarrow> Some (FrameType f)
+     | IrqHandlerCap _        \<Rightarrow> Some IRQNodeType
+     | VCPUCap _              \<Rightarrow> Some VCPUType
+     | _                      \<Rightarrow> None "
 
 (* FIXME: use datatype discriminators instead *)
 abbreviation "is_untyped_cap cap    \<equiv> cap_type cap = Some UntypedType"
@@ -687,33 +628,25 @@ lemma update_cap_guard_size [simp]:
 
 
 
-definition is_pending_cap :: "cdl_cap \<Rightarrow> bool"
-where "is_pending_cap c \<equiv> case c of
-  PendingSyncRecvCap _ _ _ \<Rightarrow> True
-  | PendingNtfnRecvCap _ \<Rightarrow> True
-  | PendingSyncSendCap _ _ _ _ _ _ \<Rightarrow> True
-  | _ \<Rightarrow> False"
+definition is_pending_cap :: "cdl_cap \<Rightarrow> bool" where
+  "is_pending_cap c \<equiv>
+     case c of
+       PendingSyncRecvCap _ _ _ \<Rightarrow> True
+     | PendingNtfnRecvCap _ \<Rightarrow> True
+     | PendingSyncSendCap _ _ _ _ _ _ \<Rightarrow> True
+     | _ \<Rightarrow> False"
 
 
-(*
- * Object constructors.
- *)
+(* Object constructors *)
 
-(* Create a capability map that contains no caps. *)
-definition
-  empty_cap_map :: "nat \<Rightarrow> cdl_cap_map"
-where
-  "empty_cap_map sz \<equiv> (\<lambda>a. if a < 2^sz then (Some NullCap) else None)"
+(* Create a capability map of specified size that contains no caps. *)
+definition empty_cap_map :: "nat \<Rightarrow> cdl_cap_map" where
+  "empty_cap_map sz \<equiv> \<lambda>a. if a < 2^sz then Some NullCap else None"
 
-(* Create an empty CNode. *)
-definition
-  empty_cnode :: "nat \<Rightarrow> cdl_cnode"
-where
+definition empty_cnode :: "nat \<Rightarrow> cdl_cnode" where
   "empty_cnode sz = \<lparr> cdl_cnode_caps = empty_cap_map sz, cdl_cnode_size_bits = sz \<rparr>"
 
-definition
-  empty_irq_node :: cdl_irq_node
-where
+definition empty_irq_node :: cdl_irq_node where
   "empty_irq_node \<equiv> \<lparr> cdl_irq_node_caps = empty_cap_map 0 \<rparr>"
 
 definition default_tcb_extra_data :: "cdl_tcb_extra" where
@@ -725,26 +658,23 @@ definition default_tcb_extra_data :: "cdl_tcb_extra" where
      cdl_tcb_ipc_buf = 1,
      cdl_tcb_init = [],
      cdl_tcb_flags = 0
-  \<rparr>"
+   \<rparr>"
 
-(* Standard empty TCB object. *)
-definition
-  default_tcb :: "domain \<Rightarrow> cdl_tcb"
-where
+definition default_tcb :: "domain \<Rightarrow> cdl_tcb" where
   "default_tcb current_domain = \<lparr>
-    cdl_tcb_caps = \<lambda>n. if n \<in> tcb_slots then Some NullCap else None,
-    cdl_tcb_fault_endpoint = 0,
-    cdl_tcb_intent = \<lparr>
-      cdl_intent_op = None,
-      cdl_intent_error = False,
-      cdl_intent_cap = 0,
-      cdl_intent_extras = [],
-      cdl_intent_recv_slot = None
-      \<rparr>,
-    cdl_tcb_has_fault = False,
-    cdl_tcb_domain = current_domain,
-    cdl_tcb_extra = default_tcb_extra_data
-    \<rparr>"
+     cdl_tcb_caps = \<lambda>n. if n \<in> tcb_slots then Some NullCap else None,
+     cdl_tcb_fault_endpoint = 0,
+     cdl_tcb_intent = \<lparr>
+       cdl_intent_op = None,
+       cdl_intent_error = False,
+       cdl_intent_cap = 0,
+       cdl_intent_extras = [],
+       cdl_intent_recv_slot = None
+     \<rparr>,
+     cdl_tcb_has_fault = False,
+     cdl_tcb_domain = current_domain,
+     cdl_tcb_extra = default_tcb_extra_data
+   \<rparr>"
 
 definition default_frame_fill_data :: "cdl_frame_fill list" where
   "default_frame_fill_data \<equiv> []"
@@ -764,7 +694,7 @@ definition pt_type_index_bits :: "cdl_pt_type \<Rightarrow> nat" where
      | PDPT   \<Rightarrow> pt_size_index
      | PML4   \<Rightarrow> pt_size_index"
 
-definition
+definition max_pt_level :: "'a::numeral" where
   "max_pt_level \<equiv>
      case cdl_ARCH of
        AARCH32 \<Rightarrow> 1
@@ -800,41 +730,40 @@ abbreviation pt_translation_bits :: "nat \<Rightarrow> nat" where
 lemmas pt_translation_bits_def = pt_type_index_bits_def cdl_level_type_def
 
 (* Return a newly constructed object of the given type. *)
-definition
-  default_object :: "cdl_object_type \<Rightarrow> nat \<Rightarrow> domain \<Rightarrow> cdl_object option"
-where
+definition default_object :: "cdl_object_type \<Rightarrow> nat \<Rightarrow> domain \<Rightarrow> cdl_object option" where
   "default_object ty sz current_domain \<equiv>
-    case ty of
-        UntypedType \<Rightarrow> Some Untyped
-      | EndpointType \<Rightarrow> Some Endpoint
-      | NotificationType \<Rightarrow> Some Notification
-      | TcbType \<Rightarrow> Some (Tcb (default_tcb current_domain))
-      | CNodeType \<Rightarrow> Some (CNode (empty_cnode sz))
-      | AsidPoolType \<Rightarrow> Some (AsidPool \<lparr> cdl_asid_pool_caps = empty_cap_map asid_low_bits \<rparr>)
-      | PageTableType t \<Rightarrow> Some (PageTable t (empty_cap_map (pt_type_index_bits t)))
-      | FrameType sz \<Rightarrow> Some (Frame \<lparr> cdl_frame_size_bits = sz,
-                                      cdl_frame_fills = default_frame_fill_data \<rparr>)
-      | IRQNodeType \<Rightarrow> Some (IRQNode empty_irq_node)
-      | VCPUType \<Rightarrow> Some VCPU"
+     case ty of
+       UntypedType \<Rightarrow> Some Untyped
+     | EndpointType \<Rightarrow> Some Endpoint
+     | NotificationType \<Rightarrow> Some Notification
+     | TcbType \<Rightarrow> Some (Tcb (default_tcb current_domain))
+     | CNodeType \<Rightarrow> Some (CNode (empty_cnode sz))
+     | AsidPoolType \<Rightarrow> Some (AsidPool \<lparr> cdl_asid_pool_caps = empty_cap_map asid_low_bits \<rparr>)
+     | PageTableType t \<Rightarrow> Some (PageTable t (empty_cap_map (pt_type_index_bits t)))
+     | FrameType sz \<Rightarrow> Some (Frame \<lparr> cdl_frame_size_bits = sz,
+                                    cdl_frame_fills = default_frame_fill_data \<rparr>)
+     | IRQNodeType \<Rightarrow> Some (IRQNode empty_irq_node)
+     | VCPUType \<Rightarrow> Some VCPU"
 
 (* FIXME: bad name; also shadows Random.pick *)
-abbreviation "pick S \<equiv> SOME x. x \<in> S"
+abbreviation pick :: "'a set \<Rightarrow> 'a" where
+  "pick S \<equiv> SOME x. x \<in> S"
 
 (* Construct a cap for a new object. *)
-definition
-  default_cap :: "cdl_object_type \<Rightarrow> cdl_object_id set \<Rightarrow> cdl_size_bits \<Rightarrow> bool \<Rightarrow> cdl_cap"
-where
+definition default_cap ::
+  "cdl_object_type \<Rightarrow> cdl_object_id set \<Rightarrow> cdl_size_bits \<Rightarrow> bool \<Rightarrow> cdl_cap"
+  where
   "default_cap t id_set sz dev \<equiv>
-    case t of
-        EndpointType \<Rightarrow> EndpointCap (pick id_set) 0 UNIV
-      | NotificationType \<Rightarrow> NotificationCap (THE i. i \<in> id_set) 0 {Read,Write}
-      | TcbType \<Rightarrow> TcbCap (pick id_set)
-      | CNodeType \<Rightarrow> CNodeCap (pick id_set) 0 0 sz
-      | IRQNodeType \<Rightarrow> IrqHandlerCap undefined
-      | UntypedType \<Rightarrow> UntypedCap dev id_set id_set
-      | AsidPoolType \<Rightarrow> AsidPoolCap (pick id_set) 0
-      | PageTableType l \<Rightarrow> PageTableCap l (pick id_set) Real None
-      | FrameType frame_size \<Rightarrow> FrameCap dev (pick id_set) {Read, Write} frame_size Real None
-      | VCPUType \<Rightarrow> VCPUCap (pick id_set)"
+     case t of
+       EndpointType \<Rightarrow> EndpointCap (pick id_set) 0 UNIV
+     | NotificationType \<Rightarrow> NotificationCap (THE i. i \<in> id_set) 0 {Read,Write}
+     | TcbType \<Rightarrow> TcbCap (pick id_set)
+     | CNodeType \<Rightarrow> CNodeCap (pick id_set) 0 0 sz
+     | IRQNodeType \<Rightarrow> IrqHandlerCap undefined
+     | UntypedType \<Rightarrow> UntypedCap dev id_set id_set
+     | AsidPoolType \<Rightarrow> AsidPoolCap (pick id_set) 0
+     | PageTableType l \<Rightarrow> PageTableCap l (pick id_set) Real None
+     | FrameType frame_size \<Rightarrow> FrameCap dev (pick id_set) {Read, Write} frame_size Real None
+     | VCPUType \<Rightarrow> VCPUCap (pick id_set)"
 
 end

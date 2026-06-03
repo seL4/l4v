@@ -7,8 +7,8 @@
 (* Abstract model of VM attributes. *)
 
 theory VMAttributes_D
-imports
-  ArchVMAttributes_D
+  imports
+    ArchVMAttributes_D
 begin
 
 arch_requalify_types (A)

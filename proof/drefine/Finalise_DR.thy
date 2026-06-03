@@ -3462,7 +3462,7 @@ next
        apply (rule monadic_rewrite_bindE_head)
        apply (rule monadic_trancl_preemptible_step)
       apply (simp add: finalise_slot_inner2_def
-                          [THEN fun_cong, unfolded split_def])
+                          [THEN meta_eq_to_obj_eq, THEN fun_cong, unfolded split_def])
       apply (simp add: alternative_bindE_distrib)
       apply (rule corres_alternate1)+
       apply (simp add: liftE_bindE bind_bindE_assoc bind_assoc)

@@ -4,31 +4,29 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(*
- * Operations on page table objects and frames.
- *)
+(* Operations on ASID pools. *)
 
 theory Asid_D
-imports
-  Invocations_D
-  CSpace_D
-  Untyped_D
+  imports
+    Invocations_D
+    CSpace_D
+    Untyped_D
 begin
 
-definition
-  decode_asid_control_invocation :: "cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow>
-      cdl_asid_control_intent \<Rightarrow> cdl_asid_control_invocation except_monad"
-where
-  "decode_asid_control_invocation target target_ref caps intent \<equiv> case intent of
-     AsidControlMakePoolIntent index depth \<Rightarrow>
-       doE
+definition decode_asid_control_invocation ::
+  "cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow> cdl_asid_control_intent \<Rightarrow>
+   cdl_asid_control_invocation except_monad"
+  where
+  "decode_asid_control_invocation target target_ref caps intent \<equiv>
+     case intent of
+       AsidControlMakePoolIntent index depth \<Rightarrow> doE
          base \<leftarrow> liftE $ select {x. x < 2 ^ asid_high_bits};
 
          \<comment> \<open>Fetch the untyped item, and ensure it is valid.\<close>
          (untyped_cap, untyped_cap_ref) \<leftarrow> throw_on_none $ get_index caps 0;
-         (case untyped_cap of
-             UntypedCap _ s _ \<Rightarrow> returnOk ()
-           | _ \<Rightarrow> throw);
+         case untyped_cap of
+           UntypedCap _ s _ \<Rightarrow> returnOk ()
+         | _ \<Rightarrow> throw;
          ensure_no_children untyped_cap_ref;
 
          \<comment> \<open>Fetch the slot we plan to put the generated cap into.\<close>
@@ -37,61 +35,55 @@ where
          ensure_empty target_slot;
 
          returnOk $ MakePool (set_available_range untyped_cap {}) untyped_cap_ref
-           (cap_objects untyped_cap) target_slot base
-       odE \<sqinter> throw"
+                             (cap_objects untyped_cap) target_slot base
+       odE
+       \<sqinter> throw"
 
 definition is_vspace_cap :: "cdl_cap \<Rightarrow> bool" where
   "is_vspace_cap cap \<equiv> is_table_cap cap \<and> cdl_cap_pt_type cap = vspace_type"
 
-definition
-  decode_asid_pool_invocation :: "cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow>
-      cdl_asid_pool_intent \<Rightarrow> cdl_asid_pool_invocation except_monad"
-where
-  "decode_asid_pool_invocation target target_ref caps intent \<equiv> case intent of
-     AsidPoolAssignIntent \<Rightarrow>
-       doE
+definition decode_asid_pool_invocation ::
+  "cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow> cdl_asid_pool_intent \<Rightarrow>
+   cdl_asid_pool_invocation except_monad"
+  where
+  "decode_asid_pool_invocation target target_ref caps intent \<equiv>
+     case intent of
+       AsidPoolAssignIntent \<Rightarrow> doE
          (vs_cap, vs_cap_ref) \<leftarrow> throw_on_none $ get_index caps 0;
          unlessE (is_vspace_cap vs_cap) throw;
 
-         base \<leftarrow> (case target of
-             AsidPoolCap p base \<Rightarrow> returnOk $ base
-           | _ \<Rightarrow> throw);
+         base \<leftarrow> case target of AsidPoolCap p base \<Rightarrow> returnOk $ base | _ \<Rightarrow> throw;
          offset \<leftarrow> liftE $ select {x. x < 2 ^ asid_low_bits};
          returnOk $ Assign (base, offset) vs_cap_ref (cap_object target, offset)
-       odE \<sqinter> throw"
+       odE
+       \<sqinter> throw"
 
-definition
-  invoke_asid_control :: "cdl_asid_control_invocation \<Rightarrow> unit k_monad"
-where
+definition invoke_asid_control :: "cdl_asid_control_invocation \<Rightarrow> unit k_monad" where
   "invoke_asid_control params \<equiv>
-    case params of
-        MakePool untyped_cap untyped_cap_ref untyped_covers target_slot base \<Rightarrow>
-          do
-            \<comment> \<open>Untype the region. A choice may be made about whether to detype
-               objects with Untyped addresses.\<close>
-            modify (detype untyped_covers);
-            set_cap untyped_cap_ref untyped_cap;
-            targets \<leftarrow> return $ generate_range (Min (untyped_cap_range untyped_cap))
-                                    AsidPoolType (obj_bits_cdl AsidPoolType undefined) 1;
+     case params of
+       MakePool untyped_cap untyped_cap_ref untyped_covers target_slot base \<Rightarrow> do
+         \<comment> \<open>Detype the region. A choice may be made about whether to detype objects with
+             Untyped addresses.\<close>
+         modify (detype untyped_covers);
+         set_cap untyped_cap_ref untyped_cap;
+         targets \<leftarrow> return $ generate_range (Min (untyped_cap_range untyped_cap))
+                                            AsidPoolType (obj_bits_cdl AsidPoolType undefined) 1;
 
-            \<comment> \<open>Retype the region.\<close>
-            retype_region 0 AsidPoolType targets;
-            assert (targets \<noteq> []);
+         \<comment> \<open>Retype the region.\<close>
+         retype_region 0 AsidPoolType targets;
+         assert (targets \<noteq> []);
 
-            \<comment> \<open>Insert the cap.\<close>
-            frame \<leftarrow> return $ pick (hd targets);
-            insert_cap_child (AsidPoolCap frame base) untyped_cap_ref target_slot;
+         \<comment> \<open>Insert the cap.\<close>
+         frame \<leftarrow> return $ pick (hd targets);
+         insert_cap_child (AsidPoolCap frame base) untyped_cap_ref target_slot;
 
-            \<comment> \<open>Update the asid table.\<close>
-            asid_table \<leftarrow> gets cdl_asid_table;
-            asid_table' \<leftarrow> return $ asid_table (base \<mapsto> AsidPoolCap frame 0);
-            modify (\<lambda>s. s \<lparr>cdl_asid_table := asid_table'\<rparr>)
+         \<comment> \<open>Update the asid table.\<close>
+         asid_table \<leftarrow> gets cdl_asid_table;
+         asid_table' \<leftarrow> return $ asid_table (base \<mapsto> AsidPoolCap frame 0);
+         modify (\<lambda>s. s \<lparr>cdl_asid_table := asid_table'\<rparr>)
+       od"
 
-          od"
-
-definition
-  invoke_asid_pool :: "cdl_asid_pool_invocation \<Rightarrow> unit k_monad"
-where
+definition invoke_asid_pool :: "cdl_asid_pool_invocation \<Rightarrow> unit k_monad" where
   "invoke_asid_pool params \<equiv>
      case params of
        Assign asid vs_cap_ref ap_target_slot \<Rightarrow> do

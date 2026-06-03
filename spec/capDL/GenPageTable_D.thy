@@ -4,16 +4,14 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(*
- * Operations on generic page table objects and frames. The intention is that these operations
- * can be instantiated, or in some cases used directly, to model the behaviour of multiple different
- * seL4 architectures.
- *)
+(* Operations on generic page table objects and frames. The intention is that these operations
+   can be instantiated, or in some cases used directly, to model the behaviour of multiple different
+   seL4 architectures. *)
 
 theory GenPageTable_D
-imports
-  Invocations_D
-  CSpace_D
+  imports
+    Invocations_D
+    CSpace_D
 begin
 
 (* FIXME AARCH64: move to nondet_monad *)

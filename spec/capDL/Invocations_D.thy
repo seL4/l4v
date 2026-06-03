@@ -18,18 +18,19 @@ datatype cdl_cnode_invocation =
   | CancelBadgedSendsCall cdl_cap
 
 datatype cdl_untyped_invocation =
-    Retype cdl_cap_ref
-        cdl_object_type cdl_size_bits "cdl_cap_ref list" bool nat
+    Retype cdl_cap_ref cdl_object_type cdl_size_bits "cdl_cap_ref list" bool nat
 
 datatype cdl_tcb_invocation =
     WriteRegisters cdl_object_id bool "machine_word list" nat
   | ReadRegisters cdl_object_id bool machine_word nat
   | CopyRegisters cdl_object_id cdl_object_id bool bool bool bool nat
-  | ThreadControl cdl_object_id cdl_cap_ref
-        "cdl_cptr option"
-        "(cdl_cap \<times> cdl_cap_ref) option"
-        "(cdl_cap \<times> cdl_cap_ref) option"
-        "(cdl_cap \<times> cdl_cap_ref) option"
+  | ThreadControl
+      cdl_object_id
+      cdl_cap_ref
+      "cdl_cptr option"
+      "(cdl_cap \<times> cdl_cap_ref) option"
+      "(cdl_cap \<times> cdl_cap_ref) option"
+      "(cdl_cap \<times> cdl_cap_ref) option"
   | Suspend cdl_object_id
   | Resume cdl_object_id
   | NotificationControl cdl_object_id "cdl_object_id option"
@@ -74,7 +75,7 @@ datatype cdl_asid_pool_invocation =
     Assign cdl_asid cdl_cap_ref cdl_cap_ref
 
 datatype flush =
-   Clean | Invalidate | CleanInvalidate | Unify
+    Clean | Invalidate | CleanInvalidate | Unify
 
 datatype cdl_page_invocation =
     PageMap cdl_cap cdl_cap cdl_cap_ref cdl_cap_ref
@@ -84,8 +85,8 @@ datatype cdl_page_invocation =
 
 
 datatype cdl_page_directory_invocation =
-   PageDirectoryFlush  flush
- | PageDirectoryNothing
+    PageDirectoryFlush  flush
+  | PageDirectoryNothing
 
 
 datatype cdl_domain_invocation =
@@ -97,10 +98,10 @@ datatype cdl_domain_invocation =
                                   (dominv_duration : domain_duration)
 
 datatype cdl_sgi_signal_invocation =
-  SGISignalGenerate (* no params, machine op only *)
+    SGISignalGenerate (* no params, machine op only *)
 
 datatype cdl_vcpu_invocation =
-  VCPUSetTCB (vcpu_inv_vcpu : cdl_object_id) (vcpu_inv_tcb : cdl_object_id)
+    VCPUSetTCB (vcpu_inv_vcpu : cdl_object_id) (vcpu_inv_tcb : cdl_object_id)
 
 datatype cdl_invocation =
     InvokeUntyped cdl_untyped_invocation
