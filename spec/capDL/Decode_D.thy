@@ -11,8 +11,6 @@ theory Decode_D
     Interrupt_D
     PageTable_D
     GenPageTable_D
-    Tcb_D
-    Untyped_D
 begin
 
 definition get_cnode_intent :: "cdl_intent \<Rightarrow> cdl_cnode_intent option" where
