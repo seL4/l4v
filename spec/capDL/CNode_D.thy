@@ -7,7 +7,7 @@
 (* Operations on CNodes. *)
 
 theory CNode_D
-  imports Invocations_D CSpace_D
+  imports CSpace_D
 begin
 
 definition has_cancel_send_rights :: "cdl_cap \<Rightarrow> bool" where

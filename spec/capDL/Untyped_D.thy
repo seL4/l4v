@@ -8,9 +8,7 @@
 
 theory Untyped_D
   imports
-    Invocations_D
     CSpace_D
-    Structures_D
 begin
 
 definition decode_untyped_invocation ::

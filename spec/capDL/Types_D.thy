@@ -11,7 +11,6 @@ theory Types_D
     ASpec.VMRights_A
     ASpec.Machine_A
     Intents_D
-    Arch_Structs_D
     Lib.Lib
     Lib.SplitRule
     "HOL-Combinatorics.Transposition" (* for Fun.swap *)

@@ -8,7 +8,6 @@
 
 theory PageTable_D
   imports
-    Invocations_D
     CSpace_D
 begin
 

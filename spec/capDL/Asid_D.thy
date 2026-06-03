@@ -8,8 +8,6 @@
 
 theory Asid_D
   imports
-    Invocations_D
-    CSpace_D
     Untyped_D
 begin
 

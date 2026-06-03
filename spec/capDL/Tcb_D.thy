@@ -8,7 +8,6 @@
 
 theory Tcb_D
   imports
-    Invocations_D
     CSpace_D
     ExecSpec.Structs_B
 begin
