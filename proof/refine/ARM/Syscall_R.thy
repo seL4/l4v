@@ -2081,7 +2081,7 @@ lemma maybeHandleInterrupt_corres:
                 simp: irq_state_independent_def
          | corres_cases_both)+
      apply (wpsimp wp: hoare_drop_imp)
-    apply clarsimp
+    apply (clarsimp simp: non_kernel_IRQs_def)
     apply (strengthen contract_all_imp_strg[where P'=True, simplified])
     apply (wpsimp wp: doMachineOp_getActiveIRQ_IRQ_active' hoare_vcg_all_lift)
    apply clarsimp
@@ -2240,7 +2240,7 @@ lemma handleSpuriousIRQ_invs'[wp]:
 
 crunch handleSpuriousIRQ, maybeHandleInterrupt
   for invs'[wp]: invs'
-  (ignore: doMachineOp)
+  (ignore: doMachineOp simp: non_kernel_IRQs_def)
 
 lemma he_invs'[wp]:
   "\<lbrace>invs' and
