@@ -2133,8 +2133,8 @@ lemma hvmf_invs_lift:
   "(\<And>s m. P (s\<lparr>ksMachineState := ksMachineState s\<lparr>machine_state_rest := m\<rparr>\<rparr>) = P s) \<Longrightarrow>
    \<lbrace>P\<rbrace> handleVMFault t flt \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding handleVMFault_def
-  by (wpsimp wp: dmo_machine_rest_lift asUser_inv
-           simp: getHSR_def getHDFAR_def addressTranslateS1_def
+  by (wpsimp wp: dmo_machine_rest_lift asUser_inv dmo'_gets_wp
+           simp: getHSR_def addressTranslateS1_def getFAR_def getHDFAR_def
                  doMachineOp_bind getRestartPC_def getRegister_def)
 
 lemma hvmf_invs_etc:

@@ -717,7 +717,7 @@ lemma sts_valid_inv'[wp]:
      apply (case_tac cnode_invocation, simp_all add: cte_wp_at_ctes_of)
            apply (wp | simp)+
     apply (rename_tac irqcontrol_invocation)
-    apply (case_tac irqcontrol_invocation, simp_all add: arch_irq_control_inv_valid'_def)
+    apply (case_tac irqcontrol_invocation, simp_all)
      apply (rename_tac archirq_inv)
      apply (case_tac archirq_inv; simp)
       apply (wp | simp add: irq_issued'_def)+
@@ -747,6 +747,7 @@ lemma arch_cap_exhausted:
     \<Longrightarrow> undefined \<lbrace>P\<rbrace>"
   by (cases cap; simp add: isCap_simps)
 
+(* slow *)
 crunch decodeInvocation
   for inv[wp]: P
   (simp: crunch_simps wp: crunch_wps arch_cap_exhausted mapME_x_inv_wp getASID_wp)
