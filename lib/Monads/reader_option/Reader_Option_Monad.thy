@@ -39,6 +39,8 @@ definition map_set :: "('a \<Rightarrow> 'b set option) \<Rightarrow> 'a \<Right
 definition opt_pred :: "('a \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> 'a option) \<Rightarrow> ('b \<Rightarrow> bool)" (infixl "|<" 55) where
   "P |< proj \<equiv> (\<lambda>x. case_option False P (proj x))"
 
+definition opt_filter :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a option" where
+  "opt_filter P x \<equiv> if P x then Some x else None"
 
 subsection \<open>Lemmas for @{const opt_map}\<close>
 
@@ -190,6 +192,101 @@ lemma opt_pred_proj_upd_eq[simp]:
   "(P |< proj (p \<mapsto> v)) p = P v"
   by (simp add: in_opt_pred)
 
+subsection \<open>Lemmas for @{const opt_filter}\<close>
+
+lemma opt_filter_True[simp]:
+  "opt_filter \<top> = Some"
+  by (simp add: opt_filter_def[abs_def])
+
+lemma opt_filter_False[simp]:
+  "opt_filter \<bottom> = (\<lambda>_. None)"
+  by (simp add: opt_filter_def[abs_def])
+
+lemma opt_filter_map_eq:
+  "opt_filter P |> f = (\<lambda>x. if P x then f x else None)"
+  by (auto simp: opt_filter_def[abs_def] opt_map_def)
+
+lemma neg_opt_filter_map_eq:
+  "opt_filter (not P) |> f = (\<lambda>x. if P x then None else f x)"
+  by (auto simp: opt_filter_def[abs_def] opt_map_def)
+
+lemma opt_filter_map_apply:
+  "(opt_filter P |> f) x = (if P x then f x else None)"
+  by (auto simp: opt_filter_def opt_map_def)
+
+lemma opt_filter_Some_map_eq:
+  "opt_filter P ||> f = (\<lambda>x. if P x then Some (f x) else None)"
+  by (auto simp: opt_filter_def[abs_def] opt_map_def)
+
+lemma in_opt_filter_eq:
+  "opt_filter P x = Some y \<longleftrightarrow> P x \<and> y = x"
+  by (auto simp: opt_filter_def)
+
+lemma in_opt_filter_None_eq:
+  "opt_filter P x = None \<longleftrightarrow> \<not> P x"
+  by (simp add: opt_filter_def)
+
+lemma in_opt_map_filter_Some:
+  "(f |> opt_filter P) x = Some y \<longleftrightarrow> f x = Some y \<and> P y"
+  by (simp add: in_opt_map_eq in_opt_filter_eq)
+
+lemma in_opt_filter_map_Some:
+  "(opt_filter P |> f) x = Some y \<longleftrightarrow> P x \<and> f x = Some y"
+  by (simp add: in_opt_map_eq in_opt_filter_eq)
+
+lemma opt_filter_conj:
+  "opt_filter P |> opt_filter Q = opt_filter (P and Q)"
+  by (auto simp: opt_filter_def[abs_def] opt_map_def)
+
+lemma opt_filter_idem[simp]:
+  "opt_filter P |> opt_filter P = opt_filter P"
+  by (simp add: opt_filter_conj)
+
+lemma opt_filter_comm:
+  "opt_filter P |> opt_filter Q = opt_filter Q |> opt_filter P"
+  by (simp add: opt_filter_conj inf_commute)
+
+lemma opt_pred_opt_filter[simp]:
+  "(P |< opt_filter Q) = (P and Q)"
+  by (auto simp: in_opt_pred in_opt_filter_eq)
+
+lemma opt_pred_opt_filter_map[simp]:
+  "(P |< (f |> opt_filter Q)) = (P and Q) |< f"
+  by (simp add: opt_pred_unfold_map)
+
+lemma opt_pred_is_opt_filter:
+  "(P |< f) x \<longleftrightarrow> (\<exists>y. (f |> opt_filter P) x = Some y)"
+  by (auto simp: in_opt_pred in_opt_filter_eq in_opt_map_eq)
+
+lemma opt_pred_top_Some:
+  "(\<top> |< f) = (\<lambda>x. \<exists>y. f x = Some y)"
+  by (auto simp: in_opt_pred)
+
+lemma opt_filter_mono:
+  "\<lbrakk> \<And>x. P x \<Longrightarrow> Q x; opt_filter P x = Some y \<rbrakk> \<Longrightarrow> opt_filter Q x = Some y"
+  by (simp add: in_opt_filter_eq)
+
+lemma opt_map_filter_id:
+  "\<lbrakk> \<And>x y. f x = Some y \<Longrightarrow> P y \<rbrakk> \<Longrightarrow> f |> opt_filter P = f"
+  by (auto simp: opt_map_def in_opt_filter_eq split: option.splits)
+
+lemma opt_map_Some_map_eq:
+  "g ||> f |> h = g |> (h \<circ> f)"
+  by (auto simp add: opt_map_def split: option.splits)
+
+lemma opt_filter_upd_None_id:
+  "\<not>P x \<Longrightarrow> (opt_filter P) (x := None) = opt_filter P"
+  by (auto simp: opt_filter_def)
+
+lemma opt_filter_apply_None:
+  "\<not>P x \<Longrightarrow> opt_filter P x = None"
+  by (auto simp: opt_filter_def)
+
+lemma opt_filter_apply_Some:
+  "P x \<Longrightarrow> opt_filter P x = Some x"
+  by (auto simp: opt_filter_def)
+
+lemmas opt_filter_apply = opt_filter_apply_None opt_filter_apply_Some
 
 section \<open>The Reader Option Monad\<close>
 
