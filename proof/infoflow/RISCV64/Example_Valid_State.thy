@@ -27,8 +27,13 @@ consts s0_context :: user_context
 
 (* define the irqs to come regularly every 10 *)
 
+definition timer_irq :: irq where
+  "timer_irq \<equiv> maxIRQ - 1"
+
+abbreviation (input) "timer_int \<equiv> 10"
+
 axiomatization where
-  irq_oracle_def: "RISCV64.irq_oracle \<equiv> \<lambda>pos. if pos mod 10 = 0 then 10 else 0"
+  irq_oracle_def: "RISCV64.irq_oracle \<equiv> \<lambda>pos. if pos mod timer_int = 0 then timer_irq else 0"
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
@@ -222,8 +227,6 @@ definition "irq_cnode_ptr = pptr_base + 0x28000"
 
 definition "shared_page_ptr_virt = pptr_base + 0x200000"
 definition "shared_page_ptr_phys = addrFromPPtr shared_page_ptr_virt"
-
-definition "timer_irq \<equiv> 10" (* not sure exactly how this fits in *)
 
 definition "Low_mcp \<equiv> 5 :: priority"
 definition "Low_prio \<equiv> 5 :: priority"
@@ -1220,11 +1223,10 @@ lemma silc_inv_s0:
   apply (clarsimp simp: Invariants_AI.cte_wp_at_caps_of_state )
   by (auto simp:is_transferable.simps dest:s0_caps_of_state)
 
-
 lemma only_timer_irq_s0:
   "only_timer_irq timer_irq s0_internal"
   apply (clarsimp simp: only_timer_irq_def s0_internal_def irq_is_recurring_def is_irq_at_def
-                        irq_at_def Let_def irq_oracle_def machine_state0_def timer_irq_def)
+                        irq_at_def Let_def irq_oracle_def machine_state0_def maxIRQ_def timer_irq_def)
   apply presburger
   done
 

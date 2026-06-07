@@ -2871,8 +2871,12 @@ axiomatization  where
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma timer_irq_not_outside_range[simp]:
-  "\<not> Kernel_Config.maxIRQ < (timer_irq :: irq)"
-  by (simp add: Kernel_Config.maxIRQ_def timer_irq_def)
+  "\<not> maxIRQ < timer_irq"
+  apply (simp add: timer_irq_def)
+  apply (rule leD)
+  apply (rule word_sub_1_le)
+  apply (simp add: word_neq_0_conv maxIRQ_def)
+  done
 
 lemma s0H_invs:
   assumes "1 \<le> maxDomain"
@@ -3099,7 +3103,7 @@ lemma s0H_invs:
   apply (rule conjI)
    apply (clarsimp simp: valid_machine_state'_def s0H_internal_def machine_state0_def)
   apply (rule conjI)
-   apply (clarsimp simp: irqs_masked'_def s0H_internal_def maxIRQ_def)
+   apply (clarsimp simp: irqs_masked'_def s0H_internal_def)
   apply (rule conjI)
    apply (clarsimp simp: sym_heap_def opt_map_def split: option.splits)
    using kh0H_dom_tcb
