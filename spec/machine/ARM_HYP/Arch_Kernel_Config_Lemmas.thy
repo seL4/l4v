@@ -21,6 +21,10 @@ lemma physBase_aligned:
 
 (* maxIRQ conditions *)
 
+lemma zero_less_maxIRQ[simp, intro!]:
+  "(0 :: irq) < Kernel_Config.maxIRQ"
+  by (simp add: Kernel_Config.maxIRQ_def)
+
 lemma irqVTimerEvent_le_maxIRQ[simp, intro!]:
   "irqVTimerEvent \<le> Kernel_Config.maxIRQ"
   by (simp add: irqVTimerEvent_def Kernel_Config.maxIRQ_def)

@@ -22,6 +22,10 @@ lemma physBase_aligned:
 
 (* maxIRQ conditions *)
 
+lemma zero_less_maxIRQ[simp, intro!]:
+  "(0 :: irq) < Kernel_Config.maxIRQ"
+  by (simp add: Kernel_Config.maxIRQ_def)
+
 lemma maxIRQ_less_2p_irqBits:
   "(Kernel_Config.maxIRQ::nat) < 2^irqBits"
   by (simp add: Kernel_Config.maxIRQ_def Kernel_Config.irqBits_def)
