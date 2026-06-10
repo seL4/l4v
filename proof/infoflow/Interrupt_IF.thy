@@ -21,7 +21,7 @@ locale Interrupt_IF_1 =
     "reads_respects aag l (K (arch_authorised_irq_ctl_inv aag irq_ctl_inv))
                     (arch_invoke_irq_control irq_ctl_inv)"
   and arch_invoke_irq_control_globals_equiv:
-    "\<lbrace>globals_equiv st and valid_arch_state and valid_global_objs\<rbrace>
+    "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
      arch_invoke_irq_control ai
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   and arch_invoke_irq_handler_globals_equiv[wp]:
@@ -74,20 +74,20 @@ lemma invoke_irq_control_reads_respects:
   done
 
 lemma invoke_irq_control_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_arch_state and valid_global_objs\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    invoke_irq_control a
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (induct a)
-   apply (wpsimp wp: set_irq_state_globals_equiv cap_insert_globals_equiv''
+   apply (wpsimp wp: set_irq_state_globals_equiv cap_insert_globals_equiv
                      set_irq_state_valid_global_objs arch_invoke_irq_control_globals_equiv)+
   done
 
 lemma invoke_irq_handler_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_arch_state and valid_global_objs\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    invoke_irq_handler a
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (induct a)
-  by (wpsimp wp: modify_wp cap_insert_globals_equiv''
+  by (wpsimp wp: modify_wp cap_insert_globals_equiv
                  cap_delete_one_globals_equiv cap_delete_one_valid_global_objs)+
 
 subsection "reads_respects_g"

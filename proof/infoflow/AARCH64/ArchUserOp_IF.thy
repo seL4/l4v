@@ -8,7 +8,7 @@ theory ArchUserOp_IF
 imports UserOp_IF
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 definition ptable_lift_s where
   "ptable_lift_s s \<equiv> ptable_lift (cur_thread s) s"
@@ -100,10 +100,22 @@ lemma arch_globals_equiv_device_state_update[UserOp_IF_assms, simp]:
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   by auto
 
+lemma no_hyp_modify[UserOp_IF_assms]:
+  "\<And>f. no_hyp (modify (\<lambda>ms. ms\<lparr>underlying_memory := f ms\<rparr>))"
+  "\<And>f. no_hyp (modify (\<lambda>ms. ms\<lparr>device_state := f ms\<rparr>))"
+  "\<And>f. no_hyp (modify (\<lambda>ms. ms\<lparr>machine_state_rest := f ms\<rparr>))"
+  by wpsimp+
+
+lemma no_fpu_modify[UserOp_IF_assms]:
+  "\<And>f. no_fpu (modify (\<lambda>ms. ms\<lparr>underlying_memory := f ms\<rparr>))"
+  "\<And>f. no_fpu (modify (\<lambda>ms. ms\<lparr>device_state := f ms\<rparr>))"
+  "\<And>f. no_fpu (modify (\<lambda>ms. ms\<lparr>machine_state_rest := f ms\<rparr>))"
+  by wpsimp+
+
 end
 
 
-requalify_types AARCH64.user_transition_if
+arch_requalify_types user_transition_if
 
 global_interpretation UserOp_IF_1?: UserOp_IF_1
 proof goal_cases
@@ -113,7 +125,7 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma requiv_get_pt_of_thread_eq:
   "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; is_subject aag (cur_thread s);
@@ -142,7 +154,7 @@ lemma requiv_get_pt_entry_eq:
   done
 
 lemma requiv_get_page_info_eq:
-  "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; invs s; is_subject aag pt; x \<notin> kernel_mappings;
+  "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; invs s; is_subject aag pt;
      \<exists>asid. vs_lookup_table max_pt_level asid x s = Some (max_pt_level, pt) \<rbrakk>
      \<Longrightarrow> get_page_info (aobjs_of s) pt x = get_page_info (aobjs_of s') pt x"
   apply (clarsimp simp: get_page_info_def obind_def)
@@ -150,12 +162,10 @@ lemma requiv_get_page_info_eq:
    apply (clarsimp split: option.splits)
    apply (case_tac "pt_lookup_slot pt x (ptes_of s') = Some (a, b)"; clarsimp)
    apply (frule_tac ptr=b in ptes_of_reads_equiv[rotated])
-    apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def)
-    apply (prop_tac "ba = bb", clarsimp simp: pt_slot_offset_def)
-    apply (frule pt_walk_is_aligned)
-     apply (erule vs_lookup_table_is_aligned; clarsimp simp: canonical_not_kernel_is_user)
-    apply (erule pt_walk_is_subject, (fastforce simp: canonical_not_kernel_is_user)+)
-  apply (rule requiv_get_pt_entry_eq; fastforce simp: canonical_not_kernel_is_user)
+    apply (clarsimp simp: pt_lookup_slot_def)
+    apply (rule_tac pt_lookup_slot_from_level_is_subject)
+            apply fastforce+
+  apply (rule requiv_get_pt_entry_eq; fastforce)
   done
 
 lemma requiv_vspace_of_thread_global_pt:
@@ -166,18 +176,19 @@ lemma requiv_vspace_of_thread_global_pt:
   apply (erule equiv_forE)
   apply (prop_tac "aag_can_read aag (cur_thread s)", simp)
   apply (clarsimp simp: get_vspace_of_thread_def
-                 split: option.split kernel_object.splits cap.splits arch_cap.splits)
-  apply (rename_tac tcb word word' word'')
-  apply (subgoal_tac "aag_can_read_asid aag word'")
-   apply (subgoal_tac "s \<turnstile> ArchObjectCap (PageTableCap word (Some (word',word'')))")
+                 split: option.split kernel_object.splits cap.splits arch_cap.splits pt_type.splits)
+  apply (rename_tac tcb pt asid vref)
+  apply (subgoal_tac "aag_can_read_asid aag asid")
+   apply (subgoal_tac "s \<turnstile> ArchObjectCap (PageTableCap pt VSRootPT_T (Some (asid,vref)))")
     apply (clarsimp simp: equiv_asids_def equiv_asid_def valid_cap_def obind_def
                           vspace_for_asid_def vspace_for_pool_def pool_for_asid_def)
     apply (clarsimp simp: word_gt_0 typ_at_eq_kheap_obj)
-    apply (drule_tac x=word' in spec)
-    apply (case_tac "word' = 0"; clarsimp)
-    apply (clarsimp simp: asid_pools_of_ko_at obj_at_def asid_low_bits_of_def opt_map_def
+    apply (drule_tac x=asid in spec)
+    apply (case_tac "asid = 0"; clarsimp)
+    apply (clarsimp simp: asid_pools_of_ko_at obj_at_def)
+    apply (clarsimp simp: asid_low_bits_of_def opt_map_def
+                          entry_for_asid_def entry_for_pool_def pool_for_asid_def obind_def
                    split: option.splits)
-    apply (frule valid_global_arch_objs_global_ptD[OF invs_valid_global_arch_objs])
     apply (drule invs_valid_global_refs)
     apply (drule_tac ptr="((cur_thread s), tcb_cnode_index 1)" in valid_global_refsD2[rotated])
      apply (subst caps_of_state_tcb_cap_cases)
@@ -187,7 +198,7 @@ lemma requiv_vspace_of_thread_global_pt:
     apply (simp add: cap_range_def global_refs_def)
    apply (cut_tac s=s and t="cur_thread s" and tcb=tcb in objs_valid_tcb_vtable)
      apply (fastforce simp: invs_valid_objs get_tcb_def)+
-  apply (subgoal_tac "(pasObjectAbs aag (cur_thread s), Control, pasASIDAbs aag word')
+  apply (subgoal_tac "(pasObjectAbs aag (cur_thread s), Control, pasASIDAbs aag asid)
                         \<in> state_asids_to_policy aag s")
    apply (frule pas_refined_Control_into_is_subject_asid)
     apply (fastforce simp: pas_refined_def)
@@ -201,7 +212,7 @@ lemma vspace_for_asid_get_vspace_of_thread:
   "get_vspace_of_thread (kheap s) (arch_state s) ct \<noteq> global_pt s
    \<Longrightarrow> \<exists>asid. vspace_for_asid asid s = Some (get_vspace_of_thread (kheap s) (arch_state s) ct)"
   by (fastforce simp: get_vspace_of_thread_def
-               split: option.splits kernel_object.splits cap.splits arch_cap.splits)
+               split: option.splits kernel_object.splits cap.splits arch_cap.splits pt_type.splits)
 
 lemma pt_of_thread_same_agent:
   "\<lbrakk> pas_refined aag s; is_subject aag tcb_ptr;
@@ -228,27 +239,13 @@ lemma requiv_ptable_rights_eq:
      \<Longrightarrow> ptable_rights_s s = ptable_rights_s s'"
   apply (simp add: ptable_rights_s_def)
   apply (rule ext)
-  apply (case_tac "x \<in> kernel_mappings")
-   apply (clarsimp simp: ptable_rights_def split: option.splits)
-   apply (rule conjI; clarsimp)
-    apply (frule some_get_page_info_kmapsD;
-           fastforce dest: invs_arch_state vspace_for_asid_get_vspace_of_thread
-                     simp: valid_arch_state_def kernel_mappings_canonical)
-   apply (frule some_get_page_info_kmapsD)
-              apply (auto dest: invs_arch_state vspace_for_asid_get_vspace_of_thread
-                          simp: valid_arch_state_def kernel_mappings_canonical)[12]
-   apply (frule_tac r=b in some_get_page_info_kmapsD)
-              apply (auto dest: invs_arch_state vspace_for_asid_get_vspace_of_thread
-                          simp: valid_arch_state_def kernel_mappings_canonical)[12]
-  apply (case_tac "get_vspace_of_thread (kheap s) (arch_state s) (cur_thread s) =
-                   arm_us_global_vspace (arch_state s)")
+  apply (case_tac "get_vspace_of_thread (kheap s) (arch_state s) (cur_thread s) = global_pt s")
    apply (frule requiv_vspace_of_thread_global_pt)
        apply (auto)[4]
-   apply (fastforce dest: get_page_info_gpd_kmaps[rotated, rotated]
+   apply (fastforce dest: get_page_info_gpd_kmaps[rotated 3]
                     simp: ptable_rights_def invs_valid_global_objs invs_arch_state
                    split: option.splits)+
-  apply (case_tac "get_vspace_of_thread (kheap s') (arch_state s') (cur_thread s') =
-                   arm_us_global_vspace (arch_state s')")
+  apply (case_tac "get_vspace_of_thread (kheap s') (arch_state s') (cur_thread s') = global_pt s'")
    apply (drule reads_equiv_sym)
    apply (frule requiv_vspace_of_thread_global_pt; fastforce simp: reads_equiv_def)
   apply (simp add: ptable_rights_def)
@@ -265,16 +262,6 @@ lemma requiv_ptable_attrs_eq:
      is_subject aag (cur_thread s); invs s; invs s'; ptable_rights_s s x \<noteq> {} \<rbrakk>
      \<Longrightarrow> ptable_attrs_s s x = ptable_attrs_s s' x"
   apply (simp add: ptable_attrs_s_def ptable_rights_s_def)
-  apply (case_tac "x \<in> kernel_mappings")
-   apply (clarsimp simp: ptable_attrs_def split: option.splits)
-   apply (rule conjI)
-    apply clarsimp
-    apply (frule some_get_page_info_kmapsD)
-               apply (auto simp: vspace_for_asid_get_vspace_of_thread ptable_rights_def)[12]
-   apply clarsimp
-   apply (frule some_get_page_info_kmapsD)
-              apply (auto dest: invs_arch_state vspace_for_asid_get_vspace_of_thread
-                          simp: valid_arch_state_def kernel_mappings_canonical ptable_rights_def)[12]
   apply (case_tac "get_vspace_of_thread (kheap s) (arch_state s) (cur_thread s) =
                    arm_us_global_vspace (arch_state s)")
    apply (frule requiv_vspace_of_thread_global_pt)
@@ -282,15 +269,15 @@ lemma requiv_ptable_attrs_eq:
    apply (clarsimp simp: ptable_attrs_def split: option.splits)
    apply (rule conjI)
     apply clarsimp
-    apply (frule get_page_info_gpd_kmaps[rotated, rotated])
-      apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[3]
+    apply (frule get_page_info_gpd_kmaps[rotated 3])
+      apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[4]
    apply clarsimp
    apply (rule conjI)
-    apply (frule get_page_info_gpd_kmaps[rotated, rotated])
-      apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[3]
+    apply (frule get_page_info_gpd_kmaps[rotated 3])
+      apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[4]
    apply clarsimp
-   apply (frule get_page_info_gpd_kmaps[rotated, rotated])
-     apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[3]
+   apply (frule get_page_info_gpd_kmaps[rotated 3])
+     apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[4]
   apply (case_tac "get_vspace_of_thread (kheap s') (arch_state s') (cur_thread s') =
                    arm_us_global_vspace (arch_state s')")
    apply (drule reads_equiv_sym)
@@ -309,16 +296,6 @@ lemma requiv_ptable_lift_eq:
      invs s'; is_subject aag (cur_thread s); ptable_rights_s s x \<noteq> {} \<rbrakk>
      \<Longrightarrow> ptable_lift_s s x = ptable_lift_s s' x"
   apply (simp add: ptable_lift_s_def ptable_rights_s_def)
-  apply (case_tac "x \<in> kernel_mappings")
-   apply (clarsimp simp: ptable_lift_def split: option.splits)
-   apply (rule conjI)
-    apply clarsimp
-    apply (frule some_get_page_info_kmapsD)
-               apply (auto simp: vspace_for_asid_get_vspace_of_thread ptable_rights_def)[12]
-   apply clarsimp
-   apply (frule some_get_page_info_kmapsD)
-              apply (auto dest: invs_arch_state vspace_for_asid_get_vspace_of_thread
-                          simp: valid_arch_state_def kernel_mappings_canonical ptable_rights_def)[12]
   apply (case_tac "get_vspace_of_thread (kheap s) (arch_state s) (cur_thread s) =
                    arm_us_global_vspace (arch_state s)")
    apply (frule requiv_vspace_of_thread_global_pt)
@@ -326,15 +303,15 @@ lemma requiv_ptable_lift_eq:
    apply (clarsimp simp: ptable_lift_def split: option.splits)
    apply (rule conjI)
     apply clarsimp
-    apply (frule get_page_info_gpd_kmaps[rotated, rotated])
-      apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[3]
+    apply (frule get_page_info_gpd_kmaps[rotated 3])
+      apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[4]
    apply clarsimp
    apply (rule conjI)
-    apply (frule get_page_info_gpd_kmaps[rotated, rotated])
-      apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[3]
+    apply (frule get_page_info_gpd_kmaps[rotated 3])
+      apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[4]
    apply clarsimp
-   apply (frule get_page_info_gpd_kmaps[rotated, rotated])
-     apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[3]
+   apply (frule get_page_info_gpd_kmaps[rotated 3])
+     apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[4]
   apply (case_tac "get_vspace_of_thread (kheap s') (arch_state s') (cur_thread s') =
                    arm_us_global_vspace (arch_state s')")
    apply (drule reads_equiv_sym)
@@ -440,11 +417,12 @@ proof -
       apply (simp add: obj_bits_def)+
      apply (simp add: mask_lower_twice ptrFromPAddr_mask_simp)
      apply (rule arg_cong[where f = ptrFromPAddr])
-     apply (subst (asm) is_aligned_ptrFromPAddr_n_eq[OF pageBitsForSize_le_canonical_bit])
-     apply (subst neg_mask_add_aligned[OF _ and_mask_less'])
-       apply simp
-      apply (fastforce simp: pbfs_less_wb'[unfolded word_bits_def,simplified])
-     apply (simp add: is_aligned_neg_mask_eq)
+     apply (subgoal_tac "is_aligned base (pageBitsForSize sz')")
+      apply (subst neg_mask_add_aligned[OF _ and_mask_less'])
+        apply simp
+       apply (fastforce simp: pbfs_less_wb'[unfolded word_bits_def,simplified])
+      apply simp
+     apply (metis is_aligned_addD2 is_aligned_pptrBaseOffset ptrFromPAddr_def)
     apply (drule not_sym)
     apply (erule(5) data_at_disjoint_equiv)
     apply (unfold obj_range_def)
@@ -452,17 +430,21 @@ proof -
      apply (simp add: obj_bits_def is_aligned_neg_mask)+
     apply (simp add: mask_lower_twice ptrFromPAddr_mask_simp)
     apply (rule arg_cong[where f = ptrFromPAddr])
-    apply (subst (asm) is_aligned_ptrFromPAddr_n_eq[OF pageBitsForSize_le_canonical_bit])
-    apply (rule sym)
-    apply (subst mask_lower_twice[symmetric])
-     apply (erule less_imp_le_nat)
-    apply (rule arg_cong[where f = "\<lambda>x. x && ~~ mask z" for z])
-    apply (subst neg_mask_add_aligned[OF _ and_mask_less'])
-      apply simp
-     apply (fastforce simp: pbfs_less_wb'[unfolded word_bits_def,simplified])
-    apply simp
+    apply (subgoal_tac "is_aligned base (pageBitsForSize sz')")
+     apply (rule sym)
+     apply (subst mask_lower_twice[symmetric])
+      apply (erule less_imp_le_nat)
+     apply (rule arg_cong[where f = "\<lambda>x. x && ~~ mask z" for z])
+     apply (subst neg_mask_add_aligned[OF _ and_mask_less'])
+       apply simp
+      apply (fastforce simp: pbfs_less_wb'[unfolded word_bits_def,simplified])
+     apply simp
+    apply (metis is_aligned_addD2 is_aligned_pptrBaseOffset ptrFromPAddr_def)
     done
 qed
+
+lemmas bit_minus_one_leq_less = bit0.minus_one_leq_less bit1.minus_one_leq_less
+lemmas bit_zero_least = bit0.zero_least bit1.zero_least
 
 lemma level_le_2_cases:
   "(level :: vm_level) \<le> 2 \<Longrightarrow> level = 0 \<or> level = 1 \<or> level = 2"
@@ -475,11 +457,28 @@ lemma level_le_2_cases:
    apply (drule meta_mp)
     apply (erule order.strict_implies_not_eq)
    apply (drule meta_mp)
-    apply (rule bit0.minus_one_leq_less)
+    apply (rule bit_minus_one_leq_less)
      apply (erule order.strict_implies_order)
-    apply (erule bit0.zero_least)
+    apply (erule bit_zero_least)
    apply clarsimp
   apply clarsimp
+  done
+
+lemma pt_walk_vref_for_levelD:
+  "\<lbrakk> pt_walk top_level bot_level pt vref ptes = Some (level,ptr);
+     level \<le> top_level; top_level \<le> max_pt_level \<rbrakk>
+     \<Longrightarrow> pt_walk top_level bot_level pt (vref_for_level vref level) ptes = Some (level,ptr)"
+  apply (induct top_level arbitrary: pt)
+   apply (simp add: pt_walk.simps Let_def oapply_def)
+  apply (case_tac "top_level=bot_level")
+   apply (simp add: pt_walk.simps)
+  apply (erule_tac x="pptr_from_pte (the (ptes (level_type top_level) (pt_slot_offset top_level pt vref)))"
+                in meta_allE)
+  apply (subst (asm) pt_walk.simps)
+  apply (subst pt_walk.simps)
+  apply (simp add: Let_def vm_level.leq_minus1_less)
+  apply (clarsimp simp: obind_def split: if_splits option.splits)
+  apply (meson pt_walk_max_level vm_level.leq_minus1_less vm_level.zero_least)
   done
 
 lemma ptable_lift_data_consistant:
@@ -487,7 +486,6 @@ lemma ptable_lift_data_consistant:
   and pt_lift: "ptable_lift t s x = Some ptr"
   and dat: "data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s"
   and misc: "get_vspace_of_thread (kheap s) (arch_state s) t \<noteq> arm_us_global_vspace (arch_state s)"
-            "x \<notin> kernel_mappings"
   shows "ptable_lift t s (x && ~~ mask (pageBitsForSize sz)) =
          Some (ptr && ~~ mask (pageBitsForSize sz))"
 proof -
@@ -503,7 +501,7 @@ proof -
     apply (case_tac pde; clarsimp simp: pte_info_def)
     apply (frule pt_lookup_slot_max_pt_level)
     apply (frule vspace_for_asid_vs_lookup)
-    apply (frule canonical_not_kernel_is_user[OF misc(2)])
+    apply (clarsimp split: if_splits)
     apply (frule_tac level=level in valid_vspace_objs_pte)
       apply clarsimp
      apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def)
@@ -515,39 +513,41 @@ proof -
      apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def in_omonad pt_walk.simps)
      apply (clarsimp split: if_splits)
       apply (fastforce dest: pt_walk_max_level simp: max_pt_level_def2)
-     apply (subst (asm) table_index_max_level_slots; clarsimp?)
-     apply (fastforce dest: vs_lookup_table_is_aligned valid_arch_state_asid_table)
+     apply clarsimp
     apply (clarsimp simp: valid_pte_def)
-    apply (frule data_at_same_size; simp?)
+    apply (frule data_at_same_size[symmetric]; simp?)
+    apply (simp add: pageBitsForSize_pt_bits_left)
+    apply (fold vref_for_level_def)
+    apply (prop_tac "level_of_vmsize (vmsize_of_level level) = level")
+     apply (metis data_at_level pageBitsForSize_pt_bits_left)
+    apply clarsimp
     apply (prop_tac "pt_lookup_slot (get_vspace_of_thread (kheap s) (arch_state s) t)
                                     (vref_for_level x level) (ptes_of s) = Some (level, pt)")
-     apply (case_tac "level = max_pt_level"; clarsimp)
-      apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def in_omonad)
-      apply (subst (asm) pt_lookup_vs_lookup_eq)
-        apply clarsimp
-       apply (clarsimp simp: vspace_for_asid_def)
-      apply (clarsimp simp: pt_walk.simps)
-      apply (fastforce dest: pt_walk_max_level simp: max_pt_level_def2 in_omonad)
-     apply (fold vref_for_level_def)
      apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def in_omonad)
-     apply (rule exI)
-     apply (subst pt_walk_vref_for_level_eq[where vref'=x])
-       apply (fastforce dest: level_le_2_cases le_neq_trans simp: max_pt_level_def2 max_def)
-      apply clarsimp
-     apply fastforce
+     apply (fastforce dest: pt_walk_vref_for_levelD)
+    using vref_for_level_user_region
     apply (fastforce simp: vref_for_level_def is_aligned_mask_out_add_eq mask_AND_NOT_mask
-                           pt_bits_left_le_canonical is_aligned_ptrFromPAddr_n_eq
-                     elim: canonical_vref_for_levelI[unfolded vref_for_level_def]
+                           is_aligned_ptrFromPAddr_n_eq
                      dest: data_at_aligned)
     done
 qed
+
+(* FIXME AARCH64 IF: override in ArchRetype_AI *)
+lemma valid_vspace_objs_pte:
+  "\<lbrakk> ptes_of s pt_t p = Some pte; valid_vspace_objs s; \<exists>\<rhd> (level, table_base pt_t p) s \<rbrakk>
+   \<Longrightarrow> valid_pte level pte s"
+  apply (clarsimp simp: ptes_of_def in_opt_map_eq)
+  apply (drule (2) valid_vspace_objsD)
+   apply (fastforce simp: in_opt_map_eq)
+  apply simp
+  done
 
 lemma ptable_rights_data_consistant:
   assumes vs: "valid_state s"
   and pt_lift: "ptable_lift t s x = Some ptr"
   and dat: "data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s"
   and misc: "get_vspace_of_thread (kheap s) (arch_state s) t \<noteq>
-             arm_us_global_vspace (arch_state s)" "x \<notin> kernel_mappings"
+             arm_us_global_vspace (arch_state s)"
   shows "ptable_rights t s (x && ~~ mask (pageBitsForSize sz)) = ptable_rights t s x"
 proof -
   have vs': "valid_objs s \<and> valid_arch_state s \<and> valid_vspace_objs s
@@ -556,48 +556,33 @@ proof -
   thus ?thesis
     using pt_lift dat vs'
     apply (clarsimp simp: ptable_rights_def ptable_lift_def split: option.splits)
-    apply (clarsimp simp: get_page_info_def simp: obind_def split: option.splits)
+    apply (clarsimp simp: get_page_info_def simp: obind_def split: option.splits if_splits)
     apply (rule exE[OF vspace_for_asid_get_vspace_of_thread[OF misc(1)]])
     apply (rename_tac level pt pde asid)
     apply (case_tac pde; clarsimp simp: pte_info_def)
     apply (frule pt_lookup_slot_max_pt_level)
     apply (frule vspace_for_asid_vs_lookup)
-    apply (frule canonical_not_kernel_is_user[OF misc(2)])
     apply (frule_tac level=level in valid_vspace_objs_pte)
       apply clarsimp
      apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def)
      apply (fastforce simp: table_base_pt_slot_offset[OF vs_lookup_table_is_aligned]
                       dest: valid_arch_state_asid_table dest!: pt_lookup_vs_lookupI
                      intro: vs_lookup_level)
-    apply (erule disjE[OF _  _ FalseE])
-     prefer 2
-     apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def in_omonad pt_walk.simps)
-     apply (clarsimp split: if_splits)
-      apply (fastforce dest: pt_walk_max_level simp: max_pt_level_def2)
-     apply (subst (asm) table_index_max_level_slots; clarsimp?)
-     apply (fastforce dest: vs_lookup_table_is_aligned valid_arch_state_asid_table)
     apply (clarsimp simp: valid_pte_def)
-    apply (frule data_at_same_size; simp?)
+    apply (frule data_at_same_size[symmetric]; simp?)
+    apply (simp add: pageBitsForSize_pt_bits_left)
+    apply (prop_tac "level_of_vmsize (vmsize_of_level level) = level")
+     apply (metis data_at_level pageBitsForSize_pt_bits_left)
+    apply clarsimp
+    apply (fold vref_for_level_def)
     apply (prop_tac "pt_lookup_slot (get_vspace_of_thread (kheap s) (arch_state s) t)
                                     (vref_for_level x level) (ptes_of s) = Some (level, pt)")
-     apply (case_tac "level = max_pt_level"; clarsimp)
-      apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def in_omonad)
-      apply (subst (asm) pt_lookup_vs_lookup_eq)
-        apply clarsimp
-       apply (clarsimp simp: vspace_for_asid_def)
-      apply (clarsimp simp: pt_walk.simps)
-      apply (fastforce dest: pt_walk_max_level simp: max_pt_level_def2 in_omonad)
-     apply (fold vref_for_level_def)
      apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def in_omonad)
-     apply (rule exI)
-     apply (subst pt_walk_vref_for_level_eq[where vref'=x])
-       apply (fastforce dest: level_le_2_cases le_neq_trans simp: max_pt_level_def2 max_def)
-      apply clarsimp
-     apply fastforce
-    apply (clarsimp simp: vref_for_level_def)
-    apply (fastforce dest: canonical_vref_for_levelI[unfolded vref_for_level_def]
-                     simp: pt_bits_left_le_canonical )
-    done
+     apply (fastforce dest: pt_walk_vref_for_levelD)
+    apply (rule conjI)
+     apply (fastforce)
+    apply clarsimp
+    using vref_for_level_user_region by fastforce
 qed
 
 
@@ -607,20 +592,14 @@ lemma user_op_access_data_at:
      auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) \<rbrakk>
      \<Longrightarrow> (pasObjectAbs aag tcb, auth,
           pasObjectAbs aag (ptrFromPAddr (ptr && ~~ mask (pageBitsForSize sz)))) \<in> pasPolicy aag"
-  apply (case_tac "x \<in> kernel_mappings")
-   apply (clarsimp simp: ptable_lift_def ptable_rights_def split: option.splits)
-   apply (frule some_get_page_info_kmapsD)
-              apply (fastforce dest: invs_arch_state invs_equal_kernel_mappings
-                               simp: valid_arch_state_def vspace_for_asid_get_vspace_of_thread
-                                     kernel_mappings_canonical vspace_cap_rights_to_auth_def)+
   apply (case_tac "get_vspace_of_thread (kheap s) (arch_state s) tcb = arm_us_global_vspace (arch_state s)")
    apply (clarsimp simp: ptable_lift_def ptable_rights_def split: option.splits)
-   apply (frule get_page_info_gpd_kmaps[rotated, rotated])
+   apply (frule get_page_info_gpd_kmaps[rotated 3])
      apply (fastforce simp: invs_valid_global_objs invs_arch_state)+
-  apply (frule (2) ptable_lift_data_consistant[rotated 2])
+  apply (frule (1) ptable_lift_data_consistant[rotated 2])
     apply fastforce
    apply fastforce
-  apply (frule (2) ptable_rights_data_consistant[rotated 2])
+  apply (frule (1) ptable_rights_data_consistant[rotated 2])
     apply fastforce
    apply fastforce
   apply (erule (3) user_op_access)
@@ -839,12 +818,12 @@ declare valid_vspace_objs_if_def[simp]
 
 end
 
-requalify_consts
-  AARCH64.do_user_op_if
-  AARCH64.valid_vspace_objs_if
-  AARCH64.context_matches_state
+arch_requalify_consts
+  do_user_op_if
+  valid_vspace_objs_if
+  context_matches_state
 
-requalify_facts
-  AARCH64.do_user_op_reads_respects_g
+arch_requalify_facts
+  do_user_op_reads_respects_g
 
 end

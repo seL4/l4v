@@ -156,8 +156,34 @@ abbreviation aag_can_read_domain :: "'a PAS \<Rightarrow> domain \<Rightarrow> b
 
 subsection \<open>Generic equivalence\<close>
 
-definition equiv_for where
+defs equiv_for_def:
   "equiv_for P f c c' \<equiv>  \<forall>x. P x \<longrightarrow> f c x = f c' x"
+
+definition identical_updates_rv where
+  "identical_updates_rv R s t s' t' \<equiv> (\<not>R s' t' \<longrightarrow> (R s s' \<and> R t t'))"
+
+abbreviation identical_updates_for_rv where
+  "identical_updates_for_rv P R s t s' t' \<equiv> \<forall>x. P x \<longrightarrow> identical_updates_rv R (s x) (t x) (s' x) (t' x)"
+
+abbreviation identical_updates_for where
+  "identical_updates_for P \<equiv> identical_updates_for_rv P (=)"
+
+abbreviation identical_updates where
+  "identical_updates \<equiv> identical_updates_for (\<lambda>_. True)"
+
+lemmas identical_updates_def = identical_updates_rv_def
+
+abbreviation identical_kheap_updates where
+  "identical_kheap_updates s s' kh kh' \<equiv> identical_updates (kheap s) (kheap s') kh kh'"
+
+lemmas identical_kheap_updates_def = identical_updates_def
+
+
+subsection \<open>Arch equivalence\<close>
+
+arch_requalify_consts
+  equiv_hyp
+  equiv_fpu
 
 
 subsection \<open>Machine state equivalence\<close>
@@ -172,14 +198,6 @@ subsection \<open>ASID equivalence\<close>
 
 definition equiv_asids :: "(asid \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> bool" where
   "equiv_asids R s s' \<equiv> \<forall>asid. asid \<noteq> 0 \<and> R asid \<longrightarrow> equiv_asid asid s s'"
-
-definition identical_updates where
-  "identical_updates k k' kh kh' \<equiv> \<forall>x. (kh x \<noteq> kh' x \<longrightarrow> (k x = kh x \<and> k' x = kh' x))"
-
-abbreviation identical_kheap_updates where
-  "identical_kheap_updates s s' kh kh' \<equiv> identical_updates (kheap s) (kheap s') kh kh'"
-
-lemmas identical_kheap_updates_def = identical_updates_def
 
 
 subsection \<open>Generic state equivalence\<close>
@@ -207,7 +225,9 @@ definition states_equiv_for ::
      equiv_for Q interrupt_states s s' \<and>
      equiv_for Q interrupt_irq_node s s' \<and>
      equiv_for S  ready_queues s s' \<and>
-     equiv_asids R s s'"
+     equiv_asids R s s' \<and>
+     equiv_hyp P s s' \<and>
+     equiv_fpu P s s'"
 
 (* This the main use of states_equiv_for : P is use to restrict the labels we want to consider *)
 abbreviation states_equiv_for_labels ::
@@ -360,6 +380,9 @@ abbreviation aag_can_affect_asid where
 abbreviation aag_can_affect_domain where
   "aag_can_affect_domain aag l \<equiv> \<lambda>x. aag_can_affect_label aag l
                                    \<and> pasDomainAbs aag x \<inter> subjectReads (pasPolicy aag) l \<noteq> {}"
+
+abbreviation (input) aag_can_read_or_affect where
+  "aag_can_read_or_affect aag l \<equiv> \<lambda>x. aag_can_read aag x \<or> aag_can_affect aag l x"
 
 
 section \<open>reads_respects\<close>

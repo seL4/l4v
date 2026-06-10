@@ -60,8 +60,6 @@ locale IRQMasks_IF_1 =
     "send_signal ntfnptr badge \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   and handle_vm_fault_irq_masks[wp]:
     "handle_vm_fault t vmft \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and handle_hypervisor_fault_irq_masks[wp]:
-    "handle_hypervisor_fault t hvft \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   and handle_interrupt_irq_masks:
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False (st :: 's state) and K (irq \<le> maxIRQ)\<rbrace>
      handle_interrupt irq
@@ -78,8 +76,6 @@ locale IRQMasks_IF_1 =
      \<lbrace>\<lambda>rv s :: det_state. (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)\<rbrace>"
   and activate_thread_irq_masks[wp]:
     "activate_thread \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and schedule_irq_masks[wp]:
-    "schedule \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   and handle_spurious_irq_masks[wp]:
     "handle_spurious_irq \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
 begin
@@ -287,14 +283,29 @@ locale IRQMasks_IF_2 = IRQMasks_IF_1 state_t
   for state_t :: "'s :: state_ext state" +
   assumes do_reply_transfer_irq_masks[wp]:
     "do_reply_transfer sender receiver slot grant \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and arch_perform_invocation_irq_masks[wp]:
-    "arch_perform_invocation i \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  and arch_perform_invocation_irq_masks:
+    "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
+     arch_perform_invocation i
+     \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
   and arch_prepare_set_domain_irq_masks_of_state[wp]:
     "arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   and invoke_tcb_irq_masks:
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False (st :: 's state) and tcb_inv_wf tinv\<rbrace>
      invoke_tcb tinv
      \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
+  and handle_hypervisor_fault_irq_masks[wp]:
+    "handle_hypervisor_fault t hvft \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  and arch_switch_to_idle_thread_irq_masks:
+    "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and valid_irq_states\<rbrace>
+      arch_switch_to_idle_thread \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  and arch_switch_to_thread_irq_masks:
+    "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and valid_irq_states\<rbrace>
+     arch_switch_to_thread t
+     \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  and arch_prepare_next_domain_irq_masks[wp]:
+    "arch_prepare_next_domain \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  and arch_prepare_next_domain_valid_irq_states[wp]:
+    "arch_prepare_next_domain \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
 begin
 
 crunch invoke_domain
@@ -311,6 +322,7 @@ lemma perform_invocation_irq_masks:
   by (wpsimp wp: invoke_tcb_irq_masks invoke_cnode_irq_masks[where st=st]
                  invoke_irq_control_irq_masks[where st=st]
                  invoke_irq_handler_irq_masks[where st=st]
+                 arch_perform_invocation_irq_masks[where st=st]
       | fastforce)+
 
 lemma handle_invocation_irq_masks:
@@ -349,22 +361,71 @@ lemma handle_event_irq_masks:
     apply wpsimp+
   done
 
-lemma call_kernel_irq_masks:
-  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False (st :: 's state) and einvs
-                                   and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
-   call_kernel ev
+lemma switch_to_idle_thread_irq_masks:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False (st :: 's state) and valid_irq_states\<rbrace>
+   switch_to_idle_thread
    \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
-  apply (simp add: call_kernel_def maybe_handle_interrupt_def)
-  apply (wpsimp wp: handle_interrupt_irq_masks[where st=st])
-    apply (rule_tac Q'="\<lambda>rv s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s \<and>
-                              (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)" in hoare_strengthen_post)
-     apply (wp | simp)+
-   apply (rule_tac Q'="\<lambda>x s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s"
-               and E="E" for E in hoare_strengthen_postE)
-     apply (rule valid_validE)
-     apply (wp handle_event_irq_masks[where st=st] valid_validE[OF handle_event_domain_sep_inv]
-            | simp)+
-  done
+  unfolding switch_to_idle_thread_def
+  by (wpsimp wp: arch_switch_to_idle_thread_irq_masks[where st=st])
+
+lemma switch_to_thread_irq_masks:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False (st :: 's state) and valid_irq_states\<rbrace>
+   switch_to_thread t
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding switch_to_thread_def
+  by (wpsimp wp: arch_switch_to_thread_irq_masks[where st=st])
+
+lemma guarded_switch_to_irq_masks:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False (st :: 's state) and valid_irq_states\<rbrace>
+   guarded_switch_to t
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding guarded_switch_to_def
+  by (wpsimp wp: switch_to_thread_irq_masks[where st=st] hoare_drop_imps)
+
+lemma choose_thread_irq_masks:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False (st :: 's state) and valid_irq_states\<rbrace>
+   choose_thread
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding choose_thread_def
+  by (wpsimp wp: guarded_switch_to_irq_masks[where st=st]
+                 switch_to_idle_thread_irq_masks[where st=st])
+
+lemma do_extended_op_irq_masks[wp]:
+  "do_extended_op f \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  by (wpsimp wp: dxo_wp_weak)
+
+lemma do_extended_op_valid_irq_states[wp]:
+  "do_extended_op f \<lbrace>valid_irq_states\<rbrace>"
+  by (wpsimp wp: dxo_wp_weak)
+
+lemma valid_irq_states_domain_index_update[simp]:
+  "valid_irq_states (domain_index_update f s) = valid_irq_states s"
+  by (simp add: valid_irq_states_def)
+
+lemma valid_irq_states_cur_domain_update[simp]:
+  "valid_irq_states (cur_domain_update f s) = valid_irq_states s"
+  by (simp add: valid_irq_states_def)
+
+crunch next_domain
+  for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  and valid_irq_states[wp]: "valid_irq_states"
+  (simp: crunch_simps)
+
+lemma schedule_choose_new_thread_irq_masks:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False (st :: 's state) and valid_irq_states\<rbrace>
+   schedule_choose_new_thread
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding schedule_choose_new_thread_def
+  by (wpsimp wp: choose_thread_irq_masks[where st=st])
+
+lemma schedule_irq_masks:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False (st :: 's state) and valid_irq_states\<rbrace>
+   schedule
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding schedule_def
+  by (wpsimp wp: schedule_choose_new_thread_irq_masks[where st=st]
+                 guarded_switch_to_irq_masks[where st=st]
+                 hoare_drop_imps gts_wp)
 
 end
 

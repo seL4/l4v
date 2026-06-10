@@ -8,7 +8,7 @@ theory ArchIRQMasks_IF
 imports IRQMasks_IF
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 named_theorems IRQMasks_IF_assms
 
@@ -30,10 +30,14 @@ crunch invoke_untyped
        wp: mapME_x_inv_wp preemption_point_inv
      simp: crunch_simps no_irq_clearMemory mapM_x_def_bak unless_def)
 
+lemma vcpu_invalidate_active_irq_masks[wp]:
+  "vcpu_invalidate_active \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding vcpu_invalidate_active_def vcpu_disable_def
+  by (wpsimp wp: dmo_wp)
+
 crunch finalise_cap
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
-  (  wp: crunch_wps dmo_wp no_irq
-   simp: crunch_simps no_irq_setVSpaceRoot no_irq_hwASIDFlush)
+  (wp: crunch_wps dmo_wp simp: crunch_simps)
 
 crunch send_signal, timer_tick
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
@@ -53,21 +57,16 @@ lemma handle_interrupt_irq_masks[IRQMasks_IF_assms]:
    apply (wp dmo_wp
           | simp add: ackInterrupt_def maskInterrupt_def when_def split del: if_split
           | wpc
-          | simp add: get_irq_state_def handle_reserved_irq_def
-          | wp (once) hoare_drop_imp)+
+          | simp add: get_irq_state_def
+          | wp (once) hoare_drop_imp hoare_pre_cont)+
+  apply (fastforce simp: domain_sep_inv_def)
   done
 
 lemma arch_invoke_irq_control_irq_masks[IRQMasks_IF_assms]:
   "\<lbrace>domain_sep_inv False st and arch_irq_control_inv_valid invok\<rbrace>
    arch_invoke_irq_control invok
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
-  apply (case_tac invok)
-  apply (clarsimp simp: arch_irq_control_inv_valid_def domain_sep_inv_def valid_def)
-  done
-
-crunch handle_vm_fault, handle_hypervisor_fault
-  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: dmo_wp no_irq)
+  by (cases invok) (auto simp: arch_irq_control_inv_valid_def domain_sep_inv_def valid_def)
 
 lemma dmo_getActiveIRQ_irq_masks[IRQMasks_IF_assms, wp]:
   "do_machine_op (getActiveIRQ in_kernel) \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
@@ -81,15 +80,12 @@ lemma dmo_getActiveIRQ_return_axiom[IRQMasks_IF_assms, wp]:
   apply (rule hoare_pre, rule dmo_wp)
    apply (insert irq_oracle_max_irq)
    apply (wp dmo_getActiveIRQ_irq_masks)
-  apply clarsimp
+  apply (clarsimp simp: maxIRQ_def)
   done
 
-crunch activate_thread, handle_spurious_irq
+crunch activate_thread, handle_spurious_irq, handle_vm_fault
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
-
-crunch schedule
-  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: dmo_wp crunch_wps dxo_wp_weak simp: crunch_simps)
+  (wp: dmo_wp no_irq)
 
 end
 
@@ -102,15 +98,24 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
+
+crunch handle_vm_fault, handle_hypervisor_fault
+  for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  (wp: dmo_wp no_irq)
 
 crunch do_reply_transfer, set_priority, set_flags, arch_post_set_flags
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: crunch_wps empty_slot_irq_masks simp: crunch_simps unless_def)
+  (wp: crunch_wps dmo_wp empty_slot_irq_masks simp: crunch_simps unless_def)
 
-crunch arch_perform_invocation
+lemma no_irq_do_flush[wp,simp]:
+  "no_irq (do_flush type vstart vend pstart)"
+  by (wpsimp simp: do_flush_def)
+
+crunch perform_vspace_invocation, perform_page_table_invocation, perform_asid_control_invocation,
+       perform_asid_pool_invocation, perform_sgi_invocation, perform_page_invocation
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: dmo_wp crunch_wps no_irq)
+  (wp: dmo_wp crunch_wps no_irq simp: crunch_simps)
 
 (* FIXME: remove duplication in this proof -- requires getting the wp automation
           to do the right thing with dropping imps in validE goals *)
@@ -124,7 +129,7 @@ lemma invoke_tcb_irq_masks[IRQMasks_IF_assms]:
                 | simp split del: if_split add: check_cap_at_def
                 | clarsimp)+)[3]
       defer
-      apply ((wp | simp )+)[2]
+      apply ((wp | simp)+)[2]
     (* NotificationControl *)
     apply (rename_tac option)
     apply (case_tac option)
@@ -151,12 +156,126 @@ lemma invoke_tcb_irq_masks[IRQMasks_IF_assms]:
     apply (simp add: option_update_thread_def | wp hoare_weak_lift_imp hoare_vcg_all_lift | wpc)+
   by fastforce+
 
-lemma init_arch_objects_irq_masks:
-  "init_arch_objects new_type dev ptr num_objects obj_sz refs \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  by (rule init_arch_objects_inv)
+crunch arch_prepare_set_domain,
+       invoke_vcpu_inject_irq, invoke_vcpu_read_register,
+       invoke_vcpu_write_register, invoke_vcpu_ack_vppi
+  for irq_masks[IRQMasks_IF_assms,wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  (wp: dmo_wp mapM_x_wp_inv mapM_wp_inv)
 
-crunch arch_prepare_set_domain
-  for inv[IRQMasks_IF_assms,wp]: P
+lemma inactive_irqVTimerEvent:
+  "\<lbrace>domain_sep_inv False st and R False\<rbrace>
+   is_irq_active irqVTimerEvent
+   \<lbrace>\<lambda>rv. if rv then Q rv else R rv\<rbrace>"
+  unfolding is_irq_active_def get_irq_state_def
+  apply wpsimp
+  apply (fastforce simp: domain_sep_inv_def non_kernel_IRQs_def)
+  done
+
+crunch vcpu_restore_reg, vcpu_restore_reg_range
+  for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  (wp: dmo_wp mapM_x_wp)
+
+lemma restore_virt_timer_irq_masks:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
+   restore_virt_timer vcpu_ptr
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding restore_virt_timer_def
+  by (wpsimp wp: inactive_irqVTimerEvent[where st=st] | wp hoare_pre_cont)+
+
+lemma vcpu_enable_irq_masks:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
+   vcpu_enable vr
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding vcpu_enable_def
+  by (wpsimp wp: restore_virt_timer_irq_masks[where st=st] dmo_wp)
+
+lemma vcpu_restore_irq_masks:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
+   vcpu_restore vr
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding vcpu_restore_def
+  by (wpsimp wp: vcpu_enable_irq_masks[where st=st] mapM_wp_inv dmo_wp)
+
+lemma vcpu_switch_Some_irq_masks:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
+   vcpu_switch (Some vcpu)
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding vcpu_switch_def
+  by (wpsimp wp: vcpu_restore_irq_masks[where st=st] vcpu_enable_irq_masks[where st=st] dmo_wp)
+
+lemma associate_vcpu_tcb_irq_masks:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
+   associate_vcpu_tcb vcpu_ptr t
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding associate_vcpu_tcb_def
+  by (wpsimp wp: vcpu_switch_Some_irq_masks[where st=st] hoare_weak_lift_imp | wps)+
+
+lemma perform_vcpu_invocation_irq_masks:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
+   perform_vcpu_invocation i
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding perform_vcpu_invocation_def
+  by (wpsimp wp: associate_vcpu_tcb_irq_masks[where st=st])
+
+lemma perform_smc_invocation_irq_masks[wp]:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s))\<rbrace>
+   perform_smc_invocation i
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding perform_smc_invocation_def doSMC_mop_def
+  by (wpsimp simp: dmo_distr wp: hoare_drop_imps dmo_wp)
+
+lemma arch_perform_invocation_irq_masks[IRQMasks_IF_assms, wp]:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
+   arch_perform_invocation i
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding arch_perform_invocation_def fun_app_def
+  by (wpsimp wp: perform_vcpu_invocation_irq_masks[where st=st])
+
+lemma maskVTimer_irq_masks:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and valid_irq_states\<rbrace>
+   do_machine_op (maskInterrupt True irqVTimerEvent)
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding maskInterrupt_def
+  apply (wpsimp wp: dmo_machine_state_lift)
+  apply (erule_tac P=P in rsubst)
+  apply (fastforce simp: domain_sep_inv_def non_kernel_IRQs_def valid_irq_states_def valid_irq_masks_def)
+  done
+
+lemma vcpu_disable_irq_masks:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and valid_irq_states\<rbrace>
+   vcpu_disable vo
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  by (wpsimp wp: maskVTimer_irq_masks[where st=st] hoare_drop_imps dmo_machine_state_lift
+           simp: vcpu_disable_def dmo_distr)
+
+lemma vcpu_switch_irq_masks:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and valid_irq_states\<rbrace>
+   vcpu_switch vo
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding vcpu_switch_def
+  by (wpsimp wp: vcpu_disable_irq_masks[where st=st]
+                 vcpu_restore_irq_masks[where st=st]
+                 vcpu_enable_irq_masks[where st=st]
+                 dmo_machine_state_lift)
+
+lemma arch_switch_to_idle_thread_irq_masks[IRQMasks_IF_assms]:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and valid_irq_states\<rbrace>
+   arch_switch_to_idle_thread
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding arch_switch_to_idle_thread_def
+  by (wpsimp wp: vcpu_switch_irq_masks[where st=st])
+
+lemma arch_switch_to_thread_irq_masks[IRQMasks_IF_assms]:
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and valid_irq_states\<rbrace>
+   arch_switch_to_thread t
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  unfolding arch_switch_to_thread_def
+  by (wpsimp wp: vcpu_switch_irq_masks[where st=st])
+
+crunch arch_prepare_next_domain
+  for irq_masks[IRQMasks_IF_assms,wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  and valid_irq_states[IRQMasks_IF_assms,wp]: "valid_irq_states"
+  (wp: crunch_wps)
 
 end
 
@@ -169,10 +288,10 @@ proof goal_cases
 qed
 
 
-requalify_facts
-  AARCH64.init_arch_objects_irq_masks
-  AARCH64.arch_activate_idle_thread_irq_masks
-  AARCH64.retype_region_irq_masks
+arch_requalify_facts
+  init_arch_objects_irq_masks
+  arch_activate_idle_thread_irq_masks
+  retype_region_irq_masks
 
 declare
   init_arch_objects_irq_masks[wp]

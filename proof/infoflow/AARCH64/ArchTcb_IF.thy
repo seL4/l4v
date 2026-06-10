@@ -8,7 +8,7 @@ theory ArchTcb_IF
 imports Tcb_IF
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 named_theorems Tcb_IF_assms
 
@@ -31,7 +31,6 @@ lemma cap_ne_global_pt:
   apply (unfold global_refs_def)
   apply clarsimp
   apply (unfold cap_range_def)
-  apply (drule valid_global_arch_objs_global_ptD)
   apply blast
   done
 
@@ -64,9 +63,23 @@ lemma arch_post_modify_registers_reads_respects_f[Tcb_IF_assms, wp]:
   "reads_respects_f aag l \<top> (arch_post_modify_registers cur t)"
   by wpsimp
 
+lemma reads_equiv_valid_inv_f:
+  assumes a: "reads_equiv_valid_inv A aag P f"
+  assumes b: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
+  shows "equiv_valid_inv (reads_equiv_f aag) A P f"
+  supply equiv_valid_2_def[simp] equiv_valid_def2[simp]
+  apply (clarsimp simp: reads_equiv_f_def)
+  apply (insert a, clarsimp)
+  apply (drule_tac x=s in spec, drule_tac x=t in spec, clarsimp)
+  apply (drule (1) bspec, clarsimp)
+  apply (drule (1) bspec, clarsimp)
+  apply (drule state_unchanged[OF b])+
+  by simp
+
 lemma arch_get_sanitise_register_info_reads_respects_f[Tcb_IF_assms, wp]:
-  "reads_respects_f aag l \<top> (arch_get_sanitise_register_info rv)"
-  by wpsimp
+  "reads_respects_f aag l (K (aag_can_read_or_affect aag l rv)) (arch_get_sanitise_register_info rv)"
+  unfolding arch_get_sanitise_register_info_def
+  by (wpsimp wp: reads_equiv_valid_inv_f)
 
 end
 
@@ -79,15 +92,15 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma valid_ipc_buffer_cap_is_nondevice_page_cap:
   "\<lbrakk>valid_ipc_buffer_cap cap ptr; cap \<noteq> NullCap\<rbrakk> \<Longrightarrow> is_nondevice_page_cap cap"
   by (clarsimp simp: valid_ipc_buffer_cap_def split: cap.splits arch_cap.splits)
 
 lemma is_valid_vtable_root_def2:
-  "is_valid_vtable_root c = (\<exists>r a. c = ArchObjectCap (PageTableCap r (Some a)))"
-  by (auto simp: is_valid_vtable_root_def split: cap.splits arch_cap.splits option.splits)
+  "is_valid_vtable_root c = (\<exists>r a. c = ArchObjectCap (PageTableCap r VSRootPT_T (Some a)))"
+  by (auto simp: is_valid_vtable_root_def split: cap.splits arch_cap.splits option.splits pt_type.splits)
 
 (* FIXME: Pretty general. Probably belongs somewhere else *)
 lemma invoke_tcb_thread_preservation[Tcb_IF_assms]:
@@ -246,15 +259,184 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
   apply (clarsimp cong: conj_cong)
   apply (intro conjI impI allI)
   (* slow *)
-  by (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def
-                     det_setRegister option.disc_eq_case[symmetric]
-              split: cap.splits arch_cap.splits option.split)+
+ by (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def
+                    det_setRegister option.disc_eq_case[symmetric]
+             split: cap.splits arch_cap.splits option.split pt_type.splits)+
+
+crunch lazy_fpu_restore
+  for cdt[wp]: "\<lambda>s. P (cdt s)"
+  and is_original_cap[wp]: "\<lambda>s. P (is_original_cap s)"
+  and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
+  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and ready_queues[wp]: "\<lambda>s. P (ready_queues s)"
+  and asid_pools_of[wp]: "\<lambda>s. P (asid_pools_of s)"
+  and asid_table[wp]: "\<lambda>s. P (asid_table s)"
+  and numlistregs[wp]: "\<lambda>s. P (numlistregs s)"
+  and vcpu_state[wp]: "\<lambda>s. P (vcpu_state (machine_state s))"
+  and underlying_memory[wp]: "\<lambda>s. P (underlying_memory (machine_state s))"
+  and device_state[wp]: "\<lambda>s. P (device_state (machine_state s))"
+  (wp: dmo_wp crunch_wps ignore: arch_thread_set)
+
+lemma equiv_but_for_labels_guard_imp:
+  "\<lbrakk> equiv_but_for_labels aag L' st s; L' \<subseteq> L \<rbrakk>
+     \<Longrightarrow> equiv_but_for_labels aag L st s"
+  by (auto simp: equiv_but_for_labels_def elim!: states_equiv_for_guard_imp)
+
+definition is_subject_cur_fpu_2 where
+  "is_subject_cur_fpu_2 aag cf \<equiv> \<forall>ptr. cf = Some ptr \<longrightarrow> is_subject aag ptr"
+
+locale_abbrev is_subject_cur_fpu where
+  "is_subject_cur_fpu aag \<equiv> \<lambda>s. is_subject_cur_fpu_2 aag (arm_current_fpu_owner (arch_state s))"
+
+lemmas is_subject_cur_fpu_def = is_subject_cur_fpu_2_def
+
+lemma dmo_enableFpu_reads_respects[wp]:
+  "reads_respects aag l \<top> (do_machine_op enableFpu)"
+  unfolding enableFpu_def dmo_distr
+  apply wpsimp
+     apply (rule use_spec_ev)
+     apply (wpsimp wp: do_machine_op_reads_respects modify_ev)
+        apply (clarsimp simp: equiv_for_def)
+    apply (wpsimp wp: dmo_mol_reads_respects)+
+  done
+
+lemma dmo_disableFpu_reads_respects[wp]:
+  "reads_respects aag l \<top> (do_machine_op disableFpu)"
+  unfolding disableFpu_def dmo_distr
+  apply wpsimp
+     apply (rule use_spec_ev)
+     apply (wpsimp wp: do_machine_op_reads_respects modify_ev)
+        apply (clarsimp simp: equiv_for_def)
+    apply (wpsimp wp: dmo_mol_reads_respects)+
+  done
+
+(* FIXME AARCH64 IF: consolidate cur_fpu_of and is_arch_cur_fpu *)
+lemma equiv_kheap_equiv_cur_fpu_of:
+  "\<lbrakk> equiv_for P kheap s s'; P t; valid_cur_fpu s; valid_cur_fpu s' \<rbrakk>
+     \<Longrightarrow> cur_fpu_of s t = cur_fpu_of s' t"
+  by (clarsimp simp: valid_cur_fpu_def equiv_for_def is_tcb_cur_fpu_def obj_at_def)
+
+lemma lazy_fpu_restore_reads_respects:
+  "reads_respects aag l (valid_cur_fpu and K (is_subject aag t)) (lazy_fpu_restore t)"
+  unfolding lazy_fpu_restore_def
+  apply (subst gets_comp)
+  apply (case_tac "aag_can_read_or_affect aag l t")
+   apply (wpsimp simp: lazy_fpu_restore_def wp: thread_get_reads_respects gets_ev'')
+       apply (rename_tac s s')
+       apply (prop_tac "valid_cur_fpu s")
+        apply assumption
+       apply (prop_tac "valid_cur_fpu s'")
+        apply assumption
+       apply clarsimp
+       apply (prop_tac "equiv_for (aag_can_read_or_affect aag l) kheap s s'")
+        apply (clarsimp simp: reads_equiv_def2 affects_equiv_def2 states_equiv_for_def equiv_for_disj)
+       apply (clarsimp simp: equiv_kheap_equiv_cur_fpu_of)
+      apply wpsimp
+     apply (wpsimp wp: thread_get_reads_respects)
+    apply (wpsimp wp: thread_get_wp')
+   apply clarsimp
+  apply (rule gen_asm_ev)
+  apply clarsimp
+  done
 
 lemma arch_post_set_flags_reads_respects_f[Tcb_IF_assms]:
-  "reads_respects_f aag l \<top> (arch_post_set_flags t flags)"
-  unfolding arch_post_set_flags_def by wpsimp
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows "reads_respects_f aag l (silc_inv aag st and valid_cur_fpu and K (is_subject aag t)) (arch_post_set_flags t flags)"
+  unfolding arch_post_set_flags_def
+  apply (rule equiv_valid_guard_imp)
+   apply (wpsimp wp: when_ev reads_respects_f[OF fpu_release_reads_respects]
+                     reads_respects_f[OF lazy_fpu_restore_reads_respects])
+  apply fastforce
+  done
 
-declare arch_post_set_flags_inv[Tcb_IF_assms]
+lemma arch_tcb_context_get_cur_fpu_update[simp]:
+  "arch_tcb_context_get (tcb_arch tcb\<lparr>tcb_cur_fpu := fpu\<rparr>) = arch_tcb_context_get (tcb_arch tcb)"
+  by (simp add: arch_tcb_context_get_def)
+
+lemma globals_equiv_fpu_owner_update[simp]:
+  "globals_equiv st (s\<lparr>arch_state := arch_state s\<lparr>arm_current_fpu_owner := t\<rparr>\<rparr>)  =
+   globals_equiv st s"
+  by (auto simp add: globals_equiv_def idle_equiv_def)
+
+lemma set_arm_current_fpu_owner_globals_equiv[wp]:
+  "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
+   set_arm_current_fpu_owner t
+   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  unfolding set_arm_current_fpu_owner_def arch_thread_set_is_thread_set
+  by (wpsimp wp: thread_set_globals_equiv thread_set_valid_arch_state hoare_vcg_all_lift hoare_drop_imps
+       | fastforce simp: ran_tcb_cap_cases)+
+
+lemma dmo_enableFpu_globals_equiv[wp]:
+  "do_machine_op enableFpu \<lbrace>globals_equiv st\<rbrace>"
+  by (wpsimp wp: bind_wp_skip
+           simp: globals_equiv_def idle_equiv_def enableFpu_def dmo_distr dmo_modify_distr)
+
+lemma dmo_disableFpu_globals_equiv[wp]:
+  "do_machine_op disableFpu \<lbrace>globals_equiv st\<rbrace>"
+  apply (clarsimp simp: disableFpu_def dmo_distr dmo_modify_distr)
+  apply (rule bind_wp_skip)
+   apply (unfold globals_equiv_def arch_globals_equiv_def idle_equiv_def enableFpu_def)[1]
+   apply wpsimp
+  apply wpsimp
+  done
+
+lemma dmo_state_assert_inv[wp]:
+  "do_machine_op (state_assert f) \<lbrace>P\<rbrace>"
+  unfolding state_assert_def
+  by (wpsimp wp: dmo_wp)
+
+lemma dmo_readFpuState_globals_equiv[wp]:
+  "do_machine_op readFpuState \<lbrace>globals_equiv st\<rbrace>"
+  by (wpsimp simp: readFpuState_def dmo_distr dmo_modify_distr)
+
+lemma dmo_writeFpuState_globals_equiv[wp]:
+  "do_machine_op (writeFpuState fpustate) \<lbrace>globals_equiv st\<rbrace>"
+  apply (clarsimp simp: writeFpuState_def dmo_distr dmo_modify_distr)
+  apply wpsimp
+  apply (clarsimp simp: globals_equiv_def idle_equiv_def)
+  done
+
+lemma as_user_getRestart_inv[wp]:
+  "as_user t getFPUState \<lbrace>P\<rbrace>"
+  unfolding getFPUState_def
+  by (wpsimp wp: as_user_inv)
+
+lemma load_fpu_state_globals_equiv[wp]:
+  "load_fpu_state t \<lbrace>globals_equiv st\<rbrace>"
+  unfolding load_fpu_state_def
+  by wpsimp
+
+lemma save_fpu_state_globals_equiv[wp]:
+  "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. t \<noteq> idle_thread s)\<rbrace>
+   save_fpu_state t
+   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  unfolding save_fpu_state_def
+  by wpsimp
+
+crunch load_fpu_state, save_fpu_state
+  for valid_arch_state[wp]: "valid_arch_state"
+
+lemma switch_local_fpu_owner_globals_equiv:
+  "\<lbrace>globals_equiv st and invs\<rbrace>
+   switch_local_fpu_owner new_owner
+   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  unfolding switch_local_fpu_owner_def
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_weak_lift_imp)
+  apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_cur_fpu_def
+                         is_tcb_cur_fpu_def live_def arch_tcb_live_def
+                   dest: idle_no_ex_cap if_live_then_nonz_capD)
+  done
+
+lemma lazy_fpu_restore_globals_equiv:
+  "\<lbrace>globals_equiv st and invs\<rbrace>
+   lazy_fpu_restore t
+   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  unfolding lazy_fpu_restore_def
+  by (wpsimp wp: switch_local_fpu_owner_globals_equiv hoare_drop_imps)
+
+crunch arch_post_set_flags
+  for globals_equiv[Tcb_IF_assms]: "globals_equiv st"
+  (simp: crunch_simps)
 
 end
 

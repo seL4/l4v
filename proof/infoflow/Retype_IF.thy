@@ -72,15 +72,6 @@ lemma machine_op_lift_irq_state[wp]:
   "machine_op_lift mop \<lbrace>\<lambda>ms. P (irq_state ms)\<rbrace>"
   by (simp add: machine_op_lift_def machine_rest_lift_def | wp | wpc)+
 
-lemma dmo_mol_reads_respects:
-  "reads_respects aag l \<top> (do_machine_op (machine_op_lift mop))"
-  apply (rule use_spec_ev)
-  apply (rule do_machine_op_spec_reads_respects)
-   apply (rule equiv_valid_guard_imp[OF machine_op_lift_ev])
-   apply simp
-  apply wp
-  done
-
 lemma dmo_bind_ev:
   "equiv_valid_inv I A P (do_machine_op (a >>= b)) =
    equiv_valid_inv I A P (do_machine_op a >>= (\<lambda>rv. do_machine_op (b rv)))"
@@ -134,7 +125,6 @@ lemma dmo_mapM_x_ev:
   shows "equiv_valid_inv D A I (do_machine_op (mapM_x m lst))"
   using assms by (auto intro: dmo_mapM_x_ev_pre)
 
-
 locale Retype_IF_1 =
   assumes clearMemory_ev:
     "equiv_valid_inv (equiv_machine_state P) (equiv_machine_state Q) \<top> (clearMemory ptr bits)"
@@ -159,23 +149,31 @@ locale Retype_IF_1 =
                       and K (range_cover p sz (obj_bits_api type o_bits) num \<and> 0 < num)\<rbrace>
      retype_region p num o_bits type dev
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  and machine_op_lift_no_hyp[wp]:
+    "no_hyp (machine_op_lift mop)"
+  and machine_op_lift_no_fpu[wp]:
+    "no_fpu (machine_op_lift mop)"
+  and clearMemory_no_hyp[wp]:
+    "no_hyp (clearMemory ptr bits)"
+  and clearMemory_no_fpu[wp]:
+    "no_fpu (clearMemory ptr bits)"
+  and freeMemory_no_hyp[wp]:
+    "no_hyp (freeMemory ptr bits)"
+  and freeMemory_no_fpu[wp]:
+    "no_fpu (freeMemory ptr bits)"
 begin
+
+lemma dmo_mol_reads_respects:
+  "reads_respects aag l \<top> (do_machine_op (machine_op_lift mop))"
+  by (wpsimp wp: do_machine_op_reads_respects equiv_valid_guard_imp[OF machine_op_lift_ev])
 
 lemma dmo_clearMemory_reads_respects:
   "reads_respects aag l \<top> (do_machine_op (clearMemory ptr bits))"
-  apply (rule use_spec_ev)
-  apply (rule do_machine_op_spec_reads_respects)
-   apply (rule equiv_valid_guard_imp[OF clearMemory_ev], rule TrueI)
-  apply wp
-  done
+  by (wpsimp wp: do_machine_op_reads_respects equiv_valid_guard_imp[OF clearMemory_ev])
 
 lemma dmo_freeMemory_reads_respects:
   "reads_respects aag l \<top> (do_machine_op (freeMemory ptr bits))"
-  apply (rule use_spec_ev)
-  apply (rule do_machine_op_spec_reads_respects)
-   apply (rule equiv_valid_guard_imp[OF freeMemory_ev], rule TrueI)
-  apply wp
-  done
+  by (wpsimp wp: do_machine_op_reads_respects equiv_valid_guard_imp[OF freeMemory_ev])
 
 lemma dmo_clearMemory_reads_respects_g:
   "reads_respects_g aag l \<top> (do_machine_op (clearMemory ptr (2 ^bits)))"
@@ -560,7 +558,7 @@ lemma invoke_untyped_reads_respects_g:
    apply (clarsimp simp: is_cap_simps)
    apply (rule equiv_valid_guard_imp, rule invoke_untyped_reads_respects_g_wcap)
    apply (cases ui, clarsimp simp: cte_wp_at_caps_of_state valid_untyped_inv_wcap)
-   apply auto[1]
+   apply (intro impI conjI, simp+)
   apply (rule equiv_valid_guard_imp, rule gen_asm_ev'[where Q=False])
    apply simp
   apply (cases ui, clarsimp simp: valid_untyped_inv_wcap cte_wp_at_caps_of_state)

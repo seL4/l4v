@@ -478,7 +478,7 @@ definition Silc_caps :: cnode_contents where
         (the_nat_to_bl_10 5)
           \<mapsto> ArchObjectCap (FrameCap shared_page_ptr_virt vm_read_only RISCVLargePage False (Some (Silc_asid,0))),
         (the_nat_to_bl_10 318)
-          \<mapsto> NotificationCap ntfn_ptr 0 {AllowSend} )"
+          \<mapsto> NotificationCap ntfn_ptr 0 {AllowSend})"
 
 definition Silc_cnode :: kernel_object where
   "Silc_cnode \<equiv> CNode 10 Silc_caps"
@@ -1216,7 +1216,7 @@ lemma silc_inv_s0:
   apply (intro conjI)
   apply (clarsimp simp: all_children_def s0_internal_def silc_dom_equiv_def equiv_for_refl)
   apply (clarsimp simp: all_children_def s0_internal_def silc_dom_equiv_def equiv_for_refl)
-  apply (clarsimp simp: Invariants_AI.cte_wp_at_caps_of_state )
+  apply (clarsimp simp: Invariants_AI.cte_wp_at_caps_of_state)
   by (auto simp:is_transferable.simps dest:s0_caps_of_state)
 
 

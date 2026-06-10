@@ -722,7 +722,7 @@ definition global_automaton_if ::
                                                              (s_aux, Some e, s') \<in> do_user_opf \<and>
                                                              e \<noteq> Interrupt} \<union>
   \<comment> \<open>User runs, no exception happens\<close>
-     {((s, InUserMode), (s', InUserMode) ) | s s_aux s'. (s, None, s_aux) \<in> get_active_irqf \<and>
+     {((s, InUserMode), (s', InUserMode)) | s s_aux s'. (s, None, s_aux) \<in> get_active_irqf \<and>
                                                          (s_aux, None, s') \<in> do_user_opf} \<union>
   \<comment> \<open>Interrupt while in user mode\<close>
      {((s, InUserMode), (s', KernelEntry Interrupt)) | s s' i. (s, Some i, s') \<in> get_active_irqf} \<union>
@@ -884,6 +884,82 @@ definition irq_state_next where
 
 
 locale ADT_IF_1 =
+  assumes dmo_getActiveIRQ_wp':
+    "\<lbrace>(\<lambda>s. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)))
+             (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>))
+      and domain_sep_inv False (st :: det_state) and valid_irq_states\<rbrace>
+     do_machine_op (getActiveIRQ in_kernel)
+     \<lbrace>P\<rbrace>"
+  and dmo_getActiveIRQ_wp:
+    "\<lbrace>\<lambda>s :: det_state. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)))
+                         (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>)\<rbrace>
+     do_machine_op (getActiveIRQ False)
+     \<lbrace>P\<rbrace>"
+  and dmo_getActiveIRQ_valid_irq_states[wp]:
+    "do_machine_op (getActiveIRQ in_kernel) \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
+  and deleted_irq_handler_valid_irq_states[wp]:
+    "deleted_irq_handler irq \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
+  and arch_finalise_cap_valid_irq_states[wp]:
+    "arch_finalise_cap c x \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
+  and arch_post_cap_deletion_valid_irq_states[wp]:
+    "arch_post_cap_deletion c \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
+  and prepare_thread_delete_valid_irq_states[wp]:
+    "prepare_thread_delete ptr \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
+  and cur_hyp_in_cur_domain_machine_state_update[simp]:
+    "\<And>f. cur_hyp_in_cur_domain (machine_state_update f s) = cur_hyp_in_cur_domain s"
+  and cur_fpu_in_cur_domain_machine_state_update[simp]:
+    "\<And>f. cur_fpu_in_cur_domain (machine_state_update f s) = cur_fpu_in_cur_domain s"
+  and thread_set_no_etcb_change_cur_fpu_in_cur_domain:
+    "(\<And>P tcb. P (tcb_domain (f tcb)) = (P (tcb_domain tcb) :: bool)) \<Longrightarrow> thread_set f t' \<lbrace>cur_fpu_in_cur_domain\<rbrace>"
+  and thread_set_no_etcb_change_cur_hyp_in_cur_domain:
+    "(\<And>P tcb. P (tcb_domain (f tcb)) = (P (tcb_domain tcb) :: bool)) \<Longrightarrow> thread_set f t' \<lbrace>cur_hyp_in_cur_domain\<rbrace>"
+  and thread_set_tcb_context_valid_cur_hyp[wp]:
+    "thread_set (tcb_arch_update (arch_tcb_context_set tc)) tcb \<lbrace>\<lambda>s :: det_state. valid_cur_hyp s\<rbrace>"
+  and maybe_handle_interrupt_cur_hyp_in_cur_domain:
+    "maybe_handle_interrupt in_kernel \<lbrace>cur_hyp_in_cur_domain\<rbrace>"
+  and maybe_handle_interrupt_cur_fpu_in_cur_domain:
+    "maybe_handle_interrupt in_kernel \<lbrace>cur_fpu_in_cur_domain\<rbrace>"
+  and maybe_handle_interrupt_valid_cur_hyp:
+    "\<lbrace>valid_cur_hyp and invs\<rbrace> maybe_handle_interrupt in_kernel \<lbrace>\<lambda>_ s :: det_state. valid_cur_hyp s\<rbrace>"
+  and handle_event_cur_hyp_in_cur_domain[wp]:
+    "\<lbrace>cur_hyp_in_cur_domain and invs and ct_in_cur_domain and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+     handle_event e
+     \<lbrace>\<lambda>_. cur_hyp_in_cur_domain\<rbrace>"
+  and handle_event_cur_fpu_in_cur_domain[wp]:
+    "\<lbrace>cur_fpu_in_cur_domain and einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+     handle_event e
+     \<lbrace>\<lambda>_. cur_fpu_in_cur_domain\<rbrace>"
+  and handle_event_valid_cur_hyp:
+    "\<lbrace>valid_cur_hyp and einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+     handle_event e
+     \<lbrace>\<lambda>_ s :: det_state. valid_cur_hyp s\<rbrace>"
+  and schedule_cur_hyp_in_cur_domain:
+    "\<lbrace>\<lambda>s. cur_hyp_in_cur_domain s \<and> valid_sched s \<and> valid_objs s \<and> sym_refs (state_hyp_refs_of s)\<rbrace>
+     schedule
+     \<lbrace>\<lambda>_. cur_hyp_in_cur_domain\<rbrace>"
+  and schedule_cur_fpu_in_cur_domain:
+    "\<lbrace>\<lambda>s. cur_fpu_in_cur_domain s \<and> valid_sched s \<and> valid_objs s \<and> sym_refs (state_hyp_refs_of s)\<rbrace>
+     schedule
+     \<lbrace>\<lambda>_. cur_fpu_in_cur_domain\<rbrace>"
+  and schedule_valid_cur_hyp:
+    "\<lbrace>valid_cur_hyp and valid_idle\<rbrace>
+     schedule
+     \<lbrace>\<lambda>_ s :: det_state. valid_cur_hyp s\<rbrace>"
+  and activate_thread_cur_hyp_in_cur_domain:
+    "activate_thread \<lbrace>cur_hyp_in_cur_domain\<rbrace>"
+  and activate_thread_cur_fpu_in_cur_domain:
+    "activate_thread \<lbrace>cur_fpu_in_cur_domain\<rbrace>"
+  and activate_thread_valid_cur_hyp:
+    "activate_thread \<lbrace>\<lambda>s :: det_state. valid_cur_hyp s\<rbrace>"
+  and do_user_op_if_cur_hyp_in_cur_domain[wp]:
+    "do_user_op_if uop tc \<lbrace>cur_hyp_in_cur_domain\<rbrace>"
+  and do_user_op_if_cur_fpu_in_cur_domain[wp]:
+    "do_user_op_if uop tc \<lbrace>cur_fpu_in_cur_domain\<rbrace>"
+  and do_user_op_if_valid_cur_hyp[wp]:
+    "do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. valid_cur_hyp s\<rbrace>"
+
+
+locale ADT_IF_2 = ADT_IF_1 +
   fixes initial_aag :: "'a subject_label PAS"
   assumes do_user_op_if_invs[wp]:
     "do_user_op_if uop tc \<lbrace>invs and ct_running :: det_state \<Rightarrow> bool\<rbrace>"
@@ -928,10 +1004,10 @@ locale ADT_IF_1 =
   and init_arch_objects_irq_state_of_state[wp]:
     "\<And>P. init_arch_objects new_type dev ptr num_objects obj_sz refs \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   and getActiveIRQ_None:
-    "(None, s') \<in> fst (do_machine_op (getActiveIRQ in_kernel) (s :: det_state))
+    "(None, s') \<in> fst (do_machine_op (getActiveIRQ False) (s :: det_state))
      \<Longrightarrow> irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)) = None"
   and getActiveIRQ_Some:
-    "(Some irq, s') \<in> fst (do_machine_op (getActiveIRQ in_kernel) s)
+    "(Some irq, s') \<in> fst (do_machine_op (getActiveIRQ False) s)
      \<Longrightarrow> irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)) = Some irq"
   and kernel_entry_if_idle_equiv:
     "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and domain_sep_inv irqs st and idle_equiv st
@@ -963,12 +1039,12 @@ locale ADT_IF_1 =
   and do_user_op_if_irq_measure_if:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. P (irq_measure_if s)\<rbrace>"
   and invoke_tcb_irq_state_inv:
-    "\<lbrace>(\<lambda>s. irq_state_inv st s) and domain_sep_inv False (sta :: det_state)
+    "\<lbrace>(\<lambda>s. irq_state_inv st s) and domain_sep_inv False (sta :: det_state) and valid_irq_states
                                and tcb_inv_wf tinv and K (irq_is_recurring irq st)\<rbrace>
      invoke_tcb tinv
      \<lbrace>\<lambda>_ s. irq_state_inv st s\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   and reset_untyped_cap_irq_state_inv:
-    "\<lbrace>irq_state_inv st and K (irq_is_recurring irq st)\<rbrace>
+    "\<lbrace>irq_state_inv st and domain_sep_inv False sta and valid_irq_states and K (irq_is_recurring irq st)\<rbrace>
      reset_untyped_cap slot
      \<lbrace>\<lambda>y. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>y. irq_state_next st\<rbrace>"
   and handle_vm_fault_irq_state_of_state[wp]:
@@ -979,12 +1055,8 @@ locale ADT_IF_1 =
     "create_cap type bits untyped dev sl \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   and arch_invoke_irq_control_irq_state_of_state[wp]:
     "arch_invoke_irq_control ici \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and thread_set_pas_refined:
-    "\<lbrakk> \<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb;
-       \<And>tcb. tcb_state (f tcb) = tcb_state tcb;
-       \<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb;
-       \<And>tcb. tcb_domain (f tcb) = tcb_domain tcb \<rbrakk>
-       \<Longrightarrow> thread_set f t \<lbrace>pas_refined aag\<rbrace>"
+  and thread_set_context_pas_refined:
+    "thread_set (tcb_arch_update (arch_tcb_context_set ctxt)) t \<lbrace>pas_refined aag\<rbrace>"
 begin
 
 lemmas do_user_op_if_no_domain_caps[wp] =
@@ -1000,7 +1072,7 @@ lemma kernel_entry_silc_inv[wp]:
   unfolding kernel_entry_if_def
   by (wpsimp simp: ran_tcb_cap_cases arch_tcb_update_aux2
                wp: hoare_weak_lift_imp handle_event_silc_inv thread_set_silc_inv thread_set_invs_trivial
-                   thread_set_not_state_valid_sched thread_set_pas_refined
+                   thread_set_not_state_valid_sched thread_set_context_pas_refined
       | wp (once) hoare_vcg_imp_lift | force)+
 
 lemma kernel_entry_pas_refined[wp]:
@@ -1011,7 +1083,7 @@ lemma kernel_entry_pas_refined[wp]:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   unfolding kernel_entry_if_def
   by (wpsimp simp: ran_tcb_cap_cases schact_is_rct_def arch_tcb_update_aux2
-               wp: hoare_vcg_imp_lift' handle_event_pas_refined thread_set_pas_refined
+               wp: hoare_vcg_imp_lift' handle_event_pas_refined thread_set_context_pas_refined
                    guarded_pas_domain_lift thread_set_invs_trivial thread_set_not_state_valid_sched)+
 
 lemma kernel_entry_if_domain_sep_inv:
@@ -1048,6 +1120,45 @@ lemma kernel_entry_if_valid_domain_list[wp]:
   unfolding kernel_entry_if_def
   by (wpsimp wp: thread_set_invs_trivial simp: ran_tcb_cap_cases arch_tcb_update_aux2)
 
+lemma thread_set_tcb_context_ct_in_cur_domain[wp]:
+  "thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set tc (tcb_arch tcb)\<rparr>) t \<lbrace>ct_in_cur_domain\<rbrace>"
+  by (wpsimp simp: thread_set_def set_object_def get_object_def)
+
+lemma thread_set_ct_active'[wp]:
+  "thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set tc (tcb_arch tcb)\<rparr>) t \<lbrace>ct_active\<rbrace>"
+  by (simp add: arch_tcb_update_aux2 thread_set_tcb_context_update_ct_active)
+
+lemma kernel_entry_if_cur_fpu_in_cur_domain:
+  "\<lbrace>cur_fpu_in_cur_domain and einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
+    and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+   kernel_entry_if e tc
+   \<lbrace>\<lambda>_. cur_fpu_in_cur_domain\<rbrace>"
+  apply (simp add: kernel_entry_if_def)
+  apply (wpsimp wp: thread_set_not_state_valid_sched thread_set_no_etcb_change_cur_fpu_in_cur_domain
+                    thread_set_invs_trivial ball_tcb_cap_casesI hoare_vcg_imp_lift')
+  done
+
+lemma kernel_entry_if_cur_hyp_in_cur_domain:
+  "\<lbrace>cur_hyp_in_cur_domain and einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
+    and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+   kernel_entry_if e tc
+   \<lbrace>\<lambda>_. cur_hyp_in_cur_domain\<rbrace>"
+  apply (simp add: kernel_entry_if_def)
+  apply (wpsimp wp: thread_set_no_etcb_change_cur_hyp_in_cur_domain thread_set_invs_trivial ball_tcb_cap_casesI
+                    hoare_vcg_imp_lift')
+  apply (clarsimp simp: valid_sched_def)
+  done
+
+lemma kernel_entry_if_valid_cur_hyp:
+  "\<lbrace>valid_cur_hyp and einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
+                                     and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+   kernel_entry_if e tc
+   \<lbrace>\<lambda>_. valid_cur_hyp\<rbrace>"
+  apply (simp add: kernel_entry_if_def arch_tcb_update_aux2)
+  apply (wpsimp wp: handle_event_valid_cur_hyp thread_set_invs_trivial ball_tcb_cap_casesI
+                    hoare_vcg_imp_lift' thread_set_not_state_valid_sched)
+  done
+
 crunch schedule_if
   for pas_refined[wp]: "pas_refined aag"
 
@@ -1082,7 +1193,12 @@ lemma handle_preemption_if_invs:
   by (wpsimp wp: handle_spurious_irq_invs)
 
 
-context ADT_IF_1 begin
+context ADT_IF_2 begin
+
+crunch handle_preemption_if
+  for cur_hyp_in_cur_domain: cur_hyp_in_cur_domain
+  and cur_fpu_in_cur_domain: cur_fpu_in_cur_domain
+  and valid_cur_hyp: "\<lambda>s :: det_state. valid_cur_hyp s"
 
 lemma handle_kernel_interrupt_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and K (irq \<notin> non_kernel_IRQs)\<rbrace>
@@ -1113,7 +1229,7 @@ lemma handle_kernel_interrupt_pas_refined:
   apply (rule conjI; rule impI;rule hoare_pre)
   apply ((wp send_signal_pas_refined get_cap_wp handle_reserved_irq_non_kernel_IRQs
          | wpc
-         | simp add: get_irq_slot_def get_irq_state_def )+)
+         | simp add: get_irq_slot_def get_irq_state_def)+)
   done
 
 lemma handle_preemption_if_pas_refined[wp]:
@@ -1134,9 +1250,11 @@ end
 
 
 lemma handle_preemption_if_silc_inv[wp]:
-  "handle_preemption_if tc \<lbrace>silc_inv aag st\<rbrace>"
+  "\<lbrace>silc_inv aag st and domain_sep_inv False st\<rbrace>
+   handle_preemption_if tc
+   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding handle_preemption_if_def maybe_handle_interrupt_def
-  by (wpsimp wp: handle_interrupt_silc_inv do_machine_op_silc_inv)
+  by (wpsimp wp: handle_interrupt_silc_inv' do_machine_op_silc_inv hoare_drop_imps)
 
 crunch handle_preemption_if
   for cur_domain[wp]: "\<lambda>s::det_state. P (cur_domain s)"
@@ -1239,7 +1357,7 @@ lemma set_thread_state_scheduler_action:
   done
 
 
-context ADT_IF_1 begin
+context ADT_IF_2 begin
 
 lemma schedule_guarded_pas_domain:
   "\<lbrace>guarded_pas_domain aag and einvs and pas_refined aag\<rbrace>
@@ -1303,10 +1421,11 @@ crunch schedule_if
   and valid_list[wp]: valid_list
 
 lemma schedule_if_irq_masks:
-  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and valid_irq_states\<rbrace>
    schedule_if tc
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
-  by (simp add: schedule_if_def | wp)+
+  unfolding schedule_if_def
+  by (wpsimp wp: schedule_irq_masks[where st=st])
 
 
 definition kernel_schedule_if ::
@@ -1393,15 +1512,15 @@ definition ADT_A_if ::
                                       kernel_handle_preemption_if kernel_schedule_if kernel_exit_A_if
                \<inter> {(s,s'). step_restrict s'})\<rparr>"
 
+
+context ADT_IF_2 begin
+
 lemma check_active_irq_if_wp:
-  "\<lbrace>\<lambda>s. P ((irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s))),tc)
+  "\<lbrace>\<lambda>s :: det_state. P ((irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s))),tc)
           (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>)\<rbrace>
    check_active_irq_if tc
    \<lbrace>P\<rbrace>"
   by (wpsimp wp: dmo_getActiveIRQ_wp simp: check_active_irq_if_def)
-
-
-context ADT_IF_1 begin
 
 lemma handle_preemption_if_only_timer_irq_inv[wp]:
   "handle_preemption_if tc \<lbrace>only_timer_irq_inv irq st\<rbrace>"
@@ -1412,9 +1531,12 @@ end
 
 
 lemma schedule_if_only_timer_irq_inv[wp]:
-  "schedule_if tc \<lbrace>only_timer_irq_inv irq st\<rbrace>"
-  by (wp only_timer_irq_inv_pres schedule_if_irq_masks | blast)+
-
+  "\<lbrace>only_timer_irq_inv irq st and domain_sep_inv False st and valid_irq_states\<rbrace>
+   schedule_if tc
+   \<lbrace>\<lambda>_. only_timer_irq_inv irq st\<rbrace>"
+  by (wpsimp wp: only_timer_irq_inv_pres[where P="domain_sep_inv False st and valid_irq_states"]
+                 schedule_if_irq_masks
+      | simp)+
 
 subsection \<open>Big step IF automaton\<close>
 
@@ -1538,7 +1660,8 @@ locale valid_initial_state_noenabled = invariant_over_ADT_if + (* FIXME: arch-sp
                                pas_refined (current_aag s) s \<and>
                                guarded_pas_domain (current_aag s) s \<and>
                                idle_equiv s0_internal s \<and>
-                               valid_domain_list s \<and> valid_vspace_objs_if s"
+                               valid_domain_list s \<and> valid_vspace_objs_if s \<and> valid_cur_hyp s \<and>
+                               cur_hyp_in_cur_domain s \<and> cur_fpu_in_cur_domain s"
   assumes Invs_s0_internal: "Invs s0_internal"
   assumes det_inv_s0: "det_inv KernelExit (cur_context s0_internal) s0_internal"
   assumes scheduler_action_s0_internal: "scheduler_action s0_internal = resume_cur_thread"
@@ -1667,7 +1790,7 @@ lemma kernel_entry_if_noIRQ_domain_time_sep_inv:
    \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   by (wpsimp wp: kernel_entry_if_noIRQ_domain_time_inv simp: no_domain_caps_strg)
 
-context ADT_IF_1 begin
+context ADT_IF_2 begin
 
 lemma kernel_entry_if_domain_time_sched_action:
   "\<lbrace>\<lambda>s. domain_time s > 0\<rbrace>
@@ -2021,8 +2144,13 @@ lemma handle_preemption_if_valid_sched[wp]:
 
 
 locale ADT_valid_initial_state =
-  ADT_IF_1 initial_aag + valid_initial_state _ _ _ initial_aag for initial_aag
+  ADT_IF_2 initial_aag + valid_initial_state _ _ _ initial_aag for initial_aag
 begin
+
+crunch schedule_if
+  for cur_hyp_in_cur_domain[wp]: "cur_hyp_in_cur_domain"
+  and cur_fpu_in_cur_domain[wp]: "cur_fpu_in_cur_domain"
+  and valid_cur_hyp[wp]: "\<lambda>s :: det_state. valid_cur_hyp s"
 
 lemma invs_if_Step_ADT_A_if:
   notes active_from_running[simp]
@@ -2045,6 +2173,9 @@ lemma invs_if_Step_ADT_A_if:
                        kernel_entry_if_idle_equiv
                        kernel_entry_if_domain_time_sched_action
                        kernel_entry_if_noIRQ_domain_time_sep_inv
+                       kernel_entry_if_cur_hyp_in_cur_domain
+                       kernel_entry_if_cur_fpu_in_cur_domain
+                       kernel_entry_if_valid_cur_hyp
                        hoare_false_imp ct_idle_lift
                     | clarsimp intro!: guarded_pas_is_subject_current_aag[rule_format]
                     | intro conjI)+
@@ -2075,6 +2206,9 @@ lemma invs_if_Step_ADT_A_if:
                       kernel_entry_if_domain_sep_inv kernel_entry_if_guarded_pas_domain
                       kernel_entry_if_domain_time_sched_action
                       kernel_entry_if_noIRQ_domain_time_sep_inv
+                      kernel_entry_if_cur_hyp_in_cur_domain
+                      kernel_entry_if_cur_fpu_in_cur_domain
+                      kernel_entry_if_valid_cur_hyp
                       ct_idle_lift
                    | clarsimp intro: guarded_pas_is_subject_current_aag)+
           apply (rule conjI, fastforce intro!: active_from_running)
@@ -2096,12 +2230,16 @@ lemma invs_if_Step_ADT_A_if:
                  rule hoare_drop_imps)
           apply (wp handle_preemption_if_invs handle_preemption_if_domain_sep_inv
                     handle_preemption_if_domain_time_sched_action
-                    handle_preemption_if_det_inv ct_idle_lift)
-         apply fastforce
+                    handle_preemption_if_det_inv ct_idle_lift
+                    handle_preemption_if_cur_hyp_in_cur_domain
+                    handle_preemption_if_cur_fpu_in_cur_domain
+                    handle_preemption_if_valid_cur_hyp)
+         apply clarsimp
         apply (simp add: kernel_schedule_if_def | elim exE conjE)+
         apply (erule use_valid)
          apply ((wp schedule_if_ct_running_or_ct_idle schedule_if_domain_time_nonzero'
                     schedule_if_domain_time_nonzero schedule_if_det_inv hoare_false_imp
+                    schedule_if_cur_hyp_in_cur_domain schedule_if_cur_fpu_in_cur_domain schedule_if_valid_cur_hyp
                  | fastforce simp: invs_valid_idle)+)[2]
        apply (simp add: kernel_exit_A_if_def | elim exE conjE)+
        apply (frule state_unchanged[OF kernel_exit_if_inv])
@@ -2121,7 +2259,7 @@ lemma invs_if_Step_ADT_A_if:
       apply simp
       apply (erule use_valid, erule use_valid[OF _ check_active_irq_if_wp])
        apply (rule_tac Q'="\<lambda>a. (invs and ct_running) and
-                              (\<lambda>b. valid_vspace_objs_if b \<and> valid_list b \<and> valid_sched b \<and>
+                              (\<lambda>b. valid_vspace_objs_if b \<and> valid_list b \<and> valid_sched b \<and> valid_cur_hyp b \<and>
                                    only_timer_irq_inv timer_irq s0_internal b \<and>
                                    silc_inv initial_aag s0_internal b \<and>
                                    pas_refined initial_aag b \<and>
@@ -2129,7 +2267,8 @@ lemma invs_if_Step_ADT_A_if:
                                    idle_equiv s0_internal b \<and>
                                    domain_sep_inv False s0_internal b \<and>
                                    valid_domain_list b \<and> 0 < domain_time b \<and>
-                                   scheduler_action b = resume_cur_thread)" in hoare_strengthen_post)
+                                   scheduler_action b = resume_cur_thread \<and>
+                                   cur_hyp_in_cur_domain b \<and> cur_fpu_in_cur_domain b)" in hoare_strengthen_post)
         apply ((wp do_user_op_if_invs ct_idle_lift | simp add: ct_active_not_idle' | clarsimp)+)[2]
       apply (erule use_valid[OF _ check_active_irq_if_wp])
       apply (simp add: ct_in_state_def)
@@ -2143,7 +2282,7 @@ lemma invs_if_Step_ADT_A_if:
      apply simp
      apply (erule use_valid, erule use_valid[OF _ check_active_irq_if_wp])
       apply (rule_tac Q'="\<lambda>a. (invs and ct_running) and
-                             (\<lambda>b. valid_vspace_objs_if b \<and> valid_list b \<and> valid_sched b \<and>
+                             (\<lambda>b. valid_vspace_objs_if b \<and> valid_list b \<and> valid_sched b \<and> valid_cur_hyp b \<and>
                                   only_timer_irq_inv timer_irq s0_internal b \<and>
                                   silc_inv initial_aag s0_internal b \<and>
                                   pas_refined initial_aag b \<and>
@@ -2151,7 +2290,8 @@ lemma invs_if_Step_ADT_A_if:
                                   idle_equiv s0_internal b \<and>
                                   domain_sep_inv False s0_internal b \<and>
                                   valid_domain_list b \<and> 0 < domain_time b \<and>
-                                  scheduler_action b = resume_cur_thread)" in hoare_strengthen_post)
+                                  scheduler_action b = resume_cur_thread \<and>
+                                  cur_hyp_in_cur_domain b \<and> cur_fpu_in_cur_domain b)" in hoare_strengthen_post)
        apply ((wp do_user_op_if_invs | simp | clarsimp simp: ct_active_not_idle')+)[2]
      apply (erule use_valid[OF _ check_active_irq_if_wp])
      apply (simp add: ct_in_state_def)
@@ -2311,7 +2451,7 @@ lemma next_irq_state_Suc':
 lemma is_irq_at_next_irq_state_dom':
   "is_irq_at s irq pos \<Longrightarrow> next_irq_state_dom (pos,irq_masks (machine_state s))"
   apply (rule next_irq_state.domintros)
-  apply (fastforce simp: is_irq_at_def )
+  apply (fastforce simp: is_irq_at_def)
   done
 
 lemma is_irq_at_next_irq_state_dom:
@@ -2464,23 +2604,6 @@ lemma OR_choiceE_wp:
   apply (fastforce split: prod.splits)
   done
 
-lemma preemption_point_irq_state_inv'[wp]:
-  "\<lbrace>irq_state_inv st and K (irq_is_recurring irq st)\<rbrace>
-   preemption_point
-   \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
-  apply (simp add: preemption_point_def)
-  apply (wpsimp wp: OR_choiceE_wp[where P'="irq_state_inv st and K(irq_is_recurring irq st)"
-                                    and P''="irq_state_inv st and K(irq_is_recurring irq st)"]
-              simp: reset_work_units_def)+
-     apply simp
-     apply (wpsimp wp: OR_choiceE_wp dmo_getActiveIRQ_wp simp: reset_work_units_def)+
-     apply (clarsimp simp: irq_state_inv_def)
-     apply (simp add: next_irq_state_Suc[OF _ recurring_next_irq_state_dom])
-     apply (clarsimp simp: irq_state_next_def)
-     apply (simp add: next_irq_state_Suc'[OF _ recurring_next_irq_state_dom])
-    apply (wp | simp add: update_work_units_def irq_state_inv_def | fastforce)+
-  done
-
 lemma validE_validE_E':
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f -, \<lbrace>E\<rbrace>"
   apply (rule validE_validE_E)
@@ -2488,9 +2611,6 @@ lemma validE_validE_E':
     apply assumption
    apply simp+
   done
-
-lemmas preemption_point_irq_state_inv[wp] = validE_validE_R'[OF preemption_point_irq_state_inv']
-lemmas preemption_point_irq_state_next[wp] = validE_validE_E'[OF preemption_point_irq_state_inv']
 
 lemma hoare_add_postE:
   "\<lbrakk> \<lbrace>S\<rbrace> f \<lbrace>\<lambda>_. S'\<rbrace>; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. S' s \<longrightarrow> Q r s\<rbrace>, \<lbrace>\<lambda>r s. S' s \<longrightarrow> E r s\<rbrace> \<rbrakk>
@@ -2504,14 +2624,47 @@ lemma hoare_add_postE:
     apply (assumption, simp, fastforce split: sum.splits)
   done
 
+
+context ADT_IF_1 begin
+
+lemma preemption_point_valid_irq_states[wp]:
+  "preemption_point \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
+  unfolding preemption_point_def
+  by (wp OR_choiceE_wp[where P'=valid_irq_states and P''=valid_irq_states] hoare_drop_imps
+      | wpc | simp)+
+
+crunch cap_delete
+  for valid_irq_states[wp]: "\<lambda>s :: det_state. valid_irq_states s"
+  (wp: crunch_wps mapM_x_wp hoare_drop_imps simp: crunch_simps)
+
+lemma preemption_point_irq_state_inv'[wp]:
+  "\<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state) and valid_irq_states and K (irq_is_recurring irq st)\<rbrace>
+   preemption_point
+   \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
+  (is "validE ?P _ _ _")
+  apply (simp add: preemption_point_def)
+  apply (wpsimp wp: OR_choiceE_wp[where P'="?P" and P''="?P"]
+              simp: reset_work_units_def)+
+      apply simp
+     apply (wpsimp wp: OR_choiceE_wp dmo_getActiveIRQ_wp'[where st=sta] simp: reset_work_units_def)+
+     apply (clarsimp simp: irq_state_inv_def)
+     apply (simp add: next_irq_state_Suc[OF _ recurring_next_irq_state_dom])
+     apply (clarsimp simp: irq_state_next_def)
+     apply (simp add: next_irq_state_Suc'[OF _ recurring_next_irq_state_dom])
+    apply (wp | simp add: update_work_units_def irq_state_inv_def | fastforce)+
+  done
+
+lemmas preemption_point_irq_state_inv[wp] = validE_validE_R'[OF preemption_point_irq_state_inv']
+lemmas preemption_point_irq_state_next[wp] = validE_validE_E'[OF preemption_point_irq_state_inv']
+
 lemma rec_del_irq_state_inv':
   notes drop_spec_valid[wp_split del] drop_spec_validE[wp_split del] rec_del.simps[simp del]
   shows
-    "s \<turnstile> \<lbrace>irq_state_inv st and domain_sep_inv False sta and K (irq_is_recurring irq st)\<rbrace>
+    "s \<turnstile> \<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state) and valid_irq_states and K (irq_is_recurring irq st)\<rbrace>
          rec_del call
          \<lbrace>\<lambda>a s. (case call of FinaliseSlotCall x y \<Rightarrow> y \<or> fst a \<longrightarrow> snd a = NullCap
                             | _ \<Rightarrow> True) \<and>
-                domain_sep_inv False sta s \<and> irq_state_inv st s\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
+                domain_sep_inv False sta s \<and> valid_irq_states s \<and> irq_state_inv st s\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
 proof (induct s arbitrary: rule: rec_del.induct, simp_all only: rec_del_fails hoare_fail_any)
   case (1 slot exposed s) show ?case
     apply (simp add: split_def rec_del.simps)
@@ -2536,12 +2689,13 @@ next
                  (wp preemption_point_irq_state_inv[where irq=irq] | simp)+)[1]
          apply (rule spec_strengthen_postE)
           apply (rule "2.hyps"[simplified], fastforce+)
-           apply (wp  finalise_cap_domain_sep_inv_cap get_cap_wp
+           apply (wp finalise_cap_domain_sep_inv_cap get_cap_wp
                      finalise_cap_returns_NullCap[where irqs=False, simplified]
                      drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
                   | simp add: without_preemption_def split del: if_split
                   | wp (once) hoare_drop_imps
-                  | wp irq_state_inv_triv)+
+                  | wp irq_state_inv_triv
+                  | fastforce)+
     apply (blast dest: cte_wp_at_domain_sep_inv_cap)
     done
 next
@@ -2564,7 +2718,7 @@ next
 qed
 
 lemma rec_del_irq_state_inv:
-  "\<lbrace>irq_state_inv st and domain_sep_inv False sta and K (irq_is_recurring irq st)\<rbrace>
+  "\<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state) and valid_irq_states and K (irq_is_recurring irq st)\<rbrace>
    rec_del call
    \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   apply (rule hoare_strengthen_postE)
@@ -2574,7 +2728,7 @@ lemma rec_del_irq_state_inv:
   done
 
 lemma cap_delete_irq_state_inv':
-  "\<lbrace>irq_state_inv st and domain_sep_inv False sta and K (irq_is_recurring irq st)\<rbrace>
+  "\<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state) and valid_irq_states and K (irq_is_recurring irq st)\<rbrace>
    cap_delete slot
    \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   by (wpsimp wp: rec_del_irq_state_inv simp: cap_delete_def) auto
@@ -2585,7 +2739,7 @@ lemmas cap_delete_irq_state_next[wp] = validE_validE_E'[OF cap_delete_irq_state_
 lemma cap_revoke_irq_state_inv'':
   notes drop_spec_valid[wp_split del] drop_spec_validE[wp_split del]
   shows
-    "s \<turnstile> \<lbrace>irq_state_inv st and domain_sep_inv False sta and K (irq_is_recurring irq st)\<rbrace>
+    "s \<turnstile> \<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state) and valid_irq_states and K (irq_is_recurring irq st)\<rbrace>
          cap_revoke slot
          \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
 proof(induct rule: cap_revoke.induct[where ?a1.0=s])
@@ -2612,13 +2766,13 @@ lemmas cap_revoke_irq_state_inv[wp] = validE_validE_R'[OF cap_revoke_irq_state_i
 lemmas cap_revoke_irq_state_next[wp] = validE_validE_E'[OF cap_revoke_irq_state_inv']
 
 lemma finalise_slot_irq_state_inv:
-  "\<lbrace>irq_state_inv st and domain_sep_inv False sta and K (irq_is_recurring irq st)\<rbrace>
+  "\<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state) and valid_irq_states and K (irq_is_recurring irq st)\<rbrace>
    finalise_slot p e
    \<lbrace>\<lambda>_ s. irq_state_inv st s\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   by (wpsimp wp: rec_del_irq_state_inv[folded validE_R_def] simp: finalise_slot_def) blast
 
 lemma invoke_cnode_irq_state_inv:
-  "\<lbrace>irq_state_inv st and domain_sep_inv False sta
+  "\<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state) and valid_irq_states
                      and valid_cnode_inv cnode_invocation and K (irq_is_recurring irq st)\<rbrace>
    invoke_cnode cnode_invocation
    \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
@@ -2633,6 +2787,9 @@ lemma invoke_cnode_irq_state_inv:
                  | wp (once) hoare_drop_imps)+)[7]
   apply fastforce
   done
+
+end
+
 
 lemma checked_insert_irq_state_of_state[wp]:
   "check_cap_at a b (check_cap_at c d (cap_insert e f g)) \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
@@ -2683,7 +2840,7 @@ lemma irq_state_inv_trivE':
   done
 
 
-context ADT_IF_1 begin
+context ADT_IF_2 begin
 
 crunch invoke_irq_control
   for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
@@ -2693,17 +2850,18 @@ lemma invoke_irq_control_noErr[wp]:
   by (cases a; wpsimp simp: arch_invoke_irq_control_noErr)
 
 lemma invoke_untyped_irq_state_inv:
-  "\<lbrace>irq_state_inv st and K (irq_is_recurring irq st)\<rbrace>
+  "\<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state)
+                     and valid_irq_states and K (irq_is_recurring irq st)\<rbrace>
    invoke_untyped ui
    \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   apply (cases ui, simp add: invoke_untyped_def mapM_x_def[symmetric])
   apply (rule hoare_pre)
    apply (wp mapM_x_wp' whenE_wp reset_untyped_cap_irq_state_inv[where irq=irq]
-         | rule irq_state_inv_triv | simp)+
+         | rule irq_state_inv_triv | fastforce)+
   done
 
 lemma perform_invocation_irq_state_inv:
-   "\<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state)
+   "\<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state) and valid_irq_states
                       and valid_invocation op and K (irq_is_recurring irq st)
                       and (\<lambda>s. \<forall>i. op = InvokeIRQHandler i \<longrightarrow>
                                    (\<exists>p. cte_wp_at ((=) (IRQHandlerCap (irq_of_handler_inv i))) p s))\<rbrace>
@@ -2713,14 +2871,16 @@ lemma perform_invocation_irq_state_inv:
          (solves \<open>(wp invoke_untyped_irq_state_inv[where irq=irq] irq_state_inv_triv
                       invoke_tcb_irq_state_inv invoke_cnode_irq_state_inv[simplified validE_R_def]
                    | clarsimp | simp add: invoke_domain_def)+\<close>)?)
+    apply wp
+     apply (wpsimp wp: irq_state_inv_triv' invoke_irq_control_irq_masks)
+     apply assumption
+    apply auto[1]
    apply wp
-    apply (wpsimp wp: irq_state_inv_triv' invoke_irq_control_irq_masks)
+    apply (wp irq_state_inv_triv' invoke_irq_handler_irq_masks | clarsimp)+
     apply assumption
    apply auto[1]
-  apply wp
-   apply (wp irq_state_inv_triv' invoke_irq_handler_irq_masks | clarsimp)+
-   apply assumption
-  apply auto[1]
+  apply (wp irq_state_inv_triv' arch_perform_invocation_irq_masks)
+  apply fastforce
   done
 
 lemma hoare_drop_impE:
@@ -2769,12 +2929,16 @@ lemma handle_event_irq_state_inv:
 end
 
 
+lemma schedule_if_irq_state_of_state[wp]:
+  "schedule_if tc \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+  by (wpsimp simp: schedule_if_def activate_thread_def wp: hoare_drop_imps)
+
 lemma schedule_if_irq_state_inv:
-  "schedule_if tc \<lbrace>irq_state_inv st\<rbrace>"
-  by (wp irq_state_inv_triv
-      | simp add: schedule_if_def activate_thread_def
-      | wpc
-      | wp (once) hoare_drop_imps)+
+  "\<lbrace>irq_state_inv st and domain_sep_inv False st and valid_irq_states\<rbrace>
+   schedule_if tc
+   \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>"
+  unfolding irq_state_inv_def
+  by (wpsimp wp: schedule_if_irq_masks[where st=st] | wps)+
 
 lemma irq_measure_if_inv:
   assumes irq_state:
@@ -2823,7 +2987,7 @@ abbreviation next_irq_state_of_state where
   "next_irq_state_of_state s \<equiv> next_irq_state (Suc (irq_state_of_state s)) (irq_masks_of_state s)"
 
 
-context ADT_IF_1 begin
+context ADT_IF_2 begin
 
 lemma kernel_entry_if_next_irq_state_of_state:
   "\<lbrakk> event \<noteq> Interrupt; invs i_s; domain_sep_inv False (st :: det_state) i_s;
@@ -2841,7 +3005,7 @@ lemma kernel_entry_if_next_irq_state_of_state:
                      thread_set_invs_trivial irq_is_recurring_triv
                simp: ran_tcb_cap_cases)+
   apply (erule use_valid)
-   apply (wp | simp )+
+   apply (wp | simp)+
   apply (simp add: irq_state_inv_def)
   done
 
@@ -2862,7 +3026,7 @@ lemma kernel_entry_if_next_irq_state_of_state_next:
                      thread_set_invs_trivial irq_is_recurring_triv
                simp: ran_tcb_cap_cases)+
   apply (erule use_valid)
-   apply (wp | simp )+
+   apply (wp | simp)+
   apply (simp add: irq_state_inv_def)
   done
 
@@ -2888,18 +3052,20 @@ end
 
 
 lemma schedule_if_irq_measure_if:
-  "(r, b) \<in> fst (schedule_if uc i_s) \<Longrightarrow> irq_measure_if b \<le> irq_measure_if i_s"
+  "\<lbrakk> (r, b) \<in> fst (schedule_if uc i_s); domain_sep_inv False st i_s; valid_irq_states i_s \<rbrakk>
+     \<Longrightarrow> irq_measure_if b \<le> irq_measure_if i_s"
   apply (fold irq_measure_if_inv_def)
   apply (erule use_valid[OF _ irq_measure_if_inv'] | wp schedule_if_irq_state_inv | simp)+
-  apply (simp add: irq_measure_if_inv_def)
+  apply (simp add: irq_measure_if_inv_def domain_sep_inv_refl)
   done
 
 lemma schedule_if_next_irq_state_of_state:
-  "(r, b) \<in> fst (schedule_if uc i_s) \<Longrightarrow> next_irq_state_of_state b = next_irq_state_of_state i_s"
+  "\<lbrakk> (r, b) \<in> fst (schedule_if uc i_s); domain_sep_inv False st i_s; valid_irq_states i_s \<rbrakk>
+     \<Longrightarrow> next_irq_state_of_state b = next_irq_state_of_state i_s"
   apply (erule use_valid)
    apply (rule_tac Q'="\<lambda>_. irq_state_inv i_s" in hoare_strengthen_post)
     apply (wp schedule_if_irq_state_inv)
-   apply (auto simp: irq_state_inv_def)
+   apply (auto simp: irq_state_inv_def domain_sep_inv_refl)
   done
 
 lemma next_irq_state_of_state_triv:
@@ -3033,11 +3199,11 @@ lemma ADT_A_if_Step_measure_if':
                apply (clarsimp split: if_splits)
               apply (rule Suc_le_lessD)
               apply (simp add: kernel_schedule_if_def)
-              apply (blast intro: schedule_if_irq_measure_if)
+              apply (blast intro: schedule_if_irq_measure_if invs_valid_irq_states)
              apply (simp add: kernel_schedule_if_def)
-             apply (blast intro: schedule_if_next_irq_state_of_state)
+             apply (blast intro: schedule_if_next_irq_state_of_state invs_valid_irq_states)
             apply (simp add: kernel_schedule_if_def)
-            apply (blast intro: schedule_if_next_irq_state_of_state)
+            apply (blast intro: schedule_if_next_irq_state_of_state invs_valid_irq_states)
            apply (clarsimp simp: kernel_exit_A_if_def split: if_splits)
           apply (clarsimp simp: kernel_exit_A_if_def)
           apply ((erule use_valid, wp | simp)+)[1]
@@ -3127,7 +3293,7 @@ lemma ADT_A_if_Step_measure_if'':
            apply (clarsimp split: if_splits)
           apply (rule Suc_le_lessD)
           apply (simp add: kernel_schedule_if_def)
-          apply (blast intro: schedule_if_irq_measure_if)
+          apply (blast intro: schedule_if_irq_measure_if invs_valid_irq_states)
          apply (clarsimp simp: kernel_exit_A_if_def split: if_splits)
         apply (clarsimp simp: kernel_exit_A_if_def)
         apply ((erule use_valid, wp | simp)+)[1]
@@ -3172,7 +3338,7 @@ lemma ADT_A_if_Step_irq_masks:
     apply (erule use_valid[OF _ handle_preemption_if_irq_masks])
     apply fastforce
    apply (erule use_valid[OF _ schedule_if_irq_masks])
-   apply fastforce
+   apply (blast intro: invs_valid_irq_states)
   apply (erule use_valid[OF _ kernel_exit_irq_masks])
   apply simp
   done

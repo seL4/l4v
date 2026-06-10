@@ -1287,7 +1287,7 @@ lemma Noninfluence_gen_integrity_u:
   apply (drule_tac x=s in spec, drule_tac x="{s}" in spec)
   apply (simp add: sources_Step sameFor_dom_def uwr_equiv_def Step_def ipurge_Cons ipurge_Nil
                    uwr_refl policy_refl execution_Nil uwr_sym
-            split: if_splits )
+            split: if_splits)
   done
 
 lemma Noninfluence_strong_uwr_integrity_u:

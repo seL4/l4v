@@ -72,8 +72,7 @@ lemma tcb_domain_map_wellformed_pasSubject_update:
   by (clarsimp simp: tcb_domain_map_wellformed_aux_def)
 
 
-(* FIXME: rename PasUpdates_2 to PasUpdates_1; original PasUpdates_1 was removed *)
-locale PasUpdates_2 =
+locale PasUpdates_1 =
   fixes aag :: "'a subject_label PAS"
   assumes state_asids_to_policy_pasSubject_update:
     "state_asids_to_policy (aag\<lparr>pasSubject := subject\<rparr>) s =
@@ -203,7 +202,7 @@ lemma state_irqs_to_policy_pasMayEditReadyQueues_update:
   done
 
 
-context PasUpdates_2 begin
+context PasUpdates_1 begin
 
 lemma pas_refined_pasMayActivate_update:
   "pas_refined aag s

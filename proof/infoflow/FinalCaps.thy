@@ -335,16 +335,12 @@ locale FinalCaps_1 =
     "arch_finalise_cap c x \<lbrace>silc_inv aag st\<rbrace>"
   and prepare_thread_delete_silc_inv[wp]:
     "prepare_thread_delete p \<lbrace>silc_inv aag st\<rbrace>"
-  and handle_reserved_irq_silc_inv[wp]:
-    "handle_reserved_irq irq \<lbrace>silc_inv aag st\<rbrace>"
-  and arch_mask_irq_signal_silc_inv[wp]:
-    "arch_mask_irq_signal irq \<lbrace>silc_inv aag st\<rbrace>"
   and handle_vm_fault_silc_inv[wp]:
     "handle_vm_fault t vmft \<lbrace>silc_inv aag st\<rbrace>"
+  and arch_mask_irq_signal_silc_inv[wp]:
+    "arch_mask_irq_signal irq \<lbrace>silc_inv aag st\<rbrace>"
   and handle_vm_fault_cur_thread[wp]:
     "\<And>P. handle_vm_fault t vmft \<lbrace>\<lambda>s :: det_state. P (cur_thread s)\<rbrace>"
-  and handle_hypervisor_fault_silc_inv[wp]:
-    "handle_hypervisor_fault t hvft \<lbrace>silc_inv aag st\<rbrace>"
   and arch_activate_idle_threadt_silc_inv[wp]:
     "arch_activate_idle_thread t \<lbrace>silc_inv aag st\<rbrace>"
   and arch_switch_to_idle_thread_silc_inv[wp]:
@@ -2714,15 +2710,15 @@ end
 
 
 lemma thread_set_tcb_ipc_buffer_update_silc_inv[wp]:
-  "\<lbrace>silc_inv aag st\<rbrace>
-   thread_set (tcb_ipc_buffer_update blah) t
-   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  "thread_set (tcb_ipc_buffer_update f) t \<lbrace>silc_inv aag st\<rbrace>"
   by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def)
 
 lemma thread_set_tcb_fault_handler_update_silc_inv[wp]:
-  "\<lbrace>silc_inv aag st\<rbrace>
-   thread_set (tcb_fault_handler_update blah) t
-   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  "thread_set (tcb_fault_handler_update f) t \<lbrace>silc_inv aag st\<rbrace>"
+  by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def)
+
+lemma thread_set_tcb_arch_update_silc_inv[wp]:
+  "thread_set (tcb_arch_update f) t \<lbrace>silc_inv aag st\<rbrace>"
   by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def)
 
 lemma thread_set_tcb_fault_handler_update_invs:
@@ -2846,7 +2842,7 @@ lemma handle_reply_silc_inv:
    handle_reply
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding handle_reply_def
-  apply (wp hoare_vcg_all_lift get_cap_wp | wpc )+
+  apply (wp hoare_vcg_all_lift get_cap_wp | wpc)+
   by (force dest: cap_auth_caps_of_state silc_inv_not_subject
             simp: cte_wp_at_caps_of_state aag_cap_auth_def cap_auth_conferred_def
                   reply_cap_rights_to_auth_def
@@ -2885,9 +2881,57 @@ crunch timer_tick, handle_yield
   for silc_inv[wp]: "silc_inv aag st"
   (simp: tcb_cap_cases_def)
 
+end
+
+
+locale FinalCaps_3 = FinalCaps_2 +
+  assumes handle_reserved_irq_silc_inv[wp]:
+    "\<lbrace>silc_inv aag st and invs and pas_refined aag and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>
+     handle_reserved_irq irq
+     \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  and handle_hypervisor_fault_silc_inv[wp]:
+    "\<lbrace>silc_inv aag st and invs and pas_refined aag and is_subject aag o cur_thread and K (is_subject aag t)\<rbrace>
+     handle_hypervisor_fault t hvft
+     \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  and handle_reserved_irq_in_kernel_inv:
+    "\<lbrace>P and K (irq \<notin> non_kernel_IRQs)\<rbrace>
+     handle_reserved_irq irq
+     \<lbrace>\<lambda>_. P :: det_state \<Rightarrow> bool\<rbrace>"
+begin
+
 lemma handle_interrupt_silc_inv:
-  "handle_interrupt irq \<lbrace>silc_inv aag st\<rbrace>"
+  "\<lbrace>silc_inv aag st and invs and pas_refined aag and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>
+   handle_interrupt irq
+   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding handle_interrupt_def by (wpsimp wp: hoare_drop_imps)
+
+(* FIXME: cleanup *)
+lemma irq_inactive_or_timer:
+  "\<lbrace>domain_sep_inv False st and Q IRQTimer and Q IRQInactive\<rbrace>
+   get_irq_state irq
+   \<lbrace>Q\<rbrace>"
+  apply (simp add:get_irq_state_def)
+  apply wp
+  apply (clarsimp simp add: domain_sep_inv_def)
+  apply (drule_tac x=irq in spec)
+  apply (case_tac "interrupt_states st irq")
+  by fastforce+
+
+lemma handle_interrupt_silc_inv':
+  "\<lbrace>silc_inv aag st and domain_sep_inv False st\<rbrace>
+   handle_interrupt irq
+   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  unfolding handle_interrupt_def
+  apply (wpsimp wp: irq_inactive_or_timer)
+  apply fastforce
+  done
+
+lemma handle_interrupt_in_kernel_silc_inv:
+  "\<lbrace>silc_inv aag st and K (irq \<notin> non_kernel_IRQs)\<rbrace>
+   handle_interrupt irq
+   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  unfolding handle_interrupt_def get_irq_state_def
+  by (wpsimp wp: handle_reserved_irq_in_kernel_inv)
 
 lemma handle_event_silc_inv:
   "\<lbrace>silc_inv aag st and einvs and simple_sched_action and pas_refined aag
@@ -2896,7 +2940,7 @@ lemma handle_event_silc_inv:
                     and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>
    handle_event ev
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  apply (case_tac ev; simp_all add: maybe_handle_interrupt_def)
+   apply (case_tac ev; simp_all add: maybe_handle_interrupt_def)
   by (wpsimp wp: handle_send_silc_inv[where st'=st']
                  handle_call_silc_inv[where st'=st']
                  handle_recv_silc_inv
@@ -2904,7 +2948,8 @@ lemma handle_event_silc_inv:
                  handle_interrupt_silc_inv
                  handle_vm_fault_silc_inv
                  handle_hypervisor_fault_silc_inv
-           simp: invs_valid_objs invs_mdb invs_sym_refs)+
+           simp: invs_valid_objs invs_mdb invs_sym_refs
+         | wp (once) hoare_drop_imps)+
 
 crunch activate_thread
   for silc_inv[wp]: "silc_inv aag st"
@@ -2915,6 +2960,7 @@ crunch schedule
    ignore: set_scheduler_action
      simp: crunch_simps)
 
+(* FIXME IF: delete if unused *)
 lemma call_kernel_silc_inv:
   "\<lbrace>silc_inv aag st and einvs and simple_sched_action and pas_refined aag
                     and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s)
@@ -2922,7 +2968,13 @@ lemma call_kernel_silc_inv:
    call_kernel ev
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding call_kernel_def maybe_handle_interrupt_def
-  by (wpsimp wp: handle_interrupt_silc_inv handle_event_silc_inv[where st'=st'])
+  apply (wpsimp wp: handle_interrupt_in_kernel_silc_inv handle_event_silc_inv[where st'=st'])
+  apply (rule_tac Q'="\<lambda>rv s.  rv \<notin> Some ` non_kernel_IRQs \<and> silc_inv aag st s" in hoare_strengthen_post[rotated])
+   apply clarsimp
+  apply (wpsimp wp: getActiveIRQ_neq_non_kernel)
+  apply (wpsimp wp: handle_event_silc_inv[where st'=st'])
+  apply clarsimp
+  done
 
 end
 
