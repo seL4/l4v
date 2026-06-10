@@ -2164,13 +2164,66 @@ lemma vcpu_proj_arch_state_update[simp]:
 crunch vcpu_switch
   for arm_gicvcpu_numlistregs[wp]: "\<lambda>s. P (arm_gicvcpu_numlistregs (arch_state s))"
 
+lemma vcpu_update_extra_lrs[wp]:
+  "\<lbrace>\<lambda>s. P (vcpu_extra_lrs (arm_gicvcpu_numlistregs (arch_state s)) (vcpus_of s x)) \<and>
+        (\<forall>v r. arm_gicvcpu_numlistregs (arch_state s) \<le> r \<longrightarrow> vgic_lr (vcpu_vgic (f v)) r =  vgic_lr (vcpu_vgic v) r)\<rbrace>
+   vcpu_update vr f
+   \<lbrace>\<lambda>_ s. P (vcpu_extra_lrs (arm_gicvcpu_numlistregs (arch_state s)) (vcpus_of s x))\<rbrace>"
+  unfolding vcpu_update_def
+  apply (wpsimp wp: set_vcpu_wp get_vcpu_wp)
+  apply (erule_tac x=v in allE)
+  apply (erule_tac P=P in rsubst)
+  apply (auto intro!: ext simp: vcpu_extra_lrs_def)
+  done
+
+crunch vcpu_save_reg, vcpu_save_reg_range, save_virt_timer
+  for extra_lrs[wp]: "\<lambda>s. P (vcpu_extra_lrs (arm_gicvcpu_numlistregs (arch_state s)) (vcpus_of s x))"
+  (wp: mapM_x_wp)
+
+lemma vgic_update_extra_lrs[wp]:
+  "\<lbrace>\<lambda>s. P (vcpu_extra_lrs (arm_gicvcpu_numlistregs (arch_state s)) (vcpus_of s x)) \<and>
+        (\<forall>v r. arm_gicvcpu_numlistregs (arch_state s) \<le> r \<longrightarrow> vgic_lr (f v) r = vgic_lr v r)\<rbrace>
+   vgic_update vr f
+   \<lbrace>\<lambda>_ s. P (vcpu_extra_lrs (arm_gicvcpu_numlistregs (arch_state s)) (vcpus_of s x))\<rbrace>"
+  unfolding vgic_update_def
+  by wpsimp
+
+lemma vgic_update_lr_extra_lrs[wp]:
+  "\<lbrace>\<lambda>s. P (vcpu_extra_lrs (arm_gicvcpu_numlistregs (arch_state s)) (vcpus_of s x)) \<and>
+        r < arm_gicvcpu_numlistregs (arch_state s)\<rbrace>
+   vgic_update_lr vr r irq
+   \<lbrace>\<lambda>_ s. P (vcpu_extra_lrs (arm_gicvcpu_numlistregs (arch_state s)) (vcpus_of s x))\<rbrace>"
+  unfolding vgic_update_lr_def
+  by wpsimp
+
+lemma vcpu_save_extra_lrs[wp]:
+  "vcpu_save vr \<lbrace>\<lambda>s. P (vcpu_extra_lrs (arm_gicvcpu_numlistregs (arch_state s)) (vcpus_of s x))\<rbrace>"
+  unfolding vcpu_save_def
+  apply clarsimp
+  apply wpsimp
+apply (rule_tac Q'="\<lambda>_ s.
+(P (vcpu_extra_lrs (arm_gicvcpu_numlistregs (arch_state s)) (vcpus_of s x)) \<and>
+num_list_regs = arm_gicvcpu_numlistregs (arch_state s)) \<and>
+ (\<forall>r \<in> set [0..<num_list_regs]. r < arm_gicvcpu_numlistregs (arch_state s))" in hoare_strengthen_post[rotated], clarsimp)
+          apply (rule mapM_set_inv)
+            apply wpsimp+
+  done
+
+crunch vcpu_restore, vcpu_enable, vcpu_disable, vcpu_invalidate_active
+  for extra_lrs[wp]: "\<lambda>s. P (vcpu_extra_lrs (arm_gicvcpu_numlistregs (arch_state s)) (vcpus_of s x))"
+  (wp: mapM_x_wp)
+
 lemma vcpu_switch_integrity_hyp[wp]:
   "\<lbrace>integrity_hyp aag subjects x st and valid_arch_state\<rbrace>
    vcpu_switch vr
    \<lbrace>\<lambda>_. integrity_hyp aag subjects x st\<rbrace>"
   unfolding integrity_hyp_def vcpu_integrity_def vcpu_switch_def vcpu_proj_of_state
+  apply (rule hoare_weaken_pre)
+   apply (rule hoare_vcg_conj_lift, solves wpsimp)
+   apply (rule hoare_vcg_imp_lift, solves wpsimp)
+   apply (rule hoare_vcg_conj_lift, solves wpsimp)
   supply if_split[split del] if_split[where P="\<lambda>v. _ = v", simp]
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' | wp dmo_lift_vcpu_proj)+
+   apply ((wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' | wp dmo_lift_vcpu_proj)+)[1]
   apply (auto simp: insert_commute cur_vcpu_of_def split: if_splits)
   done
 
@@ -2221,11 +2274,15 @@ lemma vcpu_flush_integrity_hyp[wp]:
    vcpu_flush
    \<lbrace>\<lambda>_. integrity_hyp aag subjects x st\<rbrace>"
   unfolding integrity_hyp_def vcpu_integrity_def vcpu_flush_def vcpu_proj_of_state
+  apply (rule hoare_weaken_pre)
+   apply (rule hoare_vcg_conj_lift, solves wpsimp)
+   apply (rule hoare_vcg_imp_lift, solves wpsimp)
+   apply (rule hoare_vcg_conj_lift, solves wpsimp)
   supply if_split[split del] if_split[where P="\<lambda>v. _ = v", simp]
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift'
                     hoare_pre_cont[where f=vcpu_invalidate_active and P="\<lambda>_ s. cur_vcpu_of s x = Some _"]
          | strengthen None_Some_strg)+
-  apply (fastforce simp: cur_vcpu_of_def split: if_splits)
+  apply (auto simp: insert_commute cur_vcpu_of_def split: if_splits)
   done
 
 crunch vcpu_flush

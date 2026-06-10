@@ -143,8 +143,15 @@ where
                        vgic_apr := vgic_apr (vcpu_vgic vst),
                        vgic_lr := vgic_lr (vcpu_vgic vst)\<rparr>\<rparr>))"
 
+definition vcpu_extra_lrs :: "nat \<Rightarrow> vcpu option \<Rightarrow> (nat \<Rightarrow> AARCH64.virq) option" where
+  "vcpu_extra_lrs n vopt \<equiv>
+     case vopt of
+       None \<Rightarrow> None \<comment> \<open>No VCPU\<close>
+     | Some vcpu \<Rightarrow> Some (\<lambda>r. if r \<ge> n then vgic_lr (vcpu_vgic vcpu) r else undefined)"
+
 definition vcpu_integrity where
    "vcpu_integrity hv hv' cv cv' n n' vopt vopt' \<equiv>
+      vcpu_extra_lrs n vopt = vcpu_extra_lrs n' vopt' \<and>
       vcpu_of_state hv cv n vopt = vcpu_of_state hv' cv' n' vopt'"
 
 definition integrity_hyp_2 ::
