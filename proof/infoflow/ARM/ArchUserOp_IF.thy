@@ -124,7 +124,7 @@ global_interpretation UserOp_IF_1?: UserOp_IF_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact UserOp_IF_assms)?)
+    by (unfold_locales; (fact UserOp_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
 qed
 
 
@@ -919,6 +919,8 @@ lemma dmo_getExMonitor_reads_respects_g:
   "reads_respects_g aag l (\<lambda>s. cur_thread s \<noteq> idle_thread s) (do_machine_op getExMonitor)"
   apply (simp add: getExMonitor_def)
   apply (wp dmo_ev gets_ev'')
+  prefer 2
+   apply assumption
   apply (clarsimp simp: reads_equiv_g_def globals_equiv_def)
   done
 

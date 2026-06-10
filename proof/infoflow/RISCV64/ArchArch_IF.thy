@@ -106,11 +106,10 @@ lemma store_word_offs_reads_respects[Arch_IF_assms]:
   apply (simp add: storeWord_def)
   apply (simp add: do_machine_op_bind)
   apply wp
-     apply (rule use_spec_ev)
-     apply (rule do_machine_op_spec_reads_respects)
+     apply (rule do_machine_op_reads_respects)
       apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def in_monad)
       apply (fastforce intro: equiv_forI elim: equiv_forE simp: upto.simps comp_def)
-     apply (rule use_spec_ev do_machine_op_spec_reads_respects assert_ev2
+     apply (rule do_machine_op_reads_respects assert_ev2
             | simp add: spec_equiv_valid_def | wp modify_wp)+
   done
 
@@ -139,26 +138,14 @@ lemma set_thread_state_globals_equiv[Arch_IF_assms]:
                     split: option.splits kernel_object.splits)+
   done
 
-lemma set_cap_globals_equiv''[Arch_IF_assms]:
-  "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
-   set_cap cap p
-   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding set_cap_def
-  apply (simp only: split_def)
-  apply (wp set_object_globals_equiv hoare_vcg_all_lift get_object_wp | wpc | simp)+
-  apply (fastforce simp: valid_arch_state_def obj_at_def is_tcb_def
-                   dest: valid_global_arch_objs_pt_at)+
-  done
-
-lemma as_user_globals_equiv[Arch_IF_assms]:
-  "\<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
-   as_user tptr f
-   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding as_user_def
-  apply (wpsimp wp: set_object_globals_equiv simp: split_def)
-  apply (fastforce simp: valid_arch_state_def get_tcb_def obj_at_def
-                   dest: valid_global_arch_objs_pt_at)
-  done
+lemma thread_set_non_idle_globals_equiv[Arch_IF_assms]:
+  "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
+   thread_set f tptr
+   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  unfolding thread_set_def
+  apply (wp set_object_globals_equiv)
+  by (fastforce simp: valid_arch_state_def obj_at_def get_tcb_def
+                dest: valid_global_arch_objs_pt_at)
 
 declare arch_prepare_set_domain_inv[Arch_IF_assms]
 declare arch_prepare_next_domain_inv[Arch_IF_assms]
@@ -180,7 +167,7 @@ global_interpretation Arch_IF_1?: Arch_IF_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Arch_IF_assms)?)
+    by (unfold_locales; (fact Arch_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
 qed
 
 
@@ -397,9 +384,9 @@ lemma perform_page_invocation_reads_respects:
             perform_pg_inv_unmap_def perform_pg_inv_get_addr_def
   apply (rule equiv_valid_guard_imp)
    apply (wp dmo_mol_reads_respects mapM_x_ev'' store_pte_reads_respects set_cap_reads_respects
-             mapM_ev'' store_pte_reads_respects unmap_page_reads_respects  dmo_mol_2_reads_respects
+             mapM_ev'' store_pte_reads_respects unmap_page_reads_respects
              get_cap_rev set_mrs_reads_respects set_message_info_reads_respects
-          | simp add: sfence_def
+          | simp add: sfence_def dmo_distr
           | wpc | wp (once) hoare_drop_imps[where Q'="\<lambda>r s. r"])+
   apply (clarsimp simp: authorised_page_inv_def valid_page_inv_def)
   apply (auto simp: cte_wp_at_caps_of_state authorised_slots_def cap_links_asid_slot_def
@@ -815,14 +802,14 @@ lemma perform_pt_inv_map_globals_equiv:
    perform_pt_inv_map x11 x12 x13 x14
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding perform_pt_inv_map_def
-  by (wpsimp wp: store_pte_globals_equiv set_cap_globals_equiv'' simp: sfence_def)
+  by (wpsimp wp: store_pte_globals_equiv set_cap_globals_equiv simp: sfence_def)
 
 lemma perform_pt_inv_unmap_globals_equiv:
   "\<lbrace>invs and globals_equiv st and cte_wp_at ((=) (ArchObjectCap cap)) ct_slot\<rbrace>
    perform_pt_inv_unmap cap ct_slot
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding perform_pt_inv_unmap_def
-  apply (wpsimp wp: set_cap_globals_equiv'' mapM_x_swp_store_pte_globals_equiv)
+  apply (wpsimp wp: set_cap_globals_equiv mapM_x_swp_store_pte_globals_equiv)
      apply (strengthen invs_imps invs_valid_global_vspace_mappings)
      apply (clarsimp cong: conj_cong)
      apply (wpsimp wp: unmap_page_table_globals_equiv unmap_page_table_invs)
@@ -852,7 +839,7 @@ lemma perform_page_table_invocation_globals_equiv:
    perform_page_table_invocation pti
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding perform_page_table_invocation_def
-  apply (wpsimp wp: store_pte_globals_equiv set_cap_globals_equiv''
+  apply (wpsimp wp: store_pte_globals_equiv set_cap_globals_equiv
                     perform_pt_inv_map_globals_equiv
                     perform_pt_inv_unmap_globals_equiv)
   apply (case_tac pti; clarsimp simp: authorised_for_globals_page_table_inv_def valid_pti_def)
@@ -991,7 +978,7 @@ lemma perform_pg_inv_unmap_globals_equiv:
   unfolding perform_pg_inv_unmap_def
   apply (rule hoare_weaken_pre)
    apply (wp mapM_swp_store_pte_globals_equiv hoare_vcg_all_lift mapM_x_swp_store_pte_globals_equiv
-             set_cap_globals_equiv'' unmap_page_globals_equiv store_pte_globals_equiv
+             set_cap_globals_equiv unmap_page_globals_equiv store_pte_globals_equiv
              store_pte_globals_equiv hoare_weak_lift_imp set_message_info_globals_equiv
              unmap_page_valid_arch_state perform_pg_inv_get_addr_globals_equiv
           | wpc | simp add: do_machine_op_bind sfence_def)+
@@ -1008,7 +995,7 @@ lemma perform_pg_inv_map_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding perform_pg_inv_map_def
   by (wp mapM_swp_store_pte_globals_equiv hoare_vcg_all_lift mapM_x_swp_store_pte_globals_equiv
-         set_cap_globals_equiv'' unmap_page_globals_equiv store_pte_globals_equiv
+         set_cap_globals_equiv unmap_page_globals_equiv store_pte_globals_equiv
          store_pte_globals_equiv hoare_weak_lift_imp set_message_info_globals_equiv
          unmap_page_valid_arch_state perform_pg_inv_get_addr_globals_equiv
       | wpc | simp add: do_machine_op_bind sfence_def | fastforce)+
@@ -1052,7 +1039,7 @@ lemma perform_asid_control_invocation_globals_equiv:
   apply (rule hoare_pre)
    apply wpc
    apply (rename_tac word1 cslot_ptr1 cslot_ptr2 word2)
-   apply (wp modify_wp cap_insert_globals_equiv''
+   apply (wp modify_wp cap_insert_globals_equiv
              retype_region_ASIDPoolObj_globals_equiv[simplified]
              retype_region_invs_extras(5)[where sz=pageBits]
              retype_region_invs_extras(6)[where sz=pageBits]
@@ -1135,7 +1122,7 @@ lemma store_asid_pool_entry_globals_equiv:
    store_asid_pool_entry pool_ptr asid ptr
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding store_asid_pool_entry_def
-  by (wp modify_wp set_asid_pool_globals_equiv set_cap_globals_equiv'' get_cap_wp | wpc | simp)+
+  by (wp modify_wp set_asid_pool_globals_equiv set_cap_globals_equiv get_cap_wp | wpc | simp)+
 
 lemma perform_asid_pool_invocation_globals_equiv:
   "\<lbrace>globals_equiv s and invs and valid_apinv api\<rbrace>
@@ -1143,7 +1130,7 @@ lemma perform_asid_pool_invocation_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding perform_asid_pool_invocation_def
   apply (rule hoare_weaken_pre)
-   apply (wp modify_wp set_asid_pool_globals_equiv set_cap_globals_equiv''
+   apply (wp modify_wp set_asid_pool_globals_equiv set_cap_globals_equiv
              store_asid_pool_entry_globals_equiv copy_global_mappings_globals_equiv
              copy_global_mappings_valid_arch_state get_cap_wp
           | wpc | simp)+
@@ -1236,14 +1223,10 @@ lemma thread_set_globals_equiv:
 
 end
 
-hide_fact as_user_globals_equiv
-
-context begin interpretation Arch .
-
-requalify_consts
+arch_requalify_consts
   authorised_for_globals_arch_inv
 
-requalify_facts
+arch_requalify_facts
   arch_post_cap_deletion_valid_global_objs
   get_thread_state_globals_equiv
   auth_ipc_buffers_mem_Write'
@@ -1253,11 +1236,7 @@ requalify_facts
   length_msg_lt_msg_max
   set_mrs_globals_equiv
   arch_perform_invocation_globals_equiv
-  as_user_globals_equiv
-  prepare_thread_delete_st_tcb_at_halted
-  make_arch_fault_msg_inv
   check_valid_ipc_buffer_inv
-  arch_tcb_update_aux2
   arch_perform_invocation_reads_respects_g
 
 declare
@@ -1266,10 +1245,6 @@ declare
   arch_post_modify_registers_cur_domain[wp]
   arch_post_modify_registers_cur_thread[wp]
   prepare_thread_delete_st_tcb_at_halted[wp]
-
-end
-
-declare as_user_globals_equiv[wp]
 
 axiomatization dmo_reads_respects where
   dmo_read_stval_reads_respects: "reads_respects aag l \<top> (do_machine_op read_stval)"
