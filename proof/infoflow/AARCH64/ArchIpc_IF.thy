@@ -36,24 +36,26 @@ lemma storeWord_equiv_but_for_labels[Ipc_IF_assms]:
   apply (wp modify_wp)
   apply (clarsimp simp: equiv_but_for_labels_def)
   apply (rule states_equiv_forI)
-          apply (fastforce intro!: equiv_forI elim!: states_equiv_forE dest: equiv_forD)
-         apply (simp add: states_equiv_for_def)
-         apply (rule conjI)
-          apply (rule equiv_forI)
-          apply clarsimp
-          apply (drule_tac f=underlying_memory in equiv_forD,fastforce)
-          apply (fastforce intro: is_aligned_no_wrap' word_plus_mono_right
-                            simp: is_aligned_mask for_each_byte_of_word_def word_size_def upto.simps)
-         apply (rule equiv_forI)
-         apply clarsimp
-         apply (drule_tac f=device_state in equiv_forD,fastforce)
-         apply clarsimp
-        apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt])
-       apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt_list])
-      apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=is_original_cap])
-     apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=interrupt_states])
-    apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=interrupt_irq_node])
-   apply (fastforce simp: equiv_asids_def equiv_asid_def elim: states_equiv_forE)
+            apply (fastforce intro!: equiv_forI elim!: states_equiv_forE dest: equiv_forD)
+           apply (simp add: states_equiv_for_def)
+           apply (rule conjI)
+            apply (rule equiv_forI)
+            apply clarsimp
+            apply (drule_tac f=underlying_memory in equiv_forD,fastforce)
+            apply (fastforce intro: is_aligned_no_wrap' word_plus_mono_right
+                              simp: is_aligned_mask for_each_byte_of_word_def word_size_def upto.simps)
+           apply (rule equiv_forI)
+           apply clarsimp
+           apply (drule_tac f=device_state in equiv_forD,fastforce)
+           apply clarsimp
+          apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt])
+         apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt_list])
+        apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=is_original_cap])
+       apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=interrupt_states])
+      apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=interrupt_irq_node])
+     apply (fastforce simp: equiv_asids_def equiv_asid_def elim: states_equiv_forE)
+    apply (fastforce simp: equiv_hyp_def equiv_for_def elim: states_equiv_forE)
+   apply (fastforce simp: equiv_fpu_def equiv_for_def cur_fpu_for_def elim: states_equiv_forE)
   apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=ready_queues])
   done
 
@@ -202,9 +204,7 @@ lemma dmo_loadWord_reads_respects[Ipc_IF_assms]:
   "reads_respects aag l (K (for_each_byte_of_word (\<lambda> x. aag_can_read_or_affect aag l x) p))
                   (do_machine_op (loadWord p))"
   apply (rule gen_asm_ev)
-  apply (rule use_spec_ev)
-  apply (rule spec_equiv_valid_hoist_guard)
-  apply (rule do_machine_op_spec_reads_respects)
+  apply (rule do_machine_op_reads_respects)
    apply (simp add: loadWord_def equiv_valid_def2 spec_equiv_valid_def)
    apply (rule_tac R'="\<lambda>rv rv'. for_each_byte_of_word (\<lambda>y. rv y = rv' y) p"
                and Q="\<top>\<top>" and Q'="\<top>\<top>" and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
@@ -234,8 +234,15 @@ lemma handle_arch_fault_reply_reads_respects[Ipc_IF_assms, wp]:
   "reads_respects aag l (K (aag_can_read aag thread)) (handle_arch_fault_reply afault thread x y)"
   by (simp add: handle_arch_fault_reply_def, wp)
 
+lemma arch_thread_get_reads_respects[wp]:
+  "reads_respects aag l (K (aag_can_read_or_affect aag l t)) (arch_thread_get f t)"
+  unfolding arch_thread_get_def
+  apply (wpsimp)
+  apply (fastforce elim: reads_equivE affects_equivE equiv_forE simp: get_tcb_def split: option.splits)
+  done
+
 lemma arch_get_sanitise_register_info_reads_respects[Ipc_IF_assms, wp]:
-  "reads_respects aag l \<top> (arch_get_sanitise_register_info t)"
+  "reads_respects aag l (K (aag_can_read_or_affect aag l t)) (arch_get_sanitise_register_info t)"
   by wpsimp
 
 declare arch_get_sanitise_register_info_inv[Ipc_IF_assms]
@@ -441,7 +448,7 @@ lemma set_mrs_reads_respects'[Ipc_IF_assms]:
   apply (simp add: equiv_valid_def2)
   apply (rule equiv_valid_rv_guard_imp)
    apply (case_tac buf)
-    apply (rule_tac Q="\<top>" and P="\<top>" and L="{pasObjectAbs aag thread}" in ev_invisible[OF domains_distinct])
+    apply (rule_tac Q="\<top>" and P="\<top>" and L="{pasObjectAbs aag thread}" in revrv_invisible[OF domains_distinct])
       apply (clarsimp simp: labels_are_invisible_def)
      apply (rule modifies_at_mostI)
      apply (simp add: set_mrs_def)
@@ -451,7 +458,7 @@ lemma set_mrs_reads_respects'[Ipc_IF_assms]:
    apply (rename_tac buf')
    apply (rule_tac Q="\<top>" and L="{pasObjectAbs aag thread} \<union> (pasObjectAbs aag)
                                  ` (ptr_range buf' msg_align_bits)"
-                in ev_invisible[OF domains_distinct])
+                in revrv_invisible[OF domains_distinct])
      apply (auto simp: labels_are_invisible_def ipc_buffer_has_auth_def
                  dest: reads_read_page_read_thread simp: aag_can_affect_label_def)[1]
     apply (rule modifies_at_mostI)

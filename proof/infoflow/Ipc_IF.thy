@@ -19,11 +19,6 @@ definition ipc_buffer_has_read_auth :: "'a PAS \<Rightarrow> 'a \<Rightarrow> ob
        (\<lambda>buf'. is_aligned buf' msg_align_bits \<and>
                (\<forall>x \<in> ptr_range buf' msg_align_bits. (l,Read,pasObjectAbs aag x) \<in> (pasPolicy aag)))"
 
-abbreviation aag_can_read_or_affect where
-  "aag_can_read_or_affect aag l x \<equiv>
-    aag_can_read aag x \<or> aag_can_affect aag l x"
-
-
 lemma get_cap_reads_respects:
   "reads_respects aag l (K (aag_can_read aag (fst slot) \<or> aag_can_affect aag l (fst slot))) (get_cap slot)"
   apply (simp add: get_cap_def split_def)
@@ -64,14 +59,16 @@ lemma tcb_sched_action_equiv_but_for_labels:
   apply (simp add: tcb_sched_action_def, wp)
   apply (clarsimp simp: etcb_at_def equiv_but_for_labels_def split: option.splits)
   apply (rule states_equiv_forI)
-          apply (fastforce intro!: equiv_forI elim!: states_equiv_forE dest: equiv_forD[where f=kheap])
-         apply (simp add: states_equiv_for_def)
-        apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt])
-       apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt_list])
-      apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=is_original_cap])
-     apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=interrupt_states])
-    apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=interrupt_irq_node])
-   apply (fastforce simp: equiv_asids_def elim: states_equiv_forE)
+            apply (fastforce intro!: equiv_forI elim!: states_equiv_forE dest: equiv_forD[where f=kheap])
+           apply (simp add: states_equiv_for_def)
+          apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt])
+         apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt_list])
+        apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=is_original_cap])
+       apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=interrupt_states])
+      apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=interrupt_irq_node])
+     apply (fastforce simp: equiv_asids_def elim: states_equiv_forE)
+    apply (fastforce elim: states_equiv_forE)
+   apply (fastforce elim: states_equiv_forE)
   apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def split: option.splits)
   apply (rule equiv_forI)
   apply (erule_tac x="(thread, etcb_domain (the (etcbs_of s thread)))" in ballE)
@@ -159,7 +156,7 @@ locale Ipc_IF_1 =
   and handle_arch_fault_reply_reads_respects:
     "reads_respects aag l (K (aag_can_read aag thread)) (handle_arch_fault_reply afault thread x y)"
   and arch_get_sanitise_register_info_reads_respects[wp]:
-    "reads_respects aag l \<top> (arch_get_sanitise_register_info t)"
+    "reads_respects aag l (K (aag_can_read_or_affect aag l t)) (arch_get_sanitise_register_info t)"
   and arch_get_sanitise_register_info_valid_global_objs[wp]:
     "arch_get_sanitise_register_info t \<lbrace>\<lambda>s :: det_state. valid_global_objs s\<rbrace>"
   and handle_arch_fault_reply_valid_global_objs[wp]:
@@ -1171,14 +1168,6 @@ lemma load_word_offs_reads_respects:
 end
 
 
-lemma as_user_reads_respects:
-  "reads_respects aag l (K (det f \<and> aag_can_read_or_affect aag l thread)) (as_user thread f)"
-  apply (simp add: as_user_def split_def)
-  apply (rule gen_asm_ev)
-  apply (wp set_object_reads_respects select_f_ev gets_the_ev)
-  apply (auto intro: reads_affects_equiv_get_tcb_eq[where aag=aag])
-  done
-
 lemma get_mi_length':
    "\<lbrace>\<top>\<rbrace> get_message_info sender \<lbrace>\<lambda>rv s. buffer_cptr_index + unat (mi_extra_caps rv)
                                          < 2 ^ (msg_align_bits - word_size_bits)\<rbrace>"
@@ -1666,7 +1655,7 @@ lemma setup_caller_cap_globals_equiv:
    setup_caller_cap sender receiver grant
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding setup_caller_cap_def
-  apply (wp cap_insert_globals_equiv'' set_thread_state_globals_equiv)
+  apply (wp cap_insert_globals_equiv set_thread_state_globals_equiv)
   apply (simp_all)
   done
 
@@ -1694,7 +1683,7 @@ next
       apply (wp set_extra_badge_globals_equiv)+
          apply (rule Cons.hyps)
         apply (simp)
-        apply (wp cap_insert_globals_equiv'')
+        apply (wp cap_insert_globals_equiv)
        apply (rule_tac Q'="\<lambda>_. globals_equiv st and valid_arch_state and valid_global_objs"
                    and E'="\<lambda>_. globals_equiv st and valid_arch_state and valid_global_objs"
                     in hoare_strengthen_postE)

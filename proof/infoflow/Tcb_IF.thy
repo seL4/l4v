@@ -22,7 +22,7 @@ lemma setup_reply_master_globals_equiv:
    setup_reply_master t
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding setup_reply_master_def
-  apply (wp set_cap_globals_equiv'' set_original_globals_equiv get_cap_wp)
+  apply (wp set_cap_globals_equiv set_original_globals_equiv get_cap_wp)
   apply clarsimp
   done
 
@@ -42,7 +42,7 @@ lemma cap_swap_for_delete_globals_equiv[wp]:
    cap_swap_for_delete a b
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding cap_swap_for_delete_def cap_swap_def set_original_def
-  by (wp modify_wp set_cdt_globals_equiv set_cap_globals_equiv'' dxo_wp_weak | simp)+
+  by (wp modify_wp set_cdt_globals_equiv set_cap_globals_equiv dxo_wp_weak | simp)+
 
 lemma rec_del_preservation2':
   assumes finalise_cap_P: "\<And>cap final. \<lbrace>R cap and P\<rbrace> finalise_cap cap final \<lbrace>\<lambda>_. P\<rbrace>"
@@ -191,7 +191,7 @@ locale Tcb_IF_1 =
   and arch_post_modify_registers_reads_respects_f[wp]:
     "reads_respects_f aag l \<top> (arch_post_modify_registers cur t)"
   and arch_get_sanitise_register_info_reads_respects_f[wp]:
-    "reads_respects_f aag l \<top> (arch_get_sanitise_register_info t)"
+    "reads_respects_f aag l (K (aag_can_read_or_affect aag l t)) (arch_get_sanitise_register_info t)"
 begin
 
 crunch cap_swap_for_delete
@@ -206,7 +206,7 @@ lemma rec_del_globals_equiv:
                     rec_del_preservation2[where Q="valid_arch_state"
                                             and R="\<lambda>cap s. invs s \<and> valid_cap cap s
                                                       \<and> (\<forall>p. cap = ThreadCap p \<longrightarrow> p \<noteq> idle_thread s)"])
-            apply (wp set_cap_globals_equiv'')
+            apply (wp set_cap_globals_equiv)
             apply simp
            apply (wp empty_slot_globals_equiv)+
           apply simp
@@ -295,9 +295,12 @@ locale Tcb_IF_2 = Tcb_IF_1 +
                               and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
              (invoke_tcb ti)"
   and arch_post_set_flags_globals_equiv[wp]:
-    "arch_post_set_flags t flags \<lbrace>globals_equiv st\<rbrace>"
+    "\<lbrace>globals_equiv st and invs\<rbrace>
+     arch_post_set_flags t flags
+     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   and arch_post_set_flags_reads_respects_f:
-    "reads_respects_f aag l \<top> (arch_post_set_flags t flags)"
+    "pas_domains_distinct aag \<Longrightarrow>
+     reads_respects_f aag l (silc_inv aag st and valid_cur_fpu and K (is_subject aag t)) (arch_post_set_flags t flags)"
 begin
 
 crunch suspend, restart
@@ -325,9 +328,8 @@ lemma invoke_tcb_globals_equiv:
                           weak_if_wp')+
    apply (intro conjI impI; clarsimp simp: no_cap_to_idle_thread)+
   apply (simp del: invoke_tcb.simps tcb_inv_wf.simps)
-  apply (wp invoke_tcb_thread_preservation cap_delete_globals_equiv
-            cap_insert_globals_equiv'' thread_set_globals_equiv set_mcpriority_globals_equiv
-            set_priority_globals_equiv
+  apply (wp invoke_tcb_thread_preservation cap_delete_globals_equiv cap_insert_globals_equiv
+            thread_set_globals_equiv set_mcpriority_globals_equiv set_priority_globals_equiv
          | fastforce)+
   done
 
@@ -417,7 +419,7 @@ lemma set_mcpriority_reads_respects:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows "reads_respects aag (l :: 'a subject_label) \<top> (set_mcpriority x y)"
   unfolding set_mcpriority_def
-  by (rule thread_set_reads_respects[OF domains_distinct])
+  by (rule thread_set_reads_respects)
 
 lemma checked_cap_insert_only_timer_irq_inv:
   "check_cap_at a b (check_cap_at c d (cap_insert a b e)) \<lbrace>only_timer_irq_inv irq (st :: det_state)\<rbrace>"
@@ -480,6 +482,10 @@ context Tcb_IF_2 begin
 lemma thread_set_tcb_flags_update_silc_inv[wp]:
   "thread_set (tcb_flags_update f) t \<lbrace>silc_inv aag st\<rbrace>"
   by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def)
+
+crunch set_flags
+  for silc_inv[wp]: "silc_inv aag st"
+  (ignore: thread_set)
 
 lemma set_flags_reads_respects_f:
   assumes "pas_domains_distinct aag"

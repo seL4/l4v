@@ -61,23 +61,29 @@ locale Syscall_IF_1 =
   and arch_mask_irq_signal_globals_equiv[wp]:
     "arch_mask_irq_signal irq \<lbrace>globals_equiv st\<rbrace>"
   and handle_reserved_irq_globals_equiv[wp]:
-    "handle_reserved_irq irq \<lbrace>globals_equiv st\<rbrace>"
+     "\<lbrace>globals_equiv st and invs\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   and handle_spurious_irq_globals_equiv[wp]:
     "handle_spurious_irq \<lbrace>globals_equiv st\<rbrace>"
   and arch_prepare_set_domain_globals_equiv[wp]:
-    "arch_prepare_set_domain t new_dom \<lbrace>globals_equiv st\<rbrace>"
+    "\<lbrace>globals_equiv st and invs\<rbrace> arch_prepare_set_domain t new_dom \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   and arch_prepare_set_domain_valid_arch_state[wp]:
     "arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s :: det_state. valid_arch_state s\<rbrace>"
   and handle_vm_fault_reads_respects:
-    "reads_respects aag l (K (is_subject aag thread)) (handle_vm_fault thread vmfault_type)"
+    "reads_respects aag l (pas_refined aag and valid_cur_hyp and
+                               schact_is_rct and ct_in_cur_domain
+                           and is_subject aag \<circ> cur_thread and K (is_subject aag thread))
+                          (handle_vm_fault thread vmfault_type)"
   and handle_hypervisor_fault_reads_respects:
-    "reads_respects aag l \<top> (handle_hypervisor_fault thread hypfault_type)"
+    "pas_domains_distinct aag \<Longrightarrow>
+     reads_respects aag l (invs and pas_refined aag and pas_cur_domain aag
+                                 and is_subject aag \<circ> cur_thread and K (is_subject aag thread))
+                          (handle_hypervisor_fault thread hypfault_type)"
   and handle_vm_fault_globals_equiv:
     "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
      handle_vm_fault thread vmfault_type
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   and handle_hypervisor_fault_globals_equiv:
-    "handle_hypervisor_fault thread hypfault_type \<lbrace>globals_equiv st\<rbrace>"
+    "\<lbrace>globals_equiv st and invs\<rbrace> handle_hypervisor_fault thread hypfault_type \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   and arch_activate_idle_thread_globals_equiv[wp]:
     "arch_activate_idle_thread t \<lbrace>globals_equiv st\<rbrace>"
   and select_f_setNextPC_reads_respects[wp]:
@@ -792,12 +798,6 @@ lemma handle_recv_reads_respects_f_g:
    apply simp+
   done
 
-lemma dmo_return_reads_respects:
-  "reads_respects aag l \<top> (do_machine_op (return ()))"
-  apply (rule use_spec_ev)
-  apply (rule do_machine_op_spec_reads_respects; wp)
-  done
-
 lemma dmo_return_globals_equiv:
   "do_machine_op (return ()) \<lbrace>globals_equiv st\<rbrace>"
   by simp
@@ -886,8 +886,10 @@ lemma handle_interrupt_globals_equiv:
   done
 
 lemma handle_vm_fault_reads_respects_g:
-  "reads_respects_g aag l (K (is_subject aag t) and (valid_arch_state and (\<lambda>s. t \<noteq> idle_thread s)))
-                    (handle_vm_fault t vmfault_type)"
+  "reads_respects_g aag l (pas_refined aag and valid_cur_hyp and schact_is_rct and ct_in_cur_domain
+                                           and is_subject aag \<circ> cur_thread and K (is_subject aag t)
+                                           and (valid_arch_state and (\<lambda>s. t \<noteq> idle_thread s)))
+                          (handle_vm_fault t vmfault_type)"
   apply (rule reads_respects_g)
    apply (rule handle_vm_fault_reads_respects)
   apply (rule doesnt_touch_globalsI)
@@ -896,18 +898,22 @@ lemma handle_vm_fault_reads_respects_g:
   done
 
 lemma handle_hypervisor_fault_reads_respects_g:
-  "reads_respects_g aag l \<top> (handle_hypervisor_fault thread hyp)"
-  apply (rule reads_respects_g[where P="\<top>" and Q="\<top>", simplified])
-   apply (rule handle_hypervisor_fault_reads_respects)
-  apply (rule doesnt_touch_globalsI)
-  apply (wp handle_hypervisor_fault_globals_equiv)
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows "reads_respects_g aag l (invs and pas_refined aag and pas_cur_domain aag
+                                      and is_subject aag \<circ> cur_thread and K (is_subject aag thread))
+                                (handle_hypervisor_fault thread hyp)"
+  apply (rule equiv_valid_guard_imp)
+   apply (rule reads_respects_g[OF handle_hypervisor_fault_reads_respects])
+    apply wp
+   apply (rule doesnt_touch_globalsI)
+   apply (wp handle_hypervisor_fault_globals_equiv)
   apply simp
   done
 
 (* we explicitly exclude the case where ev is Interrupt since this is a scheduler action *)
 lemma handle_event_reads_respects_f_g:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
-  shows "reads_respects_f_g aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs
+  shows "reads_respects_f_g aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs and valid_cur_hyp
                                                    and schact_is_rct and is_subject aag \<circ> cur_thread
                                                    and domain_sep_inv (pasMaySendIrqs aag) st'
                                                    and (\<lambda>s. ev \<noteq> Interrupt \<and> (ct_active s))
@@ -953,16 +959,21 @@ lemma handle_event_reads_respects_f_g:
          | clarsimp simp: reads_equiv_f_g_conj requiv_g_cur_thread_eq schact_is_rct_simple
          | wpc | intro impI conjI allI)+
      apply (rule equiv_valid_guard_imp)
-      apply ((wp reads_respects_f_g'[OF handle_hypervisor_fault_reads_respects_g, where Q=\<top>]
+      apply ((wp reads_respects_f_g'[OF handle_hypervisor_fault_reads_respects_g]
                  handle_hypervisor_fault_silc_inv
               | simp)+)[1]
-     prefer 2
-     apply ((wp reads_respects_f_g'[OF handle_fault_reads_respects_g, where st=st] | simp)+)[1]
-    apply (simp add: validE_E_def)
-   apply (wp hv_invs handle_vm_fault_silc_inv)+
-  apply (simp add: invs_imps invs_mdb invs_valid_idle)+
+     apply simp
+    apply (wp hv_invs handle_vm_fault_silc_inv)+
   apply (fastforce simp: requiv_g_cur_thread_eq reads_equiv_f_g_conj ct_active_not_idle)
   done
+
+lemma getRestartPC_reads_respects:
+  "reads_respects aag l (K (aag_can_read_or_affect aag l t)) (as_user t getRestartPC)"
+  by (wpsimp wp: as_user_reads_respects simp: det_getRestartPC)
+
+lemma setNextPC_reads_respects:
+  "reads_respects aag l (K (aag_can_read_or_affect aag l t)) (as_user t (setNextPC pc))"
+  by (wpsimp wp: as_user_reads_respects simp: det_setNextPC)
 
 lemma activate_thread_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -971,9 +982,9 @@ lemma activate_thread_reads_respects:
            activate_thread"
   apply (simp add: activate_thread_def)
   apply (wpsimp wp: set_thread_state_runnable_reads_respects get_thread_state_rev)
-  by (wp set_object_reads_respects get_thread_state_rev
-      | simp add: as_user_def select_f_returns tcb_at_st_tcb_at[symmetric] cur_tcb_def
-      | rule hoare_drop_imps conjI requiv_cur_thread_eq requiv_get_tcb_eq'
+  by (wpsimp wp: set_object_reads_respects get_thread_state_rev
+                 getRestartPC_reads_respects setNextPC_reads_respects
+      | rule hoare_drop_imps conjI requiv_cur_thread_eq
       | clarsimp simp: st_tcb_at_def obj_at_def is_tcb_def)+
 
 lemma activate_thread_globals_equiv:
