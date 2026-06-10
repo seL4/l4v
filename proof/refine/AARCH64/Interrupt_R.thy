@@ -444,12 +444,6 @@ lemma isnt_irq_handler_strg:
   "(\<not> isIRQHandlerCap cap) \<longrightarrow> (\<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> P irq)"
   by (clarsimp simp: isCap_simps)
 
-lemma dmo_plic_complete_claim_invs'[wp]:
-  "doMachineOp (AARCH64.plic_complete_claim irq) \<lbrace>invs'\<rbrace>"
-  apply (wp dmo_invs')
-  apply (clarsimp simp: in_monad AARCH64.plic_complete_claim_def machine_op_lift_def machine_rest_lift_def select_f_def)
-  done
-
 lemma doMachineOp_maskInterrupt_False[wp]:
   "\<lbrace> \<lambda>s. invs' s \<and> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive \<rbrace>
    doMachineOp (maskInterrupt False irq)
