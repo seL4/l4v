@@ -333,7 +333,7 @@ lemma integrity_hyp_ao_upd:
   "\<lbrakk> ao p = Some ako; vcpu_of ako = None; vcpu_of ako' = None;
      integrity_hyp_2 aag subjects x ms ms' as as' ao ao' \<rbrakk>
      \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' ao (ao'(p \<mapsto> ako')) "
-  unfolding integrity_hyp_def vcpu_integrity_def vcpu_of_state_def opt_map_def
+  unfolding integrity_hyp_def vcpu_integrity_def vcpu_extra_lrs_def vcpu_of_state_def opt_map_def
   by (case_tac "x = p"; clarsimp; auto split: option.splits)+
 
 end
