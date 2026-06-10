@@ -15,7 +15,7 @@ begin
 
 context Arch begin arch_global_naming (H)
 
-#INCLUDE_HASKELL SEL4/Object/Interrupt/AARCH64.hs CONTEXT AARCH64_H bodies_only ArchInv= Arch= NOT plic_complete_claim
+#INCLUDE_HASKELL SEL4/Object/Interrupt/AARCH64.hs CONTEXT AARCH64_H bodies_only ArchInv= Arch=
 
 end
 

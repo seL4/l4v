@@ -81,15 +81,6 @@ lemma maskInterrupt_invs_ARCH[Interrupt_AI_assms]:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (rule maskInterrupt_invs)
 
-crunch plic_complete_claim (* FIXME AARCH64: remove plic_complete_claim *)
-  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
-
-lemma dmo_plic_complete_claim[wp]: (* FIXME AARCH64: remove plic_complete_claim *)
-  "do_machine_op (plic_complete_claim irq) \<lbrace>invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply (auto simp: plic_complete_claim_def machine_op_lift_def machine_rest_lift_def in_monad select_f_def)
-  done
-
 lemma no_cap_to_obj_with_diff_IRQHandler_ARCH[Interrupt_AI_assms]:
   "no_cap_to_obj_with_diff_ref (IRQHandlerCap irq) S = \<top>"
   by (rule ext, simp add: no_cap_to_obj_with_diff_ref_def

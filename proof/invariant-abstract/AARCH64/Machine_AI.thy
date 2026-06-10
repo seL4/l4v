@@ -260,7 +260,6 @@ crunch_ignore (valid, empty_fail, no_fail)
     invalidateTranslationASID_impl
     invalidateTranslationSingle_impl
     isb_impl
-    plic_complete_claim_impl
     resetTimer_impl
     set_gic_vcpu_ctrl_apr_impl
     set_gic_vcpu_ctrl_hcr_impl
@@ -321,7 +320,6 @@ crunch
   invalidateTranslationASID,
   invalidateTranslationSingle,
   isb,
-  plic_complete_claim,
   resetTimer,
   set_gic_vcpu_ctrl_apr,
   set_gic_vcpu_ctrl_hcr,

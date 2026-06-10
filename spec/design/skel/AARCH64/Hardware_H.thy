@@ -14,7 +14,7 @@ begin
 context Arch begin arch_global_naming (H)
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs Platform=Platform.AARCH64 CONTEXT AARCH64_H \
-  NOT PT_Type plic_complete_claim getMemoryRegions getDeviceRegions getKernelDevices \
+  NOT PT_Type getMemoryRegions getDeviceRegions getKernelDevices \
   loadWord storeWord storeWordVM getActiveIRQ ackInterrupt maskInterrupt deactivateInterrupt \
   configureTimer resetTimer debugPrint getRestartPC setNextPC clearMemory \
   clearMemoryVM initMemory freeMemory setHardwareASID wordFromPDE wordFromPTE \
@@ -50,7 +50,7 @@ arch_requalify_types (H)
 
 context Arch begin arch_global_naming (H)
 
-#INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64_H instanceproofs NOT plic_complete_claim HardwareASID VMFaultType VMPageSize VMPageEntry HypFaultType
+#INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64_H instanceproofs NOT HardwareASID VMFaultType VMPageSize VMPageEntry HypFaultType
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64_H ONLY wordFromPTE
 
