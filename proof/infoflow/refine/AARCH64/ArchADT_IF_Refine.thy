@@ -8,7 +8,7 @@ theory ArchADT_IF_Refine
 imports ADT_IF_Refine
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems ADT_IF_Refine_assms
 
@@ -167,7 +167,7 @@ lemma do_user_op_if_corres[ADT_IF_Refine_assms]:
     apply (rule corres_split[where r'="(=)"])
        apply (clarsimp simp: select_def corres_underlying_def)
       apply clarsimp
-      apply (rule corres_split[OF corres_machine_op,where r'="(=)"])
+      apply (rule corres_split[OF corres_machine_op', where r'="(=)"])
          apply (rule corres_underlying_trivial)
          apply (clarsimp simp: user_memory_update_def)
          apply (rule no_fail_modify)
@@ -285,7 +285,7 @@ lemma getActiveIRQ_nf:
   done
 
 lemma dmo_getActiveIRQ_corres[ADT_IF_Refine_assms]:
-  "corres (=) \<top> \<top> (do_machine_op (getActiveIRQ in_kernel)) (doMachineOp (getActiveIRQ in_kernel'))"
+  "corres (=) \<top> \<top> (do_machine_op (getActiveIRQ in_kernel)) (doMachineOp (getActiveIRQ in_kernel))"
   apply (rule SubMonad_R.corres_machine_op)
   apply (rule corres_Id)
     apply (simp add: getActiveIRQ_def non_kernel_IRQs_def)
@@ -296,7 +296,7 @@ lemma dmo_getActiveIRQ_corres[ADT_IF_Refine_assms]:
 lemma dmo'_getActiveIRQ_wp[ADT_IF_Refine_assms]:
   "\<lbrace>\<lambda>s. P (irq_at (irq_state (ksMachineState s) + 1) (irq_masks (ksMachineState s)))
           (s\<lparr>ksMachineState := (ksMachineState s\<lparr>irq_state := irq_state (ksMachineState s) + 1\<rparr>)\<rparr>)\<rbrace>
-   doMachineOp (getActiveIRQ in_kernel)
+   doMachineOp (getActiveIRQ False)
    \<lbrace>P\<rbrace>"
   apply(simp add: doMachineOp_def getActiveIRQ_def non_kernel_IRQs_def)
   apply(wp modify_wp | wpc)+
@@ -356,30 +356,64 @@ lemma handleEvent_corres_arch_extras[ADT_IF_Refine_assms]:
        (handle_event event) (handleEvent event)"
   by (fastforce intro: corres_guard2_imp[OF handleEvent_corres])
 
-lemma getActiveIRQ_corres_True_False:
-  "corres_underlying Id False True (=) \<top> \<top> (getActiveIRQ True) (getActiveIRQ False)"
-  unfolding getActiveIRQ_def
-  by (corres simp: non_kernel_IRQs_def)
+lemma handle_event_valid_domain_time_IRQ:
+  "\<lbrace>\<lambda>s. 0 < domain_time s \<rbrace>
+   handle_event Interrupt
+   \<lbrace>\<lambda>_ s::det_state. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>, -"
+  by (wpsimp wp: maybe_handle_interrupt_valid_domain_time wp_del: handle_event_domain_time_valid)
 
-lemma maybeHandleInterrupt_corres_True_False[ADT_IF_Refine_assms]:
-  "corres dc einvs invs' (maybe_handle_interrupt True) (maybeHandleInterrupt False)"
-  unfolding maybe_handle_interrupt_def maybeHandleInterrupt_def
-  apply (corres corres: corres_machine_op getActiveIRQ_corres_True_False
-                        handleInterrupt_corres[@lift_corres_args]
-                simp:  irq_state_independent_def
-         | corres_cases_both)+
-     apply (wpsimp wp: hoare_drop_imps)
-    apply clarsimp
-    apply (strengthen contract_all_imp_strg[where P'=True, simplified])
-    apply (wpsimp wp: doMachineOp_getActiveIRQ_IRQ_active' hoare_vcg_all_lift)
-   apply clarsimp
-  apply (clarsimp simp: invs'_def valid_state'_def)
+lemma kernel_entry_if_corres[ADT_IF_Refine_assms]:
+  "corres (prod_lift (dc \<oplus> dc))
+     (einvs and no_domain_caps
+            and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s)
+            and schact_is_rct
+            and (\<lambda>s. 0 < domain_time s) and valid_domain_list)
+     (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s)
+            and arch_extras
+            and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+     (kernel_entry_if event tc) (kernelEntry_if event tc)"
+  supply local.getActiveIRQ_inv[wp del]
+  supply Machine_AI.AARCH64.getActiveIRQ_inv[wp del]
+  apply (simp add: kernel_entry_if_def kernelEntry_if_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF getCurThread_corres])
+      apply (rule corres_split)
+         apply simp
+         apply (rule threadset_corresT)
+              apply (erule arch_tcb_context_set_tcb_relation)
+             apply (clarsimp simp: tcb_cap_cases_def)
+            apply (rule allI[OF ball_tcb_cte_casesI]; clarsimp)
+           apply fastforce
+          apply fastforce
+         apply fastforce
+        apply (rule corres_split[OF handleEvent_corres_arch_extras])
+          apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
+                        P="\<lambda>s. valid_domain_list s \<and>
+                               (event \<noteq> Interrupt \<longrightarrow> 0 < domain_time s) \<and>
+                               (event = Interrupt \<longrightarrow> domain_time s = 0 \<longrightarrow>
+                                 scheduler_action s = choose_new_thread)"])
+           apply (clarsimp simp: prod_lift_def)
+          apply (clarsimp simp: state_relation_def)
+         apply (wp add: threadSet_invs_trivial thread_set_invs_trivial thread_set_ct_in_state
+                        threadSet_ct_running' thread_set_not_state_valid_sched
+                        hoare_vcg_const_imp_lift
+                        handle_interrupt_valid_domain_time handle_event_valid_domain_time_IRQ
+                        handle_event_noIRQ_domain_time_inv
+                        no_domain_caps_sep_inv_lift[OF thread_set_tcb_arch_update_domain_sep_inv]
+                   del: handle_event_domain_time_valid
+                | simp add: tcb_cap_cases_def schact_is_rct_def maybe_handle_interrupt_def
+                            arch_tcb_update_aux2
+                | wpc
+                | wps
+                | wp (once) hoare_drop_imp)+
+   apply (fastforce simp: invs_def cur_tcb_def valid_state_def)
+  apply force
   done
 
 end
 
 requalify_consts
-  RISCV64.doUserOp_if
+  AARCH64.doUserOp_if
 
 
 global_interpretation ADT_IF_Refine_1?: ADT_IF_Refine_1 doUserOp_if

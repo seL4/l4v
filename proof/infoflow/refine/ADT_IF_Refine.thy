@@ -64,7 +64,7 @@ definition prod_lift where
 
 definition handlePreemption_if :: "user_context \<Rightarrow> user_context kernel" where
   "handlePreemption_if tc \<equiv> do
-     maybeHandleInterrupt False;
+     maybeHandleInterrupt True;
      stateAssert
        (\<lambda>s. ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread) [];
      return tc
@@ -229,11 +229,11 @@ locale ADT_IF_Refine_1 =
        (invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running')
        (do_user_op_if f tc) (doUserOp_if f tc)"
   and dmo_getActiveIRQ_corres:
-    "corres (=) \<top> \<top> (do_machine_op (getActiveIRQ in_kernel)) (doMachineOp (getActiveIRQ in_kernel'))"
+    "corres (=) \<top> \<top> (do_machine_op (getActiveIRQ in_kernel)) (doMachineOp (getActiveIRQ in_kernel))"
   and dmo'_getActiveIRQ_wp:
     "\<lbrace>\<lambda>s. P (irq_at (irq_state (ksMachineState s) + 1) (irq_masks (ksMachineState s)))
             (s\<lparr>ksMachineState := (ksMachineState s\<lparr>irq_state := irq_state (ksMachineState s) + 1\<rparr>)\<rparr>)\<rbrace>
-     doMachineOp (getActiveIRQ in_kernel)
+     doMachineOp (getActiveIRQ False)
      \<lbrace>P\<rbrace>"
   and handlePreemption_arch_extras[wp]:
     "handlePreemption_if tc \<lbrace>arch_extras\<rbrace>"
@@ -272,8 +272,6 @@ locale ADT_IF_Refine_1 =
               and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
               and arch_extras)
        (handle_event event) (handleEvent event)"
-  and maybeHandleInterrupt_corres_True_False:
-    "corres dc einvs invs' (maybe_handle_interrupt True) (maybeHandleInterrupt False)"
   and kernel_entry_if_corres:
     "\<And>event tc.
      corres (prod_lift (dc \<oplus> dc))
@@ -361,16 +359,11 @@ lemma checkActiveIRQ_ex_abs[wp]:
   apply (clarsimp simp: ex_abs_def)
   done
 
-lemma handlePreemption_invs'[wp]:
-  "handlePreemption_if tc \<lbrace>invs'\<rbrace>"
-  unfolding handlePreemption_if_def
-  by (wpsimp wp: dmo'_getActiveIRQ_wp hoare_drop_imps)
-
 lemma handle_preemption_if_corres:
   "corres (=) (einvs and valid_domain_list and (\<lambda>s. 0 < domain_time s))
               (invs') (handle_preemption_if tc) (handlePreemption_if tc)"
   apply (simp add: handlePreemption_if_def handle_preemption_if_def)
-  apply (corres corres: maybeHandleInterrupt_corres_True_False)
+  apply (corres corres: maybeHandleInterrupt_corres)
       apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
                     P="\<lambda>s. valid_domain_list s \<and>
                            (domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread)"])
@@ -832,6 +825,11 @@ definition ADT_H_if where
 lemma ex_abs_pred_conjD1: (* FIXME: move *)
   "ex_abs (P and Q) s \<Longrightarrow> ex_abs P s"
   by (auto simp: ex_abs_def)
+
+lemma handlePreemption_invs'[wp]:
+  "handlePreemption_if tc \<lbrace>invs'\<rbrace>"
+  unfolding handlePreemption_if_def
+  by (wpsimp wp: dmo'_getActiveIRQ_wp hoare_drop_imps)
 
 lemma haskell_invs:
   "global_automaton_invs checkActiveIRQ_H_if (doUserOp_H_if uop)
