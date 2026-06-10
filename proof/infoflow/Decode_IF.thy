@@ -268,7 +268,7 @@ lemma decode_irq_control_invocation_rev:
          | simp add: Let_def)+
   apply safe
        apply simp+
-    apply (blast intro: aag_Control_into_owns_irq )
+    apply (blast intro: aag_Control_into_owns_irq)
    apply (drule_tac x="caps ! 0" in bspec)
     apply (fastforce intro: bang_0_in_set)
    apply (drule (1) is_cnode_into_is_subject; blast dest: prop_of_obj_ref_of_cnode_cap)
@@ -347,7 +347,7 @@ begin
 
 lemma decode_invocation_reads_respects_f:
   "reads_respects_f aag l
-     (silc_inv aag st and pas_refined aag and valid_cap cap and invs and ct_active
+     (silc_inv aag st and pas_refined aag and invs and ct_active
                       and domain_sep_inv irqs st'
                       and cte_wp_at ((=) cap) slot and ex_cte_cap_to slot
                       and (\<lambda>s. \<forall>r\<in>zobj_refs cap. ex_nonz_cap_to r s)

@@ -30,7 +30,7 @@ locale Finalise_IF_1 =
   and set_bound_notification_none_reads_respects:
     "pas_domains_distinct aag \<Longrightarrow> reads_respects aag l \<top> (set_bound_notification ref None)"
   and thread_set_reads_respects:
-    "pas_domains_distinct aag \<Longrightarrow> reads_respects aag l \<top> (thread_set x y)"
+    "reads_respects aag l \<top> (thread_set f thread)"
   and set_tcb_queue_reads_respects[wp]:
     "reads_respects aag l \<top> (set_tcb_queue d prio queue)"
   and set_notification_equiv_but_for_labels:
@@ -38,9 +38,13 @@ locale Finalise_IF_1 =
      set_notification ntfnptr ntfn
      \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
   and prepare_thread_delete_reads_respects_f:
-    "reads_respects_f aag l \<top> (prepare_thread_delete t)"
+    "pas_domains_distinct aag
+     \<Longrightarrow> reads_respects_f aag l (silc_inv aag st and pas_refined aag and valid_arch_state
+                                                 and valid_cur_fpu and K (is_subject aag thread))
+                                (prepare_thread_delete thread)"
   and arch_finalise_cap_reads_respects:
-    "reads_respects aag l (pas_refined aag and invs and cte_wp_at ((=) (ArchObjectCap cap)) slot
+    "pas_domains_distinct aag
+     \<Longrightarrow> reads_respects aag l (pas_refined aag and invs and cte_wp_at ((=) (ArchObjectCap cap)) slot
                                            and K (pas_cap_cur_auth aag (ArchObjectCap cap)))
                           (arch_finalise_cap cap is_final)"
   and arch_finalise_cap_makes_halted:
@@ -65,7 +69,7 @@ locale Finalise_IF_1 =
      arch_finalise_cap acap ex
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   and prepare_thread_delete_globals_equiv[wp]:
-    "prepare_thread_delete t \<lbrace>globals_equiv st\<rbrace>"
+    "\<lbrace>globals_equiv s and invs\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
 begin
 
 lemma set_irq_state_reads_respects:
@@ -528,6 +532,13 @@ crunch set_simple_ko
   for sched_act[wp]: "\<lambda>s. P (scheduler_action s)"
   (wp: crunch_wps)
 
+lemma thread_get_reads_respects:
+  "reads_respects aag l (K (aag_can_read aag thread \<or> aag_can_affect aag l thread))
+                        (thread_get f thread)"
+  unfolding thread_get_def fun_app_def
+  apply (wp gets_the_ev)
+  apply (auto intro: reads_affects_equiv_get_tcb_eq)
+  done
 
 
 context Finalise_IF_1 begin
@@ -545,18 +556,17 @@ lemma tcb_sched_action_reads_respects:
   apply (simp add: tcb_sched_action_def get_tcb_queue_def)
   apply (subst gets_apply)
   apply (case_tac "aag_can_read aag t \<or> aag_can_affect aag l t")
-   apply (simp add: thread_get_def)
    apply wp
-         apply (rule_tac Q="\<lambda>s. pasObjectAbs aag t \<in> pasDomainAbs aag (tcb_domain rv)"
+         apply (rule_tac Q="\<lambda>s. pasObjectAbs aag t \<in> pasDomainAbs aag rv"
                       in equiv_valid_guard_imp)
-          apply (wp gets_apply_ev')
+          apply (wp gets_apply_ev)
           apply (fastforce simp: reads_equiv_def affects_equiv_def equiv_for_def states_equiv_for_def)
-         apply (wp | simp)+
+         apply (wp thread_get_reads_respects | simp)+
    apply (intro conjI impI allI
           | fastforce simp: get_tcb_def elim: reads_equivE affects_equivE equiv_forE)+
    apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def split: option.splits)
-   apply (erule_tac x="(t, tcb_domain y)" in ballE, force)
-   apply (force intro: domtcbs simp: get_tcb_Some etcbs_of'_def)
+   apply (erule_tac x="(t, tcb_domain tcb)" in ballE, force)
+   apply (force intro: domtcbs simp: obj_at_def get_tcb_Some etcbs_of'_def)
   apply (simp add: equiv_valid_def2 thread_get_def)
   apply (rule equiv_valid_rv_bind)
     apply (wpsimp wp: equiv_valid_rv_trivial')
@@ -693,14 +703,6 @@ lemma get_bound_notification_reads_respects':
   apply clarify
   apply (rule requiv_get_tcb_eq)
    apply simp+
-  done
-
-lemma thread_get_reads_respects:
-  "reads_respects aag l (K (aag_can_read aag thread \<or> aag_can_affect aag l thread))
-                  (thread_get f thread)"
-  unfolding thread_get_def fun_app_def
-  apply (wp gets_the_ev)
-  apply (auto intro: reads_affects_equiv_get_tcb_eq)
   done
 
 lemma get_bound_notification_reads_respects:
@@ -956,7 +958,7 @@ lemma cancel_signal_owned_reads_respects:
 
 lemma as_user_get_register_reads_respects:
   "reads_respects aag l (K (is_subject aag thread)) (as_user thread (getRegister reg))"
-  by (fastforce simp: equiv_valid_guard_imp[OF as_user_reads_respects] det_getRegister)
+  by (wpsimp wp: as_user_reads_respects simp: det_getRegister)
 
 lemma update_restart_pc_reads_respects[wp]:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -1040,6 +1042,14 @@ lemma deleting_irq_handler_reads_respects:
   by (wp cap_delete_one_reads_respects_f reads_respects_f[OF get_irq_slot_reads_respects]
       | simp | blast)+
 
+crunch unbind_notification, set_original, fast_finalise
+  for valid_arch_state[wp]: "valid_arch_state"
+  (wp: dxo_wp_weak mapM_x_wp)
+
+crunch suspend
+  for valid_arch_state[wp]: "\<lambda>s :: det_state. valid_arch_state s"
+  (wp: mapM_x_wp_inv crunch_wps simp: crunch_simps tcb_cap_cases_def)
+
 lemma finalise_cap_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
@@ -1056,7 +1066,7 @@ lemma finalise_cap_reads_respects:
                         suspend_reads_respects_f[where st=st] deleting_irq_handler_reads_respects
                         unbind_notification_is_subj_reads_respects
                         unbind_maybe_notification_reads_respects
-                        unbind_notification_invs unbind_maybe_notification_invs
+                        unbind_notification_invs unbind_maybe_notification_invs suspend_silc_inv
                      | simp add: when_def invs_valid_objs invs_sym_refs aag_cap_auth_def
                                  cap_auth_conferred_def cap_rights_to_auth_def cap_links_irq_def
                                  aag_has_Control_iff_owns cte_wp_at_caps_of_state
@@ -1464,7 +1474,7 @@ crunch set_original
 lemma empty_slot_globals_equiv:
   "\<lbrace>globals_equiv st and valid_arch_state\<rbrace> empty_slot s b \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding empty_slot_def post_cap_deletion_def
-  by (wpsimp wp: set_cap_globals_equiv'' set_original_globals_equiv hoare_vcg_if_lift2
+  by (wpsimp wp: set_cap_globals_equiv set_original_globals_equiv hoare_vcg_if_lift2
                  set_cdt_globals_equiv dxo_wp_weak hoare_drop_imps hoare_vcg_all_lift)
 
 crunch fast_finalise
@@ -1473,7 +1483,7 @@ crunch fast_finalise
 
 crunch cap_delete_one
   for globals_equiv: "globals_equiv st"
-  (wp: set_cap_globals_equiv'' hoare_drop_imps simp: crunch_simps unless_def)
+  (wp: set_cap_globals_equiv hoare_drop_imps simp: crunch_simps unless_def)
 
 (*FIXME: Lots of this stuff should be in arch *)
 crunch deleting_irq_handler
@@ -1505,7 +1515,7 @@ lemma finalise_cap_globals_equiv:
   by (wp cancel_all_ipc_globals_equiv cancel_all_ipc_valid_global_objs
          cancel_all_signals_globals_equiv cancel_all_signals_valid_global_objs
          arch_finalise_cap_globals_equiv unbind_maybe_notification_globals_equiv
-         unbind_notification_globals_equiv liftM_wp when_def
+         unbind_notification_invs unbind_notification_globals_equiv liftM_wp when_def
       | clarsimp simp: valid_cap_def | intro impI conjI)+
 
 end
