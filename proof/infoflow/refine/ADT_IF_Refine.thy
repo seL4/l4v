@@ -229,11 +229,11 @@ locale ADT_IF_Refine_1 =
        (invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running')
        (do_user_op_if f tc) (doUserOp_if f tc)"
   and dmo_getActiveIRQ_corres:
-    "corres (=) \<top> \<top> (do_machine_op (getActiveIRQ in_kernel)) (doMachineOp (getActiveIRQ in_kernel'))"
+    "corres (=) \<top> \<top> (do_machine_op (getActiveIRQ in_kernel)) (doMachineOp (getActiveIRQ in_kernel))"
   and dmo'_getActiveIRQ_wp:
     "\<lbrace>\<lambda>s. P (irq_at (irq_state (ksMachineState s) + 1) (irq_masks (ksMachineState s)))
             (s\<lparr>ksMachineState := (ksMachineState s\<lparr>irq_state := irq_state (ksMachineState s) + 1\<rparr>)\<rparr>)\<rbrace>
-     doMachineOp (getActiveIRQ in_kernel)
+     doMachineOp (getActiveIRQ False)
      \<lbrace>P\<rbrace>"
   and handlePreemption_arch_extras[wp]:
     "handlePreemption_if tc \<lbrace>arch_extras\<rbrace>"
@@ -358,11 +358,6 @@ lemma checkActiveIRQ_ex_abs[wp]:
    apply (rule check_active_irq_if_wp)
   apply (clarsimp simp: ex_abs_def)
   done
-
-lemma handlePreemption_invs'[wp]:
-  "handlePreemption_if tc \<lbrace>invs'\<rbrace>"
-  unfolding handlePreemption_if_def
-  by (wpsimp wp: dmo'_getActiveIRQ_wp hoare_drop_imps)
 
 lemma handle_preemption_if_corres:
   "corres (=) (einvs and valid_domain_list and (\<lambda>s. 0 < domain_time s))
@@ -831,6 +826,11 @@ lemma ex_abs_pred_conjD1: (* FIXME: move *)
   "ex_abs (P and Q) s \<Longrightarrow> ex_abs P s"
   by (auto simp: ex_abs_def)
 
+lemma handlePreemption_invs'[wp]:
+  "handlePreemption_if tc \<lbrace>invs'\<rbrace>"
+  unfolding handlePreemption_if_def
+  by (wpsimp wp: dmo'_getActiveIRQ_wp hoare_drop_imps)
+
 lemma haskell_invs:
   "global_automaton_invs checkActiveIRQ_H_if (doUserOp_H_if uop)
                          kernelCall_H_if handlePreemption_H_if
@@ -966,7 +966,7 @@ lemma extras_inter'[dest!]:
 
 lemma fw_sim_abs_conc:
   "LI (ADT_abs) (ADT_conc) (lift_fst_rel srel) (invs_abs \<times> invs_conc)"
-  apply (unfold LI_def )
+  apply (unfold LI_def)
   apply (intro conjI allI)
     apply (rule init_refinement)
    apply (clarsimp simp: rel_semi_def relcomp_unfold lift_fst_rel_def
