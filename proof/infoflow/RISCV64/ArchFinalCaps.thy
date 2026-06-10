@@ -315,6 +315,10 @@ lemma invoke_tcb_silc_inv[FinalCaps_assms]:
                        authorised_tcb_inv_def emptyable_def
                  split: cap.splits option.splits)+
 
+lemma handle_reserved_irq_non_kernel_IRQs[FinalCaps_assms]:
+  "\<lbrace>P and K (irq \<notin> non_kernel_IRQs)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. P\<rbrace>"
+  unfolding handle_reserved_irq_def by wpsimp
+
 end
 
 
@@ -323,6 +327,14 @@ proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact FinalCaps_assms)?)
+qed
+
+
+global_interpretation FinalCaps_3?: FinalCaps_3
+proof goal_cases
+  interpret Arch .
+  case 1 show ?case
+    by (unfold_locales; (fact FinalCaps_assms | wpsimp)?)
 qed
 
 end

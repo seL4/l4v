@@ -54,6 +54,7 @@ lemma storeWord_equiv_but_for_labels[Ipc_IF_assms]:
      apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=interrupt_states])
     apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=interrupt_irq_node])
    apply (fastforce simp: equiv_asids_def equiv_asid_def elim: states_equiv_forE)
+  apply auto[2]
   apply (fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=ready_queues])
   done
 
@@ -203,9 +204,7 @@ lemma dmo_loadWord_reads_respects[Ipc_IF_assms]:
   "reads_respects aag l (K (for_each_byte_of_word (\<lambda> x. aag_can_read_or_affect aag l x) p))
                   (do_machine_op (loadWord p))"
   apply (rule gen_asm_ev)
-  apply (rule use_spec_ev)
-  apply (rule spec_equiv_valid_hoist_guard)
-  apply (rule do_machine_op_spec_reads_respects)
+  apply (rule do_machine_op_reads_respects)
    apply (simp add: loadWord_def equiv_valid_def2 spec_equiv_valid_def)
    apply (rule_tac R'="\<lambda>rv rv'. for_each_byte_of_word (\<lambda>y. rv y = rv' y) p"
                and Q="\<top>\<top>" and Q'="\<top>\<top>" and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
@@ -288,7 +287,7 @@ global_interpretation Ipc_IF_1?: Ipc_IF_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Ipc_IF_assms)?)
+    by (unfold_locales; (fact Ipc_IF_assms | wpsimp wp: Ipc_IF_assms)?)
 qed
 
 
@@ -442,7 +441,7 @@ lemma set_mrs_reads_respects'[Ipc_IF_assms]:
   apply (simp add: equiv_valid_def2)
   apply (rule equiv_valid_rv_guard_imp)
    apply (case_tac buf)
-    apply (rule_tac Q="\<top>" and P="\<top>" and L="{pasObjectAbs aag thread}" in ev_invisible[OF domains_distinct])
+    apply (rule_tac Q="\<top>" and P="\<top>" and L="{pasObjectAbs aag thread}" in revrv_invisible[OF domains_distinct])
       apply (clarsimp simp: labels_are_invisible_def)
      apply (rule modifies_at_mostI)
      apply (simp add: set_mrs_def)
@@ -452,7 +451,7 @@ lemma set_mrs_reads_respects'[Ipc_IF_assms]:
    apply (rename_tac buf')
    apply (rule_tac Q="\<top>" and L="{pasObjectAbs aag thread} \<union> (pasObjectAbs aag)
                                  ` (ptr_range buf' msg_align_bits)"
-                in ev_invisible[OF domains_distinct])
+                in revrv_invisible[OF domains_distinct])
      apply (auto simp: labels_are_invisible_def ipc_buffer_has_auth_def
                  dest: reads_read_page_read_thread simp: aag_can_affect_label_def)[1]
     apply (rule modifies_at_mostI)

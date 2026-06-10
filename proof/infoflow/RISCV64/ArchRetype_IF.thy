@@ -167,7 +167,8 @@ lemma copy_global_mappings_reads_respects_g:
                             pspace_aligned s \<and> valid_global_arch_objs s" in hoare_weaken_pre)
       apply (rule gets_sp)
      apply (assumption)
-    apply (wp mapM_x_ev store_pte_reads_respects_g get_pte_revg)
+    apply (rule mapM_x_ev)
+    apply (wp store_pte_reads_respects_g get_pte_revg)
      apply (simp only: pt_index_def)
      apply (subst table_base_offset_id)
        apply clarsimp
@@ -352,7 +353,7 @@ global_interpretation Retype_IF_1?: Retype_IF_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Retype_IF_assms)?)
+    by (unfold_locales; (fact Retype_IF_assms | solves wpsimp)?)
 qed
 
 
@@ -423,7 +424,6 @@ lemma reset_untyped_cap_reads_respects_g:
         apply (clarsimp simp: valid_cap_simps cap_aligned_def field_simps
                               free_index_of_def invs_valid_global_objs)
        apply (simp add: aligned_add_aligned is_aligned_shiftl)
-       apply (clarsimp simp: Kernel_Config.resetChunkBits_def)
        apply (rule hoare_pre)
         apply (wp preemption_point_inv' set_untyped_cap_invs_simple set_cap_cte_wp_at
                   set_cap_no_overlap only_timer_irq_inv_pres[where Q=\<top>, OF _ set_cap_domain_sep_inv]
@@ -619,7 +619,6 @@ lemma reset_untyped_cap_globals_equiv:
                  preemption_point_inv | simp add: if_apply_def2)+
     apply (clarsimp simp: is_cap_simps ptr_range_def[symmetric]
                           cap_aligned_def bits_of_def free_index_of_def)
-    apply (clarsimp simp: Kernel_Config.resetChunkBits_def)
     apply (strengthen invs_valid_global_objs invs_arch_state)
     apply (wp delete_objects_invs_ex hoare_vcg_const_imp_lift get_cap_wp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state descendants_range_def2 is_cap_simps bits_of_def
