@@ -19,8 +19,7 @@ crunch arch_post_cap_deletion
 lemma dmo_maskInterrupt_reads_respects[Finalise_IF_assms]:
   "reads_respects aag l \<top> (do_machine_op (maskInterrupt m irq))"
   unfolding maskInterrupt_def
-  apply (rule use_spec_ev)
-  apply (rule do_machine_op_spec_reads_respects)
+  apply (rule do_machine_op_reads_respects)
    apply (simp add: equiv_valid_def2)
    apply (rule modify_ev2)
    apply (fastforce simp: equiv_for_def)
@@ -165,21 +164,16 @@ lemma set_notification_equiv_but_for_labels[Finalise_IF_assms]:
   done
 
 lemma thread_set_reads_respects[Finalise_IF_assms]:
-  assumes domains_distinct[wp]: "pas_domains_distinct aag"
-  shows "reads_respects aag l \<top> (thread_set x y)"
-  unfolding thread_set_def fun_app_def
-  apply (case_tac "aag_can_read aag y \<or> aag_can_affect aag l y")
-   apply (wp set_object_reads_respects)
-   apply (clarsimp, rule reads_affects_equiv_get_tcb_eq, simp+)[1]
-  apply (simp add: equiv_valid_def2)
-  apply (rule equiv_valid_rv_guard_imp)
-   apply (rule_tac L="{pasObjectAbs aag y}" and L'="{pasObjectAbs aag y}"
-                in ev2_invisible[OF domains_distinct])
-       apply (assumption | simp add: labels_are_invisible_def)+
-     apply (rule modifies_at_mostI[where P="\<top>"]
-            | wp set_object_equiv_but_for_labels
-            | simp
-            | (clarify, drule get_tcb_not_asid_pool_at))+
+  "reads_respects aag l \<top> (thread_set f thread)"
+  unfolding thread_set_def
+  apply (rule equiv_valid_guard_imp)
+   apply (rule_tac Q=\<top> and ptr=thread in reads_respects_unit_cases)
+     apply (rule gen_asm_ev')
+     apply (wpsimp wp: set_object_reads_respects)
+    apply (wp set_object_equiv_but_for_labels)
+    apply (clarsimp simp: get_tcb_def obj_at_def)
+   apply wpsimp
+  apply (auto intro: reads_affects_equiv_get_tcb_eq)
   done
 
 lemma aag_cap_auth_ASIDPoolCap:
@@ -356,7 +350,7 @@ global_interpretation Finalise_IF_1?: Finalise_IF_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Finalise_IF_assms)?)
+    by (unfold_locales; (fact Finalise_IF_assms | solves \<open>wp only: Finalise_IF_assms; simp\<close>)?)
 qed
 
 end

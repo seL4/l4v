@@ -204,7 +204,7 @@ global_interpretation Syscall_IF_1?: Syscall_IF_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Syscall_IF_assms)?)
+    by (unfold_locales; (fact Syscall_IF_assms | solves \<open>wp only: Syscall_IF_assms; simp\<close>)?)
 qed
 
 end

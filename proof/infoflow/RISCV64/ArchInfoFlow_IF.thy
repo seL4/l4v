@@ -83,6 +83,72 @@ lemma equiv_asids_guard_imp[InfoFlow_IF_assms]:
   "\<lbrakk> equiv_asids R s s'; \<And>x. Q x \<Longrightarrow> R x \<rbrakk> \<Longrightarrow> equiv_asids Q s s'"
   by (auto simp: equiv_asids_def)
 
+
+definition identical_hyp_state_updates :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> machine_state \<Rightarrow> machine_state \<Rightarrow> bool" where
+  "identical_hyp_state_updates _ _ _ _ _ \<equiv> True"
+
+definition identical_fpu_state_updates :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> machine_state \<Rightarrow> machine_state \<Rightarrow> bool" where
+  "identical_fpu_state_updates _ _ _ _ _ \<equiv> True"
+
+definition no_hyp :: "'m machine_monad \<Rightarrow> bool" where
+  "no_hyp f \<equiv> True"
+
+definition no_fpu :: "'m machine_monad \<Rightarrow> bool" where
+  "no_fpu f \<equiv> True"
+
+lemma equiv_hyp_taut[intro!,simp]:
+  "equiv_hyp P s s'"
+  "equiv_hyp P st s = equiv_hyp P' st' s'"
+  by (simp_all add: equiv_hyp_def)
+
+lemma equiv_fpu_taut[intro!,simp]:
+  "equiv_fpu P s s'"
+  "equiv_fpu P st s = equiv_fpu P' st' s'"
+  by (simp_all add: equiv_fpu_def)
+
+lemma identical_hyp_states_updates_taut[intro!,simp]:
+  "identical_hyp_state_updates P s s' ms ms'"
+  by (simp add: identical_hyp_state_updates_def)
+
+lemma identical_fpu_states_updates_taut[intro!,simp]:
+  "identical_fpu_state_updates P s s' ms ms'"
+  by (simp add: identical_fpu_state_updates_def)
+
+lemma no_hyp_taut[intro!,simp]:
+  "no_hyp f"
+  by (simp add: no_hyp_def)
+
+lemma no_fpu_taut[intro!,simp]:
+  "no_fpu f"
+  by (simp add: no_fpu_def)
+
+lemmas equiv_arch_taut =
+  equiv_hyp_taut
+  equiv_fpu_taut
+  identical_hyp_states_updates_taut
+  identical_fpu_states_updates_taut
+  no_hyp_taut
+  no_fpu_taut
+
+end
+
+arch_requalify_consts
+  identical_hyp_state_updates
+  identical_fpu_state_updates
+  no_hyp
+  no_fpu
+
+
+global_interpretation InfoFlow_IF_1?: InfoFlow_IF_1 identical_hyp_state_updates identical_fpu_state_updates
+proof goal_cases
+  interpret Arch .
+  case 1 show ?case
+    by (unfold_locales; (fact InfoFlow_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
+qed
+
+
+context Arch begin arch_global_naming
+
 lemma dmo_loadWord_rev[InfoFlow_IF_assms]:
   "reads_equiv_valid_inv A aag (K (for_each_byte_of_word (aag_can_read aag) p))
                                (do_machine_op (loadWord p))"
@@ -109,14 +175,51 @@ lemma dmo_loadWord_rev[InfoFlow_IF_assms]:
       apply (wp wp_post_taut loadWord_inv | simp)+
   done
 
+lemma do_machine_op_reads_respects'[InfoFlow_IF_assms]:
+  assumes equiv_dmo:
+   "equiv_valid_inv (equiv_machine_state (aag_can_read aag) and equiv_irq_state)
+                    (equiv_machine_state (aag_can_affect aag l)) Q f"
+  assumes guard:
+    "\<And>s. P s \<Longrightarrow> Q (machine_state s)"
+  and no_hyp: "no_hyp f"
+  and no_fpu: "no_fpu f"
+  shows
+  "reads_respects aag l P (do_machine_op f)"
+  apply (rule use_spec_ev)
+  unfolding do_machine_op_def spec_equiv_valid_def
+  apply (rule equiv_valid_2_guard_imp)
+    apply (rule_tac R'="\<lambda>rv rv'. equiv_machine_state (aag_can_read aag or aag_can_affect aag l) rv rv' \<and>
+                                 equiv_irq_state rv rv'"
+                and Q="\<lambda>r s. st = s \<and> Q r" and Q'="\<lambda> r s. Q r" and P="(=) st" and P'="\<top>" in equiv_valid_2_bind)
+       apply (rule gen_asm_ev2_l[simplified K_def pred_conj_def])
+       apply (rule gen_asm_ev2_r')
+       apply (rule_tac R'="\<lambda>(r,ms') (r',ms''). r = r' \<and>
+                                               equiv_machine_state (aag_can_read aag) ms' ms'' \<and>
+                                               equiv_machine_state (aag_can_affect aag l) ms' ms'' \<and>
+                                               equiv_irq_state ms' ms''"
+                   and Q="\<lambda>r s. st = s" and Q'="\<top>\<top>" and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
+            apply (clarsimp simp: modify_def get_def put_def bind_def return_def equiv_valid_2_def)
+            apply (fastforce intro: reads_equiv_machine_state_update affects_equiv_machine_state_update)
+           apply (insert equiv_dmo)[1]
+           apply (clarsimp simp: select_f_def equiv_valid_2_def equiv_valid_def2 equiv_for_or split_def equiv_for_def)[1]
+           apply (drule_tac x=rv in spec, drule_tac x=rv' in spec)
+           apply (fastforce)
+          apply (rule select_f_inv)
+         apply (rule wp_post_taut)
+        apply simp+
+      apply (clarsimp simp: equiv_valid_2_def in_monad)
+      apply (fastforce elim: reads_equivE affects_equivE equiv_forE intro: equiv_forI)
+     apply (wp | simp add: guard)+
+  done
+
 end
 
 
-global_interpretation InfoFlow_IF_1?: InfoFlow_IF_1
+global_interpretation InfoFlow_IF_1?: InfoFlow_IF_2 identical_hyp_state_updates identical_fpu_state_updates no_hyp no_fpu
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact InfoFlow_IF_assms)?)
+    by (unfold_locales; (fact InfoFlow_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
 qed
 
 end

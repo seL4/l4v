@@ -10,6 +10,8 @@ imports
   "Lib.EquivValid"
 begin
 
+consts equiv_for :: "('a \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> 'a \<Rightarrow> 'c) \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> bool"
+
 context Arch begin global_naming RISCV64
 
 section \<open>Arch-specific equivalence properties\<close>
@@ -61,6 +63,12 @@ definition arch_globals_equiv :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> kh
      kh (riscv_global_pt as) = kh' (riscv_global_pt as)"
 
 declare arch_globals_equiv_def[simp]
+
+definition equiv_hyp :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> bool" where
+  "equiv_hyp P s s' \<equiv> True"
+
+definition equiv_fpu :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> bool" where
+  "equiv_fpu P s s' \<equiv> True"
 
 end
 
