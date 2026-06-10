@@ -116,6 +116,14 @@ locale UserOp_IF_1 =
           arch_globals_equiv ct it kh kh' as as' ms ms'"
     "\<And>f. arch_globals_equiv ct it kh kh' as as' ms (device_state_update f ms') =
           arch_globals_equiv ct it kh kh' as as' ms ms'"
+  and no_hyp_modify[wp,simp]:
+    "\<And>f. no_hyp (modify (\<lambda>ms :: machine_state. ms\<lparr>underlying_memory := f ms\<rparr>))"
+    "\<And>f. no_hyp (modify (\<lambda>ms :: machine_state. ms\<lparr>device_state := f ms\<rparr>))"
+    "\<And>f. no_hyp (modify (\<lambda>ms :: machine_state. ms\<lparr>machine_state_rest := f ms\<rparr>))"
+  and no_fpu_modify[wp,simp]:
+    "\<And>f. no_fpu (modify (\<lambda>ms :: machine_state. ms\<lparr>underlying_memory := f ms\<rparr>))"
+    "\<And>f. no_fpu (modify (\<lambda>ms :: machine_state. ms\<lparr>device_state := f ms\<rparr>))"
+    "\<And>f. no_fpu (modify (\<lambda>ms :: machine_state. ms\<lparr>machine_state_rest := f ms\<rparr>))"
 begin
 
 (* Assumptions:
@@ -132,13 +140,10 @@ lemma dmo_user_memory_update_reads_respects_g:
   apply (subgoal_tac "reads_respects aag l \<top> (do_machine_op (user_memory_update um))")
    apply (fastforce simp: equiv_valid_def2 equiv_valid_2_def in_monad do_machine_op_def
                           user_memory_update_def select_f_def idle_equiv_def)
-  apply (rule use_spec_ev)
   apply (simp add: user_memory_update_def)
-  apply (rule do_machine_op_spec_reads_respects)
-   apply (simp add: equiv_valid_def2)
-   apply (rule modify_ev2)
-   apply (fastforce intro: equiv_forI elim: equiv_forE split: option.splits)
-  apply (wp | simp)+
+  apply (wpsimp wp: do_machine_op_reads_respects modify_ev)
+      apply (fastforce intro: equiv_forI elim: equiv_forE split: option.splits)
+     apply wpsimp+
   done
 
 lemma dmo_device_state_update_reads_respects_g:
@@ -150,13 +155,10 @@ lemma dmo_device_state_update_reads_respects_g:
   apply (subgoal_tac "reads_respects aag l \<top> (do_machine_op (device_memory_update um))")
    apply (fastforce simp: equiv_valid_def2 equiv_valid_2_def in_monad do_machine_op_def
                           device_memory_update_def select_f_def idle_equiv_def)
-  apply (rule use_spec_ev)
   apply (simp add: device_memory_update_def)
-  apply (rule do_machine_op_spec_reads_respects)
-   apply (simp add: equiv_valid_def2)
-   apply (rule modify_ev2)
-   apply (fastforce intro: map_add_eq equiv_forI elim: equiv_forE split: option.splits)
-  apply (wp | simp)+
+  apply (wpsimp wp: do_machine_op_reads_respects modify_ev)
+      apply (fastforce intro: map_add_eq equiv_forI elim: equiv_forE split: option.splits)
+     apply wpsimp+
   done
 
 end

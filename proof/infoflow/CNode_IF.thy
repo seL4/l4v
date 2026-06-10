@@ -46,7 +46,7 @@ lemma get_object_rev:
 lemma get_cap_rev:
   "reads_equiv_valid_inv A aag (K (aag_can_read aag (fst slot))) (get_cap slot)"
   unfolding get_cap_def
-  by (wp get_object_rev | wpc | simp add: split_def)+
+  by (wpsimp wp: get_object_rev)
 
 declare if_weak_cong[cong]
 
@@ -321,14 +321,9 @@ locale CNode_IF_1 =
   fixes state_ext_t :: "'s :: state_ext itself"
   and irq_at :: "nat \<Rightarrow> (irq \<Rightarrow> bool) \<Rightarrow> irq option"
   assumes set_cap_globals_equiv:
-    "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
+    "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
      set_cap cap p
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  and dmo_getActiveIRQ_wp:
-    "\<lbrace>\<lambda>s. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)))
-            (s\<lparr>machine_state := machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>\<rparr>)\<rbrace>
-     do_machine_op (getActiveIRQ in_kernel)
-     \<lbrace>\<lambda>rv s :: 's state. P rv s\<rbrace>"
   and arch_globals_equiv_irq_state_update[simp]:
     "arch_globals_equiv ct it kh kh' as as' ms (irq_state_update f ms') =
      arch_globals_equiv ct it kh kh' as as' ms ms'"
@@ -340,7 +335,7 @@ crunch set_untyped_cap_as_full
   for globals_equiv[wp]: "globals_equiv st"
 
 lemma cap_insert_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
+  "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
    cap_insert new_cap src_slot dest_slot
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding cap_insert_def fun_app_def
@@ -348,14 +343,14 @@ lemma cap_insert_globals_equiv:
                  set_cap_globals_equiv hoare_drop_imps dxo_wp_weak)
 
 lemma cap_move_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
+  "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
    cap_move new_cap src_slot dest_slot
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding cap_move_def fun_app_def
   by (wpsimp wp: set_original_globals_equiv set_cdt_globals_equiv set_cap_globals_equiv dxo_wp_weak)
 
 lemma cap_swap_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
+  "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
    cap_swap cap1 slot1 cap2 slot2
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding cap_swap_def
@@ -476,12 +471,6 @@ lemma only_timer_irq_inv_determines_irq_masks:
   apply (case_tac "interrupt_states s x")
     apply (fastforce simp: invs_def valid_state_def valid_irq_states_def valid_irq_masks_def)
    apply fastforce+
-  done
-
-lemma dmo_getActiveIRQ_globals_equiv:
-  "\<lbrace>globals_equiv st\<rbrace> do_machine_op (getActiveIRQ in_kernel) \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply (wp dmo_getActiveIRQ_wp)
-  apply (auto simp: globals_equiv_def idle_equiv_def)
   done
 
 crunch reset_work_units, work_units_limit_reached, update_work_units
@@ -660,9 +649,11 @@ locale CNode_IF_3 = CNode_IF_2 +
   fixes aag :: "'a subject_label PAS"
   assumes dmo_getActiveIRQ_reads_respects:
     "reads_respects aag l (invs and only_timer_irq_inv irq st) (do_machine_op (getActiveIRQ in_kernel))"
+  and dmo_getActiveIRQ_globals_equiv:
+    "do_machine_op (getActiveIRQ in_kernel) \<lbrace>globals_equiv st\<rbrace>"
 begin
 
-lemma dmo_getActiveIRQ_reads_respects_g :
+lemma dmo_getActiveIRQ_reads_respects_g:
   "reads_respects_g aag l (invs and only_timer_irq_inv irq st) (do_machine_op (getActiveIRQ in_kernel))"
   apply (rule equiv_valid_guard_imp[OF reads_respects_g])
     apply (rule dmo_getActiveIRQ_reads_respects)
@@ -735,18 +726,6 @@ lemma reads_respects_f_g:
    apply (assumption)
   apply (fastforce intro: globals_equivI)
   done
-
-lemma reads_equiv_valid_rv_inv_f:
-  assumes a: "reads_equiv_valid_rv_inv A aag R P f"
-  assumes b: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
-  shows "equiv_valid_rv_inv (reads_equiv_f aag) A R P f"
-  apply (clarsimp simp: equiv_valid_2_def reads_equiv_f_def)
-  apply (insert a, clarsimp simp: equiv_valid_2_def)
-  apply (drule_tac x=s in spec, drule_tac x=t in spec, clarsimp)
-  apply (drule (1) bspec, clarsimp)
-  apply (drule (1) bspec, clarsimp)
-  apply (drule state_unchanged[OF b])+
-  by simp
 
 lemma set_cap_silc_inv':
   "\<lbrace>silc_inv aag st and (\<lambda>s. \<not> cap_points_to_label aag cap (pasObjectAbs aag (fst slot))

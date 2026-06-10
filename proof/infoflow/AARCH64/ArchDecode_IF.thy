@@ -8,7 +8,7 @@ theory ArchDecode_IF
 imports Decode_IF
 begin
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 named_theorems Decode_IF_assms
 
@@ -46,19 +46,21 @@ lemma arch_decode_irq_control_invocation_rev[Decode_IF_assms]:
      (arch_decode_irq_control_invocation label args slot caps)"
   unfolding arch_decode_irq_control_invocation_def arch_check_irq_def
   apply (wp ensure_empty_rev lookup_slot_for_cnode_op_rev
-            is_irq_active_rev whenE_inv
+            is_irq_active_rev whenE_inv range_check_ev
          | wp (once) hoare_drop_imps
-         | simp add: Let_def)+
+         | simp add: Let_def unlessE_def split del: if_split)+
   apply safe
-       apply simp+
-    apply (blast intro: aag_Control_into_owns_irq )
+           apply simp+
+      apply (blast intro: aag_Control_into_owns_irq)
+     apply (drule_tac x="caps ! 0" in bspec)
+      apply (fastforce intro: bang_0_in_set)
+     apply (drule (1) is_cnode_into_is_subject; blast dest: prop_of_obj_ref_of_cnode_cap)
+    apply (fastforce dest: is_cnode_into_is_subject intro: bang_0_in_set)
    apply (drule_tac x="caps ! 0" in bspec)
     apply (fastforce intro: bang_0_in_set)
    apply (drule (1) is_cnode_into_is_subject; blast dest: prop_of_obj_ref_of_cnode_cap)
   apply (fastforce dest: is_cnode_into_is_subject intro: bang_0_in_set)
   done
-
-requalify_facts check_valid_ipc_buffer_inv
 
 end
 
@@ -71,12 +73,13 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq'':
   "\<lbrakk> \<forall>asid. is_subject_asid aag asid; reads_equiv aag s t; pas_refined aag x \<rbrakk>
      \<Longrightarrow> arm_asid_table (arch_state s) (asid_high_bits_of base) =
          arm_asid_table (arch_state t) (asid_high_bits_of base)"
+  supply asid_high_bits_of_0[simp del]
   apply (subgoal_tac "asid_high_bits_of 0 = asid_high_bits_of 1")
    apply (case_tac "base = 0")
     apply (subgoal_tac "is_subject_asid aag 1")
@@ -172,6 +175,10 @@ lemma decode_asid_control_invocation_reads_respects_f:
   apply fastforce
   done
 
+lemma reads_respects_f_check_vspace_root[wp]:
+  "reads_respects_f aag l \<top> (check_vspace_root cap arg)"
+  unfolding check_vspace_root_def by wpsimp
+
 lemma decode_frame_invocation_reads_respects_f:
   notes reads_respects_f_inv' = reads_respects_f_inv[where st=st]
   notes whenE_wps[wp_split del]
@@ -179,15 +186,15 @@ lemma decode_frame_invocation_reads_respects_f:
     "reads_respects_f aag l
        (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
                         and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)
-                        and K (cap = FrameCap p R sz dev m)
+                        and valid_arch_cap cap and K (cap = FrameCap p R sz dev m)
                         and K (\<forall>(cap, slot) \<in> {(cap.ArchObjectCap cap, slot)} \<union> set excaps.
                                  aag_cap_auth aag (pasObjectAbs aag (fst slot)) cap \<and>
                                  is_subject aag (fst slot) \<and>
                                  (\<forall>v \<in> cap_asid' cap. is_subject_asid aag v)))
         (decode_frame_invocation label args slot cap excaps)"
-  unfolding decode_frame_invocation_def decode_fr_inv_map_def
-            check_slot_def check_vp_alignment_def gets_the_def
-  supply gets_the_ev[wp del]
+  unfolding decode_frame_invocation_def decode_fr_inv_map_def decode_fr_inv_flush_def
+            check_vp_alignment_def gets_the_def
+  apply (rule gen_asm_ev)+
   apply (rule equiv_valid_guard_imp)
    apply ((wp gets_ev' check_vp_wpR  reads_respects_f_inv'[OF get_asid_pool_rev]
               reads_respects_f_inv'[OF ensure_empty_rev]
@@ -202,123 +209,204 @@ lemma decode_frame_invocation_reads_respects_f:
            | wpc
            | simp add: Let_def unlessE_whenE
            | wp (once) whenE_throwError_wp)+)[1]
-  apply clarsimp
+  apply (case_tac "invocation_type label = ArchInvocationLabel ARMPageMap"; clarsimp)
   apply (drule_tac x="excaps ! 0" in bspec, fastforce intro: bang_0_in_set)+
-  apply (intro conjI; clarsimp)
-   apply (fastforce dest: cte_wp_valid_cap simp: valid_cap_def wellformed_mapdata_def)
-  apply (prop_tac "args ! 0 \<in> user_region")
-   apply (drule not_le_imp_less)
-   apply (frule order.strict_implies_order[where b=user_vtop])
-   apply (drule order.strict_trans[OF _ user_vtop_pptr_base])
-   apply (drule canonical_below_pptr_base_user)
-    apply (erule below_user_vtop_canonical)
-   apply (clarsimp simp: user_region_def)
-   apply (drule is_aligned_no_overflow_mask)
-   apply (erule (1) dual_order.trans)
-  apply (rule conjI; clarsimp)
-   apply (clarsimp simp: reads_equiv_f_def)
-   apply (frule vspace_for_asid_vs_lookup)
-   apply (frule_tac pt=xa and level=max_pt_level and bot_level=0 in pt_walk_reads_equiv,
-          (fastforce dest: aag_has_Control_iff_owns
-                     elim: vs_lookup_table_vref_independent
-                     simp: aag_cap_auth_def cap_auth_conferred_def arch_cap_auth_conferred_def
-                           pt_lookup_slot_def pt_lookup_slot_from_level_def obind_def
-                    split: option.splits)+)[1]
-  apply (subgoal_tac "is_subject aag (table_base bb)", clarsimp)
-  apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def vspace_for_asid_def)
-  apply (frule pt_walk_is_aligned)
-   apply (erule (1) vspace_for_pool_is_aligned[OF _ _ user_region0]; clarsimp)
   apply clarsimp
-  apply (erule_tac asid=a in pt_walk_is_subject[rotated 4]; clarsimp?)
-   apply (clarsimp simp: vs_lookup_table_def in_omonad)
-  apply (fastforce intro: vspace_for_asid_is_subject simp: vspace_for_asid_def in_omonad)
-  done
+  apply (case_tac "m = None \<and> \<not> user_vtop < args ! 0 + mask (pageBitsForSize sz) \<or> (m = Some (asid, args ! 0))")
+   prefer 2
+   apply clarsimp
+  apply (prop_tac "\<not> user_vtop < args ! 0 + mask (pageBitsForSize sz) \<longrightarrow> args ! 0 \<in> user_region")
+   apply (clarsimp simp: user_region_def not_le)
+   apply (rule user_vtop_leq_canonical_user)
+   apply (simp add: vmsz_aligned_def not_less)
+   apply (drule is_aligned_no_overflow_mask)
+   apply simp
+  apply (prop_tac "args ! 0 \<in> user_region")
+   apply (fastforce simp: valid_arch_cap_def wellformed_mapdata_def)
+  apply (subgoal_tac "(\<forall>t. reads_equiv_f aag s t \<and> affects_equiv aag l s t \<longrightarrow>
+                           pt_lookup_slot pt (args ! 0) (ptes_of s) = pt_lookup_slot pt (args ! 0) (ptes_of t))")
+   apply clarsimp
+  apply (clarsimp simp: reads_equiv_f_def)
+  apply (frule vspace_for_asid_vs_lookup)
+  apply (frule_tac pt=pt and level=max_pt_level and bot_level=0 in pt_walk_reads_equiv)
+  by (fastforce dest: aag_has_Control_iff_owns
+                elim: vs_lookup_table_vref_independent
+                simp: aag_cap_auth_def cap_auth_conferred_def arch_cap_auth_conferred_def
+                      pt_lookup_slot_def pt_lookup_slot_from_level_def obind_def
+               split: option.splits)+
 
 lemma decode_page_table_invocation_reads_respects_f:
   notes reads_respects_f_inv' = reads_respects_f_inv[where st=st]
-  notes whenE_wps[wp_split del]
   shows
     "reads_respects_f aag l
        (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
                         and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)
-                        and K (cap = PageTableCap p m)
+                        and valid_arch_cap cap and K (cap = PageTableCap p pt_t m)
                         and K (\<forall>(cap, slot) \<in> {(cap.ArchObjectCap cap, slot)} \<union> set excaps.
                                  aag_cap_auth aag (pasObjectAbs aag (fst slot)) cap \<and>
                                  is_subject aag (fst slot) \<and>
                                  (\<forall>v \<in> cap_asid' cap. is_subject_asid aag v)))
         (decode_page_table_invocation label args slot cap excaps)"
   unfolding decode_page_table_invocation_def decode_pt_inv_map_def gets_the_def
-  supply gets_the_ev[wp del]
-  apply (rule equiv_valid_guard_imp)
-   apply ((wp gets_ev' check_vp_wpR reads_respects_f_inv'[OF get_asid_pool_rev]
-              reads_respects_f_inv'[OF ensure_empty_rev]
-              reads_respects_f_inv'[OF get_pte_rev]
-              reads_respects_f_inv'[OF lookup_slot_for_cnode_op_rev]
-              reads_respects_f_inv'[OF ensure_no_children_rev]
-              reads_respects_f_inv'[OF lookup_error_on_failure_rev]
-              find_vspace_for_asid_reads_respects
-              is_final_cap_reads_respects
-              select_ext_ev_bind_lift
-              select_ext_ev_bind_lift[simplified]
-           | simp add: Let_def unlessE_whenE if_fun_split
-           | wpc
-           | wp (once) whenE_throwError_wp hoare_drop_imps)+)[1]
+  apply (wp gets_ev' check_vp_wpR reads_respects_f_inv'[OF get_asid_pool_rev]
+            reads_respects_f_inv'[OF ensure_empty_rev]
+            reads_respects_f_inv'[OF get_pte_rev]
+            reads_respects_f_inv'[OF lookup_slot_for_cnode_op_rev]
+            reads_respects_f_inv'[OF ensure_no_children_rev]
+            reads_respects_f_inv'[OF lookup_error_on_failure_rev]
+            find_vspace_for_asid_reads_respects
+            is_final_cap_reads_respects
+            select_ext_ev_bind_lift
+            select_ext_ev_bind_lift[simplified]
+         | wpc
+         | simp add: Let_def unlessE_whenE if_fun_split
+         | wp (once) whenE_throwError_wp hoare_drop_imps)+
   apply clarsimp
   apply (rule conjI; clarsimp)
    apply (drule_tac x="excaps ! 0" in bspec, fastforce intro: bang_0_in_set)+
    apply (prop_tac "args ! 0 \<in> user_region")
-    apply (drule not_le_imp_less)
-    apply (frule order.strict_implies_order[where b=user_vtop])
-    apply (drule order.strict_trans[OF _ user_vtop_pptr_base])
-    apply (drule canonical_below_pptr_base_user)
-     apply (erule below_user_vtop_canonical)
-    apply (clarsimp simp: user_region_def)
-   apply clarsimp
-   apply (intro conjI impI allI; clarsimp)
-     apply (fastforce dest: cte_wp_valid_cap simp: valid_cap_def wellformed_mapdata_def)
+    apply (clarsimp simp: user_region_def not_le)
+    apply (rule user_vtop_leq_canonical_user)
+    apply (simp add: vmsz_aligned_def not_less)
+   apply (clarsimp cong: conj_cong imp_cong)
+   apply (rule context_conjI; clarsimp)
     apply (clarsimp simp: reads_equiv_f_def)
     apply (frule vspace_for_asid_vs_lookup)
-    apply (frule_tac pt=xa and level=max_pt_level and bot_level=0 in pt_walk_reads_equiv,
+    apply (frule_tac pt=pt and level=max_pt_level and bot_level=0 in pt_walk_reads_equiv,
            (fastforce dest: aag_has_Control_iff_owns
                       elim: vs_lookup_table_vref_independent
                       simp: aag_cap_auth_def cap_auth_conferred_def arch_cap_auth_conferred_def
                             pt_lookup_slot_def pt_lookup_slot_from_level_def obind_def
                      split: option.splits)+)[1]
-   apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def vspace_for_asid_def)
-   apply (frule pt_walk_is_aligned)
-    apply (erule (1) vspace_for_pool_is_aligned[OF _ _ user_region0]; clarsimp)
-   apply clarsimp
-   apply (erule_tac asid=a in pt_walk_is_subject[rotated 4]; clarsimp?)
-    apply (clarsimp simp: vs_lookup_table_def in_omonad)
-   apply (fastforce intro: vspace_for_asid_is_subject simp: vspace_for_asid_def in_omonad)
-  apply (rule conjI, fastforce elim!: is_subject_not_silc_inv)+
-  apply (clarsimp simp: reads_equiv_f_def)
-  apply (erule reads_equivE)
-  apply (clarsimp simp: equiv_asids_def equiv_asid_def)
-  apply (erule_tac x=a in allE)
-  apply (fastforce simp: vspace_for_asid_def pool_for_asid_def vspace_for_pool_def
-                         asid_pools_of_ko_at obj_at_def obind_def opt_map_def
-                  split: option.splits)
+   apply (frule (3) pt_lookup_slot_pte_at)
+   apply (clarsimp simp: pte_at_def2)
+   apply (frule vspace_for_asid_is_subject, fastforce+)
+   apply (clarsimp simp: pt_lookup_slot_def)
+   apply (erule pt_lookup_slot_from_level_is_subject)
+          apply fastforce+
+      apply (fastforce dest: vspace_for_asid_vs_lookup vs_lookup_table_vref_independent)
+     apply clarsimp+
+  apply (intro conjI)
+     apply fastforce
+    apply fastforce
+   apply fastforce
+  apply (fastforce dest: silc_inv_not_subject)
   done
 
-lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
+lemma reads_respects_gets_lookup_frame:
+  "reads_respects aag l
+     (pas_refined aag and pspace_aligned and valid_vspace_objs and valid_asid_table
+                      and (\<lambda>s. \<exists>asid. vspace_for_asid asid s = Some pt \<and>
+                               is_subject_asid aag asid \<and> vptr \<in> user_region))
+               (gets (lookup_frame pt vptr \<circ> ptes_of))"
+  apply (wp gets_ev')
+  apply (clarsimp simp: lookup_frame_def pt_lookup_slot_def)
+  apply (frule (3) vspace_for_asid_is_subject)
+  apply (frule vspace_for_asid_vs_lookup)
+  apply (rule obind_eqI_full)
+   apply (frule (6) pt_walk_reads_equiv[where bot_level=0])
+     apply (rule order_refl)
+    apply (erule vs_lookup_table_vref_independent[OF _ order_refl])
+   apply (clarsimp simp: pt_lookup_slot_from_level_def obind_def split: option.splits)
+  apply clarsimp
+  apply (rule obind_eqI; clarsimp simp: obind_def)
+  apply (rule_tac aag=aag in ptes_of_reads_equiv)
+  by (fastforce elim: vs_lookup_table_vref_independent pt_lookup_slot_from_level_is_subject)
+
+lemma decode_vspace_invocation_reads_respects_f:
   notes reads_respects_f_inv' = reads_respects_f_inv[where st=st]
-  notes whenE_wps[wp_split del]
   shows
     "reads_respects_f aag l
        (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
-                        and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)
-                        and K (\<forall>(cap, slot) \<in> {(cap.ArchObjectCap cap, slot)} \<union> set excaps.
-                                 aag_cap_auth aag (pasObjectAbs aag (fst slot)) cap \<and>
-                                 is_subject aag (fst slot) \<and>
-                                 (\<forall>v \<in> cap_asid' cap. is_subject_asid aag v)))
-        (arch_decode_invocation label args cap_index slot cap excaps)"
+                        and valid_arch_cap cap
+                        and K (aag_cap_auth aag (pasObjectAbs aag (fst slot)) (ArchObjectCap cap) \<and>
+                               is_subject aag (fst slot) \<and>
+                               (\<forall>v \<in> cap_asid' (ArchObjectCap cap). is_subject_asid aag v)))
+        (decode_vspace_invocation label args slot cap excaps)"
+  unfolding decode_vspace_invocation_def decode_vs_inv_flush_def
+  apply (wpsimp wp: reads_respects_f_inv'[OF reads_respects_gets_lookup_frame]
+                    reads_respects_f_inv'[OF lookup_error_on_failure_rev]
+                    find_vspace_for_asid_reads_respects whenE_throwError_wp hoare_vcg_all_lift
+              simp: Let_def)+
+  apply (fastforce intro: user_vtop_leq_canonical_user simp: user_region_def user_vtop_def)
+  done
+
+lemma aag_cap_auth_VCPUCap:
+  "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (VCPUCap vcpu_ptr)); pas_refined aag s \<rbrakk>
+     \<Longrightarrow> is_subject aag vcpu_ptr"
+  unfolding aag_cap_auth_def
+  by (simp add: clas_no_asid cap_auth_conferred_def arch_cap_auth_conferred_def
+                cli_no_irqs pas_refined_all_auth_is_owns)
+
+lemma decode_vcpu_inject_irq_reads_respects_f:
+  "\<lbrakk> cap = VCPUCap vcpu_ptr; invocation_type label = ArchInvocationLabel ARMVCPUInjectIRQ\<rbrakk>
+     \<Longrightarrow> reads_respects_f aag l
+           (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (ArchObjectCap cap)) slot
+                            and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)
+                            and valid_arch_cap cap
+                            and K (\<forall>(cap, slot) \<in> {(cap.ArchObjectCap cap, slot)} \<union> set excaps.
+                                     aag_cap_auth aag (pasObjectAbs aag (fst slot)) cap \<and>
+                                     is_subject aag (fst slot) \<and>
+                                     (\<forall>v \<in> cap_asid' cap. is_subject_asid aag v)))
+            (decode_vcpu_inject_irq args (VCPUCap vcpu_ptr))"
+  unfolding decode_vcpu_inject_irq_def range_check_def unlessE_whenE
+  apply (wpsimp wp: reads_respects_f[OF get_vcpu_reads_respects, where st=st])
+  apply (prop_tac "valid_numlistregs x")
+   apply (frule invs_arch_state)
+   apply (clarsimp simp: valid_arch_state_def)
+  apply (clarsimp simp: valid_numlistregs_def)
+  apply (auto simp: aag_cap_auth_VCPUCap reads_equiv_f_def reads_equiv_def2
+                    states_equiv_for_def equiv_hyp_def equiv_for_def
+              dest: aag_can_read_self)
+  done
+
+lemma decode_vcpu_invocation_reads_respects_f:
+  "reads_respects_f aag l
+     (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (ArchObjectCap cap)) slot
+                      and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)
+                      and valid_arch_cap cap
+                      and K (\<forall>(cap, slot) \<in> {(cap.ArchObjectCap cap, slot)} \<union> set excaps.
+                               aag_cap_auth aag (pasObjectAbs aag (fst slot)) cap \<and>
+                               is_subject aag (fst slot) \<and>
+                               (\<forall>v \<in> cap_asid' cap. is_subject_asid aag v)))
+      (decode_vcpu_invocation label args cap excaps)"
+  unfolding decode_vcpu_invocation_def
+  apply (cases cap; clarsimp; (solves wp)?)
+  apply (cases "invocation_type label"; clarsimp; (solves wp)?)
+  by (wpsimp wp: decode_vcpu_inject_irq_reads_respects_f
+           simp: decode_vcpu_read_register_def decode_vcpu_write_register_def
+                 decode_vcpu_set_tcb_def decode_vcpu_ack_vppi_def arch_check_irq_def
+      | fastforce)+
+
+lemma decode_sgi_signal_invocation_reads_respects_f[wp]:
+  "reads_respects_f aag l \<top> (decode_sgi_signal_invocation (SGISignalCap irq target))"
+  unfolding decode_sgi_signal_invocation_def
+  by wpsimp
+
+lemma decode_smc_invocation_reads_respects_f[wp]:
+  "reads_respects_f aag l \<top> (decode_smc_invocation label args cap)"
+  unfolding decode_smc_invocation_def
+  by (wpsimp simp: unlessE_whenE)
+
+lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
+  "reads_respects_f aag l
+     (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
+                      and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)
+                      and K (\<forall>(cap, slot) \<in> {(cap.ArchObjectCap cap, slot)} \<union> set excaps.
+                               aag_cap_auth aag (pasObjectAbs aag (fst slot)) cap \<and>
+                               is_subject aag (fst slot) \<and>
+                               (\<forall>v \<in> cap_asid' cap. is_subject_asid aag v)))
+      (arch_decode_invocation label args cap_index slot cap excaps)"
   unfolding arch_decode_invocation_def
-  apply (cases cap; rule equiv_valid_guard_imp)
+  apply (cases cap; clarsimp; rule equiv_valid_guard_imp)
   by (wpsimp wp: decode_asid_pool_invocation_reads_respects_f
                  decode_asid_control_invocation_reads_respects_f
                  decode_frame_invocation_reads_respects_f
-                 decode_page_table_invocation_reads_respects_f | fastforce)+
+                 decode_vspace_invocation_reads_respects_f
+                 decode_vcpu_invocation_reads_respects_f
+                 decode_page_table_invocation_reads_respects_f
+      | fastforce dest: caps_of_state_valid cte_wp_at_caps_of_state'
+                  simp: valid_cap_def valid_arch_cap_def)+
 
 end
 
