@@ -27,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [ARM, RISCV64]
+        arch: [ARM, RISCV64, AARCH64]
     # test only most recent push to PR:
     concurrency:
       group: l4v-${{ github.workflow }}-${{ github.event.number }}-idx-${{ strategy.job-index }}
