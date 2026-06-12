@@ -4,11 +4,12 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(* Proofs about untyped invocations. *)
+(* Architecture-specific proofs about untyped invocations. *)
 
-theory Untyped_R
-imports ArchDetype_R Invocations_R InterruptAcc_R
+theory ArchUntyped_R
+imports Untyped_R
 begin
+
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 primrec
