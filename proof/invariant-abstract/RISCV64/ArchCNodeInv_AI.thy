@@ -768,15 +768,12 @@ global_interpretation CNodeInv_AI_2?: CNodeInv_AI_2
 
 context Arch begin arch_global_naming
 
-lemma finalise_cap_rvk_prog [CNodeInv_AI_assms]:
-   "\<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>
-   finalise_cap a b
-   \<lbrace>\<lambda>_ s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>"
-  apply (case_tac a,simp_all add:liftM_def)
-    apply (wp suspend_rvk_prog deleting_irq_handler_rvk_prog get_simple_ko_wp gts_wp
-      | clarsimp simp:is_final_cap_def comp_def | wpc)+
+lemma finalise_cap_rvk_prog[CNodeInv_AI_assms]:
+  "finalise_cap cap f \<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>"
+  apply (case_tac cap; simp add: liftM_def)
+         apply (wpsimp wp: suspend_rvk_prog deleting_irq_handler_rvk_prog get_simple_ko_wp gts_wp
+                     simp: is_final_cap_def comp_def)+
   done
-
 
 lemma rec_del_rvk_prog [CNodeInv_AI_assms]:
   "st \<turnstile> \<lbrace>\<lambda>s. revoke_progress_ord m (option_map cap_to_rpo \<circ> caps_of_state s)

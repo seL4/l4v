@@ -46,7 +46,7 @@ lemma cap_master_cap_tcb_cap_valid_arch:
    tcb_cap_valid c' p s"
   (* slow: 5 to 10s *)
   by (auto simp: cap_master_cap_def tcb_cap_valid_def tcb_cap_cases_def
-                 valid_ipc_buffer_cap_def  is_cap_simps
+                 valid_ipc_buffer_cap_def  is_cap_simps valid_fault_handler_def
            elim: pred_tcb_weakenE
           split: option.splits cap.splits arch_cap.splits
                  Structures_A.thread_state.splits)
@@ -107,7 +107,7 @@ lemma mab_wb [simp]:
 
 lemma get_cap_valid_ipc [TcbAcc_AI_assms]:
   "\<lbrace>valid_objs and obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_ipc_buffer tcb = v) t\<rbrace>
-     get_cap (t, tcb_cnode_index 4)
+     get_cap (t, tcb_cnode_index 2)
    \<lbrace>\<lambda>rv s. valid_ipc_buffer_cap rv v\<rbrace>"
   apply (wp get_cap_wp)
   apply clarsimp
@@ -117,8 +117,6 @@ lemma get_cap_valid_ipc [TcbAcc_AI_assms]:
                    acap_rights_update_def is_tcb
             split: cap.split_asm arch_cap.split_asm)
   done
-
-
 
 lemma pred_tcb_cap_wp_at [TcbAcc_AI_assms]:
   "\<lbrakk>pred_tcb_at proj P t s; valid_objs s;
@@ -256,7 +254,6 @@ lemma arch_thread_set_sym_refs_hyp':
   apply (simp add: arch_thread_set_def set_object_def get_object_def)
   apply wp
   apply (clarsimp simp del: fun_upd_apply dest!: get_tcb_SomeD)
-  apply (subst get_tcb_rev, assumption, subst option.sel)+
   apply (subst arch_tcb_update_aux3)
   apply (subst hyp_refs_update_some_tcb[where P=P and f="tcb_arch_update f"])
     apply assumption

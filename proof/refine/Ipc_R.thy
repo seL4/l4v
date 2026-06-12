@@ -1994,17 +1994,10 @@ lemma bind_sc_reply_invs[wp]:
   apply (erule (1) valid_objs_sc_replies_distinct)
   done
 
-lemma update_sk_obj_ref_in_correct_ready_q[wp]:
-  "update_sk_obj_ref C f ref new \<lbrace>in_correct_ready_q\<rbrace>"
-  by (wpsimp wp: in_correct_ready_q_lift)
-
-crunch update_sk_obj_ref
-  for ready_qs_distinct[wp]: ready_qs_distinct
-  (rule: ready_qs_distinct_lift)
-
-crunch update_sched_context
+crunch update_sk_obj_ref, set_simple_ko, update_sched_context
   for in_correct_ready_q[wp]: in_correct_ready_q
-  (wp: in_correct_ready_q_lift)
+  and ready_qs_distinct[wp]: ready_qs_distinct
+  (rule: ready_qs_distinct_lift in_correct_ready_q_lift)
 
 crunch bind_sc_reply
   for release_queue[wp]: "\<lambda>s. P (release_queue s)"
@@ -2681,10 +2674,6 @@ crunch doIPCTransfer
   (wp: crunch_wps simp: crunch_simps rule: sym_heap_sched_pointers_lift)
 
 end (* Arch *)
-
-crunch set_simple_ko
-  for ready_qs_distinct[wp]: ready_qs_distinct
-  (rule: ready_qs_distinct_lift)
 
 crunch set_thread_state
   for ntfn_queued[wp]: "\<lambda>s. P (ntfn_queued t s)"

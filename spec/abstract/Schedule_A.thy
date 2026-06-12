@@ -36,6 +36,11 @@ definition guarded_switch_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_m
      scp \<leftarrow> assert_opt sc_opt;
      sched \<leftarrow> gets (schedulable thread);
      assert sched;
+     \<comment> \<open>to simplify the proofs of the invariants related to VCPUs and FPUs, we assert that the
+         thread that we switch to is in the current domain.\<close>
+     d \<leftarrow> gets cur_domain;
+     next_domain \<leftarrow> thread_get tcb_domain thread;
+     assert (next_domain = d);
      switch_to_thread thread
    od"
 

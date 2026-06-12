@@ -743,6 +743,13 @@ lemma as_user_objs [wp]:
   apply (wpsimp simp: ran_tcb_cap_cases)+
   done
 
+lemma as_user_valid_tcbs[wp]:
+  "as_user ptr f \<lbrace>valid_tcbs\<rbrace>"
+  unfolding as_user_def
+  apply wpsimp
+  apply (fastforce simp: valid_tcbs_def get_tcb_ko_at valid_tcb_def tcb_cap_cases_def)
+  done
+
 end
 
 crunch as_user

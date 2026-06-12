@@ -992,14 +992,31 @@ crunch storeWord
 
 (* some hyp_ref invariants *)
 
-lemma state_hyp_refs_of_ep_update: "\<And>s ep val. typ_at AEndpoint ep s \<Longrightarrow>
-       state_hyp_refs_of (s\<lparr>kheap := (kheap s)(ep \<mapsto> Endpoint val)\<rparr>) = state_hyp_refs_of s"
+lemma state_hyp_refs_of_ep_update:
+  "typ_at AEndpoint ep s \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(ep \<mapsto> Endpoint val)\<rparr>) = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def hyp_refs_of_def)
   done
 
-lemma state_hyp_refs_of_ntfn_update: "\<And>s ep val. typ_at ANTFN ep s \<Longrightarrow>
-       state_hyp_refs_of (s\<lparr>kheap := (kheap s)(ep \<mapsto> Notification val)\<rparr>) = state_hyp_refs_of s"
+lemma state_hyp_refs_of_ntfn_update:
+  "typ_at ANTFN ep s \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(ep \<mapsto> Notification val)\<rparr>) = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def hyp_refs_of_def)
+  done
+
+lemma state_hyp_refs_of_sc_update:
+  "typ_at (ASchedContext n) sc s \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(sc \<mapsto> SchedContext val n)\<rparr>) = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp: state_hyp_refs_of_def obj_at_def hyp_refs_of_def
+                 split: kernel_object.splits)
+  done
+
+lemma state_hyp_refs_of_reply_update:
+  "typ_at AReply r s \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(r \<mapsto> Reply val)\<rparr>) = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def hyp_refs_of_def)
   done
@@ -1007,6 +1024,22 @@ lemma state_hyp_refs_of_ntfn_update: "\<And>s ep val. typ_at ANTFN ep s \<Longri
 lemma state_hyp_refs_of_tcb_bound_ntfn_update:
   "kheap s t = Some (TCB tcb) \<Longrightarrow>
    state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_bound_notification := ntfn\<rparr>))\<rparr>)
+   = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
+  done
+
+lemma state_hyp_refs_of_tcb_sched_context_update:
+  "kheap s t = Some (TCB tcb) \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_sched_context := sc\<rparr>))\<rparr>)
+   = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
+  done
+
+lemma state_hyp_refs_of_tcb_yield_to_update:
+  "kheap s t = Some (TCB tcb) \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_yield_to := sc\<rparr>))\<rparr>)
    = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
@@ -1031,14 +1064,6 @@ lemma state_hyp_refs_of_tcb_domain_update:
 lemma state_hyp_refs_of_tcb_priority_update:
   "kheap s t = Some (TCB tcb) \<Longrightarrow>
    state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_priority := p\<rparr>))\<rparr>)
-   = state_hyp_refs_of s"
-  apply (rule all_ext)
-  apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
-  done
-
-lemma state_hyp_refs_of_tcb_time_slice_update:
-  "kheap s t = Some (TCB tcb) \<Longrightarrow>
-   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_time_slice := ts\<rparr>))\<rparr>)
    = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
@@ -1098,6 +1123,31 @@ lemma invs_valid_uses[elim!]:
 crunch set_object
   for vmid_table[wp]: "\<lambda>s. P (vmid_table s)"
   (simp: get_object_def)
+
+lemma update_sched_context_hyp_refs_of[wp]:
+  "update_sched_context ptr f \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
+  apply (clarsimp elim!: rsubst[where P=P])
+  apply (rule all_ext)
+  apply (clarsimp simp: state_hyp_refs_of_def obj_at_def hyp_refs_of_def
+                 split: kernel_object.splits)
+  done
+
+lemma update_valid_tcb[simp]:
+  "\<And>f. valid_tcb ptr tcb (release_queue_update f s) = valid_tcb ptr tcb s"
+  "\<And>f. valid_tcb ptr tcb (reprogram_timer_update f s) = valid_tcb ptr tcb s"
+  "\<And>f. valid_tcb ptr tcb (ready_queues_update f s) = valid_tcb ptr tcb s"
+  "\<And>f. valid_tcb ptr tcb (scheduler_action_update f s) = valid_tcb ptr tcb s"
+  by (auto simp: valid_tcb_def valid_tcb_state_def valid_bound_obj_def valid_arch_tcb_def
+          split: thread_state.splits option.splits)
+
+lemma valid_tcbs_machine_state_update[iff]:
+  "valid_tcbs (machine_state_update f s) = valid_tcbs s"
+  by (rule iffI;
+      clarsimp simp: valid_tcbs_def valid_tcb_def valid_bound_obj_def valid_tcb_state_def
+                     valid_arch_tcb_def obj_at_def;
+      rename_tac ptr tcb; drule_tac x=ptr and y=tcb in spec2; clarsimp;
+      case_tac "tcb_state tcb"; clarsimp split: option.splits)
 
 end
 end

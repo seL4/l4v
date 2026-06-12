@@ -20,9 +20,9 @@ text \<open>
   initial state only, to show that the invariants and refinement relation are consistent.
 \<close>
 
-(* Some address sufficiently aligned for one page *)
+(* Some address sufficiently aligned for two pages *)
 definition arm_global_pt_ptr :: obj_ref where
-  "arm_global_pt_ptr = pptr_base + 0x2000"
+  "arm_global_pt_ptr = pptr_base + 0x4000"
 
 (* Sufficiently aligned for irq type + cte_level_bits *)
 definition init_irq_node_ptr :: obj_ref where

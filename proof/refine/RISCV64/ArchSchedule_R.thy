@@ -234,7 +234,7 @@ lemma bitmapL1_highest_lookup[Schedule_R_2_assms]:
 
 lemma guarded_switch_to_chooseThread_fragment_corres[Schedule_R_2_assms]:
   "corres dc
-     (P and schedulable t and invs and valid_ready_qs and ready_or_release)
+     (P and schedulable t and in_cur_domain t and invs and valid_ready_qs and ready_or_release)
      (P' and invs')
      (guarded_switch_to t) (ThreadDecls_H.switchToThread t)"
   apply (clarsimp simp: guarded_switch_to_def)
@@ -253,7 +253,13 @@ lemma guarded_switch_to_chooseThread_fragment_corres[Schedule_R_2_assms]:
   apply (rule corres_symb_exec_l[rotated, OF _ gets_sp])
     apply wpsimp
    apply (clarsimp simp: schedulable_def get_tcb_def vs_all_heap_simps)
+  apply (rule_tac Q="tcb_at t" in corres_cross_add_abs_guard)
+   apply (clarsimp simp: schedulable_def2)
   apply (rule corres_symb_exec_l[rotated, OF _ assert_sp]; wpsimp)
+  apply (rule corres_symb_exec_l[OF _ _ gets_sp, rotated]; (solves wpsimp)?)
+  apply (rule corres_symb_exec_l[OF _ _ thread_get_sp, rotated]; (solves wpsimp)?)
+  apply (rule corres_assert_assume_l_forward)
+   apply (clarsimp simp: obj_at_def in_cur_domain_def etcb_at'_def vs_all_heap_simps)
   apply (rule corres_guard_imp)
     apply (rule switchToThread_corres)
    apply (fastforce dest: invs_sym_refs simp: schedulable_def2)
@@ -274,7 +280,7 @@ end (* Arch *)
 
 interpretation Schedule_R_2?: Schedule_R_2
 proof goal_cases
-  interpret Arch  .
+  interpret Arch .
   case 1 show ?case by (intro_locales; (unfold_locales; (fact Schedule_R_2_assms)?)?)
 qed
 
@@ -351,7 +357,7 @@ end (* Arch *)
 
 interpretation Schedule_R_3?: Schedule_R_3
 proof goal_cases
-  interpret Arch  .
+  interpret Arch .
   case 1 show ?case by (intro_locales; (unfold_locales; (fact Schedule_R_3_assms)?)?)
 qed
 

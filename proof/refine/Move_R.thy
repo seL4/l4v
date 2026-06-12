@@ -8,7 +8,7 @@
 
 theory Move_R
 imports
-  "AInvs.AInvs"
+  "AInvs.ArchAInvs"
 
 begin
 

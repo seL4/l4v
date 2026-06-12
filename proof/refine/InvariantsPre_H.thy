@@ -12,7 +12,7 @@
 theory InvariantsPre_H
 imports
   LevityCatch
-  "AInvs.AInvs"
+  "AInvs.ArchAInvs"
   "Lib.Heap_List"
 begin
 

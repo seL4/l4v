@@ -91,6 +91,10 @@ crunch loadWord, storeWord, machine_op_lift
   for (empty_fail) empty_fail[intro!, wp, simp]
   (ignore: Nondet_Monad.bind mapM_x simp: machine_op_lift_def empty_fail_cond)
 
+lemma no_fail_machine_op_lift [simp]:
+  "no_fail \<top> (machine_op_lift f)"
+  by (simp add: machine_op_lift_def)
+
 lemmas ef_machine_op_lift = machine_op_lift_empty_fail \<comment> \<open>required for generic interface\<close>
 
 text \<open>Does not affect state\<close>
@@ -103,6 +107,22 @@ lemma getActiveIRQ_inv[wp]:
   apply wp
   apply (simp add: irq_state_independent_def)
   done
+
+lemma no_fail_ackInterrupt[wp]:
+  "no_fail \<top> (ackInterrupt irq)"
+  by (simp add: ackInterrupt_def)
+
+lemma no_fail_maskInterrupt[wp]:
+  "no_fail \<top> (maskInterrupt irq bool)"
+  by (simp add: maskInterrupt_def)
+
+lemma no_fail_setDeadline:
+  "no_fail \<top>(setDeadline t)"
+  by (simp add: setDeadline_def)
+
+lemma empty_fail_setDeadline:
+  "empty_fail (setDeadline t)"
+  by (simp add: setDeadline_def)
 
 lemma loadWord_inv[wp]: "loadWord x \<lbrace>P\<rbrace>"
   by (wpsimp simp: loadWord_def)
@@ -117,10 +137,6 @@ lemma no_fail_loadWord[wp]: "no_fail (\<lambda>_. is_aligned p 3) (loadWord p)"
 
 lemma no_fail_storeWord: "no_fail (\<lambda>_. is_aligned p 3) (storeWord p w)"
   by (wpsimp simp: storeWord_def is_aligned_mask [symmetric])
-
-lemma no_fail_machine_op_lift [simp]:
-  "no_fail \<top> (machine_op_lift f)"
-  by (simp add: machine_op_lift_def)
 
 lemma no_fail_freeMemory[simp, wp]:
   "no_fail (\<lambda>_. is_aligned p 3) (freeMemory p b)"
@@ -179,6 +195,10 @@ lemma no_irq_get[simp, wp]:
 lemma no_irq_gets[simp, wp]:
   "no_irq (gets f)"
   by (simp add: no_irq_def)
+
+lemma no_irq_setDeadline:
+  "no_irq (setDeadline t)"
+  by (wpsimp simp: setDeadline_def)
 
 lemma no_irq_mapM:
   "(\<And>x. x \<in> set xs \<Longrightarrow> no_irq (f x)) \<Longrightarrow> no_irq (mapM f xs)"

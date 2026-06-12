@@ -49,6 +49,33 @@ lemma getActiveIRQ_wp [CSpace_AI_assms]:
   apply (clarsimp simp: irq_state_independent_A_def in_monad return_def split: if_splits)
   done
 
+lemma getCurrentTime_wp[CSpace_AI_assms]:
+  "\<lbrakk>time_state_independent_A P; getCurrentTime_independent_A P\<rbrakk>
+   \<Longrightarrow> do_machine_op getCurrentTime \<lbrace>P\<rbrace>"
+  apply (simp add: getCurrentTime_def do_machine_op_def split_def
+                   select_f_select[simplified liftM_def]
+                   select_modify_comm gets_machine_state_modify)
+  apply wp
+  apply (fastforce simp: time_state_independent_A_def getCurrentTime_independent_A_def in_monad
+                  split: if_splits)
+  done
+
+lemma update_time_stamp_wp[CSpace_AI_assms]:
+  "\<lbrakk>update_time_stamp_independent_A P; cur_time_independent_A P;
+    time_state_independent_A P; getCurrentTime_independent_A P; domain_time_independent_A P\<rbrakk>
+   \<Longrightarrow> update_time_stamp \<lbrace>P\<rbrace>"
+  apply (simp add: update_time_stamp_def do_machine_op_def split_def
+                   getCurrentTime_def select_modify_comm gets_machine_state_modify
+                   select_f_select[simplified liftM_def])
+  apply (rule bind_wp_fwd_skip, wpsimp)
+  apply (rule bind_wp_fwd_skip, wpsimp)
+   apply (fastforce simp: time_state_independent_A_def getCurrentTime_independent_A_def in_monad)
+  apply (rule bind_wp_fwd_skip, wpsimp)
+   apply (fastforce simp: cur_time_independent_A_def)
+  apply wpsimp
+  apply (fastforce simp: update_time_stamp_independent_A_def domain_time_independent_A_def)
+  done
+
 lemma weak_derived_valid_cap [CSpace_AI_assms]:
   "\<lbrakk> s \<turnstile> c; wellformed_cap c'; weak_derived c' c\<rbrakk> \<Longrightarrow> s \<turnstile> c'"
   apply (case_tac "c = c'", simp)
@@ -413,38 +440,11 @@ lemma no_cap_to_obj_with_diff_ref_triv:
   apply (clarsimp simp add: no_cap_to_obj_with_diff_ref_def)
   apply (drule(1) cte_wp_at_valid_objs_valid_cap)
   apply (clarsimp simp: table_cap_ref_def table_cap_ref_arch_def valid_cap_def
-                        obj_at_def is_ep is_ntfn is_tcb is_cap_table
+                        obj_at_def is_ep is_ntfn is_tcb is_cap_table is_reply is_sc_obj
                         a_type_def is_cap_simps
                  split: cap.split_asm arch_cap.split_asm
                         if_split_asm option.split_asm)
   done
-
-
-lemma setup_reply_master_arch_caps[wp, CSpace_AI_assms]:
-  "\<lbrace>valid_arch_caps and tcb_at t and valid_objs and pspace_aligned\<rbrace>
-     setup_reply_master t
-   \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
-  apply (simp add: setup_reply_master_def)
-  apply (wp set_cap_valid_arch_caps get_cap_wp)
-  apply (clarsimp simp: cte_wp_at_caps_of_state
-                        is_pt_cap_def vs_cap_ref_def)
-  apply (rule no_cap_to_obj_with_diff_ref_triv,
-         simp_all add: is_cap_simps table_cap_ref_def)
-  apply (simp add: valid_cap_def cap_aligned_def word_bits_def)
-  apply (clarsimp simp: obj_at_def is_tcb dest!: pspace_alignedD)
-  done
-
-
-lemma setup_reply_master_cap_refs_in_kernel_window[wp, CSpace_AI_assms]:
-  "\<lbrace>cap_refs_in_kernel_window and tcb_at t and pspace_in_kernel_window\<rbrace>
-      setup_reply_master t
-   \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
-  apply (simp add: setup_reply_master_def)
-  apply (wp get_cap_wp)
-  apply (clarsimp simp: pspace_in_kernel_window_def obj_at_def
-                        cap_range_def)
-  done
-
 
 (* FIXME: prove same_region_as_def2 instead or change def *)
 lemma same_region_as_Untyped2 [CSpace_AI_assms]:
@@ -459,7 +459,7 @@ lemma same_region_as_cap_class [CSpace_AI_assms]:
   apply (case_tac a)
              apply ((fastforce simp: cap_range_def arch_is_physical_def is_cap_simps is_physical_def
                                      is_irq_control_descendant_def
-                              split: cap.splits arch_cap.splits)+)[11]
+                              split: cap.splits arch_cap.splits)+)[13]
  apply (clarsimp split: cap.splits)
  apply (rename_tac arch_cap arch_capa)
  apply (case_tac arch_cap; case_tac arch_capa; clarsimp)
@@ -490,10 +490,6 @@ lemma cap_insert_derived_valid_arch_state[CSpace_AI_assms]:
    \<lbrace>\<lambda>rv. valid_arch_state \<rbrace>"
   by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps cap_insert_tcb cap_insert_aobj_at)
 
-lemma setup_reply_master_arch[CSpace_AI_assms]:
-  "setup_reply_master t \<lbrace> valid_arch_state \<rbrace>"
-  by (wpsimp simp: setup_reply_master_def wp: get_cap_wp)
-
 end
 
 global_interpretation CSpace_AI?: CSpace_AI
@@ -514,11 +510,11 @@ lemma is_cap_simps':
   "is_ntfn_cap cap = (\<exists>r b R. cap = cap.NotificationCap r b R)"
   "is_zombie cap = (\<exists>r b n. cap = cap.Zombie r b n)"
   "is_arch_cap cap = (\<exists>a. cap = cap.ArchObjectCap a)"
-  "is_reply_cap cap = (\<exists>x R. cap = cap.ReplyCap x False R)"
-  "is_master_reply_cap cap = (\<exists>x R. cap = cap.ReplyCap x True R)"
+  "is_reply_cap cap = (\<exists>x R. cap = cap.ReplyCap x R)"
+  "is_sched_context_cap cap = (\<exists>sc_ptr n. cap = cap.SchedContextCap sc_ptr n)"
   "is_nondevice_page_cap cap = (\<exists> u v w x. cap = ArchObjectCap (FrameCap u v w False x))"
   by (cases cap, auto simp: is_zombie_def is_arch_cap_def is_nondevice_page_cap_def
-                            is_reply_cap_def is_master_reply_cap_def is_FrameCap_def
+                            is_reply_cap_def is_FrameCap_def
                      split: cap.splits arch_cap.splits)+
 
 lemma cap_insert_simple_valid_arch_state[wp]:
@@ -556,7 +552,7 @@ lemma cap_insert_simple_invs:
 lemmas is_derived_def = is_derived_def[simplified is_derived_arch_def]
 
 crunch arch_post_cap_deletion
-  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
+  for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
   and valid_objs[wp]: valid_objs
   and cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"

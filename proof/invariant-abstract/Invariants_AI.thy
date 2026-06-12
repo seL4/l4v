@@ -4370,6 +4370,17 @@ lemma valid_machine_time_lift:
   apply (wps A B | wpsimp simp: valid_machine_time_def)+
   done
 
+lemma cur_sc_tcb_lift:
+  "\<lbrakk>\<And>P. f \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>; \<And>P. f \<lbrace>\<lambda>s. P (cur_sc s)\<rbrace>; \<And>P. f \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>;
+    \<And>P t. f \<lbrace>sc_tcb_sc_at P t\<rbrace>\<rbrakk>
+   \<Longrightarrow> f \<lbrace>cur_sc_tcb\<rbrace>"
+  unfolding cur_sc_tcb_def
+  apply (rule hoare_lift_Pf2[where f=scheduler_action])
+   apply (rule hoare_lift_Pf2[where f=cur_sc])
+    apply (rule hoare_lift_Pf2[where f=cur_thread])
+     apply wpsimp+
+  done
+
 context
   fixes P r t s
   assumes eq: "\<And>st. P st \<longleftrightarrow> st = BlockedOnReply r"

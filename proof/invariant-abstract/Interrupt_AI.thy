@@ -9,7 +9,7 @@ Refinement for interrupt controller operations
 *)
 
 theory Interrupt_AI
-imports ArchIpc_AI
+imports IpcDet_AI
 begin
 
 arch_requalify_facts

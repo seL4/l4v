@@ -11,7 +11,7 @@
 
 theory AInvsToplevel_AI
 imports
-  AInvs
+  ArchAInvs
   ArchAInvsToplevel_AI
   KernelInit_AI
 begin

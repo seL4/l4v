@@ -83,23 +83,24 @@ crunch
  for valid_idle[wp]: "valid_idle"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma set_vm_root_valid_blocked_ct_in_q [wp]:
-  "\<lbrace>valid_blocked and ct_in_q\<rbrace> set_vm_root p \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>"
-  by (wp | wpc | auto)+
+lemma set_vm_root_valid_blocked_ct_in_q[wp]:
+  "set_vm_root p \<lbrace>valid_blocked and ct_in_q\<rbrace>"
+  by wpsimp
 
 lemma arch_switch_to_thread_valid_blocked [wp]:
   "\<lbrace>valid_blocked and ct_in_q\<rbrace> arch_switch_to_thread thread \<lbrace>\<lambda>_. valid_blocked and ct_in_q::det_state \<Rightarrow> _\<rbrace>"
   unfolding arch_switch_to_thread_def by wpsimp
 
-lemma switch_to_idle_thread_ct_not_queued [wp]:
+lemma switch_to_idle_thread_ct_not_queued[wp]:
   "\<lbrace>valid_ready_qs and valid_idle\<rbrace>
-     switch_to_idle_thread
-   \<lbrace>\<lambda>rv s. not_queued (cur_thread s) s\<rbrace>"
+   switch_to_idle_thread
+   \<lbrace>\<lambda>_ s. not_queued (cur_thread s) s\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def
-                   tcb_sched_action_def | wp)+
+                   tcb_sched_action_def
+         | wp)+
   apply (clarsimp simp: valid_sched_def valid_ready_qs_def valid_idle_def
-                        pred_tcb_at_def obj_at_def not_queued_def pred_map_simps vs_all_heap_simps
-         , fastforce)
+                        pred_tcb_at_def obj_at_def not_queued_def pred_map_simps vs_all_heap_simps)
+  apply fastforce
   done
 
 crunch arch_switch_to_thread

@@ -17,10 +17,13 @@ crunch_ignore (empty_fail)
   (add: pt_lookup_from_level)
 
 crunch
-  load_word_offs, get_mrs
+  load_word_offs, store_word_offs, get_mrs
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
 
-declare loadWord_empty_fail[EmptyFail_AI_assms]
+lemmas [EmptyFail_AI_assms] =
+  loadWord_empty_fail
+  storeWord_empty_fail
+  setRegister_empty_fail
 
 end
 
@@ -45,7 +48,10 @@ crunch
   for (empty_fail) empty_fail[wp]
   (simp: cap.splits arch_cap.splits split_def)
 
-crunch decode_vcpu_invocation
+crunch
+  decode_vcpu_invocation, decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
+  decode_set_priority, decode_set_mcpriority, decode_set_sched_params, decode_set_timeout_ep,
+  decode_set_tls_base, decode_set_flags, decode_set_space
   for (empty_fail) empty_fail[wp]
   (simp: cap.splits arch_cap.splits split_def)
 
@@ -186,7 +192,7 @@ lemma deactivateInterrupt_empty_fail[wp]:
   unfolding deactivateInterrupt_def
   by wpsimp
 
-crunch possible_switch_to, handle_event, activate_thread, maybe_handle_interrupt
+crunch possible_switch_to, handle_event, activate_thread, maybe_handle_interrupt, check_budget
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pte.splits
@@ -194,6 +200,8 @@ crunch possible_switch_to, handle_event, activate_thread, maybe_handle_interrupt
          thread_state.splits endpoint.splits catch_def sum.splits cnode_invocation.splits
          page_table_invocation.splits page_invocation.splits asid_control_invocation.splits
          asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits)
+
+declare getRestartPC_empty_fail[EmptyFail_AI_assms]
 
 end
 

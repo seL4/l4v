@@ -52,11 +52,6 @@ lemma cap_master_arch_inv[simp]:
   "cap_master_arch_cap (cap_master_arch_cap ac) = cap_master_arch_cap ac"
   by (cases ac; simp add: cap_master_arch_cap_def)
 
-definition arch_cap_badge :: "arch_cap \<Rightarrow> machine_word option" where
-  "arch_cap_badge acap \<equiv> case acap of
-     SMCCap smc_badge \<Rightarrow> Some smc_badge
-   | _ \<Rightarrow> None"
-
 lemmas arch_cap_badge_simps[simp] = arch_cap_badge_def[split_simps arch_cap.split]
 
 definition

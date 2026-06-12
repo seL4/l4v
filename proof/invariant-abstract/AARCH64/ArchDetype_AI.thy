@@ -633,7 +633,7 @@ interpretation Detype_AI_2
 lemma (in Arch) delete_objects_invs[wp]:
   "\<lbrace>(\<lambda>s. \<exists>slot. cte_wp_at ((=) (cap.UntypedCap dev ptr bits f)) slot s
     \<and> descendants_range (cap.UntypedCap dev ptr bits f) slot s) and
-    invs and ct_active\<rbrace>
+    invs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
     delete_objects ptr bits \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: delete_objects_def)
   apply (simp add: freeMemory_def word_size_def bind_assoc)
@@ -653,5 +653,20 @@ lemma (in Arch) delete_objects_invs[wp]:
 
 requalify_facts Arch.delete_objects_invs
 lemmas [wp] = delete_objects_invs
+
+lemma scheduler_action_detype:
+  "P (scheduler_action s) \<Longrightarrow> P (scheduler_action (detype {ptr..ptr + 2 ^ bits - 1} s))"
+  by (auto simp: detype_def)
+
+lemma do_machine_op_scheduler_action [wp]:
+  "do_machine_op mop \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
+  by (wpsimp simp: do_machine_op_def)
+
+lemma delete_objects_scheduler_action [wp]:
+  "delete_objects ptr bits \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
+  apply (wpsimp simp: delete_objects_def)
+   apply (rule hoare_strengthen_post[where Q'="\<lambda>_ s. P (scheduler_action s)"])
+    apply (wpsimp simp: scheduler_action_detype)+
+  done
 
 end
