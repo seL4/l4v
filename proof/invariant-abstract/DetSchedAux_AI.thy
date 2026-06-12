@@ -20,13 +20,6 @@ lemmas [wp] =
   init_arch_objects_pred_tcb_at
   init_arch_objects_cur_thread
 
-method set_object_easy_cases uses def final
-  = simp add: def set_object_def split_def,
-    (wp get_object_wp zipWithM_x_inv' | wp (once) hoare_drop_imp | wpc)+,
-    (fastforce simp: final obj_at_def opt_map_def eps_of_kh_def tcbs_of_kh_def a_type_def
-              intro: rsubst[where P=P]
-              split: kernel_object.splits)?
-
 lemma set_cap_eps_of[wp]:
   "set_cap c p \<lbrace>\<lambda>s. P (eps_of s)\<rbrace>"
   by (set_object_easy_cases def: set_cap_def)

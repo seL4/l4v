@@ -774,14 +774,15 @@ crunch update_asid_pool_entry, find_free_vmid, store_vmid
   and valid_idle[wp]: valid_idle
   and only_idle[wp]: only_idle
   and if_unsafe[wp]: if_unsafe_then_cap
-  and valid_reply_caps[wp]: valid_reply_caps
-  and valid_reply_masters[wp]: valid_reply_masters
   and valid_global_refs[wp]: valid_global_refs
   and irq_states[wp]: "\<lambda>s. P (interrupt_states s)"
   and irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   and kernel_vspace[wp]: "\<lambda>s. P (arm_kernel_vspace (arch_state s))"
   and valid_global_objs[wp]: valid_global_objs
   and cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
+  and valid_replies[wp]: valid_replies
+  and fault_tcbs_valid_states_except_set[wp]: "fault_tcbs_valid_states_except_set T"
+  and cur_sc_tcb[wp]: cur_sc_tcb
   (simp: valid_global_objs_def)
 
 crunch invalidate_asid, find_free_vmid, store_vmid
@@ -1035,7 +1036,7 @@ lemma valid_cap_obj_ref_pt:
   "\<lbrakk> s \<turnstile> cap; s \<turnstile> cap'; obj_refs cap = obj_refs cap' \<rbrakk>
        \<Longrightarrow> is_pt_cap cap \<longrightarrow> is_pt_cap cap'"
   by (auto simp: is_cap_simps valid_cap_def valid_arch_cap_ref_def
-                 obj_at_def is_ep is_ntfn is_cap_table is_tcb a_type_def
+                 obj_at_def is_ep is_ntfn is_cap_table is_tcb is_reply is_sc_obj a_type_def
           split: cap.split_asm if_split_asm arch_cap.split_asm option.split_asm)
 
 lemma is_pt_cap_asid_None_table_ref:
@@ -1639,6 +1640,11 @@ lemma is_final_cap_caps_of_state_2D:
 crunch do_flush
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
+crunch storeWord, ackInterrupt, setVSpaceRoot
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
+  and machine_times[wp]: "\<lambda>ms. P (last_machine_time ms) (time_state ms)"
+  (simp: crunch_simps storeWord_def)
+
 crunch perform_page_invocation
   for pspace_respects_device_region[wp]: "pspace_respects_device_region"
   (simp: crunch_simps wp: crunch_wps set_object_pspace_respects_device_region
@@ -1962,12 +1968,15 @@ lemma set_mi_invs[wp]:
 
 lemma data_at_orth:
   "data_at a p s
-   \<Longrightarrow> \<not> ep_at p s \<and> \<not> ntfn_at p s \<and> \<not> cap_table_at sz p s \<and> \<not> tcb_at p s \<and> \<not> asid_pool_at p s
-         \<and> \<not> pt_at pt_t p s \<and> \<not> asid_pool_at p s \<and> \<not> vcpu_at p s"
+   \<Longrightarrow> \<not> ep_at p s \<and> \<not> ntfn_at p s \<and> \<not> cap_table_at sz p s \<and> \<not> tcb_at p s
+       \<and> \<not> reply_at p s \<and> (\<forall>n. \<not> sc_obj_at n p s)
+       \<and> \<not> asid_pool_at p s
+       \<and> \<not> pt_at pt_t p s \<and> \<not> asid_pool_at p s \<and> \<not> vcpu_at p s"
   apply (clarsimp simp: data_at_def obj_at_def a_type_def)
-  apply (case_tac "kheap s p",simp)
-  subgoal for ko by (case_tac ko,auto simp add: is_ep_def is_ntfn_def is_cap_table_def is_tcb_def)
-  done
+  apply (case_tac "kheap s p", simp)
+  apply (rename_tac ko)
+  by (case_tac ko;
+      auto simp: is_ep_def is_ntfn_def is_cap_table_def is_tcb_def is_reply is_sc_obj)
 
 lemma data_at_frame_cap:
   "\<lbrakk>data_at sz p s; valid_cap cap s; p \<in> obj_refs cap\<rbrakk> \<Longrightarrow> is_frame_cap cap"
@@ -2579,6 +2588,22 @@ lemma valid_vspace_obj_default:
   shows "ArchObj ao = default_object ty dev us d \<Longrightarrow> valid_vspace_obj level ao s'"
   by (cases ty; simp add: default_object_def assms)
 
+lemmas setDeadline_irq_masks = no_irq[OF no_irq_setDeadline]
+
+crunch setDeadline
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
+
+lemma dmo_setDeadline[wp]:
+  "do_machine_op (setDeadline t) \<lbrace>invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+                 in use_valid)
+     apply ((clarsimp simp: setDeadline_def machine_op_lift_def
+                            machine_rest_lift_def split_def | wp)+)[3]
+  apply(erule (1) use_valid[OF _ setDeadline_irq_masks])
+  done
+
 
 (* VCPU lemmas *)
 
@@ -2678,10 +2703,6 @@ lemma set_vcpu_valid_global_refs[wp]:
   "\<lbrace>valid_global_refs\<rbrace> set_vcpu p v \<lbrace>\<lambda>rv. valid_global_refs\<rbrace>"
   by (rule valid_global_refs_cte_lift) wp+
 
-lemma set_vcpu_valid_reply_masters[wp]:
-  "\<lbrace>valid_reply_masters\<rbrace> set_vcpu p v \<lbrace>\<lambda>rv. valid_reply_masters\<rbrace>"
-  by (rule valid_reply_masters_cte_lift) wp
-
 lemma set_vcpu_pred_tcb_at[wp]:
   "set_vcpu p v \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
   apply (simp add: set_vcpu_def set_object_def)
@@ -2689,10 +2710,6 @@ lemma set_vcpu_pred_tcb_at[wp]:
   apply (rule hoare_strengthen_post [OF get_object_sp])
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
-
-lemma set_vcpu_valid_reply_caps[wp]:
-  "\<lbrace>valid_reply_caps\<rbrace> set_vcpu p v \<lbrace>\<lambda>rv. valid_reply_caps\<rbrace>"
-  by (rule valid_reply_caps_st_cte_lift) wp+
 
 lemma set_vcpu_if_unsafe_then_cap[wp]:
   "\<lbrace>if_unsafe_then_cap\<rbrace> set_vcpu p v \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
@@ -2705,6 +2722,13 @@ lemma set_vcpu_if_unsafe_then_cap[wp]:
 lemma set_vcpu_only_idle[wp]:
   "\<lbrace>only_idle\<rbrace> set_vcpu p v \<lbrace>\<lambda>rv. only_idle\<rbrace>"
   by (wp only_idle_lift set_asid_pool_typ_at)+
+
+lemma set_vcpu_idle_sc_at[wp]:
+  "set_vcpu p v \<lbrace>idle_sc_at t\<rbrace>"
+  unfolding set_vcpu_def
+  apply (wpsimp wp: set_object_wp_strong)
+  apply (clarsimp simp: obj_at_def split: if_splits)
+  done
 
 lemma set_vcpu_valid_idle[wp]:
   "\<lbrace>valid_idle\<rbrace> set_vcpu p v \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
@@ -2751,7 +2775,7 @@ lemma set_vcpu_if_live_then_nonz_cap_Some[wp]:
 
 lemma state_refs_of_vcpu_simp: "typ_at (AArch AVCPU) p s \<Longrightarrow> state_refs_of s p = {}"
   apply (clarsimp simp: obj_at_def state_refs_of_def a_type_def aa_type_def)
-  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
+  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits if_splits)
   done
 
 lemma set_object_vcpu_sym_refs:
@@ -2799,6 +2823,30 @@ lemma set_vcpu_hyp_refs_of:
   apply (wp set_object_vcpu_hyp_refs_of hoare_drop_imp)
   apply (clarsimp simp: hyp_refs_of_def)
   done
+
+lemma set_vcpu_sc_replies_sc_at[wp]:
+  "set_vcpu p v \<lbrace>\<lambda>s. P (sc_replies_sc_at Q sc_ptr s)\<rbrace>"
+  unfolding set_vcpu_def
+  apply (wpsimp wp: set_object_wp_strong)
+  apply (erule rsubst[where P=P])
+  apply (clarsimp simp: sc_at_ppred_def obj_at_def split: if_splits)
+  done
+
+lemma set_vcpu_sc_at_pred_n[wp]:
+  "set_vcpu ptr vcpu \<lbrace>\<lambda>s. P (sc_at_pred_n N proj Q p s)\<rbrace>"
+  unfolding set_vcpu_def
+  apply (wpsimp wp: set_object_wp_strong)
+  apply (erule rsubst[where P=P])
+  apply (clarsimp simp: sc_at_pred_n_def obj_at_def split: if_splits)
+  done
+
+crunch set_vcpu
+  for cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
+  and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
+  and cur_sc_tcb[wp]: cur_sc_tcb
+  and valid_replies[wp]: valid_replies
+  and fault_tcbs_valid_states_except_set[wp]: "fault_tcbs_valid_states_except_set T"
+  (rule: cur_sc_tcb_lift wp: valid_replies_lift crunch_wps fault_tcbs_valid_states_lift)
 
 lemma set_vcpu_valid_pspace:
   "\<lbrace>valid_obj p (ArchObj (VCPU v))
@@ -2915,6 +2963,10 @@ lemma save_virt_timer_invs[wp]:
   unfolding save_virt_timer_def
   by (wpsimp wp: set_vcpu_invs_eq_hyp get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift' dmo_invs_lift)
 
+lemma cur_sc_tcb_machine_state_update[simp]:
+  "cur_sc_tcb (machine_state_update f s) = cur_sc_tcb s"
+  by (clarsimp simp: cur_sc_tcb_def)
+
 (* migrated from ArchInterrupt_AI, which is not visible from here *)
 lemma maskInterrupt_invs:
   "\<lbrace>invs and (\<lambda>s. \<not>b \<longrightarrow> interrupt_states s irq \<noteq> IRQInactive)\<rbrace>
@@ -2940,7 +2992,7 @@ lemma vcpu_enable_invs[wp]:
 
 lemma vcpu_restore_invs[wp]:
   "vcpu_restore v \<lbrace>invs\<rbrace>"
-  apply (simp add: vcpu_restore_def do_machine_op_bind dom_mapM empty_fail_cond)
+  apply (simp add: vcpu_restore_def do_machine_op_bind dmo_mapM empty_fail_cond)
   apply (wpsimp wp: mapM_wp_inv)
   done
 
@@ -2965,7 +3017,7 @@ lemma valid_vcpu_vgic_update[simp]:
 
 lemma vcpu_save_invs[wp]:
   "vcpu_save v \<lbrace>invs\<rbrace>"
-  apply (clarsimp simp: vcpu_save_def dom_mapM split: option.splits)
+  apply (clarsimp simp: vcpu_save_def dmo_mapM split: option.splits)
   apply (wpsimp wp: mapM_wp_inv)
   done
 

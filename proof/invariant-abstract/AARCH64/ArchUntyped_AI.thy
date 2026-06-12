@@ -128,6 +128,7 @@ proof -
         apply (erule range_cover.sz)
        apply (simp add: range_cover_def)
       apply (clarsimp simp: get_free_ref_def empty_descendants_range_in)
+      apply (rule conjI, clarsimp simp: obj_bits_api_def min_sched_context_bits_def)
       apply (rule conjI[rotated], blast, clarsimp)
       apply (drule_tac x = "(obj_ref_of node_cap, nat_to_cref (bits_of node_cap) slota)" in bspec)
        apply (clarsimp simp: is_cap_simps nat_to_cref_def word_bits_def bits_of_def valid_cap_simps
@@ -137,6 +138,7 @@ proof -
         apply (clarsimp dest!: valid_cap_aligned simp: cap_aligned_def word_bits_def)+
       apply simp+
      apply (clarsimp simp: get_free_ref_def)
+     apply (rule conjI; clarsimp simp: obj_bits_api_def min_sched_context_bits_def)
     apply (erule disjE)
      apply (drule_tac x= "cs!0" in bspec, clarsimp)
      apply simp
@@ -369,6 +371,44 @@ lemma set_cap_non_arch_valid_arch_state[Untyped_AI_assms]:
   set_cap cap ptr
   \<lbrace>\<lambda>rv. valid_arch_state \<rbrace>"
   by wpsimp
+
+(* FIXME: move *)
+lemma set_object_obj_at_other:
+  assumes "ptr \<noteq> p"
+  shows "set_object ptr ko \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
+  apply (wpsimp wp: set_object_wp)
+  apply (erule rsubst[of N])
+  using assms
+  apply (clarsimp simp: obj_at_def)
+  done
+
+lemma init_arch_objects_obj_at_other[Untyped_AI_assms]:
+  "\<lbrakk>\<forall>ptr\<in>set ptrs. is_aligned ptr (obj_bits_api ty us); p \<notin> set ptrs\<rbrakk>
+   \<Longrightarrow> init_arch_objects ty dev ptr n us ptrs \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
+  supply if_split[split del]
+  by (wpsimp simp: init_arch_objects_def obj_bits_api_def default_arch_object_def
+               wp: mapM_x_wp')
+
+lemma init_arch_objects_obj_at_non_pt:
+  assumes non_pt: "\<forall>ko. P ko \<longrightarrow> (\<forall>pd. ko \<noteq> ArchObj (PageTable pd))"
+  shows "init_arch_objects ty dev ptr n us ptrs \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
+  supply if_split[split del]
+  by (wpsimp simp: init_arch_objects_def obj_bits_api_def default_arch_object_def
+               wp: mapM_x_wp')
+
+lemma non_arch_non_pt:
+  "\<forall>ko. P ko \<longrightarrow> non_arch_obj ko \<Longrightarrow> \<forall>ko. P ko \<longrightarrow> (\<forall>pd. ko \<noteq> ArchObj (PageTable pd))"
+  by (auto simp: non_arch_obj_def)
+
+lemma live_non_pt:
+  "\<forall>ko. P ko \<longrightarrow> live ko \<Longrightarrow> \<forall>ko. P ko \<longrightarrow> (\<forall>pd. ko \<noteq> ArchObj (PageTable pd))"
+  by (auto simp: live_def hyp_live_def arch_live_def arch_tcb_live_def)
+
+lemmas init_arch_objects_obj_at_non_arch[Untyped_AI_assms] =
+  init_arch_objects_obj_at_non_pt[OF non_arch_non_pt]
+
+lemmas init_arch_objects_obj_at_live[Untyped_AI_assms] =
+  init_arch_objects_obj_at_non_pt[OF live_non_pt]
 
 end
 

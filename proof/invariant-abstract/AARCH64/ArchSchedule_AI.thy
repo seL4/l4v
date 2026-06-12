@@ -15,7 +15,7 @@ named_theorems Schedule_AI_assms
 
 lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_assms]:
   "do_machine_op (mapM (\<lambda>p. storeWord p 0) S) \<lbrace>invs\<rbrace>"
-  apply (simp add: dom_mapM)
+  apply (simp add: dmo_mapM)
   apply (rule mapM_UNIV_wp)
   apply (simp add: do_machine_op_def split_def)
   apply wp
@@ -34,6 +34,21 @@ lemma set_arm_current_fpu_owner_valid_cur_fpu[wp]:
   apply (wp arch_thread_set_wp)
   by (auto simp: valid_cur_fpu_defs valid_cur_fpu_is_tcb_cur_fpu_unique'[simplified valid_cur_fpu_defs])
 
+lemma arch_thread_set_sc_replies_sc_at[wp]:
+  "arch_thread_set f tptr \<lbrace>\<lambda>s. P (sc_replies_sc_at Q sc_ptr s)\<rbrace>"
+  unfolding arch_thread_set_is_thread_set
+  by wpsimp
+
+lemma arch_thread_set_fault_tcb_at[wp]:
+  "arch_thread_set f tptr \<lbrace>fault_tcb_at P t\<rbrace>"
+  unfolding arch_thread_set_is_thread_set
+  by (wpsimp wp: thread_set_no_change_tcb_pred)
+
+crunch arch_thread_set
+  for valid_replies[wp]: valid_replies
+  and fault_tcbs_valid_states_except_set[wp]: "fault_tcbs_valid_states_except_set T"
+  (wp: valid_replies_lift fault_tcbs_valid_states_lift)
+
 lemma set_arm_current_fpu_owner_valid_pspace[wp]:
   "\<lbrace>valid_pspace and none_top ex_nonz_cap_to t\<rbrace>
    set_arm_current_fpu_owner t
@@ -46,14 +61,28 @@ lemma valid_asid_map_arch_arm_current_fpu_owner_update[simp]:
   "valid_asid_map (s\<lparr>arch_state := arch_state s\<lparr>arm_current_fpu_owner := x\<rparr>\<rparr>) = valid_asid_map s"
   by (simp add: valid_asid_map_def)
 
+lemma arch_thread_set_sc_tcb_sc_at[wp]:
+  "arch_thread_set f tptr \<lbrace>sc_tcb_sc_at P t\<rbrace>"
+  unfolding arch_thread_set_is_thread_set
+  apply (wpsimp wp: thread_set_wp)
+  apply (clarsimp simp: sc_at_ppred_def obj_at_def get_tcb_def)
+  done
+
+crunch set_arm_current_fpu_owner
+  for sc_tcb_sc_at[wp]: "sc_tcb_sc_at P t"
+  and cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
+  (wp: crunch_wps cur_sc_tcb_lift)
+
+crunch set_arm_current_fpu_owner
+  for cur_sc_tcb[wp]: cur_sc_tcb
+  (wp: crunch_wps cur_sc_tcb_lift)
+
 crunch set_arm_current_fpu_owner
   for valid_mdb[wp]: valid_mdb
   and valid_ioc[wp]: valid_ioc
   and valid_idle[wp]: valid_idle
   and only_idle[wp]: only_idle
   and if_unsafe_then_cap[wp]: if_unsafe_then_cap
-  and valid_reply_caps[wp]: valid_reply_caps
-  and valid_reply_masters[wp]: valid_reply_masters
   and valid_global_refs[wp]: valid_global_refs
   and valid_arch_state[wp]: valid_arch_state
   and valid_irq_node[wp]: valid_irq_node
@@ -105,6 +134,8 @@ crunch lazy_fpu_restore
 
 lemmas vcpu_switch_typ_ats[wp] = abs_typ_at_lifts[OF vcpu_switch_typ_at]
 
+lemmas lazy_fpu_restore_typ_ats[wp] = abs_typ_at_lifts[OF lazy_fpu_restore_typ_at]
+
 crunch set_vm_root, vcpu_switch
   for ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
   (wp: crunch_wps simp: crunch_simps)
@@ -116,18 +147,13 @@ lemma arch_stt_invs [wp,Schedule_AI_assms]:
   apply (clarsimp simp: tcb_at_def)
   by (rule sym_refs_VCPU_hyp_live; fastforce)
 
-lemma arch_stt_tcb [wp,Schedule_AI_assms]:
-  "arch_switch_to_thread t' \<lbrace>tcb_at t'\<rbrace>"
+lemma arch_stt_tcb[wp, Schedule_AI_assms]:
+  "arch_switch_to_thread t \<lbrace>tcb_at t'\<rbrace>"
   by (wpsimp simp: arch_switch_to_thread_def wp: tcb_at_typ_at)
 
-lemma arch_stt_st_tcb_at[Schedule_AI_assms]:
-  "arch_switch_to_thread t \<lbrace>st_tcb_at Q t\<rbrace>"
+lemma arch_stt_st_tcb_at[wp, Schedule_AI_assms]:
+  "arch_switch_to_thread t \<lbrace>st_tcb_at Q t'\<rbrace>"
   by (wpsimp simp: arch_switch_to_thread_def)
-
-lemma idle_strg:
-  "thread = idle_thread s \<and> invs s \<Longrightarrow> invs (s\<lparr>cur_thread := thread\<rparr>)"
-  by (clarsimp simp: invs_def valid_state_def valid_idle_def cur_tcb_def
-                     pred_tcb_at_def valid_machine_state_def obj_at_def is_tcb_def)
 
 crunch
   vcpu_update, vgic_update, vgic_update_lr, vcpu_restore_reg_range, vcpu_save_reg_range,
@@ -140,9 +166,18 @@ lemma arch_stit_invs[wp, Schedule_AI_assms]:
   "arch_switch_to_idle_thread \<lbrace>invs\<rbrace>"
   by (wpsimp simp: arch_switch_to_idle_thread_def)
 
-lemma arch_stit_tcb_at[wp]:
+lemma arch_stit_tcb_at[wp, Schedule_AI_assms]:
   "arch_switch_to_idle_thread \<lbrace>tcb_at t\<rbrace>"
   by (wpsimp simp: arch_switch_to_idle_thread_def wp: tcb_at_typ_at)
+
+lemma arch_stit_sc_at[wp, Schedule_AI_assms]:
+  "arch_switch_to_idle_thread \<lbrace>sc_at t\<rbrace>"
+  by (wpsimp simp: arch_switch_to_idle_thread_def wp: sc_at_typ_at)
+
+lemma arch_stt_sc_at[wp, Schedule_AI_assms]:
+  "arch_switch_to_thread t' \<lbrace>sc_at sc_ptr\<rbrace>"
+  unfolding arch_switch_to_thread_def
+  by wpsimp
 
 crunch set_vm_root
   for ct[wp]: "\<lambda>s. P (cur_thread s)"
@@ -153,12 +188,6 @@ lemma arch_stit_activatable[wp, Schedule_AI_assms]:
   "arch_switch_to_idle_thread \<lbrace>ct_in_state activatable\<rbrace>"
   apply (clarsimp simp: arch_switch_to_idle_thread_def)
   apply (wpsimp simp: ct_in_state_def wp: ct_in_state_thread_state_lift)
-  done
-
-lemma stit_invs [wp,Schedule_AI_assms]:
-  "switch_to_idle_thread \<lbrace>invs\<rbrace>"
-  apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def)
-  apply (wpsimp|strengthen idle_strg)+
   done
 
 lemma stit_activatable[Schedule_AI_assms]:
@@ -186,8 +215,11 @@ crunch arch_prepare_next_domain
   for ct[wp, Schedule_AI_assms]: "\<lambda>s. P (cur_thread s)"
   and activatable[wp, Schedule_AI_assms]: "ct_in_state activatable"
   and st_tcb_at[wp, Schedule_AI_assms]: "\<lambda>s. P (st_tcb_at Q t s)"
+  and tcb_at[wp, Schedule_AI_assms]: "tcb_at t"
+  and sc_at[wp, Schedule_AI_assms]: "sc_at sc_ptr"
   and valid_idle[wp, Schedule_AI_assms]: valid_idle
   and invs[wp, Schedule_AI_assms]: invs
+  and scheduler_action[wp, Schedule_AI_assms]: "\<lambda>s. P (scheduler_action s)"
   (wp: crunch_wps ct_in_state_thread_state_lift)
 
 lemma arch_stit_scheduler_action [wp, Schedule_AI_assms]:
@@ -200,7 +232,7 @@ interpretation Schedule_AI?: Schedule_AI
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (intro_locales; (unfold_locales; fact Schedule_AI_assms)?)
+  by (intro_locales; unfold_locales; (fact Schedule_AI_assms)?)
 qed
 
 end

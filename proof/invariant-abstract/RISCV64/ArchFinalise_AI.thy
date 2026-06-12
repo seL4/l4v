@@ -541,12 +541,12 @@ lemma arch_finalise_cap_replaceable[wp]:
               valid_cap_typ  unmap_page_unreachable unmap_page_table_unreachable
               delete_asid_unreachable
   shows
-    "\<lbrace>\<lambda>s. s \<turnstile> cap.ArchObjectCap cap \<and>
-          x = is_final_cap' (cap.ArchObjectCap cap) s \<and>
+    "\<lbrace>\<lambda>s. s \<turnstile> ArchObjectCap cap \<and>
+          x = is_final_cap' (ArchObjectCap cap) s \<and>
           pspace_aligned s \<and> valid_vspace_objs s \<and> valid_objs s \<and> valid_asid_table s \<and>
           valid_arch_caps s\<rbrace>
      arch_finalise_cap cap x
-   \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) (cap.ArchObjectCap cap)\<rbrace>"
+     \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) (ArchObjectCap cap)\<rbrace>"
   apply (simp add: arch_finalise_cap_def simps split: option.splits vmpage_size.splits)
   apply (wp wps |
          strengthen obj_at_not_live_valid_arch_cap_strg[where cap=cap] |

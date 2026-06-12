@@ -588,7 +588,7 @@ definition pte_rights_of :: "pte \<Rightarrow> rights set" where
 
 definition global_refs :: "'z::state_ext state \<Rightarrow> obj_ref set" where
   "global_refs \<equiv> \<lambda>s.
-     {idle_thread s, arm_us_global_vspace (arch_state s)} \<union>
+     {idle_thread s, idle_sc_ptr, arm_us_global_vspace (arch_state s)} \<union>
      range (interrupt_irq_node s)"
 
 definition asid_entry ::
@@ -756,6 +756,8 @@ definition hyp_refs_of :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype
                    | TCB tcb           \<Rightarrow> tcb_hyp_refs (tcb_arch tcb)
                    | Endpoint ep       \<Rightarrow> {}
                    | Notification ntfn \<Rightarrow> {}
+                   | SchedContext sc n \<Rightarrow> {}
+                   | Reply reply       \<Rightarrow> {}
                    | ArchObj ao        \<Rightarrow> refs_of_ao ao"
 
 lemmas hyp_refs_of_simps[simp] = hyp_refs_of_def[split_simps kernel_object.split]
@@ -1125,6 +1127,14 @@ lemma idle_global[simp, intro!]:
   "idle_thread s \<in> global_refs s"
   by (simp add: global_refs_def)
 
+lemma idle_sc_global:
+  "idle_sc_ptr \<in> global_refs s"
+  by (simp add: global_refs_def)
+
+lemma idle_ptrs_neq:
+  "idle_thread_ptr \<noteq> idle_sc_ptr"
+  by (clarsimp simp: idle_thread_ptr_def idle_sc_ptr_def)
+
 lemma valid_ipc_buffer_cap_null[simp, intro!]:
   "valid_ipc_buffer_cap NullCap buf"
   by (simp add: valid_ipc_buffer_cap_def)
@@ -1476,8 +1486,8 @@ lemma hyp_refs_of_hyp_live:
   "hyp_refs_of ko \<noteq> {} \<Longrightarrow> hyp_live ko"
   by (cases ko)
      (auto simp: hyp_live_def arch_live_def refs_of_ao_def vcpu_tcb_refs_def tcb_hyp_refs_def
-                     tcb_vcpu_refs_def hyp_refs_of_def
-           split: arch_kernel_obj.splits option.splits)
+                 tcb_vcpu_refs_def
+          split: arch_kernel_obj.splits)
 
 lemma hyp_refs_of_hyp_live_obj:
   "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> P ko; hyp_refs_of ko = {} \<rbrakk> \<Longrightarrow> False \<rbrakk> \<Longrightarrow> obj_at hyp_live p s"
@@ -1493,16 +1503,16 @@ lemma tcb_arch_ref_simps[simp]:
   "\<And>f. tcb_arch_ref (tcb_flags_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_ctable_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_vtable_update f tcb) = tcb_arch_ref tcb"
-  "\<And>f. tcb_arch_ref (tcb_reply_update f tcb) = tcb_arch_ref tcb"
-  "\<And>f. tcb_arch_ref (tcb_caller_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_ipcframe_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_state_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_fault_handler_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_fault_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_bound_notification_update f tcb) = tcb_arch_ref tcb"
+  "\<And>f. tcb_arch_ref (tcb_sched_context_update f tcb) = tcb_arch_ref tcb"
+  "\<And>f. tcb_arch_ref (tcb_yield_to_update f tcb) = tcb_arch_ref tcb"
+  "\<And>f. tcb_arch_ref (tcb_timeout_handler_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_domain_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_priority_update f tcb) = tcb_arch_ref tcb"
-  "\<And>f. tcb_arch_ref (tcb_time_slice_update f tcb) = tcb_arch_ref tcb"
   "tcb_arch_ref (t\<lparr>tcb_arch := (arch_tcb_context_set a (tcb_arch t))\<rparr>) = tcb_arch_ref t"
   "tcb_arch_ref (tcb\<lparr>tcb_arch := arch_tcb_set_registers regs (tcb_arch tcb)\<rparr>) = tcb_arch_ref tcb"
   by (auto simp: tcb_arch_ref_def arch_tcb_set_registers_def arch_tcb_context_set_def)
@@ -1515,16 +1525,16 @@ lemma hyp_live_tcb_simps[simp]:
   "\<And>f. hyp_live (TCB (tcb_mcpriority_update f tcb)) = hyp_live (TCB tcb)"
   "\<And>f. hyp_live (TCB (tcb_ctable_update f tcb)) = hyp_live (TCB tcb)"
   "\<And>f. hyp_live (TCB (tcb_vtable_update f tcb)) = hyp_live (TCB tcb)"
-  "\<And>f. hyp_live (TCB (tcb_reply_update f tcb)) = hyp_live (TCB tcb)"
-  "\<And>f. hyp_live (TCB (tcb_caller_update f tcb)) = hyp_live (TCB tcb)"
   "\<And>f. hyp_live (TCB (tcb_ipcframe_update f tcb)) = hyp_live (TCB tcb)"
   "\<And>f. hyp_live (TCB (tcb_state_update f tcb)) = hyp_live (TCB tcb)"
+  "\<And>tcb f. hyp_live (TCB (tcb_sched_context_update f tcb)) = hyp_live (TCB tcb)"
+  "\<And>tcb f. hyp_live (TCB (tcb_yield_to_update f tcb)) = hyp_live (TCB tcb)"
   "\<And>f. hyp_live (TCB (tcb_fault_handler_update f tcb)) = hyp_live (TCB tcb)"
+  "\<And>tcb f. hyp_live (TCB (tcb_timeout_handler_update f tcb)) = hyp_live (TCB tcb)"
   "\<And>f. hyp_live (TCB (tcb_fault_update f tcb)) = hyp_live (TCB tcb)"
   "\<And>f. hyp_live (TCB (tcb_bound_notification_update f tcb)) = hyp_live (TCB tcb)"
-  "\<And>f. hyp_live (TCB (tcb_domain_update f tcb)) = hyp_live (TCB tcb)"
-  "\<And>f. hyp_live (TCB (tcb_priority_update f tcb)) = hyp_live (TCB tcb)"
-  "\<And>f. hyp_live (TCB (tcb_time_slice_update f tcb)) = hyp_live (TCB tcb)"
+  "\<And>tcb f. hyp_live (TCB (tcb_domain_update f tcb)) = hyp_live (TCB tcb)"
+  "\<And>tcb f. hyp_live (TCB (tcb_priority_update f tcb)) = hyp_live (TCB tcb)"
   by (simp_all add: hyp_live_tcb_def)
 
 lemma arch_tcb_live_simps[simp]:
@@ -3058,6 +3068,10 @@ lemma valid_arch_state_global_arch_objs[elim!]:
   "valid_arch_state s \<Longrightarrow> valid_global_arch_objs s"
   by (simp add: valid_arch_state_def)
 
+lemma valid_sc_size_less_word_bits:
+  "valid_sched_context_size n \<Longrightarrow> min_sched_context_bits + n < word_bits"
+  by (simp add: valid_sched_context_size_def untyped_max_bits_def word_bits_def)
+
 (* VCPU and related symrefs *)
 
 lemma aa_type_vcpuD:
@@ -3144,10 +3158,11 @@ lemma valid_vso_at_update [iff]:
 (* FIXME: move to generic *)
 lemma get_cap_update [iff]:
   "(fst (get_cap p (f s)) = {(cap, f s)}) = (fst (get_cap p s) = {(cap, s)})"
-  apply (simp add: get_cap_def get_object_def bind_assoc
-                   exec_gets split_def assert_def pspace)
+  apply (simp add: get_cap_def get_object_def bind_assoc gets_the_def read_object_def
+                   exec_gets split_def assert_def pspace assert_opt_def
+            split: option.splits)
   apply (clarsimp simp: fail_def)
-  apply (case_tac y, simp_all add: assert_opt_def split: option.splits)
+  apply (rename_tac obj; case_tac obj, simp_all add: assert_opt_def split: option.splits)
       apply (simp_all add: return_def fail_def assert_def bind_def)
   done
 

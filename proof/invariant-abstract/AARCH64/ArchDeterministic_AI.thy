@@ -26,11 +26,15 @@ lemma vcpu_switch_valid_list[wp, Deterministic_AI_assms]:
   by wpsimp
 
 crunch
-  cap_swap_for_delete,set_cap,finalise_cap,arch_get_sanitise_register_info,
+  cap_swap_for_delete, set_cap, finalise_cap, arch_get_sanitise_register_info,
   arch_post_modify_registers, arch_post_set_flags
   for valid_list[wp, Deterministic_AI_assms]: valid_list
-  (wp: crunch_wps simp: unless_def crunch_simps)
-declare get_cap_inv[Deterministic_AI_assms]
+  (wp: crunch_wps hoare_vcg_all_lift simp: unless_def crunch_simps)
+
+lemmas [Deterministic_AI_assms] =
+  get_cap_inv
+  arch_get_sanitise_register_info_inv
+  arch_post_modify_registers_inv
 
 end
 
@@ -76,9 +80,13 @@ crunch handle_invocation
   (wp: crunch_wps syscall_valid simp: crunch_simps
    ignore: without_preemption syscall)
 
-crunch handle_recv, handle_yield, handle_call
+crunch receive_ipc, handle_recv
   for valid_list[wp, Deterministic_AI_assms]: valid_list
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: hoare_drop_imps hoare_vcg_if_lift2 simp: Let_def whenE_def)
+
+crunch handle_yield, handle_call
+  for valid_list[wp, Deterministic_AI_assms]: valid_list
+  (wp: crunch_wps dxo_wp_weak simp: crunch_simps)
 
 lemma handle_vm_fault_valid_list[wp, Deterministic_AI_assms]:
   "handle_vm_fault thread fault \<lbrace>valid_list\<rbrace>"
@@ -96,12 +104,22 @@ lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
        | wpc | simp add: get_irq_slot_def handle_reserved_irq_def arch_mask_irq_signal_def
        | wp (once) hoare_drop_imps)+
 
-crunch handle_send, handle_reply, handle_spurious_irq
+crunch handle_send, handle_spurious_irq, handle_hypervisor_fault
   for valid_list[wp, Deterministic_AI_assms]: valid_list
 
-crunch handle_hypervisor_fault
-  for valid_list[wp, Deterministic_AI_assms]: valid_list
-  (simp: isFpuEnable_def)
+named_theorems machine_ops_last_machine_time'
+named_theorems arch_machine_ops_last_machine_time'
+
+lemmas [machine_ops_last_machine_time'] = storeWord_machine_times ackInterrupt_machine_times
+
+crunch
+  storeWord, clearMemory, freeMemory, ackDeadlineIRQ, ackInterrupt, maskInterrupt, setDeadline,
+  cleanCacheRange_RAM, cleanCacheRange_PoU
+  for machine_times[wp, machine_ops_last_machine_time']: "\<lambda>ms. P (last_machine_time ms) (time_state ms)"
+  (wp: crunch_wps simp: crunch_simps ignore_del: storeWord maskInterrupt clearMemory)
+
+lemmas machine_ops_last_machine_time = machine_ops_last_machine_time'
+lemmas arch_machine_ops_last_machine_time = arch_machine_ops_last_machine_time'
 
 end
 

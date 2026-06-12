@@ -27,10 +27,10 @@ lemma dmo_maskInterrupt_invs [InterruptAcc_AI_assms]:
 
 lemma getCurrentTime_invs[wp]:
   "do_machine_op getCurrentTime \<lbrace>invs\<rbrace>"
-  apply (simp add: getCurrentTime_def modify_def)
-  apply (wpsimp wp: dmo_invs simp: modify_def)
-  by (simp add: do_machine_op_def modify_def in_get bind_assoc get_def put_def gets_def in_bind
-                   split_def select_f_returns in_return)
+  unfolding getCurrentTime_def
+  apply (wpsimp wp: dmo_invs)
+  apply (simp add: in_monad)
+  done
 
 crunch handle_spurious_irq
   for invs: invs

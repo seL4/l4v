@@ -22,8 +22,11 @@ definition virqSetEOIIRQEN :: "virq \<Rightarrow> machine_word \<Rightarrow> vir
 definition vgic_maintenance :: "(unit,'z::state_ext) s_monad" where
   "vgic_maintenance = do
      ct \<leftarrow> gets cur_thread;
+     dom \<leftarrow> thread_get tcb_domain ct;
+     prio \<leftarrow> thread_get tcb_priority ct;
+     queue \<leftarrow> get_tcb_queue dom prio;
      ct_schedulable \<leftarrow> gets (schedulable ct);
-     when ct_schedulable $ do
+     when (ct \<notin> set queue \<and> ct_schedulable) $ do
        cur_vcpu \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
        case cur_vcpu
          of Some (vcpu_ptr, True) \<Rightarrow> do
@@ -57,8 +60,11 @@ definition vgic_maintenance :: "(unit,'z::state_ext) s_monad" where
 definition vppi_event :: "irq \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "vppi_event irq = do
      ct \<leftarrow> gets cur_thread;
+     dom \<leftarrow> thread_get tcb_domain ct;
+     prio \<leftarrow> thread_get tcb_priority ct;
+     queue \<leftarrow> get_tcb_queue dom prio;
      ct_schedulable \<leftarrow> gets (schedulable ct);
-     when ct_schedulable $ do
+     when (ct \<notin> set queue \<and> ct_schedulable) $ do
        cur_vcpu \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
        case cur_vcpu
          of Some (vcpu_ptr, True) \<Rightarrow> do

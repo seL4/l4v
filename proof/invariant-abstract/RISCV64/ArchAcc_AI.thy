@@ -597,17 +597,39 @@ lemma set_asid_pool_cte_wp_at:
              simp: cte_wp_at_after_update)
 
 lemma set_pt_pred_tcb_at[wp]:
-  " set_pt ptr val \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
-  apply (simp add: set_pt_def set_object_def)
-  apply (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
-  done
+  "set_pt ptr val \<lbrace> \<lambda>s. Q (pred_tcb_at proj P t s) \<rbrace>"
+  unfolding set_pt_def set_object_def
+  by (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
 
+lemma set_pt_eps_of[wp]:
+  "set_pt ptr pt \<lbrace>\<lambda>s. P (eps_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_pt_def)
+
+lemma set_pt_ntfns_of[wp]:
+  "set_pt ptr pt \<lbrace>\<lambda>s. P (ntfns_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_pt_def)
+
+lemma set_pt_tcbs_of[wp]:
+  "set_pt ptr pt \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_pt_def)
 
 lemma set_asid_pool_pred_tcb_at[wp]:
   "set_asid_pool ptr val \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
   done
+
+lemma set_asid_pool_eps_of[wp]:
+  "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (eps_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_asid_pool_def)
+
+lemma set_asid_pool_ntfns_of[wp]:
+  "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (ntfns_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_asid_pool_def)
+
+lemma set_asid_pool_tcbs_of[wp]:
+  "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
+  by (set_object_easy_cases def: set_asid_pool_def)
 
 lemma mask_pt_bits_inner_beauty:
   "is_aligned p pte_bits \<Longrightarrow>

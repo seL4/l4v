@@ -89,11 +89,17 @@ lemma active_cur_vcpu_of_simps[simp]:
   "\<And>f. active_cur_vcpu_of (ready_queues_update f s) = active_cur_vcpu_of s"
   "\<And>x. active_cur_vcpu_of (s\<lparr>arch_state := arch_state s \<lparr>arm_vmid_table := x \<rparr>\<rparr>) = active_cur_vcpu_of s"
   "\<And>x. active_cur_vcpu_of (s\<lparr>arch_state := arch_state s \<lparr>arm_current_fpu_owner := x \<rparr>\<rparr>) = active_cur_vcpu_of s"
+  "\<And>f. active_cur_vcpu_of (release_queue_update f s) = active_cur_vcpu_of s"
+  "\<And>f. active_cur_vcpu_of (reprogram_timer_update f s) = active_cur_vcpu_of s"
+  "\<And>f. active_cur_vcpu_of (cur_sc_update f s) = active_cur_vcpu_of s"
+  "\<And>f. active_cur_vcpu_of (consumed_time_update f s) = active_cur_vcpu_of s"
   by (clarsimp simp: active_cur_vcpu_of_def pred_tcb_at_def obj_at_def valid_cur_vcpu_def)+
 
 lemma valid_cur_vcpu_simps[simp]:
   "\<And>f. valid_cur_vcpu (trans_state f s) = valid_cur_vcpu s"
   "\<And>x. valid_cur_vcpu (s\<lparr>arch_state := arch_state s \<lparr>arm_vmid_table := x \<rparr>\<rparr>) = valid_cur_vcpu s"
+  "\<And>f. valid_cur_vcpu (reprogram_timer_update f s) = valid_cur_vcpu s"
+  "\<And>f. valid_cur_vcpu (release_queue_update f s) = valid_cur_vcpu s"
   by (clarsimp simp: valid_cur_vcpu_def pred_tcb_at_def obj_at_def active_cur_vcpu_of_def)+
 
 crunch as_user
@@ -116,7 +122,7 @@ crunch do_machine_op
 lemma valid_cur_vcpu_vcpu_update[simp]:
   "vcpu_at v s \<Longrightarrow> valid_cur_vcpu (s\<lparr>kheap := (kheap s)(v \<mapsto> ArchObj (VCPU vcpu))\<rparr>) = valid_cur_vcpu s"
   by (clarsimp simp: valid_cur_vcpu_def active_cur_vcpu_of_def pred_tcb_at_def obj_at_def
-                     in_cur_domain_def etcb_at_def etcbs_of'_def)
+                     in_cur_domain_def etcb_at_def etcb_at'_def vs_all_heap_simps)
 
 crunch vcpu_save_reg, vcpu_write_reg, save_virt_timer, vgic_update, vcpu_disable
   for valid_cur_vcpu[wp]: valid_cur_vcpu
@@ -233,7 +239,7 @@ lemma tcb_vcpu_update_empty_valid_cur_vcpu[wp]:
    \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
   apply (wpsimp wp: arch_thread_set_wp)
   by (clarsimp simp: valid_cur_vcpu_def pred_tcb_at_def active_cur_vcpu_of_def obj_at_def
-                     in_cur_domain_def etcb_at_def etcbs_of'_def)
+                     in_cur_domain_def etcb_at_def etcb_at'_def vs_all_heap_simps)
 
 lemma vcpu_invalidate_active_valid_cur_vcpu[wp]:
   "\<lbrace>\<lambda>s. arm_current_vcpu (arch_state s) \<noteq> None
@@ -273,16 +279,34 @@ lemma associate_vcpu_tcb_valid_cur_vcpu:
        apply (wpsimp wp: arch_thread_set_wp)
       apply (rule_tac Q'="\<lambda>_ s. valid_cur_vcpu s \<and> sym_refs (state_hyp_refs_of s)" in hoare_post_imp)
        apply (clarsimp simp: pred_tcb_at_def obj_at_def valid_cur_vcpu_def active_cur_vcpu_of_def
-                             in_cur_domain_def etcb_at_def etcbs_of'_def)
+                             in_cur_domain_def etcb_at_def etcb_at'_def vs_all_heap_simps)
       by (wpsimp wp: get_vcpu_wp hoare_drop_imps hoare_vcg_all_lift | wps)+
 
-crunch set_thread_state, tcb_sched_action
+crunch set_thread_state, tcb_sched_action, update_sched_context, set_consumed
   for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   and valid_cur_vcpu[wp]: valid_cur_vcpu
   (wp: valid_cur_vcpu_lift_weak in_cur_domain_lift_weak)
 
-crunch activate_thread
+lemma set_object_active_cur_vcpu[wp]:
+  "set_object ptr obj \<lbrace>\<lambda>s. P (active_cur_vcpu_of s)\<rbrace>"
+  by (set_object_easy_cases def: active_cur_vcpu_of_def)
+
+crunch set_consumed, complete_yield_to, set_thread_state, awaken, sc_and_timer
+  for active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
+  and arch_tcb_vcpu_at[wp]: "arch_tcb_at (\<lambda>itcb. P (itcb_vcpu itcb)) t"
+  (wp: crunch_wps valid_cur_vcpu_lift simp: crunch_simps)
+
+crunch sc_and_timer
+  for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
+  (wp: crunch_wps)
+
+crunch switch_sched_context
+  for in_cur_domain[wp]: "\<lambda>s. P (in_cur_domain thread s)"
+  (wp: crunch_wps)
+
+crunch activate_thread, awaken, sc_and_timer, awaken
   for valid_cur_vcpu[wp]: valid_cur_vcpu
+  (wp: crunch_wps valid_cur_vcpu_lift)
 
 crunch switch_local_fpu_owner
   for valid_cur_vcpu[wp]: valid_cur_vcpu
@@ -304,64 +328,59 @@ lemma schedule_choose_new_thread_cur_vcpu[wp]:
   "\<lbrace>valid_idle\<rbrace> schedule_choose_new_thread \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
   by (wpsimp simp: schedule_choose_new_thread_def)
 
+crunch check_domain_time
+  for valid_idle[wp]: valid_idle
+
 crunch schedule
   for valid_cur_vcpu[wp]: valid_cur_vcpu
-  (simp: valid_cur_vcpu_def active_cur_vcpu_of_def wp: crunch_wps)
+  (wp: crunch_wps)
 
-crunch cancel_all_ipc, blocked_cancel_ipc, unbind_maybe_notification, cancel_all_signals,
-         bind_notification, fast_finalise, deleted_irq_handler, post_cap_deletion, cap_delete_one,
-         reply_cancel_ipc, cancel_ipc, update_waiting_ntfn, send_signal, send_ipc, send_fault_ipc,
-         receive_ipc, handle_fault, handle_interrupt, handle_vm_fault, handle_hypervisor_fault,
-         send_signal, do_reply_transfer, unbind_notification, suspend, cap_swap, bind_notification,
-         restart, reschedule_required, possible_switch_to, thread_set_priority, reply_from_kernel
+crunch
+  cancel_all_ipc, blocked_cancel_ipc, unbind_maybe_notification, cancel_all_signals,
+  bind_notification, fast_finalise, deleted_irq_handler, post_cap_deletion, cap_delete_one,
+  cancel_ipc, update_waiting_ntfn, send_signal, send_ipc, send_fault_ipc, end_timeslice,
+  receive_ipc, handle_fault, handle_interrupt, handle_vm_fault, handle_hypervisor_fault,
+  send_signal, do_reply_transfer, unbind_notification, suspend, cap_swap, bind_notification,
+  restart, reschedule_required, possible_switch_to, thread_set_priority, reply_from_kernel,
+  receive_ipc
   for arch_state[wp]: "\<lambda>s. P (arch_state s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
-  (wp: mapM_x_wp_inv thread_set.arch_state crunch_wps dxo_wp_weak
+  (wp: mapM_x_wp_inv thread_set.arch_state crunch_wps hoare_vcg_all_lift dxo_wp_weak
    simp: crunch_simps possible_switch_to_def reschedule_required_def)
 
 lemma do_unbind_notification_arch_tcb_at[wp]:
-  "do_unbind_notification ntfnptr ntfn tcbptr \<lbrace>arch_tcb_at P t\<rbrace>"
-  unfolding set_bound_notification_def set_simple_ko_def
-  apply (wpsimp wp: set_object_wp get_object_wp get_simple_ko_wp thread_get_wp)
-  by (fastforce simp: pred_tcb_at_def obj_at_def get_tcb_def)
-
-lemma unbind_notification_arch_tcb_at[wp]:
-  "unbind_notification tcb \<lbrace>arch_tcb_at P t\<rbrace>"
-  unfolding unbind_notification_def
-  by wpsimp
+  "do_unbind_notification ntfnptr tcbptr \<lbrace>arch_tcb_at P t\<rbrace>"
+  unfolding set_simple_ko_def
+  by (wpsimp wp: set_object_wp get_object_wp get_simple_ko_wp thread_get_wp)
 
 lemma bind_notification_arch_tcb_at[wp]:
   "bind_notification tcbptr ntfnptr \<lbrace>arch_tcb_at P t\<rbrace>"
-  unfolding bind_notification_def set_bound_notification_def set_simple_ko_def
-  apply (wpsimp wp: set_object_wp get_object_wp get_simple_ko_wp)
-  by (fastforce simp: pred_tcb_at_def obj_at_def get_tcb_def)
+  unfolding bind_notification_def set_simple_ko_def
+  by (wpsimp wp: set_object_wp get_object_wp get_simple_ko_wp)
 
 lemma unbind_maybe_notification_arch_tcb_at[wp]:
   "unbind_maybe_notification ntfnptr \<lbrace>arch_tcb_at P t\<rbrace>"
   unfolding unbind_maybe_notification_def
-  by wpsimp
+  by (wpsimp wp: hoare_drop_imps)
 
 crunch blocked_cancel_ipc, cap_delete_one, cancel_signal
   for arch_tcb_at[wp]: "arch_tcb_at P t"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma reply_cancel_ipc_arch_tcb_at[wp]:
-  "reply_cancel_ipc ntfnptr \<lbrace>arch_tcb_at P t\<rbrace>"
-  unfolding reply_cancel_ipc_def thread_set_def
-  apply (wpsimp wp: set_object_wp)
-  by (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
-
-crunch cancel_ipc, send_ipc, receive_ipc
+crunch cancel_ipc, send_ipc, maybe_return_sc, complete_signal, receive_ipc
   for arch_tcb_at[wp]: "arch_tcb_at P t"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps hoare_vcg_all_lift thread_set_no_change_tcb_pred
+   simp: crunch_simps)
 
 lemma send_fault_ipc_arch_tcb_at[wp]:
-  "send_fault_ipc tptr fault \<lbrace>arch_tcb_at P t\<rbrace>"
+  "send_fault_ipc tptr handler_cap fault can_donate \<lbrace>arch_tcb_at P t\<rbrace>"
   unfolding send_fault_ipc_def thread_set_def Let_def
   by (wpsimp wp: set_object_wp hoare_drop_imps hoare_vcg_all_liftE_R
            simp: pred_tcb_at_def obj_at_def get_tcb_def)
 
-crunch handle_fault, handle_interrupt, handle_vm_fault, handle_hypervisor_fault, send_signal
+crunch
+  handle_fault, handle_timeout, handle_interrupt, handle_vm_fault, handle_hypervisor_fault,
+  send_signal
   for arch_tcb_at[wp]: "arch_tcb_at P t"
   (wp: mapM_x_wp_inv crunch_wps thread_set_no_change_tcb_pred)
 
@@ -370,25 +389,26 @@ lemma thread_set_fault_arch_tcb_at[wp]:
   unfolding thread_set_def
   by (wpsimp wp: set_object_wp simp: pred_tcb_at_def obj_at_def get_tcb_def)
 
-lemma do_reply_transfer_arch_tcb_at[wp]:
-  "do_reply_transfer sender receiver slot grant \<lbrace>arch_tcb_at P t\<rbrace>"
-  unfolding do_reply_transfer_def
-  by (wpsimp wp: gts_wp split_del: if_split)
+crunch do_reply_transfer
+  for arch_tcb_at[wp]: "arch_tcb_at P t"
+  (wp: mapM_x_wp_inv crunch_wps thread_set_no_change_tcb_pred)
 
 crunch set_extra_badge, send_ipc
   for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   and etcbs_of[wp]: "\<lambda>s. P (etcbs_of s)"
   (wp: crunch_wps transfer_caps_loop_pres simp: crunch_simps)
 
-crunch send_fault_ipc, receive_ipc, handle_fault, handle_interrupt, handle_vm_fault,
-         handle_hypervisor_fault, send_signal, do_reply_transfer, cancel_all_ipc,
-         cancel_all_signals, unbind_maybe_notification, suspend, deleting_irq_handler,
-         unbind_notification
+crunch
+  send_fault_ipc, receive_ipc, handle_fault, handle_interrupt, handle_vm_fault,
+  handle_hypervisor_fault, send_signal, do_reply_transfer, cancel_all_ipc,
+  cancel_all_signals, unbind_maybe_notification, suspend, deleting_irq_handler,
+  unbind_notification, init_arch_objects
   for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   and etcbs_of[wp]: "\<lambda>s. P (etcbs_of s)"
   and idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
   and valid_cur_vcpu[wp]: valid_cur_vcpu
-  (wp: valid_cur_vcpu_lift_weak crunch_wps in_cur_domain_lift_weak thread_set_etcbs hoare_vcg_all_liftE_R dxo_wp_weak
+  (wp: valid_cur_vcpu_lift_weak crunch_wps hoare_vcg_all_lift in_cur_domain_lift_weak
+       thread_set_etcbs hoare_vcg_all_liftE_R dxo_wp_weak
    simp: crunch_simps)
 
 crunch init_arch_objects, reset_untyped_cap
@@ -409,7 +429,7 @@ lemma delete_objects_etcb_at':
    \<lbrace>\<lambda>_ s. Q (etcb_at P t s)\<rbrace>"
   apply (simp add: delete_objects_def)
   apply (wpsimp simp: detype_def)
-  apply (auto simp: detype_def etcbs_of'_def etcb_at'_def)
+  apply (auto simp: detype_def etcb_at'_def vs_all_heap_simps)
   done
 
 lemma reset_untyped_cap_etcb_at':
@@ -421,6 +441,10 @@ lemma reset_untyped_cap_etcb_at':
   apply (auto simp: cte_wp_at_caps_of_state bits_of_def is_cap_simps)
   done
 
+lemma init_arch_objects_etcbs_of[wp]:
+  "init_arch_objects new_type is_device ptr num_objects obj_sz refs \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace>"
+  by wpsimp
+
 lemma invoke_untyped_etcb_at':
   "\<lbrace>\<lambda>s. Q (etcb_at P t s) \<and> invs s \<and> st_tcb_at (Not o inactive and Not \<circ> idle) t s \<and> ct_active s
         \<and> valid_untyped_inv ui s\<rbrace>
@@ -429,8 +453,8 @@ lemma invoke_untyped_etcb_at':
   apply (cases ui)
   apply (simp add: mapM_x_def[symmetric] invoke_untyped_def)
   apply (wpsimp wp: mapM_x_wp'
-                    create_cap_no_pred_tcb_at typ_at_pred_tcb_at_lift
-                    hoare_convert_imp[OF create_cap_no_pred_tcb_at]
+                    typ_at_pred_tcb_at_lift
+                    hoare_convert_imp[OF create_cap.cspace_pred_tcb_at[where P'=Not]]
                     hoare_convert_imp[OF _ init_arch_objects_etcbs_of]
                     hoare_drop_impE_E reset_untyped_cap_etcb_at'[where Q=Q])
   apply (cases ui, clarsimp)
@@ -441,16 +465,20 @@ lemma invoke_untyped_etcb_at':
   done
 
 lemma invoke_untyped_etcb_at'':
-  "\<lbrace>\<lambda>s. Q (etcb_at P t s) \<and> invs s \<and> st_tcb_at (Not o inactive and Not \<circ> idle) t s \<and> ct_active s \<and> valid_untyped_inv ui s\<rbrace>
+  "\<lbrace>\<lambda>s. Q (etcb_at P t s) \<and> invs s \<and> st_tcb_at (Not o inactive and Not \<circ> idle) t s \<and> ct_active s
+        \<and> valid_untyped_inv ui s \<and> schact_is_rct s\<rbrace>
    invoke_untyped ui
    \<lbrace>\<lambda>_ s. Q (etcb_at P t s)\<rbrace>"
-  apply (rule hoare_post_imp[where Q'="\<lambda>_ s. st_tcb_at (Not \<circ> inactive) t s \<and> (st_tcb_at (Not \<circ> inactive) t s \<longrightarrow> Q (etcb_at P t s))"])
+  apply (rule hoare_post_imp[where Q'="\<lambda>_ s. st_tcb_at (Not \<circ> inactive) t s
+                                             \<and> (st_tcb_at (Not \<circ> inactive) t s
+                                                \<longrightarrow> Q (etcb_at P t s))"])
    apply simp
-  apply (wpsimp wp: invoke_untyped_etcb_at')+
+  apply (wpsimp wp: invoke_untyped_etcb_at')
+  apply (fastforce elim: st_tcb_weakenE st_tcb_ex_cap split: thread_state.splits)
   done
 
 lemma invoke_untyped_valid_cur_vcpu:
-  "\<lbrace>valid_cur_vcpu and invs and valid_untyped_inv ui and ct_active\<rbrace>
+  "\<lbrace>valid_cur_vcpu and invs and valid_untyped_inv ui and ct_active and schact_is_rct\<rbrace>
    invoke_untyped ui
    \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
   apply (rule hoare_weaken_pre)
@@ -463,7 +491,8 @@ lemma invoke_untyped_valid_cur_vcpu:
       apply wpsimp
      apply (rule_tac f=cur_thread in hoare_lift_Pf2; wpsimp)
     apply (rule_tac f=cur_thread in hoare_lift_Pf2)
-     apply (rule invoke_untyped_pred_tcb_at)
+     apply (rule hoare_weaken_pre[OF invoke_untyped_pred_tcb_at])
+     apply (fastforce elim: st_tcb_weakenE st_tcb_ex_cap split: thread_state.splits)
     apply wpsimp
    apply wpsimp
   apply (fastforce simp: pred_tcb_at_def obj_at_def ct_in_state_def)
@@ -478,11 +507,11 @@ lemma active_cur_vcpu_of_arm_asid_table_update[simp]:
    = P (active_cur_vcpu_of s)"
   by (clarsimp simp: active_cur_vcpu_of_def)
 
-crunch cap_insert, cap_move
+crunch cap_insert, set_cap, empty_slot, cap_move
   for valid_cur_vcpu[wp]: valid_cur_vcpu
   (wp: valid_cur_vcpu_lift_weak in_cur_domain_lift_weak dxo_wp_weak)
 
-crunch suspend, unbind_notification, cap_swap_for_delete, fpu_release
+crunch suspend, cap_delete_one, unbind_notification, cap_swap_for_delete, fpu_release
   for state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
   (wp: crunch_wps thread_set_hyp_refs_trivial dxo_wp_weak simp: crunch_simps ignore: arch_thread_set)
 
@@ -497,19 +526,9 @@ lemma prepare_thread_delete_valid_cur_vcpu[wp]:
   by (wpsimp wp: dissociate_vcpu_tcb_valid_cur_vcpu arch_thread_get_wp
                  hoare_drop_imps hoare_vcg_all_lift)
 
-crunch delete_asid_pool
-  for active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
-  and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
-  and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
-  and etcbs_of[wp]: "\<lambda>s. P (etcbs_of s)"
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch store_pte, set_asid_pool
-  for active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
-  and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
-  (wp: crunch_wps simp: crunch_simps active_cur_vcpu_of_def)
-
-crunch unmap_page, unmap_page_table, delete_asid
+crunch
+  delete_asid_pool, store_pte, set_asid_pool, unmap_page, unmap_page_table, delete_asid,
+  set_simple_ko
   for active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   and idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
@@ -517,13 +536,26 @@ crunch unmap_page, unmap_page_table, delete_asid
   and etcbs_of[wp]: "\<lambda>s. P (etcbs_of s)"
   (wp: crunch_wps valid_cur_vcpu_lift simp: crunch_simps)
 
-crunch delete_asid_pool, unmap_page, unmap_page_table, delete_asid
+crunch delete_asid_pool, unmap_page, unmap_page_table, delete_asid, tcb_ep_dequeue
   for valid_cur_vcpu[wp]: valid_cur_vcpu
   (wp: valid_cur_vcpu_lift in_cur_domain_lift_weak crunch_wps simp: crunch_simps)
 
+lemma thread_set_fault_tcb_update_valid_cur_vcpu[wp]:
+  "thread_set (tcb_fault_update f) t \<lbrace>valid_cur_vcpu\<rbrace>"
+  by (wpsimp wp: valid_cur_vcpu_lift)
+
+lemma thread_set_tcb_sched_context_update_valid_cur_vcpu[wp]:
+  "thread_set (tcb_sched_context_update f) t \<lbrace>valid_cur_vcpu\<rbrace>"
+  by (wpsimp wp: valid_cur_vcpu_lift in_cur_domain_lift_weak thread_set_no_change_tcb_pred
+                 thread_set_etcbs)
+
+crunch unbind_from_sc
+  for state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
+  (wp: crunch_wps hoare_vcg_all_lift ignore: thread_set)
+
 crunch vcpu_finalise, arch_finalise_cap, finalise_cap
   for valid_cur_vcpu[wp]: valid_cur_vcpu
-  (simp: crunch_simps)
+  (simp: crunch_simps wp: crunch_wps hoare_vcg_all_lift ignore: thread_set)
 
 crunch prepare_thread_delete
   for sym_refs_state_hyp_refs_of[wp]: "\<lambda>s. sym_refs (state_hyp_refs_of s)"
@@ -549,7 +581,7 @@ lemma preemption_point_state_hyp_refs_of[wp]:
 lemma preemption_point_valid_cur_vcpu[wp]:
   "preemption_point \<lbrace>valid_cur_vcpu\<rbrace>"
   apply (wpsimp wp: preemption_point_inv)
-    by (clarsimp simp: valid_cur_vcpu_def pred_tcb_at_def obj_at_def active_cur_vcpu_of_def)+
+         by (clarsimp simp: valid_cur_vcpu_def pred_tcb_at_def obj_at_def active_cur_vcpu_of_def)+
 
 crunch cap_swap_for_delete, empty_slot, finalise_cap
   for valid_cur_vcpu[wp]: valid_cur_vcpu
@@ -562,6 +594,14 @@ lemma rec_del_sym_refs_state_hyp_refs_of[wp]:
 crunch cap_delete
   for state_hyp_refs_of[wp]: "\<lambda>s. sym_refs (state_hyp_refs_of s)"
 
+crunch finalise_cap
+  for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
+  and etcbs_of[wp]: "\<lambda>s. P (etcbs_of s)"
+
+lemma preemption_point_in_cur_domain[wp]:
+  "preemption_point \<lbrace>\<lambda>s. in_cur_domain (t (cur_thread s)) s\<rbrace>"
+  by (wpsimp wp: preemption_point_inv)
+
 lemma rec_del_valid_cur_vcpu[wp]:
   "\<lbrace>\<lambda>s. valid_cur_vcpu s \<and> sym_refs (state_hyp_refs_of s) \<and> in_cur_domain (cur_thread s) s\<rbrace>
    rec_del call
@@ -573,41 +613,50 @@ lemma rec_del_valid_cur_vcpu[wp]:
 crunch cap_delete
   for valid_cur_vcpu[wp]: valid_cur_vcpu
 
+crunch cap_delete
+  for in_cur_domain[wp]: "\<lambda>s. in_cur_domain (t (cur_thread s)) s"
+  (wp: preemption_point_inv crunch_wps simp: crunch_simps)
+
 lemma cap_revoke_valid_cur_vcpu[wp]:
   "\<lbrace>\<lambda>s. valid_cur_vcpu s \<and> sym_refs (state_hyp_refs_of s) \<and> in_cur_domain (cur_thread s) s\<rbrace>
    cap_revoke slot
    \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
   (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
   apply (rule_tac Q'="\<lambda>_. ?pre" in hoare_post_imp, fastforce)
-  by (wpsimp wp: cap_revoke_preservation)
+  apply (wpsimp wp: cap_revoke_preservation)
+  done
 
-crunch cancel_badged_sends, invoke_irq_control, invoke_irq_handler
-  for arch_tcb_at[wp]: "arch_tcb_at P t"
-  and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
-  and arch_state[wp]: "\<lambda>s. P (arch_state s)"
-  and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
-  and etcbs_of[wp]: "\<lambda>s. P (etcbs_of s)"
-  (wp: filterM_preserved)
-
-crunch store_pte, set_cap, set_mrs
-  for active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
-  (simp: active_cur_vcpu_of_def)
-
-crunch perform_page_table_invocation, perform_page_invocation,
-         perform_asid_pool_invocation, invoke_vcpu_inject_irq, invoke_vcpu_read_register,
-         invoke_vcpu_write_register, invoke_vcpu_ack_vppi
+crunch
+  cancel_badged_sends, invoke_irq_control, invoke_irq_handler,
+  invoke_sched_context, invoke_sched_control_configure_flags,
+  receive_signal, perform_page_table_invocation, perform_page_invocation,
+  perform_asid_pool_invocation, invoke_vcpu_inject_irq, invoke_vcpu_read_register,
+  invoke_vcpu_write_register, invoke_vcpu_ack_vppi
   for arch_tcb_at[wp]: "arch_tcb_at P t"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   and idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
+  and arch_state[wp]: "\<lambda>s. P (arch_state s)"
   and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   and etcbs_of[wp]: "\<lambda>s. P (etcbs_of s)"
-  and active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
+  (wp: filterM_preserved crunch_wps ignore: thread_set simp: crunch_simps)
+
+crunch
+  perform_page_table_invocation, perform_page_invocation,
+  perform_asid_pool_invocation, invoke_vcpu_inject_irq, invoke_vcpu_read_register,
+  invoke_vcpu_write_register, invoke_vcpu_ack_vppi,
+  invoke_sched_context, invoke_sched_control_configure_flags, receive_signal
+  for active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch cancel_badged_sends, invoke_irq_control, invoke_irq_handler, invoke_vcpu_inject_irq,
-         bind_notification
+crunch
+  cancel_badged_sends, invoke_irq_control, invoke_irq_handler, invoke_vcpu_inject_irq,
+  bind_notification, sched_context_unbind_reply, receive_signal
   for valid_cur_vcpu[wp]: valid_cur_vcpu
   (wp: valid_cur_vcpu_lift_weak in_cur_domain_lift_weak filterM_preserved)
+
+crunch invoke_sched_control_configure_flags
+  for valid_cur_vcpu[wp]: valid_cur_vcpu
+  (wp: valid_cur_vcpu_lift_weak in_cur_domain_lift_weak filterM_preserved crunch_wps)
 
 crunch perform_asid_pool_invocation, perform_page_table_invocation,
          perform_page_invocation, invoke_vcpu_read_register,
@@ -626,54 +675,55 @@ lemma thread_set_valid_cur_vcpu_unchanged:
   "\<lbrakk>\<And>tcb. tcb_arch (f tcb) = tcb_arch tcb; \<And>tcb. tcb_domain (f tcb) = tcb_domain tcb\<rbrakk>
    \<Longrightarrow> thread_set f tptr \<lbrace>valid_cur_vcpu\<rbrace>"
   apply (rule valid_cur_vcpu_lift_weak; (solves wpsimp)?)
-   apply (clarsimp simp: thread_set_def)
-   apply (wpsimp wp: set_object_wp)
-   apply (fastforce simp: pred_tcb_at_def obj_at_def get_tcb_def)
-  apply (clarsimp simp: in_cur_domain_def)
-  apply (wp_pre, wps, wpsimp wp: thread_set_no_change_etcb_at, clarsimp)
+   apply (wpsimp wp: thread_set_no_change_tcb_pred)
+  apply (wpsimp wp: thread_set_in_cur_domain_lift)
   done
 
 crunch restart, reschedule_required, possible_switch_to
   for arch_tcb_at[wp]: "arch_tcb_at P t"
   and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   and etcbs_of[wp]: "\<lambda>s. P (etcbs_of s)"
-  (wp: thread_set_no_change_tcb_pred)
+  (wp: thread_set_no_change_tcb_pred crunch_wps simp: crunch_simps)
 
-crunch restart, reschedule_required, possible_switch_to, thread_set_priority
+crunch restart, reschedule_required, possible_switch_to, thread_set_priority, sched_context_bind_tcb
   for valid_cur_vcpu[wp]: valid_cur_vcpu
-  (wp: valid_cur_vcpu_lift_weak in_cur_domain_lift_weak thread_set_valid_cur_vcpu_unchanged)
-
-crunch restart, arch_post_modify_registers, arch_get_sanitise_register_info
-  for valid_cur_vcpu[wp]: valid_cur_vcpu
+  (wp: valid_cur_vcpu_lift_weak in_cur_domain_lift_weak thread_set_valid_cur_vcpu_unchanged
+       crunch_wps
+   simp: crunch_simps)
 
 lemma fault_handler_update_valid_cur_vcpu[wp]:
   "option_update_thread thread (tcb_fault_handler_update \<circ> f) opt \<lbrace>valid_cur_vcpu\<rbrace>"
   unfolding option_update_thread_def
   by (wpsimp wp: thread_set_valid_cur_vcpu_unchanged)
 
-crunch set_mcpriority, set_priority, set_flags, arch_post_set_flags
+crunch
+  set_mcpriority, set_priority, set_flags, arch_post_set_flags,
+  install_tcb_cap, install_tcb_frame_cap
   for valid_cur_vcpu[wp]: valid_cur_vcpu
-  (simp: set_priority_def wp: thread_set_valid_cur_vcpu_unchanged)
+  (simp: set_priority_def wp: thread_set_valid_cur_vcpu_unchanged crunch_wps get_cap_inv
+         check_cap_inv)
 
 crunch set_mcpriority, set_priority
   for state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   and in_cur_domain[wp]: "\<lambda>s. P (in_cur_domain t s)"
-  (wp: thread_set_hyp_refs_trivial thread_set_no_change_etcb_at
-   simp: thread_set_priority_def in_cur_domain_def
-   ignore: thread_set)
+  (wp: thread_set_hyp_refs_trivial thread_set_in_cur_domain_lift crunch_wps)
+
+crunch install_tcb_cap
+  for state_hyp_refs_of[wp]: "\<lambda>s. sym_refs (state_hyp_refs_of s)"
+  and in_cur_domain[wp]: "\<lambda>s. in_cur_domain (cur_thread s) s"
+  (wp: thread_set_hyp_refs_trivial thread_set_in_cur_domain_lift crunch_wps check_cap_inv)
 
 lemma invoke_tcb_valid_cur_vcpu[wp]:
   "\<lbrace>\<lambda>s. valid_cur_vcpu s \<and> sym_refs (state_hyp_refs_of s) \<and> in_cur_domain (cur_thread s) s\<rbrace>
    invoke_tcb iv
    \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
   apply (cases iv; clarsimp; (solves \<open>wpsimp wp: mapM_x_wp_inv\<close>)?)
-   defer
    subgoal for tcb_ptr ntfn_ptr_opt
-     by (case_tac ntfn_ptr_opt; wpsimp)
-  \<comment> \<open>ThreadControl\<close>
-  by (wpsimp wp: hoare_drop_imps check_cap_inv)
-     (wpsimp wp: hoare_drop_imps | wpsimp wp: check_cap_inv thread_set_valid_cur_vcpu_unchanged | wp_pre, wps)+
+     by (case_tac ntfn_ptr_opt; wpsimp wp: hoare_drop_imps)
+  subgoal for tcb_ptr ntfn_ptr_opt
+    by (case_tac ntfn_ptr_opt; wpsimp wp: hoare_drop_imps)
+  done
 
 lemma thread_set_domain_valid_cur_vcpu[wp]:
   "\<lbrace>\<lambda>s. (valid_cur_vcpu s \<or> (tptr = cur_thread s \<and> cur_domain s \<noteq> new_dom))
@@ -683,7 +733,7 @@ lemma thread_set_domain_valid_cur_vcpu[wp]:
   unfolding thread_set_domain_def thread_set_def
   apply (wpsimp wp: set_object_wp)
   by (auto simp: valid_cur_vcpu_def active_cur_vcpu_of_def in_cur_domain_def pred_tcb_at_def
-                 obj_at_def get_tcb_def etcb_at_def etcbs_of'_def)
+                 obj_at_def get_tcb_def etcb_at_def etcb_at'_def vs_all_heap_simps)
 
 lemma set_domain_valid_cur_vcpu[wp]:
   "\<lbrace>\<lambda>s. (valid_cur_vcpu s \<or> (tptr = cur_thread s \<and> cur_domain s \<noteq> new_dom))
@@ -700,12 +750,6 @@ lemma vcpu_flush_valid_cur_vcpu_not_active:
   unfolding vcpu_flush_def
   apply wpsimp
   by (auto simp: valid_cur_vcpu_def)
-
-crunch arch_prepare_set_domain
-  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
-  and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
-  and etcbs_of[wp]: "\<lambda>s. P (etcbs_of s)"
-  (wp: crunch_wps simp: crunch_simps)
 
 \<comment> \<open>FIXME: move earlier, along with sym_refs_tcb_vcpu and sym_refs_vcpu_tcb from Refine\<close>
 lemma sym_refs_kheap_tcb_vcpu:
@@ -724,7 +768,7 @@ lemma arch_prepare_set_domain_valid_cur_vcpu[wp]:
   unfolding arch_prepare_set_domain_def vcpu_flush_if_current_def
   apply (wpsimp wp: hoare_vcg_disj_lift vcpu_flush_valid_cur_vcpu_not_active arch_thread_get_wp)
   apply (auto simp: valid_cur_vcpu_def active_cur_vcpu_of_def in_cur_domain_def pred_tcb_at_def
-                    obj_at_def get_tcb_def etcb_at_def etcbs_of'_def
+                    obj_at_def get_tcb_def etcb_at_def etcb_at'_def vs_all_heap_simps
              dest!: sym_refs_kheap_tcb_vcpu
              split: bool.splits option.splits)
   done
@@ -739,9 +783,9 @@ lemma invoke_domain_valid_cur_vcpu[wp]:
   apply (clarsimp simp: valid_domain_inv_def valid_cur_vcpu_def active_cur_vcpu_of_def)
   done
 
-crunch perform_asid_control_invocation
+crunch perform_asid_control_invocation, invoke_sched_context
   for active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
-  (simp: active_cur_vcpu_of_def)
+  (simp: active_cur_vcpu_of_def return_consumed_def wp: crunch_wps)
 
 crunch perform_vspace_invocation, perform_sgi_invocation, handle_spurious_irq,
        perform_smc_invocation
@@ -756,7 +800,7 @@ lemma perform_asid_control_etcb_at':
    \<lbrace>\<lambda>r s. st_tcb_at (Not \<circ> inactive) t s \<longrightarrow> Q (etcb_at P t s)\<rbrace>"
   apply (simp add: perform_asid_control_invocation_def)
   apply wpsimp
-       apply (wp hoare_imp_lift_something typ_at_pred_tcb_at_lift)[1]
+       apply (wp hoare_convert_imp typ_at_pred_tcb_at_lift)[1]
       apply (rule hoare_drop_imps)
       apply (wpsimp wp: delete_objects_etcb_at')+
   apply (rename_tac parent_oref parent_cref base)
@@ -779,16 +823,18 @@ lemma perform_asid_control_etcb_at':
   done
 
 lemma perform_asid_control_etcb_at'':
-  "\<lbrace>\<lambda>s. Q (etcb_at P t s) \<and> st_tcb_at (Not \<circ> inactive and Not \<circ> idle) t s \<and> ct_active s \<and> invs s \<and> valid_aci aci s\<rbrace>
+  "\<lbrace>\<lambda>s. Q (etcb_at P t s) \<and> st_tcb_at (Not \<circ> inactive and Not \<circ> idle) t s \<and> ct_active s \<and> invs s
+        \<and> valid_aci aci s \<and> schact_is_rct s\<rbrace>
    perform_asid_control_invocation aci
    \<lbrace>\<lambda>r s. Q (etcb_at P t s)\<rbrace>"
   apply (rule hoare_post_imp[where Q'="\<lambda>_ s. st_tcb_at (Not \<circ> inactive) t s \<and> (st_tcb_at (Not \<circ> inactive) t s \<longrightarrow> Q (etcb_at P t s))"])
    apply simp
   apply (wpsimp wp: perform_asid_control_invocation_st_tcb_at perform_asid_control_etcb_at')+
+  apply (fastforce elim: st_tcb_weakenE st_tcb_ex_cap split: thread_state.splits)
   done
 
 lemma perform_asid_control_invocation_valid_cur_vcpu:
-  "\<lbrace>valid_cur_vcpu and invs and valid_aci iv and ct_active\<rbrace>
+  "\<lbrace>valid_cur_vcpu and invs and valid_aci iv and ct_active and schact_is_rct\<rbrace>
    perform_asid_control_invocation iv
    \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
   apply (rule hoare_weaken_pre)
@@ -801,7 +847,8 @@ lemma perform_asid_control_invocation_valid_cur_vcpu:
       apply wpsimp
      apply (rule_tac f=cur_thread in hoare_lift_Pf2; wpsimp)
     apply (rule_tac f=cur_thread in hoare_lift_Pf2)
-     apply (rule perform_asid_control_invocation_pred_tcb_at)
+     apply (rule hoare_weaken_pre[OF perform_asid_control_invocation_st_tcb_at])
+     apply (fastforce elim: st_tcb_weakenE st_tcb_ex_cap split: thread_state.splits)
     apply wpsimp
    apply wpsimp
   apply (fastforce simp: pred_tcb_at_def obj_at_def ct_in_state_def)
@@ -814,14 +861,14 @@ lemma perform_vcpu_invocation_valid_cur_vcpu:
   unfolding perform_vcpu_invocation_def
   by (wpsimp wp: associate_vcpu_tcb_valid_cur_vcpu)
 
-crunch send_ipc
+crunch send_ipc, invoke_sched_context, invoke_sched_control_configure_flags
   for valid_cur_vcpu[wp]: valid_cur_vcpu
   (wp: valid_cur_vcpu_lift in_cur_domain_lift_weak simp: active_cur_vcpu_of_def)
 
 lemma perform_invocation_valid_cur_vcpu[wp]:
   "\<lbrace>\<lambda>s. valid_cur_vcpu s \<and> invs s \<and> valid_invocation iv s \<and> ct_active s \<and>
-        in_cur_domain (cur_thread s) s\<rbrace>
-   perform_invocation blocking call iv
+        in_cur_domain (cur_thread s) s \<and> schact_is_rct s\<rbrace>
+   perform_invocation block call can_donate  iv
    \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
   apply (case_tac iv, simp_all; (solves wpsimp)?)
    apply (wpsimp wp: invoke_untyped_valid_cur_vcpu)
@@ -831,26 +878,31 @@ lemma perform_invocation_valid_cur_vcpu[wp]:
   apply (fastforce simp: valid_arch_inv_def)
   done
 
-crunch reply_from_kernel, receive_signal
+crunch reply_from_kernel, receive_signal, lookup_reply
   for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   and etcbs_of[wp]: "\<lambda>s. P (etcbs_of s)"
   and valid_cur_vcpu[wp]: valid_cur_vcpu
-  (wp: valid_cur_vcpu_lift_weak in_cur_domain_lift_weak simp: crunch_simps)
+  (wp: valid_cur_vcpu_lift_weak in_cur_domain_lift_weak crunch_wps simp: crunch_simps)
 
 lemma handle_invocation_valid_cur_vcpu[wp]:
-  "\<lbrace>valid_cur_vcpu and einvs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
-   handle_invocation calling blocking
+  "\<lbrace>valid_cur_vcpu and einvs and ct_active and ct_not_in_release_q and cur_sc_active
+    and schact_is_rct\<rbrace>
+   handle_invocation calling blocking can_donate first_phase cptr
    \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
   unfolding handle_invocation_def
-  by (wp syscall_valid set_thread_state_ct_st
-      | simp add: split_def | wpc | wps
-      | wp (once) hoare_drop_imps)+
-     (auto simp: ct_in_state_def valid_sched_def elim: st_tcb_ex_cap
-         intro!: ct_in_cur_domain_active_resume_cur_thread)
+  apply (wp syscall_valid set_thread_state_ct_st set_thread_state_schact_is_rct_strong
+         | simp add: split_def | wpc | wps
+         | wp (once) hoare_drop_imps)+
+  apply (clarsimp cong: conj_cong)
+  apply (intro conjI; fastforce?)
+    apply (clarsimp simp: ct_in_state_def)
+   apply (fastforce intro!: ct_in_cur_domain_active_resume_cur_thread)
+  apply (fastforce intro: schact_is_rct_ct_active_sc)
+  done
 
 lemma handle_recv_valid_cur_vcpu[wp]:
-  "handle_recv is_blocking \<lbrace>valid_cur_vcpu\<rbrace>"
-  unfolding handle_recv_def Let_def ep_ntfn_cap_case_helper delete_caller_cap_def
+  "handle_recv is_blocking can_reply \<lbrace>valid_cur_vcpu\<rbrace>"
+  unfolding handle_recv_def Let_def ep_ntfn_cap_case_helper
   by (wpsimp wp: hoare_drop_imps)
 
 lemma maybe_handle_interrupt_valid_cur_vcpu[wp]:
@@ -860,25 +912,45 @@ lemma maybe_handle_interrupt_valid_cur_vcpu[wp]:
   unfolding maybe_handle_interrupt_def
   by wpsimp
 
+crunch
+  update_refill_tl, update_refill_hd, refill_reset_rr, end_timeslice, check_budget_restart,
+  maybe_handle_interrupt, check_budget, charge_budget, update_time_stamp, preemption_path
+  for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
+  and arch_state[wp]: "\<lambda>s. P (arch_state s)"
+  and etcbs_of[wp]: "\<lambda>s. P (etcbs_of s)"
+  and arch_tcb_at[wp]: "arch_tcb_at t s"
+  and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  and idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
+  and valid_cur_vcpu[wp]: valid_cur_vcpu
+  (wp: valid_cur_vcpu_lift_weak in_cur_domain_lift_weak crunch_wps simp: crunch_simps)
+
 lemma handle_event_valid_cur_vcpu:
   "\<lbrace>valid_cur_vcpu and einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
-    and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+    and valid_machine_time and ct_not_in_release_q and cur_sc_active
+    and schact_is_rct\<rbrace>
    handle_event e
    \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
   apply (cases e; clarsimp; (solves wpsimp)?)
-  unfolding handle_call_def handle_send_def handle_reply_def handle_yield_def
-  by (wpsimp wp: get_cap_wp)+
+  unfolding handle_call_def handle_send_def handle_yield_def
+  by (wpsimp wp: get_cap_wp hoare_vcg_if_lift2
+                 handle_fault_valid_sched check_budget_restart_valid_sched_weaker
+                 check_budget_restart_true check_budget_restart_false
+                 hoare_vcg_if_lift2 hoare_vcg_disj_lift
+                 update_time_stamp_current_time_bounded hoare_drop_imps)
 
 lemma call_kernel_valid_cur_vcpu:
-  "\<lbrace>valid_cur_vcpu and einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
-    and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+  "\<lbrace>valid_cur_vcpu and einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)
+    and valid_machine_time and ct_not_in_release_q and cur_sc_active and schact_is_rct\<rbrace>
    call_kernel e
    \<lbrace>\<lambda>_ . valid_cur_vcpu\<rbrace>"
   unfolding call_kernel_def
   apply (simp flip: bind_assoc)
-  by (wpsimp wp: handle_event_valid_cur_vcpu hoare_vcg_if_lift2 hoare_drop_imps
-      | strengthen invs_valid_idle)+
-
+  apply (wpsimp wp: handle_event_valid_cur_vcpu hoare_vcg_if_lift2 hoare_drop_imps
+         | strengthen invs_valid_idle)+
+  apply (fastforce intro: schact_is_rct_ct_active_sc
+                    elim: st_tcb_weakenE st_tcb_ex_cap
+                    simp: schedulable_def2 ct_in_state_def schact_is_rct_def)
+  done
 
 section \<open>cur_vcpu_in_cur_domain\<close>
 
@@ -935,7 +1007,13 @@ lemma cur_vcpu_in_cur_domain_updates[simp]:
   "cur_vcpu_in_cur_domain (is_original_cap_update f_orig_cap s) = cur_vcpu_in_cur_domain s"
   "cur_vcpu_in_cur_domain (arch_state_update (arm_asid_table_update f_asid_table) s) = cur_vcpu_in_cur_domain s"
   "cur_vcpu_in_cur_domain (s\<lparr>arch_state := (arm_asid_table_update f_asid_table) (arch_state s)\<rparr>) = cur_vcpu_in_cur_domain s"
-  by (auto simp: cur_vcpu_in_cur_domain_defs)
+  "\<And>f. cur_vcpu_in_cur_domain (reprogram_timer_update f s) = cur_vcpu_in_cur_domain s"
+  "\<And>f. cur_vcpu_in_cur_domain (cur_sc_update f s) = cur_vcpu_in_cur_domain s"
+  "\<And>f. cur_vcpu_in_cur_domain (consumed_time_update f s) = cur_vcpu_in_cur_domain s"
+  "\<And>f. cur_vcpu_in_cur_domain (release_queue_update f s) = cur_vcpu_in_cur_domain s"
+  "\<And>f. cur_vcpu_in_cur_domain (domain_time_update f s) = cur_vcpu_in_cur_domain s"
+  "\<And>f. cur_vcpu_in_cur_domain (cur_time_update f s) = cur_vcpu_in_cur_domain s"
+  by (auto simp: cur_vcpu_in_cur_domain_defs split: option.splits)
 
 \<comment> \<open>schedule\<close>
 
@@ -1004,24 +1082,48 @@ lemma arch_switch_to_thread_cur_vcpu_in_cur_domain[wp]:
   apply (auto simp: in_omonad)
   done
 
-crunch guarded_switch_to, switch_to_idle_thread
+lemma update_sched_context_vcpus_of[wp]:
+  "update_sched_context ptr f \<lbrace>\<lambda>s. P (vcpus_of s)\<rbrace>"
+  apply (wpsimp wp: update_sched_context_wp)
+  apply (erule rsubst[where P=P])
+  apply (clarsimp simp: obj_at_def opt_map_def)
+  done
+
+lemma set_simple_ko_vcpus_of[wp]:
+  "set_simple_ko ptr f v \<lbrace>\<lambda>s. P (vcpus_of s)\<rbrace>"
+  unfolding set_simple_ko_def
+  apply (wpsimp wp: set_object_wp_strong get_object_wp)
+  apply (fastforce elim: rsubst[where P=P] simp: obj_at_def opt_map_def)
+  done
+
+crunch update_sched_context
+  for cur_vcpu_in_cur_domain[wp]: cur_vcpu_in_cur_domain
+  (wp: cur_vcpu_in_cur_domain_lift)
+
+crunch switch_to_thread, switch_to_idle_thread
   for cur_vcpu_in_cur_domain[wp]: cur_vcpu_in_cur_domain
   (wp: crunch_wps)
 
+lemma guarded_switch_to_cur_vcpu_in_cur_domain[wp]:
+  "\<lbrace>\<lambda>s. cur_vcpu_in_cur_domain s \<and> valid_objs s \<and> sym_refs (state_hyp_refs_of s)\<rbrace>
+   guarded_switch_to thread
+   \<lbrace>\<lambda>_. cur_vcpu_in_cur_domain\<rbrace>"
+  unfolding guarded_switch_to_def
+  apply (wpsimp wp: thread_get_wp')
+  apply (clarsimp simp: obj_at_def vs_all_heap_simps in_cur_domain_def etcb_at'_def)
+  done
+
 lemma choose_thread_cur_vcpu_in_cur_domain[wp]:
-  "\<lbrace>\<lambda>s. cur_vcpu_in_cur_domain s \<and> valid_queues s \<and> valid_objs s \<and> sym_refs (state_hyp_refs_of s)\<rbrace>
+  "\<lbrace>\<lambda>s. cur_vcpu_in_cur_domain s \<and> valid_objs s \<and> sym_refs (state_hyp_refs_of s)\<rbrace>
    choose_thread
    \<lbrace>\<lambda>_. cur_vcpu_in_cur_domain\<rbrace>"
   unfolding choose_thread_def
-  apply wpsimp
-  apply (fastforce dest!: next_thread_queued split: option.splits
-                   simp: etcb_at_def next_thread_def valid_queues_def in_cur_domain_def)
-  done
+  by wpsimp
 
 lemma next_domain_cur_vcpu_in_cur_domain[wp]:
   "\<lbrace>\<lambda>s. arm_current_vcpu (arch_state s) = None\<rbrace> next_domain \<lbrace>\<lambda>_. cur_vcpu_in_cur_domain\<rbrace>"
   unfolding next_domain_def Let_def
-  by (wpsimp wp: dxo_wp_weak simp: cur_vcpu_in_cur_domain_defs)
+  by (wpsimp wp: dxo_wp_weak simp: cur_vcpu_in_cur_domain_defs split: option.splits)
 
 lemma vcpu_flush_arm_current_vcpu_None[wp]:
   "\<lbrace>\<top>\<rbrace> vcpu_flush \<lbrace>\<lambda>_ s. arm_current_vcpu (arch_state s) = None\<rbrace>"
@@ -1034,21 +1136,26 @@ crunch next_domain, vcpu_flush, switch_local_fpu_owner
   (simp: crunch_simps wp: dxo_wp_weak crunch_wps ignore: arch_thread_set)
 
 lemma schedule_choose_new_thread_cur_vcpu_in_cur_domain[wp]:
-  "\<lbrace>\<lambda>s. cur_vcpu_in_cur_domain s \<and> valid_queues s \<and> valid_objs s \<and> sym_refs (state_hyp_refs_of s)\<rbrace>
+  "\<lbrace>\<lambda>s. cur_vcpu_in_cur_domain s \<and> valid_objs s \<and> sym_refs (state_hyp_refs_of s)\<rbrace>
    schedule_choose_new_thread
    \<lbrace>\<lambda>_. cur_vcpu_in_cur_domain\<rbrace>"
   unfolding schedule_choose_new_thread_def arch_prepare_next_domain_def
   by wpsimp
 
+crunch sc_and_timer, check_domain_time, awaken
+  for cur_vcpu_in_cur_domain[wp]: cur_vcpu_in_cur_domain
+  (wp: crunch_wps)
+
+crunch check_domain_time
+  for valid_objs[wp]: valid_objs
+  and state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
+
 lemma schedule_cur_vcpu_in_cur_domain[wp]:
-  "\<lbrace>\<lambda>s. cur_vcpu_in_cur_domain s \<and> valid_sched s \<and> valid_objs s \<and> sym_refs (state_hyp_refs_of s)\<rbrace>
+  "\<lbrace>\<lambda>s. cur_vcpu_in_cur_domain s \<and> invs s \<and> sym_refs (state_hyp_refs_of s)\<rbrace>
    schedule
    \<lbrace>\<lambda>_. cur_vcpu_in_cur_domain\<rbrace>"
   unfolding schedule_def schedule_switch_thread_fastfail_def
-  apply (wpsimp wp: hoare_drop_imps gts_wp)
-  by (safe; (fastforce simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_def
-                             switch_in_cur_domain_def st_tcb_at_def obj_at_def)?)
-
+  by (wpsimp wp: hoare_drop_imps gts_wp | strengthen invs_implies)+
 
 \<comment> \<open>handle_interrupt\<close>
 
@@ -1070,12 +1177,6 @@ lemma thread_set_vcpus_of[wp]:
   by (wpsimp wp: set_object_wp)
      (fastforce simp: opt_map_def get_tcb_def split: option.splits elim!: rsubst[where P=P])
 
-lemma set_bound_notification_vcpus_of[wp]:
-  "set_bound_notification p ntfn \<lbrace>\<lambda>s. P (vcpus_of s)\<rbrace>"
-  unfolding set_bound_notification_def
-  by (wpsimp wp: set_object_wp)
-     (fastforce simp: opt_map_def get_tcb_def split: option.splits elim!: rsubst[where P=P])
-
 crunch store_word_offs
   for vcpus_of[wp]: "\<lambda>s. P (vcpus_of s)"
 
@@ -1094,7 +1195,7 @@ crunch set_extra_badge, handle_fault
 lemma vppi_event_vcpu_tcbs_of[wp]:
   "vppi_event irq \<lbrace>\<lambda>s. P (vcpu_tcbs_of s)\<rbrace>"
   unfolding vppi_event_def
-  by (wpsimp)
+  by (wpsimp wp: thread_get_wp')
      (fastforce simp: opt_map_def get_tcb_def split: option.splits elim!: rsubst[where P=P])
 
 crunch handle_interrupt
@@ -1113,7 +1214,7 @@ lemma retype_region_cur_vcpu_in_cur_domain[wp]:
   apply (wpsimp simp_del: fun_upd_apply simp: foldr_fun_upd_value)
   by (auto simp: cur_vcpu_in_cur_domain_defs etcb_at'_def
                  default_object_def default_arch_object_def default_tcb_def default_arch_tcb_def
-                 default_vcpu_def opt_map_def etcbs_of'_def
+                 default_vcpu_def opt_map_def etcb_at'_def vs_all_heap_simps
           split: option.splits apiobject_type.splits aobject_type.splits)
 
 crunch do_machine_op, create_cap, init_arch_objects
@@ -1125,7 +1226,7 @@ lemma delete_objects_cur_vcpu_in_cur_domain[wp]:
   unfolding delete_objects_def
   apply wpsimp
    apply (rule hoare_strengthen_post, rule do_machine_op_cur_vcpu_in_cur_domain)
-  by (auto simp: cur_vcpu_in_cur_domain_defs etcb_at'_def detype_def opt_map_def etcbs_of'_def
+  by (auto simp: cur_vcpu_in_cur_domain_defs etcb_at'_def detype_def opt_map_def vs_all_heap_simps
           split: option.splits)
 
 crunch invoke_untyped
@@ -1168,37 +1269,58 @@ crunch
    simp: crunch_simps filterM_mapM
    ignore: set_simple_ko tcb_sched_action)
 
+lemma thread_set_fault_tcb_update_cur_vcpu_in_cur_domain[wp]:
+  "thread_set (tcb_fault_update f) t \<lbrace>cur_vcpu_in_cur_domain\<rbrace>"
+  by (wpsimp wp: cur_vcpu_in_cur_domain_lift)
+
+lemma set_simple_ko_cur_vcpu_in_cur_domain[wp]:
+  "set_simple_ko ptr f v \<lbrace>cur_vcpu_in_cur_domain\<rbrace>"
+  unfolding set_simple_ko_def
+  apply (wpsimp wp: set_object_wp_strong get_object_wp)
+  apply (clarsimp simp: obj_at_def opt_map_def cur_vcpu_in_cur_domain_def cur_vcpu_tcb_def
+                 split: option.splits)
+  done
+
+crunch store_word_offs
+  for cur_vcpu_in_cur_domain[wp]: cur_vcpu_in_cur_domain
+  (wp: crunch_wps hoare_vcg_all_lift preemption_point_inv' cap_revoke_preservation dxo_wp_weak
+   simp: crunch_simps ignore: thread_set set_simple_ko)
+
+lemma set_mrs_def_cur_vcpu_in_cur_domain[wp]:
+  "set_mrs thread buf msgs \<lbrace>cur_vcpu_in_cur_domain\<rbrace>"
+  unfolding set_mrs_def
+  supply if_split[split del]
+  apply (wpsimp wp: set_object_wp_strong get_object_wp crunch_wps simp: zipWithM_x_mapM_x)
+  by (fastforce simp: cur_vcpu_in_cur_domain_def cur_vcpu_tcb_def in_cur_domain_2_def etcb_at'_def
+                      vs_all_heap_simps get_tcb_def
+               split: if_splits option.splits kernel_object.splits)
+
+lemma thread_set_no_etcb_change_cur_vcpu_in_cur_domain:
+  "(\<And>P tcb. P (tcb_domain (f tcb)) = (P (tcb_domain tcb) :: bool))
+   \<Longrightarrow> thread_set f t' \<lbrace>cur_vcpu_in_cur_domain\<rbrace>"
+  by (wpsimp wp: cur_vcpu_in_cur_domain_lift_strong thread_set_etcb_domain)
+
 crunch invoke_cnode
   for cur_vcpu_in_cur_domain[wp]: cur_vcpu_in_cur_domain
-  (wp: crunch_wps preemption_point_inv' cap_revoke_preservation dxo_wp_weak
-   simp: crunch_simps)
+  (wp: crunch_wps hoare_vcg_all_lift preemption_point_inv' cap_revoke_preservation dxo_wp_weak
+       thread_set_no_etcb_change_cur_vcpu_in_cur_domain
+   simp: crunch_simps ignore: thread_set set_simple_ko)
 
 crunch set_priority
   for etcb_at_domain[wp]: "etcb_at (\<lambda>t. P (etcb_domain t)) t"
-  and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
-  (wp: thread_set_no_change_etcb_at)
-
-crunch set_mcpriority, bind_notification
-  for etcb_at[wp]: "etcb_at P t"
-  and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
-  (wp: crunch_wps thread_set_no_change_etcb_at simp: crunch_simps etcb_of_def)
+  (wp: crunch_wps thread_set_etcb_domain)
 
 crunch cancel_ipc, set_mcpriority, set_priority, bind_notification
   for vcpu_tcbs_of[wp]: "\<lambda>s. P (vcpu_tcbs_of s)"
   and arm_current_vcpu[wp]: "\<lambda>s. P (arm_current_vcpu (arch_state s))"
   and cur_vcpu_in_cur_domain[wp]: cur_vcpu_in_cur_domain
-  (wp: cur_vcpu_in_cur_domain_lift_strong ignore: set_simple_ko)
-
-lemma thread_set_no_etcb_change_cur_vcpu_in_cur_domain:
-  assumes x: "\<And>P tcb. P (tcb_domain (f tcb)) = (P (tcb_domain tcb) :: bool)"
-  shows      "thread_set f t' \<lbrace>cur_vcpu_in_cur_domain\<rbrace>"
-  by (wpsimp wp: cur_vcpu_in_cur_domain_lift_strong thread_set_no_change_etcb_at simp: x)
+  (wp: cur_vcpu_in_cur_domain_lift_strong crunch_wps ignore: set_simple_ko)
 
 lemma option_update_thread_no_etcb_change_cur_vcpu_in_cur_domain:
   assumes x: "\<And>P val tcb. P (tcb_domain (f val tcb)) = (P (tcb_domain tcb) :: bool)"
   shows      "option_update_thread t f opt \<lbrace>cur_vcpu_in_cur_domain\<rbrace>"
   unfolding option_update_thread_def
-  by (wpsimp wp: cur_vcpu_in_cur_domain_lift_strong thread_set_no_change_etcb_at simp: x)
+  by (wpsimp wp: cur_vcpu_in_cur_domain_lift_strong thread_set_etcb_domain simp: x)
 
 crunch invoke_tcb
   for cur_vcpu_in_cur_domain[wp]: cur_vcpu_in_cur_domain
@@ -1221,10 +1343,6 @@ lemma dissociate_vcpu_tcb_not_current_vcpu[wp]:
 crunch dissociate_vcpu_tcb
   for vcpus_of_None[wp]: "\<lambda>s. vcpus_of s vcpu_ptr = None"
   (wp: hoare_vcg_imp_lift' get_vcpu_wp arch_thread_get_wp simp: if_option_eq)
-
-crunch dissociate_vcpu_tcb
-  for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
-  (wp: crunch_wps)
 
 lemma vcpu_invalidate_active_cur_vcpu[wp]:
   "\<lbrace>\<top>\<rbrace> vcpu_invalidate_active \<lbrace>\<lambda>_ s. cur_vcpu_2 (arm_current_vcpu (arch_state s)) (P s)\<rbrace>"
@@ -1304,8 +1422,10 @@ lemma thread_set_domain_cur_vcpu_in_cur_domain[wp]:
    \<lbrace>\<lambda>_. cur_vcpu_in_cur_domain\<rbrace>"
   unfolding thread_set_domain_def thread_set_def
   apply (wpsimp wp: set_object_wp)
-  by (auto simp: cur_vcpu_in_cur_domain_defs pred_tcb_at_def obj_at_def etcb_at_def etcbs_of'_def
-          split: option.splits dest: bound_vcpu_bound_tcb_at)
+  apply (auto simp: cur_vcpu_in_cur_domain_defs pred_tcb_at_def obj_at_def etcb_at_def etcb_at'_def
+                    vs_all_heap_simps
+             split: option.splits dest: bound_vcpu_bound_tcb_at)
+  done
 
 lemma set_domain_cur_vcpu_in_cur_domain[wp]:
   "\<lbrace>\<lambda>s. cur_vcpu_in_cur_domain s \<and> sym_refs (state_hyp_refs_of s) \<and> valid_objs s
@@ -1359,7 +1479,7 @@ lemma invoke_domain_cur_vcpu_in_cur_domain[wp]:
    \<lbrace>\<lambda>_. cur_vcpu_in_cur_domain\<rbrace>"
   unfolding invoke_domain_def
   apply (wpsimp simp: invoke_set_domain_def domain_set_start_def domain_schedule_configure_def)
-  apply (simp add: cur_vcpu_in_cur_domain_def cur_vcpu_tcb_def)
+  apply (fastforce simp: cur_vcpu_in_cur_domain_def cur_vcpu_tcb_def split: option.splits)
   done
 
 crunch do_reply_transfer, handle_recv, handle_vm_fault
@@ -1367,11 +1487,13 @@ crunch do_reply_transfer, handle_recv, handle_vm_fault
   and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps preemption_point_inv' simp: crunch_simps filterM_mapM)
 
-crunch do_reply_transfer, handle_recv, handle_vm_fault
+crunch
+  do_reply_transfer, handle_recv, handle_vm_fault, cap_delete_one, invoke_sched_context,
+  invoke_sched_control_configure_flags
   for vcpu_tcbs_of[wp]: "\<lambda>s. P (vcpu_tcbs_of s)"
   and arm_current_vcpu[wp]: "\<lambda>s. P (arm_current_vcpu (arch_state s))"
   and cur_vcpu_in_cur_domain[wp]: cur_vcpu_in_cur_domain
-  (wp: cur_vcpu_in_cur_domain_lift_strong crunch_wps dxo_wp_weak
+  (wp: cur_vcpu_in_cur_domain_lift_strong crunch_wps hoare_vcg_all_lift dxo_wp_weak
    simp: crunch_simps
    ignore: set_simple_ko)
 
@@ -1379,67 +1501,69 @@ crunch
   handle_fault, reply_from_kernel, send_ipc, send_signal, invoke_irq_control, invoke_irq_handler,
   reschedule_required, handle_hypervisor_fault
   for cur_vcpu_in_cur_domain[wp]: cur_vcpu_in_cur_domain
-  (wp: cur_vcpu_in_cur_domain_lift_strong dxo_wp_weak crunch_wps
+  (wp: cur_vcpu_in_cur_domain_lift_strong dxo_wp_weak crunch_wps hoare_vcg_all_lift
    simp: crunch_simps)
 
 lemma perform_invocation_cur_vcpu_in_cur_domain[wp]:
   "\<lbrace>cur_vcpu_in_cur_domain and ct_in_cur_domain and cur_vcpu and valid_invocation iv
     and valid_objs and (\<lambda>s. sym_refs (state_hyp_refs_of s))
     and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
-   perform_invocation blocking call iv
+   perform_invocation block call can_donate iv
    \<lbrace>\<lambda>_. cur_vcpu_in_cur_domain\<rbrace>"
   by (case_tac iv, simp_all; (solves wpsimp)?)
 
-lemma set_thread_state_runnable_scheduler_action:
-  "\<lbrace>\<lambda>s. P (scheduler_action s) \<and> runnable ts\<rbrace> set_thread_state t ts \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
-  apply (simp add: set_thread_state_def)
-  apply (simp add: set_thread_state_act_def set_object_def get_object_def set_scheduler_action_def)
-  apply (wpsimp wp: gts_wp)
-  by (clarsimp simp: pred_tcb_at_def obj_at_def)
-
 lemma handle_invocation_cur_vcpu_in_cur_domain[wp]:
-  "\<lbrace>cur_vcpu_in_cur_domain and invs and ct_in_cur_domain and ct_active
-    and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
-   handle_invocation calling blocking
+  "\<lbrace>cur_vcpu_in_cur_domain and invs and ct_in_cur_domain and ct_active and cur_sc_active
+    and ct_not_in_release_q
+    and schact_is_rct\<rbrace>
+   handle_invocation calling blocking can_donate first_phase cptr
    \<lbrace>\<lambda>_. cur_vcpu_in_cur_domain\<rbrace>"
   unfolding handle_invocation_def
   apply (wpsimp wp: syscall_valid)
           apply (wp gts_wp hoare_vcg_all_lift hoare_drop_imps cur_vcpu_typ_lift
-                    set_thread_state_runnable_scheduler_action
+                    sts_schedulable_scheduler_action
                 | simp add: split_def)+
-  apply (fastforce simp: invs_def valid_state_def valid_arch_state_def valid_pspace_def
-                         valid_tcb_state_def ct_in_state_def
-                  elim!: pred_tcb_weakenE)
+  apply (clarsimp cong: conj_cong)
+  apply (intro conjI; fastforce?)
+   apply (fastforce elim: st_tcb_weakenE
+                   intro: schact_is_rct_ct_active_sc
+                    simp: schedulable_def2 ct_in_state_def)
+  apply (fastforce simp: invs_def valid_state_def valid_arch_state_def)
   done
 
-crunch maybe_handle_interrupt
+crunch maybe_handle_interrupt, charge_budget, check_budget_restart, update_time_stamp
   for cur_vcpu_in_cur_domain[wp]: cur_vcpu_in_cur_domain
+  (wp: crunch_wps ignore: thread_set)
 
 lemma handle_event_cur_vcpu_in_cur_domain[wp]:
   "\<lbrace>cur_vcpu_in_cur_domain and invs and ct_in_cur_domain and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
-    and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+    and cur_sc_active and ct_not_in_release_q
+    and schact_is_rct\<rbrace>
    handle_event e
    \<lbrace>\<lambda>_. cur_vcpu_in_cur_domain\<rbrace>"
   apply (cases e; clarsimp; (solves wpsimp)?)
-  unfolding handle_call_def handle_send_def handle_reply_def handle_yield_def
-  by (wpsimp wp: get_cap_wp)+
+  unfolding handle_call_def handle_send_def handle_yield_def
+  by (wpsimp wp: get_cap_wp hoare_vcg_if_lift2
+                 handle_fault_valid_sched check_budget_restart_valid_sched_weaker
+                 check_budget_restart_true check_budget_restart_false
+                 hoare_vcg_if_lift2 hoare_vcg_disj_lift
+                 update_time_stamp_current_time_bounded hoare_drop_imps)
 
-crunch activate_thread
+crunch activate_thread, preemption_path
   for cur_vcpu_in_cur_domain[wp]: cur_vcpu_in_cur_domain
 
 lemma call_kernel_cur_vcpu_in_cur_domain:
-  "\<lbrace>cur_vcpu_in_cur_domain and invs and valid_sched and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
-    and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+  "\<lbrace>cur_vcpu_in_cur_domain and invs and valid_sched
+    and cur_sc_active and ct_not_in_release_q and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)
+    and schact_is_rct\<rbrace>
    call_kernel e
    \<lbrace>\<lambda>_. cur_vcpu_in_cur_domain\<rbrace>"
   unfolding call_kernel_def maybe_handle_interrupt_def
-  apply (wpsimp wp: handle_spurious_irq_invs| strengthen invs_valid_objs invs_hyp_sym_refs)+
-    (* simplify postcondition by ruling out non_kernel_IRQs *)
-    apply (rule hoare_post_imp[where Q'="\<lambda>irq s. irq \<notin> Some ` non_kernel_IRQs \<and> cur_vcpu_in_cur_domain s \<and> valid_sched s \<and> invs s"])
-     apply fastforce
-    apply (wpsimp wp: getActiveIRQ_neq_non_kernel handle_event_valid_sched
-           | strengthen invs_valid_objs invs_hyp_sym_refs)+
-  apply (clarsimp simp: valid_sched_def)
+  apply (wpsimp wp: handle_spurious_irq_invs | strengthen invs_implies)+
+  apply (force dest!: valid_sched_ct_in_cur_domain
+              intro!: schact_is_rct_ct_active_sc
+                elim: st_tcb_weakenE
+                simp: schedulable_def2 ct_in_state_def schact_is_rct_def)
   done
 
 end

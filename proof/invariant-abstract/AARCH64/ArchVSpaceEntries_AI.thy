@@ -96,13 +96,22 @@ lemma unmap_page_valid_vspace_objs'[wp]:
   apply wpsimp
   done
 
-crunch set_simple_ko
-  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
+crunch set_simple_ko, set_thread_state
+ for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (wp: crunch_wps)
+
+lemma set_reply_obj_ref_valid_vspace_objs'[wp]:
+  "set_reply_obj_ref upd r new \<lbrace>valid_vspace_objs'\<rbrace>"
+  by (wpsimp simp: update_sk_obj_ref_def)
+
+lemma set_ntfn_obj_ref_valid_vspace_objs'[wp]:
+  "set_ntfn_obj_ref upd r new \<lbrace>valid_vspace_objs'\<rbrace>"
+  by (wpsimp simp: update_sk_obj_ref_def)
 
 crunch finalise_cap, cap_swap_for_delete, empty_slot
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
-  (wp: crunch_wps preemption_point_inv simp: crunch_simps unless_def ignore:set_object)
+  (wp: crunch_wps preemption_point_inv hoare_vcg_all_lift
+   simp: crunch_simps unless_def ignore:set_object set_thread_state_act update_sk_obj_ref)
 
 lemma preemption_point_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> preemption_point \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
@@ -132,19 +141,19 @@ lemma invoke_cnode_valid_vspace_objs'[wp]:
   by (wpsimp wp: get_cap_wp split_del: if_split)
 
 crunch invoke_tcb, invoke_domain
-  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
-  (wp: check_cap_inv crunch_wps simp: crunch_simps
-       ignore: check_cap_at)
+  for valid_vspace_objs'[wp]: valid_vspace_objs'
+  (wp: check_cap_inv crunch_wps simp: crunch_simps is_round_robin_def
+       ignore: check_cap_at update_sk_obj_ref)
 
 crunch set_extra_badge, transfer_caps_loop
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (rule: transfer_caps_loop_pres)
 
-crunch send_ipc, send_signal,
-    do_reply_transfer, invoke_irq_control, invoke_irq_handler
-  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
-  (wp: crunch_wps simp: crunch_simps
-         ignore: clearMemory const_on_failure set_object)
+crunch
+  send_ipc, send_signal, do_reply_transfer, invoke_irq_control, invoke_irq_handler
+  for valid_vspace_objs'[wp]: valid_vspace_objs'
+  (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps
+   ignore: clearMemory const_on_failure set_object update_sk_obj_ref)
 
 lemma valid_vspace_objs'_trans_state[simp]: "valid_vspace_objs' (trans_state f s) = valid_vspace_objs' s"
   apply (simp add: obj_valid_vspace_def)
@@ -185,10 +194,10 @@ crunch reset_untyped_cap
   (wp: mapME_x_inv_wp crunch_wps simp: crunch_simps unless_def)
 
 lemma invoke_untyped_valid_vspace_objs'[wp]:
-  "\<lbrace>valid_vspace_objs' and invs and ct_active
-          and valid_untyped_inv ui\<rbrace>
-       invoke_untyped ui
-   \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
+  "\<lbrace>valid_vspace_objs' and invs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)
+    and valid_untyped_inv ui\<rbrace>
+   invoke_untyped ui
+   \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
   apply (rule hoare_pre, rule invoke_untyped_Q)
       apply (wp init_arch_objects_valid_vspace | simp)+
      apply (auto simp: post_retype_invs_def split: if_split_asm)[1]
@@ -262,59 +271,78 @@ lemma perform_page_table_valid_vspace_objs'[wp]:
               | wp (once) hoare_drop_imps)+
   done
 
+crunch invoke_sched_context, invoke_sched_control_configure_flags
+  for valid_vspace_objs'[wp]: valid_vspace_objs'
+  (ignore: update_sk_obj_ref wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps cong: if_cong)
+
+(* FIXME RT: move to Invariants_AI *)
+lemma invs_valid_caps[elim]:
+  "invs s \<Longrightarrow> valid_caps (caps_of_state s) s"
+  by (fastforce intro: valid_objs_caps)
+
 lemma perform_invocation_valid_vspace_objs'[wp]:
-  "\<lbrace>invs and ct_active and valid_invocation i and valid_vspace_objs'\<rbrace>
-   perform_invocation blocking call i
-   \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  apply (cases i; wpsimp)
-   apply (wpsimp simp: arch_perform_invocation_def perform_vspace_invocation_def perform_flush_def
-                       perform_sgi_invocation_def perform_smc_invocation_def
-                 simp_del: split_paired_Ex)
-  apply (auto simp: valid_arch_inv_def intro: valid_objs_caps)
-  done
+  "\<lbrace>invs and ct_active and valid_invocation i and valid_vspace_objs' and
+    (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+   perform_invocation blocking call can_donate i
+   \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
+  by (cases i;
+      wpsimp wp: send_signal_interrupt_states hoare_drop_imps
+           simp: arch_perform_invocation_def perform_vspace_invocation_def perform_flush_def
+                 perform_sgi_invocation_def perform_smc_invocation_def)
+     (auto simp add: valid_arch_inv_def)
 
 crunch handle_fault, reply_from_kernel
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma handle_invocation_valid_vspace_objs'[wp]:
-  "\<lbrace>valid_vspace_objs' and invs and ct_active\<rbrace>
-        handle_invocation calling blocking \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
+  "\<lbrace>\<lambda>s. valid_vspace_objs' s \<and> invs s \<and> ct_active s \<and>
+        scheduler_action s = resume_cur_thread \<and> ct_schedulable s\<rbrace>
+   handle_invocation calling blocking can_donate first_phase cptr
+   \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
   apply (simp add: handle_invocation_def)
-  apply (wp syscall_valid set_thread_state_ct_st
-               | simp add: split_def | wpc
-               | wp (once) hoare_drop_imps)+
-  apply (auto simp: ct_in_state_def elim: st_tcb_ex_cap)
+  apply (wp syscall_valid set_thread_state_ct_st sts_schedulable_scheduler_action
+         | simp add: split_def cong: conj_cong | wpc
+         | wp (once) hoare_drop_imps)+
+  apply (fastforce simp: ct_in_state_def)
   done
 
-crunch activate_thread,switch_to_thread, handle_hypervisor_fault,
-       switch_to_idle_thread, handle_call, handle_recv, handle_reply,
-       handle_send, handle_yield, maybe_handle_interrupt,
-       schedule_choose_new_thread
+crunch
+  activate_thread, switch_to_thread, handle_hypervisor_fault,
+  switch_to_idle_thread, handle_call, handle_recv, handle_vm_fault,
+  handle_send, handle_yield, handle_interrupt, check_budget_restart, update_time_stamp,
+  schedule_choose_new_thread, arch_prepare_next_domain, maybe_handle_interrupt,
+  activate_thread, switch_to_thread, check_domain_time, preemption_path
+  for valid_vspace_objs'[wp]: valid_vspace_objs'
+  (simp: crunch_simps wp: crunch_wps hoare_vcg_all_lift
+   ignore: without_preemption getActiveIRQ resetTimer ackInterrupt update_sk_obj_ref)
+
+crunch awaken, sc_and_timer
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
-  (simp: crunch_simps wp: crunch_wps OR_choice_weak_wp select_ext_weak_wp
-      ignore: without_preemption getActiveIRQ resetTimer ackInterrupt
-              OR_choice set_scheduler_action)
+  (wp: hoare_drop_imps hoare_vcg_if_lift2 crunch_wps)
 
 lemma handle_event_valid_vspace_objs'[wp]:
-  "\<lbrace>valid_vspace_objs' and invs and ct_active\<rbrace> handle_event e \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  by (case_tac e; simp) (wpsimp simp: Let_def handle_vm_fault_def | wp (once) hoare_drop_imps)+
+  "\<lbrace>valid_vspace_objs' and invs and ct_active
+    and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_schedulable\<rbrace>
+   handle_event e
+   \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
+  by (case_tac e; wpsimp wp: check_budget_restart_true hoare_vcg_if_lift2 hoare_drop_imps)
 
 lemma schedule_valid_vspace_objs'[wp]:
   "schedule \<lbrace>valid_vspace_objs'\<rbrace>"
   unfolding schedule_def by (wpsimp wp: hoare_drop_imps)
 
 lemma call_kernel_valid_vspace_objs'[wp]:
-  "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_vspace_objs'\<rbrace>
+  "\<lbrace>valid_vspace_objs' and invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)
+    and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_schedulable\<rbrace>
    call_kernel e
    \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
   apply (cases e, simp_all add: call_kernel_def)
       apply (rule hoare_pre)
-       apply (wp | simp add: Let_def handle_vm_fault_def | wpc
-                 | rule conjI | clarsimp simp: ct_in_state_def
-                 | erule pred_tcb_weakenE
-                 | wp (once) hoare_drop_imps)+
-  done
+       by (wp | simp add: Let_def handle_vm_fault_def | wpc
+              | rule conjI | clarsimp simp: ct_in_state_def
+              | erule pred_tcb_weakenE
+              | wp (once) check_budget_restart_true hoare_vcg_if_lift2 hoare_drop_imps)+
 
 end
 

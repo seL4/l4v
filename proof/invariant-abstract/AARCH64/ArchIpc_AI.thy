@@ -56,7 +56,8 @@ lemma derive_cap_is_derived [Ipc_AI_1_assms]:
                                      cap_asid_def
                     | fold validE_R_def
                     | erule cte_wp_at_weakenE
-                    | simp split: cap.split_asm)+)[11]
+                    | simp split: cap.split_asm
+                    | fastforce)+)[13]
   apply(wp hoare_drop_imps arch_derive_cap_is_derived)
   apply(clarify, drule cte_wp_at_norm, clarify)
   apply(frule(1) cte_wp_at_valid_objs_valid_cap)
@@ -232,16 +233,16 @@ lemma make_arch_fault_msg_inv[wp, Ipc_AI_2_assms]:
   "make_arch_fault_msg ft t \<lbrace>P\<rbrace>"
   by (cases ft; wpsimp)
 
-lemma make_fault_msg_inv[wp]:
-  "make_fault_msg ft t \<lbrace>P\<rbrace>"
-  by (cases ft; wpsimp wp: as_user_inv getRestartPC_inv mapM_wp' split_del: if_split)
+crunch make_fault_msg
+  for invs[wp]: invs
+  and tcb_at[wp]: "tcb_at t"
 
 lemma do_fault_transfer_invs[wp, Ipc_AI_2_assms]:
   "\<lbrace>invs and tcb_at receiver\<rbrace>
       do_fault_transfer badge sender receiver recv_buf
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (simp add: do_fault_transfer_def split_def | wp
-    | clarsimp split: option.split)+
+      | clarsimp split: option.split)+
 
 lemma lookup_ipc_buffer_in_user_frame[wp, Ipc_AI_2_assms]:
   "\<lbrace>valid_objs and tcb_at t\<rbrace> lookup_ipc_buffer b t
@@ -353,15 +354,6 @@ lemma do_normal_transfer_non_null_cte_wp_at [Ipc_AI_2_assms]:
     | clarsimp simp:imp)+
   done
 
-lemma is_derived_ReplyCap [simp, Ipc_AI_2_assms]:
-  "\<And>m p R. is_derived m p (cap.ReplyCap t False R) = (\<lambda>c. is_master_reply_cap c \<and> obj_ref_of c = t)"
-  apply (subst fun_eq_iff)
-  apply clarsimp
-  apply (case_tac x, simp_all add: is_derived_def is_cap_simps
-                                   cap_master_cap_def conj_comms is_pt_cap_def
-                                   vs_cap_ref_def)
-  done
-
 lemma do_normal_transfer_tcb_caps:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows
@@ -386,15 +378,8 @@ lemma do_ipc_transfer_tcb_caps [Ipc_AI_2_assms]:
        | wpc | simp add:imp)+
   done
 
-lemma setup_caller_cap_valid_global_objs[wp, Ipc_AI_2_assms]:
-  "\<lbrace>valid_global_objs\<rbrace> setup_caller_cap send recv grant \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
-  apply (simp add: valid_global_objs_def)
-  unfolding setup_caller_cap_def
-   apply (wp sts_obj_at_impossible | simp add: tcb_not_empty_table)+
-  done
-
 crunch handle_arch_fault_reply, arch_get_sanitise_register_info
-  for inv[Ipc_AI_2_assms]: P
+  for typ_at[Ipc_AI_2_assms]: "P (typ_at T p s)"
 
 lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_2_assms]:
   "\<lbrace>valid_vspace_objs\<rbrace>
@@ -422,16 +407,6 @@ lemma dmo_addressTranslateS1_valid_irq_states[wp]:
 lemma dmo_addressTranslateS1_cap_refs_respects_device_region[wp]:
   "do_machine_op (addressTranslateS1 addr) \<lbrace> cap_refs_respects_device_region \<rbrace>"
   by (wpsimp wp: cap_refs_respects_device_region_dmo)
-
-lemma setup_caller_cap_aobj_at:
-  "arch_obj_pred P' \<Longrightarrow>
-  \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> setup_caller_cap st rt grant \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
-  unfolding setup_caller_cap_def
-  by (wpsimp wp: cap_insert_aobj_at sts.aobj_at)
-
-lemma setup_caller_cap_valid_arch[Ipc_AI_2_assms, wp]:
-  "setup_caller_cap st rt grant \<lbrace>valid_arch_state\<rbrace>"
-  by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps[rotated -1] setup_caller_cap_tcb_at setup_caller_cap_aobj_at)
 
 lemma transfer_caps_loop_valid_arch[Ipc_AI_2_assms]:
   "\<And>slots caps ep buffer n mi.
@@ -468,12 +443,11 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_3_assms]:
    \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
   apply (wpsimp simp: do_ipc_transfer_def do_normal_transfer_def transfer_caps_def bind_assoc
                 wp: hoare_vcg_all_lift hoare_drop_imps)+
-         apply (simp only: ball_conj_distrib[where P="\<lambda>x. real_cte_at x s" for s])
-         apply (wpsimp wp: get_rs_cte_at2 thread_get_wp hoare_weak_lift_imp grs_distinct
-                           hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift
-                       simp: obj_at_def is_tcb_def)+
-   apply (simp split: kernel_object.split_asm)
-   done
+          apply (simp only: ball_conj_distrib[where P="\<lambda>x. real_cte_at x s" for s])
+          apply (wpsimp wp: get_rs_cte_at2 thread_get_wp hoare_weak_lift_imp grs_distinct
+                            hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift
+                      simp: obj_at_def is_tcb_def)+
+  done
 
 lemma set_mrs_state_hyp_refs_of[wp]:
   "\<lbrace>\<lambda> s. P (state_hyp_refs_of s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"

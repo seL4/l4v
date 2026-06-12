@@ -12,6 +12,7 @@ theory ArchAInvsToplevel_AI
 imports
   ArchFPU_AI
   ArchVCPU_AI
+  ArchAInvs
 begin
 
 end

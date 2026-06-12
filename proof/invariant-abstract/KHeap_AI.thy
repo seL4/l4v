@@ -2621,4 +2621,112 @@ lemma update_sched_context_no_fail[wp]:
   apply (clarsimp simp: obj_at_def a_type_def)
   done
 
+\<comment> \<open>Project endpoints from the kernel heap\<close>
+
+definition ep_of :: "kernel_object \<rightharpoonup> endpoint" where
+  "ep_of ko \<equiv> case ko of Endpoint ep \<Rightarrow> Some ep | _ \<Rightarrow> None"
+
+lemmas ep_of_simps[simp] = ep_of_def[split_simps kernel_object.split]
+
+definition send_q_of :: "endpoint \<rightharpoonup> obj_ref list" where
+  "send_q_of ep \<equiv> case ep of SendEP q \<Rightarrow> Some q | _ \<Rightarrow> None"
+
+lemmas send_q_of_simps[simp] = send_q_of_def[split_simps endpoint.split]
+
+definition recv_q_of :: "endpoint \<rightharpoonup> obj_ref list" where
+  "recv_q_of ep \<equiv> case ep of RecvEP q \<Rightarrow> Some q | _ \<Rightarrow> None"
+
+lemmas recv_q_of_simps[simp] = recv_q_of_def[split_simps endpoint.split]
+
+lemma ep_of_Some[simp]:
+  "ep_of ko = Some ep \<longleftrightarrow> ko = Endpoint ep"
+  by (cases ko; simp)
+
+lemma ep_of_None:
+  "ep_of ko = None \<longleftrightarrow> (\<forall>ep. ko \<noteq> Endpoint ep)"
+  by (cases ko; simp)
+
+lemma shows
+  send_q_of_Some[simp]: "send_q_of ep = Some q \<longleftrightarrow> ep = SendEP q" and
+  send_q_of_None: "send_q_of ep = None \<longleftrightarrow> (\<forall>q. ep \<noteq> SendEP q)" and
+  recv_q_of_Some[simp]: "recv_q_of ep = Some q \<longleftrightarrow> ep = RecvEP q" and
+  recv_q_of_None: "recv_q_of ep = None \<longleftrightarrow> (\<forall>q. ep \<noteq> RecvEP q)"
+  by (cases ep; simp)+
+
+(* FIXME RT: Consider eliminating in favour of a direct definition below in terms of kheap.
+             Note that this definition is used as part of the pred_map locale setup. *)
+definition eps_of_kh :: "('obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> 'obj_ref \<rightharpoonup> endpoint" where
+  "eps_of_kh kh \<equiv> kh |> ep_of"
+
+abbreviation eps_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> endpoint" where
+  "eps_of s \<equiv> eps_of_kh (kheap s)"
+
+lemmas eps_of_def = eps_of_kh_def[of "kheap s" for s :: "'z state"]
+
+(* FIXME RT: Consider eliminating in favour of a direct definition below in terms of eps_of.
+             Note that this definition is used as part of the pred_map locale setup. *)
+definition ep_send_qs_of_eps :: "('obj_ref \<rightharpoonup> endpoint) \<Rightarrow> 'obj_ref \<rightharpoonup> obj_ref list" where
+  "ep_send_qs_of_eps eps \<equiv> eps |> send_q_of"
+
+definition ep_recv_qs_of_eps :: "('obj_ref \<rightharpoonup> endpoint) \<Rightarrow> 'obj_ref \<rightharpoonup> obj_ref list" where
+  "ep_recv_qs_of_eps eps \<equiv> eps |> recv_q_of"
+
+abbreviation "ep_send_qs_of_kh kh \<equiv> ep_send_qs_of_eps (eps_of_kh kh)"
+abbreviation "ep_send_qs_of s \<equiv> ep_send_qs_of_kh (kheap s)"
+
+abbreviation "ep_recv_qs_of_kh kh \<equiv> ep_recv_qs_of_eps (eps_of_kh kh)"
+abbreviation "ep_recv_qs_of s \<equiv> ep_recv_qs_of_kh (kheap s)"
+
+abbreviation ep_queues_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> obj_ref list" where
+  "ep_queues_of s \<equiv> eps_of s ||> ep_queue"
+
+\<comment> \<open>Project notifications from the kernel heap\<close>
+
+definition ntfn_of :: "kernel_object \<rightharpoonup> notification" where
+  "ntfn_of ko \<equiv> case ko of Notification ntfn \<Rightarrow> Some ntfn | _ \<Rightarrow> None"
+
+lemmas ntfn_of_simps [simp] = ntfn_of_def [split_simps kernel_object.split]
+
+lemma ntfn_of_Some[simp]:
+  "ntfn_of ko = Some obj \<longleftrightarrow> ko = Notification obj"
+  by (cases ko; simp)
+
+lemma ntfn_of_None:
+  "ntfn_of ko = None \<longleftrightarrow> (\<forall>ntfn. ko \<noteq> Notification ntfn)"
+  by (cases ko; simp)
+
+abbreviation ntfns_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> Structures_A.notification" where
+  "ntfns_of \<equiv> (\<lambda>s. kheap s |> ntfn_of)"
+
+abbreviation ntfn_queues_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> obj_ref list" where
+  "ntfn_queues_of s \<equiv> ntfns_of s ||> ntfn_obj ||> ntfn_queue"
+
+\<comment> \<open>Project replies from the kernel heap\<close>
+
+definition reply_of :: "kernel_object \<rightharpoonup> reply" where
+  "reply_of ko \<equiv> case ko of Reply reply \<Rightarrow> Some reply | _ \<Rightarrow> None"
+
+lemmas reply_of_simps [simp] = reply_of_def [split_simps kernel_object.split]
+
+lemma reply_of_Some[simp]:
+  "reply_of ko = Some obj \<longleftrightarrow> ko = Reply obj"
+  by (cases ko; simp)
+
+lemma reply_of_None:
+  "reply_of ko = None \<longleftrightarrow> (\<forall>reply. ko \<noteq> Reply reply)"
+  by (cases ko; simp)
+
+abbreviation replies_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> Structures_A.reply" where
+  "replies_of \<equiv> (\<lambda>s. kheap s |> reply_of)"
+
+text \<open>
+  A method which may be helpful in proving that a function which calls @{const set_object}
+  preserves all properties of a kernel heap projection.\<close>
+method set_object_easy_cases uses def final
+  = simp add: def set_object_def split_def,
+    (wp get_object_wp zipWithM_x_inv' | wp (once) hoare_drop_imp | wpc)+,
+    (fastforce simp: final obj_at_def opt_map_def eps_of_kh_def tcbs_of_kh_def a_type_def
+              intro: rsubst[where P=P]
+              split: kernel_object.splits)?
+
 end

@@ -792,62 +792,8 @@ global_interpretation sc_replies:
 
 \<comment> \<open>Endpoints\<close>
 
-\<comment> \<open>Project endpoints from the kernel heap\<close>
-
-definition ep_of :: "kernel_object \<rightharpoonup> endpoint" where
-  "ep_of ko \<equiv> case ko of Endpoint ep \<Rightarrow> Some ep | _ \<Rightarrow> None"
-
-lemmas ep_of_simps [simp] = ep_of_def [split_simps kernel_object.split]
-
-definition send_q_of :: "endpoint \<rightharpoonup> obj_ref list" where
-  "send_q_of ep \<equiv> case ep of SendEP q \<Rightarrow> Some q | _ \<Rightarrow> None"
-
-lemmas send_q_of_simps [simp] = send_q_of_def [split_simps endpoint.split]
-
-definition recv_q_of :: "endpoint \<rightharpoonup> obj_ref list" where
-  "recv_q_of ep \<equiv> case ep of RecvEP q \<Rightarrow> Some q | _ \<Rightarrow> None"
-
-lemmas recv_q_of_simps [simp] = recv_q_of_def [split_simps endpoint.split]
-
-lemma ep_of_Some[simp]:
-  "ep_of ko = Some ep \<longleftrightarrow> ko = Endpoint ep"
-  by (cases ko; simp)
-
-lemma ep_of_None:
-  "ep_of ko = None \<longleftrightarrow> (\<forall>ep. ko \<noteq> Endpoint ep)"
-  by (cases ko; simp)
-
-lemma shows
-  send_q_of_Some[simp]: "send_q_of ep = Some q \<longleftrightarrow> ep = SendEP q" and
-  send_q_of_None: "send_q_of ep = None \<longleftrightarrow> (\<forall>q. ep \<noteq> SendEP q)" and
-  recv_q_of_Some[simp]: "recv_q_of ep = Some q \<longleftrightarrow> ep = RecvEP q" and
-  recv_q_of_None: "recv_q_of ep = None \<longleftrightarrow> (\<forall>q. ep \<noteq> RecvEP q)"
-  by (cases ep; simp)+
-
-definition eps_of_kh :: "('obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> 'obj_ref \<rightharpoonup> endpoint" where
-  "eps_of_kh kh \<equiv> kh |> ep_of"
-
-abbreviation eps_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> endpoint" where
-  "eps_of s \<equiv> eps_of_kh (kheap s)"
-
-lemmas eps_of_def = eps_of_kh_def[of "kheap s" for s :: "'z state"]
-
 global_interpretation ep_heap: opt_map_cons_def_locale _ ep_of eps_of_kh Endpoint
   using eps_of_kh_def ep_of_None ep_of_Some by unfold_locales
-
-\<comment> \<open>Project endpoint queues\<close>
-
-definition ep_send_qs_of_eps :: "('obj_ref \<rightharpoonup> endpoint) \<Rightarrow> 'obj_ref \<rightharpoonup> obj_ref list" where
-  "ep_send_qs_of_eps eps \<equiv> eps |> send_q_of"
-
-definition ep_recv_qs_of_eps :: "('obj_ref \<rightharpoonup> endpoint) \<Rightarrow> 'obj_ref \<rightharpoonup> obj_ref list" where
-  "ep_recv_qs_of_eps eps \<equiv> eps |> recv_q_of"
-
-abbreviation "ep_send_qs_of_kh kh \<equiv> ep_send_qs_of_eps (eps_of_kh kh)"
-abbreviation "ep_send_qs_of s \<equiv> ep_send_qs_of_kh (kheap s)"
-
-abbreviation "ep_recv_qs_of_kh kh \<equiv> ep_recv_qs_of_eps (eps_of_kh kh)"
-abbreviation "ep_recv_qs_of s \<equiv> ep_recv_qs_of_kh (kheap s)"
 
 global_interpretation ep_send_qs:  opt_map_opt_map_cons_def_locale _ ep_of eps_of_kh Endpoint send_q_of SendEP ep_send_qs_of_eps
   using ep_send_qs_of_eps_def send_q_of_None send_q_of_Some by unfold_locales
@@ -856,51 +802,7 @@ global_interpretation ep_recv_qs:
   opt_map_opt_map_cons_def_locale _ ep_of eps_of_kh Endpoint recv_q_of RecvEP ep_recv_qs_of_eps
   using ep_recv_qs_of_eps_def recv_q_of_None recv_q_of_Some by unfold_locales
 
-abbreviation ep_queues_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> obj_ref list" where
-  "ep_queues_of s \<equiv> eps_of s ||> ep_queue"
 
-\<comment> \<open>Notifications\<close>
-
-\<comment> \<open>Project notifications from the kernel heap\<close>
-
-definition ntfn_of :: "kernel_object \<rightharpoonup> notification" where
-  "ntfn_of ko \<equiv> case ko of Notification ntfn \<Rightarrow> Some ntfn | _ \<Rightarrow> None"
-
-lemmas ntfn_of_simps [simp] = ntfn_of_def [split_simps kernel_object.split]
-
-lemma ntfn_of_Some[simp]:
-  "ntfn_of ko = Some obj \<longleftrightarrow> ko = Notification obj"
-  by (cases ko; simp)
-
-lemma ntfn_of_None:
-  "ntfn_of ko = None \<longleftrightarrow> (\<forall>ntfn. ko \<noteq> Notification ntfn)"
-  by (cases ko; simp)
-
-abbreviation ntfns_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> Structures_A.notification" where
-  "ntfns_of \<equiv> (\<lambda>s. kheap s |> ntfn_of)"
-
-abbreviation ntfn_queues_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> obj_ref list" where
-  "ntfn_queues_of s \<equiv> ntfns_of s ||> ntfn_obj ||> ntfn_queue"
-
-\<comment> \<open>Replies\<close>
-
-\<comment> \<open>Project replies from the kernel heap\<close>
-
-definition reply_of :: "kernel_object \<rightharpoonup> reply" where
-  "reply_of ko \<equiv> case ko of Reply reply \<Rightarrow> Some reply | _ \<Rightarrow> None"
-
-lemmas reply_of_simps [simp] = reply_of_def [split_simps kernel_object.split]
-
-lemma reply_of_Some[simp]:
-  "reply_of ko = Some obj \<longleftrightarrow> ko = Reply obj"
-  by (cases ko; simp)
-
-lemma reply_of_None:
-  "reply_of ko = None \<longleftrightarrow> (\<forall>reply. ko \<noteq> Reply reply)"
-  by (cases ko; simp)
-
-abbreviation replies_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> Structures_A.reply" where
-  "replies_of \<equiv> (\<lambda>s. kheap s |> reply_of)"
 
 \<comment> \<open>Heap simplification rules\<close>
 
@@ -1729,16 +1631,14 @@ crunch do_machine_op
            (ready_queues s) (release_queue s) (scheduler_action s) (kheap s)"
 
 lemma dmo_valid_sched_pred:
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (last_machine_time s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (time_state s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (last_machine_time s) (time_state s)\<rbrace>"
   shows "do_machine_op f \<lbrace>valid_sched_pred_strong P\<rbrace>"
-  by (rule hoare_lift_Pf[where f=last_machine_time_of]
-      ; rule hoare_lift_Pf[where f=time_state_of]
-      ; intro do_machine_op_valid_sched_pred_misc do_machine_op_machine_state assms)
+  by (rule hoare_lift_Pf[where f=last_machine_time_of];
+      rule hoare_lift_Pf[where f=time_state_of];
+      intro do_machine_op_valid_sched_pred_misc do_machine_op_machine_state assms)
 
 lemma dmo_valid_sched_pred':
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (last_machine_time s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (time_state s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (last_machine_time s) (time_state s)\<rbrace>"
   shows "(do_machine_op $ f) \<lbrace>valid_sched_pred_strong P\<rbrace>"
   unfolding fun_app_def by (rule dmo_valid_sched_pred[OF assms])
 
@@ -2356,6 +2256,11 @@ lemma ready_or_released_in_ready_qs:
 lemma ready_or_released_in_release_queue:
   "ready_or_release s \<Longrightarrow> in_release_queue t s \<Longrightarrow> not_queued t s"
   by (clarsimp simp: ready_or_release_def)
+
+lemma in_ready_q_schedulable:
+  "\<lbrakk>t \<in> set (ready_queues s d p); valid_ready_qs s; ready_or_release s\<rbrakk> \<Longrightarrow> schedulable t s"
+  by (force simp: valid_ready_qs_def ready_or_release_def schedulable_def2
+                  vs_all_heap_simps obj_at_kh_kheap_simps in_ready_q_def)
 
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation (input) valid_sched_valid_release_q :: "obj_ref set \<Rightarrow> valid_sched_t" where
@@ -3441,6 +3346,22 @@ lemma ct_in_cur_domain_lift_pre_conj:
 
 lemmas ct_in_cur_domain_lift = ct_in_cur_domain_lift_pre_conj[where R=\<top>, simplified]
 
+lemma thread_set_in_cur_domain_lift:
+  "(\<And>tcb. tcb_domain (f tcb) = tcb_domain tcb)
+   \<Longrightarrow> thread_set f tptr \<lbrace>\<lambda>s. P (in_cur_domain t s)\<rbrace>"
+  apply (wpsimp wp: thread_set_wp)
+  apply (clarsimp simp: in_cur_domain_def obj_at_kh_kheap_simps etcb_at'_def vs_all_heap_simps)
+  done
+
+lemma thread_set_etcb_domain:
+  "(\<And>P tcb. P (tcb_domain (f tcb)) = (P (tcb_domain tcb) :: bool))
+   \<Longrightarrow> thread_set f t' \<lbrace>etcb_at (\<lambda>t. P (etcb_domain t)) t\<rbrace>"
+  apply (wpsimp wp: thread_set_wp)
+  apply (clarsimp simp: etcb_at'_def vs_all_heap_simps get_tcb_def
+                 split: option.splits kernel_object.splits)
+  apply blast
+  done
+
 lemma weak_valid_sched_action_lift_pre_conj:
   assumes ts: "\<And>t. \<lbrace>\<lambda>s. pred_map runnable (tcb_sts_of s) t \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. pred_map runnable (tcb_sts_of s) t\<rbrace>"
               "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
@@ -3541,6 +3462,57 @@ lemma valid_sched_lift_pre_conj:
                    hoare_vcg_all_lift hoare_vcg_imp_lift)
 
 lemmas valid_sched_lift = valid_sched_lift_pre_conj[where R = \<top>, simplified]
+
+lemma valid_sched_pred_strong_lift:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (consumed_time s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (cur_sc s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (cur_time s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (last_machine_time_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (time_state_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (prios_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (eps_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ntfns_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (sc_tcbs_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (release_queue s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (tcb_sts_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (tcb_scps_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (tcb_faults_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (sc_refill_cfgs_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (sc_replies_of s)\<rbrace>"
+  shows "\<lbrace>\<lambda>s. valid_sched_pred_strong P s\<rbrace> f \<lbrace>\<lambda>rv. valid_sched_pred_strong P\<rbrace>"
+  apply (rule hoare_lift_Pf2[where f=consumed_time, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=cur_sc, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=ep_send_qs_of, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=ep_recv_qs_of, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=cur_time, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=cur_domain, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=idle_thread, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=ready_queues, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=etcbs_of, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=last_machine_time_of, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=time_state_of, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=ep_queues_of, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=ntfn_queues_of, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=prios_of, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=eps_of, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=ntfns_of, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=sc_tcbs_of, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=cur_thread, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=release_queue, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=scheduler_action, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=tcb_sts_of, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=tcb_scps_of, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=tcb_faults_of, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=sc_refill_cfgs_of, rotated], wpsimp wp: assms)
+  apply (rule hoare_lift_Pf2[where f=sc_replies_of, rotated], wpsimp wp: assms)
+  apply wpsimp
+  done
 
 (* This predicate declares that the current thread has a scheduling context that is
     active, ready and sufficient. *)
@@ -3650,8 +3622,30 @@ abbreviation ct_not_blocked where
 abbreviation ct_not_blocked_on_ntfn where
   "ct_not_blocked_on_ntfn s \<equiv> ct_in_state (\<lambda>x. \<not> is_blocked_on_ntfn x) s"
 
+abbreviation ct_not_blocked_on_send where
+  "ct_not_blocked_on_send s \<equiv> ct_in_state (\<lambda>st. \<not> is_blocked_on_send st) s"
+
 abbreviation ct_not_blocked_on_receive where
   "ct_not_blocked_on_receive s \<equiv> ct_in_state (\<lambda>x. \<not> is_blocked_on_receive x) s"
+
+abbreviation ct_not_blocked_on_reply where
+  "ct_not_blocked_on_reply s \<equiv> ct_in_state (\<lambda>st. \<not> is_blocked_on_reply st) s"
+
+lemma ct_not_blocked_ct_not_blocked_on_ntfn:
+  "ct_not_blocked s \<Longrightarrow> ct_not_blocked_on_ntfn s"
+  by (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def is_blocked_on_ntfn_def)
+
+lemma ct_not_blocked_ct_not_blocked_on_send:
+  "ct_not_blocked s \<Longrightarrow> ct_not_blocked_on_send s"
+  by (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def is_blocked_on_send_def)
+
+lemma ct_not_blocked_ct_not_blocked_on_receive:
+  "ct_not_blocked s \<Longrightarrow> ct_not_blocked_on_receive s"
+  by (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def is_blocked_on_receive_def)
+
+lemmas ct_not_blocked_implies =
+  ct_not_blocked_ct_not_blocked_on_ntfn ct_not_blocked_ct_not_blocked_on_receive
+  ct_not_blocked_ct_not_blocked_on_send
 
 lemma ct_in_state_kh_simp:
   "ct_in_state P s = ct_in_state' P s"

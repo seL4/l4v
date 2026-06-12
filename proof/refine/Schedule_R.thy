@@ -971,22 +971,24 @@ lemma (in Schedule_R) guarded_switch_to_corres:
       and valid_arch_state and valid_objs and valid_asid_map and valid_vspace_objs
       and pspace_aligned and pspace_distinct
       and valid_arch_caps and valid_global_objs and pspace_in_kernel_window
-      and schedulable t and valid_ready_qs and ready_or_release and valid_idle and valid_cur_fpu)
+      and schedulable t and valid_ready_qs and ready_or_release and valid_idle and valid_cur_fpu
+      and in_cur_domain t)
      (no_0_obj' and sym_heap_sched_pointers and valid_objs')
      (guarded_switch_to t) (switchToThread t)"
+  apply (rule_tac Q="tcb_at t" in corres_cross_add_abs_guard)
+   apply (clarsimp simp: schedulable_def2)
   apply (simp add: guarded_switch_to_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_symb_exec_l'[OF _ thread_get_exs_valid])
-      apply (rule corres_assert_opt_assume_l)
-      apply (rule corres_symb_exec_l'[OF _ gets_exs_valid])
-        apply (rule corres_assert_assume_l)
-        apply (rule switchToThread_corres)
-      apply wpsimp
-     apply assumption
-    apply (wpsimp wp: thread_get_wp')
-   apply (clarsimp simp: schedulable_def2 tcb_at_kh_simps pred_map_def vs_all_heap_simps
-                         obj_at_def is_tcb)
-   apply simp+
+  apply (rule corres_symb_exec_l[OF _ _ thread_get_sp, rotated]; (solves wpsimp)?)
+  apply (rule corres_assert_opt_assume_lhs[rotated])
+   apply (clarsimp simp: schedulable_def2 obj_at_def vs_all_heap_simps)
+  apply (rule corres_symb_exec_l[OF _ _ gets_sp, rotated]; (solves wpsimp)?)
+  apply (rule corres_symb_exec_l[OF _ _ assert_sp, rotated]; (solves wpsimp)?)
+  apply (rule corres_symb_exec_l[OF _ _ gets_sp, rotated]; (solves wpsimp)?)
+  apply (rule corres_symb_exec_l[OF _ _ thread_get_sp, rotated]; (solves wpsimp)?)
+  apply (rule corres_assert_assume_l_forward)
+   apply (clarsimp simp: obj_at_def in_cur_domain_def etcb_at'_def vs_all_heap_simps)
+  apply (corres corres: switchToThread_corres
+                  simp: schedulable_def2)
   done
 
 abbreviation "enumPrio \<equiv> [0.e.maxPriority]"
@@ -1038,7 +1040,7 @@ locale Schedule_R_2 = Schedule_R +
   assumes guarded_switch_to_chooseThread_fragment_corres:
     "\<And>P P' t.
      corres dc
-      (P and schedulable t and invs and valid_ready_qs and ready_or_release)
+      (P and schedulable t and in_cur_domain t and invs and valid_ready_qs and ready_or_release)
       (P' and invs')
       (guarded_switch_to t) (ThreadDecls_H.switchToThread t)"
 begin
@@ -1102,7 +1104,7 @@ lemma (in Schedule_R_2) bitmap_lookup_queue_is_max_non_empty:
   "\<lbrakk> valid_bitmaps s'; (s, s') \<in> state_relation; invs s;
      ksReadyQueuesL1Bitmap s' (ksCurDomain s') \<noteq> 0 \<rbrakk>
    \<Longrightarrow> the (tcbQueueHead (ksReadyQueues s' (ksCurDomain s', lookupBitmapPriority (ksCurDomain s') s')))
-       = hd (max_non_empty_queue (ready_queues s (cur_domain s)))"
+       = hd (max_non_empty_queue (ready_queues s (ksCurDomain s')))"
   apply (clarsimp simp: max_non_empty_queue_def valid_bitmaps_def lookupBitmapPriority_Max_eqI)
   apply (frule curdomain_relation)
   apply (drule state_relation_ready_queues_relation)
@@ -1136,7 +1138,7 @@ lemma curDomain_or_return_0:
 
 lemma (in Schedule_R_2) chooseThread_corres:
   "corres dc (invs and valid_ready_qs and ready_or_release) invs'
-     choose_thread chooseThread" (is "corres _ ?PREI ?PREH _ _")
+     choose_thread chooseThread"
   apply add_ready_qs_runnable
   unfolding choose_thread_def chooseThread_def
   apply (rule corres_stateAssert_add_assertion[rotated])
@@ -1145,48 +1147,40 @@ lemma (in Schedule_R_2) chooseThread_corres:
   apply (rule corres_stateAssert_add_assertion[rotated])
    apply (clarsimp simp: ready_qs_runnable_def)
   apply (subst if_swap[where P="_ \<noteq> 0"]) (* put switchToIdleThread on first branch*)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split[OF curDomain_corres'])
-      apply clarsimp
-      apply (rule corres_split[OF corres_gets_queues_getReadyQueuesL1Bitmap])
-        apply (erule corres_if2[OF sym])
-         apply (rule switchToIdleThread_corres)
-        apply (rule corres_symb_exec_r)
-           apply (rule corres_symb_exec_r)
-              apply (rule_tac
-                       P="\<lambda>s. ?PREI s \<and> queues = ready_queues s (cur_domain s) \<and>
-                              schedulable (hd (max_non_empty_queue queues)) s" and
-                       P'="\<lambda>s. ?PREH s \<and>
-                               l1 = ksReadyQueuesL1Bitmap s (ksCurDomain s) \<and>
-                               l1 \<noteq> 0 \<and>
-                               queue = ksReadyQueues s (ksCurDomain s,
-                                         lookupBitmapPriority (ksCurDomain s) s)" and
-                       F="the (tcbQueueHead queue) = hd (max_non_empty_queue queues)" in corres_req)
-               apply (fastforce simp: bitmap_lookup_queue_is_max_non_empty invs'_def)
-              apply clarsimp
-              apply (rule corres_guard_imp)
-                apply (rule_tac P=\<top> and P'=\<top> in guarded_switch_to_chooseThread_fragment_corres)
-               apply (wpsimp simp: getQueue_def getReadyQueuesL2Bitmap_def)+
-      apply (wp hoare_vcg_conj_lift hoare_vcg_imp_lift ksReadyQueuesL1Bitmap_return_wp)
-     apply (wpsimp wp: curDomain_or_return_0)+
-    apply (fastforce simp: invs_ksCurDomain_maxDomain')
-   apply (clarsimp simp: valid_sched_def DetSchedInvs_AI.valid_ready_qs_def max_non_empty_queue_def)
-   apply (erule_tac x="cur_domain s" in allE)
-   apply (erule_tac x="Max {prio. ready_queues s (cur_domain s) prio \<noteq> []}" in allE)
-   apply (case_tac "ready_queues s (cur_domain s) (Max {prio. ready_queues s (cur_domain s) prio \<noteq> []})")
-    apply (clarsimp)
-    apply (subgoal_tac
-             "ready_queues s (cur_domain s) (Max {prio. ready_queues s (cur_domain s) prio \<noteq> []}) \<noteq> []")
-     apply (fastforce elim!: setcomp_Max_has_prop)
-    apply (fastforce elim!: setcomp_Max_has_prop)
-   apply (clarsimp simp: tcb_at_kh_simps schedulable_def2 released_sc_tcb_at_def)
-   apply (subgoal_tac "in_ready_q a s", fastforce simp: ready_or_release_def)
-   apply (clarsimp simp: in_ready_q_def)
-    apply (rule_tac x="cur_domain s" in exI)
-    apply (rule_tac x="Max {prio. ready_queues s (cur_domain s) prio \<noteq> []}" in exI)
-    apply clarsimp
-  apply (simp add: invs_ksCurDomain_maxDomain')
-  apply (clarsimp simp: ready_qs_runnable_def)
+  apply (rule_tac Q'="\<lambda>_. invs'" in corres_split_forwards'[OF _ gets_sp])
+    apply (corres corres: curDomain_corres')
+   apply wpsimp
+  apply clarsimp
+  apply (rename_tac dom)
+  apply (rule_tac Q'="\<lambda>l1 s'. invs' s' \<and> l1 = ksReadyQueuesL1Bitmap s' dom"
+               in corres_split_forwards')
+     apply (corres corres: corres_gets_queues_getReadyQueuesL1Bitmap)
+    apply (rule gets_sp)
+   apply (wpsimp simp: getReadyQueuesL1Bitmap_def)
+  apply (rename_tac ready_qs_for_dom l1)
+  apply (rule corres_if_strong')
+    apply fastforce
+   apply (corres corres: corres_gets_queues_getReadyQueuesL1Bitmap)
+     apply (corres corres: switchToIdleThread_corres)
+    apply fastforce
+   apply fastforce
+  apply (clarsimp simp: getQueue_def)
+  apply (rule corres_symb_exec_r[OF _ gets_sp]; wpsimp?)
+  apply (rule corres_symb_exec_r[OF _ gets_sp]; wpsimp?)
+  apply (rename_tac queue)
+  apply (rule_tac F="the (he_ptrs_head queue) = hd (max_non_empty_queue ready_qs_for_dom)"
+               in corres_req)
+   apply (frule curdomain_relation)
+   apply (fastforce intro: bitmap_lookup_queue_is_max_non_empty)
+  apply clarsimp
+  apply (rule stronger_corres_guard_imp)
+    apply (rule guarded_switch_to_chooseThread_fragment_corres[where P=\<top> and P'=\<top>, simplified])
+   apply clarsimp
+   apply (frule hd_max_non_empty_queue_in_ready_queues)
+   apply (rule conjI)
+    apply (fastforce intro!: in_ready_q_schedulable)
+   apply (fastforce simp: in_cur_domain_def etcb_at'_def vs_all_heap_simps valid_ready_qs_def)
+  apply fastforce
   done
 
 lemma thread_get_comm: "do x \<leftarrow> thread_get f p; y \<leftarrow> gets g; k x y od =
@@ -4377,6 +4371,7 @@ lemma (in Schedule_R_3) schedule_corres:
                     simp: schedulable_def2 valid_idle_def pred_tcb_at_def obj_at_def)
 
   apply (rule_tac Q="\<lambda>_ s. invs s \<and> valid_domain_list s \<and> valid_ready_qs s \<and> ready_or_release s
+                           \<and> valid_sched_action s \<and> scheduler_action s = switch_thread candidate
                            \<and> pred_map runnable (tcb_sts_of s) candidate
                            \<and> released_sc_tcb_at candidate s \<and> not_in_release_q candidate s"
               and Q'="\<lambda>_ s. invs' s \<and> curThread = ksCurThread s"
@@ -4471,9 +4466,10 @@ lemma (in Schedule_R_3) schedule_corres:
      apply wpsimp
     apply wpsimp
    apply clarsimp
+   apply (frule invs_sym_refs)
    subgoal
-     by (fastforce dest: invs_sym_refs
-                   simp: obj_at_def vs_all_heap_simps pred_tcb_at_def schedulable_def3)
+     by (auto simp: vs_all_heap_simps  schedulable_def3 valid_sched_action_def
+                    switch_in_cur_domain_def)
   apply fastforce
   done
 

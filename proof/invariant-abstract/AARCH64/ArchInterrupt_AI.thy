@@ -128,9 +128,8 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_assms]:
    (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s) and
    (\<lambda>s. cte_wp_at (\<lambda>cap'. \<forall>irq\<in>cap_irqs cap - cap_irqs cap'. irq_issued irq s)
          src s) and
-   (\<lambda>s. \<forall>t R. cap = ReplyCap t False R \<longrightarrow>
-            st_tcb_at awaiting_reply t s \<and> \<not> has_reply_cap t s) and
-   K (\<not> is_master_reply_cap cap))\<rbrace>
+   (\<lambda>s. \<forall>t R. cap = ReplyCap t R \<longrightarrow>
+            st_tcb_at awaiting_reply t s \<and> \<not> has_reply_cap t s))\<rbrace>
   cap_insert cap src dest \<lbrace>\<lambda>rv s. invs s \<and> ex_inv s\<rbrace>"
    apply wp
    apply (auto simp: cte_wp_at_caps_of_state)
@@ -242,7 +241,7 @@ crunch vgic_update, vgic_update_lr, vcpu_update for ex_nonz_cap_to[wp]: "ex_nonz
   (wp: ex_nonz_cap_to_pres)
 
 lemma vgic_maintenance_invs[wp]:
-  "\<lbrace>invs\<rbrace> vgic_maintenance \<lbrace>\<lambda>_. invs\<rbrace>"
+  "vgic_maintenance \<lbrace>invs\<rbrace>"
   unfolding vgic_maintenance_def
   supply if_split[split del] valid_fault_def[simp]
   apply (wpsimp simp: get_gic_vcpu_ctrl_misr_def get_gic_vcpu_ctrl_eisr1_def
@@ -260,14 +259,12 @@ lemma vgic_maintenance_invs[wp]:
   done
 
 lemma vppi_event_invs[wp]:
-  "\<lbrace>invs\<rbrace> vppi_event irq \<lbrace>\<lambda>_. invs\<rbrace>"
+  "vppi_event irq \<lbrace>invs\<rbrace>"
   unfolding vppi_event_def
-  supply if_split[split del] valid_fault_def[simp]
+  supply valid_fault_def[simp]
   apply (wpsimp simp: if_apply_def2
-                wp: hoare_vcg_imp_lift' gts_wp hoare_vcg_all_lift maskInterrupt_invs
-                cong: vcpu.fold_congs
-         | wps
-         | strengthen not_pred_tcb_at_strengthen)+
+                wp: hoare_vcg_imp_lift' gts_wp hoare_vcg_all_lift maskInterrupt_invs thread_get_wp'
+                cong: vcpu.fold_congs)
   apply (frule tcb_at_invs)
   apply (clarsimp simp: runnable_eq halted_eq not_pred_tcb)
   apply (fastforce intro!: st_tcb_ex_cap[where P=active]
@@ -278,25 +275,23 @@ lemma handle_reserved_irq_invs[wp]:
   "\<lbrace>invs\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding handle_reserved_irq_def by (wpsimp simp: non_kernel_IRQs_def)
 
-crunch timer_tick
-  for invs[wp]: invs
-  (wp: thread_set_invs_trivial[OF ball_tcb_cap_casesI])
-
 lemma (* handle_interrupt_invs *) [Interrupt_AI_assms]:
-  "\<lbrace>invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
+  "handle_interrupt irq \<lbrace>invs\<rbrace>"
   apply (simp add: handle_interrupt_def)
   apply (rule conjI; rule impI)
   apply (simp add: do_machine_op_bind empty_fail_ackInterrupt_ARCH empty_fail_maskInterrupt_ARCH)
-     apply (wpsimp wp: dmo_maskInterrupt_invs maskInterrupt_invs_ARCH dmo_ackInterrupt
-                      send_signal_interrupt_states simp: arch_mask_irq_signal_def)+
-     apply (wp get_cap_wp send_signal_interrupt_states )
-    apply (rule_tac Q'="\<lambda>rv. invs and (\<lambda>s. st = interrupt_states s irq)" in hoare_post_imp)
-     apply (clarsimp simp: ex_nonz_cap_to_def invs_valid_objs)
-     apply (intro allI exI, erule cte_wp_at_weakenE)
-     apply (clarsimp simp: is_cap_simps)
-    apply (wpsimp wp: hoare_drop_imps resetTimer_invs_ARCH
-                simp: get_irq_state_def
-           | rule conjI)+
+   apply (wpsimp wp: dmo_maskInterrupt_invs maskInterrupt_invs_ARCH dmo_ackInterrupt
+                     send_signal_interrupt_states
+               simp: arch_mask_irq_signal_def when_def
+          split_del: if_split)+
+       apply (wp get_cap_wp send_signal_interrupt_states)
+      apply (rule_tac Q'="\<lambda>rv. invs and (\<lambda>s. st = interrupt_states s irq)" in hoare_post_imp)
+       apply (clarsimp simp: ex_nonz_cap_to_def invs_valid_objs)
+       apply (intro allI exI, erule cte_wp_at_weakenE)
+       apply (clarsimp simp: is_cap_simps)
+      apply (wpsimp wp: hoare_drop_imps resetTimer_invs_ARCH
+                  simp: get_irq_state_def ackDeadlineIRQ_def
+             | rule conjI)+
  done
 
 lemma sts_arch_irq_control_inv_valid[wp, Interrupt_AI_assms]:
@@ -308,6 +303,15 @@ lemma sts_arch_irq_control_inv_valid[wp, Interrupt_AI_assms]:
 
 crunch arch_invoke_irq_handler
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+
+crunch invoke_irq_control
+  for cur_thread[wp, Interrupt_AI_assms]: "\<lambda>s. P (cur_thread s)"
+  and ct_in_state[wp, Interrupt_AI_assms]: "ct_in_state P"
+  (wp: crunch_wps simp: crunch_simps)
+
+crunch invoke_irq_handler
+  for ct_active[wp, Interrupt_AI_assms]: ct_active
+  (wp: gts_wp get_simple_ko_wp crunch_wps simp: crunch_simps)
 
 end
 

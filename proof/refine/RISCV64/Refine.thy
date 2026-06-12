@@ -888,19 +888,21 @@ lemma kernel_corres':
     apply clarsimp
    apply (clarsimp  cong: conj_cong)
    apply (intro conjI, clarsimp simp: active_from_running)
-        apply (rule valid_sched_ct_not_queued; clarsimp?)
-       apply (erule (2) cur_sc_active_ct_not_in_release_q_imp_ct_running_imp_ct_schedulable, clarsimp)
-      apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def cur_tcb_def is_tcb
-                     dest!: invs_cur)
-     apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
-                           invs_strengthen_cur_sc_tcb_are_bound)
-    apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def cur_tcb_def is_tcb
-                    dest!: invs_cur)
-   apply (clarsimp, rule schact_is_rct_ct_released; simp?)
-   apply (frule (1) cur_sc_not_idle_sc_ptr')
-    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
-                          invs_strengthen_cur_sc_tcb_are_bound)
-   apply simp
+          apply (rule valid_sched_ct_not_queued; clarsimp?)
+         apply (erule (2) cur_sc_active_ct_not_in_release_q_imp_ct_running_imp_ct_schedulable, clarsimp)
+        apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def cur_tcb_def is_tcb
+                       dest!: invs_cur)
+       apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
+                             invs_strengthen_cur_sc_tcb_are_bound)
+      apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def cur_tcb_def is_tcb
+                      dest!: invs_cur)
+     apply (clarsimp, rule schact_is_rct_ct_released; simp?)
+     apply (frule (1) cur_sc_not_idle_sc_ptr')
+      apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
+                            invs_strengthen_cur_sc_tcb_are_bound)
+     apply simp
+    apply (force elim!: ct_in_state_weaken)
+   apply (force elim!: ct_in_state_weaken)
   apply clarsimp
   apply (frule ksCurThread_schedulable'_ct_active')
    apply (clarsimp simp: cur_tcb'_def)

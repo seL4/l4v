@@ -16,18 +16,6 @@ lemmas arch_machine_ops_valid_sched_pred[wp] =
   arch_machine_ops_last_machine_time[THEN dmo_valid_sched_pred]
   arch_machine_ops_last_machine_time[THEN dmo_valid_sched_pred']
 
-lemma set_pt_eps_of[wp]:
-  "set_pt ptr pt \<lbrace>\<lambda>s. P (eps_of s)\<rbrace>"
-  by (set_object_easy_cases def: set_pt_def)
-
-lemma set_pt_ntfns_of[wp]:
-  "set_pt ptr pt \<lbrace>\<lambda>s. P (ntfns_of s)\<rbrace>"
-  by (set_object_easy_cases def: set_pt_def)
-
-lemma set_pt_tcbs_of[wp]:
-  "set_pt ptr pt \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
-  by (set_object_easy_cases def: set_pt_def)
-
 lemma set_pt_valid_sched_pred[wp]:
   "set_pt ptr pt \<lbrace>valid_sched_pred_strong P\<rbrace>"
   apply (rule hoare_lift_Pf[where f=ntfn_queues_of, rotated], wpsimp)
@@ -38,18 +26,6 @@ lemma set_pt_valid_sched_pred[wp]:
   apply (wpsimp simp: set_pt_def wp: set_object_wp_strong get_object_wp)
   apply (fastforce simp: obj_at_kh_kheap_simps vs_all_heap_simps)
   done
-
-lemma set_asid_pool_eps_of[wp]:
-  "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (eps_of s)\<rbrace>"
-  by (set_object_easy_cases def: set_asid_pool_def)
-
-lemma set_asid_pool_ntfns_of[wp]:
-  "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (ntfns_of s)\<rbrace>"
-  by (set_object_easy_cases def: set_asid_pool_def)
-
-lemma set_asid_pool_tcbs_of[wp]:
-  "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
-  by (set_object_easy_cases def: set_asid_pool_def)
 
 lemma set_asid_pool_bound_sc_obj_tcb_at[wp]:
   "set_asid_pool ptr pool \<lbrace>valid_sched_pred_strong P\<rbrace>"
@@ -87,7 +63,7 @@ crunch init_arch_objects
   (wp: crunch_wps unless_wp)
 
 lemma valid_machine_time_getCurrentTime[DetSchedAux_AI_assms]:
-  "valid_machine_time s \<Longrightarrow> (x, s') \<in> fst (getCurrentTime (machine_state s))
+  "\<lbrakk>valid_machine_time s; (x, s') \<in> fst (getCurrentTime (machine_state s))\<rbrakk>
    \<Longrightarrow> valid_machine_time_2 x (last_machine_time s')"
   apply (clarsimp simp: valid_machine_time_def getCurrentTime_def in_monad)
   apply (rule word_of_nat_le)
@@ -104,56 +80,50 @@ lemma dmo_getCurrentTime_vmt_sp[wp, DetSchedAux_AI_assms]:
   apply (clarsimp simp: valid_machine_time_def getCurrentTime_def in_monad)
   apply (intro conjI)
    apply (clarsimp simp: min_def, intro conjI impI)
-    subgoal
-      apply (rule_tac order.trans, assumption)
-      apply (rule_tac order.trans, assumption)
-      apply (rule preorder_class.eq_refl)
-      apply (subst group_add_class.diff_conv_add_uminus)
-      apply (subst minus_one_norm_num)
-      apply clarsimp
-      done
-   subgoal for s
-     apply (subst (asm) linorder_class.not_le)
-     apply (rule_tac order.trans, assumption)
-     apply (rule no_plus_overflow_unat_size2)
-     apply (rule_tac order.trans)
-      apply (rule add_le_mono)
-       apply (rule preorder_class.eq_refl, simp)
-      apply (rule unat_of_nat_closure)
-     apply (rule_tac order.trans)
-     apply (rule order.strict_implies_order, assumption)
-     by (metis unat_minus_one_word word_le_nat_alt word_n1_ge)
+    apply (rule_tac order.trans, assumption)
+    apply (rule_tac order.trans, assumption)
+    apply (rule preorder_class.eq_refl)
+    apply (subst group_add_class.diff_conv_add_uminus)
+    apply (subst minus_one_norm_num)
+    apply clarsimp
+   apply (subst (asm) linorder_class.not_le)
+   apply (rule_tac order.trans, assumption)
+   apply (rule no_plus_overflow_unat_size2)
+   apply (rule_tac order.trans)
+    apply (rule add_le_mono)
+     apply (rule preorder_class.eq_refl, simp)
+    apply (rule unat_of_nat_closure)
+   apply (rule_tac order.trans)
+    apply (rule order.strict_implies_order, assumption)
+   apply (metis unat_minus_one_word word_le_nat_alt word_n1_ge)
   apply (clarsimp simp: min_def, intro conjI impI)
-   subgoal
-     apply (rule preorder_class.eq_refl)
-     apply (subst group_add_class.diff_conv_add_uminus)
-     apply (subst minus_one_norm_num)
-     apply clarsimp
-     apply (insert getCurrentTime_buffer_no_overflow')
-     done
-  subgoal for s
-    apply (subst (asm) linorder_class.not_le)
-    apply (rule_tac b="of_nat (unat (last_machine_time (machine_state s)) +
-                       time_oracle (Suc (time_state (machine_state s))))" in order.trans[rotated])
-     apply (rule word_of_nat_le)
-     apply (rule_tac order.trans)
-      apply (rule order.strict_implies_order, assumption)
-     apply (subst group_add_class.diff_conv_add_uminus)
-     apply (subst minus_one_norm_num)
-     apply clarsimp
-     apply (subst unat_sub)
-      apply (rule order.trans[OF word_up_bound])
-      apply (rule preorder_class.eq_refl)
-      apply simp
-     apply simp
-     apply (subst unat_minus_plus_one)
-      apply (insert getCurrentTime_buffer_no_overflow getCurrentTime_buffer_no_overflow')
-      apply (clarsimp simp: kernelWCET_ticks_def MAX_PERIOD_def)
-     apply (subst unat_add_lem')
-      apply (clarsimp simp: kernelWCET_ticks_def MAX_PERIOD_def unat_minus_one_word)
-     apply fastforce
-    apply force
-    done
+   apply (rule preorder_class.eq_refl)
+   apply (subst group_add_class.diff_conv_add_uminus)
+   apply (subst minus_one_norm_num)
+   apply clarsimp
+  apply (rename_tac s)
+  apply (subst (asm) linorder_class.not_le)
+  apply (rule_tac b="of_nat (unat (last_machine_time (machine_state s))
+                     + time_oracle (Suc (time_state (machine_state s))))"
+               in order.trans[rotated])
+   apply (rule word_of_nat_le)
+   apply (rule_tac order.trans)
+    apply (rule order.strict_implies_order, assumption)
+   apply (subst group_add_class.diff_conv_add_uminus)
+   apply (subst minus_one_norm_num)
+   apply clarsimp
+   apply (subst unat_sub)
+    apply (rule order.trans[OF word_up_bound])
+    apply (rule preorder_class.eq_refl)
+    apply simp
+   apply simp
+   apply (subst unat_minus_plus_one)
+    apply (insert getCurrentTime_buffer_no_overflow getCurrentTime_buffer_no_overflow')
+    apply (clarsimp simp: kernelWCET_ticks_def MAX_PERIOD_def)
+   apply (subst unat_add_lem')
+    apply (clarsimp simp: kernelWCET_ticks_def MAX_PERIOD_def unat_minus_one_word)
+   apply fastforce
+  apply force
   done
 
 lemma update_time_stamp_valid_machine_time[wp, DetSchedAux_AI_assms]:
@@ -182,15 +152,16 @@ lemma init_arch_objects_obj_at_impossible:
 lemma perform_asid_control_etcb_at:
   "\<lbrace>etcb_at P t\<rbrace>
    perform_asid_control_invocation aci
-   \<lbrace>\<lambda>r s. st_tcb_at (Not \<circ> inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
+   \<lbrace>\<lambda>_ s. st_tcb_at (Not \<circ> inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
   apply (cases aci, rename_tac frame slot parent base)
-  apply (simp add: perform_asid_control_invocation_def, thin_tac _)
+  apply (simp add: perform_asid_control_invocation_def)
   apply (rule bind_wp[OF _ delete_objects_etcb_at])
   apply (rule bind_wp[OF _ get_cap_inv])
   apply (rule bind_wp[OF _ set_cap_valid_sched_pred])
   apply (rule bind_wp[OF _ retype_region_etcb_at])
   apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_imp_lift')
-  by (clarsimp simp: pred_tcb_at_def obj_at_def)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  done
 
 crunch perform_asid_control_invocation
   for cur_time[wp]: "\<lambda>s. P (cur_time s)"

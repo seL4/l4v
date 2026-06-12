@@ -301,14 +301,14 @@ lemma is_cnode_or_valid_arch_is_cap_simps:
 lemma install_tcb_frame_cap_invs:
   "\<lbrace>invs and
     (\<lambda>s. \<forall>new_cap src_slot.
-       buffer = Some (new_cap, src_slot)
-         \<longrightarrow> (\<forall>a aa b.
-                    src_slot = Some (a, aa, b) \<longrightarrow>
-                    is_nondevice_page_cap a \<and>
-                    valid_ipc_buffer_cap a new_cap \<and>
-                    s \<turnstile> a \<and>
-                    no_cap_to_obj_dr_emp a s \<and>
-                    cte_wp_at (\<lambda>_. True) (aa, b) s))\<rbrace>
+           buffer = Some (new_cap, src_slot)
+           \<longrightarrow> (\<forall>cap slot.
+                  src_slot = Some (cap, slot)
+                  \<longrightarrow> is_nondevice_page_cap cap
+                      \<and> valid_ipc_buffer_cap cap new_cap
+                      \<and> s \<turnstile> cap
+                      \<and> no_cap_to_obj_dr_emp cap s
+                      \<and> cte_wp_at (\<lambda>_. True) slot s))\<rbrace>
    install_tcb_frame_cap target slot buffer
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: install_tcb_frame_cap_def )
@@ -327,7 +327,8 @@ lemma install_tcb_frame_cap_invs:
              hoare_weak_lift_imp hoare_weak_lift_imp_conj
            | strengthen use_no_cap_to_obj_asid_strg
            | wp cap_delete_ep)+)[1]
-  by (clarsimp simp: is_cap_simps' valid_fault_handler_def is_cnode_or_valid_arch_def)
+  apply (clarsimp simp: is_cap_simps' valid_fault_handler_def is_cnode_or_valid_arch_def)
+  done
 
 lemma tcc_invs[Tcb_AI_assms]:
   "\<lbrace>invs and tcb_inv_wf (ThreadControlCaps t sl fh th croot vroot buf)\<rbrace>

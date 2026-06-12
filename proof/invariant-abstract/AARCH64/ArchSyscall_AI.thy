@@ -20,24 +20,33 @@ named_theorems Syscall_AI_assms
 
 declare arch_get_sanitise_register_info_invs[Syscall_AI_assms]
         arch_get_sanitise_register_info_ex_nonz_cap_to[Syscall_AI_assms]
-        make_fault_msg_inv[Syscall_AI_assms]
 
 crunch handle_arch_fault_reply, arch_get_sanitise_register_info
-  for pred_tcb_at[wp,Syscall_AI_assms]: "pred_tcb_at proj P t"
+  for pred_tcb_at[wp, Syscall_AI_assms]: "\<lambda>s. N (pred_tcb_at proj P t s)"
+
 crunch handle_arch_fault_reply
-  for invs[wp,Syscall_AI_assms]: "invs"
+  for invs[wp, Syscall_AI_assms]: invs
+
 crunch handle_arch_fault_reply, arch_get_sanitise_register_info
-  for cap_to[wp,Syscall_AI_assms]: "ex_nonz_cap_to c"
+  for cap_to[wp, Syscall_AI_assms]: "ex_nonz_cap_to c"
+
 crunch handle_arch_fault_reply, arch_get_sanitise_register_info
-  for it[wp,Syscall_AI_assms]: "\<lambda>s. P (idle_thread s)"
+  for it[wp, Syscall_AI_assms]: "\<lambda>s. P (idle_thread s)"
+
 crunch handle_arch_fault_reply, arch_get_sanitise_register_info
-  for caps[wp,Syscall_AI_assms]: "\<lambda>s. P (caps_of_state s)"
+  for caps[wp, Syscall_AI_assms]: "\<lambda>s. P (caps_of_state s)"
+
 crunch handle_arch_fault_reply, arch_get_sanitise_register_info
-  for cur_thread[wp,Syscall_AI_assms]: "\<lambda>s. P (cur_thread s)"
+  for cur_thread[wp, Syscall_AI_assms]: "\<lambda>s. P (cur_thread s)"
+
 crunch handle_arch_fault_reply, arch_get_sanitise_register_info
-  for valid_objs[wp,Syscall_AI_assms]: "valid_objs"
+  for valid_objs[wp, Syscall_AI_assms]: valid_objs
+
 crunch handle_arch_fault_reply, arch_get_sanitise_register_info
-  for cte_wp_at[wp,Syscall_AI_assms]: "\<lambda>s. P (cte_wp_at P' p s)"
+ for valid_mdb[wp, Syscall_AI_assms]: valid_mdb
+
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
+  for cte_wp_at[wp, Syscall_AI_assms]: "\<lambda>s. P (cte_wp_at P' p s)"
 
 crunch invoke_irq_control
   for typ_at[wp, Syscall_AI_assms]: "\<lambda>s. P (typ_at T p s)"
@@ -81,9 +90,10 @@ lemma handle_vm_fault_valid_fault[wp, Syscall_AI_assms]:
   unfolding handle_vm_fault_def
   by (cases ft; wpsimp simp: valid_fault_def)
 
-lemma hvmf_active [Syscall_AI_assms]:
-  "\<lbrace>st_tcb_at active t\<rbrace> handle_vm_fault t w \<lbrace>\<lambda>rv. st_tcb_at active t\<rbrace>"
-  unfolding handle_vm_fault_def by (cases w; wpsimp)
+lemma hvmf_st_tcb_at[wp, Syscall_AI_assms]:
+  "handle_vm_fault t w \<lbrace>\<lambda>s. N (st_tcb_at P t' s)\<rbrace>"
+  unfolding handle_vm_fault_def
+  by (cases w; wpsimp)
 
 lemma hvmf_ex_cap[wp, Syscall_AI_assms]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> handle_vm_fault t b \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
@@ -95,6 +105,13 @@ lemma hh_invs[wp, Syscall_AI_assms]:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   supply if_split[split del]
   by (cases fault) (wpsimp simp: valid_fault_def isFpuEnable_def wp: dmo_invs_lift hoare_drop_imps)
+
+crunch make_fault_msg
+  for cur_sc[wp, Syscall_AI_assms]: "\<lambda>s. P (cur_sc s)"
+  and cur_thread[wp, Syscall_AI_assms]: "\<lambda>s. P (cur_thread s)"
+  and pred_tcb_at[wp, Syscall_AI_assms]: "pred_tcb_at proj P t"
+
+lemmas [Syscall_AI_assms] = arch_get_sanitise_register_info_inv
 
 end
 
