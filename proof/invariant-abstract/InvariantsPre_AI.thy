@@ -5,7 +5,7 @@
  *)
 
 theory InvariantsPre_AI
-imports LevityCatch_AI
+imports LevityCatch_AI TcbFlags_AI
 begin
 
 (* FIXME: move *)

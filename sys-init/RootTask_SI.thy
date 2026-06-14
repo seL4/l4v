@@ -8,7 +8,9 @@
  * The layout of the capability space and other parts of the system-initialiser.
  *)
 theory RootTask_SI
-imports WellFormed_SI SysInit_SI
+  imports
+    WellFormed_SI
+    SysInitSpec.SysInit_SI
 begin
 
 (******************************************************************
@@ -50,12 +52,12 @@ lemma si_cnode_size_greater_than_2 [simp]:
 
 lemma unat_less_2_si_cnode_size:
   "unat (cptr::32 word) < 2 ^ si_cnode_size
-  \<Longrightarrow> cptr < 2 ^ si_cnode_size"
+   \<Longrightarrow> cptr < 2 ^ si_cnode_size"
   by (metis si_cnode_size_less_than_word_size unat_power_lower32 word_less_nat_alt)
 
 lemma unat_less_2_si_cnode_size':
   "(cptr::32 word) < 2 ^ si_cnode_size
-  \<Longrightarrow> unat cptr < 2 ^ si_cnode_size"
+   \<Longrightarrow> unat cptr < 2 ^ si_cnode_size"
   by (metis unat_less_helper word_unat_power)
 
 (* This is stored in the root TCB. *)
@@ -89,10 +91,9 @@ definition
   si_asid :: "sep_state \<Rightarrow> bool"
 where
   "si_asid \<equiv>
-  (si_cnode_id, unat seL4_CapInitThreadASIDPool) \<mapsto>c AsidPoolCap si_asidpool_id si_asidpool_base \<and>*
-    si_asidpool_id \<mapsto>f AsidPool empty_asid \<and>*
-   (\<And>* offset\<in>{offset. offset < 2 ^ asid_low_bits}.
-               (si_asidpool_id, offset) \<mapsto>c -)"
+     (si_cnode_id, unat seL4_CapInitThreadASIDPool) \<mapsto>c AsidPoolCap si_asidpool_id si_asidpool_base
+     \<and>* si_asidpool_id \<mapsto>f AsidPool empty_asid
+     \<and>* (\<And>* offset\<in>{offset. offset < 2 ^ asid_low_bits}. (si_asidpool_id, offset) \<mapsto>c -)"
 
 abbreviation "si_tcb_id \<equiv> root_tcb_id"
 
@@ -149,9 +150,7 @@ lemma si_objects_extra_caps'_si_objects_extra_caps:
   apply (clarsimp simp: sep_conj_ac)
   done
 
-definition
-  si_irq_nodes :: "cdl_state \<Rightarrow> sep_state \<Rightarrow> bool"
-where
+definition si_irq_nodes :: "cdl_state \<Rightarrow> sep_state \<Rightarrow> bool" where
   "si_irq_nodes spec \<equiv>
      (\<lambda>s. \<exists>k_irq_table. (\<And>* irq\<in>used_irqs spec. irq \<mapsto>irq k_irq_table irq \<and>*
                                                  k_irq_table irq \<mapsto>o IRQNode empty_irq_node) s)"
@@ -185,7 +184,6 @@ lemma cap_object_si_cnode_cap [simp]:
   "cap_object si_cnode_cap = si_cnode_id"
   by (clarsimp simp: cap_object_def cap_has_object_def si_cnode_cap_def)
 
-
 lemma offset_slot_si_cnode_size:
   "slot < 2^si_cnode_size \<Longrightarrow> offset (of_nat slot) si_cnode_size = slot"
   by (clarsimp simp: offset_slot)
@@ -195,7 +193,8 @@ lemma offset_slot_si_cnode_size':
   by (clarsimp simp: offset_slot')
 
 lemma guard_equal_si_cspace_cap:
-  "src_index < 2 ^ si_cnode_size \<Longrightarrow> guard_equal si_cspace_cap src_index 32"
+  "src_index < 2 ^ si_cnode_size \<Longrightarrow> guard_equal si_cspace_cap src_index word_bits"
+  unfolding word_bits_def
   apply (clarsimp simp: si_cspace_cap_def guard_equal_def Let_unfold)
   apply (subst and_mask_eq_iff_shiftr_0 [THEN iffD1])
    apply (clarsimp simp: word_bits_def)
@@ -208,7 +207,8 @@ lemma guard_equal_si_cspace_cap':
   by (drule guard_equal_si_cspace_cap, simp add: word_bits_def)
 
 lemma guard_equal_si_cnode_cap:
-  "src_index < 2 ^ si_cnode_size \<Longrightarrow> guard_equal si_cnode_cap src_index 32"
+  "src_index < 2 ^ si_cnode_size \<Longrightarrow> guard_equal si_cnode_cap src_index word_bits"
+  unfolding word_bits_def
   apply (clarsimp simp: si_cnode_cap_def guard_equal_def Let_unfold)
   apply (subst and_mask_eq_iff_shiftr_0 [THEN iffD1])
    apply (clarsimp simp: word_bits_def)
@@ -225,7 +225,7 @@ lemma guard_equal_si_cspace_cap_seL4_CapInitThreadASIDPool [simp]:
   by (rule guard_equal_si_cspace_cap', simp)
 
 lemma si_cspace_cap_guard_equal:
-  "guard_equal si_cnode_cap src_index 32 \<Longrightarrow> src_index < 2 ^ si_cnode_size"
+  "guard_equal si_cnode_cap src_index word_bits \<Longrightarrow> src_index < 2 ^ si_cnode_size"
   apply (clarsimp simp: si_cnode_cap_def guard_equal_def
                         Let_unfold si_cnode_size_def)
   apply (subst (asm) shiftr_mask_eq')
@@ -556,57 +556,6 @@ definition frame_duplicates_copied ::
      {slot \<in> dom (slots_of pd_id spec). cap_at (\<lambda>cap. cap \<noteq> NullCap \<and> frame_at (cap_object cap) spec)
                                                (pd_id, slot) spec}"
 
-(**********************************************************
- * The pre and post conditions of the system initialiser. *
- **********************************************************)
-
-(* That the boot info is valid, and that there are enough free slots to initialise a system. *)
-definition
-  valid_boot_info
-where
-  "valid_boot_info bootinfo spec \<equiv> \<lambda>s.
-  \<exists>untyped_caps fstart fend ustart uend obj_ids.
-  ((\<And>*(cptr, cap) \<in> set (zip [ustart .e. uend - 1] untyped_caps). (si_cnode_id, unat cptr) \<mapsto>c cap)  \<and>*
-   (\<And>* cptr \<in> set [fstart .e. fend - 1]. (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
-   (\<And>* obj_id\<in>(\<Union>cap\<in>set untyped_caps. cap_free_ids cap). obj_id \<mapsto>o Untyped) \<and>*
-   (SETSEPCONJ pd_id | pd_at pd_id spec.
-     frame_duplicates_empty (make_frame_cap_map obj_ids
-                              (drop (card (dom (cdl_objects spec))) [fstart .e. fend - 1]) spec)
-                            pd_id spec) \<and>*
-   si_objects \<and>*
-   si_irq_nodes spec) s \<and>
-   obj_ids = sorted_list_of_set (dom (cdl_objects spec)) \<and>
-   card (dom (cdl_objects spec)) +
-   card {obj_id. cnode_or_tcb_at obj_id spec} +
-   card (\<Union>(set ` get_frame_caps spec ` {obj. pd_at obj spec})) \<le> unat fend - unat fstart \<and>
-   length untyped_caps = unat uend - unat ustart \<and>
-   distinct_sets (map cap_free_ids untyped_caps) \<and>
-   list_all is_full_untyped_cap untyped_caps \<and>
-   list_all well_formed_untyped_cap untyped_caps \<and>
-   list_all (\<lambda>c. \<not> is_device_cap c) untyped_caps \<and>
-   bi_untypes bootinfo = (ustart, uend) \<and>
-   bi_free_slots bootinfo = (fstart, fend) \<and>
-   ustart < 2 ^ si_cnode_size \<and>
-  (uend - 1) < 2 ^ si_cnode_size \<and>
-   fstart < 2 ^ si_cnode_size \<and>
-  (fend - 1) < 2 ^ si_cnode_size \<and>
-   uend \<noteq> 0 \<and> fend \<noteq> 0"
-
-definition
-  si_final_objects :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> sep_pred"
-where
-  "si_final_objects spec t \<equiv> \<lambda>s.
-   \<exists>dup_caps (untyped_cptrs::32 word list) (free_cptrs::32 word list) untyped_caps all_available_ids.
-    ((\<And>*  cptr \<in> set (take (card (dom (cdl_objects spec))) free_cptrs).
-          (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
-     (\<And>*  cptr \<in> set (drop (card (dom (cdl_objects spec)) +
-                             card ({obj_id. cnode_or_tcb_at obj_id spec})) free_cptrs).
-          (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
-     (\<And>* (cptr, untyped_cap) \<in> set (zip untyped_cptrs untyped_caps).
-          (si_cnode_id, unat cptr) \<mapsto>c untyped_cap) \<and>*
-     (\<And>*  obj_id \<in> all_available_ids. obj_id \<mapsto>o Untyped) \<and>*
-     (\<And>*  obj_id \<in> {obj_id. cnode_or_tcb_at obj_id spec}. (si_cap_at t dup_caps spec False obj_id)) \<and>*
-      si_objects) s"
 
 (********************************************************
  * Conversion of si_objs_caps_at to si_caps_at *
@@ -629,7 +578,8 @@ lemma slots_tcb:
    slot = 3 \<or>
    slot = 4 \<or>
    slot = 5 \<or>
-   slot = 8"
+   slot = 8 \<or>
+   slot = 9"
   apply (frule (1) well_formed_object_slots)
   apply (drule (1) well_formed_well_formed_tcb)
   apply (clarsimp simp: well_formed_tcb_def opt_cap_def slots_of_def)
@@ -651,24 +601,29 @@ lemma well_formed_irqhandler_cap_in_cnode:
     is_irqhandler_cap cap; cdl_objects spec obj_id = Some obj\<rbrakk>
     \<Longrightarrow> is_cnode obj"
   apply (case_tac obj)
-          apply (fastforce simp: opt_cap_def slots_of_def object_slots_def
-                                 is_cnode_def object_at_def is_asidpool_def)+
-        apply (frule (3) slots_tcb)
-        apply (drule (1) well_formed_well_formed_tcb)
-        apply (clarsimp simp: well_formed_tcb_def opt_cap_def slots_of_def)
-        apply (erule allE [where x=slot])
-        apply (simp add: tcb_slot_defs cap_type_def split: cdl_cap.splits)
-       apply (fastforce simp: opt_cap_def slots_of_def object_slots_def
-                              is_cnode_def object_at_def is_asidpool_def)
-      apply (frule_tac obj_id=obj_id in well_formed_asidpool_at, simp add: object_at_def)
-     apply (frule (1) well_formed_pt, simp add: object_at_def, simp+)
-    apply (frule (1) well_formed_pd, simp add: object_at_def, simp+)
-    apply (clarsimp simp: is_fake_pt_cap_def split: cdl_cap.splits)
-   apply (fastforce simp: opt_cap_def slots_of_def object_slots_def
-                         is_cnode_def object_at_def is_asidpool_def)+
+           apply (fastforce simp: opt_cap_def slots_of_def object_slots_def
+                                  is_cnode_def object_at_def is_asidpool_def)+
+         apply (frule (3) slots_tcb)
+         apply (drule (1) well_formed_well_formed_tcb)
+         apply (clarsimp simp: well_formed_tcb_def opt_cap_def slots_of_def)
+         apply (erule allE [where x=slot])
+         apply (simp add: tcb_slot_defs cap_type_def split: cdl_cap.splits)
+        apply (fastforce simp: opt_cap_def slots_of_def object_slots_def
+                               is_cnode_def object_at_def is_asidpool_def)
+       apply (frule_tac obj_id=obj_id in well_formed_asidpool_at, simp add: object_at_def)
+      apply clarsimp
+      apply (frule (1) well_formed_level_pt_cases)
+      apply (erule disjE)
+       apply (frule (1) well_formed_pt, simp add: object_at_def, simp+)
+      apply (frule (1) well_formed_pd, simp add: object_at_def, simp+)
+      apply (clarsimp simp: is_fake_pt_cap_def split: cdl_cap.splits)
+     apply (fastforce simp: opt_cap_def slots_of_def object_slots_def
+                           is_cnode_def object_at_def is_asidpool_def)+
    apply (frule (1) well_formed_well_formed_irq_node)
    apply (fastforce simp: well_formed_irq_node_def opt_cap_def slots_of_def
                           object_at_def irq_nodes_def is_irq_node_def)
+  apply (fastforce simp: opt_cap_def slots_of_def object_slots_def
+                         is_cnode_def object_at_def is_asidpool_def)+
   done
 
 lemma well_formed_irqhandler_cap_in_cnode_at:
@@ -743,7 +698,6 @@ lemma si_caps_at_conversion:
   apply (clarsimp simp: cap_ref_object_def object_cap_ref_def si_obj_cap_at'_def)
   done
 
-
 lemma si_null_caps_at_conversion:
   "\<lbrakk>well_formed spec;
     real_ids = {obj_id. real_object_at obj_id spec};
@@ -814,22 +768,28 @@ lemma si_null_caps_at_simplified:
     cnode_ids = {obj_id. cnode_at obj_id spec};
     real_ids = {obj_id. real_object_at obj_id spec};
     real_ids = set obj_ids;
-    distinct obj_ids; distinct free_cptrs;
-    si_caps = map_of (zip obj_ids free_cptrs);
-    length obj_ids \<le> length free_cptrs\<rbrakk> \<Longrightarrow>
-   (\<And>* cptr \<in> set (take (length obj_ids) free_cptrs). ((si_cnode_id, unat cptr) \<mapsto>c NullCap)) s"
+    distinct obj_ids;
+    bij_betw (the o si_caps) real_ids (set (list_take_region (length obj_ids) free_cptrs));
+    dom si_caps = real_ids;
+    length obj_ids \<le> length_region free_cptrs\<rbrakk> \<Longrightarrow>
+   (\<And>* cptr \<in> set (list_take_region (length obj_ids) free_cptrs). ((si_cnode_id, unat cptr) \<mapsto>c NullCap)) s"
   apply (subst (asm) si_null_caps_at_conversion, assumption+)
   apply (drule si_null_caps_at_simplified_helper)
-  apply (subst si_null_caps_at_reindex [symmetric], simp+)
+  apply (subst (asm) sep.prod.cong[OF refl, where h= "\<lambda>id. ((si_cnode_id, unat (the (si_caps id))) \<mapsto>c NullCap)"])
+   apply (rule ext, clarsimp, rule iffI; clarsimp?)
+   apply (clarsimp simp: bij_betw_def)
+   apply (metis (full_types) domIff mem_Collect_eq option.collapse)
+  apply (erule sep.prod.reindex_cong[THEN fun_cong,  THEN iffD2, rotated -1])
+    prefer 3
+    apply fastforce
+   apply (simp add: bij_betw_def inj_on_def)
+  apply (clarsimp simp: bij_betw_def)
   done
 
 lemma map_of_zip_range':
   "\<lbrakk>length xs = length ys; distinct xs; set xs = X\<rbrakk>
   \<Longrightarrow> (\<lambda>x. (the (map_of (zip xs ys) x))) ` X = set ys"
   by (metis map_of_zip_range)
-
-
-
 
 lemma si_irq_caps_at_conversion:
   "\<lbrakk>well_formed spec;
@@ -923,11 +883,11 @@ lemma well_formed_used_irqs_rewrite:
 lemma si_irq_null_caps_at_simplified:
   "\<lbrakk>(si_spec_irqs_null_caps_at irq_caps spec {obj_id. cnode_at obj_id spec}) s;
     well_formed spec;
-    distinct irqs; distinct free_cptrs;
+    distinct irqs;
     set irqs = used_irqs spec;
-    irq_caps = map_of (zip irqs free_cptrs);
-    length irqs \<le> length free_cptrs\<rbrakk> \<Longrightarrow>
-   (\<And>* cptr \<in> set (take (length irqs) free_cptrs). ((si_cnode_id, unat cptr) \<mapsto>c NullCap)) s"
+    irq_caps = map_of (zip_region irqs free_cptrs);
+    length irqs \<le> length_region free_cptrs\<rbrakk> \<Longrightarrow>
+   (\<And>* cptr \<in> set (list_take_region (length irqs) free_cptrs). ((si_cnode_id, unat cptr) \<mapsto>c NullCap)) s"
   apply (clarsimp simp: si_spec_irqs_null_caps_at_def si_spec_irq_null_caps_at_def
                         si_spec_irq_null_cap_at_def si_spec_irqs_caps_at_def)
   apply (subst (asm) sep.prod.Sigma, clarsimp+)
@@ -936,7 +896,7 @@ lemma si_irq_null_caps_at_simplified:
   apply (subst (asm) rewrite_irqhandler_cap_at, simp)
   apply (subst (asm) sep_map_set_conj_reindex_cong [where
                     f = "\<lambda>cap_ref. cap_ref_irq cap_ref spec"
-                and h = "si_null_irq_cap_at (map_of (zip irqs free_cptrs)) spec", symmetric])
+                and h = "si_null_irq_cap_at (map_of (zip_region irqs free_cptrs)) spec", symmetric])
      apply (drule well_formed_irqhandler_bij)
      apply (clarsimp simp: bij_betw_def cond_case_prod_eta)
     apply simp
@@ -944,22 +904,49 @@ lemma si_irq_null_caps_at_simplified:
   apply clarsimp
   apply (drule si_null_irq_caps_at_simplified_helper [simplified si_null_irq_caps_at_def])
   apply (subst (asm) sep_map_set_conj_reindex_cong [symmetric, where
-                    f = "\<lambda>irq. the ( map_of (zip irqs free_cptrs) irq)"
+                    f = "\<lambda>irq. the ( map_of (zip_region irqs free_cptrs) irq)"
                 and h = "\<lambda>cptr. (si_cnode_id, unat cptr) \<mapsto>c NullCap"
-                and B = "set (take (length irqs) free_cptrs)"])
+                and B = "set (list_take_region (length irqs) free_cptrs)"])
      apply (subst well_formed_used_irqs_rewrite, assumption)
-     apply (metis map_of_zip_inj')
+     apply (rule_tac t="used_irqs spec" in subst[rotated],
+            rule map_of_zip_inj; clarsimp)
     apply (subst well_formed_used_irqs_rewrite, assumption)
-    apply (subst zip_take_length[symmetric], subst map_of_zip_range', simp+)
-   apply (rule ext)
-   apply rule
     apply clarsimp
-   apply (rule_tac x="the (map_of (zip irqs free_cptrs) a)" in exI)
-   apply clarsimp
-   apply (frule_tac x1="(cap_irq (the (opt_cap (aa, b) spec)))" in map_of_zip_is_Some'[THEN iffD1], clarsimp)
-    apply (fastforce simp: cap_at_def used_irqs_def all_caps_def)
-   apply (clarsimp simp: cap_ref_irq_def)
+    apply (subst zip_take_length[symmetric], subst map_of_zip_range'; simp)
+   apply (rule ext)
+   apply (rule iffI)
+    apply clarsimp
+   apply (metis (lifting) length_region_length map_of_zip_is_Some' not_None_eq option.collapse
+                          take_list_region well_formed_used_irqs_rewrite zip_take_length)
   apply simp
   done
+
+(******************************
+ * Validity of a slot region. *
+ ******************************)
+
+definition valid_slot_region where
+  "valid_slot_region region \<equiv>
+     valid_region region \<and> snd region \<le> 2 ^ si_cnode_size"
+
+lemma valid_slot_region_leI[simp, elim!]:
+  "valid_slot_region region \<Longrightarrow> fst region \<le> snd region"
+  by (simp add: valid_slot_region_def valid_region_def)
+
+lemma valid_slot_region_less_all[simp, elim!]:
+  "valid_slot_region region \<Longrightarrow> list_all (\<lambda>n. n < 2 ^ si_cnode_size) (list_region region)"
+  by (simp add: valid_slot_region_def list_region_less_all)
+
+lemma valid_slot_region_less[]:
+  "\<lbrakk>valid_slot_region region; n \<in> set_region region \<rbrakk> \<Longrightarrow>
+   n < 2 ^ si_cnode_size"
+  apply (drule valid_slot_region_less_all)
+  apply (clarsimp simp: Ball_set_list_all[symmetric])
+  done
+
+lemma valid_slot_region_append[intro!]:
+  "\<lbrakk>valid_slot_region rg1; valid_slot_region rg2; valid_concat_regions rg1 rg2\<rbrakk> \<Longrightarrow>
+   valid_slot_region (rg1 @2 rg2)"
+  by (auto simp: valid_slot_region_def valid_concat_regions_defs append_region_def)
 
 end

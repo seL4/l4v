@@ -215,7 +215,7 @@ lemma setObject_pspace_in_kernel_mappings'[wp]:
             split: if_split_asm)
     (fastforce dest: bspec[OF _ domI])+
 
-crunch setEndpoint, getEndpoint, setNotification, getNotification
+crunch setEndpoint, setNotification
   for pspace_in_kernel_mappings'[wp]: "pspace_in_kernel_mappings'"
 
 declare setEndpoint_pspace_in_kernel_mappings'[KHeap_R_assms]

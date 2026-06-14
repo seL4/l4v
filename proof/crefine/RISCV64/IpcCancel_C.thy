@@ -1403,10 +1403,10 @@ lemma tcbQueueRemove_tcb_at'_head_end[wp]:
   "\<lbrace>\<top>\<rbrace>
    tcbQueueRemove queue t
    \<lbrace>\<lambda>rv s. (\<exists>head. tcbQueueHead rv = Some head) \<longleftrightarrow> (\<exists>end. tcbQueueEnd rv = Some end)\<rbrace>"
-  apply (clarsimp simp: tcbQueueRemove_def)
+  unfolding tcbQueueRemove_def emptyHeadEndPtrs_def
   apply (wpsimp wp: getTCB_wp hoare_vcg_all_lift)
   apply (frule he_ptrs_head_iff_he_ptrs_end)
-  apply (force simp: emptyHeadEndPtrs_def)
+  apply force
   done
 
 lemma tcbSchedDequeue_ccorres:

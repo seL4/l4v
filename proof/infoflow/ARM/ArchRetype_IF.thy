@@ -654,11 +654,10 @@ lemma invoke_untyped_reads_respects_g_wcap[Retype_IF_assms]:
     apply (clarsimp simp: field_simps mask_out_sub_mask shiftl_t2n)
    apply blast
   apply (clarsimp simp: cte_wp_at_caps_of_state authorised_untyped_inv_def)
-  apply (strengthen refl)
-  apply (frule(1) cap_auth_caps_of_state)
-  apply (simp add: aag_cap_auth_def untyped_range_def
-                   aag_has_Control_iff_owns ptr_range_def[symmetric])
-  apply (erule disjE, simp_all)[1]
+  apply (case_tac reset;
+         clarsimp;
+         frule(1) cap_auth_caps_of_state;
+         simp add: aag_cap_auth_def untyped_range_def aag_has_Control_iff_owns flip: ptr_range_def)
   done
 
 lemma delete_objects_globals_equiv[wp]:

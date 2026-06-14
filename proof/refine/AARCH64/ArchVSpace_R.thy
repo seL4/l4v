@@ -2159,6 +2159,8 @@ lemma performPageTableInvocation_corres:
     apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def
                           invs_valid_objs invs_psp_aligned invs_distinct)
     apply (case_tac cap; simp add: is_cap_simps cap_master_cap_simps)
+    apply (drule sym, drule cap_master_cap_arch_eqDs)
+    apply (solves clarsimp)
    apply (clarsimp simp: cte_wp_at_ctes_of valid_pti'_def)
   apply (clarsimp simp: perform_pt_inv_unmap_def)
   apply (rename_tac acap a b acap')

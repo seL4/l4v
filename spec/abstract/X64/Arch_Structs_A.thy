@@ -11,6 +11,7 @@ imports
   ExecSpec.Arch_Structs_B
   ExceptionTypes_A
   VMRights_A
+  ArchVMAttributes_A
   ExecSpec.Arch_Kernel_Config_Lemmas
 begin
 
@@ -61,12 +62,6 @@ where
 
 section \<open>Architecture-specific objects\<close>
 
-datatype table_attr = Accessed | CacheDisabled | WriteThrough | ExecuteDisable
-type_synonym table_attrs = "table_attr set"
-
-datatype frame_attr = PTAttr table_attr | Global | PAT | Dirty
-type_synonym frame_attrs = "frame_attr set"
-
 datatype pml4e
      = InvalidPML4E
      | PDPointerTablePML4E
@@ -82,7 +77,7 @@ datatype pdpte
          (pdpt_rights : vm_rights)
      | HugePagePDPTE
          (pdpt_frame : obj_ref)
-         (pdpt_frame_attrs : frame_attrs)
+         (pdpt_attrs : vm_attributes)
          (pdpt_rights : vm_rights)
 
 datatype pde
@@ -93,14 +88,14 @@ datatype pde
          (pde_rights : cap_rights)
       | LargePagePDE
          obj_ref
-         (pde_page_attrs : frame_attrs)
+         (pde_attrs : vm_attributes)
          (pde_rights: cap_rights)
 
 datatype pte
       = InvalidPTE
       | SmallPagePTE
          (pte_frame: obj_ref)
-         (pte_frame_attrs : frame_attrs)
+         (pte_attrs : vm_attributes)
          (pte_rights : cap_rights)
 
 

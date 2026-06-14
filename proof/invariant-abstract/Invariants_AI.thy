@@ -15,7 +15,6 @@ arch_requalify_types
 arch_requalify_consts (A)
   arch_cap_is_device
   ASIDPoolObj
-  idle_thread_ptr
 
 (* we need to know the sizes of arch objects in the generic context *)
 arch_requalify_facts (A)
@@ -440,7 +439,7 @@ primrec (nonexhaustive)
   usable_untyped_range :: "cap \<Rightarrow> machine_word set"
 where
  "usable_untyped_range (UntypedCap _ p n f) =
-  (if f < 2^n  then {p+of_nat f .. p + 2 ^ n - 1} else {})"
+  (if f < 2 ^ n \<and> p \<le> p + of_nat f then {p + of_nat f .. p + 2 ^ n - 1} else {})"
 
 definition
   "obj_range p obj \<equiv> {p .. p + 2^obj_bits obj - 1}" (* FIXME mask_range *)
@@ -574,20 +573,20 @@ definition
 primrec
   cap_class :: "cap \<Rightarrow> capclass"
 where
-  "cap_class (cap.NullCap)                          = NullClass"
-| "cap_class (cap.UntypedCap dev p n f)             = PhysicalClass"
-| "cap_class (cap.EndpointCap ref badge r)          = PhysicalClass"
-| "cap_class (cap.NotificationCap ref badge r)      = PhysicalClass"
-| "cap_class (cap.CNodeCap ref n bits)              = PhysicalClass"
-| "cap_class (cap.ThreadCap ref)                    = PhysicalClass"
-| "cap_class (cap.DomainCap)                        = DomainClass"
-| "cap_class (cap.Zombie r b n)                     = PhysicalClass"
-| "cap_class (cap.SchedContextCap r n)              = PhysicalClass"
-| "cap_class (cap.SchedControlCap)                  = SchedControlClass"
-| "cap_class (cap.IRQControlCap)                    = IRQClass"
-| "cap_class (cap.IRQHandlerCap irq)                = IRQClass"
-| "cap_class (cap.ReplyCap tcb rights)              = PhysicalClass"
-| "cap_class (cap.ArchObjectCap cap)                = acap_class cap"
+  "cap_class (NullCap)                     = OtherCapClass"
+| "cap_class (UntypedCap dev p n f)        = PhysicalClass"
+| "cap_class (EndpointCap ref badge r)     = PhysicalClass"
+| "cap_class (NotificationCap ref badge r) = PhysicalClass"
+| "cap_class (CNodeCap ref n bits)         = PhysicalClass"
+| "cap_class (ThreadCap ref)               = PhysicalClass"
+| "cap_class (DomainCap)                   = OtherCapClass"
+| "cap_class (Zombie r b n)                = PhysicalClass"
+| "cap_class (SchedContextCap r n)         = PhysicalClass"
+| "cap_class (SchedControlCap)             = SchedControlClass"
+| "cap_class (IRQControlCap)               = OtherCapClass"
+| "cap_class (IRQHandlerCap irq)           = OtherCapClass"
+| "cap_class (ReplyCap tcb rights)         = PhysicalClass"
+| "cap_class (ArchObjectCap cap)           = acap_class cap"
 
 
 definition

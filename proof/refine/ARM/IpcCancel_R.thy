@@ -6,12 +6,14 @@
 
 theory IpcCancel_R
 imports
-  Schedule_R
+  ArchSchedule_R
   "Lib.SimpStrategy"
 begin
 
 arch_requalify_facts
-  valid_global_refs_lift'
+  asUser_sym_heap_sched_pointers (* free type variable *)
+
+lemmas [wp] = asUser_sym_heap_sched_pointers
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
@@ -1388,7 +1390,6 @@ lemma suspend_makes_inactive:
   done
 
 declare threadSet_sch_act_sane [wp]
-declare setThreadState_sch_act_sane [wp]
 
 lemma tcbSchedEnqueue_sch_act_not_ct[wp]:
   "\<lbrace>\<lambda>s. sch_act_not (ksCurThread s) s\<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_ s. sch_act_not (ksCurThread s) s\<rbrace>"
@@ -1771,7 +1772,7 @@ lemma rescheduleRequired_all_invs_but_ct_not_inQ:
   done
 
 lemma cancelAllIPC_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> cancelAllIPC ep_ptr \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "cancelAllIPC ep_ptr \<lbrace>invs'\<rbrace>"
   apply (simp add: cancelAllIPC_def ep'_Idle_case_helper cong del: if_cong)
   apply (rule bind_wp[OF _ stateAssert_sp])
   apply (wp rescheduleRequired_all_invs_but_ct_not_inQ

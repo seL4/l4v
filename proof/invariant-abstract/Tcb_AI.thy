@@ -36,8 +36,8 @@ locale Tcb_AI_1 =
   assumes arch_post_modify_registers_ex_nonz_cap_to[wp]:
   "\<And>c t a. \<lbrace>\<lambda>(s::'state_ext state). ex_nonz_cap_to a s\<rbrace> arch_post_modify_registers c t
        \<lbrace>\<lambda>b s. ex_nonz_cap_to a s\<rbrace>"
-  assumes arch_post_set_flags[wp]:
-  "\<And>t flags. arch_post_set_flags t flags \<lbrace>invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  assumes arch_post_set_flags_invs[wp]:
+  "\<And>t flags. \<lbrace>invs and ex_nonz_cap_to t\<rbrace> arch_post_set_flags t flags \<lbrace>\<lambda>_. invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes arch_post_set_flags_cur_thread[wp]:
   "\<And>t d. arch_post_set_flags t d \<lbrace>\<lambda>s::'state_ext state. P (cur_thread s)\<rbrace>"
   assumes arch_post_set_flags_st_tcb_at[wp]:
@@ -58,6 +58,8 @@ locale Tcb_AI_1 =
                 finalise_cap cap fin \<lbrace>\<lambda>rv s. \<forall>cp \<in> ran (caps_of_state s). P cp\<rbrace>"
   assumes table_cap_ref_max_free_index_upd[simp]: (* reordered to resolve dependency in tc_invs *)
   "\<And>cap. table_cap_ref (max_free_index_update cap) = table_cap_ref cap"
+  assumes arch_cap_badge_none_master[simp]:
+  "\<And>acap. (arch_cap_badge (cap_master_arch_cap acap) = None) = (arch_cap_badge acap = None)"
 
 lemma set_consumed_ct_in_state[wp]: "\<lbrace>\<lambda>s. ct_in_state P s\<rbrace> set_consumed a buf \<lbrace>\<lambda>_ s. ct_in_state P s\<rbrace>"
   by (rule ct_in_state_thread_state_lift) wpsimp+
@@ -423,6 +425,8 @@ lemma zombies_final_helperE:
   apply (fastforce simp: cte_wp_at_caps_of_state)
   done
 
+context Tcb_AI_1 begin
+
 lemma cap_badge_none_master:
   "(cap_badge (cap_master_cap cap) = None)
      = (cap_badge cap = None)"
@@ -436,6 +440,7 @@ lemma cap_master_eq_badge_none:
   apply (simp add: cap_badge_none_master)
   done
 
+end
 
 lemma check_cap_inv2:
   assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
@@ -1082,6 +1087,8 @@ lemma set_flags_valid_objs[wp]:
 crunch set_flags
   for valid_cap[wp]: "valid_cap c"
   and cte_at[wp]: "cte_at c"
+  and ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
+  (wp: thread_set_ex_nonz_cap_to_trivial simp: ball_tcb_cap_casesI)
 
 lemma set_flags_invs[wp]:
   "\<lbrace>invs and tcb_at t\<rbrace> set_flags t fs \<lbrace>\<lambda>rv. invs\<rbrace>"

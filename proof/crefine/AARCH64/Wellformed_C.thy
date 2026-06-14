@@ -376,9 +376,8 @@ where
                                              else None))
  | Cap_domain_cap \<Rightarrow> DomainCap
  | Cap_vcpu_cap vcpu \<Rightarrow> ArchObjectCap (VCPUCap (capVCPUPtr_CL vcpu))
- | Cap_sgi_signal_cap sgi \<Rightarrow> ArchObjectCap (SGISignalCap (capSGIIRQ_CL sgi) (capSGITarget_CL sgi))"
-
-
+ | Cap_sgi_signal_cap sgi \<Rightarrow> ArchObjectCap (SGISignalCap (capSGIIRQ_CL sgi) (capSGITarget_CL sgi))
+ | Cap_smc_cap smc \<Rightarrow> ArchObjectCap (SMCCap (capSMCBadge_CL smc))"
 
 lemmas cap_to_H_simps = cap_to_H_def[split_simps cap_CL.split]
 
@@ -427,6 +426,7 @@ lemma  c_valid_cap_simps [simp]:
   "cap_get_tag c = scast cap_reply_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_vcpu_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_sgi_signal_cap \<Longrightarrow> c_valid_cap c"
+  "cap_get_tag c = scast cap_smc_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_null_cap \<Longrightarrow> c_valid_cap c"
   unfolding c_valid_cap_def  cap_lift_def cap_tag_defs
   by (auto simp: cl_valid_cap_def)

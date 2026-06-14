@@ -58,6 +58,10 @@ lemma derive_cap_is_derived [Ipc_AI_1_assms]:
   apply(clarsimp simp: valid_cap_def)
   done
 
+lemma arch_cap_badge_rights_update[Ipc_AI_1_assms, simp]:
+  "arch_cap_badge (acap_rights_update rights acap) = arch_cap_badge acap"
+  by simp
+
 end
 
 interpretation Ipc_AI?: Ipc_AI

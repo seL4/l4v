@@ -74,7 +74,8 @@ lemma arch_cap_fun_lift_expand[simp]:
                               | FrameCap obj_ref rights sz dev vr \<Rightarrow> P_FrameCap obj_ref rights sz dev vr
                               | PageTableCap obj_ref pt_t vr \<Rightarrow> P_PageTableCap obj_ref pt_t vr
                               | VCPUCap obj_ref \<Rightarrow> P_VCPUCap obj_ref
-                              | SGISignalCap irq target \<Rightarrow> P_SGICap irq target)
+                              | SGISignalCap irq target \<Rightarrow> P_SGICap irq target
+                              | SMCCap smc_badge \<Rightarrow> P_SMCCap smc_badge)
                       F = (\<lambda>c.
    case c of
       ArchObjectCap (ASIDPoolCap obj_ref asid) \<Rightarrow> P_ASIDPoolCap obj_ref asid
@@ -83,6 +84,7 @@ lemma arch_cap_fun_lift_expand[simp]:
     | ArchObjectCap (PageTableCap obj_ref pt_t vr) \<Rightarrow> P_PageTableCap obj_ref pt_t vr
     | ArchObjectCap (VCPUCap obj_ref) \<Rightarrow> P_VCPUCap obj_ref
     | ArchObjectCap (SGISignalCap irq target) \<Rightarrow> P_SGICap irq target
+    | ArchObjectCap (SMCCap smc_badge) \<Rightarrow> P_SMCCap smc_badge
     | _ \<Rightarrow> F)"
   unfolding arch_cap_fun_lift_def by fastforce
 
@@ -247,7 +249,8 @@ definition valid_arch_cap_ref :: "arch_cap \<Rightarrow> 'z::state_ext state \<R
              else typ_at (AArch (AUserData sz)) r s
   | PageTableCap r pt_t mapdata \<Rightarrow> pt_at pt_t r s
   | VCPUCap r \<Rightarrow> vcpu_at r s
-  | SGISignalCap _ _ \<Rightarrow> True"
+  | SGISignalCap _ _ \<Rightarrow> True
+  | SMCCap _ \<Rightarrow> True"
 
 lemmas valid_arch_cap_ref_simps[simp] =
   valid_arch_cap_ref_def[split_simps arch_cap.split]
@@ -274,11 +277,12 @@ lemmas is_nondevice_page_cap_simps[simp] =
 
 primrec acap_class :: "arch_cap \<Rightarrow> capclass" where
   "acap_class (ASIDPoolCap _ _)     = PhysicalClass"
-| "acap_class (ASIDControlCap)      = ASIDMasterClass"
-| "acap_class (SGISignalCap _ _)    = IRQClass"
+| "acap_class (ASIDControlCap)      = OtherCapClass"
+| "acap_class (SGISignalCap _ _)    = OtherCapClass"
 | "acap_class (FrameCap _ _ _ _ _)  = PhysicalClass"
 | "acap_class (PageTableCap _ _ _)  = PhysicalClass"
 | "acap_class (VCPUCap _)           = PhysicalClass"
+| "acap_class (SMCCap _)            = OtherCapClass"
 
 definition valid_ipc_buffer_cap_arch :: "arch_cap \<Rightarrow> machine_word \<Rightarrow> bool" where
   [simp]: "valid_ipc_buffer_cap_arch ac bufptr \<equiv>
@@ -440,6 +444,7 @@ definition vs_cap_ref_arch :: "arch_cap \<Rightarrow> (asid \<times> vspace_ref)
                           | ASIDControlCap \<Rightarrow> None
                           | VCPUCap _ \<Rightarrow> None
                           | SGISignalCap _ _ \<Rightarrow> None
+                          | SMCCap _ \<Rightarrow> None
                           \<comment> \<open>Cover all PageTableCaps/FrameCaps\<close>
                           | _ \<Rightarrow> acap_map_data acap"
 

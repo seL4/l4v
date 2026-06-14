@@ -128,7 +128,8 @@ lemma cap_get_tag_isCap0:
   \<and> (cap_get_tag cap' = scast cap_page_table_cap) = isArchNormalPTCap cap
   \<and> (cap_get_tag cap' = scast cap_vspace_cap) = isArchVSpacePTCap cap
   \<and> (cap_get_tag cap' = scast cap_vcpu_cap) = isArchCap isVCPUCap cap
-  \<and> (cap_get_tag cap' = scast cap_sgi_signal_cap) = isArchSGISignalCap cap"
+  \<and> (cap_get_tag cap' = scast cap_sgi_signal_cap) = isArchSGISignalCap cap
+  \<and> (cap_get_tag cap' = scast cap_smc_cap) = isArchSMCCap cap"
   using cr
   apply -
   apply (erule ccap_relationE)
@@ -157,6 +158,7 @@ lemma cap_get_tag_isCap:
   and "(cap_get_tag cap' = scast cap_vspace_cap) = isArchVSpacePTCap cap"
   and "(cap_get_tag cap' = scast cap_vcpu_cap) = isArchCap isVCPUCap cap"
   and "(cap_get_tag cap' = scast cap_sgi_signal_cap) = isArchSGISignalCap cap"
+  and "(cap_get_tag cap' = scast cap_smc_cap) = isArchSMCCap cap"
   using cap_get_tag_isCap0 [OF cr] by auto
 
 lemmas cap_get_tag_NullCap = cap_get_tag_isCap(2)
@@ -406,6 +408,17 @@ lemma cap_get_tag_SGISignalCap:
   apply (simp add: cap_get_tag_isCap isCap_simps)
   done
 
+lemma cap_get_tag_SMCCap:
+  assumes cr: "ccap_relation cap cap'"
+  shows "(cap_get_tag cap' = scast cap_smc_cap)
+          = (cap = ArchObjectCap (SMCCap (capSMCBadge_CL (cap_smc_cap_lift cap'))))"
+  using cr
+  apply -
+  apply (rule iffI)
+   apply (clarsimp elim!: ccap_relationE simp: cap_lifts cap_to_H_def)
+  apply (simp add: cap_get_tag_isCap isCap_simps)
+  done
+
 lemmas cap_get_tag_to_H_iffs =
      cap_get_tag_NullCap
      cap_get_tag_ThreadCap
@@ -424,6 +437,7 @@ lemmas cap_get_tag_to_H_iffs =
      cap_get_tag_VSpaceCap
      cap_get_tag_VCPUCap
      cap_get_tag_SGISignalCap
+     cap_get_tag_SMCCap
 
 lemmas cap_get_tag_to_H = cap_get_tag_to_H_iffs [THEN iffD1]
 
@@ -1958,7 +1972,8 @@ lemma cap_get_tag_isCap_ArchObject0:
   \<and> (cap_get_tag cap' = scast cap_page_table_cap) = (isPageTableCap cap \<and> capPTType cap = NormalPT_T)
   \<and> (cap_get_tag cap' = scast cap_frame_cap) = (isFrameCap cap)
   \<and> (cap_get_tag cap' = scast cap_vcpu_cap) = isVCPUCap cap
-  \<and> (cap_get_tag cap' = scast cap_sgi_signal_cap) = isSGISignalCap cap"
+  \<and> (cap_get_tag cap' = scast cap_sgi_signal_cap) = isSGISignalCap cap
+  \<and> (cap_get_tag cap' = scast cap_smc_cap) = isSMCCap cap"
   using cr
   apply -
   apply (erule ccap_relationE)
@@ -1974,6 +1989,7 @@ lemma cap_get_tag_isCap_ArchObject:
   and "(cap_get_tag cap' = scast cap_frame_cap) = (isFrameCap cap)"
   and "(cap_get_tag cap' = scast cap_vcpu_cap) = isVCPUCap cap"
   and "(cap_get_tag cap' = scast cap_sgi_signal_cap) = isSGISignalCap cap"
+  and "(cap_get_tag cap' = scast cap_smc_cap) = isSMCCap cap"
   using cap_get_tag_isCap_ArchObject0 [OF cr] by auto
 
 lemma cap_get_tag_isCap_unfolded_H_cap:
@@ -1998,6 +2014,7 @@ lemma cap_get_tag_isCap_unfolded_H_cap:
   and "ccap_relation (capability.ArchObjectCap (arch_capability.FrameCap v101 v44 v45 v46 v47)) cap'  \<Longrightarrow> (cap_get_tag cap' = scast cap_frame_cap)"
   and "ccap_relation (capability.ArchObjectCap (arch_capability.VCPUCap v48)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_vcpu_cap)"
   and "ccap_relation (capability.ArchObjectCap (arch_capability.SGISignalCap irq target)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_sgi_signal_cap)"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.SMCCap smc_badge)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_smc_cap)"
   apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps)
   apply (frule cap_get_tag_isCap(2), simp)
   apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps)+
@@ -2029,6 +2046,8 @@ lemma cap_get_tag_isCap_ArchObject2:
            = (isArchObjectCap cap \<and> isVCPUCap (capCap cap))"
   and   "(cap_get_tag cap' = scast cap_sgi_signal_cap)
            = (isArchObjectCap cap \<and> isSGISignalCap (capCap cap))"
+  and   "(cap_get_tag cap' = scast cap_smc_cap)
+           = (isArchObjectCap cap \<and> isSMCCap (capCap cap))"
   by (rule cap_get_tag_isCap_ArchObject2_worker [OF _ cr],
       simp add: cap_get_tag_isCap_ArchObject,
       simp add: isArchCap_tag_def2 cap_tag_defs)+

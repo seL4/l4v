@@ -55,5 +55,8 @@ postModifyRegisters :: PPtr TCB -> PPtr TCB -> UserMonad ()
 postModifyRegisters _ _ = return ()
 
 postSetFlags :: PPtr TCB -> TcbFlags -> Kernel ()
-postSetFlags t flags =
-    when (isFlagSet FpuDisabled flags) (fpuRelease t)
+postSetFlags t flags = do
+    cur <- getCurThread
+    if (isFlagSet FpuDisabled flags)
+        then fpuRelease t
+        else when (t == cur) (lazyFpuRestore t)

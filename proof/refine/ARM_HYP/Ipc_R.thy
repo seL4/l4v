@@ -370,7 +370,7 @@ lemma cteInsert_weak_cte_wp_at3:
 lemma maskedAsFull_null_cap[simp]:
   "(maskedAsFull x y = capability.NullCap) = (x = capability.NullCap)"
   "(capability.NullCap  = maskedAsFull x y) = (x = capability.NullCap)"
-  by (case_tac x, auto simp:maskedAsFull_def isCap_simps )
+  by (case_tac x, auto simp:maskedAsFull_def isCap_simps)
 
 lemma maskCapRights_eq_null:
   "(RetypeDecls_H.maskCapRights r xa = capability.NullCap) =
@@ -435,7 +435,7 @@ next
     apply (rule corres_const_on_failure)
     apply (simp add: dc_def[symmetric] split del: if_split)
     apply (rule corres_guard_imp)
-      apply (rule corres_if2)
+      apply (rule corres_if3)
         apply (case_tac "fst x", auto simp add: isCap_simps)[1]
        apply (rule corres_split[OF corres_set_extra_badge])
           apply (clarsimp simp: is_cap_simps)
@@ -539,6 +539,7 @@ next
       by (case_tac "capa = aa"; clarsimp split:if_splits simp:masked_as_full_def is_cap_simps)
     apply (case_tac "isEndpointCap (fst y) \<and> capEPPtr (fst y) = the ep \<and> (\<exists>y. ep = Some y)")
      apply (clarsimp simp:conj_comms split del:if_split)
+    apply (split if_split)
     apply (rule conjI)
      apply clarsimp
     apply (clarsimp simp:valid_pspace'_def cte_wp_at_ctes_of split del:if_split)
@@ -1987,7 +1988,7 @@ lemmas getSanitiseRegisterInfo_def2 = getSanitiseRegisterInfo_def[folded archThr
 lemma getSanitiseRegisterInfo_ct'[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> getSanitiseRegisterInfo t \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
   apply (simp add: getSanitiseRegisterInfo_def)
-  by (wpsimp simp: getObject_inv_tcb setObject_ct_inv)
+  by (wpsimp simp: setObject_ct_inv)
 
 crunch handleFaultReply
   for ct'[wp]: "\<lambda>s. P (ksCurThread s)"
@@ -3290,7 +3291,6 @@ lemma receiveIPC_corres:
               apply (clarsimp simp: ntfn_relation_def Ipc_A.isActive_def Endpoint_H.isActive_def
                              split: Structures_A.ntfn.splits Structures_H.notification.splits)
              apply clarsimp
-             apply wpfix
              apply (rule completeSignal_corres)
             apply (rule_tac P="einvs and valid_sched and tcb_at thread and
                                       ep_at word1 and valid_ep ep and

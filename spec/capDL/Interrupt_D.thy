@@ -12,11 +12,6 @@ theory Interrupt_D
 imports Endpoint_D "ExecSpec.Platform"
 begin
 
-context begin interpretation Arch .
-requalify_types
-  irq
-end
-
 (* Return the currently pending IRQ. *)
 definition
   get_active_irq :: "(cdl_irq option) k_monad"

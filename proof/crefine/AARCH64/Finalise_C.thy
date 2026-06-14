@@ -2351,24 +2351,27 @@ lemma Arch_finaliseCap_ccorres:
       prefer 2
       apply (rule ccorres_inst[where P="?abstract_pre" and P'=UNIV])
       apply (cases cp; clarsimp simp: isCap_simps; ccorres_rewrite)
-          apply return_NullCap_pair_ccorres (* ASIDControlCap *)
-         apply return_NullCap_pair_ccorres (* ASIDPoolCap *)
-        \<comment> \<open>PageTableCap\<close>
-        apply (rule ccorres_guard_imp)
-          apply (wpc;
-                 (* proof is the same for both cases, but C code is duplicated *)
-                 (clarsimp,
-                  ccorres_rewrite,
-                  (rule ccorres_rhs_assoc)+,
-                  csymbr,
-                  ccorres_rewrite,
-                  rule ccorres_cond_false_seq,
-                  ccorres_rewrite,
-                  rule ccorres_inst[where P=\<top> and P'=UNIV],
-                  (return_NullCap_pair_ccorres; simp)))
+           apply return_NullCap_pair_ccorres (* ASIDControlCap *)
+          apply return_NullCap_pair_ccorres (* ASIDPoolCap *)
+         \<comment> \<open>PageTableCap\<close>
+         apply (rule ccorres_guard_imp)
+           apply (wpc;
+                  (* proof is the same for both cases, but C code is duplicated *)
+                  (clarsimp,
+                   ccorres_rewrite,
+                   (rule ccorres_rhs_assoc)+,
+                   csymbr,
+                   ccorres_rewrite,
+                   rule ccorres_cond_false_seq,
+                   ccorres_rewrite,
+                   rule ccorres_inst[where P=\<top> and P'=UNIV],
+                   (return_NullCap_pair_ccorres; simp)))
+          apply simp
          apply simp
-        apply simp
-       \<comment> \<open>VCPUCap\<close>
+        \<comment> \<open>VCPUCap\<close>
+        apply return_NullCap_pair_ccorres
+
+       \<comment> \<open>SGISignalCap\<close>
        apply return_NullCap_pair_ccorres
 
       \<comment> \<open>SGISignalCap\<close>
@@ -2420,72 +2423,109 @@ lemma Arch_finaliseCap_ccorres:
      apply (simp add: cap_frame_cap_lift_def split: if_splits)
     apply (clarsimp simp: isCap_simps)
    apply (wpc; simp add: isCap_simps; ccorres_rewrite)
-        \<comment> \<open>ASIDControlCap\<close>
+         \<comment> \<open>ASIDControlCap\<close>
+         apply (rule ccorres_inst[where P="?abstract_pre" and P'=UNIV])
+         apply return_NullCap_pair_ccorres
+        \<comment> \<open>ASIDPoolCap\<close>
         apply (rule ccorres_inst[where P="?abstract_pre" and P'=UNIV])
-        apply return_NullCap_pair_ccorres
-       \<comment> \<open>ASIDPoolCap\<close>
+        apply (rule ccorres_guard_imp)
+          apply (rule ccorres_rhs_assoc)+
+          apply csymbr
+          apply csymbr
+          apply (ctac (no_vcg) add: deleteASIDPool_ccorres)
+           apply (csymbr, csymbr, csymbr, csymbr)
+           apply (rule ccorres_return_C; simp)
+          apply wp
+         apply (clarsimp simp: valid_cap'_def)
+        apply (clarsimp simp: ccap_relation_NullCap_iff cap_get_tag_isCap_unfolded_H_cap)
+        apply (clarsimp simp: ccap_relation_def map_option_Some_eq2)
+        apply (clarsimp simp: cap_to_H_def Let_def cap_asid_pool_cap_lift_def
+                        split: cap_CL.splits if_splits)
+       \<comment> \<open>FrameCap\<close>
        apply (rule ccorres_inst[where P="?abstract_pre" and P'=UNIV])
        apply (rule ccorres_guard_imp)
+         apply (rule ccorres_add_return2)
          apply (rule ccorres_rhs_assoc)+
          apply csymbr
-         apply csymbr
-         apply (ctac (no_vcg) add: deleteASIDPool_ccorres)
-          apply (csymbr, csymbr, csymbr, csymbr)
+         apply wpc
+          apply (prop_tac "ret__unsigned_longlong = 0")
+           apply (clarsimp simp: ccap_relation_def map_option_Some_eq2)
+           apply (drule cap_to_H_Frame_unfold, clarsimp)
+           apply (simp add: cap_frame_cap_lift_def split: if_split_asm)
+          apply ccorres_rewrite
+          apply csymbr
+          apply csymbr
+          apply csymbr
+          apply csymbr
+          apply simp
           apply (rule ccorres_return_C; simp)
-         apply wp
-        apply (clarsimp simp: valid_cap'_def)
-       apply (clarsimp simp: ccap_relation_NullCap_iff cap_get_tag_isCap_unfolded_H_cap)
-       apply (clarsimp simp: ccap_relation_def map_option_Some_eq2)
-       apply (clarsimp simp: cap_to_H_def Let_def cap_asid_pool_cap_lift_def
-                       split: cap_CL.splits if_splits)
-      \<comment> \<open>FrameCap\<close>
-      apply (rule ccorres_inst[where P="?abstract_pre" and P'=UNIV])
-      apply (rule ccorres_guard_imp)
-        apply (rule ccorres_add_return2)
-        apply (rule ccorres_rhs_assoc)+
-        apply csymbr
-        apply wpc
-         apply (prop_tac "ret__unsigned_longlong = 0")
+         apply (prop_tac "ret__unsigned_longlong \<noteq> 0")
           apply (clarsimp simp: ccap_relation_def map_option_Some_eq2)
           apply (drule cap_to_H_Frame_unfold, clarsimp)
           apply (simp add: cap_frame_cap_lift_def split: if_split_asm)
          apply ccorres_rewrite
+         apply (rule ccorres_rhs_assoc)+
          apply csymbr
          apply csymbr
          apply csymbr
          apply csymbr
+         apply wpc
          apply simp
-         apply (rule ccorres_return_C; simp)
-        apply (prop_tac "ret__unsigned_longlong \<noteq> 0")
-         apply (clarsimp simp: ccap_relation_def map_option_Some_eq2)
-         apply (drule cap_to_H_Frame_unfold, clarsimp)
-         apply (simp add: cap_frame_cap_lift_def split: if_split_asm)
-        apply ccorres_rewrite
-        apply (rule ccorres_rhs_assoc)+
-        apply csymbr
-        apply csymbr
-        apply csymbr
-        apply csymbr
-        apply wpc
-        apply simp
-        apply (ctac (no_vcg) add: unmapPage_ccorres)
+         apply (ctac (no_vcg) add: unmapPage_ccorres)
+          apply csymbr
+          apply csymbr
+          apply csymbr
+          apply csymbr
+          apply (rule ccorres_return_C; simp)
+         apply wp
+        apply (clarsimp simp: valid_cap'_def wellformed_mapdata'_def)
+       apply (clarsimp simp: ccap_relation_NullCap_iff cap_get_tag_isCap_unfolded_H_cap)
+       apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 cap_frame_cap_lift_def
+                             c_valid_cap_def cl_valid_cap_def
+                       dest!: cap_to_H_Frame_unfold
+                       split: if_splits)
+      \<comment> \<open>PageTableCap\<close>
+      apply (rule ccorres_inst[where P="?abstract_pre" and P'=UNIV])
+      apply (rule ccorres_guard_imp)
+        apply wpc (* NormalPT_T / VSRootPT_T *)
+         apply (in_case VSRootPT_T)
+         apply clarsimp
+         apply ccorres_rewrite
+         apply (rule ccorres_rhs_assoc)+
+         apply csymbr
+         apply ccorres_rewrite
+         apply (rule ccorres_rhs_assoc)+
          apply csymbr
          apply csymbr
-         apply csymbr
-         apply csymbr
-         apply (rule ccorres_return_C; simp)
-        apply wp
-       apply (clarsimp simp: valid_cap'_def wellformed_mapdata'_def)
-      apply (clarsimp simp: ccap_relation_NullCap_iff cap_get_tag_isCap_unfolded_H_cap)
-      apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 cap_frame_cap_lift_def
-                            c_valid_cap_def cl_valid_cap_def
-                      dest!: cap_to_H_Frame_unfold
-                      split: if_splits)
-     \<comment> \<open>PageTableCap\<close>
-     apply (rule ccorres_inst[where P="?abstract_pre" and P'=UNIV])
-     apply (rule ccorres_guard_imp)
-       apply wpc (* NormalPT_T / VSRootPT_T *)
-        apply (in_case VSRootPT_T)
+         apply wpc (* mapped None/Some *)
+          apply (in_case None)
+          apply (rule ccorres_cond_false_seq, ccorres_rewrite)
+          apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+          apply (return_NullCap_pair_ccorres; simp)
+         apply (in_case "Some ?m")
+         apply clarsimp
+         apply (rename_tac asid vref)
+         apply (rule ccorres_cond_true_seq, ccorres_rewrite)
+         apply (rule ccorres_rhs_assoc)+
+         apply (rule_tac xf'="ret__unsigned_longlong_'" and
+                         F="\<lambda>asid'. asid' = asid" and
+                         R=\<top> and
+                         R'=UNIV
+                         in ccorres_symb_exec_r_abstract_UNIV) (* FIXME AARCH64: csymbr fails *)
+            apply vcg
+            apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 dest!: cap_to_H_VSCap)
+            apply (clarsimp simp: cap_vspace_cap_lift_def cap_vspace_cap_lift)
+           apply ceqv
+          apply csymbr
+          apply wpfix
+          apply (ctac (no_vcg) add: deleteASID_ccorres)
+           apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+           apply (return_NullCap_pair_ccorres; simp)
+          apply wp
+         apply (clarsimp simp: guard_is_UNIV_def ccap_relation_def map_option_Some_eq2
+                               cap_vspace_cap_lift_def cap_vspace_cap_lift
+                         dest!: cap_to_H_VSCap)
+        apply (in_case NormalPT_T)
         apply clarsimp
         apply ccorres_rewrite
         apply (rule ccorres_rhs_assoc)+
@@ -2508,79 +2548,43 @@ lemma Arch_finaliseCap_ccorres:
                         F="\<lambda>asid'. asid' = asid" and
                         R=\<top> and
                         R'=UNIV
-                        in ccorres_symb_exec_r_abstract_UNIV) (* FIXME AARCH64: csymbr fails *)
+                        in ccorres_symb_exec_r_abstract_UNIV)
            apply vcg
-           apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 dest!: cap_to_H_VSCap)
-           apply (clarsimp simp: cap_vspace_cap_lift_def cap_vspace_cap_lift)
+           apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 dest!: cap_to_H_PTCap)
+           apply (clarsimp simp: cap_page_table_cap_lift_def cap_page_table_cap_lift)
           apply ceqv
          apply csymbr
+         apply csymbr
          apply wpfix
-         apply (ctac (no_vcg) add: deleteASID_ccorres)
+         apply (ctac (no_vcg) add: unmapPageTable_ccorres)
           apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
           apply (return_NullCap_pair_ccorres; simp)
          apply wp
         apply (clarsimp simp: guard_is_UNIV_def ccap_relation_def map_option_Some_eq2
-                              cap_vspace_cap_lift_def cap_vspace_cap_lift
-                        dest!: cap_to_H_VSCap)
-       apply (in_case NormalPT_T)
-       apply clarsimp
-       apply ccorres_rewrite
-       apply (rule ccorres_rhs_assoc)+
-       apply csymbr
-       apply ccorres_rewrite
-       apply (rule ccorres_rhs_assoc)+
-       apply csymbr
-       apply csymbr
-       apply wpc (* mapped None/Some *)
-        apply (in_case None)
-        apply (rule ccorres_cond_false_seq, ccorres_rewrite)
-        apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
-        apply (return_NullCap_pair_ccorres; simp)
-       apply (in_case "Some ?m")
-       apply clarsimp
-       apply (rename_tac asid vref)
-       apply (rule ccorres_cond_true_seq, ccorres_rewrite)
-       apply (rule ccorres_rhs_assoc)+
-       apply (rule_tac xf'="ret__unsigned_longlong_'" and
-                       F="\<lambda>asid'. asid' = asid" and
-                       R=\<top> and
-                       R'=UNIV
-                       in ccorres_symb_exec_r_abstract_UNIV)
-          apply vcg
-          apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 dest!: cap_to_H_PTCap)
-          apply (clarsimp simp: cap_page_table_cap_lift_def cap_page_table_cap_lift)
-         apply ceqv
-        apply csymbr
-        apply csymbr
-        apply wpfix
-        apply (ctac (no_vcg) add: unmapPageTable_ccorres)
-         apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
-         apply (return_NullCap_pair_ccorres; simp)
-        apply wp
-       apply (clarsimp simp: guard_is_UNIV_def ccap_relation_def map_option_Some_eq2
+                              cap_page_table_cap_lift_def cap_page_table_cap_lift
+                        dest!: cap_to_H_PTCap)
+       apply (fastforce simp: valid_cap'_def wellformed_mapdata'_def)
+      apply (fastforce simp: ccap_relation_def map_option_Some_eq2 to_bool_def
+                             cap_vspace_cap_lift_def cap_vspace_cap_lift
                              cap_page_table_cap_lift_def cap_page_table_cap_lift
-                       dest!: cap_to_H_PTCap)
-      apply (fastforce simp: valid_cap'_def wellformed_mapdata'_def)
-     apply (fastforce simp: ccap_relation_def map_option_Some_eq2 to_bool_def
-                            cap_vspace_cap_lift_def cap_vspace_cap_lift
-                            cap_page_table_cap_lift_def cap_page_table_cap_lift
-                      dest!: cap_to_H_VSCap cap_to_H_PTCap)
-    \<comment> \<open>VCPUCap\<close>
-    apply (rule ccorres_inst[where P="?abstract_pre" and P'=UNIV])
-    apply (rule ccorres_guard_imp)
-      apply (rule ccorres_rhs_assoc)+
-      apply csymbr
-      apply (ctac (no_vcg) add: vcpuFinalise_ccorres)
-       apply (csymbr, csymbr, csymbr, csymbr)
-       apply (rule ccorres_return_C; simp)
-      apply wpsimp
-     apply (clarsimp simp: valid_cap'_def)
-    apply (frule cap_get_tag_isCap_unfolded_H_cap)
-    apply (frule cap_lift_vcpu_cap)
-    apply (clarsimp simp: cap_vcpu_cap_lift cap_to_H_def
-                          case_option_over_if
-                    elim!: ccap_relationE)
-    apply (clarsimp simp: ccap_relation_NullCap_iff cap_get_tag_isCap_unfolded_H_cap)
+                       dest!: cap_to_H_VSCap cap_to_H_PTCap)
+     \<comment> \<open>VCPUCap\<close>
+     apply (rule ccorres_inst[where P="?abstract_pre" and P'=UNIV])
+     apply (rule ccorres_guard_imp)
+       apply (rule ccorres_rhs_assoc)+
+       apply csymbr
+       apply (ctac (no_vcg) add: vcpuFinalise_ccorres)
+        apply (csymbr, csymbr, csymbr, csymbr)
+        apply (rule ccorres_return_C; simp)
+       apply wpsimp
+      apply (clarsimp simp: valid_cap'_def)
+     apply (frule cap_get_tag_isCap_unfolded_H_cap)
+     apply (frule cap_lift_vcpu_cap)
+     apply (clarsimp simp: cap_vcpu_cap_lift cap_to_H_def
+                           case_option_over_if
+                     elim!: ccap_relationE)
+     apply (clarsimp simp: ccap_relation_NullCap_iff cap_get_tag_isCap_unfolded_H_cap)
+    apply return_NullCap_pair_ccorres
    apply return_NullCap_pair_ccorres
   apply fastforce
   done

@@ -524,7 +524,7 @@ proof -
           apply assumption+
         apply (simp add: sameRegionAs_def3)
         apply (intro disjI1)
-        apply (fastforce simp:isCap_simps capMasterCap_def split:capability.splits)
+        apply (fastforce simp:isCap_simps capMasterCap_def arch_capBadge_def split:capability.splits)
        apply clarsimp
       apply clarsimp
       apply (erule sameRegionAsE, auto simp: isCap_simps capMasterCap_def split:capability.splits)[1]
@@ -665,7 +665,7 @@ proof induct
     apply (frule n_cap, drule n_badged)
     apply (frule n_cap, drule n_badged)
     apply clarsimp
-    apply (case_tac cap'', simp_all add: isCap_simps)[1]
+    apply (case_tac cap'', simp_all add: isCap_simps arch_capBadge_def)[1]
      apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
     apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
     done
@@ -743,7 +743,7 @@ next
         apply (rule trancl.intros(2)[OF _ m_slot_next])
         apply (rule trancl.intros(1), rule prev_slot_next)
         apply simp
-       apply (case_tac cap'', simp_all add: isCap_simps)[1]
+       apply (case_tac cap'', simp_all add: isCap_simps arch_capBadge_def)[1]
         apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
        apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
       apply (rule m_slot_next)

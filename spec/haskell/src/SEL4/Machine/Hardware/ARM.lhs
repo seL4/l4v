@@ -122,19 +122,38 @@ The ARM MMU does not allow access to physical addresses while translation is ena
 
 The following functions define the ARM-specific interface between the kernel and the hardware. Most of them depend on the simulator in use, and are therefore defined in the platform module.
 
+#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
+> smallPageBits = (12 :: Int)
+> largePageBits = (16 :: Int)
+> sectionBits = (20 :: Int)
+> superSectionBits = (24 :: Int)
+#else
+> smallPageBits = (12 :: Int)
+> largePageBits = (16 :: Int)
+> sectionBits = (21 :: Int)
+> superSectionBits = (25 :: Int)
+#endif
+
 > pageBits :: Int
-> pageBits = 12
+> pageBits = smallPageBits
 
 > pageBitsForSize :: VMPageSize -> Int
-> pageBitsForSize ARMSmallPage = 12
-> pageBitsForSize ARMLargePage = 16
-#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
-> pageBitsForSize ARMSection = 20
-> pageBitsForSize ARMSuperSection = 24
-#else
-> pageBitsForSize ARMSection = 21
-> pageBitsForSize ARMSuperSection = 25
-#endif
+> pageBitsForSize ARMSmallPage = smallPageBits
+> pageBitsForSize ARMLargePage = largePageBits
+> pageBitsForSize ARMSection = sectionBits
+> pageBitsForSize ARMSuperSection = superSectionBits
+
+> pageForPageBits :: Int -> VMPageSize
+> pageForPageBits bits =
+>     if bits == smallPageBits
+>         then ARMSmallPage
+>         else if bits == largePageBits
+>             then ARMLargePage
+>             else if bits == sectionBits
+>                 then ARMSection
+>                 else if bits == superSectionBits
+>                     then ARMSuperSection
+>                     else undefined
 
 > getMemoryRegions :: MachineMonad [(PAddr, PAddr)]
 > getMemoryRegions = do

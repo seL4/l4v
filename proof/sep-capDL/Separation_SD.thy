@@ -50,8 +50,7 @@ definition
 where
   "reset_cap_asid \<equiv> \<lambda>c. case c of
       FrameCap dev f1 f2 f3 f4 ad \<Rightarrow> FrameCap dev f1 f2 f3 f4 None
-    | PageTableCap f1 f2 ad     \<Rightarrow> PageTableCap f1 f2 None
-    | PageDirectoryCap f1 f2 ad \<Rightarrow> PageDirectoryCap f1 f2 None
+    | PageTableCap l f1 f2 ad     \<Rightarrow> PageTableCap l f1 f2 None
     | _ \<Rightarrow> c"
 
 definition
@@ -275,6 +274,7 @@ where
           cap_guard' =  cap_guard cnode_cap
       in (cap_ptr >> remaining_size - guard_size) && mask guard_size = cap_guard'"
 
+(* FIXME: one missing precedence *)
 definition user_pointer_at :: "(cdl_size_bits * cdl_size_bits) \<Rightarrow> cdl_cap \<Rightarrow> cdl_cptr \<Rightarrow> cdl_cap \<Rightarrow> sep_pred " ("(\<box> _ : _ _ \<mapsto>u _)" [76,71] 76)
   where
    "user_pointer_at k_stuff cnode_cap cap_ptr cap  \<equiv> \<lambda>s.
@@ -300,7 +300,7 @@ lemma offset_slot:
   "\<lbrakk>slot < 2^radix; radix < word_bits\<rbrakk> \<Longrightarrow> offset (of_nat slot) radix = slot"
   apply (clarsimp simp: offset_def)
   apply (subst Word.less_mask_eq)
-   apply (erule (1) of_nat_less_pow_32)
+   apply (erule of_nat_power, simp add: word_bits_def)
   apply (subst unat_of_nat_eq)
    apply (drule_tac a="2::nat" and n=radix and N = word_bits in power_strict_increasing)
     apply simp

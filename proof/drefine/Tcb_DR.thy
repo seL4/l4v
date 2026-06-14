@@ -52,8 +52,10 @@ where
           Invocations_D.NotificationControl target_tcb opt
       | Invocations_A.SetTLSBase target_tcb x \<Rightarrow>
           Invocations_D.SetTLSBase target_tcb
-      | Invocations_A.SetFlags target_tcb x y \<Rightarrow>
-          Invocations_D.SetFlags target_tcb"
+      | Invocations_A.SetFlags target_tcb flags_set flags_clear \<Rightarrow>
+          Invocations_D.SetFlags target_tcb
+                                 (tcb_flags_to_word flags_set)
+                                 (tcb_flags_to_word flags_clear)"
 
 lemma decode_set_ipc_buffer_translate_tcb_invocation:
   "\<lbrakk>x \<noteq> [];excaps ! 0 = (a,b,c)\<rbrakk> \<Longrightarrow>
@@ -200,6 +202,7 @@ lemma decode_tcb_cap_label_not_match:
       apply (simp add: decode_read_registers_def decode_write_registers_def decode_set_ipc_buffer_def
                        decode_copy_registers_def decode_set_space_def decode_tcb_configure_def
                        decode_set_priority_def decode_set_mcpriority_def decode_set_sched_params_def
+                       decode_set_flags_def
             | wp)+
   done
 
@@ -393,8 +396,7 @@ lemma decode_tcb_corres:
                         apply ((case_tac "excaps' ! 0",clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def hd_conv_nth)
                                  | clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw split del: if_split
                                  | wp get_simple_ko_wp
-                                 | (case_tac "excaps' ! 0", rule dcorres_alternative_throw)
-                                 | (case_tac "AllowRead \<in> rights", simp))+
+                                 | (case_tac "excaps' ! 0", rule dcorres_alternative_throw))+
 
       (* TCBUnbindNotification *)
       apply (clarsimp simp: decode_unbind_notification_def dcorres_alternative_throw whenE_def)
@@ -411,11 +413,9 @@ lemma decode_tcb_corres:
      apply (simp add: translate_tcb_invocation_def)
 
     (* TCBSetFlags *)
-    apply (clarsimp simp: transform_intent_def decode_set_flags_def whenE_def)
-    apply (rule conjI; clarsimp)
-     apply (rule dcorres_alternative_throw)
+    apply (clarsimp simp: decode_set_flags_def whenE_def)
     apply (rule corres_alternate1[OF dcorres_returnOk])
-    apply (simp add: translate_tcb_invocation_def)
+    apply (simp add: translate_tcb_invocation_def tcb_flags_to_word_id)
 
    (* ARMASIDPoolAssign *)
    apply (clarsimp simp: transform_intent_def)
@@ -536,10 +536,11 @@ lemma dcorres_set_thread_state_Restart2:
   apply (rule dcorres_gets_the)
    apply (frule opt_object_tcb, simp)
     apply (clarsimp simp:not_idle_thread_def)
-   apply (clarsimp simp:transform_tcb_def has_slots_def update_slots_def object_slots_def tcb_slots)
+   apply (clarsimp simp: transform_tcb_def has_slots_def update_slots_def object_slots_def
+                         tcb_slot_defs)
    apply (rule dcorres_rhs_noop_below_True[OF set_thread_state_act_dcorres])
    apply (rule dcorres_set_object_tcb)
-     apply (clarsimp simp:transform_tcb_def infer_tcb_pending_op_def tcb_slots)
+     apply (clarsimp simp:transform_tcb_def infer_tcb_pending_op_def tcb_slot_defs)
      apply fastforce
     apply (simp add:not_idle_thread_def)
    apply (clarsimp simp:get_tcb_SomeD)

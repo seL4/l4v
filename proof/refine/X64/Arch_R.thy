@@ -687,7 +687,7 @@ lemma decodeX64PageTableInvocation_corres:
              apply (rule corres_trivial)
              apply (rule corres_returnOk)
              apply (clarsimp simp: archinv_relation_def page_table_invocation_map_def)
-             apply (clarsimp simp: attribs_from_word_def filter_frame_attrs_def
+             apply (clarsimp simp: attribs_from_word_def filter_vm_attributes_def
                                    attribsFromWord_def Let_def)
             apply ((clarsimp cong: if_cong
                      | wp whenE_wp hoare_vcg_all_liftE_R getPDE_wp get_pde_wp
@@ -778,7 +778,7 @@ lemma decodeX64PageDirectoryInvocation_corres:
              apply (rule corres_trivial)
              apply (rule corres_returnOk)
              apply (clarsimp simp: archinv_relation_def page_directory_invocation_map_def)
-             apply (clarsimp simp: attribs_from_word_def filter_frame_attrs_def
+             apply (clarsimp simp: attribs_from_word_def filter_vm_attributes_def
                                    attribsFromWord_def Let_def)
             apply ((clarsimp cong: if_cong
                         | wp whenE_wp hoare_vcg_all_liftE_R getPDPTE_wp get_pdpte_wp
@@ -866,7 +866,7 @@ lemma decodeX64PDPointerTableInvocation_corres:
              apply (rule corres_trivial)
              apply (rule corres_returnOk)
              apply (clarsimp simp: archinv_relation_def pdpt_invocation_map_def)
-             apply (clarsimp simp: attribs_from_word_def filter_frame_attrs_def
+             apply (clarsimp simp: attribs_from_word_def filter_vm_attributes_def
                                    attribsFromWord_def Let_def)
             apply ((clarsimp cong: if_cong
                     | wp whenE_wp hoare_vcg_all_liftE_R getPML4E_wp get_pml4e_wp
@@ -1586,8 +1586,9 @@ lemma inv_ASIDPool: "inv ASIDPool = (\<lambda>v. case v of ASIDPool a \<Rightarr
   done
 
 lemma eq_arch_update':
-  "ArchObjectCap cp = cteCap cte \<Longrightarrow> is_arch_update' (ArchObjectCap cp) cte"
-  by (clarsimp simp: is_arch_update'_def isCap_simps)
+  "\<lbrakk> ArchObjectCap cp = cteCap cte; arch_capBadge cp = None \<rbrakk> \<Longrightarrow>
+   is_arch_update' (ArchObjectCap cp) cte"
+  by (drule sym, clarsimp simp: is_arch_update'_def isCap_simps)
 
 lemma lookup_pdpt_slot_no_fail_corres[simp]:
   "lookupPDPTSlotFromPDPT pt vptr
@@ -1647,6 +1648,8 @@ lemma decode_page_inv_wf[wp]:
    apply (thin_tac "Ball S P" for S P)
    apply (erule cte_wp_at_weakenE')
    apply (clarsimp simp: is_arch_update'_def isCap_simps)
+   apply (drule_tac t="cteCap c" in sym)
+   apply clarsimp
   apply (cases "invocation_type label = ArchInvocationLabel X64PageGetAddress")
    apply (simp split del: if_split)
    apply (rule hoare_pre, wp)
@@ -1669,7 +1672,7 @@ lemma decode_page_table_inv_wf[wp]:
            | simp add: valid_arch_inv'_def valid_pti'_def if_apply_def2
            | wp (once) hoare_drop_imps)+)
   apply (clarsimp simp: linorder_not_le isCap_simps cte_wp_at_ctes_of)
-  apply (frule eq_arch_update')
+  apply (frule eq_arch_update', simp)
   apply (case_tac option; clarsimp)
   apply (drule_tac t="cteCap ctea" in sym, simp)
   apply (clarsimp simp: is_arch_update'_def isCap_simps valid_cap'_def capAligned_def)
@@ -1697,7 +1700,7 @@ lemma decode_page_directory_inv_wf[wp]:
            | simp add: valid_arch_inv'_def valid_pdi'_def if_apply_def2
            | wp (once) hoare_drop_imps)+)
   apply (clarsimp simp: linorder_not_le isCap_simps cte_wp_at_ctes_of)
-  apply (frule eq_arch_update')
+  apply (frule eq_arch_update', simp)
   apply (case_tac option; clarsimp)
   apply (drule_tac t="cteCap ctea" in sym, simp)
   apply (clarsimp simp: is_arch_update'_def isCap_simps valid_cap'_def capAligned_def)
@@ -1725,7 +1728,7 @@ lemma decode_pdpt_inv_wf[wp]:
            | simp add: valid_arch_inv'_def valid_pdpti'_def if_apply_def2
            | wp (once) hoare_drop_imps)+)
   apply (clarsimp simp: linorder_not_le isCap_simps cte_wp_at_ctes_of)
-  apply (frule eq_arch_update')
+  apply (frule eq_arch_update', simp)
   apply (case_tac option; clarsimp)
   apply (drule_tac t="cteCap ctea" in sym, simp)
   apply (clarsimp simp: is_arch_update'_def isCap_simps valid_cap'_def capAligned_def)

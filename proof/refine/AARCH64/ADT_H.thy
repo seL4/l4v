@@ -172,6 +172,9 @@ fun CapabilityMap :: "capability \<Rightarrow> cap" where
 | "CapabilityMap (capability.ArchObjectCap
                     (arch_capability.SGISignalCap irq target)) =
   cap.ArchObjectCap (arch_cap.SGISignalCap (ucast irq) (ucast target))"
+| "CapabilityMap (capability.ArchObjectCap
+                    (arch_capability.SMCCap smc_badge)) =
+  cap.ArchObjectCap (arch_cap.SMCCap smc_badge)"
 
 (* FIXME: wellformed_cap_simps has lots of duplicates. *)
 lemma cap_relation_imp_CapabilityMap:

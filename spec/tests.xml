@@ -29,7 +29,9 @@
         <!-- Various seL4 specifications. -->
         <test name="TakeGrant">make TakeGrant</test>
 
-        <set depends="haskell-translator kernel-config">
+        <test name="ASpec-files">make ASpec-files</test>
+
+        <set depends="haskell-translator kernel-config ASpec-files">
             <test name="ASpec">make ASpec</test>
             <test name="ExecSpec">make ExecSpec</test>
             <test name="DSpec">make DSpec</test>

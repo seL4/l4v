@@ -2712,14 +2712,15 @@ proof -
   note [simp del] = atLeastAtMost_simps
   note cover' = range_cover_rel[where sbit' = "objBitsKO val",OF cover _ refl,simplified]
   assume pn: "pspace_aligned' s" "pspace_distinct' s" "pspace_bounded' s"
-  and no_overlap: "pspace_no_overlap' ptr sz s"
+    and no_overlap: "pspace_no_overlap' ptr sz s"
   show ?thesis
     using pn pres no_overlap valid cover cte_wp_at_ctes_of[THEN iffD1,OF cte_at]
           caps_no_overlapD''[OF cte_at range]
-    apply (clarsimp simp:valid_cap'_def retype_ko_wp_at')
-    apply (case_tac "cteCap cte"; simp add: valid_cap'_def cte_wp_at_obj_cases'
-                                  valid_pspace'_def retype_obj_at_disj' retype_ko_wp_at'
-                           split: zombie_type.split_asm)
+    apply (clarsimp simp: valid_cap'_def retype_ko_wp_at')
+    apply (case_tac "cteCap cte";
+           simp add: valid_cap'_def cte_wp_at_obj_cases' valid_pspace'_def retype_obj_at_disj'
+                     retype_ko_wp_at'
+              split: zombie_type.split_asm)
       apply (simp add: valid_untyped'_helper_arch_cap)
      unfolding valid_untyped'_def
      apply (intro allI)

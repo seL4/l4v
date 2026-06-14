@@ -19,7 +19,7 @@ begin
 
 context Arch begin arch_global_naming (H)
 
-#INCLUDE_HASKELL SEL4/Object/ObjectType/AARCH64.hs CONTEXT AARCH64_H Arch.Types=ArchTypes_H ArchInv=ArchRetypeDecls_H NOT bodies_only
+#INCLUDE_HASKELL SEL4/Object/ObjectType/AARCH64.hs CONTEXT AARCH64_H Arch.Types=ArchTypes_H ArchInv= NOT bodies_only
 #INCLUDE_HASKELL SEL4/API/Invocation/AARCH64.hs CONTEXT AARCH64_H bodies_only \
   NOT isVSpaceFlushLabel isPageFlushLabel
 

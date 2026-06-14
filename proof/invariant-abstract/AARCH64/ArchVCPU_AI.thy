@@ -737,7 +737,8 @@ crunch perform_asid_control_invocation
   for active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
   (simp: active_cur_vcpu_of_def)
 
-crunch perform_vspace_invocation, perform_sgi_invocation, handle_spurious_irq
+crunch perform_vspace_invocation, perform_sgi_invocation, handle_spurious_irq,
+       perform_smc_invocation
   for active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
   and valid_cur_vcpu[wp]: valid_cur_vcpu
 
@@ -829,11 +830,6 @@ crunch reply_from_kernel, receive_signal
   and etcbs_of[wp]: "\<lambda>s. P (etcbs_of s)"
   and valid_cur_vcpu[wp]: valid_cur_vcpu
   (wp: valid_cur_vcpu_lift_weak in_cur_domain_lift_weak simp: crunch_simps)
-
-lemma ct_in_cur_domain_active_resume_cur_thread:
-  "\<lbrakk>ct_in_cur_domain s; ct_active s; valid_idle s; scheduler_action s = resume_cur_thread\<rbrakk>
-   \<Longrightarrow> in_cur_domain (cur_thread s) s"
-  by (clarsimp simp: ct_in_cur_domain_def ct_in_state_def dest!: st_tcb_at_idle_thread)
 
 lemma handle_invocation_valid_cur_vcpu[wp]:
   "\<lbrace>valid_cur_vcpu and einvs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
@@ -1283,7 +1279,8 @@ crunch store_pte, store_asid_pool_entry
 
 crunch
   perform_vspace_invocation, perform_page_table_invocation, perform_page_invocation,
-  perform_asid_control_invocation, perform_asid_pool_invocation, perform_sgi_invocation
+  perform_asid_control_invocation, perform_asid_pool_invocation, perform_sgi_invocation,
+  perform_smc_invocation
   for cur_vcpu_in_cur_domain[wp]: cur_vcpu_in_cur_domain
   (wp: crunch_wps  simp: crunch_simps)
 

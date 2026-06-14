@@ -237,10 +237,22 @@ lemma obj_refs_cap_rights_update[CNode_AC_assms, simp]:
   "aobj_ref' (acap_rights_update rights ao) = aobj_ref' ao"
   by (cases ao; clarsimp simp: cap_rights_update_def acap_rights_update_def)
 
+lemma auth_derived_SMC_badge:
+  "auth_derived (ArchObjectCap (SMCCap smc_badge)) cap \<Longrightarrow>
+   auth_derived (ArchObjectCap (SMCCap smc_badge')) cap"
+  by (simp add: auth_derived_def cap_auth_conferred_def arch_cap_auth_conferred_def
+           split: cap.splits)
+
+lemma auth_derived_SMC_NullCap:
+  "auth_derived (ArchObjectCap (SMCCap smc_badge)) cap \<Longrightarrow> auth_derived NullCap cap"
+  by (simp add: auth_derived_def cap_auth_conferred_def arch_cap_auth_conferred_def
+           split: cap.splits)
+
 lemma auth_derived_arch_update_cap_data[CNode_AC_assms]:
   "auth_derived (ArchObjectCap ao) cap' \<Longrightarrow> auth_derived (arch_update_cap_data pres w ao) cap'"
-  by (simp add: update_cap_data_def is_cap_simps arch_update_cap_data_def
-                  split del: if_split cong: if_cong)
+  by (auto simp: update_cap_data_def is_cap_simps arch_update_cap_data_def
+           intro: auth_derived_SMC_badge auth_derived_SMC_NullCap
+           cong: if_cong)
 
 lemma acap_auth_conferred_acap_rights_update[CNode_AC_assms]:
   "arch_cap_auth_conferred (acap_rights_update (acap_rights acap \<inter> R) acap)
@@ -290,7 +302,7 @@ lemma arch_derive_cap_untyped_range_subset[CNode_AC_assms]:
 
 lemma arch_update_cap_obj_refs_subset[CNode_AC_assms]:
   "\<lbrakk> x \<in> obj_refs_ac (arch_update_cap_data pres data cap) \<rbrakk> \<Longrightarrow> x \<in> aobj_ref' cap"
-  by (simp add: arch_update_cap_data_def)
+  by (simp add: arch_update_cap_data_def split: if_splits)
 
 lemma arch_update_cap_untyped_range_empty[CNode_AC_assms, simp]:
   "untyped_range (arch_update_cap_data pres data cap) = {}"
@@ -303,11 +315,13 @@ lemma arch_update_cap_irqs_controlled_empty[CNode_AC_assms, simp]:
 lemma arch_update_cap_links_asid_slot[CNode_AC_assms]:
   "cap_links_asid_slot aag p (arch_update_cap_data pres w acap) =
    cap_links_asid_slot aag p (ArchObjectCap acap)"
-  by (simp add: arch_update_cap_data_def)
+  by (auto simp add: arch_update_cap_data_def is_cap_simps cap_links_asid_slot_def)
 
 lemma arch_update_cap_cap_auth_conferred_subset[CNode_AC_assms]:
   "y \<in> cap_auth_conferred (arch_update_cap_data b w acap) \<Longrightarrow> y \<in> arch_cap_auth_conferred acap"
-  by (simp add: arch_update_cap_data_def cap_auth_conferred_def)
+  by (simp add: arch_update_cap_data_def cap_auth_conferred_def arch_cap_auth_conferred_def
+                is_cap_simps
+           split: if_splits)
 
 end
 

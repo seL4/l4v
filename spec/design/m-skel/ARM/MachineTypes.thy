@@ -137,9 +137,20 @@ definition
                          exclusive_state = default_exclusive_state,
                          machine_state_rest = undefined \<rparr>"
 
+(* Probably better to transfer from Haskell *)
+abbreviation (input) "smallPageBits \<equiv> 12"
+abbreviation (input) "largePageBits \<equiv> 16"
+abbreviation (input) "sectionBits \<equiv> 20"
+abbreviation (input) "superSectionBits \<equiv> 24"
+
+abbreviation (input) "pt_size_index \<equiv> 8"
+abbreviation (input) "pd_size_index \<equiv> 12"
+abbreviation (input) "pt_slot_vaddr_mask \<equiv> 0xFF"
 
 (* Machine/Hardware/ARM.lhs - hardware_asid, vmfault_type and vmpage_size *)
-#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM ONLY HardwareASID VMFaultType VMPageSize HypFaultType pageBits pageBitsForSize
+#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM ONLY HardwareASID VMFaultType VMPageSize HypFaultType pageBits pageBitsForSize pageForPageBits
+
+lemmas vmpage_size_simps = vmpage_size.simps
 
 end
 

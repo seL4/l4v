@@ -199,6 +199,13 @@ definition perform_sgi_invocation :: "sgi_signal_invocation \<Rightarrow> (unit,
   "perform_sgi_invocation iv \<equiv> case iv of
      SGISignalGenerate irq target \<Rightarrow> do_machine_op $ sendSGI (ucast irq) (ucast target)"
 
+definition perform_smc_invocation :: "smc_invocation \<Rightarrow> (machine_word list,'z::state_ext) s_monad" where
+  "perform_smc_invocation iv \<equiv> case iv of
+     SMCCall args \<Rightarrow> do
+       (r0, r1, r2, r3, r4, r5, r6, r7) \<leftarrow> do_machine_op $ doSMC_mop args;
+       return [r0, r1, r2, r3, r4, r5, r6, r7]
+     od"
+
 locale_abbrev arch_no_return :: "(unit, 'z::state_ext) s_monad \<Rightarrow> (data list, 'z::state_ext) s_monad"
   where
   "arch_no_return oper \<equiv> do oper; return [] od"
@@ -213,7 +220,8 @@ definition arch_perform_invocation :: "arch_invocation \<Rightarrow> (data list,
    | InvokeASIDControl oper \<Rightarrow> arch_no_return $ perform_asid_control_invocation oper
    | InvokeASIDPool oper \<Rightarrow> arch_no_return $ perform_asid_pool_invocation oper
    | InvokeVCPU oper \<Rightarrow> perform_vcpu_invocation oper
-   | InvokeSGISignal oper \<Rightarrow> arch_no_return $ perform_sgi_invocation oper"
+   | InvokeSGISignal oper \<Rightarrow> arch_no_return $ perform_sgi_invocation oper
+   | InvokeSMCCall oper \<Rightarrow> perform_smc_invocation oper"
 
 end
 end

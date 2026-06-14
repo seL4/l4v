@@ -20,6 +20,7 @@ lemma cap_asid_PageCap_None[simp]:
 lemma arch_derive_cap_is_derived:
   "\<lbrace>\<lambda>s. cte_wp_at (\<lambda>cap . cap_master_cap cap =
                           cap_master_cap (ArchObjectCap c') \<and>
+                          (cap_badge cap, cap_badge (ArchObjectCap c')) \<in> capBadge_ordering False \<and>
                           cap_aligned cap \<and>
                           cap_asid cap = cap_asid (ArchObjectCap c') \<and>
                           vs_cap_ref cap = vs_cap_ref (ArchObjectCap c')) p s\<rbrace>
@@ -62,6 +63,10 @@ lemma derive_cap_is_derived [Ipc_AI_1_assms]:
   apply(erule cte_wp_at_weakenE)
   apply(clarsimp simp: valid_cap_def)
   done
+
+lemma arch_cap_badge_rights_update[Ipc_AI_1_assms, simp]:
+  "arch_cap_badge (acap_rights_update rights acap) = arch_cap_badge acap"
+  by (cases acap; simp add: acap_rights_update_def)
 
 end
 

@@ -255,7 +255,7 @@ lemmas is_nondevice_page_cap_simps[simp] =
 
 primrec acap_class :: "arch_cap \<Rightarrow> capclass" where
   "acap_class (ASIDPoolCap _ _)     = PhysicalClass"
-| "acap_class (ASIDControlCap)      = ASIDMasterClass"
+| "acap_class (ASIDControlCap)      = OtherCapClass"
 | "acap_class (FrameCap _ _ _ _ _)  = PhysicalClass"
 | "acap_class (PageTableCap _ _)    = PhysicalClass"
 

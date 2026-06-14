@@ -128,10 +128,6 @@ lemma mapM_length[wp]:
   "\<lbrace>\<lambda>s. P (length xs)\<rbrace> mapM f xs \<lbrace>\<lambda>rv s. P (length rv)\<rbrace>"
   by (induct xs arbitrary: P) (wpsimp simp: mapM_Cons mapM_def sequence_def|assumption)+
 
-lemma cap_badge_rights_update[simp]:
-  "cap_badge (cap_rights_update rights cap) = cap_badge cap"
-  by (auto simp: cap_rights_update_def split: cap.split bool.splits)
-
 lemma get_cap_cte_wp_at_rv:
   "\<lbrace>cte_wp_at (\<lambda>cap. P cap cap) p\<rbrace> get_cap p \<lbrace>\<lambda>rv. cte_wp_at (P rv) p\<rbrace>"
   apply (wp get_cap_wp)
@@ -212,8 +208,10 @@ crunch set_extra_badge
   for in_device_frame[wp]: "in_device_frame buffer"
 
 lemma cap_insert_cte_wp_at:
-  "\<lbrace>\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s \<and> valid_mdb s \<and> valid_objs s
-    \<and> (if p = dest then P cap else cte_wp_at (\<lambda>c. P (masked_as_full c cap)) p s)\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>uu. cte_wp_at P p\<rbrace>"
+  "\<lbrace>\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s \<and> valid_mdb s \<and> valid_objs s \<and>
+        (if p = dest then P cap else cte_wp_at (\<lambda>c. P (masked_as_full c cap)) p s)\<rbrace>
+   cap_insert cap src dest
+   \<lbrace>\<lambda>_. cte_wp_at P p\<rbrace>"
   supply if_cong[cong]
   apply (rule hoare_name_pre_state)
   apply (clarsimp split:if_split_asm)
@@ -229,26 +227,23 @@ lemma cap_insert_cte_wp_at:
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (frule(1) caps_of_state_valid)
   apply (intro conjI impI)
-    apply (clarsimp simp:masked_as_full_def split:if_splits)+
+     apply (clarsimp simp:masked_as_full_def split:if_splits)+
    apply (clarsimp simp:valid_mdb_def is_derived_def)
    apply (drule(4) untyped_incD)
-   apply (clarsimp simp:is_cap_simps cap_aligned_def
-      dest!:valid_cap_aligned split:if_split_asm)
-    apply (drule_tac y = "of_nat fa" in word_plus_mono_right[OF _ is_aligned_no_overflow',rotated])
+   apply (clarsimp simp:is_cap_simps cap_aligned_def dest!:valid_cap_aligned split:if_split_asm)
+    apply (rename_tac free_idx free_idx')
+    apply (drule_tac y = "of_nat free_idx"
+                     in word_plus_mono_right[OF _ is_aligned_no_overflow',rotated])
      apply (simp add:word_of_nat_less)
     apply (clarsimp simp:p_assoc_help)
    apply (drule(1) caps_of_state_valid)+
-   apply (clarsimp simp:valid_cap_def valid_untyped_def max_free_index_def)
-  apply (clarsimp simp:masked_as_full_def split:if_splits)
-  apply (erule impEM)
-    apply (clarsimp simp: is_derived_def split:if_splits)
-     apply (clarsimp simp:is_cap_simps cap_master_cap_simps)
-   apply (clarsimp simp:is_cap_simps cap_master_cap_simps dest!:cap_master_cap_eqDs)
-  apply (erule impEM)
-    apply (clarsimp simp: is_derived_def split:if_splits)
-     apply (clarsimp simp:is_cap_simps cap_master_cap_simps)
-   apply (clarsimp simp:is_cap_simps cap_master_cap_simps dest!:cap_master_cap_eqDs)
-   apply (clarsimp simp:is_derived_def is_cap_simps cap_master_cap_simps)
+   apply (erule rsubst[where P=P])
+   apply (simp add: valid_cap_def max_free_index_def is_aligned_no_wrap' word_of_nat_less)
+  apply (simp add: is_aligned_no_wrap' word_of_nat_less)
+  apply (erule rsubst[where P=P])
+  apply (clarsimp simp:is_derived_def masked_as_full_def is_cap_simps cap_master_cap_simps
+                  split:if_split_asm)
+  apply (fastforce dest!:cap_master_cap_eqDs)
   done
 
 lemma cap_insert_weak_cte_wp_at2:
@@ -349,8 +344,14 @@ locale Ipc_AI =
                            \<and> valid_objs s\<rbrace>
         derive_cap slot c'
       \<lbrace>\<lambda>rv s. rv \<noteq> cap.NullCap \<longrightarrow> cte_wp_at (is_derived (cdt s) slot rv) slot s\<rbrace>, -"
+   assumes arch_cap_badge_rights_update[simp]:
+     "arch_cap_badge (acap_rights_update rights acap) = arch_cap_badge acap"
 
 context Ipc_AI begin
+
+lemma cap_badge_rights_update[simp]:
+  "cap_badge (cap_rights_update rights cap) = cap_badge cap"
+  by (auto simp: cap_rights_update_def split: cap.split bool.splits)
 
 lemma transfer_caps_loop_presM:
   fixes P vo em ex buffer slots caps n mi

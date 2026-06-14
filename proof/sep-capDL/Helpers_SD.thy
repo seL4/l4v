@@ -12,27 +12,6 @@ imports
   "Sep_Algebra.Map_Extra"
 begin
 
-(* Functions we need from capDL, but can't have yet (until we change capDL).
- * Maybe they aren't actually needed for the proof.
- * (If capDL doesn't have them, then we might not need them to prove conformance.)
- *)
-
-consts tcb_priority :: "cdl_tcb \<Rightarrow> word8 \<times> word8"
-consts tcb_ip :: "cdl_tcb \<Rightarrow> word32"
-consts tcb_sp :: "cdl_tcb \<Rightarrow> word32"
-consts opt_vmattribs :: "cdl_object \<Rightarrow> cdl_raw_vmattrs option"
-
-(* We don't need to know anything about this except that it isn't 0. *)
-definition tcb_ipc_buffer_address :: "cdl_tcb \<Rightarrow> word32"
-where "tcb_ipc_buffer_address tcb = 1"
-
-lemma tcb_ipc_buffer_address_non_zero:
-  "tcb_ipc_buffer_address tcb \<noteq> 0"
-  by (clarsimp simp: tcb_ipc_buffer_address_def)
-
-(* Helper funtions. These possibly should be moved somewhere else. *)
-
-
 (***************************************************
  * Generic Isabelle lemmas. Could be moved to lib. *
  ***************************************************)
@@ -186,8 +165,7 @@ where
   | IOSpaceCap _ \<Rightarrow> IOSpaceCap obj_id
   | IOPortsCap _ f2 \<Rightarrow> IOPortsCap obj_id f2
   | AsidPoolCap _ f2 \<Rightarrow> AsidPoolCap obj_id f2
-  | PageDirectoryCap _ f2 f3 \<Rightarrow> PageDirectoryCap obj_id f2 f3
-  | PageTableCap _ f2 f3 \<Rightarrow> PageTableCap obj_id f2 f3
+  | PageTableCap l _ f2 f3 \<Rightarrow> PageTableCap l obj_id f2 f3
   | FrameCap dev _ f2 f3 f4 f5 \<Rightarrow> FrameCap dev obj_id f2 f3 f4 f5
   | TcbCap _ \<Rightarrow> TcbCap obj_id
   | CNodeCap _ f2 f3 f4 \<Rightarrow> CNodeCap obj_id f2 f3 f4
@@ -200,6 +178,7 @@ where
   | PendingSyncRecvCap _ f2 f3 \<Rightarrow> PendingSyncRecvCap obj_id f2 f3
   | PendingNtfnRecvCap _ \<Rightarrow> PendingNtfnRecvCap obj_id
   | BoundNotificationCap _ \<Rightarrow> BoundNotificationCap obj_id
+  | VCPUCap _ \<Rightarrow> VCPUCap obj_id
   | _ \<Rightarrow> cap"
 
 definition update_cap_objects :: "cdl_object_id set \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
@@ -349,7 +328,7 @@ lemma some_nat_None [simp]:
   "some_nat None = 0"
   by (simp add: some_nat_def)
 
-definition
+definition (* FIXME: use datatype package discriminators *)
   is_untyped :: "cdl_object \<Rightarrow> bool" where
  "is_untyped v \<equiv> case v of Untyped \<Rightarrow> True | _ \<Rightarrow> False"
 
@@ -378,17 +357,31 @@ definition
  "is_asidpool v \<equiv> case v of AsidPool _ \<Rightarrow> True | _ \<Rightarrow> False"
 
 definition
-  is_pt :: "cdl_object \<Rightarrow> bool" where
- "is_pt v \<equiv> case v of PageTable _ \<Rightarrow> True | _ \<Rightarrow> False"
+  is_table :: "cdl_object \<Rightarrow> bool" where
+ "is_table v \<equiv> case v of PageTable _ _ \<Rightarrow> True | _ \<Rightarrow> False"
 
 definition
+  is_type_pt :: "cdl_pt_type \<Rightarrow> cdl_object \<Rightarrow> bool" where
+ "is_type_pt pt_t v \<equiv> case v of PageTable t _ \<Rightarrow> t = pt_t | _ \<Rightarrow> False"
+
+abbreviation
+  is_pt :: "cdl_object \<Rightarrow> bool" where
+  "is_pt \<equiv> is_type_pt PT"
+
+abbreviation
   is_pd :: "cdl_object \<Rightarrow> bool" where
- "is_pd v \<equiv> case v of PageDirectory _ \<Rightarrow> True | _ \<Rightarrow> False"
+ "is_pd \<equiv> is_type_pt PD"
+
+lemmas is_pt_def = is_type_pt_def
+lemmas is_pd_def = is_type_pt_def
 
 definition
   is_frame :: "cdl_object \<Rightarrow> bool" where
  "is_frame v \<equiv> case v of Frame _ \<Rightarrow> True | _ \<Rightarrow> False"
 
+definition
+  is_vcpu :: "cdl_object \<Rightarrow> bool" where
+ "is_vcpu v \<equiv> case v of VCPU \<Rightarrow> True | _ \<Rightarrow> False"
 
 definition
   object_domain :: "cdl_object \<Rightarrow> word8"
@@ -404,21 +397,24 @@ lemma is_object_simps [simp]:
   "is_tcb (Tcb tcb)"
   "is_cnode (CNode c)"
   "is_asidpool (AsidPool a)"
-  "is_pd (PageDirectory pd)"
-  "is_pt (PageTable pt)"
+  "is_pd (PageTable PD pd)"
+  "is_pt (PageTable PT pt)"
+  "is_table (PageTable t pt)"
+  "is_type_pt t (PageTable t pt)"
   "is_frame (Frame f)"
+  "is_vcpu VCPU"
   by (clarsimp simp: is_untyped_def is_ep_def is_ntfn_def is_tcb_def is_cnode_def
-                     is_asidpool_def is_pt_def is_pd_def is_frame_def)+
+                     is_asidpool_def is_table_def is_pt_def is_frame_def is_vcpu_def)+
 
 
 (* These sizes are needed for ARM *)
 definition pt_size :: nat
 where
-  "pt_size = 8"
+  "pt_size = pt_size_index"
 
 definition pd_size :: nat
 where
-  "pd_size = 12"
+  "pd_size = pd_size_index"
 
 definition small_frame_size :: nat
 where
@@ -431,8 +427,7 @@ where
       CNode cnode \<Rightarrow> cdl_cnode_size_bits cnode
     | AsidPool ap \<Rightarrow> asid_low_bits
     | Frame frame \<Rightarrow> cdl_frame_size_bits frame
-    | PageTable cdl_page_table \<Rightarrow> pt_size
-    | PageDirectory cdl_page_directory \<Rightarrow> pd_size
+    | PageTable pt_t cdl_page_table \<Rightarrow> pt_type_index_bits pt_t
     | _ \<Rightarrow> 0"
 
 lemma object_size_bits_default_tcb [simp]:
@@ -443,11 +438,15 @@ lemma object_size_bits_empty_cnode [simp]:
   "object_size_bits (CNode (empty_cnode sz)) = sz"
   by (clarsimp simp: object_size_bits_def empty_cnode_def)
 
-lemma is_pt_pt_size[simp]: "is_pt obj \<Longrightarrow> object_size_bits obj = pt_size"
-  by (clarsimp simp: object_size_bits_def pt_size_def is_pt_def split: cdl_object.splits)
+lemma is_pt_pt_size[simp]:
+  "is_pt obj \<Longrightarrow> object_size_bits obj = pt_size"
+  by (clarsimp simp: object_size_bits_def pt_size_def is_pt_def pt_type_index_bits_def
+               split: cdl_object.splits)
 
-lemma is_pd_pd_size[simp]: "is_pd obj \<Longrightarrow> object_size_bits obj = pd_size"
-  by (clarsimp simp: object_size_bits_def pt_size_def is_pd_def split: cdl_object.splits)
+lemma is_pd_pd_size[simp]:
+  "is_pd obj \<Longrightarrow> object_size_bits obj = pd_size"
+  by (clarsimp simp: object_size_bits_def pd_size_def is_pd_def pt_type_index_bits_def
+               split: cdl_object.splits)
 
 definition
   object_at_pointer_size_bits :: "cdl_state \<Rightarrow> cdl_object_id \<Rightarrow> cdl_size_bits"
@@ -485,6 +484,15 @@ abbreviation
   "pd_at \<equiv> object_at is_pd"
 abbreviation
   "frame_at \<equiv> object_at is_frame"
+abbreviation
+  "vcpu_at \<equiv> object_at is_vcpu"
+abbreviation
+  "type_pt_at pt \<equiv> object_at (is_type_pt pt)"
+abbreviation
+  "vspace_at \<equiv> type_pt_at vspace_type"
+abbreviation
+  "level_pt_at level \<equiv> type_pt_at (cdl_level_type level)"
+
 
 (* Threads that are waiting to run. *)
 definition
@@ -548,7 +556,8 @@ definition
 abbreviation
   "table_at \<equiv> \<lambda>obj_id s. pt_at obj_id s \<or> pd_at obj_id s"
 abbreviation
-  "capless_at \<equiv> \<lambda>obj_id s. untyped_at obj_id s \<or> ep_at obj_id s \<or> ntfn_at obj_id s \<or> frame_at obj_id s"
+  "capless_at \<equiv> \<lambda>obj_id s. untyped_at obj_id s \<or> ep_at obj_id s \<or> ntfn_at obj_id s \<or>
+                            frame_at obj_id s \<or> vcpu_at obj_id s"
 abbreviation
   "cnode_or_tcb_at \<equiv> \<lambda>obj_id spec. cnode_at obj_id spec \<or> tcb_at obj_id spec"
 abbreviation
@@ -557,7 +566,7 @@ abbreviation
 lemma capless_at_def2:
   "capless_at p s = object_at (\<lambda>obj. \<not> (has_slots obj)) p s"
   apply (clarsimp simp: has_slots_def object_at_def)
-  apply (fastforce simp: is_untyped_def is_ep_def is_ntfn_def is_frame_def
+  apply (fastforce simp: is_untyped_def is_ep_def is_ntfn_def is_frame_def is_vcpu_def
                  split: cdl_object.splits)
   done
 
@@ -587,19 +596,21 @@ lemma set_used_irq_list [simp]:
 lemma object_type_is_object:
   "is_untyped obj  = (object_type obj = UntypedType)"
   "is_ep obj       = (object_type obj = EndpointType)"
-  "is_ntfn obj      = (object_type obj = NotificationType)"
+  "is_ntfn obj     = (object_type obj = NotificationType)"
   "is_tcb obj      = (object_type obj = TcbType)"
   "is_cnode obj    = (object_type obj = CNodeType)"
   "is_irq_node obj = (object_type obj = IRQNodeType)"
   "is_asidpool obj = (object_type obj = AsidPoolType)"
-  "is_pt obj       = (object_type obj = PageTableType)"
-  "is_pd obj       = (object_type obj = PageDirectoryType)"
+  "is_pt obj   = (object_type obj = PageTableType PT)"
+  "is_pd obj       = (object_type obj = PageTableType PD)"
   "is_frame obj    = (\<exists>n. object_type obj = FrameType n)"
-  by (simp_all add: object_type_def is_untyped_def is_ep_def is_ntfn_def is_tcb_def
+  "is_vcpu obj     = (object_type obj = VCPUType)"
+  by (simp_all add: object_type_def is_untyped_def is_ep_def is_ntfn_def is_tcb_def is_vcpu_def
                     is_cnode_def is_irq_node_def is_asidpool_def is_pt_def is_pd_def is_frame_def
              split: cdl_object.splits)
 
-lemma is_ptD[dest]: "is_pt obj \<Longrightarrow> \<exists>x. obj = PageTable x"
+lemma is_ptD[dest]:
+  "is_pt obj \<Longrightarrow> \<exists>x. obj = PageTable PT x"
   by (clarsimp simp: is_pt_def split: cdl_object.splits)
 
 lemma object_at_object_type:
@@ -610,8 +621,8 @@ lemma object_at_object_type:
   "\<lbrakk>cdl_objects spec obj_id = Some obj; cnode_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = CNodeType"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; irq_node_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = IRQNodeType"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; asidpool_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = AsidPoolType"
-  "\<lbrakk>cdl_objects spec obj_id = Some obj; pt_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = PageTableType"
-  "\<lbrakk>cdl_objects spec obj_id = Some obj; pd_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = PageDirectoryType"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; pt_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = PageTableType PT"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; pd_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = PageTableType PD"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; frame_at obj_id spec\<rbrakk> \<Longrightarrow> \<exists>n. object_type obj = FrameType n"
   by (simp_all add: object_at_def object_type_is_object)
 
@@ -623,8 +634,8 @@ lemma object_type_object_at:
   "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = CNodeType\<rbrakk> \<Longrightarrow> cnode_at obj_id spec"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = IRQNodeType\<rbrakk> \<Longrightarrow> irq_node_at obj_id spec"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = AsidPoolType\<rbrakk> \<Longrightarrow> asidpool_at obj_id spec"
-  "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = PageTableType\<rbrakk> \<Longrightarrow> pt_at obj_id spec"
-  "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = PageDirectoryType\<rbrakk> \<Longrightarrow> pd_at obj_id spec"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = PageTableType PT\<rbrakk> \<Longrightarrow> pt_at obj_id spec"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = PageTableType PD\<rbrakk> \<Longrightarrow> pd_at obj_id spec"
   by (simp_all add: object_at_def object_type_is_object)
 
 lemma set_object_type [simp]:
@@ -636,7 +647,8 @@ lemma set_object_type [simp]:
   "{obj_id \<in> dom (cdl_objects spec). real_object_at obj_id spec} = {obj_id. real_object_at obj_id spec}"
   by (auto simp: object_at_def real_object_at_def)
 
-lemma pt_at_is_real[simp]: "pt_at pt_id spec \<Longrightarrow> pt_id \<in> {obj_id. real_object_at obj_id spec}"
+lemma pt_at_is_real[simp]:
+  "pt_at pt_id spec \<Longrightarrow> pt_id \<in> {obj_id. real_object_at obj_id spec}"
   apply (clarsimp simp: object_at_def is_pt_def real_object_at_def dom_def
                         irq_nodes_def is_irq_node_def)
   by (clarsimp split: cdl_object.splits)
@@ -657,6 +669,19 @@ lemma cnode_or_tcb_at_simps:
   "(cnode_or_tcb_at obj_id spec \<and> \<not> cnode_at obj_id spec) = tcb_at obj_id spec"
   by (auto simp: object_at_def object_type_is_object)
 
+lemma real_object_at_other_object[simp]:
+  "(real_object_at obj_id spec \<and> untyped_at obj_id spec)      = untyped_at obj_id spec"
+  "(real_object_at obj_id spec \<and> ep_at obj_id spec)           = ep_at obj_id spec"
+  "(real_object_at obj_id spec \<and> ntfn_at obj_id spec)         = ntfn_at obj_id spec"
+  "(real_object_at obj_id spec \<and> tcb_at obj_id spec)          = tcb_at obj_id spec"
+  "(real_object_at obj_id spec \<and> cnode_at obj_id spec)        = cnode_at obj_id spec"
+  "(real_object_at obj_id spec \<and> asidpool_at obj_id spec)     = asidpool_at obj_id spec"
+  "(real_object_at obj_id spec \<and> pt_at obj_id spec)           = pt_at obj_id spec"
+  "(real_object_at obj_id spec \<and> pd_at obj_id spec)           = pd_at obj_id spec"
+  "(real_object_at obj_id spec \<and> frame_at obj_id spec)        = frame_at obj_id spec"
+  "(real_object_at obj_id spec \<and> cnode_or_tcb_at obj_id spec) = cnode_or_tcb_at obj_id spec"
+  by (auto simp: real_object_at_def irq_nodes_def object_type_is_object object_at_def)
+
 (******************************
  * Cap types and default caps *
  ******************************)
@@ -666,31 +691,27 @@ where
 
 definition is_fake_pt_cap :: "cdl_cap \<Rightarrow> bool"
 where "is_fake_pt_cap cap \<equiv> case cap of
-    PageTableCap _ Fake _ \<Rightarrow> True
+    PageTableCap PT _ (Fake _) _ \<Rightarrow> True
   | _ \<Rightarrow> False"
 
-definition is_real_vm_cap :: "cdl_cap \<Rightarrow> bool"
-where
+definition is_real_vm_cap :: "cdl_cap \<Rightarrow> bool" where
   "is_real_vm_cap cap \<equiv>
-       (case cap of
-           FrameCap _ _ _ _ Real _     \<Rightarrow> True
-         | PageTableCap _ Real _     \<Rightarrow> True
-         | PageDirectoryCap _ Real _ \<Rightarrow> True
-         | _                         \<Rightarrow> False)"
+     case cap of
+       FrameCap _ _ _ _ Real _ \<Rightarrow> True
+     | PageTableCap _ _ Real _ \<Rightarrow> True
+     | _                       \<Rightarrow> False"
 
-definition is_fake_vm_cap :: "cdl_cap \<Rightarrow> bool"
-where
+definition is_fake_vm_cap :: "cdl_cap \<Rightarrow> bool" where
   "is_fake_vm_cap cap \<equiv>
-       (case cap of
-           FrameCap _ _ _ _ Fake _     \<Rightarrow> True
-         | PageTableCap _ Fake _     \<Rightarrow> True
-         | PageDirectoryCap _ Fake _ \<Rightarrow> True
-         | _                         \<Rightarrow> False)"
+     case cap of
+         FrameCap _ _ _ _ (Fake _) _ \<Rightarrow> True
+     | PageTableCap _ _ (Fake _) _   \<Rightarrow> True
+     | _                             \<Rightarrow> False"
 
 abbreviation
-  "fake_frame_cap dev ptr rights n \<equiv> FrameCap dev ptr rights n Fake None"
+  "fake_frame_cap dev ptr rights n attr \<equiv> FrameCap dev ptr rights n (Fake attr) None"
 abbreviation
-  "is_fake_frame_cap cap \<equiv> (case cap of FrameCap _ _ _ _ Fake None \<Rightarrow> True | _ \<Rightarrow> False)"
+  "is_fake_frame_cap cap \<equiv> (case cap of FrameCap _ _ _ _ (Fake _) None \<Rightarrow> True | _ \<Rightarrow> False)"
 
 definition dev_of :: "cdl_cap \<Rightarrow> bool option" where
   "dev_of cap = (case cap of FrameCap dev ptr _ n _ _ \<Rightarrow> Some dev | _ \<Rightarrow> None)"
@@ -699,7 +720,7 @@ definition cap_size_bits :: "cdl_cap \<Rightarrow> nat" where
 
 lemma is_fake_pt_cap_is_pt_cap [elim!]:
   "is_fake_pt_cap cap \<Longrightarrow> is_pt_cap cap"
-  by (clarsimp simp: is_fake_pt_cap_def split: cdl_cap.splits)
+  by (clarsimp simp: is_fake_pt_cap_def split: cdl_cap.splits cdl_pt_type.splits)
 
 abbreviation "pd_cap_at \<equiv> cap_at is_pd_cap"
 abbreviation "pt_cap_at \<equiv> cap_at is_pt_cap"
@@ -712,8 +733,7 @@ lemma is_cnode_cap_simps:
   "is_cnode_cap (IOSpaceCap x) = False"
   "is_cnode_cap (IOPortsCap x a) = False"
   "is_cnode_cap (AsidPoolCap x b) = False"
-  "is_cnode_cap (PageDirectoryCap x c d) = False"
-  "is_cnode_cap (PageTableCap x e f) = False"
+  "is_cnode_cap (PageTableCap pt_t x e f) = False"
   "is_cnode_cap (FrameCap dev x g h i j) = False"
   "is_cnode_cap (TcbCap x) = False"
   "is_cnode_cap (MasterReplyCap x) = False"
@@ -811,8 +831,7 @@ lemma object_type_has_slots [elim!]:
   "object_type obj = TcbType \<Longrightarrow> has_slots obj"
   "object_type obj = CNodeType \<Longrightarrow> has_slots obj"
   "object_type obj = IRQNodeType \<Longrightarrow> has_slots obj"
-  "object_type obj = PageTableType \<Longrightarrow> has_slots obj"
-  "object_type obj = PageDirectoryType \<Longrightarrow> has_slots obj"
+  "object_type obj = PageTableType l \<Longrightarrow> has_slots obj"
   "object_type obj = AsidPoolType \<Longrightarrow> has_slots obj"
   by (clarsimp simp: object_type_def has_slots_def split: cdl_object.splits)+
 
@@ -858,19 +877,19 @@ lemma cap_object_default_cap_frame:
 lemma is_pd_default_cap[simp]:
   "is_pd obj \<Longrightarrow>
    cdl_objects spec ptr = Some obj \<Longrightarrow>
-   default_cap (object_type obj) {ptr'} n b = PageDirectoryCap ptr' Real None"
+   default_cap (object_type obj) {ptr'} n b = PageTableCap PD ptr' Real None"
   by (clarsimp simp: object_type_is_object default_cap_def)
 
 lemma pd_at_default_cap[simp]:
   "pd_at ptr spec \<Longrightarrow>
    cdl_objects spec ptr = Some obj \<Longrightarrow>
-   default_cap (object_type obj) {ptr'} n b = PageDirectoryCap ptr' Real None"
+   default_cap (object_type obj) {ptr'} n b = PageTableCap PD ptr' Real None"
   by (fastforce simp: object_at_def)
 
 lemma pt_at_default_cap[simp]:
   "pt_at ptr spec \<Longrightarrow>
    cdl_objects spec ptr = Some obj \<Longrightarrow>
-   default_cap (object_type obj) {ptr'} n b = PageTableCap ptr' Real None"
+   default_cap (object_type obj) {ptr'} n b = PageTableCap PT ptr' Real None"
   by (clarsimp simp: object_type_is_object default_cap_def object_at_def)
 
 lemma default_cap_not_null [elim!]:
@@ -906,8 +925,7 @@ lemma cap_has_object_simps [simp]:
   "cap_has_object (IOSpaceCap x)"
   "cap_has_object (IOPortsCap x a)"
   "cap_has_object (AsidPoolCap x b)"
-  "cap_has_object (PageDirectoryCap x c d)"
-  "cap_has_object (PageTableCap x e f)"
+  "cap_has_object (PageTableCap pt_t x e f)"
   "cap_has_object (FrameCap dev x g h i j)"
   "cap_has_object (TcbCap x)"
   "cap_has_object (CNodeCap x k l sz)"
@@ -931,6 +949,7 @@ lemma is_cap_NullCap [simp]:
   "\<not> is_asidpool_cap NullCap"
   "\<not> is_pt_cap NullCap"
   "\<not> is_pd_cap NullCap"
+  "\<not> is_table_cap NullCap"
   "\<not> is_frame_cap NullCap"
   "\<not> is_fake_pt_cap NullCap"
   "\<not> is_irqhandler_cap NullCap"
@@ -940,10 +959,9 @@ definition
   object_slots_list :: "cdl_object \<Rightarrow> cdl_cnode_index list"
 where
   "object_slots_list obj \<equiv> case obj of
-    PageDirectory _ \<Rightarrow> [0..<2^pd_size]
-  | PageTable _ \<Rightarrow> [0..<2^pt_size]
-  | AsidPool _ \<Rightarrow> [0..<2^asid_low_bits]
-  | CNode cnode \<Rightarrow> [0..<2^(cdl_cnode_size_bits cnode)]
+    PageTable t _ \<Rightarrow> [0 ..< 2 ^ pt_type_index_bits t]
+  | AsidPool _ \<Rightarrow> [0 ..< 2 ^ asid_low_bits]
+  | CNode cnode \<Rightarrow> [0 ..< 2 ^ cdl_cnode_size_bits cnode]
   | Tcb _ \<Rightarrow> tcb_slots_list
   | IRQNode _ \<Rightarrow> [0]
   | _ \<Rightarrow> []"
@@ -976,14 +994,15 @@ where
     cap_badge cap
   else if (is_ntfn_cap cap) then
     cap_badge cap
-  else
-    guard_as_rawdata cap"
+  else if is_cnode_cap cap then
+    guard_as_rawdata cap
+  else 0"
 
 (*
  * Deterministic version of update_cap_data used by the capDL kernel.
  * This is used in the specification of the CSpace kernel calls.
  *)
-definition guard_update :: "cdl_cap \<Rightarrow> word32 \<Rightarrow> cdl_cap"
+definition guard_update :: "cdl_cap \<Rightarrow> machine_word \<Rightarrow> cdl_cap"
 where "guard_update cap data  \<equiv>
   case cap of cdl_cap.CNodeCap oid _ _ sz \<Rightarrow>
     (let reserved_bits = 3; guard_bits = 18; guard_size_bits = 5; new_guard_size = unat ((data >> reserved_bits) && mask guard_size_bits);
@@ -992,15 +1011,14 @@ where "guard_update cap data  \<equiv>
     in CNodeCap oid new_guard new_guard_size sz)
   | _ \<Rightarrow> cap"
 
-definition
-  update_cap_data_det :: "cdl_raw_capdata \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
-where
+definition update_cap_data_det :: "cdl_raw_capdata \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap" where
   "update_cap_data_det raw_data cap \<equiv>
-   case cap of
-        EndpointCap _ b _      \<Rightarrow> badge_update raw_data cap
-      | NotificationCap _ b _ \<Rightarrow> badge_update raw_data cap
-      | CNodeCap object g gs _  \<Rightarrow> guard_update cap raw_data
-      | _ \<Rightarrow> cap"
+     case cap of
+       EndpointCap _ b _      \<Rightarrow> badge_update raw_data cap
+     | NotificationCap _ b _  \<Rightarrow> badge_update raw_data cap
+     | CNodeCap object g gs _ \<Rightarrow> guard_update cap raw_data
+     | SMCCap b               \<Rightarrow> badge_update raw_data cap
+     | _ \<Rightarrow> cap"
 
 definition "valid_src_cap cap data \<equiv>
    is_cnode_cap cap \<longrightarrow> (
@@ -1039,8 +1057,7 @@ definition safe_for_derive :: "cdl_cap \<Rightarrow> bool"
 where "safe_for_derive cap \<equiv> case cap of
     NullCap \<Rightarrow> False
   | UntypedCap _ _ _ \<Rightarrow> False
-  | PageTableCap _ _ _ \<Rightarrow> False
-  | PageDirectoryCap _ _ _ \<Rightarrow> False
+  | PageTableCap _ _ _ _ \<Rightarrow> False
   | ReplyCap _ _ \<Rightarrow> False
   | MasterReplyCap _ \<Rightarrow> False
   | IrqControlCap \<Rightarrow> False
@@ -1095,9 +1112,10 @@ lemma object_default_state_def2:
       | CNode cnode \<Rightarrow> CNode (empty_cnode (cdl_cnode_size_bits cnode))
       | IRQNode cnode \<Rightarrow> IRQNode empty_irq_node
       | AsidPool ap \<Rightarrow> AsidPool \<lparr>cdl_asid_pool_caps = empty_cap_map asid_low_bits\<rparr>
-      | PageTable pt \<Rightarrow> PageTable \<lparr> cdl_page_table_caps = empty_cap_map 8 \<rparr>
-      | PageDirectory pd \<Rightarrow> PageDirectory \<lparr> cdl_page_directory_caps = empty_cap_map 12 \<rparr>
-      | Frame frame \<Rightarrow> Frame \<lparr> cdl_frame_size_bits = (cdl_frame_size_bits frame) \<rparr>)"
+      | PageTable t pt \<Rightarrow> PageTable t (empty_cap_map (pt_type_index_bits t))
+      | Frame frame \<Rightarrow> Frame \<lparr> cdl_frame_size_bits = cdl_frame_size_bits frame,
+                               cdl_frame_fills = default_frame_fill_data \<rparr>
+      | VCPU \<Rightarrow> VCPU)"
   by (clarsimp simp: object_default_state_def object_type_def default_object_def
                      object_size_bits_def object_domain_def
               split: cdl_object.splits)
@@ -1140,7 +1158,6 @@ lemma update_slots_eq_slots:
   "\<lbrakk>has_slots obj; update_slots slots obj = update_slots slots' obj'\<rbrakk> \<Longrightarrow> slots = slots'"
   by (clarsimp simp: update_slots_def has_slots_def cdl_tcb.splits cdl_cnode.splits
                      cdl_asid_pool.splits cdl_irq_node.splits
-                     cdl_page_table.splits cdl_page_directory.splits
               split: cdl_object.splits)
 
 lemma has_slots_object_type_has_slots:
@@ -1226,11 +1243,11 @@ lemma is_fake_pt_cap_cap_has_object:
   by (clarsimp simp: cap_has_object_def is_fake_pt_cap_def split: cdl_cap.splits)
 
 lemma is_fake_pt_cap_pt_cap:
-  "is_fake_pt_cap (PageTableCap x R z) \<longleftrightarrow> R = Fake"
+  "is_fake_pt_cap (PageTableCap PT x R z) \<longleftrightarrow> (\<exists>attr. R = Fake attr)"
   by (clarsimp simp: is_fake_pt_cap_def split: cdl_frame_cap_type.splits)
 
 lemma fake_vm_cap_simp:
-  "is_fake_vm_cap (FrameCap x y z a R b) \<longleftrightarrow> R = Fake"
+  "is_fake_vm_cap (FrameCap x y z a R b) \<longleftrightarrow> (\<exists>attr. R = Fake attr)"
   by (clarsimp simp: is_fake_vm_cap_def split: cdl_frame_cap_type.splits)
 
 lemma frame_not_pt[intro!]: "\<not> (is_frame x \<and> is_pt x)"

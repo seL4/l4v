@@ -10,25 +10,21 @@
  *)
 
 theory PageTable_D
-imports Invocations_D CSpace_D
+imports
+  Invocations_D
+  CSpace_D
 begin
-
-(* Return the set of free PD slots in the given PD. *)
-definition
-  free_pd_slots :: "cdl_object \<Rightarrow> cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_cap_ref set"
-where
-  "free_pd_slots pd pd_id state \<equiv> {(pd_id, y). (object_slots pd) y = Some NullCap}"
 
 (* Return the set of all PD/PT slots in the given PD. *)
 definition
   all_pd_pt_slots :: "cdl_object \<Rightarrow> cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_cap_ref set"
 where
   "all_pd_pt_slots pd pd_id state \<equiv> {(pd_id, y). y \<in> dom (object_slots pd)}
-     \<union> {(x, y). \<exists> a b c. (object_slots pd) a = Some (PageTableCap x b c) \<and> x \<in> dom (cdl_objects state)}"
+     \<union> {(x, y). \<exists> a b c. (object_slots pd) a = Some (PageTableCap PT x b c) \<and> x \<in> dom (cdl_objects state)}"
 
 definition
   "cdl_get_pt_mapped_addr cap \<equiv>
-    case cap of PageTableCap pid ctype maddr \<Rightarrow>  maddr
+    case cap of PageTableCap _ pid ctype maddr \<Rightarrow>  maddr
     | _ \<Rightarrow> None"
 
 (* Decode a page table intent into an invocation. *)
@@ -52,17 +48,19 @@ where
         pd \<leftarrow> throw_on_none $ get_index caps 0;
         (pd_object_id, asid) \<leftarrow>
           case (fst pd) of
-              PageDirectoryCap x _ (Some asid) \<Rightarrow> returnOk (x, asid)
+              PageTableCap PD x _ (Some (asid, _)) \<Rightarrow> returnOk (x, asid)
             | _ \<Rightarrow> throw;
 
         target_slot \<leftarrow> returnOk $ cdl_lookup_pd_slot pd_object_id vaddr;
 
-        returnOk $ PageTableMap (PageTableCap (cap_object target) Real (Some (asid,vaddr && ~~ mask 20)))
-          (PageTableCap (cap_object target) Fake None) target_ref target_slot
+        new_attribs \<leftarrow> returnOk $ validate_pt_vm_attributes attr;
+
+        returnOk $ PageTableMap (PageTableCap PT (cap_object target) Real (Some (asid,vaddr && ~~ mask sectionBits)))
+          (PageTableCap PT (cap_object target) (Fake new_attribs) None) target_ref target_slot
       odE \<sqinter> throw
     \<comment> \<open>Unmap this PageTable.\<close>
     | PageTableUnmapIntent \<Rightarrow> (
-        case target of PageTableCap pid ctype maddr \<Rightarrow>
+        case target of PageTableCap PT pid ctype maddr \<Rightarrow>
         (returnOk $ PageTableUnmap maddr pid target_ref)
         | _ \<Rightarrow> throw
       ) \<sqinter> throw
@@ -79,11 +77,7 @@ where
       (returnOk $ PageDirectoryFlush CleanInvalidate )  \<sqinter> (returnOk $ PageDirectoryFlush Invalidate)
       \<sqinter> throw "
 
-
-
-
 (* Decode a page intent into an invocation. *)
-
 definition
   decode_page_invocation :: "cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow>
       cdl_page_intent \<Rightarrow> cdl_page_invocation except_monad"
@@ -102,7 +96,7 @@ where
           pd \<leftarrow> throw_on_none $ get_index caps 0;
           (pd_object_id, asid) \<leftarrow>
             case (fst pd) of
-                PageDirectoryCap x _ (Some asid) \<Rightarrow> returnOk (x, asid)
+                PageTableCap PD x _ (Some (asid, _)) \<Rightarrow> returnOk (x, asid)
               | _ \<Rightarrow> throw;
 
           \<comment> \<open>Collect mapping from target cap.\<close>
@@ -113,9 +107,12 @@ where
           \<comment> \<open>Calculate rights.\<close>
           new_rights \<leftarrow> returnOk $ validate_vm_rights $ cap_rights target \<inter> rights;
 
+          \<comment> \<open>Calculate attribs.\<close>
+          new_attribs \<leftarrow> returnOk $ validate_vm_attributes attr (pageForPageBits sz);
+
           \<comment> \<open>Return the map intent.\<close>
           returnOk $ PageMap (FrameCap dev frame (cap_rights target) sz Real (Some (asid,vaddr)))
-            (FrameCap False frame new_rights sz Fake None) target_ref target_slots
+            (FrameCap False frame new_rights sz (Fake new_attribs) None) target_ref target_slots
         odE \<sqinter> throw
 
     \<comment> \<open>Unmap this PageTable.\<close>
@@ -144,8 +141,6 @@ where
       PageDirectoryFlush flush  => return ()
     | PageDirectoryNothing => return ()
   "
-
-definition "option_exec f \<equiv> \<lambda>x. case x of Some a \<Rightarrow> f a | None \<Rightarrow> return ()"
 
 (* Invoke a page table. *)
 definition
@@ -178,11 +173,11 @@ definition
   invoke_page :: "cdl_page_invocation \<Rightarrow> unit k_monad"
 where
   "invoke_page params \<equiv> case params of
-      PageMap frame_cap pseudo_frame_cap frame_cap_ref target_slots \<Rightarrow>
+      PageMap frame_cap pseudo_frame_cap frame_cap_ref target_slot \<Rightarrow>
           \<comment> \<open>Clear out the target slots.\<close>
         do
           set_cap frame_cap_ref frame_cap;
-          mapM_x (swp set_cap pseudo_frame_cap) target_slots
+          set_cap target_slot pseudo_frame_cap
         od
 
     | PageUnmap mapped_addr frame_id frame_cap_ref pgsz \<Rightarrow> do

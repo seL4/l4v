@@ -344,7 +344,7 @@ lemma pspace_relation_sc_at:
 
 end
 
-lemma corres_get_tcb [corres]:
+lemma corres_get_tcb[corres]:
   "corres (tcb_relation \<circ> the) (tcb_at t) (tcb_at' t) (gets (get_tcb t)) (getObject t)"
   apply (rule corres_no_failI)
    apply wp

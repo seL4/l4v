@@ -42,6 +42,7 @@ lemma aobj_ref_cases:
     ASIDPoolCap w _ \<Rightarrow> Some w
   | ASIDControlCap \<Rightarrow> None
   | SGISignalCap _ _ \<Rightarrow> None
+  | SMCCap _ \<Rightarrow> None
   | FrameCap w _ _ _ _ \<Rightarrow> Some w
   | PageTableCap w _ _ \<Rightarrow> Some w
   | VCPUCap v \<Rightarrow> Some v)"

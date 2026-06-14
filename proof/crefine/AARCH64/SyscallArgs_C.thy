@@ -1176,6 +1176,85 @@ lemma getSyscallArg_ccorres_foo:
   apply (clarsimp simp: bind_def gets_def return_def split_def get_def)
   done
 
+lemma setMR_ccorres:
+  notes setRegister_ccorres[corres]
+  notes if_cong[cong]
+  notes unat_of_nat32 = unat_of_nat_eq[where 'a=32, unfolded word_bits_len_of]
+  shows
+  "ccorres (\<lambda>r r'. r = unat (r' && mask msgLengthBits)) ret__unsigned_'
+     (valid_pspace' and  case_option \<top> valid_ipc_buffer_ptr' buf
+           and (\<lambda>s. offset < msgMaxLength))
+     (UNIV \<inter> {s. offset_' s = of_nat offset} \<inter> {s. reg___unsigned_long_' s = v}
+             \<inter> {s. receiver_' s = tcb_ptr_to_ctcb_ptr thread}
+             \<inter> {s. receiveIPCBuffer_' s = option_to_ptr buf}) []
+     (setMR thread buf offset v) (Call setMR_'proc)"
+  apply (rule ccorres_gen_asm)
+  apply (cinit' lift: offset_' reg___unsigned_long_' receiver_' receiveIPCBuffer_')
+   apply (unfold setMR_def)
+   apply (rule ccorres_cond2'[where R=\<top>])
+     apply (clarsimp simp add: msgRegisters_unfold n_msgRegisters_def Collect_const_mem
+                      linorder_not_less word_le_nat_alt unat_of_nat32
+                      word_bits_def msgMaxLength_unfold)
+     apply arith
+    apply wpc
+     apply (simp add: option_to_ptr_def option_to_0_def Collect_False
+                      ccorres_cond_iffs
+                 del: Collect_const)
+     apply (rule ccorres_return_C, simp+)[1]
+    apply (simp add: option_to_ptr_def option_to_0_def Collect_True
+                     ccorres_cond_iffs
+                del: Collect_const ptr_add_def')
+    apply (rule ccorres_cond_true)
+    apply (rule ccorres_split_nothrow_novcg)
+        apply (rule ccorres_move_array_assertion_ipc_buffer
+               | (rule ccorres_flip_Guard, rule ccorres_move_array_assertion_ipc_buffer))+
+        apply (rule storeWordUser_ccorres)
+       apply ceqv
+      apply (rule ccorres_return_C, simp+)[1]
+     apply wp
+    apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
+    apply (simp add: msgLengthBits_def msgMaxLength_def
+                     unat_arith_simps less_mask_eq unat_of_nat
+                del: Collect_const)
+   apply ctac
+     apply (simp, rule ccorres_return_C, simp+)[1]
+    apply wp
+   apply (simp del: Collect_const)
+   apply (vcg exspec=setRegister_modifies)
+  supply Word.of_int_uint[simp del]
+  apply (simp add: Collect_const_mem option_to_0_def
+                   unat_gt_0 option_to_ptr_def)
+  apply (intro impI conjI allI; simp?)
+          apply (clarsimp simp: valid_ipc_buffer_ptr'_def)
+          apply (erule aligned_add_aligned)
+           apply (simp only: word_size_def is_aligned_mult_triv2[where n=3, simplified])
+          apply (simp add: msg_align_bits_def word_size_bits_def)
+         apply (simp add: n_msgRegisters_def length_msgRegisters msgLengthBits_def mask_def)
+        apply (simp add: msg_align_bits word_size_def msgMaxLength_def unat_of_nat
+                         length_msgRegisters n_msgRegisters_def uint_nat unat_word_ariths)
+       apply (simp add: unat_word_ariths msg_align_bits msgMaxLength_def
+                        word_less_nat_alt unat_of_nat)
+      apply (simp add: unat_word_ariths msg_align_bits msgMaxLength_def
+                       word_less_nat_alt unat_of_nat)
+     apply (clarsimp simp: valid_ipc_buffer_ptr'_def)
+    apply (simp add: unat_of_nat32 word_bits_def msgMaxLength_unfold
+                     word_le_nat_alt msgRegisters_ccorres n_msgRegisters_def)
+   apply (simp add: unat_of_nat32 msgMaxLength_unfold word_bits_def
+                    unat_add_lem[THEN iffD1] less_mask_eq msgLengthBits_def
+                    word_less_nat_alt)
+  apply (simp add: linorder_not_le n_msgRegisters_def)
+  done
+
+lemma setMR_ccorres_dc:
+  "ccorres dc xfdc
+     (valid_pspace' and  case_option \<top> valid_ipc_buffer_ptr' buf
+           and (\<lambda>s. offset < msgMaxLength))
+     (UNIV \<inter> {s. offset_' s = of_nat offset} \<inter> {s. reg___unsigned_long_' s = v}
+             \<inter> {s. receiver_' s = tcb_ptr_to_ctcb_ptr thread}
+             \<inter> {s. receiveIPCBuffer_' s = option_to_ptr buf}) []
+     (setMR thread buf offset v) (Call setMR_'proc)"
+  by (rule ccorres_rel_imp, rule setMR_ccorres, simp)
+
 end
 
 context begin interpretation Arch . (*FIXME: arch-split*)

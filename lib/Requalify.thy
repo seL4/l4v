@@ -81,8 +81,9 @@ val alias_default = false
 (* (aliasing) only *)
 val generic_options = Scan.optional (Args.parens alias >> (fn x => (x, ""))) (alias_default, "")
 
-(* e.g. ARM, ARM_A, ARM_H *)
-val arch_suffix = ((Parse.reserved "A" || Parse.reserved "H") >> (fn s =>  "_" ^ s))
+(* e.g. ARM, ARM_A, ARM_H, ARM_D *)
+val arch_suffix = (Parse.reserved "A" || Parse.reserved "H" || Parse.reserved "D") >>
+                  (fn s =>  "_" ^ s)
 fun arch_prefix suffix = getenv_strict "L4V_ARCH" ^ suffix
 
 (* ([aliasing][,] [A|H]) in that order *)
@@ -141,7 +142,7 @@ val get_const_nm = ((fst o dest_Const) oo (Proof_Context.read_const {proper = tr
 val get_type_nm = ((fst o dest_Type) oo (Proof_Context.read_type_name {proper = true, strict = false}))
 val get_fact_nm = (fst oo global_fact)
 
-(* For the arch_requalify commands, we prefix the const/type name based on L4V_ARCH and A/H option.
+(* For the arch_requalify commands, we prefix the const/type name based on L4V_ARCH and A/H/D option.
    This means we have to be careful when resolving names and marking up the document.
 
    What is completely non-obvious is that Proof_Context.read_const and Proof_Context.read_type_name
@@ -201,22 +202,22 @@ val _ =
 
 val _ =
   Outer_Syntax.command @{command_keyword arch_requalify_consts}
-    "alias const with current naming, but prepend \"($L4V_ARCH)_[A|H].\" using env. variable"
+    "alias const with current naming, but prepend \"($L4V_ARCH)_[A|H|D].\" using env. variable"
     (gen_requalify get_const_nm check_const const_alias true)
 
 val _ =
   Outer_Syntax.command @{command_keyword arch_requalify_types}
-    "alias type with current naming, but prepend \"($L4V_ARCH)_[A|H].\" using env. variable"
+    "alias type with current naming, but prepend \"($L4V_ARCH)_[A|H|D].\" using env. variable"
     (gen_requalify get_type_nm check_type_name type_alias true)
 
 val _ =
   Outer_Syntax.command @{command_keyword arch_requalify_facts}
-    "alias fact with current naming, but prepend \"($L4V_ARCH)_[A|H].\" using env. variable"
+    "alias fact with current naming, but prepend \"($L4V_ARCH)_[A|H|D].\" using env. variable"
     (gen_requalify get_fact_nm check_fact alias_fact true)
 
 val _ =
   Outer_Syntax.command @{command_keyword arch_global_naming}
-    "change global naming of context block to \"($L4V_ARCH)_[A|H]\" using env. variable"
+    "change global naming of context block to \"($L4V_ARCH)_[A|H|D]\" using env. variable"
     (arch_global_opts  >> (fn arch_suffix =>
       Toplevel.local_theory NONE NONE
         (Local_Theory.map_background_naming

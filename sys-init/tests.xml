@@ -14,7 +14,12 @@
 
 -->
 <testsuite cpu-timeout="3600" depends="isabelle Lib">
-    <!-- Refine -->
+    <!-- SysInit specs. Depends on one file in session DSpecProofs, but not
+         on the image DSpecProofs. -->
+    <sequence depends="SepDSpec">
+        <test name="SysInitSpec">make SysInitSpec</test>
+    </sequence>
+    <!-- SysInit proofs -->
     <sequence depends="DSpecProofs">
         <test name="SysInit">make SysInit</test>
         <test name="SysInitExamples">make SysInitExamples</test>

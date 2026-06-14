@@ -1005,8 +1005,7 @@ lemma deleteObjects_corres:
                            untyped_children_in_mdb s \<and> if_unsafe_then_cap s \<and>
                            valid_global_refs s" and
                   Q'="\<lambda>_ s. s \<turnstile>' capability.UntypedCap d base magnitude idx \<and>
-                            valid_pspace' s \<and>
-                            deletionIsSafe_delete_locale base magnitude s"
+                            valid_pspace' s \<and> deletionIsSafe_delete_locale base magnitude s"
                   in corres_underlying_split)
      apply (rule corres_bind_return)
      apply (rule corres_guard_imp[where r=dc])
@@ -1030,17 +1029,14 @@ lemma deleteObjects_corres:
           apply (drule(4) cte_map_not_null_outside')
            apply (fastforce simp add: cte_wp_at_caps_of_state)
           apply simp
-         apply (rule ext, clarsimp simp add: null_filter'_def
-                            map_to_ctes_delete[simplified field_simps])
+         apply (rule ext, clarsimp simp: null_filter'_def map_to_ctes_delete[simplified field_simps])
          apply (rule sym, rule ccontr, clarsimp)
-         apply (frule(2) pspace_relation_cte_wp_atI
-                         [OF state_relation_pspace_relation])
+         apply (frule (2) pspace_relation_cte_wp_atI[OF state_relation_pspace_relation])
          apply (elim exE)
-         apply (frule(4) cte_map_not_null_outside')
+         apply (frule (4) cte_map_not_null_outside')
           apply (rule cte_wp_at_weakenE, erule conjunct1)
           apply (case_tac y, clarsimp)
-          apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def
-                                valid_nullcaps_def)
+          apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def valid_nullcaps_def)
          apply clarsimp
          apply (frule_tac cref="(aa, ba)" in cte_map_untyped_range,
                 erule cte_wp_at_weakenE[OF _ TrueI], assumption+)
@@ -1051,8 +1047,7 @@ lemma deleteObjects_corres:
         apply (clarsimp simp: valid_cap_def, assumption)
        apply (rule detype_ready_queues_relation; blast?)
         apply (clarsimp simp: deletionIsSafe_delete_locale_def)
-       apply (frule state_relation_ready_queues_relation)
-       apply (simp add: ready_queues_relation_def Let_def)
+       apply (erule state_relation_ready_queues_relation)
       apply (clarsimp simp: state_relation_def)
      apply (clarsimp simp: state_relation_def ghost_relation_of_heap detype_def)
      apply (drule_tac t="gsUserPages s'" in sym)

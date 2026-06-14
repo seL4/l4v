@@ -601,8 +601,8 @@ lemma createNewCaps_cte_wp_at2[Retype_R_assms]:
       apply (rename_tac apiobject_type)
       apply (case_tac apiobject_type; simp split del: if_split)
             apply (wpsimp wp: createObjects_orig_cte_wp_at2'[where sz = sz] mapM_x_wp'
-                          simp: curDomain_def APIType_capBits_def APIType_capBits_gen_def
                           split_del: if_split
+                          simp: curDomain_def APIType_capBits_def APIType_capBits_gen_def
                    | simp add: projectKO_opts_defs makeObject_tcb tcb_cte_cases_def Let_def
                                scBits_simps objBits_if_dev objBits_simps' bit_simps
                           split del: if_split
@@ -1730,22 +1730,22 @@ lemma corres_retype_region_createNewCaps:
                 apply simp
                apply (clarsimp simp: range_cover_def)
                apply (arith+)[4]
-           \<comment> \<open>TCB\<close>
-           apply (simp_all add: curDomain_def split del: if_split)
-           apply (rule corres_underlying_gets_pre_rhs[rotated])
-            apply (rule gets_sp)
-           apply (rule corres_guard_imp)
-             apply (rule corres_bind_return)
-             apply (rule corres_split_eqr)
-                apply (rule corres_retype[where 'a = tcb],
-                       simp_all add: obj_bits_api_def objBits_simps' pageBits_def
-                                     APIType_map2_def makeObjectKO_def)[1]
-                 apply (fastforce simp: range_cover_def)
-                apply (simp add: tcb_relation_retype)
-               apply (rule corres_returnTT, simp)
-               apply (clarsimp simp: list_all2_same list_all2_map1 list_all2_map2
-                                     objBits_simps APIType_map2_def)
-              apply ((wp | simp add: APIType_map2_def)+)[1]
+         \<comment> \<open>TCB\<close>
+         apply (simp_all add: curDomain_def APIType_map2_gen_def split del: if_split)
+         apply (rule corres_underlying_gets_pre_rhs[rotated])
+          apply (rule gets_sp)
+         apply (rule corres_guard_imp)
+           apply (rule corres_bind_return)
+           apply (rule corres_split_eqr)
+              apply (rule corres_retype[where 'a = tcb],
+                     simp_all add: obj_bits_api_def objBits_simps' pageBits_def
+                                   APIType_map2_def makeObjectKO_def)[1]
+               apply (fastforce simp: range_cover_def)
+              apply (simp add: tcb_relation_retype)
+             apply (rule corres_returnTT, simp)
+             apply (clarsimp simp: list_all2_same list_all2_map1 list_all2_map2
+                                   objBits_simps APIType_map2_def)
+            apply ((wp | simp add: APIType_map2_def)+)[1]
              apply ((wp createObjects_tcb_at'[where sz=sz] | simp add: APIType_map2_def objBits_simps' obj_bits_api_def)+)[1]
             apply simp
            apply simp

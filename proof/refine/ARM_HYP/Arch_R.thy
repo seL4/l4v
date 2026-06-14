@@ -1644,8 +1644,9 @@ lemma findPDForASID_valid_offset'[wp]:
   done
 
 lemma eq_arch_update':
-  "ArchObjectCap cp = cteCap cte \<Longrightarrow> is_arch_update' (ArchObjectCap cp) cte"
-  by (clarsimp simp: is_arch_update'_def isCap_simps)
+  "\<lbrakk> ArchObjectCap cp = cteCap cte; arch_capBadge cp = None \<rbrakk> \<Longrightarrow>
+   is_arch_update' (ArchObjectCap cp) cte"
+  by (drule sym, clarsimp simp: is_arch_update'_def isCap_simps)
 
 lemma lookupPTSlot_page_table_at':
   "\<lbrace>valid_objs'\<rbrace> lookupPTSlot pd vptr
@@ -1945,6 +1946,8 @@ lemma arch_decodeInvocation_wf[wp]:
       apply (thin_tac "Ball S P" for S P)
       apply (erule cte_wp_at_weakenE')
       apply (clarsimp simp: is_arch_update'_def isCap_simps)
+      apply (drule_tac t="cteCap c" in sym)
+      apply clarsimp
      apply (cases "ARM_HYP_H.isPageFlushLabel (invocation_type label)")
       apply (clarsimp simp: ARM_HYP_H.isPageFlushLabel_def split: invocation_label.splits arch_invocation_label.splits)
          apply (rule arch_decodeARMPageFlush_wf,
@@ -1985,7 +1988,7 @@ lemma arch_decodeInvocation_wf[wp]:
                     | wpc | simp add: valid_arch_inv'_def valid_pti'_def if_apply_def2
                     | rule hoare_drop_imp)+)[20]
     apply (clarsimp simp: linorder_not_le isCap_simps cte_wp_at_ctes_of)
-    apply (frule eq_arch_update')
+    apply (frule eq_arch_update', simp)
     apply (case_tac option; clarsimp)
     apply (drule_tac t="cteCap ctea" in sym, simp)
     apply (clarsimp simp: is_arch_update'_def isCap_simps valid_cap'_def capAligned_def)

@@ -798,6 +798,18 @@ lemma in_all_active_tcb_ptrsD:
   apply (case_tac st; clarsimp)
   done
 
+lemma chooseThread_nosch:
+  "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>
+   chooseThread
+   \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
+  unfolding chooseThread_def Let_def curDomain_def
+  supply if_split[split del]
+  apply (simp only: return_bind, simp)
+  apply (wp findM_inv | simp)+
+  apply (case_tac queue)
+  apply (wp stt_nosch | simp add: curDomain_def bitmap_fun_defs)+
+  done
+
 lemma scheduleChooseNewThread_no_orphans:
   "\<lbrace>invs' and no_orphans
     and (\<lambda>s. ksSchedulerAction s = ChooseNewThread
@@ -1680,7 +1692,8 @@ lemma tc_no_orphans:
     K (case_option True isArchObjectCap (case_option None (case_option None (Some o fst) o snd) g)) and
     K (case_option True (swp is_aligned 2 o fst) g) and
     K (case_option True (swp is_aligned msg_align_bits o fst) g) and
-    K (case g of None \<Rightarrow> True | Some x \<Rightarrow> (case_option True (isArchObjectCap \<circ> fst) \<circ> snd) x) and
+    K (case g of None \<Rightarrow> True | Some x \<Rightarrow>
+         (case_option True ((\<lambda>cap. isArchObjectCap cap \<and> capBadge cap = None) \<circ> fst) \<circ> snd) x) and
     K (valid_option_prio d \<and> valid_option_prio mcp) \<rbrace>
       invokeTCB (tcbinvocation.ThreadControl a sl b' mcp d e' f' g)
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"

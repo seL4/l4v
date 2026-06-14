@@ -225,7 +225,7 @@ text \<open>
 \<close>
 definition
   get_page_info :: "(obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> obj_ref \<Rightarrow>
-                    machine_word \<rightharpoonup> (machine_word \<times> nat \<times> frame_attrs \<times> vm_rights)"
+                    machine_word \<rightharpoonup> (machine_word \<times> nat \<times> vm_attributes \<times> vm_rights)"
 where
   "get_page_info ahp pm_ref vptr \<equiv>
      if canonical_address vptr then

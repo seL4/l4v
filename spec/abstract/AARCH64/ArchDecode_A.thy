@@ -70,9 +70,6 @@ definition arch_decode_irq_control_invocation ::
         else throwError TruncatedMessage
       else throwError IllegalOperation)"
 
-definition attribs_from_word :: "machine_word \<Rightarrow> vm_attributes" where
-  "attribs_from_word w \<equiv> {attr.  \<not>w!!0 \<and> attr = Device \<or> \<not>w !! 2 \<and> attr = Execute}"
-
 definition make_user_pte :: "paddr \<Rightarrow> vm_attributes \<Rightarrow> vm_rights \<Rightarrow> vmpage_size \<Rightarrow> pte" where
   "make_user_pte addr attr rights vm_size \<equiv>
      PagePTE addr (vm_size = ARMSmallPage) (attr - {Global}) rights"
@@ -329,6 +326,20 @@ definition decode_sgi_signal_invocation :: "arch_cap \<Rightarrow> (arch_invocat
        SGISignalCap irq target \<Rightarrow> returnOk $ InvokeSGISignal $ SGISignalGenerate irq target
      | _ \<Rightarrow> fail"
 
+definition decode_smc_invocation ::
+  "data \<Rightarrow> data list \<Rightarrow> arch_cap \<Rightarrow> (arch_invocation, 'z::state_ext) se_monad"
+  where
+  "decode_smc_invocation label args acap \<equiv> doE
+     unlessE (invocation_type label = ArchInvocationLabel ARMSMCCall) $ throwError IllegalOperation;
+     unlessE (length args \<ge> numSMCRegs) $ throwError TruncatedMessage;
+     assertE (is_SMCCap acap);
+     badge \<leftarrow> returnOk $ acap_smc_badge acap;
+     smc_fun_id \<leftarrow> returnOk $ args ! 0;
+     whenE (badge \<noteq> 0 \<and> badge \<noteq> smc_fun_id) $ throwError IllegalOperation;
+     returnOk $ InvokeSMCCall $
+                  SMCCall (args!0, args!1, args!2, args!3, args!4, args!5, args!6, args!7)
+   odE"
+
 definition arch_decode_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cap_ref \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
     (arch_invocation,'z::state_ext) se_monad"
@@ -340,7 +351,8 @@ definition arch_decode_invocation ::
    | ASIDControlCap              \<Rightarrow> decode_asid_control_invocation label args cte cap extra_caps
    | ASIDPoolCap _ _             \<Rightarrow> decode_asid_pool_invocation label args cte cap extra_caps
    | VCPUCap _                   \<Rightarrow> decode_vcpu_invocation label args cap extra_caps
-   | SGISignalCap _ _            \<Rightarrow> decode_sgi_signal_invocation cap"
+   | SGISignalCap _ _            \<Rightarrow> decode_sgi_signal_invocation cap
+   | SMCCap _                    \<Rightarrow> decode_smc_invocation label args cap"
 
 section "Interface Functions used in Decode"
 

@@ -18,19 +18,16 @@
  * a single invocation when being validated.
  *
  * Caps required by the intents are not stored in the intent themselves,
- * but passed seperately in when required. In some sense, the Intent
+ * but passed separately in when required. In some sense, the Intent
  * is the "data" part of an invocation, but not the "caps" part of it.
  *)
 
 theory Intents_D
 imports
-  "ASpec.CapRights_A"
-  ExecSpec.Platform
+  ASpec.CapRights_A
+  VMAttributes_D
+  Structures_D
 begin
-
-context begin interpretation Arch .
-requalify_types irq
-end
 
 (*
  * Entities in seL4 have particular rights to kernel objects, which
@@ -39,7 +36,7 @@ end
 type_synonym cdl_right = rights
 
 (* A user cap pointer. *)
-type_synonym cdl_cptr = word32
+type_synonym cdl_cptr = machine_word
 
 abbreviation (input) Read ::rights
   where "Read \<equiv> AllowRead"
@@ -54,13 +51,36 @@ abbreviation (input) GrantReply::rights
   where "GrantReply \<equiv> AllowGrantReply"
 
 (* Capability data, such as guard information. *)
-type_synonym cdl_raw_capdata = word32
+type_synonym cdl_raw_capdata = machine_word
 
 (* VM Attributes, such as page cache attributes. *)
-type_synonym cdl_raw_vmattrs = word32
+type_synonym cdl_raw_vmattrs = arch_raw_vmattrs
 
 (* TCB context, for operations such as write to a thread's registers. *)
-type_synonym cdl_raw_usercontext = "word32 list"
+type_synonym cdl_raw_usercontext = "machine_word list"
+
+(* Thread priorities *)
+type_synonym prio = word8
+
+(* Domains in the domain scheduler *)
+type_synonym domain = word8
+
+(* Union of seL4 page table types. We use a separate type, because storing the level is too
+   fine-grained for e.g. RISCV64, and storing the size is too coarse-grained for some configs
+   in AARCH64.
+
+   ARM/ARM_HYP/IA32 use PT/PD. RISCV64 uses PT. AARCH64 uses PT/VS_ROOT. X64 uses PT/PD/PDPT/PML4. *)
+datatype cdl_pt_type =
+  PT | PD | VSROOT | PDPT | PML4
+
+definition
+  "vspace_type \<equiv> case cdl_ARCH of
+     AARCH32 \<Rightarrow> PD
+   | AARCH64 \<Rightarrow> VSROOT
+   | RISCV32 \<Rightarrow> PT
+   | RISCV64 \<Rightarrow> PT
+   | IA32    \<Rightarrow> PD
+   | X64     \<Rightarrow> PML4"
 
 (* Kernel objects types. *)
 datatype cdl_object_type =
@@ -71,65 +91,73 @@ datatype cdl_object_type =
   | IRQNodeType
   | UntypedType
   | AsidPoolType
-  | PageTableType
-  | PageDirectoryType
+  | PageTableType (cdl_pt_type : cdl_pt_type)
   | FrameType nat (* size in bits of desired page *)
+  | VCPUType
 
 datatype cdl_cnode_intent =
     (* Copy: (target), dest_index, dest_depth, (src_root), src_index, src_depth, rights *)
-    CNodeCopyIntent word32 word32 word32 word32 "cdl_right set"
+    CNodeCopyIntent machine_word machine_word machine_word machine_word "cdl_right set"
     (* Mint: (target), dest_index, dest_depth, (src_root), src_index, src_depth, rights, badge *)
- |  CNodeMintIntent word32 word32 word32 word32 "cdl_right set" cdl_raw_capdata
+ |  CNodeMintIntent machine_word machine_word machine_word machine_word "cdl_right set" cdl_raw_capdata
     (* Move: (target), dest_index, dest_depth, (src_root), src_index, src_depth *)
- |  CNodeMoveIntent word32 word32 word32 word32
+ |  CNodeMoveIntent machine_word machine_word machine_word machine_word
     (* Mutate: (target), dest_index, dest_depth, (src_root), src_index, src_depth, badge *)
- |  CNodeMutateIntent word32 word32 word32 word32 cdl_raw_capdata
+ |  CNodeMutateIntent machine_word machine_word machine_word machine_word cdl_raw_capdata
     (* Revoke: (target), index, depth *)
- |  CNodeRevokeIntent word32 word32
+ |  CNodeRevokeIntent machine_word machine_word
     (* Delete: (target), index, depth *)
- |  CNodeDeleteIntent word32 word32
+ |  CNodeDeleteIntent machine_word machine_word
     (* SaveCaller: (target), index, depth *)
- |  CNodeSaveCallerIntent word32 word32
+ |  CNodeSaveCallerIntent machine_word machine_word
     (* CancelBadgedSends: (target), index, depth *)
- |  CNodeCancelBadgedSendsIntent word32 word32
-    (* Rotate: (target), dest_index, dest_depth, (pivot_root), pivot_index, pivot_depth, pivot_badge, (src_root), src_index, src_depth, src_badge *)
- |  CNodeRotateIntent word32 word32 word32 word32 cdl_raw_capdata word32 word32 cdl_raw_capdata
+ |  CNodeCancelBadgedSendsIntent machine_word machine_word
+    (* Rotate: (target), dest_index, dest_depth, (pivot_root), pivot_index, pivot_depth, pivot_badge,
+               (src_root), src_index, src_depth, src_badge *)
+ |  CNodeRotateIntent machine_word machine_word machine_word machine_word cdl_raw_capdata
+                      machine_word machine_word cdl_raw_capdata
+
+type_synonym arch_flags = word8 (* FIXME arch-split: check if used *)
 
 datatype cdl_tcb_intent =
     (* ReadRegisters: (target), suspend_source, arch_flags, count *)
-    TcbReadRegistersIntent bool word8 word32
+    TcbReadRegistersIntent bool arch_flags machine_word
     (* WriteRegisters: (target), resume_target, arch_flags, count, regs *)
- |  TcbWriteRegistersIntent bool word8 word32 cdl_raw_usercontext
-    (* CopyRegisters: (target), (source), suspend_source, resume_target, transfer_frame, transfer_integer, arch_flags *)
- |  TcbCopyRegistersIntent bool bool bool bool word8
+ |  TcbWriteRegistersIntent bool arch_flags machine_word cdl_raw_usercontext
+    (* CopyRegisters: (target), (source), suspend_source, resume_target, transfer_frame,
+                      transfer_integer, arch_flags *)
+ |  TcbCopyRegistersIntent bool bool bool bool arch_flags
     (* Suspend: (target) *)
  |  TcbSuspendIntent
     (* Resume: (target) *)
  |  TcbResumeIntent
-    (* Configure: (target), fault_ep, (cspace_root), cspace_root_data, (vspace_root), vspace_root_data, buffer, (bufferFrame) *)
- |  TcbConfigureIntent cdl_cptr cdl_raw_capdata cdl_raw_capdata word32
+    (* Configure: (target), fault_ep, (cspace_root), cspace_root_data, (vspace_root),
+                  vspace_root_data, buffer, (bufferFrame) *)
+ |  TcbConfigureIntent cdl_cptr cdl_raw_capdata cdl_raw_capdata machine_word
     (* SetMCPriority: (target), mcp *)
- |  TcbSetMCPriorityIntent word8
+ |  TcbSetMCPriorityIntent prio
     (* SetPriority: (target), priority *)
- |  TcbSetPriorityIntent word8
+ |  TcbSetPriorityIntent prio
     (* SetSchedParams: (target), mcp, priority *)
- |  TcbSetSchedParamsIntent word8 word8
+ |  TcbSetSchedParamsIntent prio prio
     (* SetIPCBuffer: (target), buffer, (bufferFrame) *)
- |  TcbSetIPCBufferIntent word32
+ |  TcbSetIPCBufferIntent machine_word
     (* SetSpace: (target), fault_ep, (cspace_root), cspace_root_data, (vspace_root), vspace_root_data *)
- |  TcbSetSpaceIntent word32 cdl_raw_capdata cdl_raw_capdata
+ |  TcbSetSpaceIntent machine_word cdl_raw_capdata cdl_raw_capdata
     (* BindNTFN: (target), (ntfn) *)
  |  TcbBindNTFNIntent
     (* UnbindNTFN: (target) *)
  |  TcbUnbindNTFNIntent
     (* SetTLSBase: (target) *)
  |  TcbSetTLSBaseIntent
-    (* SetFlags: (target) *)
- |  TcbSetFlagsIntent
+    (* SetFlags: (target) set_flags clear_flags *)
+ |  TcbSetFlagsIntent machine_word machine_word
 
 datatype cdl_untyped_intent =
-    (* Retype: (target), (do_reset), type, size_bits, (root), node_index, node_depth, node_offset, node_window, has_children *)
-    UntypedRetypeIntent cdl_object_type word32 word32 word32 word32 word32
+    (* Retype: (target), (do_reset), type, size_bits, (root), node_index, node_depth, node_offset,
+               node_window, has_children *)
+    UntypedRetypeIntent cdl_object_type machine_word machine_word machine_word machine_word
+                        machine_word
 
 datatype cdl_irq_handler_intent =
     (* Ack: (target) *)
@@ -141,24 +169,24 @@ datatype cdl_irq_handler_intent =
 
 datatype cdl_arch_irq_control_intent =
     (* ArchIssueIrqHandler: (target), irq, (root), index, depth *)
-    ARMIrqControlIssueIrqHandlerIntent irq word32 word32
+    ARMIrqControlIssueIrqHandlerIntent irq machine_word machine_word
     (* ARMIssueSGISignal: irq, target, index, depth, (cnode) *)
   | ARMIssueSGISignalIntent machine_word machine_word machine_word machine_word
 
 datatype cdl_irq_control_intent =
     (* IssueIrqHandler: (target), irq, (root), index, depth *)
-    IrqControlIssueIrqHandlerIntent irq word32 word32
+    IrqControlIssueIrqHandlerIntent irq machine_word machine_word
     (* InterruptControl *)
   | ArchIrqControlIssueIrqHandlerIntent cdl_arch_irq_control_intent
 
 datatype cdl_page_table_intent =
     (* Map: (target), (pd), vaddr, attr *)
-    PageTableMapIntent word32 cdl_raw_vmattrs
+    PageTableMapIntent machine_word cdl_raw_vmattrs
  |  PageTableUnmapIntent
 
 datatype cdl_page_intent =
     (* Map: (target), (pd), vaddr, rights, attr *)
-    PageMapIntent word32 "cdl_right set" cdl_raw_vmattrs
+    PageMapIntent machine_word "cdl_right set" cdl_raw_vmattrs
     (* Unmap: (target) *)
  |  PageUnmapIntent
     (* FlushCaches: (target) *)
@@ -173,20 +201,20 @@ datatype cdl_page_directory_intent =
 
 datatype cdl_asid_control_intent =
     (* MakePool: (target), (untyped), (root), index, depth *)
-    AsidControlMakePoolIntent word32 word32
+    AsidControlMakePoolIntent machine_word machine_word
 
 datatype cdl_asid_pool_intent =
     (* Assign: (target), (vroot) *)
     AsidPoolAssignIntent
 
 datatype cdl_notification_intent =
-    SendSignalIntent word32
+    SendSignalIntent machine_word
 
 (* Also used with reply caps *)
 datatype cdl_endpoint_intent =
     SendMessageIntent "cdl_cptr list"
 
-datatype cdl_domain_intent = DomainSetIntent word8
+datatype cdl_domain_intent = DomainSetIntent domain
 
 datatype cdl_intent =
     CNodeIntent cdl_cnode_intent
@@ -202,12 +230,13 @@ datatype cdl_intent =
   | NotificationIntent cdl_notification_intent
   | EndpointIntent cdl_endpoint_intent
   | DomainIntent cdl_domain_intent
+  | VCPUIntent
 
 record cdl_full_intent =
   cdl_intent_op        :: "cdl_intent option"
   cdl_intent_error     :: bool
   cdl_intent_cap       :: cdl_cptr
   cdl_intent_extras    :: "cdl_cptr list"
-  cdl_intent_recv_slot :: "(cdl_cptr \<times> word32 \<times> nat) option"
+  cdl_intent_recv_slot :: "(cdl_cptr \<times> machine_word \<times> nat) option"
 
 end

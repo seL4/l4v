@@ -11,6 +11,7 @@ imports
   ExecSpec.Arch_Structs_B
   ExceptionTypes_A
   VMRights_A
+  ArchVMAttributes_A
   ExecSpec.Arch_Kernel_Config_Lemmas
 begin
 
@@ -49,12 +50,6 @@ definition update_map_data :: "arch_cap \<Rightarrow> (asid \<times> vspace_ref)
 
 
 section \<open>Architecture-specific objects\<close>
-
-(* This datatype does not match up with the executable spec directly:
-   This one here models all "things" one can set on a page or page table entry.
-   The attributes accessible to users are the ones returned by attribs_from_word. *)
-datatype vm_attribute = Global | Execute | User
-type_synonym vm_attributes = "vm_attribute set"
 
 (* The address of the target object is stored shifted right by pt_bits and stored as a ppn (page
    number). To get the address, use addr_from_pte *)

@@ -386,7 +386,7 @@ lemma invoke_vcpu_write_register_valid_sched[wp]:
   "\<lbrace>valid_sched and ct_active\<rbrace> invoke_vcpu_write_register v reg val \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   unfolding invoke_vcpu_write_register_def by (wpsimp wp: set_thread_state_Restart_valid_sched)
 
-crunch perform_vcpu_invocation
+crunch perform_vcpu_invocation, perform_smc_invocation
   for valid_sched[wp]: valid_sched
   (wp: crunch_wps simp: crunch_simps ignore: set_thread_state)
 

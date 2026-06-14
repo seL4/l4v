@@ -45,24 +45,23 @@ I/O MMU additions add IO page table objects. Note that there is only one IO page
 
 > instance Enum ObjectType where
 >     fromEnum e =
->       case e of
->           APIObjectType a -> fromEnum a
->           _ -> apiMax + 1 + archToIndex e
->           where apiMax = fromEnum (maxBound :: APIObjectType)
->                 archToIndex c = fromJust $ elemIndex c
->                     [SmallPageObject
->                     ,LargePageObject
->                     ,SectionObject
->                     ,SuperSectionObject
->                     ,PageTableObject
->                     ,PageDirectoryObject
+>         -- This definition is ignored in Isabelle, the order is defined in the
+>         -- skeleton file instead.
+>         let apiMax = fromEnum (maxBound :: APIObjectType)
+>         in case e of
+>             APIObjectType a -> fromEnum a
+>             SmallPageObject -> apiMax + 1
+>             LargePageObject -> apiMax + 2
+>             SectionObject -> apiMax + 3
+>             SuperSectionObject -> apiMax + 4
+>             PageTableObject -> apiMax + 5
+>             PageDirectoryObject -> apiMax + 6
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
->                     ,VCPUObject
+>             VCPUObject -> apiMax + 7
 #endif
 #ifdef CONFIG_ARM_SMMU
->                     ,IOPageTableObject
+>             IOPageTableObject -> apiMax + 8
 #endif
->                     ]
 >     toEnum n
 >         | n <= apiMax = APIObjectType $ toEnum n
 >         | n == fromEnum SmallPageObject = SmallPageObject

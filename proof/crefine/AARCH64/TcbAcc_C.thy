@@ -497,5 +497,94 @@ lemma setMRs_single:
   apply (clarsimp simp: msgRegisters_unfold sequence_x_def)
   done
 
+definition
+  "setMR thread buffer \<equiv> \<lambda>idx value.
+   if idx < length msgRegisters
+   then do
+     asUser thread (setRegister (msgRegisters ! idx) value);
+     return (idx + 1)
+   od
+   else case buffer of None \<Rightarrow> return (length msgRegisters)
+     | Some buf \<Rightarrow> do
+         storeWordUser (buf + (of_nat (idx + 1) * word_size)) value;
+         return (idx + 1)
+   od"
+
+lemmas msgMaxLength_unfold
+    = msgMaxLength_def[where 'a=nat, unfolded msgLengthBits_def, simplified,
+                       unfolded shiftL_nat, simplified]
+
+lemma registers_less_maxlength:
+  "length msgRegisters < msgMaxLength"
+  by (simp add: msgRegisters_unfold msgMaxLength_unfold)
+
+lemma setMRs_to_setMR':
+  "setMRs thread buffer xs = do
+     stateAssert (tcb_at' thread) [];
+     ys \<leftarrow> zipWithM (setMR thread buffer) [0 ..< msgMaxLength] xs;
+     return (of_nat (min (length xs) (length msgRegisters +
+               (case buffer of
+                  None \<Rightarrow> 0
+                | _ \<Rightarrow> Suc (unat (msgMaxLength :: machine_word))
+                       - unat ((1 :: machine_word) + of_nat (length msgRegisters))))))
+   od"
+  apply (simp add: setMRs_def setMR_def split_def zipWithM_x_mapM_x asUser_mapM_x bind_assoc
+                   zipWithM_If_cut)
+  apply (simp add: zipWithM_mapM)
+  apply (simp add: split_def mapM_liftM_const[unfolded liftM_def] mapM_return mapM_Nil mapM_x_Nil
+                   asUser_mapM_x last_append map_replicate_const
+            split: option.split split del: if_split)
+  apply (simp add: mapM_discarded mapM_x_def split del: if_split)
+  apply (intro allI conjI impI bind_cong bind_apply_cong arg_cong2[where f=sequence_x]
+               map_length_cong,
+         insert registers_less_maxlength; simp)
+     apply (clarsimp simp: set_zip)
+    apply (clarsimp simp: set_zip)
+   apply (simp add: msgRegisters_unfold msgMaxLength_def msgLengthBits_def shiftL_nat)
+  apply (clarsimp simp only: set_zip min_less_iff_conj length_zip length_map nth_zip fst_conv
+                             nth_map snd_conv upto_enum_word length_drop length_take nth_drop
+                             nth_upt)
+  apply (subst nth_take)
+   apply (simp add: less_diff_conv)
+  apply (simp add: word_size word_size_def wordSize_def wordBits_def field_simps)
+  done
+
+lemma setMRs_to_setMR:
+  "setMRs thread buffer xs = do
+     stateAssert (tcb_at' thread) [];
+     ys \<leftarrow> zipWithM (setMR thread buffer) [0 ..< msgMaxLength] xs;
+     return (of_nat (last (0 # ys)))
+   od"
+  apply (simp add: setMRs_to_setMR' zipWithM_mapM split_def mapM_discarded
+              del: last.simps)
+  apply (subst mapM_last_Cons)
+    prefer 3
+    apply simp
+   apply (simp add: msgMaxLength_unfold)
+  apply (simp add: fst_last_zip_upt)
+  apply (subgoal_tac "msgMaxLength - Suc 0 \<ge> length msgRegisters \<and>
+                      of_nat (length xs - Suc 0) = of_nat (length xs) - (1 :: machine_word) \<and>
+                      unat ((1 :: machine_word) + of_nat (length msgRegisters)) = Suc (length msgRegisters)")
+   apply (simp add: setMR_def split: option.split)
+   apply (fastforce simp: msgRegisters_unfold msgMaxLength_def msgLengthBits_def shiftL_nat)
+  apply (simp add: msgRegisters_unfold msgMaxLength_unfold)
+  apply (case_tac xs; simp)
+  done
+
+crunch setMR
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and valid_objs'[wp]: valid_objs'
+  and pspace_aligned'[wp]: pspace_aligned'
+  and pspace_distinct'[wp]: pspace_distinct'
+  and schact_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
+  and vaild_pspace'[wp]: valid_pspace'
+
+lemmas setMR_typ_at_lifts[wp] = typ_at_lifts[OF setMR_typ_at']
+
+lemma setMR_ipc_buffer[unfolded none_top_def top_fun_def top_bool_def, wp]:
+  "setMR thread buffer reg val \<lbrace>none_top valid_ipc_buffer_ptr' buffer\<rbrace>"
+  unfolding setMR_def
+  by (cases buffer; wpsimp simp: valid_ipc_buffer_ptr'_def)
+
 end
 end

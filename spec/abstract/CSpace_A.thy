@@ -902,13 +902,11 @@ definition
 
 section "Cap classification used to define invariants"
 
+text \<open>@{term PhysicalClass} is for caps to objects that consume physical
+memory. This includes anything that can be retyped from Untyped caps.
+@{term OtherCapClass} for anything else.\<close>
+
 datatype capclass =
-    PhysicalClass
-  | IRQClass
-  | ASIDMasterClass
-  | NullClass
-  | DomainClass
-  | IOPortClass
-  | SchedControlClass
+  PhysicalClass | OtherCapClass
 
 end

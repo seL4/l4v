@@ -702,6 +702,8 @@ known_type_assignments = [
     'user_monad',
     'reader_m',
     'reader_m s',
+    'fpustate',
+    'eight_tuple a'
 ]
 
 
@@ -710,8 +712,8 @@ def typename_transform(line, header, d):
         [oldtype] = line.split()
     except:
         if header not in known_type_assignments:
-            warning('type assignment with parameters not supported %s, (%s)' %
-                    (d.body, header), filename)
+            warning('Type assignment with parameters not supported %s\n  Translated string was "%s"'
+                    % (d.body, header), filename)
             call.bad_type_assignment = True
         return
     if oldtype.startswith('Data.Word.Word'):
@@ -2254,7 +2256,7 @@ regexes = [
     (re.compile('/='), r'\<noteq>'),
     (re.compile('"([^"])*"'), '[]'),
     (re.compile('&&'), r'\<and>'),
-    (re.compile('\|\|'), r'\<or>'),
+    (re.compile(r'\|\|'), r'\<or>'),
     (re.compile(r"(\W)not(\s)"), r"\1Not\2"),
     (re.compile(r"(\W)and(\s)"), r"\1andList\2"),
     (re.compile(r"(\W)or(\s)"), r"\1orList\2"),

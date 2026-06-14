@@ -10,6 +10,8 @@ imports
   "HOL-Eisbach.Eisbach_Tools"
 begin
 
+(* An attribute that produces a theorem/rule via proof method. Used to define tsbust method as demo. *)
+
 ML \<open>
 signature RULE_BY_METHOD =
 sig
@@ -258,6 +260,9 @@ val _ = Theory.setup
     "atomize rule")
 \<close>
 
+
+(* Demo: inline use *)
+
 experiment begin
 
 ML \<open>
@@ -282,6 +287,31 @@ lemma assumes A shows A by (silly_rule A rule: \<open>A\<close>)
 lemma assumes A[simp]: "A" shows A
   apply (match conclusion in P for P \<Rightarrow>
        \<open>rule [[@\<open>erule thin_rl, rule revcut_rl[of "P"], simp\<close>]]\<close>)
+  done
+
+end
+
+
+(* Demo: tsubst *)
+
+(* The rule-by-method attribute can be used to state and prove simple equations on the fly,
+   for instance for substituting exactly one term. The method below only works for terms
+   without schematic variables. *)
+
+method tsubst_m for s :: 'a and t :: 'a methods m
+  \<open>substitute s with t in goal; prove s=t by m\<close> =
+  subst [[@\<open>erule thin_rl, rule revcut_rl[of "s = t"], m\<close>]] |
+  subst (asm) [[@\<open>erule thin_rl, rule revcut_rl[of "s = t"], m\<close>]]
+
+method tsubst for s :: 'a and t :: 'a
+  \<open>substitute s with t in goal; prove s=t by simp\<close> =
+  tsubst_m s t simp
+
+experiment begin
+
+lemma "P (32 + (42 - 5) :: nat) = P 69"
+  apply (tsubst "32 + (42 - 5) :: nat" "32 + 42 - 5")
+  apply simp
   done
 
 end

@@ -1191,7 +1191,7 @@ lemma ctes_of_strng:
 lemma updateCap_valid_cap [wp]:
   "\<lbrace>valid_cap' cap\<rbrace> updateCap ptr cap' \<lbrace>\<lambda>r. valid_cap' cap\<rbrace>"
   unfolding updateCap_def
-  by (wp setCTE_valid_cap getCTE_wp) (clarsimp dest!: cte_at_cte_wp_atD)
+  by (wp getCTE_wp) (clarsimp dest!: cte_at_cte_wp_atD)
 
 lemma mdb_chain_0_trancl:
   assumes chain: "mdb_chain_0 m"
@@ -5820,10 +5820,6 @@ lemma shrink_zombie_invs':
   apply (drule word_le_minus_one_leq)
   apply (rule ccontr, simp add: linorder_not_less mult.commute mult.left_commute shiftl_t2n)
   done
-
-crunch suspend
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps getObject_inv_tcb simp: crunch_simps)
 
 lemma cte_wp_at_cteCap_norm:
   "(cte_wp_at' (\<lambda>c. P (cteCap c)) p s) = (\<exists>cap. cte_wp_at' (\<lambda>c. cteCap c = cap) p s \<and> P cap)"

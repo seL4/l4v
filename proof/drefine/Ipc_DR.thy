@@ -603,7 +603,7 @@ lemma receive_blocked_waiting_syncs:
     apply (clarsimp simp: transform_object_def
                    split: Structures_A.kernel_object.splits ARM_A.arch_kernel_obj.splits
                           option.splits nat.splits)
-    apply (clarsimp simp add: transform_tcb_def tcb_pending_op_slot_def
+    apply (clarsimp simp add: transform_tcb_def tcb_pending_op_slot_def tcb_boundvcpu_slot_def
                               tcb_boundntfn_slot_def infer_tcb_bound_notification_def
                        split: option.splits)
     apply (frule_tac tcb="x2a" in  bound_tcb_fold, simp)
@@ -620,7 +620,8 @@ lemma receive_blocked_waiting_syncs:
   apply (frule transform_objects_tcb)
    apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
   apply (clarsimp simp: transform_tcb_def tcb_pending_op_slot_def tcb_boundntfn_slot_def
-                        infer_tcb_pending_op_def infer_tcb_bound_notification_def receive_blocked_def
+                        tcb_boundvcpu_slot_def infer_tcb_pending_op_def
+                        infer_tcb_bound_notification_def receive_blocked_def
                  split: Structures_A.thread_state.splits)
   done
 
@@ -1470,7 +1471,7 @@ lemma get_receive_slot_dcorres:
   apply (clarsimp simp:cte_wp_at_cases dest!:get_tcb_SomeD)
   apply (drule_tac t ="tcb_ipcframe obj" in sym)
   apply (clarsimp simp:transform_full_intent_def Let_def bind_assoc)
-  apply (simp add:load_cap_transfer_def' tcb_slots)
+  apply (simp add:load_cap_transfer_def' tcb_slot_defs)
   apply (rule_tac Q' = "\<lambda>r s. r = get_ipc_buffer_words (machine_state s'a) obj
                [Suc (Suc (msg_max_length + msg_max_extra_caps))..<5 + (msg_max_length + msg_max_extra_caps)]
     \<and> s = s'a" in corres_symb_exec_r)
@@ -2077,9 +2078,9 @@ lemma dcorres_set_thread_state_Restart:
                 apply (clarsimp simp: transform_def transform_current_thread_def)
                 apply (intro conjI ext)
                  apply (clarsimp simp:transform_objects_def transform_tcb_def
-                  infer_tcb_pending_op_def restrict_map_def map_add_def tcb_slots)
+                  infer_tcb_pending_op_def restrict_map_def map_add_def tcb_slot_defs)
                 apply (solves \<open>clarsimp simp: transform_objects_def transform_tcb_def not_idle_thread_def
-                                              tcb_slots restrict_map_def map_add_def
+                                              tcb_slot_defs restrict_map_def map_add_def
                                        dest!: get_tcb_SomeD\<close>)
                prefer 2
                apply (wp remove_parent_dummy_when_pending_wp)
@@ -2133,7 +2134,7 @@ lemma dcorres_set_thread_state_Restart:
     not_idle_thread_def)
   apply (intro ext conjI)
   apply (fastforce simp: transform_objects_def transform_tcb_def restrict_map_def map_add_def
-                         assert_def infer_tcb_pending_op_def  not_idle_thread_def tcb_slots)
+                         assert_def infer_tcb_pending_op_def  not_idle_thread_def tcb_slot_defs)
   done
 
 
@@ -2331,7 +2332,7 @@ lemma dcorres_receive_sync:
      apply (erule get_tcb_rev)
     apply (frule_tac a = t and list = "t # ts" in pending_thread_in_send_not_idle)
        apply ((simp add: valid_state_def insertI obj_at_def not_idle_thread_def)+)[4]
-   apply (clarsimp simp: assert_opt_def transform_tcb_def infer_tcb_pending_op_def tcb_slots
+   apply (clarsimp simp: assert_opt_def transform_tcb_def infer_tcb_pending_op_def tcb_slot_defs
               split del: if_split)
    apply (rule dcorres_symb_exec_r)
      apply (rule corres_symb_exec_r)
@@ -2347,10 +2348,10 @@ lemma dcorres_receive_sync:
               apply (rule corres_alternate1)+
               apply (rule corres_setup_caller_cap)
               apply (clarsimp simp:st_tcb_at_def obj_at_def generates_pending_def)
-             apply (rule corres_alternate2[OF set_thread_state_corres[unfolded tcb_slots]])
+             apply (rule corres_alternate2[OF set_thread_state_corres[unfolded tcb_slot_defs]])
             apply (rule corres_alternate1[OF corres_alternate2])
             apply (rule dcorres_rhs_noop_below_True[OF possible_switch_to_dcorres])
-            apply (rule set_thread_state_corres[unfolded tcb_slots])
+            apply (rule set_thread_state_corres[unfolded tcb_slot_defs])
            apply wp
           apply (wp hoare_drop_imps gts_st_tcb_at | simp add:not_idle_thread_def)+
          apply (rule_tac Q'="\<lambda>fault. valid_mdb and valid_objs and pspace_aligned
@@ -2488,7 +2489,7 @@ lemma dcorres_dummy_set_pending_cap_Restart:
   apply (fastforce dest!: get_tcb_SomeD
     simp add: not_idle_thread_def
     transform_objects_def transform_tcb_def
-    infer_tcb_pending_op_def runnable_def tcb_slots
+    infer_tcb_pending_op_def runnable_def tcb_slot_defs
     split : Structures_A.thread_state.splits)
   done
 

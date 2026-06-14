@@ -374,7 +374,7 @@ lemma cteInsert_weak_cte_wp_at3:
 lemma maskedAsFull_null_cap[simp]:
   "(maskedAsFull x y = capability.NullCap) = (x = capability.NullCap)"
   "(capability.NullCap  = maskedAsFull x y) = (x = capability.NullCap)"
-  by (case_tac x, auto simp:maskedAsFull_def isCap_simps )
+  by (case_tac x, auto simp:maskedAsFull_def isCap_simps)
 
 lemma maskCapRights_eq_null:
   "(RetypeDecls_H.maskCapRights r xa = capability.NullCap) =
@@ -439,7 +439,7 @@ next
     apply (rule corres_const_on_failure)
     apply (simp add: dc_def[symmetric] split del: if_split)
     apply (rule corres_guard_imp)
-      apply (rule corres_if2)
+      apply (rule corres_if3)
         apply (case_tac "fst x", auto simp add: isCap_simps)[1]
        apply (rule corres_split[OF corres_set_extra_badge])
           apply (clarsimp simp: is_cap_simps)
@@ -543,6 +543,7 @@ next
       by (case_tac "capa = aa"; clarsimp split:if_splits simp:masked_as_full_def is_cap_simps)
     apply (case_tac "isEndpointCap (fst y) \<and> capEPPtr (fst y) = the ep \<and> (\<exists>y. ep = Some y)")
      apply (clarsimp simp:conj_comms split del:if_split)
+    apply (split if_split)
     apply (rule conjI)
      apply clarsimp
     apply (clarsimp simp:valid_pspace'_def cte_wp_at_ctes_of split del:if_split)
@@ -1127,34 +1128,45 @@ lemma is_derived_mask' [simp]:
   apply (simp add: is_derived'_def badge_derived'_def)
   done
 
+lemma arch_updateCapData_ordering: (* arch interface *)
+  "\<lbrakk> (x, arch_capBadge acap) \<in> capBadge_ordering P; Arch.updateCapData p d acap \<noteq> NullCap \<rbrakk>
+   \<Longrightarrow> (x, capBadge (Arch.updateCapData p d acap)) \<in> capBadge_ordering P"
+  apply (cases acap; simp add: AARCH64_H.updateCapData_def)
+  apply fastforce
+  done
+
 lemma updateCapData_ordering:
   "\<lbrakk> (x, capBadge cap) \<in> capBadge_ordering P; updateCapData p d cap \<noteq> NullCap \<rbrakk>
     \<Longrightarrow> (x, capBadge (updateCapData p d cap)) \<in> capBadge_ordering P"
-  apply (cases cap, simp_all add: updateCapData_def isCap_simps Let_def
-                                  capBadge_def AARCH64_H.updateCapData_def
-                           split: if_split_asm)
-   apply fastforce+
+  apply (cases cap; simp)
+    apply (fastforce simp: updateCapData_def Let_def isCap_simps split: if_split_asm)
+   apply (fastforce simp: updateCapData_def Let_def isCap_simps split: if_split_asm)
+  apply (fastforce dest: arch_updateCapData_ordering simp: updateCapData_def isCap_simps)
   done
 
 lemma updateCapData_capReplyMaster:
   "isReplyCap cap \<Longrightarrow> capReplyMaster (updateCapData p d cap) = capReplyMaster cap"
   by (clarsimp simp: isCap_simps updateCapData_def split del: if_split)
 
+lemma ArchUpdateCapData_noReply: (* arch interface *)
+  "Arch.updateCapData p d acap \<noteq> capability.ReplyCap x y z"
+  by (cases acap; simp add: AARCH64_H.updateCapData_def)
+
 lemma updateCapData_is_Reply[simp]:
   "(updateCapData p d cap = ReplyCap x y z) = (cap = ReplyCap x y z)"
   by (rule ccontr,
-      clarsimp simp: isCap_simps updateCapData_def Let_def
-                     AARCH64_H.updateCapData_def
+      clarsimp simp: isCap_simps updateCapData_def Let_def ArchUpdateCapData_noReply
           split del: if_split
               split: if_split_asm)
 
+lemma ArchUpdateCapData_noIRQControl: (* arch interface *)
+  "Arch.updateCapData p d acap \<noteq> IRQControlCap"
+  by (cases acap; simp add: AARCH64_H.updateCapData_def)
+
 lemma updateCapDataIRQ:
   "updateCapData p d cap \<noteq> NullCap \<Longrightarrow>
-  isIRQControlCap (updateCapData p d cap) = isIRQControlCap cap"
-  apply (cases cap, simp_all add: updateCapData_def isCap_simps Let_def
-                                  AARCH64_H.updateCapData_def
-                           split: if_split_asm)
-  done
+   isIRQControlCap (updateCapData p d cap) = isIRQControlCap cap"
+  by (cases cap; simp add: updateCapData_def isCap_simps Let_def ArchUpdateCapData_noIRQControl)
 
 lemma updateCapData_vs_cap_ref'[simp]:
   "vs_cap_ref' (updateCapData pr D c) = vs_cap_ref' c"
@@ -1163,7 +1175,7 @@ lemma updateCapData_vs_cap_ref'[simp]:
                      AARCH64_H.updateCapData_def
                      vs_cap_ref'_def
           split del: if_split
-              split: if_split_asm)
+              split: if_split_asm arch_capability.splits)
 
 lemma isFrameCap_updateCapData[simp]:
   "isArchCap isFrameCap (updateCapData pr D c) = isArchCap isFrameCap c"
@@ -1695,6 +1707,16 @@ lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   apply (rule and_mask_less')
   apply (simp add: word_bits_conv pbfs_less_wb'[unfolded word_bits_conv])
   done
+
+(* Used in CRefine *)
+lemma lookupIPCBuffer_Some_0:
+  "\<lbrace>\<top>\<rbrace> lookupIPCBuffer w t \<lbrace>\<lambda>rv s. rv \<noteq> Some 0\<rbrace>"
+  by (wpsimp simp: lookupIPCBuffer_def Let_def getThreadBufferSlot_def locateSlot_conv)
+
+(* Used in CRefine *)
+lemma asUser_valid_ipc_buffer_ptr':
+  "asUser t m \<lbrace>\<lambda>s. valid_ipc_buffer_ptr' p s\<rbrace>"
+  by (simp add: valid_ipc_buffer_ptr'_def, wp)
 
 lemma doIPCTransfer_corres:
   "corres dc
@@ -3175,7 +3197,6 @@ lemma receiveIPC_corres:
               apply (clarsimp simp: ntfn_relation_def Ipc_A.isActive_def Endpoint_H.isActive_def
                              split: Structures_A.ntfn.splits Structures_H.notification.splits)
              apply clarsimp
-             apply wpfix
              apply (rule completeSignal_corres)
             apply (rule_tac P="einvs and valid_sched and tcb_at thread and
                                       ep_at word1 and valid_ep ep and

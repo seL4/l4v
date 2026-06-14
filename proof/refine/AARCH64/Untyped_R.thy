@@ -479,54 +479,57 @@ lemma ctes_of_ko:
    \<comment> \<open>Arch cases\<close>
    apply (rename_tac arch_capability)
    apply (case_tac arch_capability)
-        \<comment> \<open>ASID control\<close>
-        apply clarsimp
-       \<comment> \<open>ASIDPool\<close>
-       apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def typ_at'_def ko_wp_at'_def)
-       apply (intro exI conjI, assumption)
-       apply (clarsimp simp: obj_range'_def archObjSize_def objBitsKO_def)
-       apply (case_tac ko; simp)
-       apply (rename_tac arch_kernel_object)
-       apply (case_tac arch_kernel_object;
-                simp add: archObjSize_def asid_low_bits_def bit_simps mask_def add_ac)
-     \<comment> \<open>Frame case\<close>
-      apply (rename_tac word vmrights vmpage_size option)
-      apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def typ_at'_def
-                            ko_wp_at'_def capAligned_def)
-      apply (frule_tac ptr = ptr and sz = "pageBits" in
-                       nasty_range[where 'a=machine_word_len, folded word_bits_def, rotated])
-         apply simp
-        apply (simp add: pbfs_atleast_pageBits)+
-      apply (clarsimp simp: frame_at'_def)
-      apply (drule_tac x = idx in spec, clarsimp simp: typ_at'_def ko_wp_at'_def)
+         \<comment> \<open>ASID control\<close>
+         apply clarsimp
+        \<comment> \<open>ASIDPool\<close>
+        apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def typ_at'_def ko_wp_at'_def)
+        apply (intro exI conjI, assumption)
+        apply (clarsimp simp: obj_range'_def archObjSize_def objBitsKO_def)
+        apply (case_tac ko; simp)
+        apply (rename_tac arch_kernel_object)
+        apply (case_tac arch_kernel_object;
+                 simp add: archObjSize_def asid_low_bits_def bit_simps mask_def add_ac)
+       \<comment> \<open>Frame case\<close>
+       apply (rename_tac word vmrights vmpage_size option)
+       apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def typ_at'_def
+                             ko_wp_at'_def capAligned_def)
+       apply (frule_tac ptr = ptr and sz = "pageBits" in
+                        nasty_range[where 'a=machine_word_len, folded word_bits_def, rotated])
+          apply simp
+         apply (simp add: pbfs_atleast_pageBits)+
+       apply (clarsimp simp: frame_at'_def)
+       apply (drule_tac x = idx in spec, clarsimp simp: typ_at'_def ko_wp_at'_def)
+       apply (intro exI conjI,assumption)
+       apply (clarsimp simp: obj_range'_def shiftl_t2n mask_def add_diff_eq)
+       apply (case_tac ko, simp_all split: if_splits,
+             (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n)+)[1]
+      \<comment> \<open>PT case\<close>
+      apply (rename_tac word pt_t option)
+      apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def obj_at'_def
+                            page_table_at'_def typ_at'_def ko_wp_at'_def)
+      apply (cut_tac ptr=ptr and bz="ptBits pt_t" and word=word and sz=pte_bits in
+                     nasty_range[where 'a=machine_word_len]; simp?)
+       apply (simp add: pt_bits_def)
+      apply clarsimp
+      apply (drule_tac x="ucast idx" in spec)
+      apply (clarsimp simp: pt_bits_def table_size_def le_mask_iff_lt_2n[THEN iffD1])
       apply (intro exI conjI,assumption)
-      apply (clarsimp simp: obj_range'_def shiftl_t2n mask_def add_diff_eq)
-      apply (case_tac ko, simp_all split: if_splits,
-            (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n)+)[1]
-     \<comment> \<open>PT case\<close>
-     apply (rename_tac word pt_t option)
-     apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def obj_at'_def
-                           page_table_at'_def typ_at'_def ko_wp_at'_def)
-     apply (cut_tac ptr=ptr and bz="ptBits pt_t" and word=word and sz=pte_bits in
-                    nasty_range[where 'a=machine_word_len]; simp?)
-      apply (simp add: pt_bits_def)
-     apply clarsimp
-     apply (drule_tac x="ucast idx" in spec)
-     apply (clarsimp simp: pt_bits_def table_size_def le_mask_iff_lt_2n[THEN iffD1])
-     apply (intro exI conjI,assumption)
-     apply (clarsimp simp: obj_range'_def)
-     apply (case_tac ko; simp)
+      apply (clarsimp simp: obj_range'_def)
+      apply (case_tac ko; simp)
+      apply (rename_tac arch_kernel_object)
+      apply (case_tac arch_kernel_object; simp)
+      apply (simp add: objBitsKO_def archObjSize_def bit_simps mask_def ucast_ucast_len field_simps
+                       shiftl_t2n)
+     \<comment> \<open>VCPU case\<close>
+     apply (clarsimp simp: valid_cap'_def typ_at'_def ko_wp_at'_def objBits_simps)
+     apply (intro exI conjI, assumption)
+     apply (clarsimp simp: obj_range'_def archObjSize_def objBitsKO_def)
+     apply (case_tac ko, simp+)[1]
      apply (rename_tac arch_kernel_object)
-     apply (case_tac arch_kernel_object; simp)
-     apply (simp add: objBitsKO_def archObjSize_def bit_simps mask_def ucast_ucast_len field_simps
-                      shiftl_t2n)
-    \<comment> \<open>VCPU case\<close>
-    apply (clarsimp simp: valid_cap'_def typ_at'_def ko_wp_at'_def objBits_simps)
-    apply (intro exI conjI, assumption)
-    apply (clarsimp simp: obj_range'_def archObjSize_def objBitsKO_def)
-    apply (case_tac ko, simp+)[1]
-    apply (rename_tac arch_kernel_object)
-    apply (case_tac arch_kernel_object;  simp add: archObjSize_def bit_simps mask_def add_ac)
+     apply (case_tac arch_kernel_object;  simp add: archObjSize_def bit_simps mask_def add_ac)
+
+    \<comment> \<open>SMCCap case\<close>
+    apply (clarsimp simp: valid_cap'_def)
 
    \<comment> \<open>SGISignalCap case\<close>
    apply (clarsimp simp: valid_cap'_def)
@@ -1426,56 +1429,56 @@ shows
      apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
      apply (drule sameRegionAs_classes, simp)
     apply (rule corres_caps_decomposition)
-                                              prefer 3
-                                              apply wp+
-                                                 apply (rule hoare_post_imp, simp)
-                                                 apply (wp | assumption)+
-                                             defer
-                                             apply ((wp | simp)+)[1]
-                                            apply (simp add: create_cap_ext_def set_cdt_list_def update_cdt_list_def bind_assoc)
-                                            apply ((wp | simp)+)[1]
-                                           apply (wp updateMDB_ctes_of_cases
-                                                  | simp add: o_def split del: if_split)+
-            apply (clarsimp simp: cdt_relation_def cte_wp_at_ctes_of
+                                        prefer 3
+                                        apply wp+
+                                            apply (rule hoare_post_imp, simp)
+                                            apply (wp | assumption)+
+                                       defer
+                                       apply ((wp | simp)+)[1]
+                                      apply (simp add: create_cap_ext_def set_cdt_list_def update_cdt_list_def bind_assoc)
+                                      apply ((wp | simp)+)[1]
+                                     apply (wp updateMDB_ctes_of_cases
+                                            | simp add: o_def split del: if_split)+
+     apply (intro conjI; (solves \<open>simp add: state_relation_def\<close>)?)
+          apply (clarsimp simp: cdt_relation_def cte_wp_at_ctes_of
                      split del: if_split cong: if_cong simp del: id_apply)
-            apply (subst if_not_P, erule(1) valid_mdbD3')
-            apply (case_tac x, case_tac oldCTE)
-            apply (subst bluhr_descendants_of')
-             apply (rule mdb_insert_again_child.intro)
-              apply (rule mdb_insert_again.intro)
-                apply (rule mdb_ptr.intro)
-                 apply (simp add: valid_mdb'_def vmdb_def)
-                apply (rule mdb_ptr_axioms.intro)
-                apply simp
-               apply (rule mdb_ptr.intro)
-                apply (simp add: valid_mdb'_def vmdb_def)
-               apply (rule mdb_ptr_axioms.intro)
-               apply fastforce
-              apply (rule mdb_insert_again_axioms.intro)
-                       apply (clarsimp simp: nullPointer_def)+
-                apply (erule (1) ctes_of_valid_cap')
-               apply (simp add: valid_mdb'_def valid_mdb_ctes_def)
-              apply clarsimp
-             apply (rule mdb_insert_again_child_axioms.intro)
-             apply (clarsimp simp: isMDBParentOf_def)
-             apply (clarsimp simp: isCap_simps isArchMDBParentOf_def)
-             apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def
-                                   ut_revocable'_def)
-            apply (fold fun_upd_def)
-            apply (subst descendants_of_insert_child')
-               apply (erule(1) mdb_Null_descendants)
-              apply (clarsimp simp: cte_wp_at_def)
-             apply (erule(1) mdb_Null_None)
-            apply (subgoal_tac "cte_at (aa, bb) s")
-             prefer 2
-             apply (drule not_sym, clarsimp simp: cte_wp_at_caps_of_state split: if_split_asm)
-            apply (subst descendants_of_eq' [OF _ cte_wp_at_cte_at], assumption+)
-                 apply (clarsimp simp: state_relation_def)
-                apply assumption+
-            apply (subst cte_map_eq_subst [OF _ cte_wp_at_cte_at], assumption+)
-            apply (simp add: mdb_relation_simp)
-           defer
-           apply (clarsimp split del: if_split)+
+          apply (subst if_not_P, erule(1) valid_mdbD3')
+          apply (case_tac x, case_tac oldCTE)
+          apply (subst bluhr_descendants_of')
+           apply (rule mdb_insert_again_child.intro)
+            apply (rule mdb_insert_again.intro)
+              apply (rule mdb_ptr.intro)
+               apply (simp add: valid_mdb'_def vmdb_def)
+              apply (rule mdb_ptr_axioms.intro)
+              apply simp
+             apply (rule mdb_ptr.intro)
+              apply (simp add: valid_mdb'_def vmdb_def)
+             apply (rule mdb_ptr_axioms.intro)
+             apply fastforce
+            apply (rule mdb_insert_again_axioms.intro)
+                     apply (clarsimp simp: nullPointer_def)+
+              apply (erule (1) ctes_of_valid_cap')
+             apply (simp add: valid_mdb'_def valid_mdb_ctes_def)
+            apply clarsimp
+           apply (rule mdb_insert_again_child_axioms.intro)
+           apply (clarsimp simp: isMDBParentOf_def)
+           apply (clarsimp simp: isCap_simps isArchMDBParentOf_def)
+           apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def
+                                 ut_revocable'_def)
+          apply (fold fun_upd_def)
+          apply (subst descendants_of_insert_child')
+             apply (erule(1) mdb_Null_descendants)
+            apply (clarsimp simp: cte_wp_at_def)
+           apply (erule(1) mdb_Null_None)
+          apply (subgoal_tac "cte_at (aa, bb) s")
+           prefer 2
+           apply (drule not_sym, clarsimp simp: cte_wp_at_caps_of_state split: if_split_asm)
+          apply (subst descendants_of_eq' [OF _ cte_wp_at_cte_at], assumption+)
+               apply (clarsimp simp: state_relation_def)
+              apply assumption+
+          apply (subst cte_map_eq_subst [OF _ cte_wp_at_cte_at], assumption+)
+          apply (simp add: mdb_relation_simp)
+         defer
          apply (clarsimp simp add: revokable_relation_def cte_wp_at_ctes_of
                         split del: if_split)
          apply simp
@@ -1497,7 +1500,7 @@ shows
          apply (elim modify_map_casesE)
             apply (clarsimp split: if_split_asm cong: conj_cong
                             simp: cte_map_eq_subst cte_wp_at_cte_at revokable_relation_simp)+
-        apply (clarsimp simp: state_relation_def ghost_relation_of_heap pt_types_of_heap_eq o_def)+
+        apply (clarsimp simp: state_relation_def ghost_relation_of_heap pt_types_of_heap_eq)+
      apply wp+
    apply (rule corres_guard_imp)
      apply (rule corres_underlying_symb_exec_l [OF gets_symb_exec_l])
@@ -1526,9 +1529,8 @@ shows
    apply (erule (2) valid_dlistEn)
    apply simp
   apply(simp only: cdt_list_relation_def valid_mdb_def2)
-  apply(subgoal_tac "finite_depth (cdt s)")
-   prefer 2
-   apply(simp add: finite_depth valid_mdb_def2[symmetric])
+  apply(prop_tac "finite_depth (cdt s)")
+   apply (fastforce intro: finite_depth simp: valid_mdb_def2)
   apply(intro impI allI)
   apply(subgoal_tac "mdb_insert_abs (cdt s) p (a, b)")
    prefer 2
@@ -1996,7 +1998,7 @@ lemma valid_badges_n' [simp]: "valid_badges n'"
    apply (erule_tac x=parent in allE)
    apply simp
    apply (erule_tac x=p' in allE)
-   apply (clarsimp simp: isCap_simps)
+   apply (fastforce simp: isCap_simps)
   apply (erule_tac x=p in allE)
   apply (erule_tac x=p' in allE)
   apply simp
@@ -4887,10 +4889,21 @@ lemma inv_untyped_corres':
       apply (simp add: add.commute word_plus_and_or_coroll2)
       done
 
+   from vc' have sz_le_word_bits[simp]: (* FIXME: arch-split *)
+     "sz \<le> word_bits"
+     by (clarsimp simp: valid_cap'_def maxUntypedSizeBits_def word_bits_def)
+
+   (* avoid LENGTH('a) in of_nat_le_pow to maintain arch-generic proof *)
+   have no_overflow:
+     "\<not> reset \<Longrightarrow> ptr && ~~ mask sz \<le> (ptr && ~~ mask sz) + word_of_nat idx"
+     by (rule and_neg_mask_plus_le, rule of_nat_le_pow[where 'a=machine_word_len, folded word_bits_def],
+         erule non_reset_idx_le)
+        clarsimp
+
    have overlap_ranges:
      "{x. ptr \<le> x \<and> x \<le> ptr + 2 ^ obj_bits_api (APIType_map2 (Inr ao')) us * of_nat (length slots) - 1}
          \<subseteq> usable_untyped_range (cap.UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))"
-     apply (cases reset, simp_all add: usable_untyped_range.simps)
+     apply (cases reset, simp_all add: usable_untyped_range.simps no_overflow)
       apply (rule order_trans, rule overlap_ranges1)
       apply (simp add: blah word_and_le2)
      apply (rule overlap_ranges2)
@@ -5029,7 +5042,7 @@ lemma inv_untyped_corres':
                           if_split[where P="\<lambda>v. v \<le> unat x" for x])
          apply (frule range_cover.sz(1), fold word_bits_def)
          apply (frule cte_wp_at_pspace_no_overlapI,
-           simp add: cte_wp_at_caps_of_state, simp split: if_split,
+           simp add: cte_wp_at_caps_of_state, simp split: if_splits,
            simp add: invoke_untyped_proofs.szw)
          apply (simp add: field_simps conj_comms ex_in_conv
                           cte_wp_at_caps_of_state

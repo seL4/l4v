@@ -45,6 +45,9 @@ lemma same_object_obj_refs[Tcb_AI_assms]:
                       split: cap.split_asm)+
   by (cases "the_arch_cap cap"; cases "the_arch_cap cap'"; simp)
 
+lemma arch_cap_badge_none_master[Tcb_AI_assms, simp]:
+  "(arch_cap_badge (cap_master_arch_cap acap) = None) = (arch_cap_badge acap = None)"
+  by simp
 
 definition
   is_cnode_or_valid_arch :: "cap \<Rightarrow> bool"
@@ -78,7 +81,6 @@ lemma checked_insert_is_derived: (* arch specific *)
   apply (cases slot)
   apply (frule same_object_as_cap_master)
   apply (frule master_cap_obj_refs)
-  apply (frule cap_master_eq_badge_none)
   apply (frule same_master_cap_same_types)
   apply (simp add: is_derived_def)
   apply clarsimp
@@ -164,7 +166,14 @@ lemma finalise_cap_not_cte_wp_at[Tcb_AI_assms]:
 
 crunch arch_post_set_flags, arch_prepare_set_domain
   for typ_at[wp, Tcb_AI_assms]: "\<lambda>s. P (typ_at T p s)"
-  and invs[wp, Tcb_AI_assms]: "invs"
+
+crunch arch_prepare_set_domain
+  for invs[wp, Tcb_AI_assms]: "invs"
+
+lemma arch_post_set_flags_invs[wp, Tcb_AI_assms]:
+  "\<lbrace>invs and ex_nonz_cap_to t\<rbrace> arch_post_set_flags t flags \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding arch_post_set_flags_def
+  by wpsimp
 
 lemmas arch_prepare_set_domain_typ_ats[wp] = abs_typ_at_lifts[OF arch_prepare_set_domain_typ_at]
 

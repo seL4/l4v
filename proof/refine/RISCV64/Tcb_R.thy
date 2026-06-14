@@ -1868,7 +1868,9 @@ where
                 K (case_option True (isValidFaultHandler o fst) fault_h) and
                 K (case_option True (isValidFaultHandler o fst) time_h) and
                 K (case_option True ((\<lambda>v. is_aligned v msg_align_bits) o fst) ipcb) and
-                K (case_option True (case_option True (isArchObjectCap o fst) o snd) ipcb) and
+                K (case_option True
+                     (case_option True
+                        ((\<lambda>cap. isArchObjectCap cap \<and> capBadge cap = None) o fst) o snd) ipcb) and
                 case_option \<top> (case_option \<top> (valid_cap' o fst) o snd) ipcb and
                 (\<lambda>s. {fault_h, time_h, croot, vroot, option_map undefined ipcb} \<noteq> {None} \<longrightarrow>
                      cte_at' slot s))"
@@ -3375,7 +3377,7 @@ lemma checkValidIPCBuffer_corres:
   done
 
 lemma checkValidIPCBuffer_ArchObject_wp:
-  "\<lbrace>\<lambda>s. isArchObjectCap cap \<and> is_aligned x msg_align_bits \<longrightarrow> P s\<rbrace>
+  "\<lbrace>\<lambda>s. isArchObjectCap cap \<and> capBadge cap = None \<and> is_aligned x msg_align_bits \<longrightarrow> P s\<rbrace>
      checkValidIPCBuffer x cap
    \<lbrace>\<lambda>rv s. P s\<rbrace>,-"
   apply (simp add: checkValidIPCBuffer_def

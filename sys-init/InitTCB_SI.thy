@@ -5,12 +5,11 @@
  *)
 
 theory InitTCB_SI
-imports
-  "DSpecProofs.KHeap_DP"
-  "DSpecProofs.TCB_DP"
-  ObjectInitialised_SI
-  RootTask_SI
-  SysInit_SI
+  imports
+    DSpecProofs.TCB_DP
+    ObjectInitialised_SI
+    RootTask_SI
+    SysInitSpec.SysInit_SI
 begin
 
 lemma cap_has_type_cap_has_object [simp]:
@@ -31,6 +30,7 @@ lemma tcb_empty_decomp:
    (obj_id, tcb_caller_slot) \<mapsto>c NullCap \<and>*
    (obj_id, tcb_pending_op_slot) \<mapsto>c NullCap \<and>*
    (obj_id, tcb_boundntfn_slot) \<mapsto>c NullCap \<and>*
+   (obj_id, tcb_boundvcpu_slot) \<mapsto>c NullCap \<and>*
     obj_id \<mapsto>E Tcb (default_tcb (object_domain obj)))"
   apply (rule ext, rename_tac s)
   apply (clarsimp simp: is_tcb_def object_default_state_def2)
@@ -52,8 +52,9 @@ lemma tcb_decomp':
     opt_cap (obj_id, tcb_ipcbuffer_slot) spec = Some buffer_frame_cap;
     opt_cap (obj_id, tcb_replycap_slot) spec = Some reply_cap;
     opt_cap (obj_id, tcb_pending_op_slot) spec = Some pending_cap;
-    opt_cap (obj_id, tcb_boundntfn_slot) spec = Some bound_cap\<rbrakk>
-  \<Longrightarrow> (k_obj_id \<mapsto>o spec2s t obj) =
+    opt_cap (obj_id, tcb_boundntfn_slot) spec = Some bound_cap;
+    opt_cap (obj_id, tcb_boundvcpu_slot) spec = Some vcpu_cap\<rbrakk>
+  \<Longrightarrow> (k_obj_id \<mapsto>o object_initialised_state t obj) =
      (k_obj_id \<mapsto>f obj \<and>*
      (k_obj_id, tcb_cspace_slot)     \<mapsto>c cap_transform t cspace_cap \<and>*
      (k_obj_id, tcb_vspace_slot)     \<mapsto>c cap_transform t vspace_cap \<and>*
@@ -62,6 +63,7 @@ lemma tcb_decomp':
      (k_obj_id, tcb_caller_slot)     \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_pending_op_slot) \<mapsto>c cap_transform t pending_cap \<and>*
      (k_obj_id, tcb_boundntfn_slot) \<mapsto>c cap_transform t bound_cap \<and>*
+     (k_obj_id, tcb_boundvcpu_slot) \<mapsto>c cap_transform t vcpu_cap \<and>*
       k_obj_id \<mapsto>E Tcb (default_tcb minBound))"
   apply (frule (1) well_formed_object_slots)
   apply (frule (1) well_formed_object_domain)
@@ -76,7 +78,7 @@ lemma tcb_decomp':
   apply (drule_tac obj'="Tcb (default_tcb minBound)" and p = k_obj_id in sep_map_E_eq [rotated],
          simp add: object_type_def)
   apply (subst sep_map_s_sep_map_c_eq,
-         rule object_slots_spec2s',
+         rule object_slots_object_initialised_state',
          fastforce simp: opt_cap_def slots_of_def object_slots_def)+
   apply (clarsimp simp: sep_conj_ac)
   done
@@ -86,7 +88,7 @@ lemma tcb_half_decomp':
     opt_cap (obj_id, tcb_cspace_slot) spec = Some cspace_cap;
     opt_cap (obj_id, tcb_vspace_slot) spec = Some vspace_cap;
     opt_cap (obj_id, tcb_ipcbuffer_slot) spec = Some buffer_frame_cap\<rbrakk>
-  \<Longrightarrow> (k_obj_id \<mapsto>o spec2s t (tcb_half spec obj)) =
+  \<Longrightarrow> (k_obj_id \<mapsto>o object_initialised_state t (tcb_half spec obj)) =
      (k_obj_id \<mapsto>f obj \<and>*
      (k_obj_id, tcb_cspace_slot)     \<mapsto>c cap_transform t cspace_cap \<and>*
      (k_obj_id, tcb_vspace_slot)     \<mapsto>c cap_transform t vspace_cap \<and>*
@@ -95,6 +97,7 @@ lemma tcb_half_decomp':
      (k_obj_id, tcb_caller_slot)     \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_pending_op_slot) \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_boundntfn_slot) \<mapsto>c NullCap \<and>*
+     (k_obj_id, tcb_boundvcpu_slot) \<mapsto>c NullCap \<and>*
       k_obj_id \<mapsto>E Tcb (default_tcb minBound))"
   apply (frule (1) well_formed_object_slots)
   apply (frule (1) well_formed_object_domain)
@@ -102,6 +105,7 @@ lemma tcb_half_decomp':
   apply (frule well_formed_tcb_caller_cap [where obj_id=obj_id], simp add: object_at_def)
   apply (frule well_formed_tcb_pending_op_cap [where obj_id=obj_id], simp add: object_at_def)
   apply (frule well_formed_tcb_boundntfn_cap [where obj_id=obj_id], simp add: object_at_def)
+  apply (frule well_formed_tcb_boundvcpu_cap [where obj_id=obj_id], simp add: object_at_def)
   apply (clarsimp simp: is_tcb_def object_domain_def object_default_state_def2)
   apply (case_tac obj, simp_all)
   apply (subst sep_map_o_decomp)
@@ -112,15 +116,17 @@ lemma tcb_half_decomp':
   apply (drule_tac obj'="Tcb (default_tcb minBound)" and p = k_obj_id in sep_map_E_eq [rotated],
          simp add: object_type_def)
   apply (subst sep_map_s_sep_map_c_eq,
-         rule object_slots_spec2s',
+         rule object_slots_object_initialised_state',
          simp add: object_slots_tcb_half tcb_slot_defs,
          fastforce simp: opt_cap_def slots_of_def object_slots_def)+
+  apply (subst sep_map_f_object_initialised_state_alt)
+   apply (simp add: tcb_half_def update_slots_def is_frame_def)
   apply (clarsimp simp: sep_conj_ac)
   done
 
 lemma tcb_decomp [simplified]:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_tcb obj\<rbrakk>
-  \<Longrightarrow> (k_obj_id \<mapsto>o spec2s t obj) =
+  \<Longrightarrow> (k_obj_id \<mapsto>o object_initialised_state t obj) =
     (k_obj_id \<mapsto>f obj \<and>*
      (k_obj_id, tcb_cspace_slot)     \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_cspace_slot) spec) \<and>*
      (k_obj_id, tcb_vspace_slot)     \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_vspace_slot) spec) \<and>*
@@ -128,7 +134,8 @@ lemma tcb_decomp [simplified]:
      (k_obj_id, tcb_replycap_slot)   \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_replycap_slot) spec) \<and>*
      (k_obj_id, tcb_caller_slot)     \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_pending_op_slot) \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_pending_op_slot) spec) \<and>*
-     (k_obj_id, tcb_boundntfn_slot) \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_boundntfn_slot) spec) \<and>*
+     (k_obj_id, tcb_boundntfn_slot)  \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_boundntfn_slot) spec) \<and>*
+     (k_obj_id, tcb_boundvcpu_slot)  \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_boundvcpu_slot) spec) \<and>*
       k_obj_id \<mapsto>E Tcb (default_tcb minBound))"
   apply (simp add: is_tcb_obj_type)
   apply (frule (1) object_type_object_at)
@@ -139,20 +146,20 @@ lemma tcb_decomp [simplified]:
   apply (frule (1) well_formed_tcb_caller_cap)
   apply (frule (1) well_formed_tcb_pending_op_cap)
   apply (frule (1) well_formed_tcb_boundntfn_cap)
+  apply (frule (1) well_formed_tcb_boundvcpu_cap)
   apply clarsimp
   apply (subst tcb_decomp'
          [where cspace_cap = "the $ opt_cap (obj_id, tcb_cspace_slot) spec"
             and vspace_cap = "the $ opt_cap (obj_id, tcb_vspace_slot) spec"
             and buffer_frame_cap = "the $ opt_cap (obj_id, tcb_ipcbuffer_slot) spec"
             and reply_cap = "the $ opt_cap (obj_id, tcb_replycap_slot) spec"
-            and pending_cap = "the $ opt_cap (obj_id, tcb_pending_op_slot) spec"
-            and bound_cap = "the $ opt_cap (obj_id, tcb_boundntfn_slot) spec"],
+            and pending_cap = "the $ opt_cap (obj_id, tcb_pending_op_slot) spec"],
          (fastforce simp: is_tcb_obj_type)+)
   done
 
 lemma tcb_half_decomp [simplified]:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_tcb obj\<rbrakk>
-  \<Longrightarrow> (k_obj_id \<mapsto>o spec2s t (tcb_half spec obj)) =
+  \<Longrightarrow> (k_obj_id \<mapsto>o object_initialised_state t (tcb_half spec obj)) =
     (k_obj_id \<mapsto>f obj \<and>*
      (k_obj_id, tcb_cspace_slot)     \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_cspace_slot) spec) \<and>*
      (k_obj_id, tcb_vspace_slot)     \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_vspace_slot) spec) \<and>*
@@ -160,7 +167,8 @@ lemma tcb_half_decomp [simplified]:
      (k_obj_id, tcb_replycap_slot)   \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_caller_slot)     \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_pending_op_slot) \<mapsto>c NullCap \<and>*
-     (k_obj_id, tcb_boundntfn_slot) \<mapsto>c NullCap \<and>*
+     (k_obj_id, tcb_boundntfn_slot)  \<mapsto>c NullCap \<and>*
+     (k_obj_id, tcb_boundvcpu_slot)  \<mapsto>c NullCap \<and>*
       k_obj_id \<mapsto>E Tcb (default_tcb minBound))"
   apply (simp add: is_tcb_obj_type)
   apply (frule (1) object_type_object_at)
@@ -217,7 +225,7 @@ lemma tcb_configure_pre:
 
     tcb_cap = default_cap TcbType {k_obj_id} 0 False;
     k_cspace_cap = default_cap CNodeType {cspace_kobj_id} cnode_size False;
-    k_vspace_cap = default_cap PageDirectoryType {vspace_kobj_id} 0 False;
+    k_vspace_cap = default_cap (PageTableType PD) {vspace_kobj_id} 0 False;
     k_buffer_frame_cap = default_cap buffer_frame_type {buffer_frame_kobj_id} 0 False;
 
     \<guillemotleft>object_empty spec t obj_id \<and>*
@@ -263,6 +271,7 @@ lemma tcb_configure_pre:
      (k_obj_id, tcb_caller_slot) \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_pending_op_slot) \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_boundntfn_slot) \<mapsto>c NullCap \<and>*
+     (k_obj_id, tcb_boundvcpu_slot) \<mapsto>c NullCap \<and>*
       k_obj_id \<mapsto>E Tcb (default_tcb minBound) \<and>*
       R\<guillemotright> s"
   apply clarsimp
@@ -281,8 +290,6 @@ lemma tcb_configure_pre:
   apply (frule (2) well_formed_types_match [where cap=vspace_cap], clarsimp)
   apply (frule (2) well_formed_types_match [where cap=buffer_frame_cap], clarsimp simp: cap_type_def)
   apply (clarsimp simp: object_type_is_object)
-  apply (subst (asm) (2) default_cap_size_0 [where type=TcbType], simp)
-  apply (subst (asm) (2) default_cap_size_0 [where type=PageDirectoryType], simp)
   apply (cut_tac type="FrameType sz" and sz="(object_size_bits obja)" and dev=False and
               obj_id="{buffer_frame_kobj_id}" in default_cap_size_0, simp+)
   apply sep_solve
@@ -311,14 +318,11 @@ lemma default_cap_update_cap_object_non_cnode:
   done
 
 lemma sep_map_f_eq_tcb_fault_endpoint:
-  "\<lbrakk>\<not> cdl_tcb_has_fault tcb; cdl_tcb_domain tcb = minBound\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>\<not> cdl_tcb_has_fault tcb; cdl_tcb_domain tcb = minBound;
+    cdl_tcb_extra tcb = default_tcb_extra_data\<rbrakk> \<Longrightarrow>
    obj_id \<mapsto>f Tcb (update_tcb_fault_endpoint (cdl_tcb_fault_endpoint tcb) (default_tcb minBound)) =
    obj_id \<mapsto>f Tcb tcb"
-   apply (rule sep_map_f_eq_tcb)
-     apply (clarsimp simp: update_tcb_fault_endpoint_def)
-    apply (clarsimp simp: update_tcb_fault_endpoint_def default_tcb_def)
-   apply (clarsimp simp: update_tcb_fault_endpoint_def default_tcb_def)
-  done
+  by (auto simp: update_tcb_fault_endpoint_def default_tcb_def intro!: sep_map_f_eq_tcb)
 
 lemma cnode_not_device[simp]:
   "is_cnode_cap spec_cspace_cap \<Longrightarrow> \<not> is_device_cap spec_cspace_cap"
@@ -330,6 +334,9 @@ lemma well_formed_nondevice_cap_in_tcb:
     by (simp add: well_formed_def)
 
 lemma tcb_configure_post:
+  notes update_cap_data_det_simps[simp del]
+  notes default_cap_simps[simp del]
+  shows
   "\<lbrakk>well_formed spec; tcb_at obj_id spec;
     cdl_objects spec obj_id = Some (Tcb spec_tcb);
     opt_cap (obj_id, tcb_cspace_slot) spec = Some spec_cspace_cap;
@@ -348,7 +355,7 @@ lemma tcb_configure_post:
     cap_data spec_vspace_cap = vspace_cap_data;
 
     cspace_cap = default_cap CNodeType {cspace_kobj_id} cnode_size False;
-    vspace_cap = default_cap PageDirectoryType {vspace_kobj_id} 0 False;
+    vspace_cap = default_cap (PageTableType PD) {vspace_kobj_id} 0 False;
     buffer_frame_cap = default_cap buffer_frame_type {buffer_frame_kobj_id} 0 False;
 
     orig_caps obj_id = Some tcb_index;
@@ -379,7 +386,7 @@ lemma tcb_configure_post:
      (si_cnode_id, offset cspace_index si_cnode_size) \<mapsto>c
           default_cap CNodeType {cspace_kobj_id} cnode_size False \<and>*
      (si_cnode_id, offset vspace_index si_cnode_size) \<mapsto>c
-          default_cap PageDirectoryType {vspace_kobj_id} 0 False \<and>*
+          default_cap (PageTableType PD) {vspace_kobj_id} 0 False \<and>*
      (si_cnode_id, offset buffer_frame_index si_cnode_size) \<mapsto>c buffer_frame_cap \<and>*
      (si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>*
       si_asid \<and>*
@@ -388,12 +395,13 @@ lemma tcb_configure_post:
                                                   (default_tcb minBound)) \<and>*
      (k_obj_id, tcb_cspace_slot) \<mapsto>c update_cap_data_det cspace_cap_data
                                     (default_cap CNodeType {cspace_kobj_id} cnode_size False) \<and>*
-     (k_obj_id, tcb_vspace_slot) \<mapsto>c default_cap PageDirectoryType {vspace_kobj_id} 0 False \<and>*
+     (k_obj_id, tcb_vspace_slot) \<mapsto>c default_cap (PageTableType PD) {vspace_kobj_id} 0 False \<and>*
      (k_obj_id, tcb_ipcbuffer_slot) \<mapsto>c buffer_frame_cap \<and>*
      (k_obj_id, tcb_replycap_slot) \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_caller_slot) \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_pending_op_slot) \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_boundntfn_slot) \<mapsto>c NullCap \<and>*
+     (k_obj_id, tcb_boundvcpu_slot) \<mapsto>c NullCap \<and>*
      k_obj_id \<mapsto>E Tcb (default_tcb minBound) \<and>* R\<guillemotright> s\<rbrakk>
   \<Longrightarrow> \<guillemotleft>tcb_half_initialised spec t obj_id \<and>*
        si_cap_at t orig_caps spec False obj_id \<and>*
@@ -426,7 +434,8 @@ lemma tcb_configure_post:
   apply (clarsimp simp: si_cap_at_def sep_conj_assoc sep_conj_exists)
   apply (subst tcb_half_decomp' [where obj_id=obj_id and k_obj_id=k_obj_id],
          (assumption|simp)+)
-  apply (subst (asm) sep_map_f_eq_tcb_fault_endpoint, assumption+)
+  apply (subst (asm) sep_map_f_eq_tcb_fault_endpoint, assumption+,
+         fastforce intro: well_formed_tcb_extra_data)
   apply (clarsimp simp: opt_cap_def slots_of_def)
   apply (frule (2) well_formed_well_formed_cap [where cap=spec_cspace_cap],
          simp add: cap_type_null)
@@ -436,7 +445,6 @@ lemma tcb_configure_post:
   apply (frule (2) well_formed_vm_cap_has_asid [where cap=spec_vspace_cap])
   apply (frule (1) well_formed_is_fake_vm_cap
          [where cap=spec_vspace_cap], simp+)
-
   apply (frule (4) well_formed_cnode_object_size_bits_eq2, simp)
   apply (subst (asm) update_cap_data [where spec_cap = spec_cspace_cap],
          (assumption|simp|fastforce dest: is_fake_vm_cap_cap_type)+)
@@ -456,8 +464,7 @@ lemma tcb_configure_post:
          assumption, assumption, simp+)
   apply (subst default_cap_update_cap_object_non_cnode,
          assumption, assumption, simp+)
-  apply (subst default_cap_update_cap_object_pd [where dev =False,THEN sym],
-         assumption, assumption, simp+)
+  apply (subst default_cap_update_cap_object_pd[where dev=False and cap=spec_vspace_cap,THEN sym]; simp)
   apply (cut_tac type = "FrameType sz"
              and obj_id = buffer_frame_kobj_id
              and sz = 0
@@ -467,11 +474,12 @@ lemma tcb_configure_post:
   apply (clarsimp simp: sep_conj_assoc)
   apply (clarsimp simp: object_type_simps)
   apply (subst default_cap_size_0 [where type=TcbType], simp)
-  apply (cut_tac type=PageDirectoryType and sz="(object_size_bits obj)" and dev = False and
+  apply (cut_tac type="PageTableType PD" and sz="object_size_bits obj" and dev = False and
               obj_id="{vspace_kobj_id}" in default_cap_size_0, simp+)
   apply (cut_tac type="FrameType sz" and sz="(object_size_bits obja)" and
               obj_id="{buffer_frame_kobj_id}" in default_cap_size_0, simp+)
-  by sep_solve
+  apply sep_solve
+  done
 
 lemma tcb_cap_has_object [elim]:
   "is_tcb_cap tcb_cap \<Longrightarrow> cap_has_object tcb_cap"
@@ -688,7 +696,7 @@ lemma seL4_TCB_Configure_object_initialised_sep_helper:
                   cnode_cap' = si_cnode_cap and
                   tcb_cap = "default_cap TcbType {k_obj_id} 0 False" and
                   cspace_cap = "default_cap CNodeType {cspace_kobj_id} (object_size_bits spec_cnode) False" and
-                  vspace_cap = "default_cap PageDirectoryType {vspace_kobj_id} 0 False" and
+                  vspace_cap = "default_cap (PageTableType PD) {vspace_kobj_id} 0 False" and
                   buffer_frame_cap = "default_cap (FrameType sz) {buffer_frame_kobj_id} 0 False" and
                   cspace_root = cspace_index and
                   vspace_root = vspace_index and
@@ -700,6 +708,7 @@ lemma seL4_TCB_Configure_object_initialised_sep_helper:
                      (k_obj_id, tcb_caller_slot) \<mapsto>c NullCap \<and>*
                      (k_obj_id, tcb_pending_op_slot) \<mapsto>c NullCap \<and>*
                      (k_obj_id, tcb_boundntfn_slot) \<mapsto>c NullCap \<and>*
+                     (k_obj_id, tcb_boundvcpu_slot) \<mapsto>c NullCap \<and>*
                       k_obj_id \<mapsto>E Tcb (default_tcb minBound) \<and>* R"
                in seL4_TCB_Configure_sep,
                (assumption|simp|clarsimp)+)[1]
@@ -789,11 +798,13 @@ lemma init_tcb_sep':
    apply (frule well_formed_tcb_cspace_cap, fastforce)
    apply (frule well_formed_tcb_vspace_cap, fastforce)
    apply (frule well_formed_tcb_ipcbuffer_cap, fastforce)
-   apply (clarsimp simp: init_tcb_def)
-   apply (wp hoare_drop_imps seL4_TCB_Configure_object_initialised_sep
+   apply (clarsimp simp: init_tcb_def cdl_ARCH_AARCH32 Kernel_Config.config_HAVE_FPU_def)
+   apply (wpsimp wp: hoare_drop_imps seL4_TCB_Configure_object_initialised_sep
                              [where spec_cspace_cap=cspace_cap and
                                     spec_vspace_cap=vspace_cap and
-                                    spec_buffer_frame_cap=tcb_ipcbuffer_cap])
+                                    spec_buffer_frame_cap=tcb_ipcbuffer_cap]
+                 simp: seL4_TCB_SetSchedParams'_def seL4_TCB_SetSchedParams_def
+                       dummy_syscall_def)
    apply (fastforce simp: opt_thread_def cap_data_def
                           tcb_ipc_buffer_address_non_zero
                           si_cap_at_def sep_conj_exists)
@@ -947,8 +958,9 @@ lemma init_tcbs_sep:
   "\<lbrace>\<guillemotleft>objects_empty spec t {obj_id. tcb_at obj_id spec} \<and>*
      si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright> and
-     K(well_formed spec \<and> set obj_ids = dom (cdl_objects spec) \<and> distinct obj_ids)\<rbrace>
-   init_tcbs spec orig_caps obj_ids
+     K (well_formed spec \<and> distinct real_obj_ids \<and>
+        set real_obj_ids = {obj_id. real_object_at obj_id spec})\<rbrace>
+   init_tcbs spec orig_caps real_obj_ids
    \<lbrace>\<lambda>_.\<guillemotleft>tcbs_half_initialised spec t {obj_id. tcb_at obj_id spec} \<and>*
         si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
         si_objects \<and>* R\<guillemotright>\<rbrace>"

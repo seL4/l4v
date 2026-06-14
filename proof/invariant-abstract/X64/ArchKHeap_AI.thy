@@ -330,7 +330,7 @@ lemma set_object_vspace_objs:
   apply (case_tac ko; auto)
   done
 
-lemma set_object_valid_kernel_mappings:
+lemma set_object_valid_kernel_mappings[wp]:
   "\<lbrace>\<lambda>s. valid_kernel_mappings s
            \<and> valid_kernel_mappings_if_pm
                 (set (second_level_tables (arch_state s)))

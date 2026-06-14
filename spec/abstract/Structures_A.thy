@@ -845,12 +845,11 @@ primrec (nonexhaustive)
 where
   "cap_bits_untyped (UntypedCap dev r s f) = s"
 
-definition
-  cap_badge :: "cap \<rightharpoonup> badge"
-where
+definition cap_badge :: "cap \<rightharpoonup> badge" where
  "cap_badge cap \<equiv> case cap of
-    cap.EndpointCap r badge rights \<Rightarrow> Some badge
-  | cap.NotificationCap r badge rights \<Rightarrow> Some badge
+    EndpointCap r badge rights \<Rightarrow> Some badge
+  | NotificationCap r badge rights \<Rightarrow> Some badge
+  | ArchObjectCap acap \<Rightarrow> arch_cap_badge acap
   | _ \<Rightarrow> None"
 
 definition tcb_cnode_map :: "tcb \<Rightarrow> cnode_index \<Rightarrow> cap option"

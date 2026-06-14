@@ -1067,16 +1067,16 @@ lemma deleteObjects_corres:
       apply (rule corres_split[OF pTableNoPartialOverlap])
         apply simp
         apply (rule_tac P="\<lambda>s. valid_objs s \<and> valid_list s \<and>
-                 (\<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s \<and>
-                         descendants_range (cap.UntypedCap d base magnitude idx) cref s ) \<and>
-                 s \<turnstile> cap.UntypedCap d base magnitude idx \<and> pspace_aligned s \<and>
-                 valid_mdb s \<and> pspace_distinct s \<and> if_live_then_nonz_cap s \<and>
-                 zombies_final s \<and> sym_refs (state_refs_of s) \<and> sym_refs (state_hyp_refs_of s) \<and>
-                 untyped_children_in_mdb s \<and> if_unsafe_then_cap s \<and>
-                 valid_global_refs s" and
-               P'="\<lambda>s. s \<turnstile>' capability.UntypedCap d base magnitude idx \<and>
-                       valid_pspace' s \<and>
-                       deletionIsSafe_delete_locale base magnitude s" in corres_modify)
+                               (\<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s \<and>
+                                       descendants_range (cap.UntypedCap d base magnitude idx) cref s ) \<and>
+                               s \<turnstile> cap.UntypedCap d base magnitude idx \<and> pspace_aligned s \<and>
+                               valid_mdb s \<and> pspace_distinct s \<and> if_live_then_nonz_cap s \<and>
+                               zombies_final s \<and> sym_refs (state_refs_of s) \<and> sym_refs (state_hyp_refs_of s) \<and>
+                               untyped_children_in_mdb s \<and> if_unsafe_then_cap s \<and>
+                               valid_global_refs s"
+                    and P'="\<lambda>s. s \<turnstile>' capability.UntypedCap d base magnitude idx \<and>
+                                valid_pspace' s \<and> deletionIsSafe_delete_locale base magnitude s"
+                     in corres_modify)
         apply (simp add: valid_pspace'_def)
         apply (rule state_relation_null_filterE, assumption,
                simp_all add: pspace_aligned'_cut pspace_distinct'_cut)[1]
@@ -1089,9 +1089,9 @@ lemma deleteObjects_corres:
               apply simp
              apply (rule ext, clarsimp simp: null_filter'_def map_to_ctes_delete)
              apply (rule sym, rule ccontr, clarsimp)
-             apply (frule(2) pspace_relation_cte_wp_atI[OF state_relation_pspace_relation])
+             apply (frule (2) pspace_relation_cte_wp_atI[OF state_relation_pspace_relation])
              apply (elim exE)
-             apply (frule(4) cte_map_not_null_outside')
+             apply (frule (4) cte_map_not_null_outside')
               apply (rule cte_wp_at_weakenE, erule conjunct1)
               apply (case_tac y, clarsimp)
               apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def

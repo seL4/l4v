@@ -592,11 +592,6 @@ where valid_cap'_def:
                     \<and> (\<forall>addr. real_cte_at' (r + 2^cteSizeBits * (addr && mask n)) s))
   | ArchObjectCap ac \<Rightarrow> valid_arch_cap' ac s)"
 
-definition arch_cap'_fun_lift :: "(arch_capability \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> capability \<Rightarrow> 'a" where
-  "arch_cap'_fun_lift P F c \<equiv> case c of ArchObjectCap ac \<Rightarrow> P ac | _ \<Rightarrow> F"
-
-lemmas arch_cap'_fun_lift_simps[simp] = arch_cap'_fun_lift_def[split_simps capability.split]
-
 (* Use abbreviation, not syntax, so that it can be input-only *)
 abbreviation (input) valid_cap'_syn ::
   "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>'' _" [60, 60] 61) where
@@ -806,8 +801,8 @@ where
 primrec
   capClass :: "capability \<Rightarrow> capclass"
 where
-  "capClass (NullCap)                          = NullClass"
-| "capClass (DomainCap)                        = DomainClass"
+  "capClass (NullCap)                          = OtherCapClass"
+| "capClass (DomainCap)                        = OtherCapClass"
 | "capClass (UntypedCap d p n f)               = PhysicalClass"
 | "capClass (EndpointCap ref badge s r g gr)   = PhysicalClass"
 | "capClass (NotificationCap ref badge s r)    = PhysicalClass"
@@ -815,9 +810,9 @@ where
 | "capClass (CNodeCap ref bits g gs)           = PhysicalClass"
 | "capClass (ThreadCap ref)                    = PhysicalClass"
 | "capClass (Zombie r b n)                     = PhysicalClass"
-| "capClass (IRQControlCap)                    = IRQClass"
-| "capClass (SchedControlCap)                  = SchedControlClass"
-| "capClass (IRQHandlerCap irq)                = IRQClass"
+| "capClass (IRQControlCap)                    = OtherCapClass"
+| "capClass (SchedControlCap)                  = OtherCapClass"
+| "capClass (IRQHandlerCap irq)                = OtherCapClass"
 | "capClass (ReplyCap tcb m)                   = PhysicalClass"
 | "capClass (ArchObjectCap cap)                = acapClass cap"
 

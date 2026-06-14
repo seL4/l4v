@@ -70,7 +70,7 @@ lemma isMDBParentOf_CTE:
   apply (simp add: isMDBParentOf_CTE1)
   apply (intro arg_cong[where f=Ex] ext conj_cong refl)
   apply (cases cap, simp_all add: isCap_simps)
-   apply (auto elim!: sameRegionAsE simp: isCap_simps)
+   apply (auto elim!: sameRegionAsE simp: isCap_simps arch_capBadge_def)
   done
 
 lemma isMDBParentOf_trans:
@@ -771,14 +771,14 @@ lemma valid_badges_def2[CSpace1_R_assms]:
   apply (simp add: valid_badges_def)
   apply (intro arg_cong[where f=All] ext imp_cong [OF refl])
   apply (case_tac cap; clarsimp simp: gen_isCap_simps)
-      by (fastforce simp: sameRegionAs_def3 isCap_simps)+
+      by (fastforce simp: sameRegionAs_def3 isCap_simps arch_capBadge_def)+
 
 lemma is_cap_revocable_eq[CSpace1_R_assms]:
   "\<lbrakk> cap_relation c c'; cap_relation src_cap src_cap'; sameRegionAs src_cap' c';
      is_untyped_cap src_cap \<longrightarrow> \<not> is_ep_cap c \<and> \<not> is_ntfn_cap c\<rbrakk>
    \<Longrightarrow> is_cap_revocable c src_cap = isCapRevocable c' src_cap'"
-  apply (clarsimp simp: isCap_simps bit_simps arch_is_cap_revocable_def
-                        bits_of_def is_cap_revocable_def Retype_H.isCapRevocable_def
+  apply (clarsimp simp: isCap_simps arch_is_cap_revocable_def
+                        is_cap_revocable_def Retype_H.isCapRevocable_def
                         sameRegionAs_def3 isCapRevocable_def
                  split: cap_relation_split_asm arch_cap.split_asm)
   done
@@ -798,6 +798,10 @@ lemma is_derived'_genD[CSpace1_R_assms]:
    (isReplyCap cap' \<longrightarrow> \<not> capReplyMaster cap')"
   by (simp add: ARM_HYP.is_derived'_def)
 
+lemma acap_relation_capBadge[CSpace1_R_assms]:
+  "acap_relation acap acap' \<Longrightarrow> arch_capBadge acap' = arch_cap_badge acap"
+  by (simp add: arch_capBadge_def)
+
 end (* Arch *)
 
 interpretation CSpace1_R?: CSpace1_R
@@ -811,7 +815,7 @@ context Arch begin arch_global_naming
 named_theorems CSpace1_R_2_assms
 
 lemma weak_derived_updateCapData:
-  "\<lbrakk> (updateCapData P x c) \<noteq> NullCap; weak_derived' c c';
+  "\<lbrakk> updateCapData P x c \<noteq> NullCap; weak_derived' c c';
      capBadge (updateCapData P x c) = capBadge c' \<rbrakk>
   \<Longrightarrow> weak_derived' (updateCapData P x c) c'"
   apply (clarsimp simp add: weak_derived'_def updateCapData_Master)
@@ -874,11 +878,6 @@ lemma master_cap_relation:
   by (auto simp add: cap_master_cap_def capMasterCap_def up_ucast_inj_eq
            split: cap.splits arch_cap.splits)
 
-lemma cap_badge_relation:
-  "\<lbrakk> cap_relation c c'; cap_relation d d' \<rbrakk> \<Longrightarrow>
-   (capBadge c' = capBadge d') = (cap_badge c = cap_badge d)"
-  by (auto simp add: cap_badge_def split: cap.splits arch_cap.splits)
-
 lemma cap_asid_cap_relation:
   "cap_relation c c' \<Longrightarrow> capASID c' = map_option ucast (cap_asid c)"
   by (auto simp: capASID_def cap_asid_def arch_cap_fun_lift_def
@@ -895,7 +894,7 @@ lemma is_derived_eq[CSpace1_R_2_assms]:
    apply (clarsimp simp: is_cap_simps isCap_simps)
    apply (cases c, auto simp: isCap_simps cap_master_cap_def capMasterCap_def
                               vsCapRef_def vs_cap_ref_def)[1]
-  apply (case_tac "isIRQControlCap d'")
+  apply (cases "isIRQControlCap d'")
    apply (frule(1) master_cap_relation)
    apply (clarsimp simp: isCap_simps cap_master_cap_def
                          is_zombie_def is_reply_cap_def is_master_reply_cap_def
@@ -1358,49 +1357,32 @@ lemma sameRegionAs2:
 
 lemmas sameRegionAs[simp] = sameRegionAs1 sameRegionAs2
 
+lemma capBadgeNone:
+  "(capBadge cap' = None) = (capBadge cap = None)"
+  by (clarsimp simp: capBadge_def arch_capBadge_def)
+
 lemma isMDBParentOf1:
-  assumes "\<not>isReplyCap cap"
-  assumes "\<not>isEndpointCap cap"
-  assumes "\<not>isNotificationCap cap"
+  assumes "capBadge cap = None"
   shows "isMDBParentOf c (CTE cap' m) = isMDBParentOf c (CTE cap m)"
 proof -
   from assms
-  have c':
-    "\<not>isReplyCap cap'" "\<not>isEndpointCap cap'"
-    "\<not>isNotificationCap cap'" by auto
-  note isReplyCap [simp del] isEndpointCap [simp del] isNotificationCap [simp del]
-  from c' assms
+  have "capBadge cap' = None"
+    by (auto simp: capBadgeNone)
+  with assms
   show ?thesis
-  apply (cases c, clarsimp)
-  apply (simp add: isMDBParentOf_CTE)
-  apply (rule iffI)
-   apply clarsimp
-   apply (clarsimp simp: capBadge_ordering_def capBadge_def isCap_simps sameRegionAs_def3
-                   split: if_split_asm)
-  apply clarsimp
-  apply (clarsimp simp: capBadge_ordering_def capBadge_def isCap_simps sameRegionAs_def3
-                  split: if_split_asm)
-  done
+    by (cases c, simp add: isMDBParentOf_CTE)
 qed
 
 lemma isMDBParentOf2:
-  assumes "\<not>isReplyCap cap"
-  assumes "\<not>isEndpointCap cap"
-  assumes "\<not>isNotificationCap cap"
+  assumes "capBadge cap = None"
   shows "isMDBParentOf (CTE cap' m) c = isMDBParentOf (CTE cap m) c"
 proof -
   from assms
-  have c':
-    "\<not>isReplyCap cap'" "\<not>isEndpointCap cap'"
-    "\<not>isNotificationCap cap'" by auto
-  note isReplyCap [simp del] isEndpointCap [simp del] isNotificationCap [simp del]
-  from c' assms
+  have "capBadge cap' = None"
+    by (auto simp: capBadgeNone)
+  with assms
   show ?thesis
-  apply (cases c, clarsimp)
-  apply (simp add: isMDBParentOf_CTE)
-  apply (auto simp: capBadge_ordering_def capBadge_def isCap_simps sameRegionAs_def3
-                  split: if_split_asm)[1]
-  done
+    by (simp add: isMDBParentOf_CTE)
 qed
 
 lemmas isMDBParentOf = isMDBParentOf1 isMDBParentOf2
