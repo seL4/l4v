@@ -4,8 +4,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 
-from __future__ import print_function
-
 
 class BracedString:
     """A string split into components based on delimiters (usually braces).

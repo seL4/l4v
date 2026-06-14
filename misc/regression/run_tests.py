@@ -9,8 +9,6 @@
 # Very simple command-line test runner.
 #
 
-from __future__ import print_function
-
 import argparse
 import atexit
 import datetime
@@ -19,11 +17,7 @@ import cpuusage
 import fnmatch
 import memusage
 import os
-try:
-    import Queue
-except ImportError:
-    import queue
-    Queue = queue
+import queue
 import signal
 import subprocess
 import sys
@@ -598,7 +592,7 @@ def main():
     # Current jobs.
     current_jobs = {}
     # Newly finished jobs.
-    status_queue = Queue.Queue()
+    status_queue = queue.Queue()
 
     # If run from a tty and -v is off, we also track
     # current jobs on the bottom line of the tty.
@@ -685,7 +679,7 @@ def main():
                 if args.fail_fast and status != PASSED:
                     # Notify current threads and future tests
                     kill_switch.set()
-        except Queue.Empty:
+        except queue.Empty:
             pass
     wipe_tty_status()
 
