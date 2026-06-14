@@ -4,15 +4,9 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 
-from __future__ import print_function
-from __future__ import absolute_import
 import re
 import sys
 import os
-import six
-from six.moves import map
-from six.moves import range
-from six.moves import zip
 from functools import reduce
 
 import braces
@@ -500,7 +494,7 @@ def type_transform(string):
             var_annotes.setdefault(var, [])
             var_annotes[var].extend(names)
         transformed = type_transform(bits[1])
-        for (var, insts) in six.iteritems(var_annotes):
+        for (var, insts) in var_annotes.items():
             if len(insts) == 1:
                 newvar = '(%s :: %s)' % (var, insts[0])
             else:
@@ -812,7 +806,7 @@ def named_newtype_transform(line, header, d):
             names[name][cons] = i
             types[name] = type
 
-    for name, map in six.iteritems(names):
+    for name, map in names.items():
         lines.append('')
         lines.extend(named_update_definitions(name, map, types[name], header,
                                               dict(constructors)))
@@ -830,8 +824,8 @@ def named_newtype_transform(line, header, d):
             lines.extend(check)
 
     if len(constructors) == 1:
-        for ex_name, _ in six.iteritems(names):
-            for up_name, _ in six.iteritems(names):
+        for ex_name in names:
+            for up_name in names:
                 lines.append('')
                 lines.extend(named_extractor_update_lemma(ex_name, up_name))
 
@@ -871,7 +865,7 @@ def named_extractor_definitions(name, map, type, header, constructors):
                  % (name, header, type))
     lines.append('where')
     is_first = True
-    for cons, i in six.iteritems(map):
+    for cons, i in map.items():
         if is_first:
             l = '  "%s (%s' % (name, cons)
             is_first = False
@@ -896,7 +890,7 @@ def named_update_definitions(name, map, type, header, constructors):
                  % (name, type, ra, type, ra, header, ra, header))
     lines.append('where')
     is_first = True
-    for cons, i in six.iteritems(map):
+    for cons, i in map.items():
         if is_first:
             l = '  "%s_update f (%s' % (name, cons)
             is_first = False
@@ -2560,12 +2554,11 @@ def print_tree(tree, indent=0):
 
 
 supplied_transform_table = get_supplied_transform_table()
-supplied_transforms_usage = dict((
-    key, 0) for key in six.iterkeys(supplied_transform_table))
+supplied_transforms_usage = {key: 0 for key in supplied_transform_table}
 
 
 def warn_supplied_usage():
-    for (key, usage) in six.iteritems(supplied_transforms_usage):
+    for (key, usage) in supplied_transforms_usage.items():
         if not usage:
             warning(f'supplied conv unused: {key[0]}')
 

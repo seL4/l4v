@@ -6,8 +6,6 @@
 """Parser for skeletons of theory files which are completed
 by inserting parsed Haskell."""
 
-from __future__ import print_function
-from __future__ import absolute_import
 import sys
 import os
 import os.path

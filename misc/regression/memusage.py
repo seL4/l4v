@@ -10,7 +10,6 @@ Monitors the peak memory usage of a process and its children. Usage is similar
 to the UNIX `time` utility.
 '''
 
-from __future__ import print_function
 import subprocess
 import sys
 import threading
