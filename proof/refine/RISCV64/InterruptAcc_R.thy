@@ -116,7 +116,7 @@ lemma updateTimeStamp_corres[corres]:
   "corres dc \<top> \<top> update_time_stamp updateTimeStamp"
   apply (clarsimp simp: update_time_stamp_def updateTimeStamp_def setConsumedTime_def)
   apply (prop_tac "minBudget = MIN_BUDGET")
-   apply (clarsimp simp: minBudget_def MIN_BUDGET_def kernelWCETTicks_def)
+   apply (clarsimp simp: minBudget_def MIN_BUDGET_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurTime_sp])
    apply corresKsimp
   apply (rule corres_underlying_split[where r'="(=)"])
@@ -260,7 +260,7 @@ lemma getRefillSufficient_corres:
     apply (rule corres_split[OF getRefillHead_corres])
        apply simp
       apply (clarsimp simp: refillCapacity_def refill_capacity_def refill_map_def
-                            minBudget_def MIN_BUDGET_def kernelWCETTicks_def)
+                            minBudget_def MIN_BUDGET_def)
      apply wpsimp+
   done
 

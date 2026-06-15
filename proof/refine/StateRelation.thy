@@ -263,9 +263,7 @@ lemma
 
 lemma maxReleaseTime_equiv:
   "maxReleaseTime = MAX_RELEASE_TIME"
-  apply (clarsimp simp: maxReleaseTime_def MAX_RELEASE_TIME_def maxBound_max_word RISCV64_H.maxPeriodUs_def
-                        RISCV64_H.usToTicks_def MAX_PERIOD_def) (* FIXME arch-split RT *)
-  done
+  by (clarsimp simp: maxReleaseTime_def MAX_RELEASE_TIME_def maxBound_max_word MAX_PERIOD_def)
 
 definition reply_relation :: "Structures_A.reply \<Rightarrow> Structures_H.reply \<Rightarrow> bool" where
   "reply_relation \<equiv> \<lambda>reply reply'.
@@ -1087,7 +1085,7 @@ lemma refill_ready_relation:
   "\<lbrakk>sc_relation sc n sc'; sc_valid_refills' sc'\<rbrakk>
    \<Longrightarrow> refill_ready time (refill_hd sc) = (rTime (refillHd sc') \<le> time)"
   apply (frule (1) refill_hd_relation)
-  by (clarsimp simp: refill_ready_def RISCV64_H.kernelWCETTicks_def refill_map_def) (* FIXME arch-split RT *)
+  by (clarsimp simp: refill_ready_def refill_map_def)
 
 lemma refill_capacity_relation:
   "\<lbrakk>sc_relation sc n sc'; sc_valid_refills' sc'\<rbrakk> \<Longrightarrow>
@@ -1099,8 +1097,7 @@ lemma refill_sufficient_relation:
   "\<lbrakk>sc_relation sc n sc'; sc_valid_refills' sc'\<rbrakk> \<Longrightarrow>
    refill_sufficient usage (refill_hd sc) = refillSufficient usage (refillHd sc')"
   apply (frule (1) refill_capacity_relation[where usage=usage])
-  by (clarsimp simp: refillSufficient_def refill_sufficient_def minBudget_def MIN_BUDGET_def
-                     RISCV64_H.kernelWCETTicks_def) (* FIXME arch-split RT *)
+  by (clarsimp simp: refillSufficient_def refill_sufficient_def minBudget_def MIN_BUDGET_def)
 
 (* used for generating architecture-specific cap_relation split lemmas *)
 lemma eq_trans_helper:

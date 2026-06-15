@@ -1868,19 +1868,18 @@ lemma decodeSchedControl_ConfigureFlags_ccorres:
      \<comment> \<open>throw an error if the budget is greater than the period\<close>
      apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
         apply vcg
-       apply (clarsimp simp: parseTimeArg_def timer_defs maxPeriodUs_def)
+       apply (clarsimp simp: parseTimeArg_def timer_defs)
       apply (simp add: throwError_bind invocationCatch_def)
       apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
       apply (rule allI, rule conseqPre, vcg)
       apply (clarsimp simp: throwError_def syscall_error_rel_def syscall_error_to_H_cases
-                            exception_defs return_def minBudgetUs_def maxPeriodUs_def
-                            kernelWCET_us_def timer_defs)
+                            exception_defs return_def minBudgetUs_def timer_defs)
      apply (rule_tac xf'=budget_ticks_'
                  and val="usToTicks (parseTimeArg 0 args)"
                   in ccorres_symb_exec_r_known_rv[where R=\<top> and R'="UNIV"])
         apply (rule conseqPre, vcg)
         using getCurrentTime_buffer_bound
-        apply (clarsimp simp: parseTimeArg_def timer_defs maxPeriodUs_def word_less_nat_alt)
+        apply (clarsimp simp: parseTimeArg_def timer_defs word_less_nat_alt)
        apply ceqv
       apply (rule ccorres_add_return,
              ctac add: mode_parseTimeArg_ccorres_foo'[where args=args and n=1 and buffer=buffer])
@@ -1888,71 +1887,65 @@ lemma decodeSchedControl_ConfigureFlags_ccorres:
         \<comment> \<open>throw an error if period is greater than maxPeriodUs\<close>
         apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
            apply vcg
-          apply (clarsimp simp: parseTimeArg_def timer_defs maxPeriodUs_def)
+          apply (clarsimp simp: parseTimeArg_def timer_defs)
          apply (simp add: throwError_bind invocationCatch_def)
          apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
          apply (rule allI, rule conseqPre, vcg)
          apply (clarsimp simp: throwError_def syscall_error_rel_def syscall_error_to_H_cases
-                               exception_defs return_def minBudgetUs_def maxPeriodUs_def
-                               kernelWCET_us_def timer_defs)
+                               exception_defs return_def minBudgetUs_def timer_defs)
         apply (rule_tac xf'=period_ticks_'
                     and val="usToTicks (parseTimeArg 1 args)"
                      in ccorres_symb_exec_r_known_rv[where R=\<top> and R'="UNIV"])
            apply (rule conseqPre, vcg)
            using getCurrentTime_buffer_bound
-           apply (clarsimp simp: parseTimeArg_def timer_defs maxPeriodUs_def word_less_nat_alt)
+           apply (clarsimp simp: parseTimeArg_def timer_defs word_less_nat_alt)
           apply ceqv
          apply (rule_tac xf'=ret__unsigned_longlong_'
                      and val=kernelWCET_ticks
                       in ccorres_symb_exec_r_known_rv[where R=\<top> and R'="UNIV"])
             apply (rule conseqPre, vcg)
-            apply (clarsimp simp: kernelWCETTicks_def)
+            apply clarsimp
            apply ceqv
           \<comment> \<open>throw an error if budget is less than minBudget\<close>
           apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
              apply vcg
             using getCurrentTime_buffer_bound
             subgoal
-              by (fastforce simp: minBudgetUs_def kernelWCET_ticks_def usToTicks_def
-                                  word_mult_div_assoc timer_defs maxPeriodUs_def
-                                  word_less_nat_alt)
+              by (fastforce simp: minBudgetUs_def kernelWCET_ticks_def
+                                  word_mult_div_assoc timer_defs word_less_nat_alt)
            apply (simp add: throwError_bind invocationCatch_def)
            apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
            apply (rule allI, rule conseqPre, vcg)
            apply (clarsimp simp: throwError_def syscall_error_rel_def
                                  syscall_error_to_H_cases exception_defs return_def
-                                 minBudgetUs_def maxPeriodUs_def MAX_PERIOD_US_def
-                                 kernelWCET_us_def)
+                                 minBudgetUs_def MAX_PERIOD_US_def kernelWCET_us_def)
           apply clarsimp
           apply (rule_tac xf'=ret__unsigned_longlong_'
                       and val=kernelWCET_ticks
                        in ccorres_symb_exec_r_known_rv[where R=\<top> and R'="UNIV"])
              apply (rule conseqPre, vcg)
-             apply (clarsimp simp: kernelWCETTicks_def)
+             apply clarsimp
             apply ceqv
           \<comment> \<open>throw an error if the period is less than minBudget\<close>
            apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
               apply vcg
              using getCurrentTime_buffer_bound
              subgoal
-               by (fastforce simp: minBudgetUs_def kernelWCET_ticks_def usToTicks_def
-                                   word_mult_div_assoc timer_defs maxPeriodUs_def
-                                   word_less_nat_alt)
+               by (fastforce simp: minBudgetUs_def kernelWCET_ticks_def
+                                   word_mult_div_assoc timer_defs word_less_nat_alt)
             apply (simp add: throwError_bind invocationCatch_def)
             apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
             apply (rule allI, rule conseqPre, vcg)
             apply (clarsimp simp: throwError_def syscall_error_rel_def
                                   syscall_error_to_H_cases exception_defs return_def
-                                  minBudgetUs_def maxPeriodUs_def MAX_PERIOD_US_def
-                                  kernelWCET_us_def)
+                                  minBudgetUs_def MAX_PERIOD_US_def kernelWCET_us_def)
            \<comment> \<open>throw an error if period is less than budget\<close>
            apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
               apply vcg
              using getCurrentTime_buffer_bound
              subgoal
-               by (fastforce simp: minBudgetUs_def kernelWCET_ticks_def usToTicks_def
-                                   word_mult_div_assoc timer_defs maxPeriodUs_def
-                                   word_less_nat_alt)
+               by (fastforce simp: minBudgetUs_def kernelWCET_ticks_def
+                                   word_mult_div_assoc timer_defs word_less_nat_alt)
             apply (simp add: throwError_bind invocationCatch_def)
             apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
             apply (rule allI, rule conseqPre, vcg)
@@ -2088,7 +2081,7 @@ lemma decodeSchedControl_ConfigureFlags_ccorres:
    apply (rule of_nat_neq_0[where 'a=32])
     apply clarsimp
    apply (simp add: refill_C_size len32)
-  apply (simp add: cap_get_tag_isCap MIN_REFILLS_def usToTicks_def parseTimeArg_def len64)
+  apply (simp add: cap_get_tag_isCap MIN_REFILLS_def parseTimeArg_def len64)
   apply (prop_tac "excaprefs_C (current_extra_caps_' (globals s')).[0] \<noteq> NULL
                    \<longrightarrow> excaprefs_C (current_extra_caps_' (globals s')).[0]
                        = cte_Ptr (snd (extraCaps ! 0))")
@@ -2119,21 +2112,21 @@ lemma decodeSchedControl_ConfigureFlags_ccorres:
                   split: capability.splits)[1]
       apply (clarsimp simp: MAX_PERIOD_def)
       apply (rule us_to_ticks_mono)
-       apply (fastforce simp: timer_defs maxPeriodUs_def)
+       apply (fastforce simp: timer_defs)
       apply fastforce
      apply (clarsimp simp: minBudgetUs_def MIN_BUDGET_def2)
      apply (rule us_to_ticks_mono)
       apply fastforce
-     apply (clarsimp simp: maxPeriodUs_def word_less_nat_alt)
+     apply (clarsimp simp: word_less_nat_alt)
      apply (force intro: mult_le_mono3[where a="5 * unat MAX_PERIOD_US"])
     apply (clarsimp simp: MAX_PERIOD_def)
     apply (rule us_to_ticks_mono)
-     apply (clarsimp simp: maxPeriodUs_def word_le_nat_alt word_less_nat_alt)
+     apply (clarsimp simp: word_le_nat_alt word_less_nat_alt)
     apply (force intro: mult_le_mono3[where a="5 * unat MAX_PERIOD_US"])
    apply (clarsimp simp: minBudgetUs_def MIN_BUDGET_def2)
    apply (rule us_to_ticks_mono)
     apply fastforce
-   apply (clarsimp simp: maxPeriodUs_def word_less_nat_alt)
+   apply (clarsimp simp: word_less_nat_alt)
    apply (force intro: mult_le_mono3[where a="5 * unat MAX_PERIOD_US"])
   apply (clarsimp simp: excaps_map_def neq_Nil_conv cte_wp_at_ctes_of dest!: interpret_excaps_eq)
   done

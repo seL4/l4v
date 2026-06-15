@@ -448,20 +448,20 @@ lemma usToTicks_spec:
                Call usToTicks_'proc
                \<lbrace>\<acute>ret__unsigned_longlong = usToTicks us\<rbrace>"
   apply vcg
-  apply (fastforce simp: usToTicks_def timer_defs word_mult_div_assoc)
+  apply (fastforce simp: timer_defs word_mult_div_assoc)
   done
 
 lemma ticksToUs_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call ticksToUs_'proc \<lbrace>\<acute>ret__unsigned_longlong = ticksToUs (ticks_' s)\<rbrace>"
   apply vcg
-  apply (clarsimp simp: ticksToUs_def timer_defs ticks_to_us_def)
+  apply (clarsimp simp: timer_defs ticks_to_us_def)
   done
 
 lemma getKernelWcetTicks_spec:
   "\<forall>s. \<Gamma>\<turnstile> {s} Call getKernelWcetTicks_'proc \<lbrace>\<acute>ret__unsigned_longlong = kernelWCETTicks\<rbrace>"
   apply vcg
   apply (insert MIN_BUDGET_bound)
-  apply (simp add: kernelWCETTicks_def kernelWCET_ticks_def usToTicks_def kernelWCET_us_def)
+  apply (simp add: kernelWCET_ticks_def kernelWCET_us_def)
   done
 
 lemma getTimerPrecision_spec:
@@ -476,7 +476,7 @@ lemma wrap_config_set_spec:
 lemma getMaxTicksToUs_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call getMaxTicksToUs_'proc \<lbrace>\<acute>ret__unsigned_longlong = maxTicksToUs\<rbrace>"
   apply vcg
-  apply (clarsimp simp: maxTicksToUs_def timer_defs)
+  apply (clarsimp simp: timer_defs)
   done
 
 end
