@@ -123,10 +123,15 @@ definition kernel_elf_base :: "vspace_ref" where
 
 text \<open>
   Currently an arbitrary aligned address for the idle thread.
-  Only has to exist, does not have to match up with the concrete value in C.
-\<close>
+  Only has to exist, does not have to match up with the concrete value in C.\<close>
 definition idle_thread_ptr :: vspace_ref where
   "idle_thread_ptr = pptr_base + 0x1000"
+
+text \<open>
+  Currently an arbitrary aligned address for the idle scheduling context.
+  Only has to exist, does not have to match up with the concrete value in C.\<close>
+definition idle_sc_ptr :: vspace_ref where
+  "idle_sc_ptr = pptr_base + 0x3000"
 
 (* FIXME: nat_to_cref is not arch specific *)
 definition nat_to_cref :: "nat \<Rightarrow> nat \<Rightarrow> cap_ref" where
@@ -165,6 +170,6 @@ datatype arch_fault
 
 end
 
-arch_requalify_consts (A) idle_thread_ptr
+arch_requalify_consts (A) idle_thread_ptr idle_sc_ptr
 
 end

@@ -13,16 +13,35 @@ begin
 
 context Arch begin arch_global_naming (H)
 
+abbreviation (input) ticksToUs :: "word64 \<Rightarrow> word64" where
+  "ticksToUs \<equiv> ticks_to_us"
+
+abbreviation (input) maxUsToTicks :: "word64" where
+  "maxUsToTicks \<equiv> max_us_to_ticks"
+
+abbreviation (input) maxTicksToUs :: "word64" where
+  "maxTicksToUs \<equiv> max_ticks_to_us"
+
+abbreviation (input) kernelWCETTicks :: "word64" where
+  "kernelWCETTicks \<equiv> kernelWCET_ticks"
+
+abbreviation (input) kernelWCETUs :: "word64" where
+  "kernelWCETUs \<equiv> kernelWCET_us"
+
+abbreviation (input) maxPeriodUs :: "word64" where
+  "maxPeriodUs \<equiv> MAX_PERIOD_US"
+
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs Platform=Platform.AARCH64 CONTEXT AARCH64_H \
   NOT PT_Type plic_complete_claim getMemoryRegions getDeviceRegions getKernelDevices \
-  loadWord storeWord storeWordVM getActiveIRQ ackInterrupt maskInterrupt deactivateInterrupt \
-  configureTimer resetTimer debugPrint getRestartPC setNextPC clearMemory \
+  loadWord storeWord storeWordVM getActiveIRQ ackInterrupt maskInterrupt setDeadline \
+  deactivateInterrupt configureTimer resetTimer debugPrint getRestartPC setNextPC clearMemory \
   clearMemoryVM initMemory freeMemory setHardwareASID wordFromPDE wordFromPTE \
   VMFaultType HypFaultType VMPageSize pageBits pageBitsForSize toPAddr \
   addrFromPPtr ptrFromPAddr sfence physBase paddrBase pptrBase pptrBaseOffset \
   pptrUserTop kernelELFBase kernelELFBaseOffset kernelELFPAddrBase \
   addrFromKPPtr ptTranslationBits vmFaultTypeFSR setVSpaceRoot \
-  setIRQTrigger \
+  setIRQTrigger getCurrentTime usToTicks ticksToUs maxUsToTicks maxTicksToUs maxPeriodUs \
+  ackDeadlineIRQ timerPrecision \
   config_ARM_PA_SIZE_BITS_40 numSGIs gicNumTargets \
   readFpuState writeFpuState enableFpu disableFpu isFpuEnable \
   hcrVCPU hcrNative sctlrDefault vgicHCREN gicVCPUMaxNumLR sctlrEL1VM \

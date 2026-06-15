@@ -115,8 +115,8 @@ interpretation Arch .
 instance
   apply (intro_classes)
   apply (clarsimp simp add: updateObject_default_def in_monad projectKO_opts_defs
-                            projectKO_eq2
-                     split: kernel_object.splits arch_kernel_object.splits)
+                            projectKO_eq objBitsKO_def
+                     split: kernel_object.splits arch_kernel_object.splits)+
   done
 
 end
@@ -132,8 +132,8 @@ interpretation Arch .
 instance
   apply (intro_classes)
   apply (clarsimp simp add: updateObject_default_def in_monad projectKO_opts_defs
-                            projectKO_eq2
-                     split: kernel_object.splits arch_kernel_object.splits)
+                            projectKO_eq objBitsKO_def
+                     split: kernel_object.splits arch_kernel_object.splits)+
   done
 
 end
@@ -150,7 +150,7 @@ definition
 
 definition
   loadObject_asidpool[simp]:
- "(loadObject p q n obj) :: asidpool kernel \<equiv>
+ "(loadObject p q n obj) :: asidpool kernel_r \<equiv>
     loadObject_default p q n obj"
 
 definition
@@ -161,8 +161,8 @@ definition
 instance
   apply (intro_classes)
   apply (clarsimp simp add: updateObject_default_def in_monad projectKO_opts_defs
-                            projectKO_eq2
-                     split: kernel_object.splits arch_kernel_object.splits)
+                            projectKO_eq objBitsKO_def
+                     split: kernel_object.splits arch_kernel_object.splits)+
   done
 
 end

@@ -11,7 +11,7 @@
 module SEL4.API.Types.AARCH64 where
 
 import SEL4.API.Types.Universal(APIObjectType(..),
-                                epSizeBits, ntfnSizeBits, cteSizeBits)
+                                epSizeBits, ntfnSizeBits, cteSizeBits, replySizeBits)
 import SEL4.Machine.Hardware.AARCH64
 import Data.WordLib(wordSizeCase)
 
@@ -73,6 +73,8 @@ apiGetObjectSize TCBObject _ = tcbBlockSizeBits
 apiGetObjectSize EndpointObject _ = epSizeBits
 apiGetObjectSize NotificationObject _ = ntfnSizeBits
 apiGetObjectSize CapTableObject size = cteSizeBits + size
+apiGetObjectSize SchedContextObject size = size
+apiGetObjectSize ReplyObject _ = replySizeBits
 
 getObjectSize :: ObjectType -> Int -> Int
 getObjectSize PageTableObject _ = ptBits NormalPT_T

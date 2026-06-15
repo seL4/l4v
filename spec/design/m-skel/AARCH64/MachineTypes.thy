@@ -81,6 +81,8 @@ record vcpu_state =
 record machine_state =
   irq_masks :: "AARCH64.irq \<Rightarrow> bool"
   irq_state :: nat
+  time_state :: nat \<comment> \<open>position in the time oracle\<close>
+  last_machine_time :: "64 word" \<comment> \<open>value we read from timer device\<close>
   underlying_memory :: "machine_word \<Rightarrow> word8"
   device_state :: "machine_word \<Rightarrow> word8 option"
   vcpu_state :: vcpu_state
@@ -92,6 +94,10 @@ axiomatization
   irq_oracle :: "nat \<Rightarrow> AARCH64.irq"
 where
   irq_oracle_max_irq: "\<forall>n. irq_oracle n <= Kernel_Config.maxIRQ"
+
+text \<open>The values the timer device will return (how much time passed since last query)\<close>
+axiomatization
+  time_oracle :: "nat \<Rightarrow> nat"
 
 end_qualify
 
@@ -154,6 +160,8 @@ definition
   init_machine_state :: machine_state where
  "init_machine_state \<equiv> \<lparr> irq_masks = init_irq_masks,
                          irq_state = 0,
+                         time_state = 0,
+                         last_machine_time = 0,
                          underlying_memory = init_underlying_memory,
                          device_state = Map.empty,
                          vcpu_state = default_vcpu_state,

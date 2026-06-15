@@ -34,16 +34,14 @@ section "The Operations"
 
 subsection "Memory"
 
-definition loadWord :: "machine_word \<Rightarrow> machine_word machine_monad"
-  where
+definition loadWord :: "machine_word \<Rightarrow> machine_word machine_monad" where
   "loadWord p \<equiv> do
      m \<leftarrow> gets underlying_memory;
      assert (p && mask 3 = 0);
      return (word_rcat (map (\<lambda>i. m (p + (7 - of_int i))) [0 .. 7]))
    od"
 
-definition storeWord :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-  where
+definition storeWord :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
   "storeWord p w \<equiv> do
      assert (p && mask 3 = 0);
      modify (underlying_memory_update
@@ -59,13 +57,11 @@ lemma loadWord_storeWord_is_return:
                  modify_def gets_def get_def eval_nat_numeral put_def upto0_7_def word_size)
 
 consts' memory_regions :: "(paddr \<times> paddr) list"
-definition getMemoryRegions :: "(paddr * paddr) list machine_monad"
-  where
+definition getMemoryRegions :: "(paddr * paddr) list machine_monad" where
   "getMemoryRegions \<equiv> return memory_regions"
 
 text \<open>This instruction is required in the simulator, only.\<close>
-definition storeWordVM :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-  where
+definition storeWordVM :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
   "storeWordVM w p \<equiv> return ()"
 
 

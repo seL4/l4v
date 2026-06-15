@@ -168,3 +168,11 @@ archObjSize :: ArchKernelObject -> Int
 archObjSize (KOASIDPool _) = pageBits
 archObjSize (KOPTE _) = pteBits
 archObjSize (KOVCPU _) = vcpuBits
+
+{- Time -}
+
+parseTimeArg :: Int -> [Word] -> Time
+parseTimeArg i args = fromIntegral (args !! i)
+
+wordsOfTime :: Time -> [Word]
+wordsOfTime t = [fromIntegral t]

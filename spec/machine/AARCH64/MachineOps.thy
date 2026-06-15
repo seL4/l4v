@@ -12,6 +12,7 @@ imports
   Word_Lib.WordSetup
   Monads.Nondet_Monad
   MachineMonad
+  Time
 begin
 
 section "Wrapping and Lifting Machine Operations"
@@ -27,7 +28,7 @@ text \<open>
 
   All this is done only to avoid a large number of axioms (2 for each operation).\<close>
 
-context Arch begin global_naming AARCH64
+context Arch begin arch_global_naming
 
 section "The Operations"
 
@@ -73,6 +74,30 @@ definition configureTimer :: "irq machine_monad" where
      machine_op_lift configureTimer_impl;
      gets configureTimer_val
    od"
+
+text \<open>
+This encodes the following assumptions:
+  a) time increases monotonically,
+  b) global 64-bit time does not overflow during the lifetime of the system.
+\<close>
+definition
+  getCurrentTime :: "64 word machine_monad"
+where
+  "getCurrentTime = do
+    modify (\<lambda>s. s \<lparr> time_state := time_state s + 1 \<rparr>);
+    passed \<leftarrow> gets $ time_oracle o time_state;
+    last' \<leftarrow> gets last_machine_time;
+    last \<leftarrow> return (unat last');
+    current \<leftarrow> return (min (unat (-(getCurrentTime_buffer + 1))) (last + passed));
+    modify (\<lambda>s. s\<lparr>last_machine_time := of_nat current\<rparr>);
+    return (of_nat current)
+  od"
+
+consts'
+  setDeadline_impl :: "64 word \<Rightarrow> unit machine_rest_monad"
+
+definition setDeadline :: "64 word \<Rightarrow> unit machine_monad" where
+  "setDeadline d \<equiv> machine_op_lift (setDeadline_impl d)"
 
 consts' initTimer_impl :: "unit machine_rest_monad"
 definition initTimer :: "unit machine_monad" where
@@ -132,6 +157,11 @@ definition maskInterrupt :: "bool \<Rightarrow> irq \<Rightarrow> unit machine_m
 
 definition ackInterrupt :: "irq \<Rightarrow> unit machine_monad" where
   "ackInterrupt \<equiv> \<lambda>irq. return ()"
+
+consts' deadlineIRQ :: irq
+
+definition
+  "ackDeadlineIRQ \<equiv> ackInterrupt deadlineIRQ"
 
 definition setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> unit machine_monad" where
   "setInterruptMode \<equiv> \<lambda>irq levelTrigger polarityLow. return ()"
