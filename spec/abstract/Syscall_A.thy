@@ -399,8 +399,12 @@ where
   od)"
 
 | "handle_event (HypervisorEvent hypfault_type) = (without_preemption $ do
-    thread \<leftarrow> gets cur_thread;
-    handle_hypervisor_fault thread hypfault_type
+    update_time_stamp;
+    restart \<leftarrow> check_budget_restart;
+    when restart $ do
+      thread \<leftarrow> gets cur_thread;
+      handle_hypervisor_fault thread hypfault_type
+    od
   od)"
 
 

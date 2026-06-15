@@ -2793,6 +2793,7 @@ proof -
      apply clarsimp
      apply (fastforce simp: simple_sane_strg sch_act_simple_def ct_in_state'_def
                       elim: st_tcb_ex_cap'' pred_tcb'_weakenE)
+    apply (rule updateTimeStamp_checkBudgetRestart_helper)
     apply (rule corres_underlying_split)
        apply (rule corres_guard_imp[OF getCurThread_corres], simp+)
       apply (rule handleHypervisorFault_corres)
