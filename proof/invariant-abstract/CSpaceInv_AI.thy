@@ -14,7 +14,6 @@ begin
 
 arch_requalify_consts
   cap_master_arch_cap
-  arch_cap_badge
   replaceable_final_arch_cap
   replaceable_non_final_arch_cap
   unique_table_refs
@@ -402,7 +401,6 @@ lemma cap_badge_simps [simp]:
  "cap_badge (NotificationCap r badge rights)   = Some badge"
  "cap_badge (UntypedCap dev p n f)             = None"
  "cap_badge (NullCap)                          = None"
- "cap_badge (DomainCap)                        = None"
  "cap_badge (CNodeCap r bits guard)            = None"
  "cap_badge (ThreadCap r)                      = None"
  "cap_badge (DomainCap)                        = None"
@@ -412,7 +410,6 @@ lemma cap_badge_simps [simp]:
  "cap_badge (SchedControlCap)                  = None"
  "cap_badge (IRQHandlerCap irq)                = None"
  "cap_badge (Zombie r b n)                     = None"
- "cap_badge (ArchObjectCap cap)                = None"
  "cap_badge (ArchObjectCap acap)               = arch_cap_badge acap"
   by (auto simp: cap_badge_def)
 

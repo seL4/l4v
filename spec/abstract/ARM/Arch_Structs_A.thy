@@ -116,6 +116,12 @@ where
   "arch_cap_is_device (PageCap dev x rs sz as4) = dev"
 | "arch_cap_is_device _ = False"
 
+(* No badges on arch capabilities on this architecture *)
+definition arch_cap_badge :: "arch_cap \<Rightarrow> machine_word option" where
+  "arch_cap_badge acap \<equiv> None"
+
+lemmas arch_cap_badge_simps[simp] = arch_cap_badge_def
+
 definition tcb_bits :: nat where
   "tcb_bits \<equiv> 9"
 

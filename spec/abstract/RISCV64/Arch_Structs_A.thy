@@ -120,6 +120,12 @@ fun arch_cap_is_device :: "arch_cap \<Rightarrow> bool"
   "arch_cap_is_device (FrameCap _ _ _ is_dev _) = is_dev"
 | "arch_cap_is_device _ = False"
 
+(* No badges on arch capabilities on this architecture *)
+definition arch_cap_badge :: "arch_cap \<Rightarrow> machine_word option" where
+  "arch_cap_badge acap \<equiv> None"
+
+lemmas arch_cap_badge_simps[simp] = arch_cap_badge_def
+
 definition cte_level_bits :: nat
   where
   "cte_level_bits \<equiv> 5"

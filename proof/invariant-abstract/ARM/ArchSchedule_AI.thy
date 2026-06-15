@@ -44,20 +44,12 @@ lemma arch_stt_invs [wp,Schedule_AI_assms]:
   apply wpsimp
   done
 
-lemma arch_stt_tcb [wp,Schedule_AI_assms]:
-  "\<lbrace>tcb_at t'\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. tcb_at t'\<rbrace>"
-  apply (simp add: arch_switch_to_thread_def)
-  apply (wp)
-  done
-
-lemma arch_stt_sc_at[wp,Schedule_AI_assms]:
-  "arch_switch_to_thread t' \<lbrace>sc_at sc_ptr\<rbrace>"
-  apply (simp add: arch_switch_to_thread_def)
-  apply wp
-  done
+crunch arch_switch_to_thread, arch_prepare_next_domain
+  for tcb_at[wp, Schedule_AI_assms]: "tcb_at t"
+  and sc_at[wp, Schedule_AI_assms]: "sc_at sc_ptr"
 
 lemma arch_stt_st_tcb_at[Schedule_AI_assms]:
-  "arch_switch_to_thread t \<lbrace>st_tcb_at Q t\<rbrace>"
+  "arch_switch_to_thread t \<lbrace>st_tcb_at Q t'\<rbrace>"
   by (wpsimp simp: arch_switch_to_thread_def)
 
 lemma arch_stit_invs[wp, Schedule_AI_assms]:

@@ -288,6 +288,7 @@ lemma valid_untyped_helper [Retype_AI_assms]:
     apply (rule context_conjI)
      apply clarsimp
      apply (frule retype_addrs_obj_range_subset[OF _ cover' tyunt])
+      apply (simp add: tysc)
      apply (frule aligned_ranges_subset_or_disjoint)
       apply (erule retype_addrs_aligned[where sz = sz]; simp add: range_cover_def word_bits_def)
      apply (clarsimp simp: default_obj_range Int_ac tyunt tysc)

@@ -582,7 +582,7 @@ where
 | "cap_class (DomainCap)                   = OtherCapClass"
 | "cap_class (Zombie r b n)                = PhysicalClass"
 | "cap_class (SchedContextCap r n)         = PhysicalClass"
-| "cap_class (SchedControlCap)             = SchedControlClass"
+| "cap_class (SchedControlCap)             = OtherCapClass"
 | "cap_class (IRQControlCap)               = OtherCapClass"
 | "cap_class (IRQHandlerCap irq)           = OtherCapClass"
 | "cap_class (ReplyCap tcb rights)         = PhysicalClass"

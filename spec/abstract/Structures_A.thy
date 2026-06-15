@@ -32,6 +32,7 @@ arch_requalify_consts (A)
   acap_rights_update
   arch_kobj_size
   arch_obj_size
+  arch_cap_badge
   aobj_ref
   arch_is_frame_type
   badge_bits

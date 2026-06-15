@@ -850,14 +850,6 @@ crunch setThreadState, setBoundNotification
 end (* TcbAcc_R *)
 
 crunch threadSet
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
-  (wp: crunch_wps)
-
-global_interpretation threadSet: typ_at_all_props' "threadSet tptr f"
-  by typ_at_props'
-
-crunch threadSet
   for irq_states'[wp]: valid_irq_states'
 
 crunch threadSet
@@ -963,6 +955,9 @@ lemma threadSet_pred_tcb_no_state:
   assumes "\<And>tcb. proj (tcb_to_itcb' (f tcb)) = proj (tcb_to_itcb' tcb)"
   shows   "threadSet f t \<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
   by (wpsimp wp: threadSet_obj_at'_no_state simp: pred_tcb_at'_def assms)
+
+global_interpretation threadSet: typ_at_all_props' "threadSet tptr f"
+  by typ_at_props'
 
 lemma threadSet_mdb':
   "\<lbrace>\<lambda>s. valid_mdb' s

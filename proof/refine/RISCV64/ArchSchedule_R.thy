@@ -45,7 +45,7 @@ qed
 lemmas Arch_switchToThread_st_tcb_at'[Schedule_R_assms] =
   Arch_switchToThread_pred_tcb'[where proj=itcbState]
 
-crunch storeWordUser, setVMRoot, asUser, storeWordUser, Arch.switchToThread
+crunch storeWordUser, setVMRoot, asUser, storeWordUser, Arch.switchToThread, Arch.switchToIdleThread
   for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
   and ksIdleThread[Schedule_R_assms, wp]: "\<lambda>s. P (ksIdleThread s)"
   and tcbSchedNexts_of[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
@@ -59,16 +59,18 @@ crunch storeWordUser, setVMRoot, asUser, storeWordUser, Arch.switchToThread
 crunch arch_switch_to_thread, arch_switch_to_idle_thread
   for pspace_aligned[Schedule_R_assms, wp]: pspace_aligned
   and pspace_distinct[Schedule_R_assms, wp]: pspace_distinct
-  and in_correct_ready_q[Schedule_R_assms, wp]: in_correct_ready_q
-  and ready_qs_distinct[wp]: ready_qs_distinct
-  and valid_idle[wp]: valid_idle
+  and valid_idle[Schedule_R_assms, wp]: valid_idle
   and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
+  (simp: crunch_simps)
+
+crunch arch_switch_to_idle_thread
+  for in_correct_ready_q[wp]: in_correct_ready_q
+  and ready_qs_distinct[wp]: ready_qs_distinct
   and ready_queues_runnable[wp]: ready_queues_runnable
   and ep_queues_blocked[wp]: ep_queues_blocked
   and ntfn_queues_blocked[wp]: ntfn_queues_blocked
   (rule: in_correct_ready_q_lift ready_qs_distinct_lift ready_queues_runnable_lift
-         ep_queues_blocked_lift ntfn_queues_blocked_lift crunch_wps
-   simp: crunch_simps)
+         ep_queues_blocked_lift ntfn_queues_blocked_lift)
 
 lemma arch_switchToThread_corres:
   "corres dc (valid_arch_state and valid_objs and pspace_aligned and pspace_distinct
@@ -87,7 +89,6 @@ lemma arch_switchToThread_corres:
 lemma arch_switchToThread_corres_interface[Schedule_R_assms]:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map and valid_arch_caps
               and pspace_aligned and pspace_distinct and valid_global_objs
-              and (\<lambda>s. sym_refs (state_hyp_refs_of s))
               and valid_vspace_objs and pspace_in_kernel_window and valid_cur_fpu and tcb_at t)
              (no_0_obj')
              (arch_switch_to_thread t) (Arch.switchToThread t)"
@@ -102,7 +103,7 @@ lemma arch_switchToIdleThread_corres:
   unfolding arch_switch_to_idle_thread_def RISCV64_H.switchToIdleThread_def
   apply add_valid_idle'
   apply (rule corres_stateAssert_add_assertion[rotated])
-   apply (clarsimp simp: valid_idle'_asrt_def)
+   apply clarsimp
   by (corres corres: getIdleThread_corres setVMRoot_corres)
      (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def is_tcb
                      valid_arch_state_asid_table valid_arch_state_global_arch_objs)+
@@ -115,6 +116,12 @@ lemma arch_switchToIdleThread_corres_interface[Schedule_R_assms]:
      (no_0_obj')
      arch_switch_to_idle_thread Arch.switchToIdleThread"
   by (rule corres_guard_imp, rule arch_switchToIdleThread_corres; simp)
+
+crunch Arch.switchToThread
+  for pspace_aligned'[Schedule_R_assms, wp]: pspace_aligned'
+  and pspace_distinct'[Schedule_R_assms, wp]: pspace_distinct'
+  and pspace_bounded'[Schedule_R_assms, wp]: pspace_bounded'
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma Arch_switchToThread_invs[Schedule_R_assms, wp]:
   "Arch.switchToThread t \<lbrace>invs'\<rbrace>"
@@ -166,9 +173,6 @@ lemmas Arch_switchToIdleThread_not_queued'[Schedule_R_assms] =
 
 lemmas Arch_switchToIdleThread_tcbState[Schedule_R_assms] =
   ArchThreadDecls_H_RISCV64_H_switchToIdleThread_obj_at'[where P="P \<circ> tcbState" for P]
-
-crunch arch_switch_to_thread, handle_spurious_irq
-  for valid_idle[Schedule_R_assms, wp]: valid_idle
 
 end (* Arch *)
 
@@ -336,6 +340,11 @@ lemma stit_nosch[wp]:
                    RISCV64_H.switchToIdleThread_def storeWordUser_def)
   apply (wp setCurThread_nosch | simp add: getIdleThread_def)+
   done
+
+lemma chooseThread_nosch:
+  "chooseThread \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>"
+  unfolding chooseThread_def
+  by (wpsimp wp: stt_nosch simp: bitmap_fun_defs)
 
 end (* Arch *)
 

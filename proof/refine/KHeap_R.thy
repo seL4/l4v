@@ -1420,8 +1420,7 @@ lemma dmo_return' [simp]:
 lemma no_fail_dmo'[wp]:
   "no_fail P f \<Longrightarrow> no_fail (P o ksMachineState) (doMachineOp f)"
   apply (simp add: doMachineOp_def split_def)
-  apply (rule no_fail_pre, wp)
-  apply simp
+  apply wp
   apply (simp add: no_fail_def)
   done
 

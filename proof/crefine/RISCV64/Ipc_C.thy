@@ -4145,8 +4145,7 @@ lemma copyMRsFaultReply_ccorres_syscall:
                             msgRegisters_unfold
                             syscallMessage_unfold
                             n_syscallMessage_def
-                            n_msgRegisters_def
-                       intro: obj_tcb_at')+)[2]
+                            n_msgRegisters_def)+)[2]
     apply wp
    apply auto
   done
@@ -4346,8 +4345,7 @@ proof -
       apply ((fastforce simp: guard_is_UNIV_def
                             msgRegisters_unfold
                             timeoutMessage_unfold
-                            n_msgRegisters_def
-                       intro: obj_tcb_at')+)[2]
+                            n_msgRegisters_def)+)[2]
     apply wp
    apply auto
   done
