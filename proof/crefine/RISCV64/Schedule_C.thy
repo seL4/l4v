@@ -630,7 +630,7 @@ lemma head_refill_overrun_ccorres:
                   and xf'=ret__unsigned_longlong_'
                    in ccorres_symb_exec_r_known_rv[where R=\<top> and R'=UNIV])
          apply (rule conseqPre, vcg)
-         apply (clarsimp simp: maxPeriodUs_def timer_defs unat_max_word)
+         apply (clarsimp simp: timer_defs unat_max_word)
         apply ceqv
        apply csymbr
        apply (fastforce intro: ccorres_return_C)
@@ -1371,7 +1371,7 @@ lemma refill_budget_check_ccorres:
                         and xf'=ret__unsigned_longlong_'
                          in ccorres_symb_exec_r_known_rv[where R=\<top> and R'=UNIV])
                apply (rule conseqPre, vcg)
-               apply (clarsimp simp: maxPeriodUs_def timer_defs unat_max_word)
+               apply (clarsimp simp: timer_defs unat_max_word)
               apply ceqv
              apply (rule_tac val="from_bool (rTime head < maxReleaseTime)"
                          and xf'=ret__int_'

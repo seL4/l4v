@@ -17,7 +17,7 @@ begin
 
 context Arch begin arch_global_naming (H)
 
-definition usToTicks :: "word64 \<Rightarrow> word64" where
+abbreviation (input) usToTicks :: "word64 \<Rightarrow> word64" where
   "usToTicks \<equiv> us_to_ticks"
 
 #INCLUDE_HASKELL SEL4/Model/StateData/RISCV64.hs SEL4/Machine/Hardware.lhs CONTEXT RISCV64_H ONLY RISCVVSpaceRegionUse

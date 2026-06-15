@@ -1210,13 +1210,6 @@ lemma \<mu>s_in_ms_equiv:
   "\<mu>s_in_ms = usInMs"
   by (simp add: usInMs_def \<mu>s_in_ms_def)
 
-(*FIXME arch-split RT*)
-lemma (in Arch) us_to_ticks_equiv:
-  "us_to_ticks = usToTicks"
-  by (simp add: usToTicks_def)
-
-requalify_facts Arch.us_to_ticks_equiv
-
 lemma reset_work_units_equiv:
   "do_extended_op (modify (work_units_completed_update (\<lambda>_. 0)))
    = (modify (work_units_completed_update (\<lambda>_. 0)))"
@@ -1227,7 +1220,7 @@ lemma nextDomain_corres:
   apply (clarsimp simp: next_domain_def nextDomain_def reset_work_units_equiv modify_modify)
   apply (rule corres_modify)
   apply (simp add: state_relation_def Let_def dschLength_def dschDomain_def cdt_relation_def
-                   \<mu>s_in_ms_equiv us_to_ticks_equiv)
+                   \<mu>s_in_ms_equiv)
   done
 
 lemma next_domain_valid_sched[wp]:
@@ -3410,7 +3403,7 @@ lemma gets_the_refillHdInsufficient_corres:
              flip: get_refill_head_def getRefillHead_def)
   apply (corres corres: getRefillHead_corres)
       apply (rule corres_return_eq_same)
-      apply (clarsimp simp: refill_map_def minBudget_def MIN_BUDGET_def RISCV64_H.kernelWCETTicks_def) (*FIXME arch-split RT*)
+      apply (clarsimp simp: refill_map_def minBudget_def MIN_BUDGET_def)
      apply wpsimp+
    apply (fastforce elim!: sc_at_pred_n_sc_at)
   apply clarsimp
