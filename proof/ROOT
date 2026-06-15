@@ -168,8 +168,7 @@ session InfoFlowC in "infoflow/refine" = InfoFlowCBase +
   directories
     "$L4V_ARCH"
   theories
-    "Noninterference_Refinement"
-    "Example_Valid_StateH"
+    "InfoFlowC_Image_Toplevel"
 
 (*
  * capDL
