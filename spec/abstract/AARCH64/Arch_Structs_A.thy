@@ -215,6 +215,12 @@ fun arch_cap_is_device :: "arch_cap \<Rightarrow> bool" where
   "arch_cap_is_device (FrameCap _ _ _ is_dev _) = is_dev"
 | "arch_cap_is_device _ = False"
 
+definition arch_cap_badge :: "arch_cap \<Rightarrow> machine_word option" where
+  "arch_cap_badge acap \<equiv>
+     case acap of
+         SMCCap smc_badge \<Rightarrow> Some smc_badge
+       | _ \<Rightarrow> None"
+
 definition cte_level_bits :: nat where
   "cte_level_bits \<equiv> 5"
 
@@ -226,6 +232,9 @@ definition endpoint_bits :: nat where
 
 definition ntfn_bits :: nat where
   "ntfn_bits \<equiv> 5"
+
+definition reply_bits :: nat where
+  "reply_bits \<equiv> 5"
 
 definition untyped_min_bits :: nat where
   "untyped_min_bits \<equiv> 4"
@@ -398,6 +407,14 @@ definition arch_tcb_set_registers :: "(register \<Rightarrow> machine_word) \<Ri
 
 definition arch_tcb_get_registers :: "arch_tcb \<Rightarrow> register \<Rightarrow> machine_word" where
   "arch_tcb_get_registers a_tcb \<equiv> user_regs (tcb_context a_tcb)"
+
+text \<open> Time \<close>
+
+definition parse_time_arg :: "nat \<Rightarrow> machine_word list \<Rightarrow> time" where
+  "parse_time_arg i args = ucast (args ! i)"
+
+definition words_from_time :: "time \<Rightarrow> machine_word list" where
+  "words_from_time t = [ucast t]"
 
 end
 end

@@ -521,33 +521,35 @@ vcpuFlushIfCurrent t = do
 
 vgicMaintenance :: Kernel ()
 vgicMaintenance = do
-    hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
-    -- ignore event unless current VCPU active
-    case hsCurVCPU of
-        Just (vcpuPtr, True) -> do
-            eisr0 <- doMachineOp $ get_gic_vcpu_ctrl_eisr0
-            eisr1 <- doMachineOp $ get_gic_vcpu_ctrl_eisr1
-            flags <- doMachineOp $ get_gic_vcpu_ctrl_misr
-            let vgic_misr_eoi = vgicHCREN
-            let irq_idx = irqIndex eisr0 eisr1
+    curThread <- getCurThread
+    isSchedulable <- getSchedulable curThread
+    when isSchedulable $ do
+        hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
+        -- ignore event unless current VCPU active
+        case hsCurVCPU of
+            Just (vcpuPtr, True) -> do
+                eisr0 <- doMachineOp $ get_gic_vcpu_ctrl_eisr0
+                eisr1 <- doMachineOp $ get_gic_vcpu_ctrl_eisr1
+                flags <- doMachineOp $ get_gic_vcpu_ctrl_misr
+                let vgic_misr_eoi = vgicHCREN
+                let irq_idx = irqIndex eisr0 eisr1
 
-            gic_vcpu_num_list_regs <- gets (armKSGICVCPUNumListRegs . ksArchState)
-            fault <-
-                if (flags .&. vgic_misr_eoi /= 0)
-                then
-                    if (eisr0 == 0 && eisr1 == 0 ||
-                        irq_idx >= gic_vcpu_num_list_regs) -- irq_idx invalid
-                        then return $ VGICMaintenance Nothing
-                        else (do
-                            setIndex vcpuPtr irq_idx
-                            return $ VGICMaintenance $ Just $ fromIntegral irq_idx
-                            )
-                else return $ VGICMaintenance Nothing
+                gic_vcpu_num_list_regs <- gets (armKSGICVCPUNumListRegs . ksArchState)
+                fault <-
+                    if (flags .&. vgic_misr_eoi /= 0)
+                    then
+                        if (eisr0 == 0 && eisr1 == 0 ||
+                            irq_idx >= gic_vcpu_num_list_regs) -- irq_idx invalid
+                            then return $ VGICMaintenance Nothing
+                            else (do
+                                setIndex vcpuPtr irq_idx
+                                return $ VGICMaintenance $ Just $ fromIntegral irq_idx
+                                )
+                    else return $ VGICMaintenance Nothing
 
-            curThread <- getCurThread
-            runnable <- isRunnable curThread
-            when runnable $ handleFault curThread $ ArchFault fault
-        _ -> return ()
+                runnable <- isRunnable curThread
+                when runnable $ handleFault curThread $ ArchFault fault
+            _ -> return ()
     where
         irqIndex eisr0 eisr1 =
             if eisr0 /= 0 then countTrailingZeros eisr0
@@ -568,14 +570,16 @@ irqVPPIEventIndex irq =
 
 vppiEvent :: IRQ -> Kernel ()
 vppiEvent irq = do
-    hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
-    case hsCurVCPU of
-        Just (vcpuPtr, True) -> do
-            doMachineOp $ maskInterrupt True irq
-            let vppi = fromJust $ irqVPPIEventIndex irq
-            vcpuUpdate vcpuPtr
-                       (\vcpu -> vcpu{ vcpuVPPIMasked = vcpuVPPIMasked vcpu // [(vppi, True)] })
-            curThread <- getCurThread
-            runnable <- isRunnable curThread
-            when runnable $ handleFault curThread $ ArchFault $ VPPIEvent irq
-        _ -> return ()
+    curThread <- getCurThread
+    isSchedulable <- getSchedulable curThread
+    when isSchedulable $ do
+        hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
+        case hsCurVCPU of
+            Just (vcpuPtr, True) -> do
+                doMachineOp $ maskInterrupt True irq
+                let vppi = fromJust $ irqVPPIEventIndex irq
+                vcpuUpdate vcpuPtr
+                           (\vcpu -> vcpu{ vcpuVPPIMasked = vcpuVPPIMasked vcpu // [(vppi, True)] })
+                runnable <- isRunnable curThread
+                when runnable $ handleFault curThread $ ArchFault $ VPPIEvent irq
+            _ -> return ()

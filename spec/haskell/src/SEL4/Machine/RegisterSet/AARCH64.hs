@@ -46,6 +46,12 @@ frameRegisters = FaultIP : SP_EL0 : SPSR_EL1 : [X0 .. X8] ++ [X16, X17, X18, X29
 gpRegisters :: [Register]
 gpRegisters = [X9 .. X15] ++ [X19 .. X28] ++ [TPIDR_EL0, TPIDRRO_EL0]
 
+replyRegister :: Register
+replyRegister = X6
+
+nbsendRecvDest :: Register
+nbsendRecvDest = X8
+
 exceptionMessage :: [Register] -- see fault_messages[] in C
 exceptionMessage = [FaultIP, SP_EL0, SPSR_EL1]
 
@@ -54,6 +60,9 @@ syscallMessage = [X0 .. X7] ++ [FaultIP, SP_EL0, NextIP, SPSR_EL1]
 
 tlsBaseRegister :: Register
 tlsBaseRegister = TPIDR_EL0
+
+timeoutMessage :: [Register]
+timeoutMessage = [FaultIP, SP_EL0, SPSR_EL1] ++ [X0 .. X30]
 
 pstateUser :: Word
 pstateUser =  0x140 -- PSTATE_USER

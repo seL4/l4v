@@ -2551,3 +2551,17 @@ case \x of ArchInv.InvokeVCPU iv -> ArchInv.InvokeSGISignal iv -> ArchInv.Invoke
 
 case \x of (ArchInv.SMCCall args) ->  ---> let args = smcArgs \x in
   ->1
+
+case \x of cap@(PageTableCap { capPTType = VSRootPT_T }) -> _ ->  ---> let cap = \x in
+  if isPageTableCap cap \<and> capPTType cap = VSRootPT_T
+  then ->1
+  else ->2
+
+case \x of Arch.Types.APIObjectType _ -> Arch.Types.SmallPageObject -> Arch.Types.LargePageObject -> Arch.Types.HugePageObject -> Arch.Types.PageTableObject -> Arch.Types.VSpaceObject -> Arch.Types.VCPUObject ->  ---> case \x of
+    APIObjectType \v0\ \<Rightarrow> ->1
+  | SmallPageObject \<Rightarrow> ->2
+  | LargePageObject \<Rightarrow> ->3
+  | HugePageObject \<Rightarrow> ->4
+  | PageTableObject \<Rightarrow> ->5
+  | VSpaceObject \<Rightarrow> ->6
+  | VCPUObject \<Rightarrow> ->7

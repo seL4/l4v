@@ -128,6 +128,9 @@ definition addrFromKPPtr :: "machine_word \<Rightarrow> paddr" where
 definition minIRQ :: "irq" where
   "minIRQ \<equiv> 0"
 
+definition timerIRQ :: "irq" where
+  "timerIRQ \<equiv> maxIRQ"
+
 definition irqVGICMaintenance :: irq where
   "irqVGICMaintenance \<equiv> 25"
 

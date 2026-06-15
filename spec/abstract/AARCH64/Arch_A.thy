@@ -8,7 +8,7 @@
 chapter "Toplevel AARCH64 Definitions"
 
 theory Arch_A
-imports TcbAcc_A VCPU_A
+imports TcbAcc_A VCPU_A CSpace_A
 begin
 
 context Arch begin arch_global_naming (A)

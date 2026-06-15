@@ -8,7 +8,7 @@
 chapter \<open>Arch IPC Cancelling\<close>
 
 theory ArchIpcCancel_A
-imports CSpaceAcc_A
+imports Sporadic_A
 begin
 
 context Arch begin arch_global_naming (A)

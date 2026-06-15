@@ -135,6 +135,16 @@ configureTimer = do
     cbptr <- ask
     liftIO $ Platform.configureTimer cbptr
 
+setDeadline :: Word64 -> MachineMonad ()
+setDeadline d = do
+    cbptr <- ask
+    liftIO $ Platform.setDeadline cbptr d
+
+ackDeadlineIRQ :: MachineMonad ()
+ackDeadlineIRQ = do
+    cbptr <- ask
+    liftIO $ Platform.ackDeadlineIRQ cbptr
+
 resetTimer :: MachineMonad ()
 resetTimer = do
     cbptr <- ask
@@ -382,6 +392,11 @@ maskInterrupt maskI irq = do
     cbptr <- ask
     liftIO $ Platform.maskInterrupt cbptr maskI irq
 
+getCurrentTime :: MachineMonad Word64
+getCurrentTime = do
+    cbptr <- ask
+    liftIO $ Platform.getCurrentTime cbptr
+
 deactivateInterrupt :: IRQ -> MachineMonad ()
 deactivateInterrupt irq = error "Unimplemented - GICv3 machine op"
 
@@ -454,6 +469,9 @@ check_export_arch_timer = error "Unimplemented - machine op"
 
 {- Constants -}
 
+timerIRQ :: IRQ
+timerIRQ = Platform.timerIRQ
+
 hcrCommon :: Word
 --          HCR_VM  | HCR_RW   | HCR_AMO | HCR_IMO | HCR_FMO | HCR_TSC
 hcrCommon = bit 0  .|. bit 31 .|. bit 5 .|. bit 4 .|. bit 3 .|. bit 19
@@ -515,3 +533,21 @@ config_DISABLE_WFI_WFE_TRAPS = error "generated from CMake config"
 -- Whether to use the GICv3. Defaults to GICv2 when set to False.
 config_ARM_GIC_V3 :: Bool
 config_ARM_GIC_V3 = error "generated from CMake config"
+
+timerPrecision :: Word64
+timerPrecision = usToTicks 1
+
+usToTicks :: Word64 -> Word64
+usToTicks _ = undefined
+
+ticksToUs :: Word64 -> Word64
+ticksToUs _ = undefined
+
+maxUsToTicks :: Word64
+maxUsToTicks = undefined
+
+maxTicksToUs :: Word64
+maxTicksToUs = undefined
+
+maxPeriodUs :: Word64
+maxPeriodUs = undefined
