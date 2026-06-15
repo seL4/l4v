@@ -2033,8 +2033,11 @@ lemma handle_event_schact_is_rct_imp_ct_activatable:
     apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
    apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
    apply (wpsimp wp: hoare_vcg_imp_lift')
+  apply (clarsimp simp: liftE_def bind_assoc)
+  apply (rule_tac P'="?Q" in hoare_weaken_pre[rotated])
+   apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  apply (rule bind_wp_fwd_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
   apply (wpsimp wp: hoare_vcg_imp_lift')
-  apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
 lemma preemption_path_schact_is_rct_imp_ct_activatable[wp]:

@@ -20993,11 +20993,6 @@ lemma handle_event_valid_sched:
 
       apply handle_event_valid_sched_fault+
 
-   (* HypervisorEvent *)
-   apply wpsimp
-   apply (clarsimp simp: ct_in_state_def schact_is_rct_def valid_sched_def ct_not_in_q_def
-                         pred_tcb_at_def obj_at_def)
-
   (* Interrupt *)
   apply (clarsimp simp: maybe_handle_interrupt_def)
   apply wpsimp
@@ -21618,7 +21613,7 @@ lemma handle_event_scheduler_act_sane:
      apply (wpsimp wp: check_budget_restart_if_lift, fastforce)
     apply (wpsimp wp: hoare_drop_imp do_machine_op_ct_in_state, fastforce)
    apply (wpsimp wp: check_budget_restart_if_lift, fastforce)
-  apply (wpsimp, fastforce)
+  apply (wpsimp wp: check_budget_restart_if_lift, fastforce)
   done
 
 end
@@ -23010,14 +23005,9 @@ lemma handle_event_cur_sc_more_than_ready[wp]:
    handle_event e
    \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>, -"
   apply (cases e; (solves \<open>wpsimp\<close>)?; simp)
-
-  subgoal for syscall
-    by (case_tac syscall; simp add: handle_call_def handle_send_def
-        ; handle_event_cur_sc_more_than_ready_syscall)
-
-  apply wpsimp
-  apply (clarsimp simp: cur_sc_more_than_ready_def)
-  done
+  apply (rename_tac syscall)
+  by (case_tac syscall; simp add: handle_call_def handle_send_def;
+      handle_event_cur_sc_more_than_ready_syscall)
 
 lemma perform_invocation_cur_sc_offset_ready[wp]:
   "\<lbrace>\<lambda>s. (cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s) \<and> valid_machine_time s\<rbrace>
@@ -25587,6 +25577,7 @@ lemma handle_event_cur_sc_in_release_q_imp_zero_consumed:
       apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
       done
 
+   \<comment> \<open>handle_vm_fault\<close>
    apply (wpsimp wp: check_budget_restart_if_lift
                      update_timestamp_cur_sc_in_release_q_imp_zero_consumed)
    apply (fastforce dest: invs_cur_sc_chargeableE valid_sched_valid_release_q
@@ -25595,14 +25586,12 @@ lemma handle_event_cur_sc_in_release_q_imp_zero_consumed:
                           receive_blocked_def)
 
   \<comment> \<open>handle_hypervisor_fault\<close>
-  apply wpsimp
-  apply (prop_tac "cur_sc_tcb_are_bound s")
-   apply (rule invs_strengthen_cur_sc_tcb_are_bound; fastforce?)
-  apply (intro conjI impI)
-    apply (rule cur_sc_tcb_are_bound_cur_sc_in_release_q_imp_zero_consumed; assumption?)
-    apply (erule invs_sym_refs)
-   apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-  apply fastforce
+  apply (wpsimp wp: check_budget_restart_if_lift
+                    update_timestamp_cur_sc_in_release_q_imp_zero_consumed)
+  apply (fastforce dest: invs_cur_sc_chargeableE valid_sched_valid_release_q
+                         ct_active_not_receive_blocked_helper
+                   simp: ct_in_state_def pred_tcb_at_def obj_at_def vs_all_heap_simps
+                         receive_blocked_def)
   done
 
 lemma handle_no_fault_ct_ready_if_schedulable[wp]:
@@ -26702,15 +26691,15 @@ lemma handle_event_ct_ready_if_schedulable[wp]:
 
       apply he_ctris_handle_fault
      apply he_ctris_handle_fault
-  subgoal \<comment>\<open>Interrupt\<close>
-    apply wpsimp
+    subgoal \<comment>\<open>Interrupt\<close>
+     apply wpsimp
       apply (wpsimp_str wp: update_time_stamp_current_time_bounded)+
-    apply (fastforce elim: invs_cur_sc_chargeableE
-                     simp: ct_ready_if_schedulable_def vs_all_heap_simps ct_in_state_def
-                           pred_tcb_at_def obj_at_def is_blocked_on_receive_def)
-    done
+     apply (fastforce elim: invs_cur_sc_chargeableE
+                      simp: ct_ready_if_schedulable_def vs_all_heap_simps ct_in_state_def
+                            pred_tcb_at_def obj_at_def is_blocked_on_receive_def)
+     done
+   apply he_ctris_handle_fault
   apply he_ctris_handle_fault
-  apply (wpsimp wp: handle_fault_ct_ready_if_schedulable_not_blocked_on_receive)
   done
 
 lemma ct_active_sc_cur_sc_active:

@@ -33,7 +33,11 @@ where
            tsType_CL (thread_state_lift (tcbState_C tcb)) = scast ThreadState_Running"
 
 definition
-  "handleHypervisorEvent_C = (CALL schedule();; CALL activateThread())"
+  "handleHypervisorEvent_C =
+     (CALL updateTimestamp();;
+      \<acute>ret__unsigned_long :== CALL checkBudgetRestart();;
+      CALL schedule();;
+      CALL activateThread())"
 
 context kernel_m
 begin

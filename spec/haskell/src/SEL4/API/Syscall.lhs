@@ -174,8 +174,11 @@ If the simulator reports a VM fault, the appropriate action depends on whether t
 For platforms running in hypervisor mode, many fault handlers are wrapped and redirected to standard fault handlers on kernel entry. Some however, such as VCPU faults on ARM plaftforms, require specialised handling.
 
 > handleEvent (HypervisorEvent hypType) = withoutPreemption $ do
->     thread <- getCurThread
->     handleHypervisorFault thread hypType
+>     updateTimeStamp
+>     restart <- checkBudgetRestart
+>     when restart $ do
+>         thread <- getCurThread
+>         handleHypervisorFault thread hypType
 
 \subsection{System Calls}
 

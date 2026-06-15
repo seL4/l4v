@@ -679,18 +679,32 @@ lemma handleHypervisorEvent_ccorres:
   apply (simp add: liftE_def bind_assoc)
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_stateAssert)+
-    apply (rule ccorres_pre_getCurThread)
-    apply (cases t; simp add: handleHypervisorFault_def)
-    apply (rule ccorres_stateAssert)+
-    apply (ctac (no_vcg) add: schedule_ccorres)
-     apply (rule ccorres_stateAssert)+
-     apply (rule ccorres_stateAssert_after)
-     apply (rule ccorres_guard_imp[where A="A and P" and Q=A for A P])
-       apply (ctac (no_vcg) add: activateThread_ccorres)
-      apply simp
-     apply assumption
-    apply (wp schedule_sch_act_wf schedule_invs' hoare_drop_imps)+
-   apply (clarsimp simp: weak_sch_act_wf_def sch_act_simple_def)+
+    apply (rule ccorres_rhs_assoc)+
+    apply (ctac (no_vcg) add: updateTimestamp_ccorres, rename_tac xfdc')
+     apply (rule ccorres_split_nothrow_novcg[where xf'=xfdc])
+         apply (rule_tac xf''=xfdc in ccorres_call)
+            apply (rule ccorres_rel_imp)
+             apply (fastforce intro: checkBudgetRestart_ccorres, fastforce+)
+        apply ceqv
+       apply (rule ccorres_seq_skip[THEN iffD1])
+       apply (rule ccorres_split_nothrow_novcg[where xf'=xfdc and r'=dc and P=\<top> and P'=UNIV])
+           apply (case_tac restart; clarsimp simp: bind_assoc)
+            apply (ccorres_exec_l_pre ccorres_exec_l_pre: getCurThread_sp)
+            apply (cases t; simp add: handleHypervisorFault_def)
+            apply (fastforce intro: ccorres_guard_imp[OF ccorres_return_Skip])
+           apply (fastforce intro: ccorres_guard_imp[OF ccorres_return_Skip])
+          apply ceqv
+         apply (rule ccorres_stateAssert)+
+         apply (ctac (no_vcg) add: schedule_ccorres)
+          apply (rule ccorres_stateAssert)+
+          apply (rule ccorres_stateAssert_after)
+          apply (rule ccorres_guard_imp[where A="A and P" and Q=A for A P])
+            apply (ctac (no_vcg) add: activateThread_ccorres)
+           apply simp
+          apply assumption
+         apply (wpsimp wp: schedule_sch_act_wf schedule_invs' hoare_drop_imps
+                           hoare_vcg_if_lift2
+                     simp: handleHypervisorFault_def guard_is_UNIV_def)+
   done
 
 lemma callKernel_corres_C:
