@@ -2176,6 +2176,26 @@ lemmas gen_typ_at_lifts =
 
 end (* typ_at_gen *)
 
+locale gen_typ_at_props' = typ_at_gen "b_itself :: 'b" for b_itself +
+  fixes f :: "'b kernel"
+  assumes typ': "f \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
+begin
+
+lemmas gen_typ_ats[wp] = gen_typ_at_lifts[REPEAT [OF typ']]
+
+context begin
+(* We want to enforce that gen_typ_ats only contains lemmas that have no
+   assumptions. The following thm statement should fail if this is not true. *)
+private lemmas check_valid_internal = iffD1[OF refl, where P="valid p g q" for p g q]
+thm gen_typ_ats[atomized, THEN check_valid_internal]
+end
+
+end (* gen_typ_at_props' *)
+
+(* we expect typ_at' lemmas to be [wp], so this should be easy: *)
+method typ_at_props' = unfold_locales; wp?
+
+
 lemma mdb_next_unfold:
   "s \<turnstile> c \<leadsto> c' = (\<exists>z. s c = Some z \<and> c' = mdbNext (cteMDBNode z))"
   by (auto simp add: mdb_next_rel_def mdb_next_def)

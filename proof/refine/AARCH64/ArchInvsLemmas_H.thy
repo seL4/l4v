@@ -479,6 +479,26 @@ lemmas typ_at_lifts = gen_typ_at_lifts typ_at_lifts_internal
 
 end
 
+end (* Arch *)
+
+locale typ_at_props' = Arch +
+  fixes f :: "'a kernel"
+  assumes typ': "f \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
+begin
+
+lemmas typ_ats[wp] = typ_at_lifts[REPEAT [OF typ']]
+
+context begin
+(* We want to enforce that typ_ats only contains lemmas that have no
+   assumptions. The following thm statements should fail if this is not true. *)
+private lemmas check_valid_internal = iffD1[OF refl, where P="valid p g q" for p g q]
+thm typ_ats[atomized, THEN check_valid_internal]
+end
+
+end (* typ_at_props' *)
+
+
+context Arch begin arch_global_naming
 
 lemma valid_arch_state_armKSGlobalUserVSpace:
   "valid_arch_state' s \<Longrightarrow> canonical_address (addrFromKPPtr (armKSGlobalUserVSpace (ksArchState s)))"
