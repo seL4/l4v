@@ -2188,6 +2188,35 @@ end
 
 end (* typ_at_gen *)
 
+(* Will be a sublocale of gen_typ_at_props' once Invariants_H_typ_at_lifts is interpreted.
+   Done this way to avoid f_rvt_itself parameter in final gen_typ_at_props' locale.*)
+locale gen_typ_at_props'_interface = Invariants_H_typ_at_lifts "f_rvt_itself :: 'f_rvt itself" for f_rvt_itself +
+  fixes f :: "'f_rvt kernel"
+  assumes typ'_interface: "f \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
+begin
+
+lemmas gen_typ_ats[wp] = gen_typ_at_lifts[REPEAT [OF typ'_interface]]
+
+context begin
+(* We want to enforce that gen_typ_ats only contains lemmas that have no
+   assumptions. The following thm statement should fail if this is not true. *)
+private lemmas check_valid_internal = iffD1[OF refl, where P="valid p g q" for p g q]
+thm gen_typ_ats[atomized, THEN check_valid_internal]
+end
+
+end (* gen_typ_at_props'_interface *)
+
+(* Main typ_at_props' locale used for function instantiation.
+   Requires Invariants_H_typ_at_lifts to be interpreted first before gen_typ_at_props'_interface
+   can become a sublocale. *)
+locale gen_typ_at_props' =
+  fixes f :: "'f_rvt kernel"
+  assumes typ': "f \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
+
+(* we expect typ_at' lemmas to be [wp], so this should be easy *)
+method typ_at_props' "for instantiating typ_at_props' locale"
+  = unfold_locales; wp?
+
 lemma mdb_next_unfold:
   "s \<turnstile> c \<leadsto> c' = (\<exists>z. s c = Some z \<and> c' = mdbNext (cteMDBNode z))"
   by (auto simp add: mdb_next_rel_def mdb_next_def)

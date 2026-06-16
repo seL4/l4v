@@ -18,6 +18,13 @@ arch_requalify_facts
   objBitsT_koTypeOf (* FIXME arch-split: consider declaring [simp] here rather than Schedule_R *)
   hyp_refs_of_live'
 
+(* Transfer facts from partial locale (with extra assumptions) into complete locale.
+   Done this way because Invariants_H_typ_at_lifts has a fixes that gen_typ_at_props'_interface had
+   to inherit. Now that Invariants_H_typ_at_lifts has been instantiated, we can drop that fixes
+   assumption by moving everything into gen_typ_at_props'. *)
+sublocale gen_typ_at_props' < gen_typ_at_props'_interface \<open>TYPE('f_rvt)\<close> f
+  by unfold_locales (fact typ')
+
 (* these depend on interpretations in ArchInvLemmas_H *)
 context pspace_update_eq'
 begin
