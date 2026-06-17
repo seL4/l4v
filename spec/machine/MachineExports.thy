@@ -18,9 +18,6 @@ arch_requalify_types
   irq
   user_monad
   user_context
-  ticks_len
-  ticks
-  time
 
 arch_requalify_consts
   getActiveIRQ
@@ -56,51 +53,7 @@ arch_requalify_consts
   ptrFromPAddr
   pageBits
   configureTimer
-  kernelWCET_us
-  kernelWCET_ticks
-  maxTimer_us
-  max_ticks_to_us
-  max_us_to_ticks
-  MAX_PERIOD_US
-  MAX_PERIOD
-  ticks_per_timer_unit
-  us_to_ticks
-  ticks_to_us
   setDeadline
-  max_time
-  getCurrentTime_buffer
-  time_buffer_const
-  \<mu>s_in_ms
-
-arch_requalify_facts
-  MAX_PERIOD_US_def
-  MAX_PERIOD_def
-  kernelWCET_ticks_def
-  replicate_no_overflow
-  getCurrentTime_buffer_nonzero'
-  getCurrentTime_buffer_no_overflow'
-  MAX_PERIOD_mult
-  ticks_per_timer_unit_non_zero
-  MIN_BUDGET_bound
-  getCurrentTime_buffer_bound
-  kernelWCET_pos'
-  MIN_BUDGET_pos'
-  init_domain_time_pos
-  init_domain_time_bound
-  getCurrentTime_buffer_pos
-  getCurrentTime_buffer_no_overflow
-  us_to_ticks_mono
-  MIN_BUDGET_helper
-  \<mu>s_in_ms_def
-  us_to_ticks_helper
-  MIN_BUDGET_le_MAX_PERIOD
-
-definition "MAX_RELEASE_TIME = max_time - 5 * MAX_PERIOD"
-
-lemma unat_MAX_RELEASE_TIME:
-  "unat MAX_RELEASE_TIME = unat max_time - 5 * unat MAX_PERIOD"
-  apply (clarsimp simp: MAX_RELEASE_TIME_def unat_sub MAX_PERIOD_mult)
-  done
 
 (* HERE IS THE PLACE FOR GENERIC WORD LEMMAS FOR ALL ARCHITECTURES *)
 

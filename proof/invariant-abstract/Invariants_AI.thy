@@ -119,7 +119,6 @@ arch_requalify_facts
   iarch_tcb_context_set
   iarch_tcb_set_registers
   valid_sc_size_less_word_bits
-  kernelWCET_us_pos
 
 lemmas x_bit_defs [simp] =
   tcb_bits_def

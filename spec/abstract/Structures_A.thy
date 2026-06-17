@@ -53,9 +53,6 @@ arch_requalify_consts (A)
   parse_time_arg
   words_from_time
 
-arch_requalify_facts
-  kernelWCET_ticks_pos2
-
 text \<open>
   User mode can request these objects to be created by retype:
 \<close>
