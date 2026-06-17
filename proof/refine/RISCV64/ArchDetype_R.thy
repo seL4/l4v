@@ -191,9 +191,10 @@ lemma sym_refs_hyp_refs_triv[simp]:
   by (clarsimp simp: state_hyp_refs_of_def sym_refs_def)
      (case_tac "kheap s' x"; simp)
 
-(* FIXME arch-split: some of this can be generalised; 3 is same on all arches *)
-lemma deleteObjects_corres:
-  "is_aligned base magnitude \<Longrightarrow> magnitude \<ge> 3 \<Longrightarrow>
+named_theorems Detype_R_assms
+
+lemma deleteObjects_corres[Detype_R_assms]:
+  "\<lbrakk> is_aligned base magnitude; magnitude \<ge> word_size_bits \<rbrakk> \<Longrightarrow>
    corres dc
       (\<lambda>s. einvs s
            \<and> s \<turnstile> (cap.UntypedCap d base magnitude idx)
@@ -245,7 +246,7 @@ lemma deleteObjects_corres:
          apply (rule no_fail_freeMemory, simp+)
         apply (wp hoare_vcg_ex_lift)+
       apply auto[1]
-     apply (auto elim: is_aligned_weaken)[1]
+     apply (auto elim: is_aligned_weaken simp: word_size_bits_def)[1]
     apply (rule corres_modify)
     apply (simp add: valid_pspace'_def)
     apply (rule state_relation_null_filterE, assumption,
@@ -355,8 +356,6 @@ lemmas delete_invs' = delete_invs'
 end
 
 context Arch begin arch_global_naming
-
-named_theorems Detype_R_assms
 
 (* FIXME arch-split: some lemmas in this block use deleteObjects_def3, which leaks some arch details.
    Not all of them need to deal with these arch details, so if the def2/def3 lemmas can be
@@ -468,10 +467,10 @@ lemma deleteObjects_cap_to':
   apply (simp add: delete_locale_def)
   done
 
-lemma deleteObject_no_overlap[wp]:
+lemma deleteObject_no_overlap[Detype_R_assms, wp]:
   "\<lbrace>valid_cap' (UntypedCap d ptr bits idx) and valid_pspace'\<rbrace>
-     deleteObjects ptr bits
-   \<lbrace>\<lambda>rv s. pspace_no_overlap' ptr bits s\<rbrace>"
+   deleteObjects ptr bits
+   \<lbrace>\<lambda>_ s. pspace_no_overlap' ptr bits s\<rbrace>"
   apply (simp add: deleteObjects_def3 doMachineOp_def split_def)
   apply wp
   apply (clarsimp simp: valid_cap'_def cong:if_cong)
@@ -487,10 +486,10 @@ lemma deleteObject_no_overlap[wp]:
   apply simp
   done
 
-lemma deleteObjects_cte_wp_at':
+lemma deleteObjects_cte_wp_at'[Detype_R_assms]:
   "\<lbrace>\<lambda>s. cte_wp_at' P p s \<and> p \<notin> mask_range ptr bits
-         \<and> s \<turnstile>' (UntypedCap d ptr bits idx) \<and> valid_pspace' s\<rbrace>
-     deleteObjects ptr bits
+        \<and> s \<turnstile>' (UntypedCap d ptr bits idx) \<and> valid_pspace' s\<rbrace>
+   deleteObjects ptr bits
    \<lbrace>\<lambda>rv s. cte_wp_at' P p s\<rbrace>"
   apply (simp add: deleteObjects_def3 doMachineOp_def split_def)
   apply wp
@@ -506,7 +505,7 @@ lemma deleteObjects_cte_wp_at':
   apply (case_tac s, simp)
   done
 
-lemma deleteObjects_nosch:
+lemma deleteObjects_nosch[wp, Detype_R_assms]:
   "deleteObjects ptr sz \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>"
   by (simp add: deleteObjects_def3 | wp hoare_drop_imp)+
 

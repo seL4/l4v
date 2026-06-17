@@ -269,7 +269,7 @@ lemma range_cover_canonical_address':
   apply (frule range_cover_canonical_address[where p="unat p"]; simp?)
   using unat_less_helper by blast
 
-lemma createNewCaps_valid_cap:
+lemma createNewCaps_valid_cap[Retype_R_assms]:
   fixes ptr :: machine_word
   assumes cover: "range_cover ptr sz (APIType_capBits ty us) n "
   assumes not_0: "n \<noteq> 0"
@@ -1510,21 +1510,21 @@ lemma init_arch_objects_APIType_map2_VCPU_noop:
   apply (simp add: init_arch_objects_def APIType_map2_def)
   done
 
-lemma corres_retype_region_createNewCaps:
+lemma corres_retype_region_createNewCaps[Retype_R_3_assms]:
   "corres ((\<lambda>r r'. length r = length r' \<and> list_all2 cap_relation r r')
-               \<circ> map (\<lambda>ref. default_cap (APIType_map2 (Inr ty)) ref us dev))
-            (\<lambda>s. valid_pspace s \<and> valid_mdb s \<and> valid_list s \<and> valid_arch_state s
-                   \<and> caps_no_overlap y sz s \<and> pspace_no_overlap_range_cover y sz s
-                   \<and> caps_overlap_reserved {y..y + of_nat n * 2 ^ (obj_bits_api (APIType_map2 (Inr ty)) us) - 1} s
-                   \<and> (\<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area y sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
-                   \<and> (APIType_map2 (Inr ty) = Structures_A.CapTableObject \<longrightarrow> 0 < us))
-            (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_no_overlap' y sz s
-                  \<and> valid_pspace' s \<and> valid_arch_state' s
-                  \<and> range_cover y sz (obj_bits_api (APIType_map2 (Inr ty)) us) n \<and> n\<noteq> 0)
-            (do x \<leftarrow> retype_region y n us (APIType_map2 (Inr ty)) dev :: obj_ref list det_ext_monad;
-                init_arch_objects (APIType_map2 (Inr ty)) dev y n us x;
-                return x od)
-            (createNewCaps ty y n us dev)"
+                   \<circ> map (\<lambda>ref. default_cap (APIType_map2 (Inr ty)) ref us dev))
+          (\<lambda>s. valid_pspace s \<and> valid_mdb s \<and> valid_list s \<and> valid_arch_state s
+               \<and> caps_no_overlap y sz s \<and> pspace_no_overlap_range_cover y sz s
+               \<and> caps_overlap_reserved {y..y + of_nat n * 2 ^ (obj_bits_api (APIType_map2 (Inr ty)) us) - 1} s
+               \<and> (\<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area y sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
+               \<and> (APIType_map2 (Inr ty) = Structures_A.CapTableObject \<longrightarrow> 0 < us))
+          (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_no_overlap' y sz s
+               \<and> valid_pspace' s \<and> valid_arch_state' s
+               \<and> range_cover y sz (obj_bits_api (APIType_map2 (Inr ty)) us) n \<and> n\<noteq> 0)
+          (do x \<leftarrow> retype_region y n us (APIType_map2 (Inr ty)) dev :: obj_ref list det_ext_monad;
+              init_arch_objects (APIType_map2 (Inr ty)) dev y n us x;
+              return x od)
+          (createNewCaps ty y n us dev)"
   supply APIType_map2_generic[simp del]
   apply (rule_tac F="range_cover y sz (obj_bits_api (APIType_map2 (Inr ty)) us) n
                       \<and> n \<noteq> 0 \<and> (APIType_map2 (Inr ty) = Structures_A.CapTableObject \<longrightarrow> 0 < us)"

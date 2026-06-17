@@ -2476,6 +2476,23 @@ lemma case_eq_if_isUntypedCap:
   by (cases c, simp_all add: gen_isCap_simps)
 
 locale Detype_R =
+  assumes deleteObjects_corres:
+    "\<And>base magnitude d idx ptr.
+     \<lbrakk> is_aligned base magnitude; magnitude \<ge> word_size_bits \<rbrakk> \<Longrightarrow>
+     corres dc
+        (\<lambda>s. einvs s
+             \<and> s \<turnstile> (cap.UntypedCap d base magnitude idx)
+             \<and> (\<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s
+                       \<and> descendants_range (cap.UntypedCap d base magnitude idx) cref s)
+             \<and> untyped_children_in_mdb s \<and> if_unsafe_then_cap s
+             \<and> valid_mdb s \<and> valid_global_refs s \<and> ct_active s
+             \<and> schact_is_rct s)
+        (\<lambda>s'. invs' s'
+              \<and> cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap d base magnitude idx) ptr s'
+              \<and> descendants_range' (UntypedCap d base magnitude idx) ptr (ctes_of s')
+              \<and> ct_active' s'
+              \<and> s' \<turnstile>' (UntypedCap d base magnitude idx))
+        (delete_objects base magnitude) (deleteObjects base magnitude)"
   assumes deleteObjects_null_filter:
     "\<And>d ptr bits idx p P.
      \<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p
@@ -2522,8 +2539,29 @@ locale Detype_R =
   assumes createNewCaps_not_nc:
     "\<And>ty ptr n us d.
      \<lbrace>\<top>\<rbrace> createNewCaps ty ptr n us d \<lbrace>\<lambda>r s. (\<forall>cap\<in>set r. cap \<noteq> capability.NullCap)\<rbrace>"
-
-context Detype_R begin
+  assumes deleteObjects_st_tcb_at':
+    "\<And>d ptr bits idx p t P.
+     \<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p
+       and invs' and ct_active' and sch_act_simple
+       and (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s))
+       and st_tcb_at' (P and (\<noteq>) Inactive and (\<noteq>) IdleThreadState) t
+       and K (bits < word_bits \<and> is_aligned ptr bits)\<rbrace>
+     deleteObjects ptr bits
+     \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
+  assumes deleteObject_no_overlap[wp]:
+    "\<And>d ptr bits idx.
+     \<lbrace>valid_cap' (UntypedCap d ptr bits idx) and valid_pspace'\<rbrace>
+     deleteObjects ptr bits
+     \<lbrace>\<lambda>_ s. pspace_no_overlap' ptr bits s\<rbrace>"
+  assumes deleteObjects_cte_wp_at':
+    "\<And>d ptr bits idx P p.
+     \<lbrace>\<lambda>s. cte_wp_at' P p s \<and> p \<notin> mask_range ptr bits
+          \<and> s \<turnstile>' (UntypedCap d ptr bits idx) \<and> valid_pspace' s\<rbrace>
+     deleteObjects ptr bits
+     \<lbrace>\<lambda>_ s. cte_wp_at' P p s\<rbrace>"
+  assumes deleteObjects_nosch[wp]:
+    "\<And>ptr sz P. deleteObjects ptr sz \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>"
+begin
 
 lemma deleteObjects_descendants:
   "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p

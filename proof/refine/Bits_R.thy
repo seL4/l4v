@@ -34,6 +34,24 @@ lemma (in Arch) wordSize_word_size:
   by (simp add: word_bits_def)
 requalify_facts Arch.wordSize_word_size
 
+(* same derivation on all architectures *)
+lemma (in Arch) word_size_bits_le_pageBits:
+  "word_size_bits \<le> pageBits"
+  by (simp add: word_size_bits_def pageBits_def)
+requalify_facts Arch.word_size_bits_le_pageBits
+
+(* same derivation on all architectures *)
+lemma (in Arch) maxUntypedSizeBits_untyped_max_bits:
+  "maxUntypedSizeBits = untyped_max_bits"
+  by (simp add: maxUntypedSizeBits_def untyped_max_bits_def)
+requalify_facts Arch.maxUntypedSizeBits_untyped_max_bits
+
+(* same derivation on all architectures *)
+lemma (in Arch) minUntypedSizeBits_untyped_min_bits:
+  "minUntypedSizeBits = untyped_min_bits"
+  by (simp add: minUntypedSizeBits_def untyped_min_bits_def)
+requalify_facts Arch.minUntypedSizeBits_untyped_min_bits
+
 lemma throwE_R: "\<lbrace>\<top>\<rbrace> throw f \<lbrace>P\<rbrace>,-"
   by (simp add: validE_R_def) wp
 

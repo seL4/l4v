@@ -134,6 +134,36 @@ lemma ghost_relation_typ_at:
   apply (intro conjI impI iffI allI; force)
   done
 
+(* interface lemma, but can't be interfaced in locale due to free type variable (return type of f) *)
+lemma ghost_relation_wrapper_lift:
+  assumes aos: "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s) \<rbrace>"
+  assumes cns: "\<And>P. f \<lbrace>\<lambda>s. P (cns_of_heap (kheap s))\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (ghost_relation_wrapper s s')\<rbrace>"
+  apply (simp add: ghost_relation_def flip: aobjs_of_Some cns_of_heap_Some)
+  apply (rule hoare_lift_Pf2[OF _ aos])
+  apply (rule hoare_lift_Pf2[OF _ cns])
+  apply (rule hoare_lift_Pf2[OF _ aos])
+  apply wpsimp
+  done
+
+(* interface lemma, but can't be interfaced in locale due to free type variable (return type of f) *)
+lemma ghost_relation_wrapper_lift':
+  assumes ksa: "\<And>P. f \<lbrace>\<lambda>s. P (ksArchState s) \<rbrace>"
+  assumes gsp: "\<And>P. f \<lbrace>\<lambda>s. P (gsUserPages s) \<rbrace>"
+  assumes gsc: "\<And>P. f \<lbrace>\<lambda>s. P (gsCNodes s) \<rbrace>"
+  shows "f \<lbrace>\<lambda>s'. P (ghost_relation_wrapper s s')\<rbrace>"
+  apply (simp add: ghost_relation_def)
+  apply (rule hoare_lift_Pf2[OF _ ksa])
+  apply (rule hoare_lift_Pf2[OF _ gsc])
+  apply (rule hoare_lift_Pf2[OF _ gsp])
+  apply wp
+  done
+
+lemma ghost_relation_wrapper_genD[StateRelation_R_assms]:
+  "ghost_relation_wrapper s s'
+   \<Longrightarrow> ups_of_heap (kheap s) = gsUserPages s' \<and> cns_of_heap (kheap s) = gsCNodes s'"
+  by (simp add: ghost_relation_of_heap)
+
 (* FIXME arch-split: extension of gen_isCap_defs *)
 lemmas isCap_defs =
   isZombie_def isArchObjectCap_def
@@ -185,5 +215,10 @@ proof goal_cases
   interpret Arch .
   case 1 show ?case by (intro_locales; (unfold_locales; fact StateRelation_R_assms)?)
 qed
+
+(* requalify interface lemmas which can't be locale assumptions due to free type variable *)
+arch_requalify_facts
+  ghost_relation_wrapper_lift
+  ghost_relation_wrapper_lift'
 
 end

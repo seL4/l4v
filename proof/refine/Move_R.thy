@@ -262,4 +262,9 @@ lemma check_active_irq_invs_just_idle:
         and (\<lambda>s. 0 < domain_time s) and valid_domain_list \<rbrace>"
   by (wpsimp simp: check_active_irq_def ct_in_state_def)
 
+lemma cns_of_heap_Some:
+  "(cns_of_heap kh a = Some n)
+   = (\<exists>cs. kh a = Some (CNode n cs) \<and> well_formed_cnode_n n cs)"
+  by (auto simp: cns_of_heap_def split: option.splits if_splits Structures_A.kernel_object.splits)
+
 end

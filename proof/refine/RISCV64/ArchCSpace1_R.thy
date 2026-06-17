@@ -796,6 +796,14 @@ lemma obj_relation_cuts_in_obj_range[CSpace1_R_assms]:
   apply (simp add: word_bits_def)
   done
 
+lemma isMDBParentOf_CTE_gen[CSpace1_R_assms]:
+  "\<not>isArchObjectCap cap \<Longrightarrow>
+   isMDBParentOf (CTE cap node) cte =
+   (\<exists>cap' node'. cte = CTE cap' node' \<and> sameRegionAs cap cap'
+                 \<and> mdbRevocable node
+                 \<and> (capBadge cap, capBadge cap') \<in> capBadge_ordering (mdbFirstBadged node'))"
+  by (simp add: isMDBParentOf_CTE isCap_simps)
+
 end (* Arch *)
 
 interpretation CSpace1_R?: CSpace1_R
