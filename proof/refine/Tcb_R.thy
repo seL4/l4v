@@ -814,11 +814,10 @@ crunch setPriority, setMCPriority
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps)
 
-lemmas setPriority_gen_typ_ats[wp] = gen_typ_at_lifts[OF setPriority_typ_at']
-
-crunch setPriority, setMCPriority
-  for valid_cap[wp]: "valid_cap' c"
-  (wp: getObject_tcb_inv)
+global_interpretation setPriority: gen_typ_at_props' _ "setPriority t prio"
+  by typ_at_props'
+global_interpretation setMCPriority: gen_typ_at_props' _ "setMCPriority t prio"
+  by typ_at_props'
 
 definition newroot_rel ::
   "(cap \<times> cslot_ptr) option \<Rightarrow> (capability \<times> machine_word) option \<Rightarrow> bool"
@@ -1454,8 +1453,6 @@ proof -
             apply (wp add: stuff hoare_vcg_all_liftE_R hoare_vcg_all_lift
                                  hoare_vcg_const_imp_liftE_R hoare_vcg_const_imp_lift setMCPriority_invs'
                                  threadSet_valid_objs' thread_set_not_state_valid_sched setP_invs'
-                                 gen_typ_at_lifts[OF setPriority_typ_at']
-                                 gen_typ_at_lifts[OF setMCPriority_typ_at']
                                  threadSet_cap_to' assertDerived_wp checked_insert_tcb_invs_gen
                       del: cteInsert_invs
                    | simp add: ran_tcb_cap_cases split_def U V
@@ -1545,7 +1542,6 @@ lemma (in Tcb_R) tc_invs':
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
     apply ((wp case_option_wp threadSet_invs_trivial hoare_weak_lift_imp setMCPriority_invs'
-               gen_typ_at_lifts[OF setMCPriority_typ_at']
                hoare_vcg_all_lift threadSet_cap_to' | clarsimp simp: inQ_def)+)[2]
   apply (wp add: setP_invs' hoare_weak_lift_imp hoare_vcg_all_lift)+
       apply (rule case_option_wp_None_return[OF setP_invs'[simplified pred_conj_assoc]])
@@ -1558,15 +1554,15 @@ lemma (in Tcb_R) tc_invs':
                         threadSet_invs_trivial2 threadSet_tcb'  hoare_vcg_all_lift threadSet_cte_wp_at')
        apply (wpsimp wp: hoare_weak_lift_impE_R cteDelete_deletes
                          hoare_vcg_all_liftE_R hoare_vcg_conj_liftE1 hoare_vcg_const_imp_liftE_R hoare_vcg_propE_R
-                         cteDelete_invs' cteDelete_invs' cteDelete_typ_at'_lifts)+
+                         cteDelete_invs' cteDelete_invs')+
      apply (assumption | clarsimp cong: conj_cong imp_cong | (rule case_option_wp_None_returnOk)
             | wpsimp wp: hoare_weak_lift_imp hoare_vcg_all_lift checkCap_inv[where P="tcb_at' t" for t] assertDerived_wp_weak
                          hoare_vcg_imp_lift' hoare_vcg_all_lift checkCap_inv[where P="tcb_at' t" for t]
                          checkCap_inv[where P="valid_cap' c" for c] checkCap_inv[where P=sch_act_simple]
                          hoare_vcg_const_imp_liftE_R assertDerived_wp_weak hoare_weak_lift_impE_R cteDelete_deletes
                          hoare_vcg_all_liftE_R hoare_vcg_conj_liftE1 hoare_vcg_const_imp_liftE_R hoare_vcg_propE_R
-                         cteDelete_invs' cteDelete_typ_at'_lifts cteDelete_sch_act_simple)+
-  apply (clarsimp simp: tcb_cte_cases_def  tcb_cte_cases_neqs tcbIPCBufferSlot_def
+                         cteDelete_invs' cteDelete_sch_act_simple)+
+  apply (clarsimp simp: tcb_cte_cases_def tcb_cte_cases_neqs tcbIPCBufferSlot_def
                         cteSizeBits_cte_level_bits[symmetric] shiftl_t2n)
   apply (auto dest!: isCapDs isReplyCapD isValidVTableRootD_gen simp: gen_isCap_simps)
   done
@@ -1755,13 +1751,6 @@ lemma tcbBoundNotification_caps_safe[simp]:
   "\<forall>(getF, setF)\<in>ran tcb_cte_cases.
      getF (tcbBoundNotification_update (\<lambda>_. Some ntfnptr) tcb) = getF tcb"
   by (case_tac tcb, simp add: tcb_cte_cases_def tcb_cte_cases_neqs)
-
-lemma valid_bound_ntfn_lift:
-  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. valid_bound_ntfn' a s\<rbrace> f \<lbrace>\<lambda>rv s. valid_bound_ntfn' a s\<rbrace>"
-  apply (simp add: valid_bound_ntfn'_def, case_tac a, simp_all)
-  apply (wp gen_typ_at_lifts[OF P])+
-  done
 
 lemma bindNotification_invs':
   "\<lbrace>bound_tcb_at' ((=) None) tcbptr

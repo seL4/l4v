@@ -2108,7 +2108,6 @@ lemma tc_valid_duplicates':
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
     apply ((wp case_option_wp threadSet_invs_trivial hoare_weak_lift_imp setMCPriority_invs'
-               typ_at_lifts[OF setMCPriority_typ_at']
                hoare_vcg_all_lift threadSet_cap_to' | clarsimp simp: inQ_def)+)[2]
   apply ((simp only: simp_thms cases_simp cong: conj_cong
           | (wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
@@ -2120,7 +2119,7 @@ lemma tc_valid_duplicates':
               checkCap_inv[where P="\<lambda>s. P (ksReadyQueues s)" for P]
               checkCap_inv[where P="\<lambda>s. vs_valid_duplicates' (ksPSpace s)"]
               checkCap_inv[where P=sch_act_simple] cteDelete_valid_duplicates' hoare_vcg_const_imp_liftE_R
-              typ_at_lifts[OF setPriority_typ_at'] assertDerived_wp threadSet_cte_wp_at'
+              assertDerived_wp threadSet_cte_wp_at'
               hoare_vcg_all_liftE_R hoare_vcg_all_lift hoare_weak_lift_imp)[1]
           | wpc
           | simp add: inQ_def

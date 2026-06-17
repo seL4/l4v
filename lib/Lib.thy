@@ -2672,4 +2672,12 @@ lemma wf_fst_size:
 (* FIXME: use the name wf_fst_size instead of list_length_wf_helper *)
 lemmas list_length_wf_helper = wf_fst_size
 
+lemma bool_to_bool_cases:
+  assumes "f = (\<lambda>x. True) \<Longrightarrow> P"
+  assumes "f = (\<lambda>x. False) \<Longrightarrow> P"
+  assumes "f = (\<lambda>x. x) \<Longrightarrow> P"
+  assumes "f = (\<lambda>x. \<not>x) \<Longrightarrow> P"
+  shows P
+  by (cases "f True"; cases "f False"; rule assms; rule ext; case_tac x; simp)
+
 end

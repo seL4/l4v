@@ -88,7 +88,7 @@ locale delete_one_conc_pre =
   assumes delete_one_st_tcb_at:
     "\<And>P. (\<And>st. simple' st \<longrightarrow> P st) \<Longrightarrow>
      \<lbrace>st_tcb_at' P t\<rbrace> cteDeleteOne slot \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
-  assumes delete_one_typ_at:
+  assumes delete_one_typ_at[wp]:
     "\<And>P. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> cteDeleteOne slot \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   assumes delete_one_aligned:
     "\<lbrace>pspace_aligned'\<rbrace> cteDeleteOne slot \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
@@ -145,13 +145,15 @@ lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at':
 
 context delete_one_conc_pre begin
 
-lemmas delete_one_typ_ats[wp] = gen_typ_at_lifts[OF delete_one_typ_at]
+(* FIXME arch-split: not clear where arch version of this should go *)
+sublocale delete_one: gen_typ_at_props' _ "cteDeleteOne slot"
+  by typ_at_props'
 
 lemma cancelIPC_tcb_at'[wp]:
   "\<lbrace>tcb_at' t\<rbrace> cancelIPC t' \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
   apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def)
-  apply (wp delete_one_typ_ats hoare_drop_imps
-       | simp add: o_def if_apply_def2 | wpc | assumption)+
+  apply (wpsimp wp: hoare_drop_imps
+              simp: o_def if_apply_def2)
   done
 
 end (* delete_one_conc_pre *)

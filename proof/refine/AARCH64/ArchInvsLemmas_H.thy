@@ -395,62 +395,110 @@ lemma is_physical_cases:
              | _                                \<Rightarrow> True)"
   by (simp split: capability.splits arch_capability.splits zombie_type.splits)
 
-lemma typ_at_lift_page_table_at':
-  assumes x: "\<And>T p. f \<lbrace>typ_at' T p\<rbrace>"
-  shows "f \<lbrace>page_table_at' pt_t p\<rbrace>"
+named_theorems typ_at_gen_assms
+
+lemma typ_at_lift_page_table_at'_strong:
+  "(\<And>p. f \<lbrace>\<lambda>s. P (typ_at' (ArchT PTET) p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (page_table_at' pt_t p s)\<rbrace>"
   unfolding page_table_at'_def
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' x)
+  apply (rule bool_to_bool_cases[where f=P]; clarsimp)
+  apply (wpsimp wp: hoare_vcg_const_Ball_lift hoare_vcg_imp_lift
+                    hoare_vcg_all_lift hoare_vcg_ex_lift
+         | assumption)+
+  done
 
-lemma typ_at_lift_asid_at':
-  "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow> \<lbrace>asid_pool_at' p\<rbrace> f \<lbrace>\<lambda>_. asid_pool_at' p\<rbrace>"
-  by assumption
-
-lemma typ_at_lift_vcpu_at':
-  "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow> \<lbrace>vcpu_at' p\<rbrace> f \<lbrace>\<lambda>_. vcpu_at' p\<rbrace>"
-  by assumption
-
-lemma typ_at_lift_frame_at':
-  assumes "\<And>T p. f \<lbrace>typ_at' T p\<rbrace>"
-  shows "f \<lbrace>frame_at' p sz d\<rbrace>"
+lemma typ_at_lift_frame_at'_strong:
+  "\<lbrakk>\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>\<rbrakk> \<Longrightarrow> f \<lbrace>\<lambda>s. P (frame_at' p sz d s)\<rbrace>"
+  supply if_split[split del]
   unfolding frame_at'_def
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift assms split_del: if_split)
-
-lemma typ_at_lift_valid_cap':
-  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. valid_cap' cap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_cap' cap s\<rbrace>"
-  including no_pre
-  apply (simp add: valid_cap'_def)
-  apply wp
-  apply (case_tac cap;
-         simp add: valid_cap'_def P[of id, simplified] typ_at_lift_tcb'
-                   hoare_vcg_prop typ_at_lift_ep'
-                   typ_at_lift_ntfn' typ_at_lift_cte_at'
-                   hoare_vcg_conj_lift [OF typ_at_lift_cte_at'])
-     apply (rename_tac zombie_type nat)
-     apply (case_tac zombie_type; simp)
-      apply (wp typ_at_lift_tcb' P hoare_vcg_all_lift typ_at_lift_cte')+
-    apply (rename_tac arch_capability)
-    apply (case_tac arch_capability,
-           simp_all add: P[of id, simplified] vspace_table_at'_defs
-                         hoare_vcg_prop All_less_Ball
-                    split del: if_split)
-       apply (wp hoare_vcg_const_Ball_lift P typ_at_lift_valid_untyped'
-                 hoare_vcg_all_lift typ_at_lift_cte' typ_at_lift_frame_at')+
+  apply (rule bool_to_bool_cases[where f=P]; clarsimp)
+   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift hoare_vcg_ex_lift
+          | assumption)+
   done
 
-(* interface lemma *)
-lemma valid_arch_tcb_lift':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_arch_tcb' tcb s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_tcb' tcb s\<rbrace>"
-  apply (clarsimp simp add: valid_arch_tcb'_def)
-  apply (cases "atcbVCPUPtr tcb"; simp)
-   apply (wp x)+
+lemma typ_at_lift_asid_at'_strong:
+  "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (asid_pool_at' p s)\<rbrace>"
+  by assumption
+
+lemma typ_at_lift_vcpu_at'_strong:
+  "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (vcpu_at' p s)\<rbrace>"
+  by assumption
+
+lemma valid_arch_tcb_lift'_strong[typ_at_gen_assms]:
+  "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_arch_tcb' tcb s)\<rbrace>"
+  unfolding valid_arch_tcb'_def
+  apply (rule bool_to_bool_cases[where f=P]; clarsimp)
+  apply (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_all_lift hoare_vcg_ex_lift
+         | assumption)+
   done
 
-lemmas typ_at_lifts =
-           typ_at_lift_tcb' typ_at_lift_ep' typ_at_lift_ntfn' typ_at_lift_cte' typ_at_lift_cte_at'
-           typ_at_lift_valid_untyped' typ_at_lift_valid_cap' valid_bound_tcb_lift
-           typ_at_lift_page_table_at' typ_at_lift_asid_at' typ_at_lift_vcpu_at'
+lemma typ_at_lift_valid_arch_cap'[typ_at_gen_assms]:
+  assumes P: "\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
+  shows      "f \<lbrace>\<lambda>s. valid_arch_cap' cap s\<rbrace>"
+  apply (case_tac cap,
+         simp_all add: P[where P=id, simplified] All_less_Ball
+            split del: if_split)
+    apply (wp hoare_vcg_const_Ball_lift P
+              typ_at_lift_page_table_at'_strong typ_at_lift_frame_at'_strong)+
+  done
+
+end (* Arch *)
+
+global_interpretation typ_at_gen?: typ_at_gen
+proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (intro_locales; unfold_locales; (fact typ_at_gen_assms)?)
+qed
+
+context Arch begin arch_global_naming
+
+lemmas typ_at_lifts_strong =
+  gen_typ_at_lifts_strong
+  typ_at_lift_page_table_at'_strong
+  typ_at_lift_frame_at'_strong
+  typ_at_lift_asid_at'_strong
+  typ_at_lift_vcpu_at'_strong
+
+context begin
+
+\<comment>\<open> See the comment above @{ML weaken_typ_at_lifts_thms} for an explanation of what
+    this @{command ML_goal} is for. Here we are constructing the combined list of
+    both generic and arch-specific typ_at_lifts lemmas.\<close>
+ML \<open>
+local
+  val strong_thms = subtract Thm.eq_thm gen_strong_thms @{thms typ_at_lifts_strong[no_vars]};
+in
+  val typ_at_lifts_internal_goals = weaken_typ_at_lifts_thms strong_thms
+end
+\<close>
+
+private ML_goal typ_at_lifts_internal:
+  \<open>typ_at_lifts_internal_goals\<close>
+  by (auto simp: typ_at_lifts_strong)
+
+lemmas typ_at_lifts = gen_typ_at_lifts typ_at_lifts_internal
+
+end
+
+end (* Arch *)
+
+locale typ_at_props' = Arch +
+  fixes f :: "'a kernel"
+  assumes typ': "f \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
+begin
+
+lemmas typ_ats[wp] = typ_at_lifts[REPEAT [OF typ']]
+
+context begin
+(* We want to enforce that typ_ats only contains lemmas that have no
+   assumptions. The following thm statements should fail if this is not true. *)
+private lemmas check_valid_internal = iffD1[OF refl, where P="valid p g q" for p g q]
+thm typ_ats[atomized, THEN check_valid_internal]
+end
+
+end (* typ_at_props' *)
+
+
+context Arch begin arch_global_naming
 
 lemma valid_arch_state_armKSGlobalUserVSpace:
   "valid_arch_state' s \<Longrightarrow> canonical_address (addrFromKPPtr (armKSGlobalUserVSpace (ksArchState s)))"

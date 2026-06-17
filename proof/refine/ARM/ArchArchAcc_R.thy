@@ -981,22 +981,15 @@ lemma lookupPTSlot_corres [@lift_corres_args, corres]:
                       wp: get_pde_wp_valid getPDE_wp)
   by (auto simp: lookup_failure_map_def obj_at_def)
 
-crunch storePDE
+crunch storePDE, storePTE
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
 
-crunch storePTE
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps mapM_x_wp' simp: crunch_simps ignore_del: setObject)
+sublocale storePDE: typ_at_props' "storePDE slot pde"
+  by typ_at_props'
 
-lemmas storePDE_typ_ats[wp] = typ_at_lifts [OF storePDE_typ_at']
-lemmas storePTE_typ_ats[wp] = typ_at_lifts [OF storePTE_typ_at']
-
-lemma setObject_asid_typ_at' [wp]:
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> setObject p' (v::asidpool) \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
-  by (rule setObject_typ_at')
-
-lemmas setObject_asid_typ_ats'[wp] = typ_at_lifts [OF setObject_asid_typ_at']
+sublocale storePTE: typ_at_props' "storePTE slot pte"
+  by typ_at_props'
 
 lemma getObject_pte_inv[wp]:
   "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>rv :: pte. P\<rbrace>"
@@ -1010,7 +1003,8 @@ crunch copyGlobalMappings
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: mapM_x_wp')
 
-lemmas copyGlobalMappings_typ_ats[wp] = typ_at_lifts [OF copyGlobalMappings_typ_at']
+sublocale copyGlobalMappings: typ_at_props' "copyGlobalMappings newPT"
+  by typ_at_props'
 
 lemma arch_cap_rights_update[ArchAcc_R_assms]:
   "acap_relation c c' \<Longrightarrow>

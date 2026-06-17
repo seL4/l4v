@@ -23,7 +23,8 @@ lemma arch_postCapDeletion_ksArchState_lift[Finalise_R_assms]:
   unfolding postCapDeletion_def
   by wpsimp
 
-lemmas clearUntypedFreeIndex_typ_ats[wp] = typ_at_lifts[OF clearUntypedFreeIndex_typ_at']
+sublocale clearUntypedFreeIndex: typ_at_props' "clearUntypedFreeIndex slot"
+  by typ_at_props'
 
 crunch setIRQState
   for umm[Finalise_R_assms, wp]: "\<lambda>s. P (underlying_memory (ksMachineState s))"
@@ -610,11 +611,17 @@ lemma isFinal_no_descendants[Finalise_R_2_assms]:
   apply (simp add: valid_mdb'_def)
   done
 
-lemmas cancelAllIPC_typs[wp] = typ_at_lifts[OF cancelAllIPC_typ_at']
-lemmas cancelAllSignals_typs[wp] = typ_at_lifts[OF cancelAllSignals_typ_at']
-lemmas suspend_typs[wp] = typ_at_lifts[OF suspend_typ_at']
+sublocale cancelIPC: typ_at_props' "cancelIPC tptr" by typ_at_props'
 
-lemmas finaliseCap_typ_ats[wp] = typ_at_lifts[OF finaliseCap_typ_at']
+sublocale cancelAllIPC: typ_at_props' "cancelAllIPC epptr" by typ_at_props'
+
+sublocale cancelAllSignals: typ_at_props' "cancelAllSignals ntfnPtr" by typ_at_props'
+
+sublocale suspend: typ_at_props' "suspend target" by typ_at_props'
+
+sublocale finaliseCap: typ_at_props' "finaliseCap cap final x" by typ_at_props'
+
+sublocale unbindNotification: typ_at_props' "unbindNotification tcb" by typ_at_props'
 
 crunch flushSpace
   for invs'[wp]: "invs'"
@@ -697,7 +704,8 @@ lemma deleteASID_invs'[wp]:
   apply clarsimp
   done
 
-lemmas archThreadSet_typ_ats[wp] = typ_at_lifts[OF archThreadSet_typ_at']
+sublocale archThreadSet: typ_at_props' "archThreadSet f tptr"
+  by typ_at_props'
 
 lemma archThreadSet_valid_objs'[wp]:
   "\<lbrace>valid_objs' and (\<lambda>s. \<forall>tcb. ko_at' tcb t s \<longrightarrow> valid_arch_tcb' (f (tcbArch tcb)) s)\<rbrace>
@@ -1487,7 +1495,8 @@ lemma arch_finaliseCap_corres[Finalise_R_3_assms]:
   apply (clarsimp simp: valid_cap_def valid_cap'_def)
   done
 
-lemmas deleteCallerCap_typ_ats[wp] = typ_at_lifts[OF deleteCallerCap_typ_at']
+sublocale deleteCallerCap: typ_at_props' "deleteCallerCap receiver"
+  by typ_at_props'
 
 end (* Arch *)
 

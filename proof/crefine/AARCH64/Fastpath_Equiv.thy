@@ -286,13 +286,6 @@ lemma recv_ep_queued_st_tcb_at':
   apply (clarsimp simp: isBlockedOnReceive_def )
   done
 
-lemma valid_ep_typ_at_lift':
-  "\<lbrakk> \<And>p. \<lbrace>typ_at' TCBT p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' TCBT p\<rbrace> \<rbrakk>
-      \<Longrightarrow> \<lbrace>\<lambda>s. valid_ep' ep s\<rbrace> f \<lbrace>\<lambda>rv s. valid_ep' ep s\<rbrace>"
-  apply (cases ep, simp_all add: valid_ep'_def)
-   apply (wp hoare_vcg_const_Ball_lift typ_at_lifts | assumption)+
-  done
-
 lemma threadSet_tcbState_valid_objs:
   "\<lbrace>valid_tcb_state' st and valid_objs'\<rbrace>
      threadSet (tcbState_update (\<lambda>_. st)) t
@@ -1743,7 +1736,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                       emptySlot_tcbContext[simplified comp_apply]
                                       emptySlot_cte_wp_at_cteCap
                                       emptySlot_cnode_caps
-                                      user_getreg_inv asUser_typ_ats
+                                      user_getreg_inv
                                       asUser_obj_at_not_queued asUser_obj_at' mapM_x_wp'
                                       hoare_weak_lift_imp hoare_vcg_all_lift hoare_vcg_imp_lift
                                       cnode_caps_gsCNodes_lift
@@ -1755,7 +1748,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
 
                             apply (wpsimp wp: fastpathBestSwitchCandidate_lift[where f="asUser a b" for a b])+
                            apply (clarsimp cong: conj_cong)
-                           apply ((wp user_getreg_inv asUser_typ_ats
+                           apply ((wp user_getreg_inv asUser.typ_ats
                                       asUser_obj_at_not_queued asUser_obj_at' mapM_x_wp'
                                       hoare_weak_lift_imp hoare_vcg_all_lift hoare_vcg_imp_lift
                                       cnode_caps_gsCNodes_lift
@@ -1926,8 +1919,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
   apply (frule(1) st_tcb_at_is_Reply_imp_not_tcbQueued)
   apply (frule invs_pspace_aligned')
   apply (frule invs_pspace_distinct')
-  apply (auto simp: obj_at_tcbs_of tcbSlots projectKOs
-                        cte_level_bits_def)
+  apply (auto simp: obj_at_tcbs_of tcbSlots cte_level_bits_def)
   done
 
 end

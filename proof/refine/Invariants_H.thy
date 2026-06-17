@@ -1939,81 +1939,66 @@ lemma locateSlot_conv:
                          split: zombie_type.split cong: option.case_cong)
   done
 
+context
+begin
+
+private method typ_at_proof =
+  unfold obj_at'_real_def typ_at'_def ko_wp_at'_def,
+  (rule ext)+,
+  (rule iffI; clarsimp, case_tac ko; clarsimp simp: projectKO_opts_defs)
+
 lemma typ_at_tcb':
   "typ_at' TCBT = tcb_at'"
-  apply (rule ext)+
-  apply (simp add: obj_at'_real_def typ_at'_def)
-  apply (simp add: ko_wp_at'_def)
-  apply (rule iffI)
-   apply clarsimp
-   apply (case_tac ko)
-   apply (auto simp: projectKO_opt_tcb)[9]
-  apply (case_tac ko)
-  apply (auto simp: projectKO_opt_tcb)
-  done
+  by typ_at_proof
 
-lemma typ_at_ep:
+lemma typ_at_ep':
   "typ_at' EndpointT = ep_at'"
-  apply (rule ext)+
-  apply (simp add: obj_at'_real_def typ_at'_def)
-  apply (simp add: ko_wp_at'_def)
-  apply (rule iffI)
-   apply clarsimp
-   apply (case_tac ko)
-   apply (auto simp: projectKO_opt_ep)[9]
-  apply (case_tac ko)
-  apply (auto simp: projectKO_opt_ep)
-  done
+  by typ_at_proof
 
-lemma typ_at_ntfn:
+lemma typ_at_ntfn':
   "typ_at' NotificationT = ntfn_at'"
-  apply (rule ext)+
-  apply (simp add: obj_at'_real_def typ_at'_def)
-  apply (simp add: ko_wp_at'_def)
-  apply (rule iffI)
-   apply clarsimp
-   apply (case_tac ko)
-   apply (auto simp: projectKO_opt_ntfn)[8]
-  apply clarsimp
-  apply (case_tac ko)
-  apply (auto simp: projectKO_opt_ntfn)
-  done
+  by typ_at_proof
 
-lemma typ_at_cte:
+lemma typ_at_cte':
   "typ_at' CTET = real_cte_at'"
-  apply (rule ext)+
-  apply (simp add: obj_at'_real_def typ_at'_def)
-  apply (simp add: ko_wp_at'_def)
-  apply (rule iffI)
-   apply clarsimp
-   apply (case_tac ko)
-   apply (auto simp: projectKO_opt_cte)[8]
-  apply clarsimp
-  apply (case_tac ko)
-  apply (auto simp: projectKO_opt_cte)
-  done
+  by typ_at_proof
 
-lemma typ_at_lift_tcb':
-  "\<lbrace>typ_at' TCBT p\<rbrace> f \<lbrace>\<lambda>_. typ_at' TCBT p\<rbrace> \<Longrightarrow> \<lbrace>tcb_at' p\<rbrace> f \<lbrace>\<lambda>_. tcb_at' p\<rbrace>"
+lemmas typ_ats' = typ_at_cte' typ_at_ntfn' typ_at_ep' typ_at_tcb'
+
+end
+
+lemma typ_at_lift_tcb'_strong:
+  "f \<lbrace>\<lambda>s. P (typ_at' TCBT p s)\<rbrace> \<Longrightarrow> f \<lbrace>\<lambda>s. P (tcb_at' p s)\<rbrace>"
   by (simp add: typ_at_tcb')
 
-lemma typ_at_lift_ep':
-  "\<lbrace>typ_at' EndpointT p\<rbrace> f \<lbrace>\<lambda>_. typ_at' EndpointT p\<rbrace> \<Longrightarrow> \<lbrace>ep_at' p\<rbrace> f \<lbrace>\<lambda>_. ep_at' p\<rbrace>"
-  by (simp add: typ_at_ep)
+lemma typ_at_lift_ep'_strong:
+  "f \<lbrace>\<lambda>s. P (typ_at' EndpointT p s)\<rbrace> \<Longrightarrow> f \<lbrace>\<lambda>s. P (ep_at' p s)\<rbrace>"
+  by (simp add: typ_at_ep')
 
-lemma typ_at_lift_ntfn':
-  "\<lbrace>typ_at' NotificationT p\<rbrace> f \<lbrace>\<lambda>_. typ_at' NotificationT p\<rbrace> \<Longrightarrow> \<lbrace>ntfn_at' p\<rbrace> f \<lbrace>\<lambda>_. ntfn_at' p\<rbrace>"
-  by (simp add: typ_at_ntfn)
+lemma typ_at_lift_ntfn'_strong:
+  "f \<lbrace>\<lambda>s. P (typ_at' NotificationT p s)\<rbrace> \<Longrightarrow> f \<lbrace>\<lambda>s. P (ntfn_at' p s)\<rbrace>"
+  by (simp add: typ_at_ntfn')
 
-lemma typ_at_lift_cte':
-  "\<lbrace>typ_at' CTET p\<rbrace> f \<lbrace>\<lambda>_. typ_at' CTET p\<rbrace> \<Longrightarrow> \<lbrace>real_cte_at' p\<rbrace> f \<lbrace>\<lambda>_. real_cte_at' p\<rbrace>"
-  by (simp add: typ_at_cte)
+lemma typ_at_lift_cte'_strong:
+  "f \<lbrace>\<lambda>s. P (typ_at' CTET p s)\<rbrace> \<Longrightarrow> f \<lbrace>\<lambda>s. P (real_cte_at' p s)\<rbrace>"
+  by (simp add: typ_at_cte')
 
 lemma (in Invariants_H_cte_ats) typ_at_lift_cte_at':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows      "\<lbrace>cte_at' c\<rbrace> f \<lbrace>\<lambda>rv. cte_at' c\<rbrace>"
+  assumes x: "\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
+  shows      "f \<lbrace>\<lambda>s. P (cte_at' c s)\<rbrace>"
   apply (simp only: cte_at_typ')
-  apply (wp hoare_vcg_disj_lift hoare_vcg_ex_lift x)
+  apply (rule P_bool_lift[where P=P])
+   apply (wpsimp wp: hoare_vcg_disj_lift hoare_vcg_ex_lift hoare_vcg_all_lift x)+
+  done
+
+lemma typ_at_lift_valid_tcb_state'_strong:
+  assumes ep: "\<And>p. f \<lbrace>\<lambda>s. P (typ_at' EndpointT p s)\<rbrace>"
+      and ntfn: "\<And>p. f \<lbrace>\<lambda>s. P (typ_at' NotificationT p s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (valid_tcb_state' st s)\<rbrace>"
+  unfolding valid_tcb_state'_def
+  apply (case_tac st ; clarsimp split: option.splits,
+         wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift typ_at_lift_ep'_strong[OF ep]
+                    typ_at_lift_ntfn'_strong[OF ntfn])
   done
 
 (* proof is identical for all architectures *)
@@ -2031,8 +2016,8 @@ lemma ko_wp_typ_at':
   by (clarsimp simp: typ_at'_def ko_wp_at'_def)
 
 lemma typ_at_lift_valid_untyped':
-  assumes P: "\<And>T p. \<lbrace>\<lambda>s. \<not>typ_at' T p s\<rbrace> f \<lbrace>\<lambda>rv s. \<not>typ_at' T p s\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_untyped' d p n idx s\<rbrace> f \<lbrace>\<lambda>rv s. valid_untyped' d p n idx s\<rbrace>"
+  assumes P: "\<And>T p. f \<lbrace>\<lambda>s. \<not>typ_at' T p s\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. valid_untyped' d p n idx s\<rbrace>"
   apply (clarsimp simp: valid_untyped'_def split del:if_split)
   apply (rule hoare_vcg_all_lift)
   apply (clarsimp simp: valid_def split del:if_split)
@@ -2056,17 +2041,160 @@ lemma typ_at_lift_valid_untyped':
   apply (clarsimp split:if_splits)
   done
 
-lemma typ_at_lift_valid_irq_node':
-  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  shows      "\<lbrace>valid_irq_node' p\<rbrace> f \<lbrace>\<lambda>_. valid_irq_node' p\<rbrace>"
-  apply (simp add: valid_irq_node'_def)
-  apply (wp hoare_vcg_all_lift P typ_at_lift_cte')
+lemma valid_bound_tcb_lift:
+  "(\<And>T p. f \<lbrace>typ_at' T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_bound_tcb' tcb\<rbrace>"
+  by (auto simp: valid_bound_tcb'_def valid_def typ_ats'[symmetric] split: option.splits)
+
+lemma valid_bound_ntfn_lift:
+  "(\<And>T p. f \<lbrace>typ_at' T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_bound_ntfn' ntfn\<rbrace>"
+  by (auto simp: valid_bound_ntfn'_def valid_def typ_ats'[symmetric] split: option.splits)
+
+lemma valid_ntfn_lift':
+  "(\<And>T p. f \<lbrace>typ_at' T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_ntfn' ntfn\<rbrace>"
+  unfolding valid_ntfn'_def
+  apply (cases "ntfnObj ntfn"; clarsimp)
+    apply (wpsimp wp: valid_bound_tcb_lift)
+   apply (wpsimp wp: valid_bound_tcb_lift)
+  apply (wpsimp wp: hoare_vcg_ball_lift typ_at_lift_tcb'_strong[where P=id, simplified])
+   apply (wpsimp wp: valid_bound_tcb_lift)
+  apply simp
   done
 
-lemma valid_bound_tcb_lift:
-  "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow>
-  \<lbrace>valid_bound_tcb' tcb\<rbrace> f \<lbrace>\<lambda>_. valid_bound_tcb' tcb\<rbrace>"
-  by (auto simp: valid_bound_tcb'_def valid_def typ_at_tcb'[symmetric] split: option.splits)
+lemma typ_at_lift_valid_irq_node':
+  assumes P: "\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
+  shows      "f \<lbrace>valid_irq_node' p\<rbrace>"
+  apply (simp add: valid_irq_node'_def)
+  apply (wp hoare_vcg_all_lift P typ_at_lift_cte'_strong)
+  done
+
+(* use b_itself parameter to fix free type variable in interface lemmas *)
+locale typ_at_gen = Invariants_H_cte_ats +
+  fixes b_itself :: 'b
+  assumes valid_arch_tcb_lift'_strong:
+    "\<And>(f :: 'b kernel) P tcb. (\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_arch_tcb' tcb s)\<rbrace>"
+  assumes typ_at_lift_valid_arch_cap':
+    "\<And>(f :: 'b kernel) cap. (\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>valid_arch_cap' cap\<rbrace>"
+begin
+
+lemmas gen_typ_at_lifts_strong =
+  typ_at_lift_tcb'_strong[where 'a='b] typ_at_lift_ep'_strong[where 'a='b]
+  typ_at_lift_ntfn'_strong[where 'a='b] typ_at_lift_cte'_strong[where 'a='b]
+  typ_at_lift_valid_tcb_state'_strong[where 'a='b]
+  valid_arch_tcb_lift'_strong
+
+context begin
+\<comment>\<open> We're using @{command ML_goal} here because there are two useful formulations
+    of typ_at lifting lemmas and we do not want to write all of the possibilities
+    out by hand. If we use typ_at_lift_tcb' as an example, then the first is
+    @{term "\<lbrace>\<lambda>s. P (typ_at' TCBT p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at' TCBT p s)\<rbrace>
+            \<Longrightarrow> \<lbrace>\<lambda>s. P (tcb_at' p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (tcb_at' p s)\<rbrace>"} and the second is
+    @{term "(\<And>P. \<lbrace>\<lambda>s. P (typ_at' TCBT p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at' TCBT p s)\<rbrace>)
+            \<Longrightarrow> \<lbrace>\<lambda>s. P (tcb_at' p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (tcb_at' p s)\<rbrace>"}.
+    The first form is stronger, and therefore preferred for backward reasoning
+    using rule. However, since the P in the premise is free in the first form,
+    forward unification using the OF attribute produces flex-flex pairs which
+    causes problems. The second form avoids the unification issue by demanding
+    that there is a P that is free in the lemma supplied to the OF attribute.
+    However, it can only be applied if @{term f} preserves both
+    @{term "typ_at' TCBT p s"} and @{term "\<not> typ_at' TCBT p s"}.
+    The following @{command ML_goal} generates lemmas of the second form based on
+    the previously proven stronger lemmas of the first form. \<close>
+ML \<open>
+fun weaken_typ_at_lifts_thms strong_thms =
+  let
+    fun abstract_P term = Logic.all (Free ("P", @{typ "bool \<Rightarrow> bool"})) term
+    fun abstract thm =
+      let
+        val prems = List.map abstract_P (Thm.prems_of thm);
+        fun imp [] = Thm.concl_of thm
+          | imp (p :: pms) = @{const Pure.imp} $ p $ imp pms
+      in
+        imp prems
+      end
+  in
+    List.map abstract strong_thms
+  end
+
+val gen_strong_thms = @{thms gen_typ_at_lifts_strong[no_vars]}
+val gen_typ_at_lifts_internal_goals = weaken_typ_at_lifts_thms gen_strong_thms
+\<close>
+
+private ML_goal gen_typ_at_lifts_internal:
+  \<open>gen_typ_at_lifts_internal_goals\<close>
+  by (auto simp: gen_typ_at_lifts_strong)
+
+lemmas gen_typ_at_lifts' = gen_typ_at_lifts_internal
+                           typ_at_lift_cte_at'
+                           typ_at_lift_valid_untyped'
+                           valid_bound_tcb_lift
+                           valid_bound_ntfn_lift
+                           valid_ntfn_lift'
+                           typ_at_lift_valid_irq_node'
+end
+
+lemma typ_at_lift_valid_cap':
+  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>(rv::'b) s. P (typ_at' T p s)\<rbrace>"
+  shows      "\<lbrace>\<lambda>s. valid_cap' cap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_cap' cap s\<rbrace>"
+  including no_pre
+  apply (simp add: valid_cap'_def)
+  apply wp
+  apply (case_tac cap;
+         wpsimp wp: valid_cap'_def P gen_typ_at_lifts'
+                    typ_at_lift_valid_arch_cap')
+     apply (rename_tac zombie_type nat)
+     apply (case_tac zombie_type; simp)
+      apply (wp gen_typ_at_lifts_strong[where P=id, simplified] P)
+    apply (wp hoare_vcg_all_lift P typ_at_lift_valid_untyped' gen_typ_at_lifts')+
+  done
+
+lemma typ_at'_valid_obj'_lift:
+  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>(rv::'b) s. P (typ_at' T p s)\<rbrace>"
+  notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_const_Ball_lift
+               gen_typ_at_lifts'[OF P] typ_at_lift_valid_cap'[OF P]
+  shows      "\<lbrace>\<lambda>s. valid_obj' obj s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj' obj s\<rbrace>"
+  apply (cases obj; simp add: valid_obj'_def hoare_TrueI)
+      apply (rename_tac endpoint)
+      apply (case_tac endpoint; simp add: valid_ep'_def, wp)
+     apply (rename_tac notification)
+     apply (case_tac "ntfnObj notification";
+            simp add: valid_ntfn'_def split: option.splits,
+            (wpsimp|rule conjI)+)
+    apply (rename_tac tcb)
+    apply (case_tac "tcbState tcb";
+           simp add: valid_tcb'_def valid_tcb_state'_def split_def opt_tcb_at'_def;
+           wpsimp wp: hoare_case_option_wp)
+   apply (wpsimp simp: valid_cte'_def)+
+  done
+
+lemmas gen_typ_at_lifts =
+  gen_typ_at_lifts' typ_at_lift_valid_cap' typ_at'_valid_obj'_lift
+  typ_at'_valid_obj'_lift[where obj="KOEndpoint ko" for ko, simplified valid_obj'_def kernel_object.case]
+  typ_at'_valid_obj'_lift[where obj="KONotification ko" for ko, simplified valid_obj'_def kernel_object.case]
+  typ_at'_valid_obj'_lift[where obj="KOTCB ko" for ko, simplified valid_obj'_def kernel_object.case]
+  typ_at'_valid_obj'_lift[where obj="KOCTE ko" for ko, simplified valid_obj'_def kernel_object.case]
+  typ_at'_valid_obj'_lift[where obj="KOArch ko" for ko, simplified valid_obj'_def kernel_object.case]
+
+end (* typ_at_gen *)
+
+locale gen_typ_at_props' = typ_at_gen "b_itself :: 'b" for b_itself +
+  fixes f :: "'b kernel"
+  assumes typ': "f \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
+begin
+
+lemmas gen_typ_ats[wp] = gen_typ_at_lifts[REPEAT [OF typ']]
+
+context begin
+(* We want to enforce that gen_typ_ats only contains lemmas that have no
+   assumptions. The following thm statement should fail if this is not true. *)
+private lemmas check_valid_internal = iffD1[OF refl, where P="valid p g q" for p g q]
+thm gen_typ_ats[atomized, THEN check_valid_internal]
+end
+
+end (* gen_typ_at_props' *)
+
+(* we expect typ_at' lemmas to be [wp], so this should be easy: *)
+method typ_at_props' = unfold_locales; wp?
+
 
 lemma mdb_next_unfold:
   "s \<turnstile> c \<leadsto> c' = (\<exists>z. s c = Some z \<and> c' = mdbNext (cteMDBNode z))"

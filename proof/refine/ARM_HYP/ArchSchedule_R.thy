@@ -104,7 +104,7 @@ lemma vcpuSwitch_typ_at'[wp]:
 
 lemma arch_switch_thread_tcb_at'[wp]:
   "\<lbrace>tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
-  by (unfold ARM_HYP_H.switchToThread_def, wp typ_at_lift_tcb')
+  by (unfold ARM_HYP_H.switchToThread_def, wp)
 
 crunch setVMRoot, vcpuSwitch
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t'"

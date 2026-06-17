@@ -6369,11 +6369,12 @@ lemma cteDelete_invs':
   apply simp
   done
 
-lemma cteDelete_typ_at' [wp]:
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> cteDelete slot exposed \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
-  by (wp cteDelete_preservation | simp | fastforce)+
+crunch cteDelete
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  (rule: cteDelete_preservation)
 
-lemmas cteDelete_typ_at'_lifts [wp] = gen_typ_at_lifts [OF cteDelete_typ_at']
+sublocale cteDelete: gen_typ_at_props' _ "cteDelete slot exposed"
+  by typ_at_props'
 
 lemma cteDelete_cte_at:
   "\<lbrace>\<top>\<rbrace> cteDelete slot bool \<lbrace>\<lambda>rv. cte_at' slot\<rbrace>"
@@ -6381,7 +6382,7 @@ lemma cteDelete_cte_at:
                in hoare_weaken_pre)
    apply (rule hoare_strengthen_post)
     apply (rule hoare_vcg_disj_lift)
-     apply (rule gen_typ_at_lifts, rule cteDelete_typ_at')
+     apply (rule cteDelete.gen_typ_ats)
     apply (simp add: cteDelete_def finaliseSlot_def split_def)
     apply (rule validE_valid, rule bindE_wp_fwd)
      apply (subst finaliseSlot'_simps_ext)
@@ -6835,13 +6836,15 @@ crunch reduceZombie
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps wp: crunch_wps)
 
-lemmas reduceZombie_typ_ats[wp] = gen_typ_at_lifts[OF reduceZombie_typ_at']
+sublocale reduceZombie: gen_typ_at_props' _ "reduceZombie cap slot x"
+  by typ_at_props'
 
-lemma finaliseSlot_typ_at'[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> finaliseSlot ptr exposed \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
-  by (rule finaliseSlot_preservation, (wp | simp)+)
+crunch finaliseSlot
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  (rule: finaliseSlot_preservation)
 
-lemmas finaliseSlot_typ_ats[wp] = gen_typ_at_lifts[OF finaliseSlot_typ_at']
+sublocale finaliseSlot: gen_typ_at_props' _ "finaliseSlot ptr exposed"
+  by typ_at_props'
 
 lemma rec_del_corres:
   "\<forall>C \<in> rec_del_concrete args.
@@ -7645,7 +7648,8 @@ crunch invokeCNode
      simp: crunch_simps filterM_mapM unless_def
        wp: crunch_wps undefined_valid finaliseSlot_preservation)
 
-lemmas invokeCNode_typ_ats[wp] = gen_typ_at_lifts[OF invokeCNode_typ_at']
+sublocale invokeCNode: gen_typ_at_props' _ "invokeCNode i"
+  by typ_at_props'
 
 end (* CNodeInv_R *)
 
@@ -8399,10 +8403,11 @@ lemma cteMove_irq_handlers' [wp]:
 
 context CNodeInv_R begin
 
+sublocale cteMove: gen_typ_at_props' _ "cteMove cap src dest"
+  by typ_at_props'
+
 lemmas cteMove_valid_irq_node'[wp]
     = valid_irq_node_lift[OF cteMove_ksInterrupt cteMove_typ_at']
-
-lemmas cteMove_typ_at_lifts[wp] = gen_typ_at_lifts[OF cteMove_typ_at']
 
 lemmas finalise_slot_corres'
     = rec_del_corres[where args="FinaliseSlotCall slot exp",

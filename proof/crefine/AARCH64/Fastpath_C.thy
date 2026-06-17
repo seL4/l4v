@@ -2671,13 +2671,6 @@ lemma ccap_relation_reply_helper:
                      cap_reply_cap_lift_def
               elim!: ccap_relationE)
 
-lemma valid_ep_typ_at_lift':
-  "\<lbrakk> \<And>p. \<lbrace>typ_at' TCBT p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' TCBT p\<rbrace> \<rbrakk>
-      \<Longrightarrow> \<lbrace>\<lambda>s. valid_ep' ep s\<rbrace> f \<lbrace>\<lambda>rv s. valid_ep' ep s\<rbrace>"
-  apply (cases ep, simp_all add: valid_ep'_def)
-   apply (wp hoare_vcg_const_Ball_lift typ_at_lifts | assumption)+
-  done
-
 lemma threadSet_tcbState_valid_objs:
   "\<lbrace>valid_tcb_state' st and valid_objs'\<rbrace>
      threadSet (tcbState_update (\<lambda>_. st)) t
@@ -3305,7 +3298,7 @@ proof -
                                                 valid_mdb'_def)
                                apply (wp threadSet_cur threadSet_tcbState_valid_objs
                                          threadSet_state_refs_of' threadSet_ctes_of
-                                         valid_ep_typ_at_lift' threadSet_cte_wp_at' asid_has_vmid_lift
+                                         threadSet_cte_wp_at' asid_has_vmid_lift
                                       | simp)+
                               apply (vcg exspec=thread_state_ptr_mset_blockingObject_tsType_modifies)
                              apply simp

@@ -1476,7 +1476,8 @@ crunch doMachineOp
 crunch doMachineOp
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
 
-lemmas doMachineOp_gen_typ_ats[wp] = gen_typ_at_lifts[OF doMachineOp_typ_at']
+global_interpretation doMachineOp: gen_typ_at_props' _ "doMachineOp mop"
+  by typ_at_props'
 
 lemma doMachineOp_invs_bits[wp]:
   "doMachineOp m \<lbrace>valid_pspace'\<rbrace>"
@@ -1600,11 +1601,12 @@ lemma setObject_typ_at_not:
   apply fastforce
   done
 
-lemma setObject_typ_at':
-  "\<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace> setObject p v \<lbrace>\<lambda>r s. P (typ_at' T p' s)\<rbrace>"
+lemma setObject_typ_at'[wp]:
+  "setObject p v \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
   by (blast intro: P_bool_lift setObject_typ_at_inv setObject_typ_at_not)
 
-lemmas setObject_gen_typ_ats[wp] = gen_typ_at_lifts[OF setObject_typ_at']
+sublocale setObject: gen_typ_at_props' _ "setObject p v"
+  by typ_at_props'
 
 lemma setObject_cte_wp_at':
   assumes x: "\<And>x n tcb s t. \<lbrakk> t \<in> fst (updateObject v (KOTCB tcb) ptr x n s); Q s;
@@ -1680,17 +1682,9 @@ lemma setNotification_cte_wp_at':
                      intro!: set_eqI)+
   done
 
-lemma setObject_ep_tcb':
-  "\<lbrace>tcb_at' t\<rbrace> setObject p (e::endpoint) \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
-  by (rule setObject_gen_typ_ats)
-
-lemma setObject_ntfn_tcb':
-  "\<lbrace>tcb_at' t\<rbrace> setObject p (e::Structures_H.notification) \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
-  by (rule setObject_gen_typ_ats)
-
-lemma set_ntfn_tcb' [wp]:
+lemma set_ntfn_tcb'[wp]:
   "\<lbrace> tcb_at' t \<rbrace> setNotification ntfn v \<lbrace> \<lambda>rv. tcb_at' t \<rbrace>"
-  by (simp add: setNotification_def setObject_ntfn_tcb')
+  by (wpsimp simp: setNotification_def)
 
 lemma ctes_of_from_cte_wp_at:
   assumes x: "\<And>P P' p. \<lbrace>\<lambda>s. P (cte_wp_at' P' p s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>r s. P (cte_wp_at' P' p s)\<rbrace>"
@@ -1749,26 +1743,6 @@ lemma setNotification_corres:
        apply (corresK_search search: setObject_other_corres_ntfn[where P="\<lambda>_. True"])
   apply (corresKsimp wp: get_object_ret get_object_wp)+
   by (fastforce simp: is_ntfn gen_obj_at_simps partial_inv_def)
-
-lemma typ_at'_valid_obj'_lift:
-  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_const_Ball_lift gen_typ_at_lifts[OF P]
-  shows      "\<lbrace>\<lambda>s. valid_obj' obj s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj' obj s\<rbrace>"
-  apply (cases obj; simp add: valid_obj'_def hoare_TrueI)
-      apply (rename_tac endpoint)
-      apply (case_tac endpoint; simp add: valid_ep'_def, wp)
-     apply (rename_tac notification)
-     apply (case_tac "ntfnObj notification";
-            simp add: valid_ntfn'_def split: option.splits,
-            (wpsimp|rule conjI)+)
-    apply (rename_tac tcb)
-    apply (case_tac "tcbState tcb";
-           simp add: valid_tcb'_def valid_tcb_state'_def split_def opt_tcb_at'_def
-                     valid_bound_ntfn'_def;
-           wpsimp wp: hoare_case_option_wp hoare_case_option_wp2 valid_arch_tcb_lift' P;
-           (clarsimp split: option.splits)?)
-   apply (wpsimp simp: valid_cte'_def)+
-  done
 
 lemmas setObject_valid_obj = typ_at'_valid_obj'_lift [OF setObject_typ_at']
 
@@ -1962,7 +1936,8 @@ lemma setEndpoint_typ_at'[wp]:
   unfolding setEndpoint_def
   by (rule setObject_typ_at')
 
-lemmas setEndpoint_gen_typ_ats[wp] = gen_typ_at_lifts[OF setEndpoint_typ_at']
+sublocale setEndpoint: gen_typ_at_props' _ "setEndpoint ptr val"
+  by typ_at_props'
 
 lemma setEndpoint_iflive'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s

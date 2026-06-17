@@ -183,15 +183,15 @@ lemma setMessageInfo_corres:
   apply (simp add: message_info_to_data_eqv)
   done
 
-lemma set_mi_tcb' [wp]:
-  "\<lbrace> tcb_at' t \<rbrace> setMessageInfo receiver msg \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
-  by (simp add: setMessageInfo_def) wp
+crunch setMessageInfo, setMRs
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  (wp: crunch_wps simp: crunch_simps)
 
-lemma setMRs_typ_at':
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> setMRs receiver recv_buf mrs \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  by (simp add: setMRs_def zipWithM_x_mapM split_def, wp crunch_wps)
+global_interpretation setMessageInfo: gen_typ_at_props' _ "setMessageInfo thread info"
+  by typ_at_props'
 
-lemmas setMRs_typ_at_lifts[wp] = gen_typ_at_lifts[OF setMRs_typ_at']
+global_interpretation setMRs: gen_typ_at_props' _ "setMRs receiver recv_buf mrs"
+  by typ_at_props'
 
 crunch doMachineOp
   for arch[wp]: "\<lambda>s. P (ksArchState s)"
