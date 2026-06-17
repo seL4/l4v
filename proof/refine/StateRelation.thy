@@ -442,5 +442,9 @@ locale StateRelation_R =
     "msgInfoRegister = msg_info_register"
   assumes obj_relation_cuts_trivial:
     "\<And>ptr ty. ptr \<in> fst ` obj_relation_cuts ty ptr"
+  assumes ghost_relation_wrapper_genD:
+    "\<And>s s'.
+     ghost_relation_wrapper s s'
+     \<Longrightarrow> ups_of_heap (kheap s) = gsUserPages s' \<and> cns_of_heap (kheap s) = gsCNodes s'"
 
 end

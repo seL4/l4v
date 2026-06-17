@@ -241,6 +241,14 @@ locale CSpace1_R =
       no_loops m\<rbrakk>
      \<Longrightarrow> (c \<noteq> slot \<or> P \<longrightarrow> descendants_of' c m \<subseteq> descendants_of' c (m(slot \<mapsto> cteCap_update (\<lambda>_. cap) cte))) \<and>
        (P \<longrightarrow> descendants_of' c (m(slot \<mapsto> cteCap_update (\<lambda>_. cap) cte)) \<subseteq> descendants_of' c m)"
+  (* FIXME arch-split: see if we could use this more instead of isMDBParentOf_CTE *)
+  assumes isMDBParentOf_CTE_gen:
+    "\<And>cap node cte.
+     \<not>isArchObjectCap cap \<Longrightarrow>
+     isMDBParentOf (CTE cap node) cte =
+     (\<exists>cap' node'. cte = CTE cap' node' \<and> sameRegionAs cap cap'
+                   \<and> mdbRevocable node
+                   \<and> (capBadge cap, capBadge cap') \<in> capBadge_ordering (mdbFirstBadged node'))"
 
 lemma subtree_no_parent:
   assumes "m \<turnstile> p \<rightarrow> x"

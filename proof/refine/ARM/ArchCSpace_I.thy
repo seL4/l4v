@@ -265,7 +265,7 @@ lemma sameRegionAs_capRange_Int[CSpace_I_2_assms]:
       apply (fastforce simp: capRange_Master isCap_simps)+
   done
 
-lemma sameRegionAs_trans:
+lemma sameRegionAs_trans[CSpace_I_2_assms]:
   "\<lbrakk> sameRegionAs a b; sameRegionAs b c \<rbrakk> \<Longrightarrow> sameRegionAs a c"
   by (simp add: sameRegionAs_def2, elim conjE disjE)
      (auto simp: isCap_simps capRange_def) (* long *)

@@ -806,6 +806,8 @@ locale CSpace_I_2 = CSpace_I +
        \<lbrakk> capMasterCap cap = capMasterCap cap'; \<not> isNullCap cap; \<not> isZombie cap;
          \<not> isUntypedCap cap;
          isArchFrameCap cap \<Longrightarrow> capRange cap \<noteq> {} \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
+  assumes sameRegionAs_trans:
+    "\<And>a b c. \<lbrakk> sameRegionAs a b; sameRegionAs b c \<rbrakk> \<Longrightarrow> sameRegionAs a c"
 begin
 
 lemma isMDBParent_Null[simp]:
