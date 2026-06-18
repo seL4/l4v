@@ -126,7 +126,7 @@ for line in instructions:
             error("IOError comparing {} and {}:\n{}".format(output_tmp, output, e))
             sys.exit(1)
     else:
-        #warning('{} does not exist, assuming changed'.format(output))
+        # warning('{} does not exist, assuming changed'.format(output))
         changed = 1
 
     if changed:
