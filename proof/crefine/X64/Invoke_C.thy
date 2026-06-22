@@ -2817,6 +2817,7 @@ lemma invokeUntyped_Retype_ccorres:
          apply csymbr
          apply (rule ccorres_move_c_guard_cte)
          apply (rule ccorres_stateAssert)
+         apply (rule ccorres_assert)
          apply (rule ccorres_cross_retype_zero_bytes_over_guard[where
              dev=isdev and p=cref, OF cover])
          apply (rule ccorres_rhs_assoc2)
@@ -2877,7 +2878,7 @@ lemma invokeUntyped_Retype_ccorres:
                               invs_pspace_aligned' invs_pspace_distinct'
                               invs_ksCurDomain_maxDomain'
                               invokeUntyped_proofs.not_0_ptr
-                              atLeastAtMost_iff[where i=0]
+                              atLeastAtMost_iff[where i=0] add_mask_fold
                         cong: if_cong)
         apply (frule invokeUntyped_proofs.idx_le_new_offs)
         apply (frule invokeUntyped_proofs.szw)
@@ -2890,7 +2891,6 @@ lemma invokeUntyped_Retype_ccorres:
                               field_simps unat_of_nat_eq[OF range_cover.weak, OF cover]
                               if_apply_def2 invs_valid_objs' ptr_base_eq sz_bound canonical_ptr ptr_in_km
                               invs_urz untypedBits_defs)
-
         apply (intro conjI)
                   (* pspace_no_overlap *)
                   apply (cases reset, simp_all)[1]
@@ -2903,12 +2903,12 @@ lemma invokeUntyped_Retype_ccorres:
               apply (rule contra_subsetD[rotated],
                 rule invokeUntyped_proofs.ex_cte_no_overlap'[OF proofs], rule misc)
               apply (simp add: shiftl_t2n mult.commute)
-              apply (rule order_trans, erule range_cover_subset', simp_all)[1]
+              apply (rule order_trans, erule range_cover_subset', simp_all add: add_mask_fold)[1]
              (* gsCNodes *)
              apply (clarsimp split: option.split_asm)
             (* kernel data refs *)
             apply (drule(1) valid_global_refsD'[OF _ invs_valid_global'])
-            apply clarsimp
+            apply (clarsimp simp: add_mask_fold)
             apply (subst Int_commute, erule disjoint_subset2[rotated])
             apply (rule order_trans, erule invokeUntyped_proofs.subset_stuff)
             apply (simp add: atLeastatMost_subset_iff word_and_le2)
@@ -2921,7 +2921,7 @@ lemma invokeUntyped_Retype_ccorres:
            apply (simp add: shiftl_t2n field_simps)
           (* subsets *)
           apply (rule order_trans, erule invokeUntyped_proofs.subset_stuff)
-          apply (simp add: atLeastatMost_subset_iff word_and_le2)
+          apply (simp add: atLeastatMost_subset_iff word_and_le2 add.commute)
          (* destSlots *)
          apply (clarsimp split: if_split)
          apply (frule invokeUntyped_proofs.slots_invD[OF proofs])
@@ -2966,7 +2966,7 @@ lemma invokeUntyped_Retype_ccorres:
       apply (intro conjI)
        apply clarsimp
        apply (drule invokeUntyped_proofs.ex_cte_no_overlap'[OF proofs])
-       apply simp
+       apply (simp add: add_mask_fold)
       apply (frule(1) cap_get_tag_to_H)
       apply (simp add: cap_lift_untyped_cap)
       apply clarsimp

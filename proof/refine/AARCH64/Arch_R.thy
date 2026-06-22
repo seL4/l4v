@@ -169,7 +169,7 @@ lemma performASIDControlInvocation_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split)
        apply (erule deleteObjects_corres)
-       apply (simp add:pageBits_def)
+       apply (simp add: word_size_bits_le_pageBits)
       apply (rule corres_split[OF getSlotCap_corres], simp)
         apply (rule_tac F = " pcap = (cap.UntypedCap False word1 pageBits idxa)" in corres_gen_asm)
         apply (rule corres_split[OF updateFreeIndex_corres])

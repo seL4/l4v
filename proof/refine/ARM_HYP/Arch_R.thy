@@ -135,7 +135,7 @@ lemma performASIDControlInvocation_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split)
        apply (erule deleteObjects_corres)
-       apply (simp add:pageBits_def)
+       apply (simp add: word_size_bits_le_pageBits)
       apply (rule corres_split[OF getSlotCap_corres])
          apply simp
         apply (rule_tac F = " pcap = (cap.UntypedCap False word1 pageBits idxa)" in corres_gen_asm)
@@ -1842,7 +1842,7 @@ lemma arch_decodeInvocation_wf[wp]:
        apply (clarsimp simp: word_neq_0_conv valid_cap'_def valid_arch_inv'_def valid_apinv'_def)
        apply (rule conjI)
         apply (erule cte_wp_at_weakenE')
-        apply (simp, drule_tac t="cteCap c" in sym, simp)
+        apply (simp, drule_tac t="cteCap c" in sym, simp add: isPDCap_def)
        apply (subst (asm) conj_assoc [symmetric])
        apply (subst (asm) assocs_empty_dom_comp [symmetric])
        apply (drule dom_hd_assocsD)

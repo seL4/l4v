@@ -6032,12 +6032,12 @@ lemma createObject_notZombie[wp]:
     apply (wp| clarsimp simp add:isCap_simps)+
   done
 
+(* FIXME: 25 here is maxUntypedSizeBits - cteSizeBits *)
 lemma createObject_valid_cap':
   "\<lbrace>\<lambda>s. pspace_no_overlap' ptr (APIType_capBits ty us) s \<and>
          valid_pspace' s \<and>
          is_aligned ptr (APIType_capBits ty us) \<and>
-          APIType_capBits ty us < word_bits \<and>
-         (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> 0 < us) \<and>
+         (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> 0 < us \<and> us \<le> 25) \<and>
          (ty = APIObjectType apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits) \<and> ptr \<noteq> 0\<rbrace>
     createObject ty ptr us dev \<lbrace>\<lambda>r s. s \<turnstile>' r\<rbrace>"
   apply (simp add:createObject_def3)
@@ -6050,7 +6050,11 @@ lemma createObject_valid_cap':
      apply (rule hoare_strengthen_post[OF createNewCaps_valid_cap'[where sz = "APIType_capBits ty us"]])
     apply assumption
    apply clarsimp
-  apply (clarsimp simp add:word_bits_conv range_cover_full)
+  apply (clarsimp simp add: word_bits_conv range_cover_full canonical_address_def)
+  apply (prop_tac "APIType_capBits ty us \<le> maxUntypedSizeBits")
+  subgoal by (cases ty; simp add: APIType_capBits_def maxUntypedSizeBits_def objBits_simps'
+                              split: apiobject_type.splits)
+  apply (auto intro!: range_cover_full order_le_less_trans[OF _ maxUntypedSizeBits_less_word_bits])
   done
 
 lemma createObject_untypedRange:
@@ -6801,6 +6805,7 @@ lemma retype_offs_region_actually_is_zero_bytes:
 lemma createNewCaps_valid_cap_hd:
     "\<lbrace>\<lambda>s. pspace_no_overlap' ptr sz s \<and>
         valid_pspace' s \<and> n \<noteq> 0 \<and>
+        sz \<le> maxUntypedSizeBits \<and>
         range_cover ptr sz (APIType_capBits ty us) n \<and>
         (ty = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> 0 < us) \<and>
         (ty = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits) \<and>
@@ -6813,7 +6818,7 @@ lemma createNewCaps_valid_cap_hd:
     apply (rule hoare_vcg_conj_lift)
      apply (rule createNewCaps_ret_len)
     apply (rule createNewCaps_valid_cap'[where sz=sz])
-   apply (clarsimp simp: range_cover_n_wb)
+   apply (clarsimp simp: range_cover_n_wb canonical_address_def)
   apply simp
   done
 
@@ -7020,7 +7025,7 @@ shows  "ccorres dc xfdc
                         by (simp_all add:range_cover_sz'[where 'a=32, folded word_bits_def]
                                    word_bits_def range_cover_def)+
             apply (subst add.commute)
-            apply (simp add: range_cover_not_in_neqD)
+            apply (simp add: range_cover_not_in_neqD canonical_address_def)
             apply (intro conjI)
                   apply (drule_tac p = n in range_cover_no_0)
                     apply (simp add:shiftl_t2n)+
@@ -7173,12 +7178,13 @@ shows  "ccorres dc xfdc
        apply clarsimp
        apply (simp add: range_cover_not_in_neqD)
        apply (intro conjI)
-                          subgoal by (simp add: word_bits_def range_cover_def)
-                         subgoal by (clarsimp simp: cte_wp_at_ctes_of invs'_def valid_state'_def
-                                               valid_global_refs'_def cte_at_valid_cap_sizes_0)
-                        apply (erule range_cover_le,simp)
-                       apply (drule_tac p = "n" in range_cover_no_0)
-                         apply (simp add:field_simps shiftl_t2n)+
+                           subgoal by (simp add: word_bits_def range_cover_def)
+                          subgoal by (clarsimp simp: cte_wp_at_ctes_of invs'_def valid_state'_def
+                                                     valid_global_refs'_def cte_at_valid_cap_sizes_0)
+                         apply (erule range_cover_le,simp)
+                        apply (drule_tac p = "n" in range_cover_no_0)
+                          apply (simp add:field_simps shiftl_t2n)+
+                       subgoal by (clarsimp simp: APIType_capBits_gen_def objBits_simps' maxUntypedSizeBits_def)
                       apply (erule caps_no_overlap''_le)
                        apply (simp add:range_cover.sz[where 'a=32, folded word_bits_def])+
                      apply (erule caps_no_overlap''_le2)

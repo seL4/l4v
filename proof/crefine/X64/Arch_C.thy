@@ -841,8 +841,9 @@ shows
        apply simp
       apply (rule descendants_range_caps_no_overlapI'[where d=isdev and cref = parent])
         apply simp
-        apply (fastforce simp:cte_wp_at_ctes_of is_aligned_neg_mask_eq)
-       apply (clarsimp simp:is_aligned_neg_mask_eq)
+       apply (fastforce simp: cte_wp_at_ctes_of)
+      apply (clarsimp simp: add.commute)
+      apply (clarsimp simp: mask_def) (* does not combine with previous *)
      apply (clarsimp dest!: upto_intvl_eq)
     apply (wp deleteObjects_cte_wp_at'[where d=isdev and idx = idx and p = parent]
               deleteObjects_descendants[where d=isdev and p = parent and idx = idx]
@@ -4399,7 +4400,7 @@ lemma decodeX64MMUInvocation_ccorres:
        apply (simp add: asid_low_bits_def asid_bits_def)
       apply (simp add: asid_wf_def)
      apply simp
-    apply (auto simp: ct_in_state'_def valid_tcb_state'_def
+    apply (auto simp: ct_in_state'_def valid_tcb_state'_def isPML4Cap'_def
                dest!: st_tcb_at_idle_thread'
                elim!: pred_tcb'_weakenE)[1]
   apply (clarsimp simp: cte_wp_at_ctes_of asidHighBits_handy_convs
