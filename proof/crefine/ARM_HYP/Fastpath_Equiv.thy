@@ -1575,7 +1575,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                            apply (rule monadic_rewrite_weaken_flags[where E=True and F=True], simp)
                            apply (rule setThreadState_rewrite_simple)
                           apply clarsimp
-                          apply (wp getCTE_known_cap)+
+                          apply (wp getCTE_get)+
                         apply (rule monadic_rewrite_bind)
                           apply (rule_tac t="capTCBPtr (cteCap replyCTE)"
                                       and t'=thread
