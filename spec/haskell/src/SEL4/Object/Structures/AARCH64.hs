@@ -110,6 +110,15 @@ asidHighBitsOf :: ASID -> ASID
 asidHighBitsOf asid = (asid `shiftR` asidLowBits) .&. mask asidHighBits
 
 
+{- Time -}
+
+parseTimeArg :: Int -> [Word] -> Time
+parseTimeArg i args = fromIntegral (args !! i)
+
+wordsOfTime :: Time -> [Word]
+wordsOfTime t = [fromIntegral t]
+
+
 {- VCPUs -}
 
 type VIRQ = Word
@@ -168,11 +177,3 @@ archObjSize :: ArchKernelObject -> Int
 archObjSize (KOASIDPool _) = pageBits
 archObjSize (KOPTE _) = pteBits
 archObjSize (KOVCPU _) = vcpuBits
-
-{- Time -}
-
-parseTimeArg :: Int -> [Word] -> Time
-parseTimeArg i args = fromIntegral (args !! i)
-
-wordsOfTime :: Time -> [Word]
-wordsOfTime t = [fromIntegral t]

@@ -283,7 +283,7 @@ context Arch begin arch_global_naming
 named_theorems Schedule_R_3_assms
 
 lemma scheduleChooseNewThread_fragment_corres:
-  "corres dc (invs and valid_ready_qs and ready_or_release
+  "corres dc (invs and valid_domain_list and valid_ready_qs and ready_or_release
               and (\<lambda>s. scheduler_action s = choose_new_thread))
              (invs' and (\<lambda>s. ksSchedulerAction s = ChooseNewThread))
      (do _ \<leftarrow> when (domainTime = 0) (do
@@ -300,13 +300,14 @@ lemma scheduleChooseNewThread_fragment_corres:
       od)"
   apply (subst bind_dummy_ret_val)+
   apply (corres corres: nextDomain_corres chooseThread_corres
-                    wp: nextDomain_invs')
+                    wp: nextDomain_invs' valid_domain_list_lift)
    apply (auto simp: valid_sched_def invs'_def)
   done
 
 lemma scheduleChooseNewThread_corres[Schedule_R_3_assms]:
   "corres dc
-     (\<lambda>s. invs s \<and> valid_ready_qs s \<and> ready_or_release s \<and> scheduler_action s = choose_new_thread)
+     (\<lambda>s. invs s \<and> valid_domain_list s \<and> valid_ready_qs s \<and> ready_or_release s
+          \<and> scheduler_action s = choose_new_thread)
      (\<lambda>s. invs' s \<and> ksSchedulerAction s = ChooseNewThread)
      schedule_choose_new_thread scheduleChooseNewThread"
   apply (clarsimp simp: schedule_choose_new_thread_def scheduleChooseNewThread_def)

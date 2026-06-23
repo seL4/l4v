@@ -72,13 +72,20 @@ datatype irq_handler_invocation =
   | SetIRQHandler irq cap cslot_ptr
   | ClearIRQHandler irq
 
+datatype domain_invocation =
+    InvokeDomainSet (dom_thread : obj_ref) (dom_domain : domain)
+  | InvokeDomainScheduleSetStart (dom_index : nat)
+  | InvokeDomainScheduleConfigure (dom_index : nat)
+                                  (dom_domain : domain)
+                                  (dom_duration : domain_duration)
+
 datatype invocation =
     InvokeUntyped untyped_invocation
   | InvokeEndpoint obj_ref machine_word bool bool
   | InvokeNotification obj_ref machine_word
   | InvokeReply obj_ref bool
   | InvokeTCB tcb_invocation
-  | InvokeDomain obj_ref word8
+  | InvokeDomain domain_invocation
   | InvokeSchedContext sched_context_invocation
   | InvokeSchedControl sched_control_invocation
   | InvokeCNode cnode_invocation

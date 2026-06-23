@@ -12,7 +12,7 @@ chapter "Kernel Data Structures"
 
 theory Structures_H
 imports
-  Structs_B
+  Arch_Structs_B
   Config_H
   State_H
   Fault_H
@@ -36,6 +36,8 @@ arch_requalify_consts (H)
   atcbContextSet
   wordsOfTime
   parseTimeArg
+
+type_synonym domain_schedule_item = "domain \<times> ticks"
 
 type_synonym tcb_queue = "machine_word head_end_ptrs"
 

@@ -28,7 +28,7 @@ definition all_but_exst where
                       (cur_thread s) (idle_thread s)
                       (consumed_time s) (cur_time s)
                       (cur_sc s) (reprogram_timer s)
-                      (scheduler_action s) (domain_list s) (domain_index s)
+                      (scheduler_action s) (domain_list s) (domain_index s) (domain_start_index s)
                       (cur_domain s) (domain_time s) (ready_queues s) (release_queue s)
                       (machine_state s) (interrupt_irq_node s)
                       (interrupt_states s) (arch_state s))"
@@ -42,12 +42,13 @@ lemma ef_mk_ef: "empty_fail f \<Longrightarrow> mk_ef (f s) = f s"
 
 lemma all_but_obvious:
   "all_but_exst (\<lambda>kheap cdt is_original_cap cur_thread idle_thread consumed_time cur_time cur_sc
-       reprogram_timer scheduler_action domain_list domain_index cur_domain domain_time
+       reprogram_timer scheduler_action domain_list domain_index domain_start_index cur_domain domain_time
        ready_queues release_queue machine_state interrupt_irq_node interrupt_states arch_state.
        x = \<lparr>kheap = kheap, cdt = cdt, is_original_cap = is_original_cap, cur_thread = cur_thread,
             idle_thread = idle_thread, consumed_time = consumed_time, cur_time = cur_time,
             cur_sc = cur_sc, reprogram_timer = reprogram_timer, scheduler_action = scheduler_action,
-            domain_list = domain_list, domain_index = domain_index, cur_domain = cur_domain,
+            domain_list = domain_list, domain_index = domain_index,
+            domain_start_index = domain_start_index, cur_domain = cur_domain,
             domain_time = domain_time, ready_queues = ready_queues, release_queue = release_queue,
             machine_state = machine_state, interrupt_irq_node = interrupt_irq_node,
             interrupt_states = interrupt_states, arch_state = arch_state,

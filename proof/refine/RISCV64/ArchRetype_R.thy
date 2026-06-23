@@ -825,6 +825,7 @@ crunch createNewCaps
   and irq_states'[Retype_R_assms, wp]: valid_irq_states'
   and ksDomSchedule[Retype_R_assms, wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[Retype_R_assms, wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[Retype_R_assms, wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and gsUntypedZeroRanges[Retype_R_assms, wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   and ksArch[wp]: "\<lambda>s. P (ksArchState s)"
   (simp: crunch_simps unless_def
@@ -1619,7 +1620,7 @@ lemma createObjects_no_cte_invs:
               createObjects_no_cte_irq_handlers
               createObjects_pspace_domain_valid
               createObjects_untyped_ranges_zero'[OF moKO]
-              assms
+              assms valid_dom_schedule'_lift
           | simp)+
   apply clarsimp
   by ((intro conjI; assumption?);

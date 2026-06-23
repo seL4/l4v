@@ -2327,8 +2327,8 @@ lemma cancelSignal_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: cancelSignal_def invs'_def valid_pspace'_def Let_def valid_dom_schedule'_def)
   apply (intro bind_wp[OF _ stateAssert_sp])
-  apply (wp valid_irq_node_lift irqs_masked_lift hoare_vcg_all_lift hoare_vcg_imp_lift'
-            setThreadState_sched_pointers_valid_sched_pointers sts'_valid_replies')
+  apply (wp valid_irq_node_lift irqs_masked_lift valid_dom_schedule'_lift hoare_vcg_all_lift
+            hoare_vcg_imp_lift' setThreadState_sched_pointers_valid_sched_pointers sts'_valid_replies')
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   done
 

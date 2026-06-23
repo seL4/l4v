@@ -35,6 +35,7 @@ We use the C preprocessor to select a target architecture.
 > import SEL4.Object.Endpoint
 > import SEL4.Object.Notification
 > import SEL4.Object.Interrupt
+> import SEL4.Object.Domain
 > import SEL4.Object.Reply
 > import {-# SOURCE #-} SEL4.Object.CNode
 > import {-# SOURCE #-} SEL4.Object.TCB
@@ -443,7 +444,7 @@ The "decodeInvocation" function parses the message, determines the operation tha
 >     liftM InvokeTCB $ decodeTCBInvocation label args cap slot extraCaps
 >
 > decodeInvocation label args _ _ DomainCap extraCaps False _ =
->     liftM (uncurry InvokeDomain) $ decodeDomainInvocation label args extraCaps
+>     liftM InvokeDomain $ decodeDomainInvocation label args extraCaps
 >
 > decodeInvocation label args _ _ (SchedContextCap {capSchedContextPtr=sc}) extraCaps False buffer =
 >     liftM InvokeSchedContext $ decodeSchedContextInvocation label sc (map fst extraCaps)
@@ -484,43 +485,42 @@ This function just dispatches invocations to the type-specific invocation functi
 > performInvocation _ _ _ (InvokeUntyped invok) = do
 >     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
 >     invokeUntyped invok
->     return $ []
+>     return []
 >
 > performInvocation block call canDonate (InvokeEndpoint ep badge canGrant canGrantReply) =
 >   withoutPreemption $ do
 >     thread <- getCurThread
 >     sendIPC block call badge canGrant canGrantReply canDonate thread ep
->     return $ []
+>     return []
 >
 > performInvocation _ _ _ (InvokeNotification ep badge) = do
 >     withoutPreemption $ sendSignal ep badge
->     return $ []
+>     return []
 >
 > performInvocation _ _ _ (InvokeReply reply canGrantReply) =
 >   withoutPreemption $ do
 >     thread <- getCurThread
 >     doReplyTransfer thread reply canGrantReply
->     return $ []
+>     return []
 >
 > performInvocation _ _ _ (InvokeTCB invok) = invokeTCB invok
 >
-> performInvocation _ _ _ (InvokeDomain thread domain) = withoutPreemption $ do
->     Arch.prepareSetDomain thread domain
->     setDomain thread domain
->     return $ []
+> performInvocation _ _ _ (InvokeDomain invok) = do
+>     withoutPreemption $ invokeDomain invok
+>     return []
 >
 > performInvocation _ _ _ (InvokeCNode invok) = do
 >     stateAssert sym_refs_asrt "`sym_refs (state_refs_of' s)`"
 >     invokeCNode invok
->     return $ []
+>     return []
 >
 > performInvocation _ _ _ (InvokeIRQControl invok) = do
 >     performIRQControl invok
->     return $ []
+>     return []
 >
 > performInvocation _ _ _ (InvokeIRQHandler invok) = do
 >     withoutPreemption $ invokeIRQHandler invok
->     return $ []
+>     return []
 >
 > performInvocation _ _ _ (InvokeSchedContext invok) =
 >     withoutPreemption $ invokeSchedContext invok

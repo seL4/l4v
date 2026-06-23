@@ -328,12 +328,10 @@ lemma select_ext_ev_bind_lift:
   apply simp+
   done
 
+(* Domain cap is disallowed, so we will never call this function *)
 lemma decode_domain_invocation_reads_respects_f:
-  "reads_respects_f aag l \<top> (decode_domain_invocation label args excaps)"
-  apply (simp add: decode_domain_invocation_def)
-  apply (wp | wpc | simp)+
-  done
-
+  "reads_respects_f aag l \<bottom> (decode_domain_invocation label args excaps)"
+  by (rule ev_pre_cont)
 
 locale Decode_IF_2 = Decode_IF_1 +
   assumes arch_decode_invocation_reads_respects_f:
@@ -350,6 +348,7 @@ begin
 lemma decode_invocation_reads_respects_f:
   "reads_respects_f aag l
      (silc_inv aag st and pas_refined aag and valid_cap cap and invs and ct_active
+                      and domain_sep_inv irqs st'
                       and cte_wp_at ((=) cap) slot and ex_cte_cap_to slot
                       and (\<lambda>s. \<forall>r\<in>zobj_refs cap. ex_nonz_cap_to r s)
                       and (\<lambda>s. \<forall>r\<in>cte_refs cap (interrupt_irq_node s). ex_cte_cap_to r s)
@@ -386,6 +385,7 @@ lemma decode_invocation_reads_respects_f:
             | drule(1) bspec
             | erule eq_no_cap_to_obj_with_diff_ref
             | assumption)+)[1]
+    apply (simp add: domain_sep_inv_def del: split_paired_All)
    apply (rule conjI, assumption)
    apply (rule impI, erule subst, rule pas_refined_sita_mem[OF sita_controlled],
           auto simp: cte_wp_at_caps_of_state)[1]

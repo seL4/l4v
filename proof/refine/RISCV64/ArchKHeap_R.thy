@@ -457,7 +457,7 @@ lemma set_ntfn_minor_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (clarsimp simp add: invs'_def cteCaps_of_def valid_dom_schedule'_def)
   apply (wpsimp wp: irqs_masked_lift valid_irq_node_lift untyped_ranges_zero_lift
-                    sym_heap_sched_pointers_lift
+                    sym_heap_sched_pointers_lift valid_dom_schedule'_lift
               simp: o_def)
   done
 

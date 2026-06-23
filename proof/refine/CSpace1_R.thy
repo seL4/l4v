@@ -1711,7 +1711,8 @@ lemma set_cap_not_quite_corres:
   "machine_state s = ksMachineState s'"
   "work_units_completed s = ksWorkUnitsCompleted s'"
   "domain_index s = ksDomScheduleIdx s'"
-  "domain_list s = ksDomSchedule s'"
+  "domain_start_index s = ksDomScheduleStart s'"
+  "domain_list_map (domain_list s) = ksDomSchedule s'"
   "cur_domain s = ksCurDomain s'"
   "domain_time s = ksDomainTime s'"
   "consumed_time s = ksConsumedTime s'"
@@ -1742,7 +1743,8 @@ lemma set_cap_not_quite_corres:
              machine_state t = ksMachineState t' \<and>
              work_units_completed t = ksWorkUnitsCompleted t' \<and>
              domain_index t = ksDomScheduleIdx t' \<and>
-             domain_list t = ksDomSchedule t' \<and>
+             domain_start_index t = ksDomScheduleStart t' \<and>
+             domain_list_map (domain_list t) = ksDomSchedule t' \<and>
              cur_domain t = ksCurDomain t' \<and>
              domain_time t = ksDomainTime t' \<and>
              consumed_time t = ksConsumedTime t' \<and>
@@ -2047,10 +2049,12 @@ lemma updateMDB_eqs:
          ksSchedulerAction s'' = ksSchedulerAction s' \<and>
          gsUserPages s'' = gsUserPages s' \<and>
          gsCNodes s'' = gsCNodes s' \<and>
-         ksDomScheduleIdx s'' = ksDomScheduleIdx s' \<and>
-         ksDomSchedule s''    = ksDomSchedule s' \<and>
-         ksCurDomain s''      = ksCurDomain s' \<and>
-         ksDomainTime s''     = ksDomainTime s'" using assms
+         ksDomScheduleIdx s''   = ksDomScheduleIdx s' \<and>
+         ksDomScheduleStart s'' = ksDomScheduleStart s' \<and>
+         ksDomSchedule s''      = ksDomSchedule s' \<and>
+         ksCurDomain s''        = ksCurDomain s' \<and>
+         ksDomainTime s''       = ksDomainTime s'"
+  using assms
   apply (clarsimp simp: updateMDB_def Let_def in_monad split: if_split_asm)
   apply (drule in_inv_by_hoareD [OF getCTE_inv])
   apply (clarsimp simp: setCTE_def setObject_def in_monad split_def)
@@ -2938,20 +2942,21 @@ lemma updateMDB_the_lot:
          pspace_relation (kheap s) (ksPSpace s'') \<and>
          pspace_aligned' s'' \<and> pspace_distinct' s'' \<and>
          no_0 (ctes_of s'') \<and>
-         ksDomScheduleIdx s'' = ksDomScheduleIdx s' \<and>
-         ksDomSchedule s''    = ksDomSchedule s' \<and>
-         ksCurDomain s''      = ksCurDomain s' \<and>
-         ksDomainTime s''     = ksDomainTime s' \<and>
-         ksConsumedTime s''   = ksConsumedTime s' \<and>
-         ksCurTime s''        = ksCurTime s' \<and>
-         ksCurSc s''          = ksCurSc s' \<and>
-         ksReprogramTimer s'' = ksReprogramTimer s' \<and>
-         replyPrevs_of s'' = replyPrevs_of s' \<and>
-         scReplies_of s'' = scReplies_of s' \<and>
-         epQueues_of s'' = epQueues_of s' \<and>
-         ntfnQueues_of s'' = ntfnQueues_of s' \<and>
-         tcbSchedNexts_of s'' = tcbSchedNexts_of s' \<and>
-         tcbSchedPrevs_of s'' = tcbSchedPrevs_of s' \<and>
+         ksDomScheduleIdx s''   = ksDomScheduleIdx s' \<and>
+         ksDomScheduleStart s'' = ksDomScheduleStart s' \<and>
+         ksDomSchedule s''      = ksDomSchedule s' \<and>
+         ksCurDomain s''        = ksCurDomain s' \<and>
+         ksDomainTime s''       = ksDomainTime s' \<and>
+         ksConsumedTime s''     = ksConsumedTime s' \<and>
+         ksCurTime s''          = ksCurTime s' \<and>
+         ksCurSc s''            = ksCurSc s' \<and>
+         ksReprogramTimer s''   = ksReprogramTimer s' \<and>
+         replyPrevs_of s''      = replyPrevs_of s' \<and>
+         scReplies_of s''       = scReplies_of s' \<and>
+         epQueues_of s''        = epQueues_of s' \<and>
+         ntfnQueues_of s''      = ntfnQueues_of s' \<and>
+         tcbSchedNexts_of s''   = tcbSchedNexts_of s' \<and>
+         tcbSchedPrevs_of s''   = tcbSchedPrevs_of s' \<and>
          (tcbInReleaseQueue |< tcbs_of' s'') = (tcbInReleaseQueue |< tcbs_of' s') \<and>
          (\<forall>domain priority.
             (inQ domain priority |< tcbs_of' s'') = (inQ domain priority |< tcbs_of' s'))"
@@ -2984,20 +2989,21 @@ lemma updateMDB_the_lot':
          pspace_relation (kheap s) (ksPSpace s'') \<and>
          pspace_aligned' s'' \<and> pspace_distinct' s'' \<and>
          no_0 (ctes_of s'') \<and>
-         ksDomScheduleIdx s'' = ksDomScheduleIdx s' \<and>
-         ksDomSchedule s''    = ksDomSchedule s' \<and>
-         ksCurDomain s''      = ksCurDomain s' \<and>
-         ksDomainTime s''     = ksDomainTime s' \<and>
-         ksConsumedTime s''   = ksConsumedTime s' \<and>
-         ksCurTime s''        = ksCurTime s' \<and>
-         ksCurSc s''          = ksCurSc s' \<and>
-         ksReprogramTimer s'' = ksReprogramTimer s' \<and>
-         replyPrevs_of s'' = replyPrevs_of s' \<and>
-         scReplies_of s'' = scReplies_of s' \<and>
-         epQueues_of s'' = epQueues_of s' \<and>
-         ntfnQueues_of s'' = ntfnQueues_of s' \<and>
-         tcbSchedNexts_of s'' = tcbSchedNexts_of s' \<and>
-         tcbSchedPrevs_of s'' = tcbSchedPrevs_of s' \<and>
+         ksDomScheduleIdx s''   = ksDomScheduleIdx s' \<and>
+         ksDomScheduleStart s'' = ksDomScheduleStart s' \<and>
+         ksDomSchedule s''      = ksDomSchedule s' \<and>
+         ksCurDomain s''        = ksCurDomain s' \<and>
+         ksDomainTime s''       = ksDomainTime s' \<and>
+         ksConsumedTime s''     = ksConsumedTime s' \<and>
+         ksCurTime s''          = ksCurTime s' \<and>
+         ksCurSc s''            = ksCurSc s' \<and>
+         ksReprogramTimer s''   = ksReprogramTimer s' \<and>
+         replyPrevs_of s''      = replyPrevs_of s' \<and>
+         scReplies_of s''       = scReplies_of s' \<and>
+         epQueues_of s''        = epQueues_of s' \<and>
+         ntfnQueues_of s''      = ntfnQueues_of s' \<and>
+         tcbSchedNexts_of s''   = tcbSchedNexts_of s' \<and>
+         tcbSchedPrevs_of s''   = tcbSchedPrevs_of s' \<and>
          (tcbInReleaseQueue |< tcbs_of' s'') = (tcbInReleaseQueue |< tcbs_of' s') \<and>
          (\<forall>domain priority.
             (inQ domain priority |< tcbs_of' s'') = (inQ domain priority |< tcbs_of' s'))"
@@ -5191,7 +5197,7 @@ lemma cteInsert_corres:
                apply (simp+)[3]
             apply (clarsimp simp: corres_underlying_def state_relation_def
                                   in_monad valid_mdb'_def valid_mdb_ctes_def)
-            apply (drule (22) set_cap_not_quite_corres)
+            apply (drule (23) set_cap_not_quite_corres)
               apply fastforce
              apply (rule refl)
             apply (elim conjE exE)
@@ -5777,7 +5783,7 @@ lemma cteSwap_corres:
   apply (clarsimp simp: corres_underlying_def in_monad
                         state_relation_def)
   apply (clarsimp simp: valid_mdb'_def)
-  apply (drule (16) set_cap_not_quite_corres)
+  apply (drule (17) set_cap_not_quite_corres)
           apply fastforce
          apply (erule cte_wp_at_weakenE, rule TrueI)
         apply assumption+
@@ -5798,7 +5804,7 @@ lemma cteSwap_corres:
                          use_valid [OF _ set_cap_distinct]
                          cte_wp_at_weakenE)
   apply (elim conjE)
-  apply (drule (18) set_cap_not_quite_corres)
+  apply (drule (19) set_cap_not_quite_corres)
         apply simp
        apply fastforce
       apply assumption+
@@ -5835,6 +5841,7 @@ lemma cteSwap_corres:
   apply (thin_tac "machine_state t = p" for t p)+
   apply (thin_tac "cur_thread t = p" for t p)+
   apply (thin_tac "ksDomScheduleIdx t = p" for t p)+
+  apply (thin_tac "ksDomScheduleStart t = p" for t p)+
   apply (thin_tac "ksDomSchedule t = p" for t p)+
   apply (thin_tac "ksCurDomain t = p" for t p)+
   apply (thin_tac "ksDomainTime t = p" for t p)+
@@ -5865,13 +5872,14 @@ lemma cteSwap_corres:
   apply (thin_tac "ksSchedulerAction t = p" for t p)+
   apply (thin_tac "cur_domain t = p" for t p)+
   apply (thin_tac "ksDomScheduleIdx t = p" for t p)+
+  apply (thin_tac "ksDomScheduleStart t = p" for t p)+
   apply (thin_tac "ksDomSchedule t = p" for t p)+
   apply (thin_tac "ksCurDomain t = p" for t p)+
   apply (thin_tac "ksDomainTime t = p" for t p)+
   apply (thin_tac "idle_thread t = p" for t p)+
   apply (thin_tac "work_units_completed t = p" for t p)+
   apply (thin_tac "domain_index t = p" for t p)+
-  apply (thin_tac "domain_list t = p" for t p)+
+  apply (thin_tac "domain_list_map (domain_list t) = p" for t p)+
   apply (thin_tac "domain_time t = p" for t p)+
   apply (thin_tac "scheduler_action t = p" for t p)+
   apply (thin_tac "ksWorkUnitsCompleted t = p" for t p)+

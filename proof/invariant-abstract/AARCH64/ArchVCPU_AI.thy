@@ -727,11 +727,14 @@ lemma arch_prepare_set_domain_valid_cur_vcpu[wp]:
   done
 
 lemma invoke_domain_valid_cur_vcpu[wp]:
-  "\<lbrace>\<lambda>s. valid_cur_vcpu s \<and> sym_refs (state_hyp_refs_of s) \<and> in_cur_domain (cur_thread s) s \<and> t \<noteq> idle_thread s\<rbrace>
-   invoke_domain t new_dom
+  "\<lbrace>\<lambda>s. valid_cur_vcpu s \<and> sym_refs (state_hyp_refs_of s) \<and> in_cur_domain (cur_thread s) s \<and>
+        valid_domain_inv di s\<rbrace>
+   invoke_domain di
    \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
   unfolding invoke_domain_def
-  by (wpsimp | wps)+
+  apply (wpsimp simp: invoke_set_domain_def domain_set_start_def domain_schedule_configure_def | wps)+
+  apply (clarsimp simp: valid_domain_inv_def valid_cur_vcpu_def active_cur_vcpu_of_def)
+  done
 
 crunch perform_asid_control_invocation
   for active_cur_vcpu_of[wp]: "\<lambda>s. P (active_cur_vcpu_of s)"
@@ -1352,10 +1355,12 @@ crunch arch_prepare_set_domain
 
 lemma invoke_domain_cur_vcpu_in_cur_domain[wp]:
   "\<lbrace>\<lambda>s. cur_vcpu_in_cur_domain s \<and> sym_refs (state_hyp_refs_of s) \<and> valid_objs s\<rbrace>
-   invoke_domain thread domain
+   invoke_domain iv
    \<lbrace>\<lambda>_. cur_vcpu_in_cur_domain\<rbrace>"
   unfolding invoke_domain_def
-  by wpsimp
+  apply (wpsimp simp: invoke_set_domain_def domain_set_start_def domain_schedule_configure_def)
+  apply (simp add: cur_vcpu_in_cur_domain_def cur_vcpu_tcb_def)
+  done
 
 crunch do_reply_transfer, handle_recv, handle_vm_fault
   for etcb_at[wp]: "etcb_at P t"

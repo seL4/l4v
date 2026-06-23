@@ -166,8 +166,7 @@ definition
 lemma handlePreemption_if_def2:
   "handlePreemption_if tc = do
      r \<leftarrow> handleEvent Interrupt;
-          stateAssert (\<lambda>s. (ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread) \<and>
-                            valid_domain_list' s) [];
+          stateAssert (\<lambda>s. ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread) [];
           return tc
    od"
   by (clarsimp simp: handlePreemption_if_def maybeHandleInterrupt_def handleEvent_def
@@ -371,7 +370,15 @@ lemma handleEvent_ccorres:
 
 lemma kernelEntry_corres_C:
   "corres_underlying rf_sr False False
-     (prod_lift (\<lambda>r r'. (r = Inr ()) = (r' = Inr ()))) (all_invs' e) \<top>
+     (prod_lift (\<lambda>r r'. (r = Inr ()) = (r' = Inr ())))
+     (\<lambda>s'. \<exists>s :: det_state.
+       (s,s') \<in> state_relation \<and>
+       (einvs s \<and> no_domain_caps s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and> (ct_running s \<or> ct_idle s) \<and>
+         scheduler_action s = resume_cur_thread \<and> domain_time s \<noteq> 0 \<and> valid_domain_list s) \<and>
+      (invs' s' \<and>
+        (e \<noteq> Interrupt \<longrightarrow> ct_running' s') \<and> (ct_running' s' \<or> ct_idle' s') \<and>
+        ksSchedulerAction s' = ResumeCurrentThread  \<and> ksDomainTime s' \<noteq> 0 \<and> arch_extras s'))
+     \<top>
      (kernelEntry_if e tc) (kernelEntry_C_if fp e tc)"
   using corres_nofail[OF kernel_entry_if_corres[of e tc], simplified]
   supply nonzero_gt_zero[simp] gt_zero_nonzero[simp]
@@ -415,12 +422,15 @@ lemma kernelEntry_corres_C:
       apply (rule wp_post_taut)
      apply wp+
    apply (clarsimp simp: all_invs'_def invs'_def cur_tcb'_def valid_state'_def)
+   apply (rename_tac s')
+   apply (rule_tac x=s' in exI)
+   apply clarsimp
   apply fastforce
   done
 
 lemma handle_preemption_corres_C:
   "corres_underlying rf_sr False False (=)
-     (invs' and valid_domain_list' and (\<lambda>s. 0 < ksDomainTime s) and ex_abs einvs) \<top>
+     (invs' and (\<lambda>s. 0 < ksDomainTime s) and ex_abs einvs) \<top>
      (handlePreemption_if tc) (handlePreemption_C_if tc)"
   apply (simp add: handlePreemption_if_def2 handlePreemption_C_if_def)
   apply (rule corres_stateAssert_no_fail)
@@ -429,7 +439,7 @@ lemma handle_preemption_corres_C:
    apply (erule no_fail_pre)
    apply (clarsimp simp: ex_abs_underlying_def ex_abs_def)
    apply (rule exI, rule conjI, assumption)
-   apply (clarsimp simp: domain_time_rel_eq domain_list_rel_eq)
+   apply (clarsimp simp: domain_time_rel_eq valid_domain_list_from_invs')
   apply (rule corres_guard_imp)
     apply (rule_tac r'="dc" in corres_split)
        apply (rule ccorres_corres_u)
@@ -475,7 +485,7 @@ lemma ccorres_corres_u':
 
 lemma schedule_if_corres_C:
   "corres_underlying rf_sr False False (=)
-     (invs' and ex_abs einvs and valid_domain_list'
+     (invs' and ex_abs (einvs and no_domain_caps)
             and (\<lambda>s. ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread)) \<top>
      (schedule'_if tc) (schedule_C_if' tc)"
   apply (simp add: schedule'_if_def schedule_C_if'_def)
@@ -485,7 +495,7 @@ lemma schedule_if_corres_C:
    apply (erule no_fail_pre)
    apply (clarsimp simp: ex_abs_def)
    apply (rule exI, rule conjI, assumption)
-   apply (clarsimp simp: domain_time_rel_eq domain_list_rel_eq)
+   apply (clarsimp simp: domain_time_rel_eq valid_domain_list_from_invs')
    apply (clarsimp simp: state_relation_def)
   apply (simp only: bind_assoc)
   apply (rule corres_guard_imp)
@@ -514,10 +524,8 @@ lemma schedule_if_corres_C:
        apply (rule schedule_corres)
       apply wp
      apply (clarsimp simp: ex_abs_def invs'_def valid_state'_def valid_pspace'_def)
-     apply fastforce
-    apply simp
-    apply (rule wp_post_taut)
-   apply (auto simp: ex_abs_def)
+    apply fastforce
+   apply (auto simp: ex_abs_def valid_domain_list_from_invs')
   done
 
 
@@ -576,7 +584,7 @@ lemma full_invs_all_invs[simp]:
   apply (clarsimp simp: full_invs_if'_def all_invs'_def ex_abs_def)
   apply (rule_tac x=sa in exI)
   by (auto simp: ct_running_related ct_idle_related schedaction_related
-                 domain_time_rel_eq domain_list_rel_eq)
+                 domain_time_rel_eq valid_domain_list_from_invs')
 
 lemma obs_cpspace_device_data_relation:
   "\<lbrakk> pspace_aligned' bd; pspace_distinct' bd;
@@ -620,45 +628,55 @@ lemma c_to_haskell:
   apply (intro conjI)
     apply (rule haskell_invs)
    apply (unfold_locales)
-                        apply (simp add: ADT_C_if_def)
-                       apply (simp_all add: preserves_trivial preserves'_trivial)
-          apply (clarsimp simp: full_invs_if'_def ex_abs_def)
-          apply (frule ksReadyQueues_asrt_cross[OF state_relation_ready_queues_relation])
-          apply (clarsimp simp: lift_snd_rel_def ADT_C_if_def ADT_H_if_def absKState_crelation
-                                rf_sr_def full_invs_if'_def)
+                         apply (simp add: ADT_C_if_def)
+                        apply (simp_all add: preserves_trivial preserves'_trivial)
+           apply (clarsimp simp: full_invs_if'_def ex_abs_def)
+           apply (frule ksReadyQueues_asrt_cross[OF state_relation_ready_queues_relation])
+           apply (clarsimp simp: lift_snd_rel_def ADT_C_if_def ADT_H_if_def absKState_crelation
+                                 rf_sr_def full_invs_if'_def)
           apply (clarsimp simp: rf_sr_def full_invs_if'_def ex_abs_def)
-         apply (simp add: ADT_H_if_def ADT_C_if_def lift_fst_rel_def lift_snd_rel_def)
-         apply (clarsimp simp: full_invs_if'_def)
-         apply (frule ex_abs_ksReadyQueues_asrt)
-         apply (clarsimp simp: absKState_crelation  rf_sr_def)
-         apply (frule invs_valid_stateI')
-         apply (rule_tac x="((a,bb),ba)" in bexI)
+          apply (simp add: ADT_H_if_def ADT_C_if_def lift_fst_rel_def lift_snd_rel_def)
+          apply (clarsimp simp: full_invs_if'_def)
+          apply (rename_tac uc mode s' uc' s)
+          apply (frule ex_abs_ksReadyQueues_asrt)
+          apply (clarsimp simp: absKState_crelation  rf_sr_def)
+          apply (frule invs_valid_stateI')
+          apply (rule_tac x="((uc,s),mode)" in bexI)
+           apply simp
           apply simp
-         apply simp
-         apply (frule cstate_to_H_correct[rotated],simp add: invs'_def)
-         apply (case_tac ba,simp_all)
-        apply (simp_all add: checkActiveIRQ_H_if_def check_active_irq_C_if_def
-                             doUserOp_H_if_def do_user_op_C_if_def
-                             kernelCall_H_if_def kernel_call_C_if_def
-                             handlePreemption_H_if_def handle_preemption_C_if_def
-                             schedule'_H_if_def schedule_C_if_def
-                             kernelExit_H_if_def kernel_exit_C_if_def invs'_def)
-         apply (clarsimp split: sys_mode.splits)
-        apply (rule step_corres_lifts,rule corres_guard_imp[OF check_active_irq_corres_C]; fastforce simp: full_invs_if'_def)
-       apply (rule step_corres_lifts,rule corres_guard_imp[OF check_active_irq_corres_C]; fastforce simp: full_invs_if'_def)
-      apply (rule step_corres_lifts,rule corres_guard_imp[OF do_user_op_if_C_corres]; auto simp: full_invs_if'_def ex_abs_def)
-     apply (rule step_corres_lifts)
-      apply (rule corres_rel_imp)
-       apply (rule corres_guard_imp[OF kernelEntry_corres_C],(clarsimp simp: prod_lift_def)+)
-    apply (rule step_corres_lifts,rule corres_guard_imp[OF handle_preemption_corres_C]; auto simp add: full_invs_if'_def)
-   apply (rule step_corres_lifts,rule corres_guard_imp[OF schedule_if_corres_C]; auto simp: full_invs_if'_def ex_abs_def)
-  apply (rule_tac S="invs'" and S'="\<top>" in step_corres_lifts(5))
-      apply (rule corres_guard_imp[OF kernel_exit_corres_C])
-       apply (fastforce simp: full_invs_if'_def)
-      apply simp+
-    apply (simp add: ct_running'_C)
-   apply wp+
-  apply (clarsimp simp: full_invs_if'_def)
+          apply (frule cstate_to_H_correct[rotated],simp add: invs'_def)
+           apply (case_tac mode; simp)
+          apply (simp_all add: checkActiveIRQ_H_if_def check_active_irq_C_if_def
+                               doUserOp_H_if_def do_user_op_C_if_def
+                               kernelCall_H_if_def kernel_call_C_if_def
+                               handlePreemption_H_if_def handle_preemption_C_if_def
+                               schedule'_H_if_def schedule_C_if_def
+                               kernelExit_H_if_def kernel_exit_C_if_def invs'_def)
+          apply (clarsimp split: sys_mode.splits)
+         apply (rule step_corres_lifts, rule corres_guard_imp[OF check_active_irq_corres_C];
+                fastforce simp: full_invs_if'_def)
+        apply (rule step_corres_lifts, rule corres_guard_imp[OF check_active_irq_corres_C];
+               fastforce simp: full_invs_if'_def)
+       apply (rule step_corres_lifts, rule corres_guard_imp[OF do_user_op_if_C_corres];
+              solves \<open>auto simp: full_invs_if'_def ex_abs_def\<close>)
+      apply (rule step_corres_lifts)
+       apply (rule corres_rel_imp)
+        apply (rule corres_guard_imp[OF kernelEntry_corres_C])
+         apply (fastforce simp: full_invs_if'_def ex_abs_def valid_domain_list_from_invs'
+                                domain_time_rel_eq ct_running_related
+                                schedaction_related ct_idle_related)
+        apply (clarsimp simp: prod_lift_def)+
+     apply (rule step_corres_lifts, rule corres_guard_imp[OF handle_preemption_corres_C]; clarsimp)
+     apply (clarsimp simp: full_invs_if'_def ex_abs_pred_conjD1)
+    apply (rule step_corres_lifts, rule corres_guard_imp[OF schedule_if_corres_C];
+           solves \<open>clarsimp simp: full_invs_if'_def\<close>)
+   apply (rule_tac S="invs'" and S'="\<top>" in step_corres_lifts(5))
+       apply (rule corres_guard_imp[OF kernel_exit_corres_C])
+        apply (fastforce simp: full_invs_if'_def)
+       apply simp+
+     apply (simp add: ct_running'_C)
+    apply wp+
+   apply (clarsimp simp: full_invs_if'_def)
   apply (clarsimp)
   apply (drule use_valid[OF _ kernelEntry_if_no_preempt]; simp)
   done

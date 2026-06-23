@@ -130,11 +130,6 @@ lemma schedule_invs[wp]:
      apply (wpsimp simp: invs_def)+
   done
 
-lemma invs_domain_index_update[simp]:
-  "invs (domain_index_update f s) = invs s"
-  by (simp add: invs_def valid_state_def valid_mdb_def mdb_cte_at_def valid_ioc_def
-                valid_irq_states_def valid_machine_state_def cur_tcb_def cur_sc_tcb_def)
-
 lemma invs_cur_domain_update[simp]:
   "invs (cur_domain_update f s) = invs s"
   by (simp add: invs_def valid_state_def valid_mdb_def mdb_cte_at_def valid_ioc_def
@@ -217,7 +212,7 @@ where
 | "valid_invocation (InvokeEndpoint w w2 b gr) = (ep_at w and ex_nonz_cap_to w)"
 | "valid_invocation (InvokeNotification w w2) = (ntfn_at w and ex_nonz_cap_to w)"
 | "valid_invocation (InvokeTCB i) = tcb_inv_wf i"
-| "valid_invocation (InvokeDomain thread domain) = (tcb_at thread and (\<lambda>s. thread \<noteq> idle_thread s))"
+| "valid_invocation (InvokeDomain di) = valid_domain_inv di"
 | "valid_invocation (InvokeReply reply grant) = (reply_at reply and ex_nonz_cap_to reply)"
 | "valid_invocation (InvokeIRQControl i) = irq_control_inv_valid i"
 | "valid_invocation (InvokeIRQHandler i) = irq_handler_inv_valid i"
@@ -255,11 +250,11 @@ lemma check_budget_restart_invs[wp]:
 
 lemma invoke_tcb_tcb[wp]:
   "invoke_tcb i \<lbrace>tcb_at tptr\<rbrace>"
-  by (simp add: tcb_at_typ, rule invoke_tcb_typ_at [where P=id, simplified])
+  by (simp add: tcb_at_typ, rule invoke_tcb_typ_at[where P=id, simplified])
 
 lemma invoke_domain_tcb[wp]:
-  "\<lbrace>tcb_at tptr\<rbrace> invoke_domain thread domain \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
-  by (simp add: tcb_at_typ invoke_domain_typ_at [where P=id, simplified])
+  "invoke_domain di \<lbrace>tcb_at tptr\<rbrace>"
+  by (simp add: tcb_at_typ invoke_domain_typ_at[where P=id, simplified])
 
 lemma simple_from_active:
   "st_tcb_at active t s \<Longrightarrow> st_tcb_at simple t s"
@@ -661,6 +656,15 @@ lemma sts_tcb_inv_wf [wp]:
          | clarsimp simp: pred_conj_def split: option.splits)+
   done
 
+crunch set_thread_state
+  for domain_list_inv'[wp]: "\<lambda>s. P (domain_list s)"
+  and domain_start_inv'[wp]: "\<lambda>s. P (domain_start_index s)"
+  (wp: get_object_wp)
+
+lemma set_thread_state_valid_domain_inv[wp]:
+  "set_thread_state t st \<lbrace>valid_domain_inv di\<rbrace>"
+  by (cases di; wpsimp simp: valid_domain_inv_def)
+
 lemma sts_valid_sched_context_inv[wp]:
   "\<lbrace>valid_sched_context_inv i and K (\<not> ipc_queued_thread_state st)\<rbrace>
    set_thread_state t st
@@ -693,7 +697,6 @@ lemma sts_valid_inv[wp]:
   "\<lbrace>valid_invocation i and K (\<not> ipc_queued_thread_state st)\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_invocation i\<rbrace>"
   by (cases i; wpsimp)
 
-
 lemma sts_Restart_stay_simple:
   "\<lbrace>st_tcb_at simple t\<rbrace>
      set_thread_state t' Structures_A.Restart
@@ -708,7 +711,7 @@ lemma decode_inv_inv[wp]:
   shows
   "\<lbrace>P\<rbrace> decode_invocation first_phase label args cap_index slot cap excaps buffer \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (case_tac cap, simp_all add: decode_invocation_def)
-          apply (wp decode_tcb_inv_inv decode_domain_inv_inv
+          apply (wp decode_tcb_inv_inv decode_domain_invocation_inv
                     decode_sched_context_inv_inv decode_sched_control_inv_inv
                       | rule conjI | clarsimp
                       | simp split: bool.split)+

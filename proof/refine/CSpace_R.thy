@@ -792,15 +792,16 @@ lemma next_slot_eq2:
 lemma set_cap_not_quite_corres':
   assumes cr:
   "pspace_relation (kheap s) (ksPSpace s')"
-  "cur_thread s    = ksCurThread s'"
-  "idle_thread s   = ksIdleThread s'"
-  "idle_sc_ptr     = ksIdleSC s'"
+  "cur_thread s = ksCurThread s'"
+  "idle_thread s = ksIdleThread s'"
+  "idle_sc_ptr = ksIdleSC s'"
   "machine_state s = ksMachineState s'"
   "work_units_completed s = ksWorkUnitsCompleted s'"
-  "domain_index s  = ksDomScheduleIdx s'"
-  "domain_list s   = ksDomSchedule s'"
-  "cur_domain s    = ksCurDomain s'"
-  "domain_time s   = ksDomainTime s'"
+  "domain_index s = ksDomScheduleIdx s'"
+  "domain_start_index s = ksDomScheduleStart s'"
+  "domain_list_map (domain_list s) = ksDomSchedule s'"
+  "cur_domain s = ksCurDomain s'"
+  "domain_time s = ksDomainTime s'"
   "consumed_time s = ksConsumedTime s'"
   "cur_time s = ksCurTime s'"
   "cur_sc s = ksCurSc s'"
@@ -814,24 +815,25 @@ lemma set_cap_not_quite_corres':
   assumes p: "p' = cte_map p"
   shows "\<exists>t. ((),t) \<in> fst (set_cap c p s) \<and>
              pspace_relation (kheap t) (ksPSpace t') \<and>
-             cdt t              = cdt s \<and>
-             cdt_list t         = cdt_list (s) \<and>
+             cdt t = cdt s \<and>
+             cdt_list t = cdt_list (s) \<and>
              scheduler_action t = scheduler_action (s) \<and>
-             ready_queues t     = ready_queues (s) \<and>
+             ready_queues t = ready_queues (s) \<and>
              release_queue t = release_queue s \<and>
-             is_original_cap t  = is_original_cap s \<and>
+             is_original_cap t = is_original_cap s \<and>
              interrupt_state_relation (interrupt_irq_node t) (interrupt_states t)
-                              (ksInterruptState t') \<and>
+                                      (ksInterruptState t') \<and>
              (arch_state t, ksArchState t') \<in> arch_state_relation \<and>
-             cur_thread t    = ksCurThread t' \<and>
-             idle_thread t   = ksIdleThread t' \<and>
-             idle_sc_ptr     = ksIdleSC t' \<and>
+             cur_thread t = ksCurThread t' \<and>
+             idle_thread t = ksIdleThread t' \<and>
+             idle_sc_ptr = ksIdleSC t' \<and>
              machine_state t = ksMachineState t' \<and>
              work_units_completed t = ksWorkUnitsCompleted t' \<and>
-             domain_index t  = ksDomScheduleIdx t' \<and>
-             domain_list t   = ksDomSchedule t' \<and>
-             cur_domain t    = ksCurDomain t' \<and>
-             domain_time t   = ksDomainTime t' \<and>
+             domain_index t = ksDomScheduleIdx t' \<and>
+             domain_start_index t = ksDomScheduleStart t' \<and>
+             domain_list_map (domain_list t) = ksDomSchedule t' \<and>
+             cur_domain t = ksCurDomain t' \<and>
+             domain_time t = ksDomainTime t' \<and>
              consumed_time t = ksConsumedTime t' \<and>
              cur_time t = ksCurTime t' \<and>
              cur_sc t = ksCurSc t' \<and>
@@ -1024,7 +1026,7 @@ lemma cteMove_corres:
   apply (clarsimp simp: split_def)
   apply (rule bind_execI, assumption)
   apply (drule_tac p=ptr and c="cap.NullCap" in set_cap_not_quite_corres')
-                 apply assumption+
+                      apply (assumption | solves \<open>simp add: split_def\<close>)+
             apply (frule use_valid [OF _ set_cap_valid_objs])
              apply fastforce
             apply assumption
@@ -1086,7 +1088,7 @@ lemma cteMove_corres:
   apply (subgoal_tac "\<forall>p. cte_at p ta = cte_at p a")
    prefer 2
    apply (simp (no_asm_simp) add: set_cap_cte_eq)
-  apply (clarsimp simp add: swp_def cte_wp_at_ctes_of simp del: split_paired_All)
+  apply (clarsimp simp add: swp_def cte_wp_at_ctes_of split_def simp del: split_paired_All)
   apply (subgoal_tac "cte_at ptr' a")
    prefer 2
    apply (erule cte_wp_at_weakenE, rule TrueI)
@@ -1102,6 +1104,7 @@ lemma cteMove_corres:
   apply (thin_tac "ksWorkUnitsCompleted t = p" for t p)+
   apply (thin_tac "cur_thread t = p" for t p)+
   apply (thin_tac "domain_index t = p" for t p)+
+  apply (thin_tac "domain_start_index t = p" for t p)+
   apply (thin_tac "domain_time t = p" for t p)+
   apply (thin_tac "cur_domain t = p" for t p)+
   apply (thin_tac "scheduler_action t = p" for t p)+
@@ -1114,6 +1117,7 @@ lemma cteMove_corres:
   apply (thin_tac "ksCurDomain t = p" for t p)+
   apply (thin_tac "ksInterruptState t = p" for t p)+
   apply (thin_tac "ksDomScheduleIdx t = p" for t p)+
+  apply (thin_tac "ksDomScheduleStart t = p" for t p)+
   apply (thin_tac "ksDomainTime t = p" for t p)+
   apply (thin_tac "ksDomSchedule t = p" for t p)+
   apply (thin_tac "pspace_relation t p" for t p)+
@@ -2982,64 +2986,19 @@ crunch cteInsert
   for pspace_domain_valid[wp]: "pspace_domain_valid"
   (wp: crunch_wps)
 
-lemma setCTE_ksCurDomain[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace>
-   setCTE p cte
-   \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
-  apply (simp add: setCTE_def)
-  apply wp
-  done
-
-lemma setObject_cte_ksDomSchedule[wp]: "\<lbrace> \<lambda>s. P (ksDomSchedule s) \<rbrace> setObject ptr (v::cte) \<lbrace> \<lambda>_ s. P (ksDomSchedule s) \<rbrace>"
-  apply (simp add: setObject_def split_def)
-  apply (wp updateObject_cte_inv | simp)+
-  done
-
-lemma setCTE_ksDomSchedule[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace>
-   setCTE p cte
-   \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
-  apply (simp add: setCTE_def)
-  apply wp
-  done
-
-crunch cteInsert
+crunch setCTE, cteInsert
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
-  (wp:  crunch_wps )
-
-crunch cteInsert
-  for ksIdleThread[wp]:  "\<lambda>s. P (ksIdleThread s)"
+  and ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
   and ksIdlSC[wp]: "\<lambda>s. P (ksIdleSC s)"
-  (wp: crunch_wps)
-
-crunch cteInsert
-  for ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
-  (wp: crunch_wps)
-
-lemma setCTE_tcbDomain_inv[wp]:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t\<rbrace> setCTE ptr v \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t\<rbrace>"
-  by (simp add: setCTE_def)
-     (rule setObject_cte_obj_at_tcb', simp_all)
+  and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
+  and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
+  (wp: updateObject_cte_inv crunch_wps simp: setObject_def)
 
 crunch cteInsert
   for tcbDomain_inv[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
-  (wp: crunch_simps hoare_drop_imps)
-
-lemma setCTE_tcbPriority_inv[wp]:
-  "setCTE ptr v \<lbrace> obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
-  by (auto simp: setCTE_def intro: setObject_cte_obj_at_tcb')
-
-crunch cteInsert
-  for tcbPriority_inv[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
-  (wp: crunch_simps hoare_drop_imps)
-
-lemma setObject_cte_domIdx:
-  "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setObject t (v::cte) \<lbrace>\<lambda>rv s. P (ksDomScheduleIdx s)\<rbrace>"
-  by (clarsimp simp: valid_def setCTE_def[symmetric] dest!: setCTE_pspace_only)
-
-crunch cteInsert
-  for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
-  (wp: setObject_cte_domIdx hoare_drop_imps)
+  and tcbPriority_inv[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
+  (wp: crunch_simps hoare_drop_imps setObject_cte_obj_at_tcb')
 
 crunch cteInsert
   for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
@@ -3217,8 +3176,8 @@ lemma cteInsert_invs:
   cteInsert cap src dest
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
-  apply (wpsimp wp: valid_bitmaps_lift valid_irq_node_lift
-                    irqs_masked_lift cteInsert_norq sym_heap_sched_pointers_lift)
+  apply (wpsimp wp: valid_bitmaps_lift valid_irq_node_lift irqs_masked_lift
+                    cteInsert_norq sym_heap_sched_pointers_lift valid_dom_schedule'_lift)
   by (auto simp: invs'_def valid_pspace'_def elim: valid_capAligned)
 
 lemma deriveCap_corres:
@@ -3708,7 +3667,7 @@ lemma arch_update_setCTE_invs:
             arch_update_setCTE_ifunsafe valid_irq_node_lift setCTE_typ_at' setCTE_irq_handlers'
             irqs_masked_lift
             setCTE_norq hoare_vcg_disj_lift untyped_ranges_zero_lift valid_replies'_lift
-            sym_heap_sched_pointers_lift setCTE_valid_arch
+            sym_heap_sched_pointers_lift setCTE_valid_arch valid_dom_schedule'_lift
           | simp add: pred_tcb_at'_def)+
   apply (clarsimp simp: valid_global_refs'_def is_arch_update'_def fun_upd_def[symmetric]
                         cte_wp_at_ctes_of gen_isCap_simps untyped_ranges_zero_fun_upd)
@@ -3911,7 +3870,7 @@ lemma (in CSpace_R_2) cteInsert_simple_corres:
                apply (simp+)[3]
             apply (clarsimp simp: corres_underlying_def state_relation_def
                                   in_monad valid_mdb'_def valid_mdb_ctes_def)
-            apply (drule (22) set_cap_not_quite_corres)
+            apply (drule (23) set_cap_not_quite_corres)
               apply fastforce
              apply (rule refl)
             apply (elim conjE exE)
@@ -3952,6 +3911,7 @@ lemma (in CSpace_R_2) cteInsert_simple_corres:
             apply (thin_tac "ksSchedulerAction t = p" for t p)+
             apply (thin_tac "cur_thread t = p" for t p)+
             apply (thin_tac "domain_index t = p" for t p)+
+            apply (thin_tac "domain_start_index t = p" for t p)+
             apply (thin_tac "domain_time t = p" for t p)+
             apply (thin_tac "cur_domain t = p" for t p)+
             apply (thin_tac "scheduler_action t = p" for t p)+
@@ -3964,6 +3924,7 @@ lemma (in CSpace_R_2) cteInsert_simple_corres:
             apply (thin_tac "ksCurDomain t = p" for t p)+
             apply (thin_tac "ksInterruptState t = p" for t p)+
             apply (thin_tac "ksDomScheduleIdx t = p" for t p)+
+            apply (thin_tac "ksDomScheduleStart t = p" for t p)+
             apply (thin_tac "ksDomainTime t = p" for t p)+
             apply (thin_tac "ksDomSchedule t = p" for t p)+
             apply (thin_tac "ctes_of t = p" for t p)+
@@ -4927,7 +4888,7 @@ lemma cteInsert_simple_invs:
    apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
    apply (wp valid_bitmaps_lift valid_irq_node_lift irqs_masked_lift
              cteInsert_simple_mdb' cteInsert_valid_globals_simple cteInsert_norq
-             sym_heap_sched_pointers_lift
+             sym_heap_sched_pointers_lift valid_dom_schedule'_lift
           | simp add: pred_tcb_at'_def)+
    apply (subst fold_list_refs_of_replies')
   apply (auto simp: invs'_def valid_pspace'_def valid_dom_schedule'_def
@@ -5114,7 +5075,7 @@ lemma updateFreeIndex_forward_invs':
       apply (simp add:updateCap_def)
       apply (wp irqs_masked_lift cur_tcb_lift
                 hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp
-                sym_heap_sched_pointers_lift valid_bitmaps_lift
+                sym_heap_sched_pointers_lift valid_bitmaps_lift valid_dom_schedule'_lift
                | wp (once) hoare_use_eq[where f="gsUntypedZeroRanges"]
                | simp add: getSlotCap_def)+
   apply (clarsimp simp: cte_wp_at_ctes_of fun_upd_def[symmetric])

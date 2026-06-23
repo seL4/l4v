@@ -48,15 +48,21 @@ definition
      modify (\<lambda>s. s \<lparr> cur_thread := thread \<rparr>)
    od"
 
+definition domain_end_marker :: "domain \<times> domain_duration" where
+  "domain_end_marker = (0, 0)"
+
 definition
   next_domain :: "(unit, 'z::state_ext) s_monad" where
   "next_domain \<equiv> do
     modify (\<lambda>s.
-      let domain_index' = (domain_index s + 1) mod length (domain_list s) in
-      let next_dom = (domain_list s)!domain_index'
-      in s\<lparr> domain_index := domain_index',
-            cur_domain := fst next_dom,
-            domain_time := us_to_ticks (snd next_dom * \<mu>s_in_ms),
+      let index_inc = domain_index s + 1;
+          index' = if domain_list s ! index_inc = domain_end_marker
+                   then domain_start_index s
+                   else index_inc;
+          dom_entry = domain_list s ! index'
+      in s\<lparr> domain_index := index',
+            cur_domain := fst dom_entry,
+            domain_time := ucast (snd dom_entry),
             reprogram_timer := True\<rparr>);
     do_extended_op $ modify (\<lambda>s. s \<lparr>work_units_completed := 0\<rparr>)
   od"
@@ -325,5 +331,21 @@ where
     od
   | InvokeSchedContextYieldTo sc_ptr \<Rightarrow>
       sched_context_yield_to sc_ptr"
+
+definition domain_schedule_configure ::
+  "nat \<Rightarrow> domain \<Rightarrow> domain_duration \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "domain_schedule_configure index domain duration \<equiv>
+     modify (\<lambda>s. s\<lparr> domain_list := (domain_list s) [index := (domain, duration)]\<rparr>)"
+
+definition domain_set_start :: "nat \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "domain_set_start index \<equiv> do
+     modify (\<lambda>s. s\<lparr>domain_start_index := index\<rparr>);
+     modify (\<lambda>s. s\<lparr>domain_time := 0\<rparr>);
+     \<comment> \<open>Set the index such that after increment in @{const next_domain}, it will point to
+         the last domain schedule item, which is reserved to be an end marker.\<close>
+     domain_list_len \<leftarrow> gets (length \<circ> domain_list);
+     modify (\<lambda>s. s\<lparr>domain_index := domain_list_len - 2\<rparr>);
+     reschedule_required
+   od"
 
 end

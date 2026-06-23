@@ -399,7 +399,7 @@ lemma tcbSchedEnqueue_invs'[wp]:
   "tcbSchedEnqueue t \<lbrace>invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
-                    untyped_ranges_zero_lift
+                    valid_dom_schedule'_lift untyped_ranges_zero_lift
               simp: cteCaps_of_def o_def)
   done
 
@@ -509,7 +509,7 @@ lemma tcbSchedAppend_invs'[wp]:
   "tcbSchedAppend t \<lbrace>invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
-                    untyped_ranges_zero_lift valid_replies'_lift
+                    untyped_ranges_zero_lift valid_replies'_lift valid_dom_schedule'_lift
               simp: cteCaps_of_def o_def)
   done
 
@@ -570,7 +570,7 @@ lemma (in Schedule_R) tcbSchedDequeue_invs'[wp]:
   "tcbSchedDequeue t \<lbrace>invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
-                    untyped_ranges_zero_lift valid_replies'_lift
+                    untyped_ranges_zero_lift valid_replies'_lift valid_dom_schedule'_lift
               simp: cteCaps_of_def o_def)
   done
 
@@ -1216,12 +1216,15 @@ lemma reset_work_units_equiv:
   by (clarsimp simp: reset_work_units_def[symmetric])
 
 lemma nextDomain_corres:
-  "corres dc \<top> \<top> next_domain nextDomain"
+  "corres dc valid_domain_list \<top> next_domain nextDomain"
   apply (clarsimp simp: next_domain_def nextDomain_def reset_work_units_equiv modify_modify)
   apply (rule corres_modify)
-  apply (simp add: state_relation_def Let_def dschLength_def dschDomain_def cdt_relation_def
-                   \<mu>s_in_ms_equiv)
-  done
+  apply (simp add: state_relation_def Let_def dschLength_def dschDomain_def cdt_relation_def)
+  apply clarsimp
+  apply (drule sym[where t="ksDomSchedule s" for s])
+  apply (clarsimp simp: valid_domain_list_def split_def domain_end_marker_def domainEndMarker_def
+                        all_set_conv_all_nth)
+  by (force simp: ucast_eq_0 is_up split_pairs2)
 
 lemma next_domain_valid_sched[wp]:
   "\<lbrace> valid_sched and (\<lambda>s. scheduler_action s  = choose_new_thread)\<rbrace> next_domain \<lbrace> \<lambda>_. valid_sched \<rbrace>"
@@ -1234,7 +1237,9 @@ lemma nextDomain_invs':
   "nextDomain \<lbrace>invs'\<rbrace>"
   apply (simp add: nextDomain_def Let_def dschLength_def)
   apply wp
-  apply (clarsimp simp: invs'_def valid_machine_state'_def dschDomain_def valid_dom_schedule'_def)
+  apply (clarsimp simp: invs'_def valid_machine_state'_def
+                        valid_dom_schedule'_def split_def domainEndMarker_def)
+  apply (metis diff_Suc_Suc linorder_neqE_nat minus_nat.diff_0 not_less_eq)
   done
 
 lemma scheduleSwitchThreadFastfail_corres:
@@ -1283,7 +1288,7 @@ crunch isHighestPrio, scheduleSwitchThreadFastfail
   for inv[wp]: P
 
 lemma setSchedulerAction_invs': (* not in wp set, clobbered by ssa_wp *)
-  "\<lbrace>\<lambda>s. invs' s \<rbrace> setSchedulerAction ChooseNewThread \<lbrace>\<lambda>_. invs' \<rbrace>"
+  "setSchedulerAction ChooseNewThread \<lbrace>invs'\<rbrace>"
   by (wpsimp simp: invs'_def valid_irq_node'_def valid_bitmaps_def  valid_dom_schedule'_def)
 
 lemma ssa_invs':
@@ -1896,7 +1901,7 @@ crunch setCurThread
 locale Schedule_R_3 = Schedule_R_2 +
   assumes scheduleChooseNewThread_corres:
     "corres dc
-       (\<lambda>s. invs s \<and> valid_ready_qs s \<and> ready_or_release s \<and> scheduler_action s = choose_new_thread)
+       (\<lambda>s. invs s \<and> valid_domain_list s \<and> valid_ready_qs s \<and> ready_or_release s \<and> scheduler_action s = choose_new_thread)
        (\<lambda>s. invs' s \<and> ksSchedulerAction s = ChooseNewThread)
        schedule_choose_new_thread scheduleChooseNewThread"
   assumes scheduleChooseNewThread_invs':
@@ -4222,8 +4227,8 @@ lemma runnable'_Not_tcbInReleaseQueue_not_sched_linked:
 
 lemma (in Schedule_R_3) schedule_corres:
   "corres dc
-     (invs and valid_sched and valid_domain_list and current_time_bounded and ct_ready_if_schedulable
-      and cur_sc_more_than_ready and consumed_time_bounded
+     (invs and valid_domain_list and valid_sched and valid_domain_list and current_time_bounded
+      and ct_ready_if_schedulable and cur_sc_more_than_ready and consumed_time_bounded
       and (\<lambda>s. schact_is_rct s \<longrightarrow> cur_sc_active s))
      invs'
      Schedule_A.schedule schedule"

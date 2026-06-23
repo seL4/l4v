@@ -164,6 +164,16 @@ ASIDs are mapped to address space roots by a global two-level table. The actual 
 >     where
 >         vspace' = vspace .&. (mask pml4ShiftBits `shiftL` asidBits)
 
+
+\subsection{Time}
+
+> parseTimeArg :: Int -> [Word] -> Ticks
+> parseTimeArg i args = fromIntegral (args !! i)
+
+> timeArgLen :: Int
+> timeArgLen = 1
+
+
 \subsection{IRQ State}
 
 > data X64IRQState =
@@ -180,4 +190,3 @@ ASIDs are mapped to address space roots by a global two-level table. The actual 
 >     irqLevel :: Word,
 >     irqPolarity :: Word,
 >     irqMasked :: Bool }
-

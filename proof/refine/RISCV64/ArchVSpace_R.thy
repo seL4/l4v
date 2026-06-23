@@ -700,6 +700,7 @@ lemma storePTE_invs[wp]:
   apply (rule hoare_pre)
    apply (wp valid_global_refs_lift' irqs_masked_lift valid_arch_state_lift' valid_irq_node_lift
              valid_irq_handlers_lift'' untyped_ranges_zero_lift sym_heap_sched_pointers_lift
+             valid_dom_schedule'_lift
           | simp add: cteCaps_of_def o_def)+
   apply (clarsimp simp: valid_arch_obj'_def)
   done
@@ -727,7 +728,7 @@ lemma setASIDPool_invs [wp]:
   apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (wp valid_global_refs_lift' irqs_masked_lift valid_arch_state_lift' valid_irq_node_lift
             valid_irq_handlers_lift'' untyped_ranges_zero_lift updateObject_default_inv
-            sym_heap_sched_pointers_lift
+            sym_heap_sched_pointers_lift valid_dom_schedule'_lift
          | simp add: cteCaps_of_def
          | rule setObject_ksPSpace_only)+
   apply (clarsimp simp:  o_def)

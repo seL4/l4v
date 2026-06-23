@@ -132,6 +132,19 @@ lemma none_top_True_fun[intro!]:
   "none_top \<top>\<top> opt s"
   by simp
 
+lemma none_top_fun_updateD:
+  "\<lbrakk> none_top P x (f s); \<And>y. \<lbrakk>x = Some y; P y (f s) \<rbrakk> \<Longrightarrow> P y s\<rbrakk> \<Longrightarrow> none_top P x s"
+  by (simp split: none_top_splits)
+
+lemma none_top_fun_updateI:
+  "\<lbrakk> none_top P x s; \<And>y. \<lbrakk>x = Some y; P y s \<rbrakk> \<Longrightarrow> P y (f s)\<rbrakk> \<Longrightarrow> none_top P x (f s)"
+  by (rule none_top_fun_updateD)
+
+lemma none_top_fun_update_eq:
+  "(\<And>y. x = Some y \<Longrightarrow> P y (f s) = P y s) \<Longrightarrow> none_top P x (f s) = none_top P x s"
+  by (simp split: none_top_split)
+
+
 section \<open>General lattice properties for @{const none_bot}\<close>
 
 lemma none_bot_simps[simp]:
@@ -227,6 +240,19 @@ lemma none_bot_False_fun[simp]:
 lemma none_bot_False_funE[dest!]:
   "none_bot \<bottom>\<bottom> opt s \<Longrightarrow> False"
   by simp
+
+lemma none_bot_fun_updateD:
+  "\<lbrakk> none_bot P x (f s); \<And>y. \<lbrakk>x = Some y; P y (f s) \<rbrakk> \<Longrightarrow> P y s\<rbrakk> \<Longrightarrow> none_bot P x s"
+  by (simp split: none_bot_splits)
+
+lemma none_bot_fun_updateI:
+  "\<lbrakk> none_bot P x s; \<And>y. \<lbrakk>x = Some y; P y s \<rbrakk> \<Longrightarrow> P y (f s)\<rbrakk> \<Longrightarrow> none_bot P x (f s)"
+  by (rule none_bot_fun_updateD)
+
+lemma none_bot_fun_update_eq:
+  "(\<And>y. x = Some y \<Longrightarrow> P y (f s) = P y s) \<Longrightarrow> none_bot P x (f s) = none_bot P x s"
+  by (simp split: none_bot_split)
+
 
 section \<open>Automation setup and short-hand names\<close>
 

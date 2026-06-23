@@ -22,7 +22,6 @@ This module uses the C preprocessor to select a target architecture.
 >         tcbFaultHandler, tcbIPCBuffer,
 >         decodeTCBInvocation, invokeTCB,
 >         getExtraCPtrs, getExtraCPtr, lookupExtraCaps, setExtraBadge,
->         decodeDomainInvocation,
 >         archThreadSet, archThreadGet,
 >         decodeSchedContextInvocation, decodeSchedControlInvocation,
 >         checkBudget, chargeBudget, checkBudgetRestart, mcsPreemptionPoint, commitTime, awaken, switchSchedContext,
@@ -32,7 +31,7 @@ This module uses the C preprocessor to select a target architecture.
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.API.Types SEL4.API.Failures SEL4.Machine SEL4.Model SEL4.Object.Structures SEL4.API.Invocation #-}
-% {-# BOOT-EXPORTS: threadRead threadGet threadSet asUser setMRs replyFromKernel setMessageInfo getThreadCSpaceRoot getThreadVSpaceRoot decodeTCBInvocation invokeTCB getThreadBufferSlot decodeDomainInvocation archThreadSet archThreadGet sanitiseRegister decodeSchedContextInvocation decodeSchedControlInvocation checkBudget chargeBudget updateAt #-}
+% {-# BOOT-EXPORTS: threadRead threadGet threadSet asUser setMRs replyFromKernel setMessageInfo getThreadCSpaceRoot getThreadVSpaceRoot decodeTCBInvocation invokeTCB getThreadBufferSlot archThreadSet archThreadGet sanitiseRegister decodeSchedContextInvocation decodeSchedControlInvocation checkBudget chargeBudget updateAt #-}
 
 > import Prelude hiding (Word)
 > import SEL4.Config
@@ -653,24 +652,6 @@ Modifying the current thread may require rescheduling because modified registers
 >     Arch.postSetFlags tcb newFlags
 >     return newFlags
 
-\subsection{Decoding Domain Invocations}
-
-The domain cap is invoked to set the domain of a given TCB object to a given value.
-
-> decodeDomainInvocation :: Word -> [Word] -> [(Capability, PPtr CTE)] ->
->         KernelF SyscallError (PPtr TCB, Domain)
-> decodeDomainInvocation label args extraCaps = do
->     when (genInvocationType label /= DomainSetSet) $ throw IllegalOperation
->     domain <- case args of
->         (x:_) -> do
->                      when (fromIntegral x >= numDomains) $
->                          throw InvalidArgument { invalidArgumentNumber = 0 }
->                      return $ fromIntegral x
->         _ -> throw TruncatedMessage
->     when (null extraCaps) $ throw TruncatedMessage
->     case fst (head extraCaps) of
->         ThreadCap { capTCBPtr = ptr } -> return $ (ptr, domain)
->         _ -> throw InvalidArgument { invalidArgumentNumber = 1 }
 
 > isBlocked :: PPtr TCB -> Kernel Bool
 > isBlocked thread = do

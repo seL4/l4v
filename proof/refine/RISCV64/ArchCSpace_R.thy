@@ -401,6 +401,7 @@ lemma corres_caps_decomposition:
              "\<And>P. \<lbrace>\<lambda>s. P (new_ntfnQueues_of s) (new_tcbSchedNexts_of s) (new_tcbSchedPrevs_of s)\<rbrace>
                    g \<lbrace>\<lambda>rv s. P (ntfnQueues_of s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_di s)\<rbrace> f \<lbrace>\<lambda>rv s. P (domain_index s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_ds s)\<rbrace> f \<lbrace>\<lambda>rv s. P (domain_start_index s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_dl s)\<rbrace> f \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_cd s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_domain s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_dt s)\<rbrace> f \<lbrace>\<lambda>rv s. P (domain_time s)\<rbrace>"
@@ -409,6 +410,7 @@ lemma corres_caps_decomposition:
              "\<And>P. \<lbrace>\<lambda>s. P (new_csc s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_sc s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_rpt s)\<rbrace> f \<lbrace>\<lambda>rv s. P (reprogram_timer s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_dsi' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksDomScheduleIdx s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_dss' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksDomScheduleStart s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_ds' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_cd' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_dt' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksDomainTime s)\<rbrace>"
@@ -441,8 +443,11 @@ lemma corres_caps_decomposition:
                   \<and> idle_sc_ptr = new_idsc' s'
                   \<and> new_ms s = new_ms' s'
                   \<and> new_di s = new_dsi' s'
-                  \<and> new_dl s = new_ds' s'
-                  \<and> new_cd s = new_cd' s'
+                  \<and> new_ds s = new_dss' s'
+                            \<and> domain_list_map (new_dl s) = new_ds' s'
+
+
+                            \<and> new_cd s = new_cd' s'
                   \<and> new_dt s = new_dt' s'
                   \<and> new_cot s = new_cot' s'
                   \<and> new_cut s = new_cut' s'

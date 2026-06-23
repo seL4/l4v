@@ -242,34 +242,13 @@ lemma valid_tcbs'_obj_at':
   by (clarsimp simp add: valid_tcbs'_def ran_def typ_at'_def
                          ko_wp_at'_def valid_obj'_def valid_tcb'_def obj_at'_def)
 
-(* same derivation on all architectures *)
-lemma (in Arch) update_valid_tcb'[simp]:
-  "\<And>f. valid_tcb' tcb (ksReleaseQueue_update f s) = valid_tcb' tcb s"
-  "\<And>f. valid_tcb' tcb (ksReprogramTimer_update f s) = valid_tcb' tcb s"
-  "\<And>f. valid_tcb' tcb (ksReadyQueuesL1Bitmap_update f s) = valid_tcb' tcb s"
-  "\<And>f. valid_tcb' tcb (ksReadyQueuesL2Bitmap_update f s) = valid_tcb' tcb s"
-  "\<And>f. valid_tcb' tcb (ksReadyQueues_update f s) = valid_tcb' tcb s"
-  "\<And>f. valid_tcb' tcb (ksSchedulerAction_update f s) = valid_tcb' tcb s"
-  "\<And>f. valid_tcb' tcb (ksDomainTime_update f s) = valid_tcb' tcb s"
-  by (auto simp: valid_tcb'_def valid_bound_obj'_def opt_tcb_at'_def valid_arch_tcb'_def
-          split: option.splits thread_state.splits none_top_split)
+context pspace_update_eq' begin
 
-lemma update_tcbInReleaseQueue_False_valid_tcb'[simp]:
-  "valid_tcb' (tcbInReleaseQueue_update a tcb) s = valid_tcb' tcb s"
-  by (auto simp: valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs gen_objBits_simps)
+lemma valid_tcb'_update'[iff]:
+  "valid_tcbs' (f s) = valid_tcbs' s"
+  by (simp add: valid_tcbs'_def pspace)
 
-requalify_facts Arch.update_valid_tcb'
-lemmas [simp] = update_valid_tcb'
-
-lemma update_valid_tcbs'[simp]:
-  "\<And>f. valid_tcbs' (ksReleaseQueue_update f s) = valid_tcbs' s"
-  "\<And>f. valid_tcbs' (ksReprogramTimer_update f s) = valid_tcbs' s"
-  "\<And>f. valid_tcbs' (ksReadyQueuesL1Bitmap_update f s) = valid_tcbs' s"
-  "\<And>f. valid_tcbs' (ksReadyQueuesL2Bitmap_update f s) = valid_tcbs' s"
-  "\<And>f. valid_tcbs' (ksReadyQueues_update f s) = valid_tcbs' s"
-  "\<And>f. valid_tcbs' (ksSchedulerAction_update f s) = valid_tcbs' s"
-  "\<And>f. valid_tcbs' (ksDomainTime_update f s) = valid_tcbs' s"
-  by (simp_all add: valid_tcbs'_def)
+end
 
 lemma doMachineOp_irq_states':
   assumes masks: "\<And>P. \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
@@ -968,6 +947,11 @@ lemma threadSet_mdb':
   apply fastforce
   done
 
+crunch threadSet
+  for ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
+  and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  (wp: updateObject_default_inv simp: setObject_def)
+
 lemma threadSet_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> threadSet F t \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
   apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
@@ -980,9 +964,8 @@ lemma threadSet_invs_trivial_helper[simp]:
   by auto
 
 lemma threadSet_valid_dom_schedule':
-  "\<lbrace> valid_dom_schedule'\<rbrace> threadSet F t \<lbrace>\<lambda>_. valid_dom_schedule'\<rbrace>"
-  unfolding threadSet_def valid_dom_schedule'_def
-  by (wp setObject_ksDomSchedule_inv hoare_Ball_helper)
+  "threadSet F t \<lbrace>valid_dom_schedule'\<rbrace>"
+  by (wp valid_dom_schedule'_lift)
 
 lemma threadSet_wp:
   "\<lbrace>\<lambda>s. \<forall>tcb :: tcb. ko_at' tcb t s \<longrightarrow> P (set_obj' t (f tcb) s)\<rbrace>
@@ -1563,9 +1546,9 @@ lemma set_tcb_queue_projs:
   "set_tcb_queue d p queue
    \<lbrace>\<lambda>s. P (kheap s) (cdt s) (is_original_cap s) (cur_thread s) (idle_thread s) (consumed_time s)
           (cur_time s) (cur_sc s) (reprogram_timer s) (scheduler_action s) (domain_list s)
-          (domain_index s) (cur_domain s) (domain_time s) (release_queue s) (machine_state s)
-          (interrupt_irq_node s) (interrupt_states s) (arch_state s) (caps_of_state s)
-          (work_units_completed s) (cdt_list s)\<rbrace>"
+          (domain_index s) (domain_start_index s) (cur_domain s) (domain_time s) (release_queue s)
+          (machine_state s) (interrupt_irq_node s) (interrupt_states s) (arch_state s)
+          (caps_of_state s) (work_units_completed s) (cdt_list s)\<rbrace>"
   by (wpsimp simp: set_tcb_queue_def)
 
 lemma set_tcb_queue_cte_at:
@@ -1589,6 +1572,7 @@ crunch setReprogramTimer, setReleaseQueue, setQueue, removeFromBitmap
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   and valid_machine_state'[wp]: valid_machine_state'
   and ksPSpace[wp]: "\<lambda>s. P (ksPSpace s)"
@@ -1619,7 +1603,7 @@ crunch tcbReleaseRemove, tcbReleaseEnqueue,
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
-  and valid_dom_schedule'[wp]: valid_dom_schedule'
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
@@ -5164,6 +5148,7 @@ crunch rescheduleRequired, setThreadState, setBoundNotification
 
 crunch rescheduleRequired, setBoundNotification, setThreadState
   for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -5943,7 +5928,7 @@ lemma (in TcbAcc_R_2) sts_invs':
    setThreadState st t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_dom_schedule'_def)
-  apply (wpsimp wp: valid_irq_node_lift irqs_masked_lift
+  apply (wpsimp wp: valid_irq_node_lift irqs_masked_lift valid_dom_schedule'_lift
                     setThreadState_valid_sched_pointers setThreadState_sym_heap_sched_pointers
               simp: cteCaps_of_def o_def)
   apply (clarsimp simp: valid_pspace'_def)

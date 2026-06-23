@@ -498,7 +498,9 @@ context Arch begin arch_global_naming
 named_theorems Schedule_R_3_assms
 
 lemma scheduleChooseNewThread_fragment_corres:
-  "corres dc (invs and valid_sched and (\<lambda>s. scheduler_action s = choose_new_thread)) (invs' and (\<lambda>s. ksSchedulerAction s = ChooseNewThread))
+  "corres dc (invs and valid_domain_list and valid_sched and
+              (\<lambda>s. scheduler_action s = choose_new_thread))
+             (invs' and (\<lambda>s. ksSchedulerAction s = ChooseNewThread))
      (do _ \<leftarrow> when (domainTime = 0) (do
            _ \<leftarrow> arch_prepare_next_domain;
            next_domain
@@ -513,13 +515,13 @@ lemma scheduleChooseNewThread_fragment_corres:
       od)"
   apply (subst bind_dummy_ret_val)+
   apply (corres corres: nextDomain_corres chooseThread_corres
-                    wp: nextDomain_invs_no_cicd')
+                    wp: nextDomain_invs_no_cicd' valid_domain_list_lift)
    apply (auto simp: valid_sched_def invs'_def valid_state'_def all_invs_but_ct_idle_or_in_cur_domain'_def)
   done
 
 lemma scheduleChooseNewThread_corres[Schedule_R_3_assms]:
   "corres dc
-     (\<lambda>s. invs s \<and> valid_sched s \<and> scheduler_action s = choose_new_thread)
+     (\<lambda>s. invs s \<and> valid_domain_list s \<and> valid_sched s \<and> scheduler_action s = choose_new_thread)
      (\<lambda>s. invs' s \<and> ksSchedulerAction s = ChooseNewThread)
      schedule_choose_new_thread scheduleChooseNewThread"
   unfolding schedule_choose_new_thread_def scheduleChooseNewThread_def

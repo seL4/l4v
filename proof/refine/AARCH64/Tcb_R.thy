@@ -747,6 +747,7 @@ lemma threadSet_priority_invs':
             untyped_ranges_zero_lift
             sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
             threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of
+            valid_dom_schedule'_lift
          | clarsimp simp: cteCaps_of_def update_tcb_cte_cases | rule refl)+
   apply (clarsimp simp: o_def)
   by (auto simp: obj_at'_def)
@@ -1852,7 +1853,7 @@ lemma bindNotification_invs':
   apply (rule hoare_pre)
    apply (wp set_ntfn_valid_pspace' sbn_sch_act' valid_irq_node_lift
              setBoundNotification_ct_not_inQ valid_bound_ntfn_lift
-             untyped_ranges_zero_lift
+             untyped_ranges_zero_lift valid_dom_schedule'_lift
           | clarsimp dest!: global'_no_ex_cap simp: cteCaps_of_def)+
   apply (clarsimp simp: valid_pspace'_def)
   apply (cases "tcbptr = ntfnptr")

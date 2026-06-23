@@ -16604,10 +16604,10 @@ lemma valid_blocked_valid_ready_qs_ready_and_sufficient:
 context DetSchedSchedule_AI begin
 
 lemma invoke_domain_valid_sched:
-  "\<lbrace>valid_sched and tcb_at t and (\<lambda>s. t \<noteq> idle_thread s) and ct_not_queued
+  "\<lbrace>valid_sched and valid_domain_inv iv and ct_not_queued
                 and scheduler_act_not t and valid_idle
                 and (\<lambda>s. budget_ready (cur_thread s) s)\<rbrace>
-   invoke_domain t d
+   invoke_domain iv
    \<lbrace>\<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>" (is "\<lbrace>?P\<rbrace> _ \<lbrace>_\<rbrace>")
   supply if_split [split del]
   apply (simp add: invoke_domain_def)

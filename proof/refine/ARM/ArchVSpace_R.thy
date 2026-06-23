@@ -2842,6 +2842,7 @@ lemma setObject_pde_ksDomScheduleIdx [wp]:
 
 crunch storePTE, storePDE
   for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: setObject_ksPSpace_only updateObject_default_inv simp: o_def)
@@ -2872,11 +2873,10 @@ lemma storePDE_invs[wp]:
   apply (rule hoare_pre)
    apply (wp sch_act_wf_lift valid_global_refs_lift'
              irqs_masked_lift
-             valid_irq_node_lift
+             valid_irq_node_lift valid_dom_schedule'_lift
              cur_tcb_lift valid_irq_handlers_lift'' valid_bitmaps_lift sym_heap_sched_pointers_lift
              untyped_ranges_zero_lift storePDE_valid_arch_state'
            | simp add: cteCaps_of_def o_def)+
-  apply clarsimp
   done
 
 lemma storePTE_valid_mdb [wp]:
@@ -3038,11 +3038,10 @@ lemma storePTE_invs [wp]:
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (rule hoare_pre)
    apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
-             valid_irq_node_lift
+             valid_irq_node_lift valid_dom_schedule'_lift
              cur_tcb_lift valid_irq_handlers_lift''
              untyped_ranges_zero_lift valid_bitmaps_lift
            | simp add: cteCaps_of_def o_def)+
-  apply clarsimp
   done
 
 lemma setASIDPool_valid_objs [wp]:
@@ -3213,7 +3212,7 @@ lemma setASIDPool_invs [wp]:
    apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
              valid_arch_state_lift' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift''
-             untyped_ranges_zero_lift
+             untyped_ranges_zero_lift valid_dom_schedule'_lift
              updateObject_default_inv valid_bitmaps_lift
            | simp add: cteCaps_of_def
            | rule setObject_ksPSpace_only)+

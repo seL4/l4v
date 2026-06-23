@@ -528,11 +528,20 @@ The interrupt controller state consists of an array with one entry for each of t
 
 Each entry in the domain schedule specifies a domain and a length (a number of time slices).
 
-> type DomainSchedule = (Domain, Word64)
-> dschDomain :: (Domain, Word64) -> Domain
+> type DomainScheduleItem = (Domain, DomainDuration)
+>
+> dschDomain :: DomainScheduleItem -> Domain
 > dschDomain = fst
-> dschLength :: (Domain, Word64) -> Word64
+> dschLength :: DomainScheduleItem -> DomainDuration
 > dschLength = snd
+>
+> domainEndMarker :: DomainScheduleItem
+> domainEndMarker = (0,0)
+
+Schedule entries are represented as single 64-bit words in C, with 8 bits for the domain and 64-8=56 bits for the duration.
+
+> maxDomainDuration :: DomainDuration
+> maxDomainDuration = mask 56
 
 > isReceive :: ThreadState -> Bool
 > isReceive (BlockedOnReceive _ _ _) = True

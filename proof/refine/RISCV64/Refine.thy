@@ -199,18 +199,19 @@ lemma absKState_correct:
   shows "absKState s' = abs_state s"
   using assms
   apply (intro state.equality, simp_all add: absKState_def abs_state_def)
-                      apply (rule absHeap_correct;
-                             clarsimp simp: state_relation_sc_replies_relation elim!: state_relationE)
-                     apply (rule absCDT_correct; clarsimp)
-                    apply (rule absIsOriginalCap_correct; clarsimp)
+                       apply (rule absHeap_correct;
+                              clarsimp simp: state_relation_sc_replies_relation elim!: state_relationE)
+                      apply (rule absCDT_correct; clarsimp)
+                     apply (rule absIsOriginalCap_correct; clarsimp)
+                    apply (simp add: state_relation_def)
                    apply (simp add: state_relation_def)
-                  apply (simp add: state_relation_def)
-                 apply (clarsimp simp: state_relation_def)
+                  apply (clarsimp simp: state_relation_def)
+                 apply (simp add: state_relation_def)
                 apply (simp add: state_relation_def)
                apply (simp add: state_relation_def)
-              apply (simp add: state_relation_def)
-             apply (rule absSchedulerAction_correct, simp add: state_relation_def)
-            apply (simp add: state_relation_def)
+              apply (rule absSchedulerAction_correct, simp add: state_relation_def)
+             apply (simp add: state_relation_def)
+            apply (simp add: domSchedule_map_relation)
            apply (simp add: state_relation_def)
           apply (simp add: state_relation_def)
          apply (simp add: state_relation_def)
@@ -341,7 +342,7 @@ crunch do_user_op, check_active_irq
   for valid_list[wp]: valid_list
   and valid_sched[wp]: valid_sched
   and sched_act[wp]: "\<lambda>s. P (scheduler_action s)"
-  and domain_time[wp]: "\<lambda>s. P (domain_time s)"
+  and domain_fields_inv[wp]: "domain_fields P"
   and cur_sc_active[wp]: cur_sc_active
   and ct_not_in_release_q[wp]: ct_not_in_release_q
   and current_time_bounded[wp]: current_time_bounded
@@ -529,11 +530,7 @@ lemma corres_cross_over_fastpathKernelAssertions:
      (fastforce elim: fastpathKernelAssertions_cross)+
 
 defs kernelExitAssertions_def:
-  "kernelExitAssertions s \<equiv> valid_domain_list' s \<and> cur_tcb' s"
-
-lemma callKernel_valid_domain_list':
-  "\<lbrace> \<top> \<rbrace> callKernel e \<lbrace>\<lambda>_ s. valid_domain_list' s \<rbrace>"
-  unfolding callKernel_def kernelExitAssertions_def by wpsimp
+  "kernelExitAssertions s \<equiv> cur_tcb' s"
 
 lemma callKernel_cur_tcb':
   "\<lbrace>\<top>\<rbrace> callKernel e \<lbrace>\<lambda>_ s. cur_tcb' s\<rbrace>"
@@ -565,8 +562,7 @@ lemma kernelEntry_invs':
   "\<lbrace>invs' and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s)
     and (ct_running' or ct_idle')
     and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> schedulable' (ksCurThread s) s)
-    and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
-    and valid_domain_list' \<rbrace>
+    and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
   kernelEntry e tc
   \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding kernelEntry_def
@@ -614,12 +610,10 @@ crunch doMachineOp
 
 lemma doUserOp_invs':
   "\<lbrace>invs' and ex_abs einvs and
-    (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running' and
-    valid_domain_list'\<rbrace>
+    (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running'\<rbrace>
    doUserOp f tc
    \<lbrace>\<lambda>_. invs' and
-        (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running' and
-        valid_domain_list'\<rbrace>"
+        (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running'\<rbrace>"
   apply (simp add: doUserOp_def split_def ex_abs_def)
   apply (wp device_update_invs' doMachineOp_ct_in_state'
     | (wp (once) dmo_invs', wpsimp simp: no_irq_modify device_memory_update_def
@@ -757,6 +751,10 @@ lemma ct_running_or_idle_cross:
    \<Longrightarrow> ct_running' c \<or> ct_idle' c"
   apply (fastforce dest: ct_running_cross ct_idle_cross)
   done
+
+lemma contract_all_imp_strg':
+  "P \<and> P' \<and> P'' \<and> (\<forall>x. R x \<longrightarrow> Q x) \<Longrightarrow> \<forall>x. R x \<longrightarrow> P \<and> Q x \<and> P' \<and> P''"
+  by blast
 
 lemma kernel_corres':
   "corres dc (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle)
@@ -960,7 +958,7 @@ lemma device_mem_corres:
 lemma entry_corres:
   "corres (=)
       (\<lambda>s. mcs_invs s \<and> (ct_running s \<or> ct_idle s) \<and> (event \<noteq> Interrupt \<longrightarrow> ct_running s))
-      (invs' and valid_domain_list')
+      invs'
       (kernel_entry event tc) (kernelEntry event tc)"
   apply (simp add: kernel_entry_def kernelEntry_def)
   apply add_cur_tcb'
@@ -1105,7 +1103,6 @@ lemma checkActiveIRQ_just_idle_corres:
     (invs and ct_idle and einvs and (\<lambda>s. scheduler_action s = resume_cur_thread)
      and valid_domain_list)
     (invs' and ct_idle'
-      and valid_domain_list'
       and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
     (check_active_irq) (checkActiveIRQ)"
   apply (rule corres_guard_imp)
@@ -1148,19 +1145,25 @@ lemma domain_time_rel_eq:
   "(a, c) \<in> state_relation \<Longrightarrow> P (ksDomainTime c) = P (domain_time a)"
   by (clarsimp simp: state_relation_def)
 
-lemma domain_list_rel_eq:
-  "(a, c) \<in> state_relation \<Longrightarrow> P (ksDomSchedule c) = P (domain_list a)"
-  by (clarsimp simp: state_relation_def)
-
 crunch doUserOp, checkActiveIRQ
   for valid_objs': valid_objs'
   (wp: crunch_wps)
+
+lemma valid_domain_list_2_cross:
+  "\<lbrakk>valid_dom_schedule'_2 sched idx start; domain_list_map dom_list = sched \<rbrakk>
+   \<Longrightarrow> valid_domain_list_2 start idx dom_list"
+  by (fastforce simp: valid_domain_list_2_def valid_dom_schedule'_2_def ucast_eq_0 is_up
+                split: prod.splits)
+
+lemma valid_domain_list_from_invs':
+  "\<lbrakk> (s, s') \<in> state_relation; invs' s' \<rbrakk> \<Longrightarrow> valid_domain_list s"
+  by (clarsimp simp: valid_domain_list_2_cross invs'_def valid_state'_def elim!: state_relationE)
 
 lemma ckernel_invariant:
   "ADT_H uop \<Turnstile> full_invs'"
   unfolding full_invs'_def
   supply word_neq_0_conv[simp]
-  supply domain_time_rel_eq[simp] domain_list_rel_eq[simp]
+  supply domain_time_rel_eq[simp]
   apply (rule invariantI)
    apply (clarsimp simp add: ADT_H_def)
    apply (subst conj_commute, simp)
@@ -1180,7 +1183,7 @@ lemma ckernel_invariant:
    apply (frule ckernel_init_domain_time)
    apply (frule ckernel_init_domain_list)
    apply (clarsimp simp: ex_abs_def)
-   apply (fastforce simp: Init_H_def valid_domain_list'_def)
+   apply (fastforce simp: Init_H_def)
 
   apply (clarsimp simp: ADT_A_def ADT_H_def global_automaton_def)
 
@@ -1227,7 +1230,7 @@ lemma ckernel_invariant:
    apply (intro conjI impI)
      apply metis
     apply metis
-   apply (fastforce dest!: ct_running_or_idle_cross)
+   apply (fastforce dest!: ct_running_or_idle_cross valid_domain_list_from_invs')
 
   apply (erule_tac P="a \<and> b" for a b in disjE)
    apply (clarsimp simp add: do_user_op_H_def monad_to_transition_def)
@@ -1244,7 +1247,7 @@ lemma ckernel_invariant:
       apply fastforce
      apply fastforce
     apply (clarsimp simp: ex_abs_def, rule_tac x=s in exI,
-           clarsimp simp: ct_running_related sched_act_rct_related)
+           clarsimp simp: ct_running_related sched_act_rct_related valid_domain_list_from_invs')
    apply (fastforce simp: ex_abs_def)
 
   apply (erule_tac P="a \<and> b \<and> c \<and> (\<exists>x. d x)" for a b c d in disjE)
@@ -1261,7 +1264,8 @@ lemma ckernel_invariant:
      apply (erule (1) ct_running_cross)
       apply fastforce
      apply fastforce
-    apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related)
+    apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related
+                           valid_domain_list_from_invs')
    apply (fastforce simp: ex_abs_def)
 
   apply (erule_tac P="a \<and> b" for a b in disjE)
@@ -1278,7 +1282,8 @@ lemma ckernel_invariant:
        apply fastforce
       apply fastforce
      apply (erule (1) resume_cur_thread_cross)
-    apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related)
+    apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related
+                           valid_domain_list_from_invs')
    apply (fastforce simp: ex_abs_def)
 
   apply (erule_tac P="a \<and> b" for a b in disjE)
@@ -1293,7 +1298,7 @@ lemma ckernel_invariant:
     apply clarsimp
     apply (intro conjI)
      apply (fastforce intro: ct_idle_related)
-    apply (fastforce intro: resume_cur_thread_cross)
+    apply (fastforce intro: resume_cur_thread_cross simp: valid_domain_list_from_invs')
    apply (fastforce simp: ex_abs_def)
 
   apply (clarsimp simp: check_active_irq_H_def)
@@ -1307,7 +1312,7 @@ lemma ckernel_invariant:
    apply clarsimp
    apply (intro conjI)
     apply (fastforce intro: ct_idle_related)
-   apply (fastforce intro: resume_cur_thread_cross)
+   apply (fastforce intro: resume_cur_thread_cross simp: valid_domain_list_from_invs')
   apply (fastforce simp: ex_abs_def)
   done
 

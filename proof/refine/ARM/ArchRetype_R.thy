@@ -832,6 +832,7 @@ crunch createNewCaps
   and irq_states'[Retype_R_assms, wp]: valid_irq_states'
   and ksDomSchedule[Retype_R_assms, wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[Retype_R_assms, wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[Retype_R_assms, wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and gsUntypedZeroRanges[Retype_R_assms, wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   and ksArch[wp]: "\<lambda>s. P (ksArchState s)"
   (simp: crunch_simps unless_def
@@ -1720,7 +1721,7 @@ proof -
        apply (simp add: createObjects_def)
        apply (wp createObjects_idle')
        apply (wpsimp wp: createObjects_valid_bitmaps)
-      apply (wp createObjects_cur'
+      apply (wp createObjects_cur' valid_dom_schedule'_lift
                 createObjects_pspace_domain_valid co_ct_not_inQ
                 createObjects_ct_idle_or_in_cur_domain'
                 createObjects_untyped_ranges_zero'[OF moKO]

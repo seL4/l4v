@@ -11,9 +11,7 @@ chapter "Common, Architecture-Specific Data Types"
 
 theory Arch_Structs_B
 imports
-  Setup_Locale
-  Lib.HaskellLib_H
-  MachineExports
+  Structs_B
 begin
 
 context Arch begin arch_global_naming (H)
@@ -24,6 +22,8 @@ abbreviation (input) usToTicks :: "word64 \<Rightarrow> word64" where
 #INCLUDE_HASKELL SEL4/Model/StateData/AARCH64.hs CONTEXT AARCH64_H ONLY ArmVSpaceRegionUse
 
 #INCLUDE_HASKELL SEL4/API/Invocation/AARCH64.hs CONTEXT AARCH64_H ONLY FlushType
+
+#INCLUDE_HASKELL SEL4/Object/Structures/AARCH64.hs ONLY parseTimeArg
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64_H ONLY timerPrecision
 

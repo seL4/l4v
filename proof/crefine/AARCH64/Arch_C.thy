@@ -851,10 +851,6 @@ lemma slotcap_in_mem_VSpace:
   apply (simp add: cap_get_tag_isCap_ArchObject2)
   done
 
-lemma Restart_valid[simp]:
-  "valid_tcb_state' Restart s"
-  by (simp add: valid_tcb_state'_def)
-
 lemma canonical_address_mask_shift2:
   "\<lbrakk> canonical_address p; n + m = Suc canonical_bit; 0 < n \<rbrakk> \<Longrightarrow> p && (mask n << m) = p >> m << m"
   apply (prop_tac "m = Suc canonical_bit - n", arith)

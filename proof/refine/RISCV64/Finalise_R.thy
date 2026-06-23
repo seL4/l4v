@@ -1444,6 +1444,8 @@ crunch emptySlot
   and valid_bitmaps[wp]: valid_bitmaps
   and tcbQueued_opt_pred[wp]: "\<lambda>s. P (tcbQueued |< tcbs_of' s)"
   and valid_sched_pointers[wp]: valid_sched_pointers
+  and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   (wp: valid_bitmaps_lift)
 
 lemma emptySlot_invs'[wp]:
@@ -1452,10 +1454,8 @@ lemma emptySlot_invs'[wp]:
      emptySlot sl info
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
-  apply (rule hoare_pre)
-   apply (wp valid_irq_node_lift valid_replies'_lift)
-  apply (clarsimp simp: cte_wp_at_ctes_of o_def)
-  apply (clarsimp simp: post_cap_delete_pre'_def cteCaps_of_def
+  apply (wp valid_irq_node_lift valid_replies'_lift valid_dom_schedule'_lift)
+  apply (clarsimp simp: cte_wp_at_ctes_of post_cap_delete_pre'_def cteCaps_of_def o_def
                  split: capability.split_asm arch_capability.split_asm)
   by auto
 
@@ -2244,7 +2244,7 @@ lemma unbindNotification_invs[wp]:
   apply (case_tac ntfnPtrOpt, clarsimp, wp, clarsimp)
   apply (clarsimp simp: updateNotification_def)
   apply (wpsimp wp: getNotification_wp sbn'_valid_pspace'_inv valid_irq_node_lift irqs_masked_lift
-                    sym_heap_sched_pointers_lift untyped_ranges_zero_lift
+                    sym_heap_sched_pointers_lift untyped_ranges_zero_lift valid_dom_schedule'_lift
          | clarsimp simp: cteCaps_of_def o_def)+
   apply (fastforce dest!: ntfn_ko_at_valid_objs_valid_ntfn' simp: valid_ntfn'_def valid_obj'_def)
   done
@@ -2267,7 +2267,7 @@ lemma unbindMaybeNotification_invs[wp]:
   apply (simp add: unbindMaybeNotification_def invs'_def valid_dom_schedule'_def)
   apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (wpsimp wp: getNotification_wp sbn'_valid_pspace'_inv valid_irq_node_lift irqs_masked_lift
-                    untyped_ranges_zero_lift sym_heap_sched_pointers_lift
+                    valid_dom_schedule'_lift untyped_ranges_zero_lift sym_heap_sched_pointers_lift
               simp: updateNotification_def cteCaps_of_def)
   by (auto simp: pred_tcb_at' valid_pspace'_def valid_obj'_def
                  valid_ntfn'_def ko_wp_at'_def live_ntfn'_def o_def

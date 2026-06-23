@@ -2767,6 +2767,15 @@ lemma silc_inv_cur_thread[simp]:
   "silc_inv aag st (s\<lparr>cur_thread := X\<rparr>) = silc_inv aag st s"
   by (simp add: silc_inv_def silc_dom_equiv_def equiv_for_def)
 
+lemma silc_inv_domain_start_index[simp]:
+  "silc_inv aag st (s\<lparr>domain_start_index := X\<rparr>) = silc_inv aag st s"
+  by (simp add: silc_inv_def silc_dom_equiv_def equiv_for_def slots_holding_overlapping_caps_def2
+                ctes_wp_at_def intra_label_cap_def)
+
+lemma silc_inv_domain_list[simp]:
+  "silc_inv aag st (s\<lparr>domain_list := X\<rparr>) = silc_inv aag st s"
+  by (simp add: silc_inv_def silc_dom_equiv_def equiv_for_def slots_holding_overlapping_caps_def2
+                ctes_wp_at_def intra_label_cap_def)
 
 crunch set_domain
   for silc_inv[wp]: "silc_inv aag st"
@@ -2774,21 +2783,25 @@ crunch set_domain
 
 context FinalCaps_2 begin
 
+crunch invoke_domain
+  for silc_inv[wp]: "silc_inv aag st"
+  (simp: tcb_cap_cases_def)
+
 lemma perform_invocation_silc_inv:
   "\<lbrace>silc_inv aag st and valid_invocation iv and authorised_invocation aag iv
                     and einvs and simple_sched_action
                     and pas_refined aag and is_subject aag \<circ> cur_thread\<rbrace>
    perform_invocation block call iv
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  apply (cases iv)
-  by (wp invoke_untyped_silc_inv send_ipc_silc_inv
+  by (cases iv)
+     (wp invoke_untyped_silc_inv send_ipc_silc_inv
          invoke_tcb_silc_inv invoke_cnode_silc_inv
          invoke_irq_control_silc_inv
          invoke_irq_handler_silc_inv
          arch_perform_invocation_silc_inv
       | simp add: authorised_invocation_def invs_valid_objs
                   invs_mdb invs_sym_refs
-                  split_def invoke_domain_def
+                  split_def
       | fastforce dest:silc_inv_not_subject)+
 
 lemma handle_invocation_silc_inv:

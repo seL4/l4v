@@ -427,9 +427,16 @@ lemma maybeHandleInterrupt_corres_True_False[ADT_IF_Refine_assms]:
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
 
+lemma handle_event_valid_domain_time_IRQ:
+  "\<lbrace>\<lambda>s. 0 < domain_time s \<rbrace>
+   handle_event Interrupt
+   \<lbrace>\<lambda>_ s::det_state. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>, -"
+  by (wpsimp wp: maybe_handle_interrupt_valid_domain_time wp_del: handle_event_domain_time_valid)
+
 lemma kernel_entry_if_corres[ADT_IF_Refine_assms]:
   "corres (prod_lift (dc \<oplus> dc))
-     (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s)
+     (einvs and no_domain_caps
+            and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s)
             and schact_is_rct
             and (\<lambda>s. 0 < domain_time s) and valid_domain_list)
      (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s)
@@ -458,10 +465,15 @@ lemma kernel_entry_if_corres[ADT_IF_Refine_assms]:
                                  scheduler_action s = choose_new_thread)"])
            apply (clarsimp simp: prod_lift_def)
           apply (clarsimp simp: state_relation_def)
-         apply (wp hoare_TrueI threadSet_invs_trivial thread_set_invs_trivial thread_set_ct_in_state
-                   threadSet_ct_running' thread_set_not_state_valid_sched hoare_vcg_const_imp_lift
-                   handle_event_domain_time_inv handle_interrupt_valid_domain_time
+         apply (wp add: threadSet_invs_trivial thread_set_invs_trivial thread_set_ct_in_state
+                        threadSet_ct_running' thread_set_not_state_valid_sched
+                        hoare_vcg_const_imp_lift
+                        handle_interrupt_valid_domain_time handle_event_valid_domain_time_IRQ
+                        handle_event_noIRQ_domain_time_inv
+                        no_domain_caps_sep_inv_lift[OF thread_set_tcb_arch_update_domain_sep_inv]
+                   del: handle_event_domain_time_valid
                 | simp add: tcb_cap_cases_def schact_is_rct_def maybe_handle_interrupt_def
+                            arch_tcb_update_aux2
                 | wpc
                 | wps
                 | wp (once) hoare_drop_imp)+

@@ -1739,7 +1739,6 @@ proof (simp add: invs'_def valid_pspace'_def
                         \<or> (tcbInReleaseQueue |< (pspace' |> tcb_of')) t
                         \<or> (inIPCQueueThreadState |< (pspace' |> tcb_of' ||> tcbState)) t)"
     by (clarsimp simp: valid_sched_pointers_def opt_pred_def opt_map_def)
-
 qed (clarsimp simp: valid_dom_schedule'_def)
 
 lemma (in delete_locale) delete_sym_refs':

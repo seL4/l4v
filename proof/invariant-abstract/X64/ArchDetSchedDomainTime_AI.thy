@@ -12,14 +12,14 @@ context Arch begin arch_global_naming
 
 named_theorems DetSchedDomainTime_AI_assms
 
-lemma flush_table_domain_list_inv[wp]: "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> flush_table a b c d \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
-  by (wp mapM_x_wp' | wpc | simp add: flush_table_def | rule hoare_pre)+
-
-lemma flush_table_domain_time_inv[wp]: "\<lbrace>\<lambda>s. P (domain_time s)\<rbrace> flush_table a b c d \<lbrace>\<lambda>rv s. P (domain_time s)\<rbrace>"
-  by (wp mapM_x_wp' | wpc | simp add: flush_table_def | rule hoare_pre)+
+(* crunch chokes on the case distinction for InvalidPTE in the argument of mapM in this function *)
+lemma flush_table_domain_list_inv[wp]:
+  "flush_table a b c d \<lbrace>domain_fields P\<rbrace>"
+  unfolding flush_table_def
+  by (wpsimp wp: crunch_wps)
 
 crunch arch_finalise_cap
-  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
+  for domain_fields[wp, DetSchedDomainTime_AI_assms]: "domain_fields P"
   (wp: hoare_drop_imps mapM_wp mapM_x_wp' subset_refl simp: crunch_simps)
 
 crunch
@@ -30,21 +30,7 @@ crunch
   arch_get_sanitise_register_info, handle_reserved_irq,
   arch_invoke_irq_handler, arch_mask_irq_signal, arch_prepare_next_domain, arch_prepare_set_domain,
   arch_post_set_flags
-  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
-  (wp: crunch_wps)
-
-crunch arch_finalise_cap
-  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
-  (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
-
-crunch
-  arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
-  handle_arch_fault_reply, init_arch_objects,
-  arch_invoke_irq_control, handle_vm_fault, arch_post_modify_registers,
-  prepare_thread_delete, handle_hypervisor_fault, arch_post_cap_deletion,
-  arch_get_sanitise_register_info, handle_reserved_irq, arch_invoke_irq_handler,
-  arch_mask_irq_signal, arch_prepare_set_domain, arch_post_set_flags
-  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_time s)"
+  for domain_fields[wp, DetSchedDomainTime_AI_assms]: "domain_fields P"
   (wp: crunch_wps)
 
 declare init_arch_objects_exst[DetSchedDomainTime_AI_assms]
@@ -52,26 +38,19 @@ declare init_arch_objects_exst[DetSchedDomainTime_AI_assms]
 end
 
 global_interpretation DetSchedDomainTime_AI?: DetSchedDomainTime_AI
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact DetSchedDomainTime_AI_assms)?)
-  qed
+qed
 
 context Arch begin arch_global_naming
 
 crunch arch_perform_invocation
-  for domain_list_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_list s)"
-  (wp: crunch_wps check_cap_inv)
-
-crunch arch_perform_invocation
-  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s::det_state. P (domain_time s)"
+  for domain_fields[wp, DetSchedDomainTime_AI_assms]: "domain_fields P"
   (wp: crunch_wps check_cap_inv)
 
 crunch do_machine_op
   for exst[wp]: "\<lambda>s. P (exst s)"
-
-crunch get_irq_slot
-  for inv[wp]: P
 
 lemma timer_tick_valid_domain_time:
   "\<lbrace> \<lambda>s :: det_ext state. 0 < domain_time s \<rbrace>
@@ -111,16 +90,15 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
   done
 
 crunch handle_spurious_irq
-  for domain_time_inv [wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
-  and domain_list_inv [wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_list s)"
+  for domain_fields[wp, DetSchedDomainTime_AI_assms]: "domain_fields P"
   and scheduler_action[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (scheduler_action s)"
 
 end
 
 global_interpretation DetSchedDomainTime_AI_2?: DetSchedDomainTime_AI_2
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact DetSchedDomainTime_AI_assms)?)
-  qed
+qed
 
 end

@@ -703,7 +703,8 @@ known_type_assignments = [
     'reader_m',
     'reader_m s',
     'fpustate',
-    'eight_tuple a'
+    'eight_tuple a',
+    'domain_schedule_item'
 ]
 
 

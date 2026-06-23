@@ -14,12 +14,19 @@ begin
 
 definition authorised_for_globals_inv :: "invocation \<Rightarrow> ('z::state_ext) state \<Rightarrow> bool" where
   "authorised_for_globals_inv oper \<equiv>
-     \<lambda>s. case oper of InvokeArchObject ai \<Rightarrow> authorised_for_globals_arch_inv ai s | _ \<Rightarrow> True"
+     \<lambda>s. case oper of
+           InvokeArchObject ai \<Rightarrow> authorised_for_globals_arch_inv ai s
+         | InvokeDomain di \<Rightarrow> False
+         | _ \<Rightarrow> True"
 
 definition authorised_invocation_extra where
   "authorised_invocation_extra aag invo \<equiv>
      case invo of InvokeTCB ti \<Rightarrow> authorised_tcb_inv_extra aag ti | _ \<Rightarrow> True"
 
+definition no_domain_inv :: "invocation \<Rightarrow> bool" where
+  "no_domain_inv iv \<equiv> case iv of InvokeDomain di \<Rightarrow> False | _ \<Rightarrow> True"
+
+lemmas no_domain_inv_simps[simp] = no_domain_inv_def[split_simps invocation.split]
 
 lemma tcb_context_merge[simp]:
   "arch_tcb_context_get (tcb_arch (tcb_registers_caps_merge tcb tcb')) =
@@ -302,9 +309,8 @@ lemma reads_respects_f_g':
   done
 
 lemma invoke_domain_reads_respects_f_g:
-  "reads_respects_f_g aag l \<bottom> (invoke_domain thread domain)"
-  by (clarsimp simp: equiv_valid_def spec_equiv_valid_def equiv_valid_2_def)
-
+  "reads_respects_f_g aag l \<bottom> (invoke_domain di)"
+  by (rule ev_pre_cont)
 
 context Syscall_IF_1 begin
 
@@ -482,10 +488,28 @@ lemma lookup_cap_and_slot_reads_respects_g':
   done
 
 lemma authorised_for_globals_triv:
-  "\<forall>x y. f x \<noteq> InvokeArchObject y
-   \<Longrightarrow> \<lbrace>\<top>\<rbrace> m \<lbrace>authorised_for_globals_inv \<circ> f\<rbrace>, -"
+  "\<lbrace>\<lambda>s. \<forall>x ai di. f x \<noteq> InvokeArchObject ai \<and> f x \<noteq> InvokeDomain di\<rbrace>
+   m
+   \<lbrace>authorised_for_globals_inv \<circ> f\<rbrace>, -"
   by (clarsimp simp: validE_R_def validE_def valid_def authorised_for_globals_inv_def
               split: invocation.splits sum.splits)
+
+lemma no_domains_inv_triv:
+  "\<lbrace>\<lambda>s. \<forall>x di. f x \<noteq> InvokeDomain di\<rbrace>
+   m
+   \<lbrace>\<lambda>iv _. (no_domain_inv \<circ> f) iv\<rbrace>, -"
+  by (clarsimp simp: validE_R_def validE_def valid_def no_domain_inv_def
+              split: invocation.splits)
+
+lemma decode_invocation_no_domain_inv:
+  "\<lbrace>invs and no_domain_caps and cte_wp_at ((=) cap) slot
+         and (\<lambda>s :: det_state. \<forall>x\<in>set excaps. cte_wp_at ((=) (fst x)) (snd x) s)\<rbrace>
+   decode_invocation info_label args ptr slot cap excaps
+   \<lbrace>\<lambda>iv _. no_domain_inv iv\<rbrace>, -"
+  unfolding decode_invocation_def
+  apply (wpsimp wp: no_domains_inv_triv simp: o_def)
+  apply (clarsimp simp: no_domain_caps_def2 simp del: split_paired_All)
+  done
 
 lemma set_thread_state_reads_respects_g:
   assumes domains_distinct: "pas_domains_distinct aag"
@@ -544,22 +568,21 @@ lemma ct_active_not_idle:
 context Syscall_IF_1 begin
 
 lemma decode_invocation_authorised_globals_inv:
-  "\<lbrace>invs and cte_wp_at ((=) cap) slot
+  "\<lbrace>invs and domain_sep_inv irqs st and cte_wp_at ((=) cap) slot
          and (\<lambda>s :: det_state. \<forall>x\<in>set excaps. cte_wp_at ((=) (fst x)) (snd x) s)\<rbrace>
    decode_invocation info_label args ptr slot cap excaps
    \<lbrace>authorised_for_globals_inv\<rbrace>, -"
   unfolding decode_invocation_def
-  apply (rule hoare_pre)
-   apply wpc
+  apply wpc
               apply ((wp authorised_for_globals_triv | wpc | simp add: uncurry_def)+)[11]
    apply (unfold authorised_for_globals_inv_def)
    apply wp
    apply (unfold comp_def)
    apply simp
    apply (wp decode_arch_invocation_authorised_for_globals)
-  apply (intro impI conjI allI | clarsimp simp add: authorised_for_globals_inv_def)+
-  apply (erule_tac x="(a, aa, b)" in ballE)
-   apply simp+
+  apply (prop_tac "cap \<noteq> DomainCap")
+   apply (fastforce simp: domain_sep_inv_def simp del: split_paired_All)
+  apply (fastforce simp add: authorised_for_globals_inv_def)
   done
 
 lemma handle_invocation_reads_respects_g:
@@ -569,7 +592,8 @@ lemma handle_invocation_reads_respects_g:
   shows "reads_respects_f_g aag l
            (silc_inv aag st and only_timer_irq_inv irq st' and einvs and schact_is_rct and ct_active
                             and pas_refined aag and pas_cur_domain aag
-                            and is_subject aag \<circ> cur_thread and K (\<not> pasMaySendIrqs aag))
+                            and is_subject aag \<circ> cur_thread
+                            and K (\<not> pasMaySendIrqs aag))
            (handle_invocation calling blocking)"
   apply (rule gen_asm_ev)
   apply (simp add: handle_invocation_def split_def)
@@ -624,11 +648,11 @@ lemma handle_invocation_reads_respects_g:
    apply (simp add: ct_active_cur_thread_not_idle_thread)
   apply (clarsimp simp: valid_pspace_def ct_in_state_def)
   apply (rule conjI)
-   apply (fastforce intro: reads_lrefl)
+   apply fastforce
   apply (rule conjI, fastforce)+
   apply (simp add: conj_comms)
   apply (rule conjI)
-   apply (clarsimp elim!: schact_is_rct_simple)
+   apply fastforce
   apply (rule conjI)
    apply (rule st_tcb_ex_cap)
      apply simp+
@@ -843,11 +867,11 @@ lemma handle_fault_globals_equiv':
 crunch timer_tick
   for globals_equiv[wp]: "globals_equiv st"
 
+lemma invoke_domain_globals_equiv[wp]:
+  "\<lbrace>\<bottom>\<rbrace> invoke_domain di \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  by wpsimp
 
 context Syscall_IF_1 begin
-
-crunch invoke_domain
-  for globals_equiv[wp]: "globals_equiv st"
 
 lemma handle_interrupt_globals_equiv:
   "\<lbrace>globals_equiv (st :: det_state) and invs\<rbrace>
@@ -984,10 +1008,10 @@ lemma perform_invocation_globals_equiv:
                    arch_perform_invocation_globals_equiv do_reply_transfer_globals_equiv
                    invoke_tcb_globals_equiv invoke_irq_control_globals_equiv
                    invoke_cnode_globals_equiv invoke_irq_handler_globals_equiv
-      ; fastforce simp: invs_imps authorised_for_globals_inv_def)
+      ; (fastforce simp: invs_imps authorised_for_globals_inv_def)?)
 
 lemma handle_invocation_globals_equiv:
-  "\<lbrace>invs and ct_active and globals_equiv st\<rbrace>
+  "\<lbrace>invs and ct_active and globals_equiv st and domain_sep_inv irqs st'\<rbrace>
    handle_invocation calling blocking
    \<lbrace>\<lambda>_. globals_equiv (st :: det_state)\<rbrace>"
   apply (simp add: handle_invocation_def ts_Restart_case_helper
@@ -1007,7 +1031,7 @@ lemma handle_invocation_globals_equiv:
   done
 
 lemma handle_event_globals_equiv:
-  "\<lbrace>invs and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and globals_equiv st\<rbrace>
+  "\<lbrace>invs and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and globals_equiv st and domain_sep_inv irqs st'\<rbrace>
    handle_event ev
    \<lbrace>\<lambda>_. globals_equiv (st :: det_state)\<rbrace>"
   apply (case_tac ev)
@@ -1019,7 +1043,8 @@ lemma handle_event_globals_equiv:
       | wpc
       | simp add: handle_send_def handle_call_def maybe_handle_interrupt_def Let_def
       | wp (once) hoare_drop_imps
-      | clarsimp simp: invs_imps invs_valid_idle ct_active_not_idle)+
+      | clarsimp simp: invs_imps invs_valid_idle ct_active_not_idle
+      | fastforce)+
 
 end
 

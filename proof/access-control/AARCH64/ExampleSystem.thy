@@ -370,6 +370,7 @@ where
     scheduler_action = undefined,
     domain_list = undefined,
     domain_index = undefined,
+    domain_start_index = undefined,
     cur_domain = undefined,
     domain_time = undefined,
     ready_queues = undefined,
@@ -478,12 +479,6 @@ lemma caps1_0x6_well_formed: "well_formed_cnode_n 10 caps1_0x6"
    apply (elim disjE, insert size_bin_to_bl, simp_all)[1]
   apply clarsimp
   done
-
-(* clagged from KernelInit_R *)
-lemma empty_cnode_apply[simp]:
-  "(empty_cnode n xs = Some cap) = (length xs = n \<and> cap = NullCap)"
-  by (auto simp add: empty_cnode_def)
-
 
 lemma s1_caps_of_state :
   "caps_of_state s1 p = Some cap \<Longrightarrow>
@@ -912,6 +907,7 @@ where
     scheduler_action = undefined,
     domain_list = undefined,
     domain_index = undefined,
+    domain_start_index = undefined,
     cur_domain = undefined,
     domain_time = undefined,
     ready_queues = undefined,

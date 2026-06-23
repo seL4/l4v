@@ -174,7 +174,11 @@ where
 
 | "perform_invocation _ _ _ (InvokeTCB i) = invoke_tcb i"
 
-| "perform_invocation _ _ _ (InvokeDomain tptr d) = invoke_domain tptr d"
+| "perform_invocation _ _ _ (InvokeDomain dom_inv) =
+    liftE (do
+      invoke_domain dom_inv;
+      return []
+    od)"
 
 | "perform_invocation _ _ _ (InvokeReply reply grant) =
     liftE (do

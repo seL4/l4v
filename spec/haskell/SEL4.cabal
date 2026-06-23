@@ -81,6 +81,7 @@ Library
                             SEL4.Object.CNode
                             SEL4.Object.Endpoint
                             SEL4.Object.TCB
+                            SEL4.Object.Domain
                             SEL4.Object.Instances
                             SEL4.Object.Structures
                             SEL4.Object.Interrupt
@@ -125,6 +126,7 @@ Library
                             SEL4.Object.Interrupt.ARM
                             SEL4.Object.Instances.ARM
                             SEL4.Object.TCB.ARM
+                            SEL4.Object.Domain.ARM
                             SEL4.Model.StateData.ARM
                             SEL4.Model.PSpace.ARM
                             SEL4.Machine.RegisterSet.ARM
@@ -149,6 +151,7 @@ Library
                             SEL4.Object.Instances.ARM
                             SEL4.Object.VCPU.ARM
                             SEL4.Object.TCB.ARM
+                            SEL4.Object.Domain.ARM
                             SEL4.Model.StateData.ARM
                             SEL4.Model.PSpace.ARM
                             SEL4.Machine.RegisterSet.ARM
@@ -171,6 +174,7 @@ Library
                             SEL4.Object.Instances.X64
                             SEL4.Object.IOPort.X64
                             SEL4.Object.TCB.X64
+                            SEL4.Object.Domain.X64
                             SEL4.Object.FPU.X64
                             SEL4.Model.StateData.X64
                             SEL4.Model.PSpace.X64
@@ -194,6 +198,7 @@ Library
                             SEL4.Object.Interrupt.RISCV64
                             SEL4.Object.Instances.RISCV64
                             SEL4.Object.TCB.RISCV64
+                            SEL4.Object.Domain.RISCV64
                             SEL4.Model.StateData.RISCV64
                             SEL4.Model.PSpace.RISCV64
                             SEL4.Machine.RegisterSet.RISCV64
@@ -217,6 +222,7 @@ Library
                             SEL4.Object.Instances.AARCH64
                             SEL4.Object.VCPU.AARCH64
                             SEL4.Object.TCB.AARCH64
+                            SEL4.Object.Domain.AARCH64
                             SEL4.Object.FPU.AARCH64
                             SEL4.Model.StateData.AARCH64
                             SEL4.Model.PSpace.AARCH64

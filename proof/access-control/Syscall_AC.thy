@@ -27,7 +27,7 @@ definition authorised_invocation ::
        (grant \<longrightarrow> is_subject aag thread) \<and> is_subject aag (fst slot)
                                          \<and> aag_has_auth_to aag Reply thread
    | InvokeTCB i' \<Rightarrow> tcb_inv_wf i' s \<and> authorised_tcb_inv aag i'
-   | InvokeDomain thread slot \<Rightarrow> False
+   | InvokeDomain i' \<Rightarrow> False
    | InvokeCNode i' \<Rightarrow> authorised_cnode_inv aag i' s \<and> is_subject aag (cur_thread s)
                                                      \<and> cnode_inv_auth_derivations i' s
    | InvokeIRQControl i' \<Rightarrow> authorised_irq_ctl_inv aag i'

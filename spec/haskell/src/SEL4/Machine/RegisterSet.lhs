@@ -179,10 +179,10 @@ Time values are always 64 bit, independent of the architecture.
 > type Ticks = Data.Word.Word64
 > type Time = Data.Word.Word64
 
+
 \subsubsection{Miscellaneous}
 
 The "mask" function is a trivial function which, given a number of bits, returns a word with that number of low-order bits set.
 
 > mask :: (Bits w, Num w) => Int -> w
 > mask bits = bit bits - 1
-

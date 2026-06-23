@@ -105,72 +105,31 @@ lemma dmo_machine_op_lift_invs'[wp]:
                   there may be an opportunity to factor most of these out into a separate theory *)
 (* setObject for VCPU invariant preservation *)
 
-lemma setObject_vcpu_cur_domain[wp]:
-  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace>"
-    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+abbreviation (input) (* for use as type constraint for setObject in crunch *)
+  "setObject_vcpu \<equiv> setObject :: _ \<Rightarrow> vcpu \<Rightarrow> _"
 
-lemma setObject_vcpu_ct[wp]:
-  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace>"
-    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+crunch setObject_vcpu
+  for cur_domain[wp]: "\<lambda>s. P (ksCurDomain s)"
+  and ct[wp]: "\<lambda>s. P (ksCurThread s)"
+  and it[wp]: "\<lambda>s. P (ksIdleThread s)"
+  and sched[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  and L1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  and L2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+  and ksInt[wp]: "\<lambda>s. P (ksInterruptState s)"
+  and ksArch[wp]: "\<lambda>s. P (ksArchState s)"
+  and gs[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
+  and maschine_state[wp]: "\<lambda>s. P (ksMachineState s)"
+  and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
+  and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
+  and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (rule: setObject_def wp: updateObject_default_inv
+   wp_del: setObject_it setObject_qsL1 setObject_qsL2)
 
-lemma setObject_vcpu_it[wp]:
-  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace>"
-    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
-
-lemma setObject_vcpu_sched[wp]:
-  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>"
-    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
-
-lemma setObject_vcpu_L1[wp]:
-  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
-    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
-
-lemma setObject_vcpu_L2[wp]:
-  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
-    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
-
-lemma setObject_vcpu_ksInt[wp]:
-  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace>"
-    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
-
-lemma setObject_vcpu_ksArch[wp]:
-  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace>"
-    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
-
-lemma setObject_vcpu_gs[wp]:
-  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace>"
-    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
-
-lemma setObject_vcpu_maschine_state[wp]:
-  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace>"
-    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
-
-lemma setObject_vcpu_ksDomSchedule[wp]:
-  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace>"
-    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
-
-lemma setObject_vcpu_ksDomScheduleIdx[wp]:
-  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
-    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
-
-lemma setObject_vcpu_gsUntypedZeroRanges[wp]:
-  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (gsUntypedZeroRanges s)\<rbrace>"
-    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
-
-
-crunch vcpuEnable, vcpuSave, vcpuDisable, vcpuRestore
+crunch vcpuEnable, vcpuSave, vcpuDisable, vcpuRestore, vcpuSwitch
   for pspace_aligned'[wp]: pspace_aligned'
+  and pspace_distinct'[wp]: pspace_distinct'
   (simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
-
-lemma vcpuSwitch_aligned'[wp]: "\<lbrace>pspace_aligned'\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. pspace_aligned'\<rbrace>"
-  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
-
-crunch vcpuEnable, vcpuSave, vcpuDisable, vcpuRestore
-  for pspace_distinct'[wp]: pspace_distinct'
-  (simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
-
-lemma vcpuSwitch_distinct'[wp]: "\<lbrace>pspace_distinct'\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. pspace_distinct'\<rbrace>"
-  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
 lemma setObject_vcpu_ctes_of[wp]:
   "\<lbrace> \<lambda>s. P (ctes_of s)\<rbrace> setObject p (t :: vcpu) \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
@@ -866,7 +825,7 @@ lemma setVCPU_regs_r_invs_cicd':
                     valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
-                    setObject_typ_at' cur_tcb_lift valid_bitmaps_lift
+                    setObject_typ_at' cur_tcb_lift valid_bitmaps_lift valid_dom_schedule'_lift
                     setVCPU_regs_valid_arch' setVCPU_regs_vcpu_live
               simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
@@ -888,7 +847,7 @@ lemma setVCPU_vgic_invs_cicd':
                     valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
-                    setObject_typ_at' cur_tcb_lift valid_bitmaps_lift
+                    setObject_typ_at' cur_tcb_lift valid_bitmaps_lift valid_dom_schedule'_lift
                     setVCPU_vgic_valid_arch'
               simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
@@ -910,7 +869,7 @@ lemma setVCPU_VPPIMasked_invs_cicd':
                     valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
-                    setObject_typ_at' cur_tcb_lift valid_bitmaps_lift
+                    setObject_typ_at' cur_tcb_lift valid_bitmaps_lift valid_dom_schedule'_lift
                     setVCPU_VPPIMasked_valid_arch'
               simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
@@ -932,7 +891,7 @@ lemma setVCPU_VTimer_invs_cicd':
                     valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
-                    setObject_typ_at' cur_tcb_lift valid_bitmaps_lift
+                    setObject_typ_at' cur_tcb_lift valid_bitmaps_lift valid_dom_schedule'_lift
                     setVCPU_VTimer_valid_arch'
               simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
@@ -1136,7 +1095,7 @@ lemma setVCPU_vgic_invs':
                     valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
-                    setObject_typ_at' cur_tcb_lift valid_bitmaps_lift
+                    setObject_typ_at' cur_tcb_lift valid_bitmaps_lift valid_dom_schedule'_lift
                     setVCPU_vgic_valid_arch'
               simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
@@ -1156,7 +1115,7 @@ lemma setVCPU_regs_invs':
                     valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
-                    setObject_typ_at' cur_tcb_lift valid_bitmaps_lift
+                    setObject_typ_at' cur_tcb_lift valid_bitmaps_lift valid_dom_schedule'_lift
                     setVCPU_regs_valid_arch'
               simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
@@ -1177,7 +1136,7 @@ lemma setVCPU_VPPIMasked_invs':
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
                     setObject_typ_at' cur_tcb_lift valid_bitmaps_lift
-                    setVCPU_VPPIMasked_valid_arch'
+                    setVCPU_VPPIMasked_valid_arch' valid_dom_schedule'_lift
               simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
   apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
@@ -1197,7 +1156,7 @@ lemma setVCPU_VTimer_invs':
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
                     setObject_typ_at' cur_tcb_lift valid_bitmaps_lift
-                    setVCPU_VTimer_valid_arch'
+                    setVCPU_VTimer_valid_arch' valid_dom_schedule'_lift
               simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
   apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
@@ -2448,7 +2407,7 @@ lemma setASIDPool_invs[wp]:
             valid_irq_node_lift
             cur_tcb_lift valid_irq_handlers_lift''
             untyped_ranges_zero_lift
-            updateObject_default_inv valid_bitmaps_lift
+            updateObject_default_inv valid_bitmaps_lift valid_dom_schedule'_lift
           | simp add: cteCaps_of_def
           | rule setObject_ksPSpace_only)+
   apply (clarsimp simp: o_def)
@@ -2503,7 +2462,7 @@ lemma setASIDPool_invs_no_cicd'[wp]:
             valid_irq_node_lift
             cur_tcb_lift valid_irq_handlers_lift''
             untyped_ranges_zero_lift
-            updateObject_default_inv valid_bitmaps_lift
+            updateObject_default_inv valid_bitmaps_lift valid_dom_schedule'_lift
           | simp add: cteCaps_of_def
           | rule setObject_ksPSpace_only)+
   apply (clarsimp simp:  o_def)
@@ -2735,6 +2694,7 @@ lemma setObject_pte_ksDomScheduleIdx [wp]:
 
 crunch storePTE
   for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: setObject_ksPSpace_only updateObject_default_inv)
@@ -2766,7 +2726,7 @@ lemma storePTE_invs[wp]:
   unfolding invs'_def valid_state'_def valid_pspace'_def
   by (wpsimp wp: sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift valid_arch_state_lift'
                  valid_irq_node_lift cur_tcb_lift valid_irq_handlers_lift'' untyped_ranges_zero_lift
-                 valid_bitmaps_lift
+                 valid_bitmaps_lift valid_dom_schedule'_lift
              simp: cteCaps_of_def o_def)
 
 crunch unmapPageTable

@@ -1677,7 +1677,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
                                         (tcbQueued |< (pspace' |> tcb_of'))"
     by (clarsimp simp: valid_sched_pointers_def opt_pred_def opt_map_def)
 
-qed (clarsimp)
+qed
 
 lemma (in delete_locale) delete_ko_wp_at':
   assumes    objs: "ko_wp_at' P p s' \<and> ex_nonz_cap_to' p s'"

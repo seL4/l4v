@@ -311,6 +311,15 @@ translations
  *
  * current_domain:
  *   The currently running domain.
+ *
+ * dom_schedule:
+ *   The domain schedule.
+ *
+ * dom_start:
+ *   The start index in cdl_dom_schedule to resume at when the domain end marker is reached.
+ *
+ * Since scheduling in capDL is fully non-determinist, we do not need to model the current index
+ * in the domain schedule.
  *)
 record cdl_state =
   cdl_arch           :: cdl_arch
@@ -320,6 +329,8 @@ record cdl_state =
   cdl_irq_node       :: "cdl_irq \<Rightarrow> cdl_object_id"
   cdl_asid_table     :: cdl_cap_map
   cdl_current_domain :: domain
+  cdl_dom_schedule   :: "(domain \<times> domain_duration) list"
+  cdl_dom_start      :: nat
 
 (* Return the type of an object. *)
 definition

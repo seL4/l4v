@@ -15,105 +15,115 @@ text \<open>
 \<close>
 
 (* Note: domains in the domain list should also be \<le> maxDomain, but this is not needed right now *)
-definition
-  "valid_domain_list_2 dlist
-     \<equiv> 0 < length dlist
-       \<and> (\<forall>(d, time) \<in> set dlist. 0 < us_to_ticks (time * \<mu>s_in_ms)
-                                  \<and> unat time * unat \<mu>s_in_ms * unat ticks_per_timer_unit
-                                    < unat max_time)"
+definition valid_domain_list_2 :: "nat \<Rightarrow> nat \<Rightarrow> (domain \<times> domain_duration) list \<Rightarrow> bool" where
+  "valid_domain_list_2 start index dlist \<equiv>
+     \<comment> \<open>We need at least two entries in the schedule: One active entry and the reserved domain end
+         marker at the end. Technically this is redundant with the last conjunct in this predicate,
+         but it is convenient to have it spelled out.\<close>
+     1 < length dlist \<and>
+     \<comment> \<open>Time can only be 0 in the end marker.\<close>
+     (\<forall>(d,time) \<in> set dlist. time = 0 \<longrightarrow> d = 0) \<and>
+     start < length dlist \<and>
+     \<comment> \<open>The start must always be a non-end-marker so that the schedule can make progress.\<close>
+     dlist ! start \<noteq> (0,0) \<and>
+     \<comment> \<open>The last entry in the schedule is reserved to always be an end marker.\<close>
+     dlist ! (length dlist - 1) = (0,0) \<and>
+     \<comment> \<open>The current index never gets to the final end marker.\<close>
+     index < length dlist - 1"
 
 abbreviation
   valid_domain_list :: "'z state \<Rightarrow> bool"
 where
-  "valid_domain_list \<equiv> \<lambda>s. valid_domain_list_2 (domain_list s)"
+  "valid_domain_list \<equiv>
+     \<lambda>s. valid_domain_list_2 (domain_start_index s) (domain_index s) (domain_list s)"
 
 lemmas valid_domain_list_def = valid_domain_list_2_def
 
+lemma valid_domain_list_lift:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (domain_list s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (domain_index s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (domain_start_index s)\<rbrace>"
+  shows "f \<lbrace>valid_domain_list\<rbrace>"
+  by (wp_pre, wps assms, wp)
 
 section \<open>Preservation of domain list validity\<close>
 
-crunch
-  schedule_tcb, set_thread_state
- for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
+abbreviation (input) domain_fields ::
+  "(ticks \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> (domain \<times> domain_duration) list \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> bool"
+  where
+  "domain_fields P s \<equiv> P (domain_time s) (domain_index s) (domain_start_index s) (domain_list s)"
+
+abbreviation (input) dlist_fields ::
+  "(nat \<Rightarrow> nat \<Rightarrow> (domain \<times> domain_duration) list \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> bool"
+  where
+  "dlist_fields P s \<equiv> P (domain_index s) (domain_start_index s) (domain_list s)"
+
+lemma valid_domain_list_lift':
+  assumes "\<And>P. f \<lbrace>domain_fields P\<rbrace>"
+  shows "f \<lbrace>valid_domain_list\<rbrace>"
+  by (wp assms)
+
+crunch schedule_tcb, set_thread_state
+  for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps)
 
-(*
-  FIXME: cleanup
-  Many of these could be factored out into the general state_ext class instead, but they will be
-  applied to det_ext lemmas that contain e.g. preemption_point which needs the det_ext work_units,
-  i.e. those will need additional locales, because 'state_ext needs to be interpreted first
-  into ?'state_ext.
-*)
 locale DetSchedDomainTime_AI =
-  assumes finalise_cap_domain_list_inv'[wp]:
-    "\<And>P cap fin. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> arch_finalise_cap cap fin \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  assumes arch_activate_idle_thread_domain_list_inv'[wp]:
-    "\<And>P t. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> arch_activate_idle_thread t \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  assumes arch_switch_to_thread_domain_list_inv'[wp]:
-    "\<And>P t. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  assumes arch_get_sanitise_register_info_domain_list_inv'[wp]:
-    "\<And>P t. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> arch_get_sanitise_register_info t \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  assumes arch_switch_to_idle_thread_domain_list_inv'[wp]:
-    "\<And>P. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  assumes handle_arch_fault_reply_domain_list_inv'[wp]:
-    "\<And>P f t x y. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> handle_arch_fault_reply f t x y \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  assumes init_arch_objects_domain_list_inv'[wp]:
-    "\<And>P t d p n s r. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> init_arch_objects t d p n s r \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  assumes arch_post_modify_registers_domain_list_inv'[wp]:
-    "\<And>P t p. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> arch_post_modify_registers t p \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  assumes arch_invoke_irq_control_domain_list_inv'[wp]:
-    "\<And>P i. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> arch_invoke_irq_control i \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  assumes handle_vm_fault_domain_list_inv'[wp]:
-    "\<And>P t f. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> handle_vm_fault t f \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  assumes prepare_thread_delete_domain_list_inv'[wp]:
-    "\<And>P t. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  assumes arch_activate_idle_thread_domain_time_inv'[wp]:
-    "\<And>P t. arch_activate_idle_thread t \<lbrace>\<lambda>s :: det_state. P (domain_time s)\<rbrace>"
-  assumes arch_switch_to_thread_domain_inv'[wp]:
-    "\<And>P t. arch_switch_to_thread t \<lbrace>\<lambda>s :: det_state. P (domain_time s)\<rbrace>"
-  assumes arch_switch_to_idle_thread_domain_time_inv'[wp]:
-    "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_state. P (domain_time s)\<rbrace>"
-  assumes arch_post_cap_deletion_domain_list_inv'[wp]:
-    "\<And>P ft. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> arch_post_cap_deletion ft \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  assumes arch_invoke_irq_handler_domain_list_inv'[wp]:
-    "\<And>P i. arch_invoke_irq_handler i \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
-  assumes arch_prepare_next_domain_domain_list_inv'[wp]:
-    "\<And>P. arch_prepare_next_domain \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
-  assumes arch_prepare_set_domain_domain_list_inv'[wp]:
-    "\<And>P t d. arch_prepare_set_domain t d \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
-  assumes arch_post_set_flags_domain_list_inv'[wp]:
-    "\<And>P t fs. arch_post_set_flags t fs \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
-  assumes arch_prepare_set_domain_domain_time_inv'[wp]:
-    "\<And>P t d. arch_prepare_set_domain t d \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace>"
-  assumes arch_post_set_flags_domain_time_inv'[wp]:
-    "\<And>P t fs. arch_post_set_flags t fs \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace>"
+  assumes finalise_cap_domain_fields_inv[wp]:
+    "\<And>P cap fin. arch_finalise_cap cap fin \<lbrace>domain_fields P\<rbrace>"
+  assumes arch_activate_idle_thread_domain_fields_inv[wp]:
+    "\<And>P t. arch_activate_idle_thread t \<lbrace>domain_fields P\<rbrace>"
+  assumes arch_switch_to_thread_domain_fields_inv[wp]:
+    "\<And>P t. arch_switch_to_thread t \<lbrace>domain_fields P\<rbrace>"
+  assumes arch_get_sanitise_register_info_domain_fields_inv[wp]:
+    "\<And>P t. arch_get_sanitise_register_info t \<lbrace>domain_fields P\<rbrace>"
+  assumes arch_switch_to_idle_thread_domain_fields_inv[wp]:
+    "\<And>P. arch_switch_to_idle_thread \<lbrace>domain_fields P\<rbrace>"
+  assumes handle_arch_fault_reply_domain_fields_inv[wp]:
+    "\<And>P f t x y. handle_arch_fault_reply f t x y \<lbrace>domain_fields P\<rbrace>"
+  assumes init_arch_objects_domain_fields_inv[wp]:
+    "\<And>P t d p n s r. init_arch_objects t d p n s r \<lbrace>domain_fields P\<rbrace>"
+  assumes arch_post_modify_registers_domain_fields_inv[wp]:
+    "\<And>P t p. arch_post_modify_registers t p \<lbrace>domain_fields P\<rbrace>"
+  assumes arch_invoke_irq_control_domain_fields_inv[wp]:
+    "\<And>P i. arch_invoke_irq_control i \<lbrace>domain_fields P\<rbrace>"
+  assumes handle_vm_fault_domain_fields_inv[wp]:
+    "\<And>P t f. handle_vm_fault t f \<lbrace>domain_fields P\<rbrace>"
+  assumes prepare_thread_delete_domain_fields_inv[wp]:
+    "\<And>P t. prepare_thread_delete t \<lbrace>domain_fields P\<rbrace>"
+  assumes arch_post_cap_deletion_domain_fields_inv[wp]:
+    "\<And>P ft. arch_post_cap_deletion ft \<lbrace>domain_fields P\<rbrace>"
+  assumes arch_invoke_irq_handler_domain_fields_inv[wp]:
+    "\<And>P i. arch_invoke_irq_handler i \<lbrace>domain_fields P\<rbrace>"
+  assumes arch_prepare_next_domain_domain_fields_inv[wp]:
+    "\<And>P. arch_prepare_next_domain \<lbrace>domain_fields P\<rbrace>"
+  assumes arch_prepare_set_domain_domain_fields_inv[wp]:
+    "\<And>P t d. arch_prepare_set_domain t d \<lbrace>domain_fields P\<rbrace>"
+  assumes arch_post_set_flags_domain_fields_inv[wp]:
+    "\<And>P t fs. arch_post_set_flags t fs \<lbrace>domain_fields P\<rbrace>"
 
 crunch update_restart_pc
-  for domain_list[wp]: "\<lambda>s. P (domain_list s)"
-  and domain_time[wp]: "\<lambda>s. P (domain_time s)"
+  for domain_fields[wp]: "domain_fields P"
   (wp: crunch_wps)
 
 locale DetSchedDomainTime_AI_2 = DetSchedDomainTime_AI +
-  assumes handle_hypervisor_fault_domain_list_inv'[wp]:
-    "\<And>P t f. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> handle_hypervisor_fault t f \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  assumes arch_perform_invocation_domain_list_inv'[wp]:
-    "\<And>P i. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> arch_perform_invocation i \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  assumes handle_reserved_irq_domain_list_inv'[wp]:
-    "\<And>P irq. \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  assumes arch_mask_irq_signal_domain_list_inv'[wp]:
-    "\<And>P irq. arch_mask_irq_signal irq \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
-  assumes handle_spurious_irq_domain_time_inv'[wp]:
-    "\<And>P. handle_spurious_irq \<lbrace>\<lambda>s::det_state. P (domain_time s)\<rbrace>"
-  assumes handle_spurious_irq_domain_list_inv'[wp]:
-    "\<And>P. handle_spurious_irq \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
+  assumes handle_hypervisor_fault_domain_fields_invs[wp]:
+    "\<And>P t f. handle_hypervisor_fault t f \<lbrace>domain_fields P\<rbrace>"
+  assumes arch_perform_invocation_domain_fields_invs[wp]:
+    "\<And>P i. arch_perform_invocation i \<lbrace>domain_fields P\<rbrace>"
+  assumes handle_reserved_irq_domain_fields_invs[wp]:
+    "\<And>P irq. handle_reserved_irq irq \<lbrace>domain_fields P\<rbrace>"
+  assumes arch_mask_irq_signal_domain_fields_invs[wp]:
+    "\<And>P irq. arch_mask_irq_signal irq \<lbrace>domain_fields P\<rbrace>"
+  assumes handle_spurious_irq_domain_fields_invs[wp]:
+    "\<And>P. handle_spurious_irq \<lbrace>domain_fields P\<rbrace>"
   assumes handle_spurious_irq_scheduler_action[wp]:
-    "handle_spurious_irq \<lbrace>\<lambda>s::det_state. P (scheduler_action s) \<rbrace>"
+    "\<And>P. handle_spurious_irq \<lbrace>\<lambda>s::det_state. P (scheduler_action s)\<rbrace>"
 
 context DetSchedDomainTime_AI begin
 
-crunch cap_swap_for_delete, empty_slot, get_object, get_cap, tcb_sched_action
-  for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
-  (wp: dxo_wp_weak)
+crunch
+  cap_swap_for_delete, empty_slot, get_object, get_cap, tcb_sched_action
+  for domain_fields_invs[wp]: "domain_fields P"
 
 crunch reply_unlink_tcb, reply_unlink_sc, tcb_sched_action
   for domain_list_inv[wp]:  "\<lambda>s. P (domain_list s)"
@@ -128,15 +138,15 @@ crunch cancel_all_ipc, cancel_all_signals
   (wp: hoare_drop_imps mapM_x_wp' whileLoop_valid_inv)
 
 crunch finalise_cap
-  for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
+  for domain_fields_invs[wp]: "domain_fields P"
   (wp: crunch_wps maybeM_inv dxo_wp_weak select_inv simp: crunch_simps)
 
-lemma rec_del_domain_list[wp]:
-  "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> rec_del call \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
+lemma rec_del_domain_fields_invst[wp]:
+  "rec_del call \<lbrace>domain_fields P\<rbrace>"
   by (wp rec_del_preservation preemption_point_inv' | simp)+
 
 crunch cap_delete, activate_thread
-  for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
+  for domain_fields_invs[wp]: "domain_fields P"
   (wp: hoare_drop_imp)
 
 crunch awaken
@@ -166,7 +176,8 @@ lemma sc_and_timer_domain_list[wp]:
   by (wpsimp simp: sc_and_timer_def Let_def wp: get_sched_context_wp)
 
 crunch schedule
-  for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
+  for domain_list_invs[wp]: "\<lambda>s::det_state. P (domain_list s)"
+  and domain_start_index_inv[wp]: "\<lambda>s::det_state. P (domain_start_index s)"
   (wp: hoare_drop_imp dxo_wp_weak simp: Let_def)
 
 crunch send_signal
@@ -175,17 +186,12 @@ crunch send_signal
 
 end
 
-lemma (in DetSchedDomainTime_AI_2) handle_interrupt_domain_list[wp]:
-  "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> handle_interrupt irq \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
+lemma (in DetSchedDomainTime_AI_2) handle_interrupt_dlist_fields_inv[wp]:
+  "handle_interrupt irq \<lbrace>dlist_fields P\<rbrace>"
   by (wpsimp simp: handle_interrupt_def wp: hoare_vcg_if_lift2 hoare_drop_imp split_del: if_split)
 
-crunch cap_insert
-  for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
-  (wp: hoare_drop_imps)
-
-crunch
-  lookup_cap_and_slot, set_extra_badge
-  for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
+crunch cap_insert, lookup_cap_and_slot, set_extra_badge
+  for domain_fields_invs[wp]: "domain_fields P"
   (wp: hoare_drop_imps)
 
 crunch postpone
@@ -193,8 +199,9 @@ crunch postpone
   (wp: hoare_drop_imps mapM_wp)
 
 context DetSchedDomainTime_AI begin
+
 crunch do_ipc_transfer
-  for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
+  for domain_fields_invs[wp]: "domain_fields P"
   (wp: crunch_wps transfer_caps_loop_pres simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
 lemma reply_push_domain_list_inv[wp]:
@@ -217,18 +224,18 @@ lemma send_fault_ipc_domain_list_inv[wp]:
   by (wpsimp simp: send_fault_ipc_def wp: hoare_drop_imp hoare_vcg_all_lift)
 
 crunch handle_fault
-  for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
+  for domain_fields_invs[wp]: "domain_fields P"
   (wp: mapM_wp hoare_drop_imps maybeM_inv dxo_wp_weak simp: crunch_simps ignore:copy_mrs)
 
 crunch
   reply_from_kernel, create_cap, retype_region, do_reply_transfer
-  for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
+  for domain_fields_invs[wp]: "domain_fields P"
   (wp: hoare_drop_imps maybeM_inv dxo_wp_weak mapM_wp)
 
 end
 
 crunch delete_objects, preemption_point, reset_untyped_cap
-  for domain_list_inv[wp]: "\<lambda>s :: det_state. P (domain_list s)"
+  for domain_fields_invs[wp]: "domain_fields P"
   (wp: crunch_wps mapME_x_inv_wp OR_choiceE_weak_wp simp: detype_def ignore_del: preemption_point)
 
 crunch
@@ -245,9 +252,9 @@ crunch
   (wp: crunch_wps check_cap_inv maybeM_inv simp: Let_def)
 
 crunch invoke_untyped
-  for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
+  for domain_fields_invs[wp]: "domain_fields P"
   (wp: crunch_wps
-    simp: crunch_simps mapM_x_defsym)
+   simp: crunch_simps mapM_x_defsym)
 
 crunch invoke_tcb
  for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
@@ -261,25 +268,26 @@ lemma invoke_sched_context_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> invoke_sched_context i \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   by (wpsimp simp: invoke_sched_context_def)
 
-crunch
-  invoke_domain, invoke_irq_control, invoke_irq_handler
-  for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
+crunch invoke_tcb, invoke_set_domain, invoke_irq_control, invoke_irq_handler
+  for domain_fields_invs[wp]: "domain_fields P"
   (wp: crunch_wps check_cap_inv maybeM_inv)
 
 end
 
 crunch cap_move
-  for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
+  for domain_fields_invs[wp]: "domain_fields P"
 
 context DetSchedDomainTime_AI begin
-lemma cap_revoke_domain_list_inv[wp]:
-  "\<lbrace>\<lambda>s :: det_state. P (domain_list s)\<rbrace> cap_revoke a \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
+
+lemma cap_revoke_domain_fields_invs[wp]:
+  "cap_revoke a \<lbrace>domain_fields P\<rbrace>"
   by (rule cap_revoke_preservation2)
      (wp preemption_point_inv'|simp)+
+
 end
 
 crunch cancel_badged_sends
-  for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
+  for domain_fields_invs[wp]: "domain_fields P"
   (ignore: filterM clearMemory
      simp: filterM_mapM crunch_simps
        wp: crunch_wps)
@@ -301,64 +309,109 @@ lemma handle_spurious_irq_valid_domain[wp]:
   "handle_spurious_irq \<lbrace>\<lambda>s::det_state. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread \<rbrace>"
   by (wp | wps)+
 
-lemma invoke_cnode_domain_list_inv[wp]:
-  "\<lbrace>\<lambda>s :: det_state. P (domain_list s)\<rbrace>
-     invoke_cnode i
-   \<lbrace>\<lambda>rv s. P (domain_list s) \<rbrace>"
-  apply (rule hoare_pre)
-   apply (wp crunch_wps cap_move_src_slot_Null hoare_drop_imps hoare_vcg_all_lift
-          | wpc | simp add: invoke_cnode_def crunch_simps split del: if_split)+
+lemma invoke_cnode_fields_invs[wp]:
+  "invoke_cnode i \<lbrace>domain_fields P\<rbrace>"
+  by (wpsimp wp: crunch_wps cap_move_src_slot_Null hoare_drop_imps hoare_vcg_all_lift
+             simp: invoke_cnode_def crunch_simps
+             split_del: if_split)
+
+crunch handle_recv, handle_yield, handle_reply, handle_vm_fault, check_domain_time
+  for dlist_fields_invs[wp]: "domain_fields P"
+  (wp: crunch_wps simp: crunch_simps)
+
+crunch maybe_handle_interrupt
+  for dlist_fields_invs[wp]: "dlist_fields P"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma domain_set_start_valid_domain_list_inv[wp]:
+  "\<lbrace>valid_domain_list and valid_domain_inv (InvokeDomainScheduleSetStart start)\<rbrace>
+   domain_set_start start
+   \<lbrace>\<lambda>_ s::det_state. valid_domain_list s\<rbrace>"
+  unfolding domain_set_start_def
+  apply (wpsimp wp: valid_domain_list_lift[of reschedule_required])
+  apply (fastforce simp add: valid_domain_inv_def valid_domain_list_def domain_end_marker_def)
   done
 
-lemma perform_invocation_domain_list_inv[wp]:
-  "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>
-  perform_invocation block call can_donate i \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
-  by (cases i; wpsimp)
+lemma domain_schedule_configure_valid_domain_list_inv[wp]:
+  "\<lbrace>valid_domain_list and valid_domain_inv (InvokeDomainScheduleConfigure index domain duration)\<rbrace>
+   domain_schedule_configure index domain duration
+   \<lbrace>\<lambda>_ s::det_state. valid_domain_list s\<rbrace>"
+  unfolding domain_schedule_configure_def
+  apply wpsimp
+  apply (simp add: valid_domain_inv_def valid_domain_list_def domain_end_marker_def)
+  apply (rule conjI; clarsimp)
+   apply (cut_tac set_update_subset_insert)
+   apply fastforce
+  apply (metis nth_list_update_eq nth_list_update_neq snd_conv)
+  done
 
-(*
-crunch perform_invocation
- for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps syscall_valid maybeM_inv simp: crunch_simps ignore: without_preemption)
-*)
-crunch handle_invocation,receive_ipc,receive_signal
- for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
-  (wp: crunch_wps syscall_valid maybeM_inv simp: crunch_simps ignore: without_preemption syscall)
+lemma invoke_domain_valid_domain_list_inv[wp]:
+  "\<lbrace>valid_domain_list and valid_domain_inv di\<rbrace>
+   invoke_domain di
+   \<lbrace>\<lambda>_ s::det_state. valid_domain_list s\<rbrace>"
+  unfolding invoke_domain_def
+  apply (wpsimp wp: valid_domain_list_lift[where f="invoke_set_domain t d" for t d])
+  apply fastforce
+  done
 
-lemma handle_recv_domain_list_inv[wp]:
-  "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>
-  handle_recv is_blocking can_reply \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
-  by (wpsimp simp: handle_recv_def Let_def whenE_def get_sk_obj_ref_def
-        split_del: if_split wp: hoare_drop_imps)
+lemma perform_invocation_valid_domain_list_inv[wp]:
+  "\<lbrace>valid_domain_list and valid_invocation iv\<rbrace>
+   perform_invocation block call iv
+   \<lbrace>\<lambda>_ s::det_state. valid_domain_list s\<rbrace>"
+  by (cases iv; (wpsimp | wp valid_domain_list_lift)+)
 
-crunch
-  handle_yield, handle_call, handle_vm_fault, handle_hypervisor_fault, maybe_handle_interrupt,
-  check_domain_time
-  for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
+
+lemma handle_invocation_valid_domain_list_inv[wp]:
+  "\<lbrace>valid_domain_list and invs\<rbrace>
+   handle_invocation calling blocking
+   \<lbrace>\<lambda>_ s::det_state. valid_domain_list s\<rbrace>"
+proof -
+  have [simp]:
+    "\<And>x P. (\<forall>a b c. x = (a, b, c) \<longrightarrow> P a b c) = P (fst x) (fst (snd x)) (snd (snd x))"
+    by fastforce
+
+  show ?thesis
+    unfolding handle_invocation_def
+    by (wpsimp wp: syscall_valid gts_wp
+        | wp valid_domain_list_lift
+        | wp hoare_vcg_all_liftE_R hoare_drop_impE_R)+
+qed
+
+
+crunch preemption_path
+  for domain_list[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps simp: crunch_simps)
+
+crunch handle_call, handle_send
+  for valid_domain_list_inv[wp]: "\<lambda>s::det_state. valid_domain_list s"
 
 crunch check_budget_restart
  for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (simp: is_round_robin_def wp: hoare_drop_imps)
 
 lemma handle_event_domain_list_inv[wp]:
-  "\<lbrace>\<lambda>s::det_state. P (domain_list s) \<rbrace>
+  "\<lbrace>valid_domain_list and invs\<rbrace>
    handle_event e
-   \<lbrace>\<lambda>_ s::det_state. P (domain_list s) \<rbrace>"
-  apply (cases e, simp_all)
-      apply (rename_tac syscall)
-      apply (case_tac syscall, simp_all add: handle_send_def whenE_def)
-             apply wpsimp+
+   \<lbrace>\<lambda>_ s::det_state. valid_domain_list s\<rbrace>"
+  by (cases e; (wpsimp | wp valid_domain_list_lift)+)
+
+lemma next_domain_valid_domain_list[wp]:
+  "next_domain \<lbrace>\<lambda>s::det_state. valid_domain_list s\<rbrace>"
+  unfolding next_domain_def
+  apply (wpsimp wp: dxo_wp_weak)
+  apply (clarsimp simp: valid_domain_list_def Let_def domain_end_marker_def)
+  using less_Suc_eq
+  apply fastforce
   done
 
-crunch preemption_path
-  for domain_list[wp]: "\<lambda>s::det_state. P (domain_list s)"
-  (wp: crunch_wps simp: crunch_simps)
+crunch schedule
+  for valid_domain_list[wp]: "\<lambda>s::det_state. valid_domain_list s"
+  (wp: crunch_wps)
 
-(* no one modifies domain_list - supplied at compile time *)
 lemma call_kernel_domain_list_inv_det_ext:
-  "\<lbrace> \<lambda>s::det_state. P (domain_list s) \<rbrace>
-     (call_kernel e) :: (unit,det_ext) s_monad
-   \<lbrace>\<lambda>_ s. P (domain_list s) \<rbrace>"
+  "\<lbrace>valid_domain_list and invs\<rbrace>
+   (call_kernel e) :: (unit,det_ext) s_monad
+   \<lbrace>\<lambda>_. valid_domain_list\<rbrace>"
   unfolding call_kernel_def
   by wpsimp
 
@@ -390,13 +443,14 @@ crunch switch_sched_context, sc_and_timer
 
 lemma next_domain_domain_time_left[wp]:
   "\<lbrace>valid_domain_list\<rbrace> next_domain \<lbrace>\<lambda>_ s. 0 < domain_time s \<rbrace>"
-  apply (clarsimp simp: next_domain_def)
-  apply (rule_tac Q'="\<lambda>_ s. 0 < domain_time s" in bind_wp)
-   apply (wpsimp wp: dxo_wp_weak)
-  apply wpsimp
-  apply (clarsimp simp: valid_domain_list_def all_set_conv_all_nth)
-  apply (erule_tac x="Suc (domain_index s) mod length (domain_list s)" in allE)
-  apply clarsimp
+  unfolding next_domain_def Let_def
+  apply (wpsimp wp: dxo_wp_weak)
+  apply (clarsimp simp: valid_domain_list_def all_set_conv_all_nth word_greater_zero_iff
+                         ucast_eq_0 is_up domain_end_marker_def not_le)
+  apply (rule conjI)
+   apply fastforce
+  apply (metis (mono_tags, lifting) less_imp_diff_less linorder_neqE_nat not_less_eq prod.simps(2)
+                                    surjective_pairing)
   done
 
 context DetSchedDomainTime_AI begin
@@ -410,7 +464,7 @@ lemma schedule_choose_new_thread_domain_time_left[wp]:
    schedule_choose_new_thread
    \<lbrace>\<lambda>_ s::det_state. 0 < domain_time s \<rbrace>"
   unfolding schedule_choose_new_thread_def
-  by (wpsimp simp: word_gt_0)
+  by (wpsimp simp: word_gt_0 wp: valid_domain_list_lift)
 
 lemma schedule_domain_time_left:
   "\<lbrace>valid_domain_list\<rbrace>
@@ -429,7 +483,7 @@ lemma schedule_domain_time_left:
   apply (case_tac action; wpsimp wp: hoare_vcg_const_imp_lift hoare_drop_imps)
   done
 
-end
+end (* context DetSchedDomainTime_AI *)
 
 (* FIXME: move to where hoare_drop_imp is, add E/R variants etc *)
 lemma hoare_false_imp:
@@ -448,7 +502,7 @@ lemma call_kernel_domain_time_inv_det_ext:
    \<lbrace>\<lambda>_ s :: det_state. Suc 0 < numDomains \<longrightarrow> 0 < domain_time s\<rbrace>"
   unfolding call_kernel_def
   apply (cases "e = Interrupt"; clarsimp)
-   apply (wpsimp wp: schedule_domain_time_left)
+   apply (wpsimp wp: schedule_domain_time_left valid_domain_list_lift)
   apply (rule_tac Q'="\<lambda>_. valid_domain_list" in bind_wp_fwd)
    apply wpsimp
   apply (wp schedule_domain_time_left without_preemption_wp)

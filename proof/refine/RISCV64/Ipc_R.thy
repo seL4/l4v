@@ -957,9 +957,10 @@ lemma tcts_zero_ranges[wp]:
   apply auto[1]
   done
 
-crunch setExtraBadge, transferCapsToSlots
+crunch transferCapsToSlots, setExtraBadge
   for ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
   and tcbSchedPrevs_of[wp]: "\<lambda>s. P (tcbSchedPrevs_of s)"
@@ -981,7 +982,7 @@ lemma transferCapsToSlots_invs[wp]:
    transferCapsToSlots ep buffer n caps slots mi
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_dom_schedule'_def)
-  apply (wp valid_irq_node_lift valid_bitmaps_lift)
+  apply (wp valid_irq_node_lift valid_dom_schedule'_lift valid_bitmaps_lift)
   apply fastforce
   done
 
@@ -2555,6 +2556,7 @@ crunch replyPush
   and pspace_domain_valid[wp]: pspace_domain_valid
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and valid_dom_schedule'[wp]: valid_dom_schedule'
   and no_0_obj'[wp]: no_0_obj'
@@ -4466,7 +4468,7 @@ lemma setThreadState_nonqueued_state_update:
    setThreadState st t
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_dom_schedule'_def)
-  apply (rule hoare_pre, wp valid_irq_node_lift setThreadState_not_queued_valid_sched_pointers')
+  apply (wp valid_irq_node_lift setThreadState_not_queued_valid_sched_pointers' valid_dom_schedule'_lift)
   apply (clarsimp simp: valid_pspace'_def)
   apply (clarsimp simp: pred_tcb_at' pred_tcb_at'_eq_commute)
   apply (intro conjI impI allI)
@@ -6535,7 +6537,7 @@ lemma ri_invs' [wp]:
      apply (case_tac "epState ep"; clarsimp)
        apply (find_goal \<open>match premises in "epState _ = IdleEPState" \<Rightarrow> -\<close>)
        apply (clarsimp simp: receiveIPCBlocked_def)
-       apply (wpsimp wp: completeSignal_invs' tcbEPAppend_invs'
+       apply (wpsimp wp: completeSignal_invs' tcbEPAppend_invs' valid_dom_schedule'_lift
                          setThreadState_BlockedOnReceive_invs' maybeReturnSc_invs'
                          updateReply_replyTCB_invs' inIPCQueueThreadState_sched_flag_set
                          getNotification_wp gbn_wp' hoare_vcg_all_lift hoare_vcg_const_imp_lift
@@ -6545,7 +6547,7 @@ lemma ri_invs' [wp]:
       apply (find_goal \<open>match premises in "epState _ = ReceiveEPState" \<Rightarrow> -\<close>)
       apply (clarsimp simp: receiveIPCBlocked_def)
       apply (wpsimp wp: completeSignal_invs' tcbEPAppend_invs' setThreadState_BlockedOnReceive_invs'
-                        maybeReturnSc_invs' updateReply_replyTCB_invs'
+                        maybeReturnSc_invs' updateReply_replyTCB_invs' valid_dom_schedule'_lift
                         inIPCQueueThreadState_sched_flag_set getNotification_wp gbn_wp'
                         hoare_vcg_all_lift hoare_vcg_const_imp_lift
                   simp: receiveIPCBlocked_def if_fun_split
