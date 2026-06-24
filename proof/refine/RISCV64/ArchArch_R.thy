@@ -4,12 +4,10 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(*
-  Top level architecture related proofs.
-*)
+(* Top level architecture related proofs *)
 
-theory Arch_R
-imports ArchUntyped_R ArchFinalise_R
+theory ArchArch_R
+imports Arch_R
 begin
 
 unbundle l4v_word_context
