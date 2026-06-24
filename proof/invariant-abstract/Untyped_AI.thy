@@ -2618,10 +2618,6 @@ crunch delete_objects
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (simp: detype_def)
 
-lemma ct_in_state_trans_state[simp]:
-  "ct_in_state P (trans_state a s) = ct_in_state P s"
-  by (simp add: ct_in_state_def)
-
 lemmas unat_of_nat_word_bits
   = unat_of_nat_eq[where 'a = machine_word_len, unfolded word_bits_len_of, simplified]
 

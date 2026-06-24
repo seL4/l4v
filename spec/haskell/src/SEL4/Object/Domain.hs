@@ -14,7 +14,7 @@ module SEL4.Object.Domain (
     ) where
 
 import Prelude hiding (Word)
-import SEL4.Config (numDomains)
+import SEL4.Config
 import SEL4.API.Types
 import SEL4.API.Failures
 import SEL4.API.Invocation
@@ -81,7 +81,7 @@ decodeDomainSet args extraCaps = do
 
 decodeDomainConfigure :: [Word] -> [(Capability, PPtr CTE)] -> KernelF SyscallError DomainInvocation
 decodeDomainConfigure args extraCaps = do
-    when (length args < 2 + timeArgLen) $ throw TruncatedMessage
+    when (length args < 2 + timeArgSize) $ throw TruncatedMessage
     index <- return $ fromIntegral $ args !! 0
     domain <- return $ args !! 1
     duration <- return $ parseTimeArg 2 args

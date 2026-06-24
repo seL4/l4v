@@ -20,7 +20,7 @@ crunch
   arch_post_modify_registers, arch_post_cap_deletion,
   arch_invoke_irq_handler, arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags
   for domain_fields_invs[wp, DetSchedDomainTime_AI_assms]: "domain_fields P"
-  (wp: crunch_wps)
+  (simp: crunch_simps)
 
 declare init_arch_objects_exst[DetSchedDomainTime_AI_assms]
         arch_get_sanitise_register_info_inv[DetSchedDomainTime_AI_assms]
@@ -42,6 +42,9 @@ crunch arch_perform_invocation
 crunch handle_reserved_irq, arch_mask_irq_signal, handle_spurious_irq
   for domain_fields_invs[wp, DetSchedDomainTime_AI_assms]: "domain_fields P"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps)
+
+crunch handle_spurious_irq
+  for scheduler_action[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (scheduler_action s)"
 
 end
 

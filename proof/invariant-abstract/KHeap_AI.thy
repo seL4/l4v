@@ -1021,9 +1021,8 @@ lemma invs_domain_start_index_update[simp]:
 
 lemma invs_domain_index_update[simp]:
   "invs (domain_index_update f s) = invs s"
-  unfolding invs_def cur_tcb_def valid_state_def valid_mdb_def mdb_cte_at_def valid_irq_states_def
-            valid_machine_state_def valid_ioc_def cur_sc_tcb_def
-  by simp
+  by (simp add: invs_def cur_tcb_def valid_state_def valid_mdb_def valid_irq_states_def
+                valid_irq_masks_def valid_ioc_def mdb_cte_at_def valid_machine_state_def)
 
 lemma invs_exst [iff]:
   "invs (trans_state f s) = invs s"

@@ -1583,13 +1583,6 @@ lemma setObject_valid_objs':
 
 lemmas setObject_valid_reply' = setObject.typ_at_lifts_all'(26)
 
-lemma valid_dom_schedule'_lift:
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ksDomScheduleStart s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
-  shows "f \<lbrace>valid_dom_schedule'\<rbrace>"
-  by (wps assms | wp assms)+
-
 
 locale pspace_only' =
   fixes f :: "'a kernel"
@@ -1600,16 +1593,15 @@ lemma it[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace>"
   and ksIdleSC[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksIdleSC s)\<rbrace>"
   and ct[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace>"
   and cur_domain[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace>"
-  and ksDomSchedule[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace>"
   and l1Bitmap[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
   and l2Bitmap[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
   and gsUserPages[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (gsUserPages s)\<rbrace>"
   and gsCNodes[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (gsCNodes s)\<rbrace>"
   and gsUntypedZeroRanges[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (gsUntypedZeroRanges s)\<rbrace>"
   and gsMaxObjectSize[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace>"
-  and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
+  and ksDomSchedule[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace>"
   and ksDomScheduleIdx[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
-  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
+  and ksDomScheduleStart[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksDomScheduleStart s)\<rbrace>"
   and ksDomainTime[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace>"
   and ksReadyQueues[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace>"
   and ksReleaseQueue[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (ksReleaseQueue s)\<rbrace>"
@@ -2655,10 +2647,6 @@ lemma sym_ref_replyTCB_Receive_or_Reply:
 (* cross lemmas *)
 
 context begin interpretation Arch . (*FIXME: arch-split RT*)
-
-lemma valid_domain_list_cross:
-  "\<lbrakk>valid_domain_list s; (s, s') \<in> state_relation\<rbrakk> \<Longrightarrow> valid_domain_list' s'"
-  by (clarsimp simp: state_relation_def)
 
 lemma pspace_aligned_cross:
   "\<lbrakk> pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> pspace_aligned' s'"

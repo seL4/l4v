@@ -3906,21 +3906,22 @@ lemma valid_irq_node_arch_state_updates[simp]:
   "\<And>f. valid_irq_node (arch_state_update f s) = valid_irq_node s"
   by (simp add: valid_irq_node_def)
 
-lemma ct_in_state_ready_queues_update[simp]:
-  "ct_in_state P (ready_queues_update f s) = ct_in_state P s"
-  by (simp add: ct_in_state_def)
-
-lemma ct_in_state_release_queue_update[simp]:
-  "ct_in_state P (release_queue_update f s) = ct_in_state P s"
-  by (simp add: ct_in_state_def)
-
-lemma ct_in_state_is_original_cap_update[simp]:
-  "ct_in_state P (is_original_cap_update f s) = ct_in_state P s"
-  by (clarsimp simp: ct_in_state_def)
-
-lemma ct_in_state_cdt_update[simp]:
-  "ct_in_state P (cdt_update f s) = ct_in_state P s"
-  by (clarsimp simp: ct_in_state_def)
+lemma ct_in_state_simps[simp]:
+  "\<And>f. ct_in_state P (ready_queues_update f s) = ct_in_state P s"
+  "\<And>f. ct_in_state P (release_queue_update f s) = ct_in_state P s"
+  "\<And>f. ct_in_state P (is_original_cap_update f s) = ct_in_state P s"
+  "\<And>f. ct_in_state P (cdt_update f s) = ct_in_state P s"
+  "\<And>f. ct_in_state P (reprogram_timer_update f s) = ct_in_state P s"
+  "\<And>f. ct_in_state P (consumed_time_update f s) = ct_in_state P s"
+  "\<And>f. ct_in_state P (cur_time_update f s) = ct_in_state P s"
+  "\<And>f. ct_in_state P (cur_sc_update f s) = ct_in_state P s"
+  "\<And>f. ct_in_state P (scheduler_action_update f s) = ct_in_state P s"
+  "\<And>f. ct_in_state P (domain_list_update f s) = ct_in_state P s"
+  "\<And>f. ct_in_state P (domain_index_update f s) = ct_in_state P s"
+  "\<And>f. ct_in_state P (domain_start_index_update f s) = ct_in_state P s"
+  "\<And>f. ct_in_state P (domain_time_update f s) = ct_in_state P s"
+  "\<And>f. ct_in_state P (trans_state f s) = ct_in_state P s"
+  by (simp_all add: ct_in_state_def)
 
 lemma ct_in_state_thread_state_lift':
   assumes ct: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
@@ -4170,6 +4171,9 @@ lemma cur_sc_tcb_simps[simp]:
   "\<And>f. cur_sc_tcb (trans_state f s) = cur_sc_tcb s"
   "\<And>f. cur_sc_tcb (ready_queues_update f s) = cur_sc_tcb s"
   "\<And>f. cur_sc_tcb (domain_time_update f s) = cur_sc_tcb s"
+  "\<And>f. cur_sc_tcb (domain_list_update f s) = cur_sc_tcb s"
+  "\<And>f. cur_sc_tcb (domain_start_index_update f s) = cur_sc_tcb s"
+  "\<And>f. cur_sc_tcb (domain_index_update f s) = cur_sc_tcb s"
   by (simp_all add: cur_sc_tcb_def sc_tcb_sc_at_def)
 
 lemma invs_valid_global_objs[elim!]:

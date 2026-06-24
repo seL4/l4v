@@ -113,17 +113,14 @@ lemma activate_invs':
 
 declare not_psubset_eq[dest!]
 
-crunch schedContextResume
-  for tcb_at'[wp]: "\<lambda>s. P (tcb_at' t s)"
-  (wp: crunch_wps)
-
 lemma setThreadState_Restart_invs':
   "\<lbrace>\<lambda>s. invs' s
         \<and> st_tcb_at' (Not \<circ> is_BlockedOnReply) t s \<and> st_tcb_at' (Not \<circ> inIPCQueueThreadState) t s\<rbrace>
    setThreadState Restart t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_dom_schedule'_def)
-  apply (wpsimp wp: setThreadState_not_queued_valid_sched_pointers' simp: pred_tcb_at'_eq_commute)
+  apply (simp add: invs'_def)
+  apply (wpsimp wp: setThreadState_not_queued_valid_sched_pointers' valid_dom_schedule'_lift
+              simp: pred_tcb_at'_eq_commute)
   apply (auto simp: pred_tcb_at'_def obj_at'_def)
   done
 
@@ -660,6 +657,7 @@ crunch threadSetPriority
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
@@ -696,9 +694,9 @@ lemma threadSetPriority_invs':
   "\<lbrace>invs' and K (p \<le> maxPriority)\<rbrace>
    threadSetPriority t p
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_pspace'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
-                    untyped_ranges_zero_lift valid_replies'_lift
+                    untyped_ranges_zero_lift valid_replies'_lift valid_dom_schedule'_lift
               simp: cteCaps_of_def o_def)
   done
 
@@ -2730,15 +2728,15 @@ lemma schedContextBindTCB_invs':
      apply (wp hoare_drop_imps)
     apply (wpsimp wp: hoare_vcg_imp_lift' simp: ifCondRefillUnblockCheck_def)
    apply (rule_tac Q'="\<lambda>_ s. invs' s" in hoare_strengthen_post[rotated], simp)
-   apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
+   apply (simp add: invs'_def valid_pspace'_def)
    apply (wp threadSet_valid_objs' threadSet_mdb'
              threadSet_cap_to threadSet_ifunsafe'T threadSet_ctes_ofT
-             untyped_ranges_zero_lift valid_irq_node_lift
+             untyped_ranges_zero_lift valid_irq_node_lift valid_dom_schedule'_lift
              valid_irq_handlers_lift'' hoare_vcg_const_imp_lift hoare_vcg_imp_lift'
              threadSet_valid_replies' threadSet_valid_sched_pointers threadSet_field_inv
              sym_heap_sched_pointers_lift hoare_vcg_all_lift hoare_vcg_imp_lift'
           | clarsimp simp: tcb_cte_cases_def cteCaps_of_def cteSizeBits_def)+
-  apply (clarsimp simp: invs'_def valid_pspace'_def valid_dom_schedule'_def)
+  apply (clarsimp simp: invs'_def valid_pspace'_def)
   by (fastforce simp: pred_tcb_at'_def obj_at'_def
                       objBits_def objBitsKO_def valid_tcb'_def tcb_cte_cases_def comp_def
                       valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def
@@ -2905,7 +2903,7 @@ lemma tcbBoundNotification_caps_safe[simp]:
 
 lemma bindNotification_invs':
   "\<lbrace>invs' and tcb_at' tcbPtr\<rbrace> bindNotification tcbPtr ntfnPtr \<lbrace>\<lambda>_. invs'\<rbrace>"
-  unfolding bindNotification_def updateNotification_def invs'_def valid_dom_schedule'_def bind_assoc
+  unfolding bindNotification_def updateNotification_def invs'_def bind_assoc
   apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (wpsimp wp: set_ntfn_valid_pspace' valid_irq_node_lift
                     valid_bound_ntfn_lift untyped_ranges_zero_lift valid_dom_schedule'_lift

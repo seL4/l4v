@@ -199,6 +199,11 @@ lemma fst_snd_pairI:
   "\<lbrakk> fst p = x; snd p = y \<rbrakk> \<Longrightarrow> p = (x, y)"
   by auto
 
+(* FIXME: move *)
+lemma timeArgSize_TIME_ARG_SIZE[simp]:
+  "timeArgSize = TIME_ARG_SIZE"
+  by (clarsimp simp: TIME_ARG_SIZE_def timeArgSize_def wordBits_word_bits)
+
 lemma decodeDomainConfigure_corres[corres]:
   "args' = args \<Longrightarrow>
    corres (ser \<oplus> domaininv_relation) \<top> \<top>
@@ -492,24 +497,35 @@ lemma domainSet_corres[corres]:
           (invs' and sch_act_simple and tcb_at' t' and K (d' \<le> maxDomain))
           (invoke_set_domain t d) (domainSet t' d')"
   unfolding invoke_set_domain_def domainSet_def
-  by (simp, corres corres: setDomain_corres; fastforce)
+  by (simp, corres corres: setDomain_corres; fastforce dest: invs_sym_refs valid_sched_valid_ready_qs)
 
 lemma gets_comp_eq_return: (* FIXME dom: move to Monads *)
   "gets (f \<circ> g) = do x \<leftarrow> gets g; return (f x) od"
   by monad_eq
 
+(*FIXME: move into update_valid_tcb*)
+lemma update_valid_tcb2[simp]:
+  "\<And>f. valid_tcb ptr tcb (domain_index_update f s) = valid_tcb ptr tcb s"
+  "\<And>f. valid_tcb ptr tcb (domain_start_index_update f s) = valid_tcb ptr tcb s"
+  "\<And>f. valid_tcb ptr tcb (domain_time_update f s) = valid_tcb ptr tcb s"
+  by (auto simp: valid_tcb_def valid_tcb_state_def valid_bound_obj_def valid_arch_tcb_def
+          split: Structures_A.thread_state.splits option.splits)
+
 lemma domainSetStart_corres[corres]:
   "\<lbrakk> i' = i \<rbrakk> \<Longrightarrow>
    corres dc
-          (weak_valid_sched_action and in_correct_ready_q and ready_qs_distinct and
-           pspace_aligned and pspace_distinct)
+          (ep_queues_blocked and ntfn_queues_blocked and valid_tcbs and weak_valid_sched_action
+           and pspace_aligned and pspace_distinct and active_scs_valid and in_correct_ready_q
+           and ready_or_release  and ready_qs_distinct and ready_queues_runnable)
           (sym_heap_sched_pointers and valid_sched_pointers and valid_tcbs')
           (domain_set_start i) (domainSetStart i')"
   unfolding domain_set_start_def domainSetStart_def
   apply (corres corres: corres_modify_tivial rescheduleRequired_corres
                 simp: gets_comp_eq_return
                 term_simp: state_relation_def cdt_relation_def)
-   apply (simp add: ready_qs_distinct_def)
+  (*FIXME: add domain_index, domain_start_index and domain_time to update lemmas*)
+   apply (simp add: ready_qs_distinct_def ep_queues_blocked_def ntfn_queues_blocked_def
+                    in_correct_ready_q_def ready_queues_runnable_def valid_tcbs_def)
   apply clarsimp
   done
 
@@ -530,7 +546,7 @@ lemma invokeDomain_corres[corres]:
           (invoke_domain di) (invokeDomain di')"
   unfolding invoke_domain_def invokeDomain_def domaininv_relation_def
   apply (corres_cases_both; (is_corres, corres)?)
-   apply (fastforce simp: valid_domain_inv_def valid_sched_def valid_sched_action_def)
+   apply (fastforce simp: valid_domain_inv_def valid_sched_def valid_sched_action_def dest: invs_sym_refs)
   apply (fastforce simp: valid_domain_inv'_def)
   done
 
@@ -606,6 +622,7 @@ lemma performInvocation_corres:
         apply (clarsimp simp: liftE_bind_return_bindE_returnOk)
         apply corres
        \<comment> \<open>SchedContext\<close>
+       apply clarsimp
        apply (corres corres: invokeSchedContext_corres)
       \<comment> \<open>SchedControl\<close>
       apply clarsimp
@@ -624,7 +641,7 @@ lemma performInvocation_corres:
           apply (rule corres_trivial, simp add: returnOk_def)
          apply wp+
        apply (clarsimp+)[2]
-     apply (clarsimp simp: sym_refs_asrt_def)
+     apply clarsimp
     apply (clarsimp simp: liftME_def[symmetric] o_def dc_def[symmetric])
     apply (rule corres_guard_imp, rule performIRQControl_corres; fastforce)
    apply (clarsimp simp: liftME_def[symmetric] o_def dc_def[symmetric])
@@ -670,13 +687,17 @@ global_interpretation invokeSchedControlConfigureFlags: typ_at_all_props' "invok
 global_interpretation handleFault: typ_at_all_props' "handleFault t ex"
   by typ_at_props'
 
+crunch invokeDomain
+  for tcb_at'[wp]: "tcb_at' tptr"
+  (simp: crunch_simps)
+
 lemma pinv_tcb'[wp]:
   "\<lbrace>invs' and st_tcb_at' active' tptr
           and valid_invocation' i and ct_active'\<rbrace>
      RetypeDecls_H.performInvocation block call can_donate i
    \<lbrace>\<lambda>rv. tcb_at' tptr\<rbrace>"
   unfolding performInvocation_def
-  by (cases i; simp; wpsimp wp: invokeArch_tcb_at' simp: stateAssertE_def sym_refs_asrt_def)
+  by (cases i; simp; wpsimp wp: invokeArch_tcb_at' simp: stateAssertE_def)
 
 lemma sts_mcpriority_tcb_at'[wp]:
   "\<lbrace>mcpriority_tcb_at' P t\<rbrace>
@@ -701,7 +722,8 @@ lemma sts_valid_inv'[wp]:
   supply opt_mapE[elim!]
   apply (case_tac i; simp)
              apply (wpsimp wp: sts_valid_untyped_inv')
-            apply (wpsimp+)[4]
+            apply (wpsimp+)[3]
+         apply (rename_tac dom_inv, case_tac dom_inv; wpsimp simp: valid_domain_inv'_def)
         \<comment>\<open>start InvokeTCB\<close>
         apply (rename_tac tcbinvocation)
         apply (case_tac tcbinvocation; simp)
@@ -764,8 +786,8 @@ lemma decodeDomainSetStart_inv_wf[wp]:
 lemma decodeDomainConfigure_inv_wf[wp]:
   "\<lbrace>\<top>\<rbrace> decodeDomainConfigure args excaps \<lbrace>valid_domain_inv'\<rbrace>, -"
   unfolding decodeDomainConfigure_def
-  apply (wpsimp simp: valid_domain_inv'_def split_del: if_split)
-  apply (clarsimp simp: not_less not_le le_maxDomain_eq_less_numDomains unat_ucast)
+  apply (wpsimp split_del: if_split)
+  apply (clarsimp simp: valid_domain_inv'_def not_less not_le le_maxDomain_eq_less_numDomains unat_ucast)
   using numDomains_fits_domainBits
   apply (simp add: domainBits_def)
   done
@@ -1018,13 +1040,13 @@ lemma contextYieldToUpdateQueues_invs'_helper:
    od
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding updateSchedContext_def
-  apply (clarsimp simp: invs'_def valid_pspace'_def valid_dom_schedule'_def)
+  apply (clarsimp simp: invs'_def valid_pspace'_def)
   apply (wp threadSet_valid_objs' threadSet_mdb' threadSet_cap_to
             threadSet_ifunsafe'T threadSet_ctes_ofT threadSet_valid_sched_pointers
             sym_heap_sched_pointers_lift threadSet_field_inv
             untyped_ranges_zero_lift valid_irq_node_lift valid_irq_handlers_lift''
             hoare_vcg_const_imp_lift hoare_vcg_imp_lift' threadSet_valid_replies'
-            hoare_vcg_all_lift
+            hoare_vcg_all_lift valid_dom_schedule'_lift
          | clarsimp simp: tcb_cte_cases_def cteSizeBits_def cteCaps_of_def)+
   apply normalise_obj_at'
   apply (frule (1) sc_ko_at_valid_objs_valid_sc')
@@ -1116,7 +1138,7 @@ lemma setDomain_invs':
   apply (wpsimp wp: getSchedulable_wp hoare_vcg_if_lift2 valid_dom_schedule'_lift)
      apply (rule_tac Q'="\<lambda>_. invs'" in hoare_post_imp)
       apply fastforce
-     apply (wpsimp wp: threadSet_tcbDomain_update_invs')+
+     apply (wpsimp wp: threadSet_tcbDomain_update_invs' simp: valid_domain_inv'_def)+
   done
 
 crunch refillNew, refillUpdate, commitTime
@@ -1166,7 +1188,7 @@ lemma domainSetStart_invs[wp]:
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding domainSetStart_def
   apply wpsimp
-  apply (clarsimp simp: valid_domain_inv'_def invs'_def valid_state'_def valid_machine_state'_def
+  apply (clarsimp simp: valid_domain_inv'_def invs'_def valid_machine_state'_def
                         ct_not_inQ_def ct_idle_or_in_cur_domain'_def cur_tcb'_def
                         tcb_in_cur_domain'_def)
   apply (fastforce simp: valid_dom_schedule'_def domainEndMarker_def)
@@ -1186,7 +1208,7 @@ lemma domainScheduleConfigure_invs[wp]:
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding domainScheduleConfigure_def
   apply wpsimp
-  apply (clarsimp simp: valid_domain_inv'_def invs'_def valid_state'_def valid_machine_state'_def
+  apply (clarsimp simp: valid_domain_inv'_def invs'_def valid_machine_state'_def
                         ct_not_inQ_def ct_idle_or_in_cur_domain'_def cur_tcb'_def
                         tcb_in_cur_domain'_def valid_dom_schedule'_update)
   done
@@ -1201,7 +1223,7 @@ lemma invokeDomain_invs[wp]:
   done
 
 lemma performInv_invs'[wp]:
-  "\<lbrace>invs' and ct_active' and valid_invocation' i\<rbrace>
+  "\<lbrace>invs' and sch_act_simple and ct_active' and valid_invocation' i\<rbrace>
    performInvocation block call can_donate i
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (clarsimp simp: performInvocation_def)
@@ -1571,7 +1593,9 @@ lemma rfk_ksQ[wp]:
   done
 
 lemma handleInvocation_invs'[wp]:
-  "handleInvocation calling blocking can_donate first_phase cptr \<lbrace>invs'\<rbrace>"
+  "\<lbrace>invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
+   handleInvocation calling blocking can_donate first_phase cptr
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
   supply if_split[split del]
   apply (simp add: handleInvocation_def split_def
                    ts_Restart_case_helper' ct_not_inQ_asrt_def)
@@ -1585,8 +1609,8 @@ lemma handleInvocation_invs'[wp]:
           apply (fastforce elim!: pred_tcb'_weakenE st_tcb_ex_cap''
                            split: if_split)
          apply wp+
-        apply (rule_tac Q'="\<lambda>_. invs'
-                                and valid_invocation' rv
+        apply (rule_tac Q'="\<lambda>_. invs' and valid_invocation' rv
+                                and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
                                 and (\<lambda>s. ksCurThread s = thread)
                                 and st_tcb_at' active' thread"
                      in hoare_post_imp)
@@ -2484,7 +2508,7 @@ lemma invs'_ksCurTime_update[iff]:
   by (clarsimp simp: invs'_def valid_pspace'_def valid_mdb'_def
                      valid_bitmapQ_def bitmapQ_def bitmapQ_no_L2_orphans_def
                      bitmapQ_no_L1_orphans_def valid_irq_node'_def valid_machine_state'_def
-                     valid_dom_schedule'_def valid_bitmaps_def)
+                     valid_bitmaps_def)
 
 lemma schedulable'_ksDomainTime_update[simp]:
   "schedulable' t (ksDomainTime_update f s) = schedulable' t s"

@@ -51,6 +51,10 @@ lemma valid_bound_ntfn_update'[iff]:
   "valid_bound_ntfn' ntfn (f s) = valid_bound_ntfn' ntfn s"
   by (simp add: valid_bound_ntfn'_def split: option.splits)
 
+lemma valid_bound_sc_update'[iff]:
+  "valid_bound_sc' sc (f s) = valid_bound_sc' sc s"
+  by (simp add: valid_bound_sc'_def split: option.splits)
+
 lemma opt_tcb_at'_update'[iff]:
   "opt_tcb_at' t (f s) = opt_tcb_at' t s"
   by (simp add: none_top_fun_update_eq)
@@ -119,7 +123,7 @@ proof -
     apply (simp_all add: invs'_def cur_tcb'_def ct_in_state'_def
                          ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
                          valid_bitmaps_def bitmapQ_defs
-                         vms ct_not_inQ_def valid_dom_schedule'_def mask
+                         vms ct_not_inQ_def mask
                    cong: option.case_cong)
     done
 qed
@@ -166,15 +170,10 @@ lemma (in Arch) valid_arch_tcb'_ksMachineState_update:
 requalify_facts Arch.valid_arch_tcb'_ksMachineState_update
 declare valid_arch_tcb'_ksMachineState_update[simp]
 
-lemma valid_tcb'_ksMachineState_update[simp]:
-  "valid_tcb' tcb (ksMachineState_update f s) = valid_tcb' tcb s"
-  by (auto simp: valid_tcb'_def valid_bound_obj'_def
-          split: option.splits thread_state.splits)
-
 lemma invs'_wu[simp]:
   "invs' (ksWorkUnitsCompleted_update f s) = invs' s"
   apply (simp add: invs'_def valid_bitmaps_def valid_sched_pointers_def valid_irq_node'_def
-                   valid_machine_state'_def bitmapQ_defs valid_dom_schedule'_def)
+                   valid_machine_state'_def bitmapQ_defs)
   done
 
 lemma if_unsafe_then_cap_arch'[simp]:
@@ -465,15 +464,15 @@ lemma ct_not_inQ_update_stt[simp]:
 
 lemma ksDomainTime_invs[simp]:
   "invs' (ksDomainTime_update f s) = invs' s"
-  by (simp add: invs'_def valid_machine_state'_def valid_dom_schedule'_def)
+  by (simp add: invs'_def valid_machine_state'_def)
 
 lemma ksSchedulerAction_invs'[simp]:
   "invs' (ksSchedulerAction_update f s) = invs' s"
-  by (auto simp: invs'_def valid_machine_state'_def  valid_irq_node'_def valid_dom_schedule'_def)
+  by (auto simp: invs'_def valid_machine_state'_def  valid_irq_node'_def)
 
 lemma invs'_update_cnt[elim!]:
   "invs' s \<Longrightarrow> invs' (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>)"
-  by (auto simp: invs'_def valid_dom_schedule'_def valid_irq_node'_def)
+  by (auto simp: invs'_def valid_irq_node'_def)
 
 lemma ksReprogramTimer_update_misc[simp]:
   "\<And>f. valid_machine_state' (ksReprogramTimer_update f s) = valid_machine_state' s"
@@ -591,16 +590,14 @@ lemma invs'_gsCNodes_update[simp]:
   "invs' (gsCNodes_update f s') = invs' s'"
   apply (clarsimp simp: invs'_def valid_bitmaps_def bitmapQ_defs
                         valid_irq_node'_def valid_irq_handlers'_def
-                        irq_issued'_def irqs_masked'_def valid_machine_state'_def
-                        valid_dom_schedule'_def)
+                        irq_issued'_def irqs_masked'_def valid_machine_state'_def)
   done
 
 lemma invs'_gsUserPages_update[simp]:
   "invs' (gsUserPages_update f s') = invs' s'"
   apply (clarsimp simp: invs'_def valid_bitmaps_def bitmapQ_defs
                         valid_irq_node'_def valid_irq_handlers'_def
-                        irq_issued'_def irqs_masked'_def valid_machine_state'_def
-                        valid_dom_schedule'_def)
+                        irq_issued'_def irqs_masked'_def valid_machine_state'_def)
   done
 
 end

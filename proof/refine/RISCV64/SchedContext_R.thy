@@ -58,8 +58,8 @@ lemma setSchedContext_invs':
   "\<lbrace>invs' and valid_sched_context' sc and (\<lambda>_. valid_sched_context_size' sc)\<rbrace>
    setSchedContext scPtr sc
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_dom_schedule'_def)
-  apply (wpsimp wp: untyped_ranges_zero_lift sym_heap_sched_pointers_lift
+  apply (simp add: invs'_def)
+  apply (wpsimp wp: untyped_ranges_zero_lift sym_heap_sched_pointers_lift valid_dom_schedule'_lift
               simp: cteCaps_of_def o_def)
   done
 
@@ -178,6 +178,7 @@ crunch schedContextUpdateConsumed
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
@@ -231,9 +232,10 @@ lemma schedContextUpdateConsumed_if_unsafe_then_cap'[wp]:
 
 lemma schedContextUpdateConsumed_invs'[wp]:
   "schedContextUpdateConsumed scPtr \<lbrace>invs'\<rbrace>"
-  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_pspace'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift cur_tcb_lift
                     untyped_ranges_zero_lift sym_heap_sched_pointers_lift valid_bitmaps_lift
+                    valid_dom_schedule'_lift
               simp: cteCaps_of_def o_def)
   done
 
@@ -294,6 +296,7 @@ crunch schedContextCancelYieldTo
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
@@ -322,9 +325,10 @@ global_interpretation schedContextCancelYieldTo: typ_at_all_props' "schedContext
 
 lemma schedContextCancelYieldTo_invs':
   "schedContextCancelYieldTo t \<lbrace>invs'\<rbrace>"
-  apply (simp add: invs'_def valid_pspace'_def setSchedContext_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_pspace'_def setSchedContext_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
                     untyped_ranges_zero_lift sym_heap_sched_pointers_lift valid_bitmaps_lift
+                    valid_dom_schedule'_lift
               simp: cteCaps_of_def o_def)
   done
 

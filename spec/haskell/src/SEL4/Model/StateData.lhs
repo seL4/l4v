@@ -630,11 +630,6 @@ An assert that will say that the scheduler action is ResumeCurrentThread
 > sch_act_rct'_asrt :: KernelState -> Bool
 > sch_act_rct'_asrt _ = True
 
-An assert that will say that valid_domain_list' holds
-
-> valid_domain_list'_asrt :: KernelState -> Bool
-> valid_domain_list'_asrt _ = True
-
 An assert that will say that pspace_aligned' holds
 
 > pspace_aligned'_asrt :: KernelState -> Bool

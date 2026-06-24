@@ -210,8 +210,8 @@ lemma absKState_correct:
                 apply (simp add: state_relation_def)
                apply (simp add: state_relation_def)
               apply (rule absSchedulerAction_correct, simp add: state_relation_def)
-             apply (simp add: state_relation_def)
-            apply (simp add: domSchedule_map_relation)
+             apply (simp add: domSchedule_map_relation)
+            apply (simp add: state_relation_def)
            apply (simp add: state_relation_def)
           apply (simp add: state_relation_def)
          apply (simp add: state_relation_def)
@@ -294,7 +294,8 @@ lemma kernel_entry_invs:
    apply (wpsimp wp: kernel_entry_valid_sched)
   apply (rule hoare_vcg_conj_lift_pre_fix)
    apply (clarsimp simp: kernel_entry_def)
-   apply (wpsimp wp: call_kernel_domain_list_inv_det_ext | clarsimp simp: active_from_running)+
+   apply (wpsimp wp: call_kernel_domain_list_inv_det_ext thread_set_invs_trivial
+               simp: ran_tcb_cap_cases)
   apply (rule hoare_vcg_conj_lift_pre_fix)
    apply (clarsimp simp: kernel_entry_def)
    apply wpsimp
@@ -326,7 +327,8 @@ lemma kernel_entry_invs:
    apply (clarsimp simp: kernel_entry_def)
    apply (wpsimp wp: call_kernel_consumed_time_bounded)
   apply (clarsimp simp: kernel_entry_def)
-  apply (wpsimp wp: call_kernel_domain_time_inv_det_ext)
+  apply (wpsimp wp: call_kernel_domain_time_inv_det_ext thread_set_invs_trivial
+              simp: ran_tcb_cap_cases)
   done
 
 definition
@@ -389,7 +391,7 @@ lemma do_user_op_invs2:
                in hoare_post_imp, fastforce)
   apply (rule hoare_vcg_conj_lift_pre_fix)
    apply (wpsimp wp: do_user_op_invs[simplified pred_conj_def])
-  apply (wp do_user_op_valid_list do_user_op_valid_sched do_user_op_sched_act do_user_op_domain_time
+  apply (wp do_user_op_valid_list do_user_op_valid_sched do_user_op_sched_act
          | fastforce)+
   done
 
@@ -602,8 +604,7 @@ lemma device_update_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
    apply (simp add: doMachineOp_def device_memory_update_def simpler_modify_def select_f_def
                     gets_def get_def bind_def valid_def return_def)
-   by (clarsimp simp: invs'_def valid_irq_states'_def valid_machine_state'_def
-                      valid_dom_schedule'_def)
+   by (clarsimp simp: invs'_def valid_irq_states'_def valid_machine_state'_def)
 
 crunch doMachineOp
   for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
@@ -1157,7 +1158,7 @@ lemma valid_domain_list_2_cross:
 
 lemma valid_domain_list_from_invs':
   "\<lbrakk> (s, s') \<in> state_relation; invs' s' \<rbrakk> \<Longrightarrow> valid_domain_list s"
-  by (clarsimp simp: valid_domain_list_2_cross invs'_def valid_state'_def elim!: state_relationE)
+  by (clarsimp simp: valid_domain_list_2_cross invs'_def elim!: state_relationE)
 
 lemma ckernel_invariant:
   "ADT_H uop \<Turnstile> full_invs'"
@@ -1230,7 +1231,7 @@ lemma ckernel_invariant:
    apply (intro conjI impI)
      apply metis
     apply metis
-   apply (fastforce dest!: ct_running_or_idle_cross valid_domain_list_from_invs')
+   apply (fastforce dest!: ct_running_or_idle_cross)
 
   apply (erule_tac P="a \<and> b" for a b in disjE)
    apply (clarsimp simp add: do_user_op_H_def monad_to_transition_def)
@@ -1338,9 +1339,8 @@ lemma fw_sim_A_H:
     apply (clarsimp simp: corres_underlying_def)
     apply (drule_tac x="(abs_state, conc_state)" in bspec, blast)
     apply clarsimp
-    apply (prop_tac "valid_domain_list' conc_state \<and> ksSchedulerAction conc_state = ResumeCurrentThread")
+    apply (prop_tac "ksSchedulerAction conc_state = ResumeCurrentThread")
      apply (clarsimp simp: state_relation_def)
-    apply clarsimp
     apply (drule_tac x="(uc', conc_state')" in bspec, blast)
     apply clarsimp
     apply (frule use_valid[OF _ kernel_entry_invs])

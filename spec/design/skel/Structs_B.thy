@@ -22,7 +22,4 @@ text \<open>Ticks are always 64 bits, even on 32-bit platforms\<close>
 type_synonym ticks_len = 64
 type_synonym ticks = "ticks_len word"
 
-definition timeArgLen :: nat where
-  "timeArgLen \<equiv> LENGTH(ticks_len) div LENGTH(machine_word_len)"
-
 end

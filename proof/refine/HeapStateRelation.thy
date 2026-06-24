@@ -649,8 +649,11 @@ lemmas work_units_completed_relation_lift_rcorres[rcorres_lift] =
 lemmas domain_index_relation_lift_rcorres[rcorres_lift] =
   abs_conc_rel_lift_rcorres[where p=domain_index and p'=ksDomScheduleIdx and R="(=)"]
 
+lemmas domain_start_index_relation_lift_rcorres[rcorres_lift] =
+  abs_conc_rel_lift_rcorres[where p=domain_start_index and p'=ksDomScheduleStart and R="(=)"]
+
 lemmas domain_list_relation_lift_rcorres[rcorres_lift] =
-  abs_conc_rel_lift_rcorres[where p=domain_list and p'=ksDomSchedule and R="(=)"]
+  abs_conc_rel_lift_rcorres[where p=domain_list and p'=ksDomSchedule and R="\<lambda>s s'. domain_list_map s = s'"]
 
 lemmas cur_domain_relation_lift_rcorres[rcorres_lift] =
   abs_conc_rel_lift_rcorres[where p=cur_domain and p'=ksCurDomain and R="(=)"]

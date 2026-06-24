@@ -244,11 +244,15 @@ lemma valid_tcbs'_obj_at':
 
 context pspace_update_eq' begin
 
-lemma valid_tcb'_update'[iff]:
+lemma valid_tcbs'_update'[iff]:
   "valid_tcbs' (f s) = valid_tcbs' s"
   by (simp add: valid_tcbs'_def pspace)
 
 end
+
+lemma update_tcbInReleaseQueue_False_valid_tcb'[simp]:
+  "valid_tcb' (tcbInReleaseQueue_update a tcb) s = valid_tcb' tcb s"
+  by (auto simp: valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs gen_objBits_simps)
 
 lemma doMachineOp_irq_states':
   assumes masks: "\<And>P. \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
@@ -4681,14 +4685,14 @@ lemma tcbSchedEnqueue_valid_tcbs'[wp]:
 lemma setSchedulerAction_valid_tcbs'[wp]:
   "setSchedulerAction sa \<lbrace>valid_tcbs'\<rbrace>"
   unfolding valid_tcbs'_def
-  by (wpsimp wp: hoare_vcg_all_lift update_valid_tcb')
+  by (wpsimp wp: hoare_vcg_all_lift)
 
 lemma rescheduleRequired_valid_tcbs'[wp]:
   "rescheduleRequired \<lbrace>valid_tcbs'\<rbrace>"
   apply (clarsimp simp: rescheduleRequired_def)
   apply (rule bind_wp_fwd_skip,
-         wpsimp wp: tcbSchedEnqueue_valid_tcbs' update_valid_tcb' getSchedulable_wp)+
-  apply (wpsimp wp: update_valid_tcb')
+         wpsimp wp: tcbSchedEnqueue_valid_tcbs' getSchedulable_wp)+
+  apply wpsimp
   done
 
 crunch scheduleTCB
@@ -5908,8 +5912,8 @@ lemma (in TcbAcc_R_2) sts_invs_minor':
                           \<and> \<not> inIPCQueueThreadState st') t\<rbrace>
    setThreadState st t
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_dom_schedule'_def)
-  apply (wpsimp wp: valid_irq_node_lift irqs_masked_lift
+  apply (simp add: invs'_def)
+  apply (wpsimp wp: valid_irq_node_lift irqs_masked_lift valid_dom_schedule'_lift
                     setThreadState_valid_sched_pointers
                     setThreadState_sym_heap_sched_pointers
               simp: cteCaps_of_def o_def pred_tcb_at'_eq_commute)
@@ -5927,7 +5931,7 @@ lemma (in TcbAcc_R_2) sts_invs':
     and invs'\<rbrace>
    setThreadState st t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def)
   apply (wpsimp wp: valid_irq_node_lift irqs_masked_lift valid_dom_schedule'_lift
                     setThreadState_valid_sched_pointers setThreadState_sym_heap_sched_pointers
               simp: cteCaps_of_def o_def)
@@ -6315,7 +6319,7 @@ lemma (in TcbAcc_R_2) tcbReleaseRemove_invs':
   "tcbReleaseRemove tcbPtr \<lbrace>invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def)
   apply (wpsimp wp: valid_irq_node_lift irqs_masked_lift untyped_ranges_zero_lift
-                    valid_replies'_lift
+                    valid_replies'_lift valid_dom_schedule'_lift
               simp: cteCaps_of_def o_def)
   done
 

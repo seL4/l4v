@@ -404,10 +404,6 @@ lemma set_mrs_invs'[wp]:
          simp add: zipWithM_x_mapM split_def)+
   done
 
-crunch unmapPage
-  for cte_at'[wp]: "cte_at' p"
-  (wp: crunch_wps simp: crunch_simps)
-
 lemma performPageInvocation_corres:
   assumes "page_invocation_map pgi pgi'"
   shows "corres (=) (invs and valid_page_inv pgi) (no_0_obj' and valid_page_inv' pgi')
@@ -696,14 +692,11 @@ crunch storePTE
 
 lemma storePTE_invs[wp]:
   "storePTE p pte \<lbrace>invs'\<rbrace>"
-  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
-  apply (rule hoare_pre)
-   apply (wp valid_global_refs_lift' irqs_masked_lift valid_arch_state_lift' valid_irq_node_lift
-             valid_irq_handlers_lift'' untyped_ranges_zero_lift sym_heap_sched_pointers_lift
-             valid_dom_schedule'_lift
-          | simp add: cteCaps_of_def o_def)+
-  apply (clarsimp simp: valid_arch_obj'_def)
-  done
+  unfolding invs'_def valid_pspace'_def
+  by (wpsimp wp: valid_global_refs_lift' irqs_masked_lift valid_arch_state_lift'
+                 valid_irq_node_lift cur_tcb_lift valid_irq_handlers_lift'' untyped_ranges_zero_lift
+                 valid_bitmaps_lift valid_dom_schedule'_lift
+             simp: cteCaps_of_def o_def)
 
 lemma setASIDPool_valid_objs [wp]:
   "setObject p (ap::asidpool) \<lbrace>valid_objs'\<rbrace>"
@@ -725,7 +718,7 @@ lemma setASIDPool_state_refs' [wp]:
 
 lemma setASIDPool_invs [wp]:
   "setObject p (ap::asidpool) \<lbrace>invs'\<rbrace>"
-  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_pspace'_def)
   apply (wp valid_global_refs_lift' irqs_masked_lift valid_arch_state_lift' valid_irq_node_lift
             valid_irq_handlers_lift'' untyped_ranges_zero_lift updateObject_default_inv
             sym_heap_sched_pointers_lift valid_dom_schedule'_lift
@@ -772,7 +765,7 @@ lemma perform_page_invs [wp]:
      apply clarsimp
      apply ((wpsimp wp: hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_const_imp_lift
                         arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp
-                  simp: valid_page_inv'_def is_arch_update'_def cur_tcb'_asrt_def cur_tcb'_def
+                  simp: valid_page_inv'_def is_arch_update'_def cur_tcb'_def
              | (auto simp: is_arch_update'_def)[1])+)[3]
   apply (clarsimp simp: cte_wp_at_ctes_of valid_page_inv'_def)
   apply (clarsimp simp: is_arch_update'_def isCap_simps valid_cap'_def capAligned_def

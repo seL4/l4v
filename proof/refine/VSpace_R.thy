@@ -88,8 +88,7 @@ lemma maskInterrupt_invs':
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
    by (wpsimp wp: maskInterrupt_irq_states' dmo_maskInterrupt simp: invs'_def )
       (auto simp: valid_irq_states_def valid_irq_masks'_def valid_machine_state'_def
-                  ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
-                  valid_dom_schedule'_def)
+                  ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
 
 lemma dmo'_gets_wp:
   "\<lbrace>\<lambda>s. Q (f (ksMachineState s)) s\<rbrace> doMachineOp (gets f) \<lbrace>Q\<rbrace>"

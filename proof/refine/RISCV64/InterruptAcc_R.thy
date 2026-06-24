@@ -56,7 +56,7 @@ lemma setIRQState_invs[wp]:
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: setIRQState_def setInterruptState_def getInterruptState_def)
   apply (wp dmo_maskInterrupt)
-  apply (clarsimp simp: invs'_def valid_dom_schedule'_def valid_irq_node'_def
+  apply (clarsimp simp: invs'_def valid_irq_node'_def
                         valid_arch_state'_def valid_global_refs'_def
                         global_refs'_def valid_machine_state'_def
                         if_unsafe_then_cap'_def ex_cte_cap_to'_def
@@ -480,7 +480,6 @@ method invs'_independent_method
                    pspace_domain_valid_def
                    valid_machine_state'_def ex_cte_cap_wp_to'_def
                    valid_mdb'_def
-                   valid_dom_schedule'_def
              cong: if_cong option.case_cong
 
 lemma

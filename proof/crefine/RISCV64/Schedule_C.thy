@@ -388,39 +388,15 @@ lemma mult_non_zero_less_eq:
   using assms
   by (metis le_0_eq le_eq_less_or_eq less_irrefl_nat multi_lessD nat_le_linear)
 
-lemma domain_time_overflow_condition_helper:
-  "\<lbrakk>cdom_schedule_relation (kernel_state.ksDomSchedule s) ksDomSchedule; valid_domain_list' s\<rbrakk>
-   \<Longrightarrow> \<forall>n<length(kernel_state.ksDomSchedule s).
-        unat (dschedule_C.length_C (ksDomSchedule.[n]) * \<mu>s_in_ms) * unat ticks_per_timer_unit
-        \<le> unat max_time"
-  apply (clarsimp simp: valid_domain_list'_def)
-  apply (drule_tac x="(kernel_state.ksDomSchedule s) ! n" in bspec)
-   apply fastforce
-  apply clarsimp
-  apply (rename_tac n d time)
-  apply (prop_tac "dschedule_C.length_C (ksDomSchedule.[n]) = time")
-   apply (frule ksDomSched_length_dom_relation)
-   apply (simp add: ksDomScheduleLength_def sdiv_word_def sdiv_int_def)
-   apply (clarsimp simp: cdom_schedule_relation_def dom_schedule_entry_relation_def
-               simp del: ksDomSched_length_dom_relation)
-   apply (drule_tac x=n in spec)
-   apply clarsimp
-  apply (subst unat_mult_lem')
-   apply (rule_tac b="unat ticks_per_timer_unit" in mult_non_zero_less_eq)
-    apply simp
-   apply (fastforce simp: ticks_per_timer_unit_non_zero neq_0_unat)
-  apply simp
-  done
-
 lemma nextDomain_ccorres:
-  "ccorres dc xfdc (invs' and valid_domain_list') UNIV [] nextDomain (Call nextDomain_'proc)"
+  "ccorres dc xfdc invs' UNIV [] nextDomain (Call nextDomain_'proc)"
   supply rf_sr_unfold = rf_sr_def cstate_relation_def Let_def carch_state_relation_def
                         cmachine_state_relation_def dschDomain_def dschLength_def
   supply idx_unat = word_le_nat_alt word_less_nat_alt less_domScheduleLength_plus_1
                     unat_scast_domScheduleLength
   supply word_less_1[simp del] less_Suc0[simp del]
   apply cinit
-   apply (rule_tac P="invs' and valid_domain_list'" and P'=UNIV in ccorres_from_vcg)
+   apply (rule_tac P=invs' and P'=UNIV in ccorres_from_vcg)
    apply (rule allI, rule conseqPre, vcg)
    apply (simp add: if_P_then_t_else_f_eq_f cong: if_cong)
    apply (clarsimp simp: simpler_modify_def Let_def not_le)
@@ -464,9 +440,6 @@ crunch nextDomain
   and ksReadyQueues_asrt[wp]: ksReadyQueues_asrt
   (simp: crunch_simps ready_or_release'_def ksReadyQueues_asrt_def)
 
-crunch prepareNextDomain
-  for valid_domain_list'[wp]: valid_domain_list'
-
 lemma Arch_prepareNextDomain_ccorres:
   "ccorres dc xfdc invs' UNIV [] (return ()) (Call Arch_prepareNextDomain_'proc)"
   apply cinit'
@@ -484,7 +457,7 @@ lemma prepareNextDomain_ccorres:
 
 lemma scheduleChooseNewThread_ccorres:
   "ccorres dc xfdc
-     (\<lambda>s. invs' s \<and> ksSchedulerAction s = ChooseNewThread \<and> valid_domain_list' s)
+     (\<lambda>s. invs' s \<and> ksSchedulerAction s = ChooseNewThread)
      UNIV hs
      (do domainTime \<leftarrow> getDomainTime;
          _ \<leftarrow> when (domainTime = 0) (do
@@ -2321,13 +2294,8 @@ lemma setSchedulerAction_valid_idle'[wp]:
   "setSchedulerAction act \<lbrace>valid_idle'\<rbrace>"
   by wpsimp
 
-lemma setSchedulerAction_valid_domain_list'[wp]:
-  "setSchedulerAction act \<lbrace>valid_domain_list'\<rbrace>"
-  by wpsimp
-
 crunch checkDomainTime, awaken
-  for valid_domain_list'[wp]: valid_domain_list'
-  and weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma schedule_ccorres:
@@ -2562,8 +2530,7 @@ lemma schedule_ccorres:
             apply clarsimp
             (* when runnable tcbSchedEnqueue curThread *)
             apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> ksCurThread s = curThread
-                                      \<and> ksSchedulerAction s = SwitchToThread candidate
-                                      \<and> valid_domain_list' s"
+                                      \<and> ksSchedulerAction s = SwitchToThread candidate"
                          in hoare_post_imp)
              apply (fastforce simp: invs'_bitmapQ_no_L1_orphans invs_ksCurDomain_maxDomain')
             apply wpsimp+
@@ -2603,8 +2570,7 @@ lemma schedule_ccorres:
               | fold cur_tcb'_def
               | strengthen invs'_implies)+)[1]
      apply (clarsimp simp: guard_is_UNIV_def)
-    apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> valid_domain_list' s
-                              \<and> cur_tcb' s \<and> weak_sch_act_wf (ksSchedulerAction s) s"
+    apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> cur_tcb' s \<and> weak_sch_act_wf (ksSchedulerAction s) s"
                  in hoare_post_imp)
      apply (fastforce simp: cur_tcb'_def)
     apply (wpsimp wp: hoare_drop_imps ssa_invs' scheduleChooseNewThread_invs')

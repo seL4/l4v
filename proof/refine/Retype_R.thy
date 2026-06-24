@@ -3156,9 +3156,6 @@ lemma createObjects_orig_cte_wp_at2':
 lemmas threadSet_cte_wp_at2' =
   threadSet_cte_wp_at'T[OF all_tcbI, OF ball_tcb_cte_casesI]
 
-crunch doMachineOp
-  for ko_wp_at'[wp]: "\<lambda>s. P (ko_wp_at' P' p s)"
-
 lemma createObjects_orig_obj_at':
   "\<lbrace>\<lambda>s. n \<noteq> 0
       \<and> range_cover ptr sz (objBitsKO val + gbits) n
@@ -3862,8 +3859,7 @@ proof (rule hoare_gen_asm, elim conjE)
      and ptr_km: "ptr && ~~ mask sz \<in> kernel_mappings"
   show "\<lbrace>?P\<rbrace> createNewCaps ty ptr n us dev \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply -
-  apply (simp add: invs'_def valid_dom_schedule'_def
-                   pointerInUserData_def typ_at'_def sc_size_bounds_def)
+  apply (simp add: invs'_def pointerInUserData_def typ_at'_def sc_size_bounds_def)
     apply (rule hoare_pre)
    supply createNewCaps_valid_pspace[wp]
    apply (wp createNewCaps_valid_pspace[OF not_0 cover sz_limit ptr_cn ptr_km]

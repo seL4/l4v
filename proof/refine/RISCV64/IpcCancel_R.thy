@@ -432,6 +432,7 @@ crunch tcbEPAppend, tcbEPDequeue, tcbNTFNAppend, tcbNTFNDequeue
   and ksMachineState[wp]: "\<lambda>s. P (ksMachineState s)"
   and ksWorkUnitsCompleted[wp]: "\<lambda>s. P (ksWorkUnitsCompleted s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
@@ -2325,7 +2326,7 @@ lemma cancelSignal_invs':
   "\<lbrace>invs' and st_tcb_at' (\<lambda>st. st = BlockedOnNotification ntfn) t\<rbrace>
    cancelSignal t ntfn
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: cancelSignal_def invs'_def valid_pspace'_def Let_def valid_dom_schedule'_def)
+  apply (simp add: cancelSignal_def invs'_def valid_pspace'_def Let_def)
   apply (intro bind_wp[OF _ stateAssert_sp])
   apply (wp valid_irq_node_lift irqs_masked_lift valid_dom_schedule'_lift hoare_vcg_all_lift
             hoare_vcg_imp_lift' setThreadState_sched_pointers_valid_sched_pointers sts'_valid_replies')
@@ -2338,6 +2339,7 @@ crunch cancelIPC
   and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
   and ksMachineState[wp]: "\<lambda>s. P (ksMachineState s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and sch_act_simple[wp]: "sch_act_simple"
   and ifunsafe'[wp]: "if_unsafe_then_cap'"
   and global_refs'[wp]: "valid_global_refs'"
@@ -2426,10 +2428,10 @@ lemma blockedCancelIPC_invs':
   "\<lbrace>invs' and st_tcb_at' ((=) st) tptr\<rbrace>
    blockedCancelIPC st tptr rptrOpt
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  unfolding invs'_def valid_dom_schedule'_def
+  unfolding invs'_def
   apply (wpsimp wp: blockedCancelIPC_valid_sched_pointers
                     valid_irq_node_lift valid_irq_handlers_lift' valid_irq_states_lift'
-                    irqs_masked_lift
+                    irqs_masked_lift valid_dom_schedule'_lift
               simp: cteCaps_of_def)
   done
 
@@ -4107,6 +4109,7 @@ crunch removeAndRestartEPQueuedThread, removeAndRestartNTFNQueuedThread,
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and list_refs_of_replies'[wp]: "\<lambda>s. P (list_refs_of_replies' s)"
   and irqs_masked'[wp]: irqs_masked'
   and valid_dom_schedule'[wp]: valid_dom_schedule'
@@ -4164,8 +4167,8 @@ lemma replyUnlink_invs'[wp]:
     and (\<lambda>s. \<not> is_sched_linked tcbPtr s)\<rbrace>
    replyUnlink replyPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  unfolding invs'_def valid_dom_schedule'_def valid_pspace'_def
-  by (wpsimp wp: replyUnlink_valid_sched_pointers)
+  unfolding invs'_def valid_pspace'_def
+  by (wpsimp wp: replyUnlink_valid_sched_pointers valid_dom_schedule'_lift)
 
 lemma removeAndRestartNTFNQueuedThread_invs'[wp]:
   "removeAndRestartNTFNQueuedThread t ntfnPtr \<lbrace>invs'\<rbrace>"

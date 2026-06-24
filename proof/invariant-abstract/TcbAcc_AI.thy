@@ -2219,10 +2219,6 @@ lemma set_bound_notification_ex_nonz_cap_to[wp]:
    \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
   by (wp ex_nonz_cap_to_pres)
 
-lemma ct_in_state_sched_act_update[simp]:
-  "ct_in_state P (scheduler_action_update f s) = ct_in_state P s"
-  by (simp add: ct_in_state_def)
-
 crunch set_thread_state_act
  for ct_in_state[wp]: "\<lambda>s. Q (ct_in_state P s)"
 

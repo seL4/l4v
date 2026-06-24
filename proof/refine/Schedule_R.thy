@@ -58,6 +58,7 @@ crunch refillUnblockCheck, refillBudgetCheck, ifCondRefillUnblockCheck, refillBu
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksCurdomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and untyped_ranges_zero'[wp]: untyped_ranges_zero'
   and valid_dom_schedule'[wp]: valid_dom_schedule'
   and ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
@@ -507,7 +508,7 @@ crunch switchToThread, switchToIdleThread
 
 lemma tcbSchedAppend_invs'[wp]:
   "tcbSchedAppend t \<lbrace>invs'\<rbrace>"
-  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_pspace'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
                     untyped_ranges_zero_lift valid_replies'_lift valid_dom_schedule'_lift
               simp: cteCaps_of_def o_def)
@@ -689,7 +690,7 @@ lemma setCurThread_invs':
   apply wp
   apply (clarsimp simp add: invs'_def cur_tcb'_def sch_act_wf ct_in_state'_def
                             state_refs_of'_def ps_clear_def valid_irq_node'_def
-                            valid_bitmaps_def bitmapQ_defs valid_dom_schedule'_def
+                            valid_bitmaps_def bitmapQ_defs
                       cong: option.case_cong)
   done
 
@@ -1235,7 +1236,7 @@ lemma next_domain_valid_sched[wp]:
 
 lemma nextDomain_invs':
   "nextDomain \<lbrace>invs'\<rbrace>"
-  apply (simp add: nextDomain_def Let_def dschLength_def)
+  apply (simp add: nextDomain_def Let_def dschLength_def dschDomain_def)
   apply wp
   apply (clarsimp simp: invs'_def valid_machine_state'_def
                         valid_dom_schedule'_def split_def domainEndMarker_def)
@@ -1289,12 +1290,12 @@ crunch isHighestPrio, scheduleSwitchThreadFastfail
 
 lemma setSchedulerAction_invs': (* not in wp set, clobbered by ssa_wp *)
   "setSchedulerAction ChooseNewThread \<lbrace>invs'\<rbrace>"
-  by (wpsimp simp: invs'_def valid_irq_node'_def valid_bitmaps_def  valid_dom_schedule'_def)
+  by (wpsimp simp: invs'_def valid_irq_node'_def valid_bitmaps_def)
 
 lemma ssa_invs':
   "setSchedulerAction sa \<lbrace>invs'\<rbrace>"
   apply (wp ssa_wp)
-  apply (clarsimp simp: invs'_def valid_irq_node'_def valid_dom_schedule'_def)
+  apply (clarsimp simp: invs'_def valid_irq_node'_def)
   done
 
 lemma setCurThread_obj_at':
@@ -1331,7 +1332,7 @@ lemma setReprogramTimer_invs'[wp]:
   "setReprogramTimer v \<lbrace>invs'\<rbrace>"
   unfolding setReprogramTimer_def
   apply wpsimp
-  apply (clarsimp simp: invs'_def valid_machine_state'_def valid_dom_schedule'_def)
+  apply (clarsimp simp: invs'_def valid_machine_state'_def)
   done
 
 lemma machine_op_lift_underlying_memory_invar:
@@ -1351,8 +1352,7 @@ lemma setCurSc_invs'[wp]:
   apply wpsimp
   apply (clarsimp simp: invs'_def valid_machine_state'_def
                         valid_bitmaps_def valid_bitmapQ_def bitmapQ_def
-                        bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def valid_irq_node'_def
-                        valid_dom_schedule'_def)
+                        bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def valid_irq_node'_def)
   done
 
 lemma setConsumedTime_invs'[wp]:
@@ -1361,8 +1361,7 @@ lemma setConsumedTime_invs'[wp]:
   apply wpsimp
   apply (clarsimp simp: invs'_def valid_machine_state'_def
                         valid_bitmaps_def valid_bitmapQ_def bitmapQ_def
-                        bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def valid_irq_node'_def
-                        valid_dom_schedule'_def)
+                        bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def valid_irq_node'_def)
   done
 
 lemma setDomainTime_invs'[wp]:
@@ -4208,11 +4207,6 @@ lemma getCurThread_sp2:
   "\<lbrace>P\<rbrace> getCurThread \<lbrace>\<lambda>rv. P and (\<lambda>s. ksCurThread s = rv)\<rbrace>"
   by (wpsimp simp: getCurThread_def)
 
-defs valid_domain_list'_asrt_def:
-  "valid_domain_list'_asrt \<equiv> valid_domain_list'"
-
-declare valid_domain_list'_asrt_def[simp]
-
 lemma runnable'_Not_tcbInReleaseQueue_not_sched_linked:
   "\<lbrakk>(runnable' |< tcbStates_of' s) t; \<not> (tcbInReleaseQueue |< tcbs_of' s) t;
     valid_sched_pointers s\<rbrakk>
@@ -4227,7 +4221,7 @@ lemma runnable'_Not_tcbInReleaseQueue_not_sched_linked:
 
 lemma (in Schedule_R_3) schedule_corres:
   "corres dc
-     (invs and valid_domain_list and valid_sched and valid_domain_list and current_time_bounded
+     (invs and valid_domain_list and valid_sched and current_time_bounded
       and ct_ready_if_schedulable and cur_sc_more_than_ready and consumed_time_bounded
       and (\<lambda>s. schact_is_rct s \<longrightarrow> cur_sc_active s))
      invs'
@@ -4249,8 +4243,6 @@ lemma (in Schedule_R_3) schedule_corres:
   apply (clarsimp simp: Schedule_A.schedule_def schedule_def)
   apply (rule corres_stateAssert_ignore)
    apply (fastforce intro: valid_idle'_cross)
-  apply (rule corres_stateAssert_ignore)
-   apply (fastforce intro: valid_domain_list_cross)
   apply (rule corres_stateAssert_ignore)
    apply (fastforce intro: sch_act_wf_cross)
   apply (rule corres_stateAssert_ignore)
@@ -4375,7 +4367,7 @@ lemma (in Schedule_R_3) schedule_corres:
    apply (fastforce dest: invs_valid_idle
                     simp: schedulable_def2 valid_idle_def pred_tcb_at_def obj_at_def)
 
-  apply (rule_tac Q="\<lambda>_ s. invs s \<and> valid_ready_qs s \<and> ready_or_release s
+  apply (rule_tac Q="\<lambda>_ s. invs s \<and> valid_domain_list s \<and> valid_ready_qs s \<and> ready_or_release s
                            \<and> pred_map runnable (tcb_sts_of s) candidate
                            \<and> released_sc_tcb_at candidate s \<and> not_in_release_q candidate s"
               and Q'="\<lambda>_ s. invs' s \<and> curThread = ksCurThread s"
@@ -4539,7 +4531,7 @@ lemma schedContextDonate_invs':
   "\<lbrace>invs' and tcb_at' tcbPtr\<rbrace>
    schedContextDonate scPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_pspace'_def)
   apply (wpsimp wp: schedContextDonate_valid_objs')
   done
 

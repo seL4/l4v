@@ -1737,11 +1737,11 @@ lemma cstate_to_H_correct:
                         by (fastforce simp: cstate_relation_def cpspace_relation_def
                                             Let_def ghost_size_rel_def unat_eq_0
                                      split: if_split)
-                     using invs' cstate_rel
+                     using cstate_rel
                      apply (rule cDomScheduleIdx_to_H_correct)
                     using cstate_rel
                     apply (clarsimp simp: cstate_relation_def Let_def)
-                    using invs' cstate_rel
+                    using cstate_rel
                     apply (rule cDomSchedule_to_H_correct)
                     using cstate_rel
                     apply (clarsimp simp: cstate_relation_def Let_def)

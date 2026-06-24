@@ -1243,7 +1243,7 @@ lemma invs_asid_table_strengthen':
   "invs' s \<and> asid_pool_at' ap s \<and> asid \<le> 2 ^ asid_high_bits - 1 \<longrightarrow>
    invs' (s\<lparr>ksArchState :=
             riscvKSASIDTable_update (\<lambda>_. ((riscvKSASIDTable \<circ> ksArchState) s)(asid \<mapsto> ap)) (ksArchState s)\<rparr>)"
-  apply (clarsimp simp: invs'_def valid_dom_schedule'_def)
+  apply (clarsimp simp: invs'_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_global_refs'_def global_refs'_def)
   apply (clarsimp simp: valid_arch_state'_def)

@@ -981,7 +981,7 @@ lemma transferCapsToSlots_invs[wp]:
         \<and> transferCaps_srcs caps s\<rbrace>
    transferCapsToSlots ep buffer n caps slots mi
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def)
   apply (wp valid_irq_node_lift valid_dom_schedule'_lift valid_bitmaps_lift)
   apply fastforce
   done
@@ -4184,8 +4184,8 @@ crunch tcbNTFNDequeue
 
 lemma tcbNTFNDequeue_invs'[wp]:
   "tcbNTFNDequeue t ntfnPtr \<lbrace>invs'\<rbrace>"
-  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
-  apply (wpsimp wp: valid_irq_node_lift)
+  apply (simp add: invs'_def valid_pspace'_def)
+  apply (wpsimp wp: valid_irq_node_lift valid_dom_schedule'_lift)
   done
 
 lemma sendSignal_corres:
@@ -4467,7 +4467,7 @@ lemma setThreadState_nonqueued_state_update:
   "\<lbrace>\<lambda>s. invs' s \<and> st_tcb_at' simple' t s\<rbrace>
    setThreadState st t
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def)
   apply (wp valid_irq_node_lift setThreadState_not_queued_valid_sched_pointers' valid_dom_schedule'_lift)
   apply (clarsimp simp: valid_pspace'_def)
   apply (clarsimp simp: pred_tcb_at' pred_tcb_at'_eq_commute)
@@ -4510,7 +4510,7 @@ lemma setThreadState_Running_invs':
    setThreadState Running t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (wpsimp wp: sts_invs')
-  apply (simp add: invs'_def valid_dom_schedule'_def pred_tcb_at'_eq_commute)
+  apply (simp add: invs'_def pred_tcb_at'_eq_commute)
   apply (fastforce dest: global'_no_ex_cap
                    simp: o_def pred_tcb_at'_def obj_at'_def)
   done
@@ -4520,8 +4520,8 @@ lemma setThreadState_BlockedOnReceive_invs':
         \<and> st_tcb_at' (Not \<circ> is_BlockedOnReply) t s \<and> st_tcb_at' (not inIPCQueueThreadState) t s\<rbrace>
    setThreadState (BlockedOnReceive eptr cg rptr) t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_dom_schedule'_def)
-  apply (wpsimp wp: setThreadState_not_queued_valid_sched_pointers' valid_irq_node_lift
+  apply (simp add: invs'_def)
+  apply (wpsimp wp: setThreadState_not_queued_valid_sched_pointers' valid_irq_node_lift valid_dom_schedule'_lift
               simp: pred_tcb_at'_eq_commute)
   apply (fastforce dest: global'_no_ex_cap
                    simp: comp_def pred_tcb_at'_def obj_at'_def)
@@ -4539,7 +4539,7 @@ crunch tcbReleaseEnqueue
 lemma tcbReleaseEnqueue_invs'[wp]:
   "tcbReleaseEnqueue tcbPtr \<lbrace>invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def)
-  apply (wpsimp wp: valid_irq_node_lift  untyped_ranges_zero_lift valid_replies'_lift
+  apply (wpsimp wp: valid_irq_node_lift  untyped_ranges_zero_lift valid_replies'_lift valid_dom_schedule'_lift
               simp: cteCaps_of_def o_def)
   done
 
@@ -4582,7 +4582,7 @@ lemma sai_invs'[wp]:
            apply (rule_tac Q'="\<lambda>_. invs'" in hoare_strengthen_post[rotated])
             apply (clarsimp simp: schedulable'_def)
            apply (wpsimp wp: setThreadState_Running_invs'
-                             setNotification_invs' getNotification_wp gts_wp' cancelIPC_simple
+                             getNotification_wp gts_wp' cancelIPC_simple
                              ntfnSetActive_invs'
                              cancelIPC_receiveBlocked_tcbSchedNexts_of
                              cancelIPC_receiveBlocked_tcbSchedPrevs_of
@@ -4600,7 +4600,7 @@ lemma sai_invs'[wp]:
    apply (wp getSchedulable_wp)
            apply (rule_tac Q'="\<lambda>_. invs'" in hoare_strengthen_post[rotated])
             apply (clarsimp simp: schedulable'_def)
-           apply (wp setThreadState_Running_invs' setNotification_invs' gts_wp')+
+           apply (wp setThreadState_Running_invs' gts_wp')+
    apply (fastforce simp: ko_wp_at'_def st_tcb_at'_def obj_at'_def isBlockedOnNtfn_def
                    split: thread_state.splits)
   apply (fastforce dest: ntfn_ko_at_valid_objs_valid_ntfn')
@@ -5895,7 +5895,7 @@ lemma receiveSignal_corres:
             apply (clarsimp simp: obj_at'_def split: option.split)
            apply wpsimp
           apply (wpsimp wp: set_ntfn_minor_invs)
-         apply (wpsimp wp: set_ntfn_minor_invs')
+         apply (wpsimp wp: setNotification_invs')
         apply (wpsimp wp: getNotification_wp)
        apply wpsimp
       apply wpsimp
@@ -6044,7 +6044,7 @@ lemma completeSignal_invs':
        apply (rule hoare_strengthen_post[where Q'="\<lambda>_. invs'"])
         apply wpsimp
        apply (clarsimp simp: obj_at'_def)
-      apply (wpsimp wp: set_ntfn_minor_invs' getNotification_wp simp: updateNotification_def)
+      apply (wpsimp wp: setNotification_invs' getNotification_wp simp: updateNotification_def)
      apply (wpsimp wp: hoare_vcg_ex_lift hoare_weak_lift_imp hoare_vcg_all_lift
                        hoare_vcg_imp_lift')
     apply wpsimp
@@ -6073,8 +6073,8 @@ lemma tcbNTFNAppend_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> tcb_at' tcbPtr s \<and> sched_flag_set s tcbPtr \<and> \<not> is_sched_linked tcbPtr s\<rbrace>
    tcbNTFNAppend tcbPtr ntfnPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
-  apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
+  apply (simp add: invs'_def valid_pspace'_def)
+  apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift valid_dom_schedule'_lift
               simp: cteCaps_of_def o_def)
   done
 
@@ -6082,8 +6082,8 @@ lemma tcbEPAppend_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> tcb_at' tcbPtr s \<and> sched_flag_set s tcbPtr\<rbrace>
    tcbEPAppend tcbPtr ntfnPtr isRecv
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
-  apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
+  apply (simp add: invs'_def valid_pspace'_def)
+  apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift valid_dom_schedule'_lift
               simp: cteCaps_of_def o_def)
   done
 
@@ -6225,7 +6225,7 @@ lemma replyPush_invs':
 
 lemma setEndpoint_invs':
   "setEndpoint eptr ep \<lbrace>invs'\<rbrace>"
-  by (wpsimp simp: invs'_def valid_dom_schedule'_def comp_def)
+  by (wpsimp simp: invs'_def comp_def wp: valid_dom_schedule'_lift)
 
 crunch maybeReturnSc, cancelIPC
   for sch_act_not[wp]: "sch_act_not t"
@@ -6504,8 +6504,8 @@ crunch ifCondRefillUnblockCheck
 
 lemma tcbEPDequeue_invs'[wp]:
   "tcbEPDequeue t epPtr \<lbrace>invs'\<rbrace>"
-  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
-  apply (wpsimp wp: valid_irq_node_lift)
+  apply (simp add: invs'_def valid_pspace'_def)
+  apply (wpsimp wp: valid_irq_node_lift valid_dom_schedule'_lift)
   done
 
 lemma getBoundNotification_tcb_at'[wp]:
@@ -6631,8 +6631,8 @@ lemma replyUnlink_invs':
         \<and> \<not> is_sched_linked tcbPtr s\<rbrace>
    replyUnlink replyPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  unfolding invs'_def valid_dom_schedule'_def
-  by (wpsimp wp: replyUnlink_valid_sched_pointers)
+  unfolding invs'_def
+  by (wpsimp wp: replyUnlink_valid_sched_pointers valid_dom_schedule'_lift)
 
 lemma asUser_pred_tcb_at'[wp]:
   "asUser tptr f \<lbrace>\<lambda>s. P (pred_tcb_at' proj test t s)\<rbrace>"
@@ -6762,7 +6762,7 @@ lemma si_invs'[wp]:
                        in hoare_post_imp)
            apply (force simp: obj_at'_def pred_tcb_at'_def invs'_def
                               is_BlockedOnReceive_def is_BlockedOnReply_def)
-          apply (wpsimp simp: invs'_def valid_dom_schedule'_def valid_pspace'_def
+          apply (wpsimp simp: invs'_def valid_pspace'_def
                           wp: hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_imp_lift' gts_wp')+
   apply (intro conjI; (solves clarsimp)?)
       apply (erule pred_tcb'_weakenE)

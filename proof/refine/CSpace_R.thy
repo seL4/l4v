@@ -3175,7 +3175,7 @@ lemma cteInsert_invs:
   and ex_cte_cap_to' dest and (\<lambda>s. \<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s)\<rbrace>
   cteInsert cap src dest
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_pspace'_def)
   apply (wpsimp wp: valid_bitmaps_lift valid_irq_node_lift irqs_masked_lift
                     cteInsert_norq sym_heap_sched_pointers_lift valid_dom_schedule'_lift)
   by (auto simp: invs'_def valid_pspace'_def elim: valid_capAligned)
@@ -3662,7 +3662,7 @@ lemma arch_update_setCTE_invs:
   "\<lbrace>cte_wp_at' (is_arch_update' cap) p and cte_wp_at' ((=) oldcte) p and invs' and valid_cap' cap\<rbrace>
   setCTE p (cteCap_update (\<lambda>_. cap) oldcte)
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_pspace'_def)
   apply (wp arch_update_setCTE_mdb setCTE_pspace_in_kernel_mappings' valid_bitmaps_lift
             arch_update_setCTE_ifunsafe valid_irq_node_lift setCTE_typ_at' setCTE_irq_handlers'
             irqs_masked_lift
@@ -4885,13 +4885,13 @@ lemma cteInsert_simple_invs:
   cteInsert cap src dest
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (rule hoare_pre)
-   apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
+   apply (simp add: invs'_def valid_pspace'_def)
    apply (wp valid_bitmaps_lift valid_irq_node_lift irqs_masked_lift
              cteInsert_simple_mdb' cteInsert_valid_globals_simple cteInsert_norq
              sym_heap_sched_pointers_lift valid_dom_schedule'_lift
           | simp add: pred_tcb_at'_def)+
    apply (subst fold_list_refs_of_replies')
-  apply (auto simp: invs'_def valid_pspace'_def valid_dom_schedule'_def
+  apply (auto simp: invs'_def valid_pspace'_def
                     untyped_derived_eq_def o_def
               dest!: is_simple_cap'_genD
               elim: valid_capAligned)
@@ -5055,7 +5055,7 @@ lemma updateFreeIndex_forward_invs':
           \<and> is_aligned (of_nat idx :: machine_word) minUntypedSizeBits) o cteCap) src s\<rbrace>
    updateFreeIndex src idx
    \<lbrace>\<lambda>r s. invs' s\<rbrace>"
-  apply (clarsimp simp: invs'_def valid_dom_schedule'_def)
+  apply (clarsimp simp: invs'_def)
   apply (rule hoare_pre)
    apply (rule hoare_vcg_conj_lift)
     apply (simp add: valid_pspace'_def, wp updateFreeIndex_forward_valid_objs'

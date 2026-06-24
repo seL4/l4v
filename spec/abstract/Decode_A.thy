@@ -499,7 +499,7 @@ definition decode_domain_schedule_set_start ::
 definition decode_domain_schedule_configure ::
   "data list \<Rightarrow> (domain_invocation, 'z::state_ext) se_monad" where
   "decode_domain_schedule_configure args \<equiv> doE
-     whenE (length args < 2 + timeArgLen) $ throwError TruncatedMessage;
+     whenE (length args < 2 + TIME_ARG_SIZE) $ throwError TruncatedMessage;
      index \<leftarrow> returnOk $ unat (args ! 0);
      domain \<leftarrow> returnOk $ args ! 1;
      duration \<leftarrow> returnOk $ parseTimeArg 2 args;

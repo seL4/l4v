@@ -1739,7 +1739,7 @@ proof (simp add: invs'_def valid_pspace'_def
                         \<or> (tcbInReleaseQueue |< (pspace' |> tcb_of')) t
                         \<or> (inIPCQueueThreadState |< (pspace' |> tcb_of' ||> tcbState)) t)"
     by (clarsimp simp: valid_sched_pointers_def opt_pred_def opt_map_def)
-qed (clarsimp simp: valid_dom_schedule'_def)
+qed
 
 lemma (in delete_locale) delete_sym_refs':
   "sym_refs
@@ -1888,7 +1888,7 @@ lemma deleteObjects_sym_refs':
    apply (rule subst[rotated, where P="\<lambda>s. sym_refs (state_refs_of' s)"],
           erule delete_locale.delete_sym_refs')
    apply (simp add: field_simps mask_def)
-  apply (simp add: sym_refs_asrt_def state_refs_of'_def)
+  apply (simp add: state_refs_of'_def)
   apply clarsimp
   apply (drule invs_valid_objs')
   apply (drule (1) cte_wp_at_valid_objs_valid_cap')

@@ -12,23 +12,15 @@ context Arch begin arch_global_naming
 
 named_theorems DetSchedDomainTime_AI_assms
 
-crunch arch_finalise_cap
-  for domain_fields_invs[wp, DetSchedDomainTime_AI_assms]: "domain_fields P"
-  (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
-
 crunch
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
-  handle_arch_fault_reply,
+  handle_arch_fault_reply, arch_finalise_cap,
   arch_invoke_irq_control, handle_vm_fault, arch_get_sanitise_register_info,
   prepare_thread_delete, handle_hypervisor_fault, init_arch_objects,
   arch_post_modify_registers, arch_post_cap_deletion, arch_invoke_irq_handler,
   arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags
   for domain_fields_invs[wp, DetSchedDomainTime_AI_assms]: "domain_fields P"
-  (wp: crunch_wps)
-
-crunch arch_finalise_cap
-  for domain_fields_invs[wp, DetSchedDomainTime_AI_assms]: "domain_fields P"
-  (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 declare init_arch_objects_exst[DetSchedDomainTime_AI_assms]
         arch_get_sanitise_register_info_inv[DetSchedDomainTime_AI_assms]
@@ -50,6 +42,9 @@ crunch arch_perform_invocation, arch_mask_irq_signal
 crunch handle_reserved_irq, handle_spurious_irq
   for domain_fields_invs[wp, DetSchedDomainTime_AI_assms]: "domain_fields P"
   (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps)
+
+crunch handle_spurious_irq
+  for scheduler_action[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (scheduler_action s)"
 
 end
 

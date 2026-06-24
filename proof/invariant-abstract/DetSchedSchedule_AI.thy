@@ -7141,10 +7141,6 @@ lemma preemption_point_active_scs_valid[wp]:
                   wp: OR_choiceE_weak_wp hoare_drop_imps)
   done
 
-lemma invoke_domain_no_exception[wp]:
-  "\<lbrace>\<top>\<rbrace> invoke_domain thread domain -, \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (wpsimp simp: invoke_domain_def)
-
 lemma update_time_stamp_budget_ready[wp]:
  "\<lbrace>budget_ready t and valid_machine_time :: 'state_ext state \<Rightarrow> _\<rbrace>
   update_time_stamp
@@ -16601,53 +16597,62 @@ lemma valid_blocked_valid_ready_qs_ready_and_sufficient:
    apply fastforce
   by fastforce
 
+lemma set_domain_valid_sched[wp]:
+  "\<lbrace>valid_sched and tcb_at t and (\<lambda>s. t \<noteq> idle_thread s)
+                and scheduler_act_not t and valid_idle
+                and (\<lambda>s. budget_ready (cur_thread s) s)\<rbrace>
+   set_domain t d
+   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  supply if_split [split del]
+  including classic_wp_pre
+  apply (simp add: set_domain_def)
+  apply (rule bind_wp[OF _ gets_sp])
+  apply (case_tac "t=cur"; simp)
+   (* first case *)
+   apply (wpsimp wp_del: reschedule_valid_sched_const
+                     wp: reschedule_required_valid_sched'
+                         tcb_sched_enqueue_valid_blocked_except_set_const)
+    apply (clarsimp simp: schedulable_def2 split: if_split)
+    apply (wpsimp wp: thread_set_domain_valid_ready_qs_not_q hoare_vcg_if_lift hoare_vcg_imp_lift' hoare_vcg_all_lift
+                      thread_set_domain_not_idle_valid_idle_etcb)
+   apply (wpsimp wp: tcb_sched_dequeue_valid_ready_qs tcb_dequeue_not_queued hoare_vcg_imp_lift' hoare_vcg_all_lift
+                     tcb_sched_dequeue_valid_blocked_except_set_remove hoare_vcg_conj_lift)
+    apply (clarsimp simp: valid_sched_def valid_blocked_defs released_sc_tcb_at_def)
+   apply (fastforce simp: valid_sched_def valid_blocked_defs released_sc_tcb_at_def)
+  (* second case *)
+  apply (wpsimp wp: tcb_sched_enqueue_valid_sched)
+   apply (clarsimp split: if_split)
+   apply (wpsimp wp: hoare_vcg_imp_lift')
+    apply (simp add: valid_sched_def)
+    apply (wpsimp wp: thread_set_domain_valid_ready_qs_not_q
+                      thread_set_domain_act_not_valid_sched_action
+                      thread_set_domain_ct_in_cur_domain
+                      thread_set_domain_not_idle_valid_idle_etcb)
+   apply (wpsimp wp: hoare_vcg_imp_lift' thread_set_domain_not_idle_valid_sched)
+  apply (clarsimp simp: tcb_at_kh_simps[symmetric] valid_sched_def)
+  apply (wpsimp wp: tcb_sched_dequeue_valid_ready_qs tcb_dequeue_not_queued
+                    tcb_sched_action_valid_sched_misc
+                    tcb_sched_dequeue_valid_blocked_except_set_const
+                    hoare_vcg_conj_lift hoare_vcg_imp_lift' tcb_sched_dequeue_ct_not_in_q)
+  apply (clarsimp simp: valid_blocked_thread_def)
+  apply (intro conjI)
+  using valid_blocked_valid_ready_qs_ready_and_sufficient schedulable_def2 apply blast
+  apply (clarsimp simp: runnable_eq_active tcb_at_kh_simps schedulable_def2)
+  done
+
 context DetSchedSchedule_AI begin
 
 lemma invoke_domain_valid_sched:
   "\<lbrace>valid_sched and valid_domain_inv iv and ct_not_queued
-                and scheduler_act_not t and valid_idle
+                and simple_sched_action and valid_idle
                 and (\<lambda>s. budget_ready (cur_thread s) s)\<rbrace>
    invoke_domain iv
    \<lbrace>\<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>" (is "\<lbrace>?P\<rbrace> _ \<lbrace>_\<rbrace>")
   supply if_split [split del]
   apply (simp add: invoke_domain_def)
-  including classic_wp_pre
-  apply wp
-   apply (rule_tac P="?P" in hoare_triv)
-   apply (simp add: set_domain_def)
-   apply (rule bind_wp[OF _ gets_sp])
-   apply (case_tac "t=cur"; simp)
-    (* first case *)
-    apply (wpsimp wp_del: reschedule_valid_sched_const
-                      wp: reschedule_required_valid_sched'
-                          tcb_sched_enqueue_valid_blocked_except_set_const)
-     apply (clarsimp simp: schedulable_def2 split: if_split)
-     apply (wpsimp wp: thread_set_domain_valid_ready_qs_not_q hoare_vcg_if_lift hoare_vcg_imp_lift' hoare_vcg_all_lift
-                       thread_set_domain_not_idle_valid_idle_etcb)
-    apply (wpsimp wp: tcb_sched_dequeue_valid_ready_qs tcb_dequeue_not_queued hoare_vcg_imp_lift' hoare_vcg_all_lift
-                      tcb_sched_dequeue_valid_blocked_except_set_remove hoare_vcg_conj_lift)
-     apply (clarsimp simp: valid_sched_def valid_blocked_defs released_sc_tcb_at_def)
-    apply (fastforce simp: valid_sched_def valid_blocked_defs released_sc_tcb_at_def)
-   (* second case *)
-   apply (wpsimp wp: tcb_sched_enqueue_valid_sched)
-    apply (clarsimp split: if_split)
-    apply (wpsimp wp: hoare_vcg_imp_lift')
-     apply (simp add: valid_sched_def)
-     apply (wpsimp wp: thread_set_domain_valid_ready_qs_not_q
-                       thread_set_domain_act_not_valid_sched_action
-                       thread_set_domain_ct_in_cur_domain
-                       thread_set_domain_not_idle_valid_idle_etcb)
-    apply (wpsimp wp: hoare_vcg_imp_lift' thread_set_domain_not_idle_valid_sched)
-   apply (clarsimp simp: tcb_at_kh_simps[symmetric] valid_sched_def)
-   apply (wpsimp wp: tcb_sched_dequeue_valid_ready_qs tcb_dequeue_not_queued
-                     tcb_sched_action_valid_sched_misc
-                     tcb_sched_dequeue_valid_blocked_except_set_const
-                     hoare_vcg_conj_lift hoare_vcg_imp_lift' tcb_sched_dequeue_ct_not_in_q)
-   apply (clarsimp simp: valid_blocked_thread_def)
-   apply (intro conjI)
-  using valid_blocked_valid_ready_qs_ready_and_sufficient schedulable_def2 apply blast
-   apply (clarsimp simp: runnable_eq_active tcb_at_kh_simps schedulable_def2)
-  apply (wpsimp simp: tcb_at_typ)
+  apply (wpsimp wp: tcb_at_typ_at reschedule_valid_sched_const
+                simp: invoke_set_domain_def domain_set_start_def domain_schedule_configure_def)
+  apply (simp add: valid_domain_inv_def)
   done
 
 lemma sched_context_bind_ntfn_valid_sched[wp]:
@@ -19057,7 +19062,7 @@ lemma ct_active_imp_not_timeout:
 context DetSchedSchedule_AI_det_ext begin
 
 lemma perform_invocation_valid_sched:
-  "\<lbrace>invs and valid_invocation i and ct_active and scheduler_act_sane and valid_sched and valid_machine_time
+  "\<lbrace>invs and valid_invocation i and ct_active and valid_sched and valid_machine_time
         and cur_sc_active
         and schact_is_rct and ct_not_queued and ct_not_in_release_q and ct_released
         and current_time_bounded and consumed_time_bounded
@@ -19612,19 +19617,21 @@ lemma do_reply_transfer_scheduler_act_sane[wp]:
   by (clarsimp simp: ct_in_state_def pred_tcb_at_eq_commute tcb_at_kh_simps vs_all_heap_simps)
 
 lemma invoke_domain_valid_sched_misc[wp]:
-  "invoke_domain thread domain
+  "invoke_domain iv
    \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (ep_send_qs_of s) (ep_recv_qs_of s) (cur_time s)
           (cur_domain s) (cur_thread s) (idle_thread s) (release_queue s)
           (tcb_sts_of s) (tcb_scps_of s) (sc_refill_cfgs_of (s::'state_ext state))\<rbrace>"
-  unfolding invoke_domain_def
-  by (wpsimp simp: set_domain_def)
+  unfolding invoke_domain_def invoke_set_domain_def set_domain_def domain_set_start_def
+            domain_schedule_configure_def
+  by wpsimp
 
 lemma invoke_domain_scheduler_act_sane[wp]:
   "\<lbrace>scheduler_act_sane\<rbrace>
-   invoke_domain thread domain
+   invoke_domain iv
    \<lbrace>\<lambda>_. scheduler_act_sane :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding invoke_domain_def
-  by (wpsimp simp: set_domain_def wp: hoare_vcg_if_lift2)
+  unfolding invoke_domain_def invoke_set_domain_def set_domain_def domain_set_start_def
+            domain_schedule_configure_def
+  by (wpsimp wp: hoare_vcg_if_lift2)
 
 lemma sched_context_bind_ntfn_valid_sched_pred_strong[wp]:
   "sched_context_bind_ntfn sc ntfn \<lbrace>valid_sched_pred P\<rbrace>"

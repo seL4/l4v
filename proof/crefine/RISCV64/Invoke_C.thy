@@ -130,9 +130,11 @@ lemma invokeDomainSetSet_ccorres:
   done
 
 lemma invokeDomainScheduleSetStart_ccorres:
-  "ccorres dc xfdc invs' \<lbrace>unat \<acute>index___unsigned_long = idx\<rbrace> hs
-           (domainSetStart idx)
-           (Call invokeDomainScheduleSetStart_'proc)"
+  "ccorres dc xfdc
+     (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
+     \<lbrace>unat \<acute>index___unsigned_long = idx\<rbrace> hs
+     (domainSetStart idx)
+     (Call invokeDomainScheduleSetStart_'proc)"
   apply (cinit lift: index___unsigned_long_')
    apply (rule ccorres_split_nothrow_novcg)
        apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV and rrel=dc])
@@ -163,7 +165,6 @@ lemma invokeDomainScheduleSetStart_ccorres:
     apply wpsimp
    apply (simp add: guard_is_UNIV_def)
   apply clarsimp
-  apply (frule invs_weak_sch_act_wf)
   apply (fastforce simp: weak_sch_act_wf_def tcb_in_cur_domain'_def)
   done
 
@@ -207,7 +208,7 @@ lemma decodeDomainSetSetInvocation_ccorres:
               and (\<lambda>s. \<forall>v \<in> set extraCaps. \<forall>y \<in> zobj_refs' (fst v). ex_nonz_cap_to' y s)
               and (\<lambda>s. \<forall>v \<in> set extraCaps. s \<turnstile>' fst v)
               and sysargs_rel args buffer
-              and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s))
+              and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
        (\<lbrace>unat \<acute>length___unsigned_long = length args\<rbrace>
         \<inter> \<lbrace>\<acute>current_extra_caps = extraCaps' \<rbrace>
         \<inter> \<lbrace>\<acute>buffer = option_to_ptr buffer\<rbrace>) []
@@ -308,7 +309,7 @@ lemma throw_syscall_error_type_ccorres:
   "(\<And>exf lf. syscall_error_to_H (type_C_update (\<lambda>_. scast exc') exf) lf = Some exc) \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
            \<top> UNIV [SKIP]
-           (throwError exc >>= invocationCatch thread isBlocking isCall InvokeDomain)
+           (throwError exc >>= invocationCatch thread isBlocking isCall canDonate InvokeDomain)
            (\<acute>current_syscall_error :== type_C_update (\<lambda>_. scast exc') \<acute>current_syscall_error;;
             return_C ret__unsigned_long_'_update (\<lambda>s. scast EXCEPTION_SYSCALL_ERROR))"
   apply (simp add: throwError_bind invocationCatch_def)
@@ -320,7 +321,7 @@ lemma throw_syscall_error_type_ccorres:
 lemma throw_IllegalOperation_ccorres:
   "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
            \<top> UNIV [SKIP]
-           (throwError IllegalOperation >>= invocationCatch thread isBlocking isCall InvokeDomain)
+           (throwError IllegalOperation >>= invocationCatch thread isBlocking isCall canDonate InvokeDomain)
            (\<acute>current_syscall_error :== type_C_update (\<lambda>_. scast seL4_IllegalOperation) \<acute>current_syscall_error;;
             return_C ret__unsigned_long_'_update (\<lambda>s. scast EXCEPTION_SYSCALL_ERROR))"
   apply (rule throw_syscall_error_type_ccorres)
@@ -382,7 +383,7 @@ lemma decodeDomainScheduleSetStart_ccorres:
               and sysargs_rel args buffer)
        (\<lbrace>unat \<acute>length___unsigned_long = length args\<rbrace>
         \<inter> \<lbrace>\<acute>buffer = option_to_ptr buffer\<rbrace>) []
-   (decodeDomainSetStart args extraCaps >>= invocationCatch thread isBlocking isCall InvokeDomain)
+   (decodeDomainSetStart args extraCaps >>= invocationCatch thread isBlocking isCall canDonate InvokeDomain)
    (Call decodeDomainScheduleSetStart_'proc)"
   supply Collect_const[simp del]
   apply (cinit' lift: length___unsigned_long_' buffer_'
@@ -482,13 +483,13 @@ lemma decodeDomainScheduleConfigure_ccorres:
               and sysargs_rel args buffer)
        (\<lbrace>unat \<acute>length___unsigned_long = length args\<rbrace>
         \<inter> \<lbrace>\<acute>buffer = option_to_ptr buffer\<rbrace>) []
-   (decodeDomainConfigure args extraCaps >>= invocationCatch thread isBlocking isCall InvokeDomain)
+   (decodeDomainConfigure args extraCaps >>= invocationCatch thread isBlocking isCall canDonate InvokeDomain)
    (Call decodeDomainScheduleConfigure_'proc)"
   supply Collect_const[simp del] unat_scast_domScheduleLength_m1[simp]
   apply (cinit' lift: length___unsigned_long_' buffer_'
                 simp: decodeDomainConfigure_def)
    apply (drule sym[where t="length args"])
-   apply (clarsimp simp: timeArgLen_def)
+   apply (clarsimp simp: TIME_ARG_SIZE_def word_bits_def)
    apply (rule ccorres_Cond_rhs_Seq)
     apply ccorres_rewrite
     apply (clarsimp simp: word_less_nat_alt)
@@ -605,7 +606,7 @@ lemma decodeDomainInvocation_ccorres:
         \<inter> \<lbrace>\<acute>invLabel = label\<rbrace>
         \<inter> \<lbrace>\<acute>buffer = option_to_ptr buffer\<rbrace>) []
    (decodeDomainInvocation label args extraCaps >>=
-      invocationCatch thread isBlocking isCall InvokeDomain)
+      invocationCatch thread isBlocking isCall canDonate InvokeDomain)
    (Call decodeDomainInvocation_'proc)"
   supply gen_invocation_type_eq[simp] invocation_eq_use_types[simp]
   apply (cinit' lift: length___unsigned_long_' current_extra_caps_' invLabel_' buffer_'

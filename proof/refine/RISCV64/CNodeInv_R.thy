@@ -5019,7 +5019,6 @@ crunch cteSwap
   and valid_sched_pointers[wp]: valid_sched_pointers
   and valid_bitmaps[wp]: valid_bitmaps
   and valid_machine_state'[wp]: valid_machine_state'
-  and ct_not_inQ[wp]: ct_not_inQ
   and pspace_domain_valid[wp]: pspace_domain_valid
   and replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
   and tcbSchedNexts_of[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
@@ -5037,7 +5036,7 @@ lemma cteSwap_invs'[wp]:
     K (c1 \<noteq> c2)\<rbrace>
   cteSwap c c1 c' c2
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_dom_schedule'_def pred_conj_def)
+  apply (simp add: invs'_def pred_conj_def)
   apply (rule hoare_pre)
    apply (wp hoare_vcg_conj_lift valid_irq_node_lift irqs_masked_lift
              valid_dom_schedule'_lift valid_irq_states_lift')
@@ -5505,7 +5504,7 @@ lemma make_zombie_invs':
     updateCap sl cap
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def valid_mdb'_def
-                   valid_irq_handlers'_def irq_issued'_def valid_dom_schedule'_def)
+                   valid_irq_handlers'_def irq_issued'_def)
   apply (wp updateCap_ctes_of_wp updateCap_ifunsafe' valid_dom_schedule'_lift
             valid_arch_state_lift' valid_irq_node_lift updateCap_untyped_ranges_zero_simple
             valid_bitmaps_lift
@@ -8493,7 +8492,7 @@ lemma cteMove_invs' [wp]:
             cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) word2 s\<rbrace>
      cteMove capability word1 word2
    \<lbrace>\<lambda>y. invs'\<rbrace>"
-  apply (simp add: invs'_def pred_conj_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def pred_conj_def)
   apply (intro hoare_vcg_conj_lift_pre_fix;
          solves \<open>wpsimp wp: cteMove_urz cteMove_ifunsafe'
                  | wpsimp simp: cteMove_def o_def
@@ -8665,7 +8664,7 @@ lemma updateCap_noop_invs:
   "\<lbrace>invs' and cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot\<rbrace>
    updateCap slot cap
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_dom_schedule'_def valid_pspace'_def valid_mdb'_def)
+  apply (simp add: invs'_def valid_pspace'_def valid_mdb'_def)
   apply (rule hoare_pre)
    apply (wp updateCap_ctes_of_wp updateCap_ifunsafe'
              valid_arch_state_lift' valid_irq_node_lift

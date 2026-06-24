@@ -317,7 +317,9 @@ lemma getNBSendRecvDest_ccorres[corres]:
   done
 
 lemma handleSyscall_ccorres:
-  "ccorres dc xfdc invs' \<lbrace>\<acute>syscall___unsigned_long = syscall_from_H sysc\<rbrace> []
+  "ccorres dc xfdc
+     (invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+     \<lbrace>\<acute>syscall___unsigned_long = syscall_from_H sysc\<rbrace> []
      (callKernel (SyscallEvent sysc)) (Call handleSyscall_'proc)"
   supply if_cong[cong] option.case_cong[cong]
   apply (cinit' lift: syscall_' simp: getCapReg_def)
@@ -601,9 +603,9 @@ lemma handleSyscall_ccorres:
                      simp: handleSend_def handleCall_def stateAssertE_def
                 | wpc)+)[1]
        apply (simp add: guard_is_UNIV_def)
-      apply (rule_tac Q'="\<lambda>_. invs'" in hoare_post_imp)
+      apply (rule_tac Q'="\<lambda>rv. invs' and (\<lambda>s. rv \<longrightarrow> ksSchedulerAction s = ResumeCurrentThread)" in hoare_post_imp)
        apply clarsimp
-      apply wpsimp
+      apply (wpsimp wp: checkBudgetRestart_true)
      apply (vcg exspec=checkBudgetRestart_modifies)
     apply wpsimp
    apply (vcg exspec=updateTimestamp_modifies)
@@ -752,7 +754,7 @@ lemma callKernel_corres_C:
    apply (rule ccorres_guard_imp)
      apply (rule ccorres_call)
         apply (rule handleSyscall_ccorres)
-       apply (clarsimp simp: all_invs'_def)+
+       apply (clarsimp simp: all_invs'_def resume_cur_thread_cross)+
   apply (rule ccorres_corres_u [rotated], assumption)
   apply (rule ccorres_guard_imp)
     apply (rule handleHypervisorEvent_ccorres)

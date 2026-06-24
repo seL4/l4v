@@ -377,7 +377,6 @@ has the highest runnable priority in the system on kernel entry (unless idle).
 > schedule :: Kernel ()
 > schedule = do
 >     stateAssert valid_idle'_asrt "`valid_idle'`"
->     stateAssert valid_domain_list'_asrt "`valid_domain_list'`"
 >     stateAssert sch_act_wf_asrt "`sch_act_wf (ksSchedulerAction s) s`"
 >     stateAssert cur_tcb'_asrt "`cur_tcb'`"
 >     awaken

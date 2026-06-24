@@ -1453,7 +1453,7 @@ lemma emptySlot_invs'[wp]:
             \<and> (info \<noteq> NullCap \<longrightarrow> post_cap_delete_pre' info sl (cteCaps_of s) )\<rbrace>
      emptySlot sl info
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_pspace'_def)
   apply (wp valid_irq_node_lift valid_replies'_lift valid_dom_schedule'_lift)
   apply (clarsimp simp: cte_wp_at_ctes_of post_cap_delete_pre'_def cteCaps_of_def o_def
                  split: capability.split_asm arch_capability.split_asm)
@@ -2239,7 +2239,7 @@ context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma unbindNotification_invs[wp]:
   "unbindNotification tcb \<lbrace>invs'\<rbrace>"
-  apply (simp add: unbindNotification_def invs'_def valid_dom_schedule'_def)
+  apply (simp add: unbindNotification_def invs'_def)
   apply (rule bind_wp[OF _ gbn_sp'], rename_tac ntfnPtrOpt)
   apply (case_tac ntfnPtrOpt, clarsimp, wp, clarsimp)
   apply (clarsimp simp: updateNotification_def)
@@ -2264,7 +2264,7 @@ lemma ntfn_bound_tcb_at':
 
 lemma unbindMaybeNotification_invs[wp]:
   "unbindMaybeNotification ntfnptr \<lbrace>invs'\<rbrace>"
-  apply (simp add: unbindMaybeNotification_def invs'_def valid_dom_schedule'_def)
+  apply (simp add: unbindMaybeNotification_def invs'_def)
   apply (rule bind_wp[OF _ get_ntfn_sp'])
   apply (wpsimp wp: getNotification_wp sbn'_valid_pspace'_inv valid_irq_node_lift irqs_masked_lift
                     valid_dom_schedule'_lift untyped_ranges_zero_lift sym_heap_sched_pointers_lift
@@ -2275,14 +2275,6 @@ lemma unbindMaybeNotification_invs[wp]:
           split: option.splits ntfn.splits)
 
 end
-
-lemma setNotification_invs':
-  "\<lbrace>invs' and valid_ntfn' ntfn\<rbrace>
-   setNotification ntfnPtr ntfn
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_dom_schedule'_def)
-  apply (wpsimp wp: untyped_ranges_zero_lift simp: cteCaps_of_def o_def)
-  done
 
 lemma schedContextUnbindNtfn_valid_objs'[wp]:
   "schedContextUnbindNtfn scPtr \<lbrace>valid_objs'\<rbrace>"
@@ -2298,11 +2290,11 @@ lemma schedContextUnbindNtfn_valid_objs'[wp]:
 
 lemma schedContextUnbindNtfn_invs'[wp]:
   "schedContextUnbindNtfn scPtr \<lbrace>invs'\<rbrace>"
-  unfolding invs'_def valid_pspace'_def valid_dom_schedule'_def
+  unfolding invs'_def valid_pspace'_def
   apply wpsimp \<comment> \<open>this handles valid_objs' separately\<close>
    unfolding schedContextUnbindNtfn_def updateSchedContext_def updateNotification_def
    apply (wpsimp wp: getNotification_wp hoare_vcg_all_lift hoare_vcg_imp_lift'
-                     valid_ntfn_lift')
+                     valid_ntfn_lift' valid_dom_schedule'_lift)
   by (auto simp: ko_wp_at'_def obj_at'_def live'_def live_sc'_def live_ntfn'_def o_def
           elim!: if_live_then_nonz_capE')
 
@@ -2324,6 +2316,7 @@ crunch replyRemove
   and untyped_ranges_zero'[wp]: untyped_ranges_zero'
   and no_0_obj'[wp]: no_0_obj'
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and valid_dom_schedule'[wp]: valid_dom_schedule'
   and pspace_in_kernel_mappings'[wp]: pspace_in_kernel_mappings'
@@ -2575,7 +2568,7 @@ lemma invs_asid_update_strg':
             (\<lambda>_. tab (asid := None)) (ksArchState s)\<rparr>)"
   apply (simp add: invs'_def)
   apply (simp add: valid_global_refs'_def global_refs'_def valid_arch_state'_def
-                   valid_asid_table'_def valid_machine_state'_def valid_dom_schedule'_def)
+                   valid_asid_table'_def valid_machine_state'_def)
   apply (auto simp add: ran_def split: if_split_asm)
   done
 
@@ -2872,6 +2865,7 @@ crunch schedContextUnbindTCB
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   (wp: crunch_wps valid_mdb'_lift getTCB_wp simp: crunch_simps o_def)
 
 crunch schedContextUnbindTCB
@@ -2883,8 +2877,8 @@ crunch schedContextUnbindTCB
 
 lemma schedContextUnbindTCB_invs'[wp]:
   "schedContextUnbindTCB scPtr \<lbrace>invs'\<rbrace>"
-  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
-  by (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' simp: o_def)
+  apply (simp add: invs'_def valid_pspace'_def)
+  by (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' valid_dom_schedule'_lift)
 
 (* FIXME RT: bound_tcb_at' is an outdated name? *)
 lemma threadSet_sc_bound_tcb_at'[wp]:

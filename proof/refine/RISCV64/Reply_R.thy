@@ -362,6 +362,7 @@ crunch replyRemoveTCB
   and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
   and ksMachineState[wp]: "\<lambda>s. P (ksMachineState s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
   and sch_act_simple[wp]: "sch_act_simple"
   and untyped_ranges_zero'[wp]: "untyped_ranges_zero'"
   and ifunsafe'[wp]: "if_unsafe_then_cap'"
@@ -540,10 +541,10 @@ crunch replyRemoveTCB
 
 lemma replyRemoveTCB_invs':
   "replyRemoveTCB tptr \<lbrace>invs'\<rbrace>"
-  unfolding invs'_def valid_dom_schedule'_def
+  unfolding invs'_def
   by (wpsimp wp: replyRemoveTCB_sym_refs_list_refs_of_replies'
                  valid_irq_node_lift valid_irq_handlers_lift' valid_irq_states_lift'
-                 irqs_masked_lift
+                 irqs_masked_lift valid_dom_schedule'_lift
            simp: cteCaps_of_def)
 
 lemma set_reply_obj_ref_noop:
@@ -761,8 +762,8 @@ crunch bindScReply
   and cte_wp_at'[wp]: "cte_wp_at' P p"
   and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   and pspace_in_kernel_mappings'[wp]: pspace_in_kernel_mappings'
-  (wp: crunch_wps hoare_vcg_all_lift valid_irq_node_lift
-   simp: crunch_simps valid_mdb'_def valid_dom_schedule'_def)
+  (wp: crunch_wps hoare_vcg_all_lift valid_irq_node_lift valid_dom_schedule'_lift
+   simp: crunch_simps valid_mdb'_def)
 
 lemma updateReply_obj_at':
   "\<lbrace>\<lambda>s. reply_at' rptr s \<longrightarrow>
@@ -1507,7 +1508,7 @@ lemma updateReply_Prev_Next_rewrite:
     done
    apply (all \<open>clarsimp simp: updateReply_def getReply_def setReply_def getObject_def2
                               obj_at'_def updateObject_default_def setObject_def
-                              loadObject_default_def2[simplified] RISCV64_H.fromPPtr_def
+                              loadObject_default_def2[simplified]
                               split_def in_monad in_magnitude_check' objBits_simps'\<close>)
    apply (fastforce simp add: fun_upd_def replyPrevNext_update_commute)+
   done
@@ -1636,7 +1637,7 @@ proof -
     apply (rename_tac s s')
     apply (rule conjI)
      apply (clarsimp simp: update_sched_context_def updateReply_def getReply_def
-                           setReply_def getObject_def2 setObject_def in_monad RISCV64_H.fromPPtr_def
+                           setReply_def getObject_def2 setObject_def in_monad
                            get_object_def2 set_object_def bind_assoc loadObject_default_def2[simplified]
                            scBits_simps split_def lookupAround2_known1 exec_gets a_type_def
                            obj_at'_def reply_sc_reply_at_def obj_at_def

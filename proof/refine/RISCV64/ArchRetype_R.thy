@@ -1590,7 +1590,7 @@ lemma createObjects_no_cte_invs:
    createObjects ptr n val gbits
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (rule hoare_grab_asm)+
-  apply (clarsimp simp: invs'_def valid_dom_schedule'_def)
+  apply (clarsimp simp: invs'_def)
   apply (rule hoare_pre)
    apply (rule hoare_vcg_conj_lift)
     apply (simp add: createObjects_def,wp createObjects_valid_pspace_untyped')

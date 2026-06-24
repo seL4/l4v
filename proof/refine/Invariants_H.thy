@@ -1368,12 +1368,6 @@ defs sch_act_sane_asrt_def:
 defs ct_not_ksQ_asrt_def:
   "ct_not_ksQ_asrt \<equiv> \<lambda>s. obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s"
 
-(* abstract and haskell have identical domain list fields *)
-abbreviation valid_domain_list' :: "'a kernel_state_scheme \<Rightarrow> bool" where
-  "valid_domain_list' \<equiv> \<lambda>s. valid_domain_list_2 (ksDomSchedule s)"
-
-lemmas valid_domain_list'_def = valid_domain_list_2_def
-
 
 subsection "Derived concepts"
 
@@ -2485,11 +2479,11 @@ lemma ko_wp_typ_at':
   by (clarsimp simp: typ_at'_def ko_wp_at'_def)
 
 lemma valid_dom_schedule'_lift:
-  assumes dsi: "\<And>Q. \<lbrace>\<lambda>s. Q (ksDomScheduleIdx s)\<rbrace> f \<lbrace>\<lambda>rv s. Q (ksDomScheduleIdx s)\<rbrace>"
-  assumes ds: "\<And>Q. \<lbrace>\<lambda>s. Q (ksDomSchedule s)\<rbrace> f \<lbrace>\<lambda>rv s. Q (ksDomSchedule s)\<rbrace>"
-    shows "\<lbrace>\<lambda>s. valid_dom_schedule' s\<rbrace> f \<lbrace>\<lambda>rv. valid_dom_schedule'\<rbrace>"
-   unfolding valid_dom_schedule'_def
-   by (wpsimp wp: dsi ds)
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ksDomScheduleStart s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
+  shows "f \<lbrace>valid_dom_schedule'\<rbrace>"
+  by (wps assms | wp assms)+
 
 lemma valid_bound_tcb_lift:
   "(\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_bound_tcb' tcb s)\<rbrace>"
@@ -2762,13 +2756,6 @@ lemma ct_active_st_tcb_at_runnable':
   "ct_active' s \<Longrightarrow> st_tcb_at' runnable' (ksCurThread s) s"
   by (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
 
-lemma simple_valid_tcb_state'[simp]:
-  "valid_tcb_state' Restart s"
-  "valid_tcb_state' Running s"
-  "valid_tcb_state' Inactive s"
-  "valid_tcb_state' IdleThreadState s"
-  by (auto simp: valid_tcb_state'_def)
-
 section "kernel_state field update identities"
 
 context pspace_update_eq'
@@ -2845,11 +2832,6 @@ lemma pointerInDeviceData_update[iff]:
 lemma pspace_domain_valid_update [iff]:
   "pspace_domain_valid (f s) = pspace_domain_valid s"
   by (simp add: pspace_domain_valid_def pspace)
-
-lemma valid_tcb_state'_eq[iff]:
-  "valid_tcb_state' st (f s) = valid_tcb_state' st s"
-  unfolding valid_tcb_state'_def
-  by (cases st; fastforce intro: obj_at'_pspaceI simp: pspace)
 
 end
 
@@ -3422,7 +3404,7 @@ lemma invs_ksCurDomain_maxDomain' [elim!]:
 
 lemma invs_valid_dom_schedule'[elim!]:
   "invs' s \<Longrightarrow> valid_dom_schedule' s"
-  by (simp add: invs'_def valid_state'_def)
+  by (simp add: invs'_def)
 
 lemma cur_tcb_arch' [iff]:
   "cur_tcb' (ksArchState_update f s) = cur_tcb' s"

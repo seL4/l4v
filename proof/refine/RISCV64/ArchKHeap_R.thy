@@ -451,11 +451,11 @@ lemmas valid_globals_cte_wpD'_idleThread = valid_globals_cte_wpD'[OF _ _ idle_is
 lemmas valid_globals_cte_wpD'_idleSC = valid_globals_cte_wpD'[OF _ _ idle_sc_is_global]
 
 (*FIXME arch-split RT: everything after this*)
-lemma set_ntfn_minor_invs':
+lemma setNotification_invs':
   "\<lbrace>invs' and valid_ntfn' val\<rbrace>
    setNotification ptr val
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (clarsimp simp add: invs'_def cteCaps_of_def valid_dom_schedule'_def)
+  apply (clarsimp simp add: invs'_def cteCaps_of_def)
   apply (wpsimp wp: irqs_masked_lift valid_irq_node_lift untyped_ranges_zero_lift
                     sym_heap_sched_pointers_lift valid_dom_schedule'_lift
               simp: o_def)

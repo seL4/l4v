@@ -23,10 +23,6 @@ lemma get_tcb_exst_update:
   "get_tcb p (trans_state f s) = get_tcb p s"
   by (simp add: get_tcb_def)
 
-lemma ct_in_state_trans_update[simp]: "ct_in_state st (trans_state f s) = ct_in_state st s"
-  apply (simp add: ct_in_state_def)
-  done
-
 (* RT: sc_and_timer invs *)
 lemma set_refills_valid_objs:
   "set_refills sc_ptr refills \<lbrace>valid_objs\<rbrace>"
@@ -974,20 +970,6 @@ lemma sc_and_timer_invs:
   "\<lbrace>valid_state and cur_tcb\<rbrace> sc_and_timer \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp simp: sc_and_timer_def)
 
-(* move to Invariants_AI *)
-lemma ct_in_state_reprogram_timer_update[iff]:
-  "ct_in_state st (reprogram_timer_update f s) = ct_in_state st s"
-  by (simp add: ct_in_state_def)
-lemma ct_in_state_consumed_time_update[iff]:
-  "ct_in_state st (consumed_time_update f s) = ct_in_state st s"
-  by (simp add: ct_in_state_def)
-lemma ct_in_state_cur_time_update[iff]:
-  "ct_in_state st (cur_time_update f s) = ct_in_state st s"
-  by (simp add: ct_in_state_def)
-lemma ct_in_state_cur_sc_update[iff]:
-  "ct_in_state st (cur_sc_update f s) = ct_in_state st s"
-  by (simp add: ct_in_state_def)
-
 crunch commit_time
  for pred_tcb_at[wp]: "\<lambda>s. P (pred_tcb_at proj f t s)"
   (simp: crunch_simps wp: crunch_wps)
@@ -1011,11 +993,6 @@ lemma refill_budget_check_ct_in_state[wp]:
   apply (wpsimp wp: whileLoop_valid_inv get_refills_wp hoare_drop_imps hoare_vcg_all_lift
                     hoare_vcg_if_lift2)
   done
-
-(* FIXME: move *)
-lemma ct_in_state_domain_time_update[simp]:
-  "ct_in_state st (domain_time_update f s) = ct_in_state st s"
-  by (simp add: ct_in_state_def)
 
 crunch commit_time
  for ct_in_state[wp]: "ct_in_state t"
