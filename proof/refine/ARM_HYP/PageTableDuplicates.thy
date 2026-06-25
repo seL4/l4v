@@ -1265,7 +1265,7 @@ lemma unmapPage_valid_duplicates'[wp]:
           apply (rule_tac ptr = "p && ~~ mask ptBits" and word = p
             in mapM_x_storePTE_update_helper[where sz = 7])
           apply (wp checkMappingPPtr_inv lookupPTSlot_page_table_at'
-                    Arch_R.lookupPTSlot_aligned | simp)+
+                    lookupPTSlot_aligned | simp)+
       apply (rule hoare_strengthen_postE_R[OF lookupPTSlot_aligned[where sz= vmpage_size]])
       apply (simp add:pageBitsForSize_def pt_bits_def pte_bits_def)
       apply (drule upto_enum_step_shift[where n = 7 and m = 3,simplified])
