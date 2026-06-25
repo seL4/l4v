@@ -11,15 +11,11 @@ theory ArchArch_R
 imports Arch_R
 begin
 
-unbundle l4v_word_context
+context Arch begin arch_global_naming
 
-lemmas [datatype_schematic] = cap.sel list.sel(1) list.sel(3)
+named_theorems Arch_R_assms
 
-context begin interpretation Arch . (*FIXME: arch-split*)
-
-declare arch_cap.sel [datatype_schematic]
-declare is_aligned_shiftl [intro!]
-declare is_aligned_shiftr [intro!]
+declare arch_cap.sel[datatype_schematic]
 
 definition
   "asid_ci_map i \<equiv>
@@ -35,12 +31,6 @@ definition
       ex_cte_cap_to' slot s \<and>
       sch_act_simple s \<and>
       is_aligned base asid_low_bits \<and> asid_wf base"
-
-lemma vp_strgs':
-  "valid_pspace' s \<longrightarrow> pspace_distinct' s"
-  "valid_pspace' s \<longrightarrow> pspace_aligned' s"
-  "valid_pspace' s \<longrightarrow> valid_mdb' s"
-  by auto
 
 lemma safe_parent_strg':
   "cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap False frame pageBits idx) p s \<and>
@@ -58,61 +48,6 @@ lemma safe_parent_strg':
    apply (clarsimp simp: capRange_def asid_low_bits_def bit_simps)
   apply (clarsimp simp: sameRegionAs_def2 isCap_simps capRange_def asid_low_bits_def bit_simps)
   done
-
-lemma descendants_of'_helper:
-  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q (descendants_of' t (null_filter' (ctes_of s)))\<rbrace>
-   \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q (descendants_of' t (ctes_of s))\<rbrace>"
-  apply (clarsimp simp:valid_def)
-  apply (subst null_filter_descendants_of')
-  prefer 2
-   apply fastforce
-  apply simp
-  done
-
-lemma createObject_typ_at':
-  "\<lbrace>\<lambda>s.  koTypeOf ty = otype \<and> is_aligned ptr (objBitsKO ty) \<and>
-         pspace_aligned' s \<and> pspace_no_overlap' ptr (objBitsKO ty) s\<rbrace>
-   createObjects' ptr (Suc 0) ty 0
-   \<lbrace>\<lambda>rv s. typ_at' otype ptr s\<rbrace>"
-  supply
-    is_aligned_neg_mask_eq[simp del]
-    is_aligned_neg_mask_weaken[simp del]
-  apply (clarsimp simp:createObjects'_def alignError_def split_def | wp unless_wp | wpc )+
-  apply (clarsimp simp:obj_at'_def ko_wp_at'_def typ_at'_def pspace_distinct'_def)+
-  apply (subgoal_tac "ps_clear ptr (objBitsKO ty)
-    (s\<lparr>ksPSpace := \<lambda>a. if a = ptr then Some ty else ksPSpace s a\<rparr>)")
-  apply (simp add:ps_clear_def)+
-  apply (rule ccontr)
-  apply (drule int_not_emptyD)
-  apply clarsimp
-  apply (unfold pspace_no_overlap'_def)
-  apply (erule allE)+
-  apply (erule(1) impE)
-  apply (subgoal_tac "x \<in> mask_range x (objBitsKO y)")
-   apply (fastforce simp: is_aligned_neg_mask_eq)
-  apply (drule(1) pspace_alignedD')
-  apply (clarsimp simp: is_aligned_no_overflow_mask)
-  done
-
-lemma set_cap_device_and_range_aligned:
-  "is_aligned ptr sz \<Longrightarrow> \<lbrace>\<lambda>_. True\<rbrace>
-    set_cap
-     (cap.UntypedCap dev ptr sz idx)
-     aref
-    \<lbrace>\<lambda>rv s.
-        \<exists>slot.
-           cte_wp_at
-            (\<lambda>c. cap_is_device c = dev \<and>
-                 up_aligned_area ptr sz \<subseteq> cap_range c)
-            slot s\<rbrace>"
-  apply (subst is_aligned_neg_mask_eq[symmetric])
-   apply simp
-  apply (wp set_cap_device_and_range)
-  done
-
-crunch cteInsert
-  for aobjs_of'[wp]: "\<lambda>s. P (aobjs_of' s)"
-  (wp: crunch_wps)
 
 lemma createObjects'_ap:
   "\<lbrace>\<lambda>s. pspace_no_overlap' p sz s \<and> valid_pspace' s \<and> range_cover p sz pageBits (Suc 0)\<rbrace>
@@ -436,7 +371,7 @@ where
 
 lemma mask_vmrights_corres:
   "maskVMRights (vmrights_map R) (rightsFromWord d) =
-  vmrights_map (mask_vm_rights R (data_to_rights d))"
+   vmrights_map (mask_vm_rights R (data_to_rights d))"
   by (clarsimp simp: rightsFromWord_def data_to_rights_def
                      vmrights_map_def Let_def maskVMRights_def
                      mask_vm_rights_def nth_ucast
@@ -497,34 +432,14 @@ lemma ARMMMU_improve_cases:
   apply (case_tac pt_t; simp)
   done
 
-crunch "AARCH64_H.decodeInvocation"
-  for inv[wp]: "P"
+crunch Arch.decodeInvocation
+  for inv[Arch_R_assms, wp]: "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp hoare_vcg_imp_lift'
    simp: crunch_simps ARMMMU_improve_cases)
 
-lemma case_option_corresE:
-  assumes nonec: "corres r Pn Qn (nc >>=E f) (nc' >>=E g)"
-  and     somec: "\<And>v'. corres r (Ps v') (Qs v') (sc v' >>=E f) (sc' v' >>=E g)"
-  shows "corres r (case_option Pn Ps v) (case_option Qn Qs v) (case_option nc sc v >>=E f) (case_option nc' sc' v >>=E g)"
-  apply (cases v)
-   apply simp
-   apply (rule nonec)
-  apply simp
-  apply (rule somec)
-  done
-
-
-lemma cap_relation_Untyped_eq:
-  "cap_relation c (UntypedCap d p sz f) = (c = cap.UntypedCap d p sz f)"
-  by (cases c) auto
+lemmas arch_decodeInvocation_inv = ArchRetypeDecls_H_AARCH64_H_decodeInvocation_inv
 
 declare check_vp_alignment_inv[wp del]
-
-lemma select_ext_fa:
-  "free_asid_select asid_tbl \<in> S
-  \<Longrightarrow> ((select_ext (\<lambda>_. free_asid_select asid_tbl) S) :: _ det_ext_monad)
-   = return (free_asid_select asid_tbl)"
-  by (simp add: select_ext_def get_def gets_def bind_def assert_def return_def fail_def)
 
 lemma select_ext_fap:
   "free_asid_pool_select p b \<in> S
@@ -635,6 +550,7 @@ lemma decodeARMFrameInvocation_corres:
              (\<lambda>s. \<forall>x\<in>set excaps'. valid_cap' (fst x) s \<and> cte_wp_at' (\<lambda>_. True) (snd x) s))
             (decode_frame_invocation l args slot cap excaps)
             (decodeARMFrameInvocation l args (cte_map slot) cap' excaps')"
+  supply corres_throwError_ser[corres del]
   apply (simp add: decode_frame_invocation_def decodeARMFrameInvocation_def Let_def isCap_simps
               split del: if_split)
   apply (cases "invocation_type l = ArchInvocationLabel ARMPageMap")
@@ -819,18 +735,7 @@ lemma decodeARMPageTableInvocation_corres:
 lemma list_all2_Cons: "list_all2 f (x#xs) b \<Longrightarrow> \<exists>y ys. b = y # ys"
   by (induct b; simp)
 
-lemma corres_gets_numlistregs[corres]:
-  "corres (=) \<top> \<top>
-      (gets (arm_gicvcpu_numlistregs \<circ> arch_state)) (gets (armKSGICVCPUNumListRegs \<circ> ksArchState))"
-  by (clarsimp simp: state_relation_def arch_state_relation_def)
-
-theorem corres_throwError_ser[corres]:
-  "corres (ser \<oplus> r) (\<lambda>_. b = syscall_error_map a) (\<lambda>_. True) (throwError a) (throwError b)"
-  by simp
-
-lemmas corres_liftE_rel_sumI = corres_liftE_rel_sum[THEN iffD2]
-lemmas corres_liftMI = corres_liftM_simp[THEN iffD2]
-lemmas corres_liftM2I = corres_liftM2_simp[THEN iffD2]
+declare corres_gets_gicvcpu_numlistregs[corres]
 
 lemma get_vcpu_LR_corres[corres]:
   "corres (r \<oplus> (\<lambda>vcpu lr. vgic_lr (vcpu_vgic vcpu) = lr)) (vcpu_at v) (vcpu_at' v)
@@ -1104,27 +1009,6 @@ lemma dom_ucast_eq:
   apply (word_bitwise)
   done
 
-lemma assocs_map_option:
-  "assocs (\<lambda>x. map_option f (pool x)) = map (\<lambda>(x,y). (x, map_option f y)) (assocs pool)"
-  by (simp add: assocs_def)
-
-lemma fst_hd_map_eq:
-  "xs \<noteq> [] \<Longrightarrow> fst (hd (map (\<lambda>p. (fst p, f (snd p))) xs)) = fst (hd xs)"
-  by (induct xs; simp)
-
-lemma assocs_dom_comp_split:
-  "set (map fst (filter (\<lambda>x. P (fst x) \<and> snd x = None) (assocs f))) = (- dom f \<inter> Collect P)"
-  apply (clarsimp simp: in_assocs_is_fun)
-  apply (rule set_eqI)
-  apply clarsimp
-  apply (rule iffI, clarsimp)
-  apply (erule conjE)
-  apply (drule not_in_domD)
-  apply (rule_tac x="(x,None)" in image_eqI)
-   apply simp
-  apply simp
-  done
-
 lemma decodeSMCInvocation_corres:
   "corres (ser \<oplus> archinv_relation) invs invs'
           (decode_smc_invocation (mi_label mi) args (arch_cap.SMCCap smc_badge))
@@ -1133,7 +1017,7 @@ lemma decodeSMCInvocation_corres:
   by (corres corres: corres_returnOk[where P=\<top> and P'=\<top>]
              simp: archinv_relation_def smc_invocation_map_def)
 
-lemma arch_decodeInvocation_corres:
+lemma arch_decodeInvocation_corres[Arch_R_assms]:
   "\<lbrakk> acap_relation arch_cap arch_cap';
      list_all2 cap_relation (map fst excaps) (map fst excaps');
      list_all2 (\<lambda>s s'. s' = cte_map s) (map snd excaps) (map snd excaps') \<rbrakk> \<Longrightarrow>
@@ -1142,7 +1026,8 @@ lemma arch_decodeInvocation_corres:
            cte_wp_at ((=) (cap.ArchObjectCap arch_cap)) slot and
            (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> fst x \<and> cte_at (snd x) s))
           (invs' and valid_cap' (capability.ArchObjectCap arch_cap') and
-           (\<lambda>s. \<forall>x\<in>set excaps'. s \<turnstile>' fst x \<and> cte_at' (snd x) s))
+           (\<lambda>s. \<forall>x\<in>set excaps'. s \<turnstile>' fst x \<and> cte_at' (snd x) s) and
+           (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
           (arch_decode_invocation (mi_label mi) args (to_bl cptr') slot arch_cap excaps)
           (Arch.decodeInvocation (mi_label mi) args cptr' (cte_map slot) arch_cap' excaps')"
   (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
@@ -1434,11 +1319,11 @@ lemma performARMVCPUInvocation_corres:
      apply (rule inv_corres [THEN corres_guard_imp]; simp add: invs_no_0_obj' invs_implies)+
   done
 
-lemma arch_performInvocation_corres:
+lemma arch_performInvocation_corres[Arch_R_assms]:
   "archinv_relation ai ai' \<Longrightarrow>
    corres (dc \<oplus> (=))
      (einvs and ct_active and valid_arch_inv ai and schact_is_rct)
-     (invs' and ct_active' and valid_arch_inv' ai')
+     (invs' and ct_active' and valid_arch_inv' ai' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
      (arch_perform_invocation ai) (Arch.performInvocation ai')"
   apply (clarsimp simp: arch_perform_invocation_def
                         AARCH64_H.performInvocation_def
@@ -1515,10 +1400,6 @@ lemma asid_pool_typ_at_ext':
   apply (simp add: typ_at_to_obj_at_arches)
   done
 
-lemma st_tcb_strg':
-  "st_tcb_at' P p s \<longrightarrow> tcb_at' p s"
-  by (auto simp: pred_tcb_at')
-
 lemma performASIDControlInvocation_tcb_at':
   "\<lbrace>st_tcb_at' active' p and invs' and ct_active' and valid_aci' aci\<rbrace>
   performASIDControlInvocation aci
@@ -1561,7 +1442,7 @@ crunch performVSpaceInvocation, performARMVCPUInvocation, performSGISignalGenera
        performSMCInvocation
   for tcb_at'[wp]: "\<lambda>s. tcb_at' p s"
 
-lemma invokeArch_tcb_at':
+lemma invokeArch_tcb_at'[Arch_R_assms]:
   "\<lbrace>invs' and valid_arch_inv' ai and ct_active' and st_tcb_at' active' p\<rbrace>
      Arch.performInvocation ai
    \<lbrace>\<lambda>rv. tcb_at' p\<rbrace>"
@@ -1570,16 +1451,7 @@ lemma invokeArch_tcb_at':
                   wp: performASIDControlInvocation_tcb_at')
   done
 
-crunch setThreadState
-  for pspace_no_overlap'[wp]: "pspace_no_overlap' w s"
-  (simp: unless_def crunch_simps wp: crunch_wps)
-
-lemma sts_cte_cap_to'[wp]:
-  "\<lbrace>ex_cte_cap_to' p\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. ex_cte_cap_to' p\<rbrace>"
-  by (wp ex_cte_cap_to'_pres)
-
-
-lemma sts_valid_arch_inv': (* FIXME AARCH64 cleanup *)
+lemma sts_valid_arch_inv'[Arch_R_assms]: (* FIXME AARCH64 cleanup *)
   "\<lbrace>valid_arch_inv' ai\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_arch_inv' ai\<rbrace>"
   apply (cases ai, simp_all add: valid_arch_inv'_def)
          apply (clarsimp simp: valid_vsi'_def split: vspace_invocation.splits)
@@ -1608,11 +1480,6 @@ lemma inv_ASIDPool:
   "inv ASIDPool = (\<lambda>v. case v of ASIDPool a \<Rightarrow> a)"
   by (rule ext)
      (simp split: asidpool.splits)
-
-lemma eq_arch_update':
-  "\<lbrakk> ArchObjectCap cp = cteCap cte; arch_capBadge cp = None \<rbrakk> \<Longrightarrow>
-   is_arch_update' (ArchObjectCap cp) cte"
-  by (drule sym, clarsimp simp: is_arch_update'_def isCap_simps)
 
 lemma decodeARMFrameInvocationFlush_valid_arch_inv'[wp]:
   "\<lbrace>\<top>\<rbrace>
@@ -1845,19 +1712,21 @@ lemma arch_decodeInvocation_wf[wp]:
   apply (wpsimp simp: valid_arch_inv'_def)
   done
 
-crunch setMRs
-  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
-    (ignore: getRestartPC setRegister transferCapsToSlots
-   wp: hoare_drop_imps hoare_vcg_split_case_option
-        mapM_wp'
-   simp: split_def zipWithM_x_mapM)
+lemma arch_decodeInvocation_wf_interface[Arch_R_assms]:
+  "\<lbrace>invs' and valid_cap' (ArchObjectCap arch_cap) and
+    cte_wp_at' ((=) (ArchObjectCap arch_cap) o cteCap) slot and
+    (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at' ((=) (fst x) o cteCap) (snd x) s) and
+    (\<lambda>s. \<forall>x \<in> set excaps. \<forall>r \<in> cte_refs' (fst x) (irq_node' s). ex_cte_cap_to' r s) and
+    (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile>' fst x) and
+    sch_act_simple and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>
+   Arch.decodeInvocation label args cap_index slot arch_cap excaps
+   \<lbrace>valid_arch_inv'\<rbrace>,-"
+  by wpsimp
 
 crunch performARMMMUInvocation
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps
    wp: crunch_wps getObject_cte_inv getASID_wp)
-
-lemmas setObject_cte_st_tcb_at' [wp] = setCTE_pred_tcb_at' [unfolded setCTE_def]
 
 crunch performPageTableInvocation,
                    performPageInvocation,
@@ -2070,7 +1939,6 @@ lemma performARMVCPUInvocation_invs'[wp]:
   "\<lbrace>invs' and valid_vcpuinv' i\<rbrace> performARMVCPUInvocation i \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding performARMVCPUInvocation_def valid_vcpuinv'_def by wpsimp
 
-
 lemma invs_asid_table_strengthen':
   "invs' s \<and> asid_pool_at' ap s \<and> asid \<le> 2 ^ asid_high_bits - 1 \<longrightarrow>
    invs' (s\<lparr>ksArchState :=
@@ -2086,16 +1954,6 @@ lemma invs_asid_table_strengthen':
   apply (rule conjI)
    apply (clarsimp simp: valid_pspace'_def)
   apply (simp add: valid_machine_state'_def split: option.splits prod.splits)
-  done
-
-lemma ex_cte_not_in_untyped_range:
-  "\<lbrakk>(ctes_of s) cref = Some (CTE (capability.UntypedCap d ptr bits idx) mnode);
-    descendants_of' cref (ctes_of s) = {}; invs' s;
-    ex_cte_cap_wp_to' (\<lambda>_. True) x s; valid_global_refs' s\<rbrakk>
-   \<Longrightarrow> x \<notin> mask_range ptr bits"
-  apply clarsimp
-  apply (drule(1) cte_cap_in_untyped_range)
-   apply (fastforce simp:cte_wp_at_ctes_of)+
   done
 
 lemma makeObject_ASIDPool_not_live[simp]:
@@ -2213,7 +2071,7 @@ lemma performSMCInvocation_invs[wp]:
   unfolding performSMCInvocation_def
   by (wpsimp wp: dmo_invs_lift' hoare_drop_imps)
 
-lemma arch_performInvocation_invs':
+lemma arch_performInvocation_invs'[Arch_R_assms]:
   "\<lbrace>invs' and ct_active' and valid_arch_inv' invocation\<rbrace>
   Arch.performInvocation invocation
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -2222,6 +2080,20 @@ lemma arch_performInvocation_invs':
        apply wpsimp+
   done
 
-end
+lemma setObject_TCB_valid_duplicates'[Arch_R_assms, wp]:
+  "setObject p (tcb::tcb) \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
+  by wpsimp
+
+end (* Arch *)
+
+arch_requalify_consts
+  valid_arch_inv'
+  archinv_relation
+
+interpretation Arch_R?: Arch_R valid_arch_inv' archinv_relation
+proof goal_cases
+  interpret Arch  .
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact Arch_R_assms)?)?)
+qed
 
 end
