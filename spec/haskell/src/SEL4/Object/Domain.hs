@@ -81,7 +81,7 @@ decodeDomainSet args extraCaps = do
 
 decodeDomainConfigure :: [Word] -> [(Capability, PPtr CTE)] -> KernelF SyscallError DomainInvocation
 decodeDomainConfigure args extraCaps = do
-    when (length args < 2 + timeArgSize) $ throw TruncatedMessage
+    when (length args < 2 + timeArgLen) $ throw TruncatedMessage
     index <- return $ fromIntegral $ args !! 0
     domain <- return $ args !! 1
     duration <- return $ parseTimeArg 2 args

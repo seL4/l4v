@@ -8,6 +8,6 @@ theory Config_H
 imports Types_H
 begin
 
-#INCLUDE_HASKELL SEL4/Config.lhs NOT numDomains timeSlice resetChunkBits retypeFanOutLimit
+#INCLUDE_HASKELL SEL4/Config.lhs NOT numDomains timeSlice resetChunkBits retypeFanOutLimit timeArgLen
 
 end

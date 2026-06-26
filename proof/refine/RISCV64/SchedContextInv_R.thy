@@ -145,7 +145,7 @@ lemma decodeSchedControlInvocation_wf:
   apply (rename_tac a list, case_tac a; simp add: isSchedContextCap_def)
   apply (clarsimp simp: valid_cap'_def  ko_wp_at'_def scBits_simps valid_refills_number'_def
                         MAX_PERIOD_def kernelWCET_ticks_def us_to_ticks_mono MIN_BUDGET_def
-                        timeArgSize_def minBudgetUs_def MIN_REFILLS_def minRefills_def not_less
+                        timeArgLen_def minBudgetUs_def MIN_REFILLS_def minRefills_def not_less
                   cong: conj_cong)
   apply (rename_tac sc)
   apply (insert getCurrentTime_buffer_bound)
@@ -359,7 +359,7 @@ lemma decode_sc_ctrl_inv_corres:
           (decodeSchedControlInvocation (mi_label mi) args' excaps')"
   apply (clarsimp simp: decode_sched_control_invocation_flags_def decodeSchedControlInvocation_def)
   apply (cases "gen_invocation_type (mi_label mi)";
-         clarsimp simp: decodeSchedControl_ConfigureFlags_def TIME_ARG_SIZE_def timeArgSize_def
+         clarsimp simp: decodeSchedControl_ConfigureFlags_def timeArgLen_def
                         wordBits_word_bits parseTimeArg_parse_time_arg minBudgetUs_def
                         MIN_BUDGET_US_def parseTimeArg_def max_refills_cap_def)
   apply (cases excaps; clarsimp)

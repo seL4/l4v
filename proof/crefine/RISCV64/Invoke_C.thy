@@ -489,7 +489,7 @@ lemma decodeDomainScheduleConfigure_ccorres:
   apply (cinit' lift: length___unsigned_long_' buffer_'
                 simp: decodeDomainConfigure_def)
    apply (drule sym[where t="length args"])
-   apply (clarsimp simp: TIME_ARG_SIZE_def word_bits_def)
+   apply (clarsimp simp: timeArgLen_def)
    apply (rule ccorres_Cond_rhs_Seq)
     apply ccorres_rewrite
     apply (clarsimp simp: word_less_nat_alt)

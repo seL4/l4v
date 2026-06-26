@@ -1844,7 +1844,7 @@ lemma decodeSchedControl_ConfigureFlags_ccorres:
   apply (intro ccorres_gen_asm[simplified pred_conj_def])
   supply Collect_const[simp del] if_cong[cong] option.case_cong[cong]
   apply (cinit' lift: current_extra_caps_' length___unsigned_long_' buffer_' cap_')
-   apply (simp add: decodeSchedControl_ConfigureFlags_def TIME_ARG_SIZE_def word_bits_conv
+   apply (simp add: decodeSchedControl_ConfigureFlags_def timeArgLen_def
                     invocation_eq_use_types gen_invocation_type_eq
               cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
@@ -1855,7 +1855,7 @@ lemma decodeSchedControl_ConfigureFlags_ccorres:
     apply (simp add: throwError_bind invocationCatch_def)
     apply (rule syscall_error_throwError_ccorres_n)
     apply (simp add: syscall_error_to_H_cases)
-   \<comment> \<open>throw an error if args is of length less than timeArgSize * 2 + 3\<close>
+   \<comment> \<open>throw an error if args is of length less than timeArgLen * 2 + 3\<close>
    apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
       apply vcg
      apply (clarsimp simp: word_less_nat_alt)

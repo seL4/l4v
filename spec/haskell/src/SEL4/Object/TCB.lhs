@@ -746,11 +746,11 @@ Modifying the current thread may require rescheduling because modified registers
 >     KernelF SyscallError SchedControlInvocation
 > decodeSchedControl_ConfigureFlags excaps args = do
 >     when (length excaps == 0) $ throw TruncatedMessage
->     when (length args < timeArgSize * 2 + 3) $ throw TruncatedMessage
+>     when (length args < timeArgLen * 2 + 3) $ throw TruncatedMessage
 >     budgetUs <- return $ parseTimeArg 0 args
 >     when (budgetUs > maxPeriodUs) $
 >         throw (RangeError (fromIntegral minBudgetUs) (fromIntegral maxPeriodUs))
->     periodUs <- return $ parseTimeArg timeArgSize args
+>     periodUs <- return $ parseTimeArg timeArgLen args
 >     when (periodUs > maxPeriodUs) $
 >         throw (RangeError (fromIntegral minBudgetUs) (fromIntegral maxPeriodUs))
 >     when (budgetUs < minBudgetUs) $
@@ -762,11 +762,11 @@ Modifying the current thread may require rescheduling because modified registers
 >     targetCap <- return $ head excaps
 >     when (not (isSchedContextCap targetCap)) $ throw (InvalidCapability 1)
 >     scPtr <- return $ capSchedContextPtr targetCap
->     extraRefills <- return $ args !! (2 * timeArgSize)
+>     extraRefills <- return $ args !! (2 * timeArgLen)
 >     when (fromIntegral extraRefills > refillAbsoluteMax(targetCap) - minRefills) $
 >         throw (RangeError 0 (fromIntegral (refillAbsoluteMax(targetCap) - minRefills)))
->     badge <- return $ args !! (2 * timeArgSize + 1)
->     flags <- return $ args !! (2 * timeArgSize + 2)
+>     badge <- return $ args !! (2 * timeArgLen + 1)
+>     flags <- return $ args !! (2 * timeArgLen + 2)
 >     return $ InvokeSchedControlConfigureFlags scPtr
 >         (usToTicks budgetUs) (usToTicks periodUs) (fromIntegral extraRefills + minRefills) badge flags
 

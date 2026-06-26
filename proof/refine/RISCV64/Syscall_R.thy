@@ -199,11 +199,6 @@ lemma fst_snd_pairI:
   "\<lbrakk> fst p = x; snd p = y \<rbrakk> \<Longrightarrow> p = (x, y)"
   by auto
 
-(* FIXME: move *)
-lemma timeArgSize_TIME_ARG_SIZE[simp]:
-  "timeArgSize = TIME_ARG_SIZE"
-  by (clarsimp simp: TIME_ARG_SIZE_def timeArgSize_def wordBits_word_bits)
-
 lemma decodeDomainConfigure_corres[corres]:
   "args' = args \<Longrightarrow>
    corres (ser \<oplus> domaininv_relation) \<top> \<top>

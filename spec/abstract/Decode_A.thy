@@ -499,7 +499,7 @@ definition decode_domain_schedule_set_start ::
 definition decode_domain_schedule_configure ::
   "data list \<Rightarrow> (domain_invocation, 'z::state_ext) se_monad" where
   "decode_domain_schedule_configure args \<equiv> doE
-     whenE (length args < 2 + TIME_ARG_SIZE) $ throwError TruncatedMessage;
+     whenE (length args < 2 + timeArgLen) $ throwError TruncatedMessage;
      index \<leftarrow> returnOk $ unat (args ! 0);
      domain \<leftarrow> returnOk $ args ! 1;
      duration \<leftarrow> returnOk $ parseTimeArg 2 args;
@@ -616,11 +616,11 @@ where
   "decode_sched_control_invocation_flags label args excaps \<equiv> doE
     unlessE (gen_invocation_type label = SchedControlConfigureFlags) $ throwError IllegalOperation;
     whenE (length excaps = 0) $ throwError TruncatedMessage;
-    whenE (length args < TIME_ARG_SIZE*2 + 3) $ throwError TruncatedMessage;
+    whenE (length args < timeArgLen*2 + 3) $ throwError TruncatedMessage;
     budget_\<mu>s \<leftarrow> returnOk $ parse_time_arg 0 args;
     whenE (budget_\<mu>s > MAX_PERIOD_US) $
       throwError (RangeError (ucast MIN_BUDGET_US) (ucast MAX_PERIOD_US));
-    period_\<mu>s \<leftarrow> returnOk $ parse_time_arg TIME_ARG_SIZE args;
+    period_\<mu>s \<leftarrow> returnOk $ parse_time_arg timeArgLen args;
     whenE (period_\<mu>s > MAX_PERIOD_US) $
       throwError (RangeError (ucast MIN_BUDGET_US) (ucast MAX_PERIOD_US));
     whenE (budget_\<mu>s < MIN_BUDGET_US) $
@@ -633,11 +633,11 @@ where
     whenE (\<not>is_sched_context_cap target_cap) $ throwError (InvalidCapability 1);
     sc_ptr \<leftarrow> returnOk $ obj_ref_of target_cap;
     assertE (MIN_REFILLS \<le> max_refills_cap target_cap);
-    extra_refills \<leftarrow> returnOk $ args ! (2 * TIME_ARG_SIZE);
+    extra_refills \<leftarrow> returnOk $ args ! (2 * timeArgLen);
     whenE (unat extra_refills > max_refills_cap target_cap - MIN_REFILLS) $
       throwError (RangeError 0 (of_nat (max_refills_cap target_cap - MIN_REFILLS)));
-    badge \<leftarrow> returnOk $ args ! (2 * TIME_ARG_SIZE + 1);
-    flags \<leftarrow> returnOk $ args ! (2 * TIME_ARG_SIZE + 2);
+    badge \<leftarrow> returnOk $ args ! (2 * timeArgLen + 1);
+    flags \<leftarrow> returnOk $ args ! (2 * timeArgLen + 2);
     returnOk $ InvokeSchedControlConfigureFlags sc_ptr
        (us_to_ticks budget_\<mu>s) (us_to_ticks period_\<mu>s) (unat extra_refills + MIN_REFILLS)
        badge flags
