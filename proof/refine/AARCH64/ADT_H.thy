@@ -8,7 +8,7 @@
 chapter \<open>Abstract datatype for the executable specification\<close>
 
 theory ADT_H
-  imports Syscall_R
+  imports ArchSyscall_R
 begin
 
 text \<open>

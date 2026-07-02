@@ -5,12 +5,10 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(*
-  Refinement for handleEvent and syscalls
-*)
+(* Refinement for handleEvent and syscalls - architecture-specific proofs *)
 
-theory Syscall_R
-imports ArchTcb_R ArchArch_R ArchInterrupt_R
+theory ArchSyscall_R
+imports Syscall_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)

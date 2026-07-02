@@ -5,7 +5,7 @@
  *)
 
 theory PageTableDuplicates
-imports Syscall_R
+imports ArchSyscall_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
@@ -37,7 +37,7 @@ crunch setupReplyMaster
   (wp: crunch_wps simp: crunch_simps)
 
 
-(* we need the following lemma in Syscall_R *)
+(* we need the following lemma in ArchSyscall_R *)
 crunch getRegister
   for inv[wp]: "P"
 
