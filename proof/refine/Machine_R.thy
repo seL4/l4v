@@ -45,5 +45,10 @@ locale Machine_R =
     "gpRegisters = MachineExports.gpRegisters"
   assumes tlsBaseRegister_def':
     "tlsBaseRegister = MachineExports.tlsBaseRegister"
+  assumes doMachineOp_getActiveIRQ_non_kernel[wp]:
+    "\<And>P.
+     \<lbrace>\<top>\<rbrace>
+     doMachineOp (getActiveIRQ True)
+     \<lbrace>\<lambda>rv s. \<forall>irq. rv = Some irq \<longrightarrow> irq \<in> non_kernel_IRQs \<longrightarrow> P irq s\<rbrace>"
 
 end
