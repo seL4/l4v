@@ -70,8 +70,6 @@ locale Tcb_R =
     "\<And>F t P.
      \<lbrakk>\<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb) \<rbrakk>
      \<Longrightarrow> threadSet F t \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
-  assumes threadSet_tcbPriority_if_live_then_nonz_cap'[wp]:
-    "\<And>f t. threadSet (tcbPriority_update f) t \<lbrace>if_live_then_nonz_cap'\<rbrace>"
   assumes sameObject_corres2:
     "\<And>c c' d d'. \<lbrakk> cap_relation c c'; cap_relation d d' \<rbrakk> \<Longrightarrow> same_object_as c d = sameObjectAs c' d'"
   (* FIXME arch-split: consider moving several of these to AInvs *)
@@ -774,6 +772,11 @@ lemma out_corresT:
   done
 
 lemmas out_corres = out_corresT [OF _ all_tcbI, OF ball_tcb_cap_casesI ball_tcb_cte_casesI]
+
+lemma threadSet_tcbPriority_if_live_then_nonz_cap'[wp]:
+  "threadSet (tcbPriority_update f) t \<lbrace>if_live_then_nonz_cap'\<rbrace>"
+  by (wpsimp wp: threadSet_iflive'T)
+     (fastforce simp: tcb_cte_cases_def tcb_cte_cases_neqs)+
 
 context Tcb_R begin
 
