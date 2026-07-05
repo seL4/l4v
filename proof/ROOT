@@ -169,7 +169,6 @@ session InfoFlowC in "infoflow/refine" = InfoFlowCBase +
     "$L4V_ARCH"
   theories
     "Noninterference_Refinement"
-    "Example_Valid_StateH"
 
 (*
  * capDL
