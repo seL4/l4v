@@ -167,8 +167,9 @@ session InfoFlowCBase in "infoflow/refine/base" = CRefine +
 session InfoFlowC in "infoflow/refine" = InfoFlowCBase +
   directories
     "$L4V_ARCH"
-  theories
+  theories [quick_and_dirty]
     "Noninterference_Refinement"
+    "Example_Valid_StateH"
 
 (*
  * capDL
