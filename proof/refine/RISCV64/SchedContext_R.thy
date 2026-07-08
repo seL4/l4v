@@ -387,7 +387,7 @@ lemma tcb_yield_to_update_corres:
   apply (rule_tac Q'="tcb_at' t" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (rule corres_guard_imp)
-    apply (rule set_tcb_obj_ref_corres; simp add: inQ_def tcb_relation_def)
+    apply (rule threadSet_corres; simp add: inQ_def tcb_relation_def)
    apply simp+
   done
 

@@ -204,13 +204,11 @@ definition
 where
   "get_tcb_obj_ref f ref \<equiv> thread_get f ref"
 
-definition
-  set_tcb_obj_ref :: "((obj_ref option \<Rightarrow> obj_ref option) \<Rightarrow> tcb \<Rightarrow> tcb) \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "set_tcb_obj_ref f ref new \<equiv> do
-     tcb \<leftarrow> gets_the $ get_tcb ref;
-     set_object ref (TCB (f (K new) tcb))
-   od"
+abbreviation (input) set_tcb_obj_ref ::
+  "((obj_ref option \<Rightarrow> obj_ref option) \<Rightarrow> tcb \<Rightarrow> tcb) \<Rightarrow> obj_ref \<Rightarrow> obj_ref option
+   \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  where
+  "set_tcb_obj_ref f ref new \<equiv> thread_set (f (\<lambda>_. new)) ref"
 
 section "simple kernel objects"
 (* to be used for abstraction unifying kernel objects other than TCB and CNode *)

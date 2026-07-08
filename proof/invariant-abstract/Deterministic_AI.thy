@@ -3843,10 +3843,6 @@ lemma update_sched_context_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> update_sched_context ptr sc \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: update_sched_context_def wp: hoare_drop_imp)
 
-lemma set_tcb_obj_ref_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> set_tcb_obj_ref f r v \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: set_tcb_obj_ref_def wp: hoare_drop_imp)
-
 lemma reply_unlink_tcb_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: reply_unlink_tcb_def wp: hoare_drop_imp)
@@ -3903,8 +3899,7 @@ interpretation
 lemma sched_context_donate_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> sched_context_donate sc_ptr tcb_ptr\<lbrace>\<lambda>_.valid_list\<rbrace>"
   supply if_cong[cong]
-  by (wpsimp simp: sched_context_donate_def set_tcb_obj_ref_def
-      wp: get_sc_obj_ref_inv hoare_drop_imp)
+  by (wpsimp simp: sched_context_donate_def wp: get_sc_obj_ref_inv hoare_drop_imp)
 
 lemma schedule_tcb_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> schedule_tcb p \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
@@ -3939,8 +3934,7 @@ lemma reply_unlink_sc_cdt_cdt_list[wp]:
 lemma sched_context_donate_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> sched_context_donate sc r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
   supply if_cong[cong]
-  by (wpsimp simp: sched_context_donate_def set_tcb_obj_ref_def
-       wp: set_object_wp hoare_drop_imp)
+  by (wpsimp simp: sched_context_donate_def  wp: thread_set_wp set_object_wp hoare_drop_imp)
 
 lemma reply_remove_cdt_cdt_list[wp]:
    "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> reply_remove t r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"

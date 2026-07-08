@@ -874,7 +874,7 @@ crunch sched_context_unbind_tcb, sched_context_bind_tcb
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   and no_cap_to_obj_with_diff_ref[wp]: "no_cap_to_obj_with_diff_ref c S"
   (rule: abs_typ_at_lifts no_cap_to_obj_with_diff_ref_lift
-   ignore: set_tcb_obj_ref)
+   ignore: thread_set)
 
 schematic_goal rec_del_CTEDeleteCall:
   "rec_del (CTEDeleteCall slot True) = ?X"
@@ -982,7 +982,7 @@ crunch
 
 crunch unbind_notification
  for ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
- (wp: maybeM_inv ignore: set_tcb_obj_ref)
+ (wp: maybeM_inv ignore: thread_set)
 
 lemma sbn_has_reply[wp]:
   "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> set_tcb_obj_ref tcb_bound_notification_update tcb ntfnptr \<lbrace>\<lambda>rv s. P (has_reply_cap t s)\<rbrace>"
@@ -1061,7 +1061,8 @@ lemma bind_notification_invs:
    \<lbrace>\<lambda>_. invs\<rbrace>"
   supply if_weak_cong[cong del]
   apply (simp add: bind_notification_def invs_def valid_state_def valid_pspace_def)
-  apply (wpsimp wp: ntfn_at_typ_at update_sk_obj_ref_typ_at valid_irq_node_typ)
+  apply (wpsimp wp: ntfn_at_typ_at update_sk_obj_ref_typ_at valid_irq_node_typ
+         | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: obj_at_def pred_tcb_at_def is_ntfn)
   apply (rule conjI, clarsimp simp: obj_at_def)
   apply clarsimp

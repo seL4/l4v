@@ -392,7 +392,7 @@ lemma all_tcbI:
 
 context TcbAcc_R begin
 
-lemma threadset_corresT:
+lemma threadSet_corresT:
   assumes x: "\<And>tcb tcb'. tcb_relation tcb tcb' \<Longrightarrow> tcb_relation (f tcb) (f' tcb')"
   assumes y: "\<And>tcb. \<forall>(getF, setF) \<in> ran tcb_cap_cases. getF (f tcb) = getF tcb"
   assumes z: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF (f' tcb) = getF tcb"
@@ -420,8 +420,8 @@ lemma threadset_corresT:
   apply simp
   done
 
-lemmas threadset_corres =
-    threadset_corresT[OF _ _ all_tcbI, OF _ ball_tcb_cap_casesI ball_tcb_cte_casesI]
+lemmas threadSet_corres =
+    threadSet_corresT[OF _ _ all_tcbI, OF _ ball_tcb_cap_casesI ball_tcb_cte_casesI]
 
 lemma threadSet_corres_noopT:
   assumes x: "\<And>tcb tcb'. tcb_relation tcb tcb' \<Longrightarrow> tcb_relation tcb (fn tcb')"
@@ -448,7 +448,7 @@ proof -
       apply (subst corres_cong [OF refl refl S refl refl])
        defer
        apply (subst bind_return [symmetric],
-              rule corres_underlying_split [OF threadset_corresT])
+              rule corres_underlying_split [OF threadSet_corresT])
                 apply (simp add: x)
                apply simp
               apply (rule y)
@@ -4072,7 +4072,7 @@ lemma setThreadState_corres:
    apply (solves \<open>fastforce simp: state_relation_def intro: tcb_at_cross\<close>)
   apply (simp add: set_thread_state_def setThreadState_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF threadset_corresT]; simp?)
+    apply (rule corres_split[OF threadSet_corresT]; simp?)
           apply (clarsimp simp: tcb_relation_def)
          apply (clarsimp simp: tcb_cap_cases_def)
         apply (clarsimp simp: tcb_cte_cases_def gen_objBits_simps tcb_cte_cases_neqs)
@@ -4085,32 +4085,11 @@ lemma setThreadState_corres:
   apply (clarsimp simp: valid_tcb'_tcbState_update)
   done
 
-lemma set_tcb_obj_ref_corresT:
-  assumes x: "\<And>tcb tcb'. tcb_relation tcb tcb' \<Longrightarrow>
-                         tcb_relation (f (\<lambda>_. new) tcb) (f' tcb')"
-  assumes y: "\<And>tcb. \<forall>(getF, setF) \<in> ran tcb_cap_cases. getF (f (\<lambda>_. new) tcb) = getF tcb"
-  assumes z: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases.
-                 getF (f' tcb) = getF tcb"
-  assumes s: "\<forall>tcb'. tcbSchedPrev (f' tcb') = tcbSchedPrev tcb'"
-             "\<forall>tcb'. tcbSchedNext (f' tcb') = tcbSchedNext tcb'"
-  assumes f: "\<And>d p tcb'. inQ d p (f' tcb') = inQ d p tcb'"
-             "\<And>tcb'. tcbInReleaseQueue (f' tcb') = tcbInReleaseQueue tcb'"
-  shows
-    "corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
-       (set_tcb_obj_ref f t new) (threadSet f' t)"
-  using assms
-  unfolding set_tcb_obj_ref_thread_set
-  apply -
-  by (corres corres: threadset_corresT simp: inQ_def)
-
-lemmas set_tcb_obj_ref_corres =
-    set_tcb_obj_ref_corresT [OF _ _ all_tcbI, OF _ ball_tcb_cap_casesI ball_tcb_cte_casesI]
-
 lemma setBoundNotification_corres:
   "corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
           (set_tcb_obj_ref tcb_bound_notification_update t ntfn) (setBoundNotification ntfn t)"
   apply (simp add: setBoundNotification_def)
-  apply (rule set_tcb_obj_ref_corres; simp add: tcb_relation_def inQ_def)
+  apply (rule threadSet_corres; simp add: tcb_relation_def inQ_def)
   done
 
 end (* TcbAcc_R_2 *)

@@ -101,36 +101,36 @@ crunch update_sched_context
   and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
 
 lemma set_sc_ntfn_valid_objs[wp]:
-  "\<lbrace>valid_objs and valid_bound_ntfn ntfn\<rbrace>
-   set_sc_obj_ref sc_ntfn_update t ntfn
+  "\<lbrace>\<lambda>s. valid_objs s \<and> (sc_at sc_ptr s \<longrightarrow> valid_bound_ntfn ntfn_opt s)\<rbrace>
+   set_sc_obj_ref sc_ntfn_update sc_ptr ntfn_opt
    \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (wpsimp wp: set_object_valid_objs get_object_wp
           simp: update_sched_context_def obj_at_def
           split: option.splits kernel_object.splits)
   apply (erule (1) valid_objsE)
-  apply (auto simp: valid_obj_def valid_sched_context_def a_type_def)
+  apply (auto simp: valid_obj_def valid_sched_context_def a_type_def is_sc_obj_def)
   done
 
 lemma set_sc_tcb_valid_objs[wp]:
-  "\<lbrace>valid_objs and valid_bound_tcb ntfn\<rbrace>
-   set_sc_obj_ref sc_tcb_update t ntfn
+  "\<lbrace>\<lambda>s. valid_objs s \<and> (sc_at sc_ptr s \<longrightarrow> valid_bound_tcb tcb_opt s)\<rbrace>
+   set_sc_obj_ref sc_tcb_update sc_ptr tcb_opt
    \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (wpsimp wp: set_object_valid_objs get_object_wp
           simp: obj_at_def update_sched_context_def
           split: option.splits kernel_object.splits)
   apply (erule (1) valid_objsE)
-  apply (auto simp: valid_obj_def valid_sched_context_def a_type_def)
+  apply (auto simp: valid_obj_def valid_sched_context_def a_type_def is_sc_obj_def)
   done
 
 lemma set_sc_yf_valid_objs[wp]:
-  "\<lbrace>valid_objs and valid_bound_tcb ntfn\<rbrace>
-   set_sc_obj_ref sc_yield_from_update t ntfn
+  "\<lbrace>\<lambda>s. valid_objs s \<and> (sc_at sc_ptr s \<longrightarrow> valid_bound_tcb tcb_ptr_opt s)\<rbrace>
+   set_sc_obj_ref sc_yield_from_update sc_ptr tcb_ptr_opt
    \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (wpsimp wp: set_object_valid_objs get_object_wp
           simp: obj_at_def update_sched_context_def
           split: option.splits kernel_object.splits)
   apply (erule (1) valid_objsE)
-  apply (auto simp: valid_obj_def valid_sched_context_def a_type_def)
+  apply (auto simp: valid_obj_def valid_sched_context_def a_type_def is_sc_obj_def)
   done
 
 lemma update_sched_context_sc_replies_update_valid_objs[wp]:
@@ -658,20 +658,18 @@ lemma scheduling_context_update [iff]: (* FIXME: move it to Invariants_AI *)
   by (simp add: valid_sched_context_def valid_bound_obj_def split: option.splits)
 
 lemma sched_context_donate_valid_objs [wp]:
-  "\<lbrace>valid_objs\<rbrace> sched_context_donate scp tcbp \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  "sched_context_donate sc_ptr tcb_ptr \<lbrace>valid_objs\<rbrace>"
   apply (simp add: sched_context_donate_def)
-  apply (rule hoare_strengthen_pre_via_assert_backward[of "tcb_at tcbp"])
-   apply (rule subst[where s="do _ \<leftarrow> do x \<leftarrow> a; _ \<leftarrow> b x; c od; d od"
-                       and t="do x \<leftarrow> a; _ \<leftarrow> b x; _ \<leftarrow> c; d od"
-                       and P="\<lambda>h. \<lbrace>_\<rbrace> h \<lbrace>_\<rbrace>" for a b c d]
-          , simp add: bind_assoc)
-   apply (rule bind_wp[where Q'="\<lambda>rv s. Not (tcb_at tcbp s)"]
-          , wpsimp wp: set_tcb_obj_ref_wp simp: obj_at_def is_tcb)
-   apply (wpsimp wp: weak_if_wp get_sc_obj_ref_wp simp: test_reschedule_def)
-  apply (wpsimp simp: sched_context_donate_def get_sc_obj_ref_def test_reschedule_def
-                  wp: get_sched_context_wp hoare_drop_imps)
-  apply (intro conjI; clarsimp)
-   apply (erule (1) obj_at_valid_objsE, fastforce simp: obj_at_def is_sc_obj_def valid_obj_def)+
+  apply (rule bind_wp[OF _ gsct_sp])
+  \<comment> \<open>step over things until we get to the update of the sc and tcb fields\<close>
+  apply (rule_tac Q'="\<lambda>_. valid_objs" in bind_wp[rotated])
+   apply (wpsimp simp: test_reschedule_def)
+  apply (rule hoare_strengthen_pre[where E="tcb_at tcb_ptr and sc_at sc_ptr"])
+   apply (wpsimp wp: thread_set_wp update_sched_context_wp)
+   apply (fastforce simp: valid_sched_context_size_objsI obj_at_def is_sc_obj_def get_tcb_def
+                          is_tcb_def
+                   split: kernel_object.splits option.splits)
+  apply (wpsimp wp: hoare_vcg_imp_lift')
   done
 
 lemma sched_context_donate_pspace_aligned[wp]:
@@ -1322,12 +1320,11 @@ lemma charge_budget_inv[wp]: "(\<And>s f. P (trans_state f s) = P s)
   oops
 *)
 
-
 crunch sched_context_donate
   for st_tcb_at[wp]: "\<lambda>s. Q (st_tcb_at P t s)"
   and fault_tcb_at[wp]: "\<lambda>s. Q (fault_tcb_at P t s)"
   and fault_tcbs_valid_states[wp]: fault_tcbs_valid_states
-  (wp: crunch_wps simp: crunch_simps ignore: set_tcb_obj_ref)
+  (wp: crunch_wps simp: crunch_simps ignore: thread_set)
 
 lemma reply_push_st_tcb_at[wp]:
   "\<lbrace>st_tcb_at P t and K (t \<noteq> caller) and K (t \<noteq> callee)\<rbrace>

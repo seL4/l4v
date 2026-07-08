@@ -927,8 +927,8 @@ lemma valid_arch_mdb_lift:
   by (clarsimp simp: valid_def valid_arch_mdb_def)
 
 lemma set_tcb_obj_ref_asid_map[wp]:
-  "\<lbrace>valid_asid_map\<rbrace> set_tcb_obj_ref f t ko \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
-  by (wpsimp wp: set_object_asid_map simp: set_tcb_obj_ref_def vs_refs_def)
+  "set_tcb_obj_ref f t ko \<lbrace>valid_asid_map\<rbrace>"
+  by (wpsimp wp: set_object_asid_map simp: thread_set_def vs_refs_def)
 
 lemma update_sched_context_hyp_refs_of[wp]:
  "update_sched_context ptr f \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
