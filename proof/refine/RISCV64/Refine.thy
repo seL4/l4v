@@ -967,7 +967,7 @@ lemma entry_corres:
     apply (rule corres_split[OF getCurThread_corres])
       apply (rule corres_split)
          apply simp
-         apply (rule threadset_corresT)
+         apply (rule threadSet_corresT)
                apply (simp add: tcb_relation_def arch_tcb_relation_def
                                 arch_tcb_context_set_def atcbContextSet_def)
               apply (clarsimp simp: tcb_cap_cases_def)

@@ -1092,7 +1092,7 @@ lemma ssc_refs_of_Some[wp]:
           {x \<in> state_refs_of s t. snd x \<noteq> TCBSchedContext}))\<rbrace>
    set_tcb_obj_ref tcb_sched_context_update t (Some sc)
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  apply (simp add: set_tcb_obj_ref_def)
+  apply (simp add: thread_set_def)
   apply (wpsimp wp: set_object_wp_strong)
   apply (erule rsubst[where P=P])
   apply (clarsimp simp: state_refs_of_def)
@@ -1106,7 +1106,7 @@ lemma ssc_refs_of_None[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of s)(t:= {x \<in> state_refs_of s t. snd x \<noteq> TCBSchedContext}))\<rbrace>
    set_tcb_obj_ref tcb_sched_context_update t None
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  apply (simp add: set_tcb_obj_ref_def)
+  apply (simp add: thread_set_def)
   apply (wpsimp wp: set_object_wp_strong)
   apply (erule rsubst[where P=P])
   apply (clarsimp simp: state_refs_of_def)
@@ -1141,7 +1141,7 @@ lemma sched_context_bind_ntfn_invs[wp]:
   apply (wpsimp simp: sched_context_bind_ntfn_def invs_def valid_state_def valid_pspace_def
                       update_sk_obj_ref_def
                   wp: get_simple_ko_wp valid_irq_node_typ set_simple_ko_valid_objs
-                      simple_obj_set_prop_at update_sched_context_valid_idle)
+                      simple_obj_set_prop_at update_sched_context_valid_idle hoare_drop_imps)
   apply (clarsimp simp: obj_at_def is_ntfn sc_ntfn_sc_at_def)
   apply (case_tac "sc=ntfn", simp)
   apply safe
@@ -1233,8 +1233,8 @@ crunch sched_context_resume, test_possible_switch_to, tcb_release_remove, postpo
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_tcb_yt_update_bound_sc_tcb_at[wp]:
-  "\<lbrace>bound_sc_tcb_at P t\<rbrace> set_tcb_obj_ref tcb_yield_to_update scp tcb \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
-  by (wpsimp simp: set_tcb_obj_ref_def pred_tcb_at_def obj_at_def get_tcb_rev wp: set_object_wp_strong)
+  "set_tcb_obj_ref tcb_yield_to_update scp tcb \<lbrace>bound_sc_tcb_at P t\<rbrace>"
+  by (wpsimp wp: thread_set_no_change_tcb_pred)
 
 lemma set_tcb_queue_valid_replies[wp]:
   "set_tcb_queue d prio queue \<lbrace> valid_replies_pred P \<rbrace>"
@@ -1330,10 +1330,10 @@ lemma sched_context_bind_tcb_invs[wp]:
                     update_sched_context_valid_objs_same
                     update_sched_context_iflive_update update_sched_context_refs_of_update
                     update_sched_context_cur_sc_tcb_None update_sched_context_valid_idle
-                    hoare_vcg_all_lift hoare_vcg_conj_lift | wp set_tcb_obj_ref_wp)+
+                    hoare_vcg_all_lift hoare_vcg_conj_lift | wp thread_set_wp)+
   by (fastforce simp: obj_at_def tcb_cap_cases_def tcb_st_refs_of_def is_sc_obj_def
                       pred_tcb_at_def sc_tcb_sc_at_def valid_sched_context_def
-                      is_tcb valid_idle_def state_refs_of_def get_refs_def2
+                      is_tcb valid_idle_def state_refs_of_def get_refs_def2 get_tcb_def
                 elim: ex_cap_to_after_update' delta_sym_refs valid_objs_valid_sched_context_size
                dest!: symreftype_inverse' split: if_splits)
 
@@ -1341,7 +1341,7 @@ lemma sched_context_unbind_valid_replies[wp]:
   "tcb_release_remove tcb_ptr \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp simp: tcb_release_remove_def)
 
-crunch tcb_release_remove, tcb_sched_action, set_tcb_obj_ref
+crunch tcb_release_remove, tcb_sched_action, thread_set
   for cur_sc_tcb[wp]: cur_sc_tcb
   and cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"

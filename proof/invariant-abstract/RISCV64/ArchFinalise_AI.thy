@@ -650,8 +650,9 @@ lemma sched_context_cancel_yield_to_unlive:
    \<lbrace>\<lambda>_. obj_at (Not \<circ> live) t\<rbrace>"
   apply (clarsimp simp: sched_context_cancel_yield_to_def)
   apply (rule bind_wp[OF _ gyt_sp])
-  apply (wpsimp simp: set_tcb_obj_ref_def set_object_def update_sched_context_def get_object_def
-                      pred_tcb_at_def obj_at_def get_tcb_def live_def hyp_live_def arch_tcb_live_def)
+  apply (wpsimp wp: thread_set_wp update_sched_context_wp)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_def live_def hyp_live_def
+                        arch_tcb_live_def)
   done
 
 lemma suspend_unlive':

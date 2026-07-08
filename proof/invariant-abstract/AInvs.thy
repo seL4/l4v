@@ -751,8 +751,7 @@ lemma sched_context_bind_tcb_schact_is_rct_imp_ct_not_in_release_q:
          apply (wpsimp wp: reschedule_cnt)
         apply wpsimp+
       apply (wpsimp wp: hoare_drop_imps sched_context_resume_ct_not_in_release_q
-                        update_sched_context_wp set_object_wp
-                  simp: set_tcb_obj_ref_def)+
+                        update_sched_context_wp thread_set_wp)+
   apply (clarsimp simp: vs_all_heap_simps pred_map_simps obj_at_def)
   done
 
@@ -1369,19 +1368,8 @@ lemma reschedule_required_schact_is_rct_imp_ct_activatable[wp]:
 lemma sched_context_donate_schact_is_rct_imp_ct_activatable[wp]:
   "sched_context_donate sc_ptr tcb_ptr
    \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
-  (is "_ \<lbrace>?P\<rbrace>")
-  apply (clarsimp simp: sched_context_donate_def test_reschedule_def)
-  apply (rule bind_wp_fwd_skip, wpsimp)
-  apply (rule_tac Q'="\<lambda>_. ?P" in bind_wp)
-   apply (wpsimp wp: hoare_vcg_imp_lift' set_tcb_obj_ref_wp update_sched_context_wp)
-   apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def
-                   split: if_splits kernel_object.splits)
-  apply (rule hoare_when_cases, simp)
-  apply (rule bind_wp_fwd_skip, solves \<open>wpsimp wp: hoare_vcg_imp_lift'\<close>)+
-  apply (rule bind_wp_fwd_skip)
-  apply (wpsimp wp: hoare_vcg_imp_lift' set_tcb_obj_ref_wp)
-   apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-  apply wpsimp
+  unfolding sched_context_donate_def test_reschedule_def
+  apply (wpsimp wp: hoare_vcg_imp_lift' thread_set_ct_in_state)
   done
 
 crunch bind_sc_reply
@@ -1528,17 +1516,17 @@ lemma set_ntfn_obj_ref_schact_is_rct_imp_ct_activatable[wp]:
 
 lemma unbind_maybe_notification_schact_is_rct_imp_ct_activatable[wp]:
   "unbind_maybe_notification ntfnptr \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
-  apply (clarsimp simp: unbind_maybe_notification_def)
-  apply (wpsimp wp: update_sk_obj_ref_wp set_tcb_obj_ref_wp get_sk_obj_ref_wp)
-  apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  unfolding unbind_maybe_notification_def
+  apply (wpsimp wp: thread_set_ct_in_state get_sk_obj_ref_wp hoare_vcg_imp_lift')
+  apply fastforce
   done
 
 lemma sched_context_maybe_unbind_ntfn_schact_is_rct_imp_ct_activatable[wp]:
   "sched_context_maybe_unbind_ntfn ntfn_ptr
    \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
-  apply (clarsimp simp: sched_context_maybe_unbind_ntfn_def)
-  apply (wpsimp wp: update_sk_obj_ref_wp get_sk_obj_ref_wp update_sched_context_wp)
-  apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  unfolding sched_context_maybe_unbind_ntfn_def
+  apply (wpsimp wp: thread_set_ct_in_state get_sk_obj_ref_wp hoare_vcg_imp_lift')
+  apply fastforce
   done
 
 crunch fast_finalise

@@ -228,7 +228,7 @@ lemma sched_context_unbind_yield_from_st_tcb_at[wp]:
 
 crunch tcb_release_remove, sched_context_unbind_all_tcbs
  for st_tcb_at[wp]: "\<lambda>s. Q (st_tcb_at P t s)"
-  (ignore: set_tcb_obj_ref)
+  (wp: crunch_wps ignore: thread_set)
 
 
 locale IpcCancel_AI =
@@ -716,7 +716,7 @@ crunch sched_context_donate
   and cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
   and arch_tcb_at[wp]: "\<lambda>s. P' (arch_tcb_at P t s)"
   and valid_cur_fpu[wp]: valid_cur_fpu
-  (ignore: set_object set_tcb_obj_ref wp: crunch_wps simp: crunch_simps)
+  (ignore: set_object thread_set wp: crunch_wps simp: crunch_simps)
 
 lemma sched_context_donate_valid_irq_node [wp]:
   "\<lbrace>valid_irq_node\<rbrace> sched_context_donate scp tp \<lbrace>\<lambda>s. valid_irq_node\<rbrace>"
@@ -940,8 +940,7 @@ lemma reply_unlink_tcb_assume_asserts:
             reply_unlink_tcb t r
            \<lbrace> Q \<rbrace>"
   shows "\<lbrace> P \<rbrace> reply_unlink_tcb t r \<lbrace> Q \<rbrace>"
-  apply (rule hoare_strengthen_pre_via_assert_backward
-                [OF _ assms[unfolded pred_conj_assoc[symmetric]]])
+  apply (rule hoare_strengthen_pre[OF _ assms[unfolded pred_conj_assoc[symmetric]]])
   apply (simp add: reply_unlink_tcb_def)
   apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (rule bind_wp[OF _ assert_sp])
@@ -1625,10 +1624,8 @@ lemma in_release_queue_ready_queues_update[simp]:
   by (clarsimp simp: in_release_queue_def)
 
 lemma set_tcb_sc_bound_tcb_at [wp]:
-  "\<lbrace>bound_tcb_at P t\<rbrace>
-     set_tcb_obj_ref tcb_sched_context_update ref new \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
-  apply (wpsimp simp: set_tcb_obj_ref_def set_object_def get_object_def)
-  by (clarsimp simp: pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
+  "set_tcb_obj_ref tcb_sched_context_update ref new \<lbrace>bound_tcb_at P t\<rbrace>"
+  by (wpsimp wp: thread_set_no_change_tcb_pred)
 
 lemma sched_context_donate_bound_tcb_at [wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> sched_context_donate scptr tcbptr \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
@@ -1710,8 +1707,8 @@ lemma sched_context_cancel_yield_to_bound_yt_tcb_at[wp]:
   "\<lbrace>\<top>\<rbrace> sched_context_cancel_yield_to t \<lbrace>\<lambda>_. bound_yt_tcb_at ((=) None) t\<rbrace>"
   apply (clarsimp simp: sched_context_cancel_yield_to_def)
   apply (rule bind_wp[OF _ gyt_sp])
-  apply (wpsimp simp: set_tcb_obj_ref_def set_object_def update_sched_context_def
-                      get_object_def pred_tcb_at_def obj_at_def get_tcb_def)
+  apply (wpsimp wp: thread_set_wp update_sched_context_wp)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
 lemma set_thread_state_not_live0:
@@ -1741,7 +1738,7 @@ crunch tcb_release_remove
 
 lemma set_tcb_yt_update_bound_tcb_at[wp]:
   "set_tcb_obj_ref tcb_yield_to_update scp tcb \<lbrace>bound_tcb_at P t\<rbrace>"
-  by (wpsimp simp: set_tcb_obj_ref_def pred_tcb_at_def obj_at_def get_tcb_rev wp: set_object_wp)
+  by (wpsimp wp: thread_set_no_change_tcb_pred)
 
 lemma sched_context_cancel_yield_to_bound_tcb_at[wp]:
   "sched_context_cancel_yield_to scptr \<lbrace>bound_tcb_at P t\<rbrace>"
@@ -1765,10 +1762,7 @@ lemma complete_yield_to_bound_sc_tcb_at[wp]:
 
 lemma ssc_bound_yt_tcb_at[wp]:
   "set_tcb_obj_ref tcb_sched_context_update tcb ntfn \<lbrace>bound_yt_tcb_at P t\<rbrace>"
-  apply (simp add: set_tcb_obj_ref_def)
-  apply (wp set_object_wp)
-  apply (auto simp: pred_tcb_at_def obj_at_def get_tcb_def)
-  done
+  by (wpsimp wp: thread_set_no_change_tcb_pred)
 
 lemma sched_context_unbind_tcb_bound_tcb_at[wp]:
   "sched_context_unbind_tcb a \<lbrace>bound_tcb_at P t\<rbrace>"
@@ -2376,9 +2370,10 @@ lemma ntfn_q_refs_no_TCBBound:
   by (auto simp: ntfn_q_refs_of_def split:ntfn.splits)
 
 lemma set_tcb_obj_ref_valid_irq_node[wp]:
-  "\<lbrace>valid_irq_node\<rbrace> set_tcb_obj_ref f t new \<lbrace>\<lambda>_. valid_irq_node\<rbrace>"
-  apply (wpsimp simp: set_tcb_obj_ref_def get_tcb_def wp: set_object_wp
-               split: option.splits kernel_object.splits)
+  "set_tcb_obj_ref f t new \<lbrace>valid_irq_node\<rbrace>"
+  apply (wpsimp wp: thread_set_wp
+              simp: get_tcb_def
+             split: option.splits kernel_object.splits)
   apply (clarsimp simp: valid_irq_node_def obj_at_def is_cap_table_def)
   apply (erule_tac x = irq in allE)
   apply auto
