@@ -321,7 +321,7 @@ lemma pt_walk_reads_equiv:
     apply clarsimp
    apply (erule_tac x="pptr_from_pte x2" in meta_allE)
    apply (drule meta_mp)
-    apply (subst (asm) vs_lookup_split_Some[OF order_less_imp_le[OF bit1.pred]])
+    apply (subst (asm) vs_lookup_split_Some[OF order_less_imp_le[OF bit0.pred]])
       apply fastforce+
     apply (erule_tac pt_ptr=pt in pt_walk_is_subject; fastforce)
    apply (erule (1) meta_mp)
@@ -346,7 +346,7 @@ lemma pt_lookup_from_level_reads_respects:
   apply (frule vs_lookup_table_is_aligned; clarsimp)
   apply (prop_tac "pt_walk level (level - 1) pt vref (ptes_of s) =
                    Some (level - 1, pptr_from_pte rv)")
-   apply (fastforce simp: vs_lookup_split_Some[OF order_less_imp_le[OF bit1.pred]]
+   apply (fastforce simp: vs_lookup_split_Some[OF order_less_imp_le[OF bit0.pred]]
                           pt_walk.simps obind_def)
   apply (rule conjI)
    apply (erule_tac level=level and bot_level="level-1" and pt_ptr=pt in pt_walk_is_subject; fastforce)
