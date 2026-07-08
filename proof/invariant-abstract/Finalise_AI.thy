@@ -423,7 +423,7 @@ crunch
   sched_context_unbind_yield_from, update_sk_obj_ref, sched_context_set_inactive
   for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   (wp: crunch_wps maybeM_inv
-   ignore: set_object set_tcb_obj_ref tcb_release_remove)
+   ignore: thread_set tcb_release_remove)
 
 lemma sched_context_unbind_all_tcbs_caps_of_state[wp]:
   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> sched_context_unbind_all_tcbs scref \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
@@ -512,13 +512,9 @@ lemma deleting_irq_handler_final:
   apply simp
   done
 
-crunch update_sk_obj_ref
- for cte_wp_at[wp]: "cte_wp_at P p"
-
 crunch unbind_notification
  for cte_wp_at[wp]: "cte_wp_at P p"
-  (wp: maybeM_inv ignore: set_tcb_obj_ref)
-
+  (wp: maybeM_inv ignore: thread_set)
 
 crunch sched_context_maybe_unbind_ntfn
  for cte_wp_at[wp]: "cte_wp_at P p"
@@ -531,7 +527,7 @@ lemma sched_context_update_consumed_cte_wp_at [wp]:
 
 crunch complete_yield_to
  for cte_wp_at[wp]: "cte_wp_at P p"
-  (wp: maybeM_inv hoare_drop_imp ignore: set_tcb_obj_ref get_sched_context)
+  (wp: maybeM_inv hoare_drop_imp ignore: thread_set get_sched_context)
 
 lemma sched_context_unbind_tcb_cte_wp_at[wp]:
   "\<lbrace>cte_wp_at P p\<rbrace> sched_context_unbind_tcb param_a \<lbrace>\<lambda>_. cte_wp_at P p\<rbrace>"
@@ -608,14 +604,12 @@ lemma tcb_st_refs_no_TCBBound:
   by (clarsimp simp: tcb_st_refs_of_def split: thread_state.splits)
 
 lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
-  "\<lbrace>invs\<rbrace> unbind_maybe_notification ntfnptr \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "unbind_maybe_notification ntfnptr \<lbrace>invs\<rbrace>"
   supply if_cong[cong]
   apply (simp add: unbind_maybe_notification_def invs_def valid_state_def valid_pspace_def
                    get_sk_obj_ref_def update_sk_obj_ref_def maybeM_def)
   apply (rule bind_wp [OF _ get_simple_ko_sp])
-  apply (rule hoare_pre)
-   apply (wpsimp wp: valid_irq_node_typ set_simple_ko_valid_objs hoare_drop_imp get_simple_ko_wp)
-  apply simp
+  apply (wpsimp wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp)
   apply safe
        defer 3 defer 6
        prefer 2 prefer 4
@@ -638,7 +632,6 @@ lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
        clarsimp simp: state_refs_of_def get_refs_def2 tcb_st_refs_of_def
                       ep_q_refs_of_def ntfn_q_refs_of_def
                 split: thread_state.splits if_splits endpoint.splits ntfn.splits)
-
   apply (frule obj_at_state_refs_ofD)
   apply (frule (1) sym_refs_ko_atD)
   apply (clarsimp simp: obj_at_def get_refs_def2 ntfn_q_refs_of_def split: ntfn.splits)
@@ -794,7 +787,7 @@ lemma  tcb_sched_context_sc_yf_helper[wp]:
    set_tcb_obj_ref tcb_sched_context_update tptr new
    \<lbrace>\<lambda>rv s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
                             st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) p s\<rbrace>"
-  apply (clarsimp simp: set_tcb_obj_ref_def)
+  apply (clarsimp simp: thread_set_def)
   apply (wpsimp wp: hoare_drop_imp get_object_wp get_simple_ko_wp
               simp: update_sk_obj_ref_def set_simple_ko_def update_sched_context_def set_object_def)
   apply (clarsimp simp: sc_yf_sc_at_def obj_at_def pred_tcb_at_def dest!: get_tcb_SomeD
@@ -973,7 +966,7 @@ lemma unbind_notification_not_bound:
   apply (rule hoare_pre)
    apply (rule bind_wp[OF _ gbn_wp[where P="\<lambda>ptr _. ptr = (Some ntfnptr)"]])
    apply (rule hoare_gen_asm[where P'=\<top>, simplified])
-   apply (wp sbn_obj_at_impossible simple_obj_set_prop_at | wpc | simp add: update_sk_obj_ref_def)+
+   apply (wpsimp wp: thread_set_obj_at_impossible simple_obj_set_prop_at simp: update_sk_obj_ref_def)
   apply (clarsimp simp: obj_at_def)
   apply (rule valid_objsE, simp+)
   apply (drule_tac P="(=) (Some ntfnptr)" in ntfn_bound_tcb_at, simp+)
@@ -985,8 +978,8 @@ lemma unbind_notification_not_bound:
       unbind_maybe_notification ntfnptr
     \<lbrace>\<lambda>_. obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_bound_tcb ntfn = None) ntfnptr\<rbrace>"
   apply (simp add: unbind_maybe_notification_def maybeM_def get_sk_obj_ref_def)
-  apply (rule hoare_pre)
-   apply (wp get_simple_ko_wp sbn_obj_at_impossible simple_obj_set_prop_at | wpc | simp add: update_sk_obj_ref_def)+
+  apply (wpsimp wp: get_simple_ko_wp thread_set_obj_at_impossible simple_obj_set_prop_at
+              simp: update_sk_obj_ref_def)
   apply (clarsimp simp: obj_at_def)
   done
 
@@ -1000,8 +993,9 @@ lemma unbind_notification_bound_tcb_at[wp]:
   done
 
 crunch unbind_notification
- for valid_mdb[wp]: "valid_mdb"
-  (wp: maybeM_inv ignore: set_tcb_obj_ref)
+  for valid_mdb[wp]: "valid_mdb"
+  (wp: maybeM_inv ignore: thread_set)
+
 crunch unbind_notification
  for tcb_at[wp]: "tcb_at t"
   (wp: maybeM_inv)
@@ -1119,7 +1113,7 @@ crunch
   fast_finalise, sched_context_unbind_all_tcbs, sched_context_unbind_yield_from,
   sched_context_unbind_reply, sched_context_unbind_ntfn, sched_context_set_inactive
   for cte_wp_at[wp]: "cte_wp_at P p"
-  (wp: crunch_wps ignore: set_tcb_obj_ref simp: crunch_simps)
+  (wp: crunch_wps ignore: thread_set simp: crunch_simps)
 
 lemma (in Finalise_AI_1) finalise_cap_equal_cap[wp]:
   "\<lbrace>cte_wp_at ((=) cap) sl\<rbrace>
@@ -1597,7 +1591,7 @@ lemma unbind_maybe_notification_not_live_helper[wp]:
    unbind_maybe_notification ptr
    \<lbrace>\<lambda>_. ntfn_at_pred (\<lambda>ntfn. ntfn_bound_tcb ntfn = None) ptr\<rbrace>"
   unfolding unbind_maybe_notification_def
-  apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp set_tcb_obj_ref_wp
+  apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp
               simp: update_sk_obj_ref_def get_sk_obj_ref_def)
   apply (clarsimp simp: ntfn_at_pred_def obj_at_def)
   done
@@ -1607,7 +1601,7 @@ lemma sched_context_maybe_unbind_ntfn_not_bound_sc[wp]:
    sched_context_maybe_unbind_ntfn ptr
    \<lbrace>\<lambda>_. ntfn_at_pred (\<lambda>ntfn. ntfn_sc ntfn = None) ptr\<rbrace>"
   unfolding sched_context_maybe_unbind_ntfn_def
-  apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp set_tcb_obj_ref_wp
+  apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp
               simp: update_sk_obj_ref_def get_sk_obj_ref_def)
   apply (clarsimp simp: ntfn_at_pred_def obj_at_def)
   done
@@ -1615,7 +1609,7 @@ lemma sched_context_maybe_unbind_ntfn_not_bound_sc[wp]:
 lemma unbind_maybe_notification_ntfn_sc[wp]:
   "unbind_maybe_notification ptr \<lbrace>\<lambda>s. Q (ntfn_at_pred (\<lambda>ntfn. P (ntfn_sc ntfn)) ptr s)\<rbrace>"
   unfolding unbind_maybe_notification_def
-  apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp set_tcb_obj_ref_wp
+  apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp
               simp: update_sk_obj_ref_def get_sk_obj_ref_def)
   apply (clarsimp simp: ntfn_at_pred_def obj_at_def)
   done
@@ -1792,16 +1786,6 @@ lemma unbind_from_sc_no_cap_to_obj_ref[wp]:
   apply (wp)
   done
 
-lemma set_sc_obj_ref_not_live:
-  "\<lbrace>obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> sc_tcb sc = None
-                        \<and> sc_ntfn sc = None \<and> sc_replies sc = []) sc
-    and K (t = sc)\<rbrace>
-   set_sc_obj_ref sc_yield_from_update t None
-   \<lbrace>\<lambda>_. obj_at (Not \<circ> live) sc\<rbrace>"
-  by (wpsimp simp: update_sched_context_def set_object_def
-                   get_sched_context_def obj_at_def live_def live_sc_def
-               wp: get_object_wp)
-
 lemma sched_context_cancel_yield_to_not_live:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> sc_yield_from sc = Some tcb_ptr
                         \<and> sc_tcb sc = None \<and> sc_ntfn sc = None \<and> sc_replies sc = []) sc_ptr
@@ -1809,9 +1793,7 @@ lemma sched_context_cancel_yield_to_not_live:
    sched_context_cancel_yield_to tcb_ptr
    \<lbrace>\<lambda>_. obj_at (Not \<circ> live) sc_ptr\<rbrace>"
   apply (clarsimp simp: sched_context_cancel_yield_to_def get_tcb_obj_ref_def)
-  apply (wpsimp wp: thread_get_wp' set_sc_obj_ref_not_live
-                    set_tcb_obj_ref_obj_at_trivial
-                    get_object_wp hoare_vcg_all_lift)
+  apply (wpsimp wp: thread_get_wp' thread_set_wp update_sched_context_wp hoare_drop_imps)
   apply (auto simp: obj_at_def live_def live_sc_def dest: sym_ref_sc_yf)
   done
 
@@ -1852,8 +1834,7 @@ lemma complete_yield_to_not_live:
    complete_yield_to tcb_ptr
    \<lbrace>\<lambda>_. obj_at (Not \<circ> live) sc_ptr\<rbrace>"
   apply (clarsimp simp: complete_yield_to_def get_tcb_obj_ref_def)
-  apply (wpsimp wp: thread_get_wp' set_sc_obj_ref_not_live
-                    set_tcb_obj_ref_obj_at_trivial
+  apply (wpsimp wp: thread_get_wp'
                     set_consumed_obj_at_trivial
                     get_object_wp hoare_vcg_all_lift
                     sched_context_cancel_yield_to_not_live

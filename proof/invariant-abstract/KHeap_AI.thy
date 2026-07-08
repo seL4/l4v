@@ -248,25 +248,6 @@ lemma set_thread_state_typ_at[wp]:
 
 lemmas set_thread_state_typ_ats[wp] = abs_typ_at_lifts[OF set_thread_state_typ_at]
 
-lemma set_tcb_obj_ref_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_tcb_obj_ref f t ntfn \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  unfolding set_tcb_obj_ref_def
-  by (wpsimp wp: set_object_typ_at)
-
-lemmas set_tcb_obj_ref_typ_ats[wp] = abs_typ_at_lifts[OF set_tcb_obj_ref_typ_at]
-
-lemma set_tcb_obj_ref_sc_at_inv[wp]:
-  "\<lbrace> sc_at ep \<rbrace> set_tcb_obj_ref f t ntfn \<lbrace> \<lambda>rv. sc_at ep \<rbrace>"
-  apply (simp add: set_tcb_obj_ref_def)
-  apply (wp | simp add: set_object_def)+
-  done
-
-lemma set_tcb_obj_ref_reply_at_inv[wp]:
-  "\<lbrace> reply_at ep \<rbrace> set_tcb_obj_ref f t ntfn \<lbrace> \<lambda>rv. reply_at ep \<rbrace>"
-  apply (simp add: set_tcb_obj_ref_def)
-  apply (wp | simp add: set_object_def)+
-  done
-
 lemma update_sched_context_typ_at_inv[wp]:
   "update_sched_context ptr f \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
   by (wpsimp simp: update_sched_context_def get_object_def wp: set_object_typ_at)
@@ -1783,8 +1764,7 @@ lemma shows
     "set_tcb_obj_ref tcb_yield_to_update t sc \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>" and
   as_user_caps_of_state[wp]:
     "as_user p f \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
-
-  unfolding set_thread_state_def set_tcb_obj_ref_def as_user_def set_object_def get_object_def
+  unfolding set_thread_state_def as_user_def set_object_def get_object_def
             set_mrs_def thread_set_def
   apply (all \<open>(wp | wpc | simp)+ ; clarsimp, erule rsubst[where P=P], rule cte_wp_caps_of_lift\<close>)
   by (auto simp: cte_wp_at_cases2 tcb_cnode_map_def dest!: get_tcb_SomeD)
@@ -1834,7 +1814,7 @@ interpretation
   set_tcb_yt: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_yield_to_update p sc"
   apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
   unfolding set_simple_ko_def set_thread_state_def
-            set_tcb_obj_ref_def thread_set_def set_cap_def[simplified split_def]
+            thread_set_def set_cap_def[simplified split_def]
             as_user_def set_mrs_def update_sched_context_def update_sched_context_def
   apply -
   supply validNF_prop[wp_unsafe del]
@@ -2393,21 +2373,6 @@ lemma update_sched_context_obj_at_trivial:
    update_sched_context sc_ptr f
    \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
   by (wpsimp wp: update_sched_context_wp simp: obj_at_def)
-
-lemma set_tcb_obj_ref_wp:
-  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at (TCB tcb) t s
-                \<longrightarrow> Q (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (f (K v) tcb))\<rparr>)\<rbrace>
-    set_tcb_obj_ref f t v
-   \<lbrace>\<lambda>rv. Q\<rbrace>"
-  by (wpsimp simp: set_tcb_obj_ref_def wp: set_object_wp)
-     (clarsimp simp: get_tcb_ko_at)
-
-lemma set_tcb_obj_ref_obj_at_trivial:
-  "\<lbrace>obj_at P t' and
-    K (\<forall>tcb. P (TCB tcb) \<longrightarrow> P (TCB (f (K new) tcb)))\<rbrace>
-     set_tcb_obj_ref f t new
-   \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
-  by (wpsimp wp: set_tcb_obj_ref_wp simp: obj_at_def)
 
 lemma sched_context_update_consumed_obj_at_trivial:
   "\<lbrace>obj_at P t' and

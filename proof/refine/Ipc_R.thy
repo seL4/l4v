@@ -2025,8 +2025,8 @@ crunch test_reschedule
 
 lemma sched_context_donate_in_correct_ready_q[wp]:
   "sched_context_donate sc_ptr tcb_ptr \<lbrace>in_correct_ready_q\<rbrace>"
-  apply (clarsimp simp: sched_context_donate_def set_tcb_obj_ref_thread_set)
-  apply (wpsimp wp: thread_set_in_correct_ready_q cong: if_cong)
+  apply (clarsimp simp: sched_context_donate_def)
+  apply (wpsimp wp: thread_set_in_correct_ready_q hoare_vcg_if_lift2 hoare_drop_imps)
   done
 
 crunch thread_set, update_sched_context
@@ -2035,8 +2035,8 @@ crunch thread_set, update_sched_context
 
 lemma sched_context_donate_ready_qs_distinct[wp]:
   "sched_context_donate sc_ptr tcb_ptr \<lbrace>ready_qs_distinct\<rbrace>"
-  apply (clarsimp simp: sched_context_donate_def set_tcb_obj_ref_thread_set)
-  apply (wpsimp wp: thread_set_in_correct_ready_q cong: if_cong)
+  apply (clarsimp simp: sched_context_donate_def)
+  apply (wpsimp wp: thread_set_in_correct_ready_q hoare_vcg_if_lift2 hoare_drop_imps)
   done
 
 crunch reply_push
@@ -2746,8 +2746,8 @@ lemma set_thread_state_ready_queues_runnable_runnable:
 
 lemma sched_context_donate_ready_queues_runnable[wp]:
   "sched_context_donate y callee \<lbrace>ready_queues_runnable\<rbrace>"
-  unfolding sched_context_donate_def test_reschedule_def set_tcb_obj_ref_thread_set
-  by (wpsimp wp: thread_set_ready_queues_runnable cong: if_cong)
+  unfolding sched_context_donate_def test_reschedule_def
+  by (wpsimp wp: thread_set_ready_queues_runnable hoare_vcg_if_lift2 hoare_drop_imps)
 
 lemma reply_push_ready_queues_runnable[wp]:
   "\<lbrace>ready_queues_runnable and not_queued caller\<rbrace>
@@ -4687,7 +4687,7 @@ lemma replyFromKernel_corres:
 crunch maybe_donate_sc
   for ntfn_at[wp]: "ntfn_at ntfnp"
   and ntfns_of[wp]: "\<lambda>s. P (ntfns_of s)"
-  (simp: crunch_simps wp: crunch_wps set_object_wp ignore: set_tcb_obj_ref)
+  (simp: crunch_simps wp: crunch_wps set_object_wp ignore: thread_set)
 
 crunch maybeDonateSc
   for ntfn_at'[wp]: "ntfn_at' ntfnp"
@@ -4838,8 +4838,7 @@ lemma maybeReturnSc_corres:
   unfolding maybe_return_sc_def maybeReturnSc_def
   apply add_sym_refs
   apply (rule corres_stateAssert_assume)
-   apply (clarsimp simp: liftM_def get_sk_obj_ref_def get_tcb_obj_ref_def
-                         set_tcb_obj_ref_thread_set)
+   apply (clarsimp simp: liftM_def get_sk_obj_ref_def get_tcb_obj_ref_def)
    apply (rule stronger_corres_guard_imp)
      apply (rule corres_split[OF getNotification_corres])
        apply (frule ntfn_relation_par_inj[symmetric], simp)
@@ -4847,7 +4846,7 @@ lemma maybeReturnSc_corres:
           apply (clarsimp simp: tcb_relation_def)
          apply (rule corres_when2, simp)
          apply (rule corres_assert_opt_assume_l)
-         apply (rule corres_split[OF threadset_corresT]; (simp add: inQ_def)?)
+         apply (rule corres_split[OF threadSet_corresT]; (simp add: inQ_def)?)
               apply (clarsimp simp: tcb_relation_def)
              apply (rule ball_tcb_cap_casesI; simp)
             apply (clarsimp simp: tcb_cte_cases_def tcb_cte_cases_neqs)
@@ -4912,8 +4911,8 @@ lemma maybe_return_sc_weak_valid_sched_action:
    maybe_return_sc ntfn_ptr tcb_ptr
    \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
   apply (clarsimp simp: maybe_return_sc_def)
-  apply (wpsimp wp: set_object_wp thread_get_wp get_simple_ko_wp
-              simp: set_tcb_obj_ref_def get_tcb_obj_ref_def get_sk_obj_ref_def)
+  apply (wpsimp wp: thread_set_wp thread_get_wp get_simple_ko_wp
+              simp: get_tcb_obj_ref_def get_sk_obj_ref_def)
   apply (clarsimp simp: obj_at_def is_tcb_def)
   apply (rename_tac tcb, case_tac tcb; clarsimp)
   apply (fastforce simp: weak_valid_sched_action_def scheduler_act_not_def vs_all_heap_simps)
@@ -6014,7 +6013,7 @@ lemma sendFaultIPC_corres:
   apply (cases cap; simp add: valid_fault_handler_def tcb_relation_def)
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split)
-       apply (rule threadset_corres;
+       apply (rule threadSet_corres;
               clarsimp simp: tcb_relation_def fault_rel_optionation_def inQ_def)
       apply (rule corres_split)
          apply (rule sendIPC_corres, clarsimp)
@@ -7047,7 +7046,7 @@ lemma doReplyTransfer_corres:
                              apply (simp (no_asm) del: dc_simp)
                              apply (rule corres_split_eqr[OF handleFaultReply_corres])
                                 apply simp
-                               apply (rule corres_split [OF threadset_corresT setThreadState_corres])
+                               apply (rule corres_split [OF threadSet_corresT setThreadState_corres])
                                         apply (clarsimp simp: tcb_relation_def fault_rel_optionation_def)
                                        apply (clarsimp simp: tcb_cte_cases_neqs tcb_cap_cases_def)
                                       apply (clarsimp simp: tcb_cte_cases_neqs tcb_cte_cases_def)
