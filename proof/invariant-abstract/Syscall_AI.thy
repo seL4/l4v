@@ -1600,16 +1600,12 @@ crunch empty_slot
   (wp: crunch_wps simp: crunch_simps interrupt_update.state_refs_update)
 
 lemma reply_unlink_runnable[wp]:
-  "\<lbrace>st_tcb_at runnable t'\<rbrace> reply_unlink_tcb t rptr \<lbrace>\<lambda>rv. st_tcb_at runnable t'\<rbrace>"
-  apply (rule hoare_strengthen_pre_via_assert_backward[of "st_tcb_at (Not \<circ> runnable) t", rotated]
-         , wpsimp wp: reply_unlink_tcb_st_tcb_at simp: pred_tcb_at_def obj_at_def)
-  apply (clarsimp simp: reply_unlink_tcb_def)
-  apply (rule bind_wp[OF _ get_simple_ko_sp])
-  apply (rule bind_wp[OF _ assert_inv])
-  apply (rule bind_wp[OF _ gts_sp])
-  apply (rule bind_wp[OF _ assert_sp, OF hoare_gen_asm_conj])
-  apply (rule hoare_weaken_pre[where P'=\<bottom>])
-  by (auto simp: pred_tcb_at_def obj_at_def)
+  "reply_unlink_tcb t rptr \<lbrace>st_tcb_at runnable t'\<rbrace>"
+  unfolding reply_unlink_tcb_def
+  apply (wpsimp wp: sts_st_tcb_at_cases_strong hoare_vcg_imp_lift' update_sk_obj_ref_wp
+                    get_simple_ko_wp gts_wp)
+  apply (auto simp: pred_tcb_at_def obj_at_def)
+  done
 
 (* FIXME: move; this should be much higher up *)
 lemma in_get_refs:
