@@ -196,27 +196,15 @@ lemma get_object_wp:
   apply (clarsimp simp: obj_at_def)
   done
 
-(* FIXME: move *)
-lemma hoare_strengthen_pre_via_assert_forward:
-  assumes pos: "\<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>"
-  assumes rel: "\<And>s. S s \<Longrightarrow> P s \<or> N s"
-  assumes neg: "\<lbrace> N \<rbrace> f \<lbrace> \<bottom>\<bottom> \<rbrace>"
-  shows "\<lbrace> S \<rbrace> f \<lbrace> Q \<rbrace>"
-  apply (rule hoare_weaken_pre)
-   apply (rule hoare_strengthen_post)
-    apply (rule hoare_vcg_disj_lift[OF pos neg])
-   apply simp
-  apply (erule rel)
-  done
-
 lemma hoare_set_object_weaken_pre:
-  assumes "\<lbrace>P\<rbrace> set_object p v \<lbrace>\<lambda>_. Q\<rbrace>"
-  shows "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> (a_type v = a_type ko) \<longrightarrow> P s\<rbrace>
-         set_object p v
-         \<lbrace>\<lambda>_. Q\<rbrace>"
-  apply (rule hoare_strengthen_pre_via_assert_forward
-                [OF assms, where N="\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> a_type ko \<noteq> a_type v"])
-  apply fastforce
+  "\<lbrace>P\<rbrace> set_object p v \<lbrace>\<lambda>_. Q\<rbrace> \<Longrightarrow>
+   \<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> (a_type v = a_type ko) \<longrightarrow> P s\<rbrace>
+   set_object p v
+   \<lbrace>\<lambda>_. Q\<rbrace>"
+  apply (rule hoare_strengthen_pre'[
+                where P=P and N="\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> a_type ko \<noteq> a_type v"])
+    apply (fastforce intro: hoare_weaken_pre)
+   apply fastforce
   apply (simp add: set_object_def)
   apply (rule bind_wp[OF _ get_object_sp])
   apply (rule bind_wp[OF _ assert_sp])
