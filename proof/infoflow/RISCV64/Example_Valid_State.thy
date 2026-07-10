@@ -225,7 +225,6 @@ definition "High_pool_ptr = pptr_base + 0xA000"
 definition "Low_cnode_ptr = pptr_base + 0x10000"
 definition "High_cnode_ptr = pptr_base + 0x18000"
 definition "Silc_cnode_ptr = pptr_base + 0x20000"
-definition "irq_cnode_ptr = pptr_base + 0x28000"
 
 definition "shared_page_ptr_virt = pptr_base + 0x200000"
 definition "shared_page_ptr_phys = addrFromPPtr shared_page_ptr_virt"
@@ -241,7 +240,7 @@ definition "High_domain \<equiv> 1 :: domain"
 
 lemmas s0_ptr_defs =
   Low_pool_ptr_def High_pool_ptr_def Low_cnode_ptr_def High_cnode_ptr_def Silc_cnode_ptr_def
-  ntfn_ptr_def irq_cnode_ptr_def Low_pd_ptr_def High_pd_ptr_def Low_pt_ptr_def High_pt_ptr_def
+  ntfn_ptr_def Low_pd_ptr_def High_pd_ptr_def Low_pt_ptr_def High_pt_ptr_def
   Low_tcb_ptr_def High_tcb_ptr_def idle_tcb_ptr_def timer_irq_def Low_prio_def High_prio_def
   Low_time_slice_def Low_domain_def High_domain_def init_irq_node_ptr_def riscv_global_pt_ptr_def
   pptr_base_def pptrBase_def canonical_bit_def shared_page_ptr_virt_def
@@ -252,7 +251,7 @@ distinct ptrs_distinct[simp]:
   Low_tcb_ptr High_tcb_ptr idle_tcb_ptr ntfn_ptr
   Low_pt_ptr High_pt_ptr shared_page_ptr_virt Low_pd_ptr High_pd_ptr
   Low_cnode_ptr High_cnode_ptr Low_pool_ptr High_pool_ptr
-  Silc_cnode_ptr irq_cnode_ptr riscv_global_pt_ptr
+  Silc_cnode_ptr riscv_global_pt_ptr init_irq_node_ptr
   by (auto simp: s0_ptr_defs)
 
 
@@ -617,9 +616,6 @@ definition idle_tcb :: kernel_object where
                    tcb_flags = {},
                    tcb_arch = \<lparr>tcb_context = empty_context\<rparr>\<rparr>"
 
-definition
-  "irq_cnode \<equiv> CNode 0 (Map.empty([] \<mapsto> cap.NullCap))"
-
 abbreviation
   "Low_pool' \<equiv> \<lambda>idx. if idx = asid_low_bits_of Low_asid then Some Low_pd_ptr else None"
 
@@ -645,7 +641,6 @@ definition kh0 :: kheap where
           High_pool_ptr  \<mapsto> High_pool,
           Silc_cnode_ptr \<mapsto> Silc_cnode,
           ntfn_ptr       \<mapsto> ntfn,
-          irq_cnode_ptr  \<mapsto> irq_cnode,
           Low_pd_ptr     \<mapsto> Low_pd,
           High_pd_ptr    \<mapsto> High_pd,
           Low_pt_ptr     \<mapsto> Low_pt,
@@ -727,7 +722,6 @@ lemma irq_node_offs_range_distinct[simp]:
   "High_pool_ptr \<notin> irq_node_offs_range"
   "Silc_cnode_ptr \<notin> irq_node_offs_range"
   "ntfn_ptr \<notin> irq_node_offs_range"
-  "irq_cnode_ptr \<notin> irq_node_offs_range"
   "Low_pd_ptr \<notin> irq_node_offs_range"
   "High_pd_ptr \<notin> irq_node_offs_range"
   "Low_pt_ptr \<notin> irq_node_offs_range"
@@ -747,7 +741,6 @@ lemma irq_node_offs_distinct[simp]:
   "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> High_pool_ptr"
   "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> Silc_cnode_ptr"
   "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> ntfn_ptr"
-  "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> irq_cnode_ptr"
   "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> Low_pd_ptr"
   "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> High_pd_ptr"
   "init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<noteq> Low_pt_ptr"
@@ -761,7 +754,7 @@ lemma irq_node_offs_distinct[simp]:
 
 lemma kh0_dom:
   "dom kh0 = {shared_page_ptr_virt, riscv_global_pt_ptr, idle_tcb_ptr, High_tcb_ptr, Low_tcb_ptr,
-              High_pt_ptr, Low_pt_ptr, High_pd_ptr, Low_pd_ptr, irq_cnode_ptr, ntfn_ptr,
+              High_pt_ptr, Low_pt_ptr, High_pd_ptr, Low_pd_ptr, ntfn_ptr,
               Silc_cnode_ptr, High_pool_ptr, Low_pool_ptr, High_cnode_ptr, Low_cnode_ptr}
            \<union> irq_node_offs_range"
   apply (rule equalityI)
@@ -785,7 +778,6 @@ lemma kh0_SomeD:
         x = Low_pt_ptr \<and> y = Low_pt \<or>
         x = High_pd_ptr \<and> y = High_pd \<or>
         x = Low_pd_ptr \<and> y = Low_pd \<or>
-        x = irq_cnode_ptr \<and> y = irq_cnode \<or>
         x = ntfn_ptr \<and> y = ntfn \<or>
         x = Silc_cnode_ptr \<and> y = Silc_cnode \<or>
         x = High_pool_ptr \<and> y = High_pool \<or>
@@ -799,7 +791,7 @@ lemma kh0_SomeD:
 
 lemmas kh0_obj_def =
   Low_cnode_def High_cnode_def Silc_cnode_def Low_pool_def High_pool_def Low_pd_def High_pd_def
-  Low_pt_def High_pt_def  Low_tcb_def High_tcb_def idle_tcb_def irq_cnode_def ntfn_def
+  Low_pt_def High_pt_def  Low_tcb_def High_tcb_def idle_tcb_def ntfn_def
   init_global_pt_def global_pte_def vm_kernel_only_def shared_page_def
 
 
@@ -855,7 +847,6 @@ lemma kh_s0_def:
         x = Low_pt_ptr \<and> y = Low_pt \<or>
         x = High_pd_ptr \<and> y = High_pd \<or>
         x = Low_pd_ptr \<and> y = Low_pd \<or>
-        x = irq_cnode_ptr \<and> y = irq_cnode \<or>
         x = ntfn_ptr \<and> y = ntfn \<or>
         x = Silc_cnode_ptr \<and> y = Silc_cnode \<or>
         x = High_pool_ptr \<and> y = High_pool \<or>
@@ -881,7 +872,7 @@ definition Sys1AgentMap :: "(auth_graph_label subject_label) agent_map" where
     Low_pool_ptr := partition_label Low,
     High_pool_ptr := partition_label High,
     ntfn_ptr := partition_label High,
-    irq_cnode_ptr := partition_label IRQ0,
+    init_irq_node_ptr := partition_label IRQ0,
     Silc_cnode_ptr := SilcLabel,
     Low_pd_ptr := partition_label Low,
     High_pd_ptr := partition_label High,
@@ -897,7 +888,7 @@ lemma Sys1AgentMap_simps:
   "Sys1AgentMap Low_pool_ptr = partition_label Low"
   "Sys1AgentMap High_pool_ptr = partition_label High"
   "Sys1AgentMap ntfn_ptr = partition_label High"
-  "Sys1AgentMap irq_cnode_ptr = partition_label IRQ0"
+  "Sys1AgentMap init_irq_node_ptr = partition_label IRQ0"
   "Sys1AgentMap Silc_cnode_ptr = SilcLabel"
   "Sys1AgentMap Low_pd_ptr = partition_label Low"
   "Sys1AgentMap High_pd_ptr = partition_label High"
@@ -1211,21 +1202,22 @@ lemma silc_inv_s0:
      apply (simp add: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def)
      apply (case_tac a, clarsimp)
      apply (clarsimp split: if_splits)
-            apply ((clarsimp simp: intra_label_cap_def cte_wp_at_cases tcb_cap_cases_def
-                                   cap_points_to_label_def split: if_split_asm)+)[8]
+           apply ((clarsimp simp: intra_label_cap_def cte_wp_at_cases tcb_cap_cases_def
+                                  cap_points_to_label_def split: if_split_asm)+)[7]
     apply (clarsimp simp: intra_label_cap_def cap_points_to_label_def)
     apply (drule cte_wp_at_caps_of_state' s0_caps_of_state)+
     subgoal
       by (erule disjE
           | clarsimp simp: Sys1PAS_def Sys1AgentMap_simps
                            the_nat_to_bl_def nat_to_bl_def ctes_wp_at_def cte_wp_at_cases
-                           s0_internal_def kh0_def kh0_obj_def Silc_caps_well_formed obj_refs_def
+                           s0_internal_def kh0_def kh0_obj_def Silc_caps_well_formed
           | simp add: Silc_caps_def)+
+   apply (clarsimp simp add: intra_label_cap_def)
    apply (clarsimp simp: Sys1PAS_def Sys1AgentMap_def)
   apply (intro conjI)
   apply (clarsimp simp: all_children_def s0_internal_def silc_dom_equiv_def equiv_for_refl)
   apply (clarsimp simp: all_children_def s0_internal_def silc_dom_equiv_def equiv_for_refl)
-  apply (clarsimp simp: Invariants_AI.cte_wp_at_caps_of_state )
+  apply (clarsimp simp: Invariants_AI.cte_wp_at_caps_of_state)
   by (auto simp:is_transferable.simps dest:s0_caps_of_state)
 
 lemma only_timer_irq_s0:
@@ -1302,7 +1294,6 @@ lemma valid_obj_s0[simp]:
   "valid_obj Low_pool_ptr        Low_pool       s0_internal"
   "valid_obj Silc_cnode_ptr      Silc_cnode     s0_internal"
   "valid_obj ntfn_ptr            ntfn           s0_internal"
-  "valid_obj irq_cnode_ptr       irq_cnode      s0_internal"
   "valid_obj Low_pd_ptr          Low_pd         s0_internal"
   "valid_obj High_pd_ptr         High_pd        s0_internal"
   "valid_obj Low_pt_ptr          Low_pt         s0_internal"
@@ -1312,12 +1303,10 @@ lemma valid_obj_s0[simp]:
   "valid_obj idle_tcb_ptr        idle_tcb       s0_internal"
   "valid_obj riscv_global_pt_ptr init_global_pt s0_internal"
   "valid_obj shared_page_ptr_virt shared_page s0_internal"
-                 apply (simp_all add: valid_obj_def kh0_obj_def)
-              apply (simp add: valid_cs_def Low_caps_ran High_caps_ran Silc_caps_ran
-                               valid_cs_size_def word_bits_def cte_level_bits_def)+
-           apply (simp add: valid_ntfn_def obj_at_def s0_internal_def kh0_def High_tcb_def is_tcb_def)
-          apply (simp add: valid_cs_def valid_cs_size_def word_bits_def
-                           cte_level_bits_def well_formed_cnode_n_def)
+                apply (simp_all add: valid_obj_def kh0_obj_def)
+             apply (simp add: valid_cs_def Low_caps_ran High_caps_ran Silc_caps_ran
+                              valid_cs_size_def word_bits_def cte_level_bits_def)+
+          apply (simp add: valid_ntfn_def obj_at_def s0_internal_def kh0_def High_tcb_def is_tcb_def)
          apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def valid_tcb_state_def valid_arch_tcb_def
                                is_valid_vtable_root_def is_master_reply_cap_def is_ntfn_def obj_at_def
                                wellformed_pte_def valid_vm_rights_def vm_kernel_only_def
