@@ -196,5 +196,11 @@ definition archMakeObjectT :: "arch_kernel_object_type \<Rightarrow> kernel_obje
      of PTET \<Rightarrow> injectKO (makeObject :: pte)
       | ASIDPoolT \<Rightarrow> injectKO (makeObject :: asidpool)"
 
+(* no page table duplicates on this architecture, used for generic interfaces only *)
+definition vs_valid_duplicates' :: "(paddr \<Rightarrow> Structures_H.kernel_object option) \<Rightarrow> bool" where
+   "vs_valid_duplicates' \<equiv> \<lambda>_. True"
+
+lemmas [simp] = vs_valid_duplicates'_def
+
 end
 end
