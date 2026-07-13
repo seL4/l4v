@@ -507,7 +507,7 @@ lemma kernel_corres':
               od)"
   unfolding call_kernel_def
   apply (corres corres: handleEvent_corres maybeHandleInterrupt_corres)
-        apply (wp handle_event_valid_sched)+
+        apply (wpsimp wp: handle_event_valid_sched)+
       apply (rule corres_split[OF schedule_corres])
         apply (rule activateThread_corres)
        apply (wpsimp wp: schedule_invs' hoare_vcg_if_lift2 hoare_drop_imps handle_spurious_irq_invs

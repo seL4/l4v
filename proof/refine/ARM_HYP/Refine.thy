@@ -387,7 +387,7 @@ lemma ckernel_invs:
                  hoare_drop_imp[where Q'="\<lambda>_. kernelExitAssertions"]
                  hoare_drop_imp[where Q'="\<lambda>rv _. rv = None"]
              simp: no_irq_getActiveIRQ
-      | strengthen non_kernel_IRQs_strg[where Q=True, simplified])+
+      | strengthen non_kernel_IRQs_strg)+
 
 lemma fastpathKernelAssertions_cross:
   "\<lbrakk> (s,s') \<in> state_relation; invs s; valid_arch_state' s'\<rbrakk> \<Longrightarrow> fastpathKernelAssertions s'"
@@ -539,7 +539,7 @@ lemma kernel_corres':
                      E'="\<lambda>_. valid_domain_list and valid_sched and invs and valid_list"
                      in hoare_strengthen_postE)
        apply (wpsimp wp: handle_event_valid_sched hoare_vcg_if_lift3
-              | strengthen non_kernel_IRQs_strg[where Q=True, simplified] None_drop)+
+              | strengthen non_kernel_IRQs_strg None_drop)+
    apply (clarsimp simp: active_from_running schact_is_rct_def)
   apply (clarsimp simp: active_from_running')
   done
