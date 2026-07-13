@@ -64,7 +64,7 @@ definition prod_lift where
 
 definition handlePreemption_if :: "user_context \<Rightarrow> user_context kernel" where
   "handlePreemption_if tc \<equiv> do
-     maybeHandleInterrupt False;
+     maybeHandleInterrupt True;
      stateAssert
        (\<lambda>s. ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread) [];
      return tc
@@ -272,8 +272,6 @@ locale ADT_IF_Refine_1 =
               and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
               and arch_extras)
        (handle_event event) (handleEvent event)"
-  and maybeHandleInterrupt_corres_True_False:
-    "corres dc einvs invs' (maybe_handle_interrupt True) (maybeHandleInterrupt False)"
   and kernel_entry_if_corres:
     "\<And>event tc.
      corres (prod_lift (dc \<oplus> dc))
@@ -370,7 +368,7 @@ lemma handle_preemption_if_corres:
   "corres (=) (einvs and valid_domain_list and (\<lambda>s. 0 < domain_time s))
               (invs') (handle_preemption_if tc) (handlePreemption_if tc)"
   apply (simp add: handlePreemption_if_def handle_preemption_if_def)
-  apply (corres corres: maybeHandleInterrupt_corres_True_False)
+  apply (corres corres: maybeHandleInterrupt_corres)
       apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
                     P="\<lambda>s. valid_domain_list s \<and>
                            (domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread)"])

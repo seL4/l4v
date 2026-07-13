@@ -12,21 +12,6 @@ context kernel_m begin
 
 named_theorems ADT_IF_Refine_assms
 
-lemma handleInterrupt_ccorres[ADT_IF_Refine_assms]:
-  "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_') (invs') (UNIV) []
-           (handleEvent Interrupt) (handleInterruptEntry_C_body_if)"
-  apply (rule ccorres_guard_imp2)
-   apply (simp add: handleEvent_def minus_one_norm handleInterruptEntry_C_body_if_def)
-   apply (rule ccorres_add_return2)
-   apply (ctac (no_vcg) add: checkInterrupt_ccorres)
-    apply (rule_tac R="\<lambda>_. rv = Inr ()" in ccorres_return[where R'=UNIV])
-    apply (rule conseqPre, vcg)
-    apply (clarsimp simp: return_def)
-   apply (simp add: liftE_def)
-   apply wpsimp
-  apply clarsimp
-  done
-
 lemma handleInvocation_ccorres'[ADT_IF_Refine_assms]:
   "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and arch_extras and ct_active' and sch_act_simple)
@@ -35,6 +20,33 @@ lemma handleInvocation_ccorres'[ADT_IF_Refine_assms]:
        (handleInvocation isCall isBlocking) (Call handleInvocation_'proc)"
   apply (simp only: arch_extras_def)
   apply (rule handleInvocation_ccorres)
+  done
+
+lemma checkInterrupt_ccorres'[ADT_IF_Refine_assms]:
+  "ccorres dc xfdc (\<lambda>s. invs' s \<and> (\<not>inKernel \<longrightarrow> sch_act_not (ksCurThread s) s)) UNIV []
+           (maybeHandleInterrupt inKernel) (Call checkInterrupt_'proc)"
+  unfolding maybeHandleInterrupt_def
+  apply cinit'
+  apply (rule ccorres_guard_imp)
+    apply (simp add: liftE_def bind_assoc)
+    apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
+         apply (rule_tac P="\<lambda>_. rv \<noteq> None" and R=\<top> in ccorres_cond_both)
+           apply (auto simp: irq_type_never_invalid split: option.splits)[1]
+          apply (rule_tac P="rv \<noteq> None" in ccorres_gen_asm)
+          apply clarsimp
+          apply (rule ccorres_call[where xf'=xfdc, OF handleInterrupt_ccorres]; simp)
+         apply (rule_tac P="rv = None" in ccorres_gen_asm)
+         apply clarsimp
+         apply (ctac (no_vcg) add: handleSpuriousIRQ_ccorres)
+      apply wp
+     apply (simp add: guard_is_UNIV_def)
+    apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)"
+                    in hoare_post_imp)
+     apply (solves clarsimp)
+    apply (wpsimp wp: getActiveIRQ_le_maxIRQ)
+    apply assumption
+   apply assumption
+  apply (clarsimp simp: invs'_def valid_state'_def)
   done
 
 definition
