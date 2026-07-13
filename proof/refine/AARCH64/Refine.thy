@@ -12,7 +12,7 @@
 theory Refine
 imports
   KernelInit_R
-  ADT_H
+  ArchADT_H
   InitLemmas
   PageTableDuplicates
 begin
