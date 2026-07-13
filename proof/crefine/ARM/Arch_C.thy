@@ -1382,7 +1382,7 @@ lemma createSafeMappingEntries_PTE_ccorres:
         apply (simp add: exception_defs)
        apply (wp injection_wp[OF refl])
        apply (simp add: linorder_not_less)
-       apply (wp lookupPTSlot_le_0x3C lookupPTSlot_page_table_at' Arch_R.lookupPTSlot_aligned)
+       apply (wp lookupPTSlot_le_0x3C lookupPTSlot_page_table_at' lookupPTSlot_aligned)
       apply simp
       apply (vcg exspec=lookupPTSlot_modifies)
      apply simp

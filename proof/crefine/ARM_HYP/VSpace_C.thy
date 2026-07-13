@@ -3490,7 +3490,7 @@ lemma unmapPage_ccorres:
              apply (rule ccorres_split_throws)
               apply (rule ccorres_return_void_C')
              apply vcg
-            apply (wp lookupPTSlot_inv Arch_R.lookupPTSlot_aligned
+            apply (wp lookupPTSlot_inv lookupPTSlot_aligned
                   lookupPTSlot_page_table_at' | simp add: ptBits_eq)+
            apply (vcg exspec=lookupPTSlot_modifies)
           \<comment> \<open>ARMSection\<close>
