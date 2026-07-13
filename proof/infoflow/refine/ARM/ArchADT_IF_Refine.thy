@@ -412,21 +412,6 @@ lemma getActiveIRQ_corres_True_False:
   unfolding getActiveIRQ_def
   by (corres simp: non_kernel_IRQs_def)
 
-lemma maybeHandleInterrupt_corres_True_False[ADT_IF_Refine_assms]:
-  "corres dc einvs invs' (maybe_handle_interrupt True) (maybeHandleInterrupt False)"
-  unfolding maybe_handle_interrupt_def maybeHandleInterrupt_def
-  apply (corres corres: corres_machine_op getActiveIRQ_corres_True_False
-                        handleInterrupt_corres[@lift_corres_args]
-                simp:  irq_state_independent_def
-         | corres_cases_both)+
-     apply (wpsimp wp: hoare_drop_imps)
-    apply clarsimp
-    apply (strengthen contract_all_imp_strg[where P'=True, simplified])
-    apply (wpsimp wp: doMachineOp_getActiveIRQ_IRQ_active' hoare_vcg_all_lift simp: non_kernel_IRQs_def)
-   apply clarsimp
-  apply (clarsimp simp: invs'_def valid_state'_def)
-  done
-
 lemma handle_event_valid_domain_time_IRQ:
   "\<lbrace>\<lambda>s. 0 < domain_time s \<rbrace>
    handle_event Interrupt
