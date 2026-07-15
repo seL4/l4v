@@ -90,8 +90,9 @@ definition cacheLineBits :: nat where
 definition kdevBase :: machine_word where
   "kdevBase = 0x000000FFFFE00000"
 
+(* Fixed value. See KERNEL_ELF_BASE in include/arch/arm/arch/64/mode/hardware.h *)
 definition kernelELFBase :: machine_word where
-  "kernelELFBase = 2^39 + physBase"
+  "kernelELFBase =  2^40 - 2^30" (* 0x000000ffc0000000 *)
 
 definition kernelELFPAddrBase :: machine_word where
   "kernelELFPAddrBase = physBase"
