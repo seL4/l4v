@@ -1105,6 +1105,7 @@ FIXME ARMHYP TODO unify hyp/non-hyp to share more code
 >                      dsb
 >                      invalidateCacheRange_I vstart' vend' pstart
 >                      branchFlushRange vstart' vend' pstart
+>                      dsb
 >                      isb
 >     where vstart' = VPtr $ fromPPtr $ ptrFromPAddr pstart
 >           vend' = vstart' + (vend - vstart)
@@ -1121,6 +1122,7 @@ FIXME ARMHYP TODO unify hyp/non-hyp to share more code
 >     dsb
 >     invalidateCacheRange_I vstart vend pstart
 >     branchFlushRange vstart vend pstart
+>     dsb
 >     isb
 #endif
 
