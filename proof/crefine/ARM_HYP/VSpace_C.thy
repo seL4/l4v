@@ -2811,8 +2811,9 @@ lemma doFlush_ccorres:
     apply (ctac (no_vcg) add: dsb_ccorres)
      apply (ctac (no_vcg) add: invalidateCacheRange_I_ccorres)
       apply (ctac (no_vcg) add: branchFlushRange_ccorres)
-       apply (ctac (no_vcg) add: isb_ccorres)
-      apply wp+
+       apply (ctac (no_vcg) add: dsb_ccorres)
+        apply (ctac (no_vcg) add: isb_ccorres)
+       apply wp+
   apply (clarsimp simp: Collect_const_mem)
   apply (auto simp: flushtype_relation_def o_def
                         Kernel_C.ARMPageClean_Data_def Kernel_C.ARMPDClean_Data_def

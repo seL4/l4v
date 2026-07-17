@@ -126,6 +126,7 @@ definition do_flush :: "flush_type \<Rightarrow> vspace_ref \<Rightarrow> vspace
          cleanCacheRange_PoU vstart vend pstart;
          dsb;
          invalidateCacheRange_I vstart vend pstart;
+         dsb;
          isb
        od"
 
