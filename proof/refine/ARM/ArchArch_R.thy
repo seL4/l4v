@@ -426,6 +426,15 @@ lemma resolveVAddr_corres:
   apply (clarsimp simp: page_directory_pde_at_lookupI' page_directory_at_state_relation)
   done
 
+lemma resolveVAddr_corres':
+  "\<lbrakk> pd' = pd; vaddr' = vaddr \<rbrakk> \<Longrightarrow>
+   corres (=) (pspace_aligned and valid_vspace_objs and page_directory_at pd and
+               (\<exists>\<rhd> (lookup_pd_slot pd vaddr && ~~ mask pd_bits)) and
+               K (is_aligned pd pd_bits \<and> vaddr < kernel_base))
+              (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> vs_valid_duplicates' (ksPSpace s))
+              (resolve_vaddr pd vaddr) (resolveVAddr pd' vaddr')"
+  by (fastforce intro: resolveVAddr_corres corres_gen_asm)
+
 lemma decodeARMPageFlush_corres:
   "ARM_H.isPageFlushLabel (invocation_type (mi_label mi)) \<Longrightarrow>
    corres (ser \<oplus> archinv_relation)
@@ -442,23 +451,30 @@ lemma decodeARMPageFlush_corres:
             (\<lambda>s. \<forall>x\<in>set excaps'. valid_cap' (fst x) s \<and> cte_wp_at' (\<lambda>_. True) (snd x) s) and
             (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
            (if Suc 0 < length args
-            then let start = args ! 0; end = args ! 1
-                 in doE (asid, vaddr) \<leftarrow>
-                        case option of
-                        None \<Rightarrow> throwError ExceptionTypes_A.syscall_error.IllegalOperation
-                        | Some x \<Rightarrow> returnOk x;
-                        pd \<leftarrow> lookup_error_on_failure False $ find_pd_for_asid asid;
-                        whenE (end \<le> start) $
-                        throwError $ ExceptionTypes_A.syscall_error.InvalidArgument 1;
-                        page_size \<leftarrow> returnOk $ 1 << pageBitsForSize vmpage_size;
-                        whenE (page_size \<le> start \<or> page_size < end) $
-                        throwError $ ExceptionTypes_A.syscall_error.InvalidArgument 0;
-                        returnOk $
-                        arch_invocation.InvokePage $
-                        ARM_A.page_invocation.PageFlush
-                         (label_to_flush_type (invocation_type (mi_label mi))) (start + vaddr)
-                         (end + vaddr - 1) (addrFromPPtr word + start) pd asid
-                    odE
+            then
+              let start = args ! 0; end = args ! 1
+              in doE (asid, vaddr) \<leftarrow>
+                       case option of
+                         None \<Rightarrow> throwError ExceptionTypes_A.syscall_error.IllegalOperation
+                       | Some x \<Rightarrow> returnOk x;
+                     pd \<leftarrow> lookup_error_on_failure False $ find_pd_for_asid asid;
+                     whenE (end \<le> start) $
+                       throwError $ ExceptionTypes_A.syscall_error.InvalidArgument 1;
+                     page_size \<leftarrow> returnOk $ 1 << pageBitsForSize vmpage_size;
+                     page_base <- returnOk $ addrFromPPtr word;
+                     frame_info <- liftE $ resolve_vaddr pd vaddr;
+                     case frame_info of
+                       None \<Rightarrow> throwError $ ExceptionTypes_A.syscall_error.InvalidCapability 0
+                     | Some (sz', base') \<Rightarrow>
+                         whenE (sz' \<noteq> vmpage_size \<or> base' \<noteq> page_base) $
+                           throwError $ ExceptionTypes_A.syscall_error.InvalidCapability 0;
+                     whenE (page_size \<le> start \<or> page_size < end) $
+                       throwError $ ExceptionTypes_A.syscall_error.InvalidArgument 0;
+                     returnOk $ arch_invocation.InvokePage $
+                       ARM_A.PageFlush (label_to_flush_type (invocation_type (mi_label mi)))
+                                       (start + vaddr) (end + vaddr - 1) (page_base + start)
+                                       pd asid
+                 odE
             else throwError ExceptionTypes_A.syscall_error.TruncatedMessage)
            (decodeARMPageFlush (mi_label mi) args
              (arch_capability.PageCap d word (vmrights_map seta) vmpage_size option))"
@@ -471,24 +487,15 @@ lemma decodeARMPageFlush_corres:
   apply (case_tac a)
   apply (rename_tac asid vref)
   apply clarsimp
-  apply (rule corres_guard_imp)
-    apply (rule corres_splitEE)
-       apply (rule corres_lookup_error)
-       apply (rule find_pd_for_asid_corres[OF refl])
-      apply (rule whenE_throwError_corres, simp)
-       apply simp
-      apply (rule whenE_throwError_corres, simp)
-       apply simp
-      apply (rule corres_trivial)
-      apply (rule corres_returnOk)
-      apply (clarsimp simp: archinv_relation_def page_invocation_map_def
-                            label_to_flush_type_def labelToFlushType_def flush_type_map_def
-                            ARM_H.isPageFlushLabel_def
-                     split: flush_type.splits invocation_label.splits arch_invocation_label.splits)
-     apply wp+
-   apply (fastforce simp: valid_cap_def mask_def
-                          invs_vspace_objs[simplified])
-  apply (auto)
+  apply (corres corres: corres_lookup_error resolveVAddr_corres' corres_returnOkTT
+         | corres_cases_both)+
+        apply (clarsimp simp: archinv_relation_def page_invocation_map_def
+                              label_to_flush_type_def labelToFlushType_def flush_type_map_def
+                              ARM_H.isPageFlushLabel_def
+                       split: flush_type.splits invocation_label.splits arch_invocation_label.splits)
+       apply (wpsimp | wp (once) hoare_drop_imps)+
+   apply (fastforce simp: valid_cap_def mask_def invs_vspace_objs[simplified])
+  apply fastforce
   done
 
 lemma vs_refs_pages_ptI:
@@ -1455,12 +1462,9 @@ lemma arch_decodeARMPageFlush_wf:
         (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>
        decodeARMPageFlush label args (arch_capability.PageCap d word vmrights vmpage_size option)
        \<lbrace>valid_arch_inv'\<rbrace>, -"
-  apply (simp add: decodeARMPageFlush_def)
-  apply (rule hoare_pre)
-   apply (wp throwE_R whenE_throwError_wp | wpc | clarsimp simp: if_apply_def2)+
-   apply (wpsimp simp: valid_arch_inv'_def valid_page_inv'_def)
-  apply fastforce
-  done
+  unfolding decodeARMPageFlush_def
+  by (wpsimp wp: throwE_R whenE_throwError_wp hoare_drop_imps hoare_vcg_op_lift
+             simp: if_apply_def2 valid_arch_inv'_def valid_page_inv'_def)
 
 lemma arch_decodeInvocation_wf[wp]:
   notes ensureSafeMapping_inv[wp del]

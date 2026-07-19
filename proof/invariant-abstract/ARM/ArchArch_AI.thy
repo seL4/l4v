@@ -1405,11 +1405,9 @@ lemma arch_decode_inv_wf[wp]:
       apply (simp add: valid_unmap_def)
       apply (fastforce simp: vmsz_aligned_def elim: is_aligned_weaken intro!: pbfs_atleast_pageBits)
      apply (cases "isPageFlushLabel (invocation_type label)")
-      apply (rule hoare_pre)
-       apply simp
-       apply (wp whenE_throwError_wp hoare_weak_lift_imp hoare_drop_imps)
-         apply (simp add: valid_arch_inv_def valid_page_inv_def)
-         apply (wp find_pd_for_asid_pd_at_asid | wpc)+
+      apply (wpsimp wp: whenE_throwError_wp hoare_weak_lift_imp hoare_drop_imps hoare_vcg_op_lift
+                        find_pd_for_asid_pd_at_asid
+                    simp: valid_arch_inv_def valid_page_inv_def)
       apply (clarsimp simp: valid_cap_def mask_def)
      apply (cases "invocation_type label = ArchInvocationLabel ARMPageGetAddress")
       apply simp
