@@ -193,6 +193,19 @@ lemma decode_sgi_signal_invocation_reads_respects_f[wp]:
   "reads_respects_f aag l \<top> (decode_sgi_signal_invocation (SGISignalCap irq target))"
   by (wpsimp simp: decode_sgi_signal_invocation_def)
 
+lemma is_subject_asid_trans:
+  "\<lbrakk> is_subject_asid aag x; pas_refined aag s;
+     (pasASIDAbs aag x, Control, pasObjectAbs aag y) \<in> pasPolicy aag \<rbrakk>
+   \<Longrightarrow> is_subject aag y"
+  by (subst aag_has_Control_iff_owns[symmetric]; simp)
+
+(* 2 = pde_bits (does not exist here), 20 = whatever lookup_pd_slot does *)
+lemma lookup_pd_slot_aligned_pd:
+  "is_aligned pd pd_bits \<Longrightarrow>
+   lookup_pd_slot pd vaddr && mask pd_bits >> 2 = vaddr >> 20"
+  using vaddr_segment_nonsense2
+  by (simp add: lookup_pd_slot_def pd_bits_def pageBits_def)
+
 lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
   notes reads_respects_f_inv' = reads_respects_f_inv[where st=st]
   notes whenE_wps[wp_split del]
@@ -226,85 +239,104 @@ lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
           | simp add: Let_def unlessE_whenE
           | wp (once) whenE_throwError_wp)+
   apply (intro impI allI conjI)
-                              apply (rule requiv_arm_asid_table_asid_high_bits_of_asid_eq')
+                                apply (rule requiv_arm_asid_table_asid_high_bits_of_asid_eq')
+                                  apply fastforce
+                                 apply (simp add: reads_equiv_f_def)
+                                apply blast
+                               apply (fastforce simp: aag_cap_auth_ASIDPoolCap)
+                              apply (rule pas_cap_cur_auth_ASIDControlCap[where aag=aag])
                                 apply fastforce
                                apply (simp add: reads_equiv_f_def)
                               apply blast
-                             apply (fastforce simp: aag_cap_auth_ASIDPoolCap)
-                            apply (rule pas_cap_cur_auth_ASIDControlCap[where aag=aag])
-                              apply fastforce
-                             apply (simp add: reads_equiv_f_def)
-                            apply blast
+                             apply clarify
+                             apply (subgoal_tac "excaps ! 0 \<in> set excaps", fastforce)
+                             apply (rule nth_mem)
+                             apply (erule less_trans[rotated], simp)
+                            apply (subgoal_tac "excaps ! (Suc 0) \<in> set excaps")
+                             apply (rule_tac slot="snd (excaps ! (Suc 0))"
+                                          in owns_cnode_owns_obj_ref_of_child_cnodes)
+                                apply blast
+                               apply (fastforce)
+                              apply (fastforce)
+                             apply assumption
+                            apply (fastforce intro: nth_mem)
                            apply clarify
-                           apply (subgoal_tac "excaps ! 0 \<in> set excaps", fastforce)
-                           apply (rule nth_mem)
-                            apply (erule less_trans[rotated], simp)
-                          apply (subgoal_tac "excaps ! (Suc 0) \<in> set excaps")
-                           apply (rule_tac slot="snd (excaps ! (Suc 0))"
-                                        in owns_cnode_owns_obj_ref_of_child_cnodes)
-                              apply blast
-                             apply (fastforce)
-                            apply (fastforce)
-                           apply assumption
-                          apply (fastforce intro: nth_mem)
-                         apply clarify
-                         apply (subgoal_tac "excaps ! Suc 0 \<in> set excaps")
-                          apply (rule_tac cap="fst (excaps ! Suc 0)" and p="snd (excaps ! Suc 0)"
-                                       in caps_of_state_pasObjectAbs_eq)
-                              apply (rule cte_wp_at_caps_of_state')
+                           apply (subgoal_tac "excaps ! Suc 0 \<in> set excaps")
+                            apply (rule_tac cap="fst (excaps ! Suc 0)" and p="snd (excaps ! Suc 0)"
+                                         in caps_of_state_pasObjectAbs_eq)
+                                apply (rule cte_wp_at_caps_of_state')
+                                apply fastforce
+                               apply (erule cap_auth_conferred_cnode_cap)
                               apply fastforce
-                             apply (erule cap_auth_conferred_cnode_cap)
-                            apply fastforce
-                           apply assumption
-                          apply (fastforce intro: nth_mem)
-                         apply (fastforce intro: nth_mem)
+                             apply assumption
+                            apply (fastforce intro: nth_mem)
+                           apply (fastforce intro: nth_mem)
+                          apply (subgoal_tac "excaps ! 0 \<in> set excaps")
+                           apply (fastforce intro: aag_cap_auth_PageDirectoryCap_asid)
+                          apply fastforce
+                         apply (simp add: lookup_pd_slot_def)
+                         apply (subgoal_tac "excaps ! 0 \<in> set excaps")
+                          apply (subst vaddr_segment_nonsense)
+                           apply (fastforce dest: cte_wp_valid_cap cap_aligned_valid
+                                            simp: obj_ref_of_def cap_aligned_def cap_bits_def)
+                          apply (fastforce dest: aag_cap_auth_PageDirectoryCap)
+                         apply fastforce
+                        apply (simp add: lookup_pd_slot_def)
                         apply (subgoal_tac "excaps ! 0 \<in> set excaps")
-                         apply (fastforce intro: aag_cap_auth_PageDirectoryCap_asid)
+                         apply (subst vaddr_segment_nonsense)
+                          apply (fastforce dest: cte_wp_valid_cap cap_aligned_valid
+                                           simp: obj_ref_of_def cap_aligned_def cap_bits_def)
+                         apply (fastforce dest: aag_cap_auth_PageDirectoryCap)
                         apply fastforce
-                       apply (simp add: lookup_pd_slot_def)
-                       apply (subgoal_tac "excaps ! 0 \<in> set excaps")
-                        apply (subst vaddr_segment_nonsense)
-                         apply (fastforce dest: cte_wp_valid_cap cap_aligned_valid
-                                          simp: obj_ref_of_def cap_aligned_def cap_bits_def)
-                        apply (fastforce dest: aag_cap_auth_PageDirectoryCap)
                        apply fastforce
-                      apply (simp add: lookup_pd_slot_def)
                       apply (subgoal_tac "excaps ! 0 \<in> set excaps")
-                       apply (subst vaddr_segment_nonsense)
-                        apply (fastforce dest: cte_wp_valid_cap cap_aligned_valid
-                                         simp: obj_ref_of_def cap_aligned_def cap_bits_def)
                        apply (fastforce dest: aag_cap_auth_PageDirectoryCap)
                       apply fastforce
                      apply fastforce
-                    apply (subgoal_tac "excaps ! 0 \<in> set excaps")
-                     apply (fastforce dest: aag_cap_auth_PageDirectoryCap)
-                    apply fastforce
-                   apply fastforce
-                  apply (simp add: linorder_not_le aligned_sum_less_kernel_base)
-                 apply (rule ball_subset[OF _ vspace_cap_rights_to_auth_mask_vm_rights])
-                 apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def arch_cap_auth_conferred_def)
-                apply (simp add: lookup_pd_slot_def)
-                apply (subgoal_tac "excaps ! 0 \<in> set excaps")
-                 apply (subst vaddr_segment_nonsense)
-                  apply (fastforce dest: cte_wp_valid_cap cap_aligned_valid
-                                   simp: obj_ref_of_def cap_aligned_def cap_bits_def)
-                 apply (fastforce dest: aag_cap_auth_PageDirectoryCap)
+                    apply (simp add: linorder_not_le aligned_sum_less_kernel_base)
+                   apply (rule ball_subset[OF _ vspace_cap_rights_to_auth_mask_vm_rights])
+                   apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def arch_cap_auth_conferred_def)
+                  apply (simp add: lookup_pd_slot_def)
+                  apply (subgoal_tac "excaps ! 0 \<in> set excaps")
+                   apply (subst vaddr_segment_nonsense)
+                    apply (fastforce dest: cte_wp_valid_cap cap_aligned_valid
+                                     simp: obj_ref_of_def cap_aligned_def cap_bits_def)
+                   apply (fastforce dest: aag_cap_auth_PageDirectoryCap)
+                  apply fastforce
+                 apply (simp add: lookup_pd_slot_def)
+                 apply (subgoal_tac "excaps ! 0 \<in> set excaps")
+                  apply (subst vaddr_segment_nonsense)
+                   apply (fastforce dest: cte_wp_valid_cap cap_aligned_valid
+                                    simp: obj_ref_of_def cap_aligned_def cap_bits_def)
+                  apply (fastforce dest: aag_cap_auth_PageDirectoryCap)
+                 apply fastforce
                 apply fastforce
-               apply (simp add: lookup_pd_slot_def)
                apply (subgoal_tac "excaps ! 0 \<in> set excaps")
-                apply (subst vaddr_segment_nonsense)
-                 apply (fastforce dest: cte_wp_valid_cap cap_aligned_valid
-                                  simp: obj_ref_of_def cap_aligned_def cap_bits_def)
                 apply (fastforce dest: aag_cap_auth_PageDirectoryCap)
                apply fastforce
               apply fastforce
-             apply (subgoal_tac "excaps ! 0 \<in> set excaps")
-              apply (fastforce dest: aag_cap_auth_PageDirectoryCap)
+             apply (fastforce dest: cte_wp_valid_cap simp: valid_cap_simps)
+            apply (rule ball_subset[OF _ vspace_cap_rights_to_auth_mask_vm_rights])
+            apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def arch_cap_auth_conferred_def)
+           apply clarsimp
+           apply (simp add: lookup_pd_slot_def)
+           apply (subst vaddr_segment_nonsense)
+            apply (fastforce simp: pd_bits_def pageBits_def)
+           apply (fastforce elim!: is_subject_asid_trans)
+          apply (subst lookup_pd_slot_eq, fastforce)
+          apply (subst lookup_pd_slot_aligned_pd, fastforce)
+          apply (clarsimp split: option.split kernel_object.split arch_kernel_obj.split pde.split)
+          apply (rule lookup_pt_slot_no_fail_is_subject)
+                  apply fastforce
+                 apply fastforce
+                apply fastforce
+               apply fastforce
+              apply (fastforce elim!: is_subject_asid_trans)
              apply fastforce
-            apply fastforce
-           apply (fastforce dest: cte_wp_valid_cap simp: valid_cap_simps)
-          apply (rule ball_subset[OF _ vspace_cap_rights_to_auth_mask_vm_rights])
-          apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def arch_cap_auth_conferred_def)
+            apply (drule cte_wp_valid_cap, fastforce)
+            apply (clarsimp simp: valid_cap_def)
+           apply fastforce
+          apply fastforce
          apply (subgoal_tac "excaps ! 0 \<in> set excaps")
           apply (fastforce intro: aag_cap_auth_PageDirectoryCap_asid)
          apply fastforce

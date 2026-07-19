@@ -1450,6 +1450,20 @@ The function should not be called on any other cap types.
 >             throw $ InvalidArgument 1
 >         let pageSize = bit (pageBitsForSize (capVPSize cap))
 >         let pageBase = addrFromPPtr $ capVPBasePtr cap
+#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
+
+The provided cap might have stale mapping info, which we should not use for flushing,
+because the page may now be unmapped or mapped at a different address or size, which
+would lead to failure. If it is mapped at same size and address, then at least the
+flush is safe. On hypervisor configs, we are using the kernel's mappings for flushing,
+so the operation is already safe.
+
+>         frameInfo <- withoutFailure $ resolveVAddr pd vaddr
+>         case frameInfo of
+>             Nothing -> throw $ InvalidCapability 0
+>             Just (sz', base') -> when (sz' /= capVPSize cap || base' /= pageBase) $
+>                                       throw $ InvalidCapability 0
+#endif
 >         when (start >= pageSize || end > pageSize) $
 >             throw $ InvalidArgument 0
 >         let pstart = pageBase + toPAddr start
