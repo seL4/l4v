@@ -187,9 +187,10 @@ lemma memzero_spec:
     apply (clarsimp simp add: hrs_mem_update_def)
 
    apply clarsimp
-   apply (case_tac s, case_tac p___ptr_to_unsigned_char)
+   apply (rename_tac p n')
+   apply (case_tac s, case_tac p)
 
-   apply (subgoal_tac "4 \<le> unat na")
+   apply (subgoal_tac "4 \<le> unat n'")
     apply (intro conjI)
            apply (simp add: ptr_safe_def s_footprint_def s_footprint_untyped_def
                             typ_uinfo_t_def typ_info_word)
@@ -217,7 +218,7 @@ lemma memzero_spec:
     apply (subst to_bytes_word32_0)
     apply (rule heap_update_list_replicate)
      apply clarsimp
-    apply (rule_tac s="unat ((n - na) + 4)" in trans)
+    apply (rule_tac s="unat ((n - n') + 4)" in trans)
      apply (simp add: field_simps)
     apply (subst Word.unat_plus_simple[THEN iffD1])
      apply (rule is_aligned_no_overflow''[where n=2, simplified])
@@ -264,6 +265,7 @@ lemma memset_spec:
      apply (rule is_aligned_and_2_to_k, clarsimp simp: mask_def)
     apply (rule is_aligned_and_2_to_k, clarsimp simp: mask_def)
    apply clarsimp
+   apply (rename_tac p n')
    apply (intro conjI)
         apply (simp add: ptr_safe_def s_footprint_def s_footprint_untyped_def
                          typ_uinfo_t_def typ_info_word)
@@ -280,14 +282,14 @@ lemma memset_spec:
         apply assumption
        apply (erule order_trans [rotated])
        apply (simp add: lt1_neq0)
-      apply (case_tac p___ptr_to_unsigned_char, simp add: CTypesDefs.ptr_add_def unat_minus_one field_simps)
+      apply (case_tac p, simp add: CTypesDefs.ptr_add_def unat_minus_one field_simps)
      apply (metis word_must_wrap word_not_simps(1) linear)
     apply (erule order_trans[rotated])
     apply (clarsimp simp: ptr_val_case split: ptr.splits)
     apply (erule subsetD[OF intvl_sub_offset, rotated])
     apply (simp add: unat_sub word_le_nat_alt word_less_nat_alt)
    apply (clarsimp simp: ptr_val_case unat_minus_one hrs_mem_update_def split: ptr.splits)
-   apply (subgoal_tac "unat (n - (na - 1)) = Suc (unat (n - na))")
+   apply (subgoal_tac "unat (n - (n' - 1)) = Suc (unat (n - n'))")
     apply (erule ssubst, subst replicate_Suc_append)
     apply (subst heap_update_list_append)
     apply (simp add: heap_update_word8)
