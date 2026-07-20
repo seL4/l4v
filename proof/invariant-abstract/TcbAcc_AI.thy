@@ -344,6 +344,10 @@ lemma tcb_agnostic_predE:
 global_interpretation thread_set: tcb_op "thread_set f t_ptr"
   by unfold_locales (wpsimp wp: thread_set_wp simp: obj_at_def get_tcb_ko_at tcb_agnostic_predE)
 
+global_interpretation thread_set: non_ntfn_op "thread_set f t_ptr"
+  by unfold_locales
+     (wpsimp wp: thread_set_wp simp: simple_obj_at_def obj_at_def get_tcb_ko_at)
+
 lemma sts_obj_at_impossible':
   "(\<And>tcb. \<not> P' (TCB tcb)) \<Longrightarrow> set_thread_state t st \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
   unfolding set_thread_state_def

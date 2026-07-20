@@ -360,10 +360,6 @@ lemma receive_ipc_preamble_st_tcb_at:
   by (wpsimp simp: receive_ipc_preamble_def
                wp: cancel_ipc_st_tcb_at hoare_vcg_if_lift2 get_simple_ko_wp)
 
-global_interpretation set_tcb_obj_ref: non_ntfn_op "set_tcb_obj_ref f ref new"
-  apply unfold_locales
-  by (wpsimp simp: thread_set_def wp: set_object_wp)
-
 global_interpretation reply_unlink_tcb: non_reply_sc_op "reply_unlink_tcb t r"
   apply unfold_locales
   apply (wpsimp simp: reply_unlink_tcb_def wp: get_simple_ko_wp update_sk_obj_ref_wps gts_wp)
