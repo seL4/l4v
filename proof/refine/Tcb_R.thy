@@ -2517,17 +2517,17 @@ lemma decodeUnbindNotification_corres:
   done
 
 lemma decodeSetTLSBase_corres:
-  "corres (ser \<oplus> tcbinv_relation) (tcb_at t) (tcb_at' t)
+  "corres (ser \<oplus> tcbinv_relation) \<top> \<top>
           (decode_set_tls_base w (cap.ThreadCap t))
           (decodeSetTLSBase w (capability.ThreadCap t))"
-  by (clarsimp simp: decode_set_tls_base_def decodeSetTLSBase_def returnOk_def
+  by (clarsimp simp: decode_set_tls_base_def decodeSetTLSBase_def corres_returnOkTT
                split: list.split)
 
 lemma decodeSetFlags_corres:
-  "corres (ser \<oplus> tcbinv_relation) (tcb_at t) (tcb_at' t)
+  "corres (ser \<oplus> tcbinv_relation) \<top> \<top>
           (decode_set_flags w (cap.ThreadCap t))
           (decodeSetFlags w (capability.ThreadCap t))"
-  by (clarsimp simp: decode_set_flags_def decodeSetFlags_def returnOk_def
+  by (clarsimp simp: decode_set_flags_def decodeSetFlags_def corres_returnOkTT
                split: list.split)
 
 context Tcb_R begin
