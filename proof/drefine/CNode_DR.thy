@@ -693,10 +693,9 @@ lemma cap_revoke_corres_helper:
                       od
               od)
          False)
-       (cap_revoke slot')
-  "
-  proof (induct rule: cap_revoke.induct)
-    case (1 slot' sfix)
+       (cap_revoke slot')"
+proof (induct rule: cap_revoke.induct)
+  case (1 slot' sfix)
   show ?case
   supply if_cong[cong]
   apply (subst cap_revoke.simps)
@@ -738,7 +737,6 @@ lemma cap_revoke_corres_helper:
                apply (rule monadic_trancl_preemptible_return)
               apply (rule corres_trivial)
               apply (clarsimp simp:returnOk_def boolean_exception_def)+
-           apply (clarsimp simp:whenE_def empty_set_eq)
            apply (subst gets_def)
            apply (simp add: bind_assoc bindE_def)
            apply (rule dcorres_absorb_get_l)
