@@ -2545,6 +2545,10 @@ lemma isPML4Cap'_PML4 :
   "isPML4Cap' (ArchObjectCap (PML4Cap r m))"
   by (simp add: isPML4Cap'_def)
 
+crunch flushTable
+  for valid_arch_state'[wp]: valid_arch_state'
+  (wp: crunch_wps  simp: crunch_simps unless_def)
+
 end (* Arch *)
 
 interpretation VSpace_R?: VSpace_R

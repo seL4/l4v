@@ -27,6 +27,17 @@ lemma fst_snd_pairI: (* FIXME: move *)
   "\<lbrakk> fst p = x; snd p = y \<rbrakk> \<Longrightarrow> p = (x, y)"
   by auto
 
+(* FIXME: move to lib/DataMap *)
+lemma foldr_data_map_insert[simp]:
+  "foldr (\<lambda>addr map a. if a = addr then Some b else map a) = foldr (\<lambda>addr. data_map_insert addr b)"
+  by (fastforce simp: data_map_insert_def[abs_def] fun_upd_def
+                del: ext intro!: ext)
+
+(* FIXME: move to monads *)
+lemma mapM_x_mapM_valid:
+  "\<lbrace> P \<rbrace> mapM_x f xs \<lbrace>\<lambda>r. Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> mapM f xs \<lbrace>\<lambda>r. Q\<rbrace>"
+  by (fastforce simp: mapM_x_mapM valid_def return_def bind_def)
+
 (* FIXME: move *)
 lemma setObject_F_ct_activatable':
   "\<lbrakk>\<And>tcb f. tcbState (F f tcb) = tcbState tcb \<rbrakk> \<Longrightarrow>
