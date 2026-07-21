@@ -161,11 +161,11 @@ lemmas ccorres_move_c_guard_ap = ccorres_move_c_guards [OF move_c_guard_ap]
 
 lemma array_assertion_abs_irq:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> True
-        \<and> (n s' \<le> 64 \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
+        \<and> (n s' \<le> 2^irqBits \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
     \<longrightarrow> (x s' = 0 \<or> array_assertion intStateIRQNode_Ptr (n s') (hrs_htd (t_hrs_' (globals s'))))"
   apply (intro allI impI disjCI2)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-  apply (clarsimp simp: h_t_valid_clift_Some_iff)
+  apply (clarsimp simp: h_t_valid_clift_Some_iff simp flip: LENGTH_irq_len_irqBits)
   apply (erule clift_array_assertion_imp, (simp add: exI[where x=0])+)
   done
 

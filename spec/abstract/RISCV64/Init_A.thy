@@ -25,10 +25,17 @@ definition riscv_global_pt_ptr :: obj_ref
   where
   "riscv_global_pt_ptr = pptr_base + 0x2000"
 
-(* Sufficiently aligned for irq type + cte_level_bits *)
+(* Sufficiently aligned for irq type + cte_level_bits. irq_len can be up to 10, depending on
+   platform, so we need alignment to at least 15 bits. *)
 definition init_irq_node_ptr :: obj_ref
   where
-  "init_irq_node_ptr = pptr_base + 0x3000"
+  "init_irq_node_ptr = pptr_base + 0x30000"
+
+(* Alignment check *)
+lemma is_aligned_init_irq_cte:
+  "is_aligned init_irq_node_ptr (irq_len + cte_level_bits)"
+  by (simp add: cte_level_bits_def init_irq_node_ptr_def pptr_base_def pptrBase_def
+                canonical_bit_def irq_len_val is_aligned_def)
 
 (* The highest user-level virtual address that is still canonical.
    It can be larger than user_vtop, which is the highest address we allow to be mapped.

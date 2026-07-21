@@ -560,7 +560,11 @@ lemma invoke_untyped_reads_respects_g:
    apply (clarsimp simp: is_cap_simps)
    apply (rule equiv_valid_guard_imp, rule invoke_untyped_reads_respects_g_wcap)
    apply (cases ui, clarsimp simp: cte_wp_at_caps_of_state valid_untyped_inv_wcap)
-   apply auto[1]
+   (* resolve schematics first, auto and fastforce only take forever *)
+   apply (rule conjI; clarsimp)
+    apply (rule conjI, (rule refl sym | assumption))+
+     apply assumption+
+   apply fastforce
   apply (rule equiv_valid_guard_imp, rule gen_asm_ev'[where Q=False])
    apply simp
   apply (cases ui, clarsimp simp: valid_untyped_inv_wcap cte_wp_at_caps_of_state)

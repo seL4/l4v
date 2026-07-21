@@ -337,18 +337,6 @@ lemma asid_shiftr_low_bits_less[simplified]:
   apply simp
   done
 
-lemma getActiveIRQ_neq_Some0x3FF':
-  "\<lbrace>\<top>\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
-  apply (simp add: getActiveIRQ_def)
-  apply wpsimp
-  done
-
-lemma getActiveIRQ_neq_Some0x3FF:
-  "\<lbrace>\<top>\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
-  apply (wpsimp simp: doMachineOp_def split_def)
-  apply (auto dest: use_valid intro: getActiveIRQ_neq_Some0x3FF')
-  done
-
 (* We don't have access to n_msgRegisters from C here, but the number of msg registers in C should
    be equivalent to what we have in the abstract/design specs. We want a number for this definition
    that automatically updates if the number of registers changes, and we sanity check it later

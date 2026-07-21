@@ -17,7 +17,7 @@ named_theorems Interrupt_R_assms
 
 lemma maxIRQ_H_ucast_toEnum_eq_irq[Interrupt_R_assms]:
   "x \<le> ucast maxIRQ \<Longrightarrow> toEnum (unat x) = (ucast x :: irq)" for x::machine_word
-  by (simp add: word_le_nat_alt maxIRQ_def)
+  by (simp add: word_le_nat_alt maxIRQ_def maxIRQ_ucast_toEnum_eq_irq)
 
 lemma arch_valid_irq_le_maxIRQ[Interrupt_R_assms]:
   "arch_valid_irq irq \<Longrightarrow> irq \<le> maxIRQ"
@@ -66,9 +66,7 @@ lemma checkIRQ_irq_valid[Interrupt_R_assms]:
   supply hoare_vcg_prop[wp del]
   apply (clarsimp simp: unlessE_def split del: if_split)
   apply (wpsimp simp: maxIRQ_H_ucast_toEnum_eq_irq)
-  apply (simp add: not_less word_le_nat_alt unat_ucast_upcast is_up unat_ucast_unat_id
-                   maxIRQ_def irqInvalid_def
-              flip: word_unat.Rep_inject)
+  apply (clarsimp simp: maxIRQ_def ucast_eq_irqInvalid_conv irq_machine_le_maxIRQ_irq)
   done
 
 lemma arch_decodeIRQControlInvocation_corres[Interrupt_R_assms]:
@@ -126,9 +124,8 @@ lemma arch_decode_irq_control_valid'[Interrupt_R_assms, wp]:
           | wp whenE_throwError_wp isIRQActive_wp ensureEmptySlot_stronger
           | wpc
           | wp (once) hoare_drop_imps)+
-  apply (clarsimp simp: invs_valid_objs' not_less maxIRQ_H_ucast_toEnum_eq_irq word_le_nat_alt
-                        unat_ucast_upcast is_up unat_ucast_unat_id maxIRQ_def
-                  simp flip: word_unat.Rep_inject)
+  apply (clarsimp simp: invs_valid_objs' not_less maxIRQ_def maxIRQ_H_ucast_toEnum_eq_irq
+                        ucast_eq_irqInvalid_conv irq_machine_le_maxIRQ_irq)
   done
 
 crunch Arch.decodeIRQControlInvocation
