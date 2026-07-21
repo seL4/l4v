@@ -650,10 +650,12 @@ lemma updateFreeIndex_valid_objs' [wp]:
 
 crunch setInterruptState
   for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
-  (simp: state_refs_of'_pspaceI)
-crunch setInterruptState
-  for state_hyp_refs_of'[wp]: "\<lambda>s. P (state_hyp_refs_of' s)"
-  (simp: state_hyp_refs_of'_pspaceI)
+  and state_hyp_refs_of'[wp]: "\<lambda>s. P (state_hyp_refs_of' s)"
+  (simp: state_refs_of'_pspaceI state_hyp_refs_of'_pspaceI)
+
+crunch isFinalCapability
+  for valid_cap'[wp]: "\<lambda>s. valid_cap' cap s"
+  (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def)
 
 definition
   "isFinal cap p m \<equiv>
