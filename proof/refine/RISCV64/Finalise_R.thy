@@ -4178,7 +4178,7 @@ lemma schedContextUnbindTCB_corres:
            apply (rule corres_split[OF tcbSchedDequeue_corres], simp)
              apply (rule corres_split[OF tcbReleaseRemove_corres])
              apply (clarsimp simp: sc_relation_def)
-               apply (rule corres_split[OF set_tcb_obj_ref_corres];
+               apply (rule corres_split[OF threadSet_corres];
                       clarsimp simp: tcb_relation_def inQ_def)
                  apply (rule updateSchedContext_no_stack_update_corres)
                     apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def refillSize_def)+

@@ -427,7 +427,7 @@ lemma schedContextBindNtfn_corres:
 
 crunch tcb_sched_action, complete_yield_to, reschedule_required, sched_context_resume
   for in_user_frame[wp]: "in_user_frame buf"
-  (simp: crunch_simps wp: crunch_wps ignore: set_tcb_obj_ref)
+  (simp: crunch_simps wp: crunch_wps ignore: thread_set)
 
 lemma
   schedContext_valid_ipc_buffer_ptr'[wp]:
@@ -464,9 +464,7 @@ lemma set_sc_obj_ref_schedulable:
 
 lemma set_tcb_obj_ref_tcb_yield_update_in_correct_ready_q[wp]:
   "set_tcb_obj_ref tcb_yield_to_update ref new \<lbrace>in_correct_ready_q\<rbrace>"
-  apply (clarsimp simp: set_tcb_obj_ref_thread_set)
-  apply (wpsimp wp: thread_set_in_correct_ready_q)
-  done
+  by (wpsimp wp: thread_set_in_correct_ready_q)
 
 (* FIXME RT: move to AInvs *)
 lemma thread_set_schedulable:
@@ -482,20 +480,11 @@ lemma thread_set_schedulable:
 
 lemma tcb_yield_to_update_schedulable[wp]:
   "set_tcb_obj_ref tcb_yield_to_update ref new \<lbrace>\<lambda>s. P (schedulable t s)\<rbrace>"
-  apply (clarsimp simp: set_tcb_obj_ref_thread_set)
-  apply (fastforce intro: thread_set_schedulable)
-  done
+  by (fastforce intro: thread_set_schedulable)
 
 lemma set_tcb_obj_ref_tcb_yield_update_ct_in_state[wp]:
   "set_tcb_obj_ref tcb_yield_to_update ref new \<lbrace>ct_in_state st\<rbrace>"
-  apply (clarsimp simp: set_tcb_obj_ref_thread_set)
-  apply (wpsimp wp: thread_set_wp)
-  apply (clarsimp simp: ct_in_state_def get_tcb_ko_at pred_tcb_at_def obj_at_def)
-  done
-
-crunch set_tcb_obj_ref
-  for ready_qs_distinct[wp]: ready_qs_distinct
-  (rule: ready_qs_distinct_lift)
+  by (wpsimp wp: thread_set_ct_in_state)
 
 lemma returnConsumed_corres:
   "corres (=)
@@ -679,11 +668,10 @@ lemma schedContextYieldTo_corres:
                                                set_yf_sc_yf_sc_at[simplified op_equal]
                                                set_sc_obj_ref_schedulable)
                             apply (wpsimp wp:hoare_case_option_wp)
-                           apply ((wpsimp wp: syt_bound_tcb_at' thread_set_ready_queues_runnable
-                                              thread_set_ep_queues_blocked
-                                              thread_set_ntfn_queues_blocked thread_set_schedulable
-                                              thread_set_ct_in_state
-                                   | simp add: set_tcb_obj_ref_thread_set)+)[1]
+                           apply (wpsimp wp: syt_bound_tcb_at' thread_set_ready_queues_runnable
+                                             thread_set_ep_queues_blocked
+                                             thread_set_ntfn_queues_blocked thread_set_schedulable
+                                             thread_set_ct_in_state hoare_drop_imps)
                           apply (rule_tac Q'="\<lambda>_. valid_objs'
                                                   and sym_heap_sched_pointers and valid_sched_pointers
                                                   and pspace_aligned' and pspace_distinct'

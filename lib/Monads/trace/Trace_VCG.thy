@@ -1347,31 +1347,30 @@ lemma hoare_vcg_set_pred_lift_mono:
   shows "m \<lbrace> \<lambda>s. P {x. f x s} \<rbrace>"
   by (fastforce simp: valid_def elim!: mono[rotated] dest: use_valid[OF _ f])
 
-text \<open>If a function contains an @{term assert}, or equivalent, then it might be
-      possible to strengthen the precondition of an already-proven hoare triple
-      @{text pos}, by additionally proving a side condition @{text neg}, that
-      violating some condition causes failure. The stronger hoare triple produced
-      by this theorem allows the precondition to assume that the condition is
-      satisfied.\<close>
-lemma hoare_strengthen_pre_via_assert_forward:
-  assumes pos: "\<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>"
+text \<open>
+  If a function contains an @{const assert}, or equivalent, then it might be possible to strengthen
+  the precondition of an already-proven Hoare triple @{text pos}, by additionally proving a side
+  condition @{text neg}, that violating some condition causes failure. The stronger Hoare triple
+  produced by this theorem allows the precondition to assume that the condition is satisfied.\<close>
+lemma hoare_strengthen_pre':
+  assumes pos: "\<lbrace> S and P \<rbrace> f \<lbrace> Q \<rbrace>"
   assumes rel: "\<And>s. S s \<longrightarrow> P s \<or> N s"
-  assumes neg: "\<lbrace> N \<rbrace> f \<lbrace> \<bottom>\<bottom> \<rbrace>"
+  assumes neg: "\<lbrace> S and N \<rbrace> f \<lbrace> \<bottom>\<bottom> \<rbrace>"
   shows "\<lbrace> S \<rbrace> f \<lbrace> Q \<rbrace>"
   apply (rule hoare_weaken_pre)
    apply (rule hoare_strengthen_post)
     apply (rule hoare_vcg_disj_lift[OF pos neg])
    by (auto simp: rel)
 
-text \<open>Like @{thm hoare_strengthen_pre_via_assert_forward}, strengthen a precondition
-      by proving a side condition that the negation of that condition would cause
-      failure. This version is intended for backward reasoning. Apply it to a goal to
-      obtain a stronger precondition after proving the side condition.\<close>
-lemma hoare_strengthen_pre_via_assert_backward:
-  assumes neg: "\<lbrace> Not \<circ> E \<rbrace> f \<lbrace> \<bottom>\<bottom> \<rbrace>"
+text \<open>
+  Like @{thm hoare_strengthen_pre'}, strengthen a precondition by proving a side condition that the
+  negation of that condition would cause failure. Apply it to a goal to obtain a stronger
+  precondition after proving the side condition.\<close>
+lemma hoare_strengthen_pre:
+  assumes neg: "\<lbrace> P and Not \<circ> E \<rbrace> f \<lbrace> \<bottom>\<bottom> \<rbrace>"
   assumes pos: "\<lbrace> P and E \<rbrace> f \<lbrace> Q \<rbrace>"
   shows "\<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>"
-  by (rule hoare_strengthen_pre_via_assert_forward[OF pos _ neg], simp)
+  by (rule hoare_strengthen_pre'[OF pos _ neg], simp)
 
 
 subsection \<open>Strongest postcondition rules\<close>

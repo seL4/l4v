@@ -839,7 +839,7 @@ lemma threadSet_all_invs_triv':
   unfolding all_invs'_def
   apply (rule hoare_pre)
    apply (rule wp_from_corres_unit)
-      apply (rule threadset_corresT [where f="tcb_arch_update (arch_tcb_context_set f)"]; simp?)
+      apply (rule threadSet_corresT[where f="tcb_arch_update (arch_tcb_context_set f)"]; simp?)
         apply (simp add: tcb_relation_def arch_tcb_context_set_def
                          atcbContextSet_def arch_tcb_relation_def)
        apply (simp add: tcb_cap_cases_def)

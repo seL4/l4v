@@ -1464,7 +1464,7 @@ lemma setMCPriority_corres:
      (set_mcpriority t mcp) (setMCPriority t mcp)"
   apply (clarsimp simp: setMCPriority_def set_mcpriority_def)
   apply (rule corres_assert_assume[rotated], simp)
-  apply (corres corres: threadset_corresT
+  apply (corres corres: threadSet_corresT
                   simp: tcb_relation_def tcb_cap_cases_tcb_mcpriority tcb_cte_cases_def
                         cteSizeBits_def inQ_def)
   done
@@ -1801,7 +1801,7 @@ lemma setFlags_corres[corres]:
    corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
          (set_flags t flags) (setFlags t flags')"
   unfolding set_flags_def setFlags_def
-  apply (corres corres: threadset_corres)
+  apply (corres corres: threadSet_corres)
   by (clarsimp simp: tcb_relation_def inQ_def)+
 
 crunch set_flags
@@ -2080,7 +2080,7 @@ lemma installThreadBuffer_corres:
         apply (rule cteDelete_corres)
         apply (rule_tac F="is_aligned aa msg_align_bits" in corres_gen_asm2)
         apply (rule corres_split_nor)
-           apply (rule threadset_corres; simp add: tcb_relation_def)
+           apply (rule threadSet_corres; simp add: tcb_relation_def)
           apply (rule corres_split_nor)
              apply (simp only: case_option_If2)
              apply (rule corres_if3)
@@ -2266,8 +2266,7 @@ lemma schedContextBindTCB_corres:
   apply (rule stronger_corres_guard_imp)
     apply clarsimp
     apply (rule corres_split_nor)
-       apply (clarsimp simp: set_tcb_obj_ref_thread_set sc_relation_def)
-       apply (rule threadset_corres; clarsimp simp: tcb_relation_def inQ_def)
+       apply (rule threadSet_corres; clarsimp simp: tcb_relation_def inQ_def)
       apply (rule corres_split_nor)
          apply (rule_tac f'="scTCB_update (\<lambda>_. Some t)"
                       in updateSchedContext_no_stack_update_corres; clarsimp?)
@@ -2348,7 +2347,7 @@ lemma schedContextBindTCB_corres:
      apply ((wp set_tcb_sched_context_valid_ready_qs
                 set_tcb_sched_context_valid_release_q_not_queued
                 set_tcb_sched_context_simple_weak_valid_sched_action
-             | ((rule hoare_vcg_conj_lift)?, rule set_tcb_obj_ref_wp))+)[1]
+             | ((rule hoare_vcg_conj_lift)?, rule thread_set_wp))+)[1]
     apply (clarsimp simp: pred_conj_def valid_pspace'_def cong: conj_cong)
     apply (wp threadSet_valid_objs' threadSet_ifunsafe'T threadSet_ctes_ofT
               threadSet_mdb' valid_irq_node_lift valid_irq_handlers_lift''
@@ -2359,9 +2358,10 @@ lemma schedContextBindTCB_corres:
            | rule hoare_vcg_conj_lift hoare_vcg_all_lift hoare_vcg_imp_lift' refl)+
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_sched_def)
    apply (intro conjI impI allI; (solves clarsimp)?)
-            apply (fastforce simp: valid_obj_def obj_at_def sc_at_ppred_def is_sc_obj_def)
+             apply (fastforce simp: valid_obj_def obj_at_def sc_at_ppred_def is_sc_obj_def)
+            apply (force intro!: sc_at_pred_n_sc_at simp: sc_at_pred_n_def obj_at_def)
            apply (clarsimp simp: valid_sched_context_def obj_at_def pred_tcb_at_def is_tcb_def)
-          apply (fastforce simp: obj_at_def pred_tcb_at_def sc_at_ppred_def
+          apply (fastforce simp: obj_at_def pred_tcb_at_def sc_at_ppred_def get_tcb_def
                                  tcb_st_refs_of_def state_refs_of_def
                            elim: delta_sym_refs split: if_splits)
          apply (fastforce simp: tcb_at_kh_simps pred_map_eq_def

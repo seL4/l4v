@@ -4621,7 +4621,7 @@ lemma schedContextDonate_corres:
      (valid_objs' and sym_heap_sched_pointers
       and valid_sched_pointers and pspace_aligned' and pspace_distinct')
      (sched_context_donate scp thread) (schedContextDonate scp thread)"
-  apply (simp add: test_reschedule_def get_sc_obj_ref_def set_tcb_obj_ref_thread_set
+  apply (simp add: test_reschedule_def get_sc_obj_ref_def
                    schedContextDonate_def sched_context_donate_def schedContextDonate_corres_helper)
   apply (rule corres_stateAssert_ignore, fastforce)
   apply (rule stronger_corres_guard_imp)
@@ -4638,14 +4638,8 @@ lemma schedContextDonate_corres:
               apply (clarsimp simp: sc_relation_def)
              apply (rule corres_split_nor)
                 apply (rule_tac x="the (sc_tcb sc)" and x'="the (scTCB sca)" in lift_args_corres)
-                 apply (rule threadset_corresT)
-                       apply (clarsimp simp: tcb_relation_def)
-                      apply (clarsimp simp: tcb_cap_cases_def)
-                     apply (fastforce simp: update_tcb_cte_cases)
-                    apply fastforce
-                   apply fastforce
-                  apply (fastforce simp: inQ_def)
-                 apply fastforce
+                 apply (rule threadSet_corres;
+                        fastforce simp: tcb_relation_def inQ_def)
                 apply (clarsimp simp: sc_relation_def)
                apply (rule corres_split_eqr)
                   apply (rule getCurThread_corres)
@@ -4679,14 +4673,9 @@ lemma schedContextDonate_corres:
              apply clarsimp
             apply (clarsimp simp: objBits_def objBitsKO_def)
            apply clarsimp
-          apply (rule threadset_corresT)
-                apply (clarsimp simp: tcb_relation_def)
-               apply (fastforce simp: tcb_cap_cases_def update_tcb_cte_cases)
-              apply (fastforce simp: tcb_cte_cases_def update_tcb_cte_cases)
-             apply wpsimp
-            apply wpsimp
-           apply (fastforce simp: inQ_def)
-          apply fastforce
+          apply (rule threadSet_corres;
+                 fastforce simp: tcb_relation_def inQ_def)
+         apply (clarsimp simp: sc_relation_def)
          apply (wpsimp wp: hoare_drop_imp)+
    apply (frule (1) valid_objs_ko_at)
    apply (fastforce simp: valid_obj_def valid_sched_context_def valid_bound_obj_def obj_at_def)

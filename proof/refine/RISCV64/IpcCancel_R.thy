@@ -1554,7 +1554,7 @@ lemma sched_context_donate_weak_valid_sched_action[wp]:
   "\<lbrace>weak_valid_sched_action and bound_sc_tcb_at ((=) None) tcb_ptr\<rbrace>
    sched_context_donate sc_ptr tcb_ptr
    \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
-  apply (wpsimp wp: set_tcb_obj_ref_wp update_sched_context_wp test_reschedule_wp
+  apply (wpsimp wp: thread_set_wp update_sched_context_wp test_reschedule_wp
                     tcb_sched_action_wp get_sc_obj_ref_wp
               simp: sched_context_donate_def tcb_release_remove_def)
   apply (frule weak_valid_sched_action_no_sc_sched_act_not)
@@ -2239,7 +2239,7 @@ lemma cancel_ipc_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF getThreadState_corres])
       apply (rule corres_split[OF ])
-         apply (rule threadset_corres; (simp add: inQ_def)?)
+         apply (rule threadSet_corres; (simp add: inQ_def)?)
          apply (clarsimp simp: tcb_relation_def fault_rel_optionation_def)
         apply (rule_tac P="invs and valid_release_q and valid_ready_qs and ready_or_release
                            and st_tcb_at ((=) state) t" and

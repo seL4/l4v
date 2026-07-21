@@ -2699,12 +2699,9 @@ lemma clear_revokable [iff]:
 
 
 lemma maybe_return_sc_cap_to[wp]:
-  "\<lbrace>ex_nonz_cap_to p\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
-  supply if_cong[cong]
-  apply (wpsimp simp: maybe_return_sc_def set_tcb_obj_ref_def set_object_def get_tcb_obj_ref_def
-                      thread_get_def get_sk_obj_ref_def get_simple_ko_def get_object_def)
-  apply (auto simp: tcb_cap_cases_def intro!: ex_cap_to_after_update)
-  done
+  "maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>ex_nonz_cap_to p\<rbrace>"
+  by (wpsimp simp: maybe_return_sc_def get_tcb_obj_ref_def
+               wp: hoare_drop_imps hoare_vcg_if_lift2)
 
 lemma schedule_tcb_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> schedule_tcb param_a \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
@@ -2769,11 +2766,8 @@ lemma schedule_tcb_pred_tcb_at:
 lemma maybe_return_sc_pred_tcb_at:
   "\<lbrace>pred_tcb_at proj P tcb_ptr' and K (tcb_ptr \<noteq> tcb_ptr')\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr
    \<lbrace>\<lambda>rv. pred_tcb_at proj P tcb_ptr'\<rbrace>"
-  apply (wpsimp simp: maybe_return_sc_def set_tcb_obj_ref_def set_object_def
-                      get_tcb_obj_ref_def thread_get_def get_sk_obj_ref_def get_simple_ko_def
-                      get_object_def)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  done
+  unfolding maybe_return_sc_def
+  by (wpsimp wp: sbn_st_tcb_at_neq thread_get_wp' get_sk_obj_ref_wp simp: get_tcb_obj_ref_def)
 
 lemma maybe_donate_sc_pred_tcb_at:
   "\<lbrace>(\<lambda>s. P' (pred_tcb_at proj P tcb_ptr' s)) and K (tcb_ptr \<noteq> tcb_ptr')\<rbrace> maybe_donate_sc tcb_ptr ntfn_ptr
@@ -2788,7 +2782,7 @@ lemma maybe_donate_sc_pred_tcb_at:
    apply (rule bind_wp[OF _ gsct_sp])
    apply (rename_tac sc_tcb_opt)
    apply (case_tac sc_tcb_opt; simp)
-    apply (wpsimp simp: sched_context_donate_def set_tcb_obj_ref_def set_object_def tcb_release_remove_def
+    apply (wpsimp simp: sched_context_donate_def thread_set_def set_object_def tcb_release_remove_def
                         update_sched_context_def get_object_def get_tcb_def
                         pred_tcb_at_def obj_at_def get_sc_obj_ref_def get_sched_context_def
                         tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def
