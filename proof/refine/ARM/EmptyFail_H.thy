@@ -5,7 +5,7 @@
  *)
 
 theory EmptyFail_H
-imports Refine
+imports ArchRefine
 begin
 
 crunch_ignore (empty_fail)

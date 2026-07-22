@@ -5,7 +5,7 @@
  *)
 
 theory Orphanage
-imports Refine.Refine
+imports Refine.ArchRefine
 begin
 
 text \<open>
