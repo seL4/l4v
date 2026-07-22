@@ -783,7 +783,8 @@ lemma domain_time_rel_eq:
 
 crunch doUserOp, checkActiveIRQ
   for valid_objs': valid_objs'
-  (wp: crunch_wps)
+  (wp: crunch_wps
+   rule: doUserOp_def) (* crunch can't find the rule of locale-defined constant *)
 
 lemma valid_domain_list_2_cross:
   "\<lbrakk>valid_dom_schedule'_2 sched idx start; domain_list_map dom_list = sched \<rbrakk>

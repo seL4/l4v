@@ -1711,6 +1711,10 @@ lemma ctes_of_eq_cte_wp_at':
   "cte_wp_at' ((=) cte) x s \<Longrightarrow> ctes_of s x = Some cte"
   by (simp add: cte_wp_at_ctes_of)
 
+lemma ctes_of_cte_wp_atD:
+  "ctes_of s p = Some cte \<Longrightarrow> cte_wp_at' ((=) cte) p s"
+  by (simp add: cte_wp_at_ctes_of)
+
 lemma ctes_of_setObject_cte:
   "\<lbrace>\<lambda>s. P ((ctes_of s) (p \<mapsto> cte))\<rbrace> setObject p (cte :: cte) \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   apply (clarsimp simp: setObject_def split_def valid_def in_monad)
