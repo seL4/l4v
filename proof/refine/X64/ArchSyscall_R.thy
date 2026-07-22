@@ -117,6 +117,9 @@ lemma Arch_performIRQControl_inv_EE[Syscall_R_assms]:
   unfolding X64_H.performIRQControl_def
   by wpsimp
 
+(* FIXME arch-split: move to ArchInvariants_AI on this arch *)
+lemmas pageBitsForSize_bounded = pbfs_less_wb'
+
 end (* Arch *)
 
 interpretation Syscall_R?: Syscall_R
