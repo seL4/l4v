@@ -1,5 +1,5 @@
 (*
- * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
@@ -17,6 +17,13 @@ begin
 axiomatization where
   init_refinement:
   "Init_H \<subseteq> lift_state_relation state_relation `` Init_A"
+
+(* This axiom is only needed on architectures with page table duplicates (32-bit Arm).
+   For other architectures, vs_valid_duplicates' is trivially True, making this axiom
+   redundant but harmless.  *)
+axiomatization where
+  ckernel_init_valid_duplicates':
+  "\<forall>((tc,s),x) \<in> Init_H. vs_valid_duplicates' (ksPSpace s)"
 
 axiomatization where
   ckernel_init_invs:
