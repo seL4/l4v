@@ -4,15 +4,11 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(*
-   The main theorem
-*)
+(* Main abstract-to-design refinement theorem - architecture-specific proofs *)
 
-theory Refine
+theory ArchRefine
 imports
-  KernelInit_R
-  ArchADT_H
-  InitLemmas
+  Refine
   PageTableDuplicates
 begin
 
