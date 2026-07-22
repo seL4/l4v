@@ -69,10 +69,10 @@ jobs:
             plat: bcm2711
           - arch: AARCH64
             plat: imx8mm
-    # test only most recent push:
+    # test only most recent push, but let started jobs finish:
     concurrency:
-      group: l4v-regression-${{ github.ref }}-${{ strategy.job-index }}
-      cancel-in-progress: true
+      group: l4v-deploy-${{ github.ref }}-${{ matrix.arch }}-${{ matrix.num_domains }}-${{ matrix.plat }}
+      cancel-in-progress: false
     steps:
     - name: Proofs
       uses: seL4/ci-actions/aws-proofs@master
@@ -107,10 +107,10 @@ jobs:
         arch: [ARM, RISCV64]
         num_domains: ['1', '']
         plat: [""]
-    # test only most recent push:
+    # test only most recent push, but let started jobs finish
     concurrency:
-      group: l4v-mcs-regression-${{ github.ref }}-${{ strategy.job-index }}
-      cancel-in-progress: true
+      group: l4v-mcs-deploy-${{ github.ref }}-${{ matrix.arch }}-${{ matrix.num_domains }}-${{ matrix.plat }}
+      cancel-in-progress: false
     steps:
     - name: Proofs
       uses: seL4/ci-actions/aws-proofs@master
