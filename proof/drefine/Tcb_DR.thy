@@ -453,11 +453,12 @@ lemma suspend_corres:
          apply (case_tac "rv = Running"; simp)
           apply (rule update_restart_pc_dcorres)
          apply simp
-        apply (rule dcorres_rhs_noop_below_True[OF tcb_sched_action_dcorres])
-        apply (rule set_thread_state_corres)
-       apply wp
+        apply (rule dcorres_rhs_noop_above[OF tcb_sched_action_dcorres])
+          apply (rule set_thread_state_corres)
+         apply wp
+        apply (wpsimp split_del: if_split)+
       apply (case_tac "rv = Running"; simp)
-       apply (wpsimp simp: not_idle_thread_def conj_comms)+
+       apply (wpsimp simp: not_idle_thread_def)+
   done
 
 lemma dcorres_setup_reply_master:

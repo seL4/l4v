@@ -9,7 +9,7 @@
 *)
 
 theory Syscall_R
-imports Tcb_R Arch_R Interrupt_R SchedContextInv_R
+imports ArchTcb_R Arch_R ArchInterrupt_R SchedContextInv_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
@@ -269,7 +269,7 @@ lemma decodeInvocation_corres:
                       split del: if_split cong: if_cong)
           apply (clarsimp simp add: o_def)
           apply (rule corres_guard_imp)
-            apply (rule_tac F="length list \<le> 64" in corres_gen_asm)
+            apply (rule_tac F="length list \<le> word_bits" in corres_gen_asm)
           apply (rule decodeCNodeInvocation_corres, simp+)
            apply (simp add: valid_cap_def word_bits_def)
           apply simp
@@ -698,6 +698,7 @@ lemma sts_mcpriority_tcb_at'[wp]:
   "\<lbrace>mcpriority_tcb_at' P t\<rbrace>
     setThreadState st t'
    \<lbrace>\<lambda>_. mcpriority_tcb_at' P t\<rbrace>"
+  supply if_cong[cong]
   apply (cases "t = t'",
          simp_all add: setThreadState_def
                   split del: if_split)
@@ -757,6 +758,7 @@ lemma arch_cap_exhausted:
     \<Longrightarrow> undefined \<lbrace>P\<rbrace>"
   by (cases param_e; simp add: isCap_simps)
 
+(* slow *)
 crunch decodeInvocation
   for inv[wp]: P
   (simp: crunch_simps wp: crunch_wps arch_cap_exhausted mapME_x_inv_wp getASID_wp)
@@ -781,6 +783,7 @@ lemma decodeDomainSetStart_inv_wf[wp]:
 lemma decodeDomainConfigure_inv_wf[wp]:
   "\<lbrace>\<top>\<rbrace> decodeDomainConfigure args excaps \<lbrace>valid_domain_inv'\<rbrace>, -"
   unfolding decodeDomainConfigure_def
+  supply if_cong[cong]
   apply (wpsimp split_del: if_split)
   apply (clarsimp simp: valid_domain_inv'_def not_less not_le le_maxDomain_eq_less_numDomains unat_ucast)
   using numDomains_fits_domainBits
@@ -2418,7 +2421,7 @@ lemma maybeHandleInterrupt_corres:
                 simp: irq_state_independent_def
          | corres_cases_both)+
      apply (wpsimp wp: hoare_drop_imp)
-    apply clarsimp
+    apply (clarsimp simp: non_kernel_IRQs_def)
     apply (strengthen contract_all_imp_strg[where P'=True, simplified])
     apply (wpsimp wp: doMachineOp_getActiveIRQ_IRQ_active' hoare_vcg_all_lift)
    apply clarsimp
@@ -2595,7 +2598,7 @@ lemma handleSpuriousIRQ_invs'[wp]:
 
 crunch handleSpuriousIRQ, maybeHandleInterrupt
   for invs'[wp]: invs'
-  (ignore: doMachineOp)
+  (ignore: doMachineOp simp: non_kernel_IRQs_def)
 
 lemma he_invs'[wp]:
   "\<lbrace>invs'

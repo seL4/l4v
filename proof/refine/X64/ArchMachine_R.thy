@@ -16,7 +16,7 @@ context Arch begin arch_global_naming
 
 named_theorems Machine_R_assms
 
-lemma dmo_getirq_inv[wp]:
+lemma dmo_getirq_inv[Machine_R_assms, wp]:
   "irq_state_independent_H P \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: getActiveIRQ_def doMachineOp_def split_def exec_gets
                    select_f_select[simplified liftM_def]
@@ -51,10 +51,8 @@ lemma dmo_maskInterrupt_True:
                    ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
   done
 
-lemma setIRQState_irq_states':
-  "\<lbrace>valid_irq_states'\<rbrace>
-      setIRQState state irq
-   \<lbrace>\<lambda>rv. valid_irq_states'\<rbrace>"
+lemma setIRQState_irq_states'[Machine_R_assms, wp]:
+  "setIRQState state irq \<lbrace>valid_irq_states'\<rbrace>"
   apply (simp add: setIRQState_def setInterruptState_def getInterruptState_def)
   apply (wp dmo_maskInterrupt)
   apply (simp add: valid_irq_masks'_def)
@@ -64,12 +62,22 @@ lemma getActiveIRQ_le_maxIRQ:
   "\<lbrace>irqs_masked' and valid_irq_states'\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
   apply wp
-  apply clarsimp
+  apply (clarsimp simp: maxIRQ_def)
   apply (drule use_valid, rule getActiveIRQ_le_maxIRQ')
-   prefer 2
-   apply simp
-  apply (simp add: irqs_masked'_def valid_irq_states'_def)
+   apply (simp add: irqs_masked'_def valid_irq_states'_def maxIRQ_def)+
   done
+
+lemma frameRegisters_def'[Machine_R_assms]:
+  "frameRegisters = MachineExports.frameRegisters"
+  by (simp add: frameRegisters_def)
+
+lemma gpRegisters_def'[Machine_R_assms]:
+  "gpRegisters = MachineExports.gpRegisters"
+  by (simp add: gpRegisters_def)
+
+lemma tlsBaseRegister_def'[Machine_R_assms]:
+  "tlsBaseRegister = MachineExports.tlsBaseRegister"
+  by (simp add: tlsBaseRegister_def)
 
 end
 

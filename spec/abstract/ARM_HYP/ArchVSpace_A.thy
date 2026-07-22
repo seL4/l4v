@@ -385,9 +385,7 @@ definition save_virt_timer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_mona
      vcpu_write_reg vcpu_ptr VCPURegCNTVOFFhigh (ucast (cntvoff >> 32));
      vcpu_write_reg vcpu_ptr VCPURegCNTVOFFlow (ucast cntvoff);
      vcpu_save_reg vcpu_ptr VCPURegCNTKCTL;
-     do_machine_op check_export_arch_timer;
-     cntpct \<leftarrow> do_machine_op read_cntpct;
-     vcpu_update vcpu_ptr (\<lambda>vcpu. vcpu\<lparr>vcpu_vtimer := VirtTimer cntpct \<rparr>)
+     do_machine_op check_export_arch_timer
    od"
 
 definition irq_vppi_event_index :: "irq \<rightharpoonup> vppievent_irq" where
@@ -403,16 +401,11 @@ definition restore_virt_timer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_m
      (cval :: 64 word) \<leftarrow> return $ ((ucast cval_high) << 32) || ucast cval_low;
      do_machine_op $ set_cntv_cval_64 cval;
      vcpu_restore_reg vcpu_ptr VCPURegCNTKCTL;
-     current_cntpct \<leftarrow> do_machine_op read_cntpct;
-     vcpu \<leftarrow> get_vcpu vcpu_ptr;
-     last_pcount \<leftarrow> return $ vtimerLastPCount $ vcpu_vtimer vcpu;
-     delta \<leftarrow> return $ current_cntpct - last_pcount;
      offs_high \<leftarrow> vcpu_read_reg vcpu_ptr VCPURegCNTVOFFhigh;
      offs_low \<leftarrow> vcpu_read_reg vcpu_ptr VCPURegCNTVOFFlow;
-     (offset :: 64 word) \<leftarrow> return $ (((ucast offs_high) << 32) || ucast offs_low) + delta;
-     vcpu_write_reg vcpu_ptr VCPURegCNTVOFFhigh (ucast (offset >> 32));
-     vcpu_write_reg vcpu_ptr VCPURegCNTVOFFlow (ucast offset);
+     (offset :: 64 word) \<leftarrow> return $ ((ucast offs_high) << 32) || ucast offs_low;
      do_machine_op $ set_cntv_off_64 offset;
+     vcpu \<leftarrow> get_vcpu vcpu_ptr;
      masked \<leftarrow> return $ (vcpu_vppi_masked vcpu (the $ irq_vppi_event_index irqVTimerEvent));
      \<comment> \<open>we do not know here that irqVTimerEvent is IRQReserved, therefore not IRQInactive,
         so the only way to prove we don't unmask an inactive interrupt is to check\<close>

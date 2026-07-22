@@ -737,7 +737,7 @@ lemma setObject_PD_corres:
    apply fastforce
   apply (simp add: map_to_ctes_upd_other)
   apply (simp add: fun_upd_def)
-  apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
+  apply (clarsimp simp: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
   done
 
 lemma more_pt_inner_beauty:
@@ -819,7 +819,7 @@ lemma setObject_PT_corres:
    subgoal by (fastforce dest: tcbs_of'_non_tcb_update)
   apply (simp add: map_to_ctes_upd_other)
   apply (simp add: fun_upd_def)
-  apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
+  apply (clarsimp simp: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
   done
 
 lemma more_pdpt_inner_beauty:
@@ -902,7 +902,7 @@ lemma setObject_PDPT_corres:
    apply fastforce
   apply (simp add: map_to_ctes_upd_other)
   apply (simp add: fun_upd_def)
-  apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
+  apply (clarsimp simp: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
   done
 
 lemma more_pml4_inner_beauty:
@@ -986,7 +986,7 @@ lemma setObject_PML4_corres:
    apply fastforce
   apply (simp add: map_to_ctes_upd_other)
   apply (simp add: fun_upd_def)
-  apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
+  apply (clarsimp simp: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
   done
 
 lemma store_pml4e_corres [corres]:

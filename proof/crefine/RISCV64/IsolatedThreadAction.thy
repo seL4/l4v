@@ -248,6 +248,7 @@ lemma map_to_ctes_partial_overwrite:
    map_to_ctes (partial_overwrite idx tsrs (ksPSpace s))
      = ctes_of s"
   supply if_split[split del]
+  supply if_cong[cong]
   apply (rule ext)
   apply (frule dom_partial_overwrite[where tsrs=tsrs])
   apply (simp add: map_to_ctes_def partial_overwrite_def
@@ -851,7 +852,8 @@ lemma oblivious_switchToThread_schact:
                    pointerInUserData_def isRunnable_def readRunnable_def threadGet_def[symmetric]
                    isStopped_def threadGet_getObject
                    getThreadState_def tcbSchedDequeue_def bitmap_fun_defs ready_qs_runnable_def
-                   ready_or_release'_asrt_def ksReadyQueues_asrt_def)
+                   ready_or_release'_asrt_def ksReadyQueues_asrt_def
+              cong: if_cong[cong])
   by (safe intro!: oblivious_bind oblivious_tcbQueueRemove
       | simp_all add: oblivious_setVMRoot_schact idleThreadNotQueued_def)+
 

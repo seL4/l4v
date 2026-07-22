@@ -103,7 +103,7 @@ lemma constOnFailure_empty_fail[intro!, wp, simp]:
 lemma ArchRetypeDecls_H_deriveCap_empty_fail[intro!, wp, simp]:
   "empty_fail (Arch.deriveCap x y)"
   unfolding AARCH64_H.deriveCap_def
-  by (cases y, auto simp: isCap_simps)
+  by (cases y, auto simp: isCap_simps cong: if_cong)
 
 crunch ensureNoChildren
   for (empty_fail) empty_fail[intro!, wp, simp]
@@ -292,6 +292,7 @@ crunch
 
 lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   "empty_fail schedule"
+  supply if_cong[cong]
   apply (simp add: schedule_def)
   apply (clarsimp simp: scheduleChooseNewThread_def split: if_split | wp | wpc)+
   done

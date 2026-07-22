@@ -9,8 +9,6 @@
 # Very simple command-line test runner.
 #
 
-from __future__ import print_function
-
 import argparse
 import atexit
 import datetime
@@ -19,11 +17,7 @@ import cpuusage
 import fnmatch
 import memusage
 import os
-try:
-    import Queue
-except ImportError:
-    import queue
-    Queue = queue
+import queue
 import signal
 import subprocess
 import sys
@@ -163,7 +157,7 @@ status_name = ['RUNNING (***bug***)',
                'TIMEOUT',
                'STUCK',
                'CANCELLED']
-status_maxlen = max(len(s) for s in status_name[1:]) + len(" *")
+status_maxlen = max(len(s) for s in status_name[1:])
 
 
 def run_test(test, status_queue, kill_switch,
@@ -232,7 +226,7 @@ def run_test(test, status_queue, kill_switch,
 
     # Now running the test.
     # Wrap in a list to prevent nested functions getting the wrong scope
-    test_status = [RUNNING]
+    test_status = [RUNNING, None]
 
     # If we exit for some reason, attempt to kill our test processes.
     def emergency_stop():
@@ -329,6 +323,7 @@ def run_test(test, status_queue, kill_switch,
         elif test_status[0] is RUNNING:
             # No special status, so assume it failed by itself
             test_status[0] = FAILED
+            test_status[1] = process.returncode
 
         if cpu_timer is not None:
             # prevent cpu_timer using c after it goes away
@@ -350,8 +345,14 @@ def run_test(test, status_queue, kill_switch,
         print("::endgroup::")
         sys.stdout.flush()
 
+    # if the task failed, we are interested in abnormal exit codes
+    returncode = None
+    if test_status[0] in [FAILED] and test_status[1] != 1:
+        returncode = test_status[1]
+
     status_queue.put({'name': test.name,
                       'status': test_status[0],
+                      'returncode': returncode,
                       'output': output,
                       'real_time': datetime.datetime.now() - start_time,
                       'cpu_time': cpu_usage,
@@ -381,7 +382,8 @@ def print_test_line_start(test_name):
         sys.stdout.flush()
 
 
-def print_test_line(test_name, color, status, real_time=None, cpu_time=None, mem=None):
+def print_test_line(test_name, color, status, status_extra=None, real_time=None,
+                    cpu_time=None, mem=None):
     if mem is not None:
         # Report memory usage in gigabytes.
         mem = '%5.2fGB' % round(float(mem) / 1024 / 1024 / 1024, 2)
@@ -389,22 +391,24 @@ def print_test_line(test_name, color, status, real_time=None, cpu_time=None, mem
     if real_time is not None:
         # Format times as H:MM:SS; strip milliseconds for better printing.
         real_time = datetime.timedelta(seconds=int(real_time.total_seconds()))
-        real_time = '%8s real' % real_time
+        # Running for 10 hours or more can be considered highly abnormal,
+        # so we are ok with a misalignment in that case, but saving two columns
+        # in the general case.
+        real_time = '%7s real' % real_time
 
     if cpu_time is not None:
         cpu_time = datetime.timedelta(seconds=int(cpu_time))
-        cpu_time = '%8s cpu' % cpu_time
+        cpu_time = '%7s cpu' % cpu_time
 
     extras = ', '.join(filter(None, [real_time, cpu_time, mem]))
 
     # Print status line.
     front = '  Finished %-25s ' % test_name
     status_str = status_name[status]
-    if status is not PASSED:
-        status_str += " *"
     print(front +
           output_color(color, "{:<{}} ".format(status_str, status_maxlen)) +
-          ('(%s)' % extras if extras else ''))
+          ('(%s)' % extras if extras else '') +
+          (' %s' % status_extra if status_extra else ''))
     sys.stdout.flush()
 
 #
@@ -588,7 +592,7 @@ def main():
     # Current jobs.
     current_jobs = {}
     # Newly finished jobs.
-    status_queue = Queue.Queue()
+    status_queue = queue.Queue()
 
     # If run from a tty and -v is off, we also track
     # current jobs on the bottom line of the tty.
@@ -647,6 +651,7 @@ def main():
             while True:
                 info = status_queue.get(block=True, timeout=0.1337)  # Built-in pause
                 name, status = info['name'], info['status']
+                status_extra = None
 
                 test_results[name] = info
                 del current_jobs[name]
@@ -659,17 +664,22 @@ def main():
                 elif status is CANCELLED:
                     failed_tests.add(name)
                     colour = ANSI_YELLOW
+                elif status is FAILED:
+                    failed_tests.add(name)
+                    if info['returncode'] is not None:
+                        status_extra = '[exit %s]' % str(info['returncode'])
+                    colour = ANSI_RED
                 else:
                     failed_tests.add(name)
                     colour = ANSI_RED
-                print_test_line(name, colour, status,
+                print_test_line(name, colour, status, status_extra,
                                 real_time=info['real_time'],
                                 cpu_time=info['cpu_time'],
                                 mem=info['mem_usage'])
                 if args.fail_fast and status != PASSED:
                     # Notify current threads and future tests
                     kill_switch.set()
-        except Queue.Empty:
+        except queue.Empty:
             pass
     wipe_tty_status()
 

@@ -10,7 +10,7 @@
 *)
 
 theory Arch_R
-imports Untyped_R Finalise_R
+imports Untyped_R ArchFinalise_R
 begin
 
 unbundle l4v_word_context
@@ -325,7 +325,7 @@ lemma performASIDControlInvocation_corres:
     apply simp
    apply clarsimp
    apply (drule (1) cte_cap_in_untyped_range)
-        apply (fastforce simp add: cte_wp_at_ctes_of)
+        apply (fastforce simp: cte_wp_at_ctes_of)
        apply assumption+
      apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
     apply fastforce
@@ -1032,7 +1032,7 @@ shows
                in corres_gen_asm2)
         apply (rule corres_split[OF isFinalCapability_corres[where ptr=slot]])
           apply (drule mp)
-           apply (clarsimp simp: isCap_simps final_matters'_def)
+           apply (clarsimp simp: isCap_simps final_matters'_def arch_final_matters'_def)
           apply (rule whenE_throwError_corres)
             apply simp
            apply simp
@@ -1218,7 +1218,7 @@ lemma invokeArch_tcb_at':
 
 crunch setThreadState
   for pspace_no_overlap'[wp]: "pspace_no_overlap' w s"
-  (simp: unless_def)
+  (simp: unless_def crunch_simps wp: crunch_wps)
 
 lemma sts_cte_cap_to'[wp]:
   "\<lbrace>ex_cte_cap_to' p\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. ex_cte_cap_to' p\<rbrace>"
@@ -1287,7 +1287,7 @@ lemma tcbSchedEnqueue_vs_entry_align[wp]:
 crunch
   setThreadState
   for vs_entry_align[wp]: "ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma sts_valid_arch_inv':
   "\<lbrace>valid_arch_inv' ai\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_arch_inv' ai\<rbrace>"
@@ -1770,10 +1770,6 @@ crunch performPageDirectoryInvocation, performPageTableInvocation, performPageIn
   for st_tcb_at': "st_tcb_at' P t"
   (wp: crunch_wps getASID_wp getObject_cte_inv simp: crunch_simps)
 
-lemmas arch_finalise_cap_aligned' = finaliseCap_aligned'
-
-lemmas arch_finalise_cap_distinct' = finaliseCap_distinct'
-
 crunch "Arch.finaliseCap"
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   (wp: crunch_wps getASID_wp simp: crunch_simps)
@@ -1799,7 +1795,7 @@ lemma ex_cte_not_in_untyped_range:
   "\<lbrakk>(ctes_of s) cref = Some (CTE (capability.UntypedCap d ptr bits idx) mnode);
     descendants_of' cref (ctes_of s) = {}; invs' s;
     ex_cte_cap_wp_to' (\<lambda>_. True) x s; valid_global_refs' s\<rbrakk>
-   \<Longrightarrow> x \<notin> {ptr .. ptr + 2 ^ bits - 1}"
+   \<Longrightarrow> x \<notin> {ptr .. ptr + mask bits}"
   apply clarsimp
   apply (drule(1) cte_cap_in_untyped_range)
    apply (fastforce simp:cte_wp_at_ctes_of)+

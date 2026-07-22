@@ -260,7 +260,6 @@ crunch_ignore (valid, empty_fail, no_fail)
     invalidateTranslationASID_impl
     invalidateTranslationSingle_impl
     isb_impl
-    plic_complete_claim_impl
     resetTimer_impl
     set_gic_vcpu_ctrl_apr_impl
     set_gic_vcpu_ctrl_hcr_impl
@@ -282,7 +281,7 @@ crunch_ignore (valid, empty_fail, no_fail)
    grep -oE "(\w+_impl)|(get\w+)" MachineOps.thy|sort|uniq|sed "s/_impl//;s/$/,/;s/^/  /"
    with the following manual interventions:
    - remove false positives: get_def, gets, gets_def, getFPUState, getRegister, getRestartPC
-   - add read_cntpct and readFpuState
+   - add readFpuState
    - remove final comma
    - getActiveIRQ does not preserve no_irq *)
 crunch
@@ -321,7 +320,6 @@ crunch
   invalidateTranslationASID,
   invalidateTranslationSingle,
   isb,
-  plic_complete_claim,
   resetTimer,
   set_gic_vcpu_ctrl_apr,
   set_gic_vcpu_ctrl_hcr,
@@ -335,7 +333,6 @@ crunch
   writeFpuState,
   readVCPUHardwareReg,
   writeVCPUHardwareReg,
-  read_cntpct,
   sendSGI,
   doSMC_mop,
   readFpuState

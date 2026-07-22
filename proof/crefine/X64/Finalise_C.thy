@@ -754,15 +754,10 @@ lemma suspend_ccorres:
           apply (ctac (no_vcg) add: updateRestartPC_ccorres)
          apply (rule ccorres_return_Skip)
         apply ceqv
-       apply (ctac(no_vcg) add: setThreadState_ccorres_simple)
-        apply (ctac add: tcbSchedDequeue_ccorres)
-       apply (rule_tac Q'="\<lambda>_. valid_objs' and tcb_at' thread and pspace_aligned' and pspace_distinct'"
-                    in hoare_post_imp)
-        apply clarsimp
-       apply (wp sts_valid_objs')[1]
-      apply clarsimp
-      apply (wpsimp simp: valid_tcb_state'_def)
-     apply clarsimp
+       apply (ctac (no_vcg) add: tcbSchedDequeue_ccorres)
+        apply (ctac add: setThreadState_ccorres_simple)
+       apply wpsimp
+      apply (wp sts_valid_objs')
      apply (rule conseqPre, vcg exspec=updateRestartPC_modifies)
      apply (rule subset_refl)
     apply clarsimp
@@ -796,7 +791,7 @@ lemma doUnbindNotification_ccorres:
     (UNIV \<inter> {s. ntfnPtr_' s = ntfn_Ptr ntfnptr} \<inter> {s. tcbptr_' s = tcb_ptr_to_ctcb_ptr tcb}) []
    (do ntfn \<leftarrow> getNotification ntfnptr; doUnbindNotification ntfnptr ntfn tcb od)
    (Call doUnbindNotification_'proc)"
-  apply (cinit' lift: ntfnPtr_' tcbptr_')
+  apply (cinit' lift: ntfnPtr_' tcbptr_' simp: doUnbindNotification_def)
    apply (rule ccorres_symb_exec_l [OF _ get_ntfn_inv' _ empty_fail_getNotification])
     apply (rule_tac P="invs' and ko_at' ntfn ntfnptr" and P'=UNIV
              in ccorres_split_nothrow_novcg)
@@ -846,7 +841,7 @@ lemma doUnbindNotification_ccorres':
     (UNIV \<inter> {s. ntfnPtr_' s = ntfn_Ptr ntfnptr} \<inter> {s. tcbptr_' s = tcb_ptr_to_ctcb_ptr tcb}) []
    (doUnbindNotification ntfnptr ntfn tcb)
    (Call doUnbindNotification_'proc)"
-  apply (cinit' lift: ntfnPtr_' tcbptr_')
+  apply (cinit' lift: ntfnPtr_' tcbptr_' simp: doUnbindNotification_def)
     apply (rule_tac P="invs' and ko_at' ntfn ntfnptr" and P'=UNIV
                 in ccorres_split_nothrow_novcg)
         apply (rule ccorres_from_vcg[where rrel=dc and xf=xfdc])
@@ -2687,7 +2682,7 @@ lemma finaliseCap_ccorres:
    apply (rule ccorres_if_lhs)
     apply (simp add: Collect_False Collect_True Let_def
                 del: Collect_const)
-    apply (rule_tac P="(capIRQ cap) \<le>  X64.maxIRQ" in ccorres_gen_asm)
+    apply (rule_tac P="(capIRQ cap) \<le> maxIRQ" in ccorres_gen_asm)
     apply (rule ccorres_rhs_assoc)+
     apply csymbr
     apply csymbr
@@ -2748,13 +2743,13 @@ lemma finaliseCap_ccorres:
    apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
    apply (frule(1) ccap_relation_IRQHandler_mask)
    apply (clarsimp simp: isCap_simps irqInvalid_def
-                      valid_cap'_def X64.maxIRQ_def
+                      valid_cap'_def maxIRQ_def
                       Kernel_C.maxIRQ_def)
     apply (rule irq_opt_relation_Some_ucast'[simplified Kernel_C.maxIRQ_def, simplified])
      apply fastforce
     apply simp
     apply (clarsimp simp: isCap_simps irqInvalid_def
-                      valid_cap'_def X64.maxIRQ_def
+                      valid_cap'_def maxIRQ_def
                       Kernel_C.maxIRQ_def)
    apply fastforce
   apply clarsimp

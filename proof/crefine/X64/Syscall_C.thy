@@ -1531,7 +1531,7 @@ lemma ucast_maxIRQ_is_less:
     by (simp)+
 
 lemma validIRQcastingLess:
-  "Kernel_C.maxIRQ <s ucast b \<Longrightarrow> X64.maxIRQ < b"
+  "Kernel_C.maxIRQ <s ucast b \<Longrightarrow> maxIRQ < b"
   by (simp add: Platform_maxIRQ scast_maxIRQ_is_less is_up_def target_size source_size)
 
 lemma scast_maxIRQ_is_not_less:

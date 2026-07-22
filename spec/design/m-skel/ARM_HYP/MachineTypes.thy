@@ -17,7 +17,6 @@ begin
 context Arch begin arch_global_naming
 
 #INCLUDE_SETTINGS keep_constructor=hyp_fault_type
-#INCLUDE_SETTINGS keep_constructor=virt_timer
 
 text \<open>
   An implementation of the machine's types, defining register set
@@ -28,17 +27,17 @@ section "Types"
 
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM_HYP decls_only NOT UserContext UserMonad Word getRegister setRegister newContext
 
-#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_HYP ONLY VPPIEventIRQ VirtTimer
+#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_HYP ONLY VPPIEventIRQ
 (*<*)
 
 end
 
-arch_requalify_types register vcpureg vppievent_irq virt_timer
+arch_requalify_types register vcpureg vppievent_irq
 
 context Arch begin arch_global_naming
 
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM_HYP instanceproofs
-#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_HYP instanceproofs ONLY VPPIEventIRQ VirtTimer
+#INCLUDE_HASKELL SEL4/Object/Structures/ARM.lhs CONTEXT ARM_HYP instanceproofs ONLY VPPIEventIRQ
 (*>*)
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM_HYP bodies_only NOT getRegister setRegister newContext
 

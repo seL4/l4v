@@ -345,11 +345,6 @@ assumes set_cntv_off_64_ccorres:
            (doMachineOp (set_cntv_off_64 val))
            (Call set_cntv_off_64_'proc)"
 
-assumes read_cntpct_ccorres:
-  "ccorres (=) ret__unsigned_longlong_' \<top> UNIV []
-           (doMachineOp read_cntpct)
-           (Call read_cntpct_'proc)"
-
 assumes check_export_arch_timer_ccorres:
   "ccorres dc xfdc \<top> UNIV []
            (doMachineOp check_export_arch_timer)

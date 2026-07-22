@@ -2587,14 +2587,13 @@ lemma dcorres_finalise_cap:
               apply (case_tac "rv = Running"; simp)
                apply (rule update_restart_pc_dcorres)
               apply simp
-             apply (rule corres_split)
-                apply (rule set_cap_set_thread_state_inactive)
-               apply (rule dcorres_rhs_noop_above_True[OF tcb_sched_action_dcorres[where P=\<top> and P'=\<top>]])
-               apply (rule corres_underlying_split[OF prepare_thread_delete_dcorres])
-                 apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
-                 apply (clarsimp simp:transform_cap_def)
-                apply wp+
-           apply (simp add:not_idle_thread_def)
+             apply (rule dcorres_rhs_noop_above[OF tcb_sched_action_dcorres])
+               apply (rule corres_split)
+                  apply (rule set_cap_set_thread_state_inactive)
+                 apply (rule corres_underlying_split[OF prepare_thread_delete_dcorres])
+                   apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
+                   apply (clarsimp simp: transform_cap_def)
+                  apply (wpsimp simp: not_idle_thread_def split_del: if_split)+
            apply (case_tac "rv = Running"; simp)
             apply (wp update_restart_pc_dcorres)
            apply (wp unbind_notification_invs | simp add: not_idle_thread_def)+
@@ -3463,7 +3462,7 @@ next
        apply (rule monadic_rewrite_bindE_head)
        apply (rule monadic_trancl_preemptible_step)
       apply (simp add: finalise_slot_inner2_def
-                          [THEN fun_cong, unfolded split_def])
+                          [THEN meta_eq_to_obj_eq, THEN fun_cong, unfolded split_def])
       apply (simp add: alternative_bindE_distrib)
       apply (rule corres_alternate1)+
       apply (simp add: liftE_bindE bind_bindE_assoc bind_assoc)

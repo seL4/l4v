@@ -26,7 +26,7 @@ lemma capUntypedPtr_simps[simp]:
   "Arch.capUntypedPtr (ARM_HYP_H.VCPUCap r) = r"
   by (auto simp: ARM_HYP_H.capUntypedPtr_def)
 
-lemma maskCapRights_allRights[simp]:
+lemma maskCapRights_allRights[CSpace_I_assms, simp]:
   "maskCapRights allRights c = c"
   unfolding global.maskCapRights_def isCap_defs allRights_def maskCapRights_def maskVMRights_def
   by (cases c) (simp_all add: Let_def split: arch_capability.split vmrights.split)
@@ -224,7 +224,7 @@ lemma sameRegionAsE:
    \<rbrakk> \<Longrightarrow> R"
   by (simp add: sameRegionAs_def3, fastforce simp: gen_isCap_Master arch_isCap_Master)
 
-lemma sameObjectAsE:
+lemma sameObjectAsE[CSpace_I_2_assms]:
   "\<lbrakk> sameObjectAs cap cap';
      \<lbrakk> capMasterCap cap = capMasterCap cap'; \<not> isNullCap cap; \<not> isZombie cap;
        \<not> isUntypedCap cap;
@@ -279,14 +279,14 @@ lemma capMasterCap_maskCapRights[simp, CSpace_I_2_assms]:
   apply (case_tac arch_capability; simp add: maskCapRights_def Let_def isCap_simps)
   done
 
-lemma capBadge_maskCapRights[simp]:
+lemma capBadge_maskCapRights[simp, CSpace_I_2_assms]:
   "capBadge (maskCapRights msk cap) = capBadge cap"
   apply (cases cap; simp add: global.maskCapRights_def Let_def gen_isCap_simps capBadge_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability; simp add: maskCapRights_def Let_def isCap_simps)
   done
 
-lemma cte_refs_capRange:
+lemma cte_refs_capRange[CSpace_I_2_assms]:
   "\<lbrakk> s \<turnstile>' c; \<forall>irq. c \<noteq> IRQHandlerCap irq \<rbrakk> \<Longrightarrow> cte_refs' c x \<subseteq> capRange c"
   apply (cases c; simp add: capRange_def gen_isCap_simps)
     apply (clarsimp dest!: valid_capAligned
@@ -389,9 +389,9 @@ lemmas distinct_zombies_sameMasterE
 
 declare distinct_zombies_sameMasterE[CSpace_I_2_assms]
 
-lemma cap_table_at_gsCNodes[CSpace_I_2_assms]:
-  "\<lbrakk> cap_table_at bits ptr s; (s, s') \<in> state_relation \<rbrakk>
-   \<Longrightarrow> gsCNodes s' ptr = Some bits"
+lemma cap_table_at_gsCNodes_eq[CSpace_I_2_assms]:
+  "(s, s') \<in> state_relation
+   \<Longrightarrow> (gsCNodes s' ptr = Some bits) = cap_table_at bits ptr s"
   by (fastforce simp: state_relation_def ghost_relation_def obj_at_def is_cap_table)
 
 end

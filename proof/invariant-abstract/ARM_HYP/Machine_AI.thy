@@ -820,7 +820,7 @@ lemma empty_fail_set_gic_vcpu_ctrl_hcr[simp, intro!]:
   by (simp add: set_gic_vcpu_ctrl_hcr_def)
 
 crunch readVCPUHardwareReg, writeVCPUHardwareReg, get_cntv_cval_64, set_cntv_cval_64,
-          get_cntv_off_64, set_cntv_off_64, read_cntpct
+          get_cntv_off_64, set_cntv_off_64
   for (no_fail) no_fail[intro!, wp, simp]
   and (empty_fail) empty_fail[intro!, wp, simp]
   and (no_irq) no_irq[intro!, wp, simp]

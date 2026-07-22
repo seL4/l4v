@@ -180,6 +180,10 @@ lemma no_irq_invalidateTranslationSingleASID[wp]:
   "no_irq (invalidateTranslationSingleASID a b)"
   by (simp add: invalidateTranslationSingleASID_def)
 
+(* FIXME: move, missing in Ipc_AI on this architecture *)
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
+  for inv[Ipc_AI_2_assms]: P
+
 end
 
 end

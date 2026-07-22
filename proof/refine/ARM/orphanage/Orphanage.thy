@@ -453,10 +453,10 @@ lemma setThreadState_current_no_orphans:
    setThreadState state tcb_ptr
    \<lbrace>\<lambda>_. no_orphans\<rbrace>"
   unfolding setThreadState_def
-  apply wpsimp
+  apply (wpsimp wp: ssa_no_orphans)
   unfolding no_orphans_disj
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
-             threadSet_all_queued_tcb_ptrs
+             threadSet_all_queued_tcb_ptrs hoare_drop_imps
           | fastforce)+
   done
 
@@ -465,41 +465,56 @@ lemma setThreadState_isRestart_no_orphans:
    setThreadState state tcb_ptr
    \<lbrace>\<lambda>_ . no_orphans\<rbrace>"
   unfolding setThreadState_def
-  apply wpsimp
+  apply (wpsimp wp: ssa_no_orphans)
    unfolding no_orphans_disj
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
-             threadSet_all_queued_tcb_ptrs
+             threadSet_all_queued_tcb_ptrs hoare_drop_imps
           | fastforce)+
   apply (auto simp: is_active_thread_state_def st_tcb_at_double_neg' st_tcb_at_neg')
+  done
+
+lemma setThreadState_not_is_active_thread_state_no_orphans:
+  "\<lbrace>almost_no_orphans tcb_ptr and not K (is_active_thread_state state)\<rbrace>
+   setThreadState state tcb_ptr
+   \<lbrace>\<lambda>_ . no_orphans\<rbrace>"
+  unfolding setThreadState_def
+  supply if_cong[cong]
+  apply (wpsimp wp: ssa_no_orphans)
+   apply (unfold no_orphans_disj almost_no_orphans_disj)
+   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
+             threadSet_all_queued_tcb_ptrs hoare_drop_imps
+          | fastforce)+
   done
 
 lemma setThreadState_almost_no_orphans [wp]:
   "\<lbrace>no_orphans\<rbrace> setThreadState state tcb_ptr \<lbrace>\<lambda>_. almost_no_orphans tcb_ptr\<rbrace>"
   unfolding setThreadState_def
-  apply wpsimp
+  apply (wpsimp wp: ssa_no_orphans)
    apply (unfold no_orphans_disj almost_no_orphans_disj)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
-             threadSet_all_queued_tcb_ptrs
+             threadSet_all_queued_tcb_ptrs hoare_drop_imps
           | fastforce)+
   done
 
 lemma setThreadState_not_active_no_orphans:
   "\<not> is_active_thread_state state \<Longrightarrow> setThreadState state tcb_ptr \<lbrace>no_orphans\<rbrace>"
   unfolding setThreadState_def
-  apply wpsimp
+  supply if_cong[cong]
+  apply (wpsimp wp: ssa_no_orphans)
    apply (unfold no_orphans_disj)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
-             threadSet_all_queued_tcb_ptrs
+             threadSet_all_queued_tcb_ptrs hoare_drop_imps
           | fastforce)+
   done
 
 lemma setThreadState_not_active_almost_no_orphans:
   "\<not> is_active_thread_state state \<Longrightarrow> setThreadState state tcb_ptr \<lbrace>almost_no_orphans thread\<rbrace>"
   unfolding setThreadState_def
-  apply wpsimp
+  supply if_cong[cong]
+  apply (wpsimp wp: ssa_no_orphans)
    apply (unfold almost_no_orphans_disj)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state
-             threadSet_all_queued_tcb_ptrs
+             threadSet_all_queued_tcb_ptrs hoare_drop_imps
           | fastforce)+
   done
 
@@ -558,6 +573,7 @@ lemma tcbSchedDequeue_no_orphans[wp]:
    tcbSchedDequeue tcbPtr
    \<lbrace>\<lambda>_. no_orphans\<rbrace>"
   supply disj_not1[simp del]
+  supply if_cong[cong]
   unfolding no_orphans_disj almost_no_orphans_disj
   apply (rule hoare_allI)
   apply (rename_tac tcb_ptr)
@@ -700,6 +716,7 @@ lemma chooseThread_no_orphans [wp]:
   (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
   unfolding chooseThread_def Let_def
   supply if_split[split del]
+  supply if_cong[cong]
   apply (simp only: return_bind, simp)
   apply (intro bind_wp[OF _ stateAssert_sp])
   apply (rule bind_wp[where Q'="\<lambda>rv s. ?PRE s \<and> ksReadyQueues_asrt s \<and> ready_qs_runnable s
@@ -1164,10 +1181,10 @@ lemma createNewObjects_no_orphans:
    createNewObjects tp cref slots ptr us d
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (rule hoare_name_pre_state)
-  apply clarsimp
+  apply (clarsimp simp: add_mask_fold)
   apply (rule hoare_pre)
    apply (rule createNewObjects_wp_helper)
-       apply simp+
+       apply (simp add: canonical_address_def)+
    apply (simp add:insertNewCaps_def)
    apply wp
     apply (rule_tac P = "length caps = length slots" in hoare_gen_asm)
@@ -1301,7 +1318,7 @@ lemma unbindNotification_no_orphans[wp]:
   "\<lbrace>\<lambda>s. no_orphans s\<rbrace>
     unbindNotification t
    \<lbrace> \<lambda>rv s. no_orphans s\<rbrace>"
-  unfolding unbindNotification_def
+  unfolding unbindNotification_def doUnbindNotification_def
   apply (rule bind_wp[OF _ gbn_sp'])
   apply (case_tac ntfnPtr, simp_all, wp, simp)
   apply (rule bind_wp[OF _ get_ntfn_sp'])
@@ -1312,7 +1329,7 @@ lemma unbindMaybeNotification_no_orphans[wp]:
   "\<lbrace>\<lambda>s. no_orphans s\<rbrace>
     unbindMaybeNotification a
    \<lbrace> \<lambda>rv s. no_orphans s\<rbrace>"
-  unfolding unbindMaybeNotification_def
+  unfolding unbindMaybeNotification_def doUnbindNotification_def
   by (wp getNotification_wp | simp | wpc)+
 
 lemma finaliseCapTrue_standin_no_orphans[wp]:
@@ -1380,17 +1397,12 @@ lemma updateRestartPC_no_orphans[wp]:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   by (wpsimp simp: updateRestartPC_def asUser_no_orphans)
 
-lemma suspend_no_orphans [wp]:
-  "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<and> tcb_at' t s \<rbrace>
-   suspend t
-   \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
+lemma suspend_no_orphans[wp]:
+  "\<lbrace>no_orphans and invs' and tcb_at' t\<rbrace> suspend t \<lbrace>\<lambda>_. no_orphans\<rbrace>"
   unfolding suspend_def
-  apply (wp | clarsimp simp: unless_def | rule conjI)+
-      apply (clarsimp simp: is_active_tcb_ptr_def is_active_thread_state_def st_tcb_at_neg2)
-      apply (wp setThreadState_not_active_no_orphans hoare_disjI1 setThreadState_st_tcb
-             | clarsimp simp: is_active_thread_state_def isRunning_def isRestart_def)+
-    apply (wp hoare_drop_imp)+
-  apply auto
+  apply (wpsimp wp: setThreadState_not_is_active_thread_state_no_orphans gts_wp'
+                    hoare_vcg_all_lift hoare_drop_imps)
+  apply (fastforce simp: is_active_thread_state_def isRunning_def isRestart_def)
   done
 
 lemma storeHWASID_no_orphans[wp]:
@@ -1513,7 +1525,7 @@ declare withoutPreemption_lift [wp del]
 lemma no_orphans_finalise_prop_stuff:
   "no_cte_prop no_orphans = no_orphans"
   "finalise_prop_stuff no_orphans"
-  by (simp_all add: no_cte_prop_def finalise_prop_stuff_def
+  by (simp_all add: no_cte_prop_def finalise_prop_stuff_def arch_finalise_prop_stuff_def
                     setCTE_no_orphans,
     simp_all add: no_orphans_def all_active_tcb_ptrs_def
                   is_active_tcb_ptr_def all_queued_tcb_ptrs_def)
@@ -1856,7 +1868,8 @@ lemma performASIDControlInvocation_no_orphans [wp]:
   apply (clarsimp simp: is_active_thread_state_def makeObject_tcb valid_aci'_def
                         cte_wp_at_ctes_of invs_pspace_aligned' invs_pspace_distinct'
                         projectKO_opt_tcb isRunning_def isRestart_def conj_comms
-                        invs_valid_pspace' vc objBits_simps archObjSize_def range_cover.aligned)
+                        invs_valid_pspace' vc objBits_simps archObjSize_def range_cover.aligned
+                        add_mask_fold)
   apply (intro conjI)
     apply (rule vc)
    apply (simp add:descendants_range'_def2)
@@ -2090,7 +2103,7 @@ theorem callKernel_no_orphans [wp]:
    callKernel e
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding callKernel_def maybeHandleInterrupt_def
-  by (wpsimp wp: weak_if_wp schedule_invs' hoare_drop_imps
+  by (wpsimp wp: weak_if_wp schedule_invs' hoare_drop_imps simp: non_kernel_IRQs_def
       | strengthen invs_pspace_aligned' invs_pspace_distinct')+
 
 end

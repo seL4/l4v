@@ -69,6 +69,13 @@ lemma APIType_capBits_generic[Retype_R_assms, simp]:
   "APIType_capBits (APIObjectType api) us = APIType_capBits_gen api us"
   by (simp add: APIType_capBits_raw_def)
 
+lemma objSize_eq_capBits[simp, Retype_R_assms]:
+  "Types_H.getObjectSize ty us = APIType_capBits ty us"
+  by (cases ty;
+      clarsimp simp: getObjectSize_def objBits_simps bit_simps
+                     APIType_capBits_def apiGetObjectSize_def ptBits_def
+               split: apiobject_type.splits)
+
 definition makeObjectKO :: "bool \<Rightarrow> domain \<Rightarrow> (kernel_object + AARCH64_H.object_type) \<rightharpoonup> kernel_object"
   where
   makeObjectKO_raw_def:
@@ -569,7 +576,7 @@ lemmas object_splits =
   AARCH64_H.object_type.split_asm
   arch_kernel_object.split_asm
 
-lemma valid_arch_badges_not_arch:
+lemma valid_arch_badges_not_arch[Retype_R_assms]:
   "\<not>isArchObjectCap cap' \<Longrightarrow> valid_arch_badges cap cap' node"
   by (auto simp: isCap_simps valid_arch_badges_def)
 
@@ -891,6 +898,12 @@ lemma createNewCaps_pspace_domain_valid[Retype_R_assms, wp]:
   apply (auto simp: objBits_simps APIType_capBits_def field_simps mult_2_right)
   done
 
+(* safe for generic context, and we can't requalify object_type.inject as that would
+   result in it being named "inject" *)
+lemma object_type_inject[Retype_R_assms]:
+  "(APIObjectType x = APIObjectType y) = (x = y)"
+  by simp
+
 end (* Arch *)
 
 arch_requalify_consts
@@ -1001,17 +1014,21 @@ lemma retype_state_relation[Retype_R_2_assms]:
   have nc_dis: "distinct (new_cap_addrs m ptr ko)"
     by (rule new_cap_addrs_distinct [OF cover'])
 
+  have ksPSpace_None:
+    "\<And>p. p \<in> set (new_cap_addrs m ptr ko) \<Longrightarrow> ksPSpace s' p = None"
+    apply (drule subsetD [OF new_cap_addrs_subset [OF cover']])
+    apply (insert pspace_no_overlap_disjoint'[OF vs'(1) pn'])
+    apply (drule orthD1)
+     apply (simp add:ptr_add_def field_simps)
+    apply clarsimp
+    done
+
   note nc_al = bspec [OF new_cap_addrs_aligned [OF al']]
   note nc_al' = nc_al[unfolded objBits_def]
   show "null_filter' (map_to_ctes ?ps') = null_filter' (ctes_of s')"
     apply (rule null_filter_ctes_retype [OF ko vs' pa'' pd''])
      apply (simp add: nc_al)
-    apply clarsimp
-    apply (drule subsetD [OF new_cap_addrs_subset [OF cover']])
-    apply (insert pspace_no_overlap_disjoint'[OF vs'(1) pn'])
-    apply (drule orthD1)
-      apply (simp add:ptr_add_def field_simps)
-    apply clarsimp
+    apply (clarsimp simp: ksPSpace_None)
     done
 
   show "valid_objs s" using vs
@@ -1193,11 +1210,32 @@ lemma retype_state_relation[Retype_R_2_assms]:
     using retype_ready_queues_relation[OF _ vs' pn' ko cover num_r]
     by (clarsimp simp: ready_queues_relation_def Let_def)
 
-  have asr: "(arch_state s, ksArchState s') \<in> arch_state_relation" using sr
-    by (blast dest: state_relationD)
+  have [dest!]:
+    "\<And>pool. (makeObjectKO dev d ty = Some (KOArch (KOASIDPool (asidpool.ASIDPool pool)))) \<Longrightarrow>
+             (pool = Map.empty)"
+    by (simp add: makeObjectKO_def makeObject_asidpool const_def
+             split: sum.splits kernel_object.splits arch_kernel_object.splits object_type.splits
+                    apiobject_type.splits if_splits)
 
-  thus "(arch_state s, ksArchState ?t') \<in> arch_state_relation"
-    using asr
+  from ko
+  have vmid_for_asid':
+    "\<And>table.
+       (\<lambda>asid::AARCH64_A.asid. vmid_for_asid_2' (ucast asid) table
+                                                (asid_pools_of' s' ||> vmids_of_pool')) =
+       (\<lambda>asid. vmid_for_asid_2' (ucast asid) table
+                                (?ps' |> aobj_of' |> asid_pool_of' ||> vmids_of_pool'))"
+    apply (simp add: foldr_upd_app_if[folded data_map_insert_def])
+    apply (rule ext, rename_tac asid)
+    apply (clarsimp simp: vmid_for_asid_2'_def obind_def split: option.split)
+    apply (fastforce simp: in_omonad in_opt_map_None_eq ksPSpace_None vmids_of_pool'_def
+                     split: if_splits)
+    done
+
+  moreover
+  have asr: "(arch_state s, ksArchState s') \<in> arch_state_relation (aobjs_of' s')" using sr
+    by (blast dest: state_relationD)
+  ultimately
+  show "(arch_state s, ksArchState ?t') \<in> arch_state_relation (?ps' |> aobj_of')"
     by (clarsimp simp: arch_state_relation_def update_gs_def comp_def
                  split: Structures_A.apiobject_type.splits aobject_type.splits)
 qed

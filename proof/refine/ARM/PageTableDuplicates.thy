@@ -85,6 +85,7 @@ lemma mapM_x_storePTE_updates:
      \<and> Q (\<lambda>x. if (x \<in> set xs) then Some (KOArch (KOPTE pte)) else (ksPSpace s) x) \<rbrace>
      mapM_x (swp storePTE pte) xs
    \<lbrace>\<lambda>r s. Q (ksPSpace s)\<rbrace>"
+  supply if_cong[cong]
   apply (induct xs)
    apply (simp add: mapM_x_Nil)
   apply (simp add: mapM_x_Cons)
@@ -381,6 +382,7 @@ lemma mapM_x_storePDE_updates:
      \<and> Q (\<lambda>x. if (x \<in> set xs) then Some (KOArch (KOPDE pte)) else (ksPSpace s) x) \<rbrace>
      mapM_x (swp storePDE pte) xs
    \<lbrace>\<lambda>r s. Q (ksPSpace s)\<rbrace>"
+  supply if_cong[cong]
   apply (induct xs)
    apply (simp add: mapM_x_Nil)
   apply (simp add: mapM_x_Cons)
@@ -1104,6 +1106,7 @@ lemma createObject_valid_duplicates'[wp]:
    apply (rule none_in_new_cap_addrs[where us =12,simplified]
      ,(simp add: objBits_simps pageBits_def word_bits_conv archObjSize_def pdeBits_def)+)[1]
   supply APIType_capBits_generic[simp del]
+  supply if_cong[cong]
   apply (intro conjI impI allI)
       apply simp
      apply clarsimp
@@ -1141,6 +1144,66 @@ crunch createNewObjects
   for arch_inv[wp]: "\<lambda>s. P (armKSGlobalPD (ksArchState s))"
   (simp: crunch_simps zipWithM_x_mapM wp: crunch_wps unless_wp)
 
+lemma createNewObjects_pspace_no_overlap':
+  "\<lbrace>pspace_no_overlap' ptr sz and pspace_aligned' and pspace_distinct'
+    and K (range_cover ptr sz (Types_H.getObjectSize ty us) (Suc (length dests)))
+    and K (ptr \<noteq> 0)
+    and K (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> us < 28)\<rbrace>
+  createNewObjects ty src dests ptr us d
+  \<lbrace>\<lambda>rv s.  pspace_aligned' s \<and> pspace_distinct' s
+           \<and> pspace_no_overlap' ((of_nat (length dests) << APIType_capBits ty us) + ptr) sz s\<rbrace>"
+proof ((rule hoare_gen_asm)+, induct rule: rev_induct )
+    case Nil
+    show ?case
+      by (simp add:createNewObjects_def zipWithM_x_mapM mapM_Nil | wp)+
+   next
+   case (snoc dest dests)
+   have rc:"range_cover ptr sz (Types_H.getObjectSize ty us) (Suc (length dests))"
+      apply (rule range_cover_le)
+      apply (rule snoc)
+      apply simp
+      done
+   show ?case
+     using rc
+     apply (subst createNewObjects_Cons)
+      apply (drule range_cover.weak)
+      apply (simp add: word_bits_def)
+     apply (wp pspace_no_overlap'_lift)
+      apply (simp add: conj_comms)
+      apply (rule hoare_vcg_conj_lift)
+       apply (rule hoare_post_imp[OF _ createObject_pspace_aligned_distinct'])
+       apply simp
+      apply (rule hoare_vcg_conj_lift)
+       apply (rule hoare_post_imp[OF _ createObject_pspace_aligned_distinct'])
+       apply simp
+      apply (simp add:field_simps)
+      apply (wp createObject_pspace_no_overlap')
+     apply (clarsimp simp: conj_comms)
+     apply (rule hoare_pre)
+      apply (rule hoare_vcg_conj_lift)
+       apply (rule hoare_post_imp[OF _ snoc.hyps])
+       apply (simp add:snoc)+
+      apply (rule hoare_vcg_conj_lift)
+       apply (rule hoare_post_imp[OF _ snoc.hyps])
+       apply (simp add:snoc)+
+      apply wp
+     apply (simp add: conj_comms field_simps)
+     apply (rule hoare_post_imp)
+     apply (erule context_conjI)
+      apply (intro conjI)
+        apply (rule aligned_add_aligned[OF range_cover.aligned
+                                           is_aligned_shiftl_self])
+          apply simp
+         apply simp
+        apply simp
+       apply (erule pspace_no_overlap'_le)
+       apply (simp add: range_cover.sz[where 'a=32, folded word_bits_def])+
+     apply (rule hoare_post_imp[OF _ snoc.hyps])
+     apply (simp add:field_simps snoc)+
+    using snoc
+    apply simp
+  done
+qed
 
 lemma createNewObjects_valid_duplicates'[wp]:
  "\<lbrace> (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_no_overlap' ptr sz
@@ -1220,13 +1283,13 @@ lemma valid_duplicates'_diffI:
 
 lemma valid_duplicates_deleteObjects_helper:
   assumes vd:"vs_valid_duplicates' (m::(word32 \<rightharpoonup> Structures_H.kernel_object))"
-  assumes inc: "\<And>p ko. \<lbrakk>m p = Some (KOArch ko);p \<in> {ptr .. ptr + 2 ^ sz - 1}\<rbrakk>
+  assumes inc: "\<And>p ko. \<lbrakk>m p = Some (KOArch ko);p \<in> mask_range ptr sz\<rbrakk>
   \<Longrightarrow> 6 \<le> sz"
   assumes aligned:"is_aligned ptr sz"
   notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
           atLeastAtMost_iff
-  shows "vs_valid_duplicates'  (\<lambda>x. if x \<in> {ptr .. ptr + 2 ^ sz - 1} then None else m x)"
+  shows "vs_valid_duplicates'  (\<lambda>x. if x \<in> mask_range ptr sz then None else m x)"
   apply (rule valid_duplicates'_diffI,rule vd)
   apply (clarsimp simp: vs_valid_duplicates'_def split:option.splits)
   apply (clarsimp simp: vs_valid_duplicates'_def split:option.splits)
@@ -1242,8 +1305,7 @@ lemma valid_duplicates_deleteObjects_helper:
      apply clarsimp
      apply (drule(1) inc)
      apply (drule(1) mask_out_first_mask_some)
-      apply (simp add:mask_lower_twice)
-     apply (simp add: mask_in_range[OF aligned,symmetric])
+     apply (fastforce simp: mask_lower_twice simp flip: neg_mask_in_mask_range[OF aligned])
     apply (drule_tac p' = y in valid_duplicates'_D[OF vd])
       apply simp
      apply (simp add:vs_ptr_align_def)
@@ -1259,8 +1321,7 @@ lemma valid_duplicates_deleteObjects_helper:
      apply (simp add:vs_ptr_align_def)
     apply (drule(1) inc)
     apply (drule(1) mask_out_first_mask_some)
-    apply (simp add:mask_lower_twice)
-    apply (simp add: mask_in_range[OF aligned,symmetric])
+    apply (fastforce simp: mask_lower_twice simp flip: neg_mask_in_mask_range[OF aligned])
    apply (drule_tac p' = y in valid_duplicates'_D[OF vd])
      apply simp
     apply (simp add:vs_ptr_align_def)
@@ -1286,7 +1347,7 @@ lemma deleteObjects_valid_duplicates'[wp]:
   apply clarsimp
   apply (simp add:deletionIsSafe_def)
   apply (erule valid_duplicates_deleteObjects_helper)
-   apply fastforce
+   apply (fastforce simp: arch_deletionIsSafe_def)
   apply simp
   done
 
@@ -1361,7 +1422,7 @@ lemma invokeUntyped_valid_duplicates[wp]:
   apply (frule invokeUntyped_proofs.not_0_ptr)
   apply (strengthen is_aligned_armKSGlobalPD)
   apply (frule cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD], clarsimp+)
-  apply (clarsimp simp add: isCap_simps valid_cap_simps' capAligned_def)
+  apply (clarsimp simp add: isCap_simps valid_cap_simps' capAligned_def objSize_eq_capBits)
   apply (auto split: if_split_asm)
   done
 
@@ -1695,7 +1756,7 @@ declare withoutPreemption_lift [wp del]
 lemma valid_duplicates_finalise_prop_stuff:
   "no_cte_prop (vs_valid_duplicates' \<circ> ksPSpace) = vs_valid_duplicates' \<circ> ksPSpace"
   "finalise_prop_stuff (vs_valid_duplicates' \<circ> ksPSpace)"
-  by (simp_all add: no_cte_prop_def finalise_prop_stuff_def
+  by (simp_all add: no_cte_prop_def finalise_prop_stuff_def arch_finalise_prop_stuff_def
                     setCTE_valid_duplicates' o_def)
 
 lemma finaliseSlot_valid_duplicates'[wp]:
@@ -1891,6 +1952,16 @@ lemma performPageInvocation_valid_duplicates'[wp]:
    apply (wp |wpc |simp)+
   apply (clarsimp simp:valid_page_inv'_def
       valid_arch_inv'_def valid_cap'_def invs_valid_objs' invs_pspace_aligned')
+  done
+
+lemma pspace_no_overlapD3':
+  "\<lbrakk>pspace_no_overlap' ptr sz s;ksPSpace s p = Some obj;is_aligned ptr sz\<rbrakk>
+  \<Longrightarrow> obj_range' p obj \<inter> {ptr..ptr + 2 ^ sz - 1} = {}"
+  apply (unfold pspace_no_overlap'_def)
+  apply (drule spec)+
+  apply (erule(1) impE)
+  apply (simp only: is_aligned_neg_mask_eq obj_range'_def p_assoc_help)
+  apply (simp only: add_diff_eq ptr_range_mask_range)
   done
 
 lemma placeASIDPool_valid_duplicates'[wp]:
@@ -2256,9 +2327,9 @@ lemma callKernel_valid_duplicates':
   apply (rule hoare_pre)
    apply (wp activate_invs' activate_sch_act schedule_sch
              schedule_sch_act_simple he_invs'
-          | simp add: no_irq_getActiveIRQ
+          | simp add: no_irq_getActiveIRQ non_kernel_IRQs_def
           | wpc
-          | wp (once) hoare_drop_imps )+
+          | wp (once) hoare_drop_imps)+
    apply (rule hoare_strengthen_postE)
      apply (rule valid_validE)
      prefer 2

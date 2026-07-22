@@ -110,6 +110,7 @@ lemma Arch_switchToThread_obj_at_pre:
 
 crunch setThreadState
   for pspace_canonical'[wp]: pspace_canonical'
+  (cong: if_cong)
 
 lemma word_shift_by_3:
   "x * 8 = (x::'a::len word) << 3"

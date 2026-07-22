@@ -707,9 +707,7 @@ lemma check_active_irq_corres':
   apply (simp add: check_active_irq_def checkActiveIRQ_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF corres_machine_op[OF corres_underlying_trivial], where R="\<lambda>_. \<top>" and R'="\<lambda>_. \<top>"])
-       apply simp
-      apply (rule no_fail_getActiveIRQ)
-     apply (wp | simp )+
+       apply wpsimp+
   done
 
 lemma check_active_irq_corres:

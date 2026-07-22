@@ -183,6 +183,51 @@ locale CSpace1_R =
      (isReplyCap cap = isReplyCap cap')"
   assumes acap_relation_capBadge:
     "\<And>acap acap'. acap_relation acap acap' \<Longrightarrow> arch_capBadge acap' = arch_cap_badge acap"
+  assumes obj_relation_cuts_in_obj_range:
+    "\<And>y P ko x (s::det_state).
+     \<lbrakk> (y, P) \<in> obj_relation_cuts ko x; x \<in> obj_range x ko;
+       kheap s x = Some ko; valid_objs s; pspace_aligned s \<rbrakk>
+     \<Longrightarrow> y \<in> obj_range x ko"
+  assumes arch_updateCapData_Master:
+    "\<And>P d acap.
+     Arch.updateCapData P d acap \<noteq> NullCap \<Longrightarrow>
+     capMasterCap (Arch.updateCapData P d acap) = capMasterCap (ArchObjectCap acap)"
+  assumes updateCapData_Reply[simp]:
+    "\<And>P x c. isReplyCap (updateCapData P x c) = isReplyCap c"
+  assumes maskCap_valid[simp]:
+    "\<And>s R cap. s \<turnstile>' global.maskCapRights R cap = s \<turnstile>' cap"
+  assumes cap_map_update_data:
+    "\<And>c c' p x. cap_relation c c' \<Longrightarrow> cap_relation (update_cap_data p x c) (updateCapData p x c')"
+  assumes capASID_mask[simp]:
+    "\<And>x c. capASID (maskCapRights x c) = capASID c"
+  assumes cap_vptr_mask'[simp]:
+    "\<And>x c. cap_vptr' (maskCapRights x c) = cap_vptr' c"
+  assumes cap_asid_base_mask'[simp]:
+    "\<And>x c. cap_asid_base' (maskCapRights x c) = cap_asid_base' c"
+  assumes capASID_update[simp]:
+    "\<And>P x c. capASID (RetypeDecls_H.updateCapData P x c) = capASID c"
+  assumes cap_vptr_update'[simp]:
+    "\<And>P x c. cap_vptr' (RetypeDecls_H.updateCapData P x c) = cap_vptr' c"
+  assumes cap_asid_base_update'[simp]:
+    "\<And>P x c. cap_asid_base' (RetypeDecls_H.updateCapData P x c) = cap_asid_base' c"
+  assumes descendants_of_update_ztc:
+    "\<And>m slot P cte cap c.
+     \<lbrakk>\<And>x. \<lbrakk>m \<turnstile> x \<rightarrow> slot; \<not> P\<rbrakk>
+          \<Longrightarrow> \<exists>cte'.
+               m x = Some cte' \<and>
+               capMasterCap (cteCap cte') \<noteq> capMasterCap (cteCap cte) \<and>
+               global.sameRegionAs (cteCap cte') (cteCap cte);
+      m slot = Some cte; isZombie cap \<or> isCNodeCap cap \<or> isThreadCap cap;
+      \<And>x cte'.
+         \<lbrakk>m x = Some cte'; x \<noteq> slot; P\<rbrakk>
+         \<Longrightarrow> isUntypedCap (cteCap cte') \<or>
+           capClass (cteCap cte') \<noteq> PhysicalClass \<or>
+           global.capUntypedPtr (cteCap cte') \<noteq> global.capUntypedPtr (cteCap cte);
+      capRange (cteCap cte) = capRange cap \<and> global.capUntypedPtr (cteCap cte) = global.capUntypedPtr cap;
+      capAligned (cteCap cte); isZombie (cteCap cte) \<or> isCNodeCap (cteCap cte) \<or> isThreadCap (cteCap cte);
+      no_loops m\<rbrakk>
+     \<Longrightarrow> (c \<noteq> slot \<or> P \<longrightarrow> descendants_of' c m \<subseteq> descendants_of' c (m(slot \<mapsto> cteCap_update (\<lambda>_. cap) cte))) \<and>
+       (P \<longrightarrow> descendants_of' c (m(slot \<mapsto> cteCap_update (\<lambda>_. cap) cte)) \<subseteq> descendants_of' c m)"
 
 lemma subtree_no_parent:
   assumes "m \<turnstile> p \<rightarrow> x"
@@ -247,6 +292,18 @@ qed
 lemma subtree_trans:
   "\<lbrakk> s \<turnstile> a \<rightarrow> b; s \<turnstile> b \<rightarrow> c \<rbrakk> \<Longrightarrow> s \<turnstile> a \<rightarrow> c"
   by (rule subtree_trans_lemma)
+
+lemma updateCapData_Master:
+  "updateCapData P d cap \<noteq> NullCap \<Longrightarrow> capMasterCap (updateCapData P d cap) = capMasterCap cap"
+  by (cases cap;
+      simp add: global.updateCapData_def gen_isCap_simps Let_def arch_updateCapData_Master
+           split: if_split_asm)
+
+lemma weak_derived_updateCapData:
+  "\<lbrakk> updateCapData P x c \<noteq> NullCap; weak_derived' c c';
+     capBadge (updateCapData P x c) = capBadge c' \<rbrakk>
+   \<Longrightarrow> weak_derived' (updateCapData P x c) c'"
+  by (clarsimp simp add: weak_derived'_def updateCapData_Master)
 
 end (* CSpace1_R *)
 
@@ -1702,6 +1759,12 @@ lemma ctes_of_valid:
 
 context CSpace1_R begin
 
+lemma in_setCTE_aobjs_of':
+  "(rv, s') \<in> fst (setCTE p v s) \<Longrightarrow> aobjs_of' s' =  aobjs_of' s"
+  apply (clarsimp simp: setCTE_def)
+  apply (drule use_valid[OF _ setObject_cte_aobjs_of']; fastforce)
+  done
+
 lemma set_cap_not_quite_corres:
   assumes cr:
   "pspace_relation (kheap s) (ksPSpace s')"
@@ -1723,7 +1786,7 @@ lemma set_cap_not_quite_corres:
   "valid_objs s" "pspace_aligned s" "pspace_distinct s" "cte_at p s"
   "pspace_aligned' s'" "pspace_distinct' s'"
   "interrupt_state_relation (interrupt_irq_node s) (interrupt_states s) (ksInterruptState s')"
-  "(arch_state s, ksArchState s') \<in> arch_state_relation"
+  "(arch_state s, ksArchState s') \<in> arch_state_relation (aobjs_of' s')"
   assumes c: "cap_relation c c'"
   assumes p: "p' = cte_map p"
   shows "\<exists>t. ((),t) \<in> fst (set_cap c p s) \<and>
@@ -1736,7 +1799,7 @@ lemma set_cap_not_quite_corres:
              is_original_cap t = is_original_cap s \<and>
              interrupt_state_relation (interrupt_irq_node t) (interrupt_states t)
                               (ksInterruptState t') \<and>
-             (arch_state t, ksArchState t') \<in> arch_state_relation \<and>
+             (arch_state t, ksArchState t') \<in> arch_state_relation (aobjs_of' t') \<and>
              cur_thread t = ksCurThread t' \<and>
              idle_thread t = ksIdleThread t' \<and>
              idle_sc_ptr = ksIdleSC t' \<and>
@@ -1762,6 +1825,7 @@ lemma set_cap_not_quite_corres:
     apply simp
     apply (rule c)
    apply (rule p)
+  apply (frule in_setCTE_aobjs_of')
   apply (erule exEI)
   apply clarsimp
   apply (frule setCTE_pspace_only)
@@ -2921,6 +2985,9 @@ lemma maxFreeIndex_eq[simp]:
 
 context CSpace1_R_2 begin
 
+crunch updateMDB
+  for aobjs_of'[wp]: "\<lambda>s. P (aobjs_of' s)"
+
 lemma updateMDB_the_lot:
   fixes s :: "det_state"
   assumes "(x, s'') \<in> fst (updateMDB p f s')"
@@ -2958,6 +3025,7 @@ lemma updateMDB_the_lot:
          tcbSchedNexts_of s''   = tcbSchedNexts_of s' \<and>
          tcbSchedPrevs_of s''   = tcbSchedPrevs_of s' \<and>
          (tcbInReleaseQueue |< tcbs_of' s'') = (tcbInReleaseQueue |< tcbs_of' s') \<and>
+         aobjs_of' s''          = aobjs_of' s' \<and>
          (\<forall>domain priority.
             (inQ domain priority |< tcbs_of' s'') = (inQ domain priority |< tcbs_of' s'))"
   using assms
@@ -3005,6 +3073,7 @@ lemma updateMDB_the_lot':
          tcbSchedNexts_of s''   = tcbSchedNexts_of s' \<and>
          tcbSchedPrevs_of s''   = tcbSchedPrevs_of s' \<and>
          (tcbInReleaseQueue |< tcbs_of' s'') = (tcbInReleaseQueue |< tcbs_of' s') \<and>
+         aobjs_of' s''          = aobjs_of' s' \<and>
          (\<forall>domain priority.
             (inQ domain priority |< tcbs_of' s'') = (inQ domain priority |< tcbs_of' s'))"
   by (rule updateMDB_the_lot; fastforce intro: assms)
@@ -3158,6 +3227,7 @@ lemma setCTE_UntypedCap_corres:
    apply (rule use_valid[OF _ setCTE_ntfns_of'], assumption)
    apply clarsimp
 
+  apply (frule in_setCTE_aobjs_of')
   apply (frule setCTE_pspace_only)
   apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def)
   apply (rename_tac obj ps' s'' obj' kobj; case_tac obj;
@@ -5887,7 +5957,7 @@ lemma cteSwap_corres:
   apply (thin_tac "ksIdleThread t = p" for t p)+
   apply (thin_tac "pspace_relation s s'" for s s')+
   apply (thin_tac "interrupt_state_relation n s s'" for n s s')+
-  apply (thin_tac "(s,s') \<in> arch_state_relation" for s s')+
+  apply (thin_tac "(s,s') \<in> arch_state_relation aobjs" for s s' aobjs)+
   apply (rule conjI)
    apply (erule (2) ghost_relation_wrapper_set_cap_twice; rule refl)
   apply (thin_tac "ksArchState t = p" for t p)+

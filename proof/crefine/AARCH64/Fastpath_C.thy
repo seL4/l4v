@@ -1786,8 +1786,8 @@ lemma capVSBasePtr_CL_capUntypedPtr_helper:
                dest!: isValidVTableRootD')
 
 lemma casid_map_relation_Some_get_tag:
-  "casid_map_relation (Some asid_entry) asid_entry'
-   \<Longrightarrow> asid_map_get_tag asid_entry' = signed asid_map_asid_map_vspace"
+  "casid_map_relation (Some asid_pool_entry) asid_pool_entry'
+   \<Longrightarrow> asid_map_get_tag asid_pool_entry' = signed asid_map_asid_map_vspace"
   by (clarsimp simp: casid_map_relation_def asid_map_lift_def Let_def
                split: option.splits if_splits asid_map_CL.splits)
 

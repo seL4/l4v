@@ -87,10 +87,11 @@ val rule_sect = ("rule", Parse.thm >> Thm);
 val rule_del_sect = ("rule_del", Parse.thm >> Thm);
 val wp_comb_sect = ("wp_comb", Parse.thm >> Thm);
 val wp_comb_del_sect = ("wp_comb_del", Parse.thm >> Thm);
+val cong_sect = ("cong", Parse.thm >> Thm);
 
 val crunch_sections =
   [wp_sect,wp_del_sect,wps_sect,ignore_sect,simp_sect,simp_del_sect,rule_sect,rule_del_sect,
-   ignore_del_sect,wp_comb_sect,wp_comb_del_sect]
+   ignore_del_sect,wp_comb_sect,wp_comb_del_sect,cong_sect]
 
 fun read_const ctxt = Proof_Context.read_const {proper = true, strict = false} ctxt;
 
@@ -886,6 +887,9 @@ fun crunch_x atts extra prp_name wpigs consts ctxt =
         val wp_comb_dels = wpigs |> filter (fn (s,_) => s = #1 wp_comb_del_sect) |> map #2 |> thms
                     |> get_thms_from_facts ctxt
 
+        val congs = wpigs |> filter (fn (s,_) => s = #1 cong_sect) |> map #2 |> thms
+                    |> get_thms_from_facts ctxt
+
         fun mk_wp thm =
            let val ms = Thm.prop_of thm |> monads_of ctxt;
                 val m = if length ms = 1
@@ -913,7 +917,8 @@ fun crunch_x atts extra prp_name wpigs consts ctxt =
           |> fold (fn thm => fn ctxt => Thm.proof_attributes [WeakestPre.combs_add] thm ctxt |> snd)
                   wp_combs
           |> fold (fn thm => fn ctxt => Thm.proof_attributes [WeakestPre.combs_del] thm ctxt |> snd)
-                  wp_comb_dels;
+                  wp_comb_dels
+          |> fold Simplifier.add_cong congs;
 
         val crunch_cfg =
           {ctxt = ctxt', prp_name = prp_name, nmspce = nmspce, wp_rules = wp_rules,

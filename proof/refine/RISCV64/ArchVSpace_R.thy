@@ -397,13 +397,6 @@ definition
       cte_wp_at' (is_arch_update' (ArchObjectCap cap)) ptr and valid_cap' (ArchObjectCap cap)
   | PageGetAddr ptr \<Rightarrow> \<top>"
 
-lemma set_mrs_invs'[wp]:
-  "setMRs receiver recv_buf mrs \<lbrace>invs'\<rbrace>"
-  apply (simp add: setMRs_def)
-  apply (wp dmo_invs' no_irq_mapM no_irq_storeWord crunch_wps|
-         simp add: zipWithM_x_mapM split_def)+
-  done
-
 lemma performPageInvocation_corres:
   assumes "page_invocation_map pgi pgi'"
   shows "corres (=) (invs and valid_page_inv pgi) (no_0_obj' and valid_page_inv' pgi')
@@ -804,9 +797,9 @@ lemma perform_aci_invs [wp]:
                         wellformed_mapdata'_def)
   done
 
-lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
+lemma lookupIPCBuffer_valid_ipc_buffer[wp]:
   "\<lbrace>valid_objs'\<rbrace> lookupIPCBuffer b t \<lbrace>case_option \<top> valid_ipc_buffer_ptr'\<rbrace>"
-  unfolding lookupIPCBuffer_def RISCV64_H.lookupIPCBuffer_def
+  unfolding lookupIPCBuffer_def
   supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
   apply (simp add: Let_def getSlotCap_def getThreadBufferSlot_def
                    locateSlot_conv threadGet_getObject)

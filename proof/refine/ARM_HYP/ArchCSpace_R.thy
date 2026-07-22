@@ -162,10 +162,12 @@ crunch cteInsert
   (wp: crunch_wps simp: cte_wp_at_ctes_of)
 
 crunch cteInsert
-  for valid_arch_state'[wp]: valid_arch_state'
+  for valid_arch_state'[CSpace_R_assms, wp]: valid_arch_state'
   (wp: crunch_wps)
 
-declare cteInsert_valid_arch_state'[CSpace_R_assms]
+lemma acapClass_not_Reply[CSpace_R_assms]:
+  "acapClass acap \<noteq> ReplyClass t"
+  by (cases acap; simp)
 
 end (* Arch *)
 
@@ -353,12 +355,12 @@ context Arch begin arch_global_naming
 
 named_theorems CSpace_R_2_assms
 
-lemma deriveCap_derived:
+lemma deriveCap_derived[CSpace_R_2_assms]:
   "\<lbrace>\<lambda>s. c'\<noteq> capability.NullCap \<longrightarrow> cte_wp_at' (\<lambda>cte. badge_derived' c' (cteCap cte)
-                           \<and> capASID c' = capASID (cteCap cte)
-                           \<and> cap_asid_base' c' = cap_asid_base' (cteCap cte)
-                           \<and> cap_vptr' c' = cap_vptr' (cteCap cte)) slot s
-       \<and> valid_objs' s\<rbrace>
+        \<and> capASID c' = capASID (cteCap cte)
+        \<and> cap_asid_base' c' = cap_asid_base' (cteCap cte)
+        \<and> cap_vptr' c' = cap_vptr' (cteCap cte)) slot s
+        \<and> valid_objs' s\<rbrace>
   deriveCap slot c'
   \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow>
           cte_wp_at' (is_derived' (ctes_of s) slot rv \<circ> cteCap) slot s\<rbrace>, -"
@@ -383,25 +385,15 @@ lemma deriveCap_derived:
                   | clarsimp split: option.split_asm)+)
   done
 
-lemma arch_deriveCap_untyped_derived[wp]:
+lemma arch_deriveCap_untyped_derived[CSpace_R_2_assms, wp]:
   "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte. untyped_derived_eq c' (cteCap cte)) slot s\<rbrace>
-     ARM_HYP_H.deriveCap slot (capCap c')
+   ARM_HYP_H.deriveCap slot (capCap c')
    \<lbrace>\<lambda>rv s. cte_wp_at' (untyped_derived_eq rv o cteCap) slot s\<rbrace>, -"
   apply (wpsimp simp: ARM_HYP_H.deriveCap_def Let_def untyped_derived_eq_ArchObjectCap
            split_del: if_split
                   wp: undefined_validE_R)
   apply(clarsimp simp: cte_wp_at_ctes_of isCap_simps untyped_derived_eq_def)
   by (case_tac "capCap c'"; fastforce)
-
-lemma deriveCap_untyped_derived:
-  "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte. untyped_derived_eq c' (cteCap cte)) slot s\<rbrace>
-  deriveCap slot c'
-  \<lbrace>\<lambda>rv s. cte_wp_at' (untyped_derived_eq rv o cteCap) slot s\<rbrace>, -"
-  apply (simp add: global.deriveCap_def split del: if_split cong: if_cong)
-  apply (rule hoare_pre)
-   apply (wp arch_deriveCap_inv | simp add: o_def untyped_derived_eq_ArchObjectCap)+
-  apply (clarsimp simp: cte_wp_at_ctes_of gen_isCap_simps untyped_derived_eq_def)
-  done
 
 lemma corres_caps_decomposition:
   assumes pspace_corres:
@@ -446,6 +438,7 @@ lemma corres_caps_decomposition:
              "\<And>P. \<lbrace>\<lambda>s. P (new_ds' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_cd' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_dt' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksDomainTime s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_ao' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (aobjs_of' s)\<rbrace>"
   assumes updated_relations:
     "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
               \<Longrightarrow> cdt_relation ((\<noteq>) None \<circ> new_caps s) (new_mdb s) (new_ctes s')
@@ -456,7 +449,7 @@ lemma corres_caps_decomposition:
                   \<and> sched_act_relation (new_action s) (new_sa' s')
                   \<and> revokable_relation (new_rvk s) (null_filter (new_caps s)) (new_ctes s')
                   \<and> interrupt_state_relation (new_irqn s) (new_irqs s) (new_irqs' s')
-                  \<and> (new_as s, new_as' s') \<in> arch_state_relation
+                  \<and> (new_as s, new_as' s') \<in> arch_state_relation (new_ao' s')
                   \<and> new_ct s = new_ct' s'
                   \<and> new_id s = new_id' s'
                   \<and> new_ms s = new_ms' s'
@@ -509,6 +502,12 @@ proof -
     "\<And>P. \<lbrace>\<lambda>s. P (new_irqn s) (new_irqs s)\<rbrace> f
              \<lbrace>\<lambda>rv s. \<exists>irn. interrupt_irq_node s = irn \<and> P irn (interrupt_states s)\<rbrace>"
     by (wp hoare_vcg_ex_lift updates, simp)
+  have g_as_ao'[wp]:
+    "\<And>P. \<lbrace>\<lambda>s'. P (new_as' s') (new_ao' s')\<rbrace> g \<lbrace>\<lambda>_ s'. P (ksArchState s') (aobjs_of' s')\<rbrace>"
+    apply wp_pre
+     apply (wp updates | wps updates)+
+    apply simp
+    done
   note abs_irq_together = abs_irq_together'[simplified]
   show ?thesis
     unfolding state_relation_def swp_cte_at
@@ -592,23 +591,6 @@ lemma create_reply_master_corres[CSpace_R_2_assms]:
   apply (clarsimp simp: valid_pspace'_def cte_wp_at'_def)
   done
 
-lemma cte_map_nat_to_cref:
-  "\<lbrakk> n < 2 ^ b; b < word_bits \<rbrakk> \<Longrightarrow>
-   cte_map (p, nat_to_cref b n) = p + (of_nat n * 2^cte_level_bits)"
-  apply (clarsimp simp: cte_map_def nat_to_cref_def shiftl_t2n
-                 dest!: less_is_drop_replicate)
-  apply (subst mult_ac)
-  apply (rule arg_cong [where f="\<lambda>x. x * 2^cte_level_bits"])
-  apply (subst of_drop_to_bl)
-  apply (simp add: word_bits_def)
-  apply (subst mask_eq_iff_w2p)
-   apply (simp add: word_size)
-  apply (simp add: word_less_nat_alt word_size word_bits_def)
-  apply (rule order_le_less_trans; assumption?)
-  apply (subst unat_of_nat)
-  apply (rule mod_less_eq_dividend)
-  done
-
 declare azobj_refs'_only_vcpu[simp]
 
 lemma setupReplyMaster_global_refs[wp]:
@@ -628,37 +610,6 @@ lemma setupReplyMaster_global_refs[wp]:
                  split: capability.split_asm)
   done
 
-lemma setupReplyMaster_valid_mdb:
-  "slot = t + 2 ^ objBits (undefined :: cte) * tcbReplySlot \<Longrightarrow>
-   \<lbrace>valid_mdb' and valid_pspace' and tcb_at' t\<rbrace>
-   setupReplyMaster t
-   \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
-  apply (clarsimp simp: setupReplyMaster_def locateSlot_conv
-                        nullMDBNode_def)
-  apply (fold initMDBNode_def)
-  apply (wp setCTE_valid_mdb getCTE_wp')
-  apply clarsimp
-  apply (intro conjI)
-      apply (case_tac cte)
-      apply (fastforce simp: cte_wp_at_ctes_of valid_mdb'_def valid_mdb_ctes_def
-                            no_mdb_def
-                      elim: valid_nullcapsE)
-     apply (frule obj_at_aligned')
-      apply (simp add: valid_cap'_def capAligned_def
-                       objBits_simps' word_bits_def)+
-    apply (clarsimp simp: valid_pspace'_def)
-   apply (clarsimp simp: caps_no_overlap'_def capRange_def)
-  apply (clarsimp simp: fresh_virt_cap_class_def
-                 elim!: ranE)
-  apply (clarsimp simp add: noReplyCapsFor_def cte_wp_at_ctes_of)
-  apply (case_tac x)
-  apply (rename_tac capability mdbnode)
-  apply (case_tac capability; simp)
-   apply (rename_tac arch_capability)
-   apply (case_tac arch_capability; simp)
-  apply fastforce
-  done
-
 lemma setupReplyMaster_valid_pspace':
   "\<lbrace>valid_pspace' and tcb_at' t\<rbrace>
    setupReplyMaster t
@@ -672,7 +623,7 @@ crunch setupReplyMaster
   for valid_arch'[wp]: "valid_arch_state'"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma ex_nonz_tcb_cte_caps':
+lemma ex_nonz_tcb_cte_caps'[CSpace_R_2_assms]:
   "\<lbrakk>ex_nonz_cap_to' t s; tcb_at' t s; valid_objs' s; sl \<in> dom tcb_cte_cases\<rbrakk> \<Longrightarrow>
    ex_cte_cap_to' (t + sl) s"
   apply (clarsimp simp: ex_nonz_cap_to'_def ex_cte_cap_to'_def cte_wp_at_ctes_of)
@@ -702,7 +653,7 @@ lemma ex_nonz_cap_not_global':
   apply (clarsimp simp: ctes_of_valid_cap')
   done
 
-lemma setupReplyMaster_invs'[wp]:
+lemma setupReplyMaster_invs'[CSpace_R_2_assms, wp]:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t\<rbrace>
    setupReplyMaster t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -1387,7 +1338,7 @@ lemmas [CSpace_R_3_assms] =
   updateCap_valid_arch_state'
   master_cap_relation
 
-lemma derived'_not_Null:
+lemma derived'_not_Null[CSpace_R_3_assms, simp]:
   "\<not> is_derived' m p c capability.NullCap"
   "\<not> is_derived' m p capability.NullCap c"
   by (clarsimp simp: is_derived'_def badge_derived'_def)+

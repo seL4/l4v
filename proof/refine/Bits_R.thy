@@ -17,12 +17,23 @@ crunch_ignore (add:
   setObject getObject updateObject loadObject
   ifM andM orM whenM whileM haskell_assert) (*FIXME arch-split RT: can these be removed?*)
 
+(* FIXME: move to WordLib *)
+lemma word_of_nat_word_size[simp]:
+  "word_of_nat word_size = word_size"
+  by (simp add: word_size_def)
+
 (* same derivation on all architectures *)
 lemma (in Arch) wordBits_word_bits:
   "wordBits = word_bits"
   by (simp add: wordBits_def' word_bits_def)
-
 requalify_facts Arch.wordBits_word_bits
+
+(* same derivation on all architectures *)
+lemma (in Arch) wordSize_word_size:
+  "wordSize = word_size"
+  unfolding wordSize_def word_size_def wordBits_word_bits
+  by (simp add: word_bits_def)
+requalify_facts Arch.wordSize_word_size
 
 lemma throwE_R: "\<lbrace>\<top>\<rbrace> throw f \<lbrace>P\<rbrace>,-"
   by (simp add: validE_R_def) wp
@@ -397,7 +408,7 @@ lemmas unifyFailure_injection_corres
 lemmas unifyFailure_discard
    = unifyFailure_injection_corres [OF id_injection, simplified]
 
-lemmas unifyFailure_wp = injection_wp [OF unifyFailure_injection]
+lemmas unifyFailure_wp[wp] = injection_wp[OF unifyFailure_injection]
 
 lemmas unifyFailure_wp_E[wp] = injection_wp_E [OF unifyFailure_injection]
 
@@ -556,7 +567,7 @@ lemma corres_const_on_failure:
    apply simp+
   done
 
-lemma constOnFailure_wp :
+lemma constOnFailure_wp[wp]:
   "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>, \<lbrace>\<lambda>rv. Q n\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> constOnFailure n m \<lbrace>Q\<rbrace>"
   apply (simp add: constOnFailure_def const_def)
   apply (wp|simp)+
@@ -566,5 +577,17 @@ lemma isFlagSet_in_word_to_tcb_flags[simp]:
   "flag \<in> word_to_tcb_flags tcbFlagMask \<Longrightarrow> isFlagSet flag flags = (flag \<in> word_to_tcb_flags flags)"
   by (drule tcbFlagToWord_and_tcbFlagMask_eq)
      (clarsimp simp: isFlagSet_def word_to_tcb_flags_def word_bw_lcs intro!: eq_eqI word_bw_comms)
+
+(* same proof for all machine word sizes *)
+lemma (in Arch) eq_ucast_word8[simp]:
+  "((ucast (x :: 8 word) :: machine_word) = ucast y) = (x = y)"
+  apply safe
+  apply (drule_tac f="ucast :: (machine_word \<Rightarrow> 8 word)" in arg_cong)
+  apply (simp add: ucast_up_ucast_id is_up_def
+                   source_size_def target_size_def)
+  done
+
+requalify_facts Arch.eq_ucast_word8
+lemmas [simp] = eq_ucast_word8
 
 end

@@ -1,0 +1,131 @@
+(*
+ * Copyright 2021, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2023, Proofcraft Pty Ltd
+ *
+ * SPDX-License-Identifier: GPL-2.0-only
+ *)
+
+theory Init_R
+imports
+  ArchKHeap_R
+begin
+
+(*
+  This provides a very simple witness that the state relation used in the first refinement proof is
+  non-trivial, by exhibiting a pair of related states. This helps guard against silly mistakes in
+  the state relation, since we currently assume that the system starts in a state satisfying
+  invariants and state relations.
+
+  Note that the states we exhibit are not intended to be useful states. They are just the simplest
+  possible states that prove non-triviality of the state relation. In particular, these states do
+  not satisfy the respective invariant conditions. In future, this could be improved by exhibiting
+  a tuple of more realistic states that are related across all levels of the refinement, and that
+  also satisfy respective invariant. Ultimately, we would like to prove functional correctness of
+  kernel initialisation. That would allow us to start from a minimal but real configuration that
+  would allow us to make a much smaller set of assumptions about the initial configuration of the
+  system.
+*)
+
+locale Init_R =
+  fixes zeroed_arch_abstract_state :: arch_state
+  fixes zeroed_arch_intermediate_state :: Arch.kernel_state
+  fixes aobjs
+  assumes non_empty_refine_arch_state_relation:
+    "(zeroed_arch_abstract_state, zeroed_arch_intermediate_state) \<in> arch_state_relation Map.empty"
+  (* the None maps are a result of unfolding zeroed_main_abstract_state *)
+  assumes ghost_relation_wrapper_arch_intermediate_state:
+    "ghost_relation_wrapper_2 (\<lambda>_. None) (\<lambda>_. None) (\<lambda>_. None) zeroed_arch_intermediate_state"
+begin
+
+definition zeroed_main_abstract_state :: abstract_state where
+  "zeroed_main_abstract_state \<equiv> \<lparr>
+    kheap = Map.empty,
+    cdt = Map.empty,
+    is_original_cap = \<top>,
+    cur_thread = 0,
+    idle_thread = 0,
+    consumed_time = 0,
+    cur_time = 0,
+    cur_sc = 0,
+    reprogram_timer = False,
+    scheduler_action = resume_cur_thread,
+    domain_list = [],
+    domain_index = 0,
+    domain_start_index = 0,
+    cur_domain = 0,
+    domain_time = 0,
+    ready_queues = (\<lambda>_ _. []),
+    release_queue = [],
+    machine_state = init_machine_state,
+    interrupt_irq_node = (\<lambda>irq. ucast irq << cte_level_bits),
+    interrupt_states = (K irq_state.IRQInactive),
+    arch_state = zeroed_arch_abstract_state\<rparr>"
+
+definition zeroed_extended_state :: det_ext where
+  "zeroed_extended_state \<equiv> \<lparr>
+    work_units_completed_internal = 0,
+    cdt_list_internal = K []
+  \<rparr>"
+
+definition zeroed_abstract_state :: det_state where
+  "zeroed_abstract_state \<equiv> abstract_state.extend zeroed_main_abstract_state
+                           (state.fields zeroed_extended_state)"
+
+definition zeroed_intermediate_state :: global.kernel_state where
+  "zeroed_intermediate_state \<equiv> \<lparr>
+    ksPSpace = Map.empty,
+    gsUserPages = Map.empty,
+    gsCNodes = Map.empty,
+    gsUntypedZeroRanges = {},
+    gsMaxObjectSize = 0,
+    ksDomScheduleIdx = 0,
+    ksDomScheduleStart = 0,
+    ksDomSchedule = [],
+    ksCurDomain = 0,
+    ksDomainTime = 0,
+    ksReadyQueues = K emptyQueue,
+    ksReleaseQueue = emptyQueue,
+    ksReadyQueuesL1Bitmap = K 0,
+    ksReadyQueuesL2Bitmap = K 0,
+    ksCurThread = 0,
+    ksIdleThread = 0,
+    ksIdleSC = idle_sc_ptr,
+    ksConsumedTime = 0,
+    ksCurTime = 0,
+    ksCurSc = 0,
+    ksReprogramTimer = False,
+    ksSchedulerAction = ResumeCurrentThread,
+    ksInterruptState = (InterruptState 0 (K IRQInactive)),
+    ksWorkUnitsCompleted = 0,
+    ksArchState = zeroed_arch_intermediate_state,
+    ksMachineState = init_machine_state
+  \<rparr>"
+
+lemmas zeroed_state_defs = zeroed_main_abstract_state_def zeroed_abstract_state_def
+                           zeroed_extended_state_def
+                           zeroed_intermediate_state_def abstract_state.defs
+
+lemma non_empty_refine_state_relation:
+  "(zeroed_abstract_state, zeroed_intermediate_state) \<in> state_relation"
+  apply (clarsimp simp: state_relation_def zeroed_state_defs state.defs)
+  apply (intro conjI)
+             apply (clarsimp simp: pspace_relation_def pspace_dom_def)
+            apply (clarsimp simp: ep_queues_relation_def)
+           apply (clarsimp simp: ntfn_queues_relation_def)
+          apply (clarsimp simp: ready_queues_relation_def ready_queue_relation_def
+                                queue_end_valid_def opt_pred_def list_queue_relation_def
+                                emptyHeadEndPtrs_def headEndPtrsEmpty_def prev_queue_head_def)
+         apply (clarsimp simp: release_queue_relation_def queue_end_valid_def opt_pred_def
+                               list_queue_relation_def emptyHeadEndPtrs_def prev_queue_head_def)
+        apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
+       apply (clarsimp simp: ghost_relation_wrapper_arch_intermediate_state)
+      apply (fastforce simp: cdt_relation_def swp_def dest: cte_wp_at_domI)
+     apply (clarsimp simp: cdt_list_relation_def map_to_ctes_def)
+    apply (clarsimp simp: revokable_relation_def map_to_ctes_def)
+   apply (clarsimp simp: zeroed_state_defs non_empty_refine_arch_state_relation)
+  apply (clarsimp simp: interrupt_state_relation_def irq_state_relation_def cte_level_bits_def)
+  done
+
+end (* Init_R *)
+
+end

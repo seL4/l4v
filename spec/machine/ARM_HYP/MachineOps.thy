@@ -726,13 +726,6 @@ where
   "set_cntv_off_64 w \<equiv> machine_op_lift (set_cntv_off_64_impl w)"
 
 consts'
-  read_cntpct_val :: "machine_state \<Rightarrow> 64 word"
-definition
-  read_cntpct :: "64 word machine_monad"
-where
-  "read_cntpct \<equiv> gets read_cntpct_val"
-
-consts'
   check_export_arch_timer_impl :: "unit machine_rest_monad"
 definition
   check_export_arch_timer :: "unit machine_monad"

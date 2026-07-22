@@ -1404,7 +1404,7 @@ lemma doUnbindNotification_ccorres:
     (\<lbrace>\<acute>ntfnPtr = ntfn_Ptr ntfnPtr\<rbrace> \<inter> \<lbrace>\<acute>tcbptr = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) hs
    (doUnbindNotification ntfnPtr tcbPtr)
    (Call doUnbindNotification_'proc)"
-  apply (cinit' lift: ntfnPtr_' tcbptr_')
+  apply (cinit' lift: ntfnPtr_' tcbptr_' simp: doUnbindNotification_def)
    apply (rule ccorres_split_nothrow_novcg)
        apply (rule_tac P'="ntfn_at' ntfnPtr" in updateNotification_ccorres_lemma3[where P=\<top>])
         apply vcg
@@ -3454,7 +3454,7 @@ lemma finaliseCap_ccorres:
    apply (rule ccorres_if_lhs)
     apply (simp add: Collect_False Collect_True Let_def
                 del: Collect_const)
-    apply (rule_tac P="(capIRQ cap) \<le> RISCV64.maxIRQ" in ccorres_gen_asm)
+    apply (rule_tac P="(capIRQ cap) \<le> maxIRQ" in ccorres_gen_asm)
     apply (rule ccorres_rhs_assoc)+
     apply csymbr
     apply csymbr

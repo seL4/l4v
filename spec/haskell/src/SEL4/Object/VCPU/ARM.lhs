@@ -342,8 +342,6 @@ For initialisation, see makeVCPUObject.
 >     vcpuWriteReg vcpuPtr VCPURegCNTVOFFlow (fromIntegral cntvoff)
 >     vcpuSaveReg vcpuPtr VCPURegCNTKCTL
 >     doMachineOp check_export_arch_timer
->     cntpct <- doMachineOp read_cntpct
->     vcpuUpdate vcpuPtr (\vcpu -> vcpu { vcpuVTimer = VirtTimer cntpct })
 
 > restoreVirtTimer :: PPtr VCPU -> Kernel ()
 > restoreVirtTimer vcpuPtr = do
@@ -352,16 +350,11 @@ For initialisation, see makeVCPUObject.
 >     let cval = ((fromIntegral cvalHigh :: Word64) `shiftL` 32) .|. (fromIntegral cvalLow :: Word64)
 >     doMachineOp $ set_cntv_cval_64 cval
 >     vcpuRestoreReg vcpuPtr VCPURegCNTKCTL
->     current_cntpct <- doMachineOp read_cntpct
->     vcpu <- getObject vcpuPtr
->     let lastPCount =  vtimerLastPCount (vcpuVTimer vcpu)
->     let pcountDelta = current_cntpct - lastPCount
 >     offsetHigh <- vcpuReadReg vcpuPtr VCPURegCNTVOFFhigh
 >     offsetLow <- vcpuReadReg vcpuPtr VCPURegCNTVOFFlow
->     let offset = (((fromIntegral offsetHigh :: Word64) `shiftL` 32) .|. (fromIntegral offsetLow :: Word64)) + pcountDelta
->     vcpuWriteReg vcpuPtr VCPURegCNTVOFFhigh (fromIntegral $ offset `shiftR` 32)
->     vcpuWriteReg vcpuPtr VCPURegCNTVOFFlow (fromIntegral offset)
+>     let offset = ((fromIntegral offsetHigh :: Word64) `shiftL` 32) .|. (fromIntegral offsetLow :: Word64)
 >     doMachineOp $ set_cntv_off_64 offset
+>     vcpu <- getObject vcpuPtr
 >     let vppi = fromJust $ irqVPPIEventIndex (IRQ irqVTimerEvent)
 >     let masked = (vcpuVPPIMasked vcpu) ! vppi
 >     safeToUnmask <- isIRQActive (IRQ irqVTimerEvent)

@@ -290,6 +290,7 @@ lemma asUser_getRegister_discarded:
 
 crunch setThreadState
   for pspace_canonical'[wp]: pspace_canonical'
+  (cong: if_cong)
 
 lemma obj_at_kernel_mappings':
   "\<lbrakk>pspace_in_kernel_mappings' s; obj_at' P p s\<rbrakk>

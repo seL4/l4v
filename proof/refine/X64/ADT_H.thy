@@ -665,7 +665,7 @@ lemma absHeap_correct:
   assumes valid_cur_fpu:   "valid_cur_fpu s"
   assumes pspace_relation: "pspace_relation (kheap s) (ksPSpace s')"
   assumes ghost_relation:  "ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')"
-  assumes arch_state_relation: "(arch_state s, ksArchState s') \<in> arch_state_relation"
+  assumes arch_state_relation: "(arch_state s, ksArchState s') \<in> arch_state_relation (aobjs_of' s')"
 shows
   "absHeap (gsUserPages s') (gsCNodes s') (ksPSpace s') (x64KSCurFPUOwner (ksArchState s')) = kheap s"
 proof -
@@ -1902,17 +1902,13 @@ lemma cr3_expand_unexpand[simp]: "cr3 (cr3_base_address a) (cr3_pcid a) = a"
   by (cases a, simp)
 
 lemma absArchState_correct:
-assumes rel:
-  "(s,s') \<in> state_relation"
-shows
-  "absArchState (ksArchState s') = arch_state s"
-apply (subgoal_tac "(arch_state s, ksArchState s') \<in> arch_state_relation")
- prefer 2
- using rel
- apply (simp add: state_relation_def)
-apply (clarsimp simp add: arch_state_relation_def)
-by (clarsimp simp add: absArchState_def absCR3_def cr3_relation_def x64_irq_relation_def
-             split: X64_H.kernel_state.splits cr3.splits)
+  "(s,s') \<in> state_relation \<Longrightarrow> absArchState (ksArchState s') = arch_state s"
+  apply (prop_tac "(arch_state s, ksArchState s') \<in> arch_state_relation (aobjs_of' s')")
+   apply (simp add: state_relation_def)
+  apply (clarsimp simp: arch_state_relation_def)
+  apply (clarsimp simp: absArchState_def absCR3_def cr3_relation_def x64_irq_relation_def
+                  split: X64_H.kernel_state.splits cr3.splits)
+  done
 
 definition absSchedulerAction where
   "absSchedulerAction action \<equiv>

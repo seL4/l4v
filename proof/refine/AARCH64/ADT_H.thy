@@ -109,12 +109,11 @@ definition absHeapArch ::
          Some (AARCH64_A.ASIDPool (\<lambda>w. map_option abs_asid_entry (ap (ucast w))))
      | KOPTE _ \<Rightarrow>
          map_option PageTable (absPageTable h (pt_types a) a)
-     | KOVCPU (VCPUObj tcb vgic regs vppimask vtimer) \<Rightarrow>
+     | KOVCPU (VCPUObj tcb vgic regs vppimask) \<Rightarrow>
        Some (VCPU \<lparr> vcpu_vgic   = absVGIC vgic,
                     vcpu_regs   = regs,
                     vcpu_tcb    = tcb,
-                    vcpu_vppi_masked = vppimask,
-                    vcpu_vtimer = vtimer \<rparr>)"
+                    vcpu_vppi_masked = vppimask \<rparr>)"
 
 definition
   "EndpointMap ep \<equiv> case ep of
@@ -449,7 +448,7 @@ lemma absHeap_correct:
   assumes pspace_relation: "pspace_relation (kheap s) (ksPSpace s')"
   assumes ghost_relation:  "ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')
                                            (gsPTTypes (ksArchState s'))"
-  assumes arch_state_relation: "(arch_state s, ksArchState s') \<in> arch_state_relation"
+  assumes arch_state_relation: "(arch_state s, ksArchState s') \<in> arch_state_relation (aobjs_of' s')"
   shows
     "absHeap (gsUserPages s') (gsCNodes s') (gsPTTypes (ksArchState s')) (ksPSpace s') (armKSCurFPUOwner (ksArchState s'))
      = kheap s"
@@ -1580,12 +1579,13 @@ lemma absInterruptStates_correct:
   done
 
 definition
-  "absArchState s' \<equiv>
+  "absArchState s' aobjs' \<equiv>
    case s' of
      ARMKernelState asid_tbl kvspace vmid_tab next_vmid global_us_vspace current_vcpu
                     num_list_regs gs_pt_types current_fpu_owner \<Rightarrow>
      \<lparr> arm_asid_table = asid_tbl \<circ> ucast,
        arm_kernel_vspace = kvspace,
+       arm_asid_map = armKSASIDMap' s' aobjs',
        arm_vmid_table = map_option ucast \<circ> vmid_tab,
        arm_next_vmid = next_vmid,
        arm_us_global_vspace = global_us_vspace,
@@ -1594,8 +1594,8 @@ definition
        arm_current_fpu_owner = current_fpu_owner \<rparr>"
 
 lemma absArchState_correct:
-  "(s,s') \<in> state_relation \<Longrightarrow> absArchState (ksArchState s') = arch_state s"
-  apply (prop_tac "(arch_state s, ksArchState s') \<in> arch_state_relation")
+  "(s,s') \<in> state_relation \<Longrightarrow> absArchState (ksArchState s') (aobjs_of' s') = arch_state s"
+  apply (prop_tac "(arch_state s, ksArchState s') \<in> arch_state_relation (aobjs_of' s')")
    apply (simp add: state_relation_def)
   apply (clarsimp simp: arch_state_relation_def absArchState_def
                   split: AARCH64_H.kernel_state.splits)
@@ -1660,7 +1660,7 @@ definition
     machine_state = observable_memory (ksMachineState s) (user_mem' s),
     interrupt_irq_node = absInterruptIRQNode (ksInterruptState s),
     interrupt_states = absInterruptStates (ksInterruptState s),
-    arch_state = absArchState (ksArchState s),
+    arch_state = absArchState (ksArchState s) (aobjs_of' s),
     exst = absExst s\<rparr>"
 
 

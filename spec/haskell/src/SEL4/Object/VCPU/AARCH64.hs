@@ -348,24 +348,13 @@ saveVirtTimer vcpuPtr = do
     vcpuSaveReg vcpuPtr VCPURegCNTVOFF
     vcpuSaveReg vcpuPtr VCPURegCNTKCTL_EL1
     doMachineOp check_export_arch_timer
-    cntpct <- doMachineOp read_cntpct
-    vcpuUpdate vcpuPtr (\vcpu -> vcpu { vcpuVTimer = VirtTimer cntpct })
 
 restoreVirtTimer :: PPtr VCPU -> Kernel ()
 restoreVirtTimer vcpuPtr = do
     vcpuRestoreReg vcpuPtr VCPURegCNTV_CVAL
     vcpuRestoreReg vcpuPtr VCPURegCNTKCTL_EL1
-
-    current_cntpct <- doMachineOp read_cntpct
-    vcpu <- getObject vcpuPtr
-    let lastPCount =  vtimerLastPCount (vcpuVTimer vcpu)
-    let pcountDelta = current_cntpct - lastPCount
-    cntvoff <- vcpuReadReg vcpuPtr VCPURegCNTVOFF
-    let offset = cntvoff + fromIntegral pcountDelta
-    vcpuWriteReg vcpuPtr VCPURegCNTVOFF offset
     vcpuRestoreReg vcpuPtr VCPURegCNTVOFF
 
-    -- read vcpu again, so we don't have to reason about independence of vcpuWriteRegister changes
     vcpu <- getObject vcpuPtr
     let vppi = fromJust $ irqVPPIEventIndex (IRQ irqVTimerEvent)
     let masked = (vcpuVPPIMasked vcpu) ! vppi

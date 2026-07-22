@@ -9,7 +9,7 @@
 *)
 
 theory Syscall_R
-imports Tcb_R Arch_R Interrupt_R
+imports ArchTcb_R Arch_R ArchInterrupt_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
@@ -262,7 +262,7 @@ lemma decodeInvocation_corres:
                     split del: if_split cong: if_cong)
         apply (clarsimp simp add: o_def)
         apply (rule corres_guard_imp)
-          apply (rule_tac F="length list \<le> 32" in corres_gen_asm)
+          apply (rule_tac F="length list \<le> word_bits" in corres_gen_asm)
           apply (rule decodeCNodeInvocation_corres, simp+)
          apply (simp add: valid_cap_def word_bits_def)
         apply simp
@@ -682,6 +682,7 @@ lemma pinv_tcb'[wp]:
 
 lemma sts_cte_at[wp]:
   "\<lbrace>cte_at' p\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. cte_at' p\<rbrace>"
+  supply if_cong[cong]
   apply (simp add: setThreadState_def)
   apply (wp|simp)+
   done
@@ -695,6 +696,7 @@ lemma sts_mcpriority_tcb_at'[wp]:
   "\<lbrace>mcpriority_tcb_at' P t\<rbrace>
     setThreadState st t'
    \<lbrace>\<lambda>_. mcpriority_tcb_at' P t\<rbrace>"
+  supply if_cong[cong]
   apply (cases "t = t'",
          simp_all add: setThreadState_def
                   split del: if_split)
@@ -768,6 +770,7 @@ lemma decodeDomainSetStart_inv_wf[wp]:
 lemma decodeDomainConfigure_inv_wf[wp]:
   "\<lbrace>\<top>\<rbrace> decodeDomainConfigure args excaps \<lbrace>valid_domain_inv'\<rbrace>, -"
   unfolding decodeDomainConfigure_def
+  supply if_cong[cong]
   apply (wpsimp simp: valid_domain_inv'_def split_del: if_split)
   apply (clarsimp simp: not_less not_le le_maxDomain_eq_less_numDomains unat_ucast)
   using numDomains_fits_domainBits
@@ -1385,6 +1388,7 @@ crunch rescheduleRequired
 
 crunch setThreadState
   for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  (cong: if_cong)
 
 crunch reply_from_kernel
   for pspace_aligned[wp]: pspace_aligned
@@ -1853,6 +1857,16 @@ lemma getHDFAR_invs'[wp]:
   "valid invs' (doMachineOp getHDFAR) (\<lambda>_. invs')"
   by (simp add: getHDFAR_def doMachineOp_def split_def select_f_returns | wp)+
 
+lemma dmo_addressTranslateS1_invs'[wp]:
+  "doMachineOp (addressTranslateS1 pc) \<lbrace>invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_addressTranslateS1 no_irq)
+  apply clarsimp
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+    apply (clarsimp simp: addressTranslateS1_def machine_op_lift_def
+                          machine_rest_lift_def split_def | wp)+
+  done
+
 lemma hv_invs'[wp]: "\<lbrace>invs' and tcb_at' t'\<rbrace> handleVMFault t' vptr \<lbrace>\<lambda>r. invs'\<rbrace>"
   apply (simp add: ARM_HYP_H.handleVMFault_def
              cong: vmfault_type.case_cong)
@@ -2119,8 +2133,8 @@ lemma hvmf_invs_lift:
   "(\<And>s m. P (s\<lparr>ksMachineState := ksMachineState s\<lparr>machine_state_rest := m\<rparr>\<rparr>) = P s) \<Longrightarrow>
    \<lbrace>P\<rbrace> handleVMFault t flt \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding handleVMFault_def
-  by (wpsimp wp: dmo_machine_rest_lift asUser_inv
-           simp: getHSR_def getHDFAR_def addressTranslateS1_def
+  by (wpsimp wp: dmo_machine_rest_lift asUser_inv dmo'_gets_wp
+           simp: getHSR_def addressTranslateS1_def getFAR_def getHDFAR_def
                  doMachineOp_bind getRestartPC_def getRegister_def)
 
 lemma hvmf_invs_etc:
@@ -2223,6 +2237,17 @@ crunch handleVMFault
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   and norq[wp]: "\<lambda>s. P (ksReadyQueues s)"
   (ignore: getFAR getDFSR getIFSR)
+
+(* only needed on ARM_HYP *)
+lemma setupCallerCap_cap_to'[wp]:
+  "setupCallerCap a b c \<lbrace>ex_nonz_cap_to' p\<rbrace>"
+  unfolding setupCallerCap_def getThreadCallerSlot_def getThreadReplySlot_def
+  apply (wp cteInsert_cap_to')
+       apply (rule_tac Q'="\<lambda>rv. ex_nonz_cap_to' p
+                           and cte_wp_at' (\<lambda>c. (cteCap c) = rv) callerSlot"
+                    in hoare_post_imp)
+       apply (wpsimp simp: cte_wp_at_ctes_of wp: getSlotCap_cte_wp_at hoare_drop_imps)+
+  done
 
 crunch handleVMFault, handleHypervisorFault
   for cap_to'[wp]: "ex_nonz_cap_to' t"

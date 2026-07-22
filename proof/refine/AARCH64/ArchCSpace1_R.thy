@@ -196,14 +196,14 @@ lemma can_be_is[CSpace1_R_assms]:
   apply (auto simp: Let_def isCap_simps is_cap_simps dest!: acap_relation_SGISignalCapD)[1]
   done
 
-lemma maskCap_valid[simp]:
+lemma maskCap_valid[CSpace1_R_assms, simp]:
   "s \<turnstile>' global.maskCapRights R cap = s \<turnstile>' cap"
   by (clarsimp simp: valid_cap'_def global.maskCapRights_def isCap_simps
                      capAligned_def AARCH64_H.maskCapRights_def
               split: capability.split arch_capability.split
                cong: if_cong)
 
-lemma cap_map_update_data:
+lemma cap_map_update_data[CSpace1_R_assms]:
   assumes "cap_relation c c'"
   shows   "cap_relation (update_cap_data p x c) (updateCapData p x c')"
 proof -
@@ -248,6 +248,11 @@ qed
 
 lemmas setCTE_typ_ats[wp] = typ_at_lifts[OF setCTE_typ_at']
 
+lemma arch_updateCapData_Master[CSpace1_R_assms]:
+  "Arch.updateCapData P d acap \<noteq> NullCap \<Longrightarrow>
+   capMasterCap (Arch.updateCapData P d acap) = capMasterCap (ArchObjectCap acap)"
+  by (cases acap; simp add: AARCH64_H.updateCapData_def split: if_split_asm)
+
 context begin (* private method *)
 
 private method updateCapData_cases for c =
@@ -255,39 +260,28 @@ private method updateCapData_cases for c =
   (rename_tac arch_capability),
   (case_tac arch_capability; simp add: AARCH64_H.updateCapData_def isCap_simps Let_def)
 
-lemma capASID_update[simp]:
+lemma capASID_update[CSpace1_R_assms, simp]:
   "capASID (RetypeDecls_H.updateCapData P x c) = capASID c"
   unfolding capASID_def
   by (updateCapData_cases c)
 
-lemma cap_vptr_update'[simp]:
+lemma cap_vptr_update'[CSpace1_R_assms, simp]:
   "cap_vptr' (RetypeDecls_H.updateCapData P x c) = cap_vptr' c"
   unfolding capASID_def
   by (updateCapData_cases c)
 
-lemma cap_asid_base_update'[simp]:
+lemma cap_asid_base_update'[CSpace1_R_assms, simp]:
   "cap_asid_base' (RetypeDecls_H.updateCapData P x c) = cap_asid_base' c"
   unfolding cap_asid_base'_def
   by (updateCapData_cases c)
 
-lemma arch_updateCapData_Master:
-  "Arch.updateCapData P d acap \<noteq> NullCap \<Longrightarrow>
-   capMasterCap (Arch.updateCapData P d acap) = capMasterCap (ArchObjectCap acap)"
-  by (cases acap; simp add: AARCH64_H.updateCapData_def split: if_split_asm)
-
-lemma updateCapData_Master:
-  "updateCapData P d cap \<noteq> NullCap \<Longrightarrow> capMasterCap (updateCapData P d cap) = capMasterCap cap"
-  apply (cases cap; simp add: global.updateCapData_def isCap_simps Let_def split: if_split_asm)
-  apply (simp add: arch_updateCapData_Master)
-  done
-
-lemma updateCapData_Reply:
+lemma updateCapData_Reply[CSpace1_R_assms, simp]:
   "isReplyCap (updateCapData P x c) = isReplyCap c"
   by (updateCapData_cases c)
 
 end (* context private method *)
 
-lemma capASID_mask[simp]:
+lemma capASID_mask[CSpace1_R_assms, simp]:
   "capASID (maskCapRights x c) = capASID c"
   unfolding capASID_def
   apply (cases c, simp_all add: global.maskCapRights_def isCap_simps Let_def)
@@ -296,7 +290,7 @@ lemma capASID_mask[simp]:
          simp_all add: AARCH64_H.maskCapRights_def isCap_simps Let_def)
   done
 
-lemma cap_vptr_mask'[simp]:
+lemma cap_vptr_mask'[CSpace1_R_assms, simp]:
   "cap_vptr' (maskCapRights x c) = cap_vptr' c"
   unfolding cap_vptr'_def
   apply (cases c, simp_all add: global.maskCapRights_def isCap_simps Let_def)
@@ -305,7 +299,7 @@ lemma cap_vptr_mask'[simp]:
          simp_all add: AARCH64_H.maskCapRights_def isCap_simps Let_def)
   done
 
-lemma cap_asid_base_mask'[simp]:
+lemma cap_asid_base_mask'[CSpace1_R_assms, simp]:
   "cap_asid_base' (maskCapRights x c) = cap_asid_base' c"
   unfolding cap_vptr'_def
   apply (cases c, simp_all add: global.maskCapRights_def isCap_simps Let_def)
@@ -543,7 +537,7 @@ lemma arch_gen_refs_cap_relation_Master_eq[CSpace1_R_assms]:
    \<Longrightarrow> arch_gen_refs c = arch_gen_refs c'"
   by (simp split: cap_relation_split_asm arch_cap.split_asm)
 
-lemma descendants_of_update_ztc:
+lemma descendants_of_update_ztc[CSpace1_R_assms]:
   assumes c: "\<And>x. \<lbrakk> m \<turnstile> x \<rightarrow> slot; \<not> P \<rbrakk> \<Longrightarrow>
                   \<exists>cte'. m x = Some cte'
                     \<and> capMasterCap (cteCap cte') \<noteq> capMasterCap (cteCap cte)
@@ -793,6 +787,28 @@ lemma valid_badges_def2[CSpace1_R_assms]:
   apply (auto simp: isCap_simps valid_arch_badges_SMC)
   done
 
+(* FIXME arch-split: theoretically, valid_badges_def3 could be an interface lemma, but:
+   unordered_valid_arch_badges is on AARCH64 only, and this rule is always used with
+   unordered_valid_arch_badges_def, which defeats any attempt at using it generically  *)
+lemma valid_badges_def3:
+  "valid_badges m =
+   (\<forall>p p' cap node cap' node'.
+      m p = Some (CTE cap node) \<longrightarrow>
+      m p' = Some (CTE cap' node') \<longrightarrow>
+      m \<turnstile> p \<leadsto> p' \<longrightarrow>
+      (capMasterCap cap = capMasterCap cap' \<longrightarrow> capBadge cap \<noteq> None \<longrightarrow>
+       capBadge cap \<noteq> capBadge cap' \<longrightarrow> capBadge cap' \<noteq> Some 0 \<longrightarrow> mdbFirstBadged node') \<and>
+      unordered_valid_arch_badges cap cap' node')"
+  apply (simp add: valid_badges_def2)
+  apply (rule iffI; clarsimp simp: valid_arch_badges_implies_unordered)
+  apply (simp add: valid_arch_badges_def)
+  apply (rule conjI; clarsimp)
+   (* SGISignalCap *)
+   apply (fastforce simp: unordered_valid_arch_badges_def)
+  (* SMCCap *)
+  apply (fastforce simp: isCap_simps)
+  done
+
 lemma capRange_SMC[simp]:
   "capRange (ArchObjectCap (SMCCap smc_badge)) = {}"
   by (simp add: capRange_def)
@@ -826,6 +842,53 @@ lemma acap_relation_capBadge[CSpace1_R_assms]:
   "acap_relation acap acap' \<Longrightarrow> arch_capBadge acap' = arch_cap_badge acap"
   by (cases acap; simp)
 
+lemma obj_relation_cuts_in_obj_range[CSpace1_R_assms]:
+  "\<lbrakk> (y, P) \<in> obj_relation_cuts ko x; x \<in> obj_range x ko;
+     kheap s x = Some ko; valid_objs s; pspace_aligned s \<rbrakk>
+   \<Longrightarrow> y \<in> obj_range x ko"
+  apply (cases ko; simp)
+   apply (clarsimp split: if_split_asm)
+   apply (subgoal_tac "cte_at (x, ya) s")
+    apply (drule(2) cte_at_cte_map_in_obj_bits)
+    apply (simp add: obj_range_def)
+   apply (fastforce intro: cte_wp_at_cteI)
+  apply (frule(1) pspace_alignedD)
+  apply (frule valid_obj_sizes, erule ranI)
+  apply (rename_tac arch_kernel_obj)
+  apply (case_tac arch_kernel_obj; simp)
+   apply (clarsimp simp only: obj_range_def atLeastAtMost_iff
+                              obj_bits.simps arch_kobj_size.simps)
+   apply (rule context_conjI)
+    apply (erule is_aligned_no_wrap')
+    apply (simp add: table_size_def)
+    apply (rule shiftl_less_t2n)
+     apply (erule order_le_less_trans)
+     apply (simp add: bit_simps mask_def)
+    apply (simp add: bit_simps)
+   apply (subst add_diff_eq[symmetric])
+   apply (rule word_plus_mono_right)
+    apply (subst word_less_sub_le, simp add: bit_simps)
+    apply (rule shiftl_less_t2n)
+     apply (erule order_le_less_trans)
+     apply (simp add: bit_simps mask_def)
+    apply (simp add: bit_simps)
+   apply (simp add: field_simps)
+  apply (clarsimp simp only: obj_range_def atLeastAtMost_iff)
+  apply (rule conjI)
+   apply (erule is_aligned_no_wrap')
+   apply (simp add: shiftl_t2n mult_ac)
+   apply (erule word_less_power_trans2)
+    apply (rule pbfs_atleast_pageBits)
+   using pbfs_less_wb'
+   apply (simp add: word_bits_def)
+  apply (subst add_diff_eq[symmetric])
+  apply (rule word_plus_mono_right; simp add: add_diff_eq)
+  apply (simp add: shiftl_t2n mult_ac)
+  apply (rule word_less_power_trans2; (simp add: pbfs_atleast_pageBits)?)
+  using pbfs_less_wb'
+  apply (simp add: word_bits_def)
+  done
+
 end (* Arch *)
 
 interpretation CSpace1_R?: CSpace1_R
@@ -837,16 +900,6 @@ qed
 context Arch begin arch_global_naming
 
 named_theorems CSpace1_R_2_assms
-
-lemma weak_derived_updateCapData:
-  "\<lbrakk> updateCapData P x c \<noteq> NullCap; weak_derived' c c';
-     capBadge (updateCapData P x c) = capBadge c' \<rbrakk>
-  \<Longrightarrow> weak_derived' (updateCapData P x c) c'"
-  apply (clarsimp simp add: weak_derived'_def updateCapData_Master)
-  apply (clarsimp elim: impE dest!: iffD1[OF updateCapData_Reply])
-  apply (clarsimp simp: gen_isCap_simps)
-  apply (clarsimp simp: Let_def gen_isCap_simps global.updateCapData_def)
-  done
 
 lemma updateMDB_pspace_relation[CSpace1_R_2_assms]:
   assumes "(x, s'') \<in> fst (updateMDB p f s')"

@@ -56,9 +56,18 @@ lemma updateObject_default_inv:
   "\<lbrace>P\<rbrace> updateObject_default obj ko x y n \<lbrace>\<lambda>rv. P\<rbrace>"
   unfolding updateObject_default_def
   by (simp, wp magnitudeCheck_inv alignCheck_inv projectKO_inv, simp)
-context begin interpretation Arch . (*FIXME: arch-split*)
-lemma to_from_apiType [simp]: "toAPIType (fromAPIType x) = Some x"
-  by (cases x) (auto simp add: fromAPIType_def ARM_H.fromAPIType_def
-    toAPIType_def ARM_H.toAPIType_def)
+
+context Arch begin arch_global_naming
+
+lemma to_from_apiType[simp]:
+  "toAPIType (fromAPIType x) = Some x"
+  by (cases x) (auto simp add: fromAPIType_def toAPIType_def)
+
 end
+
+arch_requalify_facts
+  to_from_apiType (* FIXME arch-split: LevityCatch not split yet *)
+
+lemmas [simp] = to_from_apiType
+
 end

@@ -147,7 +147,7 @@ lemma setObject_tcb_refs'[TcbAcc_R_assms, wp]:
   apply (simp add: global_refs'_def)
   done
 
-lemma threadSet_state_hyp_refs_of':
+lemma threadSet_state_hyp_refs_of'_vcpu:
   assumes y: "\<And>tcb. atcbVCPUPtr (tcbArch (F tcb)) = atcbVCPUPtr (tcbArch tcb)"
   shows      "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> threadSet F t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   apply (simp add: threadSet_def)
@@ -157,6 +157,17 @@ lemma threadSet_state_hyp_refs_of':
                  elim!: rsubst[where P=P] del: ext intro!: ext)+
   done
 
+lemma threadSet_state_hyp_refs_of':
+  assumes y: "\<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)"
+  shows      "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> threadSet F t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  apply (rule threadSet_state_hyp_refs_of'_vcpu)
+  using y
+  apply (clarsimp simp: tcb_vcpu_refs'_def)
+  apply (metis empty_not_insert ex_in_conv mem_Sigma_iff option.set_cases set_empty_eq)
+  done
+
+(* FIXME arch-split: if this lemma statement can be phrased generically by using tcb_hyp_refs',
+   then it can become an assumption, and make threadSet_tcbPriority_if_live_then_nonz_cap generic *)
 lemma threadSet_iflive'T:
   assumes x: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
   shows
@@ -200,10 +211,21 @@ lemma zobj_refs'_capRange[TcbAcc_R_assms]:
   apply (case_tac aobj_cap; clarsimp dest!: is_aligned_no_overflow)
   done
 
+lemma capAligned_zobj_refs'_capRange[TcbAcc_R_assms]:
+  "capAligned c \<Longrightarrow> zobj_refs' c \<subseteq> capRange c"
+  apply (cases c; simp add: capAligned_def capRange_def is_aligned_no_overflow)
+  apply (rename_tac ac)
+  apply (case_tac ac; simp)
+  apply clarsimp
+  apply (drule is_aligned_no_overflow)
+  apply simp
+  done
+
 lemma atcbVCPUPtr_atcbContextSet_id[simp]:
   "atcbVCPUPtr (atcbContextSet f (tcbArch tcb)) = atcbVCPUPtr (tcbArch tcb)"
   by (simp add: atcbContextSet_def)
 
+(* interface lemma, but can't be done via locale *)
 lemma asUser_valid_tcbs'[wp]:
   "asUser t f \<lbrace>valid_tcbs'\<rbrace>"
   apply (simp add: asUser_def split_def)
@@ -294,6 +316,24 @@ lemma pspace_dom_dom[TcbAcc_R_assms]:
   apply (simp add: pageBitsForSize_def bit_simps split: vmpage_size.split)
   done
 
+lemma less_max_ipc_words_less_2p_msg_align_bits[TcbAcc_R_assms]:
+  assumes y: "y < unat max_ipc_words"
+  shows "word_of_nat y * (word_size :: machine_word) < 2 ^ msg_align_bits"
+  apply (simp add: word_size_def word_size_bits_def)
+  apply (rule word_less_power_trans_ofnat[where k = 3, simplified])
+    apply (rule order_less_le_trans[OF y])
+    apply (simp add: msg_align_bits max_ipc_words)+
+  done
+
+lemma is_aligned_word_size_bits_less_max_ipc_words[TcbAcc_R_assms]:
+  "y < unat max_ipc_words \<Longrightarrow> is_aligned (word_of_nat y * word_size) word_size_bits"
+  by (simp add: word_size_def word_size_bits_def)
+     (rule is_aligned_mult_triv2[where n=3, simplified])
+
+lemma msg_align_bits_le_pageBitsForSize[TcbAcc_R_assms]:
+  "msg_align_bits \<le> pageBitsForSize sz"
+  by (simp add: msg_align_bits pageBitsForSize_def bit_simps split: vmpage_size.split)
+
 lemmas [TcbAcc_R_assms] =
   dmo_getirq_inv
   getActiveIRQ_masked
@@ -314,49 +354,57 @@ named_theorems TcbAcc_R_2_assms
 
 lemmas asUser_typ_ats[wp] = typ_at_lifts[OF asUser_typ_at']
 
-lemma threadSet_invs_trivialT:
+lemma tcb_hyp_refs'_valid_arch_tcb'_eq[TcbAcc_R_2_assms]:
+  "tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)
+   \<Longrightarrow> valid_arch_tcb' (tcbArch (F tcb)) s = valid_arch_tcb' (tcbArch tcb) s"
+  by (auto simp: valid_arch_tcb'_def tcb_vcpu_refs'_def)
+
+lemma tcb_hyp_refs'_atcbVCPUPtr_eq:
+  "tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)
+   \<Longrightarrow> atcbVCPUPtr (tcbArch (F tcb)) = atcbVCPUPtr (tcbArch tcb)"
+  by (simp add: tcb_vcpu_refs'_def)
+     (metis Times_eq_cancel2 empty_not_insert ex_in_conv option.set_cases set_empty_eq)
+
+lemma threadSet_invs_trivialT[TcbAcc_R_2_assms]:
   assumes
     "\<forall>tcb. \<forall>(getF,setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
-    "\<forall>tcb. tcbState (F tcb) = tcbState tcb"
+    "\<forall>tcb. tcbState (F tcb) = tcbState tcb \<and> tcbDomain (F tcb) = tcbDomain tcb"
     "\<forall>tcb. is_aligned (tcbIPCBuffer tcb) msg_align_bits
            \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits"
     "\<forall>tcb. tcbBoundNotification (F tcb) = tcbBoundNotification tcb"
     "\<forall>tcb. tcbSchedPrev (F tcb) = tcbSchedPrev tcb"
     "\<forall>tcb. tcbSchedNext (F tcb) = tcbSchedNext tcb"
     "\<forall>tcb. tcbQueued (F tcb) = tcbQueued tcb"
-    "\<forall>tcb. tcbDomain (F tcb) = tcbDomain tcb"
-    "\<forall>tcb. tcbPriority (F tcb) = tcbPriority tcb"
+    "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
     "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
     "\<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0"
-    "\<forall>tcb. atcbVCPUPtr (tcbArch (F tcb)) = atcbVCPUPtr (tcbArch tcb)"
+    "\<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)"
   shows "threadSet F t \<lbrace>invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def split del: if_split)
+  supply tcb_hyp_refs_of'_simps[simp del]
+  apply (simp add: invs'_def valid_state'_def)
   apply (wp threadSet_valid_pspace'T
-            threadSet_sch_actT_P[where P=False, simplified]
-            threadSet_state_refs_of'T[where f'=id]
-            threadSet_state_hyp_refs_of'
             threadSet_iflive'T
             threadSet_ifunsafe'T
-            threadSet_idle'T
             threadSet_global_refsT
-            irqs_masked_lift
             valid_irq_node_lift
             valid_irq_handlers_lift''
             threadSet_ctes_ofT
-            threadSet_not_inQ
-            threadSet_ct_idle_or_in_cur_domain'
             threadSet_valid_dom_schedule'
-            threadSet_cur
             untyped_ranges_zero_lift
             sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
-            threadSet_tcbQueued
-            threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of valid_bitmaps_lift
-         | clarsimp simp: assms cteCaps_of_def valid_arch_tcb'_def | rule refl)+
-  apply (clarsimp simp: o_def)
-  by (auto simp: assms obj_at'_def)
-
-lemmas threadSet_invs_trivial =
-    threadSet_invs_trivialT [OF all_tcbI all_tcbI all_tcbI all_tcbI, OF ball_tcb_cte_casesI]
+            threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of
+            threadSet_sch_actT_P[where P=False, simplified]
+            threadSet_state_refs_of'T[where f'=id]
+            threadSet_state_hyp_refs_of'
+            threadSet_idle'T
+            threadSet_not_inQ
+            threadSet_ct_idle_or_in_cur_domain'
+            threadSet_cur
+            valid_bitmaps_lift
+         | clarsimp simp: assms cteCaps_of_def tcb_hyp_refs'_valid_arch_tcb'_eq[where F=F] | rule refl)+
+  apply (clarsimp simp: o_def tcb_hyp_refs_of'_simps)
+  apply (auto simp: assms obj_at'_def tcb_hyp_refs'_atcbVCPUPtr_eq)
+  done
 
 (* interface lemma, but can't be done via locale *)
 lemma asUser_corres':
@@ -441,12 +489,6 @@ lemma user_getreg_inv'[TcbAcc_R_2_assms, wp]:
    apply (simp_all add: getRegister_def)
   done
 
-lemma asUser_invs[wp]:
-  "\<lbrace>invs' and tcb_at' t\<rbrace> asUser t m \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: asUser_def split_def)
-  apply (wpsimp wp: threadSet_invs_trivial threadGet_wp)
-  done
-
 (* interface lemma, but can't be done via locale *)
 lemma asUser_valid_objs[wp]:
   "\<lbrace>valid_objs'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
@@ -455,6 +497,7 @@ lemma asUser_valid_objs[wp]:
              simp: valid_tcb'_def tcb_cte_cases_def valid_arch_tcb'_def cteSizeBits_def
                    atcbContextSet_def)+
 
+(* interface lemma, but can't be done via locale *)
 lemma asUser_valid_pspace'[wp]:
   "\<lbrace>valid_pspace'\<rbrace> asUser t m \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   apply (simp add: asUser_def)
@@ -462,11 +505,13 @@ lemma asUser_valid_pspace'[wp]:
                 simp: atcbContextSet_def valid_arch_tcb'_def)+
   done
 
+(* interface lemma, but can't be done via locale *)
 lemma asUser_st_hyp_refs_of'[wp]:
   "asUser t m \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
   unfolding asUser_def
   by (wpsimp wp: threadSet_state_hyp_refs_of' hoare_drop_imps simp: atcbContextSet_def)
 
+(* interface lemma, but can't be done via locale *)
 lemma asUser_iflive'[wp]:
   "asUser t m \<lbrace>if_live_then_nonz_cap'\<rbrace> "
   unfolding asUser_def
@@ -574,95 +619,12 @@ lemma addToBitmap_valid_bitmapQ_except[TcbAcc_R_2_assms]:
                    dest: prioToL1Index_bits_low_high_eq)
   done
 
-lemma valid_ipc_buffer_ptr'D:
-  assumes yv: "y < unat max_ipc_words"
-  and    buf: "valid_ipc_buffer_ptr' a s"
-  shows "pointerInUserData (a + of_nat y * 8) s"
-  using buf unfolding valid_ipc_buffer_ptr'_def pointerInUserData_def
-  apply clarsimp
-  apply (subgoal_tac
-         "(a + of_nat y * 8) && ~~ mask pageBits = a  && ~~ mask pageBits")
-   apply simp
-  apply (rule mask_out_first_mask_some [where n = msg_align_bits])
-   apply (erule is_aligned_add_helper [THEN conjunct2])
-   apply (rule word_less_power_trans_ofnat [where k = 3, simplified])
-     apply (rule order_less_le_trans [OF yv])
-     apply (simp add: msg_align_bits max_ipc_words)
-    apply (simp add: msg_align_bits)
-   apply (simp_all add: msg_align_bits pageBits_def)
-  done
-
-lemma in_user_frame_eq:
+lemma in_user_frame_eq[TcbAcc_R_2_assms]:
   assumes y: "y < unat max_ipc_words"
   and    al: "is_aligned a msg_align_bits"
-  shows "in_user_frame (a + of_nat y * 8) s = in_user_frame a s"
-proof -
-  have "\<And>sz. (a + of_nat y * 8) && ~~ mask (pageBitsForSize sz) =
-             a && ~~ mask (pageBitsForSize sz)"
-  apply (rule mask_out_first_mask_some [where n = msg_align_bits])
-   apply (rule is_aligned_add_helper [OF al, THEN conjunct2])
-   apply (rule word_less_power_trans_ofnat [where k = 3, simplified])
-     apply (rule order_less_le_trans [OF y])
-     apply (simp add: msg_align_bits max_ipc_words)
-    apply (simp add: msg_align_bits)
-   apply (simp add: msg_align_bits pageBits_def)
-  apply (case_tac sz, simp_all add: msg_align_bits bit_simps)
-  done
-
-  thus ?thesis by (simp add: in_user_frame_def)
-qed
-
-lemma loadWordUser_corres:
-  assumes y: "y < unat max_ipc_words"
-  shows "corres (=) \<top> (valid_ipc_buffer_ptr' a) (load_word_offs a y) (loadWordUser (a + of_nat y * 8))"
-  unfolding loadWordUser_def
-  apply (rule corres_stateAssert_assume [rotated])
-   apply (erule valid_ipc_buffer_ptr'D[OF y])
-  apply (rule corres_guard_imp)
-    apply (simp add: load_word_offs_def word_size_def)
-    apply (rule_tac F = "is_aligned a msg_align_bits" in corres_gen_asm2)
-    apply (rule corres_machine_op)
-    apply (rule corres_Id [OF refl refl])
-    apply (rule no_fail_pre)
-     apply wp
-    apply (simp add: word_size_bits_def)
-    apply (erule aligned_add_aligned)
-      apply (rule is_aligned_mult_triv2[where n = 3, simplified])
-      apply (simp add: word_bits_conv msg_align_bits)+
-  apply (simp add: valid_ipc_buffer_ptr'_def msg_align_bits)
-  done
-
-lemma storeWordUser_corres:
-  assumes y: "y < unat max_ipc_words"
-  shows "corres dc (in_user_frame a) (valid_ipc_buffer_ptr' a)
-                   (store_word_offs a y w) (storeWordUser (a + of_nat y * 8) w)"
-  apply (simp add: storeWordUser_def bind_assoc[symmetric]
-                   store_word_offs_def word_size_def)
-  apply (rule corres_guard2_imp)
-   apply (rule_tac F = "is_aligned a msg_align_bits" in corres_gen_asm2)
-   apply (rule corres_guard1_imp)
-    apply (rule_tac r'=dc in corres_split)
-       apply (simp add: stateAssert_def)
-       apply (rule_tac r'=dc in corres_split)
-          apply (rule corres_trivial)
-          apply simp
-         apply (rule corres_assert)
-        apply wp+
-      apply (rule corres_machine_op)
-      apply (rule corres_Id [OF refl])
-       apply simp
-      apply (rule no_fail_pre)
-       apply (wp no_fail_storeWord)
-      apply (erule_tac n=msg_align_bits in aligned_add_aligned)
-       apply (rule is_aligned_mult_triv2 [where n = 3, simplified])
-      apply (simp add: word_bits_conv msg_align_bits)+
-     apply wp+
-   apply (simp add: in_user_frame_eq[OF y])
-  apply simp
-  apply (rule conjI)
-   apply (frule (1) valid_ipc_buffer_ptr'D [OF y])
-  apply (simp add: valid_ipc_buffer_ptr'_def)
-  done
+  shows "in_user_frame (a + of_nat y * word_size) s = in_user_frame a s"
+  using in_user_frame_eq_helper[OF y al]
+  by (simp add: in_user_frame_def)
 
 lemmas msgRegisters_unfold
   = AARCH64_H.msgRegisters_def
@@ -684,55 +646,25 @@ lemma thread_get_registers:
   apply (clarsimp simp: map_upd_triv select_f_def image_def return_def)
   done
 
-lemma getMRs_corres:
-  "corres (=) (tcb_at t and pspace_aligned and pspace_distinct)
-              (case_option \<top> valid_ipc_buffer_ptr' buf)
-              (get_mrs t buf mi) (getMRs t buf (message_info_map mi))"
-  proof -
-  have S: "get = gets id"
-    by (simp add: gets_def)
-  have T: "corres (\<lambda>con regs. regs = map con msg_registers)
-                  (tcb_at t and pspace_aligned and pspace_distinct) \<top>
-                  (thread_get (arch_tcb_get_registers o tcb_arch) t)
-                  (asUser t (mapM getRegister AARCH64_H.msgRegisters))"
-   apply (subst thread_get_registers)
-    apply (rule asUser_corres')
-    apply (subst mapM_gets)
-     apply (simp add: getRegister_def)
-    apply (simp add: S AARCH64_H.msgRegisters_def msg_registers_def)
-    done
-  show ?thesis
-  apply (case_tac mi, simp add: get_mrs_def getMRs_def split del: if_split)
-  apply (case_tac buf)
-   apply (rule corres_guard_imp)
-     apply (rule corres_split [where R = "\<lambda>_. \<top>" and R' =  "\<lambda>_. \<top>", OF T])
-       apply simp
-      apply wp+
-    apply simp
-   apply simp
-  apply (rule corres_guard_imp)
-    apply (rule corres_split[OF T])
-      apply (simp only: option.simps return_bind fun_app_def
-                        load_word_offs_def doMachineOp_mapM loadWord_empty_fail)
-      apply (rule corres_split_eqr)
-         apply (simp only: mapM_map_simp msgMaxLength_def msgLengthBits_def
-                           msg_max_length_def o_def upto_enum_word)
-         apply (rule corres_mapM [where r'="(=)" and S="{a. fst a = snd a \<and> fst a < unat max_ipc_words}"])
-               apply simp
-              apply simp
-             apply (simp add: word_size wordSize_def wordBits_def)
-             apply (rule loadWordUser_corres)
-             apply simp
-            apply wp+
-          apply simp
-          apply (unfold msgRegisters_unfold)[1]
-          apply simp
-         apply (clarsimp simp: set_zip)
-         apply (simp add: msgRegisters_unfold max_ipc_words nth_append)
-        apply (rule corres_trivial, simp)
-       apply (wp hoare_vcg_all_lift | simp add: valid_ipc_buffer_ptr'_def)+
+lemma msgRegisters_msg_registers[TcbAcc_R_2_assms]:
+  "msgRegisters = msg_registers"
+  by (simp add: msgRegisters_unfold)
+
+lemma suc_len_msg_registers_less_2p_word_bits[TcbAcc_R_2_assms]:
+  "Suc (length msg_registers) < 2 ^ word_bits"
+  by (simp add: msgRegisters_unfold word_bits_def)
+
+lemma asUser_mapM_getRegister_corres[TcbAcc_R_2_assms]:
+  "corres (\<lambda>con regs. regs = map con msg_registers)
+          (tcb_at t and pspace_aligned and pspace_distinct) \<top>
+          (thread_get (arch_tcb_get_registers o tcb_arch) t)
+          (asUser t (mapM getRegister msgRegisters))"
+  apply (subst thread_get_registers)
+  apply (rule asUser_corres')
+  apply (subst mapM_gets)
+   apply (simp add: getRegister_def)
+  apply (simp add: msgRegisters_msg_registers)
   done
-qed
 
 lemma thread_set_as_user_registers:
   "thread_set (\<lambda>tcb. tcb \<lparr> tcb_arch := arch_tcb_set_registers (f (arch_tcb_get_registers (tcb_arch tcb)))
@@ -756,158 +688,6 @@ lemma UserContext_fold:
   apply (clarsimp split: prod.splits)
   apply (metis user_context.sel)
   done
-
-lemma setMRs_corres:
-  assumes m: "mrs' = mrs"
-  shows
-  "corres (=) (tcb_at t and pspace_aligned and pspace_distinct and case_option \<top> in_user_frame buf)
-              (case_option \<top> valid_ipc_buffer_ptr' buf)
-              (set_mrs t buf mrs) (setMRs t buf mrs')"
-proof -
-  have setRegister_def2:
-    "setRegister = (\<lambda>r v.  modify (\<lambda>s. UserContext (user_fpu_state s) ((user_regs s)(r := v))))"
-    by ((rule ext)+, simp add: setRegister_def)
-
-  have S: "\<And>xs ys n m. m - n \<ge> length xs \<Longrightarrow> (zip xs (drop n (take m ys))) = zip xs (drop n ys)"
-    by (simp add: zip_take_triv2 drop_take)
-
-  note upt.simps[simp del] upt_rec_numeral[simp del]
-
-  show ?thesis using m
-    unfolding setMRs_def set_mrs_def
-    apply (clarsimp  cong: option.case_cong split del: if_split)
-    apply (subst bind_assoc[symmetric])
-    apply (fold thread_set_def[simplified])
-    apply (subst thread_set_as_user_registers)
-    apply (cases buf)
-     apply (clarsimp simp: msgRegisters_unfold setRegister_def2 zipWithM_x_modify
-                           take_min_len zip_take_triv2 min.commute)
-     apply (rule corres_guard_imp)
-       apply (rule corres_split_nor[OF asUser_corres'])
-         apply (rule corres_modify')
-          apply (fastforce simp: fold_fun_upd[symmetric] msgRegisters_unfold UserContext_fold
-                                 modify_registers_def
-                           cong: if_cong simp del: the_index.simps)
-          apply simp
-         apply (rule corres_trivial, simp)
-         apply ((wp |simp)+)[4]
-    \<comment> \<open>buf = Some a\<close>
-    using if_split[split del]
-    apply (clarsimp simp: msgRegisters_unfold setRegister_def2 zipWithM_x_modify
-                          take_min_len zip_take_triv2 min.commute
-                          msgMaxLength_def msgLengthBits_def)
-    apply (simp add: msg_max_length_def)
-    apply (rule corres_guard_imp)
-      apply (rule corres_split_nor[OF asUser_corres'])
-         apply (rule corres_modify')
-          apply (simp only: msgRegisters_unfold cong: if_cong)
-          apply (fastforce simp: fold_fun_upd[symmetric] modify_registers_def UserContext_fold)
-         apply simp
-        apply (rule corres_split_nor)
-           apply (rule_tac S="{((x, y), (x', y')). y = y' \<and> x' = (a + (of_nat x * 8)) \<and> x < unat max_ipc_words}"
-                         in zipWithM_x_corres)
-               apply (fastforce intro: storeWordUser_corres)
-              apply wp+
-            apply (clarsimp simp add: S msgMaxLength_def msg_max_length_def set_zip)
-            apply (simp add: wordSize_def wordBits_def word_size max_ipc_words
-                              upt_Suc_append[symmetric] upto_enum_word)
-           apply simp
-          apply (rule corres_trivial, clarsimp simp: min.commute)
-         apply wp+
-      apply (wp | clarsimp simp: valid_ipc_buffer_ptr'_def)+
-    done
-qed
-
-lemma copyMRs_corres:
-  "corres (=) (tcb_at s and tcb_at r and pspace_aligned and pspace_distinct
-               and case_option \<top> in_user_frame sb
-               and case_option \<top> in_user_frame rb
-               and K (unat n \<le> msg_max_length))
-              (case_option \<top> valid_ipc_buffer_ptr' sb
-               and case_option \<top> valid_ipc_buffer_ptr' rb)
-              (copy_mrs s sb r rb n) (copyMRs s sb r rb n)"
-proof -
-  have U: "unat n \<le> msg_max_length \<Longrightarrow>
-           map (toEnum :: nat \<Rightarrow> machine_word) [7 ..< Suc (unat n)] = map of_nat [7 ..< Suc (unat n)]"
-    unfolding msg_max_length_def by auto
-  note R'=msgRegisters_unfold[THEN meta_eq_to_obj_eq, THEN arg_cong[where f=length]]
-  note R=R'[simplified]
-
-  have as_user_bit:
-    "\<And>v :: machine_word.
-       corres dc (tcb_at s and tcb_at r and pspace_aligned and pspace_distinct)
-                 \<top>
-           (mapM
-             (\<lambda>ra. do v \<leftarrow> as_user s (getRegister ra);
-                      as_user r (setRegister ra v)
-                   od)
-             (take (unat n) msg_registers))
-           (mapM
-             (\<lambda>ra. do v \<leftarrow> asUser s (getRegister ra);
-                      asUser r (setRegister ra v)
-                   od)
-             (take (unat n) msgRegisters))"
-    apply (rule corres_guard_imp)
-      apply (rule_tac S=Id in corres_mapM, simp+)
-          apply (rule corres_split_eqr[OF asUser_getRegister_corres asUser_setRegister_corres])
-           apply (wp | clarsimp simp: msg_registers_def msgRegisters_def)+
-    done
-
-  have wordSize[simp]: "of_nat wordSize = 8"
-    by (simp add: wordSize_def wordBits_def word_size)
-
-  show ?thesis
-    apply (rule corres_assume_pre)
-    apply (simp add: copy_mrs_def copyMRs_def word_size
-               cong: option.case_cong
-          split del: if_split del: upt.simps)
-    apply (cases sb)
-     apply (simp add: R)
-     apply (rule corres_guard_imp)
-       apply (rule corres_split_nor[OF as_user_bit])
-         apply (rule corres_trivial, simp)
-        apply wp+
-      apply simp
-     apply simp
-    apply (cases rb)
-     apply (simp add: R)
-     apply (rule corres_guard_imp)
-       apply (rule corres_split_nor[OF as_user_bit])
-         apply (rule corres_trivial, simp)
-        apply wp+
-      apply simp
-     apply simp
-    apply (simp add: R del: upt.simps)
-    apply (rule corres_guard_imp)
-      apply (rename_tac sb_ptr rb_ptr)
-      apply (rule corres_split_nor[OF as_user_bit])
-        apply (rule corres_split_eqr)
-           apply (rule_tac S="{(x, y). y = of_nat x \<and> x < unat max_ipc_words}"
-                   in corres_mapM, simp+)
-               apply (rule corres_split_eqr)
-                  apply (rule loadWordUser_corres)
-                  apply simp
-                 apply (rule storeWordUser_corres)
-                 apply simp
-                apply (wp hoare_vcg_all_lift | simp)+
-            apply (clarsimp simp: upto_enum_def)
-            apply arith
-           apply (subst set_zip)
-           apply (simp add: upto_enum_def U del: upt.simps)
-           apply (clarsimp simp del: upt.simps)
-           apply (clarsimp simp: msg_max_length_def word_le_nat_alt nth_append
-                                 max_ipc_words)
-           apply (erule order_less_trans)
-           apply simp
-          apply (rule corres_trivial, simp)
-         apply (wp hoare_vcg_all_lift mapM_wp'
-                | simp add: valid_ipc_buffer_ptr'_def)+
-    done
-qed
-
-lemma cte_at_tcb_at_32': (* FIXME arch-split: can't be generic with this 32 *)
-  "tcb_at' t s \<Longrightarrow> cte_at' (t + 32) s"
-  by (simp add: cte_at'_obj_at' tcb_cte_cases_def cteSizeBits_def)
 
 lemmas valid_ipc_buffer_cap_simps = valid_ipc_buffer_cap_def [split_simps cap.split arch_cap.split]
 
@@ -969,6 +749,7 @@ crunch rescheduleRequired
   (simp: unless_def crunch_simps wp: threadSet_state_hyp_refs_of' ignore: threadSet)
 
 lemmas [TcbAcc_R_2_assms] =
+  getThreadBufferSlot_inv
   lookupIPCBuffer_inv
   rescheduleRequired_hyp_refs_of'
   tcbSchedEnqueue_hyp_refs_of'
@@ -983,18 +764,10 @@ lemma setThreadState_state_hyp_refs_of'[TcbAcc_R_2_assms, wp]:
      setThreadState st t
    \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   apply (simp add: setThreadState_def fun_upd_def
-        | wp threadSet_state_hyp_refs_of')+
+        | wp threadSet_state_hyp_refs_of' hoare_drop_imps)+
   done
 
-lemma setBoundNotification_state_refs_of'[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := tcb_bound_refs' ntfn
-                                 \<union> {r \<in> state_refs_of' s t. snd r \<noteq> TCBBound}))\<rbrace>
-     setBoundNotification ntfn t
-   \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
-  by (simp add: setBoundNotification_def Un_commute fun_upd_def
-        | wp threadSet_state_refs_of' )+
-
-lemma setBoundNotification_state_hyp_refs_of'[wp]:
+lemma setBoundNotification_state_hyp_refs_of'[TcbAcc_R_2_assms, wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>
      setBoundNotification ntfn t
    \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
@@ -1019,7 +792,7 @@ lemma tcbQueued_update_iflive'[TcbAcc_R_2_assms, wp]:
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
 
-lemma sbn_iflive'[wp]:
+lemma sbn_iflive'[TcbAcc_R_2_assms, wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
       \<and> (bound ntfn \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
    setBoundNotification ntfn t
@@ -1084,6 +857,10 @@ lemma tcbSchedAppend_pspace_in_kernel_mappings'[TcbAcc_R_2_assms]:
   "tcbSchedAppend t \<lbrace>pspace_in_kernel_mappings'\<rbrace>"
   by wpsimp
 
+(* FIXME: the code assumes that it is word_t, so length_type should be defined generically in ASpec,
+   not per architecture *)
+lemmas [TcbAcc_R_2_assms] = meta_eq_to_obj_eq[OF nat_to_len_def]
+
 end (* Arch *)
 
 interpretation TcbAcc_R_2?: TcbAcc_R_2
@@ -1095,6 +872,67 @@ qed
 context Arch begin arch_global_naming
 
 named_theorems TcbAcc_R_3_assms
+
+lemma setMRs_corres[TcbAcc_R_3_assms]:
+  assumes m: "mrs' = mrs"
+  shows
+  "corres (=) (tcb_at t and pspace_aligned and pspace_distinct and case_option \<top> in_user_frame buf)
+              (case_option \<top> valid_ipc_buffer_ptr' buf)
+              (set_mrs t buf mrs) (setMRs t buf mrs')"
+proof -
+  have setRegister_def2:
+    "setRegister = (\<lambda>r v.  modify (\<lambda>s. UserContext (user_fpu_state s) ((user_regs s)(r := v))))"
+    by ((rule ext)+, simp add: setRegister_def)
+
+  have S: "\<And>xs ys n m. m - n \<ge> length xs \<Longrightarrow> (zip xs (drop n (take m ys))) = zip xs (drop n ys)"
+    by (simp add: zip_take_triv2 drop_take)
+
+  note upt.simps[simp del] upt_rec_numeral[simp del]
+
+  show ?thesis using m
+    unfolding setMRs_def set_mrs_def
+    apply (clarsimp  cong: option.case_cong split del: if_split)
+    apply (subst bind_assoc[symmetric])
+    apply (fold thread_set_def[simplified])
+    apply (subst thread_set_as_user_registers)
+    apply (cases buf)
+     apply (clarsimp simp: msgRegisters_unfold setRegister_def2 zipWithM_x_modify
+                           take_min_len zip_take_triv2 min.commute)
+     apply (rule corres_guard_imp)
+       apply (rule corres_split_nor[OF asUser_corres'])
+         apply (rule corres_modify')
+          apply (fastforce simp: fold_fun_upd[symmetric] msgRegisters_unfold UserContext_fold
+                                 modify_registers_def
+                           cong: if_cong simp del: the_index.simps)
+          apply simp
+         apply (rule corres_trivial, simp)
+         apply ((wp |simp)+)[4]
+    \<comment> \<open>buf = Some a\<close>
+    using if_split[split del]
+    apply (clarsimp simp: msgRegisters_unfold setRegister_def2 zipWithM_x_modify
+                          take_min_len zip_take_triv2 min.commute
+                          msgMaxLength_def msgLengthBits_def)
+    apply (simp add: msg_max_length_def)
+    apply (rule corres_guard_imp)
+      apply (rule corres_split_nor[OF asUser_corres'])
+         apply (rule corres_modify')
+          apply (simp only: msgRegisters_unfold cong: if_cong)
+          apply (fastforce simp: fold_fun_upd[symmetric] modify_registers_def UserContext_fold)
+         apply simp
+        apply (rule corres_split_nor)
+           apply (rule_tac S="{((x, y), (x', y')). y = y' \<and> x' = (a + (of_nat x * word_size)) \<and> x < unat max_ipc_words}"
+                         in zipWithM_x_corres)
+               apply (fastforce intro: storeWordUser_corres)
+              apply wp+
+            apply (clarsimp simp add: S msgMaxLength_def msg_max_length_def set_zip)
+            apply (simp add:  wordSize_word_size max_ipc_words
+                              upt_Suc_append[symmetric] upto_enum_word)
+           apply simp
+          apply (rule corres_trivial, clarsimp simp: min.commute)
+         apply wp+
+      apply (wp | clarsimp simp: valid_ipc_buffer_ptr'_def)+
+    done
+qed
 
 lemma sts_iflive'[TcbAcc_R_3_assms, wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
@@ -1109,6 +947,24 @@ lemma sts_iflive'[TcbAcc_R_3_assms, wp]:
     apply clarsimp
    apply (wpsimp wp: threadSet_iflive')
   apply fastforce
+  done
+
+(* interface lemma, but can't be done via locale *)
+lemma asUser_invs[wp]:
+  "\<lbrace>invs' and tcb_at' t\<rbrace> asUser t m \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  apply (wpsimp wp: threadSet_invs_trivial threadGet_wp)
+  done
+
+(* interface lemma, but can't be done via locale *)
+crunch storeWordUser
+  for pred_tcb_at'[wp]: "\<lambda>s. pred_tcb_at' proj P p s"
+
+lemma set_mrs_invs'[TcbAcc_R_3_assms, wp]:
+  "\<lbrace> invs' and tcb_at' receiver \<rbrace> setMRs receiver recv_buf mrs \<lbrace>\<lambda>rv. invs' \<rbrace>"
+  apply (simp add: setMRs_def)
+  apply (wp dmo_invs' no_irq_mapM no_irq_storeWord crunch_wps|
+         simp add: zipWithM_x_mapM split_def)+
   done
 
 lemmas setThreadState_typ_ats[wp] = typ_at_lifts [OF setThreadState_typ_at']
@@ -1128,9 +984,19 @@ arch_requalify_facts
   asUser_corres
   asUser_valid_objs
   asUser_invs
+  storeWordUser_pred_tcb_at'
+  asUser_valid_pspace'
+  asUser_st_hyp_refs_of'
+  asUser_iflive'
+  asUser_valid_tcbs'
 
 lemmas [wp] =
   asUser_valid_objs
   asUser_invs
+  storeWordUser_pred_tcb_at'
+  asUser_valid_pspace'
+  asUser_st_hyp_refs_of'
+  asUser_iflive'
+  asUser_valid_tcbs'
 
 end

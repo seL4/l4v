@@ -10,6 +10,10 @@ theory ArchMove_C
 imports Move_C
 begin
 
+(* FIXME arch-split: CRefine was before Kernel_Config.maxIRQ was wrapped in Platform.maxIRQ_def *)
+arch_requalify_facts maxIRQ_def
+declare maxIRQ_def[simp]
+
 lemma aligned_no_overflow_less: (* FIXME AARCH64: move to Word_Lib *)
   "\<lbrakk> is_aligned p n; p + 2 ^ n \<noteq> 0 \<rbrakk> \<Longrightarrow> p < p + 2 ^ n"
   by (erule word_leq_minus_one_le) (erule is_aligned_no_overflow)

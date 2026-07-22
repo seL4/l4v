@@ -2008,7 +2008,7 @@ lemma scheduleTCB_ccorres':
       return (runnable, curThread, action) od;
       when (\<not> runnable \<and>
               curThread = thread \<and> action = ResumeCurrentThread)
-       rescheduleRequired
+           (setSchedulerAction ChooseNewThread)
   od)
   (Call scheduleTCB_'proc)"
   supply empty_fail_cond[simp]
@@ -2022,7 +2022,8 @@ lemma scheduleTCB_ccorres':
        apply (intro allI impI)
        apply (unfold mem_simps)[1]
        apply assumption
-      apply (ctac add: rescheduleRequired_ccorres)
+      apply (rule ccorres_setSchedulerAction)
+      apply (clarsimp simp: cscheduler_action_relation_def)
      prefer 4
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_pre_getCurThread)
@@ -2065,7 +2066,8 @@ lemma scheduleTCB_ccorres_valid_queues'_pre:
                                              action \<leftarrow> getSchedulerAction;
                                              return (runnable, curThread, action)
                                           od;
-         when (\<not> runnable \<and> curThread = thread \<and> action = ResumeCurrentThread) rescheduleRequired
+         when (\<not> runnable \<and> curThread = thread \<and> action = ResumeCurrentThread)
+              (setSchedulerAction ChooseNewThread)
       od)
      (Call scheduleTCB_'proc)"
   supply empty_fail_cond[simp]
@@ -2079,7 +2081,8 @@ lemma scheduleTCB_ccorres_valid_queues'_pre:
        apply (intro allI impI)
        apply (unfold mem_simps)[1]
        apply assumption
-      apply (ctac add: rescheduleRequired_ccorres)
+      apply (rule ccorres_setSchedulerAction)
+      apply (clarsimp simp: cscheduler_action_relation_def)
      prefer 4
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_pre_getCurThread)
@@ -2159,7 +2162,8 @@ lemma scheduleTCB_ccorres_valid_queues'_pre_simple:
                                              action \<leftarrow> getSchedulerAction;
                                              return (runnable, curThread, action)
                                           od;
-         when (\<not> runnable \<and> curThread = thread \<and> action = ResumeCurrentThread) rescheduleRequired
+         when (\<not> runnable \<and> curThread = thread \<and> action = ResumeCurrentThread)
+              (setSchedulerAction ChooseNewThread)
       od)
      (Call scheduleTCB_'proc)"
   supply empty_fail_cond[simp]
@@ -2173,7 +2177,8 @@ lemma scheduleTCB_ccorres_valid_queues'_pre_simple:
        apply (intro allI impI)
        apply (unfold mem_simps)[1]
        apply assumption
-      apply (ctac add: rescheduleRequired_ccorres_valid_queues'_simple)
+      apply (rule ccorres_setSchedulerAction)
+      apply (clarsimp simp: cscheduler_action_relation_def)
      prefer 4
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_pre_getCurThread)
@@ -2728,11 +2733,11 @@ lemma cancelIPC_ccorres1:
             apply (simp add: word_sle_def ccorres_cond_iffs cong: call_ignore_cong)
             apply (rule ccorres_rhs_assoc)+
             apply csymbr
-            apply csymbr
             apply (rule ccorres_pre_getEndpoint)
             apply (rule ccorres_assert)
             apply (rule ccorres_symb_exec_r) \<comment> \<open>ptr_get lemmas don't work so well :(\<close>
               apply (rule ccorres_symb_exec_r)
+                apply csymbr
                 apply (simp only: fun_app_def simp_list_case_return
                                   return_bind ccorres_seq_skip)
                 apply (rule ccorres_rhs_assoc2)
@@ -2830,11 +2835,11 @@ lemma cancelIPC_ccorres1:
       \<comment> \<open>clag\<close>
       apply (rule ccorres_rhs_assoc)+
       apply csymbr
-      apply csymbr
       apply (rule ccorres_pre_getEndpoint)
       apply (rule ccorres_assert)
       apply (rule ccorres_symb_exec_r) \<comment> \<open>ptr_get lemmas don't work so well :(\<close>
         apply (rule ccorres_symb_exec_r)
+          apply csymbr
           apply (simp only: fun_app_def simp_list_case_return return_bind ccorres_seq_skip)
           apply (rule ccorres_rhs_assoc2)
           apply (rule ccorres_rhs_assoc2)

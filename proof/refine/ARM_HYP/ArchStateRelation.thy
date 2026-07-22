@@ -54,8 +54,7 @@ definition vcpu_relation :: "ARM_HYP_A.vcpu \<Rightarrow> vcpu \<Rightarrow> boo
   "vcpu_relation \<equiv> \<lambda>v v'. vcpu_tcb v = vcpuTCBPtr v' \<and>
                            vgic_map (vcpu_vgic v) = vcpuVGIC v' \<and>
                            vcpu_regs v = vcpuRegs v' \<and>
-                           vcpu_vppi_masked v = vcpuVPPIMasked v' \<and>
-                           vcpu_vtimer v = vcpuVTimer v'"
+                           vcpu_vppi_masked v = vcpuVPPIMasked v'"
 
 definition arch_tcb_relation :: "Structures_A.arch_tcb \<Rightarrow> Structures_H.arch_tcb \<Rightarrow> bool" where
   "arch_tcb_relation \<equiv> \<lambda>atcb atcb'.
@@ -175,8 +174,10 @@ definition ghost_relation_wrapper_2 ::
 (* inside Arch locale, we have no need for the wrapper *)
 lemmas ghost_relation_wrapper_def[simp] = ghost_relation_wrapper_2_def
 
-definition arch_state_relation :: "(arch_state \<times> ARM_HYP_H.kernel_state) set" where
-  "arch_state_relation \<equiv> {(s, s') .
+(* aobjs' argument unused on this architecture *)
+definition arch_state_relation ::
+  "(obj_ref \<rightharpoonup> arch_kernel_object) \<Rightarrow> (arch_state \<times> ARM_HYP_H.kernel_state) set" where
+  "arch_state_relation aobjs' \<equiv> {(s, s') .
          arm_asid_table s = armKSASIDTable s' o ucast
        \<and> arm_hwasid_table s = armKSHWASIDTable s'
        \<and> arm_next_asid s = armKSNextASID s'

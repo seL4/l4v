@@ -2297,7 +2297,7 @@ lemma decodeWriteRegisters_ccorres:
      (decodeWriteRegisters args cp
             >>= invocationCatch thread isBlocking isCall InvokeTCB)
      (Call decodeWriteRegisters_'proc)"
-  supply unsigned_numeral[simp del]
+  supply unsigned_numeral[simp del] tl_drop_1[simp]
   apply (cinit' lift: cap_' length___unsigned_long_' buffer_' simp: decodeWriteRegisters_def)
    apply (rename_tac length' cap')
    apply (rule ccorres_Cond_rhs_Seq)
@@ -4623,6 +4623,7 @@ lemma decodeSetFlags_ccorres:
      (decodeSetFlags args cp
         >>= invocationCatch thread isBlocking isCall InvokeTCB)
      (Call decodeSetFlags_'proc)"
+  supply tl_drop_1[simp]
   apply (cinit' lift: cap_' length___unsigned_long_' buffer_' call_'
                 simp: decodeSetFlags_def )
    apply csymbr+

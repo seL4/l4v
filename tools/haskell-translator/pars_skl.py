@@ -6,8 +6,6 @@
 """Parser for skeletons of theory files which are completed
 by inserting parsed Haskell."""
 
-from __future__ import print_function
-from __future__ import absolute_import
 import sys
 import os
 import os.path
@@ -128,7 +126,7 @@ for line in instructions:
             error("IOError comparing {} and {}:\n{}".format(output_tmp, output, e))
             sys.exit(1)
     else:
-        #warning('{} does not exist, assuming changed'.format(output))
+        # warning('{} does not exist, assuming changed'.format(output))
         changed = 1
 
     if changed:

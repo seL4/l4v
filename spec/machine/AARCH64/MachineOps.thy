@@ -129,10 +129,6 @@ consts' setIRQTrigger_impl :: "irq \<Rightarrow> bool \<Rightarrow> unit machine
 definition setIRQTrigger :: "irq \<Rightarrow> bool \<Rightarrow> unit machine_monad" where
   "setIRQTrigger irq trigger \<equiv> machine_op_lift (setIRQTrigger_impl irq trigger)"
 
-consts' plic_complete_claim_impl :: "irq \<Rightarrow> unit machine_rest_monad"
-definition plic_complete_claim :: "irq \<Rightarrow> unit machine_monad" where
-  "plic_complete_claim irq \<equiv> machine_op_lift (plic_complete_claim_impl irq)"
-
 text \<open>
   Interrupts that cannot occur while the kernel is running (e.g. at preemption points),
   but that can occur from user mode.\<close>
@@ -384,10 +380,6 @@ definition check_export_arch_timer :: "unit machine_monad" where
      modify (vcpu_state_update (vcpu_regs_update (\<lambda>r. r(VCPURegCNTKCTL_EL1 := check_export_arch_timer_val))));
      machine_op_lift check_export_arch_timer_impl
    od"
-
-consts' read_cntpct_val :: "machine_state \<Rightarrow> 64 word"
-definition read_cntpct :: "64 word machine_monad" where
-  "read_cntpct \<equiv> gets read_cntpct_val"
 
 
 subsection "Hypervisor Banked Registers"

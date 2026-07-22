@@ -10,7 +10,7 @@
 *)
 
 theory Arch_R
-imports Untyped_R Finalise_R
+imports Untyped_R ArchFinalise_R
 begin
 
 unbundle l4v_word_context
@@ -326,7 +326,7 @@ lemma performASIDControlInvocation_corres:
     apply simp
    apply clarsimp
    apply (drule (1) cte_cap_in_untyped_range)
-        apply (fastforce simp add: cte_wp_at_ctes_of)
+        apply (fastforce simp: cte_wp_at_ctes_of)
        apply assumption+
      apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
     apply fastforce
@@ -865,7 +865,7 @@ lemma decodeARMVCPUInvocation_corres:
   apply (cases args; clarsimp simp: isCap_simps)
   apply (simp add: arch_check_irq_def rangeCheck_def ucast_nat_def minIRQ_def unlessE_def
                    word_le_not_less)
-  apply (case_tac "a > Kernel_Config.maxIRQ"; simp add:  ucast_nat_def word_le_not_less)
+  apply (case_tac "a > Kernel_Config.maxIRQ"; simp add: ucast_nat_def word_le_not_less maxIRQ_def)
   apply (clarsimp simp: irq_vppi_event_index_def irqVPPIEventIndex_def IRQ_def toEnum_unat_ucast
                         le_maxIRQ_machine_less_irqBits_val)
   apply (fastforce simp: archinv_relation_def vcpu_invocation_map_def
@@ -1169,7 +1169,7 @@ shows
                   in corres_gen_asm2)
          apply (rule corres_split[OF isFinalCapability_corres[where ptr=slot]])
            apply (drule mp)
-            apply (clarsimp simp: isCap_simps final_matters'_def)
+            apply (clarsimp simp: isCap_simps final_matters'_def arch_final_matters'_def)
            apply (rule whenE_throwError_corres)
              apply simp
             apply simp
@@ -1479,7 +1479,7 @@ lemma invokeArch_tcb_at':
 
 crunch setThreadState
   for pspace_no_overlap'[wp]: "pspace_no_overlap' w s"
-  (simp: unless_def)
+  (simp: unless_def crunch_simps wp: crunch_wps)
 
 lemma sts_cte_cap_to'[wp]:
   "\<lbrace>ex_cte_cap_to' p\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. ex_cte_cap_to' p\<rbrace>"
@@ -1548,7 +1548,7 @@ lemma tcbSchedEnqueue_vs_entry_align[wp]:
 crunch
   setThreadState
   for vs_entry_align[wp]: "ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma sts_valid_arch_inv':
   "\<lbrace>valid_arch_inv' ai\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_arch_inv' ai\<rbrace>"
@@ -2098,13 +2098,9 @@ crunch "Arch.finaliseCap"
   for aligned': pspace_aligned'
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
-lemmas arch_finalise_cap_aligned' = finaliseCap_aligned'
-
 crunch "Arch.finaliseCap"
   for distinct': pspace_distinct'
   (wp: crunch_wps getASID_wp simp: crunch_simps)
-
-lemmas arch_finalise_cap_distinct' = finaliseCap_distinct'
 
 crunch "Arch.finaliseCap"
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
@@ -2143,7 +2139,7 @@ lemma ex_cte_not_in_untyped_range:
   "\<lbrakk>(ctes_of s) cref = Some (CTE (capability.UntypedCap d ptr bits idx) mnode);
     descendants_of' cref (ctes_of s) = {}; invs' s;
     ex_cte_cap_wp_to' (\<lambda>_. True) x s; valid_global_refs' s\<rbrakk>
-   \<Longrightarrow> x \<notin> {ptr .. ptr + 2 ^ bits - 1}"
+   \<Longrightarrow> x \<notin> {ptr .. ptr + mask bits}"
   apply clarsimp
   apply (drule(1) cte_cap_in_untyped_range)
    apply (fastforce simp:cte_wp_at_ctes_of)+

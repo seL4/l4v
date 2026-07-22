@@ -29,7 +29,7 @@ jobs:
         branch: [imx8-fpu-ver]
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         ref: ${{ matrix.branch }}
         path: l4v-${{ matrix.branch }}

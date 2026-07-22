@@ -80,9 +80,7 @@ definition save_virt_timer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_mona
      vcpu_save_reg vcpu_ptr VCPURegCNTV_CVAL;
      vcpu_save_reg vcpu_ptr VCPURegCNTVOFF;
      vcpu_save_reg vcpu_ptr VCPURegCNTKCTL_EL1;
-     do_machine_op check_export_arch_timer;
-     cntpct \<leftarrow> do_machine_op read_cntpct;
-     vcpu_update vcpu_ptr (\<lambda>vcpu. vcpu\<lparr>vcpu_vtimer := VirtTimer cntpct \<rparr>)
+     do_machine_op check_export_arch_timer
    od"
 
 definition irq_vppi_event_index :: "irq \<rightharpoonup> vppievent_irq" where
@@ -95,15 +93,7 @@ definition restore_virt_timer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_m
   "restore_virt_timer vcpu_ptr \<equiv> do
      vcpu_restore_reg vcpu_ptr VCPURegCNTV_CVAL;
      vcpu_restore_reg vcpu_ptr VCPURegCNTKCTL_EL1;
-     current_cntpct \<leftarrow> do_machine_op read_cntpct;
-     vcpu \<leftarrow> get_vcpu vcpu_ptr;
-     last_pcount \<leftarrow> return $ vtimerLastPCount $ vcpu_vtimer vcpu;
-     delta \<leftarrow> return $ current_cntpct - last_pcount;
-     cntvoff \<leftarrow> vcpu_read_reg vcpu_ptr VCPURegCNTVOFF;
-     offset \<leftarrow> return $ cntvoff + ucast delta;
-     vcpu_write_reg vcpu_ptr VCPURegCNTVOFF offset;
      vcpu_restore_reg vcpu_ptr VCPURegCNTVOFF;
-     \<comment> \<open>read again, so we don't have to reason about @{const vcpu_write_reg} changes in CRefine\<close>
      vcpu \<leftarrow> get_vcpu vcpu_ptr;
      masked \<leftarrow> return $ (vcpu_vppi_masked vcpu (the $ irq_vppi_event_index irqVTimerEvent));
      \<comment> \<open>we do not know here that irqVTimerEvent is IRQReserved, therefore not IRQInactive,

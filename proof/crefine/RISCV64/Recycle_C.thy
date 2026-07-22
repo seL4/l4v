@@ -784,6 +784,10 @@ lemma removeAndRestartBadgedThread_ccorres:
 crunch removeAndRestartBadgedThread
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
 
+crunch tcbSchedEnqueue
+  for ep_obj_at'[wp]: "obj_at' (P :: endpoint \<Rightarrow> bool) ptr"
+  (simp: unless_def)
+
 lemma cancelBadgedSends_ccorres:
   "ccorres dc xfdc
      invs' (\<lbrace>\<acute>epptr = ep_Ptr epptr\<rbrace> \<inter> \<lbrace>\<acute>badge___unsigned_long = badge\<rbrace>) hs

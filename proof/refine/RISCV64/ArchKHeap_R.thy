@@ -111,6 +111,11 @@ lemma obj_relation_cut_same_type:
 lemmas obj_at_simps = gen_obj_at_simps is_other_obj_relation_type_def
                       objBits_simps pageBits_def
 
+(* No aobjs dependency on this architecture *)
+lemma arch_state_relation_no_aobjs[elim!]:
+  "(s, s') \<in> arch_state_relation aobjs' \<Longrightarrow> (s, s') \<in> arch_state_relation aobjs"
+  by (simp add: arch_state_relation_def)
+
 lemma setObject_other_arch_corres:
   fixes ob' :: "'a :: pspace_storable"
   assumes x: "updateObject ob' = updateObject_default ob'"
@@ -354,9 +359,27 @@ proof goal_cases
   case 1 show ?case by (intro_locales; (unfold_locales; fact KHeap_R_assms)?)
 qed
 
+context Arch begin arch_global_naming
+
+lemma setObject_ko_wp_at':
+  fixes v :: "'a :: pspace_storable"
+  assumes x: "\<And>v :: 'a. updateObject v = updateObject_default v"
+  assumes n: "\<And>v :: 'a. objBits v = n"
+  assumes v: "(1 :: machine_word) < 2 ^ n"
+  shows
+  "\<lbrace>\<lambda>s. P (injectKO v)\<rbrace> setObject p v \<lbrace>\<lambda>rv. ko_wp_at' P p\<rbrace>"
+  by (clarsimp simp: setObject_def valid_def in_monad
+                     ko_wp_at'_def x split_def n
+                     updateObject_default_def
+                     objBits_def[symmetric] ps_clear_upd
+                     in_magnitude_check v)
+
+end
+
 (* requalify interface lemmas which can't be locale assumptions due to free type variable *)
 arch_requalify_facts
   setObject_pspace_in_kernel_mappings'
+  setObject_ko_wp_at'
   valid_global_refs_lift'
 
 (* arch-specific lemmas not required for satisfying KHeap_R interface *)

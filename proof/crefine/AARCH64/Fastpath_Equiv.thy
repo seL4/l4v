@@ -35,7 +35,7 @@ lemmas setEndpoint_obj_at_tcb' = setEndpoint_obj_at'_tcb
 
 crunch tcbSchedEnqueue
   for tcbContext[wp]: "obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t"
-  (simp: tcbQueuePrepend_def)
+  (simp: tcbQueuePrepend_def cong: if_cong)
 
 lemma setCTE_tcbContext:
   "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
@@ -477,13 +477,10 @@ lemma setCTE_obj_at'_tcbIPCBuffer:
   unfolding setCTE_def
   by (rule setObject_cte_obj_at_tcb', simp+)
 
-context
-notes if_cong[cong]
-begin
 crunch cteInsert, asUser
   for obj_at'_tcbIPCBuffer[wp]: "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
-  (wp: setCTE_obj_at'_queued crunch_wps threadSet_obj_at'_really_strongest)
-end
+  (wp: setCTE_obj_at'_queued crunch_wps threadSet_obj_at'_really_strongest
+   cong: if_cong)
 
 crunch cteInsert, threadSet, asUser, emptySlot
   for ksReadyQueuesL1Bitmap_inv[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
@@ -897,7 +894,7 @@ lemma fastpath_callKernel_SysCall_corres:
 
   apply (prop_tac "cte_wp_at' (\<lambda>_. True) (hd (epQueue ep) + 2 ^ cte_level_bits * tcbVTableSlot) s")
    apply (solves \<open>clarsimp simp: valid_ep'_def isRecvEP_endpoint_case tcbVTableSlot_def
-                                 cte_level_bits_def cte_at_tcb_at_32'\<close>)
+                                 cteSizeBits_cte_level_bits[symmetric] cte_at_tcb_at_2p_cteSizeBits\<close>)
   apply clarsimp
   apply (frule_tac cte=ctea in ctes_of_valid, fastforce)
   apply (clarsimp simp: isValidVTableRoot_def2 valid_cap'_def wellformed_mapdata'_def
@@ -1084,7 +1081,7 @@ crunch emptySlot, asUser
 
 crunch possibleSwitchTo
   for tcbContext[wp]: "obj_at' (\<lambda>tcb. P ( (atcbContextGet o tcbArch) tcb)) t"
-  (wp: crunch_wps simp_del: comp_apply)
+  (wp: crunch_wps simp_del: comp_apply cong: if_cong)
 
 crunch doFaultTransfer
   for only_cnode_caps[wp]: "\<lambda>s. P (only_cnode_caps (ctes_of s))"
@@ -1417,7 +1414,7 @@ lemma valid_objs_ntfn_at_tcbBoundNotification:
 
 crunch setThreadState
   for bound_tcb_at'_Q[wp]: "\<lambda>s. Q (bound_tcb_at' P t s)"
-  (wp: threadSet_pred_tcb_no_state crunch_wps simp: unless_def)
+  (wp: threadSet_pred_tcb_no_state crunch_wps simp: unless_def cong: if_cong)
 
 lemmas emptySlot_pred_tcb_at'_Q[wp] = lift_neg_pred_tcb_at'[OF emptySlot_typ_at' emptySlot_pred_tcb_at']
 
@@ -1471,18 +1468,16 @@ crunch rescheduleRequired
   for obj_at'_tcbIPCBuffer[wp]: "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: crunch_wps tcbSchedEnqueue_tcbIPCBuffer simp: rescheduleRequired_def)
 
-context
-notes if_cong[cong]
-begin
 crunch setThreadState
   for obj_at'_tcbIPCBuffer[wp]: "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
-  (wp: crunch_wps threadSet_obj_at'_really_strongest)
+  (wp: crunch_wps threadSet_obj_at'_really_strongest
+   cong: if_cong)
 
 crunch handleFault
   for obj_at'_tcbIPCBuffer[wp]: "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: crunch_wps constOnFailure_wp tcbSchedEnqueue_tcbIPCBuffer threadSet_obj_at'_really_strongest
-   simp: zipWithM_x_mapM)
-end
+   simp: zipWithM_x_mapM
+   cong: if_cong)
 
 crunch emptySlot
   for obj_at'_tcbIPCBuffer[wp]: "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"

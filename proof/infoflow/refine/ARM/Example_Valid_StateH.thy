@@ -3099,7 +3099,7 @@ lemma s0H_invs:
   apply (rule conjI)
    apply (clarsimp simp: valid_machine_state'_def s0H_internal_def machine_state0_def)
   apply (rule conjI)
-   apply (clarsimp simp: irqs_masked'_def s0H_internal_def)
+   apply (clarsimp simp: irqs_masked'_def s0H_internal_def maxIRQ_def)
   apply (rule conjI)
    apply (clarsimp simp: sym_heap_def opt_map_def split: option.splits)
    using kh0H_dom_tcb

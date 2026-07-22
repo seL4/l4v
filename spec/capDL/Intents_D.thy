@@ -23,10 +23,10 @@
  *)
 
 theory Intents_D
-imports
-  ASpec.CapRights_A
-  VMAttributes_D
-  Structures_D
+  imports
+    ASpec.CapRights_A
+    VMAttributes_D
+    Structures_D
 begin
 
 type_synonym domain_duration_len = 56
@@ -41,17 +41,17 @@ type_synonym cdl_right = rights
 (* A user cap pointer. *)
 type_synonym cdl_cptr = machine_word
 
-abbreviation (input) Read ::rights
-  where "Read \<equiv> AllowRead"
+abbreviation (input) Read :: rights where
+  "Read \<equiv> AllowRead"
 
-abbreviation (input) Write::rights
-  where "Write \<equiv> AllowWrite"
+abbreviation (input) Write :: rights where
+  "Write \<equiv> AllowWrite"
 
-abbreviation (input) Grant::rights
-  where "Grant \<equiv> AllowGrant"
+abbreviation (input) Grant :: rights where
+  "Grant \<equiv> AllowGrant"
 
-abbreviation (input) GrantReply::rights
-  where "GrantReply \<equiv> AllowGrantReply"
+abbreviation (input) GrantReply :: rights where
+  "GrantReply \<equiv> AllowGrantReply"
 
 (* Capability data, such as guard information. *)
 type_synonym cdl_raw_capdata = machine_word
@@ -76,7 +76,7 @@ type_synonym domain = word8
 datatype cdl_pt_type =
   PT | PD | VSROOT | PDPT | PML4
 
-definition
+definition vspace_type :: "cdl_pt_type" where
   "vspace_type \<equiv> case cdl_ARCH of
      AARCH32 \<Rightarrow> PD
    | AARCH64 \<Rightarrow> VSROOT
@@ -102,22 +102,22 @@ datatype cdl_cnode_intent =
     (* Copy: (target), dest_index, dest_depth, (src_root), src_index, src_depth, rights *)
     CNodeCopyIntent machine_word machine_word machine_word machine_word "cdl_right set"
     (* Mint: (target), dest_index, dest_depth, (src_root), src_index, src_depth, rights, badge *)
- |  CNodeMintIntent machine_word machine_word machine_word machine_word "cdl_right set" cdl_raw_capdata
+  | CNodeMintIntent machine_word machine_word machine_word machine_word "cdl_right set" cdl_raw_capdata
     (* Move: (target), dest_index, dest_depth, (src_root), src_index, src_depth *)
- |  CNodeMoveIntent machine_word machine_word machine_word machine_word
+  | CNodeMoveIntent machine_word machine_word machine_word machine_word
     (* Mutate: (target), dest_index, dest_depth, (src_root), src_index, src_depth, badge *)
- |  CNodeMutateIntent machine_word machine_word machine_word machine_word cdl_raw_capdata
+  | CNodeMutateIntent machine_word machine_word machine_word machine_word cdl_raw_capdata
     (* Revoke: (target), index, depth *)
- |  CNodeRevokeIntent machine_word machine_word
+  | CNodeRevokeIntent machine_word machine_word
     (* Delete: (target), index, depth *)
- |  CNodeDeleteIntent machine_word machine_word
+  | CNodeDeleteIntent machine_word machine_word
     (* SaveCaller: (target), index, depth *)
- |  CNodeSaveCallerIntent machine_word machine_word
+  | CNodeSaveCallerIntent machine_word machine_word
     (* CancelBadgedSends: (target), index, depth *)
- |  CNodeCancelBadgedSendsIntent machine_word machine_word
+  | CNodeCancelBadgedSendsIntent machine_word machine_word
     (* Rotate: (target), dest_index, dest_depth, (pivot_root), pivot_index, pivot_depth, pivot_badge,
                (src_root), src_index, src_depth, src_badge *)
- |  CNodeRotateIntent machine_word machine_word machine_word machine_word cdl_raw_capdata
+  | CNodeRotateIntent machine_word machine_word machine_word machine_word cdl_raw_capdata
                       machine_word machine_word cdl_raw_capdata
 
 type_synonym arch_flags = word8 (* FIXME arch-split: check if used *)
@@ -126,35 +126,35 @@ datatype cdl_tcb_intent =
     (* ReadRegisters: (target), suspend_source, arch_flags, count *)
     TcbReadRegistersIntent bool arch_flags machine_word
     (* WriteRegisters: (target), resume_target, arch_flags, count, regs *)
- |  TcbWriteRegistersIntent bool arch_flags machine_word cdl_raw_usercontext
+  | TcbWriteRegistersIntent bool arch_flags machine_word cdl_raw_usercontext
     (* CopyRegisters: (target), (source), suspend_source, resume_target, transfer_frame,
                       transfer_integer, arch_flags *)
- |  TcbCopyRegistersIntent bool bool bool bool arch_flags
+  | TcbCopyRegistersIntent bool bool bool bool arch_flags
     (* Suspend: (target) *)
- |  TcbSuspendIntent
+  | TcbSuspendIntent
     (* Resume: (target) *)
- |  TcbResumeIntent
+  | TcbResumeIntent
     (* Configure: (target), fault_ep, (cspace_root), cspace_root_data, (vspace_root),
                   vspace_root_data, buffer, (bufferFrame) *)
- |  TcbConfigureIntent cdl_cptr cdl_raw_capdata cdl_raw_capdata machine_word
+  | TcbConfigureIntent cdl_cptr cdl_raw_capdata cdl_raw_capdata machine_word
     (* SetMCPriority: (target), mcp *)
- |  TcbSetMCPriorityIntent prio
+  | TcbSetMCPriorityIntent prio
     (* SetPriority: (target), priority *)
- |  TcbSetPriorityIntent prio
+  | TcbSetPriorityIntent prio
     (* SetSchedParams: (target), mcp, priority *)
- |  TcbSetSchedParamsIntent prio prio
+  | TcbSetSchedParamsIntent prio prio
     (* SetIPCBuffer: (target), buffer, (bufferFrame) *)
- |  TcbSetIPCBufferIntent machine_word
+  | TcbSetIPCBufferIntent machine_word
     (* SetSpace: (target), fault_ep, (cspace_root), cspace_root_data, (vspace_root), vspace_root_data *)
- |  TcbSetSpaceIntent machine_word cdl_raw_capdata cdl_raw_capdata
+  | TcbSetSpaceIntent machine_word cdl_raw_capdata cdl_raw_capdata
     (* BindNTFN: (target), (ntfn) *)
- |  TcbBindNTFNIntent
+  | TcbBindNTFNIntent
     (* UnbindNTFN: (target) *)
- |  TcbUnbindNTFNIntent
+  | TcbUnbindNTFNIntent
     (* SetTLSBase: (target) *)
- |  TcbSetTLSBaseIntent
+  | TcbSetTLSBaseIntent
     (* SetFlags: (target) set_flags clear_flags *)
- |  TcbSetFlagsIntent machine_word machine_word
+  | TcbSetFlagsIntent machine_word machine_word
 
 datatype cdl_untyped_intent =
     (* Retype: (target), (do_reset), type, size_bits, (root), node_index, node_depth, node_offset,
@@ -166,9 +166,9 @@ datatype cdl_irq_handler_intent =
     (* Ack: (target) *)
     IrqHandlerAckIntent
     (* SetEndpoint: (target), (endpoint) *)
- |  IrqHandlerSetEndpointIntent
+  | IrqHandlerSetEndpointIntent
     (* Clear: (target) *)
- |  IrqHandlerClearIntent
+  | IrqHandlerClearIntent
 
 datatype cdl_arch_irq_control_intent =
     (* ArchIssueIrqHandler: (target), irq, (root), index, depth *)
@@ -185,22 +185,22 @@ datatype cdl_irq_control_intent =
 datatype cdl_page_table_intent =
     (* Map: (target), (pd), vaddr, attr *)
     PageTableMapIntent machine_word cdl_raw_vmattrs
- |  PageTableUnmapIntent
+  | PageTableUnmapIntent
 
 datatype cdl_page_intent =
     (* Map: (target), (pd), vaddr, rights, attr *)
     PageMapIntent machine_word "cdl_right set" cdl_raw_vmattrs
     (* Unmap: (target) *)
- |  PageUnmapIntent
+  | PageUnmapIntent
     (* FlushCaches: (target) *)
- |  PageFlushCachesIntent
+  | PageFlushCachesIntent
     (* GetAddress *)
- | PageGetAddressIntent
+  | PageGetAddressIntent
 
 
 datatype cdl_page_directory_intent =
-   PageDirectoryFlushIntent
- | PageDirectoryNothingIntent
+    PageDirectoryFlushIntent
+  | PageDirectoryNothingIntent
 
 datatype cdl_asid_control_intent =
     (* MakePool: (target), (untyped), (root), index, depth *)

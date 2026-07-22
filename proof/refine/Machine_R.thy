@@ -56,8 +56,20 @@ lemma time_state_independent_HI[intro!, simp]:
 
 locale Machine_R =
   assumes dmo_maskInterrupt:
-    "\<lbrace>\<lambda>s. P (ksMachineState_update (irq_masks_update (\<lambda>t. t (irq := m))) s)\<rbrace>
+    "\<And>P irq m.
+     \<lbrace>\<lambda>s. P (ksMachineState_update (irq_masks_update (\<lambda>t. t (irq := m))) s)\<rbrace>
      doMachineOp (maskInterrupt m irq)
      \<lbrace>\<lambda>_. P\<rbrace>"
+  assumes dmo_getirq_inv[wp]:
+    "\<And>P in_kernel.
+     irq_state_independent_H P \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv. P\<rbrace>"
+  assumes setIRQState_irq_states'[wp]:
+    "\<And>state irq. setIRQState state irq \<lbrace>valid_irq_states'\<rbrace>"
+  assumes frameRegisters_def':
+    "frameRegisters = MachineExports.frameRegisters"
+  assumes gpRegisters_def':
+    "gpRegisters = MachineExports.gpRegisters"
+  assumes tlsBaseRegister_def':
+    "tlsBaseRegister = MachineExports.tlsBaseRegister"
 
 end

@@ -106,10 +106,6 @@ lemma arch_switchToIdleThread_corres_interface[Schedule_R_assms]:
      arch_switch_to_idle_thread Arch.switchToIdleThread"
   by (rule corres_guard_imp, rule arch_switchToIdleThread_corres; simp)
 
-lemma threadSet_timeslice_invs[Schedule_R_assms]:
-  "\<lbrace>invs' and tcb_at' t\<rbrace> threadSet (tcbTimeSlice_update b) t \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  by (wp threadSet_invs_trivial, simp_all add: inQ_def cong: conj_cong)
-
 lemma clearExMonitor_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp ARM.clearExMonitor \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (wp dmo_invs' no_irq)

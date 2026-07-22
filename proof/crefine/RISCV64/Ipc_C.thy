@@ -2852,7 +2852,7 @@ lemma transferCapsLoop_ccorres:
            (W ep caps')"
 unfolding W_def check1_def check2_def split_def
 proof (rule ccorres_gen_asm, induct caps arbitrary: n slots mi)
-  note if_split[split]
+  note if_split[split] tl_drop_1[simp]
   case Nil
   thus ?case
     apply (simp only: transferCapsToSlots.simps)
@@ -2951,15 +2951,6 @@ next
     apply (case_tac acap)
      apply (simp_all add: RISCV64_H.deriveCap_def Let_def isCap_simps is_the_ep_def)
     apply (wp |clarsimp|rule conjI)+
-    done
-
-  have mask_right_eq_null:
-    "\<And>r cap. (maskCapRights r cap = NullCap) = (cap = NullCap)"
-    apply (case_tac cap)
-     apply (simp_all add:maskCapRights_def isCap_simps)
-    apply (rename_tac acap)
-    apply (case_tac acap)
-     apply (simp add: RISCV64_H.maskCapRights_def isFrameCap_def)+
     done
 
   have scast_2n_eq:
@@ -3086,8 +3077,9 @@ next
                     \<and> cte_wp_at' (\<lambda>c. fst x \<noteq> NullCap \<longrightarrow> stable_masked (fst x) (cteCap c)) (snd x) s)"
                  in hoare_strengthen_postE_R)
                 prefer 2
-                 apply (clarsimp simp:cte_wp_at_ctes_of valid_pspace_mdb' valid_pspace'_splits
-                   valid_pspace_valid_objs' is_derived_capMasterCap image_def)
+                 apply (clarsimp simp: cte_wp_at_ctes_of valid_pspace_mdb' valid_pspace'_splits
+                                       valid_pspace_valid_objs' valid_pspace_canonical'
+                                       is_derived_capMasterCap image_def)
                  apply (clarsimp split:if_splits)
                  apply (rule conjI)
                   apply clarsimp+
@@ -3156,7 +3148,7 @@ next
                                 option_to_0_def cap_to_H_def Let_def split:cap_CL.splits split:if_splits)
             apply clarsimp
            apply (simp only:badge_derived_mask capASID_mask cap_asid_base_mask'
-             cap_vptr_mask' maskCap_valid mask_right_eq_null)
+             cap_vptr_mask' maskCap_valid)
            apply (simp only:is_the_ep_fold relative_fold)
            apply (clarsimp simp:Collect_const_mem if_1_0_0
              split del:if_split)
@@ -4489,6 +4481,7 @@ lemma handleFaultReply_ccorres [corres]:
              apply wp
             apply (vcg exspec=copyMRsFaultReply_modifies)
            apply (wpsimp wp: threadGet_wp)+
+
         (* ArchFault *)
         apply (rename_tac arch_fault)
         apply ccorres_rewrite
@@ -4540,18 +4533,16 @@ lemma handleFaultReply_ccorres [corres]:
   apply (fastforce simp: seL4_Faults seL4_Arch_Faults)
   done
 
-context
-notes if_cong[cong]
-begin
 crunch emptySlot, tcbSchedEnqueue, rescheduleRequired
   for tcbFault: "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
   (wp: threadSet_obj_at'_strongish crunch_wps
-    simp: crunch_simps unless_def)
+   simp: crunch_simps unless_def
+   cong: if_cong)
 
 crunch setThreadState, cancelAllIPC, cancelAllSignals
  for tcbFault: "obj_at' (\<lambda>tcb. P (tcbFault tcb)) t"
-  (wp: threadSet_obj_at'_strongish crunch_wps simp: crunch_simps)
-end
+  (wp: threadSet_obj_at'_strongish crunch_wps
+   cong: if_cong simp: crunch_simps)
 
 lemma sbn_tcbFault:
   "\<lbrace>obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>

@@ -894,9 +894,10 @@ lemma finaliseSlot_ccorres:
          apply (clarsimp simp: cte_wp_at_ctes_of)
          apply (erule disjE[where P="F \<and> G" for F G])
           apply (clarsimp simp: capRemovable_def cte_wp_at_ctes_of cap_has_cleanup'_def
+                                arch_cap_has_cleanup'_def
                          split: option.split capability.splits)
           apply (auto dest!: ctes_of_valid'
-                       simp: valid_cap'_def Kernel_C.maxIRQ_def RISCV64.maxIRQ_def
+                       simp: valid_cap'_def Kernel_C.maxIRQ_def maxIRQ_def
                              unat_ucast word_le_nat_alt cleanup_info_wf'_def arch_cleanup_info_wf'_def)[1]
          subgoal by (auto dest!: valid_capAligned ctes_of_valid'
                           simp: isCap_simps final_matters'_def o_def obj_at_simps pred_tcb_at'_def)

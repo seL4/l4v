@@ -9,7 +9,7 @@
 *)
 
 theory Syscall_R
-imports Tcb_R Arch_R Interrupt_R
+imports ArchTcb_R Arch_R ArchInterrupt_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
@@ -262,7 +262,7 @@ lemma decodeInvocation_corres:
                     split del: if_split cong: if_cong)
         apply (clarsimp simp add: o_def)
         apply (rule corres_guard_imp)
-          apply (rule_tac F="length list \<le> 32" in corres_gen_asm)
+          apply (rule_tac F="length list \<le> word_bits" in corres_gen_asm)
           apply (rule decodeCNodeInvocation_corres, simp+)
          apply (simp add: valid_cap_def word_bits_def)
         apply simp
@@ -662,6 +662,7 @@ lemma pinv_tcb'[wp]:
 
 lemma sts_cte_at[wp]:
   "\<lbrace>cte_at' p\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. cte_at' p\<rbrace>"
+  supply if_cong[cong]
   apply (simp add: setThreadState_def)
   apply (wp|simp)+
   done
@@ -675,6 +676,7 @@ lemma sts_mcpriority_tcb_at'[wp]:
   "\<lbrace>mcpriority_tcb_at' P t\<rbrace>
     setThreadState st t'
    \<lbrace>\<lambda>_. mcpriority_tcb_at' P t\<rbrace>"
+  supply if_cong[cong]
   apply (cases "t = t'",
          simp_all add: setThreadState_def
                   split del: if_split)
@@ -748,6 +750,7 @@ lemma decodeDomainSetStart_inv_wf[wp]:
 lemma decodeDomainConfigure_inv_wf[wp]:
   "\<lbrace>\<top>\<rbrace> decodeDomainConfigure args excaps \<lbrace>valid_domain_inv'\<rbrace>, -"
   unfolding decodeDomainConfigure_def
+  supply if_cong[cong]
   apply (wpsimp simp: valid_domain_inv'_def split_del: if_split)
   apply (clarsimp simp: not_less not_le le_maxDomain_eq_less_numDomains unat_ucast)
   using numDomains_fits_domainBits
@@ -1353,6 +1356,7 @@ crunch rescheduleRequired
 
 crunch setThreadState
   for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  (cong: if_cong)
 
 crunch reply_from_kernel
   for pspace_aligned[wp]: pspace_aligned
@@ -1631,7 +1635,7 @@ lemma deleteCallerCap_nonz_cap:
 
 crunch cteDeleteOne
   for sch_act_sane[wp]: sch_act_sane
-  (wp: crunch_wps loadObject_default_inv getObject_inv
+  (wp: sts_sch_act_sane crunch_wps loadObject_default_inv getObject_inv
    simp: crunch_simps unless_def
    rule: sch_act_sane_lift)
 
@@ -2009,11 +2013,10 @@ crunch doIPCTransfer
 
 lemma doReplyTransfer_sane:
   "\<lbrace>\<lambda>s. sch_act_sane s \<and> t' \<noteq> ksCurThread s\<rbrace>
-  doReplyTransfer t t' callerSlot g \<lbrace>\<lambda>rv. sch_act_sane\<rbrace>"
-  apply (simp add: doReplyTransfer_def liftM_def)
-  apply (wp possibleSwitchTo_sane hoare_drop_imps hoare_vcg_all_lift|wpc)+
-  apply simp
-  done
+   doReplyTransfer t t' callerSlot g
+   \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
+  unfolding doReplyTransfer_def
+  by (wpsimp wp: sts_sch_act_sane possibleSwitchTo_sane hoare_drop_imps)
 
 lemma handleReply_sane:
   "\<lbrace>sch_act_sane\<rbrace> handleReply \<lbrace>\<lambda>rv. sch_act_sane\<rbrace>"
@@ -2078,7 +2081,7 @@ lemma maybeHandleInterrupt_corres:
                 simp: irq_state_independent_def
          | corres_cases_both)+
      apply (wpsimp wp: hoare_drop_imp)
-    apply clarsimp
+    apply (clarsimp simp: non_kernel_IRQs_def)
     apply (strengthen contract_all_imp_strg[where P'=True, simplified])
     apply (wpsimp wp: doMachineOp_getActiveIRQ_IRQ_active' hoare_vcg_all_lift)
    apply clarsimp
@@ -2237,7 +2240,7 @@ lemma handleSpuriousIRQ_invs'[wp]:
 
 crunch handleSpuriousIRQ, maybeHandleInterrupt
   for invs'[wp]: invs'
-  (ignore: doMachineOp)
+  (ignore: doMachineOp simp: non_kernel_IRQs_def)
 
 lemma he_invs'[wp]:
   "\<lbrace>invs' and

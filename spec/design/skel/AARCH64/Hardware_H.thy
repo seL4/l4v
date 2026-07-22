@@ -32,7 +32,7 @@ abbreviation (input) maxPeriodUs :: "word64" where
   "maxPeriodUs \<equiv> MAX_PERIOD_US"
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs Platform=Platform.AARCH64 CONTEXT AARCH64_H \
-  NOT PT_Type plic_complete_claim getMemoryRegions getDeviceRegions getKernelDevices \
+  NOT PT_Type getMemoryRegions getDeviceRegions getKernelDevices \
   loadWord storeWord storeWordVM getActiveIRQ ackInterrupt maskInterrupt setDeadline \
   deactivateInterrupt configureTimer resetTimer debugPrint getRestartPC setNextPC clearMemory \
   clearMemoryVM initMemory freeMemory setHardwareASID wordFromPDE wordFromPTE \
@@ -48,7 +48,7 @@ abbreviation (input) maxPeriodUs :: "word64" where
   get_gic_vcpu_ctrl_hcr set_gic_vcpu_ctrl_hcr get_gic_vcpu_ctrl_vmcr \
   set_gic_vcpu_ctrl_vmcr get_gic_vcpu_ctrl_apr set_gic_vcpu_ctrl_apr \
   get_gic_vcpu_ctrl_vtr get_gic_vcpu_ctrl_eisr0 get_gic_vcpu_ctrl_eisr1 \
-  get_gic_vcpu_ctrl_misr get_gic_vcpu_ctrl_lr set_gic_vcpu_ctrl_lr read_cntpct \
+  get_gic_vcpu_ctrl_misr get_gic_vcpu_ctrl_lr set_gic_vcpu_ctrl_lr \
   check_export_arch_timer \
   isb dsb dmb \
   invalidateTranslationASID invalidateTranslationSingle \
@@ -69,13 +69,13 @@ arch_requalify_types (H)
 
 context Arch begin arch_global_naming (H)
 
-#INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64_H instanceproofs NOT plic_complete_claim HardwareASID VMFaultType VMPageSize VMPageEntry HypFaultType
+#INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64_H instanceproofs NOT HardwareASID VMFaultType VMPageSize VMPageEntry HypFaultType
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64_H ONLY wordFromPTE
 
-(* Kernel_Config provides a generic numeral, Haskell expects type irq *)
+(* Platform provides a generic numeral, Haskell expects type irq *)
 abbreviation (input) maxIRQ :: irq where
-  "maxIRQ \<equiv> Kernel_Config.maxIRQ"
+  "maxIRQ \<equiv> Platform.maxIRQ"
 
 end (* context AARCH64 *)
 

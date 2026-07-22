@@ -10,7 +10,7 @@
 *)
 
 theory Syscall_R
-imports Tcb_R Arch_R Interrupt_R
+imports ArchTcb_R Arch_R ArchInterrupt_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)
@@ -262,7 +262,7 @@ lemma decodeInvocation_corres:
                     split del: if_split cong: if_cong)
         apply (clarsimp simp add: o_def)
         apply (rule corres_guard_imp)
-          apply (rule_tac F="length list \<le> 64" in corres_gen_asm)
+          apply (rule_tac F="length list \<le> word_bits" in corres_gen_asm)
           apply (rule decodeCNodeInvocation_corres, simp+)
          apply (simp add: valid_cap_def word_bits_def)
         apply simp
@@ -684,6 +684,7 @@ lemma pinv_tcb'[wp]:
 
 lemma sts_cte_at[wp]:
   "\<lbrace>cte_at' p\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. cte_at' p\<rbrace>"
+  supply if_cong[cong]
   apply (simp add: setThreadState_def)
   apply (wp|simp)+
   done
@@ -697,6 +698,7 @@ lemma sts_mcpriority_tcb_at'[wp]:
   "\<lbrace>mcpriority_tcb_at' P t\<rbrace>
     setThreadState st t'
    \<lbrace>\<lambda>_. mcpriority_tcb_at' P t\<rbrace>"
+  supply if_cong[cong]
   apply (cases "t = t'",
          simp_all add: setThreadState_def
                   split del: if_split)
@@ -715,7 +717,7 @@ lemma sts_valid_inv'[wp]:
      apply (case_tac cnode_invocation, simp_all add: cte_wp_at_ctes_of)
            apply (wp | simp)+
     apply (rename_tac irqcontrol_invocation)
-    apply (case_tac irqcontrol_invocation, simp_all add: arch_irq_control_inv_valid'_def)
+    apply (case_tac irqcontrol_invocation, simp_all)
      apply (rename_tac archirq_inv)
      apply (case_tac archirq_inv; simp)
       apply (wp | simp add: irq_issued'_def)+
@@ -745,6 +747,7 @@ lemma arch_cap_exhausted:
     \<Longrightarrow> undefined \<lbrace>P\<rbrace>"
   by (cases cap; simp add: isCap_simps)
 
+(* slow *)
 crunch decodeInvocation
   for inv[wp]: P
   (simp: crunch_simps wp: crunch_wps arch_cap_exhausted mapME_x_inv_wp getASID_wp)
@@ -769,6 +772,7 @@ lemma decodeDomainSetStart_inv_wf[wp]:
 lemma decodeDomainConfigure_inv_wf[wp]:
   "\<lbrace>\<top>\<rbrace> decodeDomainConfigure args excaps \<lbrace>valid_domain_inv'\<rbrace>, -"
   unfolding decodeDomainConfigure_def
+  supply if_cong[cong]
   apply (wpsimp simp: valid_domain_inv'_def split_del: if_split)
   apply (clarsimp simp: not_less not_le le_maxDomain_eq_less_numDomains unat_ucast)
   using numDomains_fits_domainBits

@@ -16,6 +16,7 @@ arch_requalify_facts
   typ_at_lift_valid_cap'
   tcb_at_cte_at'
   gen_objBitsT_simps
+  hyp_refs_of_live'
 
 (* these depend on interpretations in ArchInvLemmas_H *)
 context pspace_update_eq'
@@ -89,6 +90,10 @@ end
 locale InvariantUpdates_H =
   assumes valid_arch_state'_interrupt[simp]:
     "\<And>f s. valid_arch_state' (ksInterruptState_update f s) = valid_arch_state' s"
+  assumes global_refs'_intStateIRQTable_update[simp]:
+    "\<And>s f.
+     global_refs' (s\<lparr>ksInterruptState := intStateIRQTable_update f (ksInterruptState s)\<rparr>)
+     = global_refs' s"
 
 (* FIXME: use locales to shorten this work *)
 

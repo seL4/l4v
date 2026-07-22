@@ -73,6 +73,7 @@ lemma set_asid_pool_valid_queues[wp]:
 crunch set_asid_pool, set_vm_root, vcpu_flush
   for cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   and ready_queues[wp]: "\<lambda>s. P (ready_queues s)"
+  and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
 
 lemma set_asid_pool_weak_valid_sched_action[wp]:
   "set_asid_pool ptr pool \<lbrace>weak_valid_sched_action\<rbrace>"

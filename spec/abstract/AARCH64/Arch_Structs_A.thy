@@ -123,7 +123,7 @@ lemma pt_index_ptTranslationBits:
   by (simp add: ptTranslationBits_def)
 
 (* This could also be a record, but we expect further alternatives to be added for SMMU *)
-datatype asid_pool_entry = ASIDPoolVSpace (ap_vmid : "vmid option") (ap_vspace : obj_ref)
+datatype asid_pool_entry = ASIDPoolVSpace (ap_vspace : obj_ref)
 
 type_synonym asid_pool = "asid_low_index \<rightharpoonup> asid_pool_entry"
 
@@ -145,7 +145,6 @@ qualify AARCH64_A (in Arch)
 record vcpu = AARCH64.vcpu_state +
   vcpu_tcb  :: "obj_ref option"
   vcpu_vppi_masked :: "vppievent_irq \<Rightarrow> bool"
-  vcpu_vtimer :: virt_timer
 
 end_qualify
 
@@ -167,8 +166,7 @@ definition
       vcpu_vgic   = default_gic_vcpu_interface,
       vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrEL1VM),
       vcpu_tcb    = None,
-      vcpu_vppi_masked = (\<lambda>_. False),
-      vcpu_vtimer = VirtTimer 0
+      vcpu_vppi_masked = (\<lambda>_. False)
    \<rparr>"
 
 (* produce discriminators and selectors even though no field names are mentioned *)
@@ -333,6 +331,7 @@ section \<open>Architecture-specific state\<close>
 record arch_state =
   arm_asid_table :: "asid_high_index \<rightharpoonup> obj_ref"
   arm_kernel_vspace :: "AARCH64_A.arm_vspace_region_uses"
+  arm_asid_map :: "asid \<rightharpoonup> AARCH64_A.vmid"
   arm_vmid_table :: "AARCH64_A.vmid \<rightharpoonup> asid"
   arm_next_vmid :: AARCH64_A.vmid
   arm_us_global_vspace :: "obj_ref"

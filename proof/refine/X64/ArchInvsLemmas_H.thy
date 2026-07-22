@@ -382,6 +382,7 @@ lemma hyp_refs_of_hyp_live':
   "hyp_refs_of' ko \<noteq> {} \<Longrightarrow> hyp_live' ko"
   by (cases ko, simp_all)
 
+(* interface lemma *)
 lemma hyp_refs_of_live':
   "hyp_refs_of' ko \<noteq> {} \<Longrightarrow> live' ko"
   by (cases ko, simp_all add: live'_def hyp_refs_of_hyp_live')

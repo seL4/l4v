@@ -180,7 +180,7 @@ lemma handleInterrupt_no_fail:
   apply (rule corres_nofail)
     apply (rule handleInterrupt_corres)
    apply (erule FalseE)
-  apply (fastforce simp: ex_abs_def)
+  apply (fastforce simp: ex_abs_def non_kernel_IRQs_def)
   done
 
 lemma handleSpuriousIRQ_no_fail[intro!, wp, simp]:

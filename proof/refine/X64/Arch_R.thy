@@ -10,7 +10,7 @@
 *)
 
 theory Arch_R
-imports Untyped_R Finalise_R
+imports Untyped_R ArchFinalise_R
 begin
 
 unbundle l4v_word_context
@@ -326,20 +326,20 @@ lemma performASIDControlInvocation_corres:
         apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
        apply (simp add: pageBits_def)
       apply (simp add: pageBits_def)
-     apply (simp add: pageBits_def)
+     apply clarsimp
+     apply (drule(1) cte_cap_in_untyped_range)
+          apply (fastforce simp: cte_wp_at_ctes_of)
+         apply assumption+
+      apply fastforce
+     apply simp
     apply clarsimp
-    apply (drule(1) cte_cap_in_untyped_range)
+    apply (drule (1) cte_cap_in_untyped_range)
          apply (fastforce simp: cte_wp_at_ctes_of)
         apply assumption+
+      apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
      apply fastforce
     apply simp
-   apply clarsimp
-   apply (drule (1) cte_cap_in_untyped_range)
-        apply (fastforce simp add: cte_wp_at_ctes_of)
-       apply assumption+
-     apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
-    apply fastforce
-   apply simp
+   apply (simp add: pageBits_def)
   apply clarsimp
   done
 
@@ -713,7 +713,7 @@ lemma decodeX64PageTableInvocation_corres:
                                  in corres_gen_asm2)
         apply (rule corres_split[OF isFinalCapability_corres[where ptr=slot]])
           apply (drule mp)
-           apply (clarsimp simp: isCap_simps final_matters'_def)
+           apply (clarsimp simp: isCap_simps final_matters'_def arch_final_matters'_def)
           apply (rule whenE_throwError_corres)
             apply simp
            apply simp
@@ -804,7 +804,7 @@ lemma decodeX64PageDirectoryInvocation_corres:
       in corres_gen_asm2)
         apply (rule corres_split[OF isFinalCapability_corres[where ptr=slot]])
           apply (drule mp)
-           apply (clarsimp simp: isCap_simps final_matters'_def)
+           apply (clarsimp simp: isCap_simps final_matters'_def arch_final_matters'_def)
           apply (rule whenE_throwError_corres)
             apply simp
            apply simp
@@ -884,7 +884,7 @@ lemma decodeX64PDPointerTableInvocation_corres:
                      in corres_gen_asm2)
         apply (rule corres_split[OF isFinalCapability_corres[where ptr=slot]])
           apply (drule mp)
-           apply (clarsimp simp: isCap_simps final_matters'_def)
+           apply (clarsimp simp: isCap_simps final_matters'_def arch_final_matters'_def)
           apply (rule whenE_throwError_corres)
             apply simp
            apply simp
@@ -1533,7 +1533,7 @@ lemma invokeArch_tcb_at':
 
 crunch setThreadState
   for pspace_no_overlap'[wp]: "pspace_no_overlap' w s"
-  (simp: unless_def)
+  (simp: unless_def crunch_simps wp: crunch_wps)
 
 lemma sts_cte_cap_to'[wp]:
   "\<lbrace>ex_cte_cap_to' p\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. ex_cte_cap_to' p\<rbrace>"
@@ -1944,13 +1944,9 @@ crunch "Arch.finaliseCap"
   for aligned': pspace_aligned'
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
-lemmas arch_finalise_cap_aligned' = finaliseCap_aligned'
-
 crunch "Arch.finaliseCap"
   for distinct': pspace_distinct'
   (wp: crunch_wps getASID_wp simp: crunch_simps)
-
-lemmas arch_finalise_cap_distinct' = finaliseCap_distinct'
 
 crunch "Arch.finaliseCap"
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
@@ -1990,7 +1986,7 @@ lemma ex_cte_not_in_untyped_range:
   "\<lbrakk>(ctes_of s) cref = Some (CTE (capability.UntypedCap d ptr bits idx) mnode);
     descendants_of' cref (ctes_of s) = {}; invs' s;
     ex_cte_cap_wp_to' (\<lambda>_. True) x s; valid_global_refs' s\<rbrakk>
-   \<Longrightarrow> x \<notin> {ptr .. ptr + 2 ^ bits - 1}"
+   \<Longrightarrow> x \<notin> {ptr .. ptr + mask bits}"
   apply clarsimp
   apply (drule(1) cte_cap_in_untyped_range)
    apply (fastforce simp:cte_wp_at_ctes_of)+

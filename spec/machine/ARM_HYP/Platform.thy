@@ -36,6 +36,10 @@ context Arch begin global_naming ARM_HYP
 value_type irq_len = Kernel_Config.irqBits (* IRQ_CNODE_SLOT_BITS *)
 type_synonym irq = "irq_len word"
 
+(* maxIRQ is defined via Kernel_Config on this architecture *)
+definition maxIRQ :: "'a::numeral" where
+  "maxIRQ \<equiv> Kernel_Config.maxIRQ"
+
 (* List of supported Arm platforms that support GICv3 or GICv2 *)
 definition isGICPlatform :: bool where
   "isGICPlatform \<equiv> \<not>(config_PLAT_OMAP3 \<or> config_PLAT_AM335X \<or> config_PLAT_BCM2837)"
@@ -139,5 +143,9 @@ definition irqVTimerEvent :: "irq" where
   "irqVTimerEvent  \<equiv> 27"
 
 end
+
+(* we want to use the Platform constant in the global context instead of the arch-specific one from
+   Kernel_Config *)
+arch_requalify_consts (aliasing) maxIRQ
 
 end

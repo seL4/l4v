@@ -548,8 +548,7 @@ where
      vcpuTCB_C cvcpu = option_to_ctcb_ptr (vcpuTCBPtr vcpu)
      \<and> cvcpu_regs_relation vcpu cvcpu
      \<and> cvgic_relation (vcpuVGIC vcpu) (vgic_C cvcpu)
-     \<and> cvcpu_vppi_masked_relation vcpu cvcpu
-     \<and> last_pcount_C (virtTimer_C cvcpu) = vtimerLastPCount (vcpuVTimer vcpu)"
+     \<and> cvcpu_vppi_masked_relation vcpu cvcpu"
 
 definition
   cuser_user_data_relation :: "(10 word \<Rightarrow> word32) \<Rightarrow> user_data_C \<Rightarrow> bool"

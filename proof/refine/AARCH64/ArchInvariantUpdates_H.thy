@@ -37,6 +37,12 @@ lemma valid_arch_state'_interrupt[simp, InvariantUpdates_H_assms]:
   "valid_arch_state' (ksInterruptState_update f s) = valid_arch_state' s"
   by (simp add: valid_arch_state'_def cong: option.case_cong)
 
+(* not generally true for ksInterruptState update *)
+lemma global_refs'_intStateIRQTable_update[simp, InvariantUpdates_H_assms]:
+  "global_refs' (s\<lparr>ksInterruptState := intStateIRQTable_update f (ksInterruptState s)\<rparr>)
+   = global_refs' s"
+  by (simp add: global_refs'_def)
+
 end
 
 global_interpretation InvariantUpdates_H?: InvariantUpdates_H

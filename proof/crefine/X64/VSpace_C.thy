@@ -1269,15 +1269,15 @@ lemma setVMRoot_ccorres:
    apply vcg
   apply (clarsimp simp: Collect_const_mem)
   apply (rule conjI)
-   apply (frule cte_at_tcb_at_32', drule cte_at_cte_wp_atD)
-   apply (clarsimp simp: cte_level_bits_def tcbVTableSlot_def)
+   apply (frule cte_at_tcb_at_2p_cteSizeBits, drule cte_at_cte_wp_atD)
+   apply (clarsimp simp: cteSizeBits_cte_level_bits tcbVTableSlot_def)
    apply (rule_tac x="cteCap cte" in exI)
    apply (rule conjI, erule cte_wp_at_weakenE', simp)
    apply (clarsimp simp: invs_cicd_no_0_obj' invs_cicd_arch_state')
    apply (frule cte_wp_at_valid_objs_valid_cap'; clarsimp simp: invs_cicd_valid_objs')
    apply (clarsimp simp: isCap_simps valid_cap'_def mask_def asid_wf_def)
   apply (clarsimp simp: tcb_cnode_index_defs cte_level_bits_def tcbVTableSlot_def
-                        cte_at_tcb_at_32')
+                        cte_at_tcb_at_2p_cteSizeBits)
   apply (clarsimp simp: cap_get_tag_isCap_ArchObject2
                  dest!: isCapDs)
   apply (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric]

@@ -20,7 +20,7 @@ lemmas of_nat_inj32 = of_nat_inj[where 'a=32, folded word_bits_def]
 (* prefer 2 as a tactic *)
 method prefer_next = tactic \<open>SUBGOAL (K (prefer_tac 2)) 1\<close>
 
-context begin interpretation Arch .
+context Arch begin arch_global_naming
 
 (* Move to Machine_AI *)
 lemma no_fail_writeContextIDAndPD[wp]: "no_fail \<top> (writeContextIDAndPD a w)"
@@ -42,6 +42,10 @@ crunch
 lemma flush_space_vspace_objs[wp]:
   "\<lbrace>valid_vspace_objs\<rbrace> flush_space space \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
   by (wpsimp simp: flush_space_def)
+
+(* FIXME: move, missing in Ipc_AI on this architecture *)
+crunch handle_arch_fault_reply, arch_get_sanitise_register_info
+  for inv[Ipc_AI_2_assms]: P
 
 end
 

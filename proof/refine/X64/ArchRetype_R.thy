@@ -71,6 +71,13 @@ lemma APIType_capBits_generic[Retype_R_assms, simp]:
   "APIType_capBits (APIObjectType api) us = APIType_capBits_gen api us"
   by (simp add: APIType_capBits_raw_def)
 
+lemma objSize_eq_capBits[simp, Retype_R_assms]:
+  "Types_H.getObjectSize ty us = APIType_capBits ty us"
+  by (cases ty;
+      clarsimp simp: getObjectSize_def objBits_simps bit_simps
+                     APIType_capBits_def apiGetObjectSize_def ptBits_def
+               split: apiobject_type.splits)
+
 definition makeObjectKO :: "bool \<Rightarrow> domain \<Rightarrow> (kernel_object + X64_H.object_type) \<rightharpoonup> kernel_object"
   where
   makeObjectKO_raw_def:
@@ -626,7 +633,7 @@ lemmas object_splits =
   X64_H.object_type.split_asm
   arch_kernel_object.split_asm
 
-lemma valid_arch_badges_not_arch:
+lemma valid_arch_badges_not_arch[Retype_R_assms]:
   "\<not>isArchObjectCap cap' \<Longrightarrow> valid_arch_badges cap cap' node"
   by (auto simp: isCap_simps valid_arch_badges_def)
 
@@ -1012,6 +1019,12 @@ lemma createNewCaps_pspace_domain_valid[Retype_R_assms, wp]:
   apply (auto simp: objBits_simps APIType_capBits_def field_simps mult_2_right bit_simps)
   done
 
+(* safe for generic context, and we can't requalify object_type.inject as that would
+   result in it being named "inject" *)
+lemma object_type_inject[Retype_R_assms]:
+  "(APIObjectType x = APIObjectType y) = (x = y)"
+  by simp
+
 end (* Arch *)
 
 arch_requalify_consts
@@ -1283,10 +1296,10 @@ lemma retype_state_relation[Retype_R_2_assms]:
     using retype_ready_queues_relation[OF _ vs' pn' ko cover num_r]
     by (clarsimp simp: ready_queues_relation_def Let_def)
 
-  have asr: "(arch_state s, ksArchState s') \<in> arch_state_relation" using sr
-    by (blast dest: state_relationD)
+  have asr: "\<And>aobjs. (arch_state s, ksArchState s') \<in> arch_state_relation aobjs" using sr
+    by (clarsimp dest!: state_relationD)
 
-  thus "(arch_state s, ksArchState ?t') \<in> arch_state_relation"
+  thus "\<And>aobjs. (arch_state s, ksArchState ?t') \<in> arch_state_relation aobjs"
     using asr
     by (clarsimp simp: arch_state_relation_def update_gs_def comp_def
                  split: Structures_A.apiobject_type.splits aobject_type.splits)

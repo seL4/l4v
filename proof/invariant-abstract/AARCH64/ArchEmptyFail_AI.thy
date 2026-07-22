@@ -175,10 +175,6 @@ qed
 
 context Arch begin arch_global_naming
 
-lemma plic_complete_claim_empty_fail[wp, EmptyFail_AI_assms]:
-  "empty_fail (plic_complete_claim irq)"
-  by (clarsimp simp: plic_complete_claim_def)
-
 lemma vgic_maintenance_empty_fail[wp]: "empty_fail vgic_maintenance"
   by (wpsimp simp: get_gic_vcpu_ctrl_eisr0_def
                    get_gic_vcpu_ctrl_eisr1_def

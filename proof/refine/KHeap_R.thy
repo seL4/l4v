@@ -98,10 +98,10 @@ lemma typ_at_to_obj_at':
   by (simp add: typ_at'_def obj_at'_real_def project_koType[symmetric])
 
 lemma setObject_modify_variable_size:
-  fixes v :: "'a :: pspace_storable" shows
   "\<lbrakk>obj_at' (P :: 'a \<Rightarrow> bool) p s; updateObject v = updateObject_default v;
     (1 :: machine_word) < 2 ^ objBits v; obj_at' (\<lambda>obj. objBits v = objBits obj) p s\<rbrakk>
    \<Longrightarrow> setObject p v s = modify (ksPSpace_update (\<lambda>ps. ps (p \<mapsto> injectKO v))) s"
+  for v :: "'a :: pspace_storable"
   apply (clarsimp simp: setObject_def split_def exec_gets obj_at'_def lookupAround2_known1
                         assert_opt_def updateObject_default_def bind_assoc)
   apply (simp add: projectKO_def alignCheck_assert)
@@ -115,6 +115,16 @@ lemma setObject_modify_variable_size:
   apply (simp add: simpler_modify_def)
   done
 
+lemma setObject_default_wp:
+  "\<lbrakk> updateObject v = updateObject_default v; (1::nat) < 2 ^ objBits v \<rbrakk> \<Longrightarrow>
+   \<lbrace>\<lambda>s. obj_at' (\<lambda>obj::'a. objBits v = objBits obj) p s \<and>
+        Q () (ksPSpace_update (\<lambda>ps. ps(p \<mapsto> injectKO v)) s)\<rbrace>
+   setObject p v
+   \<lbrace>Q\<rbrace>"
+  for v :: "'a :: pspace_storable"
+  by (clarsimp simp: valid_def simpler_modify_def
+                     setObject_modify_variable_size[where P="\<lambda>ko. objBits v = objBits ko"])
+
 lemma setObject_modify_variable_size_rewrite:
   fixes v :: "'a :: pspace_storable"
   assumes "updateObject v = updateObject_default v"
@@ -126,10 +136,10 @@ lemma setObject_modify_variable_size_rewrite:
   by (fastforce intro: setObject_modify_variable_size simp: monadic_rewrite_def obj_at'_def)
 
 lemma setObject_modify:
-  fixes v :: "'a :: pspace_storable" shows
   "\<lbrakk>obj_at' (P :: 'a \<Rightarrow> bool) p s; updateObject v = updateObject_default v;
     (1 :: machine_word) < 2 ^ objBits v; \<And>ko. P ko \<Longrightarrow> objBits ko = objBits v \<rbrakk>
    \<Longrightarrow> setObject p v s = modify (ksPSpace_update (\<lambda>ps. ps (p \<mapsto> injectKO v))) s"
+  for v :: "'a :: pspace_storable"
   apply (rule setObject_modify_variable_size)
      apply fastforce
     apply fastforce
@@ -156,6 +166,24 @@ lemma ovalid_readObject[wp]:
   by (auto simp: obj_at'_def readObject_def split_def omonad_defs obind_def
                  lookupAround2_known1 ovalid_def
            dest: R)
+
+definition isArchT :: "kernel_object_type \<Rightarrow> bool" where
+  "isArchT T \<equiv> case T of ArchT _ \<Rightarrow> True | _ \<Rightarrow> False"
+
+lemmas isArchT_simps[simp] = isArchT_def[split_simps kernel_object_type.split]
+
+lemma isArchT_eq:
+  "isArchT T = (\<exists>T'. T = ArchT T')"
+  by (cases T; simp)
+
+lemma isArch_koTypeOf_aobj_of':
+  "(\<not>isArchT (koTypeOf ko)) = (aobj_of' ko = None)"
+  by (cases ko; simp)
+
+lemma typ_at_aobjs_of'_None:
+  "\<lbrakk> typ_at' T p s; \<not>isArchT T \<rbrakk> \<Longrightarrow> aobjs_of' s p = None"
+  unfolding typ_at'_def ko_wp_at'_def
+  by (clarsimp simp: isArch_koTypeOf_aobj_of' opt_map_def)
 
 lemma obj_at_getObject:
   assumes R:
@@ -690,6 +718,22 @@ lemma setObject_sched_context_tcbs_of'[wp]:
 
 lemma setObject_cte_replies_of'[wp]:
   "setObject c (cte::cte) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"
+  by setObject_easy_cases
+
+lemma setObject_endpoint_aobjs_of'[wp]:
+  "setObject c (ep :: endpoint) \<lbrace>\<lambda>s. P' (aobjs_of' s)\<rbrace>"
+  by setObject_easy_cases
+
+lemma setObject_notification_aobjs_of'[wp]:
+  "setObject c (ntfn :: notification) \<lbrace>\<lambda>s. P' (aobjs_of' s)\<rbrace>"
+  by setObject_easy_cases
+
+lemma setObject_cte_aobjs_of'[wp]:
+  "setObject c (cte :: cte) \<lbrace>\<lambda>s. P' (aobjs_of' s)\<rbrace>"
+  by setObject_easy_cases
+
+lemma setObject_tcb_aobjs_of'[wp]:
+  "setObject c (tcb :: tcb) \<lbrace>\<lambda>s. P' (aobjs_of' s)\<rbrace>"
   by setObject_easy_cases
 
 lemma setObject_cte_tcbSchedNexts_of[wp]:

@@ -21,6 +21,10 @@ sublocale p_asid_table_vmid_table_update:
   Arch_p_asid_table_update_eq "\<lambda>s. s\<lparr>arch_state := arm_vmid_table_update f (arch_state s)\<rparr>"
   by (unfold_locales) auto
 
+sublocale p_asid_table_asid_map_update:
+  Arch_p_asid_table_update_eq "\<lambda>s. s\<lparr>arch_state := arm_asid_map_update f (arch_state s)\<rparr>"
+  by (unfold_locales) auto
+
 sublocale p_asid_table_next_vmid_update:
   Arch_p_asid_table_update_eq "\<lambda>s. s\<lparr>arch_state := arm_next_vmid_update f (arch_state s)\<rparr>"
   by (unfold_locales) auto

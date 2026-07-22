@@ -470,6 +470,10 @@ locale Retype_R =
     "\<And>api us. APIType_capBits (APIObjectType api) us = APIType_capBits_gen api us"
   assumes toAPIType_Some[simp]:
     "\<And>ty x. (toAPIType ty = Some x) = (ty = APIObjectType x)"
+  assumes object_type_inject[simp]:
+    "\<And>x y. (APIObjectType x = APIObjectType y) = (x = y)"
+  assumes objSize_eq_capBits[simp]:
+    "\<And>ty us. Types_H.getObjectSize ty us = APIType_capBits ty us"
   assumes objBits_le_obj_bits_api:
     "\<And>dev d ty ko us.
      ty = Inr (APIObjectType SchedContextObject) \<longrightarrow> min_sched_context_bits \<le> us \<Longrightarrow>
@@ -619,6 +623,8 @@ locale Retype_R =
       valid_machine_state'\<rbrace>
      createNewCaps ty ptr n us dev
      \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
+  assumes valid_arch_badges_not_arch:
+    "\<And>cap cap' node. \<not>isArchObjectCap cap' \<Longrightarrow> valid_arch_badges cap cap' node"
 begin
 
 lemma valid_obj_makeObject_tcb[simp]:
@@ -653,7 +659,7 @@ lemma state_relation_null_filterE:
      pspace_relation (kheap t) (ksPSpace t');
      sc_replies_relation t t'; ep_queues_relation t t'; ntfn_queues_relation t t';
      ready_queues_relation t t'; release_queue_relation t t';
-     (arch_state t, ksArchState t') \<in> arch_state_relation;
+     (arch_state t, ksArchState t') \<in> arch_state_relation (aobjs_of' t');
      ghost_relation_wrapper t t';
      valid_list s;
      pspace_aligned' s'; pspace_distinct' s'; valid_objs s; valid_mdb s;

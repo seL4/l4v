@@ -34,4 +34,17 @@ definition map_relation :: "(obj_ref \<rightharpoonup> 'a) \<Rightarrow> (obj_re
      dom ah = dom ch
      \<and> (\<forall>p obj obj'. ah p = Some obj \<and> ch p = Some obj' \<longrightarrow> rel obj obj')"
 
+text \<open>Arch object projection for predicates that depend on arch objects only.\<close>
+definition aobj_of':: "kernel_object \<Rightarrow> arch_kernel_object option" where
+  "aobj_of' ko \<equiv> case ko of KOArch ako \<Rightarrow> Some ako | _ \<Rightarrow> None"
+
+lemmas aobj_of'_simps[simp] = aobj_of'_def[split_simps kernel_object.split]
+
+lemma aobj_of'_Some[iff]:
+  "(aobj_of' a = Some ao) = (a = KOArch ao)"
+  by (simp add: aobj_of'_def split: kernel_object.splits)
+
+abbreviation aobjs_of' :: "kernel_state \<Rightarrow> obj_ref \<rightharpoonup> arch_kernel_object" where
+  "aobjs_of' \<equiv> \<lambda>s. ksPSpace s |> aobj_of'"
+
 end

@@ -2011,6 +2011,11 @@ crunch setThreadState, setBoundNotification
   for sch_act_sane[wp]: sch_act_sane
   (simp: crunch_simps wp: crunch_wps)
 
+lemma setSchedulerAction_ChooseNewThread_sch_act_sane[wp]:
+  "\<lbrace>\<top>\<rbrace> setSchedulerAction ChooseNewThread \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
+  apply (wp ssa_wp)
+  by (clarsimp simp: sch_act_sane_def)
+
 lemma weak_sch_act_wf_cross:
   assumes sr: "(s,s') \<in> state_relation"
   assumes aligned: "pspace_aligned s"
@@ -2088,6 +2093,10 @@ lemma reschedule_required_ready_queues_runnable[wp]:
   apply (wpsimp wp: set_scheduler_action_wp thread_get_wp)
   apply (clarsimp simp: st_tcb_at_def obj_at_def schedulable_def2 is_tcb_def)
   done
+
+crunch rescheduleRequired
+  for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
+  and valid_sched_pointers[wp]: valid_sched_pointers
 
 lemma possibleSwitchTo_corres:
   "t = t' \<Longrightarrow>

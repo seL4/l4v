@@ -752,15 +752,10 @@ lemma suspend_ccorres:
           apply (ctac (no_vcg) add: updateRestartPC_ccorres)
          apply (rule ccorres_return_Skip)
         apply ceqv
-       apply (ctac(no_vcg) add: setThreadState_ccorres_simple)
-        apply (ctac add: tcbSchedDequeue_ccorres)
-       apply (rule_tac Q'="\<lambda>_. valid_objs' and tcb_at' thread and pspace_aligned' and pspace_distinct'"
-                    in hoare_post_imp)
-        apply clarsimp
-       apply (wp sts_valid_objs')[1]
-      apply clarsimp
-      apply (wpsimp simp: valid_tcb_state'_def)
-     apply clarsimp
+       apply (ctac (no_vcg) add: tcbSchedDequeue_ccorres)
+        apply (ctac add: setThreadState_ccorres_simple)
+       apply wpsimp
+      apply (wp sts_valid_objs')
      apply (rule conseqPre, vcg exspec=updateRestartPC_modifies)
      apply (rule subset_refl)
     apply clarsimp
@@ -794,7 +789,7 @@ lemma doUnbindNotification_ccorres:
     (UNIV \<inter> {s. ntfnPtr_' s = ntfn_Ptr ntfnptr} \<inter> {s. tcbptr_' s = tcb_ptr_to_ctcb_ptr tcb}) []
    (do ntfn \<leftarrow> getNotification ntfnptr; doUnbindNotification ntfnptr ntfn tcb od)
    (Call doUnbindNotification_'proc)"
-  apply (cinit' lift: ntfnPtr_' tcbptr_')
+  apply (cinit' lift: ntfnPtr_' tcbptr_' simp: doUnbindNotification_def)
    apply (rule ccorres_symb_exec_l [OF _ get_ntfn_inv' _ empty_fail_getNotification])
     apply (rule_tac P="invs' and ko_at' ntfn ntfnptr" and P'=UNIV
              in ccorres_split_nothrow_novcg)
@@ -843,7 +838,7 @@ lemma doUnbindNotification_ccorres':
     (UNIV \<inter> {s. ntfnPtr_' s = ntfn_Ptr ntfnptr} \<inter> {s. tcbptr_' s = tcb_ptr_to_ctcb_ptr tcb}) []
    (doUnbindNotification ntfnptr ntfn tcb)
    (Call doUnbindNotification_'proc)"
-  apply (cinit' lift: ntfnPtr_' tcbptr_')
+  apply (cinit' lift: ntfnPtr_' tcbptr_' simp: doUnbindNotification_def)
     apply (rule_tac P="invs' and ko_at' ntfn ntfnptr" and P'=UNIV
                 in ccorres_split_nothrow_novcg)
         apply (rule ccorres_from_vcg[where rrel=dc and xf=xfdc])

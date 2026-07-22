@@ -19,7 +19,6 @@ NB: In order to get up-to-date information, we don't use interfaces such
     CPU usage, especially for short-lived child processes.
 '''
 
-from __future__ import print_function
 import os
 import psutil
 import signal

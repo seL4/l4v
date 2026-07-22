@@ -544,7 +544,7 @@ shows
     apply (wp deleteObjects_cte_wp_at'[where d=isdev and idx = idx and p = parent]
               deleteObjects_descendants[where d=isdev and p = parent and idx = idx]
               deleteObjects_invs'[where d=isdev and p = parent and idx = idx]
-              Detype_R.deleteObjects_descendants[where p = parent and idx = idx]
+              ArchDetype_R.Detype_R.deleteObjects_descendants[where p = parent and idx = idx]
               deleteObjects_ct_active'[where d=isdev and cref = parent and idx = idx])
    apply clarsimp
    apply vcg
@@ -643,7 +643,7 @@ lemma decodeARMPageTableInvocation_ccorres:
        (decodeARMMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeARMPageTableInvocation_'proc)"
-  supply if_cong[cong]
+  supply if_cong[cong] tl_drop_1[simp]
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
                 simp: decodeARMMMUInvocation_def invocation_eq_use_types)
@@ -3663,7 +3663,7 @@ lemma decodeARMMMUInvocation_ccorres:
        (decodeARMMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeARMMMUInvocation_'proc)"
-  supply if_cong[cong]
+  supply if_cong[cong] tl_drop_1[simp]
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_'
                       current_extra_caps_' cap_' buffer_' call_')
    apply csymbr

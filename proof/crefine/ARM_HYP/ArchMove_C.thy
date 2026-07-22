@@ -12,6 +12,10 @@ theory ArchMove_C
 imports Move_C
 begin
 
+(* FIXME arch-split: CRefine was before Kernel_Config.maxIRQ was wrapped in Platform.maxIRQ_def *)
+arch_requalify_facts maxIRQ_def
+declare maxIRQ_def[simp]
+
 (* FIXME move: need a theory on top of CSpec that arches can share *)
 (* word size corresponding to a C int (e.g. 32 bit signed on x64 and ARM *)
 type_synonym int_sword = "machine_word_len signed word"

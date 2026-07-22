@@ -353,7 +353,7 @@ lemma getActiveIRQ_ret_no_dmo[Noninterference_assms, wp]:
   apply (rule hoare_pre)
    apply (insert irq_oracle_max_irq)
    apply (wp dmo_getActiveIRQ_irq_masks)
-  apply clarsimp
+  apply (clarsimp simp: maxIRQ_def)
   done
 
 (*FIXME: Move to scheduler_if*)
