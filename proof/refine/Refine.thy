@@ -12,11 +12,22 @@ theory Refine
 imports
   KernelInit_R
   ArchADT_H
-  InitLemmas
 begin
 
 arch_requalify_facts no_irq_getActiveIRQ (* FIXME arch-split: Machine_AI *)
 arch_requalify_facts no_irq_modify (* FIXME arch-split: Machine_AI *)
+
+lemmas [simp] =
+  headM_tailM_Cons
+  cart_singletons
+  less_1_simp
+  is_aligned_no_overflow
+  maybe_fail_bind_fail
+
+crunch setPriority
+  for cte_wp_at'[wp]: "cte_wp_at' P p"
+  and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
+  (simp: crunch_simps)
 
 locale Refine =
   assumes user_mem_relation:
