@@ -1483,20 +1483,6 @@ crunch emptySlot
   for obj_at'_tcbIPCBuffer[wp]: "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: crunch_wps)
 
-(* FIXME AARCH64: this was removed since ARM in RAB_FN.thy back in refine *)
-lemma resolveAddressBitsFn_real_cte_at':
-  "resolveAddressBitsFn cap addr depth (only_cnode_caps (ctes_of s)) = Inr rv
-    \<Longrightarrow> (isCNodeCap cap \<longrightarrow> cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot s)
-    \<Longrightarrow> cnode_caps_gsCNodes (only_cnode_caps (ctes_of s)) (gsCNodes s)
-    \<Longrightarrow> valid_objs' s \<Longrightarrow> valid_cap' cap s
-    \<Longrightarrow> real_cte_at' (fst rv) s"
-  using monadic_rewrite_refine_validE_R[where F=False and P''=\<top>,
-    OF resolveAddressBitsFn_eq resolveAddressBits_real_cte_at']
-  apply (clarsimp simp: valid_def validE_R_def validE_def simpler_gets_def)
-  apply (cases rv, clarsimp)
-  apply metis
-  done
-
 (* FIXME move *)
 crunch getBoundNotification
   for (no_fail) no_fail[intro!, wp, simp]
