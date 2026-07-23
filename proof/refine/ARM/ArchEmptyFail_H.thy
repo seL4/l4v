@@ -1,11 +1,11 @@
 (*
- * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-theory EmptyFail_H
-imports ArchRefine
+theory ArchEmptyFail_H
+imports EmptyFail_H
 begin
 
 crunch_ignore (empty_fail)
@@ -37,7 +37,9 @@ lemma emptyOnFailure_empty_fail[intro!, wp, simp]:
 
 lemma rethrowFailure_empty_fail [intro!, wp, simp]:
   "empty_fail m \<Longrightarrow> empty_fail (rethrowFailure f m)"
-  by (wpsimp simp:rethrowFailure_def o_def)
+  apply (simp add:rethrowFailure_def o_def)
+  apply (wp | simp)+
+  done
 
 lemma unifyFailure_empty_fail [intro!, wp, simp]:
   "empty_fail f \<Longrightarrow> empty_fail (unifyFailure f)"
@@ -50,16 +52,20 @@ lemma lookupErrorOnFailure_empty_fail [intro!, wp, simp]:
 lemma setObject_empty_fail [intro!, wp, simp]:
   assumes x: "(\<And>a b c. empty_fail (updateObject v a x b c))"
   shows "empty_fail (setObject x v)"
-  by (wpsimp simp: setObject_def split_def wp: x)
+  apply (simp add: setObject_def split_def)
+  apply (wp x | simp)+
+  done
 
 lemma asUser_empty_fail [intro!, wp, simp]:
   "empty_fail f \<Longrightarrow> empty_fail (asUser t f)"
-  unfolding asUser_def
-  by (wpsimp | simp add: empty_fail_def)+
+  apply (simp add:asUser_def)
+  apply (wp | wpc | simp | simp add: empty_fail_def)+
+  done
 
 lemma capFaultOnFailure_empty_fail [intro!, wp, simp]:
   "empty_fail m \<Longrightarrow> empty_fail (capFaultOnFailure cptr rp m)"
-  by (simp add: capFaultOnFailure_def)
+  apply (simp add: capFaultOnFailure_def)
+  done
 
 crunch locateSlotCap
   for (empty_fail) empty_fail[intro!, wp, simp]
@@ -96,9 +102,10 @@ lemma constOnFailure_empty_fail[intro!, wp, simp]:
   by (simp add: constOnFailure_def const_def empty_fail_catch)
 
 lemma ArchRetypeDecls_H_deriveCap_empty_fail[intro!, wp, simp]:
-  "isPageTableCap y \<or> isFrameCap y \<or> isASIDControlCap y \<or> isASIDPoolCap y
+  "isPageTableCap y \<or> isPageDirectoryCap y \<or> isPageCap y
+   \<or> isASIDControlCap y \<or> isASIDPoolCap y \<or> isSGISignalCap y
    \<Longrightarrow> empty_fail (Arch.deriveCap x y)"
-  by (auto simp: isCap_simps RISCV64_H.deriveCap_def cong: if_cong)
+  by (auto simp: ARM_H.deriveCap_def cong: if_cong)
 
 crunch ensureNoChildren
   for (empty_fail) empty_fail[intro!, wp, simp]
@@ -107,8 +114,9 @@ lemma deriveCap_empty_fail[intro!, wp, simp]:
   "empty_fail (RetypeDecls_H.deriveCap slot y)"
   apply (simp add: Retype_H.deriveCap_def)
   apply (clarsimp simp: empty_fail_bindE)
-  apply (case_tac "capCap y")
-      apply (simp_all add: isCap_simps)
+  apply (case_tac "capCap y";
+         simp add: isPageTableCap_def isPageDirectoryCap_def isSGISignalCap_def
+                   isPageCap_def isASIDPoolCap_def isASIDControlCap_def)
   done
 
 crunch setExtraBadge, cteInsert
@@ -138,37 +146,31 @@ lemma empty_fail_getObject_ap [intro!, wp, simp]:
   "empty_fail (getObject p :: asidpool kernel)"
   by (simp add: empty_fail_getObject)
 
+lemma empty_fail_getObject_pde [intro!, wp, simp]:
+  "empty_fail (getObject p :: pde kernel)"
+  by (simp add: empty_fail_getObject)
+
 lemma empty_fail_getObject_pte [intro!, wp, simp]:
   "empty_fail (getObject p :: pte kernel)"
   by (simp add: empty_fail_getObject)
 
-lemma empty_fail_lookupPTSlotFromLevel[intro!, wp, simp]:
-  "empty_fail (lookupPTSlotFromLevel level pt vPtr)"
-proof (induct level arbitrary: pt)
-  case 0
-  then show ?case by (subst lookupPTSlotFromLevel.simps, simp)
-next
-  case (Suc level)
-  then show ?case
-    by (subst lookupPTSlotFromLevel.simps) (wpsimp simp: checkPTAt_def pteAtIndex_def)
-qed
-
-lemma empty_fail_arch_cap_exhausted:
-  " \<lbrakk>\<not> isFrameCap cap; \<not> isPageTableCap cap; \<not> isASIDControlCap cap; \<not> isASIDPoolCap cap\<rbrakk>
-    \<Longrightarrow> empty_fail undefined"
-  by (cases cap; simp add: isCap_simps)
-
-crunch decodeRISCVMMUInvocation
+crunch decodeARMMMUInvocation
   for (empty_fail) empty_fail[intro!, wp, simp]
-  (simp: Let_def pteAtIndex_def wp: empty_fail_catch empty_fail_arch_cap_exhausted)
+  (simp: Let_def)
 
 lemma ignoreFailure_empty_fail[intro!, wp, simp]:
   "empty_fail x \<Longrightarrow> empty_fail (ignoreFailure x)"
   by (simp add: ignoreFailure_def empty_fail_catch)
 
-crunch cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isStopped, possibleSwitchTo, tcbSchedAppend
+context
+notes option.case_cong_weak[cong]
+begin
+crunch
+  cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isStopped,
+  possibleSwitchTo, tcbSchedAppend
   for (empty_fail) empty_fail[intro!, wp, simp]
-(simp: Let_def setNotification_def setBoundNotification_def wp: empty_fail_getObject)
+  (simp: crunch_simps)
+end
 
 crunch "ThreadDecls_H.suspend"
   for (empty_fail) "_H_empty_fail"[intro!, wp, simp]
@@ -178,16 +180,9 @@ lemma ThreadDecls_H_restart_empty_fail[intro!, wp, simp]:
   "empty_fail (ThreadDecls_H.restart target)"
   by (fastforce simp: restart_def)
 
-lemma empty_fail_lookupPTFromLevel[intro!, wp, simp]:
-  "empty_fail (lookupPTFromLevel level ptPtr vPtr target)"
-  by (induct level arbitrary: ptPtr; subst lookupPTFromLevel.simps; simp; wpsimp)
-
-crunch setBoundNotification
-  for (empty_fail) empty_fail[intro!, wp, simp]
-
 crunch finaliseCap, preemptionPoint, capSwapForDelete
   for (empty_fail) empty_fail[intro!, wp, simp]
-(wp: empty_fail_catch simp:  Let_def ignore: lookupPTFromLevel)
+  (wp: empty_fail_catch simp: Let_def)
 
 lemmas finalise_spec_empty_fail_induct = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. spec_empty_fail (finaliseSlot' sl exp) s"]
@@ -274,10 +269,6 @@ lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   apply (clarsimp simp: scheduleChooseNewThread_def split: if_split | wp | wpc)+
   done
 
-crunch setMRs, setMessageInfo
-  for (empty_fail) empty_fail[wp, simp]
-(wp: empty_fail_catch simp: const_def Let_def)
-
 crunch callKernel
   for (empty_fail) empty_fail
   (wp: empty_fail_catch)
@@ -288,7 +279,8 @@ theorem call_kernel_serial:
               (\<lambda>s. 0 < domain_time s \<and> valid_domain_list s)) s;
        \<exists>s'. (s, s') \<in> state_relation \<and>
             (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and
-              (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)) s' \<rbrakk>
+              (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
+              (\<lambda>s. vs_valid_duplicates' (ksPSpace s))) s' \<rbrakk>
     \<Longrightarrow> fst (call_kernel event s) \<noteq> {}"
   apply (cut_tac m = "call_kernel event" in corres_underlying_serial)
     apply (rule kernel_corres)

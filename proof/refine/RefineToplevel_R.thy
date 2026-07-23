@@ -9,7 +9,7 @@
 
 theory RefineToplevel_R
 imports
-  EmptyFail_H
+  ArchEmptyFail_H
   RAB_FN
   ArchInit_R
 begin

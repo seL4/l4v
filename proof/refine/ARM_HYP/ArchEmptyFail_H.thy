@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-theory EmptyFail_H
-imports ArchRefine
+theory ArchEmptyFail_H
+imports EmptyFail_H
 begin
 
 crunch_ignore (empty_fail)
@@ -102,10 +102,10 @@ lemma constOnFailure_empty_fail[intro!, wp, simp]:
   by (simp add: constOnFailure_def const_def empty_fail_catch)
 
 lemma ArchRetypeDecls_H_deriveCap_empty_fail[intro!, wp, simp]:
-  "isPageTableCap y \<or> isPageDirectoryCap y \<or> isPageCap y \<or> isIOPortControlCap y
-   \<or> isASIDControlCap y \<or> isASIDPoolCap y \<or> isPDPointerTableCap y \<or> isPML4Cap y \<or> isIOPortCap y
+  "isPageTableCap y \<or> isPageDirectoryCap y \<or> isPageCap y
+   \<or> isASIDControlCap y \<or> isASIDPoolCap y \<or> isVCPUCap y \<or> isSGISignalCap y
    \<Longrightarrow> empty_fail (Arch.deriveCap x y)"
-  by (auto simp: X64_H.deriveCap_def cong: if_cong)
+  by (auto simp: ARM_HYP_H.deriveCap_def cong: if_cong)
 
 crunch ensureNoChildren
   for (empty_fail) empty_fail[intro!, wp, simp]
@@ -114,8 +114,7 @@ lemma deriveCap_empty_fail[intro!, wp, simp]:
   "empty_fail (RetypeDecls_H.deriveCap slot y)"
   apply (simp add: Retype_H.deriveCap_def)
   apply (clarsimp simp: empty_fail_bindE)
-  apply (case_tac "capCap y")
-      apply (simp_all add: isCap_simps)
+  apply (cases "capCap y"; simp add: isCap_defs)
   done
 
 crunch setExtraBadge, cteInsert
@@ -153,29 +152,26 @@ lemma empty_fail_getObject_pte [intro!, wp, simp]:
   "empty_fail (getObject p :: pte kernel)"
   by (simp add: empty_fail_getObject)
 
-lemma empty_fail_getObject_pdpte [intro!, wp, simp]:
-  "empty_fail (getObject p :: pdpte kernel)"
+lemma empty_fail_getObject_vcpu [intro!, wp, simp]:
+  "empty_fail (getObject p :: vcpu kernel)"
   by (simp add: empty_fail_getObject)
 
-lemma empty_fail_getObject_pml4e [intro!, wp, simp]:
-  "empty_fail (getObject p :: pml4e kernel)"
-  by (simp add: empty_fail_getObject)
-
-crunch decodeX64MMUInvocation, decodeX64PortInvocation
+crunch decodeARMMMUInvocation
   for (empty_fail) empty_fail[intro!, wp, simp]
-(simp: Let_def )
+(simp: Let_def ARMMMU_improve_cases)
 
 lemma ignoreFailure_empty_fail[intro!, wp, simp]:
   "empty_fail x \<Longrightarrow> empty_fail (ignoreFailure x)"
   by (simp add: ignoreFailure_def empty_fail_catch)
 
-crunch setBoundNotification, setNotification
-  for (empty_fail) empty_fail[intro!, wp, simp]
-
+context
+notes option.case_cong_weak[cong]
+begin
 crunch
   cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isStopped, possibleSwitchTo, tcbSchedAppend
   for (empty_fail) empty_fail[intro!, wp, simp]
-  (simp: Let_def wp: empty_fail_getObject)
+  (simp: crunch_simps)
+end
 
 crunch "ThreadDecls_H.suspend"
   for (empty_fail) "_H_empty_fail"[intro!, wp, simp]
@@ -185,9 +181,17 @@ lemma ThreadDecls_H_restart_empty_fail[intro!, wp, simp]:
   "empty_fail (ThreadDecls_H.restart target)"
   by (fastforce simp: restart_def)
 
+lemma vcpuUpdate_empty_fail[intro!, wp, simp]:
+  "empty_fail (vcpuUpdate p f)"
+  by (fastforce simp: vcpuUpdate_def)
+
+crunch vcpuEnable, vcpuRestore
+  for (empty_fail) empty_fail[intro!, wp, simp]
+  (simp: uncurry_def)
+
 crunch finaliseCap, preemptionPoint, capSwapForDelete
   for (empty_fail) empty_fail[intro!, wp, simp]
-  (wp: empty_fail_catch simp: Let_def)
+  (wp: empty_fail_catch simp: Let_def ignore: get_gic_vcpu_ctrl_lr_impl)
 
 lemmas finalise_spec_empty_fail_induct = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. spec_empty_fail (finaliseSlot' sl exp) s"]
@@ -265,7 +269,7 @@ lemma catchError_empty_fail[intro!, wp, simp]:
 crunch
   chooseThread, getDomainTime, nextDomain, isHighestPrio, prepareNextDomain
   for (empty_fail) empty_fail[intro!, wp, simp]
-  (wp: empty_fail_catch)
+  (wp: empty_fail_catch ignore: get_gic_vcpu_ctrl_apr get_gic_vcpu_ctrl_vmcr)
 
 lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   "empty_fail schedule"
@@ -274,21 +278,13 @@ lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   apply (clarsimp simp: scheduleChooseNewThread_def split: if_split | wp | wpc)+
   done
 
-crunch setMRs, setMessageInfo
-  for (empty_fail) empty_fail[wp, simp]
-(wp: empty_fail_catch simp: const_def Let_def ignore: portIn portOut)
-
-lemma empty_fail_portIn[intro!, wp, simp]:
-  "empty_fail a \<Longrightarrow> empty_fail (portIn a)"
-  by (fastforce simp: portIn_def)
-
-lemma empty_fail_portOut[intro!, wp, simp]:
-  "empty_fail (w a) \<Longrightarrow> empty_fail (portOut w a)"
-  by (fastforce simp: portOut_def)
+crunch decodeVCPUInjectIRQ, decodeVCPUWriteReg, decodeVCPUReadReg, doFlush
+  for (empty_fail) empty_fail
+  (simp: Let_def)
 
 crunch callKernel
   for (empty_fail) empty_fail
-  (wp: empty_fail_catch)
+  (wp: empty_fail_catch simp: Let_def)
 
 theorem call_kernel_serial:
   "\<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and
@@ -296,7 +292,8 @@ theorem call_kernel_serial:
               (\<lambda>s. 0 < domain_time s \<and> valid_domain_list s)) s;
        \<exists>s'. (s, s') \<in> state_relation \<and>
             (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and
-              (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)) s' \<rbrakk>
+              (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
+              (\<lambda>s. vs_valid_duplicates' (ksPSpace s))) s' \<rbrakk>
     \<Longrightarrow> fst (call_kernel event s) \<noteq> {}"
   apply (cut_tac m = "call_kernel event" in corres_underlying_serial)
     apply (rule kernel_corres)

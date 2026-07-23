@@ -1,12 +1,11 @@
 (*
- * Copyright 2023, Proofcraft Pty Ltd
- * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-theory EmptyFail_H
-imports ArchRefine
+theory ArchEmptyFail_H
+imports EmptyFail_H
 begin
 
 crunch_ignore (empty_fail)
@@ -38,7 +37,9 @@ lemma emptyOnFailure_empty_fail[intro!, wp, simp]:
 
 lemma rethrowFailure_empty_fail [intro!, wp, simp]:
   "empty_fail m \<Longrightarrow> empty_fail (rethrowFailure f m)"
-  by (wpsimp simp:rethrowFailure_def o_def)
+  apply (simp add:rethrowFailure_def o_def)
+  apply (wp | simp)+
+  done
 
 lemma unifyFailure_empty_fail [intro!, wp, simp]:
   "empty_fail f \<Longrightarrow> empty_fail (unifyFailure f)"
@@ -51,16 +52,20 @@ lemma lookupErrorOnFailure_empty_fail [intro!, wp, simp]:
 lemma setObject_empty_fail [intro!, wp, simp]:
   assumes x: "(\<And>a b c. empty_fail (updateObject v a x b c))"
   shows "empty_fail (setObject x v)"
-  by (wpsimp simp: setObject_def split_def wp: x)
+  apply (simp add: setObject_def split_def)
+  apply (wp x | simp)+
+  done
 
 lemma asUser_empty_fail [intro!, wp, simp]:
   "empty_fail f \<Longrightarrow> empty_fail (asUser t f)"
-  unfolding asUser_def
-  by (wpsimp | simp add: empty_fail_def)+
+  apply (simp add:asUser_def)
+  apply (wp | wpc | simp | simp add: empty_fail_def)+
+  done
 
 lemma capFaultOnFailure_empty_fail [intro!, wp, simp]:
   "empty_fail m \<Longrightarrow> empty_fail (capFaultOnFailure cptr rp m)"
-  by (simp add: capFaultOnFailure_def)
+  apply (simp add: capFaultOnFailure_def)
+  done
 
 crunch locateSlotCap
   for (empty_fail) empty_fail[intro!, wp, simp]
@@ -88,10 +93,6 @@ lemma empty_fail_getObject_ep [intro!, wp, simp]:
   "empty_fail (getObject p :: endpoint kernel)"
   by (simp add: empty_fail_getObject)
 
-lemma empty_fail_getObject_tcb [intro!, wp, simp]:
-  shows "empty_fail (getObject x :: tcb kernel)"
-  by (auto intro: empty_fail_getObject)
-
 lemma getEndpoint_empty_fail [intro!, wp, simp]:
   "empty_fail (getEndpoint ep)"
   by (simp add: getEndpoint_def)
@@ -101,9 +102,10 @@ lemma constOnFailure_empty_fail[intro!, wp, simp]:
   by (simp add: constOnFailure_def const_def empty_fail_catch)
 
 lemma ArchRetypeDecls_H_deriveCap_empty_fail[intro!, wp, simp]:
-  "empty_fail (Arch.deriveCap x y)"
-  unfolding AARCH64_H.deriveCap_def
-  by (cases y, auto simp: isCap_simps cong: if_cong)
+  "isPageTableCap y \<or> isPageDirectoryCap y \<or> isPageCap y \<or> isIOPortControlCap y
+   \<or> isASIDControlCap y \<or> isASIDPoolCap y \<or> isPDPointerTableCap y \<or> isPML4Cap y \<or> isIOPortCap y
+   \<Longrightarrow> empty_fail (Arch.deriveCap x y)"
+  by (auto simp: X64_H.deriveCap_def cong: if_cong)
 
 crunch ensureNoChildren
   for (empty_fail) empty_fail[intro!, wp, simp]
@@ -112,6 +114,8 @@ lemma deriveCap_empty_fail[intro!, wp, simp]:
   "empty_fail (RetypeDecls_H.deriveCap slot y)"
   apply (simp add: Retype_H.deriveCap_def)
   apply (clarsimp simp: empty_fail_bindE)
+  apply (case_tac "capCap y")
+      apply (simp_all add: isCap_simps)
   done
 
 crunch setExtraBadge, cteInsert
@@ -141,52 +145,37 @@ lemma empty_fail_getObject_ap [intro!, wp, simp]:
   "empty_fail (getObject p :: asidpool kernel)"
   by (simp add: empty_fail_getObject)
 
+lemma empty_fail_getObject_pde [intro!, wp, simp]:
+  "empty_fail (getObject p :: pde kernel)"
+  by (simp add: empty_fail_getObject)
+
 lemma empty_fail_getObject_pte [intro!, wp, simp]:
   "empty_fail (getObject p :: pte kernel)"
   by (simp add: empty_fail_getObject)
 
-lemma empty_fail_getObject_vcpu [intro!, wp, simp]:
-  "empty_fail (getObject p :: vcpu kernel)"
+lemma empty_fail_getObject_pdpte [intro!, wp, simp]:
+  "empty_fail (getObject p :: pdpte kernel)"
   by (simp add: empty_fail_getObject)
 
-lemma empty_fail_lookupPTSlotFromLevel[intro!, wp, simp]:
-  "empty_fail (lookupPTSlotFromLevel level pt vPtr)"
-proof (induct level arbitrary: pt)
-  case 0
-  then show ?case by (subst lookupPTSlotFromLevel.simps, simp)
-next
-  case (Suc level)
-  then show ?case
-    by (subst lookupPTSlotFromLevel.simps) (wpsimp simp: checkPTAt_def pteAtIndex_def)
-qed
+lemma empty_fail_getObject_pml4e [intro!, wp, simp]:
+  "empty_fail (getObject p :: pml4e kernel)"
+  by (simp add: empty_fail_getObject)
 
-(* FIXME AARCH64 this and empty_fail_pt_type_exhausted are needed to effectively crunch decodeARMMMUInvocation,
-   so should be moved much higher and then deployed to other crunches of decodeARMMMUInvocation,
-   which are hand-held at present  *)
-lemma empty_fail_arch_cap_exhausted:
-  "\<lbrakk>\<not> isFrameCap cap; \<not> isPageTableCap cap; \<not> isASIDControlCap cap; \<not> isASIDPoolCap cap;
-    \<not> isVCPUCap cap; \<not> isSGISignalCap cap; \<not> isSMCCap cap\<rbrakk>
-   \<Longrightarrow> empty_fail undefined"
-  by (cases cap; simp add: isCap_simps)
-
-(* FIXME AARCH64 move somewhere high up, see empty_fail_arch_cap_exhausted *)
-lemma empty_fail_pt_type_exhausted:
-  "\<lbrakk> pt_t \<noteq> NormalPT_T; pt_t \<noteq> VSRootPT_T \<rbrakk>
-   \<Longrightarrow> False"
-  by (case_tac pt_t; simp)
-
-crunch decodeARMMMUInvocation
+crunch decodeX64MMUInvocation, decodeX64PortInvocation
   for (empty_fail) empty_fail[intro!, wp, simp]
-  (simp: Let_def pteAtIndex_def
-   wp: empty_fail_catch empty_fail_pt_type_exhausted empty_fail_arch_cap_exhausted)
+(simp: Let_def )
 
 lemma ignoreFailure_empty_fail[intro!, wp, simp]:
   "empty_fail x \<Longrightarrow> empty_fail (ignoreFailure x)"
   by (simp add: ignoreFailure_def empty_fail_catch)
 
-crunch cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isStopped, possibleSwitchTo, tcbSchedAppend
+crunch setBoundNotification, setNotification
   for (empty_fail) empty_fail[intro!, wp, simp]
-(simp: Let_def setNotification_def setBoundNotification_def wp: empty_fail_getObject)
+
+crunch
+  cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isStopped, possibleSwitchTo, tcbSchedAppend
+  for (empty_fail) empty_fail[intro!, wp, simp]
+  (simp: Let_def wp: empty_fail_getObject)
 
 crunch "ThreadDecls_H.suspend"
   for (empty_fail) "_H_empty_fail"[intro!, wp, simp]
@@ -196,21 +185,9 @@ lemma ThreadDecls_H_restart_empty_fail[intro!, wp, simp]:
   "empty_fail (ThreadDecls_H.restart target)"
   by (fastforce simp: restart_def)
 
-lemma vcpuUpdate_empty_fail[intro!, wp, simp]:
-  "empty_fail (vcpuUpdate p f)"
-  by (fastforce simp: vcpuUpdate_def)
-
-crunch vcpuEnable, vcpuRestore
-  for (empty_fail) empty_fail[intro!, wp, simp]
-  (simp: uncurry_def)
-
-lemma empty_fail_lookupPTFromLevel[intro!, wp, simp]:
-  "empty_fail (lookupPTFromLevel level ptPtr vPtr target)"
-  by (induct level arbitrary: ptPtr; subst lookupPTFromLevel.simps; simp; wpsimp)
-
 crunch finaliseCap, preemptionPoint, capSwapForDelete
   for (empty_fail) empty_fail[intro!, wp, simp]
-(wp: empty_fail_catch simp: Let_def ignore: lookupPTFromLevel)
+  (wp: empty_fail_catch simp: Let_def)
 
 lemmas finalise_spec_empty_fail_induct = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. spec_empty_fail (finaliseSlot' sl exp) s"]
@@ -299,20 +276,15 @@ lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
 
 crunch setMRs, setMessageInfo
   for (empty_fail) empty_fail[wp, simp]
-(wp: empty_fail_catch simp: const_def Let_def)
+(wp: empty_fail_catch simp: const_def Let_def ignore: portIn portOut)
 
-crunch decodeVCPUInjectIRQ, decodeVCPUWriteReg, decodeVCPUReadReg, doFlush,
-                                decodeVCPUAckVPPI
-  for (empty_fail) empty_fail
-  (simp: Let_def)
+lemma empty_fail_portIn[intro!, wp, simp]:
+  "empty_fail a \<Longrightarrow> empty_fail (portIn a)"
+  by (fastforce simp: portIn_def)
 
-crunch handleFault
-  for (empty_fail) empty_fail[wp, simp]
-
-lemma handleHypervisorFault_empty_fail[intro!, wp, simp]:
-  "empty_fail (handleHypervisorFault t f)"
-  by (cases f, simp add: handleHypervisorFault_def isFpuEnable_def split del: if_split)
-     wpsimp
+lemma empty_fail_portOut[intro!, wp, simp]:
+  "empty_fail (w a) \<Longrightarrow> empty_fail (portOut w a)"
+  by (fastforce simp: portOut_def)
 
 crunch callKernel
   for (empty_fail) empty_fail
