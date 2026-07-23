@@ -35,20 +35,11 @@ session Refine in "refine" = BaseRefine +
   directories
     "$L4V_ARCH"
   theories [condition = "REFINE_QUICK_AND_DIRTY", quick_and_dirty]
-    "$L4V_ARCH/Refine"
-    "$L4V_ARCH/RAB_FN"
-    "$L4V_ARCH/EmptyFail_H"
-    "$L4V_ARCH/ArchInit_R"
+    "RefineToplevel_R"
   theories [condition = "SKIP_REFINE_PROOFS", quick_and_dirty, skip_proofs]
-    "$L4V_ARCH/Refine"
-    "$L4V_ARCH/RAB_FN"
-    "$L4V_ARCH/EmptyFail_H"
-    "$L4V_ARCH/ArchInit_R"
+    "RefineToplevel_R"
   theories
-    "$L4V_ARCH/Refine"
-    "$L4V_ARCH/RAB_FN"
-    "$L4V_ARCH/EmptyFail_H"
-    "$L4V_ARCH/ArchInit_R"
+    "RefineToplevel_R"
 
 (*
  * This theory is in a separate session because the proofs currently
