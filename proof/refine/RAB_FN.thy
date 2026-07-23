@@ -9,7 +9,6 @@ theory RAB_FN
 imports
   "CSpace1_R"
   "Lib.MonadicRewrite"
-
 begin
 
 definition
@@ -29,7 +28,7 @@ abbreviation (input)
 
 function
   resolveAddressBitsFn ::
-  "capability \<Rightarrow> cptr \<Rightarrow> nat \<Rightarrow> (word32 \<Rightarrow> capability option)
+  "capability \<Rightarrow> cptr \<Rightarrow> nat \<Rightarrow> (machine_word \<Rightarrow> capability option)
     \<Rightarrow> (lookup_failure + (machine_word * nat))"
 where
  "resolveAddressBitsFn a b c =
@@ -80,8 +79,6 @@ lemma isCNodeCap_capUntypedPtr_capCNodePtr:
   "isCNodeCap c \<Longrightarrow> capUntypedPtr c = capCNodePtr c"
   by (clarsimp simp: gen_isCap_simps)
 
-context begin interpretation Arch . (*FIXME: arch-split*)
-
 lemma resolveAddressBitsFn_eq:
   "monadic_rewrite F E (\<lambda>s. (isCNodeCap cap \<longrightarrow> (\<exists>slot. cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot s))
         \<and> valid_objs' s \<and> cnode_caps_gsCNodes' s)
@@ -90,8 +87,6 @@ lemma resolveAddressBitsFn_eq:
   (is "monadic_rewrite F E (?P cap) (?f cap bits) (?g cap capptr bits)")
 proof (induct cap capptr bits rule: resolveAddressBits.induct)
   case (1 cap cref depth)
-  note objBits_defs[simp]
-
   show ?case
     apply (subst resolveAddressBits.simps, subst resolveAddressBitsFn.simps)
     apply (simp only: Let_def haskell_assertE_def K_bind_def)
@@ -128,7 +123,7 @@ proof (induct cap capptr bits rule: resolveAddressBits.induct)
             apply simp
            apply (rule impI, rule no_fail_getCTE)
           apply (simp add: monadic_rewrite_def simpler_gets_def return_def returnOk_def
-                           only_cnode_caps_def cte_wp_at_ctes_of isCap_simps
+                           only_cnode_caps_def cte_wp_at_ctes_of gen_isCap_simps
                            locateSlotFun_def isCNodeCap_capUntypedPtr_capCNodePtr
                     split: capability.split)
          apply (rule monadic_rewrite_name_pre[where P="\<lambda>_. False" and f=fail]
@@ -137,14 +132,13 @@ proof (induct cap capptr bits rule: resolveAddressBits.induct)
                        isCNodeCap_capUntypedPtr_capCNodePtr
              cong: if_cong split del: if_split)+
   (* step 3, prove the non-failure conditions *)
-  apply (clarsimp simp: isCap_simps)
+  apply (clarsimp simp: gen_isCap_simps)
   apply (frule(1) cte_wp_at_valid_objs_valid_cap')
-  apply (clarsimp simp: cte_level_bits_def valid_cap_simps'
-                        real_cte_at' isCap_simps)
+  apply (clarsimp simp: valid_cap_simps' real_cte_at' gen_isCap_simps cteSizeBits_cte_level_bits)
   apply (clarsimp simp: cte_wp_at_ctes_of only_cnode_caps_def ball_Un
                         cnode_caps_gsCNodes_def ran_map_option o_def)
-  apply (drule bspec, rule IntI, erule ranI, simp add: isCap_simps)
-  apply (simp add: isCap_simps capAligned_def word_bits_def and_mask_less')
+  apply (drule bspec, rule IntI, erule ranI, simp add: gen_isCap_simps)
+  apply (simp add: mask_eq word_and_less' gen_isCap_simps capAligned_def)
   done
 qed
 
@@ -160,7 +154,5 @@ lemma resolveAddressBitsFn_real_cte_at':
   apply (cases rv, clarsimp)
   apply metis
   done
-
-end
 
 end
