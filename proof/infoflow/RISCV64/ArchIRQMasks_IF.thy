@@ -158,6 +158,9 @@ lemma init_arch_objects_irq_masks:
 crunch arch_prepare_set_domain
   for inv[IRQMasks_IF_assms,wp]: P
 
+crunch arch_prepare_next_domain
+  for valid_irq_states[wp]: valid_irq_states
+
 end
 
 
@@ -165,7 +168,7 @@ global_interpretation IRQMasks_IF_2?: IRQMasks_IF_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact IRQMasks_IF_assms)?)
+    by (unfold_locales; (fact IRQMasks_IF_assms | solves wpsimp)?)
 qed
 
 

@@ -285,8 +285,10 @@ lemma dmo_storeWord_reads_respects_g[Noninterference_assms, wp]:
                            equiv_for_def equiv_asids_def equiv_asid_def silc_dom_equiv_def upto.simps)
    apply (rule affects_equiv_machine_state_update, assumption)
    apply (fastforce simp: equiv_for_def affects_equiv_def states_equiv_for_def upto.simps)
+    apply auto[2]
   apply (simp add: equiv_valid_def2 equiv_valid_2_def)
   done
+
 
 lemma set_vm_root_reads_respects:
   "reads_respects aag l \<top> (set_vm_root tcb)"
@@ -399,6 +401,56 @@ lemma arch_tcb_get_registers_equality[Noninterference_assms]:
    \<Longrightarrow> tcb_arch tcb = tcb_arch tcb'"
   by (auto simp: arch_tcb_get_registers_def intro: arch_tcb.equality user_context.expand)
 
+lemma getActiveIRQ_ev2[Noninterference_assms]:
+  "equiv_valid_2 (scheduler_equiv aag)
+                 (scheduler_affects_equiv aag l) (scheduler_affects_equiv aag l)
+                 (\<lambda>irq irq'. irq = irq' \<or> irq = None \<and> irq' \<in> Some ` non_kernel_IRQs)
+                 (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s)
+                 (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s)
+   (do_machine_op (getActiveIRQ True)) (do_machine_op (getActiveIRQ False))"
+  apply (simp add: getActiveIRQ_no_non_kernel_IRQs)
+  apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def)
+  apply (erule use_valid, rule dmo_getActiveIRQ_wp)+
+  apply clarsimp
+  apply (clarsimp simp: scheduler_equiv_def irq_at_def Let_def)
+   apply (clarsimp simp: scheduler_equiv_def domain_fields_equiv_def globals_equiv_scheduler_def
+                         silc_dom_equiv_def equiv_for_def)
+  apply (clarsimp simp: scheduler_affects_equiv_def)
+  apply (intro conjI impI)
+    apply (clarsimp simp: states_equiv_for_def equiv_for_def equiv_asids_def)
+   apply (clarsimp simp: scheduler_globals_frame_equiv_def)
+  apply (clarsimp simp: arch_scheduler_affects_equiv_def)
+  done
+
+lemma arch_prepare_next_domain_reads_respects_g[Noninterference_assms]:
+  "reads_respects_g aag l invs arch_prepare_next_domain"
+  unfolding arch_prepare_next_domain_def by wpsimp
+
+lemma partitionIntegrity_subjectAffects_tcb_fpu[Noninterference_assms]:
+  assumes par_inte: "partitionIntegrity aag s s'"
+  and "kheap s x = Some (TCB tcb)"
+      "kheap s' x = Some (TCB tcb')"
+      "tcb' = tcb\<lparr>tcb_arch := new_arch\<rparr>"
+      "arch_tcb_get_registers new_arch = arch_tcb_get_registers (tcb_arch tcb)"
+      "tcb_hyp_refs new_arch = tcb_hyp_refs (tcb_arch tcb)"
+      "kheap s x \<noteq> kheap s' x"
+      "silc_inv aag st s"
+      "pas_wellformed_noninterference aag"
+      "pas_refined aag s" "pas_refined aag s'"
+      "pas_cur_domain aag s" "pas_cur_domain aag s'"
+      "cur_fpu_in_cur_domain s" "cur_fpu_in_cur_domain s'"
+      "invs s" "invs s'"
+  notes inte_obj = par_inte[THEN partitionIntegrity_integrity, THEN integrity_subjects_obj,
+                            THEN spec[where x=x], simplified integrity_obj_def, simplified]
+  shows "subject_can_affect_label_directly aag (pasObjectAbs aag x)"
+  apply (insert assms(2,3,4,5,7))
+  apply (clarsimp simp: arch_tcb_get_registers_def)
+  apply (subgoal_tac "new_arch = tcb_arch tcb")
+   apply clarsimp
+  apply (rule arch_tcb.equality; clarsimp?)
+  apply (rule user_context.expand; clarsimp)
+  done
+
 end
 
 
@@ -410,7 +462,8 @@ global_interpretation Noninterference_1?: Noninterference_1 _ arch_globals_equiv
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Noninterference_assms | solves \<open>rule integrity_arch_triv\<close>)?)
+    by (unfold_locales; (fact Noninterference_assms | solves \<open>rule integrity_arch_triv\<close>
+                                                    | solves \<open>wp only: Noninterference_assms; simp\<close>)?)
 qed
 
 

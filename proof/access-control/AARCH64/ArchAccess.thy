@@ -133,8 +133,8 @@ where
      | (Some vcpu, None) \<Rightarrow> Some (vcpu_mask n vcpu) \<comment> \<open>No current VCPU\<close>
      | (Some vcpu, Some enabled) \<Rightarrow> Some (vcpu_mask n
          (vcpu\<lparr>vcpu_regs := \<lambda>reg. if vcpuRegSavedWhenDisabled reg \<and> \<not>enabled
-                                       then vcpu_regs vcpu reg \<comment> \<open>Register saved when VCPU disabled\<close>
-                                       else vcpu_regs vst reg,
+                                  then vcpu_regs vcpu reg \<comment> \<open>Register saved when VCPU disabled\<close>
+                                  else vcpu_regs vst reg,
                     vcpu_vgic := (vcpu_vgic vcpu)
                       \<lparr>vgic_hcr := if \<not>enabled
                                    then vgic_hcr (vcpu_vgic vcpu) \<comment> \<open>Saved when VCPU disabled\<close>
@@ -143,8 +143,18 @@ where
                        vgic_apr := vgic_apr (vcpu_vgic vst),
                        vgic_lr := vgic_lr (vcpu_vgic vst)\<rparr>\<rparr>))"
 
+(* A vcpu's vgic_lr field is a total function from nats to virqs, with the domain restricted only
+   in practice via the arm_gicvcpu_numlistregs parameter. To establish true equivalence between
+   vcpus in the InfoFlow proofs, we prove here that these out-of-bounds registers aren't touched. *)
+definition vcpu_extra_lrs :: "nat \<Rightarrow> vcpu option \<rightharpoonup> (nat \<Rightarrow> virq)" where
+  "vcpu_extra_lrs n vopt \<equiv>
+     case vopt of
+       None \<Rightarrow> None
+     | Some vcpu \<Rightarrow> Some (\<lambda>r. if r \<ge> n then vgic_lr (vcpu_vgic vcpu) r else undefined)"
+
 definition vcpu_integrity where
    "vcpu_integrity hv hv' cv cv' n n' vopt vopt' \<equiv>
+      vcpu_extra_lrs n vopt = vcpu_extra_lrs n' vopt' \<and>
       vcpu_of_state hv cv n vopt = vcpu_of_state hv' cv' n' vopt'"
 
 definition integrity_hyp_2 ::

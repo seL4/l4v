@@ -310,10 +310,78 @@ lemma obs_cpspace_user_data_relation[ADT_IF_Refine_assms]:
   apply simp
   done
 
+declare handleSpuriousIRQ_ccorres[ADT_IF_Refine_assms]
+
+lemma dmo_getActiveIRQ_inKernel_sch_act_not:
+  "\<lbrace>\<lambda>s. \<not>inKernel \<longrightarrow> sch_act_not (ksCurThread s) s\<rbrace>
+   doMachineOp (getActiveIRQ inKernel)
+   \<lbrace>\<lambda>rv s. \<forall>irq. rv = Some irq \<longrightarrow> irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s\<rbrace>"
+  unfolding doMachineOp_def
+  apply (cases inKernel; wpsimp)
+  apply (drule use_valid, rule getActiveIRQ_neq_non_kernel, rule TrueI)
+  apply clarsimp
+  done
+
+lemma checkInterrupt_ccorres'[ADT_IF_Refine_assms]:
+  "ccorres dc xfdc (\<lambda>s. invs' s \<and> (\<not>inKernel \<longrightarrow> sch_act_not (ksCurThread s) s)) UNIV []
+           (maybeHandleInterrupt inKernel) (Call checkInterrupt_'proc)"
+  unfolding maybeHandleInterrupt_def
+  apply cinit'
+  apply (rule ccorres_guard_imp)
+    apply (simp add: liftE_def bind_assoc)
+    apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
+         apply (rule_tac P="\<lambda>_. rv \<noteq> None" and R=\<top> in ccorres_cond_both)
+           apply (auto simp: irq_type_never_invalid split: option.splits)[1]
+          apply (rule_tac P="rv \<noteq> None" in ccorres_gen_asm)
+          apply clarsimp
+          apply (rule ccorres_call[where xf'=xfdc, OF handleInterrupt_ccorres]; simp)
+         apply (rule_tac P="rv = None" in ccorres_gen_asm)
+         apply clarsimp
+         apply (ctac (no_vcg) add: handleSpuriousIRQ_ccorres)
+      apply wp
+     apply (simp add: guard_is_UNIV_def)
+    apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)"
+                    in hoare_post_imp)
+     apply (solves clarsimp)
+    apply (wpsimp wp: getActiveIRQ_le_maxIRQ)
+    apply assumption
+   apply assumption
+  apply (clarsimp simp: invs'_def valid_state'_def)
+  done
+
+lemma hvmf_invs_lift[ADT_IF_Refine_assms]:
+  "\<lbrakk> \<And>s m. P (s\<lparr>ksMachineState := ksMachineState s\<lparr>machine_state_rest := m\<rparr>\<rparr>) = P s \<rbrakk>
+   \<Longrightarrow> \<lbrace>P\<rbrace> handleVMFault t hf \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
+  by (rule hv_inv_ex')
+
+definition handleHypervisorFault_C_body_if :: "machine_word \<Rightarrow> (globals myvars, int, strictc_errortype) com"
+  where
+  "handleHypervisorFault_C_body_if hyp_fault_type ==
+     (SKIP ;; \<acute>ret__unsigned_long :== scast EXCEPTION_NONE)"
+
+definition hyp_fault_type_from_H :: "hyp_fault_type \<Rightarrow> machine_word" where
+  "hyp_fault_type_from_H fault \<equiv> undefined"
+
+lemma handleHypervisorFault_C_body_ccorres[ADT_IF_Refine_assms]:
+  "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+            (invs' and arch_extras and ct_running' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)) UNIV []
+            (liftE (do thread <- getCurThread;
+                       handleHypervisorFault thread flt
+                    od))
+            (handleHypervisorFault_C_body_if (hyp_fault_type_from_H flt))"
+  apply (case_tac flt)
+  apply (simp add: liftE_def bind_assoc handleHypervisorFault_def handleHypervisorFault_C_body_if_def)
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_pre_getCurThread)
+    apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
+    apply (rule allI, rule conseqPre, vcg)
+    apply (auto simp: return_def)
+  done
+
 end
 
 
-sublocale kernel_m \<subseteq> ADT_IF_Refine_1?: ADT_IF_Refine_1 _ _ _ doUserOp_C_if
+sublocale kernel_m \<subseteq> ADT_IF_Refine_1?: ADT_IF_Refine_1 _ _ _ doUserOp_C_if handleHypervisorFault_C_body_if hyp_fault_type_from_H
 proof goal_cases
   interpret Arch .
   case 1 show ?case

@@ -669,6 +669,8 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
     "\<lbrakk> tro_tag TCBGeneric; ko = Some (TCB tcb); ko' = Some (TCB tcb');
        tcb' = tcb \<lparr>tcb_arch := new_arch, tcb_bound_notification := ntfn',
                    tcb_caller := cap', tcb_ctable := ccap'\<rparr>;
+       tcb_ctable tcb = ccap' \<and> tcb_caller tcb = cap' \<and> tcb_bound_notification tcb = ntfn'
+       \<longrightarrow> arch_tcb_get_registers new_arch = arch_tcb_get_registers (tcb_arch tcb);
        tcb_hyp_refs new_arch = tcb_hyp_refs (tcb_arch tcb);
        tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag ;
        reply_cap_deletion_integrity subjects aag (tcb_caller tcb) cap';

@@ -82,10 +82,68 @@ definition handleVMFaultEvent_C_body_if
 
 context kernel_m begin
 
+definition
+  checkActiveIRQ_C_if :: "user_context \<Rightarrow> (cstate, irq option \<times> user_context) nondet_monad"
+  where
+  "checkActiveIRQ_C_if tc \<equiv>
+   do
+      getActiveIRQ_C;
+      irq \<leftarrow>  gets ret__unsigned_long_';
+      return (if irq = ucast irqInvalid then None else Some (ucast irq), tc)
+   od"
+
+definition
+  check_active_irq_C_if
+  where
+  "check_active_irq_C_if \<equiv> {((tc, s), irq, (tc', s')). ((irq, tc'), s') \<in> fst (checkActiveIRQ_C_if tc s)}"
+
 definition handleInterruptEntry_C_body_if (*:: "(globals myvars, int, l4c_errortype) com"*) where
-"handleInterruptEntry_C_body_if \<equiv> (
+  "handleInterruptEntry_C_body_if \<equiv> (
       (CALL checkInterrupt());;
        \<acute>ret__unsigned_long :== scast EXCEPTION_NONE)"
+
+definition
+  handlePreemption_C_if :: "user_context \<Rightarrow> (cstate,user_context) nondet_monad" where
+  "handlePreemption_C_if tc \<equiv> do (exec_C \<Gamma> handleInterruptEntry_C_body_if); return tc od"
+
+end
+
+
+locale ADT_IF_Refine_1 = kernel_m +
+  fixes doUserOp_C_if ::
+    "user_transition_if \<Rightarrow> user_context \<Rightarrow> (cstate, (event option \<times> user_context)) nondet_monad"
+  and handleHypervisorFault_C_body_if :: "machine_word \<Rightarrow> (globals myvars, int, strictc_errortype) com"
+  and hyp_fault_type_from_H :: "hyp_fault_type \<Rightarrow> machine_word"
+  assumes do_user_op_if_C_corres:
+    "corres_underlying rf_sr False False (=) (invs' and ex_abs einvs and (\<lambda>_. uop_nonempty f))
+                       \<top> (doUserOp_if f tc) (doUserOp_C_if f tc)"
+  and handleInvocation_ccorres':
+    "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+             (invs' and arch_extras and ct_active' and sch_act_simple)
+             (UNIV \<inter> {s. isCall_' s = from_bool isCall} \<inter> {s. isBlocking_' s = from_bool isBlocking}) []
+             (handleInvocation isCall isBlocking) (Call handleInvocation_'proc)"
+  and handleHypervisorFault_C_body_ccorres:
+    "ccorres ((\<lambda>irq :: irq. K dc irq) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+             (invs' and arch_extras and ct_running' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+             (UNIV) []
+             (liftE (do thread <- getCurThread;
+                        handleHypervisorFault thread flt
+                     od))
+             (handleHypervisorFault_C_body_if (hyp_fault_type_from_H flt))"
+  and checkInterrupt_ccorres':
+    "ccorres dc xfdc (\<lambda>s. invs' s \<and> (\<not>inKernel \<longrightarrow> sch_act_not (ksCurThread s) s)) UNIV []
+             (maybeHandleInterrupt inKernel) (Call checkInterrupt_'proc)"
+  and hvmf_invs_lift:
+    "\<lbrakk> \<And>s m. P (s\<lparr>ksMachineState := ksMachineState s\<lparr>machine_state_rest := m\<rparr>\<rparr>) = P s \<rbrakk>
+     \<Longrightarrow> \<lbrace>P\<rbrace> handleVMFault t hf \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
+  and check_active_irq_corres_C:
+    "corres_underlying rf_sr False False (=) \<top> \<top> (checkActiveIRQ_if tc) (checkActiveIRQ_C_if tc)"
+  and obs_cpspace_user_data_relation:
+    "\<lbrakk> pspace_aligned' bd; pspace_distinct' bd;
+       cpspace_user_data_relation (ksPSpace bd) (underlying_memory (ksMachineState bd)) hgs \<rbrakk>
+     \<Longrightarrow> cpspace_user_data_relation (ksPSpace bd)
+           (underlying_memory (observable_memory (ksMachineState bd) (user_mem' bd))) hgs"
+begin
 
 definition
   "callKernel_C_body_if e \<equiv> case e of
@@ -94,7 +152,7 @@ definition
   | UserLevelFault w1 w2 \<Rightarrow> (handleUserLevelFault_C_body_if w1 w2)
   | Interrupt \<Rightarrow> (handleInterruptEntry_C_body_if)
   | VMFaultEvent t \<Rightarrow> (handleVMFaultEvent_C_body_if (vm_fault_type_from_H t))
-  | HypervisorEvent t \<Rightarrow> (SKIP ;; \<acute>ret__unsigned_long :== scast EXCEPTION_NONE)"
+  | HypervisorEvent t \<Rightarrow> (handleHypervisorFault_C_body_if (hyp_fault_type_from_H t))"
 
 definition
   kernelEntry_C_if (*::
@@ -121,51 +179,10 @@ definition
       {(s, b, (tc,s'))|s b tc s' r. ((r,tc),s') \<in> fst (split (kernelEntry_C_if fp e) s) \<and>
                    b = (case r of Inl x \<Rightarrow> True | Inr x \<Rightarrow> False)}"
 
-definition
-  checkActiveIRQ_C_if :: "user_context \<Rightarrow> (cstate, irq option \<times> user_context) nondet_monad"
-  where
-  "checkActiveIRQ_C_if tc \<equiv>
-   do
-      getActiveIRQ_C;
-      irq \<leftarrow>  gets ret__unsigned_long_';
-      return (if irq = ucast irqInvalid then None else Some (ucast irq), tc)
-   od"
-
-definition
-  check_active_irq_C_if
-  where
-  "check_active_irq_C_if \<equiv> {((tc, s), irq, (tc', s')). ((irq, tc'), s') \<in> fst (checkActiveIRQ_C_if tc s)}"
-
-lemma corres_select_f':
-  "\<lbrakk> \<And>s s'. P s \<Longrightarrow> P' s' \<Longrightarrow> \<forall>s' \<in> fst S'. \<exists>s \<in> fst S. rvr s s'; nf' \<Longrightarrow> \<not> snd S' \<rbrakk>
-      \<Longrightarrow> corres_underlying sr nf nf' rvr P P' (select_f S) (select_f S')"
-  by (clarsimp simp: select_f_def corres_underlying_def)
-
-lemma cur_thread_of_absKState[simp]:
-   "cur_thread (absKState s) = (ksCurThread s)"
-   by (clarsimp simp: cstate_relation_def Let_def absKState_def cstate_to_H_def)
-
-lemma absKState_crelation:
-  "\<lbrakk> cstate_relation s (globals s'); invs' s; ksReadyQueues_asrt s\<rbrakk>
-   \<Longrightarrow>  cstate_to_A s' = absKState s"
-  apply (clarsimp simp add: cstate_to_H_correct invs'_def cstate_to_A_def)
-  apply (clarsimp simp: absKState_def absExst_def observable_memory_def)
-  apply (case_tac s)
-  apply clarsimp
-  apply (case_tac ksMachineState)
-  apply clarsimp
-  apply (rule ext)
-  by (clarsimp simp: option_to_0_def user_mem'_def pointerInUserData_def ko_wp_at'_def
-                     obj_at'_def typ_at'_def ps_clear_def
-              split: if_splits)
-
-definition
-  handlePreemption_C_if :: "user_context \<Rightarrow> (cstate,user_context) nondet_monad" where
-  "handlePreemption_C_if tc \<equiv> do (exec_C \<Gamma> handleInterruptEntry_C_body_if); return tc od"
-
 lemma handleInterrupt_no_fail:
   "no_fail (ex_abs (einvs) and invs'
-                           and (\<lambda>s. intStateIRQTable (ksInterruptState s) a \<noteq> irqstate.IRQInactive))
+                           and (\<lambda>s. intStateIRQTable (ksInterruptState s) a \<noteq> irqstate.IRQInactive)
+                           and (\<lambda>s. a \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s))
            (handleInterrupt a)"
   apply (rule no_fail_pre)
   apply (rule corres_nofail)
@@ -181,49 +198,45 @@ lemma handleSpuriousIRQ_no_fail[intro!, wp, simp]:
   by wpsimp
 
 lemma handleEvent_Interrupt_no_fail:
-  "no_fail (invs' and ex_abs einvs) (handleEvent Interrupt)"
+  "no_fail (invs' and ex_abs einvs and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)) (handleEvent Interrupt)"
   apply (simp add: handleEvent_def maybeHandleInterrupt_def)
   apply (wpsimp wp: handleInterrupt_no_fail)
     apply (simp add: crunch_simps)
     apply (rule_tac Q'="\<lambda>r s. ex_abs (einvs) s \<and> invs' s \<and>
                              (\<forall>irq. r = Some irq
-                                    \<longrightarrow> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive)"
+                                    \<longrightarrow> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive)
+                                      \<and> (\<forall>irq. r = Some irq \<longrightarrow> irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s)"
                  in hoare_strengthen_post)
      apply (rule hoare_vcg_conj_lift)
       apply (rule corres_ex_abs_lift)
        apply (rule dmo_getActiveIRQ_corres)
       apply wpsimp
      apply (wpsimp wp: doMachineOp_getActiveIRQ_IRQ_active)
+     apply (wp hoare_vcg_all_lift hoare_drop_imps)
+     apply wpsimp
     apply clarsimp
    apply wpsimp
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
 
-end
-
-
-locale ADT_IF_Refine_1 = kernel_m +
-  fixes doUserOp_C_if ::
-    "user_transition_if \<Rightarrow> user_context \<Rightarrow> (cstate, (event option \<times> user_context)) nondet_monad"
-  assumes do_user_op_if_C_corres:
-    "corres_underlying rf_sr False False (=) (invs' and ex_abs einvs and (\<lambda>_. uop_nonempty f))
-                       \<top> (doUserOp_if f tc) (doUserOp_C_if f tc)"
-  and handleInvocation_ccorres':
-    "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and arch_extras and ct_active' and sch_act_simple)
-       (UNIV \<inter> {s. isCall_' s = from_bool isCall} \<inter> {s. isBlocking_' s = from_bool isBlocking}) []
-       (handleInvocation isCall isBlocking) (Call handleInvocation_'proc)"
-  and checkInterrupt_ccorres':
-    "ccorres dc xfdc (\<lambda>s. invs' s \<and> (\<not>inKernel \<longrightarrow> sch_act_not (ksCurThread s) s)) UNIV []
-       (maybeHandleInterrupt inKernel) (Call checkInterrupt_'proc)"
-  and check_active_irq_corres_C:
-    "corres_underlying rf_sr False False (=) \<top> \<top> (checkActiveIRQ_if tc) (checkActiveIRQ_C_if tc)"
-  and obs_cpspace_user_data_relation:
-    "\<lbrakk> pspace_aligned' bd; pspace_distinct' bd;
-       cpspace_user_data_relation (ksPSpace bd) (underlying_memory (ksMachineState bd)) hgs \<rbrakk>
-       \<Longrightarrow> cpspace_user_data_relation (ksPSpace bd)
-             (underlying_memory (observable_memory (ksMachineState bd) (user_mem' bd))) hgs"
-begin
+lemma handleInterrupt_if_ccorres:
+  "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+           (\<lambda>s. invs' s \<and> (\<not>inKernel \<longrightarrow> sch_act_not (ksCurThread s) s))
+           UNIV
+           []
+           (liftE (maybeHandleInterrupt inKernel))
+           (handleInterruptEntry_C_body_if)"
+  apply (rule ccorres_guard_imp2)
+   apply (simp add: handleInterruptEntry_C_body_if_def)
+   apply (rule ccorres_add_return2)
+   apply (ctac (no_vcg) add: checkInterrupt_ccorres)
+    apply (rule_tac R="\<lambda>_. rv = Inr ()" in ccorres_return[where R'=UNIV])
+    apply (rule conseqPre, vcg)
+    apply (clarsimp simp: return_def)
+   apply (simp add: liftE_def)
+   apply wpsimp
+  apply clarsimp
+  done
 
 lemma handleInterrupt_if_ccorres:
   "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -352,7 +365,8 @@ lemma handleEvent_ccorres:
             apply simp
            apply simp
           apply simp
-         apply (wp hv_inv_ex')
+         apply (wp hvmf_invs_lift)
+         apply (fastforce simp: invs'_machine valid_machine_state'_def)
         apply (simp add: guard_is_UNIV_def)
         apply (vcg exspec=handleVMFault_modifies)
        apply ceqv
@@ -362,20 +376,12 @@ lemma handleEvent_ccorres:
       apply (clarsimp simp: return_def)
      apply wp
     apply (simp add: guard_is_UNIV_def)
-   apply (auto simp: ct_in_state'_def isReply_def is_cap_fault_def
-                     cfault_rel_def seL4_Fault_UnknownSyscall_lift seL4_Fault_UserException_lift
-               elim: pred_tcb'_weakenE st_tcb_ex_cap''
-               dest: st_tcb_at_idle_thread' rf_sr_ksCurThread)
   \<comment> \<open>HypervisorEvent\<close>
-  apply (simp add: liftE_def bind_assoc)
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_symb_exec_l)
-      apply (case_tac x6; simp add: handleHypervisorFault_def)
-      apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
-      apply (rule allI, rule conseqPre, vcg)
-      apply (clarsimp simp: return_def)
-     apply wp+
-  apply clarsimp
+   apply (rule handleHypervisorFault_C_body_ccorres)
+  apply (auto simp: ct_in_state'_def isReply_def is_cap_fault_def
+                    cfault_rel_def seL4_Fault_UnknownSyscall_lift seL4_Fault_UserException_lift
+              elim: pred_tcb'_weakenE st_tcb_ex_cap''
+              dest: st_tcb_at_idle_thread' rf_sr_ksCurThread split: if_splits)
   done
 
 lemma kernelEntry_corres_C:
@@ -511,11 +517,6 @@ lemma handle_preemption_corres_C:
    apply (fastforce simp: ex_abs_def schedaction_related)+
   done
 
-end
-
-
-context kernel_m begin
-
 definition
   handle_preemption_C_if
   where
@@ -612,6 +613,34 @@ lemma preserves_trivial: "preserves mode mode' UNIV f"
 lemma preserves'_trivial: "preserves' mode UNIV f"
   apply (simp add: preserves'_def)
   done
+
+lemma corres_select_f':
+  "\<lbrakk> \<And>s s'. P s \<Longrightarrow> P' s' \<Longrightarrow> \<forall>s' \<in> fst S'. \<exists>s \<in> fst S. rvr s s'; nf' \<Longrightarrow> \<not> snd S' \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' rvr P P' (select_f S) (select_f S')"
+  by (clarsimp simp: select_f_def corres_underlying_def)
+
+
+context kernel_m begin
+
+lemma cur_thread_of_absKState[simp]:
+   "cur_thread (absKState s) = (ksCurThread s)"
+   by (clarsimp simp: cstate_relation_def Let_def absKState_def cstate_to_H_def)
+
+lemma absKState_crelation:
+  "\<lbrakk> cstate_relation s (globals s'); invs' s; ksReadyQueues_asrt s\<rbrakk>
+   \<Longrightarrow> cstate_to_A s' = absKState s"
+  apply (clarsimp simp add: cstate_to_H_correct invs'_def cstate_to_A_def)
+  apply (clarsimp simp: absKState_def absExst_def observable_memory_def)
+  apply (case_tac s)
+  apply clarsimp
+  apply (case_tac ksMachineState)
+  apply clarsimp
+  apply (rule ext)
+  by (clarsimp simp: option_to_0_def user_mem'_def pointerInUserData_def ko_wp_at'_def
+                     obj_at'_def typ_at'_def ps_clear_def
+              split: if_splits)
+
+end
 
 
 context ADT_IF_Refine_1 begin

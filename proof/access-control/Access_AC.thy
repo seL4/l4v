@@ -603,6 +603,7 @@ lemma tro_alt_trans_spec: (* this takes a long time to process *)
 
   apply (find_goal \<open>match premises in "tro_tag TCBGeneric" and "tro_tag' TCBRestart" \<Rightarrow> -\<close>)
   subgoal
+    apply (thin_tac "_ \<longrightarrow> _")
     apply (erule integrity_obj_alt.intros[simplified tro_tag_to_prime])
             apply (simp | rule tcb.equality | fastforce)+
     done
@@ -637,15 +638,33 @@ lemma tro_alt_trans_spec: (* this takes a long time to process *)
              | time_methods \<open>fastforce intro: integrity_obj_alt.intros
                                         simp: arch_tro_alt_trans_spec\<close>\<close>)
 
+  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag TCBGeneric"],
+                     erule thin_rl[of "tro_tag' TCBGeneric"]\<close>
+         | time_methods \<open>solves \<open>
+                    erule integrity_obj_alt.intros[simplified tro_tag_to_prime],
+                    (assumption | rule refl
+                    | ((erule exE)+)?, (rule exI)?,
+                      force intro: tcb.equality
+                             simp: reply_cap_deletion_integrity_def
+                                   tcb_bound_notification_reset_integrity_def)+\<close>\<close>\<close>)
+ apply (all \<open>fails \<open>erule thin_rl[of "tro_tag TCBGeneric"]\<close>
+             | time_methods \<open>solves \<open>
+                    (thin_tac \<open>_ \<longrightarrow> _\<close>)?,
+                    erule integrity_obj_alt.intros[simplified tro_tag_to_prime],
+                    (assumption | rule refl
+                    | ((erule exE)+)?, (rule exI)?, force intro: tcb.equality)+\<close>\<close>\<close>)
+
   (* TCB-TCB steps, somewhat slow *)
   apply (all \<open>fails \<open>erule thin_rl[of "tro_tag TCBGeneric"]\<close>
              | time_methods \<open>solves \<open>
+                    thin_tac \<open>_ \<longrightarrow> _\<close>,
                     erule integrity_obj_alt.intros[simplified tro_tag_to_prime],
                     (assumption | rule refl
                     | ((erule exE)+)?, (rule exI)?, force intro: tcb.equality)+\<close>\<close>\<close>)
 
   apply (all \<open>fails \<open>erule thin_rl[of "tro_tag' TCBGeneric"]\<close>
              | time_methods \<open>solves \<open>
+                    (thin_tac \<open>_ \<longrightarrow> _\<close>)?,
                     erule integrity_obj_alt.intros,
                     (assumption | rule refl
                     | (elim exE)?, (intro exI)?, fastforce intro: tcb.equality
@@ -777,6 +796,7 @@ lemma cdt_direct_change_allowed_backward:
   by (drule spec,
       erule integrity_objE, erule cdca_owned;
       (elim exE)?;
+      (thin_tac "_ \<longrightarrow> _")?;
       simp;
       rule cdca_reply[rotated], assumption, assumption,
       fastforce elim:tcb_states_of_state_kheapI simp:direct_call_def)

@@ -82,11 +82,6 @@ lemma dmo_cacheRangeOp_reads_respects:
   apply (rule hoare_TrueI)
   done
 
-lemma dmo_cleanCacheRange_PoU_reads_respects:
-  "reads_respects aag l \<top> (do_machine_op (cleanCacheRange_PoU vsrat vend pstart))"
-  unfolding cleanCacheRange_PoU_def
-  by (wp dmo_cacheRangeOp_reads_respects dmo_mol_reads_respects | simp add: cleanByVA_PoU_def)+
-
 lemma set_pd_globals_equiv:
   "\<lbrace>globals_equiv st and (\<lambda>s. a \<noteq> arm_global_pd (arch_state s))\<rbrace> set_pd a b \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding set_pd_def
@@ -181,7 +176,8 @@ lemma copy_global_mappings_reads_respects_g:
                             pspace_aligned s \<and> valid_arch_state s" in hoare_weaken_pre)
       apply (rule gets_sp)
      apply (assumption)
-    apply (wp mapM_x_ev store_pde_reads_respects_g get_pde_revg)
+    apply (rule mapM_x_ev)
+     apply (wp mapM_x_ev store_pde_reads_respects_g get_pde_revg)
      apply (drule subsetD[OF copy_global_mappings_index_subset])
      apply (clarsimp simp: pd_shifting' invs_aligned_pdD)
     apply (wp get_pde_inv store_pde_aligned store_pde_valid_arch | simp | fastforce)+
@@ -220,32 +216,11 @@ lemma dmo_cleanCacheRange_PoU_globals_equiv:
   unfolding cleanCacheRange_PoU_def
   by (wp dmo_mol_globals_equiv dmo_cacheRangeOp_lift | simp add: cleanByVA_PoU_def)+
 
-lemma dmo_cleanCacheRange_PoU_reads_respects_g:
-  "reads_respects_g aag l \<top> (do_machine_op (cleanCacheRange_PoU x y z))"
-  apply (rule equiv_valid_guard_imp[OF reads_respects_g])
-    apply (rule dmo_cleanCacheRange_PoU_reads_respects)
-   apply (rule doesnt_touch_globalsI[where P="\<top>", simplified, OF dmo_cleanCacheRange_PoU_globals_equiv])
-  by simp
-
 lemma dmo_cleanCacheRange_RAM_globals_equiv:
   "do_machine_op (cleanCacheRange_RAM x y z) \<lbrace>globals_equiv s\<rbrace>"
   unfolding cleanCacheRange_RAM_def
   by (wpsimp wp: dmo_mol_globals_equiv dmo_cacheRangeOp_lift
              simp: dmo_bind_valid dsb_def cleanCacheRange_PoC_def cleanByVA_def cleanL2Range_def)
-
-lemma dmo_cleanCacheRange_RAM_reads_respects:
-  "reads_respects aag l \<top> (do_machine_op (cleanCacheRange_RAM vsrat vend pstart))"
-  unfolding cleanCacheRange_RAM_def
-  by (wp dmo_cacheRangeOp_reads_respects dmo_mol_reads_respects empty_fail_cleanByVA empty_fail_cacheRangeOp
-      | simp add: cleanL2Range_def dsb_def cleanCacheRange_PoC_def cleanByVA_def
-      | subst do_machine_op_bind)+
-
-lemma dmo_cleanCacheRange_RAM_reads_respects_g:
-  "reads_respects_g aag l \<top> (do_machine_op (cleanCacheRange_RAM x y z))"
-  apply (rule equiv_valid_guard_imp[OF reads_respects_g])
-    apply (rule dmo_cleanCacheRange_RAM_reads_respects)
-   apply (rule doesnt_touch_globalsI[where P="\<top>", simplified, OF dmo_cleanCacheRange_RAM_globals_equiv])
-  by simp
 
 lemma mol_globals_equiv:
   "machine_op_lift mop \<lbrace>\<lambda>ms. globals_equiv st (s\<lparr>machine_state := ms\<rparr>)\<rbrace>"
@@ -281,26 +256,6 @@ lemma dmo_freeMemory_globals_equiv[Retype_IF_assms]:
   apply (erule use_valid)
    apply (wp mapM_x_wp' storeWord_globals_equiv mol_globals_equiv)
   apply (simp_all)
-  done
-
-lemma init_arch_objects_reads_respects_g:
-  "reads_respects_g aag l ((\<lambda>s. arm_global_pd (arch_state s) \<notin> set refs \<and>
-                                pspace_aligned s \<and> valid_arch_state s) and
-                           K (\<forall>x\<in>set refs. is_subject aag x) and
-                           K (\<forall>x\<in>set refs. new_type = ArchObject PageDirectoryObj
-                                           \<longrightarrow> is_aligned x pd_bits) and
-                           K ((0::obj_ref) < of_nat num_objects))
-                    (init_arch_objects new_type dev ptr num_objects obj_sz refs)"
-  apply (unfold init_arch_objects_def fun_app_def)
-  apply (rule gen_asm_ev)+
-  apply (rule equiv_valid_guard_imp)
-   apply (wp dmo_cleanCacheRange_RAM_reads_respects_g
-             dmo_cleanCacheRange_PoU_reads_respects_g
-             mapM_x_ev'' when_ev
-             equiv_valid_guard_imp[OF copy_global_mappings_reads_respects_g]
-             copy_global_mappings_valid_arch_state copy_global_mappings_pspace_aligned
-             hoare_vcg_ball_lift | wpc | simp)+
-  apply clarsimp
   done
 
 lemma copy_global_mappings_globals_equiv:
@@ -428,7 +383,7 @@ global_interpretation Retype_IF_1?: Retype_IF_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Retype_IF_assms)?)
+    by (unfold_locales; (fact Retype_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
 qed
 
 
@@ -499,7 +454,6 @@ lemma reset_untyped_cap_reads_respects_g:
         apply (clarsimp simp: valid_cap_simps cap_aligned_def field_simps
                               free_index_of_def invs_valid_global_objs)
        apply (simp add: aligned_add_aligned is_aligned_shiftl)
-       apply (clarsimp simp: Kernel_Config.resetChunkBits_def)
        apply (rule hoare_pre)
         apply (wp preemption_point_inv' set_untyped_cap_invs_simple set_cap_cte_wp_at
                   set_cap_no_overlap only_timer_irq_inv_pres[where Q=\<top>, OF _ set_cap_domain_sep_inv]
@@ -547,6 +501,52 @@ lemma retype_region_ret_pd_aligned:
     apply (rule retype_region_aligned_for_init)
    apply simp
   apply (clarsimp simp: obj_bits_api_def default_arch_object_def pd_bits_def pageBits_def)
+  done
+
+lemma dmo_cleanCacheRange_PoU_reads_respects:
+  "reads_respects aag l \<top> (do_machine_op (cleanCacheRange_PoU vsrat vend pstart))"
+  unfolding cleanCacheRange_PoU_def
+  by (wp dmo_cacheRangeOp_reads_respects dmo_mol_reads_respects | simp add: cleanByVA_PoU_def)+
+
+lemma dmo_cleanCacheRange_PoU_reads_respects_g:
+  "reads_respects_g aag l \<top> (do_machine_op (cleanCacheRange_PoU x y z))"
+  apply (rule equiv_valid_guard_imp[OF reads_respects_g])
+    apply (rule dmo_cleanCacheRange_PoU_reads_respects)
+   apply (rule doesnt_touch_globalsI[where P="\<top>", simplified, OF dmo_cleanCacheRange_PoU_globals_equiv])
+  by simp
+
+lemma dmo_cleanCacheRange_RAM_reads_respects:
+  "reads_respects aag l \<top> (do_machine_op (cleanCacheRange_RAM vsrat vend pstart))"
+  unfolding cleanCacheRange_RAM_def
+  by (wp dmo_cacheRangeOp_reads_respects dmo_mol_reads_respects empty_fail_cleanByVA empty_fail_cacheRangeOp
+      | simp add: cleanL2Range_def dsb_def cleanCacheRange_PoC_def cleanByVA_def
+      | subst do_machine_op_bind)+
+
+lemma dmo_cleanCacheRange_RAM_reads_respects_g:
+  "reads_respects_g aag l \<top> (do_machine_op (cleanCacheRange_RAM x y z))"
+  apply (rule equiv_valid_guard_imp[OF reads_respects_g])
+    apply (rule dmo_cleanCacheRange_RAM_reads_respects)
+   apply (rule doesnt_touch_globalsI[where P="\<top>", simplified, OF dmo_cleanCacheRange_RAM_globals_equiv])
+  by simp
+
+lemma init_arch_objects_reads_respects_g:
+  "reads_respects_g aag l ((\<lambda>s. arm_global_pd (arch_state s) \<notin> set refs \<and>
+                                pspace_aligned s \<and> valid_arch_state s) and
+                           K (\<forall>x\<in>set refs. is_subject aag x) and
+                           K (\<forall>x\<in>set refs. new_type = ArchObject PageDirectoryObj
+                                           \<longrightarrow> is_aligned x pd_bits) and
+                           K ((0::obj_ref) < of_nat num_objects))
+                    (init_arch_objects new_type dev ptr num_objects obj_sz refs)"
+  apply (unfold init_arch_objects_def fun_app_def)
+  apply (rule gen_asm_ev)+
+  apply (rule equiv_valid_guard_imp)
+   apply (wp dmo_cleanCacheRange_RAM_reads_respects_g
+             dmo_cleanCacheRange_PoU_reads_respects_g
+             mapM_x_ev'' when_ev
+             equiv_valid_guard_imp[OF copy_global_mappings_reads_respects_g]
+             copy_global_mappings_valid_arch_state copy_global_mappings_pspace_aligned
+             hoare_vcg_ball_lift | wpc | simp)+
+  apply clarsimp
   done
 
 lemma invoke_untyped_reads_respects_g_wcap[Retype_IF_assms]:
@@ -691,7 +691,6 @@ lemma reset_untyped_cap_globals_equiv:
     apply (clarsimp simp: is_cap_simps ptr_range_def[symmetric]
                           cap_aligned_def bits_of_def
                           free_index_of_def)
-    apply (clarsimp simp: Kernel_Config.resetChunkBits_def)
     apply (strengthen invs_valid_global_objs invs_arch_state)
     apply (wp delete_objects_invs_ex hoare_vcg_const_imp_lift get_cap_wp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state descendants_range_def2 is_cap_simps bits_of_def
