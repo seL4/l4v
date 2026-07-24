@@ -699,20 +699,6 @@ lemma archThreadSet_state_hyp_refs_of'[wp]:
   apply auto
   done
 
-lemma archThreadSet_if_live'[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and>
-        (\<forall>tcb. ko_at' tcb t s \<longrightarrow> atcbVCPUPtr (f (tcbArch tcb)) \<noteq> None \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
-  archThreadSet f t \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  unfolding archThreadSet_def
-  apply (wpsimp wp: setObject_tcb_iflive' getObject_tcb_wp)
-  apply normalise_obj_at'
-  apply (clarsimp simp: tcb_cte_cases_def if_live_then_nonz_cap'_def cteSizeBits_def)
-  apply (erule_tac x=t in allE)
-  apply (erule impE)
-   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def live'_def hyp_live'_def)
-  apply simp
-  done
-
 lemma archThreadSet_ifunsafe'[wp]:
   "archThreadSet f t \<lbrace>if_unsafe_then_cap'\<rbrace>"
   unfolding archThreadSet_def
