@@ -5,7 +5,7 @@
  *)
 
 theory ADT_IF_Refine
-imports "InfoFlow.ArchADT_IF" "Refine.EmptyFail_H"
+imports "InfoFlow.ArchADT_IF" "Refine.ArchEmptyFail_H"
 begin
 
 definition kernelEntry_if where
