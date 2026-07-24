@@ -122,6 +122,30 @@ locale TcbAcc_R =
     "\<And>y. y < unat max_ipc_words \<Longrightarrow> is_aligned (word_of_nat y * word_size :: machine_word) word_size_bits"
   assumes msg_align_bits_le_pageBitsForSize:
     "msg_align_bits \<le> pageBitsForSize sz"
+  assumes threadSet_state_hyp_refs_of':
+    "\<And>F t P.
+     \<lbrakk> \<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb) \<rbrakk>
+     \<Longrightarrow> \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> threadSet F t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  assumes threadSet_iflive'T:
+    "\<And>t F.
+     \<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb \<Longrightarrow>
+     \<lbrace>\<lambda>s. if_live_then_nonz_cap' s
+          \<and> ((\<exists>tcb. \<not> bound (tcbBoundNotification tcb) \<and> bound (tcbBoundNotification (F tcb))
+                    \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
+          \<and> ((\<exists>tcb. (tcbState tcb = Inactive \<or> tcbState tcb = IdleThreadState)
+                    \<and> tcbState (F tcb) \<noteq> Inactive
+                    \<and> tcbState (F tcb) \<noteq> IdleThreadState
+                    \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
+          \<and> ((\<exists>tcb. tcbSchedNext tcb = None \<and> tcbSchedNext (F tcb) \<noteq> None
+                    \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
+          \<and> ((\<exists>tcb. tcbSchedPrev tcb = None \<and> tcbSchedPrev (F tcb) \<noteq> None
+                    \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
+          \<and> ((\<exists>tcb. \<not> tcbQueued tcb \<and> tcbQueued (F tcb)
+                    \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
+          \<and> ((\<exists>tcb. tcb_hyp_refs' (tcbArch tcb) = {} \<and> tcb_hyp_refs' (tcbArch (F tcb)) \<noteq> {}
+                    \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
+     threadSet F t
+     \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
 
 (* isHighestPrio_def' is a cleaner version of isHighestPrio_def *)
 lemma isHighestPrio_def':
@@ -429,6 +453,8 @@ lemma all_tcbI:
   by (rule allI, case_tac tcb, simp)
 
 context TcbAcc_R begin
+
+lemmas threadSet_iflive' = threadSet_iflive'T[OF all_tcbI, OF ball_tcb_cte_casesI]
 
 lemma threadset_corresT:
   assumes x: "\<And>tcb tcb'. tcb_relation tcb tcb' \<Longrightarrow>
@@ -2052,6 +2078,15 @@ crunch threadSet
   for aobjs_of'[wp]: "\<lambda>s. P (aobjs_of' s)"
   and ksArch_aobjs_of'[wp]: "\<lambda>s. P (ksArchState s) (aobjs_of' s)"
 
+lemma update_tcb_cte_cases:
+  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbQueued_update f tcb) = getF tcb"
+  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbSchedNext_update f tcb) = getF tcb"
+  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbSchedPrev_update f tcb) = getF tcb"
+  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbBoundNotification_update f tcb) = getF tcb"
+  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbPriority_update f tcb) = getF tcb"
+  unfolding tcb_cte_cases_def
+  by (case_tac tcb; fastforce simp: gen_objBits_simps tcb_cte_cases_def tcb_cte_cases_neqs)+
+
 locale TcbAcc_R_2 = TcbAcc_R +
   assumes removeFromBitmap_valid_bitmapQ_except:
     "\<And>d p. removeFromBitmap d p \<lbrace>valid_bitmapQ_except d p \<rbrace>"
@@ -2075,21 +2110,6 @@ locale TcbAcc_R_2 = TcbAcc_R +
        (tcb_at t and valid_objs and pspace_aligned and pspace_distinct)
        (valid_objs' and no_0_obj')
        (lookup_ipc_buffer w t) (lookupIPCBuffer w t)"
-  assumes tcbSchedNext_update_iflive':
-    "\<And>t f.
-     \<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
-     threadSet (tcbSchedNext_update f) t
-     \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  assumes tcbSchedPrev_update_iflive':
-    "\<And>t f.
-     \<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
-     threadSet (tcbSchedPrev_update f) t
-     \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  assumes tcbQueued_update_iflive'[wp]:
-    "\<And>t f.
-     \<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
-     threadSet (tcbQueued_update f) t
-     \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   assumes setThreadState_state_hyp_refs_of'[wp]:
     "\<And>st t P. setThreadState st t \<lbrace>\<lambda>s. P ((state_hyp_refs_of' s))\<rbrace>"
   assumes storeWord_invs_no_cicd'[wp]:
@@ -2115,32 +2135,12 @@ locale TcbAcc_R_2 = TcbAcc_R +
      corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
                (as_user t (setRegister r v))
                (asUser t (setRegister r v))"
-  assumes threadSet_invs_trivialT:
-    "\<And>F.
-     \<lbrakk>\<forall>tcb. \<forall>(getF, setF)\<in>ran tcb_cte_cases. getF (F tcb) = getF tcb;
-      \<forall>tcb. tcbState (F tcb) = tcbState tcb \<and> tcbDomain (F tcb) = tcbDomain tcb;
-      \<forall>tcb. is_aligned (tcbIPCBuffer tcb) msg_align_bits
-            \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits;
-      \<forall>tcb. tcbBoundNotification (F tcb) = tcbBoundNotification tcb;
-      \<forall>tcb. tcbSchedPrev (F tcb) = tcbSchedPrev tcb; \<forall>tcb. tcbSchedNext (F tcb) = tcbSchedNext tcb;
-      \<forall>tcb. tcbQueued (F tcb) = tcbQueued tcb;
-      \<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority;
-      \<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority;
-      \<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0;
-      \<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)\<rbrakk> \<Longrightarrow>
-     threadSet F t \<lbrace>invs'\<rbrace>"
   assumes tcb_hyp_refs'_valid_arch_tcb'_eq:
     "\<And>F tcb s.
      tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)
      \<Longrightarrow> valid_arch_tcb' (tcbArch (F tcb)) s = valid_arch_tcb' (tcbArch tcb) s"
   assumes setBoundNotification_state_hyp_refs_of'[wp]:
     "\<And>ntfn t P. setBoundNotification ntfn t \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
-  assumes sbn_iflive'[wp]:
-    "\<And>ntfn t.
-     \<lbrace>\<lambda>s. if_live_then_nonz_cap' s
-          \<and> (bound ntfn \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
-     setBoundNotification ntfn t
-     \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   assumes in_user_frame_eq:
     "\<And>y a (s::det_state).
      \<lbrakk>y < unat max_ipc_words; is_aligned a msg_align_bits\<rbrakk>
@@ -2373,8 +2373,75 @@ lemma tcbSchedEnqueue_corres:
   by (auto dest!: hd_in_set simp: inQ_def in_opt_pred opt_map_def fun_upd_apply
            split: if_splits option.splits)
 
+lemma threadSet_invs_trivialT:
+  assumes
+    "\<forall>tcb. \<forall>(getF,setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
+    "\<forall>tcb. tcbState (F tcb) = tcbState tcb \<and> tcbDomain (F tcb) = tcbDomain tcb"
+    "\<forall>tcb. is_aligned (tcbIPCBuffer tcb) msg_align_bits
+           \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits"
+    "\<forall>tcb. tcbBoundNotification (F tcb) = tcbBoundNotification tcb"
+    "\<forall>tcb. tcbSchedPrev (F tcb) = tcbSchedPrev tcb"
+    "\<forall>tcb. tcbSchedNext (F tcb) = tcbSchedNext tcb"
+    "\<forall>tcb. tcbQueued (F tcb) = tcbQueued tcb"
+    "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
+    "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
+    "\<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0"
+    "\<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)"
+  shows "threadSet F t \<lbrace>invs'\<rbrace>"
+  apply (simp add: invs'_def valid_state'_def)
+  apply (wp threadSet_valid_pspace'T
+            threadSet_iflive'T
+            threadSet_ifunsafe'T
+            threadSet_global_refsT
+            valid_irq_node_lift
+            valid_irq_handlers_lift''
+            threadSet_ctes_ofT
+            threadSet_valid_dom_schedule'
+            untyped_ranges_zero_lift
+            sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
+            threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of
+            threadSet_sch_actT_P[where P=False, simplified]
+            threadSet_state_refs_of'T[where f'=id]
+            threadSet_state_hyp_refs_of'
+            threadSet_idle'T
+            threadSet_not_inQ
+            threadSet_ct_idle_or_in_cur_domain'
+            threadSet_cur
+            valid_bitmaps_lift
+         | clarsimp simp: assms cteCaps_of_def tcb_hyp_refs'_valid_arch_tcb'_eq[where F=F] | rule refl)+
+  apply (auto simp: assms obj_at'_def o_def)
+  done
+
 lemmas threadSet_invs_trivial =
     threadSet_invs_trivialT[OF all_tcbI all_tcbI all_tcbI all_tcbI, OF ball_tcb_cte_casesI]
+
+lemma tcbSchedNext_update_iflive':
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
+   threadSet (tcbSchedNext_update f) t
+   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
+  by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
+
+lemma tcbSchedPrev_update_iflive':
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
+   threadSet (tcbSchedPrev_update f) t
+   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
+  by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
+
+lemma tcbQueued_update_iflive'[wp]:
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
+   threadSet (tcbQueued_update f) t
+   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
+  by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
+
+lemma sbn_iflive'[wp]:
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> (bound ntfn \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
+   setBoundNotification ntfn t
+   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
+  apply (simp add: setBoundNotification_def)
+  apply (rule hoare_pre)
+   apply (wp threadSet_iflive' | simp)+
+  apply auto
+  done
 
 end (* TcbAcc_R_2 *)
 
@@ -3402,6 +3469,21 @@ lemma in_user_frame_eq_helper:
   apply (simp add: msg_align_bits_le_pageBitsForSize)
   done
 
+lemma sts_iflive'[wp]:
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
+        \<and> (st \<noteq> Inactive \<and> \<not> idle' st \<longrightarrow> ex_nonz_cap_to' t s)
+        \<and> pspace_aligned' s \<and> pspace_distinct' s\<rbrace>
+   setThreadState st t
+   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
+  apply (simp add: setThreadState_def setQueue_def)
+  apply wpsimp
+   apply (rule_tac Q'="\<lambda>rv. if_live_then_nonz_cap' and pspace_aligned' and pspace_distinct'"
+                in hoare_post_imp)
+    apply clarsimp
+   apply (wpsimp wp: threadSet_iflive')
+  apply fastforce
+  done
+
 end (* TcbAcc_R *)
 
 lemma (in TcbAcc_R_2) addToBitmap_valid_bitmapQ:
@@ -3863,15 +3945,6 @@ crunch removeFromBitmap
 
 crunch rescheduleRequired
   for cap_to'[wp]: "ex_nonz_cap_to' p"
-
-lemma update_tcb_cte_cases:
-  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbQueued_update f tcb) = getF tcb"
-  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbSchedNext_update f tcb) = getF tcb"
-  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbSchedPrev_update f tcb) = getF tcb"
-  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbBoundNotification_update f tcb) = getF tcb"
-  "\<And>f. (getF, setF) \<in> ran tcb_cte_cases \<Longrightarrow> getF (tcbPriority_update f tcb) = getF tcb"
-  unfolding tcb_cte_cases_def
-  by (case_tac tcb; fastforce simp: gen_objBits_simps tcb_cte_cases_def tcb_cte_cases_neqs)+
 
 lemma tcbSchedNext_update_ctes_of[wp]:
   "threadSet (tcbSchedNext_update f) tptr \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
@@ -5077,13 +5150,6 @@ lemma archTcbUpdate_aux2: "(\<lambda>tcb. tcb\<lparr> tcbArch := f (tcbArch tcb)
   by (rule ext, case_tac tcb, simp)
 
 locale TcbAcc_R_3 = TcbAcc_R_2 +
-  assumes sts_iflive'[wp]:
-    "\<And>st t.
-     \<lbrace>\<lambda>s. if_live_then_nonz_cap' s
-          \<and> (st \<noteq> Inactive \<and> \<not> idle' st \<longrightarrow> ex_nonz_cap_to' t s)
-          \<and> pspace_aligned' s \<and> pspace_distinct' s\<rbrace>
-     setThreadState st t
-     \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
   assumes set_mrs_invs'[wp]:
     "\<And>receiver recv_buf mrs.
      \<lbrace>invs' and tcb_at' receiver\<rbrace> setMRs receiver recv_buf mrs \<lbrace>\<lambda>rv. invs'\<rbrace>"

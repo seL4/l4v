@@ -523,7 +523,7 @@ where
                   od)
             gicIndices;
 
-          vcpu_save_reg_range vr VCPURegACTLR VCPURegSPSRfiq;
+          vcpu_save_reg_range vr VCPURegACTLR VCPURegPARlow;
           do_machine_op isb
        od
      | _ \<Rightarrow> fail"
@@ -546,7 +546,7 @@ where
               (map (\<lambda>i. (i, (vgic_lr vgic) i)) gicIndices)
      od;
     \<comment> \<open>restore banked VCPU registers except SCTLR (that's in VCPUEnable)\<close>
-     vcpu_restore_reg_range vr VCPURegACTLR VCPURegSPSRfiq;
+     vcpu_restore_reg_range vr VCPURegACTLR VCPURegPARlow;
      vcpu_enable vr
   od"
 
@@ -747,6 +747,7 @@ do_flush :: "flush_type \<Rightarrow> vspace_ref \<Rightarrow> vspace_ref \<Righ
          dsb;
          invalidateCacheRange_I vstart' vend' pstart;
          branchFlushRange vstart' vend' pstart;
+         dsb;
          isb
      od)"
 

@@ -521,7 +521,7 @@ lemma kernel_corres':
               od)"
   apply (simp add: call_kernel_def)
   apply (corres corres: handleEvent_corres maybeHandleInterrupt_corres)
-        apply (wp handle_event_valid_sched)+
+        apply (wpsimp wp: handle_event_valid_sched)+
       apply (rule corres_split[OF schedule_corres])
         apply (rule activateThread_corres)
        apply (wpsimp wp: handle_interrupt_valid_sched[unfolded non_kernel_IRQs_def, simplified]

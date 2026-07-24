@@ -5,7 +5,7 @@
  *)
 
 theory PageTableDuplicates
-imports Syscall_R
+imports ArchSyscall_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch-split*)

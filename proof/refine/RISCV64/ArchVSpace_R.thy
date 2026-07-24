@@ -12,6 +12,8 @@ begin
 
 context Arch begin arch_global_naming
 
+named_theorems VSpace_R_assms
+
 definition
   "vspace_at_asid' vs asid \<equiv> \<lambda>s. \<exists>ap pool.
              riscvKSASIDTable (ksArchState s) (ucast (asid_high_bits_of (ucast asid))) = Some ap \<and>
@@ -46,11 +48,17 @@ lemma no_fail_read_stval[wp, intro!, simp]:
   "no_fail \<top> read_stval"
   by (simp add: read_stval_def)
 
-lemma handleVMFault_corres:
+lemma handleVMFault_corres':
   "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
   unfolding handleVMFault_def handle_vm_fault_def
   by (corres | corres_cases_both)+
+
+(* interface lemma, superset of all architecture preconditions *)
+lemma handleVMFault_corres[VSpace_R_assms]:
+  "corres (fr \<oplus> dc) (tcb_at thread and pspace_aligned and pspace_distinct) (tcb_at' thread)
+          (handle_vm_fault thread fault) (handleVMFault thread fault)"
+  by (corres corres: handleVMFault_corres')
 
 lemma no_fail_setVSpaceRoot[wp, intro!, simp]:
   "no_fail \<top> (setVSpaceRoot v a)"
@@ -1115,6 +1123,12 @@ lemma perform_aci_invs [wp]:
                         wellformed_mapdata'_def)
   done
 
-end
+end (* Arch *)
+
+interpretation VSpace_R?: VSpace_R
+proof goal_cases
+  interpret Arch  .
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact VSpace_R_assms)?)?)
+qed
 
 end

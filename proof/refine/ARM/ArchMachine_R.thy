@@ -72,6 +72,11 @@ lemma sendSGI_underlying_memory[wp]:
   unfolding sendSGI_def
   by wp
 
+lemma doMachineOp_getActiveIRQ_non_kernel[Machine_R_assms, wp]:
+  "\<lbrace>\<top>\<rbrace> doMachineOp (getActiveIRQ True)
+   \<lbrace>\<lambda>rv s. \<forall>irq. rv = Some irq \<longrightarrow> irq \<in> non_kernel_IRQs \<longrightarrow> P irq s\<rbrace>"
+  by (wpsimp simp: non_kernel_IRQs_def)
+
 lemma frameRegisters_def'[Machine_R_assms]:
   "frameRegisters = MachineExports.frameRegisters"
   by (simp add: frameRegisters_def)

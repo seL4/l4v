@@ -212,4 +212,10 @@ crunch doMachineOp
 crunch haskell_fail
   for inv[wp]: "P"
 
+locale VSpace_R =
+  assumes handleVMFault_corres:
+    "\<And>thread fault.
+     corres (fr \<oplus> dc) (tcb_at thread and pspace_aligned and pspace_distinct) (tcb_at' thread)
+            (handle_vm_fault thread fault) (handleVMFault thread fault)"
+
 end

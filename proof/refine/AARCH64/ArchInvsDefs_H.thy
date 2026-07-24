@@ -270,6 +270,12 @@ definition archMakeObjectT :: "arch_kernel_object_type \<Rightarrow> kernel_obje
       | ASIDPoolT \<Rightarrow> injectKO (makeObject :: asidpool)
       | VCPUT \<Rightarrow> injectKO (makeObject :: vcpu)"
 
+(* no page table duplicates on this architecture, used for generic interfaces only *)
+definition vs_valid_duplicates' :: "(paddr \<Rightarrow> Structures_H.kernel_object option) \<Rightarrow> bool" where
+   "vs_valid_duplicates' \<equiv> \<lambda>_. True"
+
+lemmas [simp] = vs_valid_duplicates'_def
+
 end
 
 (* Need to declare code equation outside Arch locale *)

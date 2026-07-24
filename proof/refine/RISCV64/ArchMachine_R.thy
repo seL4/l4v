@@ -67,6 +67,11 @@ lemma getActiveIRQ_le_maxIRQ:
    apply (simp add: irqs_masked'_def valid_irq_states'_def maxIRQ_def)+
   done
 
+lemma doMachineOp_getActiveIRQ_non_kernel[Machine_R_assms, wp]:
+  "\<lbrace>\<top>\<rbrace> doMachineOp (getActiveIRQ True)
+   \<lbrace>\<lambda>rv s. \<forall>irq. rv = Some irq \<longrightarrow> irq \<in> non_kernel_IRQs \<longrightarrow> P irq s\<rbrace>"
+  by (wpsimp simp: non_kernel_IRQs_def)
+
 lemma frameRegisters_def'[Machine_R_assms]:
   "frameRegisters = MachineExports.frameRegisters"
   by (simp add: frameRegisters_def)

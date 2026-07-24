@@ -9,7 +9,7 @@ chapter \<open>Abstract datatype for the executable specification\<close>
 theory ADT_H
 imports
   "AInvs.ADT_AI"
-  Syscall_R
+  ArchSyscall_R
 begin
 
 text \<open>

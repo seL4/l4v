@@ -2084,6 +2084,12 @@ lemma sts_tcb_at'_preserve':
 crunch handleSpuriousIRQ
   for no_orphans[wp]: no_orphans
 
+lemma hv_inv':
+  "\<lbrace>P\<rbrace> handleVMFault p t \<lbrace>\<lambda>_. P\<rbrace>"
+  unfolding ARM_H.handleVMFault_def
+  by (wpsimp wp: dmo_inv' getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv det_getRestartPC
+                 asUser_inv)
+
 lemma handleEvent_no_orphans [wp]:
   "\<lbrace> \<lambda>s. invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and>
          (e \<noteq> Interrupt \<longrightarrow> ct_running' s) \<and>
