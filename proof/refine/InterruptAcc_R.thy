@@ -7,7 +7,7 @@
  *)
 
 theory InterruptAcc_R
-imports TcbAcc_R
+imports ArchTcbAcc_R
 begin
 
 arch_requalify_facts
@@ -224,8 +224,6 @@ lemma getRefillHead_corres:
       and is_active_sc sc_ptr and sc_at sc_ptr and sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr)
      valid_objs'
      (get_refill_head sc_ptr) (getRefillHead scPtr)"
-  supply ghost_relation_wrapper_def[simp del] (*FIXME arch-split RT: not necessary after arch-split*)
-         heap_ghost_relation_wrapper_def[simp del] (*FIXME arch-split RT: not necessary after arch-split*)
   apply (add_active_sc_at' scPtr)
   apply (rule_tac Q'=pspace_bounded' in corres_cross_add_guard)
    apply (fastforce intro: pspace_relation_pspace_bounded')
@@ -286,10 +284,9 @@ lemma modifyWorkUnits_valid_objs'[wp]:
 
 lemma setWorkUnits_corres[corres]:
   "corres dc \<top> \<top> reset_work_units (setWorkUnits 0)"
-  apply (clarsimp simp: reset_work_units_def setWorkUnits_def)
-  apply (rule corres_modify)
-  apply (clarsimp simp: state_relation_def)
-  done
+  unfolding reset_work_units_def setWorkUnits_def
+  by (rule corres_modify_tivial)
+     (clarsimp simp: state_relation_def)
 
 crunch updateTimeStamp
   for valid_objs'[wp]: valid_objs'
@@ -438,12 +435,6 @@ lemma preemptionPoint_invs [wp]:
   "\<lbrace>invs'\<rbrace> preemptionPoint \<lbrace>\<lambda>_. invs'\<rbrace>"
   by (wp preemptionPoint_inv | clarsimp)+
 
-lemma setWorkUnits_corres[corres]:
-  "corres dc \<top> \<top> reset_work_units (setWorkUnits 0)"
-  unfolding reset_work_units_def setWorkUnits_def
-  by (rule corres_modify_tivial)
-     (clarsimp simp: state_relation_def)
-
 lemma preemptionPoint_corres:
   "corres (dc \<oplus> dc)
      (valid_objs and cur_sc_tcb and pspace_aligned and pspace_distinct and active_scs_valid)
@@ -506,7 +497,7 @@ lemma preemptionPoint_corres:
                     apply (rule_tac Q="\<top>\<top>" and P'=\<top> in corres_symb_exec_l)
                        apply fastforce
                       apply wpsimp+
-               apply (fastforce intro!: sc_at_cross simp: sc_at'_asrt_def)
+               apply (fastforce intro!: sc_at_cross)
               apply wpsimp
              apply (rule_tac Q'="\<lambda>_. valid_objs'" in hoare_post_imp)
               apply fastforce

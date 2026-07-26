@@ -1904,16 +1904,18 @@ lemmas tcb_cte_cases_neqs_n =
     distinct_rev[THEN iffD2, OF tcb_cte_cases_distinct_n, simplified],
     simplified conj_ac, simplified] (* remove duplicates from 0/1 simplification *)
 
-lemma tcb_cte_cases_simps[simp]:
-  "tcb_cte_cases 0  = Some (tcbCTable, tcbCTable_update)"
-  "tcb_cte_cases (1 << cteSizeBits) = Some (tcbVTable, tcbVTable_update)"
-  "tcb_cte_cases (2 << cteSizeBits) = Some (tcbIPCBufferFrame, tcbIPCBufferFrame_update)"
-  "tcb_cte_cases (3 << cteSizeBits) = Some (tcbFaultHandler, tcbFaultHandler_update)"
-  "tcb_cte_cases (4 << cteSizeBits) = Some (tcbTimeoutHandler, tcbTimeoutHandler_update)"
-  by (simp add: tcb_cte_cases_neqs_n tcb_cte_cases_def)+
-
 lemmas tcbSlot_defs = tcbCTableSlot_def tcbVTableSlot_def tcbIPCBufferSlot_def
                       tcbFaultHandlerSlot_def tcbTimeoutHandlerSlot_def
+
+lemma tcb_cte_cases_simps[simp]:
+  "tcb_cte_cases (tcbCTableSlot << cteSizeBits) = Some (tcbCTable, tcbCTable_update)"
+  "tcb_cte_cases (tcbVTableSlot << cteSizeBits) = Some (tcbVTable, tcbVTable_update)"
+  "tcb_cte_cases (tcbIPCBufferSlot << cteSizeBits) = Some (tcbIPCBufferFrame, tcbIPCBufferFrame_update)"
+  "tcb_cte_cases (tcbFaultHandlerSlot << cteSizeBits) = Some (tcbFaultHandler, tcbFaultHandler_update)"
+  "tcb_cte_cases (tcbTimeoutHandlerSlot << cteSizeBits) = Some (tcbTimeoutHandler, tcbTimeoutHandler_update)"
+  by (simp add: tcb_cte_cases_neqs_n tcb_cte_cases_def tcbSlot_defs)+
+
+lemmas tcb_cte_cases_simps'[simp] = tcb_cte_cases_simps[simplified tcbSlot_defs shiftl_0]
 
 lemma tcb_cte_cases_distinct:
   "distinct [

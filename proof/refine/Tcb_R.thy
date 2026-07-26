@@ -49,8 +49,11 @@ locale Tcb_R =
   assumes checked_insert_tcb_invs_gen:
     "\<And>target ref new_cap src_slot slot.
      \<lbrace>invs and cte_wp_at (\<lambda>c. c = cap.NullCap) (target, ref)
-      and K (is_cnode_or_valid_arch new_cap) and valid_cap new_cap
+      and K (is_cnode_or_valid_arch new_cap \<or> valid_fault_handler new_cap)
+      and valid_cap new_cap
       and tcb_cap_valid new_cap (target, ref)
+      and (\<lambda>s. valid_fault_handler new_cap
+               \<longrightarrow> cte_wp_at (\<lambda>c. c = new_cap \<or> c = cap.NullCap) src_slot s)
       and cte_wp_at \<top> src_slot
       and no_cap_to_obj_dr_emp new_cap\<rbrace>
      check_cap_at new_cap src_slot
@@ -70,8 +73,6 @@ locale Tcb_R =
     "\<And>F t P.
      \<lbrakk>\<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb) \<rbrakk>
      \<Longrightarrow> threadSet F t \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
-  assumes threadSet_tcbPriority_if_live_then_nonz_cap'[wp]:
-    "\<And>f t. threadSet (tcbPriority_update f) t \<lbrace>if_live_then_nonz_cap'\<rbrace>"
   assumes sameObject_corres2:
     "\<And>c c' d d'. \<lbrakk> cap_relation c c'; cap_relation d d' \<rbrakk> \<Longrightarrow> same_object_as c d = sameObjectAs c' d'"
   (* FIXME arch-split: consider moving several of these to AInvs *)
@@ -123,6 +124,12 @@ locale Tcb_R =
      \<lbrace>\<lambda>rv s. P s\<rbrace>,-"
   assumes isValidVTableRoot_eq:
     "\<And>cap cap'. cap_relation cap cap' \<Longrightarrow> isValidVTableRoot cap' = is_valid_vtable_root cap"
+  assumes prepareThreadDelete_ksCurThread[wp]:
+    "\<And>t P. Arch.prepareThreadDelete t \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace>"
+  assumes arch_finaliseCap_ksCurThread[wp]:
+    "\<And>acap final P. Arch.finaliseCap acap final \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace>"
+  assumes arch_postCapDeletion_sc_tcb_sc_at'[wp]:
+    "\<And>acap P p. Arch.postCapDeletion acap \<lbrace>\<lambda>s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) p s)\<rbrace>"
 begin
 
 lemma activateThread_corres:
@@ -247,13 +254,18 @@ crunch maybe_donate_sc
   for ready_queues_runnable[wp]: ready_queues_runnable
   (ignore: tcb_sched_action wp: crunch_wps simp: crunch_simps)
 
+crunch Tcb_A.restart
+  for pspace_aligned[wp]: "pspace_aligned :: det_state \<Rightarrow> _"
+  and pspace_distinct[wp]: "pspace_distinct :: det_state \<Rightarrow> _"
+  (wp: crunch_wps simp: crunch_simps)
+
 lemma restart_corres:
   "corres dc
      (einvs and tcb_at t and ex_nonz_cap_to t and current_time_bounded) invs'
      (Tcb_A.restart t) (ThreadDecls_H.restart t)"
   apply (simp add: Tcb_A.restart_def Thread_H.restart_def test_possible_switch_to_def
                    get_tcb_obj_ref_def)
-  apply (rule corres_stateAssert_ignore, simp add: sch_act_wf_asrt_def)+
+  apply (rule corres_stateAssert_ignore, simp)+
    apply (fastforce elim!: sch_act_wf_cross)
   apply (simp add: isStopped_def2 liftM_def)
   apply (rule corres_guard_imp)
@@ -364,7 +376,7 @@ crunch schedContextResume, ifCondRefillUnblockCheck
 lemma restart_invs'[wp]:
   "ThreadDecls_H.restart t \<lbrace>invs'\<rbrace>"
   unfolding restart_def
-  by (wpsimp wp: setThreadState_nonqueued_state_update hoare_vcg_all_lift hoare_drop_imps)
+  by (wpsimp wp: setThreadState_nonqueued_state_update hoare_vcg_all_lift hoare_drop_imps cong: if_cong)
 
 crunch "ThreadDecls_H.restart"
   for tcb'[wp]: "tcb_at' t"
@@ -372,11 +384,6 @@ crunch "ThreadDecls_H.restart"
 
 declare det_getRegister[simp]
 declare det_setRegister[simp]
-
-crunch restart
-  for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
-  and valid_sched_pointers[wp]: valid_sched_pointers
-  (simp: crunch_simps wp: crunch_wps threadSet_sched_pointers threadSet_valid_sched_pointers)
 
 context Tcb_R begin
 
@@ -388,18 +395,13 @@ lemma invokeTCB_ReadRegisters_corres:
   unfolding invokeTCB_def genericTake_def performTransfer_def
   apply (rule_tac Q'="tcb_at' src" in corres_cross_add_guard, fastforce intro!: tcb_at_cross)
   apply (corres corres: suspend_corres asUser_corres
-                wp: no_fail_mapM suspend_invs
+                wp: no_fail_mapM
                 simp: frameRegisters_def' gpRegisters_def'
                       frame_registers_def gp_registers_def no_fail_getRegister)
-   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
+   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_idle_def
                   dest!: idle_no_ex_cap)
   apply (clarsimp simp: invs'_def dest!: global'_no_ex_cap)
   done
-
-crunch restart
-  for sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
-  and valid_sched_pointers[wp]: valid_sched_pointers
-  (simp: crunch_simps wp: crunch_wps threadSet_sched_pointers threadSet_valid_sched_pointers)
 
 lemma invokeTCB_WriteRegisters_corres:
   "corres (dc \<oplus> (=))
@@ -410,15 +412,21 @@ lemma invokeTCB_WriteRegisters_corres:
           (invokeTCB (tcbinvocation.WriteRegisters dest resume values arch'))"
   unfolding invokeTCB_def performTransfer_def
   apply (simp add: frameRegisters_def' gpRegisters_def')
-   apply (corresKsimp corres: arch_getSanitiseRegisterInfo_corres asUser_corres
+  apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurThread_sp])
+   apply (corresKsimp corres: getCurThread_corres arch_getSanitiseRegisterInfo_corres)
+  apply (rule corres_split_skip; (solves wpsimp)?)
+   apply (corresKsimp corres: arch_getSanitiseRegisterInfo_corres)
+   apply fastforce
+  apply (rule corres_split_skip; (solves wpsimp)?)
+   apply (corresKsimp corres:  asUser_corres
                        simp: zipWithM_mapM sanitiseRegister_sanitise_register
-                         wp: no_fail_mapM)
+                         wp: no_fail_mapM no_fail_setRegister)
   apply (rule corres_split_skip; (solves wpsimp)?)
    apply (corresKsimp corres: asUser_postModifyRegisters_corres[simplified])
    apply fastforce
   apply (rule_tac Q="\<lambda>_. einvs" and Q'="\<lambda>_. invs'" in corres_underlying_split[rotated 2])
      apply (wpsimp wp: restart_valid_sched)
-     using idle_no_ex_cap apply fastforce
+     apply (frule idle_no_ex_cap[OF invs_valid_global_refs]; fastforce)
     apply (wpsimp wp: restart_invs')
    apply (corres corres: restart_corres)
   apply (corresKsimp corres: rescheduleRequired_corres)
@@ -445,7 +453,7 @@ proof -
     apply clarsimp
     apply (corres corres: asUser_getRegister_corres asUser_corres)
           apply (rule corres_Id; simp)
-          apply wpsimp
+          apply (wpsimp simp: invs_distinct)+
     done
   have R: "\<And>src src' des des' xs ys. \<lbrakk> src = src'; des = des'; xs = ys \<rbrakk> \<Longrightarrow>
            corres dc (tcb_at src and tcb_at des and invs)
@@ -473,10 +481,9 @@ proof -
              apply (rule corres_split_nor)
                 apply (rule R[OF refl refl])
                 apply (simp add: frame_registers_def frameRegisters_def')
-               apply (simp add: dc_def[symmetric])
-      apply (rule corres_split_eqr[OF asUser_getRestartPC_corres])
-        apply (rule asUser_setNextPC_corres)
-              apply (wp mapM_x_wp' | simp)+
+               apply (rule corres_split_eqr[OF asUser_getRestartPC_corres])
+                 apply (rule asUser_setNextPC_corres)
+                apply (wp mapM_x_wp' | simp)+
             apply (rule corres_split_nor)
                apply (rule corres_when[OF refl])
                apply (rule R[OF refl refl])
@@ -487,13 +494,13 @@ proof -
                     apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
                     apply simp
                    apply (solves \<open>wp hoare_weak_lift_imp\<close>)+
-             apply (rule_tac Q'="\<lambda>_. einvs and tcb_at dest" in hoare_strengthen_post[rotated])
-              apply (fastforce simp: invs_def valid_sched_weak_strg valid_sched_def valid_state_def
-                                     valid_pspace_def)
-             prefer 2
-             apply (rule_tac Q'="\<lambda>_. invs' and tcb_at' dest" in hoare_strengthen_post[rotated])
-              apply (clarsimp simp: invs'_def valid_pspace'_def)
-             apply ((wp mapM_x_wp' hoare_weak_lift_imp | simp)+)[4]
+                 apply (rule_tac Q'="\<lambda>_. einvs and tcb_at dest" in hoare_post_imp)
+                  apply (fastforce simp: invs_def valid_sched_weak_strg valid_sched_def valid_state_def
+                                         valid_pspace_def)
+                 prefer 2
+                 apply (rule_tac Q'="\<lambda>_. invs' and tcb_at' dest" in hoare_strengthen_post[rotated])
+                  apply (clarsimp simp: invs'_def valid_pspace'_def)
+                 apply ((wp mapM_x_wp' hoare_weak_lift_imp | simp)+)[8]
          apply ((wp hoare_weak_lift_imp restart_invs' restart_valid_sched | wpc
                  | clarsimp simp: if_apply_def2)+)[2]
        apply (rule_tac Q'="\<lambda>_. einvs and tcb_at dest and tcb_at src and ex_nonz_cap_to dest
@@ -502,9 +509,9 @@ proof -
         apply (clarsimp simp: invs_def valid_sched_weak_strg valid_sched_def valid_state_def
                               valid_pspace_def valid_idle_def
                        dest!: idle_no_ex_cap )
-       apply (wpsimp wp: suspend_nonz_cap_to_tcb hoare_weak_lift_imp suspend_invs suspend_valid_sched
-                   simp: if_apply_def2
-              | strengthen invs_psp_aligned invs_distinct)+
+       apply (wp suspend_nonz_cap_to_tcb hoare_weak_lift_imp suspend_invs
+                 suspend_valid_sched
+              | simp add: if_apply_def2)+
      apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_idle_def
                      dest!: idle_no_ex_cap)
     apply (fastforce simp: invs'_def)
@@ -702,7 +709,7 @@ lemma threadSetPriority_valid_objs'[wp]:
    threadSetPriority t p
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (wpsimp wp: threadSet_valid_objs' simp: threadSetPriority_def)
-  apply (fastforce simp: valid_tcb'_def valid_cap'_def tcb_cte_cases_def cteSizeBits_def)
+  apply (fastforce simp: valid_tcb'_def valid_cap'_def tcb_cte_cases_def tcb_cte_cases_neqs)
   done
 
 crunch threadSetPriority
@@ -735,7 +742,6 @@ crunch threadSetPriority
   and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   and ksMachineState[wp]: "\<lambda>s. P (ksMachineState s)"
-  and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
   and sym_heap_sched_pointers[wp]: sym_heap_sched_pointers
   and valid_sched_pointers[wp]: valid_sched_pointers
   and valid_machine_state'[wp]: valid_machine_state'
@@ -752,14 +758,14 @@ lemma threadSetPriority_valid_mdb'[wp]:
   "threadSetPriority t p \<lbrace>valid_mdb'\<rbrace>"
   unfolding threadSetPriority_def
   apply (wpsimp wp: threadSet_mdb')
-  apply (fastforce simp: obj_at'_def valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
+  apply (fastforce simp: obj_at'_def valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs)
   done
 
 lemma threadSetPriority_if_unsafe_then_cap'[wp]:
   "threadSetPriority t p \<lbrace>if_unsafe_then_cap'\<rbrace>"
   unfolding threadSetPriority_def
   apply (wpsimp wp: threadSet_ifunsafe'T)
-   apply (fastforce simp: tcb_cte_cases_def cteSizeBits_def)
+   apply (fastforce simp: tcb_cte_cases_def tcb_cte_cases_neqs)
   apply fastforce
   done
 
@@ -772,10 +778,6 @@ lemma threadSetPriority_invs':
                     untyped_ranges_zero_lift valid_replies'_lift valid_dom_schedule'_lift
               simp: cteCaps_of_def o_def)
   done
-
-crunch reorderEp, threadSetPriority
-  for st_tcb_at'[wp]: "st_tcb_at' P t"
-  (wp: crunch_wps threadSet_st_tcb_at2)
 
 lemma threadSetPriority_onRunning_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> p \<le> maxPriority\<rbrace> threadSetPriority_onRunning t p \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -942,8 +944,6 @@ lemma reorderNtfn_corres:
      invs'
      (reorder_ntfn ntfn_ptr t) (reorderNtfn ntfnPtr t)"
   supply return_bind[simp del]
-         ghost_relation_wrapper_def[simp del] (*FIXME arch-split RT: not necessary after arch-split*)
-         heap_ghost_relation_wrapper_def[simp del] (*FIXME arch-split RT: not necessary after arch-split*)
   apply (clarsimp simp: reorder_ntfn_def reorderNtfn_def)
   apply (rule corres_split_forwards'[OF _ get_simple_ko_sp get_ntfn_sp'])
    apply (corres corres: getNotification_corres)
@@ -1176,8 +1176,6 @@ lemma reorderEp_corres:
      invs'
      (reorder_ep ep_ptr t) (reorderEp epPtr t)"
   supply return_bind[simp del]
-         ghost_relation_wrapper_def[simp del] (*FIXME arch-split RT: not necessary after arch-split*)
-         heap_ghost_relation_wrapper_def[simp del] (*FIXME arch-split RT: not necessary after arch-split*)
   apply (rule_tac Q="ep_at ep_ptr" in corres_cross_add_abs_guard)
    apply clarsimp
    apply (frule tcb_in_valid_state)
@@ -1249,7 +1247,6 @@ lemma reorderEp_corres:
    apply clarsimp
    apply (frule state_relation_pspace_relation)
    subgoal by (fastforce simp: pspace_relation_heap_pspace_relation simp: removeAll_filter_not_eq)
-  supply return_bind[simp del]
   apply (clarsimp simp: state_relation_def pspace_relation_heap_pspace_relation
                         ghost_relation_heap_ghost_relation heap_pspace_relation_def)
   apply (rcorres_conj_lift clarsimp
@@ -1344,7 +1341,7 @@ lemma threadSetPriority_valid_tcbs'[wp]:
    threadSet (tcbPriority_update (\<lambda>_. prio)) t
    \<lbrace>\<lambda>_. valid_tcbs'\<rbrace>"
   apply (wp threadSet_valid_tcbs')
-  by (fastforce simp: valid_tcbs'_def valid_tcb'_def tcb_cte_cases_def cteSizeBits_def obj_at'_def)
+  by (fastforce simp: valid_tcbs'_def valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs obj_at'_def)
 
 lemma thread_set_in_correct_ready_q_not_queued:
   "\<lbrace>in_correct_ready_q and not_queued t\<rbrace>
@@ -1410,6 +1407,7 @@ lemma threadSetPriority_onRunning_corres:
               od
          else thread_set_priority t prio od)
      (threadSetPriority_onRunning t prio)"
+  supply if_cong[cong]
   apply (rule_tac Q'="tcb_at' t" in corres_cross_add_guard)
    apply (fastforce intro!: tcb_at_cross)
   apply (rule corres_gen_asm')
@@ -1452,7 +1450,7 @@ lemma threadSetPriority_onRunning_corres:
    apply fastforce
   apply (rule corres_guard_imp)
     apply (rule threadSet_not_queued_corres;
-           simp add: tcb_relation_def tcb_cap_cases_def tcb_cte_cases_def cteSizeBits_def)
+           simp add: tcb_relation_def tcb_cap_cases_def tcb_cte_cases_def tcb_cte_cases_neqs)
    apply (clarsimp simp: obj_at_def)
    apply (fastforce dest!: in_correct_ready_q_in_ready_q simp: is_tcb_def)
   apply fastforce
@@ -1467,7 +1465,7 @@ lemma setPriority_corres:
      (einvs and tcb_at t and ct_not_in_release_q)
      (invs' and (\<lambda>_. prio \<le> maxPriority))
      (set_priority t prio) (setPriority t prio)"
-  supply if_split[split del]
+  supply if_split[split del] if_cong[cong]
   apply (rule corres_cross_add_guard[where Q'="tcb_at' t"])
    apply (fastforce intro: tcb_at_cross)
   apply (simp add: setPriority_def set_priority_def runnable'_case_thread_state_If)
@@ -1487,7 +1485,7 @@ lemma setPriority_corres:
     apply (rule_tac r'=dc in corres_split)
        apply (clarsimp simp: thread_set_priority_def threadSetPriority_def)
        apply (rule threadSet_not_queued_corres;
-              simp add: tcb_relation_def tcb_cap_cases_def tcb_cte_cases_def cteSizeBits_def)
+              simp add: tcb_relation_def tcb_cap_cases_def tcb_cte_cases_def tcb_cte_cases_neqs)
       apply clarsimp
       apply (rule_tac R="epBlocked ts' = None \<and> ep_blocked ts = None" in corres_cases'; clarsimp)
        apply (clarsimp simp: maybeM_def case_option_If2)
@@ -1683,7 +1681,7 @@ lemma setMCPriority_valid_objs'[wp]:
   "setMCPriority t prio \<lbrace>valid_objs'\<rbrace>"
   unfolding setMCPriority_def
   apply (wpsimp wp: threadSet_valid_objs')
-  apply (clarsimp simp: valid_tcb'_def valid_cap'_def tcb_cte_cases_def cteSizeBits_def)
+  apply (clarsimp simp: valid_tcb'_def valid_cap'_def tcb_cte_cases_def tcb_cte_cases_neqs)
   done
 
 abbreviation "valid_option_prio \<equiv> case_option True (\<lambda>(p, auth). p \<le> maxPriority)"
@@ -1904,6 +1902,8 @@ lemma installTCBCap_corres_helper:
                  tcbCTableSlot_def tcbVTableSlot_def tcb_cnode_index_def cte_map_def to_bl_def
                  cteSizeBits_def cte_level_bits_def)
 
+context Tcb_R_2 begin
+
 lemma installTCBCap_corres:
   "\<lbrakk> newroot_rel slot_opt slot_opt'; slot_opt \<noteq> None \<longrightarrow> slot' = cte_map slot; n \<in> {0,1,3,4} \<rbrakk> \<Longrightarrow>
      corres (dc \<oplus> dc)
@@ -1939,10 +1939,8 @@ lemma installTCBCap_corres:
        apply simp
       apply simp
      apply (wp cap_delete_valid_sched cap_delete_deletes_fh cap_delete_deletes cap_delete_cte_at
-                cap_delete_valid_cap cteDelete_invs' cteDelete_deletes hoare_vcg_const_imp_liftE_R
-            | strengthen use_no_cap_to_obj_asid_strg)+
-   apply (fastforce simp: is_cap_simps valid_fault_handler_def
-                          is_cnode_or_valid_arch_def cte_wp_at_def)+
+                cap_delete_valid_cap cteDelete_invs' cteDelete_deletes hoare_vcg_const_imp_liftE_R)+
+   apply (fastforce simp: is_cap_simps valid_fault_handler_def cte_wp_at_def)+
   done
 
 lemma installTCBCap_invs':
@@ -1951,15 +1949,12 @@ lemma installTCBCap_invs':
                                       \<not> isReplyCap newCap \<and> \<not> isIRQControlCap newCap)\<rbrace>
    installTCBCap target slot n slot_opt
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split RT: legacy, try use tcb_cte_cases_neqs *)
-  apply (simp only: installTCBCap_def tcbCTableSlot_def tcbVTableSlot_def tcbFaultHandlerSlot_def
-                    getThreadCSpaceRoot_def getThreadVSpaceRoot_def getThreadFaultHandlerSlot_def)
+  unfolding installTCBCap_def getThreadCSpaceRoot_def getThreadVSpaceRoot_def getThreadFaultHandlerSlot_def
   apply (wpsimp split_del: if_split
-                       wp: checked_insert_tcb_invs cteDelete_invs'
+                       wp: checked_insert_tcb_invs_gen cteDelete_invs'
                            cteDelete_deletes hoare_vcg_const_imp_liftE_R hoare_vcg_if_lift_ER
-                     simp: locateSlotBasic_def maybe_def returnOk_bindE
-                           getThreadTimeoutHandlerSlot_def locateSlotTCB_def)+
-  apply (auto simp: objBits_def objBitsKO_def cteSizeBits_def tcbTimeoutHandlerSlot_def)
+                     simp: locateSlotBasic_def getThreadTimeoutHandlerSlot_def locateSlotTCB_def)+
+  apply (auto simp: objBits_def objBitsKO_def shiftl_t2n[symmetric])
   done
 
 lemma installThreadBuffer_invs':
@@ -1975,7 +1970,7 @@ lemma installThreadBuffer_invs':
   apply (wpsimp wp: hoare_weak_lift_imp hoare_vcg_all_lift threadSet_invs_trivial2)
      apply (wpsimp wp: threadSet_cte_wp_at'T)
       apply (clarsimp simp: tcbIPCBuffer_update_def)
-      apply (case_tac tcb; fastforce simp: tcb_cte_cases_def cteSizeBits_def)
+      apply (case_tac tcb; fastforce simp: tcb_cte_cases_def tcb_cte_cases_neqs)
      apply wpsimp+
     apply (wpsimp wp: cteDelete_invs' cteDelete_deletes getThreadBufferSlot_inv
                       getThreadBufferSlot_dom_tcb_cte_cases hoare_vcg_const_imp_liftE_R
@@ -1993,16 +1988,20 @@ lemma installTCBCap_valid_cap'[wp]:
             getThreadVSpaceRoot_def getThreadCSpaceRoot_def installTCBCap_def
   by (wpsimp wp: checkCap_inv crunch_wps assertDerived_wp_weak | intro conjI)+
 
+context begin interpretation Arch . (*FIXME: rt arch-split*)
+
 lemma is_aligned_tcb_ipc_buffer_update:
   "is_aligned aa msg_align_bits \<longrightarrow>
    valid_tcb a tcb s \<longrightarrow> valid_tcb a (tcb\<lparr>tcb_ipc_buffer := aa\<rparr>) s"
   by (clarsimp simp: valid_tcb_def ran_tcb_cap_cases valid_ipc_buffer_cap_def
               split: cap.splits arch_cap.splits bool.splits)
 
+end (* Arch *)
+
 lemma is_aligned_tcbIPCBuffer_update:
   "is_aligned aa msg_align_bits \<longrightarrow>
    valid_tcb' tcb s \<longrightarrow> valid_tcb' (tcbIPCBuffer_update (\<lambda>_. aa) tcb) s"
-  by (clarsimp simp: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
+  by (clarsimp simp: valid_tcb'_def tcb_cte_cases_def tcb_cte_cases_neqs)
 
 lemma checkCap_inv2:
   assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
@@ -2054,7 +2053,7 @@ lemma installThreadBuffer_corres:
   apply (rule corres_gen_asm2)
   apply (rule corres_guard_imp[where P=P and P'=P' and Q="P and cte_at (a, tcb_cnode_index 2)"
                                          and Q'="P' and cte_at' (cte_map (a, cap))" for P P' a cap])
-    apply (cases g, simp add: returnOk_def comp_apply)
+    apply (cases g, simp add: returnOk_def)
     apply (clarsimp simp: installThreadBuffer_corres_helper bind_liftE_distrib liftE_bindE)
     apply (rule corres_guard_imp)
       apply (rule corres_split_norE)
@@ -2092,17 +2091,17 @@ lemma installThreadBuffer_corres:
                          wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift
                              thread_set_tcb_ipc_buffer_cap_cleared_invs
                              thread_set_not_state_valid_sched thread_set_valid_objs'
-                             thread_set_cte_wp_at_trivial thread_set_ipc_tcb_cap_valid
-                             thread_set_in_correct_ready_q ep_queues_blocked_lift
-                             ntfn_queues_blocked_lift ready_queues_runnable_lift
-                             thread_set_no_change_tcb_state)
+                             thread_set_ipc_buffer_no_cap_to_obj_dr_emp thread_set_cte_wp_at_trivial
+                             thread_set_ipc_tcb_cap_valid thread_set_in_correct_ready_q
+                             ep_queues_blocked_lift ntfn_queues_blocked_lift
+                             ready_queues_runnable_lift thread_set_no_change_tcb_state)
         apply (clarsimp simp: option.case_eq_if if_fun_split)
         apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift threadSet_invs_trivial
                           threadSet_cte_wp_at' threadSet_valid_objs' threadSet_sched_pointers
                           threadSet_valid_sched_pointers)
        apply ((wp cap_delete_deletes cap_delete_valid_sched cap_delete_cte_at cap_delete_deletes_fh
                   hoare_vcg_const_imp_liftE_R hoare_vcg_all_liftE_R hoare_vcg_disj_lift_R
-               | strengthen use_no_cap_to_obj_asid_strg is_aligned_tcb_ipc_buffer_update invs_valid_objs2
+               | strengthen is_aligned_tcb_ipc_buffer_update invs_valid_objs2
                             invs_psp_aligned_strg invs_distinct[atomized] valid_sched_weak_strg
                             valid_sched_active_scs_valid
                             sym_refs_ep_queues_blocked[OF invs_sym_refs]
@@ -2120,45 +2119,48 @@ lemma installThreadBuffer_corres:
       apply (wp cteDelete_invs' cteDelete_deletes hoare_vcg_const_imp_liftE_R)
      apply (fastforce simp: tcb_ep_slot_cte_wp_ats cte_wp_at_caps_of_state
                             valid_fault_handler_def is_cap_simps valid_ipc_buffer_cap_def
-                      dest: is_cnode_or_valid_arch_cap_asid
-                     split: arch_cap.splits bool.splits option.splits)
+                            valid_ipc_buffer_cap_is_nondevice_page_cap
+                     split: bool.splits option.splits)
     apply (fastforce split: option.splits)
    apply (fastforce simp: obj_at_def is_tcb intro: cte_wp_at_tcbI)
-  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split RT: legacy, try use tcb_cte_cases_neqs *)
-  apply (fastforce simp: cte_map_def tcb_cnode_index_def obj_at'_def
-                         cte_level_bits_def objBits_simps cte_wp_at_tcbI')
+  apply (fastforce simp: cte_map_def tcb_cnode_index_def obj_at'_def gen_objBits_simps
+                         cte_wp_at_tcbI' cteSizeBits_cte_level_bits[symmetric])
   done
 
-lemma tcb_at_cte_at'_0: "tcb_at' a s \<Longrightarrow> cte_at' (cte_map (a, tcb_cnode_index 0)) s"
-  apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def projectKO_tcb oassert_opt_def
+lemma tcb_at_cte_at'_0:
+  "tcb_at' a s \<Longrightarrow> cte_at' (cte_map (a, tcb_cnode_index 0)) s"
+  apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def oassert_opt_def
                  split: option.splits)
   apply (rule_tac ptr'=a in cte_wp_at_tcbI'; simp add: objBitsKO_def)
-  apply (simp add: cte_map_def tcb_cnode_index_def cte_level_bits_def)
+  apply (simp add: cte_map_def tcb_cnode_index_def cteSizeBits_cte_level_bits[symmetric])
   done
 
-lemma tcb_at_cte_at'_1: "tcb_at' a s \<Longrightarrow> cte_at' (cte_map (a, tcb_cnode_index (Suc 0))) s"
-  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split RT: legacy, try use tcb_cte_cases_neqs *)
-  apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def projectKO_tcb oassert_opt_def
+lemma tcb_at_cte_at'_1:
+  "tcb_at' a s \<Longrightarrow> cte_at' (cte_map (a, tcb_cnode_index (Suc 0))) s"
+  apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def oassert_opt_def
                  split: option.splits)
   apply (rule_tac ptr'=a in cte_wp_at_tcbI'; simp add: objBitsKO_def)
-  apply (simp add: cte_map_def tcb_cnode_index_def cte_level_bits_def of_bl_def)
+  apply (simp add: cte_map_def tcb_cnode_index_def cteSizeBits_cte_level_bits[symmetric] of_bl_def
+              del: shiftl_1)
   done
 
-lemma tcb_at_cte_at'_3: "tcb_at' a s \<Longrightarrow> cte_at' (cte_map (a, tcb_cnode_index 3)) s"
-  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split RT: legacy, try use tcb_cte_cases_neqs *)
-  apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def projectKO_tcb oassert_opt_def
+lemma tcb_at_cte_at'_3:
+  "tcb_at' a s \<Longrightarrow> cte_at' (cte_map (a, tcb_cnode_index 3)) s"
+  apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def oassert_opt_def
                  split: option.splits)
   apply (rule_tac ptr'=a in cte_wp_at_tcbI'; simp add: objBitsKO_def)
-  apply (simp add: cte_map_def tcb_cnode_index_def cte_level_bits_def)
+  apply (simp add: cte_map_def tcb_cnode_index_def cteSizeBits_cte_level_bits[symmetric])
   done
 
-lemma tcb_at_cte_at'_4: "tcb_at' a s \<Longrightarrow> cte_at' (cte_map (a, tcb_cnode_index 4)) s"
-  supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split RT: legacy, try use tcb_cte_cases_neqs *)
-  apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def projectKO_tcb oassert_opt_def
+lemma tcb_at_cte_at'_4:
+  "tcb_at' a s \<Longrightarrow> cte_at' (cte_map (a, tcb_cnode_index 4)) s"
+  apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def oassert_opt_def
                  split: option.splits)
   apply (rule_tac ptr'=a in cte_wp_at_tcbI'; simp add: objBitsKO_def)
-  apply (simp add: cte_map_def tcb_cnode_index_def cte_level_bits_def)
+  apply (simp add: cte_map_def tcb_cnode_index_def cteSizeBits_cte_level_bits[symmetric])
   done
+
+context begin interpretation Arch . (*FIXME: rt arch-split*)
 
 lemma tc_corres_caps:
   fixes t slot fault_h time_h croot vroot ipcb sl' fault_h' time_h' croot' vroot' ipcb'
@@ -2215,6 +2217,8 @@ lemma tc_corres_caps:
                      isValidFaultHandler_def isValidVTableRoot_def
       | intro conjI)+
 
+end (* Arch *)
+
 lemma sched_context_resume_weak_valid_sched_action:
   "\<lbrace>\<lambda>s. weak_valid_sched_action s \<and>
         (\<forall>ya. sc_tcb_sc_at ((=) (Some ya)) scp s \<longrightarrow> scheduler_act_not ya s)\<rbrace>
@@ -2225,14 +2229,14 @@ lemma sched_context_resume_weak_valid_sched_action:
 
 crunch sched_context_resume
   for sc_at_ppred[wp]: "sc_at_ppred n P ptr"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma setSchedContext_scTCB_update_valid_refills[wp]:
   "\<lbrace>ko_at' sc ptr and valid_refills' ptr'\<rbrace>
    setSchedContext ptr (scTCB_update f sc)
    \<lbrace>\<lambda>_. valid_refills' ptr'\<rbrace>"
   apply (wpsimp wp: set_sc'.set_wp)
-  by (fastforce simp: valid_refills'_def obj_at_simps opt_map_red opt_pred_def refillSize_def)
+  by (fastforce simp: valid_refills'_def gen_obj_at_simps opt_map_red opt_pred_def refillSize_def)
 
 lemma schedContextBindTCB_corres:
   "corres dc
@@ -2336,7 +2340,7 @@ lemma schedContextBindTCB_corres:
               untyped_ranges_zero_lift threadSet_valid_dom_schedule'
               threadSet_valid_replies' sym_heap_sched_pointers_lift
               threadSet_valid_sched_pointers threadSet_field_inv threadSet_cap_to
-           | clarsimp simp: tcb_cte_cases_def cteCaps_of_def cteSizeBits_def
+           | clarsimp simp: tcb_cte_cases_def cteCaps_of_def tcb_cte_cases_neqs
            | rule hoare_vcg_conj_lift hoare_vcg_all_lift hoare_vcg_imp_lift' refl)+
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_sched_def)
    apply (intro conjI impI allI; (solves clarsimp)?)
@@ -2361,15 +2365,15 @@ lemma schedContextBindTCB_corres:
     apply (subgoal_tac "ptr \<noteq> idle_sc_ptr")
      apply (clarsimp simp: invs'_def valid_pspace'_def pred_tcb_at'_def sc_at_ppred_def obj_at'_def)
      apply (intro conjI allI impI; (solves \<open>clarsimp simp: inQ_def comp_def\<close>)?)
-         apply (fastforce simp: valid_tcb'_def tcb_cte_cases_def obj_at'_def cteSizeBits_def)
+         apply (fastforce simp: valid_tcb'_def tcb_cte_cases_def obj_at'_def tcb_cte_cases_neqs)
         subgoal
-          by (fastforce simp: valid_obj'_def valid_sched_context'_def tcb_cte_cases_def
+          by (fastforce simp: valid_obj'_def valid_sched_context'_def tcb_cte_cases_neqs
                               cteSizeBits_def obj_at'_def refillSize_def)
        apply (fastforce elim: valid_objs_sizeE'[OF valid_objs'_valid_objs_size']
                         simp: objBits_def objBitsKO_def valid_obj_size'_def
                               valid_sched_context_size'_def)
       apply (fastforce elim: ex_cap_to'_after_update
-                       simp: ko_wp_at'_def tcb_cte_cases_def cteSizeBits_def)
+                       simp: ko_wp_at'_def tcb_cte_cases_def tcb_cte_cases_neqs)
      apply (clarsimp simp: untyped_ranges_zero_inv_def cteCaps_of_def comp_def)
     apply (fastforce dest: idle_sc_no_ex_cap[rotated])
    apply (clarsimp simp: state_relation_def invs_def valid_state_def valid_pspace_def)
@@ -2403,7 +2407,6 @@ lemma cteDelete_fh_lift:
   apply (rule bindE_wp_fwd)
    apply (subst liftE_validE)
    apply (rule getCTE_sp)
-  apply (clarsimp split del: if_split)
   apply (rule_tac P'="P and invs' and L and cte_wp_at' (\<lambda>c. c = cte) target
                        and K (isValidFaultHandler (cteCap cte))" in hoare_weaken_preE)
    apply (case_tac "cteCap cte"; clarsimp simp: isValidFaultHandler_def split: bool.splits)
@@ -2429,7 +2432,7 @@ lemma installTCBCap_fh_ex_nonz_cap_to':
   apply (rule valid_validE)
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: objBits_def objBitsKO_def)
-  apply (wpsimp wp: checkCap_wp assertDerived_wp_weak cteInsert_cap_to' split_del: if_splits)
+  apply (wpsimp wp: checkCap_wp assertDerived_wp_weak cteInsert_cap_to' split_del: if_split)
    apply (rule_tac Q'="\<lambda>_ s. cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap)
                                        (target + 2 ^ cteSizeBits * tcbFaultHandlerSlot) s \<and>
                             ex_nonz_cap_to' p s" in hoare_strengthen_postE)
@@ -2448,11 +2451,11 @@ lemma installTCBCap_fh_ex_nonz_cap_to':
      apply (prop_tac "s \<turnstile>' (cteCap cte)")
       apply fastforce
      apply (prop_tac "\<not> isEndpointCap (cteCap cte)")
-      apply (fastforce simp: valid_cap'_def isCap_simps)
+      apply (fastforce simp: valid_cap'_def gen_isCap_simps)
      apply (case_tac "cteCap cte"; clarsimp simp: isValidFaultHandler_def isEndpointCap_def)
     apply (wpsimp wp: cteDelete_deletes)+
-  apply (clarsimp simp: comp_def cte_map_def tcb_cnode_index_def
-                        objBits_defs cte_level_bits_def tcbFaultHandlerSlot_def)
+  apply (clarsimp simp: comp_def cte_map_def tcb_cnode_index_def cteSizeBits_cte_level_bits
+                        tcbFaultHandlerSlot_def shiftl_t2n)
   done
 
 crunch setMCPriority
@@ -2499,7 +2502,7 @@ lemma schedContextUnbindTCB_corres':
 
 crunch setPriority, setMCPriority
   for obj_at'_tcbSchedContext[wp]: "obj_at' (\<lambda>tcb. P (tcbSchedContext tcb)) t"
-  (wp: crunch_wps threadSet_tcbSCs_of_inv)
+  (wp: crunch_wps threadSet_tcbSCs_of_inv cong: if_cong)
 
 lemma tc_corres_sched:
   fixes t slot sc_fault_h p_auth mcp_auth sc_opt sl' sc_fault_h' sc_opt'
@@ -2621,6 +2624,7 @@ lemma tc_corres_sched:
        apply wp
       apply (wp install_tcb_cap_invs install_tcb_cap_ex_nonz_cap_to
                 install_tcb_cap_ct_active hoare_vcg_all_lift hoare_weak_lift_imp
+                RISCV64.install_tcb_cap_sc_tcb_sc_at (* FIXME: rt arch-split *)
                 hoare_lift_Pf3[where f=cur_thread, OF install_tcb_cap_released_sc_tcb_at
                                                       install_tcb_cap_cur_thread])
      apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> tcb_at' t s \<and>
@@ -2650,9 +2654,9 @@ lemma tc_corres_sched:
    apply (clarsimp simp: tcs_cross_asrt1_def)
    apply (intro conjI impI allI; clarsimp?)
      apply (clarsimp simp: tcb_at_cte_at'_3)
-    apply (clarsimp simp: newroot_rel_def isCap_simps valid_fault_handler_def)
+    apply (clarsimp simp: newroot_rel_def gen_isCap_simps valid_fault_handler_def)
     apply (case_tac a; clarsimp)
-   apply (clarsimp simp: newroot_rel_def isCap_simps valid_fault_handler_def)
+   apply (clarsimp simp: newroot_rel_def gen_isCap_simps valid_fault_handler_def)
    apply (case_tac a; clarsimp)
   apply (clarsimp simp: tcs_cross_asrt1_def)
   apply (intro conjI impI allI)
@@ -2665,13 +2669,13 @@ lemma tc_corres_sched:
     apply (clarsimp simp: state_relation_def pspace_relation_def invs_def valid_state_def
                           valid_pspace_def pred_tcb_at_def pred_tcb_at'_def obj_at_def obj_at'_def)
     apply (drule_tac x=t in bspec, clarsimp)
-    apply (clarsimp simp: tcb_relation_cut_def tcb_relation_def projectKOs)
+    apply (clarsimp simp: tcb_relation_cut_def tcb_relation_def)
    apply (force intro: tcb_at_cross)
   apply (subgoal_tac "sc_at' x s'")
    apply (clarsimp simp: state_relation_def pspace_relation_def invs_def valid_state_def
                          valid_pspace_def sc_at_ppred_def obj_at_def obj_at'_def)
    apply (drule_tac x=x in bspec, clarsimp)
-   apply (clarsimp simp: sc_relation_def projectKOs split: if_splits)
+   apply (clarsimp simp: sc_relation_def split: if_splits)
   apply (fastforce elim: sc_at_cross)
   done
 
@@ -2690,7 +2694,8 @@ lemma tc_caps_invs':
                     installTCBCap_invs' installThreadBuffer_invs')
   apply (clarsimp cong: conj_cong)
   apply (intro conjI; intro allI impI; clarsimp;
-         fastforce simp: isValidFaultHandler_def isCap_simps isValidVTableRoot_def)
+         fastforce simp: isValidFaultHandler_def gen_isCap_simps
+                   dest: isValidVTableRootD_gen)
   done
 
 lemma schedContextBindTCB_invs':
@@ -2716,12 +2721,12 @@ lemma schedContextBindTCB_invs':
              valid_irq_handlers_lift'' hoare_vcg_const_imp_lift hoare_vcg_imp_lift'
              threadSet_valid_replies' threadSet_valid_sched_pointers threadSet_field_inv
              sym_heap_sched_pointers_lift hoare_vcg_all_lift hoare_vcg_imp_lift'
-          | clarsimp simp: tcb_cte_cases_def cteCaps_of_def cteSizeBits_def)+
+          | clarsimp simp: tcb_cte_cases_def cteCaps_of_def tcb_cte_cases_neqs)+
   apply (clarsimp simp: invs'_def valid_pspace'_def)
   by (fastforce simp: pred_tcb_at'_def obj_at'_def
                       objBits_def objBitsKO_def valid_tcb'_def tcb_cte_cases_def comp_def
                       valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def
-                      inQ_def cteCaps_of_def cteSizeBits_def refillSize_def
+                      inQ_def cteCaps_of_def tcb_cte_cases_neqs refillSize_def
                 elim: ps_clear_domE split: if_splits)
 
 lemma threadSetPriority_bound_sc_tcb_at' [wp]:
@@ -2742,19 +2747,19 @@ crunch setMCPriority
   and ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
   (wp: crunch_wps threadSet_pred_tcb_no_state)
 
-crunch finaliseCap, capSwapForDelete
+crunch finaliseCap, capSwapForDelete, getThreadVSpaceRoot
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (simp: crunch_simps wp: crunch_wps getObject_inv cteDelete_preservation)
 
 lemma updateRefillHd_sc_tcb_sc_at'[wp]:
   "updateRefillHd scp f \<lbrace>\<lambda>s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) p s)\<rbrace>"
   apply (wpsimp simp: updateRefillHd_def wp: updateSchedContext_wp)
-  by (clarsimp simp: obj_at'_def ps_clear_upd projectKOs opt_map_red objBits_simps)
+  by (clarsimp simp: obj_at'_def ps_clear_upd opt_map_red gen_objBits_simps)
 
 lemma refillPopHead_sc_tcb_sc_at'[wp]:
   "refillPopHead scp \<lbrace>\<lambda>s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) p s)\<rbrace>"
   apply (wpsimp simp: refillPopHead_def wp: updateSchedContext_wp getRefillNext_wp)
-  apply (clarsimp simp: obj_at'_def ps_clear_upd opt_map_red objBits_simps)
+  apply (clarsimp simp: obj_at'_def ps_clear_upd opt_map_red gen_objBits_simps)
   done
 
 crunch cteInsert, emptySlot, cancelAllIPC
@@ -2768,8 +2773,8 @@ lemma installTCBCap_fh_sc_tcb_sc_at':
    \<lbrace>\<lambda>_ s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) p s)\<rbrace>"
   by (wpsimp wp: checkCap_inv assertDerived_wp cteDelete_fh_lift
            simp: installTCBCap_def locateSlotTCB_def locateSlotBasic_def tcbFaultHandlerSlot_def
-                 getThreadFaultHandlerSlot_def cte_level_bits_def cte_map_def
-                 tcb_cnode_index_def objBits_defs objBits_def objBitsKO_def)
+                 getThreadFaultHandlerSlot_def cteSizeBits_cte_level_bits cte_map_def
+                 tcb_cnode_index_def objBits_def objBitsKO_def shiftl_t2n)
 
 lemma installTCBCap_fh_bound_sc_tcb_at':
   "\<lbrace>\<lambda>s. bound_sc_tcb_at' P t s \<and> invs' s \<and> tcb_at' target s \<and>
@@ -2778,8 +2783,8 @@ lemma installTCBCap_fh_bound_sc_tcb_at':
    \<lbrace>\<lambda>_ s. bound_sc_tcb_at' P t s\<rbrace>"
   by (wpsimp wp: checkCap_inv assertDerived_wp cteDelete_fh_lift hoare_vcg_const_imp_lift
            simp: installTCBCap_def locateSlotTCB_def locateSlotBasic_def tcbFaultHandlerSlot_def
-                 getThreadFaultHandlerSlot_def cte_level_bits_def cte_map_def
-                 tcb_cnode_index_def objBits_defs objBits_def objBitsKO_def)
+                 getThreadFaultHandlerSlot_def cteSizeBits_cte_level_bits cte_map_def
+                 tcb_cnode_index_def objBits_def objBitsKO_def shiftl_t2n)
 
 lemma installTCBCap_ksCurThread[wp]:
   "installTCBCap target slot n slot_opt \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace>"
@@ -2800,7 +2805,7 @@ lemma tc_sched_invs':
                                         bound_sc_tcb_at' (\<lambda>sc. sc = None) t s \<and>
                                         bound_sc_tcb_at' bound (ksCurThread s) s)"
                      in hoare_strengthen_post[rotated])
-        apply (fastforce simp: pred_tcb_at'_def obj_at'_def projectKOs)
+        apply (fastforce simp: pred_tcb_at'_def obj_at'_def)
        apply (rule hoare_lift_Pf3[where f=ksCurThread])
         apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift)
        apply wpsimp
@@ -2817,15 +2822,13 @@ lemma tc_sched_invs':
   apply (clarsimp cong: conj_cong)
   apply (subgoal_tac "sc_opt = Some None \<longrightarrow> bound_sc_tcb_at' (\<lambda>a. a \<noteq> Some idle_sc_ptr) t s")
    apply (fastforce simp: tcs_cross_asrt1_def comp_def isValidFaultHandler_def
-                          isCap_simps pred_tcb_at'_def obj_at'_def)
+                          gen_isCap_simps pred_tcb_at'_def obj_at'_def)
   apply (clarsimp simp: invs'_def valid_idle'_def
-                        pred_tcb_at'_def obj_at'_def tcs_cross_asrt1_def valid_idle'_asrt_def)
+                        pred_tcb_at'_def obj_at'_def tcs_cross_asrt1_def)
   apply (frule_tac p=t and ko="ko :: tcb" for ko in sym_refs_ko_atD'[rotated])
-   apply (auto simp: ko_wp_at'_def obj_at'_def projectKOs valid_idle'_def tcb_bound_refs'_def
+   apply (auto simp: ko_wp_at'_def obj_at'_def valid_idle'_def tcb_bound_refs'_def
               dest!: global'_no_ex_cap)
   done
-
-context Tcb_R_2 begin
 
 lemma invokeTCB_corres:
  "tcbinv_relation ti ti' \<Longrightarrow>
@@ -2861,7 +2864,7 @@ lemma invokeTCB_corres:
              apply simp
             apply (rule rescheduleRequired_corres)
            apply (rule corres_trivial, simp)
-          apply (solves \<open>wpsimp wp: hoare_drop_imp\<close>)+
+          apply (solves \<open>wpsimp wp: hoare_drop_imp RISCV64.as_user_valid_tcbs\<close>)+ (* FIXME: rt arch-split *)
     apply clarsimp
     apply (frule invs_sym_refs)
     apply (fastforce dest: valid_sched_valid_ready_qs)
@@ -2875,7 +2878,7 @@ lemma invokeTCB_corres:
   apply (fastforce dest: tcb_ko_at_valid_objs_valid_tcb' simp: valid_tcb'_def)
   done
 
-end (* Tcb_R *)
+end (* Tcb_R_2 *)
 
 crunch option_update_thread
   for aligned[wp]: "pspace_aligned"
@@ -2925,7 +2928,7 @@ lemma setFlags_invs'[wp]:
 
 declare assertDerived_wp[wp]
 
-context Tcb_R begin
+context Tcb_R_2 begin
 
 lemma invokeSetFlags_invs'[wp]:
   "\<lbrace>invs' and tcb_inv_wf' (tcbinvocation.SetFlags tcb clears' sets')\<rbrace>
@@ -3073,7 +3076,7 @@ lemma decodeCopyReg_wf:
                         valid_cap'_def[where c="ThreadCap t" for t])
   done
 
-end (* Tcb_R *)
+end (* Tcb_R_2 *)
 
 lemma checkPrio_corres:
   "corres (ser \<oplus> dc) (tcb_at auth and pspace_aligned and pspace_distinct) \<top>
@@ -3283,7 +3286,7 @@ lemma decodeSetSchedParams_corres:
        (invs' and (\<lambda>s. s \<turnstile>' cap' \<and> (\<forall>x \<in> set extras'. s \<turnstile>' (fst x))))
        (decode_set_sched_params args cap slot extras)
        (decodeSetSchedParams args cap' slot' extras')"
-  supply if_split[split del]
+  supply if_split[split del] if_cong[cong]
   apply (clarsimp simp: is_cap_simps)
   apply (simp add: decode_set_sched_params_def decodeSetSchedParams_def decode_update_sc_def
                    check_handler_ep_def unlessE_whenE)
@@ -3877,7 +3880,7 @@ lemma decodeSetFlags_corres:
   by (clarsimp simp: decode_set_flags_def decodeSetFlags_def returnOk_def
                split: list.split)
 
-context Tcb_R begin
+context Tcb_R_2 begin
 
 lemma decodeTCBInvocation_corres:
  "\<lbrakk> c = Structures_A.ThreadCap t; cap_relation c c';
@@ -3923,7 +3926,7 @@ crunch decodeTCBInvocation
   for inv[wp]: P
   (simp: crunch_simps wp: crunch_wps threadGet_wp)
 
-end (* Tcb_R *)
+end (* Tcb_R_2 *)
 
 lemma real_cte_at_not_tcb_at':
   "real_cte_at' x s \<Longrightarrow> \<not> tcb_at' x s"
@@ -3981,7 +3984,7 @@ lemma decodeSetTimeoutEndpoint_wf[wp]:
   apply wpsimp
   done
 
-context Tcb_R begin
+context Tcb_R_2 begin
 
 lemma decodeTCBInv_wf:
   "\<lbrace>invs' and tcb_at' t and cte_at' slot and ex_nonz_cap_to' t
@@ -3999,7 +4002,7 @@ lemma decodeTCBInv_wf:
   apply (fastforce simp: real_cte_at_not_tcb_at' gen_objBits_simps)
   done
 
-end (* Tcb_R *)
+end (* Tcb_R_2 *)
 
 crunch getThreadBufferSlot, setPriority, setMCPriority
   for irq_states'[wp]: valid_irq_states'

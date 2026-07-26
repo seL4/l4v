@@ -580,15 +580,17 @@ lemma revokable_relation_lift_rcorres[rcorres_lift]:
 lemma arch_state_relation_lift_rcorres[rcorres_lift]:
   "\<lbrakk>\<And>s'. no_fail (\<lambda>s. Q s s') f; empty_fail f;
     \<And>P s'. \<lbrace>\<lambda>s. P (arch_state s) \<and> Q s s'\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>;
-    \<And>P s. \<lbrace>\<lambda>s'. P (ksArchState s') \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (ksArchState s')\<rbrace>\<rbrakk>
+    \<And>P s. \<lbrace>\<lambda>s'. P (ksArchState s') \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (ksArchState s')\<rbrace>;
+    \<And>P s. \<lbrace>\<lambda>s'. P (aobjs_of' s') \<and> Q s s'\<rbrace> f' \<lbrace>\<lambda>_ s'. P (aobjs_of' s')\<rbrace>\<rbrakk>
    \<Longrightarrow> rcorres
-         (\<lambda>s s'. (arch_state s, ksArchState s') \<in> arch_state_relation \<and> Q s s')
+         (\<lambda>s s'. (arch_state s, ksArchState s') \<in> arch_state_relation (aobjs_of' s') \<and> Q s s')
          f  f'
-         (\<lambda>_ _ s s'. (arch_state s, ksArchState s') \<in> arch_state_relation)"
+         (\<lambda>_ _ s s'. (arch_state s, ksArchState s') \<in> arch_state_relation (aobjs_of' s'))"
   apply (rule rcorres_lift_conc[where p=ksArchState])
-   apply (rule rcorres_lift_abs)
-    apply (rule rcorres_prop_fwd)
-      by (fastforce intro: no_fail_pre hoare_weaken_pre)+
+   apply (rule rcorres_lift_conc[where p=aobjs_of'])
+    apply (rule rcorres_lift_abs)
+     apply (rule rcorres_prop_fwd)
+  by (fastforce intro: no_fail_pre hoare_weaken_pre)+
 
 lemma interrupt_state_relation_lift_rcorres[rcorres_lift]:
   "\<lbrakk>\<And>s'. no_fail (\<lambda>s. Q s s') f; empty_fail f;
@@ -674,8 +676,9 @@ lemmas reprogram_timer_relation_lift_rcorres[rcorres_lift] =
   abs_conc_rel_lift_rcorres[where p=reprogram_timer and p'=ksReprogramTimer and R="(=)"]
 
 locale HeapStateRelation_R =
+  fixes state_ext_t :: "'state_ext::state_ext itself"
   assumes pspace_relation_heap_pspace_relation:
-    "\<And>(s :: det_state) s'. pspace_relation (kheap s) (ksPSpace s') \<longleftrightarrow> heap_pspace_relation s s'"
+    "\<And>(s :: 'state_ext state) s'. pspace_relation (kheap s) (ksPSpace s') \<longleftrightarrow> heap_pspace_relation s s'"
   assumes ghost_relation_heap_ghost_relation:
     "\<And>(s :: det_state) s'. ghost_relation_wrapper s s' \<longleftrightarrow> heap_ghost_relation_wrapper s s'"
 

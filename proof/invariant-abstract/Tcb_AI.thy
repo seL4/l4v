@@ -167,7 +167,7 @@ lemma readreg_invs:
   "\<lbrace>invs and tcb_at src and ex_nonz_cap_to src\<rbrace>
      invoke_tcb (tcb_invocation.ReadRegisters src susp n arch)
    \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wpsimp wp: suspend_invs)
+  apply wpsimp
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_idle_def
                  dest!: idle_no_ex_cap)
   done
@@ -184,7 +184,7 @@ lemma (in Tcb_AI_1) copyreg_invs:
      invoke_tcb (tcb_invocation.CopyRegisters dest src susp resume frames ints arch)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: if_apply_def2
-                  wp: mapM_x_wp' suspend_invs suspend_nonz_cap_to_tcb hoare_weak_lift_imp)
+                  wp: mapM_x_wp' suspend_nonz_cap_to_tcb hoare_weak_lift_imp)
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_idle_def suspend_def
                  dest!: idle_no_ex_cap)
   done
@@ -1120,7 +1120,7 @@ lemma (in Tcb_AI) tcbinv_invs:
      invoke_tcb ti
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (case_tac ti; simp only:)
-           apply ((wp writereg_invs readreg_invs copyreg_invs tcc_invs tcs_invs suspend_invs
+           apply ((wp writereg_invs readreg_invs copyreg_invs tcc_invs tcs_invs
                   | simp add: valid_idle_def
                   | clarsimp simp: invs_def valid_state_def valid_pspace_def
                             dest!: idle_no_ex_cap

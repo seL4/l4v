@@ -1621,11 +1621,6 @@ lemma invokeTCB_CopyRegisters_ccorres:
       apply (wpsimp wp: hoare_drop_imp restart_invs')+
      apply (clarsimp simp add: guard_is_UNIV_def)
     apply (wp hoare_drop_imp hoare_vcg_if_lift)+
-    apply simp
-    apply (rule_tac Q'="\<lambda>rv. invs' and tcb_at' destn"
-                 in hoare_strengthen_post[rotated])
-     apply (fastforce dest: global'_no_ex_cap)
-    apply (wpsimp wp: hoare_drop_imp)+
    apply (clarsimp simp add: guard_is_UNIV_def)
   apply (clarsimp simp: invs_valid_objs'
                  split: if_split cong: if_cong | rule conjI)+

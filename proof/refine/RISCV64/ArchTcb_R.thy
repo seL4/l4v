@@ -18,11 +18,6 @@ lemma activateIdleThread_corres[Tcb_R_assms]:
     (arch_activate_idle_thread t) (activateIdleThread t)"
   by (simp add: arch_activate_idle_thread_def activateIdleThread_def)
 
-crunch arch_post_modify_registers
-  for pspace_aligned[Tcb_R_assms, wp]: pspace_aligned
-  and pspace_distinct[Tcb_R_assms, wp]: pspace_distinct
-  (wp: crunch_wps simp: crunch_simps)
-
 lemma asUser_postModifyRegisters_corres[Tcb_R_assms]:
   "corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
      (arch_post_modify_registers ct t)
@@ -42,11 +37,6 @@ lemma threadSet_state_hyp_refs_of'_interface[Tcb_R_assms]:
   "\<lbrakk> \<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb) \<rbrakk>
    \<Longrightarrow> threadSet F t \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> "
   by (wpsimp simp: threadSet_state_hyp_refs_of')
-
-lemma threadSet_tcbPriority_if_live_then_nonz_cap'[Tcb_R_assms]:
-  "threadSet (tcbPriority_update f) t \<lbrace>if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: RISCV64.threadSet_iflive'T)
-     (fastforce simp: tcb_cte_cases_def tcb_cte_cases_neqs)+
 
 lemma sameObject_corres2[Tcb_R_assms]:
   "\<lbrakk> cap_relation c c'; cap_relation d d' \<rbrakk>
@@ -74,10 +64,10 @@ lemma isValidVTableRootD:
          split: capability.split_asm arch_capability.split_asm
                 option.split_asm)
 
-crunch prepare_thread_delete, arch_finalise_cap
+crunch arch_finalise_cap
   for pspace_aligned[Tcb_R_assms, wp]: "pspace_aligned :: det_ext state \<Rightarrow> _"
   and pspace_distinct[Tcb_R_assms, wp]: "pspace_distinct :: det_ext state \<Rightarrow> _"
-  (simp: crunch_simps preemption_point_def wp: crunch_wps OR_choiceE_weak_wp)
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma is_valid_vtable_root_simp:
   "is_valid_vtable_root cap =
@@ -90,8 +80,11 @@ lemma threadSet_invs_trivialT2:
     "\<forall>tcb. \<forall>(getF,setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
     "\<forall>tcb. tcbState (F tcb) = tcbState tcb \<and> tcbDomain (F tcb) = tcbDomain tcb"
     "\<forall>tcb. tcbBoundNotification (F tcb) = tcbBoundNotification tcb"
+    "\<forall>tcb. tcbSchedContext (F tcb) = tcbSchedContext tcb"
+    "\<forall>tcb. tcbYieldTo (F tcb) = tcbYieldTo tcb"
     "\<forall>tcb. tcbSchedPrev (F tcb) = tcbSchedPrev tcb"
     "\<forall>tcb. tcbSchedNext (F tcb) = tcbSchedNext tcb"
+    "\<forall>tcb. tcbInReleaseQueue (F tcb) = tcbInReleaseQueue tcb"
     "\<forall>tcb. tcbQueued (F tcb) = tcbQueued tcb"
     "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
     "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
@@ -103,9 +96,8 @@ lemma threadSet_invs_trivialT2:
      \<lbrace>\<lambda>_. invs'\<rbrace>"
   supply tcb_hyp_refs_of'_simps[simp del]
   apply (rule hoare_gen_asm)
-  apply (simp add: invs'_def valid_state'_def)
+  apply (simp add: invs'_def)
   apply (wp threadSet_valid_pspace'T
-            threadSet_iflive'T
             threadSet_ifunsafe'T
             threadSet_global_refsT
             valid_irq_node_lift
@@ -113,26 +105,20 @@ lemma threadSet_invs_trivialT2:
             threadSet_ctes_ofT
             threadSet_valid_dom_schedule'
             untyped_ranges_zero_lift
-            sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
-            threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of
-            threadSet_sch_actT_P[where P=False, simplified]
-            threadSet_state_refs_of'T[where f'=id]
-            threadSet_state_hyp_refs_of'
-            threadSet_idle'T
-            threadSet_not_inQ
-            threadSet_ct_idle_or_in_cur_domain'
-            threadSet_cur
+            threadSet_field_inv sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
          | clarsimp simp: assms cteCaps_of_def tcb_hyp_refs'_valid_arch_tcb'_eq[where F=F]
          | rule refl)+
   apply (clarsimp simp: o_def tcb_hyp_refs_of'_simps)
-  apply (auto simp: assms obj_at'_def)
   done
 
 (* FIXME: move after checked_insert_tcb_invs in ArchTcb_AI, and consolidate redundancy there *)
 lemma checked_insert_tcb_invs_gen[Tcb_R_assms]:
   "\<lbrace>invs and cte_wp_at (\<lambda>c. c = cap.NullCap) (target, ref)
-    and K (is_cnode_or_valid_arch new_cap) and valid_cap new_cap
+    and K (is_cnode_or_valid_arch new_cap \<or> valid_fault_handler new_cap)
+    and valid_cap new_cap
     and tcb_cap_valid new_cap (target, ref)
+    and (\<lambda>s. valid_fault_handler new_cap
+             \<longrightarrow> cte_wp_at (\<lambda>c. c = new_cap \<or> c = cap.NullCap) src_slot s)
     and cte_wp_at \<top> src_slot
     and no_cap_to_obj_dr_emp new_cap\<rbrace>
    check_cap_at new_cap src_slot
@@ -143,14 +129,6 @@ lemma checked_insert_tcb_invs_gen[Tcb_R_assms]:
   apply (strengthen use_no_cap_to_obj_asid_strg)
   apply (clarsimp dest!: is_cnode_or_valid_arch_cap_asid)
   done
-
-lemma is_valid_vtable_root_is_cnode_or_valid_arch[Tcb_R_assms]:
-  "is_valid_vtable_root cap \<Longrightarrow> is_cnode_or_valid_arch cap"
-  by (clarsimp simp: is_cnode_or_valid_arch_def is_valid_vtable_root_simp is_cap_simps)
-
-lemma is_cnode_cap_is_cnode_or_valid_arch[Tcb_R_assms]:
-  "is_cnode_cap cap \<Longrightarrow> is_cnode_or_valid_arch cap"
-  by (clarsimp simp: is_cnode_or_valid_arch_def)
 
 lemma valid_ipc_buffer_cap_is_nondevice_page_cap[Tcb_R_assms]:
   "\<lbrakk>valid_ipc_buffer_cap cap buf; is_arch_cap cap\<rbrakk> \<Longrightarrow> is_nondevice_page_cap cap"
@@ -229,6 +207,22 @@ lemma isValidVTableRoot_eq[Tcb_R_assms]:
   apply (rename_tac acap, case_tac acap; simp)
   apply (auto split: option.split simp: mdata_map_def)
   done
+
+crunch Arch_finaliseCap, prepareThreadDelete
+  for ksCurThread[Tcb_R_assms, wp]: "\<lambda>s. P (ksCurThread s)"
+  (wp: crunch_wps getObject_inv
+   rule: RISCV64_H.finaliseCap_def
+   cong: if_cong)
+
+crunch Arch.postCapDeletion
+  for sc_tcb_sc_at'[Tcb_R_assms, wp]: "\<lambda>s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) p s)"
+
+lemmas [Tcb_R_assms] =
+  arch_post_modify_registers_inv
+  prepare_thread_delete_inv[Tcb_R_assms]
+
+(* FIXME: rt arch-split, move interface to AInvs *)
+lemmas [Tcb_R_assms] = is_cnode_or_valid_arch_is_cap_simps
 
 end (* Arch *)
 

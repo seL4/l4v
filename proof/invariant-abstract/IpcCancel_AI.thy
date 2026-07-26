@@ -1542,7 +1542,7 @@ lemma cancel_ipc_no_refs:
   apply (auto elim: st_tcb_weakenE)
   done
 
-lemma suspend_invs:
+lemma suspend_invs[wp]:
   "\<lbrace>invs and K (t \<noteq> idle_thread_ptr)\<rbrace> suspend t \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding suspend_def
   apply (wpsimp wp: sts_invs_minor sched_context_cancel_yield_to_invs cancel_ipc_no_refs)

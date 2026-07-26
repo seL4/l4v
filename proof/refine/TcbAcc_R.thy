@@ -3383,8 +3383,7 @@ crunch tcbQueueRemove, orderedInsert, updateEndpoint, updateNotification
   (wp: crunch_wps)
 
 crunch threadSet
-  for aobjs_of'[wp]: "\<lambda>s. P (aobjs_of' s)"
-  and ksArch_aobjs_of'[wp]: "\<lambda>s. P (ksArchState s) (aobjs_of' s)"
+  for ksArch_aobjs_of'[wp]: "\<lambda>s. P (ksArchState s) (aobjs_of' s)"
 
 locale TcbAcc_R_2 = TcbAcc_R +
   assumes removeFromBitmap_valid_bitmapQ_except:
@@ -3437,8 +3436,10 @@ locale TcbAcc_R_2 = TcbAcc_R +
       \<forall>tcb. is_aligned (tcbIPCBuffer tcb) msg_align_bits
             \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits;
       \<forall>tcb. tcbBoundNotification (F tcb) = tcbBoundNotification tcb;
+      \<forall>tcb. tcbSchedContext (F tcb) = tcbSchedContext tcb;
+      \<forall>tcb. tcbYieldTo (F tcb) = tcbYieldTo tcb;
       \<forall>tcb. tcbSchedPrev (F tcb) = tcbSchedPrev tcb; \<forall>tcb. tcbSchedNext (F tcb) = tcbSchedNext tcb;
-      \<forall>tcb. tcbQueued (F tcb) = tcbQueued tcb;
+      \<forall>tcb. tcbInReleaseQueue (F tcb) = tcbInReleaseQueue tcb; \<forall>tcb. tcbQueued (F tcb) = tcbQueued tcb;
       \<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority;
       \<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority;
       \<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0;
@@ -3488,8 +3489,7 @@ lemma setBoundNotification_state_refs_of'[wp]:
   by (fastforce split: option.splits reftype.splits if_splits)
 
 crunch setQueue, tcbQueuePrepend, tcbQueueRemove, removeFromBitmap, tcbQueueAppend, tcbQueueAppend
-  for aobjs_of'[wp]: "\<lambda>s. P (aobjs_of' s)"
-  and ksArch_aobjs_of'[wp]: "\<lambda>s. P (ksArchState s) (aobjs_of' s)"
+  for ksArch_aobjs_of'[wp]: "\<lambda>s. P (ksArchState s) (aobjs_of' s)"
   (wp: crunch_wps)
 
 lemma tcbSchedEnqueue_corres:

@@ -305,11 +305,7 @@ lemma threadSet_invs_trivialT[TcbAcc_R_2_assms]:
             threadSet_valid_dom_schedule'
             untyped_ranges_zero_lift
             sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
-            threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of
             threadSet_state_hyp_refs_of'
-            threadSet_idle'T
-            threadSet_not_inQ
-            threadSet_ct_idle_or_in_cur_domain'
             threadSet_cur
             threadSet_field_opt_pred threadSet_field_inv
             valid_bitmaps_lift

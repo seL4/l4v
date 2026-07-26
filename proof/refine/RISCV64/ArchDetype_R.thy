@@ -171,7 +171,6 @@ lemmas irq_nodes =
 sublocale delete_locale_gen by (unfold_locales; fact irq_nodes)
 
 (* re-bind these lemma names into delete_locale so that later proofs can refer to them *)
-lemmas deletionIsSafe_delete_locale_holds = deletionIsSafe_delete_locale_holds
 lemmas null_filter' = null_filter'
 lemmas delete_ko_wp_at' = delete_ko_wp_at'
 lemmas delete_ex_cte_cap_to' = delete_ex_cte_cap_to'
@@ -182,7 +181,7 @@ context detype_locale' begin
 
 sublocale detype_locale'_gen by (unfold_locales; fact RISCV64.arch_deletionIsSafe)
 
-lemmas deletionIsSafe = deletionIsSafe
+lemmas deletionIsSafe_holds = deletionIsSafe_holds
 
 end (* detype_locale' *)
 
@@ -192,6 +191,13 @@ lemma sym_refs_hyp_refs_triv[simp]:
   "sym_refs (state_hyp_refs_of s)"
   by (clarsimp simp: state_hyp_refs_of_def sym_refs_def)
      (case_tac "kheap s x"; simp)
+
+lemma freeMemory_deletionIsSafe[wp]:
+  "doMachineOp (freeMemory base magnitude) \<lbrace>deletionIsSafe base magnitude\<rbrace>"
+  apply (clarsimp simp: doMachineOp_def)
+  apply wpsimp
+  apply (clarsimp simp: deletionIsSafe_def arch_deletionIsSafe_def)
+  done
 
 (* FIXME arch-split: some of this can be generalised; 3 is same on all arches *)
 lemma deleteObjects_corres:
@@ -221,9 +227,9 @@ lemma deleteObjects_corres:
    apply (frule invs_iflive)
    apply (frule (1) if_live_then_nonz_cap_to_cross, fastforce+)[1]
   apply (rule corres_stateAssert_add_assertion[rotated])
-   apply (rule delete_locale.deletionIsSafe_holds;
-          fastforce simp: delete_locale_def valid_cap_simps sch_act_simple_def state_relation_def
-                          sched_act_relation_def pred_conj_def)
+   apply (rule detype_locale'.deletionIsSafe_holds;
+          fastforce simp: detype_locale'_def delete_locale_def invs_valid_pspace valid_cap_simps
+                          sch_act_simple_def state_relation_def sched_act_relation_def)
   apply (simp add: bind_assoc[symmetric])
   apply (rule corres_stateAssert_implied2)
      defer
@@ -324,7 +330,6 @@ lemma valid_arch_tcb':
   "\<lbrakk> ksPSpace s' p = Some (KOTCB tcb); is_aligned p tcbBlockSizeBits; ps_clear p tcbBlockSizeBits s';
      valid_arch_tcb' (tcbArch tcb) s' \<rbrakk>
    \<Longrightarrow> valid_arch_tcb' (tcbArch tcb) state'"
-   using sym_hyp_refs
    by (clarsimp simp add: valid_arch_tcb'_def split: option.split_asm)
 
 lemma pspace_in_kernel_mappings':
@@ -374,6 +379,8 @@ sublocale delete_locale_gen_2
 
 lemmas delete_invs' = delete_invs'
 
+lemmas delete_sym_refs' = delete_sym_refs'
+
 end
 
 context Arch begin arch_global_naming
@@ -402,6 +409,35 @@ lemma deleteObjects_null_filter[Detype_R_assms]:
    apply (subgoal_tac "ksPSpace (s\<lparr>ksMachineState := snd ((), b)\<rparr>) =
                        ksPSpace s", simp only:, simp)
   apply (unfold_locales, simp_all)
+  done
+
+lemma deleteObjects_sym_refs'[Detype_R_assms]:
+  "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p
+     and invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and ct_active' and sch_act_simple
+     and (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s))\<rbrace>
+   deleteObjects ptr bits
+   \<lbrace>\<lambda>_ s. sym_refs (state_refs_of' s)\<rbrace>"
+  apply (rule hoare_pre)
+   apply (rule_tac P'="is_aligned ptr bits \<and> 3 \<le> bits \<and> bits \<le> word_bits" in hoare_grab_asm)
+   apply (clarsimp simp add: deleteObjects_def2)
+   apply (simp add: freeMemory_def bind_assoc doMachineOp_bind ef_storeWord)
+   apply (simp add: bind_assoc[where f="\<lambda>_. modify f" for f, symmetric])
+   apply (simp add: mapM_x_storeWord_step[simplified word_size_bits_def]
+                    doMachineOp_modify modify_modify)
+   apply (simp add: bind_assoc intvl_range_conv'[where 'a=machine_word_len, folded word_bits_def])
+   apply wp
+  apply (simp cong: if_cong)
+  apply (subgoal_tac "is_aligned ptr bits \<and> 3 \<le> bits \<and> bits < word_bits",simp)
+   apply clarsimp
+   apply (frule(2) delete_locale.intro, simp_all)[1]
+   apply (rule subst[rotated, where P="\<lambda>s. sym_refs (state_refs_of' s)"],
+          erule delete_locale.delete_sym_refs')
+   apply (simp add: field_simps mask_def)
+  apply (simp add: state_refs_of'_def)
+  apply clarsimp
+  apply (drule invs_valid_objs')
+  apply (drule (1) cte_wp_at_valid_objs_valid_cap')
+  apply (clarsimp simp add: valid_cap'_def capAligned_def untypedBits_defs)
   done
 
 lemma deleteObjects_invs'[Detype_R_assms]:
@@ -776,7 +812,7 @@ lemma createObject_setCTE_commute[Detype_R_assms]:
                rule monad_commute_split[OF commute_commute[OF return_commute]],
                clarsimp simp: RISCV64_H.createObject_def
                               placeNewDataObject_def bind_assoc
-                   split del: if_splits,
+                   split del: if_split,
                (rule monad_commute_split return_commute[THEN commute_commute]
                      setCTE_modify_gsUserPages_commute[of \<top>]
                      modify_wp[of "%_. \<top>"]
@@ -1303,7 +1339,7 @@ lemma createObject_pspace_aligned_distinct':
           split del: if_split
          | wpc | intro conjI impI)+
   by (auto simp: APIType_capBits_def objBits_simps' pteBits_def
-                 pageBits_def word_bits_def archObjSize_def ptBits_def RISCV64_H.toAPIType_def
+                 pageBits_def word_bits_def ptBits_def RISCV64_H.toAPIType_def
                  untypedBits_defs scBits_simps ptTranslationBits_def pte_bits_def pt_bits_def
                  word_size_bits_def table_size_def
           split: RISCV64_H.object_type.splits apiobject_type.splits)

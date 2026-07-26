@@ -115,16 +115,6 @@ lemma setObject_modify_variable_size:
   apply (simp add: simpler_modify_def)
   done
 
-lemma setObject_default_wp:
-  "\<lbrakk> updateObject v = updateObject_default v; (1::nat) < 2 ^ objBits v \<rbrakk> \<Longrightarrow>
-   \<lbrace>\<lambda>s. obj_at' (\<lambda>obj::'a. objBits v = objBits obj) p s \<and>
-        Q () (ksPSpace_update (\<lambda>ps. ps(p \<mapsto> injectKO v)) s)\<rbrace>
-   setObject p v
-   \<lbrace>Q\<rbrace>"
-  for v :: "'a :: pspace_storable"
-  by (clarsimp simp: valid_def simpler_modify_def
-                     setObject_modify_variable_size[where P="\<lambda>ko. objBits v = objBits ko"])
-
 lemma setObject_modify_variable_size_rewrite:
   fixes v :: "'a :: pspace_storable"
   assumes "updateObject v = updateObject_default v"
@@ -134,6 +124,16 @@ lemma setObject_modify_variable_size_rewrite:
            (setObject p v) (modify (ksPSpace_update (\<lambda>ps. ps (p \<mapsto> injectKO v))))"
   using assms
   by (fastforce intro: setObject_modify_variable_size simp: monadic_rewrite_def obj_at'_def)
+
+lemma setObject_default_wp:
+  "\<lbrakk> updateObject v = updateObject_default v; (1 :: machine_word) < 2 ^ objBits v \<rbrakk> \<Longrightarrow>
+   \<lbrace>\<lambda>s. obj_at' (\<lambda>obj::'a. objBits v = objBits obj) p s \<and>
+        Q () (ksPSpace_update (\<lambda>ps. ps(p \<mapsto> injectKO v)) s)\<rbrace>
+   setObject p v
+   \<lbrace>Q\<rbrace>"
+  for v :: "'a :: pspace_storable"
+  by (clarsimp simp: valid_def simpler_modify_def
+                     setObject_modify_variable_size[where P="\<lambda>ko. objBits v = objBits ko"])
 
 lemma setObject_modify:
   "\<lbrakk>obj_at' (P :: 'a \<Rightarrow> bool) p s; updateObject v = updateObject_default v;
@@ -1511,13 +1511,28 @@ lemma setObject_state_refs_of':
   assumes x: "updateObject val = updateObject_default val"
   shows
   "\<lbrace>\<lambda>s. P ((state_refs_of' s) (ptr := refs_of' (injectKO val)))\<rbrace>
-     setObject ptr val
+   setObject ptr val
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
                         updateObject_default_def x in_magnitude_check
                  elim!: rsubst[where P=P] del: ext intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (clarsimp simp: state_refs_of'_def objBits_def[symmetric]
+                        ps_clear_upd
+                  cong: if_cong option.case_cong)
+  done
+
+lemma setObject_state_hyp_refs_of':
+  assumes x: "updateObject val = updateObject_default val"
+  shows
+  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s) (ptr := hyp_refs_of' (injectKO val)))\<rbrace>
+     setObject ptr val
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  apply (clarsimp simp: setObject_def valid_def in_monad split_def
+                        updateObject_default_def x in_magnitude_check
+                 elim!: rsubst[where P=P] del: ext intro!: ext
+             split del: if_split cong: option.case_cong if_cong)
+  apply (clarsimp simp: state_hyp_refs_of'_def objBits_def[symmetric]
                         ps_clear_upd
                   cong: if_cong option.case_cong)
   done
@@ -1736,6 +1751,13 @@ lemma state_refs_of':
    \<lbrace>\<lambda>_ s. P (state_refs_of' s)\<rbrace>"
   unfolding f_def
   by (auto intro: setObject_state_refs_of' simp: default_update)
+
+lemma state_hyp_refs_of':
+  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s) (ptr := hyp_refs_of' (injectKO val)))\<rbrace>
+   f ptr val
+   \<lbrace>\<lambda>_ s. P (state_hyp_refs_of' s)\<rbrace>"
+  unfolding f_def
+  by (auto intro: setObject_state_hyp_refs_of' simp: default_update)
 
 lemmas valid_irq_node'[wp] = valid_irq_node_lift[OF ksInterruptState typ_at']
 lemmas irq_states' [wp] = valid_irq_states_lift' [OF ksInterruptState ksMachineState]
@@ -2274,26 +2296,6 @@ lemmas set_reply_valid_objs'[wp] =
 lemmas set_sc_valid_objs'[wp] =
   set_sc'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
 
-lemma setObject_state_hyp_refs_of':
-  assumes x: "updateObject val = updateObject_default val"
-  assumes y: "(1 :: machine_word) < 2 ^ objBits val"
-  shows
-  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s) (ptr := hyp_refs_of' (injectKO val)))\<rbrace>
-     setObject ptr val
-   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
-  apply (clarsimp simp: setObject_def valid_def in_monad split_def
-                        updateObject_default_def x in_magnitude_check y
-                 elim!: rsubst[where P=P] del: ext intro!: ext
-             split del: if_split cong: option.case_cong if_cong)
-  apply (clarsimp simp: state_hyp_refs_of'_def objBits_def[symmetric]
-                        ps_clear_upd
-                  cong: if_cong option.case_cong)
-  done
-
-lemma state_hyp_refs_of'_ep:
-  "ep_at' epptr s \<Longrightarrow> (state_hyp_refs_of' s)(epptr := {}) = state_hyp_refs_of' s"
-  by (rule ext) (clarsimp simp: state_hyp_refs_of'_def obj_at'_def)
-
 lemma setObject_gen_obj_at:
   fixes v :: "'a :: pspace_storable"
   assumes R: "\<And>ko s y n. updateObject v ko p y n s = updateObject_default v ko p y n s"
@@ -2310,6 +2312,10 @@ lemma setObject_gen_obj_at:
   apply (drule spec, erule mp)
   apply (clarsimp simp: in_monad in_magnitude_check)
   done
+
+lemma state_hyp_refs_of'_ep:
+  "ep_at' epptr s \<Longrightarrow> (state_hyp_refs_of' s)(epptr := {}) = state_hyp_refs_of' s"
+  by (rule ext) (clarsimp simp: state_hyp_refs_of'_def obj_at'_def)
 
 lemma set_ep_state_hyp_refs_of'[wp]:
   "setEndpoint epptr ep \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
@@ -2338,12 +2344,34 @@ lemma setSchedContext_state_refs_of'[wp]:
    \<lbrace>\<lambda>_ s. P (state_refs_of' s)\<rbrace>"
   by (wp set_sc'.state_refs_of') (simp flip: fun_upd_def)
 
+lemma state_hyp_refs_of'_sc:
+  "sc_at' sc s \<Longrightarrow> (state_hyp_refs_of' s) (sc := {}) = state_hyp_refs_of' s"
+  by (rule ext) (clarsimp simp: state_hyp_refs_of'_def obj_at'_def)
+
+lemma set_sc_state_hyp_refs_of'[wp]:
+  "setSchedContext p reply \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
+  unfolding setSchedContext_def
+  apply (rule setObject_gen_obj_at, simp)
+  apply (wp setObject_state_hyp_refs_of'; simp add: gen_objBits_simps state_hyp_refs_of'_sc)
+  done
+
 lemma setReply_state_refs_of'[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of' s)(p := get_refs ReplySchedContext (replySC reply) \<union>
                                    get_refs ReplyTCB (replyTCB reply)))\<rbrace>
    setReply p reply
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   by (wp set_reply'.state_refs_of') (simp flip: fun_upd_def)
+
+lemma state_hyp_refs_of'_reply:
+  "reply_at' reply s \<Longrightarrow> (state_hyp_refs_of' s) (reply := {}) = state_hyp_refs_of' s"
+  by (rule ext) (clarsimp simp: state_hyp_refs_of'_def obj_at'_def)
+
+lemma set_reply_state_hyp_refs_of'[wp]:
+  "setReply p reply \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
+  unfolding setReply_def
+  apply (rule setObject_gen_obj_at, simp)
+  apply (wp setObject_state_hyp_refs_of'; simp add: gen_objBits_simps state_hyp_refs_of'_reply)
+  done
 
 lemma setReply_reply_projs[wp]:
   "\<lbrace>\<lambda>s. P ((replyNexts_of s)(rptr := replyNext_of reply))

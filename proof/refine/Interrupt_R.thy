@@ -150,7 +150,7 @@ lemma doMachineOp_maskInterrupt_False[wp]:
    doMachineOp (maskInterrupt False irq)
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (wp dmo_maskInterrupt)
-  apply (clarsimp simp: invs'_def valid_state'_def)
+  apply (clarsimp simp: invs'_def)
   apply (simp add: valid_irq_masks'_def valid_machine_state'_def
                    ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
   done
@@ -207,6 +207,8 @@ crunch doMachineOp
    and pred_tcb_at'_ct[wp]: "\<lambda>s. pred_tcb_at' proj test (ksCurThread s) s"
    and ex_nonz_cap_to'[wp]: "\<lambda>s. P (ex_nonz_cap_to' (ksCurThread s) s)"
 
+context begin interpretation Arch . (*FIXME: rt arch-split*)
+
 lemma doMachineOp_ackDeadlineIRQ_invs'[wp]:
   "doMachineOp ackDeadlineIRQ \<lbrace>invs'\<rbrace>"
   apply (wpsimp simp: ackDeadlineIRQ_def wp: dmo_invs' ackInterrupt_irq_masks)
@@ -214,6 +216,8 @@ lemma doMachineOp_ackDeadlineIRQ_invs'[wp]:
          in use_valid[where P=P and Q="\<lambda>_. P" for P])
     apply wpsimp+
   done
+
+end (* Arch *)
 
 lemma dmo_wp_no_rest:
   "\<lbrace>K((\<forall>s f. P s = (P (machine_state_update (machine_state_rest_update f) s)))) and P\<rbrace>
@@ -234,10 +238,6 @@ lemma dmo_gets_wp:
   "\<lbrace>\<lambda>s. P (f (machine_state s)) s\<rbrace> do_machine_op (gets f) \<lbrace>P\<rbrace>"
   by (wpsimp simp: submonad_do_machine_op.gets)
 
-lemma not_pred_tcb':
-  "(\<not>pred_tcb_at' proj P t s) = (\<not>tcb_at' t s \<or> pred_tcb_at' proj (\<lambda>a. \<not>P a) t s)"
-  by (auto simp: pred_tcb_at'_def obj_at'_def)
-
 crunch rescheduleRequired, tcbSchedAppend
   for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
   (simp: tcbSchedEnqueue_def wp: crunch_wps)
@@ -247,7 +247,7 @@ crunch tcbSchedAppend
   for irq_handlers'[wp]: valid_irq_handlers'
   and irqs_masked'[wp]: irqs_masked'
   and ct[wp]: cur_tcb'
-  (simp: unless_def tcb_cte_cases_def tcb_cte_cases_neqs wp: crunch_wps)
+  (simp: unless_def tcb_cte_cases_def tcb_cte_cases_neqs wp: crunch_wps cur_tcb_lift)
 
 lemma resetTimer_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp resetTimer \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -542,7 +542,7 @@ lemma invoke_irq_control_invs'[wp]:
   "\<lbrace>invs' and irq_control_inv_valid' i\<rbrace> performIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (cases i, simp_all add: performIRQControl_def)
   apply (rule hoare_pre)
-   apply_trace (wp cteInsert_simple_invs | simp add: cte_wp_at_ctes_of)+
+   apply (wp cteInsert_simple_invs | simp add: cte_wp_at_ctes_of)+
   apply (clarsimp simp: cte_wp_at_ctes_of arch_valid_irq_le_maxIRQ
                         gen_isCap_simps is_simple_cap'_IRQHandlerCap
                         safe_parent_for'_def arch_valid_irq_valid_IRQHandlerCap)
@@ -592,7 +592,7 @@ lemma handleInterrupt_corres:
              apply wpsimp+
     apply fastforce
    apply (corresKsimp corres: corres_machine_op setReprogramTimer_corres
-                       simp: ackDeadlineIRQ_def ackInterrupt_def)
+                       simp: RISCV64.ackDeadlineIRQ_def RISCV64.ackInterrupt_def) (* FIXME: rt arch-split *)
   apply (corres corres: corres_machine_op corres_eq_trivial)
   done
 
@@ -603,18 +603,11 @@ lemma hint_invs[wp]:
   apply (simp add: handleInterrupt_def getSlotCap_def cong: irqstate.case_cong)
   apply (rule conjI; rule impI)
    apply (wpsimp wp: dmo_maskInterrupt_True getCTE_wp'
-               simp: doMachineOp_bind)
+               simp: doMachineOp_bind)+
       apply (rule_tac Q'="\<lambda>_. invs'" in hoare_post_imp)
        apply clarsimp
       apply (wpsimp wp: threadSet_invs_trivial getIRQState_wp handleReservedIRQ_invs'
                     split_del: if_split)+
-  apply fastforce
-
-    apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_post_imp)
-     apply (clarsimp simp: cte_wp_at_ctes_of ex_nonz_cap_to'_def)
-     apply fastforce
-    apply (wpsimp wp: threadSet_invs_trivial getIRQState_wp handleReservedIRQ_invs'
-                  split_del: if_split)+
   done
 
 end (* Interrupt_R *)

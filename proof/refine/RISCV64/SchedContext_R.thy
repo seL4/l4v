@@ -210,6 +210,11 @@ lemma schedContextUpdateConsumed_state_refs_of:
   apply (rule ext; clarsimp)
   done
 
+lemma schedContextUpdateConsumed_state_hyp_refs_of:
+  "schedContextUpdateConsumed sc \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
+  unfolding schedContextUpdateConsumed_def updateSchedContext_def
+  by wpsimp
+
 lemma schedContextUpdateConsumed_objs'[wp]:
   "schedContextUpdateConsumed sc \<lbrace>valid_objs'\<rbrace>"
   unfolding schedContextUpdateConsumed_def updateSchedContext_def

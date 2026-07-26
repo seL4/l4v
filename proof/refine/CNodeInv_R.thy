@@ -342,6 +342,8 @@ locale CNodeInv_R =
      \<Longrightarrow> post_cap_delete_pre' (ArchObjectCap acap) sl (cteCaps_of s)"
   assumes prepareThreadDelete_st_tcb_at'[wp]:
     "\<And>t' P t. prepareThreadDelete t' \<lbrace>st_tcb_at' P t\<rbrace>"
+  assumes prepareThreadDelete_ksSchedulerAction[wp]:
+    "\<And>t' P. prepareThreadDelete t' \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>"
   assumes arch_finaliseCap_st_tcb_at'[wp]:
     "\<And>acap b P t. Arch.finaliseCap acap b \<lbrace>st_tcb_at' P t\<rbrace>"
   assumes prepareThreadDelete_rvk_prog':
@@ -5052,7 +5054,6 @@ crunch cteSwap
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
-  and ct_not_inQ[wp]: "ct_not_inQ"
   and pspace_domain_valid[wp]: "pspace_domain_valid"
   and vms'[wp]: "valid_machine_state'"
   and st_tcb_at'[wp]: "st_tcb_at' P t"
@@ -5800,7 +5801,7 @@ proof (induct rule: finalise_spec_induct)
           apply (wp | simp)+
        apply (rule hoare_strengthen_post)
         apply (rule hoare_vcg_conj_lift[where Q="\<lambda>rv. cte_at' slot"])
-         apply (wp gen_typ_at_lifts [OF finaliseCap_typ_at'])[1]
+         apply (wp RISCV64.typ_at_lifts [OF finaliseCap_typ_at'])[1] (* FIXME: rt arch-split *)
         apply (rule finaliseCap_cases)
        apply (clarsimp simp: cte_wp_at_ctes_of)
       apply (wp getCTE_wp isFinalCapability_inv | simp)+
@@ -5953,10 +5954,9 @@ lemmas preemptionPoint_invE =
 
 crunch capSwapForDelete
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
+  and st_tcb_at'[wp]: "st_tcb_at' P t"
   (wp: crunch_wps)
-
-crunch capSwapForDelete
-  for st_tcb_at'[wp]: "st_tcb_at' P t"
 
 context CNodeInv_R begin
 
@@ -6053,8 +6053,7 @@ lemma sch_act_simple_only_ksSchedulerAction:
   done
 
 crunch schedContextCompleteYieldTo, unbindMaybeNotification, schedContextMaybeUnbindNtfn,
-         prepareThreadDelete, setMessageInfo, schedContextUpdateConsumed, isFinalCapability,
-         setQueue
+       setMessageInfo, schedContextUpdateConsumed, isFinalCapability, setQueue
   for ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
 
 lemma finaliseSlot_invs':
@@ -6151,8 +6150,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
                                  \<and> cte_wp_at' (\<lambda>cte. cteCap cte = cteCap rv) sl s
                                  \<and> (q = sl \<or> exp \<or> cte_wp_at' (?P) q s)"
                    in hoare_vcg_conj_lift)
-         apply (wp hoare_vcg_disj_lift finaliseCap finaliseCap_invs
-                   finaliseCap_sch_act_simple)
+         apply (wp hoare_vcg_disj_lift finaliseCap finaliseCap_invs)
          apply (rule finaliseCap_zombie_cap')
         apply (rule hoare_vcg_conj_lift)
          apply (rule finaliseCap_cte_refs)
@@ -6313,7 +6311,7 @@ crunch cteDelete
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (rule: cteDelete_preservation)
 
-global_interpretation cteDelete: typ_at_all_props' "cteDelete slot exposed"
+sublocale cteDelete: typ_at_all_props' "cteDelete slot exposed"
   by typ_at_props'
 
 lemma cteDelete_cte_at:
@@ -6743,8 +6741,6 @@ lemmas rec_del_concrete_unfold
   = rec_del_concrete.simps red_zombie_will_fail.simps
     if_True if_False ball_simps simp_thms
 
-context begin interpretation Arch . (*FIXME: arch-split*)
-
 lemma cap_relation_removables:
   "\<lbrakk> cap_relation cap cap'; isNullCap cap' \<or> isZombie cap';
      s \<turnstile> cap; cte_at slot s; invs s \<rbrakk>
@@ -6797,7 +6793,7 @@ crunch reduceZombie
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (simp: crunch_simps wp: crunch_wps)
 
-global_interpretation reduceZombie: typ_at_all_props' "reduceZombie cap slot x"
+sublocale reduceZombie: typ_at_all_props' "reduceZombie cap slot x"
   by typ_at_props'
 
 crunch finaliseSlot
@@ -6805,10 +6801,8 @@ crunch finaliseSlot
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (rule: finaliseSlot_preservation)
 
-global_interpretation finaliseSlot: typ_at_all_props' "finaliseSlot ptr exposed"
+sublocale finaliseSlot: typ_at_all_props' "finaliseSlot ptr exposed"
   by typ_at_props'
-
-context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma rec_del_corres:
   "\<forall>C \<in> rec_del_concrete args.
@@ -7058,9 +7052,9 @@ next
         apply clarsimp
        apply (clarsimp simp: cte_wp_at_caps_of_state)
        apply (erule tcb_valid_nonspecial_cap, fastforce)
-        apply (clarsimp simp: ran_tcb_cap_cases is_cap_simps is_nondevice_page_cap_def
+        apply (clarsimp simp: ran_tcb_cap_cases is_cap_simps is_nondevice_page_cap_simps
                        split: Structures_A.thread_state.split)
-       apply (clarsimp simp: is_nondevice_page_cap_def)
+       apply (clarsimp simp: is_nondevice_page_cap_simps)
       apply fastforce
      apply wp
     apply (rule no_fail_pre, wp)
@@ -7626,8 +7620,6 @@ qed
 
 lemmas cteRevoke_corres = use_spec_corres[OF cteRevoke_corres']
 
-end (* CNodeInv_R *)
-
 crunch invokeCNode
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
@@ -7635,8 +7627,10 @@ crunch invokeCNode
      simp: crunch_simps filterM_mapM unless_def
        wp: crunch_wps undefined_valid finaliseSlot_preservation)
 
-global_interpretation invokeCNode: typ_at_all_props' "invokeCNode i"
+sublocale invokeCNode: typ_at_all_props' "invokeCNode i"
   by typ_at_props'
+
+end (* CNodeInv_R *)
 
 crunch cteMove
   for st_tcb_at'[wp]: "st_tcb_at' P t"
@@ -8346,7 +8340,7 @@ context CNodeInv_R begin
 lemmas cteMove_valid_irq_node'[wp]
     = valid_irq_node_lift[OF cteMove_ksInterrupt cteMove_typ_at']
 
-global_interpretation cteMove: typ_at_all_props' "cteMove cap src dest"
+sublocale cteMove: typ_at_all_props' "cteMove cap src dest"
   by typ_at_props'
 
 lemmas finalise_slot_corres'
@@ -8600,7 +8594,7 @@ lemma (in CNodeInv_R) invokeCNode_invs' [wp]:
               simp: unless_def getSlotCap_def locateSlot_conv
          split_del: if_split)
   apply (cases cinv; clarsimp)
-    apply (clarsimp simp: cte_wp_at_ctes_of is_derived'_def gen_isCap_simps badge_derived'_def)
+    apply (clarsimp simp: cte_wp_at_ctes_of is_derived'_IRQHandlerCap gen_isCap_simps badge_derived'_def)
     apply (erule (1) valid_irq_handlers_ctes_ofD)
     apply (clarsimp simp: invs'_def)
    apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -8617,7 +8611,7 @@ context CNodeInv_R begin
 crunch finaliseCap
   for irq_states'[wp]: valid_irq_states'
   (wp: crunch_wps unless_wp
-   simp: crunch_simps o_def)
+   simp: crunch_simps o_def cong: if_cong)
 
 lemma finaliseSlot_irq_states':
   "finaliseSlot a b \<lbrace>valid_irq_states'\<rbrace> "

@@ -35,13 +35,6 @@ lemma is_derived'_Untyped[Ipc_R_assms]:
   by (clarsimp simp add: RISCV64.is_derived'_def gen_isCap_simps)
      (cases cap; clarsimp simp: badge_derived'_def capMasterCap_def)
 
-lemma is_derived'_Reply[Ipc_R_assms]:
-  "\<lbrakk>isReplyCap cap'\<rbrakk>
-   \<Longrightarrow> is_derived' m src cap' cap
-      = (isReplyCap cap \<and> capTCBPtr cap = capTCBPtr cap' \<and> capReplyMaster cap \<and> \<not> capReplyMaster cap')"
-  by (clarsimp simp add: RISCV64.is_derived'_def gen_isCap_simps)
-     (cases cap; clarsimp simp: badge_derived'_def capMasterCap_def)
-
 lemma arch_maskCapRights_not_null[Ipc_R_assms, simp]:
   "Arch.maskCapRights r acap \<noteq> NullCap"
   by (case_tac acap; simp add: RISCV64_H.maskCapRights_def isCap_simps)
@@ -99,10 +92,6 @@ lemma isFrameCap_maskCapRights[simp]:
 lemma arch_updateCapData_ordering[Ipc_R_assms]:
   "\<lbrakk> (x, arch_capBadge acap) \<in> capBadge_ordering P; Arch.updateCapData p d acap \<noteq> NullCap \<rbrakk>
    \<Longrightarrow> (x, capBadge (Arch.updateCapData p d acap)) \<in> capBadge_ordering P"
-  by (cases acap; simp add: RISCV64_H.updateCapData_def)
-
-lemma ArchUpdateCapData_noReply[Ipc_R_assms]:
-  "Arch.updateCapData p d acap \<noteq> capability.ReplyCap x y z"
   by (cases acap; simp add: RISCV64_H.updateCapData_def)
 
 lemma ArchUpdateCapData_noIRQControl[Ipc_R_assms]:
@@ -173,10 +162,6 @@ lemma arch_getSanitiseRegisterInfo_corres[Ipc_R_assms]:
 crunch getSanitiseRegisterInfo
   for tcb_at'[wp]: "tcb_at' t"
 
-crunch arch_get_sanitise_register_info
-  for pspace_distinct[Ipc_R_assms, wp]: pspace_distinct
-  and pspace_aligned[Ipc_R_assms, wp]: pspace_aligned
-
 lemma sanitiseRegister_sanitise_register[Ipc_R_assms]:
   "sanitiseRegister = sanitise_register"
   by (rule ext)+
@@ -191,18 +176,12 @@ lemma handleArchFaultReply_corres[Ipc_R_assms]:
 crunch getSanitiseRegisterInfo, handleArchFaultReply, handle_arch_fault_reply
   for inv[Ipc_R_assms, wp]: P
 
-lemma ctes_of_mdbNext_parentOf[Ipc_R_assms]:
-  "\<lbrakk> ctes_of s' \<turnstile> cte_map cptr \<rightarrow> cte_map slot;
-     ctes_of s' (cte_map cptr) = Some (CTE (capability.ReplyCap t master rights) n);
-     ctes_of s' (mdbNext (cteMDBNode cte)) = Some (CTE (capability.ReplyCap t master' rights') n');
-     ctes_of s' \<turnstile> cte_map slot \<leadsto> mdbNext (cteMDBNode cte)\<rbrakk>
-   \<Longrightarrow> ctes_of s' \<turnstile> cte_map cptr parentOf mdbNext (cteMDBNode cte)"
-  by (clarsimp simp add: parentOf_def isMDBParentOf_CTE sameRegionAs_def2 isCap_simps)
-     (erule subtree.cases; clarsimp simp: parentOf_def isMDBParentOf_CTE)
-
 crunch debugPrint
   for inv[Ipc_R_assms, wp]: P
   and (no_fail) no_fail[Ipc_R_assms, intro!, wp, simp]
+
+lemmas [Ipc_R_assms] =
+  lookupIPCBuffer_valid_ipc_buffer
 
 end (* Arch *)
 

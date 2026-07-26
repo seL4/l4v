@@ -1167,13 +1167,6 @@ lemma arch_decodeInvocation_wf[wp]:
   apply (wpsimp, simp+)
   done
 
-crunch setMRs
-  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
-    (ignore: getRestartPC setRegister transferCapsToSlots
-   wp: hoare_drop_imps hoare_vcg_split_case_option
-        mapM_wp'
-   simp: split_def zipWithM_x_mapM)
-
 crunch performRISCVMMUInvocation
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps

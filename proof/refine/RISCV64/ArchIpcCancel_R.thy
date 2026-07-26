@@ -21,16 +21,12 @@ crunch getRegister, setRegister
 crunch Arch.postCapDeletion
   for pred_tcb_at'[IpcCancel_R_assms, wp]: "pred_tcb_at' proj P t"
   and typ_at'[IpcCancel_R_assms, wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[IpcCancel_R_assms, wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: setCTE_pred_tcb_at')
 
-lemma acapClass_not_ReplyClass[IpcCancel_R_assms]:
-  "acapClass acap \<noteq> ReplyClass t"
-  by (cases acap; simp)
-
-crunch arch_post_cap_deletion
-  for pspace_aligned[IpcCancel_R_assms, wp]: "pspace_aligned :: det_state \<Rightarrow> _"
-  and pspace_distinct[IpcCancel_R_assms, wp]: "pspace_distinct :: det_state \<Rightarrow> _"
-  (simp: crunch_simps wp: crunch_wps)
+(* arch_post_cap_deletion is trivial for this architecture, no proofs are needed for additional
+   properties in the interface *)
+declare arch_post_cap_deletion_inv[IpcCancel_R_assms]
 
 crunch emptySlot
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
@@ -106,17 +102,8 @@ context delete_one begin
 
 sublocale delete_one_gen
   by unfold_locales
-     (fact RISCV64.update_restart_pc_corres
-           reply_descendants_of_mdbNext cancel_ipc_pspace_aligned cancel_ipc_pspace_distinct)+
+     (fact RISCV64.update_restart_pc_corres cancel_ipc_pspace_aligned cancel_ipc_pspace_distinct)+
 
 end (* delete_one *)
-
-context delete_one_conc_pre begin
-
-sublocale delete_one_conc_pre_gen
-  by unfold_locales
-     (fact emptySlot_st_tcb_at')
-
-end (* delete_one_conc_pre *)
 
 end

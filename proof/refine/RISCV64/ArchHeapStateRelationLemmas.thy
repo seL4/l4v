@@ -210,9 +210,8 @@ lemma pspace_relation_ptes_relation:
    apply (clarsimp simp: opt_map_def ptr_to_pte_ptrs_def split: option.splits)
    apply (erule (1) pspace_dom_relatedE)
    apply (clarsimp simp: pte_relation_def aobj_of'_def pte_of'_def)
-   apply (rename_tac ako ko ptr abs_ko P)
+   apply (rename_tac ko ptr abs_ko P)
    apply (case_tac ko; clarsimp)
-   apply (case_tac ako; clarsimp)
    apply (fastforce simp: obj_relation_cuts_def2 ko_relations
                    split: Structures_A.kernel_object.split_asm if_split_asm
                           arch_kernel_obj.split_asm)
@@ -245,7 +244,7 @@ lemma pspace_relation_asid_pools_relation:
                   split: Structures_A.kernel_object.split_asm if_split_asm
                          arch_kernel_obj.split_asm kernel_object.splits)
   apply (clarsimp simp: pspace_relation_def opt_map_def split: option.splits)
-  apply (rename_tac p ko ako ap ap')
+  apply (rename_tac p ako ap ap')
   apply (drule_tac x=p in bspec, fastforce)
   apply (clarsimp simp: aobj_of'_def asid_pool_of'_def other_aobj_relation_def
                  split: kernel_object.splits arch_kernel_object.splits)

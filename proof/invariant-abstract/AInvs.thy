@@ -800,7 +800,7 @@ lemma invoke_tcb_schact_is_rct_imp_ct_not_in_release_q:
    apply (rule_tac Q'="\<lambda>_ s. ct_not_in_release_q s \<and> cur_sc_tcb_are_bound s \<and> invs s
                             \<and> ex_nonz_cap_to src s \<and> ex_nonz_cap_to dest s"
                 in bind_wp_fwd)
-    apply (wpsimp wp: suspend_invs)
+    apply wpsimp
     apply (frule invs_strengthen_cur_sc_tcb_are_bound, fastforce+)
     using idle_no_ex_cap idle_thread_idle_thread_ptr
     apply (metis invs_valid_global_refs invs_valid_idle invs_valid_objs)

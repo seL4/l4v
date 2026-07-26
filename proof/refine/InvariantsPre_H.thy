@@ -143,10 +143,17 @@ lemma (in Arch) cteSizeBits_cte_level_bits:
 requalify_facts
   Arch.cteSizeBits_cte_level_bits
 
+text \<open>Arch object projection for predicates that depend on arch objects only.\<close>
 definition aobj_of' :: "kernel_object \<rightharpoonup> arch_kernel_object" where
-  "aobj_of' ko \<equiv> case ko of KOArch aobj \<Rightarrow> Some aobj | _ \<Rightarrow> None"
+  "aobj_of' ko \<equiv> case ko of KOArch ako \<Rightarrow> Some ako | _ \<Rightarrow> None"
+
+lemmas aobj_of'_simps[simp] = aobj_of'_def[split_simps kernel_object.split]
+
+lemma aobj_of'_Some[iff]:
+  "(aobj_of' a = Some ao) = (a = KOArch ao)"
+  by (simp add: aobj_of'_def split: kernel_object.splits)
 
 abbreviation aobjs_of' :: "kernel_state \<Rightarrow> obj_ref \<rightharpoonup> arch_kernel_object" where
-  "aobjs_of' s \<equiv> ksPSpace s |> aobj_of'"
+  "aobjs_of' \<equiv> \<lambda>s. ksPSpace s |> aobj_of'"
 
 end

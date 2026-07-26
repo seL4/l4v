@@ -5,7 +5,7 @@
  *)
 
 theory Reply_R
-imports Schedule_R
+imports ArchSchedule_R
 begin
 
 defs replyUnlink_assertion_def:
@@ -1718,6 +1718,10 @@ proof -
        apply (clarsimp simp: ep_queues_relation_def eps_of_kh_def projectKO_opts_defs)
       apply (extract_conjunct \<open>match conclusion in "ntfn_queues_relation_2 _ _ _ _" \<Rightarrow> -\<close>)
        apply (clarsimp simp: ntfn_queues_relation_def projectKO_opts_defs)
+      apply (prop_tac "aobjs_of' s' nrp = None")
+       apply (clarsimp simp: opt_map_def)
+      apply (extract_conjunct \<open>match conclusion in "_ \<in> arch_state_relation _" \<Rightarrow> -\<close>)
+       apply clarsimp
      apply (clarsimp simp: caps_of_state_after_update cte_wp_at_after_update
                            swp_def fun_upd_def gen_obj_at_simps)
      apply (rule conjI)

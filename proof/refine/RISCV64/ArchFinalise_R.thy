@@ -19,12 +19,6 @@ lemma arch_postCapDeletion_ksArchState_lift[Finalise_R_assms]:
   unfolding postCapDeletion_def
   by wpsimp
 
-crunch clearUntypedFreeIndex
-  for sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
-
-global_interpretation clearUntypedFreeIndex: typ_at_all_props' "clearUntypedFreeIndex slot"
-  by typ_at_props'
-
 lemma setIRQState_umm[Finalise_R_assms]:
   "setIRQState irqState irq \<lbrace>\<lambda>s. P (underlying_memory (ksMachineState s))\<rbrace> "
   by (simp add: setIRQState_def maskInterrupt_def
@@ -50,16 +44,20 @@ abbreviation (input)
 
 crunch Arch_finaliseCap, prepareThreadDelete, archThreadSet
   for typ_at'[Finalise_R_assms, wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[Finalise_R_assms, wp]: "\<lambda>s. P (sc_at'_n n p s)"
   and aligned'[Finalise_R_assms, wp]: "pspace_aligned'"
   and distinct'[Finalise_R_assms, wp]: "pspace_distinct'"
-  (wp: crunch_wps getObject_inv loadObject_default_inv
+  and bounded'[Finalise_R_assms, wp]: "pspace_bounded'"
+  and canonical'[Finalise_R_assms, wp]: "pspace_canonical'"
+  (wp: crunch_wps getObject_inv
    simp: crunch_simps unless_def o_def
    ignore_del: setObject
    rule: RISCV64_H.finaliseCap_def)
 
 crunch prepareThreadDelete, Arch_finaliseCap
   for it'[Finalise_R_assms, wp]: "\<lambda>s. P (ksIdleThread s)"
-  (wp: hoare_drop_imps
+  and irq_node'[Finalise_R_assms, wp]: "\<lambda>s. P (irq_node' s)"
+  (wp: hoare_drop_imps getObject_inv
    simp: crunch_simps updateObject_default_def
    rule: RISCV64_H.finaliseCap_def)
 
@@ -659,10 +657,9 @@ crunch archThreadSet
   and L2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   and ksArch[wp]: "\<lambda>s. P (ksArchState s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
-  and pspace_canonical'[wp]: pspace_canonical'
   and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
-  (wp: setObject_ct_inv setObject_sa_unchanged setObject_ksDomSchedule_inv)
+  (wp: setObject_ct_inv setObject_ksDomSchedule_inv)
 
 crunch archThreadSet
   for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
@@ -680,7 +677,7 @@ lemma archThreadSet_state_refs_of'[wp]:
   apply normalise_obj_at'
   apply (erule rsubst[where P=P])
   apply (rule ext)
-  apply (auto simp: state_refs_of'_def obj_at'_def)
+  apply (auto simp: state_refs_of'_def tcb_bound_refs'_def obj_at'_def)
   done
 
 lemma archThreadSet_state_hyp_refs_of'[wp]:
@@ -693,33 +690,12 @@ lemma archThreadSet_state_hyp_refs_of'[wp]:
   apply auto
   done
 
-lemma archThreadSet_if_live'[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and>
-        (\<forall>tcb. ko_at' tcb t s \<longrightarrow> atcbVCPUPtr (f (tcbArch tcb)) \<noteq> None \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
-  archThreadSet f t \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  unfolding archThreadSet_def
-  apply (wpsimp wp: setObject_tcb_iflive' getObject_tcb_wp)
-  apply normalise_obj_at'
-  apply (clarsimp simp: tcb_cte_cases_def if_live_then_nonz_cap'_def cteSizeBits_def)
-  apply (erule_tac x=t in allE)
-  apply (erule impE)
-   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def live'_def hyp_live'_def)
-  apply simp
-  done
-
 lemma archThreadSet_ifunsafe'[wp]:
   "archThreadSet f t \<lbrace>if_unsafe_then_cap'\<rbrace>"
   unfolding archThreadSet_def
   apply (wpsimp wp: setObject_tcb_ifunsafe' getObject_tcb_wp)
   apply normalise_obj_at'
   apply (auto simp: tcb_cte_cases_def if_live_then_nonz_cap'_def cteSizeBits_def)
-  done
-
-lemma archThreadSet_valid_idle'[wp]:
-  "archThreadSet f t \<lbrace>valid_idle'\<rbrace>"
-  unfolding archThreadSet_def
-  apply (wpsimp wp: setObject_tcb_idle' getObject_tcb_wp)
-  apply (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def idle_tcb'_def)
   done
 
 lemma archThreadSet_ct_not_inQ[wp]:
@@ -769,8 +745,8 @@ lemma archThreadSet_tcbSchedNexts_of[wp]:
   apply (clarsimp simp: opt_map_def obj_at'_def split: option.splits)
   done
 
-lemma archThreadSet_tcbQueued[wp]:
-  "archThreadSet f t \<lbrace>\<lambda>s. P (tcbQueued |< tcbs_of' s)\<rbrace>"
+lemma archThreadSet_sched_flag_set[wp]:
+  "archThreadSet f t \<lbrace>\<lambda>s. P (sched_flag_set s)\<rbrace>"
   unfolding archThreadSet_def
   apply (wp getObject_tcb_wp)
   apply normalise_obj_at'
@@ -819,16 +795,10 @@ lemma archThreadSet_bound_tcb_at'[wp]:
 
 crunch prepareThreadDelete
   for bound_tcb_at'[wp]: "bound_tcb_at' P t"
+  and bound_sc_tcb_at'[wp]: "bound_sc_tcb_at' P t"
+  and bound_yt_tcb_at'[wp]: "bound_yt_tcb_at' P t"
   (wp: sts_bound_tcb_at' crunch_wps hoare_vcg_all_lift hoare_vcg_if_lift3
    ignore: archThreadSet)
-
-crunch Arch.finaliseCap, prepareThreadDelete
-  for irq_node'[Finalise_R_2_assms, wp]: "\<lambda>s. P (irq_node' s)"
-  (wp: crunch_wps getObject_inv loadObject_default_inv
-       updateObject_default_inv setObject_ksInterrupt
-   simp: crunch_simps o_def)
-
-lemmas Arch_finaliseCap_irq_node'[Finalise_R_2_assms] = ArchRetypeDecls_H_RISCV64_H_finaliseCap_irq_node'
 
 crunch prepareThreadDelete
   for cte_wp_at'[Finalise_R_2_assms, wp]: "cte_wp_at' P p"
@@ -900,6 +870,10 @@ lemma arch_finaliseCap_cases[Finalise_R_2_assms, wp]:
             \<longrightarrow> final \<and> arch_cap_has_cleanup' v0 \<and> snd rv = capability.ArchObjectCap v0)\<rbrace>"
   by (wpsimp simp: RISCV64_H.finaliseCap_def)
 
+crunch prepareThreadDelete
+  for not_tcbInReleaseQueue[wp]: "obj_at' (Not \<circ> tcbInReleaseQueue) t"
+  (simp: obj_at'_not_comp_fold)
+
 lemmas [Finalise_R_2_assms] =
   cancelAllIPC_cte_wp_at' cancelAllSignals_cte_wp_at' unbindMaybeNotification_cte_wp_at'
   prepareThreadDelete_cte_wp_at' unbindNotification_cte_wp_at'
@@ -942,6 +916,8 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
                      \<and> ko_wp_at' (Not \<circ> hyp_live') p s
                      \<and> obj_at' (\<lambda>tcb. tcbSchedPrev tcb = None \<and> tcbSchedNext tcb = None) p s))\<rbrace>"
   supply [wp] = RISCV64.prepareThreadDelete_bound_tcb_at'
+                RISCV64.prepareThreadDelete_bound_sc_tcb_at'
+                RISCV64.prepareThreadDelete_bound_yt_tcb_at'
                 RISCV64.prepareThreadDelete_tcbSchedPrevNext
   apply (simp add: finaliseCap_def Let_def getThreadCSpaceRoot
              cong: if_cong split del: if_split)
@@ -957,7 +933,8 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
          apply (clarsimp simp: obj_at'_def)
         apply (wpsimp wp: schedContextSetInactive_removeable'
                           RISCV64.prepareThreadDelete_unqueued
-                          RISCV64.prepareThreadDelete_inactive
+                          RISCV64.prepareThreadDelete_inactive RISCV64.prepareThreadDelete_isFinal
+                          RISCV64.prepareThreadDelete_not_tcbInReleaseQueue
                           RISCV64.prepareThreadDelete_hyp_unlive
                           suspend_makes_inactive
                           suspend_flag_not_set
@@ -982,11 +959,14 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
                        final_matters'_def gen_objBits_simps
                        not_Final_removeable finaliseCap_def,
          simp_all add: removeable'_def)
+    (* ThreadCap *)
+    apply (frule capAligned_capUntypedPtr [OF valid_capAligned], simp)
+    apply (clarsimp simp: valid_cap'_def)
    (* ArchObjectCap *)
-   apply (fastforce simp: obj_at'_def sch_act_wf_asrt_def)
+   apply (fastforce simp: obj_at'_def)
   (* ReplyCap *)
   apply (rule conjI; clarsimp)
-   apply (fastforce simp: obj_at'_def sch_act_wf_asrt_def)
+   apply (fastforce simp: obj_at'_def)
   apply (frule (1) obj_at_replyTCBs_of[OF ko_at_obj_at', simplified])
   apply (frule valid_replies'_no_tcb, clarsimp)
   apply (clarsimp simp: ko_wp_at'_def obj_at'_def live'_def live_reply'_def opt_map_def
@@ -1031,7 +1011,7 @@ lemma cteDeleteOne_invs[Finalise_R_3_assms, wp]:
                    split_def finaliseCapTrue_standin_simple_def)
   apply wp
     apply (rule hoare_strengthen_post)
-     apply (rule hoare_vcg_conj_lift[OF finaliseCap_True_invs])
+     apply (rule hoare_vcg_conj_lift[OF finaliseCap_True_invs'])
      apply (rule hoare_vcg_conj_lift[OF finaliseCap_replaceable[where slot=ptr]])
      apply (rule hoare_vcg_conj_lift[OF finaliseCap_cte_refs])
      apply (rule finaliseCap_equal_cap[where sl=ptr])
@@ -1151,12 +1131,6 @@ crunch Arch_finaliseCap, prepareThreadDelete
   (wp: crunch_wps getObject_inv simp: loadObject_default_def updateObject_default_def
    rule: RISCV64_H.finaliseCap_def sch_act_simple_lift
    cong: if_cong)
-
-crunch deletingIRQHandler
-  for sch_act_simple[wp]: sch_act_simple
-  (simp: crunch_simps
-   rule: sch_act_simple_lift
-   wp: getObject_inv loadObject_default_inv crunch_wps)
 
 lemma arch_finaliseCap_corres[Finalise_R_3_assms]:
   "\<lbrakk> final_matters' (ArchObjectCap cap') \<Longrightarrow> final = final'; acap_relation cap cap' \<rbrakk>

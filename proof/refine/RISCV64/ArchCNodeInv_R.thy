@@ -227,7 +227,7 @@ lemma final_post_cap_delete_pre'_ArchObjectCap[CNodeInv_R_assms]:
 crunch Arch_finaliseCap, prepareThreadDelete
   for st_tcb_at'[CNodeInv_R_assms, wp]: "st_tcb_at' P t"
   (simp: crunch_simps pteAtIndex_def
-   wp: crunch_wps getObject_inv loadObject_default_inv
+   wp: crunch_wps getObject_inv
    rule: RISCV64_H.finaliseCap_def)
 
 lemma archThreadSet_rvk_prog':
@@ -238,7 +238,7 @@ crunch prepareThreadDelete, Arch_finaliseCap
   for rvk_prog'[CNodeInv_R_assms]:
         "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
   (wp: crunch_wps emptySlot_rvk_prog' threadSet_ctesCaps_of
-       getObject_inv loadObject_default_inv
+       getObject_inv
    simp: crunch_simps unless_def o_def setBoundNotification_def
    ignore: setCTE threadSet
    rule: RISCV64_H.finaliseCap_def)
@@ -328,7 +328,6 @@ proof -
      apply (erule_tac x=p in allE, erule_tac x=src in allE,
             erule allE, erule impE, erule exI)
      apply clarsimp
-    apply (clarsimp simp: isCap_simps)
     apply fastforce
     done
 qed
@@ -391,6 +390,9 @@ context Arch begin arch_global_naming
 lemmas [CNodeInv_R_assms] =
   mdb_swap.cteSwap_valid_mdb_helper
   mdb_move.cteMove_valid_mdb_helper
+
+lemmas [CNodeInv_R_assms] =
+  prepareThreadDelete_nosch
 
 end (* Arch *)
 

@@ -13340,13 +13340,13 @@ lemma invoke_tcb_valid_sched:
           apply (wpsimp wp: suspend_valid_sched hoare_vcg_if_lift2 hoare_vcg_imp_lift')
             apply (rule_tac Q'="\<lambda>rv s. invs s \<and> simple_sched_action s \<and> current_time_bounded s"
                    in hoare_strengthen_post[rotated], fastforce)
-            apply (wpsimp wp: suspend_invs suspend_valid_sched hoare_vcg_if_lift2 hoare_vcg_imp_lift')+
+            apply (wpsimp wp: suspend_valid_sched hoare_vcg_if_lift2 hoare_vcg_imp_lift')+
             apply (rule_tac Q'="\<lambda>rv s. invs s \<and> simple_sched_action s \<and> current_time_bounded s"
                    in hoare_strengthen_post[rotated], fastforce)
-            apply (wpsimp wp: suspend_invs suspend_valid_sched hoare_vcg_if_lift2 hoare_vcg_imp_lift')+
+            apply (wpsimp wp: suspend_valid_sched hoare_vcg_if_lift2 hoare_vcg_imp_lift')+
            apply (rule_tac Q'="\<lambda>rv s. invs s \<and> simple_sched_action s \<and> current_time_bounded s"
                   in hoare_strengthen_post[rotated], fastforce)
-           apply (wpsimp wp: suspend_invs suspend_valid_sched hoare_vcg_if_lift2 hoare_vcg_imp_lift')+
+           apply (wpsimp wp: suspend_valid_sched hoare_vcg_if_lift2 hoare_vcg_imp_lift')+
          apply (subgoal_tac "x31 \<noteq> idle_thread s \<and> x32 \<noteq> idle_thread s")
           apply (clarsimp simp: invs_def valid_pspace_def valid_state_def valid_idle_def split: if_splits)
          apply (fastforce simp: invs_def valid_state_def valid_idle_def dest!: idle_no_ex_cap)
@@ -24906,7 +24906,7 @@ lemma invoke_tcb_cur_sc_in_release_q_imp_zero_consumed[wp]:
                                \<and> current_time_bounded s \<and> invs s \<and> cur_sc s \<noteq> idle_sc_ptr
                                \<and> ex_nonz_cap_to dest s \<and> tcb_at dest s"
                    in bind_wp_fwd)
-       apply (wpsimp wp : suspend_invs)
+       apply wpsimp
        apply (frule invs_valid_global_refs)
        apply (frule idle_no_ex_cap)
         apply fastforce

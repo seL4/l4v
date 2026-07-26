@@ -3015,7 +3015,7 @@ crunch setCTE, cteInsert
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   and ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
-  (wp: updateObject_cte_inv crunch_wps simp: setObject_def)
+  (wp: updateObject_cte_inv crunch_wps simp: setObject_def cong: if_cong)
 
 crunch cteInsert
   for tcbDomain_inv[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"

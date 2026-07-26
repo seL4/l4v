@@ -5,7 +5,7 @@
  *)
 
 theory SchedContextInv_R
-imports Invocations_R Tcb_R
+imports Invocations_R ArchTcb_R
 begin
 
 global_interpretation schedContextCompleteYieldTo: typ_at_all_props' "schedContextCompleteYieldTo scp"
@@ -522,6 +522,7 @@ lemma schedContextYieldTo_corres:
                 \<and> obj_at' (\<lambda>sc. \<exists>t. scTCB sc = Some t \<and> t \<noteq> ksCurThread s) scp s))
       (sched_context_yield_to scp) (schedContextYieldTo scp)"
   (is "corres _ ((\<lambda>s. einvs s \<and> ?ct s \<and> ?scp s) and _ and _) (invs' and ?scp') _ _")
+  supply if_cong[cong]
   apply (rule_tac Q'=cur_tcb' in corres_cross_add_guard)
    apply (clarsimp simp: cur_tcb'_def)
   unfolding sched_context_yield_to_def schedContextYieldTo_def get_sc_obj_ref_def bind_assoc
@@ -958,7 +959,7 @@ lemma refillUpdate_corres:
      (refill_update sc_ptr period budget max_refills)
      (refillUpdate sc_ptr period budget max_refills)"
   (is "_ \<Longrightarrow> _ \<Longrightarrow> corres _ (?pred and _) ?conc _ _")
-  supply getSchedContext_wp[wp del] set_sc'.get_wp[wp del] projection_rewrites[simp]
+  supply getSchedContext_wp[wp del] set_sc'.get_wp[wp del] projection_rewrites[simp] if_cong[cong]
   apply (rule corres_cross_add_guard[where Q' = "sc_at' sc_ptr"])
    apply (fastforce dest!: sc_obj_at_cross[OF state_relation_pspace_relation]
                      simp: obj_at'_def opt_map_red objBits_simps)
@@ -1237,6 +1238,7 @@ lemma invokeSchedControlConfigureFlags_corres:
           (invs' and sch_act_simple and valid_sc_ctrl_inv' sc_inv' and ct_active')
           (invoke_sched_control_configure_flags sc_inv)
           (invokeSchedControlConfigureFlags sc_inv')"
+  supply if_cong[cong]
   apply (cases sc_inv)
   apply (rename_tac sc_ptr budget period mrefills badge flag)
   apply (simp add: invoke_sched_control_configure_flags_def invokeSchedControlConfigureFlags_def)

@@ -970,7 +970,7 @@ lemma (* finalise_cap_invs *)[Finalise_AI_assms]:
   "\<lbrace>invs and cte_wp_at ((=) cap) slot\<rbrace> finalise_cap cap x \<lbrace>\<lambda>_ s. invs s\<rbrace>"
   apply (cases cap, simp_all split del: if_split)
                prefer 7
-               apply (wpsimp wp: suspend_invs unbind_notification_invs)
+               apply (wpsimp wp: unbind_notification_invs)
                apply (frule (1) cte_wp_valid_cap[OF _ invs_valid_objs])
                apply (fastforce simp: invs_def valid_state_def valid_idle_def cap_range_def
                                       valid_cap_def2 valid_cap_ref_simps

@@ -8,7 +8,6 @@
 
 theory IpcCancel_R
 imports
-  ArchSchedule_R
   Reply_R
   "Lib.SimpStrategy"
 begin
@@ -986,6 +985,8 @@ lemma cte_map_tcb_2:
 locale IpcCancel_R =
   assumes Arch_postCapDeletion_typ_at'[wp]:
     "\<And>acap T p P. Arch.postCapDeletion acap \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
+  assumes Arch_postCapDeletion_sc_at'_n[wp]:
+    "\<And>acap n p P. Arch.postCapDeletion acap \<lbrace>\<lambda>s. P (sc_at'_n n p s)\<rbrace>"
   assumes Arch_postCapDeletion_st_tcb_at'[wp]: (* can't use pred_tcb_at' due to free type variable *)
     "\<And>acap P t. Arch.postCapDeletion acap \<lbrace>st_tcb_at' P t\<rbrace>"
   assumes arch_post_cap_deletion_pspace_distinct[wp]:
@@ -1053,13 +1054,6 @@ locale delete_one_gen = delete_one +
     "\<And>t. corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
                 (update_restart_pc t) (updateRestartPC t)"
   (* results of IpcCancel_R locale *)
-  assumes reply_descendants_of_mdbNext:
-    "\<lbrakk> (s, s') \<in> state_relation; valid_reply_caps s; valid_reply_masters s;
-       valid_objs s; valid_mdb s; valid_mdb' s'; pspace_aligned' s';
-       pspace_distinct' s'; st_tcb_at (Not \<circ> halted) t s;
-       ctes_of s' (t + 2*2^cte_level_bits) = Some cte \<rbrakk>
-     \<Longrightarrow> (descendants_of (t, tcb_cnode_index 2) (cdt s) = {})
-        = (mdbNext (cteMDBNode cte) = nullPointer)"
   assumes cancel_ipc_pspace_aligned[wp]:
     "\<And>t. cancel_ipc t \<lbrace>\<lambda>s::det_state. pspace_aligned s\<rbrace>"
   assumes cancel_ipc_pspace_distinct[wp]:
@@ -1493,9 +1487,9 @@ lemma replyRemoveTCB_corres:
                      apply (clarsimp simp: valid_reply'_def)
                      apply (rule context_conjI)
                       apply (clarsimp simp: obj_at'_def  opt_map_red)
-                     apply (clarsimp simp: obj_at_def del: opt_mapE)
+                     apply (clarsimp simp: obj_at_def)
                      apply (frule (1) valid_sched_context_objsI)
-                     apply (clarsimp simp: valid_sched_context_def del: opt_mapE)
+                     apply (clarsimp simp: valid_sched_context_def)
                      apply (frule (4) next_reply_in_sc_replies[OF state_relation_sc_replies_relation])
                         apply (fastforce dest!: state_relationD pspace_aligned_cross pspace_distinct_cross)
                        apply (fastforce dest!: state_relationD pspace_distinct_cross)
@@ -1733,7 +1727,7 @@ lemma replyPop_corres:
      apply (rename_tac sc)
      apply (rule corres_gen_asm') (* sc_replies sc = rp # ls, distinct (rp#ls) *)
      apply (rule corres_stateAssert_add_assertion[rotated])
-      apply (clarsimp simp: sym_refs_asrt_def)
+      apply clarsimp
      apply (rule corres_guard_imp)
        apply (rule corres_split[OF get_reply_corres])
          apply (rename_tac r r')
@@ -1953,7 +1947,7 @@ lemma replyPop_corres:
       apply simp
      apply (clarsimp del: opt_mapE)
      apply (rule conjI)
-      apply (clarsimp simp: sym_refs_asrt_def pred_tcb_at'_def obj_at'_def)
+      apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
       apply (drule sym_ref_Receive_or_Reply_replyTCB')
         apply (fastforce simp: obj_at'_def)
        apply (rule disjI2, rule sym, simp)
@@ -2218,10 +2212,10 @@ lemma replyRemove_corres:
                                apply simp
                               apply (clarsimp simp: valid_reply'_def)
                               apply (rule context_conjI)
-                               apply (clarsimp simp: obj_at'_def  opt_map_red)
-                              apply (clarsimp simp: obj_at_def del: opt_mapE)
+                               apply (clarsimp simp: obj_at'_def opt_map_red)
+                              apply (clarsimp simp: obj_at_def)
                               apply (frule (1) valid_sched_context_objsI)
-                              apply (clarsimp simp: valid_sched_context_def del: opt_mapE)
+                              apply (clarsimp simp: valid_sched_context_def)
                               apply (frule (4) next_reply_in_sc_replies[OF state_relation_sc_replies_relation])
                                  apply (fastforce dest!: state_relationD pspace_aligned_cross pspace_distinct_cross)
                                 apply (fastforce dest!: state_relationD pspace_distinct_cross)
@@ -2336,7 +2330,7 @@ lemma cancel_ipc_corres:
         apply simp
        apply (wpsimp wp: thread_set_invs_fault_None thread_set_valid_ready_qs
                          thread_set_no_change_tcb_state)
-      apply (wpsimp wp: threadSet_pred_tcb_no_state RISCV64.threadSet_invs_trivial)+ (*FIXME arch-split RT*)
+      apply (wpsimp wp: threadSet_pred_tcb_no_state threadSet_invs_trivial)+
      apply (wp gts_sp[where P="\<top>", simplified])+
     apply (rule hoare_strengthen_post)
      apply (rule gts_sp'[where P="\<top>"])
@@ -2499,7 +2493,7 @@ lemma blockedCancelIPC_invs':
 
 lemma threadSet_fault_invs':
   "threadSet (tcbFault_update upd) t \<lbrace>invs'\<rbrace>"
-  apply (wpsimp wp: RISCV64.threadSet_invs_trivial) (*FIXME arch-split RT*)
+  apply (wpsimp wp: threadSet_invs_trivial)
   done
 
 lemma cancelIPC_invs'[wp]:
@@ -2644,7 +2638,7 @@ crunch as_user
   (wp: crunch_wps ep_queues_blocked_lift ntfn_queues_blocked_lift ready_queues_runnable_lift
        release_q_runnable_lift)
 
-lemma suspend_corres:
+lemma (in delete_one_gen) suspend_corres:
   "corres dc
      (einvs and tcb_at t) (invs' and tcb_at' t)
      (SchedContext_A.suspend t) (ThreadDecls_H.suspend t)"
@@ -2675,7 +2669,7 @@ lemma suspend_corres:
               apply (wpsimp wp: schedContextCancelYieldTo_invs' tcbReleaseRemove_invs')+
           apply (wpsimp simp: update_restart_pc_def | strengthen invs_implies)+
          apply (clarsimp simp: updateRestartPC_def)
-         apply (wpsimp wp: gts_wp hoare_vcg_all_lift hoare_drop_imps
+         apply (wpsimp wp: gts_wp hoare_vcg_all_lift hoare_drop_imps weak_if_wp
                 | strengthen invs_implies valid_ready_qs_in_correct_ready_q
                              valid_ready_qs_ready_qs_distinct
                              valid_sched_valid_ready_qs valid_sched_valid_release_q invs'_implies
@@ -4322,30 +4316,20 @@ lemma setThreadState_unlive_other:
   apply (fastforce simp: ko_wp_at'_def obj_at'_def)
   done
 
-lemma possibleSwitchTo_unlive_other:
-  "\<lbrace>ko_wp_at' (Not \<circ> live') p and K (p \<noteq> t) and valid_tcbs'\<rbrace>
-   possibleSwitchTo t
-   \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') p\<rbrace>"
-  unfolding possibleSwitchTo_def inReleaseQueue_def
-  by (wpsimp wp: tcbSchedEnqueue_unlive_other threadGet_wp rescheduleRequired_unlive)+
-
-context begin interpretation Arch . (*FIXME: arch-split*)
-
 lemma setThreadState_Inactive_unlive:
   "setThreadState Inactive tptr \<lbrace>ko_wp_at' (Not o live') p\<rbrace>"
   apply (clarsimp simp: setThreadState_def)
   apply (wpsimp wp: threadSet_wp)
   apply (clarsimp simp: live'_def ko_wp_at'_def obj_at'_def gen_objBits_simps ps_clear_upd
-                        hyp_live'_def)
+                        RISCV64.hyp_live'_def) (* FIXME: rt arch-split *)
   done
 
-lemma replyUnlink_unlive:
-  "replyUnlink replyPtr tcbPtr \<lbrace>ko_wp_at' (Not o live') p\<rbrace>"
-  supply fun_upd_apply[simp del]
-  apply (clarsimp simp: replyUnlink_def updateReply_def)
-  apply (wpsimp wp: setThreadState_Inactive_unlive set_reply'.set_wp gts_wp')
-  apply (clarsimp simp: live'_def ko_wp_at'_def live_reply'_def obj_at'_def ps_clear_upd fun_upd_apply)
-  done
+lemma possibleSwitchTo_unlive_other:
+  "\<lbrace>ko_wp_at' (Not \<circ> live') p and K (p \<noteq> t) and valid_tcbs'\<rbrace>
+   possibleSwitchTo t
+   \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') p\<rbrace>"
+  unfolding possibleSwitchTo_def inReleaseQueue_def
+  by (wpsimp wp: tcbSchedEnqueue_unlive_other threadGet_wp rescheduleRequired_unlive)
 
 lemma cancelAllIPC_unlive[wp]:
   "\<lbrace>\<top>\<rbrace> cancelAllIPC epPtr \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') epPtr\<rbrace>"
@@ -4364,7 +4348,7 @@ lemma tcbNTFNDequeue_ntfnBoundTCB[wp]:
   apply (clarsimp simp: tcbNTFNDequeue_def)
   apply forward_inv_step+
   apply (wpsimp wp: updateNotification_wp hoare_drop_imps hoare_vcg_all_lift)
-  apply (fastforce simp: obj_at'_def ps_clear_upd objBits_simps)
+  apply (fastforce simp: obj_at'_def ps_clear_upd gen_objBits_simps)
   done
 
 lemma tcbNTFNDequeue_ntfnSc[wp]:
@@ -4372,7 +4356,7 @@ lemma tcbNTFNDequeue_ntfnSc[wp]:
   apply (clarsimp simp: tcbNTFNDequeue_def)
   apply forward_inv_step+
   apply (wpsimp wp: updateNotification_wp hoare_drop_imps hoare_vcg_all_lift)
-  apply (fastforce simp: obj_at'_def ps_clear_upd objBits_simps)
+  apply (fastforce simp: obj_at'_def ps_clear_upd gen_objBits_simps)
   done
 
 crunch possibleSwitchTo, ifCondRefillUnblockCheck
@@ -4682,6 +4666,7 @@ lemma cancelBadgedSends_corres:
 
 crunch schedContextCancelYieldTo, tcbReleaseRemove, setThreadState, updateRestartPC
   for tcbQueued[wp]: "obj_at' (\<lambda>obj. P (tcbQueued obj)) t"
+  (cong: if_cong)
 
 lemma suspend_unqueued[wp]:
   "\<lbrace>\<top>\<rbrace> suspend t \<lbrace>\<lambda>_. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
@@ -4690,7 +4675,7 @@ lemma suspend_unqueued[wp]:
 
 crunch schedContextCancelYieldTo, tcbQueueRemove, setThreadState
   for not_tcbInReleaseQueue[wp]: "obj_at' (\<lambda>tcb. P (tcbInReleaseQueue tcb)) t"
-  (wp: crunch_wps)
+  (wp: crunch_wps cong: if_cong)
 
 lemma tcbReleaseRemove_flag_not_set:
   "\<lbrace>\<top>\<rbrace> tcbReleaseRemove t \<lbrace>\<lambda>_. obj_at' (Not \<circ> tcbInReleaseQueue) t\<rbrace>"
