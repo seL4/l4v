@@ -630,6 +630,22 @@ lemma ccorres_if_lhs:
           hs (if P then f else g) conc"
   by (simp split: if_split)
 
+lemma ccorres_if_bind_lhs:
+  "\<lbrakk> P \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf Q S hs (f >>= m) conc;
+     \<not> P \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf R T hs (g >>= m) conc \<rbrakk>
+   \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf (\<lambda>s. (P \<longrightarrow> Q s) \<and> (\<not> P \<longrightarrow> R s))
+                      {s. (P \<longrightarrow> s \<in> S) \<and> (\<not> P \<longrightarrow> s \<in> T)}
+          hs ((if P then f else g) >>= m) conc"
+  by (simp split: if_split)
+
+lemma ccorres_if_bindE_lhs:
+  "\<lbrakk> P \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf Q S hs (f >>=E m) conc;
+     \<not> P \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf R T hs (g >>=E m) conc \<rbrakk>
+   \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf (\<lambda>s. (P \<longrightarrow> Q s) \<and> (\<not> P \<longrightarrow> R s))
+                      {s. (P \<longrightarrow> s \<in> S) \<and> (\<not> P \<longrightarrow> s \<in> T)}
+          hs ((if P then f else g) >>=E m) conc"
+  by (simp split: if_split)
+
 lemma ccorres_if_bindE:
   "ccorres_underlying sr Gamm r xf arrel axf G G' hs (if a then (b >>=E f) else (c >>=E f)) d
   \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf G G' hs ((if a then b else c) >>=E f) d"
