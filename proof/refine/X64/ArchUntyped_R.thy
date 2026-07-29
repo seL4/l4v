@@ -365,6 +365,17 @@ crunch createObject
   for nosch[Untyped_R_assms, wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and ksInterruptState[Untyped_R_assms, wp]: "\<lambda>s. P (ksInterruptState s)"
 
+crunch createNewObjects
+  for arch_inv[wp]: "\<lambda>s. P (x64KSSKIMPML4 (ksArchState s))"
+  (simp: crunch_simps zipWithM_x_mapM wp: crunch_wps unless_wp)
+
+crunch resetUntypedCap
+  for arch_inv[wp]: "\<lambda>s. P (ksArchState s)"
+  (simp: crunch_simps
+     wp: hoare_drop_imps unless_wp mapME_x_inv_wp
+         preemptionPoint_inv
+   ignore: freeMemory)
+
 end (* Arch *)
 
 interpretation Untyped_R?: Untyped_R

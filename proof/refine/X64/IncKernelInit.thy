@@ -5,7 +5,7 @@
  *)
 
 theory IncKernelInit
-imports ADT_H ArchTcb_R ArchArch_R
+imports ArchADT_H ArchTcb_R ArchArch_R
 begin
 
 (* Dummy include file for kernel init *)
