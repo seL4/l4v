@@ -13,7 +13,7 @@ but are mostly used from Eisbach methods, so we collect them here as well.
 We only include theories that are needed in the [Monads], [CParser], and
 [AutoCorres] sessions.
 
-[Eisbach]: https://isabelle.in.tum.de/dist//doc/eisbach.pdf
+[Eisbach]: https://isabelle.in.tum.de/dist/doc/eisbach.pdf
 [Monads]: ../Monads/
 [CParser]: ../../tools/c-parser/
 [AutoCorres]: ../../tools/autocorres/
