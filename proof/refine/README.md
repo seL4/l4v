@@ -27,11 +27,9 @@ To build for the ARM architecture from the `l4v/` directory, run:
 Important Theories
 ------------------
 
-The top-level theory where the refinement statement is established over
-the entire kernel is [`Refine`](ARM/Refine.thy); the state-relation that
-relates the state-spaces of the two specifications is defined in
-[`StateRelation`](StateRelation.thy) and the basic correspondence
-property proved over each kernel function is defined in
-[`Corres`](Corres.thy).
-
-
+The top-level theory where the refinement statement is established over the
+entire kernel is [`Refine`](Refine.thy) with architecture assumptions that
+are discharged in [`ArchRefine`](AARCH64/ArchRefine.thy); the state-relation
+that relates the state-spaces of the two specifications is defined in
+[`StateRelation`](StateRelation.thy) and the basic correspondence property
+proved over each kernel function is defined in [`Corres`](Corres.thy).
