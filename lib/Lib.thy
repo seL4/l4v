@@ -22,6 +22,7 @@ imports
   Monads.Monad_Lib
   Basics.CLib
   NICTATools
+  Sorted_Addrs
   "Word_Lib.WordSetup"
 begin
 
