@@ -12,7 +12,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems KHeap_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for KHeap_R locale *)
 
 lemma getObject_inv_vcpu[wp]:
   "\<lbrace>P\<rbrace> getObject l \<lbrace>\<lambda>_::ArchStructures_H.vcpu. P\<rbrace>"
@@ -80,12 +80,12 @@ lemma getObject_vcpu_corres:
   apply (clarsimp simp: other_aobj_relation_def)
   done
 
-lemma koType_objBitsKO[KHeap_R_assms]:
+lemma koType_objBitsKO[Arch_assms]:
   "koTypeOf k = koTypeOf k' \<Longrightarrow> objBitsKO k = objBitsKO k'"
   by (auto simp: objBitsKO_def archObjSize_def
           split: kernel_object.splits arch_kernel_object.splits)
 
-lemma pspace_dom_update[KHeap_R_assms]:
+lemma pspace_dom_update[Arch_assms]:
   "\<lbrakk> ps ptr = Some x; a_type x = a_type v \<rbrakk> \<Longrightarrow> pspace_dom (ps(ptr \<mapsto> v)) = pspace_dom ps"
   apply (simp add: pspace_dom_def dom_fun_upd2 del: dom_fun_upd)
   apply (rule SUP_cong [OF refl])
@@ -93,7 +93,7 @@ lemma pspace_dom_update[KHeap_R_assms]:
   apply (simp add: obj_relation_cuts_def3)
   done
 
-lemma cte_wp_at_ctes_of[KHeap_R_assms]:
+lemma cte_wp_at_ctes_of[Arch_assms]:
   "cte_wp_at' P p s = (\<exists>cte. ctes_of s p = Some cte \<and> P cte)"
   supply diff_neg_mask[simp del]
   apply (simp add: cte_wp_at_cases' map_to_ctes_def Let_def
@@ -126,7 +126,7 @@ lemma cte_wp_at_ctes_of[KHeap_R_assms]:
                         word_bw_assocs)
   done
 
-lemma ctes_of_canonical[KHeap_R_assms]:
+lemma ctes_of_canonical[Arch_assms]:
   assumes canonical: "pspace_canonical' s"
   assumes ctes_of: "ctes_of s p = Some cte"
   shows "canonical_address p"
@@ -139,9 +139,9 @@ proof -
                   elim: cte_wp_atE' canonical_address_add)
 qed
 
-lemma valid_updateCapDataI[KHeap_R_assms]:
+lemma valid_updateCapDataI[Arch_assms]:
   "s \<turnstile>' c \<Longrightarrow> s \<turnstile>' updateCapData b x c"
-  unfolding global.updateCapData_def Let_def updateCapData_def
+  unfolding global.updateCapData_def Let_def AARCH64_H.updateCapData_def
   by (cases c, auto simp: gen_isCap_defs valid_cap'_def global.capUntypedPtr_def gen_isCap_simps
                           capAligned_def word_size word_bits_def word_bw_assocs
                     split: capability.splits arch_capability.splits)
@@ -349,7 +349,7 @@ lemma setObject_not_asidpool_corres:
   done
 
 
-lemmas [KHeap_R_assms] =
+lemmas [Arch_assms] =
   setObject_other_corres[where 'a=endpoint]
   setObject_other_corres[where 'a=notification]
 
@@ -368,11 +368,11 @@ lemma pspace_in_kernel_mappings'_inv:
   "f \<lbrace>pspace_in_kernel_mappings'\<rbrace>"
   by wp
 
-lemma setEndpoint_pspace_in_kernel_mappings'[KHeap_R_assms]:
+lemma setEndpoint_pspace_in_kernel_mappings'[Arch_assms]:
   "setEndpoint p ko \<lbrace>pspace_in_kernel_mappings'\<rbrace>"
   by wp
 
-lemma setNotification_pspace_in_kernel_mappings'[KHeap_R_assms]:
+lemma setNotification_pspace_in_kernel_mappings'[Arch_assms]:
   "setNotification p ko \<lbrace>pspace_in_kernel_mappings'\<rbrace>"
   by wp
 
@@ -421,27 +421,28 @@ lemma set_ep_hyp[wp]:
   by (wpsimp wp: setObject_ko_wp_at simp: objBits_simps', rule refl, simp)
      (clarsimp simp: is_vcpu'_def ko_wp_at'_def obj_at'_def)
 
-lemma idle_is_global[KHeap_R_assms, intro!]:
+lemma idle_is_global[Arch_assms, intro!]:
   "ksIdleThread s \<in> global_refs' s"
   by (simp add: global_refs'_def)
 
-end
+lemmas KHeap_R_assms = Arch_assms (* extract accumulated assumptions *)
+
+end (* Arch *)
 
 interpretation KHeap_R?: KHeap_R
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact KHeap_R_assms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact AARCH64.KHeap_R_assms)?)
 qed
 
 context Arch begin arch_global_naming
 
-named_theorems KHeap_R_assms_2
+clear_named_theorems Arch_assms (* accumulate assumptions for KHeap_R_2 locale *)
 
-lemmas setEndpoint_valid_globals[KHeap_R_assms_2, wp]
+lemmas setEndpoint_valid_globals[Arch_assms, wp]
   = valid_global_refs_lift'[OF set_ep_ctes_of set_ep_arch'
                                setEndpoint_it setEndpoint_ksInterruptState]
 
-lemma set_ntfn_global_refs'[KHeap_R_assms_2, wp]:
+lemma set_ntfn_global_refs'[Arch_assms, wp]:
   "\<lbrace>valid_global_refs'\<rbrace> setNotification ptr val \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
   by (rule valid_global_refs_lift'; wp)
 
@@ -462,7 +463,7 @@ lemma setObject_ko_wp_at':
                      objBits_def[symmetric] ps_clear_upd
                      in_magnitude_check v)
 
-lemmas [KHeap_R_assms_2] = setEndpoint_valid_arch' setNotification_valid_arch'
+lemmas [Arch_assms] = setEndpoint_valid_arch' setNotification_valid_arch'
 
 sublocale setObject: typ_at_props' "setObject p v"
   by typ_at_props'
@@ -473,12 +474,13 @@ sublocale doMachineOp: typ_at_props' "doMachineOp mop"
 sublocale setEndpoint: typ_at_props' "setEndpoint ptr val"
   by typ_at_props'
 
-end
+lemmas KHeap_R_2_assms = Arch_assms (* extract accumulated assumptions *)
+
+end (* Arch *)
 
 interpretation KHeap_R_2?: KHeap_R_2
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact KHeap_R_assms_2)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact AARCH64.KHeap_R_2_assms)?)
 qed
 
 (* requalify interface lemmas which can't be locale assumptions due to free type variable *)

@@ -13,7 +13,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Arch_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Arch_R locale *)
 
 definition
   "asid_ci_map i \<equiv>
@@ -389,7 +389,7 @@ lemma decodeVCPUInjectIRQ_inv[wp]: "\<lbrace>P\<rbrace> decodeVCPUInjectIRQ a b 
   by (wpsimp simp: decodeVCPUInjectIRQ_def Let_def wp: whenE_wp getVCPU_wp | rule conjI)+
 
 crunch Arch.decodeInvocation
-  for inv[Arch_R_assms, wp]: "P"
+  for inv[Arch_assms, wp]: "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp
    simp: crunch_simps ARMMMU_improve_cases)
 
@@ -792,7 +792,7 @@ lemma decodeARMVCPUInvocation_corres:
 lemmas vmsz_aligned_imp_aligned
     = vmsz_aligned_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN is_aligned_weaken]
 
-lemma arch_decodeInvocation_corres[Arch_R_assms]:
+lemma arch_decodeInvocation_corres[Arch_assms]:
 notes check_vp_inv[wp del] check_vp_wpR[wp] [[goals_limit = 1]]
   (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
      check_vp_wpR should probably be generalised to replace check_vp_inv. *)
@@ -1298,7 +1298,7 @@ lemma performSGIInvocation_corres:
   apply (corres corres: corres_machine_op)
   done
 
-lemma arch_performInvocation_corres[Arch_R_assms]:
+lemma arch_performInvocation_corres[Arch_assms]:
   assumes "archinv_relation ai ai'"
   shows   "corres (dc \<oplus> (=))
                   (einvs and ct_active and valid_arch_inv ai and schact_is_rct)
@@ -1367,7 +1367,7 @@ lemma performASIDControlInvocation_tcb_at':
 crunch writeVCPUReg, readVCPUReg, performARMVCPUInvocation, performSGISignalGenerate
   for tcb_at'[wp]: "tcb_at' p"
 
-lemma invokeArch_tcb_at'[Arch_R_assms]:
+lemma invokeArch_tcb_at'[Arch_assms]:
   "\<lbrace>invs' and valid_arch_inv' ai and ct_active' and st_tcb_at' active' p\<rbrace>
      Arch.performInvocation ai
    \<lbrace>\<lambda>rv. tcb_at' p\<rbrace>"
@@ -1447,7 +1447,7 @@ crunch
   for vs_entry_align[wp]: "ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma sts_valid_arch_inv'[Arch_R_assms]:
+lemma sts_valid_arch_inv'[Arch_assms]:
   "\<lbrace>valid_arch_inv' ai\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_arch_inv' ai\<rbrace>"
   apply (cases ai, simp_all add: valid_arch_inv'_def)
         apply (clarsimp simp: valid_pti'_def split: page_table_invocation.splits)
@@ -1916,7 +1916,7 @@ lemma arch_decodeInvocation_wf[wp]:
   apply (drule_tac t="cteCap cte" in sym, simp)
   by fastforce
 
-lemma arch_decodeInvocation_wf_interface[Arch_R_assms]:
+lemma arch_decodeInvocation_wf_interface[Arch_assms]:
   "\<lbrace>invs' and valid_cap' (ArchObjectCap arch_cap) and
     cte_wp_at' ((=) (ArchObjectCap arch_cap) o cteCap) slot and
     (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at' ((=) (fst x) o cteCap) (snd x) s) and
@@ -2277,7 +2277,7 @@ lemma performSGISignalInvocation_invs[wp]:
   unfolding performSGISignalGenerate_def
   by (wpsimp wp: dmo_invs'_simple no_irq_sendSGI)
 
-lemma arch_performInvocation_invs'[Arch_R_assms]:
+lemma arch_performInvocation_invs'[Arch_assms]:
   "\<lbrace>invs' and ct_active' and valid_arch_inv' invocation\<rbrace>
   Arch.performInvocation invocation
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -2286,7 +2286,7 @@ lemma arch_performInvocation_invs'[Arch_R_assms]:
       simp_all add: performARMMMUInvocation_def valid_arch_inv'_def,
       (wp|simp)+)
 
-lemma setObject_TCB_valid_duplicates'[Arch_R_assms, wp]:
+lemma setObject_TCB_valid_duplicates'[Arch_assms, wp]:
   "setObject p (tcb::tcb) \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
                         pspace_aligned'_def ps_clear_upd
@@ -2300,6 +2300,8 @@ lemma setObject_TCB_valid_duplicates'[Arch_R_assms, wp]:
      apply (erule valid_duplicates'_non_pd_pt_I[rotated 3], simp+)+
   done
 
+lemmas Arch_R_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 arch_requalify_consts
@@ -2308,8 +2310,7 @@ arch_requalify_consts
 
 interpretation Arch_R?: Arch_R valid_arch_inv' archinv_relation
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Arch_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact ARM_HYP.Arch_R_assms)?)?)
 qed
 
 end

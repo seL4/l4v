@@ -15,7 +15,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems StateRelation_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for StateRelation_R locale *)
 
 lemma obj_relation_cuts_def2:
   "obj_relation_cuts ko x =
@@ -82,7 +82,7 @@ lemma obj_relation_cutsE:
               force simp: cte_relation_def pte_relation_def pde_relation_def)+)[5]
   done
 
-lemma is_other_obj_relation_type_gen[simp, StateRelation_R_assms]:
+lemma is_other_obj_relation_type_gen[simp, Arch_assms]:
   "\<And>n. \<not> is_other_obj_relation_type (ACapTable n)"
   "\<not> is_other_obj_relation_type ATCB"
   "is_other_obj_relation_type AEndpoint"
@@ -102,7 +102,7 @@ lemma is_other_obj_relation_type_DeviceData:
   "\<not> is_other_obj_relation_type (AArch (ADeviceData sz))"
   unfolding is_other_obj_relation_type_def by simp
 
-lemma obj_relation_cuts_trivial[StateRelation_R_assms]:
+lemma obj_relation_cuts_trivial[Arch_assms]:
   "ptr \<in> fst ` obj_relation_cuts ty ptr"
   apply (case_tac ty)
       apply (rename_tac sz cs)
@@ -176,7 +176,7 @@ lemma ghost_relation_wrapper_lift':
   apply wp
   done
 
-lemma ghost_relation_wrapper_genD[StateRelation_R_assms]:
+lemma ghost_relation_wrapper_genD[Arch_assms]:
   "ghost_relation_wrapper s s'
    \<Longrightarrow> ups_of_heap (kheap s) = gsUserPages s' \<and> cns_of_heap (kheap s) = gsCNodes s'"
   by (simp add: ghost_relation_of_heap)
@@ -217,20 +217,21 @@ lemma other_aobj_relation_aobj:
   unfolding other_aobj_relation_def is_ArchObj_def
   by (clarsimp split: Structures_A.kernel_object.splits)
 
-lemma msgLabelBits_msg_label_bits[StateRelation_R_assms]:
+lemma msgLabelBits_msg_label_bits[Arch_assms]:
   "msgLabelBits = msg_label_bits"
   by (simp add: msgLabelBits_def)
 
-lemma msgInfoRegister_msg_info_register[StateRelation_R_assms]:
+lemma msgInfoRegister_msg_info_register[Arch_assms]:
   "msgInfoRegister = msg_info_register"
   by (simp add: msg_info_register_def msgInfoRegister_def)
 
-end
+lemmas StateRelation_R_assms = Arch_assms (* extract accumulated assumptions *)
+
+end (* Arch *)
 
 global_interpretation StateRelation_R?: StateRelation_R
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact StateRelation_R_assms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact ARM.StateRelation_R_assms)?)
 qed
 
 (* requalify interface lemmas which can't be locale assumptions due to free type variable *)

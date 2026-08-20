@@ -13,17 +13,17 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Interrupt_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Interrupt_R locale *)
 
-lemma maxIRQ_H_ucast_toEnum_eq_irq[Interrupt_R_assms]:
+lemma maxIRQ_H_ucast_toEnum_eq_irq[Arch_assms]:
   "x \<le> ucast maxIRQ \<Longrightarrow> toEnum (unat x) = (ucast x :: irq)" for x::machine_word
   by (simp add: maxIRQ_ucast_toEnum_eq_irq maxIRQ_def)
 
-lemma arch_valid_irq_le_maxIRQ[Interrupt_R_assms]:
+lemma arch_valid_irq_le_maxIRQ[Arch_assms]:
   "arch_valid_irq irq \<Longrightarrow> irq \<le> maxIRQ"
   by simp
 
-lemma arch_valid_irq_valid_IRQHandlerCap[Interrupt_R_assms]:
+lemma arch_valid_irq_valid_IRQHandlerCap[Arch_assms]:
   "arch_valid_irq irq \<Longrightarrow> valid_cap' (capability.IRQHandlerCap irq) s"
   by (simp add: valid_cap'_def capAligned_def)
 
@@ -46,7 +46,7 @@ primrec arch_irq_control_inv_valid' :: "Arch.irqcontrol_invocation \<Rightarrow>
       cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) src_slot and
       ex_cte_cap_to' sgi_slot and real_cte_at' sgi_slot)"
 
-lemma checkIRQ_corres[Interrupt_R_assms]:
+lemma checkIRQ_corres[Arch_assms]:
   "corres (ser \<oplus> dc) \<top> \<top> (arch_check_irq irq) (Arch.checkIRQ irq)"
   unfolding arch_check_irq_def checkIRQ_def
   by (clarsimp simp: minIRQ_def maxIRQ_def whenE_rangeCheck_eq whenE_def returnOk_def split: if_split)
@@ -54,7 +54,7 @@ lemma checkIRQ_corres[Interrupt_R_assms]:
 lemmas irq_const_defs = minIRQ_def
 
 crunch arch_check_irq, checkIRQ
-  for inv[Interrupt_R_assms]: "P"
+  for inv[Arch_assms]: "P"
   (simp: crunch_simps)
 
 lemma arch_check_irq_valid:
@@ -62,11 +62,11 @@ lemma arch_check_irq_valid:
   unfolding arch_check_irq_def
   by (wpsimp simp: validE_R_def not_less word_le_nat_alt maxIRQ_def wp: whenE_throwError_wp)
 
-lemma arch_check_irq_valid'[Interrupt_R_assms]:
+lemma arch_check_irq_valid'[Arch_assms]:
   "\<lbrace>\<top>\<rbrace> arch_check_irq irq \<lbrace>\<lambda>_ _. irq \<le> ucast maxIRQ\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"
   by (wp arch_check_irq_valid)
 
-lemma checkIRQ_irq_valid[Interrupt_R_assms]:
+lemma checkIRQ_irq_valid[Arch_assms]:
   "\<lbrace>\<top>\<rbrace> checkIRQ irq \<lbrace>\<lambda>_ _. arch_valid_irq (toEnum (unat irq))\<rbrace>, -"
   unfolding checkIRQ_def rangeCheck_def validE_R_def
   supply hoare_vcg_prop[wp del]
@@ -99,7 +99,7 @@ lemma sgi_irq_cast:
            add: ucast_ucast_len sgi_irq_len_val word_le_nat_alt word_less_nat_alt
            split: if_split_asm)
 
-lemma arch_decodeIRQControlInvocation_corres[Interrupt_R_assms]:
+lemma arch_decodeIRQControlInvocation_corres[Arch_assms]:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
    corres (ser \<oplus> arch_irq_control_inv_relation)
      (invs and (\<lambda>s. \<forall>cp \<in> set caps. s \<turnstile> cp))
@@ -146,7 +146,7 @@ lemma arch_decodeIRQControlInvocation_corres[Interrupt_R_assms]:
   apply (auto split: arch_invocation_label.splits invocation_label.splits)
   done
 
-lemma arch_decode_irq_control_valid'[Interrupt_R_assms, wp]:
+lemma arch_decode_irq_control_valid'[Arch_assms, wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> (\<forall>cap \<in> set caps. s \<turnstile>' cap)
         \<and> (\<forall>cap \<in> set caps. \<forall>r \<in> cte_refs' cap (irq_node' s). ex_cte_cap_to' r s)
         \<and> cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) slot s\<rbrace>
@@ -168,12 +168,12 @@ lemma arch_decode_irq_control_valid'[Interrupt_R_assms, wp]:
   done
 
 crunch Arch.decodeIRQControlInvocation
-  for inv[Interrupt_R_assms, wp]: "P"
+  for inv[Arch_assms, wp]: "P"
   (simp: crunch_simps wp: crunch_wps)
 
-lemmas [Interrupt_R_assms] = arch_check_irq_inv
+lemmas [Arch_assms] = arch_check_irq_inv
 
-lemma irq_node_in_global_refs'[Interrupt_R_assms]:
+lemma irq_node_in_global_refs'[Arch_assms]:
   "Invariants_H.irq_node' s + (ucast irq << cteSizeBits) \<in> global_refs' s" for irq :: irq
   by (simp add: global_refs'_def cteSizeBits_def shiftl_t2n)
 
@@ -182,13 +182,13 @@ lemma no_fail_deactivateInterrupt[wp, simp]:
   unfolding deactivateInterrupt_def
   by wpsimp
 
-lemma arch_invokeIRQHandler_corres[Interrupt_R_assms]:
+lemma arch_invokeIRQHandler_corres[Arch_assms]:
   "irq_handler_inv_relation i i' \<Longrightarrow>
    corres dc \<top> \<top> (arch_invoke_irq_handler i) (Arch.invokeIRQHandler i')"
   by (cases i; clarsimp simp: invokeIRQHandler_def theIRQ_def)
      (intro conjI impI; rule corres_machine_op, rule corres_Id; simp?)
 
-lemma is_derived'_NotificationCap[Interrupt_R_assms]:
+lemma is_derived'_NotificationCap[Arch_assms]:
   "\<lbrakk>isNotificationCap cap; isNotificationCap cap'\<rbrakk>
    \<Longrightarrow> is_derived' ctes src cap' cap = badge_derived' cap' cap"
   by (clarsimp simp add: is_derived'_def gen_isCap_simps vsCapRef_def)
@@ -219,7 +219,7 @@ lemma SGISignalCap_valid[simp, intro!]:
   "valid_cap' (ArchObjectCap (SGISignalCap irq target)) s"
   by (simp add: valid_cap'_def capAligned_def word_bits_def)
 
-lemma arch_performIRQControl_corres[Interrupt_R_assms]:
+lemma arch_performIRQControl_corres[Arch_assms]:
   "arch_irq_control_inv_relation ivk ivk' \<Longrightarrow> corres (dc \<oplus> dc)
           (einvs and arch_irq_control_inv_valid ivk)
           (invs' and arch_irq_control_inv_valid' ivk')
@@ -251,11 +251,11 @@ lemma arch_performIRQControl_corres[Interrupt_R_assms]:
   apply (rename_tac cte', case_tac cte', simp add: isCap_simps)
   done
 
-lemma is_simple_cap'_IRQHandlerCap[Interrupt_R_assms]:
+lemma is_simple_cap'_IRQHandlerCap[Arch_assms]:
   "isIRQHandlerCap cap \<Longrightarrow> is_simple_cap' cap"
   by (clarsimp simp: isCap_simps is_simple_cap'_def)
 
-lemma sameRegionAs_IRQControl_handler[Interrupt_R_assms, simp]:
+lemma sameRegionAs_IRQControl_handler[Arch_assms, simp]:
   "global.sameRegionAs capability.IRQControlCap (capability.IRQHandlerCap irq)"
   by (simp add: sameRegionAs_def3 isCap_simps)
 
@@ -268,7 +268,7 @@ lemma dmo_setIRQTrigger_invs'[wp]:
     apply (wpsimp simp: setIRQTrigger_def machine_op_lift_def machine_rest_lift_def split_def)+
   done
 
-lemma arch_invoke_irq_control_invs'[Interrupt_R_assms, wp]:
+lemma arch_invoke_irq_control_invs'[Arch_assms, wp]:
   "\<lbrace>invs' and arch_irq_control_inv_valid' i\<rbrace> Arch.performIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: ARM_HYP_H.performIRQControl_def)
   apply (rule hoare_pre)
@@ -464,7 +464,7 @@ lemma vppiEvent_corres:
   apply (simp add: tcb_at_invs')
   done
 
-lemma handle_reserved_irq_corres[Interrupt_R_assms, corres]:
+lemma handle_reserved_irq_corres[Arch_assms, corres]:
   "corres dc einvs
      (\<lambda>s. invs' s \<and> (irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s))
      (handle_reserved_irq irq) (handleReservedIRQ irq)"
@@ -476,12 +476,12 @@ lemma handle_reserved_irq_corres[Interrupt_R_assms, corres]:
   apply (fastforce intro: vgic_maintenance_corres simp: unat_arith_simps)+
   done
 
-lemma maskIrqSignal_corres[Interrupt_R_assms, corres]:
+lemma maskIrqSignal_corres[Arch_assms, corres]:
   "corres dc \<top> \<top> (arch_mask_irq_signal irq) (Arch.maskIrqSignal irq)"
   unfolding arch_mask_irq_signal_def maskIrqSignal_def when_def
   by (corres corres: corres_machine_op)
 
-lemma dmo_ackInterrupt_corres[Interrupt_R_assms, corres]:
+lemma dmo_ackInterrupt_corres[Arch_assms, corres]:
   "corres dc \<top> \<top> (do_machine_op (ackInterrupt irq)) (doMachineOp (ackInterrupt irq))"
   by (corres corres: corres_machine_op)
 
@@ -547,10 +547,10 @@ lemma vppiEvent_invs'[wp]:
   done
 
 crunch maskIrqSignal
-  for invs'[Interrupt_R_assms]: invs'
+  for invs'[Arch_assms]: invs'
   (wp: dmo_maskInterrupt_True ignore: doMachineOp)
 
-lemma handleReservedIRQ_invs'[Interrupt_R_assms]:
+lemma handleReservedIRQ_invs'[Arch_assms]:
   "\<lbrace>invs' and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s)\<rbrace>
    handleReservedIRQ irq
    \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -559,30 +559,32 @@ lemma handleReservedIRQ_invs'[Interrupt_R_assms]:
                    non_kernel_IRQs_def
              split_del: if_split)
 
+lemmas Interrupt_R_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 interpretation Interrupt_R?: Interrupt_R ARM_HYP.arch_irq_control_inv_valid'
                                          ARM_HYP.arch_irq_control_inv_relation
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Interrupt_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact ARM_HYP.Interrupt_R_assms)?)?)
 qed
 
 context Arch begin arch_global_naming
 
-named_theorems Interrupt_R_2_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Interrupt_R_2 locale *)
 
-lemma invoke_arch_irq_handler_invs'[Interrupt_R_2_assms, wp]:
+lemma invoke_arch_irq_handler_invs'[Arch_assms, wp]:
   "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace> Arch.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
   by (cases i; (wpsimp simp: ARM_HYP_H.invokeIRQHandler_def theIRQ_def | rule conjI)+)
+
+lemmas Interrupt_R_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 interpretation Interrupt_R_2?: Interrupt_R_2 ARM_HYP.arch_irq_control_inv_valid'
                                              ARM_HYP.arch_irq_control_inv_relation
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Interrupt_R_2_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact ARM_HYP.Interrupt_R_2_assms)?)?)
 qed
 
 end

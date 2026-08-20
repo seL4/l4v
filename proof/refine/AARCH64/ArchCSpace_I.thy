@@ -13,7 +13,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems CSpace_I_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for CSpace_I locale *)
 
 lemma arch_capUntypedPtr_simps[simp]:
   "Arch.capUntypedPtr (ASIDPoolCap r asid) = r"
@@ -22,14 +22,14 @@ lemma arch_capUntypedPtr_simps[simp]:
   "Arch.capUntypedPtr (VCPUCap r) = r"
   by (auto simp: AARCH64_H.capUntypedPtr_def)
 
-lemma maskCapRights_allRights[CSpace_I_assms, simp]:
+lemma maskCapRights_allRights[Arch_assms, simp]:
   "maskCapRights allRights c = c"
-  unfolding global.maskCapRights_def isCap_defs allRights_def maskCapRights_def maskVMRights_def
+  unfolding global.maskCapRights_def isCap_defs allRights_def AARCH64_H.maskCapRights_def maskVMRights_def
   by (cases c) (simp_all add: Let_def split: arch_capability.split vmrights.split)
 
-lemma isPhysicalCap[CSpace_I_assms, simp]:
+lemma isPhysicalCap[Arch_assms, simp]:
   "isPhysicalCap cap = (capClass cap = PhysicalClass)"
-  by (simp add: global.isPhysicalCap_def isPhysicalCap_def
+  by (simp add: global.isPhysicalCap_def AARCH64_H.isPhysicalCap_def
          split: capability.split arch_capability.split)
 
 definition arch_capMasterCap :: "arch_capability \<Rightarrow> arch_capability" where
@@ -47,17 +47,17 @@ definition arch_capMasterCap :: "arch_capability \<Rightarrow> arch_capability" 
 
 lemmas arch_capMasterCap_simps[simp] = arch_capMasterCap_def[split_simps arch_capability.split]
 
-lemma acapClass_arch_capMasterCap[CSpace_I_assms,simp]:
+lemma acapClass_arch_capMasterCap[Arch_assms,simp]:
   "acapClass (arch_capMasterCap acap) = acapClass acap"
   unfolding arch_capMasterCap_def
   by (simp split: arch_capability.splits)
 
-lemma capUntypedPtr_arch_capMasterCap[CSpace_I_assms, simp]:
+lemma capUntypedPtr_arch_capMasterCap[Arch_assms, simp]:
   "Arch.capUntypedPtr (arch_capMasterCap acap) = Arch.capUntypedPtr acap"
   unfolding arch_capMasterCap_def
   by (simp add: AARCH64_H.capUntypedPtr_def split: arch_capability.splits)
 
-lemma acapBits_arch_capMasterCap[CSpace_I_assms, simp]:
+lemma acapBits_arch_capMasterCap[Arch_assms, simp]:
   "acapBits (arch_capMasterCap acap) = acapBits acap"
   unfolding arch_capMasterCap_def
   by (simp split: arch_capability.splits)
@@ -65,11 +65,11 @@ lemma acapBits_arch_capMasterCap[CSpace_I_assms, simp]:
 lemmas isArchFrameCap_simps[simp] =
   isArchFrameCap_def[split_simps capability.split arch_capability.split]
 
-lemma isArchFrameCap_arch_capMasterCap[CSpace_I_assms, simp]:
+lemma isArchFrameCap_arch_capMasterCap[Arch_assms, simp]:
   "isArchFrameCap (ArchObjectCap (arch_capMasterCap acap)) = isArchFrameCap (ArchObjectCap acap)"
   by (simp add: arch_capMasterCap_def split: arch_capability.split)
 
-lemma isArchFrameCap_non_arch[CSpace_I_assms]:
+lemma isArchFrameCap_non_arch[Arch_assms]:
   "\<not>is_ArchObjectCap cap \<Longrightarrow> isArchFrameCap cap = False"
   by (simp add: isArchFrameCap_def is_ArchObjectCap_def split: capability.split)
 
@@ -89,18 +89,19 @@ lemma arch_capBadge_def2:
   "arch_capBadge acap = (if is_SMCCap acap then Some (capSMCBadge acap) else None)"
   by (cases acap; simp add: is_SMCCap_def)
 
-end
+lemmas CSpace_I_assms = Arch_assms (* extract accumulated assumptions *)
+
+end (* Arch *)
 
 interpretation CSpace_I?: CSpace_I AARCH64.arch_capMasterCap AARCH64.arch_capBadge
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact CSpace_I_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact AARCH64.CSpace_I_assms)?)?)
 qed
 
 
 context Arch begin arch_global_naming
 
-named_theorems CSpace_I_2_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for CSpace_I_2 locale *)
 
 (* for the Arch locale we want the fully expanded version covering all cases, but avoiding the
    capMasterCap_ArchObjectCap rewrite case for an unspecified ArchObjectCap *)
@@ -110,7 +111,7 @@ lemmas capMasterCap_simps[simp] =
   capMasterCap_def[simplified arch_capMasterCap_def,
                    split_simps capability.split arch_capability.split]
 
-lemma isArchFrameCap_capMasterCap[CSpace_I_2_assms, simp]:
+lemma isArchFrameCap_capMasterCap[Arch_assms, simp]:
   "isArchFrameCap (capMasterCap cap) = isArchFrameCap cap"
   by (simp add: isArchFrameCap_def split: capability.split arch_capability.split)
 
@@ -142,7 +143,7 @@ lemmas arch_capMasterCap_eqDs[dest!] = arch_capMasterCap_eqDs1 arch_capMasterCap
 
 lemma capUntypedSize_capBits:
   "capClass cap = PhysicalClass \<Longrightarrow> capUntypedSize cap = 2 ^ (capBits cap)"
-  by (fastforce simp: global.capUntypedSize_def objBits_simps bit_simps' capUntypedSize_def
+  by (fastforce simp: global.capUntypedSize_def objBits_simps bit_simps' AARCH64_H.capUntypedSize_def
                 split: capability.splits arch_capability.splits zombie_type.splits)
 
 lemma sameRegionAs_def2:
@@ -218,7 +219,7 @@ lemma sameRegionAsE:
    \<rbrakk> \<Longrightarrow> R"
   by (simp add: sameRegionAs_def3, fastforce simp: gen_isCap_Master arch_isCap_Master)
 
-lemma sameObjectAsE[CSpace_I_2_assms]:
+lemma sameObjectAsE[Arch_assms]:
   "\<lbrakk> sameObjectAs cap cap';
      \<lbrakk> capMasterCap cap = capMasterCap cap'; \<not> isNullCap cap; \<not> isZombie cap;
        \<not> isUntypedCap cap;
@@ -229,7 +230,7 @@ lemma sameObjectAs_sameRegionAs:
   "sameObjectAs cap cap' \<Longrightarrow> sameRegionAs cap cap'"
   by (clarsimp simp add: sameObjectAs_def2 sameRegionAs_def2 isCap_simps)
 
-lemma sameObjectAs_sym[CSpace_I_2_assms]:
+lemma sameObjectAs_sym[Arch_assms]:
   "sameObjectAs c d = sameObjectAs d c"
   by (auto simp: sameObjectAs_def2)
 
@@ -239,17 +240,17 @@ lemma sameObject_capRange:
   apply (clarsimp simp: sameObjectAs_def2)
   done
 
-lemma sameRegionAs_Null[CSpace_I_2_assms, simp]:
+lemma sameRegionAs_Null[Arch_assms, simp]:
   "sameRegionAs c NullCap = False"
   "sameRegionAs NullCap c = False"
   by (simp add: sameRegionAs_def3 capRange_def isCap_simps)+
 
-lemma sameRegionAs_classes[CSpace_I_2_assms]:
+lemma sameRegionAs_classes[Arch_assms]:
   "sameRegionAs cap cap' \<Longrightarrow> capClass cap = capClass cap'"
   by (erule sameRegionAsE, rule master_eqI)
      (clarsimp simp: capRange_def isCap_simps intro!: capClass_Master split: if_split_asm)+
 
-lemma sameRegionAs_capRange_Int[CSpace_I_2_assms]:
+lemma sameRegionAs_capRange_Int[Arch_assms]:
   "\<lbrakk> sameRegionAs cap cap'; capClass cap = PhysicalClass \<or> capClass cap' = PhysicalClass;
      capAligned cap; capAligned cap' \<rbrakk>
    \<Longrightarrow> capRange cap' \<inter> capRange cap \<noteq> {}"
@@ -261,26 +262,26 @@ lemma sameRegionAs_capRange_Int[CSpace_I_2_assms]:
       apply (fastforce simp: capRange_Master isCap_simps)+
   done
 
-lemma sameRegionAs_trans[CSpace_I_2_assms]:
+lemma sameRegionAs_trans[Arch_assms]:
   "\<lbrakk> sameRegionAs a b; sameRegionAs b c \<rbrakk> \<Longrightarrow> sameRegionAs a c"
   by (simp add: sameRegionAs_def2, elim conjE disjE)
      (auto simp: isCap_simps capRange_def) (* long *)
 
-lemma capMasterCap_maskCapRights[simp, CSpace_I_2_assms]:
+lemma capMasterCap_maskCapRights[simp, Arch_assms]:
   "capMasterCap (maskCapRights msk cap) = capMasterCap cap"
   apply (cases cap; simp add: global.maskCapRights_def Let_def isCap_simps capMasterCap_def)
   apply (rename_tac arch_capability)
-  apply (case_tac arch_capability; simp add: maskCapRights_def Let_def isCap_simps)
+  apply (case_tac arch_capability; simp add: AARCH64_H.maskCapRights_def Let_def isCap_simps)
   done
 
-lemma capBadge_maskCapRights[simp, CSpace_I_2_assms]:
+lemma capBadge_maskCapRights[simp, Arch_assms]:
   "capBadge (maskCapRights msk cap) = capBadge cap"
   apply (cases cap; simp add: global.maskCapRights_def Let_def gen_isCap_simps capBadge_def)
   apply (rename_tac arch_capability)
-  apply (case_tac arch_capability; simp add: maskCapRights_def Let_def isCap_simps)
+  apply (case_tac arch_capability; simp add: AARCH64_H.maskCapRights_def Let_def isCap_simps)
   done
 
-lemma cte_refs_capRange[CSpace_I_2_assms]:
+lemma cte_refs_capRange[Arch_assms]:
   "\<lbrakk> s \<turnstile>' c; \<forall>irq. c \<noteq> IRQHandlerCap irq \<rbrakk> \<Longrightarrow> cte_refs' c x \<subseteq> capRange c"
   apply (cases c; simp add: capRange_def gen_isCap_simps)
     apply (clarsimp dest!: valid_capAligned
@@ -351,15 +352,15 @@ lemma cte_refs_capRange[CSpace_I_2_assms]:
   apply (simp add: word_bits_def)
   done
 
-lemma capBits_Master[CSpace_I_2_assms]:
+lemma capBits_Master[Arch_assms]:
   "capBits (capMasterCap cap) = capBits cap"
   by (clarsimp simp: capMasterCap_def split: capability.split arch_capability.split)
 
-lemma capUntyped_Master[CSpace_I_2_assms]:
+lemma capUntyped_Master[Arch_assms]:
   "capUntypedPtr (capMasterCap cap) = capUntypedPtr cap"
   by (clarsimp simp: capMasterCap_def AARCH64_H.capUntypedPtr_def split: capability.split arch_capability.split)
 
-lemma distinct_zombies_copyMasterE[CSpace_I_2_assms]:
+lemma distinct_zombies_copyMasterE[Arch_assms]:
   "\<lbrakk> distinct_zombies m; m x = Some cte;
      capClass (cteCap cte') = PhysicalClass
      \<Longrightarrow> capMasterCap (cteCap cte) = capMasterCap (cteCap cte');
@@ -381,19 +382,20 @@ lemmas distinct_zombies_sameMasterE
     = distinct_zombies_copyMasterE[where x=x and y=x for x, simplified,
                                    OF _ _ _]
 
-declare distinct_zombies_sameMasterE[CSpace_I_2_assms]
+declare distinct_zombies_sameMasterE[Arch_assms]
 
-lemma cap_table_at_gsCNodes_eq[CSpace_I_2_assms]:
+lemma cap_table_at_gsCNodes_eq[Arch_assms]:
   "(s, s') \<in> state_relation
    \<Longrightarrow> (gsCNodes s' ptr = Some bits) = cap_table_at bits ptr s"
   by (fastforce simp: state_relation_def ghost_relation_def obj_at_def is_cap_table)
 
-end
+lemmas CSpace_I_2_assms = Arch_assms (* extract accumulated assumptions *)
+
+end (* Arch *)
 
 interpretation CSpace_I_2?: CSpace_I_2 AARCH64.arch_capMasterCap AARCH64.arch_capBadge
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact CSpace_I_2_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact AARCH64.CSpace_I_2_assms)?)?)
 qed
 
 (* Arch constant definitions required to exist for sane locales in CSpace1_R *)

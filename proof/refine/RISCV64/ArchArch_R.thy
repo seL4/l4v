@@ -12,7 +12,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Arch_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Arch_R locale *)
 
 definition
   "asid_ci_map i \<equiv>
@@ -626,7 +626,7 @@ lemma decodeX64PageTableInvocation_corres:
   by (clarsimp split: invocation_label.splits arch_invocation_label.splits)
 
 
-lemma arch_decodeInvocation_corres[Arch_R_assms]:
+lemma arch_decodeInvocation_corres[Arch_assms]:
 notes check_vp_inv[wp del] check_vp_wpR[wp]
   (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
      check_vp_wpR should probably be generalised to replace check_vp_inv. *)
@@ -805,7 +805,7 @@ shows
   done
 
 
-lemma arch_performInvocation_corres[Arch_R_assms]:
+lemma arch_performInvocation_corres[Arch_assms]:
   "archinv_relation ai ai' \<Longrightarrow>
    corres (dc \<oplus> (=))
      (einvs and ct_active and valid_arch_inv ai and schact_is_rct)
@@ -889,7 +889,7 @@ lemma performASIDControlInvocation_tcb_at':
   apply clarsimp
   done
 
-lemma invokeArch_tcb_at'[Arch_R_assms]:
+lemma invokeArch_tcb_at'[Arch_assms]:
   "\<lbrace>invs' and valid_arch_inv' ai and ct_active' and st_tcb_at' active' p\<rbrace>
      Arch.performInvocation ai
    \<lbrace>\<lambda>rv. tcb_at' p\<rbrace>"
@@ -898,7 +898,7 @@ lemma invokeArch_tcb_at'[Arch_R_assms]:
                   wp: performASIDControlInvocation_tcb_at')
   done
 
-lemma sts_valid_arch_inv'[Arch_R_assms]:
+lemma sts_valid_arch_inv'[Arch_assms]:
   "\<lbrace>valid_arch_inv' ai\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_arch_inv' ai\<rbrace>"
   apply (cases ai, simp_all add: valid_arch_inv'_def)
      apply (clarsimp simp: valid_pti'_def split: page_table_invocation.splits)
@@ -952,7 +952,7 @@ lemma arch_cap_exhausted:
   by (cases acap; simp add: isCap_simps)
 
 crunch Arch.decodeInvocation
-  for inv[Arch_R_assms, wp]: P
+  for inv[Arch_assms, wp]: P
   (simp: crunch_simps wp: crunch_wps arch_cap_exhausted mapME_x_inv_wp getASID_wp)
 
 lemmas arch_decodeInvocation_inv = ArchRetypeDecls_H_RISCV64_H_decodeInvocation_inv
@@ -1072,7 +1072,7 @@ lemma arch_decodeInvocation_wf[wp]:
   apply (wpsimp, simp+)
   done
 
-lemma arch_decodeInvocation_wf_interface[Arch_R_assms]:
+lemma arch_decodeInvocation_wf_interface[Arch_assms]:
   "\<lbrace>invs' and valid_cap' (ArchObjectCap arch_cap) and
     cte_wp_at' ((=) (ArchObjectCap arch_cap) o cteCap) slot and
     (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at' ((=) (fst x) o cteCap) (snd x) s) and
@@ -1262,14 +1262,14 @@ lemma performASIDControlInvocation_invs' [wp]:
                     null_filter_descendants_of'[OF null_filter_simp'] bit_simps
                     valid_cap_simps' mask_def kernel_mappings_canonical)
 
-lemma arch_performInvocation_invs'[Arch_R_assms]:
+lemma arch_performInvocation_invs'[Arch_assms]:
   "\<lbrace>invs' and ct_active' and valid_arch_inv' invocation\<rbrace>
   Arch.performInvocation invocation
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   unfolding RISCV64_H.performInvocation_def
   by (cases invocation, simp_all add: performRISCVMMUInvocation_def valid_arch_inv'_def; wpsimp)
 
-lemma setObject_TCB_valid_duplicates'[Arch_R_assms, wp]:
+lemma setObject_TCB_valid_duplicates'[Arch_assms, wp]:
   "setObject p (tcb::tcb) \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   by wpsimp
 
@@ -1284,6 +1284,8 @@ lemma hv_inv_ex':
   apply simp
   done
 
+lemmas Arch_R_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 arch_requalify_consts
@@ -1292,8 +1294,7 @@ arch_requalify_consts
 
 interpretation Arch_R?: Arch_R valid_arch_inv' archinv_relation
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Arch_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact RISCV64.Arch_R_assms)?)?)
 qed
 
 end

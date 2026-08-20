@@ -11,9 +11,9 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems EmptyFail_H_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for EmptyFail_H locale *)
 
-lemma arch_deriveCap_empty_fail[EmptyFail_H_assms, intro!, wp, simp]:
+lemma arch_deriveCap_empty_fail[Arch_assms, intro!, wp, simp]:
   "empty_fail (Arch.deriveCap x y)"
   unfolding ARM_HYP_H.deriveCap_def
   by (cases y, auto simp: isCap_simps cong: if_cong)
@@ -35,7 +35,7 @@ lemma empty_fail_getObject_vcpu[intro!, wp, simp]:
   by (simp add: empty_fail_getObject)
 
 crunch decodeARMMMUInvocation, Arch_postCapDeletion, setRegister, prepareThreadDelete
-  for (empty_fail) empty_fail[EmptyFail_H_assms, intro!, wp, simp]
+  for (empty_fail) empty_fail[Arch_assms, intro!, wp, simp]
   (simp: Let_def ARMMMU_improve_cases
    wp: empty_fail_catch
    rule: ARM_HYP_H.postCapDeletion_def)
@@ -47,7 +47,7 @@ crunch vcpuEnable, vcpuRestore
 crunch
   Arch_finaliseCap, Arch.switchToThread, Arch.switchToIdleThread, prepareNextDomain, getRestartPC,
   makeArchFaultMessage
-  for (empty_fail) empty_fail[EmptyFail_H_assms, intro!, wp, simp]
+  for (empty_fail) empty_fail[Arch_assms, intro!, wp, simp]
   (rule: ARM_HYP_H.finaliseCap_def
    ignore: get_gic_vcpu_ctrl_vmcr get_gic_vcpu_ctrl_apr)
 
@@ -58,32 +58,34 @@ crunch
   handleArchFaultReply, prepareSetDomain, postModifyRegisters, postSetFlags,
   Arch.performIRQControl, Arch.invokeIRQHandler, Arch.performInvocation, handleSpuriousIRQ,
   maskIrqSignal, handleVMFault, checkIRQ, prepareThreadDelete, Arch.postCapDeletion
-  for (empty_fail) empty_fail[EmptyFail_H_assms, intro!, wp, simp]
+  for (empty_fail) empty_fail[Arch_assms, intro!, wp, simp]
   (simp: Let_def)
+
+lemmas EmptyFail_H_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 interpretation EmptyFail_H?: EmptyFail_H
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact EmptyFail_H_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact ARM_HYP.EmptyFail_H_assms)?)?)
 qed
 
 context Arch begin arch_global_naming
 
-named_theorems EmptyFail_H_2_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for EmptyFail_H_2 locale *)
 
 crunch
   handleReservedIRQ, handleHypervisorFault
-  for (empty_fail) empty_fail[EmptyFail_H_2_assms, intro!, wp, simp]
+  for (empty_fail) empty_fail[Arch_assms, intro!, wp, simp]
   (simp: Let_def)
+
+lemmas EmptyFail_H_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 interpretation EmptyFail_H_2?: EmptyFail_H_2
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact EmptyFail_H_2_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact ARM_HYP.EmptyFail_H_2_assms)?)?)
 qed
 
 crunch callKernel

@@ -14,7 +14,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems CNodeInv_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for CNodeInv_R locale *)
 
 definition ioport_state_independent_H :: "(kernel_state \<Rightarrow> bool) \<Rightarrow> bool" where
   "ioport_state_independent_H P \<equiv>
@@ -27,44 +27,44 @@ declare ioport_state_independent_H_def[simp]
 definition arch_finalise_prop_stuff :: "(kernel_state \<Rightarrow> bool) \<Rightarrow> bool" where
   "arch_finalise_prop_stuff P = ioport_state_independent_H P"
 
-lemma arch_finalise_prop_stuff_top[CNodeInv_R_assms, simp]:
+lemma arch_finalise_prop_stuff_top[Arch_assms, simp]:
   "arch_finalise_prop_stuff \<top>"
   by (simp add: arch_finalise_prop_stuff_def)
 
-lemma acap_relation_arch_update_cap_data_NullCap[CNodeInv_R_assms]:
+lemma acap_relation_arch_update_cap_data_NullCap[Arch_assms]:
   "acap_relation acap acap' \<Longrightarrow>
    (arch_update_cap_data P x acap = cap.NullCap) = (Arch.updateCapData P x acap' = NullCap)"
   unfolding arch_update_cap_data_def X64_H.updateCapData_def
   by (cases acap; simp)
 
-lemma cnode_guard_size_bits_wordRadix[CNodeInv_R_assms]:
+lemma cnode_guard_size_bits_wordRadix[Arch_assms]:
   "cnode_guard_size_bits = wordRadix"
   by (simp add: cnode_guard_size_bits_def wordRadix_def)
 
-lemma cteRightsBits_cnode_padding_bits[CNodeInv_R_assms]:
+lemma cteRightsBits_cnode_padding_bits[Arch_assms]:
   "cteRightsBits = cnode_padding_bits"
   by (simp add: cteRightsBits_def cnode_padding_bits_def)
 
 (* FIXME arch-split: valid_cnode_capI in CNodeInv_AI exposes the value of word_bits, replace with this *)
-lemma valid_cnode_capI'[CNodeInv_R_assms]:
+lemma valid_cnode_capI'[Arch_assms]:
   "\<lbrakk>cap_table_at n w s; valid_objs s; pspace_aligned s; 0 < n; length g \<le> word_bits\<rbrakk>
    \<Longrightarrow> s \<turnstile> cap.CNodeCap w n g"
   by (simp add: word_bits_def valid_cnode_capI)
 
-lemma arch_capBadge_updateCapData_True[CNodeInv_R_assms]:
+lemma arch_capBadge_updateCapData_True[Arch_assms]:
   "Arch.updateCapData True x acap \<noteq> NullCap \<Longrightarrow>
    capBadge (Arch.updateCapData True x acap) = arch_capBadge acap"
   unfolding X64_H.updateCapData_def
   by (cases acap; simp)
 
 crunch fpuRelease, prepareThreadDelete
-  for ctes_of[CNodeInv_R_assms, wp]: "\<lambda>s. P (ctes_of s)"
+  for ctes_of[Arch_assms, wp]: "\<lambda>s. P (ctes_of s)"
 
 crunch prepareThreadDelete
-  for not_recursive_ctes[CNodeInv_R_assms]: "\<lambda>s. P (not_recursive_ctes s)"
+  for not_recursive_ctes[Arch_assms]: "\<lambda>s. P (not_recursive_ctes s)"
   (simp: prepareThreadDelete_def not_recursive_ctes_def cteCaps_of_def)
 
-lemma in_preempt'[CNodeInv_R_assms]:
+lemma in_preempt'[Arch_assms]:
   "(Inr rv, s') \<in> fst (preemptionPoint s) \<Longrightarrow>
    \<exists>f g. s' = ksWorkUnitsCompleted_update f
                 (s \<lparr> ksMachineState := ksMachineState s \<lparr> irq_state := g (irq_state (ksMachineState s)) \<rparr>\<rparr>)"
@@ -90,19 +90,19 @@ lemma sameRegionAs_eq_parent:
    \<Longrightarrow> sameRegionAs c' cap"
   by (clarsimp simp: weak_derived'_def sameRegionAs_def2 isCap_simps)
 
-lemma sameRegion_ep[CNodeInv_R_assms]:
+lemma sameRegion_ep[Arch_assms]:
   "\<lbrakk> sameRegionAs cap cap'; isEndpointCap cap \<rbrakk> \<Longrightarrow> isEndpointCap cap'"
   by (auto simp: isCap_simps sameRegionAs_def3 isArchFrameCap_non_arch)
 
-lemma sameRegion_ntfn[CNodeInv_R_assms]:
+lemma sameRegion_ntfn[Arch_assms]:
   "\<lbrakk> sameRegionAs cap cap'; isNotificationCap cap \<rbrakk> \<Longrightarrow> isNotificationCap cap'"
   by (auto simp: isCap_simps sameRegionAs_def3 isArchFrameCap_non_arch)
 
-lemma sameRegionAs_Zombie[CNodeInv_R_assms, simp]:
+lemma sameRegionAs_Zombie[Arch_assms, simp]:
   "\<not> sameRegionAs (Zombie p zb n) cap"
   by (simp add: sameRegionAs_def3 isCap_simps)
 
-lemma isFinal_notUntyped_capRange_disjoint[CNodeInv_R_assms]:
+lemma isFinal_notUntyped_capRange_disjoint[Arch_assms]:
   "\<lbrakk> isFinal cap sl (cteCaps_of s); cteCaps_of s sl' = Some cap';
      sl \<noteq> sl'; capUntypedPtr cap = capUntypedPtr cap'; capBits cap = capBits cap';
      isThreadCap cap \<or> isCNodeCap cap; s \<turnstile>' cap;
@@ -123,7 +123,7 @@ lemma isFinal_notUntyped_capRange_disjoint[CNodeInv_R_assms]:
           (clarsimp simp: sameObjectAs_def3 isCap_simps)?)+
   done
 
-lemma ztc_sameRegion[CNodeInv_R_assms]:
+lemma ztc_sameRegion[Arch_assms]:
   "\<lbrakk> isCNodeCap cap \<or> isThreadCap cap \<or> isZombie cap \<rbrakk>
    \<Longrightarrow> sameRegionAs cap cap' = sameObjectAs cap cap'"
   apply (subgoal_tac "\<not> isUntypedCap cap \<and> \<not> isArchFrameCap cap
@@ -132,7 +132,7 @@ lemma ztc_sameRegion[CNodeInv_R_assms]:
    apply (auto simp: isCap_simps)
   done
 
-lemma mdb_chunked_update_final[CNodeInv_R_assms]:
+lemma mdb_chunked_update_final[Arch_assms]:
   assumes chunked: "mdb_chunked m"
          and slot: "m slot = Some (CTE cap node)"
          and Fin1: "\<And>x cte. m x = Some cte \<Longrightarrow> x \<noteq> slot
@@ -191,19 +191,19 @@ proof -
     done
 qed
 
-lemma sameRegionAs_ThreadCap_eq[CNodeInv_R_assms]:
+lemma sameRegionAs_ThreadCap_eq[Arch_assms]:
   "sameRegionAs (ThreadCap p) (ThreadCap p') = (p = p')"
   by (simp add: sameRegionAs_def2 isCap_simps)
 
-lemma sameRegionAs_IRQHandlerCap_eq[CNodeInv_R_assms]:
+lemma sameRegionAs_IRQHandlerCap_eq[Arch_assms]:
   "sameRegionAs (IRQHandlerCap irq) (IRQHandlerCap irq') = (irq = irq')"
   by (simp add: sameRegionAs_def2 isCap_simps)
 
-lemma sameRegionAs_CNodeCap_eq[CNodeInv_R_assms]:
+lemma sameRegionAs_CNodeCap_eq[Arch_assms]:
   "sameRegionAs (CNodeCap p b g gs) (CNodeCap p' b' g' gs') = (p = p' \<and> b = b')"
   by (simp add: sameRegionAs_def2 isCap_simps)
 
-lemma ztc_untyped_helper[CNodeInv_R_assms]:
+lemma ztc_untyped_helper[Arch_assms]:
   "\<lbrakk> isCNodeCap cap' \<or> isThreadCap cap' \<or> isZombie cap'; sameRegionAs cap cap' \<rbrakk>
    \<Longrightarrow> isUntypedCap cap \<or> sameRegionAs cap' cap"
   apply (erule sameRegionAsE)
@@ -217,12 +217,12 @@ lemma ztc_untyped_helper[CNodeInv_R_assms]:
     apply (clarsimp simp: isCap_simps)+
   done
 
-lemma valid_arch_badges_PhysicalClass[CNodeInv_R_assms]:
+lemma valid_arch_badges_PhysicalClass[Arch_assms]:
   "\<lbrakk> valid_arch_badges cap'' cap' node'; capClass cap'' = PhysicalClass; capClass cap = PhysicalClass \<rbrakk>
    \<Longrightarrow> valid_arch_badges cap cap' node'"
   by (auto simp: valid_arch_badges_def isCap_simps)
 
-lemma isFinal_Zombie[CNodeInv_R_assms]:
+lemma isFinal_Zombie[Arch_assms]:
   "isFinal (Zombie p' b n) p cs"
   by (simp add: isFinal_def sameObjectAs_def2 gen_isCap_simps)
 
@@ -239,13 +239,13 @@ crunch Arch.postCapDeletion
   for no_cte_prop[wp]: "no_cte_prop P"
 
 (* interface, above crunch does not result in same lemma on all architectures *)
-lemma arch_postCapDeletion_no_cte_prop[CNodeInv_R_assms]:
+lemma arch_postCapDeletion_no_cte_prop[Arch_assms]:
   "\<lbrace>no_cte_prop P and K (arch_finalise_prop_stuff P)\<rbrace>
    Arch.postCapDeletion t
    \<lbrace>\<lambda>_. no_cte_prop P\<rbrace>"
   by wpsimp
 
-lemma post_cap_delete_pre'_IRQHandlerCap[CNodeInv_R_assms]:
+lemma post_cap_delete_pre'_IRQHandlerCap[Arch_assms]:
   "post_cap_delete_pre' (IRQHandlerCap irq) sl cs
    = (arch_valid_irq irq \<and> (\<forall>sl'. sl \<noteq> sl' \<longrightarrow> cs sl' \<noteq> Some (IRQHandlerCap irq)))"
   by (simp add: post_cap_delete_pre'_def)
@@ -255,14 +255,14 @@ lemma final_IOPort_no_copy:
    \<Longrightarrow> cteCaps_of s sl' \<noteq> Some (ArchObjectCap (IOPortCap f l))"
   by (fastforce simp: isFinal_def sameObjectAs_def2 isCap_simps)
 
-lemma final_post_cap_delete_pre'_ArchObjectCap[CNodeInv_R_assms]:
+lemma final_post_cap_delete_pre'_ArchObjectCap[Arch_assms]:
   "\<lbrakk> isFinal (ArchObjectCap acap) sl (cteCaps_of s); arch_cap_has_cleanup' acap;
      valid_arch_cap' acap s\<rbrakk>
    \<Longrightarrow> post_cap_delete_pre' (ArchObjectCap acap) sl (cteCaps_of s)"
   by (clarsimp simp add: post_cap_delete_pre'_def arch_cap_has_cleanup'_def isCap_simps final_IOPort_no_copy)
 
 crunch Arch_finaliseCap, prepareThreadDelete
-  for st_tcb_at'[CNodeInv_R_assms, wp]: "st_tcb_at' P t"
+  for st_tcb_at'[Arch_assms, wp]: "st_tcb_at' P t"
   (simp: crunch_simps
    wp: crunch_wps getObject_inv loadObject_default_inv
    rule: X64_H.finaliseCap_def)
@@ -278,7 +278,7 @@ lemma archThreadSet_rvk_prog':
   by (wpsimp simp: cteCaps_of_def)
 
 crunch prepareThreadDelete, Arch_finaliseCap
-  for rvk_prog'[CNodeInv_R_assms]:
+  for rvk_prog'[Arch_assms]:
         "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
   (wp: crunch_wps emptySlot_rvk_prog' threadSet_ctesCaps_of
        getObject_inv loadObject_default_inv
@@ -293,13 +293,13 @@ lemma arch_recycleCap_improve_cases:
     \<Longrightarrow> (if isASIDPoolCap cap then v else undefined) = v"
   by (cases cap, simp_all add: isCap_simps)
 
-lemma cap_relation_trans[CNodeInv_R_assms]:
+lemma cap_relation_trans[Arch_assms]:
   "\<lbrakk> cap_relation cap cap'; cap_relation cap cap'' \<rbrakk>
    \<Longrightarrow> cap' = cap''"
   by (clarsimp split: cap_relation_split_asm arch_cap.split_asm)
 
 crunch Arch_finaliseCap, prepareThreadDelete
-  for irq_states'[CNodeInv_R_assms, wp]: valid_irq_states'
+  for irq_states'[Arch_assms, wp]: valid_irq_states'
   (wp: crunch_wps unless_wp getASID_wp
    simp: crunch_simps o_def
    rule: X64_H.finaliseCap_def)
@@ -433,9 +433,11 @@ end (* mdb_move *)
 
 context Arch begin arch_global_naming
 
-lemmas [CNodeInv_R_assms] =
+lemmas [Arch_assms] =
   mdb_swap.cteSwap_valid_mdb_helper
   mdb_move.cteMove_valid_mdb_helper
+
+lemmas CNodeInv_R_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
@@ -443,9 +445,8 @@ arch_requalify_consts arch_finalise_prop_stuff
 
 interpretation CNodeInv_R?: CNodeInv_R arch_finalise_prop_stuff
 proof goal_cases
-  interpret Arch  .
 
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact CNodeInv_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact X64.CNodeInv_R_assms)?)?)
 qed
 
 context Arch begin arch_global_naming

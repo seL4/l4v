@@ -13,7 +13,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Arch_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Arch_R locale *)
 
 declare arch_cap.sel[datatype_schematic]
 
@@ -433,7 +433,7 @@ lemma ARMMMU_improve_cases:
   done
 
 crunch Arch.decodeInvocation
-  for inv[Arch_R_assms, wp]: "P"
+  for inv[Arch_assms, wp]: "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp hoare_vcg_imp_lift'
    simp: crunch_simps ARMMMU_improve_cases)
 
@@ -1017,7 +1017,7 @@ lemma decodeSMCInvocation_corres:
   by (corres corres: corres_returnOk[where P=\<top> and P'=\<top>]
              simp: archinv_relation_def smc_invocation_map_def)
 
-lemma arch_decodeInvocation_corres[Arch_R_assms]:
+lemma arch_decodeInvocation_corres[Arch_assms]:
   "\<lbrakk> acap_relation arch_cap arch_cap';
      list_all2 cap_relation (map fst excaps) (map fst excaps');
      list_all2 (\<lambda>s s'. s' = cte_map s) (map snd excaps) (map snd excaps') \<rbrakk> \<Longrightarrow>
@@ -1319,7 +1319,7 @@ lemma performARMVCPUInvocation_corres:
      apply (rule inv_corres [THEN corres_guard_imp]; simp add: invs_no_0_obj' invs_implies)+
   done
 
-lemma arch_performInvocation_corres[Arch_R_assms]:
+lemma arch_performInvocation_corres[Arch_assms]:
   "archinv_relation ai ai' \<Longrightarrow>
    corres (dc \<oplus> (=))
      (einvs and ct_active and valid_arch_inv ai and schact_is_rct)
@@ -1442,7 +1442,7 @@ crunch performVSpaceInvocation, performARMVCPUInvocation, performSGISignalGenera
        performSMCInvocation
   for tcb_at'[wp]: "\<lambda>s. tcb_at' p s"
 
-lemma invokeArch_tcb_at'[Arch_R_assms]:
+lemma invokeArch_tcb_at'[Arch_assms]:
   "\<lbrace>invs' and valid_arch_inv' ai and ct_active' and st_tcb_at' active' p\<rbrace>
      Arch.performInvocation ai
    \<lbrace>\<lambda>rv. tcb_at' p\<rbrace>"
@@ -1451,7 +1451,7 @@ lemma invokeArch_tcb_at'[Arch_R_assms]:
                   wp: performASIDControlInvocation_tcb_at')
   done
 
-lemma sts_valid_arch_inv'[Arch_R_assms]: (* FIXME AARCH64 cleanup *)
+lemma sts_valid_arch_inv'[Arch_assms]: (* FIXME AARCH64 cleanup *)
   "\<lbrace>valid_arch_inv' ai\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_arch_inv' ai\<rbrace>"
   apply (cases ai, simp_all add: valid_arch_inv'_def)
          apply (clarsimp simp: valid_vsi'_def split: vspace_invocation.splits)
@@ -1712,7 +1712,7 @@ lemma arch_decodeInvocation_wf[wp]:
   apply (wpsimp simp: valid_arch_inv'_def)
   done
 
-lemma arch_decodeInvocation_wf_interface[Arch_R_assms]:
+lemma arch_decodeInvocation_wf_interface[Arch_assms]:
   "\<lbrace>invs' and valid_cap' (ArchObjectCap arch_cap) and
     cte_wp_at' ((=) (ArchObjectCap arch_cap) o cteCap) slot and
     (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at' ((=) (fst x) o cteCap) (snd x) s) and
@@ -2071,7 +2071,7 @@ lemma performSMCInvocation_invs[wp]:
   unfolding performSMCInvocation_def
   by (wpsimp wp: dmo_invs_lift' hoare_drop_imps)
 
-lemma arch_performInvocation_invs'[Arch_R_assms]:
+lemma arch_performInvocation_invs'[Arch_assms]:
   "\<lbrace>invs' and ct_active' and valid_arch_inv' invocation\<rbrace>
   Arch.performInvocation invocation
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -2080,9 +2080,11 @@ lemma arch_performInvocation_invs'[Arch_R_assms]:
        apply wpsimp+
   done
 
-lemma setObject_TCB_valid_duplicates'[Arch_R_assms, wp]:
+lemma setObject_TCB_valid_duplicates'[Arch_assms, wp]:
   "setObject p (tcb::tcb) \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   by wpsimp
+
+lemmas Arch_R_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
@@ -2092,8 +2094,7 @@ arch_requalify_consts
 
 interpretation Arch_R?: Arch_R valid_arch_inv' archinv_relation
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Arch_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact AARCH64.Arch_R_assms)?)?)
 qed
 
 end

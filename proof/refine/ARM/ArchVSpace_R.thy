@@ -12,7 +12,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems VSpace_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for VSpace_R locale *)
 
 lemmas store_pte_typ_ats[wp] = store_pte_typ_ats abs_atyp_at_lifts[OF store_pte_typ_at]
 lemmas store_pde_typ_ats[wp] = store_pde_typ_ats abs_atyp_at_lifts[OF store_pde_typ_at]
@@ -526,7 +526,7 @@ lemma handleVMFault_corres':
   done
 
 (* interface lemma, superset of all architecture preconditions *)
-lemma handleVMFault_corres[VSpace_R_assms]:
+lemma handleVMFault_corres[Arch_assms]:
   "corres (fr \<oplus> dc) (tcb_at thread and pspace_aligned and pspace_distinct) (tcb_at' thread)
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
   by (corres corres: handleVMFault_corres')
@@ -3423,12 +3423,13 @@ lemma isPDCap_PD :
   "isPDCap (ArchObjectCap (PageDirectoryCap r m))"
   by (simp add: isPDCap_def)
 
+lemmas VSpace_R_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 interpretation VSpace_R?: VSpace_R
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact VSpace_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact ARM.VSpace_R_assms)?)?)
 qed
 
 end

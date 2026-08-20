@@ -12,7 +12,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems VSpace_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for VSpace_R locale *)
 
 definition
   "vspace_at_asid' vs asid \<equiv> \<lambda>s. \<exists>ap pool.
@@ -171,7 +171,7 @@ lemma handleVMFault_corres':
   done
 
 (* interface lemma, superset of all architecture preconditions *)
-lemma handleVMFault_corres[VSpace_R_assms]:
+lemma handleVMFault_corres[Arch_assms]:
   "corres (fr \<oplus> dc) (tcb_at thread and pspace_aligned and pspace_distinct) (tcb_at' thread)
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
   by (corres corres: handleVMFault_corres')
@@ -2544,12 +2544,13 @@ crunch flushTable
   for valid_arch_state'[wp]: valid_arch_state'
   (wp: crunch_wps  simp: crunch_simps unless_def)
 
+lemmas VSpace_R_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 interpretation VSpace_R?: VSpace_R
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact VSpace_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact X64.VSpace_R_assms)?)?)
 qed
 
 end

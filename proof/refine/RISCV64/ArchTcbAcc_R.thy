@@ -11,19 +11,19 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems TcbAcc_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for TcbAcc_R locale *)
 
 (* FIXME: move & the versions in Machine_AI could use word_size_bits form instead of specific number *)
-lemma no_fail_loadWord_bits[TcbAcc_R_assms, wp]:
+lemma no_fail_loadWord_bits[Arch_assms, wp]:
   "no_fail (\<lambda>_. is_aligned p word_size_bits) (loadWord p)"
   by (wpsimp simp: loadWord_def is_aligned_mask[symmetric] word_size_bits_def)
 
 (* FIXME: move & the versions in Machine_AI could use word_size_bits form instead of specific number *)
-lemma no_fail_storeWord_bits[TcbAcc_R_assms]:
+lemma no_fail_storeWord_bits[Arch_assms]:
   "no_fail (\<lambda>_. is_aligned p word_size_bits) (storeWord p w)"
   by (wpsimp simp: storeWord_def is_aligned_mask[symmetric] word_size_bits_def)
 
-lemma prioToL1Index_l1IndexToPrio_or_id[TcbAcc_R_assms]:
+lemma prioToL1Index_l1IndexToPrio_or_id[Arch_assms]:
   "\<lbrakk> unat (w'::priority) < 2 ^ wordRadix ; w < 2^(size w' - wordRadix) \<rbrakk>
    \<Longrightarrow> prioToL1Index ((l1IndexToPrio w) || w') = w"
   unfolding l1IndexToPrio_def prioToL1Index_def
@@ -33,12 +33,12 @@ lemma prioToL1Index_l1IndexToPrio_or_id[TcbAcc_R_assms]:
   apply (subst unat_of_nat_eq, simp_all add: word_size)
   done
 
-lemma l1IndexToPrio_wordRadix_mask[TcbAcc_R_assms, simp]:
+lemma l1IndexToPrio_wordRadix_mask[Arch_assms, simp]:
   "l1IndexToPrio i && mask wordRadix = 0"
   unfolding l1IndexToPrio_def
   by (simp add: wordRadix_def')
 
-lemma st_tcb_at_coerce_abstract[TcbAcc_R_assms]:
+lemma st_tcb_at_coerce_abstract[Arch_assms]:
   assumes t: "st_tcb_at' P t c"
   assumes sr: "(a, c) \<in> state_relation"
   shows "st_tcb_at (\<lambda>st. \<exists>st'. thread_state_relation st st' \<and> P st') t a"
@@ -62,7 +62,7 @@ lemma tcb_at'_cross:
                      other_obj_relation_def pte_relation_def is_tcb_def
               split: Structures_A.kernel_object.split_asm if_split_asm arch_kernel_obj.split_asm)
 
-lemma setObject_update_TCB_corres'[TcbAcc_R_assms]:
+lemma setObject_update_TCB_corres'[Arch_assms]:
   assumes tcbs: "tcb_relation tcb tcb' \<Longrightarrow> tcb_relation new_tcb new_tcb'"
   assumes tables: "\<forall>(getF, v) \<in> ran tcb_cap_cases. getF new_tcb = getF tcb"
   assumes tables': "\<forall>(getF, v) \<in> ran tcb_cte_cases. getF new_tcb' = getF tcb'"
@@ -134,11 +134,11 @@ lemma setObject_update_TCB_corres'[TcbAcc_R_assms]:
    apply (fastforce simp: opt_map_def)
   by (clarsimp simp: ready_queue_relation_def opt_pred_def opt_map_def split: option.splits)
 
-lemma setObject_tcb_valid_arch'[TcbAcc_R_assms, wp]:
+lemma setObject_tcb_valid_arch'[Arch_assms, wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setObject t (v :: tcb) \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
   by (wp valid_arch_state_lift' setObject_typ_at')
 
-lemma setObject_tcb_refs'[TcbAcc_R_assms, wp]:
+lemma setObject_tcb_refs'[Arch_assms, wp]:
   "\<lbrace>\<lambda>s. P (global_refs' s)\<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>rv s. P (global_refs' s)\<rbrace>"
   apply (clarsimp simp: setObject_def split_def updateObject_default_def)
   apply wp
@@ -146,7 +146,7 @@ lemma setObject_tcb_refs'[TcbAcc_R_assms, wp]:
   done
 
 (* assumption not needed on this architecture, but used in generic interface *)
-lemma threadSet_state_hyp_refs_of'[TcbAcc_R_assms]:
+lemma threadSet_state_hyp_refs_of'[Arch_assms]:
   assumes y: "\<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)"
   shows      "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> threadSet F t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   apply (simp add: threadSet_def)
@@ -154,7 +154,7 @@ lemma threadSet_state_hyp_refs_of'[TcbAcc_R_assms]:
                 simp: gen_objBits_simps obj_at'_def state_hyp_refs_of'_def)
   done
 
-lemma threadSet_iflive'T[TcbAcc_R_assms]:
+lemma threadSet_iflive'T[Arch_assms]:
   assumes x: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
   shows
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
@@ -188,11 +188,11 @@ lemma threadSet_iflive'T[TcbAcc_R_assms]:
 sublocale threadSet: typ_at_props' "threadSet tptr f"
   by typ_at_props'
 
-lemma zobj_refs'_capRange[TcbAcc_R_assms]:
+lemma zobj_refs'_capRange[Arch_assms]:
   "s \<turnstile>' cap \<Longrightarrow> zobj_refs' cap \<subseteq> capRange cap"
   by (cases cap; simp add: valid_cap'_def capAligned_def capRange_def is_aligned_no_overflow)
 
-lemma capAligned_zobj_refs'_capRange[TcbAcc_R_assms]:
+lemma capAligned_zobj_refs'_capRange[Arch_assms]:
   "capAligned c \<Longrightarrow> zobj_refs' c \<subseteq> capRange c"
   by (cases c; simp add: capAligned_def capRange_def is_aligned_no_overflow)
 
@@ -219,7 +219,7 @@ schematic_goal l2BitmapSize_def': (* arch specific consequence *)
   "l2BitmapSize = numeral ?X"
   by (simp add: l2BitmapSize_def wordBits_def word_size numPriorities_def)
 
-lemma prioToL1Index_size[TcbAcc_R_assms, simp]:
+lemma prioToL1Index_size[Arch_assms, simp]:
   "prioToL1Index w < l2BitmapSize"
   unfolding prioToL1Index_def wordRadix_def l2BitmapSize_def'
   by (fastforce simp: shiftr_div_2n' nat_divide_less_eq
@@ -230,12 +230,12 @@ lemma prioToL1Index_max:
   unfolding prioToL1Index_def wordRadix_def
   by (insert unat_lt2p[where x=p], simp add: shiftr_div_2n')
 
-lemma prioToL1Index_bit_set[TcbAcc_R_assms]:
+lemma prioToL1Index_bit_set[Arch_assms]:
   "((2 :: machine_word) ^ prioToL1Index p) !! prioToL1Index p"
   using l2BitmapSize_def'
   by (fastforce simp: nth_w2p_same intro: order_less_le_trans[OF prioToL1Index_size])
 
-lemma prioL2Index_bit_set[TcbAcc_R_assms]:
+lemma prioL2Index_bit_set[Arch_assms]:
   fixes p :: priority
   shows "((2::machine_word) ^ unat (ucast p && (mask wordRadix :: machine_word))) !! unat (p && mask wordRadix)"
   apply (simp add: nth_w2p wordRadix_def ucast_and_mask[symmetric] unat_ucast_upcast is_up)
@@ -254,25 +254,25 @@ lemma prioToL1Index_bits_low_high_eq:
   unfolding prioToL1Index_def
   by (fastforce simp: nth_w2p wordRadix_def is_up bits_low_high_eq)
 
-lemma prioToL1Index_bit_not_set[TcbAcc_R_assms]:
+lemma prioToL1Index_bit_not_set[Arch_assms]:
   "\<not> (~~ ((2 :: machine_word) ^ prioToL1Index p)) !! prioToL1Index p"
   apply (subst word_ops_nth_size, simp_all add: prioToL1Index_bit_set del: bit_exp_iff)
   apply (fastforce simp: prioToL1Index_def wordRadix_def word_size
                   intro: order_less_le_trans[OF word_shiftr_lt])
   done
 
-lemma prioToL1Index_complement_nth_w2p[TcbAcc_R_assms]:
+lemma prioToL1Index_complement_nth_w2p[Arch_assms]:
   fixes p p' :: priority
   shows "(~~ ((2 :: machine_word) ^ prioToL1Index p)) !! prioToL1Index p'
           = (prioToL1Index p \<noteq> prioToL1Index p')"
   by (fastforce simp: complement_nth_w2p prioToL1Index_lt wordRadix_def word_size)+
 
-lemma invertL1Index_eq_cancelD[TcbAcc_R_assms]:
+lemma invertL1Index_eq_cancelD[Arch_assms]:
   "\<lbrakk>  invertL1Index i = invertL1Index j ; i < l2BitmapSize ; j < l2BitmapSize \<rbrakk>
    \<Longrightarrow> i = j"
    by (simp add: invertL1Index_def l2BitmapSize_def')
 
-lemma pspace_dom_dom[TcbAcc_R_assms]:
+lemma pspace_dom_dom[Arch_assms]:
   "dom ps \<subseteq> pspace_dom ps"
   unfolding pspace_dom_def
   apply clarsimp
@@ -290,7 +290,7 @@ lemma pspace_dom_dom[TcbAcc_R_assms]:
   apply (simp add: pageBitsForSize_def bit_simps split: vmpage_size.split)
   done
 
-lemma less_max_ipc_words_less_2p_msg_align_bits[TcbAcc_R_assms]:
+lemma less_max_ipc_words_less_2p_msg_align_bits[Arch_assms]:
   assumes y: "y < unat max_ipc_words"
   shows "word_of_nat y * (word_size :: machine_word) < 2 ^ msg_align_bits"
   apply (simp add: word_size_def word_size_bits_def)
@@ -299,37 +299,38 @@ lemma less_max_ipc_words_less_2p_msg_align_bits[TcbAcc_R_assms]:
     apply (simp add: msg_align_bits max_ipc_words)+
   done
 
-lemma is_aligned_word_size_bits_less_max_ipc_words[TcbAcc_R_assms]:
+lemma is_aligned_word_size_bits_less_max_ipc_words[Arch_assms]:
   "y < unat max_ipc_words \<Longrightarrow> is_aligned (word_of_nat y * word_size) word_size_bits"
   by (simp add: word_size_def word_size_bits_def)
      (rule is_aligned_mult_triv2[where n=3, simplified])
 
-lemma msg_align_bits_le_pageBitsForSize[TcbAcc_R_assms]:
+lemma msg_align_bits_le_pageBitsForSize[Arch_assms]:
   "msg_align_bits \<le> pageBitsForSize sz"
   by (simp add: msg_align_bits pageBitsForSize_def bit_simps split: vmpage_size.split)
 
-lemmas [TcbAcc_R_assms] =
+lemmas [Arch_assms] =
   dmo_getirq_inv
   getActiveIRQ_masked
   tcb_at'_cross
   pspace_relation_update_tcbs
 
+lemmas TcbAcc_R_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 interpretation TcbAcc_R?: TcbAcc_R
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact TcbAcc_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact RISCV64.TcbAcc_R_assms)?)?)
 qed
 
 context Arch begin arch_global_naming
 
-named_theorems TcbAcc_R_2_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for TcbAcc_R_2 locale *)
 
 sublocale asUser: typ_at_props' "asUser tptr f"
   by typ_at_props'
 
-lemma tcb_hyp_refs'_valid_arch_tcb'_eq[TcbAcc_R_2_assms]:
+lemma tcb_hyp_refs'_valid_arch_tcb'_eq[Arch_assms]:
   "tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)
    \<Longrightarrow> valid_arch_tcb' (tcbArch (F tcb)) s = valid_arch_tcb' (tcbArch tcb) s"
   by (auto simp: valid_arch_tcb'_def)
@@ -404,14 +405,14 @@ lemma asUser_corres:
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   done
 
-lemma asUser_getRegister_corres[TcbAcc_R_2_assms]:
+lemma asUser_getRegister_corres[Arch_assms]:
  "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
         (as_user t (getRegister r)) (asUser t (getRegister r))"
   apply (rule asUser_corres')
   apply (clarsimp simp: getRegister_def)
   done
 
-lemma user_getreg_inv'[TcbAcc_R_2_assms, wp]:
+lemma user_getreg_inv'[Arch_assms, wp]:
   "\<lbrace>P\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>x. P\<rbrace>"
   apply (rule asUser_inv)
    apply (simp_all add: getRegister_def)
@@ -445,7 +446,7 @@ lemma asUser_iflive'[wp]:
   unfolding asUser_def
   by (wpsimp wp: threadSet_iflive' hoare_drop_imps, auto)
 
-lemma asUser_setRegister_corres[TcbAcc_R_2_assms]:
+lemma asUser_setRegister_corres[Arch_assms]:
   "corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
              (as_user t (setRegister r v))
              (asUser t (setRegister r v))"
@@ -454,7 +455,7 @@ lemma asUser_setRegister_corres[TcbAcc_R_2_assms]:
   apply (rule corres_modify'; simp)
   done
 
-lemma removeFromBitmap_bitmapQ_no_L1_orphans[TcbAcc_R_2_assms, wp]:
+lemma removeFromBitmap_bitmapQ_no_L1_orphans[Arch_assms, wp]:
   "\<lbrace> bitmapQ_no_L1_orphans \<rbrace> removeFromBitmap d p \<lbrace>\<lambda>_. bitmapQ_no_L1_orphans \<rbrace>"
   unfolding bitmap_fun_defs
   apply (wp | simp add: bitmap_fun_defs bitmapQ_no_L1_orphans_def)+
@@ -462,7 +463,7 @@ lemma removeFromBitmap_bitmapQ_no_L1_orphans[TcbAcc_R_2_assms, wp]:
                          prioToL1Index_complement_nth_w2p)
   done
 
-lemma removeFromBitmap_bitmapQ_no_L2_orphans[TcbAcc_R_2_assms, wp]:
+lemma removeFromBitmap_bitmapQ_no_L2_orphans[Arch_assms, wp]:
   "\<lbrace> bitmapQ_no_L2_orphans and bitmapQ_no_L1_orphans \<rbrace>
    removeFromBitmap d p
    \<lbrace>\<lambda>_. bitmapQ_no_L2_orphans \<rbrace>"
@@ -474,7 +475,7 @@ lemma removeFromBitmap_bitmapQ_no_L2_orphans[TcbAcc_R_2_assms, wp]:
   apply metis
   done
 
-lemma removeFromBitmap_valid_bitmapQ_except[TcbAcc_R_2_assms]:
+lemma removeFromBitmap_valid_bitmapQ_except[Arch_assms]:
   "\<lbrace> valid_bitmapQ_except d p \<rbrace>
    removeFromBitmap d p
    \<lbrace>\<lambda>_. valid_bitmapQ_except d p \<rbrace>"
@@ -525,7 +526,7 @@ proof -
   done
 qed
 
-lemma addToBitmap_bitmapQ_no_L1_orphans[TcbAcc_R_2_assms, wp]:
+lemma addToBitmap_bitmapQ_no_L1_orphans[Arch_assms, wp]:
   "\<lbrace> bitmapQ_no_L1_orphans \<rbrace> addToBitmap d p \<lbrace>\<lambda>_. bitmapQ_no_L1_orphans \<rbrace>"
   unfolding bitmap_fun_defs bitmapQ_defs
   using word_unat_mask_lt[where w=p and m=wordRadix]
@@ -535,7 +536,7 @@ lemma addToBitmap_bitmapQ_no_L1_orphans[TcbAcc_R_2_assms, wp]:
                         wordBits_def numPriorities_def)
   done
 
-lemma addToBitmap_valid_bitmapQ_except[TcbAcc_R_2_assms]:
+lemma addToBitmap_valid_bitmapQ_except[Arch_assms]:
   "\<lbrace> valid_bitmapQ_except d p and bitmapQ_no_L2_orphans \<rbrace>
      addToBitmap d p
    \<lbrace>\<lambda>_. valid_bitmapQ_except d p \<rbrace>"
@@ -547,7 +548,7 @@ lemma addToBitmap_valid_bitmapQ_except[TcbAcc_R_2_assms]:
                    dest: prioToL1Index_bits_low_high_eq)
   done
 
-lemma in_user_frame_eq[TcbAcc_R_2_assms]:
+lemma in_user_frame_eq[Arch_assms]:
   assumes y: "y < unat max_ipc_words"
   and    al: "is_aligned a msg_align_bits"
   shows "in_user_frame (a + of_nat y * word_size) s = in_user_frame a s"
@@ -574,15 +575,15 @@ lemma thread_get_registers:
   apply (clarsimp simp: map_upd_triv select_f_def image_def return_def)
   done
 
-lemma msgRegisters_msg_registers[TcbAcc_R_2_assms]:
+lemma msgRegisters_msg_registers[Arch_assms]:
   "msgRegisters = msg_registers"
   by (simp add: msgRegisters_unfold)
 
-lemma suc_len_msg_registers_less_2p_word_bits[TcbAcc_R_2_assms]:
+lemma suc_len_msg_registers_less_2p_word_bits[Arch_assms]:
   "Suc (length msg_registers) < 2 ^ word_bits"
   by (simp add: msgRegisters_unfold word_bits_def)
 
-lemma asUser_mapM_getRegister_corres[TcbAcc_R_2_assms]:
+lemma asUser_mapM_getRegister_corres[Arch_assms]:
   "corres (\<lambda>con regs. regs = map con msg_registers)
           (tcb_at t and pspace_aligned and pspace_distinct) \<top>
           (thread_get (arch_tcb_get_registers o tcb_arch) t)
@@ -618,7 +619,7 @@ lemma UserContext_fold:
 
 lemmas valid_ipc_buffer_cap_simps = valid_ipc_buffer_cap_def [split_simps cap.split arch_cap.split]
 
-lemma lookupIPCBuffer_corres'[TcbAcc_R_2_assms]:
+lemma lookupIPCBuffer_corres'[Arch_assms]:
   "corres (=)
      (tcb_at t and valid_objs and pspace_aligned and pspace_distinct)
      (valid_objs' and no_0_obj')
@@ -675,7 +676,7 @@ crunch rescheduleRequired, tcbSchedEnqueue
   for hyp_refs_of'[wp]: "\<lambda>s. P (state_hyp_refs_of' s)"
   (simp: unless_def crunch_simps wp: threadSet_state_hyp_refs_of' ignore: threadSet)
 
-lemmas [TcbAcc_R_2_assms] =
+lemmas [Arch_assms] =
   getThreadBufferSlot_inv
   lookupIPCBuffer_inv
   rescheduleRequired_hyp_refs_of'
@@ -686,7 +687,7 @@ lemma archThreadGet_wp:
   unfolding archThreadGet_def
   by (wpsimp wp: getObject_tcb_wp simp: obj_at'_def)
 
-lemma setThreadState_state_hyp_refs_of'[TcbAcc_R_2_assms, wp]:
+lemma setThreadState_state_hyp_refs_of'[Arch_assms, wp]:
   "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s))\<rbrace>
      setThreadState st t
    \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
@@ -694,14 +695,14 @@ lemma setThreadState_state_hyp_refs_of'[TcbAcc_R_2_assms, wp]:
         | wp threadSet_state_hyp_refs_of')+
   done
 
-lemma setBoundNotification_state_hyp_refs_of'[TcbAcc_R_2_assms, wp]:
+lemma setBoundNotification_state_hyp_refs_of'[Arch_assms, wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>
      setBoundNotification ntfn t
    \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   by (simp add: setBoundNotification_def fun_upd_def
         | wp threadSet_state_hyp_refs_of')+
 
-lemma storeWord_invs'[TcbAcc_R_2_assms, wp]:
+lemma storeWord_invs'[Arch_assms, wp]:
   "\<lbrace>pointerInUserData p and invs'\<rbrace> doMachineOp (storeWord p w) \<lbrace>\<lambda>rv. invs'\<rbrace>"
 proof -
   have aligned_offset_ignore:
@@ -726,7 +727,7 @@ proof -
   done
 qed
 
-lemma storeWord_invs_no_cicd'[TcbAcc_R_2_assms, wp]:
+lemma storeWord_invs_no_cicd'[Arch_assms, wp]:
   "\<lbrace>pointerInUserData p and invs_no_cicd'\<rbrace> doMachineOp (storeWord p w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
 proof -
   have aligned_offset_ignore:
@@ -754,25 +755,26 @@ qed
 crunch tcbSchedAppend
   for pspace_in_kernel_mappings'[wp]: pspace_in_kernel_mappings'
 
-lemmas [TcbAcc_R_2_assms] = tcbSchedAppend_pspace_in_kernel_mappings'
+lemmas [Arch_assms] = tcbSchedAppend_pspace_in_kernel_mappings'
 
 (* FIXME: the code assumes that it is word_t, so length_type should be defined generically in ASpec,
    not per architecture *)
-lemmas [TcbAcc_R_2_assms] = meta_eq_to_obj_eq[OF nat_to_len_def]
+lemmas [Arch_assms] = meta_eq_to_obj_eq[OF nat_to_len_def]
+
+lemmas TcbAcc_R_2_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 interpretation TcbAcc_R_2?: TcbAcc_R_2
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact TcbAcc_R_2_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact RISCV64.TcbAcc_R_2_assms)?)?)
 qed
 
 context Arch begin arch_global_naming
 
-named_theorems TcbAcc_R_3_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for TcbAcc_R_3 locale *)
 
-lemma setMRs_corres[TcbAcc_R_3_assms]:
+lemma setMRs_corres[Arch_assms]:
   assumes m: "mrs' = mrs"
   shows
   "corres (=) (tcb_at t and pspace_aligned and pspace_distinct and case_option \<top> in_user_frame buf)
@@ -844,7 +846,7 @@ lemma asUser_invs[wp]:
 crunch storeWordUser
   for pred_tcb_at'[wp]: "\<lambda>s. pred_tcb_at' proj P p s"
 
-lemma set_mrs_invs'[TcbAcc_R_3_assms, wp]:
+lemma set_mrs_invs'[Arch_assms, wp]:
   "\<lbrace> invs' and tcb_at' receiver \<rbrace> setMRs receiver recv_buf mrs \<lbrace>\<lambda>rv. invs' \<rbrace>"
   apply (simp add: setMRs_def)
   apply (wp dmo_invs' no_irq_mapM no_irq_storeWord crunch_wps|
@@ -863,12 +865,13 @@ sublocale setThreadState: typ_at_props' "setThreadState st p"
 sublocale setBoundNotification: typ_at_props' "setBoundNotification v p"
   by typ_at_props'
 
+lemmas TcbAcc_R_3_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 interpretation TcbAcc_R_3?: TcbAcc_R_3
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact TcbAcc_R_3_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact RISCV64.TcbAcc_R_3_assms)?)?)
 qed
 
 (* requalify interface lemmas which can't be locale assumptions due to free type variable *)
