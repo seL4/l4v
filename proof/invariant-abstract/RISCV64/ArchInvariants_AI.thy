@@ -35,6 +35,10 @@ end_qualify
 
 context Arch begin arch_global_naming
 
+(* used to accumulate theorems for satisfying Arch interface assumptions;
+   remember to clear before starting a new accumulation *)
+named_theorems Arch_assms
+
 (* compatibility with other architectures, input only *)
 abbreviation
   "vs_lookup s \<equiv> \<lambda>level asid vref. vs_lookup_table level asid vref s"
