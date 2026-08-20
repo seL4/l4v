@@ -567,16 +567,19 @@ instance user_data_device :: no_vcpu by intro_classes auto
 
 end_qualify
 
+(* FIXME arch-split: koType_asidpool and koType_pte are somehow [simp] even outside Arch on AARCH64
+   due to how pre_storable instantiation is done *)
+
 instantiation AARCH64_H.asidpool :: no_vcpu
 begin
-interpretation Arch .
-instance by intro_classes auto
+instance by intro_classes
+            (auto simp: AARCH64_H.arch_kernel_object_type.distinct)
 end
 
 instantiation AARCH64_H.pte :: no_vcpu
 begin
-interpretation Arch .
-instance by intro_classes auto
+instance by intro_classes
+            (auto simp: AARCH64_H.arch_kernel_object_type.distinct)
 end
 
 end

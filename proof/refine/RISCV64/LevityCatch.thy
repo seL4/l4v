@@ -41,16 +41,11 @@ lemma updateObject_default_inv:
   unfolding updateObject_default_def
   by (wpsimp wp: magnitudeCheck_inv alignCheck_inv projectKO_inv)
 
-
-context begin interpretation Arch .
+context Arch begin arch_global_naming
 
 lemmas makeObject_simps =
   makeObject_endpoint makeObject_notification makeObject_cte
   makeObject_tcb makeObject_user_data makeObject_pte makeObject_asidpool
-
-end
-
-context Arch begin arch_global_naming
 
 lemma to_from_apiType[simp]:
   "toAPIType (fromAPIType x) = Some x"

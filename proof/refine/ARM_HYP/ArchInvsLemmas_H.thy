@@ -595,20 +595,20 @@ end_qualify
 
 instantiation ARM_HYP_H.asidpool :: no_vcpu
 begin
-interpretation Arch .
-instance by intro_classes auto
+instance by intro_classes
+            (auto simp: ARM_HYP_H.arch_kernel_object_type.distinct ARM_HYP_H.koType_asidpool)
 end
 
 instantiation ARM_HYP_H.pde :: no_vcpu
 begin
-interpretation Arch .
-instance by intro_classes auto
+instance by intro_classes
+            (auto simp: ARM_HYP_H.arch_kernel_object_type.distinct ARM_HYP_H.koType_pde)
 end
 
 instantiation ARM_HYP_H.pte :: no_vcpu
 begin
-interpretation Arch .
-instance by intro_classes auto
+instance by intro_classes
+            (auto simp: ARM_HYP_H.arch_kernel_object_type.distinct ARM_HYP_H.koType_pte)
 end
 
 end
