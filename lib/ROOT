@@ -72,6 +72,7 @@ session Lib (lib) = Word_Lib +
     Heap_List
     None_Top_Bot
     Sorted_Addrs
+    Clear_Named_Theorems
 
     (* should move to Monads: *)
     NonDetMonadLemmaBucket
@@ -131,6 +132,7 @@ session LibTest (lib) in test = Refine +
     Rules_Tac_Test
     MonadicRewrite_Test
     Requalify_Test
+    Clear_Named_Theorems_Test
   (* use virtual memory function as an example, only makes sense on ARM: *)
   theories [condition = "L4V_ARCH_IS_ARM"]
     CorresK_Test
