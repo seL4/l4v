@@ -13,9 +13,9 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Retype_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Retype_R locale *)
 
-lemma toAPIType_Some[Retype_R_assms, simp]:
+lemma toAPIType_Some[Arch_assms, simp]:
   "(toAPIType ty = Some x) = (ty = APIObjectType x)"
   by (cases ty; auto simp: toAPIType_def)
 
@@ -33,19 +33,19 @@ definition APIType_map2 :: "kernel_object + RISCV64_H.object_type \<Rightarrow> 
 (* inside of Arch, we don't need to isolate generic component *)
 lemmas APIType_map2_def = APIType_map2_raw_def[simplified APIType_map2_gen_def]
 
-lemma APIType_map2_Untyped[Retype_R_assms, simp]:
+lemma APIType_map2_Untyped[Arch_assms, simp]:
   "(APIType_map2 tp = Structures_A.Untyped) = (tp = Inr (APIObjectType ArchTypes_H.Untyped))"
   by (simp add: APIType_map2_def
          split: sum.split object_type.split kernel_object.split arch_kernel_object.splits
                 apiobject_type.split)
 
-lemma APIType_map2_TCBObject[Retype_R_assms, simp]:
+lemma APIType_map2_TCBObject[Arch_assms, simp]:
   "(APIType_map2 tp = Structures_A.TCBObject) = (tp = Inr (APIObjectType ArchTypes_H.TCBObject))"
   by (simp add: APIType_map2_def
          split: sum.split object_type.split kernel_object.split arch_kernel_object.splits
                 apiobject_type.split)
 
-lemma APIType_map2_generic[Retype_R_assms, simp]:
+lemma APIType_map2_generic[Arch_assms, simp]:
   "APIType_map2 (Inr (APIObjectType api)) = APIType_map2_gen api"
   by (simp add: APIType_map2_raw_def)
 
@@ -61,11 +61,11 @@ definition APIType_capBits :: "RISCV64_H.object_type \<Rightarrow> nat \<Rightar
 (* inside of Arch, we don't need to isolate generic component *)
 lemmas APIType_capBits_def = APIType_capBits_raw_def[simplified APIType_capBits_gen_def]
 
-lemma APIType_capBits_generic[Retype_R_assms, simp]:
+lemma APIType_capBits_generic[Arch_assms, simp]:
   "APIType_capBits (APIObjectType api) us = APIType_capBits_gen api us"
   by (simp add: APIType_capBits_raw_def)
 
-lemma objSize_eq_capBits[simp, Retype_R_assms]:
+lemma objSize_eq_capBits[simp, Arch_assms]:
   "Types_H.getObjectSize ty us = APIType_capBits ty us"
   by (cases ty;
       clarsimp simp: getObjectSize_def objBits_simps bit_simps
@@ -88,13 +88,13 @@ definition makeObjectKO :: "bool \<Rightarrow> domain \<Rightarrow> (kernel_obje
 (* inside of Arch, we don't need to isolate generic component *)
 lemmas makeObjectKO_def = makeObjectKO_raw_def[simplified makeObjectKO_gen_def]
 
-lemma makeObjectKO_generic[Retype_R_assms, simp]:
+lemma makeObjectKO_generic[Arch_assms, simp]:
   "makeObjectKO dev d (Inr (APIObjectType api)) = makeObjectKO_gen d api"
   by (simp add: makeObjectKO_raw_def)
 
 text \<open>makeObject etc. lemmas\<close>
 
-lemma valid_arch_tcb'_newArchTCB[Retype_R_assms, simp]:
+lemma valid_arch_tcb'_newArchTCB[Arch_assms, simp]:
   "valid_arch_tcb' newArchTCB s"
   unfolding valid_arch_tcb'_def newArchTCB_def
   by simp
@@ -112,7 +112,7 @@ text \<open>On the abstract side\<close>
 
 text \<open>Lemmas for createNewObjects etc.\<close>
 
-lemma makeObjectKO_eq[Retype_R_assms]:
+lemma makeObjectKO_eq[Arch_assms]:
   assumes x: "makeObjectKO dev d tp = Some v"
   shows
   "(v = KOCTE cte) =
@@ -124,7 +124,7 @@ lemma makeObjectKO_eq[Retype_R_assms]:
          split: apiobject_type.split_asm sum.split_asm kernel_object.split_asm
                 RISCV64_H.object_type.split_asm arch_kernel_object.split_asm)+
 
-lemma objBits_le_obj_bits_api[Retype_R_assms]:
+lemma objBits_le_obj_bits_api[Arch_assms]:
   "makeObjectKO dev d ty = Some ko \<Longrightarrow> objBitsKO ko \<le> obj_bits_api (APIType_map2 ty) us"
   apply (case_tac ty)
     apply (auto simp: default_arch_object_def bit_simps
@@ -133,7 +133,7 @@ lemma objBits_le_obj_bits_api[Retype_R_assms]:
                       Structures_H.kernel_object.splits arch_kernel_object.splits apiobject_type.splits)
   done
 
-lemma obj_relation_retype_other_obj[Retype_R_assms]:
+lemma obj_relation_retype_other_obj[Arch_assms]:
   "\<lbrakk> is_other_obj_relation_type (a_type ko); other_obj_relation ko ko' \<rbrakk>
    \<Longrightarrow> obj_relation_retype ko ko'"
   apply (simp add: obj_relation_retype_def)
@@ -166,7 +166,7 @@ lemma sym_refs_empty[simp]:
   unfolding sym_refs_def
   by simp
 
-lemma ksPSpace_update_gs_eq[Retype_R_assms, simp]:
+lemma ksPSpace_update_gs_eq[Arch_assms, simp]:
   "ksPSpace (update_gs ty us ptrs s) = ksPSpace s"
   by (simp add: update_gs_def
            split: Structures_A.apiobject_type.splits aobject_type.splits)
@@ -187,12 +187,12 @@ lemma update_gs_ksMachineState_update_swap:
   by (simp add: update_gs_def
          split: aobject_type.splits Structures_A.apiobject_type.splits)
 
-lemma update_gs_id[Retype_R_assms]:
+lemma update_gs_id[Arch_assms]:
   "tp \<in> no_gs_types \<Longrightarrow> update_gs tp us addrs = id"
   by (simp add: no_gs_types_def update_gs_def
            split: Structures_A.apiobject_type.splits aobject_type.splits)
 
-lemma no_gs_types_CapTableObject[Retype_R_assms]:
+lemma no_gs_types_CapTableObject[Arch_assms]:
   "Structures_A.apiobject_type.CapTableObject \<notin> no_gs_types"
   by (simp add: no_gs_types_def)
 
@@ -207,7 +207,7 @@ lemma update_gs_simps[simp]:
    gsUserPages_update (\<lambda>ups x. if x \<in> ptrs then Some RISCVHugePage else ups x)"
   by (simp_all add: update_gs_def)
 
-lemma objBitsKO_gt_0[Retype_R_assms]:
+lemma objBitsKO_gt_0[Arch_assms]:
   "0 < objBitsKO ko"
   apply (case_tac ko)
          apply (simp_all add: objBits_simps' pageBits_def)
@@ -269,7 +269,7 @@ lemma range_cover_canonical_address':
   apply (frule range_cover_canonical_address[where p="unat p"]; simp?)
   using unat_less_helper by blast
 
-lemma createNewCaps_valid_cap[Retype_R_assms]:
+lemma createNewCaps_valid_cap[Arch_assms]:
   fixes ptr :: machine_word
   assumes cover: "range_cover ptr sz (APIType_capBits ty us) n "
   assumes not_0: "n \<noteq> 0"
@@ -474,7 +474,7 @@ proof -
   qed
 qed
 
-lemma arch_tcb_relation_default[Retype_R_assms]:
+lemma arch_tcb_relation_default[Arch_assms]:
   "arch_tcb_relation default_arch_tcb newArchTCB"
   by (clarsimp simp: new_context_def newContext_def initContext_def
                      default_arch_tcb_def newArchTCB_def arch_tcb_relation_def)
@@ -509,7 +509,7 @@ lemmas object_splits =
   RISCV64_H.object_type.split_asm
   arch_kernel_object.split_asm
 
-lemma valid_arch_badges_not_arch[Retype_R_assms]:
+lemma valid_arch_badges_not_arch[Arch_assms]:
   "\<not>isArchObjectCap cap' \<Longrightarrow> valid_arch_badges cap cap' node"
   by (auto simp: isCap_simps valid_arch_badges_def)
 
@@ -517,7 +517,7 @@ lemma valid_arch_badges_NullCap[simp]:
   "valid_arch_badges cap NullCap node"
   by (simp add: valid_arch_badges_not_arch gen_isCap_simps)
 
-lemma valid_untyped'_helper_arch_cap[Retype_R_assms]:
+lemma valid_untyped'_helper_arch_cap[Arch_assms]:
   "\<lbrakk>pspace_aligned' s; pspace_distinct' s; pspace_no_overlap' ptr sz s;
     range_cover ptr sz (objBitsKO val) n; valid_arch_cap' acap s \<rbrakk>
    \<Longrightarrow> valid_arch_cap' acap
@@ -526,7 +526,7 @@ lemma valid_untyped'_helper_arch_cap[Retype_R_assms]:
                      typ_at_to_obj_at_arches frame_at'_def page_table_at'_def
                split: if_split_asm arch_capability.splits)
 
-lemma retype_in_kernel_mappings'[Retype_R_assms]:
+lemma retype_in_kernel_mappings'[Arch_assms]:
   assumes pc': "pspace_in_kernel_mappings' s'"
       and cover: "range_cover ptr sz (objBitsKO ko) n"
       and sz_limit: "sz \<le> maxUntypedSizeBits"
@@ -544,7 +544,7 @@ proof -
     done
 qed
 
-lemma createNewCaps_cte_wp_at2[Retype_R_assms]:
+lemma createNewCaps_cte_wp_at2[Arch_assms]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s) \<and> \<not> P' makeObject
       \<and> n \<noteq> 0
       \<and> range_cover ptr sz (APIType_capBits ty objsz) n
@@ -565,7 +565,7 @@ lemma createNewCaps_cte_wp_at2[Retype_R_assms]:
                  | simp)+
   done
 
-lemma createNewCaps_cte_wp_at'[Retype_R_assms]:
+lemma createNewCaps_cte_wp_at'[Arch_assms]:
   "\<lbrace>\<lambda>s. cte_wp_at' P p s
       \<and> range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0
       \<and> pspace_aligned' s \<and> pspace_distinct' s
@@ -590,7 +590,7 @@ lemma createNewCaps_cte_wp_at'[Retype_R_assms]:
 
 (* example of arch-split attempt of this kind of proof; unfortunately splitting off the
    arch-specific part doesn't actually save space, so we will leave these in Arch *)
-lemma createNewCaps_state_refs_of'[Retype_R_assms]:
+lemma createNewCaps_state_refs_of'[Arch_assms]:
   assumes cover: "range_cover ptr sz (APIType_capBits ty us) n"
   and     not_0: "n \<noteq> 0"
   shows
@@ -618,7 +618,7 @@ lemma createNewCaps_state_refs_of'[Retype_R_assms]:
   apply (force simp: gen_objBits_simps split: ArchTypes_H.apiobject_type.splits)
   done
 
-lemma createNewCaps_state_hyp_refs_of'[Retype_R_assms]:
+lemma createNewCaps_state_hyp_refs_of'[Arch_assms]:
   assumes cover: "range_cover ptr sz (APIType_capBits ty us) n"
   and     not_0: "n \<noteq> 0"
   shows
@@ -647,7 +647,7 @@ lemma arch_live'_KOPTE[simp]:
   "arch_live' (KOPTE makeObject) = False"
   by (simp add: makeObject_pte arch_live'_def)
 
-lemma createNewCaps_iflive'[Retype_R_assms, wp]:
+lemma createNewCaps_iflive'[Arch_assms, wp]:
   assumes cover: "range_cover ptr sz (APIType_capBits ty us) n"
   and     not_0: "n \<noteq> 0"
   shows
@@ -679,20 +679,20 @@ crunch createNewCaps
   for qs[wp]: "\<lambda>s. P (ksReadyQueues s)"
   and qsL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
   and qsL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
-  and ct[Retype_R_assms, wp]: "\<lambda>s. P (ksCurThread s)"
-  and ksCurDomain[Retype_R_assms, wp]: "\<lambda>s. P (ksCurDomain s)"
-  and ksInterrupt[Retype_R_assms, wp]: "\<lambda>s. P (ksInterruptState s)"
-  and nosch[Retype_R_assms, wp]: "\<lambda>s. P (ksSchedulerAction s)"
-  and it[Retype_R_assms, wp]: "\<lambda>s. P (ksIdleThread s)"
+  and ct[Arch_assms, wp]: "\<lambda>s. P (ksCurThread s)"
+  and ksCurDomain[Arch_assms, wp]: "\<lambda>s. P (ksCurDomain s)"
+  and ksInterrupt[Arch_assms, wp]: "\<lambda>s. P (ksInterruptState s)"
+  and nosch[Arch_assms, wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  and it[Arch_assms, wp]: "\<lambda>s. P (ksIdleThread s)"
   and asid_table[wp]: "\<lambda>s. P (riscvKSASIDTable (ksArchState s))"
   and global_ksArch[wp]: "\<lambda>s. P (riscvKSGlobalPTs (ksArchState s))"
   and vspace_ksArch[wp]: "\<lambda>s. P (riscvKSKernelVSpace (ksArchState s))"
   and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
-  and irq_states'[Retype_R_assms, wp]: valid_irq_states'
-  and ksDomSchedule[Retype_R_assms, wp]: "\<lambda>s. P (ksDomSchedule s)"
-  and ksDomScheduleIdx[Retype_R_assms, wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
-  and ksDomScheduleStart[Retype_R_assms, wp]: "\<lambda>s. P (ksDomScheduleStart s)"
-  and gsUntypedZeroRanges[Retype_R_assms, wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
+  and irq_states'[Arch_assms, wp]: valid_irq_states'
+  and ksDomSchedule[Arch_assms, wp]: "\<lambda>s. P (ksDomSchedule s)"
+  and ksDomScheduleIdx[Arch_assms, wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and ksDomScheduleStart[Arch_assms, wp]: "\<lambda>s. P (ksDomScheduleStart s)"
+  and gsUntypedZeroRanges[Arch_assms, wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   and ksArch[wp]: "\<lambda>s. P (ksArchState s)"
   (simp: crunch_simps unless_def
    wp: mapM_x_wp' setObject_ksInterrupt updateObject_default_inv crunch_wps
@@ -702,11 +702,11 @@ crunch copyGlobalMappings
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps)
 
-lemma createNewCaps_arch_ko_type_pre_non_arch[Retype_R_assms]:
+lemma createNewCaps_arch_ko_type_pre_non_arch[Arch_assms]:
   "(case ty of ArchT _ \<Rightarrow> False | _ \<Rightarrow> True) \<Longrightarrow> createNewCaps_arch_ko_type_pre ty"
   by simp
 
-lemma createNewCaps_ko_wp_atQ'[Retype_R_assms]:
+lemma createNewCaps_ko_wp_atQ'[Arch_assms]:
   "\<lbrace>(\<lambda>s. P (ko_wp_at' P' p s)
        \<and> range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0
        \<and> pspace_aligned' s \<and> pspace_distinct' s
@@ -734,7 +734,7 @@ lemma createNewCaps_ko_wp_atQ'[Retype_R_assms]:
                  | split if_split_asm)+
   done
 
-lemma createNewCaps_global_refs'[Retype_R_assms]:
+lemma createNewCaps_global_refs'[Arch_assms]:
   "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0
        \<and> pspace_aligned' s \<and> pspace_distinct' s
        \<and> pspace_no_overlap' ptr sz s \<and> valid_global_refs' s
@@ -756,7 +756,7 @@ lemma createNewCaps_global_refs'[Retype_R_assms]:
   apply (auto simp: linorder_not_less ball_ran_eq)
   done
 
-lemma createNewCaps_valid_bitmaps[Retype_R_assms]:
+lemma createNewCaps_valid_bitmaps[Arch_assms]:
   "\<lbrace>\<lambda>s. valid_pspace' s \<and> pspace_no_overlap' ptr sz s \<and> valid_bitmaps s\<rbrace>
    createNewCaps ty ptr n us dev
    \<lbrace>\<lambda>_. valid_bitmaps\<rbrace>"
@@ -772,7 +772,7 @@ lemma createNewCaps_valid_bitmaps[Retype_R_assms]:
                  | intro conjI impI)+
   done
 
-lemma createNewCaps_valid_sched_pointers[Retype_R_assms]:
+lemma createNewCaps_valid_sched_pointers[Arch_assms]:
   "\<lbrace>\<lambda>s. valid_pspace' s \<and> pspace_no_overlap' ptr sz s \<and> valid_sched_pointers s\<rbrace>
    createNewCaps ty ptr n us dev
    \<lbrace>\<lambda>_. valid_sched_pointers\<rbrace>"
@@ -787,7 +787,7 @@ lemma createNewCaps_valid_sched_pointers[Retype_R_assms]:
                  | intro conjI impI)+
   done
 
-lemma createNewCaps_vms[Retype_R_assms]:
+lemma createNewCaps_vms[Arch_assms]:
   "\<lbrace>pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz and
     K (range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n) and
     valid_machine_state'\<rbrace>
@@ -812,7 +812,7 @@ lemma createNewCaps_vms[Retype_R_assms]:
                      field_simps mult_2_right bit_simps)
   done
 
-lemma createNewCaps_pspace_domain_valid[Retype_R_assms, wp]:
+lemma createNewCaps_pspace_domain_valid[Arch_assms, wp]:
   "\<lbrace>pspace_domain_valid and K ({ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}
             \<inter> kernel_data_refs = {}
         \<and> range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n)\<rbrace>
@@ -831,9 +831,11 @@ lemma createNewCaps_pspace_domain_valid[Retype_R_assms, wp]:
 
 (* safe for generic context, and we can't requalify object_type.inject as that would
    result in it being named "inject" *)
-lemma object_type_inject[Retype_R_assms]:
+lemma object_type_inject[Arch_assms]:
   "(APIObjectType x = APIObjectType y) = (x = y)"
   by simp
+
+lemmas Retype_R_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
@@ -845,8 +847,7 @@ arch_requalify_consts
 
 interpretation Retype_R?: Retype_R makeObjectKO APIType_map2 APIType_capBits update_gs
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Retype_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact RISCV64.Retype_R_assms)?)?)
 qed
 
 locale Arch_retype_mdb = retype_mdb + Arch
@@ -875,18 +876,18 @@ end (* Arch_retype_mdb *)
 
 context Arch begin arch_global_naming
 
-named_theorems Retype_R_2_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Retype_R_2 locale *)
 
 (* drop the Arch assumption directly instead of requalifying to improve processing time
    (unfold_locales for Arch is slow) *)
-lemmas [Retype_R_2_assms] = Arch_retype_mdb.valid_n[simplified Arch_retype_mdb_def]
+lemmas [Arch_assms] = Arch_retype_mdb.valid_n[simplified Arch_retype_mdb_def]
 
 (* FIXME arch-split: currently only the gen_ version is used *)
 lemmas valid_obj_makeObject_rules =
   gen_valid_obj_makeObject_rules
   valid_obj_makeObject_pte valid_obj_makeObject_asid_pool
 
-lemma retype_state_relation[Retype_R_2_assms]:
+lemma retype_state_relation[Arch_assms]:
   notes data_map_insert_def[simp del]
   assumes  sr:   "(s, s') \<in> state_relation"
       and  vs:   "valid_pspace s" "valid_mdb s"
@@ -1113,7 +1114,7 @@ lemma retype_state_relation[Retype_R_2_assms]:
                  split: Structures_A.apiobject_type.splits aobject_type.splits)
 qed
 
-lemma createObjects_valid_objs'[Retype_R_2_assms]:
+lemma createObjects_valid_objs'[Arch_assms]:
   assumes mko: "makeObjectKO dev d ty = Some val"
     and max_d: "ty = Inr (APIObjectType TCBObject) \<longrightarrow> d \<le> maxDomain"
     and vo: "valid_objs' s"
@@ -1199,7 +1200,7 @@ proof -
     done
 qed
 
-lemma createNewCaps_idle'[Retype_R_2_assms, wp]:
+lemma createNewCaps_idle'[Arch_assms, wp]:
   "\<lbrace>valid_idle' and valid_pspace' and pspace_no_overlap' ptr sz
        and K (range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0)\<rbrace>
    createNewCaps ty ptr n us d
@@ -1218,7 +1219,7 @@ lemma createNewCaps_idle'[Retype_R_2_assms, wp]:
                              objBits_def createObjects_def tcb_cte_cases_neqs bit_simps)+
   done
 
-lemma createNewCaps_valid_arch_state[Retype_R_2_assms]:
+lemma createNewCaps_valid_arch_state[Arch_assms]:
   "\<lbrace>(\<lambda>s. valid_arch_state' s \<and> valid_pspace' s \<and> pspace_no_overlap' ptr sz s
         \<and> (tp = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> us > 0))
        and K (range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0)\<rbrace>
@@ -1242,7 +1243,7 @@ lemma createNewCaps_valid_arch_state[Retype_R_2_assms]:
   apply auto
   done
 
-lemma createNewCaps_sched_queues[Retype_R_2_assms]:
+lemma createNewCaps_sched_queues[Arch_assms]:
   assumes cover: "range_cover ptr sz (APIType_capBits ty us) n"
   assumes not_0: "n \<noteq> 0"
   shows
@@ -1266,7 +1267,7 @@ lemma createNewCaps_sched_queues[Retype_R_2_assms]:
                      split_del: if_split,
               fastforce simp add: mult_2 add_ac bit_simps)+
 
-lemma createNewCaps_null_filter'[Retype_R_2_assms]:
+lemma createNewCaps_null_filter'[Arch_assms]:
   "\<lbrace>(\<lambda>s. P (null_filter' (ctes_of s)))
       and pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz
       and K (range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0) \<rbrace>
@@ -1290,7 +1291,7 @@ lemma createNewCaps_null_filter'[Retype_R_2_assms]:
                     | fastforce)+
   done
 
-lemma createObjects_no_cte_valid_global[Retype_R_2_assms]:
+lemma createObjects_no_cte_valid_global[Arch_assms]:
   assumes no_cte: "\<And>c. projectKO_opt val \<noteq> Some (c::cte)"
   assumes no_tcb: "\<And>t. projectKO_opt val \<noteq> Some (t::tcb)"
   shows "\<lbrace>\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and>
@@ -1333,7 +1334,7 @@ lemma createObjects_valid_arch:
   apply auto
   done
 
-lemma createObjects_untyped_ranges_zero'[Retype_R_2_assms]:
+lemma createObjects_untyped_ranges_zero'[Arch_assms]:
   assumes moKO: "makeObjectKO dev d ty = Some val"
   shows
   "\<lbrace>ct_active' and valid_pspace' and pspace_no_overlap' ptr sz
@@ -1359,18 +1360,19 @@ lemma createObjects_untyped_ranges_zero'[Retype_R_2_assms]:
   apply (simp add: makeObject_cte untypedZeroRange_def)
   done
 
+lemmas Retype_R_2_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 interpretation Retype_R_2?: Retype_R_2 makeObjectKO APIType_map2
                                         APIType_capBits update_gs
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Retype_R_2_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact RISCV64.Retype_R_2_assms)?)?)
 qed
 
 context Arch begin arch_global_naming
 
-named_theorems Retype_R_3_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Retype_R_3 locale *)
 
 lemma createObjects_no_cte_invs:
   assumes moKO: "makeObjectKO dev d ty = Some val"
@@ -1457,7 +1459,7 @@ proof -
              split: option.splits kernel_object.splits)
 qed
 
-lemma createNewCaps_valid_pspace[Retype_R_3_assms]:
+lemma createNewCaps_valid_pspace[Arch_assms]:
   assumes  not_0: "n \<noteq> 0"
   and      cover: "range_cover ptr sz (APIType_capBits ty us) n"
   and      sz_limit: "sz \<le> maxUntypedSizeBits"
@@ -1510,7 +1512,7 @@ lemma init_arch_objects_APIType_map2_VCPU_noop:
   apply (simp add: init_arch_objects_def APIType_map2_def)
   done
 
-lemma corres_retype_region_createNewCaps[Retype_R_3_assms]:
+lemma corres_retype_region_createNewCaps[Arch_assms]:
   "corres ((\<lambda>r r'. length r = length r' \<and> list_all2 cap_relation r r')
                    \<circ> map (\<lambda>ref. default_cap (APIType_map2 (Inr ty)) ref us dev))
           (\<lambda>s. valid_pspace s \<and> valid_mdb s \<and> valid_list s \<and> valid_arch_state s
@@ -1660,13 +1662,14 @@ lemma corres_retype_region_createNewCaps[Retype_R_3_assms]:
    apply fastforce+
   done
 
+lemmas Retype_R_3_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 interpretation Retype_R_3?: Retype_R_3 makeObjectKO APIType_map2
                                         APIType_capBits update_gs
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Retype_R_3_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact RISCV64.Retype_R_3_assms)?)?)
 qed
 
 end

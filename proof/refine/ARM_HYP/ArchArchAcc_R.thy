@@ -12,7 +12,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems ArchAcc_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for ArchAcc_R locale *)
 
 lemma asid_pool_at_ko:
   "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (ARM_HYP_A.ASIDPool pool)) p s"
@@ -1194,7 +1194,7 @@ lemma copy_global_mappings_corres [corres]:
   apply (simp add: copy_global_mappings_def copyGlobalMappings_def)
   done
 
-lemma arch_cap_rights_update[ArchAcc_R_assms]:
+lemma arch_cap_rights_update[Arch_assms]:
   "acap_relation c c' \<Longrightarrow>
    cap_relation (cap.ArchObjectCap (acap_rights_update (acap_rights c \<inter> msk) c))
                  (Arch.maskCapRights (rights_mask_map msk) c')"
@@ -1224,7 +1224,7 @@ lemma arch_deriveCap_valid:
   apply (rule hoare_pre, wp undefined_validE_R)
   apply (cases arch_cap, simp_all add: isCap_defs)
   apply (simp add: valid_cap'_def capAligned_def
-                   global.capUntypedPtr_def capUntypedPtr_def)
+                   global.capUntypedPtr_def ARM_HYP_H.capUntypedPtr_def)
   done
 
 lemma arch_deriveCap_corres [corres]:
@@ -1588,7 +1588,7 @@ lemma setObject_ASID_ctes_of'[wp]:
    \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   by (rule ctes_of_from_cte_wp_at [where Q=\<top>, simplified]) wp
 
-lemma pspace_aligned_cross[ArchAcc_R_assms]:
+lemma pspace_aligned_cross[Arch_assms]:
   "\<lbrakk> pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow> pspace_aligned' s'"
   supply option.case_cong[cong]
   apply (clarsimp simp: pspace_aligned'_def pspace_aligned_def pspace_relation_def)
@@ -1669,7 +1669,7 @@ lemma obj_relation_cuts_range_limit:
    apply fastforce+
   done
 
-lemma obj_relation_cuts_range_mask_range[ArchAcc_R_assms]:
+lemma obj_relation_cuts_range_mask_range[Arch_assms]:
   "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko'; is_aligned p (obj_bits ko) \<rbrakk>
    \<Longrightarrow> p' \<in> mask_range p (obj_bits ko)"
   apply (drule (1) obj_relation_cuts_range_limit, clarsimp)
@@ -1691,7 +1691,7 @@ lemma obj_relation_cuts_obj_bits:
                             split: kernel_object.splits arch_kernel_object.splits)
   done
 
-lemma pspace_distinct_cross[ArchAcc_R_assms]:
+lemma pspace_distinct_cross[Arch_assms]:
   "\<lbrakk> pspace_distinct s; pspace_aligned s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow>
    pspace_distinct' s'"
   apply (frule (1) pspace_aligned_cross)
@@ -1739,12 +1739,13 @@ lemma pspace_distinct_cross[ArchAcc_R_assms]:
   apply (erule (2) in_empty_interE)
   done
 
-end
+lemmas ArchAcc_R_assms = Arch_assms (* extract accumulated assumptions *)
+
+end (* Arch *)
 
 interpretation ArchAcc_R?: ArchAcc_R
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact ArchAcc_R_assms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact ARM_HYP.ArchAcc_R_assms)?)
 qed
 
 end

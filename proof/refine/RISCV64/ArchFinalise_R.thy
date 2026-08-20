@@ -12,9 +12,9 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Finalise_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Finalise_R locale *)
 
-lemma arch_postCapDeletion_ksArchState_lift[Finalise_R_assms]:
+lemma arch_postCapDeletion_ksArchState_lift[Arch_assms]:
   "\<lbrakk>\<And>s as. P (s\<lparr>ksArchState := as\<rparr>) = P s\<rbrakk> \<Longrightarrow> Arch.postCapDeletion ac \<lbrace>P\<rbrace>"
   unfolding postCapDeletion_def
   by wpsimp
@@ -22,7 +22,7 @@ lemma arch_postCapDeletion_ksArchState_lift[Finalise_R_assms]:
 sublocale clearUntypedFreeIndex: typ_at_props' "clearUntypedFreeIndex slot"
   by typ_at_props'
 
-lemma setIRQState_umm[Finalise_R_assms]:
+lemma setIRQState_umm[Arch_assms]:
   "setIRQState irqState irq \<lbrace>\<lambda>s. P (underlying_memory (ksMachineState s))\<rbrace> "
   by (simp add: setIRQState_def maskInterrupt_def
                 setInterruptState_def getInterruptState_def
@@ -37,7 +37,7 @@ crunch Arch_postCapDeletion
   and valid_arch_state'[wp]: valid_arch_state'
   (rule: RISCV64_H.postCapDeletion_def)
 
-lemma arch_postCapDeletion_corres[Finalise_R_assms]:
+lemma arch_postCapDeletion_corres[Arch_assms]:
   "acap_relation cap cap' \<Longrightarrow> corres dc \<top> \<top> (arch_post_cap_deletion cap) (RISCV64_H.postCapDeletion cap')"
   by (clarsimp simp: arch_post_cap_deletion_def RISCV64_H.postCapDeletion_def)
 
@@ -46,16 +46,16 @@ abbreviation (input)
   "Arch_finaliseCap \<equiv> Arch.finaliseCap"
 
 crunch Arch_finaliseCap, prepareThreadDelete, archThreadSet
-  for typ_at'[Finalise_R_assms, wp]: "\<lambda>s. P (typ_at' T p s)"
-  and aligned'[Finalise_R_assms, wp]: "pspace_aligned'"
-  and distinct'[Finalise_R_assms, wp]: "pspace_distinct'"
+  for typ_at'[Arch_assms, wp]: "\<lambda>s. P (typ_at' T p s)"
+  and aligned'[Arch_assms, wp]: "pspace_aligned'"
+  and distinct'[Arch_assms, wp]: "pspace_distinct'"
   (wp: crunch_wps getObject_inv loadObject_default_inv
    simp: crunch_simps unless_def o_def
    ignore_del: setObject
    rule: RISCV64_H.finaliseCap_def)
 
 crunch prepareThreadDelete, Arch_finaliseCap
-  for it'[Finalise_R_assms, wp]: "\<lambda>s. P (ksIdleThread s)"
+  for it'[Arch_assms, wp]: "\<lambda>s. P (ksIdleThread s)"
   (wp: hoare_drop_imps
    simp: crunch_simps updateObject_default_def
    rule: RISCV64_H.finaliseCap_def)
@@ -87,6 +87,8 @@ definition post_cap_delete_pre' :: "capability \<Rightarrow> paddr \<Rightarrow>
   "post_cap_delete_pre' cap sl cs \<equiv> case cap of
      IRQHandlerCap irq \<Rightarrow> arch_valid_irq irq \<and> (\<forall>sl'. sl \<noteq> sl' \<longrightarrow> cs sl' \<noteq> Some cap)
    | _ \<Rightarrow> False"
+
+lemmas Finalise_R_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
@@ -377,15 +379,14 @@ end (* mdb_empty *)
 
 interpretation Finalise_R?: Finalise_R arch_final_matters' arch_cap_has_cleanup'
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Finalise_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact RISCV64.Finalise_R_assms)?)?)
 qed
 
 context Arch begin arch_global_naming
 
-named_theorems Finalise_R_2_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Finalise_R_2 locale *)
 
-lemma not_Final_removeable[Finalise_R_2_assms]:
+lemma not_Final_removeable[Arch_assms]:
   "\<not> isFinal cap sl (cteCaps_of s) \<Longrightarrow> removeable' sl s cap"
   apply (erule not_FinalE)
    apply (clarsimp simp: removeable'_def gen_isCap_simps)
@@ -394,7 +395,7 @@ lemma not_Final_removeable[Finalise_R_2_assms]:
   apply fastforce
   done
 
-lemma deletedIRQHandler_valid_global_refs[Finalise_R_2_assms, wp]:
+lemma deletedIRQHandler_valid_global_refs[Arch_assms, wp]:
   "\<lbrace>valid_global_refs'\<rbrace> deletedIRQHandler irq \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
   apply (clarsimp simp: valid_global_refs'_def global_refs'_def)
   apply (rule hoare_pre)
@@ -408,7 +409,7 @@ lemma deletedIRQHandler_valid_global_refs[Finalise_R_2_assms, wp]:
   apply (clarsimp simp: valid_refs'_cteCaps valid_cap_sizes_cteCaps ball_ran_eq)
   done
 
-lemma clearUntypedFreeIndex_valid_global_refs[Finalise_R_2_assms, wp]:
+lemma clearUntypedFreeIndex_valid_global_refs[Arch_assms, wp]:
   "\<lbrace>valid_global_refs'\<rbrace> clearUntypedFreeIndex irq \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
   apply (clarsimp simp: valid_global_refs'_def global_refs'_def)
   apply (rule hoare_pre)
@@ -454,7 +455,7 @@ lemma final_matters_mdb_chunked_arch_assms:
   by (clarsimp simp: mdb_chunked_arch_assms_def isCap_simps
                      final_matters'_def arch_final_matters'_def)
 
-lemma notFinal_prev_or_next[Finalise_R_2_assms]:
+lemma notFinal_prev_or_next[Arch_assms]:
   "\<lbrakk> \<not> isFinal cap x (cteCaps_of s); mdb_chunked (ctes_of s);
      valid_dlist (ctes_of s); no_0 (ctes_of s);
      ctes_of s x = Some (CTE cap node); final_matters' cap \<rbrakk>
@@ -501,12 +502,12 @@ lemma notFinal_prev_or_next[Finalise_R_2_assms]:
   apply (clarsimp simp: sameObjectAs_def3 simp del: isArchFrameCap_capMasterCap)
   done
 
-lemma sameObjectAs_not_Untyped[Finalise_R_2_assms]:
+lemma sameObjectAs_not_Untyped[Arch_assms]:
   "\<lbrakk> global.sameObjectAs cap cap'; \<not> isUntypedCap cap \<rbrakk>
    \<Longrightarrow> \<not> isUntypedCap cap'"
   by (clarsimp simp: gen_isCap_simps sameObjectAs_def3)
 
-lemma sameObjectAs_not_Untyped'[Finalise_R_2_assms]:
+lemma sameObjectAs_not_Untyped'[Arch_assms]:
   "\<lbrakk> global.sameObjectAs cap cap'; \<not> isUntypedCap cap' \<rbrakk>
    \<Longrightarrow> global.sameObjectAs cap' cap"
   by (clarsimp simp: isCap_simps sameObjectAs_def3)
@@ -558,7 +559,7 @@ lemma (in vmdb) isFinal_untypedParent:
 
 context Arch begin arch_global_naming
 
-lemma isFinal_no_descendants[Finalise_R_2_assms]:
+lemma isFinal_no_descendants[Arch_assms]:
   "\<lbrakk> isFinal cap sl (cteCaps_of s); ctes_of s sl = Some (CTE cap n);
      valid_mdb' s; final_matters' cap \<rbrakk>
   \<Longrightarrow> descendants_of' sl (ctes_of s) = {}"
@@ -789,7 +790,7 @@ lemma archThreadSet_valid_sched_pointers[wp]:
   "archThreadSet f t \<lbrace>valid_sched_pointers\<rbrace>"
   by (wp_pre, wps, wp, assumption)
 
-lemma arch_finaliseCap_invs[Finalise_R_2_assms, wp]:
+lemma arch_finaliseCap_invs[Arch_assms, wp]:
   "\<lbrace>invs' and valid_cap' (ArchObjectCap cap)\<rbrace> Arch.finaliseCap cap fin \<lbrace>\<lambda>rv. invs'\<rbrace>"
   unfolding RISCV64_H.finaliseCap_def Let_def by wpsimp
 
@@ -829,16 +830,16 @@ crunch prepareThreadDelete
    ignore: archThreadSet)
 
 crunch Arch.finaliseCap, prepareThreadDelete
-  for irq_node'[Finalise_R_2_assms, wp]: "\<lambda>s. P (irq_node' s)"
+  for irq_node'[Arch_assms, wp]: "\<lambda>s. P (irq_node' s)"
   (wp: crunch_wps getObject_inv loadObject_default_inv
        updateObject_default_inv setObject_ksInterrupt
    simp: crunch_simps o_def)
 
-lemmas Arch_finaliseCap_irq_node'[Finalise_R_2_assms] = ArchRetypeDecls_H_RISCV64_H_finaliseCap_irq_node'
+lemmas Arch_finaliseCap_irq_node'[Arch_assms] = ArchRetypeDecls_H_RISCV64_H_finaliseCap_irq_node'
 
 crunch prepareThreadDelete
-  for cte_wp_at'[Finalise_R_2_assms, wp]: "cte_wp_at' P p"
-  and valid_cap'[Finalise_R_2_assms, wp]: "valid_cap' cap"
+  for cte_wp_at'[Arch_assms, wp]: "cte_wp_at' P p"
+  and valid_cap'[Arch_assms, wp]: "valid_cap' cap"
 
 lemma asUser_hyp_unlive[wp]:
   "asUser f t \<lbrace>ko_wp_at' (Not \<circ> hyp_live') t'\<rbrace>"
@@ -854,7 +855,7 @@ lemma prepareThreadDelete_hyp_unlive:
      (auto simp: ko_wp_at'_def obj_at'_def hyp_live'_def)
 
 crunch prepareThreadDelete
-  for invs[Finalise_R_2_assms, wp]: "invs'"
+  for invs[Arch_assms, wp]: "invs'"
   (ignore: doMachineOp simp: crunch_simps)
 
 lemma archThreadSet_tcbSchedPrevNext[wp]:
@@ -890,35 +891,36 @@ lemma deleteASID_cte_wp_at'[wp]:
           | wpc)+
   done
 
-lemma arch_finaliseCap_cte_wp_at[Finalise_R_2_assms, wp]:
+lemma arch_finaliseCap_cte_wp_at[Arch_assms, wp]:
   "\<lbrace>cte_wp_at' P p\<rbrace> Arch.finaliseCap cap fin \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>"
   apply (simp add: RISCV64_H.finaliseCap_def)
   apply (wpsimp wp: unmapPage_cte_wp_at')
   done
 
-lemma finaliseCap_valid_cap[Finalise_R_2_assms, wp]:
+lemma finaliseCap_valid_cap[Arch_assms, wp]:
   "\<lbrace>\<top>\<rbrace> Arch.finaliseCap cap final \<lbrace>\<lambda>rv. valid_cap' (fst rv)\<rbrace>"
   by (wpsimp simp: RISCV64_H.finaliseCap_def)
 
-lemma arch_finaliseCap_cases[Finalise_R_2_assms, wp]:
+lemma arch_finaliseCap_cases[Arch_assms, wp]:
   "\<lbrace>\<top>\<rbrace> Arch.finaliseCap v0 final
    \<lbrace>\<lambda>rv s. fst rv = capability.NullCap \<and>
            (snd rv \<noteq> capability.NullCap
             \<longrightarrow> final \<and> arch_cap_has_cleanup' v0 \<and> snd rv = capability.ArchObjectCap v0)\<rbrace>"
   by (wpsimp simp: RISCV64_H.finaliseCap_def)
 
-lemmas [Finalise_R_2_assms] =
+lemmas [Arch_assms] =
   cancelAllIPC_cte_wp_at' cancelAllSignals_cte_wp_at' unbindMaybeNotification_cte_wp_at'
   prepareThreadDelete_cte_wp_at' unbindNotification_cte_wp_at'
   Arch_postCapDeletion_valid_global_refs Arch_postCapDeletion_valid_arch_state'
   mdb_empty.vmdb_n mdb_empty.descendants not_Final_removeable
 
+lemmas Finalise_R_2_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 interpretation Finalise_R_2?: Finalise_R_2 arch_final_matters' arch_cap_has_cleanup'
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Finalise_R_2_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact RISCV64.Finalise_R_2_assms)?)?)
 qed
 
 (* This is the only arch-specific lemma in delete_one_conc_pre so far;
@@ -986,13 +988,13 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
 
 context Arch begin arch_global_naming
 
-named_theorems Finalise_R_3_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Finalise_R_3 locale *)
 
-lemma finaliseCap_cte_refs[Finalise_R_3_assms]:
+lemma finaliseCap_cte_refs[Arch_assms]:
   "\<lbrace>\<lambda>s. s \<turnstile>' cap\<rbrace>
    finaliseCap cap final flag
    \<lbrace>\<lambda>rv s. fst rv \<noteq> NullCap \<longrightarrow> cte_refs' (fst rv) = cte_refs' cap\<rbrace>"
-  apply (simp add: global.finaliseCap_def Let_def getThreadCSpaceRoot finaliseCap_def
+  apply (simp add: global.finaliseCap_def Let_def getThreadCSpaceRoot RISCV64_H.finaliseCap_def
              cong: if_cong split del: if_split)
   apply (rule hoare_pre)
    apply (wp | wpc | simp only: o_def)+
@@ -1005,7 +1007,7 @@ lemma finaliseCap_cte_refs[Finalise_R_3_assms]:
   apply (fastforce simp: mask_def capAligned_def gen_objBits_simps shiftL_nat)
   done
 
-lemma emptySlot_invs'[Finalise_R_3_assms, wp]:
+lemma emptySlot_invs'[Arch_assms, wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' (\<lambda>cte. removeable' sl s (cteCap cte)) sl s
         \<and> (info \<noteq> NullCap \<longrightarrow> post_cap_delete_pre' info sl (cteCaps_of s))\<rbrace>
    emptySlot sl info
@@ -1016,7 +1018,7 @@ lemma emptySlot_invs'[Finalise_R_3_assms, wp]:
                  split: capability.split_asm)
   by auto
 
-lemma cteDeleteOne_invs[Finalise_R_3_assms, wp]:
+lemma cteDeleteOne_invs[Arch_assms, wp]:
   "cteDeleteOne ptr \<lbrace>invs'\<rbrace>"
   apply (simp add: cteDeleteOne_def unless_def
                    split_def finaliseCapTrue_standin_simple_def)
@@ -1038,7 +1040,7 @@ lemma cteDeleteOne_invs[Finalise_R_3_assms, wp]:
   apply (fastforce simp: cte_wp_at_ctes_of)
   done
 
-lemma isFinalCapability_corres'[Finalise_R_3_assms]:
+lemma isFinalCapability_corres'[Arch_assms]:
   "final_matters' (cteCap cte) \<Longrightarrow>
    corres (=) (invs and cte_wp_at ((=) cap) ptr)
                (invs' and cte_wp_at' ((=) cte) (cte_map ptr))
@@ -1131,7 +1133,7 @@ crunch unmapPageTable
 
 crunch Arch_finaliseCap, prepareThreadDelete
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
-  and sch_act_simple[Finalise_R_3_assms, wp]: sch_act_simple
+  and sch_act_simple[Arch_assms, wp]: sch_act_simple
   (wp: crunch_wps getObject_inv simp: loadObject_default_def updateObject_default_def
    rule: RISCV64_H.finaliseCap_def sch_act_simple_lift
    cong: if_cong)
@@ -1142,7 +1144,7 @@ crunch deletingIRQHandler
    rule: sch_act_simple_lift
    wp: getObject_inv loadObject_default_inv crunch_wps)
 
-lemma arch_finaliseCap_corres[Finalise_R_3_assms]:
+lemma arch_finaliseCap_corres[Arch_assms]:
   "\<lbrakk> final_matters' (ArchObjectCap cap') \<Longrightarrow> final = final'; acap_relation cap cap' \<rbrakk>
      \<Longrightarrow> corres (\<lambda>r r'. cap_relation (fst r) (fst r') \<and> cap_relation (snd r) (snd r'))
            (\<lambda>s. invs s \<and> s \<turnstile> cap.ArchObjectCap cap
@@ -1191,14 +1193,15 @@ lemma arch_finaliseCap_corres[Finalise_R_3_assms]:
 sublocale deleteCallerCap: typ_at_props' "deleteCallerCap receiver"
   by typ_at_props'
 
+lemmas Finalise_R_3_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 arch_requalify_consts post_cap_delete_pre'
 
 interpretation Finalise_R_3?: Finalise_R_3 arch_final_matters' arch_cap_has_cleanup' post_cap_delete_pre'
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Finalise_R_3_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact RISCV64.Finalise_R_3_assms)?)?)
 qed
 
 end

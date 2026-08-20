@@ -13,7 +13,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Arch_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Arch_R locale *)
 
 definition
   "asid_ci_map i \<equiv>
@@ -353,7 +353,7 @@ crunch decodeARMMMUInvocation
    simp: crunch_simps)
 
 crunch Arch.decodeInvocation
-  for inv[Arch_R_assms, wp]: "P"
+  for inv[Arch_assms, wp]: "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp
    simp: crunch_simps)
 
@@ -672,7 +672,7 @@ lemma resolve_vaddr_valid_mapping_size:
                  split: if_split_asm)
   done
 
-lemma arch_decodeInvocation_corres[Arch_R_assms]:
+lemma arch_decodeInvocation_corres[Arch_assms]:
 notes check_vp_inv[wp del] check_vp_wpR[wp]
   (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
      check_vp_wpR should probably be generalised to replace check_vp_inv. *)
@@ -1030,7 +1030,7 @@ shows
   apply clarsimp
   done
 
-lemma arch_performInvocation_corres[Arch_R_assms]:
+lemma arch_performInvocation_corres[Arch_assms]:
   "archinv_relation ai ai' \<Longrightarrow>
    corres (dc \<oplus> (=))
      (einvs and ct_active and valid_arch_inv ai and schact_is_rct)
@@ -1120,7 +1120,7 @@ lemma performASIDControlInvocation_tcb_at':
 crunch performSGISignalGenerate
   for tcb_at'[wp]: "\<lambda>s. P (tcb_at' t s)"
 
-lemma invokeArch_tcb_at'[Arch_R_assms]:
+lemma invokeArch_tcb_at'[Arch_assms]:
   "\<lbrace>invs' and valid_arch_inv' ai and ct_active' and st_tcb_at' active' p\<rbrace>
      Arch.performInvocation ai
    \<lbrace>\<lambda>rv. tcb_at' p\<rbrace>"
@@ -1199,7 +1199,7 @@ crunch
   for vs_entry_align[wp]: "ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma sts_valid_arch_inv'[Arch_R_assms]:
+lemma sts_valid_arch_inv'[Arch_assms]:
   "\<lbrace>valid_arch_inv' ai\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_arch_inv' ai\<rbrace>"
   apply (cases ai, simp_all add: valid_arch_inv'_def)
        apply (clarsimp simp: valid_pti'_def split: page_table_invocation.splits)
@@ -1654,7 +1654,7 @@ lemma arch_decodeInvocation_wf[wp]:
   apply wp
   done
 
-lemma arch_decodeInvocation_wf_interface[Arch_R_assms]:
+lemma arch_decodeInvocation_wf_interface[Arch_assms]:
   "\<lbrace>invs' and valid_cap' (ArchObjectCap arch_cap) and
     cte_wp_at' ((=) (ArchObjectCap arch_cap) o cteCap) slot and
     (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at' ((=) (fst x) o cteCap) (snd x) s) and
@@ -1809,7 +1809,7 @@ lemma performSGISignalInvocation_invs[wp]:
   unfolding performSGISignalGenerate_def
   by (wpsimp wp: dmo_invs'_simple simp: no_irq_sendSGI)
 
-lemma arch_performInvocation_invs'[Arch_R_assms]:
+lemma arch_performInvocation_invs'[Arch_assms]:
   "\<lbrace>invs' and ct_active' and valid_arch_inv' invocation\<rbrace>
   Arch.performInvocation invocation
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -1818,7 +1818,7 @@ lemma arch_performInvocation_invs'[Arch_R_assms]:
       simp_all add: performARMMMUInvocation_def valid_arch_inv'_def,
       (wp|simp)+)
 
-lemma setObject_TCB_valid_duplicates'[Arch_R_assms, wp]:
+lemma setObject_TCB_valid_duplicates'[Arch_assms, wp]:
   "setObject p (tcb::tcb) \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
                         pspace_aligned'_def ps_clear_upd
@@ -1843,6 +1843,8 @@ lemma hv_inv_ex':
   apply simp
   done
 
+lemmas Arch_R_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 arch_requalify_consts
@@ -1851,8 +1853,7 @@ arch_requalify_consts
 
 interpretation Arch_R?: Arch_R valid_arch_inv' archinv_relation
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Arch_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact ARM.Arch_R_assms)?)?)
 qed
 
 end
