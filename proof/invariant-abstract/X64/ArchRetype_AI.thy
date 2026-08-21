@@ -679,11 +679,7 @@ locale retype_region_proofs_arch
   + Arch
   for s :: "'state_ext :: state_ext state"
   and ty us ptr sz n ps s'
-
-
-context retype_region_proofs begin
-
-interpretation Arch .
+begin
 
 lemma valid_cap:
   assumes cap:
@@ -759,11 +755,6 @@ lemma vs_lookup_pages':
 
 lemma hyp_refs_eq: "state_hyp_refs_of s' = state_hyp_refs_of s"
   unfolding s'_def ps_def by (auto simp: state_hyp_refs_of_def split: option.splits)
-
-end
-
-
-context retype_region_proofs_arch begin
 
 lemma valid_vspace_obj_pres: "valid_vspace_obj ao s \<Longrightarrow> valid_vspace_obj ao s'"
   apply (cases ao; simp add: obj_at_pres)
