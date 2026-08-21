@@ -15,18 +15,18 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Retype_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Retype_AI locale *)
 
-lemma arch_kobj_size_cong[Retype_AI_assms]:
+lemma arch_kobj_size_cong[Arch_assms]:
 "\<lbrakk>a = a1; c=c1\<rbrakk> \<Longrightarrow> arch_kobj_size (default_arch_object a b c)
   = arch_kobj_size (default_arch_object a1 b1 c1)"
   by (simp add: default_arch_object_def split: aobject_type.splits)
 
-lemma clearMemoryVM_return[simp, Retype_AI_assms]:
+lemma clearMemoryVM_return[simp, Arch_assms]:
   "clearMemoryVM a b = return ()"
   by (simp add: clearMemoryVM_def)
 
-lemma slot_bits_def2 [Retype_AI_assms]: "slot_bits = cte_level_bits"
+lemma slot_bits_def2 [Arch_assms]: "slot_bits = cte_level_bits"
   by (simp add: slot_bits_def cte_level_bits_def)
 
 definition
@@ -34,7 +34,7 @@ definition
      ArchObject SmallPageObj, ArchObject LargePageObj,
      ArchObject SectionObj, ArchObject SuperSectionObj}"
 
-lemma no_gs_types_simps [simp, Retype_AI_assms]:
+lemma no_gs_types_simps [simp, Arch_assms]:
   "Untyped \<in> no_gs_types"
   "TCBObject \<in> no_gs_types"
   "EndpointObject \<in> no_gs_types"
@@ -44,7 +44,7 @@ lemma no_gs_types_simps [simp, Retype_AI_assms]:
   "ArchObject ASIDPoolObj \<in> no_gs_types"
   by (simp_all add: no_gs_types_def)
 
-lemma retype_region_ret_folded [Retype_AI_assms]:
+lemma retype_region_ret_folded [Arch_assms]:
   "\<lbrace>\<top>\<rbrace> retype_region y n bits ty dev
    \<lbrace>\<lambda>r s. r = retype_addrs y ty n bits\<rbrace>"
   unfolding retype_region_def
@@ -538,7 +538,7 @@ lemma mapM_copy_global_invs_mappings_restricted:
   done
 
 
-lemma dmo_eq_kernel_restricted [wp, Retype_AI_assms]:
+lemma dmo_eq_kernel_restricted [wp, Arch_assms]:
   "\<lbrace>\<lambda>s. equal_kernel_mappings (kheap_update (f (kheap s)) s)\<rbrace>
        do_machine_op m
    \<lbrace>\<lambda>rv s. equal_kernel_mappings (kheap_update (f (kheap s)) s)\<rbrace>"
@@ -601,7 +601,7 @@ lemma init_arch_objects_invs_from_restricted:
   done
 
 
-lemma obj_bits_api_neq_0 [Retype_AI_assms]:
+lemma obj_bits_api_neq_0 [Arch_assms]:
   "ty \<noteq> Untyped \<Longrightarrow> 0 < obj_bits_api ty us"
   unfolding obj_bits_api_def
   by (clarsimp simp: slot_bits_def default_arch_object_def pageBits_def
@@ -635,20 +635,20 @@ lemma vs_lookup_pages_sub2:
   apply (rule table)
   done
 
+lemmas Retype_AI_slot_bits_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 
 global_interpretation Retype_AI_slot_bits?: Retype_AI_slot_bits
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case
-    by (unfold_locales; fact Retype_AI_assms)
+  case 1 show ?case by (unfold_locales; fact ARM.Retype_AI_slot_bits_assms)
   qed
 
 
 context Arch begin arch_global_naming
 
-lemma valid_untyped_helper [Retype_AI_assms]:
+lemma valid_untyped_helper [Arch_assms]:
   assumes valid_c : "s  \<turnstile> c"
   and   cte_at  : "cte_wp_at ((=) c) q s"
   and     tyunt: "ty \<noteq> Untyped"
@@ -722,13 +722,14 @@ lemma valid_default_arch_tcb:
   "\<And>s. valid_arch_tcb default_arch_tcb s"
   by (simp add: default_arch_tcb_def valid_arch_tcb_def)
 
+lemmas Retype_AI_valid_untyped_helper_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 
 global_interpretation Retype_AI_valid_untyped_helper?: Retype_AI_valid_untyped_helper
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; fact Retype_AI_assms)
+  case 1 show ?case by (unfold_locales; fact ARM.Retype_AI_valid_untyped_helper_assms)
   qed
 
 
@@ -1227,9 +1228,7 @@ end
 
 context Arch begin arch_global_naming
 
-named_theorems Retype_AI_assms'
-
-lemma invs_post_retype_invs [Retype_AI_assms']:
+lemma invs_post_retype_invs [Arch_assms]:
   "invs s \<Longrightarrow> post_retype_invs ty refs s"
   apply (clarsimp simp: post_retype_invs_def invs_def valid_state_def)
   apply (clarsimp simp: equal_kernel_mappings_def obj_at_def
@@ -1239,8 +1238,10 @@ lemma invs_post_retype_invs [Retype_AI_assms']:
 lemmas equal_kernel_mappings_trans_state
   = more_update.equal_kernel_mappings_update
 
-lemmas retype_region_proofs_assms [Retype_AI_assms']
+lemmas retype_region_proofs_assms [Arch_assms]
   = retype_region_proofs.post_retype_invs_axioms
+
+lemmas Retype_AI_assms' = Arch_assms (* extract accumulated assumptions *)
 
 end
 
@@ -1251,10 +1252,9 @@ global_interpretation Retype_AI?: Retype_AI
     and post_retype_invs = post_retype_invs
     and region_in_kernel_window = region_in_kernel_window
   proof goal_cases
-  interpret Arch .
   case 1 show ?case
-  by (intro_locales; (unfold_locales; fact Retype_AI_assms)?)
-     (simp add: Retype_AI_axioms_def Retype_AI_assms')
+  by (intro_locales; (unfold_locales; fact ARM.Retype_AI_assms')?)
+     (simp add: Retype_AI_axioms_def ARM.Retype_AI_assms')
   qed
 
 

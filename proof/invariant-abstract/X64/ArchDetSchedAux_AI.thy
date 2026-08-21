@@ -10,7 +10,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems DetSchedAux_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for DetSchedAux_AI locale *)
 
 lemma set_arch_obj_etcbs[wp]:
   "set_object ptr (ArchObj aobj) \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace>"
@@ -20,11 +20,11 @@ lemma set_arch_obj_etcbs[wp]:
 
 crunch init_arch_objects
   for exst[wp]: "\<lambda>s. P (exst s)"
-  and etcbs_of[wp, DetSchedAux_AI_assms]: "\<lambda>s. P (etcbs_of s)"
-  and ready_queues[wp, DetSchedAux_AI_assms]: "\<lambda>s. P (ready_queues s)"
-  and idle_thread[wp, DetSchedAux_AI_assms]: "\<lambda>s. P (idle_thread s)"
-  and schedact[wp, DetSchedAux_AI_assms]: "\<lambda>s. P (scheduler_action s)"
-  and cur_domain[wp, DetSchedAux_AI_assms]: "\<lambda>s. P (cur_domain s)"
+  and etcbs_of[wp, Arch_assms]: "\<lambda>s. P (etcbs_of s)"
+  and ready_queues[wp, Arch_assms]: "\<lambda>s. P (ready_queues s)"
+  and idle_thread[wp, Arch_assms]: "\<lambda>s. P (idle_thread s)"
+  and schedact[wp, Arch_assms]: "\<lambda>s. P (scheduler_action s)"
+  and cur_domain[wp, Arch_assms]: "\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps simp: set_arch_obj_simps)
 
 crunch init_arch_objects
@@ -39,7 +39,7 @@ lemma tcb_sched_action_valid_idle_etcb:
      (wpsimp simp: tcb_sched_action_def set_tcb_queue_def)
 
 crunch init_arch_objects
-  for valid_blocked[wp, DetSchedAux_AI_assms]: valid_blocked
+  for valid_blocked[wp, Arch_assms]: valid_blocked
   (wp: valid_blocked_lift set_cap_typ_at)
 
 lemma perform_asid_control_etcb_at:
@@ -83,12 +83,13 @@ lemma perform_asid_control_invocation_valid_sched:
   apply simp
   done
 
+lemmas DetSchedAux_AI_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation DetSchedAux_AI?: DetSchedAux_AI
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact DetSchedAux_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact X64.DetSchedAux_AI_assms)?)
   qed
 
 end

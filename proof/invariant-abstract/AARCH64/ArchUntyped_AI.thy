@@ -11,9 +11,9 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Untyped_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Untyped_AI locale *)
 
-lemma of_bl_nat_to_cref[Untyped_AI_assms]:
+lemma of_bl_nat_to_cref[Arch_assms]:
     "\<lbrakk> x < 2 ^ bits; bits < word_bits \<rbrakk>
       \<Longrightarrow> (of_bl (nat_to_cref bits x) :: word64) = of_nat x"
   apply (clarsimp intro!: less_mask_eq
@@ -22,7 +22,7 @@ lemma of_bl_nat_to_cref[Untyped_AI_assms]:
   by (metis add_lessD1 le_unat_uoi nat_le_iff_add nat_le_linear)
 
 
-lemma cnode_cap_ex_cte[Untyped_AI_assms]:
+lemma cnode_cap_ex_cte[Arch_assms]:
   "\<lbrakk> is_cnode_cap cap; cte_wp_at (\<lambda>c. \<exists>m. cap = mask_cap m c) p s;
      (s::'state_ext::state_ext state) \<turnstile> cap; valid_objs s; pspace_aligned s \<rbrakk> \<Longrightarrow>
     ex_cte_cap_wp_to is_cnode_cap (obj_ref_of cap, nat_to_cref (bits_of cap) x) s"
@@ -37,7 +37,7 @@ lemma cnode_cap_ex_cte[Untyped_AI_assms]:
 
 
 
-lemma inj_on_nat_to_cref[Untyped_AI_assms]:
+lemma inj_on_nat_to_cref[Arch_assms]:
   "bits < word_bits \<Longrightarrow> inj_on (nat_to_cref bits) {..< 2 ^ bits}"
   apply (rule inj_onI)
   apply (drule arg_cong[where f="\<lambda>x. replicate (64 - bits) False @ x"])
@@ -55,7 +55,7 @@ lemma inj_on_nat_to_cref[Untyped_AI_assms]:
   done
 
 
-lemma data_to_obj_type_sp[Untyped_AI_assms]:
+lemma data_to_obj_type_sp[Arch_assms]:
   "\<lbrace>P\<rbrace> data_to_obj_type x \<lbrace>\<lambda>ts (s::'state_ext::state_ext state). ts \<noteq> ArchObject ASIDPoolObj \<and> P s\<rbrace>, -"
   unfolding data_to_obj_type_def
   apply (rule hoare_pre)
@@ -64,7 +64,7 @@ lemma data_to_obj_type_sp[Untyped_AI_assms]:
   apply (simp add: arch_data_to_obj_type_def split: if_split_asm)
   done
 
-lemma dui_inv_wf[wp, Untyped_AI_assms]:
+lemma dui_inv_wf[wp, Arch_assms]:
   "\<lbrace>invs and cte_wp_at ((=) (cap.UntypedCap dev w sz idx)) slot
      and (\<lambda>s. \<forall>cap \<in> set cs. is_cnode_cap cap
                       \<longrightarrow> (\<forall>r\<in>cte_refs cap (interrupt_irq_node s). ex_cte_cap_wp_to is_cnode_cap r s))
@@ -149,7 +149,7 @@ qed
 lemma asid_bits_ge_0:
   "(0::word32) < 2 ^ asid_bits" by (simp add: asid_bits_def)
 
-lemma retype_ret_valid_caps_captable[Untyped_AI_assms]:
+lemma retype_ret_valid_caps_captable[Arch_assms]:
   "\<lbrakk>pspace_no_overlap_range_cover ptr sz (s::'state_ext::state_ext state) \<and> 0 < us
       \<and> range_cover ptr sz (obj_bits_api CapTableObject us) n \<and> ptr \<noteq> 0
        \<rbrakk>
@@ -162,7 +162,7 @@ by ((clarsimp simp:valid_cap_def default_object_def cap_aligned_def
       | rule is_aligned_add_multI[OF _ le_refl],
         (simp add:range_cover_def word_bits_def obj_bits_api_def slot_bits_def)+)+)[1]
 
-lemma retype_ret_valid_caps_aobj[Untyped_AI_assms]:
+lemma retype_ret_valid_caps_aobj[Arch_assms]:
   "\<And>ptr sz (s::'state_ext::state_ext state) x6 us n.
   \<lbrakk>pspace_no_overlap_range_cover ptr sz s \<and> x6 \<noteq> ASIDPoolObj \<and>
   range_cover ptr sz (obj_bits_api (ArchObject x6) us) n \<and> ptr \<noteq> 0\<rbrakk>
@@ -190,21 +190,21 @@ lemma cap_refs_in_kernel_windowD2:
   apply fastforce
   done
 
-lemma init_arch_objects_descendants_range[wp,Untyped_AI_assms]:
+lemma init_arch_objects_descendants_range[wp,Arch_assms]:
   "\<lbrace>\<lambda>(s::'state_ext::state_ext state). descendants_range x cref s \<rbrace>
    init_arch_objects ty dev ptr n us y
    \<lbrace>\<lambda>rv s. descendants_range x cref s\<rbrace>"
   unfolding init_arch_objects_def descendants_range_def
   by (wp mapM_x_wp' | wps)+ simp
 
-lemma init_arch_objects_caps_overlap_reserved[wp,Untyped_AI_assms]:
+lemma init_arch_objects_caps_overlap_reserved[wp,Arch_assms]:
   "\<lbrace>\<lambda>(s::'state_ext::state_ext state). caps_overlap_reserved S s\<rbrace>
    init_arch_objects ty dev ptr n us y
    \<lbrace>\<lambda>rv s. caps_overlap_reserved S s\<rbrace>"
   unfolding init_arch_objects_def caps_overlap_reserved_def
   by (wp mapM_x_wp' | wps)+ simp
 
-lemma set_untyped_cap_invs_simple[Untyped_AI_assms]:
+lemma set_untyped_cap_invs_simple[Arch_assms]:
   "\<lbrace>\<lambda>s. descendants_range_in {ptr .. ptr+2^sz - 1} cref s \<and> pspace_no_overlap_range_cover ptr sz s \<and> invs s
   \<and> cte_wp_at (\<lambda>c. is_untyped_cap c \<and> cap_bits c = sz \<and> obj_ref_of c = ptr \<and> cap_is_device c = dev) cref s \<and> idx \<le> 2^ sz\<rbrace>
   set_cap (cap.UntypedCap dev ptr sz idx) cref
@@ -245,7 +245,7 @@ lemma set_untyped_cap_invs_simple[Untyped_AI_assms]:
 
 lemmas pbfs_less_wb' = pageBitsForSize_bounded
 
-lemma delete_objects_rewrite[Untyped_AI_assms]:
+lemma delete_objects_rewrite[Arch_assms]:
   "\<lbrakk> word_size_bits \<le> sz; sz\<le> word_bits;ptr && ~~ mask sz = ptr\<rbrakk> \<Longrightarrow> delete_objects ptr sz =
     do y \<leftarrow> modify (clear_um {ptr + of_nat k |k. k < 2 ^ sz});
     modify (detype {ptr && ~~ mask sz..ptr + 2 ^ sz - 1})
@@ -274,7 +274,7 @@ lemma reachable_pg_cap_exst_update[simp]:
   "reachable_frame_cap x (trans_state f (s::'state_ext::state_ext state)) = reachable_frame_cap x s"
   by (simp add: reachable_frame_cap_def obj_at_def)
 
-lemma create_cap_valid_arch_caps[wp, Untyped_AI_assms]:
+lemma create_cap_valid_arch_caps[wp, Arch_assms]:
   "\<lbrace>valid_arch_caps
       and valid_cap (default_cap tp oref sz dev)
       and (\<lambda>(s::'state_ext::state_ext state). \<forall>r\<in>obj_refs (default_cap tp oref sz dev).
@@ -309,7 +309,7 @@ lemma create_cap_valid_arch_caps[wp, Untyped_AI_assms]:
   done
 
 
-lemma create_cap_cap_refs_in_kernel_window[wp, Untyped_AI_assms]:
+lemma create_cap_cap_refs_in_kernel_window[wp, Arch_assms]:
   "\<lbrace>cap_refs_in_kernel_window and cte_wp_at (\<lambda>c. cap_range (default_cap tp oref sz dev) \<subseteq> cap_range c) p\<rbrace>
      create_cap tp sz p dev (cref, oref) \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   apply (simp add: create_cap_def)
@@ -319,7 +319,7 @@ lemma create_cap_cap_refs_in_kernel_window[wp, Untyped_AI_assms]:
   apply blast
   done
 
-lemma init_arch_objects_nonempty_table[Untyped_AI_assms, wp]:
+lemma init_arch_objects_nonempty_table[Arch_assms, wp]:
   "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
          \<and> valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s) and
     K (\<forall>ref\<in>set refs. is_aligned ref (obj_bits_api tp us))\<rbrace>
@@ -327,13 +327,13 @@ lemma init_arch_objects_nonempty_table[Untyped_AI_assms, wp]:
    \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
   unfolding init_arch_objects_def by (wpsimp wp: mapM_x_wp')
 
-lemma nonempty_table_caps_of[Untyped_AI_assms]:
+lemma nonempty_table_caps_of[Arch_assms]:
   "nonempty_table S ko \<Longrightarrow> caps_of ko = {}"
   by (auto simp: caps_of_def cap_of_def nonempty_table_def a_type_def
           split: Structures_A.kernel_object.split if_split_asm)
 
 
-lemma nonempty_default[simp, Untyped_AI_assms]:
+lemma nonempty_default[simp, Arch_assms]:
   "tp \<noteq> Untyped \<Longrightarrow> \<not> nonempty_table S (default_object tp dev us d)"
   apply (case_tac tp, simp_all add: default_object_def nonempty_table_def a_type_def)
   apply (rename_tac aobject_type)
@@ -346,7 +346,7 @@ crunch init_arch_objects
 
 lemmas init_arch_objects_ex_cte_cap_wp_to = init_arch_objects_excap
 
-lemma obj_is_device_vui_eq[Untyped_AI_assms]:
+lemma obj_is_device_vui_eq[Arch_assms]:
   "valid_untyped_inv ui s
       \<Longrightarrow> case ui of Retype slot reset ptr_base ptr tp us slots dev
           \<Rightarrow> obj_is_device tp dev = dev"
@@ -358,26 +358,27 @@ lemma obj_is_device_vui_eq[Untyped_AI_assms]:
   apply (auto simp: arch_is_frame_type_def)
   done
 
-lemma create_cap_valid_arch_state[wp, Untyped_AI_assms]:
+lemma create_cap_valid_arch_state[wp, Arch_assms]:
   "\<lbrace>valid_arch_state and cte_wp_at (\<lambda>_. True) cref\<rbrace>
    create_cap tp sz p dev (cref,oref)
    \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
   by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps create_cap_tcb create_cap_aobj_at)
 
-lemma set_cap_non_arch_valid_arch_state[Untyped_AI_assms]:
+lemma set_cap_non_arch_valid_arch_state[Arch_assms]:
  "\<lbrace>\<lambda>s. valid_arch_state s \<and> cte_wp_at (\<lambda>_. \<not>is_arch_cap cap) ptr s\<rbrace>
   set_cap cap ptr
   \<lbrace>\<lambda>rv. valid_arch_state \<rbrace>"
   by wpsimp
+
+lemmas Untyped_AI_assms = Arch_assms (* extract accumulated assumptions *)
 
 end
 
 global_interpretation Untyped_AI? : Untyped_AI
   where nonempty_table = AARCH64.nonempty_table
   proof goal_cases
-    interpret Arch .
     case 1 show ?case
-    by (unfold_locales; (fact Untyped_AI_assms)?)
+    by (unfold_locales; (fact AARCH64.Untyped_AI_assms)?)
   qed
 
 end

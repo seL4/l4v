@@ -14,9 +14,9 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems InterruptAcc_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for InterruptAcc_AI locale *)
 
-lemma dmo_maskInterrupt_invs [InterruptAcc_AI_assms]:
+lemma dmo_maskInterrupt_invs [Arch_assms]:
   "\<lbrace>all_invs_but_valid_irq_states_for irq and (\<lambda>s. state = interrupt_states s irq)\<rbrace>
    do_machine_op (maskInterrupt (state = IRQInactive) irq)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -30,12 +30,13 @@ lemma dmo_maskInterrupt_invs [InterruptAcc_AI_assms]:
 crunch handle_spurious_irq
   for invs: invs
 
+lemmas InterruptAcc_AI_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation InterruptAcc_AI?: InterruptAcc_AI
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; fact InterruptAcc_AI_assms)
+  case 1 show ?case by (unfold_locales; fact RISCV64.InterruptAcc_AI_assms)
   qed
 
 end

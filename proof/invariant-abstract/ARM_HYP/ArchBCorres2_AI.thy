@@ -11,10 +11,10 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems BCorres2_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for BCorres2_AI locale *)
 
 crunch invoke_cnode
-  for (bcorres) bcorres[wp, BCorres2_AI_assms]: truncate_state
+  for (bcorres) bcorres[wp, Arch_assms]: truncate_state
   (simp: swp_def ignore: clearMemory without_preemption filterM)
 
 crunch create_cap,init_arch_objects,retype_region,delete_objects
@@ -31,7 +31,7 @@ crunch invoke_untyped
 crunch
   set_mcpriority, set_priority, arch_get_sanitise_register_info, arch_post_modify_registers,
   set_flags, arch_post_set_flags
-  for (bcorres) bcorres[BCorres2_AI_assms,wp]: truncate_state
+  for (bcorres) bcorres[Arch_assms,wp]: truncate_state
 
 lemma invoke_tcb_bcorres[wp]:
   fixes a
@@ -53,20 +53,21 @@ lemma invoke_irq_control_bcorres[wp]: "bcorres (invoke_irq_control a) (invoke_ir
 lemma invoke_irq_handler_bcorres[wp]: "bcorres (invoke_irq_handler a) (invoke_irq_handler a)"
   by (cases a; (wpsimp | rule conjI)+)
 
-lemma make_arch_fault_msg_bcorres[wp,BCorres2_AI_assms]:
+lemma make_arch_fault_msg_bcorres[wp,Arch_assms]:
   "bcorres (make_arch_fault_msg a b) (make_arch_fault_msg a b)"
   by (cases a; wpsimp)
 
-lemma handle_arch_fault_reply_bcorres[wp,BCorres2_AI_assms]:
+lemma handle_arch_fault_reply_bcorres[wp,Arch_assms]:
   "bcorres ( handle_arch_fault_reply a b c d) (handle_arch_fault_reply a b c d)"
   by (cases a; wpsimp simp: handle_arch_fault_reply_def)
+
+lemmas BCorres2_AI_assms = Arch_assms (* extract accumulated assumptions *)
 
 end
 
 interpretation BCorres2_AI?: BCorres2_AI
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact BCorres2_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact ARM_HYP.BCorres2_AI_assms)?)
   qed
 
 context Arch begin arch_global_naming
