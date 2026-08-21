@@ -28,16 +28,16 @@ primrec arch_irq_control_inv_valid_real ::
 defs arch_irq_control_inv_valid_def:
   "arch_irq_control_inv_valid \<equiv> arch_irq_control_inv_valid_real"
 
-named_theorems Interrupt_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Interrupt_AI locale *)
 
-lemma (* decode_irq_control_invocation_inv *)[Interrupt_AI_assms]:
+lemma (* decode_irq_control_invocation_inv *)[Arch_assms]:
   "\<lbrace>P\<rbrace> decode_irq_control_invocation label args slot caps \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: decode_irq_control_invocation_def Let_def arch_check_irq_def range_check_def
                    arch_decode_irq_control_invocation_def whenE_def, safe)
   apply (wp | simp)+
   done
 
-lemma decode_irq_control_valid [Interrupt_AI_assms]:
+lemma decode_irq_control_valid [Arch_assms]:
   "\<lbrace>\<lambda>s. invs s \<and> (\<forall>cap \<in> set caps. s \<turnstile> cap)
         \<and> (\<forall>cap \<in> set caps. is_cnode_cap cap \<longrightarrow>
                 (\<forall>r \<in> cte_refs cap (interrupt_irq_node s). ex_cte_cap_wp_to is_cnode_cap r s))
@@ -54,7 +54,7 @@ lemma decode_irq_control_valid [Interrupt_AI_assms]:
   apply (cases caps ; fastforce simp: cte_wp_at_eq_simp maxIRQ_def)
   done
 
-lemma get_irq_slot_different_ARCH[Interrupt_AI_assms]:
+lemma get_irq_slot_different_ARCH[Arch_assms]:
   "\<lbrace>\<lambda>s. valid_global_refs s \<and> ex_cte_cap_wp_to is_cnode_cap ptr s\<rbrace>
       get_irq_slot irq
    \<lbrace>\<lambda>rv s. rv \<noteq> ptr\<rbrace>"
@@ -66,7 +66,7 @@ lemma get_irq_slot_different_ARCH[Interrupt_AI_assms]:
   apply (clarsimp simp: global_refs_def is_cap_simps cap_range_def)
   done
 
-lemma is_derived_use_interrupt_ARCH[Interrupt_AI_assms]:
+lemma is_derived_use_interrupt_ARCH[Arch_assms]:
   "(is_ntfn_cap cap \<and> interrupt_derived cap cap') \<longrightarrow> (is_derived m p cap cap')"
   apply (clarsimp simp: is_cap_simps)
   apply (clarsimp simp: interrupt_derived_def is_derived_def)
@@ -74,15 +74,15 @@ lemma is_derived_use_interrupt_ARCH[Interrupt_AI_assms]:
   apply (simp add: is_cap_simps is_pt_cap_def vs_cap_ref_def)
   done
 
-lemmas maskInterrupt_invs_ARCH[Interrupt_AI_assms] = maskInterrupt_invs
+lemmas maskInterrupt_invs_ARCH[Arch_assms] = maskInterrupt_invs
 
-lemma no_cap_to_obj_with_diff_IRQHandler_ARCH[Interrupt_AI_assms]:
+lemma no_cap_to_obj_with_diff_IRQHandler_ARCH[Arch_assms]:
   "no_cap_to_obj_with_diff_ref (IRQHandlerCap irq) S = \<top>"
   by (rule ext, simp add: no_cap_to_obj_with_diff_ref_def
                           cte_wp_at_caps_of_state
                           obj_ref_none_no_asid)
 
-lemma (* set_irq_state_valid_cap *)[Interrupt_AI_assms]:
+lemma (* set_irq_state_valid_cap *)[Arch_assms]:
   "\<lbrace>valid_cap cap\<rbrace> set_irq_state IRQSignal irq \<lbrace>\<lambda>rv. valid_cap cap\<rbrace>"
   apply (clarsimp simp: set_irq_state_def)
   apply (wp do_machine_op_valid_cap)
@@ -92,7 +92,7 @@ lemma (* set_irq_state_valid_cap *)[Interrupt_AI_assms]:
   done
 
 crunch set_irq_state
-  for valid_global_refs[Interrupt_AI_assms]: "valid_global_refs"
+  for valid_global_refs[Arch_assms]: "valid_global_refs"
 
 crunch arch_invoke_irq_handler
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
@@ -106,7 +106,7 @@ lemma deactivateInterrupt_invs:
   by (cases config_ARM_GIC_V3; simp)
      (wpsimp wp: maskInterrupt_invs_ARCH)
 
-lemma invoke_irq_handler_invs'[Interrupt_AI_assms]:
+lemma invoke_irq_handler_invs'[Arch_assms]:
   assumes dmo_ex_inv[wp]: "\<And>f. \<lbrace>invs and ex_inv\<rbrace> do_machine_op f \<lbrace>\<lambda>rv::unit. ex_inv\<rbrace>"
   assumes cap_insert_ex_inv[wp]: "\<And>cap src dest.
   \<lbrace>ex_inv and invs and K (src \<noteq> dest)\<rbrace>
@@ -177,7 +177,7 @@ lemma valid_cap_SGISignalCap[simp, intro!]:
   unfolding valid_cap_def
   by (clarsimp simp: cap_aligned_def word_bits_def)
 
-lemma invoke_irq_control_invs[Interrupt_AI_assms]:
+lemma invoke_irq_control_invs[Arch_assms]:
   "\<lbrace>invs and irq_control_inv_valid i\<rbrace> invoke_irq_control i \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (cases i; simp)
    apply (wp cap_insert_simple_invs
@@ -208,7 +208,7 @@ lemma invoke_irq_control_invs[Interrupt_AI_assms]:
 crunch resetTimer
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
 
-lemma resetTimer_invs_ARCH[Interrupt_AI_assms]:
+lemma resetTimer_invs_ARCH[Arch_assms]:
   "\<lbrace>invs\<rbrace> do_machine_op resetTimer \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (wp dmo_invs)
   apply safe
@@ -221,11 +221,11 @@ lemma resetTimer_invs_ARCH[Interrupt_AI_assms]:
   apply(erule use_valid, wp no_irq_resetTimer no_irq, assumption)
   done
 
-lemma empty_fail_ackInterrupt_ARCH[Interrupt_AI_assms]:
+lemma empty_fail_ackInterrupt_ARCH[Arch_assms]:
   "empty_fail (ackInterrupt irq)"
   by (wp | simp add: ackInterrupt_def)+
 
-lemma empty_fail_maskInterrupt_ARCH[Interrupt_AI_assms]:
+lemma empty_fail_maskInterrupt_ARCH[Arch_assms]:
   "empty_fail (maskInterrupt f irq)"
   by (wp | simp add: maskInterrupt_def)+
 
@@ -292,7 +292,7 @@ crunch timer_tick
   for invs[wp]: invs
   (wp: thread_set_invs_trivial[OF ball_tcb_cap_casesI])
 
-lemma handle_interrupt_invs[Interrupt_AI_assms]:
+lemma handle_interrupt_invs[Arch_assms]:
   "\<lbrace>invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: handle_interrupt_def)
   apply (rule conjI; rule impI)
@@ -309,7 +309,7 @@ lemma handle_interrupt_invs[Interrupt_AI_assms]:
            | rule conjI)+
  done
 
-lemma sts_arch_irq_control_inv_valid[wp, Interrupt_AI_assms]:
+lemma sts_arch_irq_control_inv_valid[wp, Arch_assms]:
   "\<lbrace>arch_irq_control_inv_valid i\<rbrace>
        set_thread_state t st
    \<lbrace>\<lambda>rv. arch_irq_control_inv_valid i\<rbrace>"
@@ -319,12 +319,13 @@ lemma sts_arch_irq_control_inv_valid[wp, Interrupt_AI_assms]:
    apply (wp ex_cte_cap_to_pres | simp add: cap_table_at_typ)+
   done
 
+lemmas Interrupt_AI_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 interpretation Interrupt_AI?: Interrupt_AI
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales, simp_all add: Interrupt_AI_assms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales, simp_all add: ARM_HYP.Interrupt_AI_assms)?)
 qed
 
 end

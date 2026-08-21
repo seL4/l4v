@@ -174,11 +174,11 @@ lemma device_frame_in_device_region:
   by (auto simp add: pspace_respects_device_region_def dom_def device_mem_def)
 
 
-named_theorems AInvsPre_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for AInvsPre locale *)
 
 
 
-lemma (* ptable_rights_imp_frame *)[AInvsPre_assms]:
+lemma (* ptable_rights_imp_frame *)[Arch_assms]:
   assumes "valid_state s"
   shows "ptable_rights t s x \<noteq> {} \<Longrightarrow>
          ptable_lift t s x = Some (addrFromPPtr y) \<Longrightarrow>
@@ -216,12 +216,14 @@ lemma (* ptable_rights_imp_frame *)[AInvsPre_assms]:
     apply (case_tac sz, simp_all add: word_bits_conv)[1]
   apply (clarsimp simp: field_simps simp: data_at_def)
   done
+
+lemmas AInvsPre_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation AInvsPre?: AInvsPre
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales, fact AInvsPre_assms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales, fact ARM.AInvsPre_assms)?)
   qed
 
 end

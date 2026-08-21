@@ -10,7 +10,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Ipc_AI_1_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Ipc_AI_1 locale *)
 
 lemma cap_asid_PageCap_None [simp]:
   "cap_asid (ArchObjectCap (PageCap dev r R pgsz None)) = None"
@@ -36,7 +36,7 @@ lemma arch_derive_cap_is_derived:
              | rule conjI)+)
   done
 
-lemma derive_cap_is_derived [Ipc_AI_1_assms]:
+lemma derive_cap_is_derived [Arch_assms]:
   "\<lbrace>\<lambda>s. c'\<noteq> cap.NullCap \<longrightarrow> cte_wp_at (\<lambda>cap. cap_master_cap cap = cap_master_cap c'
                      \<and> (cap_badge cap, cap_badge c') \<in> capBadge_ordering False
                      \<and> cap_asid cap = cap_asid c'
@@ -62,23 +62,24 @@ lemma derive_cap_is_derived [Ipc_AI_1_assms]:
   apply(clarsimp simp: valid_cap_def)
   done
 
-lemma arch_cap_badge_rights_update[Ipc_AI_1_assms, simp]:
+lemma arch_cap_badge_rights_update[Arch_assms, simp]:
   "arch_cap_badge (acap_rights_update rights acap) = arch_cap_badge acap"
   by simp
+
+lemmas Ipc_AI_assms = Arch_assms (* extract accumulated assumptions *)
 
 end
 
 interpretation Ipc_AI?: Ipc_AI
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact Ipc_AI_1_assms)?)
+  case 1 show ?case by (unfold_locales; (fact ARM.Ipc_AI_assms)?)
 qed
 
 context Arch begin arch_global_naming
 
-named_theorems Ipc_AI_2_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Ipc_AI_2 locale *)
 
-lemma is_derived_cap_rights [simp, Ipc_AI_2_assms]:
+lemma is_derived_cap_rights [simp, Arch_assms]:
   "is_derived m p (cap_rights_update R c) = is_derived m p c"
   apply (rule ext)
   apply (simp add: cap_rights_update_def is_derived_def is_cap_simps)
@@ -90,12 +91,12 @@ lemma is_derived_cap_rights [simp, Ipc_AI_2_assms]:
            split: arch_cap.split cap.split bool.splits)
 
 
-lemma data_to_message_info_valid [Ipc_AI_2_assms]:
+lemma data_to_message_info_valid [Arch_assms]:
   "valid_message_info (data_to_message_info w)"
   by (simp add: valid_message_info_def data_to_message_info_def  word_and_le1 msg_max_length_def
                 msg_max_extra_caps_def Let_def not_less mask_def)
 
-lemma get_extra_cptrs_length[wp, Ipc_AI_2_assms]:
+lemma get_extra_cptrs_length[wp, Arch_assms]:
   "\<lbrace>\<lambda>s . valid_message_info mi\<rbrace>
    get_extra_cptrs buf mi
    \<lbrace>\<lambda>rv s. length rv \<le> msg_max_extra_caps\<rbrace>"
@@ -110,19 +111,19 @@ lemma get_extra_cptrs_length[wp, Ipc_AI_2_assms]:
                  intro: length_upt)
   done
 
-lemma cap_asid_rights_update [simp, Ipc_AI_2_assms]:
+lemma cap_asid_rights_update [simp, Arch_assms]:
   "cap_asid (cap_rights_update R c) = cap_asid c"
   apply (simp add: cap_rights_update_def acap_rights_update_def split: cap.splits arch_cap.splits bool.splits)
   apply (clarsimp simp: cap_asid_def)
   done
 
-lemma cap_rights_update_vs_cap_ref[simp, Ipc_AI_2_assms]:
+lemma cap_rights_update_vs_cap_ref[simp, Arch_assms]:
   "vs_cap_ref (cap_rights_update rs cap) = vs_cap_ref cap"
   by (simp add: vs_cap_ref_def cap_rights_update_def
                 acap_rights_update_def
          split: cap.split arch_cap.split bool.splits)
 
-lemma is_derived_cap_rights2[simp, Ipc_AI_2_assms]:
+lemma is_derived_cap_rights2[simp, Arch_assms]:
   "is_derived m p c (cap_rights_update R c') = is_derived m p c c'"
   apply (case_tac c')
   apply (simp_all add: cap_rights_update_def)
@@ -132,12 +133,12 @@ lemma is_derived_cap_rights2[simp, Ipc_AI_2_assms]:
   apply (case_tac acap1)
    by (auto simp: acap_rights_update_def)
 
-lemma cap_range_update [simp, Ipc_AI_2_assms]:
+lemma cap_range_update [simp, Arch_assms]:
   "cap_range (cap_rights_update R cap) = cap_range cap"
   by (auto simp add: cap_range_def cap_rights_update_def acap_rights_update_def
          split: cap.splits arch_cap.splits bool.splits)
 
-lemma derive_cap_idle[wp, Ipc_AI_2_assms]:
+lemma derive_cap_idle[wp, Arch_assms]:
   "\<lbrace>\<lambda>s. global_refs s \<inter> cap_range cap = {}\<rbrace>
    derive_cap slot cap
   \<lbrace>\<lambda>c s. global_refs s \<inter> cap_range c = {}\<rbrace>, -"
@@ -149,7 +150,7 @@ lemma derive_cap_idle[wp, Ipc_AI_2_assms]:
   apply (case_tac arch_cap, simp_all)
   done
 
-lemma arch_derive_cap_objrefs_iszombie [Ipc_AI_2_assms]:
+lemma arch_derive_cap_objrefs_iszombie [Arch_assms]:
   "\<lbrace>\<lambda>s . P (set_option (aobj_ref cap)) False s\<rbrace>
      arch_derive_cap cap
    \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow> P (obj_refs rv) (is_zombie rv) s\<rbrace>,-"
@@ -157,7 +158,7 @@ lemma arch_derive_cap_objrefs_iszombie [Ipc_AI_2_assms]:
       apply(rule hoare_pre, wpc?, wp+, simp)+
   done
 
-lemma obj_refs_remove_rights[simp, Ipc_AI_2_assms]:
+lemma obj_refs_remove_rights[simp, Arch_assms]:
   "obj_refs (remove_rights rs cap) = obj_refs cap"
   by (auto simp add: remove_rights_def cap_rights_update_def
                 acap_rights_update_def
@@ -172,7 +173,7 @@ lemma storeWord_um_inv:
   apply simp
   done
 
-lemma store_word_offs_vms[wp, Ipc_AI_2_assms]:
+lemma store_word_offs_vms[wp, Arch_assms]:
   "\<lbrace>valid_machine_state\<rbrace> store_word_offs ptr offs v \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
 proof -
   have aligned_offset_ignore:
@@ -211,12 +212,12 @@ proof -
     done
 qed
 
-lemma is_zombie_update_cap_data[simp, Ipc_AI_2_assms]:
+lemma is_zombie_update_cap_data[simp, Arch_assms]:
   "is_zombie (update_cap_data P data cap) = is_zombie cap"
   by (simp add: update_cap_data_closedform is_zombie_def arch_update_cap_data_def
          split: cap.splits)
 
-lemma valid_msg_length_strengthen [Ipc_AI_2_assms]:
+lemma valid_msg_length_strengthen [Arch_assms]:
   "valid_message_info mi \<longrightarrow> unat (mi_length mi) \<le> msg_max_length"
   apply (clarsimp simp: valid_message_info_def)
   apply (subgoal_tac "unat (mi_length mi) \<le> unat (of_nat msg_max_length :: word32)")
@@ -224,7 +225,7 @@ lemma valid_msg_length_strengthen [Ipc_AI_2_assms]:
   apply (clarsimp simp: un_ui_le word_le_def)
   done
 
-lemma copy_mrs_in_user_frame[wp, Ipc_AI_2_assms]:
+lemma copy_mrs_in_user_frame[wp, Arch_assms]:
   "\<lbrace>in_user_frame p\<rbrace> copy_mrs t buf t' buf' n \<lbrace>\<lambda>rv. in_user_frame p\<rbrace>"
   by (simp add: in_user_frame_def) (wp hoare_vcg_ex_lift)
 
@@ -232,7 +233,7 @@ lemma as_user_getRestart_inv[wp]:
   "as_user t getRestartPC \<lbrace>P\<rbrace>"
   by (simp add: getRestartPC_def, rule user_getreg_inv)
 
-lemma make_arch_fault_msg_inv[wp, Ipc_AI_2_assms]:
+lemma make_arch_fault_msg_inv[wp, Arch_assms]:
   "make_arch_fault_msg ft t \<lbrace>P\<rbrace>"
   by (cases ft; wpsimp)
 
@@ -240,14 +241,14 @@ lemma make_fault_msg_inv[wp]:
   "make_fault_msg ft t \<lbrace>P\<rbrace>"
   by (cases ft; wpsimp wp: as_user_inv getRestartPC_inv mapM_wp' split_del: if_split)
 
-lemma do_fault_transfer_invs[wp, Ipc_AI_2_assms]:
+lemma do_fault_transfer_invs[wp, Arch_assms]:
   "\<lbrace>invs and tcb_at receiver\<rbrace>
       do_fault_transfer badge sender receiver recv_buf
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (simp add: do_fault_transfer_def split_def | wp
     | clarsimp split: option.split)+
 
-lemma lookup_ipc_buffer_in_user_frame[wp, Ipc_AI_2_assms]:
+lemma lookup_ipc_buffer_in_user_frame[wp, Arch_assms]:
   "\<lbrace>valid_objs and tcb_at t\<rbrace> lookup_ipc_buffer b t
    \<lbrace>case_option (\<lambda>_. True) in_user_frame\<rbrace>"
   apply (simp add: lookup_ipc_buffer_def)
@@ -350,9 +351,9 @@ lemma transfer_caps_non_null_cte_wp_at:
   done
 
 crunch do_fault_transfer
-  for cte_wp_at[wp,Ipc_AI_2_assms]: "cte_wp_at P p"
+  for cte_wp_at[wp,Arch_assms]: "cte_wp_at P p"
 
-lemma do_normal_transfer_non_null_cte_wp_at [Ipc_AI_2_assms]:
+lemma do_normal_transfer_non_null_cte_wp_at [Arch_assms]:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows  "\<lbrace>valid_objs and cte_wp_at (P and ((\<noteq>) cap.NullCap)) ptr\<rbrace>
    do_normal_transfer st send_buffer ep b gr rt recv_buffer
@@ -363,7 +364,7 @@ lemma do_normal_transfer_non_null_cte_wp_at [Ipc_AI_2_assms]:
     | clarsimp simp:imp)+
   done
 
-lemma is_derived_ReplyCap [simp, Ipc_AI_2_assms]:
+lemma is_derived_ReplyCap [simp, Arch_assms]:
   "\<And>m p R. is_derived m p (cap.ReplyCap t False R) = (\<lambda>c. is_master_reply_cap c \<and> obj_ref_of c = t)"
   apply (subst fun_eq_iff)
   apply clarsimp
@@ -384,7 +385,7 @@ lemma do_normal_transfer_tcb_caps:
      | simp add:imp)+
   done
 
-lemma do_ipc_transfer_tcb_caps [Ipc_AI_2_assms]:
+lemma do_ipc_transfer_tcb_caps [Arch_assms]:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows
   "\<lbrace>valid_objs and cte_wp_at P (t, ref) and tcb_at t\<rbrace>
@@ -406,7 +407,7 @@ lemma cap_insert_valid_vso_at[wp]:
   apply (clarsimp simp: valid_vso_at_def)
   by (wpsimp wp: sts_obj_at_impossible sts_typ_ats hoare_vcg_ex_lift)
 
-lemma setup_caller_cap_valid_global_objs[wp, Ipc_AI_2_assms]:
+lemma setup_caller_cap_valid_global_objs[wp, Arch_assms]:
   "\<lbrace>valid_global_objs\<rbrace> setup_caller_cap send recv grant \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
   apply (wp valid_global_objs_lift valid_ao_at_lift)
   unfolding setup_caller_cap_def
@@ -414,9 +415,9 @@ lemma setup_caller_cap_valid_global_objs[wp, Ipc_AI_2_assms]:
   done
 
 crunch handle_arch_fault_reply, arch_get_sanitise_register_info
-  for inv[Ipc_AI_2_assms]: P
+  for inv[Arch_assms]: P
 
-lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_2_assms]:
+lemma transfer_caps_loop_valid_vspace_objs[wp, Arch_assms]:
   "\<lbrace>valid_vspace_objs\<rbrace>
       transfer_caps_loop ep buffer n caps slots mi
     \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
@@ -437,11 +438,11 @@ lemma setup_caller_cap_aobj_at:
   unfolding setup_caller_cap_def
   by (wpsimp wp: cap_insert_aobj_at sts.aobj_at)
 
-lemma setup_caller_cap_valid_arch[Ipc_AI_2_assms, wp]:
+lemma setup_caller_cap_valid_arch[Arch_assms, wp]:
   "setup_caller_cap st rt grant \<lbrace>valid_arch_state\<rbrace>"
   by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps[rotated -1] setup_caller_cap_tcb_at setup_caller_cap_aobj_at)
 
-lemma transfer_caps_loop_valid_arch[Ipc_AI_2_assms]:
+lemma transfer_caps_loop_valid_arch[Arch_assms]:
   "\<And>slots caps ep buffer n mi.
     \<lbrace>valid_arch_state and valid_objs and valid_mdb and K (distinct slots)
          and (\<lambda>s. \<forall>x \<in> set slots. real_cte_at x s \<and> cte_wp_at (\<lambda>cap. cap = cap.NullCap) x s)
@@ -450,23 +451,24 @@ lemma transfer_caps_loop_valid_arch[Ipc_AI_2_assms]:
     \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps transfer_caps_loop_typ_ats transfer_caps_loop_aobj_at)
 
+lemmas Ipc_AI_2_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 interpretation Ipc_AI?: Ipc_AI_2
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact Ipc_AI_2_assms)?)
+  case 1 show ?case by (unfold_locales; (fact ARM.Ipc_AI_2_assms)?)
 qed
 
 context Arch begin arch_global_naming
 
-named_theorems Ipc_AI_3_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Ipc_AI_3 locale *)
 
 crunch do_ipc_transfer
-  for pspace_respects_device_region[wp, Ipc_AI_3_assms]: "pspace_respects_device_region"
+  for pspace_respects_device_region[wp, Arch_assms]: "pspace_respects_device_region"
   (wp: crunch_wps ignore: const_on_failure simp: crunch_simps)
 
-lemma do_ipc_transfer_respects_device_region[Ipc_AI_3_assms]:
+lemma do_ipc_transfer_respects_device_region[Arch_assms]:
   "\<lbrace>cap_refs_respects_device_region and tcb_at t and  valid_objs and valid_mdb\<rbrace>
    do_ipc_transfer t ep bg grt r
    \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
@@ -484,7 +486,7 @@ lemma set_mrs_state_hyp_refs_of[wp]:
   by (wp set_mrs_thread_set_dmo thread_set_hyp_refs_trivial | simp)+
 
 crunch do_ipc_transfer
-  for state_hyp_refs_of[wp, Ipc_AI_3_assms]: "\<lambda> s. P (state_hyp_refs_of s)"
+  for state_hyp_refs_of[wp, Arch_assms]: "\<lambda> s. P (state_hyp_refs_of s)"
   (wp: crunch_wps simp: zipWithM_x_mapM)
 
 lemma arch_derive_cap_untyped:
@@ -503,18 +505,19 @@ lemma valid_arch_mdb_cap_swap:
             ((caps_of_state s)(a \<mapsto> c', b \<mapsto> c))"
   by auto
 
-lemma do_ipc_transfer_valid_arch[Ipc_AI_3_assms]:
+lemma do_ipc_transfer_valid_arch[Arch_assms]:
   "\<lbrace>valid_arch_state and valid_objs and valid_mdb \<rbrace>
    do_ipc_transfer s ep bg grt r
    \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
   by (wpsimp wp: valid_arch_state_lift_aobj_at_no_caps dit_tcb_at do_ipc_transfer_aobj_at)
 
+lemmas Ipc_AI_3_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 interpretation Ipc_AI?: Ipc_AI_3
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales;(fact Ipc_AI_3_assms)?)
+  case 1 show ?case by (unfold_locales;(fact ARM.Ipc_AI_3_assms)?)
 qed
 
 end

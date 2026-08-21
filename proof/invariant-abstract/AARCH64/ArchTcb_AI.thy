@@ -11,17 +11,17 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Tcb_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Tcb_AI locale *)
 
 
-lemma activate_idle_invs[Tcb_AI_assms]:
+lemma activate_idle_invs[Arch_assms]:
   "\<lbrace>invs and ct_idle\<rbrace>
      arch_activate_idle_thread thread
    \<lbrace>\<lambda>rv. invs and ct_idle\<rbrace>"
   by (simp add: arch_activate_idle_thread_def)
 
 
-declare getRegister_empty_fail [Tcb_AI_assms]
+declare getRegister_empty_fail [Arch_assms]
 
 lemma same_object_also_valid:  (* arch specific *)
   "\<lbrakk> same_object_as cap cap'; s \<turnstile> cap'; wellformed_cap cap;
@@ -35,14 +35,14 @@ lemma same_object_also_valid:  (* arch specific *)
                    split: cap.split_asm arch_cap.split_asm option.splits)+)
   done
 
-lemma same_object_obj_refs[Tcb_AI_assms]:
+lemma same_object_obj_refs[Arch_assms]:
   "\<lbrakk> same_object_as cap cap' \<rbrakk>
      \<Longrightarrow> obj_refs cap = obj_refs cap'"
   apply (cases cap, simp_all add: same_object_as_def)
        apply (clarsimp simp: is_cap_simps bits_of_def split: cap.split_asm)+
   by (cases "the_arch_cap cap"; cases "the_arch_cap cap'"; simp)
 
-lemma arch_cap_badge_none_master[Tcb_AI_assms, simp]:
+lemma arch_cap_badge_none_master[Arch_assms, simp]:
   "(arch_cap_badge (cap_master_arch_cap acap) = None) = (arch_cap_badge acap = None)"
   by (cases acap; simp add: cap_master_arch_cap_def)
 
@@ -55,11 +55,11 @@ where
       (\<not> arch_cap_fun_lift is_SMCCap False cap)"
 
 crunch arch_get_sanitise_register_info, arch_post_modify_registers
-  for tcb_at[wp, Tcb_AI_assms]: "tcb_at a"
-  and invs[wp, Tcb_AI_assms]: "invs"
-  and ex_nonz_cap_to[wp, Tcb_AI_assms]: "ex_nonz_cap_to a"
+  for tcb_at[wp, Arch_assms]: "tcb_at a"
+  and invs[wp, Arch_assms]: "invs"
+  and ex_nonz_cap_to[wp, Arch_assms]: "ex_nonz_cap_to a"
 
-lemma finalise_cap_not_cte_wp_at[Tcb_AI_assms]:
+lemma finalise_cap_not_cte_wp_at[Arch_assms]:
   assumes x: "P cap.NullCap"
   shows      "\<lbrace>\<lambda>s. \<forall>cp \<in> ran (caps_of_state s). P cp\<rbrace>
                 finalise_cap cap fin
@@ -76,12 +76,12 @@ lemma finalise_cap_not_cte_wp_at[Tcb_AI_assms]:
     done
 
 crunch arch_post_set_flags, arch_prepare_set_domain
-  for typ_at[wp, Tcb_AI_assms]: "\<lambda>s. P (typ_at T p s)"
+  for typ_at[wp, Arch_assms]: "\<lambda>s. P (typ_at T p s)"
 
 crunch arch_prepare_set_domain
-  for invs[wp, Tcb_AI_assms]: "invs"
+  for invs[wp, Arch_assms]: "invs"
 
-lemma arch_post_set_flags_invs[wp, Tcb_AI_assms]:
+lemma arch_post_set_flags_invs[wp, Arch_assms]:
   "\<lbrace>invs and ex_nonz_cap_to t\<rbrace> arch_post_set_flags t flags \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding arch_post_set_flags_def
   by wpsimp
@@ -93,9 +93,11 @@ crunch arch_prepare_set_domain
   and pspace_distinct[wp]: pspace_distinct
   (wp: crunch_wps)
 
-lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_assms]:
+lemma table_cap_ref_max_free_index_upd[simp,Arch_assms]:
   "table_cap_ref (max_free_index_update cap) = table_cap_ref cap"
   by (simp add:free_index_update_def table_cap_ref_def split:cap.splits)
+
+lemmas Tcb_AI_assms = Arch_assms (* extract accumulated assumptions *)
 
 end
 
@@ -103,8 +105,7 @@ global_interpretation Tcb_AI_1?: Tcb_AI_1
   where state_ext_t = state_ext_t
   and is_cnode_or_valid_arch = is_cnode_or_valid_arch
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact Tcb_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact AARCH64.Tcb_AI_assms)?)
 qed
 
 context Arch begin arch_global_naming
@@ -189,8 +190,7 @@ global_interpretation Tcb_AI_1?: Tcb_AI_1
   where state_ext_t = state_ext_t
   and is_cnode_or_valid_arch = is_cnode_or_valid_arch
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact Tcb_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact AARCH64.Tcb_AI_assms)?)
 qed
 
 context Arch begin arch_global_naming
@@ -209,7 +209,7 @@ lemma use_no_cap_to_obj_asid_strg: (* arch specific *)
   by (fastforce simp: table_cap_ref_def vspace_asid_def valid_cap_simps obj_at_def
                 split: cap.splits arch_cap.splits option.splits prod.splits)
 
-lemma cap_delete_no_cap_to_obj_asid[wp, Tcb_AI_assms]:
+lemma cap_delete_no_cap_to_obj_asid[wp, Arch_assms]:
   "\<lbrace>no_cap_to_obj_dr_emp cap\<rbrace>
      cap_delete slot
    \<lbrace>\<lambda>rv. no_cap_to_obj_dr_emp cap\<rbrace>"
@@ -243,7 +243,7 @@ lemma option_case_eq_None:
   "((case m of None \<Rightarrow> None | Some (a,b) \<Rightarrow> Some a) = None) = (m = None)"
   by (clarsimp split: option.splits)
 
-lemma tc_invs[Tcb_AI_assms]:
+lemma tc_invs[Arch_assms]:
   "\<lbrace>invs and tcb_at a
        and (case_option \<top> (valid_cap o fst) e)
        and (case_option \<top> (valid_cap o fst) f)
@@ -319,7 +319,7 @@ lemma check_valid_ipc_buffer_inv: (* arch_specific *)
    apply (wp | simp add: if_apply_def2 split del: if_split | wpcw)+
   done
 
-lemma check_valid_ipc_buffer_wp[Tcb_AI_assms]:
+lemma check_valid_ipc_buffer_wp[Arch_assms]:
   "\<lbrace>\<lambda>(s::'state_ext::state_ext state). is_arch_cap cap \<and> is_cnode_or_valid_arch cap
           \<and> valid_ipc_buffer_cap cap vptr
           \<and> is_aligned vptr msg_align_bits
@@ -334,7 +334,7 @@ lemma check_valid_ipc_buffer_wp[Tcb_AI_assms]:
                         valid_ipc_buffer_cap_def)
   done
 
-lemma derive_no_cap_asid[wp,Tcb_AI_assms]:
+lemma derive_no_cap_asid[wp,Arch_assms]:
   "\<lbrace>(no_cap_to_obj_with_diff_ref cap S)::'state_ext::state_ext state\<Rightarrow>bool\<rbrace>
      derive_cap slot cap
    \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref rv S\<rbrace>,-"
@@ -348,7 +348,7 @@ lemma derive_no_cap_asid[wp,Tcb_AI_assms]:
   done
 
 
-lemma decode_set_ipc_inv[wp,Tcb_AI_assms]:
+lemma decode_set_ipc_inv[wp,Arch_assms]:
   "\<lbrace>P::'state_ext::state_ext state \<Rightarrow> bool\<rbrace> decode_set_ipc_buffer args cap slot excaps \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp   add: decode_set_ipc_buffer_def whenE_def
                      split_def
@@ -357,7 +357,7 @@ lemma decode_set_ipc_inv[wp,Tcb_AI_assms]:
   apply simp
   done
 
-lemma no_cap_to_obj_with_diff_ref_update_cap_data[Tcb_AI_assms]:
+lemma no_cap_to_obj_with_diff_ref_update_cap_data[Arch_assms]:
   "no_cap_to_obj_with_diff_ref c S s \<longrightarrow>
     no_cap_to_obj_with_diff_ref (update_cap_data P x c) S s"
   apply (case_tac "update_cap_data P x c = NullCap")
@@ -371,7 +371,7 @@ lemma no_cap_to_obj_with_diff_ref_update_cap_data[Tcb_AI_assms]:
                split: cap.split arch_cap.splits)
   done
 
-lemma update_cap_valid[Tcb_AI_assms]:
+lemma update_cap_valid[Arch_assms]:
   "valid_cap cap (s::'state_ext::state_ext state) \<Longrightarrow>
    valid_cap (case capdata of
               None \<Rightarrow> cap_rights_update rs cap
@@ -403,13 +403,14 @@ crunch invoke_tcb
        wp: hoare_drop_imps mapM_x_wp' check_cap_inv
      simp: crunch_simps)
 
+lemmas Tcb_AI_2_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation Tcb_AI?: Tcb_AI
   where is_cnode_or_valid_arch = AARCH64.is_cnode_or_valid_arch
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact Tcb_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact AARCH64.Tcb_AI_2_assms)?)
 qed
 
 end
