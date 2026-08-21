@@ -738,11 +738,7 @@ locale retype_region_proofs_arch
   + Arch
   for s :: "'state_ext :: state_ext state"
   and ty us ptr sz n ps s' dev
-
-
-context retype_region_proofs begin
-
-interpretation Arch .
+begin
 
 lemma valid_cap:
   assumes cap:
@@ -834,11 +830,6 @@ lemma hyp_refs_eq:
   apply (cases ty; simp add: tyunt default_object_def default_tcb_def hyp_refs_of_def tcb_hyp_refs_def
                              default_arch_tcb_def)
   done
-
-end
-
-
-context retype_region_proofs_arch begin
 
 lemma valid_vspace_obj_pres:
   "valid_vspace_obj ao s \<Longrightarrow> valid_vspace_obj ao s'"

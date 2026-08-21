@@ -23,6 +23,14 @@ locale BCorres2_AI =
       bcorres (make_arch_fault_msg a b :: 'a state \<Rightarrow> _)
               (make_arch_fault_msg a b)"
 
+(* same derivation on all architectures; needed inside is_extended' locale *)
+lemma (in Arch) valid_vs_lookup_trans_state:
+  "valid_vs_lookup (trans_state g s) = valid_vs_lookup s"
+  by simp
+
+requalify_facts Arch.valid_vs_lookup_trans_state
+lemmas [iff] = valid_vs_lookup_trans_state
+
 definition all_but_exst where
   "all_but_exst P \<equiv> (\<lambda>s. P (kheap s) (cdt s) (is_original_cap s)
                       (cur_thread s) (idle_thread s)
@@ -108,7 +116,6 @@ lemma dxo_ex: "((),x :: det_ext state) \<in> fst (do_extended_op f s) \<Longrigh
                             wrap_ext_op_det_ext_ext_def)
   apply force
   done
-
 
 locale is_extended' =
   fixes f :: "'a det_ext_monad"
@@ -203,10 +210,10 @@ lemma cte_wp_at[wp]: "I (\<lambda>s. P (cte_wp_at P' p s))" by (rule lift_inv,si
 
 lemma no_cap_to_obj_dr_emp[wp]: "I (no_cap_to_obj_dr_emp x)" by (rule lift_inv,simp)
 
-lemma valid_vs_lookup[wp]: "I (valid_vs_lookup)"
+lemma valid_vs_lookup[wp]:
+  "I (valid_vs_lookup)"
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (rule lift_inv, simp)
+  case 1 show ?case by (rule lift_inv, simp add: valid_vs_lookup_trans_state)
   qed
 
 lemma typ_at[wp]: "I (\<lambda>s. P (typ_at T p s))" by (rule lift_inv,simp)

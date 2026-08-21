@@ -331,11 +331,7 @@ locale retype_region_proofs_arch
   + Arch
   for s :: "'state_ext :: state_ext state"
   and ty us ptr sz n ps s' dev
-
-
-context retype_region_proofs begin
-
-interpretation Arch .
+begin
 
 lemma valid_cap:
   assumes cap:
@@ -529,11 +525,6 @@ lemma wellformed_default_obj[Arch_assms]:
   apply (clarsimp elim!:obj_at_pres
                   split: arch_kernel_obj.splits option.splits)
   done
-
-end
-
-
-context retype_region_proofs_arch begin
 
 lemma hyp_refs_eq:
   "state_hyp_refs_of s' = state_hyp_refs_of s"
