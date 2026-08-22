@@ -131,7 +131,7 @@ lemma length_region_length[simp]:
 
 lemma length_region_drop[simp]:
   "length_region (drop_region n region) = length_region region - n"
-  by (metis length_code length_drop length_region_length list_drop_region)
+  by (metis length_drop length_region_length list_drop_region)
 
 lemma list_region_less_all:
   "snd region \<le> m \<Longrightarrow> list_all (\<lambda>n. n < m) (list_region region)"

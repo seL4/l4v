@@ -234,9 +234,9 @@ lemma si_caps_at_take_2:
                                                       {spec_pd_ptr} - {spec_pt_section_ptr}))"
   apply (frule (1) object_at_real_object_at)
   apply (frule (1) object_at_real_object_at[where obj_id=spec_pt_section_ptr])
-  apply (clarsimp simp: object_at_def is_pd_def is_frame_def is_pt_def split: cdl_object.split_asm)
+  apply (clarsimp simp: object_at_def is_pd_def is_frame_def split: cdl_object.split_asm)
   apply (rename_tac object obj_id, case_tac object; simp)
-  by (metis cdl_object.distinct(79) insert_Diff insert_iff mem_Collect_eq option.inject
+  by (metis cdl_object.distinct(71) insert_Diff insert_iff mem_Collect_eq option.inject
             sep_caps_at_split)
 
 lemma si_caps_at_take_2_not_object_at:
@@ -263,9 +263,10 @@ lemma si_caps_at_take_2':
                                                       {spec_pd_ptr} - {spec_pt_section_ptr}))"
   apply (frule (1) object_at_real_object_at)
   apply (frule (1) object_at_real_object_at[where obj_id=spec_pt_section_ptr])
-  apply (clarsimp simp: object_at_def is_pd_def is_frame_def is_pt_def split: cdl_object.split_asm)
-  apply (metis cdl_object.exhaust cdl_pt_type.distinct(1) if_option(4) mem_Collect_eq member_remove
-               remove_def sep_caps_at_split)
+  apply (clarsimp simp: object_at_def is_pd_def is_frame_def split: cdl_object.split_asm)
+  apply (rename_tac object obj_id, case_tac object; simp)
+  apply (subst sep_caps_at_split[symmetric], fastforce)+
+  apply simp
   done
 
 lemma frame_at_default_cap[simp]:
