@@ -5,11 +5,14 @@
 
 # Automated Platform Branches
 
-The following branches for additional platforms are currently automatically
+Most of this mechanism is now obsolete, because platform variation is part of
+the main proof. The remaining (currently broken) branch is FPU support on
+`imx8mm` for ARM.
+
+The following branches for additional platforms are automatically
 rebased and tested on each push to `master`:
 
 - [imx8mm-fpu-ver](https://github.com/seL4/l4v/tree/imx8-fpu-ver)
-- [exynos5-ver](https://github.com/seL4/l4v/tree/exynos5-ver)
 
 ## How this works
 
@@ -23,9 +26,7 @@ from the seL4 repository under
 configs/${L4V_ARCH}_${L4V_PLAT}_${L4V_FEATURES}_verified.cmake
 ```
 
-e.g. `ARM_HYP_exynos5_verified.cmake`. Tests on the master branch will currently
-keep `L4V_PLAT` empty, and tests on the platform branches will provide the
-appropriate platform string.
+e.g. `ARM_imx8mm_verified.cmake`.
 
 To keep platform branches up to date, there is [a GitHub action][rebase-action]
 that automatically attempts to rebase all platform branches over each new push
