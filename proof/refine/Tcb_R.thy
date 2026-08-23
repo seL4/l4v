@@ -1941,8 +1941,7 @@ lemma decodeCopyReg_wf:
               cong: list.case_cong capability.case_cong
               split del: if_split)
   apply wpsimp
-  apply (clarsimp simp: null_def neq_Nil_conv
-                        valid_cap'_def[where c="ThreadCap t" for t])
+  apply (clarsimp simp: neq_Nil_conv valid_cap'_def[where c="ThreadCap t" for t])
   done
 
 end (* Tcb_R *)

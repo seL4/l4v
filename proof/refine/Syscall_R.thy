@@ -906,7 +906,7 @@ lemma decodeDomainSet_inv_wf[wp]:
    \<lbrace>valid_domain_inv'\<rbrace>, -"
   unfolding decodeDomainSet_def
   apply (wpsimp split_del: if_split)
-  apply (clarsimp simp: null_def valid_domain_inv'_def)
+  apply (clarsimp simp: valid_domain_inv'_def)
   apply (drule_tac x="hd excaps" in bspec, simp)
   apply (simp del: Word.of_nat_unat flip: ucast_nat_def)
   apply (fastforce intro: word_of_nat_le simp: le_maxDomain_eq_less_numDomains valid_cap'_def)
