@@ -75,6 +75,21 @@ jobs:
           - arch: AARCH64
             plat: zynqmp
 
+          - arch: RISCV64
+            plat: ariane
+          - arch: RISCV64
+            plat: bananapi-f3
+          - arch: RISCV64
+            plat: cheshire
+          - arch: RISCV64
+            plat: hifive-p550
+          - arch: RISCV64
+            plat: polarfire
+          - arch: RISCV64
+            plat: rocketchip-zcu102
+          - arch: RISCV64
+            plat: star64
+
     steps:
     - name: Proofs
       uses: seL4/ci-actions/aws-proofs@master
