@@ -1089,8 +1089,14 @@ proof -
       apply (cut_tac x=ptr in mask_lower_twice[where n=2 and m=pageBits])
        apply (simp add: pageBits_def)
       apply simp
-     apply (auto simp add: eval_nat_numeral horrible_helper2 take_bit_Suc simp del: unsigned_numeral
-                 elim!: less_SucE)[1]
+    apply (clarsimp simp: eval_nat_numeral horrible_helper2 take_bit_Suc
+                    simp del: unsigned_numeral)
+     apply (erule less_SucE)+
+         (* cases unat _ < ... *)
+         apply (repeat 4 \<open>clarsimp simp: eval_nat_numeral horrible_helper2 take_bit_Suc\<close>)
+     (* case unat _ = Suc (Suc (Suc 0)); loops if take_bit_Suc is in the set *)
+     apply (clarsimp simp: eval_nat_numeral horrible_helper2)
+     apply (simp add: take_bit_Suc)
     apply (rule iffI)
      apply clarsimp
      apply (cut_tac p=ptr in unat_mask_2_less_4)
