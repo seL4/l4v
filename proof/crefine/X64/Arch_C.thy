@@ -3964,7 +3964,7 @@ lemma decodeX64MMUInvocation_ccorres:
               apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws[rotated -1])
                  apply clarsimp
                  apply (rule conseqPre, vcg, rule subset_refl)
-                apply (clarsimp simp: asid_high_bits_word_bits asidHighBits_handy_convs null_def)
+                apply (clarsimp simp: asid_high_bits_word_bits asidHighBits_handy_convs)
                 apply (clarsimp split: list.split)
                 apply (fastforce dest!: filter_eq_ConsD)
                apply (simp add: throwError_bind invocationCatch_def)
@@ -4036,9 +4036,8 @@ lemma decodeX64MMUInvocation_ccorres:
                         apply (rule_tac Q'=UNIV and A'="{}" in conseqPost)
                           apply (vcg exspec=ensureEmptySlot_modifies)
                          apply (frule length_ineq_not_Nil)
-                         apply (clarsimp simp: null_def hd_conv_nth
-                                               isCap_simps rf_sr_ksCurThread cap_get_tag_UntypedCap
-                                               word_le_make_less asid_high_bits_def
+                         apply (clarsimp simp: isCap_simps rf_sr_ksCurThread cap_get_tag_UntypedCap
+                                               word_le_make_less asid_high_bits_def hd_conv_nth
                                          split: list.split)
                          apply (frule interpret_excaps_eq[rule_format, where n=0], fastforce)
                          apply (fastforce simp: interpret_excaps_test_null excaps_map_def split_def)
@@ -4290,8 +4289,7 @@ lemma decodeX64MMUInvocation_ccorres:
          apply (simp add: if_to_top_of_bind)
          apply (rule ccorres_if_cond_throws[where Q=\<top> and Q'=\<top>, rotated -1])
             apply vcg
-           apply (clarsimp simp: null_def split: list.split
-                           dest!: filter_eq_ConsD)
+           apply (clarsimp split: list.split dest!: filter_eq_ConsD)
            apply (simp add: asid_low_bits_def)
           apply (simp add: throwError_bind invocationCatch_def)
           apply (rule syscall_error_throwError_ccorres_n)
@@ -4375,7 +4373,7 @@ lemma decodeX64MMUInvocation_ccorres:
         apply simp
        apply (simp add: objBits_simps archObjSize_def)
       apply fastforce
-     apply (clarsimp simp: null_def neq_Nil_conv)
+     apply (clarsimp simp: neq_Nil_conv)
      apply (drule_tac f="\<lambda>xs. (a, bb) \<in> set xs" in arg_cong)
       apply (clarsimp simp: in_assocs_is_fun)
      apply (clarsimp simp: le_mask_asid_bits_helper)
@@ -4393,7 +4391,7 @@ lemma decodeX64MMUInvocation_ccorres:
                           maskCapRights_def[where ?x1.0="ArchObjectCap cp" for cp]
                           X64_H.maskCapRights_def
                    split: arch_capability.split_asm)
-    apply (clarsimp simp: null_def neq_Nil_conv mask_def field_simps
+    apply (clarsimp simp: neq_Nil_conv mask_def field_simps
                           asid_low_bits_word_bits asidInvalid_def
                    dest!: filter_eq_ConsD)
     apply (subst is_aligned_add_less_t2n[rotated], assumption+)
