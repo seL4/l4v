@@ -37,7 +37,6 @@ session Lib (lib) = Word_Lib +
     Corres_Method
     Find_Names
     LemmaBucket
-    Try_Methods
     ListLibLemmas
     Time_Methods_Cmd
     MonadicRewrite

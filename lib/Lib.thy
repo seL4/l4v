@@ -14,7 +14,6 @@ theory Lib
 imports
   Value_Abbreviation
   Match_Abbreviation
-  Try_Methods
   Extract_Conjunct
   ML_Goal
   Eval_Bool
