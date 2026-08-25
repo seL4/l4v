@@ -2799,11 +2799,10 @@ lemma decodeX64FrameInvocation_ccorres:
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
   apply clarsimp
   apply (frule cap_get_tag_PageCap_frame)
-  supply unsigned_numeral[simp del]
   apply (clarsimp simp: word_less_nat_alt vm_attribs_relation_def attribsFromWord_def
                         framesize_from_H_eqs of_bool_nth[simplified of_bool_from_bool]
                         vm_page_size_defs neq_Nil_conv excaps_in_mem_def hd_conv_nth
-                        numeral_2_eq_2 does_not_throw_def asidInvalid_def)
+                        does_not_throw_def asidInvalid_def take_bit_Suc)
   apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
   apply (frule(1) slotcap_in_mem_PML4)
   apply (clarsimp simp: mask_def[where n=4] typ_heap_simps' isCap_simps)
@@ -4985,9 +4984,8 @@ lemma bitmap_word_zero_no_bits_set1:
         \<not>arr.[unat (port >> 6)] !! unat (port && mask 6)"
   apply clarsimp
   apply (drule word_not_exists_nth)
-  apply (simp only: all_nat_less_eq)
   apply (cut_tac w=port in unat_and_mask_less_2p[of 6, simplified mask_def, simplified]; simp)
-  apply (drule_tac x="unat (port && 0x3F)" in bspec, clarsimp)
+  apply (erule allE, erule (1) impE)
   apply (frule_tac v1=port in word_le_split_mask[where n=6, THEN iffD1, OF word_le_nat_alt[THEN iffD2]])
   apply (frule_tac w1=port in word_le_split_mask[where n=6, THEN iffD1, OF word_le_nat_alt[THEN iffD2]])
   apply (subgoal_tac "port >> 6 = l >> 6")
