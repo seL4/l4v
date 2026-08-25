@@ -1135,8 +1135,7 @@ shows
           apply (simp add: o_def validE_R_def)
       apply (fastforce simp: asid_high_bits_def)
      apply clarsimp
-     apply (simp add: null_def split_def asid_high_bits_def
-                      word_le_make_less)
+     apply (simp add: split_def asid_high_bits_def word_le_make_less)
      apply (subst hd_map, assumption)
                    (* need abstract guard to show list nonempty *)
      apply (simp add: word_le_make_less)
@@ -1717,7 +1716,7 @@ lemma arch_decodeInvocation_wf[wp]:
          apply (wp ensureNoChildren_sp whenE_throwError_wp|wpc)+
      apply clarsimp
      apply (rule conjI)
-      apply (clarsimp simp: null_def neq_Nil_conv)
+      apply (clarsimp simp: neq_Nil_conv)
       apply (drule filter_eq_ConsD)
       apply clarsimp
       apply (rule shiftl_less_t2n)
