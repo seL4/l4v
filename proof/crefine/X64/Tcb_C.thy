@@ -2558,8 +2558,6 @@ method wrong_cap_throwError_ccorres = solves \<open>
                      split: capability.split arch_capability.split if_split_asm)[1]
    \<close>
 
-add_try_method wrong_cap_throwError_ccorres
-
 lemma checkValidIPCBuffer_ccorres:
   "ccorres (syscall_error_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs') (UNIV \<inter> {s. vptr_' s = vptr} \<inter> {s. ccap_relation cp (cap_' s)}) []
@@ -4413,7 +4411,7 @@ lemma decodeSetSpace_ccorres:
               dest!: st_tcb_at_idle_thread' interpret_excaps_eq)[1]
   apply (clarsimp simp: linorder_not_le interpret_excaps_test_null
                         excaps_map_def neq_Nil_conv word_sle_def
-                        word_sless_def)
+                        word_sless_def take_bit_Suc)
   apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
   apply (frule interpret_excaps_eq[rule_format, where n=1], simp)
   apply (clarsimp simp: mask_def[where n=4] ccap_rights_relation_def
