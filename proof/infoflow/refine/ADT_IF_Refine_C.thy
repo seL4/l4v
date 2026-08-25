@@ -163,15 +163,6 @@ definition
   handlePreemption_C_if :: "user_context \<Rightarrow> (cstate,user_context) nondet_monad" where
   "handlePreemption_C_if tc \<equiv> do (exec_C \<Gamma> handleInterruptEntry_C_body_if); return tc od"
 
-lemma handlePreemption_if_def2:
-  "handlePreemption_if tc = do
-     r \<leftarrow> handleEvent Interrupt;
-          stateAssert (\<lambda>s. ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread) [];
-          return tc
-   od"
-  by (clarsimp simp: handlePreemption_if_def maybeHandleInterrupt_def handleEvent_def
-                     liftE_def bind_assoc)
-
 lemma handleInterrupt_no_fail:
   "no_fail (ex_abs (einvs) and invs'
                            and (\<lambda>s. intStateIRQTable (ksInterruptState s) a \<noteq> irqstate.IRQInactive))
@@ -217,14 +208,14 @@ locale ADT_IF_Refine_1 = kernel_m +
   assumes do_user_op_if_C_corres:
     "corres_underlying rf_sr False False (=) (invs' and ex_abs einvs and (\<lambda>_. uop_nonempty f))
                        \<top> (doUserOp_if f tc) (doUserOp_C_if f tc)"
-  assumes handleInterrupt_if_ccorres:
-    "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_') (invs') (UNIV) []
-             (handleEvent Interrupt) (handleInterruptEntry_C_body_if)"
   and handleInvocation_ccorres':
     "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and arch_extras and ct_active' and sch_act_simple)
        (UNIV \<inter> {s. isCall_' s = from_bool isCall} \<inter> {s. isBlocking_' s = from_bool isBlocking}) []
        (handleInvocation isCall isBlocking) (Call handleInvocation_'proc)"
+  and checkInterrupt_ccorres':
+    "ccorres dc xfdc (\<lambda>s. invs' s \<and> (\<not>inKernel \<longrightarrow> sch_act_not (ksCurThread s) s)) UNIV []
+       (maybeHandleInterrupt inKernel) (Call checkInterrupt_'proc)"
   and check_active_irq_corres_C:
     "corres_underlying rf_sr False False (=) \<top> \<top> (checkActiveIRQ_if tc) (checkActiveIRQ_C_if tc)"
   and obs_cpspace_user_data_relation:
@@ -233,6 +224,25 @@ locale ADT_IF_Refine_1 = kernel_m +
        \<Longrightarrow> cpspace_user_data_relation (ksPSpace bd)
              (underlying_memory (observable_memory (ksMachineState bd) (user_mem' bd))) hgs"
 begin
+
+lemma handleInterrupt_if_ccorres:
+  "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+           (\<lambda>s. invs' s \<and> (\<not>inKernel \<longrightarrow> sch_act_not (ksCurThread s) s))
+           (UNIV)
+           []
+           (liftE (maybeHandleInterrupt inKernel))
+           (handleInterruptEntry_C_body_if)"
+  apply (rule ccorres_guard_imp2)
+   apply (simp add: handleInterruptEntry_C_body_if_def)
+   apply (rule ccorres_add_return2)
+   apply (ctac (no_vcg) add: checkInterrupt_ccorres)
+    apply (rule_tac R="\<lambda>_. rv = Inr ()" in ccorres_return[where R'=UNIV])
+    apply (rule conseqPre, vcg)
+    apply (clarsimp simp: return_def)
+   apply (simp add: liftE_def)
+   apply wpsimp
+  apply clarsimp
+  done
 
 lemma handleEvent_ccorres:
   notes K_def[simp del]
@@ -428,14 +438,59 @@ lemma kernelEntry_corres_C:
   apply fastforce
   done
 
+lemma handleInterrupt_if_ccorres':
+  "ccorres dc (liftxf errstate id (K ()) ret__unsigned_long_')
+           (\<lambda>s. invs' s \<and> (\<not>inKernel \<longrightarrow> sch_act_not (ksCurThread s) s))
+           (UNIV)
+           []
+           (maybeHandleInterrupt inKernel)
+           (handleInterruptEntry_C_body_if)"
+  apply (rule ccorres_guard_imp2)
+   apply (simp add: handleInterruptEntry_C_body_if_def)
+   apply (rule ccorres_add_return2)
+   apply (ctac (no_vcg) add: checkInterrupt_ccorres')
+    apply (rule_tac R="\<top>" in ccorres_return[where R'=UNIV])
+    apply (rule conseqPre, vcg)
+    apply (clarsimp simp: return_def)
+   apply wpsimp
+  apply simp
+  done
+
+lemma dmo_getActiveIRQ_notin_non_kernel_IRQs[wp]:
+  "\<lbrace>\<top>\<rbrace> doMachineOp (getActiveIRQ True) \<lbrace>\<lambda>irq _. irq \<notin> Some ` non_kernel_IRQs\<rbrace>"
+  unfolding doMachineOp_def
+  apply wpsimp
+  apply (drule use_valid, rule getActiveIRQ_neq_non_kernel, rule TrueI)
+  apply clarsimp
+  done
+
+lemma maybeHandleInterrupt_True_no_fail:
+  "no_fail (invs' and ex_abs einvs) (maybeHandleInterrupt True)"
+  apply (simp add: handleEvent_def maybeHandleInterrupt_def)
+  apply (wpsimp wp: handleInterrupt_no_fail)
+    apply (simp add: crunch_simps)
+    apply (rule_tac Q'="\<lambda>r s. ex_abs (einvs) s \<and> invs' s \<and> r \<notin> Some ` non_kernel_IRQs \<and>
+                             (\<forall>irq. r = Some irq
+                                    \<longrightarrow> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive)"
+                 in hoare_strengthen_post)
+     apply (rule hoare_vcg_conj_lift)
+      apply (rule corres_ex_abs_lift)
+       apply (rule dmo_getActiveIRQ_corres)
+      apply wpsimp
+     apply (wpsimp wp: doMachineOp_getActiveIRQ_IRQ_active)
+    apply clarsimp
+   apply wpsimp
+  apply (clarsimp simp: invs'_def valid_state'_def)
+  done
+
 lemma handle_preemption_corres_C:
   "corres_underlying rf_sr False False (=)
      (invs' and (\<lambda>s. 0 < ksDomainTime s) and ex_abs einvs) \<top>
      (handlePreemption_if tc) (handlePreemption_C_if tc)"
-  apply (simp add: handlePreemption_if_def2 handlePreemption_C_if_def)
+  apply (simp add: handlePreemption_if_def handlePreemption_C_if_def)
   apply (rule corres_stateAssert_no_fail)
   using corres_nofail[OF handle_preemption_if_corres[of tc], simplified]
-   apply (simp add: handlePreemption_if_def2)
+   apply (simp add: handlePreemption_if_def)
    apply (erule no_fail_pre)
    apply (clarsimp simp: ex_abs_underlying_def ex_abs_def)
    apply (rule exI, rule conjI, assumption)
@@ -445,10 +500,10 @@ lemma handle_preemption_corres_C:
        apply (rule ccorres_corres_u)
         apply (rule ccorres_guard_imp)
           apply (rule ccorres_rel_imp)
-           apply (rule handleInterrupt_if_ccorres)
+           apply (ctac add: handleInterrupt_if_ccorres')
           apply simp
          prefer 3
-         apply (rule handleEvent_Interrupt_no_fail)
+         apply (rule maybeHandleInterrupt_True_no_fail)
         apply clarsimp
        apply simp
       apply simp

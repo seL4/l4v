@@ -127,27 +127,35 @@ lemma whenE_True_bind[simp]:
   by (simp add: whenE_def bindE_def returnOk_def lift_def)
 
 lemma when_True[simp]:
-  "when True X = X"
+  "when True m = m"
   by (clarsimp simp: when_def)
 
 lemma when_False[simp]:
-  "when False X = return ()"
+  "when False m = return ()"
   by (clarsimp simp: when_def)
 
+lemma whenE_True[simp]:
+  "whenE True m = m"
+  by (clarsimp simp: whenE_def)
+
+lemma whenE_False[simp]:
+  "whenE False m = returnOk ()"
+  by (clarsimp simp: whenE_def)
+
 lemma unless_False[simp]:
-  "unless False X = X"
+  "unless False m = m"
   by (clarsimp simp: unless_def)
 
 lemma unlessE_False[simp]:
-  "unlessE False f = f"
+  "unlessE False m = m"
   unfolding unlessE_def by fastforce
 
 lemma unless_True[simp]:
-  "unless True X = return ()"
+  "unless True m = return ()"
   by (clarsimp simp: unless_def)
 
 lemma unlessE_True[simp]:
-  "unlessE True f = returnOk ()"
+  "unlessE True m = returnOk ()"
   unfolding unlessE_def by fastforce
 
 lemma unlessE_whenE:

@@ -7,7 +7,7 @@
 theory Include_C
 imports
   "CSpec.KernelInc_C"
-  "Refine.Refine"
+  "Refine.ArchRefine"
 begin
 
 end

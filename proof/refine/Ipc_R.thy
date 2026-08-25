@@ -4661,7 +4661,8 @@ lemma sai_invs'[wp]:
   done
 
 lemma replyFromKernel_corres:
-  "corres dc (tcb_at t and invs) invs' (reply_from_kernel t r) (replyFromKernel t r)"
+  "\<lbrakk>t = t'; r = r'\<rbrakk> \<Longrightarrow>
+   corres dc (tcb_at t and invs) invs' (reply_from_kernel t r) (replyFromKernel t' r')"
   apply (case_tac r)
   apply (clarsimp simp: replyFromKernel_def reply_from_kernel_def badgeRegister_badge_register)
   apply (rule corres_guard_imp)
@@ -6979,10 +6980,13 @@ crunch replyRemove
 
 context begin interpretation Arch . (*FIXME: rt arch-split*)
 
+crunch handleFaultReply
+  for it[wp]: "\<lambda>s. P (ksIdleThread s)"
+
 lemma handleFaultReply_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> handleFaultReply x t label msg \<lbrace>\<lambda>rv. invs'\<rbrace>"
   unfolding handleFaultReply_def
-  by (cases x; wpsimp simp: handleArchFaultReply_def split: arch_fault.split)
+  by wpsimp
 
 end (* Arch *)
 

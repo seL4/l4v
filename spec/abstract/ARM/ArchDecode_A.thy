@@ -184,10 +184,16 @@ where
             pd \<leftarrow> lookup_error_on_failure False $ find_pd_for_asid asid;
             whenE (end \<le> start) $ throwError $ InvalidArgument 1;
             page_size \<leftarrow> returnOk $ 1 << pageBitsForSize pgsz;
+            page_base \<leftarrow> returnOk $ addrFromPPtr p;
+            frame_info \<leftarrow> liftE $ resolve_vaddr pd vaddr;
+            case frame_info of
+              None \<Rightarrow> throwError $ InvalidCapability 0
+            | Some (sz', base') \<Rightarrow> whenE (sz' \<noteq> pgsz \<or> base' \<noteq> page_base) $
+                                         throwError $ InvalidCapability 0;
             whenE (start \<ge> page_size \<or> end > page_size) $ throwError $ InvalidArgument 0;
             returnOk $ InvokePage $ PageFlush
                 (label_to_flush_type (invocation_type label)) (start + vaddr)
-                (end + vaddr - 1) (addrFromPPtr p + start) pd asid
+                (end + vaddr - 1) (page_base + start) pd asid
     odE
     else throwError TruncatedMessage
     else if invocation_type label = ArchInvocationLabel ARMPageGetAddress

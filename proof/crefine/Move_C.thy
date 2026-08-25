@@ -9,7 +9,7 @@
 (* Arch generic lemmas that should be moved into theory files before CRefine *)
 
 theory Move_C
-imports Refine.Refine
+imports Refine.ArchRefine
 begin
 
 lemma dumb_bool_for_all: "(\<forall>x. x) = False"

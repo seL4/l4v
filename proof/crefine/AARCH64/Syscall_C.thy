@@ -922,7 +922,7 @@ lemma handleInvocation_ccorres:
               apply vcg
              apply (simp add: ball_conj_distrib)
              apply (wp lookupExtraCaps_excaps_in_mem
-                       lec_eq[unfolded o_def] lec_derived'[unfolded o_def])
+                       lec_dimished'[unfolded o_def] lec_derived'[unfolded o_def])
             apply (clarsimp simp: guard_is_UNIV_def option_to_ptr_def
                                   mi_from_H_def)
            apply (clarsimp simp: guard_is_UNIV_def)

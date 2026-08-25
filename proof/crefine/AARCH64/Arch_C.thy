@@ -1631,10 +1631,11 @@ lemma doFlush_ccorres:
    apply (ctac (no_vcg) add: cleanCacheRange_PoU_ccorres)
     apply (ctac (no_vcg) add: dsb_ccorres)
      apply (ctac (no_vcg) add: invalidateCacheRange_I_ccorres)
-      apply (ctac (no_vcg) add: isb_ccorres)
-     apply wp+
-   apply (fastforce simp: flushtype_relation_def
-                          sel4_arch_invocation_label_defs arch_invocation_label_defs)
+      apply (ctac (no_vcg) add: dsb_ccorres)
+       apply (ctac (no_vcg) add: isb_ccorres)
+      apply wp+
+  apply (fastforce simp: flushtype_relation_def
+                         sel4_arch_invocation_label_defs arch_invocation_label_defs)
   done
 
 (* The precondition is slightly different here to ARM/ARM_HYP, because we're flushing on kernel

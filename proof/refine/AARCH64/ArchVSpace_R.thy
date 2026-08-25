@@ -13,6 +13,8 @@ begin
 
 context Arch begin arch_global_naming
 
+named_theorems VSpace_R_assms
+
 definition
   "vspace_at_asid' vs asid \<equiv> \<lambda>s. \<exists>ap pool entry.
              armKSASIDTable (ksArchState s) (ucast (asid_high_bits_of (ucast asid))) = Some ap \<and>
@@ -1193,8 +1195,7 @@ crunch setVMRoot
   (simp: updateObject_default_def o_def loadObject_default_def if_apply_def2
    wp: crunch_wps getObject_inv)
 
-(* FIXME arch-split: interface? *)
-lemma handleVMFault_corres:
+lemma handleVMFault_corres':
   "corres (fr \<oplus> dc) (tcb_at thread  and pspace_aligned and pspace_distinct) \<top>
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
   supply if_split[split del]
@@ -1255,6 +1256,12 @@ lemma handleVMFault_corres:
             apply (rule corres_trivial, simp)
            apply (wpsimp simp: if_apply_def2)+
   done
+
+(* interface lemma, superset of all architecture preconditions *)
+lemma handleVMFault_corres[VSpace_R_assms]:
+  "corres (fr \<oplus> dc) (tcb_at thread and pspace_aligned and pspace_distinct) (tcb_at' thread)
+          (handle_vm_fault thread fault) (handleVMFault thread fault)"
+  by (corres corres: handleVMFault_corres')
 
 crunch findFreeVMID, loadVMID
   for no_0_obj'[wp]: no_0_obj'
@@ -2970,6 +2977,12 @@ lemma perform_aci_invs [wp]:
                         wellformed_mapdata'_def)
   done
 
-end
+end (* Arch *)
+
+interpretation VSpace_R?: VSpace_R
+proof goal_cases
+  interpret Arch  .
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact VSpace_R_assms)?)?)
+qed
 
 end

@@ -1176,4 +1176,56 @@ lemma ucast_0_eq_right:
 
 lemmas ucast_0_eq = ucast_0_eq_left ucast_0_eq_right
 
+lemma nth_aligned_offset_no_overflow:
+  fixes p :: "'a::len word"
+  assumes aligned: "is_aligned p sz"
+  assumes i: "i < unat (mask sz div 2 ^ n :: 'a word)"
+  shows "p + (mask n + word_of_nat i * 2 ^ n) < p + (2 ^ n + word_of_nat i * 2 ^ n)"
+proof -
+  from i
+  have n: "n < LENGTH('a)"
+    by (metis div_by_0 gr_implies_not0 unat_2tp_if unsigned_eq_0_iff)
+
+  from i
+  have i_len: "i < 2^LENGTH('a)"
+    by (auto intro: order_less_trans)
+
+  let ?i = "word_of_nat i :: 'a::len word"
+  from i
+  have i_shift: "?i < mask sz >> n"
+    by (simp add: word_less_nat_alt shiftr_div_2n_w i_len unat_of_nat_eq)
+
+  have Suc_i: "Suc i * 2 ^ n \<le> unat (mask sz :: 'a word)"
+    by (metis Suc_leI bot_nat_0.extremum_strict div_by_0 i th2 unat_2tp_if unat_div)
+
+  from aligned
+  have p_mask: "p \<le> p + mask sz"
+    by (simp add: is_aligned_no_overflow_mask)
+
+  have less_mask: "2 ^ n + (?i << n) \<le> mask sz"
+    by (metis Suc_i of_nat_Suc of_nat_shiftl shiftl_1 word_of_nat_le word_shiftl_add_distrib)
+
+  have mask_less: "mask n < (2 ^n :: 'a word)"
+    by (simp add: mask_lt_2pn n)
+  hence "mask n + (?i << n) < 2 ^ n + (?i << n)"
+    by (smt (verit, ccfv_SIG) Suc_i add.commute add_right_cancel bot_nat_0.extremum_strict
+                              is_aligned_and_not_zero is_aligned_shift le_unat_uoi mult_Suc
+                              n_less_equal_power_2 of_nat_add of_nat_numeral of_nat_shiftl
+                              olen_add_eqv order_less_le semiring_1_class.of_nat_power
+                              trans_less_add1 unsigned_eq_0_iff word_plus_mono_right)
+  moreover
+  have "p \<le> p + (2 ^ n + (?i << n))"
+    using less_mask p_mask order_less_imp_le word_random
+    by blast
+  ultimately
+  have "p + (mask n + (?i << n)) < p + (2 ^ n + (?i << n))"
+    by (rule word_plus_strict_mono_right)
+  thus ?thesis
+    by (simp add: shiftl_t2n')
+qed
+
+lemma mask_and_neg_mask_compose:
+  "n \<le> sz \<Longrightarrow> (mask sz && ~~mask n) + mask n = mask sz"
+  by (metis diff_add_cancel mask_sub)
+
 end

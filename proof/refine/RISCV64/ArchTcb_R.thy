@@ -75,42 +75,6 @@ lemma is_valid_vtable_root_simp:
   by (simp add: is_valid_vtable_root_def
            split: cap.splits arch_cap.splits option.splits)
 
-lemma threadSet_invs_trivialT2:
-  assumes
-    "\<forall>tcb. \<forall>(getF,setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
-    "\<forall>tcb. tcbState (F tcb) = tcbState tcb \<and> tcbDomain (F tcb) = tcbDomain tcb"
-    "\<forall>tcb. tcbBoundNotification (F tcb) = tcbBoundNotification tcb"
-    "\<forall>tcb. tcbSchedContext (F tcb) = tcbSchedContext tcb"
-    "\<forall>tcb. tcbYieldTo (F tcb) = tcbYieldTo tcb"
-    "\<forall>tcb. tcbSchedPrev (F tcb) = tcbSchedPrev tcb"
-    "\<forall>tcb. tcbSchedNext (F tcb) = tcbSchedNext tcb"
-    "\<forall>tcb. tcbInReleaseQueue (F tcb) = tcbInReleaseQueue tcb"
-    "\<forall>tcb. tcbQueued (F tcb) = tcbQueued tcb"
-    "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
-    "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
-    "\<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0"
-    "\<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)"
-  shows
-    "\<lbrace>invs' and K (\<forall>tcb. is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits)\<rbrace>
-     threadSet F t
-     \<lbrace>\<lambda>_. invs'\<rbrace>"
-  supply tcb_hyp_refs_of'_simps[simp del]
-  apply (rule hoare_gen_asm)
-  apply (simp add: invs'_def)
-  apply (wp threadSet_valid_pspace'T
-            threadSet_ifunsafe'T
-            threadSet_global_refsT
-            valid_irq_node_lift
-            valid_irq_handlers_lift''
-            threadSet_ctes_ofT
-            threadSet_valid_dom_schedule'
-            untyped_ranges_zero_lift
-            threadSet_field_inv sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
-         | clarsimp simp: assms cteCaps_of_def tcb_hyp_refs'_valid_arch_tcb'_eq[where F=F]
-         | rule refl)+
-  apply (clarsimp simp: o_def tcb_hyp_refs_of'_simps)
-  done
-
 (* FIXME: move after checked_insert_tcb_invs in ArchTcb_AI, and consolidate redundancy there *)
 lemma checked_insert_tcb_invs_gen[Tcb_R_assms]:
   "\<lbrace>invs and cte_wp_at (\<lambda>c. c = cap.NullCap) (target, ref)

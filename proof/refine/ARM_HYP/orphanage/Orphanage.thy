@@ -5,7 +5,7 @@
  *)
 
 theory Orphanage
-imports Refine.Refine
+imports Refine.ArchRefine
 begin
 
 (* FIXME: place holder, Orphanage not proved for ARM_HYP *)

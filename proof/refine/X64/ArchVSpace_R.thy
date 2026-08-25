@@ -13,6 +13,8 @@ begin
 
 context Arch begin arch_global_naming
 
+named_theorems VSpace_R_assms
+
 definition
   "vspace_at_asid' vs asid \<equiv> \<lambda>s. \<exists>ap pool.
              x64KSASIDTable (ksArchState s) (ucast (asid_high_bits_of asid)) = Some ap \<and>
@@ -151,7 +153,7 @@ lemma asidBits_asid_bits[simp]:
   by (simp add: asid_bits_def asidBits_def
                 asidHighBits_def asid_low_bits_def)
 
-lemma handleVMFault_corres:
+lemma handleVMFault_corres':
   "corres (fr \<oplus> dc) (tcb_at thread and pspace_aligned and pspace_distinct) \<top>
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
   apply (simp add: X64_H.handleVMFault_def handle_vm_fault_def)
@@ -169,6 +171,12 @@ lemma handleVMFault_corres:
       apply (simp, wp asUser_typ_ats)
      apply wpsimp+
   done
+
+(* interface lemma, superset of all architecture preconditions *)
+lemma handleVMFault_corres[VSpace_R_assms]:
+  "corres (fr \<oplus> dc) (tcb_at thread and pspace_aligned and pspace_distinct) (tcb_at' thread)
+          (handle_vm_fault thread fault) (handleVMFault thread fault)"
+  by (corres corres: handleVMFault_corres')
 
 lemma set_current_cr3_corres [corres]:
   "cr3_relation c c' \<Longrightarrow> corres dc \<top> \<top> (set_current_cr3 c) (setCurrentUserCR3 c')"
@@ -2538,6 +2546,16 @@ lemma isPML4Cap'_PML4 :
   "isPML4Cap' (ArchObjectCap (PML4Cap r m))"
   by (simp add: isPML4Cap'_def)
 
-end
+crunch flushTable
+  for valid_arch_state'[wp]: valid_arch_state'
+  (wp: crunch_wps  simp: crunch_simps unless_def)
+
+end (* Arch *)
+
+interpretation VSpace_R?: VSpace_R
+proof goal_cases
+  interpret Arch  .
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact VSpace_R_assms)?)?)
+qed
 
 end

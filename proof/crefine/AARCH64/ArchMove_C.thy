@@ -471,10 +471,9 @@ crunch readVCPUReg
 crunch readVCPUReg
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
 
-(* schematic_goal leads to Suc (Suc ..) form only *)
-lemma fromEnum_maxBound_vcpureg_def:
-  "fromEnum (maxBound :: vcpureg) = 23"
-  by (clarsimp simp: fromEnum_def maxBound_def enum_vcpureg)
+schematic_goal fromEnum_maxBound_vcpureg_def:
+  "fromEnum (maxBound :: vcpureg) = numeral ?n"
+  by (simp add: fromEnum_def maxBound_def enum_vcpureg flip: One_nat_def)
 
 lemma unat_of_nat_mword_fromEnum_vcpureg[simp]:
   "unat ((of_nat (fromEnum e)) :: machine_word) = fromEnum (e :: vcpureg)"

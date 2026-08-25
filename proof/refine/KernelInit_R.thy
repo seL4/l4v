@@ -1,0 +1,50 @@
+(*
+ * Copyright 2014, General Dynamics C4 Systems
+ *
+ * SPDX-License-Identifier: GPL-2.0-only
+ *)
+
+(* Kernel init refinement. Currently axiomatised.
+*)
+
+theory KernelInit_R
+imports
+  IncKernelInit
+  "AInvs.KernelInit_AI"
+begin
+
+(* Axiomatisation of the rest of the initialisation code *)
+axiomatization where
+  init_refinement:
+  "Init_H \<subseteq> lift_state_relation state_relation `` Init_A"
+
+(* This axiom is only needed on architectures with page table duplicates (32-bit Arm).
+   For other architectures, vs_valid_duplicates' is trivially True, making this axiom
+   redundant but harmless.  *)
+axiomatization where
+  ckernel_init_valid_duplicates':
+  "\<forall>((tc,s),x) \<in> Init_H. vs_valid_duplicates' (ksPSpace s)"
+
+axiomatization where
+  ckernel_init_invs:
+  "\<forall>((tc,s),x) \<in> Init_H. invs' s"
+
+axiomatization where
+  ckernel_init_sch_norm:
+  "((tc,s),x) \<in> Init_H \<Longrightarrow> ksSchedulerAction s = ResumeCurrentThread"
+
+axiomatization where
+  ckernel_init_ctr:
+  "((tc,s),x) \<in> Init_H \<Longrightarrow> ct_running' s"
+
+axiomatization where
+  ckernel_init_domain_time:
+  "((tc,s),x) \<in> Init_H \<Longrightarrow> ksDomainTime s \<noteq> 0"
+
+axiomatization where
+  ckernel_init_domain_list:
+  "((tc,s),x) \<in> Init_H
+   \<Longrightarrow> length (ksDomSchedule s) > 0
+       \<and> (\<forall>(d,time) \<in> set (ksDomSchedule s). us_to_ticks (time * \<mu>s_in_ms) > 0)"
+
+end

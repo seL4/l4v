@@ -71,6 +71,7 @@ session Lib (lib) = Word_Lib +
     Rules_Tac
     Heap_List
     None_Top_Bot
+    Sorted_Addrs
 
     (* should move to Monads: *)
     NonDetMonadLemmaBucket

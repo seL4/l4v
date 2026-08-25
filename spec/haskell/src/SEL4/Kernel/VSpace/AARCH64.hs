@@ -263,6 +263,7 @@ doFlush flushType vstart vend pstart =
                                cleanCacheRange_PoU vstart vend pstart
                                dsb
                                invalidateCacheRange_I vstart vend pstart
+                               dsb
                                isb
 
 {- Unmapping and Deletion -}

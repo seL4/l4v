@@ -535,8 +535,9 @@ shows
         apply (simp add:is_aligned_def)
       apply (rule descendants_range_caps_no_overlapI'[where d=isdev and cref = parent])
          apply simp
-        apply (fastforce simp:cte_wp_at_ctes_of is_aligned_neg_mask_eq)
-       apply (clarsimp simp:is_aligned_neg_mask_eq)
+        apply (fastforce simp: cte_wp_at_ctes_of)
+       apply (clarsimp simp: add.commute)
+       apply (simp add: mask_def) (* can't combine with above *)
       apply (rule le_m1_iff_lt[THEN iffD1,THEN iffD1])
        apply (simp add:asid_bits_def)
       apply (simp add:mask_def)
@@ -1398,7 +1399,7 @@ lemma createSafeMappingEntries_PTE_ccorres:
         apply (simp add: exception_defs)
        apply (wp injection_wp[OF refl])
        apply (simp add: linorder_not_less ptBits_eq)
-       apply (wp lookupPTSlot_le_0x3C lookupPTSlot_page_table_at' Arch_R.lookupPTSlot_aligned)
+       apply (wp lookupPTSlot_le_0x3C lookupPTSlot_page_table_at' lookupPTSlot_aligned)
       apply simp
       apply (vcg exspec=lookupPTSlot_modifies)
      apply simp
@@ -4272,7 +4273,7 @@ lemma decodeARMMMUInvocation_ccorres:
        apply (simp add: asid_low_bits_def asid_bits_def)
       apply simp
      apply simp
-    apply (auto simp: ct_in_state'_def valid_tcb_state'_def
+    apply (auto simp: ct_in_state'_def valid_tcb_state'_def isPDCap_def
                dest!: st_tcb_at_idle_thread'
                elim!: pred_tcb'_weakenE)[1]
   apply (clarsimp simp: cte_wp_at_ctes_of asidHighBits_handy_convs

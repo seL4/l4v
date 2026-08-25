@@ -442,4 +442,9 @@ lemma TCB_cte_wp_at_obj_at:
                         obj_at_def cte_wp_at_def get_cap_def is_tcb
                  split: option.splits)
 
+lemma cns_of_heap_Some:
+  "(cns_of_heap kh a = Some n)
+   = (\<exists>cs. kh a = Some (CNode n cs) \<and> well_formed_cnode_n n cs)"
+  by (auto simp: cns_of_heap_def split: option.splits if_splits Structures_A.kernel_object.splits)
+
 end

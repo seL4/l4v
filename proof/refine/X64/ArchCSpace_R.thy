@@ -137,6 +137,11 @@ lemma acapClass_not_Reply[CSpace_R_assms]:
   "acapClass acap \<noteq> ReplyClass t"
   by (cases acap; simp)
 
+lemma isArchMDBParentOf_non_arch[CSpace_R_assms]:
+  "\<not>isArchObjectCap cap \<Longrightarrow> isArchMDBParentOf cap cap' b"
+  "\<not>isArchObjectCap cap' \<Longrightarrow> isArchMDBParentOf cap cap' b"
+  by (simp add: isCap_simps)+
+
 end (* Arch *)
 
 context Arch_mdb_move begin
@@ -358,202 +363,6 @@ lemma arch_deriveCap_untyped_derived[CSpace_R_2_assms, wp]:
                   wp: undefined_validE_R)
   apply(clarsimp simp: cte_wp_at_ctes_of isCap_simps untyped_derived_eq_def)
   by (case_tac "capCap c'"; fastforce)
-
-lemma corres_caps_decomposition:
-  assumes pspace_corres:
-    "corres_underlying {(s, s'). pspace_relation (kheap s) (ksPSpace s')} False True r P P' f g"
-  assumes updates:
-             "\<And>P. \<lbrace>\<lambda>s. P (new_caps s)\<rbrace> f \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_mdb s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cdt s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_list s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cdt_list (s))\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_rvk s)\<rbrace> f \<lbrace>\<lambda>rv s. P (is_original_cap s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_ctes s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_ms s)\<rbrace> f \<lbrace>\<lambda>rv s. P (machine_state s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_ms' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_wuc s)\<rbrace> f \<lbrace>\<lambda>rv s. P (work_units_completed s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_wuc' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksWorkUnitsCompleted s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_ct s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_ct' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_as s)\<rbrace> f \<lbrace>\<lambda>rv s. P (arch_state s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_as' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksArchState s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_id s)\<rbrace> f \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_id' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksIdleThread s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_irqn s)\<rbrace> f \<lbrace>\<lambda>rv s. P (interrupt_irq_node s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_irqs s)\<rbrace> f \<lbrace>\<lambda>rv s. P (interrupt_states s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_irqs' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksInterruptState s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_ups s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ups_of_heap (kheap s))\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_ups' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (gsUserPages s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_cns s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cns_of_heap (kheap s))\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_cns' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (gsCNodes s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_action s)\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_sa' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_ksReadyQueues s) (new_tcbSchedNexts_of s) (new_tcbSchedPrevs_of s)
-                          (\<lambda>d p. new_inQs d p s)\<rbrace>
-                   g \<lbrace>\<lambda>rv s. P (ksReadyQueues s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
-                               (\<lambda>d p. inQ d p |< tcbs_of' s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_di s)\<rbrace> f \<lbrace>\<lambda>rv s. P (domain_index s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_ds s)\<rbrace> f \<lbrace>\<lambda>rv s. P (domain_start_index s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_dl s)\<rbrace> f \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_cd s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_domain s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_dt s)\<rbrace> f \<lbrace>\<lambda>rv s. P (domain_time s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_dsi' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksDomScheduleIdx s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_dss' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksDomScheduleStart s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_ds' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_cd' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_dt' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksDomainTime s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_ao' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (aobjs_of' s)\<rbrace>"
-  assumes updated_relations:
-    "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
-              \<Longrightarrow> cdt_relation ((\<noteq>) None \<circ> new_caps s) (new_mdb s) (new_ctes s')
-                  \<and> cdt_list_relation (new_list s) (new_mdb s) (new_ctes s')
-                  \<and> ready_queues_relation_2 (new_ready_queues s) (new_ksReadyQueues s')
-                                             (new_tcbSchedNexts_of s') (new_tcbSchedPrevs_of s')
-                                             (\<lambda>d p. new_inQs d p s')
-                  \<and> sched_act_relation (new_action s) (new_sa' s')
-                  \<and> revokable_relation (new_rvk s) (null_filter (new_caps s)) (new_ctes s')
-                  \<and> interrupt_state_relation (new_irqn s) (new_irqs s) (new_irqs' s')
-                  \<and> (new_as s, new_as' s') \<in> arch_state_relation (new_ao' s')
-                  \<and> new_ct s = new_ct' s'
-                  \<and> new_id s = new_id' s'
-                  \<and> new_ms s = new_ms' s'
-                  \<and> new_di s = new_dsi' s'
-                  \<and> new_ds s = new_dss' s'
-                            \<and> domain_list_map (new_dl s) = new_ds' s'
-
-
-                            \<and> new_cd s = new_cd' s'
-                  \<and> new_dt s = new_dt' s'
-                  \<and> new_wuc s = new_wuc' s'
-                  \<and> new_ups s = new_ups' s'
-                  \<and> new_cns s = new_cns' s'"
-  shows "corres r P P' f g"
-proof -
-  have all_ext: "\<And>f f'. (\<forall>p. f p = f' p) = (f = f')"
-    by fastforce
-  have mdb_wp':
-    "\<And>ctes. \<lbrace>\<lambda>s. cdt_relation ((\<noteq>) None \<circ> new_caps s) (new_mdb s) ctes\<rbrace>
-                f
-            \<lbrace>\<lambda>rv s. \<exists>m ca. (\<forall>p. ca p = ((\<noteq>) None \<circ> caps_of_state s) p) \<and> m = cdt s
-                            \<and> cdt_relation ca m ctes\<rbrace>"
-    apply (wp hoare_vcg_ex_lift hoare_vcg_all_lift updates)
-    apply (subst all_ext)
-    apply (simp add: o_def)
-    done
-  note mdb_wp = mdb_wp' [simplified all_ext simp_thms]
-  have list_wp':
-    "\<And>ctes. \<lbrace>\<lambda>s. cdt_list_relation (new_list s) (new_mdb s) ctes\<rbrace>
-                f
-            \<lbrace>\<lambda>rv s. \<exists>m t. t = cdt_list s \<and> m = cdt s
-                            \<and> cdt_list_relation t m ctes\<rbrace>"
-    apply (wp hoare_vcg_ex_lift hoare_vcg_all_lift updates)
-    apply (simp add: o_def)
-    done
-  note list_wp = list_wp' [simplified all_ext simp_thms]
-  have rvk_wp':
-    "\<And>ctes. \<lbrace>\<lambda>s. revokable_relation (new_rvk s) (null_filter (new_caps s)) ctes\<rbrace>
-                f
-            \<lbrace>\<lambda>rv s. revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) ctes\<rbrace>"
-    unfolding revokable_relation_def
-    apply (simp only: imp_conv_disj)
-    apply (wp hoare_vcg_ex_lift hoare_vcg_all_lift hoare_vcg_disj_lift updates)
-    done
-  note rvk_wp = rvk_wp' [simplified all_ext simp_thms]
-  have swp_cte_at:
-    "\<And>s. swp cte_at s = ((\<noteq>) None \<circ> caps_of_state s)"
-    by (rule ext, simp, subst neq_commute, simp add: cte_wp_at_caps_of_state)
-  have abs_irq_together':
-    "\<And>P. \<lbrace>\<lambda>s. P (new_irqn s) (new_irqs s)\<rbrace> f
-             \<lbrace>\<lambda>rv s. \<exists>irn. interrupt_irq_node s = irn \<and> P irn (interrupt_states s)\<rbrace>"
-    by (wp hoare_vcg_ex_lift updates, simp)
-  have g_as_ao'[wp]:
-    "\<And>P. \<lbrace>\<lambda>s'. P (new_as' s') (new_ao' s')\<rbrace> g \<lbrace>\<lambda>_ s'. P (ksArchState s') (aobjs_of' s')\<rbrace>"
-    apply wp_pre
-     apply (wp updates | wps updates)+
-    apply simp
-    done
-  note abs_irq_together = abs_irq_together'[simplified]
-  show ?thesis
-    unfolding state_relation_def swp_cte_at
-    apply (rule corres_underlying_decomposition[OF pspace_corres])
-     apply (simp add: ghost_relation_of_heap)
-     apply (wpsimp wp: hoare_vcg_conj_lift mdb_wp rvk_wp list_wp updates abs_irq_together)+
-    apply (frule updated_relations)
-      apply fastforce
-     apply (fastforce simp: state_relation_def swp_cte_at)
-    apply (clarsimp simp: o_def Let_def)
-    done
-qed
-
-lemma create_reply_master_corres[CSpace_R_2_assms]:
-  "\<lbrakk> sl' = cte_map sl ; AllowGrant \<in> rights \<rbrakk> \<Longrightarrow>
-   corres dc
-      (cte_wp_at ((=) cap.NullCap) sl and valid_pspace and valid_mdb and valid_list)
-      (cte_wp_at' (\<lambda>c. cteCap c = NullCap \<and> mdbPrev (cteMDBNode c) = 0) sl'
-       and valid_mdb' and valid_pspace')
-      (do
-         y \<leftarrow> set_original sl True;
-         set_cap (cap.ReplyCap thread True rights) sl
-       od)
-      (setCTE sl' (CTE (capability.ReplyCap thread True True) initMDBNode))"
-  apply clarsimp
-  apply (rule corres_caps_decomposition)
-                                     defer
-                                     apply (solves \<open>wpsimp\<close>)+
-   apply (intro conjI; (solves \<open>simp add: state_relation_def\<close>)?)
-       apply (clarsimp simp: o_def cdt_relation_def cte_wp_at_ctes_of
-                  split del: if_split cong: if_cong simp del: id_apply)
-       apply (case_tac cte, clarsimp)
-       apply (fold fun_upd_def)
-       apply (subst descendants_of_Null_update')
-            apply fastforce
-           apply fastforce
-          apply assumption
-         apply assumption
-        apply (simp add: nullPointer_def)
-       apply (subgoal_tac "cte_at (a, b) s")
-        prefer 2
-        apply (drule not_sym, clarsimp simp: cte_wp_at_caps_of_state
-                                      split: if_split_asm)
-       apply (simp add: state_relation_def cdt_relation_def)
-      apply (clarsimp simp: o_def cdt_list_relation_def cte_wp_at_ctes_of
-                 split del: if_split cong: if_cong simp del: id_apply)
-      apply (case_tac cte, clarsimp)
-      apply (clarsimp simp: state_relation_def cdt_list_relation_def)
-      apply (simp split: if_split_asm)
-      apply (erule_tac x=a in allE, erule_tac x=b in allE)
-      apply clarsimp
-      apply(case_tac "next_slot (a, b) (cdt_list s) (cdt s)")
-       apply simp
-      apply simp
-      apply (fastforce simp: valid_mdb'_def valid_mdb_ctes_def valid_nullcaps_def)
-     apply (clarsimp simp add: revokable_relation_def cte_wp_at_ctes_of
-                    split del: if_split)
-     apply simp
-     apply (rule conjI)
-      apply (clarsimp simp: initMDBNode_def)
-     apply clarsimp
-     apply (subgoal_tac "null_filter (caps_of_state s) (a, b) \<noteq> None")
-      prefer 2
-      apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state
-                     split: if_split_asm)
-     apply (subgoal_tac "cte_at (a,b) s")
-      prefer 2
-      apply clarsimp
-      apply (drule null_filter_caps_of_stateD)
-      apply (erule cte_wp_cte_at)
-     apply (clarsimp split: if_split_asm cong: conj_cong
-                      simp: cte_map_eq_subst revokable_relation_simp
-                            cte_wp_at_cte_at valid_pspace_def)
-    apply (clarsimp elim!: state_relationE simp: ghost_relation_of_heap o_def)+
-  apply (rule corres_guard_imp)
-    apply (rule corres_underlying_symb_exec_l [OF set_original_symb_exec_l'])
-     apply (rule setCTE_corres)
-     apply simp
-    apply wp
-   apply (clarsimp simp: cte_wp_at_cte_at valid_pspace_def)
-  apply (clarsimp simp: valid_pspace'_def cte_wp_at'_def)
-  done
 
 lemma setupReplyMaster_global_refs[wp]:
   "\<lbrace>\<lambda>s. valid_global_refs' s \<and> thread \<notin> global_refs' s \<and> tcb_at' thread s
@@ -803,12 +612,29 @@ lemma setUntypedCapAsFull_archMDBAssertions[CSpace_R_2_assms, wp]:
   apply (clarsimp simp: arch_mdb_assert_def cte_wp_at_ctes_of isCap_simps split: if_split_asm)
   done
 
-lemma sameRegion_capRange_sub:
+lemma sameRegion_capRange_sub[CSpace_R_2_assms]:
   "sameRegionAs cap cap' \<Longrightarrow> capRange cap' \<subseteq> capRange cap"
   apply (clarsimp simp: sameRegionAs_def2 gen_isCap_Master arch_isCap_Master capRange_Master
                   cong: conj_cong)
   apply (erule disjE, fastforce dest!: capMaster_capRange)
   apply (fastforce simp: isCap_simps capRange_def split: if_split_asm)
+  done
+
+lemma capRange_sameRegionAs[CSpace_R_2_assms]:
+  "\<lbrakk> sameRegionAs x y; s \<turnstile>' y; capClass x = PhysicalClass \<or> capClass y = PhysicalClass \<rbrakk>
+   \<Longrightarrow> capRange x \<inter> capRange y \<noteq> {}"
+  apply (erule sameRegionAsE)
+      apply (subgoal_tac "capClass x = capClass y \<and> capRange x = capRange y")
+       apply simp
+       apply (drule valid_capAligned)
+       apply (drule(1) capAligned_capUntypedPtr)
+       apply clarsimp
+      apply (rule conjI)
+       apply (rule master_eqI, rule capClass_Master, simp)
+      apply (rule master_eqI, rule capRange_Master, simp)
+     apply blast
+    apply blast
+   apply (clarsimp simp: isCap_simps)+
   done
 
 lemma safe_parent_for_capRange_capBits[CSpace_R_2_assms]:

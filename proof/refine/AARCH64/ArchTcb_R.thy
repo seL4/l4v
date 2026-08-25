@@ -39,11 +39,6 @@ lemma asUser_postModifyRegisters_corres[Tcb_R_assms]:
    use this as interface, but keep original lemma name for use outside of Arch *)
 lemmas threadSet_state_hyp_refs_of'_interface[Tcb_R_assms] = threadSet_state_hyp_refs_of'
 
-lemma threadSet_tcbPriority_if_live_then_nonz_cap'[Tcb_R_assms]:
-  "threadSet (tcbPriority_update f) t \<lbrace>if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: AARCH64.threadSet_iflive'T)
-     (fastforce simp: tcb_cte_cases_def tcb_cte_cases_neqs)+
-
 lemma sameObject_corres2[Tcb_R_assms]:
   "\<lbrakk> cap_relation c c'; cap_relation d d' \<rbrakk>
    \<Longrightarrow> same_object_as c d = sameObjectAs c' d'"
@@ -90,49 +85,6 @@ lemma is_valid_vtable_root_simp:
    (\<exists>r asid vref. cap = cap.ArchObjectCap (arch_cap.PageTableCap r VSRootPT_T (Some (asid, vref))))"
   by (simp add: is_valid_vtable_root_def
            split: cap.splits arch_cap.splits option.splits pt_type.splits)
-
-lemma threadSet_invs_trivialT2:
-  assumes
-    "\<forall>tcb. \<forall>(getF,setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
-    "\<forall>tcb. tcbState (F tcb) = tcbState tcb \<and> tcbDomain (F tcb) = tcbDomain tcb"
-    "\<forall>tcb. tcbBoundNotification (F tcb) = tcbBoundNotification tcb"
-    "\<forall>tcb. tcbSchedPrev (F tcb) = tcbSchedPrev tcb"
-    "\<forall>tcb. tcbSchedNext (F tcb) = tcbSchedNext tcb"
-    "\<forall>tcb. tcbQueued (F tcb) = tcbQueued tcb"
-    "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
-    "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
-    "\<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0"
-    "\<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)"
-  shows
-    "\<lbrace>invs' and K (\<forall>tcb. is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits)\<rbrace>
-     threadSet F t
-     \<lbrace>\<lambda>_. invs'\<rbrace>"
-  supply tcb_hyp_refs_of'_simps[simp del]
-  apply (rule hoare_gen_asm)
-  apply (simp add: invs'_def valid_state'_def)
-  apply (wp threadSet_valid_pspace'T
-            threadSet_iflive'T
-            threadSet_ifunsafe'T
-            threadSet_global_refsT
-            valid_irq_node_lift
-            valid_irq_handlers_lift''
-            threadSet_ctes_ofT
-            threadSet_valid_dom_schedule'
-            untyped_ranges_zero_lift
-            sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
-            threadSet_tcbSchedPrevs_of threadSet_tcbSchedNexts_of
-            threadSet_sch_actT_P[where P=False, simplified]
-            threadSet_state_refs_of'T[where f'=id]
-            threadSet_state_hyp_refs_of'
-            threadSet_idle'T
-            threadSet_not_inQ
-            threadSet_ct_idle_or_in_cur_domain'
-            threadSet_cur
-         | clarsimp simp: assms cteCaps_of_def tcb_hyp_refs'_valid_arch_tcb'_eq[where F=F]
-         | rule refl)+
-  apply (clarsimp simp: o_def tcb_hyp_refs_of'_simps)
-  apply (auto simp: assms obj_at'_def tcb_hyp_refs'_atcbVCPUPtr_eq)
-  done
 
 (* FIXME: move after checked_insert_tcb_invs in ArchTcb_AI, and consolidate redundancy there *)
 lemma checked_insert_tcb_invs_gen[Tcb_R_assms]:

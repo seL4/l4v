@@ -64,7 +64,7 @@ record
 axiomatization
   irq_oracle :: "nat \<Rightarrow> RISCV64.irq"
 where
-  irq_oracle_max_irq: "\<forall>n. irq_oracle n <= RISCV64.maxIRQ"
+  irq_oracle_max_irq: "\<forall>n. irq_oracle n <= maxIRQ"
 
 text \<open>The values the timer device will return (how much time passed since last query)\<close>
 axiomatization

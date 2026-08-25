@@ -398,7 +398,7 @@ For initialisation, see makeVCPUObject.
 
 > armvVCPUSave :: PPtr VCPU -> Bool -> Kernel ()
 > armvVCPUSave vcpuPtr active = do
->     vcpuSaveRegRange vcpuPtr VCPURegACTLR VCPURegSPSRfiq
+>     vcpuSaveRegRange vcpuPtr VCPURegACTLR VCPURegPARlow
 >     doMachineOp isb
 
 > vcpuSave :: Maybe (PPtr VCPU, Bool) -> Kernel ()
@@ -447,7 +447,7 @@ For initialisation, see makeVCPUObject.
 >         mapM_ (uncurry set_gic_vcpu_ctrl_lr) (map (\i -> (fromIntegral i, (vgicLR vgic) ! i)) gicIndices)
 >
 >     -- restore banked VCPU registers except SCTLR (that's in VCPUEnable)
->     vcpuRestoreRegRange vcpuPtr VCPURegACTLR VCPURegSPSRfiq
+>     vcpuRestoreRegRange vcpuPtr VCPURegACTLR VCPURegPARlow
 >
 >     vcpuEnable vcpuPtr
 

@@ -14,7 +14,10 @@ begin
 context Arch begin arch_global_naming
 
 (*FIXME: move to ainvs*)
+(* extend with arch rules *)
 lemmas store_pte_typ_ats[wp] = store_pte_typ_ats abs_atyp_at_lifts[OF store_pte_typ_at]
+
+named_theorems VSpace_R_assms
 
 definition
   "vspace_at_asid' vs asid \<equiv> \<lambda>s. \<exists>ap pool.
@@ -50,11 +53,17 @@ lemma no_fail_read_stval[wp, intro!, simp]:
   "no_fail \<top> read_stval"
   by (simp add: read_stval_def)
 
-lemma handleVMFault_corres:
+lemma handleVMFault_corres':
   "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
   unfolding handleVMFault_def handle_vm_fault_def
   by (corres | corres_cases_both)+
+
+(* interface lemma, superset of all architecture preconditions *)
+lemma handleVMFault_corres[VSpace_R_assms]:
+  "corres (fr \<oplus> dc) (tcb_at thread and pspace_aligned and pspace_distinct) (tcb_at' thread)
+          (handle_vm_fault thread fault) (handleVMFault thread fault)"
+  by (corres corres: handleVMFault_corres')
 
 lemma no_fail_setVSpaceRoot[wp, intro!, simp]:
   "no_fail \<top> (setVSpaceRoot v a)"
@@ -471,9 +480,6 @@ definition
        cte_wp_at' (is_arch_update' (ArchObjectCap cap)) slot and valid_cap' (ArchObjectCap cap)
          and K (isPageTableCap cap)"
 
-(* extend with arch rules *)
-lemmas store_pte_typ_ats[wp] = store_pte_typ_ats abs_atyp_at_lifts[OF store_pte_typ_at]
-
 lemma clear_page_table_corres:
   "corres dc (pspace_aligned and pspace_distinct and pt_at p)
              \<top>
@@ -838,21 +844,12 @@ lemma lookupIPCBuffer_valid_ipc_buffer[wp]:
   apply (case_tac rghts; simp add: pageBits_def ptTranslationBits_def)
   done
 
-lemma replyFromKernel_corres:
-  "\<lbrakk>t = t'; r = r'\<rbrakk> \<Longrightarrow>
-   corres dc (tcb_at t and invs) invs' (reply_from_kernel t r) (replyFromKernel t' r')"
-  apply (case_tac r)
-  apply (clarsimp simp: replyFromKernel_def reply_from_kernel_def
-                        badge_register_def badgeRegister_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr[OF lookupIPCBuffer_corres])
-      apply (rule corres_split[OF asUser_setRegister_corres])
-        apply (rule corres_split_eqr[OF setMRs_corres], simp)
-          apply (rule setMessageInfo_corres)
-          apply (wp hoare_case_option_wp hoare_valid_ipc_buffer_ptr_typ_at'
-                 | fastforce)+
-  done
+end (* Arch *)
 
-end
+interpretation VSpace_R?: VSpace_R
+proof goal_cases
+  interpret Arch  .
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact VSpace_R_assms)?)?)
+qed
 
 end

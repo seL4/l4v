@@ -884,7 +884,7 @@ next
         apply (clarsimp)
         apply (rule corres_from_rdonly)
            apply (wp, clarsimp)
-          apply (simp only: Let_unfold, (wp whenE_inv)+, clarsimp)
+          apply (wpsimp simp: Let_unfold wp: hoare_drop_imps hoare_vcg_op_lift)
          apply (rule validE_cases_valid, rule hoare_pre)
           apply (wpsimp simp: Let_unfold arch_invocation_relation_def
                               translate_arch_invocation_def transform_page_inv_def)+
@@ -895,7 +895,7 @@ next
        (* PageInvalidate *)
        apply (rule corres_from_rdonly)
           apply (wp, clarsimp)
-         apply (simp only: Let_unfold, (wp whenE_inv)+, clarsimp)
+         apply (wpsimp simp: Let_unfold wp: hoare_drop_imps hoare_vcg_op_lift)
         apply (rule validE_cases_valid, rule hoare_pre)
          apply (wpsimp simp: Let_unfold arch_invocation_relation_def
                              translate_arch_invocation_def transform_page_inv_def)+
@@ -906,7 +906,7 @@ next
       (* PageCleanInvalidate *)
       apply (rule corres_from_rdonly)
          apply (wp, clarsimp)
-        apply (simp only: Let_unfold, (wp whenE_inv)+, clarsimp)
+        apply (wpsimp simp: Let_unfold wp: hoare_drop_imps hoare_vcg_op_lift)
        apply (rule validE_cases_valid, rule hoare_pre)
         apply (wpsimp simp: Let_unfold arch_invocation_relation_def
                             translate_arch_invocation_def transform_page_inv_def)+
@@ -917,7 +917,7 @@ next
      (* PageUnify *)
      apply (rule corres_from_rdonly)
         apply (wp, clarsimp)
-       apply (simp only: Let_unfold, (wp whenE_inv)+, clarsimp)
+       apply (wpsimp simp: Let_unfold wp: hoare_drop_imps hoare_vcg_op_lift)
       apply (rule validE_cases_valid, rule hoare_pre)
        apply (wpsimp simp: Let_unfold arch_invocation_relation_def
                            translate_arch_invocation_def transform_page_inv_def)+

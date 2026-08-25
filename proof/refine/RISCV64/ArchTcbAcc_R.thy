@@ -127,8 +127,10 @@ lemma setObject_tcb_refs'[TcbAcc_R_assms, wp]:
   apply (simp add: global_refs'_def)
   done
 
-lemma threadSet_state_hyp_refs_of':
-  shows "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> threadSet F t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+(* assumption not needed on this architecture, but used in generic interface *)
+lemma threadSet_state_hyp_refs_of'[TcbAcc_R_assms]:
+  assumes y: "\<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)"
+  shows      "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> threadSet F t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   apply (simp add: threadSet_def)
   apply (wpsimp wp: setObject_state_hyp_refs_of' getObject_tcb_wp
                 simp: gen_objBits_simps obj_at'_def state_hyp_refs_of'_def)
@@ -275,43 +277,6 @@ lemma tcb_hyp_refs'_valid_arch_tcb'_eq[TcbAcc_R_2_assms]:
   "tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)
    \<Longrightarrow> valid_arch_tcb' (tcbArch (F tcb)) s = valid_arch_tcb' (tcbArch tcb) s"
   by (auto simp: valid_arch_tcb'_def)
-
-lemma threadSet_invs_trivialT[TcbAcc_R_2_assms]:
-  assumes
-    "\<forall>tcb. \<forall>(getF,setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
-    "\<forall>tcb. tcbState (F tcb) = tcbState tcb \<and> tcbDomain (F tcb) = tcbDomain tcb"
-    "\<forall>tcb. is_aligned (tcbIPCBuffer tcb) msg_align_bits
-           \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits"
-    "\<forall>tcb. tcbBoundNotification (F tcb) = tcbBoundNotification tcb"
-    "\<forall>tcb. tcbSchedContext (F tcb) = tcbSchedContext tcb"
-    "\<forall>tcb. tcbYieldTo (F tcb) = tcbYieldTo tcb"
-    "\<forall>tcb. tcbSchedPrev (F tcb) = tcbSchedPrev tcb"
-    "\<forall>tcb. tcbSchedNext (F tcb) = tcbSchedNext tcb"
-    "\<forall>tcb. tcbInReleaseQueue (F tcb) = tcbInReleaseQueue tcb"
-    "\<forall>tcb. tcbQueued (F tcb) = tcbQueued tcb"
-    "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
-    "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
-    "\<forall>tcb. tcbFlags tcb && ~~ tcbFlagMask = 0 \<longrightarrow> tcbFlags (F tcb) && ~~ tcbFlagMask = 0"
-    "\<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)"
-  shows "threadSet F t \<lbrace>invs'\<rbrace>"
-  supply tcb_hyp_refs_of'_simps[simp del]
-  apply (simp add: invs'_def split del: if_split)
-  apply (wp threadSet_valid_pspace'T
-            threadSet_ifunsafe'T
-            threadSet_global_refsT
-            valid_irq_node_lift
-            valid_irq_handlers_lift''
-            threadSet_ctes_ofT
-            threadSet_valid_dom_schedule'
-            untyped_ranges_zero_lift
-            sym_heap_sched_pointers_lift threadSet_valid_sched_pointers
-            threadSet_state_hyp_refs_of'
-            threadSet_cur
-            threadSet_field_opt_pred threadSet_field_inv
-            valid_bitmaps_lift
-         | clarsimp simp: assms cteCaps_of_def tcb_hyp_refs'_valid_arch_tcb'_eq[where F=F] | rule refl)+
-  apply (clarsimp simp: o_def tcb_hyp_refs_of'_simps)
-  done
 
 (* interface lemma, but can't be done via locale *)
 lemma asUser_corres':

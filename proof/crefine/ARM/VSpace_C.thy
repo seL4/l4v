@@ -1597,16 +1597,16 @@ lemma doFlush_ccorres:
      apply (rule ccorres_cond_false)
      apply (rule ccorres_cond_false)
      apply (rule ccorres_cond_true)
-     apply (simp add: empty_fail_cond empty_fail_cleanCacheRange_PoU empty_fail_dsb
-                      empty_fail_invalidateCacheRange_I empty_fail_branchFlushRange empty_fail_isb
+     apply (simp add: empty_fail_cond empty_fail_dsb empty_fail_isb
                       doMachineOp_bind)
      apply (rule ccorres_rhs_assoc)+
      apply (ctac (no_vcg) add: cleanCacheRange_PoU_ccorres)
       apply (ctac (no_vcg) add: dsb_ccorres)
        apply (ctac (no_vcg) add: invalidateCacheRange_I_ccorres)
         apply (ctac (no_vcg) add: branchFlushRange_ccorres)
-         apply (ctac (no_vcg) add: isb_ccorres)
-        apply wp+
+         apply (ctac (no_vcg) add: dsb_ccorres)
+          apply (ctac (no_vcg) add: isb_ccorres)
+         apply wp+
     apply simp
    apply (clarsimp simp: Collect_const_mem)
   apply (auto simp: flushtype_relation_def
@@ -2264,7 +2264,7 @@ lemma unmapPage_ccorres:
              apply (rule ccorres_split_throws)
               apply (rule ccorres_return_void_C')
              apply vcg
-            apply (wp lookupPTSlot_inv Arch_R.lookupPTSlot_aligned lookupPTSlot_page_table_at'
+            apply (wp lookupPTSlot_inv lookupPTSlot_aligned lookupPTSlot_page_table_at'
                   | simp)+
            apply (vcg exspec=lookupPTSlot_modifies)
           \<comment> \<open>ARMSection\<close>

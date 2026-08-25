@@ -208,6 +208,12 @@ lemma valid_sz_simps:
                      pteBits_def wordSizeCase_def wordBits_def replySizeBits_def
               split: arch_kernel_object.splits)
 
+(* no page table duplicates on this architecture, used for generic interfaces only *)
+definition vs_valid_duplicates' :: "(paddr \<Rightarrow> Structures_H.kernel_object option) \<Rightarrow> bool" where
+   "vs_valid_duplicates' \<equiv> \<lambda>_. True"
+
+lemmas [simp] = vs_valid_duplicates'_def
+
 text \<open>Heap projections:\<close>
 
 definition asid_pool_of' :: "arch_kernel_object \<rightharpoonup> asidpool" where

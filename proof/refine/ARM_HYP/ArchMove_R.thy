@@ -47,6 +47,14 @@ lemma flush_space_vspace_objs[wp]:
 crunch handle_arch_fault_reply, arch_get_sanitise_register_info
   for inv[Ipc_AI_2_assms]: P
 
+(* FIXME arch-split: missing from ArchCSpaceInvPre_AI on this architecture *)
+lemma set_cap_aobjs_of[wp]:
+  "set_cap cap ptr \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  unfolding set_cap_def
+  apply (wpsimp wp: set_object_wp get_object_wp)
+  apply (auto simp: opt_map_def obj_at_def aobj_of_def split: option.splits elim!: rsubst[where P=P])
+  done
+
 end
 
 end

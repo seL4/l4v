@@ -1951,7 +1951,7 @@ definition
 where
   "cleanup_info_wf' cap \<equiv> case cap of
       IRQHandlerCap irq \<Rightarrow>
-        UCAST(6\<rightarrow>machine_word_len) irq \<le>  SCAST(32 signed\<rightarrow>machine_word_len) Kernel_C.maxIRQ
+        UCAST(irq_len\<rightarrow>machine_word_len) irq \<le>  SCAST(32 signed\<rightarrow>machine_word_len) Kernel_C.maxIRQ
     | ArchObjectCap acap \<Rightarrow> arch_cleanup_info_wf' acap
     | _ \<Rightarrow> True"
 
@@ -2257,9 +2257,11 @@ lemma postCapDeletion_ccorres:
   apply (clarsimp simp: isCap_simps)
   apply (frule cap_get_tag_isCap_unfolded_H_cap(5))
   apply (clarsimp simp: cap_irq_handler_cap_lift ccap_relation_def cap_to_H_def
-                        cleanup_info_wf'_def c_valid_cap_def cl_valid_cap_def mask_def)
-  apply (rule mask_eq_ucast_eq[where 'a="6" and 'b="64" and 'c="64", symmetric, simplified])
-  by (simp add: mask_def)
+                        cleanup_info_wf'_def c_valid_cap_def cl_valid_cap_def)
+  apply (rule mask_eq_ucast_eq[where 'a="irq_len" and 'b="machine_word_len" and 'c="machine_word_len",
+                               symmetric, simplified])
+  apply (simp flip: LENGTH_irq_len_irqBits)
+  done
 
 lemma emptySlot_ccorres:
   "ccorres dc xfdc
