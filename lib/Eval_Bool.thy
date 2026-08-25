@@ -5,9 +5,7 @@
  *)
 
 theory Eval_Bool
-
-imports Try_Methods
-
+  imports Main
 begin
 
 text \<open>The eval_bool method/simproc uses the code generator setup to
