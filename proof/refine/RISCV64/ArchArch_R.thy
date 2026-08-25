@@ -688,7 +688,7 @@ shows
              apply (rule corres_splitEE)
                 apply (rule corres_whenE)
                   apply (subst conj_assoc [symmetric])
-                  apply (subst assocs_empty_dom_comp [symmetric])
+                  apply (subst assocs_empty_dom_comp[symmetric, simplified])
                   apply (erule dom_ucast_eq)
                  apply (rule corres_trivial)
                  apply simp
@@ -740,7 +740,7 @@ shows
          apply (clarsimp simp: state_relation_def arch_state_relation_def)
         apply (rule corres_splitEE)
            apply (rule corres_whenE)
-             apply (subst assocs_empty_dom_comp [symmetric])
+             apply (subst assocs_empty_dom_comp[symmetric, simplified])
              apply (simp add: o_def)
              apply (rule dom_ucast_eq_8)
             apply (rule corres_trivial, simp, simp)
@@ -1052,7 +1052,7 @@ lemma arch_decodeInvocation_wf[wp]:
      apply (erule cte_wp_at_weakenE')
      apply (simp, drule_tac t="cteCap c" in sym, simp add: isCap_simps)
     apply (subst (asm) conj_assoc [symmetric],
-           subst (asm) assocs_empty_dom_comp [symmetric])
+           subst (asm) assocs_empty_dom_comp[symmetric, simplified])
     apply (drule dom_hd_assocsD)
     apply (simp add: capAligned_def asid_wf_def mask_def)
     apply (elim conjE)
