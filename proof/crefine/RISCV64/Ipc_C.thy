@@ -1547,9 +1547,7 @@ proof -
     by (simp | erule in_set_zipE)+
   have msg_aux: "\<forall>p. elem p (zip [4..<120] (drop 4 msg))
                     \<longrightarrow> (\<lambda>(x1,y1). setMR receiver None x1 y1) p = (\<lambda>_ . return (length msgRegisters)) p"
-    by (fastforce simp add: numeral_eqs setMR_def less_than_4 n_msgRegisters_def length_msgRegisters
-                            take_bit_Suc
-                  simp del: unsigned_numeral)
+    by (fastforce simp: setMR_def less_than_4 n_msgRegisters_def length_msgRegisters)
   have mapM_x_return_gen: "\<And>v w xs. mapM_x (\<lambda>_. return v) xs = return w" (* FIXME mapM_x_return *)
     by (induct_tac xs; simp add: mapM_x_Nil mapM_x_Cons)
   show ?thesis
