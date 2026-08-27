@@ -179,5 +179,26 @@ locale VSpace_R =
     "\<And>thread fault.
      corres (fr \<oplus> dc) (tcb_at thread and pspace_aligned and pspace_distinct) (tcb_at' thread)
             (handle_vm_fault thread fault) (handleVMFault thread fault)"
+  assumes badgeRegister_badge_register:
+    "badgeRegister = badge_register"
+  assumes lookupIPCBuffer_valid_ipc_buffer[wp]:
+    "\<And>b s. \<lbrace>valid_objs'\<rbrace> lookupIPCBuffer b s \<lbrace>case_option \<top> valid_ipc_buffer_ptr'\<rbrace>"
+begin
+
+lemma replyFromKernel_corres:
+  "\<lbrakk>t = t'; r = r'\<rbrakk> \<Longrightarrow>
+   corres dc (tcb_at t and invs) invs' (reply_from_kernel t r) (replyFromKernel t' r')"
+  apply (case_tac r)
+  apply (clarsimp simp: replyFromKernel_def reply_from_kernel_def badgeRegister_badge_register)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_eqr[OF lookupIPCBuffer_corres])
+      apply (rule corres_split[OF asUser_setRegister_corres])
+        apply (rule corres_split_eqr[OF setMRs_corres], simp)
+          apply (rule setMessageInfo_corres)
+          apply (wp hoare_case_option_wp hoare_valid_ipc_buffer_ptr_typ_at'
+                 | fastforce)+
+  done
+
+end (* VSpace_R *)
 
 end

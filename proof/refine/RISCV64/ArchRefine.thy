@@ -212,31 +212,34 @@ lemma valid_domain_list_init[Refine_assms, simp]:
   apply (insert init_domain_time_pos init_domain_time_bound)
   by (simp add: init_A_st_def ext_init_def valid_domain_list_def)
 
-lemma cur_sc_active_init[simp]:
+lemma cur_sc_active_init[Refine_assms, simp]:
   "cur_sc_active init_A_st"
   by (clarsimp simp: init_A_st_def init_kheap_def vs_all_heap_simps active_sc_def MIN_REFILLS_def
                      riscv_global_pt_ptr_def idle_sc_ptr_def)
 
-lemma ct_not_in_release_q_init[simp]:
+lemma ct_not_in_release_q_init[Refine_assms, simp]:
   "ct_not_in_release_q init_A_st"
   by (clarsimp simp: init_A_st_def init_kheap_def not_in_release_q_def in_queue_2_def)
 
-lemma valid_machine_time_init[simp]:
+lemma valid_machine_time_init[Refine_assms, simp]:
   "valid_machine_time init_A_st"
   by (clarsimp simp: init_A_st_def valid_machine_time_def init_machine_state_def)
 
-lemma current_time_bounded_init[simp]:
+lemma current_time_bounded_init[Refine_assms, simp]:
   "current_time_bounded init_A_st"
   apply (insert getCurrentTime_buffer_no_overflow)
   by (clarsimp simp: current_time_bounded_def init_A_st_def)
 
-lemma consumed_time_bounded_init[simp]:
+lemma consumed_time_bounded_init[Refine_assms, simp]:
   "consumed_time_bounded init_A_st"
   by (clarsimp simp: init_kheap_def init_A_st_def)
 
-lemma cur_sc_offset_ready_and_sufficient[simp]:
-  "cur_sc_offset_ready (consumed_time init_A_st) init_A_st
-   \<and> cur_sc_offset_sufficient (consumed_time init_A_st) init_A_st"
+lemma cur_sc_offset_ready[Refine_assms, simp]:
+  "cur_sc_offset_ready (consumed_time init_A_st) init_A_st"
+  by (clarsimp simp: init_A_st_def)
+
+lemma cur_sc_offset_sufficient[Refine_assms, simp]:
+  "cur_sc_offset_sufficient (consumed_time init_A_st) init_A_st"
   by (clarsimp simp: init_A_st_def)
 
 lemma valid_domain_time_init[Refine_assms, simp]:

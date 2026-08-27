@@ -21,9 +21,6 @@ lemmas [wp] =
   arch_prepare_set_domain_pspace_distinct
   arch_prepare_set_domain_typ_ats
 
-arch_requalify_facts delete_caller_cap_valid_list (* FIXME arch-split: Deterministic_AI *)
-lemmas [wp] = delete_caller_cap_valid_list
-
 arch_requalify_consts
   vs_valid_duplicates'
 
@@ -140,12 +137,6 @@ crunch setThreadState
   for pspace_no_overlap'[wp]: "pspace_no_overlap' w s"
   (simp: unless_def crunch_simps wp: crunch_wps)
 
-crunch setMRs
-  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
-  (ignore: getRestartPC setRegister transferCapsToSlots
-   wp: hoare_drop_imps hoare_vcg_split_case_option mapM_wp'
-   simp: split_def zipWithM_x_mapM)
-
 lemmas setObject_cte_st_tcb_at'[wp] = setCTE_pred_tcb_at'[unfolded setCTE_def]
 
 (* FIXME: move *)
@@ -205,6 +196,9 @@ locale Arch_R =
      \<lbrace>invs' and ct_active' and valid_arch_inv' invocation\<rbrace>
      Arch.performInvocation invocation
      \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  assumes arch_performInvocation_ksCurThread[wp]:
+    "\<And>invocation P.
+     Arch.performInvocation invocation \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace>"
   assumes arch_decodeInvocation_inv[wp]:
     "\<And>label args capIndex slot cap extraCaps.
      Arch.decodeInvocation label args capIndex slot cap extraCaps \<lbrace>P\<rbrace>"

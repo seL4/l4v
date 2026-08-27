@@ -1114,8 +1114,9 @@ locale ADT_H_2 = ADT_H +
      Arch.kernel_state \<Rightarrow> (machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> Structures_A.kheap"
   assumes absHeap_correct:
     "\<And>s s'.
-     \<lbrakk>pspace_aligned s; pspace_distinct s; valid_objs s; valid_cur_fpu s;
-      pspace_relation (kheap s) (ksPSpace s'); ghost_relation_wrapper s s';
+     \<lbrakk>pspace_aligned s; pspace_distinct s; valid_objs s; valid_objs' s'; valid_cur_fpu s;
+      active_scs_valid s; pspace_relation (kheap s) (ksPSpace s'); ghost_relation_wrapper s s';
+      sc_replies_relation s s'; ep_queues_relation s s'; ntfn_queues_relation s s';
       (arch_state s, ksArchState s') \<in> arch_state_relation (aobjs_of' s')\<rbrakk>
      \<Longrightarrow> absHeap (gsUserPages s') (gsCNodes s') (ksArchState s') (ksPSpace s') = kheap s"
 begin

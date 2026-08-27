@@ -233,8 +233,6 @@ locale Ipc_R =
      corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
             (make_arch_fault_msg f t)
             (makeArchFaultMessage (arch_fault_map f) t)"
-  assumes badgeRegister_badge_register:
-    "badgeRegister = badge_register"
   assumes syscallMessage_def':
     "FaultHandler_H.syscallMessage \<equiv> MachineExports.syscallMessage"
   assumes exceptionMessage_def':
@@ -243,9 +241,7 @@ locale Ipc_R =
     "sanitiseRegister = sanitise_register"
   assumes makeArchFaultMessage_inv[wp]:
     "\<And>ft t P. makeArchFaultMessage ft t \<lbrace>P\<rbrace>"
-  assumes lookupIPCBuffer_valid_ipc_buffer[wp]:
-    "\<And>b s. \<lbrace>valid_objs'\<rbrace> VSpace_H.lookupIPCBuffer b s \<lbrace>case_option \<top> valid_ipc_buffer_ptr'\<rbrace>"
-assumes arch_getSanitiseRegisterInfo_corres:
+  assumes arch_getSanitiseRegisterInfo_corres:
     "\<And>t.
      corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
             (arch_get_sanitise_register_info t)
@@ -4658,20 +4654,6 @@ lemma sai_invs'[wp]:
    apply (fastforce simp: ko_wp_at'_def st_tcb_at'_def obj_at'_def isBlockedOnNtfn_def
                    split: thread_state.splits)
   apply (fastforce dest: ntfn_ko_at_valid_objs_valid_ntfn')
-  done
-
-lemma replyFromKernel_corres:
-  "\<lbrakk>t = t'; r = r'\<rbrakk> \<Longrightarrow>
-   corres dc (tcb_at t and invs) invs' (reply_from_kernel t r) (replyFromKernel t' r')"
-  apply (case_tac r)
-  apply (clarsimp simp: replyFromKernel_def reply_from_kernel_def badgeRegister_badge_register)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr[OF lookupIPCBuffer_corres])
-      apply (rule corres_split[OF asUser_setRegister_corres])
-        apply (rule corres_split_eqr[OF setMRs_corres], simp)
-          apply (rule setMessageInfo_corres)
-          apply (wp hoare_case_option_wp hoare_valid_ipc_buffer_ptr_typ_at'
-                 | fastforce)+
   done
 
 crunch maybe_donate_sc

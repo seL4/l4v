@@ -215,7 +215,7 @@ lemma createNewCaps_range_helper[Untyped_R_assms]:
               \<comment>\<open>Untyped\<close>
               apply (rule hoare_pre, wp)
               apply (frule range_cover_not_zero[rotated -1],simp)
-              apply (clarsimp simp: APIType_capBits_gen_def objBits_simps archObjSize_def ptr_add_def o_def)
+              apply (clarsimp simp: APIType_capBits_gen_def objBits_simps ptr_add_def o_def)
               apply (subst upto_enum_red')
                apply unat_arith
               apply (clarsimp simp: o_def fromIntegral_def toInteger_nat fromInteger_nat)
@@ -224,12 +224,12 @@ lemma createNewCaps_range_helper[Untyped_R_assms]:
              apply (rule hoare_pre, wp createObjects_ret2)
               apply (wpsimp simp: curDomain_def)
              apply (clarsimp simp: APIType_capBits_gen_def word_bits_def
-                                   objBits_simps archObjSize_def ptr_add_def o_def)
+                                   objBits_simps ptr_add_def o_def)
              apply (fastforce simp: objBitsKO_def objBits_def)
              \<comment>\<open>other APIObjectType\<close>
             apply ((rule hoare_pre, wp createObjects_ret2,
                     clarsimp simp: APIType_capBits_gen_def word_bits_def
-                                   objBits_simps archObjSize_def ptr_add_def o_def,
+                                   objBits_simps ptr_add_def o_def,
                     fastforce simp: objBitsKO_def objBits_def scBits_simps)+)[5]
         \<comment>\<open>Arch objects\<close>
         by (wp createObjects_ret2
@@ -301,7 +301,8 @@ lemma resetChunkBits_le_word_bits[Untyped_R_assms]:
   by (simp add: Kernel_Config.resetChunkBits_def word_bits_def)
 
 lemma APIType_capBits_lower_bound[Untyped_R_assms]:
-  "\<lbrakk>tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us\<rbrakk>
+  "\<lbrakk>tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us;
+    tp = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow> minUntypedSizeBits \<le> us\<rbrakk>
    \<Longrightarrow> minUntypedSizeBits \<le> APIType_capBits tp us"
   by (simp add: APIType_capBits_def objBits_simps' bit_simps minUntypedSizeBits_def
            split: object_type.split apiobject_type.split)
@@ -319,6 +320,7 @@ lemma dmo_freeMemory_clear_um[Untyped_R_assms]:
 crunch createObject
   for nosch[Untyped_R_assms, wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and ksInterruptState[Untyped_R_assms, wp]: "\<lambda>s. P (ksInterruptState s)"
+  and ksCurThread[Untyped_R_assms, wp]: "\<lambda>s. P (ksCurThread s)"
 
 crunch resetUntypedCap
   for arch_inv[wp]: "\<lambda>s. P (ksArchState s)"

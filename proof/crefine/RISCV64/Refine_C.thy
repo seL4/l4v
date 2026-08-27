@@ -706,6 +706,7 @@ lemma handleHypervisorEvent_ccorres:
           apply assumption
          apply (wpsimp wp: schedule_sch_act_wf schedule_invs' hoare_drop_imps
                            hoare_vcg_if_lift2
+                   wp_del: hh_invs' (* FIXME: rt arch-split: could be removed if sch_act_not asserted *)
                      simp: handleHypervisorFault_def guard_is_UNIV_def)+
   done
 

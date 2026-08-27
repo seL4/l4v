@@ -631,6 +631,7 @@ locale Retype_R =
       ty = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<Longrightarrow> 0 < us;
       ty = APIObjectType ArchTypes_H.apiobject_type.Untyped \<Longrightarrow>
       minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits;
+      ty = APIObjectType ArchTypes_H.SchedContextObject \<Longrightarrow> sc_size_bounds us;
       ptr \<noteq> 0; canonical_address (ptr && ~~ mask sz); ptr && ~~ mask sz \<in> kernel_mappings;
       sz \<le> maxUntypedSizeBits\<rbrakk>
      \<Longrightarrow> \<lbrace>\<lambda>s. pspace_no_overlap' ptr sz s \<and> valid_pspace' s\<rbrace>
@@ -3859,7 +3860,8 @@ locale Retype_R_3 = Retype_R_2 +
                  \<and> caps_no_overlap y sz s \<and> pspace_no_overlap_range_cover y sz s
                  \<and> caps_overlap_reserved {y..y + of_nat n * 2 ^ (obj_bits_api (APIType_map2 (Inr ty)) us) - 1} s
                  \<and> (\<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area y sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
-                 \<and> (APIType_map2 (Inr ty) = Structures_A.CapTableObject \<longrightarrow> 0 < us))
+                 \<and> (APIType_map2 (Inr ty) = Structures_A.CapTableObject \<longrightarrow> 0 < us)
+                 \<and> (APIType_map2 (Inr ty) = Structures_A.SchedContextObject \<longrightarrow> sc_size_bounds us))
             (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_no_overlap' y sz s
                  \<and> valid_pspace' s \<and> valid_arch_state' s
                  \<and> range_cover y sz (obj_bits_api (APIType_map2 (Inr ty)) us) n \<and> n\<noteq> 0)

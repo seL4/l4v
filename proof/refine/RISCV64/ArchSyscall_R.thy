@@ -27,19 +27,20 @@ crunch prepareSetDomain
   and ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and sch_act_simple[Syscall_R_assms, wp]: sch_act_simple
   and tcb_at'[Syscall_R_assms, wp]: "tcb_at' p"
-  and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   and pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
   and ct_in_state'[Syscall_R_assms, wp]: "ct_in_state' P"
   (wp: sch_act_simple_lift ct_in_state_thread_state_lift' crunch_wps)
 
-crunch postSetFlags, Arch.performIRQControl, Arch.invokeIRQHandler
+crunch prepareSetDomain, postSetFlags, Arch.performIRQControl, Arch.invokeIRQHandler
   for typ_at'[Syscall_R_assms, wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[Syscall_R_assms, wp]: "\<lambda>s. P (sc_at'_n n p s)"
+  and ksCurThread[Syscall_R_assms, wp]: "\<lambda>s. P (ksCurThread s)"
 
 lemma setThreadState_irq_control_inv_valid'[Syscall_R_assms, wp]:
   "setThreadState st t \<lbrace>irq_control_inv_valid' irqcontrol_invocation\<rbrace>"
   apply (case_tac irqcontrol_invocation; simp)
    apply (rename_tac arch_irqhandler_issue)
-   apply (case_tac archirq_inv; simp)
+   apply (case_tac arch_irqhandler_issue; simp)
     apply (wpsimp simp: irq_issued'_def)+
   done
 
@@ -72,8 +73,11 @@ lemma handleSpuriousIRQ_corres[Syscall_R_assms, corres]:
   by (simp add: handle_spurious_irq_def handleSpuriousIRQ_def)
 
 lemma handleHypervisorFault_corres[Syscall_R_assms]:
-  "corres dc einvs invs' (handle_hypervisor_fault w fault) (handleHypervisorFault w fault)"
-  by (cases fault; clarsimp simp add: handleHypervisorFault_def returnOk_def2)
+  "corres dc
+     (einvs and st_tcb_at runnable thread and ex_nonz_cap_to thread)
+     invs'
+     (handle_hypervisor_fault thread fault) (handleHypervisorFault thread fault)"
+  by (cases fault; clarsimp simp: handleHypervisorFault_def split del: if_split)
 
 lemma hvmf_invs_lift[Syscall_R_assms]:
   "(\<And>s m. P (s\<lparr>ksMachineState := ksMachineState s\<lparr>machine_state_rest := m\<rparr>\<rparr>) = P s) \<Longrightarrow>
@@ -94,7 +98,7 @@ crunch handleHypervisorFault
   (wp: undefined_valid haskell_assert_inv)
 
 lemma hh_invs'[Syscall_R_assms, wp]:
-  "\<lbrace>invs' and sch_act_not p and st_tcb_at' simple' p and ex_nonz_cap_to' p and (\<lambda>s. p \<noteq> ksIdleThread s)\<rbrace>
+  "\<lbrace>invs' and st_tcb_at' runnable' p\<rbrace>
    handleHypervisorFault p t
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   supply if_split[split del]

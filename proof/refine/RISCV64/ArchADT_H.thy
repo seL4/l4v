@@ -209,7 +209,7 @@ private method ko =
   clarsimp simp: ep_relation_cut_def ntfn_relation_cut_def cte_relation_def
           split: if_split_asm
 
-lemma absHeap_correct:
+lemma absHeap_correct[ADT_H_2_assms]:
   fixes s' :: kernel_state
   assumes pspace_aligned:  "pspace_aligned s"
   assumes pspace_distinct: "pspace_distinct s"
@@ -370,7 +370,7 @@ proof -
         using valid_objs[simplified valid_objs_def Ball_def dom_def fun_app_def]
         apply (erule_tac x=y in allE)
         apply (clarsimp simp: cap_relation_imp_CapabilityMap valid_obj_def valid_tcb_def
-                              ran_tcb_cap_cases valid_cap_def2 arch_tcb_relation_imp_ArchTcnMap)
+                              ran_tcb_cap_cases valid_cap_def2 arch_tcb_relation_imp_ArchTcbMap)
 
        apply (erule relatedE, ko, ako)
         apply (simp add: absCNode_def cte_map_def)

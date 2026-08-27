@@ -3708,34 +3708,6 @@ lemma threadSet_invs_trivialT:
 lemmas threadSet_invs_trivial =
     threadSet_invs_trivialT[OF all_tcbI all_tcbI all_tcbI all_tcbI, OF ball_tcb_cte_casesI]
 
-lemma tcbSchedNext_update_iflive':
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
-   threadSet (tcbSchedNext_update f) t
-   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
-
-lemma tcbSchedPrev_update_iflive':
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
-   threadSet (tcbSchedPrev_update f) t
-   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
-
-lemma tcbQueued_update_iflive'[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' t s\<rbrace>
-   threadSet (tcbQueued_update f) t
-   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: threadSet_iflive'T simp: update_tcb_cte_cases)
-
-lemma sbn_iflive'[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> (bound ntfn \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
-   setBoundNotification ntfn t
-   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: setBoundNotification_def)
-  apply (rule hoare_pre)
-   apply (wp threadSet_iflive' | simp)+
-  apply auto
-  done
-
 end (* TcbAcc_R_2 *)
 
 lemma (in TcbAcc_R) setSchedulerAction_corres:
@@ -4616,21 +4588,6 @@ lemma in_user_frame_eq_helper:
    apply (rule is_aligned_add_helper [OF al, THEN conjunct2])
    apply (rule less_max_ipc_words_less_2p_msg_align_bits[OF y])
   apply (simp add: msg_align_bits_le_pageBitsForSize)
-  done
-
-lemma sts_iflive'[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
-        \<and> (st \<noteq> Inactive \<and> \<not> idle' st \<longrightarrow> ex_nonz_cap_to' t s)
-        \<and> pspace_aligned' s \<and> pspace_distinct' s\<rbrace>
-   setThreadState st t
-   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: setThreadState_def setQueue_def)
-  apply wpsimp
-   apply (rule_tac Q'="\<lambda>rv. if_live_then_nonz_cap' and pspace_aligned' and pspace_distinct'"
-                in hoare_post_imp)
-    apply clarsimp
-   apply (wpsimp wp: threadSet_iflive')
-  apply fastforce
   done
 
 end (* TcbAcc_R *)

@@ -3356,7 +3356,7 @@ lemma fast_finaliseCap_corres:
   apply (rule pred_tcb'_weakenE, erule sym_ref_replyTCB_Receive_or_Reply; fastforce)
   done
 
-crunch ThreadDecls_H.suspend, unbindNotification
+crunch ThreadDecls_H.suspend, unbindNotification, isFinalCapability
   for no_0_obj'[wp]: no_0_obj'
   (simp: crunch_simps wp: crunch_wps getCTE_no_0_obj'_helper cong: option.case_cong_weak)
 

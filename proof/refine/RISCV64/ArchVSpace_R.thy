@@ -803,7 +803,7 @@ lemma perform_aci_invs [wp]:
                         wellformed_mapdata'_def)
   done
 
-lemma lookupIPCBuffer_valid_ipc_buffer[wp]:
+lemma lookupIPCBuffer_valid_ipc_buffer[VSpace_R_assms, wp]:
   "\<lbrace>valid_objs'\<rbrace> lookupIPCBuffer b t \<lbrace>case_option \<top> valid_ipc_buffer_ptr'\<rbrace>"
   unfolding lookupIPCBuffer_def
   supply raw_tcb_cte_cases_simps[simp] (* FIXME arch-split: legacy, try use tcb_cte_cases_neqs *)
@@ -843,6 +843,10 @@ lemma lookupIPCBuffer_valid_ipc_buffer[wp]:
   apply (rule and_mask_less')
   apply (case_tac rghts; simp add: pageBits_def ptTranslationBits_def)
   done
+
+lemma badgeRegister_badge_register[VSpace_R_assms]:
+  "badgeRegister = badge_register"
+  by (simp add: badge_register_def badgeRegister_def)
 
 end (* Arch *)
 

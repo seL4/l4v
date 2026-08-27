@@ -332,7 +332,8 @@ locale Untyped_R = mdb_insert_again_all_common +
     "minUntypedSizeBits \<le> resetChunkBits"
   assumes APIType_capBits_lower_bound:
     "\<And>tp us.
-     \<lbrakk>tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us\<rbrakk>
+     \<lbrakk>tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us;
+      tp = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject \<longrightarrow> minUntypedSizeBits \<le> us\<rbrakk>
      \<Longrightarrow> minUntypedSizeBits \<le> APIType_capBits tp us"
   assumes dmo_freeMemory_clear_um:
     "\<And>sz ptr.
@@ -352,6 +353,9 @@ locale Untyped_R = mdb_insert_again_all_common +
   assumes createObject_ksInterruptState[wp]:
     "\<And>t regionBase userSize isDevice P.
      createObject t regionBase userSize isDevice \<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace>"
+  assumes createObject_ksCurThread[wp]:
+    "\<And>t regionBase userSize isDevice P.
+     createObject t regionBase userSize isDevice \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace>"
 begin
 
 crunch deleteObjects, updateFreeIndex
@@ -676,7 +680,7 @@ lemma ctes_of_ko:
      apply (fastforce dest: ctes_of_ko_arch simp: gen_isCap_simps capRange_def)
     \<comment> \<open>Reply case\<close>
     apply (clarsimp simp: valid_cap'_def obj_at'_def)
-    apply (fastforce simp: obj_range'_def objBits_simps' field_simps mask_def)
+    apply (fastforce simp: obj_range'_def gen_objBits_simps field_simps mask_def)
    \<comment> \<open>CNode case\<close>
    apply (clarsimp simp: valid_cap'_def obj_at'_def capAligned_def gen_objBits_simps)
    apply (frule_tac ptr=ptr and sz=cte_level_bits
@@ -1025,7 +1029,7 @@ lemma decodeUntyped_wf[wp]:
        apply (drule_tac x=x in spec)+
        apply simp
       apply (clarsimp simp: APIType_capBits_gen_def)
-     apply (clarsimp simp: APIType_capBits_gen_def objBits_defs sc_size_bounds_def maxUntypedSizeBits_def)
+     apply (clarsimp simp: APIType_capBits_gen_def objBits_defs sc_size_bounds_def)
     apply (clarsimp simp: cteSizeBits_cte_level_bits)
    apply clarsimp
   apply (clarsimp simp: getFreeRef_def cteSizeBits_cte_level_bits gen_objBits_simps field_simps)
@@ -3530,7 +3534,7 @@ lemma retype_region_caps_overlap_reserved:
   apply (simp (no_asm) add:caps_overlap_reserved_def2)
   apply (rule hoare_pre)
   apply (wp retype_region_caps_of)
-    apply (simp add: sc_size_bounds_def untyped_max_bits_def maxUntypedSizeBits_def sc_const_eq(3))+
+    apply (simp add: sc_size_bounds_def maxUntyped_eq sc_const_eq(3))+
   apply (simp add:caps_overlap_reserved_def2)
   apply (intro conjI,simp+)
   apply clarsimp
@@ -4260,11 +4264,11 @@ lemma resetUntypedCap_corres:
             apply (erule aligned_add_aligned)
              apply (rule is_aligned_weaken)
               apply (rule is_aligned_mult_triv2)
-             apply (simp add: Kernel_Config.resetChunkBits_def)
-            apply (simp add: untyped_min_bits_def)
+             apply (simp add: word_size_bits_le_resetChunkBits)
+            apply (simp add: order_trans[OF word_size_bits_le_untyped_min_bits])
            apply (clarsimp simp: getFreeIndex_def getFreeRef_def)
            apply (subst is_aligned_weaken[OF is_aligned_mult_triv2])
-            apply (simp add: word_size_bits_le_resetChunkBits minUntypedSizeBits_def)
+            apply (simp add: minUntypedSizeBits_le_resetChunkBits)
            apply (subst unat_mult_simple)
             apply (rule order_less_trans[rotated],
                    rule_tac n=sz in power_strict_increasing; simp add: word_bits_def)
@@ -4720,7 +4724,9 @@ lemma (in Untyped_R_2) inv_untyped_corres:
       using vui
       apply (clarsimp simp: obj_bits_api_APIType_map2)
       apply (rule APIType_capBits_lower_bound)
-      apply (simp add: minUntypedSizeBits_untyped_min_bits min_sched_context_bits_def)
+       apply (clarsimp simp: minUntypedSizeBits_untyped_min_bits)
+      (* FIXME rt arch-split: add lemma saying minUntypedSizeBits \<le> minSchedContextBits *)
+      apply (clarsimp simp: min_sched_context_bits_def RISCV64_H.minUntypedSizeBits_def)
       done
 
     have cover: "range_cover ptr sz
@@ -5327,7 +5333,7 @@ lemma (in Untyped_R_2) insertNewCap_invs':
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (frule ctes_of_valid[rotated, where p=parent, OF valid_pspace_valid_objs'])
    apply (fastforce simp: cte_wp_at_ctes_of)
-  apply (auto simp: gen_isCap_simps sameRegionAs_def3
+  apply (auto simp: gen_isCap_simps sameRegionAs_def_untyped
             intro!: capRange_subset_capBits
               elim: valid_capAligned)
   done
@@ -5615,7 +5621,10 @@ lemma invokeUntyped_invs'':
     apply simp
     apply (intro conjI; assumption?)
           apply (erule is_aligned_weaken[OF range_cover.funky_aligned])
-          apply (simp add: APIType_capBits_lower_bound sc_size_bounds_def minSchedContextBits_def)
+          apply (rule APIType_capBits_lower_bound)
+           apply simp
+          (* FIXME rt arch-split: add lemma saying minUntypedSizeBits \<le> minSchedContextBits *)
+          apply (clarsimp simp: sc_size_bounds_def minSchedContextBits_def RISCV64_H.minUntypedSizeBits_def)
          apply (clarsimp simp: invs'_def valid_pspace'_def)
         apply (cases reset)
          apply clarsimp

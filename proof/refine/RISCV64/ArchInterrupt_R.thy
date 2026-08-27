@@ -226,8 +226,7 @@ lemma arch_invoke_irq_control_invs'[Interrupt_R_assms, wp]:
   done
 
 lemma handle_reserved_irq_corres[Interrupt_R_assms, corres]:
-  "corres dc einvs
-     (\<lambda>s. invs' s \<and> (irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s))
+  "corres dc einvs invs'
      (handle_reserved_irq irq) (handleReservedIRQ irq)"
   unfolding handle_reserved_irq_def handleReservedIRQ_def by corres
 
@@ -245,9 +244,7 @@ crunch maskIrqSignal
   (wp: dmo_maskInterrupt_True ignore: doMachineOp)
 
 lemma handleReservedIRQ_invs'[Interrupt_R_assms]:
-  "\<lbrace>invs' and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s)\<rbrace>
-   handleReservedIRQ irq
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  "handleReservedIRQ irq \<lbrace>invs'\<rbrace>"
   by (wpsimp simp: handleReservedIRQ_def)
 
 

@@ -115,10 +115,6 @@ lemma isFrameCap_updateCapData[simp]:
   apply (clarsimp split:capability.splits simp:Let_def)
   done
 
-lemma badgeRegister_badge_register[Ipc_R_assms]:
-  "badgeRegister = badge_register"
-  by (simp add: badge_register_def badgeRegister_def)
-
 crunch copyMRs
   for pspace_in_kernel_mappings'[Ipc_R_assms, wp]: pspace_in_kernel_mappings'
   (wp: crunch_wps simp: crunch_simps)
@@ -179,9 +175,6 @@ crunch getSanitiseRegisterInfo, handleArchFaultReply, handle_arch_fault_reply
 crunch debugPrint
   for inv[Ipc_R_assms, wp]: P
   and (no_fail) no_fail[Ipc_R_assms, intro!, wp, simp]
-
-lemmas [Ipc_R_assms] =
-  lookupIPCBuffer_valid_ipc_buffer
 
 end (* Arch *)
 

@@ -2822,7 +2822,7 @@ lemma sameRegionAs_spec:
   apply clarsimp
   apply (simp add: sameRegionAs_def isArchCap_tag_def2 ccap_relation_c_valid_cap)
   apply (case_tac capa, simp_all add: cap_get_tag_isCap_unfolded_H_cap isCap_simps)
-            \<comment> \<open>capa is a ThreadCap\<close>
+               \<comment> \<open>capa is a ThreadCap\<close>
                apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                                                    isCap_simps cap_tag_defs)[1]
                 apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(1))
@@ -2835,9 +2835,9 @@ lemma sameRegionAs_spec:
                                 cong: if_cong)
                apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
                apply (clarsimp simp: isArchCap_tag_def2)
-             \<comment> \<open>capa is a NullCap\<close>
+              \<comment> \<open>capa is a NullCap\<close>
               apply (simp add: cap_tag_defs)
-            \<comment> \<open>capa is an NotificationCap\<close>
+             \<comment> \<open>capa is an NotificationCap\<close>
              apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                                                  isCap_simps cap_tag_defs)[1]
               apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(3))
@@ -2857,8 +2857,9 @@ lemma sameRegionAs_spec:
              apply (simp add: cap_irq_handler_cap_lift)
              apply (simp add: cap_to_H_def)
              apply (clarsimp simp: up_ucast_inj_eq c_valid_cap_def ucast_eq_mask
-                                   cl_valid_cap_def mask_twice
-                            split: if_split bool.split
+                                   cl_valid_cap_def mask_twice from_bool_0
+                             simp flip: LENGTH_irq_len_irqBits
+                             split: if_split bool.split
                     | intro impI conjI
                     | simp)
             apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)

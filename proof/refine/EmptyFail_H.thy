@@ -11,11 +11,9 @@ imports ArchRefine
 begin
 
 arch_requalify_facts (* FIXME arch-split: Machine_AI *)
-  storeWord_empty_fail setRegister_empty_fail getRestartPC_empty_fail resetTimer_empty_fail
-  setNextPC_empty_fail
+  setNextPC_empty_fail ackDeadlineIRQ_empty_fail
 lemmas [intro!, wp, simp] =
-  storeWord_empty_fail setRegister_empty_fail getRestartPC_empty_fail resetTimer_empty_fail
-  setNextPC_empty_fail
+  setNextPC_empty_fail ackDeadlineIRQ_empty_fail
 
 arch_requalify_facts (* FIXME arch-split: ArchEmptyFail_AI *)
   freeMemory_empty_fail clearMemory_empty_fail
@@ -24,7 +22,7 @@ lemmas [intro!, wp, simp] = freeMemory_empty_fail clearMemory_empty_fail
 arch_requalify_consts (H) deleteGhost maskIrqSignal
 
 crunch_ignore (empty_fail)
-  (add: handleE' getCTE getObject updateObject ifM andM orM whileM ifM
+  (add: handleE' getCTE getObject updateObject andM orM whileM ifM
         CSpaceDecls_H.resolveAddressBits
         doMachineOp suspend restart schedule)
 

@@ -328,8 +328,7 @@ locale Interrupt_R =
     "\<And>irq. global.sameRegionAs capability.IRQControlCap (capability.IRQHandlerCap irq)"
   assumes handle_reserved_irq_corres[corres]:
     "\<And>irq.
-     corres dc einvs
-       (\<lambda>s. invs' s \<and> (irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s))
+     corres dc einvs invs'
        (handle_reserved_irq irq) (handleReservedIRQ irq)"
   assumes maskIrqSignal_corres[corres]:
     "\<And>irq. corres dc \<top> \<top> (arch_mask_irq_signal irq) (Arch.maskIrqSignal irq)"
@@ -338,10 +337,7 @@ locale Interrupt_R =
   assumes maskIrqSignal_invs'[wp]:
     "\<And>irq. Arch.maskIrqSignal irq \<lbrace>invs'\<rbrace>"
   assumes handleReservedIRQ_invs':
-    "\<And>irq.
-     \<lbrace>invs' and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s)\<rbrace>
-     handleReservedIRQ irq
-     \<lbrace>\<lambda>_. invs'\<rbrace>"
+    "\<And>irq. handleReservedIRQ irq \<lbrace>invs'\<rbrace>"
   assumes arch_valid_irq_le_maxIRQ:
     "\<And>irq. arch_valid_irq irq \<Longrightarrow> irq \<le> maxIRQ"
   assumes arch_valid_irq_valid_IRQHandlerCap:
@@ -554,17 +550,16 @@ lemma invoke_irq_control_invs'[wp]:
 lemma handleInterrupt_corres:
   "corres dc
      (einvs and current_time_bounded)
-     (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive)
-            and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s))
+     (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive))
      (handle_interrupt irq) (handleInterrupt irq)"
-  (is "corres dc ?Q (invs' and _ and ?P') _ _")
+  (is "corres dc ?Q _ _ _")
   supply debugPrint_def[simp]
   apply (simp add: handle_interrupt_def handleInterrupt_def)
   apply (rule conjI[rotated]; rule impI)
    apply (rule corres_guard_imp)
      apply (rule corres_split[OF getIRQState_corres,
                                where R="\<lambda>rv. ?Q"
-                                 and R'="\<lambda>rv. invs' and ?P' and (\<lambda>s. rv \<noteq> IRQInactive)"])
+                                 and R'="\<lambda>rv. invs' and (\<lambda>s. rv \<noteq> IRQInactive)"])
        defer
        apply (wp getIRQState_wp getIRQState_inv do_machine_op_bind doMachineOp_bind
               | simp add: do_machine_op_bind doMachineOp_bind)+
@@ -597,8 +592,7 @@ lemma handleInterrupt_corres:
   done
 
 lemma hint_invs[wp]:
-  "\<lbrace>invs' and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s)\<rbrace>
-    handleInterrupt irq \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "handleInterrupt irq \<lbrace>invs'\<rbrace>"
   supply debugPrint_def[simp]
   apply (simp add: handleInterrupt_def getSlotCap_def cong: irqstate.case_cong)
   apply (rule conjI; rule impI)

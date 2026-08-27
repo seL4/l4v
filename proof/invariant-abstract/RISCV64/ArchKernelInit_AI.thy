@@ -526,8 +526,7 @@ lemma irq_node_in_kernel_window_init_arch_state':
   "\<lbrakk> init_irq_node_ptr + m \<le> x; x \<le> init_irq_node_ptr + m + mask cte_level_bits;
      m \<le> mask (size (irq::irq)) << cte_level_bits\<rbrakk>
    \<Longrightarrow> x \<in> kernel_window_2 (riscv_kernel_vspace init_arch_state)"
-  apply (clarsimp simp: init_vspace_uses_def init_arch_state_def bit_simps kernel_window_def
-                        kernel_window_bits_def)
+  apply (clarsimp simp: kernel_window_def init_vspace_uses_def init_arch_state_def)
   apply (subgoal_tac "pptr_base \<le> x \<and> x < pptr_base + 2 ^ kernel_window_bits", simp)
   apply (simp add: cte_level_bits_def canonical_bit_def mask_def init_irq_node_ptr_def
                    pptr_base_num word_size kernel_window_bits_def)

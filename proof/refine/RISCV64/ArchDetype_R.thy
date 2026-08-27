@@ -210,7 +210,7 @@ lemma deleteObjects_corres[Detype_R_assms]:
                      \<and> descendants_range (cap.UntypedCap d base magnitude idx) cref s)
            \<and> untyped_children_in_mdb s \<and> if_unsafe_then_cap s
            \<and> valid_mdb s \<and> valid_global_refs s \<and> ct_active s
-           \<and> scheduler_action s = resume_cur_thread)
+           \<and> schact_is_rct s)
       (\<lambda>s'. invs' s'
            \<and> cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap d base magnitude idx) ptr s'
            \<and> descendants_range' (UntypedCap d base magnitude idx) ptr (ctes_of s')
@@ -230,7 +230,7 @@ lemma deleteObjects_corres[Detype_R_assms]:
   apply (rule corres_stateAssert_add_assertion[rotated])
    apply (rule detype_locale'.deletionIsSafe_holds;
           fastforce simp: detype_locale'_def delete_locale_def invs_valid_pspace valid_cap_simps
-                          sch_act_simple_def state_relation_def sched_act_relation_def)
+                          sch_act_simple_def state_relation_def sched_act_relation_def schact_is_rct_def)
   apply (simp add: bind_assoc[symmetric])
   apply (rule corres_stateAssert_implied2)
      defer

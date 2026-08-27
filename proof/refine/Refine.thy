@@ -55,6 +55,20 @@ locale Refine =
     "valid_domain_list (init_A_st :: det_state)"
   assumes valid_domain_time_init[simp]:
     "0 < domain_time (init_A_st :: det_state)"
+  assumes cur_sc_active_init[simp]:
+    "cur_sc_active (init_A_st :: det_state)"
+  assumes ct_not_in_release_q_init[simp]:
+    "ct_not_in_release_q (init_A_st :: det_state)"
+  assumes valid_machine_time_init[simp]:
+    "valid_machine_time (init_A_st :: det_state)"
+  assumes current_time_bounded_init[simp]:
+    "current_time_bounded (init_A_st :: det_state)"
+  assumes consumed_time_bounded_init[simp]:
+    "consumed_time_bounded (init_A_st :: det_state)"
+  assumes cur_sc_offset_ready_init[simp]:
+    "cur_sc_offset_ready (consumed_time (init_A_st :: det_state)) (init_A_st :: det_state)"
+  assumes cur_sc_offset_sufficient_init[simp]:
+    "cur_sc_offset_sufficient (consumed_time (init_A_st :: det_state)) (init_A_st :: det_state)"
   assumes fastpathKernelAssertions_cross:
     "\<And>s s'. \<lbrakk>(s,s') \<in> state_relation; invs s; valid_arch_state' s'\<rbrakk> \<Longrightarrow> fastpathKernelAssertions s'"
   assumes callKernel_valid_duplicates':
@@ -277,7 +291,7 @@ lemma do_user_op_valid_machine_time[wp]:
 lemma check_active_irq_valid_machine_time[wp]:
   "check_active_irq \<lbrace>valid_machine_time\<rbrace>"
   apply (clarsimp simp: check_active_irq_def)
-  apply (wpsimp wp: getActiveIRQ_inv)
+  apply wpsimp
   done
 
 lemma do_user_op_invs2:
@@ -418,11 +432,13 @@ lemma kernelEntry_invs':
   "\<lbrace>invs' and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s)
     and (ct_running' or ct_idle')
     and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> schedulable' (ksCurThread s) s)
+    and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))
     and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
    kernelEntry e tc
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
+   \<lbrace>\<lambda>_. invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>"
   unfolding kernelEntry_def
-  by (wpsimp wp: ckernel_invs threadSet_invs_trivial threadSet_ct_in_state' hoare_weak_lift_imp
+  by (wpsimp wp: ckernel_invs callKernel_valid_duplicates' threadSet_invs_trivial
+                 threadSet_ct_in_state' hoare_weak_lift_imp
                  hoare_vcg_disj_lift threadSet_schedulable'_fields_inv
       | wps)+
 
@@ -909,7 +925,7 @@ definition full_invs' :: "(('user_context \<times> global.kernel_state) \<times>
                   invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and>
                   ex_abs (\<lambda>s :: det_state. mcs_invs s \<and>
                                            (ct_running s \<or> ct_idle s) \<and>
-                                           (e \<noteq> None \<and> e \<noteq> Some Interrupt \<longrightarrow> ct_running s)) s
+                                           (e \<noteq> None \<and> e \<noteq> Some Interrupt \<longrightarrow> ct_running s)) s \<and>
                   (m = KernelMode \<longrightarrow> e \<noteq> None) \<and>
                   (m = UserMode \<longrightarrow> ct_running' s) \<and>
                   (m = IdleMode \<longrightarrow> ct_idle' s)}"
@@ -1006,7 +1022,6 @@ lemma ckernel_invariant:
     apply (frule akernel_init_invs[THEN bspec])
     apply (rule_tac x=s in exI)
     apply (clarsimp simp: Init_A_def)
-    apply (clarsimp simp: init_A_st_def)
    apply (insert ckernel_init_invs)[1]
    apply clarsimp
    apply (frule ckernel_init_sch_norm)

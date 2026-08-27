@@ -3509,7 +3509,7 @@ lemma finaliseCap_ccorres:
     apply (rule irq_opt_relation_Some_ucast)
       apply fastforce
      apply simp
-    apply (simp add: Kernel_C.maxIRQ_def maxIRQ_def)
+    apply (simp add: Kernel_C_maxIRQ maxIRQ_def)
    apply force
   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
   apply (frule(1) ccap_relation_IRQHandler_mask)
