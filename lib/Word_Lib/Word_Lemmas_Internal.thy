@@ -1182,4 +1182,12 @@ lemma mask_and_neg_mask_compose:
   "n \<le> sz \<Longrightarrow> (mask sz && ~~mask n) + mask n = mask sz"
   by (metis diff_add_cancel mask_sub)
 
+lemma one_or_from_bool[simp]:
+  "1 || from_bool v = 1"
+  by (simp add: from_bool_def split: bool.split)
+
+lemma from_bool_or_one[simp]:
+  "from_bool v || 1 = 1"
+  by (simp add: from_bool_def split: bool.split)
+
 end
