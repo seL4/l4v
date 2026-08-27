@@ -1756,11 +1756,24 @@ lemma cap_frame_cap_lift_asid_upd_idem:
    cap_frame_cap_lift cap"
   by (clarsimp simp: cap_frame_cap_lift_def cap_lift_def Let_def cap_tag_defs)
 
+lemma vmrights_to_H_simps[simp]:
+  "vmrights_to_H (scast Kernel_C.VMReadOnly) = VMReadOnly"
+  "vmrights_to_H (scast Kernel_C.VMReadWrite) = VMReadWrite"
+  "vmrights_to_H (scast Kernel_C.VMKernelOnly) = VMKernelOnly"
+  by (simp add: vmrights_to_H_def vmrights_defs)+
+
+lemma vmrights_to_H_VMKernelOnly:
+  "(vmrights_to_H vm_rights = VMKernelOnly) =
+   (vm_rights \<noteq> scast Kernel_C.VMReadOnly \<and> vm_rights \<noteq> scast Kernel_C.VMReadWrite)"
+  by (clarsimp simp: vmrights_to_H_def vmrights_defs split: if_splits)
+
 lemma cpte_relation_makeUserPTE:
   "\<lbrakk> vm_attributes_lift v =
        \<lparr>armExecuteNever_CL = (attrs >> 2) && 1, armParityEnabled_CL = (attrs >> Suc 0) && 1,
         armPageCacheable_CL = attrs && 1\<rparr>;
-     let uxn = uxn_from_vmattributes (vm_attributes_to_H v);
+     let uxn = uxn_from_vmattributes (vm_attributes_to_H v) ||
+               from_bool (crights \<noteq> scast Kernel_C.VMReadOnly \<and>
+                          crights \<noteq> scast Kernel_C.VMReadWrite);
          ap = ap_from_vm_rights rights;
          attridx = attridx_from_vmattributes (vm_attributes_to_H v)
      in if framesize_from_H sz = scast Kernel_C.ARMSmallPage
@@ -1771,13 +1784,15 @@ lemma cpte_relation_makeUserPTE:
         else pte_lift cpte =
                Some (Pte_pte_page \<lparr>pte_pte_page_CL.UXN_CL = uxn, page_base_address_CL = p,
                                    nG_CL = 0, AF_CL = 1, SH_CL = 0, AP_CL = ap,
-                                   AttrIndx_CL = attridx\<rparr>)\<rbrakk>
-   \<Longrightarrow> cpte_relation (makeUserPTE p rights (attribsFromWord attrs) sz) cpte"
+                                   AttrIndx_CL = attridx\<rparr>);
+     vmrights_to_H crights = capRights\<rbrakk>
+   \<Longrightarrow> cpte_relation (makeUserPTE p rights capRights (attribsFromWord attrs) sz) cpte"
   apply (clarsimp simp: cpte_relation_def Let_def makeUserPTE_def vm_attributes_to_H_def
-                        uxn_from_vmattributes_def framesize_from_H_eqs
+                        uxn_from_vmattributes_def framesize_from_H_eqs vmrights_to_H_VMKernelOnly
                   split: if_splits)
-   apply (clarsimp simp: pte_lift_def Let_def attribsFromWord_def
-                   simp flip: of_bool_nth to_bool_and_1)+
+   apply (fastforce simp: pte_lift_def Let_def attribsFromWord_def attridx_from_vmattributes_def
+                          true_def false_def
+                    simp flip: of_bool_nth to_bool_and_1 from_bool_eq)+
   done
 
 lemma ccap_relation_decodePageMap[unfolded asid_bits_def canonical_bit_def, simplified]:
@@ -2071,6 +2086,7 @@ lemma decodeARMFrameInvocation_ccorres:
           apply csymbr
           apply csymbr
           apply csymbr
+          apply csymbr
           apply (rule ccorres_add_return)
           apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=1 and buffer=buffer])
            apply (clarsimp simp: assertE_liftE liftE_bindE bind_assoc cong: if_weak_cong)
@@ -2176,8 +2192,9 @@ lemma decodeARMFrameInvocation_ccorres:
                                          lookup_fault_lift_def lookup_fault_tag_defs)
                    apply (solves \<open>clarsimp simp: mask_def word_le_nat_alt\<close>)
                   apply (clarsimp simp: performARMMMUInvocations)
+                  apply csymbr
+                  apply csymbr
                   apply (ctac add: setThreadState_ccorres)
-                    apply csymbr
                     apply (ctac (no_vcg) add: performPageInvocationMap_ccorres)
                       apply (rule ccorres_gen_asm)
                       apply (erule ssubst[OF if_P, where P="\<lambda>x. ccorres _ _ _ _ _ x _"])
@@ -2230,8 +2247,9 @@ lemma decodeARMFrameInvocation_ccorres:
                                         lookup_fault_lift_def lookup_fault_tag_defs)
                   apply (solves \<open>clarsimp simp: mask_def word_le_nat_alt\<close>)
                  apply (clarsimp simp: performARMMMUInvocations)
+                 apply csymbr
+                 apply csymbr
                  apply (ctac add: setThreadState_ccorres)
-                   apply csymbr
                    apply (ctac (no_vcg) add: performPageInvocationMap_ccorres)
                      apply (rule ccorres_gen_asm)
                      apply (erule ssubst[OF if_P, where P="\<lambda>x. ccorres _ _ _ _ _ x _"])

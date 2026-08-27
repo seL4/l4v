@@ -1975,11 +1975,19 @@ lemma makeUserPagePTE_spec_helper:
   apply (subst add_diff_inverse_nat; fastforce)
   done
 
+lemma discinct_vmrights:
+  "distinct [Kernel_C.VMReadWrite, Kernel_C.VMReadOnly, Kernel_C.VMKernelOnly]"
+  by (simp add: vmrights_defs)
+
+lemmas discinct_vmrights_simps[simp] =
+  discinct_vmrights[simplified] distinct_rev[THEN iffD2, OF discinct_vmrights, simplified]
+
 lemma makeUserPagePTE_spec:
   "\<forall>s. \<Gamma> \<turnstile>
    \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 2 \<and> canonical_address \<acute>paddr \<and> is_aligned \<acute>paddr pageBits \<rbrace>
    Call makeUserPagePTE_'proc
-   \<lbrace> let uxn = uxn_from_vmattributes (vm_attributes_to_H \<^bsup>s\<^esup>attributes);
+   \<lbrace> let uxn = uxn_from_vmattributes (vm_attributes_to_H \<^bsup>s\<^esup>attributes) ||
+               from_bool (\<^bsup>s\<^esup>cap_read = 0);
          ap = ap_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights);
          attridx = attridx_from_vmattributes (vm_attributes_to_H \<^bsup>s\<^esup>attributes);
          nG = 0 \<comment> \<open>hyp 0, non-hyp 1\<close>
@@ -2011,9 +2019,10 @@ lemma makeUserPagePTE_spec:
   apply (clarsimp simp: pte_pte_page_lift pte_pte_4k_page_lift makeUserPagePTE_spec_helper)
   apply (clarsimp simp: uxn_from_vmattributes_def vm_attributes_to_H_def Let_def vm_attributes_helpers
                          attridx_from_vmattributes_def S2_NORMAL_def S2_DEVICE_nGnRnE_def mask_def
-                         ap_from_vm_rights_def vmrights_to_H_def
+                         ap_from_vm_rights_def vmrights_to_H_def up_scast_inj_eq
                   split: if_split vmrights.split)
-  apply (simp add: to_bool_def)
+  apply (clarsimp simp: from_bool_def true_def false_def vm_attributes_lift_def
+                  split: bool.splits if_splits)
   done
 
 lemma cap_to_H_PTCap:

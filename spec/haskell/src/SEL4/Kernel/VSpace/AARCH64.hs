@@ -506,13 +506,18 @@ attribsFromWord w = VMAttributes {
     armExecuteNever = w `testBit` 2,
     armPageCacheable = w `testBit` 0 }
 
-makeUserPTE :: PAddr -> VMRights -> VMAttributes -> VMPageSize -> PTE
-makeUserPTE baseAddr rights attrs vmSize =
+-- On AArch64, read access is not required to execute code, but executing code
+-- effectively confers read access to the page contents. Hence, we force
+-- execute-never if the frame cap does not have the Read right. The masked
+-- rights may still be less than the cap's rights, so that execute-only
+-- mappings are possible with a cap that has the Read right.
+makeUserPTE :: PAddr -> VMRights -> VMRights -> VMAttributes -> VMPageSize -> PTE
+makeUserPTE baseAddr rights capRights attrs vmSize =
     PagePTE {
         pteBaseAddress = baseAddr,
         pteSmallPage = vmSize == ARMSmallPage,
         pteGlobal = False,
-        pteExecuteNever = armExecuteNever attrs,
+        pteExecuteNever = armExecuteNever attrs || capRights == VMKernelOnly,
         pteDevice = not (armPageCacheable attrs),
         pteRights = rights }
 
@@ -544,7 +549,8 @@ decodeARMFrameInvocationMap :: PPtr CTE -> ArchCapability -> VPtr -> Word ->
 decodeARMFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
     let attributes = attribsFromWord attr
     let frameSize = capFSize cap
-    let vmRights = maskVMRights (capFVMRights cap) $ rightsFromWord rightsMask
+    let capRights = capFVMRights cap
+    let vmRights = maskVMRights capRights $ rightsFromWord rightsMask
     let basePtr = capFBasePtr cap
     assert (fromVPtr pptrBase <= fromPPtr basePtr &&
             fromPPtr basePtr < fromVPtr pptrTop)
@@ -567,7 +573,7 @@ decodeARMFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
     return $ InvokePage $ PageMap {
         pageMapCap = cap { capFMappedAddress = Just (asid,vptr) },
         pageMapCTSlot = cte,
-        pageMapEntries = (makeUserPTE base vmRights attributes frameSize, slot) }
+        pageMapEntries = (makeUserPTE base vmRights capRights attributes frameSize, slot) }
 
 decodeARMFrameInvocationFlush :: Word -> [Word] -> ArchCapability ->
                                  KernelF SyscallError ArchInv.Invocation
