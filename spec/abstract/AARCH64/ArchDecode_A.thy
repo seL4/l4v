@@ -72,7 +72,8 @@ definition arch_decode_irq_control_invocation ::
 
 definition make_user_pte :: "paddr \<Rightarrow> vm_attributes \<Rightarrow> vm_rights \<Rightarrow> vmpage_size \<Rightarrow> pte" where
   "make_user_pte addr attr rights vm_size \<equiv>
-     PagePTE addr (vm_size = ARMSmallPage) (attr - {Global}) rights"
+     let attrs = attr - {Global} - (if AllowRead \<notin> rights then {Execute} else {})
+     in PagePTE addr (vm_size = ARMSmallPage) attrs rights"
 
 definition check_vspace_root :: "cap \<Rightarrow> nat \<Rightarrow> (obj_ref \<times> asid, 'z) se_monad" where
   "check_vspace_root cap arg_no \<equiv>

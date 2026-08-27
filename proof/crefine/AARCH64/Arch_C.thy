@@ -1756,11 +1756,24 @@ lemma cap_frame_cap_lift_asid_upd_idem:
    cap_frame_cap_lift cap"
   by (clarsimp simp: cap_frame_cap_lift_def cap_lift_def Let_def cap_tag_defs)
 
+lemma vmrights_to_H_simps[simp]:
+  "vmrights_to_H (scast Kernel_C.VMReadOnly) = VMReadOnly"
+  "vmrights_to_H (scast Kernel_C.VMReadWrite) = VMReadWrite"
+  "vmrights_to_H (scast Kernel_C.VMKernelOnly) = VMKernelOnly"
+  by (simp add: vmrights_to_H_def vmrights_defs)+
+
+lemma vmrights_to_H_not_VMKernelOnly:
+  "(vmrights_to_H vm_rights \<noteq> VMKernelOnly) =
+   (vm_rights = scast Kernel_C.VMReadOnly \<or> vm_rights = scast Kernel_C.VMReadWrite)"
+  by (clarsimp simp: vmrights_to_H_def vmrights_defs split: if_splits)
+
 lemma cpte_relation_makeUserPTE:
   "\<lbrakk> vm_attributes_lift v =
        \<lparr>armExecuteNever_CL = (attrs >> 2) && 1, armParityEnabled_CL = (attrs >> Suc 0) && 1,
         armPageCacheable_CL = attrs && 1\<rparr>;
-     let uxn = uxn_from_vmattributes (vm_attributes_to_H v);
+     let uxn = uxn_from_vmattributes (vm_attributes_to_H v) ||
+               from_bool (vm_rights \<noteq> scast Kernel_C.VMReadOnly \<and>
+                          vm_rights \<noteq> scast Kernel_C.VMReadWrite);
          ap = ap_from_vm_rights rights;
          attridx = attridx_from_vmattributes (vm_attributes_to_H v)
      in if framesize_from_H sz = scast Kernel_C.ARMSmallPage
@@ -1771,13 +1784,15 @@ lemma cpte_relation_makeUserPTE:
         else pte_lift cpte =
                Some (Pte_pte_page \<lparr>pte_pte_page_CL.UXN_CL = uxn, page_base_address_CL = p,
                                    nG_CL = 0, AF_CL = 1, SH_CL = 0, AP_CL = ap,
-                                   AttrIndx_CL = attridx\<rparr>)\<rbrakk>
+                                   AttrIndx_CL = attridx\<rparr>);
+     vmrights_to_H vm_rights = rights\<rbrakk>
    \<Longrightarrow> cpte_relation (makeUserPTE p rights (attribsFromWord attrs) sz) cpte"
   apply (clarsimp simp: cpte_relation_def Let_def makeUserPTE_def vm_attributes_to_H_def
                         uxn_from_vmattributes_def framesize_from_H_eqs
                   split: if_splits)
-   apply (clarsimp simp: pte_lift_def Let_def attribsFromWord_def
-                   simp flip: of_bool_nth to_bool_and_1)+
+   apply (fastforce simp: pte_lift_def Let_def attribsFromWord_def vmrights_to_H_not_VMKernelOnly
+                          attridx_from_vmattributes_def
+                    simp flip: of_bool_nth to_bool_and_1)+
   done
 
 lemma ccap_relation_decodePageMap[unfolded asid_bits_def canonical_bit_def, simplified]:

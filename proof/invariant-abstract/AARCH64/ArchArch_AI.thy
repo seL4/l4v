@@ -1398,6 +1398,21 @@ lemma user_vtop_leq_canonical_user:
   "vref \<le> user_vtop \<Longrightarrow> vref \<le> canonical_user"
   using user_vtop_leq_canonical_user by simp
 
+lemma valid_slots_no_attrs:
+  "valid_slots (PagePTE p sm (attrs - A) rights, pte_ptr, level) =
+   valid_slots (PagePTE p sm {} rights, pte_ptr, level)"
+  by (simp add: valid_slots_def wellformed_pte_def)
+
+lemma parent_for_refs_no_attrs:
+  "parent_for_refs (PagePTE p sm (attrs - A) rights, slot, level) =
+   parent_for_refs (PagePTE p sm {} rights, slot, level)"
+  by (simp add: parent_for_refs_def)
+
+lemma valid_mapping_insert_no_attrs:
+  "valid_mapping_insert pt_t p (PagePTE p' sm (attrs - A) rights) =
+   valid_mapping_insert pt_t p (PagePTE p' sm {} rights)"
+  by (simp add: valid_mapping_insert_def)
+
 lemma decode_fr_inv_map_wf[wp]:
   assumes "arch_cap = FrameCap p rights vmpage_size dev option"
   shows
@@ -1438,7 +1453,8 @@ proof -
                             vref \<in> user_region")
      apply (rule_tac x="args!0" in exI)
      apply (fastforce simp: vmsz_aligned_vref_for_level)
-    apply clarsimp
+    apply (clarsimp simp: valid_slots_no_attrs parent_for_refs_no_attrs
+                          valid_mapping_insert_no_attrs)
     apply (rule conjI, fastforce)
     apply (clarsimp simp: valid_slots_def make_user_pte_def wellformed_pte_def)
     apply (rule conjI, clarsimp)
