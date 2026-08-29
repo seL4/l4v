@@ -1345,7 +1345,7 @@ definition arch_state0H :: Arch.kernel_state where
                                        ucast (asid_high_bits_of High_asid) \<mapsto> High_pool_ptr]
              \<comment> \<open>armKSKernelVSpace =\<close>  Example_Valid_State.init_vspace_uses
              \<comment> \<open>armKSVMIDTable  =\<close> Map.empty
-             \<comment> \<open>armKSNextVMID     =\<close> 0
+             \<comment> \<open>armKSNextVMID     =\<close> vmid_min
              \<comment> \<open>armKSGlobalUserVSpace     =\<close> arm_global_pt_ptr
              \<comment> \<open>armHSCurVCPU      =\<close> None
              \<comment> \<open>armKSGICVCPUNumListRegs      =\<close> (max_armKSGICVCPUNumListRegs - 1)

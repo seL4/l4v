@@ -1461,14 +1461,6 @@ lemma gets_armKSNextVMID_corres[corres]:
           (gets (arm_next_vmid \<circ> arch_state)) (gets (armKSNextVMID \<circ> ksArchState))"
   by (simp add: state_relation_def arch_state_relation_def)
 
-lemma take_vmid_minBound_maxBound:
-  "take (length [minBound .e. maxBound :: vmid])
-        ([next_vmid .e. maxBound] @ [minBound .e. next_vmid])
-   = [next_vmid .e. maxBound] @ init [minBound .e. next_vmid]"
-  for next_vmid :: vmid
-  using leq_maxBound[where x=next_vmid]
-  by (simp add: word_le_nat_alt init_def upto_enum_word minBound_word)
-
 lemma invalidateVMIDEntry_corres[corres]:
   "vmid' = vmid \<Longrightarrow>
    corres dc \<top> \<top> (invalidate_vmid_entry vmid) (invalidateVMIDEntry vmid')"
@@ -1483,38 +1475,51 @@ lemma valid_vmid_tableD:
   apply (fastforce simp: valid_vmid_table_def)
   done
 
+lemma vmidMin_abs[simp]:
+  "vmidMin = vmid_min"
+  by (simp add: vmidMin_def vmid_min_def)
+
+lemma vmidReserved_abs[simp]:
+  "vmidReserved = vmid_reserved"
+  by (simp add: vmidReserved_def vmid_reserved_def)
+
+lemma armKSNextVMID_cross:
+  "(s, s') \<in> state_relation \<Longrightarrow>
+   armKSNextVMID (ksArchState s') = arm_next_vmid (arch_state s)"
+  by (simp add: state_relation_def arch_state_relation_def)
+
 lemma findFreeVMID_corres[corres]:
   "corres (=)
           (vmid_inv and valid_vmid_table and valid_asid_table and valid_asid_map and
-           pspace_aligned and pspace_distinct)
+           valid_next_vmid and pspace_aligned and pspace_distinct)
           \<top>
           find_free_vmid findFreeVMID"
   unfolding find_free_vmid_def findFreeVMID_def
-  apply (simp only: take_vmid_minBound_maxBound)
-  apply corres
+  apply (simp only: init_eq_butlast vmidMin_abs)
+  apply (corres corres: corres_assert_assume_r)
         apply corres_cases_both (* case find .. of *)
         (* Only None case left over *)
         apply corres
            apply (clarsimp dest!: findNoneD)
-           apply (drule bspec, rule UnI1, simp, rule order_refl)
+           apply (drule bspec, rule UnI1, simp, rule order_refl)+
            apply clarsimp
-          apply (corres corres: corres_modify_tivial  (* FIXME AARCH64: fix typo *)
-                        simp: state_relation_def arch_state_relation_def maxBound_word minBound_word)
-         apply wpsimp+
+          apply (corres corres: corres_modify_tivial  (* FIXME AARCH64: fix typo tivial *)
+                        simp: state_relation_def arch_state_relation_def)
+         apply (wpsimp split_del: if_split)+
    apply (clarsimp dest!: findNoneD)
    apply (drule bspec, rule UnI1, simp, rule order_refl)
    apply (clarsimp simp: vmid_inv_def)
    apply (frule (1) valid_vmid_tableD)
    apply (drule (1) is_inv_SomeD)
    apply (fastforce simp: valid_asid_map_def)
-  apply simp
+  apply (clarsimp simp: armKSNextVMID_cross valid_next_vmid_def)
   done
 
 lemma getVMID_corres[corres]:
   "asid' = ucast asid \<Longrightarrow>
    corres (=)
           (vmid_inv and valid_vmid_table and valid_asid_table and valid_asid_map and
-           pspace_aligned and pspace_distinct
+           valid_next_vmid and pspace_aligned and pspace_distinct
            and (\<lambda>s. vspace_for_asid asid s \<noteq> None))
           \<top>
           (get_vmid asid) (getVMID asid')"
@@ -1525,7 +1530,8 @@ lemma armContextSwitch_corres[corres]:
   "asid' = ucast asid \<Longrightarrow>
    corres dc
           (vmid_inv and valid_vmid_table and valid_asid_table and valid_asid_map and
-           pspace_aligned and pspace_distinct and (\<lambda>s. vspace_for_asid asid s \<noteq> None))
+           valid_next_vmid and pspace_aligned and pspace_distinct and
+           (\<lambda>s. vspace_for_asid asid s \<noteq> None))
           \<top>
           (arm_context_switch pt asid) (armContextSwitch pt asid')"
   unfolding arm_context_switch_def armContextSwitch_def
@@ -1534,8 +1540,9 @@ lemma armContextSwitch_corres[corres]:
 lemma setVMRoot_corres [corres]:
   assumes "t' = t"
   shows "corres dc (tcb_at t and valid_vspace_objs and valid_asid_table and valid_asid_map and
-                    vmid_inv and valid_vmid_table and pspace_aligned and pspace_distinct and
-                    valid_objs and valid_global_arch_objs and pspace_in_kernel_window and valid_uses)
+                    vmid_inv and valid_vmid_table and valid_next_vmid and pspace_aligned and
+                    pspace_distinct and valid_objs and valid_global_arch_objs and
+                    pspace_in_kernel_window and valid_uses)
                    no_0_obj'
                    (set_vm_root t) (setVMRoot t')"
 proof -
@@ -1555,9 +1562,9 @@ proof -
                         tcbVTableSlot_def cte_map_def objBits_def cte_level_bits_def
                         objBitsKO_def tcb_cnode_index_def to_bl_1 assms cteSizeBits_def)
       apply (rule_tac  R="\<lambda>thread_root. valid_vspace_objs and valid_asid_table and vmid_inv and
-                                        valid_vmid_table and pspace_aligned and pspace_distinct and
-                                        valid_objs and valid_global_arch_objs and valid_asid_map and
-                                        pspace_in_kernel_window and valid_uses and
+                                        valid_vmid_table and valid_next_vmid and pspace_aligned and
+                                        pspace_distinct and valid_objs and valid_global_arch_objs and
+                                        valid_asid_map and pspace_in_kernel_window and valid_uses and
                                         cte_wp_at ((=) thread_root) thread_root_slot and
                                         tcb_at (fst thread_root_slot) and
                                         K (snd thread_root_slot = tcb_cnode_index 1)"
@@ -1582,7 +1589,8 @@ proof -
           apply (rule_tac P="valid_vspace_objs and valid_asid_table and pspace_aligned and
                              valid_vmid_table and vmid_inv and pspace_distinct and valid_objs and
                              pspace_in_kernel_window and valid_uses and valid_asid_map and
-                             valid_global_arch_objs and cte_wp_at ((=) cap) thread_root_slot"
+                             valid_global_arch_objs and cte_wp_at ((=) cap) thread_root_slot and
+                             valid_next_vmid"
                           in corres_assert_gen_asm2)
           prefer 3
           apply assumption
@@ -1920,7 +1928,7 @@ lemma deleteASIDPool_corres:
               some manual massaging to avoid massive duplication *)
            apply (simp (no_asm) del: fun_upd_apply)
            apply (strengthen invs_vmid_inv invs_valid_global_arch_objs invs_implies invs_valid_uses
-                             invs_valid_vmid_table valid_asid_table_None_upd)
+                             invs_valid_vmid_table valid_asid_table_None_upd invs_valid_next_vmid)
            (* can't move these into previous strengthen, otherwise will be applied too early *)
            apply (strengthen invs_arm_asid_table_unmap invs_valid_asid_table)
            apply (clarsimp simp: o_def)

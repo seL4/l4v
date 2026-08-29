@@ -263,6 +263,9 @@ crunch arch_switch_to_thread, arch_switch_to_idle_thread
   and ready_qs_distinct[wp]: ready_qs_distinct
   (wp: ready_qs_distinct_lift crunch_wps simp: crunch_simps)
 
+crunch vcpu_switch
+  for valid_next_vmid[wp]: valid_next_vmid
+
 lemma arch_switchToThread_corres:
   "corres dc (valid_arch_state and valid_objs and pspace_aligned and pspace_distinct
               and valid_vspace_objs and pspace_in_kernel_window and valid_cur_fpu

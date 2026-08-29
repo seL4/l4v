@@ -562,11 +562,12 @@ lemmas get_vmid_typ_ats[wp] = abs_typ_at_lifts [OF get_vmid_typ_at]
 lemmas invalidate_tlb_by_asid_typ_ats[wp] = abs_typ_at_lifts [OF invalidate_tlb_by_asid_typ_at]
 lemmas invalidate_tlb_by_asid_va_typ_ats[wp] = abs_typ_at_lifts [OF invalidate_tlb_by_asid_va_typ_at]
 
-lemma valid_arch_state_arm_next_vmid[simp]:
-  "valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>arm_next_vmid := next_vmid\<rparr>\<rparr>) =
+lemma valid_arch_state_arm_next_vmid:
+  "\<lbrakk> valid_next_vmid s; next_vmid \<noteq> vmid_reserved \<rbrakk> \<Longrightarrow>
+   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>arm_next_vmid := next_vmid\<rparr>\<rparr>) =
    valid_arch_state s"
   unfolding valid_arch_state_def
-  by (fastforce simp: valid_global_arch_objs_def vmid_inv_def)
+  by (fastforce simp: valid_global_arch_objs_def vmid_inv_def valid_next_vmid_def)
 
 lemma update_asid_pool_entry_vspace_objs_of:
   "\<lbrace>\<lambda>s. \<forall>pool_ptr ap entry. pool_for_asid asid s = Some pool_ptr \<longrightarrow>
@@ -680,7 +681,13 @@ lemma find_free_vmid_vmid_inv[wp]:
   apply wpsimp
   apply (frule is_inv_inj)
   apply (drule findNoneD)
-  apply (drule_tac x="arm_next_vmid (arch_state s)" in bspec, simp add: minBound_word)
+  apply (drule_tac x="arm_next_vmid (arch_state s)" in bspec)
+   apply (simp add: vmid_min_def upto_enum_def maxBound_word unat_minus_one_word image_iff)
+   apply (rule conjI; clarsimp)
+    apply (rule_tac x="unat (arm_next_vmid (arch_state s))" in bexI; clarsimp)
+    apply (rule unat_lt2p[where 'a=vmid_len, simplified])
+   apply (clarsimp simp: not_le take_map image_iff)
+   apply (rule_tac x=0 in bexI; clarsimp simp: unat_eq_0)
   apply (fastforce simp: is_inv_def ran_upd[folded fun_upd_apply] dom_upd
                          fun_upd_apply
                    split: if_split_asm
@@ -707,7 +714,26 @@ crunch find_free_vmid
   and valid_cur_fpu[wp]: valid_cur_fpu
   and valid_numlistregs[wp]: valid_numlistregs
 
-lemma find_free_vmid_valid_arch [wp]:
+crunch invalidate_asid, update_asid_map, invalidate_vmid_entry
+  for valid_next_vmid[wp]: valid_next_vmid
+
+lemma find_free_vmid_valid_next_vmid[wp]:
+  "find_free_vmid \<lbrace>valid_next_vmid\<rbrace>"
+  unfolding find_free_vmid_def
+  apply (wpsimp split_del: if_split)
+  apply (clarsimp simp: valid_next_vmid_def vmid_reserved_def vmid_min_def maxBound_word
+                        max_word_wrap)
+  done
+
+\<comment> \<open>Sanity check: @{const find_free_vmid} never returns the reserved VMID.
+    Not used in any proof, but a useful check on the definitions.\<close>
+lemma find_free_vmid_not_reserved:
+  "\<lbrace>valid_next_vmid\<rbrace> find_free_vmid \<lbrace>\<lambda>vmid _. vmid \<noteq> vmid_reserved\<rbrace>"
+  unfolding find_free_vmid_def valid_next_vmid_def
+  by wpsimp
+     (fastforce dest!: findSomeD in_set_butlastD simp: vmid_reserved_def vmid_min_def)
+
+lemma find_free_vmid_valid_arch[wp]:
   "find_free_vmid \<lbrace>valid_arch_state\<rbrace>"
   unfolding valid_arch_state_def by wpsimp
 

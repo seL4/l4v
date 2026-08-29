@@ -1192,6 +1192,34 @@ crunch invalidateVMIDEntry, invalidateASID
   for nextVMID[wp]: "\<lambda>s. P (armKSNextVMID (ksArchState s))"
   (wp: crunch_wps getASID_wp)
 
+lemma vmid_full_wrapped_list:
+  "nextVMID \<noteq> vmid_reserved \<Longrightarrow>
+   [nextVMID .e. maxBound] @ vmid_reserved # init [vmid_min .e. nextVMID] =
+   map (\<lambda>x. nextVMID + (of_nat x)) [0 ..< 2 ^ LENGTH(vmid_len)]"
+  apply (prop_tac "Suc 0 \<le> unat nextVMID")
+   apply (cases "unat nextVMID"; simp add: unat_eq_0 vmid_reserved_def)
+  apply (simp add: maxBound_word vmid_min_def vmid_reserved_def init_eq_butlast)
+  apply (subst butlast_enum_Cons[where x=0, simplified])
+    apply (clarsimp simp: word_le_nat_alt)
+   apply simp
+  apply (cut_tac unat_lt2p[where 'a=vmid_len and x=nextVMID])
+  apply (simp add: upto_enum_def unat_max_word split: if_split)
+  apply (rule nth_equalityI)
+   apply clarsimp
+  apply (clarsimp simp: nth_append not_less split: if_split)
+  done
+
+lemma find_nextVMID_without_reserved_eq:
+  "nextVMID \<noteq> vmid_reserved \<Longrightarrow>
+   find P ([nextVMID .e. maxBound] @ init [vmid_min .e. nextVMID]) =
+   find (\<lambda>a. P a \<and> a \<noteq> vmid_reserved)
+        (map (\<lambda>x. nextVMID + (of_nat x)) [0 ..< 2 ^ LENGTH(vmid_len)])"
+  apply (subst find_drop_elem[symmetric, where y=vmid_reserved])
+  apply (simp add: vmid_full_wrapped_list)
+   apply (clarsimp simp: distinct_conv_nth of_nat_inj)
+  apply (simp add: vmid_full_wrapped_list)
+  done
+
 lemma findFreeHWASID_ccorres:
   "ccorres (=) ret__unsigned_char_'
        (valid_arch_state') UNIV []
@@ -1200,63 +1228,52 @@ lemma findFreeHWASID_ccorres:
    apply csymbr
    apply (rule ccorres_pre_gets_armKSVMIDTable_ksArchState)
    apply (rule ccorres_pre_gets_armKSNextVMID_ksArchState)
+   apply (rule ccorres_assert)
+   apply (subst find_nextVMID_without_reserved_eq, simp)
    apply (simp add: whileAnno_def case_option_find_give_me_a_map
-                    mapME_def
+                    mapME_def init_eq_butlast
                del: Collect_const map_append)
    apply (rule ccorres_splitE_novcg)
-       apply (subgoal_tac "[nextVMID .e. maxBound] @ init [minBound .e. nextVMID]
-                               = map (\<lambda>x. nextVMID + (of_nat x)) [0 ..< 256]") (* FIXME AARCH64: vmid array size *)
-        apply clarsimp
-        apply (rule_tac xf=hw_asid_offset_' and i=0
-                     and xf_update=hw_asid_offset_'_update
-                     and r'=dc and xf'=xfdc and Q=UNIV
-                     and F="\<lambda>n s. vmidTable = armKSVMIDTable (ksArchState s)
-                                  \<and> nextVMID = armKSNextVMID (ksArchState s)
-                                  \<and> valid_arch_state' s"
+       apply (rule_tac xf=hw_asid_offset_' and i=0
+                   and xf_update=hw_asid_offset_'_update
+                   and r'=dc and xf'=xfdc and Q=UNIV
+                   and F="\<lambda>n s. vmidTable = armKSVMIDTable (ksArchState s)
+                                \<and> nextVMID = armKSNextVMID (ksArchState s)
+                                \<and> valid_arch_state' s"
                    in ccorres_sequenceE_while_gen')
-              apply (rule ccorres_from_vcg_might_throw)
-              apply (rule allI, rule conseqPre, vcg)
-              apply clarsimp
-              apply (rename_tac ys \<sigma> s)
-              apply (subst down_cast_same [symmetric, where 'b=8], (* FIXME AARCH64: vmid_len, but vmid just word8 *)
-                     simp add: is_down_def target_size_def source_size_def word_size)+
-              apply (simp add: ucast_ucast_mask
-                               ucast_ucast_add ucast_and_mask
-                               ucast_of_nat_small asidInvalid_def
-                               word_sless_msb_less ucast_less[THEN order_less_le_trans]
-                               word_0_sle_from_less)
-              apply (simp add: word_sint_msb_eq not_msb_from_less word_of_nat_less
-                               trans[OF msb_nth nth_ucast] bang_big word_size
-                               uint_up_ucast is_up_def source_size_def
-                               target_size_def rf_sr_armKSNextVMID)
-              apply (rule conjI, rule order_trans[OF _ uint_add_ge0], simp)
-              apply (simp add: throwError_def return_def split: if_split)
-              apply (clarsimp simp: returnOk_def return_def inr_rrel_def rf_sr_armKSNextVMID)
-              apply (drule rf_sr_armKSVMIDTable_rel')
-              apply (clarsimp simp: array_relation_def vmid_bits_val mask_def)
-              apply (erule_tac x="armKSNextASID_' (globals s) + word_of_nat (length ys)" in allE)
-              apply (clarsimp simp: valid_arch_state'_def ran_def)
-              apply ((rule conjI, uint_arith, simp add: take_bit_nat_def unsigned_of_nat, clarsimp)+)[1]
-             apply (simp add: mask_def)
-             apply unat_arith
-            apply (rule conseqPre, vcg)
-            apply clarsimp
-           apply simp
-           apply (rule hoare_pre, wp)
-           apply simp
+             apply (rule ccorres_from_vcg_might_throw)
+             apply (rule allI, rule conseqPre, vcg)
+             apply clarsimp
+             apply (rename_tac ys \<sigma> s)
+             apply (subst down_cast_same [symmetric, where 'b=vmid_len],
+                    simp add: is_down_def target_size_def source_size_def word_size)+
+             apply (simp add: ucast_ucast_mask
+                              ucast_ucast_add ucast_and_mask
+                              ucast_of_nat_small asidInvalid_def
+                              word_sless_msb_less ucast_less[THEN order_less_le_trans]
+                              word_0_sle_from_less)
+             apply (simp add: word_sint_msb_eq not_msb_from_less word_of_nat_less
+                              trans[OF msb_nth nth_ucast] bang_big word_size
+                              uint_up_ucast is_up_def source_size_def
+                              target_size_def rf_sr_armKSNextVMID)
+             apply (rule conjI, rule order_trans[OF _ uint_add_ge0], simp)
+             apply (simp add: throwError_def return_def split: if_split)
+             apply (clarsimp simp: returnOk_def return_def inr_rrel_def rf_sr_armKSNextVMID)
+             apply (drule rf_sr_armKSVMIDTable_rel')
+             apply (clarsimp simp: array_relation_def vmid_bits_val mask_def)
+             apply (erule_tac x="armKSNextASID_' (globals s) + word_of_nat (length ys)" in allE)
+             apply (clarsimp simp: valid_arch_state'_def ran_def vmid_reserved_def hwASIDReserved_def)
+             apply (cut_tac x="armKSNextASID_' (globals s)" in uint_lt2p)
+             apply (fastforce simp: uint_of_nat ucast_eq_0 is_up)
+            apply (simp add: mask_def)
+            apply unat_arith
+           apply (rule conseqPre, vcg)
+           apply clarsimp
           apply simp
+          apply wpsimp
          apply simp
         apply simp
-
-       apply (cut_tac x=nextVMID in leq_maxBound[unfolded word_le_nat_alt])
-       apply (simp add: minBound_word init_def maxBound_word minus_one_norm)
-       apply (simp add: upto_enum_word)
-       apply (rule nth_equalityI)
-        apply (simp del: upt.simps)
-       apply (simp del: upt.simps)
-       apply (simp add: nth_append
-                 split: if_split)
-
+       apply simp
       apply ceqv
      apply (rule ccorres_assert)
      apply (rule_tac A="\<lambda>s. nextVMID = armKSNextVMID (ksArchState s)
@@ -1294,9 +1311,11 @@ lemma findFreeHWASID_ccorres:
                            split: if_split)
             apply (simp add: word_sint_msb_eq uint_up_ucast word_size
                              msb_nth nth_ucast bang_big is_up_def source_size_def
-                             target_size_def)
-            apply uint_arith
-            subgoal by simp
+                             target_size_def vmid_min_def hwASIDMin_def hwASIDReserved_def)
+            apply clarsimp
+            apply (rename_tac s)
+            apply (cut_tac x="armKSNextASID_' (globals s)" in uint_lt2p)
+            apply (clarsimp simp: ucast_eq_0 is_up word_wrap_eq_max_word)
            apply wp
           apply vcg
          apply simp
@@ -1306,9 +1325,9 @@ lemma findFreeHWASID_ccorres:
        apply vcg
       apply (rule conseqPre, vcg)
       apply clarsimp
-     apply (drule_tac x=nextVMID in bspec, simp)
+     apply (drule_tac x="0" in bspec, simp)
      apply clarsimp
-     apply (clarsimp simp: rf_sr_armKSNextVMID
+     apply (clarsimp simp: rf_sr_armKSNextVMID vmid_reserved_def
                            valid_arch_state'_def
                            Collect_const_mem word_sless_msb_less
                            ucast_less[THEN order_less_le_trans]
@@ -1320,8 +1339,7 @@ lemma findFreeHWASID_ccorres:
      apply simp
     apply (fold mapME_def)
     apply (wp mapME_wp')
-    apply (rule hoare_pre, wp)
-    apply simp
+    apply wpsimp
    apply (clarsimp simp: guard_is_UNIV_def)
   apply simp
   done
@@ -1516,7 +1534,8 @@ lemma setVMRoot_ccorres:
   apply (frule valid_arch_state_armKSGlobalUserVSpace)
   apply (frule rf_sr_armKSGlobalUserVSpace)
   apply (clarsimp simp: tcb_cnode_index_defs cte_level_bits_def tcbVTableSlot_def)
-  apply (clarsimp simp: isCap_simps isValidVTableRoot_def2 canonical_address_and_maskD)
+  apply (clarsimp simp: isCap_simps isValidVTableRoot_def2 canonical_address_and_maskD
+                        vmid_reserved_def hwASIDReserved_def)
   apply (erule allE, erule (1) impE)
   apply (clarsimp simp: cap_get_tag_isCap_ArchObject2)
   by (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric]
