@@ -82,6 +82,14 @@ atcbContextGet = atcbContext
 newtype VMID = VMID Word8
     deriving (Eq, Ord, Show, Real, Integral, Enum, Num, Ix, Bounded)
 
+{- Reserved VMID for the global user VSpace. -}
+vmidReserved :: VMID
+vmidReserved = VMID 0
+
+{- First usable VMID for user VSpaces. -}
+vmidMin :: VMID
+vmidMin = VMID 1
+
 {- For SMMU table roots there will be another constructor in this data type. -}
 data ASIDPoolEntry = ASIDPoolVSpace {
         apVMID :: Maybe VMID,

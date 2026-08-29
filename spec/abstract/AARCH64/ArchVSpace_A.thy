@@ -146,15 +146,15 @@ definition find_free_vmid :: "(vmid,'z::state_ext) s_monad" where
      vmid_table \<leftarrow> gets (arm_vmid_table \<circ> arch_state);
      next_vmid \<leftarrow> gets (arm_next_vmid \<circ> arch_state);
      maybe_vmid \<leftarrow> return $ find (\<lambda>a. vmid_table a = None)
-                                 (take (length [minBound :: vmid .e. maxBound])
-                                       ([next_vmid .e. maxBound] @ [minBound .e. next_vmid]));
+                                 ([next_vmid .e. maxBound] @ butlast [vmid_min .e. next_vmid]);
      case maybe_vmid of
        Some vmid \<Rightarrow> return vmid
      | None \<Rightarrow> do
          invalidate_asid $ the $ vmid_table next_vmid;
          do_machine_op $ invalidateTranslationASID (ucast next_vmid);
          invalidate_vmid_entry next_vmid;
-         modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> arm_next_vmid := next_vmid + 1 \<rparr>\<rparr>);
+         next_vmid' \<leftarrow> return (if next_vmid = maxBound then vmid_min else next_vmid + 1);
+         modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> arm_next_vmid := next_vmid' \<rparr>\<rparr>);
          return next_vmid
        od
    od"
@@ -216,11 +216,11 @@ definition arm_context_switch :: "obj_ref \<Rightarrow> asid \<Rightarrow> (unit
    od"
 
 
-text \<open>Switch to global user address space, using VMID 0.\<close>
+text \<open>Switch to global user address space, using the reserved VMID.\<close>
 definition set_global_user_vspace :: "(unit,'z::state_ext) s_monad" where
   "set_global_user_vspace = do
      global <- gets (arm_us_global_vspace \<circ> arch_state);
-     do_machine_op $ setVSpaceRoot (addrFromKPPtr global) 0
+     do_machine_op $ setVSpaceRoot (addrFromKPPtr global) (ucast vmid_reserved)
    od"
 
 text \<open>

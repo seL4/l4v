@@ -374,7 +374,7 @@ armContextSwitch vspace asid = do
 setGlobalUserVSpace :: Kernel ()
 setGlobalUserVSpace = do
     globalUserVSpace <- gets (armKSGlobalUserVSpace . ksArchState)
-    doMachineOp $ setVSpaceRoot (addrFromKPPtr globalUserVSpace) 0
+    doMachineOp $ setVSpaceRoot (addrFromKPPtr globalUserVSpace) (fromIntegral vmidReserved)
 
 setVMRoot :: PPtr TCB -> Kernel ()
 setVMRoot tcb = do
@@ -440,8 +440,9 @@ findFreeVMID = do
     -- Look for a free VM ID.
     vmidTable <- gets (armKSVMIDTable . ksArchState)
     nextVMID <- gets (armKSNextVMID . ksArchState)
+    assert (nextVMID /= vmidReserved) "nextVMID must never be reserved"
     let maybeVMID = find (\a -> isNothing (vmidTable ! a))
-                    ([nextVMID .. maxBound] ++ init [minBound .. nextVMID])
+                    ([nextVMID .. maxBound] ++ init [vmidMin .. nextVMID])
 
     -- If there is one, return it, otherwise revoke the next one in a strict round-robin.
     case maybeVMID of
@@ -450,7 +451,7 @@ findFreeVMID = do
             invalidateASID $ fromJust $ vmidTable ! nextVMID
             doMachineOp $ invalidateTranslationASID $ fromIntegral nextVMID
             invalidateVMIDEntry nextVMID
-            let new_nextVMID = if nextVMID == maxBound then minBound else nextVMID + 1
+            let new_nextVMID = if nextVMID == maxBound then vmidMin else nextVMID + 1
             modify (\s -> s { ksArchState = (ksArchState s) { armKSNextVMID = new_nextVMID }})
             return nextVMID
 
