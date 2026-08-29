@@ -51,7 +51,8 @@ lemma Arch_switchToIdleThread_ccorres:
        apply vcg
       apply wpsimp+
   apply (clarsimp simp: invs_no_cicd'_def valid_pspace'_def valid_idle'_tcb_at'_ksIdleThread
-                        canonical_address_and_maskD valid_arch_state_armKSGlobalUserVSpace)
+                        canonical_address_and_maskD valid_arch_state_armKSGlobalUserVSpace
+                        vmid_reserved_def hwASIDReserved_def)
   done
 
 lemma switchToIdleThread_ccorres:

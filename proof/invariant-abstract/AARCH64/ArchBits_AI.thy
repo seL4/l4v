@@ -66,6 +66,10 @@ lemma invs_valid_vmid_table[elim!]:
   "invs s \<Longrightarrow> valid_vmid_table s"
   by (auto simp: invs_def valid_state_def valid_arch_state_def)
 
+lemma invs_valid_next_vmid[elim!]:
+  "invs s \<Longrightarrow> valid_next_vmid s"
+  by (simp add: invs_def valid_state_def valid_arch_state_def)
+
 lemma invs_valid_global_arch_objs[elim!]:
   "invs s \<Longrightarrow> valid_global_arch_objs s"
   by (clarsimp simp: invs_def valid_state_def valid_arch_state_def)
