@@ -458,7 +458,17 @@ definition
 
 definition
   init :: "'a list \<Rightarrow> 'a list" where
- "init xs \<equiv> case (length xs) of Suc n \<Rightarrow> take n xs | _ \<Rightarrow> undefined"
+ "init xs \<equiv> case (length xs) of Suc n \<Rightarrow> take n xs | _ \<Rightarrow> []"
+
+(* FIXME: eventually we should remove "init", but the "case" formulation is sufficiently different
+          that proofs will break *)
+lemma init_eq_butlast:
+  "init = butlast"
+proof (rule ext)
+  fix xs :: "'a list"
+  show "init xs = butlast xs"
+    by (induct xs, auto simp: init_def neq_Nil_conv)
+qed
 
 primrec
   break :: "('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> ('a list \<times> 'a list)"
