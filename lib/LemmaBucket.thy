@@ -528,4 +528,38 @@ lemma Least_sym_eq_trivial[simp]:
   unfolding Least_def
   by (clarsimp cong: conj_cong)
 
+lemma butlast_contract_Cons:
+  "xs \<noteq> [] \<Longrightarrow> x # butlast xs = butlast (x # xs)"
+  by simp
+
+lemma butlast_enum_Cons:
+  "\<lbrakk> x + 1 \<le> y; unat x \<noteq> 2 ^ LENGTH('a) - 1 \<rbrakk> \<Longrightarrow>
+   x # butlast [x + 1 .e. y] = butlast [x .e. y]" for x::"'a::len word"
+  apply (subst butlast_contract_Cons)
+   apply (simp add: upto_enum_def word_le_nat_alt)
+  apply (rule arg_cong[where f=butlast])
+  apply (simp add: upto_enum_def word_le_nat_alt)
+  apply (rule conjI, clarsimp)
+   apply (subst upt_rec[where i="unat x"])
+   apply simp
+   apply (rule conjI, clarsimp)
+    apply (subgoal_tac "unat (x + 1) = Suc (unat x)", simp)
+    apply unat_arith
+   apply unat_arith
+  apply unat_arith
+  done
+
+lemma find_absorb_all:
+  "\<forall>x \<in> set xs. Q x \<Longrightarrow> find (\<lambda>x. P x \<and> Q x) xs = find P xs"
+  by (induct xs; clarsimp split: if_split)
+
+lemma find_drop_elem:
+  "distinct (xs @ y # ys) \<Longrightarrow> find (\<lambda>x. P x \<and> x \<noteq> y) (xs @ y # ys) = find P (xs @ ys)"
+  apply (induct xs arbitrary: y ys)
+   apply simp
+   apply (subst find_absorb_all, fastforce)
+   apply simp
+  apply (clarsimp split: if_split)
+  done
+
 end
