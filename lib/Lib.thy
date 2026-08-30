@@ -1597,6 +1597,10 @@ lemma comp_upd_simp:
   "(f \<circ> (g (x := y))) = ((f \<circ> g) (x := f y))"
   by (rule fun_upd_comp)
 
+lemma map_option_fun_upd_None:
+  "(\<lambda>x. map_option g ((f(y := None)) x)) = (map_option g \<circ> f)(y := None)"
+  by (auto simp add: comp_upd_simp comp_def)
+
 lemma dom_option_map:
   "dom (map_option f o m) = dom m"
   by (rule dom_map_option_comp)
