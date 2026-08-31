@@ -1190,4 +1190,19 @@ lemma from_bool_or_one[simp]:
   "from_bool v || 1 = 1"
   by (simp add: from_bool_def split: bool.split)
 
+lemma uint_of_nat:
+  "uint (of_nat x :: 'a::len word) = int x mod 2 ^ LENGTH('a)"
+  apply (clarsimp simp only: uint_nat unat_of_nat)
+  apply (metis of_nat_numeral semiring_1_class.of_nat_power zmod_int)
+  done
+
+lemma uint_of_nat_less:
+  "n < 2^LENGTH('a) \<Longrightarrow> uint (of_nat n :: 'a::len word) = int n"
+  by (simp add: take_bit_nat_eq_self_iff unsigned_of_nat)
+
+(* Instance of add_eq_0_iff2, useful for rewriting *)
+lemma word_wrap_eq_max_word:
+  "(x + 1 = 0) = (x = - 1)" for x :: "'a::len word"
+  by (fact add_eq_0_iff2)
+
 end
