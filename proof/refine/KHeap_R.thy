@@ -1556,7 +1556,7 @@ lemma valid_irq_handlers_lift':
 lemmas valid_irq_handlers_lift'' = valid_irq_handlers_lift' [unfolded cteCaps_of_def]
 
 lemmas valid_irq_node_lift =
-    hoare_use_eq_irq_node' [OF _ typ_at_lift_valid_irq_node']
+    hoare_use_eq_irq_node' [OF _ valid_irq_node'_typ_at_lift]
 
 lemmas untyped_ranges_zero_lift
     = hoare_use_eq[where f="gsUntypedZeroRanges"
@@ -1628,7 +1628,7 @@ lemma setObject_valid_objs':
   apply (subgoal_tac "\<forall>ko. valid_obj' ko s \<longrightarrow> valid_obj' ko b")
    defer
    apply clarsimp
-   apply (erule (1) use_valid [OF _ setObject.typ_at_sc_at'_n_lifts'(3)])
+   apply (erule (1) use_valid [OF _ valid_obj'_typ_at_lift[OF setObject_typ_at']])
   apply (clarsimp simp: setObject_def split_def in_monad
                         lookupAround2_char1)
   apply (simp add: valid_objs'_def)

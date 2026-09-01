@@ -755,15 +755,15 @@ next
     done
 qed
 
-lemmas storePTE_typ_ats[wp] = typ_at_lifts [OF storePTE.typ_at']
-
-lemmas setObject_asid_typ_ats' [wp] = typ_at_lifts [OF setObject_asidpool.typ_at']
+sublocale storePTE: typ_at_props' "storePTE slot pte"
+  by typ_at_props'
 
 crunch copyGlobalMappings
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: mapM_x_wp')
 
-lemmas copyGlobalMappings_typ_ats[wp] = typ_at_lifts [OF copyGlobalMappings_typ_at']
+sublocale copyGlobalMappings: typ_at_props' "copyGlobalMappings newPT"
+  by typ_at_props'
 
 lemma corres_gets_global_pt [corres]:
   "corres (=) valid_global_arch_objs \<top>

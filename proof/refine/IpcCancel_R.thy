@@ -198,6 +198,7 @@ lemma cancelSignal_st_tcb_at':
   apply (wpsimp wp: setThreadState_st_tcb_at'_cases)
   done
 
+(* FIXME arch-split: not clear where arch version of this should go *)
 sublocale delete_one_conc_pre < delete_one: typ_at_all_props' "cteDeleteOne slot"
   by typ_at_props'
 

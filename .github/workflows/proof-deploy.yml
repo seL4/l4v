@@ -69,6 +69,8 @@ jobs:
             plat: bcm2711
           - arch: AARCH64
             plat: imx8mm
+          - arch: RISCV64
+            plat: hifive-p550
     # test only most recent push, but let started jobs finish:
     concurrency:
       group: l4v-deploy-${{ github.ref }}-${{ matrix.arch }}-${{ matrix.num_domains }}-${{ matrix.plat }}

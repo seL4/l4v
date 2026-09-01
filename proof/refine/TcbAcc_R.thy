@@ -1079,12 +1079,6 @@ lemma threadSet_valid_objs':
   apply (clarsimp elim!: obj_at'_weakenE)
   done
 
-(*FIXME arch-split RT*)
-lemmas typ_at'_valid_tcb'_lift =
-  RISCV64.typ_at'_valid_obj'_lift[where obj="KOTCB tcb" for tcb, unfolded valid_obj'_def, simplified]
-
-lemmas setObject_valid_tcb' = typ_at'_valid_tcb'_lift[OF setObject_typ_at' setObject_sc_at'_n]
-
 lemma setObject_valid_tcbs':
   assumes preserve_valid_tcb': "\<And>s s' ko ko' x n tcb tcb'.
             \<lbrakk> (ko', s') \<in> fst (updateObject val ko ptr x n s); P s;
@@ -1097,7 +1091,7 @@ lemma setObject_valid_tcbs':
   apply (rename_tac s s' ptr' tcb)
   apply (prop_tac "\<forall>tcb'. valid_tcb' tcb s \<longrightarrow> valid_tcb' tcb s'")
    apply clarsimp
-   apply (erule (1) use_valid[OF _ setObject_valid_tcb'])
+   apply (erule (1) use_valid[OF _ valid_tcb'_typ_at_lift[OF setObject_typ_at']])
   apply (drule spec, erule mp)
   apply (clarsimp simp: setObject_def in_monad split_def lookupAround2_char1)
   apply (rename_tac s ptr' new_tcb' ptr'' old_tcb_ko' s' f)
@@ -1122,10 +1116,8 @@ lemma setObject_tcb_valid_tcbs':
 lemma threadSet_valid_tcb':
   "\<lbrace>valid_tcb' tcb and (\<lambda>s. \<forall>tcb. valid_tcb' tcb s \<longrightarrow> valid_tcb' (f tcb) s)\<rbrace>
    threadSet f t
-   \<lbrace>\<lambda>rv. valid_tcb' tcb\<rbrace>"
-  apply (simp add: threadSet_def)
-  apply (wpsimp wp: setObject_valid_tcb')
-  done
+   \<lbrace>\<lambda>_. valid_tcb' tcb\<rbrace>"
+  by (wpsimp simp: threadSet_def)
 
 lemma threadSet_valid_tcbs':
   "\<lbrace>valid_tcbs' and (\<lambda>s. \<forall>tcb. valid_tcb' tcb s \<longrightarrow> valid_tcb' (f tcb) s)\<rbrace>

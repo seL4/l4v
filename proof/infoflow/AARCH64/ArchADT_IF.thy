@@ -1,0 +1,464 @@
+(*
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+ *
+ * SPDX-License-Identifier: GPL-2.0-only
+ *)
+
+text \<open>
+  This file sets up a kernel automaton, ADT_A_if, which is
+  slightly different from ADT_A.
+  It then setups a big step framework to transfrom this automaton in the
+  big step automaton on which the infoflow theorem will be proved
+\<close>
+
+theory ArchADT_IF
+imports ADT_IF
+begin
+
+context Arch begin arch_global_naming
+
+named_theorems ADT_IF_assms
+
+lemmas [ADT_IF_assms] =
+  thread_set_no_etcb_change_cur_fpu_in_cur_domain
+  thread_set_no_etcb_change_cur_vcpu_in_cur_domain
+  handle_event_valid_cur_vcpu
+  cur_vcpu_in_cur_domain_updates
+  cur_fpu_in_cur_domain_updates
+
+lemma dmo_getActiveIRQ_wp'[ADT_IF_assms]:
+  "\<lbrace>(\<lambda>s. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)))
+           (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>))
+    and domain_sep_inv False st and valid_irq_states\<rbrace>
+   do_machine_op (getActiveIRQ in_kernel)
+   \<lbrace>P\<rbrace>"
+  apply (simp add: do_machine_op_def getActiveIRQ_def non_kernel_IRQs_def)
+  apply (wp modify_wp | wpc)+
+  apply clarsimp
+  apply (erule use_valid)
+   apply (wp modify_wp)
+  apply (fastforce simp: domain_sep_inv_def non_kernel_IRQs_def
+                         valid_irq_states_def valid_irq_masks_def irq_at_def)
+  done
+
+lemma dmo_getActiveIRQ_wp[ADT_IF_assms]:
+  "\<lbrace>(\<lambda>s. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)))
+           (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>))\<rbrace>
+   do_machine_op (getActiveIRQ False)
+   \<lbrace>P\<rbrace>"
+  apply (simp add: do_machine_op_def getActiveIRQ_def non_kernel_IRQs_def)
+  apply (wp modify_wp | wpc)+
+  apply clarsimp
+  apply (erule use_valid)
+   apply (wp modify_wp)
+  apply (auto simp: Let_def non_kernel_IRQs_def irq_at_def split: if_splits)
+  done
+
+lemma thread_set_valid_cur_vcpu_unchanged_strong:
+  "\<lbrakk>\<And>tcb. tcb_vcpu (tcb_arch (f tcb)) = tcb_vcpu (tcb_arch tcb); \<And>tcb. tcb_domain (f tcb) = tcb_domain tcb\<rbrakk>
+   \<Longrightarrow> thread_set f tptr \<lbrace>valid_cur_vcpu\<rbrace>"
+  apply (rule valid_cur_vcpu_lift_weak; (solves wpsimp)?)
+   apply (clarsimp simp: thread_set_def)
+   apply (wpsimp wp: set_object_wp)
+   apply (fastforce simp: pred_tcb_at_def obj_at_def get_tcb_def)
+  apply (clarsimp simp: in_cur_domain_def)
+  apply (wp_pre, wps, wpsimp wp: thread_set_no_change_etcb_at, clarsimp)
+  done
+
+lemma thread_set_tcb_context_valid_cur_vcpu[ADT_IF_assms,wp]:
+  "thread_set (tcb_arch_update (arch_tcb_context_set tc)) tcb \<lbrace>valid_cur_vcpu\<rbrace>"
+  by (wpsimp wp: thread_set_valid_cur_vcpu_unchanged_strong simp: arch_tcb_context_set_def)
+
+crunch do_user_op_if
+  for cur_vcpu_in_cur_domain[ADT_IF_assms,wp]: "cur_vcpu_in_cur_domain"
+  and cur_fpu_in_cur_domain[ADT_IF_assms,wp]: "cur_fpu_in_cur_domain"
+  and valid_cur_vcpu[ADT_IF_assms,wp]: "valid_cur_vcpu"
+  (simp: do_user_op_if_def)
+
+lemma deleted_irq_handler_valid_irq_states[ADT_IF_assms,wp]:
+  "deleted_irq_handler irq \<lbrace>valid_irq_states\<rbrace>"
+  unfolding deleted_irq_handler_def set_irq_state_def valid_irq_states_def valid_irq_masks_def maskInterrupt_def
+  by (wpsimp wp: dmo_wp)
+
+lemma dmo_getActiveIRQ_valid_irq_states[ADT_IF_assms,wp]:
+  "do_machine_op (getActiveIRQ in_kernel) \<lbrace>valid_irq_states\<rbrace>"
+  unfolding getActiveIRQ_def by wpsimp
+
+crunch prepare_thread_delete, arch_finalise_cap, arch_post_cap_deletion
+  for valid_irq_states[ADT_IF_assms,wp]: "\<lambda>s :: det_state. valid_irq_states s"
+  (wp: crunch_wps mapM_x_wp hoare_drop_imps simp: crunch_simps)
+
+lemmas [ADT_IF_assms] =
+  maybe_handle_interrupt_cur_vcpu_in_cur_domain
+  maybe_handle_interrupt_cur_fpu_in_cur_domain
+  maybe_handle_interrupt_valid_cur_vcpu
+  handle_event_cur_vcpu_in_cur_domain
+  handle_event_cur_fpu_in_cur_domain
+  schedule_cur_vcpu_in_cur_domain
+  schedule_cur_fpu_in_cur_domain
+  schedule_valid_cur_vcpu
+  activate_thread_cur_vcpu_in_cur_domain
+  activate_thread_cur_fpu_in_cur_domain
+  activate_thread_valid_cur_vcpu
+
+end
+
+
+global_interpretation ADT_IF_1?: ADT_IF_1
+proof goal_cases
+  interpret Arch .
+  case 1 show ?case
+    by (unfold_locales; (fact ADT_IF_assms[folded valid_cur_hyp_def cur_hyp_in_cur_domain_def])?)
+qed
+
+
+context Arch begin arch_global_naming
+
+(* FIXME: clagged from AInvs.do_user_op_invs *)
+lemma do_user_op_if_invs[ADT_IF_assms]:
+  "\<lbrace>invs and ct_running\<rbrace>
+   do_user_op_if f tc
+   \<lbrace>\<lambda>_. invs and ct_running\<rbrace>"
+  apply (simp add: do_user_op_if_def split_def)
+  apply (wp do_machine_op_ct_in_state device_update_invs | wp (once) dmo_invs | simp)+
+  apply (clarsimp simp: user_mem_def user_memory_update_def simpler_modify_def restrict_map_def
+                        invs_def cur_tcb_def ptable_rights_s_def ptable_lift_s_def)
+  apply (frule ptable_rights_imp_frame)
+    apply fastforce
+   apply simp
+  apply (clarsimp simp: valid_state_def device_frame_in_device_region)
+  done
+
+crunch do_user_op_if
+  for domain_sep_inv[ADT_IF_assms, wp]: "domain_sep_inv irqs st"
+  (ignore: user_memory_update)
+
+crunch do_user_op_if
+  for valid_sched[ADT_IF_assms, wp]: "valid_sched"
+  (ignore: user_memory_update)
+
+crunch do_user_op_if
+  for irq_masks[ADT_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
+  (ignore: user_memory_update wp: dmo_wp no_irq)
+
+crunch do_user_op_if
+  for valid_list[ADT_IF_assms, wp]: "valid_list"
+  (ignore: user_memory_update)
+
+lemma do_user_op_if_scheduler_action[ADT_IF_assms, wp]:
+  "do_user_op_if f tc \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
+  by (simp add: do_user_op_if_def | wp | wpc)+
+
+lemma do_user_op_silc_inv[ADT_IF_assms, wp]:
+  "do_user_op_if f tc \<lbrace>silc_inv aag st\<rbrace>"
+  apply (simp add: do_user_op_if_def)
+  apply (wp | wpc | simp)+
+  done
+
+lemma do_user_op_pas_refined[ADT_IF_assms, wp]:
+  "do_user_op_if f tc \<lbrace>pas_refined aag\<rbrace>"
+  apply (simp add: do_user_op_if_def)
+  apply (wp | wpc | simp)+
+  done
+
+crunch do_user_op_if
+  for cur_thread[ADT_IF_assms, wp]: "\<lambda>s. P (cur_thread s)"
+  and cur_domain[ADT_IF_assms, wp]: "\<lambda>s. P (cur_domain s)"
+  and idle_thread[ADT_IF_assms, wp]: "\<lambda>s. P (idle_thread s)"
+  and domain_fields[ADT_IF_assms, wp]: "domain_fields P"
+  (ignore: user_memory_update)
+
+lemma do_use_op_guarded_pas_domain[ADT_IF_assms, wp]:
+  "do_user_op_if f tc \<lbrace>guarded_pas_domain aag\<rbrace>"
+  by (rule guarded_pas_domain_lift; wp)
+
+lemma tcb_arch_ref_tcb_context_set[ADT_IF_assms, simp]:
+  "tcb_arch_ref (tcb_arch_update (arch_tcb_context_set tc) tcb) = tcb_arch_ref tcb"
+  by (simp add: tcb_arch_ref_def arch_tcb_context_set_def)
+
+crunch arch_activate_idle_thread, arch_switch_to_thread
+  for cur_thread[ADT_IF_assms, wp]: "\<lambda>s. P (cur_thread s)"
+
+lemma arch_activate_idle_thread_scheduler_action[ADT_IF_assms, wp]:
+  "arch_activate_idle_thread t \<lbrace>\<lambda>s :: det_state. P (scheduler_action s)\<rbrace>"
+  by (wpsimp simp: arch_activate_idle_thread_def)
+
+crunch handle_vm_fault, handle_hypervisor_fault
+  for domain_fields[ADT_IF_assms, wp]: "domain_fields P"
+
+lemma arch_perform_invocation_noErr[ADT_IF_assms, wp]:
+  "\<lbrace>\<top>\<rbrace> arch_perform_invocation a -, \<lbrace>Q\<rbrace>"
+  by (wpsimp simp: arch_perform_invocation_def)
+
+lemma arch_invoke_irq_control_noErr[ADT_IF_assms, wp]:
+  "\<lbrace>\<top>\<rbrace> arch_invoke_irq_control a -, \<lbrace>Q\<rbrace>"
+  by (cases a; wpsimp)
+
+lemma getActiveIRQ_None[ADT_IF_assms]:
+  "(None,s') \<in> fst (do_machine_op (getActiveIRQ False) s)  \<Longrightarrow>
+   irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)) = None"
+  apply (erule use_valid)
+   apply (wp dmo_getActiveIRQ_wp)
+  by simp
+
+lemma getActiveIRQ_Some[ADT_IF_assms]:
+  "(Some i, s') \<in> fst (do_machine_op (getActiveIRQ False) s)
+   \<Longrightarrow> irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)) = Some i"
+  apply (erule use_valid)
+   apply (wp dmo_getActiveIRQ_wp)
+  by simp
+
+lemma idle_equiv_as_globals_equiv:
+  "arm_us_global_vspace (arch_state s) \<noteq> idle_thread s
+   \<Longrightarrow> idle_equiv st s =
+       globals_equiv (st\<lparr>arch_state := arch_state s, machine_state := machine_state s,
+                         kheap:= (kheap st)(arm_us_global_vspace (arch_state s) :=
+                                              kheap s (arm_us_global_vspace (arch_state s))),
+                                            cur_thread := cur_thread s\<rparr>) s"
+  by (clarsimp simp: idle_equiv_def globals_equiv_def tcb_at_def2)
+
+lemma idle_globals_lift:
+  assumes g: "\<And>st. \<lbrace>globals_equiv st and P\<rbrace> f \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  assumes i: "\<And>s. P s \<Longrightarrow> arm_us_global_vspace (arch_state s) \<noteq> idle_thread s"
+  shows "\<lbrace>idle_equiv st and P\<rbrace> f \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
+  apply (clarsimp simp: valid_def)
+  apply (subgoal_tac "arm_us_global_vspace (arch_state s) \<noteq> idle_thread s")
+   apply (subst (asm) idle_equiv_as_globals_equiv,simp+)
+   apply (frule use_valid[OF _ g])
+    apply simp+
+   apply (clarsimp simp: idle_equiv_def globals_equiv_def tcb_at_def2)
+  apply (erule i)
+  done
+
+lemma idle_equiv_as_globals_equiv_scheduler:
+  "arm_us_global_vspace (arch_state s) \<noteq> idle_thread s
+   \<Longrightarrow> idle_equiv st s =
+       globals_equiv_scheduler (st\<lparr>arch_state := arch_state s, machine_state := machine_state s,
+                                   kheap:= (kheap st)(arm_us_global_vspace (arch_state s) :=
+                                                        kheap s (arm_us_global_vspace (arch_state s)))\<rparr>) s"
+  by (clarsimp simp: idle_equiv_def tcb_at_def2 globals_equiv_scheduler_def
+                     arch_globals_equiv_scheduler_def)
+
+lemma idle_globals_lift_scheduler:
+  assumes g: "\<And>st. \<lbrace>globals_equiv_scheduler st and P\<rbrace> f \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
+  assumes i: "\<And>s. P s \<Longrightarrow> arm_us_global_vspace (arch_state s) \<noteq> idle_thread s"
+  shows "\<lbrace>idle_equiv st and P\<rbrace> f \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
+  apply (clarsimp simp: valid_def)
+  apply (subgoal_tac "arm_us_global_vspace (arch_state s) \<noteq> idle_thread s")
+   apply (subst (asm) idle_equiv_as_globals_equiv_scheduler,simp+)
+   apply (frule use_valid[OF _ g])
+    apply simp+
+   apply (clarsimp simp: idle_equiv_def globals_equiv_scheduler_def tcb_at_def2)
+  apply (erule i)
+  done
+
+lemma invs_pt_not_idle_thread[intro]:
+  "invs s \<Longrightarrow> arm_us_global_vspace (arch_state s) \<noteq> idle_thread s"
+  apply clarsimp
+  apply (frule invs_valid_idle)
+  apply (frule invs_valid_global_arch_objs)
+  by (fastforce dest: valid_global_arch_objs_pt_at
+                simp: obj_at_def valid_idle_def pred_tcb_at_def)
+
+lemma kernel_entry_if_idle_equiv[ADT_IF_assms]:
+  "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and domain_sep_inv irqs st and idle_equiv st
+         and (\<lambda>s. ct_idle s \<longrightarrow> tc = idle_context s)\<rbrace>
+   kernel_entry_if e tc
+   \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
+  apply (rule hoare_pre)
+   apply (rule idle_globals_lift)
+    apply (wp kernel_entry_if_globals_equiv)
+    apply force
+   apply (fastforce intro!: invs_pt_not_idle_thread)+
+  done
+
+lemmas handle_preemption_idle_equiv[ADT_IF_assms, wp] =
+  idle_globals_lift[OF handle_preemption_globals_equiv invs_pt_not_idle_thread, simplified]
+
+lemmas schedule_if_idle_equiv[ADT_IF_assms, wp] =
+  idle_globals_lift_scheduler[OF schedule_if_globals_equiv_scheduler invs_pt_not_idle_thread, simplified]
+
+lemma do_user_op_if_idle_equiv[ADT_IF_assms, wp]:
+  "\<lbrace>idle_equiv st and invs\<rbrace>
+   do_user_op_if uop tc
+   \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
+  unfolding do_user_op_if_def
+  by (wpsimp wp: dmo_user_memory_update_idle_equiv dmo_device_memory_update_idle_equiv)
+
+lemma kernel_entry_if_valid_vspace_objs_if[ADT_IF_assms, wp]:
+  "\<lbrace>valid_vspace_objs_if and invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
+   kernel_entry_if e tc
+   \<lbrace>\<lambda>_. valid_vspace_objs_if\<rbrace>"
+  by wpsimp
+
+lemma handle_preemption_if_valid_pdpt_objs[ADT_IF_assms, wp]:
+  "\<lbrace>valid_vspace_objs_if\<rbrace> handle_preemption_if a \<lbrace>\<lambda>rv s. valid_vspace_objs_if s\<rbrace>"
+  by wpsimp
+
+lemma schedule_if_valid_pdpt_objs[ADT_IF_assms, wp]:
+  "\<lbrace>valid_vspace_objs_if\<rbrace> schedule_if a \<lbrace>\<lambda>rv s. valid_vspace_objs_if s\<rbrace>"
+  by wpsimp
+
+lemma do_user_op_if_valid_pdpt_objs[ADT_IF_assms, wp]:
+  "\<lbrace>valid_vspace_objs_if\<rbrace> do_user_op_if a b \<lbrace>\<lambda>rv s. valid_vspace_objs_if s\<rbrace>"
+  by wpsimp
+
+lemma valid_vspace_objs_if_ms_update[ADT_IF_assms, simp]:
+  "valid_vspace_objs_if (machine_state_update f s) = valid_vspace_objs_if s"
+  by simp
+
+lemma do_user_op_if_irq_state_of_state[ADT_IF_assms]:
+  "do_user_op_if utf uc \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+  apply (rule hoare_pre)
+  apply (simp add: do_user_op_if_def user_memory_update_def | wp dmo_wp | wpc)+
+  done
+
+lemma do_user_op_if_irq_masks_of_state[ADT_IF_assms]:
+  "do_user_op_if utf uc \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
+  apply (rule hoare_pre)
+  apply (simp add: do_user_op_if_def user_memory_update_def | wp dmo_wp | wpc)+
+  done
+
+lemma do_user_op_if_irq_measure_if[ADT_IF_assms]:
+  "do_user_op_if utf uc \<lbrace>\<lambda>s. P (irq_measure_if s)\<rbrace>"
+  apply (rule hoare_pre)
+  apply (simp add: do_user_op_if_def user_memory_update_def irq_measure_if_def
+         | wps |wp dmo_wp | wpc)+
+  done
+
+crunch set_flags, arch_post_set_flags
+  for irq_states_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
+
+lemma checked_cap_insert_valid_irq_states[wp]:
+  "check_cap_at a b (check_cap_at c d (cap_insert a b e)) \<lbrace>valid_irq_states\<rbrace>"
+  by (wpsimp simp: check_cap_at_def)+
+
+crunch set_mcpriority
+  for valid_irq_states[wp]: valid_irq_states
+
+lemma invoke_tcb_irq_state_inv[ADT_IF_assms]:
+  "\<lbrace>(\<lambda>s. irq_state_inv st s) and domain_sep_inv False (sta :: det_state) and valid_irq_states
+                             and tcb_inv_wf tinv and K (irq_is_recurring irq st)\<rbrace>
+   invoke_tcb tinv
+   \<lbrace>\<lambda>_ s. irq_state_inv st s\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
+  apply (case_tac tinv)
+       apply ((wp hoare_vcg_if_lift  mapM_x_wp[OF _ subset_refl]
+               | wpc
+               | simp split del: if_split add: check_cap_at_def
+               | clarsimp
+               | wp (once) irq_state_inv_triv)+)[3]
+    defer
+      apply ((wp irq_state_inv_triv | simp)+)[2]
+    apply (simp add: split_def cong: option.case_cong)
+ by (clarsimp split del: if_split cong: conj_cong
+     | wp hoare_vcg_all_liftE_R hoare_vcg_all_lift hoare_vcg_const_imp_liftE_R
+         checked_cap_insert_domain_sep_inv cap_delete_deletes
+         cap_delete_irq_state_inv[where st=st and sta=sta and irq=irq]
+         cap_delete_irq_state_next[where st=st and sta=sta and irq=irq]
+         cap_delete_valid_cap cap_delete_cte_at
+      | wpc
+      | simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
+                  tcb_at_st_tcb_at option_update_thread_def
+      | strengthen use_no_cap_to_obj_asid_strg
+      | wp (once) irq_state_inv_triv hoare_drop_imps
+      | clarsimp split: option.splits | intro impI conjI allI)+
+
+crunch freeMemory
+  for irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
+  (wp: mapM_x_wp)
+
+lemma valid_irq_states_kheap_update[simp]:
+  "valid_irq_states (kheap_update f s) = valid_irq_states s"
+  by (simp add: valid_irq_states_def)
+
+crunch delete_objects
+  for valid_irq_states[wp]: valid_irq_states
+  (wp: dmo_machine_state_lift simp: crunch_simps detype_def)
+
+lemma reset_untyped_cap_irq_state_inv[ADT_IF_assms]:
+  "\<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state) and valid_irq_states and K (irq_is_recurring irq st)\<rbrace>
+   reset_untyped_cap slot
+   \<lbrace>\<lambda>y. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>y. irq_state_next st\<rbrace>"
+  apply (cases "irq_is_recurring irq st", simp_all)
+  apply (simp add: reset_untyped_cap_def)
+  apply (rule hoare_pre)
+  by (wp no_irq_clearMemory hoare_vcg_const_imp_lift set_cap_domain_sep_inv
+         hoare_post_addE[where Q'="domain_sep_inv False sta and valid_irq_states", OF mapME_x_wp']
+         get_cap_wp preemption_point_irq_state_inv'[where irq=irq]
+      | rule hoare_vcg_conj_lift
+      | rule irq_state_inv_triv
+      | simp add: unless_def
+      | wp (once) dmo_wp
+      | fastforce)+
+
+lemma handle_vm_fault_irq_state_of_state[ADT_IF_assms]:
+  "handle_vm_fault thread fault \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+  unfolding handle_vm_fault_def addressTranslateS1_def
+  by (wpsimp wp: dmo_wp)
+
+lemma handle_hypervisor_fault_irq_state_of_state[ADT_IF_assms]:
+  "handle_hypervisor_fault thread fault \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+  by (cases fault, wpsimp wp: dmo_wp split_del: if_split)
+
+
+text \<open>Not true of invoke_untyped any more.\<close>
+crunch create_cap
+  for irq_state_of_state[ADT_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
+  (ignore: freeMemory
+      wp: dmo_wp modify_wp crunch_wps
+    simp: freeMemory_def storeWord_def clearMemory_def
+          machine_op_lift_def machine_rest_lift_def mapM_x_defsym)
+
+crunch arch_invoke_irq_control
+  for irq_state_of_state[ADT_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
+  (wp: dmo_wp crunch_wps simp: setIRQTrigger_def machine_op_lift_def machine_rest_lift_def)
+
+lemma handle_reserved_irq_non_kernel_IRQs[ADT_IF_assms]:
+  "\<lbrace>P and K (irq \<notin> non_kernel_IRQs)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. P\<rbrace>"
+  unfolding handle_reserved_irq_def
+  apply (rule hoare_gen_asm)
+  apply (wpsimp wp: when_wp[where P'="\<bottom>"] simp: non_kernel_IRQs_def irq_vppi_event_index_def)
+  done
+
+lemma thread_set_context_state_hyp_refs_of:
+  "thread_set (tcb_arch_update (arch_tcb_context_set ctxt)) t \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (wpsimp simp: thread_set_def wp: set_object_wp)
+  apply (erule_tac P=P in back_subst)
+  apply (rule ext)
+  apply (simp add: state_hyp_refs_of_def get_tcb_def arch_tcb_context_set_def
+            split: option.splits kernel_object.splits)
+  done
+
+lemma thread_set_context_pas_refined[ADT_IF_assms]:
+  "thread_set (tcb_arch_update (arch_tcb_context_set ctxt)) t \<lbrace>pas_refined aag\<rbrace>"
+  unfolding pas_refined_def state_objs_to_policy_def
+  apply (rule hoare_weaken_pre)
+   apply (wpsimp wp: tcb_domain_map_wellformed_lift_strong thread_set_edomains)
+   apply (wps thread_set_state_vrefs thread_set_context_state_hyp_refs_of)
+   apply (rule hoare_lift_Pf2[where f="caps_of_state"])
+    apply (rule hoare_lift_Pf2[where f="thread_st_auth"])
+     apply (rule hoare_lift_Pf2[where f="thread_bound_ntfns"])
+      apply wp
+     apply (wpsimp wp: thread_set_thread_bound_ntfns_trivT)
+    apply (wpsimp wp: thread_set_thread_st_auth_trivT)
+   apply (wpsimp wp: thread_set_caps_of_state_trivial simp: ran_tcb_cap_cases)
+  apply simp
+  done
+
+crunch init_arch_objects
+  for irq_states_of_state[ADT_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
+  (wp: crunch_wps dmo_wp)
+
+end
+
+
+global_interpretation ADT_IF_2?: ADT_IF_2
+proof goal_cases
+  interpret Arch .
+  case 1 show ?case
+    by (unfold_locales; (fact ADT_IF_assms)?)
+qed
+
+sublocale valid_initial_state \<subseteq> valid_initial_state?: ADT_valid_initial_state ..
+
+end

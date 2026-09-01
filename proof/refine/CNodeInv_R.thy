@@ -6320,7 +6320,7 @@ lemma cteDelete_cte_at:
                in hoare_weaken_pre)
    apply (rule hoare_strengthen_post)
     apply (rule hoare_vcg_disj_lift)
-     apply (rule cteDelete.typ_at_lifts')
+     apply (rule cteDelete.gen_typ_ats)
     apply (simp add: cteDelete_def finaliseSlot_def split_def)
     apply (rule validE_valid, rule bindE_wp_fwd)
      apply (subst finaliseSlot'_simps_ext)
@@ -8336,6 +8336,9 @@ lemma cteMove_irq_handlers' [wp]:
   done
 
 context CNodeInv_R begin
+
+sublocale cteMove: gen_typ_at_props' "cteMove cap src dest"
+  by typ_at_props'
 
 lemmas cteMove_valid_irq_node'[wp]
     = valid_irq_node_lift[OF cteMove_ksInterrupt cteMove_typ_at']

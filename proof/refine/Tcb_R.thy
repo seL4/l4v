@@ -1554,6 +1554,7 @@ crunch setPriority, setMCPriority
 
 global_interpretation setPriority: typ_at_all_props' "setPriority t prio"
   by typ_at_props'
+
 global_interpretation setMCPriority: typ_at_all_props' "setMCPriority t prio"
   by typ_at_props'
 
@@ -2893,9 +2894,8 @@ lemma bindNotification_invs':
   "\<lbrace>invs' and tcb_at' tcbPtr\<rbrace> bindNotification tcbPtr ntfnPtr \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding bindNotification_def updateNotification_def invs'_def bind_assoc
   apply (rule bind_wp[OF _ get_ntfn_sp'])
-  apply (wpsimp wp: set_ntfn_valid_pspace' valid_irq_node_lift
-                    valid_bound_ntfn_lift untyped_ranges_zero_lift valid_dom_schedule'_lift
-                    irqs_masked_lift sym_heap_sched_pointers_lift
+  apply (wpsimp wp: set_ntfn_valid_pspace' valid_irq_node_lift untyped_ranges_zero_lift
+                    valid_dom_schedule'_lift irqs_masked_lift sym_heap_sched_pointers_lift
               simp: cteCaps_of_def)
   apply (frule(1) ntfn_ko_at_valid_objs_valid_ntfn'[OF _ valid_pspace_valid_objs'])
   apply (clarsimp simp: valid_ntfn'_def o_def)

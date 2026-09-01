@@ -1676,9 +1676,14 @@ crunch cteDeleteOne, suspend, unbindFromSC, unbindNotification
    simp: crunch_simps unless_def o_def
    ignore_del: setObject)
 
-global_interpretation suspend: typ_at_all_props' "suspend x" by typ_at_props'
-global_interpretation unbindFromSC: typ_at_all_props' "unbindFromSC t" by typ_at_props'
-global_interpretation unbindNotification: typ_at_all_props' "unbindNotification tcbPtr" by typ_at_props'
+global_interpretation suspend: typ_at_all_props' "suspend x"
+  by typ_at_props'
+
+global_interpretation unbindFromSC: typ_at_all_props' "unbindFromSC t"
+  by typ_at_props'
+
+global_interpretation unbindNotification: typ_at_all_props' "unbindNotification tcbPtr"
+  by typ_at_props'
 
 lemma tcb_st_not_Bound:
   "(p, NTFNBound) \<notin> tcb_st_refs_of' ts"

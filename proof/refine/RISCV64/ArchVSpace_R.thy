@@ -259,38 +259,34 @@ lemma deleteASIDPool_corres:
   done
 
 crunch unmapPageTable, unmapPage, setVMRoot, setMessageInfo, setMRs, performPageTableInvocation,
-         performASIDPoolInvocation, performPageInvocation
+       performASIDPoolInvocation, performPageInvocation
   for typ_at' [wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
-end
-
-sublocale Arch < unmapPageTable: typ_at_all_props' "unmapPageTable asid vaddr pt"
+sublocale unmapPageTable: typ_at_all_props' "unmapPageTable asid vaddr pt"
   by typ_at_props'
 
-sublocale Arch < unmapPage: typ_at_all_props' "unmapPage magnitude asid vptr ptr"
+sublocale unmapPage: typ_at_all_props' "unmapPage magnitude asid vptr ptr"
   by typ_at_props'
 
-sublocale Arch < setVMRoot: typ_at_all_props' "setVMRoot tcb"
+sublocale setVMRoot: typ_at_all_props' "setVMRoot tcb"
   by typ_at_props'
 
-sublocale Arch < setMessageInfo: typ_at_all_props' "setMessageInfo thread info"
+sublocale setMessageInfo: typ_at_all_props' "setMessageInfo thread info"
   by typ_at_props'
 
-sublocale Arch < setMRs: typ_at_all_props' "setMRs thread buffer messageData"
+sublocale setMRs: typ_at_all_props' "setMRs thread buffer messageData"
   by typ_at_props'
 
-sublocale Arch < performPageTableInvocation: typ_at_all_props' "performPageTableInvocation iv"
+sublocale performPageTableInvocation: typ_at_all_props' "performPageTableInvocation iv"
   by typ_at_props'
 
-sublocale Arch < performASIDPoolInvocation: typ_at_all_props' "performASIDPoolInvocation iv"
+sublocale performPageInvocation: typ_at_all_props' "performPageInvocation iv"
   by typ_at_props'
 
-sublocale Arch < performPageInvocation: typ_at_all_props' "performPageInvocation iv"
+sublocale performASIDPoolInvocation: typ_at_all_props' "performASIDPoolInvocation iv"
   by typ_at_props'
-
-context begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma getObject_PTE_corres'':
   assumes "p' = p"

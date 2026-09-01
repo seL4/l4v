@@ -1493,12 +1493,6 @@ lemma option_to_ctcb_ptr_valid_ntfn:
   apply (clarsimp simp: valid_ntfn'_def tcb_at_not_NULL)
   done
 
-lemma hoare_vcg_imp_liftE:
-  "\<lbrakk>\<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>, \<lbrace>E\<rbrace>; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>\<rbrakk> \<Longrightarrow>  \<lbrace>\<lambda>s. P' s \<or> Q' s\<rbrace> f \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>, \<lbrace>E\<rbrace>"
-  apply (simp add: validE_def valid_def split_def split: sum.splits)
-  done
-
-
 lemma not_obj_at'_ntfn:
   "(\<not>obj_at' (P::Structures_H.notification \<Rightarrow> bool) t s) = (\<not> typ_at' NotificationT t s \<or> obj_at' (Not \<circ> P) t s)"
   apply (simp add: obj_at'_real_def projectKOs typ_at'_def ko_wp_at'_def objBits_simps)

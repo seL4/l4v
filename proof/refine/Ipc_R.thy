@@ -1807,8 +1807,6 @@ crunch doIPCTransfer
 sublocale doIPCTransfer: typ_at_all_props' "doIPCTransfer s e b g r"
   by typ_at_props'
 
-lemmas dit_irq_node'[wp] = valid_irq_node_lift [OF doIPCTransfer_irq_node' doIPCTransfer_typ_at']
-
 crunch doIPCTransfer
   for objs'[wp]: "valid_objs'"
   and global_refs'[wp]: "valid_global_refs'"
@@ -3485,9 +3483,6 @@ crunch maybeReturnSc
   (wp: crunch_wps)
 
 sublocale maybeReturnSc: typ_at_all_props' "maybeReturnSc ntfnPtr tcbPtr"
-  by typ_at_props'
-
-sublocale setMessageInfo: typ_at_all_props' "setMessageInfo t info"
   by typ_at_props'
 
 crunch cancel_ipc

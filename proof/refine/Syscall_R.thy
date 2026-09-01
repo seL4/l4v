@@ -873,9 +873,8 @@ sublocale invokeTCB: typ_at_all_props' "invokeTCB i"
 sublocale performIRQControl: typ_at_all_props' "performIRQControl i"
   by typ_at_props'
 
-(* FIXME rt arch-split
-sublocale Arch < arch_invokeIRQHandler: typ_at_all_props' "Arch.invokeIRQHandler i"
-  by typ_at_props' *)
+sublocale arch_invokeIRQHandler: typ_at_all_props' "Arch.invokeIRQHandler i"
+  by typ_at_props'
 
 sublocale invokeIRQHandler: typ_at_all_props' "invokeIRQHandler i"
   by typ_at_props'

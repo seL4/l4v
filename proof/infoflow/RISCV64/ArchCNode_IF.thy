@@ -34,25 +34,15 @@ lemma set_object_globals_equiv'':
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   by (wpsimp wp: set_object_globals_equiv)
 
-lemma set_cap_globals_equiv':
-  "\<lbrace>globals_equiv s and (\<lambda> s. fst p \<noteq> riscv_global_pt (arch_state s))\<rbrace>
-   set_cap cap p
-   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding set_cap_def
-  apply (simp only: split_def)
-  apply (wp set_object_globals_equiv hoare_vcg_all_lift get_object_wp | wpc | simp)+
-  apply (fastforce simp: obj_at_def is_tcb_def)
-  done
-
 lemma set_cap_globals_equiv[CNode_IF_assms]:
-  "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
+  "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
    set_cap cap p
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding set_cap_def
   apply (simp only: split_def)
   apply (wp set_object_globals_equiv hoare_vcg_all_lift get_object_wp | wpc | simp)+
-  apply (fastforce simp: is_tcb_def obj_at_def valid_arch_state_def
-                   dest: valid_global_arch_objs_pt_at)
+  apply (fastforce simp: valid_arch_state_def obj_at_def is_tcb_def
+                   dest: valid_global_arch_objs_pt_at)+
   done
 
 definition irq_at :: "nat \<Rightarrow> (irq \<Rightarrow> bool) \<Rightarrow> irq option" where
@@ -124,14 +114,22 @@ lemma dmo_getActiveIRQ_reads_respects[CNode_IF_assms]:
   notes gets_ev[wp del]
   shows "reads_respects aag l (invs and only_timer_irq_inv irq st)
                        (do_machine_op (getActiveIRQ in_kernel))"
-  apply (rule use_spec_ev)
-  apply (rule do_machine_op_spec_reads_respects')
+  apply (rule do_machine_op_reads_respects')
    apply (simp add: getActiveIRQ_def)
    apply (wp irq_state_increment_reads_respects_memory irq_state_increment_reads_respects_device
              gets_ev[where f="irq_oracle \<circ> irq_state"] equiv_valid_inv_conj_lift
              gets_irq_masks_equiv_valid modify_wp
           | simp add: no_irq_def)+
   apply (rule only_timer_irq_inv_determines_irq_masks, blast+)
+  done
+
+lemma dmo_getActiveIRQ_globals_equiv[CNode_IF_assms]:
+  "do_machine_op (getActiveIRQ in_kernel) \<lbrace>globals_equiv st\<rbrace>"
+  unfolding globals_equiv_def arch_globals_equiv_def idle_equiv_def
+  apply (rule hoare_weaken_pre)
+   apply wps
+   apply wpsimp
+  apply clarsimp
   done
 
 end
