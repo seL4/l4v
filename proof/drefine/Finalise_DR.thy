@@ -683,7 +683,7 @@ lemma dcorres_set_asid_pool:
 
 lemma dcorres_set_vm_root:
   "dcorres dc \<top> \<top> (return x) (set_vm_root rvd)"
-  apply (clarsimp simp: set_vm_root_def)
+  apply (clarsimp simp: set_vm_root_def set_global_pd_def)
   apply (rule dcorres_symb_exec_r)+
     apply (clarsimp simp:catch_def throwError_def)
     apply (rule corres_dummy_return_r)
