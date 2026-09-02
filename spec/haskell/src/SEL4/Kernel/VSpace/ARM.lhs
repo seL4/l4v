@@ -911,6 +911,23 @@ When switching threads, or after deleting an ASID or page directory, the kernel 
 
 If the current thread has no page directory, or if it has an invalid ASID, the hardware page directory register is set to the global page directory, which contains only kernel mappings. In this case it is not necessary to set the current ASID, since the valid mappings are all global.
 
+Switch to the global page directory on the reserved hardware ASID. Stale TLB entries may still
+exist under the previous hardware ASID, but no new ones can be added, and after the switch to the
+reserved hardware ASID only global kernel mappings are available from the TLB.
+
+> setGlobalPD :: Kernel ()
+> setGlobalPD = do
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     globalPD <- gets (armUSGlobalPD . ksArchState)
+#else
+>     globalPD <- gets (armKSGlobalPD . ksArchState)
+#endif
+>     doMachineOp $ do
+>         dsb
+>         setCurrentPD $ addrFromKPPtr globalPD
+>         isb
+>         setHardwareASID hwASIDReserved
+
 > setVMRoot :: PPtr TCB -> Kernel ()
 > setVMRoot tcb = do
 >     threadRootSlot <- getThreadVSpaceRoot tcb
@@ -932,12 +949,7 @@ If the current thread has no page directory, or if it has an invalid ASID, the h
 >                     capPDMappedASID = Just _,
 >                     capPDBasePtr = pd }) -> checkPDNotInASIDMap pd
 >                 _ -> return ()
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
->             globalPD <- gets (armUSGlobalPD . ksArchState)
-#else
->             globalPD <- gets (armKSGlobalPD . ksArchState)
-#endif
->             doMachineOp $ setCurrentPD $ addrFromKPPtr globalPD)
+>             setGlobalPD)
 
 When cleaning the cache by user virtual address on ARM11, the active address space must be the one that contains the mappings being cleaned. The following function is used to temporarily switch to a given page directory and ASID, in order to clean the cache. It returns "True" if the address space was not the same as the current one, in which case the caller must switch back to the current address space once the cache is clean.
 
@@ -1057,8 +1069,9 @@ Look for a free Hardware ASID.
 
 >     hwASIDTable <- gets (armKSHWASIDTable . ksArchState)
 >     nextASID <- gets (armKSNextASID . ksArchState)
+>     assert (nextASID /= hwASIDReserved) "nextASID must never be reserved"
 >     let maybe_asid = find (\a -> isNothing (hwASIDTable ! a))
->                       ([nextASID .. maxBound] ++ init [minBound .. nextASID])
+>                       ([nextASID .. maxBound] ++ init [hwASIDMin .. nextASID])
 
 If there is one, return it, otherwise revoke the next one in a strict
 round-robin.
@@ -1071,7 +1084,7 @@ round-robin.
 >             invalidateHWASIDEntry nextASID
 >             let new_nextASID =
 >                     if nextASID == maxBound
->                     then minBound
+>                     then hwASIDMin
 >                     else nextASID + 1
 >             modify (\s -> s {
 >                 ksArchState = (ksArchState s)
