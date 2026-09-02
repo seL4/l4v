@@ -12,7 +12,7 @@ context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for Bits_R locale *)
 
-crunch_ignore (add: setCurrentPD sendSGI)
+crunch_ignore (add: sendSGI)
 
 lemma atcbContext_get_eq[Arch_assms, simp]:
   "atcbContextGet (atcbContextSet x atcb) = x"

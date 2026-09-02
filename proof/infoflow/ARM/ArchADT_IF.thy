@@ -61,7 +61,7 @@ lemma dmo_getActiveIRQ_valid_irq_states[ADT_IF_assms,wp]:
   unfolding getActiveIRQ_def by wpsimp
 
 lemmas [wp] = invalidateLocalTLB_ASID_irq_masks cleanCaches_PoU_irq_masks
-              setHardwareASID_irq_masks set_current_pd_irq_masks
+              setHardwareASID_irq_masks write_ttbr0_ptr_irq_masks
 
 crunch prepare_thread_delete, arch_finalise_cap, arch_post_cap_deletion
   for valid_irq_states[ADT_IF_assms,wp]: "\<lambda>s :: det_state. valid_irq_states s"

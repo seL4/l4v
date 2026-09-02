@@ -3133,10 +3133,9 @@ lemma machine_op_lift_device_state[wp]:
               split: if_splits)
 
 crunch invalidateLocalTLB_ASID, invalidateLocalTLB_VAASID, setHardwareASID, isb, dsb,
-         set_current_pd, storeWord, cleanByVA_PoU, cleanL2Range
+         storeWord, cleanByVA_PoU, cleanL2Range
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
-  (simp: setCurrentPDPL2_def
-   ignore_del: invalidateLocalTLB_ASID invalidateLocalTLB_VAASID setHardwareASID isb
+  (ignore_del: invalidateLocalTLB_ASID invalidateLocalTLB_VAASID setHardwareASID isb
                dsb storeWord cleanByVA_PoU cleanL2Range)
 
 lemma as_user_inv:

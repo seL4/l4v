@@ -1407,10 +1407,6 @@ lemma cleanInvalidateCacheRange_RAM_underlying_memory[wp]:
   "cleanInvalidateCacheRange_RAM word1 word2 word3 \<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace>"
   by (clarsimp simp: cleanInvalidateCacheRange_RAM_def,wp)
 
-lemma isb_underlying_memory[wp]:
-  "\<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> isb \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
-  by (clarsimp simp: isb_def, wp)
-
 lemma do_flush_underlying_memory[wp]:
   "do_flush flush_type word1 word2 word3 \<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace>"
   unfolding do_flush_def by wpsimp

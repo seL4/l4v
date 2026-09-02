@@ -90,16 +90,17 @@ lemma integrity_arm_next_asid[iff]:
 crunch arm_context_switch
   for respects[wp]: "integrity X aag st"
   (simp: dmo_bind_valid dsb_def isb_def writeTTBR0_def invalidateLocalTLB_ASID_def
-         setHardwareASID_def set_current_pd_def ignore: do_machine_op)
+         setHardwareASID_def write_ttbr0_ptr_def ignore: do_machine_op)
 
 crunch set_vm_root
   for respects[wp]: "integrity X aag st"
-  (simp: set_current_pd_def isb_def dsb_def writeTTBR0_def dmo_bind_valid crunch_simps
+  (simp: write_ttbr0_ptr_def isb_def dsb_def writeTTBR0_def setHardwareASID_def dmo_bind_valid
+         crunch_simps
      wp: crunch_wps ignore: do_machine_op)
 
 crunch set_vm_root_for_flush
   for respects[wp]: "integrity X aag st"
-  (wp: crunch_wps simp: set_current_pd_def crunch_simps ignore: do_machine_op)
+  (wp: crunch_wps simp: write_ttbr0_ptr_def crunch_simps ignore: do_machine_op)
 
 crunch flush_table
   for respects[wp]: "integrity X aag st"

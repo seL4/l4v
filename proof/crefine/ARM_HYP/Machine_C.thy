@@ -19,11 +19,6 @@ instance virq_C :: array_inner_packed
   apply intro_classes
   by (simp add: size_of_def)
 
-definition (* FIXME ARMHYP REMOVE, missing machine (stub) *)
-  setCurrentPDPL2 :: "machine_word \<Rightarrow> unit machine_monad"
-where
-  "setCurrentPDPL2 = undefined"
-
 locale kernel_m = kernel +
 assumes resetTimer_ccorres:
   "ccorres dc xfdc \<top> UNIV []
@@ -54,11 +49,6 @@ assumes dmb_ccorres:
   "ccorres dc xfdc \<top> UNIV []
            (doMachineOp dmb)
            (Call dmb_'proc)"
-
-assumes setCurrentPDPL2_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr = addr \<rbrace>) []
-           (doMachineOp (setCurrentPDPL2 addr))
-           (Call setCurrentPDPL2_'proc)"
 
 assumes writeContextIDAndPD_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>id = ucast asid\<rbrace> \<union> \<lbrace> \<acute>pd_val = pd_val \<rbrace>) []
@@ -832,20 +822,6 @@ lemma cleanCaches_PoU_ccorres:
 lemma wrap_config_set_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call wrap_config_set_'proc \<lbrace>\<acute>ret__int = x_' s\<rbrace>"
   by (rule allI, rule conseqPre, vcg) clarsimp
-
-lemma setCurrentPD_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr = pd\<rbrace>) []
-           (doMachineOp (setCurrentPD pd))
-           (Call setCurrentPD_'proc)"
-  apply cinit'
-   apply (clarsimp simp: setCurrentPD_def doMachineOp_bind empty_fail_dsb empty_fail_isb
-                         setCurrentPDPL2_empty_fail empty_fail_cond
-                  intro!: ccorres_cond_empty)
-   apply csymbr (* config_set(CONFIG_ARM_HYPERVISOR_SUPPORT) *)
-   apply ccorres_rewrite
-   apply (ctac (no_vcg) add: setCurrentPDPL2_ccorres)
-  apply wpsimp
-  done
 
 end
 

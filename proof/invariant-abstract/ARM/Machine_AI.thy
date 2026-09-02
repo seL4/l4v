@@ -150,10 +150,8 @@ lemma no_fail_dmb: "no_fail \<top> dmb"
 lemma no_fail_writeTTBR0: "no_fail \<top> (writeTTBR0 w)"
   by (simp add: writeTTBR0_def)
 
-lemma no_fail_set_current_pd: "no_fail \<top> (set_current_pd w)"
-  apply (simp add: set_current_pd_def)
-  apply (rule no_fail_pre, wp no_fail_dsb no_fail_writeTTBR0 no_fail_isb, simp)
-  done
+lemma no_fail_write_ttbr0_ptr: "no_fail \<top> (write_ttbr0_ptr w)"
+  by (simp add: write_ttbr0_ptr_def no_fail_writeTTBR0)
 
 lemma no_fail_cleanByVA: "no_fail \<top> (cleanByVA w p)"
   by (simp add: cleanByVA_def)
@@ -537,10 +535,8 @@ lemma no_irq_modify:
   apply (clarsimp simp: in_monad)
   done
 
-lemma no_irq_set_current_pd: "no_irq (set_current_pd pd)"
-  apply (clarsimp simp: set_current_pd_def)
-  apply (wp no_irq_dsb no_irq_writeTTBR0 no_irq_isb)
-  done
+lemma no_irq_write_ttbr0_ptr: "no_irq (write_ttbr0_ptr pd)"
+  by (simp add: write_ttbr0_ptr_def no_irq_writeTTBR0)
 
 lemma no_irq_clearExMonitor: "no_irq clearExMonitor"
   apply (simp add: clearExMonitor_def)
@@ -648,6 +644,10 @@ lemma empty_fail_dsb: "empty_fail  dsb"
 
 lemma empty_fail_dmb: "empty_fail  dmb"
   by (simp add: dmb_def)
+
+lemma empty_fail_setHardwareASID[simp, intro!]:
+  "empty_fail (setHardwareASID hw_asid)"
+  by (simp add: setHardwareASID_def)
 
 lemma empty_fail_sendSGI:
   "empty_fail (sendSGI irq target)"
@@ -765,6 +765,26 @@ crunch handleSpuriousIRQ_mop
   (wp: no_fail_machine_state_rest_T ignore: handleSpuriousIRQ_impl)
 
 end
+
+text \<open>Lifting rules\<close>
+
+lemma dmo_machine_state_lift:
+  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P (machine_state s)\<rbrace> do_machine_op f \<lbrace>\<lambda>rv s. Q rv (machine_state s)\<rbrace>"
+  unfolding do_machine_op_def by wpsimp (erule use_valid; assumption)
+
+crunch do_machine_op
+  for user_frame[wp]: "\<lambda>s. P (in_user_frame p s)"
+
+lemma dmo_valid_machine_state[wp]:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (underlying_memory s)\<rbrace>"
+  shows "do_machine_op f \<lbrace>valid_machine_state\<rbrace>"
+  unfolding valid_machine_state_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift dmo_machine_state_lift assms)
+
+lemma dmo_valid_irq_states[wp]:
+  "(\<And>P. f \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>) \<Longrightarrow> do_machine_op f \<lbrace>valid_irq_states\<rbrace>"
+  unfolding valid_irq_states_def do_machine_op_def
+  by (wpsimp, erule use_valid; assumption)
 
 lemmas msgRegisters_A_unfold
   = msg_registers_def
