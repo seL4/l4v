@@ -1231,6 +1231,36 @@ end
 context kernel_m begin
 
 
+lemma hw_asid_full_wrapped_list:
+  "nextASID \<noteq> hw_asid_reserved \<Longrightarrow>
+   [nextASID .e. maxBound] @ hw_asid_reserved # butlast [hw_asid_min .e. nextASID] =
+   map (\<lambda>x. nextASID + (of_nat x)) [0 ..< 2 ^ LENGTH(hw_asid_len)]"
+  for nextASID :: hardware_asid
+  apply (prop_tac "Suc 0 \<le> unat nextASID")
+   apply (cases "unat nextASID"; simp add: unat_eq_0 hw_asid_reserved_def)
+  apply (simp add: maxBound_word hw_asid_min_def hw_asid_reserved_def init_eq_butlast)
+  apply (subst butlast_enum_Cons[where x=0, simplified])
+    apply (clarsimp simp: word_le_nat_alt)
+   apply simp
+  apply (cut_tac unat_lt2p[where 'a=hw_asid_len and x=nextASID])
+  apply (simp add: upto_enum_def unat_max_word split: if_split)
+  apply (rule nth_equalityI)
+   apply clarsimp
+  apply (clarsimp simp: nth_append not_less split: if_split)
+  done
+
+lemma find_nextASID_without_reserved_eq:
+  "nextASID \<noteq> hw_asid_reserved \<Longrightarrow>
+   find P ([nextASID .e. maxBound] @ butlast [hw_asid_min .e. nextASID]) =
+   find (\<lambda>a. P a \<and> a \<noteq> hw_asid_reserved)
+        (map (\<lambda>x. nextASID + (of_nat x)) [0 ..< 2 ^ LENGTH(hw_asid_len)])"
+  for nextASID :: hardware_asid
+  apply (subst find_drop_elem[symmetric, where y=hw_asid_reserved])
+  apply (simp add: hw_asid_full_wrapped_list)
+   apply (clarsimp simp: distinct_conv_nth of_nat_inj)
+  apply (simp add: hw_asid_full_wrapped_list)
+  done
+
 lemma findFreeHWASID_ccorres:
   "ccorres (=) ret__unsigned_char_'
        (valid_arch_state' and valid_pde_mappings') UNIV []
@@ -1239,58 +1269,54 @@ lemma findFreeHWASID_ccorres:
    apply csymbr
    apply (rule ccorres_pre_gets_armKSHWASIDTable_ksArchState)
    apply (rule ccorres_pre_gets_armKSNextASID_ksArchState)
-   apply (simp add: whileAnno_def case_option_find_give_me_a_map
-                    mapME_def
+   apply (rule ccorres_assert)
+   apply (simp only: init_eq_butlast)
+   apply (subst find_nextASID_without_reserved_eq, simp)
+   apply (simp add: whileAnno_def case_option_find_give_me_a_map mapME_def
                del: Collect_const map_append)
    apply (rule ccorres_splitE_novcg)
-       apply (subgoal_tac "[nextASID .e. maxBound] @ init [minBound .e. nextASID]
-                               = map (\<lambda>x. nextASID + (of_nat x)) [0 ..< 256]")
-        apply clarsimp
-        apply (rule_tac xf=hw_asid_offset_' and i=0
-                     and xf_update=hw_asid_offset_'_update
-                     and r'=dc and xf'=xfdc and Q=UNIV
-                     and F="\<lambda>n s. hwASIDTable = armKSHWASIDTable (ksArchState s)
-                                  \<and> nextASID = armKSNextASID (ksArchState s)
-                                  \<and> valid_arch_state' s"
-                   in ccorres_sequenceE_while_gen')
-              apply (rule ccorres_from_vcg_might_throw)
-              apply (rule allI, rule conseqPre, vcg)
-              apply (clarsimp simp: rf_sr_armKSNextASID)
-              apply (subst down_cast_same [symmetric],
-                     simp add: is_down_def target_size_def source_size_def word_size)+
-              apply (simp add: ucast_ucast_mask
-                               ucast_ucast_add ucast_and_mask
-                               ucast_of_nat_small asidInvalid_def
-                               word_sless_msb_less ucast_less[THEN order_less_le_trans]
-                               word_0_sle_from_less)
-              apply (simp add: word_sint_msb_eq not_msb_from_less word_of_nat_less
-                               trans[OF msb_nth nth_ucast] bang_big word_size
-                               uint_up_ucast is_up_def source_size_def
-                               target_size_def)
-              apply (rule conjI, rule order_trans[OF _ uint_add_ge0], simp)
-              apply (simp add: rf_sr_armKSASIDTable_rel'
-                               throwError_def return_def split: if_split)
-              apply (clarsimp simp: returnOk_def return_def)
-              apply (uint_arith, simp add: take_bit_nat_def unsigned_of_nat)
-             apply (simp add: mask_def)
-             apply unat_arith
-            apply (rule conseqPre, vcg)
-            apply clarsimp
-           apply simp
-           apply (rule hoare_pre, wp)
-           apply simp
+       apply (rule_tac xf=hw_asid_offset_' and i=0
+                   and xf_update=hw_asid_offset_'_update
+                   and r'=dc and xf'=xfdc and Q=UNIV
+                   and F="\<lambda>n s. hwASIDTable = armKSHWASIDTable (ksArchState s)
+                                \<and> nextASID = armKSNextASID (ksArchState s)
+                                \<and> valid_arch_state' s"
+                 in ccorres_sequenceE_while_gen')
+             apply (rule ccorres_from_vcg_might_throw)
+             apply (rule allI, rule conseqPre, vcg)
+             apply (clarsimp simp: rf_sr_armKSNextASID)
+             apply (subst down_cast_same [symmetric, where 'b=hw_asid_len],
+                    simp add: is_down_def target_size_def source_size_def word_size)+
+             apply (simp add: ucast_ucast_mask
+                              ucast_ucast_add ucast_and_mask
+                              ucast_of_nat_small asidInvalid_def
+                              word_sless_msb_less ucast_less[THEN order_less_le_trans]
+                              word_0_sle_from_less)
+             apply (simp add: word_sint_msb_eq not_msb_from_less word_of_nat_less
+                              trans[OF msb_nth nth_ucast] bang_big word_size
+                              uint_up_ucast is_up_def source_size_def
+                              target_size_def)
+             apply (rule conjI, rule order_trans[OF _ uint_add_ge0], simp)
+             apply (simp add: rf_sr_armKSASIDTable_rel'
+                              throwError_def return_def split: if_split)
+             apply (clarsimp simp: returnOk_def return_def hw_asid_reserved_def
+                                   Kernel_C.hwASIDReserved_def)
+             apply (rename_tac s)
+             apply (cut_tac x="armKSNextASID_' (globals s)" in uint_lt2p)
+             apply (clarsimp simp: uint_of_nat_less ucast_eq_0 is_up take_bit_nat_def
+                                   unsigned_of_nat)
+             apply uint_arith
+             apply fastforce
+            apply (simp add: mask_def)
+            apply unat_arith
+           apply (rule conseqPre, vcg)
+           apply clarsimp
+          apply simp
+          apply (rule hoare_pre, wp)
           apply simp
          apply simp
         apply simp
-
-       apply (cut_tac x=nextASID in leq_maxBound[unfolded word_le_nat_alt])
-       apply (simp add: minBound_word init_def maxBound_word minus_one_norm)
-       apply (simp add: upto_enum_word)
-       apply (rule nth_equalityI)
-        apply (simp del: upt.simps)
-       apply (simp del: upt.simps)
-       apply (simp add: nth_append
-                 split: if_split)
+       apply simp
 
       apply ceqv
      apply (rule ccorres_assert)
@@ -1323,14 +1349,17 @@ lemma findFreeHWASID_ccorres:
                              cmachine_state_relation_def)
             apply (subst down_cast_same [symmetric],
               simp add: is_down_def target_size_def source_size_def word_size)+
-            apply (clarsimp simp: maxBound_word minBound_word
+            apply (clarsimp simp: maxBound_word
                                   ucast_ucast_add minus_one_norm
                            split: if_split)
             apply (simp add: word_sint_msb_eq uint_up_ucast word_size
                              msb_nth nth_ucast bang_big is_up_def source_size_def
-                             target_size_def)
-            apply uint_arith
-            subgoal by simp
+                             target_size_def hw_asid_min_def Kernel_C.hwASIDMin_def
+                             Kernel_C.hwASIDReserved_def)
+            apply clarsimp
+            apply (rename_tac s)
+            apply (cut_tac x="armKSNextASID_' (globals s)" in uint_lt2p)
+            apply (clarsimp simp: ucast_eq_0 is_up word_wrap_eq_max_word)
            apply wp
           apply vcg
          apply simp
@@ -1340,9 +1369,9 @@ lemma findFreeHWASID_ccorres:
        apply vcg
       apply (rule conseqPre, vcg)
       apply clarsimp
-     apply (drule_tac x=nextASID in bspec, simp)
+     apply (drule_tac x="0" in bspec, simp)
      apply clarsimp
-     apply (clarsimp simp: rf_sr_armKSNextASID
+     apply (clarsimp simp: rf_sr_armKSNextASID hw_asid_reserved_def
                            rf_sr_armKSASIDTable_rel'
                            valid_arch_state'_def
                            valid_asid_map'_def
@@ -1354,8 +1383,7 @@ lemma findFreeHWASID_ccorres:
      apply simp
     apply (fold mapME_def)
     apply (wp mapME_wp')
-    apply (rule hoare_pre, wp)
-    apply simp
+    apply wpsimp
    apply (clarsimp simp: guard_is_UNIV_def)
   apply simp
   done
@@ -2537,6 +2565,22 @@ lemma invs_no_cicd_sym_hyp' [elim!]:
   "invs_no_cicd' s \<Longrightarrow> sym_refs (state_hyp_refs_of' s)"
   by (simp add: invs_no_cicd'_def valid_state'_def)
 
+lemma setGlobalPD_ccorres:
+  "ccorres dc xfdc \<top> UNIV [] setGlobalPD (Call setGlobalPD_'proc)"
+  apply (cinit')
+   apply (simp add: setGlobalPD_def doMachineOp_bind empty_fail_dsb empty_fail_isb
+                    doMachineOp_bind_dist)
+   apply (rule ccorres_pre_gets_armUSGlobalPD_ksArchState)
+   apply (ctac (no_vcg) add: dsb_ccorres)
+    apply (rule ccorres_h_t_valid_armUSGlobalPD)
+    apply csymbr
+    apply (ctac (no_vcg) add: setCurrentPD_ccorres)
+     apply (ctac (no_vcg) add: isb_ccorres)
+      apply (ctac (no_vcg) add: setHardwareASID_ccorres)
+     apply wp+
+  apply (clarsimp simp: hw_asid_reserved_def Kernel_C.hwASIDReserved_def rf_sr_armUSGlobalPD)
+  done
+
 lemma setVMRoot_ccorres:
   "ccorres dc xfdc
       (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' thread)
@@ -2555,12 +2599,8 @@ lemma setVMRoot_ccorres:
       apply (rule ccorres_cond_true_seq)
       apply (rule ccorres_rhs_assoc)
       apply (simp add: throwError_def catch_def)
-      apply (rule ccorres_rhs_assoc)+
-      apply (rule ccorres_h_t_valid_armUSGlobalPD)
-      apply csymbr
-      apply (rule ccorres_pre_gets_armUSGlobalPD_ksArchState)
       apply (rule ccorres_add_return2)
-      apply (ctac (no_vcg) add: setCurrentPD_ccorres)
+      apply (ctac (no_vcg) add: setGlobalPD_ccorres)
        apply (rule ccorres_split_throws)
         apply (rule ccorres_return_void_C)
        apply vcg
@@ -2576,11 +2616,8 @@ lemma setVMRoot_ccorres:
       apply (simp add: cap_case_isPageDirectoryCap cong: if_cong)
       apply (simp add: throwError_def catch_def)
       apply (rule ccorres_rhs_assoc)+
-      apply (rule ccorres_h_t_valid_armUSGlobalPD)
-      apply csymbr
-      apply (rule ccorres_pre_gets_armUSGlobalPD_ksArchState)
       apply (rule ccorres_add_return2)
-      apply (ctac (no_vcg) add: setCurrentPD_ccorres)
+      apply (ctac (no_vcg) add: setGlobalPD_ccorres)
        apply (rule ccorres_split_throws)
         apply (rule ccorres_return_void_C)
        apply vcg
@@ -2606,12 +2643,9 @@ lemma setVMRoot_ccorres:
          apply (simp add: whenE_def throwError_def
                           checkPDNotInASIDMap_def checkPDASIDMapMembership_def)
          apply (rule ccorres_stateAssert)
-         apply (rule ccorres_pre_gets_armUSGlobalPD_ksArchState)
          apply (rule ccorres_rhs_assoc)+
-         apply (rule ccorres_h_t_valid_armUSGlobalPD)
-         apply csymbr
          apply (rule ccorres_add_return2)
-         apply (ctac(no_vcg) add: setCurrentPD_ccorres)
+         apply (ctac(no_vcg) add: setGlobalPD_ccorres)
           apply (rule ccorres_split_throws)
            apply (rule ccorres_return_void_C)
           apply vcg
@@ -2624,11 +2658,8 @@ lemma setVMRoot_ccorres:
        apply (simp add: checkPDNotInASIDMap_def checkPDASIDMapMembership_def)
        apply (rule ccorres_stateAssert)
        apply (rule ccorres_rhs_assoc)+
-       apply (rule ccorres_pre_gets_armUSGlobalPD_ksArchState)
-       apply (rule ccorres_h_t_valid_armUSGlobalPD)
-       apply csymbr
        apply (rule ccorres_add_return2)
-       apply (ctac(no_vcg) add: setCurrentPD_ccorres)
+       apply (ctac(no_vcg) add: setGlobalPD_ccorres)
         apply (rule ccorres_split_throws)
          apply (rule ccorres_return_void_C)
         apply vcg
