@@ -272,15 +272,14 @@ find_free_hw_asid :: "(hardware_asid,'z::state_ext) s_monad" where
     hw_asid_table \<leftarrow> gets (arm_hwasid_table \<circ> arch_state);
     next_asid \<leftarrow> gets (arm_next_asid \<circ> arch_state);
     maybe_asid \<leftarrow> return (find (\<lambda>a. hw_asid_table a = None)
-                    (take (length [minBound :: hardware_asid .e. maxBound])
-                        ([next_asid .e. maxBound] @ [minBound .e. next_asid])));
+                    ([next_asid .e. maxBound] @ butlast [hw_asid_min .e. next_asid]));
     (case maybe_asid of
        Some hw_asid \<Rightarrow> return hw_asid
      | None \<Rightarrow>  do
             invalidate_asid $ the $ hw_asid_table next_asid;
             do_machine_op $ invalidateLocalTLB_ASID next_asid;
             invalidate_hw_asid_entry next_asid;
-            new_next_asid \<leftarrow> return (next_asid + 1);
+            new_next_asid \<leftarrow> return (if next_asid = maxBound then hw_asid_min else next_asid + 1);
             modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> arm_next_asid := new_next_asid \<rparr>\<rparr>);
             return next_asid
        od)
@@ -652,6 +651,15 @@ where
 
 (* end of vcpu related definitions *)
 
+text \<open>Switch to the global user page directory on the reserved hardware ASID. Only global
+kernel mappings are available from the TLB afterwards.\<close>
+definition
+  set_global_pd :: "(unit,'z::state_ext) s_monad" where
+  "set_global_pd \<equiv> do
+     global_us_pd \<leftarrow> gets (arm_us_global_pd \<circ> arch_state);
+     do_machine_op $ writeContextIDAndPD hw_asid_reserved (addrFromKPPtr global_us_pd)
+   od"
+
 text \<open>Switch into the address space of a given thread or the global address
 space if none is correctly configured.\<close>
 definition
@@ -666,10 +674,7 @@ definition
            liftE $ arm_context_switch pd asid
        odE
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
-    (\<lambda>_. do
-       global_us_pd \<leftarrow> gets (arm_us_global_pd o arch_state);
-       do_machine_op $ set_current_pd $ addrFromKPPtr global_us_pd
-    od)
+    (\<lambda>_. set_global_pd)
 od"
 
 text \<open>Before deleting an ASID pool object we must deactivate all page

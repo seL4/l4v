@@ -54,7 +54,7 @@ definition
   "init_arch_state \<equiv> \<lparr>
     arm_asid_table = Map.empty,
     arm_hwasid_table = Map.empty,
-    arm_next_asid = 0,
+    arm_next_asid = hw_asid_min,
     arm_asid_map = Map.empty,
     arm_global_pd = init_global_pd,
     arm_global_pts = [],

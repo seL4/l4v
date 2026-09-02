@@ -19,7 +19,7 @@ This module contains the architecture-specific kernel global data for the ARM ar
 > import Prelude hiding (Word)
 > import SEL4.Machine
 > import SEL4.Machine.Hardware.ARM
->     (HardwareASID(..), PTE(..), PDE(..), ptBits, pdBits)
+>     (HardwareASID(..), PTE(..), PDE(..), ptBits, pdBits, hwASIDMin)
 > import SEL4.Object.Structures.ARM
 
 > import Data.Array
@@ -88,7 +88,7 @@ FIXME ARMHYP_SMMU ARMHYP missing IO ASID to PD map for SMMU
 >         state = ARMKernelState {
 >             armKSASIDTable = funPartialArray (const Nothing) (0, (1 `shiftL` asidHighBits) - 1),
 >             armKSHWASIDTable = funArray (const Nothing),
->             armKSNextASID = minBound,
+>             armKSNextASID = hwASIDMin,
 >             armKSASIDMap = funPartialArray (const Nothing) asidRange,
 >             armKSGlobalPD = ptrFromPAddr globalPD,
 >             armKSGlobalPTs = map ptrFromPAddr
@@ -115,7 +115,7 @@ FIXME ARMHYP ok, someone needs to explain how this actually works before it gets
 >         state = ARMKernelState {
 >             armKSASIDTable = funPartialArray (const Nothing) (0, (1 `shiftL` asidHighBits) - 1),
 >             armKSHWASIDTable = funArray (const Nothing),
->             armKSNextASID = minBound,
+>             armKSNextASID = hwASIDMin,
 >             armKSASIDMap = funPartialArray (const Nothing) asidRange,
 >             armHSCurVCPU = Nothing,
 >             armKSGICVCPUNumListRegs = error "FIXME ARMHYP read from platform",
