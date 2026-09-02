@@ -206,7 +206,7 @@ lemma dmo_mol_exclusive_state[wp]:
 crunch set_vm_root
   for exclusive_state[wp]: "\<lambda>s. P (exclusive_state (machine_state s))"
   (ignore: do_machine_op
-     simp: invalidateLocalTLB_ASID_def setHardwareASID_def set_current_pd_def dsb_def isb_def
+     simp: invalidateLocalTLB_ASID_def setHardwareASID_def write_ttbr0_ptr_def dsb_def isb_def
            writeTTBR0_def dmo_bind_valid crunch_simps)
 
 lemma set_vm_root_arch_scheduler_affects_equiv[wp]:

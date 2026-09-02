@@ -764,6 +764,14 @@ definition arch_tcb_live :: "arch_tcb \<Rightarrow> bool" where
 definition valid_cur_fpu :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_cur_fpu \<equiv> \<top>"
 
+definition valid_next_asid_2 :: "hardware_asid \<Rightarrow> bool" where
+  "valid_next_asid_2 hw_asid \<equiv> hw_asid \<noteq> hw_asid_reserved"
+
+locale_abbrev valid_next_asid :: "'z::state_ext state \<Rightarrow> bool" where
+  "valid_next_asid s \<equiv> valid_next_asid_2 (arm_next_asid (arch_state s))"
+
+lemmas valid_next_asid_def = valid_next_asid_2_def
+
 definition
   valid_arch_state :: "'z::state_ext state \<Rightarrow> bool"
 where
@@ -771,6 +779,7 @@ where
   valid_asid_table (arm_asid_table (arch_state s)) s \<and>
   page_directory_at (arm_global_pd (arch_state s)) s \<and>
   valid_global_pts s \<and>
+  valid_next_asid s \<and>
   is_inv (arm_hwasid_table (arch_state s))
              (option_map fst o arm_asid_map (arch_state s))"
 

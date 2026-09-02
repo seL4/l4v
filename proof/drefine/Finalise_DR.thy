@@ -517,6 +517,10 @@ lemma dsb_underlying_memory[wp]: "\<lbrace>\<lambda>ms. underlying_memory ms = m
   apply (clarsimp simp: dsb_def, wp)
 done
 
+lemma isb_underlying_memory[wp]:
+  "\<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> isb \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
+  by (clarsimp simp: isb_def, wp)
+
 lemma invalidate_I_PoU_underlying_memory[wp]: "\<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> invalidate_I_PoU \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
   apply (clarsimp simp: invalidate_I_PoU_def , wp)
 done
@@ -582,9 +586,9 @@ lemma invalidate_hw_asid_entry_dwp[wp]:
   apply (clarsimp simp:transform_def transform_objects_def2 transform_current_thread_def transform_cdt_def transform_asid_table_def)
 done
 
-lemma set_current_pd_dwp[wp]:
-  " \<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> set_current_pd paddr \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
-  by (clarsimp simp:set_current_pd_def writeTTBR0_def isb_def dsb_def,wp)
+lemma write_ttbr0_ptr_dwp[wp]:
+  "\<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> write_ttbr0_ptr paddr \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
+  by (clarsimp simp: write_ttbr0_ptr_def writeTTBR0_def, wp)
 
 lemma set_hardware_asid_dwp[wp]:
   " \<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> setHardwareASID hw_asid \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
@@ -683,7 +687,7 @@ lemma dcorres_set_asid_pool:
 
 lemma dcorres_set_vm_root:
   "dcorres dc \<top> \<top> (return x) (set_vm_root rvd)"
-  apply (clarsimp simp: set_vm_root_def)
+  apply (clarsimp simp: set_vm_root_def set_global_pd_def)
   apply (rule dcorres_symb_exec_r)+
     apply (clarsimp simp:catch_def throwError_def)
     apply (rule corres_dummy_return_r)

@@ -3648,6 +3648,12 @@ lemma doMachineOp_bind:
  "\<lbrakk> empty_fail a; \<And>x. empty_fail (b x) \<rbrakk> \<Longrightarrow> doMachineOp (a >>= b) = (doMachineOp a >>= (\<lambda>rv. doMachineOp (b rv)))"
   by (blast intro: submonad_bind submonad_doMachineOp)
 
+lemma doMachineOp_bind_dist:
+  "doMachineOp (f >>= g) = (doMachineOp f >>= (\<lambda>x. doMachineOp (g x)))"
+  by (fastforce simp: doMachineOp_def gets_def get_def select_f_def
+                      modify_def put_def return_def bind_def
+               split: prod.splits)
+
 lemma zipWithM_x_corres:
   assumes x: "\<And>x x' y y'. ((x, y), (x', y')) \<in> S \<Longrightarrow> corres dc P P' (f x y) (f' x' y')"
   assumes y: "\<And>x x' y y'. ((x, y), (x', y')) \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x y \<lbrace>\<lambda>rv. P\<rbrace>"

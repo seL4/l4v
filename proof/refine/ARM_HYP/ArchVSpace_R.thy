@@ -376,6 +376,18 @@ lemma invalidateHWASIDEntry_corres:
       apply (wp | clarsimp)+
   done
 
+lemma hwASIDMin_hw_asid_min[simp]:
+  "hwASIDMin = hw_asid_min"
+  by (simp add: hwASIDMin_def hw_asid_min_def)
+
+lemma hwASIDReserved_hw_asid_reserved[simp]:
+  "hwASIDReserved = hw_asid_reserved"
+  by (simp add: hwASIDReserved_def hw_asid_reserved_def)
+
+lemma armKSNextASID_cross:
+  "(s, s') \<in> state_relation \<Longrightarrow> armKSNextASID (ksArchState s') = arm_next_asid (arch_state s)"
+  by (simp add: state_relation_def arch_state_relation_def)
+
 lemma findFreeHWASID_corres:
   "corres (=)
           (valid_asid_map and valid_vspace_objs
@@ -385,42 +397,34 @@ lemma findFreeHWASID_corres:
               and valid_global_objs)
           (pspace_aligned' and pspace_distinct' and no_0_obj')
           find_free_hw_asid findFreeHWASID"
-  apply (simp add: find_free_hw_asid_def findFreeHWASID_def)
-  apply (rule corres_guard_imp)
+  apply (simp add: find_free_hw_asid_def findFreeHWASID_def init_eq_butlast)
+  apply (rule stronger_corres_guard_imp)
     apply (rule corres_split_eqr[OF corres_trivial])
        apply (clarsimp simp: arch_state_relation_def state_relation_def)
       apply (rule corres_split_eqr[OF corres_trivial])
          apply (clarsimp simp: arch_state_relation_def state_relation_def)
-        apply (subgoal_tac "take (length [minBound .e. maxBound :: hardware_asid])
-                              ([next_asid .e. maxBound] @ [minBound .e. next_asid])
-                              = [next_asid .e. maxBound] @ init [minBound .e. next_asid]")
-         apply (cut_tac option="find (\<lambda>a. hw_asid_table a = None)
-           ([next_asid .e. maxBound] @ init [minBound .e. next_asid])"
-                   in option.nchotomy[rule_format])
-         apply (erule corres_disj_division)
-          apply (clarsimp split del: if_split)
-          apply (rule corres_split[OF invalidate_asid_ext_corres])
-            apply (rule corres_underlying_split [where r'=dc])
-               apply (rule corres_trivial, rule corres_machine_op)
-               apply (rule corres_no_failI)
-                apply (rule no_fail_invalidateLocalTLB_ASID)
-               apply fastforce
-              apply (rule corres_split)
-                 apply (rule invalidateHWASIDEntry_corres)
-                apply (rule corres_split)
-                   apply (rule corres_trivial)
-                   apply (rule corres_modify)
-                   apply (simp add: minBound_word maxBound_word
-                                    state_relation_def arch_state_relation_def)
+        apply (rule corres_assert_assume_r)
+        apply (cut_tac option="find (\<lambda>a. hw_asid_table a = None)
+                               ([next_asid .e. maxBound] @ butlast [hw_asid_min .e. next_asid])"
+                       in option.nchotomy[rule_format])
+        apply (erule corres_disj_division)
+         apply (clarsimp split del: if_split)
+         apply (rule corres_split[OF invalidate_asid_ext_corres])
+           apply (rule corres_underlying_split [where r'=dc])
+              apply (rule corres_trivial, rule corres_machine_op)
+              apply (rule corres_no_failI)
+               apply (rule no_fail_invalidateLocalTLB_ASID)
+              apply fastforce
+             apply (rule corres_split)
+                apply (rule invalidateHWASIDEntry_corres)
+               apply (rule corres_split)
                   apply (rule corres_trivial)
-                  apply simp
-                 apply (wp | simp split del: if_split)+
-         apply (rule corres_trivial, clarsimp)
-        apply (cut_tac x=next_asid in leq_maxBound)
-        apply (simp only: word_le_nat_alt)
-        apply (simp add: init_def upto_enum_word
-                         minBound_word
-                    del: upt.simps)
+                  apply (rule corres_modify)
+                  apply (simp add: state_relation_def arch_state_relation_def)
+                 apply (rule corres_trivial)
+                 apply simp
+                apply (wp | simp split del: if_split)+
+        apply (rule corres_trivial, clarsimp)
        apply wp+
    apply (clarsimp dest!: findNoneD)
    apply (drule bspec, rule UnI1, simp, rule order_refl)
@@ -432,7 +436,7 @@ lemma findFreeHWASID_corres:
     apply (drule subsetD, erule domI)
     apply simp
    apply fastforce
-  apply clarsimp
+  apply (clarsimp simp: armKSNextASID_cross valid_arch_state_def valid_next_asid_def)
   done
 
 crunch findFreeHWASID
@@ -1103,20 +1107,6 @@ lemma vcpuSwitch_corres':
   apply (rule aligned_distinct_relation_vcpu_atI'; assumption)
   done
 
-lemma no_fail_setCurrentPDPL2: "no_fail \<top> (setCurrentPDPL2 w)"
-  by (simp add: set_current_pd_def setCurrentPDPL2_def)
-
-lemma setCurrentPD_corres:
-  "addr = addr' \<Longrightarrow> corres dc \<top> \<top> (do_machine_op (set_current_pd addr)) (doMachineOp (setCurrentPD addr'))"
-  apply (simp add: setCurrentPD_def set_current_pd_def)
-  apply (rule corres_machine_op)
-  apply (rule corres_guard_imp)
-    apply (rule corres_rel_imp)
-     apply (rule corres_underlying_trivial)
-    apply (rule no_fail_setCurrentPDPL2)
-    apply simp+
-  done
-
 crunch armv_contextSwitch
   for tcb_at'[wp]: "tcb_at' t"
 crunch armv_contextSwitch
@@ -1135,23 +1125,25 @@ lemma setVMRoot_corres:
              (no_0_obj')
              (set_vm_root t) (setVMRoot t)"
 proof -
+  have P: "corres dc \<top> \<top> set_global_pd setGlobalPD"
+    apply (simp add: set_global_pd_def setGlobalPD_def)
+    apply (rule corres_underlying_split[where P=\<top> and P'=\<top> and r'="(=)"])
+       apply (clarsimp simp: state_relation_def arch_state_relation_def)
+      apply clarsimp
+      apply (rule corres_machine_op)
+      apply (rule corres_rel_imp)
+       apply (rule corres_underlying_trivial)
+       apply (wpsimp wp: no_fail_writeContextIDAndPD)+
+    done
   have Q: "\<And>P P'. corres dc P P'
-        (throwError ExceptionTypes_A.lookup_failure.InvalidRoot <catch>
-         (\<lambda>_. do global_us_pd \<leftarrow> gets (arm_us_global_pd \<circ> arch_state);
-                 do_machine_op $ set_current_pd $ addrFromKPPtr global_us_pd
-              od))
-        (throwError Fault_H.lookup_failure.InvalidRoot <catch>
-         (\<lambda>_ . do globalPD \<leftarrow> gets (armUSGlobalPD \<circ> ksArchState);
-                  doMachineOp $ setCurrentPD $ addrFromKPPtr globalPD
-               od))"
+        (throwError ExceptionTypes_A.lookup_failure.InvalidRoot <catch> (\<lambda>_. set_global_pd))
+        (throwError Fault_H.lookup_failure.InvalidRoot <catch> (\<lambda>_. setGlobalPD))"
     apply (rule corres_guard_imp)
       apply (rule corres_split_catch [where f=lfr])
          apply (rule corres_trivial)
          apply (subst corres_throwError, simp add: lookup_failure_map_def)
-        apply (rule corres_underlying_split [where P=\<top> and P'=\<top> and r'="(=)"])
-           apply (clarsimp simp: state_relation_def arch_state_relation_def)
-          apply (simp, rule setCurrentPD_corres, rule refl)
-         apply wpsimp+
+        apply (simp, rule P)
+       apply wpsimp+
     done
   have valid_tcb_vcpu: "\<And>s t p v.\<lbrakk> valid_tcb p t s; tcb_vcpu (tcb_arch t) = Some v \<rbrakk>
                         \<Longrightarrow> vcpu_at v s"
@@ -1211,10 +1203,7 @@ proof -
                                     and valid_vspace_objs
                                     and valid_arch_state"
                           in corres_stateAssert_implied)
-               apply (rule corres_underlying_split [where P=\<top> and P'=\<top> and r'="(=)"])
-                  apply (clarsimp simp: state_relation_def arch_state_relation_def)
-                 apply (rule setCurrentPD_corres, simp)
-                apply wp+
+               apply (rule P)
               apply (clarsimp simp: restrict_map_def state_relation_asid_map
                              elim!: ranE)
               apply (frule(1) valid_asid_mapD)
@@ -3283,27 +3272,26 @@ lemma armv_contextSwitch_invs_no_cicd':
     apply (clarsimp simp: machine_op_lift_def machine_rest_lift_def split_def armv_ctxt_sw_defs | wp)+
   done
 
-lemma no_irq_setCurrentPD: "no_irq (setCurrentPD addr)"
-  by (simp add: setCurrentPD_def setCurrentPDPL2_def)
-
-lemma dmo_setCurrentPD_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (setCurrentPD addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_setCurrentPD no_irq)
-  apply clarsimp
+lemma setGlobalPD_invs'[wp]:
+  "setGlobalPD \<lbrace>invs'\<rbrace>"
+  apply (simp add: setGlobalPD_def)
+  apply (wpsimp wp: dmo_invs' no_irq_writeContextIDAndPD no_irq)
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (clarsimp simp: setCurrentPD_def machine_op_lift_def writeTTBR0_def dsb_def isb_def
-                        setCurrentPDPL2_def machine_rest_lift_def split_def | wp)+
+                   in use_valid)
+    apply (clarsimp simp: writeContextIDAndPD_def machine_op_lift_def machine_rest_lift_def
+                          split_def
+           | wp)+
   done
 
-lemma dmo_setCurrentPD_invs_no_cicd':
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (setCurrentPD addr) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wp dmo_invs_no_cicd' no_irq_setCurrentPD no_irq)
-  apply clarsimp
+lemma setGlobalPD_invs_no_cicd':
+  "setGlobalPD \<lbrace>invs_no_cicd'\<rbrace>"
+  apply (simp add: setGlobalPD_def)
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_writeContextIDAndPD no_irq)
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (clarsimp simp: setCurrentPD_def machine_op_lift_def writeTTBR0_def dsb_def isb_def
-                        machine_rest_lift_def split_def setCurrentPDPL2_def| wp)+
+                   in use_valid)
+    apply (clarsimp simp: writeContextIDAndPD_def machine_op_lift_def machine_rest_lift_def
+                          split_def
+           | wp)+
   done
 
 crunch storeWordUser, armv_contextSwitch, doMachineOp
@@ -3329,7 +3317,7 @@ lemma vcpuSwitch_ksQ[wp]:
 
 lemma setVMRoot_ksQ[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> setVMRoot param_a \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
-  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
+  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def setGlobalPD_def)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps | wpcw
           | simp add: if_apply_def2 checkPDNotInASIDMap_def split del: if_split)+
@@ -4125,7 +4113,7 @@ lemma setVMRoot_valid_arch_state'[wp]:
   "\<lbrace>valid_arch_state' and live_vcpu_at_tcb p\<rbrace>
      setVMRoot p
    \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
-  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
+  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def setGlobalPD_def)
   apply ((wpsimp wp: hoare_vcg_ex_lift hoare_drop_imps
                     getObject_tcb_wp valid_case_option_post_wp'
                simp: if_apply_def2
@@ -4187,7 +4175,7 @@ lemma setVMRoot_invs_no_cicd'[wp]:
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
    apply (wp hoare_drop_imps getObject_tcb_hyp_sym_refs
              armv_contextSwitch_invs_no_cicd' getHWASID_invs_no_cicd'
-             dmo_setCurrentPD_invs_no_cicd'
+             setGlobalPD_invs_no_cicd'
           | wpcw
           | simp add: if_apply_def2 checkPDNotInASIDMap_def split del: if_split)+
   done
@@ -4849,8 +4837,8 @@ lemma dmo_cleanCaches_PoU_invs'[wp]:
 crunch unmapPageTable
   for invs'[wp]: "invs'"
   (ignore: storePDE doMachineOp
-       wp: dmo_invalidateLocalTLB_VAASID_invs' dmo_setCurrentPD_invs'
-           storePDE_Invalid_invs mapM_wp' no_irq_setCurrentPD
+       wp: dmo_invalidateLocalTLB_VAASID_invs'
+           storePDE_Invalid_invs mapM_wp'
            crunch_wps
      simp: crunch_simps)
 

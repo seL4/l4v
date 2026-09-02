@@ -119,7 +119,7 @@ global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
 context Arch begin arch_global_naming
 
 crunch maskInterrupt, empty_slot,
-    setHardwareASID, set_current_pd, finalise_cap, preemption_point,
+    setHardwareASID, write_ttbr0_ptr, finalise_cap, preemption_point,
     cap_swap_for_delete, decode_invocation
   for (empty_fail) empty_fail[wp, Arch_assms]
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
