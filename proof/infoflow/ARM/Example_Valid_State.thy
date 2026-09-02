@@ -831,7 +831,7 @@ definition machine_state0 :: "machine_state" where
 
 definition arch_state0 :: "arch_state" where
   "arch_state0 \<equiv> \<lparr>arm_asid_table = Map.empty,
-                  arm_hwasid_table = Map.empty, arm_next_asid = 0, arm_asid_map = Map.empty,
+                  arm_hwasid_table = Map.empty, arm_next_asid = hw_asid_min, arm_asid_map = Map.empty,
                   arm_global_pd = init_global_pd, arm_global_pts = [],
                   arm_kernel_vspace =
        \<lambda>ref. if ref \<in> {init_objs_base..init_objs_base + mask 20} then ArmVSpaceKernelWindow
@@ -1547,7 +1547,7 @@ lemma valid_arch_state_s0[simp]:
   "valid_arch_state s0_internal"
   apply (clarsimp simp: valid_arch_state_def s0_internal_def arch_state0_def)
   apply (intro conjI)
-      apply (clarsimp simp: obj_at_def kh0_def)
+     apply (clarsimp simp: obj_at_def kh0_def)
      apply (simp add: valid_asid_table_def)
     apply (clarsimp simp: obj_at_def kh0_def a_type_def)
    apply (simp add: valid_global_pts_def)

@@ -94,7 +94,8 @@ crunch arm_context_switch
 
 crunch set_vm_root
   for respects[wp]: "integrity X aag st"
-  (simp: set_current_pd_def isb_def dsb_def writeTTBR0_def dmo_bind_valid crunch_simps
+  (simp: set_current_pd_def isb_def dsb_def writeTTBR0_def setHardwareASID_def dmo_bind_valid
+         crunch_simps
      wp: crunch_wps ignore: do_machine_op)
 
 crunch set_vm_root_for_flush
