@@ -204,7 +204,7 @@ definition
   | PageDirectoryObj \<Rightarrow> PageDirectory (\<lambda>x. InvalidPDE)
   | ASIDPoolObj \<Rightarrow> ASIDPool (\<lambda>_. None)"
 
-type_synonym hw_asid = word8
+type_synonym hw_asid = "hw_asid_len word"
 
 type_synonym arm_vspace_region_uses = "vspace_ref \<Rightarrow> arm_vspace_region_use"
 
