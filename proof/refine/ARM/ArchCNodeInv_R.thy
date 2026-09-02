@@ -271,7 +271,7 @@ crunch Arch_finaliseCap, prepareThreadDelete
   (wp: crunch_wps unless_wp getASID_wp no_irq
        no_irq_invalidateLocalTLB_ASID no_irq_setHardwareASID
        no_irq_set_current_pd no_irq_invalidateLocalTLB_VAASID
-       no_irq_cleanByVA_PoU
+       no_irq_cleanByVA_PoU no_irq_dsb no_irq_isb
    simp: crunch_simps armv_contextSwitch_HWASID_def o_def setCurrentPD_to_abs
    rule: ARM_H.finaliseCap_def)
 
