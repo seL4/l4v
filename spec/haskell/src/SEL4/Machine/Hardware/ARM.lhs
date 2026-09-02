@@ -45,6 +45,19 @@ The machine monad contains a platform-specific opaque pointer, used by the exter
 > newtype HardwareASID = HardwareASID { fromHWASID :: Word8 }
 >     deriving (Num, Enum, Bounded, Ord, Ix, Eq, Show)
 
+Hardware ASID 0 is reserved: "setVMRoot" installs the empty global page directory under hardware
+ASID 0 for threads without a valid page directory, without a TLB flush. That is only sound if no
+real page directory ever runs under hardware ASID 0, otherwise such a thread hits that page
+directory's TLB entries.
+
+> hwASIDReserved :: HardwareASID
+> hwASIDReserved = HardwareASID 0
+
+First hardware ASID usable for user page directories.
+
+> hwASIDMin :: HardwareASID
+> hwASIDMin = HardwareASID 1
+
 > toPAddr = Platform.PAddr
 
 \subsubsection{Virtual Memory}
@@ -295,25 +308,12 @@ caches must be done separately.
 > writeTTBR0Ptr :: PAddr -> MachineMonad ()
 > writeTTBR0Ptr pd = writeTTBR0 ((fromPAddr pd .&. 0xffffe000) .|. 0x18)
 
-> setCurrentPD :: PAddr -> MachineMonad ()
-> setCurrentPD pd = do
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
->     setCurrentPDPL2 pd
-#else
->     dsb
->     writeTTBR0Ptr pd
->     isb
-#endif
-
 > setHardwareASID :: HardwareASID -> MachineMonad ()
 > setHardwareASID (HardwareASID hw_asid) = do
 >     cbptr <- ask
 >     liftIO $ Platform.setHardwareASID cbptr hw_asid
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-
-> setCurrentPDPL2 :: PAddr -> MachineMonad ()
-> setCurrentPDPL2 = error "FIXME ARMHYP machine callback unimplemented"
 
 > writeContextIDAndPD :: HardwareASID -> PAddr -> MachineMonad ()
 > writeContextIDAndPD = error "FIXME ARMHYP  machine callback unimplemented"

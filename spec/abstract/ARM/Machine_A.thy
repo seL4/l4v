@@ -44,6 +44,18 @@ type_synonym asid_len           = 17
 type_synonym asid_rep_len       = machine_word_len
 type_synonym asid               = "asid_rep_len word"
 
+text \<open>
+  Hardware ASID 0 is reserved for the global/empty page directory: @{text set_vm_root} installs
+  the empty page directory under hardware ASID 0 for threads without a valid page directory,
+  without a TLB flush. That is only sound if no real page directory ever runs under hardware
+  ASID 0, otherwise such a thread hits that page directory's TLB entries.
+\<close>
+definition hw_asid_reserved :: hardware_asid where
+  "hw_asid_reserved \<equiv> 0"
+
+definition hw_asid_min :: hardware_asid where
+  "hw_asid_min \<equiv> 1"
+
 text \<open>With the definitions above, most conversions between abstract
 type names boil down to just the identity function, some convert from
 @{text word} to @{typ nat} and others between different word sizes
