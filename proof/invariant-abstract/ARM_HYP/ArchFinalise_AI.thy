@@ -654,19 +654,6 @@ crunch dissociate_vcpu_tcb
   for valid_irq_node[wp]: "valid_irq_node"
   (wp: crunch_wps)
 
-lemma dmo_valid_irq_states:
-  "(\<And>P. \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>) \<Longrightarrow>
-    \<lbrace>valid_irq_states\<rbrace> do_machine_op f \<lbrace>\<lambda>_. valid_irq_states\<rbrace>"
-  unfolding valid_irq_states_def do_machine_op_def
-  apply (rule hoare_lift_Pf [where f="\<lambda>s. irq_masks (machine_state s)"])
-   apply wpsimp+
-  apply (erule use_valid; assumption)
-  done
-
-lemma dmo_machine_state_lift:
-  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P (machine_state s)\<rbrace> do_machine_op f \<lbrace>\<lambda>rv s. Q rv (machine_state s)\<rbrace>"
-  unfolding do_machine_op_def by wpsimp (erule use_valid; assumption)
-
 lemma dmo_maskInterrupt_True_valid_irq_states[wp]:
   "do_machine_op (maskInterrupt True irq) \<lbrace>valid_irq_states\<rbrace>"
   unfolding valid_irq_states_def do_machine_op_def maskInterrupt_def
@@ -1181,7 +1168,7 @@ lemma flush_table_empty:
   "\<lbrace>\<lambda>s. obj_at (empty_table {}) word s\<rbrace>
     flush_table ac aa b word
    \<lbrace>\<lambda>rv s. obj_at (empty_table {}) word s\<rbrace>"
-  apply (clarsimp simp: flush_table_def set_vm_root_def)
+  apply (clarsimp simp: flush_table_def set_vm_root_def set_global_pd_def)
   apply (wp do_machine_op_obj_at arm_context_switch_P_obj_at whenE_wp hoare_drop_imp
     | wpc
     | simp
@@ -1358,7 +1345,7 @@ crunch arch_finalise_cap
 
 lemma set_vm_root_empty[wp]:
   "\<lbrace>\<lambda>s. P (obj_at (empty_table {}) p s)\<rbrace> set_vm_root v \<lbrace>\<lambda>_ s. P (obj_at (empty_table {}) p s) \<rbrace>"
-  apply (simp add: set_vm_root_def)
+  apply (simp add: set_vm_root_def set_global_pd_def)
   apply wpsimp+
      apply (clarsimp simp: if_apply_def2)
      apply (wpsimp+ | rule hoare_conjI[rotated] hoare_drop_imp hoare_allI)+
