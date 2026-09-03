@@ -594,7 +594,7 @@ text \<open>Properties about empty_slot/emptySlot\<close>
 crunch clearUntypedFreeIndex
   for sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
 
-global_interpretation clearUntypedFreeIndex: typ_at_all_props' "clearUntypedFreeIndex slot"
+global_interpretation clearUntypedFreeIndex: gen_typ_at_all_props' "clearUntypedFreeIndex slot"
   by typ_at_props'
 
 lemma case_Null_If:
@@ -1676,13 +1676,13 @@ crunch cteDeleteOne, suspend, unbindFromSC, unbindNotification
    simp: crunch_simps unless_def o_def
    ignore_del: setObject)
 
-global_interpretation suspend: typ_at_all_props' "suspend x"
+global_interpretation suspend: gen_typ_at_all_props' "suspend x"
   by typ_at_props'
 
-global_interpretation unbindFromSC: typ_at_all_props' "unbindFromSC t"
+global_interpretation unbindFromSC: gen_typ_at_all_props' "unbindFromSC t"
   by typ_at_props'
 
-global_interpretation unbindNotification: typ_at_all_props' "unbindNotification tcbPtr"
+global_interpretation unbindNotification: gen_typ_at_all_props' "unbindNotification tcbPtr"
   by typ_at_props'
 
 lemma tcb_st_not_Bound:
@@ -1753,7 +1753,7 @@ lemma schedContextUnbindNtfn_invs'[wp]:
   apply wpsimp \<comment> \<open>this handles valid_objs' separately\<close>
    unfolding schedContextUnbindNtfn_def updateSchedContext_def updateNotification_def
    apply (wpsimp wp: getNotification_wp hoare_vcg_all_lift hoare_vcg_imp_lift'
-                     valid_ntfn_lift' valid_dom_schedule'_lift)
+                     valid_dom_schedule'_lift)
   by (auto simp: ko_wp_at'_def obj_at'_def live'_def live_sc'_def live_ntfn'_def o_def
           elim!: if_live_then_nonz_capE')
 
@@ -1793,10 +1793,10 @@ crunch replyRemove, handleFaultReply
 
 end
 
-global_interpretation replyRemove: typ_at_all_props' "replyRemove replyPtr tcbPtr"
+global_interpretation replyRemove: gen_typ_at_all_props' "replyRemove replyPtr tcbPtr"
   by typ_at_props'
 
-global_interpretation unbindMaybeNotification: typ_at_all_props' "unbindMaybeNotification ntfnPtr"
+global_interpretation unbindMaybeNotification: gen_typ_at_all_props' "unbindMaybeNotification ntfnPtr"
   by typ_at_props'
 
 lemma replyNext_update_valid_objs':
@@ -2083,7 +2083,7 @@ crunch finaliseCap
   and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
   (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
-sublocale finaliseCap: typ_at_all_props' "finaliseCap cap final x"
+sublocale finaliseCap: gen_typ_at_all_props' "finaliseCap cap final x"
   by typ_at_props'
 
 lemma cteDeleteOne_cteCaps_of:
@@ -2708,7 +2708,7 @@ lemmas schedContextSetInactive_removeable'
 crunch schedContextMaybeUnbindNtfn
   for valid_tcbs'[wp]: valid_tcbs'
 
-global_interpretation schedContextUnbindTCB: typ_at_all_props' "schedContextUnbindTCB scPtr"
+global_interpretation schedContextUnbindTCB: gen_typ_at_all_props' "schedContextUnbindTCB scPtr"
   by typ_at_props'
 
 context Finalise_R begin
@@ -3833,13 +3833,13 @@ crunch unbindFromSC
   for no_0_obj'[wp]: no_0_obj'
   (wp: crunch_wps simp: crunch_simps)
 
-sublocale schedContextUnbindReply: typ_at_all_props' "schedContextUnbindReply scPtr"
+sublocale schedContextUnbindReply: gen_typ_at_all_props' "schedContextUnbindReply scPtr"
   by typ_at_props'
 
-sublocale schedContextUnbindNtfn: typ_at_all_props' "schedContextUnbindNtfn scPtr"
+sublocale schedContextUnbindNtfn: gen_typ_at_all_props' "schedContextUnbindNtfn scPtr"
   by typ_at_props'
 
-sublocale schedContextUnbindAllTCBs: typ_at_all_props' "schedContextUnbindAllTCBs scPtr"
+sublocale schedContextUnbindAllTCBs: gen_typ_at_all_props' "schedContextUnbindAllTCBs scPtr"
   by typ_at_props'
 
 lemma finaliseCap_corres:

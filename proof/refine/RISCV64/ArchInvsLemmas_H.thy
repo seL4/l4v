@@ -50,7 +50,7 @@ lemma valid_obj'_pspaceI[Invariants_H_pspaceI_assms]:
   "valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
   unfolding valid_obj'_def
   by (cases obj)
-     (auto simp: valid_ntfn'_def valid_ntfn'_def valid_tcb'_def valid_cte'_def
+     (auto simp: valid_ntfn'_def valid_tcb'_def valid_cte'_def
                  valid_bound_obj'_def valid_sched_context'_def valid_reply'_def
                  valid_arch_tcb'_def
            split: Structures_H.endpoint.splits Structures_H.notification.splits
@@ -378,7 +378,7 @@ lemma asid_pool_at'_typ_at_lift_strong:
 
 lemma valid_arch_tcb'_typ_at_lift_strong[Invariants_H_typ_at_lifts_assms]:
   assumes "\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
-  shows "f \<lbrace>\<lambda>s. P (valid_arch_tcb' tcb s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (valid_arch_tcb' arch_tcb s)\<rbrace>"
   by (clarsimp simp: valid_arch_tcb'_def, wp)
 
 lemma valid_arch_cap'_typ_at_lift[Invariants_H_typ_at_lifts_assms]:
@@ -428,23 +428,7 @@ lemmas typ_at_lifts = gen_typ_at_lifts typ_at_lifts_strong_internal
 
 end
 
-lemma typ_at'_valid_sched_context'_lift:
-  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  assumes sz: "\<And>n p. \<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> f \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
-  notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_const_Ball_lift
-               typ_at_lifts[OF P] typ_at_lift_valid_cap'[OF P]
-  shows      "\<lbrace>\<lambda>s. valid_sched_context' ko s\<rbrace> f \<lbrace>\<lambda>rv s. valid_sched_context' ko s\<rbrace>"
-  by (wpsimp simp: valid_sched_context'_def)
-
-lemmas typ_at_sc_at'_n_lifts =
-  typ_at_lift_valid_untyped' typ_at_lift_valid_cap' typ_at'_valid_obj'_lift
-  typ_at'_valid_obj'_lift[where obj="KOEndpoint ko" for ko, simplified valid_obj'_def kernel_object.case]
-  typ_at'_valid_obj'_lift[where obj="KONotification ko" for ko, simplified valid_obj'_def kernel_object.case]
-  typ_at'_valid_obj'_lift[where obj="KOTCB ko" for ko, simplified valid_obj'_def kernel_object.case]
-  typ_at'_valid_obj'_lift[where obj="KOCTE ko" for ko, simplified valid_obj'_def kernel_object.case]
-  typ_at'_valid_obj'_lift[where obj="KOArch ko" for ko, simplified valid_obj'_def kernel_object.case]
-  typ_at'_valid_obj'_lift[where obj="KOReply ko" for ko, simplified valid_obj'_def kernel_object.case]
-  typ_at'_valid_sched_context'_lift
+lemmas typ_at_sc_at'_n_lifts = gen_typ_at_sc_at'_n_lifts
 
 lemmas typ_at_lifts_all = typ_at_lifts typ_at_sc_at'_n_lifts
 
@@ -460,19 +444,17 @@ lemmas typ_ats[wp] = typ_at_lifts[REPEAT [OF typ']]
 end (* typ_at_props' *)
 
 locale typ_at_all_props' = typ_at_props' +
-  assumes scs: "f \<lbrace>\<lambda>s. Q (sc_at'_n n p s)\<rbrace>"
+  assumes sc': "f \<lbrace>\<lambda>s. Q (sc_at'_n n p s)\<rbrace>"
 begin
 
-interpretation Arch . (* FIXME arch-split RT *)
-
-lemmas typ_at_sc_at'_n_lifts'[wp] = typ_at_sc_at'_n_lifts[OF typ' scs]
-lemmas typ_at_lifts_all' = typ_at_lifts' typ_at_sc_at'_n_lifts'
+lemmas typ_at_sc_ats[wp] = typ_at_sc_at'_n_lifts[OF typ' sc']
+lemmas typ_ats_all = typ_ats typ_at_sc_ats
 
 context begin
-(* We want to enforce that typ_at_lifts_all' only contains lemmas that have no
+(* We want to enforce that typ_ats_all only contains lemmas that have no
    assumptions. The following thm statement should fail if this is not true. *)
 private lemmas check_valid_internal = iffD1[OF refl, where P="valid p g q" for p g q]
-thm typ_at_lifts_all'[atomized, THEN check_valid_internal]
+thm typ_ats_all[atomized, THEN check_valid_internal]
 end
 
 end (* typ_at_all_props' *)

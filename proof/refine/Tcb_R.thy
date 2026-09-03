@@ -747,7 +747,7 @@ crunch threadSetPriority
   and valid_machine_state'[wp]: valid_machine_state'
   (wp: threadSet_sched_pointers)
 
-global_interpretation threadSetPriority: typ_at_all_props' "threadSetPriority tptr prio"
+global_interpretation threadSetPriority: gen_typ_at_all_props' "threadSetPriority tptr prio"
   by typ_at_props'
 
 crunch threadSetPriority
@@ -1552,10 +1552,10 @@ crunch setPriority, setMCPriority
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: crunch_wps)
 
-global_interpretation setPriority: typ_at_all_props' "setPriority t prio"
+global_interpretation setPriority: gen_typ_at_all_props' "setPriority t prio"
   by typ_at_props'
 
-global_interpretation setMCPriority: typ_at_all_props' "setMCPriority t prio"
+global_interpretation setMCPriority: gen_typ_at_all_props' "setMCPriority t prio"
   by typ_at_props'
 
 definition newroot_rel ::

@@ -38,10 +38,10 @@ lemma threadSet_state_hyp_refs_of'_interface[Tcb_R_assms]:
    \<Longrightarrow> threadSet F t \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> "
   by (wpsimp simp: threadSet_state_hyp_refs_of')
 
-sublocale setPriority: typ_at_props' "setPriority t prio"
+sublocale setPriority: typ_at_all_props' "setPriority t prio"
   by typ_at_props'
 
-sublocale setMCPriority: typ_at_props' "setMCPriority t prio"
+sublocale setMCPriority: typ_at_all_props' "setMCPriority t prio"
   by typ_at_props'
 
 lemma sameObject_corres2[Tcb_R_assms]:

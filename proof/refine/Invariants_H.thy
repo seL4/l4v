@@ -2450,13 +2450,11 @@ lemma real_cte_at'_typ_at_lift_strong:
   "f \<lbrace>\<lambda>s. P (typ_at' CTET p s)\<rbrace> \<Longrightarrow> f \<lbrace>\<lambda>s. P (real_cte_at' p s)\<rbrace>"
   by (simp add: typ_at_cte')
 
-(* FIXME rt: rename *)
-lemma typ_at_lift_sc'_strong:
+lemma sc_at'_typ_at_lift_strong:
   "f \<lbrace>\<lambda>s. P (typ_at' SchedContextT p s)\<rbrace> \<Longrightarrow> f \<lbrace>\<lambda>s. P (sc_at' p s)\<rbrace>"
   by (simp add: typ_ats')
 
-(* FIXME rt: rename *)
-lemma typ_at_lift_reply'_strong:
+lemma reply_at'_typ_at_lift_strong:
   "f \<lbrace>\<lambda>s. P (typ_at' ReplyT p s)\<rbrace> \<Longrightarrow> f \<lbrace>\<lambda>s. P (reply_at' p s)\<rbrace>"
   by (simp add: typ_ats')
 
@@ -2466,16 +2464,6 @@ lemma (in Invariants_H_cte_ats) cte_at'_typ_at_lift':
   apply (simp only: cte_at_typ')
   apply (rule P_bool_lift[where P=P])
    apply (wpsimp wp: hoare_vcg_disj_lift hoare_vcg_ex_lift hoare_vcg_all_lift x)+
-  done
-
-lemma valid_tcb_state'_typ_at_lift_strong:
-  assumes ep: "\<And>p. f \<lbrace>\<lambda>s. P (typ_at' EndpointT p s)\<rbrace>"
-      and ntfn: "\<And>p. f \<lbrace>\<lambda>s. P (typ_at' NotificationT p s)\<rbrace>"
-  shows "f \<lbrace>\<lambda>s. P (valid_tcb_state' st s)\<rbrace>"
-  unfolding valid_tcb_state'_def
-  apply (case_tac st ; clarsimp split: option.splits,
-         wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift ep_at'_typ_at_lift_strong[OF ep]
-                    ntfn_at'_typ_at_lift_strong[OF ntfn])
   done
 
 (* proof is identical for all architectures *)
@@ -2519,43 +2507,44 @@ lemma valid_untyped'_typ_at_lift:
   apply simp
   done
 
-lemma valid_dom_schedule'_lift:
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ksDomScheduleStart s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
-  shows "f \<lbrace>valid_dom_schedule'\<rbrace>"
-  by (wps assms | wp assms)+
-
-(* FIXME rt: check names in section and make strong where possible *)
-lemma valid_bound_tcb'_typ_at_lift:
-  "(\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_bound_tcb' tcb s)\<rbrace>"
+lemma valid_bound_tcb'_typ_at_lift_strong:
+  "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_bound_tcb' p_opt s)\<rbrace>"
   by (auto simp: valid_bound_tcb'_def valid_def typ_ats'[symmetric] split: option.splits)
 
-lemma valid_bound_ntfn'_typ_at_lift:
-  "(\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_bound_ntfn' ntfn s)\<rbrace>"
+lemma valid_bound_ntfn'_typ_at_lift_strong:
+  "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_bound_ntfn' p_opt s)\<rbrace>"
   by (auto simp: valid_bound_ntfn'_def valid_def typ_ats'[symmetric] split: option.splits)
 
-lemma valid_bound_ep_lift:
-  "(\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_bound_ep' ntfn s)\<rbrace>"
+lemma valid_bound_ep'_typ_at_lift_strong:
+  "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_bound_ep' p_opt s)\<rbrace>"
   by (auto simp: valid_bound_obj'_def valid_def typ_ats'[symmetric] split: option.splits)
 
-lemma valid_bound_sc_lift:
-  "(\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_bound_sc' tcb s)\<rbrace>"
+lemma valid_bound_sc'_typ_at_lift_strong:
+  "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_bound_sc' p_opt s)\<rbrace>"
   by (auto simp: valid_bound_obj'_def valid_def typ_ats'[symmetric] split: option.splits)
 
-lemma valid_bound_reply_lift:
-  "(\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_bound_reply' tcb s)\<rbrace>"
+lemma valid_bound_reply'_typ_at_lift_strong:
+  "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_bound_reply' p_opt s)\<rbrace>"
   by (auto simp: valid_bound_tcb'_def valid_def typ_ats'[symmetric] split: option.splits)
 
-lemma valid_ntfn'_typ_at_lift':
-  "(\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>valid_ntfn' ntfn\<rbrace>"
+lemma valid_ntfn'_typ_at_lift:
+  "(\<And>T p. f \<lbrace>typ_at' T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_ntfn' ntfn\<rbrace>"
   unfolding valid_ntfn'_def
-  by (wpsimp wp: valid_bound_tcb_lift valid_bound_sc_lift)
+  by (wpsimp wp: valid_bound_tcb'_typ_at_lift_strong[where P=id, simplified]
+                 valid_bound_sc'_typ_at_lift_strong[where P=id, simplified])
 
-lemma valid_sc_lift':
-  "(\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>valid_sched_context' sc\<rbrace>"
+lemma valid_sc'_typ_at_lift:
+  "(\<And>T p. f \<lbrace>typ_at' T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_sched_context' sc\<rbrace>"
   unfolding valid_sched_context'_def
-  by (wpsimp wp: valid_bound_ntfn_lift valid_bound_tcb_lift valid_bound_reply_lift)
+  by (wpsimp wp: valid_bound_ntfn'_typ_at_lift_strong[where P=id, simplified]
+                 valid_bound_tcb'_typ_at_lift_strong[where P=id, simplified])
+
+lemma valid_reply'_typ_at_lift:
+  "(\<And>T p. f \<lbrace>typ_at' T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_reply' sc\<rbrace>"
+  unfolding valid_reply'_def
+  by (wpsimp wp: valid_bound_tcb'_typ_at_lift_strong[where P=id, simplified]
+                 valid_bound_sc'_typ_at_lift_strong[where P=id, simplified]
+                 valid_bound_reply'_typ_at_lift_strong[where P=id, simplified])
 
 lemma valid_irq_node'_typ_at_lift:
   assumes P: "\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
@@ -2571,7 +2560,7 @@ locale Invariants_H_typ_at_lifts = Invariants_H_cte_ats +
      is able to be used here because nothing within the locale looks at f. *)
   fixes f_rvt_itself :: "'f_rvt itself"
   assumes valid_arch_tcb'_typ_at_lift_strong:
-    "\<And>(f :: 'f_rvt kernel) P tcb. (\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_arch_tcb' tcb s)\<rbrace>"
+    "\<And>(f :: 'f_rvt kernel) P arch_tcb. (\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_arch_tcb' arch_tcb s)\<rbrace>"
   assumes valid_arch_cap'_typ_at_lift:
     "\<And>(f :: 'f_rvt kernel) cap. (\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>valid_arch_cap' cap\<rbrace>"
 begin
@@ -2579,8 +2568,10 @@ begin
 lemmas gen_typ_at_lifts_strong =
   tcb_at'_typ_at_lift_strong[where 'a='f_rvt] ep_at'_typ_at_lift_strong[where 'a='f_rvt]
   ntfn_at'_typ_at_lift_strong[where 'a='f_rvt] real_cte_at'_typ_at_lift_strong[where 'a='f_rvt]
-  typ_at_lift_reply'_strong typ_at_lift_sc'_strong
-  valid_tcb_state'_typ_at_lift_strong[where 'a='f_rvt]
+  sc_at'_typ_at_lift_strong[where 'a='f_rvt] reply_at'_typ_at_lift_strong[where 'a='f_rvt]
+  valid_bound_tcb'_typ_at_lift_strong[where 'a='f_rvt] valid_bound_ntfn'_typ_at_lift_strong[where 'a='f_rvt]
+  valid_bound_ep'_typ_at_lift_strong[where 'a='f_rvt] valid_bound_sc'_typ_at_lift_strong[where 'a='f_rvt]
+  valid_bound_reply'_typ_at_lift_strong[where 'a='f_rvt]
   valid_arch_tcb'_typ_at_lift_strong
 
 (* anonymous context to keep gen_typ_at_lifts_strong_internal private *)
@@ -2645,29 +2636,15 @@ lemma valid_obj'_typ_at_lift:
   assumes P: "\<And>P T p. (f :: 'f_rvt kernel) \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
   assumes sz: "\<And>n p. \<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> f \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
   notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_const_Ball_lift
-               gen_typ_at_lifts_strong[OF P] valid_cap'_typ_at_lift[OF P]
-               valid_bound_tcb'_typ_at_lift[OF P] valid_bound_ntfn'_typ_at_lift[OF P]
+               gen_typ_at_lifts_strong[OF P] valid_cap'_typ_at_lift[OF P sz]
+               valid_ntfn'_typ_at_lift[OF P] valid_sc'_typ_at_lift[OF P] valid_reply'_typ_at_lift[OF P]
   shows      "f \<lbrace>\<lambda>s. valid_obj' obj s\<rbrace>"
-  apply (cases obj; simp add: valid_obj'_def hoare_TrueI)
-      apply (rename_tac endpoint)
-      apply (case_tac endpoint; simp add: valid_ep'_def, wp)
-     apply (rename_tac notification)
-     apply (case_tac "ntfnObj notification";
-            simp add: valid_ntfn'_def split: option.splits,
-            (wpsimp|rule conjI)+)
-    apply (rename_tac tcb)
-    apply (case_tac "tcbState tcb";
-           simp add: valid_tcb'_def valid_tcb_state'_def split_def opt_tcb_at'_def;
-           wpsimp wp: sz hoare_case_option_wp)
-   apply (wpsimp simp: valid_cte'_def sz)
-  apply (wpsimp simp: valid_reply'_def)
+  apply (cases obj; simp add: valid_obj'_def hoare_TrueI; (solves \<open>wpsimp\<close>)?)
+   apply (rename_tac tcb)
+   apply (simp add: valid_tcb'_def split_def opt_tcb_at'_def;
+          wpsimp wp: sz hoare_case_option_wp)
+  apply (wpsimp simp: valid_cte'_def sz)
   done
-
-lemmas valid_ep'_typ_at_lift =
-  valid_obj'_typ_at_lift[where obj="KOEndpoint ko" for ko, simplified valid_obj'_def kernel_object.case]
-
-lemmas valid_ntfn'_typ_at_lift =
-  valid_obj'_typ_at_lift[where obj="KONotification ko" for ko, simplified valid_obj'_def kernel_object.case]
 
 lemmas valid_tcb'_typ_at_lift =
   valid_obj'_typ_at_lift[where obj="KOTCB ko" for ko, simplified valid_obj'_def kernel_object.case]
@@ -2679,11 +2656,15 @@ lemmas valid_arch_obj'_typ_at_lift =
   valid_obj'_typ_at_lift[where obj="KOArch ko" for ko, simplified valid_obj'_def kernel_object.case]
 
 lemmas gen_typ_at_lifts =
-  gen_typ_at_lifts_strong_internal cte_at'_typ_at_lift' valid_untyped'_typ_at_lift
-  valid_bound_tcb'_typ_at_lift valid_bound_ntfn'_typ_at_lift valid_ntfn'_typ_at_lift'
-  valid_irq_node'_typ_at_lift valid_cap'_typ_at_lift valid_obj'_typ_at_lift valid_arch_cap'_typ_at_lift
-  valid_ep'_typ_at_lift valid_ntfn'_typ_at_lift valid_tcb'_typ_at_lift valid_cte'_typ_at_lift
-  valid_arch_obj'_typ_at_lift
+  gen_typ_at_lifts_strong_internal cte_at'_typ_at_lift'
+  valid_irq_node'_typ_at_lift   valid_arch_cap'_typ_at_lift
+  valid_ntfn'_typ_at_lift valid_sc'_typ_at_lift valid_reply'_typ_at_lift
+
+lemmas gen_typ_at_sc_at'_n_lifts =
+  valid_untyped'_typ_at_lift valid_cap'_typ_at_lift valid_obj'_typ_at_lift
+  valid_tcb'_typ_at_lift valid_cte'_typ_at_lift valid_arch_obj'_typ_at_lift
+
+lemmas gen_typ_at_lifts_all = gen_typ_at_lifts gen_typ_at_sc_at'_n_lifts
 
 end
 
@@ -2698,25 +2679,49 @@ begin
 
 lemmas gen_typ_ats[wp] = gen_typ_at_lifts[REPEAT [OF typ'_interface]]
 
-context begin
-(* We want to enforce that gen_typ_ats only contains lemmas that have no
-   assumptions. The following thm statement should fail if this is not true. *)
-private lemmas check_valid_internal = iffD1[OF refl, where P="valid p g q" for p g q]
-thm gen_typ_ats[atomized, THEN check_valid_internal]
-end
-
 end (* gen_typ_at_props'_interface *)
 
-(* Main typ_at_props' locale used for function instantiation.
+locale gen_typ_at_all_props'_interface = gen_typ_at_props'_interface +
+  assumes sc'_interface: "f \<lbrace>\<lambda>s. Q (sc_at'_n n p s)\<rbrace>"
+begin
+
+lemmas gen_typ_at_sc_ats[wp] = gen_typ_at_sc_at'_n_lifts[OF typ'_interface sc'_interface]
+lemmas gen_typ_ats_all = gen_typ_ats gen_typ_at_sc_ats
+
+context begin
+(* We want to enforce that gen_typ_ats_all only contains lemmas that have no
+   assumptions. The following thm statement should fail if this is not true. *)
+private lemmas check_valid_internal = iffD1[OF refl, where P="valid p g q" for p g q]
+thm gen_typ_ats_all[atomized, THEN check_valid_internal]
+end
+
+end (* gen_typ_at_all_props'_interface *)
+
+(* Main gen_typ_at_props' locale used for function instantiation.
    Requires Invariants_H_typ_at_lifts to be interpreted first before gen_typ_at_props'_interface
    can become a sublocale. *)
 locale gen_typ_at_props' =
   fixes f :: "'f_rvt kernel"
   assumes typ': "f \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
 
+(* Main gen_typ_at_all_props' locale used for function instantiation.
+   Requires Invariants_H_typ_at_lifts to be interpreted first before gen_typ_at_all_props'_interface
+   can become a sublocale. *)
+locale gen_typ_at_all_props' =
+  fixes f :: "'f_rvt kernel"
+  assumes typ': "f \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
+  assumes sc': "f \<lbrace>\<lambda>s. Q (sc_at'_n n p s)\<rbrace>"
+
 (* we expect typ_at' lemmas to be [wp], so this should be easy *)
 method typ_at_props' "for instantiating typ_at_props' locale"
   = unfold_locales; wp?
+
+lemma valid_dom_schedule'_lift:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ksDomScheduleStart s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
+  shows "f \<lbrace>valid_dom_schedule'\<rbrace>"
+  by (wps assms | wp assms)+
 
 lemma mdb_next_unfold:
   "s \<turnstile> c \<leadsto> c' = (\<exists>z. s c = Some z \<and> c' = mdbNext (cteMDBNode z))"

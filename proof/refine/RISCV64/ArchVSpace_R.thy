@@ -258,9 +258,9 @@ lemma deleteASIDPool_corres:
   apply clarsimp
   done
 
-crunch unmapPageTable, unmapPage, setVMRoot, setMessageInfo, setMRs, performPageTableInvocation,
+crunch unmapPageTable, unmapPage, setVMRoot, performPageTableInvocation,
        performASIDPoolInvocation, performPageInvocation
-  for typ_at' [wp]: "\<lambda>s. P (typ_at' T p s)"
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
