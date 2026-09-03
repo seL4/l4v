@@ -70,46 +70,46 @@ crunch commitTime, refillNew, refillUpdate
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: crunch_wps simp: crunch_simps)
 
-global_interpretation refillPopHead: typ_at_all_props' "refillPopHead scPtr"
+global_interpretation refillPopHead: gen_typ_at_all_props' "refillPopHead scPtr"
   by typ_at_props'
 
-global_interpretation updateRefillTl: typ_at_all_props' "updateRefillTl scPtr f"
+global_interpretation updateRefillTl: gen_typ_at_all_props' "updateRefillTl scPtr f"
   by typ_at_props'
 
-global_interpretation chargeEntireHeadRefill: typ_at_all_props' "chargeEntireHeadRefill scPtr usage"
+global_interpretation chargeEntireHeadRefill: gen_typ_at_all_props' "chargeEntireHeadRefill scPtr usage"
   by typ_at_props'
 
-global_interpretation handleOverrun: typ_at_all_props' "handleOverrun scPtr usage"
+global_interpretation handleOverrun: gen_typ_at_all_props' "handleOverrun scPtr usage"
   by typ_at_props'
 
-global_interpretation scheduleUsed: typ_at_all_props' "scheduleUsed scPtr new"
+global_interpretation scheduleUsed: gen_typ_at_all_props' "scheduleUsed scPtr new"
   by typ_at_props'
 
-global_interpretation updateRefillHd: typ_at_all_props' "updateRefillHd scPtr f"
+global_interpretation updateRefillHd: gen_typ_at_all_props' "updateRefillHd scPtr f"
   by typ_at_props'
 
-global_interpretation mergeOverlappingRefills: typ_at_all_props' "mergeOverlappingRefills scPtr"
+global_interpretation mergeOverlappingRefills: gen_typ_at_all_props' "mergeOverlappingRefills scPtr"
   by typ_at_props'
 
-global_interpretation setRefillHd: typ_at_all_props' "setRefillHd scPtr v"
+global_interpretation setRefillHd: gen_typ_at_all_props' "setRefillHd scPtr v"
   by typ_at_props'
 
-global_interpretation mergeNonoverlappingHeadRefill: typ_at_all_props' "mergeNonoverlappingHeadRefill scPtr"
+global_interpretation mergeNonoverlappingHeadRefill: gen_typ_at_all_props' "mergeNonoverlappingHeadRefill scPtr"
   by typ_at_props'
 
-global_interpretation refillBudgetCheck: typ_at_all_props' "refillBudgetCheck usage"
+global_interpretation refillBudgetCheck: gen_typ_at_all_props' "refillBudgetCheck usage"
   by typ_at_props'
 
-global_interpretation refillBudgetCheckRoundRobin: typ_at_all_props' "refillBudgetCheckRoundRobin usage"
+global_interpretation refillBudgetCheckRoundRobin: gen_typ_at_all_props' "refillBudgetCheckRoundRobin usage"
   by typ_at_props'
 
-global_interpretation commitTime: typ_at_all_props' "commitTime"
+global_interpretation commitTime: gen_typ_at_all_props' "commitTime"
    by typ_at_props'
 
-global_interpretation refillNew: typ_at_all_props' "refillNew scPtr maxRefills budget period"
+global_interpretation refillNew: gen_typ_at_all_props' "refillNew scPtr maxRefills budget period"
   by typ_at_props'
 
-global_interpretation refillUpdate: typ_at_all_props' "refillUpdate  scPtr newPeriod newBudget newMaxRefills"
+global_interpretation refillUpdate: gen_typ_at_all_props' "refillUpdate  scPtr newPeriod newBudget newMaxRefills"
   by typ_at_props'
 
 lemma findM_awesome':
@@ -493,6 +493,8 @@ locale Schedule_R =
     "\<And>t. Arch.switchToIdleThread \<lbrace>obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
   assumes Arch_switchToIdleThread_tcbState[wp]:
     "\<And>P t. Arch.switchToIdleThread \<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace>"
+  assumes Arch_switchToIdleThread_invs'[wp]:
+    "Arch.switchToIdleThread \<lbrace>invs'\<rbrace> "
   assumes bitmapQ_lookupBitmapPriority_simp:
     "\<And>s d.
      \<lbrakk> ksReadyQueuesL1Bitmap s d \<noteq> 0 ; valid_bitmapQ s ; bitmapQ_no_L1_orphans s \<rbrakk> \<Longrightarrow>
@@ -782,15 +784,14 @@ lemma switchToThread_invs'_helper:
 
 lemma switchToIdleThread_activatable_2[wp]:
   "\<lbrace>invs'\<rbrace> switchToIdleThread \<lbrace>\<lambda>_. ct_in_state' activatable'\<rbrace>"
-  apply (simp add: Thread_H.switchToIdleThread_def
-                   RISCV64_H.switchToIdleThread_def)
+  apply (simp add: switchToIdleThread_def)
   apply (wp setCurThread_ct_in_state)
   apply (clarsimp simp: invs'_def valid_idle'_def pred_tcb_at'_def obj_at'_def idle_tcb'_def)
   done
 
 lemma switchToThread_invs'[wp]:
   "switchToThread t \<lbrace>invs'\<rbrace>"
-  apply (simp add: Thread_H.switchToThread_def )
+  apply (simp add: switchToThread_def)
   apply (wp setCurThread_invs' Arch_switchToThread_invs dmo_invs'
             doMachineOp_obj_at tcbSchedDequeue_not_tcbQueued)
   by (auto elim!: pred_tcb'_weakenE)
@@ -913,17 +914,17 @@ lemma (in Schedule_R) switchToThread_lookupBitmapPriority_wp:
   apply (fastforce simp: st_tcb_at'_def invs'_def ready_qs_runnable_def)
   done
 
-lemma switchToIdleThread_invs':
-  "switchToIdleThread \<lbrace>invs'\<rbrace>"
-  apply (clarsimp simp: Thread_H.switchToIdleThread_def RISCV64_H.switchToIdleThread_def)
-  apply (wpsimp wp: setCurThread_invs')
-  done
-
 lemma setCurThread_const:
   "\<lbrace>\<lambda>_. P t \<rbrace> setCurThread t \<lbrace>\<lambda>_ s. P (ksCurThread s) \<rbrace>"
   by (simp add: setCurThread_def | wp)+
 
 context Schedule_R begin
+
+lemma switchToIdleThread_invs':
+  "switchToIdleThread \<lbrace>invs'\<rbrace>"
+  apply (clarsimp simp: switchToIdleThread_def)
+  apply (wpsimp wp: setCurThread_invs')
+  done
 
 lemma switchToIdleThread_curr_is_idle:
   "\<lbrace>\<top>\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv s. ksCurThread s = ksIdleThread s\<rbrace>"
@@ -1839,7 +1840,7 @@ crunch possibleSwitchTo
   and pspace_bounded'[wp]: pspace_bounded'
   (wp: crunch_wps cur_tcb_lift valid_irq_handlers_lift'' simp: crunch_simps)
 
-global_interpretation possibleSwitchTo: typ_at_all_props' "possibleSwitchTo t"
+global_interpretation possibleSwitchTo: gen_typ_at_all_props' "possibleSwitchTo t"
   by typ_at_props'
 
 lemma possibleSwitchTo_utr[wp]:

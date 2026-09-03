@@ -187,7 +187,7 @@ proof -
   done
 qed
 
-sublocale setCTE: typ_at_props' "setCTE c cte"
+sublocale setCTE: typ_at_all_props' "setCTE c cte"
   by typ_at_props'
 
 lemma arch_updateCapData_Master[CSpace1_R_assms]:

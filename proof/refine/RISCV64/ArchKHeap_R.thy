@@ -374,10 +374,10 @@ lemma setObject_ko_wp_at':
                      objBits_def[symmetric] ps_clear_upd
                      in_magnitude_check v)
 
-sublocale setObject: typ_at_props' "setObject p v"
+sublocale setObject: typ_at_all_props' "setObject p v"
   by typ_at_props'
 
-sublocale doMachineOp: typ_at_props' "doMachineOp mop"
+sublocale doMachineOp: typ_at_all_props' "doMachineOp mop"
   by typ_at_props'
 
 end

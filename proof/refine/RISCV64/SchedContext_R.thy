@@ -226,7 +226,7 @@ lemma schedContextUpdateConsumed_sym_refs_lis_refs_of_replies'[wp]:
   unfolding schedContextUpdateConsumed_def updateSchedContext_def
   by wpsimp
 
-global_interpretation schedContextUpdateConsumed: typ_at_all_props' "schedContextUpdateConsumed scPtr"
+global_interpretation schedContextUpdateConsumed: gen_typ_at_all_props' "schedContextUpdateConsumed scPtr"
   by typ_at_props'
 
 lemma schedContextUpdateConsumed_if_unsafe_then_cap'[wp]:
@@ -325,7 +325,7 @@ crunch schedContextCancelYieldTo
   for list_refs_of_replies[wp]: "\<lambda>s. sym_refs (list_refs_of_replies' s)"
   (wp: crunch_wps simp: crunch_simps updateSchedContext_def comp_def)
 
-global_interpretation schedContextCancelYieldTo: typ_at_all_props' "schedContextCancelYieldTo t"
+global_interpretation schedContextCancelYieldTo: gen_typ_at_all_props' "schedContextCancelYieldTo t"
   by typ_at_props'
 
 lemma schedContextCancelYieldTo_invs':
@@ -463,10 +463,10 @@ crunch schedContextDonate
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
 
-global_interpretation schedContextDonate: typ_at_all_props' "schedContextDonate scPtr tcbPtr"
+global_interpretation schedContextDonate: gen_typ_at_all_props' "schedContextDonate scPtr tcbPtr"
   by typ_at_props'
 
-global_interpretation updateSchedContext: typ_at_all_props' "updateSchedContext scPtr f"
+global_interpretation updateSchedContext: gen_typ_at_all_props' "updateSchedContext scPtr f"
   by typ_at_props'
 
 crunch schedContextDonate

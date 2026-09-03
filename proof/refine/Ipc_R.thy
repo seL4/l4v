@@ -420,7 +420,7 @@ crunch setExtraBadge
   and cte_wp_at'[wp]: "cte_wp_at' P p"
   and ipc_buffer'[wp]: "valid_ipc_buffer_ptr' buffer"
 
-global_interpretation setExtraBadge: typ_at_all_props' "setExtraBadge buffer badge n"
+global_interpretation setExtraBadge: gen_typ_at_all_props' "setExtraBadge buffer badge n"
   by typ_at_props'
 
 crunch getExtraCPtr
@@ -1247,7 +1247,7 @@ crunch transferCaps
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
 
-global_interpretation transferCaps: typ_at_all_props' "transferCaps info caps endpoint receiver receiveBuffer"
+global_interpretation transferCaps: gen_typ_at_all_props' "transferCaps info caps endpoint receiver receiveBuffer"
   by typ_at_props'
 
 lemma lookup_cap_to'[wp]:
@@ -1287,7 +1287,7 @@ crunch copyMRs
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: crunch_wps)
 
-global_interpretation copyMRs: typ_at_all_props' "copyMRs s sb r rb n"
+global_interpretation copyMRs: gen_typ_at_all_props' "copyMRs s sb r rb n"
   by typ_at_props'
 
 lemma copy_mrs_invs'[wp]:
@@ -1493,7 +1493,7 @@ crunch doNormalTransfer
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: crunch_wps)
 
-global_interpretation doNormalTransfer: typ_at_all_props' "doNormalTransfer s sb e b g r rb"
+global_interpretation doNormalTransfer: gen_typ_at_all_props' "doNormalTransfer s sb e b g r rb"
   by typ_at_props'
 
 crunch doNormalTransfer
@@ -1639,7 +1639,7 @@ crunch makeFaultMessage
 
 end (* Arch *)
 
-global_interpretation makeFaultMessage: typ_at_all_props' "makeFaultMessage x t"
+global_interpretation makeFaultMessage: gen_typ_at_all_props' "makeFaultMessage x t"
   by typ_at_props'
 
 context Ipc_R begin
@@ -1804,7 +1804,7 @@ crunch doIPCTransfer
   (wp: crunch_wps
    simp: zipWithM_x_mapM ball_conj_distrib)
 
-sublocale doIPCTransfer: typ_at_all_props' "doIPCTransfer s e b g r"
+sublocale doIPCTransfer: gen_typ_at_all_props' "doIPCTransfer s e b g r"
   by typ_at_props'
 
 crunch doIPCTransfer
@@ -1863,7 +1863,7 @@ lemma handleFaultReply_corres:
                           handle_fault_reply_registers_corres)
      (corres corres: handleArchFaultReply_corres)
 
-sublocale handleFaultReply: typ_at_all_props' "handleFaultReply x t l m"
+sublocale handleFaultReply: gen_typ_at_all_props' "handleFaultReply x t l m"
   by typ_at_props'
 
 lemma doIPCTransfer_sch_act_simple [wp]:
@@ -3482,7 +3482,7 @@ crunch maybeReturnSc
   and sc_at'_n[wp]: "\<lambda>s. Q (sc_at'_n n p s)"
   (wp: crunch_wps)
 
-sublocale maybeReturnSc: typ_at_all_props' "maybeReturnSc ntfnPtr tcbPtr"
+sublocale maybeReturnSc: gen_typ_at_all_props' "maybeReturnSc ntfnPtr tcbPtr"
   by typ_at_props'
 
 crunch cancel_ipc
@@ -6001,11 +6001,13 @@ crunch sendFaultIPC, receiveIPC, receiveSignal
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
-sublocale sendFaultIPC: typ_at_all_props' "sendFaultIPC t cap f d"
+sublocale sendFaultIPC: gen_typ_at_all_props' "sendFaultIPC t cap f d"
   by typ_at_props'
-sublocale receiveIPC: typ_at_all_props' "receiveIPC t cap b r"
+
+sublocale receiveIPC: gen_typ_at_all_props' "receiveIPC t cap b r"
   by typ_at_props'
-sublocale receiveSignal: typ_at_all_props' "receiveSignal t cap b"
+
+sublocale receiveSignal: gen_typ_at_all_props' "receiveSignal t cap b"
   by typ_at_props'
 
 lemma getSlotCap_cte_wp_at:

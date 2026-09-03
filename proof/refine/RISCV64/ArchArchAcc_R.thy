@@ -755,14 +755,15 @@ next
     done
 qed
 
-sublocale storePTE: typ_at_props' "storePTE slot pte"
+sublocale storePTE: typ_at_all_props' "storePTE slot pte"
   by typ_at_props'
 
 crunch copyGlobalMappings
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: mapM_x_wp')
 
-sublocale copyGlobalMappings: typ_at_props' "copyGlobalMappings newPT"
+sublocale copyGlobalMappings: typ_at_all_props' "copyGlobalMappings newPT"
   by typ_at_props'
 
 lemma corres_gets_global_pt [corres]:

@@ -8,7 +8,7 @@ theory SchedContextInv_R
 imports Invocations_R ArchTcb_R
 begin
 
-global_interpretation schedContextCompleteYieldTo: typ_at_all_props' "schedContextCompleteYieldTo scp"
+global_interpretation schedContextCompleteYieldTo: gen_typ_at_all_props' "schedContextCompleteYieldTo scp"
   by typ_at_props'
 
 context begin interpretation Arch . (*FIXME: arch-split*)

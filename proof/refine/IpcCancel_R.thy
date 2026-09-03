@@ -55,52 +55,52 @@ crunch updateEndpoint, updateNotification, tcbNTFNDequeue, tcbNTFNAppend, tcbEPD
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: crunch_wps)
 
-global_interpretation updateEndpoint: typ_at_all_props' "updateEndpoint epPtr f"
+global_interpretation updateEndpoint: gen_typ_at_all_props' "updateEndpoint epPtr f"
   by typ_at_props'
 
-global_interpretation updateNotification: typ_at_all_props' "updateNotification ntfnPtr f"
+global_interpretation updateNotification: gen_typ_at_all_props' "updateNotification ntfnPtr f"
   by typ_at_props'
 
-global_interpretation tcbNTFNDequeue: typ_at_all_props' "tcbNTFNDequeue tcbPtr ntfnPtr"
+global_interpretation tcbNTFNDequeue: gen_typ_at_all_props' "tcbNTFNDequeue tcbPtr ntfnPtr"
   by typ_at_props'
 
-global_interpretation tcbNTFNAppend: typ_at_all_props' "tcbNTFNAppend tcbPtr ntfnPtr"
+global_interpretation tcbNTFNAppend: gen_typ_at_all_props' "tcbNTFNAppend tcbPtr ntfnPtr"
   by typ_at_props'
 
-global_interpretation tcbEPDequeue: typ_at_all_props' "tcbEPDequeue tcbPtr epPtr"
+global_interpretation tcbEPDequeue: gen_typ_at_all_props' "tcbEPDequeue tcbPtr epPtr"
   by typ_at_props'
 
-global_interpretation tcbEPAppend: typ_at_all_props' "tcbEPAppend tcbPtr epPtr state"
+global_interpretation tcbEPAppend: gen_typ_at_all_props' "tcbEPAppend tcbPtr epPtr state"
   by typ_at_props'
 
-global_interpretation tcbQueueRemove: typ_at_all_props' "tcbQueueRemove queue tcbPtr"
+global_interpretation tcbQueueRemove: gen_typ_at_all_props' "tcbQueueRemove queue tcbPtr"
   by typ_at_props'
 
 global_interpretation removeAndRestartEPQueuedThread:
-  typ_at_all_props' "removeAndRestartEPQueuedThread t epptr"
+  gen_typ_at_all_props' "removeAndRestartEPQueuedThread t epptr"
   by typ_at_props'
 
 global_interpretation removeAndRestartNTFNQueuedThread:
-  typ_at_all_props' "removeAndRestartNTFNQueuedThread t ntfnPtr"
+  gen_typ_at_all_props' "removeAndRestartNTFNQueuedThread t ntfnPtr"
   by typ_at_props'
 
 global_interpretation removeAndRestartBadgedThread:
-  typ_at_all_props' "removeAndRestartBadgedThread t epptr badge"
+  gen_typ_at_all_props' "removeAndRestartBadgedThread t epptr badge"
   by typ_at_props'
 
-global_interpretation cancelBadgedSends: typ_at_all_props' "cancelBadgedSends epptr badge"
+global_interpretation cancelBadgedSends: gen_typ_at_all_props' "cancelBadgedSends epptr badge"
   by typ_at_props'
 
-global_interpretation cancelAllSignals: typ_at_all_props' "cancelAllSignals ntfnPtr"
+global_interpretation cancelAllSignals: gen_typ_at_all_props' "cancelAllSignals ntfnPtr"
   by typ_at_props'
 
-global_interpretation cancelAllIPC: typ_at_all_props' "cancelAllIPC epptr"
+global_interpretation cancelAllIPC: gen_typ_at_all_props' "cancelAllIPC epptr"
   by typ_at_props'
 
-global_interpretation cancelIPC: typ_at_all_props' "cancelIPC tptr"
+global_interpretation cancelIPC: gen_typ_at_all_props' "cancelIPC tptr"
   by typ_at_props'
 
-global_interpretation cancelSignal: typ_at_all_props' "cancelSignal threadPtr ntfnPtr"
+global_interpretation cancelSignal: gen_typ_at_all_props' "cancelSignal threadPtr ntfnPtr"
   by typ_at_props'
 
 (* FIXME RT: remove *)
@@ -198,8 +198,7 @@ lemma cancelSignal_st_tcb_at':
   apply (wpsimp wp: setThreadState_st_tcb_at'_cases)
   done
 
-(* FIXME arch-split: not clear where arch version of this should go *)
-sublocale delete_one_conc_pre < delete_one: typ_at_all_props' "cteDeleteOne slot"
+sublocale delete_one_conc_pre < delete_one: gen_typ_at_all_props' "cteDeleteOne slot"
   by typ_at_props'
 
 declare delete_remove1[simp]
@@ -2584,13 +2583,7 @@ lemma setObject_ntfn_sa_unchanged[wp]:
   done
 
 lemmas ipccancel_weak_sch_act_wfs
-    = weak_sch_act_wf_lift[OF _ setCTE.typ_at_lifts_all'(1)]
-
- (* prevents wp from splitting on the when; stronger technique than hoare_when_weak_wp
-    FIXME: possible to replace with hoare_when_weak_wp?
- *)
-definition
-  "removeFromBitmap_conceal d p q t \<equiv> when (null [x\<leftarrow>q . x \<noteq> t]) (removeFromBitmap d p)"
+    = weak_sch_act_wf_lift[OF _ tcb_at'_typ_at_lift_strong[OF setCTE_typ_at']]
 
 lemma updateObject_ep_inv:
   "\<lbrace>P\<rbrace> updateObject (obj::endpoint) ko p q n \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -2738,10 +2731,10 @@ lemma sts_sch_act_not_ct[wp]:
 
 text \<open>Cancelling all IPC in an endpoint or notification object\<close>
 
-global_interpretation refillUnblockCheck: typ_at_all_props' "refillUnblockCheck scp"
+global_interpretation refillUnblockCheck: gen_typ_at_all_props' "refillUnblockCheck scp"
   by typ_at_props'
 
-global_interpretation ifCondRefillUnblockCheck: typ_at_all_props' "ifCondRefillUnblockCheck scp act ast"
+global_interpretation ifCondRefillUnblockCheck: gen_typ_at_all_props' "ifCondRefillUnblockCheck scp act ast"
   by typ_at_props'
 
 lemma updateSchedContext_valid_tcbs'[wp]:
@@ -2871,17 +2864,12 @@ lemma restartThreadIfNoFault_corres:
   apply (clarsimp simp: in_ep_queue_at_def)
   done
 
-global_interpretation possibleSwitchTo: typ_at_all_props' "possibleSwitchTo target"
-  by typ_at_props'
-
 crunch ifCondRefillUnblockCheck
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P p"
   (simp: crunch_simps wp: whileLoop_wp crunch_wps ignore: threadSet)
 
 crunch removeAndRestartEPQueuedThread, removeAndRestartNTFNQueuedThread
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
-  and pspace_bounded'[wp]: pspace_bounded'
+  for pspace_bounded'[wp]: pspace_bounded'
   (simp: crunch_simps wp: whileLoop_wp ignore: updateSchedContext
    wp: crunch_wps)
 

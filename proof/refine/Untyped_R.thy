@@ -2277,7 +2277,7 @@ lemma caps_overlap_reserved'_D:
   apply fastforce
   done
 
-global_interpretation updateNewFreeIndex: typ_at_all_props' "updateNewFreeIndex slot"
+global_interpretation updateNewFreeIndex: gen_typ_at_all_props' "updateNewFreeIndex slot"
   by typ_at_props'
 
 lemma updateNewFreeIndex_valid_objs[wp]:

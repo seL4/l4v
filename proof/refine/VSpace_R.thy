@@ -155,6 +155,17 @@ lemma setMessageInfo_corres:
   apply (simp add: message_info_to_data_eqv)
   done
 
+crunch setMessageInfo, setMRs
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
+  (wp: crunch_wps simp: crunch_simps)
+
+global_interpretation setMessageInfo: gen_typ_at_all_props' "setMessageInfo thread info"
+  by typ_at_props'
+
+global_interpretation setMRs: gen_typ_at_all_props' "setMRs receiver recv_buf mrs"
+  by typ_at_props'
+
 crunch doMachineOp
   for arch[wp]: "\<lambda>s. P (ksArchState s)"
   and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"

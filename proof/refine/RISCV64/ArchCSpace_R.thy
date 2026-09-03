@@ -27,13 +27,13 @@ lemma capAligned_master[CSpace_R_assms]:
    apply (clarsimp simp: capAligned_def)+
   done
 
-sublocale updateMDB: typ_at_props' "updateMDB slot f"
+sublocale updateMDB: typ_at_all_props' "updateMDB slot f"
   by typ_at_props'
 
-sublocale updateCap: typ_at_props' "updateCap slot newCap"
+sublocale updateCap: typ_at_all_props' "updateCap slot newCap"
   by typ_at_props'
 
-sublocale cteInsert: typ_at_props' "cteInsert newCap srcSlot destSlot"
+sublocale cteInsert: typ_at_all_props' "cteInsert newCap srcSlot destSlot"
   by typ_at_props'
 
 lemma maskedAsFull_derived'[CSpace_R_assms]:

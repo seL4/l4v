@@ -859,7 +859,7 @@ crunch setCTE
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
 
-global_interpretation setCTE: typ_at_all_props' "setCTE p v"
+global_interpretation setCTE: gen_typ_at_all_props' "setCTE p v"
   by typ_at_props'
 
 lemma setObject_cte_ksCurDomain[wp]:

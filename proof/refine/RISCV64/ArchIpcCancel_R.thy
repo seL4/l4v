@@ -88,6 +88,15 @@ crunch prepareThreadDelete
   and inactive: "st_tcb_at' ((=) Inactive) t'"
   (simp: obj_at'_not_comp_fold)
 
+sublocale cancelIPC: typ_at_all_props' "cancelIPC tptr"
+  by typ_at_props'
+
+sublocale cancelAllIPC: typ_at_all_props' "cancelAllIPC epptr"
+  by typ_at_props'
+
+sublocale cancelAllSignals: typ_at_all_props' "cancelAllSignals ntfnPtr"
+  by typ_at_props'
+
 end (* Arch *)
 
 interpretation IpcCancel_R?: IpcCancel_R

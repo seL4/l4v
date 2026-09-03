@@ -136,7 +136,7 @@ lemma threadSet_state_hyp_refs_of'[TcbAcc_R_assms]:
                 simp: gen_objBits_simps obj_at'_def state_hyp_refs_of'_def)
   done
 
-sublocale threadSet: typ_at_props' "threadSet tptr f"
+sublocale threadSet: typ_at_all_props' "threadSet tptr f"
   by typ_at_props'
 
 lemma zobj_refs'_capRange[TcbAcc_R_assms]:
@@ -155,10 +155,10 @@ lemma asUser_valid_tcbs'[wp]:
               simp: valid_tcb'_def valid_arch_tcb'_def tcb_cte_cases_def objBits_simps')
   done
 
-sublocale addToBitmap: typ_at_props' "addToBitmap tdom prio"
+sublocale addToBitmap: typ_at_all_props' "addToBitmap tdom prio"
   by typ_at_props'
 
-sublocale removeFromBitmap: typ_at_props' "removeFromBitmap tdom prio"
+sublocale removeFromBitmap: typ_at_all_props' "removeFromBitmap tdom prio"
   by typ_at_props'
 
 crunch tcbQueueRemove, tcbQueuePrepend, tcbQueueAppend, tcbQueueInsert,
@@ -277,7 +277,7 @@ context Arch begin arch_global_naming
 
 named_theorems TcbAcc_R_2_assms
 
-sublocale asUser: typ_at_props' "asUser tptr f"
+sublocale asUser: typ_at_all_props' "asUser tptr f"
   by typ_at_props'
 
 lemma tcb_hyp_refs'_valid_arch_tcb'_eq[TcbAcc_R_2_assms]:
@@ -767,16 +767,19 @@ lemma set_mrs_invs'[TcbAcc_R_3_assms, wp]:
          simp add: zipWithM_x_mapM split_def)+
   done
 
-sublocale rescheduleRequired: typ_at_props' "rescheduleRequired"
+sublocale rescheduleRequired: typ_at_all_props' "rescheduleRequired"
   by typ_at_props'
 
-sublocale tcbSchedDequeue: typ_at_props' "tcbSchedDequeue thread"
+sublocale tcbSchedDequeue: typ_at_all_props' "tcbSchedDequeue thread"
   by typ_at_props'
 
-sublocale setThreadState: typ_at_props' "setThreadState st p"
+sublocale setThreadState: typ_at_all_props' "setThreadState st p"
   by typ_at_props'
 
-sublocale setBoundNotification: typ_at_props' "setBoundNotification v p"
+sublocale setBoundNotification: typ_at_all_props' "setBoundNotification v p"
+  by typ_at_props'
+
+sublocale scheduleTCB: typ_at_all_props' "scheduleTCB tcbPtr"
   by typ_at_props'
 
 end (* Arch *)

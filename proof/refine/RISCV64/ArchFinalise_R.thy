@@ -19,7 +19,7 @@ lemma arch_postCapDeletion_ksArchState_lift[Finalise_R_assms]:
   unfolding postCapDeletion_def
   by wpsimp
 
-sublocale clearUntypedFreeIndex: typ_at_props' "clearUntypedFreeIndex slot"
+sublocale clearUntypedFreeIndex: typ_at_all_props' "clearUntypedFreeIndex slot"
   by typ_at_props'
 
 lemma setIRQState_umm[Finalise_R_assms]:
@@ -569,22 +569,13 @@ lemma isFinal_no_descendants[Finalise_R_2_assms]:
   apply (simp add: valid_mdb'_def)
   done
 
-sublocale cancelIPC: typ_at_props' "cancelIPC tptr"
+sublocale suspend: typ_at_all_props' "suspend target"
   by typ_at_props'
 
-sublocale cancelAllIPC: typ_at_props' "cancelAllIPC epptr"
+sublocale finaliseCap: typ_at_all_props' "finaliseCap cap final x"
   by typ_at_props'
 
-sublocale cancelAllSignals: typ_at_props' "cancelAllSignals ntfnPtr"
-  by typ_at_props'
-
-sublocale suspend: typ_at_props' "suspend target"
-  by typ_at_props'
-
-sublocale finaliseCap: typ_at_props' "finaliseCap cap final x"
-  by typ_at_props'
-
-sublocale unbindNotification: typ_at_props' "unbindNotification tcb"
+sublocale unbindNotification: typ_at_all_props' "unbindNotification tcb"
   by typ_at_props'
 
 lemma invs_asid_update_strg':
@@ -620,7 +611,7 @@ lemma deleteASID_invs'[wp]:
   unfolding deleteASID_def
   by (wpsimp wp: getASID_wp)
 
-sublocale archThreadSet: typ_at_props' "archThreadSet f tptr"
+sublocale archThreadSet: typ_at_all_props' "archThreadSet f tptr"
   by typ_at_props'
 
 lemma archThreadSet_valid_objs'[wp]:
