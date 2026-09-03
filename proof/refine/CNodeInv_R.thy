@@ -5801,7 +5801,7 @@ proof (induct rule: finalise_spec_induct)
           apply (wp | simp)+
        apply (rule hoare_strengthen_post)
         apply (rule hoare_vcg_conj_lift[where Q="\<lambda>rv. cte_at' slot"])
-         apply (wp RISCV64.typ_at_lifts [OF finaliseCap_typ_at'])[1] (* FIXME: rt arch-split *)
+         apply wp
         apply (rule finaliseCap_cases)
        apply (clarsimp simp: cte_wp_at_ctes_of)
       apply (wp getCTE_wp isFinalCapability_inv | simp)+
@@ -6311,7 +6311,7 @@ crunch cteDelete
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (rule: cteDelete_preservation)
 
-sublocale cteDelete: typ_at_all_props' "cteDelete slot exposed"
+sublocale cteDelete: gen_typ_at_all_props' "cteDelete slot exposed"
   by typ_at_props'
 
 lemma cteDelete_cte_at:
@@ -6320,7 +6320,7 @@ lemma cteDelete_cte_at:
                in hoare_weaken_pre)
    apply (rule hoare_strengthen_post)
     apply (rule hoare_vcg_disj_lift)
-     apply (rule cteDelete.typ_at_lifts')
+     apply (rule cteDelete.gen_typ_ats)
     apply (simp add: cteDelete_def finaliseSlot_def split_def)
     apply (rule validE_valid, rule bindE_wp_fwd)
      apply (subst finaliseSlot'_simps_ext)
@@ -6793,7 +6793,7 @@ crunch reduceZombie
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (simp: crunch_simps wp: crunch_wps)
 
-sublocale reduceZombie: typ_at_all_props' "reduceZombie cap slot x"
+sublocale reduceZombie: gen_typ_at_all_props' "reduceZombie cap slot x"
   by typ_at_props'
 
 crunch finaliseSlot
@@ -6801,7 +6801,7 @@ crunch finaliseSlot
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (rule: finaliseSlot_preservation)
 
-sublocale finaliseSlot: typ_at_all_props' "finaliseSlot ptr exposed"
+sublocale finaliseSlot: gen_typ_at_all_props' "finaliseSlot ptr exposed"
   by typ_at_props'
 
 lemma rec_del_corres:
@@ -7627,7 +7627,7 @@ crunch invokeCNode
      simp: crunch_simps filterM_mapM unless_def
        wp: crunch_wps undefined_valid finaliseSlot_preservation)
 
-sublocale invokeCNode: typ_at_all_props' "invokeCNode i"
+sublocale invokeCNode: gen_typ_at_all_props' "invokeCNode i"
   by typ_at_props'
 
 end (* CNodeInv_R *)
@@ -8337,11 +8337,11 @@ lemma cteMove_irq_handlers' [wp]:
 
 context CNodeInv_R begin
 
+sublocale cteMove: gen_typ_at_all_props' "cteMove cap src dest"
+  by typ_at_props'
+
 lemmas cteMove_valid_irq_node'[wp]
     = valid_irq_node_lift[OF cteMove_ksInterrupt cteMove_typ_at']
-
-sublocale cteMove: typ_at_all_props' "cteMove cap src dest"
-  by typ_at_props'
 
 lemmas finalise_slot_corres'
     = rec_del_corres[where args="FinaliseSlotCall slot exp",

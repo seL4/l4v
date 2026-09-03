@@ -76,7 +76,7 @@ global_interpretation Tcb_IF_1?: Tcb_IF_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Tcb_IF_assms)?)
+    by (unfold_locales; (fact Tcb_IF_assms | solves \<open>wp only: Tcb_IF_assms; simp\<close>)?)
 qed
 
 
@@ -255,7 +255,7 @@ global_interpretation Tcb_IF_2?: Tcb_IF_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Tcb_IF_assms)?)
+    by (unfold_locales; (fact Tcb_IF_assms | solves \<open>wp only: Tcb_IF_assms; simp\<close>)?)
 qed
 
 end

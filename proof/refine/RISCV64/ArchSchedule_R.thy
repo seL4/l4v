@@ -165,6 +165,11 @@ lemma bitmapQ_lookupBitmapPriority_simp[Schedule_R_assms]:
    apply (fastforce intro: word_of_nat_less simp: wordRadix_def' unat_of_nat word_size)+
   done
 
+lemma Arch_switchToIdleThread_invs'[Schedule_R_assms]:
+  "Arch.switchToIdleThread \<lbrace>invs'\<rbrace>"
+  unfolding switchToIdleThread_def
+  by (wpsimp wp: )
+
 crunch Arch.switchToIdleThread
   for obj_at'[wp]: "obj_at' P t"
 

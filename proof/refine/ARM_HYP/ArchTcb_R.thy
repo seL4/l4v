@@ -39,6 +39,12 @@ lemma asUser_postModifyRegisters_corres[Tcb_R_assms]:
    use this as interface, but keep original lemma name for use outside of Arch *)
 lemmas threadSet_state_hyp_refs_of'_interface[Tcb_R_assms] = threadSet_state_hyp_refs_of'
 
+sublocale setPriority: typ_at_props' "setPriority t prio"
+  by typ_at_props'
+
+sublocale setMCPriority: typ_at_props' "setMCPriority t prio"
+  by typ_at_props'
+
 lemma sameObject_corres2[Tcb_R_assms]:
   "\<lbrakk> cap_relation c c'; cap_relation d d' \<rbrakk>
    \<Longrightarrow> same_object_as c d = sameObjectAs c' d'"

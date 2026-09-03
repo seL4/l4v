@@ -136,7 +136,8 @@ lemma threadSet_state_hyp_refs_of'[TcbAcc_R_assms]:
                 simp: gen_objBits_simps obj_at'_def state_hyp_refs_of'_def)
   done
 
-lemmas threadSet_typ_at_lifts[wp] = typ_at_lifts[OF threadSet_typ_at']
+sublocale threadSet: typ_at_all_props' "threadSet tptr f"
+  by typ_at_props'
 
 lemma zobj_refs'_capRange[TcbAcc_R_assms]:
   "s \<turnstile>' cap \<Longrightarrow> zobj_refs' cap \<subseteq> capRange cap"
@@ -154,8 +155,11 @@ lemma asUser_valid_tcbs'[wp]:
               simp: valid_tcb'_def valid_arch_tcb'_def tcb_cte_cases_def objBits_simps')
   done
 
-lemmas addToBitmap_typ_ats[wp] = typ_at_lifts[OF addToBitmap_typ_at']
-lemmas removeFromBitmap_typ_ats[wp] = typ_at_lifts[OF removeFromBitmap_typ_at']
+sublocale addToBitmap: typ_at_all_props' "addToBitmap tdom prio"
+  by typ_at_props'
+
+sublocale removeFromBitmap: typ_at_all_props' "removeFromBitmap tdom prio"
+  by typ_at_props'
 
 crunch tcbQueueRemove, tcbQueuePrepend, tcbQueueAppend, tcbQueueInsert,
          setQueue, removeFromBitmap
@@ -272,6 +276,9 @@ qed
 context Arch begin arch_global_naming
 
 named_theorems TcbAcc_R_2_assms
+
+sublocale asUser: typ_at_all_props' "asUser tptr f"
+  by typ_at_props'
 
 lemma tcb_hyp_refs'_valid_arch_tcb'_eq[TcbAcc_R_2_assms]:
   "tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb)
@@ -760,8 +767,20 @@ lemma set_mrs_invs'[TcbAcc_R_3_assms, wp]:
          simp add: zipWithM_x_mapM split_def)+
   done
 
-lemmas setThreadState_typ_ats[wp] = typ_at_lifts [OF setThreadState_typ_at']
-lemmas setBoundNotification_typ_ats[wp] = typ_at_lifts [OF setBoundNotification_typ_at']
+sublocale rescheduleRequired: typ_at_all_props' "rescheduleRequired"
+  by typ_at_props'
+
+sublocale tcbSchedDequeue: typ_at_all_props' "tcbSchedDequeue thread"
+  by typ_at_props'
+
+sublocale setThreadState: typ_at_all_props' "setThreadState st p"
+  by typ_at_props'
+
+sublocale setBoundNotification: typ_at_all_props' "setBoundNotification v p"
+  by typ_at_props'
+
+sublocale scheduleTCB: typ_at_all_props' "scheduleTCB tcbPtr"
+  by typ_at_props'
 
 end (* Arch *)
 

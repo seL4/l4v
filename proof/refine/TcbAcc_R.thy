@@ -56,16 +56,16 @@ crunch orderedInsert, tcbQueueRemove
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: crunch_wps)
 
-global_interpretation tcbQueuePrepend: typ_at_all_props' "tcbQueuePrepend q tcbPtr"
+global_interpretation tcbQueuePrepend: gen_typ_at_all_props' "tcbQueuePrepend q tcbPtr"
   by typ_at_props'
 
-global_interpretation tcbQueueAppend: typ_at_all_props' "tcbQueueAppend q tcbPtr"
+global_interpretation tcbQueueAppend: gen_typ_at_all_props' "tcbQueueAppend q tcbPtr"
   by typ_at_props'
 
-global_interpretation tcbQueueInsert: typ_at_all_props' "tcbQueueInsert tcbPtr afterPtr"
+global_interpretation tcbQueueInsert: gen_typ_at_all_props' "tcbQueueInsert tcbPtr afterPtr"
   by typ_at_props'
 
-global_interpretation orderedInsert: typ_at_all_props' "orderedInsert t q f r"
+global_interpretation orderedInsert: gen_typ_at_all_props' "orderedInsert t q f r"
   by typ_at_props'
 
 lemma threadRead_SomeD:
@@ -831,10 +831,9 @@ lemma threadSet_valid_bitmapQ_no_L2_orphans[wp]:
      (wp | simp add: updateObject_default_def gen_objBits_simps)+
 
 lemma threadSet_cur:
-  "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. cur_tcb' s\<rbrace>"
-  apply (wpsimp simp: threadSet_def cur_tcb'_def
-                  wp: hoare_lift_Pf[OF setObject.typ_at_lifts'(1) setObject_ct_inv])
-  done
+  "threadSet f t \<lbrace>cur_tcb' \<rbrace>"
+  unfolding threadSet_def cur_tcb'_def
+  by (wpsimp wp: setObject_ct_inv | wps)+
 
 lemma modifyReadyQueuesL1Bitmap_obj_at[wp]:
   "\<lbrace>obj_at' P t\<rbrace> modifyReadyQueuesL1Bitmap a b \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
@@ -958,7 +957,7 @@ lemma threadSet_pred_tcb_no_state:
   shows   "threadSet f t \<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
   by (wpsimp wp: threadSet_obj_at'_no_state simp: pred_tcb_at'_def assms)
 
-global_interpretation threadSet: typ_at_all_props' "threadSet tptr f"
+global_interpretation threadSet: gen_typ_at_all_props' "threadSet tptr f"
   by typ_at_props'
 
 lemma threadSet_mdb':
@@ -969,11 +968,6 @@ lemma threadSet_mdb':
   apply (wpsimp wp: setObject_tcb_mdb' getTCB_wp simp: threadSet_def obj_at'_def)
   apply fastforce
   done
-
-crunch threadSet
-  for ksDomScheduleStart[wp]: "\<lambda>s. P (ksDomScheduleStart s)"
-  and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
-  (wp: updateObject_default_inv simp: setObject_def)
 
 lemma threadSet_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> threadSet F t \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
@@ -1079,12 +1073,6 @@ lemma threadSet_valid_objs':
   apply (clarsimp elim!: obj_at'_weakenE)
   done
 
-(*FIXME arch-split RT*)
-lemmas typ_at'_valid_tcb'_lift =
-  RISCV64.typ_at'_valid_obj'_lift[where obj="KOTCB tcb" for tcb, unfolded valid_obj'_def, simplified]
-
-lemmas setObject_valid_tcb' = typ_at'_valid_tcb'_lift[OF setObject_typ_at' setObject_sc_at'_n]
-
 lemma setObject_valid_tcbs':
   assumes preserve_valid_tcb': "\<And>s s' ko ko' x n tcb tcb'.
             \<lbrakk> (ko', s') \<in> fst (updateObject val ko ptr x n s); P s;
@@ -1097,7 +1085,7 @@ lemma setObject_valid_tcbs':
   apply (rename_tac s s' ptr' tcb)
   apply (prop_tac "\<forall>tcb'. valid_tcb' tcb s \<longrightarrow> valid_tcb' tcb s'")
    apply clarsimp
-   apply (erule (1) use_valid[OF _ setObject_valid_tcb'])
+   apply (erule (1) use_valid[OF _ valid_tcb'_typ_at_lift[OF setObject_typ_at' setObject_sc_at'_n]])
   apply (drule spec, erule mp)
   apply (clarsimp simp: setObject_def in_monad split_def lookupAround2_char1)
   apply (rename_tac s ptr' new_tcb' ptr'' old_tcb_ko' s' f)
@@ -1122,10 +1110,8 @@ lemma setObject_tcb_valid_tcbs':
 lemma threadSet_valid_tcb':
   "\<lbrace>valid_tcb' tcb and (\<lambda>s. \<forall>tcb. valid_tcb' tcb s \<longrightarrow> valid_tcb' (f tcb) s)\<rbrace>
    threadSet f t
-   \<lbrace>\<lambda>rv. valid_tcb' tcb\<rbrace>"
-  apply (simp add: threadSet_def)
-  apply (wpsimp wp: setObject_valid_tcb')
-  done
+   \<lbrace>\<lambda>_. valid_tcb' tcb\<rbrace>"
+  by (wpsimp simp: threadSet_def)
 
 lemma threadSet_valid_tcbs':
   "\<lbrace>valid_tcbs' and (\<lambda>s. \<forall>tcb. valid_tcb' tcb s \<longrightarrow> valid_tcb' (f tcb) s)\<rbrace>
@@ -1164,7 +1150,7 @@ crunch asUser
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: crunch_wps)
 
-global_interpretation asUser: typ_at_all_props' "asUser tptr f"
+global_interpretation asUser: gen_typ_at_all_props' "asUser tptr f"
   by typ_at_props'
 
 lemma threadGet_sp:
@@ -1497,10 +1483,10 @@ crunch addToBitmap, removeFromBitmap
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
 
-global_interpretation addToBitmap: typ_at_all_props' "addToBitmap tdom prio"
+global_interpretation addToBitmap: gen_typ_at_all_props' "addToBitmap tdom prio"
   by typ_at_props'
 
-global_interpretation removeFromBitmap: typ_at_all_props' "removeFromBitmap tdom prio"
+global_interpretation removeFromBitmap: gen_typ_at_all_props' "removeFromBitmap tdom prio"
   by typ_at_props'
 
 lemma pspace_relation_tcb_domain_priority:
@@ -1636,6 +1622,9 @@ crunch tcbReleaseRemove, tcbReleaseEnqueue,
   and ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
   (wp: crunch_wps threadSet_state_refs_of'[where f'=id and g'=id] valid_dom_schedule'_lift
    simp: crunch_simps tcb_cte_cases_def tcb_bound_refs'_def bitmap_fun_defs)
+
+sublocale tcbReleaseRemove: gen_typ_at_all_props' "tcbReleaseRemove tptr"
+  by typ_at_props'
 
 crunch tcbReleaseRemove, tcbReleaseEnqueue
   for valid_machine_state'[wp]: valid_machine_state'
@@ -4206,22 +4195,19 @@ crunch rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
   and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps)
 
-global_interpretation rescheduleRequired: typ_at_all_props' "rescheduleRequired"
+global_interpretation rescheduleRequired: gen_typ_at_all_props' "rescheduleRequired"
   by typ_at_props'
 
-global_interpretation tcbSchedDequeue: typ_at_all_props' "tcbSchedDequeue thread"
+global_interpretation tcbSchedDequeue: gen_typ_at_all_props' "tcbSchedDequeue thread"
   by typ_at_props'
 
-global_interpretation threadSet: typ_at_all_props' "threadSet f p"
+global_interpretation setThreadState: gen_typ_at_all_props' "setThreadState st p"
   by typ_at_props'
 
-global_interpretation setThreadState: typ_at_all_props' "setThreadState st p"
+global_interpretation setBoundNotification: gen_typ_at_all_props' "setBoundNotification v p"
   by typ_at_props'
 
-global_interpretation setBoundNotification: typ_at_all_props' "setBoundNotification v p"
-  by typ_at_props'
-
-global_interpretation scheduleTCB: typ_at_all_props' "scheduleTCB tcbPtr"
+global_interpretation scheduleTCB: gen_typ_at_all_props' "scheduleTCB tcbPtr"
   by typ_at_props'
 
 lemma sts'_valid_mdb'[wp]:
@@ -6257,9 +6243,6 @@ lemma setReleaseQueue_pred_tcb_at'[wp]:
   by (wpsimp simp: setReleaseQueue_def)
 
 context TcbAcc_R begin
-
-sublocale tcbReleaseRemove: typ_at_all_props' "tcbReleaseRemove tptr"
-  by typ_at_props'
 
 crunch tcbReleaseRemove, tcbQueueRemove, tcbReleaseEnqueue
   for valid_irq_handlers'[wp]: valid_irq_handlers'

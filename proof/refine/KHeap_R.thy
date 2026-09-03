@@ -1556,7 +1556,7 @@ lemma valid_irq_handlers_lift':
 lemmas valid_irq_handlers_lift'' = valid_irq_handlers_lift' [unfolded cteCaps_of_def]
 
 lemmas valid_irq_node_lift =
-    hoare_use_eq_irq_node' [OF _ typ_at_lift_valid_irq_node']
+    hoare_use_eq_irq_node' [OF _ valid_irq_node'_typ_at_lift]
 
 lemmas untyped_ranges_zero_lift
     = hoare_use_eq[where f="gsUntypedZeroRanges"
@@ -1613,10 +1613,8 @@ lemma setObject_typ_at'[wp]:
   "setObject p v \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
   by (blast intro: P_bool_lift setObject_typ_at_inv setObject_typ_at_not)
 
-global_interpretation setObject: typ_at_all_props' "setObject p v"
+global_interpretation setObject: gen_typ_at_all_props' "setObject p v"
   by typ_at_props'
-
-lemmas setObject_valid_obj = setObject.typ_at_lifts_all'(20)
 
 lemma setObject_valid_objs':
   assumes x: "\<And>x n ko s ko' s'.
@@ -1628,7 +1626,7 @@ lemma setObject_valid_objs':
   apply (subgoal_tac "\<forall>ko. valid_obj' ko s \<longrightarrow> valid_obj' ko b")
    defer
    apply clarsimp
-   apply (erule (1) use_valid [OF _ setObject.typ_at_sc_at'_n_lifts'(3)])
+   apply (erule (1) use_valid[OF _ valid_obj'_typ_at_lift[OF setObject_typ_at' setObject_sc_at'_n]])
   apply (clarsimp simp: setObject_def split_def in_monad
                         lookupAround2_char1)
   apply (simp add: valid_objs'_def)
@@ -1639,8 +1637,6 @@ lemma setObject_valid_objs':
    apply (simp add: prod_eqI lookupAround2_char1)
   apply (clarsimp elim!: ranE split: if_split_asm simp: ranI)
   done
-
-lemmas setObject_valid_reply' = setObject.typ_at_lifts_all'(26)
 
 
 locale pspace_only' =
@@ -1724,7 +1720,8 @@ lemma sc_at'_n[wp]: "f p v \<lbrace>\<lambda>s. P (sc_at'_n n p' s)\<rbrace>"
   by (clarsimp simp: valid_def setObject_def in_monad split_def ko_wp_at'_def ps_clear_upd
                      updateObject_size lookupAround2_char1 updateObject_type)
 
-sublocale typ_at_all_props' "f p v" for p v by typ_at_props'
+sublocale gen_typ_at_all_props' "f p v" for p v
+  by typ_at_props'
 
 sublocale pspace_only' "f p v" for p v
   unfolding f_def
@@ -1928,8 +1925,6 @@ lemmas get_ko_at' = getObject_ko_at'[folded g_def]
 
 lemmas ko_wp_at = setObject_ko_wp_at[where 'a='a, folded f_def,
                                      simplified default_update, simplified]
-
-lemmas set_valid_reply' = setObject_valid_reply'[folded f_def]
 
 lemma setObject_ko_at':
   "\<lbrace>\<lambda>s. obj_at' (\<lambda>_ :: 'a. True) p s \<longrightarrow>
@@ -2560,7 +2555,7 @@ crunch doMachineOp
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
 
-global_interpretation doMachineOp: typ_at_all_props' "doMachineOp mop"
+global_interpretation doMachineOp: gen_typ_at_all_props' "doMachineOp mop"
   by typ_at_props'
 
 lemma doMachineOp_invs_bits[wp]:

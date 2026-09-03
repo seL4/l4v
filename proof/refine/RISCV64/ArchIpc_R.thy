@@ -190,6 +190,33 @@ lemma is_derived_mask'[simp]:
   "is_derived' m p (maskCapRights R c) = is_derived' m p c"
   by (rule ext, simp add: is_derived'_def badge_derived'_def)
 
+sublocale setExtraBadge: typ_at_all_props' "setExtraBadge buffer badge n"
+  by typ_at_props'
+
+sublocale transferCaps: typ_at_all_props' "transferCaps info caps endpoint receiver receiveBuffer"
+  by typ_at_props'
+
+sublocale copyMRs: typ_at_all_props' "copyMRs s sb r rb n"
+  by typ_at_props'
+
+sublocale doNormalTransfer: typ_at_all_props' "doNormalTransfer s sb e b g r rb"
+  by typ_at_props'
+
+sublocale doIPCTransfer: typ_at_all_props' "doIPCTransfer s e b g r"
+  by typ_at_props'
+
+sublocale handleFaultReply: typ_at_all_props' "handleFaultReply x t l m"
+  by typ_at_props'
+
+sublocale sendFaultIPC: typ_at_all_props' "sendFaultIPC tptr handlerCap fault canDonate"
+  by typ_at_props'
+
+sublocale receiveIPC: typ_at_all_props' "receiveIPC t cap b replyCap"
+  by typ_at_props'
+
+sublocale receiveSignal: typ_at_all_props' "receiveSignal t cap b"
+  by typ_at_props'
+
 end (* Arch *)
 
 end

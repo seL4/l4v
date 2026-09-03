@@ -843,19 +843,19 @@ crunch restart, bindNotification, performTransfer, setFlags, doReplyTransfer, se
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (simp: crunch_simps wp: crunch_wps)
 
-global_interpretation doReplyTransfer: typ_at_all_props' "doReplyTransfer s r g"
+global_interpretation doReplyTransfer: gen_typ_at_all_props' "doReplyTransfer s r g"
   by typ_at_props'
 
-global_interpretation sendIPC: typ_at_all_props' "sendIPC bl call bdg cg cgr cd t' ep"
+global_interpretation sendIPC: gen_typ_at_all_props' "sendIPC bl call bdg cg cgr cd t' ep"
   by typ_at_props'
 
-global_interpretation invokeSchedContext: typ_at_all_props' "invokeSchedContext i"
+global_interpretation invokeSchedContext: gen_typ_at_all_props' "invokeSchedContext i"
   by typ_at_props'
 
-global_interpretation invokeSchedControlConfigureFlags: typ_at_all_props' "invokeSchedControlConfigureFlags i"
+global_interpretation invokeSchedControlConfigureFlags: gen_typ_at_all_props' "invokeSchedControlConfigureFlags i"
   by typ_at_props'
 
-global_interpretation handleFault: typ_at_all_props' "handleFault t ex"
+global_interpretation handleFault: gen_typ_at_all_props' "handleFault t ex"
   by typ_at_props'
 
 context Syscall_R begin
@@ -867,17 +867,16 @@ crunch invokeTCB, performIRQControl, invokeIRQHandler
    wp: crunch_wps checkCap_inv hoare_vcg_all_lift
    ignore: checkCapAt)
 
-sublocale invokeTCB: typ_at_all_props' "invokeTCB i"
+sublocale invokeTCB: gen_typ_at_all_props' "invokeTCB i"
   by typ_at_props'
 
-sublocale performIRQControl: typ_at_all_props' "performIRQControl i"
+sublocale performIRQControl: gen_typ_at_all_props' "performIRQControl i"
   by typ_at_props'
 
-(* FIXME rt arch-split
-sublocale Arch < arch_invokeIRQHandler: typ_at_all_props' "Arch.invokeIRQHandler i"
-  by typ_at_props' *)
+sublocale arch_invokeIRQHandler: gen_typ_at_all_props' "Arch.invokeIRQHandler i"
+  by typ_at_props'
 
-sublocale invokeIRQHandler: typ_at_all_props' "invokeIRQHandler i"
+sublocale invokeIRQHandler: gen_typ_at_all_props' "invokeIRQHandler i"
   by typ_at_props'
 
 crunch invokeDomain
@@ -2149,10 +2148,10 @@ crunch chargeBudget
   and sc_at'_n[wp]: "\<lambda>s. Q (sc_at'_n n p s)"
   (wp: crunch_wps simp: crunch_simps)
 
-global_interpretation refillResetRR: typ_at_all_props' "refillResetRR scPtr"
+global_interpretation refillResetRR: gen_typ_at_all_props' "refillResetRR scPtr"
   by typ_at_props'
 
-global_interpretation chargeBudget: typ_at_all_props' "chargeBudget consumed canTimeoutFault"
+global_interpretation chargeBudget: gen_typ_at_all_props' "chargeBudget consumed canTimeoutFault"
   by typ_at_props'
 
 crunch refillResetRR

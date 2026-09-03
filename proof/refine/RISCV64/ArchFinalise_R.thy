@@ -19,6 +19,9 @@ lemma arch_postCapDeletion_ksArchState_lift[Finalise_R_assms]:
   unfolding postCapDeletion_def
   by wpsimp
 
+sublocale clearUntypedFreeIndex: typ_at_all_props' "clearUntypedFreeIndex slot"
+  by typ_at_props'
+
 lemma setIRQState_umm[Finalise_R_assms]:
   "setIRQState irqState irq \<lbrace>\<lambda>s. P (underlying_memory (ksMachineState s))\<rbrace> "
   by (simp add: setIRQState_def maskInterrupt_def
@@ -566,7 +569,14 @@ lemma isFinal_no_descendants[Finalise_R_2_assms]:
   apply (simp add: valid_mdb'_def)
   done
 
-lemmas finaliseCap_typ_ats[wp] = typ_at_lifts[OF finaliseCap_typ_at']
+sublocale suspend: typ_at_all_props' "suspend target"
+  by typ_at_props'
+
+sublocale finaliseCap: typ_at_all_props' "finaliseCap cap final x"
+  by typ_at_props'
+
+sublocale unbindNotification: typ_at_all_props' "unbindNotification tcb"
+  by typ_at_props'
 
 lemma invs_asid_update_strg':
   "invs' s \<and> tab = riscvKSASIDTable (ksArchState s) \<longrightarrow>
@@ -601,7 +611,8 @@ lemma deleteASID_invs'[wp]:
   unfolding deleteASID_def
   by (wpsimp wp: getASID_wp)
 
-lemmas archThreadSet_typ_ats[wp] = typ_at_lifts[OF archThreadSet_typ_at']
+sublocale archThreadSet: typ_at_all_props' "archThreadSet f tptr"
+  by typ_at_props'
 
 lemma archThreadSet_valid_objs'[wp]:
   "\<lbrace>valid_objs' and (\<lambda>s. \<forall>tcb. ko_at' tcb t s \<longrightarrow> valid_arch_tcb' (f (tcbArch tcb)) s)\<rbrace>

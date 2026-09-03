@@ -679,7 +679,7 @@ lemma handleFaultReply':
                                    asUser_return submonad_asUser.fn_stateAssert
                   | rule monadic_rewrite_bind_tail monadic_rewrite_refl
                          monadic_rewrite_symb_exec_l[OF _ stateAssert_inv]
-                  | wp )+)+
+                  | wp)+)+
        apply (case_tac "msgLength tag < scast n_msgRegisters")
         apply (erule disjE[OF word_less_cases],
                   ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
@@ -4595,8 +4595,7 @@ lemma doNormalTransfer_local_slots:
     doNormalTransfer sender sendBuffer ep badge grant receiver receiveBuffer
    \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>cte. P (cteCap cte)) slot\<rbrace>"
   apply (simp add: doNormalTransfer_def)
-  apply (wp transferCaps_local_slots weak copyMRs_typ_at'[where T=CTET, unfolded typ_at_cte]
-    | simp)+
+  apply (wpsimp wp: transferCaps_local_slots weak)
   done
 
 lemma doIPCTransfer_local_slots:

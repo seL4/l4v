@@ -19,7 +19,6 @@ lemmas [wp] = do_ipc_transfer_valid_arch_no_caps
 abbreviation irq_state_of_state :: "det_state \<Rightarrow> nat" where
   "irq_state_of_state s \<equiv> irq_state (machine_state s)"
 
-
 crunch cap_insert, cap_swap_for_delete
   for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps)
@@ -148,18 +147,12 @@ lemma throw_on_false_reads_respects:
    \<Longrightarrow> reads_respects aag l P (throw_on_false ex f)"
   unfolding throw_on_false_def fun_app_def unlessE_def by wpsimp
 
-lemma dmo_mol_2_reads_respects:
-  "reads_respects aag l \<top> (do_machine_op (machine_op_lift mop >>= (\<lambda> y. machine_op_lift mop')))"
-  apply (rule use_spec_ev)
-  apply (rule do_machine_op_spec_reads_respects)
-  by (wpsimp wp: machine_op_lift_ev)+
-
 lemma tl_subseteq:
   "set (tl xs) \<subseteq> set xs"
   by (induct xs, auto)
 
 
-abbreviation(input) aag_can_read_label where
+abbreviation (input) aag_can_read_label where
   "aag_can_read_label aag l \<equiv> l \<in> subjectReads (pasPolicy aag) (pasSubject aag)"
 
 definition labels_are_invisible where
@@ -167,38 +160,60 @@ definition labels_are_invisible where
      (\<forall>d \<in> L. \<not> aag_can_read_label aag d) \<and>
      (aag_can_affect_label aag l \<longrightarrow> (\<forall>d \<in> L. d \<notin> subjectReads (pasPolicy aag) l))"
 
-
-lemma equiv_but_for_reads_equiv:
-  "\<lbrakk> pas_domains_distinct aag; labels_are_invisible aag l L; equiv_but_for_labels aag L s s' \<rbrakk>
+lemma equiv_but_for_reads_equiv':
+  "\<lbrakk> pas_domains_distinct aag \<or> equiv_for (aag_can_read_domain aag) ready_queues s s';
+     labels_are_invisible aag l L; equiv_but_for_labels aag L s s' \<rbrakk>
      \<Longrightarrow> reads_equiv aag s s'"
   apply (simp add: reads_equiv_def2)
   apply (rule conjI)
    apply (clarsimp simp: labels_are_invisible_def equiv_but_for_labels_def)
    apply (rule states_equiv_forI)
-            apply (fastforce intro: equiv_forI elim: states_equiv_forE equiv_forD)+
-       apply (auto intro!: equiv_forI elim!: states_equiv_forE elim!: equiv_forD simp: o_def)[1]
-      apply (fastforce intro: equiv_forI elim: states_equiv_forE equiv_forD)+
-    apply (fastforce simp: equiv_asids_def elim: states_equiv_forE elim: equiv_forD)
+             apply (fastforce intro: equiv_forI elim: states_equiv_forE equiv_forD)+
+         apply (auto intro!: equiv_forI elim!: states_equiv_forE elim!: equiv_forD simp: o_def)[1]
+        apply (fastforce intro: equiv_forI elim: states_equiv_forE equiv_forD)+
+      apply (fastforce simp: equiv_asids_def elim: states_equiv_forE elim: equiv_forD)
+     apply (fastforce elim!: states_equiv_forE equiv_hyp_guard_imp)
+    apply (fastforce elim!: states_equiv_forE equiv_fpu_guard_imp)
    apply (clarsimp simp: equiv_for_def states_equiv_for_def disjoint_iff_not_equal)
    apply (metis pas_domains_distinct_inj)
   apply (fastforce simp: equiv_but_for_labels_def)
   done
 
-lemma equiv_but_for_affects_equiv:
-  "\<lbrakk> pas_domains_distinct aag; labels_are_invisible aag l L; equiv_but_for_labels aag L s s' \<rbrakk>
+lemma equiv_but_for_affects_equiv':
+  "\<lbrakk> pas_domains_distinct aag \<or> equiv_for (aag_can_affect_domain aag l) ready_queues s s';
+     labels_are_invisible aag l L; equiv_but_for_labels aag L s s' \<rbrakk>
      \<Longrightarrow> affects_equiv aag l s s'"
   apply (subst affects_equiv_def2)
   apply (clarsimp simp: labels_are_invisible_def equiv_but_for_labels_def aag_can_affect_label_def)
   apply (rule states_equiv_forI)
-           apply (fastforce intro!: equiv_forI elim!: states_equiv_forE equiv_forD)+
-   apply (fastforce simp: equiv_asids_def elim!: states_equiv_forE elim!: equiv_forD)
+            apply (fastforce intro!: equiv_forI elim!: states_equiv_forE equiv_forD)+
+     apply (fastforce simp: equiv_asids_def elim!: states_equiv_forE elim!: equiv_forD)
+    apply (fastforce elim!: states_equiv_forE equiv_hyp_guard_imp)
+   apply (fastforce elim!: states_equiv_forE equiv_fpu_guard_imp)
   apply (clarsimp simp: equiv_for_def states_equiv_for_def disjoint_iff_not_equal)
   apply (metis pas_domains_distinct_inj)
   done
 
+lemmas equiv_but_for_reads_equiv = equiv_but_for_reads_equiv'[OF disjI1]
+   and equiv_but_for_affects_equiv = equiv_but_for_affects_equiv'[OF disjI1]
+
+lemma equiv_for_lift:
+  assumes "\<And>P. m \<lbrace>\<lambda>s. P (f s)\<rbrace>"
+  shows "m \<lbrace>\<lambda>s. equiv_for P f st s\<rbrace>"
+    and "m \<lbrace>\<lambda>s. equiv_for P f s st\<rbrace>"
+  using assms
+  by (fastforce simp: equiv_for_def valid_def)+
+
+lemma equiv_for_lift2:
+  assumes "\<And>P. m \<lbrace>\<lambda>s. P (f (g s))\<rbrace>"
+  shows "m \<lbrace>\<lambda>s. equiv_for P f st (g s)\<rbrace>"
+  using assms
+  by (fastforce simp: equiv_for_def valid_def)
+
 (* consider rewriting the return-value assumption using equiv_valid_rv_inv *)
-lemma ev2_invisible:
-  assumes domains_distinct: "pas_domains_distinct aag"
+lemma ev2_invisible':
+  assumes "pas_domains_distinct aag \<or> (\<forall>P. f \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace>) \<and>
+                                      (\<forall>P. g \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace>)"
   shows
   "\<lbrakk> labels_are_invisible aag l L; labels_are_invisible aag l L';
      modifies_at_most aag L Q f; modifies_at_most aag L' Q' g;
@@ -210,39 +225,62 @@ lemma ev2_invisible:
    apply blast
   apply (drule_tac s=s in modifies_at_mostD, assumption+)
   apply (drule_tac s=t in modifies_at_mostD, assumption+)
-  apply (frule (1) equiv_but_for_reads_equiv[OF domains_distinct])
-  apply (frule_tac s=t in equiv_but_for_reads_equiv[OF domains_distinct], assumption)
-  apply (drule (1) equiv_but_for_affects_equiv[OF domains_distinct])
-  apply (drule_tac s=t in equiv_but_for_affects_equiv[OF domains_distinct], assumption)
-  apply (blast intro: reads_equiv_trans reads_equiv_sym affects_equiv_trans affects_equiv_sym)
+  apply (insert assms)
+  apply (frule equiv_but_for_reads_equiv'[rotated 2])
+    apply (erule disjE; clarsimp intro!: disjCI2)
+    apply (erule use_valid, wpsimp wp: equiv_for_lift, rule equiv_for_refl)
+   apply assumption
+  apply (drule equiv_but_for_affects_equiv'[rotated 2])
+    apply (erule disjE; clarsimp intro!: disjCI2)
+    apply (erule use_valid, wpsimp wp: equiv_for_lift, rule equiv_for_refl)
+   apply assumption
+  apply (frule equiv_but_for_reads_equiv'[rotated 2])
+    apply (erule disjE; clarsimp intro!: disjCI2)
+    apply (rule equiv_for_sym, erule use_valid, wpsimp wp: equiv_for_lift, rule equiv_for_refl)
+   apply assumption
+  apply (drule equiv_but_for_affects_equiv'[rotated 2])
+    apply (erule disjE; clarsimp intro!: disjCI2)
+    apply (erule use_valid, wpsimp wp: equiv_for_lift, rule equiv_for_refl)
+   apply assumption
+  apply (meson reads_equiv_sym reads_equiv_trans affects_equiv_sym affects_equiv_trans)
   done
 
-lemma ev_invisible:
+lemmas ev2_invisible = ev2_invisible'[OF disjI1]
+
+lemma revrv_invisible:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows
     "\<lbrakk> labels_are_invisible aag l L; modifies_at_most aag L Q f;
        \<forall>s t. P s \<and> P t \<longrightarrow> (\<forall>(rva, s') \<in> fst (f s). \<forall>(rvb, t') \<in> fst(f t). W rva rvb) \<rbrakk>
-       \<Longrightarrow> equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l)
-                         W (P and Q) (P and Q) f f"
+       \<Longrightarrow> reads_equiv_valid_rv_inv (affects_equiv aag l) aag W (P and Q) f"
   by (rule ev2_invisible[OF domains_distinct]; simp)
 
-lemma modify_det:
-  "det (modify f)"
-  by (clarsimp simp: det_def modify_def get_def put_def bind_def)
+lemma reads_respects_unit_invisible:
+  "\<lbrakk> labels_are_invisible aag l L; modifies_at_most aag L P f; \<And>P. f \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> \<rbrakk>
+     \<Longrightarrow> reads_respects aag l P (f :: (det_state,unit) nondet_monad)"
+  apply (rule equiv_valid_guard_imp)
+   apply (simp add: equiv_valid_def2)
+   apply (rule ev2_invisible')
+  by simp+
+
+lemma reads_respects_unit_cases':
+  "\<lbrakk> reads_respects aag l (P and K (aag_can_read_or_affect aag l ptr)) f;
+     modifies_at_most aag {pasObjectAbs aag ptr} (Q and K (\<not> aag_can_read_or_affect aag l ptr)) f;
+     \<And>P. f \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> \<rbrakk>
+     \<Longrightarrow> reads_respects aag l (if aag_can_read_or_affect aag l ptr then P else Q) (f :: (det_state,unit) nondet_monad)"
+  apply (case_tac "aag_can_read_or_affect aag l ptr")
+   apply clarsimp
+  apply (rule_tac L="{pasObjectAbs aag ptr}" in reads_respects_unit_invisible)
+    apply (clarsimp simp: labels_are_invisible_def)
+   apply (clarsimp simp: modifies_at_most_def)
+  apply simp
+  done
+
+lemmas reads_respects_unit_cases = reads_respects_unit_cases'[OF _ modifies_at_mostI]
 
 lemma dummy_kheap_update:
   "st = st\<lparr>kheap := kheap st\<rparr>"
   by simp
-
-lemma reads_affects_equiv_kheap_eq:
-  "\<lbrakk> reads_equiv aag s s'; affects_equiv aag l s s'; aag_can_affect aag l x \<or> aag_can_read aag x \<rbrakk>
-     \<Longrightarrow> kheap s x = kheap s' x"
-  by (fastforce elim: affects_equivE reads_equivE equiv_forE)
-
-lemma reads_affects_equiv_get_tcb_eq:
-  "\<lbrakk> aag_can_read aag t \<or> aag_can_affect aag l t; reads_equiv aag s s'; affects_equiv aag l s s' \<rbrakk>
-     \<Longrightarrow> get_tcb t s = get_tcb t s'"
-  by (fastforce simp: get_tcb_def reads_affects_equiv_kheap_eq)
 
 lemma equiv_valid_get_assert:
   "equiv_valid_inv I A P f
@@ -409,23 +447,22 @@ locale Arch_IF_1 =
     "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
      set_endpoint ptr ep
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  and set_cap_globals_equiv'':
-    "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
-     set_cap cap p
-     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   and set_thread_state_globals_equiv:
     "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
      set_thread_state ref ts
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  and as_user_globals_equiv:
-    "\<And>f :: unit user_monad.
-     \<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
-     as_user tptr f
-     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  and thread_set_non_idle_globals_equiv:
+    "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
+     thread_set f tptr
+     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   and arch_prepare_set_domain_irq_state_of_state[wp]:
     "arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   and arch_prepare_next_domain_irq_state_of_state[wp]:
     "arch_prepare_next_domain  \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+  and equiv_hyp_machine_state_rest_update[simp]:
+    "\<And>P. equiv_hyp P st (s\<lparr>machine_state := ms\<lparr>machine_state_rest := rest\<rparr>\<rparr>) = equiv_hyp P st (s\<lparr>machine_state := ms\<rparr>)"
+  and equiv_fpu_machine_state_rest_update[simp]:
+    "\<And>P. equiv_fpu P st (s\<lparr>machine_state := ms\<lparr>machine_state_rest := rest\<rparr>\<rparr>) = equiv_fpu P st (s\<lparr>machine_state := ms\<rparr>)"
 begin
 
 crunch empty_slot
@@ -465,7 +502,7 @@ lemma mol_states_equiv_for:
   apply (simp add: machine_rest_lift_def split_def)
   apply (wp modify_wp)
   apply (clarsimp simp: states_equiv_for_def equiv_asids_def)
-  apply (fastforce elim!: equiv_forE intro!: equiv_forI)
+  apply (auto elim!: equiv_forE intro!: equiv_forI)
   done
 
 lemma do_machine_op_mol_states_equiv_for:
@@ -488,17 +525,15 @@ lemma set_mrs_reads_respects:
   "reads_respects aag l (K (aag_can_read aag t \<or> aag_can_affect aag l t)) (set_mrs t buf msgs)"
   apply (simp add: set_mrs_def cong: option.case_cong_weak)
   apply (wp mapM_x_ev' store_word_offs_reads_respects set_object_reads_respects
-         | wpc | simp add: split_def split del: if_split add: zipWithM_x_mapM_x)+
+          | wpc | simp add: split_def split del: if_split add: zipWithM_x_mapM_x)+
   apply (auto intro: reads_affects_equiv_get_tcb_eq)
   done
 
-lemma cap_insert_globals_equiv'':
-  "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
-   cap_insert new_cap src_slot dest_slot
+lemma as_user_globals_equiv[wp]:
+  "\<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
+   as_user tptr f
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding cap_insert_def
-  by (wpsimp wp: set_original_globals_equiv update_cdt_globals_equiv
-                 set_cap_globals_equiv'' dxo_wp_weak hoare_drop_imps)
+  by (wpsimp wp: as_user_wp_thread_set_helper thread_set_non_idle_globals_equiv)
 
 lemma set_message_info_globals_equiv:
   "\<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>

@@ -30,6 +30,7 @@ definition domain_sep_inv :: "bool \<Rightarrow> 'a :: state_ext state \<Rightar
                       \<and> \<not> cte_wp_at ((=) (IRQHandlerCap irq)) slot s
                       \<and> interrupt_states s irq \<noteq> IRQSignal
                       \<and> interrupt_states s irq \<noteq> IRQReserved
+                      \<and> (irq \<in> non_kernel_IRQs \<longrightarrow> interrupt_states s irq = IRQInactive)
                       \<and> interrupt_states s = interrupt_states st))"
 
 definition domain_sep_inv_cap where
@@ -59,6 +60,7 @@ lemma domain_sep_inv_def2:
                        \<and> \<not> cte_wp_at ((=) (IRQHandlerCap irq)) slot s)) \<and>
      (irqs \<or> (\<forall>irq. interrupt_states s irq \<noteq> IRQSignal
                   \<and> interrupt_states s irq \<noteq> IRQReserved
+                  \<and> (irq \<in> non_kernel_IRQs \<longrightarrow> interrupt_states s irq = IRQInactive)
                   \<and> interrupt_states s = interrupt_states st)))"
   by (fastforce simp: domain_sep_inv_def)
 
@@ -90,7 +92,9 @@ lemma domain_sep_inv_wp:
   apply (rule disjI2)
   apply simp
   apply (intro allI conjI)
-    apply (erule_tac P1="\<lambda>x. x irq \<noteq> IRQSignal" in use_valid[OF _ irq_pres], assumption)
+     apply (erule_tac P1="\<lambda>x. x irq \<noteq> IRQSignal" in use_valid[OF _ irq_pres], assumption)
+     apply blast
+    apply (erule use_valid[OF _ irq_pres], assumption)
     apply blast
    apply (erule use_valid[OF _ irq_pres], assumption)
    apply blast

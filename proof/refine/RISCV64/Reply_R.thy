@@ -18,7 +18,7 @@ crunch updateReply
   and ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
   and sc_obj_at'[wp]: "\<lambda>s. Q (obj_at' (P :: sched_context \<Rightarrow> bool) scp s)"
 
-global_interpretation updateReply: typ_at_all_props' "updateReply p f"
+global_interpretation updateReply: gen_typ_at_all_props' "updateReply p f"
   by typ_at_props'
 
 lemma updateReply_replyNext_reply_projs[wp]:
@@ -84,7 +84,7 @@ crunch cleanReply
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (rule: weak_sch_act_wf_lift)
 
-global_interpretation cleanReply: typ_at_all_props' "cleanReply p"
+global_interpretation cleanReply: gen_typ_at_all_props' "cleanReply p"
   by typ_at_props'
 
 lemma replyUnlink_st_tcb_at':
@@ -378,7 +378,7 @@ crunch replyRemoveTCB
   (wp: hoare_vcg_all_lift crunch_wps hoare_vcg_if_lift valid_mdb'_lift
    simp: pred_tcb_at'_def if_distribR if_bool_eq_conj)
 
-global_interpretation replyUnlink: typ_at_all_props' "replyUnlink replyPtr tcbPtr"
+global_interpretation replyUnlink: gen_typ_at_all_props' "replyUnlink replyPtr tcbPtr"
   by typ_at_props'
 
 lemma replyRemoveTCB_valid_objs'[wp]:
@@ -1504,7 +1504,7 @@ lemma updateReply_Prev_Next_rewrite:
     apply (insert no_fail_updateReply, drule_tac x=rp and y="replyPrev_update f" in meta_spec2)
     apply (insert no_fail_updateReply, drule_tac x=rp and y="replyNext_update g" in meta_spec2)
     apply (rule; clarsimp simp: in_monad no_fail_def snd_bind split_def)
-     apply (drule (1) use_valid[OF _ updateReply.typ_at_lifts'(5)], fastforce)+
+     apply (drule (1) use_valid[OF _ reply_at'_typ_at_lift_strong[OF updateReply_typ_at']], fastforce)+
     done
    apply (all \<open>clarsimp simp: updateReply_def getReply_def setReply_def getObject_def2
                               obj_at'_def updateObject_default_def setObject_def
