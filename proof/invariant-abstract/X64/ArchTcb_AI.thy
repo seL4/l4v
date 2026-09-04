@@ -192,10 +192,10 @@ end
 
 global_interpretation Tcb_AI_1?: Tcb_AI_1
   where state_ext_t = state_ext_t
-  and is_cnode_or_valid_arch = is_cnode_or_valid_arch
-  proof goal_cases
-    case 1 show ?case by (unfold_locales; (fact X64.Tcb_AI_assms)?)
-  qed
+    and is_cnode_or_valid_arch = is_cnode_or_valid_arch
+proof goal_cases
+  case 1 show ?case by (unfold_locales; (fact X64.Tcb_AI_assms)?)
+qed
 
 context Arch begin arch_global_naming
 

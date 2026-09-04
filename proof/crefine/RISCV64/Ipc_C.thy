@@ -4982,9 +4982,9 @@ lemma sendIPC_ccorres [corres]:
               apply ccorres_rewrite
               apply (ctac add: setThreadState_ccorres)
              apply (rule ccorres_return_Skip)
+            apply (clarsimp simp: valid_tcb_state'_def)
             apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift possibleSwitchTo_sch_act_not
-                              possibleSwitchTo_sch_act_not sts_st_tcb' sts_valid_objs'
-                          simp: valid_tcb_state'_def)+
+                              sts_st_tcb' sts_valid_objs')+
           apply vcg
          apply (wpsimp wp: doIPCTransfer_sch_act hoare_vcg_all_lift
                            set_ep_valid_objs' setEndpoint_valid_mdb'

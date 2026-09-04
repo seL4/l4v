@@ -100,6 +100,12 @@ lemma setEndpoint_pde_mappings'[wp]:
    apply (clarsimp dest!: updateObject_default_result)+
   done
 
+sublocale cancelAllIPC: typ_at_props' "cancelAllIPC epptr"
+  by typ_at_props'
+
+sublocale cancelAllSignals: typ_at_props' "cancelAllSignals ntfnPtr"
+  by typ_at_props'
+
 lemmas IpcCancel_R_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
