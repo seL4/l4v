@@ -118,8 +118,8 @@ lemmas Syscall_AI_assms = Arch_assms (* extract accumulated assumptions *)
 end
 
 global_interpretation Syscall_AI?: Syscall_AI
-  proof goal_cases
+proof goal_cases
   case 1 show ?case by (unfold_locales; (fact X64.Syscall_AI_assms)?)
-  qed
+qed
 
 end

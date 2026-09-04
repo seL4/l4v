@@ -182,7 +182,7 @@ crunch arch_prepare_set_domain
 
 interpretation Tcb_AI_1? : Tcb_AI_1
   where state_ext_t = state_ext_t
-  and is_cnode_or_valid_arch = is_cnode_or_valid_arch
+    and is_cnode_or_valid_arch = is_cnode_or_valid_arch
   by (unfold_locales; fact Arch_assms)
 
 lemma use_no_cap_to_obj_asid_strg: (* arch specific *)
@@ -398,9 +398,8 @@ end
 
 global_interpretation Tcb_AI?: Tcb_AI
   where is_cnode_or_valid_arch = ARM.is_cnode_or_valid_arch
- proof goal_cases
-  case 1 show ?case
-  by (unfold_locales; fact ARM.Tcb_AI_assms)
+proof goal_cases
+  case 1 show ?case by (unfold_locales; fact ARM.Tcb_AI_assms)
 qed
 
 end

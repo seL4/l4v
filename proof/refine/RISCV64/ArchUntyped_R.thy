@@ -119,13 +119,13 @@ lemma ctes_of_ko_arch[Arch_assms]:
     apply (case_tac ko; simp)
     apply (rename_tac arch_kernel_object)
     apply (case_tac arch_kernel_object;
-             simp add: archObjSize_def asid_low_bits_def bit_simps mask_def add_ac)
+           simp add: archObjSize_def asid_low_bits_def bit_simps mask_def add_ac)
    \<comment> \<open>Frame case\<close>
    apply (rename_tac word vmrights vmpage_size option)
    apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def typ_at'_def
                          ko_wp_at'_def capAligned_def)
-   apply (frule_tac ptr = ptr and sz = "pageBits" in
-                    nasty_range[where 'a=machine_word_len, folded word_bits_def, rotated])
+   apply (frule_tac ptr = ptr and sz = "pageBits"
+                 in nasty_range[where 'a=machine_word_len, folded word_bits_def, rotated])
       apply simp
      apply (simp add: pbfs_atleast_pageBits)+
    apply (clarsimp simp: frame_at'_def)
@@ -133,15 +133,15 @@ lemma ctes_of_ko_arch[Arch_assms]:
    apply (intro exI conjI,assumption)
    apply (clarsimp simp: obj_range'_def shiftl_t2n mask_def add_diff_eq)
    apply (case_tac ko, simp_all split: if_splits,
-         (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n)+)[1]
+          (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n)+)[1]
   \<comment> \<open>PT case\<close>
   apply (rename_tac word option)
   apply (clarsimp simp: valid_cap'_def valid_arch_cap_ref'_def obj_at'_def bit_simps
                         page_table_at'_def typ_at'_def ko_wp_at'_def)
-  apply (frule_tac ptr=ptr and sz=3 in
-                 nasty_range[where 'a=machine_word_len and bz="ptBits", folded word_bits_def,
-                             simplified ptBits_def word_bits_def bit_simps, simplified,
-                             simplified bit_simps, simplified])
+  apply (frule_tac ptr=ptr and sz=3
+                in nasty_range[where 'a=machine_word_len and bz="ptBits", folded word_bits_def,
+                               simplified ptBits_def word_bits_def bit_simps, simplified,
+                               simplified bit_simps, simplified])
     apply simp
    apply simp
   apply clarsimp

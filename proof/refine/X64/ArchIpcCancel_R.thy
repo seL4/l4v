@@ -154,6 +154,12 @@ lemma setThreadState_oa_queued:
       by (simp add: not_obj_at' comp_def, wp hoare_convert_imp pos)
   qed
 
+sublocale cancelAllIPC: typ_at_props' "cancelAllIPC epptr"
+  by typ_at_props'
+
+sublocale cancelAllSignals: typ_at_props' "cancelAllSignals ntfnPtr"
+  by typ_at_props'
+
 lemmas IpcCancel_R_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)

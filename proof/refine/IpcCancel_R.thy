@@ -52,21 +52,26 @@ lemmas corresK_as_user' =
 lemmas setEndpoint_ko_wp_at'
     = setObject_ko_wp_at'[where 'a=endpoint, folded setEndpoint_def, simplified]
 
-crunch cancelAllIPC
+crunch cancelBadgedSends, cancelAllSignals, cancelAllIPC, cancelSignal
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  (wp: crunch_wps filterM_preserved)
+
+global_interpretation cancelBadgedSends: gen_typ_at_props' "cancelBadgedSends epptr badge"
+  by typ_at_props'
+
+global_interpretation cancelAllSignals: gen_typ_at_props' "cancelAllSignals ntfnPtr"
+  by typ_at_props'
+
+global_interpretation cancelAllIPC: gen_typ_at_props' "cancelAllIPC epptr"
+  by typ_at_props'
+
+global_interpretation cancelSignal: gen_typ_at_props' "cancelSignal threadPtr ntfnPtr"
+  by typ_at_props'
+
+crunch cancelAllIPC, cancelAllSignals
   for aligned'[wp]: pspace_aligned'
-  (wp: crunch_wps mapM_x_wp' simp: unless_def)
-
-crunch cancelAllIPC
-  for distinct'[wp]: pspace_distinct'
-  (wp: crunch_wps mapM_x_wp' simp: unless_def)
-
-crunch cancelAllSignals
-  for aligned'[wp]: pspace_aligned'
-  (wp: crunch_wps mapM_x_wp')
-
-crunch cancelAllSignals
-  for distinct'[wp]: pspace_distinct'
-  (wp: crunch_wps mapM_x_wp')
+  and distinct'[wp]: pspace_distinct'
+  (wp: crunch_wps)
 
 lemma cancelSignal_simple[wp]:
   "\<lbrace>\<top>\<rbrace> cancelSignal t ntfn \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
@@ -145,7 +150,6 @@ lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at':
 
 context delete_one_conc_pre begin
 
-(* FIXME arch-split: not clear where arch version of this should go *)
 sublocale delete_one: gen_typ_at_props' "cteDeleteOne slot"
   by typ_at_props'
 

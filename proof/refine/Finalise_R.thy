@@ -1746,7 +1746,7 @@ crunch unbindNotification, finaliseCapTrue_standin
   for cte_wp_at'[wp]: "cte_wp_at' P p"
   (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
 
-crunch cteDeleteOne, suspend
+crunch cteDeleteOne, suspend, unbindNotification
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps getObject_inv loadObject_default_inv
    simp: crunch_simps unless_def o_def
@@ -1755,13 +1755,10 @@ crunch cteDeleteOne, suspend
 global_interpretation cancelIPC: gen_typ_at_props' "cancelIPC tptr"
   by typ_at_props'
 
-global_interpretation cancelAllIPC: gen_typ_at_props' "cancelAllIPC epptr"
-  by typ_at_props'
-
-global_interpretation cancelAllSignals: gen_typ_at_props' "cancelAllSignals ntfnPtr"
-  by typ_at_props'
-
 global_interpretation suspend: gen_typ_at_props' "suspend target"
+  by typ_at_props'
+
+global_interpretation unbindNotification: gen_typ_at_props' "unbindNotification tcb"
   by typ_at_props'
 
 context Finalise_R begin
@@ -1774,9 +1771,6 @@ crunch finaliseCap
   (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
 sublocale finaliseCap: gen_typ_at_props' "finaliseCap cap final x"
-  by typ_at_props'
-
-sublocale unbindNotification: gen_typ_at_props' "unbindNotification tcb"
   by typ_at_props'
 
 end (* Finalise_R *)

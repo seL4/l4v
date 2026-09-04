@@ -253,8 +253,8 @@ locale Ipc_R =
   assumes makeArchFaultMessage_inv[wp]:
     "\<And>ft t P. makeArchFaultMessage ft t \<lbrace>P\<rbrace>"
   assumes lookupIPCBuffer_valid_ipc_buffer[wp]:
-    "\<And>b s. \<lbrace>valid_objs'\<rbrace> VSpace_H.lookupIPCBuffer b s \<lbrace>case_option \<top> valid_ipc_buffer_ptr'\<rbrace>"
-assumes arch_getSanitiseRegisterInfo_corres:
+    "\<And>b s. \<lbrace>valid_objs'\<rbrace> lookupIPCBuffer b s \<lbrace>case_option \<top> valid_ipc_buffer_ptr'\<rbrace>"
+  assumes arch_getSanitiseRegisterInfo_corres:
     "\<And>t.
      corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
             (arch_get_sanitise_register_info t)
@@ -1846,54 +1846,25 @@ crunch doIPCTransfer
 
 crunch doIPCTransfer
   for vp[wp]: "valid_pspace'"
-  (wp: crunch_wps hoare_vcg_const_Ball_lift get_rs_cte_at' wp: transferCapsToSlots_vp simp:ball_conj_distrib )
-crunch doIPCTransfer
-  for state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of' s)"
-  (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots  simp: zipWithM_x_mapM)
-crunch doIPCTransfer
-  for ct[wp]: "cur_tcb'"
-  (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots  simp: zipWithM_x_mapM)
-crunch doIPCTransfer
-  for idle'[wp]: "valid_idle'"
-  (wp: crunch_wps get_rs_cte_at' ignore: transferCapsToSlots  simp: zipWithM_x_mapM)
+  and state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of' s)"
+  and ct[wp]: "cur_tcb'"
+  and idle'[wp]: "valid_idle'"
+  (wp: crunch_wps hoare_vcg_const_Ball_lift
+   simp: zipWithM_x_mapM ball_conj_distrib)
 
 sublocale doIPCTransfer: gen_typ_at_props' "doIPCTransfer s e b g r"
   by typ_at_props'
 
 crunch doIPCTransfer
   for objs'[wp]: "valid_objs'"
-   (    wp: crunch_wps hoare_vcg_const_Ball_lift
-            transferCapsToSlots_valid_objs
-      simp: zipWithM_x_mapM ball_conj_distrib )
-
-crunch doIPCTransfer
-  for global_refs'[wp]: "valid_global_refs'"
-  (wp: crunch_wps hoare_vcg_const_Ball_lift threadSet_global_refsT
-       transferCapsToSlots_valid_globals
-      simp: zipWithM_x_mapM ball_conj_distrib)
-
-crunch doIPCTransfer
-  for irq_handlers'[wp]: "valid_irq_handlers'"
-  (wp: crunch_wps hoare_vcg_const_Ball_lift threadSet_irq_handlers'
-       transferCapsToSlots_irq_handlers
-       simp: zipWithM_x_mapM ball_conj_distrib )
-
-crunch doIPCTransfer
-  for irq_states'[wp]: "valid_irq_states'"
-  (wp: crunch_wps no_irq no_irq_mapM no_irq_storeWord no_irq_loadWord
-       no_irq_case_option simp: crunch_simps zipWithM_x_mapM)
-
-crunch doIPCTransfer
-  for irqs_masked'[wp]: "irqs_masked'"
-  (wp: crunch_wps simp: crunch_simps rule: irqs_masked_lift)
-
-lemma doIPCTransfer_invs[wp]:
-  "\<lbrace>invs' and tcb_at' s and tcb_at' r\<rbrace>
-   doIPCTransfer s ep bg grt r
-   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: doIPCTransfer_def)
-  apply (wpsimp wp: hoare_drop_imp)
-  done
+  and global_refs'[wp]: "valid_global_refs'"
+  and irq_handlers'[wp]: "valid_irq_handlers'"
+  and irq_states'[wp]: "valid_irq_states'"
+  and irqs_masked'[wp]: "irqs_masked'"
+  and invs'[wp]: invs'
+  (wp: crunch_wps hoare_vcg_const_Ball_lift no_irq no_irq_storeWord
+   simp: zipWithM_x_mapM ball_conj_distrib
+   rule: irqs_masked_lift)
 
 lemma handle_fault_reply_registers_corres:
   "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
@@ -3104,8 +3075,7 @@ lemma replyFromKernel_corres:
            apply clarsimp
           apply (rule setMessageInfo_corres)
           apply (wp hoare_case_option_wp hoare_valid_ipc_buffer_ptr_typ_at'
-                 | clarsimp simp: invs_distinct invs_psp_aligned)+
-  apply fastforce
+                 | fastforce)+
   done
 
 lemma rfk_invs':

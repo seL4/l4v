@@ -191,6 +191,12 @@ crunch prepareThreadDelete
   and inactive: "st_tcb_at' ((=) Inactive) t'"
   (simp: obj_at'_not_comp_fold)
 
+sublocale cancelAllIPC: typ_at_props' "cancelAllIPC epptr"
+  by typ_at_props'
+
+sublocale cancelAllSignals: typ_at_props' "cancelAllSignals ntfnPtr"
+  by typ_at_props'
+
 lemmas IpcCancel_R_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
