@@ -357,7 +357,7 @@ lemma asid_at'_typ_at_lift_strong:
 
 lemma valid_arch_tcb'_typ_at_lift_strong[Arch_assms]:
   assumes "\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
-  shows "f \<lbrace>\<lambda>s. P (valid_arch_tcb' tcb s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (valid_arch_tcb' arch_tcb s)\<rbrace>"
   by (clarsimp simp: valid_arch_tcb'_def, wp)
 
 lemma valid_arch_cap'_typ_at_lift[Arch_assms]:

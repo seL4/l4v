@@ -1602,6 +1602,12 @@ crunch reschedule_required
   and ready_qs_distinct[wp]: ready_qs_distinct
   (ignore: tcb_sched_action wp: crunch_wps)
 
+crunch possibleSwitchTo
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+
+global_interpretation possibleSwitchTo: gen_typ_at_props' "possibleSwitchTo t"
+  by typ_at_props'
+
 locale Schedule_R_3 = Schedule_R_2 +
   assumes scheduleChooseNewThread_corres:
     "corres dc

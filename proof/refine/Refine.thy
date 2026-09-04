@@ -483,7 +483,7 @@ lemma entry_corres:
         apply (rule corres_split[OF kernel_corres])
           apply (rule corres_split_eqr[OF getCurThread_corres])
             apply (rule threadGet_corres)
-            apply (clarsimp simp add: tcb_relation_def arch_tcb_relation_arch_context_get)
+            apply (clarsimp simp: tcb_relation_def arch_tcb_relation_arch_context_get)
            apply wp+
          apply (rule hoare_strengthen_post, rule akernel_invs_det_ext,
                 simp add: invs_def valid_state_def valid_pspace_def cur_tcb_def)

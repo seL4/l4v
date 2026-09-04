@@ -393,7 +393,7 @@ lemma vcpu_at'_typ_at_lift_strong:
   by assumption
 
 lemma valid_arch_tcb'_typ_at_lift_strong[Arch_assms]:
-  "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_arch_tcb' tcb s)\<rbrace>"
+  "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_arch_tcb' arch_tcb s)\<rbrace>"
   unfolding valid_arch_tcb'_def
   apply (rule bool_to_bool_cases[where f=P]; clarsimp)
   apply (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_all_lift hoare_vcg_ex_lift

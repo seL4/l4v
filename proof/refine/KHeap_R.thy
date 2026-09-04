@@ -51,7 +51,7 @@ lemma setObject_modify_variable_size:
   done
 
 lemma setObject_default_wp:
-  "\<lbrakk> updateObject v = updateObject_default v; (1::nat) < 2 ^ objBits v \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> updateObject v = updateObject_default v; (1 :: machine_word) < 2 ^ objBits v \<rbrakk> \<Longrightarrow>
    \<lbrace>\<lambda>s. obj_at' (\<lambda>obj::'a. objBits v = objBits obj) p s \<and>
         Q () (ksPSpace_update (\<lambda>ps. ps(p \<mapsto> injectKO v)) s)\<rbrace>
    setObject p v
@@ -1040,7 +1040,7 @@ lemma setObject_state_refs_of':
   assumes y: "(1 :: machine_word) < 2 ^ objBits val"
   shows
   "\<lbrace>\<lambda>s. P ((state_refs_of' s) (ptr := refs_of' (injectKO val)))\<rbrace>
-     setObject ptr val
+   setObject ptr val
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
                         updateObject_default_def x in_magnitude_check y
@@ -1758,7 +1758,7 @@ lemma setObject_valid_objs':
   apply (subgoal_tac "\<forall>ko. valid_obj' ko s \<longrightarrow> valid_obj' ko b")
    defer
    apply clarsimp
-   apply (erule(1) use_valid [OF _ valid_obj'_typ_at_lift[OF setObject_typ_at']])
+   apply (erule(1) use_valid[OF _ valid_obj'_typ_at_lift[OF setObject_typ_at']])
   apply (clarsimp simp: setObject_def split_def in_monad
                         lookupAround2_char1)
   apply (simp add: valid_objs'_def)

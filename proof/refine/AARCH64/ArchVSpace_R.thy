@@ -1932,9 +1932,9 @@ lemma deleteASIDPool_corres:
   apply (fastforce simp: is_aligned_asid_low_bits_of_zero valid_asid_table'_def ran_def dom_def)
   done
 
-crunch unmapPageTable, unmapPage, setVMRoot, setMessageInfo, setMRs, performPageTableInvocation,
+crunch unmapPageTable, unmapPage, setVMRoot, performPageTableInvocation,
        performASIDPoolInvocation, performPageInvocation
-  for typ_at' [wp]: "\<lambda>s. P (typ_at' T p s)"
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 sublocale unmapPageTable: typ_at_props' "unmapPageTable asid vaddr pt"
