@@ -12,9 +12,8 @@ context Arch begin arch_global_naming
 
 clear_named_theorems Arch_assms (* accumulate assumptions for DetSchedSchedule_AI locale *)
 
-crunch
-  prepare_thread_delete
-  for prepare_thread_delete_idel_thread[wp, Arch_assms]: "\<lambda>(s:: det_ext state). P (idle_thread s)"
+crunch prepare_thread_delete
+  for idle_thread[wp, Arch_assms]: "\<lambda>s. P (idle_thread s)"
 
 crunch
   switch_to_idle_thread, switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers,
@@ -399,9 +398,9 @@ lemmas DetSchedSchedule_AI_assms = Arch_assms (* extract accumulated assumptions
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
-  proof goal_cases
+proof goal_cases
   case 1 show ?case by (unfold_locales; (fact X64.DetSchedSchedule_AI_assms)?)
-  qed
+qed
 
 context Arch begin arch_global_naming
 
@@ -423,8 +422,8 @@ lemmas DetSchedSchedule_AI_handle_hypervisor_fault_assms = Arch_assms (* extract
 end
 
 global_interpretation DetSchedSchedule_AI_handle_hypervisor_fault?: DetSchedSchedule_AI_handle_hypervisor_fault
-  proof goal_cases
+proof goal_cases
   case 1 show ?case by (unfold_locales; (fact X64.DetSchedSchedule_AI_handle_hypervisor_fault_assms)?)
-  qed
+qed
 
 end

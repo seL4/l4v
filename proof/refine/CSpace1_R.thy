@@ -636,7 +636,7 @@ lemma getThreadCSpaceRoot:
 lemma getThreadVSpaceRoot:
   "getThreadVSpaceRoot t = return (t+2^cteSizeBits)" (*2^cte_level_bits*)
   by (simp add: getThreadVSpaceRoot_def locateSlot_conv gen_objBits_simps
-                tcbVTableSlot_def shiftl_t2n cteSizeBits_cte_level_bits)
+                tcbVTableSlot_def cteSizeBits_cte_level_bits)
 
 lemma getSlotCap_tcb_corres:
   "corres (\<lambda>t c. cap_relation (tcb_ctable t) c)

@@ -142,13 +142,13 @@ lemma ctes_of_ko_arch[Arch_assms]:
     apply (intro exI conjI,assumption)
     apply (clarsimp simp: obj_range'_def)
     apply (case_tac ko, simp_all split: if_splits,
-            (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n mask_def)+)[1]
+           (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n mask_def)+)[1]
    \<comment> \<open>PT case\<close>
    apply (rename_tac word option)
    apply (clarsimp simp: valid_cap'_def obj_at'_def vspace_bits_defs
                          page_table_at'_def typ_at'_def ko_wp_at'_def ptBits_def)
-   apply (frule_tac ptr=ptr and sz=3 in
-                    nasty_range[where 'a=32 and bz="pt_bits", folded word_bits_def,
+   apply (frule_tac ptr=ptr and sz=3
+                 in nasty_range[where 'a=32 and bz="pt_bits", folded word_bits_def,
                                 simplified vspace_bits_defs word_bits_def, simplified])
      apply simp
     apply simp
@@ -164,8 +164,8 @@ lemma ctes_of_ko_arch[Arch_assms]:
   \<comment> \<open>PD case\<close>
   apply (clarsimp simp: valid_cap'_def obj_at'_def vspace_bits_defs
                         page_directory_at'_def typ_at'_def ko_wp_at'_def)
-  apply (frule_tac ptr=ptr and sz=3 in
-                   nasty_range[where 'a=32 and bz="pd_bits", folded word_bits_def,
+  apply (frule_tac ptr=ptr and sz=3
+                in nasty_range[where 'a=32 and bz="pd_bits", folded word_bits_def,
                                simplified vspace_bits_defs word_bits_def, simplified])
     apply (simp add: field_simps)
    apply simp

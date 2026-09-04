@@ -153,7 +153,7 @@ context Arch begin arch_global_naming
 clear_named_theorems Arch_assms (* accumulate assumptions for Invariants_H_cte_ats locale *)
 
 (* FIXME arch-split: for proofs which require exact offsets lining up instead of cteSizeBits *)
-(* 0 case already covered by tcb_cte_cases_simps *)
+(* 0 case already covered by tcb_cte_cases_simps' *)
 lemma raw_tcb_cte_cases_simps:
   "tcb_cte_cases 32 = Some (tcbVTable, tcbVTable_update)"
   "tcb_cte_cases 64 = Some (tcbReply, tcbReply_update)"
@@ -427,7 +427,7 @@ lemma vcpu_at'_typ_at_lift_strong:
   by assumption
 
 lemma valid_arch_tcb'_typ_at_lift_strong[Arch_assms]:
-  "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_arch_tcb' tcb s)\<rbrace>"
+  "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_arch_tcb' arch_tcb s)\<rbrace>"
   unfolding valid_arch_tcb'_def
   apply (rule bool_to_bool_cases[where f=P]; clarsimp)
   apply (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_all_lift hoare_vcg_ex_lift

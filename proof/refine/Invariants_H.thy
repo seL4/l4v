@@ -1530,16 +1530,18 @@ lemmas tcb_cte_cases_neqs_n =
     distinct_rev[THEN iffD2, OF tcb_cte_cases_distinct_n, simplified],
     simplified conj_ac, simplified] (* remove duplicates from 0/1 simplification *)
 
-lemma tcb_cte_cases_simps[simp]:
-  "tcb_cte_cases 0  = Some (tcbCTable, tcbCTable_update)"
-  "tcb_cte_cases (1 << cteSizeBits) = Some (tcbVTable, tcbVTable_update)"
-  "tcb_cte_cases (2 << cteSizeBits) = Some (tcbReply, tcbReply_update)"
-  "tcb_cte_cases (3 << cteSizeBits) = Some (tcbCaller, tcbCaller_update)"
-  "tcb_cte_cases (4 << cteSizeBits) = Some (tcbIPCBufferFrame, tcbIPCBufferFrame_update)"
-  by (simp add: tcb_cte_cases_neqs_n tcb_cte_cases_def)+
-
 lemmas tcbSlot_defs = tcbCTableSlot_def tcbVTableSlot_def tcbReplySlot_def tcbCallerSlot_def
                       tcbIPCBufferSlot_def
+
+lemma tcb_cte_cases_simps[simp]:
+  "tcb_cte_cases (tcbCTableSlot << cteSizeBits)  = Some (tcbCTable, tcbCTable_update)"
+  "tcb_cte_cases (tcbVTableSlot << cteSizeBits) = Some (tcbVTable, tcbVTable_update)"
+  "tcb_cte_cases (tcbReplySlot << cteSizeBits) = Some (tcbReply, tcbReply_update)"
+  "tcb_cte_cases (tcbCallerSlot << cteSizeBits) = Some (tcbCaller, tcbCaller_update)"
+  "tcb_cte_cases (tcbIPCBufferSlot << cteSizeBits) = Some (tcbIPCBufferFrame, tcbIPCBufferFrame_update)"
+  by (simp add: tcb_cte_cases_neqs_n tcb_cte_cases_def tcbSlot_defs)+
+
+lemmas tcb_cte_cases_simps'[simp] = tcb_cte_cases_simps[simplified tcbSlot_defs shiftl_0]
 
 lemma tcb_cte_cases_distinct:
   "distinct [
@@ -2041,24 +2043,20 @@ lemma valid_untyped'_typ_at_lift:
   apply (clarsimp split:if_splits)
   done
 
-lemma valid_bound_tcb'_typ_at_lift:
-  "(\<And>T p. f \<lbrace>typ_at' T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_bound_tcb' tcb\<rbrace>"
+lemma valid_bound_tcb'_typ_at_lift_strong:
+  "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_bound_tcb' p_opt s)\<rbrace>"
   by (auto simp: valid_bound_tcb'_def valid_def typ_ats'[symmetric] split: option.splits)
 
-lemma valid_bound_ntfn'_typ_at_lift:
-  "(\<And>T p. f \<lbrace>typ_at' T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_bound_ntfn' ntfn\<rbrace>"
+lemma valid_bound_ntfn'_typ_at_lift_strong:
+  "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_bound_ntfn' p_opt s)\<rbrace>"
   by (auto simp: valid_bound_ntfn'_def valid_def typ_ats'[symmetric] split: option.splits)
 
-lemma valid_ntfn'_typ_at_lift':
+lemma valid_ntfn'_typ_at_lift:
   "(\<And>T p. f \<lbrace>typ_at' T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_ntfn' ntfn\<rbrace>"
   unfolding valid_ntfn'_def
   apply (cases "ntfnObj ntfn"; clarsimp)
-    apply (wpsimp wp: valid_bound_tcb'_typ_at_lift)
-   apply (wpsimp wp: valid_bound_tcb'_typ_at_lift)
-  apply (wpsimp wp: hoare_vcg_ball_lift tcb_at'_typ_at_lift_strong[where P=id, simplified])
-   apply (wpsimp wp: valid_bound_tcb'_typ_at_lift)
-  apply simp
-  done
+  by (wpsimp wp: valid_bound_tcb'_typ_at_lift_strong[where P=id, simplified]
+                 hoare_vcg_ball_lift tcb_at'_typ_at_lift_strong[where P=id, simplified])+
 
 lemma valid_irq_node'_typ_at_lift:
   assumes P: "\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
@@ -2074,7 +2072,7 @@ locale Invariants_H_typ_at_lifts = Invariants_H_cte_ats +
      is able to be used here because nothing within the locale looks at f. *)
   fixes f_rvt_itself :: "'f_rvt itself"
   assumes valid_arch_tcb'_typ_at_lift_strong:
-    "\<And>(f :: 'f_rvt kernel) P tcb. (\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_arch_tcb' tcb s)\<rbrace>"
+    "\<And>(f :: 'f_rvt kernel) P arch_tcb. (\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_arch_tcb' arch_tcb s)\<rbrace>"
   assumes valid_arch_cap'_typ_at_lift:
     "\<And>(f :: 'f_rvt kernel) cap. (\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>valid_arch_cap' cap\<rbrace>"
 begin
@@ -2082,6 +2080,7 @@ begin
 lemmas gen_typ_at_lifts_strong =
   tcb_at'_typ_at_lift_strong[where 'a='f_rvt] ep_at'_typ_at_lift_strong[where 'a='f_rvt]
   ntfn_at'_typ_at_lift_strong[where 'a='f_rvt] real_cte_at'_typ_at_lift_strong[where 'a='f_rvt]
+  valid_bound_tcb'_typ_at_lift_strong[where 'a='f_rvt] valid_bound_ntfn'_typ_at_lift_strong[where 'a='f_rvt]
   valid_tcb_state'_typ_at_lift_strong[where 'a='f_rvt]
   valid_arch_tcb'_typ_at_lift_strong
 
@@ -2146,27 +2145,20 @@ lemma valid_obj'_typ_at_lift:
   assumes P: "\<And>P T p. (f :: 'f_rvt kernel) \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
   notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_const_Ball_lift
                gen_typ_at_lifts_strong[OF P] valid_cap'_typ_at_lift[OF P]
-               valid_bound_tcb'_typ_at_lift[OF P] valid_bound_ntfn'_typ_at_lift[OF P]
+               valid_ntfn'_typ_at_lift[OF P]
   shows      "f \<lbrace>\<lambda>s. valid_obj' obj s\<rbrace>"
-  apply (cases obj; simp add: valid_obj'_def hoare_TrueI)
-      apply (rename_tac endpoint)
-      apply (case_tac endpoint; simp add: valid_ep'_def, wp)
-     apply (rename_tac notification)
-     apply (case_tac "ntfnObj notification";
-            simp add: valid_ntfn'_def split: option.splits,
-            (wpsimp|rule conjI)+)
-    apply (rename_tac tcb)
-    apply (case_tac "tcbState tcb";
-           simp add: valid_tcb'_def valid_tcb_state'_def split_def opt_tcb_at'_def;
-           wpsimp wp: hoare_case_option_wp)
-   apply (wpsimp simp: valid_cte'_def)+
+  apply (cases obj; simp add: valid_obj'_def hoare_TrueI; (solves wpsimp)?)
+    apply (rename_tac endpoint)
+    apply (case_tac endpoint; simp add: valid_ep'_def, wp)
+   apply (rename_tac tcb)
+   apply (case_tac "tcbState tcb";
+          simp add: valid_tcb'_def valid_tcb_state'_def split_def opt_tcb_at'_def;
+          wpsimp wp: hoare_case_option_wp)
+  apply (wpsimp simp: valid_cte'_def)
   done
 
 lemmas valid_ep'_typ_at_lift =
   valid_obj'_typ_at_lift[where obj="KOEndpoint ko" for ko, simplified valid_obj'_def kernel_object.case]
-
-lemmas valid_ntfn'_typ_at_lift =
-  valid_obj'_typ_at_lift[where obj="KONotification ko" for ko, simplified valid_obj'_def kernel_object.case]
 
 lemmas valid_tcb'_typ_at_lift =
   valid_obj'_typ_at_lift[where obj="KOTCB ko" for ko, simplified valid_obj'_def kernel_object.case]
@@ -2179,7 +2171,6 @@ lemmas valid_arch_obj'_typ_at_lift =
 
 lemmas gen_typ_at_lifts =
   gen_typ_at_lifts_strong_internal cte_at'_typ_at_lift' valid_untyped'_typ_at_lift
-  valid_bound_tcb'_typ_at_lift valid_bound_ntfn'_typ_at_lift valid_ntfn'_typ_at_lift'
   valid_irq_node'_typ_at_lift valid_cap'_typ_at_lift valid_obj'_typ_at_lift valid_arch_cap'_typ_at_lift
   valid_ep'_typ_at_lift valid_ntfn'_typ_at_lift valid_tcb'_typ_at_lift valid_cte'_typ_at_lift
   valid_arch_obj'_typ_at_lift
@@ -2206,7 +2197,7 @@ end
 
 end (* gen_typ_at_props'_interface *)
 
-(* Main typ_at_props' locale used for function instantiation.
+(* Main gen_typ_at_props' locale used for function instantiation.
    Requires Invariants_H_typ_at_lifts to be interpreted first before gen_typ_at_props'_interface
    can become a sublocale. *)
 locale gen_typ_at_props' =

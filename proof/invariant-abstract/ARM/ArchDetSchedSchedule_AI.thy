@@ -15,9 +15,8 @@ clear_named_theorems Arch_assms (* accumulate assumptions for DetSchedSchedule_A
 crunch arch_mask_irq_signal
   for valid_sched[wp, Arch_assms]: valid_sched
 
-crunch
-  prepare_thread_delete
-  for prepare_thread_delete_idle_thread[wp, Arch_assms]: "\<lambda>(s:: det_ext state). P (idle_thread s)"
+crunch prepare_thread_delete
+  for idle_thread[wp, Arch_assms]: "\<lambda>s. P (idle_thread s)"
 
 crunch
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info,
@@ -359,9 +358,9 @@ lemmas DetSchedSchedule_AI_assms = Arch_assms (* extract accumulated assumptions
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
-  proof goal_cases
+proof goal_cases
   case 1 show ?case by (unfold_locales; (fact ARM.DetSchedSchedule_AI_assms)?)
-  qed
+qed
 
 context Arch begin arch_global_naming
 
@@ -383,8 +382,8 @@ lemmas DetSchedSchedule_AI_handle_hypervisor_fault_assms = Arch_assms (* extract
 end
 
 global_interpretation DetSchedSchedule_AI_handle_hypervisor_fault?: DetSchedSchedule_AI_handle_hypervisor_fault
-  proof goal_cases
+proof goal_cases
   case 1 show ?case by (unfold_locales; (fact ARM.DetSchedSchedule_AI_handle_hypervisor_fault_assms)?)
-  qed
+qed
 
 end

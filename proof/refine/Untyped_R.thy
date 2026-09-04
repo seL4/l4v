@@ -660,7 +660,7 @@ lemma ctes_of_ko:
                      dest!: projectKO_opt_tcbD)
     apply (clarsimp simp: valid_cap'_def obj_at'_def capAligned_def gen_objBits_simps)
     apply (frule_tac ptr=ptr and sz=cte_level_bits
-             in nasty_range[where 'a=machine_word_len, folded word_bits_def])
+                  in nasty_range[where 'a=machine_word_len, folded word_bits_def])
       apply (simp add: cteSizeBits_cte_level_bits)+
     apply clarsimp
     apply (drule_tac x=idx in spec)
@@ -669,11 +669,10 @@ lemma ctes_of_ko:
                            cteSizeBits_cte_level_bits)
    \<comment> \<open>Arch caps\<close>
    apply (fastforce dest: ctes_of_ko_arch simp: gen_isCap_simps capRange_def)
-
   \<comment> \<open>CNode case\<close>
   apply (clarsimp simp: valid_cap'_def obj_at'_def capAligned_def gen_objBits_simps)
   apply (frule_tac ptr=ptr and sz=cte_level_bits
-           in nasty_range[where 'a=machine_word_len, folded word_bits_def])
+                in nasty_range[where 'a=machine_word_len, folded word_bits_def])
       apply (simp add: cteSizeBits_cte_level_bits)+
   apply clarsimp
   apply (drule_tac x=idx in spec)
