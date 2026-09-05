@@ -1207,11 +1207,6 @@ lemma corres_assert_ret:
   apply (simp add: assert_def return_def fail_def)
   done
 
-lemma corres_assert_assume_r:
-  "corres dc P Q f (g ())
-  \<Longrightarrow> corres dc P (Q and (\<lambda>s. Q')) f (assert Q' >>= g)"
-  by (force simp: corres_underlying_def assert_def return_def bind_def fail_def)
-
 lemma gts_exs_valid[wp]:
   "tcb_at t s \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_thread_state t \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
   apply (clarsimp simp: get_thread_state_def  assert_opt_def fail_def
