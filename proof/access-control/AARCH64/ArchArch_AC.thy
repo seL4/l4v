@@ -2821,6 +2821,18 @@ lemma decode_fr_inv_map_authorised:
   apply (clarsimp simp: authorised_arch_inv_def authorised_page_inv_def authorised_slots_def
                         aag_cap_auth_def cap_links_asid_slot_def cap_links_irq_def pte_ref2_def
                         make_user_pte_def cap_auth_conferred_def arch_cap_auth_conferred_def)
+  apply (rule conjI; clarsimp)
+   apply (rule conjI)
+    apply (frule (1) pt_lookup_slot_vs_lookup_slotI, clarsimp)
+    apply (drule (1) vs_lookup_slot_unique_level; clarsimp)
+    apply (fastforce simp: cte_wp_at_caps_of_state make_user_pte_def pte_ref2_def
+                           vspace_cap_rights_to_auth_def validate_vm_rights_def
+                           mask_vm_rights_def vm_read_only_def vm_kernel_only_def
+                    split: if_splits)
+   apply (fastforce elim: pt_lookup_slot_from_level_is_subject[rotated 4]
+                   intro: vs_lookup_table_vref_independent[OF vspace_for_asid_vs_lookup]
+                          pas_refined_Control[symmetric]
+                    simp: pt_lookup_slot_def)
   apply (rule conjI)
    apply (frule (1) pt_lookup_slot_vs_lookup_slotI, clarsimp)
    apply (drule (1) vs_lookup_slot_unique_level; clarsimp)

@@ -48,7 +48,7 @@ lemma ptr_offset_in_ptr_range:
 
 lemma user_op_access[ADT_AC_assms]:
   "\<lbrakk> invs s; pas_refined aag s; is_subject aag tcb; ptable_lift tcb s x = Some ptr;
-     auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) \<rbrakk>
+     auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) (ptable_exec tcb s x) \<rbrakk>
      \<Longrightarrow> abs_has_auth_to aag auth tcb (ptrFromPAddr ptr)"
   apply (case_tac "x \<in> kernel_mappings")
   using get_vspace_of_thread_asid_or_global_pt
@@ -99,16 +99,18 @@ lemma user_op_access[ADT_AC_assms]:
    apply (clarsimp simp: graph_of_def pte_ref2_def Bex_def ptes_of_Some pts_of_Some aobjs_of_Some)
    apply (rule_tac x="table_index (pt_slot_offset max_pt_level vref x)" in exI)
    apply (fastforce simp: table_index_max_level_slots canonical_not_kernel_is_user
-                          image_iff ptrFromPAddr_def mult_is_add.mult_ac)
+                          image_iff ptrFromPAddr_def mult_is_add.mult_ac
+                          vspace_cap_rights_to_auth_def)
   apply (clarsimp simp: graph_of_def pte_ref2_def ptes_of_Some pts_of_Some aobjs_of_Some)
   apply (rule_tac x="table_index (pt_slot_offset level vref x)" in exI)
   apply (fastforce simp: image_iff table_index_offset_pt_bits_left
-                         ptrFromPAddr_def mult_is_add.mult_ac)
+                         ptrFromPAddr_def mult_is_add.mult_ac vspace_cap_rights_to_auth_def)
   done
 
 lemma write_in_vspace_cap_rights[ADT_AC_assms]:
   "AllowWrite \<in> ptable_rights (cur_thread s) s va
-   \<Longrightarrow> Write \<in> vspace_cap_rights_to_auth (ptable_rights (cur_thread s) s va)"
+   \<Longrightarrow> Write \<in> vspace_cap_rights_to_auth (ptable_rights (cur_thread s) s va)
+                                         (ptable_exec (cur_thread s) s va)"
   by (clarsimp simp: vspace_cap_rights_to_auth_def)
 
 end

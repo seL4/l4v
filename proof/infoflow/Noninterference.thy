@@ -404,11 +404,9 @@ lemma do_machine_op_globals_equiv_scheduler:
         \<lbrace>\<lambda>_. globals_equiv_scheduler s\<rbrace>"
   unfolding do_machine_op_def by (wp | simp add: split_def)+
 
-lemma dmo_user_memory_update_globals_equiv_scheduler:
-  "\<lbrace>globals_equiv_scheduler st and
-    (invs and (\<lambda>s. pl = ptable_lift t s |` {x. pr x \<noteq> {}} \<and> pr = ptable_rights t s))\<rbrace>
-   do_machine_op
-     (user_memory_update ((ba |` {y. \<exists>x. pl x = Some y \<and> AllowWrite \<in> pr x} \<circ> addrFromPPtr) |` S))
+lemma dmo_user_memory_update_globals_equiv_scheduler':
+  "\<lbrace>globals_equiv_scheduler st and invs\<rbrace>
+   do_machine_op (user_memory_update um)
    \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
   apply (rule do_machine_op_globals_equiv_scheduler)
   apply clarsimp
@@ -417,6 +415,14 @@ lemma dmo_user_memory_update_globals_equiv_scheduler:
    apply (wp modify_wp)
   apply (clarsimp simp: globals_equiv_scheduler_def split: option.splits)
   done
+
+lemma dmo_user_memory_update_globals_equiv_scheduler:
+  "\<lbrace>globals_equiv_scheduler st and
+    (invs and (\<lambda>s. pl = ptable_lift t s |` {x. pr x \<noteq> {}} \<and> pr = ptable_rights t s))\<rbrace>
+   do_machine_op
+     (user_memory_update ((ba |` {y. \<exists>x. pl x = Some y \<and> AllowWrite \<in> pr x} \<circ> addrFromPPtr) |` S))
+   \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
+  by (wpsimp wp: dmo_user_memory_update_globals_equiv_scheduler')
 
 lemma dmo_device_memory_update_globals_equiv_scheduler:
   "\<lbrace>globals_equiv_scheduler st and (\<lambda>s. device_region s = S)\<rbrace>
