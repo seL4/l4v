@@ -580,7 +580,7 @@ lemma guarded_switch_to_chooseThread_fragment_corres[Arch_assms]:
       apply (rule corres_assert_assume_l)
       apply (rule corres_assert_assume_r)
       apply (rule switchToThread_corres)
-     apply (wp gts_st_tcb_at)+
+     apply (wpsimp wp: gts_st_tcb_at gts_st_tcb_at')+
    apply (clarsimp simp: st_tcb_at_tcb_at invs_def valid_state_def valid_pspace_def valid_sched_def
                           invs_valid_vs_lookup invs_unique_refs)
   apply (auto elim!: pred_tcb'_weakenE split: thread_state.splits
