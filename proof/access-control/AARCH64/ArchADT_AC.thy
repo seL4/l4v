@@ -45,7 +45,7 @@ lemma ptr_offset_in_ptr_range:
 
 lemma user_op_access[ADT_AC_assms]:
   "\<lbrakk> invs s; pas_refined aag s; is_subject aag tcb; ptable_lift tcb s x = Some ptr;
-     auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) \<rbrakk>
+     auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) (ptable_exec tcb s x) \<rbrakk>
      \<Longrightarrow> abs_has_auth_to aag auth tcb (ptrFromPAddr ptr)"
   apply (clarsimp simp: ptable_lift_def split: option.splits)
   apply (insert get_vspace_of_thread_asid_or_global_pt)
@@ -58,8 +58,10 @@ lemma user_op_access[ADT_AC_assms]:
   apply (frule vs_lookup_table_vspace)
      apply fastforce+
   apply (clarsimp simp: vspace_for_asid_def entry_for_asid_def pool_for_asid_def entry_for_pool_def)
-  apply (clarsimp simp: get_vspace_of_thread_def get_page_info_def ptable_rights_def pt_lookup_slot_def
-                 split: if_splits option.splits kernel_object.splits cap.splits arch_cap.splits pt_type.splits)
+  apply (clarsimp simp: get_vspace_of_thread_def get_page_info_def ptable_rights_def ptable_exec_def
+                        pt_lookup_slot_def
+                 split: if_splits option.splits kernel_object.splits cap.splits arch_cap.splits
+                        pt_type.splits)
   apply (frule pt_lookup_slot_from_level_is_subject)
           apply (fastforce elim: vs_lookup_table_vref_independent)+
    apply (rule aag_Control_into_owns)
@@ -97,7 +99,8 @@ lemma user_op_access[ADT_AC_assms]:
 
 lemma write_in_vspace_cap_rights[ADT_AC_assms]:
   "AllowWrite \<in> ptable_rights (cur_thread s) s va
-   \<Longrightarrow> Write \<in> vspace_cap_rights_to_auth (ptable_rights (cur_thread s) s va)"
+   \<Longrightarrow> Write \<in> vspace_cap_rights_to_auth (ptable_rights (cur_thread s) s va)
+                                         (ptable_exec (cur_thread s) s va)"
   by (clarsimp simp: vspace_cap_rights_to_auth_def)
 
 end
