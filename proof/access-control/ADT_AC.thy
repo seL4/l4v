@@ -8,22 +8,26 @@ theory ADT_AC
 imports ArchSyscall_AC
 begin
 
+arch_requalify_consts
+  ptable_exec
 
 locale ADT_AC_1 =
   fixes aag :: "'a PAS"
   assumes user_op_access:
     "\<lbrakk> invs s; pas_refined aag s; is_subject aag tcb;
-       ptable_lift tcb s x = Some ptr; auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) \<rbrakk>
+       ptable_lift tcb s x = Some ptr;
+       auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) (ptable_exec tcb s x) \<rbrakk>
        \<Longrightarrow> abs_has_auth_to aag auth tcb (ptrFromPAddr ptr)"
   and write_in_vspace_cap_rights:
     "AllowWrite \<in> ptable_rights (cur_thread s) s va
-     \<Longrightarrow> Write \<in> vspace_cap_rights_to_auth (ptable_rights (cur_thread s) s va)"
+     \<Longrightarrow> Write \<in> vspace_cap_rights_to_auth (ptable_rights (cur_thread s) s va)
+                                           (ptable_exec (cur_thread s) s va)"
 begin
 
 lemma user_op_access':
   "\<lbrakk> invs s; pas_refined aag s; is_subject aag tcb;
      ptable_lift tcb s x = Some (addrFromPPtr ptr);
-     auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) \<rbrakk>
+     auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) (ptable_exec tcb s x) \<rbrakk>
      \<Longrightarrow> abs_has_auth_to aag auth tcb ptr"
   by (auto dest: user_op_access simp: ptrFormPAddr_addFromPPtr)
 

@@ -461,5 +461,12 @@ definition
      (get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
         (get_pd_of_thread (kheap s) (arch_state s) tcb) addr)"
 
+definition
+  ptable_exec :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> word32 \<Rightarrow> bool" where
+ "ptable_exec tcb s \<equiv> \<lambda>addr.
+  case_option False ((\<lambda>attrs. XNever \<notin> attrs) o fst o snd o snd)
+     (get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
+        (get_pd_of_thread (kheap s) (arch_state s) tcb) addr)"
+
 end
 end

@@ -65,9 +65,9 @@ definition doUserOp_if ::
   "user_transition_if \<Rightarrow> user_context \<Rightarrow> (event option \<times> user_context) kernel" where
   "doUserOp_if uop tc \<equiv>
   do pr \<leftarrow> gets ptable_rights_s';
-     pxn \<leftarrow> gets (\<lambda>s x. pr x \<noteq> {} \<and> ptable_xn_s' s x);
-     pl \<leftarrow> gets (\<lambda>s. ptable_lift_s' s |` {x. pr x \<noteq> {}});
-     allow_read \<leftarrow> return {y. \<exists>x. pl x = Some y \<and> AllowRead \<in> pr x};
+     pxn \<leftarrow> gets ptable_xn_s';
+     pl \<leftarrow> gets (\<lambda>s. ptable_lift_s' s |` {x. pr x \<noteq> {} \<or> \<not> pxn x});
+     allow_read \<leftarrow> return {y. \<exists>x. pl x = Some y \<and> (AllowRead \<in> pr x \<or> \<not> pxn x)};
      allow_write \<leftarrow> return {y. \<exists>x. pl x = Some y \<and> AllowWrite \<in> pr x};
      t \<leftarrow> getCurThread;
      um \<leftarrow> gets (\<lambda>s. (user_mem' s \<circ> ptrFromPAddr));
