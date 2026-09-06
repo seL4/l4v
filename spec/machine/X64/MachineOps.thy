@@ -348,18 +348,6 @@ where
   "invalidateLocalPageStructureCacheASID vspace asid \<equiv>
      machine_op_lift (invalidateLocalPageStructureCacheASID_impl vspace asid)"
 
-(* FIXME x64: VT-d
-definition
-firstValidIODomain :: "word16"
-where
-"firstValidIODomain \<equiv> undefined"
-
-definition
-numIODomainIDBits :: "nat"
-where
-"numIODomainIDBits \<equiv> undefined"
-*)
-
 consts'
   getFaultAddress_val :: "machine_state \<Rightarrow> machine_word"
 definition

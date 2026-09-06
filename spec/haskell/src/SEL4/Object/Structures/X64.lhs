@@ -99,8 +99,8 @@ size.
 >                 KOPDPTE _ -> 3
 >                 KOPML4E _ -> 3
 >--                KOIOPTE _ -> 3
->--                KOIOCTE _ -> 3
->--                KOIORTE _ -> 3 -- FIXME: Not correct ?
+>--                KOIOCTE _ -> 4 -- FIXME x64-vtd: check IOCTE size
+>--                KOIORTE _ -> 4 -- FIXME x64-vtd: check IORTE size
 
 \subsection{Threads}
 

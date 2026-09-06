@@ -101,13 +101,6 @@ getActiveIRQ env = do
     runDevicesCallback
     interruptCallback env
 
--- 1kHz tick; qemu's SP804s always run at 1MHz
-timerFreq :: Word
-timerFreq = 100
-
-timerLimit :: Word
-timerLimit = 1000000 `div` timerFreq
-
 configureTimer :: Ptr CallbackData -> IO IRQ
 configureTimer env = do
     -- enabled, periodic, interrupts enabled
@@ -149,7 +142,7 @@ switchFpuOwner :: Word -> Word -> IO ()
 switchFpuOwner = error "Unimplemented"
 
 getFaultAddress :: Ptr CallbackData -> IO VPtr
-getFaultAddress _ = error "Unimplemented" -- FIXME: should read CR2
+getFaultAddress _ = error "Unimplemented"
 
 firstValidIODomain :: Word16
 firstValidIODomain = error "Unimplemented"

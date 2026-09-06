@@ -180,19 +180,20 @@ Locating the page directory for a given ASID is necessary when updating or delet
 >             return ptr
 >         Nothing -> throw InvalidRoot
 
-> -- FIXME x64: these are all now unused.
+These are used in proofs only, and will be translated to the corresponding table_at
+predicates.
 
 > checkPML4At :: PPtr PML4E -> Kernel ()
-> checkPML4At _ = return ()
+> checkPML4At _ = isabelleOp
 
 > checkPDPTAt :: PPtr PDPTE -> Kernel ()
-> checkPDPTAt _ = return ()
+> checkPDPTAt _ = isabelleOp
 
 > checkPDAt :: PPtr PDE -> Kernel ()
-> checkPDAt _ = return ()
+> checkPDAt _ = isabelleOp
 
 > checkPTAt :: PPtr PTE -> Kernel ()
-> checkPTAt _ = return ()
+> checkPTAt _ = isabelleOp
 
 \subsubsection{Locating Page Table and Page Directory Slots}
 
@@ -347,7 +348,7 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 >     case pde of
 >         PageTablePDE { pdeTable = pt' } ->
 >             if pt' == addrFromPPtr pt then return () else throw InvalidRoot
->         _ -> throw InvalidRoot -- FIXME x64: dummy throw
+>         _ -> throw InvalidRoot
 >     withoutFailure $ do
 >         flushTable vspace vaddr pt asid
 >         storePDE pdSlot InvalidPDE
@@ -458,8 +459,6 @@ Note that implementations with separate high and low memory regions may also wis
 
 \subsection{Flushing}
 
-%FIXME x64: needs review
-
 > flushAll :: Word -> ASID -> Kernel ()
 > flushAll vspace asid  = doMachineOp $ invalidateASID vspace (fromASID asid)
 
@@ -468,9 +467,6 @@ Note that implementations with separate high and low memory regions may also wis
 
 > flushPD :: Word -> ASID -> Kernel ()
 > flushPD p a = flushAll p a
-
-
-%FIXME x64: needs review
 
 > flushTable :: PPtr PML4E -> VPtr -> PPtr PTE -> ASID -> Kernel ()
 > flushTable _ vptr pt asid = do
@@ -734,7 +730,7 @@ IOMap is related with label X64PageMapIO and IOUnmap is related with X64PageUnma
 
 
 >-- x86KSvtdRootTable :: Word
->-- x86KSvtdRootTable = 0 -- FIXME: this is not correct, similar to ipcbuf, artifical hard coded address not good, and I don't want do that again here.
+>-- x86KSvtdRootTable = 0 -- FIXME x64-vtd: this is not correct, similar to ipcbuf, artifical hard coded address not good, and I don't want do that again here.
 
 >-- lookupIOContextSlot :: IOASID -> Kernel (PPtr IOCTE)
 >-- lookupIOContextSlot pciRequestId = do

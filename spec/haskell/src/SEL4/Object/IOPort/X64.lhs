@@ -50,9 +50,7 @@ This module defines IO port routines, specific to x64.
 >     ports <- gets (x64KSAllocatedIOPorts . ksArchState)
 >     return $ not $ foldl (\x y -> x || ports ! y) False [f..l]
 
-%FIXME port+output data packing in C, see SELFOUR-360
-
-%FIXME downcast to 16-bit port from 64-bit arg happens before range check, which
+%FIXME x64: downcast to 16-bit port from 64-bit arg happens before range check, which
 %      is likely incorrect
 
 > decodeX64PortInvocation :: Word -> [Word] -> PPtr CTE ->
