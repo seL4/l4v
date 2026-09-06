@@ -52,7 +52,7 @@ armKSASIDMap to map from page directories to hardware ASIDs.
 
 armKSKernelVSpace is ghost state.
 
-FIXME ARMHYP_SMMU ARMHYP missing IO ASID to PD map for SMMU
+% FIXME ARMHYP_SMMU: missing IO ASID to PD map for SMMU
 
 > data KernelState = ARMKernelState {
 >     armKSASIDTable :: Array ASID (Maybe (PPtr ASIDPool)),
@@ -99,31 +99,7 @@ FIXME ARMHYP_SMMU ARMHYP missing IO ASID to PD map for SMMU
 
 #else /* CONFIG_ARM_HYPERVISOR_SUPPORT */
 
-FIXME ARMHYP what is this thing, what is data_start? where is it getting data_start? what are these frames it is returning?
-
-FIXME ARMHYP not even sure if mask 20 is correct here
-
-FIXME ARMHYP ok, someone needs to explain how this actually works before it gets fixed
-
 > newKernelState :: PAddr -> (KernelState, [PAddr])
-> newKernelState data_start = (state, frames)
->     where
->         alignToBits addr b = (((addr - 1) `shiftR` b) + 1) `shiftL` b
->         globalsFrame = data_start `alignToBits` pageBits
->         globalsFrameTop = globalsFrame + bit pageBits
->         frames = error "FIXME ARMHYP TODO"
->         state = ARMKernelState {
->             armKSASIDTable = funPartialArray (const Nothing) (0, (1 `shiftL` asidHighBits) - 1),
->             armKSHWASIDTable = funArray (const Nothing),
->             armKSNextASID = hwASIDMin,
->             armKSASIDMap = funPartialArray (const Nothing) asidRange,
->             armHSCurVCPU = Nothing,
->             armKSGICVCPUNumListRegs = error "FIXME ARMHYP read from platform",
->             armUSGlobalPD = error "FIXME ARMHYP address of C global constant",
->             armKSKernelVSpace =
->                 (\vref -> if vref < mask 20 then ArmVSpaceKernelWindow
->                                             else ArmVSpaceInvalidRegion)
->             }
+> newKernelState data_start = error "no initial state defined for ARM_HYP"
 
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
-

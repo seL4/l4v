@@ -364,7 +364,7 @@ Create an architecture-specific object.
 #endif
 > capUntypedPtr (SGISignalCap {}) = error "SGISignalCap has no pointer"
 #ifdef CONFIG_ARM_SMMU
-> capUntypedPtr (IOSpaceCap {}) = error "FIXME ARMHYP_SMMU"
+> capUntypedPtr (IOSpaceCap {}) = error "IOSpaceCap has no pointer"
 > capUntypedPtr (IOPageTableCap { capIOPTBasePtr = PPtr p }) = PPtr p
 #endif
 
@@ -379,7 +379,7 @@ Create an architecture-specific object.
 #endif
 > capUntypedSize (SGISignalCap {}) = 0 -- invalid case, use C default
 #ifdef CONFIG_ARM_SMMU
-> capUntypedSize (IOSpaceCap {}) = 0 -- invalid, use C default FIXME ARMHYP
+> capUntypedSize (IOSpaceCap {}) = 0 -- invalid, use C default
 > capUntypedSize (IOPageTableCap {}) = bit ioptBits
 #endif
 

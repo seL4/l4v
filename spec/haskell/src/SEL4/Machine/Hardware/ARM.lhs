@@ -316,13 +316,13 @@ caches must be done separately.
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 
 > writeContextIDAndPD :: HardwareASID -> PAddr -> MachineMonad ()
-> writeContextIDAndPD = error "FIXME ARMHYP  machine callback unimplemented"
+> writeContextIDAndPD = error "ARMHYP machine callback unimplemented"
 
 > getTPIDRURO :: MachineMonad Word
-> getTPIDRURO = error "FIXME ARMHYP machine callback unimplemented"
+> getTPIDRURO = error "ARMHYP machine callback unimplemented"
 
 > setTPIDRURO :: Word -> MachineMonad ()
-> setTPIDRURO = error "FIXME ARMHYP machine callback unimplemented"
+> setTPIDRURO = error "ARMHYP machine callback unimplemented"
 
 #endif
 
@@ -524,22 +524,22 @@ implementation assumes the monitor is not modelled in our simulator.
 \subsection{Hypervisor-specific status/control registers}
 
 > getHSR :: MachineMonad Word
-> getHSR = error "FIXME ARMHYP machine callback unimplemented"
+> getHSR = error "ARMHYP machine callback unimplemented"
 
 > setHCR :: Word -> MachineMonad ()
-> setHCR _hcr = error "FIXME ARMHYP machine callback unimplemented"
+> setHCR _hcr = error "ARMHYP machine callback unimplemented"
 
 > getHDFAR :: MachineMonad VPtr
-> getHDFAR = error "FIXME ARMHYP machine callback unimplemented"
+> getHDFAR = error "ARMHYP machine callback unimplemented"
 
 > addressTranslateS1 :: VPtr -> MachineMonad VPtr
-> addressTranslateS1 = error "FIXME ARMHYP machine callback unimplemented"
+> addressTranslateS1 = error "ARMHYP machine callback unimplemented"
 
 > getSCTLR :: MachineMonad Word
-> getSCTLR = error "FIXME ARMHYP machine callback unimplemented"
+> getSCTLR = error "ARMHYP machine callback unimplemented"
 
 > setSCTLR :: Word -> MachineMonad ()
-> setSCTLR _sctlr = error "FIXME ARMHYP machine callback unimplemented"
+> setSCTLR _sctlr = error "ARMHYP machine callback unimplemented"
 
 \subsection{Hypervisor banked registers}
 
@@ -549,10 +549,10 @@ each. Some special registers, like SCTLR, still get their own load/store
 functions due to being operated on separately.
 
 > readVCPUHardwareReg :: ARM.VCPUReg -> MachineMonad Word
-> readVCPUHardwareReg reg = error "FIXME ARMHYP machine callback unimplemented"
+> readVCPUHardwareReg reg = error "ARMHYP machine callback unimplemented"
 
 > writeVCPUHardwareReg :: ARM.VCPUReg -> Word -> MachineMonad ()
-> writeVCPUHardwareReg reg val = error "FIXME ARMHYP machine callback unimplemented"
+> writeVCPUHardwareReg reg val = error "ARMHYP machine callback unimplemented"
 
 #endif
 
@@ -648,8 +648,6 @@ translation (host-to-hypervisor). This is a three-level table system, but the
 hardware can be configured to omit the first level entirely if all second
 levels are stored contiguously. We use this configuration to preserve the usual
 page table/directory nomenclature.
-
-> -- FIXME ARMHYP global (SH) is never used so I don't know what a global page's SH would look like
 
 seL4 does not use hardware domains or parity on ARM hypervisor systems.
 
@@ -776,8 +774,6 @@ ARM page directories and page tables occupy four frames and one quarter of a fra
 > ioptBits :: Int
 > ioptBits = pageBits
 
-FIXME ARMHYP this is really platform code (TK1), move there
-
 Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bit. What actually happens is that a non-read, non-write entry is considered invalid. In pracice, the kernel writes an IOPTE/IOPDE of all zeros here.
 
 > data IOPDE
@@ -842,55 +838,55 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 > vgicIRQMask = 3 `shiftL` 28
 
 > get_gic_vcpu_ctrl_hcr :: MachineMonad Word
-> get_gic_vcpu_ctrl_hcr = error "FIXME ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_hcr = error "ARMHYP Unimplemented callback"
 
 > set_gic_vcpu_ctrl_hcr :: Word -> MachineMonad ()
-> set_gic_vcpu_ctrl_hcr = error "FIXME ARMHYP Unimplemented callback"
+> set_gic_vcpu_ctrl_hcr = error "ARMHYP Unimplemented callback"
 
 > get_gic_vcpu_ctrl_vmcr :: MachineMonad Word
-> get_gic_vcpu_ctrl_vmcr = error "FIXME ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_vmcr = error "ARMHYP Unimplemented callback"
 
 > set_gic_vcpu_ctrl_vmcr :: Word -> MachineMonad ()
-> set_gic_vcpu_ctrl_vmcr = error "FIXME ARMHYP Unimplemented callback"
+> set_gic_vcpu_ctrl_vmcr = error "ARMHYP Unimplemented callback"
 
 > get_gic_vcpu_ctrl_apr :: MachineMonad Word
-> get_gic_vcpu_ctrl_apr = error "FIXME ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_apr = error "ARMHYP Unimplemented callback"
 
 > set_gic_vcpu_ctrl_apr :: Word -> MachineMonad ()
-> set_gic_vcpu_ctrl_apr = error "FIXME ARMHYP Unimplemented callback"
+> set_gic_vcpu_ctrl_apr = error "ARMHYP Unimplemented callback"
 
 > get_gic_vcpu_ctrl_vtr :: MachineMonad Word
-> get_gic_vcpu_ctrl_vtr = error "FIXME ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_vtr = error "ARMHYP Unimplemented callback"
 
 > get_gic_vcpu_ctrl_eisr0 :: MachineMonad Word
-> get_gic_vcpu_ctrl_eisr0 = error "FIXME ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_eisr0 = error "ARMHYP Unimplemented callback"
 
 > get_gic_vcpu_ctrl_eisr1 :: MachineMonad Word
-> get_gic_vcpu_ctrl_eisr1 = error "FIXME ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_eisr1 = error "ARMHYP Unimplemented callback"
 
 > get_gic_vcpu_ctrl_misr :: MachineMonad Word
-> get_gic_vcpu_ctrl_misr = error "FIXME ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_misr = error "ARMHYP Unimplemented callback"
 
 > get_gic_vcpu_ctrl_lr :: Word -> MachineMonad Word
-> get_gic_vcpu_ctrl_lr = error "FIXME ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_lr = error "ARMHYP Unimplemented callback"
 
 > set_gic_vcpu_ctrl_lr :: Word -> Word -> MachineMonad ()
-> set_gic_vcpu_ctrl_lr = error "FIXME ARMHYP Unimplemented callback"
+> set_gic_vcpu_ctrl_lr = error "ARMHYP Unimplemented callback"
 
 \subsection{Virtual timer interface}
 
 > get_cntv_cval_64 :: MachineMonad Word64
-> get_cntv_cval_64 = error "FIXME ARMHYP Unimplemented callback"
+> get_cntv_cval_64 = error "ARMHYP Unimplemented callback"
 > set_cntv_cval_64 :: Word64 -> MachineMonad ()
-> set_cntv_cval_64 = error "FIXME ARMHYP Unimplemented callback"
+> set_cntv_cval_64 = error "ARMHYP Unimplemented callback"
 
 > get_cntv_off_64 :: MachineMonad Word64
-> get_cntv_off_64 = error "FIXME ARMHYP Unimplemented callback"
+> get_cntv_off_64 = error "ARMHYP Unimplemented callback"
 > set_cntv_off_64 :: Word64 -> MachineMonad ()
-> set_cntv_off_64 = error "FIXME ARMHYP Unimplemented callback"
+> set_cntv_off_64 = error "ARMHYP Unimplemented callback"
 
 > check_export_arch_timer :: MachineMonad ()
-> check_export_arch_timer = error "FIXME ARMHYP Unimplemented callback"
+> check_export_arch_timer = error "ARMHYP Unimplemented callback"
 
 #endif
 

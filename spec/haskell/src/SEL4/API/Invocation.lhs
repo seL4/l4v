@@ -146,8 +146,6 @@ The following data type defines the set of possible Domain invocation operations
 
 The following data type defines the set of possible invocations for interrupt controller capabilities.
 
-%FIXME IssueIRQHandler is not really handled on x64, instead it has two arch-specific ones
-
 > data IRQControlInvocation
 >         = ArchIRQControl { archIRQControl :: Arch.IRQControlInvocation }
 >         | IssueIRQHandler {

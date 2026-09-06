@@ -35,7 +35,7 @@ arch_requalify_consts (H)
 
 context Arch begin arch_global_naming (H)
 
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet.lhs Arch=X64 CONTEXT X64_H all_bits NOT UserContext UserMonad getRegister setRegister newContext mask Word PPtr
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet.lhs Arch=X64 CONTEXT X64_H all_bits NOT UserContext UserMonad getRegister setRegister newContext mask Word PPtr isabelleOp
 
 definition
   PPtr :: "machine_word \<Rightarrow> machine_word"
