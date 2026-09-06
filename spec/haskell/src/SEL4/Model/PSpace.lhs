@@ -117,7 +117,6 @@ A new physical address space has an empty object map.
 > newPSpace = PSpace { psMap = Data.Map.empty }
 
 The "initPSpace" function currently does nothing. In earlier versions of the Haskell model, it was used to configure the "PSpace" model to signal a bus error if an invalid physical address was accessed. This is useful only for debugging of the Haskell model, and is not strictly necessary; it has no equivalent in a real implementation.
-% FIXME maybe check that the arguments are OK
 
 > initPSpace :: [(PPtr (), PPtr ())] -> Kernel ()
 > initPSpace _ = return ()
@@ -334,7 +333,7 @@ The following functions are used to access words in user-accessible data pages. 
 >         "storeWordUser needs a user data page"
 >     doMachineOp $ storeWord p w
 
-The following predicate is used above to assert that the pointer is a valid pointer to user data. It is always "True" here, but is replaced with a stronger assertion in the Isabelle translation. % FIXME: this can probably actually be stronger here too
+The following predicate is used above to assert that the pointer is a valid pointer to user data. It is always "True" here, but is replaced with a stronger assertion in the Isabelle translation.
 
 > pointerInUserData :: PPtr Word -> KernelState -> Bool
 > pointerInUserData _ _ = True

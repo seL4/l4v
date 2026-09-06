@@ -173,3 +173,9 @@ The "mask" function is a trivial function which, given a number of bits, returns
 
 > mask :: (Bits w, Num w) => Int -> w
 > mask bits = bit bits - 1
+
+This marker is used for functions such as machine operations and assertions that
+have no Haskell definition and are instead defined only directly in Isabelle.
+
+> isabelleOp :: a
+> isabelleOp = error "unimplemented -- defined in Isabelle"

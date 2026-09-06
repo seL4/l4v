@@ -32,7 +32,7 @@ This module specifies the behavior of notification objects.
 
 \subsection{Sending Signals}
 
-> -- helper function, FIXME redundant with Structure.isReceive
+> -- redundant with Structure.isReceive, but kept because this version is written as a case statement
 > receiveBlocked :: ThreadState -> Bool
 > receiveBlocked st = case st of
 >     BlockedOnReceive _ _ -> True
@@ -54,7 +54,7 @@ mark the notification object as active.
 
 >             (IdleNtfn, Just tcb) -> do
 >                     state <- getThreadState tcb
->                     if (receiveBlocked state)
+>                     if receiveBlocked state
 >                       then do
 >                         cancelIPC tcb
 >                         setThreadState Running tcb
