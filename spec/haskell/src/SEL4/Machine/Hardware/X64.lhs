@@ -199,8 +199,6 @@ Every table is one small page in size.
 > pageColourBits :: Int
 > pageColourBits = error "Does not exist on x64" -- Platform.pageColourBits
 
-%FIXME: IOAPIC: set_mode_config and map_pin_to_vector equivalents needed?
-
 > setInterruptMode :: IRQ -> Bool -> Bool -> MachineMonad ()
 > setInterruptMode _ _ _ = return ()
 
@@ -229,8 +227,6 @@ There are several operations used by the memory management code to access releva
 This function is called before a region of user-memory is recycled.
 It zeros every word to ensure that user tasks cannot access any private data
 that might previously have been stored in the region.
-
-%FIXME x64: then flushes the kernel's mapping from the virtually-indexed caches?
 
 > clearMemory :: PPtr Word -> Int -> MachineMonad ()
 > clearMemory ptr byteLength = do
@@ -386,8 +382,6 @@ The following types are Haskell representations of an entry in an x64 page table
 >         pdeRights :: VMRights }
 >     deriving (Show, Eq)
 
-%FIXME x64 review
-
 > wordFromPDE :: PDE -> Word
 > wordFromPDE InvalidPDE = 0
 > wordFromPDE (PageTablePDE table accessed cd wt xd rights) = 1 .|.
@@ -495,8 +489,6 @@ The following types are Haskell representations of an entry in an x64 page table
 >--wordFromIORTE InvalidIORTE = 0
 >--wordFromIORTE (VTDRTE ptr present) = ((fromIntegral $ ptr) .&. 0xfffff000) .|. (if present then 1 else 0)
 
-
-%FIXME x64: word size review
 
 > wordFromPTE :: PTE -> Word
 > wordFromPTE InvalidPTE = 0
@@ -631,8 +623,6 @@ IRQ parameters
 > ioapicMapPinToVector ioapic pin level polarity vector = do
 >     cbptr <- ask
 >     liftIO $ Platform.ioapicMapPinToVector cbptr ioapic pin level polarity vector
-
-%FIXME: review how deeply we need to model this.
 
 > initIRQController :: MachineMonad ()
 > initIRQController = error "Unimplemented"

@@ -87,13 +87,6 @@ getActiveIRQ env = do
         gicIFBase = gicInterfaceBase }
 
 
--- FIXME: This is not accurate, need to check MCT Freq
-timerFreq :: Word
-timerFreq = 100
-
-timerLimit :: Word
-timerLimit = 1000000 `div` timerFreq
-
 configureTimer :: Ptr CallbackData -> IO IRQ
 configureTimer env = do
     MCT.callMCTApi mctdata $ MCT.mctInit

@@ -85,13 +85,6 @@ getActiveIRQ env = do
     runDevicesCallback env
     interruptCallback env
 
--- 1kHz tick; qemu's SP804s always run at 1MHz
-timerFreq :: Word
-timerFreq = 100
-
-timerLimit :: Word
-timerLimit = 1000000 `div` timerFreq
-
 configureTimer :: Ptr CallbackData -> IO IRQ
 configureTimer env = do
     -- enabled, periodic, interrupts enabled

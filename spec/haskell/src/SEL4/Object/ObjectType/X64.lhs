@@ -88,11 +88,11 @@ the remaining cases of generic isMDBParentOf are still checked.
 
 % X64 has two writable user data caps
 
-> -- FIXME x64: io_space_capdata_get_domainID
+> -- FIXME x64-vtd: io_space_capdata_get_domainID
 >-- ioSpaceGetDomainID :: Word -> Word16
 >-- ioSpaceGetDomainID _ = error "Not implemented"
 
->-- -- FIXME x64: io_space_capdata_get_PCIDevice
+>-- -- FIXME x64-vtd: io_space_capdata_get_PCIDevice
 >-- ioSpaceGetPCIDevice :: Word -> Maybe IOASID
 >-- ioSpaceGetPCIDevice _ = error "Not implemented"
 
@@ -200,7 +200,7 @@ Deletion of a final capability to a page table that has been mapped requires tha
 >     unmapPageTable a v ptr
 >     return (NullCap, NullCap)
 
-> --finaliseCap (IOSpaceCap {}) True = return (NullCap, NullCap) -- FIXME x64: not yet implemented in C
+> --finaliseCap (IOSpaceCap {}) True = return (NullCap, NullCap) -- FIXME x64-vtd: unmapVTDContextEntry
 
 > finaliseCap (PageCap {
 >         capVPMappedAddress = Just (a, v),
@@ -290,8 +290,6 @@ Deletion of a final capability to a page table that has been mapped requires tha
 \subsection{Creating New Capabilities}
 
 Create an architecture-specific object.
-
-% FIXME: it is not clear wheather we can have large device page
 
 > placeNewDataObject :: PPtr () -> Int -> Bool -> Kernel ()
 > placeNewDataObject regionBase sz isDevice = if isDevice
