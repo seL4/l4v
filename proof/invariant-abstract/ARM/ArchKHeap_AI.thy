@@ -117,7 +117,7 @@ locale vspace_only_obj_pred = Arch +
   fixes P :: "kernel_object \<Rightarrow> bool"
   assumes vspace_only: "vspace_obj_pred P"
 
-sublocale vspace_only_obj_pred < arch_only_obj_pred
+sublocale vspace_only_obj_pred \<subseteq> arch_only_obj_pred
   using vspace_pred_imp[OF vspace_only] by unfold_locales
 
 context Arch begin arch_global_naming

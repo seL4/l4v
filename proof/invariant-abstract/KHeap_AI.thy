@@ -1111,7 +1111,7 @@ locale non_vspace_op = fixes f
                               \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' p s)\<rbrace>" and
           arch_state'[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (arch_state s)\<rbrace>"
 
-sublocale non_aobj_op < non_vspace_op
+sublocale non_aobj_op \<subseteq> non_vspace_op
   apply (unfold_locales)
   apply (auto simp: vspace_pred_imp arch_state aobj_at)
   done
@@ -1165,7 +1165,7 @@ end
 
 locale non_aobj_non_mem_op = non_aobj_op f + non_mem_op f for f
 
-sublocale non_aobj_non_mem_op < non_vspace_non_mem_op ..
+sublocale non_aobj_non_mem_op \<subseteq> non_vspace_non_mem_op ..
 
 (* non_vspace_op version *)
 
@@ -1183,7 +1183,7 @@ end
 
 locale non_aobj_non_cap_op = non_aobj_op f + non_cap_op f for f
 
-sublocale non_aobj_non_cap_op < non_vspace_non_cap_op ..
+sublocale non_aobj_non_cap_op \<subseteq> non_vspace_non_cap_op ..
 
 context non_aobj_non_cap_op begin
 
@@ -1197,7 +1197,7 @@ end
 locale non_vspace_non_cap_non_mem_op = non_vspace_non_mem_op f + non_vspace_non_cap_op f for f
 locale non_aobj_non_cap_non_mem_op = non_aobj_non_mem_op f + non_aobj_non_cap_op f for f
 
-sublocale non_aobj_non_cap_non_mem_op < non_vspace_non_cap_non_mem_op ..
+sublocale non_aobj_non_cap_non_mem_op \<subseteq> non_vspace_non_cap_non_mem_op ..
 
 crunch set_thread_state_act
   for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"

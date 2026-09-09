@@ -332,7 +332,7 @@ lemma unique_table_caps:
 end
 
 
-sublocale detype_locale < detype_locale_gen_1
+sublocale detype_locale \<subseteq> detype_locale_gen_1
  proof goal_cases
   interpret detype_locale_arch ..
   case 1 show ?case
@@ -542,7 +542,7 @@ lemma valid_machine_state_detype[detype_invs_proofs]:
   qed
 end
 
-sublocale detype_locale < detype_locale_gen_2
+sublocale detype_locale \<subseteq> detype_locale_gen_2
  proof goal_cases
   interpret detype_locale_arch ..
   case 1 show ?case

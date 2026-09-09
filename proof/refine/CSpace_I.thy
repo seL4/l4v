@@ -1120,7 +1120,7 @@ lemma no_loops_next_prev_0:
 locale vmdb = mdb_next +
   assumes valid: "valid_mdb_ctes m"
 
-sublocale vmdb < mdb_order
+sublocale vmdb \<subseteq> mdb_order
   using valid
   by (auto simp: greater_def greater_eq_def mdb_order_def valid_mdb_ctes_def)
 

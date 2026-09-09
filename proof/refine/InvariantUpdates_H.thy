@@ -22,7 +22,7 @@ arch_requalify_facts
    Done this way because Invariants_H_typ_at_lifts has a fixes that gen_typ_at_props'_interface had
    to inherit. Now that Invariants_H_typ_at_lifts has been instantiated, we can drop that fixes
    assumption by moving everything into gen_typ_at_props'. *)
-sublocale gen_typ_at_props' < gen_typ_at_props'_interface \<open>TYPE('f_rvt)\<close> f
+sublocale gen_typ_at_props' \<subseteq> gen_typ_at_props'_interface \<open>TYPE('f_rvt)\<close> f
   by unfold_locales (fact typ')
 
 (* these depend on interpretations in ArchInvLemmas_H *)
