@@ -1828,7 +1828,7 @@ proof -
    apply (simp add: bind_assoc)
    apply (rule corres_guard_imp)
      apply (rule_tac r'=pspace_relation in corres_underlying_split)
-        apply (clarsimp dest!: state_relation_pspace_relation)
+        apply (clarsimp del: state_relation_pspace_relation dest!: state_relation_pspace_relation)
        apply (simp add: gets_def)
        apply (rule corres_symb_exec_l[rotated])
           apply (rule exs_valid_get)

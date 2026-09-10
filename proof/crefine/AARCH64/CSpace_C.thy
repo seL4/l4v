@@ -2623,7 +2623,7 @@ lemma cap_get_capSizeBits_spec:
                         word_sle_def Let_def mask_def
                         isZombieTCB_C_def ZombieTCB_C_def
                         cap_lift_domain_cap cap_get_tag_scast
-                        objBits_defs wordRadix_def
+                        objBits_defs wordRadix_def vcpuBits_def
                         c_valid_cap_def cl_valid_cap_def pageBits_def asidPoolBits_def
                         Kernel_Config.config_ARM_PA_SIZE_BITS_40_def (* #define in C, so no other option for now *)
                  cong: option.case_cong

@@ -30,7 +30,7 @@ lemmas wordRadix_def' = wordRadix_def[simplified]
 lemma wordSizeCase_simp[simp]: "wordSizeCase a b = a"
   by (simp add: wordSizeCase_def wordBits_def word_size)
 
-lemmas objBits_defs = tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def vcpuBits_def
+lemmas objBits_defs = tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def
 lemmas untypedBits_defs = minUntypedSizeBits_def maxUntypedSizeBits_def
 lemmas objBits_simps = objBits_def objBitsKO_def word_size_def archObjSize_def
 lemmas objBits_simps' = objBits_simps objBits_defs
@@ -108,7 +108,6 @@ clear_named_theorems Arch_assms (* accumulate assumptions for Invariants_H_cte_a
 
 (* FIXME arch-split: for proofs which require exact offsets lining up instead of cteSizeBits *)
 lemma raw_tcb_cte_cases_simps:
-  "tcb_cte_cases 0  = Some (tcbCTable, tcbCTable_update)"
   "tcb_cte_cases 16 = Some (tcbVTable, tcbVTable_update)"
   "tcb_cte_cases 32 = Some (tcbReply, tcbReply_update)"
   "tcb_cte_cases 48 = Some (tcbCaller, tcbCaller_update)"
@@ -249,7 +248,7 @@ begin
 
 lemma pspace_in_kernel_mappings_update' [iff]:
   "pspace_in_kernel_mappings' (f s) = pspace_in_kernel_mappings' s"
-  by (simp add: pspace_in_kernel_mappings'_def)
+  by simp
 
 lemma valid_asid_table_update' [iff]:
   "valid_asid_table' t (f s) = valid_asid_table' t s"
@@ -470,7 +469,7 @@ end (* typ_at_props' *)
 context Arch begin arch_global_naming
 
 lemmas bit_simps' = pteBits_def pdeBits_def asidHighBits_def asid_low_bits_def word_size_bits_def
-                    asid_high_bits_def bit_simps
+                    asid_high_bits_def
 
 lemma objBitsT_simps:
   "objBitsT EndpointT = epSizeBits"

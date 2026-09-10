@@ -70,15 +70,6 @@ lemma (in Arch) word_size_gt_0_mw[simp]:
 requalify_facts Arch.word_size_gt_0_mw
 lemmas [simp] = word_size_gt_0_mw
 
-(* same proof on all architectures *)
-(* FIXME: move to Bits_R *)
-lemma (in Arch) word_size_bits_le_pageBits:
-  "word_size_bits \<le> pageBits"
-  by (simp add: pageBits_def word_size_bits_def)
-
-requalify_facts Arch.word_size_bits_le_pageBits
-lemmas [simp] = word_size_bits_le_pageBits
-
 (* FIXME arch-split: move *)
 (* invariant version; a proper wp lemma would look more like no_fail_mapM_wp *)
 lemma no_fail_zipWithM_x_inv:
@@ -107,7 +98,7 @@ lemma gets_the_noop_corres:
 (* FIXME arch-split: move *)
 lemma invs_pspace_in_kernel_mappings'[elim!]:
   "invs' s \<Longrightarrow> pspace_in_kernel_mappings' s"
-  by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
+  by (fastforce del: invs_valid_pspace' dest!: invs_valid_pspace' simp: valid_pspace'_def)
 
 (* FIXME: move *)
 lemma unifyFailure_wp_E[wp]:
@@ -992,10 +983,8 @@ lemma transferCapsToSlots_vp[wp]:
         \<and> transferCaps_srcs caps s\<rbrace>
    transferCapsToSlots ep buffer n caps slots mi
    \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
-  apply (rule hoare_pre)
-   apply (simp add: valid_pspace'_def | wp)+
-  apply (fastforce simp: cte_wp_at_ctes_of dest: ctes_of_valid')
-  done
+  by (wpsimp simp: valid_pspace'_def)
+     (fastforce simp: cte_wp_at_ctes_of del: ctes_of_valid' dest: ctes_of_valid')
 
 crunch setExtraBadge, doIPCTransfer
   for sch_act [wp]: "\<lambda>s. P (ksSchedulerAction s)"
@@ -2157,7 +2146,7 @@ lemma doReplyTransfer_corres:
      apply (rule getThreadState_corres, (clarsimp simp add: st_tcb_at_tcb_at invs_distinct invs_psp_aligned)+)
   apply (rule_tac F = "awaiting_reply state" in corres_req)
    apply (clarsimp simp add: st_tcb_at_def obj_at_def is_tcb)
-   apply (fastforce simp: invs_def valid_state_def intro: has_reply_cap_cte_wpD
+   apply (fastforce simp: invs_def valid_state_def
                    dest: has_reply_cap_cte_wpD
                   dest!: valid_reply_caps_awaiting_reply cte_wp_at_is_reply_cap_toI)
   apply (case_tac state, simp_all add: bind_assoc)
@@ -2550,7 +2539,6 @@ proof -
         apply (clarsimp simp: st_tcb_at_refs_of_rev st_tcb_at_reply_cap_valid
                               st_tcb_def2 valid_sched_def valid_sched_action_def)
         apply (force simp: st_tcb_def2 dest!: st_tcb_at_caller_cap_null[simplified,rotated])
-       (* FIXME: weak elimination rule warning *)
        subgoal by (auto simp: valid_ep'_def invs'_def valid_state'_def split: list.split)
       apply wp+
     apply (clarsimp simp: ep_at_def2)+
@@ -2621,7 +2609,6 @@ proof -
        apply (clarsimp simp: st_tcb_at_refs_of_rev st_tcb_at_reply_cap_valid
                              st_tcb_at_caller_cap_null)
        apply (fastforce simp: st_tcb_def2 valid_sched_def valid_sched_action_def)
-      (* FIXME: weak elimination rule warning *)
       subgoal by (auto simp: valid_ep'_def
                       split: list.split;
                   clarsimp simp: invs'_def valid_state'_def)
@@ -2751,7 +2738,6 @@ lemma sendSignal_corres:
                            valid_pspace_def neq_Nil_conv
                            ntfn_queued_st_tcb_at valid_sched_def valid_sched_action_def
                     split: option.splits)
-   (* FIXME: weak elimination rule warning *)
    apply (auto simp: valid_ntfn'_def neq_Nil_conv invs'_def valid_state'_def
                      weak_sch_act_wf_def
               split: option.splits)[1]
@@ -2767,10 +2753,6 @@ lemma sendSignal_corres:
 lemma valid_Running'[simp]:
   "valid_tcb_state' Running = \<top>"
   by (rule ext, simp add: valid_tcb_state'_def)
-
-crunch setMRs
-  for typ'[wp]: "\<lambda>s. P (typ_at' T p s)"
-   (wp: crunch_wps simp: zipWithM_x_mapM)
 
 lemma possibleSwitchTo_sch_act[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
@@ -3284,7 +3266,6 @@ lemma receiveIPC_corres:
               apply (clarsimp simp add: valid_ep_def valid_pspace_def)
               apply (drule(1) sym_refs_obj_atD[where P="\<lambda>ko. ko = Endpoint e" for e])
               apply (fastforce simp: st_tcb_at_refs_of_rev elim: st_tcb_weakenE)
-             (* FIXME weak elimination rule warning *)
              apply (auto simp: valid_ep'_def invs'_def valid_state'_def split: list.split)[1]
             \<comment> \<open>RecvEP\<close>
             apply (simp add: ep_relation_def)
@@ -3304,12 +3285,14 @@ lemma receiveIPC_corres:
                     | wpc | simp add: ep_at_def2[symmetric, simplified] | clarsimp)+
    apply (clarsimp simp: valid_cap_def invs_psp_aligned invs_valid_objs pred_tcb_at_def
                          valid_obj_def valid_tcb_def valid_bound_ntfn_def invs_distinct
+                    del: invs_valid_objs (* suppress elim warning *)
                   dest!: invs_valid_objs
                   elim!: obj_at_valid_objsE
                   split: option.splits)
   apply clarsimp
   apply (auto simp: valid_cap'_def invs_valid_pspace' valid_obj'_def valid_tcb'_def
                     valid_bound_ntfn'_def obj_at'_def pred_tcb_at'_def
+               del: invs_valid_objs' (* suppress intro warning *)
              dest!: invs_valid_objs' obj_at_valid_objs'
              split: option.splits)[1]
   done
@@ -3712,8 +3695,10 @@ lemma completeSignal_invs:
                            if_live_then_nonz_capD'[OF invs_iflive'
                                                       obj_at'_real_def[THEN meta_eq_to_obj_eq,
                                                                        THEN iffD1]])
-   apply (fastforce simp: valid_idle'_def pred_tcb_at'_def obj_at'_def dest!: invs_valid_idle')
-  apply (fastforce dest: invs_valid_objs' ko_at_valid_objs' simp: valid_obj'_def)
+   apply (fastforce simp: valid_idle'_def pred_tcb_at'_def obj_at'_def
+                    del: invs_valid_idle' dest!: invs_valid_idle')
+  apply (fastforce del: invs_valid_objs' dest: invs_valid_objs' ko_at_valid_objs'
+                   simp: valid_obj'_def)
   done
 
 lemma setupCallerCap_urz[wp]:
@@ -3845,7 +3830,7 @@ lemma ri_invs' [wp]:
    apply (frule(1) ct_not_in_epQueue, clarsimp, clarsimp)
    apply (drule(1) sym_refs_ko_atD')
    apply (drule simple_st_tcb_at_state_refs_ofD')
-   apply (clarsimp simp: valid_obj'_def valid_ep'_def st_tcb_at_refs_of_rev' conj_ac
+   apply (clarsimp simp: valid_obj'_def valid_ep'_def st_tcb_at_refs_of_rev' conj_left_commute
               split del: if_split
                    cong: if_cong)
    apply (subgoal_tac "sch_act_not sender s")

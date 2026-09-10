@@ -9,11 +9,10 @@ theory Bits_R
 imports Corres ArchStateRelationLemmas
 begin
 
-(* FIXME: clearMemory generates a warning on some architectures *)
 crunch_ignore (add:
   withoutFailure throw catchFailure rethrowFailure capFaultOnFailure lookupErrorOnFailure
   nullCapOnFailure nothingOnFailure withoutPreemption preemptionPoint ignoreFailure
-  emptyOnFailure unifyFailure maskInterrupt clearMemory clearMemoryVM  assertDerived
+  emptyOnFailure unifyFailure maskInterrupt clearMemoryVM assertDerived
   setObject getObject updateObject loadObject)
 
 (* FIXME: move to WordLib *)
@@ -104,7 +103,7 @@ context Bits_R begin
 lemma objBitsKO_pos_power2[simp]:
   "(1::machine_word) < 2 ^ objBitsKO ko"
   using objBitsKO_neq_0
-  by (simp add: objBitsKO_less_word_bits word_2p_lem word_bits_size)
+  by (simp add: word_2p_lem word_bits_size)
 
 lemma objBits_less_word_bits:
   "objBits v < word_bits"

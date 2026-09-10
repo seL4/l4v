@@ -25,7 +25,7 @@ lemmas wordRadix_def' = wordRadix_def[simplified]
 lemma wordSizeCase_simp[simp]: "wordSizeCase a b = b"
   by (simp add: wordSizeCase_def wordBits_def word_size)
 
-lemmas objBits_defs = tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def vcpuBits_def
+lemmas objBits_defs = tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def
 lemmas untypedBits_defs = minUntypedSizeBits_def maxUntypedSizeBits_def
 lemmas objBits_simps = objBits_def objBitsKO_def word_size_def archObjSize_def
 lemmas objBits_simps' = objBits_simps objBits_defs
@@ -302,7 +302,7 @@ lemma frame_at_update' [iff]:
 
 lemma pspace_in_kernel_mappings_update' [iff]:
   "pspace_in_kernel_mappings' (f s) = pspace_in_kernel_mappings' s"
-  by (simp add: pspace_in_kernel_mappings'_def)
+  by simp
 
 lemma valid_arch_tcb_update'[iff]:
   "valid_arch_tcb' atcb (f s) = valid_arch_tcb' atcb s"

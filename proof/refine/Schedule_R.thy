@@ -75,9 +75,6 @@ lemma schedule_choose_new_thread_sched_act_rct[wp]:
   unfolding schedule_choose_new_thread_def
   by wp
 
-crunch tcbQueueAppend
-  for ghost_relation_wrapper[wp]: "ghost_relation_wrapper s"
-
 \<comment> \<open>This proof shares many similarities with the proof of @{thm tcbSchedEnqueue_corres}\<close>
 lemma tcbSchedAppend_corres:
   "tcb_ptr = tcbPtr \<Longrightarrow>
@@ -113,7 +110,8 @@ lemma tcbSchedAppend_corres:
   apply (subst if_distrib[where f="set_tcb_queue domain prio" for domain prio])
   apply (rule corres_if_strong')
     subgoal
-      by (fastforce dest!: state_relation_ready_queues_relation
+      by (fastforce   del: state_relation_ready_queues_relation (* suppress elim warning *)
+                    dest!: state_relation_ready_queues_relation
                            in_ready_q_tcbQueued_eq[where t=tcbPtr]
                      simp: obj_at'_def opt_pred_def opt_map_def in_correct_ready_q_def
                            obj_at_def etcb_at_def etcbs_of'_def)
@@ -760,7 +758,8 @@ lemma switchToThread_corres:
      apply wpsimp
      apply (fastforce simp: st_tcb_at'_def runnable_eq_active' obj_at'_def)
     apply (rule corres_stateAssert_ignore)
-     apply (fastforce dest!: state_relation_ready_queues_relation intro: ksReadyQueues_asrt_cross)
+     apply (fastforce del: state_relation_ready_queues_relation dest!: state_relation_ready_queues_relation
+                      intro: ksReadyQueues_asrt_cross)
     apply (rule corres_stateAssert_add_assertion[rotated])
      apply fastforce
     apply (rule corres_guard_imp)
@@ -1534,7 +1533,8 @@ lemma (in Schedule_R_2) isHighestPrio_corres:
            apply (elim conjE)
            apply (clarsimp simp: valid_bitmaps_def)
            apply (subst lookupBitmapPriority_Max_eqI; blast?)
-           apply (fastforce dest: state_relation_ready_queues_relation Max_prio_helper[where d=d]
+           apply (fastforce del: state_relation_ready_queues_relation (* suppress elim warning *)
+                            dest: state_relation_ready_queues_relation Max_prio_helper[where d=d]
                             simp: tcbQueueEmpty_def)
           apply fastforce
          apply (wpsimp simp: if_apply_def2 wp: hoare_drop_imps ksReadyQueuesL1Bitmap_return_wp)+
@@ -2011,7 +2011,7 @@ lemma (in Schedule_R_3) schedule_ct_activatable'[wp]:
            | simp only: obj_at'_activatable_st_tcb_at'[simplified comp_def]
            | strengthen invs'_invs_no_cicd
            | wp hoare_vcg_imp_lift)+
-  apply (fastforce dest: invs_sch_act_wf' elim: pred_tcb'_weakenE
+  apply (fastforce del: invs_sch_act_wf' dest: invs_sch_act_wf' elim: pred_tcb'_weakenE
                    simp: sch_act_wf obj_at'_activatable_st_tcb_at')
   done
 

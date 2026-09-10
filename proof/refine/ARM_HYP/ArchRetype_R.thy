@@ -145,8 +145,6 @@ lemma makeObjectKO_eq[Arch_assms]:
 
 lemma objBits_le_obj_bits_api[Arch_assms]:
   "makeObjectKO dev d ty = Some ko \<Longrightarrow> objBitsKO ko \<le> obj_bits_api (APIType_map2 ty) us"
-  (* FIXME: work around warning due to vcpuBits_def being in both bit_simps and objBits_simps' *)
-  supply vcpuBits_def[bit_simps del]
   apply (case_tac ty)
     apply (auto simp: default_arch_object_def vspace_bits_defs vcpu_bits_def
                       makeObjectKO_def objBits_simps' APIType_map2_def obj_bits_api_def slot_bits_def

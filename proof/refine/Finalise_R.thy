@@ -1818,8 +1818,6 @@ lemma unbindNotification_invs[wp]:
   apply normalise_obj_at'
   apply (subst delta_sym_refs, assumption)
     apply (auto split: if_split_asm)[1]
-   (* FIXME: weak elimination rule warning for no_0_obj_at' despite supply *)
-   supply no_0_obj_at'[rule del] (* avoid weak elim rule warning *)
    apply (auto simp: tcb_st_not_Bound ntfn_q_refs_of'_mult split: if_split_asm)[1]
   apply (frule obj_at_valid_objs', clarsimp+)
   apply (simp add: valid_ntfn'_def valid_obj'_def live'_def
@@ -2527,6 +2525,7 @@ lemma unbindNotification_corres:
            apply (clarsimp simp: ntfn_relation_def split:Structures_A.ntfn.splits)
           apply (rule setBoundNotification_corres)
          apply (wp gbn_wp' gbn_wp)+
+   supply [rule del] = invs_valid_objs invs_valid_objs' (* suppress elim warning *)
    apply (clarsimp elim!: obj_at_valid_objsE
                    dest!: bound_tcb_at_state_refs_ofD invs_valid_objs
                     simp: valid_obj_def is_tcb tcb_ntfn_is_bound_def obj_at_def
@@ -2553,6 +2552,7 @@ lemma unbindMaybeNotification_corres:
          apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
         apply (rule setBoundNotification_corres)
        apply (wp get_simple_ko_wp getNotification_wp)+
+   supply [rule del] = invs_valid_objs invs_valid_objs' (* suppress elim warning *)
    apply (clarsimp elim!: obj_at_valid_objsE
                    dest!: bound_tcb_at_state_refs_ofD invs_valid_objs
                     simp: valid_obj_def is_tcb tcb_ntfn_is_bound_def invs_psp_aligned invs_distinct
@@ -2802,7 +2802,7 @@ lemma fast_finaliseCap_corres:
             | wpc)+
    apply (clarsimp simp: valid_cap_def)
   apply (clarsimp simp: valid_cap'_def valid_obj'_def
-                 dest!: invs_valid_objs' obj_at_valid_objs' )
+                  del: invs_valid_objs' dest!: invs_valid_objs' obj_at_valid_objs' )
   done
 
 crunch ThreadDecls_H.suspend, unbindNotification

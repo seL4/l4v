@@ -394,6 +394,11 @@ abbreviation
 where
   "s \<turnstile> c \<equiv> valid_cap c s"
 
+(* include in order to prevent syntax ambiguity warning with spec_validE *)
+bundle no_valid_cap_syn begin
+no_notation valid_cap_syn ("_ \<turnstile> _" [60, 60] 61)
+end
+
 definition
   "valid_caps cs s \<equiv> \<forall>slot cap. cs slot = Some cap \<longrightarrow> valid_cap cap s"
 

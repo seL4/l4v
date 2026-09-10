@@ -66,8 +66,8 @@ lemma opt_tcb_at'_update'[iff]:
 (* exports from Arch locale version which are safe for generic use *)
 interpretation Arch_pspace_update_eq' ..
 
-lemmas pspace_in_kernel_mappings_update'[iff] = pspace_in_kernel_mappings_update'
-lemmas valid_arch_tcb_update'[iff] = valid_arch_tcb_update'
+lemmas pspace_in_kernel_mappings_update' = pspace_in_kernel_mappings_update'
+lemmas valid_arch_tcb_update' = valid_arch_tcb_update'
 
 lemma valid_tcb_update'[iff]:
   "valid_tcb' tcb (f s) = valid_tcb' tcb s"
@@ -75,6 +75,9 @@ lemma valid_tcb_update'[iff]:
   by auto
 
 end
+
+(* avoid duplicate declaration warning when re-binding name after interpretation *)
+lemmas (in pspace_update_eq') [iff] = pspace_in_kernel_mappings_update' valid_arch_tcb_update'
 
 context p_arch_idle_update_eq'
 begin
@@ -86,9 +89,12 @@ lemma ifunsafe_update [iff]:
 (* exports from Arch locale version (safe for generic use) *)
 interpretation Arch_p_arch_idle_update_eq' ..
 
-lemmas valid_arch_state_update'[iff] = valid_arch_state_update'
+lemmas valid_arch_state_update' = valid_arch_state_update'
 
 end
+
+(* avoid duplicate declaration warning when re-binding name after interpretation *)
+lemmas (in p_arch_idle_update_eq') [iff] =  valid_arch_state_update'
 
 locale InvariantUpdates_H =
   assumes valid_arch_state'_interrupt[simp]:

@@ -182,7 +182,7 @@ lemma deleteASID_corres[corres]:
                      set_asid_pool_vspace_objs_unmap_single getASID_wp
                   | strengthen valid_arch_state_asid_table valid_arch_state_global_arch_objs
                   | simp flip: cur_tcb_def)+
-   apply (fastforce dest: valid_asid_tableD invs_valid_asid_table)
+   apply (fastforce del: invs_valid_asid_table dest: valid_asid_tableD invs_valid_asid_table)
   apply simp
   done
 

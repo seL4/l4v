@@ -334,7 +334,7 @@ lemma in_kernel_mappings_neq_mask:
 
 lemma invs_pspace_in_kernel_mappings'[elim!]:
   "invs' s \<Longrightarrow> pspace_in_kernel_mappings' s"
-  by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
+  by (fastforce del: invs_valid_pspace' dest!: invs_valid_pspace' simp: valid_pspace'_def)
 
 lemma valid_pspace_in_kernel_mappings'[elim!]:
   "valid_pspace' s \<Longrightarrow> pspace_in_kernel_mappings' s"
@@ -346,7 +346,7 @@ lemma tcb_hyp_refs_of'_simps[simp]:
 
 lemma refs_of_a'_simps[simp]:
   "refs_of_a' ako = {}"
-  by (auto simp: refs_of_a'_def)
+  by auto
 
 lemma hyp_refs_of_hyp_live':
   "hyp_refs_of' ko \<noteq> {} \<Longrightarrow> hyp_live' ko"

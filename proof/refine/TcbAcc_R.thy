@@ -2195,7 +2195,8 @@ lemma tcbSchedEnqueue_corres:
   apply (subst if_distrib[where f="set_tcb_queue domain prio" for domain prio])
   apply (rule corres_if_strong')
     subgoal
-      by (fastforce dest!: state_relation_ready_queues_relation
+      by (fastforce   del: state_relation_ready_queues_relation (* suppress elim warning *)
+                    dest!: state_relation_ready_queues_relation
                            in_ready_q_tcbQueued_eq[where t=tcbPtr]
                      simp: obj_at'_def opt_pred_def opt_map_def in_correct_ready_q_def
                            obj_at_def etcb_at_def etcbs_of'_def)
@@ -2706,8 +2707,9 @@ lemma tcbSchedDequeue_corres:
    apply (fastforce intro: ksReadyQueues_asrt_cross)
   apply (rule corres_symb_exec_r[OF _ threadGet_sp]; (solves wpsimp)?)
   apply (rule corres_if_strong'; fastforce?)
-   apply (fastforce dest!: state_relation_ready_queues_relation
-                           in_ready_q_tcbQueued_eq[where t=tcbPtr]
+   apply (fastforce  del: state_relation_ready_queues_relation (* suppress elim warning *)
+                     dest!: state_relation_ready_queues_relation
+                            in_ready_q_tcbQueued_eq[where t=tcbPtr]
                      simp: obj_at'_def opt_pred_def opt_map_def in_correct_ready_q_def
                            obj_at_def etcb_at_def etcbs_of'_def)
   apply (rule corres_symb_exec_r[OF _ threadGet_sp]; wpsimp?)
@@ -2716,7 +2718,8 @@ lemma tcbSchedDequeue_corres:
   apply (rule corres_from_valid_det)
     apply (fastforce intro: det_wp_modify det_wp_pre simp: set_tcb_queue_def)
    apply (wpsimp wp: tcbQueueRemove_no_fail)
-   apply (fastforce dest: state_relation_ready_queues_relation
+   apply (fastforce del: state_relation_ready_queues_relation (* suppress elim warning *)
+                    dest: state_relation_ready_queues_relation
                     simp: ex_abs_underlying_def ready_queues_relation_def ready_queue_relation_def
                           Let_def inQ_def opt_pred_def opt_map_def obj_at'_def)
   apply (clarsimp simp: state_relation_def)
@@ -2963,7 +2966,6 @@ end (* TcbAcc_R_2 *)
 
 crunch rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps)
 
 global_interpretation rescheduleRequired: gen_typ_at_props' "rescheduleRequired"
@@ -3757,10 +3759,6 @@ lemma setSchedulerAction_ct'[wp]:
 
 crunch rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
   for ct'[wp]: "\<lambda>s. P (ksCurThread s)"
-  (simp: crunch_simps wp: crunch_wps)
-
-crunch rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
-  for typ_at'[wp]:  "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps wp: crunch_wps)
 
 end (* TcbAcc_R_2 *)

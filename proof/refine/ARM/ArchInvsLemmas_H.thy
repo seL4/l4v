@@ -111,7 +111,6 @@ clear_named_theorems Arch_assms (* accumulate assumptions for Invariants_H_cte_a
 
 (* FIXME arch-split: for proofs which require exact offsets lining up instead of cteSizeBits *)
 lemma raw_tcb_cte_cases_simps:
-  "tcb_cte_cases 0  = Some (tcbCTable, tcbCTable_update)"
   "tcb_cte_cases 16 = Some (tcbVTable, tcbVTable_update)"
   "tcb_cte_cases 32 = Some (tcbReply, tcbReply_update)"
   "tcb_cte_cases 48 = Some (tcbCaller, tcbCaller_update)"
@@ -252,7 +251,7 @@ begin
 
 lemma pspace_in_kernel_mappings_update' [iff]:
   "pspace_in_kernel_mappings' (f s) = pspace_in_kernel_mappings' s"
-  by (simp add: pspace_in_kernel_mappings'_def)
+  by simp
 
 lemma valid_asid_table_update' [iff]:
   "valid_asid_table' t (f s) = valid_asid_table' t s"
@@ -308,7 +307,7 @@ lemma tcb_hyp_refs_of'_simps[simp]:
 
 lemma refs_of_a'_simps[simp]:
   "refs_of_a' ako = {}"
-  by (auto simp: refs_of_a'_def)
+  by auto
 
 lemma hyp_refs_of_hyp_live':
   "hyp_refs_of' ko \<noteq> {} \<Longrightarrow> hyp_live' ko"
@@ -429,7 +428,7 @@ end (* typ_at_props' *)
 context Arch begin arch_global_naming
 
 lemmas bit_simps' = pteBits_def pdeBits_def asidHighBits_def asid_low_bits_def word_size_bits_def
-                    asid_high_bits_def bit_simps
+                    asid_high_bits_def
 
 lemma objBitsT_simps:
   "objBitsT EndpointT = epSizeBits"

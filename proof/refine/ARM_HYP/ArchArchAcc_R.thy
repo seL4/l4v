@@ -356,14 +356,14 @@ lemma getObject_pde_ko_at':
   "(pde::pde, s') \<in> fst (getObject p s) \<Longrightarrow> s' = s \<and> ko_at' pde p s"
   apply (rule context_conjI)
    apply (drule use_valid, rule getObject_inv[where P="(=) s"]; simp add: loadObject_default_inv)
-  apply (drule use_valid, rule getObject_ko_at; clarsimp simp: obj_at_simps pde_bits_def)
+  apply (drule use_valid, rule getObject_ko_at; clarsimp simp: pde_bits_def)
   done
 
 lemma getObject_pte_ko_at':
   "(pte::pte, s') \<in> fst (getObject p s) \<Longrightarrow> s' = s \<and> ko_at' pte p s"
   apply (rule context_conjI)
    apply (drule use_valid, rule getObject_inv[where P="(=) s"]; simp add: loadObject_default_inv)
-  apply (drule use_valid, rule getObject_ko_at; clarsimp simp: obj_at_simps pte_bits_def)
+  apply (drule use_valid, rule getObject_ko_at; clarsimp simp: pte_bits_def)
   done
 
 lemma ko_at'_pd:
@@ -1655,10 +1655,10 @@ lemma obj_relation_cuts_range_limit:
        apply (rule_tac x=tcbBlockSizeBits in exI)
        apply (simp add: tcbBlockSizeBits_def)
       apply (rule_tac x=pteBits in exI)
-      apply (simp add: bit_simps is_aligned_shift mask_def vspace_bits_defs)
+      apply (simp add: is_aligned_shift mask_def vspace_bits_defs)
       apply word_bitwise
      apply (rule_tac x=pdeBits in exI)
-     apply (simp add: bit_simps is_aligned_shift mask_def vspace_bits_defs)
+     apply (simp add: is_aligned_shift mask_def vspace_bits_defs)
      apply word_bitwise
     apply (rule_tac x=pageBits in exI)
     apply (simp add: is_aligned_shift pbfs_atleast_pageBits is_aligned_mult_triv2)
@@ -1683,7 +1683,7 @@ lemma obj_relation_cuts_range_mask_range[Arch_assms]:
 lemma obj_relation_cuts_obj_bits:
   "\<lbrakk> (p', P) \<in> obj_relation_cuts ko p; P ko ko' \<rbrakk> \<Longrightarrow> objBitsKO ko' \<le> obj_bits ko"
   apply (erule (1) obj_relation_cutsE;
-          clarsimp simp: objBits_simps objBits_defs bit_simps cte_level_bits_def
+          clarsimp simp: objBits_simps objBits_defs cte_level_bits_def
                          pbfs_atleast_pageBits[simplified vspace_bits_defs] vspace_bits_defs)
    apply (cases ko; simp add: other_obj_relation_def objBits_defs split: kernel_object.splits)
   apply (rename_tac ako)
@@ -1702,9 +1702,7 @@ lemma pspace_distinct_cross[Arch_assms]:
   apply (frule (1) pspace_alignedD')
   apply (frule (1) pspace_alignedD)
   apply (rule ps_clearI, assumption)
-   apply (case_tac ko'; simp add: objBits_defs obj_at_simps)
-   apply (simp split: arch_kernel_object.splits
-                 add: obj_at_simps vspace_bits_defs vcpu_bits_def)
+   apply (case_tac ko'; simp)
   apply (rule ccontr, clarsimp)
   apply (rename_tac x' ko_x')
   apply (frule_tac x=x' in pspace_alignedD', assumption)

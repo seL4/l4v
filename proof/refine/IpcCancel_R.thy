@@ -163,7 +163,7 @@ declare delete.simps[simp del]
 
 lemma invs_weak_sch_act_wf[elim!]:
   "invs' s \<Longrightarrow> weak_sch_act_wf (ksSchedulerAction s) s"
-  by (clarsimp dest!: invs_sch_act_wf' simp: weak_sch_act_wf_def)
+  by (clarsimp del: invs_sch_act_wf' dest!: invs_sch_act_wf' simp: weak_sch_act_wf_def)
 
 lemma blocked_cancelIPC_corres:
   "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr p' \<or>
@@ -425,6 +425,7 @@ proof -
     using invs sr
     by (fastforce simp: cte_wp_at_master_reply_cap_to_ex_rights shiftl_t2n cte_index_repair
                         cte_wp_at_ctes_of cte cte_map_def tcb_cnode_index_def
+                  del: state_relation_pspace_relation (* suppress elim warning *)
                   dest: pspace_relation_cte_wp_at state_relation_pspace_relation)
 
   hence class_link:
@@ -471,9 +472,9 @@ proof -
     by (clarsimp simp: no_0_def nullPointer_def valid_mdb'_def valid_mdb_ctes_def)
 
   from invs cte have no_loop: "mdbNext (cteMDBNode cte) \<noteq> t + 2*2^cte_level_bits"
-    by (fastforce simp: mdb_next_rel_def mdb_next_def
-                       valid_mdb'_def
-                 dest: valid_mdb_no_loops no_loops_direct_simp)
+    by (fastforce simp: mdb_next_rel_def mdb_next_def valid_mdb'_def
+                  del: valid_mdb_no_loops (* suppress elim warning *)
+                  dest: valid_mdb_no_loops no_loops_direct_simp)
 
   from invs cte have
     "mdbNext (cteMDBNode cte) \<noteq> nullPointer \<longrightarrow>
@@ -534,7 +535,7 @@ proof -
     apply (erule subtree.cases)
      apply (clarsimp simp: mdb_next_rel_def mdb_next_def)
     apply (subgoal_tac "c' = cte_map sl")
-     apply (fastforce dest: invs_no_loops no_loops_direct_simp)
+     apply (fastforce del: invs_no_loops dest: invs_no_loops no_loops_direct_simp)
     apply fastforce
     done
 qed
@@ -582,6 +583,7 @@ lemma (in delete_one_gen) cancelIPC_ReplyCap_corres:
        od)"
   proof -
   show ?thesis
+  supply state_relation_pspace_relation[rule del] (* suppress safe elim warning *)
   apply (simp add: reply_cancel_ipc_def getThreadReplySlot_def
                    locateSlot_conv liftM_def tcbReplySlot_def
               del: split_paired_Ex)
@@ -642,8 +644,8 @@ lemma (in delete_one_gen) cancelIPC_ReplyCap_corres:
                            reply_masters_mdb_def cte_wp_at_caps_of_state
                            can_fast_finalise_def)
     apply (fastforce simp: valid_mdb'_def valid_mdb_ctes_def
-                          cte_wp_at_ctes_of nullPointer_def
-                    elim: valid_dlistEn dest: invs_mdb')
+                           cte_wp_at_ctes_of nullPointer_def
+                     elim: valid_dlistEn del: invs_mdb' dest: invs_mdb')
    apply (simp add: exs_valid_def gets_def get_def return_def bind_def
                del: split_paired_Ex split_paired_All)
   apply (wp)
@@ -870,7 +872,7 @@ proof -
          y \<leftarrow> setEndpoint epptr ep';
          setThreadState Inactive t
       od \<lbrace>\<lambda>rv. invs'\<rbrace>"
-    supply no_0_obj_at'[rule del] (* avoid weak elim rule warning *)
+    supply no_0_obj_at'[rule del]
     apply (simp add: invs'_def valid_state'_def)
     apply (subst P)
     apply (wp valid_irq_node_lift valid_global_refs_lift' valid_dom_schedule'_lift
@@ -888,7 +890,7 @@ proof -
     apply (clarsimp simp: valid_obj'_def)
     apply (rule conjI)
      apply (clarsimp simp: obj_at'_def valid_ep'_def
-                    dest!: pred_tcb_at')
+                     del: pred_tcb_at' dest!: pred_tcb_at')
     apply (clarsimp, rule conjI)
      apply (auto simp: pred_tcb_at'_def obj_at'_def)[1]
     apply (rule conjI)
@@ -912,7 +914,6 @@ proof -
                     cong: list.case_cong)
      apply (frule_tac x=t in distinct_remove1)
      apply (frule_tac x=t in set_remove1_eq)
-     (* FIXME arch-split: still getting multiple no_0_obj_at' weak elim rule warnings despite rule del above!  *)
      by (auto elim!: delta_sym_refs
                simp: symreftype_inverse' tcb_st_refs_of'_def tcb_bound_refs'_def
               split: thread_state.splits if_split_asm)
@@ -946,7 +947,7 @@ proof -
                                hoare_weaken_pre[OF cancelSignal_invs']
                        elim!: pred_tcb'_weakenE)
           apply (auto simp: pred_tcb_at'_def obj_at'_def
-                      dest: invs_sch_act_wf')
+                      del: invs_sch_act_wf' dest: invs_sch_act_wf')
   done
 qed
 
@@ -1262,6 +1263,7 @@ lemma as_user_ready_qs_distinct[wp]:
 lemma (in delete_one_gen) suspend_corres:
   "corres dc (einvs and tcb_at t) invs'
              (IpcCancel_A.suspend t) (ThreadDecls_H.suspend t)"
+  supply state_relation_pspace_relation[rule del] (* suppress elim warning *)
   apply (rule corres_cross_over_guard[where P'=P' and Q="tcb_at' t and P'" for P'])
    apply (fastforce dest!: tcb_at_cross state_relation_pspace_relation)
   apply (simp add: IpcCancel_A.suspend_def Thread_H.suspend_def)
@@ -2082,7 +2084,6 @@ lemma cancelBadgedSends_invs[wp]:
            rule cancelBadgedSends_filterM_helper[where epptr=epptr])
     apply (clarsimp simp: ep_redux_simps3 fun_upd_def[symmetric])
     apply (clarsimp simp add: valid_ep'_def split: list.split)
-    supply no_0_obj_at'[rule del] (* avoid weak elim rule warning *)
     apply blast
    apply (wp valid_irq_node_lift irqs_masked_lift valid_dom_schedule'_lift
           | wp (once) sch_act_sane_lift)+

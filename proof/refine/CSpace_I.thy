@@ -66,6 +66,7 @@ lemma cap_case_CNodeCap:
 declare resolveAddressBits.simps[simp del]
 
 lemma resolveAddressBits_inv_induct:
+  includes no_valid_cap_syn
   shows
   "s \<turnstile> \<lbrace>P\<rbrace>
      resolveAddressBits cap cref depth
@@ -324,7 +325,8 @@ proof (cases rule: next_rtrancl_tranclE)
   case eq thus ?thesis by simp
 next
   case trancl thus ?thesis
-    by (auto intro: trancl_into_rtrancl elim: mdb_trancl_update_other [OF _ nopath])
+    by (auto del: trancl_into_rtrancl intro: trancl_into_rtrancl
+             elim: mdb_trancl_update_other[OF _ nopath])
 qed
 
 lemma mdb_trancl_other_update:
@@ -360,7 +362,8 @@ proof (cases rule: next_rtrancl_tranclE)
   case eq thus ?thesis by simp
 next
   case trancl thus ?thesis
-    by (auto intro: trancl_into_rtrancl elim: mdb_trancl_other_update [OF _ nopath])
+    by (auto del: trancl_into_rtrancl intro: trancl_into_rtrancl
+             elim: mdb_trancl_other_update[OF _ nopath])
 qed
 
 lemma mdb_chain_0_update:

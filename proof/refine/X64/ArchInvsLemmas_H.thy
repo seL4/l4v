@@ -43,7 +43,6 @@ lemma valid_cap'_pspaceI[Arch_assms]:
 lemma valid_obj'_pspaceI[Arch_assms]:
   "valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
   unfolding valid_obj'_def
-  supply no_0_obj_at'[rule del] (* avoid weak elim rule warning *)
   by (cases obj)
      (auto simp: valid_ep'_def valid_ntfn'_def valid_tcb'_def valid_cte'_def
                  valid_tcb_state'_def valid_bound_tcb'_def
@@ -346,7 +345,7 @@ lemma in_kernel_mappings_neq_mask:
 
 lemma invs_pspace_in_kernel_mappings'[elim!]:
   "invs' s \<Longrightarrow> pspace_in_kernel_mappings' s"
-  by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
+  by (fastforce del: invs_valid_pspace' dest!: invs_valid_pspace' simp: valid_pspace'_def)
 
 lemma valid_pspace_in_kernel_mappings'[elim!]:
   "valid_pspace' s \<Longrightarrow> pspace_in_kernel_mappings' s"

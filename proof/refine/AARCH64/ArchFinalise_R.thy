@@ -651,9 +651,6 @@ lemma invs_asid_update_strg':
   apply (auto simp add: ran_def split: if_split_asm)
   done
 
-crunch invalidateTLBByASID
-  for asidTable[wp]: "\<lambda>s. P (armKSASIDTable (ksArchState s))"
-
 lemma deleteASIDPool_invs[wp]:
   "\<lbrace>invs'\<rbrace> deleteASIDPool asid pool \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: deleteASIDPool_def)
