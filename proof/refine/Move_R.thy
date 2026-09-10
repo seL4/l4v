@@ -60,8 +60,6 @@ lemma unaligned_helper:
   apply (simp add: not_less power_overflow word_bits_conv)
   done
 
-declare word_unat_power[symmetric, simp del]
-
 lemma neq_out_intv:
   "\<lbrakk> a \<noteq> b; b \<notin> {a..a + c - 1} - {a} \<rbrakk> \<Longrightarrow> b \<notin> {a..a + c - 1}"
   by simp

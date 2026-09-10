@@ -1393,7 +1393,7 @@ lemma deleteASID_corres:
       apply (drule Some_to_the)
       apply (wpsimp wp: getASID_wp)+
    apply (clarsimp simp: valid_arch_state_def valid_asid_table_def
-                  dest!: invs_arch_state)
+                   del: invs_arch_state dest!: invs_arch_state)
    apply blast
   apply (clarsimp simp: valid_arch_state'_def valid_asid_table'_def)
   done

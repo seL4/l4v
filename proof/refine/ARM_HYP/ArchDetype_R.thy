@@ -1717,8 +1717,6 @@ lemma createObject_pspace_aligned_distinct':
    and K (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> us < 28)\<rbrace>
   createObject ty ptr us d
   \<lbrace>\<lambda>xa s. pspace_aligned' s \<and> pspace_distinct' s\<rbrace>"
-  (* FIXME: work around warning due to vcpuBits_def being in both bit_simps and objBits_simps' *)
-  supply vcpuBits_def[bit_simps del]
   apply (rule hoare_pre)
    apply (wp placeNewObject_pspace_aligned' unless_wp
              placeNewObject_pspace_distinct'

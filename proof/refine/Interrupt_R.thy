@@ -694,7 +694,7 @@ lemma handleInterrupt_corres:
    apply (rule corres_guard_imp)
      apply (rule corres_split)
         apply (rule corres_machine_op, rule corres_eq_trivial;
-               simp add: no_fail_maskInterrupt)+
+               simp)+
       apply ((wp | simp)+)[4]
   apply (rule corres_gen_asm2)
   apply (case_tac st, simp_all add: irq_state_relation_def bind_assoc split: irqstate.split_asm)

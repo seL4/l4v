@@ -163,9 +163,6 @@ lemma obj_relation_cut_same_type:
                     arch_kernel_obj.split_asm arch_kernel_object.split_asm)
   done
 
-lemmas obj_at_simps = gen_obj_at_simps is_other_obj_relation_type_def
-                      objBits_simps pageBits_def
-
 lemma arch_state_relation_vmids_cong:
   "aobjs |> asid_pool_of' ||> vmids_of_pool' = aobjs' |> asid_pool_of' ||> vmids_of_pool' \<Longrightarrow>
   ((s, s') \<in> arch_state_relation aobjs) = ((s, s') \<in> arch_state_relation aobjs')"

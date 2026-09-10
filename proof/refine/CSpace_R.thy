@@ -3907,8 +3907,8 @@ lemma setupReplyMaster_corres:
        apply (rule create_reply_master_corres; simp)
       apply (subgoal_tac "\<exists>cte. cte_wp_at' ((=) cte) (cte_map (t, tcb_cnode_index 2)) s'
                               \<and> cteCap cte = capability.NullCap")
-       apply (fastforce dest: pspace_relation_no_reply_caps
-                             state_relation_pspace_relation)
+       apply (fastforce del: state_relation_pspace_relation
+                        dest: pspace_relation_no_reply_caps state_relation_pspace_relation)
       apply (clarsimp simp: cte_map_def tcb_cnode_index_def cte_wp_at_ctes_of)
      apply (rule_tac Q'="\<lambda>rv. einvs and tcb_at t and
                              cte_wp_at ((=) rv) (t, tcb_cnode_index 2)"
@@ -5177,14 +5177,13 @@ lemma locateSlot_cap_to'[wp]:
   apply (fastforce intro!: word_and_le1)
   done
 
-(* FIXME: ambiguous notation between spec_validE (this) and validE; introduce bundles for both,
-   unbundle by default, and use `includes no` contexts to disambiguate *)
 lemma rab_cap_to'':
+  includes no valid_cap_syn
   assumes P: "\<And>cap. isCNodeCap cap \<longrightarrow> P cap"
   shows
-  "s \<turnstile> \<lbrace>\<lambda>s. isCNodeCap cap \<longrightarrow> (\<forall>r\<in>cte_refs' cap (irq_node' s). ex_cte_cap_wp_to' P r s)\<rbrace>
-     resolveAddressBits cap cref depth
-   \<lbrace>\<lambda>rv s. ex_cte_cap_wp_to' P (fst rv) s\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
+    "s \<turnstile> \<lbrace>\<lambda>s. isCNodeCap cap \<longrightarrow> (\<forall>r\<in>cte_refs' cap (irq_node' s). ex_cte_cap_wp_to' P r s)\<rbrace>
+       resolveAddressBits cap cref depth
+     \<lbrace>\<lambda>rv s. ex_cte_cap_wp_to' P (fst rv) s\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
 proof (induct arbitrary: s rule: resolveAddressBits.induct)
   case (1 cap fn cref depth)
   show ?case

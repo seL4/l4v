@@ -144,7 +144,6 @@ lemma capUntypedSize_capBits:
   "capClass cap = PhysicalClass \<Longrightarrow> capUntypedSize cap = 2 ^ (capBits cap)"
   by (fastforce simp: global.capUntypedSize_def objBits_simps
                       ARM_H.capUntypedSize_def
-                      pteBits_def pdeBits_def
                       ptBits_def pdBits_def
                       shiftl_eq_mult bit_simps'
                 split: capability.splits arch_capability.splits

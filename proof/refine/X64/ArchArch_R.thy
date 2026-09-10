@@ -1269,7 +1269,7 @@ lemma performX64PortInvocation_corres:
   apply (case_tac x; clarsimp simp: bind_assoc simp del: split_paired_All)
   apply (rule_tac corres_stateAssert_add_assertion[rotated])
    apply (rule all_ioports_issued_cross;
-          fastforce dest!: invs_valid_ioports simp: valid_ioports_def)
+          fastforce del: invs_valid_ioports dest!: invs_valid_ioports simp: valid_ioports_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor[OF set_ioport_mask_corres])
       apply (rule corres_split_nor[OF cteInsert_simple_corres])
