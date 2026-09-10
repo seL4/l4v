@@ -35,7 +35,7 @@ locale Finalise_AC_1 =
     "\<lbrace>\<top>\<rbrace> arch_finalise_cap acap ex \<lbrace>\<lambda>rv s :: det_state. \<forall>t\<in>obj_refs_ac (fst rv). halted_if_tcb t s\<rbrace>"
   and arch_cap_cleanup_wf:
     "\<lbrakk> arch_cap_cleanup_opt acap \<noteq> NullCap; \<not> is_arch_cap (arch_cap_cleanup_opt acap) \<rbrakk>
-       \<Longrightarrow> (\<exists>irq. arch_cap_cleanup_opt acap = IRQHandlerCap irq \<and> is_subject_irq aag irq)"
+     \<Longrightarrow> (\<exists>irq. arch_cap_cleanup_opt acap = IRQHandlerCap irq \<and> is_subject_irq aag irq)"
   and finalise_cap_valid_list[wp]:
     "finalise_cap param_a param_b \<lbrace>valid_list\<rbrace>"
   and arch_finalise_cap_pas_refined[wp]:
@@ -296,8 +296,8 @@ lemma thread_set_tcb_fault_reset_invs:
 (* FIXME MOVE next to IpcCancel_AI.reply_cap_descends_from_master *)
 lemma reply_cap_descends_from_master0:
   "\<lbrakk> invs s; tcb_at t s \<rbrakk>
-     \<Longrightarrow> \<forall>sl\<in>descendants_of (t, tcb_cnode_index 2) (cdt s).
-           \<exists>R. caps_of_state s sl = Some (ReplyCap t False R)"
+   \<Longrightarrow> \<forall>sl\<in>descendants_of (t, tcb_cnode_index 2) (cdt s).
+         \<exists>R. caps_of_state s sl = Some (ReplyCap t False R)"
   apply (subgoal_tac "cte_wp_at (\<lambda>c. (is_master_reply_cap c \<and> obj_ref_of c = t) \<or> c = NullCap)
                                 (t, tcb_cnode_index 2) s")
    apply (clarsimp simp: invs_def valid_state_def valid_mdb_def2 is_cap_simps
@@ -393,12 +393,12 @@ lemma bound_tcb_at_thread_bound_ntfns:
 
 lemma bound_tcb_at_implies_receive:
   "\<lbrakk> pas_refined aag s; bound_tcb_at ((=) (Some x)) t s \<rbrakk>
-     \<Longrightarrow> abs_has_auth_to aag Receive t x"
+   \<Longrightarrow> abs_has_auth_to aag Receive t x"
   by (fastforce dest!: bound_tcb_at_thread_bound_ntfns sta_bas pas_refined_mem)
 
 lemma bound_tcb_at_implies_reset:
   "\<lbrakk> pas_refined aag s; bound_tcb_at ((=) (Some x)) t s \<rbrakk>
-     \<Longrightarrow> abs_has_auth_to aag Reset t x"
+   \<Longrightarrow> abs_has_auth_to aag Reset t x"
   by (fastforce dest!: bound_tcb_at_thread_bound_ntfns sta_bas pas_refined_mem)
 
 
@@ -575,7 +575,7 @@ lemma get_irq_slot_owns[wp]:
 
 lemma pas_refined_Control_into_is_subject_asid:
   "\<lbrakk> pas_refined aag s; (pasSubject aag, Control, pasASIDAbs aag asid) \<in> pasPolicy aag \<rbrakk>
-     \<Longrightarrow> is_subject_asid aag asid"
+   \<Longrightarrow> is_subject_asid aag asid"
   apply (drule (1) pas_refined_Control)
   apply (blast intro: sym)
   done
@@ -635,7 +635,7 @@ end
 
 lemma aag_cap_auth_recycle_EndpointCap:
   "\<lbrakk> pas_refined aag s; has_cancel_send_rights (EndpointCap word1 word2 f) \<rbrakk>
-     \<Longrightarrow> pas_cap_cur_auth aag (EndpointCap word1 word2 f) = is_subject aag word1"
+   \<Longrightarrow> pas_cap_cur_auth aag (EndpointCap word1 word2 f) = is_subject aag word1"
   unfolding aag_cap_auth_def
   by (auto simp: cli_no_irqs clas_no_asid cap_auth_conferred_def pas_refined_all_auth_is_owns
                  has_cancel_send_rights_def cap_rights_to_auth_def all_rights_def pas_refined_refl)
@@ -683,7 +683,7 @@ end
 
 lemma zombie_ptr_emptyable:
   "\<lbrakk> caps_of_state s cref = Some (Zombie ptr zbits n); invs s \<rbrakk>
-     \<Longrightarrow> emptyable (ptr, cref_half) s"
+   \<Longrightarrow> emptyable (ptr, cref_half) s"
   apply (clarsimp simp: emptyable_def tcb_at_def st_tcb_def2)
   apply (rule ccontr)
   apply (clarsimp simp: get_tcb_ko_at)
@@ -719,7 +719,7 @@ end
 
 lemma aag_Control_into_owns_irq:
   "\<lbrakk> (pasSubject aag, Control, pasIRQAbs aag irq) \<in> pasPolicy aag; pas_refined aag s \<rbrakk>
-     \<Longrightarrow> is_subject_irq aag irq"
+   \<Longrightarrow> is_subject_irq aag irq"
   apply (drule (1) pas_refined_Control)
   apply simp
   done
@@ -727,7 +727,7 @@ lemma aag_Control_into_owns_irq:
 lemma owns_slot_owns_irq:
   "\<lbrakk> is_subject aag (fst slot); pas_refined aag s;
      caps_of_state s slot = Some rv; cap_irq_opt rv = Some irq \<rbrakk>
-     \<Longrightarrow> is_subject_irq aag irq"
+   \<Longrightarrow> is_subject_irq aag irq"
   apply (rule aag_Control_into_owns_irq[rotated], assumption)
   apply (drule (1) cli_caps_of_state)
   apply (clarsimp simp: cap_links_irq_def cap_irq_opt_def split: cap.splits)
@@ -1185,7 +1185,7 @@ lemma cap_move_empty_src_slot:
 
 lemma is_derived_is_transferable:
   "\<lbrakk> is_derived m slot child_cap parent_cap; is_transferable_cap parent_cap \<rbrakk>
-     \<Longrightarrow> is_transferable_cap child_cap"
+   \<Longrightarrow> is_transferable_cap child_cap"
   apply (erule is_transferable_capE)
   apply simp
   apply (simp add: is_derived_def is_cap_simps)

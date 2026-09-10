@@ -902,7 +902,7 @@ lemma Sys1AgentMap_simps:
       "Sys1AgentMap High_tcb_ptr = partition_label High"
       "Sys1AgentMap idle_tcb_ptr = partition_label Low"
       "\<And>p. p \<in> ptr_range shared_page_ptr_virt pageBits
-          \<Longrightarrow> Sys1AgentMap p = partition_label Low"
+           \<Longrightarrow> Sys1AgentMap p = partition_label Low"
   unfolding Sys1AgentMap_def
   apply simp_all
   by (auto simp: s0_ptr_defs ptr_range_def pageBits_def)

@@ -25,7 +25,7 @@ crunch as_user, restart
 
 lemma cap_ne_global_pd:
   "\<lbrakk> ex_nonz_cap_to word s; valid_global_refs s \<rbrakk>
-     \<Longrightarrow> word \<noteq> arm_global_pd (arch_state s)"
+   \<Longrightarrow> word \<noteq> arm_global_pd (arch_state s)"
   unfolding ex_nonz_cap_to_def
   apply (simp only: cte_wp_at_caps_of_state zobj_refs_to_obj_refs)
   apply (elim exE conjE)

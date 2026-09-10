@@ -120,7 +120,7 @@ lemma cptrs_in_ipc_buffer[Ipc_IF_assms]:
   "\<lbrakk> n \<in> set [buffer_cptr_index ..< buffer_cptr_index + unat (mi_extra_caps mi)];
      is_aligned (p :: obj_ref) msg_align_bits;
      buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
-     \<Longrightarrow> ptr_range (p + of_nat n * of_nat word_size) word_size_bits \<subseteq> ptr_range p msg_align_bits"
+   \<Longrightarrow> ptr_range (p + of_nat n * of_nat word_size) word_size_bits \<subseteq> ptr_range p msg_align_bits"
   apply (rule ptr_range_subset)
      apply assumption
     apply (simp add: msg_align_bits')
@@ -133,7 +133,7 @@ lemma cptrs_in_ipc_buffer[Ipc_IF_assms]:
 lemma msg_in_ipc_buffer[Ipc_IF_assms]:
   "\<lbrakk> n = msg_max_length \<or> n < msg_max_length;  is_aligned p msg_align_bits;
      unat (mi_length mi) < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
-     \<Longrightarrow> ptr_range (p + of_nat n * of_nat word_size) word_size_bits
+   \<Longrightarrow> ptr_range (p + of_nat n * of_nat word_size) word_size_bits
          \<subseteq> ptr_range (p :: obj_ref) msg_align_bits"
   apply (rule ptr_range_subset)
      apply assumption
@@ -166,9 +166,9 @@ lemma arch_derive_cap_rev[Ipc_IF_assms]:
 
 lemma captransfer_in_ipc_buffer[Ipc_IF_assms]:
   "\<lbrakk> is_aligned (buf :: obj_ref) msg_align_bits; n \<in> {0..2} \<rbrakk>
-     \<Longrightarrow> ptr_range (buf + (2 + (of_nat msg_max_length + of_nat msg_max_extra_caps)) * word_size
-                                                                                    + n * word_size)
-                   word_size_bits
+   \<Longrightarrow> ptr_range (buf + (2 + (of_nat msg_max_length + of_nat msg_max_extra_caps)) * word_size
+                                                                                  + n * word_size)
+                 word_size_bits
          \<subseteq> ptr_range buf msg_align_bits"
   apply (rule ptr_range_subset)
      apply assumption
@@ -186,7 +186,7 @@ lemma captransfer_in_ipc_buffer[Ipc_IF_assms]:
 lemma mrs_in_ipc_buffer[Ipc_IF_assms]:
   "\<lbrakk> n \<in> set [length msg_registers + 1 ..< Suc n'];
      is_aligned (buf :: obj_ref) msg_align_bits; n' < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
-     \<Longrightarrow> ptr_range (buf + of_nat n * of_nat word_size) word_size_bits \<subseteq> ptr_range buf msg_align_bits"
+   \<Longrightarrow> ptr_range (buf + of_nat n * of_nat word_size) word_size_bits \<subseteq> ptr_range buf msg_align_bits"
   apply (rule ptr_range_subset)
      apply assumption
     apply (simp add: msg_align_bits')

@@ -36,14 +36,14 @@ lemma equiv_asids_trans[InfoFlow_IF_assms]:
 
 lemma equiv_asids_non_asid_pool_kheap_update[InfoFlow_IF_assms]:
   "\<lbrakk> equiv_asids R s s'; non_asid_pool_kheap_update s kh; non_asid_pool_kheap_update s' kh' \<rbrakk>
-     \<Longrightarrow> equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
+   \<Longrightarrow> equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
   apply (clarsimp simp: equiv_asids_def equiv_asid non_asid_pool_kheap_update_def)
   apply (fastforce simp: equiv_asid'_def split: option.splits)
   done
 
 lemma equiv_asids_identical_kheap_updates[InfoFlow_IF_assms]:
   "\<lbrakk> equiv_asids R s s'; identical_kheap_updates s s' kh kh' \<rbrakk>
-     \<Longrightarrow> equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
+   \<Longrightarrow> equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
   apply (clarsimp simp: equiv_asids_def equiv_asid_def identical_kheap_updates_def asid_pool_at_kheap)
   apply (case_tac "kh pool_ptr = kh' pool_ptr"; fastforce)
   done
@@ -56,13 +56,13 @@ lemma equiv_asids_triv':
   "\<lbrakk> equiv_asids R s s'; kheap t = kheap s; kheap t' = kheap s';
      arm_asid_table (arch_state t) = arm_asid_table (arch_state s);
      arm_asid_table (arch_state t') = arm_asid_table (arch_state s') \<rbrakk>
-     \<Longrightarrow> equiv_asids R t t'"
+   \<Longrightarrow> equiv_asids R t t'"
   by (fastforce simp: equiv_asids_def equiv_asid equiv_asid'_def)
 
 lemma equiv_asids_triv[InfoFlow_IF_assms]:
   "\<lbrakk> equiv_asids R s s'; kheap t = kheap s; kheap t' = kheap s';
      arch_state t = arch_state s; arch_state t' = arch_state s' \<rbrakk>
-     \<Longrightarrow> equiv_asids R t t'"
+   \<Longrightarrow> equiv_asids R t t'"
   by (fastforce simp: equiv_asids_triv')
 
 lemma globals_equiv_refl[InfoFlow_IF_assms]:

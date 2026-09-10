@@ -23,7 +23,7 @@ crunch as_user, restart
 
 lemma cap_ne_global_pt:
   "\<lbrakk> ex_nonz_cap_to word s; valid_global_refs s; valid_global_arch_objs s \<rbrakk>
-     \<Longrightarrow> word \<noteq> arm_us_global_vspace (arch_state s)"
+   \<Longrightarrow> word \<noteq> arm_us_global_vspace (arch_state s)"
   unfolding ex_nonz_cap_to_def
   apply (simp only: cte_wp_at_caps_of_state zobj_refs_to_obj_refs)
   apply (elim exE conjE)
@@ -279,7 +279,7 @@ crunch lazy_fpu_restore
 
 lemma equiv_but_for_labels_guard_imp:
   "\<lbrakk> equiv_but_for_labels aag L' st s; L' \<subseteq> L \<rbrakk>
-     \<Longrightarrow> equiv_but_for_labels aag L st s"
+   \<Longrightarrow> equiv_but_for_labels aag L st s"
   by (auto simp: equiv_but_for_labels_def elim!: states_equiv_for_guard_imp)
 
 definition is_subject_cur_fpu_2 where
@@ -313,7 +313,7 @@ lemma dmo_disableFpu_reads_respects[wp]:
 (* FIXME AARCH64 IF: consolidate cur_fpu_of and is_arch_cur_fpu *)
 lemma equiv_kheap_equiv_cur_fpu_of:
   "\<lbrakk> equiv_for P kheap s s'; P t; valid_cur_fpu s; valid_cur_fpu s' \<rbrakk>
-     \<Longrightarrow> cur_fpu_of s t = cur_fpu_of s' t"
+   \<Longrightarrow> cur_fpu_of s t = cur_fpu_of s' t"
   by (clarsimp simp: valid_cur_fpu_def equiv_for_def is_tcb_cur_fpu_def obj_at_def)
 
 lemma lazy_fpu_restore_reads_respects:

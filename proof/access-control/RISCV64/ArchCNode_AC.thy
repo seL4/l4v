@@ -39,7 +39,7 @@ lemma sata_update[CNode_AC_assms]:
   "\<lbrakk> pas_wellformed aag;
      cap_links_asid_slot aag (pasObjectAbs aag (fst ptr)) cap;
      state_asids_to_policy_arch aag caps as vrefs \<subseteq> pasPolicy aag \<rbrakk>
-     \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap)) as vrefs \<subseteq> pasPolicy aag"
+   \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap)) as vrefs \<subseteq> pasPolicy aag"
   by (fastforce intro: state_asids_to_policy_aux.intros
                  elim!: state_asids_to_policy_aux.cases
                  simp: cap_links_asid_slot_def label_owns_asid_slot_def
@@ -50,7 +50,7 @@ lemma sata_update2[CNode_AC_assms]:
      cap_links_asid_slot aag (pasObjectAbs aag (fst ptr)) cap;
      cap_links_asid_slot aag (pasObjectAbs aag (fst ptr')) cap';
      state_asids_to_policy_arch aag caps as vrefs \<subseteq> pasPolicy aag \<rbrakk>
-     \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap, ptr' \<mapsto> cap')) as vrefs \<subseteq> pasPolicy aag"
+   \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap, ptr' \<mapsto> cap')) as vrefs \<subseteq> pasPolicy aag"
   by (fastforce intro: state_asids_to_policy_aux.intros
                 elim!: state_asids_to_policy_aux.cases
                  simp: cap_links_asid_slot_def label_owns_asid_slot_def
@@ -63,7 +63,7 @@ lemma vs_lookup_table_eqI':
                 \<longrightarrow> vspace_for_pool pool_ptr asid (asid_pools_of s') =
                     vspace_for_pool pool_ptr asid (asid_pools_of s);
      bot_level < max_pt_level \<longrightarrow> pts_of s' = pts_of s \<rbrakk>
-     \<Longrightarrow> vs_lookup_table bot_level asid vref s' = vs_lookup_table bot_level asid vref s"
+   \<Longrightarrow> vs_lookup_table bot_level asid vref s' = vs_lookup_table bot_level asid vref s"
   by (auto simp: obind_def vs_lookup_table_def asid_pool_level_eq[symmetric]
                  pool_for_asid_def vspace_for_pool_def
           split: option.splits)
@@ -105,7 +105,7 @@ lemma state_vrefs_tcb_upd[CNode_AC_assms]:
 
 lemma state_vrefs_simple_type_upd[CNode_AC_assms]:
   "\<lbrakk> ko_at ko ptr s; is_simple_type ko; a_type ko = a_type (f val) \<rbrakk>
-     \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(ptr \<mapsto> f val)\<rparr>) = state_vrefs s"
+   \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(ptr \<mapsto> f val)\<rparr>) = state_vrefs s"
   apply (case_tac ko; case_tac "f val"; clarsimp)
   by (fastforce intro!: state_vrefs_eqI simp: opt_map_def obj_at_def is_obj_defs valid_arch_state_def)+
 

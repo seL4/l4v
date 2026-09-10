@@ -205,7 +205,7 @@ fun cap_irqs_controlled :: "cap \<Rightarrow> irq set" where
 inductive_set state_irqs_to_policy_aux for aag caps where
   sita_controlled:
     "\<lbrakk> caps ptr = Some cap; irq \<in> cap_irqs_controlled cap \<rbrakk>
-       \<Longrightarrow> (pasObjectAbs aag (fst ptr), Control, pasIRQAbs aag irq) \<in> state_irqs_to_policy_aux aag caps"
+     \<Longrightarrow> (pasObjectAbs aag (fst ptr), Control, pasIRQAbs aag irq) \<in> state_irqs_to_policy_aux aag caps"
 
 abbreviation state_irqs_to_policy where
   "state_irqs_to_policy aag s \<equiv> state_irqs_to_policy_aux aag (caps_of_state s)"
@@ -225,19 +225,19 @@ definition thread_bound_ntfns where
 inductive_set state_bits_to_policy for caps thread_sts thread_bas cdt vrefs hrefs where
   sbta_caps:
     "\<lbrakk> caps ptr = Some cap; oref \<in> obj_refs_ac cap; auth \<in> cap_auth_conferred cap \<rbrakk>
-       \<Longrightarrow> (fst ptr, auth, oref) \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
+     \<Longrightarrow> (fst ptr, auth, oref) \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
 | sbta_untyped:
     "\<lbrakk> caps ptr = Some cap; oref \<in> untyped_range cap \<rbrakk>
-       \<Longrightarrow> (fst ptr, Control, oref) \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
+     \<Longrightarrow> (fst ptr, Control, oref) \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
 | sbta_ts:
     "(oref', auth) \<in> thread_sts oref
      \<Longrightarrow> (oref, auth, oref') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
 | sbta_bounds:
     "\<lbrakk> thread_bas oref = Some oref'; auth \<in> {Receive, Reset} \<rbrakk>
-       \<Longrightarrow> (oref, auth, oref') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
+     \<Longrightarrow> (oref, auth, oref') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
 | sbta_cdt:
     "\<lbrakk> cdt slot' = Some slot ; \<not>is_transferable (caps slot') \<rbrakk>
-       \<Longrightarrow> (fst slot, Control, fst slot') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
+     \<Longrightarrow> (fst slot, Control, fst slot') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
 | sbta_cdt_transferable:
     "cdt slot' = Some slot
      \<Longrightarrow> (fst slot, DeleteDerived, fst slot') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
@@ -246,7 +246,7 @@ inductive_set state_bits_to_policy for caps thread_sts thread_bas cdt vrefs href
      \<Longrightarrow> (ptr, auth, ptr') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
 | sbta_href:
     "\<lbrakk> (ptr',_) \<in> hrefs ptr \<rbrakk>
-       \<Longrightarrow> (ptr, Control, ptr') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
+     \<Longrightarrow> (ptr, Control, ptr') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs hrefs"
 
 definition state_objs_to_policy :: "det_state \<Rightarrow> (obj_ref \<times> auth \<times> obj_ref) set" where
   "state_objs_to_policy s = state_bits_to_policy (caps_of_state s) (thread_st_auth s)
@@ -423,12 +423,12 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko' where
 | troa_ntfn:
     "\<lbrakk> ko = Some (Notification ntfn); ko' = Some (Notification ntfn');
        auth \<in> {Receive, Notify, Reset}; s \<in> subjects; (s, auth, l) \<in> pasPolicy aag \<rbrakk>
-       \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
+     \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
   (* l can modify an Endpoint object state if it has rights to interact with it *)
 | troa_ep:
     "\<lbrakk> ko = Some (Endpoint ep); ko' = Some (Endpoint ep');
        auth \<in> {Receive, SyncSend, Reset}; s \<in> subjects; (s, auth, l) \<in> pasPolicy aag \<rbrakk>
-       \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
+     \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
   (* If a tcb is waiting on receiving on an Endpoint but could be bound to a notification ntfn.
      Then if we can Notify ntfn, we could modify the endpoint *)
 | troa_ep_unblock:
@@ -436,7 +436,7 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko' where
        (tcb, Receive, pasObjectAbs aag ntfn) \<in> pasPolicy aag;
        (tcb, Receive, l) \<in> pasPolicy aag;
        aag_subjects_have_auth_to subjects aag Notify ntfn \<rbrakk>
-       \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
+     \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
   (* If the subjects can send to an Endpoint or its bound notification, they can also
      modify any thread that is waiting on it *)
 | troa_tcb_send:
@@ -444,7 +444,7 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko' where
        tcb' = tcb \<lparr>tcb_arch := arch_tcb_set_registers regs' (tcb_arch tcb), tcb_state := Running\<rparr>;
        direct_send subjects aag ep tcb
        \<or> indirect_send subjects aag (the (tcb_bound_notification tcb)) ep tcb \<rbrakk>
-       \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
+     \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
   (* If a tcb is waiting on an Endpoint that the subjects can Call, they are allowed
      to do that call, and insert a ReplyCap back towards a subject*)
 | troa_tcb_call:
@@ -453,7 +453,7 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko' where
                    tcb_caller := ReplyCap caller False R\<rparr>;
        pasObjectAbs aag caller \<in> subjects;
        direct_call subjects aag ep (tcb_state tcb) \<rbrakk>
-       \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
+     \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
   (* Subjects can reply to a tcb waiting for a Reply, if they have authority to do that Reply
      In case of a fault Reply, the new state of the thread can be Restart or Inactive depending on
      the fault handler*)
@@ -463,7 +463,7 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko' where
                    tcb_state := new_st, tcb_fault := None\<rparr>;
        new_st = Running \<or> (tcb_fault tcb \<noteq> None \<and> (new_st = Restart \<or> new_st = Inactive));
        awaiting_reply (tcb_state tcb); aag_subjects_have_auth_to_label subjects aag Reply l \<rbrakk>
-       \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
+     \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
   (* Subjects can receive a message from an Endpoint. The sender state will then be set to
      Running if it is a normal send and to Inactive or BlockedOnReply if it is a call.
      TODO split that rule *)
@@ -475,7 +475,7 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko' where
        \<or> (awaiting_reply new_st \<and> allowed_call_blocked ep (tcb_state tcb));
        send_blocked_on ep (tcb_state tcb);
        aag_subjects_have_auth_to subjects aag Receive ep \<rbrakk>
-       \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
+     \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
   (* Subjects can Reset an Endpoint/Notification they have Reset authority to, and thus
      all TCBs blocked on it need to be restarted *)
 | troa_tcb_restart:
@@ -483,13 +483,13 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko' where
        tcb' = tcb\<lparr>tcb_state := Restart\<rparr>;
        blocked_on ep (tcb_state tcb);
        aag_subjects_have_auth_to subjects aag Reset ep \<rbrakk>
-       \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
+     \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
   (* Subjects can Reset a bound Notification which then need to be unbound*)
 | troa_tcb_unbind:
     "\<lbrakk> ko = Some (TCB tcb); ko' = Some (TCB tcb');
        tcb' = tcb\<lparr>tcb_bound_notification := None\<rparr>;
        aag_subjects_have_auth_to subjects aag Reset (the (tcb_bound_notification tcb)) \<rbrakk>
-       \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
+     \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
   (* Allow subjects to delete their reply caps in other subjects' threads.
    * Note that we need to account for the reply cap being in tcb_ctable,
    * because recursive deletion of the root CNode may temporarily place any
@@ -498,12 +498,12 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko' where
     "\<lbrakk> ko = Some (TCB tcb); ko' = Some (TCB tcb');
        tcb' = tcb\<lparr>tcb_ctable := cap'\<rparr>;
        reply_cap_deletion_integrity subjects aag (tcb_ctable tcb) cap' \<rbrakk>
-       \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
+     \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
 | troa_tcb_empty_caller:
     "\<lbrakk> ko = Some (TCB tcb); ko' = Some (TCB tcb');
        tcb' = tcb\<lparr>tcb_caller := cap'\<rparr>;
        reply_cap_deletion_integrity subjects aag (tcb_caller tcb) cap' \<rbrakk>
-       \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
+     \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
   (* If the activate flag is on, any thread in Restart state can be restarted *)
 | troa_tcb_activate:
     "\<lbrakk> ko = Some (TCB tcb); ko' = Some (TCB tcb');
@@ -517,17 +517,17 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko' where
        tcb' = tcb\<lparr>tcb_arch := new_arch\<rparr>;
        arch_tcb_get_registers new_arch = arch_tcb_get_registers (tcb_arch tcb);
        tcb_hyp_refs new_arch = tcb_hyp_refs (tcb_arch tcb) \<rbrakk>
-       \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
+     \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
   (* If there is a deletable_cap in a CNode, it must be allowed to be deleted *)
 | troa_cnode:
       "\<lbrakk> ko = Some (CNode n content); ko' = Some (CNode n content');
          cnode_integrity subjects aag content content' \<rbrakk>
-         \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
+       \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
   (* Arch-specific rules *)
 | troa_arch:
       "\<lbrakk> ko = Some (ArchObj ao); ko' = Some (ArchObj ao');
          arch_integrity_obj_atomic aag subjects l ao ao' \<rbrakk>
-         \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
+       \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
 
 definition integrity_obj where
   "integrity_obj aag activate subjects l \<equiv> (integrity_obj_atomic aag activate subjects l)\<^sup>*\<^sup>*"
@@ -590,17 +590,17 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
     "\<lbrakk> tro_tag RNtfn; ko = Some (Notification ntfn); ko' = Some (Notification ntfn');
        auth \<in> {Receive, Notify, Reset};
        \<exists>s \<in> subjects. (s, auth, l') \<in> pasPolicy aag \<rbrakk>
-       \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
+     \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_ep:
     "\<lbrakk> tro_tag REp; ko = Some (Endpoint ep); ko' = Some (Endpoint ep');
        auth \<in> {Receive, SyncSend, Reset}; (\<exists>s \<in> subjects. (s, auth, l') \<in> pasPolicy aag) \<rbrakk>
-       \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
+     \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_ep_unblock:
     "\<lbrakk> tro_tag EpUnblock; ko = Some (Endpoint ep); ko' = Some (Endpoint ep');
        \<exists>tcb ntfn. (tcb, Receive, pasObjectAbs aag ntfn) \<in> pasPolicy aag \<and>
                   (tcb, Receive, l') \<in> pasPolicy aag \<and>
                   aag_subjects_have_auth_to subjects aag Notify ntfn \<rbrakk>
-       \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
+     \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_tcb_send:
     "\<lbrakk> tro_tag TCBSend; ko = Some (TCB tcb); ko' = Some (TCB tcb');
        tcb' = tcb \<lparr>tcb_arch := new_arch,
@@ -612,7 +612,7 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
        reply_cap_deletion_integrity subjects aag (tcb_ctable tcb) ccap';
        direct_send subjects aag ep tcb
        \<or> indirect_send subjects aag (the (tcb_bound_notification tcb)) ep tcb \<rbrakk>
-       \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
+     \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_tcb_call:
     "\<lbrakk> tro_tag TCBCall; ko = Some (TCB tcb); ko' = Some (TCB tcb');
        tcb' = tcb \<lparr>tcb_arch := new_arch,
@@ -624,7 +624,7 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
        reply_cap_deletion_integrity subjects aag (ReplyCap caller False R) cap';
        reply_cap_deletion_integrity subjects aag (tcb_ctable tcb) ccap';
        direct_call subjects aag ep (tcb_state tcb) \<rbrakk>
-       \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
+     \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_tcb_reply:
     "\<lbrakk> tro_tag TCBReply; ko = Some (TCB tcb); ko' = Some (TCB tcb');
        tcb' = tcb \<lparr>tcb_arch := new_arch,
@@ -637,7 +637,7 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
        reply_cap_deletion_integrity subjects aag (tcb_caller tcb) cap';
        reply_cap_deletion_integrity subjects aag (tcb_ctable tcb) ccap';
        direct_reply subjects aag l' tcb \<rbrakk>
-       \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
+     \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_tcb_receive:
     "\<lbrakk> tro_tag TCBReceive; ko = Some (TCB tcb); ko' = Some (TCB tcb');
        tcb' = tcb \<lparr>tcb_state := new_st, tcb_arch := new_arch,
@@ -651,7 +651,7 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
        reply_cap_deletion_integrity subjects aag (tcb_ctable tcb) ccap';
        send_blocked_on ep (tcb_state tcb);
        aag_subjects_have_auth_to subjects aag Receive ep \<rbrakk>
-       \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
+     \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_tcb_restart:
     "\<lbrakk> tro_tag TCBRestart; ko  = Some (TCB tcb); ko' = Some (TCB tcb');
        tcb' = tcb \<lparr>tcb_arch := new_arch,
@@ -664,7 +664,7 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
        reply_cap_deletion_integrity subjects aag (tcb_ctable tcb) ccap';
        blocked_on ep (tcb_state tcb);
        aag_subjects_have_auth_to subjects aag Reset ep \<rbrakk>
-       \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
+     \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_tcb_generic:
     "\<lbrakk> tro_tag TCBGeneric; ko = Some (TCB tcb); ko' = Some (TCB tcb');
        tcb' = tcb \<lparr>tcb_arch := new_arch, tcb_bound_notification := ntfn',
@@ -675,7 +675,7 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
        tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag ;
        reply_cap_deletion_integrity subjects aag (tcb_caller tcb) cap';
        reply_cap_deletion_integrity subjects aag (tcb_ctable tcb) ccap' \<rbrakk>
-       \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
+     \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_tcb_activate:
     "\<lbrakk> tro_tag TCBActivate; ko  = Some (TCB tcb); ko' = Some (TCB tcb');
        tcb' = tcb \<lparr>tcb_arch := new_arch, tcb_caller := cap', tcb_ctable := ccap',
@@ -690,11 +690,11 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
 | tro_alt_cnode:
     "\<lbrakk> tro_tag RCNode; ko  = Some (CNode n content); ko' = Some (CNode n content');
        cnode_integrity subjects aag content content' \<rbrakk>
-       \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
+     \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_arch:
     "\<lbrakk> tro_tag RArch; ko = Some (ArchObj ao); ko' = Some (ArchObj ao');
        arch_integrity_obj_alt aag subjects l' ao ao'\<rbrakk>
-       \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
+     \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 
 
 subsubsection \<open>ready queues\<close>
@@ -741,7 +741,7 @@ inductive cdt_direct_change_allowed for aag subjects tcbsts ptr where
     "pasObjectAbs aag (fst ptr) \<in> subjects \<Longrightarrow> cdt_direct_change_allowed aag subjects tcbsts ptr"
 | cdca_reply:
     "\<lbrakk> tcbsts (fst ptr) = Some tcbst; direct_call subjects aag ep tcbst; (snd ptr) = tcb_cnode_index 3 \<rbrakk>
-       \<Longrightarrow> cdt_direct_change_allowed aag subjects tcbsts ptr"
+     \<Longrightarrow> cdt_direct_change_allowed aag subjects tcbsts ptr"
 
 (* for the moment the only caps that can be affected by that indirect control are reply caps *)
 definition cdt_change_allowed where
@@ -841,7 +841,7 @@ inductive integrity_mem for aag subjects p ts ts' ipcbufs globals w w' where
 | trm_ipc:
     "\<lbrakk> case_option False can_receive_ipc (ts p');
        ts' p' = Some Running; p \<in> ipcbufs p'; pasObjectAbs aag p' \<notin> subjects \<rbrakk>
-       \<Longrightarrow> integrity_mem aag subjects p ts ts' ipcbufs globals w w'"
+     \<Longrightarrow> integrity_mem aag subjects p ts ts' ipcbufs globals w w'"
 
 abbreviation
   "memory_integrity X aag x t1 t2 ipc \<equiv> integrity_mem (aag :: 'a PAS) {pasSubject aag} x t1 t2 ipc X"

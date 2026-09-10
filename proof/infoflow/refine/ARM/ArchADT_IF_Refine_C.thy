@@ -278,8 +278,8 @@ lemma check_active_irq_corres_C[ADT_IF_Refine_assms]:
 lemma obs_cpspace_user_data_relation[ADT_IF_Refine_assms]:
   "\<lbrakk> pspace_aligned' bd; pspace_distinct' bd;
      cpspace_user_data_relation (ksPSpace bd) (underlying_memory (ksMachineState bd)) hgs \<rbrakk>
-     \<Longrightarrow> cpspace_user_data_relation (ksPSpace bd)
-           (underlying_memory (observable_memory (ksMachineState bd) (user_mem' bd))) hgs"
+   \<Longrightarrow> cpspace_user_data_relation (ksPSpace bd)
+         (underlying_memory (observable_memory (ksMachineState bd) (user_mem' bd))) hgs"
    apply (clarsimp simp: cmap_relation_def dom_heap_to_user_data)
    apply (drule bspec, fastforce)
    apply (clarsimp simp: cuser_user_data_relation_def observable_memory_def

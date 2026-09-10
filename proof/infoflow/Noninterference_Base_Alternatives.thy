@@ -38,7 +38,7 @@ lemma in_xources_ConsI1:
 
 lemma in_xources_ConsI2:
   "\<lbrakk> x = dom a s; \<forall>s'. (s,s') \<in> Step a \<longrightarrow> (\<exists>v. dom a s \<leadsto> v \<and> v \<in> xources as s' u) \<rbrakk>
-     \<Longrightarrow> x \<in> xources (a # as) s u"
+   \<Longrightarrow> x \<in> xources (a # as) s u"
   by auto
 
 declare xources_Nil [simp del]
@@ -209,19 +209,19 @@ lemma ipurgx_xpurgx':
 
 lemma xpurge_ipurge:
   "\<lbrakk> confidentiality_u; reachable s \<rbrakk>
-     \<Longrightarrow> xpurge u as {s} = ipurge u as {s}"
+   \<Longrightarrow> xpurge u as {s} = ipurge u as {s}"
   by (subst xpurge_ipurge', auto)
 
 lemma ipurgx_ipurge:
   "\<lbrakk> confidentiality_u; reachable s \<rbrakk>
-     \<Longrightarrow> ipurgx u as {s} = ipurge u as {s}"
+   \<Longrightarrow> ipurgx u as {s} = ipurge u as {s}"
   apply (subst ipurgx_xpurge', (simp add: uwr_refl)+)
   apply (subst xpurge_ipurge', auto)
   done
 
 lemma xpurgx_ipurge:
   "\<lbrakk> confidentiality_u; reachable s \<rbrakk>
-     \<Longrightarrow> xpurgx u as {s} = ipurge u as {s}"
+   \<Longrightarrow> xpurgx u as {s} = ipurge u as {s}"
   apply (subst ipurgx_xpurgx'[rule_format, THEN sym], simp+)
   apply (subst ipurgx_xpurge', (simp add: uwr_refl)+)
   apply (subst xpurge_ipurge', auto)
@@ -291,7 +291,7 @@ definition Noninfluence_strong_uwr_pg :: bool where
 
 lemma xNoninfluence_strong_uwr_xources_ipurge_Noninfluence_strong_uwr:
   "\<lbrakk> confidentiality_u_weak; integrity_u \<rbrakk>
-     \<Longrightarrow> xNoninfluence_strong_uwr_xources_ipurge = Noninfluence_strong_uwr"
+   \<Longrightarrow> xNoninfluence_strong_uwr_xources_ipurge = Noninfluence_strong_uwr"
   apply (clarsimp simp: xNoninfluence_strong_uwr_xources_ipurge_def Noninfluence_strong_uwr_def)
   apply (frule (1) confidentiality_u_weak)
   apply (simp add: xources_sources)
@@ -299,7 +299,7 @@ lemma xNoninfluence_strong_uwr_xources_ipurge_Noninfluence_strong_uwr:
 
 lemma xNoninfluence_strong_uwr_sources_xpurge_Noninfluence_strong_uwr:
   "\<lbrakk> confidentiality_u_weak; integrity_u \<rbrakk>
-     \<Longrightarrow> xNoninfluence_strong_uwr_sources_xpurge = Noninfluence_strong_uwr"
+   \<Longrightarrow> xNoninfluence_strong_uwr_sources_xpurge = Noninfluence_strong_uwr"
   apply (clarsimp simp: xNoninfluence_strong_uwr_sources_xpurge_def Noninfluence_strong_uwr_def)
   apply (frule (1) confidentiality_u_weak)
   apply (simp add: xpurge_ipurge)
@@ -307,7 +307,7 @@ lemma xNoninfluence_strong_uwr_sources_xpurge_Noninfluence_strong_uwr:
 
 lemma xNoninfluence_strong_uwr_xources_xpurge_Noninfluence_strong_uwr:
   "\<lbrakk> confidentiality_u_weak; integrity_u \<rbrakk>
-    \<Longrightarrow> xNoninfluence_strong_uwr_xources_xpurge = Noninfluence_strong_uwr"
+   \<Longrightarrow> xNoninfluence_strong_uwr_xources_xpurge = Noninfluence_strong_uwr"
   apply (clarsimp simp: xNoninfluence_strong_uwr_xources_xpurge_def Noninfluence_strong_uwr_def)
   apply (frule (1) confidentiality_u_weak)
   apply (simp add: xources_sources xpurge_ipurge)
@@ -315,7 +315,7 @@ lemma xNoninfluence_strong_uwr_xources_xpurge_Noninfluence_strong_uwr:
 
 lemma xNoninfluence_strong_uwr_sources_ipurgx_Noninfluence_strong_uwr:
   "\<lbrakk> confidentiality_u_weak; integrity_u \<rbrakk>
-     \<Longrightarrow> xNoninfluence_strong_uwr_sources_ipurgx = Noninfluence_strong_uwr"
+   \<Longrightarrow> xNoninfluence_strong_uwr_sources_ipurgx = Noninfluence_strong_uwr"
   apply (clarsimp simp: xNoninfluence_strong_uwr_sources_ipurgx_def Noninfluence_strong_uwr_def)
   apply (frule (1) confidentiality_u_weak)
   apply (simp add: ipurgx_ipurge)
@@ -323,7 +323,7 @@ lemma xNoninfluence_strong_uwr_sources_ipurgx_Noninfluence_strong_uwr:
 
 lemma xNoninfluence_strong_uwr_xources_ipurgx_Noninfluence_strong_uwr:
   "\<lbrakk> confidentiality_u_weak; integrity_u \<rbrakk>
-     \<Longrightarrow> xNoninfluence_strong_uwr_xources_ipurgx = Noninfluence_strong_uwr"
+   \<Longrightarrow> xNoninfluence_strong_uwr_xources_ipurgx = Noninfluence_strong_uwr"
   apply (clarsimp simp: xNoninfluence_strong_uwr_xources_ipurgx_def Noninfluence_strong_uwr_def)
   apply (frule (1) confidentiality_u_weak)
   apply (simp add: xources_sources ipurgx_ipurge)
@@ -331,7 +331,7 @@ lemma xNoninfluence_strong_uwr_xources_ipurgx_Noninfluence_strong_uwr:
 
 lemma xNoninfluence_strong_uwr_sources_xpurgx_Noninfluence_strong_uwr:
   "\<lbrakk> confidentiality_u_weak; integrity_u \<rbrakk>
-     \<Longrightarrow> xNoninfluence_strong_uwr_sources_xpurgx = Noninfluence_strong_uwr"
+   \<Longrightarrow> xNoninfluence_strong_uwr_sources_xpurgx = Noninfluence_strong_uwr"
   apply (clarsimp simp: xNoninfluence_strong_uwr_sources_xpurgx_def Noninfluence_strong_uwr_def)
   apply (frule (1) confidentiality_u_weak)
   apply (simp add: xpurgx_ipurge)
@@ -339,7 +339,7 @@ lemma xNoninfluence_strong_uwr_sources_xpurgx_Noninfluence_strong_uwr:
 
 lemma xNoninfluence_strong_uwr_xources_xpurgx_Noninfluence_strong_uwr:
   "\<lbrakk> confidentiality_u_weak; integrity_u \<rbrakk>
-     \<Longrightarrow> xNoninfluence_strong_uwr_xources_xpurgx = Noninfluence_strong_uwr"
+   \<Longrightarrow> xNoninfluence_strong_uwr_xources_xpurgx = Noninfluence_strong_uwr"
   apply (clarsimp simp: xNoninfluence_strong_uwr_xources_xpurgx_def Noninfluence_strong_uwr_def)
   apply (frule (1) confidentiality_u_weak)
   apply (simp add: xpurgx_ipurge xources_sources)
@@ -347,7 +347,7 @@ lemma xNoninfluence_strong_uwr_xources_xpurgx_Noninfluence_strong_uwr:
 
 lemma Noninfluence_strong_uwr_pg_Noninfluence_strong_uwr:
   "\<lbrakk> confidentiality_u_weak; integrity_u \<rbrakk>
-     \<Longrightarrow> Noninfluence_strong_uwr_pg = Noninfluence_strong_uwr"
+   \<Longrightarrow> Noninfluence_strong_uwr_pg = Noninfluence_strong_uwr"
   apply (clarsimp simp: Noninfluence_strong_uwr_pg_def Noninfluence_strong_uwr_def)
   apply (frule (1) confidentiality_u_weak)
   apply (simp add: ipurge_eq)
@@ -419,7 +419,7 @@ lemma xNoninfluence_strong_uwr_xources_xpurgx_confidentiality_u_weak:
 
 lemma ipurge_single_eq:
   "\<lbrakk> reachable s; reachable t; s \<sim>schedDomain\<sim> t \<rbrakk>
-     \<Longrightarrow> ipurge u [a] {s} = ipurge u [a] {t}"
+   \<Longrightarrow> ipurge u [a] {s} = ipurge u [a] {t}"
   apply (frule_tac e=a in schedIncludesCurrentDom)
   apply (simp add: ipurge_Cons ipurge_Nil sources_Cons sources_Nil)
   apply (auto dest: enabled_Step)

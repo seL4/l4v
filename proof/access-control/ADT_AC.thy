@@ -17,7 +17,7 @@ locale ADT_AC_1 =
     "\<lbrakk> invs s; pas_refined aag s; is_subject aag tcb;
        ptable_lift tcb s x = Some ptr;
        auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) (ptable_exec tcb s x) \<rbrakk>
-       \<Longrightarrow> abs_has_auth_to aag auth tcb (ptrFromPAddr ptr)"
+     \<Longrightarrow> abs_has_auth_to aag auth tcb (ptrFromPAddr ptr)"
   and write_in_vspace_cap_rights:
     "AllowWrite \<in> ptable_rights (cur_thread s) s va
      \<Longrightarrow> Write \<in> vspace_cap_rights_to_auth (ptable_rights (cur_thread s) s va)
@@ -28,13 +28,13 @@ lemma user_op_access':
   "\<lbrakk> invs s; pas_refined aag s; is_subject aag tcb;
      ptable_lift tcb s x = Some (addrFromPPtr ptr);
      auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) (ptable_exec tcb s x) \<rbrakk>
-     \<Longrightarrow> abs_has_auth_to aag auth tcb ptr"
+   \<Longrightarrow> abs_has_auth_to aag auth tcb ptr"
   by (auto dest: user_op_access simp: ptrFormPAddr_addFromPPtr)
 
 lemma integrity_underlying_mem_update:
   "\<lbrakk> integrity aag X st s; \<forall>x\<in>xs. aag_has_auth_to aag Write x;
      \<forall>x\<in>-xs. um' x = underlying_memory (machine_state s) x \<rbrakk>
-     \<Longrightarrow> integrity aag X st (s\<lparr>machine_state := machine_state s\<lparr>underlying_memory := \<lambda>m. um' m\<rparr>\<rparr>)"
+   \<Longrightarrow> integrity aag X st (s\<lparr>machine_state := machine_state s\<lparr>underlying_memory := \<lambda>m. um' m\<rparr>\<rparr>)"
   apply (clarsimp simp: integrity_def)
   apply (case_tac "x \<in> xs")
    apply (erule_tac x=x in ballE)
@@ -55,7 +55,7 @@ lemma dmo_user_memory_update_respects_Write:
 
 lemma integrity_device_state_update:
   "\<lbrakk> integrity aag X st s; \<forall>x\<in>xs. aag_has_auth_to aag Write x; \<forall>x\<in>-xs. um' x = None \<rbrakk>
-     \<Longrightarrow> integrity aag X st (machine_state_update (\<lambda>v. v\<lparr>device_state := device_state v ++ um'\<rparr>) s)"
+   \<Longrightarrow> integrity aag X st (machine_state_update (\<lambda>v. v\<lparr>device_state := device_state v ++ um'\<rparr>) s)"
   apply (clarsimp simp: integrity_def)
   apply (case_tac "x \<in> xs")
    apply (erule_tac x=x in ballE)

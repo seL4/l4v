@@ -25,7 +25,7 @@ lemma vs_lookup_table_subseteq:
        \<forall>pptr vref. vspace_for_pool pptr asid (asid_pools_of s') = Some vref
                \<longrightarrow> vspace_for_pool pptr asid (asid_pools_of s) = Some vref;
        ptes_of s' = ptes_of s \<rbrakk>
-   \<Longrightarrow> vs_lookup_table bot_level asid vref s = Some (lvl,ptr)"
+     \<Longrightarrow> vs_lookup_table bot_level asid vref s = Some (lvl,ptr)"
    by (auto simp: vs_lookup_table_def in_obind_eq split: if_splits)
 
 lemma state_vrefs_clear_asid_pool:
@@ -144,7 +144,7 @@ lemma arch_finalise_cap_makes_halted[Finalise_AC_assms]:
 
 lemma arch_cap_cleanup_wf[Finalise_AC_assms]:
   "\<lbrakk> arch_cap_cleanup_opt acap \<noteq> NullCap; \<not> is_arch_cap (arch_cap_cleanup_opt acap) \<rbrakk>
-     \<Longrightarrow> (\<exists>irq. arch_cap_cleanup_opt acap = IRQHandlerCap irq \<and> is_subject_irq aag irq)"
+   \<Longrightarrow> (\<exists>irq. arch_cap_cleanup_opt acap = IRQHandlerCap irq \<and> is_subject_irq aag irq)"
   by simp
 
 lemma set_vm_root_integrity[wp]:

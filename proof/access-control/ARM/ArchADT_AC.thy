@@ -20,7 +20,7 @@ lemma invs_valid_global_pd_mappings:
 lemma pd_of_thread_same_agent:
   "\<lbrakk> pas_refined aag s; is_subject aag tcb_ptr;
      get_pd_of_thread (kheap s) (arch_state s) tcb_ptr = pd; pd \<noteq> arm_global_pd (arch_state s) \<rbrakk>
-     \<Longrightarrow> pasObjectAbs aag tcb_ptr = pasObjectAbs aag pd"
+   \<Longrightarrow> pasObjectAbs aag tcb_ptr = pasObjectAbs aag pd"
   apply (rule_tac aag="pasPolicy aag" in aag_wellformed_Control[rotated])
    apply (fastforce simp: pas_refined_def)
   apply (rule pas_refined_mem[rotated], simp)
@@ -38,7 +38,7 @@ lemma pd_of_thread_same_agent:
 
 lemma pd_of_thread_page_directory_at:
   "\<lbrakk> invs s; get_pd_of_thread (kheap s) (arch_state s) tcb \<noteq> arm_global_pd (arch_state s) \<rbrakk>
-     \<Longrightarrow> page_directory_at ((get_pd_of_thread (kheap s) (arch_state s) tcb)) s"
+   \<Longrightarrow> page_directory_at ((get_pd_of_thread (kheap s) (arch_state s) tcb)) s"
   apply (clarsimp simp: get_pd_of_thread_def
                  split: option.splits kernel_object.splits cap.splits arch_cap.splits if_splits)
   apply (frule_tac t=tcb in objs_valid_tcb_vtable[OF invs_valid_objs])
@@ -51,7 +51,7 @@ lemma ptr_offset_in_ptr_range:
      get_pd_of_thread (kheap s) (arch_state s) tcb \<noteq> arm_global_pd (arch_state s);
      get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
                    (get_pd_of_thread (kheap s) (arch_state s) tcb) x = Some (base, sz, attr, r) \<rbrakk>
-     \<Longrightarrow> ptrFromPAddr base + (x && mask sz) \<in> ptr_range (ptrFromPAddr base) sz"
+   \<Longrightarrow> ptrFromPAddr base + (x && mask sz) \<in> ptr_range (ptrFromPAddr base) sz"
   apply (simp add: ptr_range_def mask_def)
   apply (rule conjI)
    apply (rule_tac b="2 ^ sz - 1" in word_plus_mono_right2)
@@ -88,8 +88,8 @@ lemma ptable_state_objs_to_policy:
      \<forall>word1 set1 word2. get_pd_entry (\<lambda>obj. get_arch_obj (kheap s obj))
                                      (get_pd_of_thread (kheap s) (arch_state s) tcb) x \<noteq>
                         Some (PageTablePDE word1 set1 word2); x \<notin> kernel_mappings \<rbrakk>
-     \<Longrightarrow> (get_pd_of_thread (kheap s) (arch_state s) tcb, auth, ptrFromPAddr ptr) \<in>
-           state_objs_to_policy s"
+   \<Longrightarrow> (get_pd_of_thread (kheap s) (arch_state s) tcb, auth, ptrFromPAddr ptr)
+         \<in> state_objs_to_policy s"
   apply (simp add: state_objs_to_policy_def)
   apply (rule sbta_vref)
   apply (clarsimp simp: ptable_lift_def ptable_rights_def state_vrefs_def
@@ -114,7 +114,7 @@ lemma ptable_state_objs_to_policy:
 lemma pt_in_pd_same_agent:
   "\<lbrakk> pas_refined aag s; is_subject aag pd_ptr; vptr \<notin> kernel_mappings;
      get_pd_entry (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ptr vptr = Some (PageTablePDE p x xa) \<rbrakk>
-     \<Longrightarrow> pasObjectAbs aag pd_ptr = pasObjectAbs aag (ptrFromPAddr p)"
+   \<Longrightarrow> pasObjectAbs aag pd_ptr = pasObjectAbs aag (ptrFromPAddr p)"
   apply (rule_tac aag="pasPolicy aag" in aag_wellformed_Control[rotated])
    apply (fastforce simp: pas_refined_def)
   apply (rule pas_refined_mem[rotated], simp)
@@ -132,7 +132,7 @@ lemma pt_in_pd_same_agent:
 lemma pt_in_pd_page_table_at:
   "\<lbrakk> invs s; get_pd_entry (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ptr x =
      Some (PageTablePDE word1 set1 word2); (\<exists>\<rhd> pd_ptr) s; x \<notin> kernel_mappings \<rbrakk>
-     \<Longrightarrow> page_table_at (ptrFromPAddr word1) s"
+   \<Longrightarrow> page_table_at (ptrFromPAddr word1) s"
   apply (clarsimp simp: get_pd_entry_def get_arch_obj_def
                   split: option.splits kernel_object.splits arch_kernel_obj.splits)
   apply (rename_tac "fun")
@@ -153,7 +153,7 @@ lemma get_page_info_state_objs_to_policy:
      get_pd_entry (\<lambda>obj. get_arch_obj (kheap s obj))
                   (get_pd_of_thread (kheap s) (arch_state s) tcb) x =
      Some (PageTablePDE word1 set1 word2); x \<notin> kernel_mappings \<rbrakk>
-     \<Longrightarrow> (ptrFromPAddr word1, auth, ptrFromPAddr (base + (x && mask sz))) \<in> state_objs_to_policy s"
+   \<Longrightarrow> (ptrFromPAddr word1, auth, ptrFromPAddr (base + (x && mask sz))) \<in> state_objs_to_policy s"
   apply (simp add: state_objs_to_policy_def)
   apply (rule sbta_vref)
   apply (clarsimp simp: state_vrefs_def split: option.splits)
@@ -175,7 +175,7 @@ lemma get_page_info_state_objs_to_policy:
 lemma user_op_access[ADT_AC_assms]:
   "\<lbrakk> invs s; pas_refined aag s; is_subject aag tcb; ptable_lift tcb s x = Some ptr;
      auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) (ptable_exec tcb s x) \<rbrakk>
-     \<Longrightarrow> abs_has_auth_to aag auth tcb (ptrFromPAddr ptr)"
+   \<Longrightarrow> abs_has_auth_to aag auth tcb (ptrFromPAddr ptr)"
   apply (case_tac "x \<in> kernel_mappings")
    apply (fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings
                           ptable_lift_def ptable_rights_def vspace_cap_rights_to_auth_def

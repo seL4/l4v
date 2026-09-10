@@ -511,7 +511,7 @@ definition
 
 lemma ccorres_corres_u':
   "\<lbrakk> ccorres dc xfdc P' Q' [] H C; no_fail P'' H; (\<And>s. P s \<Longrightarrow> P' s \<and> P'' s); (Collect Q) \<subseteq> Q' \<rbrakk>
-     \<Longrightarrow> corres_underlying rf_sr nf nf' dc P Q H (exec_C \<Gamma> C)"
+   \<Longrightarrow> corres_underlying rf_sr nf nf' dc P Q H (exec_C \<Gamma> C)"
   apply (rule ccorres_corres_u)
    apply (rule ccorres_guard_imp)
      apply assumption
@@ -654,8 +654,8 @@ lemma full_invs_all_invs[simp]:
 lemma obs_cpspace_device_data_relation:
   "\<lbrakk> pspace_aligned' bd; pspace_distinct' bd;
      cpspace_device_data_relation (ksPSpace bd) (underlying_memory (ksMachineState bd)) hgs \<rbrakk>
-     \<Longrightarrow> cpspace_device_data_relation (ksPSpace bd)
-           (underlying_memory (observable_memory (ksMachineState bd) (user_mem' bd))) hgs"
+   \<Longrightarrow> cpspace_device_data_relation (ksPSpace bd)
+         (underlying_memory (observable_memory (ksMachineState bd) (user_mem' bd))) hgs"
    apply (clarsimp simp: cmap_relation_def dom_heap_to_device_data)
    apply (drule bspec,fastforce)
    apply (clarsimp simp: cuser_user_data_device_relation_def observable_memory_def
@@ -665,7 +665,7 @@ lemma obs_cpspace_device_data_relation:
 
 lemma cstate_relation_observable_memory:
   "\<lbrakk> invs' bs; cstate_relation bs gs \<rbrakk>
-     \<Longrightarrow> cstate_relation (bs\<lparr>ksMachineState := observable_memory (ksMachineState bs) (user_mem' bs)\<rparr>) gs"
+   \<Longrightarrow> cstate_relation (bs\<lparr>ksMachineState := observable_memory (ksMachineState bs) (user_mem' bs)\<rparr>) gs"
   by (clarsimp simp: cstate_relation_def Let_def obs_cpspace_user_data_relation
                      obs_cpspace_device_data_relation cpspace_relation_def invs'_def
                      valid_state'_def valid_pspace'_def

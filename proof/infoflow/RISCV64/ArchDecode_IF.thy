@@ -75,8 +75,8 @@ context Arch begin global_naming RISCV64
 
 lemma requiv_riscv_asid_table_asid_high_bits_of_asid_eq'':
   "\<lbrakk> \<forall>asid. is_subject_asid aag asid; reads_equiv aag s t; pas_refined aag x \<rbrakk>
-     \<Longrightarrow> riscv_asid_table (arch_state s) (asid_high_bits_of base) =
-         riscv_asid_table (arch_state t) (asid_high_bits_of base)"
+   \<Longrightarrow> riscv_asid_table (arch_state s) (asid_high_bits_of base) =
+       riscv_asid_table (arch_state t) (asid_high_bits_of base)"
   apply (subgoal_tac "asid_high_bits_of 0 = asid_high_bits_of 1")
    apply (case_tac "base = 0")
     apply (subgoal_tac "is_subject_asid aag 1")
@@ -86,7 +86,7 @@ lemma requiv_riscv_asid_table_asid_high_bits_of_asid_eq'':
 
 lemma pas_cap_cur_auth_ASIDControlCap:
   "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap ASIDControlCap); reads_equiv aag s t; pas_refined aag x \<rbrakk>
-     \<Longrightarrow> riscv_asid_table (arch_state s) = riscv_asid_table (arch_state t)"
+   \<Longrightarrow> riscv_asid_table (arch_state s) = riscv_asid_table (arch_state t)"
   apply (rule ext)
   apply (subst asid_high_bits_of_shift[symmetric])
   apply (subst (3) asid_high_bits_of_shift[symmetric])

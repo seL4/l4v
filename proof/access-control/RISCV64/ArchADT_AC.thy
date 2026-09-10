@@ -21,7 +21,7 @@ lemma ptr_offset_in_ptr_range:
      get_vspace_of_thread (kheap s) (arch_state s) tcb \<noteq> global_pt s;
      get_page_info (aobjs_of s)
                    (get_vspace_of_thread (kheap s) (arch_state s) tcb) x = Some (base, sz, attr, r) \<rbrakk>
-     \<Longrightarrow> ptrFromPAddr base + (x && mask sz) \<in> ptr_range (ptrFromPAddr base) sz"
+   \<Longrightarrow> ptrFromPAddr base + (x && mask sz) \<in> ptr_range (ptrFromPAddr base) sz"
   apply (simp add: ptr_range_def mask_def)
   apply (rule conjI)
    apply (rule_tac b="2 ^ sz - 1" in word_plus_mono_right2)
@@ -49,7 +49,7 @@ lemma ptr_offset_in_ptr_range:
 lemma user_op_access[ADT_AC_assms]:
   "\<lbrakk> invs s; pas_refined aag s; is_subject aag tcb; ptable_lift tcb s x = Some ptr;
      auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) (ptable_exec tcb s x) \<rbrakk>
-     \<Longrightarrow> abs_has_auth_to aag auth tcb (ptrFromPAddr ptr)"
+   \<Longrightarrow> abs_has_auth_to aag auth tcb (ptrFromPAddr ptr)"
   apply (case_tac "x \<in> kernel_mappings")
   using get_vspace_of_thread_asid_or_global_pt
    apply (fastforce simp: ptable_rights_def vspace_cap_rights_to_auth_def invs_def
