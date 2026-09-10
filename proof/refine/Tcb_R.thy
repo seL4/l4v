@@ -1738,7 +1738,8 @@ lemma invokeTCB_corres:
             apply (rule rescheduleRequired_corres)
            apply (rule corres_trivial, simp)
           apply (wpsimp wp: hoare_drop_imp)+
-    apply (fastforce dest: valid_sched_valid_queues simp: valid_sched_weak_strg)
+    apply (fastforce del: valid_sched_valid_queues dest: valid_sched_valid_queues
+                     simp: valid_sched_weak_strg)
    apply fastforce
   apply (clarsimp simp: invokeTCB_def invokeSetFlags_def bind_assoc)
   apply (corres corres: threadGet_corres[where r="\<lambda>flags flags'. flags = word_to_tcb_flags flags'"]
@@ -1773,7 +1774,7 @@ lemma bindNotification_invs':
           | clarsimp dest!: global'_no_ex_cap simp: cteCaps_of_def)+
   apply (clarsimp simp: valid_pspace'_def)
   apply (cases "tcbptr = ntfnptr")
-   apply (clarsimp dest!: pred_tcb_at' simp: obj_at'_def)
+   apply (clarsimp del: pred_tcb_at' dest!: pred_tcb_at' simp: obj_at'_def)
   apply (clarsimp simp: pred_tcb_at' conj_comms o_def)
   apply (subst delta_sym_refs, assumption)
     apply (fastforce simp: ntfn_q_refs_of'_def obj_at'_def
@@ -1788,8 +1789,8 @@ lemma bindNotification_invs':
   apply (clarsimp simp: valid_pspace'_def)
   apply (frule_tac P="\<lambda>k. k=ntfn" in obj_at_valid_objs', simp)
   apply (clarsimp simp: valid_obj'_def valid_ntfn'_def obj_at'_def
-                    dest!: pred_tcb_at'
-                    split: ntfn.splits)
+                  del: pred_tcb_at' dest!: pred_tcb_at'
+                  split: ntfn.splits)
   done
 
 lemma tcbntfn_invs':

@@ -1842,9 +1842,6 @@ lemma setEndpoint_valid_mdb':
   unfolding setEndpoint_def
   by (rule set_ep_valid_mdb')
 
-crunch setEndpoint, setNotification
-  for pspace_canonical'[wp]: pspace_canonical'
-
 lemma set_ep_valid_pspace'[wp]:
   "\<lbrace>valid_pspace' and valid_ep' ep\<rbrace>
   setEndpoint epptr ep

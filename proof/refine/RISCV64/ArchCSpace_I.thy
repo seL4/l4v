@@ -358,7 +358,7 @@ lemma distinct_zombies_copyMasterE[Arch_assms]:
       apply (drule_tac f=isUntypedCap in arg_cong)
       apply (simp add: gen_isCap_Master)
      apply (drule_tac f=isArchFrameCap in arg_cong)
-     apply (simp add: arch_isCap_Master)
+     apply simp
     apply (rule master_eqI, rule capBits_Master, simp)
    apply clarsimp
    apply (drule_tac f=capClass in arg_cong, simp add: capClass_Master)

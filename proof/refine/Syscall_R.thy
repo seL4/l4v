@@ -753,7 +753,7 @@ lemma performInvocation_corres:
        apply (clarsimp simp: liftME_def)
        apply (rule corres_guard_imp)
          apply (erule invokeTCB_corres)
-        apply ((clarsimp dest!: schact_is_rct_simple)+)[2]
+        apply ((clarsimp del: schact_is_rct_simple dest!: schact_is_rct_simple)+)[2]
       \<comment> \<open>domain cap\<close>
       apply (clarsimp simp: liftE_bind_return_bindE_returnOk)
       apply corres
@@ -764,7 +764,7 @@ lemma performInvocation_corres:
           apply assumption
          apply (rule corres_trivial, simp add: returnOk_def)
         apply wp+
-      apply ((clarsimp dest!: schact_is_rct_simple)+)[2]
+      apply ((clarsimp del: schact_is_rct_simple dest!: schact_is_rct_simple)+)[2]
     apply (clarsimp simp: liftME_def[symmetric] o_def dc_def[symmetric])
     apply (rule corres_guard_imp, rule performIRQControl_corres, simp+)
    apply (clarsimp simp: liftME_def[symmetric] o_def dc_def[symmetric])
@@ -1959,7 +1959,7 @@ lemma hr_ct_active'[wp]:
     apply (fastforce simp: cte_wp_at_ctes_of)
    apply (wpsimp wp: getCTE_wp doReplyTransfer_st_tcb_at_active)+
   apply (fastforce simp: ct_in_state'_def cte_wp_at_ctes_of valid_cap'_def
-                   dest: ctes_of_valid')
+                   del: ctes_of_valid' dest: ctes_of_valid')
   done
 
 context Syscall_R begin

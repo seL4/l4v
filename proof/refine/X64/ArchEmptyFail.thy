@@ -17,8 +17,6 @@ lemma empty_fail_lookupIPCBuffer[Arch_assms]:
   by (clarsimp simp: lookupIPCBuffer_def Let_def getThreadBufferSlot_def locateSlot_conv
               split: capability.splits arch_capability.splits | wp | wpc | safe)+
 
-declare setRegister_empty_fail[intro!, simp] (* FIXME: tag original instead *)
-
 lemmas EmptyFail_R_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)

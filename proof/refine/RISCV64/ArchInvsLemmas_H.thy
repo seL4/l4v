@@ -114,6 +114,7 @@ context Arch begin arch_global_naming
 clear_named_theorems Arch_assms (* accumulate assumptions for Invariants_H_cte_ats locale *)
 
 (* FIXME arch-split: for proofs which require exact offsets lining up instead of cteSizeBits *)
+(* 0 case already covered by tcb_cte_cases_simps *)
 lemma raw_tcb_cte_cases_simps:
   "tcb_cte_cases 32 = Some (tcbVTable, tcbVTable_update)"
   "tcb_cte_cases 64 = Some (tcbReply, tcbReply_update)"
@@ -334,7 +335,7 @@ lemma in_kernel_mappings_neq_mask:
 
 lemma invs_pspace_in_kernel_mappings'[elim!]:
   "invs' s \<Longrightarrow> pspace_in_kernel_mappings' s"
-  by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
+  by (fastforce del: invs_valid_pspace' dest!: invs_valid_pspace' simp: valid_pspace'_def)
 
 lemma valid_pspace_in_kernel_mappings'[elim!]:
   "valid_pspace' s \<Longrightarrow> pspace_in_kernel_mappings' s"
@@ -346,7 +347,7 @@ lemma tcb_hyp_refs_of'_simps[simp]:
 
 lemma refs_of_a'_simps[simp]:
   "refs_of_a' ako = {}"
-  by (auto simp: refs_of_a'_def)
+  by auto
 
 lemma hyp_refs_of_hyp_live':
   "hyp_refs_of' ko \<noteq> {} \<Longrightarrow> hyp_live' ko"

@@ -91,7 +91,6 @@ lemma APIType_map2_arch_data_to_obj_type[Arch_assms]:
 
 lemma obj_bits_api_APIType_map2[Arch_assms]:
   "obj_bits_api (APIType_map2 (Inr x)) y = getObjectSize x y"
-  supply vcpuBits_def[bit_simps del] (* FIXME arch-split: suppress warning *)
   apply (clarsimp simp:obj_bits_api_def APIType_map2_def getObjectSize_def simp del: objSize_eq_capBits)
   apply (case_tac x)
         apply (simp_all add:arch_kobj_size_def default_arch_object_def pageBits_def ptBits_def)
@@ -331,7 +330,6 @@ lemma resetChunkBits_le_word_bits[Arch_assms]:
 lemma APIType_capBits_lower_bound[Arch_assms]:
   "\<lbrakk>tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us\<rbrakk>
    \<Longrightarrow> minUntypedSizeBits \<le> APIType_capBits tp us"
-  supply vcpuBits_def[bit_simps del] (* FIXME arch-split: suppress warning *)
   by (simp add: APIType_capBits_def objBits_simps' bit_simps minUntypedSizeBits_def
            split: object_type.split apiobject_type.split)
 
