@@ -389,10 +389,13 @@ where
   | ArchObjectCap ac \<Rightarrow> valid_arch_cap ac s)"
 
 
-abbreviation
-  valid_cap_syn :: "'z::state_ext state \<Rightarrow> cap \<Rightarrow> bool" ("_ \<turnstile> _" [60, 60] 61)
-where
-  "s \<turnstile> c \<equiv> valid_cap c s"
+abbreviation valid_cap_syn :: "'z::state_ext state \<Rightarrow> cap \<Rightarrow> bool" where
+  "valid_cap_syn s c \<equiv> valid_cap c s" (* s \<turnstile> c \<equiv> valid_cap c s ; syntax applied via bundle below *)
+
+(* use "includes no valid_cap_syn" to prevent syntax ambiguity warning with spec_validE *)
+open_bundle valid_cap_syn begin
+notation valid_cap_syn ("_ \<turnstile> _" [60, 60] 61)
+end
 
 definition
   "valid_caps cs s \<equiv> \<forall>slot cap. cs slot = Some cap \<longrightarrow> valid_cap cap s"
