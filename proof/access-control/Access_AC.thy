@@ -20,50 +20,50 @@ lemma aag_wellformed_refl:
 
 lemma aag_wellformed_grant_Control_to_recv:
   "\<lbrakk> (s, Grant, ep) \<in> aag; (r, Receive, ep) \<in> aag; policy_wellformed aag mirqs irqs l \<rbrakk>
-     \<Longrightarrow> (s, Control, r) \<in> aag"
+   \<Longrightarrow> (s, Control, r) \<in> aag"
   unfolding policy_wellformed_def by blast
 
 lemma aag_wellformed_grant_Control_to_send:
   "\<lbrakk> (s, Grant, ep) \<in> aag; (r, Receive, ep) \<in> aag; policy_wellformed aag mirqs irqs l \<rbrakk>
-     \<Longrightarrow> (r, Control, s) \<in> aag"
+   \<Longrightarrow> (r, Control, s) \<in> aag"
   unfolding policy_wellformed_def by blast
 
 lemma aag_wellformed_reply:
   "\<lbrakk> (s, Call, ep) \<in> aag; (r, Receive, ep) \<in> aag; policy_wellformed aag mirqs irqs l \<rbrakk>
-     \<Longrightarrow> (r, Reply, s) \<in> aag"
+   \<Longrightarrow> (r, Reply, s) \<in> aag"
   unfolding policy_wellformed_def by blast
 
 lemma aag_wellformed_delete_derived':
   "\<lbrakk> (s, Call, ep) \<in> aag; (r, Receive, ep) \<in> aag; policy_wellformed aag mirqs irqs l \<rbrakk>
-     \<Longrightarrow> (s, DeleteDerived, r) \<in> aag"
+   \<Longrightarrow> (s, DeleteDerived, r) \<in> aag"
   unfolding policy_wellformed_def by blast
 
 lemma aag_wellformed_delete_derived:
   "\<lbrakk> (s, Reply, r) \<in> aag; policy_wellformed aag mirqs irqs l \<rbrakk>
-     \<Longrightarrow> (r, DeleteDerived, s) \<in> aag"
+   \<Longrightarrow> (r, DeleteDerived, s) \<in> aag"
   unfolding policy_wellformed_def by blast
 
 lemma aag_wellformed_delete_derived_trans:
   "\<lbrakk> (l1, DeleteDerived, l2) \<in> aag; (l2, DeleteDerived, l3) \<in> aag;
      policy_wellformed aag mirqs irqs l\<rbrakk>
-     \<Longrightarrow> (l1, DeleteDerived, l3) \<in> aag"
+   \<Longrightarrow> (l1, DeleteDerived, l3) \<in> aag"
   unfolding policy_wellformed_def by blast
 
 lemma aag_wellformed_call_to_syncsend:
   "\<lbrakk> (s, Call, ep) \<in> aag; policy_wellformed aag mirqs irqs l \<rbrakk>
-     \<Longrightarrow> (s, SyncSend, ep) \<in> aag"
+   \<Longrightarrow> (s, SyncSend, ep) \<in> aag"
   unfolding policy_wellformed_def by blast
 
 lemma aag_wellformed_grant_Control_to_send_by_reply:
   "\<lbrakk> (s, Call, ep) \<in> aag; (r, Receive, ep) \<in> aag;
      (r, Grant, ep) \<in> aag; policy_wellformed aag mirqs irqs l \<rbrakk>
-     \<Longrightarrow> (r, Control, s) \<in> aag"
+   \<Longrightarrow> (r, Control, s) \<in> aag"
   unfolding policy_wellformed_def by blast
 
 lemma aag_wellformed_grant_Control_to_recv_by_reply:
   "\<lbrakk> (s, Call, ep) \<in> aag; (r, Receive, ep) \<in> aag;
      (r, Grant, ep) \<in> aag; policy_wellformed aag mirqs irqs l \<rbrakk>
-     \<Longrightarrow> (s, Control, r) \<in> aag"
+   \<Longrightarrow> (s, Control, r) \<in> aag"
   unfolding policy_wellformed_def by blast
 
 lemma auth_graph_map_mem:
@@ -79,7 +79,7 @@ lemma auth_graph_map_memE:
 
 lemma auth_graph_map_memI:
   "\<lbrakk> (x', auth, y') \<in> S; x = f x'; y = f y' \<rbrakk>
-     \<Longrightarrow> (x, auth, y) \<in> auth_graph_map f S"
+   \<Longrightarrow> (x, auth, y) \<in> auth_graph_map f S"
   by (fastforce simp add: auth_graph_map_mem)
 
 lemma auth_graph_map_mono:
@@ -134,7 +134,7 @@ lemma valid_mdb_mdb_cte_at [elim!]:
 (* FIXME MOVE *)
 lemma descendants_inc_cap_classD:
   "\<lbrakk> descendants_inc m caps; p \<in> descendants_of p' m; caps p = Some cap ; caps p' = Some cap' \<rbrakk>
-     \<Longrightarrow> cap_class cap = cap_class cap'"
+   \<Longrightarrow> cap_class cap = cap_class cap'"
   by (fastforce dest:descendants_incD)
 
 
@@ -149,10 +149,10 @@ locale Access_AC_1 =
   and arch_tro_alt_trans_spec:
     "\<lbrakk> arch_integrity_obj_alt aag subjects l ko ko';
        arch_integrity_obj_alt aag subjects l ko' ko'' \<rbrakk>
-       \<Longrightarrow> arch_integrity_obj_alt aag subjects l ko ko''"
+     \<Longrightarrow> arch_integrity_obj_alt aag subjects l ko ko''"
   and clas_caps_of_state:
     "\<lbrakk> caps_of_state s slot = Some cap; pas_refined aag s \<rbrakk>
-       \<Longrightarrow> cap_links_asid_slot aag (pasObjectAbs aag (fst slot)) cap"
+     \<Longrightarrow> cap_links_asid_slot aag (pasObjectAbs aag (fst slot)) cap"
   and tcb_hyp_refs_arch_tcb_set_registers[simp]:
     "tcb_hyp_refs (arch_tcb_set_registers regs atcb) = tcb_hyp_refs atcb"
 begin
@@ -210,17 +210,17 @@ lemmas state_objs_to_policy_cases
 
 lemma tcb_states_of_state_preserved:
   "\<lbrakk> get_tcb thread s = Some tcb; tcb_state tcb' = tcb_state tcb \<rbrakk>
-     \<Longrightarrow> tcb_states_of_state (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb')\<rparr>) = tcb_states_of_state s"
+   \<Longrightarrow> tcb_states_of_state (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb')\<rparr>) = tcb_states_of_state s"
   by (auto split: option.splits simp: tcb_states_of_state_def get_tcb_def)
 
 lemma thread_st_auth_preserved:
   "\<lbrakk> get_tcb thread s = Some tcb; tcb_state tcb' = tcb_state tcb \<rbrakk>
-     \<Longrightarrow> thread_st_auth (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb')\<rparr>) = thread_st_auth s"
+   \<Longrightarrow> thread_st_auth (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb')\<rparr>) = thread_st_auth s"
   by (simp add: tcb_states_of_state_preserved thread_st_auth_def)
 
 lemma thread_bound_ntfns_preserved:
   "\<lbrakk> get_tcb thread s = Some tcb; tcb_bound_notification tcb' = tcb_bound_notification tcb \<rbrakk>
-     \<Longrightarrow> thread_bound_ntfns (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb')\<rparr>) = thread_bound_ntfns s"
+   \<Longrightarrow> thread_bound_ntfns (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb')\<rparr>) = thread_bound_ntfns s"
   by (auto simp: thread_bound_ntfns_def get_tcb_def split: option.splits)
 
 lemma is_transferable_null_filter[simp]:
@@ -229,12 +229,12 @@ lemma is_transferable_null_filter[simp]:
 
 lemma tcb_domain_map_wellformed_mono:
   "\<lbrakk> domains_of_state s' \<subseteq> domains_of_state s; tcb_domain_map_wellformed pas s \<rbrakk>
-     \<Longrightarrow> tcb_domain_map_wellformed pas s'"
+   \<Longrightarrow> tcb_domain_map_wellformed pas s'"
   by (auto simp: tcb_domain_map_wellformed_aux_def)
 
 lemma pas_refined_mem:
   "\<lbrakk> (x, auth, y) \<in> state_objs_to_policy s; pas_refined aag s \<rbrakk>
-     \<Longrightarrow> abs_has_auth_to aag auth x y"
+   \<Longrightarrow> abs_has_auth_to aag auth x y"
   by (auto simp: pas_refined_def intro: auth_graph_map_memI)
 
 lemma pas_refined_wellformed[elim!]:
@@ -248,7 +248,7 @@ lemmas pas_refined_Control
 lemma caps_of_state_pasObjectAbs_eq:
   "\<lbrakk> caps_of_state s p = Some cap; Control \<in> cap_auth_conferred cap;
      is_subject aag (fst p); pas_refined aag s; x \<in> obj_refs_ac cap \<rbrakk>
-     \<Longrightarrow> is_subject aag x"
+   \<Longrightarrow> is_subject aag x"
   apply (frule sta_caps, simp+)
   apply (drule pas_refined_mem, simp+)
   apply (drule pas_refined_Control, simp+)
@@ -261,7 +261,7 @@ lemma pas_refined_state_objs_to_policy_subset:
      state_irqs_to_policy aag s' \<subseteq> state_irqs_to_policy aag s;
      domains_of_state s' \<subseteq> domains_of_state s;
      interrupt_irq_node s' = interrupt_irq_node s \<rbrakk>
-     \<Longrightarrow> pas_refined aag s'"
+   \<Longrightarrow> pas_refined aag s'"
   by (simp add: pas_refined_def)
      (blast dest: tcb_domain_map_wellformed_mono auth_graph_map_mono[where G="pasObjectAbs aag"])
 
@@ -272,13 +272,13 @@ lemma pas_refined_subsets_tcb_domain_map_wellformed:
      state_irqs_to_policy aag s' \<subseteq> state_irqs_to_policy aag s;
      tcb_domain_map_wellformed aag s \<Longrightarrow> tcb_domain_map_wellformed aag s';
      interrupt_irq_node s' = interrupt_irq_node s \<rbrakk>
-     \<Longrightarrow> pas_refined aag s'"
+   \<Longrightarrow> pas_refined aag s'"
   by (simp add: pas_refined_def)
      (blast dest: auth_graph_map_mono[where G="pasObjectAbs aag"])
 
 lemma aag_wellformed_all_auth_is_owns':
   "\<lbrakk> Control \<in> S; pas_wellformed aag \<rbrakk>
-     \<Longrightarrow> (\<forall>auth \<in> S. aag_has_auth_to aag auth x) = (is_subject aag x)"
+   \<Longrightarrow> (\<forall>auth \<in> S. aag_has_auth_to aag auth x) = (is_subject aag x)"
   by (fastforce simp: aag_wellformed_refl dest: aag_wellformed_Control)
 
 lemmas aag_wellformed_all_auth_is_owns
@@ -292,7 +292,7 @@ lemmas pas_refined_all_auth_is_owns = aag_wellformed_all_auth_is_owns[OF pas_ref
 
 lemma pas_refined_sita_mem:
   "\<lbrakk> (x, auth, y) \<in> state_irqs_to_policy aag s; pas_refined aag s \<rbrakk>
-     \<Longrightarrow> (x, auth, y) \<in> pasPolicy aag"
+   \<Longrightarrow> (x, auth, y) \<in> pasPolicy aag"
   by (auto simp: pas_refined_def)
 
 lemma receive_blocked_on_can_receive_ipc[elim!,simp]:
@@ -372,7 +372,7 @@ lemma tro_tcb_unbind':
   "\<lbrakk> ko = Some (TCB tcb); ko' = Some (TCB tcb');
      tcb' = tcb\<lparr>tcb_bound_notification := ntfn'\<rparr>;
      tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag \<rbrakk>
-     \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
+   \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
   apply (clarsimp simp:tcb_bound_notification_reset_integrity_def)
   apply (elim disjE)
    apply (rule tro_orefl;fastforce)
@@ -393,7 +393,7 @@ lemma tro_tcb_generic':
      tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
      reply_cap_deletion_integrity subjects aag (tcb_caller tcb) cap';
      reply_cap_deletion_integrity subjects aag (tcb_ctable tcb) ccap' \<rbrakk>
-     \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
+   \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
   apply clarsimp
   apply (rule tro_trans_spec)
    apply (rule tro_tcb_empty_caller[OF refl refl refl];simp)
@@ -410,7 +410,7 @@ lemma tro_tcb_reply':
                  tcb_state := new_st, tcb_fault := None\<rparr>;
      new_st = Running \<or> (tcb_fault tcb \<noteq> None \<and> (new_st = Restart \<or> new_st = Inactive));
      direct_reply subjects aag l' tcb \<rbrakk>
-     \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
+   \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
   apply (clarsimp simp:direct_reply_def simp del:not_None_eq)
   apply (erule disjE, (rule tro_tcb_reply[OF refl refl], force; force)) (* Warning: schematics *)
   apply (clarsimp simp del:not_None_eq)
@@ -449,7 +449,7 @@ lemma integrity_ready_queues_refl[simp]: "integrity_ready_queues aag subjects pt
 (* FIXME MOVE *)
 lemma caps_of_state_tcb':
   "\<lbrakk> get_tcb p s = Some tcb; option_map fst (tcb_cap_cases idx) = Some getF \<rbrakk>
-     \<Longrightarrow> caps_of_state s (p, idx) = Some (getF tcb)"
+   \<Longrightarrow> caps_of_state s (p, idx) = Some (getF tcb)"
   apply (drule get_tcb_SomeD)
   apply clarsimp
   apply (drule (1) cte_wp_at_tcbI [where t = "(p, idx)" and P = "(=) (getF tcb)", simplified])
@@ -460,7 +460,7 @@ lemma caps_of_state_tcb':
 (* FIXME MOVE *)
 lemma caps_of_state_tcb_cap_cases:
   "\<lbrakk> get_tcb p s = Some tcb; idx \<in> dom tcb_cap_cases \<rbrakk>
-     \<Longrightarrow> caps_of_state s (p, idx) = Some ((the (option_map fst (tcb_cap_cases idx))) tcb)"
+   \<Longrightarrow> caps_of_state s (p, idx) = Some ((the (option_map fst (tcb_cap_cases idx))) tcb)"
   apply (clarsimp simp: dom_def)
   apply (erule caps_of_state_tcb')
   apply simp
@@ -474,7 +474,7 @@ lemmas integrity_obj_simps [simp] =
 
 lemma cdt_change_allowedI:
   "\<lbrakk> m \<Turnstile> pptr \<rightarrow>* ptr; cdt_direct_change_allowed aag subjects tcbsts pptr \<rbrakk>
-     \<Longrightarrow> cdt_change_allowed aag subjects m tcbsts ptr"
+   \<Longrightarrow> cdt_change_allowed aag subjects m tcbsts ptr"
   by (fastforce simp: cdt_change_allowed_def simp del: split_paired_Ex)
 
 lemma cdt_change_allowedE:
@@ -484,7 +484,7 @@ lemma cdt_change_allowedE:
 
 lemma cdca_ccaI:
   "\<lbrakk> cdt_direct_change_allowed aag subjects tcbsts ptr \<rbrakk>
-     \<Longrightarrow> cdt_change_allowed aag subjects m tcbsts ptr"
+   \<Longrightarrow> cdt_change_allowed aag subjects m tcbsts ptr"
   by (fastforce simp: cdt_change_allowed_def simp del: split_paired_Ex)
 
 lemmas cca_owned = cdt_change_allowedI[OF _ cdca_owned]
@@ -542,20 +542,20 @@ subsection \<open>Object integrity transitivity\<close>
 lemma tcb_bound_notification_reset_integrity_trans[elim]:
   "\<lbrakk> tcb_bound_notification_reset_integrity ntfn ntfn' subjects aag;
      tcb_bound_notification_reset_integrity ntfn' ntfn'' subjects aag \<rbrakk>
-     \<Longrightarrow> tcb_bound_notification_reset_integrity ntfn ntfn'' subjects aag"
+   \<Longrightarrow> tcb_bound_notification_reset_integrity ntfn ntfn'' subjects aag"
   by (auto simp: tcb_bound_notification_reset_integrity_def)
 
 lemma reply_cap_deletion_integrity_trans[elim]:
   "\<lbrakk> reply_cap_deletion_integrity subjects aag cap cap';
      reply_cap_deletion_integrity subjects aag cap' cap'' \<rbrakk>
-     \<Longrightarrow> reply_cap_deletion_integrity subjects aag cap cap''"
+   \<Longrightarrow> reply_cap_deletion_integrity subjects aag cap cap''"
   by (auto simp: reply_cap_deletion_integrity_def)
 
 
 lemma cnode_integrity_trans[elim]:
   "\<lbrakk> cnode_integrity subjects aag cont cont';
      cnode_integrity subjects aag cont' cont'' \<rbrakk>
-     \<Longrightarrow> cnode_integrity subjects aag cont cont''"
+   \<Longrightarrow> cnode_integrity subjects aag cont cont''"
    unfolding cnode_integrity_def
    apply (intro allI)
    apply (drule_tac x=l in spec)+
@@ -571,7 +571,7 @@ context Access_AC_1 begin
 lemma tro_alt_trans_spec: (* this takes a long time to process *)
   "\<lbrakk> integrity_obj_alt aag activate es subjects ko ko';
      integrity_obj_alt aag activate es subjects ko' ko'' \<rbrakk>
-     \<Longrightarrow> integrity_obj_alt aag activate es subjects ko ko''"
+   \<Longrightarrow> integrity_obj_alt aag activate es subjects ko ko''"
   (* We need to consider nearly 200 cases, one for each possible pair
      of integrity steps. We use the tro_tags to select subsets of goals
      that can be solved by the same method. *)
@@ -703,7 +703,7 @@ end
 
 lemma tro_trans:
   "\<lbrakk> integrity_obj_state aag activate es s s'; integrity_obj_state aag activate es s' s'' \<rbrakk>
-     \<Longrightarrow> integrity_obj_state aag activate es s s''"
+   \<Longrightarrow> integrity_obj_state aag activate es s s''"
   unfolding integrity_obj_def
   apply clarsimp
   apply (drule_tac x = x in spec)+
@@ -714,7 +714,7 @@ subsection \<open>Integrity transitivity\<close>
 
 lemma tcb_caller_slot_empty_on_recieve:
   "\<lbrakk> valid_mdb s; valid_objs s; kheap s tcb_ptr = Some (TCB tcb); ep_recv_blocked ep (tcb_state tcb) \<rbrakk>
-     \<Longrightarrow> tcb_caller tcb = NullCap \<and> cdt s (tcb_ptr,(tcb_cnode_index 3)) = None \<and>
+   \<Longrightarrow> tcb_caller tcb = NullCap \<and> cdt s (tcb_ptr,(tcb_cnode_index 3)) = None \<and>
          descendants_of (tcb_ptr,(tcb_cnode_index 3)) (cdt s) = {}"
   apply (simp only:valid_objs_def)
   apply (drule bspec,fastforce)
@@ -737,12 +737,12 @@ lemma tcb_caller_slot_empty_on_recieve:
 (* FIXME MOVE next to tcb_states_of_state definition *)
 lemma tcb_states_of_state_kheap:
    "\<lbrakk> kheap s slot = Some (TCB tcb)\<rbrakk>
-      \<Longrightarrow> tcb_states_of_state s slot = Some (tcb_state tcb)"
+    \<Longrightarrow> tcb_states_of_state s slot = Some (tcb_state tcb)"
   by (simp add:tcb_states_of_state_def get_tcb_def split: option.splits kernel_object.splits)
 
 lemma tcb_states_of_state_kheapI:
    "\<lbrakk> kheap s slot = Some (TCB tcb); tcb_state tcb = tcbst \<rbrakk>
-      \<Longrightarrow> tcb_states_of_state s slot = Some tcbst"
+    \<Longrightarrow> tcb_states_of_state s slot = Some tcbst"
   by (simp add: tcb_states_of_state_def get_tcb_def split: option.splits kernel_object.splits)
 
 lemma tcb_states_of_state_kheapD:
@@ -757,7 +757,7 @@ lemma tcb_states_of_state_kheapE:
 
 lemma cdt_change_allowed_to_child:
   "\<lbrakk> cdt_change_allowed aag subjects m tcbsts pptr; m ptr = Some pptr \<rbrakk>
-     \<Longrightarrow> cdt_change_allowed aag subjects m tcbsts ptr"
+   \<Longrightarrow> cdt_change_allowed aag subjects m tcbsts ptr"
   apply (elim cdt_change_allowedE)
   apply (erule cdt_change_allowedI[rotated])
   by (fastforce intro: rtrancl_into_rtrancl simp: cdt_parent_of_def)
@@ -767,8 +767,8 @@ lemma trinterrupts_trans:
                                               (interrupt_irq_node s' x, interrupt_states s' x));
      (\<forall>x. integrity_interrupts aag subjects x (interrupt_irq_node s' x, interrupt_states s' x)
                                               (interrupt_irq_node s'' x, interrupt_states s'' x)) \<rbrakk>
-     \<Longrightarrow> (\<forall>x. integrity_interrupts aag subjects x (interrupt_irq_node s x, interrupt_states s x)
-                                                  (interrupt_irq_node s'' x, interrupt_states s'' x))"
+   \<Longrightarrow> (\<forall>x. integrity_interrupts aag subjects x (interrupt_irq_node s x, interrupt_states s x)
+                                                (interrupt_irq_node s'' x, interrupt_states s'' x))"
   apply (simp add: integrity_interrupts_def del: split_paired_All)
   apply metis
   done
@@ -778,8 +778,8 @@ lemma trrqs_trans:
                                   (ready_queues s d p) (ready_queues s' d p));
      (\<forall>d p. integrity_ready_queues aag subjects (pasDomainAbs aag d)
                                    (ready_queues s' d p) (ready_queues s'' d p)) \<rbrakk>
-     \<Longrightarrow> (\<forall>d p. integrity_ready_queues aag subjects (pasDomainAbs aag d)
-                                       (ready_queues s d p) (ready_queues s'' d p))"
+   \<Longrightarrow> (\<forall>d p. integrity_ready_queues aag subjects (pasDomainAbs aag d)
+                                     (ready_queues s d p) (ready_queues s'' d p))"
   apply (clarsimp simp: integrity_ready_queues_def)
   apply (metis append_assoc)
   done
@@ -790,7 +790,7 @@ context Access_AC_1 begin
 lemma cdt_direct_change_allowed_backward:
   "\<lbrakk> integrity_obj_state aag activate subjects s s';
      cdt_direct_change_allowed aag subjects (tcb_states_of_state s') ptr \<rbrakk>
-     \<Longrightarrow> cdt_direct_change_allowed aag subjects (tcb_states_of_state s) ptr"
+   \<Longrightarrow> cdt_direct_change_allowed aag subjects (tcb_states_of_state s) ptr"
   apply (erule cdt_direct_change_allowed.cases)
    subgoal by (rule cdca_owned)
   apply (erule tcb_states_of_state_kheapE)
@@ -806,7 +806,7 @@ lemma cdt_change_allowed_backward:
   "\<lbrakk> integrity_obj_state aag activate subjects s s';
      integrity_cdt_state aag subjects s s';
      cdt_change_allowed aag subjects (cdt s') (tcb_states_of_state s') ptr \<rbrakk>
-     \<Longrightarrow> cdt_change_allowed aag subjects (cdt s) (tcb_states_of_state s) ptr"
+   \<Longrightarrow> cdt_change_allowed aag subjects (cdt s) (tcb_states_of_state s) ptr"
   apply (elim cdt_change_allowedE)
   apply (drule(1) cdt_direct_change_allowed_backward)
   apply (erule rtrancl_induct)
@@ -821,7 +821,7 @@ lemma trcdt_trans:
   "\<lbrakk> integrity_cdt_state aag subjects s s' ;
      integrity_obj_state aag activate subjects s s' ;
      integrity_cdt_state aag subjects s' s'' \<rbrakk>
-     \<Longrightarrow> integrity_cdt_state aag subjects s s''"
+   \<Longrightarrow> integrity_cdt_state aag subjects s s''"
   apply (intro allI)
   apply (frule_tac x=x in spec)
   apply (frule_tac x=x in spec[where P = "\<lambda>x. integrity_cdt _ _ (cdt s') _ x (_ x) (_ x)"])
@@ -834,7 +834,7 @@ lemma trcdtlist_trans:
      integrity_obj_state aag activate subjects s s' ;
      integrity_cdt_state aag subjects s s' ;
      integrity_cdt_list_state aag subjects s' s'' \<rbrakk>
-     \<Longrightarrow> integrity_cdt_list_state aag subjects s s''"
+   \<Longrightarrow> integrity_cdt_list_state aag subjects s s''"
   apply (intro allI)
   apply (drule_tac x=x in spec [where P="\<lambda>ptr. integrity_cdt_list _ _ _ _ ptr (_ ptr) (_ ptr)"] )+
   apply (erule integrity_cdt_listE)+
@@ -847,7 +847,7 @@ lemma trcdtlist_trans:
 lemma tsos_tro:
   "\<lbrakk> integrity_obj_state aag activate subjects s s'; tcb_states_of_state s' p = Some a;
      receive_blocked_on ep a; pasObjectAbs aag p \<notin> subjects \<rbrakk>
-     \<Longrightarrow> tcb_states_of_state s p = Some a"
+   \<Longrightarrow> tcb_states_of_state s p = Some a"
   apply (drule_tac x = p in spec)
   apply (erule integrity_objE, simp_all add: tcb_states_of_state_def get_tcb_def)
   by fastforce+
@@ -855,7 +855,7 @@ lemma tsos_tro:
 lemma can_receive_ipc_backward:
   "\<lbrakk> integrity_obj_state aag activate subjects s s'; tcb_states_of_state s' p = Some a;
      can_receive_ipc a; pasObjectAbs aag p \<notin> subjects \<rbrakk>
-     \<Longrightarrow> case tcb_states_of_state s p of None \<Rightarrow> False | Some x \<Rightarrow> can_receive_ipc x"
+   \<Longrightarrow> case tcb_states_of_state s p of None \<Rightarrow> False | Some x \<Rightarrow> can_receive_ipc x"
   apply (drule_tac x = p in spec)
   apply (erule integrity_objE;
          (fastforce simp: tcb_states_of_state_def get_tcb_def
@@ -867,7 +867,7 @@ lemma can_receive_ipc_backward:
 lemma tsos_tro_running:
   "\<lbrakk> \<forall>x. integrity_obj aag activate subjects (pasObjectAbs aag x) (kheap s x) (kheap s' x);
      tcb_states_of_state s p = Some Running; pasObjectAbs aag p \<notin> subjects \<rbrakk>
-     \<Longrightarrow> tcb_states_of_state s' p = Some Running"
+   \<Longrightarrow> tcb_states_of_state s' p = Some Running"
   by (drule_tac x=p in spec, erule integrity_objE,
       simp_all add: tcb_states_of_state_def get_tcb_def indirect_send_def direct_send_def
                     direct_call_def direct_reply_def call_blocked_def allowed_call_blocked_def)
@@ -879,7 +879,7 @@ locale Access_AC_2 = Access_AC_1 +
   assumes auth_ipc_buffers_tro:
     "\<lbrakk> integrity_obj_state aag activate subjects (s :: det_state) (s' :: det_state);
        x \<in> auth_ipc_buffers s' p; pasObjectAbs aag p \<notin> subjects \<rbrakk>
-       \<Longrightarrow> x \<in> auth_ipc_buffers s p "
+     \<Longrightarrow> x \<in> auth_ipc_buffers s p "
   and integrity_asids_refl[simp]:
     "integrity_asids aag subjects x a s s"
   and integrity_hyp_refl[simp]:
@@ -889,24 +889,24 @@ locale Access_AC_2 = Access_AC_1 +
   and trasids_trans:
     "\<lbrakk> \<forall>x a. integrity_asids_2 aag subjects x a as as' ao ao';
        \<forall>x a. integrity_asids_2 aag subjects x a as' as'' ao' ao'' \<rbrakk>
-       \<Longrightarrow> \<forall>x a. integrity_asids_2 aag subjects x a as as'' ao ao''"
+     \<Longrightarrow> \<forall>x a. integrity_asids_2 aag subjects x a as as'' ao ao''"
   and trhyp_trans:
     "\<lbrakk> integrity_hyp_2 aag subjects x ms ms' as as' ao ao';
        integrity_hyp_2 aag subjects x ms' ms'' as' as'' ao' ao'' \<rbrakk>
-       \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms'' as as'' ao ao'' "
+     \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms'' as as'' ao ao'' "
   and trfpu_trans:
     "\<lbrakk> integrity_fpu_2 aag subjects x ms ms' kh kh';
        integrity_fpu_2 aag subjects x ms' ms'' kh' kh'' \<rbrakk>
-       \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms'' kh kh''"
+     \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms'' kh kh''"
   and integrity_asids_update_autarch:
     "\<lbrakk> integrity_asids_2 aag subjects x a as as' ao ao'; pasObjectAbs aag ptr \<in> subjects \<rbrakk>
-       \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(ptr := ako))"
+     \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(ptr := ako))"
   and integrity_hyp_update_autarch:
     "\<lbrakk> integrity_hyp_2 aag subjects x ms ms' as as' ao ao'; pasObjectAbs aag ptr \<in> subjects \<rbrakk>
-       \<Longrightarrow> integrity_hyp_2 aag subjects x  ms ms' as as' ao (ao'(ptr := ako))"
+     \<Longrightarrow> integrity_hyp_2 aag subjects x  ms ms' as as' ao (ao'(ptr := ako))"
   and integrity_fpu_update_autarch:
     "\<lbrakk> integrity_fpu_2 aag subjects x ms ms' kh kh'; pasObjectAbs aag ptr \<in> subjects \<rbrakk>
-       \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(ptr \<mapsto> obj))"
+     \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(ptr \<mapsto> obj))"
 begin
 
 section \<open>Generic AC stuff\<close>
@@ -1021,7 +1021,7 @@ lemma integrity_refl [simp]:
 
 lemma integrity_update_autarch:
   "\<lbrakk> integrity aag X st s; is_subject aag ptr \<rbrakk>
-     \<Longrightarrow> integrity aag X st (s\<lparr>kheap := (kheap s)(ptr \<mapsto> obj)\<rparr>)"
+   \<Longrightarrow> integrity aag X st (s\<lparr>kheap := (kheap s)(ptr \<mapsto> obj)\<rparr>)"
   unfolding integrity_subjects_def
   apply (intro conjI,simp_all)
       apply clarsimp
@@ -1101,7 +1101,7 @@ lemma all_children_parent_of_rtrancl:
 
 lemma pas_refined_all_children':
   "\<lbrakk> valid_mdb s; pas_refined aag s; m = (cdt s) \<rbrakk>
-     \<Longrightarrow> all_children (\<lambda>x. is_subject aag (fst x) \<or> is_transferable (caps_of_state s x)) m"
+   \<Longrightarrow> all_children (\<lambda>x. is_subject aag (fst x) \<or> is_transferable (caps_of_state s x)) m"
   apply (rule all_childrenI)
   apply (erule disjE)
    apply (simp add: pas_refined_def,elim conjE)
@@ -1129,7 +1129,7 @@ lemma caps_of_state_def':
 
 lemma caps_of_state_cnode:
   "\<lbrakk> kheap s pos = Some (CNode sz content); well_formed_cnode_n sz content\<rbrakk>
-     \<Longrightarrow> caps_of_state s (pos,addr) = content addr"
+   \<Longrightarrow> caps_of_state s (pos,addr) = content addr"
   by (simp add:caps_of_state_def')
 
 lemma caps_of_state_tcb:
@@ -1193,7 +1193,7 @@ lemma descendant_of_caller_slot:
 
 lemma cca_to_transferable_or_subject:
   "\<lbrakk> valid_objs s; valid_mdb s; pas_refined aag s; cdt_change_allowed' aag ptr s \<rbrakk>
-     \<Longrightarrow> is_subject aag (fst ptr) \<or> is_transferable (caps_of_state s ptr)"
+   \<Longrightarrow> is_subject aag (fst ptr) \<or> is_transferable (caps_of_state s ptr)"
   apply (elim cdt_change_allowedE cdt_direct_change_allowed.cases)
    apply (rule all_children_parent_of_rtrancl[OF pas_refined_all_children]; blast)
   apply (simp add:rtrancl_eq_or_trancl,elim disjE conjE)
@@ -1213,17 +1213,17 @@ lemma is_transferable_weak_derived:
 
 lemma aag_cdt_link_Control:
   "\<lbrakk> cdt s x = Some y; \<not> is_transferable(caps_of_state s x); pas_refined aag s \<rbrakk>
-     \<Longrightarrow> abs_has_auth_to aag Control (fst y) (fst x)"
+   \<Longrightarrow> abs_has_auth_to aag Control (fst y) (fst x)"
   by (fastforce elim: pas_refined_mem[rotated] sta_cdt)
 
 lemma aag_cdt_link_DeleteDerived:
   "\<lbrakk> cdt s x = Some y; pas_refined aag s \<rbrakk>
-     \<Longrightarrow> abs_has_auth_to aag  DeleteDerived (fst y) (fst x)"
+   \<Longrightarrow> abs_has_auth_to aag  DeleteDerived (fst y) (fst x)"
   by (fastforce elim: pas_refined_mem[rotated] sta_cdt_transferable)
 
 lemma tcb_states_of_state_to_auth:
   "\<lbrakk> tcb_states_of_state s thread = Some tcbst; pas_refined aag s \<rbrakk>
-     \<Longrightarrow> \<forall>(obj,auth) \<in> tcb_st_to_auth tcbst. abs_has_auth_to aag auth thread obj"
+   \<Longrightarrow> \<forall>(obj,auth) \<in> tcb_st_to_auth tcbst. abs_has_auth_to aag auth thread obj"
    apply clarsimp
    apply (erule pas_refined_mem[rotated])
    apply (rule sta_ts)
@@ -1233,7 +1233,7 @@ lemma tcb_states_of_state_to_auth:
 lemma tcb_states_of_state_to_auth':
   "\<lbrakk> tcb_states_of_state s thread = Some tcbst;
      pas_refined aag s; (obj,auth) \<in> tcb_st_to_auth tcbst \<rbrakk>
-     \<Longrightarrow> abs_has_auth_to aag auth thread obj"
+   \<Longrightarrow> abs_has_auth_to aag auth thread obj"
    using tcb_states_of_state_to_auth by blast
 
 lemma ep_recv_blocked_def:
@@ -1242,7 +1242,7 @@ lemma ep_recv_blocked_def:
 
 lemma cdt_change_allowed_delete_derived:
   "\<lbrakk> valid_objs s; valid_mdb s; pas_refined aag s; cdt_change_allowed' aag slot s \<rbrakk>
-     \<Longrightarrow> aag_has_auth_to aag DeleteDerived (fst slot)"
+   \<Longrightarrow> aag_has_auth_to aag DeleteDerived (fst slot)"
   apply (elim cdt_change_allowedE cdt_direct_change_allowed.cases)
    apply (erule rtrancl_induct)
     apply (solves\<open>simp add: pas_refined_refl\<close>)
@@ -1263,7 +1263,7 @@ end
 lemma owns_thread_owns_cspace:
   "\<lbrakk> is_subject aag thread; pas_refined aag s; get_tcb thread s = Some tcb;
      is_cnode_cap (tcb_ctable tcb); x \<in> obj_refs_ac (tcb_ctable tcb) \<rbrakk>
-     \<Longrightarrow> is_subject aag x"
+   \<Longrightarrow> is_subject aag x"
   apply (drule get_tcb_SomeD)
   apply (drule cte_wp_at_tcbI[where t="(thread, tcb_cnode_index 0)"
                                 and P="\<lambda>cap. cap = tcb_ctable tcb", simplified])
@@ -1274,7 +1274,7 @@ lemma owns_thread_owns_cspace:
 lemma is_subject_into_is_subject_asid:
   "\<lbrakk> cap_links_asid_slot aag (pasObjectAbs aag p) cap;
      is_subject aag p; pas_refined aag s; asid \<in> cap_asid' cap \<rbrakk>
-     \<Longrightarrow> is_subject_asid aag asid"
+   \<Longrightarrow> is_subject_asid aag asid"
   apply (clarsimp simp add: cap_links_asid_slot_def label_owns_asid_slot_def)
   apply (drule (1) bspec)
   apply (drule (1) pas_refined_Control)
@@ -1368,7 +1368,7 @@ lemma ep_queued_st_tcb_at':
   "\<And>P. \<lbrakk> ko_at (Endpoint ep) ptr s; (t, rt) \<in> ep_q_refs_of ep;
          valid_objs s; sym_refs (state_refs_of s);
          \<And>pl pl'. P (BlockedOnSend ptr pl) \<and> P (BlockedOnReceive ptr pl') \<rbrakk>
-         \<Longrightarrow> st_tcb_at P t s"
+        \<Longrightarrow> st_tcb_at P t s"
   apply (case_tac ep, simp_all)
   apply (frule(1) sym_refs_ko_atD, clarsimp, erule (1) my_BallE,
          clarsimp simp: st_tcb_at_def refs_of_rev elim!: obj_at_weakenE)+
@@ -1380,7 +1380,7 @@ lemma ep_rcv_queued_st_tcb_at:
   "\<And>P. \<lbrakk> ko_at (Endpoint ep) epptr s; (t, EPRecv) \<in> ep_q_refs_of ep;
          valid_objs s; sym_refs (state_refs_of s);
          \<And>pl. P (BlockedOnReceive epptr pl); kheap s' t = kheap s t\<rbrakk>
-         \<Longrightarrow> st_tcb_at P t s'"
+        \<Longrightarrow> st_tcb_at P t s'"
   apply (case_tac ep, simp_all)
   apply (subgoal_tac "st_tcb_at P t s")
    apply (simp add: st_tcb_at_def obj_at_def)
@@ -1392,7 +1392,7 @@ lemma ep_rcv_queued_st_tcb_at:
 lemma ntfn_queued_st_tcb_at':
   "\<And>P. \<lbrakk> ko_at (Notification ntfn) ntfnptr s; (t, rt) \<in> ntfn_q_refs_of (ntfn_obj ntfn);
          valid_objs s; sym_refs (state_refs_of s); P (BlockedOnNotification ntfnptr) \<rbrakk>
-         \<Longrightarrow> st_tcb_at P t s"
+        \<Longrightarrow> st_tcb_at P t s"
   apply (case_tac "ntfn_obj ntfn", simp_all)
   apply (frule(1) sym_refs_ko_atD)
   apply (clarsimp)
@@ -1409,7 +1409,7 @@ lemma case_prod_wp:
 (* FIXME: move *)
 lemma case_sum_wp:
   "\<lbrakk> (\<And>a. x = Inl a \<Longrightarrow> \<lbrace>P a\<rbrace> f a \<lbrace>Q\<rbrace>); (\<And>a. x = Inr a \<Longrightarrow> \<lbrace>P' a\<rbrace> g a \<lbrace>Q\<rbrace>) \<rbrakk>
-     \<Longrightarrow> \<lbrace>\<lambda>s. (\<forall>a. x = Inl a \<longrightarrow> P a s) \<and> (\<forall>a. x = Inr a \<longrightarrow> P' a s)\<rbrace> case_sum f g x \<lbrace>Q\<rbrace>"
+   \<Longrightarrow> \<lbrace>\<lambda>s. (\<forall>a. x = Inl a \<longrightarrow> P a s) \<and> (\<forall>a. x = Inr a \<longrightarrow> P' a s)\<rbrace> case_sum f g x \<lbrace>Q\<rbrace>"
   by (cases x, simp_all)
 
 lemma st_tcb_at_to_thread_st_auth:
@@ -1440,7 +1440,7 @@ subsection \<open>Policy entailments\<close>
 lemma owns_ep_owns_receivers:
   "\<lbrakk> \<forall>auth. aag_has_auth_to aag auth epptr; pas_refined aag s; invs s;
      ko_at (Endpoint ep) epptr s; (t, EPRecv) \<in> ep_q_refs_of ep \<rbrakk>
-     \<Longrightarrow> is_subject aag t"
+   \<Longrightarrow> is_subject aag t"
   apply (drule (1) ep_rcv_queued_st_tcb_at[where P = "receive_blocked_on epptr"])
       apply clarsimp
      apply clarsimp
@@ -1459,7 +1459,7 @@ lemma owns_ep_owns_receivers:
 (* MOVE *)
 lemma cli_caps_of_state:
   "\<lbrakk> caps_of_state s slot = Some cap; pas_refined aag s \<rbrakk>
-     \<Longrightarrow> cap_links_irq aag (pasObjectAbs aag (fst slot)) cap"
+   \<Longrightarrow> cap_links_irq aag (pasObjectAbs aag (fst slot)) cap"
   apply (clarsimp simp add: cap_links_irq_def pas_refined_def)
   apply (blast dest: state_irqs_to_policy_aux.intros)
   done
@@ -1470,7 +1470,7 @@ context Access_AC_2 begin
 (* MOVE *)
 lemma cap_auth_caps_of_state:
   "\<lbrakk> caps_of_state s p = Some cap; pas_refined aag s \<rbrakk>
-     \<Longrightarrow> aag_cap_auth aag (pasObjectAbs aag (fst p)) cap"
+   \<Longrightarrow> aag_cap_auth aag (pasObjectAbs aag (fst p)) cap"
   unfolding aag_cap_auth_def
   apply (intro conjI)
     apply clarsimp
@@ -1488,7 +1488,7 @@ lemma cap_auth_caps_of_state:
 
 lemma cap_cur_auth_caps_of_state:
   "\<lbrakk> caps_of_state s p = Some cap; pas_refined aag s; is_subject aag (fst p) \<rbrakk>
-     \<Longrightarrow> pas_cap_cur_auth aag cap"
+   \<Longrightarrow> pas_cap_cur_auth aag cap"
   by (metis cap_auth_caps_of_state)
 
 end
@@ -1499,12 +1499,12 @@ subsection \<open>Integrity monotony over subjects\<close>
 
 lemma tcb_bound_notification_reset_integrity_mono:
   "\<lbrakk> tcb_bound_notification_reset_integrity ntfn ntfn' S aag; S \<subseteq> T\<rbrakk>
-     \<Longrightarrow> tcb_bound_notification_reset_integrity ntfn ntfn' T aag"
+   \<Longrightarrow> tcb_bound_notification_reset_integrity ntfn ntfn' T aag"
   unfolding tcb_bound_notification_reset_integrity_def by blast
 
 lemma reply_cap_deletion_integrity_mono:
   "\<lbrakk> reply_cap_deletion_integrity S aag cap cap'; S \<subseteq> T \<rbrakk>
-     \<Longrightarrow> reply_cap_deletion_integrity T aag cap cap'"
+   \<Longrightarrow> reply_cap_deletion_integrity T aag cap cap'"
   by (blast intro: reply_cap_deletion_integrity_intros elim: reply_cap_deletion_integrityE)
 
 lemma cnode_integrity_mono:
@@ -1516,7 +1516,7 @@ lemmas ptr_range_subset = new_range_subset' [folded ptr_range_def]
 
 lemma cdt_change_allowed_mono:
   "\<lbrakk> cdt_change_allowed aag S (cdt s) (tcb_states_of_state s) ptr; S \<subseteq> T \<rbrakk>
-     \<Longrightarrow> cdt_change_allowed aag T (cdt s) (tcb_states_of_state s) ptr"
+   \<Longrightarrow> cdt_change_allowed aag T (cdt s) (tcb_states_of_state s) ptr"
   unfolding cdt_change_allowed_def cdt_direct_change_allowed.simps direct_call_def by blast
 
 lemmas rtranclp_monoE = rtranclp_mono[THEN predicate2D,rotated,OF _ predicate2I]
@@ -1525,32 +1525,32 @@ lemmas rtranclp_monoE = rtranclp_mono[THEN predicate2D,rotated,OF _ predicate2I]
 locale Access_AC_3 = Access_AC_2 +
   assumes arch_integrity_obj_atomic_mono:
     "\<lbrakk> arch_integrity_obj_atomic aag S l ao ao'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
-       \<Longrightarrow> arch_integrity_obj_atomic aag T l ao ao'"
+     \<Longrightarrow> arch_integrity_obj_atomic aag T l ao ao'"
   and integrity_asids_mono:
     "\<lbrakk> integrity_asids aag S x a s s'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
-       \<Longrightarrow> integrity_asids aag T x a s (s' :: det_state)"
+     \<Longrightarrow> integrity_asids aag T x a s (s' :: det_state)"
   and integrity_hyp_mono:
     "\<lbrakk> integrity_hyp aag S x s s'; S \<subseteq> T \<rbrakk>
-       \<Longrightarrow> integrity_hyp aag T x s s'"
+     \<Longrightarrow> integrity_hyp aag T x s s'"
   and integrity_fpu_mono:
     "\<lbrakk> integrity_fpu aag S x s s'; S \<subseteq> T \<rbrakk>
-       \<Longrightarrow> integrity_fpu aag T x s s'"
+     \<Longrightarrow> integrity_fpu aag T x s s'"
   and auth_ipc_buffers_member:
     "\<lbrakk> x \<in> auth_ipc_buffers s p; valid_objs s \<rbrakk>
-       \<Longrightarrow> \<exists>tcb acap. get_tcb p s = Some tcb
-                    \<and> tcb_ipcframe tcb = (ArchObjectCap acap)
-                    \<and> caps_of_state s (p, tcb_cnode_index 4) = Some (ArchObjectCap acap)
-                    \<and> Write \<in> arch_cap_auth_conferred acap
-                    \<and> x \<in> aobj_ref' acap"
+     \<Longrightarrow> \<exists>tcb acap. get_tcb p s = Some tcb
+                  \<and> tcb_ipcframe tcb = (ArchObjectCap acap)
+                  \<and> caps_of_state s (p, tcb_cnode_index 4) = Some (ArchObjectCap acap)
+                  \<and> Write \<in> arch_cap_auth_conferred acap
+                  \<and> x \<in> aobj_ref' acap"
 begin
 
 lemma trm_ipc':
   "\<lbrakk> pas_refined aag s; valid_objs s; case_option False can_receive_ipc (tcb_states_of_state s p');
      (tcb_states_of_state s' p') = Some Structures_A.Running; p \<in> auth_ipc_buffers s p' \<rbrakk>
-     \<Longrightarrow> integrity_mem aag subjects p (tcb_states_of_state s) (tcb_states_of_state s')
-                      (auth_ipc_buffers s) X
-                      (underlying_memory (machine_state s) p)
-                      (underlying_memory (machine_state s') p)"
+   \<Longrightarrow> integrity_mem aag subjects p (tcb_states_of_state s) (tcb_states_of_state s')
+                    (auth_ipc_buffers s) X
+                    (underlying_memory (machine_state s) p)
+                    (underlying_memory (machine_state s') p)"
   apply (cases "pasObjectAbs aag p' \<in> subjects")
    apply (rule trm_write)
    apply (clarsimp simp: )
@@ -1569,7 +1569,7 @@ lemma trm_ipc':
 
 lemma integrity_mono:
   "\<lbrakk> integrity_subjects S aag activate X s s'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
-     \<Longrightarrow> integrity_subjects T aag activate X s s'"
+   \<Longrightarrow> integrity_subjects T aag activate X s s'"
   apply (clarsimp simp: integrity_subjects_def simp del: split_paired_All)
   apply (rule conjI)
    apply clarsimp
@@ -1619,7 +1619,7 @@ method integrity_trans_start =
 (* Q should be explicitly supplied, if not, use wp_integrity_clean' *)
 lemma wp_integrity_clean:
   "\<lbrakk> \<And>s. Q s \<Longrightarrow> integrity aag X s (g s); \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. integrity aag X st and Q\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_ s. integrity aag X st (g s)\<rbrace> "
+   \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_ s. integrity aag X st (g s)\<rbrace> "
    by (rule hoare_post_imp[of "\<lambda>_. integrity aag X st and Q"])
       (fastforce elim: integrity_trans)
 
@@ -1683,38 +1683,39 @@ locale Access_AC_4 = Access_AC_3 +
     "\<And>f. state_vrefs (trans_state f s :: det_state) = state_vrefs s"
   and integrity_asids_kh_upd_None:
     "\<lbrakk> ao' p = None; integrity_asids_2 aag subjects x a as as' ao ao'\<rbrakk>
-       \<Longrightarrow> integrity_asids_2 aag subjects x a as as' (ao(p := None)) ao'"
+     \<Longrightarrow> integrity_asids_2 aag subjects x a as as' (ao(p := None)) ao'"
     "\<lbrakk> ao p = None; integrity_asids_2 aag subjects x a as as' ao ao'\<rbrakk>
-       \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(p := None)) "
+     \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(p := None)) "
   and integrity_hyp_kh_upd_None:
     "\<lbrakk> ao' p = None; integrity_hyp_2 aag subjects x ms ms' as as' ao ao'\<rbrakk>
-       \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' (ao(p := None)) ao'"
+     \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' (ao(p := None)) ao'"
     "\<lbrakk> ao p = None; integrity_hyp_2 aag subjects x ms ms' as as' ao ao'\<rbrakk>
-       \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' ao (ao'(p := None)) "
+     \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' ao (ao'(p := None)) "
   and integrity_fpu_kh_upd:
     "\<lbrakk> \<forall>tcb. kh p \<noteq> Some (TCB tcb); \<forall>tcb. v \<noteq> Some (TCB tcb);
        integrity_fpu_2 aag subjects x ms ms' kh kh' \<rbrakk>
-      \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' (kh(p := v)) kh'"
+     \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' (kh(p := v)) kh'"
     "\<lbrakk> \<forall>tcb. kh' p \<noteq> Some (TCB tcb); \<forall>tcb. v \<noteq> Some (TCB tcb);
        integrity_fpu_2 aag subjects x ms ms' kh kh' \<rbrakk>
-      \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(p := v))"
+     \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(p := v))"
   and integrity_fpu_kh_upd_neq:
-    "x \<noteq> p \<Longrightarrow>
-     integrity_fpu_2 aag subjects x ms ms' (kh(p := v)) kh' =
-           integrity_fpu_2 aag subjects x ms ms' kh kh'"
-    "x \<noteq> p \<Longrightarrow>integrity_fpu_2 aag subjects x ms ms' kh (kh'(p := v)) =
-           integrity_fpu_2 aag subjects x ms ms' kh kh'"
+    "x \<noteq> p
+     \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' (kh(p := v)) kh' =
+         integrity_fpu_2 aag subjects x ms ms' kh kh'"
+    "x \<noteq> p
+     \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(p := v)) =
+         integrity_fpu_2 aag subjects x ms ms' kh kh'"
   and integrity_fpu_tcb_upd:
     "\<lbrakk> kh p = Some (TCB tcb); v = Some (TCB tcb'); tcb_arch tcb = tcb_arch tcb'\<rbrakk>
-       \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' (kh(p \<mapsto> TCB tcb')) kh' =
-           integrity_fpu_2 aag subjects x ms ms' kh kh'"
+     \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' (kh(p \<mapsto> TCB tcb')) kh' =
+         integrity_fpu_2 aag subjects x ms ms' kh kh'"
     "\<lbrakk> kh' p = Some (TCB tcb); v = Some (TCB tcb'); tcb_arch tcb = tcb_arch tcb'\<rbrakk>
-       \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(p \<mapsto> TCB tcb')) =
-           integrity_fpu_2 aag subjects x ms ms' kh kh'"
+     \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(p \<mapsto> TCB tcb')) =
+         integrity_fpu_2 aag subjects x ms ms' kh kh'"
   and integrity_fpu_set_registers:
     "\<lbrakk> kh x = Some (TCB tcb); kh' x = Some (TCB tcb');
        tcb_arch tcb' = arch_tcb_set_registers regs (tcb_arch tcb) \<rbrakk>
-       \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms kh kh'"
+     \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms kh kh'"
 begin
 
 lemmas integrity_arch_kh_upds =

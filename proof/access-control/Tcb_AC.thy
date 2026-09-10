@@ -84,7 +84,7 @@ lemmas itr_wps =
 (*FIXME MOVE *)
 lemma aag_cap_auth_master_Reply:
   "\<lbrakk> pas_refined aag s ; AllowGrant \<in> R \<rbrakk>
-     \<Longrightarrow>  pas_cap_cur_auth aag (ReplyCap tcb True R) = is_subject aag tcb"
+   \<Longrightarrow> pas_cap_cur_auth aag (ReplyCap tcb True R) = is_subject aag tcb"
   unfolding aag_cap_auth_def
   by (fastforce intro: aag_wellformed_refl aag_wellformed_control_is_owns[THEN iffD1]
                  simp: pas_refined_def cli_no_irqs clas_no_asid cap_auth_conferred_def
@@ -93,7 +93,7 @@ lemma aag_cap_auth_master_Reply:
 (* FIXME MOVE *)
 lemma cdt_NullCap:
   "\<lbrakk> valid_mdb s; caps_of_state s src = Some NullCap \<rbrakk>
-     \<Longrightarrow> cdt s src = None"
+   \<Longrightarrow> cdt s src = None"
   by (rule ccontr) (force dest: mdb_cte_atD simp: valid_mdb_def2)
 
 lemma setup_reply_master_pas_refined:
@@ -121,7 +121,7 @@ lemma restart_pas_refined:
 
 lemma option_update_thread_set_safe_lift:
   "\<lbrakk> \<And>v. \<lbrace>P\<rbrace> thread_set (f v) t \<lbrace>\<lambda>rv. P\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>P\<rbrace> option_update_thread t f v \<lbrace>\<lambda>rv. P\<rbrace>"
+   \<Longrightarrow> \<lbrace>P\<rbrace> option_update_thread t f v \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: option_update_thread_def split: option.split)
 
 crunch thread_set_priority

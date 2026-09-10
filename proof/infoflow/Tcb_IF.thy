@@ -283,17 +283,17 @@ locale Tcb_IF_2 = Tcb_IF_1 +
        \<And>prio ptr. \<lbrace>invs and P\<rbrace> set_priority ptr prio \<lbrace>\<lambda>_.P\<rbrace>;
        reschedule_required \<lbrace>P\<rbrace>;
        \<And>f s. P (trans_state f s) = P s \<rbrakk>
-       \<Longrightarrow> \<lbrace>P and invs and tcb_inv_wf (ThreadControl t sl ep mcp prio croot vroot buf)\<rbrace>
-           invoke_tcb (ThreadControl t sl ep mcp prio croot vroot buf)
-           \<lbrace>\<lambda>rv s :: det_state. P s\<rbrace>"
+     \<Longrightarrow> \<lbrace>P and invs and tcb_inv_wf (ThreadControl t sl ep mcp prio croot vroot buf)\<rbrace>
+         invoke_tcb (ThreadControl t sl ep mcp prio croot vroot buf)
+         \<lbrace>\<lambda>rv s :: det_state. P s\<rbrace>"
   and tc_reads_respects_f:
     "\<lbrakk> pas_domains_distinct aag; ti = ThreadControl x41 x42 x43 x44 x45 x46 x47 x48 \<rbrakk>
-       \<Longrightarrow> reads_respects_f aag l
-             (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action
-                              and pas_refined aag and pas_cur_domain aag and tcb_inv_wf ti
-                              and is_subject aag \<circ> cur_thread
-                              and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
-             (invoke_tcb ti)"
+     \<Longrightarrow> reads_respects_f aag l
+           (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action
+                            and pas_refined aag and pas_cur_domain aag and tcb_inv_wf ti
+                            and is_subject aag \<circ> cur_thread
+                            and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
+           (invoke_tcb ti)"
   and arch_post_set_flags_globals_equiv[wp]:
     "\<lbrace>globals_equiv st and invs\<rbrace>
      arch_post_set_flags t flags

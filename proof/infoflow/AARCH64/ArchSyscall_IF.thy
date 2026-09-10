@@ -135,7 +135,7 @@ lemmas is_subject_cur_vcpu_def = is_subject_cur_vcpu_2_def
 lemma active_vcpu_is_subject:
   "\<lbrakk> pas_refined aag s; is_subject aag (cur_thread s);
      valid_cur_vcpu s; schact_is_rct s; ct_in_cur_domain s \<rbrakk>
-     \<Longrightarrow> is_subject_cur_vcpu aag s"
+   \<Longrightarrow> is_subject_cur_vcpu aag s"
   apply (prop_tac "arch_tcb_at (\<lambda>itcb. itcb_vcpu itcb = active_cur_vcpu_of s) (cur_thread s) s")
    apply (clarsimp simp: valid_cur_vcpu_def schact_is_rct_def)
    apply (case_tac "cur_thread s = idle_thread s")

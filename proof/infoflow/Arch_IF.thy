@@ -163,7 +163,7 @@ definition labels_are_invisible where
 lemma equiv_but_for_reads_equiv':
   "\<lbrakk> pas_domains_distinct aag \<or> equiv_for (aag_can_read_domain aag) ready_queues s s';
      labels_are_invisible aag l L; equiv_but_for_labels aag L s s' \<rbrakk>
-     \<Longrightarrow> reads_equiv aag s s'"
+   \<Longrightarrow> reads_equiv aag s s'"
   apply (simp add: reads_equiv_def2)
   apply (rule conjI)
    apply (clarsimp simp: labels_are_invisible_def equiv_but_for_labels_def)
@@ -182,7 +182,7 @@ lemma equiv_but_for_reads_equiv':
 lemma equiv_but_for_affects_equiv':
   "\<lbrakk> pas_domains_distinct aag \<or> equiv_for (aag_can_affect_domain aag l) ready_queues s s';
      labels_are_invisible aag l L; equiv_but_for_labels aag L s s' \<rbrakk>
-     \<Longrightarrow> affects_equiv aag l s s'"
+   \<Longrightarrow> affects_equiv aag l s s'"
   apply (subst affects_equiv_def2)
   apply (clarsimp simp: labels_are_invisible_def equiv_but_for_labels_def aag_can_affect_label_def)
   apply (rule states_equiv_forI)
@@ -218,8 +218,8 @@ lemma ev2_invisible':
   "\<lbrakk> labels_are_invisible aag l L; labels_are_invisible aag l L';
      modifies_at_most aag L Q f; modifies_at_most aag L' Q' g;
      \<forall>s t. P s \<and> P' t \<longrightarrow> (\<forall>(rva,s') \<in> fst (f s). \<forall>(rvb,t') \<in> fst (g t). W rva rvb) \<rbrakk>
-     \<Longrightarrow> equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l)
-                        W (P and Q) (P' and Q') f g"
+   \<Longrightarrow> equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l)
+                     W (P and Q) (P' and Q') f g"
   apply (clarsimp simp: equiv_valid_2_def)
   apply (rule conjI)
    apply blast
@@ -252,12 +252,12 @@ lemma revrv_invisible:
   shows
     "\<lbrakk> labels_are_invisible aag l L; modifies_at_most aag L Q f;
        \<forall>s t. P s \<and> P t \<longrightarrow> (\<forall>(rva, s') \<in> fst (f s). \<forall>(rvb, t') \<in> fst(f t). W rva rvb) \<rbrakk>
-       \<Longrightarrow> reads_equiv_valid_rv_inv (affects_equiv aag l) aag W (P and Q) f"
+     \<Longrightarrow> reads_equiv_valid_rv_inv (affects_equiv aag l) aag W (P and Q) f"
   by (rule ev2_invisible[OF domains_distinct]; simp)
 
 lemma reads_respects_unit_invisible:
   "\<lbrakk> labels_are_invisible aag l L; modifies_at_most aag L P f; \<And>P. f \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> \<rbrakk>
-     \<Longrightarrow> reads_respects aag l P (f :: (det_state,unit) nondet_monad)"
+   \<Longrightarrow> reads_respects aag l P (f :: (det_state,unit) nondet_monad)"
   apply (rule equiv_valid_guard_imp)
    apply (simp add: equiv_valid_def2)
    apply (rule ev2_invisible')
@@ -267,7 +267,7 @@ lemma reads_respects_unit_cases':
   "\<lbrakk> reads_respects aag l (P and K (aag_can_read_or_affect aag l ptr)) f;
      modifies_at_most aag {pasObjectAbs aag ptr} (Q and K (\<not> aag_can_read_or_affect aag l ptr)) f;
      \<And>P. f \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> \<rbrakk>
-     \<Longrightarrow> reads_respects aag l (if aag_can_read_or_affect aag l ptr then P else Q) (f :: (det_state,unit) nondet_monad)"
+   \<Longrightarrow> reads_respects aag l (if aag_can_read_or_affect aag l ptr then P else Q) (f :: (det_state,unit) nondet_monad)"
   apply (case_tac "aag_can_read_or_affect aag l ptr")
    apply clarsimp
   apply (rule_tac L="{pasObjectAbs aag ptr}" in reads_respects_unit_invisible)
@@ -339,7 +339,7 @@ lemma case_junk:
 (* FIXME: Same here *)
 lemma hoare_add_postE:
   "\<lbrakk> \<lbrace>Q\<rbrace> f \<lbrace>P\<rbrace>, - ; \<lbrace>Q\<rbrace> f \<lbrace>\<lambda>rv s. (P rv s) \<longrightarrow> (R rv s)\<rbrace>, - \<rbrakk>
-     \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>,-"
+   \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>,-"
   unfolding validE_R_def validE_def
   apply (erule hoare_add_post)
    apply simp

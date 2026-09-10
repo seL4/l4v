@@ -39,7 +39,7 @@ lemma sata_update[CNode_AC_assms]:
   "\<lbrakk> pas_wellformed aag;
      cap_links_asid_slot aag (pasObjectAbs aag (fst ptr)) cap;
      state_asids_to_policy_arch aag caps as vrefs \<subseteq> pasPolicy aag \<rbrakk>
-     \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap)) as vrefs \<subseteq> pasPolicy aag"
+   \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap)) as vrefs \<subseteq> pasPolicy aag"
   by (fastforce intro: state_asids_to_policy_aux.intros
                  elim!: state_asids_to_policy_aux.cases
                  simp: cap_links_asid_slot_def label_owns_asid_slot_def
@@ -50,7 +50,7 @@ lemma sata_update2[CNode_AC_assms]:
      cap_links_asid_slot aag (pasObjectAbs aag (fst ptr)) cap;
      cap_links_asid_slot aag (pasObjectAbs aag (fst ptr')) cap';
      state_asids_to_policy_arch aag caps as vrefs \<subseteq> pasPolicy aag \<rbrakk>
-     \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap, ptr' \<mapsto> cap')) as vrefs \<subseteq> pasPolicy aag"
+   \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap, ptr' \<mapsto> cap')) as vrefs \<subseteq> pasPolicy aag"
   by (fastforce intro: state_asids_to_policy_aux.intros
                 elim!: state_asids_to_policy_aux.cases
                  simp: cap_links_asid_slot_def label_owns_asid_slot_def
@@ -81,7 +81,7 @@ lemma state_vrefs_tcb_upd[CNode_AC_assms]:
 
 lemma state_vrefs_simple_type_upd[CNode_AC_assms]:
   "\<lbrakk> ko_at ko ptr s; is_simple_type ko; a_type ko = a_type (f val) \<rbrakk>
-     \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(ptr \<mapsto> f val)\<rparr>) = state_vrefs s"
+   \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(ptr \<mapsto> f val)\<rparr>) = state_vrefs s"
   apply (rule ext)
   apply (auto simp: state_vrefs_def vs_refs_no_global_pts_def obj_at_def partial_inv_def a_type_def
              split: kernel_object.splits arch_kernel_obj.splits if_splits)

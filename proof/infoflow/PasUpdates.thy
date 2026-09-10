@@ -90,7 +90,7 @@ crunch send_signal
 
 lemma pas_refined_pasSubject_update':
   "\<lbrakk> pas_refined aag s; pas_wellformed (aag\<lparr>pasSubject := x\<rparr>) \<rbrakk>
-     \<Longrightarrow> pas_refined (aag\<lparr>pasSubject := x\<rparr>) s"
+   \<Longrightarrow> pas_refined (aag\<lparr>pasSubject := x\<rparr>) s"
   apply (subst pas_refined_def)
   apply (safe del: subsetI)
       apply (simp add: irq_map_wellformed_pasSubject_update pas_refined_def)
@@ -102,7 +102,7 @@ lemma pas_refined_pasSubject_update':
 
 lemma pas_wellformed_pasSubject_update:
   "\<lbrakk> pas_wellformed_noninterference aag; l \<in> pasDomainAbs aag d \<rbrakk>
-     \<Longrightarrow> pas_wellformed (aag\<lparr>pasSubject := l\<rparr>)"
+   \<Longrightarrow> pas_wellformed (aag\<lparr>pasSubject := l\<rparr>)"
   by (auto simp: pas_wellformed_noninterference_def)
 
 lemmas pas_refined_pasSubject_update =
@@ -117,12 +117,12 @@ lemma guarded_pas_domain_pasSubject_update[simp]:
 
 lemma silc_inv_pasSubject_update':
   "\<lbrakk> silc_inv aag st s; x \<noteq> SilcLabel \<rbrakk>
-     \<Longrightarrow> silc_inv (aag\<lparr>pasSubject := x\<rparr>) st s"
+   \<Longrightarrow> silc_inv (aag\<lparr>pasSubject := x\<rparr>) st s"
   by (auto simp: silc_inv_def silc_dom_equiv_def intra_label_cap_def cap_points_to_label_def)
 
 lemma silc_inv_pasSubject_update:
   "\<lbrakk> silc_inv aag st s; pas_wellformed_noninterference aag; l \<in> pasDomainAbs aag d \<rbrakk>
-     \<Longrightarrow> silc_inv (aag\<lparr>pasSubject := l\<rparr>) st s"
+   \<Longrightarrow> silc_inv (aag\<lparr>pasSubject := l\<rparr>) st s"
   by (fastforce intro: silc_inv_pasSubject_update' dest: pas_wellformed_noninterference_silc)
 
 

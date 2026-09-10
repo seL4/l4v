@@ -914,7 +914,7 @@ lemma Sys1AgentMap_simps:
   "Sys1AgentMap High_tcb_ptr = partition_label High"
   "Sys1AgentMap idle_tcb_ptr = partition_label Low"
   "\<And>p. p \<in> ptr_range shared_page_ptr_virt (pageBitsForSize shared_page_size)
-         \<Longrightarrow> Sys1AgentMap p = partition_label Low"
+        \<Longrightarrow> Sys1AgentMap p = partition_label Low"
   unfolding Sys1AgentMap_def
   apply simp_all
   by (auto simp: s0_ptr_defs ptr_range_def)
@@ -1061,7 +1061,7 @@ lemma pts_of_s0:
 
 lemma ptes_of_s0_PageTablePTE:
   "\<lbrakk> ptes_of s0_internal VSRootPT_T ptr = Some pte; is_PageTablePTE pte \<rbrakk>
-     \<Longrightarrow> table_base VSRootPT_T ptr = Low_pd_ptr \<and> pte = PageTablePTE (ppn_from_pptr Low_pt_ptr)
+   \<Longrightarrow> table_base VSRootPT_T ptr = Low_pd_ptr \<and> pte = PageTablePTE (ppn_from_pptr Low_pt_ptr)
        \<or> table_base VSRootPT_T ptr = High_pd_ptr \<and> pte = PageTablePTE (ppn_from_pptr High_pt_ptr)"
   by (auto simp: ptes_of_def pts_of_s0 obind_def kh0_obj_def split: option.splits if_splits)
 
@@ -1196,7 +1196,7 @@ lemma max_pt_m1_leq_max_page:
 lemma ptr_range_max_pt_level_minus_1:
   "\<lbrakk> (x :: machine_word) \<in> ptr_range ptr (pt_bits_left (max_pt_level - 1));
      is_aligned ptr (pageBitsForSize shared_page_size)\<rbrakk>
-     \<Longrightarrow> x \<in> ptr_range ptr (pageBitsForSize shared_page_size)"
+   \<Longrightarrow> x \<in> ptr_range ptr (pageBitsForSize shared_page_size)"
   apply (erule ptr_range_weaken)
     apply (clarsimp simp: shared_page_size_def2 max_pt_m1_leq_max_page)
    apply (clarsimp simp: word_bits_def shared_page_size_def pageBits_def ptTranslationBits_def split: if_splits)

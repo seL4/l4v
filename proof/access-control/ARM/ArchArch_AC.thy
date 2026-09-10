@@ -31,7 +31,7 @@ lemma set_mrs_state_vrefs[Arch_AC_assms, wp]:
 
 lemma mul_add_word_size_lt_msg_align_bits_ofnat[Arch_AC_assms]:
   "\<lbrakk> p < 2 ^ (msg_align_bits - word_size_bits); k < word_size \<rbrakk>
-     \<Longrightarrow> of_nat p * of_nat word_size + k < (2 :: obj_ref) ^ msg_align_bits"
+   \<Longrightarrow> of_nat p * of_nat word_size + k < (2 :: obj_ref) ^ msg_align_bits"
   apply (rule is_aligned_add_less_t2n[where n=word_size_bits])
      apply (simp_all add: msg_align_bits' word_size_word_size_bits is_aligned_mult_triv2)
    apply (simp_all add: word_size_def word_size_bits_def)
@@ -115,7 +115,7 @@ lemma kheap_eq_state_vrefsD:
 
 lemma kheap_eq_state_vrefs_pas_refinedD:
   "\<lbrakk> kheap s p = Some ko; (p', r, t, a) \<in> vs_refs_no_global_pts ko; pas_refined aag s \<rbrakk>
-     \<Longrightarrow> abs_has_auth_to aag a p p'"
+   \<Longrightarrow> abs_has_auth_to aag a p p'"
   apply (drule kheap_eq_state_vrefsD)
   apply (erule pas_refined_mem[OF sta_vref, rotated])
   apply simp
@@ -223,7 +223,7 @@ crunch unmap_page_table
 
 lemma pde_ref_pde_ref2:
   "\<lbrakk> pde_ref x = Some v; pde_ref2 x = Some v' \<rbrakk>
-     \<Longrightarrow> v' = (v, 0, {Control})"
+   \<Longrightarrow> v' = (v, 0, {Control})"
   unfolding pde_ref_def pde_ref2_def
   by (cases x, simp_all)
 
@@ -310,8 +310,8 @@ crunch lookup_pt_slot
 
 lemma vs_refs_no_global_pts_pdI:
   "\<lbrakk> pd (ucast r) = PageTablePDE x a b; (ucast r :: 12 word) < ucast (kernel_base >> 20) \<rbrakk>
-     \<Longrightarrow> (ptrFromPAddr x, r && mask 12, APageDirectory, Control) \<in>
-           vs_refs_no_global_pts (ArchObj (PageDirectory pd))"
+   \<Longrightarrow> (ptrFromPAddr x, r && mask 12, APageDirectory, Control)
+         \<in> vs_refs_no_global_pts (ArchObj (PageDirectory pd))"
   apply (clarsimp simp: vs_refs_no_global_pts_def)
   apply (drule_tac f=pde_ref2 in arg_cong, simp add: pde_ref_simps o_def)
   apply (rule rev_bexI, rule DiffI, erule graph_ofI)
@@ -350,7 +350,7 @@ lemma lookup_pt_slot_authorised:
 
 lemma is_aligned_6_masks:
   "\<lbrakk> is_aligned (p :: obj_ref) 6; bits = pt_bits \<or> bits = pd_bits \<rbrakk>
-     \<Longrightarrow> \<forall>x \<in> set [0, 4 .e. 0x3C]. x + p && ~~ mask bits = p && ~~ mask bits"
+   \<Longrightarrow> \<forall>x \<in> set [0, 4 .e. 0x3C]. x + p && ~~ mask bits = p && ~~ mask bits"
   apply clarsimp
   apply (drule subsetD[OF upto_enum_step_subset])
   apply (subst mask_lower_twice[symmetric, where n=6])
@@ -541,10 +541,10 @@ lemma integrity_arm_asid_table_entry_update':
   "\<lbrakk> integrity aag X st s; atable = arm_asid_table (arch_state s);
      (\<forall>asid'. asid' \<noteq> 0 \<and> asid_high_bits_of asid' = asid_high_bits_of asid
              \<longrightarrow> is_subject_asid aag asid') \<rbrakk>
-     \<Longrightarrow> integrity aag X st (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table :=
-                                                          \<lambda>a. if a = asid_high_bits_of asid
-                                                              then v
-                                                              else atable a\<rparr>\<rparr>)"
+   \<Longrightarrow> integrity aag X st (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table :=
+                                                        \<lambda>a. if a = asid_high_bits_of asid
+                                                            then v
+                                                            else atable a\<rparr>\<rparr>)"
   by (clarsimp simp: integrity_def integrity_asids_def)
 
 lemma arm_asid_table_entry_update_integrity[wp]:
@@ -699,7 +699,7 @@ lemma perform_asid_pool_invocation_respects:
 
 lemma asid_pool_into_aag:
   "\<lbrakk> kheap s p = Some (ArchObj (ASIDPool pool)); pool r = Some p'; pas_refined aag s \<rbrakk>
-     \<Longrightarrow> abs_has_auth_to aag Control p p'"
+   \<Longrightarrow> abs_has_auth_to aag Control p p'"
   apply (rule pas_refined_mem [rotated], assumption)
   apply (rule sta_vref)
   apply (fastforce simp: state_vrefs_def vs_refs_no_global_pts_def intro!: graph_ofI)
@@ -709,7 +709,7 @@ lemma asid_pool_uniqueness:
   "\<lbrakk> ([VSRef (ucast (asid_high_bits_of asid)) None] \<rhd> p) s;
      arm_asid_table (arch_state s) (asid_high_bits_of asid') = Some p;
      invs s; \<forall>pt. \<not> ko_at (ArchObj (PageTable pt)) p s \<rbrakk>
-     \<Longrightarrow> asid_high_bits_of asid' = asid_high_bits_of asid"
+   \<Longrightarrow> asid_high_bits_of asid' = asid_high_bits_of asid"
   apply (drule valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI], clarsimp)
   apply (drule vs_lookup_atI, drule valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI], clarsimp)
   apply (clarsimp dest!: obj_ref_elemD)

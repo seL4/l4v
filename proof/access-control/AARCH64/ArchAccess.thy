@@ -70,16 +70,16 @@ fun acap_asid' :: "arch_cap \<Rightarrow> asid set" where
 inductive_set state_asids_to_policy_aux for aag caps asid_tab vrefs where
   sata_asid:
     "\<lbrakk> caps ptr = Some (ArchObjectCap acap); asid \<in> acap_asid' acap \<rbrakk>
-       \<Longrightarrow> (pasObjectAbs aag (fst ptr), Control, pasASIDAbs aag asid)
+     \<Longrightarrow> (pasObjectAbs aag (fst ptr), Control, pasASIDAbs aag asid)
              \<in> state_asids_to_policy_aux aag caps asid_tab vrefs"
 | sata_asid_lookup:
     "\<lbrakk> asid_tab (asid_high_bits_of asid) = Some poolptr;
        (pdptr, ucast (asid && mask asid_low_bits), AASIDPool, a) \<in> vrefs poolptr \<rbrakk>
-       \<Longrightarrow> (pasASIDAbs aag asid, a, pasObjectAbs aag pdptr)
+     \<Longrightarrow> (pasASIDAbs aag asid, a, pasObjectAbs aag pdptr)
              \<in> state_asids_to_policy_aux aag caps asid_tab vrefs"
 | sata_asidpool:
     "\<lbrakk> asid_tab (asid_high_bits_of asid) = Some poolptr; asid \<noteq> 0 \<rbrakk>
-       \<Longrightarrow> (pasObjectAbs aag poolptr, AAuth ASIDPoolMapsASID, pasASIDAbs aag asid)
+     \<Longrightarrow> (pasObjectAbs aag poolptr, AAuth ASIDPoolMapsASID, pasASIDAbs aag asid)
              \<in> state_asids_to_policy_aux aag caps asid_tab vrefs"
 
 definition
@@ -207,11 +207,11 @@ inductive arch_integrity_obj_atomic ::
   arch_troa_asidpool_clear:
     "\<lbrakk> ao = ASIDPool pool; ao' = ASIDPool pool';
        asid_pool_integrity subjects aag pool pool' \<rbrakk>
-       \<Longrightarrow> arch_integrity_obj_atomic aag subjects l ao ao'"
+     \<Longrightarrow> arch_integrity_obj_atomic aag subjects l ao ao'"
   (* Allow any VCPU changes; constraints are imposed by integrity_hyp instead *)
 | arch_troa_vcpu:
     "\<lbrakk> ao = VCPU vcpu; ao' = VCPU vcpu' \<rbrakk>
-       \<Longrightarrow> arch_integrity_obj_atomic aag subjects l ao ao'"
+     \<Longrightarrow> arch_integrity_obj_atomic aag subjects l ao ao'"
 
 inductive arch_integrity_obj_alt ::
    "'a PAS \<Rightarrow> 'a set \<Rightarrow> 'a \<Rightarrow> arch_kernel_obj \<Rightarrow> arch_kernel_obj \<Rightarrow> bool"
@@ -219,10 +219,10 @@ inductive arch_integrity_obj_alt ::
   arch_tro_alt_asidpool_clear:
     "\<lbrakk> ao = ASIDPool pool; ao' = ASIDPool pool';
        asid_pool_integrity subjects aag pool pool'\<rbrakk>
-       \<Longrightarrow> arch_integrity_obj_alt aag subjects l' ao ao'"
+     \<Longrightarrow> arch_integrity_obj_alt aag subjects l' ao ao'"
 | arch_tro_alt_vcpu:
     "\<lbrakk> ao = VCPU vcpu; ao' = VCPU vcpu' \<rbrakk>
-       \<Longrightarrow> arch_integrity_obj_alt aag subjects l' ao ao'"
+     \<Longrightarrow> arch_integrity_obj_alt aag subjects l' ao ao'"
 
 subsection \<open>Misc definitions\<close>
 

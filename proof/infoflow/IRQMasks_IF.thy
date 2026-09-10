@@ -35,7 +35,7 @@ lemma empty_slot_irq_masks:
 
 lemma spec_strengthen_errE:
   "\<lbrakk> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E'\<rbrace>; \<And>s r. E' s r \<Longrightarrow> E s r \<rbrakk>
-     \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
+   \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
   by (auto simp: spec_validE_def validE_def valid_def split: sum.splits)
 
 crunch create_cap

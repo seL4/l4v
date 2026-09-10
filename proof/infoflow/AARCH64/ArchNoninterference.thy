@@ -50,8 +50,8 @@ crunch do_user_op_if
 lemma sameFor_scheduler_affects_equiv[Noninterference_assms]:
   "\<lbrakk> (s,s') \<in> same_for aag PSched; (s,s') \<in> same_for aag (Partition l);
      invs (internal_state_if s); invs (internal_state_if s') \<rbrakk>
-     \<Longrightarrow> scheduler_equiv aag (internal_state_if s) (internal_state_if s') \<and>
-         scheduler_affects_equiv aag (OrdinaryLabel l) (internal_state_if s) (internal_state_if s')"
+   \<Longrightarrow> scheduler_equiv aag (internal_state_if s) (internal_state_if s') \<and>
+       scheduler_affects_equiv aag (OrdinaryLabel l) (internal_state_if s) (internal_state_if s')"
   apply (rule conjI)
    apply (blast intro: sameFor_scheduler_equiv)
   apply (clarsimp simp: scheduler_affects_equiv_def arch_scheduler_affects_equiv_def
@@ -109,7 +109,7 @@ lemma integrity_asids_update_reference_state[Noninterference_assms]:
 lemma partitionIntegrity_cur_vcpu_None:
    "\<lbrakk> partitionIntegrity aag s s'; valid_objs s; valid_objs s';
       cur_vcpu_of s x = None; cur_vcpu_of s' x = None; vcpu_at x s \<rbrakk>
-      \<Longrightarrow> is_subject aag x \<or> kheap s x = kheap s' x"
+    \<Longrightarrow> is_subject aag x \<or> kheap s x = kheap s' x"
   apply (prop_tac "integrity_obj (aag\<lparr>pasMayActivate := False, pasMayEditReadyQueues := False\<rparr>)
                                  False {pasSubject aag} (pasObjectAbs aag x) (kheap s x) (kheap s' x)")
    apply (clarsimp simp: partitionIntegrity_def integrity_subjects_def)
@@ -148,7 +148,7 @@ lemma partitionIntegrity_cur_vcpu_None:
 lemma partitionIntegrity_cur_vcpu_Some:
   "\<lbrakk> invs s; pas_refined aag s; pas_cur_domain aag s; pas_domains_distinct aag;
      cur_vcpu_in_cur_domain s; current_vcpu s = Some (vr,b) \<rbrakk>
-     \<Longrightarrow> is_subject aag vr"
+   \<Longrightarrow> is_subject aag vr"
   apply (clarsimp simp: cur_vcpu_in_cur_domain_def cur_vcpu_tcb_def split: option.splits)
    defer
    apply (rename_tac t)
@@ -248,7 +248,7 @@ qed
 lemma asid_pool_into_aag:
   "\<lbrakk> pool_for_asid asid s = Some p; kheap s p = Some (ArchObj (ASIDPool pool));
      pool r = Some entry; ap_vspace entry = p'; pas_refined aag s \<rbrakk>
-     \<Longrightarrow> abs_has_auth_to aag Control p p'"
+   \<Longrightarrow> abs_has_auth_to aag Control p p'"
   apply (rule pas_refined_mem [rotated], assumption)
   apply (rule sta_vref)
   apply (rule state_vrefsD)
@@ -262,7 +262,7 @@ lemma owns_mapping_owns_asidpool:
   "\<lbrakk> pool_for_asid asid s = Some p; kheap s p = Some (ArchObj (ASIDPool pool));
      pool r = Some entry; ap_vspace entry = p'; pas_refined aag s; is_subject aag p';
      pas_wellformed (aag\<lparr>pasSubject := (pasObjectAbs aag p)\<rparr>) \<rbrakk>
-     \<Longrightarrow> is_subject aag p"
+   \<Longrightarrow> is_subject aag p"
   apply (frule asid_pool_into_aag)
      apply assumption+
   apply (drule pas_wellformed_pasSubject_update_Control)
@@ -275,7 +275,7 @@ lemma partitionIntegrity_subjectAffects_asid_pool':
      pas_refined aag s; silc_inv aag st s; pas_wellformed_noninterference aag; valid_arch_state s;
      arch_integrity_obj_atomic (aag\<lparr>pasMayActivate := False, pasMayEditReadyQueues := False\<rparr>)
                               {pasSubject aag} (pasObjectAbs aag x) ao ao' \<rbrakk>
-     \<Longrightarrow> subject_can_affect_label_directly aag (pasObjectAbs aag x)"
+   \<Longrightarrow> subject_can_affect_label_directly aag (pasObjectAbs aag x)"
   unfolding arch_integrity_obj_atomic.simps asid_pool_integrity_def
   apply (elim disjE)
    apply clarsimp
@@ -385,7 +385,7 @@ lemma partitionIntegrity_subjectAffects_cur_vcpu_of:
       pas_cur_domain aag s; pas_cur_domain aag s';
       pas_domains_distinct aag;
       \<not> equiv_for (\<lambda>x. pasObjectAbs aag x = a) cur_vcpu_of s s' \<rbrakk>
-      \<Longrightarrow> a \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
+    \<Longrightarrow> a \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
   apply (case_tac "\<exists>b. cur_vcpu_for (\<lambda>x. pasObjectAbs aag x = a) s = Some b")
    apply (clarsimp simp: affects_lrefl partitionIntegrity_cur_vcpu_Some cur_vcpu_for_def split: option.splits if_splits)
   apply (case_tac "\<exists>b. cur_vcpu_for (\<lambda>x. pasObjectAbs aag x = a) s' = Some b")
@@ -402,7 +402,7 @@ lemma partitionIntegrity_subjectAffects_hw_vcpu:
       pas_cur_domain aag s; pas_cur_domain aag s';
       pas_domains_distinct aag;
       \<not> equiv_for (\<lambda>x. pasObjectAbs aag x = a) hw_vcpu_of s s' \<rbrakk>
-      \<Longrightarrow> a \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
+    \<Longrightarrow> a \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
   apply (case_tac "\<exists>b. cur_vcpu_for (\<lambda>x. pasObjectAbs aag x = a) s = Some b")
    apply (clarsimp simp: affects_lrefl partitionIntegrity_cur_vcpu_Some cur_vcpu_for_def split: option.splits if_splits)
   apply (case_tac "\<exists>b. cur_vcpu_for (\<lambda>x. pasObjectAbs aag x = a) s' = Some b")
@@ -420,7 +420,7 @@ lemma partitionIntegrity_subjectAffects_hyp:
       pas_cur_domain aag s; pas_cur_domain aag s';
       pas_domains_distinct aag;
       \<not> equiv_hyp (\<lambda>x. pasObjectAbs aag x = a) s s' \<rbrakk>
-      \<Longrightarrow> a \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
+    \<Longrightarrow> a \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
   unfolding equiv_hyp_def
   using partitionIntegrity_subjectAffects_numlistregs
         partitionIntegrity_subjectAffects_cur_vcpu_of
@@ -430,7 +430,7 @@ lemma partitionIntegrity_subjectAffects_hyp:
 lemma cur_fpu_is_subject:
   "\<lbrakk> invs s; pas_refined aag s; pas_cur_domain aag s; pas_domains_distinct aag;
      cur_fpu_in_cur_domain s; current_fpu s = Some t \<rbrakk>
-     \<Longrightarrow> is_subject aag t"
+   \<Longrightarrow> is_subject aag t"
   apply (clarsimp simp: cur_fpu_in_cur_domain_def split: option.splits)
   apply (frule current_fpu_owner_Some_tcb_at, fastforce)
   apply (drule tcb_at_ko_at, clarsimp)
@@ -454,7 +454,7 @@ lemma partitionIntegrity_subjectAffects_fpu:
       pas_cur_domain aag s; pas_cur_domain aag s';
       pas_domains_distinct aag;
       \<not> equiv_fpu (\<lambda>x. pasObjectAbs aag x = a) s s' \<rbrakk>
-      \<Longrightarrow> a \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
+    \<Longrightarrow> a \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
   unfolding equiv_fpu_def
   apply (clarsimp simp: equiv_for_def)
   apply (case_tac "is_arch_cur_fpu x s")
@@ -475,7 +475,7 @@ lemma partitionIntegrity_subjectAffects_tcb_fpu':
       arch_tcb_get_registers new_arch = arch_tcb_get_registers (tcb_arch tcb);
       tcb_hyp_refs new_arch = tcb_hyp_refs (tcb_arch tcb);
       current_fpu s \<noteq> Some x; current_fpu s' \<noteq> Some x \<rbrakk>
-      \<Longrightarrow> is_subject aag x \<or> kheap s x = kheap s' x"
+    \<Longrightarrow> is_subject aag x \<or> kheap s x = kheap s' x"
   apply clarsimp
   apply (erule_tac P="tcb = tcb\<lparr>tcb_arch := new_arch\<rparr>" in swap)
   apply (prop_tac "integrity_fpu (aag\<lparr>pasMayActivate := False, pasMayEditReadyQueues := False\<rparr>)
@@ -520,7 +520,7 @@ lemma partitionIntegrity_subjectAffects_asid[Noninterference_assms]:
   "\<lbrakk> partitionIntegrity aag s s'; pas_refined aag s; valid_objs s;
      valid_arch_state s; valid_arch_state s'; pas_wellformed_noninterference aag;
      silc_inv aag st s'; invs s'; \<not> equiv_asids (\<lambda>x. pasASIDAbs aag x = a) s s' \<rbrakk>
-     \<Longrightarrow> a \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
+   \<Longrightarrow> a \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
   apply (clarsimp simp: equiv_asids_def equiv_asid_def asid_pool_at_kheap)
   apply (case_tac "arm_asid_table (arch_state s) (asid_high_bits_of asid) =
                    arm_asid_table (arch_state s') (asid_high_bits_of asid)")
@@ -639,12 +639,12 @@ lemma ev2_invisible'[Noninterference_assms]:
        \<And>st :: det_state. f \<lbrace>\<lambda>s. arch_globals_equiv_strengthener (machine_state st) (machine_state s)\<rbrace>;
        \<And>st :: det_state. g \<lbrace>\<lambda>s. arch_globals_equiv_strengthener (machine_state st) (machine_state s)\<rbrace>;
        \<forall>s t. P s \<and> P' t \<longrightarrow> (\<forall>(rva,s') \<in> fst (f s). \<forall>(rvb,t') \<in> fst (g t). W rva rvb) \<rbrakk>
-       \<Longrightarrow> equiv_valid_2 (reads_equiv_g aag)
-                         (\<lambda>s s'. affects_equiv aag l s s' \<and>
-                                 arch_globals_equiv_strengthener (machine_state s) (machine_state s'))
-                         (\<lambda>s s'. affects_equiv aag l s s' \<and>
-                                 arch_globals_equiv_strengthener (machine_state s) (machine_state s'))
-                         W (P and Q) (P' and Q') f g"
+     \<Longrightarrow> equiv_valid_2 (reads_equiv_g aag)
+                       (\<lambda>s s'. affects_equiv aag l s s' \<and>
+                               arch_globals_equiv_strengthener (machine_state s) (machine_state s'))
+                       (\<lambda>s s'. affects_equiv aag l s s' \<and>
+                               arch_globals_equiv_strengthener (machine_state s) (machine_state s'))
+                       W (P and Q) (P' and Q') f g"
   apply (clarsimp simp: equiv_valid_2_def)
   apply (rule conjI)
    apply blast

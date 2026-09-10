@@ -31,7 +31,7 @@ interpretation retype_region_proofs_arch ..
 
 lemma state_vrefs_eq:
   "\<lbrakk> valid_vspace_objs s; valid_arch_state s \<rbrakk>
-     \<Longrightarrow> state_vrefs s' = state_vrefs s"
+   \<Longrightarrow> state_vrefs s' = state_vrefs s"
   apply (insert dev vp)
   apply (intro ext subset_antisym subsetI)
    apply (clarsimp simp: state_vrefs_def)
@@ -372,10 +372,10 @@ lemma integrity_asids_detype[Retype_AC_assms]:
 lemma retype_region_integrity_asids[Retype_AC_assms]:
   "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped;
      \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_asids aag {pasSubject aag} x a s st \<rbrakk>
-     \<Longrightarrow> integrity_asids aag {pasSubject aag} x a s
-           (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
-                            then Some (default_object typ dev o_bits d)
-                            else kheap s a\<rparr>)"
+   \<Longrightarrow> integrity_asids aag {pasSubject aag} x a s
+         (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
+                          then Some (default_object typ dev o_bits d)
+                          else kheap s a\<rparr>)"
   apply (clarsimp simp: integrity_asids_def opt_map_def)
   apply (case_tac "x \<in> up_aligned_area ptr sz"; clarsimp)
   by (fastforce intro: tro_lrefl

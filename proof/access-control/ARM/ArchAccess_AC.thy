@@ -26,7 +26,7 @@ lemma arch_troa_tro_alt[Access_AC_assms, elim!]:
 lemma clear_asidpool_trans[elim]:
   "\<lbrakk> asid_pool_integrity subjects aag pool pool';
      asid_pool_integrity subjects aag pool' pool'' \<rbrakk>
-     \<Longrightarrow> asid_pool_integrity subjects aag pool pool''"
+   \<Longrightarrow> asid_pool_integrity subjects aag pool pool''"
   apply (clarsimp simp: asid_pool_integrity_def)
   apply (erule_tac x=x in allE)+
   apply (fastforce split: option.split_asm)
@@ -38,7 +38,7 @@ lemma cap_asid'_member[simp]:
 
 lemma clas_caps_of_state[Access_AC_assms]:
   "\<lbrakk> caps_of_state s slot = Some cap; pas_refined aag s \<rbrakk>
-     \<Longrightarrow> cap_links_asid_slot aag (pasObjectAbs aag (fst slot)) cap"
+   \<Longrightarrow> cap_links_asid_slot aag (pasObjectAbs aag (fst slot)) cap"
   apply (clarsimp simp: cap_links_asid_slot_def label_owns_asid_slot_def pas_refined_def)
   apply (drule state_asids_to_policy_aux.intros)
    apply assumption
@@ -48,7 +48,7 @@ lemma clas_caps_of_state[Access_AC_assms]:
 lemma arch_tro_alt_trans_spec[Access_AC_assms]:
   "\<lbrakk> arch_integrity_obj_alt aag subjects l ko ko';
      arch_integrity_obj_alt aag subjects l ko' ko'' \<rbrakk>
-     \<Longrightarrow> arch_integrity_obj_alt aag subjects l ko ko''"
+   \<Longrightarrow> arch_integrity_obj_alt aag subjects l ko ko''"
   by (fastforce simp: arch_integrity_obj_alt.simps)
 
 lemma as_user_state_vrefs[Access_AC_assms, wp]:
@@ -80,7 +80,7 @@ context Arch begin arch_global_naming
 lemma auth_ipc_buffers_tro[Access_AC_assms]:
   "\<lbrakk> integrity_obj_state aag activate subjects s s';
      x \<in> auth_ipc_buffers s' p; pasObjectAbs aag p \<notin> subjects \<rbrakk>
-     \<Longrightarrow> x \<in> auth_ipc_buffers s p "
+   \<Longrightarrow> x \<in> auth_ipc_buffers s p "
   by (drule_tac x = p in spec)
      (erule integrity_objE;
       fastforce simp: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def
@@ -89,7 +89,7 @@ lemma auth_ipc_buffers_tro[Access_AC_assms]:
 lemma trasids_trans[Access_AC_assms]:
   "\<lbrakk> \<forall>x a. integrity_asids_2 aag subjects x a as as' ao ao';
      \<forall>x a. integrity_asids_2 aag subjects x a as' as'' ao' ao'' \<rbrakk>
-     \<Longrightarrow> \<forall>x a. integrity_asids_2 aag subjects x a as as'' ao ao''"
+   \<Longrightarrow> \<forall>x a. integrity_asids_2 aag subjects x a as as'' ao ao''"
   by (clarsimp simp: integrity_asids_def) metis
 
 lemma integrity_asids_refl[Access_AC_assms, simp]:
@@ -98,7 +98,7 @@ lemma integrity_asids_refl[Access_AC_assms, simp]:
 
 lemma integrity_asids_update_autarch[Access_AC_assms]:
   "\<lbrakk> integrity_asids_2 aag subjects x a as as' ao ao'; pasObjectAbs aag ptr \<in> subjects \<rbrakk>
-     \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(ptr := ako))"
+   \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(ptr := ako))"
   by (auto simp: integrity_asids_def opt_map_def)
 
 lemma integrity_hyp_triv[intro!,simp]:
@@ -150,7 +150,7 @@ lemma ipcframe_subset_page:
   "\<lbrakk> valid_objs s; get_tcb p s = Some tcb;
      tcb_ipcframe tcb = ArchObjectCap (PageCap d p' R vms xx);
      x \<in> ptr_range (p' + (tcb_ipc_buffer tcb && mask (pageBitsForSize vms))) msg_align_bits \<rbrakk>
-     \<Longrightarrow> x \<in> ptr_range p' (pageBitsForSize vms)"
+   \<Longrightarrow> x \<in> ptr_range p' (pageBitsForSize vms)"
    apply (frule (1) valid_tcb_objs)
    apply (clarsimp simp add: valid_tcb_def ran_tcb_cap_cases)
    apply (erule set_mp[rotated])
@@ -177,11 +177,11 @@ lemma auth_ipc_buffers_member_def:
 
 lemma auth_ipc_buffers_member[Access_AC_assms]:
   "\<lbrakk> x \<in> auth_ipc_buffers s p; valid_objs s \<rbrakk>
-     \<Longrightarrow> \<exists>tcb acap. get_tcb p s = Some tcb
-                  \<and> tcb_ipcframe tcb = (ArchObjectCap acap)
-                  \<and> caps_of_state s (p, tcb_cnode_index 4) = Some (ArchObjectCap acap)
-                  \<and> Write \<in> arch_cap_auth_conferred acap
-                  \<and> x \<in> aobj_ref' acap"
+   \<Longrightarrow> \<exists>tcb acap. get_tcb p s = Some tcb
+                \<and> tcb_ipcframe tcb = (ArchObjectCap acap)
+                \<and> caps_of_state s (p, tcb_cnode_index 4) = Some (ArchObjectCap acap)
+                \<and> Write \<in> arch_cap_auth_conferred acap
+                \<and> x \<in> aobj_ref' acap"
   by (fastforce simp: auth_ipc_buffers_def caps_of_state_tcb' arch_cap_auth_conferred_def
                       vspace_cap_rights_to_auth_def ipcframe_subset_page
                split: option.splits cap.splits arch_cap.splits bool.splits if_splits)
@@ -192,12 +192,12 @@ lemma asid_pool_integrity_mono[Access_AC_assms]:
 
 lemma integrity_asids_mono[Access_AC_assms]:
     "\<lbrakk> integrity_asids aag S x a s s'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
-       \<Longrightarrow> integrity_asids aag T x a s s'"
+     \<Longrightarrow> integrity_asids aag T x a s s'"
   by (fastforce simp: integrity_asids_def)
 
 lemma arch_integrity_obj_atomic_mono[Access_AC_assms]:
   "\<lbrakk> arch_integrity_obj_atomic aag S l ao ao'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
-     \<Longrightarrow> arch_integrity_obj_atomic aag T l ao ao'"
+   \<Longrightarrow> arch_integrity_obj_atomic aag T l ao ao'"
   by (clarsimp simp: arch_integrity_obj_atomic.simps asid_pool_integrity_mono)
 
 end
@@ -223,9 +223,9 @@ context Arch begin arch_global_naming
 
 lemma integrity_asids_kh_upd_None[Access_AC_assms]:
   "\<lbrakk> ao' p = None; integrity_asids_2 aag subjects x a as as' ao ao'\<rbrakk>
-     \<Longrightarrow> integrity_asids_2 aag subjects x a as as' (ao(p := None)) ao'"
+   \<Longrightarrow> integrity_asids_2 aag subjects x a as as' (ao(p := None)) ao'"
   "\<lbrakk> ao p = None; integrity_asids_2 aag subjects x a as as' ao ao'\<rbrakk>
-     \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(p := None)) "
+   \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(p := None)) "
   unfolding integrity_asids_def opt_map_def
   by (auto split: option.split_asm)
 

@@ -208,9 +208,9 @@ locale Retype_AC_1 =
   and retype_region_proofs'_pas_refined:
     "\<lbrakk> retype_region_proofs' s ty us ptr sz n dev; invs s; pas_refined aag s;
        pas_cur_domain aag s; \<forall>x\<in> set (retype_addrs ptr ty n us). is_subject aag x \<rbrakk>
-       \<Longrightarrow> pas_refined aag (s\<lparr>kheap := \<lambda>x. if x \<in> set (retype_addrs ptr ty n us)
-                                           then Some (default_object ty dev us (cur_domain s))
-                                           else kheap s x\<rparr>)"
+     \<Longrightarrow> pas_refined aag (s\<lparr>kheap := \<lambda>x. if x \<in> set (retype_addrs ptr ty n us)
+                                         then Some (default_object ty dev us (cur_domain s))
+                                         else kheap s x\<rparr>)"
   and dmo_freeMemory_respects:
     "\<lbrace>integrity aag X st and K (is_aligned ptr bits \<and> bits < word_bits \<and> word_size_bits \<le> bits
                                    \<and> (\<forall>p \<in> ptr_range ptr bits. is_subject aag p))\<rbrace>
@@ -245,29 +245,29 @@ locale Retype_AC_1 =
   and retype_region_integrity_asids:
     "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped;
        \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_asids aag {pasSubject aag} p a s st \<rbrakk>
-       \<Longrightarrow> integrity_asids aag {pasSubject aag} p a s
-             (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
-                              then Some (default_object typ dev o_bits d)
-                              else kheap s a\<rparr>)"
+     \<Longrightarrow> integrity_asids aag {pasSubject aag} p a s
+           (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
+                            then Some (default_object typ dev o_bits d)
+                            else kheap s a\<rparr>)"
   and retype_region_integrity_hyp:
     "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped; kheap s = kheap st;
        \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_hyp aag {pasSubject aag} p s st \<rbrakk>
-       \<Longrightarrow> integrity_hyp aag {pasSubject aag} p s
-             (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
-                              then Some (default_object typ dev o_bits d)
-                              else kheap s a\<rparr>)"
+     \<Longrightarrow> integrity_hyp aag {pasSubject aag} p s
+           (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
+                            then Some (default_object typ dev o_bits d)
+                            else kheap s a\<rparr>)"
   and retype_region_integrity_fpu:
     "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped; kheap s = kheap st;
        \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_fpu aag {pasSubject aag} p s st \<rbrakk>
-       \<Longrightarrow> integrity_fpu aag {pasSubject aag} p s
-             (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
-                              then Some (default_object typ dev o_bits d)
-                              else kheap s a\<rparr>)"
+     \<Longrightarrow> integrity_fpu aag {pasSubject aag} p s
+           (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
+                            then Some (default_object typ dev o_bits d)
+                            else kheap s a\<rparr>)"
 begin
 
 lemma detype_integrity:
   "\<lbrakk> integrity aag X st s; \<forall>r\<in>refs. is_subject aag r \<rbrakk>
-     \<Longrightarrow> integrity aag X st (detype refs s)"
+   \<Longrightarrow> integrity aag X st (detype refs s)"
   by (fastforce elim!: integrity_trans simp: integrity_def detype_def
                  dest: integrity_asids_detype integrity_hyp_detype integrity_fpu_detype)
 
@@ -476,12 +476,12 @@ lemma use_retype_region_proofs':
                                                             else kheap s x\<rparr>)"
   shows
     "\<lbrakk> ty = CapTableObject \<Longrightarrow> 0 < us; \<And>s. P s \<Longrightarrow> Q (retype_addrs ptr ty n us) s \<rbrakk>
-       \<Longrightarrow> \<lbrace>\<lambda>s. valid_pspace s \<and> valid_mdb s \<and> range_cover ptr sz (obj_bits_api ty us) n \<and>
-                caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1} s \<and>
-                caps_no_overlap ptr sz s \<and> pspace_no_overlap_range_cover ptr sz s \<and>
-                (\<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s) \<and>
-                P s \<and> pas_cur_domain aag s \<and> (\<forall>x\<in> set (retype_addrs ptr ty n us). is_subject aag x)\<rbrace>
-           retype_region ptr n us ty dev \<lbrace>Q\<rbrace>"
+     \<Longrightarrow> \<lbrace>\<lambda>s. valid_pspace s \<and> valid_mdb s \<and> range_cover ptr sz (obj_bits_api ty us) n \<and>
+              caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1} s \<and>
+              caps_no_overlap ptr sz s \<and> pspace_no_overlap_range_cover ptr sz s \<and>
+              (\<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s) \<and>
+              P s \<and> pas_cur_domain aag s \<and> (\<forall>x\<in> set (retype_addrs ptr ty n us). is_subject aag x)\<rbrace>
+         retype_region ptr n us ty dev \<lbrace>Q\<rbrace>"
   apply (simp add: retype_region_def split del: if_split)
   apply wpsimp
   apply (clarsimp simp: retype_addrs_fold
@@ -561,7 +561,7 @@ lemma cte_wp_at_sym:
 lemma untyped_slots_not_in_untyped_range:
   "\<lbrakk> invs s; descendants_range_in S slot s; cte_wp_at ((=) cap) slot s;
      is_untyped_cap cap; S = untyped_range cap; T \<subseteq> S\<rbrakk>
-     \<Longrightarrow> fst slot \<notin> T"
+   \<Longrightarrow> fst slot \<notin> T"
   apply (erule contra_subsetD)
   proof -
   assume i: "invs s" and
@@ -584,7 +584,7 @@ lemma untyped_slots_not_in_untyped_range:
 lemma descendants_range_in_detype:
   "\<lbrakk> invs s; descendants_range_in S slot s; cte_wp_at ((=) cap) slot s;
      is_untyped_cap cap; S = untyped_range cap; T \<subseteq> S \<rbrakk>
-     \<Longrightarrow> descendants_range_in T slot (detype S s)"
+   \<Longrightarrow> descendants_range_in T slot (detype S s)"
   apply (erule descendants_range_in_subseteq[rotated])
   proof -
   assume i: "invs s" and
@@ -615,7 +615,7 @@ lemma descendants_range_in_detype:
 lemma descendants_range_in_detype_ex:
   "\<lbrakk> invs s; descendants_range_in S slot s; \<exists> cap. cte_wp_at ((=) cap) slot s \<and>
      is_untyped_cap cap \<and> S = untyped_range cap; T \<subseteq> S \<rbrakk>
-     \<Longrightarrow> descendants_range_in T slot (detype S s)"
+   \<Longrightarrow> descendants_range_in T slot (detype S s)"
   apply clarsimp
   apply (blast intro: descendants_range_in_detype)
   done
@@ -628,12 +628,12 @@ lemma descendants_range_in_detype_ex_strengthen:
 
 lemma untyped_cap_aligned:
   "\<lbrakk> cte_wp_at ((=) (UntypedCap dev word sz idx)) slot s; valid_objs s \<rbrakk>
-     \<Longrightarrow> is_aligned word sz"
+   \<Longrightarrow> is_aligned word sz"
   by (fastforce dest: cte_wp_at_valid_objs_valid_cap simp: valid_cap_def cap_aligned_def)
 
 lemma range_cover_subset'':
   "\<lbrakk> range_cover ptr sz sbit n; n \<noteq> 0 \<rbrakk>
-     \<Longrightarrow> {ptr ..ptr + of_nat n * 2 ^ sbit - 1} \<subseteq> {ptr && ~~ mask sz..(ptr && ~~ mask sz) + 2^ sz - 1}"
+   \<Longrightarrow> {ptr ..ptr + of_nat n * 2 ^ sbit - 1} \<subseteq> {ptr && ~~ mask sz..(ptr && ~~ mask sz) + 2^ sz - 1}"
   apply (rule order_trans, erule(1) range_cover_subset')
   apply (simp add: word_and_le2)
   done
@@ -773,7 +773,7 @@ lemma set_free_index_invs':
 (* FIXME: move *)
 lemma valid_cap_range_untyped:
   "\<lbrakk> valid_objs s; cte_wp_at ((=) (UntypedCap dev (ptr && ~~ mask sz) sz idx)) slot s \<rbrakk>
-     \<Longrightarrow> cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s"
+   \<Longrightarrow> cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s"
   apply (rule cte_wp_at_weakenE)
    apply simp
   apply (clarsimp simp: word_and_le2 p_assoc_help)
@@ -790,7 +790,7 @@ lemma aag_cap_auth_UntypedCap_idx_dev:
 lemma cte_wp_at_pas_cap_cur_auth_UntypedCap_idx_dev:
   "\<lbrakk> cte_wp_at ((=) (UntypedCap dev base sz idx)) slot s;
      is_subject aag (fst slot); pas_refined aag s\<rbrakk>
-     \<Longrightarrow> pas_cap_cur_auth aag (UntypedCap dev' base sz idx')"
+   \<Longrightarrow> pas_cap_cur_auth aag (UntypedCap dev' base sz idx')"
   apply (rule aag_cap_auth_UntypedCap_idx_dev)
   apply (auto intro: cap_cur_auth_caps_of_state simp: cte_wp_at_caps_of_state)
   done

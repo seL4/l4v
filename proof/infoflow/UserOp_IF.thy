@@ -32,12 +32,12 @@ lemma spec_equiv_valid_add_asm:
 
 lemma spec_equiv_valid_add_rel:
   "\<lbrakk> spec_equiv_valid_inv st I A (P and I st) f; \<And>s. I s s \<rbrakk>
-     \<Longrightarrow> spec_equiv_valid_inv st I A P f"
+   \<Longrightarrow> spec_equiv_valid_inv st I A P f"
   by (clarsimp simp: spec_equiv_valid_def equiv_valid_2_def)
 
 lemma spec_equiv_valid_add_rel':
   "\<lbrakk> spec_equiv_valid_inv st I A (P and A st) f; \<And>s. A s s \<rbrakk>
-     \<Longrightarrow> spec_equiv_valid_inv st I A P f"
+   \<Longrightarrow> spec_equiv_valid_inv st I A P f"
   by (clarsimp simp: spec_equiv_valid_def equiv_valid_2_def)
 
 lemma reads_equiv_g_refl:

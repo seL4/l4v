@@ -147,7 +147,7 @@ lemma set_cap_neg_cte_wp_at_other_helper':
      tcb_cap_cases (snd oslot) = Some (ogetF, osetF, orestr);
      kheap (s\<lparr>kheap := (kheap s)(fst oslot \<mapsto> TCB (osetF (\<lambda> x. cap) x))\<rparr>) (fst slot) = Some (TCB tcb);
      tcb_cap_cases (snd slot) = Some (getF, setF, restr); P (getF tcb) \<rbrakk>
-     \<Longrightarrow> cte_wp_at P slot s"
+   \<Longrightarrow> cte_wp_at P slot s"
   apply (case_tac "fst oslot = fst slot")
    apply (rule cte_wp_at_tcbI)
      apply (fastforce split: if_splits simp: obj_at_def)
@@ -162,7 +162,7 @@ lemma set_cap_neg_cte_wp_at_other_helper':
 lemma set_cap_neg_cte_wp_at_other_helper:
   "\<lbrakk> \<not> cte_wp_at P slot s; oslot \<noteq> slot; ko_at (TCB x) (fst oslot) s;
      tcb_cap_cases (snd oslot) = Some (getF, setF, restr) \<rbrakk>
-     \<Longrightarrow> \<not> cte_wp_at P slot (s\<lparr>kheap := (kheap s)(fst oslot \<mapsto> TCB (setF (\<lambda> x. cap) x))\<rparr>)"
+   \<Longrightarrow> \<not> cte_wp_at P slot (s\<lparr>kheap := (kheap s)(fst oslot \<mapsto> TCB (setF (\<lambda> x. cap) x))\<rparr>)"
   apply (rule notI)
   apply (erule cte_wp_atE)
    apply (fastforce elim: notE intro: cte_wp_at_cteI split: if_splits)
@@ -215,7 +215,7 @@ lemma set_cap_domain_sep_inv:
 
 lemma cte_wp_at_domain_sep_inv_cap:
   "\<lbrakk> domain_sep_inv irqs st s; cte_wp_at ((=) cap) slot s \<rbrakk>
-     \<Longrightarrow> domain_sep_inv_cap irqs cap"
+   \<Longrightarrow> domain_sep_inv_cap irqs cap"
   apply (case_tac slot)
   apply (auto simp: domain_sep_inv_def domain_sep_inv_cap_def split: cap.splits)
   done
@@ -237,7 +237,7 @@ lemma weak_derived_DomainCap:
 
 lemma cte_wp_at_weak_derived_domain_sep_inv_cap:
   "\<lbrakk> domain_sep_inv irqs st s; cte_wp_at (weak_derived cap) slot s \<rbrakk>
-     \<Longrightarrow> domain_sep_inv_cap irqs cap"
+   \<Longrightarrow> domain_sep_inv_cap irqs cap"
   apply (cases slot)
   apply (force simp: domain_sep_inv_def domain_sep_inv_cap_def
               split: cap.splits
@@ -258,7 +258,7 @@ lemma DomainCap_is_derived:
 
 lemma cte_wp_at_is_derived_domain_sep_inv_cap:
   "\<lbrakk> domain_sep_inv irqs st s; cte_wp_at (is_derived (cdt s) slot cap) slot s \<rbrakk>
-     \<Longrightarrow> domain_sep_inv_cap irqs cap"
+   \<Longrightarrow> domain_sep_inv_cap irqs cap"
   apply (cases slot)
   apply (fastforce simp: domain_sep_inv_def domain_sep_inv_cap_def
                   split: cap.splits
@@ -879,7 +879,7 @@ crunch setup_reply_master
 
 lemma same_object_as_domain_sep_inv_cap:
   "\<lbrakk> same_object_as a cap; domain_sep_inv_cap irqs cap \<rbrakk>
-     \<Longrightarrow> domain_sep_inv_cap irqs a"
+   \<Longrightarrow> domain_sep_inv_cap irqs a"
   by (case_tac a, simp_all add: same_object_as_def domain_sep_inv_cap_def)
 
 lemma checked_cap_insert_domain_sep_inv:

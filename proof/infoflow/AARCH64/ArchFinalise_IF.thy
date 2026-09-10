@@ -190,7 +190,7 @@ lemma aag_cap_auth_PageDirectory:
 lemma aag_cap_auth_ASIDPoolCap_asid:
   "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (ASIDPoolCap r asid)); asid' \<noteq> 0;
      asid_high_bits_of asid' = asid_high_bits_of asid; pas_refined aag s \<rbrakk>
-     \<Longrightarrow> is_subject_asid aag asid'"
+   \<Longrightarrow> is_subject_asid aag asid'"
   apply (frule (1) aag_cap_auth_ASIDPoolCap)
   apply (unfold aag_cap_auth_def)
   apply (rule is_subject_into_is_subject_asid)
@@ -199,33 +199,33 @@ lemma aag_cap_auth_ASIDPoolCap_asid:
 
 lemma aag_cap_auth_PageCap_asid:
   "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (FrameCap dev ref r sz (Some (a, b)))); pas_refined aag s \<rbrakk>
-     \<Longrightarrow> is_subject_asid aag a"
+   \<Longrightarrow> is_subject_asid aag a"
   by (auto simp: aag_cap_auth_def cap_links_asid_slot_def label_owns_asid_slot_def
           intro: pas_refined_Control_into_is_subject_asid)
 
 lemma aag_cap_auth_PageTableCap:
   "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word pt_t option)); pas_refined aag s \<rbrakk>
-     \<Longrightarrow> is_subject aag word"
+   \<Longrightarrow> is_subject aag word"
   unfolding aag_cap_auth_def
   by (simp add: clas_no_asid cap_auth_conferred_def arch_cap_auth_conferred_def
                 cli_no_irqs pas_refined_all_auth_is_owns)
 
 lemma aag_cap_auth_PageTableCap_asid:
   "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word pt_t (Some (a, b)))); pas_refined aag s \<rbrakk>
-     \<Longrightarrow> is_subject_asid aag a"
+   \<Longrightarrow> is_subject_asid aag a"
   by (auto simp: aag_cap_auth_def cap_links_asid_slot_def label_owns_asid_slot_def
           intro: pas_refined_Control_into_is_subject_asid)
 
 lemma aag_cap_auth_PageDirectoryCap:
   "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word pt_t option));  pas_refined aag s \<rbrakk>
-     \<Longrightarrow> is_subject aag word"
+   \<Longrightarrow> is_subject aag word"
   unfolding aag_cap_auth_def
   by (simp add: clas_no_asid cap_auth_conferred_def arch_cap_auth_conferred_def
                 cli_no_irqs pas_refined_all_auth_is_owns)
 
 lemma aag_cap_auth_PageDirectoryCap_asid:
   "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word pt_t (Some (a,vref)))); pas_refined aag s \<rbrakk>
-     \<Longrightarrow> is_subject_asid aag a"
+   \<Longrightarrow> is_subject_asid aag a"
   unfolding aag_cap_auth_def
   by (auto simp: cap_links_asid_slot_def label_owns_asid_slot_def
           intro: pas_refined_Control_into_is_subject_asid)
@@ -283,7 +283,7 @@ lemma valid_cur_fpu_cur_fpu_for:
 
 lemma equiv_kheap_equiv_current_fpu:
   "\<lbrakk> equiv_for P kheap s t; valid_cur_fpu s; valid_cur_fpu t; cur_fpu_for P s; cur_fpu_for P t\<rbrakk>
-     \<Longrightarrow> current_fpu s = current_fpu t"
+   \<Longrightarrow> current_fpu s = current_fpu t"
   apply (clarsimp simp: valid_cur_fpu_cur_fpu_for valid_cur_fpu_def
                         equiv_for_def is_tcb_cur_fpu_def obj_at_def)
   apply (drule_tac x=p in spec)+
@@ -297,7 +297,7 @@ lemma maybeM_when:
 
 lemma maybeM_ev:
   "\<lbrakk> \<And>v. opt = Some v \<Longrightarrow> equiv_valid_inv I A (P v) (f v) \<rbrakk>
-     \<Longrightarrow> equiv_valid_inv I A (\<lambda>s. \<forall>v. opt = Some v \<longrightarrow> P v s) (maybeM f opt)"
+   \<Longrightarrow> equiv_valid_inv I A (\<lambda>s. \<forall>v. opt = Some v \<longrightarrow> P v s) (maybeM f opt)"
   apply (subst maybeM_when)
   apply (rule equiv_valid_guard_imp)
    apply (rule_tac P="P (the opt)" in when_ev)
@@ -419,7 +419,7 @@ lemma fpu_of_None[simp]:
 
 lemma valid_cur_fpu_current_fpu_Some:
   "\<lbrakk> valid_cur_fpu s; current_fpu s = Some t \<rbrakk>
-     \<Longrightarrow> tcb_cur_fpu_of s t = Some True"
+   \<Longrightarrow> tcb_cur_fpu_of s t = Some True"
   apply (clarsimp simp: valid_cur_fpu_def)
   apply (erule_tac x=t in allE)
   apply (clarsimp simp: get_tcb_def is_tcb_cur_fpu_def obj_at_def)
@@ -639,7 +639,7 @@ lemma states_equiv_for_non_fpu_sym:
 
 lemma states_equiv_for_non_fpu_trans:
   "\<lbrakk> states_equiv_for_non_fpu P Q R S s t; states_equiv_for_non_fpu P Q R S t u \<rbrakk>
-     \<Longrightarrow> states_equiv_for_non_fpu P Q R S s u"
+   \<Longrightarrow> states_equiv_for_non_fpu P Q R S s u"
   by (auto simp: states_equiv_for_non_fpu_def
           intro: equiv_for_trans equiv_asids_trans equiv_fpu_trans equiv_hyp_trans equiv_forI
            elim: equiv_forE)
@@ -1000,8 +1000,8 @@ lemma arch_finalise_cap_reads_respects[Finalise_IF_assms]:
         being zero and thus we can't conclude it is in the current subject.*)
 lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq':
   "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (ASIDPoolCap p b)); reads_equiv aag s t; pas_refined aag x \<rbrakk>
-     \<Longrightarrow> asid_table s (asid_high_bits_of b) =
-         asid_table t (asid_high_bits_of b)"
+   \<Longrightarrow> asid_table s (asid_high_bits_of b) =
+       asid_table t (asid_high_bits_of b)"
   apply (subgoal_tac "asid_high_bits_of 0 = asid_high_bits_of 1")
    apply (case_tac "b = 0")
     apply (subgoal_tac "is_subject_asid aag 1")
@@ -1015,7 +1015,7 @@ lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq':
 
 lemma pt_cap_aligned:
   "\<lbrakk> caps_of_state s p = Some (ArchObjectCap (PageTableCap word pt_t x)); valid_caps (caps_of_state s) s \<rbrakk>
-     \<Longrightarrow> is_aligned word (pt_bits pt_t)"
+   \<Longrightarrow> is_aligned word (pt_bits pt_t)"
   by (auto simp: obj_ref_of_def pt_bits_def pageBits_def
           dest!: cap_aligned_valid[OF valid_capsD, unfolded cap_aligned_def, THEN conjunct1])
 

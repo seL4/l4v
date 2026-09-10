@@ -159,7 +159,7 @@ lemma next_revoke_eq:
 
 lemma next_revoke_eq':
   "\<lbrakk> reads_equiv_f aag s t; is_subject aag (fst src_slot) \<rbrakk>
-     \<Longrightarrow> next_revoke_cap src_slot s = next_revoke_cap src_slot t"
+   \<Longrightarrow> next_revoke_cap src_slot s = next_revoke_cap src_slot t"
   apply (rule next_revoke_eq)
    apply (fastforce simp: reads_equiv_f_def reads_equiv_def2 states_equiv_for_def equiv_for_def)
   apply simp
@@ -300,7 +300,7 @@ lemma cap_move_reads_respects_g:
 (* FIXME: MOVE *)
 lemma reads_respects_f_g':
   "\<lbrakk> reads_respects_g aag l P f; \<lbrace>silc_inv aag st and Q\<rbrace> f \<lbrace>\<lambda>_. silc_inv aag st\<rbrace> \<rbrakk>
-     \<Longrightarrow> reads_respects_f_g aag l (silc_inv aag st and P and Q) f"
+   \<Longrightarrow> reads_respects_f_g aag l (silc_inv aag st and P and Q) f"
   apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def reads_equiv_f_g_def reads_equiv_g_def)
   apply (rule conjI, fastforce)
   apply (rule conjI, fastforce)
@@ -461,7 +461,7 @@ lemma syscall_requiv_f_g:
      \<And>v. reads_respects_f_g aag l (Q' v) (h_fault v);
      \<And>v. \<lbrace>Q''' v\<rbrace> m_error v \<lbrace>R''\<rbrace>, \<lbrace>R'\<rbrace>;
      \<lbrace>P\<rbrace> m_fault \<lbrace>\<lambda>rv. Q'' rv and Q''' rv\<rbrace>, \<lbrace>Q'\<rbrace> \<rbrakk>
-     \<Longrightarrow> reads_respects_f_g aag l P (syscall m_fault h_fault m_error h_error m_finalise)"
+   \<Longrightarrow> reads_respects_f_g aag l P (syscall m_fault h_fault m_error h_error m_finalise)"
   apply (rule syscall_reads_respects_f_g[where Q''="\<lambda>rv. Q'' rv and Q''' rv"])
         apply (unfold validE_def)
         apply (assumption)+

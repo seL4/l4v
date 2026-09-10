@@ -230,8 +230,8 @@ lemma asid_high_bits_0_eq_1:
 
 lemma requiv_riscv_asid_table_asid_high_bits_of_asid_eq:
   "\<lbrakk> is_subject_asid aag asid; reads_equiv aag s t; asid \<noteq> 0 \<rbrakk>
-     \<Longrightarrow> riscv_asid_table (arch_state s) (asid_high_bits_of asid) =
-         riscv_asid_table (arch_state t) (asid_high_bits_of asid)"
+   \<Longrightarrow> riscv_asid_table (arch_state s) (asid_high_bits_of asid) =
+       riscv_asid_table (arch_state t) (asid_high_bits_of asid)"
   apply (erule reads_equivE)
   apply (fastforce simp: equiv_asids_def equiv_asid_def intro: aag_can_read_own_asids)
   done
@@ -262,15 +262,15 @@ lemma find_vspace_for_asid_reads_respects:
 
 lemma ptes_of_reads_equiv:
   "\<lbrakk> is_subject aag (table_base ptr); reads_equiv aag s t \<rbrakk>
-     \<Longrightarrow> ptes_of s ptr = ptes_of t ptr"
+   \<Longrightarrow> ptes_of s ptr = ptes_of t ptr"
   by (fastforce elim: reads_equivE equiv_forE simp: ptes_of_def obind_def opt_map_def)
 
 lemma pt_walk_reads_equiv:
   "\<lbrakk> reads_equiv aag s t; pas_refined aag s; pspace_aligned s; valid_asid_table s;
      valid_vspace_objs s; is_subject aag pt; vptr \<in> user_region;
      level \<le> max_pt_level; vs_lookup_table level asid vptr s = Some (level, pt) \<rbrakk>
-     \<Longrightarrow> pt_walk level bot_level pt vptr (ptes_of s) =
-         pt_walk level bot_level pt vptr (ptes_of t)"
+   \<Longrightarrow> pt_walk level bot_level pt vptr (ptes_of s) =
+       pt_walk level bot_level pt vptr (ptes_of t)"
   apply (induct level arbitrary: pt; clarsimp)
   apply (simp (no_asm) add: pt_walk.simps)
   apply (clarsimp simp: obind_def split: if_splits)
@@ -396,11 +396,11 @@ lemma perform_page_invocation_reads_respects:
 
 lemma equiv_asids_riscv_asid_table_update:
   "\<lbrakk> equiv_asids R s t; kheap s pool_ptr = kheap t pool_ptr \<rbrakk>
-     \<Longrightarrow> equiv_asids R
-           (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := (asid_table s)
-                                                             (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)
-           (t\<lparr>arch_state := arch_state t\<lparr>riscv_asid_table := (asid_table t)
-                                                             (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)"
+   \<Longrightarrow> equiv_asids R
+         (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := (asid_table s)
+                                                           (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)
+         (t\<lparr>arch_state := arch_state t\<lparr>riscv_asid_table := (asid_table t)
+                                                           (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)"
   by (clarsimp simp: equiv_asids_def equiv_asid_def asid_pool_at_kheap opt_map_def)
 
 lemma riscv_asid_table_update_reads_respects:
@@ -545,8 +545,8 @@ lemma riscv_asid_table_delete_ev2:
 lemma requiv_riscv_asid_table_asid_high_bits_of_asid_eq':
   "\<lbrakk> (\<forall>asid'. asid' \<noteq> 0 \<and> asid_high_bits_of asid' = asid_high_bits_of base
               \<longrightarrow> is_subject_asid aag asid'); reads_equiv aag s t \<rbrakk>
-     \<Longrightarrow> riscv_asid_table (arch_state s) (asid_high_bits_of base) =
-         riscv_asid_table (arch_state t) (asid_high_bits_of base)"
+   \<Longrightarrow> riscv_asid_table (arch_state s) (asid_high_bits_of base) =
+       riscv_asid_table (arch_state t) (asid_high_bits_of base)"
   apply (insert asid_high_bits_0_eq_1)
   apply (case_tac "base = 0")
    apply (subgoal_tac "is_subject_asid aag 1")
@@ -722,7 +722,7 @@ lemma delete_asid_pool_globals_equiv[wp]:
 lemma vs_lookup_slot_not_global:
   "\<lbrakk> vs_lookup_slot level asid vref s = Some (level, pte); level \<le> max_pt_level;
      pte_refs_of s pte = Some pt; vref \<in> user_region; invs s \<rbrakk>
-     \<Longrightarrow> pt \<notin> global_refs s"
+   \<Longrightarrow> pt \<notin> global_refs s"
   apply (prop_tac "vs_lookup_target level asid vref s = Some (level, pt)")
    apply (clarsimp simp: vs_lookup_target_def obind_def split: if_splits)
   apply (erule (2) vs_lookup_target_not_global)
@@ -1201,7 +1201,7 @@ lemma get_thread_state_globals_equiv[wp]:
 (* generalises auth_ipc_buffers_mem_Write *)
 lemma auth_ipc_buffers_mem_Write':
   "\<lbrakk> x \<in> auth_ipc_buffers s thread; pas_refined aag s; valid_objs s \<rbrakk>
-     \<Longrightarrow> (pasObjectAbs aag thread, Write, pasObjectAbs aag x) \<in> pasPolicy aag"
+   \<Longrightarrow> (pasObjectAbs aag thread, Write, pasObjectAbs aag x) \<in> pasPolicy aag"
   apply (clarsimp simp add: auth_ipc_buffers_member_def)
   apply (drule (1) cap_auth_caps_of_state)
   apply simp

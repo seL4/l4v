@@ -24,12 +24,12 @@ lemma un_eq:
 
 lemma Un_eq:
   "\<lbrakk> \<And>x y. \<lbrakk> x \<in> xs; y \<in> ys \<rbrakk> \<Longrightarrow> P x = Q y; \<exists>x. x \<in> xs; \<exists>y. y \<in> ys \<rbrakk>
-     \<Longrightarrow> (\<Union>x \<in> xs. P x) = (\<Union>y \<in> ys. Q y)"
+   \<Longrightarrow> (\<Union>x \<in> xs. P x) = (\<Union>y \<in> ys. Q y)"
   by auto
 
 lemma Int_eq:
   "\<lbrakk> \<And>x y. \<lbrakk> x \<in> xs; y \<in> ys \<rbrakk> \<Longrightarrow> P x = Q y; \<exists>x. x \<in> xs; \<exists>y. y \<in> ys \<rbrakk>
-     \<Longrightarrow> (\<Inter>x \<in> xs. P x) = (\<Inter>y \<in> ys. Q y)"
+   \<Longrightarrow> (\<Inter>x \<in> xs. P x) = (\<Inter>y \<in> ys. Q y)"
   by auto
 
 lemma Un_eq_Int:
@@ -70,7 +70,7 @@ qed
 
 lemma Run_trans:
   "\<lbrakk> (s,t) \<in> Run Stepf as; (t,u) \<in> Run Stepf bs \<rbrakk>
-     \<Longrightarrow> (s,u) \<in> Run Stepf (as @ bs)"
+   \<Longrightarrow> (s,u) \<in> Run Stepf (as @ bs)"
   by (induct as arbitrary: bs s t u) auto
 
 lemma Run_app:
@@ -201,7 +201,7 @@ lemma reachable_induct_helper:
 
 lemma reachable_induct:
   "\<lbrakk> \<And>s s' a. reachable s \<Longrightarrow> (s,s') \<in> (Step a) \<Longrightarrow> P s \<Longrightarrow> P s'; reachable s1; P s0 \<rbrakk>
-     \<Longrightarrow> P s1"
+   \<Longrightarrow> P s1"
   apply (drule reachable_Run)
   apply (elim exE)
   apply (rule reachable_induct_helper)
@@ -341,7 +341,7 @@ lemma s0_reachable:
 lemma foldl_foldl_Step:
   "\<lbrakk> x \<in> foldl (\<lambda>S j. data_type.Step A j `` S) M as;
      M \<subseteq> foldl (\<lambda>S j. data_type.Step A j `` S) B js \<rbrakk>
-     \<Longrightarrow> x \<in> foldl (\<lambda>S j. data_type.Step A j `` S) (foldl (\<lambda>S j. data_type.Step A j `` S) B js) as"
+   \<Longrightarrow> x \<in> foldl (\<lambda>S j. data_type.Step A j `` S) (foldl (\<lambda>S j. data_type.Step A j `` S) B js) as"
   apply (induct as arbitrary: x M js B rule: rev_induct)
    apply fastforce
   apply simp
@@ -356,7 +356,7 @@ lemma foldl_foldl_Step:
 
 lemma reachable_Fin:
   "\<lbrakk> reachable s; x \<in> steps (Simulation.Step A) (Init A s) as \<rbrakk>
-     \<Longrightarrow> reachable (Fin A x)"
+   \<Longrightarrow> reachable (Fin A x)"
   apply (cut_tac s=s in Init_inv_Fin, assumption)
   apply (clarsimp simp: reachable_def execution_def steps_def)
   apply (rule_tac x="js@as" in exI)
@@ -519,7 +519,7 @@ lemma uwr_equiv_sym:
 
 lemma uwr_equiv_trans:
   "\<lbrakk> reachable t; uwr_equiv s as t bs x; uwr_equiv t bs u cs x \<rbrakk>
-     \<Longrightarrow> uwr_equiv s as u cs x"
+   \<Longrightarrow> uwr_equiv s as u cs x"
   apply (clarsimp simp: uwr_equiv_def)
   apply (cut_tac s=t and js=bs in reachable_enabled)
    apply assumption
@@ -578,7 +578,7 @@ lemma obs_equiv_sym:
 
 lemma obs_equiv_trans:
   "\<lbrakk> reachable t; obs_equiv s as t bs u; obs_equiv t bs x cs u \<rbrakk>
-     \<Longrightarrow> obs_equiv s as x cs u"
+   \<Longrightarrow> obs_equiv s as x cs u"
   apply (clarsimp simp: obs_equiv_def)
   apply (cut_tac s=t and js=bs in reachable_enabled, assumption, blast)
   done
@@ -620,7 +620,7 @@ where
 
 lemma notin_policyI:
   "\<lbrakk> dom a s \<notin> sources (a # list) s u; \<exists>s'. (s,s') \<in> Step a \<and> ua \<in> sources list s' u \<rbrakk>
-     \<Longrightarrow> (dom a s,ua) \<notin> policy"
+   \<Longrightarrow> (dom a s,ua) \<notin> policy"
   by (clarsimp simp: sources_Cons)
 
 lemma Noninfluence_strong_Noninterference_strong:
@@ -670,7 +670,7 @@ definition confidentiality_u :: bool where
 
 lemma no_domain_visible_nondeterminism:
   "\<lbrakk> confidentiality_u; reachable s; (s,s') \<in> Step a; (s,s'') \<in> Step a \<rbrakk>
-     \<Longrightarrow> s' \<sim>d\<sim> s''"
+   \<Longrightarrow> s' \<sim>d\<sim> s''"
   apply (clarsimp simp: confidentiality_u_def)
   apply (fastforce intro: uwr_refl)
   done
@@ -695,7 +695,7 @@ lemma integrity_u_more:
 
 lemma integrity_uD:
   "\<lbrakk> integrity_u; reachable s; (dom a s,u) \<notin> policy; s \<sim>u\<sim> t; (s,s') \<in> Step a \<rbrakk>
-     \<Longrightarrow> s' \<sim>u\<sim> t"
+   \<Longrightarrow> s' \<sim>u\<sim> t"
   apply (drule integrity_u_more)
   apply (simp add: integrity_u_more_def)
   done
@@ -725,7 +725,7 @@ lemma impCE':
 
 lemma confidentiality_u_weak:
   "\<lbrakk> confidentiality_u_weak; integrity_u \<rbrakk>
-     \<Longrightarrow> confidentiality_u"
+   \<Longrightarrow> confidentiality_u"
   apply (clarsimp simp: confidentiality_u_def)
   apply (erule impCE')
    apply (subst (asm) confidentiality_u_weak_def, blast)
@@ -762,7 +762,7 @@ lemma Noninfluence_strong_uwr_Noninfluence_strong:
 lemma sched_equiv_preserved:
   "\<lbrakk> confidentiality_u; reachable s; reachable t;
      s \<sim>schedDomain\<sim> t; (s,s') \<in> Step a; (t,t') \<in> Step a \<rbrakk>
-     \<Longrightarrow> s' \<sim>schedDomain\<sim> t'"
+   \<Longrightarrow> s' \<sim>schedDomain\<sim> t'"
   apply (case_tac "dom a s = schedDomain")
    apply (subst (asm) confidentiality_u_def)
    apply (drule_tac x=a in spec)
@@ -777,7 +777,7 @@ lemma sched_equiv_preserved:
 lemma sched_equiv_preserved_left:
   "\<lbrakk> integrity_u; s \<sim>schedDomain\<sim> t;
      dom a s \<noteq> schedDomain; (s,s') \<in> Step a; reachable s \<rbrakk>
-     \<Longrightarrow> s' \<sim>schedDomain\<sim> t"
+   \<Longrightarrow> s' \<sim>schedDomain\<sim> t"
   by (blast intro: integrity_uD schedNotGlobalChannel)
 
 lemma Noninfluence_gen_Noninterference:
@@ -845,7 +845,7 @@ lemma sources_refl:
 
 lemma schedDomain_in_sources_Cons:
   "\<lbrakk> reachable s; dom a s = schedDomain \<rbrakk>
-     \<Longrightarrow> dom a s \<in> sources (a#as) s u"
+   \<Longrightarrow> dom a s \<in> sources (a#as) s u"
   apply (unfold sources_Cons)
   apply (erule ssubst)
   apply (rule UnI2)
@@ -882,12 +882,12 @@ qed
 
 lemma sources_eq:
   "\<lbrakk> confidentiality_u; s \<sim>schedDomain\<sim> t; reachable s; reachable t \<rbrakk>
-     \<Longrightarrow> sources as s u = sources as t u"
+   \<Longrightarrow> sources as s u = sources as t u"
   by (rule sources_eq'[rule_format], simp)
 
 lemma sameFor_sources_dom:
   "\<lbrakk> s \<approx>(sources (a#as) s u)\<approx> t; dom a s \<leadsto> x; x \<in> sources as s' u; (s,s') \<in> Step a \<rbrakk>
-     \<Longrightarrow> s \<sim>(dom a s)\<sim> t"
+   \<Longrightarrow> s \<sim>(dom a s)\<sim> t"
   apply (simp add: sameFor_dom_def)
   apply (erule bspec)
   apply (subst sources_Cons)
@@ -898,7 +898,7 @@ lemma sameFor_sources_dom:
 lemma sources_unwinding_step:
   "\<lbrakk> s \<approx>(sources (a#as) s u)\<approx> t; s \<sim>schedDomain\<sim> t; confidentiality_u;
      (s,s') \<in> Step a; (t,t') \<in> Step a; reachable s; reachable t \<rbrakk>
-     \<Longrightarrow> s' \<approx>(sources as s' u)\<approx> t'"
+   \<Longrightarrow> s' \<approx>(sources as s' u)\<approx> t'"
   apply (clarsimp simp: sameFor_dom_def sources_Cons)
   apply (subst (asm) confidentiality_u_def)
   apply (drule_tac x=a in spec)
@@ -912,7 +912,7 @@ lemma ipurge_eq'_helper:
   "\<lbrakk> s \<in> ss; dom a s \<in> sources (a # as) s u; \<forall>s\<in>ts. dom a s \<notin> sources (a # as) s u;
      (\<forall>s t. s \<in> ss \<and> t \<in> ts \<longrightarrow> s \<sim>schedDomain\<sim> t \<and> reachable s \<and> reachable t);
      t \<in> ts; confidentiality_u \<rbrakk>
-     \<Longrightarrow> False"
+   \<Longrightarrow> False"
   apply (cut_tac s=s and t=t and as=as and u=u in sources_eq, simp+)
   apply (clarsimp  simp: sources_Cons | safe)+
    apply (rename_tac s')
@@ -963,7 +963,7 @@ qed
 
 lemma ipurge_eq:
   "\<lbrakk> s \<sim>schedDomain\<sim> t; reachable s; reachable t; confidentiality_u \<rbrakk>
-     \<Longrightarrow> ipurge u as {s} = ipurge u as {t}"
+   \<Longrightarrow> ipurge u as {s} = ipurge u as {t}"
   by (rule ipurge_eq'[rule_format], simp)
 
 lemma Noninfluence_uwr_Noninfluence_strong_uwr:
@@ -1011,7 +1011,7 @@ lemma Noninfluence_Noninfluence_strong:
 lemma dom_in_sources_Cons:
   "\<lbrakk> confidentiality_u; reachable s; reachable t; s \<approx>(sources (a#as) s u)\<approx> t;
      s \<sim>schedDomain\<sim> t; (dom a s \<in> sources (a#as) s u) \<rbrakk>
-     \<Longrightarrow> (dom a t \<in> sources (a#as) t u)"
+   \<Longrightarrow> (dom a t \<in> sources (a#as) t u)"
   apply (subgoal_tac "dom a s = dom a t")
    apply (fastforce dest: sources_eq)
   apply (blast intro: schedIncludesCurrentDom)
@@ -1020,24 +1020,24 @@ lemma dom_in_sources_Cons:
 lemma uwr_equiv_Cons_bothI:
   "\<lbrakk> reachable s; reachable t;
       \<forall>s' t'. (s,s') \<in> Step a \<and> (t,t') \<in> Step b \<longrightarrow> uwr_equiv s' as t' bs u \<rbrakk>
-     \<Longrightarrow> uwr_equiv s (a # as) t (b # bs) u"
+   \<Longrightarrow> uwr_equiv s (a # as) t (b # bs) u"
   by (fastforce simp: uwr_equiv_def execution_Run reachable_Step)
 
 lemma uwr_equiv_Cons_leftI:
   "\<lbrakk> reachable s; \<forall>s'. (s,s') \<in> Step a \<longrightarrow> uwr_equiv s' as t bs u \<rbrakk>
-     \<Longrightarrow> uwr_equiv s (a # as) t bs u"
+   \<Longrightarrow> uwr_equiv s (a # as) t bs u"
   by (fastforce simp: uwr_equiv_def execution_Run reachable_Step)
 
 lemma notin_policyI':
   "\<lbrakk> reachable s; dom a s \<notin> sources (a # list) s u; (s,s') \<in> Step a; ua \<in> sources list s' u \<rbrakk>
-     \<Longrightarrow> (dom a s,ua) \<notin> policy"
+   \<Longrightarrow> (dom a s,ua) \<notin> policy"
   apply (rule notin_policyI)
    apply auto
   done
 
 lemma sources_eq_Step:
   "\<lbrakk> integrity_u; confidentiality_u; reachable s; (s,s') \<in> Step a; dom a s \<noteq> schedDomain \<rbrakk>
-     \<Longrightarrow> (sources as s' u) = (sources as s u)"
+   \<Longrightarrow> (sources as s' u) = (sources as s u)"
   apply (rule sources_eq, simp+)
     apply (rule_tac t=s and s=s and a=a in sched_equiv_preserved_left)
         apply (auto simp add: uwr_refl reachable_Step)
@@ -1047,7 +1047,7 @@ lemma sources_equiv_preserved_left:
   "\<lbrakk> integrity_u; confidentiality_u; reachable s; reachable t; s \<sim>schedDomain\<sim> t;
      dom a s \<notin> sources (a#as) s u; s \<approx>sources (a#as) s u\<approx> t; (s,s') \<in> Step a;
      dom a s \<noteq> schedDomain \<rbrakk>
-     \<Longrightarrow> s' \<approx>sources as s' u\<approx> t"
+   \<Longrightarrow> s' \<approx>sources as s' u\<approx> t"
   apply (clarsimp simp: sameFor_dom_def)
   apply (rename_tac v)
   apply (case_tac "(dom a s, v) \<in> policy")
@@ -1130,7 +1130,7 @@ lemma Nonleakage_gen:
 
 lemma Noninterference:
   "\<lbrakk> confidentiality_u_weak; output_consistent; integrity_u \<rbrakk>
-     \<Longrightarrow> Noninterference"
+   \<Longrightarrow> Noninterference"
   apply (rule Noninfluence_gen_Noninterference)
    apply assumption
   apply (blast intro: Noninfluence_gen confidentiality_u_weak)
@@ -1138,7 +1138,7 @@ lemma Noninterference:
 
 lemma Noninterference_strong:
   "\<lbrakk> confidentiality_u_weak; output_consistent; integrity_u \<rbrakk>
-     \<Longrightarrow> Noninterference_strong"
+   \<Longrightarrow> Noninterference_strong"
   apply (rule Noninfluence_gen_Noninterference_strong)
    apply assumption
   apply (blast intro: Noninfluence_gen confidentiality_u_weak)
@@ -1146,7 +1146,7 @@ lemma Noninterference_strong:
 
 lemma Noninfluence:
   "\<lbrakk> confidentiality_u_weak; output_consistent; integrity_u \<rbrakk>
-     \<Longrightarrow> Noninfluence"
+   \<Longrightarrow> Noninfluence"
   apply (rule Noninfluence_gen_Noninfluence)
    apply assumption
   apply (blast intro: Noninfluence_gen confidentiality_u_weak)
@@ -1154,7 +1154,7 @@ lemma Noninfluence:
 
 lemma Noninfluence_strong:
   "\<lbrakk> confidentiality_u_weak; output_consistent; integrity_u \<rbrakk>
-     \<Longrightarrow> Noninfluence_strong"
+   \<Longrightarrow> Noninfluence_strong"
   apply (rule Noninfluence_Noninfluence_strong)
    apply (blast intro: confidentiality_u_weak)
   apply (blast intro: Noninfluence)
@@ -1163,14 +1163,14 @@ lemma Noninfluence_strong:
 
 lemma Noninfluence_uwr:
   "\<lbrakk> confidentiality_u_weak; integrity_u \<rbrakk>
-     \<Longrightarrow> Noninfluence_uwr"
+   \<Longrightarrow> Noninfluence_uwr"
   apply (rule Noninfluence_gen_Noninfluence_uwr)
   apply (blast intro: Noninfluence_gen confidentiality_u_weak)
   done
 
 lemma Noninfluence_strong_uwr:
   "\<lbrakk> confidentiality_u_weak; integrity_u \<rbrakk>
-     \<Longrightarrow> Noninfluence_strong_uwr"
+   \<Longrightarrow> Noninfluence_strong_uwr"
   apply (rule Noninfluence_uwr_Noninfluence_strong_uwr)
    apply (blast intro: confidentiality_u_weak)
   apply (blast intro: Noninfluence_uwr)
@@ -1178,12 +1178,12 @@ lemma Noninfluence_strong_uwr:
 
 lemma sources_Step:
   "\<lbrakk> reachable s; (dom a s, u) \<notin> policy \<rbrakk>
-     \<Longrightarrow> sources [a] s u = {u}"
+   \<Longrightarrow> sources [a] s u = {u}"
   by (auto simp: sources_Cons sources_Nil enabled_Step dest: enabled_Step)
 
 lemma sources_Step_2:
   "\<lbrakk> reachable s; (dom a s, u) \<in> policy \<rbrakk>
-     \<Longrightarrow> sources [a] s u = {dom a s,u}"
+   \<Longrightarrow> sources [a] s u = {dom a s,u}"
   by (auto simp: sources_Cons sources_Nil enabled_Step dest: enabled_Step)
 
 lemma execution_Nil:
@@ -1224,7 +1224,7 @@ lemma Nonleakage_gen_equiv_confidentiality_u:
 
 lemma non_sched_doms_cannot_schedule:
   "\<lbrakk> integrity_u; reachable s; dom a s \<noteq> schedDomain; (s,s') \<in> Step a \<rbrakk>
-     \<Longrightarrow> s \<sim>schedDomain\<sim> s'"
+   \<Longrightarrow> s \<sim>schedDomain\<sim> s'"
   apply (drule_tac u=schedDomain in integrity_uD)
       apply assumption
      apply (erule contrapos_nn)
@@ -1245,7 +1245,7 @@ text \<open>
 \<close>
 lemma integrity_u_and_single_event_systems:
   "\<lbrakk> integrity_u; reachable s; dom a s \<noteq> schedDomain; s' \<in> execution A s as; \<forall>y. y = a \<rbrakk>
-     \<Longrightarrow> dom e s' \<noteq> schedDomain"
+   \<Longrightarrow> dom e s' \<noteq> schedDomain"
   apply (frule_tac x=e in spec)
   apply (erule ssubst)
   apply (rule_tac P="\<lambda>x. x \<noteq> schedDomain" in subst[rotated])

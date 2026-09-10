@@ -57,17 +57,17 @@ locale CNode_AC_1 =
   and sata_update:
     "\<lbrakk> pas_wellformed aag; cap_links_asid_slot aag (pasObjectAbs aag (fst ptr)) cap;
        state_asids_to_policy_arch aag (caps :: cslot_ptr \<Rightarrow> cap option) as vrefs \<subseteq> pasPolicy aag \<rbrakk>
-       \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap)) as vrefs \<subseteq> pasPolicy aag"
+     \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap)) as vrefs \<subseteq> pasPolicy aag"
   and sata_update2:
     "\<lbrakk> pas_wellformed aag; cap_links_asid_slot aag (pasObjectAbs aag (fst ptr)) cap;
        cap_links_asid_slot aag (pasObjectAbs aag (fst ptr')) cap';
        state_asids_to_policy_arch aag caps (as :: arch_state) vrefs \<subseteq> pasPolicy aag \<rbrakk>
-       \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap, ptr' \<mapsto> cap')) as vrefs \<subseteq> pasPolicy aag"
+     \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap, ptr' \<mapsto> cap')) as vrefs \<subseteq> pasPolicy aag"
   and state_vrefs_tcb_upd:
     "tcb_at tptr s \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(tptr \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
   and state_vrefs_simple_type_upd:
     "\<lbrakk> ko_at ko p s; is_simple_type ko; a_type ko = a_type (f (val :: 'b)) \<rbrakk>
-       \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(p \<mapsto> f val)\<rparr>) = state_vrefs s"
+     \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(p \<mapsto> f val)\<rparr>) = state_vrefs s"
   and a_type_arch_object_not_tcb[simp]:
     "a_type (ArchObj arch_kernel_obj) \<noteq> ATCB"
   and set_cap_state_vrefs:
@@ -87,25 +87,25 @@ locale CNode_AC_1 =
      \<lbrakk> \<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
        cap_insert_ext a b c d e
        \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace> \<rbrakk>
-       \<Longrightarrow> \<lbrace>integrity aag X st and Q\<rbrace> cap_insert_ext a b c d e \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+     \<Longrightarrow> \<lbrace>integrity aag X st and Q\<rbrace> cap_insert_ext a b c d e \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   and cap_move_ext_list_integ_lift:
     "\<And>Q a b c d.
      \<lbrakk> \<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
        cap_move_ext a b c d
        \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace> \<rbrakk>
-       \<Longrightarrow> \<lbrace>integrity aag X st and Q\<rbrace> cap_move_ext a b c d \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+     \<Longrightarrow> \<lbrace>integrity aag X st and Q\<rbrace> cap_move_ext a b c d \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   and cap_swap_ext_extended_list_integ_lift:
     "\<And>Q a b c d.
      \<lbrakk> \<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
        cap_swap_ext a b c d
        \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace> \<rbrakk>
-       \<Longrightarrow> \<lbrace>integrity aag X st and Q\<rbrace> cap_swap_ext a b c d \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+     \<Longrightarrow> \<lbrace>integrity aag X st and Q\<rbrace> cap_swap_ext a b c d \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   and empty_slot_extended_list_integ_lift:
     "\<And>Q a b.
      \<lbrakk> \<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
        empty_slot_ext a b
        \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace> \<rbrakk>
-       \<Longrightarrow> \<lbrace>integrity aag X st and Q\<rbrace> empty_slot_ext a b \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+     \<Longrightarrow> \<lbrace>integrity aag X st and Q\<rbrace> empty_slot_ext a b \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   and set_irq_state_respects[wp]:
     "\<lbrace>integrity aag X st and K (is_subject_irq aag irq)\<rbrace>
      set_irq_state irqst irq
@@ -218,7 +218,7 @@ lemma lookup_slot_for_cnode_op_authorised[wp]:
 (* FIXME MOVE *)
 lemma is_cnode_into_is_subject:
   "\<lbrakk> pas_cap_cur_auth aag cap; pas_refined aag s; is_cnode_cap cap \<rbrakk>
-     \<Longrightarrow> \<forall>x\<in>obj_refs_ac cap. is_subject aag x"
+   \<Longrightarrow> \<forall>x\<in>obj_refs_ac cap. is_subject aag x"
   by (clarsimp simp: is_cap_simps cap_auth_conferred_def
                      pas_refined_all_auth_is_owns aag_cap_auth_def)
 
@@ -278,7 +278,7 @@ lemma set_cap_thread_bound_ntfns[wp]:
 lemma sita_caps_update:
   "\<lbrakk> pas_wellformed aag; state_irqs_to_policy_aux aag caps \<subseteq> pasPolicy aag;
      cap_links_irq aag (pasObjectAbs aag (fst ptr)) cap \<rbrakk>
-     \<Longrightarrow> state_irqs_to_policy_aux aag (caps(ptr \<mapsto> cap)) \<subseteq> pasPolicy aag"
+   \<Longrightarrow> state_irqs_to_policy_aux aag (caps(ptr \<mapsto> cap)) \<subseteq> pasPolicy aag"
   by (fastforce intro: state_irqs_to_policy_aux.intros
                  elim: state_irqs_to_policy_aux.cases
                  simp: cap_links_irq_def split: if_splits)
@@ -287,7 +287,7 @@ lemma sita_caps_update2:
   "\<lbrakk> pas_wellformed aag; state_irqs_to_policy_aux aag caps \<subseteq> pasPolicy aag;
      cap_links_irq aag (pasObjectAbs aag (fst ptr')) cap';
      cap_links_irq aag (pasObjectAbs aag (fst ptr)) cap \<rbrakk>
-     \<Longrightarrow> state_irqs_to_policy_aux aag (caps(ptr \<mapsto> cap, ptr' \<mapsto> cap')) \<subseteq> pasPolicy aag"
+   \<Longrightarrow> state_irqs_to_policy_aux aag (caps(ptr \<mapsto> cap, ptr' \<mapsto> cap')) \<subseteq> pasPolicy aag"
   by (fastforce intro: state_irqs_to_policy_aux.intros
                  elim: state_irqs_to_policy_aux.cases
                  simp: cap_links_irq_def split: if_splits)
@@ -435,12 +435,12 @@ end
 
 lemma reply_masters_mdbD1:
  "\<lbrakk> reply_masters_mdb m cs ; cs slot = Some (ReplyCap t True R) \<rbrakk>
-    \<Longrightarrow> m slot = None"
+  \<Longrightarrow> m slot = None"
   by (fastforce simp:reply_masters_mdb_def simp del:split_paired_All)
 
 lemma reply_cap_no_grand_parent:
   "\<lbrakk> m \<Turnstile> pptr \<rightarrow>* slot ; reply_mdb m cs ; cs slot = Some (ReplyCap t False R) \<rbrakk>
-     \<Longrightarrow> pptr = slot \<or> (m \<Turnstile> pptr \<leadsto> slot \<and> (\<exists> R'. cs pptr = Some (ReplyCap t True R')))"
+   \<Longrightarrow> pptr = slot \<or> (m \<Turnstile> pptr \<leadsto> slot \<and> (\<exists> R'. cs pptr = Some (ReplyCap t True R')))"
   apply (clarsimp simp: reply_mdb_def del: disjCI)
   apply (erule(1) reply_caps_mdbE)
   apply (drule(1) reply_masters_mdbD1)
@@ -1348,13 +1348,13 @@ end
 lemma aag_owned_cdt_link:
   "\<lbrakk> cdt s x = Some y; is_subject aag (fst y);
      pas_refined aag s; \<not> is_transferable (caps_of_state s x) \<rbrakk>
-     \<Longrightarrow> is_subject aag (fst x)"
+   \<Longrightarrow> is_subject aag (fst x)"
   by (fastforce dest: sta_cdt pas_refined_mem pas_refined_Control)
 
 (* FIXME: MOVE *)
 lemma descendants_of_owned_or_transferable:
   "\<lbrakk> valid_mdb s; pas_refined aag s; p \<in> descendants_of q (cdt s); is_subject aag (fst q) \<rbrakk>
-     \<Longrightarrow> is_subject aag (fst p) \<or> is_transferable (caps_of_state s p)"
+   \<Longrightarrow> is_subject aag (fst p) \<or> is_transferable (caps_of_state s p)"
    using all_children_descendants_of pas_refined_all_children by blast
 
 
@@ -1454,7 +1454,7 @@ lemma cli_cap_irqs_controlled:
 lemma auth_derived_caps_of_state_impls:
   "\<lbrakk> auth_derived cap cap'; caps_of_state s ptr = Some cap';
      pas_refined aag s; is_subject aag (fst ptr) \<rbrakk>
-     \<Longrightarrow> pas_cap_cur_auth aag cap"
+   \<Longrightarrow> pas_cap_cur_auth aag cap"
   unfolding aag_cap_auth_def
   apply (frule (1) clas_caps_of_state)
   apply (frule (1) cli_caps_of_state)
@@ -1577,7 +1577,7 @@ lemma auth_derived_mask_cap:
 
 lemma auth_derived_update_cap_data:
   "\<lbrakk> auth_derived cap cap'; update_cap_data pres w cap \<noteq> NullCap \<rbrakk>
-     \<Longrightarrow> auth_derived (update_cap_data pres w cap) cap'"
+   \<Longrightarrow> auth_derived (update_cap_data pres w cap) cap'"
   apply (clarsimp simp: update_cap_data_def badge_update_def Let_def split_def
                         is_cap_simps auth_derived_arch_update_cap_data
                  split: if_split_asm)
