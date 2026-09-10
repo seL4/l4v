@@ -23,7 +23,7 @@ definition ipc_buffer_has_auth :: "'a PAS \<Rightarrow> obj_ref \<Rightarrow> ob
 lemma ipc_buffer_has_auth_wordE:
   "\<lbrakk> ipc_buffer_has_auth aag thread (Some buf); p \<in> ptr_range (buf + off) sz;
      is_aligned off sz; sz \<le> msg_align_bits; off < 2 ^ msg_align_bits \<rbrakk>
-     \<Longrightarrow> abs_has_auth_to aag Write thread p"
+   \<Longrightarrow> abs_has_auth_to aag Write thread p"
   unfolding ipc_buffer_has_auth_def
   by (fastforce elim: bspec set_mp[OF ptr_range_subset])
 
@@ -140,7 +140,7 @@ lemma delete_objects_invs_ex:
 
 lemma is_subject_asid_into_loas:
   "\<lbrakk> is_subject_asid aag asid; pas_refined aag s \<rbrakk>
-     \<Longrightarrow> label_owns_asid_slot aag (pasSubject aag) asid"
+   \<Longrightarrow> label_owns_asid_slot aag (pasSubject aag) asid"
   unfolding label_owns_asid_slot_def
   by (clarsimp simp: pas_refined_refl)
 
@@ -158,7 +158,7 @@ locale Arch_AC_1 =
      \<lbrace>\<lambda>_ ms. integrity aag X st (s\<lparr>machine_state := ms\<rparr>)\<rbrace>"
   and mul_add_word_size_lt_msg_align_bits_ofnat:
   "\<lbrakk> n < 2 ^ (msg_align_bits - word_size_bits); k < word_size \<rbrakk>
-     \<Longrightarrow> of_nat n * of_nat word_size + k < (2 :: obj_ref) ^ msg_align_bits"
+   \<Longrightarrow> of_nat n * of_nat word_size + k < (2 :: obj_ref) ^ msg_align_bits"
   and zero_less_word_size[simp]:
     "0 < (word_size :: obj_ref)"
 begin

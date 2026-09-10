@@ -185,7 +185,7 @@ lemma dmo_no_mem_globals_equiv:
   "\<lbrakk> \<And>P. f \<lbrace>\<lambda>ms. P (underlying_memory ms)\<rbrace>;
      \<And>P. f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>;
      \<And>P. f \<lbrace>\<lambda>ms. P (exclusive_state ms)\<rbrace> \<rbrakk>
-     \<Longrightarrow> do_machine_op f \<lbrace>globals_equiv s\<rbrace>"
+   \<Longrightarrow> do_machine_op f \<lbrace>globals_equiv s\<rbrace>"
   unfolding do_machine_op_def
   apply (wp | simp add: split_def)+
   apply atomize

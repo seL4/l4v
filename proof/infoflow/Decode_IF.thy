@@ -15,7 +15,7 @@ lemma ensure_empty_rev:
 
 lemma prop_of_obj_ref_of_cnode_cap:
   "\<lbrakk> is_cnode_cap cap; \<forall>r\<in>obj_refs_ac cap. P r \<rbrakk>
-     \<Longrightarrow> P (obj_ref_of cap)"
+   \<Longrightarrow> P (obj_ref_of cap)"
   by (case_tac cap, simp_all)
 
 lemma get_irq_state_rev:
@@ -88,7 +88,7 @@ lemma range_check_ev:
 lemma aag_has_auth_to_obj_refs_of_owned_cap:
   "\<lbrakk> pas_refined aag s; is_subject aag (fst slot); cte_wp_at ((=) cap) slot s;
      a \<in> cap_auth_conferred cap; x \<in> obj_refs_ac cap \<rbrakk>
-     \<Longrightarrow> aag_has_auth_to aag a x"
+   \<Longrightarrow> aag_has_auth_to aag a x"
   apply (drule sym, erule ssubst)
   apply (rule_tac s=s in pas_refined_mem)
    apply (fastforce intro: sta_caps[OF cte_wp_at_caps_of_state'])
@@ -132,7 +132,7 @@ lemma no_state_changes:
 
 lemma OR_choice_def2:
   "\<lbrakk> \<And>P. \<lbrace>P\<rbrace> (c :: bool det_ext_monad) \<lbrace>\<lambda>_. P\<rbrace>; empty_fail c \<rbrakk>
-     \<Longrightarrow> (OR_choice c f g) = (do b \<leftarrow> c; if b then f else g od)"
+   \<Longrightarrow> (OR_choice c f g) = (do b \<leftarrow> c; if b then f else g od)"
   apply (simp add: OR_choice_def wrap_ext_bool_det_ext_ext_def ef_mk_ef)
   by (subst no_state_changes[where f=c], simp, fastforce simp: bind_assoc split_def)
 
@@ -300,7 +300,7 @@ lemma gets_applyE:
 
 lemma owns_cnode_owns_obj_ref_of_child_cnodes:
   "\<lbrakk> pas_refined aag s; is_subject aag (fst slot); cte_wp_at ((=) cap) slot s; is_cnode_cap cap \<rbrakk>
-     \<Longrightarrow> is_subject aag (obj_ref_of cap)"
+   \<Longrightarrow> is_subject aag (obj_ref_of cap)"
   by (blast intro: owns_cnode_owns_obj_ref_of_child_cnodes_threads_and_zombies)
 
 lemma select_ext_ev_bind:

@@ -433,7 +433,7 @@ lemma page_offs_in_range:
 
 lemma page_offs_range_correct':
   "\<lbrakk> x \<in> page_offs_range ptr; is_aligned ptr 30 \<rbrakk>
-     \<Longrightarrow> \<exists>y. x = ptr + (ucast (y :: pg_index) << 12)"
+   \<Longrightarrow> \<exists>y. x = ptr + (ucast (y :: pg_index) << 12)"
   apply (clarsimp simp: page_offs_range_def s0_ptr_defs bit_simps)
   apply (rule_tac x="ucast ((x - ptr) >> 12)" in exI)
   apply (clarsimp simp: ucast_ucast_mask)
@@ -613,7 +613,7 @@ lemma is_aligned_pt_bitsD:
 
 lemma pt_offs_range_correct':
   "\<lbrakk> x \<in> pt_offs_range NormalPT_T ptr; is_aligned ptr 12 \<rbrakk>
-     \<Longrightarrow> \<exists>y. x = ptr + (ucast (y :: pt_index) << 3)"
+   \<Longrightarrow> \<exists>y. x = ptr + (ucast (y :: pt_index) << 3)"
   apply (clarsimp simp: pt_offs_range_def s0_ptr_defs bit_simps)
   apply (rule_tac x="ucast ((x - ptr) >> 3)" in exI)
   apply (clarsimp simp: ucast_ucast_mask)
@@ -649,7 +649,7 @@ lemma pt_offs_range_correct':
 
 lemma vs_offs_range_correct':
   "\<lbrakk> x \<in> pt_offs_range VSRootPT_T ptr; is_aligned ptr 13 \<rbrakk>
-     \<Longrightarrow> \<exists>y. x = ptr + (ucast (y :: vs_index) << 3)"
+   \<Longrightarrow> \<exists>y. x = ptr + (ucast (y :: vs_index) << 3)"
   apply (clarsimp simp: pt_offs_range_def s0_ptr_defs)
   apply (rule_tac x="ucast ((x - ptr) >> 3)" in exI)
   apply (clarsimp simp: ucast_ucast_mask)
@@ -828,7 +828,7 @@ lemma word_div_mult':
 
 lemma cnode_offs_range_correct':
   "\<lbrakk> x \<in> cnode_offs_range ptr; is_aligned ptr 15 \<rbrakk>
-     \<Longrightarrow> \<exists>y. length y = 10 \<and> (x = ptr + of_bl y * 0x20)"
+   \<Longrightarrow> \<exists>y. length y = 10 \<and> (x = ptr + of_bl y * 0x20)"
   apply (clarsimp simp: cnode_offs_range_def s0_ptr_defs)
   apply (rule_tac x="to_bl (ucast ((x - ptr) div 0x20) :: 10 word)" in exI)
   apply (clarsimp simp: to_bl_ucast of_bl_drop)
@@ -911,7 +911,7 @@ lemma tcb_offs_in_range:
 
 lemma tcb_offs_range_correct':
   "\<lbrakk> x \<in> tcb_offs_range ptr; is_aligned ptr 11 \<rbrakk>
-     \<Longrightarrow> \<exists>y. x = ptr + ucast (y :: 11 word)"
+   \<Longrightarrow> \<exists>y. x = ptr + ucast (y :: 11 word)"
   apply (clarsimp simp: tcb_offs_range_def s0_ptr_defs)
   apply (rule_tac x="ucast (x - ptr)" in exI)
   apply (clarsimp simp: ucast_ucast_mask)
@@ -2034,7 +2034,7 @@ lemma s0H_pspace_distinct':
 
 lemma pspace_distinctD'':
   "\<lbrakk> \<exists>v. ksPSpace s x = Some v \<and> objBitsKO v = n; pspace_distinct' s \<rbrakk>
-     \<Longrightarrow> ps_clear x n s"
+   \<Longrightarrow> ps_clear x n s"
   apply clarsimp
   apply (drule(1) pspace_distinctD')
   apply simp
@@ -2391,7 +2391,7 @@ lemmas the_nat_to_bl_simps = the_nat_to_bl_def nat_to_bl_def
 lemma ucast_shiftr_13E:
   "\<lbrakk> ucast (p - ptr >> 5) = (0x13E :: 10 word); p \<le> 0x7FFF + ptr; ptr \<le> p;
      is_aligned ptr 15; is_aligned p 5 \<rbrakk>
-     \<Longrightarrow> p = (ptr :: obj_ref) + 0x27C0"
+   \<Longrightarrow> p = (ptr :: obj_ref) + 0x27C0"
   apply (subst(asm) up_ucast_inj_eq[symmetric, where 'b=64])
    apply simp
   apply simp
@@ -2416,7 +2416,7 @@ lemma ucast_shiftr_13E:
 lemma ucast_shiftr_6:
   "\<lbrakk> ucast (p - ptr >> 5) = (0x6 :: 10 word); p \<le> 0x7FFF + ptr; ptr \<le> p;
      is_aligned ptr 15; is_aligned p 5\<rbrakk>
-     \<Longrightarrow> p = (ptr :: obj_ref) + 0xC0"
+   \<Longrightarrow> p = (ptr :: obj_ref) + 0xC0"
   apply (subst(asm) up_ucast_inj_eq[symmetric, where 'b=64])
    apply simp
   apply simp
@@ -2441,7 +2441,7 @@ lemma ucast_shiftr_6:
 lemma ucast_shiftr_5:
   "\<lbrakk> ucast (p - ptr >> 5) = (5 :: 10 word); p \<le> 0x7FFF + ptr; ptr \<le> p;
      is_aligned ptr 15; is_aligned p 5\<rbrakk>
-     \<Longrightarrow> p = (ptr :: obj_ref) + 0xA0"
+   \<Longrightarrow> p = (ptr :: obj_ref) + 0xA0"
   apply (subst(asm) up_ucast_inj_eq[symmetric, where 'b=64])
    apply simp
   apply simp
@@ -2466,7 +2466,7 @@ lemma ucast_shiftr_5:
 lemma ucast_shiftr_4:
   "\<lbrakk> ucast (p - ptr >> 5) = (4 :: 10 word); p \<le> 0x7FFF + ptr; ptr \<le> p;
      is_aligned ptr 15; is_aligned p 5\<rbrakk>
-     \<Longrightarrow> p = (ptr :: obj_ref) + 0x80"
+   \<Longrightarrow> p = (ptr :: obj_ref) + 0x80"
   apply (subst(asm) up_ucast_inj_eq[symmetric, where 'b=64])
    apply simp
   apply simp
@@ -2491,7 +2491,7 @@ lemma ucast_shiftr_4:
 lemma ucast_shiftr_3:
   "\<lbrakk>ucast (p - ptr >> 5) = (3 :: 10 word); p \<le> 0x7FFF + ptr; ptr \<le> p;
     is_aligned ptr 15; is_aligned p 5\<rbrakk>
-    \<Longrightarrow> p = (ptr :: obj_ref) + 0x60"
+   \<Longrightarrow> p = (ptr :: obj_ref) + 0x60"
   apply (subst(asm) up_ucast_inj_eq[symmetric, where 'b=64])
    apply simp
   apply simp
@@ -2516,7 +2516,7 @@ lemma ucast_shiftr_3:
 lemma ucast_shiftr_2:
   "\<lbrakk>ucast (p - ptr >> 5) = (2 :: 10 word); p \<le> 0x7FFF + ptr; ptr \<le> p;
     is_aligned ptr 15; is_aligned p 5\<rbrakk>
-    \<Longrightarrow> p = (ptr :: obj_ref) + 0x40"
+   \<Longrightarrow> p = (ptr :: obj_ref) + 0x40"
   apply (subst(asm) up_ucast_inj_eq[symmetric, where 'b=64])
    apply simp
   apply simp
@@ -2541,7 +2541,7 @@ lemma ucast_shiftr_2:
 lemma ucast_shiftr_1:
   "\<lbrakk>ucast (p - ptr >> 5) = (1 :: 10 word); p \<le> 0x7FFF + ptr; ptr \<le> p;
     is_aligned ptr 15; is_aligned p 5\<rbrakk>
-    \<Longrightarrow> p = (ptr :: obj_ref) + 0x20"
+   \<Longrightarrow> p = (ptr :: obj_ref) + 0x20"
   apply (subst(asm) up_ucast_inj_eq[symmetric, where 'b=64])
    apply simp
   apply simp
@@ -2739,20 +2739,20 @@ lemma mdb_next_rtrancl_not_0_s0H:
 lemma sameRegionAs_s0H:
   "\<lbrakk> map_to_ctes kh0H p = Some (CTE cap mdb); map_to_ctes kh0H p' = Some (CTE cap' mdb');
      sameRegionAs cap cap'; p \<noteq> p' \<rbrakk>
-     \<Longrightarrow> (p = Low_cnode_ptr + 0x27C0 \<and> (p' = Silc_cnode_ptr + 0x27C0 \<or> p' = High_cnode_ptr + 0x27C0) \<or>
-          p = Silc_cnode_ptr + 0x27C0 \<and> (p' = Low_cnode_ptr + 0x27C0 \<or> p' = High_cnode_ptr + 0x27C0) \<or>
-          p = High_cnode_ptr + 0x27C0 \<and> (p' = Low_cnode_ptr + 0x27C0 \<or> p' = Silc_cnode_ptr + 0x27C0) \<or>
-          p = Low_cnode_ptr + 0xA0 \<and> (p' = Silc_cnode_ptr + 0xA0 \<or> p' = High_cnode_ptr + 0xA0) \<or>
-          p = Silc_cnode_ptr + 0xA0 \<and> (p' = Low_cnode_ptr + 0xA0 \<or> p' = High_cnode_ptr + 0xA0) \<or>
-          p = High_cnode_ptr + 0xA0 \<and> (p' = Low_cnode_ptr + 0xA0 \<or> p' = Silc_cnode_ptr + 0xA0) \<or>
-          p = Low_tcb_ptr \<and> p' = Low_cnode_ptr + 0x40 \<or>
-          p = Low_cnode_ptr + 0x40 \<and> p' = Low_tcb_ptr \<or>
-          p = Low_tcb_ptr + 0x20 \<and> p' = Low_cnode_ptr + 0x60 \<or>
-          p = Low_cnode_ptr + 0x60 \<and> p' = Low_tcb_ptr + 0x20 \<or>
-          p = High_tcb_ptr \<and> p' = High_cnode_ptr + 0x40 \<or>
-          p = High_cnode_ptr + 0x40 \<and> p' = High_tcb_ptr \<or>
-          p = High_tcb_ptr + 0x20 \<and> p' = High_cnode_ptr + 0x60 \<or>
-          p = High_cnode_ptr + 0x60 \<and> p' = High_tcb_ptr + 0x20)"
+   \<Longrightarrow> (p = Low_cnode_ptr + 0x27C0 \<and> (p' = Silc_cnode_ptr + 0x27C0 \<or> p' = High_cnode_ptr + 0x27C0) \<or>
+        p = Silc_cnode_ptr + 0x27C0 \<and> (p' = Low_cnode_ptr + 0x27C0 \<or> p' = High_cnode_ptr + 0x27C0) \<or>
+        p = High_cnode_ptr + 0x27C0 \<and> (p' = Low_cnode_ptr + 0x27C0 \<or> p' = Silc_cnode_ptr + 0x27C0) \<or>
+        p = Low_cnode_ptr + 0xA0 \<and> (p' = Silc_cnode_ptr + 0xA0 \<or> p' = High_cnode_ptr + 0xA0) \<or>
+        p = Silc_cnode_ptr + 0xA0 \<and> (p' = Low_cnode_ptr + 0xA0 \<or> p' = High_cnode_ptr + 0xA0) \<or>
+        p = High_cnode_ptr + 0xA0 \<and> (p' = Low_cnode_ptr + 0xA0 \<or> p' = Silc_cnode_ptr + 0xA0) \<or>
+        p = Low_tcb_ptr \<and> p' = Low_cnode_ptr + 0x40 \<or>
+        p = Low_cnode_ptr + 0x40 \<and> p' = Low_tcb_ptr \<or>
+        p = Low_tcb_ptr + 0x20 \<and> p' = Low_cnode_ptr + 0x60 \<or>
+        p = Low_cnode_ptr + 0x60 \<and> p' = Low_tcb_ptr + 0x20 \<or>
+        p = High_tcb_ptr \<and> p' = High_cnode_ptr + 0x40 \<or>
+        p = High_cnode_ptr + 0x40 \<and> p' = High_tcb_ptr \<or>
+        p = High_tcb_ptr + 0x20 \<and> p' = High_cnode_ptr + 0x60 \<or>
+        p = High_cnode_ptr + 0x60 \<and> p' = High_tcb_ptr + 0x20)"
   supply option.case_cong[cong] if_cong[cong] s0_ptrs_aligned[simp]
   apply (frule_tac x=p in map_to_ctes_kh0H_SomeD)
   apply (elim disjE, simp_all)

@@ -45,7 +45,7 @@ lemma arch_finalise_cap_makes_halted[Finalise_AC_assms]:
 
 lemma arch_cap_cleanup_wf[Finalise_AC_assms]:
   "\<lbrakk> arch_cap_cleanup_opt acap \<noteq> NullCap; \<not> is_arch_cap (arch_cap_cleanup_opt acap) \<rbrakk>
-     \<Longrightarrow> (\<exists>irq. arch_cap_cleanup_opt acap = IRQHandlerCap irq \<and> is_subject_irq aag irq)"
+   \<Longrightarrow> (\<exists>irq. arch_cap_cleanup_opt acap = IRQHandlerCap irq \<and> is_subject_irq aag irq)"
   by simp
 
 lemma arch_finalise_cap_respects[Finalise_AC_assms, wp]:

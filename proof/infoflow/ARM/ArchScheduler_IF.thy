@@ -23,8 +23,8 @@ definition
 lemma arch_globals_equiv_from_scheduler[Scheduler_IF_assms]:
   "\<lbrakk> arch_globals_equiv_scheduler (kheap s) (kheap s') (arch_state s) (arch_state s');
      cur_thread s' \<noteq> idle_thread s \<longrightarrow> arch_scheduler_affects_equiv s s' \<rbrakk>
-     \<Longrightarrow> arch_globals_equiv (cur_thread s') (idle_thread s) (kheap s) (kheap s')
-                            (arch_state s) (arch_state s') (machine_state s) (machine_state s')"
+   \<Longrightarrow> arch_globals_equiv (cur_thread s') (idle_thread s) (kheap s) (kheap s')
+                          (arch_state s) (arch_state s') (machine_state s) (machine_state s')"
   by (clarsimp simp: arch_globals_equiv_scheduler_def arch_scheduler_affects_equiv_def)
 
 lemma arch_globals_equiv_scheduler_refl[Scheduler_IF_assms]:
@@ -39,12 +39,12 @@ lemma arch_globals_equiv_scheduler_sym[Scheduler_IF_assms]:
 lemma arch_globals_equiv_scheduler_trans[Scheduler_IF_assms]:
   "\<lbrakk> arch_globals_equiv_scheduler (kheap s) (kheap s') (arch_state s) (arch_state s');
      arch_globals_equiv_scheduler (kheap s') (kheap s'') (arch_state s') (arch_state s'') \<rbrakk>
-     \<Longrightarrow> arch_globals_equiv_scheduler (kheap s) (kheap s'') (arch_state s) (arch_state s'')"
+   \<Longrightarrow> arch_globals_equiv_scheduler (kheap s) (kheap s'') (arch_state s) (arch_state s'')"
   by (clarsimp simp: arch_globals_equiv_scheduler_def)
 
 lemma arch_scheduler_affects_equiv_trans[Scheduler_IF_assms, elim]:
   "\<lbrakk> arch_scheduler_affects_equiv s s'; arch_scheduler_affects_equiv s' s'' \<rbrakk>
-     \<Longrightarrow> arch_scheduler_affects_equiv s s''"
+   \<Longrightarrow> arch_scheduler_affects_equiv s s''"
   by (simp add: arch_scheduler_affects_equiv_def)
 
 lemma arch_scheduler_affects_equiv_sym[Scheduler_IF_assms, elim]:
@@ -127,7 +127,7 @@ lemma arch_scheduler_affects_equiv_update[Scheduler_IF_assms]:
 
 lemma equiv_asid_equiv_update[Scheduler_IF_assms]:
   "\<lbrakk> get_tcb x s = Some y; equiv_asid asid st s \<rbrakk>
-     \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
+   \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
   by (clarsimp simp: equiv_asid_def obj_at_def get_tcb_def)
 
 declare arch_prepare_next_domain_inv[Scheduler_IF_assms]

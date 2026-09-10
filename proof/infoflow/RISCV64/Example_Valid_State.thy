@@ -898,7 +898,7 @@ lemma Sys1AgentMap_simps:
   "Sys1AgentMap High_tcb_ptr = partition_label High"
   "Sys1AgentMap idle_tcb_ptr = partition_label Low"
   "\<And>p. p \<in> ptr_range shared_page_ptr_virt (pageBitsForSize RISCVLargePage)
-         \<Longrightarrow> Sys1AgentMap p = partition_label Low"
+       \<Longrightarrow> Sys1AgentMap p = partition_label Low"
   unfolding Sys1AgentMap_def
   apply simp_all
   by (auto simp: s0_ptr_defs ptr_range_def)
@@ -1045,7 +1045,7 @@ lemma pts_of_s0:
 
 lemma ptes_of_s0_PageTablePTE:
   "\<lbrakk> ptes_of s0_internal ptr = Some pte; is_PageTablePTE pte \<rbrakk>
-     \<Longrightarrow> table_base ptr = Low_pd_ptr \<and> pte = PageTablePTE (ppn_from_addr (addrFromPPtr Low_pt_ptr)) {}
+   \<Longrightarrow> table_base ptr = Low_pd_ptr \<and> pte = PageTablePTE (ppn_from_addr (addrFromPPtr Low_pt_ptr)) {}
        \<or> table_base ptr = High_pd_ptr \<and> pte = PageTablePTE (ppn_from_addr (addrFromPPtr High_pt_ptr)) {}"
   by (auto simp: ptes_of_def pts_of_s0 obind_def kh0_obj_def split: option.splits if_splits)
 
@@ -1724,9 +1724,9 @@ lemma valid_asid_map_s0[simp]:
 
 lemma valid_global_pd_mappings_s0_helper:
   "\<lbrakk> pptr_base \<le> vref; vref < pptr_base + (1 << kernel_window_bits) \<rbrakk>
-     \<Longrightarrow> \<exists>a b. pt_lookup_target 0 riscv_global_pt_ptr vref (ptes_of s0_internal) = Some (a, b) \<and>
-               is_aligned b (pt_bits_left a) \<and>
-               addrFromPPtr b + (vref && mask (pt_bits_left a)) = addrFromPPtr vref"
+   \<Longrightarrow> \<exists>a b. pt_lookup_target 0 riscv_global_pt_ptr vref (ptes_of s0_internal) = Some (a, b) \<and>
+             is_aligned b (pt_bits_left a) \<and>
+             addrFromPPtr b + (vref && mask (pt_bits_left a)) = addrFromPPtr vref"
   supply misc = vref_for_level_def pt_bits_left_def asid_pool_level_size
                 pageBits_def ptTranslationBits_def mask_def max_pt_level_def2
   apply (clarsimp simp: pt_lookup_target_def obind_def split: option.splits)
@@ -1768,9 +1768,9 @@ lemma ptes_of_elf_window:
 
 lemma valid_global_pd_mappings_s0_helper':
   "\<lbrakk> kernel_elf_base \<le> vref; vref < kernel_elf_base + (1 << pageBits) \<rbrakk>
-     \<Longrightarrow> \<exists>a b. pt_lookup_target 0 riscv_global_pt_ptr vref (ptes_of s0_internal) = Some (a, b) \<and>
-               is_aligned b (pt_bits_left a) \<and>
-               addrFromPPtr b + (vref && mask (pt_bits_left a)) = addrFromKPPtr vref"
+   \<Longrightarrow> \<exists>a b. pt_lookup_target 0 riscv_global_pt_ptr vref (ptes_of s0_internal) = Some (a, b) \<and>
+             is_aligned b (pt_bits_left a) \<and>
+             addrFromPPtr b + (vref && mask (pt_bits_left a)) = addrFromKPPtr vref"
   supply misc = vref_for_level_def pt_bits_left_def asid_pool_level_size
                 pageBits_def ptTranslationBits_def mask_def max_pt_level_def2
   apply (clarsimp simp: pt_lookup_target_def obind_def split: option.splits)

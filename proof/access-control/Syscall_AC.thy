@@ -254,7 +254,7 @@ lemma guarded_pas_domain_lift:
 lemma guarded_to_cur_domain:
   "\<lbrakk> invs s; ct_in_state x s; \<not> x IdleThreadState;
      guarded_pas_domain aag s; is_subject aag (cur_thread s) \<rbrakk>
-     \<Longrightarrow> pas_cur_domain aag s"
+   \<Longrightarrow> pas_cur_domain aag s"
   by (auto simp: invs_def valid_state_def valid_idle_def pred_tcb_at_def
                  obj_at_def ct_in_state_def guarded_pas_domain_def)
 
@@ -651,7 +651,7 @@ lemma timer_tick_integrity[wp]:
 lemma hacky_ipc_Send:
   "\<lbrakk> abs_has_auth_to aag Notify (interrupt_irq_node s irq) p;
      pas_refined aag s; pasMaySendIrqs aag \<rbrakk>
-     \<Longrightarrow> aag_has_auth_to aag Notify p"
+   \<Longrightarrow> aag_has_auth_to aag Notify p"
   unfolding pas_refined_def
   apply (clarsimp simp: policy_wellformed_def irq_map_wellformed_aux_def)
   apply (drule spec [where x = "pasIRQAbs aag irq"], drule spec [where x = "pasObjectAbs aag p"],
@@ -921,8 +921,8 @@ because t's domain may contain multiple labels. See the comment for
 lemma valid_sched_action_switch_subject_thread:
    "\<lbrakk> scheduler_action s = switch_thread t; valid_sched_action s;
       pas_refined aag s; pas_cur_domain aag s \<rbrakk>
-      \<Longrightarrow> pasObjectAbs aag t \<in> pasDomainAbs aag (etcb_domain (the (etcbs_of s t))) \<and>
-          pasSubject aag \<in> pasDomainAbs aag (etcb_domain (the (etcbs_of s t)))"
+    \<Longrightarrow> pasObjectAbs aag t \<in> pasDomainAbs aag (etcb_domain (the (etcbs_of s t))) \<and>
+        pasSubject aag \<in> pasDomainAbs aag (etcb_domain (the (etcbs_of s t)))"
   apply (clarsimp simp: valid_sched_action_def weak_valid_sched_action_2_def
                         switch_in_cur_domain_2_def in_cur_domain_2_def etcbs_of'_def
                         etcb_at_def st_tcb_at_def obj_at_def)

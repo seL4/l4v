@@ -26,7 +26,7 @@ lemma arch_troa_tro_alt[Access_AC_assms, elim!]:
 lemma clear_asidpool_trans[elim]:
   "\<lbrakk> asid_pool_integrity subjects aag pool pool';
      asid_pool_integrity subjects aag pool' pool'' \<rbrakk>
-     \<Longrightarrow> asid_pool_integrity subjects aag pool pool''"
+   \<Longrightarrow> asid_pool_integrity subjects aag pool pool''"
   apply (clarsimp simp: asid_pool_integrity_def)
   apply (erule_tac x=x in allE)+
   apply (fastforce split: option.split_asm)
@@ -38,7 +38,7 @@ lemma cap_asid'_member[simp]:
 
 lemma clas_caps_of_state[Access_AC_assms]:
   "\<lbrakk> caps_of_state s slot = Some cap; pas_refined aag s \<rbrakk>
-     \<Longrightarrow> cap_links_asid_slot aag (pasObjectAbs aag (fst slot)) cap"
+   \<Longrightarrow> cap_links_asid_slot aag (pasObjectAbs aag (fst slot)) cap"
   apply (clarsimp simp: cap_links_asid_slot_def label_owns_asid_slot_def pas_refined_def)
   apply (drule state_asids_to_policy_aux.intros)
    apply assumption
@@ -48,7 +48,7 @@ lemma clas_caps_of_state[Access_AC_assms]:
 lemma arch_tro_alt_trans_spec[Access_AC_assms]:
   "\<lbrakk> arch_integrity_obj_alt aag subjects l ko ko';
      arch_integrity_obj_alt aag subjects l ko' ko'' \<rbrakk>
-     \<Longrightarrow> arch_integrity_obj_alt aag subjects l ko ko''"
+   \<Longrightarrow> arch_integrity_obj_alt aag subjects l ko ko''"
   by (fastforce simp: arch_integrity_obj_alt.simps)
 
 lemma tcb_hyp_refs_arch_tcb_set_registers[Access_AC_assms]:
@@ -71,7 +71,7 @@ context Arch begin arch_global_naming
 lemma auth_ipc_buffers_tro[Access_AC_assms]:
   "\<lbrakk> integrity_obj_state aag activate subjects s s';
      x \<in> auth_ipc_buffers s' p; pasObjectAbs aag p \<notin> subjects \<rbrakk>
-     \<Longrightarrow> x \<in> auth_ipc_buffers s p "
+   \<Longrightarrow> x \<in> auth_ipc_buffers s p "
   by (drule_tac x = p in spec)
      (erule integrity_objE;
       fastforce simp: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def
@@ -80,7 +80,7 @@ lemma auth_ipc_buffers_tro[Access_AC_assms]:
 lemma trasids_trans[Access_AC_assms]:
   "\<lbrakk> \<forall>x a. integrity_asids_2 aag subjects x a as as' ao ao';
      \<forall>x a. integrity_asids_2 aag subjects x a as' as'' ao' ao'' \<rbrakk>
-     \<Longrightarrow> \<forall>x a. integrity_asids_2 aag subjects x a as as'' ao ao''"
+   \<Longrightarrow> \<forall>x a. integrity_asids_2 aag subjects x a as as'' ao ao''"
   by (clarsimp simp: integrity_asids_def) metis
 
 lemma integrity_asids_refl[Access_AC_assms, simp]:
@@ -89,7 +89,7 @@ lemma integrity_asids_refl[Access_AC_assms, simp]:
 
 lemma integrity_asids_update_autarch[Access_AC_assms]:
   "\<lbrakk> integrity_asids_2 aag subjects x a as as' ao ao'; pasObjectAbs aag ptr \<in> subjects \<rbrakk>
-     \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(ptr := ako))"
+   \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(ptr := ako))"
   by (auto simp: integrity_asids_def opt_map_def)
 
 lemma integrity_hyp_refl[Access_AC_assms,simp]:
@@ -99,12 +99,12 @@ lemma integrity_hyp_refl[Access_AC_assms,simp]:
 lemma trhyp_trans[Access_AC_assms]:
   "\<lbrakk> integrity_hyp_2 aag subjects x ms ms' as as' ao ao';
      integrity_hyp_2 aag subjects x ms' ms'' as' as'' ao' ao'' \<rbrakk>
-     \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms'' as as'' ao ao'' "
+   \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms'' as as'' ao ao'' "
   by (auto simp: integrity_hyp_def vcpu_integrity_def)
 
 lemma integrity_hyp_update_autarch[Access_AC_assms]:
   "\<lbrakk> integrity_hyp_2 aag subjects x ms ms' as as' ao ao'; pasObjectAbs aag ptr \<in> subjects \<rbrakk>
-     \<Longrightarrow> integrity_hyp_2 aag subjects x  ms ms' as as' ao (ao'(ptr := ako))"
+   \<Longrightarrow> integrity_hyp_2 aag subjects x  ms ms' as as' ao (ao'(ptr := ako))"
   by (fastforce simp: integrity_hyp_def vcpu_integrity_def vcpu_of_state_def opt_map_def
                split: option.splits elim!: trhyp_trans)
 
@@ -115,12 +115,12 @@ lemma integrity_fpu_refl[Access_AC_assms,simp]:
 lemma trfpu_trans[Access_AC_assms]:
   "\<lbrakk> integrity_fpu_2 aag subjects x ms ms' kh kh';
      integrity_fpu_2 aag subjects x ms' ms'' kh' kh'' \<rbrakk>
-     \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms'' kh kh''"
+   \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms'' kh kh''"
   by (simp add: integrity_fpu_def)
 
 lemma integrity_fpu_update_autarch[Access_AC_assms]:
   "\<lbrakk> integrity_fpu_2 aag subjects x ms ms' kh kh'; pasObjectAbs aag ptr \<in> subjects \<rbrakk>
-     \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(ptr \<mapsto> obj))"
+   \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(ptr \<mapsto> obj))"
   unfolding integrity_fpu_def integrity_fpu_def fpu_of_state_def
   by (auto split: option.splits kernel_object.splits)
 
@@ -141,7 +141,7 @@ lemma ipcframe_subset_page:
   "\<lbrakk> valid_objs s; get_tcb p s = Some tcb;
      tcb_ipcframe tcb = ArchObjectCap (FrameCap p' R vms d xx);
      x \<in> ptr_range (p' + (tcb_ipc_buffer tcb && mask (pageBitsForSize vms))) msg_align_bits \<rbrakk>
-     \<Longrightarrow> x \<in> ptr_range p' (pageBitsForSize vms)"
+   \<Longrightarrow> x \<in> ptr_range p' (pageBitsForSize vms)"
    apply (frule (1) valid_tcb_objs)
    apply (clarsimp simp add: valid_tcb_def ran_tcb_cap_cases)
    apply (erule set_mp[rotated])
@@ -168,11 +168,11 @@ lemma auth_ipc_buffers_member_def:
 
 lemma auth_ipc_buffers_member[Access_AC_assms]:
   "\<lbrakk> x \<in> auth_ipc_buffers s p; valid_objs s \<rbrakk>
-     \<Longrightarrow> \<exists>tcb acap. get_tcb p s = Some tcb
-                  \<and> tcb_ipcframe tcb = (ArchObjectCap acap)
-                  \<and> caps_of_state s (p, tcb_cnode_index 4) = Some (ArchObjectCap acap)
-                  \<and> Write \<in> arch_cap_auth_conferred acap
-                  \<and> x \<in> aobj_ref' acap"
+   \<Longrightarrow> \<exists>tcb acap. get_tcb p s = Some tcb
+                \<and> tcb_ipcframe tcb = (ArchObjectCap acap)
+                \<and> caps_of_state s (p, tcb_cnode_index 4) = Some (ArchObjectCap acap)
+                \<and> Write \<in> arch_cap_auth_conferred acap
+                \<and> x \<in> aobj_ref' acap"
   by (fastforce simp: auth_ipc_buffers_def caps_of_state_tcb' arch_cap_auth_conferred_def
                       vspace_cap_rights_to_auth_def ipcframe_subset_page
                split: option.splits cap.splits arch_cap.splits bool.splits if_splits)
@@ -183,22 +183,22 @@ lemma asid_pool_integrity_mono[Access_AC_assms]:
 
 lemma integrity_asids_mono[Access_AC_assms]:
     "\<lbrakk> integrity_asids aag S x a s s'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
-       \<Longrightarrow> integrity_asids aag T x a s s'"
+     \<Longrightarrow> integrity_asids aag T x a s s'"
   by (fastforce simp: integrity_asids_def)
 
 lemma integrity_hyp_mono[Access_AC_assms]:
     "\<lbrakk> integrity_hyp aag S x s s'; S \<subseteq> T \<rbrakk>
-       \<Longrightarrow> integrity_hyp aag T x s s'"
+     \<Longrightarrow> integrity_hyp aag T x s s'"
   by (fastforce simp: integrity_hyp_def vcpu_integrity_def)
 
 lemma integrity_fpu_mono[Access_AC_assms]:
     "\<lbrakk> integrity_fpu aag S x s s'; S \<subseteq> T \<rbrakk>
-       \<Longrightarrow> integrity_fpu aag T x s s'"
+     \<Longrightarrow> integrity_fpu aag T x s s'"
   by (fastforce simp: integrity_fpu_def)
 
 lemma arch_integrity_obj_atomic_mono[Access_AC_assms]:
   "\<lbrakk> arch_integrity_obj_atomic aag S l ao ao'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
-     \<Longrightarrow> arch_integrity_obj_atomic aag T l ao ao'"
+   \<Longrightarrow> arch_integrity_obj_atomic aag T l ao ao'"
   by (clarsimp simp: arch_integrity_obj_atomic.simps asid_pool_integrity_mono)
 
 end
@@ -277,27 +277,27 @@ context Arch begin arch_global_naming
 
 lemma integrity_asids_kh_upd_None[Access_AC_assms]:
   "\<lbrakk> ao' p = None; integrity_asids_2 aag subjects x a as as' ao ao'\<rbrakk>
-     \<Longrightarrow> integrity_asids_2 aag subjects x a as as' (ao(p := None)) ao'"
+   \<Longrightarrow> integrity_asids_2 aag subjects x a as as' (ao(p := None)) ao'"
   "\<lbrakk> ao p = None; integrity_asids_2 aag subjects x a as as' ao ao'\<rbrakk>
-     \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(p := None)) "
+   \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(p := None)) "
   unfolding integrity_asids_def opt_map_def
   by (auto split: option.split_asm)
 
 lemma integrity_hyp_kh_upd_None[Access_AC_assms]:
   "\<lbrakk> ao' p = None; integrity_hyp_2 aag subjects x ms ms' as as' ao ao'\<rbrakk>
-     \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' (ao(p := None)) ao'"
+   \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' (ao(p := None)) ao'"
   "\<lbrakk> ao p = None; integrity_hyp_2 aag subjects x ms ms' as as' ao ao'\<rbrakk>
-     \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' ao (ao'(p := None)) "
+   \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' ao (ao'(p := None)) "
   unfolding integrity_hyp_def vcpu_integrity_def vcpu_of_state_def opt_map_def
   by (auto split: option.split_asm)
 
 lemma integrity_fpu_kh_upd[Access_AC_assms]:
   "\<lbrakk> \<forall>tcb. kh p \<noteq> Some (TCB tcb); \<forall>tcb. v \<noteq> Some (TCB tcb);
      integrity_fpu_2 aag subjects x ms ms' kh kh' \<rbrakk>
-    \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' (kh(p := v)) kh'"
+   \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' (kh(p := v)) kh'"
   "\<lbrakk> \<forall>tcb. kh' p \<noteq> Some (TCB tcb); \<forall>tcb. v \<noteq> Some (TCB tcb);
      integrity_fpu_2 aag subjects x ms ms' kh kh' \<rbrakk>
-    \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(p := v))"
+   \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(p := v))"
   by (auto simp: integrity_fpu_def fpu_of_state_def
           split: option.splits kernel_object.splits)
 
@@ -311,28 +311,28 @@ lemma integrity_fpu_kh_upd_neq[Access_AC_assms]:
 
 lemma integrity_fpu_tcb_upd[Access_AC_assms]:
   "\<lbrakk> kh p = Some (TCB tcb); v = Some (TCB tcb'); tcb_arch tcb = tcb_arch tcb'\<rbrakk>
-     \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' (kh(p \<mapsto> TCB tcb')) kh' =
-         integrity_fpu_2 aag subjects x ms ms' kh kh'"
+   \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' (kh(p \<mapsto> TCB tcb')) kh' =
+       integrity_fpu_2 aag subjects x ms ms' kh kh'"
   "\<lbrakk> kh' p = Some (TCB tcb); v = Some (TCB tcb'); tcb_arch tcb = tcb_arch tcb'\<rbrakk>
-     \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(p \<mapsto> TCB tcb')) =
-         integrity_fpu_2 aag subjects x ms ms' kh kh'"
+   \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(p \<mapsto> TCB tcb')) =
+       integrity_fpu_2 aag subjects x ms ms' kh kh'"
   unfolding integrity_fpu_def opt_map_def
   by (auto simp: fpu_of_state_def split: option.splits if_splits kernel_object.splits)
 
 lemma integrity_fpu_set_registers[Access_AC_assms]:
   "\<lbrakk> kh x = Some (TCB tcb); kh' x = Some (TCB tcb');
      tcb_arch tcb' = arch_tcb_set_registers regs (tcb_arch tcb) \<rbrakk>
-     \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms kh kh'"
+   \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms kh kh'"
   by (auto simp: integrity_fpu_def fpu_of_state_def arch_tcb_set_registers_def opt_map_def
           split: option.splits kernel_object.splits)
 
 lemma integrity_hyp_ao_upd:
   "\<lbrakk> ao' p = Some ako'; vcpu_of ako = None; vcpu_of ako' = None;
      integrity_hyp_2 aag subjects x ms ms' as as' ao ao' \<rbrakk>
-     \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' (ao(p \<mapsto> ako)) ao'"
+   \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' (ao(p \<mapsto> ako)) ao'"
   "\<lbrakk> ao p = Some ako; vcpu_of ako = None; vcpu_of ako' = None;
      integrity_hyp_2 aag subjects x ms ms' as as' ao ao' \<rbrakk>
-     \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' ao (ao'(p \<mapsto> ako')) "
+   \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' ao (ao'(p \<mapsto> ako')) "
   unfolding integrity_hyp_def vcpu_integrity_def vcpu_extra_lrs_def vcpu_of_state_def opt_map_def
   by (case_tac "x = p"; clarsimp; auto split: option.splits)+
 
@@ -397,7 +397,7 @@ lemma vspace_objs_of_Some:
 
 lemma state_irqs_to_policy_eq_caps:
   "\<lbrakk> x \<in> state_irqs_to_policy_aux aag caps; caps = caps' \<rbrakk>
-     \<Longrightarrow> x \<in> state_irqs_to_policy_aux aag caps'"
+   \<Longrightarrow> x \<in> state_irqs_to_policy_aux aag caps'"
   by (erule subst)
 
 lemma vs_lookup_table_eqI':
@@ -407,7 +407,7 @@ lemma vs_lookup_table_eqI':
                   \<longrightarrow> vspace_for_pool pool_ptr asid (asid_pools_of s') =
                       vspace_for_pool pool_ptr asid (asid_pools_of s);
        bot_level < max_pt_level \<longrightarrow> pts_of s' = pts_of s \<rbrakk>
-   \<Longrightarrow> vs_lookup_table bot_level asid vref s' = vs_lookup_table bot_level asid vref s"
+     \<Longrightarrow> vs_lookup_table bot_level asid vref s' = vs_lookup_table bot_level asid vref s"
   by (auto simp: obind_def vs_lookup_table_def asid_pool_level_eq[symmetric]
                  pool_for_asid_def entry_for_pool_def vspace_for_pool_def
           split: option.splits)
@@ -430,7 +430,7 @@ lemma vs_refs_aux_eqI:
 lemma state_vrefsD:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (lvl, p);
      vspace_objs_of s p = Some ao; vref \<in> user_region; x \<in> vs_refs_aux lvl ao \<rbrakk>
-     \<Longrightarrow> x \<in> state_vrefs s p"
+   \<Longrightarrow> x \<in> state_vrefs s p"
   unfolding state_vrefs_def by fastforce
 
 lemma state_vrefs_eqI':

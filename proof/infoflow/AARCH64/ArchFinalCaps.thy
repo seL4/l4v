@@ -274,7 +274,7 @@ lemma arch_perform_invocation_silc_inv[FinalCaps_assms]:
 
 lemma new_irq_handler_caps_are_intra_label:
   "\<lbrakk> cte_wp_at ((=) (IRQControlCap)) slot s; pas_refined aag s; is_subject aag (fst slot) \<rbrakk>
-     \<Longrightarrow> cap_points_to_label aag (IRQHandlerCap irq) (pasSubject aag)"
+   \<Longrightarrow> cap_points_to_label aag (IRQHandlerCap irq) (pasSubject aag)"
   apply (clarsimp simp: cap_points_to_label_def)
   apply (frule cap_cur_auth_caps_of_state[rotated])
     apply assumption

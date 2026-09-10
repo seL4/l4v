@@ -23,8 +23,8 @@ definition
 lemma arch_globals_equiv_from_scheduler[Scheduler_IF_assms]:
   "\<lbrakk> arch_globals_equiv_scheduler (kheap s) (kheap s') (arch_state s) (arch_state s');
      cur_thread s' \<noteq> idle_thread s \<longrightarrow> arch_scheduler_affects_equiv s s' \<rbrakk>
-     \<Longrightarrow> arch_globals_equiv (cur_thread s') (idle_thread s) (kheap s) (kheap s')
-                            (arch_state s) (arch_state s') (machine_state s) (machine_state s')"
+   \<Longrightarrow> arch_globals_equiv (cur_thread s') (idle_thread s) (kheap s) (kheap s')
+                          (arch_state s) (arch_state s') (machine_state s) (machine_state s')"
   by (clarsimp simp: arch_globals_equiv_scheduler_def arch_scheduler_affects_equiv_def)
 
 lemma arch_globals_equiv_scheduler_refl[Scheduler_IF_assms]:
@@ -39,12 +39,12 @@ lemma arch_globals_equiv_scheduler_sym[Scheduler_IF_assms]:
 lemma arch_globals_equiv_scheduler_trans[Scheduler_IF_assms]:
   "\<lbrakk> arch_globals_equiv_scheduler (kheap s) (kheap s') (arch_state s) (arch_state s');
      arch_globals_equiv_scheduler (kheap s') (kheap s'') (arch_state s') (arch_state s'') \<rbrakk>
-     \<Longrightarrow> arch_globals_equiv_scheduler (kheap s) (kheap s'') (arch_state s) (arch_state s'')"
+   \<Longrightarrow> arch_globals_equiv_scheduler (kheap s) (kheap s'') (arch_state s) (arch_state s'')"
   by (clarsimp simp: arch_globals_equiv_scheduler_def)
 
 lemma arch_scheduler_affects_equiv_trans[Scheduler_IF_assms, elim]:
   "\<lbrakk> arch_scheduler_affects_equiv s s'; arch_scheduler_affects_equiv s' s'' \<rbrakk>
-     \<Longrightarrow> arch_scheduler_affects_equiv s s''"
+   \<Longrightarrow> arch_scheduler_affects_equiv s s''"
   by (simp add: arch_scheduler_affects_equiv_def)
 
 lemma arch_scheduler_affects_equiv_sym[Scheduler_IF_assms, elim]:
@@ -131,7 +131,7 @@ lemma arch_scheduler_affects_equiv_update[Scheduler_IF_assms]:
 
 lemma equiv_asid_equiv_update[Scheduler_IF_assms]:
   "\<lbrakk> get_tcb x s = Some y; equiv_asid asid st s \<rbrakk>
-     \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
+   \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
   by (clarsimp simp: equiv_asid_def obj_at_def get_tcb_def)
 
 declare arch_activate_idle_thread_domain_fields_invs[Scheduler_IF_assms]
@@ -351,7 +351,7 @@ lemma set_vm_root_globals_equiv_scheduler:
 
 lemma equiv_valid_inv_A_conjI:
   "\<lbrakk> equiv_valid_inv I A P f; equiv_valid_rv_inv I A' \<top>\<top> P f \<rbrakk>
-     \<Longrightarrow> equiv_valid_inv I (\<lambda>s s'. A s s' \<and> A' s s') P f"
+   \<Longrightarrow> equiv_valid_inv I (\<lambda>s s'. A s s' \<and> A' s s') P f"
   apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def)
   apply (erule_tac x=s in allE, erule_tac x=s in allE)
   apply (erule_tac x=t in allE, erule_tac x=t in allE)
@@ -577,7 +577,7 @@ lemma vcpu_switch_None_equiv_but_for_labels:
 
 lemma tcb_invisible:
   "\<lbrakk> \<not> reads_scheduler_cur_domain aag l s; pas_refined aag s; in_cur_domain t s; tcb_at t s \<rbrakk>
-    \<Longrightarrow> pasObjectAbs aag t \<notin> reads_scheduler aag l"
+   \<Longrightarrow> pasObjectAbs aag t \<notin> reads_scheduler aag l"
   apply (drule tcb_at_ko_at, clarsimp)
   apply (drule ko_at_etcbD)
   apply (frule (1) tcb_domain_wellformed)
@@ -589,7 +589,7 @@ lemma tcb_invisible:
 
 lemma vcpu_controls_associated_tcb:
   "\<lbrakk> pas_refined aag s; vcpus_of s v = Some vcpu; vcpu_tcb vcpu = Some t \<rbrakk>
-     \<Longrightarrow> (v, Control, t) \<in> state_objs_to_policy s"
+   \<Longrightarrow> (v, Control, t) \<in> state_objs_to_policy s"
   by (fastforce simp: sbta_href state_objs_to_policy_def state_hyp_refs_of_def opt_map_def
                 dest: pas_refined_mem is_subject_trans split: option.splits)+
 
@@ -604,7 +604,7 @@ lemma vcpu_invisible:
   shows
   "\<lbrakk> pas_refined aag s; valid_silc_label aag s;
      invs s; current_vcpu s = Some (vr,b); cur_vcpu_in_cur_domain s \<rbrakk>
-     \<Longrightarrow> pasObjectAbs aag vr \<notin> reads_scheduler aag l"
+   \<Longrightarrow> pasObjectAbs aag vr \<notin> reads_scheduler aag l"
   apply (prop_tac "cur_vcpu s")
    apply (erule invs_cur_vcpu)
   apply (clarsimp simp: cur_vcpu_def opt_pred_def split: option.splits)
@@ -667,7 +667,7 @@ lemma lazy_fpu_restore_equiv_but_for_labels:
 lemma cur_fpu_invisible:
   "\<lbrakk> pas_refined aag s; \<not> reads_scheduler_cur_domain aag l s; cur_fpu_in_cur_domain s;
      valid_cur_fpu s; current_fpu s = Some t \<rbrakk>
-    \<Longrightarrow> pasObjectAbs aag t \<notin> reads_scheduler aag l"
+   \<Longrightarrow> pasObjectAbs aag t \<notin> reads_scheduler aag l"
   apply (clarsimp simp: cur_fpu_in_cur_domain_def)
   apply (frule current_fpu_owner_Some_tcb_at, fastforce)
   apply (drule tcb_at_ko_at, clarsimp)
@@ -753,7 +753,7 @@ lemma vcpu_switch_scheduler_affects_equiv:
 
 lemma tcb_controls_associated_vcpu:
   "\<lbrakk> pas_refined aag s; get_tcb t s = Some tcb; tcb_vcpu (tcb_arch tcb) = Some v \<rbrakk>
-     \<Longrightarrow> (t, Control, v) \<in> state_objs_to_policy s"
+   \<Longrightarrow> (t, Control, v) \<in> state_objs_to_policy s"
   by (fastforce simp: sbta_href state_objs_to_policy_def state_hyp_refs_of_def get_tcb_def
                 dest: pas_refined_mem is_subject_trans split: option.splits kernel_object.splits)+
 
@@ -761,7 +761,7 @@ lemma associated_vcpu_invisible:
   "\<lbrakk> pas_wellformed_noninterference aag; pasObjectAbs aag t \<notin> reads_scheduler aag l;
      pas_refined aag s; valid_silc_label aag s; invs s;
      get_tcb t s = Some tcb; tcb_vcpu (tcb_arch tcb) = Some vr \<rbrakk>
-     \<Longrightarrow> pasObjectAbs aag vr \<notin> reads_scheduler aag l"
+   \<Longrightarrow> pasObjectAbs aag vr \<notin> reads_scheduler aag l"
   apply (frule (2) tcb_controls_associated_vcpu)
   apply (prop_tac "pasObjectAbs aag t \<noteq> SilcLabel")
    apply (fastforce simp: valid_silc_label_def obj_at_def is_cap_table_def get_tcb_Some)
@@ -925,7 +925,7 @@ lemma arch_activate_idle_thread_reads_respects_scheduler[Scheduler_IF_assms, wp]
 lemma tcb_visible:
   "\<lbrakk> reads_scheduler_cur_domain aag l s; pas_refined aag s;
      pas_domains_distinct aag; in_cur_domain t s; tcb_at t s \<rbrakk>
-     \<Longrightarrow> pasObjectAbs aag t \<in> reads_scheduler aag l"
+   \<Longrightarrow> pasObjectAbs aag t \<in> reads_scheduler aag l"
   apply (drule tcb_at_ko_at, clarsimp)
   apply (drule ko_at_etcbD)
   apply (frule (1) tcb_domain_wellformed)
@@ -944,7 +944,7 @@ lemma associated_vcpu_visible:
   "\<lbrakk> pasObjectAbs aag t \<in> reads_scheduler aag l;
      pas_refined aag s; valid_silc_label aag s; invs s;
      get_tcb t s = Some tcb; tcb_vcpu (tcb_arch tcb) = Some vr \<rbrakk>
-     \<Longrightarrow> pasObjectAbs aag vr \<in> reads_scheduler aag l"
+   \<Longrightarrow> pasObjectAbs aag vr \<in> reads_scheduler aag l"
   apply (frule (2) tcb_controls_associated_vcpu)
   apply (prop_tac "pasObjectAbs aag t \<noteq> SilcLabel")
    apply (fastforce simp: valid_silc_label_def obj_at_def is_cap_table_def get_tcb_Some)
@@ -961,7 +961,7 @@ lemma vcpu_visible:
   shows
   "\<lbrakk> pas_refined aag s; valid_silc_label aag s;
      invs s; current_vcpu s = Some (vr,b); cur_vcpu_in_cur_domain s \<rbrakk>
-     \<Longrightarrow> pasObjectAbs aag vr \<in> reads_scheduler aag l"
+   \<Longrightarrow> pasObjectAbs aag vr \<in> reads_scheduler aag l"
   apply (prop_tac "cur_vcpu s")
    apply (erule invs_cur_vcpu)
   apply (clarsimp simp: cur_vcpu_def opt_pred_def split: option.splits)

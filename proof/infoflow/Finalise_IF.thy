@@ -117,7 +117,7 @@ end
 
 lemma requiv_get_tcb_eq':
   "\<lbrakk> reads_equiv aag s t; aag_can_read aag thread \<rbrakk>
-     \<Longrightarrow> get_tcb thread s = get_tcb thread t"
+   \<Longrightarrow> get_tcb thread s = get_tcb thread t"
   by (auto simp: reads_equiv_def2 get_tcb_def
            elim: states_equiv_forE_kheap
           dest!: aag_can_read_self)
@@ -246,7 +246,7 @@ fun ep_queue_invisible where
 
 lemma obj_eq_st_tcb_at:
   "\<lbrakk> kheap s x = kheap s' x; st_tcb_at P x s' \<rbrakk>
-    \<Longrightarrow> st_tcb_at P x s"
+   \<Longrightarrow> st_tcb_at P x s"
   by (clarsimp simp: st_tcb_at_def obj_at_def)
 
 lemma send_blocked_on_tcb_st_to_auth:
@@ -259,7 +259,7 @@ lemma receive_blocked_on_tcb_st_to_auth:
 
 lemma not_ep_queue_invisible:
   "\<lbrakk> \<not> ep_queue_invisible aag l eplist; eplist = SendEP list \<or> eplist = RecvEP list \<rbrakk>
-     \<Longrightarrow> \<exists>t \<in> set list. aag_can_read aag t \<or> aag_can_affect aag l t"
+   \<Longrightarrow> \<exists>t \<in> set list. aag_can_read aag t \<or> aag_can_affect aag l t"
   by (auto simp: labels_are_invisible_def)
 
 lemma ep_queued_st_tcb_at'':
@@ -267,7 +267,7 @@ lemma ep_queued_st_tcb_at'':
           valid_objs s; sym_refs (state_refs_of s);
           \<And>pl pl'. (rt = EPSend \<and> P (BlockedOnSend ptr pl)) \<or>
                     (rt = EPRecv \<and> P (BlockedOnReceive ptr pl')) \<rbrakk>
-          \<Longrightarrow> st_tcb_at P t s"
+        \<Longrightarrow> st_tcb_at P t s"
   apply (case_tac ep, simp_all)
   apply (frule (1) sym_refs_ko_atD, fastforce simp: st_tcb_at_def obj_at_def refs_of_rev)+
   done
@@ -278,7 +278,7 @@ lemma ep_queues_are_invisible_or_eps_are_equal':
      reads_equiv aag s s'; affects_equiv aag l s s';
      valid_objs s; sym_refs (state_refs_of s); valid_objs s';
      sym_refs (state_refs_of s'); pas_refined aag s; pas_refined aag s' \<rbrakk>
-     \<Longrightarrow> (\<not> ep_queue_invisible aag l ep) \<longrightarrow> ep = ep'"
+   \<Longrightarrow> (\<not> ep_queue_invisible aag l ep) \<longrightarrow> ep = ep'"
   apply (rule impI)
   apply (case_tac "\<exists>list. ep = SendEP list \<or> ep = RecvEP list")
    apply (erule exE)
@@ -342,7 +342,7 @@ lemma ep_queues_are_invisible_or_eps_are_equal:
      reads_equiv aag s s'; affects_equiv aag l s s';
      valid_objs s; sym_refs (state_refs_of s); valid_objs s';
      sym_refs (state_refs_of s'); pas_refined aag s; pas_refined aag s' \<rbrakk>
-     \<Longrightarrow> (\<not> ep_queue_invisible aag l ep \<or> \<not> ep_queue_invisible aag l ep') \<longrightarrow> ep = ep'"
+   \<Longrightarrow> (\<not> ep_queue_invisible aag l ep \<or> \<not> ep_queue_invisible aag l ep') \<longrightarrow> ep = ep'"
   apply (rule impI)
   apply (erule disjE)
    apply (blast intro!: ep_queues_are_invisible_or_eps_are_equal'[rule_format])
@@ -654,7 +654,7 @@ fun ntfn_queue_invisible where
 
 lemma not_ntfn_queue_invisible:
   "\<lbrakk> \<not> ntfn_queue_invisible aag l eplist; eplist = WaitingNtfn list \<rbrakk>
-     \<Longrightarrow> (\<exists>t \<in> set list. aag_can_read aag t \<or> aag_can_affect aag l t)"
+   \<Longrightarrow> (\<exists>t \<in> set list. aag_can_read aag t \<or> aag_can_affect aag l t)"
   by (auto simp: labels_are_invisible_def)
 
 lemma ntfn_queues_are_invisible_or_ntfns_are_equal':
@@ -663,7 +663,7 @@ lemma ntfn_queues_are_invisible_or_ntfns_are_equal':
      reads_equiv aag s s'; affects_equiv aag l s s';
      valid_objs s; sym_refs (state_refs_of s); valid_objs s';
      sym_refs (state_refs_of s'); pas_refined aag s; pas_refined aag s' \<rbrakk>
-     \<Longrightarrow> \<not> ntfn_queue_invisible aag l (ntfn_obj ntfn) \<longrightarrow> ntfn_obj ntfn = ntfn_obj ntfn'"
+   \<Longrightarrow> \<not> ntfn_queue_invisible aag l (ntfn_obj ntfn) \<longrightarrow> ntfn_obj ntfn = ntfn_obj ntfn'"
   apply (rule impI)
   apply (case_tac "\<exists>list. ntfn_obj ntfn = WaitingNtfn list")
    apply (erule exE)
@@ -715,7 +715,7 @@ lemma get_bound_notification_reads_respects:
 
 lemma bound_tcb_at_implies_read:
   "\<lbrakk> pas_refined aag s; is_subject aag t; bound_tcb_at ((=) (Some x)) t s \<rbrakk>
-     \<Longrightarrow> aag_can_read_label aag (pasObjectAbs aag x)"
+   \<Longrightarrow> aag_can_read_label aag (pasObjectAbs aag x)"
   apply (frule bound_tcb_at_implies_receive, simp)
   apply clarsimp
   apply (frule_tac l="pasSubject aag" and auth=Receive in reads_ep, simp)
@@ -725,7 +725,7 @@ lemma bound_tcb_at_implies_read:
 lemma bound_tcb_at_eq:
   "\<lbrakk> sym_refs (state_refs_of s); valid_objs s; kheap s ntfnptr = Some (Notification ntfn);
      ntfn_bound_tcb ntfn = Some tcbptr; bound_tcb_at ((=) (Some ntfnptr')) tcbptr s \<rbrakk>
-     \<Longrightarrow> ntfnptr = ntfnptr'"
+   \<Longrightarrow> ntfnptr = ntfnptr'"
   apply (drule_tac x=ntfnptr in sym_refsD[rotated])
    apply (fastforce simp: state_refs_of_def)
   apply (auto simp: pred_tcb_at_def obj_at_def valid_obj_def valid_ntfn_def
@@ -880,7 +880,7 @@ fun tcb_st_to_auth' where
 lemma owns_thread_blocked_reads_endpoint:
   "\<lbrakk> pas_refined aag s; invs s; st_tcb_at (\<lambda> y. y = state) tptr s; is_subject aag tptr;
      state = BlockedOnReceive x pl \<or> state = BlockedOnSend x xb \<or> state = BlockedOnNotification x \<rbrakk>
-     \<Longrightarrow> aag_can_read aag x"
+   \<Longrightarrow> aag_can_read aag x"
   apply (rule_tac auth="tcb_st_to_auth' state" in reads_ep)
    apply (drule sym, simp, rule pas_refined_mem)
     apply (rule_tac s=s in sta_ts)
@@ -1100,7 +1100,7 @@ lemma cap_swap_for_delete_reads_respects:
 lemma owns_cnode_owns_obj_ref_of_child_cnodes_threads_and_zombies:
   "\<lbrakk> pas_refined aag s; is_subject aag (fst slot); cte_wp_at ((=) cap) slot s;
      is_cnode_cap cap \<or> is_thread_cap cap \<or> is_zombie cap \<rbrakk>
-     \<Longrightarrow> is_subject aag (obj_ref_of cap)"
+   \<Longrightarrow> is_subject aag (obj_ref_of cap)"
   apply (frule (1) cap_cur_auth_caps_of_state[rotated])
    apply (simp add: cte_wp_at_caps_of_state)
   apply (clarsimp simp: aag_cap_auth_def)

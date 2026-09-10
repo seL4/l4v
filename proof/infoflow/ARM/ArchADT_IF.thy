@@ -308,7 +308,7 @@ lemma do_user_op_if_idle_equiv[ADT_IF_assms, wp]:
 
 lemma not_in_global_refs_vs_lookup:
   "\<lbrakk> (\<exists>\<unrhd>p) s; valid_vs_lookup s; valid_global_refs s; valid_arch_state s; valid_global_objs s \<rbrakk>
-     \<Longrightarrow> p \<notin> global_refs s"
+   \<Longrightarrow> p \<notin> global_refs s"
   apply (clarsimp dest!: valid_vs_lookupD)
   apply (drule(1) valid_global_refsD2)
   apply (simp add: cap_range_def)

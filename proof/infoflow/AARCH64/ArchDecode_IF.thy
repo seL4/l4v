@@ -77,8 +77,8 @@ context Arch begin arch_global_naming
 
 lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq'':
   "\<lbrakk> \<forall>asid. is_subject_asid aag asid; reads_equiv aag s t; pas_refined aag x \<rbrakk>
-     \<Longrightarrow> arm_asid_table (arch_state s) (asid_high_bits_of base) =
-         arm_asid_table (arch_state t) (asid_high_bits_of base)"
+   \<Longrightarrow> arm_asid_table (arch_state s) (asid_high_bits_of base) =
+       arm_asid_table (arch_state t) (asid_high_bits_of base)"
   supply asid_high_bits_of_0[simp del]
   apply (subgoal_tac "asid_high_bits_of 0 = asid_high_bits_of 1")
    apply (case_tac "base = 0")
@@ -89,7 +89,7 @@ lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq'':
 
 lemma pas_cap_cur_auth_ASIDControlCap:
   "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap ASIDControlCap); reads_equiv aag s t; pas_refined aag x \<rbrakk>
-     \<Longrightarrow> arm_asid_table (arch_state s) = arm_asid_table (arch_state t)"
+   \<Longrightarrow> arm_asid_table (arch_state s) = arm_asid_table (arch_state t)"
   apply (rule ext)
   apply (subst asid_high_bits_of_shift[symmetric])
   apply (subst (3) asid_high_bits_of_shift[symmetric])
@@ -333,22 +333,22 @@ lemma decode_vspace_invocation_reads_respects_f:
 
 lemma aag_cap_auth_VCPUCap:
   "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (VCPUCap vcpu_ptr)); pas_refined aag s \<rbrakk>
-     \<Longrightarrow> is_subject aag vcpu_ptr"
+   \<Longrightarrow> is_subject aag vcpu_ptr"
   unfolding aag_cap_auth_def
   by (simp add: clas_no_asid cap_auth_conferred_def arch_cap_auth_conferred_def
                 cli_no_irqs pas_refined_all_auth_is_owns)
 
 lemma decode_vcpu_inject_irq_reads_respects_f:
   "\<lbrakk> cap = VCPUCap vcpu_ptr; invocation_type label = ArchInvocationLabel ARMVCPUInjectIRQ\<rbrakk>
-     \<Longrightarrow> reads_respects_f aag l
-           (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (ArchObjectCap cap)) slot
-                            and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)
-                            and valid_arch_cap cap
-                            and K (\<forall>(cap, slot) \<in> {(cap.ArchObjectCap cap, slot)} \<union> set excaps.
-                                     aag_cap_auth aag (pasObjectAbs aag (fst slot)) cap \<and>
-                                     is_subject aag (fst slot) \<and>
-                                     (\<forall>v \<in> cap_asid' cap. is_subject_asid aag v)))
-            (decode_vcpu_inject_irq args (VCPUCap vcpu_ptr))"
+   \<Longrightarrow> reads_respects_f aag l
+         (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (ArchObjectCap cap)) slot
+                          and (\<lambda>s. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)
+                          and valid_arch_cap cap
+                          and K (\<forall>(cap, slot) \<in> {(cap.ArchObjectCap cap, slot)} \<union> set excaps.
+                                   aag_cap_auth aag (pasObjectAbs aag (fst slot)) cap \<and>
+                                   is_subject aag (fst slot) \<and>
+                                   (\<forall>v \<in> cap_asid' cap. is_subject_asid aag v)))
+          (decode_vcpu_inject_irq args (VCPUCap vcpu_ptr))"
   unfolding decode_vcpu_inject_irq_def range_check_def unlessE_whenE
   apply (wpsimp wp: reads_respects_f[OF get_vcpu_reads_respects, where st=st])
   apply (prop_tac "valid_numlistregs x")

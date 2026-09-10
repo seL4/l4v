@@ -54,14 +54,14 @@ lemma equiv_asids_guard_imp[InfoFlow_IF_assms]:
 
 lemma equiv_asids_non_asid_pool_kheap_update[InfoFlow_IF_assms]:
   "\<lbrakk> equiv_asids R s s'; non_asid_pool_kheap_update s kh; non_asid_pool_kheap_update s' kh' \<rbrakk>
-     \<Longrightarrow> equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
+   \<Longrightarrow> equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
   apply (clarsimp simp: equiv_asids_def equiv_asid non_asid_pool_kheap_update_def)
   apply (fastforce simp: equiv_asid'_def split: option.splits)
   done
 
 lemma equiv_asids_identical_kheap_updates[InfoFlow_IF_assms]:
   "\<lbrakk> equiv_asids R s s'; identical_kheap_updates s s' kh kh' \<rbrakk>
-     \<Longrightarrow> equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
+   \<Longrightarrow> equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
   apply (clarsimp simp: equiv_asids_def equiv_asid_def opt_map_def
                         asid_pool_at_kheap identical_kheap_updates_def)
   apply (case_tac "kh pool_ptr = kh' pool_ptr"; fastforce)
@@ -71,13 +71,13 @@ lemma equiv_asids_triv':
   "\<lbrakk> equiv_asids R s s'; kheap t = kheap s; kheap t' = kheap s';
      arm_asid_table (arch_state t) = arm_asid_table (arch_state s);
      arm_asid_table (arch_state t') = arm_asid_table (arch_state s') \<rbrakk>
-     \<Longrightarrow> equiv_asids R t t'"
+   \<Longrightarrow> equiv_asids R t t'"
   by (fastforce simp: equiv_asids_def equiv_asid equiv_asid'_def)
 
 lemma equiv_asids_triv[InfoFlow_IF_assms]:
   "\<lbrakk> equiv_asids R s s'; kheap t = kheap s; kheap t' = kheap s';
      arch_state t = arch_state s; arch_state t' = arch_state s' \<rbrakk>
-     \<Longrightarrow> equiv_asids R t t'"
+   \<Longrightarrow> equiv_asids R t t'"
   by (fastforce simp: equiv_asids_triv')
 
 lemma equiv_hyp_refl[InfoFlow_IF_assms]:
@@ -104,18 +104,18 @@ lemma equiv_hyp_triv':
      vcpu_state (machine_state t') = vcpu_state (machine_state s');
      arm_gicvcpu_numlistregs (arch_state t) = arm_gicvcpu_numlistregs (arch_state s);
      arm_gicvcpu_numlistregs (arch_state t') = arm_gicvcpu_numlistregs (arch_state s') \<rbrakk>
-     \<Longrightarrow> equiv_hyp P t t'"
+   \<Longrightarrow> equiv_hyp P t t'"
   by (fastforce simp: equiv_hyp_def equiv_for_def)
 
 lemma equiv_hyp_triv[InfoFlow_IF_assms]:
   "\<lbrakk> equiv_hyp P s s'; arch_state t = arch_state s; arch_state t' = arch_state s';
      machine_state t = machine_state s; machine_state t' = machine_state s' \<rbrakk>
-     \<Longrightarrow> equiv_hyp P t t'"
+   \<Longrightarrow> equiv_hyp P t t'"
   by (fastforce simp: equiv_hyp_triv')
 
 lemma equiv_hyp_machine_state_update[InfoFlow_IF_assms]:
   "\<lbrakk> equiv_hyp P s s'; identical_hyp_state_updates P s s' ms ms' \<rbrakk>
-     \<Longrightarrow> equiv_hyp P (s\<lparr>machine_state := ms\<rparr>) (s'\<lparr>machine_state := ms'\<rparr>)"
+   \<Longrightarrow> equiv_hyp P (s\<lparr>machine_state := ms\<rparr>) (s'\<lparr>machine_state := ms'\<rparr>)"
   by (fastforce simp: equiv_hyp_def equiv_for_def identical_hyp_state_updates_def identical_updates_def)
 
 lemma equiv_fpu_refl[InfoFlow_IF_assms]:
@@ -138,18 +138,18 @@ lemma equiv_fpu_triv':
   "\<lbrakk> equiv_fpu P s s'; current_fpu t = current_fpu s; current_fpu t' = current_fpu s';
      fpu_state (machine_state t) = fpu_state (machine_state s);
      fpu_state (machine_state t') = fpu_state (machine_state s') \<rbrakk>
-     \<Longrightarrow> equiv_fpu P t t'"
+   \<Longrightarrow> equiv_fpu P t t'"
   by (auto simp: equiv_fpu_def equiv_for_def get_tcb_def hw_fpu_def)
 
 lemma equiv_fpu_triv[InfoFlow_IF_assms]:
   "\<lbrakk> equiv_fpu P s s'; arch_state t = arch_state s; arch_state t' = arch_state s';
      machine_state t = machine_state s; machine_state t' = machine_state s' \<rbrakk>
-     \<Longrightarrow> equiv_fpu P t t'"
+   \<Longrightarrow> equiv_fpu P t t'"
   by (fastforce simp: equiv_fpu_triv')
 
 lemma equiv_fpu_machine_state_update[InfoFlow_IF_assms]:
   "\<lbrakk> equiv_fpu P s s'; identical_fpu_state_updates P s s' ms ms' \<rbrakk>
-     \<Longrightarrow> equiv_fpu P (s\<lparr>machine_state := ms\<rparr>) (s'\<lparr>machine_state := ms'\<rparr>)"
+   \<Longrightarrow> equiv_fpu P (s\<lparr>machine_state := ms\<rparr>) (s'\<lparr>machine_state := ms'\<rparr>)"
   by (fastforce simp: equiv_fpu_def equiv_for_def hw_fpu_def
                       identical_fpu_state_updates_def identical_updates_def
                split: if_splits)
@@ -248,7 +248,7 @@ definition no_fpu :: "'a machine_monad \<Rightarrow> bool" where
 
 lemma equiv_hyp_state_identical_hyp_state_updates:
   "\<lbrakk> equiv_hyp_state (numlistregs s) (cur_vcpu_for P s) ms ms'; equiv_hyp P s t \<rbrakk>
-     \<Longrightarrow> identical_hyp_state_updates P s t ms ms'"
+   \<Longrightarrow> identical_hyp_state_updates P s t ms ms'"
   apply (clarsimp simp: equiv_hyp_state_def equiv_for_def identical_hyp_state_updates_def equiv_hyp_def)
   apply (erule_tac x=x in allE)+
   apply (drule mp, fastforce)
@@ -266,7 +266,7 @@ lemma cur_vcpu_for_Some:
 
 lemma cur_vcpu_for_equiv:
   "\<lbrakk> reads_equiv aag st s; affects_equiv aag l st s \<rbrakk>
-     \<Longrightarrow> cur_vcpu_for (aag_can_read aag or aag_can_affect aag l) st = cur_vcpu_for (aag_can_read aag or aag_can_affect aag l) s"
+   \<Longrightarrow> cur_vcpu_for (aag_can_read aag or aag_can_affect aag l) st = cur_vcpu_for (aag_can_read aag or aag_can_affect aag l) s"
   apply (prop_tac "equiv_for (aag_can_read aag or aag_can_affect aag l) cur_vcpu_of st s")
    apply (simp add: equiv_hyp_def equiv_for_or reads_equiv_def2 affects_equiv_def2 states_equiv_for_def)
   apply (case_tac "current_vcpu st"; case_tac "current_vcpu s"; clarsimp)
@@ -304,7 +304,7 @@ lemma cur_vcpu_for_equiv:
 
 lemma aequiv_get_tcb_eq'[intro]:
   "\<lbrakk> affects_equiv aag l s t; aag_can_affect aag l thread \<rbrakk>
-     \<Longrightarrow> get_tcb thread s = get_tcb thread t"
+   \<Longrightarrow> get_tcb thread s = get_tcb thread t"
   by (auto simp: affects_equiv_def2 get_tcb_def elim: states_equiv_forE_kheap)
 
 definition cur_fpu_for :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> 's state \<Rightarrow> bool" where
@@ -318,8 +318,8 @@ lemma equiv_fpu_cur_fpu_for:
 
 lemma cur_fpu_for_equiv:
   "\<lbrakk> reads_equiv aag st s; affects_equiv aag l st s \<rbrakk>
-     \<Longrightarrow> cur_fpu_for (aag_can_read aag or aag_can_affect aag l) st =
-         cur_fpu_for (aag_can_read aag or aag_can_affect aag l) s"
+   \<Longrightarrow> cur_fpu_for (aag_can_read aag or aag_can_affect aag l) st =
+       cur_fpu_for (aag_can_read aag or aag_can_affect aag l) s"
   apply (prop_tac "equiv_fpu (aag_can_read aag or aag_can_affect aag l) st s")
    apply (clarsimp simp: reads_equiv_def2 affects_equiv_def2 states_equiv_for_def equiv_fpu_def equiv_for_def)
   apply (simp add: equiv_fpu_cur_fpu_for)
@@ -327,7 +327,7 @@ lemma cur_fpu_for_equiv:
 
 lemma equiv_fpu_state_identical_fpu_state_updates:
   "\<lbrakk> equiv_fpu_state (cur_fpu_for P s) ms ms'; equiv_fpu P s t \<rbrakk>
-     \<Longrightarrow> identical_fpu_state_updates P s t ms ms'"
+   \<Longrightarrow> identical_fpu_state_updates P s t ms ms'"
   unfolding identical_fpu_state_updates_def
   apply (clarsimp simp: identical_fpu_state_updates_def identical_updates_def)
   apply (clarsimp simp: equiv_fpu_state_def equiv_for_def equiv_fpu_def)
@@ -340,7 +340,7 @@ definition numlistregs_for :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> 's sta
 
 lemma numlistregs_for_equiv:
   "\<lbrakk> reads_equiv aag st s; affects_equiv aag l st s \<rbrakk>
-     \<Longrightarrow> numlistregs_for (aag_can_read aag or aag_can_affect aag l) st = numlistregs_for (aag_can_read aag or aag_can_affect aag l) s"
+   \<Longrightarrow> numlistregs_for (aag_can_read aag or aag_can_affect aag l) st = numlistregs_for (aag_can_read aag or aag_can_affect aag l) s"
   by (auto simp: reads_equiv_def2 affects_equiv_def2 states_equiv_for_def equiv_hyp_def equiv_for_def numlistregs_for_def)
 
 lemma equiv_hyp_state_sym:

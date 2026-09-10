@@ -128,8 +128,8 @@ lemma check_vp_alignment_rev:
 
 lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq'':
   "\<lbrakk> \<forall>asid. is_subject_asid aag asid; reads_equiv aag s t; pas_refined aag x \<rbrakk>
-     \<Longrightarrow> arm_asid_table (arch_state s) (asid_high_bits_of base) =
-         arm_asid_table (arch_state t) (asid_high_bits_of base)"
+   \<Longrightarrow> arm_asid_table (arch_state s) (asid_high_bits_of base) =
+       arm_asid_table (arch_state t) (asid_high_bits_of base)"
   apply (subgoal_tac "asid_high_bits_of 0 = asid_high_bits_of 1")
    apply (case_tac "base = 0")
     apply (subgoal_tac "is_subject_asid aag 1")
@@ -139,7 +139,7 @@ lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq'':
 
 lemma pas_cap_cur_auth_ASIDControlCap:
   "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap ASIDControlCap); reads_equiv aag s t; pas_refined aag x \<rbrakk>
-     \<Longrightarrow> arm_asid_table (arch_state s) = arm_asid_table (arch_state t)"
+   \<Longrightarrow> arm_asid_table (arch_state s) = arm_asid_table (arch_state t)"
   apply (rule ext)
   apply (subst asid_high_bits_of_shift[symmetric])
   apply (subst (3) asid_high_bits_of_shift[symmetric])
@@ -167,7 +167,7 @@ lemma lookup_pt_slot_no_fail_is_subject:
   "\<lbrakk> (\<exists>\<rhd> pd) s; valid_vspace_objs s; pspace_aligned s; pas_refined aag s;
      is_subject aag pd; is_aligned pd pd_bits; vptr < kernel_base;
      kheap s pd = Some (ArchObj (PageDirectory pdo)); pdo (ucast (vptr >> 20)) = PageTablePDE p x xa \<rbrakk>
-     \<Longrightarrow> is_subject aag (lookup_pt_slot_no_fail (ptrFromPAddr p) vptr && ~~ mask pt_bits)"
+   \<Longrightarrow> is_subject aag (lookup_pt_slot_no_fail (ptrFromPAddr p) vptr && ~~ mask pt_bits)"
   apply (clarsimp simp: lookup_pt_slot_no_fail_def)
   apply (drule valid_vspace_objsD)
     apply (simp add: obj_at_def)

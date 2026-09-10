@@ -342,7 +342,7 @@ lemma subset_thing:
 
 lemma updates_not_idle:
   "\<lbrakk> idle_equiv st s; \<forall>a \<in> S. a \<noteq> idle_thread s \<rbrakk>
-     \<Longrightarrow> idle_equiv st (s\<lparr>kheap := \<lambda>a. if a \<in> S then y else kheap s a\<rparr>)"
+   \<Longrightarrow> idle_equiv st (s\<lparr>kheap := \<lambda>a. if a \<in> S then y else kheap s a\<rparr>)"
   by (fastforce simp: idle_equiv_def tcb_at_def2)
 
 lemma post_retype_invs_valid_arch_stateI:
@@ -411,7 +411,7 @@ end
 
 lemma untyped_caps_do_not_overlap_global_refs:
   "\<lbrakk> cte_wp_at ((=) (UntypedCap dev word sz idx)) slot s; valid_global_refs s \<rbrakk>
-     \<Longrightarrow> ptr_range word sz \<inter> global_refs s = {}"
+   \<Longrightarrow> ptr_range word sz \<inter> global_refs s = {}"
   apply (simp add: cte_wp_at_caps_of_state)
   apply (drule (1) valid_global_refsD2)
   apply (fastforce simp: cap_range_def ptr_range_def)
@@ -523,14 +523,14 @@ lemma equiv_valid_obtain:
 
 lemma reads_equiv_cte_wp_at:
   "\<lbrakk> reads_equiv aag s s'; is_subject aag (fst slot) \<rbrakk>
-     \<Longrightarrow> cte_wp_at P slot s = cte_wp_at P slot s'"
+   \<Longrightarrow> cte_wp_at P slot s = cte_wp_at P slot s'"
   apply (frule(1) is_subject_kheap_eq)
   apply (simp add: cte_wp_at_cases)
   done
 
 lemma reads_equiv_caps_of_state:
   "\<lbrakk> reads_equiv aag s s'; is_subject aag (fst slot) \<rbrakk>
-     \<Longrightarrow> caps_of_state s slot = caps_of_state s' slot"
+   \<Longrightarrow> caps_of_state s slot = caps_of_state s' slot"
   apply (frule(1) reads_equiv_cte_wp_at[where P="(=) (the (caps_of_state s slot))"])
   apply (frule(1) reads_equiv_cte_wp_at[where P="\<top>"])
   apply (auto simp: cte_wp_at_caps_of_state)

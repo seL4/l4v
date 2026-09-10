@@ -61,7 +61,7 @@ inductive_set subjectReads :: "'a auth_graph \<Rightarrow> 'a \<Rightarrow> 'a s
   (* if l has SyncSend or Receive authority to an endpoint, l can read it *)
 |  reads_ep:
   "\<lbrakk> (l,auth,ep) \<in> g; auth \<in> {SyncSend,Receive} \<rbrakk>
-     \<Longrightarrow> ep \<in> subjectReads g l"
+   \<Longrightarrow> ep \<in> subjectReads g l"
 |  reads_read_queued_thread_read_ep:
   (* if someone can send on or reset an endpoint, and l can read from a thread t
      that can receive or send synchronously on that endpoint, then l needs to
@@ -72,7 +72,7 @@ inductive_set subjectReads :: "'a auth_graph \<Rightarrow> 'a \<Rightarrow> 'a s
      Since t is in l's domain, the ep better be too. *)
   "\<lbrakk> (a, auth', ep) \<in> g; auth' \<in> {Notify,SyncSend,Reset};
      (t, auth, ep) \<in> g; auth \<in> {SyncSend, Receive}; t \<in> subjectReads g l \<rbrakk>
-     \<Longrightarrow> ep \<in> subjectReads g l"
+   \<Longrightarrow> ep \<in> subjectReads g l"
   (* if someone, t, can write to a page, and the page is in l's domain, that the
      writer better be too. This is needed for when the page is t's ipc buffer,
      and t is blocked on an IPC and the other party completes the operation.
@@ -80,7 +80,7 @@ inductive_set subjectReads :: "'a auth_graph \<Rightarrow> 'a \<Rightarrow> 'a s
      so if the page is part of l's domain, t better be too. *)
 | reads_read_page_read_thread:
   "\<lbrakk> b \<in> subjectReads g l; (t,Write,b) \<in> g \<rbrakk>
-     \<Longrightarrow> t \<in> subjectReads g l"
+   \<Longrightarrow> t \<in> subjectReads g l"
   (* This is the symmetric case for the rule reads_read_page_read_thread.
      Here now suppose t is a sender of an IPC and p is its IPC buffer, to which
      it necessarily has Read authority. Suppose t is blocked waiting to complete
@@ -89,7 +89,7 @@ inductive_set subjectReads :: "'a auth_graph \<Rightarrow> 'a \<Rightarrow> 'a s
      will clearly be read during the operation to send the IPC *)
 | reads_read_thread_read_pages:
   "\<lbrakk> t \<in> subjectReads g l; (t,Read,p) \<in> g \<rbrakk>
-     \<Longrightarrow> p \<in> subjectReads g l"
+   \<Longrightarrow> p \<in> subjectReads g l"
   (* This rule allows domain l to read from all senders to synchronous endpoints
      for all such endpoints in its domain. This is needed for when someone
      does a receive (for which a sender is already blocked) or reset on the ep.
@@ -97,10 +97,10 @@ inductive_set subjectReads :: "'a auth_graph \<Rightarrow> 'a \<Rightarrow> 'a s
      senders. So if the ep is in l's domain, the senders better be too. *)
 | read_sync_ep_read_senders:
   "\<lbrakk> ep \<in> subjectReads g l; (b,SyncSend,ep) \<in> g \<rbrakk>
-     \<Longrightarrow> b \<in> subjectReads g l"
+   \<Longrightarrow> b \<in> subjectReads g l"
 | read_sync_ep_call_senders:
   "\<lbrakk> ep \<in> subjectReads g l; (b,Call,ep) \<in> g \<rbrakk>
-     \<Longrightarrow> b \<in> subjectReads g l"
+   \<Longrightarrow> b \<in> subjectReads g l"
   (* This rule allows anyone who can read a synchronous endpoint, to also be
      able to read from its receivers. The intuition is that the state of the
      receivers can affect how the endpoint is affected. *)
@@ -120,23 +120,23 @@ inductive_set subjectReads :: "'a auth_graph \<Rightarrow> 'a \<Rightarrow> 'a s
      this rule does not seem worth it IMO. *)
 | read_sync_ep_read_receivers:
   "\<lbrakk> ep \<in> subjectReads g l; (b,Receive,ep) \<in> g \<rbrakk>
-     \<Longrightarrow> b \<in> subjectReads g l"
+   \<Longrightarrow> b \<in> subjectReads g l"
   (* if t can reply to t', then t can send directly information to t' *)
 | read_reply_thread_read_thread:
   "\<lbrakk> t' \<in> subjectReads g l; (t,Reply,t') \<in> g \<rbrakk>
-     \<Longrightarrow> t \<in> subjectReads g l"
+   \<Longrightarrow> t \<in> subjectReads g l"
   (* This rule is only there for convinience if Reply authorities corresponds to Call authorities*)
 | read_reply_thread_read_thread_rev:
   "\<lbrakk> t' \<in> subjectReads g l; (t',Reply,t) \<in> g \<rbrakk>
-     \<Longrightarrow> t \<in> subjectReads g l"
+   \<Longrightarrow> t \<in> subjectReads g l"
   (* if t can reply to t', then t can send directly information to t' *)
 | read_delder_thread_read_thread:
   "\<lbrakk> t' \<in> subjectReads g l; (t,DeleteDerived,t') \<in> g \<rbrakk>
-     \<Longrightarrow> t \<in> subjectReads g l"
+   \<Longrightarrow> t \<in> subjectReads g l"
   (* This rule is only there for convinience if Reply authorities corresponds to Call authorities*)
 | read_delder_thread_read_thread_rev:
   "\<lbrakk> t' \<in> subjectReads g l; (t',DeleteDerived,t) \<in> g \<rbrakk>
-     \<Longrightarrow> t \<in> subjectReads g l"
+   \<Longrightarrow> t \<in> subjectReads g l"
 
 abbreviation aag_can_read :: "'a PAS \<Rightarrow> obj_ref \<Rightarrow> bool" where
   "aag_can_read aag x \<equiv> (pasObjectAbs aag x) \<in> subjectReads (pasPolicy aag) (pasSubject aag)"
@@ -309,18 +309,18 @@ inductive_set subjectAffects :: "'a auth_graph \<Rightarrow> 'a \<Rightarrow> 'a
     "l \<in> subjectAffects g l"
 | affects_write:
     "\<lbrakk> (l,auth,l') \<in> g; auth \<in> {Control, Write} \<rbrakk>
-       \<Longrightarrow> l' \<in> subjectAffects g l"
+     \<Longrightarrow> l' \<in> subjectAffects g l"
 | affects_ep:
     "\<lbrakk> (l,auth,l') \<in> g; auth \<in> {Receive, Notify, SyncSend, Call, Reset} \<rbrakk>
-       \<Longrightarrow> l' \<in> subjectAffects g l"
+     \<Longrightarrow> l' \<in> subjectAffects g l"
   (* ipc buffer is not necessarily owned by thread *)
 | affects_send:
     "\<lbrakk> (l,auth,ep) \<in> g; auth \<in> {SyncSend, Notify, Call}; (l',Receive,ep) \<in> g; (l',Write,l'') \<in> g \<rbrakk>
-       \<Longrightarrow> l'' \<in> subjectAffects g l"
+     \<Longrightarrow> l'' \<in> subjectAffects g l"
   (* synchronous sends provide a back-channel from receiver to sender *)
 | affects_recv:
     "\<lbrakk> (l,Receive,ep) \<in> g; (l',SyncSend,ep) \<in> g \<rbrakk>
-       \<Longrightarrow> l' \<in> subjectAffects g l"
+     \<Longrightarrow> l' \<in> subjectAffects g l"
   (* a reply right can only exist if l has a call right to l',
    * so including this case saves us from having to re-derive it *)
 | affects_reply_back:
@@ -328,18 +328,18 @@ inductive_set subjectAffects :: "'a auth_graph \<Rightarrow> 'a \<Rightarrow> 'a
   (* reply direct ipc buffer writing *)
 | affects_reply:
     "\<lbrakk> (l,Reply,l') \<in> g; (l',Write,l'') \<in> g \<rbrakk>
-       \<Longrightarrow> l'' \<in> subjectAffects g l"
+     \<Longrightarrow> l'' \<in> subjectAffects g l"
   (* deletion direct channel *)
 | affects_delete_derived:
     "(l,DeleteDerived,l') \<in> g \<Longrightarrow> l' \<in> subjectAffects g l"
   (* If two agents can delete the same caps, they can affect each other *)
 | affects_delete_derived2:
     "\<lbrakk> (l,DeleteDerived,l') \<in> g; (l'',DeleteDerived,l') \<in> g \<rbrakk>
-       \<Longrightarrow> l'' \<in> subjectAffects g l"
+     \<Longrightarrow> l'' \<in> subjectAffects g l"
   (* integrity definitions allow resets to modify ipc buffer *)
 | affects_reset:
     "\<lbrakk> (l,Reset,ep) \<in> g; (l',auth,ep) \<in> g; auth \<in> {SyncSend, Receive}; (l',Write,l'') \<in> g \<rbrakk>
-       \<Longrightarrow> l'' \<in> subjectAffects g l"
+     \<Longrightarrow> l'' \<in> subjectAffects g l"
   (* if you alter an asid mapping, you affect the domain who owns that asid *)
 | affects_asidpool_map:
     "(l,AAuth ASIDPoolMapsASID,l') \<in> g \<Longrightarrow> l' \<in> subjectAffects g l"

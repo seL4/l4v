@@ -45,7 +45,7 @@ definition all_with_auth_to where
 lemma valid_ntfn_WaitingNtfn_tl:
   "\<lbrakk> ntfn_obj ntfn = (WaitingNtfn list); valid_ntfn ntfn s;
      tl list \<noteq> []; ntfn' = ntfn\<lparr>ntfn_obj := (WaitingNtfn (tl list))\<rparr> \<rbrakk>
-     \<Longrightarrow> valid_ntfn ntfn' s"
+   \<Longrightarrow> valid_ntfn ntfn' s"
   apply (case_tac list, simp_all)
   apply (rename_tac a lista)
   apply (case_tac lista, simp_all)
@@ -134,20 +134,20 @@ locale Ipc_IF_1 =
     "\<lbrakk> n \<in> set [buffer_cptr_index ..< buffer_cptr_index + unat (mi_extra_caps mi)];
        is_aligned p msg_align_bits;
        buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
-       \<Longrightarrow> ptr_range (p + of_nat n * of_nat word_size) word_size_bits \<subseteq> ptr_range p msg_align_bits"
+     \<Longrightarrow> ptr_range (p + of_nat n * of_nat word_size) word_size_bits \<subseteq> ptr_range p msg_align_bits"
   and msg_in_ipc_buffer:
     "\<lbrakk> n = msg_max_length \<or> n < msg_max_length; is_aligned p msg_align_bits;
        unat (mi_length mi) < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
-       \<Longrightarrow> ptr_range (p + of_nat n * of_nat word_size) word_size_bits \<subseteq> ptr_range p msg_align_bits"
+     \<Longrightarrow> ptr_range (p + of_nat n * of_nat word_size) word_size_bits \<subseteq> ptr_range p msg_align_bits"
   and captransfer_in_ipc_buffer:
     "\<lbrakk> is_aligned (buf :: obj_ref) msg_align_bits; p \<in> {0..2} \<rbrakk>
-       \<Longrightarrow> ptr_range (buf + (2 + (of_nat msg_max_length + of_nat msg_max_extra_caps))
-                          * word_size + p * word_size) word_size_bits
+     \<Longrightarrow> ptr_range (buf + (2 + (of_nat msg_max_length + of_nat msg_max_extra_caps))
+                        * word_size + p * word_size) word_size_bits
            \<subseteq> ptr_range buf msg_align_bits"
   and mrs_in_ipc_buffer:
     "\<lbrakk> n \<in> set [length msg_registers + 1 ..< Suc n'];
        is_aligned buf msg_align_bits; n' < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
-       \<Longrightarrow> ptr_range (buf + of_nat n * of_nat word_size) word_size_bits
+     \<Longrightarrow> ptr_range (buf + of_nat n * of_nat word_size) word_size_bits
            \<subseteq> ptr_range buf msg_align_bits"
   and complete_signal_reads_respects:
     "pas_domains_distinct aag
@@ -244,10 +244,10 @@ end
 lemma invisible_ntfn_invisible_receivers_and_ipcbuffers:
   "\<lbrakk> labels_are_invisible aag l {pasObjectAbs aag nptr};
      (pasSubject aag, Notify, pasObjectAbs aag nptr) \<in> pasPolicy aag\<rbrakk>
-     \<Longrightarrow> labels_are_invisible aag l ({pasObjectAbs aag nptr} \<union>
-                                     all_with_auth_to aag Receive (pasObjectAbs aag nptr) \<union>
-                                     \<Union>(all_to_which_has_auth aag Write
-                                        ` all_with_auth_to aag Receive (pasObjectAbs aag nptr)))"
+   \<Longrightarrow> labels_are_invisible aag l ({pasObjectAbs aag nptr} \<union>
+                                   all_with_auth_to aag Receive (pasObjectAbs aag nptr) \<union>
+                                   \<Union>(all_to_which_has_auth aag Write
+                                      ` all_with_auth_to aag Receive (pasObjectAbs aag nptr)))"
   by (auto simp: labels_are_invisible_def aag_can_affect_label_def
                  all_to_which_has_auth_def all_with_auth_to_def
            dest: reads_read_page_read_thread reads_read_queued_thread_read_ep)
@@ -255,12 +255,12 @@ lemma invisible_ntfn_invisible_receivers_and_ipcbuffers:
 lemma invisible_ntfn_invisible_receivers_and_receivers[rotated 1]:
   "\<lbrakk> auth \<in> {Notify,Receive,SyncSend}; labels_are_invisible aag l {pasObjectAbs aag nptr};
      (pasSubject aag, auth, pasObjectAbs aag nptr) \<in> pasPolicy aag \<rbrakk>
-     \<Longrightarrow> labels_are_invisible aag l ({pasObjectAbs aag nptr} \<union>
-                                     all_with_auth_to aag Receive (pasObjectAbs aag nptr) \<union>
-                                     (\<Union>(all_to_which_has_auth aag Receive
-                                         ` all_with_auth_to aag Receive (pasObjectAbs aag nptr))) \<union>
-                                     (\<Union>(all_to_which_has_auth aag Write
-                                         ` all_with_auth_to aag Receive (pasObjectAbs aag nptr))))"
+   \<Longrightarrow> labels_are_invisible aag l ({pasObjectAbs aag nptr} \<union>
+                                   all_with_auth_to aag Receive (pasObjectAbs aag nptr) \<union>
+                                   (\<Union>(all_to_which_has_auth aag Receive
+                                       ` all_with_auth_to aag Receive (pasObjectAbs aag nptr))) \<union>
+                                   (\<Union>(all_to_which_has_auth aag Write
+                                       ` all_with_auth_to aag Receive (pasObjectAbs aag nptr))))"
   by (auto simp: labels_are_invisible_def aag_can_affect_label_def
                  all_to_which_has_auth_def all_with_auth_to_def
            dest: read_sync_ep_read_senders read_sync_ep_read_receivers
@@ -270,7 +270,7 @@ lemma read_queued_thread_reads_ntfn:
   "\<lbrakk> ko_at (Notification ntfn) ntfnptr s; t \<in> set queue; aag_can_read aag t; valid_objs s;
      sym_refs (state_refs_of s); pas_refined aag s; ntfn_obj ntfn = WaitingNtfn queue;
      (pasSubject aag, Notify, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag \<rbrakk>
-     \<Longrightarrow> aag_can_read aag ntfnptr"
+   \<Longrightarrow> aag_can_read aag ntfnptr"
   apply (frule_tac P="receive_blocked_on ntfnptr" and t=t in ntfn_queued_st_tcb_at')
       apply (fastforce)
      apply assumption
@@ -303,14 +303,14 @@ lemma not_etcb_at_not_cdom_can_read:
 
 lemma tcb_at_ntfn_queue:
   "\<lbrakk> valid_objs s; t \<in> set q; ko_at (Notification ntfn) nptr s; ntfn_obj ntfn = WaitingNtfn q \<rbrakk>
-     \<Longrightarrow> tcb_at t s"
+   \<Longrightarrow> tcb_at t s"
   by (fastforce simp: obj_at_def valid_obj_def valid_ntfn_def)
 
 lemma invisible_ep_invisible_receiver:
   "\<lbrakk> labels_are_invisible aag l {pasObjectAbs aag epptr};
      (pasObjectAbs aag tcb, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag;
      (pasObjectAbs aag tcb, Reset, pasObjectAbs aag epptr) \<in> pasPolicy aag \<rbrakk>
-     \<Longrightarrow> labels_are_invisible aag l ({pasObjectAbs aag epptr} \<union> {pasObjectAbs aag tcb})"
+   \<Longrightarrow> labels_are_invisible aag l ({pasObjectAbs aag epptr} \<union> {pasObjectAbs aag tcb})"
   by (auto simp: labels_are_invisible_def aag_can_affect_label_def all_with_auth_to_def
            dest: reads_ep reads_read_queued_thread_read_ep)
 
@@ -491,7 +491,7 @@ end
 
 lemma monadic_rewrite_reads_respects:
   "\<lbrakk> monadic_rewrite False False P f f'; reads_respects aag l P' (do x <- f; g x od) \<rbrakk>
-     \<Longrightarrow> reads_respects aag l (P and P') (do x <- f'; g x od)"
+   \<Longrightarrow> reads_respects aag l (P and P') (do x <- f'; g x od)"
   apply (clarsimp simp: monadic_rewrite_def spec_equiv_valid_def
                         equiv_valid_def equiv_valid_2_def bind_def)
   apply (frule_tac x=st in spec)
@@ -713,7 +713,7 @@ lemma aag_has_auth_to_read_cptrs:
   "\<lbrakk> x \<in> set [buffer_cptr_index ..< buffer_cptr_index + unat (mi_extra_caps mi)];
      ipc_buffer_has_read_auth aag (pasSubject aag) (Some a);
      buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
-     \<Longrightarrow> for_each_byte_of_word (\<lambda> y. aag_can_read aag y) (a + of_nat x * of_nat word_size)"
+   \<Longrightarrow> for_each_byte_of_word (\<lambda> y. aag_can_read aag y) (a + of_nat x * of_nat word_size)"
   apply (simp add: for_each_byte_of_word_def2 ipc_buffer_has_read_auth_def)
   apply (rule ballI)
   apply (rule reads_read)
@@ -755,7 +755,7 @@ lemma aag_has_auth_to_read_msg:
   "\<lbrakk> n = msg_max_length \<or> n < msg_max_length;
      ipc_buffer_has_read_auth aag (pasSubject aag) (Some p);
      unat (mi_length mi) < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
-     \<Longrightarrow> for_each_byte_of_word (aag_can_read aag) (p + of_nat n * of_nat word_size)"
+   \<Longrightarrow> for_each_byte_of_word (aag_can_read aag) (p + of_nat n * of_nat word_size)"
   apply (simp add: for_each_byte_of_word_def2 ipc_buffer_has_read_auth_def)
   apply (rule ballI)
   apply (rule reads_read)
@@ -808,7 +808,7 @@ lemma set_extra_badge_reads_respects:
 lemma reads_equiv_cdt_has_children0:
   "\<lbrakk> pas_refined aag s; pas_refined aag s'; aag_can_read aag (fst slot);
      equiv_for (aag_can_read aag \<circ> fst) cdt s s' \<rbrakk>
-     \<Longrightarrow> (cdt s) c = Some slot \<longleftrightarrow> (cdt s') c = Some slot"
+   \<Longrightarrow> (cdt s) c = Some slot \<longleftrightarrow> (cdt s') c = Some slot"
   apply (rule iffI)
    apply (drule equiv_forD)
     apply (erule(1) all_children_subjectReads[THEN all_childrenD];fastforce)
@@ -821,7 +821,7 @@ lemma reads_equiv_cdt_has_children0:
 lemma reads_equiv_cdt_has_children:
   "\<lbrakk> pas_refined aag s; pas_refined aag s'; is_subject aag (fst slot);
      equiv_for (aag_can_read aag \<circ> fst) cdt s s' \<rbrakk>
-     \<Longrightarrow> (\<exists>c. (cdt s) c = Some slot) = (\<exists>c. (cdt s') c = Some slot)"
+   \<Longrightarrow> (\<exists>c. (cdt s) c = Some slot) = (\<exists>c. (cdt s') c = Some slot)"
   apply (rule iff_exI)
   by (erule reads_equiv_cdt_has_children0; force)
 
@@ -846,7 +846,7 @@ lemma ensure_no_children_rev:
 (* FIXME MOVE *)
 lemma ball_subsetE:
   "\<lbrakk> \<forall>x \<in> S. P x; S' \<subseteq> S; \<And>x. P x \<Longrightarrow> Q x \<rbrakk>
-     \<Longrightarrow> \<forall>x \<in> S'. Q x"
+   \<Longrightarrow> \<forall>x \<in> S'. Q x"
   by blast
 
 
@@ -983,7 +983,7 @@ lemma lookup_cap_rev:
 
 lemma word_plus_power_2_offset_le:
   "\<lbrakk> is_aligned (p :: 'l :: len word) n; is_aligned q m; p < q; n \<le> m; n < len_of TYPE('l) \<rbrakk>
-     \<Longrightarrow> p + 2^n \<le> q"
+   \<Longrightarrow> p + 2^n \<le> q"
   apply (drule is_aligned_weaken, assumption)
   apply (clarsimp simp: is_aligned_def)
   apply (elim dvdE)
@@ -998,9 +998,9 @@ context Ipc_IF_1 begin
 
 lemma aag_has_auth_to_read_captransfer:
   "\<lbrakk> ipc_buffer_has_read_auth aag (pasSubject aag) (Some buffer); x \<in> {0..2} \<rbrakk>
-     \<Longrightarrow> for_each_byte_of_word (aag_can_read aag)
-           (buffer + (2 + (of_nat msg_max_length + of_nat msg_max_extra_caps)) * word_size
-                                                                               + x * word_size)"
+   \<Longrightarrow> for_each_byte_of_word (aag_can_read aag)
+         (buffer + (2 + (of_nat msg_max_length + of_nat msg_max_extra_caps)) * word_size
+                                                                             + x * word_size)"
   apply (simp add: for_each_byte_of_word_def2 ipc_buffer_has_read_auth_def)
   apply (rule ballI)
   apply (rule reads_read)
@@ -1031,14 +1031,14 @@ lemma get_endpoint_rev:
 
 lemma send_endpoint_threads_blocked:
   "\<lbrakk> valid_objs s; (sym_refs \<circ> state_refs_of) s; ko_at (Endpoint (SendEP list)) ep s; x \<in> set list \<rbrakk>
-     \<Longrightarrow> st_tcb_at (send_blocked_on ep) x s"
+   \<Longrightarrow> st_tcb_at (send_blocked_on ep) x s"
   apply (rule ep_queued_st_tcb_at'')
   apply simp+
   done
 
 lemma send_blocked_threads_have_SyncSend_auth:
   "\<lbrakk> pas_refined aag s; valid_objs s; sym_refs (state_refs_of s); st_tcb_at (send_blocked_on ep) x s \<rbrakk>
-     \<Longrightarrow> (pasObjectAbs aag x, SyncSend, pasObjectAbs aag ep) \<in> pasPolicy aag"
+   \<Longrightarrow> (pasObjectAbs aag x, SyncSend, pasObjectAbs aag ep) \<in> pasPolicy aag"
   apply (drule_tac auth="SyncSend" and x=x in pas_refined_mem[rotated])
    apply (rule sta_ts)
    apply (clarsimp simp: thread_st_auth_def split: option.split simp: tcb_states_of_state_def st_tcb_def2)
@@ -1058,7 +1058,7 @@ lemma send_endpoint_reads_affects_queued:
      aag_can_read aag epptr \<or> aag_can_affect aag l epptr;
      pas_refined aag s; valid_objs s; sym_refs (state_refs_of s);
      ko_at (Endpoint (SendEP list)) epptr s; ep = SendEP list; x \<in> set list \<rbrakk>
-     \<Longrightarrow> aag_can_read aag x \<or> aag_can_affect aag l x"
+   \<Longrightarrow> aag_can_read aag x \<or> aag_can_affect aag l x"
   apply (frule send_endpoint_threads_blocked, (simp | assumption)+)
   apply (drule send_blocked_threads_have_SyncSend_auth, (simp | assumption)+)
   apply (auto dest: read_sync_ep_read_senders)
@@ -1142,9 +1142,9 @@ lemma aag_has_auth_to_read_mrs:
   "\<lbrakk> aag_can_read_or_affect_ipc_buffer aag l (Some buf);
      n \<in> set [length msg_registers + 1..<Suc n'];
      n' < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
-     \<Longrightarrow> for_each_byte_of_word
-           (\<lambda>x. aag_can_read_label aag (pasObjectAbs aag x) \<or> aag_can_affect aag l x)
-           (buf + of_nat n * of_nat word_size)"
+   \<Longrightarrow> for_each_byte_of_word
+         (\<lambda>x. aag_can_read_label aag (pasObjectAbs aag x) \<or> aag_can_affect aag l x)
+         (buf + of_nat n * of_nat word_size)"
   apply (simp add: for_each_byte_of_word_def2 aag_can_read_or_affect_ipc_buffer_def)
   apply (rule ballI)
   apply (erule conjE)
@@ -1229,7 +1229,7 @@ lemma tl_tl_in_set:
 (* GENERALIZE the following is possible *)
 lemma ptr_in_obj_range:
   "\<lbrakk>valid_objs s; pspace_aligned s; kheap s ptr = Some obj\<rbrakk>
-  \<Longrightarrow> ptr + (a && mask (obj_bits obj)) \<in> obj_range ptr obj"
+   \<Longrightarrow> ptr + (a && mask (obj_bits obj)) \<in> obj_range ptr obj"
   apply (simp add: obj_range_def)
   apply (rule context_conjI)
   apply (frule(1) pspace_alignedD)
@@ -1425,15 +1425,12 @@ lemma receive_blocked_threads_have_Receive_auth:
   done
 
 lemma receive_endpoint_reads_affects_queued:
-  "\<lbrakk>(pasSubject aag, SyncSend, pasObjectAbs aag epptr) \<in> pasPolicy aag;
-        aag_can_read_label aag (pasObjectAbs aag epptr) \<or>
-        aag_can_affect aag l epptr;
-        pas_refined aag s; valid_objs s; sym_refs (state_refs_of s);
-        ko_at (Endpoint (RecvEP list)) epptr s; ep = RecvEP list;
-        x \<in> set list\<rbrakk>
-       \<Longrightarrow>
-             aag_can_read_label aag (pasObjectAbs aag x) \<or>
-             aag_can_affect aag l x"
+  "\<lbrakk> (pasSubject aag, SyncSend, pasObjectAbs aag epptr) \<in> pasPolicy aag;
+     aag_can_read_label aag (pasObjectAbs aag epptr) \<or> aag_can_affect aag l epptr;
+     pas_refined aag s; valid_objs s; sym_refs (state_refs_of s);
+     ko_at (Endpoint (RecvEP list)) epptr s; ep = RecvEP list;
+     x \<in> set list\<rbrakk>
+   \<Longrightarrow> aag_can_read_label aag (pasObjectAbs aag x) \<or> aag_can_affect aag l x"
   apply (frule receive_endpoint_threads_blocked, (simp | assumption)+)
   apply (drule receive_blocked_threads_have_Receive_auth, (simp | assumption)+)
   apply (auto dest: read_sync_ep_read_receivers)
@@ -1767,7 +1764,7 @@ lemma set_collection: "a = {x. x\<in>a}"
 
 lemma valid_ep_send_enqueue:
   "\<lbrakk> ko_at (Endpoint (SendEP (t # ts))) a s; valid_objs s \<rbrakk>
-     \<Longrightarrow> valid_ep (case ts of [] \<Rightarrow> IdleEP | b # bs \<Rightarrow> SendEP (b # bs)) s"
+   \<Longrightarrow> valid_ep (case ts of [] \<Rightarrow> IdleEP | b # bs \<Rightarrow> SendEP (b # bs)) s"
   unfolding valid_objs_def valid_obj_def valid_ep_def obj_at_def
   apply (drule bspec)
   apply (auto split: list.splits)
@@ -1866,7 +1863,7 @@ subsection "Notifications"
 lemma valid_ntfn_dequeue:
   "\<lbrakk> ko_at (Notification ntfn) ntfnptr s;
      ntfn_obj ntfn = (WaitingNtfn (t # ts)); valid_objs s; ts \<noteq> [] \<rbrakk>
-     \<Longrightarrow> valid_ntfn ntfn s"
+   \<Longrightarrow> valid_ntfn ntfn s"
   unfolding valid_objs_def valid_obj_def valid_ntfn_def obj_at_def
   apply (drule bspec)
   apply (auto split: list.splits)

@@ -508,7 +508,7 @@ lemma irq_state_increment_reads_respects_device:
 
 lemma use_equiv_valid_inv:
   "\<lbrakk> x \<in> fst (f st); y \<in> fst (f s); g s; g st; I s st; P s st; equiv_valid_inv I P g f \<rbrakk>
-     \<Longrightarrow> fst x = fst y \<and> P (snd y) (snd x) \<and> I (snd y) (snd x)"
+   \<Longrightarrow> fst x = fst y \<and> P (snd y) (snd x) \<and> I (snd y) (snd x)"
   apply (clarsimp simp add: equiv_valid_def spec_equiv_valid_def equiv_valid_2_def)
   apply (drule spec)+
   apply (erule impE)
@@ -570,7 +570,7 @@ lemma preemption_point_def2:
 
 lemma all_children_descendants_equal:
   "\<lbrakk> equiv_for P id s t; all_children P s; all_children P t; P slot \<rbrakk>
-     \<Longrightarrow> descendants_of slot s = descendants_of slot t"
+   \<Longrightarrow> descendants_of slot s = descendants_of slot t"
   apply (clarsimp | rule equalityI)+
    apply (frule_tac p="(a, b)" and q="slot" and m=s in all_children_descendants_of)
      apply (simp)+
@@ -592,7 +592,7 @@ lemma all_children_descendants_equal:
 
 lemma cca_can_read:
   "\<lbrakk> valid_mdb s; valid_objs s; cdt_change_allowed' aag slot s; pas_refined aag s \<rbrakk>
-     \<Longrightarrow> aag_can_read aag (fst slot)"
+   \<Longrightarrow> aag_can_read aag (fst slot)"
   apply (frule(3) cdt_change_allowed_delete_derived)
   by (rule read_delder_thread_read_thread_rev[OF reads_lrefl])
 
@@ -622,7 +622,7 @@ lemma gets_descendants_of_revrv:
 
 lemma silc_dom_equiv_trans[elim]:
   "\<lbrakk> silc_dom_equiv aag s t; silc_dom_equiv aag t u \<rbrakk>
-     \<Longrightarrow> silc_dom_equiv aag s u"
+   \<Longrightarrow> silc_dom_equiv aag s u"
   by (auto simp: silc_dom_equiv_def elim: equiv_for_trans)
 
 lemma silc_dom_equiv_sym[elim]:
@@ -631,7 +631,7 @@ lemma silc_dom_equiv_sym[elim]:
 
 lemma reads_respects_f:
   "\<lbrakk> reads_respects aag l P f; \<lbrace>silc_inv aag st and Q\<rbrace> f \<lbrace>\<lambda>_. silc_inv aag st\<rbrace> \<rbrakk>
-     \<Longrightarrow> reads_respects_f aag l (silc_inv aag st and P and Q) f"
+   \<Longrightarrow> reads_respects_f aag l (silc_inv aag st and P and Q) f"
   apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def reads_equiv_f_def)
   apply (rule conjI, fastforce)
   apply (rule conjI, fastforce)
@@ -711,7 +711,7 @@ lemma reads_equiv_f_g_conj:
 
 lemma reads_respects_f_g:
   "\<lbrakk> reads_respects_f aag l P f; doesnt_touch_globals Q f \<rbrakk>
-     \<Longrightarrow> reads_respects_f_g aag l (P and Q) f"
+   \<Longrightarrow> reads_respects_f_g aag l (P and Q) f"
   apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def)
   apply (subst (asm) reads_equiv_f_g_conj, erule conjE)
   apply (subst reads_equiv_f_g_conj)

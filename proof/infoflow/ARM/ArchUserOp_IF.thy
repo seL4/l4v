@@ -135,7 +135,7 @@ lemma requiv_get_pd_of_thread_eq:
      pd_ref \<noteq> arm_global_pd (arch_state s); pd_ref' \<noteq> arm_global_pd (arch_state s');
      get_pd_of_thread (kheap s) (arch_state s) (cur_thread s) = pd_ref;
      get_pd_of_thread (kheap s') (arch_state s') (cur_thread s') = pd_ref' \<rbrakk>
-     \<Longrightarrow> pd_ref = pd_ref'"
+   \<Longrightarrow> pd_ref = pd_ref'"
   apply (erule reads_equivE)
   apply (erule equiv_forE)
   apply (subgoal_tac "aag_can_read aag (cur_thread s)")
@@ -145,8 +145,8 @@ lemma requiv_get_pd_of_thread_eq:
 
 lemma requiv_get_pt_entry_eq:
   "\<lbrakk> reads_equiv aag s s'; is_subject aag pt \<rbrakk>
-     \<Longrightarrow> get_pt_entry (\<lambda>obj. get_arch_obj (kheap s obj)) pt x =
-         get_pt_entry (\<lambda>obj. get_arch_obj (kheap s' obj)) pt x"
+   \<Longrightarrow> get_pt_entry (\<lambda>obj. get_arch_obj (kheap s obj)) pt x =
+       get_pt_entry (\<lambda>obj. get_arch_obj (kheap s' obj)) pt x"
   apply (erule reads_equivE)
   apply (erule equiv_forE)
   apply (subgoal_tac "aag_can_read aag pt")
@@ -156,16 +156,16 @@ lemma requiv_get_pt_entry_eq:
 
 lemma requiv_get_pt_info_eq:
   "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; is_subject aag pt \<rbrakk>
-     \<Longrightarrow> get_pt_info (\<lambda>obj. get_arch_obj (kheap s obj)) pt x =
-         get_pt_info (\<lambda>obj. get_arch_obj (kheap s' obj)) pt x"
+   \<Longrightarrow> get_pt_info (\<lambda>obj. get_arch_obj (kheap s obj)) pt x =
+       get_pt_info (\<lambda>obj. get_arch_obj (kheap s' obj)) pt x"
   apply (simp add: get_pt_info_def)
   apply (subst requiv_get_pt_entry_eq, simp+)
   done
 
 lemma requiv_get_pd_entry_eq:
   "\<lbrakk> reads_equiv aag s s'; is_subject aag pd \<rbrakk>
-     \<Longrightarrow> get_pd_entry (\<lambda>obj. get_arch_obj (kheap s obj)) pd x =
-         get_pd_entry (\<lambda>obj. get_arch_obj (kheap s' obj)) pd x"
+   \<Longrightarrow> get_pd_entry (\<lambda>obj. get_arch_obj (kheap s obj)) pd x =
+       get_pd_entry (\<lambda>obj. get_arch_obj (kheap s' obj)) pd x"
   apply (erule reads_equivE)
   apply (erule equiv_forE)
   apply (subgoal_tac "aag_can_read aag pd")
@@ -175,8 +175,8 @@ lemma requiv_get_pd_entry_eq:
 
 lemma requiv_get_page_info_eq:
   "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; is_subject aag pd; x \<notin> kernel_mappings \<rbrakk>
-     \<Longrightarrow> get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd x =
-         get_page_info (\<lambda>obj. get_arch_obj (kheap s' obj)) pd x"
+   \<Longrightarrow> get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd x =
+       get_page_info (\<lambda>obj. get_arch_obj (kheap s' obj)) pd x"
   apply (simp add: get_page_info_def)
   apply (subst requiv_get_pd_entry_eq[symmetric], simp+)
   apply (clarsimp split: option.splits pde.splits)
@@ -187,7 +187,7 @@ lemma requiv_get_page_info_eq:
 lemma requiv_pd_of_thread_global_pd:
   "\<lbrakk> reads_equiv aag s s'; is_subject aag (cur_thread s); invs s; pas_refined aag s;
      get_pd_of_thread (kheap s) (arch_state s) (cur_thread s) = arm_global_pd (arch_state s) \<rbrakk>
-     \<Longrightarrow> get_pd_of_thread (kheap s') (arch_state s') (cur_thread s') = arm_global_pd (arch_state s')"
+   \<Longrightarrow> get_pd_of_thread (kheap s') (arch_state s') (cur_thread s') = arm_global_pd (arch_state s')"
   apply (erule reads_equivE)
   apply (erule equiv_forE)
   apply (subgoal_tac "aag_can_read aag (cur_thread s)")
@@ -226,7 +226,7 @@ lemma requiv_pd_of_thread_global_pd:
 lemma requiv_ptable_rights_eq:
   "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; pas_refined aag s';
      is_subject aag (cur_thread s); invs s; invs s' \<rbrakk>
-     \<Longrightarrow> ptable_rights_s s = ptable_rights_s s'"
+   \<Longrightarrow> ptable_rights_s s = ptable_rights_s s'"
   apply (simp add: ptable_rights_s_def)
   apply (rule ext)
   apply (case_tac "x \<in> kernel_mappings")
@@ -276,7 +276,7 @@ lemma requiv_ptable_rights_eq:
 lemma requiv_ptable_attrs_eq:
   "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; pas_refined aag s';
      is_subject aag (cur_thread s); invs s; invs s'; ptable_rights_s s x \<noteq> {} \<rbrakk>
-     \<Longrightarrow> ptable_attrs_s s x = ptable_attrs_s s' x"
+   \<Longrightarrow> ptable_attrs_s s x = ptable_attrs_s s' x"
   apply (simp add: ptable_attrs_s_def ptable_rights_s_def)
   apply (case_tac "x \<in> kernel_mappings")
    apply (clarsimp simp: ptable_attrs_def split: option.splits)
@@ -319,7 +319,7 @@ lemma requiv_ptable_attrs_eq:
 lemma requiv_ptable_lift_eq:
   "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; pas_refined aag s'; invs s;
      invs s'; is_subject aag (cur_thread s); ptable_rights_s s x \<noteq> {} \<rbrakk>
-     \<Longrightarrow> ptable_lift_s s x = ptable_lift_s s' x"
+   \<Longrightarrow> ptable_lift_s s x = ptable_lift_s s' x"
   apply (simp add: ptable_lift_s_def ptable_rights_s_def)
   apply (case_tac "x \<in> kernel_mappings")
    apply (clarsimp simp: ptable_lift_def split: option.splits)
@@ -362,7 +362,7 @@ lemma requiv_ptable_lift_eq:
 lemma requiv_ptable_xn_eq:
   "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; pas_refined aag s';
      is_subject aag (cur_thread s); invs s; invs s'; ptable_rights_s s x \<noteq> {} \<rbrakk>
-     \<Longrightarrow> ptable_xn_s s x = ptable_xn_s s' x"
+   \<Longrightarrow> ptable_xn_s s x = ptable_xn_s s' x"
   by (simp add: ptable_xn_s_def requiv_ptable_attrs_eq)
 
 lemma mask_shift_le:
@@ -380,7 +380,7 @@ qed
 
 lemma data_at_obj_range:
   "\<lbrakk> data_at sz ptr s; pspace_aligned s; valid_objs s \<rbrakk>
-     \<Longrightarrow> ptr + (offset && mask (pageBitsForSize sz)) \<in> obj_range ptr (ArchObj (DataPage dev sz))"
+   \<Longrightarrow> ptr + (offset && mask (pageBitsForSize sz)) \<in> obj_range ptr (ArchObj (DataPage dev sz))"
   apply (clarsimp simp: data_at_def)
   apply (elim disjE)
    apply (clarsimp simp: obj_at_def)
@@ -406,7 +406,7 @@ lemma pspace_distinct_def':
 lemma data_at_disjoint_equiv:
   "\<lbrakk> ptr' \<noteq> ptr;data_at sz' ptr' s; data_at sz ptr s; valid_objs s; pspace_aligned s;
      pspace_distinct s; ptr' \<in> obj_range ptr (ArchObj (DataPage dev sz)) \<rbrakk>
-     \<Longrightarrow> False"
+   \<Longrightarrow> False"
   apply (frule (2) data_at_obj_range[where offset = 0,simplified])
   apply (clarsimp simp: data_at_def obj_at_def)
   apply (elim disjE)
@@ -487,21 +487,21 @@ qed
 
 lemma valid_pdpt_align_ptD:
   "\<lbrakk> kheap s ptr = Some (ArchObj (PageTable pt)); valid_pdpt_objs s; pt a = entry \<rbrakk>
-     \<Longrightarrow> is_aligned a (pte_range_sz entry)"
+   \<Longrightarrow> is_aligned a (pte_range_sz entry)"
   apply (drule (1) valid_pdpt_objs_ptD)
   apply (clarsimp simp: entries_align_def)
   done
 
 lemma valid_pdpt_align_pdD:
   "\<lbrakk> kheap s ptr = Some (ArchObj (PageDirectory pd));valid_pdpt_objs s; pd a = entry \<rbrakk>
-     \<Longrightarrow> is_aligned a (pde_range_sz entry)"
+   \<Longrightarrow> is_aligned a (pde_range_sz entry)"
   apply (drule (1) valid_pdpt_objs_pdD)
   apply (clarsimp simp: entries_align_def)
   done
 
 lemma valid_vspace_objsD2:
   "\<lbrakk> (\<exists>\<rhd> p) s; ko_at (ArchObj ao) p s; valid_vspace_objs s \<rbrakk>
-     \<Longrightarrow> valid_vspace_obj ao s"
+   \<Longrightarrow> valid_vspace_obj ao s"
   by (clarsimp simp: valid_vspace_objsD)
 
 lemma ptable_lift_data_consistant:
@@ -738,8 +738,8 @@ lemma user_op_access_data_at:
   "\<lbrakk> invs s; valid_pdpt_objs s;pas_refined aag s; is_subject aag tcb; ptable_lift tcb s x = Some ptr;
      data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s;
      auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) (ptable_exec tcb s x) \<rbrakk>
-     \<Longrightarrow> (pasObjectAbs aag tcb, auth,
-          pasObjectAbs aag (ptrFromPAddr (ptr && ~~ mask (pageBitsForSize sz)))) \<in> pasPolicy aag"
+   \<Longrightarrow> (pasObjectAbs aag tcb, auth,
+        pasObjectAbs aag (ptrFromPAddr (ptr && ~~ mask (pageBitsForSize sz)))) \<in> pasPolicy aag"
   apply (case_tac "x \<in> kernel_mappings")
    apply (clarsimp simp: ptable_lift_def ptable_rights_def split: option.splits)
    apply (frule some_get_page_info_kmapsD)
@@ -761,12 +761,12 @@ lemma user_op_access_data_at:
 
 lemma user_frame_at_equiv:
   "\<lbrakk> typ_at (AArch (AUserData sz)) p s; equiv_for P kheap s s'; P p \<rbrakk>
-     \<Longrightarrow> typ_at (AArch (AUserData sz)) p s'"
+   \<Longrightarrow> typ_at (AArch (AUserData sz)) p s'"
   by (clarsimp simp: equiv_for_def obj_at_def)
 
 lemma device_frame_at_equiv:
   "\<lbrakk> typ_at (AArch (ADeviceData sz)) p s; equiv_for P kheap s s'; P p \<rbrakk>
-     \<Longrightarrow> typ_at (AArch (ADeviceData sz)) p s'"
+   \<Longrightarrow> typ_at (AArch (ADeviceData sz)) p s'"
   by (clarsimp simp: equiv_for_def obj_at_def)
 
 lemma typ_at_user_data_at:
@@ -781,7 +781,7 @@ lemma requiv_device_mem_eq:
   "\<lbrakk> reads_equiv aag s s'; globals_equiv s s'; invs s; invs s'; valid_pdpt_objs s;
      valid_pdpt_objs s'; is_subject aag (cur_thread s); AllowRead \<in> ptable_rights_s s x;
      ptable_lift_s s x = Some y; pas_refined aag s; pas_refined aag s' \<rbrakk>
-     \<Longrightarrow> device_mem s (ptrFromPAddr y) = device_mem s' (ptrFromPAddr y)"
+   \<Longrightarrow> device_mem s (ptrFromPAddr y) = device_mem s' (ptrFromPAddr y)"
   apply (simp add: device_mem_def)
   apply (rule conjI)
    apply (erule reads_equivE)
@@ -818,7 +818,7 @@ lemma requiv_user_mem_eq:
   "\<lbrakk> reads_equiv aag s s'; globals_equiv s s'; invs s; invs s'; valid_pdpt_objs s;
      valid_pdpt_objs s'; is_subject aag (cur_thread s); AllowRead \<in> ptable_rights_s s x;
      ptable_lift_s s x = Some y; pas_refined aag s; pas_refined aag s' \<rbrakk>
-     \<Longrightarrow> user_mem s (ptrFromPAddr y) = user_mem s' (ptrFromPAddr y)"
+   \<Longrightarrow> user_mem s (ptrFromPAddr y) = user_mem s' (ptrFromPAddr y)"
   apply (simp add: user_mem_def)
   apply (rule conjI)
    apply clarsimp
@@ -864,7 +864,7 @@ lemma requiv_user_mem_eq:
 
 lemma ptable_rights_imp_frameD:
   "\<lbrakk> ptable_lift t s x = Some y;valid_state s;ptable_rights t s x \<noteq> {} \<rbrakk>
-     \<Longrightarrow> \<exists>sz. data_at sz (ptrFromPAddr y && ~~ mask (pageBitsForSize sz)) s"
+   \<Longrightarrow> \<exists>sz. data_at sz (ptrFromPAddr y && ~~ mask (pageBitsForSize sz)) s"
   apply (subst (asm) addrFromPPtr_ptrFromPAddr_id[symmetric])
   apply (drule ptable_rights_imp_frame)
     apply simp+
@@ -877,8 +877,8 @@ lemma requiv_user_device_eq:
   "\<lbrakk> reads_equiv aag s s'; globals_equiv s s'; invs s; invs s'; valid_pdpt_objs s;
      valid_pdpt_objs s'; is_subject aag (cur_thread s); AllowRead \<in> ptable_rights_s s x;
      ptable_lift_s s x = Some y; pas_refined aag s; pas_refined aag s' \<rbrakk>
-     \<Longrightarrow> device_state (machine_state s) (ptrFromPAddr y) =
-         device_state (machine_state s') (ptrFromPAddr y)"
+   \<Longrightarrow> device_state (machine_state s) (ptrFromPAddr y) =
+       device_state (machine_state s') (ptrFromPAddr y)"
   apply (simp add: ptable_lift_s_def)
   apply (frule ptable_rights_imp_frameD)
     apply fastforce

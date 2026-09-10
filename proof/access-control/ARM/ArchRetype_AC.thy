@@ -153,12 +153,12 @@ lemma pd_shifting_dual':
   done
 
 lemma empty_table_update_from_arm_global_pts:
-  "\<lbrakk>valid_global_objs s; kernel_base >> 20 \<le> y >> 20; y >> 20 \<le> 2 ^ (pd_bits - 2) - 1;
-    is_aligned pd pd_bits; obj_at (empty_table (set (second_level_tables (arch_state s)))) pd s;
-    kheap s (arm_global_pd (arch_state s)) = Some (ArchObj (PageDirectory pda)) \<rbrakk>
-    \<Longrightarrow> (\<forall>pdb. ko_at (ArchObj (PageDirectory pdb)) pd s
-               \<longrightarrow> empty_table (set (second_level_tables (arch_state s)))
-                               (ArchObj (PageDirectory (pdb(ucast (y >> 20) := pda (ucast (y >> 20)))))))"
+  "\<lbrakk> valid_global_objs s; kernel_base >> 20 \<le> y >> 20; y >> 20 \<le> 2 ^ (pd_bits - 2) - 1;
+     is_aligned pd pd_bits; obj_at (empty_table (set (second_level_tables (arch_state s)))) pd s;
+     kheap s (arm_global_pd (arch_state s)) = Some (ArchObj (PageDirectory pda)) \<rbrakk>
+   \<Longrightarrow> (\<forall>pdb. ko_at (ArchObj (PageDirectory pdb)) pd s
+              \<longrightarrow> empty_table (set (second_level_tables (arch_state s)))
+                              (ArchObj (PageDirectory (pdb(ucast (y >> 20) := pda (ucast (y >> 20)))))))"
   by (clarsimp simp: obj_at_def valid_global_objs_def empty_table_def)
 
 lemma copy_global_mappings_pas_refined:
@@ -427,10 +427,10 @@ lemma integrity_asids_detype[Retype_AC_assms]:
 lemma retype_region_integrity_asids[Retype_AC_assms]:
   "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped;
      \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_asids aag {pasSubject aag} x a s st \<rbrakk>
-     \<Longrightarrow> integrity_asids aag {pasSubject aag} x a s
-           (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
-                            then Some (default_object typ dev o_bits d)
-                            else kheap s a\<rparr>)"
+   \<Longrightarrow> integrity_asids aag {pasSubject aag} x a s
+         (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
+                          then Some (default_object typ dev o_bits d)
+                          else kheap s a\<rparr>)"
   by (clarsimp simp: integrity_asids_def opt_map_def)
 
 declare state_hyp_refs_of_detype[Retype_AC_assms]
