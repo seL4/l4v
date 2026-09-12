@@ -584,17 +584,17 @@ Page entries -- any of PTEs, PDEs or PDPTEs.
 IO Port interface.
 
 > in8 :: IOPort -> MachineMonad Word
-> in8 = error "Unimplemented"
+> in8 = isabelleOp
 > in16 :: IOPort -> MachineMonad Word
-> in16 = error "Unimplemented"
+> in16 = isabelleOp
 > in32 :: IOPort -> MachineMonad Word
-> in32 = error "Unimplemented"
+> in32 = isabelleOp
 > out8 :: IOPort -> Word8 -> MachineMonad ()
-> out8 = error "Unimplemented"
+> out8 = isabelleOp
 > out16 :: IOPort -> Word16 -> MachineMonad ()
-> out16 = error "Unimplemented"
+> out16 = isabelleOp
 > out32 :: IOPort -> Word32 -> MachineMonad ()
-> out32 = error "Unimplemented"
+> out32 = isabelleOp
 
 IRQ parameters
 
@@ -625,21 +625,21 @@ IRQ parameters
 >     liftIO $ Platform.ioapicMapPinToVector cbptr ioapic pin level polarity vector
 
 > initIRQController :: MachineMonad ()
-> initIRQController = error "Unimplemented"
+> initIRQController = error "Unimplemented init code"
 
 FPU operations
 
 > readFpuState :: MachineMonad X64.FPUState
-> readFpuState = error "Unimplemented - machine op"
+> readFpuState = isabelleOp
 
 > writeFpuState :: X64.FPUState -> MachineMonad ()
-> writeFpuState _ = error "Unimplemented - machine op"
+> writeFpuState _ = isabelleOp
 
 > enableFpu :: MachineMonad ()
-> enableFpu = error "Unimplemented - machine op"
+> enableFpu = isabelleOp
 
 > disableFpu :: MachineMonad ()
-> disableFpu = error "Unimplemented - machine op"
+> disableFpu = isabelleOp
 
 > isFpuEnable :: MachineMonad Bool
-> isFpuEnable = error "Unimplemented - machine op"
+> isFpuEnable = isabelleOp
