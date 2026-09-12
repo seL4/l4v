@@ -58,10 +58,6 @@ definition
   "addrFromKPPtr pptr \<equiv> pptr - kernelELFBaseOffset"
 
 definition
-  pageColourBits :: "nat" where
-  "pageColourBits \<equiv> undefined"
-
-definition
   minIRQ :: "irq" where
   "minIRQ \<equiv> 0"
 

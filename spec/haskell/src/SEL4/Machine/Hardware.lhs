@@ -143,11 +143,6 @@ This function is called to free a region of user-memory after use.
 > freeMemory :: PPtr Word -> Int -> MachineMonad ()
 > freeMemory = Arch.freeMemory
 
-The following constant is used to determine the correct page colouring when allocating the initial task's IPC buffer; it is the number of bits of the virtual page number that are significant in determining the page colour. It is zero if there are no page colouring restrictions.
-
-> pageColourBits :: Int
-> pageColourBits = Arch.pageColourBits
-
 \subsubsection{Interrupts}
 
 After receiving an Interrupt event, or at preemption points, the kernel calls this function to check for any pending interrupts which might preempt the kernel. If there are any, it returns the one with highest priority. In a real kernel, this would be implemented by briefly enabling interrupts.
