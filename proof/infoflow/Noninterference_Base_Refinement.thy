@@ -90,7 +90,6 @@ lemma xNonleakage_gen_refinement_closed:
 
 end (* noninterference_refinement *)
 
-
 locale complete_noninterference_refinement = noninterference_refinement A s0 dom uwr policy out schedDomain C
    for A :: "('a,'s,'e) data_type"
    and s0 :: "'s"

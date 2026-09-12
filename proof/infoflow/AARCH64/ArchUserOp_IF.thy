@@ -120,7 +120,6 @@ lemma no_fpu_modify[UserOp_IF_assms]:
 
 end (* Arch *)
 
-
 arch_requalify_types user_transition_if
 
 global_interpretation UserOp_IF?: UserOp_IF
@@ -129,7 +128,6 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact UserOp_IF_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 

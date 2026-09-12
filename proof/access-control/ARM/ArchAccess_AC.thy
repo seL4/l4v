@@ -66,14 +66,12 @@ lemma tcb_hyp_refs_arch_tcb_set_registers[Access_AC_assms]:
 
 end (* Arch *)
 
-
 global_interpretation Access_AC?: Access_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Access_AC_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -135,14 +133,12 @@ lemmas integrity_arch_triv =
 
 end (* Arch *)
 
-
 global_interpretation Access_AC_2?: Access_AC_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Access_AC_assms | solves \<open>rule integrity_arch_triv\<close>)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -202,14 +198,12 @@ lemma arch_integrity_obj_atomic_mono[Access_AC_assms]:
 
 end (* Arch *)
 
-
 global_interpretation Access_AC_3?: Access_AC_3
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Access_AC_assms | solves \<open>rule integrity_arch_triv\<close>)?)
 qed
-
 
 context Arch_pspace_update_eq begin arch_global_naming
 
@@ -231,14 +225,12 @@ lemma integrity_asids_kh_upd_None[Access_AC_assms]:
 
 end (* Arch *)
 
-
 global_interpretation Access_AC_4?: Access_AC_4
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Access_AC_assms | solves \<open>rule integrity_arch_triv\<close>)?)
 qed
-
 
 locale Arch_pas_refined_arch_update_eq = Arch +
   fixes f :: "('a \<Rightarrow> 'a) \<Rightarrow> arch_state \<Rightarrow> arch_state"
@@ -269,7 +261,6 @@ sublocale Arch \<subseteq> asid_map_update: Arch_pas_refined_arch_update_eq arm_
 sublocale Arch \<subseteq> global_pd_update: Arch_pas_refined_arch_update_eq arm_global_pd_update by unfold_locales auto
 sublocale Arch \<subseteq> global_pts_update: Arch_pas_refined_arch_update_eq arm_global_pts_update by unfold_locales auto
 sublocale Arch \<subseteq> kernel_vspace_update: Arch_pas_refined_arch_update_eq arm_kernel_vspace_update by unfold_locales auto
-
 
 context Arch begin arch_global_naming
 

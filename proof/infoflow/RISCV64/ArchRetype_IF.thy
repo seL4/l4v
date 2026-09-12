@@ -348,14 +348,12 @@ lemma equiv_asid_detype[Retype_IF_assms]:
 
 end (* Arch *)
 
-
 global_interpretation Retype_IF?: Retype_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Retype_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
 qed
-
 
 context Arch begin global_naming RISCV64
 
@@ -656,14 +654,12 @@ lemma invoke_untyped_globals_equiv:
 
 end (* Arch *)
 
-
 global_interpretation Retype_IF_2?: Retype_IF_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Retype_IF_assms)?)
 qed
-
 
 requalify_facts
   RISCV64.reset_untyped_cap_reads_respects_g

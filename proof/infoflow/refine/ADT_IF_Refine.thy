@@ -561,7 +561,6 @@ lemma step_corresE:
    apply simp+
   done
 
-
 locale global_automaton_invs =
   fixes check_active_irq
   fixes do_user_op
@@ -632,7 +631,6 @@ lemma ADT_invs: "ADT \<Turnstile> invs"
   done
 
 end (* global_automaton_invs *)
-
 
 lemma invariant_holds_inter:
   "A \<Turnstile> I \<Longrightarrow> A \<Turnstile> S \<Longrightarrow> A \<Turnstile> (I \<inter> S)"
@@ -807,7 +805,6 @@ lemma kernelEntry_if_no_preempt:
   unfolding kernelEntry_if_def handleEvent_def
   by (wp | clarsimp intro!: validE_cases_valid)+
 
-
 context ADT_IF_Refine begin
 
 definition doUserOp_H_if where
@@ -897,7 +894,6 @@ lemma Fin_Init_ADT_H:
 
 end (* ADT_IF_Refine *)
 
-
 lemma step_corres_exE:
   assumes step: "step_corres nf srel mode invs_abs invs_conc f f'"
   assumes nf: "nf"
@@ -915,7 +911,6 @@ lemma step_corres_exE:
   apply (rule ex)
     apply assumption+
   done
-
 
 locale global_automata_refine =
   abs: global_automaton_invs check_active_irq_abs do_user_op_abs kernel_call_abs
@@ -1070,7 +1065,6 @@ lemma abs_serial:
   done
 
 end (* global_automata_refine *)
-
 
 lemma step_corres_lift:
   "\<lbrakk> \<And>tc. corres_underlying srel False nf (=) (\<lambda>s. ((tc,s),mode) \<in> P) (\<lambda>s'. ((tc,s'),mode) \<in> P')
@@ -1304,7 +1298,6 @@ lemma ADT_A_if_enabled:
   done
 
 end (* ADT_IF_Refine *)
-
 
 lemma (in valid_initial_state_noenabled) uop_nonempty:
   "uop_nonempty utf"

@@ -76,14 +76,12 @@ requalify_consts irq_at
 
 end
 
-
 global_interpretation CNode_IF?: CNode_IF _ irq_at
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact CNode_IF_assms)?)
 qed
-
 
 context Arch begin global_naming ARM
 
@@ -103,14 +101,12 @@ lemma is_irq_at_not_masked[CNode_IF_assms]:
 
 end (* Arch *)
 
-
 global_interpretation CNode_IF_2?: CNode_IF_2 irq_at
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact CNode_IF_assms)?)
 qed
-
 
 context Arch begin global_naming ARM
 
@@ -137,7 +133,6 @@ lemma dmo_getActiveIRQ_globals_equiv[CNode_IF_assms]:
   done
 
 end (* Arch *)
-
 
 global_interpretation CNode_IF_3?: CNode_IF_3 irq_at
 proof goal_cases

@@ -99,7 +99,6 @@ crunch arch_post_set_flags
 
 end (* Arch *)
 
-
 global_interpretation Tcb_AC?: Tcb_AC
 proof goal_cases
   interpret Arch .

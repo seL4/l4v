@@ -43,7 +43,6 @@ crunch create_cap
 crunch cap_swap_for_delete
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
 
-
 locale IRQMasks_IF =
   fixes state_t :: "'s :: state_ext state"
   assumes resetTimer_irq_masks[wp]:
@@ -170,7 +169,6 @@ lemma invoke_irq_control_irq_masks:
 
 end (* IRQMasks_IF *)
 
-
 crunch cancel_ipc
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps simp: crunch_simps)
@@ -201,7 +199,6 @@ crunch cancel_badged_sends
   (wp: crunch_wps dmo_wp no_irq unless_wp
    simp: filterM_mapM crunch_simps no_irq_clearMemory
    ignore: filterM)
-
 
 context IRQMasks_IF begin
 
@@ -256,7 +253,6 @@ crunch reply_from_kernel
 
 end (* IRQMasks_IF *)
 
-
 fun irq_of_handler_inv where
   "irq_of_handler_inv (ACKIrq irq) = irq" |
   "irq_of_handler_inv (ClearIRQHandler irq) = irq" |
@@ -277,7 +273,6 @@ lemma handle_yield_irq_masks_of_state[wp]:
    handle_yield
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   by (wpsimp simp: handle_yield_def)
-
 
 locale IRQMasks_IF_2 = IRQMasks_IF state_t
   for state_t :: "'s :: state_ext state" +

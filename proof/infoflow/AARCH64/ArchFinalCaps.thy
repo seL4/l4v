@@ -99,14 +99,12 @@ declare finalise_cap_makes_halted[FinalCaps_assms]
 
 end (* Arch *)
 
-
 global_interpretation FinalCaps?: FinalCaps
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact FinalCaps_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -390,14 +388,12 @@ lemma invoke_tcb_silc_inv[FinalCaps_assms]:
 
 end (* Arch *)
 
-
 global_interpretation FinalCaps_2?: FinalCaps_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact FinalCaps_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -444,7 +440,6 @@ lemma handle_reserved_irq_non_kernel_IRQs[FinalCaps_assms]:
   done
 
 end (* Arch *)
-
 
 global_interpretation FinalCaps_3?: FinalCaps_3
 proof goal_cases

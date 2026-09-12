@@ -202,7 +202,6 @@ lemma inv_holds_steps:
   apply simp
   done
 
-
 locale serial_system_weak = system +
   fixes I
   assumes I: "A [> I"
@@ -224,7 +223,6 @@ lemma step_serial:
   done
 
 end (* serial_system_weak *)
-
 
 lemma sub_big_steps_I_holds:
   "\<lbrakk> A [> I; s \<in> I; (x, xs) \<in> sub_big_steps A R s \<rbrakk>
@@ -327,7 +325,6 @@ lemma steps_subset:
   apply force
   done
 
-
 locale Init_Fin_serial_weak = serial_system_weak +
   assumes Init_Fin: "\<And>s'. s' \<in> I \<Longrightarrow> s' \<in> Init A (Fin A s')"
   assumes s0_I: "Init A s0 \<subseteq> I"
@@ -373,7 +370,6 @@ lemma enabled:
 
 end (* Init_Fin_serial_weak *)
 
-
 lemma invariant_holds_steps:
   assumes I: "A \<Turnstile> I"
   assumes start_I: "B \<subseteq> I"
@@ -394,7 +390,6 @@ lemma invariant_holds_steps:
    apply assumption
   apply simp
   done
-
 
 locale serial_system = system +
   fixes I
@@ -438,7 +433,6 @@ lemma fw_sim_serial:
 
 end (* serial_system *)
 
-
 locale Init_Fin_serial = serial_system +
   assumes Init_Fin: "\<And>s'. s' \<in> I \<Longrightarrow> s' \<in> Init A (Fin A s')"
   assumes s0_I: "Init A s0 \<subseteq> I"
@@ -477,7 +471,6 @@ lemma enabled:
   done
 
 end (* Init_Fin_serial *)
-
 
 sublocale Init_Fin_serial \<subseteq> enabled_system by (rule enabled)
 
@@ -958,7 +951,6 @@ locale ADT_IF =
   assumes do_user_op_if_valid_cur_hyp[wp]:
     "do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. valid_cur_hyp s\<rbrace>"
 
-
 locale ADT_IF_2 = ADT_IF +
   fixes initial_aag :: "'a subject_label PAS"
   assumes do_user_op_if_invs[wp]:
@@ -1171,7 +1163,6 @@ lemma activate_thread_guarded_pas_domain[wp]:
 
 end (* ADT_IF_2 *)
 
-
 lemma kernel_entry_if_guarded_pas_domain:
   "kernel_entry_if e tc \<lbrace>guarded_pas_domain aag\<rbrace>"
   apply (simp add: kernel_entry_if_def)
@@ -1191,7 +1182,6 @@ lemma handle_preemption_if_invs:
   "handle_preemption_if tc \<lbrace>invs\<rbrace>"
   unfolding handle_preemption_if_def
   by (wpsimp wp: handle_spurious_irq_invs)
-
 
 context ADT_IF_2 begin
 
@@ -1247,7 +1237,6 @@ lemma handle_preemption_if_valid_domain_list[wp]:
   by (wpsimp wp: valid_domain_list_lift)
 
 end (* ADT_IF_2 *)
-
 
 lemma handle_preemption_if_silc_inv[wp]:
   "\<lbrace>silc_inv aag st and domain_sep_inv False st\<rbrace>
@@ -1356,7 +1345,6 @@ lemma set_thread_state_scheduler_action:
   apply (clarsimp simp: st_tcb_at_def obj_at_def)
   done
 
-
 context ADT_IF_2 begin
 
 lemma schedule_guarded_pas_domain:
@@ -1414,7 +1402,6 @@ lemma kernel_entry_if_only_timer_irq_inv:
        | simp | blast)+
 
 end (* ADT_IF_2 *)
-
 
 crunch schedule_if
   for valid_sched[wp]: "valid_sched :: det_state \<Rightarrow> _"
@@ -1512,7 +1499,6 @@ definition ADT_A_if ::
                                       kernel_handle_preemption_if kernel_schedule_if kernel_exit_A_if
                \<inter> {(s,s'). step_restrict s'})\<rparr>"
 
-
 context ADT_IF_2 begin
 
 lemma check_active_irq_if_wp:
@@ -1528,7 +1514,6 @@ lemma handle_preemption_if_only_timer_irq_inv[wp]:
       | simp | blast)+
 
 end (* ADT_IF_2 *)
-
 
 lemma schedule_if_only_timer_irq_inv[wp]:
   "\<lbrace>only_timer_irq_inv irq st and domain_sep_inv False st and valid_irq_states\<rbrace>
@@ -1809,7 +1794,6 @@ lemma kernel_entry_if_domain_time_sched_action:
   done
 
 end (* ADT_IF_2 *)
-
 
 subsection \<open>to split generic preservation lemma\<close>
 
@@ -2146,7 +2130,6 @@ lemma handle_preemption_if_valid_sched[wp]:
    apply (wpsimp wp: getActiveIRQ_neq_non_kernel)+
   done
 
-
 locale ADT_valid_initial_state =
   ADT_IF_2 initial_aag + valid_initial_state _ _ _ initial_aag for initial_aag
 begin
@@ -2345,7 +2328,6 @@ lemma execution_invs:
 
 end (* ADT_valid_initial_state *)
 
-
 lemma execution_restrict:
   assumes e: "s \<in> execution (ADT_A_if utf) s0 js"
   shows "step_restrict s"
@@ -2361,7 +2343,6 @@ lemma Step_ADT_A_if':
   apply (simp add: system.Step_def execution_def steps_def ADT_A_if_def)
   apply fastforce
   done
-
 
 context valid_initial_state begin
 
@@ -2421,7 +2402,6 @@ lemma ADT_A_if_enabled_Step_system:
   by (simp add: enabled_Step_system_def ADT_A_if_Step_system ADT_A_if_enabled_system)
 
 end (* ADT_valid_initial_state *)
-
 
 section \<open>IRQs and big step automaton enabledness\<close>
 
@@ -2628,7 +2608,6 @@ lemma hoare_add_postE:
     apply (assumption, simp, fastforce split: sum.splits)
   done
 
-
 context ADT_IF begin
 
 lemma preemption_point_valid_irq_states[wp]:
@@ -2794,7 +2773,6 @@ lemma invoke_cnode_irq_state_inv:
 
 end (* ADT_IF *)
 
-
 lemma checked_insert_irq_state_of_state[wp]:
   "check_cap_at a b (check_cap_at c d (cap_insert e f g)) \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   by (wp | simp add: check_cap_at_def)+
@@ -2842,7 +2820,6 @@ lemma irq_state_inv_trivE':
   apply (erule use_validE_E[OF _ no_err])
   apply simp
   done
-
 
 context ADT_IF_2 begin
 
@@ -2932,7 +2909,6 @@ lemma handle_event_irq_state_inv:
 
 end (* ADT_IF_2 *)
 
-
 lemma schedule_if_irq_state_of_state[wp]:
   "schedule_if tc \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   by (wpsimp simp: schedule_if_def activate_thread_def wp: hoare_drop_imps)
@@ -2989,7 +2965,6 @@ lemma irq_state_inv_irq_is_recurring:
 
 abbreviation next_irq_state_of_state where
   "next_irq_state_of_state s \<equiv> next_irq_state (Suc (irq_state_of_state s)) (irq_masks_of_state s)"
-
 
 context ADT_IF_2 begin
 
@@ -3054,7 +3029,6 @@ lemma kernel_entry_if_irq_measure:
 
 end (* ADT_IF_2 *)
 
-
 lemma schedule_if_irq_measure_if:
   "\<lbrakk> (r, b) \<in> fst (schedule_if uc i_s); domain_sep_inv False st i_s; valid_irq_states i_s \<rbrakk>
    \<Longrightarrow> irq_measure_if b \<le> irq_measure_if i_s"
@@ -3095,7 +3069,6 @@ lemma kernel_exit_irq_masks[wp]:
   apply wp
   done
 
-
 context valid_initial_state begin
 
 lemma invs_if_irq_is_recurring[simp]:
@@ -3133,7 +3106,6 @@ lemma invs_if_invs[intro]:
   by (simp add: invs_if_def Invs_def)
 
 end (* valid_initial_state *)
-
 
 context ADT_valid_initial_state begin
 
@@ -3349,7 +3321,6 @@ lemma ADT_A_if_Step_irq_masks:
 
 end (* ADT_valid_initial_state *)
 
-
 lemma steps_preserves_equivalence:
   "\<lbrakk> (s', as) \<in> sub_big_steps A R s1; \<forall>t t' as a. (t, as) \<in> sub_big_steps A R s1
                                                   \<longrightarrow> (t, t') \<in> Step A a
@@ -3412,7 +3383,6 @@ lemma step_restrict_inv_holds_ADT_A_if:
   apply (rule inv_holdsI)
   apply (clarsimp simp: Image_def ADT_A_if_def)
   done
-
 
 context ADT_valid_initial_state begin
 
@@ -3531,7 +3501,6 @@ lemma big_step_ADT_A_if_enabled_Step_system:
   done
 
 end (* ADT_valid_initial_state *)
-
 
 section \<open>Generic big step refinement\<close>
 

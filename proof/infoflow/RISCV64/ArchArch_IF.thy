@@ -152,7 +152,6 @@ declare arch_prepare_next_domain_inv[Arch_IF_assms]
 
 end (* Arch *)
 
-
 requalify_facts
   RISCV64.set_simple_ko_globals_equiv
   RISCV64.retype_region_irq_state_of_state
@@ -162,7 +161,6 @@ declare
   retype_region_irq_state_of_state[wp]
   arch_perform_invocation_irq_state_of_state[wp]
 
-
 global_interpretation Arch_IF?: Arch_IF
 proof goal_cases
   interpret Arch .
@@ -170,12 +168,10 @@ proof goal_cases
     by (unfold_locales; (fact Arch_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
 qed
 
-
 lemmas invs_imps =
   invs_sym_refs invs_psp_aligned invs_distinct invs_arch_state
   invs_valid_global_objs invs_arch_state invs_valid_objs invs_valid_global_refs tcb_at_invs
   invs_cur invs_kernel_mappings
-
 
 context Arch begin global_naming RISCV64
 

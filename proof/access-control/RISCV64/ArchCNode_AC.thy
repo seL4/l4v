@@ -126,7 +126,6 @@ lemma set_irq_state_respects[CNode_AC_assms,wp]:
 
 end (* Arch *)
 
-
 context is_extended begin interpretation Arch .
 
 lemma list_integ_lift[CNode_AC_assms]:
@@ -146,14 +145,12 @@ lemma list_integ_lift[CNode_AC_assms]:
 
 end (* is_extended *)
 
-
 global_interpretation CNode_AC?: CNode_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact CNode_AC_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -182,14 +179,12 @@ lemma thread_set_arch_trivT[CNode_AC_assms]:
 
 end (* Arch *)
 
-
 global_interpretation CNode_AC_2?: CNode_AC_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact CNode_AC_assms | solves \<open>rule integrity_arch_triv\<close>)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -206,7 +201,6 @@ crunch set_untyped_cap_as_full
 
 end (* Arch *)
 
-
 context is_extended begin interpretation Arch .
 
 lemma pas_refined_tcb_domain_map_wellformed[CNode_AC_assms, wp]:
@@ -220,14 +214,12 @@ lemma pas_refined_tcb_domain_map_wellformed[CNode_AC_assms, wp]:
 
 end (* is_extended *)
 
-
 global_interpretation CNode_AC_3?: CNode_AC_3
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact CNode_AC_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -328,13 +320,11 @@ lemma arch_update_cap_cap_auth_conferred_subset[CNode_AC_assms]:
 
 end (* Arch *)
 
-
 global_interpretation CNode_AC_4?: CNode_AC_4
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact CNode_AC_assms)?)
 qed
-
 
 end

@@ -484,7 +484,6 @@ requalify_facts arch_globals_equiv_strengthener_thread_independent
 
 end
 
-
 global_interpretation Noninterference?: Noninterference _ arch_globals_equiv_strengthener
 proof goal_cases
   interpret Arch .

@@ -95,7 +95,6 @@ crunch set_thread_state
   for etcb_at_cdom[wp]: "\<lambda>s. etcb_at (P (cur_domain s)) t s"
   (wp: crunch_wps set_object_wp)
 
-
 locale Ipc_IF =
   fixes aag :: "'a subject_label PAS"
   assumes lookup_ipc_buffer_reads_respects:
@@ -239,7 +238,6 @@ lemma update_waiting_ntfn_equiv_but_for_labels:
   done
 
 end (* Ipc_IF *)
-
 
 lemma invisible_ntfn_invisible_receivers_and_ipcbuffers:
   "\<lbrakk> labels_are_invisible aag l {pasObjectAbs aag nptr};
@@ -420,7 +418,6 @@ lemma ev2_invisible_simple:
 crunch blocked_cancel_ipc_nosts
   for silc_inv[wp]: "silc_inv aag st"
 
-
 context Ipc_IF begin
 
 lemma blocked_cancel_ipc_nosts_equiv_but_for_labels:
@@ -488,7 +485,6 @@ lemmas blocked_cancel_ipc_nosts_reads_respects_f =
 
 end (* Ipc_IF *)
 
-
 lemma monadic_rewrite_reads_respects:
   "\<lbrakk> monadic_rewrite False False P f f'; reads_respects aag l P' (do x <- f; g x od) \<rbrakk>
    \<Longrightarrow> reads_respects aag l (P and P') (do x <- f'; g x od)"
@@ -521,7 +517,6 @@ lemma BlockedOnReceive_inj:
 lemma receive_blockedD:
   "receive_blocked st \<Longrightarrow> \<exists>epptr pl. st = BlockedOnReceive epptr pl"
   by (cases st; simp add: receive_blocked_def)
-
 
 context Ipc_IF begin
 
@@ -665,7 +660,6 @@ lemma send_signal_reads_respects:
 
 end (* Ipc_IF *)
 
-
 lemma receive_signal_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
@@ -694,7 +688,6 @@ definition aag_can_read_or_affect_ipc_buffer :: "'a PAS \<Rightarrow> 'a \<Right
 lemma for_each_byte_of_word_def2:
   "for_each_byte_of_word P ptr \<equiv> (\<forall>x\<in>ptr_range ptr word_size_bits. P x)"
   by (simp add: for_each_byte_of_word_def ptr_range_def word_size_size_bits_word add_diff_eq)
-
 
 context Ipc_IF begin
 
@@ -787,7 +780,6 @@ lemmas get_mrs_reads_respects_g = reads_respects_g_from_inv[OF get_mrs_rev get_m
 
 end (* Ipc_IF *)
 
-
 lemma setup_caller_cap_reads_respects:
   "reads_respects aag l (K (aag_can_read aag sender \<and> aag_can_read aag receiver))
                   (setup_caller_cap sender receiver grant)"
@@ -848,7 +840,6 @@ lemma ball_subsetE:
   "\<lbrakk> \<forall>x \<in> S. P x; S' \<subseteq> S; \<And>x. P x \<Longrightarrow> Q x \<rbrakk>
    \<Longrightarrow> \<forall>x \<in> S'. Q x"
   by blast
-
 
 context Ipc_IF begin
 
@@ -939,7 +930,6 @@ lemma transfer_caps_loop_reads_respects:
 
 end (* Ipc_IF *)
 
-
 lemma empty_on_failure_ev:
   "equiv_valid_inv I A P m \<Longrightarrow>
   equiv_valid_inv I A P (empty_on_failure m)"
@@ -993,7 +983,6 @@ lemma word_plus_power_2_offset_le:
    apply (clarsimp simp: uint_nat)+
   done
 
-
 context Ipc_IF begin
 
 lemma aag_has_auth_to_read_captransfer:
@@ -1022,7 +1011,6 @@ lemma load_cap_transfer_rev:
   done
 
 end (* Ipc_IF *)
-
 
 lemma get_endpoint_rev:
   "reads_equiv_valid_inv A aag (K (is_subject aag ptr)) (get_endpoint ptr)"
@@ -1104,7 +1092,6 @@ lemma get_cap_ret_is_subject':
   apply (clarsimp simp: is_cap_simps)
   done
 
-
 context Ipc_IF begin
 
 lemma get_receive_slots_rev:
@@ -1166,7 +1153,6 @@ lemma load_word_offs_reads_respects:
   done
 
 end (* Ipc_IF *)
-
 
 lemma get_mi_length':
   "\<lbrace>\<top>\<rbrace> get_message_info sender \<lbrace>\<lambda>rv s. buffer_cptr_index + unat (mi_extra_caps rv)
@@ -1251,7 +1237,6 @@ lemma ptr_in_obj_range:
 lemma ko_at_eq:
   "ko_at obj pos s \<longleftrightarrow> kheap s pos = Some obj"
   by (force simp:obj_at_def)
-
 
 locale Ipc_IF_2 = Ipc_IF +
   assumes copy_mrs_reads_respects:
@@ -1405,7 +1390,6 @@ lemma receive_ipc_reads_respects:
 
 end (* Ipc_IF_2 *)
 
-
 lemma receive_endpoint_threads_blocked:
 "\<lbrakk>valid_objs s; (sym_refs \<circ> state_refs_of) s;
   ko_at (Endpoint (RecvEP list)) ep s; x\<in>set list\<rbrakk> \<Longrightarrow>
@@ -1435,7 +1419,6 @@ lemma receive_endpoint_reads_affects_queued:
   apply (drule receive_blocked_threads_have_Receive_auth, (simp | assumption)+)
   apply (auto dest: read_sync_ep_read_receivers)
   done
-
 
 context Ipc_IF_2 begin
 
@@ -1529,7 +1512,6 @@ lemma handle_fault_reads_respects:
   done
 
 end (* Ipc_IF_2 *)
-
 
 subsection "Replies"
 
@@ -1640,7 +1622,6 @@ lemma reply_from_kernel_reads_respects:
       | simp add: split_def det_setRegister)+
 
 end (* Ipc_IF_2 *)
-
 
 (* FIXME in whole section replace preconditions with 10 differents invariants by invs *)
 section "globals_equiv"
@@ -1778,7 +1759,6 @@ lemma case_list_cons_cong:
    (case xxs of [] \<Rightarrow> f | x # xs \<Rightarrow> g (x # xs))"
   by (simp split: list.split)
 
-
 context Ipc_IF begin
 
 lemma do_ipc_transfer_globals_equiv:
@@ -1856,7 +1836,6 @@ lemma receive_ipc_globals_equiv:
   by (auto intro: valid_ep_send_enqueue simp: neq_Nil_conv cong: case_list_cons_cong)
 
 end (* Ipc_IF *)
-
 
 subsection "Notifications"
 
@@ -1950,7 +1929,6 @@ lemma send_fault_ipc_valid_global_objs:
      apply (wp | simp)+
   done
 
-
 context Ipc_IF begin
 
 lemma send_fault_ipc_globals_equiv:
@@ -2033,7 +2011,6 @@ lemma handle_reply_globals_equiv:
 
 end (* Ipc_IF *)
 
-
 lemma reply_from_kernel_globals_equiv:
   "\<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
    reply_from_kernel thread x
@@ -2066,7 +2043,6 @@ lemma send_signal_reads_respects_g:
 
 end (* Ipc_IF *)
 
-
 lemma receive_signal_reads_respects_g:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows
@@ -2083,7 +2059,6 @@ lemma receive_signal_reads_respects_g:
    apply (rule doesnt_touch_globalsI)
    apply (wp receive_signal_globals_equiv | simp)+
   done
-
 
 context Ipc_IF_2 begin
 

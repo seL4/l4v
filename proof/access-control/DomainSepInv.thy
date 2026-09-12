@@ -306,7 +306,6 @@ lemma set_irq_state_domain_sep_inv:
   apply (wp | simp add: do_machine_op_def | wpc)+
   done
 
-
 locale DomainSepInv =
   fixes state_ext_t :: "'state_ext :: state_ext itself"
   assumes arch_finalise_cap_domain_sep_inv[wp]:
@@ -362,7 +361,6 @@ lemma empty_slot_domain_sep_inv:
                  hoare_weak_lift_imp deleted_irq_handler_domain_sep_inv)
 
 end (* DomainSepInv *)
-
 
 lemma set_simple_ko_neg_cte_wp_at[wp]:
   "set_simple_ko f a b \<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace>"
@@ -461,7 +459,6 @@ crunch cap_swap_for_delete
 lemma preemption_point_domain_sep_inv[wp]:
   "preemption_point \<lbrace>domain_sep_inv irqs st\<rbrace>"
   by (wp preemption_point_inv | simp)+
-
 
 context DomainSepInv begin
 
@@ -596,7 +593,6 @@ lemmas cap_revoke_domain_sep_inv[wp] = use_spec(2)[OF cap_revoke_domain_sep_inv'
 
 end (* DomainSepInv *)
 
-
 lemma cap_move_cte_wp_at_other:
   "\<lbrace>cte_wp_at P slot and K (slot \<noteq> dest_slot \<and> slot \<noteq> src_slot)\<rbrace>
    cap_move cap src_slot dest_slot
@@ -666,7 +662,6 @@ crunch delete_objects
   for domain_sep_inv[wp]: "domain_sep_inv irqs st"
   (wp: domain_sep_inv_detype_lift)
 
-
 context DomainSepInv begin
 
 crunch finalise_slot, invoke_untyped, send_signal
@@ -689,7 +684,6 @@ lemma invoke_cnode_domain_sep_inv:
   done
 
 end (* DomainSepInv *)
-
 
 lemma perform_page_invocation_domain_sep_inv_get_cap_helper:
   "\<lbrace>\<top>\<rbrace> get_cap blah \<lbrace>\<lambda>rv s. domain_sep_inv_cap irqs (ArchObjectCap (F rv))\<rbrace>"
@@ -781,7 +775,6 @@ lemma transfer_caps_domain_sep_inv:
                     hoare_vcg_all_lift hoare_vcg_imp_lift)
   apply (fastforce elim: cte_wp_at_weakenE)
   done
-
 
 context DomainSepInv begin
 
@@ -924,7 +917,6 @@ lemma invoke_tcb_domain_sep_inv:
 
 end (* DomainSepInv *)
 
-
 locale DomainSepInv_2 = DomainSepInv state_ext_t
   for state_ext_t :: "'state_ext :: state_ext itself" +
   assumes arch_perform_invocation_domain_sep_inv[wp]:
@@ -1059,7 +1051,6 @@ crunch delete_caller_cap
 
 end (* DomainSepInv_2 *)
 
-
 (* FIXME: clagged from Syscall_AC *)
 lemma lookup_slot_for_thread_cap_fault:
   "\<lbrace>invs\<rbrace> lookup_slot_for_thread t s -, \<lbrace>\<lambda>f s. valid_fault (CapFault x y f)\<rbrace>"
@@ -1075,7 +1066,6 @@ lemma domain_sep_inv_cur_thread_update[simp]:
   done
 
 lemma (in is_extended') domain_sep_inv[wp]: "I (domain_sep_inv irqs st)" by (rule lift_inv, simp)
-
 
 context DomainSepInv_2 begin
 

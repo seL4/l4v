@@ -168,7 +168,6 @@ declare
 
 end
 
-
 global_interpretation Arch_IF?: Arch_IF
 proof goal_cases
   interpret Arch .
@@ -176,11 +175,9 @@ proof goal_cases
     by (unfold_locales; (fact Arch_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
 qed
 
-
 lemmas invs_imps =
   invs_sym_refs invs_psp_aligned invs_distinct invs_arch_state invs_valid_global_objs
   invs_arch_state invs_valid_objs invs_valid_global_refs tcb_at_invs invs_cur invs_kernel_mappings
-
 
 context Arch begin global_naming ARM
 

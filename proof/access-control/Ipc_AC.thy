@@ -368,7 +368,6 @@ lemma integrity_receive_blocked_chain_bound:
   apply (clarsimp simp:tba_Some)
   done
 
-
 context Ipc_AC begin
 
 lemma cancel_ipc_receive_blocked_respects:
@@ -468,7 +467,6 @@ lemma send_signal_respects:
   done
 
 end (* Ipc_AC *)
-
 
 section\<open>Sync IPC\<close>
 
@@ -891,7 +889,6 @@ lemma hoare_conjDR2:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> R rv s\<rbrace>, - \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>, -"
   by (simp add:validE_def validE_R_def valid_def) blast
 
-
 context Ipc_AC begin
 
 crunch do_fault_transfer
@@ -930,7 +927,6 @@ lemma do_ipc_transfer_pas_refined:
   by (wpsimp wp: do_normal_transfer_pas_refined hoare_vcg_all_lift hoare_drop_imps)
 
 end (* Ipc_AC *)
-
 
 (* FIXME MOVE*)
 lemma cap_insert_pas_refined_transferable:
@@ -1018,7 +1014,6 @@ lemma send_ipc_valid_ep_helper:
 
 lemmas head_in_set = list.set_intros(1)[of h t for h t]
 
-
 context Ipc_AC begin
 
 lemma send_ipc_pas_refined:
@@ -1073,7 +1068,6 @@ lemma send_ipc_pas_refined:
   done
 
 end (* Ipc_AC *)
-
 
 lemma set_simple_ko_get_tcb:
   "set_simple_ko f ep epptr \<lbrace>\<lambda>s. P (get_tcb p s)\<rbrace>"
@@ -1163,7 +1157,6 @@ lemma complete_signal_pas_refined:
   apply (wp set_simple_ko_pas_refined set_thread_state_pas_refined | wpc)+
   apply clarsimp
   done
-
 
 context Ipc_AC begin
 
@@ -1265,7 +1258,6 @@ lemma receive_ipc_pas_refined:
 
 end (* Ipc_AC *)
 
-
 subsection \<open>@{term "integrity"}\<close>
 
 subsubsection\<open>autarchy\<close>
@@ -1300,7 +1292,6 @@ lemma get_mi_length:
   apply (rule hoare_post_imp [OF _ get_mi_valid'])
   apply (clarsimp simp: valid_message_info_def msg_align_bits' msg_max_length_def word_le_nat_alt)
   done
-
 
 context Ipc_AC begin
 
@@ -1369,7 +1360,6 @@ lemma do_ipc_transfer_integrity_autarch:
   done
 
 end (* Ipc_AC *)
-
 
 lemma set_thread_state_running_respects:
   "\<lbrace>integrity aag X st and
@@ -1475,7 +1465,6 @@ lemma pred_tcb_atI:
 abbreviation sender_can_call :: "sender_payload \<Rightarrow> bool" where
   "sender_can_call pl \<equiv> sender_can_grant pl \<or> sender_can_grant_reply pl"
 
-
 context Ipc_AC begin
 
 crunch do_ipc_transfer
@@ -1561,7 +1550,6 @@ lemma receive_ipc_integrity_autarch:
   done
 
 end (* Ipc_AC *)
-
 
 subsubsection\<open>Non-autarchy: the sender is running\<close>
 
@@ -1722,7 +1710,6 @@ lemma as_user_tcb_in_fault_reply:
   done
 
 end (* Ipc_AC *)
-
 
 locale Ipc_AC_2 = Ipc_AC +
   assumes store_word_offs_respects_in_ipc:
@@ -1906,7 +1893,6 @@ lemma integrity_tcb_in_ipc_final:
 
 end (* Ipc_AC_2 *)
 
-
 lemma update_tcb_state_in_ipc:
   "\<lbrakk> integrity_tcb_in_ipc aag X thread epptr TRContext st s;
      receive_blocked_on epptr (tcb_state tcb); aag_has_auth_to aag SyncSend epptr;
@@ -1932,7 +1918,6 @@ lemma update_tcb_state_in_ipc:
 lemma update_cdt_wp:
   "\<lbrace>\<lambda>s. P (s\<lparr>cdt := f (cdt s)\<rparr>)\<rbrace> update_cdt f \<lbrace>\<lambda>_. P\<rbrace>"
   by (wpsimp simp: update_cdt_def set_cdt_def)
-
 
 context Ipc_AC_2 begin
 
@@ -2111,7 +2096,6 @@ lemma do_ipc_transfer_respects_in_ipc:
 
 end (* Ipc_AC_2 *)
 
-
 lemma sts_act_running_noop:
   "\<lbrace>P and st_tcb_at (runnable) receiver\<rbrace> set_thread_state_act receiver \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: set_thread_state_act_def get_thread_state_def thread_get_def
@@ -2130,7 +2114,6 @@ lemma set_thread_state_running_respects_in_ipc:
                     get_tcb_rev update_tcb_state_in_ipc
               cong: if_cong elim: update_tcb_state_in_ipc[unfolded fun_upd_def])
   done
-
 
 context Ipc_AC_2 begin
 
@@ -2164,14 +2147,12 @@ lemma integrity_tcb_in_ipc_refl:
 
 end (* Ipc_AC_2 *)
 
-
 subsubsection \<open>Inserting the reply cap\<close>
 
 lemma integrity_tcb_in_ipc_no_call:
   "integrity_tcb_in_ipc aag X receiver epptr TRFinalOrCall st s
    \<Longrightarrow> integrity_tcb_in_ipc aag X receiver epptr TRFinal st s"
   unfolding integrity_tcb_in_ipc_def tcb_in_ipc.simps by clarsimp
-
 
 context Ipc_AC_2 begin
 
@@ -2194,7 +2175,6 @@ lemma update_cdt_reply_in_ipc:
                  integrity_def cca_reply st_tcb_at_tcb_states_of_state)
 
 end (* Ipc_AC_2 *)
-
 
 (* FIXME: move to NondetMonad *)
 lemma spec_valid_direct:
@@ -2219,7 +2199,6 @@ lemma set_cap_respects_in_ipc_reply:
   apply (clarsimp simp:st_tcb_at_tcb_states_of_state)
   apply (clarsimp simp:tcb_states_of_state_def direct_call_def dest!:get_tcb_SomeD)
   by (erule tcb_in_ipc.cases; (force intro:tii_call))
-
 
 context Ipc_AC_2 begin
 
@@ -2339,14 +2318,12 @@ lemma send_ipc_integrity_autarch:
 
 end (* Ipc_AC_2 *)
 
-
 section\<open>Faults\<close>
 
 (* FIXME: move *)
 lemma valid_tcb_fault_update:
   "\<lbrakk> valid_tcb p t s; valid_fault fault \<rbrakk> \<Longrightarrow> valid_tcb p (t\<lparr>tcb_fault := Some fault\<rparr>) s"
   by (simp add: valid_tcb_def ran_tcb_cap_cases)
-
 
 context Ipc_AC_2 begin
 
@@ -2391,7 +2368,6 @@ lemma handle_fault_pas_refined:
 
 end (* Ipc_AC_2 *)
 
-
 lemma thread_set_tcb_fault_update_valid_mdb:
   "thread_set (tcb_fault_update (\<lambda>_. Some fault)) thread \<lbrace>valid_mdb\<rbrace>"
   apply (rule thread_set_mdb)
@@ -2403,7 +2379,6 @@ lemma thread_set_tcb_fault_update_valid_mdb:
 lemma obj_at_conj_distrib:
   "obj_at (\<lambda>ko. P ko \<and> Q ko) p s = (obj_at (\<lambda>ko. P ko) p s \<and> obj_at (\<lambda>ko. Q ko) p s)"
   by (auto simp: obj_at_def)
-
 
 context Ipc_AC_2 begin
 
@@ -2459,13 +2434,11 @@ lemma handle_fault_integrity_autarch:
 
 end (* Ipc_AC_2 *)
 
-
 section\<open>Replies\<close>
 
 lemma tcb_st_to_auth_Restart_Inactive [simp]:
   "tcb_st_to_auth (if P then Restart else Inactive) = {}"
   by simp
-
 
 context Ipc_AC_2 begin
 
@@ -2487,7 +2460,6 @@ lemma do_reply_transfer_pas_refined:
   done
 
 end (* Ipc_AC_2 *)
-
 
 lemma update_tcb_state_in_ipc_reply:
   "\<lbrakk> integrity_tcb_in_ipc aag X thread epptr TRContext st s;
@@ -2553,7 +2525,6 @@ lemma tcb_state_of_states_cdt_update_behind_kheap[simp]:
   "tcb_states_of_state (kheap_update g (cdt_update f s)) = tcb_states_of_state (kheap_update g s)"
   by (simp add: tcb_states_of_state_def get_tcb_def)
 
-
 context Ipc_AC_2 begin
 
 lemma set_cdt_empty_slot_respects_in_ipc_autarch:
@@ -2568,7 +2539,6 @@ lemma set_cdt_empty_slot_respects_in_ipc_autarch:
 
 end (* Ipc_AC_2 *)
 
-
 lemma reply_cap_no_children':
   "\<lbrakk> valid_mdb s; caps_of_state s p = Some (ReplyCap t False r) \<rbrakk>
    \<Longrightarrow> \<forall>p'. cdt s p' \<noteq> Some p"
@@ -2581,7 +2551,6 @@ lemma valid_list_empty:
   apply (drule no_children_empty_desc[THEN iffD2])
   apply (rule classical)
   by (fastforce simp del: split_paired_All split_paired_Ex simp add: neq_Nil_conv)
-
 
 context Ipc_AC_2 begin
 
@@ -2702,14 +2671,12 @@ lemma integrity_tcb_in_fault_reply_refl:
 
 end (* Ipc_AC_2 *)
 
-
 lemma emptyable_not_master:
   "\<lbrakk> valid_objs s; caps_of_state s slot = Some cap; \<not> is_master_reply_cap cap \<rbrakk>
    \<Longrightarrow> emptyable slot s"
   apply (rule emptyable_cte_wp_atD[rotated 2])
     apply (intro allI impI, assumption)
    by (fastforce simp:is_cap_simps cte_wp_at_caps_of_state)+
-
 
 context Ipc_AC_2 begin
 

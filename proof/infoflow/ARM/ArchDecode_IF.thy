@@ -65,14 +65,12 @@ requalify_facts check_valid_ipc_buffer_inv
 
 end (* Arch *)
 
-
 global_interpretation Decode_IF?: Decode_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Decode_IF_assms)?)
 qed
-
 
 context Arch begin global_naming ARM
 
@@ -377,7 +375,6 @@ lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
   done
 
 end (* Arch *)
-
 
 global_interpretation Decode_IF_2?: Decode_IF_2
 proof goal_cases

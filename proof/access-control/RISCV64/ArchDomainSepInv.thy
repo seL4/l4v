@@ -49,14 +49,12 @@ declare init_arch_objects_inv[DomainSepInv_assms]
 
 end (* Arch *)
 
-
 global_interpretation DomainSepInv?: DomainSepInv
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact DomainSepInv_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -126,7 +124,6 @@ lemma arch_invoke_irq_control_domain_sep_inv[DomainSepInv_assms]:
   done
 
 end (* Arch *)
-
 
 global_interpretation DomainSepInv_2?: DomainSepInv_2
 proof goal_cases

@@ -289,14 +289,12 @@ lemma transfer_caps_loop_valid_arch[Ipc_IF_assms]:
 
 end (* Arch *)
 
-
 global_interpretation Ipc_IF?: Ipc_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Ipc_IF_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -467,7 +465,6 @@ lemma set_mrs_reads_respects'[Ipc_IF_assms]:
   by simp
 
 end (* Arch *)
-
 
 global_interpretation Ipc_IF_2?: Ipc_IF_2
 proof goal_cases

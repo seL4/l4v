@@ -259,14 +259,12 @@ declare valid_cur_fpu_lift_arch[Finalise_AC_assms]
 
 end (* Arch *)
 
-
 global_interpretation Finalise_AC?: Finalise_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Finalise_AC_assms | solves \<open>wp only: Finalise_AC_assms; simp\<close>)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -313,7 +311,6 @@ lemma finalise_cap_fst_ret[Finalise_AC_assms]:
   done
 
 end (* Arch *)
-
 
 global_interpretation Finalise_AC_2?: Finalise_AC_2
 proof goal_cases

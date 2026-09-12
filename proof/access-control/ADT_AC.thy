@@ -116,7 +116,6 @@ lemma do_user_op_respects:
 
 end (* ADT_AC *)
 
-
 lemma objs_valid_tcb_vtable:
   "\<lbrakk> valid_objs s; get_tcb t s = Some tcb \<rbrakk> \<Longrightarrow> s \<turnstile> tcb_vtable tcb"
   apply (clarsimp simp: get_tcb_def split: option.splits Structures_A.kernel_object.splits)

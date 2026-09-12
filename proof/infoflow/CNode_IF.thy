@@ -316,7 +316,6 @@ lemma domain_sep_inv_refl:
   "domain_sep_inv irqs st s \<Longrightarrow> domain_sep_inv irqs s s"
   by (fastforce simp: domain_sep_inv_def)
 
-
 locale CNode_IF =
   fixes state_ext_t :: "'s :: state_ext itself"
   and irq_at :: "nat \<Rightarrow> (irq \<Rightarrow> bool) \<Rightarrow> irq option"
@@ -374,7 +373,6 @@ definition only_timer_irq :: "irq \<Rightarrow> 'z::state_ext state \<Rightarrow
   "only_timer_irq irq s \<equiv> (\<forall>x. interrupt_states s x = IRQTimer \<longrightarrow> x = irq) \<and> irq_is_recurring irq s"
 
 end (* CNode_IF *)
-
 
 locale CNode_IF_2 = CNode_IF state_ext_t
   for state_ext_t :: "'s :: state_ext itself"
@@ -478,7 +476,6 @@ crunch reset_work_units, work_units_limit_reached, update_work_units
   (simp: only_timer_irq_inv_def only_timer_irq_def irq_is_recurring_def is_irq_at_def)
 
 end (* CNode_IF_2 *)
-
 
 lemma gets_irq_masks_equiv_valid:
   "equiv_valid_inv I A (\<lambda>s. \<not> (irq_masks s) irq \<and> (\<forall>x. x \<noteq> irq \<longrightarrow> (irq_masks s) x)) (gets irq_masks)"
@@ -644,7 +641,6 @@ lemma reads_respects_f:
   apply (erule (1) use_valid, simp)
   done
 
-
 locale CNode_IF_3 = CNode_IF_2 +
   fixes aag :: "'a subject_label PAS"
   assumes dmo_getActiveIRQ_reads_respects:
@@ -680,7 +676,6 @@ lemma preemption_point_reads_respects_f:
   done
 
 end (* CNode_IF_3 *)
-
 
 abbreviation
   reads_spec_equiv_valid_f ::

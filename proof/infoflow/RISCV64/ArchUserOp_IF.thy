@@ -102,7 +102,6 @@ lemma arch_globals_equiv_device_state_update[UserOp_IF_assms, simp]:
 
 end (* Arch *)
 
-
 requalify_types RISCV64.user_transition_if
 
 global_interpretation UserOp_IF?: UserOp_IF
@@ -111,7 +110,6 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact UserOp_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
 qed
-
 
 context Arch begin global_naming RISCV64
 

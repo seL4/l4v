@@ -13,7 +13,6 @@ lemma invs_mdb_cte':
   "invs s \<Longrightarrow> mdb_cte_at (\<lambda>p. \<exists>c. caps_of_state s p = Some c \<and> NullCap \<noteq> c) (cdt s)"
   by (drule invs_mdb) (simp add: valid_mdb_def2)
 
-
 context retype_region_proofs begin interpretation Arch .
 
 lemma vs_refs_no_global_pts_default[simp]:
@@ -29,7 +28,6 @@ lemma vrefs_eq: "state_vrefs s' = state_vrefs s"
   done
 
 end (* retype_region_proofs *)
-
 
 context retype_region_proofs' begin interpretation Arch .
 
@@ -64,7 +62,6 @@ lemma pas_refined:
   done
 
 end (* retype_region_proofs *)
-
 
 context Arch begin arch_global_naming
 

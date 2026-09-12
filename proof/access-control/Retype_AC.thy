@@ -419,7 +419,6 @@ lemma create_cap_pas_refined:
 
 end (* Retype_AC *)
 
-
 context retype_region_proofs begin
 
 lemma ts_eq[simp]: "thread_st_auth s' = thread_st_auth s"
@@ -439,7 +438,6 @@ lemma bas_eq[simp]: "thread_bound_ntfns s' = thread_bound_ntfns s"
   done
 
 end (* retype_region_proofs *)
-
 
 context retype_region_proofs' begin
 
@@ -516,7 +514,6 @@ lemma retype_region_pas_refined:
   done
 
 end (* Retype_AC *)
-
 
 lemma retype_region_ranges'':
   "\<lbrace>K (range_cover ptr sz (obj_bits_api tp us) num_objects \<and> num_objects \<noteq> 0)\<rbrace>
@@ -638,7 +635,6 @@ lemma range_cover_subset'':
   apply (simp add: word_and_le2)
   done
 
-
 context Retype_AC begin
 
 lemma delete_objects_descendants_range_in':
@@ -697,7 +693,6 @@ lemmas delete_objects_descendants_range_in =
   delete_objects_descendants_range_in''''
 
 end (* Retype_AC *)
-
 
 crunch delete_objects
   for arch_state[wp]: "\<lambda>s. P (arch_state s)"
@@ -839,7 +834,6 @@ lemma retype_region_post_retype_invs_spec:
   apply (frule valid_cap_range_untyped[OF invs_valid_objs],simp)
   apply fastforce
   done
-
 
 context Retype_AC begin
 
@@ -1038,7 +1032,6 @@ lemma invoke_untyped_pas_refined:
 
 end (* Retype_AC *)
 
-
 subsection\<open>decode\<close>
 
 definition authorised_untyped_inv' where
@@ -1066,7 +1059,6 @@ lemma authorised_untyped_invI:
    apply blast
   apply (simp add: blah word_and_le2)
   done
-
 
 context Retype_AC begin
 

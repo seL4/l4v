@@ -175,7 +175,6 @@ lemma rec_del_preservation2:
    apply (rule rec_del_preservation2' [where R=R],simp+)
   done
 
-
 locale Tcb_IF =
   fixes aag :: "'a subject_label PAS"
   assumes valid_arch_caps_vs_lookup:
@@ -236,7 +235,6 @@ lemma no_cap_to_idle_thread:
 
 end (* Tcb_IF *)
 
-
 crunch set_mcpriority
   for idle_thread_inv[wp]: "\<lambda>s. P (idle_thread s)"
   (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation)
@@ -271,7 +269,6 @@ lemma dxo_globals_equiv[wp]:
 definition authorised_tcb_inv_extra where
   "authorised_tcb_inv_extra aag ti \<equiv>
     (case ti of ThreadControl _ slot _ _ _ _ _ _ \<Rightarrow> is_subject aag (fst slot) | _ \<Rightarrow> True)"
-
 
 locale Tcb_IF_2 = Tcb_IF +
   assumes invoke_tcb_thread_preservation:
@@ -334,7 +331,6 @@ lemma invoke_tcb_globals_equiv:
   done
 
 end (* Tcb_IF_2 *)
-
 
 section "reads respects"
 
@@ -476,7 +472,6 @@ lemmas reschedule_required_reads_respects_f =
   reads_respects_f[OF reschedule_required_reads_respects, where Q="\<top>", simplified,
                    OF _ reschedule_required_silc_inv]
 
-
 context Tcb_IF_2 begin
 
 lemma thread_set_tcb_flags_update_silc_inv[wp]:
@@ -571,7 +566,6 @@ lemma invoke_tcb_reads_respects_f_g:
   done
 
 end (* Tcb_IF_2 *)
-
 
 lemma decode_tcb_invocation_authorised_extra:
   "\<lbrace>K (is_subject aag (fst slot))\<rbrace>

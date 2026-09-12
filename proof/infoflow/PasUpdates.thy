@@ -71,7 +71,6 @@ lemma tcb_domain_map_wellformed_pasSubject_update:
    tcb_domain_map_wellformed_aux aag irqn"
   by (clarsimp simp: tcb_domain_map_wellformed_aux_def)
 
-
 locale PasUpdates =
   fixes aag :: "'a subject_label PAS"
   assumes state_asids_to_policy_pasSubject_update:
@@ -109,7 +108,6 @@ lemmas pas_refined_pasSubject_update =
   pas_refined_pasSubject_update'[OF _ pas_wellformed_pasSubject_update]
 
 end (* PasUpdates *)
-
 
 lemma guarded_pas_domain_pasSubject_update[simp]:
   "guarded_pas_domain (aag\<lparr>pasSubject := x\<rparr>) s = guarded_pas_domain aag s"
@@ -201,7 +199,6 @@ lemma state_irqs_to_policy_pasMayEditReadyQueues_update:
              , rule state_irqs_to_policy_aux.intros, assumption+)
   done
 
-
 context PasUpdates begin
 
 lemma pas_refined_pasMayActivate_update:
@@ -219,7 +216,6 @@ lemma pas_refined_pasMayEditReadyQueues_update:
                      state_irqs_to_policy_pasMayEditReadyQueues_update)
 
 end (* PasUpdates *)
-
 
 lemma guarded_pas_domainMayEditReadyQueues_update[simp]:
   "guarded_pas_domain (aag\<lparr>pasMayEditReadyQueues := False\<rparr>) = guarded_pas_domain aag"

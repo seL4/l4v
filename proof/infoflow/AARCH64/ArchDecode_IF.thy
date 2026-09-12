@@ -64,14 +64,12 @@ lemma arch_decode_irq_control_invocation_rev[Decode_IF_assms]:
 
 end (* Arch *)
 
-
 global_interpretation Decode_IF?: Decode_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Decode_IF_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -409,7 +407,6 @@ lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
                   simp: valid_cap_def valid_arch_cap_def)+
 
 end (* Arch *)
-
 
 global_interpretation Decode_IF_2?: Decode_IF_2
 proof goal_cases

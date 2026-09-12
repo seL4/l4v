@@ -367,7 +367,6 @@ crunch arch_prepare_set_domain
 
 end (* Arch *)
 
-
 global_interpretation Syscall_IF?: Syscall_IF
 proof goal_cases
   interpret Arch .

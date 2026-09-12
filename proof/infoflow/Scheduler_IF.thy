@@ -94,7 +94,6 @@ abbreviation reads_scheduler_cur_domain where
 definition idle_context where
   "idle_context s = arch_tcb_context_get (tcb_arch (the (get_tcb (idle_thread s) s)))"
 
-
 locale Scheduler_IF =
   fixes arch_globals_equiv_scheduler :: "kheap \<Rightarrow> kheap \<Rightarrow> arch_state \<Rightarrow> arch_state \<Rightarrow> bool"
   and arch_scheduler_affects_equiv :: "det_state \<Rightarrow> det_state \<Rightarrow> bool"
@@ -225,7 +224,6 @@ lemma globals_equiv_scheduler_trans[elim]:
 
 end (* Scheduler_IF *)
 
-
 lemma scheduler_globals_frame_equiv_refl:
   "scheduler_globals_frame_equiv s s"
   by (simp add: scheduler_globals_frame_equiv_def)
@@ -284,7 +282,6 @@ lemma equiv_valid_inv_unobservable:
       apply (insert s)
       apply (fastforce intro!: sym trans)+
   done
-
 
 context Scheduler_IF begin
 
@@ -361,7 +358,6 @@ lemma reads_respects_scheduler_unobservable':
 
 end (* Scheduler_IF *)
 
-
 lemma idle_equiv_machine_state_update[simp]:
   "idle_equiv st (s\<lparr>machine_state := x\<rparr>) = idle_equiv st s"
   by (simp add: idle_equiv_def)
@@ -429,7 +425,6 @@ lemma silc_dom_equiv_trans_state[simp]:
 lemma (in is_extended') silc_dom_equiv[wp]:
   "I (silc_dom_equiv aag st)"
   by (rule lift_inv,simp)
-
 
 context Scheduler_IF begin
 
@@ -552,7 +547,6 @@ lemma dmo_no_mem_globals_equiv_scheduler:
 
 end (* Scheduler_IF *)
 
-
 definition weak_scheduler_affects_equiv ::
   "'a subject_label PAS \<Rightarrow> ('a subject_label) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> bool" where
   "weak_scheduler_affects_equiv aag l s s' \<equiv>
@@ -587,7 +581,6 @@ lemma silc_dom_equiv_states_equiv_lift:
    apply assumption
   apply (auto simp add: states_equiv_for_def equiv_for_def equiv_asids_def equiv_hyp_refl equiv_fpu_refl)
   done
-
 
 context Scheduler_IF begin
 
@@ -665,7 +658,6 @@ crunch guarded_switch_to,schedule
 
 end (* Scheduler_IF *)
 
-
 lemma silc_dom_lift:
   assumes a: "\<And>P. f \<lbrace>\<lambda>s. P (kheap s)\<rbrace>"
   shows "f \<lbrace>silc_dom_equiv aag st\<rbrace>"
@@ -715,7 +707,6 @@ lemma asahi_scheduler_affects_equiv_sym[elim]:
 lemma midstrength_weak[intro]:
   "midstrength_scheduler_affects_equiv aag l s s' \<Longrightarrow> weak_scheduler_affects_equiv aag l s s'"
   by (auto simp: midstrength_scheduler_affects_equiv_def weak_scheduler_affects_equiv_def)
-
 
 context Scheduler_IF begin
 
@@ -940,7 +931,6 @@ lemmas reads_respects_scheduler_unobservable =
 
 end (* Scheduler_IF *)
 
-
 lemma weak_scheduler_affects_equiv_trans[elim]:
   "\<lbrakk> weak_scheduler_affects_equiv aag l s s'; weak_scheduler_affects_equiv aag l s' s'' \<rbrakk>
    \<Longrightarrow> weak_scheduler_affects_equiv aag l s s''"
@@ -1010,7 +1000,6 @@ lemma ev_irrelevant_bind:
   done
 qed
 
-
 locale Scheduler_IF_is_extended' = is_extended' + Scheduler_IF
 begin
 
@@ -1020,12 +1009,10 @@ lemma globals_equiv_scheduler[wp]:
 
 end (* Scheduler_IF_is_extended *)
 
-
 definition valid_tcb_context_update where
   "valid_tcb_context_update f \<equiv>
      \<forall>tcb tcb'. arch_tcb_context_get (tcb_arch tcb) = arch_tcb_context_get (tcb_arch tcb')
                 \<longrightarrow> arch_tcb_context_get (tcb_arch (f tcb)) = arch_tcb_context_get (tcb_arch (f tcb'))"
-
 
 locale Scheduler_IF_2 = Scheduler_IF +
   fixes aag :: "'a subject_label PAS"
@@ -1201,7 +1188,6 @@ lemma switch_to_idle_thread_midstrength_reads_respects_scheduler[wp]:
 
 end (* Scheduler_IF_2 *)
 
-
 lemma gets_read_queue_ev_from_weak_sae:
   "(\<forall>s t. B s t \<longrightarrow> weak_scheduler_affects_equiv aag l s t)
    \<Longrightarrow> equiv_valid_inv R B
@@ -1252,7 +1238,6 @@ lemma ev_weaken_pre_relation:
   "\<lbrakk> equiv_valid I A B P f; \<And>s t. A' s t \<Longrightarrow> A s t \<rbrakk>
    \<Longrightarrow> equiv_valid I A' B P f"
   by (fastforce simp: equiv_valid_def2 equiv_valid_2_def)
-
 
 context Scheduler_IF begin
 
@@ -1317,7 +1302,6 @@ lemma get_scheduler_action_reads_respects_scheduler[wp]:
                      gets_def get_def bind_def return_def equiv_valid_def2 equiv_valid_2_def)
 
 end (* Scheduler_IF *)
-
 
 context Scheduler_IF_2 begin
 
@@ -1495,7 +1479,6 @@ lemma schedule_choose_new_thread_read_respects_scheduler:
 
 end (* Scheduler_IF_2 *)
 
-
 lemma switch_to_cur_domain:
   "\<lbrakk> valid_sched s; scheduler_action s = switch_thread x; pas_refined aag s \<rbrakk>
    \<Longrightarrow> pasObjectAbs aag x \<in> pasDomainAbs aag (cur_domain s)"
@@ -1585,7 +1568,6 @@ lemma guarded_active_ct_cur_domain:
   by (fastforce simp: guarded_pas_domain_def invs_def valid_state_def
                       valid_idle_def ct_in_state_def pred_tcb_at_def obj_at_def)
 
-
 context Scheduler_IF begin
 
 lemma schedule_no_domain_switch:
@@ -1661,7 +1643,6 @@ lemma dec_domain_time_reads_respects_scheduler[wp]:
   done
 
 end (* Scheduler_IF *)
-
 
 context Scheduler_IF_2 begin
 
@@ -1978,7 +1959,6 @@ lemma silc_inv_not_cur_thread:
   apply (case_tac ko, simp_all)
   done
 
-
 context Scheduler_IF_2 begin
 
 definition tick_done where
@@ -2187,7 +2167,6 @@ lemma timer_tick_reads_respects_scheduler:
 
 end (* Scheduler_IF_2 *)
 
-
 lemma gets_ev':
   "equiv_valid_inv I A (P and K(\<forall>s t. P s \<longrightarrow> P t \<longrightarrow> I s t \<and> A s t \<longrightarrow> f s = f t)) (gets f)"
   by (clarsimp simp: equiv_valid_def2 equiv_valid_2_def gets_def get_def bind_def return_def)
@@ -2205,7 +2184,6 @@ lemma equiv_valid_2_bind_right:
   apply (clarsimp simp: equiv_valid_2_def equiv_valid_def2 valid_def bind_def)
   apply fastforce
   done
-
 
 context Scheduler_IF begin
 
@@ -2314,7 +2292,6 @@ lemma as_user_reads_respects_scheduler:
 
 end (* Scheduler_IF_2 *)
 
-
 lemma arch_tcb_update_aux:
   "tcb_arch_update f t = tcb_arch_update (\<lambda>_. f (tcb_arch t)) t"
   by simp
@@ -2347,7 +2324,6 @@ lemma sts_silc_dom_equiv[wp]:
 lemma set_scheduler_action_wp[wp]:
   "\<lbrace>\<lambda>s. P () (s\<lparr>scheduler_action := a\<rparr>)\<rbrace> set_scheduler_action a \<lbrace>P\<rbrace>"
   by (simp add: set_scheduler_action_def | wp)+
-
 
 context Scheduler_IF begin
 
@@ -2387,7 +2363,6 @@ lemma SilcLabel_affects_scheduler_equiv:
                 equiv_for_def scheduler_equiv_def equiv_asids_def globals_equiv_scheduler_def)
 
 end (* Scheduler_IF *)
-
 
 (*A function that is agnostic of its parameter with respect
   to the state space (as is the case with thread context updates)
@@ -2448,7 +2423,6 @@ lemma cur_thread_idle:
   apply (rule cur_thread_idle')
   apply (simp add: invs_def valid_state_def)+
   done
-
 
 context Scheduler_IF_2 begin
 
