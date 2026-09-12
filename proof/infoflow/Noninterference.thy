@@ -1314,7 +1314,7 @@ lemma partitionIntegrity_subjectAffects_ready_queues:
              apply (fastforce simp add: partitionIntegrity_def valid_sched_def)+
   done
 
-end
+end (* Noninterference *)
 
 
 lemma pas_refined_asid_mem:
@@ -1458,7 +1458,7 @@ lemma partsSubjectAffects_bounds_subjects_affects:
                                    dest: domains_distinct[THEN pas_domains_distinct_inj])+)[16]
   done
 
-end
+end (* Noninterference *)
 
 
 lemma ev_add_pre:
@@ -1498,7 +1498,7 @@ text \<open>unwinding relation\<close>
 definition uwr where
   "uwr \<equiv> same_for initial_aag"
 
-end
+end (* valid_initial_state *)
 
 
 text \<open>
@@ -1729,7 +1729,7 @@ lemma Step_ADT_A_if'':
   apply (simp add: system.Step_def execution_def steps_def ADT_A_if_def)
   done
 
-end
+end (* valid_initial_state *)
 
 
 locale Noninterference_valid_initial_state =
@@ -1842,7 +1842,7 @@ next case KernelSchedule
     done
 qed
 
-end
+end (* Noninterference_valid_initial_state *)
 
 
 context valid_initial_state begin
@@ -1904,7 +1904,7 @@ lemma reachable_Step':
   apply blast
   done
 
-end
+end (* valid_initial_state *)
 
 
 context Noninterference_valid_initial_state begin
@@ -2014,7 +2014,7 @@ lemma integrity_part:
   apply assumption
   done
 
-end
+end (* Noninterference_valid_initial_state *)
 
 
 context valid_initial_state begin
@@ -2067,7 +2067,7 @@ lemma relation_preserved_across_sub_big_steps:
   apply blast
   done
 
-end
+end (* valid_initial_state *)
 
 
 (* FIXME: move these next lemmas culminating in reads_respects_g
@@ -2312,7 +2312,7 @@ lemma choose_thread_reads_respects_g:
    apply force+
   done
 
-end
+end (* Noninterference *)
 
 
 lemma scheduler_action_switch_thread_is_subject:
@@ -2450,7 +2450,7 @@ lemma globals_equiv_globals_equiv_scheduler[elim]:
   "globals_equiv s t \<Longrightarrow> globals_equiv_scheduler s t"
   by (auto simp: globals_equiv_def globals_equiv_scheduler_def)
 
-end
+end (* Noninterference *)
 
 
 lemma sameFor_current_partition_sys_mode_of_eq:
@@ -2519,7 +2519,7 @@ lemma uwr_reads_equiv_f_g_affects_equiv:
   apply (clarsimp simp: uwr_def part_def current_aag_def partition_def split: if_splits)
   done
 
-end
+end (* valid_initial_state *)
 
 
 lemma check_active_irq_if_reads_respects_g:
@@ -2570,7 +2570,7 @@ lemma part_not_PSched_sys_mode_of_not_KernelSchedule_True:
   apply (simp add: part_def)
   done
 
-end
+end (* valid_initial_state *)
 
 
 context Noninterference_valid_initial_state begin
@@ -2820,7 +2820,7 @@ lemma do_user_op_A_if_confidentiality':
    \<Longrightarrow> xx = yy \<and> (s', t') \<in> uwr u \<and> (s', t') \<in> uwr PSched \<and> (s', t') \<in> uwr (part s)"
   by (rule do_user_op_A_if_confidentiality, simp+)
 
-end
+end (* Noninterference_valid_initial_state *)
 
 
 context Noninterference_valid_initial_state begin
@@ -2880,7 +2880,7 @@ lemma kernel_schedule_if_confidentiality':
    \<Longrightarrow> (s', t') \<in> uwr u \<and> (s', t') \<in> uwr PSched \<and> (s', t') \<in> uwr (part s)"
   by (blast dest: kernel_schedule_if_confidentiality)
 
-end
+end (* Noninterference_valid_initial_state *)
 
 
 lemma thread_set_reads_respects_g:
@@ -3119,7 +3119,7 @@ lemma uwr_part_sys_mode_of_eq':
   apply (fastforce intro: uwr_part_sys_mode_of_eq)
   done
 
-end
+end (* valid_initial_state *)
 
 
 lemma app_Cons:
@@ -3503,7 +3503,7 @@ lemma confidentiality_part_not_PSched:
   apply (fastforce dest: non_PSched_steps_run_in_lock_step)
   done
 
-end
+end (* Noninterference_valid_initial_state *)
 
 
 lemma try_some_magic:
@@ -3647,7 +3647,7 @@ lemma kernel_entry_scheduler_equiv_2:
    apply (fastforce simp: silc_inv_not_cur_thread cur_thread_idle)+
   done
 
-end
+end (* Noninterference *)
 
 
 context valid_initial_state begin
@@ -3709,7 +3709,7 @@ lemmas irq_masks_constant = irq_masks_constant'[OF small_step_reachable]
 lemma internal_state_s0: "internal_state_if s0 = s0_internal"
   by (simp add: s0_def)
 
-end
+end (* valid_initial_state *)
 
 
 (* FIXME: clarify the following comment *)
@@ -3916,7 +3916,7 @@ lemma scheduler_step_1_confidentiality:
   apply (clarsimp simp add: sameFor_def sameFor_scheduler_def uwr_def)
   done
 
-end
+end (* Noninterference_valid_initial_state *)
 
 
 lemma schedule_if_context:
@@ -4030,7 +4030,7 @@ lemma silc_dom_equiv_current_aag:
   "silc_dom_equiv (current_aag s) st s' = silc_dom_equiv initial_aag st s'"
   by (simp add: silc_dom_equiv_def pasObjectAbs_current_aag)
 
-end
+end (* valid_initial_state *)
 
 
 lemmas schedule_if_reads_respects_scheduler_2 =
@@ -4194,6 +4194,6 @@ lemma xnonleakage:
   apply (rule xNonleakage_gen[OF confidentiality_u])
   done
 
-end
+end (* Noninterference_valid_initial_state *)
 
 end

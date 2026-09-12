@@ -105,7 +105,7 @@ lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
   apply (fastforce split: cap.split_asm option.split_asm)
   done
 
-end
+end (* Arch *)
 
 
 global_interpretation Tcb_AC?: Tcb_AC

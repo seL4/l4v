@@ -112,7 +112,7 @@ definition no_abs where
 
 lemmas no_absD = no_abs_def[THEN meta_eq_to_obj_eq, THEN iffD1, rule_format]
 
-end
+end (* system *)
 
 
 subsection \<open>Enabled system\<close>
@@ -137,7 +137,7 @@ lemma enabled_Step:
   "reachable s \<Longrightarrow> \<exists>s'. (s,s') \<in> Step a"
   by (simp add: Step_def, blast intro: reachable_enabled)
 
-end
+end (* enabled_system *)
 
 
 subsection \<open>Step system\<close>
@@ -208,7 +208,7 @@ lemma reachable_induct:
     apply simp+
   done
 
-end
+end (* Step_system *)
 
 
 subsection \<open>Init Fin system\<close>
@@ -293,7 +293,7 @@ lemma execution_Run:
   apply (erule (1) Run_subset_execution)
   done
 
-end
+end (* Init_Fin_system *)
 
 
 lemma Init_Fin_system_Step_system:
@@ -368,7 +368,7 @@ lemma reachable_Fin:
   apply (blast dest: injD[OF Fin_inj])
   done
 
-end
+end (* Init_inv_Fin_system *)
 
 
 lemma Init_inv_Fin_system_Init_Fin_system:
@@ -460,7 +460,7 @@ lemma sameFor_sym_dom:
   "s \<approx>(S::'d set)\<approx> t \<Longrightarrow> t \<approx>S\<approx> s"
   by (auto simp: sameFor_dom_def uwr_sym)
 
-end
+end (* noninterference_policy *)
 
 
 subsection \<open>Non interference system\<close>
@@ -811,7 +811,7 @@ lemma Noninfluence_gen_Noninterference_strong:
   apply (blast intro: Noninfluence_gen_Noninterference)
   done
 
-end
+end (* noninterference_system *)
 
 
 subsection \<open>Noninterference on enabled Step system : unwinding system\<close>
@@ -1270,7 +1270,7 @@ lemma integrity_u_and_single_event_systems:
   apply blast
   done
 
-end
+end (* unwinding_system *)
 
 
 subsection \<open>Complete unwinding system\<close>
@@ -1321,6 +1321,6 @@ lemma Noninfluence_gen_equiv_Noninfluence_strong_uwr:
    apply (erule Noninfluence_strong_uwr_integrity_u)+
   done
 
-end
+end (* complete_unwinding_system *)
 
 end

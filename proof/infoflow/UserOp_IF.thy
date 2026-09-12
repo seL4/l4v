@@ -161,6 +161,6 @@ lemma dmo_device_state_update_reads_respects_g:
      apply wpsimp+
   done
 
-end
+end (* UserOp_IF *)
 
 end

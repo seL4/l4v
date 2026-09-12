@@ -246,7 +246,7 @@ lemma states_equiv_for_identical_kheap_updates:
           elim!: equiv_forE equiv_asids_identical_kheap_updates
          intro!: equiv_forI)
 
-end
+end (* InfoFlow_IF *)
 
 
 lemma states_equiv_forE:
@@ -343,7 +343,7 @@ lemma states_equiv_for_trans:
           intro: equiv_for_trans equiv_asids_trans equiv_hyp_trans equiv_fpu_trans equiv_forI
            elim: equiv_forE)
 
-end
+end (* InfoFlow_IF *)
 
 
 (* FIXME MOVE *)
@@ -616,7 +616,7 @@ lemma affects_equiv_trans:
    \<Longrightarrow> affects_equiv aag l s u"
   by (auto simp: affects_equiv_def2 intro: states_equiv_for_trans equiv_asids_trans)
 
-end
+end (* InfoFlow_IF *)
 
 
 lemma globals_equivI:
@@ -921,7 +921,7 @@ lemma get_message_info_rev:
   "reads_equiv_valid_inv A aag (K (is_subject aag ptr)) (get_message_info ptr)"
   by (wpsimp wp: as_user_rev getRegister_inv simp: get_message_info_def det_getRegister)
 
-end
+end (* InfoFlow_IF *)
 
 
 lemma syscall_rev:
@@ -1048,7 +1048,7 @@ lemma modifies_at_mostI:
   apply (fastforce simp: equiv_but_for_labels_def states_equiv_for_refl)
   done
 
-end
+end (* InfoFlow_IF *)
 
 
 lemma spec_equiv_valid_hoist_guard:
@@ -1115,7 +1115,7 @@ lemma do_machine_op_reads_respects:
   apply simp
   done
 
-end
+end (* InfoFlow_IF_2 *)
 
 lemma tcb_domain_wellformed:
   "\<lbrakk> pas_refined aag s; etcbs_of s t = Some a \<rbrakk>

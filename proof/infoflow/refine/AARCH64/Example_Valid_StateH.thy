@@ -28,7 +28,7 @@ lemma pg_index_bits_ge0[simp, intro!]: "0 < pg_index_bits"
 (* FIXME AARCH64: use value_type *)
 typedef pg_index_len = "{n :: nat. n < pg_index_bits}" by auto
 
-end
+end (* Arch *)
 
 instantiation AARCH64.pg_index_len :: len0
 begin
@@ -55,7 +55,7 @@ lemma length_pg_index_len[simp]:
   "LENGTH(pg_index_len) = pg_index_bits"
   by (simp add: len_of_pg_index_len type_definition.card[OF type_definition_pg_index_len])
 
-end
+end (* Arch *)
 
 context begin interpretation Arch .
 

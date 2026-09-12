@@ -100,7 +100,7 @@ lemma arch_globals_equiv_device_state_update[UserOp_IF_assms, simp]:
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   by auto
 
-end
+end (* Arch *)
 
 
 requalify_types RISCV64.user_transition_if
@@ -845,7 +845,7 @@ definition valid_vspace_objs_if where
 
 declare valid_vspace_objs_if_def[simp]
 
-end
+end (* Arch *)
 
 requalify_consts
   RISCV64.do_user_op_if

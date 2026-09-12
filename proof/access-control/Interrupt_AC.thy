@@ -119,7 +119,7 @@ lemma invoke_irq_handler_respects:
   apply (cases irq_inv, simp_all add: authorised_irq_hdl_inv_def)
   by (wpsimp wp: arch_invoke_irq_handler_respects cap_insert_integrity_autarch)+
 
-end
+end (* Interrupt_AC *)
 
 
 lemma decode_irq_handler_invocation_authorised [wp]:
@@ -160,6 +160,6 @@ lemma decode_irq_control_invocation_authorised [wp]:
                     pas_refined_all_auth_is_owns aag_cap_auth_def)
   done
 
-end
+end (* Interrupt_AC_2 *)
 
 end

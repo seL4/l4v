@@ -329,7 +329,7 @@ lemma invoke_tcb_respects:
        | wpc | clarsimp simp: authorised_tcb_inv_def if_apply_def2
        | rule conjI | subst (asm) idle_no_ex_cap)+)
 
-end
+end (* Tcb_AC *)
 
 
 subsubsection\<open>@{term "pas_refined"}\<close>
@@ -398,7 +398,7 @@ lemma invoke_tcb_pas_refined:
                            simp: invs_valid_global_refs invs_valid_objs)+
   done
 
-end
+end (* Tcb_AC *)
 
 
 subsection\<open>TCB / decode\<close>

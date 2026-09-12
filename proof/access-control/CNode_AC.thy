@@ -148,7 +148,7 @@ lemma cap_insert_integrity_autarch:
   apply fastforce
   done
 
-end
+end (* CNode_AC *)
 
 
 text\<open>
@@ -324,7 +324,7 @@ lemma set_cap_pas_refined_not_transferable:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   by (wpsimp wp: set_cap_pas_refined simp: cte_wp_at_caps_of_state)
 
-end
+end (* CNode_AC *)
 
 
 (* FIXME MOVE *)
@@ -376,7 +376,7 @@ lemma cap_swap_for_delete_respects[wp]:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   by (wpsimp simp: cap_swap_for_delete_def)
 
-end
+end (* CNode_AC *)
 
 
 (* FIXME MOVE *)
@@ -430,7 +430,7 @@ lemma empty_slot_integrity[wp,wp_not_transferable]:
    apply (wp empty_slot_integrity_spec[simplified spec_valid_def])
   by force
 
-end
+end (* CNode_AC *)
 
 lemma reply_masters_mdbD1:
  "\<lbrakk> reply_masters_mdb m cs ; cs slot = Some (ReplyCap t True R) \<rbrakk>
@@ -598,7 +598,7 @@ lemma update_cdt_list_pas_refined[wp]:
   "update_cdt_list f \<lbrace>pas_refined aag\<rbrace>"
   by (wpsimp simp: pas_refined_def state_objs_to_policy_def | wps)+
 
-end
+end (* CNode_AC_2 *)
 
 
 text \<open>
@@ -894,7 +894,7 @@ lemma update_cdt_pas_refined:
   apply simp
   done
 
-end
+end (* CNode_AC_2 *)
 
 
 lemma set_untyped_cap_as_full_cdt_is_original_cap:
@@ -1280,7 +1280,7 @@ lemma thread_set_state_vrefs:
                  dest!: get_tcb_SomeD)
   done
 
-end
+end (* CNode_AC_3 *)
 
 
 lemma thread_set_thread_st_auth_trivT:
@@ -1341,7 +1341,7 @@ lemma thread_set_pas_refined_triv:
 
 lemmas thread_set_pas_refined = thread_set_pas_refined_triv[OF ball_tcb_cap_casesI, simplified]
 
-end
+end (* CNode_AC_3 *)
 
 
 lemma aag_owned_cdt_link:
@@ -1374,7 +1374,7 @@ lemma set_ntfn_respects:
 crunch thread_set
   for integrity_autarch: "integrity aag X st"
 
-end
+end (* CNode_AC_3 *)
 
 
 lemma sta_ts_mem:
@@ -1499,7 +1499,7 @@ lemma cap_revoke_cur_domain[wp]:
   "cap_revoke slot \<lbrace>\<lambda>s::det_state. P (cur_domain s)\<rbrace>"
   by (rule cap_revoke_preservation2; wp)
 
-end
+end (* CNode_AC_3 *)
 
 
 locale CNode_AC_4 = CNode_AC_3 +
@@ -1713,6 +1713,6 @@ lemma untyped_range_update_cap_data [simp]:
   unfolding update_cap_data_def
   by (cases c, simp_all add: is_cap_simps badge_update_def Let_def the_cnode_cap_def)
 
-end
+end (* CNode_AC_4 *)
 
 end

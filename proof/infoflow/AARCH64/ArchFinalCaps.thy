@@ -97,7 +97,7 @@ declare init_arch_objects_cte_wp_at[FinalCaps_assms]
 declare handle_vm_fault_cur_thread[FinalCaps_assms]
 declare finalise_cap_makes_halted[FinalCaps_assms]
 
-end
+end (* Arch *)
 
 
 global_interpretation FinalCaps?: FinalCaps
@@ -388,7 +388,7 @@ lemma invoke_tcb_silc_inv[FinalCaps_assms]:
                      split: cap.splits option.splits pt_type.splits arch_cap.splits)+
   done
 
-end
+end (* Arch *)
 
 
 global_interpretation FinalCaps_2?: FinalCaps_2
@@ -443,7 +443,7 @@ lemma handle_reserved_irq_non_kernel_IRQs[FinalCaps_assms]:
   apply (wpsimp wp: when_wp[where P'="\<bottom>"] simp: non_kernel_IRQs_def irq_vppi_event_index_def)
   done
 
-end
+end (* Arch *)
 
 
 global_interpretation FinalCaps_3?: FinalCaps_3

@@ -199,7 +199,7 @@ lemma cancel_all_ipc_respects [wp]:
     apply simp_all
   done
 
-end
+end (* Finalise_AC *)
 
 
 crunch blocked_cancel_ipc, cancel_signal
@@ -285,7 +285,7 @@ crunch cap_delete_one
   and pas_refined[wp, wp_not_transferable]: "pas_refined aag"
   (wp: crunch_wps simp: crunch_simps)
 
-end
+end (* Finalise_AC *)
 
 
 (* FIXME MOVE next to thread_set_tcb_fault_set_invs in DetSchedSchedule *)
@@ -373,7 +373,7 @@ lemma cancel_all_signals_respects[wp]:
   apply fastforce+
   done
 
-end
+end (* Finalise_AC *)
 
 lemma sbn_unbind_respects[wp]:
   "\<lbrace>integrity aag X st and
@@ -457,7 +457,7 @@ lemma cap_delete_one_respects[wp,wp_not_transferable]:
   apply (fastforce simp: caps_of_state_valid)
   done
 
-end
+end (* Finalise_AC *)
 
 
 lemma fast_finalise_is_transferable[wp_transferable]:
@@ -554,7 +554,7 @@ lemma suspend_respects[wp]:
     apply wpsimp+
   done
 
-end
+end (* Finalise_AC *)
 
 
 lemma finalise_is_fast_finalise:
@@ -630,7 +630,7 @@ lemma finalise_cap_auth:
   apply (simp add: fst_cte_ptrs_def split: cap.split_asm)
   done
 
-end
+end (* Finalise_AC *)
 
 
 lemma aag_cap_auth_recycle_EndpointCap:
@@ -678,7 +678,7 @@ lemma finalise_cap_obj_refs:
    \<lbrace>\<lambda>rv _. \<forall>x \<in> obj_refs_ac (fst rv). P x\<rbrace>"
   by (cases cap) (wpsimp wp: arch_finalise_cap_obj_refs simp: o_def | rule conjI)+
 
-end
+end (* Finalise_AC *)
 
 
 lemma zombie_ptr_emptyable:
@@ -714,7 +714,7 @@ lemma finalise_cap_makes_halted:
   apply (wp arch_finalise_cap_makes_halted)
   done
 
-end
+end (* Finalise_AC *)
 
 
 lemma aag_Control_into_owns_irq:
@@ -882,7 +882,7 @@ lemmas rec_del_respects =
   rec_del_respects''[of True, THEN hoare_conjD1, simplified]
   rec_del_respects''[of False, THEN hoare_conjD2, simplified]
 
-end
+end (* Finalise_AC *)
 
 
 lemma finalise_cap_transferable:
@@ -933,7 +933,7 @@ lemmas rec_del_respects_CTEDelete_transferable =
   rec_del_respects_CTEDelete_transferable'[of True,THEN validE_valid,THEN hoare_conjD1,simplified]
   rec_del_respects_CTEDelete_transferable'[of False,THEN validE_valid,THEN hoare_conjD2,simplified]
 
-end
+end (* Finalise_AC *)
 
 
 (* TODO section change *)
@@ -977,7 +977,7 @@ lemma cap_delete_pas_refined':
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   by (wp cap_delete_pas_refined) fastforce
 
-end
+end (* Finalise_AC *)
 
 
 (* MOVE *)
@@ -1159,7 +1159,7 @@ lemma invoke_cnode_respects:
   apply (auto simp: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def)
   done
 
-end
+end (* Finalise_AC_2 *)
 
 lemma set_cap_cte_wp_at_separation:
   "\<lbrace>cte_wp_at P slot and K (slot \<noteq> slot')\<rbrace>
@@ -1215,6 +1215,6 @@ lemma invoke_cnode_pas_refined:
        | drule auth_derived_caps_of_state_impls
        | fastforce intro: cap_cur_auth_caps_of_state dest: is_derived_is_transferable)+)
 
-end
+end (* Finalise_AC_2 *)
 
 end

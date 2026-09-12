@@ -365,7 +365,7 @@ crunch arch_prepare_set_domain
   for valid_arch_state[Syscall_IF_assms,wp]: valid_arch_state
   (wp: hoare_drop_imps)
 
-end
+end (* Arch *)
 
 
 global_interpretation Syscall_IF?: Syscall_IF

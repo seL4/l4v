@@ -130,7 +130,7 @@ lemmas equiv_arch_taut =
   no_hyp_taut
   no_fpu_taut
 
-end
+end (* Arch *)
 
 arch_requalify_consts
   identical_hyp_state_updates
@@ -212,7 +212,7 @@ lemma do_machine_op_reads_respects'[InfoFlow_IF_assms]:
      apply (wp | simp add: guard)+
   done
 
-end
+end (* Arch *)
 
 
 global_interpretation InfoFlow_IF?: InfoFlow_IF_2 identical_hyp_state_updates identical_fpu_state_updates no_hyp no_fpu
