@@ -176,7 +176,7 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
                         and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
        (invoke_tcb ti)"
   apply (simp add: split_def cong: option.case_cong)
-  apply (wpsimp wp: set_priority_reads_respects[THEN reads_respects_f[where  st=st and Q=\<top>]])
+  apply (wpsimp wp: set_priority_reads_respects[THEN reads_respects_f[where st=st and Q=\<top>]])
                     apply (wpsimp wp: hoare_vcg_const_imp_liftE_R simp: when_def | wpc)+
                     apply (rule conjI)
                      apply ((wpsimp wp: reschedule_required_reads_respects_f)+)[4]
@@ -354,7 +354,7 @@ lemma arch_tcb_context_get_cur_fpu_update[simp]:
   by (simp add: arch_tcb_context_get_def)
 
 lemma globals_equiv_fpu_owner_update[simp]:
-  "globals_equiv st (s\<lparr>arch_state := arch_state s\<lparr>arm_current_fpu_owner := t\<rparr>\<rparr>)  =
+  "globals_equiv st (s\<lparr>arch_state := arch_state s\<lparr>arm_current_fpu_owner := t\<rparr>\<rparr>) =
    globals_equiv st s"
   by (auto simp add: globals_equiv_def idle_equiv_def)
 

@@ -653,7 +653,7 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
        aag_subjects_have_auth_to subjects aag Receive ep \<rbrakk>
      \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_tcb_restart:
-    "\<lbrakk> tro_tag TCBRestart; ko  = Some (TCB tcb); ko' = Some (TCB tcb');
+    "\<lbrakk> tro_tag TCBRestart; ko = Some (TCB tcb); ko' = Some (TCB tcb');
        tcb' = tcb \<lparr>tcb_arch := new_arch,
                    tcb_state := tcb_state tcb', tcb_bound_notification := ntfn',
                    tcb_caller := cap', tcb_ctable := ccap'\<rparr>;
@@ -677,7 +677,7 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
        reply_cap_deletion_integrity subjects aag (tcb_ctable tcb) ccap' \<rbrakk>
      \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_tcb_activate:
-    "\<lbrakk> tro_tag TCBActivate; ko  = Some (TCB tcb); ko' = Some (TCB tcb');
+    "\<lbrakk> tro_tag TCBActivate; ko = Some (TCB tcb); ko' = Some (TCB tcb');
        tcb' = tcb \<lparr>tcb_arch := new_arch, tcb_caller := cap', tcb_ctable := ccap',
                    tcb_state := Running, tcb_bound_notification := ntfn'\<rparr>;
        tcb_hyp_refs new_arch = tcb_hyp_refs (tcb_arch tcb);
@@ -688,7 +688,7 @@ inductive integrity_obj_alt for aag activate subjects l' ko ko' where
        activate \<rbrakk> \<comment> \<open>Anyone can do this\<close>
        \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_cnode:
-    "\<lbrakk> tro_tag RCNode; ko  = Some (CNode n content); ko' = Some (CNode n content');
+    "\<lbrakk> tro_tag RCNode; ko = Some (CNode n content); ko' = Some (CNode n content');
        cnode_integrity subjects aag content content' \<rbrakk>
      \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_arch:
@@ -770,7 +770,7 @@ abbreviation integrity_cdt_state where
      (\<forall>x. integrity_cdt aag subjects (cdt s) (tcb_states_of_state s) x
                         (cdt s x,is_original_cap s x) (cdt s' x, is_original_cap s' x))"
 
-abbreviation "cdt_integrity aag \<equiv> integrity_cdt (aag :: 'a PAS) {pasSubject aag} "
+abbreviation "cdt_integrity aag \<equiv> integrity_cdt (aag :: 'a PAS) {pasSubject aag}"
 
 abbreviation cdt_integrity_state where
   "cdt_integrity_state aag s s' \<equiv>
@@ -798,7 +798,7 @@ abbreviation integrity_cdt_list_state where
 abbreviation "cdt_list_integrity aag \<equiv> integrity_cdt_list (aag :: 'a PAS) {pasSubject aag}"
 
 abbreviation cdt_list_integrity_state where
-  "cdt_list_integrity_state aag  s s' \<equiv>
+  "cdt_list_integrity_state aag s s' \<equiv>
      (\<forall>x. integrity_cdt_list (aag :: 'a PAS) {pasSubject aag} (cdt s) (tcb_states_of_state s) x
                              (cdt_list s x) (cdt_list s' x))"
 
@@ -864,7 +864,7 @@ definition integrity_interrupts ::
 subsection \<open>Abbreviations for arch-specific definitions\<close>
 
 abbreviation integrity_asids ::
-  "'a PAS \<Rightarrow> 'a set \<Rightarrow> obj_ref \<Rightarrow> asid \<Rightarrow> 'st::state_ext state \<Rightarrow> 's::state_ext state  \<Rightarrow> bool" where
+  "'a PAS \<Rightarrow> 'a set \<Rightarrow> obj_ref \<Rightarrow> asid \<Rightarrow> 'st::state_ext state \<Rightarrow> 's::state_ext state \<Rightarrow> bool" where
   "integrity_asids aag subjects x asid s s' \<equiv>
    integrity_asids_2 aag subjects x asid (arch_state s) (arch_state s') (aobjs_of s) (aobjs_of s')"
 

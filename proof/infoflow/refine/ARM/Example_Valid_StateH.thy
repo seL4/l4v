@@ -124,7 +124,7 @@ where
 text \<open>Low's VSpace (PageDirectory)\<close>
 
 definition
-  Low_pt'H :: "word8 \<Rightarrow> ARM_H.pte "
+  Low_pt'H :: "word8 \<Rightarrow> ARM_H.pte"
 where
   "Low_pt'H \<equiv> (\<lambda>_. ARM_H.InvalidPTE)
             (0 := ARM_H.SmallPagePTE shared_page_ptr_phys (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {}) (vmrights_map vm_read_write))"
@@ -145,7 +145,7 @@ definition
 
 
 definition
-  Low_pd'H :: "12 word \<Rightarrow> ARM_H.pde "
+  Low_pd'H :: "12 word \<Rightarrow> ARM_H.pde"
 where
   "Low_pd'H \<equiv>
     global_pdH
@@ -170,7 +170,7 @@ text \<open>High's VSpace (PageDirectory)\<close>
 
 
 definition
-  High_pt'H :: "word8 \<Rightarrow> ARM_H.pte "
+  High_pt'H :: "word8 \<Rightarrow> ARM_H.pte"
 where
   "High_pt'H \<equiv>
     (\<lambda>_. ARM_H.InvalidPTE)
@@ -188,14 +188,14 @@ where
 
 
 definition
-  High_pd'H :: "12 word \<Rightarrow> ARM_H.pde "
+  High_pd'H :: "12 word \<Rightarrow> ARM_H.pde"
 where
   "High_pd'H \<equiv>
     global_pdH
      (0 := ARM_H.PageTablePDE
              (addrFromPPtr High_pt_ptr)
              (ParityEnabled \<in> {})
-             undefined )"
+             undefined)"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
@@ -1655,9 +1655,9 @@ lemma map_to_ctes_kh0H_simps[simp]:
           assumption,
          erule notE,
          rule kh0H_dom_sets_distinct)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None split: option.splits)
   apply (cut_tac ptr="High_tcb_ptr" and x="0x10" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1676,7 +1676,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="High_tcb_ptr" and x="0x20" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1695,7 +1695,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="High_tcb_ptr" and x="0x30" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1714,7 +1714,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="High_tcb_ptr" and x="0x40" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1732,9 +1732,9 @@ lemma map_to_ctes_kh0H_simps[simp]:
           assumption,
          erule notE,
          rule kh0H_dom_sets_distinct)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None split: option.splits)
   apply (cut_tac ptr="idle_tcb_ptr" and x="0x10" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1753,7 +1753,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="idle_tcb_ptr" and x="0x20" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1772,7 +1772,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="idle_tcb_ptr" and x="0x30" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1791,7 +1791,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="idle_tcb_ptr" and x="0x40" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -2861,7 +2861,7 @@ end
 (* kernel_data_refs is an undefined constant at the moment, and therefore
    cannot be referred to in valid_global_refs' and pspace_domain_valid.
    We use an axiomatization for the moment. *)
-axiomatization  where
+axiomatization where
   kdr_valid_global_refs': "valid_global_refs' s0H_internal" and
   kdr_pspace_domain_valid: "pspace_domain_valid s0H_internal"
 

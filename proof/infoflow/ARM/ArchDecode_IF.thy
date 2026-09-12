@@ -221,7 +221,7 @@ lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
   unfolding arch_decode_invocation_def
   apply (rule equiv_valid_guard_imp)
    apply (subst gets_applyE)+
-   apply (wp check_vp_wpR  reads_respects_f_inv'[OF get_asid_pool_rev]
+   apply (wp check_vp_wpR reads_respects_f_inv'[OF get_asid_pool_rev]
              reads_respects_f_inv'[OF ensure_empty_rev]
              reads_respects_f_inv'[OF lookup_slot_for_cnode_op_rev]
              reads_respects_f_inv'[OF ensure_no_children_rev]

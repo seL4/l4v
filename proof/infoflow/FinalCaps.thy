@@ -83,7 +83,7 @@ text\<open>This is an invariant that ensures that the info leak due to is_final_
 definition silc_inv :: "'a subject_label PAS \<Rightarrow> det_ext state \<Rightarrow> det_ext state \<Rightarrow> bool" where
   "silc_inv aag st s \<equiv>
      (SilcLabel \<noteq> pasSubject aag) \<and>
-     (\<forall>x. pasObjectAbs aag x = SilcLabel \<longrightarrow>  (\<exists>sz. cap_table_at sz x s)) \<and>
+     (\<forall>x. pasObjectAbs aag x = SilcLabel \<longrightarrow> (\<exists>sz. cap_table_at sz x s)) \<and>
      (\<forall>y auth. (y, auth, SilcLabel) \<in> pasPolicy aag \<longrightarrow> y = SilcLabel) \<and>
      (\<forall>slot cap. cte_wp_at ((=) cap) slot s \<and>
                  \<not> intra_label_cap aag slot s
@@ -145,7 +145,7 @@ lemma silc_inv_cnode_onlyE:
   using si posl silc_inv_cnode_only by blast
 
 lemma silc_inv_no_transferable:
-  "\<lbrakk> silc_inv aag st s;  pasObjectAbs aag (fst slot) = SilcLabel;
+  "\<lbrakk> silc_inv aag st s; pasObjectAbs aag (fst slot) = SilcLabel;
      cte_wp_at (\<lambda>cap. cap \<noteq> NullCap \<and> is_transferable_cap cap) slot st \<rbrakk>
    \<Longrightarrow> False"
   unfolding silc_inv_def by (force simp del: split_paired_All)
@@ -314,8 +314,8 @@ lemma aag_can_read_kheap_eq:
   done
 
 lemma caps_ref_either_an_object_or_irq':
-   "ref \<in> cap_irqs cap' \<Longrightarrow>
-    (obj_refs cap' = {} \<and> arch_gen_refs cap' = {})"
+  "ref \<in> cap_irqs cap'
+   \<Longrightarrow> (obj_refs cap' = {} \<and> arch_gen_refs cap' = {})"
   apply (case_tac cap', simp_all)
   done
 
@@ -370,15 +370,15 @@ lemma cap_points_to_label_def':
   by (simp add: gen_obj_refs_def ball_Un FIXME_arch_gen_refs)
 
 lemma caps_ref_either_an_object_or_irq:
-   "ref \<in> obj_refs cap'
-    \<Longrightarrow> cap_irqs cap' = {} \<and> arch_gen_refs cap' = {}"
+  "ref \<in> obj_refs cap'
+   \<Longrightarrow> cap_irqs cap' = {} \<and> arch_gen_refs cap' = {}"
   apply (clarsimp simp: FIXME_arch_gen_refs)
   apply (case_tac cap'; clarsimp)
   done
 
 lemma caps_ref_either_an_object_or_irq'':
-   "ref \<in> arch_gen_refs cap'
-    \<Longrightarrow> obj_refs cap' = {} \<and> cap_irqs cap' = {}"
+  "ref \<in> arch_gen_refs cap'
+   \<Longrightarrow> obj_refs cap' = {} \<and> cap_irqs cap' = {}"
   apply (clarsimp simp: FIXME_arch_gen_refs)
   done
 
@@ -394,7 +394,7 @@ lemma is_final_cap'_read_equiv_imp:
   subgoal premises prems
   proof (rule ccontr)
     assume not_final: "\<not> is_final_cap' cap t"
-    from prems have ilcs : "intra_label_cap aag slot s"
+    from prems have ilcs: "intra_label_cap aag slot s"
       by (fastforce elim: silc_inv_finalE[OF _ caps_of_state_cteD, where s = s])
     hence ilct: "intra_label_cap aag slot t"
       using prems caps_of_state_intra_label_cap by blast
@@ -423,7 +423,7 @@ lemma is_final_cap'_read_equiv_imp:
     next
       case False note cant_read = this
       (* slot is in subjectRead, slot' isn't. However they hold overlaping caps. Thus: *)
-      hence not_intra : "\<not> intra_label_cap aag slot' t"
+      hence not_intra: "\<not> intra_label_cap aag slot' t"
         using prems ilct by (fastforce simp: cap_points_to_label_def' dest!: intra_label_capD')
       (* Then, accroding to silc_inv, there is a third cap in SilcLabel overlapping cap and cap'*)
       then obtain lslot where "lslot \<in> slots_holding_overlapping_caps cap' t"
@@ -788,7 +788,7 @@ lemma cap_irqs_max_free_index_update[simp]:
   done
 
 lemma cap_points_to_label_max_free_index_update[simp]:
-  "cap_points_to_label aag (max_free_index_update cap) l =  cap_points_to_label aag cap l"
+  "cap_points_to_label aag (max_free_index_update cap) l = cap_points_to_label aag cap l"
   apply (simp add: cap_points_to_label_def)
   done
 
@@ -923,7 +923,7 @@ lemma cap_swap_silc_inv:
   apply (rule hoare_pre)
   apply (wp set_cap_silc_inv hoare_vcg_ex_lift hoare_weak_lift_imp
             set_cap_slots_holding_overlapping_caps_other[where aag=aag] set_cdt_silc_inv
-        | simp  split del: if_split)+
+        | simp split del: if_split)+
   apply (rule conjI)
    apply (rule impI, elim conjE)
    apply (drule weak_derived_overlaps)
@@ -1226,8 +1226,8 @@ lemma reply_cancel_ipc_silc_inv:
   apply (case_tac "cdt s (a,b)")
    apply (fastforce dest: descendants_of_NoneD)
   apply (elim is_transferable.cases)
-    apply (fastforce dest: mdb_cte_atD valid_mdb_mdb_cte_at simp:  cte_wp_at_caps_of_state)
-   apply (fastforce dest: mdb_cte_atD valid_mdb_mdb_cte_at simp:  cte_wp_at_caps_of_state)
+    apply (fastforce dest: mdb_cte_atD valid_mdb_mdb_cte_at simp: cte_wp_at_caps_of_state)
+   apply (fastforce dest: mdb_cte_atD valid_mdb_mdb_cte_at simp: cte_wp_at_caps_of_state)
   apply (erule(1) silc_inv_no_transferableD')
   apply (force simp add:cte_wp_at_caps_of_state)
   done
@@ -1576,7 +1576,7 @@ lemma rec_del_silc_inv':
           apply (wp rec_del_ReduceZombie_emptyable preemption_point_inv' rec_del_invs
                     valid_validE_R[OF rec_del_respects(2)[simplified]] "2.hyps"
                     drop_spec_validE[OF liftE_wp] set_cap_silc_inv
-                    set_cap_pas_refined replace_cap_invs  final_cap_same_objrefs set_cap_cte_cap_wp_to
+                    set_cap_pas_refined replace_cap_invs final_cap_same_objrefs set_cap_cte_cap_wp_to
                     set_cap_cte_wp_at hoare_weak_lift_imp hoare_vcg_ball_lift
                  | simp add: finalise_cap_not_reply_master_unlifted split del: if_split)+
        (* where the action is *)
@@ -1968,7 +1968,7 @@ lemma delete_objects_silc_inv:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (rule hoare_gen_asm)
   unfolding delete_objects_def
-  apply (wp detype_silc_inv |  simp add: ptr_range_def)+
+  apply (wp detype_silc_inv | simp add: ptr_range_def)+
   done
 
 lemma reset_untyped_cap_untyped_cap:
@@ -2565,7 +2565,7 @@ lemma receive_ipc_base_silc_inv:
   apply (rule hoare_pre)
    apply (wp setup_caller_cap_silc_inv hoare_weak_lift_imp do_ipc_transfer_silc_inv
          | wpc | simp split del: if_split)+
-     apply (wp  hoare_vcg_all_lift hoare_vcg_imp_lift  set_simple_ko_get_tcb
+     apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift set_simple_ko_get_tcb
            | wpc | simp split del: if_split)+
   apply (clarsimp)
   apply (frule tcb_states_of_state_to_auth[rotated])
@@ -2615,7 +2615,7 @@ lemma send_fault_ipc_silc_inv:
    \<lbrace>\<lambda>rv. silc_inv aag st\<rbrace>"
   apply (rule hoare_gen_asm)+
   unfolding send_fault_ipc_def
-  apply (wp send_ipc_silc_inv  thread_set_tcb_fault_set_invs
+  apply (wp send_ipc_silc_inv thread_set_tcb_fault_set_invs
             thread_set_fault_pas_refined thread_set_refs_trivial thread_set_obj_at_impossible
             hoare_vcg_ex_lift get_cap_wp hoare_vcg_conj_lift hoare_vcg_ex_lift hoare_vcg_all_lift
          | wpc
@@ -2638,7 +2638,7 @@ crunch handle_fault
 
 crunch do_reply_transfer
   for silc_inv[wp]: "silc_inv aag st"
-  (wp: thread_set_tcb_fault_update_silc_inv crunch_wps  ignore: set_object thread_set)
+  (wp: thread_set_tcb_fault_update_silc_inv crunch_wps ignore: set_object thread_set)
 
 end
 
@@ -2969,7 +2969,7 @@ lemma call_kernel_silc_inv:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding call_kernel_def maybe_handle_interrupt_def
   apply (wpsimp wp: handle_interrupt_in_kernel_silc_inv handle_event_silc_inv[where st'=st'])
-  apply (rule_tac Q'="\<lambda>rv s.  rv \<notin> Some ` non_kernel_IRQs \<and> silc_inv aag st s" in hoare_strengthen_post[rotated])
+  apply (rule_tac Q'="\<lambda>rv s. rv \<notin> Some ` non_kernel_IRQs \<and> silc_inv aag st s" in hoare_strengthen_post[rotated])
    apply clarsimp
   apply (wpsimp wp: getActiveIRQ_neq_non_kernel)
   apply (wpsimp wp: handle_event_silc_inv[where st'=st'])

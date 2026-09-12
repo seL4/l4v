@@ -305,9 +305,9 @@ lemma set_cap_pas_refined:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: pas_refined_def state_objs_to_policy_def aag_cap_auth_def)
   apply (rule hoare_pre)
-   apply (wp set_cap_caps_of_state set_cap_state_vrefs  | wps)+
+   apply (wp set_cap_caps_of_state set_cap_state_vrefs | wps)+
   apply clarsimp
-  apply (intro conjI)  \<comment> \<open>auth_graph_map\<close>
+  apply (intro conjI) \<comment> \<open>auth_graph_map\<close>
     apply (clarsimp dest!: auth_graph_map_memD)
     apply (erule state_bits_to_policy.cases;
            solves\<open>auto simp: cap_links_asid_slot_def label_owns_asid_slot_def
@@ -440,7 +440,7 @@ lemma reply_masters_mdbD1:
 
 lemma reply_cap_no_grand_parent:
   "\<lbrakk> m \<Turnstile> pptr \<rightarrow>* slot ; reply_mdb m cs ; cs slot = Some (ReplyCap t False R) \<rbrakk>
-   \<Longrightarrow> pptr = slot \<or> (m \<Turnstile> pptr \<leadsto> slot \<and> (\<exists> R'. cs pptr = Some (ReplyCap t True R')))"
+   \<Longrightarrow> pptr = slot \<or> (m \<Turnstile> pptr \<leadsto> slot \<and> (\<exists>R'. cs pptr = Some (ReplyCap t True R')))"
   apply (clarsimp simp: reply_mdb_def del: disjCI)
   apply (erule(1) reply_caps_mdbE)
   apply (drule(1) reply_masters_mdbD1)
@@ -865,7 +865,7 @@ lemma set_cdt_pas_refined:
   apply (subgoal_tac
           "\<forall>x y. c x = Some y \<longrightarrow>
             (is_transferable (caps_of_state s x) \<or> abs_has_auth_to aag Control (fst y) (fst x))
-          \<and> abs_has_auth_to  aag DeleteDerived (fst y) (fst x)")
+          \<and> abs_has_auth_to aag DeleteDerived (fst y) (fst x)")
    defer
    apply (intro allI, case_tac "cdt s x = Some y")
     apply (solves\<open>auto intro: auth_graph_map_memI state_bits_to_policy.intros\<close>)
@@ -1124,7 +1124,7 @@ lemma cap_swap_for_delete_pas_refined[wp]:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: cap_swap_for_delete_def)
   apply (wp get_cap_wp | simp)+
-  apply (clarsimp simp: cte_wp_at_caps_of_state )
+  apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (fastforce dest!: cap_cur_auth_caps_of_state)
   done
 
@@ -1312,7 +1312,7 @@ context CNode_AC_3 begin
 lemma tcb_domain_map_wellformed_lift_strong:
   assumes 1: "\<And>P. f \<lbrace>\<lambda>s. P (etcbs_of s ||> etcb_domain)\<rbrace>"
   shows "f \<lbrace>tcb_domain_map_wellformed aag\<rbrace>"
-  apply (clarsimp simp: valid_def  elim!: tcb_domain_map_wellformed_mono[rotated] domains_of_state_aux.cases)
+  apply (clarsimp simp: valid_def elim!: tcb_domain_map_wellformed_mono[rotated] domains_of_state_aux.cases)
   apply (subgoal_tac "(etcbs_of s ||> etcb_domain) ptr = Some (etcb_domain tcb)")
    apply (auto simp: in_opt_map_Some_eq intro!: domtcbs)[1]
   apply (rule ccontr)
@@ -1616,7 +1616,7 @@ lemma derive_cap_clas:
   "\<lbrace>\<lambda>s :: det_state. cap_links_asid_slot aag p b \<rbrace>
    derive_cap a b
    \<lbrace>\<lambda>rv s. cap_links_asid_slot aag p rv\<rbrace>, -"
-  apply (simp add: derive_cap_def  cong: cap.case_cong)
+  apply (simp add: derive_cap_def cong: cap.case_cong)
   apply (rule hoare_pre)
   apply (wp arch_derive_cap_clas | wpc)+
   apply (auto simp: is_cap_simps cap_links_asid_slot_def)

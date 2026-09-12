@@ -510,7 +510,7 @@ lemma integrity_cdt_change_allowed[simp,intro]:
 
 lemmas integrity_cdt_intros = integrity_cdt_refl integrity_cdt_change_allowed
 
-lemmas integrity_cdt_direct = cca_direct[THEN  integrity_cdt_change_allowed]
+lemmas integrity_cdt_direct = cca_direct[THEN integrity_cdt_change_allowed]
 
 lemma integrity_cdt_list_refl[simp]: "integrity_cdt_list aag subjects m kh ptr v v"
   by (simp add: integrity_cdt_list_def)
@@ -721,7 +721,7 @@ lemma tcb_caller_slot_empty_on_recieve:
   apply (simp add:valid_obj_def)
   apply (simp only:valid_tcb_def)
   apply (drule conjunct1)
-  apply (drule_tac x="the (tcb_cap_cases (tcb_cnode_index 3))" in  bspec)
+  apply (drule_tac x="the (tcb_cap_cases (tcb_cnode_index 3))" in bspec)
    apply (fastforce simp:tcb_cap_cases_def)
   apply (simp add:tcb_cap_cases_def split: thread_state.splits)
   apply (subgoal_tac "caps_of_state s (tcb_ptr, tcb_cnode_index 3) = Some NullCap")
@@ -736,13 +736,13 @@ lemma tcb_caller_slot_empty_on_recieve:
 
 (* FIXME MOVE next to tcb_states_of_state definition *)
 lemma tcb_states_of_state_kheap:
-   "\<lbrakk> kheap s slot = Some (TCB tcb)\<rbrakk>
-    \<Longrightarrow> tcb_states_of_state s slot = Some (tcb_state tcb)"
+  "\<lbrakk> kheap s slot = Some (TCB tcb)\<rbrakk>
+   \<Longrightarrow> tcb_states_of_state s slot = Some (tcb_state tcb)"
   by (simp add:tcb_states_of_state_def get_tcb_def split: option.splits kernel_object.splits)
 
 lemma tcb_states_of_state_kheapI:
-   "\<lbrakk> kheap s slot = Some (TCB tcb); tcb_state tcb = tcbst \<rbrakk>
-    \<Longrightarrow> tcb_states_of_state s slot = Some tcbst"
+  "\<lbrakk> kheap s slot = Some (TCB tcb); tcb_state tcb = tcbst \<rbrakk>
+   \<Longrightarrow> tcb_states_of_state s slot = Some tcbst"
   by (simp add: tcb_states_of_state_def get_tcb_def split: option.splits kernel_object.splits)
 
 lemma tcb_states_of_state_kheapD:
@@ -836,7 +836,7 @@ lemma trcdtlist_trans:
      integrity_cdt_list_state aag subjects s' s'' \<rbrakk>
    \<Longrightarrow> integrity_cdt_list_state aag subjects s s''"
   apply (intro allI)
-  apply (drule_tac x=x in spec [where P="\<lambda>ptr. integrity_cdt_list _ _ _ _ ptr (_ ptr) (_ ptr)"] )+
+  apply (drule_tac x=x in spec [where P="\<lambda>ptr. integrity_cdt_list _ _ _ _ ptr (_ ptr) (_ ptr)"])+
   apply (erule integrity_cdt_listE)+
     apply (rule integrity_cdt_list_filt)
     apply (simp del: split_paired_All split_paired_Ex)
@@ -879,7 +879,7 @@ locale Access_AC_2 = Access_AC_1 +
   assumes auth_ipc_buffers_tro:
     "\<lbrakk> integrity_obj_state aag activate subjects (s :: det_state) (s' :: det_state);
        x \<in> auth_ipc_buffers s' p; pasObjectAbs aag p \<notin> subjects \<rbrakk>
-     \<Longrightarrow> x \<in> auth_ipc_buffers s p "
+     \<Longrightarrow> x \<in> auth_ipc_buffers s p"
   and integrity_asids_refl[simp]:
     "integrity_asids aag subjects x a s s"
   and integrity_hyp_refl[simp]:
@@ -893,7 +893,7 @@ locale Access_AC_2 = Access_AC_1 +
   and trhyp_trans:
     "\<lbrakk> integrity_hyp_2 aag subjects x ms ms' as as' ao ao';
        integrity_hyp_2 aag subjects x ms' ms'' as' as'' ao' ao'' \<rbrakk>
-     \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms'' as as'' ao ao'' "
+     \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms'' as as'' ao ao''"
   and trfpu_trans:
     "\<lbrakk> integrity_fpu_2 aag subjects x ms ms' kh kh';
        integrity_fpu_2 aag subjects x ms' ms'' kh' kh'' \<rbrakk>
@@ -903,7 +903,7 @@ locale Access_AC_2 = Access_AC_1 +
      \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(ptr := ako))"
   and integrity_hyp_update_autarch:
     "\<lbrakk> integrity_hyp_2 aag subjects x ms ms' as as' ao ao'; pasObjectAbs aag ptr \<in> subjects \<rbrakk>
-     \<Longrightarrow> integrity_hyp_2 aag subjects x  ms ms' as as' ao (ao'(ptr := ako))"
+     \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' ao (ao'(ptr := ako))"
   and integrity_fpu_update_autarch:
     "\<lbrakk> integrity_fpu_2 aag subjects x ms ms' kh kh'; pasObjectAbs aag ptr \<in> subjects \<rbrakk>
      \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(ptr \<mapsto> obj))"
@@ -916,7 +916,7 @@ subsection \<open>Basic integrity lemmas\<close>
 lemma integrity_trans:
   assumes t1: "integrity_subjects subjects aag activate X s s'"
   and     t2: "integrity_subjects subjects aag activate X s' s''"
-  shows  "integrity_subjects subjects aag activate X s s''"
+  shows "integrity_subjects subjects aag activate X s s''"
 proof -
   from t1 have tro1: "integrity_obj_state aag activate subjects s s'"
     unfolding integrity_subjects_def by simp
@@ -1218,7 +1218,7 @@ lemma aag_cdt_link_Control:
 
 lemma aag_cdt_link_DeleteDerived:
   "\<lbrakk> cdt s x = Some y; pas_refined aag s \<rbrakk>
-   \<Longrightarrow> abs_has_auth_to aag  DeleteDerived (fst y) (fst x)"
+   \<Longrightarrow> abs_has_auth_to aag DeleteDerived (fst y) (fst x)"
   by (fastforce elim: pas_refined_mem[rotated] sta_cdt_transferable)
 
 lemma tcb_states_of_state_to_auth:
@@ -1478,7 +1478,7 @@ lemma cap_auth_caps_of_state:
     apply (drule_tac f="pasObjectAbs aag" in auth_graph_map_memI[OF _ refl refl])
     apply (fastforce simp: pas_refined_def)
    apply clarsimp
-   apply (drule (2) sta_untyped [THEN pas_refined_mem] )
+   apply (drule (2) sta_untyped [THEN pas_refined_mem])
    apply simp
   apply (drule (1) clas_caps_of_state)
   apply simp
@@ -1553,7 +1553,7 @@ lemma trm_ipc':
                     (underlying_memory (machine_state s') p)"
   apply (cases "pasObjectAbs aag p' \<in> subjects")
    apply (rule trm_write)
-   apply (clarsimp simp: )
+   apply (clarsimp simp:)
    apply (frule pas_refined_mem[rotated])
     prefer 3
     apply (rule trm_ipc; fastforce)
@@ -1619,7 +1619,7 @@ method integrity_trans_start =
 (* Q should be explicitly supplied, if not, use wp_integrity_clean' *)
 lemma wp_integrity_clean:
   "\<lbrakk> \<And>s. Q s \<Longrightarrow> integrity aag X s (g s); \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. integrity aag X st and Q\<rbrace> \<rbrakk>
-   \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_ s. integrity aag X st (g s)\<rbrace> "
+   \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_ s. integrity aag X st (g s)\<rbrace>"
    by (rule hoare_post_imp[of "\<lambda>_. integrity aag X st and Q"])
       (fastforce elim: integrity_trans)
 
@@ -1685,12 +1685,12 @@ locale Access_AC_4 = Access_AC_3 +
     "\<lbrakk> ao' p = None; integrity_asids_2 aag subjects x a as as' ao ao'\<rbrakk>
      \<Longrightarrow> integrity_asids_2 aag subjects x a as as' (ao(p := None)) ao'"
     "\<lbrakk> ao p = None; integrity_asids_2 aag subjects x a as as' ao ao'\<rbrakk>
-     \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(p := None)) "
+     \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(p := None))"
   and integrity_hyp_kh_upd_None:
     "\<lbrakk> ao' p = None; integrity_hyp_2 aag subjects x ms ms' as as' ao ao'\<rbrakk>
      \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' (ao(p := None)) ao'"
     "\<lbrakk> ao p = None; integrity_hyp_2 aag subjects x ms ms' as as' ao ao'\<rbrakk>
-     \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' ao (ao'(p := None)) "
+     \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' ao (ao'(p := None))"
   and integrity_fpu_kh_upd:
     "\<lbrakk> \<forall>tcb. kh p \<noteq> Some (TCB tcb); \<forall>tcb. v \<noteq> Some (TCB tcb);
        integrity_fpu_2 aag subjects x ms ms' kh kh' \<rbrakk>

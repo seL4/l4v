@@ -91,7 +91,7 @@ lemma vgic_update_valid_arch_state[wp]:
 
 crunch vcpu_update
   for valid_global_objs[wp]: valid_global_objs
-  (wp: crunch_wps  simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma vppi_event_globals_equiv[wp]:
   "\<lbrace>globals_equiv st and invs\<rbrace> vppi_event irq \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"

@@ -71,7 +71,7 @@ lemma list_filter_remove: "P a \<Longrightarrow>
    It is stated in this way so that the property can be shown to be transitive.*)
 
 definition list_integ where
-"list_integ P t t' \<equiv>  \<forall>x. P x \<or> (filtered_eq P (cdt_list t x) (cdt_list t' x))"
+"list_integ P t t' \<equiv> \<forall>x. P x \<or> (filtered_eq P (cdt_list t x) (cdt_list t' x))"
 
 lemmas list_integI = list_integ_def[THEN meta_eq_to_obj_eq,THEN iffD2,rule_format]
 lemma list_integE:
@@ -120,10 +120,10 @@ lemma create_cap_list_integrity:
 lemma empty_slot_list_integrity:
   notes split_paired_All[simp del]
   shows
-  "\<lbrace>list_integ P st and (\<lambda>s. valid_list_2 (cdt_list s) m) and K(P slot) and K( all_children P m)\<rbrace> empty_slot_ext slot slot_p \<lbrace>\<lambda>_. list_integ P st\<rbrace>"
+  "\<lbrace>list_integ P st and (\<lambda>s. valid_list_2 (cdt_list s) m) and K(P slot) and K(all_children P m)\<rbrace> empty_slot_ext slot slot_p \<lbrace>\<lambda>_. list_integ P st\<rbrace>"
   apply (simp add: empty_slot_ext_def split del: if_split)
   apply (wp update_cdt_list_wp)
-  apply (intro impI conjI allI | simp add: list_filter_replace_list list_filter_remove split: option.splits | elim conjE  | simp add: list_integ_def)+
+  apply (intro impI conjI allI | simp add: list_filter_replace_list list_filter_remove split: option.splits | elim conjE | simp add: list_integ_def)+
   apply (drule_tac x="the slot_p" in spec)
   apply (elim disjE)
    apply (simp add: all_children_def valid_list_2_def list_filter_replace_list)+

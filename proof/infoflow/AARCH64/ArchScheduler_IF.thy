@@ -336,11 +336,11 @@ lemma store_cur_thread_fragment_midstrength_reads_respects:
   apply (rule equiv_valid_guard_imp)
    apply (rule equiv_valid_weaken_pre)
     apply (rule ev_asahi_ex_to_full_fragement)
-   apply  (auto simp: midstrength_scheduler_affects_equiv_def asahi_scheduler_affects_equiv_def
-                           asahi_ex_scheduler_affects_equiv_def states_equiv_for_def equiv_for_def
-                           arch_scheduler_affects_equiv_def equiv_asids_def equiv_asid_def
-                           scheduler_globals_frame_equiv_def
-                 simp del: split_paired_All)
+   apply (auto simp: midstrength_scheduler_affects_equiv_def asahi_scheduler_affects_equiv_def
+                     asahi_ex_scheduler_affects_equiv_def states_equiv_for_def equiv_for_def
+                     arch_scheduler_affects_equiv_def equiv_asids_def equiv_asid_def
+                     scheduler_globals_frame_equiv_def
+           simp del: split_paired_All)
   done
 
 lemma set_vm_root_globals_equiv_scheduler:
@@ -837,7 +837,7 @@ lemma dmo_resetTimer_reads_respects_scheduler[Scheduler_IF_assms]:
   "reads_respects_scheduler aag l \<top> (do_machine_op resetTimer)"
   apply (rule reads_respects_scheduler_unobservable)
    apply (rule scheduler_equiv_lift)
-        apply (simp add: globals_equiv_scheduler_def[abs_def]  idle_equiv_def)
+        apply (simp add: globals_equiv_scheduler_def[abs_def] idle_equiv_def)
         apply (wpsimp wp: dmo_wp)
        apply ((wp silc_dom_lift dmo_wp | simp)+)[5]
   apply (rule scheduler_affects_equiv_unobservable)
@@ -850,7 +850,7 @@ lemma ackInterrupt_reads_respects_scheduler[Scheduler_IF_assms]:
   "reads_respects_scheduler aag l \<top> (do_machine_op (ackInterrupt irq))"
   apply (rule reads_respects_scheduler_unobservable)
    apply (rule scheduler_equiv_lift)
-        apply (simp add:  globals_equiv_scheduler_def[abs_def] idle_equiv_def)
+        apply (simp add: globals_equiv_scheduler_def[abs_def] idle_equiv_def)
         apply (rule hoare_pre)
          apply wps
          apply (wp dmo_wp ackInterrupt_irq_masks | simp add:no_irq_def)+
@@ -1332,7 +1332,7 @@ lemma arch_prepare_next_domain_states_equiv_valid:
 crunch arch_prepare_next_domain
   for domain_time[wp]: "\<lambda>s. P (domain_time s)"
   and domain_index[wp]: "\<lambda>s. P (domain_index s)"
-  (simp : crunch_simps wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch arch_prepare_next_domain
   for globals_equiv[wp]: "globals_equiv st"
@@ -1343,7 +1343,7 @@ lemma arch_prepare_next_domain_weak_scheduler_reads_respects[Scheduler_IF_assms]
   apply (rule equiv_valid_guard_imp)
    apply (rule_tac Q="invs and valid_silc_label aag" in weak_reads_respects_scheduler_from_labels)
          apply (rule arch_prepare_next_domain_states_equiv_valid)
-        apply (wpsimp wp: domain_fields_equiv_lift  globals_equiv_scheduler_inv'[where P="invs"])+
+        apply (wpsimp wp: domain_fields_equiv_lift globals_equiv_scheduler_inv'[where P="invs"])+
   done
 
 lemma gets_cur_fpu_of_states_equiv_valid:
@@ -1379,7 +1379,7 @@ lemma set_vm_root_states_equiv_valid[wp]:
   done
 
 lemma arch_switch_to_thread_states_equiv_valid:
-  "states_equiv_valid aag L (invs and  K (L (pasObjectAbs aag t))) (arch_switch_to_thread t)"
+  "states_equiv_valid aag L (invs and K (L (pasObjectAbs aag t))) (arch_switch_to_thread t)"
   unfolding arch_switch_to_thread_def
   apply (wpsimp wp: vcpu_switch_states_equiv_valid)
   apply (auto simp: states_equiv_for_def get_tcb_def equiv_for_def)
@@ -1431,7 +1431,7 @@ lemma midstrength_cur_domain_unobservable':
    \<Longrightarrow> equiv_valid_inv (scheduler_equiv aag) (midstrength_scheduler_affects_equiv aag l)
          ((\<lambda>s. \<not> reads_scheduler_cur_domain aag l s) and P) f"
   apply (clarsimp simp: scheduler_equiv_def domain_fields_equiv_def scheduler_affects_equiv_def
-                        equiv_valid_def2 equiv_valid_2_def  midstrength_scheduler_affects_equiv_def)
+                        equiv_valid_def2 equiv_valid_2_def midstrength_scheduler_affects_equiv_def)
   apply (drule_tac x=s in spec)
   apply (drule_tac x=t in spec)
   apply clarsimp

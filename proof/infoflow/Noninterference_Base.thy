@@ -86,7 +86,7 @@ subsection \<open>Base system locale\<close>
 text \<open>An ADT with an initial state.\<close>
 locale system =
   fixes A :: "('a,'s,'e) data_type"
-  and s0 :: "'s"  (* an initial state *)
+  and s0 :: "'s" (* an initial state *)
 begin
 
 (* State 's' is reachable from the initial state 's0'. *)
@@ -447,7 +447,7 @@ lemma uwr_trans:
   apply (blast dest: transD)
   done
 
-definition sameFor_dom :: "'s \<Rightarrow> 'd set \<Rightarrow> 's \<Rightarrow> bool"  ("(_/ \<approx>_\<approx>/ _)" [50,100,50] 1000) where
+definition sameFor_dom :: "'s \<Rightarrow> 'd set \<Rightarrow> 's \<Rightarrow> bool" ("(_/ \<approx>_\<approx>/ _)" [50,100,50] 1000) where
   "s \<approx>us\<approx> t \<equiv> \<forall>u\<in>us. (s,t) \<in> uwr u"
 
 lemma sameFor_subset_dom: "\<lbrakk>s \<approx>(x::'d set)\<approx> t; y \<subseteq> x\<rbrakk> \<Longrightarrow> s \<approx>y\<approx> t"
@@ -609,7 +609,7 @@ definition Noninfluence :: bool where
                \<longrightarrow> s \<sim>schedDomain\<sim> t
                \<longrightarrow> obs_equiv s as t (ipurge u as {t}) u"
 
-definition Noninfluence_strong  :: "bool"
+definition Noninfluence_strong :: "bool"
 where
  "Noninfluence_strong \<equiv> \<forall>u as bs s t. reachable s \<and> reachable t
                                       \<longrightarrow> s \<approx>(sources as s u)\<approx> t
@@ -645,7 +645,7 @@ definition Noninfluence_gen :: bool where
                                    \<longrightarrow> (\<forall>t \<in> ts. s \<sim>schedDomain\<sim> t)
                                    \<longrightarrow> (\<forall>t \<in> ts. uwr_equiv s as t (ipurge u as ts) u)"
 
-definition Noninfluence_uwr  :: bool where
+definition Noninfluence_uwr :: bool where
   "Noninfluence_uwr \<equiv> \<forall>u as s t. reachable s \<and> reachable t
                                   \<longrightarrow> s \<approx>(sources as s u)\<approx> t
                                   \<longrightarrow> s \<sim>schedDomain\<sim> t
@@ -659,7 +659,7 @@ definition Noninfluence_strong_uwr :: bool where
                                             \<longrightarrow> uwr_equiv s as t bs u"
 
 definition output_consistent :: bool where
-  "output_consistent \<equiv> \<forall>u s s'. s \<sim>u\<sim> s'  \<longrightarrow> (out u s = out u s')"
+  "output_consistent \<equiv> \<forall>u s s'. s \<sim>u\<sim> s' \<longrightarrow> (out u s = out u s')"
 
 definition confidentiality_u :: bool where
   "confidentiality_u \<equiv> \<forall>a u s t. reachable s \<and> reachable t
@@ -914,7 +914,7 @@ lemma ipurge_eq'_helper:
      t \<in> ts; confidentiality_u \<rbrakk>
    \<Longrightarrow> False"
   apply (cut_tac s=s and t=t and as=as and u=u in sources_eq, simp+)
-  apply (clarsimp  simp: sources_Cons | safe)+
+  apply (clarsimp simp: sources_Cons | safe)+
    apply (rename_tac s')
    apply (drule_tac x=t in bspec, simp)
    apply clarsimp

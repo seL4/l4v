@@ -124,7 +124,7 @@ lemma invoke_tcb_irq_masks[IRQMasks_IF_assms]:
    invoke_tcb tinv
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   apply (case_tac tinv)
-         apply((wp restart_irq_masks hoare_vcg_if_lift  mapM_x_wp[OF _ subset_refl]
+         apply((wp restart_irq_masks hoare_vcg_if_lift mapM_x_wp[OF _ subset_refl]
                 | wpc
                 | simp split del: if_split add: check_cap_at_def
                 | clarsimp)+)[3]

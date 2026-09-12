@@ -35,7 +35,7 @@ lemma state_vrefs_eq:
                       dest: vs_lookup_asid_pool
                      split: option.splits)
     apply (fastforce simp: valid_arch_state_def valid_pspace_def obj_at_def orthr
-                    dest!: vs_lookup_table_pt_at )
+                    dest!: vs_lookup_table_pt_at)
    apply (fastforce simp: opt_map_def)
   apply (clarsimp simp: state_vrefs_def)
   apply (frule vs_lookup_level)
@@ -46,7 +46,7 @@ lemma state_vrefs_eq:
                      dest: vs_lookup_asid_pool
                     split: option.splits)
    apply (fastforce simp: valid_arch_state_def valid_pspace_def obj_at_def orthr
-                   dest!: vs_lookup_table_pt_at )
+                   dest!: vs_lookup_table_pt_at)
   apply (fastforce simp: opt_map_def vs_lookup_table'[symmetric])
   done
 
@@ -59,7 +59,7 @@ lemma pas_refined:
   "\<lbrakk> invs s; pas_refined aag s; pas_cur_domain aag s; \<forall>x\<in> set (retype_addrs ptr ty n us). is_subject aag x \<rbrakk>
    \<Longrightarrow> pas_refined aag s'"
   apply (erule pas_refined_subsets_tcb_domain_map_wellformed)
-      apply (simp add: state_objs_to_policy_def refs_eq  mdb_and_revokable)
+      apply (simp add: state_objs_to_policy_def refs_eq mdb_and_revokable)
       apply (subst state_vrefs_eq; fastforce?)
       apply (rule subsetI, rename_tac x, case_tac x, simp)
       apply (erule state_bits_to_policy.cases)
@@ -339,7 +339,7 @@ lemma dmo_clearMemory_respects'[Retype_AC_assms]:
    do_machine_op (clearMemory ptr (2 ^ bits))
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   unfolding do_machine_op_def clearMemory_def
-  apply (simp add: split_def )
+  apply (simp add: split_def)
   apply wp
   apply clarsimp
   apply (erule use_valid)

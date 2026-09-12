@@ -166,7 +166,7 @@ crunch
   arch_prepare_set_domain, arch_post_set_flags, arch_prepare_next_domain, handle_spurious_irq
   for cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
   and idle_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (idle_thread s)"
-  and cur_domain[Syscall_AC_assms, wp]:  "\<lambda>s. P (cur_domain s)"
+  and cur_domain[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps)
 
 \<comment> \<open>These aren't proved in the previous crunch, and hence need to be declared\<close>

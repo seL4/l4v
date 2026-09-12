@@ -107,7 +107,7 @@ lemma list_integ_lift[CNode_AC_assms]:
   assumes li:
     "\<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
      f
-     \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag}  (cdt st) (tcb_states_of_state st)) st\<rbrace>"
+     \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace>"
   shows "\<lbrace>integrity aag X st and Q\<rbrace> f \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_pre)
    apply (unfold integrity_def[abs_def] integrity_asids_def integrity_hyp_def integrity_fpu_def)
@@ -181,7 +181,7 @@ lemma aobj_ref'_same_aobject[CNode_AC_assms]:
 lemma thread_set_arch_trivT[CNode_AC_assms]:
   assumes arch: "\<And>tcb. tcb_arch (f tcb) = tcb_arch tcb"
   shows "thread_set f t \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (wpsimp simp: thread_set_def wp: set_object_wp )
+  apply (wpsimp simp: thread_set_def wp: set_object_wp)
   apply (erule_tac P=P in back_subst)
   apply (rule ext)
   apply (simp add: arch state_hyp_refs_of_def get_tcb_def split: option.splits kernel_object.splits)

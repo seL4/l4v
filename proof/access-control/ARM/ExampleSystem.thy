@@ -83,7 +83,7 @@ where
   "the_nat_to_bl sz n \<equiv> the (nat_to_bl sz n)"
 
 definition
-  the_nat_to_bl_10  :: "nat \<Rightarrow> bool list"
+  the_nat_to_bl_10 :: "nat \<Rightarrow> bool list"
 where
   "the_nat_to_bl_10 n \<equiv> the_nat_to_bl 10 n"
 
@@ -188,7 +188,7 @@ where
             \<mapsto> ArchObjectCap (PageDirectoryCap 3063
                                              (Some asid1_3063)),
         (the_nat_to_bl_10 318)
-            \<mapsto> EndpointCap  9 0 {AllowSend} )"
+            \<mapsto> EndpointCap 9 0 {AllowSend} )"
 
 
 definition
@@ -211,7 +211,7 @@ where
            \<mapsto> ArchObjectCap (PageDirectoryCap 3065
                                             (Some asid1_3065)),
         (the_nat_to_bl_10 318)
-           \<mapsto> EndpointCap  9 0 {AllowRecv}) "
+           \<mapsto> EndpointCap 9 0 {AllowRecv})"
 
 definition
   obj1_7 :: kernel_object
@@ -230,7 +230,7 @@ where
 text \<open>UT1's VSpace (PageDirectory)\<close>
 
 definition
-  pt1_3072 :: "word8 \<Rightarrow> pte "
+  pt1_3072 :: "word8 \<Rightarrow> pte"
 where
   "pt1_3072 \<equiv> (\<lambda>_. InvalidPTE)"
 
@@ -241,14 +241,14 @@ where
 
 
 definition
-  pd1_3063 :: "12 word \<Rightarrow> pde "
+  pd1_3063 :: "12 word \<Rightarrow> pde"
 where
   "pd1_3063 \<equiv>
     (\<lambda>_. InvalidPDE)
      (0 := PageTablePDE
               (addrFromPPtr 3072)
               undefined
-              undefined )"
+              undefined)"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
@@ -263,7 +263,7 @@ text \<open>T1's VSpace (PageDirectory)\<close>
 
 
 definition
-  pt1_3077 :: "word8 \<Rightarrow> pte "
+  pt1_3077 :: "word8 \<Rightarrow> pte"
 where
   "pt1_3077 \<equiv>
     (\<lambda>_. InvalidPTE)"
@@ -276,14 +276,14 @@ where
 
 
 definition
-  pd1_3065 :: "12 word \<Rightarrow> pde "
+  pd1_3065 :: "12 word \<Rightarrow> pde"
 where
   "pd1_3065 \<equiv>
     (\<lambda>_. InvalidPDE)
      (0 := PageTablePDE
              (addrFromPPtr 3077)
              undefined
-             undefined )"
+             undefined)"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
@@ -375,7 +375,7 @@ definition exst1 :: "det_ext" where
 definition
   s1 :: "det_ext state"
 where
-  "s1 \<equiv>  \<lparr>
+  "s1 \<equiv> \<lparr>
     kheap = kh1,
     cdt = Map.empty,
     is_original_cap = undefined,
@@ -424,7 +424,7 @@ where
       3072 := UT1,
       3077 := T1,
       3079 := UT1,
-      3080 := T1 )"
+      3080 := T1)"
 
 lemma Sys1AgentMap_simps:
   "Sys1AgentMap 6 = UT1"
@@ -500,21 +500,21 @@ lemma s1_caps_of_state :
        { ((6::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap 3079),
          ((6::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap 6 undefined undefined),
          ((6::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap 3063 (Some asid1_3063))),
-         ((6::obj_ref,(the_nat_to_bl_10 318)),EndpointCap  9 0 {AllowSend}),
+         ((6::obj_ref,(the_nat_to_bl_10 318)),EndpointCap 9 0 {AllowSend}),
          ((7::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap 3080),
          ((7::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap 7 undefined undefined),
          ((7::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap 3065 (Some asid1_3065))),
-         ((7::obj_ref,(the_nat_to_bl_10 318)),EndpointCap  9 0 {AllowRecv}) ,
-         ((3079::obj_ref, (tcb_cnode_index 0)), CNodeCap 6 undefined undefined ),
+         ((7::obj_ref,(the_nat_to_bl_10 318)),EndpointCap 9 0 {AllowRecv}) ,
+         ((3079::obj_ref, (tcb_cnode_index 0)), CNodeCap 6 undefined undefined),
          ((3079::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageDirectoryCap 3063 (Some asid1_3063))),
          ((3079::obj_ref, (tcb_cnode_index 2)), ReplyCap 3079 True {AllowGrant,AllowWrite}),
          ((3079::obj_ref, (tcb_cnode_index 3)), NullCap),
          ((3079::obj_ref, (tcb_cnode_index 4)), NullCap),
-         ((3080::obj_ref, (tcb_cnode_index 0)), CNodeCap 7 undefined undefined ),
+         ((3080::obj_ref, (tcb_cnode_index 0)), CNodeCap 7 undefined undefined),
          ((3080::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageDirectoryCap 3065 (Some asid1_3065))),
          ((3080::obj_ref, (tcb_cnode_index 2)), ReplyCap 3080 True {AllowGrant,AllowWrite}),
          ((3080::obj_ref, (tcb_cnode_index 3)), NullCap),
-         ((3080::obj_ref, (tcb_cnode_index 4)), NullCap)} "
+         ((3080::obj_ref, (tcb_cnode_index 4)), NullCap)}"
   apply (insert caps1_7_well_formed)
   apply (insert caps1_6_well_formed)
   apply (simp add: caps_of_state_cte_wp_at cte_wp_at_cases s1_def kh1_def kh1_obj_def)
@@ -523,7 +523,7 @@ lemma s1_caps_of_state :
      apply (clarsimp simp: cte_wp_at_cases tcb_cap_cases_def
                      split: if_split_asm)+
    apply (clarsimp simp: caps1_7_def split: if_splits)
-  apply (clarsimp simp: caps1_6_def cte_wp_at_cases  split: if_splits)
+  apply (clarsimp simp: caps1_6_def cte_wp_at_cases split: if_splits)
 done
 
 
@@ -541,7 +541,7 @@ lemma tcb_states_of_state_1:
   unfolding s1_def tcb_states_of_state_def
   apply (rule ext)
   apply (simp add: get_tcb_def)
-  apply (simp add: kh1_def kh1_obj_def )
+  apply (simp add: kh1_def kh1_obj_def)
   done
 
 lemma thread_bound_ntfns_1:
@@ -549,7 +549,7 @@ lemma thread_bound_ntfns_1:
   unfolding s1_def thread_bound_ntfns_def
   apply (rule ext)
   apply (simp add: get_tcb_def)
-  apply (simp add: kh1_def kh1_obj_def )
+  apply (simp add: kh1_def kh1_obj_def)
   done
 
 declare AllowSend_def[simp] AllowRecv_def[simp]
@@ -581,9 +581,8 @@ lemma "pas_refined Sys1PAS s1"
       subgoal by (simp add: irq_map_wellformed_aux_def s1_def Sys1AgentMap_simps Sys1PAS_def)
      subgoal by (simp add: tcb_domain_map_wellformed_s1)
     apply (clarsimp simp: auth_graph_map_def
-                           Sys1PAS_def
-                           state_objs_to_policy_def
-                           )+
+                          Sys1PAS_def
+                          state_objs_to_policy_def)+
     apply (erule state_bits_to_policy.cases, simp_all, clarsimp)
           apply (drule s1_caps_of_state, clarsimp)
           apply (simp add: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def)
@@ -595,12 +594,12 @@ lemma "pas_refined Sys1PAS s1"
                complete_AuthGraph_def
                Sys1AuthGraph_aux_def
                split: if_splits)
-       apply (simp add:  thread_bound_ntfns_1)
+       apply (simp add: thread_bound_ntfns_1)
       apply (simp add: s1_def) (* this is OK because cdt is empty..*)
      apply (simp add: s1_def) (* this is OK because cdt is empty..*)
     apply (fastforce simp: state_vrefs_def
                            vs_refs_no_global_pts_def
-                           s1_def kh1_def  Sys1AgentMap_simps
+                           s1_def kh1_def Sys1AgentMap_simps
                            kh1_obj_def comp_def pt1_3072_def pt1_3077_def pte_ref_def pde_ref2_def pd1_3065_def pd1_3063_def
                            Sys1AuthGraph_def ptr_range_def
                            complete_AuthGraph_def
@@ -613,10 +612,10 @@ lemma "pas_refined Sys1PAS s1"
      apply (drule s1_caps_of_state, clarsimp)
      apply (simp add: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def Sys1PAS_def Sys1ASIDMap_def)
      apply (elim disjE conjE, simp_all add: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def asid1_3065_def asid1_3063_def
-       asid_low_bits_def asid_high_bits_of_def )[1]
+       asid_low_bits_def asid_high_bits_of_def)[1]
     apply (clarsimp simp: state_vrefs_def
                            vs_refs_no_global_pts_def
-                           s1_def kh1_def  Sys1AgentMap_simps
+                           s1_def kh1_def Sys1AgentMap_simps
                            kh1_obj_def comp_def pt1_3072_def pt1_3077_def pte_ref_def pde_ref2_def pd1_3065_def pd1_3063_def
                            Sys1AuthGraph_def ptr_range_def
                            complete_AuthGraph_def
@@ -764,7 +763,7 @@ where
            \<mapsto> ArchObjectCap (PageDirectoryCap 3065
                                             (Some asid2_3065)),
         (the_nat_to_bl_10 4)
-            \<mapsto> CNodeCap 5 undefined undefined) "
+            \<mapsto> CNodeCap 5 undefined undefined)"
 
 definition
   obj2_7 :: kernel_object
@@ -783,7 +782,7 @@ where
 text \<open>UT2's VSpace (PageDirectory)\<close>
 
 definition
-  pt2_3072 :: "word8 \<Rightarrow> pte "
+  pt2_3072 :: "word8 \<Rightarrow> pte"
 where
   "pt2_3072 \<equiv> (\<lambda>_. InvalidPTE)"
 
@@ -794,14 +793,14 @@ where
 
 
 definition
-  pd2_3063 :: "12 word \<Rightarrow> pde "
+  pd2_3063 :: "12 word \<Rightarrow> pde"
 where
   "pd2_3063 \<equiv>
     (\<lambda>_. InvalidPDE)
      (0 := PageTablePDE
               (addrFromPPtr 3072)
               undefined
-              undefined )"
+              undefined)"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
@@ -816,7 +815,7 @@ text \<open>T1's VSpace (PageDirectory)\<close>
 
 
 definition
-  pt2_3077 :: "word8 \<Rightarrow> pte "
+  pt2_3077 :: "word8 \<Rightarrow> pte"
 where
   "pt2_3077 \<equiv>
     (\<lambda>_. InvalidPTE)"
@@ -828,14 +827,14 @@ where
 
 
 definition
-  pd2_3065 :: "12 word \<Rightarrow> pde "
+  pd2_3065 :: "12 word \<Rightarrow> pde"
 where
   "pd2_3065 \<equiv>
     (\<lambda>_. InvalidPDE)
      (0 := PageTablePDE
              (addrFromPPtr 3077)
              undefined
-             undefined )"
+             undefined)"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
@@ -919,7 +918,7 @@ lemmas kh2_obj_def =
 definition
   s2 :: "det_ext state"
 where
-  "s2 \<equiv>  \<lparr>
+  "s2 \<equiv> \<lparr>
     kheap = kh2,
     cdt = Map.empty,
     is_original_cap = undefined,
@@ -969,7 +968,7 @@ where
       3077 := T2,
       3079 := UT2,
       3080 := T2,
-      9001 := IRQ2 )"
+      9001 := IRQ2)"
 
 
 definition
@@ -990,7 +989,7 @@ where
   "Sys2ASIDMap \<equiv>
     (\<lambda>_. undefined)
      (asid2_3063 := UT2,
-      asid2_3065 := T2 )"
+      asid2_3065 := T2)"
 
 definition Sys2DomainMap :: "Sys2Labels agent_domain_map" where
   "Sys2DomainMap \<equiv> (\<lambda>_. {}) (0 := {UT2, T2})"
@@ -1037,16 +1036,16 @@ lemma s2_caps_of_state :
          ((7::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap 7 undefined undefined),
          ((7::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap 3065 (Some asid2_3065))),
          ((7::obj_ref,(the_nat_to_bl_10 4)),  CNodeCap 5 undefined undefined),
-         ((3079::obj_ref, (tcb_cnode_index 0)), CNodeCap 6 undefined undefined ),
+         ((3079::obj_ref, (tcb_cnode_index 0)), CNodeCap 6 undefined undefined),
          ((3079::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageDirectoryCap 3063 (Some asid2_3063))),
          ((3079::obj_ref, (tcb_cnode_index 2)), ReplyCap 3079 True {AllowGrant,AllowWrite}),
          ((3079::obj_ref, (tcb_cnode_index 3)), NullCap),
          ((3079::obj_ref, (tcb_cnode_index 4)), NullCap),
-         ((3080::obj_ref, (tcb_cnode_index 0)), CNodeCap 7 undefined undefined ),
+         ((3080::obj_ref, (tcb_cnode_index 0)), CNodeCap 7 undefined undefined),
          ((3080::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageDirectoryCap 3065 (Some asid2_3065))),
          ((3080::obj_ref, (tcb_cnode_index 2)), ReplyCap 3080 True {AllowGrant,AllowWrite}),
          ((3080::obj_ref, (tcb_cnode_index 3)), NullCap),
-         ((3080::obj_ref, (tcb_cnode_index 4)), NullCap)} "
+         ((3080::obj_ref, (tcb_cnode_index 4)), NullCap)}"
   apply (insert caps2_7_well_formed)
   apply (insert caps2_6_well_formed)
   apply (simp add: caps_of_state_cte_wp_at cte_wp_at_cases s2_def kh2_def kh2_obj_def)
@@ -1054,7 +1053,7 @@ lemma s2_caps_of_state :
   apply (clarsimp simp: cte_wp_at_cases split: if_splits)
      apply (clarsimp simp: tcb_cap_cases_def split: if_splits)+
    apply (clarsimp simp: caps2_7_def split: if_splits)
-  apply (clarsimp simp: caps2_6_def cte_wp_at_cases  split: if_splits)
+  apply (clarsimp simp: caps2_6_def cte_wp_at_cases split: if_splits)
   done
 
 lemma Sys2_wellformed: "pas_wellformed Sys2PAS"

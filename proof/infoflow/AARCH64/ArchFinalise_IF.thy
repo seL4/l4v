@@ -217,7 +217,7 @@ lemma aag_cap_auth_PageTableCap_asid:
           intro: pas_refined_Control_into_is_subject_asid)
 
 lemma aag_cap_auth_PageDirectoryCap:
-  "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word pt_t option));  pas_refined aag s \<rbrakk>
+  "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word pt_t option)); pas_refined aag s \<rbrakk>
    \<Longrightarrow> is_subject aag word"
   unfolding aag_cap_auth_def
   by (simp add: clas_no_asid cap_auth_conferred_def arch_cap_auth_conferred_def
@@ -909,9 +909,9 @@ lemma fpu_release_reads_respects:
        prefer 2
        apply wpsimp
       apply (wpsimp wp: gets_ev'')
-      apply (prop_tac "valid_cur_fpu x \<and>  aag_can_read_or_affect aag l t")
+      apply (prop_tac "valid_cur_fpu x \<and> aag_can_read_or_affect aag l t")
        apply assumption
-      apply (prop_tac "valid_cur_fpu xa \<and>  aag_can_read_or_affect aag l t")
+      apply (prop_tac "valid_cur_fpu xa \<and> aag_can_read_or_affect aag l t")
        apply assumption
       apply (prop_tac "equiv_fpu (aag_can_read_or_affect aag l) x xa \<and>
                        equiv_for (aag_can_read_or_affect aag l) kheap x xa ")

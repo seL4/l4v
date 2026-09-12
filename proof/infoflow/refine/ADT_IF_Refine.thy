@@ -143,8 +143,8 @@ crunch device_memory_update
 
 lemma corres_gets_same:
   assumes equiv: "\<And>s s'. \<lbrakk>P s; Q s'; (s, s') \<in> sr\<rbrakk>\<Longrightarrow> f s = g s'"
-  and rimp : "\<And>s. P s \<Longrightarrow> R (f s) s"
-  and corres: "\<And>r.  corres_underlying sr b c rr (P and (R r) and (\<lambda>s. r = f s)) Q (n r) (m r)"
+  and rimp: "\<And>s. P s \<Longrightarrow> R (f s) s"
+  and corres: "\<And>r. corres_underlying sr b c rr (P and (R r) and (\<lambda>s. r = f s)) Q (n r) (m r)"
   shows "corres_underlying sr b c rr P Q (do r \<leftarrow> gets f; n r od) (do r \<leftarrow> gets g; m r od)"
   apply (rule corres_guard_imp)
     apply (rule corres_split[where r' = "(=)"])
@@ -656,8 +656,8 @@ lemma preserves_lift':
   by (fastforce simp: preserves_def valid_def)
 
 lemma preserves_lift'':
-   "(\<And>tc. \<lbrace>\<lambda>s. ((tc,s),mode) \<in> P\<rbrace> f e tc \<lbrace>\<lambda>tc' s'. ((snd tc',s'),mode') \<in> P\<rbrace>)
-    \<Longrightarrow> preserves mode mode' P
+  "(\<And>tc. \<lbrace>\<lambda>s. ((tc,s),mode) \<in> P\<rbrace> f e tc \<lbrace>\<lambda>tc' s'. ((snd tc',s'),mode') \<in> P\<rbrace>)
+   \<Longrightarrow> preserves mode mode' P
          {((a, b), ba, tc, s') | a b ba tc s'.
                                  \<exists>r. ((r, tc), s') \<in> fst (f e a b) \<and> ba = (r \<noteq> Inr ())}"
   by (fastforce simp: preserves_def valid_def)
@@ -958,7 +958,7 @@ locale global_automata_refine =
 begin
 
 lemma extras_inter'[dest!]:
-   "(t,mode) \<in> has_srel_state (lift_fst_rel srel) invs_conc \<Longrightarrow> (t,mode) \<in> extras_abs"
+  "(t,mode) \<in> has_srel_state (lift_fst_rel srel) invs_conc \<Longrightarrow> (t,mode) \<in> extras_abs"
   apply (rule set_mp)
    apply (rule extras_abs_intro)
   apply simp

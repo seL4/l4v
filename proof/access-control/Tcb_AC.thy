@@ -10,7 +10,7 @@ begin
 
 (* FIXME-NTFN: The 'NotificationControl' case of the following definition needs to be changed. *)
 
-definition authorised_tcb_inv :: "'a PAS \<Rightarrow> tcb_invocation \<Rightarrow>  bool" where
+definition authorised_tcb_inv :: "'a PAS \<Rightarrow> tcb_invocation \<Rightarrow> bool" where
  "authorised_tcb_inv aag ti \<equiv> case ti of
     Suspend t \<Rightarrow> is_subject aag t
   | Resume t \<Rightarrow> is_subject aag t
@@ -140,7 +140,7 @@ lemma set_priority_pas_refined[wp]:
   by (wpsimp wp: thread_set_pas_refined)
 
 lemma gts_test[wp]:
-   "\<lbrace>\<top>\<rbrace> get_thread_state t \<lbrace>\<lambda>rv s. test rv = st_tcb_at test t s\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> get_thread_state t \<lbrace>\<lambda>rv s. test rv = st_tcb_at test t s\<rbrace>"
   apply (simp add: get_thread_state_def thread_get_def)
   apply wp
   apply (clarsimp simp add: st_tcb_def2)
@@ -521,14 +521,14 @@ lemma decode_unbind_notification_authorised:
 
 lemma decode_bind_notification_authorised:
   "\<lbrace>K (is_subject aag t \<and> (\<forall>x \<in> set excaps. is_subject aag (fst (snd x)))
-                        \<and> (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x)) )\<rbrace>
+                        \<and> (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x)))\<rbrace>
    decode_bind_notification (ThreadCap t) excaps
    \<lbrace>\<lambda>rv _. authorised_tcb_inv aag rv\<rbrace>, -"
   unfolding decode_bind_notification_def authorised_tcb_inv_def
   apply clarsimp
   apply (wp gbn_wp get_simple_ko_wp whenE_throwError_wp | wpc | simp add:)+
   apply (clarsimp dest!: hd_in_set)
-  apply (drule_tac x="hd excaps"  in bspec, simp)+
+  apply (drule_tac x="hd excaps" in bspec, simp)+
   apply (auto simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def AllowRecv_def)
   done
 

@@ -81,7 +81,7 @@ lemma arch_activate_idle_thread_reads_respects_g[Noninterference_assms, wp]:
   unfolding arch_activate_idle_thread_def by wpsimp
 
 crunch handle_spurious_irq
-  for domain[wp]: "\<lambda>s.  Q (domain_time s) (domain_index s) (domain_list s)"
+  for domain[wp]: "\<lambda>s. Q (domain_time s) (domain_index s) (domain_list s)"
   and irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
 
 lemma handle_spurious_irq_reads_respect_scheduler[Noninterference_assms]:
@@ -103,8 +103,8 @@ lemma arch_globals_equiv_strengthener_thread_independent[Noninterference_assms]:
   by auto
 
 lemma integrity_asids_update_reference_state[Noninterference_assms]:
-   "is_subject aag t
-    \<Longrightarrow> integrity_asids aag {pasSubject aag} x a s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
+  "is_subject aag t
+   \<Longrightarrow> integrity_asids aag {pasSubject aag} x a s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
   by (clarsimp simp: integrity_asids_def opt_map_def)
 
 lemma inte_obj_arch:
