@@ -115,6 +115,6 @@ lemma invoke_irq_control_reads_respects_g:
    apply (wp invoke_irq_control_globals_equiv | simp)+
   done
 
-end
+end (* Interrupt_IF *)
 
 end

@@ -123,7 +123,7 @@ lemma invoke_cnode_globals_equiv:
   apply (case_tac cinv; clarsimp simp: real_cte_emptyable_strg)
   done
 
-end
+end (* Syscall_IF *)
 
 
 (* The contents of the delete_confidentiality locale *)
@@ -423,7 +423,7 @@ next
     by (fastforce simp: authorised_invocation_def authorised_for_globals_inv_def)
 qed
 
-end
+end (* Syscall_IF *)
 
 
 crunch reply_from_kernel
@@ -666,7 +666,7 @@ lemma handle_invocation_reads_respects_g:
   apply (force simp: only_timer_irq_inv_def runnable_eq_active)
   done
 
-end
+end (* Syscall_IF *)
 
 
 lemma delete_caller_cap_reads_respects_f:
@@ -1058,7 +1058,7 @@ lemma handle_event_globals_equiv:
       | clarsimp simp: invs_imps invs_valid_idle ct_active_not_idle
       | fastforce)+
 
-end
+end (* Syscall_IF *)
 
 lemma dmo_ev:
   "(\<And>s s'. equiv_valid (\<lambda>ms ms'. I (s\<lparr>machine_state := ms\<rparr>) (s'\<lparr>machine_state := ms'\<rparr>))

@@ -346,7 +346,7 @@ lemma equiv_asid_detype[Retype_IF_assms]:
   "equiv_asid asid s s' \<Longrightarrow> equiv_asid asid (detype N s) (detype N s')"
   by (auto simp: equiv_asid_def)
 
-end
+end (* Arch *)
 
 
 global_interpretation Retype_IF?: Retype_IF
@@ -654,7 +654,7 @@ lemma invoke_untyped_globals_equiv:
   apply (cases ui, clarsimp simp: cte_wp_at_caps_of_state)
   done
 
-end
+end (* Arch *)
 
 
 global_interpretation Retype_IF_2?: Retype_IF_2

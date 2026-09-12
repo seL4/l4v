@@ -61,7 +61,7 @@ crunch handle_vm_fault, handle_vm_fault, perform_pg_inv_unmap,
   for domain_sep_inv[DomainSepInv_assms, wp]: "domain_sep_inv irqs st"
   (wp: crunch_wps)
 
-end
+end (* Arch *)
 
 
 global_interpretation DomainSepInv?: DomainSepInv
@@ -164,7 +164,7 @@ crunch handle_reserved_irq, handle_hypervisor_fault
 declare handle_reserved_irq_domain_sep_inv[simplified and_assoc, DomainSepInv_assms]
 declare handle_hypervisor_fault_domain_sep_inv[simplified and_assoc, DomainSepInv_assms]
 
-end
+end (* Arch *)
 
 
 global_interpretation DomainSepInv_2?: DomainSepInv_2

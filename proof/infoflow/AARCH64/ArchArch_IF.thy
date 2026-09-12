@@ -197,7 +197,7 @@ lemma equiv_fpu_machine_state_rest_update[Arch_IF_assms]:
   "equiv_fpu P st (s\<lparr>machine_state := ms\<lparr>machine_state_rest := r\<rparr>\<rparr>) = equiv_fpu P st (s\<lparr>machine_state := ms\<rparr>)"
   by (simp add: equiv_fpu_def equiv_for_def)
 
-end
+end (* Arch *)
 
 
 (* FIXME AARCH64 IF: add to interface *)
@@ -3491,7 +3491,7 @@ lemma auth_ipc_buffers_mem_Write':
    apply (auto dest: ipcframe_subset_page)
   done
 
-end
+end (* Arch *)
 
 (* FIXME AARCH64 IF: add to interface *)
 

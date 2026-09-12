@@ -188,7 +188,7 @@ lemma is_transferable_all_children:
   apply (blast dest: reply_cap_no_children)
   done
 
-end
+end (* Access_AC *)
 
 
 lemmas state_objs_to_policy_mem = eqset_imp_iff[OF state_objs_to_policy_def]
@@ -440,7 +440,7 @@ lemma troa_tro_alt[elim!]:
        apply (fastforce intro: integrity_obj_alt.intros[OF tro_tagI])+
   done
 
-end
+end (* Access_AC *)
 
 
 lemma integrity_ready_queues_refl[simp]: "integrity_ready_queues aag subjects ptr s s"
@@ -698,7 +698,7 @@ lemma tro_tro_alt[elim!]:
 lemmas integrity_objE = tro_tro_alt[THEN integrity_obj_alt.cases
                                           [simplified tro_tag_def True_implies_equals]]
 
-end
+end (* Access_AC *)
 
 
 lemma tro_trans:
@@ -872,7 +872,7 @@ lemma tsos_tro_running:
       simp_all add: tcb_states_of_state_def get_tcb_def indirect_send_def direct_send_def
                     direct_call_def direct_reply_def call_blocked_def allowed_call_blocked_def)
 
-end
+end (* Access_AC *)
 
 
 locale Access_AC_2 = Access_AC +
@@ -1047,7 +1047,7 @@ lemma set_object_integrity_autarch:
   apply (rule integrity_update_autarch, simp_all)
   done
 
-end
+end (* Access_AC_2 *)
 
 context pspace_update_eq begin
 
@@ -1061,7 +1061,7 @@ lemma integrity_update_eq[iff]:
   "tcb_states_of_state (f s) = tcb_states_of_state s"
   by (simp add: pspace tcb_states_of_state_def get_tcb_def)
 
-end
+end (* pspace_update_eq *)
 
 context Access_AC_2 begin
 
@@ -1136,7 +1136,7 @@ lemma caps_of_state_tcb:
   "kheap s pos = Some (TCB tcb) \<Longrightarrow> caps_of_state s (pos,addr) = tcb_cnode_map tcb addr"
   by (simp add:caps_of_state_def')
 
-end
+end (* Access_AC_2 *)
 
 
 (* FIXME MOVE next to tcb_cnode_cases_simps *)
@@ -1257,7 +1257,7 @@ lemma cdt_change_allowed_delete_derived:
   apply clarsimp
   by (rule aag_wellformed_delete_derived'[OF _ _ pas_refined_wellformed])
 
-end
+end (* Access_AC_2 *)
 
 
 lemma owns_thread_owns_cspace:
@@ -1491,7 +1491,7 @@ lemma cap_cur_auth_caps_of_state:
    \<Longrightarrow> pas_cap_cur_auth aag cap"
   by (metis cap_auth_caps_of_state)
 
-end
+end (* Access_AC_2 *)
 
 
 subsection \<open>Integrity monotony over subjects\<close>
@@ -1625,7 +1625,7 @@ lemma wp_integrity_clean:
 
 lemmas wp_integrity_clean'= wp_integrity_clean[of \<top>, simplified]
 
-end
+end (* Access_AC_3 *)
 
 
 lemma machine_state_update_id:
@@ -1658,7 +1658,7 @@ lemmas integrity_arch_machine_upds[simp] =
   integrity_hyp_machine_upd[where h=id, simplified machine_state_update_id id_apply]
   integrity_hyp_machine_upd[where h=id and g="\<lambda>_. _", simplified machine_state_update_id id_apply]
 
-end
+end (* integrity_arch_machine_upds *)
 
 
 locale Access_AC_4 = Access_AC_3 +
@@ -1752,7 +1752,7 @@ lemma pas_refined_updates[simp]:
   "\<And>f. pas_refined aag (ready_queues_update f s) = pas_refined aag s"
   by (auto simp add: pas_refined_def state_objs_to_policy_def)
 
-end
+end (* Access_AC_4 *)
 
 sublocale Access_AC_4 \<subseteq> irq_state_update: integrity_arch_machine_upds aag irq_state_update ..
 sublocale Access_AC_4 \<subseteq> underlying_memory_update: integrity_arch_machine_upds aag underlying_memory_update..

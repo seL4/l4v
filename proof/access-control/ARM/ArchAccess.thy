@@ -182,6 +182,6 @@ definition auth_ipc_buffers :: "'z::state_ext state \<Rightarrow> obj_ref \<Righ
           else {}
       | _ \<Rightarrow> {})"
 
-end
+end (* Arch *)
 
 end

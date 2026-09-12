@@ -261,7 +261,7 @@ lemma set_thread_state_respects_in_signalling:
   apply (auto simp: indirect_send_def direct_send_def)
   done
 
-end
+end (* Ipc_AC *)
 
 lemma set_notification_obj_at:
   "\<lbrace>obj_at P ptr and K (ptr \<noteq> ntfnptr)\<rbrace>
@@ -467,7 +467,7 @@ lemma send_signal_respects:
   apply clarsimp
   done
 
-end
+end (* Ipc_AC *)
 
 
 section\<open>Sync IPC\<close>
@@ -834,7 +834,7 @@ lemma transfer_caps_pas_refined:
          hoare_vcg_const_imp_lift hoare_vcg_all_lift grs_distinct
       | wpc | simp del: get_receive_slots.simps add: ball_conj_distrib)+
 
-end
+end (* Ipc_AC *)
 
 lemma copy_mrs_pas_refined:
   "copy_mrs sender sbuf receiver rbuf n \<lbrace>pas_refined aag\<rbrace>"
@@ -929,7 +929,7 @@ lemma do_ipc_transfer_pas_refined:
   unfolding do_ipc_transfer_def
   by (wpsimp wp: do_normal_transfer_pas_refined hoare_vcg_all_lift hoare_drop_imps)
 
-end
+end (* Ipc_AC *)
 
 
 (* FIXME MOVE*)
@@ -1072,7 +1072,7 @@ lemma send_ipc_pas_refined:
     done
   done
 
-end
+end (* Ipc_AC *)
 
 
 lemma set_simple_ko_get_tcb:
@@ -1263,7 +1263,7 @@ lemma receive_ipc_pas_refined:
   apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)
   done
 
-end
+end (* Ipc_AC *)
 
 
 subsection \<open>@{term "integrity"}\<close>
@@ -1368,7 +1368,7 @@ lemma do_ipc_transfer_integrity_autarch:
          | wp (once) hoare_drop_imps)+
   done
 
-end
+end (* Ipc_AC *)
 
 
 lemma set_thread_state_running_respects:
@@ -1560,7 +1560,7 @@ lemma receive_ipc_integrity_autarch:
   apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)
   done
 
-end
+end (* Ipc_AC *)
 
 
 subsubsection\<open>Non-autarchy: the sender is running\<close>
@@ -1721,7 +1721,7 @@ lemma as_user_tcb_in_fault_reply:
               simp: update_tcb_context_in_fault_reply st_tcb_def2 tcb_at_def fun_upd_def[symmetric])
   done
 
-end
+end (* Ipc_AC *)
 
 
 locale Ipc_AC_2 = Ipc_AC +
@@ -1904,7 +1904,7 @@ lemma integrity_tcb_in_ipc_final:
   apply (case_tac "x = thread"; erule tcb_in_ipc.cases)
   by (auto simp: integrity_fpu_kh_upd_neq integrity_fpu_set_registers)
 
-end
+end (* Ipc_AC_2 *)
 
 
 lemma update_tcb_state_in_ipc:
@@ -2109,7 +2109,7 @@ lemma do_ipc_transfer_respects_in_ipc:
   apply (auto intro: st_tcb_at_tcb_at)
   done
 
-end
+end (* Ipc_AC_2 *)
 
 
 lemma sts_act_running_noop:
@@ -2162,7 +2162,7 @@ lemma integrity_tcb_in_ipc_refl:
   apply simp
   done
 
-end
+end (* Ipc_AC_2 *)
 
 
 subsubsection \<open>Inserting the reply cap\<close>
@@ -2193,7 +2193,7 @@ lemma update_cdt_reply_in_ipc:
            simp: integrity_tcb_in_ipc_def tcb_in_ipc_kheap_comms
                  integrity_def cca_reply st_tcb_at_tcb_states_of_state)
 
-end
+end (* Ipc_AC_2 *)
 
 
 (* FIXME: move to NondetMonad *)
@@ -2241,7 +2241,7 @@ lemma set_scheduler_action_respects_in_ipc_autarch:
   unfolding set_scheduler_action_def
   by (wpsimp simp: integrity_tcb_in_ipc_def integrity_def tcb_in_ipc_kheap_comms)
 
-end
+end (* Ipc_AC_2 *)
 
 lemma exists_cons_append:
   "\<exists>xs. xs @ ys = zs \<Longrightarrow> \<exists>xs. xs @ ys = z # zs"
@@ -2337,7 +2337,7 @@ lemma send_ipc_integrity_autarch:
   apply (force elim: obj_at_ko_atE)
   done
 
-end
+end (* Ipc_AC_2 *)
 
 
 section\<open>Faults\<close>
@@ -2389,7 +2389,7 @@ lemma handle_fault_pas_refined:
         apply (wpsimp wp: send_fault_ipc_pas_refined)+
   done
 
-end
+end (* Ipc_AC_2 *)
 
 
 lemma thread_set_tcb_fault_update_valid_mdb:
@@ -2457,7 +2457,7 @@ lemma handle_fault_integrity_autarch:
          | simp add: handle_double_fault_def)+
   done
 
-end
+end (* Ipc_AC_2 *)
 
 
 section\<open>Replies\<close>
@@ -2486,7 +2486,7 @@ lemma do_reply_transfer_pas_refined:
   apply auto
   done
 
-end
+end (* Ipc_AC_2 *)
 
 
 lemma update_tcb_state_in_ipc_reply:
@@ -2566,7 +2566,7 @@ lemma set_cdt_empty_slot_respects_in_ipc_autarch:
                          tcb_in_ipc_kheap_comms no_children_empty_desc[symmetric])
   done
 
-end
+end (* Ipc_AC_2 *)
 
 
 lemma reply_cap_no_children':
@@ -2700,7 +2700,7 @@ lemma integrity_tcb_in_fault_reply_refl:
       apply auto
   done
 
-end
+end (* Ipc_AC_2 *)
 
 
 lemma emptyable_not_master:
@@ -2776,7 +2776,7 @@ lemma do_reply_transfer_respects:
                  | simp)+
    apply (strengthen integrity_tcb_in_fault_reply_refl)+
    apply (wp cap_delete_one_reply_st_tcb_at)
-  \<comment> \<open>the end\<close>
+  \<comment> \<open>the end (* Ipc_AC_2 *)\<close>
   by (force simp: st_tcb_at_tcb_states_of_state cte_wp_at_caps_of_state is_cap_simps
                   is_reply_cap_to_def
            dest!: tcb_states_of_state_kheapD get_tcb_SomeD tcb_atD ko_atD

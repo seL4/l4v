@@ -81,7 +81,7 @@ lemma arch_tcb_setRegister[Ipc_AC_assms]:
                 arch_tcb_get_registers_def arch_tcb_set_registers_def
                 setRegister_def modify_def get_def put_def bind_def)
 
-end
+end (* Arch *)
 
 
 global_interpretation Ipc_AC?: Ipc_AC
@@ -235,7 +235,7 @@ lemma integrity_fpu_kh_updI[Ipc_AC_assms]:
 declare handle_arch_fault_reply_inv[Ipc_AC_assms]
 declare arch_get_sanitise_register_info_inv[Ipc_AC_assms]
 
-end
+end (* Arch *)
 
 
 context is_extended begin interpretation Arch .
@@ -260,7 +260,7 @@ lemma list_integ_lift_in_ipc[Ipc_AC_assms]:
   apply (clarsimp simp: tcb_states_of_state_def get_tcb_def fun_upd_def)
   done
 
-end
+end (* is_extended *)
 
 
 global_interpretation Ipc_AC_2?: Ipc_AC_2

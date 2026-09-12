@@ -114,7 +114,7 @@ lemma do_user_op_respects:
       apply (simp add: write_in_vspace_cap_rights)+
   done
 
-end
+end (* ADT_AC *)
 
 
 lemma objs_valid_tcb_vtable:

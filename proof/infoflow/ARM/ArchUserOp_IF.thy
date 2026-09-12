@@ -111,7 +111,7 @@ lemma arch_globals_equiv_device_state_update[UserOp_IF_assms, simp]:
    arch_globals_equiv ct it kh kh' as as' ms ms'"
   by auto
 
-end
+end (* Arch *)
 
 context begin interpretation Arch .
 
@@ -996,7 +996,7 @@ lemma do_user_op_reads_respects_g:
   apply (clarsimp simp: reads_equiv_g_def globals_equiv_def)
   done
 
-end
+end (* Arch *)
 
 context begin interpretation Arch .
 

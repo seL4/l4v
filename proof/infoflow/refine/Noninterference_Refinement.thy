@@ -62,7 +62,7 @@ lemma big_step_ADT_C_if_big_step_ADT_A_if_refines:
   apply simp
   done
 
-end
+end (* kernel_m *)
 
 lemma LI_sub_big_steps':
   "\<lbrakk>(s',as) \<in> sub_big_steps C (internal_R C R) s;
@@ -378,7 +378,7 @@ lemma big_step_ADT_C_if_enabled_system:
   apply (rule ADT_C_if_big_step_R_terminate)
   done
 
-end
+end (* valid_initial_state_C *)
 
 sublocale valid_initial_state_C \<subseteq>
      abstract_to_C: noninterference_refinement
@@ -405,6 +405,6 @@ lemma xnonleakage_C:
   apply(rule xnonleakage)
   done
 
-end
+end (* valid_initial_state_C *)
 
 end

@@ -281,7 +281,7 @@ lemma vspace_cap_rights_to_auth_mask_vm_rights:
   apply (auto simp: mask_vm_rights_def dest: subsetD[OF validate_vm_rights_subseteq])
   done
 
-end
+end (* Decode_IF *)
 
 
 (* this one doesn't read from the state at all *)
@@ -402,6 +402,6 @@ lemmas decode_invocation_reads_respects_f_g =
   reads_respects_f_g[OF decode_invocation_reads_respects_f doesnt_touch_globalsI,
                      where Q="\<top>", simplified, OF decode_inv_inv]
 
-end
+end (* Decode_IF_2 *)
 
 end

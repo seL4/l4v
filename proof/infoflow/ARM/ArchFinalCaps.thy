@@ -84,7 +84,7 @@ lemma arch_derive_cap_silc[FinalCaps_assms]:
   apply (auto simp: cap_points_to_label_def slots_holding_overlapping_caps_def)
   done
 
-end
+end (* Arch *)
 
 
 global_interpretation FinalCaps?: FinalCaps
@@ -350,7 +350,7 @@ lemma handle_reserved_irq_non_kernel_IRQs[FinalCaps_assms]:
   "\<lbrace>P and K (irq \<notin> non_kernel_IRQs)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding handle_reserved_irq_def by wpsimp
 
-end
+end (* Arch *)
 
 
 global_interpretation FinalCaps_2?: FinalCaps_2

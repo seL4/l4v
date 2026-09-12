@@ -47,7 +47,7 @@ lemma arch_post_modify_registers_domain_sep_inv[DomainSepInv_assms, wp]:
 
 declare init_arch_objects_inv[DomainSepInv_assms]
 
-end
+end (* Arch *)
 
 
 global_interpretation DomainSepInv?: DomainSepInv
@@ -125,7 +125,7 @@ lemma arch_invoke_irq_control_domain_sep_inv[DomainSepInv_assms]:
    apply (wpsimp wp: do_machine_op_domain_sep_inv simp: arch_irq_control_inv_valid_def)+
   done
 
-end
+end (* Arch *)
 
 
 global_interpretation DomainSepInv_2?: DomainSepInv_2

@@ -62,7 +62,7 @@ lemma arch_decode_irq_control_invocation_rev[Decode_IF_assms]:
   apply (fastforce dest: is_cnode_into_is_subject intro: bang_0_in_set)
   done
 
-end
+end (* Arch *)
 
 
 global_interpretation Decode_IF?: Decode_IF
@@ -408,7 +408,7 @@ lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
       | fastforce dest: caps_of_state_valid cte_wp_at_caps_of_state'
                   simp: valid_cap_def valid_arch_cap_def)+
 
-end
+end (* Arch *)
 
 
 global_interpretation Decode_IF_2?: Decode_IF_2

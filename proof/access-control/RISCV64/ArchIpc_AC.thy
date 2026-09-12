@@ -80,7 +80,7 @@ lemma arch_tcb_setRegister[Ipc_AC_assms]:
   by (simp add: arch_tcb_context_get_def arch_tcb_context_set_def
                 arch_tcb_get_registers_def arch_tcb_set_registers_def
                 setRegister_def modify_def get_def put_def bind_def)
-end
+end (* Arch *)
 
 
 global_interpretation Ipc_AC?: Ipc_AC
@@ -212,7 +212,7 @@ lemma integrity_asids_kh_updI[Ipc_AC_assms]:
 declare handle_arch_fault_reply_inv[Ipc_AC_assms]
 declare arch_get_sanitise_register_info_inv[Ipc_AC_assms]
 
-end
+end (* Arch *)
 
 
 context is_extended begin interpretation Arch .
@@ -236,7 +236,7 @@ lemma list_integ_lift_in_ipc[Ipc_AC_assms]:
   apply (fastforce simp: opt_map_def)
   done
 
-end
+end (* is_extended *)
 
 
 global_interpretation Ipc_AC_2?: Ipc_AC_2

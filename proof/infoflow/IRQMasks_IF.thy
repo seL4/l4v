@@ -168,7 +168,7 @@ lemma invoke_irq_control_irq_masks:
   apply (clarsimp simp: arch_invoke_irq_control_irq_masks)
   done
 
-end
+end (* IRQMasks_IF *)
 
 
 crunch cancel_ipc
@@ -254,7 +254,7 @@ crunch reply_from_kernel
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (simp: crunch_simps wp: crunch_wps)
 
-end
+end (* IRQMasks_IF *)
 
 
 fun irq_of_handler_inv where
@@ -427,6 +427,6 @@ lemma schedule_irq_masks:
                  guarded_switch_to_irq_masks[where st=st]
                  hoare_drop_imps gts_wp)
 
-end
+end (* IRQMasks_IF_2 *)
 
 end

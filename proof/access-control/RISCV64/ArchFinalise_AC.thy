@@ -257,7 +257,7 @@ declare prepare_thread_delete_pas_refined[Finalise_AC_assms]
 declare finalise_cap_replaceable[Finalise_AC_assms]
 declare valid_cur_fpu_lift_arch[Finalise_AC_assms]
 
-end
+end (* Arch *)
 
 
 global_interpretation Finalise_AC?: Finalise_AC
@@ -312,7 +312,7 @@ lemma finalise_cap_fst_ret[Finalise_AC_assms]:
   apply (wp | simp | (rule hoare_pre, wpc))+
   done
 
-end
+end (* Arch *)
 
 
 global_interpretation Finalise_AC_2?: Finalise_AC_2

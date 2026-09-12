@@ -71,7 +71,7 @@ declare handle_vm_fault_cur_thread[FinalCaps_assms]
 declare finalise_cap_makes_halted[FinalCaps_assms]
 declare init_arch_objects_inv[FinalCaps_assms]
 
-end
+end (* Arch *)
 
 
 global_interpretation FinalCaps?: FinalCaps
@@ -319,7 +319,7 @@ lemma handle_reserved_irq_non_kernel_IRQs[FinalCaps_assms]:
   "\<lbrace>P and K (irq \<notin> non_kernel_IRQs)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding handle_reserved_irq_def by wpsimp
 
-end
+end (* Arch *)
 
 
 global_interpretation FinalCaps_2?: FinalCaps_2

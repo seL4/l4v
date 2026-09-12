@@ -475,7 +475,7 @@ lemma partitionIntegrity_subjectAffects_tcb_fpu[Noninterference_assms]:
   apply (rule user_context.expand; clarsimp)
   done
 
-end
+end (* Arch *)
 
 context begin interpretation Arch .
 
