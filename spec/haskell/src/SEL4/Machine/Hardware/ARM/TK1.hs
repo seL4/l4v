@@ -160,7 +160,7 @@ cacheCleanL2RangeCallback :: Ptr CallbackData -> PAddr -> PAddr -> IO ()
 cacheCleanL2RangeCallback _ _ _ = return ()
 
 cacheLine :: Int
-cacheLine = error "see Kernel_Config.thy"
+cacheLine = isabelleOp
 
 cacheLineBits :: Int
-cacheLineBits = error "see Kernel_Config.thy"
+cacheLineBits = isabelleOp
