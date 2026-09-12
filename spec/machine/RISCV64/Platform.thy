@@ -181,10 +181,6 @@ definition irqInvalid :: "irq"
   where
   "irqInvalid \<equiv> 0"
 
-definition pageColourBits :: nat
-  where
-  "pageColourBits \<equiv> undefined" \<comment> \<open>not implemented on this platform\<close>
-
 end
 
 (* we want to use the Platform constant in the global context instead of the arch-specific one from

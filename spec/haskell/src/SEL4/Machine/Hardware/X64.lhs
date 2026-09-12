@@ -196,9 +196,6 @@ Every table is one small page in size.
 > --ioptBits :: Int
 > --ioptBits = ptTranslationBits + 3
 
-> pageColourBits :: Int
-> pageColourBits = error "Does not exist on x64" -- Platform.pageColourBits
-
 > setInterruptMode :: IRQ -> Bool -> Bool -> MachineMonad ()
 > setInterruptMode _ _ _ = return ()
 
