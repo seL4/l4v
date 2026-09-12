@@ -453,10 +453,8 @@ lemma partitionIntegrity_subjectAffects_tcb_fpu[Noninterference_assms]:
 
 end (* Arch *)
 
-
 requalify_consts RISCV64.arch_globals_equiv_strengthener
 requalify_facts RISCV64.arch_globals_equiv_strengthener_thread_independent
-
 
 global_interpretation Noninterference?: Noninterference _ arch_globals_equiv_strengthener
 proof goal_cases
@@ -465,7 +463,6 @@ proof goal_cases
     by (unfold_locales; (fact Noninterference_assms | solves \<open>rule integrity_arch_triv\<close>
                                                     | solves \<open>wp only: Noninterference_assms; simp\<close>)?)
 qed
-
 
 sublocale valid_initial_state \<subseteq> valid_initial_state?:
   Noninterference_valid_initial_state arch_globals_equiv_strengthener ..

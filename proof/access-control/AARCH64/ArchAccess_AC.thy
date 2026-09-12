@@ -57,14 +57,12 @@ lemma tcb_hyp_refs_arch_tcb_set_registers[Access_AC_assms]:
 
 end (* Arch *)
 
-
 global_interpretation Access_AC?: Access_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Access_AC_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -126,14 +124,12 @@ lemma integrity_fpu_update_autarch[Access_AC_assms]:
 
 end (* Arch *)
 
-
 global_interpretation Access_AC_2?: Access_AC_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Access_AC_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -203,14 +199,12 @@ lemma arch_integrity_obj_atomic_mono[Access_AC_assms]:
 
 end (* Arch *)
 
-
 global_interpretation Access_AC_3?: Access_AC_3
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Access_AC_assms)?)
 qed
-
 
 locale Arch_hyp_machine_update_eq = Arch +
   fixes f :: "('a \<Rightarrow> 'a) \<Rightarrow> machine_state \<Rightarrow> machine_state"
@@ -263,7 +257,6 @@ sublocale Arch \<subseteq> vcpu_state_update: Arch_fpu_machine_update_eq vcpu_st
 sublocale Arch \<subseteq> fpu_state_update: Arch_hyp_machine_update_eq fpu_state_update by unfold_locales auto
 sublocale Arch \<subseteq> fpu_enabled_update: Arch_integrity_machine_update_eq fpu_enabled_update by unfold_locales auto
 
-
 context Arch_p_arch_update_eq begin arch_global_naming
 
 lemma state_vrefs[Access_AC_assms, iff]:
@@ -271,7 +264,6 @@ lemma state_vrefs[Access_AC_assms, iff]:
   by (simp add: state_vrefs_def pspace)
 
 end (* Arch_p_arch_update_eq *)
-
 
 context Arch begin arch_global_naming
 
@@ -338,14 +330,12 @@ lemma integrity_hyp_ao_upd:
 
 end (* Arch *)
 
-
 global_interpretation Access_AC_4?: Access_AC_4
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Access_AC_assms)?)
 qed
-
 
 locale Arch_pas_refined_arch_update_eq = Arch +
   fixes f :: "('a \<Rightarrow> 'a) \<Rightarrow> arch_state \<Rightarrow> arch_state"
@@ -382,7 +372,6 @@ sublocale Arch \<subseteq> global_vspace_update: Arch_pas_refined_arch_update_eq
 sublocale Arch \<subseteq> current_vcpu_update: Arch_pas_refined_arch_update_eq arm_current_vcpu_update by unfold_locales auto
 sublocale Arch \<subseteq> numlistregs_update: Arch_pas_refined_arch_update_eq arm_gicvcpu_numlistregs_update by unfold_locales auto
 sublocale Arch \<subseteq> current_fpu_update: Arch_pas_refined_arch_update_eq arm_current_fpu_owner_update by unfold_locales auto
-
 
 context Arch begin arch_global_naming
 

@@ -97,7 +97,6 @@ lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
 
 end (* Arch *)
 
-
 global_interpretation Tcb_AC?: Tcb_AC
 proof goal_cases
   interpret Arch .

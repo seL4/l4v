@@ -199,7 +199,6 @@ declare arch_prepare_set_domain_inv[Syscall_IF_assms]
 
 end (* Arch *)
 
-
 global_interpretation Syscall_IF?: Syscall_IF
 proof goal_cases
   interpret Arch .

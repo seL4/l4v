@@ -413,7 +413,6 @@ crunch cancel_badged_sends
   for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps simp: filterM_mapM)
 
-
 locale Arch_IF =
   fixes aag :: "'a PAS"
   assumes arch_post_cap_deletion_valid_global_refs:

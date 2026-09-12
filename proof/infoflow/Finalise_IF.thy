@@ -114,7 +114,6 @@ crunch set_thread_state_act
 
 end (* Finalise_IF *)
 
-
 lemma requiv_get_tcb_eq':
   "\<lbrakk> reads_equiv aag s t; aag_can_read aag thread \<rbrakk>
    \<Longrightarrow> get_tcb thread s = get_tcb thread t"
@@ -540,7 +539,6 @@ lemma thread_get_reads_respects:
   apply (auto intro: reads_affects_equiv_get_tcb_eq)
   done
 
-
 context Finalise_IF begin
 
 lemma set_tcb_queue_modifies_at_most:
@@ -646,7 +644,6 @@ lemma cancel_all_ipc_reads_respects:
 
 end (* Finalise_IF *)
 
-
 fun ntfn_queue_invisible where
   "ntfn_queue_invisible aag l (WaitingNtfn list) = labels_are_invisible aag l ((pasObjectAbs aag) ` (set list))"
 | "ntfn_queue_invisible aag l _ = True"
@@ -745,7 +742,6 @@ lemma unbind_notification_is_subj_reads_respects:
   apply (clarsimp)
   apply (rule bound_tcb_at_implies_read, auto)
   done
-
 
 context Finalise_IF begin
 
@@ -862,7 +858,6 @@ lemma cap_delete_one_reads_respects_f_transferable:
 
 end (* Finalise_IF *)
 
-
 lemma get_blocking_object_reads_respects:
   "reads_respects aag l \<top> (get_blocking_object state)"
   unfolding get_blocking_object_def
@@ -968,7 +963,6 @@ lemma update_restart_pc_reads_respects[wp]:
   apply (subst as_user_bind)
   apply (wpsimp wp: as_user_set_register_reads_respects' as_user_get_register_reads_respects)
   done
-
 
 context Finalise_IF begin
 
@@ -1084,7 +1078,6 @@ lemma finalise_cap_reads_respects:
 
 end (* Finalise_IF *)
 
-
 lemma cap_swap_for_delete_reads_respects:
   "reads_respects aag l (K (is_subject aag (fst slot1) \<and> is_subject aag (fst slot2)))
                  (cap_swap_for_delete slot1 slot2)"
@@ -1154,7 +1147,6 @@ lemma finalise_cap_only_timer_irq_inv:
   apply (simp add: only_timer_irq_inv_def)
   apply (wp only_timer_irq_pres | force)+
   done
-
 
 context Finalise_IF begin
 
@@ -1327,7 +1319,6 @@ lemmas rec_del_reads_respects_f = use_spec_ev[OF rec_del_spec_reads_respects_f]
 
 end (* Finalise_IF *)
 
-
 (* FIXME MOVE in lib *)
 lemma ev_pre_cont:
   "equiv_valid I A B \<bottom> f"
@@ -1360,7 +1351,6 @@ lemma rec_del_Finalise_transferableE_R:
    apply (rule hoare_strengthen_postE)
      apply (rule rec_del_Finalise_transferable)
   by force+
-
 
 context Finalise_IF begin
 
@@ -1400,7 +1390,6 @@ lemma cap_delete_reads_respects:
 
 end (* Finalise_IF *)
 
-
 lemma globals_equiv_interrupt_states_update:
   "globals_equiv st (s\<lparr>interrupt_states := x\<rparr>) = globals_equiv st s"
   by (auto simp: globals_equiv_def idle_equiv_def)
@@ -1434,7 +1423,6 @@ lemma cancel_all_signals_globals_equiv:
    cancel_all_signals epptr
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   by (fastforce intro: hoare_strengthen_post[OF cancel_all_signals_globals_equiv'])
-
 
 context Finalise_IF begin
 

@@ -105,7 +105,6 @@ lemma write_in_vspace_cap_rights[ADT_AC_assms]:
 
 end (* Arch *)
 
-
 global_interpretation ADT_AC?: ADT_AC
 proof goal_cases
   interpret Arch .

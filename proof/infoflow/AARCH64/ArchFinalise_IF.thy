@@ -1221,7 +1221,6 @@ lemma set_bound_notification_globals_equiv[Finalise_IF_assms]:
 
 end (* Arch *)
 
-
 global_interpretation Finalise_IF?: Finalise_IF
 proof goal_cases
   interpret Arch .

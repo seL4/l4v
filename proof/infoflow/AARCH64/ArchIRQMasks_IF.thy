@@ -89,14 +89,12 @@ crunch activate_thread, handle_spurious_irq, handle_vm_fault
 
 end (* Arch *)
 
-
 global_interpretation IRQMasks_IF?: IRQMasks_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact IRQMasks_IF_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -279,14 +277,12 @@ crunch arch_prepare_next_domain
 
 end (* Arch *)
 
-
 global_interpretation IRQMasks_IF_2?: IRQMasks_IF_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact IRQMasks_IF_assms)?)
 qed
-
 
 (* FIXME AARCH64 IF: add to interface *)
 arch_requalify_facts

@@ -63,7 +63,6 @@ crunch handle_vm_fault, handle_vm_fault, perform_pg_inv_unmap,
 
 end (* Arch *)
 
-
 global_interpretation DomainSepInv?: DomainSepInv
 proof goal_cases
   interpret Arch .
@@ -165,7 +164,6 @@ declare handle_reserved_irq_domain_sep_inv[simplified and_assoc, DomainSepInv_as
 declare handle_hypervisor_fault_domain_sep_inv[simplified and_assoc, DomainSepInv_assms]
 
 end (* Arch *)
-
 
 global_interpretation DomainSepInv_2?: DomainSepInv_2
 proof goal_cases

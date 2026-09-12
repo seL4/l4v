@@ -137,7 +137,6 @@ lemma descendants_inc_cap_classD:
    \<Longrightarrow> cap_class cap = cap_class cap'"
   by (fastforce dest:descendants_incD)
 
-
 locale Access_AC =
   fixes aag :: "'a PAS"
   and user_monad_t :: "'b user_monad"
@@ -189,7 +188,6 @@ lemma is_transferable_all_children:
   done
 
 end (* Access_AC *)
-
 
 lemmas state_objs_to_policy_mem = eqset_imp_iff[OF state_objs_to_policy_def]
 
@@ -421,7 +419,6 @@ lemma tro_tcb_reply':
    apply (rule tro_tcb_reply[OF refl refl refl, where new_st=new_st];force)
   by (fastforce intro!: tro_orefl tcb.equality)
 
-
 context Access_AC begin
 
 lemma troa_tro_alt[elim!]:
@@ -441,7 +438,6 @@ lemma troa_tro_alt[elim!]:
   done
 
 end (* Access_AC *)
-
 
 lemma integrity_ready_queues_refl[simp]: "integrity_ready_queues aag subjects ptr s s"
   unfolding integrity_ready_queues_def by simp
@@ -564,7 +560,6 @@ lemma cnode_integrity_trans[elim]:
 lemma tcb_bound_notification_reset_eq_or_none:
   "tcb_bound_notification_reset_integrity ntfn ntfn' subjects aag \<Longrightarrow> ntfn = ntfn' \<or> ntfn' = None"
   by (auto simp: tcb_bound_notification_reset_integrity_def)
-
 
 context Access_AC begin
 
@@ -700,7 +695,6 @@ lemmas integrity_objE = tro_tro_alt[THEN integrity_obj_alt.cases
 
 end (* Access_AC *)
 
-
 lemma tro_trans:
   "\<lbrakk> integrity_obj_state aag activate es s s'; integrity_obj_state aag activate es s' s'' \<rbrakk>
    \<Longrightarrow> integrity_obj_state aag activate es s s''"
@@ -783,7 +777,6 @@ lemma trrqs_trans:
   apply (clarsimp simp: integrity_ready_queues_def)
   apply (metis append_assoc)
   done
-
 
 context Access_AC begin
 
@@ -873,7 +866,6 @@ lemma tsos_tro_running:
                     direct_call_def direct_reply_def call_blocked_def allowed_call_blocked_def)
 
 end (* Access_AC *)
-
 
 locale Access_AC_2 = Access_AC +
   assumes auth_ipc_buffers_tro:
@@ -1138,7 +1130,6 @@ lemma caps_of_state_tcb:
 
 end (* Access_AC_2 *)
 
-
 (* FIXME MOVE next to tcb_cnode_cases_simps *)
 lemma tcb_cnode_map_simps[simp]:
   "tcb_cnode_map tcb (tcb_cnode_index 0) = Some (tcb_ctable tcb)"
@@ -1177,7 +1168,6 @@ lemma tcb_atE:
 lemma tcb_atI:
   "kheap s ptr = Some (TCB tcb) \<Longrightarrow> tcb_at ptr s"
   by (simp add:obj_at_def is_tcb_def)
-
 
 context Access_AC_2 begin
 
@@ -1258,7 +1248,6 @@ lemma cdt_change_allowed_delete_derived:
   by (rule aag_wellformed_delete_derived'[OF _ _ pas_refined_wellformed])
 
 end (* Access_AC_2 *)
-
 
 lemma owns_thread_owns_cspace:
   "\<lbrakk> is_subject aag thread; pas_refined aag s; get_tcb thread s = Some tcb;
@@ -1464,7 +1453,6 @@ lemma cli_caps_of_state:
   apply (blast dest: state_irqs_to_policy_aux.intros)
   done
 
-
 context Access_AC_2 begin
 
 (* MOVE *)
@@ -1493,7 +1481,6 @@ lemma cap_cur_auth_caps_of_state:
 
 end (* Access_AC_2 *)
 
-
 subsection \<open>Integrity monotony over subjects\<close>
 
 
@@ -1520,7 +1507,6 @@ lemma cdt_change_allowed_mono:
   unfolding cdt_change_allowed_def cdt_direct_change_allowed.simps direct_call_def by blast
 
 lemmas rtranclp_monoE = rtranclp_mono[THEN predicate2D,rotated,OF _ predicate2I]
-
 
 locale Access_AC_3 = Access_AC_2 +
   assumes arch_integrity_obj_atomic_mono:
@@ -1627,11 +1613,9 @@ lemmas wp_integrity_clean'= wp_integrity_clean[of \<top>, simplified]
 
 end (* Access_AC_3 *)
 
-
 lemma machine_state_update_id:
   "machine_state_update id s = s"
   by simp
-
 
 locale integrity_arch_machine_upds =
   fixes aag :: "'a PAS"
@@ -1659,7 +1643,6 @@ lemmas integrity_arch_machine_upds[simp] =
   integrity_hyp_machine_upd[where h=id and g="\<lambda>_. _", simplified machine_state_update_id id_apply]
 
 end (* integrity_arch_machine_upds *)
-
 
 locale Access_AC_4 = Access_AC_3 +
   assumes integrity_arch_machine_upds[intro!]:

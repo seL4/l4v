@@ -47,14 +47,12 @@ declare storeWord_respects[Arch_AC_assms]
 
 end (* Arch *)
 
-
 global_interpretation Arch_AC?: Arch_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Arch_AC_assms | solves \<open>wp only: Arch_AC_assms; simp\<close>)?)
 qed
-
 
 context Arch begin arch_global_naming
 

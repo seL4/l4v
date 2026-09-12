@@ -101,7 +101,6 @@ definition xNonleakage_gen :: bool where
 
 end (* noninterference_system *)
 
-
 context unwinding_system begin
 
 lemma xources_sources:
@@ -434,7 +433,6 @@ lemma Noninfluence_strong_uwr_pg_confidentiality_u_weak:
   done
 
 end (* unwinding_system *)
-
 
 context complete_unwinding_system begin
 

@@ -796,10 +796,8 @@ lemmas [Noninterference_assms] =
 
 end (* Arch *)
 
-
 arch_requalify_consts arch_globals_equiv_strengthener
 arch_requalify_facts arch_globals_equiv_strengthener_thread_independent
-
 
 global_interpretation Noninterference?: Noninterference _ arch_globals_equiv_strengthener
 proof goal_cases
@@ -807,7 +805,6 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact Noninterference_assms)?)
 qed
-
 
 sublocale valid_initial_state \<subseteq> valid_initial_state?:
   Noninterference_valid_initial_state arch_globals_equiv_strengthener ..

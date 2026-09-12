@@ -114,7 +114,6 @@ lemmas no_absD = no_abs_def[THEN meta_eq_to_obj_eq, THEN iffD1, rule_format]
 
 end (* system *)
 
-
 subsection \<open>Enabled system\<close>
 
 text\<open>
@@ -138,7 +137,6 @@ lemma enabled_Step:
   by (simp add: Step_def, blast intro: reachable_enabled)
 
 end (* enabled_system *)
-
 
 subsection \<open>Step system\<close>
 
@@ -209,7 +207,6 @@ lemma reachable_induct:
   done
 
 end (* Step_system *)
-
 
 subsection \<open>Init Fin system\<close>
 
@@ -295,7 +292,6 @@ lemma execution_Run:
 
 end (* Init_Fin_system *)
 
-
 lemma Init_Fin_system_Step_system:
   "Init_Fin_system A s0 \<Longrightarrow> Step_system A s0"
   apply (unfold_locales)
@@ -369,7 +365,6 @@ lemma reachable_Fin:
   done
 
 end (* Init_inv_Fin_system *)
-
 
 lemma Init_inv_Fin_system_Init_Fin_system:
   "Init_inv_Fin_system A s0 \<Longrightarrow> Init_Fin_system A s0"
@@ -461,7 +456,6 @@ lemma sameFor_sym_dom:
   by (auto simp: sameFor_dom_def uwr_sym)
 
 end (* noninterference_policy *)
-
 
 subsection \<open>Non interference system\<close>
 
@@ -812,7 +806,6 @@ lemma Noninfluence_gen_Noninterference_strong:
   done
 
 end (* noninterference_system *)
-
 
 subsection \<open>Noninterference on enabled Step system : unwinding system\<close>
 
@@ -1271,7 +1264,6 @@ lemma integrity_u_and_single_event_systems:
   done
 
 end (* unwinding_system *)
-
 
 subsection \<open>Complete unwinding system\<close>
 

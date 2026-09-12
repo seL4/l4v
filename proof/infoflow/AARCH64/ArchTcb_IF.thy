@@ -83,14 +83,12 @@ lemma arch_get_sanitise_register_info_reads_respects_f[Tcb_IF_assms, wp]:
 
 end (* Arch *)
 
-
 global_interpretation Tcb_IF?: Tcb_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Tcb_IF_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -439,7 +437,6 @@ crunch arch_post_set_flags
   (simp: crunch_simps)
 
 end (* Arch *)
-
 
 global_interpretation Tcb_IF_2?: Tcb_IF_2
 proof goal_cases

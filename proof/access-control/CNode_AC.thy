@@ -42,7 +42,6 @@ lemma integrity_cdt_list_as_list_integ:
 crunch set_untyped_cap_as_full
   for integrity_autarch: "integrity aag X st"
 
-
 locale CNode_AC =
   fixes aag :: "'a PAS"
   and val_t :: "'b"
@@ -149,7 +148,6 @@ lemma cap_insert_integrity_autarch:
   done
 
 end (* CNode_AC *)
-
 
 text\<open>
 
@@ -292,7 +290,6 @@ lemma sita_caps_update2:
                  elim: state_irqs_to_policy_aux.cases
                  simp: cap_links_irq_def split: if_splits)
 
-
 context CNode_AC begin
 
 lemma set_cap_pas_refined:
@@ -326,13 +323,11 @@ lemma set_cap_pas_refined_not_transferable:
 
 end (* CNode_AC *)
 
-
 (* FIXME MOVE *)
 lemma parent_ofI[intro!]: "m x = Some src \<Longrightarrow> m \<Turnstile> src \<leadsto> x"
   by (simp add: cdt_parent_rel_def is_cdt_parent_def)
 
 declare set_original_wp[wp del]
-
 
 context CNode_AC begin
 
@@ -378,7 +373,6 @@ lemma cap_swap_for_delete_respects[wp]:
 
 end (* CNode_AC *)
 
-
 (* FIXME MOVE *)
 lemma cdt_change_allowed_all_children:
   "all_children (cdt_change_allowed aag subject (cdt s) (tcb_states_of_state s)) (cdt s)"
@@ -391,7 +385,6 @@ abbreviation cleanup_info_wf :: "cap \<Rightarrow> 'a PAS \<Rightarrow> bool" wh
 (* FIXME: MOVE *)
 named_theorems wp_transferable
 named_theorems wp_not_transferable
-
 
 context CNode_AC begin
 
@@ -460,7 +453,6 @@ crunch set_cdt_list, update_cdt_list
   and is_original_cap[wp]: "\<lambda>s. P (is_original_cap s)"
   and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   and thread_bound_ntfns[wp]: "\<lambda>s. P (thread_bound_ntfns s)"
-
 
 locale CNode_AC_2 = CNode_AC +
   assumes integrity_asids_set_cap_Nullcap:
@@ -599,7 +591,6 @@ lemma update_cdt_list_pas_refined[wp]:
   by (wpsimp simp: pas_refined_def state_objs_to_policy_def | wps)+
 
 end (* CNode_AC_2 *)
-
 
 text \<open>
   For the @{const empty_slot} proof, we need to rearrange the operations
@@ -804,7 +795,6 @@ lemma aag_cap_auth_max_free_index_update[simp]:
   by (clarsimp simp: aag_cap_auth_def free_index_update_def cap_links_asid_slot_def cap_links_irq_def
               split: cap.splits)
 
-
 context CNode_AC_2 begin
 
 (* Putting it all together *)
@@ -895,7 +885,6 @@ lemma update_cdt_pas_refined:
   done
 
 end (* CNode_AC_2 *)
-
 
 lemma set_untyped_cap_as_full_cdt_is_original_cap:
   "\<lbrace>\<lambda>s. P (cdt s) (is_original_cap s)\<rbrace>
@@ -1232,7 +1221,6 @@ lemma set_simple_ko_thread_bound_ntfns[wp]:
                  split: kernel_object.split_asm if_splits)
   done
 
-
 context CNode_AC_3 begin
 
 lemma sts_st_vrefs[wp]:
@@ -1282,7 +1270,6 @@ lemma thread_set_state_vrefs:
 
 end (* CNode_AC_3 *)
 
-
 lemma thread_set_thread_st_auth_trivT:
   assumes st: "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
   shows "thread_set f t \<lbrace>\<lambda>s. P (thread_st_auth s)\<rbrace>"
@@ -1302,7 +1289,6 @@ lemma thread_set_thread_bound_ntfns_trivT:
                  elim!: rsubst[where P=P, OF _ ext]
                  split: kernel_object.split_asm)
   done
-
 
 context CNode_AC_3 begin
 
@@ -1343,7 +1329,6 @@ lemmas thread_set_pas_refined = thread_set_pas_refined_triv[OF ball_tcb_cap_case
 
 end (* CNode_AC_3 *)
 
-
 lemma aag_owned_cdt_link:
   "\<lbrakk> cdt s x = Some y; is_subject aag (fst y);
      pas_refined aag s; \<not> is_transferable (caps_of_state s x) \<rbrakk>
@@ -1355,7 +1340,6 @@ lemma descendants_of_owned_or_transferable:
   "\<lbrakk> valid_mdb s; pas_refined aag s; p \<in> descendants_of q (cdt s); is_subject aag (fst q) \<rbrakk>
    \<Longrightarrow> is_subject aag (fst p) \<or> is_transferable (caps_of_state s p)"
    using all_children_descendants_of pas_refined_all_children by blast
-
 
 context CNode_AC_3 begin
 
@@ -1375,7 +1359,6 @@ crunch thread_set
   for integrity_autarch: "integrity aag X st"
 
 end (* CNode_AC_3 *)
-
 
 lemma sta_ts_mem:
   "\<lbrakk> thread_st_auth s x = S; r \<in> S \<rbrakk> \<Longrightarrow> (x, snd r, fst r) \<in> state_objs_to_policy s"
@@ -1473,7 +1456,6 @@ lemma cnode_inv_auth_derivations_If_Insert_Move:
    cnode_inv_auth_derivations (MoveCall cap src_slot dest_slot)"
   by (simp add: cnode_inv_auth_derivations_def)
 
-
 context CNode_AC_3 begin
 
 lemma post_cap_deletion_cur_domain[wp]:
@@ -1500,7 +1482,6 @@ lemma cap_revoke_cur_domain[wp]:
   by (rule cap_revoke_preservation2; wp)
 
 end (* CNode_AC_3 *)
-
 
 locale CNode_AC_4 = CNode_AC_3 +
   assumes cap_asid'_cap_rights_update[simp]:

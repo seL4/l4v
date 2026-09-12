@@ -76,14 +76,12 @@ lemmas [ADT_IF_assms] =
 
 end (* Arch *)
 
-
 global_interpretation ADT_IF?: ADT_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact ADT_IF_assms | solves \<open>wp only: ADT_IF_assms; simp\<close>)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -486,7 +484,6 @@ lemma thread_set_context_pas_refined[ADT_IF_assms]:
   done
 
 end (* Arch *)
-
 
 global_interpretation ADT_IF_2?: ADT_IF_2
 proof goal_cases

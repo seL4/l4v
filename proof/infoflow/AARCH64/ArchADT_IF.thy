@@ -103,14 +103,12 @@ lemmas [ADT_IF_assms] =
 
 end (* Arch *)
 
-
 global_interpretation ADT_IF?: ADT_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact ADT_IF_assms[folded valid_cur_hyp_def cur_hyp_in_cur_domain_def])?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -450,7 +448,6 @@ crunch init_arch_objects
   (wp: crunch_wps dmo_wp)
 
 end (* Arch *)
-
 
 global_interpretation ADT_IF_2?: ADT_IF_2
 proof goal_cases

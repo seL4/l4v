@@ -196,7 +196,6 @@ lemma dmo_freeMemory_reads_respects_g:
 
 end (* Retype_IF *)
 
-
 crunch set_cdt
   for valid_arch_state[wp]: "\<lambda>s. P (valid_arch_state s)"
 
@@ -373,7 +372,6 @@ lemma machine_state_detype:
   "machine_state (detype S s) = machine_state s"
   by (auto simp: detype_def)
 
-
 context Retype_IF begin
 
 lemma retype_region_reads_respects_g:
@@ -407,7 +405,6 @@ crunch delete_objects
   (ignore: do_machine_op wp: dmo_wp no_irq_freeMemory no_irq simp: detype_def)
 
 end (* Retype_IF *)
-
 
 lemma untyped_caps_do_not_overlap_global_refs:
   "\<lbrakk> cte_wp_at ((=) (UntypedCap dev word sz idx)) slot s; valid_global_refs s \<rbrakk>
@@ -535,7 +532,6 @@ lemma reads_equiv_caps_of_state:
   apply (frule(1) reads_equiv_cte_wp_at[where P="\<top>"])
   apply (auto simp: cte_wp_at_caps_of_state)
   done
-
 
 locale Retype_IF_2 = Retype_IF +
   fixes aag :: "'a subject_label PAS"

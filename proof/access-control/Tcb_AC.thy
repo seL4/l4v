@@ -280,7 +280,6 @@ lemma invoke_tcb_ntfn_control_respects[wp]:
    apply (wp invoke_tcb_bind_notification_respects invoke_tcb_unbind_notification_respects | simp)+
   done
 
-
 locale Tcb_AC =
   fixes aag :: "'a PAS"
   assumes arch_post_modify_registers_invs[wp]:
@@ -330,7 +329,6 @@ lemma invoke_tcb_respects:
        | rule conjI | subst (asm) idle_no_ex_cap)+)
 
 end (* Tcb_AC *)
-
 
 subsubsection\<open>@{term "pas_refined"}\<close>
 
@@ -399,7 +397,6 @@ lemma invoke_tcb_pas_refined:
   done
 
 end (* Tcb_AC *)
-
 
 subsection\<open>TCB / decode\<close>
 

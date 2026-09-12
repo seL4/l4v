@@ -319,7 +319,6 @@ lemma checkInterrupt_ccorres'[ADT_IF_Refine_assms]:
 
 end (* kernel_m *)
 
-
 sublocale kernel_m \<subseteq> ADT_IF_Refine?: ADT_IF_Refine _ _ _ doUserOp_C_if handleHypervisorFault_C_body_if hyp_fault_type_from_H
 proof goal_cases
   interpret Arch .

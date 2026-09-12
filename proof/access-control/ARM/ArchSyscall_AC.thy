@@ -229,7 +229,6 @@ lemma arch_perform_invocation_in_cur_domainE[Syscall_AC_assms, wp]:
 
 end (* Arch *)
 
-
 global_interpretation Syscall_AC?: Syscall_AC
 proof goal_cases
   interpret Arch .
