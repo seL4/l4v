@@ -371,7 +371,7 @@ lemma set_bound_notification_globals_equiv[Finalise_IF_assms]:
 end
 
 
-global_interpretation Finalise_IF_1?: Finalise_IF_1
+global_interpretation Finalise_IF?: Finalise_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case

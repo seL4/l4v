@@ -46,7 +46,7 @@ lemma arch_post_modify_registers_domain_sep_inv[DomainSepInv_assms, wp]:
 end
 
 
-global_interpretation DomainSepInv_1?: DomainSepInv_1
+global_interpretation DomainSepInv?: DomainSepInv
 proof goal_cases
   interpret Arch .
   case 1 show ?case

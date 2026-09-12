@@ -320,7 +320,7 @@ lemma caps_ref_either_an_object_or_irq':
   done
 
 
-locale FinalCaps_1 =
+locale FinalCaps =
   fixes aag :: "'a subject_label PAS"
   (* FIXME IF: precludes X64 *)
   assumes FIXME_arch_gen_refs:
@@ -844,7 +844,7 @@ lemma disj_dup: "A \<and> B \<and> C \<and> C'\<Longrightarrow> A \<and> B \<and
   by simp
 
 
-context FinalCaps_1 begin
+context FinalCaps begin
 
 lemma weak_derived_overlaps':
   "\<lbrakk> weak_derived cap cap'; obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {} \<rbrakk>
@@ -1179,7 +1179,7 @@ crunch cancel_signal
   for silc_inv[wp]: "silc_inv aag st"
 
 
-context FinalCaps_1 begin
+context FinalCaps begin
 
 lemma empty_slot_silc_inv:
   "\<lbrace>silc_inv aag st and K (pasObjectAbs aag (fst slot) \<noteq> SilcLabel)\<rbrace>
@@ -1349,7 +1349,7 @@ lemma silc_inv_preserves_silc_dom_caps:
   done
 
 
-context FinalCaps_1 begin
+context FinalCaps begin
 
 lemma finalise_cap_silc_inv:
   "\<lbrace>silc_inv aag st and valid_mdb and pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace>
@@ -1531,7 +1531,7 @@ lemma silc_inv_irq_state_independent_A[simp, intro!]:
   by (simp add: silc_inv_def irq_state_independent_A_def silc_dom_equiv_def equiv_for_def)
 
 
-context FinalCaps_1 begin
+context FinalCaps begin
 
 crunch cap_swap_for_delete
   for silc_inv: "silc_inv aag st"
@@ -1716,7 +1716,7 @@ crunch cancel_badged_sends
    simp: filterM_mapM)
 
 
-context FinalCaps_1 begin
+context FinalCaps begin
 
 lemma rec_del_silc_inv_CTEDelete_transferable':
   "\<lbrace>silc_inv aag st and pas_refined aag and einvs and simple_sched_action and emptyable slot
@@ -2068,7 +2068,7 @@ lemma send_signal_silc_inv[wp]:
   done
 
 
-context FinalCaps_1 begin
+context FinalCaps begin
 
 lemma slots_holding_overlapping_caps_eq:
   assumes "obj_refs cap = obj_refs cap'"
@@ -2280,7 +2280,7 @@ lemma cap_delete_one_cte_wp_at_other:
   done
 
 
-context FinalCaps_1 begin
+context FinalCaps begin
 
 lemma cap_insert_silc_inv''':
   "\<lbrace>silc_inv aag st and (\<lambda> s. \<not> cap_points_to_label aag cap (pasObjectAbs aag (fst dest))
@@ -2393,7 +2393,7 @@ lemma get_tcb_Some:
   by (simp add: get_tcb_def split: kernel_object.splits option.splits)
 
 
-context FinalCaps_1 begin
+context FinalCaps begin
 
 lemma derive_cap_silc:
   "\<lbrace>\<lambda>s :: det_state. \<not> cap_points_to_label aag cap l \<longrightarrow> R (slots_holding_overlapping_caps cap s)\<rbrace>
@@ -2449,7 +2449,7 @@ lemma do_ipc_transfer_silc_inv:
 end
 
 
-locale FinalCaps_2 = FinalCaps_1 +
+locale FinalCaps_2 = FinalCaps +
   assumes arch_perform_invocation_silc_inv:
     "\<lbrace>silc_inv aag st and invs and valid_arch_inv ai and authorised_arch_inv aag ai\<rbrace>
      arch_perform_invocation ai
@@ -2660,7 +2660,7 @@ lemma setup_reply_master_silc_inv:
   done
 
 
-context FinalCaps_1 begin
+context FinalCaps begin
 
 crunch restart
   for silc_inv: "silc_inv aag st"

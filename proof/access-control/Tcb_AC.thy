@@ -281,7 +281,7 @@ lemma invoke_tcb_ntfn_control_respects[wp]:
   done
 
 
-locale Tcb_AC_1 =
+locale Tcb_AC =
   fixes aag :: "'a PAS"
   assumes arch_post_modify_registers_invs[wp]:
     "arch_post_modify_registers cur t \<lbrace>pas_refined aag\<rbrace>"
@@ -363,7 +363,7 @@ lemma invoke_tcb_ntfn_control_pas_refined[wp]:
    apply (wp | fastforce simp: authorised_tcb_inv_def)+
   done
 
-context Tcb_AC_1 begin
+context Tcb_AC begin
 
 crunch set_flags
   for pas_refined[wp]: "pas_refined aag"

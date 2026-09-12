@@ -40,7 +40,7 @@ crunch cap_move
   (wp: cap_move_ext.valid_global_objs dxo_wp_weak)
 
 
-locale Syscall_IF_1 =
+locale Syscall_IF =
   fixes aag :: "'a subject_label PAS"
   assumes globals_equiv_irq_state_update[simp]:
     "\<And>f. globals_equiv st (s\<lparr>machine_state :=
@@ -318,7 +318,7 @@ lemma invoke_domain_reads_respects_f_g:
   "reads_respects_f_g aag l \<bottom> (invoke_domain di)"
   by (rule ev_pre_cont)
 
-context Syscall_IF_1 begin
+context Syscall_IF begin
 
 lemma invoke_cnode_reads_respects_f_g:
   assumes domains_distinct: "pas_domains_distinct aag"
@@ -571,7 +571,7 @@ lemma ct_active_not_idle:
   by (clarsimp simp: ct_active_cur_thread_not_idle_thread invs_valid_idle)
 
 
-context Syscall_IF_1 begin
+context Syscall_IF begin
 
 lemma decode_invocation_authorised_globals_inv:
   "\<lbrace>invs and domain_sep_inv irqs st and cte_wp_at ((=) cap) slot
@@ -871,7 +871,7 @@ lemma invoke_domain_globals_equiv[wp]:
   "\<lbrace>\<bottom>\<rbrace> invoke_domain di \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   by wpsimp
 
-context Syscall_IF_1 begin
+context Syscall_IF begin
 
 lemma handle_interrupt_globals_equiv:
   "\<lbrace>globals_equiv (st :: det_state) and invs\<rbrace>

@@ -197,7 +197,7 @@ lemma corres_assert':
 
 consts arch_extras :: "kernel_state \<Rightarrow> bool"
 
-locale ADT_IF_Refine_1 =
+locale ADT_IF_Refine =
   fixes doUserOp_if :: "user_transition_if \<Rightarrow> user_context \<Rightarrow> (event option \<times> user_context) kernel"
   assumes arch_tcb_context_set_tcb_relation:
     "tcb_relation tcb tcb'
@@ -808,7 +808,7 @@ lemma kernelEntry_if_no_preempt:
   by (wp | clarsimp intro!: validE_cases_valid)+
 
 
-context ADT_IF_Refine_1 begin
+context ADT_IF_Refine begin
 
 definition doUserOp_H_if where
   "doUserOp_H_if uop \<equiv> {(s,e,(tc,s'))| s e tc s'. ((e,tc),s') \<in> fst (split (doUserOp_if uop) s)}"
@@ -1180,7 +1180,7 @@ lemma sched_act_cnt_related:
    \<Longrightarrow> scheduler_action a = choose_new_thread"
   by (case_tac "scheduler_action a", simp_all add: state_relation_def)
 
-context ADT_IF_Refine_1 begin
+context ADT_IF_Refine begin
 
 lemma kernel_exit_if_corres:
   "corres (=) (invs) (invs') (kernel_exit_if tc) (kernelExit_if tc)"
@@ -1317,7 +1317,7 @@ lemma (in valid_initial_state_noenabled) uop_sane:
   apply blast
   done
 
-locale ADT_valid_initial_state_noenabled = ADT_IF_Refine_1 + valid_initial_state_noenabled
+locale ADT_valid_initial_state_noenabled = ADT_IF_Refine + valid_initial_state_noenabled
 
 sublocale ADT_valid_initial_state_noenabled \<subseteq> valid_initial_state
   using ADT_A_if_enabled[of utf s0, OF uop_sane] ADT_A_if_Init_Fin_serial[OF uop_sane, of s0]

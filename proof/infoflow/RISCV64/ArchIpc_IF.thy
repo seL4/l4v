@@ -282,7 +282,7 @@ lemma transfer_caps_loop_valid_arch[Ipc_IF_assms]:
 end
 
 
-global_interpretation Ipc_IF_1?: Ipc_IF_1
+global_interpretation Ipc_IF?: Ipc_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case

@@ -317,7 +317,7 @@ lemma domain_sep_inv_refl:
   by (fastforce simp: domain_sep_inv_def)
 
 
-locale CNode_IF_1 =
+locale CNode_IF =
   fixes state_ext_t :: "'s :: state_ext itself"
   and irq_at :: "nat \<Rightarrow> (irq \<Rightarrow> bool) \<Rightarrow> irq option"
   assumes set_cap_globals_equiv:
@@ -376,7 +376,7 @@ definition only_timer_irq :: "irq \<Rightarrow> 'z::state_ext state \<Rightarrow
 end
 
 
-locale CNode_IF_2 = CNode_IF_1 state_ext_t
+locale CNode_IF_2 = CNode_IF state_ext_t
   for state_ext_t :: "'s :: state_ext itself"
   and f :: "('s state, 'a) nondet_monad" +
   assumes is_irq_at_triv:

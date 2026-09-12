@@ -151,7 +151,7 @@ lemma receive_signal_integrity_autarch:
 
 subsubsection\<open>Non-autarchy: the sender is running\<close>
 
-locale Ipc_AC_1 =
+locale Ipc_AC =
   fixes aag :: "'a PAS"
   assumes arch_derive_cap_auth_derived:
     "\<lbrace>\<top>\<rbrace>
@@ -369,7 +369,7 @@ lemma integrity_receive_blocked_chain_bound:
   done
 
 
-context Ipc_AC_1 begin
+context Ipc_AC begin
 
 lemma cancel_ipc_receive_blocked_respects:
   "\<lbrace>integrity aag X st and pas_refined aag and st_tcb_at (receive_blocked) t and
@@ -685,7 +685,7 @@ lemma auth_derived_refl[simp]:
 crunch set_extra_badge
   for valid_arch_state[wp]: valid_arch_state
 
-context Ipc_AC_1 begin
+context Ipc_AC begin
 
 lemma derive_cap_auth_derived:
   "\<lbrace>\<top>\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s :: det_state. rv \<noteq> NullCap \<longrightarrow> auth_derived rv cap\<rbrace>, -"
@@ -892,7 +892,7 @@ lemma hoare_conjDR2:
   by (simp add:validE_def validE_R_def valid_def) blast
 
 
-context Ipc_AC_1 begin
+context Ipc_AC begin
 
 crunch do_fault_transfer
   for pas_refined[wp]: "\<lambda>s :: det_state. pas_refined aag s"
@@ -1019,7 +1019,7 @@ lemma send_ipc_valid_ep_helper:
 lemmas head_in_set = list.set_intros(1)[of h t for h t]
 
 
-context Ipc_AC_1 begin
+context Ipc_AC begin
 
 lemma send_ipc_pas_refined:
   "\<lbrace>pas_refined aag and invs and
@@ -1165,7 +1165,7 @@ lemma complete_signal_pas_refined:
   done
 
 
-context Ipc_AC_1 begin
+context Ipc_AC begin
 
 lemma receive_ipc_base_pas_refined:
   "\<lbrace>pas_refined aag and invs and ko_at (Endpoint ep) epptr and
@@ -1302,7 +1302,7 @@ lemma get_mi_length:
   done
 
 
-context Ipc_AC_1 begin
+context Ipc_AC begin
 
 lemma set_extra_badge_integrity_autarch:
   "\<lbrace>\<lambda>s. integrity aag X st s \<and> is_subject aag thread \<and> ipc_buffer_has_auth aag thread (Some buf)
@@ -1476,7 +1476,7 @@ abbreviation sender_can_call :: "sender_payload \<Rightarrow> bool" where
   "sender_can_call pl \<equiv> sender_can_grant pl \<or> sender_can_grant_reply pl"
 
 
-context Ipc_AC_1 begin
+context Ipc_AC begin
 
 crunch do_ipc_transfer
   for pred_tcb: "\<lambda>s :: det_state. pred_tcb_at proj P t s"
@@ -1667,7 +1667,7 @@ lemma tcb_in_ipc_kheap_comms:
         ready_queues_update (\<lambda>_. g) (kheap_update (\<lambda>_. f) s)"
   by auto
 
-context Ipc_AC_1 begin
+context Ipc_AC begin
 
 lemma update_tcb_context_in_fault_reply:
   "\<lbrakk> integrity_tcb_in_fault_reply aag X thread TRFContext st s; get_tcb thread s = Some tcb;
@@ -1724,7 +1724,7 @@ lemma as_user_tcb_in_fault_reply:
 end
 
 
-locale Ipc_AC_2 = Ipc_AC_1 +
+locale Ipc_AC_2 = Ipc_AC +
   assumes store_word_offs_respects_in_ipc:
     "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and
       K ((\<not> is_subject aag receiver \<longrightarrow> auth_ipc_buffers st receiver = ptr_range buf msg_align_bits)

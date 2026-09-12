@@ -184,7 +184,7 @@ arch_requalify_consts
   identical_fpu_state_updates
 
 
-global_interpretation InfoFlow_IF_1?: InfoFlow_IF_1 identical_hyp_state_updates identical_fpu_state_updates
+global_interpretation InfoFlow_IF?: InfoFlow_IF identical_hyp_state_updates identical_fpu_state_updates
 proof goal_cases
   interpret Arch .
   case 1 show ?case

@@ -165,7 +165,7 @@ lemma decode_set_sched_params_rev:
   done
 
 
-locale Decode_IF_1 =
+locale Decode_IF =
   fixes aag :: "'a subject_label PAS"
   assumes data_to_obj_type_rev:
     "reads_equiv_valid_inv A aag \<top> (data_to_obj_type type)"
@@ -333,7 +333,7 @@ lemma decode_domain_invocation_reads_respects_f:
   "reads_respects_f aag l \<bottom> (decode_domain_invocation label args excaps)"
   by (rule ev_pre_cont)
 
-locale Decode_IF_2 = Decode_IF_1 +
+locale Decode_IF_2 = Decode_IF +
   assumes arch_decode_invocation_reads_respects_f:
     "reads_respects_f aag l
        (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot

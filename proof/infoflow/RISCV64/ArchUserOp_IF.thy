@@ -105,7 +105,7 @@ end
 
 requalify_types RISCV64.user_transition_if
 
-global_interpretation UserOp_IF_1?: UserOp_IF_1
+global_interpretation UserOp_IF?: UserOp_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case

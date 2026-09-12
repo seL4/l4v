@@ -63,7 +63,7 @@ requalify_facts check_valid_ipc_buffer_inv
 end
 
 
-global_interpretation Decode_IF_1?: Decode_IF_1
+global_interpretation Decode_IF?: Decode_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case

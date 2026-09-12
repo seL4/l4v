@@ -414,7 +414,7 @@ crunch cancel_badged_sends
   (wp: crunch_wps simp: filterM_mapM)
 
 
-locale Arch_IF_1 =
+locale Arch_IF =
   fixes aag :: "'a PAS"
   assumes arch_post_cap_deletion_valid_global_refs:
     "arch_post_cap_deletion acap \<lbrace>\<lambda>s :: det_state. valid_global_refs s\<rbrace>"

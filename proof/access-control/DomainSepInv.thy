@@ -307,7 +307,7 @@ lemma set_irq_state_domain_sep_inv:
   done
 
 
-locale DomainSepInv_1 =
+locale DomainSepInv =
   fixes state_ext_t :: "'state_ext :: state_ext itself"
   assumes arch_finalise_cap_domain_sep_inv[wp]:
     "arch_finalise_cap c x \<lbrace>\<lambda>s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_state)\<rbrace>"
@@ -463,7 +463,7 @@ lemma preemption_point_domain_sep_inv[wp]:
   by (wp preemption_point_inv | simp)+
 
 
-context DomainSepInv_1 begin
+context DomainSepInv begin
 
 crunch cap_delete_one
   for domain_sep_inv[wp]: "\<lambda>s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_state)"
@@ -667,7 +667,7 @@ crunch delete_objects
   (wp: domain_sep_inv_detype_lift)
 
 
-context DomainSepInv_1 begin
+context DomainSepInv begin
 
 crunch finalise_slot, invoke_untyped, send_signal
   for domain_sep_inv[wp]: "\<lambda>s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_state)"
@@ -783,7 +783,7 @@ lemma transfer_caps_domain_sep_inv:
   done
 
 
-context DomainSepInv_1 begin
+context DomainSepInv begin
 
 lemma do_normal_transfer_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and valid_objs and valid_mdb\<rbrace>
@@ -894,7 +894,7 @@ crunch bind_notification, set_mcpriority, set_priority
   for domain_sep_inv[wp]: "domain_sep_inv irqs st"
   (ignore: thread_set)
 
-context DomainSepInv_1 begin
+context DomainSepInv begin
 
 crunch invoke_domain, set_flags
   for domain_sep_inv[wp]: "domain_sep_inv irqs (st :: 'state_ext state) :: det_state \<Rightarrow> _"
@@ -925,7 +925,7 @@ lemma invoke_tcb_domain_sep_inv:
 end
 
 
-locale DomainSepInv_2 = DomainSepInv_1 state_ext_t
+locale DomainSepInv_2 = DomainSepInv state_ext_t
   for state_ext_t :: "'state_ext :: state_ext itself" +
   assumes arch_perform_invocation_domain_sep_inv[wp]:
     "\<lbrace>domain_sep_inv irqs st and valid_arch_inv ai\<rbrace>

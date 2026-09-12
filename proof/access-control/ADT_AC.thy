@@ -11,7 +11,7 @@ begin
 arch_requalify_consts
   ptable_exec
 
-locale ADT_AC_1 =
+locale ADT_AC =
   fixes aag :: "'a PAS"
   assumes user_op_access:
     "\<lbrakk> invs s; pas_refined aag s; is_subject aag tcb;

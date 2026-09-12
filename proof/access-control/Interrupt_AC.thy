@@ -27,7 +27,7 @@ lemma pas_refined_is_subject_irqD:
   by (simp add:pas_refined_def irq_map_wellformed_aux_def)
 
 
-locale Interrupt_AC_1 =
+locale Interrupt_AC =
   fixes arch_authorised_irq_ctl_inv :: "'a PAS \<Rightarrow> arch_irq_control_invocation \<Rightarrow> bool"
   assumes arch_invoke_irq_control_pas_refined:
     "\<lbrace>pas_refined (aag :: 'a PAS) and valid_mdb and arch_irq_control_inv_valid irq_ctl_inv
@@ -135,7 +135,7 @@ lemma decode_irq_handler_invocation_authorised [wp]:
   done
 
 
-locale Interrupt_AC_2 = Interrupt_AC_1 +
+locale Interrupt_AC_2 = Interrupt_AC +
   assumes arch_decode_irq_control_invocation_authorised:
     "\<lbrace>pas_refined aag and
       K (is_subject aag (fst slot) \<and> (\<forall>cap \<in> set caps. pas_cap_cur_auth aag cap) \<and>

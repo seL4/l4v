@@ -105,7 +105,7 @@ lemma map_add_eq:
   by (clarsimp simp: map_add_def split: option.splits)
 
 
-locale UserOp_IF_1 =
+locale UserOp_IF =
   assumes arch_globals_equiv_underlying_memory_update[simp]:
     "\<And>f. arch_globals_equiv ct it kh kh' as as' (underlying_memory_update f ms) ms' =
           arch_globals_equiv ct it kh kh' as as' ms ms'"

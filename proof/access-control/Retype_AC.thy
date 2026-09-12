@@ -166,7 +166,7 @@ locale retype_region_proofs' = retype_region_proofs +
   constrains s :: "det_state"
   and s' :: "det_state"
 
-locale Retype_AC_1 =
+locale Retype_AC =
   fixes aag :: "'a PAS"
   assumes state_vrefs_detype[simp]:
     "x \<in> state_vrefs (detype R s) p \<Longrightarrow> x \<in> state_vrefs s p"
@@ -495,7 +495,7 @@ lemma use_retype_region_proofs':
 lemmas use_retype_region_proofs =
   use_retype_region_proofs'[where Q="\<lambda>_. Q" and P=Q, simplified] for Q
 
-context Retype_AC_1 begin
+context Retype_AC begin
 
 lemma retype_region_pas_refined:
   "\<lbrace>pas_refined aag and invs and pas_cur_domain aag and
@@ -639,7 +639,7 @@ lemma range_cover_subset'':
   done
 
 
-context Retype_AC_1 begin
+context Retype_AC begin
 
 lemma delete_objects_descendants_range_in':
   "\<lbrace>invs and (\<lambda>s :: det_state. \<exists>idx. cte_wp_at ((=) (UntypedCap dev word2 sz idx)) slot s)
@@ -841,7 +841,7 @@ lemma retype_region_post_retype_invs_spec:
   done
 
 
-context Retype_AC_1 begin
+context Retype_AC begin
 
 lemma retype_region_pas_refined':
   "\<lbrace>pas_refined aag and pas_cur_domain aag and invs and
@@ -1068,7 +1068,7 @@ lemma authorised_untyped_invI:
   done
 
 
-context Retype_AC_1 begin
+context Retype_AC begin
 
 lemma data_to_obj_type_ret_not_asid_pool:
   "\<lbrace>\<top>\<rbrace> data_to_obj_type v \<lbrace>\<lambda>r s. r \<noteq> ArchObject ASIDPoolObj\<rbrace>, -"

@@ -125,7 +125,7 @@ lemma dmo_mapM_x_ev:
   shows "equiv_valid_inv D A I (do_machine_op (mapM_x m lst))"
   using assms by (auto intro: dmo_mapM_x_ev_pre)
 
-locale Retype_IF_1 =
+locale Retype_IF =
   assumes clearMemory_ev:
     "equiv_valid_inv (equiv_machine_state P) (equiv_machine_state Q) \<top> (clearMemory ptr bits)"
   assumes freeMemory_ev:
@@ -374,7 +374,7 @@ lemma machine_state_detype:
   by (auto simp: detype_def)
 
 
-context Retype_IF_1 begin
+context Retype_IF begin
 
 lemma retype_region_reads_respects_g:
   "reads_respects_g aag l
@@ -537,7 +537,7 @@ lemma reads_equiv_caps_of_state:
   done
 
 
-locale Retype_IF_2 = Retype_IF_1 +
+locale Retype_IF_2 = Retype_IF +
   fixes aag :: "'a subject_label PAS"
   assumes invoke_untyped_reads_respects_g_wcap:
     "reads_respects_g aag l (invs and valid_untyped_inv_wcap ui (Some (UntypedCap dev ptr sz idx))

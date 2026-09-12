@@ -13,7 +13,7 @@ crunch cap_delete_one
   (wp: dxo_wp_weak simp: unless_def ignore: empty_slot_ext)
 
 
-locale Interrupt_IF_1 =
+locale Interrupt_IF =
   fixes aag :: "'a subject_label PAS"
   assumes arch_invoke_irq_handler_reads_respects[wp]:
     "reads_respects_f aag (l :: 'a subject_label) (silc_inv aag st) (arch_invoke_irq_handler hi)"

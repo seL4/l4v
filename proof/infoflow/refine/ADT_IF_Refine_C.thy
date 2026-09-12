@@ -109,7 +109,7 @@ definition
 end
 
 
-locale ADT_IF_Refine_1 = kernel_m +
+locale ADT_IF_Refine = kernel_m +
   fixes doUserOp_C_if ::
     "user_transition_if \<Rightarrow> user_context \<Rightarrow> (cstate, (event option \<times> user_context)) nondet_monad"
   and handleHypervisorFault_C_body_if :: "machine_word \<Rightarrow> (globals myvars, int, strictc_errortype) com"
@@ -624,7 +624,7 @@ lemma absKState_crelation:
 end
 
 
-context ADT_IF_Refine_1 begin
+context ADT_IF_Refine begin
 
 definition do_user_op_C_if where
   "do_user_op_C_if uop \<equiv> {(s,e,(tc,s'))| s e tc s'. ((e,tc),s') \<in> fst (split (doUserOp_C_if uop) s)}"

@@ -145,7 +145,7 @@ lemma is_subject_asid_into_loas:
   by (clarsimp simp: pas_refined_refl)
 
 
-locale Arch_AC_1 =
+locale Arch_AC =
   fixes aag :: "'a PAS"
   assumes set_mrs_state_vrefs[wp]:
     "\<And>P. set_mrs thread buf msgs \<lbrace>\<lambda>s :: det_state. P (state_vrefs s)\<rbrace>"
@@ -237,7 +237,7 @@ lemma set_mrs_integrity_autarch:
 
 end
 
-locale Arch_AC_2 = Arch_AC_1 +
+locale Arch_AC_2 = Arch_AC +
   fixes authorised_arch_inv :: "'a PAS \<Rightarrow> arch_invocation \<Rightarrow> det_state \<Rightarrow> bool"
   assumes invoke_arch_respects:
     "\<lbrace>integrity aag X st and authorised_arch_inv aag ai and pas_refined aag and invs

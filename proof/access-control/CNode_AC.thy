@@ -43,7 +43,7 @@ crunch set_untyped_cap_as_full
   for integrity_autarch: "integrity aag X st"
 
 
-locale CNode_AC_1 =
+locale CNode_AC =
   fixes aag :: "'a PAS"
   and val_t :: "'b"
   assumes sata_cdt_update[simp]:
@@ -293,7 +293,7 @@ lemma sita_caps_update2:
                  simp: cap_links_irq_def split: if_splits)
 
 
-context CNode_AC_1 begin
+context CNode_AC begin
 
 lemma set_cap_pas_refined:
   "\<lbrace>pas_refined aag and
@@ -334,7 +334,7 @@ lemma parent_ofI[intro!]: "m x = Some src \<Longrightarrow> m \<Turnstile> src \
 declare set_original_wp[wp del]
 
 
-context CNode_AC_1 begin
+context CNode_AC begin
 
 lemma cap_move_respects[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag
@@ -393,7 +393,7 @@ named_theorems wp_transferable
 named_theorems wp_not_transferable
 
 
-context CNode_AC_1 begin
+context CNode_AC begin
 
 crunch deleted_irq_handler
   for respects[wp]: "integrity aag X st"
@@ -462,7 +462,7 @@ crunch set_cdt_list, update_cdt_list
   and thread_bound_ntfns[wp]: "\<lambda>s. P (thread_bound_ntfns s)"
 
 
-locale CNode_AC_2 = CNode_AC_1 +
+locale CNode_AC_2 = CNode_AC +
   assumes integrity_asids_set_cap_Nullcap:
     "\<lbrace>(=) st\<rbrace> set_cap NullCap slot \<lbrace>\<lambda>_. integrity_asids aag subjects x a (st :: det_state)\<rbrace>"
   assumes integrity_hyp_set_cap_Nullcap:

@@ -103,7 +103,7 @@ next
                      in hoare_vcg_conj_lift)
          apply (wp finalise_cap_invs[where slot=slot]
                    finalise_cap_replaceable[where sl=slot]
-                   Finalise_AC_1.finalise_cap_makes_halted[where slot=slot]
+                   Finalise_AC.finalise_cap_makes_halted[where slot=slot]
                    finalise_cap_P)[1]
         apply (rule finalise_cap_cases[where slot=slot])
        apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -176,7 +176,7 @@ lemma rec_del_preservation2:
   done
 
 
-locale Tcb_IF_1 =
+locale Tcb_IF =
   fixes aag :: "'a subject_label PAS"
   assumes valid_arch_caps_vs_lookup:
     "valid_arch_caps s \<Longrightarrow> valid_vs_lookup s"
@@ -273,7 +273,7 @@ definition authorised_tcb_inv_extra where
     (case ti of ThreadControl _ slot _ _ _ _ _ _ \<Rightarrow> is_subject aag (fst slot) | _ \<Rightarrow> True)"
 
 
-locale Tcb_IF_2 = Tcb_IF_1 +
+locale Tcb_IF_2 = Tcb_IF +
   assumes invoke_tcb_thread_preservation:
     "\<lbrakk> \<And>slot. \<lbrace>invs and P and emptyable slot\<rbrace> cap_delete slot \<lbrace>\<lambda>_.P\<rbrace>;
        \<And>new_cap src dest. \<lbrace>invs and P\<rbrace> cap_insert new_cap src dest \<lbrace>\<lambda>_.P\<rbrace>;
