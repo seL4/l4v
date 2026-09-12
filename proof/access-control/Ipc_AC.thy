@@ -1334,19 +1334,17 @@ lemma transfer_caps_integrity_autarch:
   done
 
 lemma do_normal_transfer_send_integrity_autarch:
-  notes lec_valid_cap[wp del]
-  shows
   "\<lbrace>pas_refined aag and integrity aag X st and valid_objs and valid_mdb and
     K (is_subject aag receiver \<and> ipc_buffer_has_auth aag receiver rbuf
                                \<and> (grant \<longrightarrow> is_subject aag sender))\<rbrace>
    do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   unfolding do_normal_transfer_def
+  supply lec_valid_cap[wp del]
   by (wpsimp wp: as_user_integrity_autarch set_message_info_integrity_autarch
                  copy_mrs_pas_refined copy_mrs_integrity_autarch transfer_caps_integrity_autarch
                  lookup_extra_caps_authorised lookup_extra_caps_length get_mi_length get_mi_valid'
                  hoare_weak_lift_imp hoare_vcg_conj_lift hoare_vcg_ball_lift lec_valid_cap')
-
 
 crunch setup_caller_cap
   for integrity_autarch: "integrity aag X st"
@@ -1485,12 +1483,12 @@ crunch do_ipc_transfer
   (wp: crunch_wps transfer_caps_loop_pres make_fault_message_inv simp: zipWithM_x_mapM)
 
 lemma receive_ipc_base_integrity:
-  notes do_nbrecv_failed_transfer_def[simp]
-  shows "\<lbrace>pas_refined aag and integrity aag X st and invs and ko_at (Endpoint ep) epptr and
-          K (is_subject aag receiver \<and> aag_has_auth_to aag Receive epptr \<and>
-             (\<forall>auth \<in> cap_rights_to_auth rights True. aag_has_auth_to aag auth epptr))\<rbrace>
-         receive_ipc_base aag receiver ep epptr rights is_blocking
-         \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  "\<lbrace>pas_refined aag and integrity aag X st and invs and ko_at (Endpoint ep) epptr and
+    K (is_subject aag receiver \<and> aag_has_auth_to aag Receive epptr \<and>
+       (\<forall>auth \<in> cap_rights_to_auth rights True. aag_has_auth_to aag auth epptr))\<rbrace>
+   receive_ipc_base aag receiver ep epptr rights is_blocking
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  supply do_nbrecv_failed_transfer_def[simp]
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: thread_get_def get_thread_state_def cong: endpoint.case_cong)
   apply (rule hoare_pre)
@@ -2066,8 +2064,6 @@ lemma copy_mrs_respects_in_ipc:
   done
 
 lemma do_normal_transfer_respects_in_ipc:
-  notes lec_valid_cap[wp del]
-  shows
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and pas_refined aag and
     valid_objs and valid_mdb and st_tcb_at can_receive_ipc receiver and
     (\<lambda>s. grant \<longrightarrow> is_subject aag sender \<and> is_subject aag receiver) and
@@ -2077,6 +2073,7 @@ lemma do_normal_transfer_respects_in_ipc:
        (case recv_buf of None \<Rightarrow> True | Some buf' \<Rightarrow> is_aligned buf' msg_align_bits))\<rbrace>
    do_normal_transfer sender sbuf epopt badge grant receiver recv_buf
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
+  supply lec_valid_cap[wp del]
   apply (simp add: do_normal_transfer_def)
   apply (wpsimp wp: as_user_tcb_in_ipc set_message_info_respects_in_ipc copy_mrs_pas_refined
                     copy_mrs_respects_in_ipc transfer_caps_respects_in_ipc get_mi_length
@@ -2543,10 +2540,10 @@ lemma fast_finalise_reply_respects_in_ipc_autarch:
   by (rule hoare_gen_asm) (fastforce simp: is_cap_simps)
 
 lemma empty_slot_list_integrity':
-  notes split_paired_All[simp del]
-  shows "\<lbrace>list_integ P st and (\<lambda>s . cdt_list s slot = []) and K (P slot)\<rbrace>
-         empty_slot_ext slot slot_p
-         \<lbrace>\<lambda>_. list_integ P st\<rbrace>"
+  "\<lbrace>list_integ P st and (\<lambda>s . cdt_list s slot = []) and K (P slot)\<rbrace>
+   empty_slot_ext slot slot_p
+   \<lbrace>\<lambda>_. list_integ P st\<rbrace>"
+  supply split_paired_All[simp del]
   apply (simp add: empty_slot_ext_def split del: if_split)
   apply (wp update_cdt_list_wp)
   apply (fastforce simp: list_filter_replace_list list_integ_def split: option.splits)
