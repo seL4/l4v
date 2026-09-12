@@ -101,79 +101,79 @@ locale Ipc_IF_1 =
   assumes lookup_ipc_buffer_reads_respects:
     "reads_respects aag l (K (aag_can_read aag thread \<or> aag_can_affect aag l thread))
                           (lookup_ipc_buffer is_receiver thread)"
-  and as_user_equiv_but_for_labels:
+  assumes as_user_equiv_but_for_labels:
     "\<lbrace>equiv_but_for_labels aag L st and K (pasObjectAbs aag thread \<in> L)\<rbrace>
      as_user thread (f :: unit user_monad)
      \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
-  and storeWord_equiv_but_for_labels:
+  assumes storeWord_equiv_but_for_labels:
     "\<lbrace>\<lambda>ms. equiv_but_for_labels aag L st (s\<lparr>machine_state := ms\<rparr>) \<and>
            for_each_byte_of_word (\<lambda>x. pasObjectAbs aag x \<in> L) p\<rbrace>
      storeWord p v
      \<lbrace>\<lambda>_ ms. equiv_but_for_labels aag L st (s\<lparr>machine_state := ms\<rparr>)\<rbrace>"
-  and set_thread_state_runnable_equiv_but_for_labels:
+  assumes set_thread_state_runnable_equiv_but_for_labels:
     "runnable tst
      \<Longrightarrow> \<lbrace>equiv_but_for_labels aag L st and K (pasObjectAbs aag thread \<in> L)\<rbrace>
          set_thread_state thread tst
          \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
-  and set_endpoint_equiv_but_for_labels:
+  assumes set_endpoint_equiv_but_for_labels:
     "\<lbrace>equiv_but_for_labels aag L st and K (pasObjectAbs aag epptr \<in> L)\<rbrace>
      set_endpoint epptr ep
      \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
-  and lookup_ipc_buffer_has_read_auth:
+  assumes lookup_ipc_buffer_has_read_auth:
     "\<lbrace>pas_refined aag and valid_objs\<rbrace>
      lookup_ipc_buffer is_receiver thread
      \<lbrace>\<lambda>rv _. ipc_buffer_has_read_auth aag (pasObjectAbs aag thread) rv\<rbrace>"
-  and dmo_loadWord_reads_respects:
+  assumes dmo_loadWord_reads_respects:
     "reads_respects aag l (K (for_each_byte_of_word (\<lambda> x. aag_can_read_or_affect aag l x) p))
                           (do_machine_op (loadWord p))"
-  and arch_derive_cap_reads_respects:
+  assumes arch_derive_cap_reads_respects:
     "reads_respects aag l \<top> (arch_derive_cap acap)"
-  and arch_derive_cap_rev:
+  assumes arch_derive_cap_rev:
     "reads_equiv_valid_inv A aag \<top> (arch_derive_cap acap)"
-  and cptrs_in_ipc_buffer:
+  assumes cptrs_in_ipc_buffer:
     "\<lbrakk> n \<in> set [buffer_cptr_index ..< buffer_cptr_index + unat (mi_extra_caps mi)];
        is_aligned p msg_align_bits;
        buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
      \<Longrightarrow> ptr_range (p + of_nat n * of_nat word_size) word_size_bits \<subseteq> ptr_range p msg_align_bits"
-  and msg_in_ipc_buffer:
+  assumes msg_in_ipc_buffer:
     "\<lbrakk> n = msg_max_length \<or> n < msg_max_length; is_aligned p msg_align_bits;
        unat (mi_length mi) < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
      \<Longrightarrow> ptr_range (p + of_nat n * of_nat word_size) word_size_bits \<subseteq> ptr_range p msg_align_bits"
-  and captransfer_in_ipc_buffer:
+  assumes captransfer_in_ipc_buffer:
     "\<lbrakk> is_aligned (buf :: obj_ref) msg_align_bits; p \<in> {0..2} \<rbrakk>
      \<Longrightarrow> ptr_range (buf + (2 + (of_nat msg_max_length + of_nat msg_max_extra_caps))
                         * word_size + p * word_size) word_size_bits
            \<subseteq> ptr_range buf msg_align_bits"
-  and mrs_in_ipc_buffer:
+  assumes mrs_in_ipc_buffer:
     "\<lbrakk> n \<in> set [length msg_registers + 1 ..< Suc n'];
        is_aligned buf msg_align_bits; n' < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
      \<Longrightarrow> ptr_range (buf + of_nat n * of_nat word_size) word_size_bits
            \<subseteq> ptr_range buf msg_align_bits"
-  and complete_signal_reads_respects:
+  assumes complete_signal_reads_respects:
     "pas_domains_distinct aag
      \<Longrightarrow> reads_respects aag l (K (aag_can_read aag nptr \<or> aag_can_affect aag l nptr))
                         (complete_signal nptr receiver)"
-  and handle_arch_fault_reply_reads_respects:
+  assumes handle_arch_fault_reply_reads_respects:
     "reads_respects aag l (K (aag_can_read aag thread)) (handle_arch_fault_reply afault thread x y)"
-  and arch_get_sanitise_register_info_reads_respects[wp]:
+  assumes arch_get_sanitise_register_info_reads_respects[wp]:
     "reads_respects aag l (K (aag_can_read_or_affect aag l t)) (arch_get_sanitise_register_info t)"
-  and arch_get_sanitise_register_info_valid_global_objs[wp]:
+  assumes arch_get_sanitise_register_info_valid_global_objs[wp]:
     "arch_get_sanitise_register_info t \<lbrace>\<lambda>s :: det_state. valid_global_objs s\<rbrace>"
-  and handle_arch_fault_reply_valid_global_objs[wp]:
+  assumes handle_arch_fault_reply_valid_global_objs[wp]:
     "handle_arch_fault_reply vmf thread x y \<lbrace>\<lambda>s :: det_state. valid_global_objs s\<rbrace>"
-  and lookup_ipc_buffer_ptr_range':
+  assumes lookup_ipc_buffer_ptr_range':
     "\<lbrace>valid_objs\<rbrace>
      lookup_ipc_buffer True t
      \<lbrace>\<lambda>rv s :: det_state. rv = Some buf' \<longrightarrow> auth_ipc_buffers s t = ptr_range buf' msg_align_bits\<rbrace>"
-  and lookup_ipc_buffer_aligned':
+  assumes lookup_ipc_buffer_aligned':
     "\<lbrace>valid_objs\<rbrace>
      lookup_ipc_buffer True t
      \<lbrace>\<lambda>rv s :: det_state. rv = Some buf' \<longrightarrow> is_aligned buf' msg_align_bits\<rbrace>"
-  and handle_arch_fault_reply_globals_equiv:
+  assumes handle_arch_fault_reply_globals_equiv:
     "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
      handle_arch_fault_reply vmf thread x y
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  and handle_arch_fault_reply_valid_arch_state[wp]:
+  assumes handle_arch_fault_reply_valid_arch_state[wp]:
     "handle_arch_fault_reply vmf thread x y \<lbrace>\<lambda>s :: det_state. valid_arch_state s\<rbrace>"
   (* FIXME IF: This assumption precludes X64 (its valid_arch_state includes caps) *)
   and transfer_caps_loop_valid_arch[wp]:
@@ -1260,9 +1260,9 @@ locale Ipc_IF_2 = Ipc_IF_1 +
                                   aag_can_read_or_affect_ipc_buffer aag l sbuf \<and>
                                   unat w < 2 ^ (msg_align_bits - word_size_bits)))
                         (copy_mrs sender sbuf receiver rbuf w)"
-  and get_message_info_reads_respects:
+  assumes get_message_info_reads_respects:
     "reads_respects aag l (K (aag_can_read_or_affect aag l ptr)) (get_message_info ptr)"
-  and do_normal_transfer_reads_respects:
+  assumes do_normal_transfer_reads_respects:
     "pas_domains_distinct aag
      \<Longrightarrow> reads_respects aag l (pas_refined aag and valid_mdb and valid_objs and
                                K (aag_can_read_or_affect aag l sender \<and>
@@ -1270,9 +1270,9 @@ locale Ipc_IF_2 = Ipc_IF_1 +
                                   ipc_buffer_has_read_auth aag (pasObjectAbs aag receiver) rbuf \<and>
                                   (grant \<longrightarrow> (is_subject aag sender \<and> is_subject aag receiver))))
                         (do_normal_transfer sender sbuf endpoint badge grant receiver rbuf)"
-  and make_arch_fault_msg_reads_respects:
+  assumes make_arch_fault_msg_reads_respects:
     "reads_respects aag l (\<lambda>y. aag_can_read_or_affect aag l sender) (make_arch_fault_msg x4 sender)"
-  and set_mrs_equiv_but_for_labels:
+  assumes set_mrs_equiv_but_for_labels:
     "\<lbrace>equiv_but_for_labels aag L st and
       K (pasObjectAbs aag thread \<in> L \<and>
          (case buf of (Some buf') \<Rightarrow> is_aligned buf' msg_align_bits \<and>
@@ -1280,7 +1280,7 @@ locale Ipc_IF_2 = Ipc_IF_1 +
                               | _ \<Rightarrow> True))\<rbrace>
      set_mrs thread buf msgs
      \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
-  and set_mrs_reads_respects':
+  assumes set_mrs_reads_respects':
     "pas_domains_distinct aag
      \<Longrightarrow> reads_respects aag l (K (ipc_buffer_has_auth aag thread buf \<and>
                                   (case buf of (Some buf') \<Rightarrow> is_aligned buf' msg_align_bits

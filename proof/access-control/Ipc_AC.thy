@@ -157,23 +157,23 @@ locale Ipc_AC_1 =
     "\<lbrace>\<top>\<rbrace>
      arch_derive_cap acap
      \<lbrace>\<lambda>rv _ :: det_state. rv \<noteq> NullCap \<longrightarrow> auth_derived rv (ArchObjectCap acap)\<rbrace>, -"
-  and lookup_ipc_buffer_has_auth[wp]:
+  assumes lookup_ipc_buffer_has_auth[wp]:
     "\<lbrace>pas_refined aag and valid_objs\<rbrace>
      lookup_ipc_buffer True receiver
      \<lbrace>\<lambda>rv _. ipc_buffer_has_auth aag receiver rv\<rbrace>"
-  and make_fault_message_inv[wp]:
+  assumes make_fault_message_inv[wp]:
     "\<And>P. make_fault_msg ft t \<lbrace>\<lambda>s :: det_state. P s\<rbrace>"
-  and arch_tcb_get_set_registers[simp]:
+  assumes arch_tcb_get_set_registers[simp]:
     "arch_tcb_get_registers (arch_tcb_set_registers regs atcb) = regs"
-  and arch_tcb_set_get_registers[simp]:
+  assumes arch_tcb_set_get_registers[simp]:
     "arch_tcb_set_registers (arch_tcb_get_registers atcb) atcb = atcb"
-  and arch_tcb_set_set_registers[simp]:
+  assumes arch_tcb_set_set_registers[simp]:
     "arch_tcb_set_registers regs (arch_tcb_set_registers regs' atcb) =
      arch_tcb_set_registers regs atcb"
-  and arch_tcb_context_set_set_registers[simp]:
+  assumes arch_tcb_context_set_set_registers[simp]:
     "arch_tcb_context_set (arch_tcb_context_get (arch_tcb_set_registers regs atcb)) atcb =
      arch_tcb_set_registers regs atcb"
-  and arch_tcb_setRegister:
+  assumes arch_tcb_setRegister:
     "((), uc) \<in> fst (setRegister r v (arch_tcb_context_get atcb))
      \<Longrightarrow> uc = arch_tcb_context_get (arch_tcb_set_registers ((arch_tcb_get_registers atcb)(r := v)) atcb)"
 begin
@@ -978,8 +978,8 @@ lemma setup_caller_cap_pas_refined:
 (* FIXME: MOVE *)
 lemma sym_ref_endpoint_recvD:
   assumes sym: "sym_refs (state_refs_of s)"
-  and ep: "ko_at (Endpoint (RecvEP l)) epptr s"
-  and inl: "t \<in> set l"
+  assumes ep: "ko_at (Endpoint (RecvEP l)) epptr s"
+  assumes inl: "t \<in> set l"
   shows "\<exists>pl. st_tcb_at ((=) (BlockedOnReceive epptr pl)) t s"
 proof -
   have "(t, EPRecv) \<in> state_refs_of s epptr"
@@ -996,9 +996,9 @@ qed
 
 lemma pas_refined_ep_recv:
   assumes policy: "pas_refined aag s"
-  and invs: "invs s"
-  and ep: "ko_at (Endpoint (RecvEP l)) epptr s"
-  and inl: "t \<in> set l"
+  assumes invs: "invs s"
+  assumes ep: "ko_at (Endpoint (RecvEP l)) epptr s"
+  assumes inl: "t \<in> set l"
   shows "abs_has_auth_to aag Receive t epptr"
   apply (insert sym_ref_endpoint_recvD[OF invs_sym_refs[OF invs] ep inl])
   apply clarsimp
@@ -1109,8 +1109,8 @@ abbreviation (input) receive_ipc_base where
 
 lemma sym_ref_endpoint_sendD:
   assumes sym: "sym_refs (state_refs_of s)"
-  and ep: "ko_at (Endpoint (SendEP l)) epptr s"
-  and inl: "t \<in> set l"
+  assumes ep: "ko_at (Endpoint (SendEP l)) epptr s"
+  assumes inl: "t \<in> set l"
   shows "\<exists>pl. st_tcb_at ((=) (BlockedOnSend epptr pl)) t s"
 proof -
   have "(t, EPSend) \<in> state_refs_of s epptr"
@@ -1733,7 +1733,7 @@ locale Ipc_AC_2 = Ipc_AC_1 +
           \<and> is_aligned buf msg_align_bits \<and> r < 2 ^ (msg_align_bits - word_size_bits))\<rbrace>
      store_word_offs buf r v
      \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
-  and set_extra_badge_respects_in_ipc[wp]:
+  assumes set_extra_badge_respects_in_ipc[wp]:
     "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and
       K ((pasObjectAbs aag receiver \<noteq> pasSubject aag
           \<longrightarrow> auth_ipc_buffers st receiver = ptr_range buffer msg_align_bits) \<and>
@@ -1741,11 +1741,11 @@ locale Ipc_AC_2 = Ipc_AC_1 +
          buffer_cptr_index + n < 2 ^ (msg_align_bits - word_size_bits))\<rbrace>
      set_extra_badge buffer badge n
      \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
-  and arch_get_sanitise_register_info_inv[wp]:
+  assumes arch_get_sanitise_register_info_inv[wp]:
     "arch_get_sanitise_register_info t \<lbrace>\<lambda>s :: det_state. P s\<rbrace>"
-  and handle_arch_fault_reply_pas_refined[wp]:
+  assumes handle_arch_fault_reply_pas_refined[wp]:
     "handle_arch_fault_reply vmf thread x y \<lbrace>pas_refined aag\<rbrace>"
-  and set_mrs_respects_in_ipc:
+  assumes set_mrs_respects_in_ipc:
     "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and
       K ((\<not> is_subject aag receiver \<longrightarrow>
           (case recv_buf of None \<Rightarrow> True | Some buf' \<Rightarrow> auth_ipc_buffers st receiver =
@@ -1753,55 +1753,55 @@ locale Ipc_AC_2 = Ipc_AC_1 +
          (case recv_buf of None \<Rightarrow> True | Some buf' \<Rightarrow> is_aligned buf' msg_align_bits))\<rbrace>
      set_mrs receiver recv_buf msgs
      \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
-  and lookup_ipc_buffer_ptr_range_in_ipc:
+  assumes lookup_ipc_buffer_ptr_range_in_ipc:
     "\<lbrace>valid_objs and integrity_tcb_in_ipc aag X thread epptr tst st\<rbrace>
      lookup_ipc_buffer True thread
      \<lbrace>\<lambda>rv _. \<not> is_subject aag thread \<longrightarrow>
              (case rv of None \<Rightarrow> True | Some buf' \<Rightarrow> auth_ipc_buffers st thread =
                                                      ptr_range buf' msg_align_bits)\<rbrace>"
-  and lookup_ipc_buffer_aligned:
+  assumes lookup_ipc_buffer_aligned:
     "\<lbrace>valid_objs\<rbrace>
      lookup_ipc_buffer True thread
      \<lbrace>\<lambda>rv _ :: det_state. case rv of None \<Rightarrow> True | Some buf' \<Rightarrow> is_aligned buf' msg_align_bits\<rbrace>"
-  and handle_arch_fault_reply_respects:
+  assumes handle_arch_fault_reply_respects:
     "\<lbrace>integrity aag X st and K (is_subject aag thread)\<rbrace>
      handle_arch_fault_reply vmf thread x y
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and auth_ipc_buffers_kheap_update:
+  assumes auth_ipc_buffers_kheap_update:
     "\<lbrakk> x \<in> auth_ipc_buffers st thread; kheap st thread = Some (TCB tcb);
        kheap s thread = Some (TCB tcb'); tcb_ipcframe tcb = tcb_ipcframe tcb' \<rbrakk>
      \<Longrightarrow> x \<in> auth_ipc_buffers (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb)\<rparr>) thread"
-  and auth_ipc_buffers_machine_state_update[simp]:
+  assumes auth_ipc_buffers_machine_state_update[simp]:
     "auth_ipc_buffers (machine_state_update f s) = auth_ipc_buffers (s :: det_state)"
-  and empty_slot_extended_list_integ_lift_in_ipc:
+  assumes empty_slot_extended_list_integ_lift_in_ipc:
     "\<lbrakk> \<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
        empty_slot_ext a b
        \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace> \<rbrakk>
      \<Longrightarrow> \<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st and Q\<rbrace>
          empty_slot_ext a b
          \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
-  and handle_arch_fault_reply_integrity_tcb_in_fault_reply[wp]:
+  assumes handle_arch_fault_reply_integrity_tcb_in_fault_reply[wp]:
     "handle_arch_fault_reply vmf thread d ds
      \<lbrace>integrity_tcb_in_fault_reply aag X thread TRFContext st\<rbrace>"
-  and cap_insert_ext_integrity_asids_in_ipc[wp]:
+  assumes cap_insert_ext_integrity_asids_in_ipc[wp]:
     "cap_insert_ext src_parent src_slot dest_slot src_p dest_p
      \<lbrace>\<lambda>s. integrity_asids aag subjects x asid st
             (s\<lparr>kheap := \<lambda>a. if a = receiver then kheap st receiver else kheap s a\<rparr>)\<rbrace>"
-  and cap_insert_ext_integrity_hyp_in_ipc[wp]:
+  assumes cap_insert_ext_integrity_hyp_in_ipc[wp]:
     "cap_insert_ext src_parent src_slot dest_slot src_p dest_p
      \<lbrace>\<lambda>s. integrity_hyp aag subjects x st
             (s\<lparr>kheap := \<lambda>a. if a = receiver then kheap st receiver else kheap s a\<rparr>)\<rbrace>"
-  and cap_insert_ext_integrity_fpu_in_ipc[wp]:
+  assumes cap_insert_ext_integrity_fpu_in_ipc[wp]:
     "cap_insert_ext src_parent src_slot dest_slot src_p dest_p
      \<lbrace>\<lambda>s. integrity_fpu aag subjects x st
             (s\<lparr>kheap := \<lambda>a. if a = receiver then kheap st receiver else kheap s a\<rparr>)\<rbrace>"
-  and integrity_asids_kh_updI:
+  assumes integrity_asids_kh_updI:
     "integrity_asids_2 aag subjects x asid as as ao ao'
      \<Longrightarrow> integrity_asids_2 aag subjects x asid as as (ao(p := ako)) (ao'(p := ako))"
-  and integrity_hyp_kh_updI:
+  assumes integrity_hyp_kh_updI:
     "integrity_hyp_2 aag subjects x ms ms as as ao ao'
      \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms as as (ao(p := ako)) (ao'(p := ako))"
-  and integrity_fpu_kh_updI:
+  assumes integrity_fpu_kh_updI:
     "integrity_fpu_2 aag subjects x ms ms kh kh'
      \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms (kh(p := ko)) (kh'(p := ko))"
 begin

@@ -30,7 +30,7 @@ lemma vs_lookup_table_subseteq:
 
 lemma state_vrefs_clear_asid_pool:
   assumes "asid_table s (asid_high_bits_of asid) = Some pool_ptr"
-  and "ako_at (ASIDPool pool) pool_ptr s"
+  assumes "ako_at (ASIDPool pool) pool_ptr s"
   shows "state_vrefs (s\<lparr>kheap := \<lambda>a. if a = pool_ptr
                                      then Some (ArchObj (ASIDPool (\<lambda>a. if a = asid_low_bits_of asid
                                                                        then None

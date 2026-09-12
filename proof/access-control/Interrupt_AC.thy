@@ -34,19 +34,19 @@ locale Interrupt_AC_1 =
                                   and K (arch_authorised_irq_ctl_inv aag irq_ctl_inv)\<rbrace>
      arch_invoke_irq_control irq_ctl_inv
      \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  and arch_invoke_irq_handler_pas_refined:
+  assumes arch_invoke_irq_handler_pas_refined:
     "\<lbrace>pas_refined aag and invs and (\<lambda>s. interrupt_states s x1 \<noteq> IRQInactive)\<rbrace>
      arch_invoke_irq_handler (ACKIrq x1)
      \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  and arch_invoke_irq_control_respects:
+  assumes arch_invoke_irq_control_respects:
     "\<lbrace>integrity aag X st and pas_refined aag and K (arch_authorised_irq_ctl_inv aag acinv)\<rbrace>
      arch_invoke_irq_control acinv
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and arch_invoke_irq_handler_respects:
+  assumes arch_invoke_irq_handler_respects:
     "\<lbrace>integrity aag X st and pas_refined aag and einvs\<rbrace>
      arch_invoke_irq_handler (ACKIrq x1)
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and arch_check_irq_inv[wp]:
+  assumes arch_check_irq_inv[wp]:
     "arch_check_irq irq \<lbrace>\<lambda>s :: det_ext state. P s\<rbrace>"
 begin
 

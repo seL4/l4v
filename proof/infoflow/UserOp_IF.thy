@@ -49,7 +49,7 @@ lemma reads_equiv_g_refl:
 
 lemma spec_equiv_valid_inv_gets:
   assumes proj_retain: "\<And>t. \<lbrakk> P st; P t; I st t; A st t \<rbrakk> \<Longrightarrow> proj (f st) = proj (f t)"
-  and spec_eqv_valid: "spec_equiv_valid_inv st I A P (g (proj (f st)))"
+  assumes spec_eqv_valid: "spec_equiv_valid_inv st I A P (g (proj (f st)))"
   shows "spec_equiv_valid_inv st I A P (do r \<leftarrow> gets f; g (proj r) od)"
   apply (clarsimp simp: spec_equiv_valid_def equiv_valid_2_def gets_def get_def bind_def return_def)
   apply (frule (3) proj_retain)
@@ -111,16 +111,16 @@ locale UserOp_IF_1 =
           arch_globals_equiv ct it kh kh' as as' ms ms'"
     "\<And>f. arch_globals_equiv ct it kh kh' as as' ms (underlying_memory_update f ms') =
           arch_globals_equiv ct it kh kh' as as' ms ms'"
-  and arch_globals_equiv_device_state_update[simp]:
+  assumes arch_globals_equiv_device_state_update[simp]:
     "\<And>f. arch_globals_equiv ct it kh kh' as as' (device_state_update f ms) ms' =
           arch_globals_equiv ct it kh kh' as as' ms ms'"
     "\<And>f. arch_globals_equiv ct it kh kh' as as' ms (device_state_update f ms') =
           arch_globals_equiv ct it kh kh' as as' ms ms'"
-  and no_hyp_modify[wp,simp]:
+  assumes no_hyp_modify[wp,simp]:
     "\<And>f. no_hyp (modify (\<lambda>ms :: machine_state. ms\<lparr>underlying_memory := f ms\<rparr>))"
     "\<And>f. no_hyp (modify (\<lambda>ms :: machine_state. ms\<lparr>device_state := f ms\<rparr>))"
     "\<And>f. no_hyp (modify (\<lambda>ms :: machine_state. ms\<lparr>machine_state_rest := f ms\<rparr>))"
-  and no_fpu_modify[wp,simp]:
+  assumes no_fpu_modify[wp,simp]:
     "\<And>f. no_fpu (modify (\<lambda>ms :: machine_state. ms\<lparr>underlying_memory := f ms\<rparr>))"
     "\<And>f. no_fpu (modify (\<lambda>ms :: machine_state. ms\<lparr>device_state := f ms\<rparr>))"
     "\<And>f. no_fpu (modify (\<lambda>ms :: machine_state. ms\<lparr>machine_state_rest := f ms\<rparr>))"

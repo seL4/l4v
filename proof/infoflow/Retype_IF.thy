@@ -128,38 +128,38 @@ lemma dmo_mapM_x_ev:
 locale Retype_IF_1 =
   assumes clearMemory_ev:
     "equiv_valid_inv (equiv_machine_state P) (equiv_machine_state Q) \<top> (clearMemory ptr bits)"
-  and freeMemory_ev:
+  assumes freeMemory_ev:
     "equiv_valid_inv (equiv_machine_state P) (equiv_machine_state Q) \<top> (freeMemory ptr bits)"
-  and no_irq_freeMemory:
+  assumes no_irq_freeMemory:
     "no_irq (freeMemory ptr sz)"
-  and equiv_asid_detype:
+  assumes equiv_asid_detype:
     "equiv_asid asid s s' \<Longrightarrow> equiv_asid asid (detype N s) (detype N s')"
-  and clearMemory_irq_state[wp]:
+  assumes clearMemory_irq_state[wp]:
     "\<And>P. clearMemory ptr bits \<lbrace>\<lambda>s. P (irq_state s)\<rbrace>"
-  and freeMemory_irq_state[wp]:
+  assumes freeMemory_irq_state[wp]:
     "\<And>P. freeMemory ptr bits \<lbrace>\<lambda>s. P (irq_state s)\<rbrace>"
-  and dmo_clearMemory_globals_equiv:
+  assumes dmo_clearMemory_globals_equiv:
     "do_machine_op (clearMemory ptr (2 ^ bits)) \<lbrace>globals_equiv s\<rbrace>"
-  and dmo_freeMemory_globals_equiv:
+  assumes dmo_freeMemory_globals_equiv:
     "do_machine_op (freeMemory ptr bits) \<lbrace>globals_equiv s\<rbrace>"
-  and retype_region_globals_equiv:
+  assumes retype_region_globals_equiv:
     "\<lbrace>globals_equiv s and invs
                       and (\<lambda>s. \<exists>i. cte_wp_at (\<lambda>c. c = UntypedCap dev (p && ~~ mask sz) sz i) slot s \<and>
                                    (i \<le> unat (p && mask sz) \<or> pspace_no_overlap_range_cover p sz s))
                       and K (range_cover p sz (obj_bits_api type o_bits) num \<and> 0 < num)\<rbrace>
      retype_region p num o_bits type dev
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  and machine_op_lift_no_hyp[wp]:
+  assumes machine_op_lift_no_hyp[wp]:
     "no_hyp (machine_op_lift mop)"
-  and machine_op_lift_no_fpu[wp]:
+  assumes machine_op_lift_no_fpu[wp]:
     "no_fpu (machine_op_lift mop)"
-  and clearMemory_no_hyp[wp]:
+  assumes clearMemory_no_hyp[wp]:
     "no_hyp (clearMemory ptr bits)"
-  and clearMemory_no_fpu[wp]:
+  assumes clearMemory_no_fpu[wp]:
     "no_fpu (clearMemory ptr bits)"
-  and freeMemory_no_hyp[wp]:
+  assumes freeMemory_no_hyp[wp]:
     "no_hyp (freeMemory ptr bits)"
-  and freeMemory_no_fpu[wp]:
+  assumes freeMemory_no_fpu[wp]:
     "no_fpu (freeMemory ptr bits)"
 begin
 

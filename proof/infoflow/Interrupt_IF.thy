@@ -17,14 +17,14 @@ locale Interrupt_IF_1 =
   fixes aag :: "'a subject_label PAS"
   assumes arch_invoke_irq_handler_reads_respects[wp]:
     "reads_respects_f aag (l :: 'a subject_label) (silc_inv aag st) (arch_invoke_irq_handler hi)"
-  and arch_invoke_irq_control_reads_respects:
+  assumes arch_invoke_irq_control_reads_respects:
     "reads_respects aag l (K (arch_authorised_irq_ctl_inv aag irq_ctl_inv))
                     (arch_invoke_irq_control irq_ctl_inv)"
-  and arch_invoke_irq_control_globals_equiv:
+  assumes arch_invoke_irq_control_globals_equiv:
     "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
      arch_invoke_irq_control ai
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  and arch_invoke_irq_handler_globals_equiv[wp]:
+  assumes arch_invoke_irq_handler_globals_equiv[wp]:
     "arch_invoke_irq_handler hi \<lbrace>globals_equiv st\<rbrace>"
 begin
 

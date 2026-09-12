@@ -311,35 +311,35 @@ locale DomainSepInv_1 =
   fixes state_ext_t :: "'state_ext :: state_ext itself"
   assumes arch_finalise_cap_domain_sep_inv[wp]:
     "arch_finalise_cap c x \<lbrace>\<lambda>s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_state)\<rbrace>"
-  and arch_post_cap_deletion_domain_sep_inv[wp]:
+  assumes arch_post_cap_deletion_domain_sep_inv[wp]:
     "arch_post_cap_deletion acap \<lbrace>\<lambda>s :: det_state. domain_sep_inv irqs st s\<rbrace>"
-  and init_arch_objects_domain_sep_inv[wp]:
+  assumes init_arch_objects_domain_sep_inv[wp]:
     "init_arch_objects typ dev ptr n sz refs \<lbrace>\<lambda>s :: det_state. domain_sep_inv irqs st s\<rbrace>"
-  and prepare_thread_delete_domain_sep_inv[wp]:
+  assumes prepare_thread_delete_domain_sep_inv[wp]:
     "prepare_thread_delete t \<lbrace>\<lambda>s :: det_state. domain_sep_inv irqs st s\<rbrace>"
-  and arch_finalise_cap_rv:
+  assumes arch_finalise_cap_rv:
     "\<lbrace>\<lambda>_. P (NullCap,NullCap)\<rbrace> arch_finalise_cap c x \<lbrace>\<lambda>rv s :: det_state. P rv\<rbrace>"
-  and arch_switch_to_thread_domain_sep_inv[wp]:
+  assumes arch_switch_to_thread_domain_sep_inv[wp]:
     "arch_switch_to_thread t \<lbrace>\<lambda>s :: det_state. domain_sep_inv irqs (st :: 'state_ext state) s\<rbrace>"
-  and arch_switch_to_idle_thread_domain_sep_inv[wp]:
+  assumes arch_switch_to_idle_thread_domain_sep_inv[wp]:
     "arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_state. domain_sep_inv irqs st s\<rbrace>"
-  and arch_activate_idle_thread_domain_sep_inv[wp]:
+  assumes arch_activate_idle_thread_domain_sep_inv[wp]:
     "arch_activate_idle_thread t \<lbrace>\<lambda>s :: det_state. domain_sep_inv irqs st s\<rbrace>"
-  and arch_mask_irq_signal_domain_sep_inv[wp]:
+  assumes arch_mask_irq_signal_domain_sep_inv[wp]:
     "arch_mask_irq_signal irq \<lbrace>\<lambda>s :: det_state. domain_sep_inv irqs st s\<rbrace>"
-  and arch_derive_cap_domain_sep_inv[wp]:
+  assumes arch_derive_cap_domain_sep_inv[wp]:
     "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv s :: det_state. domain_sep_inv_cap irqs rv\<rbrace>,-"
-  and arch_post_modify_registers_domain_sep_inv[wp]:
+  assumes arch_post_modify_registers_domain_sep_inv[wp]:
     "arch_post_modify_registers cur t \<lbrace>\<lambda>s :: det_state. domain_sep_inv irqs st s\<rbrace>"
-  and arch_prepare_set_domain_domain_sep_inv[wp]:
+  assumes arch_prepare_set_domain_domain_sep_inv[wp]:
     "arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s :: det_state. domain_sep_inv irqs st s\<rbrace>"
-  and arch_prepare_next_domain_domain_sep_inv[wp]:
+  assumes arch_prepare_next_domain_domain_sep_inv[wp]:
     "arch_prepare_next_domain \<lbrace>\<lambda>s :: det_state. domain_sep_inv irqs st s\<rbrace>"
-  and arch_post_set_flags_domain_sep_inv[wp]:
+  assumes arch_post_set_flags_domain_sep_inv[wp]:
     "arch_post_set_flags t flags \<lbrace>\<lambda>s :: det_state. domain_sep_inv irqs st s\<rbrace>"
-  and handle_arch_fault_reply_domain_sep_inv[wp]:
+  assumes handle_arch_fault_reply_domain_sep_inv[wp]:
     "handle_arch_fault_reply vmf thread d ds \<lbrace>\<lambda>s :: det_state. domain_sep_inv irqs st s\<rbrace>"
-  and handle_vm_fault_domain_sep_inv[wp]:
+  assumes handle_vm_fault_domain_sep_inv[wp]:
     "handle_vm_fault t vmf_t \<lbrace>\<lambda>s :: det_state. domain_sep_inv irqs st s\<rbrace>"
 begin
 
@@ -932,21 +932,21 @@ locale DomainSepInv_2 = DomainSepInv_1 state_ext_t
     "\<lbrace>domain_sep_inv irqs st and valid_arch_inv ai\<rbrace>
      arch_perform_invocation ai
      \<lbrace>\<lambda>_ s :: det_state. domain_sep_inv irqs st s\<rbrace>"
-  and arch_invoke_irq_handler_domain_sep_inv[wp]:
+  assumes arch_invoke_irq_handler_domain_sep_inv[wp]:
     "arch_invoke_irq_handler ihi \<lbrace>\<lambda>s :: det_state. domain_sep_inv irqs st s\<rbrace>"
-  and arch_invoke_irq_control_domain_sep_inv:
+  assumes arch_invoke_irq_control_domain_sep_inv:
     "\<lbrace>domain_sep_inv irqs st and arch_irq_control_inv_valid ivk\<rbrace>
      arch_invoke_irq_control ivk
      \<lbrace>\<lambda>_ s :: det_state. domain_sep_inv irqs st s\<rbrace>"
-  and handle_hypervisor_fault_domain_sep_inv[wp]:
+  assumes handle_hypervisor_fault_domain_sep_inv[wp]:
     "\<lbrace>domain_sep_inv irqs st and valid_objs and valid_mdb and sym_refs \<circ> state_refs_of\<rbrace>
      handle_hypervisor_fault t hf_t
      \<lbrace>\<lambda>_ s :: det_state. domain_sep_inv irqs st s\<rbrace>"
-  and handle_reserved_irq_domain_sep_inv[wp]:
+  assumes handle_reserved_irq_domain_sep_inv[wp]:
     "\<lbrace>domain_sep_inv irqs st and valid_objs and valid_mdb and sym_refs \<circ> state_refs_of\<rbrace>
      handle_reserved_irq irq
      \<lbrace>\<lambda>_ s :: det_state. domain_sep_inv irqs (st :: 'state_ext state) s\<rbrace>"
-  and handle_spurious_irq_domain_sep_inv[wp]:
+  assumes handle_spurious_irq_domain_sep_inv[wp]:
     "handle_spurious_irq \<lbrace>domain_sep_inv irqs st :: det_state \<Rightarrow> _\<rbrace>"
 begin
 

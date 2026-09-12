@@ -21,7 +21,7 @@ lemma state_vrefs_clear_asid_table:
 
 lemma state_vrefs_clear_asid_pool:
   assumes "asid_table s (asid_high_bits_of asid) = Some pool_ptr"
-  and "ako_at (ASIDPool pool) pool_ptr s"
+  assumes "ako_at (ASIDPool pool) pool_ptr s"
   shows "state_vrefs (s\<lparr>kheap := (kheap s)(pool_ptr \<mapsto> ArchObj
            (ASIDPool (\<lambda>a. if a = asid_low_bits_of asid then None else pool a)))\<rparr>) x
            \<subseteq> state_vrefs s x"
@@ -49,16 +49,14 @@ lemma set_vcpu_state_vrefs[wp]:
 
 lemma state_vrefs_set_asid_pool_vmid:
   assumes "pool_for_asid asid s = Some pool_ptr"
-      and "asid_pools_of s pool_ptr = Some pool"
-      and "pool (asid_low_bits_of asid) = Some entry"
-    shows "state_vrefs
-            (s\<lparr>kheap := (kheap s)
-                 (pool_ptr \<mapsto>
-                  ArchObj
-                   (ASIDPool
-                     (\<lambda>a. if a = asid_low_bits_of asid
-                           then Some (ASIDPoolVSpace (ap_vspace entry)) else pool a)))\<rparr>)
-            x
+  assumes "asid_pools_of s pool_ptr = Some pool"
+  assumes "pool (asid_low_bits_of asid) = Some entry"
+  shows "state_vrefs
+           (s\<lparr>kheap := (kheap s)
+                (pool_ptr \<mapsto> ArchObj (ASIDPool
+                   (\<lambda>a. if a = asid_low_bits_of asid
+                        then Some (ASIDPoolVSpace (ap_vspace entry))
+                        else pool a)))\<rparr>) x
            \<subseteq> state_vrefs s x"
   (is "state_vrefs ?s' _ \<subseteq> state_vrefs _ _")
   apply (rule state_vrefs_subseteq)

@@ -353,13 +353,13 @@ lemma equiv_fpu_state_sym:
 
 lemma spec_equiv_valid_add_inv:
   assumes "spec_equiv_valid st I A B (P and I st) f"
-  and "\<And>s. I s s"
+  assumes "\<And>s. I s s"
   shows "spec_equiv_valid st I A B P f"
   using assms by (fastforce simp: spec_equiv_valid_def equiv_valid_2_def)
 
 lemma spec_equiv_valid_add_A:
   assumes "spec_equiv_valid st I A B (P and A st) f"
-  and "\<And>s. A s s"
+  assumes "\<And>s. A s s"
   shows "spec_equiv_valid st I A B P f"
   using assms by (fastforce simp: spec_equiv_valid_def equiv_valid_2_def)
 
