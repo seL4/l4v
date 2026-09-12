@@ -719,35 +719,34 @@ lemma usable_range_disjoint:
                          atLeastatMost_subset_iff atLeastLessThan_iff
                          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   shows
-       "usable_untyped_range (UntypedCap dev (ptr && ~~ mask sz) sz
-                                         (unat ((ptr && mask sz) +
-                                          of_nat (length slots) * 2 ^ obj_bits_api tp us))) \<inter>
-        {ptr..ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us - 1} = {}"
-      proof -
-      have not_0_ptr[simp]: "ptr\<noteq> 0"
-      using misc cte_wp_at
-      apply (clarsimp simp:cte_wp_at_caps_of_state)
-      apply (drule(1) caps_of_state_valid)
-      apply (clarsimp simp:valid_cap_def)
-      done
-
-      have idx_compare''[simp]:
-       "unat ((ptr && mask sz) + (of_nat (length slots) * 2 ^ obj_bits_api tp us)) < 2 ^ sz
-        \<Longrightarrow> ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us - 1
-        < ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us"
-      apply (rule word_leq_le_minus_one,simp)
-      apply (rule neq_0_no_wrap)
-      apply (rule machine_word_plus_mono_right_split)
+    "usable_untyped_range (UntypedCap dev (ptr && ~~ mask sz) sz
+                                      (unat ((ptr && mask sz) +
+                                       of_nat (length slots) * 2 ^ obj_bits_api tp us))) \<inter>
+     {ptr..ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us - 1} = {}"
+proof -
+  have not_0_ptr[simp]: "ptr\<noteq> 0"
+    using misc cte_wp_at
+    apply (clarsimp simp:cte_wp_at_caps_of_state)
+    apply (drule(1) caps_of_state_valid)
+    apply (clarsimp simp:valid_cap_def)
+    done
+  have idx_compare''[simp]:
+    "unat ((ptr && mask sz) + (of_nat (length slots) * 2 ^ obj_bits_api tp us)) < 2 ^ sz
+    \<Longrightarrow> ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us - 1
+    < ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us"
+    apply (rule word_leq_le_minus_one,simp)
+    apply (rule neq_0_no_wrap)
+     apply (rule machine_word_plus_mono_right_split)
       apply (simp add: shiftl_t2n range_cover_unat[OF cover] field_simps)
-      apply (simp only: word_bits_def range_cover.sz(1)[OF cover])
-      apply simp
-      done
-      show ?thesis
-       apply (clarsimp simp:mask_out_sub_mask blah)
-       apply (drule idx_compare'')
-       apply (simp add:not_le[symmetric])
-       done
-     qed
+     apply (simp only: word_bits_def range_cover.sz(1)[OF cover])
+    apply simp
+    done
+  show ?thesis
+    apply (clarsimp simp:mask_out_sub_mask blah)
+    apply (drule idx_compare'')
+    apply (simp add:not_le[symmetric])
+    done
+qed
 
 lemma set_free_index_invs':
   "\<lbrace>(\<lambda>s. invs s \<and> cte_wp_at ((=) cap) slot s \<and>
@@ -1049,10 +1048,10 @@ definition authorised_untyped_inv' where
        new_type \<noteq> ArchObject ASIDPoolObj \<and> (\<forall>x\<in>set slots. is_subject aag (fst x))"
 
 lemma authorised_untyped_invI:
-  notes blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-                         Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-  shows "\<lbrakk> valid_untyped_inv ui s; pas_refined aag s; authorised_untyped_inv' aag ui \<rbrakk>
-           \<Longrightarrow> authorised_untyped_inv aag ui"
+  "\<lbrakk> valid_untyped_inv ui s; pas_refined aag s; authorised_untyped_inv' aag ui \<rbrakk>
+   \<Longrightarrow> authorised_untyped_inv aag ui"
+  supply blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+                          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   apply (case_tac ui)
   apply (clarsimp simp: cte_wp_at_caps_of_state
                        authorised_untyped_inv_def authorised_untyped_inv'_def

@@ -405,12 +405,11 @@ lemma post_cap_deletion_integrity[wp]:
   by (wpsimp simp: post_cap_deletion_def is_cap_simps wp: arch_post_cap_deletion_integrity)
 
 lemma empty_slot_integrity_spec:
-  notes split_paired_All[simp del]
-  shows
   "s \<turnstile> \<lbrace>valid_list and valid_mdb and valid_objs and pas_refined aag
                    and K (is_subject aag (fst slot) \<and> cleanup_info_wf cleanup_info aag)\<rbrace>
        empty_slot slot cleanup_info
        \<lbrace>\<lambda>_. integrity aag X s\<rbrace>"
+  supply split_paired_All[simp del]
   apply (simp add: spec_valid_def)
   apply (simp add: empty_slot_def)
   apply (wp add: get_cap_wp set_cap_integrity_autarch set_original_integrity_autarch
@@ -852,13 +851,13 @@ lemma empty_slot_integrity_transferable[wp_transferable]:
   by (fastforce intro: cdt_change_allowed_all_children)
 
 lemma set_cdt_pas_refined:
-  notes split_paired_All[simp del] split_paired_Ex[simp del]
-  shows "\<lbrace>pas_refined aag and (\<lambda>s. \<forall>x y. c x = Some y \<and> cdt s x \<noteq> Some y
-           \<longrightarrow> (is_transferable (caps_of_state s x) \<or>
-                abs_has_auth_to aag Control (fst y) (fst x)) \<and>
-               abs_has_auth_to aag DeleteDerived (fst y) (fst x))\<rbrace>
-         set_cdt c
-         \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  "\<lbrace>pas_refined aag and (\<lambda>s. \<forall>x y. c x = Some y \<and> cdt s x \<noteq> Some y
+                             \<longrightarrow> (is_transferable (caps_of_state s x) \<or>
+                                  abs_has_auth_to aag Control (fst y) (fst x)) \<and>
+                                  abs_has_auth_to aag DeleteDerived (fst y) (fst x))\<rbrace>
+   set_cdt c
+   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  supply split_paired_All[simp del] split_paired_Ex[simp del]
   apply (simp add: pas_refined_def state_objs_to_policy_def set_cdt_def)
   apply (wp | simp | simp_all)+
   apply (clarsimp dest!: auth_graph_map_memD)
