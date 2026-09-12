@@ -35,7 +35,6 @@ hide_fact
   dmo_doSMC_mop_reads_respects
   dmo_addressTranslateS1_reads_respects
 
-
 context Arch begin arch_global_naming
 
 named_theorems Arch_IF_assms
@@ -199,7 +198,6 @@ lemma equiv_fpu_machine_state_rest_update[Arch_IF_assms]:
 
 end (* Arch *)
 
-
 (* FIXME AARCH64 IF: add to interface *)
 arch_requalify_facts
   set_simple_ko_globals_equiv
@@ -210,7 +208,6 @@ declare
   retype_region_irq_state_of_state[wp]
   arch_perform_invocation_irq_state_of_state[wp]
 
-
 global_interpretation Arch_IF?: Arch_IF
 proof goal_cases
   interpret Arch .
@@ -218,12 +215,10 @@ proof goal_cases
     by (unfold_locales; (fact Arch_IF_assms)?)
 qed
 
-
 lemmas invs_imps =
   invs_sym_refs invs_psp_aligned invs_distinct invs_arch_state
   invs_valid_global_objs invs_arch_state invs_valid_objs invs_valid_global_refs tcb_at_invs
   invs_cur invs_kernel_mappings
-
 
 context Arch begin arch_global_naming
 

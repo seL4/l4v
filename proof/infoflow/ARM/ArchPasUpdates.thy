@@ -80,7 +80,6 @@ declare arch_prepare_set_domain_inv[PasUpdates_assms]
 
 end (* Arch *)
 
-
 global_interpretation PasUpdates_2?: PasUpdates
 proof goal_cases
   interpret Arch .

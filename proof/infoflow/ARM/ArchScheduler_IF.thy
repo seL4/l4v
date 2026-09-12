@@ -143,7 +143,6 @@ requalify_consts
 
 end
 
-
 global_interpretation Scheduler_IF?:
   Scheduler_IF arch_globals_equiv_scheduler arch_scheduler_affects_equiv
 proof goal_cases
@@ -151,7 +150,6 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact Scheduler_IF_assms | solves \<open>wp only: Scheduler_IF_assms; simp\<close>)?)
 qed
-
 
 context Arch begin global_naming ARM
 
@@ -536,7 +534,6 @@ arch_requalify_consts
   cur_hyp_in_cur_domain
   cur_fpu_in_cur_domain
 
-
 global_interpretation Scheduler_IF_2?:
   Scheduler_IF_2 arch_globals_equiv_scheduler arch_scheduler_affects_equiv _ cur_hyp_in_cur_domain cur_fpu_in_cur_domain
 proof goal_cases
@@ -544,7 +541,6 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact Scheduler_IF_assms | solves \<open>wp only: Scheduler_IF_assms; simp\<close>)?)
 qed
-
 
 hide_fact Scheduler_IF_2.globals_equiv_scheduler_inv'
 requalify_facts ARM.globals_equiv_scheduler_inv'

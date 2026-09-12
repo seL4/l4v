@@ -70,14 +70,12 @@ lemma arch_get_sanitise_register_info_reads_respects_f[Tcb_IF_assms, wp]:
 
 end (* Arch *)
 
-
 global_interpretation Tcb_IF?: Tcb_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Tcb_IF_assms | solves \<open>wp only: Tcb_IF_assms; simp\<close>)?)
 qed
-
 
 context Arch begin global_naming RISCV64
 
@@ -257,7 +255,6 @@ lemma arch_post_set_flags_reads_respects_f[Tcb_IF_assms]:
 declare arch_post_set_flags_inv[Tcb_IF_assms]
 
 end (* Arch *)
-
 
 global_interpretation Tcb_IF_2?: Tcb_IF_2
 proof goal_cases

@@ -86,14 +86,12 @@ lemma arch_derive_cap_silc[FinalCaps_assms]:
 
 end (* Arch *)
 
-
 global_interpretation FinalCaps?: FinalCaps
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact FinalCaps_assms)?)
 qed
-
 
 context Arch begin global_naming ARM
 
@@ -352,14 +350,12 @@ lemma handle_reserved_irq_non_kernel_IRQs[FinalCaps_assms]:
 
 end (* Arch *)
 
-
 global_interpretation FinalCaps_2?: FinalCaps_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact FinalCaps_assms)?)
 qed
-
 
 global_interpretation FinalCaps_3?: FinalCaps_3
 proof goal_cases

@@ -77,7 +77,6 @@ lemma state_asids_to_policy_pasMayEditReadyQueues_update[PasUpdates_assms]:
 
 end (* Arch *)
 
-
 global_interpretation PasUpdates?: PasUpdates
 proof goal_cases
   interpret Arch .

@@ -62,7 +62,6 @@ crunch arch_check_irq for inv[Interrupt_AC_assms, wp]: P
 
 end (* Arch *)
 
-
 arch_requalify_consts arch_authorised_irq_ctl_inv
 
 global_interpretation Interrupt_AC?: Interrupt_AC "arch_authorised_irq_ctl_inv"
@@ -71,7 +70,6 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact Interrupt_AC_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -94,13 +92,11 @@ lemma arch_decode_irq_control_invocation_authorised[Interrupt_AC_assms]:
 
 end (* Arch *)
 
-
 global_interpretation Interrupt_AC_2?: Interrupt_AC_2 "arch_authorised_irq_ctl_inv"
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Interrupt_AC_assms)?)
 qed
-
 
 end

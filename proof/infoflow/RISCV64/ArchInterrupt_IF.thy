@@ -44,7 +44,6 @@ lemma arch_invoke_irq_handler_globals_equiv[Interrupt_IF_assms, wp]:
 
 end (* Arch *)
 
-
 global_interpretation Interrupt_IF?: Interrupt_IF
 proof goal_cases
   interpret Arch .
