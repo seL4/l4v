@@ -254,7 +254,7 @@ proof (induct rule: cap_revoke.induct[where ?a1.0=s])
                       cap_delete_irq_masks_R
                       drop_spec_validE[OF assertE_wp] drop_spec_validE[OF returnOk_wp]
                       drop_spec_validE[OF liftE_wp]
-                      drop_spec_validE[OF  hoare_vcg_conj_liftE1]
+                      drop_spec_validE[OF hoare_vcg_conj_liftE1]
                    | simp | wp (once) hoare_drop_imps)+
     apply fastforce
     done

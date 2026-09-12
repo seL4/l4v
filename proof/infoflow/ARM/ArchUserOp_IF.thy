@@ -27,7 +27,7 @@ definition ptable_attrs_s :: "'z state \<Rightarrow> obj_ref \<Rightarrow> vm_at
  "ptable_attrs_s s \<equiv> ptable_attrs (cur_thread s) s"
 
 definition ptable_xn_s where
-  "ptable_xn_s s \<equiv>  \<lambda>addr. XNever \<in> ptable_attrs_s s addr"
+  "ptable_xn_s s \<equiv> \<lambda>addr. XNever \<in> ptable_attrs_s s addr"
 
 definition getExMonitor :: "exclusive_monitors machine_monad" where
   "getExMonitor \<equiv> gets exclusive_state"
@@ -59,8 +59,8 @@ definition do_user_op_if ::
       \<comment> \<open>Get the mapping from virtual to physical addresses.\<close>
       pl \<leftarrow> gets (\<lambda>s. restrict_map (ptable_lift_s s) {x. pr x \<noteq> {}});
 
-      allow_read \<leftarrow> return  {y. EX x. pl x = Some y \<and> AllowRead \<in> pr x};
-      allow_write \<leftarrow> return  {y. EX x. pl x = Some y \<and> AllowWrite \<in> pr x};
+      allow_read \<leftarrow> return {y. EX x. pl x = Some y \<and> AllowRead \<in> pr x};
+      allow_write \<leftarrow> return {y. EX x. pl x = Some y \<and> AllowWrite \<in> pr x};
 
       \<comment> \<open>Get the current thread.\<close>
       t \<leftarrow> gets cur_thread;
@@ -992,7 +992,7 @@ lemma do_user_op_reads_respects_g:
    apply (erule impE)
     prefer 2
     apply assumption
-   apply (clarsimp simp: context_matches_state_def comp_def  reads_equiv_g_def globals_equiv_def)
+   apply (clarsimp simp: context_matches_state_def comp_def reads_equiv_g_def globals_equiv_def)
   apply (clarsimp simp: reads_equiv_g_def globals_equiv_def)
   done
 

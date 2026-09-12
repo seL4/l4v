@@ -20,12 +20,12 @@ lemma state_vrefs_clear_asid_table:
   by (fastforce simp: state_vrefs_def dest: vs_lookup_clear_asid_table[simplified fun_upd_def])
 
 lemma vs_lookup_table_subseteq:
-    "\<lbrakk> vs_lookup_table bot_level asid vref s' = Some (lvl,ptr);
-       \<forall>pptr. pool_for_asid asid s' = Some pptr \<longrightarrow> pool_for_asid asid s = Some pptr;
-       \<forall>pptr vref. vspace_for_pool pptr asid (asid_pools_of s') = Some vref
-               \<longrightarrow> vspace_for_pool pptr asid (asid_pools_of s) = Some vref;
-       ptes_of s' = ptes_of s \<rbrakk>
-     \<Longrightarrow> vs_lookup_table bot_level asid vref s = Some (lvl,ptr)"
+  "\<lbrakk> vs_lookup_table bot_level asid vref s' = Some (lvl,ptr);
+     \<forall>pptr. pool_for_asid asid s' = Some pptr \<longrightarrow> pool_for_asid asid s = Some pptr;
+     \<forall>pptr vref. vspace_for_pool pptr asid (asid_pools_of s') = Some vref
+                 \<longrightarrow> vspace_for_pool pptr asid (asid_pools_of s) = Some vref;
+     ptes_of s' = ptes_of s \<rbrakk>
+   \<Longrightarrow> vs_lookup_table bot_level asid vref s = Some (lvl,ptr)"
    by (auto simp: vs_lookup_table_def in_obind_eq split: if_splits)
 
 lemma state_vrefs_clear_asid_pool:
@@ -148,7 +148,7 @@ lemma arch_cap_cleanup_wf[Finalise_AC_assms]:
   by simp
 
 lemma set_vm_root_integrity[wp]:
-  "set_vm_root param_a \<lbrace>integrity aag X st\<rbrace> "
+  "set_vm_root param_a \<lbrace>integrity aag X st\<rbrace>"
   unfolding set_vm_root_def
   by (wpsimp wp: dmo_wp mol_respects get_cap_wp simp: setVSpaceRoot_def)
 
@@ -179,7 +179,7 @@ crunch set_asid_pool
 
 lemma set_asid_pool_tcb_states_of_state[wp]:
   "set_asid_pool p pool \<lbrace>\<lambda>s. P (tcb_states_of_state s)\<rbrace>"
-  apply (wpsimp wp: set_object_wp_strong simp: obj_at_def  set_asid_pool_def)
+  apply (wpsimp wp: set_object_wp_strong simp: obj_at_def set_asid_pool_def)
   apply (prop_tac "\<forall>x. get_tcb x (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (ASIDPool pool))\<rparr>) = get_tcb x s")
    apply (auto simp: tcb_states_of_state_def get_tcb_def)
   done

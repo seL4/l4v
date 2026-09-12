@@ -88,7 +88,7 @@ definition
   "checkActiveIRQ_C_if tc \<equiv>
    do
       getActiveIRQ_C;
-      irq \<leftarrow>  gets ret__unsigned_long_';
+      irq \<leftarrow> gets ret__unsigned_long_';
       return (if irq = ucast irqInvalid then None else Some (ucast irq), tc)
    od"
 
@@ -148,7 +148,7 @@ begin
 definition
   "callKernel_C_body_if e \<equiv> case e of
     SyscallEvent n \<Rightarrow> (handleSyscall_C_body_if (ucast (syscall_from_H n)))
-  | UnknownSyscall n \<Rightarrow>  (handleUnknownSyscall_C_body_if (of_nat n))
+  | UnknownSyscall n \<Rightarrow> (handleUnknownSyscall_C_body_if (of_nat n))
   | UserLevelFault w1 w2 \<Rightarrow> (handleUserLevelFault_C_body_if w1 w2)
   | Interrupt \<Rightarrow> (handleInterruptEntry_C_body_if)
   | VMFaultEvent t \<Rightarrow> (handleVMFaultEvent_C_body_if (vm_fault_type_from_H t))
@@ -374,7 +374,7 @@ lemma kernelEntry_corres_C:
          scheduler_action s = resume_cur_thread \<and> domain_time s \<noteq> 0 \<and> valid_domain_list s) \<and>
       (invs' s' \<and>
         (e \<noteq> Interrupt \<longrightarrow> ct_running' s') \<and> (ct_running' s' \<or> ct_idle' s') \<and>
-        ksSchedulerAction s' = ResumeCurrentThread  \<and> ksDomainTime s' \<noteq> 0 \<and> arch_extras s'))
+        ksSchedulerAction s' = ResumeCurrentThread \<and> ksDomainTime s' \<noteq> 0 \<and> arch_extras s'))
      \<top>
      (kernelEntry_if e tc) (kernelEntry_C_if fp e tc)"
   using corres_nofail[OF kernel_entry_if_corres[of e tc], simplified]
@@ -604,7 +604,7 @@ lemma corres_select_f':
 context kernel_m begin
 
 lemma cur_thread_of_absKState[simp]:
-   "cur_thread (absKState s) = (ksCurThread s)"
+  "cur_thread (absKState s) = (ksCurThread s)"
    by (clarsimp simp: cstate_relation_def Let_def absKState_def cstate_to_H_def)
 
 lemma absKState_crelation:
@@ -659,7 +659,7 @@ lemma obs_cpspace_device_data_relation:
    apply (clarsimp simp: cmap_relation_def dom_heap_to_device_data)
    apply (drule bspec,fastforce)
    apply (clarsimp simp: cuser_user_data_device_relation_def observable_memory_def
-                         heap_to_user_data_def  map_comp_def Let_def
+                         heap_to_user_data_def map_comp_def Let_def
                   split: option.split_asm)
    done
 
@@ -704,7 +704,7 @@ lemma c_to_haskell:
           apply (clarsimp simp: full_invs_if'_def)
           apply (rename_tac uc mode s' uc' s)
           apply (frule ex_abs_ksReadyQueues_asrt)
-          apply (clarsimp simp: absKState_crelation  rf_sr_def)
+          apply (clarsimp simp: absKState_crelation rf_sr_def)
           apply (frule invs_valid_stateI')
           apply (rule_tac x="((uc,s),mode)" in bexI)
            apply simp

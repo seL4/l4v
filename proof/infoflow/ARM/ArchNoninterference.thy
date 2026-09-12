@@ -218,7 +218,7 @@ lemma partitionIntegrity_subjectAffects_asid[Noninterference_assms]:
     apply (drule partitionIntegrity_integrity)
     apply (drule integrity_subjects_obj)
     apply (drule_tac x="pool_ptr" in spec)+
-    apply (drule tro_tro_alt, erule integrity_obj_alt.cases;simp )
+    apply (drule tro_tro_alt, erule integrity_obj_alt.cases; simp)
      apply (drule_tac t="pasSubject aag" in sym)
      apply simp
      apply (rule sata_asidpool)
@@ -378,7 +378,7 @@ lemma dmo_getActive_IRQ_reads_respect_scheduler[Noninterference_assms]:
   done
 
 crunch handle_spurious_irq
-  for domain[wp]: "\<lambda>s.  Q (domain_time s) (domain_index s) (domain_list s)"
+  for domain[wp]: "\<lambda>s. Q (domain_time s) (domain_index s) (domain_list s)"
 
 crunch handle_spurious_irq
   for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"

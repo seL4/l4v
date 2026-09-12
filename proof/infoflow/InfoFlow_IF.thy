@@ -90,7 +90,7 @@ definition for_each_byte_of_word :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> 
 
 locale InfoFlow_IF_1 =
   fixes identical_hyp_state_updates :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> machine_state \<Rightarrow> machine_state \<Rightarrow> bool"
-  and  identical_fpu_state_updates :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> machine_state \<Rightarrow> machine_state \<Rightarrow> bool"
+  and identical_fpu_state_updates :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> machine_state \<Rightarrow> machine_state \<Rightarrow> bool"
   \<comment> \<open>equiv_asids lemmas\<close>
   assumes equiv_asids_refl:
     "equiv_asids R s s"
@@ -330,7 +330,7 @@ context InfoFlow_IF_1 begin
 
 lemma states_equiv_for_refl:
   "states_equiv_for P Q R S s s"
-  by (auto simp: states_equiv_for_def  intro: equiv_for_refl equiv_asids_refl equiv_hyp_refl equiv_fpu_refl)
+  by (auto simp: states_equiv_for_def intro: equiv_for_refl equiv_asids_refl equiv_hyp_refl equiv_fpu_refl)
 
 lemma states_equiv_for_sym:
   "states_equiv_for P Q R S s t \<Longrightarrow> states_equiv_for P Q R S t s"
@@ -985,8 +985,8 @@ lemma do_machine_op_rev:
   apply (rule_tac W="\<lambda> rv rv'. equiv_machine_state (aag_can_read aag) rv rv' \<and> equiv_irq_state rv rv'"
              and Q="\<lambda> rv s. rv = machine_state s " in equiv_valid_rv_bind)
     apply (blast intro: equiv_valid_rv_guard_imp[OF gets_machine_state_revrv'[simplified pred_conj_def]])
-   apply (rule_tac R'="\<lambda> (r, ms') (r', ms'').  r = r' \<and> equiv_machine_state (aag_can_read aag) ms' ms''"
-              and Q="\<lambda> (r,ms') s. ms' = rv \<and> rv = machine_state s "
+   apply (rule_tac R'="\<lambda> (r, ms') (r', ms''). r = r' \<and> equiv_machine_state (aag_can_read aag) ms' ms''"
+              and Q="\<lambda> (r,ms') s. ms' = rv \<and> rv = machine_state s"
               and Q'="\<lambda> (r',ms'') s. ms'' = rv' \<and> rv' = machine_state s"
               and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
         apply (clarsimp simp: modify_def get_def put_def bind_def return_def equiv_valid_2_def)

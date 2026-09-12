@@ -55,14 +55,14 @@ text\<open>We take the authority graph from the access proofs. We identify each
 inductive_set subjectReads :: "'a auth_graph \<Rightarrow> 'a \<Rightarrow> 'a set"
   for g :: "'a auth_graph" and l :: "'a" where
   (* clearly, l can read from anything it has Read authority to *)
-  reads_read: "(l,Read,l') \<in> g \<Longrightarrow>  l' \<in> subjectReads g l"
+  reads_read: "(l,Read,l') \<in> g \<Longrightarrow> l' \<in> subjectReads g l"
   (* l can read from itself *)
 | reads_lrefl[simp,intro!]: "l \<in> subjectReads g l"
   (* if l has SyncSend or Receive authority to an endpoint, l can read it *)
-|  reads_ep:
+| reads_ep:
   "\<lbrakk> (l,auth,ep) \<in> g; auth \<in> {SyncSend,Receive} \<rbrakk>
    \<Longrightarrow> ep \<in> subjectReads g l"
-|  reads_read_queued_thread_read_ep:
+| reads_read_queued_thread_read_ep:
   (* if someone can send on or reset an endpoint, and l can read from a thread t
      that can receive or send synchronously on that endpoint, then l needs to
      be able to read from the endpoint too. This is because the thread t might
@@ -85,7 +85,7 @@ inductive_set subjectReads :: "'a auth_graph \<Rightarrow> 'a \<Rightarrow> 'a s
      Here now suppose t is a sender of an IPC and p is its IPC buffer, to which
      it necessarily has Read authority. Suppose t is blocked waiting to complete
      the send, and the receiver completes the rendezvous.
-     IF t is in l's domain, then the IPC buffer  had better be too, since it
+     IF t is in l's domain, then the IPC buffer had better be too, since it
      will clearly be read during the operation to send the IPC *)
 | reads_read_thread_read_pages:
   "\<lbrakk> t \<in> subjectReads g l; (t,Read,p) \<in> g \<rbrakk>
@@ -157,7 +157,7 @@ abbreviation aag_can_read_domain :: "'a PAS \<Rightarrow> domain \<Rightarrow> b
 subsection \<open>Generic equivalence\<close>
 
 defs equiv_for_def:
-  "equiv_for P f c c' \<equiv>  \<forall>x. P x \<longrightarrow> f c x = f c' x"
+  "equiv_for P f c c' \<equiv> \<forall>x. P x \<longrightarrow> f c x = f c' x"
 
 definition identical_updates_rv where
   "identical_updates_rv R s t s' t' \<equiv> (\<not>R s' t' \<longrightarrow> (R s s' \<and> R t t'))"
@@ -224,7 +224,7 @@ definition states_equiv_for ::
      equiv_for (P \<circ> fst) is_original_cap s s' \<and>
      equiv_for Q interrupt_states s s' \<and>
      equiv_for Q interrupt_irq_node s s' \<and>
-     equiv_for S  ready_queues s s' \<and>
+     equiv_for S ready_queues s s' \<and>
      equiv_asids R s s' \<and>
      equiv_hyp P s s' \<and>
      equiv_fpu P s s'"

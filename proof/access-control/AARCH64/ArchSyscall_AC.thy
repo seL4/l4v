@@ -69,7 +69,7 @@ lemma handle_vm_fault_integrity[Syscall_AC_assms]:
    handle_vm_fault thread vmfault_type
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   unfolding handle_vm_fault_def addressTranslateS1_def
-  by (cases vmfault_type; wpsimp wp: dmo_no_mem_respects as_user_integrity_autarch )
+  by (cases vmfault_type; wpsimp wp: dmo_no_mem_respects as_user_integrity_autarch)
 
 crunch ackInterrupt, resetTimer
   for underlying_memory_inv[Syscall_AC_assms, wp]: "\<lambda>s. P (underlying_memory s)"
@@ -152,7 +152,7 @@ crunch
   handle_vm_fault, handle_arch_fault_reply
   for cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
   and idle_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (idle_thread s)"
-  and cur_domain[Syscall_AC_assms, wp]:  "\<lambda>s. P (cur_domain s)"
+  and cur_domain[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps simp: crunch_simps)
 
 declare arch_invoke_irq_control_cur_domain[Syscall_AC_assms]
@@ -168,7 +168,7 @@ declare arch_invoke_irq_control_cur_domain[Syscall_AC_assms]
         handle_vm_fault_cur_domain[Syscall_AC_assms]
 
 crunch set_extra_badge
- for cur_domain[Syscall_AC_assms, wp]:  "\<lambda>s :: det_state. P (cur_domain s)"
+ for cur_domain[Syscall_AC_assms, wp]: "\<lambda>s :: det_state. P (cur_domain s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma transfer_caps_loop_cur_domain[wp]:
@@ -222,7 +222,7 @@ lemma vgic_maintenance_pas_refined:
   apply (wpsimp wp: handle_fault_pas_refined gts_wp)
                apply (rule hoare_lift_Pf2[where f="cur_thread", rotated])
                 apply wpsimp
-               apply (wpsimp wp:  vcpu_update_trivial_invs
+               apply (wpsimp wp: vcpu_update_trivial_invs
                                  hoare_vcg_all_lift hoare_vcg_imp_lift)
               apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s \<and> (ct_active s \<longrightarrow> is_subject aag (cur_thread s)) \<and> invs s"
                            in hoare_strengthen_post[rotated])
@@ -255,7 +255,7 @@ lemma vppi_event_integrity_autarch:
    \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
   unfolding vppi_event_def
   apply (wpsimp wp: handle_fault_integrity_autarch maskInterrupt_invs dmo_no_mem_respects
-                    vcpu_update_integrity_autarch  vcpu_update_trivial_invs
+                    vcpu_update_integrity_autarch vcpu_update_trivial_invs
               simp: if_fun_split
          | wpsimp wp: hoare_vcg_all_lift hoare_drop_imps)+
   apply (frule invs_cur)
@@ -277,7 +277,7 @@ lemma vppi_event_pas_refined:
       apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s \<and> (ct_active s \<longrightarrow> is_subject aag (cur_thread s)) \<and> invs s"
                    in hoare_strengthen_post[rotated])
        apply (clarsimp simp: valid_fault_def ct_in_state_def pred_tcb_at_def obj_at_def runnable_eq)
-      apply (wpsimp wp: maskInterrupt_invs  hoare_vcg_imp_lift)+
+      apply (wpsimp wp: maskInterrupt_invs hoare_vcg_imp_lift)+
   done
 
 lemma handle_reserved_irq_integrity_autarch[Syscall_AC_assms]:

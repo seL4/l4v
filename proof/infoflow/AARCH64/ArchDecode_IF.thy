@@ -144,7 +144,7 @@ lemma decode_asid_control_invocation_reads_respects_f:
         (decode_asid_control_invocation label args slot cap excaps)"
   unfolding decode_asid_control_invocation_def
   apply (rule equiv_valid_guard_imp)
-   apply (wp check_vp_wpR  reads_respects_f_inv'[OF get_asid_pool_rev]
+   apply (wp check_vp_wpR reads_respects_f_inv'[OF get_asid_pool_rev]
              reads_respects_f_inv'[OF ensure_empty_rev]
              reads_respects_f_inv'[OF lookup_slot_for_cnode_op_rev]
              reads_respects_f_inv'[OF ensure_no_children_rev]
@@ -196,7 +196,7 @@ lemma decode_frame_invocation_reads_respects_f:
             check_vp_alignment_def gets_the_def
   apply (rule gen_asm_ev)+
   apply (rule equiv_valid_guard_imp)
-   apply ((wp gets_ev' check_vp_wpR  reads_respects_f_inv'[OF get_asid_pool_rev]
+   apply ((wp gets_ev' check_vp_wpR reads_respects_f_inv'[OF get_asid_pool_rev]
               reads_respects_f_inv'[OF ensure_empty_rev]
               reads_respects_f_inv'[OF get_pte_rev]
               reads_respects_f_inv'[OF lookup_slot_for_cnode_op_rev]

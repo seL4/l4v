@@ -206,7 +206,7 @@ lemma save_fpu_state_cur_fpu_of[wp]:
   done
 
 lemma load_fpu_state_machine_fpu[wp]:
- " \<lbrace>\<lambda>s. tcb_at t s \<longrightarrow> P (the (tcb_fpu_of s t))\<rbrace>
+  "\<lbrace>\<lambda>s. tcb_at t s \<longrightarrow> P (the (tcb_fpu_of s t))\<rbrace>
    load_fpu_state t
    \<lbrace>\<lambda>_ s. P (machine_fpu s)\<rbrace>"
   unfolding load_fpu_state_def as_user_def writeFpuState_def getFPUState_def

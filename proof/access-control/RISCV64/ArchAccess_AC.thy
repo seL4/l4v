@@ -71,7 +71,7 @@ context Arch begin arch_global_naming
 lemma auth_ipc_buffers_tro[Access_AC_assms]:
   "\<lbrakk> integrity_obj_state aag activate subjects s s';
      x \<in> auth_ipc_buffers s' p; pasObjectAbs aag p \<notin> subjects \<rbrakk>
-   \<Longrightarrow> x \<in> auth_ipc_buffers s p "
+   \<Longrightarrow> x \<in> auth_ipc_buffers s p"
   by (drule_tac x = p in spec)
      (erule integrity_objE;
       fastforce simp: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def
@@ -184,8 +184,8 @@ lemma asid_pool_integrity_mono[Access_AC_assms]:
   unfolding asid_pool_integrity_def by fastforce
 
 lemma integrity_asids_mono[Access_AC_assms]:
-    "\<lbrakk> integrity_asids aag S x a s s'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
-     \<Longrightarrow> integrity_asids aag T x a s s'"
+  "\<lbrakk> integrity_asids aag S x a s s'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
+   \<Longrightarrow> integrity_asids aag T x a s s'"
   by (fastforce simp: integrity_asids_def)
 
 lemma arch_integrity_obj_atomic_mono[Access_AC_assms]:
@@ -217,7 +217,7 @@ lemma integrity_asids_kh_upd_None[Access_AC_assms]:
   "\<lbrakk> ao' p = None; integrity_asids_2 aag subjects x a as as' ao ao'\<rbrakk>
    \<Longrightarrow> integrity_asids_2 aag subjects x a as as' (ao(p := None)) ao'"
   "\<lbrakk> ao p = None; integrity_asids_2 aag subjects x a as as' ao ao'\<rbrakk>
-   \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(p := None)) "
+   \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(p := None))"
   unfolding integrity_asids_def opt_map_def
   by (auto split: option.split_asm)
 

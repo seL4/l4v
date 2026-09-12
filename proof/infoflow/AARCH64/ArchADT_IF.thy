@@ -195,7 +195,7 @@ lemma arch_invoke_irq_control_noErr[ADT_IF_assms, wp]:
   by (cases a; wpsimp)
 
 lemma getActiveIRQ_None[ADT_IF_assms]:
-  "(None,s') \<in> fst (do_machine_op (getActiveIRQ False) s)  \<Longrightarrow>
+  "(None,s') \<in> fst (do_machine_op (getActiveIRQ False) s) \<Longrightarrow>
    irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)) = None"
   apply (erule use_valid)
    apply (wp dmo_getActiveIRQ_wp)
@@ -342,7 +342,7 @@ lemma invoke_tcb_irq_state_inv[ADT_IF_assms]:
    invoke_tcb tinv
    \<lbrace>\<lambda>_ s. irq_state_inv st s\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   apply (case_tac tinv)
-       apply ((wp hoare_vcg_if_lift  mapM_x_wp[OF _ subset_refl]
+       apply ((wp hoare_vcg_if_lift mapM_x_wp[OF _ subset_refl]
                | wpc
                | simp split del: if_split add: check_cap_at_def
                | clarsimp

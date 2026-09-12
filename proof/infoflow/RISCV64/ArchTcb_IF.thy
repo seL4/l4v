@@ -163,7 +163,7 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
                         and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
        (invoke_tcb ti)"
   apply (simp add: split_def cong: option.case_cong)
-  apply (wpsimp wp: set_priority_reads_respects[THEN reads_respects_f[where  st=st and Q=\<top>]])
+  apply (wpsimp wp: set_priority_reads_respects[THEN reads_respects_f[where st=st and Q=\<top>]])
                     apply (wpsimp wp: hoare_vcg_const_imp_liftE_R simp: when_def | wpc)+
                     apply (rule conjI)
                      apply ((wpsimp wp: reschedule_required_reads_respects_f)+)[4]

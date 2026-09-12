@@ -51,7 +51,7 @@ lemma arch_decode_irq_control_invocation_rev[Decode_IF_assms]:
          | simp add: Let_def)+
   apply safe
        apply simp+
-    apply (blast intro: aag_Control_into_owns_irq )
+    apply (blast intro: aag_Control_into_owns_irq)
    apply (drule_tac x="caps ! 0" in bspec)
     apply (fastforce intro: bang_0_in_set)
    apply (drule (1) is_cnode_into_is_subject; blast dest: prop_of_obj_ref_of_cnode_cap)
@@ -141,7 +141,7 @@ lemma decode_asid_control_invocation_reads_respects_f:
         (decode_asid_control_invocation label args slot cap excaps)"
   unfolding decode_asid_control_invocation_def
   apply (rule equiv_valid_guard_imp)
-   apply (wp check_vp_wpR  reads_respects_f_inv'[OF get_asid_pool_rev]
+   apply (wp check_vp_wpR reads_respects_f_inv'[OF get_asid_pool_rev]
              reads_respects_f_inv'[OF ensure_empty_rev]
              reads_respects_f_inv'[OF lookup_slot_for_cnode_op_rev]
              reads_respects_f_inv'[OF ensure_no_children_rev]
@@ -189,7 +189,7 @@ lemma decode_frame_invocation_reads_respects_f:
             check_slot_def check_vp_alignment_def gets_the_def
   supply gets_the_ev[wp del]
   apply (rule equiv_valid_guard_imp)
-   apply ((wp gets_ev' check_vp_wpR  reads_respects_f_inv'[OF get_asid_pool_rev]
+   apply ((wp gets_ev' check_vp_wpR reads_respects_f_inv'[OF get_asid_pool_rev]
               reads_respects_f_inv'[OF ensure_empty_rev]
               reads_respects_f_inv'[OF get_pte_rev]
               reads_respects_f_inv'[OF lookup_slot_for_cnode_op_rev]

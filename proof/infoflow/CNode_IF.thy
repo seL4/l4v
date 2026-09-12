@@ -175,7 +175,7 @@ lemma update_cdt_reads_respects:
   done
 
 lemma update_cdt_list_reads_respects:
-  "reads_respects aag l (K  (\<forall>rv rv'.
+  "reads_respects aag l (K (\<forall>rv rv'.
       equiv_for ((aag_can_read aag or aag_can_affect aag l) \<circ> fst) id rv rv' \<longrightarrow>
       equiv_for ((aag_can_read aag or aag_can_affect aag l) \<circ> fst) f rv rv'))
      (update_cdt_list f)"

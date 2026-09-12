@@ -321,7 +321,7 @@ lemma retype_region_globals_equiv[Retype_IF_assms]:
     apply (clarsimp simp: p_assoc_help)
     apply (drule disjoint_subset_neg1[OF _ subset_thing], rule is_aligned_no_wrap')
         apply (clarsimp simp: valid_pspace_def pspace_aligned_def)
-        apply (drule_tac x="arm_global_pd (arch_state sa)" and A="dom (kheap sa)"  in bspec)
+        apply (drule_tac x="arm_global_pd (arch_state sa)" and A="dom (kheap sa)" in bspec)
          apply (simp add: domI)
         apply simp
        apply (rule word_power_less_1)
@@ -350,7 +350,7 @@ lemma retype_region_globals_equiv[Retype_IF_assms]:
    apply (clarsimp simp: p_assoc_help)
    apply (drule disjoint_subset_neg1[OF _ subset_thing], rule is_aligned_no_wrap')
        apply (clarsimp simp: valid_pspace_def pspace_aligned_def)
-       apply (drule_tac x="idle_thread sa" and A="dom (kheap sa)"  in bspec)
+       apply (drule_tac x="idle_thread sa" and A="dom (kheap sa)" in bspec)
         apply (simp add: domI)
        apply simp
       apply uint_arith

@@ -104,7 +104,7 @@ lemma perform_asid_control_invocation_domain_sep_inv:
   apply (rule hoare_pre)
   apply (wp modify_wp cap_insert_domain_sep_inv' set_cap_domain_sep_inv
             get_cap_domain_sep_inv_cap[where st=st] hoare_vcg_imp_lift
-         | wpc | simp )+
+         | wpc | simp)+
   done
 
 crunch perform_sgi_invocation, perform_asid_pool_invocation, perform_smc_invocation

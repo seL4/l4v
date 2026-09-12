@@ -297,7 +297,7 @@ lemma equiv_valid_get_assert:
   done
 
 lemma my_bind_rewrite_lemma:
-  "(f >>= g) =  (f >>= (\<lambda> r. (g r) >>= (\<lambda> x. return ())))"
+  "(f >>= g) = (f >>= (\<lambda>r. (g r) >>= (\<lambda>x. return ())))"
   by simp
 
 lemma delete_objects_reads_respects:
@@ -458,7 +458,7 @@ locale Arch_IF_1 =
   and arch_prepare_set_domain_irq_state_of_state[wp]:
     "arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   and arch_prepare_next_domain_irq_state_of_state[wp]:
-    "arch_prepare_next_domain  \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+    "arch_prepare_next_domain \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   and equiv_hyp_machine_state_rest_update[simp]:
     "\<And>P. equiv_hyp P st (s\<lparr>machine_state := ms\<lparr>machine_state_rest := rest\<rparr>\<rparr>) = equiv_hyp P st (s\<lparr>machine_state := ms\<rparr>)"
   and equiv_fpu_machine_state_rest_update[simp]:
@@ -547,7 +547,7 @@ crunch reschedule_required
 lemma cancel_badged_sends_globals_equiv:
   "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
    cancel_badged_sends epptr badge
-   \<lbrace>\<lambda>_. globals_equiv s\<rbrace> "
+   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding cancel_badged_sends_def
   by (wpsimp wp: set_endpoint_globals_equiv set_thread_state_globals_equiv
                  filterM_preserved get_simple_ko_wp)

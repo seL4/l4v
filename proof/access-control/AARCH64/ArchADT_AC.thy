@@ -22,7 +22,7 @@ lemma ptr_offset_in_ptr_range:
    apply (rule_tac b="2 ^ sz - 1" in word_plus_mono_right2)
     apply (frule some_get_page_info_umapsD)
           apply (fastforce dest: get_vspace_of_thread_reachable
-                           simp:  get_page_info_def)+
+                           simp: get_page_info_def)+
     apply clarsimp
     apply (drule is_aligned_ptrFromPAddr_n)
      apply (simp add: pageBitsForSize_def pageBits_def canonical_bit_def

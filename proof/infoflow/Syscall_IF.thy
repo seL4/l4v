@@ -264,7 +264,7 @@ lemma invoke_cnode_reads_respects_f:
                   reads_respects_f[OF cap_move_reads_respects] cap_move_silc_inv get_cap_auth_wp
                   cap_revoke_reads_respects_f cap_delete_reads_respects_f cap_swap_silc_inv
                   reads_respects_f[OF cap_swap_reads_respects] cap_move_cte_wp_at_other
-                  reads_respects_f[OF get_cap_rev]  cancel_badged_sends_reads_respects_f
+                  reads_respects_f[OF get_cap_rev] cancel_badged_sends_reads_respects_f
              | simp add: when_def split del: if_split
              | elim conjE, assumption)+
   apply (clarsimp simp: cnode_inv_auth_derivations_def authorised_cnode_inv_def)

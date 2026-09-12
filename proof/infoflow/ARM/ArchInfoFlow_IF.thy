@@ -20,7 +20,7 @@ lemma equiv_asid:
   "equiv_asid asid s s' = equiv_asid' asid (arm_asid_table (arch_state s) (asid_high_bits_of asid))
                                            (arm_asid_table (arch_state s') (asid_high_bits_of asid))
                                            (kheap s) (kheap s')"
-  by (auto simp: equiv_asid_def equiv_asid'_def asid_pool_at_kheap split: option.splits )
+  by (auto simp: equiv_asid_def equiv_asid'_def asid_pool_at_kheap split: option.splits)
 
 lemma equiv_asids_refl[InfoFlow_IF_assms]:
   "equiv_asids R s s"
