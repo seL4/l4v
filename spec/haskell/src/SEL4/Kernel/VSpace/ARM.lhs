@@ -67,7 +67,7 @@ The idle thread's code is at an arbitrary location in kernel memory. For conveni
 The idle thread executes a short loop that drains the CPU's write buffer and then waits for an interrupt. Note that the wait for interrupt instruction always completes before the interrupt is delivered, so the interrupt handler will return to the following branch instruction.
 
 > idleThreadCode :: [Word]
-> idleThreadCode = error "unimplemented"
+> idleThreadCode = error "Unimplemented init code"
 
 \subsection{Creating the vspace for the initial thread}
 
@@ -76,37 +76,37 @@ Function mapKernelWindow will create a virtual address space for the initial thr
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 
 > mapKernelWindow :: Kernel ()
-> mapKernelWindow = error "ARM_HYP BOOT unimplemented"
+> mapKernelWindow = error "Unimplemented init code"
 
 > activateGlobalVSpace :: Kernel ()
-> activateGlobalVSpace = error "ARM_HYP BOOT unimplemented"
+> activateGlobalVSpace = error "Unimplemented init code"
 
 > createITPDPTs :: Capability -> VPtr -> VPtr -> KernelInit Capability
-> createITPDPTs rootCNCap vptrStart biFrameVPtr = error "ARM_HYP BOOT unimplemented"
+> createITPDPTs rootCNCap vptrStart biFrameVPtr = error "Unimplemented init code"
 
 > writeITPDPTs :: Capability -> Capability -> KernelInit ()
-> writeITPDPTs rootCNCap pdCap = error "ARM_HYP BOOT unimplemented"
+> writeITPDPTs rootCNCap pdCap = error "Unimplemented init code"
 
 > createITASIDPool :: Capability -> KernelInit Capability
-> createITASIDPool rootCNCap = error "ARM_HYP BOOT unimplemented"
+> createITASIDPool rootCNCap = error "Unimplemented init code"
 
 > writeITASIDPool :: Capability -> Capability -> Kernel ()
-> writeITASIDPool apCap pdCap = error "ARM_HYP BOOT unimplemented"
+> writeITASIDPool apCap pdCap = error "Unimplemented init code"
 
 > createIPCBufferFrame :: Capability -> VPtr -> KernelInit Capability
-> createIPCBufferFrame rootCNCap vptr = error "ARM_HYP BOOT unimplemented"
+> createIPCBufferFrame rootCNCap vptr = error "Unimplemented init code"
 
 > createBIFrame :: Capability -> VPtr -> Word32 -> Word32 -> KernelInit Capability
-> createBIFrame rootCNCap vptr nodeId numNodes = error "ARM_HYP BOOT unimplemented"
+> createBIFrame rootCNCap vptr nodeId numNodes = error "Unimplemented init code"
 
 > vptrFromPPtr :: PPtr a -> KernelInit VPtr
-> vptrFromPPtr (PPtr ptr) = error "ARM_HYP BOOT unimplemented"
+> vptrFromPPtr (PPtr ptr) = error "Unimplemented init code"
 
 > createFramesOfRegion :: Capability -> Region -> Bool -> KernelInit ()
-> createFramesOfRegion rootCNCap region doMap = error "ARM_HYP BOOT unimplemented"
+> createFramesOfRegion rootCNCap region doMap = error "Unimplemented init code"
 
 > createDeviceFrames :: Capability -> KernelInit ()
-> createDeviceFrames rootCNodeCap = error "ARM_HYP BOOT unimplemented"
+> createDeviceFrames rootCNodeCap = error "Unimplemented init code"
 
 #else /* CONFIG_ARM_HYPERVISOR_SUPPORT */
 

@@ -202,7 +202,7 @@ The following functions define the ARM-specific interface between the kernel and
 >     liftIO $ Platform.maskInterrupt cbptr maskI irq
 
 > deactivateInterrupt :: IRQ -> MachineMonad ()
-> deactivateInterrupt irq = error "Unimplemented - GICv3 machine op"
+> deactivateInterrupt irq = isabelleOp
 
 > configureTimer :: MachineMonad IRQ
 > configureTimer = do
@@ -215,10 +215,10 @@ The following functions define the ARM-specific interface between the kernel and
 >     liftIO $ Platform.initIRQController cbptr
 
 > setIRQTrigger :: IRQ -> Bool -> MachineMonad ()
-> setIRQTrigger irq trigger = error "ARM machine callback unimplemented"
+> setIRQTrigger irq trigger = isabelleOp
 
 > handleSpuriousIRQ_mop :: MachineMonad ()
-> handleSpuriousIRQ_mop = error "See MachineOps.thy"
+> handleSpuriousIRQ_mop = isabelleOp
 
 > resetTimer :: MachineMonad ()
 > resetTimer = do
@@ -230,12 +230,6 @@ The following functions define the ARM-specific interface between the kernel and
 
 > getRestartPC = getRegister (Register ARM.FaultIP)
 > setNextPC = setRegister (Register ARM.NextIP)
-
-> getTPIDRURW :: MachineMonad Word
-> getTPIDRURW = error "machine callback unimplemented"
-
-> setTPIDRURW :: Word -> MachineMonad ()
-> setTPIDRURW = error "machine callback unimplemented"
 
 \subsection{ARM Memory Management}
 
@@ -313,16 +307,16 @@ caches must be done separately.
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 
 > setCurrentPDPL2 :: PAddr -> MachineMonad ()
-> setCurrentPDPL2 = error "ARMHYP machine callback unimplemented"
+> setCurrentPDPL2 = isabelleOp
 
 > writeContextIDAndPD :: HardwareASID -> PAddr -> MachineMonad ()
-> writeContextIDAndPD = error "ARMHYP machine callback unimplemented"
+> writeContextIDAndPD = isabelleOp
 
 > getTPIDRURO :: MachineMonad Word
-> getTPIDRURO = error "ARMHYP machine callback unimplemented"
+> getTPIDRURO = isabelleOp
 
 > setTPIDRURO :: Word -> MachineMonad ()
-> setTPIDRURO = error "ARMHYP machine callback unimplemented"
+> setTPIDRURO = isabelleOp
 
 #endif
 
@@ -524,22 +518,22 @@ implementation assumes the monitor is not modelled in our simulator.
 \subsection{Hypervisor-specific status/control registers}
 
 > getHSR :: MachineMonad Word
-> getHSR = error "ARMHYP machine callback unimplemented"
+> getHSR = isabelleOp
 
 > setHCR :: Word -> MachineMonad ()
-> setHCR _hcr = error "ARMHYP machine callback unimplemented"
+> setHCR _hcr = isabelleOp
 
 > getHDFAR :: MachineMonad VPtr
-> getHDFAR = error "ARMHYP machine callback unimplemented"
+> getHDFAR = isabelleOp
 
 > addressTranslateS1 :: VPtr -> MachineMonad VPtr
-> addressTranslateS1 = error "ARMHYP machine callback unimplemented"
+> addressTranslateS1 = isabelleOp
 
 > getSCTLR :: MachineMonad Word
-> getSCTLR = error "ARMHYP machine callback unimplemented"
+> getSCTLR = isabelleOp
 
 > setSCTLR :: Word -> MachineMonad ()
-> setSCTLR _sctlr = error "ARMHYP machine callback unimplemented"
+> setSCTLR _sctlr = isabelleOp
 
 \subsection{Hypervisor banked registers}
 
@@ -549,10 +543,10 @@ each. Some special registers, like SCTLR, still get their own load/store
 functions due to being operated on separately.
 
 > readVCPUHardwareReg :: ARM.VCPUReg -> MachineMonad Word
-> readVCPUHardwareReg reg = error "ARMHYP machine callback unimplemented"
+> readVCPUHardwareReg reg = isabelleOp
 
 > writeVCPUHardwareReg :: ARM.VCPUReg -> Word -> MachineMonad ()
-> writeVCPUHardwareReg reg val = error "ARMHYP machine callback unimplemented"
+> writeVCPUHardwareReg reg val = isabelleOp
 
 #endif
 
@@ -838,55 +832,55 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 > vgicIRQMask = 3 `shiftL` 28
 
 > get_gic_vcpu_ctrl_hcr :: MachineMonad Word
-> get_gic_vcpu_ctrl_hcr = error "ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_hcr = isabelleOp
 
 > set_gic_vcpu_ctrl_hcr :: Word -> MachineMonad ()
-> set_gic_vcpu_ctrl_hcr = error "ARMHYP Unimplemented callback"
+> set_gic_vcpu_ctrl_hcr = isabelleOp
 
 > get_gic_vcpu_ctrl_vmcr :: MachineMonad Word
-> get_gic_vcpu_ctrl_vmcr = error "ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_vmcr = isabelleOp
 
 > set_gic_vcpu_ctrl_vmcr :: Word -> MachineMonad ()
-> set_gic_vcpu_ctrl_vmcr = error "ARMHYP Unimplemented callback"
+> set_gic_vcpu_ctrl_vmcr = isabelleOp
 
 > get_gic_vcpu_ctrl_apr :: MachineMonad Word
-> get_gic_vcpu_ctrl_apr = error "ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_apr = isabelleOp
 
 > set_gic_vcpu_ctrl_apr :: Word -> MachineMonad ()
-> set_gic_vcpu_ctrl_apr = error "ARMHYP Unimplemented callback"
+> set_gic_vcpu_ctrl_apr = isabelleOp
 
 > get_gic_vcpu_ctrl_vtr :: MachineMonad Word
-> get_gic_vcpu_ctrl_vtr = error "ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_vtr = isabelleOp
 
 > get_gic_vcpu_ctrl_eisr0 :: MachineMonad Word
-> get_gic_vcpu_ctrl_eisr0 = error "ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_eisr0 = isabelleOp
 
 > get_gic_vcpu_ctrl_eisr1 :: MachineMonad Word
-> get_gic_vcpu_ctrl_eisr1 = error "ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_eisr1 = isabelleOp
 
 > get_gic_vcpu_ctrl_misr :: MachineMonad Word
-> get_gic_vcpu_ctrl_misr = error "ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_misr = isabelleOp
 
 > get_gic_vcpu_ctrl_lr :: Word -> MachineMonad Word
-> get_gic_vcpu_ctrl_lr = error "ARMHYP Unimplemented callback"
+> get_gic_vcpu_ctrl_lr = isabelleOp
 
 > set_gic_vcpu_ctrl_lr :: Word -> Word -> MachineMonad ()
-> set_gic_vcpu_ctrl_lr = error "ARMHYP Unimplemented callback"
+> set_gic_vcpu_ctrl_lr = isabelleOp
 
 \subsection{Virtual timer interface}
 
 > get_cntv_cval_64 :: MachineMonad Word64
-> get_cntv_cval_64 = error "ARMHYP Unimplemented callback"
+> get_cntv_cval_64 = isabelleOp
 > set_cntv_cval_64 :: Word64 -> MachineMonad ()
-> set_cntv_cval_64 = error "ARMHYP Unimplemented callback"
+> set_cntv_cval_64 = isabelleOp
 
 > get_cntv_off_64 :: MachineMonad Word64
-> get_cntv_off_64 = error "ARMHYP Unimplemented callback"
+> get_cntv_off_64 = isabelleOp
 > set_cntv_off_64 :: Word64 -> MachineMonad ()
-> set_cntv_off_64 = error "ARMHYP Unimplemented callback"
+> set_cntv_off_64 = isabelleOp
 
 > check_export_arch_timer :: MachineMonad ()
-> check_export_arch_timer = error "ARMHYP Unimplemented callback"
+> check_export_arch_timer = isabelleOp
 
 #endif
 
@@ -917,7 +911,7 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 
 > -- Wether to trap WFI/WFE instructions or not in hyp mode
 > config_DISABLE_WFI_WFE_TRAPS :: Bool
-> config_DISABLE_WFI_WFE_TRAPS = error "generated from CMake config"
+> config_DISABLE_WFI_WFE_TRAPS = isabelleOp
 
 #endif
 
@@ -925,27 +919,27 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 
 > -- Whether to use the GICv3. Defaults to GICv2 when set to False.
 > config_ARM_GIC_V3 :: Bool
-> config_ARM_GIC_V3 = error "generated from CMake config"
+> config_ARM_GIC_V3 = isabelleOp
 
 > -- Whether the handleSpuriousIRQ machine op is available
 > hasSpuriousIRQ_mop :: Bool
-> hasSpuriousIRQ_mop = error "Implemented in MachineOps.thy"
+> hasSpuriousIRQ_mop = isabelleOp
 
 > -- Whether the setTrigger machine op is available
 > haveSetTrigger :: Bool
-> haveSetTrigger = error "Implemented in machine/(ARM|ARM_HYP)/Platform.thy"
+> haveSetTrigger = isabelleOp
 
 \subsection{SGI}
 
 > numSGIs :: Int
-> numSGIs = error "defined in machine/AARCH64/Platform.thy"
+> numSGIs = isabelleOp
 
 > gicNumTargets :: Int
-> gicNumTargets = error "defined in machine/AARCH64/Platform.thy"
+> gicNumTargets = isabelleOp
 
 > isGICPlatform :: Bool
-> isGICPlatform = error "defined in machine/AARCH64/Platform.thy"
+> isGICPlatform = isabelleOp
 
 > -- the machine op uses word_t (and irq_t which is also word_t in C)
 > sendSGI :: Word -> Word -> MachineMonad ()
-> sendSGI irq target = error "Unimplemented - machine op"
+> sendSGI irq target = isabelleOp

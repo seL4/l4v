@@ -596,34 +596,34 @@ storePTE slot pte = do
 {- Unimplemented Boot Code Stubs -}
 
 mapKernelWindow  :: Kernel ()
-mapKernelWindow = error "boot code unimplemented"
+mapKernelWindow = error "unimplemented init code"
 
 activateGlobalVSpace :: Kernel ()
-activateGlobalVSpace = error "boot code unimplemented"
+activateGlobalVSpace = error "unimplemented init code"
 
 createIPCBufferFrame :: Capability -> VPtr -> KernelInit Capability
-createIPCBufferFrame = error "boot code unimplemented"
+createIPCBufferFrame = error "unimplemented init code"
 
 createBIFrame :: Capability -> VPtr -> Word32 -> Word32 -> KernelInit Capability
-createBIFrame = error "boot code unimplemented"
+createBIFrame = error "unimplemented init code"
 
 createFramesOfRegion :: Capability -> Region -> Bool -> KernelInit ()
-createFramesOfRegion = error "boot code unimplemented"
+createFramesOfRegion = error "unimplemented init code"
 
 createITPDPTs :: Capability -> VPtr -> VPtr -> KernelInit Capability
-createITPDPTs  = error "boot code unimplemented"
+createITPDPTs  = error "unimplemented init code"
 
 writeITPDPTs :: Capability -> Capability -> KernelInit ()
-writeITPDPTs  = error "boot code unimplemented"
+writeITPDPTs  = error "unimplemented init code"
 
 createITASIDPool :: Capability -> KernelInit Capability
-createITASIDPool  = error "boot code unimplemented"
+createITASIDPool  = error "unimplemented init code"
 
 writeITASIDPool :: Capability -> Capability -> Kernel ()
-writeITASIDPool  = error "boot code unimplemented"
+writeITASIDPool  = error "unimplemented init code"
 
 createDeviceFrames :: Capability -> KernelInit ()
-createDeviceFrames  = error "boot code unimplemented"
+createDeviceFrames  = error "unimplemented init code"
 
 vptrFromPPtr :: PPtr a -> KernelInit VPtr
-vptrFromPPtr  = error "boot code unimplemented"
+vptrFromPPtr  = error "unimplemented init code"
