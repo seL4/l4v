@@ -99,7 +99,7 @@ definition xNonleakage_gen :: bool where
                                  \<longrightarrow> s \<approx>(xources as s u)\<approx> t
                                  \<longrightarrow> uwr_equiv s as t as u"
 
-end
+end (* noninterference_system *)
 
 
 context unwinding_system begin
@@ -433,7 +433,7 @@ lemma Noninfluence_strong_uwr_pg_confidentiality_u_weak:
   apply (simp add: sources_Step_2 sameFor_dom_def uwr_equiv_def Step_def ipurge_single_eq)
   done
 
-end
+end (* unwinding_system *)
 
 
 context complete_unwinding_system begin
@@ -664,6 +664,6 @@ lemma Noninfluence_strong_uwr_equiv_Noninfluence_strong_uwr_pg:
   apply (erule Noninfluence_strong_uwr_pg_integrity_u)
   done
 
-end
+end (* complete_unwinding_system *)
 
 end

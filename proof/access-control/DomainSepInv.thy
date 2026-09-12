@@ -361,7 +361,7 @@ lemma empty_slot_domain_sep_inv:
   by (wpsimp wp: get_cap_wp set_cap_domain_sep_inv set_original_wp dxo_wp_weak
                  hoare_weak_lift_imp deleted_irq_handler_domain_sep_inv)
 
-end
+end (* DomainSepInv *)
 
 
 lemma set_simple_ko_neg_cte_wp_at[wp]:
@@ -594,7 +594,7 @@ qed
 
 lemmas cap_revoke_domain_sep_inv[wp] = use_spec(2)[OF cap_revoke_domain_sep_inv']
 
-end
+end (* DomainSepInv *)
 
 
 lemma cap_move_cte_wp_at_other:
@@ -688,7 +688,7 @@ lemma invoke_cnode_domain_sep_inv:
   apply (wp | simp | wpc | rule hoare_pre)+
   done
 
-end
+end (* DomainSepInv *)
 
 
 lemma perform_page_invocation_domain_sep_inv_get_cap_helper:
@@ -870,7 +870,7 @@ crunch do_reply_transfer, handle_fault, reply_from_kernel, restart
   for domain_sep_inv[wp]: "\<lambda>s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_state)"
   (wp: crunch_wps handle_arch_fault_reply_domain_sep_inv ignore: thread_set)
 
-end
+end (* DomainSepInv *)
 
 crunch setup_reply_master
   for domain_sep_inv[wp]: "domain_sep_inv irqs st"
@@ -922,7 +922,7 @@ lemma invoke_tcb_domain_sep_inv:
                        tcb_cap_valid_def tcb_at_st_tcb_at)+
   done
 
-end
+end (* DomainSepInv *)
 
 
 locale DomainSepInv_2 = DomainSepInv state_ext_t
@@ -1057,7 +1057,7 @@ lemma handle_reply_domain_sep_inv:
 crunch delete_caller_cap
   for domain_sep_inv[wp]: "\<lambda>s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_state)"
 
-end
+end (* DomainSepInv_2 *)
 
 
 (* FIXME: clagged from Syscall_AC *)
@@ -1136,7 +1136,7 @@ lemma call_kernel_domain_sep_inv:
       | strengthen invs_valid_objs invs_mdb invs_sym_refs
       | wp hoare_drop_imps)+
 
-end
+end (* DomainSepInv_2 *)
 
 (* Occasionally it is useful to only require the absence of domain caps: *)
 
@@ -1183,6 +1183,6 @@ lemma no_domain_caps_update[iff]:
   "no_domain_caps (f s) = no_domain_caps s"
   by (simp add: no_domain_caps_def2)
 
-end
+end (* pspace_update_eq *)
 
 end

@@ -211,7 +211,7 @@ lemma arch_perform_invocation_in_cur_domainE[Syscall_AC_assms, wp]:
    -,\<lbrace>\<lambda>_ s. in_cur_domain t s\<rbrace>"
   by (wpsimp simp: arch_perform_invocation_def)
 
-end
+end (* Arch *)
 
 
 global_interpretation Syscall_AC?: Syscall_AC

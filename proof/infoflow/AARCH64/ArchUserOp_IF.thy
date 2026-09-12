@@ -118,7 +118,7 @@ lemma no_fpu_modify[UserOp_IF_assms]:
   "\<And>f. no_fpu (modify (\<lambda>ms. ms\<lparr>machine_state_rest := f ms\<rparr>))"
   by wpsimp+
 
-end
+end (* Arch *)
 
 
 arch_requalify_types user_transition_if
@@ -846,7 +846,7 @@ definition valid_vspace_objs_if where
 
 declare valid_vspace_objs_if_def[simp]
 
-end
+end (* Arch *)
 
 arch_requalify_consts
   do_user_op_if

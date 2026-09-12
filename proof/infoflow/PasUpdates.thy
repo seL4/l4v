@@ -108,7 +108,7 @@ lemma pas_wellformed_pasSubject_update:
 lemmas pas_refined_pasSubject_update =
   pas_refined_pasSubject_update'[OF _ pas_wellformed_pasSubject_update]
 
-end
+end (* PasUpdates *)
 
 
 lemma guarded_pas_domain_pasSubject_update[simp]:
@@ -218,7 +218,7 @@ lemma pas_refined_pasMayEditReadyQueues_update:
                      state_asids_to_policy_pasMayEditReadyQueues_update[simplified]
                      state_irqs_to_policy_pasMayEditReadyQueues_update)
 
-end
+end (* PasUpdates *)
 
 
 lemma guarded_pas_domainMayEditReadyQueues_update[simp]:

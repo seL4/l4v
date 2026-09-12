@@ -45,7 +45,7 @@ lemma zero_less_word_size[Arch_AC_assms, simp]:
 declare set_mrs_state_hyp_refs_of[Arch_AC_assms]
 declare storeWord_respects[Arch_AC_assms]
 
-end
+end (* Arch *)
 
 
 global_interpretation Arch_AC?: Arch_AC
@@ -1019,7 +1019,7 @@ lemma set_thread_state_authorised_arch_inv[Arch_AC_assms,wp]:
   apply (wpsimp wp: set_object_wp)
   by (clarsimp simp: authorised_arch_inv_def)
 
-end
+end (* Arch *)
 
 
 arch_requalify_consts authorised_arch_inv

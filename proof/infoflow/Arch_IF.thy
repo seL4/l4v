@@ -552,6 +552,6 @@ lemma cancel_badged_sends_globals_equiv:
   by (wpsimp wp: set_endpoint_globals_equiv set_thread_state_globals_equiv
                  filterM_preserved get_simple_ko_wp)
 
-end
+end (* Arch_IF *)
 
 end

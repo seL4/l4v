@@ -150,7 +150,7 @@ lemma thread_set_non_idle_globals_equiv[Arch_IF_assms]:
 declare arch_prepare_set_domain_inv[Arch_IF_assms]
 declare arch_prepare_next_domain_inv[Arch_IF_assms]
 
-end
+end (* Arch *)
 
 
 requalify_facts
@@ -1221,7 +1221,7 @@ lemma thread_set_globals_equiv:
     apply (fastforce simp: valid_arch_state_def obj_at_def get_tcb_def dest: valid_global_arch_objs_pt_at)+
   done
 
-end
+end (* Arch *)
 
 arch_requalify_consts
   authorised_for_globals_arch_inv

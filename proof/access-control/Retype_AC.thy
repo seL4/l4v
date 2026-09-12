@@ -419,7 +419,7 @@ lemma create_cap_pas_refined:
   apply (auto intro: pas_refined_refl dest!: subsetD)
   done
 
-end
+end (* Retype_AC *)
 
 
 context retype_region_proofs begin
@@ -440,7 +440,7 @@ lemma bas_eq[simp]: "thread_bound_ntfns s' = thread_bound_ntfns s"
             split: Structures_A.apiobject_type.split)
   done
 
-end
+end (* retype_region_proofs *)
 
 
 context retype_region_proofs' begin
@@ -467,7 +467,7 @@ lemma caps_of_state_pres:
   "caps_of_state s p = Some cap \<Longrightarrow> caps_of_state s' p = Some cap"
   using cte_wp_at_pres by (simp add: F)
 
-end
+end (* retype_region_proofs *)
 
 lemma use_retype_region_proofs':
   assumes x: "\<And>(s::det_state). \<lbrakk> retype_region_proofs s ty us ptr sz n dev; P s; pas_cur_domain aag s;
@@ -517,7 +517,7 @@ lemma retype_region_pas_refined:
     apply auto
   done
 
-end
+end (* Retype_AC *)
 
 
 lemma retype_region_ranges'':
@@ -698,7 +698,7 @@ lemmas delete_objects_descendants_range_in =
   delete_objects_descendants_range_in'''
   delete_objects_descendants_range_in''''
 
-end
+end (* Retype_AC *)
 
 
 crunch delete_objects
@@ -1040,7 +1040,7 @@ lemma invoke_untyped_pas_refined:
   apply (force simp: descendants_range_def cte_wp_at_caps_of_state authorised_untyped_inv_def)
   done
 
-end
+end (* Retype_AC *)
 
 
 subsection\<open>decode\<close>
@@ -1134,6 +1134,6 @@ lemma decode_untyped_invocation_authorised:
                      aag_cap_auth_def ptr_range_def le_trans[OF word_size_bits_untyped_min_bits])
   done
 
-end
+end (* Retype_AC *)
 
 end
