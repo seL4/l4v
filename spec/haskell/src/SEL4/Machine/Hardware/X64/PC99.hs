@@ -46,9 +46,6 @@ kernelELFPAddrBase = PAddr 0x00100000
 kernelELFBase :: VPtr
 kernelELFBase = VPtr $ fromVPtr pptrTop + (fromPAddr kernelELFPAddrBase)
 
-pageColourBits :: Int
-pageColourBits = 0 -- qemu has no cache
-
 getMemoryRegions :: Ptr CallbackData -> IO [(PAddr, PAddr)]
 getMemoryRegions _ = return [(0, 0x8 `shiftL` 24)]
 
@@ -134,12 +131,6 @@ invalidateTranslationSingleASID = isabelleOp
 
 invalidateLocalPageStructureCacheASID :: PAddr -> Word64 -> IO ()
 invalidateLocalPageStructureCacheASID = isabelleOp
-
-nativeThreadUsingFPU :: Word -> IO Bool
-nativeThreadUsingFPU = error "Unimplemented"
-
-switchFpuOwner :: Word -> Word -> IO ()
-switchFpuOwner = error "Unimplemented"
 
 getFaultAddress :: Ptr CallbackData -> IO VPtr
 getFaultAddress _ = isabelleOp

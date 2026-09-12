@@ -30,9 +30,6 @@ physBase = PAddr 0x80000000
 pptrBase :: VPtr
 pptrBase = VPtr 0xf0000000
 
-pageColourBits :: Int
-pageColourBits = 0 -- qemu has no cache
-
 getMemoryRegions :: Ptr CallbackData -> IO [(PAddr, PAddr)]
 getMemoryRegions _ = return [(0x80000000, 0x80000000 + (0x8 `shiftL` 24))]
 

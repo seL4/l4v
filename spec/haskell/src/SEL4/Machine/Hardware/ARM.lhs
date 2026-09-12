@@ -183,9 +183,6 @@ The following functions define the ARM-specific interface between the kernel and
 > storeWordVM :: PPtr Word -> Word -> MachineMonad ()
 > storeWordVM ptr val = storeWord ptr val
 
-> pageColourBits :: Int
-> pageColourBits = Platform.pageColourBits
-
 > getActiveIRQ :: Bool -> MachineMonad (Maybe IRQ)
 > getActiveIRQ _ = do
 >     cbptr <- ask

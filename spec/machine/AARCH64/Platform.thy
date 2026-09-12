@@ -139,9 +139,6 @@ definition irqVGICMaintenance :: irq where
 definition irqVTimerEvent :: irq where
   "irqVTimerEvent \<equiv> 27"
 
-definition pageColourBits :: nat where
-  "pageColourBits \<equiv> undefined" \<comment> \<open>not implemented on this platform\<close>
-
 
 section \<open>Page table sizes\<close>
 
