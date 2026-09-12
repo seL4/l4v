@@ -268,9 +268,6 @@ data PTE
 
 {- Simulator callbacks -}
 
-pageColourBits :: Int
-pageColourBits = Platform.pageColourBits
-
 getMemoryRegions :: MachineMonad [(PAddr, PAddr)]
 getMemoryRegions = do
     cpbtr <- ask
