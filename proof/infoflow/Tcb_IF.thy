@@ -229,7 +229,7 @@ lemma cap_delete_globals_equiv:
   done
 
 lemma no_cap_to_idle_thread:
-   "invs (s :: det_state) \<Longrightarrow> \<not> ex_nonz_cap_to (idle_thread s) s"
+  "invs (s :: det_state) \<Longrightarrow> \<not> ex_nonz_cap_to (idle_thread s) s"
   apply (rule no_cap_to_idle_thread')
   apply clarsimp
   done
@@ -516,9 +516,9 @@ lemma invoke_tcb_reads_respects_f:
           apply (solves \<open>auto intro!: det_zipWithM
                                simp: det_setRegister det_getRestartPC det_setNextPC
                                      authorised_tcb_inv_def reads_equiv_f_def\<close>)
-         apply (wp as_user_reads_respects_f suspend_silc_inv when_ev  suspend_reads_respects_f
+         apply (wp as_user_reads_respects_f suspend_silc_inv when_ev suspend_reads_respects_f
                 | simp | elim conjE, assumption)+
-         apply (solves \<open>auto simp: authorised_tcb_inv_def  det_getRegister reads_equiv_f_def
+         apply (solves \<open>auto simp: authorised_tcb_inv_def det_getRegister reads_equiv_f_def
                           intro!: det_mapM[OF _ subset_refl]\<close>)
         apply (wp when_ev mapM_x_ev'' reschedule_required_reads_respects_f[where st=st]
                   as_user_reads_respects_f[where st=st] hoare_vcg_ball_lift

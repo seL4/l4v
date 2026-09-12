@@ -322,8 +322,8 @@ lemma no_fail_gts:
   by (clarsimp simp: get_tcb_def tcb_at_def)
 
 lemma sts_noop:
-   "monadic_rewrite True True (tcb_at tcb and (\<lambda>s. tcb \<noteq> cur_thread s))
-                    (set_thread_state_act tcb) (return ())"
+  "monadic_rewrite True True (tcb_at tcb and (\<lambda>s. tcb \<noteq> cur_thread s))
+                   (set_thread_state_act tcb) (return ())"
   apply (clarsimp simp: set_thread_state_act_def when_def)
   apply (monadic_rewrite_l monadic_rewrite_if_l_False \<open>wpsimp wp: gts_wp\<close>)
    apply (monadic_rewrite_symb_exec_l_drop)+
@@ -1084,7 +1084,7 @@ lemma cancel_badged_sends_reads_respects:
   apply (rule gen_asm_ev)+
   apply (simp add: cancel_badged_sends_def)
   apply wp
-     apply ((wp mapM_ev''  get_thread_state_reads_respects set_thread_state_runnable_reads_respects
+     apply ((wp mapM_ev'' get_thread_state_reads_respects set_thread_state_runnable_reads_respects
                 set_simple_ko_reads_respects get_simple_ko_reads_respects hoare_vcg_ball_lift
                 tcb_sched_action_reads_respects set_thread_state_pas_refined mapM_wp
              | wpc | simp add: filterM_mapM tcb_at_st_tcb_at[symmetric]
@@ -1169,15 +1169,15 @@ end
 
 
 lemma get_mi_length':
-   "\<lbrace>\<top>\<rbrace> get_message_info sender \<lbrace>\<lambda>rv s. buffer_cptr_index + unat (mi_extra_caps rv)
-                                         < 2 ^ (msg_align_bits - word_size_bits)\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> get_message_info sender \<lbrace>\<lambda>rv s. buffer_cptr_index + unat (mi_extra_caps rv)
+                                        < 2 ^ (msg_align_bits - word_size_bits)\<rbrace>"
   apply (rule hoare_post_imp[OF _ get_mi_valid'])
   apply (clarsimp simp: valid_message_info_def msg_align_bits' msg_max_length_def word_le_nat_alt
                        buffer_cptr_index_def msg_max_extra_caps_def)
   done
 
 lemma validE_E_wp_post_taut:
-   "\<lbrace>P\<rbrace> f -, \<lbrace>\<top>\<top>\<rbrace>"
+  "\<lbrace>P\<rbrace> f -, \<lbrace>\<top>\<top>\<rbrace>"
   by (auto simp: validE_E_def validE_def valid_def)
 
 lemma aag_has_read_auth_can_read_or_affect_ipc_buffer:
@@ -1561,7 +1561,7 @@ lemma do_reply_transfer_reads_respects_f:
   shows
     "reads_respects_f aag l
        (silc_inv aag st and invs and pas_refined aag and pas_cur_domain aag and tcb_at receiver
-                        and tcb_at sender and emptyable slot  and is_subject aag \<circ> cur_thread
+                        and tcb_at sender and emptyable slot and is_subject aag \<circ> cur_thread
                         and K (grant \<longrightarrow> is_subject aag receiver)
                         and K (is_subject aag sender \<and> aag_can_read aag receiver
                                                      \<and> is_subject aag (fst slot)))
@@ -1589,7 +1589,7 @@ lemma do_reply_transfer_reads_respects_f:
                                  \<and> silc_inv aag st s"
                      in hoare_strengthen_post[rotated])
           apply ((wp (once) hoare_drop_imps
-                  | wp cap_delete_one_invs  hoare_vcg_all_lift
+                  | wp cap_delete_one_invs hoare_vcg_all_lift
                        cap_delete_one_silc_inv reads_respects_f[OF thread_get_reads_respects]
                        reads_respects_f[OF get_thread_state_rev]
                   | simp add: invs_valid_objs invs_psp_aligned invs_valid_global_refs

@@ -34,7 +34,7 @@ lemma set_pt_silc_inv[wp]:
   done
 
 lemma set_asid_pool_silc_inv[wp]:
-   "set_asid_pool ptr pool \<lbrace>silc_inv aag st\<rbrace>"
+  "set_asid_pool ptr pool \<lbrace>silc_inv aag st\<rbrace>"
   unfolding set_asid_pool_def
   apply (rule silc_inv_pres)
     apply (wpsimp wp: set_object_wp_strong simp: a_type_def split: kernel_object.splits)
@@ -111,13 +111,13 @@ qed
 context Arch begin arch_global_naming
 
 lemma perform_page_table_invocation_silc_inv_get_cap_helper:
-   "\<lbrace>silc_inv aag st and cte_wp_at (is_pt_cap or is_frame_cap) xa\<rbrace>
-    get_cap xa
-    \<lbrace>(\<lambda>capa s. (\<not> cap_points_to_label aag (ArchObjectCap $ update_map_data capa None)
-                                           (pasObjectAbs aag (fst xa))
-                \<longrightarrow> (\<exists>lslot. lslot \<in> slots_holding_overlapping_caps
-                                       (ArchObjectCap $ update_map_data capa None) s \<and>
-                             pasObjectAbs aag (fst lslot) = SilcLabel))) \<circ> the_arch_cap\<rbrace>"
+  "\<lbrace>silc_inv aag st and cte_wp_at (is_pt_cap or is_frame_cap) xa\<rbrace>
+   get_cap xa
+   \<lbrace>(\<lambda>capa s. (\<not> cap_points_to_label aag (ArchObjectCap $ update_map_data capa None)
+                                          (pasObjectAbs aag (fst xa))
+               \<longrightarrow> (\<exists>lslot. lslot \<in> slots_holding_overlapping_caps
+                                      (ArchObjectCap $ update_map_data capa None) s \<and>
+                            pasObjectAbs aag (fst lslot) = SilcLabel))) \<circ> the_arch_cap\<rbrace>"
   apply (wp get_cap_wp)
   apply clarsimp
   apply (drule cte_wp_at_norm)
@@ -415,7 +415,7 @@ lemma vppi_event_silc_inv:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding vppi_event_def
   apply (wpsimp wp: gts_wp hoare_vcg_all_lift vcpu_update_trivial_invs maskInterrupt_invs
-                    hoare_vcg_imp_lift  | wps | wp dmo_wp)+
+                    hoare_vcg_imp_lift | wps | wp dmo_wp)+
   apply (clarsimp simp: valid_fault_def)
   using ct_active_st_tcb_at_weaken runnable_eq by blast
 

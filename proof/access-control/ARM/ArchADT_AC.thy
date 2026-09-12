@@ -161,7 +161,7 @@ lemma get_page_info_state_objs_to_policy:
      apply (simp add: get_pd_of_thread_reachable)+
   apply (clarsimp simp: typ_at_eq_kheap_obj)
   apply (clarsimp simp: vs_refs_no_global_pts_def)
-  apply (rule_tac x="(ucast ((x >> 12) && mask 8),  ptrFromPAddr base, sz,
+  apply (rule_tac x="(ucast ((x >> 12) && mask 8), ptrFromPAddr base, sz,
                       vspace_cap_rights_to_auth r False)" in bexI)
    apply clarsimp
    apply (rule_tac x="(ptrFromPAddr base + (x && mask sz), auth)" in image_eqI)

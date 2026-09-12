@@ -220,7 +220,7 @@ lemma aag_cap_auth_PageTableCap_asid:
           intro: pas_refined_Control_into_is_subject_asid)
 
 lemma aag_cap_auth_PageDirectoryCap:
-  "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (PageDirectoryCap word option));  pas_refined aag s \<rbrakk>
+  "\<lbrakk> pas_cap_cur_auth aag (ArchObjectCap (PageDirectoryCap word option)); pas_refined aag s \<rbrakk>
    \<Longrightarrow> is_subject aag word"
   unfolding aag_cap_auth_def
   by (simp add: clas_no_asid cap_auth_conferred_def arch_cap_auth_conferred_def

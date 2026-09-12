@@ -164,7 +164,7 @@ lemma guarded_pas_domainMayActivate_update[simp]:
   by (simp add: guarded_pas_domain_def)
 
 lemma cdt_change_allowedMayActivate_update[simp]:
-  "cdt_change_allowed (aag\<lparr>pasMayActivate := x\<rparr>) = cdt_change_allowed aag "
+  "cdt_change_allowed (aag\<lparr>pasMayActivate := x\<rparr>) = cdt_change_allowed aag"
   by (simp add: cdt_change_allowed_def[abs_def] cdt_direct_change_allowed.simps direct_call_def)
 
 

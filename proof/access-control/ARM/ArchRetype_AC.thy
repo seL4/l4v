@@ -209,7 +209,7 @@ lemma copy_global_invs_mappings_restricted':
   done
 
 lemma init_arch_objects_pas_refined[Retype_AC_assms]:
-  "\<lbrace>pas_refined aag and post_retype_invs tp refs and (\<lambda>s. \<forall> x\<in>set refs. x \<notin> global_refs s)
+  "\<lbrace>pas_refined aag and post_retype_invs tp refs and (\<lambda>s. \<forall>x\<in>set refs. x \<notin> global_refs s)
                     and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api tp obj_sz))\<rbrace>
    init_arch_objects tp dev ptr bits obj_sz refs
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"

@@ -168,7 +168,7 @@ lemma arch_invoke_irq_control_noErr[ADT_IF_assms, wp]:
   by (cases a; wpsimp)
 
 lemma getActiveIRQ_None[ADT_IF_assms]:
-  "(None,s') \<in> fst (do_machine_op (getActiveIRQ False) s)  \<Longrightarrow>
+  "(None,s') \<in> fst (do_machine_op (getActiveIRQ False) s) \<Longrightarrow>
    irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)) = None"
   apply (erule use_valid)
    apply (wp dmo_getActiveIRQ_wp)
@@ -313,7 +313,7 @@ lemma invoke_tcb_irq_state_inv[ADT_IF_assms]:
    invoke_tcb tinv
    \<lbrace>\<lambda>_ s. irq_state_inv st s\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   apply (case_tac tinv)
-       apply ((wp hoare_vcg_if_lift  mapM_x_wp[OF _ subset_refl]
+       apply ((wp hoare_vcg_if_lift mapM_x_wp[OF _ subset_refl]
                | wpc
                | simp split del: if_split add: check_cap_at_def
                | clarsimp
@@ -398,7 +398,7 @@ lemma thread_set_pas_refined[ADT_IF_assms]:
 
 lemma thread_set_context_state_hyp_refs_of:
   "thread_set (tcb_arch_update (arch_tcb_context_set ctxt)) t \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
-  by (wpsimp simp: thread_set_def wp: set_object_wp )
+  by (wpsimp simp: thread_set_def wp: set_object_wp)
 
 lemma thread_set_context_pas_refined[ADT_IF_assms]:
   "thread_set (tcb_arch_update (arch_tcb_context_set ctxt)) t \<lbrace>pas_refined aag\<rbrace>"
@@ -410,7 +410,7 @@ lemma thread_set_context_pas_refined[ADT_IF_assms]:
     apply (rule hoare_lift_Pf2[where f="thread_st_auth"])
      apply (rule hoare_lift_Pf2[where f="thread_bound_ntfns"])
       apply wp
-     apply (wpsimp wp: thread_set_thread_bound_ntfns_trivT )
+     apply (wpsimp wp: thread_set_thread_bound_ntfns_trivT)
     apply (wpsimp wp: thread_set_thread_st_auth_trivT)
    apply (wpsimp wp: thread_set_caps_of_state_trivial simp: ran_tcb_cap_cases)
   apply simp

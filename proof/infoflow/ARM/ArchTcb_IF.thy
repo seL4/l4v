@@ -160,7 +160,7 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
                         and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
        (invoke_tcb ti)"
   apply (simp add: split_def cong: option.case_cong)
-  apply (wpsimp wp: set_priority_reads_respects[THEN reads_respects_f[where  st=st and Q=\<top>]])
+  apply (wpsimp wp: set_priority_reads_respects[THEN reads_respects_f[where st=st and Q=\<top>]])
                     apply (wpsimp wp: hoare_vcg_const_imp_liftE_R simp: when_def | wpc)+
                     apply (rule conjI)
                      apply ((wpsimp wp: reschedule_required_reads_respects_f)+)[4]
@@ -238,7 +238,7 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
              thread_set_tcb_fault_handler_update_only_timer_irq_inv
              thread_set_valid_arch_state
           | simp add: tcb_cap_cases_def | wpc | wp (once) hoare_drop_imp)+
-  apply (clarsimp simp: authorised_tcb_inv_def  authorised_tcb_inv_extra_def emptyable_def)
+  apply (clarsimp simp: authorised_tcb_inv_def authorised_tcb_inv_extra_def emptyable_def)
   by (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def det_setRegister
       | intro impI conjI)+
 

@@ -793,7 +793,7 @@ next
           apply (rule "2.hyps", assumption+)
          apply simp
         apply (simp add: conj_comms)
-        apply (wp set_cap_integrity_autarch  set_cap_pas_refined_not_transferable replace_cap_invs
+        apply (wp set_cap_integrity_autarch set_cap_pas_refined_not_transferable replace_cap_invs
                   final_cap_same_objrefs set_cap_cte_cap_wp_to
                   set_cap_cte_wp_at hoare_vcg_const_Ball_lift hoare_weak_lift_imp
                        | rule finalise_cap_not_reply_master
@@ -896,7 +896,7 @@ lemma rec_del_Finalise_transferable:
    rec_del (FinaliseSlotCall slot exposed)
    \<lbrace>\<lambda>rv. K (rv = (True,NullCap)) and P\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
   apply (subst rec_del.simps[abs_def])
-  apply (wp hoare_K_bind | wpc )+
+  apply (wp hoare_K_bind | wpc)+
         apply ((simp only: validE_R_def validE_E_def)?, rule hoare_FalseE)
        apply ((simp only: validE_R_def validE_E_def)?, rule hoare_FalseE)
       apply ((simp only: validE_R_def validE_E_def)?, rule hoare_FalseE)
@@ -911,7 +911,7 @@ context Finalise_AC_1 begin
 
 lemma rec_del_respects_CTEDelete_transferable':
   "\<lbrace>(\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag and einvs and
-    simple_sched_action and emptyable slot and  cdt_change_allowed' aag slot and
+    simple_sched_action and emptyable slot and cdt_change_allowed' aag slot and
     (\<lambda>s. \<not> exposed \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) slot s)\<rbrace>
    rec_del (CTEDeleteCall slot exposed)
    \<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>,

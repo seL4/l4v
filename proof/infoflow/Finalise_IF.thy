@@ -168,7 +168,7 @@ lemma set_bound_notification_owned_reads_respects:
   done
 
 lemma get_thread_state_runnable[wp]:
-   "\<lbrace>st_tcb_at runnable ref\<rbrace> get_thread_state ref \<lbrace>\<lambda>rv _. runnable rv\<rbrace>"
+  "\<lbrace>st_tcb_at runnable ref\<rbrace> get_thread_state ref \<lbrace>\<lambda>rv _. runnable rv\<rbrace>"
   by (wpsimp wp: gts_st_tcb_at)
 
 lemma set_thread_state_act_runnable_reads_respects:
@@ -446,7 +446,7 @@ lemma mapM_x_ev2_r_invisible:
     "\<And>P. g \<lbrace>P\<rbrace>"
   shows
     "equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (=) \<top>
-                   (K (\<forall>x. x \<in> set list \<longrightarrow>  labels_are_invisible aag l (L x))) g (mapM_x f list)"
+                   (K (\<forall>x. x \<in> set list \<longrightarrow> labels_are_invisible aag l (L x))) g (mapM_x f list)"
   apply (induct list)
    apply (simp add: mapM_x_Nil)
    apply (rule ev2_inv[OF inv])
@@ -1202,7 +1202,7 @@ next
             apply (wp drop_spec_ev[OF liftE_ev] set_cap_reads_respects_f[where st=st]
                       set_cap_silc_inv[where st=st] | simp)+
            apply (wp replace_cap_invs set_cap_cte_wp_at set_cap_sets final_cap_same_objrefs
-                     set_cap_cte_cap_wp_to  hoare_vcg_const_Ball_lift hoare_weak_lift_imp
+                     set_cap_cte_cap_wp_to hoare_vcg_const_Ball_lift hoare_weak_lift_imp
                      drop_spec_ev[OF liftE_ev] finalise_cap_reads_respects set_cap_silc_inv
                      set_cap_only_timer_irq_inv set_cap_pas_refined_not_transferable
                   | simp add: cte_wp_at_eq_simp

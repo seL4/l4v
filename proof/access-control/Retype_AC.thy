@@ -149,7 +149,7 @@ lemma sita_detype:
   "state_irqs_to_policy aag (detype R s) \<subseteq> state_irqs_to_policy aag s"
   apply (clarsimp)
   apply (erule state_irqs_to_policy_aux.induct)
-  apply (auto simp: detype_def  intro: state_irqs_to_policy_aux.intros split: if_split_asm)
+  apply (auto simp: detype_def intro: state_irqs_to_policy_aux.intros split: if_split_asm)
   done
 
 (* FIXME: move *)
@@ -321,7 +321,7 @@ lemma reset_untyped_cap_integrity:
                         (\<forall>r \<in> cap_range cap. aag_has_auth_to aag Write r)" in hoare_gen_asm)
      apply (rule validE_valid, rule mapME_x_wp')
      apply (rule hoare_pre)
-      apply (wp mapME_x_inv_wp[OF hoare_pre(2)]  preemption_point_inv'
+      apply (wp mapME_x_inv_wp[OF hoare_pre(2)] preemption_point_inv'
                 set_cap_integrity_autarch dmo_clearMemory_respects' | simp)+
      apply (clarsimp simp: cap_aligned_def is_cap_simps bits_of_def)
      apply (subst aligned_add_aligned, assumption, rule is_aligned_shiftl, simp+)
@@ -613,7 +613,7 @@ lemma descendants_range_in_detype:
   qed
 
 lemma descendants_range_in_detype_ex:
-  "\<lbrakk> invs s; descendants_range_in S slot s; \<exists> cap. cte_wp_at ((=) cap) slot s \<and>
+  "\<lbrakk> invs s; descendants_range_in S slot s; \<exists>cap. cte_wp_at ((=) cap) slot s \<and>
      is_untyped_cap cap \<and> S = untyped_range cap; T \<subseteq> S \<rbrakk>
    \<Longrightarrow> descendants_range_in T slot (detype S s)"
   apply clarsimp
@@ -1086,7 +1086,7 @@ lemma decode_untyped_invocation_authorised:
          and (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> x)
          and K (cap = UntypedCap dev base sz idx \<and> is_subject aag (fst slot) \<and>
                 (\<forall>c \<in> set excaps. pas_cap_cur_auth aag c) \<and>
-                (\<forall> ref \<in> untyped_range cap. is_subject aag ref))\<rbrace>
+                (\<forall>ref \<in> untyped_range cap. is_subject aag ref))\<rbrace>
    decode_untyped_invocation label args slot cap excaps
    \<lbrace>\<lambda>rv _. authorised_untyped_inv aag rv\<rbrace>,-"
   apply (rule hoare_gen_asmE)
@@ -1098,7 +1098,7 @@ lemma decode_untyped_invocation_authorised:
                    split del: if_split split: untyped_invocation.splits)
    (* need to hoist the is_cnode_cap assumption into postcondition later on *)
    apply (simp add: unlessE_def[symmetric] whenE_def[symmetric] unlessE_whenE split del: if_split)
-   apply (wp whenE_throwError_wp  hoare_vcg_all_lift mapME_x_inv_wp
+   apply (wp whenE_throwError_wp hoare_vcg_all_lift mapME_x_inv_wp
           | simp split: untyped_invocation.splits
           | (auto)[1])+
            apply (rule_tac Q'="\<lambda>node_cap s.

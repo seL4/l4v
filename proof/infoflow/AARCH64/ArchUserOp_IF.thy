@@ -59,8 +59,8 @@ definition do_user_op_if ::
          executable, it does not fault on AArch64, even when no other rights exist.\<close>
       pl \<leftarrow> gets (\<lambda>s. restrict_map (ptable_lift_s s) {x. pr x \<noteq> {} \<or> \<not> pxn x});
 
-      allow_read \<leftarrow> return  {y. EX x. pl x = Some y \<and> (AllowRead \<in> pr x \<or> \<not> pxn x)};
-      allow_write \<leftarrow> return  {y. EX x. pl x = Some y \<and> AllowWrite \<in> pr x};
+      allow_read \<leftarrow> return {y. EX x. pl x = Some y \<and> (AllowRead \<in> pr x \<or> \<not> pxn x)};
+      allow_write \<leftarrow> return {y. EX x. pl x = Some y \<and> AllowWrite \<in> pr x};
 
       \<comment> \<open>Get the current thread.\<close>
       t \<leftarrow> gets cur_thread;
@@ -514,7 +514,7 @@ proof -
      apply (fastforce simp: table_base_pt_slot_offset[OF vs_lookup_table_is_aligned]
                       dest: valid_arch_state_asid_table dest!: pt_lookup_vs_lookupI
                      intro: vs_lookup_level)
-    apply (erule disjE[OF _  _ FalseE])
+    apply (erule disjE[OF _ _ FalseE])
      prefer 2
      apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def in_omonad pt_walk.simps)
      apply (clarsimp split: if_splits)
@@ -837,7 +837,7 @@ lemma do_user_op_reads_respects_g:
    apply (erule impE)
     prefer 2
     apply assumption
-   apply (clarsimp simp: context_matches_state_def comp_def  reads_equiv_g_def globals_equiv_def)
+   apply (clarsimp simp: context_matches_state_def comp_def reads_equiv_g_def globals_equiv_def)
   apply (clarsimp simp: reads_equiv_g_def globals_equiv_def)
   done
 

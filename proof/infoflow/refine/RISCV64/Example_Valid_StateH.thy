@@ -1087,12 +1087,12 @@ lemma kh0H_simps[simp]:
   "kh0H Low_tcb_ptr   = Some (KOTCB Low_tcbH)"
   "kh0H High_tcb_ptr  = Some (KOTCB High_tcbH)"
   "kh0H idle_tcb_ptr  = Some (KOTCB idle_tcbH)"
-  "length x = 10 \<Longrightarrow> kh0H (Low_cnode_ptr  + of_bl x * 0x20) = Low_cte  Low_cnode_ptr  (Low_cnode_ptr  + of_bl x * 0x20)"
+  "length x = 10 \<Longrightarrow> kh0H (Low_cnode_ptr  + of_bl x * 0x20) = Low_cte Low_cnode_ptr  (Low_cnode_ptr  + of_bl x * 0x20)"
   "length x = 10 \<Longrightarrow> kh0H (High_cnode_ptr + of_bl x * 0x20) = High_cte High_cnode_ptr (High_cnode_ptr + of_bl x * 0x20)"
   "length x = 10 \<Longrightarrow> kh0H (Silc_cnode_ptr + of_bl x * 0x20) = Silc_cte Silc_cnode_ptr (Silc_cnode_ptr + of_bl x * 0x20)"
-  "kh0H (Low_pd_ptr  + (ucast y << 3)) = Low_pdH  Low_pd_ptr  (Low_pd_ptr  + (ucast y << 3))"
+  "kh0H (Low_pd_ptr  + (ucast y << 3)) = Low_pdH Low_pd_ptr  (Low_pd_ptr  + (ucast y << 3))"
   "kh0H (High_pd_ptr + (ucast y << 3)) = High_pdH High_pd_ptr (High_pd_ptr + (ucast y << 3))"
-  "kh0H (Low_pt_ptr  + (ucast y << 3)) = Low_ptH  Low_pt_ptr  (Low_pt_ptr  + (ucast y << 3))"
+  "kh0H (Low_pt_ptr  + (ucast y << 3)) = Low_ptH Low_pt_ptr  (Low_pt_ptr  + (ucast y << 3))"
   "kh0H (High_pt_ptr + (ucast y << 3)) = High_ptH High_pt_ptr (High_pt_ptr + (ucast y << 3))"
   "kh0H (riscv_global_pt_ptr + (ucast y << 3)) = global_ptH riscv_global_pt_ptr (riscv_global_pt_ptr + (ucast y << 3))"
   "kh0H (shared_page_ptr_virt + (ucast y << 12)) = Some KOUserData"
@@ -1716,7 +1716,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
                         map_to_ctes_kh0H kh0H_dom_distinct split: option.splits)
   apply (cut_tac ptr="Low_tcb_ptr" and x="0x20" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
   apply (clarsimp simp: not_in_range_cte_None option_update_range_def
-                        map_to_ctes_kh0H  kh0H_dom_distinct kh0H_dom_distinct'
+                        map_to_ctes_kh0H kh0H_dom_distinct kh0H_dom_distinct'
                  split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
@@ -2280,7 +2280,7 @@ lemma s0H_valid_objs':
                                        Low_domain_def minBound_word valid_arch_tcb'_def
                                        Low_mcp_def Low_prio_def maxPriority_def numPriorities_def
                                        tcb_cte_cases_def Low_capsH_def kh0H_obj_def)
-                apply (clarsimp simp: valid_obj'_def valid_tcb'_def  valid_tcb_state'_def
+                apply (clarsimp simp: valid_obj'_def valid_tcb'_def valid_tcb_state'_def
                                       High_domain_def minBound_word valid_arch_tcb'_def
                                       High_mcp_def High_prio_def maxPriority_def numPriorities_def
                                       tcb_cte_cases_def High_capsH_def obj_at'_def kh0H_obj_def)
@@ -3101,7 +3101,7 @@ end
 (* kernel_data_refs is an undefined constant at the moment, and therefore
    cannot be referred to in valid_global_refs' and pspace_domain_valid.
    We use an axiomatization for the moment. *)
-axiomatization  where
+axiomatization where
   kdr_valid_global_refs': "valid_global_refs' s0H_internal" and
   kdr_pspace_domain_valid: "pspace_domain_valid s0H_internal"
 
@@ -3318,7 +3318,7 @@ lemma s0H_invs:
    apply (clarsimp simp: valid_machine_state'_def s0H_internal_def machine_state0_def)
   apply (rule conjI)
    using timer_irq_le_maxIRQ
-   apply (fastforce simp: irqs_masked'_def s0H_internal_def maxIRQ_def )
+   apply (fastforce simp: irqs_masked'_def s0H_internal_def maxIRQ_def)
   apply (rule conjI)
    apply (clarsimp simp: sym_heap_def opt_map_def split: option.splits)
    using kh0H_dom_tcb
@@ -3346,7 +3346,7 @@ lemma s0H_invs:
   apply (clarsimp simp: s0H_internal_def cteCaps_of_def untyped_ranges_zero_inv_def
                         dschDomain_def dschLength_def valid_dom_schedule'_def
                         maxDomainDuration_def mask_def)
-  apply (clarsimp simp: cur_tcb'_def obj_at'_def  s0H_internal_def objBitsKO_def s0_ptrs_aligned)
+  apply (clarsimp simp: cur_tcb'_def obj_at'_def s0H_internal_def objBitsKO_def s0_ptrs_aligned)
   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
   apply (simp add: objBitsKO_def)
   done
@@ -3464,7 +3464,7 @@ lemma shiftl_shiftr_3_pt_index[simp]:
 
 lemma mult_shiftr_id[simp]:
   "length x = 10 \<Longrightarrow> of_bl x * (0x20 :: obj_ref) >> 5 = of_bl x"
-  apply (simp add: shiftl_t2n[symmetric, where n=5, simplified mult.commute, simplified] )
+  apply (simp add: shiftl_t2n[symmetric, where n=5, simplified mult.commute, simplified])
   apply (subst shiftl_shiftr_id)
     apply simp
    apply (rule less_trans)

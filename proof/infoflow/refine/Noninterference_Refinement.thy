@@ -51,7 +51,7 @@ definition big_step_ADT_C_if where
 
 (*Note: Might be able to generalise big_step_adt_refines for fw_sim*)
 lemma big_step_ADT_C_if_big_step_ADT_A_if_refines:
-  "uop_nonempty utf \<Longrightarrow> refines (big_step_ADT_C_if utf) (big_step_ADT_A_if utf) "
+  "uop_nonempty utf \<Longrightarrow> refines (big_step_ADT_C_if utf) (big_step_ADT_A_if utf)"
   apply (simp add: big_step_ADT_A_if_def big_step_ADT_C_if_def)
   apply (rule big_step_adt_refines[where A="ADT_A_if utf", simplified internal_R_ADT_A_if])
     apply (rule LI_trans)
@@ -267,11 +267,9 @@ lemma Fin_Init_s0_ADT_C_if:
   by (clarsimp simp: ADT_C_if_def s0_def)
 
 lemma big_step_R_tranclp_abs':
-        "\<lbrakk>(s, s')
-        \<in> lift_fst_rel (lift_snd_rel state_relation) O
-          lift_fst_rel (lift_snd_rel rf_sr);
-        big_step_R\<^sup>+\<^sup>+ s0 s''\<rbrakk> \<Longrightarrow> s'' = (Fin (ADT_C_if fp utf) s')
-       \<longrightarrow> big_step_R\<^sup>+\<^sup>+ s0 s"
+  "\<lbrakk> (s, s') \<in> lift_fst_rel (lift_snd_rel state_relation) O lift_fst_rel (lift_snd_rel rf_sr);
+     big_step_R\<^sup>+\<^sup>+ s0 s'' \<rbrakk>
+   \<Longrightarrow> s'' = (Fin (ADT_C_if fp utf) s') \<longrightarrow> big_step_R\<^sup>+\<^sup>+ s0 s"
   apply (erule tranclp_induct)
    apply (clarsimp simp: Fin_ADT_C_if lift_fst_rel_def)
    apply (rule tranclp.r_into_trancl)

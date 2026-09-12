@@ -39,7 +39,7 @@ lemma mul_add_word_size_lt_msg_align_bits_ofnat[Arch_AC_assms]:
   done
 
 lemma zero_less_word_size[Arch_AC_assms, simp]:
-    "0 < (word_size :: obj_ref)"
+  "0 < (word_size :: obj_ref)"
   by (simp add: word_size_def)
 
 declare set_mrs_state_hyp_refs_of[Arch_AC_assms]
@@ -166,7 +166,7 @@ lemma unmap_page_table_respects:
    unmap_page_table asid vaddr pt
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (simp add: unmap_page_table_def page_table_mapped_def )
+  apply (simp add: unmap_page_table_def page_table_mapped_def)
   apply (rule hoare_pre)
    apply (wpsimp wp: store_pde_respects page_table_mapped_wp_weak get_pde_wp hoare_vcg_all_liftE_R
                simp: cleanByVA_PoU_def
@@ -181,7 +181,7 @@ definition authorised_page_table_inv :: "'a PAS \<Rightarrow> page_table_invocat
                  (case_option True (is_subject aag \<circ> fst) (pde_ref2 pde)) \<and>
                  pas_cap_cur_auth aag cap
              | PageTableUnmap cap cslot_ptr \<Rightarrow>
-                 is_subject aag (fst cslot_ptr) \<and> aag_cap_auth aag (pasSubject aag) cap  \<and>
+                 is_subject aag (fst cslot_ptr) \<and> aag_cap_auth aag (pasSubject aag) cap \<and>
                  (\<forall>p asid vspace_ref. cap = ArchObjectCap (PageTableCap p (Some (asid, vspace_ref)))
                                       \<longrightarrow> is_subject_asid aag asid \<and>
                                           (\<forall>x \<in> set [p , p + 4 .e. p + 2 ^ pt_bits - 1].
@@ -382,7 +382,7 @@ lemma lookup_pt_slot_authorised3:
     valid_vspace_objs and valid_arch_state and equal_kernel_mappings and
     valid_global_objs and pspace_aligned and pas_refined aag\<rbrace>
    lookup_pt_slot pd vptr
-   \<lbrace>\<lambda>rv _.  \<forall>x\<in>set [rv, rv + 4 .e. rv + 0x3C]. is_subject aag (x && ~~ mask pt_bits)\<rbrace>, -"
+   \<lbrace>\<lambda>rv _. \<forall>x\<in>set [rv, rv + 4 .e. rv + 0x3C]. is_subject aag (x && ~~ mask pt_bits)\<rbrace>, -"
   apply (rule_tac Q'="\<lambda>rv s. is_aligned rv 6 \<and> (\<forall>x\<in>set [0, 4 .e. 0x3C].
                                                   is_subject aag (x + rv && ~~ mask pt_bits))"
                in hoare_strengthen_postE_R)
@@ -458,7 +458,7 @@ lemma invalidate_tlb_by_asid_pas_refined[wp]:
 lemma perform_page_invocation_respects:
   "\<lbrace>integrity aag X st and pas_refined aag and K (authorised_page_inv aag pgi)
                        and valid_page_inv pgi and valid_vspace_objs
-                       and pspace_aligned and is_subject aag  \<circ> cur_thread\<rbrace>
+                       and pspace_aligned and is_subject aag \<circ> cur_thread\<rbrace>
    perform_page_invocation pgi
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
 proof -
@@ -480,7 +480,7 @@ proof -
                   mapM_x_and_const_wp[OF store_pde_respects] store_pde_respects
                | elim conjE hd_valid_slots[THEN bspec[rotated]]
                | clarsimp dest!: set_tl_subset_mp
-               | wpc )+
+               | wpc)+
    apply (clarsimp simp: cte_wp_at_caps_of_state cap_rights_update_def
                          acap_rights_update_def update_map_data_def is_pg_cap_def
                          valid_page_inv_def valid_cap_simps

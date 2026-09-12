@@ -244,7 +244,7 @@ lemma set_vm_root_states_equiv_for[wp]:
            simp: setVSpaceRoot_def dmo_bind_valid if_apply_def2)+
 
 lemma find_vspace_for_asid_reads_respects:
-   "reads_respects aag l (K (asid \<noteq> 0 \<and> aag_can_read_asid aag asid)) (find_vspace_for_asid asid)"
+  "reads_respects aag l (K (asid \<noteq> 0 \<and> aag_can_read_asid aag asid)) (find_vspace_for_asid asid)"
   unfolding find_vspace_for_asid_def
   apply wpsimp
      apply (simp add: throw_opt_def)
@@ -292,11 +292,11 @@ lemma pt_walk_reads_equiv:
   by fastforce+
 
 lemma pt_lookup_from_level_reads_respects:
-   "reads_respects aag l
-      (\<lambda>s. pas_refined aag s \<and> pspace_aligned s \<and> valid_vspace_objs s \<and> valid_asid_table s \<and>
-           is_subject aag pt \<and> level \<le> max_pt_level \<and> vref \<in> user_region \<and>
-           (\<exists>asid. vs_lookup_table level asid vref s = Some (level, pt)))
-      (pt_lookup_from_level level pt vref target_pt)"
+  "reads_respects aag l
+     (\<lambda>s. pas_refined aag s \<and> pspace_aligned s \<and> valid_vspace_objs s \<and> valid_asid_table s \<and>
+          is_subject aag pt \<and> level \<le> max_pt_level \<and> vref \<in> user_region \<and>
+          (\<exists>asid. vs_lookup_table level asid vref s = Some (level, pt)))
+     (pt_lookup_from_level level pt vref target_pt)"
   apply (induct level arbitrary: pt)
    apply (simp add: pt_lookup_from_level_simps)
    apply wp
@@ -346,7 +346,7 @@ lemma perform_page_table_invocation_reads_respects:
   apply (clarsimp simp: valid_pti_def)
   apply (frule cte_wp_valid_cap)
    apply fastforce
-  apply (clarsimp simp:  is_PageTableCap_def valid_cap_def wellformed_mapdata_def)
+  apply (clarsimp simp: is_PageTableCap_def valid_cap_def wellformed_mapdata_def)
   done
 
 lemma unmap_page_reads_respects:
@@ -914,7 +914,7 @@ lemma unmap_page_globals_equiv:
 
 
 definition authorised_for_globals_page_inv ::
-  "page_invocation \<Rightarrow> 'z :: state_ext state \<Rightarrow> bool"  where
+  "page_invocation \<Rightarrow> 'z :: state_ext state \<Rightarrow> bool" where
   "authorised_for_globals_page_inv pgi \<equiv> \<lambda>s.
      case pgi of PageMap cap ptr m \<Rightarrow> (\<exists>slot. cte_wp_at (parent_for_refs m) slot s) | _ \<Rightarrow> True"
 
@@ -986,7 +986,7 @@ lemma perform_pg_inv_unmap_globals_equiv:
   apply (intro conjI; clarsimp)
   apply (clarsimp split: arch_cap.splits)
   apply (drule cte_wp_valid_cap, fastforce)
-  apply (clarsimp simp:  valid_cap_def valid_arch_cap_def wellformed_mapdata_def)
+  apply (clarsimp simp: valid_cap_def valid_arch_cap_def wellformed_mapdata_def)
   done
 
 lemma perform_pg_inv_map_globals_equiv:
@@ -1031,7 +1031,7 @@ lemma retype_region_ASIDPoolObj_globals_equiv:
 
 lemma perform_asid_control_invocation_globals_equiv:
   notes delete_objects_invs[wp del]
-  notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+  notes blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
   shows "\<lbrace>globals_equiv s and invs and ct_active and valid_aci aci\<rbrace>
          perform_asid_control_invocation aci
          \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
@@ -1047,7 +1047,7 @@ lemma perform_asid_control_invocation_globals_equiv:
              max_index_upd_invs_simple set_cap_no_overlap
              set_cap_caps_no_overlap max_index_upd_caps_overlap_reserved
              region_in_kernel_window_preserved
-             hoare_vcg_all_lift  get_cap_wp hoare_weak_lift_imp
+             hoare_vcg_all_lift get_cap_wp hoare_weak_lift_imp
              set_cap_idx_up_aligned_area[where dev = False,simplified]
           | simp)+
    (* factor out the implication -- we know what the relevant components of the

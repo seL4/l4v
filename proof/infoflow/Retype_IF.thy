@@ -218,11 +218,11 @@ lemma gets_apply_ev':
   by (clarsimp simp: gets_apply_def get_def bind_def return_def equiv_valid_def2 equiv_valid_2_def)
 
 lemma do_machine_op_globals_equiv:
-   "(\<And>s sa. \<lbrakk> P sa; globals_equiv s sa \<rbrakk>
-              \<Longrightarrow> \<forall>x\<in>fst (f (machine_state sa)). globals_equiv s (sa\<lparr>machine_state := snd x\<rparr>))
-    \<Longrightarrow> \<lbrace>globals_equiv s and P\<rbrace>
-        do_machine_op f
-        \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  "(\<And>s sa. \<lbrakk> P sa; globals_equiv s sa \<rbrakk>
+            \<Longrightarrow> \<forall>x\<in>fst (f (machine_state sa)). globals_equiv s (sa\<lparr>machine_state := snd x\<rparr>))
+   \<Longrightarrow> \<lbrace>globals_equiv s and P\<rbrace>
+       do_machine_op f
+       \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding do_machine_op_def
   apply (wp | simp add: split_def)+
   done
@@ -511,7 +511,7 @@ lemma ex_tupleI:
   by blast
 
 lemma equiv_valid_obtain:
-  assumes fn_eq: "\<And>s t. I s t \<Longrightarrow> A s t \<Longrightarrow> P s \<Longrightarrow> P t \<Longrightarrow>  fn s = fn t"
+  assumes fn_eq: "\<And>s t. I s t \<Longrightarrow> A s t \<Longrightarrow> P s \<Longrightarrow> P t \<Longrightarrow> fn s = fn t"
   assumes pr: "\<And>x. equiv_valid I A B (P and (\<lambda>s. fn s = x)) f"
   shows "equiv_valid I A B P f"
   apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def)

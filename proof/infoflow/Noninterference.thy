@@ -48,7 +48,7 @@ fun user_modes where
 
 definition sameFor_subject ::
   "'a subject_label auth_graph \<Rightarrow> 'a subject_label agent_map \<Rightarrow>
-   'a subject_label agent_irq_map \<Rightarrow> 'a subject_label agent_asid_map  \<Rightarrow>
+   'a subject_label agent_irq_map \<Rightarrow> 'a subject_label agent_asid_map \<Rightarrow>
    'a subject_label agent_domain_map \<Rightarrow> 'a \<Rightarrow> (observable_if \<times> observable_if) set" where
   "sameFor_subject g ab irqab asidab domainab l \<equiv>
      {(os,os') | os os' s s'.
@@ -396,12 +396,12 @@ lemma check_active_irq_if_partitionIntegrity:
   done
 
 lemma do_machine_op_globals_equiv_scheduler:
-   "(\<And>s sa. \<lbrakk> P sa; globals_equiv_scheduler s sa \<rbrakk>
-              \<Longrightarrow> \<forall>x \<in> fst (f (machine_state sa)).
-                    globals_equiv_scheduler s (sa\<lparr>machine_state := snd x\<rparr>))
-    \<Longrightarrow> \<lbrace>globals_equiv_scheduler s and P\<rbrace>
-        do_machine_op f
-        \<lbrace>\<lambda>_. globals_equiv_scheduler s\<rbrace>"
+  "(\<And>s sa. \<lbrakk> P sa; globals_equiv_scheduler s sa \<rbrakk>
+            \<Longrightarrow> \<forall>x \<in> fst (f (machine_state sa)).
+                  globals_equiv_scheduler s (sa\<lparr>machine_state := snd x\<rparr>))
+   \<Longrightarrow> \<lbrace>globals_equiv_scheduler s and P\<rbrace>
+       do_machine_op f
+       \<lbrace>\<lambda>_. globals_equiv_scheduler s\<rbrace>"
   unfolding do_machine_op_def by (wp | simp add: split_def)+
 
 lemma dmo_user_memory_update_globals_equiv_scheduler':
@@ -1182,7 +1182,7 @@ lemma pas_wellformed_pasSubject_update:
   apply (simp add: pas_wellformed_noninterference_def)
   apply (elim conjE)
   apply (erule bspec)
-  apply (clarsimp simp:  silc_inv_def obj_at_def split: kernel_object.splits)
+  apply (clarsimp simp: silc_inv_def obj_at_def split: kernel_object.splits)
   apply (drule spec, erule (1) impE)
   apply (fastforce simp: is_cap_table_def)
   done
@@ -1201,7 +1201,7 @@ lemma valid_queuesE:
   assumes "t \<in> set (ready_queues s d p)"
   assumes "\<lbrakk> etcb_at (\<lambda>t. etcb_priority t = p \<and> etcb_domain t = d) t s;
              st_tcb_at runnable t s; distinct (ready_queues s d p) \<rbrakk>
-             \<Longrightarrow> R "
+             \<Longrightarrow> R"
   shows R
   using assms by (clarsimp simp: valid_queues_def)
 
@@ -1326,7 +1326,7 @@ lemma sameFor_subject_def2:
   "sameFor_subject g ab irqab asidab domainab l =
      {(os,os') | os os' s s'. s = internal_state_if os \<and> s' = internal_state_if os' \<and>
                  (\<forall>d \<in> subjectReads g (OrdinaryLabel l).
-                    states_equiv_for (\<lambda>x. ab x = d) (\<lambda>x. irqab x  = d)
+                    states_equiv_for (\<lambda>x. ab x = d) (\<lambda>x. irqab x = d)
                                      (\<lambda>x. asidab x = d) (\<lambda>x. d \<in> domainab x) s s') \<and>
                  ((domainab (cur_domain s) \<inter> subjectReads g (OrdinaryLabel l) \<noteq> {} \<or>
                    domainab (cur_domain s') \<inter> subjectReads g (OrdinaryLabel l) \<noteq> {})
@@ -1560,13 +1560,13 @@ abbreviation guarded_pas_domain_if where
      guarded_pas_domain (current_aag (internal_state_if s)) (internal_state_if s)"
 
 lemma pas_refined_if:
-  "ni.reachable  s \<Longrightarrow> pas_refined_if s"
+  "ni.reachable s \<Longrightarrow> pas_refined_if s"
   apply (drule reachable_invs_if)
   apply (simp add: invs_if_def Invs_def)
   done
 
 lemma guarded_pas_domain_if:
-  "ni.reachable  s \<Longrightarrow> guarded_pas_domain_if s"
+  "ni.reachable s \<Longrightarrow> guarded_pas_domain_if s"
   apply (drule reachable_invs_if)
   apply (simp add: invs_if_def Invs_def)
   done
@@ -2128,7 +2128,7 @@ lemmas tcb_sched_action_reads_respects_g =
 lemma set_tcb_queue_reads_respects_g':
   "equiv_valid (reads_equiv_g aag)
                (\<lambda>s s'. affects_equiv aag l s s' \<and>
-                       arch_globals_equiv_strengthener  (machine_state s) (machine_state s'))
+                       arch_globals_equiv_strengthener (machine_state s) (machine_state s'))
                (\<lambda>s s'. affects_equiv aag l s s' \<and>
                        arch_globals_equiv_strengthener (machine_state s) (machine_state s'))
                \<top> (set_tcb_queue d prio queue)"
@@ -3408,7 +3408,7 @@ lemma non_PSched_steps_run_in_lock_step':
   apply (elim conjE)
   apply (subgoal_tac "part ta = part s")
    apply (drule schedIncludesCurrentDom)+
-   apply (rule_tac s=sa and t=s in  sys_mode_of_eq_big_step_R_contradiction)
+   apply (rule_tac s=sa and t=s in sys_mode_of_eq_big_step_R_contradiction)
       apply (fastforce intro: uwr_part_sys_mode_of_eq'[symmetric])
      prefer 2
      apply assumption
@@ -3581,13 +3581,13 @@ lemma preemption_interrupt_scheduler_invisible:
                  apply simp
                 apply fastforce
                apply (wp dmo_getActiveIRQ_return_axiom[simplified try_some_magic]
-                      | simp  add: imp_conjR arch_tcb_update_aux2
+                      | simp add: imp_conjR arch_tcb_update_aux2
                       | elim conjE
                       | intro conjI
                       | wp (once) hoare_drop_imps)+
            apply (subst thread_set_as_user2)
            apply (wp guarded_pas_domain_lift)
-          apply ((simp add:  arch_tcb_update_aux2 | wp | force)+)[7]
+          apply ((simp add: arch_tcb_update_aux2 | wp | force)+)[7]
    apply (fastforce simp: silc_inv_not_cur_thread cur_thread_idle guarded_pas_domain_def)+
   done
 
@@ -3638,7 +3638,7 @@ lemma kernel_entry_scheduler_equiv_2:
            apply (wp del: no_irq add: handle_interrupt_reads_respects_scheduler[where st=st and st'=st']
                                       dmo_getActive_IRQ_reads_respect_scheduler
                   | wpc
-                  | simp add: imp_conjR all_conj_distrib  arch_tcb_update_aux2
+                  | simp add: imp_conjR all_conj_distrib arch_tcb_update_aux2
                   | wp (once) hoare_drop_imps)+
           apply (rule context_update_cur_thread_snippit)
          apply (wp thread_set_invs_trivial guarded_pas_domain_lift

@@ -87,7 +87,7 @@ lemma perform_asid_control_invocation_domain_sep_inv:
   apply (rule hoare_pre)
   apply (wp modify_wp cap_insert_domain_sep_inv' set_cap_domain_sep_inv
             get_cap_domain_sep_inv_cap[where st=st] hoare_weak_lift_imp
-         | wpc | simp )+
+         | wpc | simp)+
   done
 
 lemma perform_asid_pool_invocation_domain_sep_inv:

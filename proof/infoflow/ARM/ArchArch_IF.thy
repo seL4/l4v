@@ -203,7 +203,7 @@ lemma not_in_global_not_arm:
   "A \<notin> global_refs s \<Longrightarrow> A \<noteq> arm_global_pd (arch_state s)"
   by (simp add: global_refs_def)
 
-lemma cte_wp_at_page_cap_bits :
+lemma cte_wp_at_page_cap_bits:
   "\<lbrakk> cte_wp_at ((=) (ArchObjectCap (PageTableCap word option))) slot s; valid_objs s \<rbrakk>
    \<Longrightarrow> cte_wp_at (\<lambda>c. (\<lambda>x. x && ~~ mask pt_bits) ` set [word, word + 4 .e. word + 2 ^ pt_bits - 1]
                         \<subseteq> obj_refs c \<and> is_pt_cap c) slot s"
@@ -760,10 +760,10 @@ lemma perform_page_invocation_reads_respects:
   apply (rule equiv_valid_guard_imp)
   apply wpc
       apply (simp add: mapM_discarded swp_def)
-      apply (wp dmo_mol_reads_respects dmo_cacheRangeOp_reads_respects  mapM_x_ev''
+      apply (wp dmo_mol_reads_respects dmo_cacheRangeOp_reads_respects mapM_x_ev''
                 store_pte_reads_respects set_cap_reads_respects mapM_ev'' store_pde_reads_respects
                 unmap_page_reads_respects set_vm_root_reads_respects
-                set_vm_root_for_flush_reads_respects get_cap_rev  do_flush_reads_respects
+                set_vm_root_for_flush_reads_respects get_cap_rev do_flush_reads_respects
                 invalidate_tlb_by_asid_reads_respects get_master_pte_reads_respects
                 get_master_pde_reads_respects set_mrs_reads_respects set_message_info_reads_respects
              | simp add: cleanByVA_PoU_def pte_check_if_mapped_def pde_check_if_mapped_def dmo_distr
@@ -1357,7 +1357,7 @@ lemma mapM_swp_store_pte_valid_arch_state[wp]:
   "mapM (swp store_pte A) slots \<lbrace>valid_arch_state\<rbrace>"
   by (wp mapM_wp' | simp)+
 
-lemma mapM_x_swp_store_pde_globals_equiv :
+lemma mapM_x_swp_store_pde_globals_equiv:
   "\<lbrace>globals_equiv st and (\<lambda>s. \<forall>x \<in> set slots. x && ~~ mask pd_bits \<noteq> arm_global_pd (arch_state s))\<rbrace>
    mapM_x (swp store_pde A) slots
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
@@ -1428,7 +1428,7 @@ lemma cte_wp_parent_not_global_pd:
   done
 
 definition authorised_for_globals_page_inv ::
-  "page_invocation \<Rightarrow> 'z :: state_ext state \<Rightarrow> bool"  where
+  "page_invocation \<Rightarrow> 'z :: state_ext state \<Rightarrow> bool" where
   "authorised_for_globals_page_inv pgi \<equiv> \<lambda>s.
      case pgi of PageMap asid cap ptr m \<Rightarrow> \<exists>slot. cte_wp_at (parent_for_refs m) slot s | _ \<Rightarrow> True"
 
@@ -1500,7 +1500,7 @@ lemma retype_region_ASIDPoolObj_globals_equiv:
 
 lemma perform_asid_control_invocation_globals_equiv:
   notes delete_objects_invs[wp del]
-  notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+  notes blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
   shows "\<lbrace>globals_equiv s and invs and ct_active and valid_aci aci\<rbrace>
          perform_asid_control_invocation aci
          \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
@@ -1516,7 +1516,7 @@ lemma perform_asid_control_invocation_globals_equiv:
              max_index_upd_invs_simple set_cap_no_overlap
              set_cap_caps_no_overlap max_index_upd_caps_overlap_reserved
              region_in_kernel_window_preserved
-             hoare_vcg_all_lift  get_cap_wp hoare_weak_lift_imp
+             hoare_vcg_all_lift get_cap_wp hoare_weak_lift_imp
              set_cap_idx_up_aligned_area[where dev = False,simplified]
           | simp)+
    (* factor out the implication -- we know what the relevant components of the

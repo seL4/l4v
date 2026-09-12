@@ -44,7 +44,7 @@ lemma cte_wp_at_not_domain_sep_inv_cap:
   "cte_wp_at (not domain_sep_inv_cap irqs) slot s \<longleftrightarrow>
    ((irqs \<longrightarrow> False) \<and>
     (\<not> irqs \<longrightarrow> (cte_wp_at ((=) IRQControlCap) slot s \<or>
-                 (\<exists> irq. cte_wp_at ((=) (IRQHandlerCap irq)) slot s)))) \<or>
+                 (\<exists>irq. cte_wp_at ((=) (IRQHandlerCap irq)) slot s)))) \<or>
    cte_wp_at ((=) DomainCap) slot s"
   apply (rule iffI)
    apply (drule cte_wp_at_norm)
@@ -466,13 +466,13 @@ lemma preemption_point_domain_sep_inv[wp]:
 context DomainSepInv_1 begin
 
 crunch cap_delete_one
-  for domain_sep_inv[wp]: "\<lambda>s. domain_sep_inv irqs  (st :: 'state_ext state) (s :: det_state)"
+  for domain_sep_inv[wp]: "\<lambda>s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_state)"
   (wp: mapM_x_wp' unless_wp dxo_wp_weak simp: crunch_simps)
 
 lemma reply_cancel_ipc_domain_sep_inv[wp]:
   "\<lbrace>domain_sep_inv irqs st\<rbrace>
    reply_cancel_ipc t
-   \<lbrace>\<lambda>_ s. domain_sep_inv irqs  (st :: 'state_ext state) (s :: det_state)\<rbrace>"
+   \<lbrace>\<lambda>_ s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_state)\<rbrace>"
   apply (simp add: reply_cancel_ipc_def)
   apply wp
    apply (rule hoare_strengthen_post[OF thread_set_tcb_fault_update_domain_sep_inv])
@@ -489,7 +489,7 @@ lemma finalise_cap_domain_sep_inv_cap:
    \<lbrace>\<lambda>rv s :: det_state. domain_sep_inv_cap irqs (fst rv)\<rbrace>"
   including classic_wp_pre
   apply (case_tac cap)
-             apply (wp | simp add: o_def split del: if_split  split: cap.splits
+             apply (wp | simp add: o_def split del: if_split split: cap.splits
                        | fastforce split: if_splits simp: domain_sep_inv_cap_def)+
     apply (rule hoare_pre, wp, fastforce)
    apply (rule hoare_pre, simp, wp, fastforce simp: domain_sep_inv_cap_def)
@@ -534,7 +534,7 @@ lemma rec_del_domain_sep_inv':
          apply simp
          apply (rule spec_strengthen_postE)
           apply (rule "2.hyps", fastforce+)
-         apply (wp  finalise_cap_domain_sep_inv_cap get_cap_wp
+         apply (wp finalise_cap_domain_sep_inv_cap get_cap_wp
                    finalise_cap_returns_NullCap
                    drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
                |simp split del: if_split
@@ -637,7 +637,7 @@ lemma create_cap_domain_sep_inv[wp]:
   done
 
 lemma retype_region_neg_cte_wp_at_not_domain_sep_inv_cap:
-  "retype_region  base n sz ty dev \<lbrace>\<lambda>s. \<not> cte_wp_at (not domain_sep_inv_cap irqs) slot s\<rbrace>"
+  "retype_region base n sz ty dev \<lbrace>\<lambda>s. \<not> cte_wp_at (not domain_sep_inv_cap irqs) slot s\<rbrace>"
   apply (rule hoare_pre)
    apply (simp only: retype_region_def retype_addrs_def foldr_upd_app_if fun_app_def K_bind_def)
    apply (wp dxo_wp_weak | simp)+
@@ -685,7 +685,7 @@ lemma invoke_cnode_domain_sep_inv:
       apply (wpsimp wp: cap_move_domain_sep_inv cap_move_cte_wp_at_other get_cap_wp,
              blast dest: cte_wp_at_weak_derived_domain_sep_inv_cap)+
    apply (wpsimp wp: cap_move_domain_sep_inv get_cap_wp)
-   apply (fastforce dest:  cte_wp_at_weak_derived_ReplyCap)
+   apply (fastforce dest: cte_wp_at_weak_derived_ReplyCap)
   apply (wp | simp | wpc | rule hoare_pre)+
   done
 
@@ -913,7 +913,7 @@ lemma invoke_tcb_domain_sep_inv:
     (* just NotificationControl and ThreadControl left *)
     apply (rename_tac option)
     apply (case_tac option)
-     apply  ((wp | simp)+)[1]
+     apply ((wp | simp)+)[1]
     apply (simp add: split_def cong: option.case_cong)
     apply (wp checked_cap_insert_domain_sep_inv hoare_vcg_all_liftE_R hoare_vcg_all_lift
               hoare_vcg_const_imp_liftE_R cap_delete_domain_sep_inv cap_delete_deletes
@@ -971,7 +971,7 @@ lemma invoke_control_domain_sep_inv:
   including classic_wp_pre
   apply (case_tac i)
    apply (case_tac irqs)
-    apply (wp cap_insert_domain_sep_inv' | simp )+
+    apply (wp cap_insert_domain_sep_inv' | simp)+
     apply (simp add: set_irq_state_def, wp, simp)
     apply (fastforce simp: domain_sep_inv_def domain_sep_inv_cap_def)
    apply (fastforce simp: valid_def domain_sep_inv_def)
@@ -985,7 +985,7 @@ lemma derive_cap_domain_sep_inv_cap:
    \<lbrace>\<lambda>rv s :: det_state. domain_sep_inv_cap irqs rv\<rbrace>,-"
   apply (simp add: derive_cap_def)
   apply (rule hoare_pre)
-  apply (wp | wpc | simp add: )+
+  apply (wp | wpc | simp)+
   apply auto
   done
 
@@ -1096,7 +1096,7 @@ lemma handle_recv_domain_sep_inv:
      apply ((clarsimp simp add: invs_valid_objs invs_sym_refs
              | intro impI allI conjI
              | rule cte_wp_valid_cap caps_of_state_cteD
-             | fastforce simp:  valid_fault_def)+)[1]
+             | fastforce simp: valid_fault_def)+)[1]
     apply (wp delete_caller_cap_domain_sep_inv | simp add: split_def cong: conj_cong)+
     apply (wp | simp add: invs_valid_objs invs_mdb invs_sym_refs tcb_at_invs)+
   done

@@ -293,7 +293,7 @@ lemma nat_to_bl_id [simp]: "nat_to_bl (size (x :: (('a::len) word))) (unat x) = 
 definition the_nat_to_bl :: "nat \<Rightarrow> nat \<Rightarrow> bool list" where
   "the_nat_to_bl sz n \<equiv> the (nat_to_bl sz (n mod 2^sz))"
 
-abbreviation (input) the_nat_to_bl_10  :: "nat \<Rightarrow> bool list" where
+abbreviation (input) the_nat_to_bl_10 :: "nat \<Rightarrow> bool list" where
   "the_nat_to_bl_10 n \<equiv> the_nat_to_bl 10 n"
 
 lemma len_the_nat_to_bl[simp]:
@@ -459,7 +459,7 @@ definition High_caps :: cnode_contents where
         (the_nat_to_bl_10 6)
           \<mapsto> ArchObjectCap (PageTableCap High_pt_ptr NormalPT_T (Some (High_asid,0))),
         (the_nat_to_bl_10 318)
-          \<mapsto> NotificationCap ntfn_ptr 0 {AllowRecv}) "
+          \<mapsto> NotificationCap ntfn_ptr 0 {AllowRecv})"
 
 definition High_cnode :: kernel_object where
   "High_cnode \<equiv> CNode 10 High_caps"
@@ -791,7 +791,7 @@ lemma kh0_SomeD:
 
 lemmas kh0_obj_def =
   Low_cnode_def High_cnode_def Silc_cnode_def Low_pool_def High_pool_def Low_pd_def High_pd_def
-  Low_pt_def High_pt_def  Low_tcb_def High_tcb_def idle_tcb_def ntfn_def
+  Low_pt_def High_pt_def Low_tcb_def High_tcb_def idle_tcb_def ntfn_def
   global_pt_obj_def vm_kernel_only_def shared_page_def
 
 
@@ -947,15 +947,15 @@ definition Sys1PAS :: "(auth_graph_label subject_label) PAS" where
 subsubsection \<open>Proof of pas_refined for Sys1\<close>
 
 lemma High_caps_well_formed: "well_formed_cnode_n 10 High_caps"
-  by (auto simp: High_caps_def well_formed_cnode_n_def  split: if_split_asm)
+  by (auto simp: High_caps_def well_formed_cnode_n_def split: if_split_asm)
 
 lemma Low_caps_well_formed: "well_formed_cnode_n 10 Low_caps"
-  by (auto simp: Low_caps_def well_formed_cnode_n_def  split: if_split_asm)
+  by (auto simp: Low_caps_def well_formed_cnode_n_def split: if_split_asm)
 
 lemma Silc_caps_well_formed: "well_formed_cnode_n 10 Silc_caps"
-  by (auto simp: Silc_caps_def well_formed_cnode_n_def  split: if_split_asm)
+  by (auto simp: Silc_caps_def well_formed_cnode_n_def split: if_split_asm)
 
-lemma s0_caps_of_state :
+lemma s0_caps_of_state:
   "caps_of_state s0_internal p = Some cap \<Longrightarrow>
      cap = NullCap \<or>
      (p,cap) \<in>
@@ -972,7 +972,7 @@ lemma s0_caps_of_state :
          ((High_cnode_ptr,(the_nat_to_bl_10 6)), ArchObjectCap (PageTableCap High_pt_ptr NormalPT_T (Some (High_asid,0)))),
          ((High_cnode_ptr,(the_nat_to_bl_10 4)), ArchObjectCap (ASIDPoolCap High_pool_ptr High_asid)),
          ((High_cnode_ptr,(the_nat_to_bl_10 5)), ArchObjectCap (FrameCap shared_page_ptr_virt vm_read_only shared_page_size False (Some (High_asid, 0)))),
-         ((High_cnode_ptr,(the_nat_to_bl_10 318)), NotificationCap  ntfn_ptr 0 {AllowRecv}) ,
+         ((High_cnode_ptr,(the_nat_to_bl_10 318)), NotificationCap ntfn_ptr 0 {AllowRecv}) ,
          ((Silc_cnode_ptr,(the_nat_to_bl_10 2)), CNodeCap Silc_cnode_ptr 10 (the_nat_to_bl_10 2)),
          ((Silc_cnode_ptr,(the_nat_to_bl_10 5)), ArchObjectCap (FrameCap shared_page_ptr_virt vm_read_only shared_page_size False (Some (Silc_asid, 0)))),
          ((Silc_cnode_ptr,(the_nat_to_bl_10 318)), NotificationCap ntfn_ptr 0 {AllowSend}),
@@ -985,7 +985,7 @@ lemma s0_caps_of_state :
          ((High_tcb_ptr,(tcb_cnode_index 1)), ArchObjectCap (PageTableCap High_pd_ptr VSRootPT_T (Some (High_asid,0)))),
          ((High_tcb_ptr,(tcb_cnode_index 2)), ReplyCap High_tcb_ptr True {AllowGrant, AllowWrite}),
          ((High_tcb_ptr,(tcb_cnode_index 3)), NullCap),
-         ((High_tcb_ptr,(tcb_cnode_index 4)), NullCap)} "
+         ((High_tcb_ptr,(tcb_cnode_index 4)), NullCap)}"
   supply if_cong[cong]
   apply (insert High_caps_well_formed)
   apply (insert Low_caps_well_formed)
@@ -1148,7 +1148,7 @@ lemma vs_lookup_s0_SomeD:
   apply (case_tac "lvl = max_pt_level - 1")
    apply (clarsimp simp: pt_walk.simps split: if_splits)
     apply (drule (1) ptes_of_s0_PageTablePTE)
-    apply (auto simp: pptr_from_pte_def  ptes_of_def asid_high_low
+    apply (auto simp: pptr_from_pte_def ptes_of_def asid_high_low
                       kh0_obj_def pts_of_s0 pool_for_asid_s0 asid_pools_of_s0 vspace_for_pool_def entry_for_pool_def
                split: if_splits)[2]
   apply (clarsimp simp: pt_walk.simps)
@@ -1508,7 +1508,7 @@ lemma irq_node_size_bounded[simplified, simp]:
 lemma obj_spaced_kh0H_addrs:
   "abs.obj_spaced kh0 kh0_addrs"
   apply (simp add: kh0_addrs_def abs.obj_spaced_cons_aligned_offsets abs.obj_spaced_append
-                   abs.last_aligned_offests_plus_mask  abs.aligned_offsets_obj_spaced)
+                   abs.last_aligned_offests_plus_mask abs.aligned_offsets_obj_spaced)
   apply (simp add: abs.align_of_def kh0_def)
   apply (simp add: kh0_obj_def bit_simps cte_level_bits_def mask_def s0_ptr_defs irq_len_val)
   done
@@ -1621,7 +1621,7 @@ lemma valid_ioc_s0[simp]:
 
 lemma valid_idle_s0[simp]:
   "valid_idle s0_internal"
-  by (clarsimp simp: valid_idle_def valid_arch_idle_def  pred_tcb_at_def obj_at_def
+  by (clarsimp simp: valid_idle_def valid_arch_idle_def pred_tcb_at_def obj_at_def
                      idle_thread_ptr_def idle_tcb_def kh0_def s0_ptr_defs s0_internal_def)
 
 lemma only_idle_s0[simp]:

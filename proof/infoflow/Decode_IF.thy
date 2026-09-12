@@ -34,7 +34,7 @@ lemma is_irq_active_rev:
 
 (* FIXME: move *)
 lemma if_apply_ev:
-  "equiv_valid I A B P (if a then b x  else c x) \<Longrightarrow>
+  "equiv_valid I A B P (if a then b x else c x) \<Longrightarrow>
    equiv_valid I A B P ((if a then b else c) x)"
   by (simp split: if_split_asm)
 
@@ -259,7 +259,7 @@ lemma decode_irq_control_invocation_rev:
   "reads_equiv_valid_inv A aag
      (pas_refined aag and
       K (is_subject aag (fst slot) \<and> (\<forall>cap\<in>set caps. pas_cap_cur_auth aag cap) \<and>
-         (args \<noteq> [] \<longrightarrow> (pasSubject aag, Control, pasIRQAbs aag (ucast (args ! 0)))  \<in> pasPolicy aag)))
+         (args \<noteq> [] \<longrightarrow> (pasSubject aag, Control, pasIRQAbs aag (ucast (args ! 0))) \<in> pasPolicy aag)))
      (decode_irq_control_invocation label args slot caps)"
   unfolding decode_irq_control_invocation_def
   apply (wp ensure_empty_rev lookup_slot_for_cnode_op_rev

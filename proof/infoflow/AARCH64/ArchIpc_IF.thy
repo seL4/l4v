@@ -131,7 +131,7 @@ lemma cptrs_in_ipc_buffer[Ipc_IF_assms]:
   done
 
 lemma msg_in_ipc_buffer[Ipc_IF_assms]:
-  "\<lbrakk> n = msg_max_length \<or> n < msg_max_length;  is_aligned p msg_align_bits;
+  "\<lbrakk> n = msg_max_length \<or> n < msg_max_length; is_aligned p msg_align_bits;
      unat (mi_length mi) < 2 ^ (msg_align_bits - word_size_bits) \<rbrakk>
    \<Longrightarrow> ptr_range (p + of_nat n * of_nat word_size) word_size_bits
          \<subseteq> ptr_range (p :: obj_ref) msg_align_bits"
@@ -178,7 +178,7 @@ lemma captransfer_in_ipc_buffer[Ipc_IF_assms]:
   apply (subst upto_enum_step_shift_red[where us=3, simplified])
      apply (simp add: msg_align_bits word_bits_def)+
   apply (simp add: image_def msg_max_length_def msg_max_extra_caps_def)
-  apply (rule_tac x="(125::nat) + unat n"  in bexI)
+  apply (rule_tac x="(125::nat) + unat n" in bexI)
    apply simp+
   apply (fastforce intro: unat_less_helper word_leq_minus_one_le)
   done
@@ -393,7 +393,7 @@ lemma set_mrs_equiv_but_for_labels[Ipc_IF_assms]:
   unfolding set_mrs_def
   apply (wp | wpc)+
         apply (subst zipWithM_x_mapM_x)
-        apply (rule_tac Q'="\<lambda>_. equiv_but_for_labels aag L st and K (pasObjectAbs aag thread \<in> L  \<and>
+        apply (rule_tac Q'="\<lambda>_. equiv_but_for_labels aag L st and K (pasObjectAbs aag thread \<in> L \<and>
                                (case buf of (Some buf') \<Rightarrow> is_aligned buf' msg_align_bits \<and>
                                                            (\<forall>x \<in> ptr_range buf' msg_align_bits.
                                                               pasObjectAbs aag x \<in> L)

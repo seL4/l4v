@@ -18,8 +18,8 @@ definition authorised_invocation ::
      InvokeUntyped i' \<Rightarrow> valid_untyped_inv i' s \<and> (authorised_untyped_inv aag i') \<and> ct_active s
    | InvokeEndpoint epptr badge can_grant can_grant_reply \<Rightarrow>
        \<exists>ep. ko_at (Endpoint ep) epptr s \<and>
-            (can_grant \<longrightarrow>  (\<forall>r \<in> ep_q_refs_of ep. snd r = EPRecv \<longrightarrow> is_subject aag (fst r)) \<and>
-                            aag_has_auth_to aag Grant epptr \<and> aag_has_auth_to aag Call epptr) \<and>
+            (can_grant \<longrightarrow> (\<forall>r \<in> ep_q_refs_of ep. snd r = EPRecv \<longrightarrow> is_subject aag (fst r)) \<and>
+                           aag_has_auth_to aag Grant epptr \<and> aag_has_auth_to aag Call epptr) \<and>
             (can_grant_reply \<longrightarrow> aag_has_auth_to aag Call epptr) \<and>
             aag_has_auth_to aag SyncSend epptr
    | InvokeNotification ep badge \<Rightarrow> aag_has_auth_to aag Notify ep
@@ -69,7 +69,7 @@ lemma perform_invocation_respects:
                     and valid_invocation oper and authorised_invocation aag oper
                     and is_subject aag \<circ> cur_thread
                     and (\<lambda>s. \<forall>p ko. kheap s p = Some ko
-                                    \<longrightarrow> \<not> (is_tcb ko \<and> p = cur_thread st)  \<longrightarrow> kheap st p = Some ko)\<rbrace>
+                                    \<longrightarrow> \<not> (is_tcb ko \<and> p = cur_thread st) \<longrightarrow> kheap st p = Some ko)\<rbrace>
    perform_invocation blocking calling oper
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   supply [wp] = invoke_untyped_integrity send_ipc_integrity_autarch send_signal_respects
@@ -159,7 +159,7 @@ lemma decode_invocation_authorised:
      apply (simp only: domain_sep_inv_def)
     apply (rule impI, erule subst, rule pas_refined_sita_mem [OF sita_controlled],
            auto simp: cte_wp_at_caps_of_state)[1]
-   apply (clarsimp simp add: cap_links_irq_def )
+   apply (clarsimp simp add: cap_links_irq_def)
    apply (drule (1) pas_refined_Control, simp)
   apply (clarsimp simp: cap_links_asid_slot_def label_owns_asid_slot_def)
   apply (fastforce dest!: pas_refined_Control)
@@ -629,7 +629,7 @@ lemma handle_interrupt_pas_refined:
   apply (rule conjI; rule impI;rule hoare_pre)
   apply (wp send_signal_pas_refined get_cap_wp handle_reserved_irq_pas_refined
          | wpc
-         | simp add: get_irq_slot_def get_irq_state_def )+
+         | simp add: get_irq_slot_def get_irq_state_def)+
   done
 
 lemma dec_domain_time_integrity[wp]:
@@ -794,7 +794,7 @@ lemma activate_thread_integrity:
     (\<lambda>s. cur_thread s \<noteq> idle_thread s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>
    activate_thread
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (simp add: activate_thread_def )
+  apply (simp add: activate_thread_def)
   apply (rule hoare_pre)
   apply (wpsimp wp: gts_wp set_thread_state_integrity_autarch as_user_integrity_autarch)+
   apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
@@ -899,7 +899,7 @@ lemma guarded_switch_to_respects:
 
 lemma next_domain_tcb_domain_map_wellformed[wp]:
   "next_domain \<lbrace>tcb_domain_map_wellformed aag\<rbrace>"
-  by (wpsimp simp: next_domain_def thread_set_domain_def Let_def wp: dxo_wp_weak )
+  by (wpsimp simp: next_domain_def thread_set_domain_def Let_def wp: dxo_wp_weak)
 
 lemma valid_blocked_2_valid_blocked_except[simp]:
   "valid_blocked_2 queues kh sa ct \<Longrightarrow> valid_blocked_except_2 t queues kh sa ct"
@@ -919,10 +919,10 @@ because t's domain may contain multiple labels. See the comment for
 @{thm tcb_sched_action_dequeue_integrity'}
 \<close>
 lemma valid_sched_action_switch_subject_thread:
-   "\<lbrakk> scheduler_action s = switch_thread t; valid_sched_action s;
-      pas_refined aag s; pas_cur_domain aag s \<rbrakk>
-    \<Longrightarrow> pasObjectAbs aag t \<in> pasDomainAbs aag (etcb_domain (the (etcbs_of s t))) \<and>
-        pasSubject aag \<in> pasDomainAbs aag (etcb_domain (the (etcbs_of s t)))"
+  "\<lbrakk> scheduler_action s = switch_thread t; valid_sched_action s;
+     pas_refined aag s; pas_cur_domain aag s \<rbrakk>
+   \<Longrightarrow> pasObjectAbs aag t \<in> pasDomainAbs aag (etcb_domain (the (etcbs_of s t))) \<and>
+       pasSubject aag \<in> pasDomainAbs aag (etcb_domain (the (etcbs_of s t)))"
   apply (clarsimp simp: valid_sched_action_def weak_valid_sched_action_2_def
                         switch_in_cur_domain_2_def in_cur_domain_2_def etcbs_of'_def
                         etcb_at_def st_tcb_at_def obj_at_def)
@@ -984,7 +984,7 @@ lemma schedule_integrity_pasMayEditReadyQueues:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   supply schedule_choose_new_thread_integrity[wp]
   supply if_split[split del]
-  apply (simp add: schedule_def wrap_is_highest_prio_def[symmetric] )
+  apply (simp add: schedule_def wrap_is_highest_prio_def[symmetric])
   apply (wp, wpc)
         (* resume current thread *)
         apply wp
@@ -1030,7 +1030,7 @@ crunch invoke_untyped
   (wp: crunch_wps preemption_point_inv mapME_x_inv_wp simp: crunch_simps sequence_x_mapM_x)
 
 lemma zet_zip_contrapos:
-  "fst t \<notin> set xs  \<Longrightarrow> t \<notin> set (zip xs ys)"
+  "fst t \<notin> set xs \<Longrightarrow> t \<notin> set (zip xs ys)"
   by (auto simp: in_set_zipD)
 
 lemma ct_active_update[simp]:

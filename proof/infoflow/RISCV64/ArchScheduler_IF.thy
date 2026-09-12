@@ -209,11 +209,11 @@ lemma store_cur_thread_fragment_midstrength_reads_respects:
   apply (rule equiv_valid_guard_imp)
    apply (rule equiv_valid_weaken_pre)
     apply (rule ev_asahi_ex_to_full_fragement)
-   apply  (auto simp: midstrength_scheduler_affects_equiv_def asahi_scheduler_affects_equiv_def
-                           asahi_ex_scheduler_affects_equiv_def states_equiv_for_def equiv_for_def
-                           arch_scheduler_affects_equiv_def equiv_asids_def equiv_asid_def
-                           scheduler_globals_frame_equiv_def
-                 simp del: split_paired_All)
+   apply (auto simp: midstrength_scheduler_affects_equiv_def asahi_scheduler_affects_equiv_def
+                     asahi_ex_scheduler_affects_equiv_def states_equiv_for_def equiv_for_def
+                     arch_scheduler_affects_equiv_def equiv_asids_def equiv_asid_def
+                     scheduler_globals_frame_equiv_def
+           simp del: split_paired_All)
   done
 
 lemma set_vm_root_globals_equiv_scheduler:
@@ -328,20 +328,20 @@ lemma dmo_resetTimer_reads_respects_scheduler[Scheduler_IF_assms]:
   "reads_respects_scheduler aag l \<top> (do_machine_op resetTimer)"
   apply (rule reads_respects_scheduler_unobservable)
    apply (rule scheduler_equiv_lift)
-        apply (simp add: globals_equiv_scheduler_def[abs_def]  idle_equiv_def)
+        apply (simp add: globals_equiv_scheduler_def[abs_def] idle_equiv_def)
         apply (wpsimp wp: dmo_wp)
        apply ((wp silc_dom_lift dmo_wp | simp)+)[5]
   apply (rule scheduler_affects_equiv_unobservable)
         apply (simp add: states_equiv_for_def[abs_def] equiv_for_def equiv_asids_def equiv_asid_def)
         apply (rule hoare_pre)
-         apply (wp  | simp add: arch_scheduler_affects_equiv_def | wp dmo_wp)+
+         apply (wp | simp add: arch_scheduler_affects_equiv_def | wp dmo_wp)+
   done
 
 lemma ackInterrupt_reads_respects_scheduler[Scheduler_IF_assms]:
   "reads_respects_scheduler aag l \<top> (do_machine_op (ackInterrupt irq))"
   apply (rule reads_respects_scheduler_unobservable)
    apply (rule scheduler_equiv_lift)
-        apply (simp add:  globals_equiv_scheduler_def[abs_def] idle_equiv_def)
+        apply (simp add: globals_equiv_scheduler_def[abs_def] idle_equiv_def)
         apply (rule hoare_pre)
          apply wps
          apply (wp dmo_wp ackInterrupt_irq_masks | simp add:no_irq_def)+

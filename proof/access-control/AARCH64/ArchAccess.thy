@@ -96,7 +96,7 @@ definition integrity_asids_2 ::
   "'a PAS \<Rightarrow> 'a set \<Rightarrow> obj_ref \<Rightarrow> asid \<Rightarrow> arch_state \<Rightarrow> arch_state \<Rightarrow>
    (obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> (obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> bool"
 where
-  "integrity_asids_2 aag subjects x asid as as' ao ao'  \<equiv>
+  "integrity_asids_2 aag subjects x asid as as' ao ao' \<equiv>
      (arm_asid_table as (asid_high_bits_of asid) \<noteq> arm_asid_table as' (asid_high_bits_of asid)
       \<longrightarrow> (\<forall>x. arm_asid_table as' (asid_high_bits_of asid) = Some x \<longrightarrow> pasObjectAbs aag x \<in> subjects) \<and>
           (\<forall>asid'. asid' \<noteq> 0 \<and> asid_high_bits_of asid' = asid_high_bits_of asid

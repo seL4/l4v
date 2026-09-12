@@ -24,12 +24,12 @@ begin
 section \<open>Generic big step automaton\<close>
 
 inductive_set sub_big_steps ::
-  "('a,'b,'c) data_type \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool)  \<Rightarrow>  'a  \<Rightarrow> ('a \<times> 'c list) set"
+  "('a,'b,'c) data_type \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> ('a \<times> 'c list) set"
   for A :: "('a,'b,'c) data_type" and R :: "('a \<Rightarrow> 'a \<Rightarrow> bool)" and s :: "'a" where
   nil: "\<lbrakk> evlist = []; t = s; \<not> R s s \<rbrakk>
-          \<Longrightarrow>  (t,evlist) \<in> sub_big_steps A R s"
+          \<Longrightarrow> (t,evlist) \<in> sub_big_steps A R s"
 | step: "\<lbrakk> evlist = evlist' @ [e]; (s',evlist') \<in> sub_big_steps A R s; (s',t) \<in> Step A e; \<not> R s t \<rbrakk>
-           \<Longrightarrow>  (t,evlist) \<in> sub_big_steps A R s"
+           \<Longrightarrow> (t,evlist) \<in> sub_big_steps A R s"
 
 text \<open>
   Turn the (observable) multi-step executions of one automaton into the
@@ -67,7 +67,7 @@ lemma big_stepsE:
   obtains s' as a where "(s',as) \<in> sub_big_steps A R s"
                         "(s',t) \<in> Step A a"
                         "R s t"
-                        "ev =  exmap (as @ [a])"
+                        "ev = exmap (as @ [a])"
   using bs[THEN big_stepsD] by blast
 
 
@@ -293,7 +293,7 @@ lemma Step_system_to_enabled_system:
   shows "enabled_system A s0"
   apply (clarsimp simp: enabled_system_def)
 proof -
-  fix s  js jsa
+  fix s js jsa
   assume a: "s \<in> execution A s0 js"
   show "\<exists>s'. s' \<in> execution A s jsa"
   proof -
@@ -500,7 +500,7 @@ lemma big_step_adt_R_tranclp_inv:
   apply simp
   done
 
-lemma  big_steps_I_holds:
+lemma big_steps_I_holds:
   "\<lbrakk> (xa, x) \<in> big_steps A R exmap j; xa \<in> I; A [> I \<rbrakk>
    \<Longrightarrow> x \<in> I"
   apply (erule big_stepsE)
@@ -1213,7 +1213,7 @@ lemma handle_preemption_if_domain_sep_inv:
   "handle_preemption_if e \<lbrace>domain_sep_inv irqs st\<rbrace>"
   apply (wpsimp simp: handle_preemption_if_def maybe_handle_interrupt_def
                 wp: handle_kernel_interrupt_domain_sep_inv)
-   apply (rule_tac Q'="\<lambda>rv s. domain_sep_inv  irqs st s \<and> (rv \<noteq> None \<longrightarrow> the rv \<notin> non_kernel_IRQs)"
+   apply (rule_tac Q'="\<lambda>rv s. domain_sep_inv irqs st s \<and> (rv \<noteq> None \<longrightarrow> the rv \<notin> non_kernel_IRQs)"
                 in hoare_strengthen_post)
     apply (wpsimp wp: getActiveIRQ_rv_None)+
   done
@@ -2070,7 +2070,7 @@ lemma handle_event_was_not_Interrupt:
 
 lemma kernel_entry_if_was_not_Interrupt:
   "(x, ba) \<in> fst (kernel_entry_if e a b)
-   \<Longrightarrow> (case fst x of Inr a \<Rightarrow> True | _ \<Rightarrow>  e \<noteq> Interrupt)"
+   \<Longrightarrow> (case fst x of Inr a \<Rightarrow> True | _ \<Rightarrow> e \<noteq> Interrupt)"
   apply (simp add: kernel_entry_if_def)
   apply (erule use_valid)
    apply wp
@@ -2861,12 +2861,12 @@ lemma invoke_untyped_irq_state_inv:
   done
 
 lemma perform_invocation_irq_state_inv:
-   "\<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state) and valid_irq_states
-                      and valid_invocation op and K (irq_is_recurring irq st)
-                      and (\<lambda>s. \<forall>i. op = InvokeIRQHandler i \<longrightarrow>
-                                   (\<exists>p. cte_wp_at ((=) (IRQHandlerCap (irq_of_handler_inv i))) p s))\<rbrace>
-    perform_invocation x y op
-    \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
+  "\<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state) and valid_irq_states
+                     and valid_invocation op and K (irq_is_recurring irq st)
+                     and (\<lambda>s. \<forall>i. op = InvokeIRQHandler i \<longrightarrow>
+                                  (\<exists>p. cte_wp_at ((=) (IRQHandlerCap (irq_of_handler_inv i))) p s))\<rbrace>
+   perform_invocation x y op
+   \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   apply (case_tac op; simp;
          (solves \<open>(wp invoke_untyped_irq_state_inv[where irq=irq] irq_state_inv_triv
                       invoke_tcb_irq_state_inv invoke_cnode_irq_state_inv[simplified validE_R_def]
@@ -2889,10 +2889,10 @@ lemma hoare_drop_impE:
   using assms by (fastforce simp: validE_def valid_def split: sum.splits)
 
 lemma handle_invocation_irq_state_inv:
-   "\<lbrace>invs and domain_sep_inv False (sta :: det_state)
-          and irq_state_inv st and K (irq_is_recurring irq st)\<rbrace>
-    handle_invocation x y
-    \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
+  "\<lbrace>invs and domain_sep_inv False (sta :: det_state)
+         and irq_state_inv st and K (irq_is_recurring irq st)\<rbrace>
+   handle_invocation x y
+   \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   apply (simp add: handle_invocation_def ts_Restart_case_helper split_def
                    liftE_liftM_liftME liftME_def bindE_assoc
               split del: if_split)
@@ -3324,7 +3324,7 @@ lemma ADT_A_if_Step_irq_masks:
   apply (case_tac mode)
        apply (simp_all add: system.Step_def steps_def ADT_A_if_def in_monad rah_simp execution_def
                             global_automaton_if_def check_active_irq_A_if_def do_user_op_A_if_def
-                            check_active_irq_if_def kernel_schedule_if_def  kernel_call_A_if_def
+                            check_active_irq_if_def kernel_schedule_if_def kernel_call_A_if_def
                             kernel_handle_preemption_if_def kernel_exit_A_if_def measuref_if_def
               | safe | split if_splits)+
            apply (erule use_valid[OF _ do_user_op_if_irq_masks_of_state]

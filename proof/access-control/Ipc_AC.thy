@@ -286,7 +286,7 @@ lemma set_ntfn_valid_objs_at:
 lemma integrity_receive_blocked_chain:
   "\<lbrakk> st_tcb_at (receive_blocked_on ep) p s; integrity aag X st s; \<not> is_subject aag p \<rbrakk> \<Longrightarrow> st_tcb_at (receive_blocked_on ep) p st"
   apply (clarsimp simp: integrity_def st_tcb_at_tcb_states_of_state)
-  apply (drule (1) tsos_tro [where p = p] )
+  apply (drule (1) tsos_tro [where p = p])
     apply (fastforce simp: tcb_states_of_state_def)
    apply simp
   apply simp
@@ -340,7 +340,7 @@ lemma integrity_receive_blocked_chain':
   apply (clarsimp simp: integrity_def st_tcb_at_tcb_states_of_state receive_blocked_def)
   apply (simp split: thread_state.split_asm)
   apply (rename_tac word pl)
-  apply (drule_tac ep=word in tsos_tro [where p = p], simp+ )
+  apply (drule_tac ep=word in tsos_tro [where p = p], simp+)
   done
 
 lemma tba_Some:
@@ -364,7 +364,7 @@ lemma integrity_receive_blocked_chain_bound:
    \<Longrightarrow> bound_tcb_at ((=) (Some ntfnptr)) p st"
   apply (clarsimp simp: integrity_def)
   apply (drule bound_tcb_at_thread_bound_ntfns)
-  apply (drule tsos_tro' [where p = p], simp+ )
+  apply (drule tsos_tro' [where p = p], simp+)
   apply (clarsimp simp:tba_Some)
   done
 
@@ -485,7 +485,7 @@ etc.
 subsection\<open>auxiliary\<close>
 
 lemma cap_master_cap_masked_as_full:
-  "cap_master_cap (masked_as_full a a) = cap_master_cap a "
+  "cap_master_cap (masked_as_full a a) = cap_master_cap a"
   by (clarsimp simp: cap_master_cap_def masked_as_full_def split: cap.splits)
 
 lemma cap_badge_masked_as_full:
@@ -856,9 +856,9 @@ lemma lookup_extra_caps_authorised:
   by (wpsimp wp: mapME_set lookup_cap_and_slot_authorised)
 
 lemma lookup_cap_and_slot_cur_auth:
-   "\<lbrace>pas_refined aag and K (is_subject aag thread)\<rbrace>
-    lookup_cap_and_slot thread xs
-    \<lbrace>\<lambda>rv _. pas_cap_cur_auth aag (fst rv)\<rbrace>, -"
+  "\<lbrace>pas_refined aag and K (is_subject aag thread)\<rbrace>
+   lookup_cap_and_slot thread xs
+   \<lbrace>\<lambda>rv _. pas_cap_cur_auth aag (fst rv)\<rbrace>, -"
   unfolding lookup_cap_and_slot_def
   by (wp get_cap_auth_wp [where aag = aag] lookup_slot_for_thread_authorised | simp add: split_def)+
 
@@ -1010,7 +1010,7 @@ lemma pas_refined_ep_recv:
 
 lemma send_ipc_valid_ep_helper:
   "\<lbrakk> invs s; ko_at (Endpoint (RecvEP (h # t))) epptr s \<rbrakk>
-   \<Longrightarrow> valid_ep (case t of [] \<Rightarrow> IdleEP | h' # t'  \<Rightarrow> RecvEP t) s"
+   \<Longrightarrow> valid_ep (case t of [] \<Rightarrow> IdleEP | h' # t' \<Rightarrow> RecvEP t) s"
   apply (drule invs_valid_objs)
   apply (drule ko_atD)
   apply (erule(1) valid_objsE)
@@ -1192,7 +1192,7 @@ lemma receive_ipc_base_pas_refined:
                   hoare_vcg_imp_lift [OF set_simple_ko_get_tcb, unfolded disj_not1]
                   do_ipc_transfer_valid_arch
                | wpc
-               | simp add: thread_get_def  get_thread_state_def do_nbrecv_failed_transfer_def)+
+               | simp add: thread_get_def get_thread_state_def do_nbrecv_failed_transfer_def)+
   apply (clarsimp simp: tcb_at_def [symmetric] tcb_at_st_tcb_at)
   apply (simp only: invs_psp_aligned invs_vspace_objs invs_arch_state simp_thms)
   subgoal premises prems for s
@@ -1244,7 +1244,7 @@ lemma receive_ipc_pas_refined:
    receive_ipc thread ep_cap is_blocking
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (simp add: receive_ipc_def thread_get_def  split: cap.split)
+  apply (simp add: receive_ipc_def thread_get_def split: cap.split)
   apply clarsimp
   apply (rule bind_wp[OF _ get_simple_ko_sp])
   apply (rule bind_wp[OF _ gbn_sp])
@@ -1637,13 +1637,13 @@ inductive tcb_in_fault_reply for aag tst l' ko ko' where
        tcb_state tcb = BlockedOnReply; tcb_fault tcb = Some fault; tst = TRFContext \<rbrakk>
      \<Longrightarrow> tcb_in_fault_reply aag tst l' ko ko'"
 | tifr_remove_fault:
-    "\<lbrakk> ko  = Some (TCB tcb); ko' = Some (TCB tcb');
+    "\<lbrakk> ko = Some (TCB tcb); ko' = Some (TCB tcb');
        \<exists>regs'. tcb' = tcb \<lparr> tcb_arch := arch_tcb_set_registers regs' (tcb_arch tcb), tcb_fault := None\<rparr>;
        (pasSubject aag, Reply, l') \<in> pasPolicy aag;
        tcb_state tcb = BlockedOnReply; tcb_fault tcb = Some fault; tst = TRFRemoveFault \<rbrakk>
      \<Longrightarrow> tcb_in_fault_reply aag tst l' ko ko'"
 | tifr_reply:
-    "\<lbrakk> ko  = Some (TCB tcb); ko' = Some (TCB tcb');
+    "\<lbrakk> ko = Some (TCB tcb); ko' = Some (TCB tcb');
        \<exists>regs'. tcb' = tcb \<lparr> tcb_arch := arch_tcb_set_registers regs' (tcb_arch tcb),
                             tcb_fault := None, tcb_state := new_st\<rparr>;
        new_st = Restart \<or> new_st = Inactive; (pasSubject aag, Reply, l') \<in> pasPolicy aag;
@@ -2205,10 +2205,10 @@ lemma spec_valid_direct:
   by (simp add: spec_valid_def valid_def)
 
 lemma set_cap_respects_in_ipc_reply:
-   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRFinalOrCall st and
-     K (st_tcb_at (direct_call {pasSubject aag} aag epptr) receiver st \<and> is_subject aag caller)\<rbrace>
-    set_cap (ReplyCap caller False R) (receiver, tcb_cnode_index 3)
-    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr TRFinal st\<rbrace>"
+  "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRFinalOrCall st and
+    K (st_tcb_at (direct_call {pasSubject aag} aag epptr) receiver st \<and> is_subject aag caller)\<rbrace>
+   set_cap (ReplyCap caller False R) (receiver, tcb_cnode_index 3)
+   \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr TRFinal st\<rbrace>"
   unfolding set_cap_def
   apply simp
   apply (rule bind_wp[OF _ get_object_sp])
@@ -2219,7 +2219,7 @@ lemma set_cap_respects_in_ipc_reply:
   apply (clarsimp simp:tcb_at_def get_tcb_def dest!:ko_atD split:kernel_object.splits)
   apply (simp add: spec_valid_def valid_def return_def)
   unfolding integrity_tcb_in_ipc_def
-  apply (clarsimp simp:st_tcb_at_tcb_states_of_state )
+  apply (clarsimp simp:st_tcb_at_tcb_states_of_state)
   apply (clarsimp simp:tcb_states_of_state_def direct_call_def dest!:get_tcb_SomeD)
   by (erule tcb_in_ipc.cases; (force intro:tii_call))
 
@@ -2288,12 +2288,12 @@ lemma send_ipc_integrity_autarch:
     \<comment> \<open>IdleEP\<close>
     apply simp
     apply (rule hoare_pre)
-     apply (wp set_endpoint_respects  set_thread_state_integrity_autarch | wpc | simp)+
+     apply (wp set_endpoint_respects set_thread_state_integrity_autarch | wpc | simp)+
     apply (fastforce simp: obj_at_def is_ep) \<comment> \<open>ep_at and has_auth\<close>
    \<comment> \<open>SendEP\<close>
    apply simp
    apply (rule hoare_pre)
-    apply (wp set_endpoint_respects  set_thread_state_integrity_autarch | wpc | simp)+
+    apply (wp set_endpoint_respects set_thread_state_integrity_autarch | wpc | simp)+
    apply (fastforce simp: obj_at_def is_ep) \<comment> \<open>ep_at and has_auth\<close>
   \<comment> \<open>WaitingEP\<close>
   apply (rename_tac list)
@@ -2437,7 +2437,7 @@ lemma send_fault_ipc_integrity_autarch:
      apply (clarsimp simp: invs_valid_objs invs_sym_refs cte_wp_at_caps_of_state obj_at_def)
 
      apply (frule(1) caps_of_state_valid)
-     apply (clarsimp simp: valid_cap_def  is_ep aag_cap_auth_def cap_auth_conferred_def
+     apply (clarsimp simp: valid_cap_def is_ep aag_cap_auth_def cap_auth_conferred_def
                            cap_rights_to_auth_def AllowSend_def
                     elim!: obj_atE)
      apply (intro conjI; fastforce ?)

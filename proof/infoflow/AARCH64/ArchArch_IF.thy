@@ -285,7 +285,7 @@ lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq:
   done
 
 lemma find_vspace_for_asid_reads_respects:
-   "reads_respects aag l (K (aag_can_read_asid aag asid)) (find_vspace_for_asid asid)"
+  "reads_respects aag l (K (aag_can_read_asid aag asid)) (find_vspace_for_asid asid)"
   unfolding find_vspace_for_asid_def
   apply wpsimp
      apply (simp add: throw_opt_def)
@@ -352,11 +352,11 @@ lemma pt_walk_reads_equiv:
   by fastforce+
 
 lemma pt_lookup_from_level_reads_respects:
-   "reads_respects aag l
-      (\<lambda>s. pas_refined aag s \<and> pspace_aligned s \<and> valid_vspace_objs s \<and> valid_asid_table s \<and>
-           is_subject aag pt \<and> level \<le> max_pt_level \<and> vref \<in> user_region \<and>
-           (\<exists>asid. vs_lookup_table level asid vref s = Some (level, pt)))
-      (pt_lookup_from_level level pt vref target_pt)"
+  "reads_respects aag l
+     (\<lambda>s. pas_refined aag s \<and> pspace_aligned s \<and> valid_vspace_objs s \<and> valid_asid_table s \<and>
+          is_subject aag pt \<and> level \<le> max_pt_level \<and> vref \<in> user_region \<and>
+          (\<exists>asid. vs_lookup_table level asid vref s = Some (level, pt)))
+     (pt_lookup_from_level level pt vref target_pt)"
   apply (induct level arbitrary: pt)
    apply (simp add: pt_lookup_from_level_simps)
    apply wp
@@ -1000,7 +1000,7 @@ lemma unmap_page_globals_equiv:
 
 
 definition authorised_for_globals_page_inv ::
-  "page_invocation \<Rightarrow> 'z :: state_ext state \<Rightarrow> bool"  where
+  "page_invocation \<Rightarrow> 'z :: state_ext state \<Rightarrow> bool" where
   "authorised_for_globals_page_inv pgi \<equiv> \<lambda>s.
      case pgi of PageMap cap ptr m \<Rightarrow> (\<exists>slot. cte_wp_at (parent_for_refs m) slot s) | _ \<Rightarrow> True"
 
@@ -1058,7 +1058,7 @@ lemma perform_pg_inv_unmap_globals_equiv:
   apply (intro conjI; clarsimp)
   apply (clarsimp split: arch_cap.splits)
   apply (drule cte_wp_valid_cap, fastforce)
-  apply (clarsimp simp:  valid_cap_def valid_arch_cap_def wellformed_mapdata_def)
+  apply (clarsimp simp: valid_cap_def valid_arch_cap_def wellformed_mapdata_def)
   done
 
 lemma perform_pg_inv_map_globals_equiv:
@@ -1110,7 +1110,7 @@ lemma retype_region_ASIDPoolObj_globals_equiv:
 
 lemma perform_asid_control_invocation_globals_equiv:
   notes delete_objects_invs[wp del]
-  notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+  notes blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
   shows "\<lbrace>globals_equiv s and invs and ct_active and valid_aci aci\<rbrace>
          perform_asid_control_invocation aci
          \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
@@ -1126,7 +1126,7 @@ lemma perform_asid_control_invocation_globals_equiv:
              max_index_upd_invs_simple set_cap_no_overlap
              set_cap_caps_no_overlap max_index_upd_caps_overlap_reserved
              region_in_kernel_window_preserved
-             hoare_vcg_all_lift  get_cap_wp hoare_weak_lift_imp
+             hoare_vcg_all_lift get_cap_wp hoare_weak_lift_imp
              set_cap_idx_up_aligned_area[where dev = False,simplified]
           | simp)+
    (* factor out the implication -- we know what the relevant components of the
@@ -1580,7 +1580,7 @@ lemma vcpu_save_reg_equiv_but_for_labels[wp]:
   by wpsimp
 
 lemma save_virt_timer_equiv_but_for_labels[wp]:
-   "\<lbrace>\<lambda>s. equiv_but_for_labels aag L st s \<and> pasObjectAbs aag vr \<in> L \<and> cur_vcpu_of s vr \<noteq> None\<rbrace>
+  "\<lbrace>\<lambda>s. equiv_but_for_labels aag L st s \<and> pasObjectAbs aag vr \<in> L \<and> cur_vcpu_of s vr \<noteq> None\<rbrace>
    save_virt_timer vr
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
   unfolding save_virt_timer_def
@@ -2317,7 +2317,7 @@ definition states_equiv_for_non_hyp ::
      equiv_for (P \<circ> fst) is_original_cap s s' \<and>
      equiv_for Q interrupt_states s s' \<and>
      equiv_for Q interrupt_irq_node s s' \<and>
-     equiv_for S  ready_queues s s' \<and>
+     equiv_for S ready_queues s s' \<and>
      equiv_asids R s s' \<and>
      equiv_fpu P s s'"
 
@@ -2344,7 +2344,7 @@ lemma states_equiv_for_non_hyp_lift:
   assumes "\<And>st. f \<lbrace>\<lambda>s. equiv_for (P \<circ> fst) is_original_cap st s\<rbrace>"
   assumes "\<And>st. f \<lbrace>\<lambda>s. equiv_for Q interrupt_states st s\<rbrace>"
   assumes "\<And>st. f \<lbrace>\<lambda>s. equiv_for Q interrupt_irq_node st s\<rbrace>"
-  assumes "\<And>st. f \<lbrace>\<lambda>s. equiv_for S  ready_queues st s\<rbrace>"
+  assumes "\<And>st. f \<lbrace>\<lambda>s. equiv_for S ready_queues st s\<rbrace>"
   assumes "\<And>st. f \<lbrace>\<lambda>s. equiv_asids R st s\<rbrace>"
   assumes "\<And>st. f \<lbrace>\<lambda>s. equiv_fpu P st s\<rbrace>"
   shows "f \<lbrace>states_equiv_for_non_hyp P Q R S st\<rbrace>"
@@ -2398,7 +2398,7 @@ crunch vcpu_restore
 
 lemma equiv_machine_state_lift:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P  (device_state (machine_state s))\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (device_state (machine_state s))\<rbrace>"
   shows "f \<lbrace>\<lambda>s. equiv_machine_state P ms (machine_state s)\<rbrace>"
   by (wpsimp wp: assms equiv_for_lift2)
 
@@ -2435,7 +2435,7 @@ lemma vcpu_restore_helper:
    vcpu_restore vr
    \<lbrace>\<lambda>_ s. vcpu_mask (numlistregs s) (vcpu_state.truncate vcpu) = vcpu_mask (numlistregs s) (vcpu_state (machine_state s))\<rbrace>"
   apply (rule_tac P'="\<lambda>s. vcpus_of s vr = Some vcpu \<and> valid_arch_state s \<and>
-                          Some (vcpu_mask (numlistregs s) vcpu) = vcpu_proj UNIV UNIV True True True vr s "
+                          Some (vcpu_mask (numlistregs s) vcpu) = vcpu_proj UNIV UNIV True True True vr s"
               and Q'="\<lambda>_ s. vcpus_of s vr = Some vcpu \<and>
                             Some (vcpu_mask (numlistregs s) vcpu) = vcpu_proj {} {} False False False vr s"
                in hoare_chain)
@@ -2650,7 +2650,7 @@ lemma vcpu_enable_2_states_equiv_valid:
             apply (wpsimp)+
     apply (rule vcpu_enable_2_reads_respects_hyp_l[of "L o pasObjectAbs aag"])
      apply (auto simp: states_equiv_for_def equiv_for_def
-                       states_equiv_for_non_hyp_def  equiv_hyp_def)
+                       states_equiv_for_non_hyp_def equiv_hyp_def)
   done
 
 lemma states_equiv_valid_modify_disable:
