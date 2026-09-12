@@ -221,4 +221,4 @@ The constant "nullPointer" is a physical pointer guaranteed to be invalid.
 Whether the FPU is enabled or not.
 
 > config_HAVE_FPU :: Bool
-> config_HAVE_FPU = error "generated from CMake config"
+> config_HAVE_FPU = isabelleOp

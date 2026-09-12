@@ -125,15 +125,15 @@ foreign import ccall unsafe "qemu_store_word_phys"
 
 -- PC99 stubs
 
-writeCR3 = error "Unimplemented"
+writeCR3 = isabelleOp
 
-invalidateTLB = error "Unimplemented"
-mfence = error "Unimplemented"
-invalidateASID = error "Unimplemented"
-invalidateTranslationSingleASID = error "Unimplemented"
+invalidateTLB = isabelleOp
+mfence = isabelleOp
+invalidateASID = isabelleOp
+invalidateTranslationSingleASID = isabelleOp
 
 invalidateLocalPageStructureCacheASID :: PAddr -> Word64 -> IO ()
-invalidateLocalPageStructureCacheASID = error "Unimplemented"
+invalidateLocalPageStructureCacheASID = isabelleOp
 
 nativeThreadUsingFPU :: Word -> IO Bool
 nativeThreadUsingFPU = error "Unimplemented"
@@ -142,7 +142,7 @@ switchFpuOwner :: Word -> Word -> IO ()
 switchFpuOwner = error "Unimplemented"
 
 getFaultAddress :: Ptr CallbackData -> IO VPtr
-getFaultAddress _ = error "Unimplemented"
+getFaultAddress _ = isabelleOp
 
 firstValidIODomain :: Word16
 firstValidIODomain = error "Unimplemented"
@@ -173,5 +173,5 @@ ioapicIRQLines = 24 -- IOAPIC_IRQ_LINES
 
 -- error checks this performs moved out to x64 decodeIRQControl
 ioapicMapPinToVector :: Ptr CallbackData -> Word -> Word -> Word -> Word -> Word -> IO ()
-ioapicMapPinToVector = error "Unimplemented"
+ioapicMapPinToVector = isabelleOp
 
