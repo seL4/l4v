@@ -228,16 +228,16 @@ lemma domain_fields_equiv_sym:
 
 lemma reads_respects_scheduler_from_labels:
   assumes ev: "\<And>L. states_equiv_valid aag L P f"
-    and inv: "\<And>P. \<lbrace>\<lambda>s. P (cur_domain s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (work_units_completed s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (work_units_completed s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (irq_state_of_state s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_state_of_state s)\<rbrace>"
-             "\<And>P st. \<lbrace>\<lambda>s. P (domain_fields_equiv st s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (domain_fields_equiv st s)\<rbrace>"
-             "\<And>P st. \<lbrace>\<lambda>s. P (globals_equiv_scheduler st s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (globals_equiv_scheduler st s)\<rbrace>"
-             "\<And>P st. \<lbrace>\<lambda>s. P (scheduler_globals_frame_equiv st s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (scheduler_globals_frame_equiv st s)\<rbrace>"
-             "\<And>P st. \<lbrace>\<lambda>s. P (silc_dom_equiv aag st s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (silc_dom_equiv aag st s)\<rbrace>"
+  assumes inv: "\<And>P. \<lbrace>\<lambda>s. P (cur_domain s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
+               "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
+               "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
+               "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
+               "\<And>P. \<lbrace>\<lambda>s. P (work_units_completed s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (work_units_completed s)\<rbrace>"
+               "\<And>P. \<lbrace>\<lambda>s. P (irq_state_of_state s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_state_of_state s)\<rbrace>"
+               "\<And>P st. \<lbrace>\<lambda>s. P (domain_fields_equiv st s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (domain_fields_equiv st s)\<rbrace>"
+               "\<And>P st. \<lbrace>\<lambda>s. P (globals_equiv_scheduler st s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (globals_equiv_scheduler st s)\<rbrace>"
+               "\<And>P st. \<lbrace>\<lambda>s. P (scheduler_globals_frame_equiv st s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (scheduler_globals_frame_equiv st s)\<rbrace>"
+               "\<And>P st. \<lbrace>\<lambda>s. P (silc_dom_equiv aag st s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (silc_dom_equiv aag st s)\<rbrace>"
   shows "reads_respects_scheduler aag l (P and Q) f"
   apply (simp add: reads_respects_scheduler_def2)
   apply (rule equiv_valid_inv_split_lr)
@@ -391,12 +391,12 @@ lemma midstrength_reads_respects_scheduler_from_labels:
 
 lemma weak_reads_respects_scheduler_from_labels:
   assumes ev: "\<And>L. states_equiv_valid aag L P f"
-    and inv: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (irq_state_of_state s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_state_of_state s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (cur_domain s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
-             "\<And>st. \<lbrace>\<lambda>s. domain_fields_equiv st s \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. domain_fields_equiv st s\<rbrace>"
-             "\<And>st. \<lbrace>\<lambda>s. globals_equiv_scheduler st s \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. globals_equiv_scheduler st s\<rbrace>"
-             "\<And>st. \<lbrace>\<lambda>s. silc_dom_equiv aag st s \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. silc_dom_equiv aag st s\<rbrace>"
+  assumes inv: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
+               "\<And>P. \<lbrace>\<lambda>s. P (irq_state_of_state s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_state_of_state s)\<rbrace>"
+               "\<And>P. \<lbrace>\<lambda>s. P (cur_domain s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
+               "\<And>st. \<lbrace>\<lambda>s. domain_fields_equiv st s \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. domain_fields_equiv st s\<rbrace>"
+               "\<And>st. \<lbrace>\<lambda>s. globals_equiv_scheduler st s \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. globals_equiv_scheduler st s\<rbrace>"
+               "\<And>st. \<lbrace>\<lambda>s. silc_dom_equiv aag st s \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. silc_dom_equiv aag st s\<rbrace>"
   shows "equiv_valid_inv (scheduler_equiv aag) (weak_scheduler_affects_equiv aag l) (P and Q) f"
   apply (rule equiv_valid_inv_split_lr)
    apply (rule equiv_valid_rv_inv_lift)
@@ -600,7 +600,7 @@ lemma invs_cur_vcpu:
 
 lemma vcpu_invisible:
   assumes nrs: "\<not> reads_scheduler_cur_domain aag l s"
-  and pwn: "pas_wellformed_noninterference aag"
+  assumes pwn: "pas_wellformed_noninterference aag"
   shows
   "\<lbrakk> pas_refined aag s; valid_silc_label aag s;
      invs s; current_vcpu s = Some (vr,b); cur_vcpu_in_cur_domain s \<rbrakk>
@@ -939,7 +939,7 @@ lemma tcb_visible:
 
 lemma associated_vcpu_visible:
   assumes nrs: "reads_scheduler_cur_domain aag l s"
-  and pwn: "pas_wellformed_noninterference aag"
+  assumes pwn: "pas_wellformed_noninterference aag"
   shows
   "\<lbrakk> pasObjectAbs aag t \<in> reads_scheduler aag l;
      pas_refined aag s; valid_silc_label aag s; invs s;
@@ -956,7 +956,7 @@ lemma associated_vcpu_visible:
 
 lemma vcpu_visible:
   assumes rs: "reads_scheduler_cur_domain aag l s"
-  and wellformed: "pas_wellformed_noninterference aag"
+  assumes wellformed: "pas_wellformed_noninterference aag"
   notes domains_distinct[wp] = pas_wellformed_noninterference_domains_distinct[OF wellformed]
   shows
   "\<lbrakk> pas_refined aag s; valid_silc_label aag s;
@@ -1387,13 +1387,13 @@ lemma arch_switch_to_thread_states_equiv_valid:
 
 lemma midstrength_reads_respects_scheduler_from_labels':
   assumes ev: "\<And>L. states_equiv_valid aag L (P (L o pasObjectAbs aag)) f"
-    and inv: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (irq_state_of_state s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_state_of_state s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (work_units_completed s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (work_units_completed s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (cur_domain s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
-             "\<And>st. \<lbrace>\<lambda>s. domain_fields_equiv st s \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. domain_fields_equiv st s\<rbrace>"
-             "\<And>st. \<lbrace>\<lambda>s. globals_equiv_scheduler st s \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. globals_equiv_scheduler st s\<rbrace>"
-             "\<And>st. \<lbrace>\<lambda>s. silc_dom_equiv aag st s \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. silc_dom_equiv aag st s\<rbrace>"
+  assumes inv: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
+               "\<And>P. \<lbrace>\<lambda>s. P (irq_state_of_state s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_state_of_state s)\<rbrace>"
+               "\<And>P. \<lbrace>\<lambda>s. P (work_units_completed s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (work_units_completed s)\<rbrace>"
+               "\<And>P. \<lbrace>\<lambda>s. P (cur_domain s) \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
+               "\<And>st. \<lbrace>\<lambda>s. domain_fields_equiv st s \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. domain_fields_equiv st s\<rbrace>"
+               "\<And>st. \<lbrace>\<lambda>s. globals_equiv_scheduler st s \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. globals_equiv_scheduler st s\<rbrace>"
+               "\<And>st. \<lbrace>\<lambda>s. silc_dom_equiv aag st s \<and> Q s\<rbrace> f \<lbrace>\<lambda>_ s. silc_dom_equiv aag st s\<rbrace>"
   shows "equiv_valid_inv (scheduler_equiv aag) (midstrength_scheduler_affects_equiv aag l)
                          (P (\<lambda>x. pasObjectAbs aag x \<in> reads_scheduler aag l) and Q) f"
   apply (rule equiv_valid_inv_split_lr)

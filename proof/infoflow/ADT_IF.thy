@@ -890,72 +890,72 @@ locale ADT_IF_1 =
       and domain_sep_inv False (st :: det_state) and valid_irq_states\<rbrace>
      do_machine_op (getActiveIRQ in_kernel)
      \<lbrace>P\<rbrace>"
-  and dmo_getActiveIRQ_wp:
+  assumes dmo_getActiveIRQ_wp:
     "\<lbrace>\<lambda>s :: det_state. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)))
                          (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>)\<rbrace>
      do_machine_op (getActiveIRQ False)
      \<lbrace>P\<rbrace>"
-  and dmo_getActiveIRQ_valid_irq_states[wp]:
+  assumes dmo_getActiveIRQ_valid_irq_states[wp]:
     "do_machine_op (getActiveIRQ in_kernel) \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
-  and deleted_irq_handler_valid_irq_states[wp]:
+  assumes deleted_irq_handler_valid_irq_states[wp]:
     "deleted_irq_handler irq \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
-  and arch_finalise_cap_valid_irq_states[wp]:
+  assumes arch_finalise_cap_valid_irq_states[wp]:
     "arch_finalise_cap c x \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
-  and arch_post_cap_deletion_valid_irq_states[wp]:
+  assumes arch_post_cap_deletion_valid_irq_states[wp]:
     "arch_post_cap_deletion c \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
-  and prepare_thread_delete_valid_irq_states[wp]:
+  assumes prepare_thread_delete_valid_irq_states[wp]:
     "prepare_thread_delete ptr \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
-  and cur_hyp_in_cur_domain_machine_state_update[simp]:
+  assumes cur_hyp_in_cur_domain_machine_state_update[simp]:
     "\<And>f. cur_hyp_in_cur_domain (machine_state_update f s) = cur_hyp_in_cur_domain s"
-  and cur_fpu_in_cur_domain_machine_state_update[simp]:
+  assumes cur_fpu_in_cur_domain_machine_state_update[simp]:
     "\<And>f. cur_fpu_in_cur_domain (machine_state_update f s) = cur_fpu_in_cur_domain s"
-  and thread_set_no_etcb_change_cur_fpu_in_cur_domain:
+  assumes thread_set_no_etcb_change_cur_fpu_in_cur_domain:
     "(\<And>P tcb. P (tcb_domain (f tcb)) = (P (tcb_domain tcb) :: bool)) \<Longrightarrow> thread_set f t' \<lbrace>cur_fpu_in_cur_domain\<rbrace>"
-  and thread_set_no_etcb_change_cur_hyp_in_cur_domain:
+  assumes thread_set_no_etcb_change_cur_hyp_in_cur_domain:
     "(\<And>P tcb. P (tcb_domain (f tcb)) = (P (tcb_domain tcb) :: bool)) \<Longrightarrow> thread_set f t' \<lbrace>cur_hyp_in_cur_domain\<rbrace>"
-  and thread_set_tcb_context_valid_cur_hyp[wp]:
+  assumes thread_set_tcb_context_valid_cur_hyp[wp]:
     "thread_set (tcb_arch_update (arch_tcb_context_set tc)) tcb \<lbrace>\<lambda>s :: det_state. valid_cur_hyp s\<rbrace>"
-  and maybe_handle_interrupt_cur_hyp_in_cur_domain:
+  assumes maybe_handle_interrupt_cur_hyp_in_cur_domain:
     "maybe_handle_interrupt in_kernel \<lbrace>cur_hyp_in_cur_domain\<rbrace>"
-  and maybe_handle_interrupt_cur_fpu_in_cur_domain:
+  assumes maybe_handle_interrupt_cur_fpu_in_cur_domain:
     "maybe_handle_interrupt in_kernel \<lbrace>cur_fpu_in_cur_domain\<rbrace>"
-  and maybe_handle_interrupt_valid_cur_hyp:
+  assumes maybe_handle_interrupt_valid_cur_hyp:
     "\<lbrace>valid_cur_hyp and invs\<rbrace> maybe_handle_interrupt in_kernel \<lbrace>\<lambda>_ s :: det_state. valid_cur_hyp s\<rbrace>"
-  and handle_event_cur_hyp_in_cur_domain[wp]:
+  assumes handle_event_cur_hyp_in_cur_domain[wp]:
     "\<lbrace>cur_hyp_in_cur_domain and invs and ct_in_cur_domain and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
      handle_event e
      \<lbrace>\<lambda>_. cur_hyp_in_cur_domain\<rbrace>"
-  and handle_event_cur_fpu_in_cur_domain[wp]:
+  assumes handle_event_cur_fpu_in_cur_domain[wp]:
     "\<lbrace>cur_fpu_in_cur_domain and einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
      handle_event e
      \<lbrace>\<lambda>_. cur_fpu_in_cur_domain\<rbrace>"
-  and handle_event_valid_cur_hyp:
+  assumes handle_event_valid_cur_hyp:
     "\<lbrace>valid_cur_hyp and einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
      handle_event e
      \<lbrace>\<lambda>_ s :: det_state. valid_cur_hyp s\<rbrace>"
-  and schedule_cur_hyp_in_cur_domain:
+  assumes schedule_cur_hyp_in_cur_domain:
     "\<lbrace>\<lambda>s. cur_hyp_in_cur_domain s \<and> valid_sched s \<and> valid_objs s \<and> sym_refs (state_hyp_refs_of s)\<rbrace>
      schedule
      \<lbrace>\<lambda>_. cur_hyp_in_cur_domain\<rbrace>"
-  and schedule_cur_fpu_in_cur_domain:
+  assumes schedule_cur_fpu_in_cur_domain:
     "\<lbrace>\<lambda>s. cur_fpu_in_cur_domain s \<and> valid_sched s \<and> valid_objs s \<and> sym_refs (state_hyp_refs_of s)\<rbrace>
      schedule
      \<lbrace>\<lambda>_. cur_fpu_in_cur_domain\<rbrace>"
-  and schedule_valid_cur_hyp:
+  assumes schedule_valid_cur_hyp:
     "\<lbrace>valid_cur_hyp and valid_idle\<rbrace>
      schedule
      \<lbrace>\<lambda>_ s :: det_state. valid_cur_hyp s\<rbrace>"
-  and activate_thread_cur_hyp_in_cur_domain:
+  assumes activate_thread_cur_hyp_in_cur_domain:
     "activate_thread \<lbrace>cur_hyp_in_cur_domain\<rbrace>"
-  and activate_thread_cur_fpu_in_cur_domain:
+  assumes activate_thread_cur_fpu_in_cur_domain:
     "activate_thread \<lbrace>cur_fpu_in_cur_domain\<rbrace>"
-  and activate_thread_valid_cur_hyp:
+  assumes activate_thread_valid_cur_hyp:
     "activate_thread \<lbrace>\<lambda>s :: det_state. valid_cur_hyp s\<rbrace>"
-  and do_user_op_if_cur_hyp_in_cur_domain[wp]:
+  assumes do_user_op_if_cur_hyp_in_cur_domain[wp]:
     "do_user_op_if uop tc \<lbrace>cur_hyp_in_cur_domain\<rbrace>"
-  and do_user_op_if_cur_fpu_in_cur_domain[wp]:
+  assumes do_user_op_if_cur_fpu_in_cur_domain[wp]:
     "do_user_op_if uop tc \<lbrace>cur_fpu_in_cur_domain\<rbrace>"
-  and do_user_op_if_valid_cur_hyp[wp]:
+  assumes do_user_op_if_valid_cur_hyp[wp]:
     "do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. valid_cur_hyp s\<rbrace>"
 
 
@@ -963,99 +963,99 @@ locale ADT_IF_2 = ADT_IF_1 +
   fixes initial_aag :: "'a subject_label PAS"
   assumes do_user_op_if_invs[wp]:
     "do_user_op_if uop tc \<lbrace>invs and ct_running :: det_state \<Rightarrow> bool\<rbrace>"
-  and do_user_op_if_domain_sep_inv[wp]:
+  assumes do_user_op_if_domain_sep_inv[wp]:
     "do_user_op_if uop tc \<lbrace>\<lambda>s. domain_sep_inv irqs (st :: det_state) (s :: det_state)\<rbrace>"
-  and do_user_op_if_valid_sched[wp]:
+  assumes do_user_op_if_valid_sched[wp]:
     "do_user_op_if uop tc \<lbrace>valid_sched :: det_state \<Rightarrow> _\<rbrace>"
-  and do_user_op_if_irq_masks[wp]:
+  assumes do_user_op_if_irq_masks[wp]:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and do_user_op_if_valid_list[wp]:
+  assumes do_user_op_if_valid_list[wp]:
     "do_user_op_if uop tc \<lbrace>valid_list\<rbrace>"
-  and do_user_op_if_scheduler_action[wp]:
+  assumes do_user_op_if_scheduler_action[wp]:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. P (scheduler_action s)\<rbrace>"
-  and do_user_op_silc_inv[wp]:
+  assumes do_user_op_silc_inv[wp]:
     "do_user_op_if uop tc \<lbrace>silc_inv (aag :: 'a subject_label PAS) st\<rbrace>"
-  and do_user_op_pas_refined[wp]:
+  assumes do_user_op_pas_refined[wp]:
     "do_user_op_if uop tc \<lbrace>pas_refined aag\<rbrace>"
-  and do_user_op_cur_thread[wp]:
+  assumes do_user_op_cur_thread[wp]:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. P (cur_thread s)\<rbrace>"
-  and do_user_op_cur_domain[wp]:
+  assumes do_user_op_cur_domain[wp]:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. P (cur_domain s)\<rbrace>"
-  and do_user_op_idle_thread[wp]:
+  assumes do_user_op_idle_thread[wp]:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. P (idle_thread s)\<rbrace>"
-  and do_user_op_domain_fields[wp]:
+  assumes do_user_op_domain_fields[wp]:
     "\<And>P. do_user_op_if uop tc \<lbrace>domain_fields P\<rbrace>"
-  and do_use_op_guarded_pas_domain[wp]:
+  assumes do_use_op_guarded_pas_domain[wp]:
     "do_user_op_if uop tc \<lbrace>guarded_pas_domain aag\<rbrace>"
-  and tcb_arch_ref_tcb_context_set[simp]:
+  assumes tcb_arch_ref_tcb_context_set[simp]:
     "tcb_arch_ref (tcb_arch_update (arch_tcb_context_set uc) tcb) = tcb_arch_ref tcb"
-  and arch_switch_to_thread_cur_thread[wp]:
+  assumes arch_switch_to_thread_cur_thread[wp]:
     "\<And>P. arch_switch_to_thread t \<lbrace>\<lambda>s :: det_state. P (cur_thread s)\<rbrace>"
-  and arch_activate_idle_thread_cur_thread[wp]:
+  assumes arch_activate_idle_thread_cur_thread[wp]:
     "\<And>P. arch_activate_idle_thread t \<lbrace>\<lambda>s :: det_state. P (cur_thread s)\<rbrace>"
-  and arch_activate_idle_thread_scheduler_action[wp]:
+  assumes arch_activate_idle_thread_scheduler_action[wp]:
     "\<And>P. arch_activate_idle_thread t \<lbrace>\<lambda>s :: det_state. P (scheduler_action s)\<rbrace>"
-  and handle_reserved_irq_non_kernel_IRQs:
+  assumes handle_reserved_irq_non_kernel_IRQs:
     "\<And>P. \<lbrace>P and K (irq \<notin> non_kernel_IRQs)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_ s :: det_state. P s\<rbrace>"
-  and arch_perform_invocation_noErr[wp]:
+  assumes arch_perform_invocation_noErr[wp]:
     "\<And>Q. \<lbrace>\<top>\<rbrace> arch_perform_invocation i -, \<lbrace>\<lambda>rv s :: det_state. Q rv s\<rbrace>"
-  and arch_invoke_irq_control_noErr[wp]:
+  assumes arch_invoke_irq_control_noErr[wp]:
     "\<And>Q. \<lbrace>\<top>\<rbrace> arch_invoke_irq_control ici -, \<lbrace>\<lambda>rv s :: det_state. Q rv s\<rbrace>"
-  and init_arch_objects_irq_state_of_state[wp]:
+  assumes init_arch_objects_irq_state_of_state[wp]:
     "\<And>P. init_arch_objects new_type dev ptr num_objects obj_sz refs \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and getActiveIRQ_None:
+  assumes getActiveIRQ_None:
     "(None, s') \<in> fst (do_machine_op (getActiveIRQ False) (s :: det_state))
      \<Longrightarrow> irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)) = None"
-  and getActiveIRQ_Some:
+  assumes getActiveIRQ_Some:
     "(Some irq, s') \<in> fst (do_machine_op (getActiveIRQ False) s)
      \<Longrightarrow> irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)) = Some irq"
-  and kernel_entry_if_idle_equiv:
+  assumes kernel_entry_if_idle_equiv:
     "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and domain_sep_inv irqs st and idle_equiv st
            and (\<lambda>s. ct_idle s \<longrightarrow> tc = idle_context s)\<rbrace>
      kernel_entry_if e tc
      \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
-  and handle_preemption_idle_equiv[wp]:
+  assumes handle_preemption_idle_equiv[wp]:
     "\<lbrace>idle_equiv st and invs\<rbrace> handle_preemption_if tc \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
-  and schedule_if_idle_equiv[wp]:
+  assumes schedule_if_idle_equiv[wp]:
     "\<lbrace>idle_equiv st and invs\<rbrace> schedule_if tc \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
-  and do_user_op_if_idle_equiv[wp]:
+  assumes do_user_op_if_idle_equiv[wp]:
     "\<lbrace>idle_equiv st and invs\<rbrace> do_user_op_if uop tc \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
-  and kernel_entry_if_valid_vspace_objs_if[wp]:
+  assumes kernel_entry_if_valid_vspace_objs_if[wp]:
     "\<lbrace>valid_vspace_objs_if and invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
      kernel_entry_if e tc
      \<lbrace>\<lambda>_. valid_vspace_objs_if\<rbrace>"
-  and handle_preemption_if_valid_pdpt_objs[wp]:
+  assumes handle_preemption_if_valid_pdpt_objs[wp]:
     "handle_preemption_if tc \<lbrace>\<lambda>s. valid_vspace_objs_if s\<rbrace>"
-  and schedule_if_valid_pdpt_objs[wp]:
+  assumes schedule_if_valid_pdpt_objs[wp]:
     "schedule_if tc \<lbrace>\<lambda>s. valid_vspace_objs_if s\<rbrace>"
-  and do_user_op_if_valid_pdpt_objs[wp]:
+  assumes do_user_op_if_valid_pdpt_objs[wp]:
     "do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. valid_vspace_objs_if s\<rbrace>"
-  and valid_vspace_objs_if_ms_update[simp]:
+  assumes valid_vspace_objs_if_ms_update[simp]:
     "\<And>f. valid_vspace_objs_if (machine_state_update f s) = valid_vspace_objs_if s"
-  and do_user_op_if_irq_state_of_state:
+  assumes do_user_op_if_irq_state_of_state:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and do_user_op_if_irq_masks_of_state:
+  assumes do_user_op_if_irq_masks_of_state:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and do_user_op_if_irq_measure_if:
+  assumes do_user_op_if_irq_measure_if:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. P (irq_measure_if s)\<rbrace>"
-  and invoke_tcb_irq_state_inv:
+  assumes invoke_tcb_irq_state_inv:
     "\<lbrace>(\<lambda>s. irq_state_inv st s) and domain_sep_inv False (sta :: det_state) and valid_irq_states
                                and tcb_inv_wf tinv and K (irq_is_recurring irq st)\<rbrace>
      invoke_tcb tinv
      \<lbrace>\<lambda>_ s. irq_state_inv st s\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
-  and reset_untyped_cap_irq_state_inv:
+  assumes reset_untyped_cap_irq_state_inv:
     "\<lbrace>irq_state_inv st and domain_sep_inv False sta and valid_irq_states and K (irq_is_recurring irq st)\<rbrace>
      reset_untyped_cap slot
      \<lbrace>\<lambda>y. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>y. irq_state_next st\<rbrace>"
-  and handle_vm_fault_irq_state_of_state[wp]:
+  assumes handle_vm_fault_irq_state_of_state[wp]:
     "handle_vm_fault t vmft \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and handle_hypervisor_fault_irq_state_of_state[wp]:
+  assumes handle_hypervisor_fault_irq_state_of_state[wp]:
     "handle_hypervisor_fault t hft \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and create_cap_irq_state_of_state[wp]:
+  assumes create_cap_irq_state_of_state[wp]:
     "create_cap type bits untyped dev sl \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and arch_invoke_irq_control_irq_state_of_state[wp]:
+  assumes arch_invoke_irq_control_irq_state_of_state[wp]:
     "arch_invoke_irq_control ici \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and thread_set_context_pas_refined:
+  assumes thread_set_context_pas_refined:
     "thread_set (tcb_arch_update (arch_tcb_context_set ctxt)) t \<lbrace>pas_refined aag\<rbrace>"
 begin
 
@@ -3540,9 +3540,9 @@ lemma invariant_holds_inv_holds:
 
 lemma inv_holdsE:
   assumes I: "A [> I"
-  and step: "(s, t) \<in> Step A e"
-  and s_I: "s \<in> I"
-  and t_I: "t \<in> I \<Longrightarrow> P"
+  assumes step: "(s, t) \<in> Step A e"
+  assumes s_I: "s \<in> I"
+  assumes t_I: "t \<in> I \<Longrightarrow> P"
   shows "P"
   apply (rule t_I)
   apply (insert step I s_I)

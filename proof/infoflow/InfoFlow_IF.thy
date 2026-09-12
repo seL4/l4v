@@ -94,66 +94,66 @@ locale InfoFlow_IF_1 =
   \<comment> \<open>equiv_asids lemmas\<close>
   assumes equiv_asids_refl:
     "equiv_asids R s s"
-  and equiv_asids_sym:
+  assumes equiv_asids_sym:
     "equiv_asids R s t \<Longrightarrow> equiv_asids R t s"
-  and equiv_asids_trans:
+  assumes equiv_asids_trans:
     "\<lbrakk> equiv_asids R s t; equiv_asids R t u \<rbrakk> \<Longrightarrow> equiv_asids R s u"
-  and equiv_asids_guard_imp:
+  assumes equiv_asids_guard_imp:
     "\<lbrakk> equiv_asids R s s'; \<And>x. Q x \<Longrightarrow> R x \<rbrakk> \<Longrightarrow> equiv_asids Q s s'"
-  and equiv_asids_identical_kheap_updates:
+  assumes equiv_asids_identical_kheap_updates:
     "\<lbrakk> equiv_asids R s s'; identical_kheap_updates s s' kh kh' \<rbrakk>
      \<Longrightarrow> equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
-  and equiv_asids_triv:
+  assumes equiv_asids_triv:
     "\<lbrakk> equiv_asids R s s'; kheap t = kheap s; kheap t' = kheap s';
        arch_state t = arch_state s; arch_state t' = arch_state s' \<rbrakk>
      \<Longrightarrow> equiv_asids R t t'"
-  and equiv_asids_non_asid_pool_kheap_update:
+  assumes equiv_asids_non_asid_pool_kheap_update:
     "\<lbrakk> equiv_asids R s s'; non_asid_pool_kheap_update s kh; non_asid_pool_kheap_update s' kh' \<rbrakk>
      \<Longrightarrow> equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
   \<comment> \<open>equiv_hyp lemmas\<close>
-  and equiv_hyp_refl:
+  assumes equiv_hyp_refl:
     "equiv_hyp P s s"
-  and equiv_hyp_sym:
+  assumes equiv_hyp_sym:
     "equiv_hyp P s t \<Longrightarrow> equiv_hyp P t s"
-  and equiv_hyp_trans:
+  assumes equiv_hyp_trans:
     "\<lbrakk> equiv_hyp P s t; equiv_hyp P t u \<rbrakk> \<Longrightarrow> equiv_hyp P s u"
-  and equiv_hyp_guard_imp:
+  assumes equiv_hyp_guard_imp:
     "\<lbrakk> equiv_hyp P s s'; \<And>x. P' x \<Longrightarrow> P x \<rbrakk> \<Longrightarrow> equiv_hyp P' s s'"
-  and equiv_hypI:
+  assumes equiv_hypI:
     "\<lbrakk> \<And>x. P x \<Longrightarrow> equiv_hyp ((=) x) s t \<rbrakk>
      \<Longrightarrow> equiv_hyp P s t"
-  and equiv_hyp_triv:
+  assumes equiv_hyp_triv:
     "\<lbrakk> equiv_hyp P s s'; arch_state t = arch_state s; arch_state t' = arch_state s';
        machine_state t = machine_state s; machine_state t' = machine_state s' \<rbrakk>
      \<Longrightarrow> equiv_hyp P t t'"
-  and equiv_hyp_machine_state_update:
+  assumes equiv_hyp_machine_state_update:
     "\<lbrakk> equiv_hyp P s s'; identical_hyp_state_updates P s s' ms ms' \<rbrakk>
      \<Longrightarrow> equiv_hyp P (s\<lparr>machine_state := ms\<rparr>) (s'\<lparr>machine_state := ms'\<rparr>)"
   \<comment> \<open>equiv_fpu lemmas\<close>
-  and equiv_fpu_refl:
+  assumes equiv_fpu_refl:
     "equiv_fpu P s s"
-  and equiv_fpu_sym:
+  assumes equiv_fpu_sym:
     "equiv_fpu P s t \<Longrightarrow> equiv_fpu P t s"
-  and equiv_fpu_trans:
+  assumes equiv_fpu_trans:
     "\<lbrakk> equiv_fpu P s t; equiv_fpu P t u \<rbrakk> \<Longrightarrow> equiv_fpu P s u"
-  and equiv_fpu_guard_imp:
+  assumes equiv_fpu_guard_imp:
     "\<lbrakk> equiv_fpu P s s'; \<And>x. P' x \<Longrightarrow> P x \<rbrakk> \<Longrightarrow> equiv_fpu P' s s'"
-  and equiv_fpuI:
+  assumes equiv_fpuI:
     "\<lbrakk> \<And>x. P x \<Longrightarrow> equiv_fpu ((=) x) s t \<rbrakk>
      \<Longrightarrow> equiv_fpu P s t"
-  and equiv_fpu_triv:
+  assumes equiv_fpu_triv:
     "\<lbrakk> equiv_fpu P s s'; arch_state t = arch_state s; arch_state t' = arch_state s';
        machine_state t = machine_state s; machine_state t' = machine_state s' \<rbrakk>
      \<Longrightarrow> equiv_fpu P t t'"
-  and equiv_fpu_machine_state_update:
+  assumes equiv_fpu_machine_state_update:
     "\<lbrakk> equiv_fpu P s s'; identical_fpu_state_updates P s s' ms ms' \<rbrakk>
      \<Longrightarrow> equiv_fpu P (s\<lparr>machine_state := ms\<rparr>) (s'\<lparr>machine_state := ms'\<rparr>)"
   \<comment> \<open>globals_equiv lemmas\<close>
-  and globals_equiv_refl:
+  assumes globals_equiv_refl:
     "globals_equiv s s"
-  and globals_equiv_sym:
+  assumes globals_equiv_sym:
     "globals_equiv s t \<Longrightarrow> globals_equiv t s"
-  and globals_equiv_trans:
+  assumes globals_equiv_trans:
     "\<lbrakk> globals_equiv s t; globals_equiv t u \<rbrakk> \<Longrightarrow> globals_equiv s u"
 begin
 
@@ -703,10 +703,10 @@ lemma reads_respects_g':
 
 lemma states_equiv_for_guard_imp:
   assumes "states_equiv_for P Q R S s s'"
-  and "\<And>x. P' x \<Longrightarrow> P x"
-  and "\<And>x. Q' x \<Longrightarrow> Q x"
-  and "\<And>x. R' x \<Longrightarrow> R x"
-  and "\<And>x. S' x \<Longrightarrow> S x"
+  assumes "\<And>x. P' x \<Longrightarrow> P x"
+  assumes "\<And>x. Q' x \<Longrightarrow> Q x"
+  assumes "\<And>x. R' x \<Longrightarrow> R x"
+  assumes "\<And>x. S' x \<Longrightarrow> S x"
   shows "states_equiv_for P' Q' R' S' s s'"
   using assms
   by (auto simp: states_equiv_for_def
@@ -1078,7 +1078,7 @@ locale InfoFlow_IF_2 = InfoFlow_IF_1 +
   assumes dmo_loadWord_rev:
     "reads_equiv_valid_inv A aag (K (for_each_byte_of_word (aag_can_read aag) p))
                                  (do_machine_op (loadWord p))"
-  and do_machine_op_reads_respects':
+  assumes do_machine_op_reads_respects':
     "\<lbrakk> equiv_valid_inv (equiv_machine_state (aag_can_read aag) and equiv_irq_state)
                        (equiv_machine_state (aag_can_affect aag l)) Q f;
        \<And>s. P s \<Longrightarrow> Q (machine_state s); no_hyp f; no_fpu f\<rbrakk>
@@ -1128,14 +1128,14 @@ lemma tcb_domain_wellformed:
 
 lemma equiv_valid_inv_split_lr:
   assumes "equiv_valid_rv_inv I \<top>\<top> \<top>\<top> P f"
-  and "equiv_valid_inv \<top>\<top> A P f"
+  assumes "equiv_valid_inv \<top>\<top> A P f"
   shows "equiv_valid_inv I A P f"
   using assms
   by (fastforce simp: equiv_valid_2_def equiv_valid_def2)
 
 lemma equiv_valid_inv_split_rl:
   assumes "equiv_valid_inv I \<top>\<top> P f"
-  and "equiv_valid_rv_inv \<top>\<top> A \<top>\<top> P f"
+  assumes "equiv_valid_rv_inv \<top>\<top> A \<top>\<top> P f"
   shows "equiv_valid_inv I A P f"
   using assms
   by (fastforce simp: equiv_valid_2_def equiv_valid_def2)

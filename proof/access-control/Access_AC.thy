@@ -143,17 +143,17 @@ locale Access_AC_1 =
   and user_monad_t :: "'b user_monad"
   assumes acap_class_reply:
     "acap_class acap \<noteq> ReplyClass t"
-  and arch_troa_tro_alt[elim!]:
+  assumes arch_troa_tro_alt[elim!]:
     "arch_integrity_obj_atomic aag subjects l ko ko'
      \<Longrightarrow> arch_integrity_obj_alt aag subjects l ko ko'"
-  and arch_tro_alt_trans_spec:
+  assumes arch_tro_alt_trans_spec:
     "\<lbrakk> arch_integrity_obj_alt aag subjects l ko ko';
        arch_integrity_obj_alt aag subjects l ko' ko'' \<rbrakk>
      \<Longrightarrow> arch_integrity_obj_alt aag subjects l ko ko''"
-  and clas_caps_of_state:
+  assumes clas_caps_of_state:
     "\<lbrakk> caps_of_state s slot = Some cap; pas_refined aag s \<rbrakk>
      \<Longrightarrow> cap_links_asid_slot aag (pasObjectAbs aag (fst slot)) cap"
-  and tcb_hyp_refs_arch_tcb_set_registers[simp]:
+  assumes tcb_hyp_refs_arch_tcb_set_registers[simp]:
     "tcb_hyp_refs (arch_tcb_set_registers regs atcb) = tcb_hyp_refs atcb"
 begin
 
@@ -880,31 +880,31 @@ locale Access_AC_2 = Access_AC_1 +
     "\<lbrakk> integrity_obj_state aag activate subjects (s :: det_state) (s' :: det_state);
        x \<in> auth_ipc_buffers s' p; pasObjectAbs aag p \<notin> subjects \<rbrakk>
      \<Longrightarrow> x \<in> auth_ipc_buffers s p"
-  and integrity_asids_refl[simp]:
+  assumes integrity_asids_refl[simp]:
     "integrity_asids aag subjects x a s s"
-  and integrity_hyp_refl[simp]:
+  assumes integrity_hyp_refl[simp]:
     "integrity_hyp_2 aag subjects x ms ms as as ao ao"
-  and integrity_fpu_refl[simp]:
+  assumes integrity_fpu_refl[simp]:
     "integrity_fpu_2 aag subjects x ms ms kh kh"
-  and trasids_trans:
+  assumes trasids_trans:
     "\<lbrakk> \<forall>x a. integrity_asids_2 aag subjects x a as as' ao ao';
        \<forall>x a. integrity_asids_2 aag subjects x a as' as'' ao' ao'' \<rbrakk>
      \<Longrightarrow> \<forall>x a. integrity_asids_2 aag subjects x a as as'' ao ao''"
-  and trhyp_trans:
+  assumes trhyp_trans:
     "\<lbrakk> integrity_hyp_2 aag subjects x ms ms' as as' ao ao';
        integrity_hyp_2 aag subjects x ms' ms'' as' as'' ao' ao'' \<rbrakk>
      \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms'' as as'' ao ao''"
-  and trfpu_trans:
+  assumes trfpu_trans:
     "\<lbrakk> integrity_fpu_2 aag subjects x ms ms' kh kh';
        integrity_fpu_2 aag subjects x ms' ms'' kh' kh'' \<rbrakk>
      \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms'' kh kh''"
-  and integrity_asids_update_autarch:
+  assumes integrity_asids_update_autarch:
     "\<lbrakk> integrity_asids_2 aag subjects x a as as' ao ao'; pasObjectAbs aag ptr \<in> subjects \<rbrakk>
      \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(ptr := ako))"
-  and integrity_hyp_update_autarch:
+  assumes integrity_hyp_update_autarch:
     "\<lbrakk> integrity_hyp_2 aag subjects x ms ms' as as' ao ao'; pasObjectAbs aag ptr \<in> subjects \<rbrakk>
      \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' ao (ao'(ptr := ako))"
-  and integrity_fpu_update_autarch:
+  assumes integrity_fpu_update_autarch:
     "\<lbrakk> integrity_fpu_2 aag subjects x ms ms' kh kh'; pasObjectAbs aag ptr \<in> subjects \<rbrakk>
      \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(ptr \<mapsto> obj))"
 begin
@@ -915,7 +915,7 @@ subsection \<open>Basic integrity lemmas\<close>
 
 lemma integrity_trans:
   assumes t1: "integrity_subjects subjects aag activate X s s'"
-  and     t2: "integrity_subjects subjects aag activate X s' s''"
+  assumes t2: "integrity_subjects subjects aag activate X s' s''"
   shows "integrity_subjects subjects aag activate X s s''"
 proof -
   from t1 have tro1: "integrity_obj_state aag activate subjects s s'"
@@ -1526,16 +1526,16 @@ locale Access_AC_3 = Access_AC_2 +
   assumes arch_integrity_obj_atomic_mono:
     "\<lbrakk> arch_integrity_obj_atomic aag S l ao ao'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
      \<Longrightarrow> arch_integrity_obj_atomic aag T l ao ao'"
-  and integrity_asids_mono:
+  assumes integrity_asids_mono:
     "\<lbrakk> integrity_asids aag S x a s s'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
      \<Longrightarrow> integrity_asids aag T x a s (s' :: det_state)"
-  and integrity_hyp_mono:
+  assumes integrity_hyp_mono:
     "\<lbrakk> integrity_hyp aag S x s s'; S \<subseteq> T \<rbrakk>
      \<Longrightarrow> integrity_hyp aag T x s s'"
-  and integrity_fpu_mono:
+  assumes integrity_fpu_mono:
     "\<lbrakk> integrity_fpu aag S x s s'; S \<subseteq> T \<rbrakk>
      \<Longrightarrow> integrity_fpu aag T x s s'"
-  and auth_ipc_buffers_member:
+  assumes auth_ipc_buffers_member:
     "\<lbrakk> x \<in> auth_ipc_buffers s p; valid_objs s \<rbrakk>
      \<Longrightarrow> \<exists>tcb acap. get_tcb p s = Some tcb
                   \<and> tcb_ipcframe tcb = (ArchObjectCap acap)
@@ -1641,7 +1641,7 @@ locale integrity_arch_machine_upds =
      integrity_fpu_2 aag subjects x (h ms) ms' kh kh'"
     "integrity_fpu_2 aag subjects x ms (f (g ms') (h ms')) kh kh' =
      integrity_fpu_2 aag subjects x ms (h ms') kh kh'"
-  and integrity_hyp_machine_upd:
+  assumes integrity_hyp_machine_upd:
     "integrity_hyp_2 aag subjects x (f (g ms) (h ms)) ms' as as' ao ao' =
      integrity_hyp_2 aag subjects x (h ms) ms' as as' ao ao'"
     "integrity_hyp_2 aag subjects x ms (f (g ms') (h ms')) as as' ao ao' =
@@ -1667,7 +1667,7 @@ locale Access_AC_4 = Access_AC_3 +
     "integrity_arch_machine_upds aag underlying_memory_update"
     "integrity_arch_machine_upds aag device_state_update"
     "integrity_arch_machine_upds aag machine_state_rest_update"
-  and state_vrefs_upds[iff]:
+  assumes state_vrefs_upds[iff]:
     "\<And>f. state_vrefs (is_original_cap_update f s) = state_vrefs (s :: det_state)"
     "\<And>f. state_vrefs (machine_state_update f s) = state_vrefs s"
     "\<And>f. state_vrefs (cdt_update f s) = state_vrefs s"
@@ -1681,38 +1681,38 @@ locale Access_AC_4 = Access_AC_3 +
     "\<And>f. state_vrefs (interrupt_states_update f s) = state_vrefs s"
     "\<And>f. state_vrefs (interrupt_irq_node_update f s) = state_vrefs s"
     "\<And>f. state_vrefs (trans_state f s :: det_state) = state_vrefs s"
-  and integrity_asids_kh_upd_None:
+  assumes integrity_asids_kh_upd_None:
     "\<lbrakk> ao' p = None; integrity_asids_2 aag subjects x a as as' ao ao'\<rbrakk>
      \<Longrightarrow> integrity_asids_2 aag subjects x a as as' (ao(p := None)) ao'"
     "\<lbrakk> ao p = None; integrity_asids_2 aag subjects x a as as' ao ao'\<rbrakk>
      \<Longrightarrow> integrity_asids_2 aag subjects x a as as' ao (ao'(p := None))"
-  and integrity_hyp_kh_upd_None:
+  assumes integrity_hyp_kh_upd_None:
     "\<lbrakk> ao' p = None; integrity_hyp_2 aag subjects x ms ms' as as' ao ao'\<rbrakk>
      \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' (ao(p := None)) ao'"
     "\<lbrakk> ao p = None; integrity_hyp_2 aag subjects x ms ms' as as' ao ao'\<rbrakk>
      \<Longrightarrow> integrity_hyp_2 aag subjects x ms ms' as as' ao (ao'(p := None))"
-  and integrity_fpu_kh_upd:
+  assumes integrity_fpu_kh_upd:
     "\<lbrakk> \<forall>tcb. kh p \<noteq> Some (TCB tcb); \<forall>tcb. v \<noteq> Some (TCB tcb);
        integrity_fpu_2 aag subjects x ms ms' kh kh' \<rbrakk>
      \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' (kh(p := v)) kh'"
     "\<lbrakk> \<forall>tcb. kh' p \<noteq> Some (TCB tcb); \<forall>tcb. v \<noteq> Some (TCB tcb);
        integrity_fpu_2 aag subjects x ms ms' kh kh' \<rbrakk>
      \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(p := v))"
-  and integrity_fpu_kh_upd_neq:
+  assumes integrity_fpu_kh_upd_neq:
     "x \<noteq> p
      \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' (kh(p := v)) kh' =
          integrity_fpu_2 aag subjects x ms ms' kh kh'"
     "x \<noteq> p
      \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(p := v)) =
          integrity_fpu_2 aag subjects x ms ms' kh kh'"
-  and integrity_fpu_tcb_upd:
+  assumes integrity_fpu_tcb_upd:
     "\<lbrakk> kh p = Some (TCB tcb); v = Some (TCB tcb'); tcb_arch tcb = tcb_arch tcb'\<rbrakk>
      \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' (kh(p \<mapsto> TCB tcb')) kh' =
          integrity_fpu_2 aag subjects x ms ms' kh kh'"
     "\<lbrakk> kh' p = Some (TCB tcb); v = Some (TCB tcb'); tcb_arch tcb = tcb_arch tcb'\<rbrakk>
      \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms' kh (kh'(p \<mapsto> TCB tcb')) =
          integrity_fpu_2 aag subjects x ms ms' kh kh'"
-  and integrity_fpu_set_registers:
+  assumes integrity_fpu_set_registers:
     "\<lbrakk> kh x = Some (TCB tcb); kh' x = Some (TCB tcb');
        tcb_arch tcb' = arch_tcb_set_registers regs (tcb_arch tcb) \<rbrakk>
      \<Longrightarrow> integrity_fpu_2 aag subjects x ms ms kh kh'"

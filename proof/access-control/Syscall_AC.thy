@@ -234,7 +234,7 @@ definition guarded_pas_domain where
 locale gpd_wps' =
   fixes f :: "(det_state, 'z) nondet_monad"
   assumes idle_thread[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace>"
-  and cur_thread[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>"
+  assumes cur_thread[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>"
 
 locale gpd_wps = gpd_wps' +
   assumes cur_domain[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"
@@ -425,7 +425,7 @@ locale Syscall_AC_wps =
   fixes f :: "(det_state, 'z) nondet_monad"
   and aag :: "'a PAS"
   assumes respects[wp]: "f \<lbrace>integrity aag X st\<rbrace>"
-  and pas_refined[wp]: "f \<lbrace>pas_refined aag\<rbrace>"
+  assumes pas_refined[wp]: "f \<lbrace>pas_refined aag\<rbrace>"
 
 
 locale Syscall_AC_1 =
@@ -433,123 +433,123 @@ locale Syscall_AC_1 =
   assumes invs_irq_state_update[simp]:
     "invs ((s :: det_state)\<lparr>machine_state := irq_state_update f s'\<rparr>) =
      invs (s\<lparr>machine_state := s'\<rparr>)"
-  and cap_move_Syscall_AC_wps''[simp]:
+  assumes cap_move_Syscall_AC_wps''[simp]:
     "gpd_wps' (cap_move new_cap src_slot dest_slot)"
-  and cancel_badged_sends_Syscall_AC_wps''[simp]:
+  assumes cancel_badged_sends_Syscall_AC_wps''[simp]:
     "gpd_wps' (cancel_badged_sends epptr badge)"
-  and arch_post_modify_registers_Syscall_AC_wps[simp]:
+  assumes arch_post_modify_registers_Syscall_AC_wps[simp]:
     "gpd_wps (arch_post_modify_registers cur t)"
-  and arch_perform_invocation_Syscall_AC_wps[simp]:
+  assumes arch_perform_invocation_Syscall_AC_wps[simp]:
     "gpd_wps (arch_perform_invocation ai)"
-  and arch_invoke_irq_control_Syscall_AC_wps[simp]:
+  assumes arch_invoke_irq_control_Syscall_AC_wps[simp]:
     "gpd_wps (arch_invoke_irq_control ivk)"
-  and arch_invoke_irq_handler_Syscall_AC_wps[simp]:
+  assumes arch_invoke_irq_handler_Syscall_AC_wps[simp]:
     "gpd_wps (arch_invoke_irq_handler ihi)"
-  and arch_mask_irq_signal_Syscall_AC_wps[simp]:
+  assumes arch_mask_irq_signal_Syscall_AC_wps[simp]:
     "gpd_wps (arch_mask_irq_signal irq)"
-  and handle_reserved_irq_Syscall_AC_wps[simp]:
+  assumes handle_reserved_irq_Syscall_AC_wps[simp]:
     "gpd_wps (handle_reserved_irq irq)"
-  and handle_arch_fault_reply_Syscall_AC_wps[simp]:
+  assumes handle_arch_fault_reply_Syscall_AC_wps[simp]:
     "gpd_wps (handle_arch_fault_reply vmf thread x y)"
-  and handle_hypervisor_fault_Syscall_AC_wps[simp]:
+  assumes handle_hypervisor_fault_Syscall_AC_wps[simp]:
     "gpd_wps (handle_hypervisor_fault t hf_t)"
-  and handle_vm_fault_Syscall_AC_wps[simp]:
+  assumes handle_vm_fault_Syscall_AC_wps[simp]:
     "gpd_wps (handle_vm_fault t vmf_t)"
-  and handle_spurious_irq_Syscall_AC_wps[simp]:
+  assumes handle_spurious_irq_Syscall_AC_wps[simp]:
     "gpd_wps handle_spurious_irq"
-  and ackInterrupt_integrity[wp]:
+  assumes ackInterrupt_integrity[wp]:
     "do_machine_op (ackInterrupt irq) \<lbrace>integrity aag X st\<rbrace>"
-  and maskInterrupt_integrity[wp]:
+  assumes maskInterrupt_integrity[wp]:
     "do_machine_op (maskInterrupt m irq) \<lbrace>integrity aag X st\<rbrace>"
-  and resetTimer_integrity[wp]:
+  assumes resetTimer_integrity[wp]:
     "do_machine_op resetTimer \<lbrace>integrity aag X st\<rbrace>"
-  and handle_event_valid_cur_hyp:
+  assumes handle_event_valid_cur_hyp:
     "\<lbrace>valid_cur_hyp and einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
       and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
      handle_event e
      \<lbrace>\<lambda>_. valid_cur_hyp\<rbrace>"
-  and arch_switch_to_thread_respects[wp]:
+  assumes arch_switch_to_thread_respects[wp]:
     "\<lbrace>integrity aag X st and valid_arch_state and valid_cur_fpu\<rbrace>
      arch_switch_to_thread t
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and arch_switch_to_idle_thread_respects[wp]:
+  assumes arch_switch_to_idle_thread_respects[wp]:
     "\<lbrace>integrity aag X st and valid_arch_state\<rbrace>
      arch_switch_to_idle_thread
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and arch_switch_to_thread_pas_refined[wp]:
+  assumes arch_switch_to_thread_pas_refined[wp]:
     "arch_switch_to_thread t \<lbrace>pas_refined aag\<rbrace>"
-  and arch_switch_to_idle_pas_refined[wp]:
+  assumes arch_switch_to_idle_pas_refined[wp]:
     "arch_switch_to_idle_thread \<lbrace>pas_refined aag\<rbrace>"
-  and arch_activate_idle_thread_respects[simp]:
+  assumes arch_activate_idle_thread_respects[simp]:
     "Syscall_AC_wps (arch_activate_idle_thread t) aag"
-  and arch_mask_irq_signal_integrity[simp]:
+  assumes arch_mask_irq_signal_integrity[simp]:
     "Syscall_AC_wps (arch_mask_irq_signal irq) aag"
-  and arch_activate_idle_thread_pas_refined[wp]:
+  assumes arch_activate_idle_thread_pas_refined[wp]:
     "arch_activate_idle_thread t \<lbrace>pas_refined aag\<rbrace>"
-  and arch_mask_irq_signal_pas_refined[wp]:
+  assumes arch_mask_irq_signal_pas_refined[wp]:
     "arch_mask_irq_signal irq \<lbrace>pas_refined aag\<rbrace>"
-  and arch_mask_irq_signal_pas_cur_domain:
+  assumes arch_mask_irq_signal_pas_cur_domain:
     "arch_mask_irq_signal irq \<lbrace>\<lambda>s :: det_state. pas_cur_domain aag s\<rbrace>"
-  and handle_reserved_irq_integrity_autarch:
+  assumes handle_reserved_irq_integrity_autarch:
     "\<lbrace>integrity aag X st and pas_refined aag and invs and valid_cur_hyp and is_subject aag \<circ> cur_thread
                          and (\<lambda>s. in_cur_domain (cur_thread s) s \<or> cur_thread s = idle_thread s)\<rbrace>
      handle_reserved_irq irq
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and handle_reserved_irq_integrity_idle:
+  assumes handle_reserved_irq_integrity_idle:
     "\<lbrace>integrity aag X st and invs and valid_cur_hyp and ct_idle\<rbrace>
      handle_reserved_irq irq
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and handle_reserved_irq_pas_refined:
+  assumes handle_reserved_irq_pas_refined:
     "\<lbrace>\<lambda>s. pas_refined aag s \<and> invs s \<and> (ct_active s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>
      handle_reserved_irq irq \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  and handle_reserved_irq_pas_cur_domain:
+  assumes handle_reserved_irq_pas_cur_domain:
     "handle_reserved_irq irq \<lbrace>\<lambda>s :: det_state. pas_cur_domain aag s\<rbrace>"
-  and handle_hypervisor_fault_integrity_autarch:
+  assumes handle_hypervisor_fault_integrity_autarch:
     "\<lbrace>\<lambda>s. integrity aag X st s \<and> pas_refined aag s \<and> invs s \<and> is_subject aag thread
                                \<and> (ct_active s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>
      handle_hypervisor_fault thread fault
      \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
-  and handle_hypervisor_fault_pas_refined:
+  assumes handle_hypervisor_fault_pas_refined:
     "\<lbrace>\<lambda>s. pas_refined aag s \<and> is_subject aag (cur_thread s) \<and> is_subject aag thread \<and> invs s\<rbrace>
      handle_hypervisor_fault thread fault
      \<lbrace>\<lambda>_ s. pas_refined aag s\<rbrace>"
-  and handle_vm_fault_integrity:
+  assumes handle_vm_fault_integrity:
     "\<lbrace>integrity aag X st and K (is_subject aag thread)\<rbrace>
      handle_vm_fault thread vmfault_type
      \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  and handle_vm_fault_pas_refined[wp]:
+  assumes handle_vm_fault_pas_refined[wp]:
     "handle_vm_fault t vmf_t \<lbrace>pas_refined aag\<rbrace>"
-  and valid_cur_hyp_machine_state[simp]:
+  assumes valid_cur_hyp_machine_state[simp]:
     "\<And>f. valid_cur_hyp (machine_state_update f s) = valid_cur_hyp s"
-  and ackInterrupt_underlying_memory_inv[wp]:
+  assumes ackInterrupt_underlying_memory_inv[wp]:
     "\<And>P. ackInterrupt irq \<lbrace>\<lambda>s. P (underlying_memory s)\<rbrace>"
-  and resetTimer_underlying_memory_inv[wp]:
+  assumes resetTimer_underlying_memory_inv[wp]:
     "\<And>P. resetTimer \<lbrace>\<lambda>s. P (underlying_memory s)\<rbrace>"
-  and arch_post_cap_deletion_ct_active[wp]:
+  assumes arch_post_cap_deletion_ct_active[wp]:
     "arch_post_cap_deletion acap \<lbrace>\<lambda>s :: det_state. ct_active s\<rbrace>"
-  and arch_post_cap_deletion_scheduler_action[wp]:
+  assumes arch_post_cap_deletion_scheduler_action[wp]:
     "arch_post_cap_deletion acap \<lbrace>\<lambda>s::det_state. P (scheduler_action s)\<rbrace>"
-  and prepare_thread_delete_scheduler_action[wp]:
+  assumes prepare_thread_delete_scheduler_action[wp]:
     "prepare_thread_delete p \<lbrace>\<lambda>s::det_state. P (scheduler_action s)\<rbrace>"
-  and arch_mask_irq_signal_arch_state[wp]:
+  assumes arch_mask_irq_signal_arch_state[wp]:
     "\<And>P. arch_mask_irq_signal irq \<lbrace>\<lambda>s :: det_state. P (arch_state s)\<rbrace>"
-  and handle_reserved_irq_arch_state[wp]:
+  assumes handle_reserved_irq_arch_state[wp]:
     "\<And>P. handle_reserved_irq irq \<lbrace>\<lambda>s :: det_state. P (arch_state s)\<rbrace>"
-  and init_arch_objects_arch_state[wp]:
+  assumes init_arch_objects_arch_state[wp]:
     "\<And>P. init_arch_objects new_type dev ptr n sz refs \<lbrace>\<lambda>s :: det_state. P (arch_state s)\<rbrace>"
-  and getActiveIRQ_inv:
+  assumes getActiveIRQ_inv:
     "\<And>P. \<forall>f s. P s \<longrightarrow> P (irq_state_update f s)
           \<Longrightarrow> \<lbrace>P\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv. P\<rbrace>"
-  and getActiveIRQ_rv_None:
+  assumes getActiveIRQ_rv_None:
     "\<lbrace>\<top>\<rbrace> getActiveIRQ True \<lbrace>\<lambda>rv ms. (rv \<noteq> None \<longrightarrow> the rv \<notin> non_kernel_IRQs)\<rbrace>"
-  and set_thread_state_restart_to_running_respects:
+  assumes set_thread_state_restart_to_running_respects:
     "\<lbrace>integrity aag X st and st_tcb_at ((=) Restart) thread and K (pasMayActivate aag)\<rbrace>
      do pc \<leftarrow> as_user thread getRestartPC;
               as_user thread $ setNextPC pc;
               set_thread_state thread Structures_A.thread_state.Running
      od
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and arch_prepare_next_domain_respects[wp]:
+  assumes arch_prepare_next_domain_respects[wp]:
     "\<lbrace>integrity aag X st and valid_arch_state and valid_cur_fpu\<rbrace>
      arch_prepare_next_domain
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"

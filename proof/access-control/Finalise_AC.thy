@@ -23,36 +23,36 @@ locale Finalise_AC_1 =
   fixes aag :: "'a PAS"
   assumes sbn_st_vrefs:
     "\<And>P. set_bound_notification ref ntfn \<lbrace>\<lambda>s :: det_state. P (state_vrefs s)\<rbrace>"
-  and arch_finalise_cap_auth':
+  assumes arch_finalise_cap_auth':
     "\<lbrace>pas_refined aag\<rbrace> arch_finalise_cap acap final \<lbrace>\<lambda>rv _. pas_cap_cur_auth aag (fst rv)\<rbrace>"
-  and arch_finalise_cap_obj_refs:
+  assumes arch_finalise_cap_obj_refs:
     "\<And>P. \<lbrace>\<lambda>_ :: det_state. \<forall>x \<in> aobj_ref' acap. P x\<rbrace>
           arch_finalise_cap acap slot
           \<lbrace>\<lambda>rv _. \<forall>x \<in> obj_refs_ac (fst rv). P x\<rbrace>"
-  and prepare_thread_delete_st_tcb_at_halted[wp]:
+  assumes prepare_thread_delete_st_tcb_at_halted[wp]:
     "prepare_thread_delete t \<lbrace>\<lambda>s :: det_state. st_tcb_at halted t s\<rbrace>"
-  and arch_finalise_cap_makes_halted:
+  assumes arch_finalise_cap_makes_halted:
     "\<lbrace>\<top>\<rbrace> arch_finalise_cap acap ex \<lbrace>\<lambda>rv s :: det_state. \<forall>t\<in>obj_refs_ac (fst rv). halted_if_tcb t s\<rbrace>"
-  and arch_cap_cleanup_wf:
+  assumes arch_cap_cleanup_wf:
     "\<lbrakk> arch_cap_cleanup_opt acap \<noteq> NullCap; \<not> is_arch_cap (arch_cap_cleanup_opt acap) \<rbrakk>
      \<Longrightarrow> (\<exists>irq. arch_cap_cleanup_opt acap = IRQHandlerCap irq \<and> is_subject_irq aag irq)"
-  and finalise_cap_valid_list[wp]:
+  assumes finalise_cap_valid_list[wp]:
     "finalise_cap param_a param_b \<lbrace>valid_list\<rbrace>"
-  and arch_finalise_cap_pas_refined[wp]:
+  assumes arch_finalise_cap_pas_refined[wp]:
     "\<lbrace>pas_refined aag and invs and valid_arch_cap acap\<rbrace>
      arch_finalise_cap acap ex
      \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  and prepare_thread_delete_pas_refined[wp]:
+  assumes prepare_thread_delete_pas_refined[wp]:
     "prepare_thread_delete p \<lbrace>pas_refined aag\<rbrace>"
-  and prepare_thread_delete_respects[wp]:
+  assumes prepare_thread_delete_respects[wp]:
     "\<lbrace>integrity aag X st and pas_refined aag and valid_cur_fpu and K (is_subject aag p)\<rbrace>
      prepare_thread_delete p
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and suspend_valid_cur_vcpu[wp]:
+  assumes suspend_valid_cur_vcpu[wp]:
     "suspend t \<lbrace>\<lambda>s :: det_state. valid_cur_fpu s\<rbrace>"
-  and unbind_notification_valid_cur_fpu[wp]:
+  assumes unbind_notification_valid_cur_fpu[wp]:
     "unbind_notification t \<lbrace>\<lambda>s :: det_state. valid_cur_fpu s\<rbrace>"
-  and finalise_cap_replaceable:
+  assumes finalise_cap_replaceable:
     "\<lbrace>\<lambda>s :: det_state. s \<turnstile> cap \<and> x = is_final_cap' cap s \<and> valid_mdb s \<and> valid_cur_fpu s \<and>
                            cte_wp_at ((=) cap) sl s \<and> valid_objs s \<and> sym_refs (state_refs_of s) \<and>
                            (cap_irqs cap \<noteq> {} \<longrightarrow> if_unsafe_then_cap s \<and> valid_global_refs s) \<and>
@@ -60,7 +60,7 @@ locale Finalise_AC_1 =
                                                 valid_arch_state s \<and> valid_arch_caps s)\<rbrace>
      finalise_cap cap x
      \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) cap\<rbrace>"
-  and arch_finalise_cap_respects[wp]:
+  assumes arch_finalise_cap_respects[wp]:
     "\<lbrace>integrity aag X st and invs and pas_refined aag and valid_cap (ArchObjectCap acap)
                                   and K (pas_cap_cur_auth aag (ArchObjectCap acap))\<rbrace>
      arch_finalise_cap acap final
@@ -1007,11 +1007,11 @@ locale Finalise_AC_2 = Finalise_AC_1 +
        (cap_revoke slot)
        \<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>,
        \<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>"
-  and finalise_cap_caps_of_state_nullinv:
+  assumes finalise_cap_caps_of_state_nullinv:
     "\<And>P. \<lbrace>\<lambda>s :: det_state. P (caps_of_state s) \<and> (\<forall>p. P ((caps_of_state s)(p \<mapsto> NullCap)))\<rbrace>
           finalise_cap cap final
           \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
-  and finalise_cap_fst_ret:
+  assumes finalise_cap_fst_ret:
     "\<And>P. \<lbrace>\<lambda>_ :: det_state. P NullCap \<and> (\<forall>a b c. P (Zombie a b c)) \<rbrace>
           finalise_cap cap is_final
           \<lbrace>\<lambda>rv _. P (fst rv)\<rbrace>"

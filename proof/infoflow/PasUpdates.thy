@@ -77,10 +77,10 @@ locale PasUpdates_1 =
   assumes state_asids_to_policy_pasSubject_update:
     "state_asids_to_policy (aag\<lparr>pasSubject := subject\<rparr>) s =
      state_asids_to_policy aag s"
-  and state_asids_to_policy_pasMayActivate_update:
+  assumes state_asids_to_policy_pasMayActivate_update:
     "state_asids_to_policy (aag\<lparr>pasMayActivate := b\<rparr>) s =
      state_asids_to_policy aag s"
-  and state_asids_to_policy_pasMayEditReadyQueues_update:
+  assumes state_asids_to_policy_pasMayEditReadyQueues_update:
     "state_asids_to_policy (aag\<lparr>pasMayEditReadyQueues := b\<rparr>) s =
      state_asids_to_policy aag s"
 begin

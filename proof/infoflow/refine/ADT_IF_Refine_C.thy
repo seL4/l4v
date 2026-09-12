@@ -117,12 +117,12 @@ locale ADT_IF_Refine_1 = kernel_m +
   assumes do_user_op_if_C_corres:
     "corres_underlying rf_sr False False (=) (invs' and ex_abs einvs and (\<lambda>_. uop_nonempty f))
                        \<top> (doUserOp_if f tc) (doUserOp_C_if f tc)"
-  and handleInvocation_ccorres':
+  assumes handleInvocation_ccorres':
     "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
              (invs' and arch_extras and ct_active' and sch_act_simple)
              (UNIV \<inter> {s. isCall_' s = from_bool isCall} \<inter> {s. isBlocking_' s = from_bool isBlocking}) []
              (handleInvocation isCall isBlocking) (Call handleInvocation_'proc)"
-  and handleHypervisorFault_C_body_ccorres:
+  assumes handleHypervisorFault_C_body_ccorres:
     "ccorres ((\<lambda>irq :: irq. K dc irq) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
              (invs' and arch_extras and ct_running' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
              (UNIV) []
@@ -130,15 +130,15 @@ locale ADT_IF_Refine_1 = kernel_m +
                         handleHypervisorFault thread flt
                      od))
              (handleHypervisorFault_C_body_if (hyp_fault_type_from_H flt))"
-  and checkInterrupt_ccorres':
+  assumes checkInterrupt_ccorres':
     "ccorres dc xfdc (\<lambda>s. invs' s \<and> (\<not>inKernel \<longrightarrow> sch_act_not (ksCurThread s) s)) UNIV []
              (maybeHandleInterrupt inKernel) (Call checkInterrupt_'proc)"
-  and hvmf_invs_lift:
+  assumes hvmf_invs_lift:
     "\<lbrakk> \<And>s m. P (s\<lparr>ksMachineState := ksMachineState s\<lparr>machine_state_rest := m\<rparr>\<rparr>) = P s \<rbrakk>
      \<Longrightarrow> \<lbrace>P\<rbrace> handleVMFault t hf \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
-  and check_active_irq_corres_C:
+  assumes check_active_irq_corres_C:
     "corres_underlying rf_sr False False (=) \<top> \<top> (checkActiveIRQ_if tc) (checkActiveIRQ_C_if tc)"
-  and obs_cpspace_user_data_relation:
+  assumes obs_cpspace_user_data_relation:
     "\<lbrakk> pspace_aligned' bd; pspace_distinct' bd;
        cpspace_user_data_relation (ksPSpace bd) (underlying_memory (ksMachineState bd)) hgs \<rbrakk>
      \<Longrightarrow> cpspace_user_data_relation (ksPSpace bd)

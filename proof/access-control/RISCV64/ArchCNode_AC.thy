@@ -70,7 +70,7 @@ lemma vs_lookup_table_eqI':
 
 lemma state_vrefs_eqI:
   assumes "asid_table s' = asid_table s"
-  and "aobjs_of s' = aobjs_of s"
+  assumes "aobjs_of s' = aobjs_of s"
   shows "state_vrefs s' = state_vrefs s"
   apply (prop_tac "\<forall>level asid vref. vs_lookup_table level asid vref s = vs_lookup_table level asid vref s'")
    apply (intro allI vs_lookup_table_eqI')

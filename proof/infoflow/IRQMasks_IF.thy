@@ -48,35 +48,35 @@ locale IRQMasks_IF_1 =
   fixes state_t :: "'s :: state_ext state"
   assumes resetTimer_irq_masks[wp]:
     "resetTimer \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>"
-  and storeWord_irq_masks[wp]:
+  assumes storeWord_irq_masks[wp]:
     "storeWord x y \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>"
-  and delete_objects_irq_masks[wp]:
+  assumes delete_objects_irq_masks[wp]:
     "delete_objects ptr bits \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and invoke_untyped_irq_masks[wp]:
+  assumes invoke_untyped_irq_masks[wp]:
     "invoke_untyped ui \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and finalise_cap_irq_masks[wp]:
+  assumes finalise_cap_irq_masks[wp]:
     "finalise_cap cap final \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and send_signal_irq_masks[wp]:
+  assumes send_signal_irq_masks[wp]:
     "send_signal ntfnptr badge \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and handle_vm_fault_irq_masks[wp]:
+  assumes handle_vm_fault_irq_masks[wp]:
     "handle_vm_fault t vmft \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and handle_interrupt_irq_masks:
+  assumes handle_interrupt_irq_masks:
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False (st :: 's state) and K (irq \<le> maxIRQ)\<rbrace>
      handle_interrupt irq
      \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
-  and arch_invoke_irq_control_irq_masks:
+  assumes arch_invoke_irq_control_irq_masks:
     "\<lbrace>domain_sep_inv False st and arch_irq_control_inv_valid ivk\<rbrace>
      arch_invoke_irq_control ivk
      \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
-  and dmo_getActiveIRQ_irq_masks[wp]:
+  assumes dmo_getActiveIRQ_irq_masks[wp]:
     "do_machine_op (getActiveIRQ in_kernel) \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and dmo_getActiveIRQ_return_axiom[wp]:
+  assumes dmo_getActiveIRQ_return_axiom[wp]:
     "\<lbrace>\<top>\<rbrace>
      do_machine_op (getActiveIRQ in_kernel)
      \<lbrace>\<lambda>rv s :: det_state. (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)\<rbrace>"
-  and activate_thread_irq_masks[wp]:
+  assumes activate_thread_irq_masks[wp]:
     "activate_thread \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and handle_spurious_irq_masks[wp]:
+  assumes handle_spurious_irq_masks[wp]:
     "handle_spurious_irq \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
 begin
 
@@ -283,28 +283,28 @@ locale IRQMasks_IF_2 = IRQMasks_IF_1 state_t
   for state_t :: "'s :: state_ext state" +
   assumes do_reply_transfer_irq_masks[wp]:
     "do_reply_transfer sender receiver slot grant \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and arch_perform_invocation_irq_masks:
+  assumes arch_perform_invocation_irq_masks:
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
      arch_perform_invocation i
      \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
-  and arch_prepare_set_domain_irq_masks_of_state[wp]:
+  assumes arch_prepare_set_domain_irq_masks_of_state[wp]:
     "arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and invoke_tcb_irq_masks:
+  assumes invoke_tcb_irq_masks:
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False (st :: 's state) and tcb_inv_wf tinv\<rbrace>
      invoke_tcb tinv
      \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
-  and handle_hypervisor_fault_irq_masks[wp]:
+  assumes handle_hypervisor_fault_irq_masks[wp]:
     "handle_hypervisor_fault t hvft \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and arch_switch_to_idle_thread_irq_masks:
+  assumes arch_switch_to_idle_thread_irq_masks:
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and valid_irq_states\<rbrace>
       arch_switch_to_idle_thread \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
-  and arch_switch_to_thread_irq_masks:
+  assumes arch_switch_to_thread_irq_masks:
     "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and valid_irq_states\<rbrace>
      arch_switch_to_thread t
      \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
-  and arch_prepare_next_domain_irq_masks[wp]:
+  assumes arch_prepare_next_domain_irq_masks[wp]:
     "arch_prepare_next_domain \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  and arch_prepare_next_domain_valid_irq_states[wp]:
+  assumes arch_prepare_next_domain_valid_irq_states[wp]:
     "arch_prepare_next_domain \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"
 begin
 

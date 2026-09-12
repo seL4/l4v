@@ -48,65 +48,65 @@ locale CNode_AC_1 =
   and val_t :: "'b"
   assumes sata_cdt_update[simp]:
     "\<And>f. state_asids_to_policy aag (cdt_update f s) = state_asids_to_policy aag s"
-  and sata_is_original_cap_update[simp]:
+  assumes sata_is_original_cap_update[simp]:
     "\<And>f. state_asids_to_policy aag (is_original_cap_update f s) = state_asids_to_policy aag s"
-  and sata_interrupt_states_update[simp]:
+  assumes sata_interrupt_states_update[simp]:
     "\<And>f. state_asids_to_policy aag (interrupt_states_update f s) = state_asids_to_policy aag s"
-  and sata_machine_state_update[simp]:
+  assumes sata_machine_state_update[simp]:
     "\<And>f. state_asids_to_policy aag (machine_state_update f s) = state_asids_to_policy aag s"
-  and sata_update:
+  assumes sata_update:
     "\<lbrakk> pas_wellformed aag; cap_links_asid_slot aag (pasObjectAbs aag (fst ptr)) cap;
        state_asids_to_policy_arch aag (caps :: cslot_ptr \<Rightarrow> cap option) as vrefs \<subseteq> pasPolicy aag \<rbrakk>
      \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap)) as vrefs \<subseteq> pasPolicy aag"
-  and sata_update2:
+  assumes sata_update2:
     "\<lbrakk> pas_wellformed aag; cap_links_asid_slot aag (pasObjectAbs aag (fst ptr)) cap;
        cap_links_asid_slot aag (pasObjectAbs aag (fst ptr')) cap';
        state_asids_to_policy_arch aag caps (as :: arch_state) vrefs \<subseteq> pasPolicy aag \<rbrakk>
      \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap, ptr' \<mapsto> cap')) as vrefs \<subseteq> pasPolicy aag"
-  and state_vrefs_tcb_upd:
+  assumes state_vrefs_tcb_upd:
     "tcb_at tptr s \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(tptr \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
-  and state_vrefs_simple_type_upd:
+  assumes state_vrefs_simple_type_upd:
     "\<lbrakk> ko_at ko p s; is_simple_type ko; a_type ko = a_type (f (val :: 'b)) \<rbrakk>
      \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(p \<mapsto> f val)\<rparr>) = state_vrefs s"
-  and a_type_arch_object_not_tcb[simp]:
+  assumes a_type_arch_object_not_tcb[simp]:
     "a_type (ArchObj arch_kernel_obj) \<noteq> ATCB"
-  and set_cap_state_vrefs:
+  assumes set_cap_state_vrefs:
     "\<And>P. set_cap cap slot \<lbrace>\<lambda>s :: det_state. P (state_vrefs s)\<rbrace>"
-  and set_cdt_state_vrefs[wp]:
+  assumes set_cdt_state_vrefs[wp]:
     "\<And>P. set_cdt t \<lbrace>\<lambda>s :: det_state. P (state_vrefs s)\<rbrace>"
-  and set_cdt_state_asids_to_policy[wp]:
+  assumes set_cdt_state_asids_to_policy[wp]:
     "\<And>P. set_cdt t \<lbrace>\<lambda>s::det_state. P (state_asids_to_policy aag s)\<rbrace>"
-  and arch_post_cap_deletion_integrity[wp]:
+  assumes arch_post_cap_deletion_integrity[wp]:
     "arch_post_cap_deletion acap \<lbrace>integrity aag X st\<rbrace>"
-  and maskInterrupt_underlying_memory[wp]:
+  assumes maskInterrupt_underlying_memory[wp]:
     "\<And>P. maskInterrupt m irq \<lbrace>\<lambda>s. P (underlying_memory s)\<rbrace>"
-  and maskInterrupt_device_state[wp]:
+  assumes maskInterrupt_device_state[wp]:
     "\<And>P. maskInterrupt m irq \<lbrace>\<lambda>s. P (device_state s)\<rbrace>"
-  and cap_insert_ext_extended_list_integ_lift:
+  assumes cap_insert_ext_extended_list_integ_lift:
     "\<And>Q a b c d e.
      \<lbrakk> \<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
        cap_insert_ext a b c d e
        \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace> \<rbrakk>
      \<Longrightarrow> \<lbrace>integrity aag X st and Q\<rbrace> cap_insert_ext a b c d e \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and cap_move_ext_list_integ_lift:
+  assumes cap_move_ext_list_integ_lift:
     "\<And>Q a b c d.
      \<lbrakk> \<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
        cap_move_ext a b c d
        \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace> \<rbrakk>
      \<Longrightarrow> \<lbrace>integrity aag X st and Q\<rbrace> cap_move_ext a b c d \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and cap_swap_ext_extended_list_integ_lift:
+  assumes cap_swap_ext_extended_list_integ_lift:
     "\<And>Q a b c d.
      \<lbrakk> \<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
        cap_swap_ext a b c d
        \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace> \<rbrakk>
      \<Longrightarrow> \<lbrace>integrity aag X st and Q\<rbrace> cap_swap_ext a b c d \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and empty_slot_extended_list_integ_lift:
+  assumes empty_slot_extended_list_integ_lift:
     "\<And>Q a b.
      \<lbrakk> \<lbrace>list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st and Q\<rbrace>
        empty_slot_ext a b
        \<lbrace>\<lambda>_. list_integ (cdt_change_allowed aag {pasSubject aag} (cdt st) (tcb_states_of_state st)) st\<rbrace> \<rbrakk>
      \<Longrightarrow> \<lbrace>integrity aag X st and Q\<rbrace> empty_slot_ext a b \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and set_irq_state_respects[wp]:
+  assumes set_irq_state_respects[wp]:
     "\<lbrace>integrity aag X st and K (is_subject_irq aag irq)\<rbrace>
      set_irq_state irqst irq
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
@@ -470,17 +470,17 @@ locale CNode_AC_2 = CNode_AC_1 +
     "\<lbrace>(=) st\<rbrace> set_cap NullCap slot \<lbrace>\<lambda>_. integrity_hyp aag subjects x st\<rbrace>"
   assumes integrity_fpu_set_cap_Nullcap:
     "\<lbrace>(=) st\<rbrace> set_cap NullCap slot \<lbrace>\<lambda>_. integrity_fpu aag subjects x st\<rbrace>"
-  and set_original_state_asids_to_policy[wp]:
+  assumes set_original_state_asids_to_policy[wp]:
     "\<And>P. set_original slot v \<lbrace>\<lambda>s. P (state_asids_to_policy aag s)\<rbrace>"
-  and set_original_state_objs_to_policy[wp]:
+  assumes set_original_state_objs_to_policy[wp]:
     "\<And>P. set_original slot v \<lbrace>\<lambda>s. P (state_objs_to_policy s)\<rbrace>"
-  and set_cdt_list_state_vrefs[wp]:
+  assumes set_cdt_list_state_vrefs[wp]:
     "\<And>P. set_cdt_list t \<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace>"
-  and set_cdt_list_state_asids_to_policy[wp]:
+  assumes set_cdt_list_state_asids_to_policy[wp]:
     "\<And>P. set_cdt_list t \<lbrace>\<lambda>s. P (state_asids_to_policy aag s)\<rbrace>"
-  and update_cdt_list_state_vrefs[wp]:
+  assumes update_cdt_list_state_vrefs[wp]:
     "\<And>P. update_cdt_list f \<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace>"
-  and update_cdt_list_state_asids_to_policy[wp]:
+  assumes update_cdt_list_state_asids_to_policy[wp]:
     "\<And>P. update_cdt_list f \<lbrace>\<lambda>s. P (state_asids_to_policy aag s)\<rbrace>"
 begin
 
@@ -952,20 +952,20 @@ locale CNode_AC_3 = CNode_AC_2 +
   assumes cap_move_ext_pas_refined_tcb_domain_map_wellformed[wp]:
     "\<And>a b c d. cap_move_ext a b c d \<lbrace>tcb_domain_map_wellformed aag\<rbrace>
                 \<Longrightarrow> cap_move_ext a b c d \<lbrace>pas_refined aag\<rbrace>"
-  and cap_insert_ext_pas_refined_tcb_domain_map_wellformed[wp]:
+  assumes cap_insert_ext_pas_refined_tcb_domain_map_wellformed[wp]:
     "\<And>a b c d e. cap_insert_ext a b c d e \<lbrace>tcb_domain_map_wellformed aag\<rbrace>
                   \<Longrightarrow> cap_insert_ext a b c d e \<lbrace>pas_refined aag\<rbrace>"
-  and cap_swap_ext_extended_pas_refined_tcb_domain_map_wellformed[wp]:
+  assumes cap_swap_ext_extended_pas_refined_tcb_domain_map_wellformed[wp]:
     "\<And>a b c d. cap_swap_ext a b c d \<lbrace>tcb_domain_map_wellformed aag\<rbrace>
                 \<Longrightarrow> cap_swap_ext a b c d \<lbrace>pas_refined aag\<rbrace>"
-  and empty_slot_ext_pas_refined_tcb_domain_map_wellformed[wp]:
+  assumes empty_slot_ext_pas_refined_tcb_domain_map_wellformed[wp]:
     "\<And>a b. empty_slot_ext a b \<lbrace>tcb_domain_map_wellformed aag\<rbrace>
             \<Longrightarrow> empty_slot_ext a b \<lbrace>pas_refined aag\<rbrace>"
-  and arch_ost_cap_deletion_pas_refined[wp]:
+  assumes arch_ost_cap_deletion_pas_refined[wp]:
     "arch_post_cap_deletion irqopt \<lbrace>pas_refined aag\<rbrace>"
-  and aobj_ref'_same_aobject:
+  assumes aobj_ref'_same_aobject:
     "same_aobject_as ao' ao \<Longrightarrow> aobj_ref' ao = aobj_ref' ao'"
-  and thread_set_arch_trivT:
+  assumes thread_set_arch_trivT:
     "(\<And>tcb. tcb_arch (f tcb) = tcb_arch tcb)
      \<Longrightarrow> thread_set f t \<lbrace>\<lambda>s :: det_state. P (state_hyp_refs_of s)\<rbrace>"
 begin
@@ -1327,12 +1327,12 @@ lemma thread_set_edomains:
   by (auto elim!: rsubst[where P=P] dest!: get_tcb_SomeD simp: etcbs_of'_def opt_map_def)
 
 lemma thread_set_pas_refined_triv:
-  assumes cps: "\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb"
-       and st: "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
-      and ntfn: "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
-      and arch: "\<And>tcb. tcb_arch (f tcb) = tcb_arch tcb"
-       and dom: "\<And>tcb. tcb_domain (f tcb) = tcb_domain tcb"
-     shows "thread_set f t \<lbrace>pas_refined aag\<rbrace>"
+  assumes cps:  "\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb"
+  assumes st:   "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
+  assumes ntfn: "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
+  assumes arch: "\<And>tcb. tcb_arch (f tcb) = tcb_arch tcb"
+  assumes dom:  "\<And>tcb. tcb_domain (f tcb) = tcb_domain tcb"
+  shows "thread_set f t \<lbrace>pas_refined aag\<rbrace>"
   by (wpsimp wp: tcb_domain_map_wellformed_lift_strong thread_set_state_vrefs thread_set_edomains[OF dom]
            simp: pas_refined_def state_objs_to_policy_def
       | wps thread_set_caps_of_state_trivial[OF cps]
@@ -1506,51 +1506,51 @@ end
 locale CNode_AC_4 = CNode_AC_3 +
   assumes cap_asid'_cap_rights_update[simp]:
     "acap_asid' (acap_rights_update rights ao) = acap_asid' ao"
-  and untyped_range_cap_rights_update[simp]:
+  assumes untyped_range_cap_rights_update[simp]:
     "untyped_range (cap_rights_update rights (ArchObjectCap ao)) = untyped_range (ArchObjectCap ao)"
-  and obj_refs_cap_rights_update[simp]:
+  assumes obj_refs_cap_rights_update[simp]:
     "aobj_ref' (acap_rights_update rights ao) = aobj_ref' ao"
-  and auth_derived_arch_update_cap_data:
+  assumes auth_derived_arch_update_cap_data:
     "auth_derived (ArchObjectCap ao) cap' \<Longrightarrow> auth_derived (arch_update_cap_data pres w ao) cap'"
-  and acap_auth_conferred_acap_rights_update:
+  assumes acap_auth_conferred_acap_rights_update:
     "arch_cap_auth_conferred (acap_rights_update (acap_rights acap \<inter> R) acap)
      \<subseteq> arch_cap_auth_conferred acap"
-  and arch_derive_cap_auth_derived:
+  assumes arch_derive_cap_auth_derived:
     "\<lbrace>\<lambda>s :: det_state. cte_wp_at (auth_derived (ArchObjectCap cap)) src_slot s\<rbrace>
      arch_derive_cap cap
      \<lbrace>\<lambda>rv s. cte_wp_at (auth_derived rv) src_slot s\<rbrace>, -"
-  and arch_derive_cap_clas:
+  assumes arch_derive_cap_clas:
     "\<lbrace>\<lambda>s :: det_state. cap_links_asid_slot aag p (ArchObjectCap acap) \<rbrace>
      arch_derive_cap acap
      \<lbrace>\<lambda>rv s. cap_links_asid_slot aag p rv\<rbrace>, -"
-  and arch_derive_cap_obj_refs_auth:
+  assumes arch_derive_cap_obj_refs_auth:
     "\<lbrace>K (\<forall>r\<in>obj_refs_ac (ArchObjectCap cap).
          \<forall>auth\<in>cap_auth_conferred (ArchObjectCap cap). aag_has_auth_to aag auth r)\<rbrace>
      arch_derive_cap cap
      \<lbrace>\<lambda>x s :: det_state. \<forall>r\<in>obj_refs_ac x.
                              \<forall>auth \<in> cap_auth_conferred x. aag_has_auth_to aag auth r\<rbrace>, -"
-  and arch_derive_cap_obj_refs_subset:
+  assumes arch_derive_cap_obj_refs_subset:
     "\<lbrace>\<lambda>s :: det_state. (\<forall>x \<in> aobj_ref' acap. P x s)\<rbrace>
      arch_derive_cap acap
      \<lbrace>\<lambda>rv s. \<forall>x \<in> obj_refs_ac rv. P x s\<rbrace>, -"
-  and arch_derive_cap_cli:
+  assumes arch_derive_cap_cli:
     "\<lbrace>K (cap_links_irq aag l (ArchObjectCap ac))\<rbrace>
      arch_derive_cap ac
      \<lbrace>\<lambda>x (s :: det_state). cap_links_irq aag l x\<rbrace>, -"
-  and arch_derive_cap_untyped_range_subset:
+  assumes arch_derive_cap_untyped_range_subset:
     "\<lbrace>\<lambda>s. \<forall>x \<in> untyped_range (ArchObjectCap acap). P x s\<rbrace>
      arch_derive_cap acap
      \<lbrace>\<lambda>rv s. \<forall>x \<in> untyped_range rv. P x s\<rbrace>, -"
-  and arch_update_cap_obj_refs_subset:
+  assumes arch_update_cap_obj_refs_subset:
     "\<lbrakk> x \<in> obj_refs_ac (arch_update_cap_data pres data cap) \<rbrakk> \<Longrightarrow> x \<in> aobj_ref' cap"
-  and arch_update_cap_untyped_range_empty[simp]:
+  assumes arch_update_cap_untyped_range_empty[simp]:
     "untyped_range (arch_update_cap_data pres data cap) = {}"
-  and arch_update_cap_irqs_controlled_empty[simp]:
+  assumes arch_update_cap_irqs_controlled_empty[simp]:
     "cap_irqs_controlled (arch_update_cap_data pres data cap) = {}"
-  and arch_update_cap_links_asid_slot:
+  assumes arch_update_cap_links_asid_slot:
     "cap_links_asid_slot aag p (arch_update_cap_data pres w acap) =
      cap_links_asid_slot aag p (ArchObjectCap acap)"
-  and arch_update_cap_cap_auth_conferred_subset:
+  assumes arch_update_cap_cap_auth_conferred_subset:
     "y \<in> cap_auth_conferred (arch_update_cap_data b w acap)
      \<Longrightarrow> y \<in> arch_cap_auth_conferred acap"
 begin

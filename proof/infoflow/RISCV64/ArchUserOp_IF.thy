@@ -410,10 +410,10 @@ lemma pageBitsForSize_le_canonical_bit:
 lemma data_at_same_size:
   assumes dat_sz':
     "data_at sz' (ptrFromPAddr base) s"
-  and dat_sz:
+  assumes dat_sz:
     "data_at sz
        (ptrFromPAddr (base + (x && mask (pageBitsForSize sz'))) && ~~ mask (pageBitsForSize sz)) s"
-  and vs:
+  assumes vs:
     "pspace_distinct s" "pspace_aligned s" "valid_objs s"
   shows "sz' = sz"
 proof -
@@ -484,10 +484,10 @@ lemma level_le_2_cases:
 
 lemma ptable_lift_data_consistant:
   assumes vs: "valid_state s"
-  and pt_lift: "ptable_lift t s x = Some ptr"
-  and dat: "data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s"
-  and misc: "get_vspace_of_thread (kheap s) (arch_state s) t \<noteq> riscv_global_pt (arch_state s)"
-            "x \<notin> kernel_mappings"
+  assumes pt_lift: "ptable_lift t s x = Some ptr"
+  assumes dat: "data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s"
+  assumes misc: "get_vspace_of_thread (kheap s) (arch_state s) t \<noteq> riscv_global_pt (arch_state s)"
+                "x \<notin> kernel_mappings"
   shows "ptable_lift t s (x && ~~ mask (pageBitsForSize sz)) =
          Some (ptr && ~~ mask (pageBitsForSize sz))"
 proof -
@@ -544,10 +544,10 @@ qed
 
 lemma ptable_rights_data_consistant:
   assumes vs: "valid_state s"
-  and pt_lift: "ptable_lift t s x = Some ptr"
-  and dat: "data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s"
-  and misc: "get_vspace_of_thread (kheap s) (arch_state s) t \<noteq>
-             riscv_global_pt (arch_state s)" "x \<notin> kernel_mappings"
+  assumes pt_lift: "ptable_lift t s x = Some ptr"
+  assumes dat: "data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s"
+  assumes misc: "get_vspace_of_thread (kheap s) (arch_state s) t \<noteq>
+                 riscv_global_pt (arch_state s)" "x \<notin> kernel_mappings"
   shows "ptable_rights t s (x && ~~ mask (pageBitsForSize sz)) = ptable_rights t s x"
 proof -
   have vs': "valid_objs s \<and> valid_arch_state s \<and> valid_vspace_objs s

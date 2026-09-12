@@ -618,14 +618,14 @@ lemma vs_lookup_PageTablePTE':
 
 lemma state_vrefs_store_PageTablePTE:
   assumes "invs s"
-  and "is_aligned p pte_bits"
-  and "vs_lookup_slot level asid vref s = Some (level, p)"
-  and "vref \<in> user_region"
-  and "is_PageTablePTE pte"
-  and "invalid_pte_at p s"
-  and "pts_of s (the (pte_ref pte)) = Some empty_pt"
-  and "the (pte_ref pte) \<noteq> table_base p"
-  and "kheap s (table_base p) = Some (ArchObj (PageTable pt))"
+  assumes "is_aligned p pte_bits"
+  assumes "vs_lookup_slot level asid vref s = Some (level, p)"
+  assumes "vref \<in> user_region"
+  assumes "is_PageTablePTE pte"
+  assumes "invalid_pte_at p s"
+  assumes "pts_of s (the (pte_ref pte)) = Some empty_pt"
+  assumes "the (pte_ref pte) \<noteq> table_base p"
+  assumes "kheap s (table_base p) = Some (ArchObj (PageTable pt))"
   shows "state_vrefs (s\<lparr>kheap := \<lambda>a. if a = table_base p
                                      then Some (ArchObj (PageTable (\<lambda>a. if a = table_index p
                                                                         then pte

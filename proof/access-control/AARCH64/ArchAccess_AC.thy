@@ -414,11 +414,11 @@ lemma vs_lookup_table_eqI':
 
 lemma vs_refs_aux_eqI:
   assumes "pts_of s' = pts_of s"
-  and "\<forall>p sz. data_at sz p s' = data_at sz p s"
-  and "\<forall>pool_ptr asid. (asid_pools_of s' |> oapply asid |> ogets ap_vspace) pool_ptr
-                     = (asid_pools_of s |> oapply asid |> ogets ap_vspace) pool_ptr"
-  and "aobjs_of s p = Some ao"
-  and "aobjs_of s' p = Some ao'"
+  assumes "\<forall>p sz. data_at sz p s' = data_at sz p s"
+  assumes "\<forall>pool_ptr asid. (asid_pools_of s' |> oapply asid |> ogets ap_vspace) pool_ptr
+                         = (asid_pools_of s |> oapply asid |> ogets ap_vspace) pool_ptr"
+  assumes "aobjs_of s p = Some ao"
+  assumes "aobjs_of s' p = Some ao'"
   shows "vs_refs_aux level ao = vs_refs_aux level ao'"
   apply (insert assms)
   apply (clarsimp simp: fun_eq_iff)
@@ -435,10 +435,10 @@ lemma state_vrefsD:
 
 lemma state_vrefs_eqI':
   assumes "asid_table s' = asid_table s"
-    and "pts_of s' = pts_of s"
-    and "\<forall>p sz. data_at sz p s' = data_at sz p s"
-    and "\<forall>pool_ptr asid. (asid_pools_of s' |> oapply asid |> ogets ap_vspace) pool_ptr
-                       = (asid_pools_of s |> oapply asid |> ogets ap_vspace) pool_ptr"
+    assumes "pts_of s' = pts_of s"
+    assumes "\<forall>p sz. data_at sz p s' = data_at sz p s"
+    assumes "\<forall>pool_ptr asid. (asid_pools_of s' |> oapply asid |> ogets ap_vspace) pool_ptr
+                           = (asid_pools_of s |> oapply asid |> ogets ap_vspace) pool_ptr"
   shows "state_vrefs s' = state_vrefs s"
   apply (insert assms)
   apply (prop_tac "\<And>level asid vref. vs_lookup_table level asid vref s' = vs_lookup_table level asid vref s")
@@ -472,7 +472,7 @@ lemma state_vrefs_eqI':
 
 lemma state_vrefs_eqI:
   assumes "asid_table s' = asid_table s"
-    and "vspace_objs_of s' = vspace_objs_of s"
+  assumes "vspace_objs_of s' = vspace_objs_of s"
   shows "state_vrefs s' = state_vrefs s"
   apply (prop_tac "\<forall>level asid vref. vs_lookup_table level asid vref s = vs_lookup_table level asid vref s'")
    apply (intro allI vs_lookup_table_eqI')

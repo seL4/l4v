@@ -393,10 +393,10 @@ lemma pageBitsForSize_le_canonical_bit:
 lemma data_at_same_size:
   assumes dat_sz':
     "data_at sz' (ptrFromPAddr base) s"
-  and dat_sz:
+  assumes dat_sz:
     "data_at sz
        (ptrFromPAddr (base + (x && mask (pageBitsForSize sz'))) && ~~ mask (pageBitsForSize sz)) s"
-  and vs:
+  assumes vs:
     "pspace_distinct s" "pspace_aligned s" "valid_objs s"
   shows "sz' = sz"
 proof -
@@ -489,9 +489,9 @@ lemma pt_walk_vref_for_levelD:
 
 lemma ptable_lift_data_consistant:
   assumes vs: "valid_state s"
-  and pt_lift: "ptable_lift t s x = Some ptr"
-  and dat: "data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s"
-  and misc: "get_vspace_of_thread (kheap s) (arch_state s) t \<noteq> arm_us_global_vspace (arch_state s)"
+  assumes pt_lift: "ptable_lift t s x = Some ptr"
+  assumes dat: "data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s"
+  assumes misc: "get_vspace_of_thread (kheap s) (arch_state s) t \<noteq> arm_us_global_vspace (arch_state s)"
   shows "ptable_lift t s (x && ~~ mask (pageBitsForSize sz)) =
          Some (ptr && ~~ mask (pageBitsForSize sz))"
 proof -
@@ -550,9 +550,9 @@ lemma valid_vspace_objs_pte:
 
 lemma ptable_rights_data_consistant:
   assumes vs: "valid_state s"
-  and pt_lift: "ptable_lift t s x = Some ptr"
-  and dat: "data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s"
-  and misc: "get_vspace_of_thread (kheap s) (arch_state s) t \<noteq>
+  assumes pt_lift: "ptable_lift t s x = Some ptr"
+  assumes dat: "data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s"
+  assumes misc: "get_vspace_of_thread (kheap s) (arch_state s) t \<noteq>
              arm_us_global_vspace (arch_state s)"
   shows "ptable_rights t s (x && ~~ mask (pageBitsForSize sz)) = ptable_rights t s x"
 proof -
