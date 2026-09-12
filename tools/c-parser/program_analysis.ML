@@ -882,12 +882,12 @@ fun process_type (posrange as (l,r)) (ty, env) =
         | SOME sz_e => let
             val sz_i = ti (consteval ecenv sz_e)
           in
-            if sz_i < 1 then let
-                val region = Region.make{left=l,right=r}
-              in
-                raise Fail ("Array in area "^Region.toString region^
-                            " has non-positive size "^Int.toString sz_i)
-              end
+            if sz_i < 1 then
+              (Feedback.errorStr'(l, r,
+                                  "Array has non-positive size " ^
+                                  Int.toString sz_i ^
+                                  "; zero-length arrays are not supported");
+               env')
             else
               new_array (constify_abtype ecenv elty, sz_i) env'
           end
@@ -1462,28 +1462,30 @@ in
           (* calculate the size of an initialised incomplete array *)
           case ty of
             Array(elty, NONE) => let
+              fun err msg = (Feedback.errorStr'(left d, right d, msg); ty)
             in
               case iopt of
                 NONE => let
                 in
                   case fname of
                     SOME fnm => if not is_extern then
-                                  raise Fail ("Array "^str^" in function "^fnm^
-                                              " must be given a size or an \
-                                              \initialiser")
+                                  err ("Array "^str^" in function "^fnm^
+                                       " must have a size or an \
+                                       \initialiser")
                                 else ty
                   | NONE => ty
                 end
               | SOME (InitE _) =>
-                  raise Fail ("Array "^str^" initialised with non-constant "^
-                              "expression")
+                  err ("Array "^str^" initialised with non-constant "^
+                       "expression")
               | SOME (InitList ilist) => let
                   val sz = complit.find_ilist_size ecenv ilist
-                  val _ = if sz = 0 then
-                            raise Fail "Array given empty initializer"
-                          else ()
                 in
-                  Array(elty, SOME (expr_int (IntInf.fromInt sz)))
+                  if sz = 0 then
+                    err ("Array "^str^" has empty initializer; \
+                         \zero-length arrays are not supported")
+                  else
+                    Array(elty, SOME (expr_int (IntInf.fromInt sz)))
                 end
             end
           | _ => ty
