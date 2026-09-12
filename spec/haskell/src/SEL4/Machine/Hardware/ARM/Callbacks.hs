@@ -43,8 +43,6 @@ foreign import ccall unsafe "qemu_tlb_flush_vptr"
 foreign import ccall unsafe "qemu_set_asid"
     setHardwareASID :: Ptr CallbackData -> Word8 -> IO ()
 
--- FIXME qemu_set_root is still expecting the pointer, not its mangled
--- word version, per haskell-kernel-emulator/interface/callbacks.c
 foreign import ccall unsafe "qemu_set_root"
     writeTTBR0 :: Ptr CallbackData -> Word -> IO ()
 

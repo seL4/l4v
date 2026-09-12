@@ -8,8 +8,6 @@ This module contains x64-specific TCB management functions. Specifically, these 
 
 There are presently no x64-specific register subsets defined, but in future this may be extended to transfer floating point registers and other coprocessor state.
 
-%FIXME: add x64 floating point registers + any extra state
-
 > module SEL4.Object.TCB.X64 where
 
 \begin{impdetails}

@@ -141,10 +141,10 @@ resetTimer = do
     liftIO $ Platform.resetTimer cbptr
 
 initIRQController :: MachineMonad ()
-initIRQController = error "Unimplemented - boot code"
+initIRQController = error "Unimplemented init code"
 
 setIRQTrigger :: IRQ -> Bool -> MachineMonad ()
-setIRQTrigger irq trigger = error "Unimplemented - machine op"
+setIRQTrigger irq trigger = isabelleOp
 
 getRestartPC = getRegister (Register AARCH64.FaultIP)
 setNextPC = setRegister (Register AARCH64.NextIP)
@@ -164,7 +164,7 @@ setNextPC = setRegister (Register AARCH64.NextIP)
 -- This function's abstract definition is in MachineOps.thy
 
 clearMemory :: PPtr Word -> Int -> MachineMonad ()
-clearMemory ptr byteLength = error "Unimplemented -- machine op"
+clearMemory ptr byteLength = isabelleOp
 
 -- This function is called before a region of memory is made user-accessible.
 -- Though in Haskell, it is implemented as "clearMemory",
@@ -187,80 +187,80 @@ freeMemory _ _ = return ()
 -- caches must be done separately.
 
 clearMemoryVM :: PPtr Word -> Int -> MachineMonad ()
-clearMemoryVM ptr bits = error "Unimplemented -- machine op"
+clearMemoryVM ptr bits = isabelleOp
 
 {- Address Space Setup -}
 
 setVSpaceRoot :: PAddr -> Word64 -> MachineMonad ()
-setVSpaceRoot addr asid = error "Unimplemented - machine op"
+setVSpaceRoot addr asid = isabelleOp
 
 {- Memory Barriers -}
 
 isb :: MachineMonad ()
-isb = error "Unimplemented - machine op"
+isb = isabelleOp
 
 dsb :: MachineMonad ()
-dsb = error "Unimplemented - machine op"
+dsb = isabelleOp
 
 dmb :: MachineMonad ()
-dmb = error "Unimplemented - machine op"
+dmb = isabelleOp
 
 {- Cache Cleaning and TLB Flushes -}
 
 invalidateTranslationASID :: Word -> MachineMonad ()
-invalidateTranslationASID vmID = error "unimplemented - machine op"
+invalidateTranslationASID vmID = isabelleOp
 
 invalidateTranslationSingle :: Word -> MachineMonad ()
-invalidateTranslationSingle vpn = error "unimplemented - machine op"
+invalidateTranslationSingle vpn = isabelleOp
 
 cleanByVA_PoU :: VPtr -> PAddr -> MachineMonad ()
-cleanByVA_PoU vaddr paddr = error "Unimplemented - machine op"
+cleanByVA_PoU vaddr paddr = isabelleOp
 
 cleanInvalidateCacheRange_RAM :: VPtr -> VPtr -> PAddr -> MachineMonad ()
-cleanInvalidateCacheRange_RAM vstart vend pstart = error "Unimplemented - machine op"
+cleanInvalidateCacheRange_RAM vstart vend pstart = isabelleOp
 
 cleanCacheRange_RAM :: VPtr -> VPtr -> PAddr -> MachineMonad ()
-cleanCacheRange_RAM vstart vend pstart = error "Unimplemented - machine op"
+cleanCacheRange_RAM vstart vend pstart = isabelleOp
 
 cleanCacheRange_PoU :: VPtr -> VPtr -> PAddr -> MachineMonad ()
-cleanCacheRange_PoU vstart vend pstart = error "Unimplemented - machine op"
+cleanCacheRange_PoU vstart vend pstart = isabelleOp
 
 invalidateCacheRange_RAM :: VPtr -> VPtr -> PAddr -> MachineMonad ()
-invalidateCacheRange_RAM vstart vend pstart = error "Unimplemented - machine op"
+invalidateCacheRange_RAM vstart vend pstart = isabelleOp
 
 invalidateCacheRange_I :: VPtr -> VPtr -> PAddr -> MachineMonad ()
-invalidateCacheRange_I vstart vend pstart = error "Unimplemented - machine op"
+invalidateCacheRange_I vstart vend pstart = isabelleOp
 
 branchFlushRange :: VPtr -> VPtr -> PAddr -> MachineMonad ()
-branchFlushRange vstart vend pstart = error "Unimplemented - machine op"
+branchFlushRange vstart vend pstart = isabelleOp
 
 
 {- FPU status/control registers -}
 
 enableFpuEL01 :: MachineMonad ()
-enableFpuEL01 = error "Unimplemented - machine op"
+enableFpuEL01 = isabelleOp
 
 {- Fault registers -}
 
 getFAR :: MachineMonad VPtr
-getFAR = error "Unimplemented - machine op"
+getFAR = isabelleOp
 
 {- Hypervisor-specific status/control registers -}
 
 setHCR :: Word -> MachineMonad ()
-setHCR _hcr = error "Unimplemented - machine op"
+setHCR _hcr = isabelleOp
 
 getESR :: MachineMonad Word
-getESR = error "Unimplemented - machine op"
+getESR = isabelleOp
 
 addressTranslateS1 :: VPtr -> MachineMonad VPtr
-addressTranslateS1 = error "Unimplemented - machine op"
+addressTranslateS1 = isabelleOp
 
 getSCTLR :: MachineMonad Word
-getSCTLR = error "Unimplemented - machine op"
+getSCTLR = isabelleOp
 
 setSCTLR :: Word -> MachineMonad ()
-setSCTLR _sctlr = error "Unimplemented - machine op"
+setSCTLR _sctlr = isabelleOp
 
 {- Hypervisor banked registers -}
 
@@ -270,10 +270,10 @@ setSCTLR _sctlr = error "Unimplemented - machine op"
 -- functions due to being operated on separately.
 
 readVCPUHardwareReg :: AARCH64.VCPUReg -> MachineMonad Word
-readVCPUHardwareReg reg = error "Unimplemented - machine op"
+readVCPUHardwareReg reg = isabelleOp
 
 writeVCPUHardwareReg :: AARCH64.VCPUReg -> Word -> MachineMonad ()
-writeVCPUHardwareReg reg val = error "Unimplemented - machine op"
+writeVCPUHardwareReg reg val = isabelleOp
 
 {- Page Table Structure -}
 
@@ -336,9 +336,6 @@ data PTE
 
 {- Simulator callbacks -}
 
-pageColourBits :: Int
-pageColourBits = Platform.pageColourBits
-
 getMemoryRegions :: MachineMonad [(PAddr, PAddr)]
 getMemoryRegions = do
     cpbtr <- ask
@@ -383,7 +380,7 @@ maskInterrupt maskI irq = do
     liftIO $ Platform.maskInterrupt cbptr maskI irq
 
 deactivateInterrupt :: IRQ -> MachineMonad ()
-deactivateInterrupt irq = error "Unimplemented - GICv3 machine op"
+deactivateInterrupt irq = isabelleOp
 
 debugPrint :: String -> MachineMonad ()
 debugPrint str = liftIO $ putStrLn str
@@ -391,62 +388,62 @@ debugPrint str = liftIO $ putStrLn str
 {- FPU Operations -}
 
 readFpuState :: MachineMonad AARCH64.FPUState
-readFpuState = error "Unimplemented - machine op"
+readFpuState = isabelleOp
 
 writeFpuState :: AARCH64.FPUState -> MachineMonad ()
-writeFpuState _ = error "Unimplemented - machine op"
+writeFpuState _ = isabelleOp
 
 enableFpu :: MachineMonad ()
-enableFpu = error "Unimplemented - machine op"
+enableFpu = isabelleOp
 
 disableFpu :: MachineMonad ()
-disableFpu = error "Unimplemented - machine op"
+disableFpu = isabelleOp
 
 isFpuEnable :: MachineMonad Bool
-isFpuEnable = error "Unimplemented - machine op"
+isFpuEnable = isabelleOp
 
 {- GIC VCPU interface -}
 
 get_gic_vcpu_ctrl_hcr :: MachineMonad Word32
-get_gic_vcpu_ctrl_hcr = error "Unimplemented - machine op"
+get_gic_vcpu_ctrl_hcr = isabelleOp
 
 set_gic_vcpu_ctrl_hcr :: Word32 -> MachineMonad ()
-set_gic_vcpu_ctrl_hcr = error "Unimplemented - machine op"
+set_gic_vcpu_ctrl_hcr = isabelleOp
 
 get_gic_vcpu_ctrl_vmcr :: MachineMonad Word32
-get_gic_vcpu_ctrl_vmcr = error "Unimplemented - machine op"
+get_gic_vcpu_ctrl_vmcr = isabelleOp
 
 set_gic_vcpu_ctrl_vmcr :: Word32 -> MachineMonad ()
-set_gic_vcpu_ctrl_vmcr = error "Unimplemented - machine op"
+set_gic_vcpu_ctrl_vmcr = isabelleOp
 
 get_gic_vcpu_ctrl_apr :: MachineMonad Word32
-get_gic_vcpu_ctrl_apr = error "Unimplemented - machine op"
+get_gic_vcpu_ctrl_apr = isabelleOp
 
 set_gic_vcpu_ctrl_apr :: Word32 -> MachineMonad ()
-set_gic_vcpu_ctrl_apr = error "Unimplemented - machine op"
+set_gic_vcpu_ctrl_apr = isabelleOp
 
 get_gic_vcpu_ctrl_vtr :: MachineMonad Word32
-get_gic_vcpu_ctrl_vtr = error "Unimplemented - machine op"
+get_gic_vcpu_ctrl_vtr = isabelleOp
 
 get_gic_vcpu_ctrl_eisr0 :: MachineMonad Word32
-get_gic_vcpu_ctrl_eisr0 = error "Unimplemented - machine op"
+get_gic_vcpu_ctrl_eisr0 = isabelleOp
 
 get_gic_vcpu_ctrl_eisr1 :: MachineMonad Word32
-get_gic_vcpu_ctrl_eisr1 = error "Unimplemented - machine op"
+get_gic_vcpu_ctrl_eisr1 = isabelleOp
 
 get_gic_vcpu_ctrl_misr :: MachineMonad Word32
-get_gic_vcpu_ctrl_misr = error "Unimplemented - machine op"
+get_gic_vcpu_ctrl_misr = isabelleOp
 
 get_gic_vcpu_ctrl_lr :: Word -> MachineMonad Word
-get_gic_vcpu_ctrl_lr = error "Unimplemented - machine op"
+get_gic_vcpu_ctrl_lr = isabelleOp
 
 set_gic_vcpu_ctrl_lr :: Word -> Word -> MachineMonad ()
-set_gic_vcpu_ctrl_lr = error "Unimplemented - machine op"
+set_gic_vcpu_ctrl_lr = isabelleOp
 
 {- Virtual timer interface -}
 
 check_export_arch_timer :: MachineMonad ()
-check_export_arch_timer = error "Unimplemented - machine op"
+check_export_arch_timer = isabelleOp
 
 
 {- Constants -}
@@ -476,39 +473,39 @@ gicVCPUMaxNumLR = (64 :: Int)
 {- Secure Monitor Call (SMC) -}
 
 numSMCRegs :: Int
-numSMCRegs = error "defined in machine/AARCH64/MachineOps.thy"
+numSMCRegs = isabelleOp
 
 -- we make the assumption here that numSMCRegs is 8; the assumption will be enforced in the proofs
 type EightTuple a = (a, a, a, a, a, a, a, a)
 
 doSMC_mop :: EightTuple Word -> MachineMonad (EightTuple Word)
-doSMC_mop args = error "Unimplemented - machine op"
+doSMC_mop args = isabelleOp
 
 
 {- Software-Generated Interrupts (SGI) -}
 
 numSGIs :: Int
-numSGIs = error "defined in machine/AARCH64/Platform.thy"
+numSGIs = isabelleOp
 
 -- SGI targets
 gicNumTargets :: Int
-gicNumTargets = error "defined in machine/AARCH64/Platform.thy"
+gicNumTargets = isabelleOp
 
 -- the machine op uses word_t (and irq_t which is also word_t in C)
 sendSGI :: Word -> Word -> MachineMonad ()
-sendSGI irq target = error "Unimplemented - machine op"
+sendSGI irq target = isabelleOp
 
 
 {- Config parameters -}
 
 -- The size of the physical address space in hyp mode can be configured on some platforms.
 config_ARM_PA_SIZE_BITS_40 :: Bool
-config_ARM_PA_SIZE_BITS_40 = error "generated from CMake config"
+config_ARM_PA_SIZE_BITS_40 = isabelleOp
 
 -- Whether to trap WFI/WFE instructions or not in hyp mode.
 config_DISABLE_WFI_WFE_TRAPS :: Bool
-config_DISABLE_WFI_WFE_TRAPS = error "generated from CMake config"
+config_DISABLE_WFI_WFE_TRAPS = isabelleOp
 
 -- Whether to use the GICv3. Defaults to GICv2 when set to False.
 config_ARM_GIC_V3 :: Bool
-config_ARM_GIC_V3 = error "generated from CMake config"
+config_ARM_GIC_V3 = isabelleOp
