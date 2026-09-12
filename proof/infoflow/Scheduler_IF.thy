@@ -95,7 +95,7 @@ definition idle_context where
   "idle_context s = arch_tcb_context_get (tcb_arch (the (get_tcb (idle_thread s) s)))"
 
 
-locale Scheduler_IF_1 =
+locale Scheduler_IF =
   fixes arch_globals_equiv_scheduler :: "kheap \<Rightarrow> kheap \<Rightarrow> arch_state \<Rightarrow> arch_state \<Rightarrow> bool"
   and arch_scheduler_affects_equiv :: "det_state \<Rightarrow> det_state \<Rightarrow> bool"
   assumes arch_globals_equiv_from_scheduler:
@@ -286,7 +286,7 @@ lemma equiv_valid_inv_unobservable:
   done
 
 
-context Scheduler_IF_1 begin
+context Scheduler_IF begin
 
 lemma scheduler_equiv_trans[elim]:
   "\<lbrakk> scheduler_equiv aag s s'; scheduler_equiv aag s' s'' \<rbrakk>
@@ -431,7 +431,7 @@ lemma (in is_extended') silc_dom_equiv[wp]:
   by (rule lift_inv,simp)
 
 
-context Scheduler_IF_1 begin
+context Scheduler_IF begin
 
 lemma set_scheduler_action_rev_scheduler[wp]:
   "reads_respects_scheduler aag l \<top> (set_scheduler_action a)"
@@ -589,7 +589,7 @@ lemma silc_dom_equiv_states_equiv_lift:
   done
 
 
-context Scheduler_IF_1 begin
+context Scheduler_IF begin
 
 abbreviation strong_reads_respects_scheduler where
   "strong_reads_respects_scheduler aag l P f \<equiv>
@@ -717,7 +717,7 @@ lemma midstrength_weak[intro]:
   by (auto simp: midstrength_scheduler_affects_equiv_def weak_scheduler_affects_equiv_def)
 
 
-context Scheduler_IF_1 begin
+context Scheduler_IF begin
 
 lemma asahi_scheduler_affects_equiv_trans[elim]:
   "\<lbrakk> asahi_scheduler_affects_equiv aag l s s'; scheduler_equiv aag s s';
@@ -1011,7 +1011,7 @@ lemma ev_irrelevant_bind:
 qed
 
 
-locale Scheduler_IF_is_extended' = is_extended' + Scheduler_IF_1
+locale Scheduler_IF_is_extended' = is_extended' + Scheduler_IF
 begin
 
 lemma globals_equiv_scheduler[wp]:
@@ -1027,7 +1027,7 @@ definition valid_tcb_context_update where
                 \<longrightarrow> arch_tcb_context_get (tcb_arch (f tcb)) = arch_tcb_context_get (tcb_arch (f tcb'))"
 
 
-locale Scheduler_IF_2 = Scheduler_IF_1 +
+locale Scheduler_IF_2 = Scheduler_IF +
   fixes aag :: "'a subject_label PAS"
   and cur_hyp_in_cur_domain :: "det_state \<Rightarrow> bool"
   and cur_fpu_in_cur_domain :: "det_state \<Rightarrow> bool"
@@ -1254,7 +1254,7 @@ lemma ev_weaken_pre_relation:
   by (fastforce simp: equiv_valid_def2 equiv_valid_2_def)
 
 
-context Scheduler_IF_1 begin
+context Scheduler_IF begin
 
 lemma gets_cur_domain_reads_respects_scheduler[wp]:
   "equiv_valid (scheduler_equiv aag) A A \<top> (gets cur_domain)"
@@ -1586,7 +1586,7 @@ lemma guarded_active_ct_cur_domain:
                       valid_idle_def ct_in_state_def pred_tcb_at_def obj_at_def)
 
 
-context Scheduler_IF_1 begin
+context Scheduler_IF begin
 
 lemma schedule_no_domain_switch:
   "\<lbrace>\<lambda>s::det_state. domain_time s \<noteq> 0 \<and> Q (cur_domain s)\<rbrace>
@@ -2207,7 +2207,7 @@ lemma equiv_valid_2_bind_right:
   done
 
 
-context Scheduler_IF_1 begin
+context Scheduler_IF begin
 
 lemma get_irq_state_reads_respects_scheduler_trivial:
   "reads_respects_scheduler aag l (domain_sep_inv False st) (get_irq_state irq)"
@@ -2349,7 +2349,7 @@ lemma set_scheduler_action_wp[wp]:
   by (simp add: set_scheduler_action_def | wp)+
 
 
-context Scheduler_IF_1 begin
+context Scheduler_IF begin
 
 lemma scheduler_affects_equiv_update:
   "\<lbrakk> get_tcb x s = Some y; pasObjectAbs aag x \<notin> reads_scheduler aag l;

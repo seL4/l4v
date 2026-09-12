@@ -71,7 +71,7 @@ declare valid_cur_fpu_lift_arch[Finalise_AC_assms]
 end
 
 
-global_interpretation Finalise_AC_1?: Finalise_AC_1
+global_interpretation Finalise_AC?: Finalise_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case

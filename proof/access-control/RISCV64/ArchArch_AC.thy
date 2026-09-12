@@ -47,7 +47,7 @@ declare storeWord_respects[Arch_AC_assms]
 end
 
 
-global_interpretation Arch_AC_1?: Arch_AC_1
+global_interpretation Arch_AC?: Arch_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case

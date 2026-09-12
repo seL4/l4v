@@ -54,7 +54,7 @@ end
 
 arch_requalify_consts irq_at
 
-global_interpretation CNode_IF_1?: CNode_IF_1 _ irq_at
+global_interpretation CNode_IF?: CNode_IF _ irq_at
 proof goal_cases
   interpret Arch .
   case 1 show ?case

@@ -69,7 +69,7 @@ end
 
 arch_requalify_consts arch_authorised_irq_ctl_inv
 
-global_interpretation Interrupt_AC_1?: Interrupt_AC_1 "arch_authorised_irq_ctl_inv"
+global_interpretation Interrupt_AC?: Interrupt_AC "arch_authorised_irq_ctl_inv"
 proof goal_cases
   interpret Arch .
   case 1 show ?case

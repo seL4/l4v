@@ -126,7 +126,7 @@ lemma set_irq_state_respects[CNode_AC_assms,wp]:
 end
 
 
-global_interpretation CNode_AC_1?: CNode_AC_1
+global_interpretation CNode_AC?: CNode_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case

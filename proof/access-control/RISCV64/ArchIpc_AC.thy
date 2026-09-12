@@ -83,7 +83,7 @@ lemma arch_tcb_setRegister[Ipc_AC_assms]:
 end
 
 
-global_interpretation Ipc_AC_1?: Ipc_AC_1
+global_interpretation Ipc_AC?: Ipc_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case

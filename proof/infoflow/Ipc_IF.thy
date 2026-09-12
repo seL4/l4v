@@ -96,7 +96,7 @@ crunch set_thread_state
   (wp: crunch_wps set_object_wp)
 
 
-locale Ipc_IF_1 =
+locale Ipc_IF =
   fixes aag :: "'a subject_label PAS"
   assumes lookup_ipc_buffer_reads_respects:
     "reads_respects aag l (K (aag_can_read aag thread \<or> aag_can_affect aag l thread))
@@ -421,7 +421,7 @@ crunch blocked_cancel_ipc_nosts
   for silc_inv[wp]: "silc_inv aag st"
 
 
-context Ipc_IF_1 begin
+context Ipc_IF begin
 
 lemma blocked_cancel_ipc_nosts_equiv_but_for_labels:
   "\<lbrace>pas_refined aag and st_tcb_at (\<lambda>st. st = BlockedOnReceive x pl) t
@@ -523,7 +523,7 @@ lemma receive_blockedD:
   by (cases st; simp add: receive_blocked_def)
 
 
-context Ipc_IF_1 begin
+context Ipc_IF begin
 
 lemma send_signal_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -696,7 +696,7 @@ lemma for_each_byte_of_word_def2:
   by (simp add: for_each_byte_of_word_def ptr_range_def word_size_size_bits_word add_diff_eq)
 
 
-context Ipc_IF_1 begin
+context Ipc_IF begin
 
 lemma lookup_ipc_buffer_aag_can_read_or_affect:
   "\<lbrace>pas_refined aag and valid_objs and K (aag_can_read aag thread \<or> aag_can_affect aag l thread)\<rbrace>
@@ -850,7 +850,7 @@ lemma ball_subsetE:
   by blast
 
 
-context Ipc_IF_1 begin
+context Ipc_IF begin
 
 lemma derive_cap_rev':
   "reads_equiv_valid_inv A aag (\<lambda>s. (\<exists>x xa xb d. cap = cap.UntypedCap d x xa xb)
@@ -994,7 +994,7 @@ lemma word_plus_power_2_offset_le:
   done
 
 
-context Ipc_IF_1 begin
+context Ipc_IF begin
 
 lemma aag_has_auth_to_read_captransfer:
   "\<lbrakk> ipc_buffer_has_read_auth aag (pasSubject aag) (Some buffer); x \<in> {0..2} \<rbrakk>
@@ -1105,7 +1105,7 @@ lemma get_cap_ret_is_subject':
   done
 
 
-context Ipc_IF_1 begin
+context Ipc_IF begin
 
 lemma get_receive_slots_rev:
   "reads_equiv_valid_inv A aag
@@ -1253,7 +1253,7 @@ lemma ko_at_eq:
   by (force simp:obj_at_def)
 
 
-locale Ipc_IF_2 = Ipc_IF_1 +
+locale Ipc_IF_2 = Ipc_IF +
   assumes copy_mrs_reads_respects:
     "pas_domains_distinct aag
      \<Longrightarrow> reads_respects aag l (K (aag_can_read_or_affect aag l sender \<and>
@@ -1533,7 +1533,7 @@ end
 
 subsection "Replies"
 
-context Ipc_IF_1 begin
+context Ipc_IF begin
 
 lemma handle_fault_reply_reads_respects:
   "reads_respects aag l (K (aag_can_read aag thread)) (handle_fault_reply fault thread x y)"
@@ -1725,7 +1725,7 @@ lemma validE_to_valid:
   apply (simp add: validE_def valid_def)
   done
 
-context Ipc_IF_1 begin
+context Ipc_IF begin
 
 crunch transfer_caps, copy_mrs
   for valid_arch[wp]: "\<lambda>s :: det_state. valid_arch_state s"
@@ -1779,7 +1779,7 @@ lemma case_list_cons_cong:
   by (simp split: list.split)
 
 
-context Ipc_IF_1 begin
+context Ipc_IF begin
 
 lemma do_ipc_transfer_globals_equiv:
   "\<lbrace>globals_equiv st and valid_arch_state and valid_objs
@@ -1951,7 +1951,7 @@ lemma send_fault_ipc_valid_global_objs:
   done
 
 
-context Ipc_IF_1 begin
+context Ipc_IF begin
 
 lemma send_fault_ipc_globals_equiv:
   "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs and valid_global_objs
@@ -2046,7 +2046,7 @@ section "reads_respects_g"
 
 subsection "Notifications"
 
-context Ipc_IF_1 begin
+context Ipc_IF begin
 
 lemma send_signal_reads_respects_g:
   assumes domains_distinct: "pas_domains_distinct aag"

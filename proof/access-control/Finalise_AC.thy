@@ -19,7 +19,7 @@ NB: the @{term is_subject} assumption is not appropriate for some of
     the current subject's domains.
 \<close>
 
-locale Finalise_AC_1 =
+locale Finalise_AC =
   fixes aag :: "'a PAS"
   assumes sbn_st_vrefs:
     "\<And>P. set_bound_notification ref ntfn \<lbrace>\<lambda>s :: det_state. P (state_vrefs s)\<rbrace>"
@@ -237,7 +237,7 @@ crunch fast_finalise
   (wp: crunch_wps simp: crunch_simps)
 
 
-context Finalise_AC_1 begin
+context Finalise_AC begin
 
 lemma sbn_pas_refined[wp]:
   "\<lbrace>pas_refined aag and
@@ -313,7 +313,7 @@ lemma reply_cap_descends_from_master0:
                         tcb_cap_cases_def is_cap_simps)
   done
 
-context Finalise_AC_1 begin
+context Finalise_AC begin
 
 lemma reply_cancel_ipc_pas_refined[wp]:
   "\<lbrace>pas_refined aag and invs and tcb_at t and K (is_subject aag t)\<rbrace>
@@ -431,7 +431,7 @@ lemma unbind_maybe_notification_respects:
   done
 
 
-context Finalise_AC_1 begin
+context Finalise_AC begin
 
 lemma fast_finalise_respects[wp]:
   "\<lbrace>integrity aag X st and invs and pas_refined aag and valid_cap cap
@@ -541,7 +541,7 @@ lemma update_restart_pc_integrity_autarch[wp]:
   done
 
 
-context Finalise_AC_1 begin
+context Finalise_AC begin
 
 lemma suspend_respects[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and tcb_at t and K (is_subject aag t)\<rbrace>
@@ -581,7 +581,7 @@ lemma pas_refined_Control_into_is_subject_asid:
   done
 
 
-context Finalise_AC_1 begin
+context Finalise_AC begin
 
 lemma finalise_cap_respects[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and valid_cap cap
@@ -656,7 +656,7 @@ lemma aag_cap_auth_Thread:
   by (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def pas_refined_all_auth_is_owns)
 
 
-context Finalise_AC_1 begin
+context Finalise_AC begin
 
 lemma finalise_cap_auth':
   "\<lbrace>pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace>
@@ -696,7 +696,7 @@ lemma zombie_ptr_emptyable:
   done
 
 
-context Finalise_AC_1 begin
+context Finalise_AC begin
 
 lemma finalise_cap_makes_halted:
   "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s) and cte_wp_at ((=) cap) slot\<rbrace>
@@ -740,7 +740,7 @@ lemma replaceable_zombie_not_transferable:
 declare finalise_cap_valid_list[wp]
 
 
-context Finalise_AC_1 begin
+context Finalise_AC begin
 
 lemma rec_del_respects'_pre':
   "s \<turnstile>
@@ -907,7 +907,7 @@ lemma rec_del_Finalise_transferable:
   by (fastforce simp:cte_wp_at_caps_of_state)
 
 
-context Finalise_AC_1 begin
+context Finalise_AC begin
 
 lemma rec_del_respects_CTEDelete_transferable':
   "\<lbrace>(\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag and einvs and
@@ -942,7 +942,7 @@ end
 lemmas dmo_valid_cap[wp] = valid_cap_typ[OF do_machine_op_obj_at]
 
 
-context Finalise_AC_1 begin
+context Finalise_AC begin
 
 lemma cancel_badged_sends_pas_refined[wp]:
   "cancel_badged_sends epptr badge \<lbrace>pas_refined aag\<rbrace>"
@@ -1000,7 +1000,7 @@ lemma deleting_irq_handler_caps_of_state_nullinv:
   done
 
 
-locale Finalise_AC_2 = Finalise_AC_1 +
+locale Finalise_AC_2 = Finalise_AC +
   assumes cap_revoke_respects':
   "s \<turnstile> \<lbrace>(\<lambda>s. trp \<longrightarrow> integrity aag X st s) and K (is_subject aag (fst slot))
                                            and pas_refined aag and einvs and simple_sched_action\<rbrace>

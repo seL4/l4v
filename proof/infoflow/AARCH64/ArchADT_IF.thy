@@ -104,7 +104,7 @@ lemmas [ADT_IF_assms] =
 end
 
 
-global_interpretation ADT_IF_1?: ADT_IF_1
+global_interpretation ADT_IF?: ADT_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case

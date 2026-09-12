@@ -88,7 +88,7 @@ definition for_each_byte_of_word :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> 
   "for_each_byte_of_word P w \<equiv> \<forall>y\<in>{w..w + (word_size - 1)}. P y"
 
 
-locale InfoFlow_IF_1 =
+locale InfoFlow_IF =
   fixes identical_hyp_state_updates :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> machine_state \<Rightarrow> machine_state \<Rightarrow> bool"
   and identical_fpu_state_updates :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> machine_state \<Rightarrow> machine_state \<Rightarrow> bool"
   \<comment> \<open>equiv_asids lemmas\<close>
@@ -326,7 +326,7 @@ lemma equiv_for_trans:
   by (auto simp: equiv_for_def)
 
 
-context InfoFlow_IF_1 begin
+context InfoFlow_IF begin
 
 lemma states_equiv_for_refl:
   "states_equiv_for P Q R S s s"
@@ -370,7 +370,7 @@ lemma equiv_asids_aag_can_read_asid:
   by (auto simp: equiv_asids_def)
 
 
-context InfoFlow_IF_1 begin
+context InfoFlow_IF begin
 
 lemma equiv_hyp_aag_can_read:
   "equiv_hyp (aag_can_read aag) s s' =
@@ -641,7 +641,7 @@ lemma reads_respects_when:
   by (wpsimp simp: when_def)
 
 
-context InfoFlow_IF_1 begin
+context InfoFlow_IF begin
 
 (* since doesnt_touch_globals is true for all of the kernel except the scheduler,
    the following lemma shows that we can just prove reads_respects for it, and
@@ -971,7 +971,7 @@ lemma syscall_reads_respects_g:
       | fastforce)+
 
 
-context InfoFlow_IF_1 begin
+context InfoFlow_IF begin
 
 lemma equiv_for_disj:
   "equiv_for (\<lambda>x. P x \<or> Q x) f c c' = (equiv_for P f c c' \<and> equiv_for Q f c c')"
@@ -1071,7 +1071,7 @@ lemma invs_kernel_mappings:
   by (auto simp: invs_def valid_state_def)
 
 
-locale InfoFlow_IF_2 = InfoFlow_IF_1 +
+locale InfoFlow_IF_2 = InfoFlow_IF +
   fixes no_hyp :: "'m machine_monad \<Rightarrow> bool"
   and no_fpu :: "'m machine_monad \<Rightarrow> bool"
   and aag :: "'a PAS"
