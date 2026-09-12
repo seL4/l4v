@@ -504,8 +504,7 @@ lemma finalise_cap_returns_NullCap:
   by (wpsimp wp: arch_finalise_cap_rv simp: o_def domain_sep_inv_cap_def split_del: if_split)+
 
 lemma rec_del_domain_sep_inv':
-  notes drop_spec_valid[wp_split del] drop_spec_validE[wp_split del]
-         rec_del.simps[simp del]
+  notes drop_spec_valid[wp_split del] drop_spec_validE[wp_split del] rec_del.simps[simp del]
   shows
   "s \<turnstile> \<lbrace>domain_sep_inv irqs st\<rbrace>
        rec_del call
