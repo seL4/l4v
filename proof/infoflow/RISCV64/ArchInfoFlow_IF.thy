@@ -181,8 +181,8 @@ lemma do_machine_op_reads_respects'[InfoFlow_IF_assms]:
                     (equiv_machine_state (aag_can_affect aag l)) Q f"
   assumes guard:
     "\<And>s. P s \<Longrightarrow> Q (machine_state s)"
-  and no_hyp: "no_hyp f"
-  and no_fpu: "no_fpu f"
+  assumes no_hyp: "no_hyp f"
+  assumes no_fpu: "no_fpu f"
   shows
   "reads_respects aag l P (do_machine_op f)"
   apply (rule use_spec_ev)

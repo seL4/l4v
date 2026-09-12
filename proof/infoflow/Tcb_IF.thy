@@ -180,17 +180,17 @@ locale Tcb_IF_1 =
   fixes aag :: "'a subject_label PAS"
   assumes valid_arch_caps_vs_lookup:
     "valid_arch_caps s \<Longrightarrow> valid_vs_lookup s"
-  and no_cap_to_idle_thread':
+  assumes no_cap_to_idle_thread':
     "valid_global_refs s \<Longrightarrow> \<not> ex_nonz_cap_to (idle_thread s) s"
-  and no_cap_to_idle_thread'':
+  assumes no_cap_to_idle_thread'':
     "valid_global_refs s \<Longrightarrow> caps_of_state s ref \<noteq> Some (ThreadCap (idle_thread s))"
-  and arch_post_modify_registers_globals_equiv[wp]:
+  assumes arch_post_modify_registers_globals_equiv[wp]:
     "arch_post_modify_registers cur t \<lbrace>globals_equiv s\<rbrace>"
-  and arch_post_modify_registers_valid_arch_state[wp]:
+  assumes arch_post_modify_registers_valid_arch_state[wp]:
     "arch_post_modify_registers cur t \<lbrace>\<lambda>s :: det_state. valid_arch_state s\<rbrace>"
-  and arch_post_modify_registers_reads_respects_f[wp]:
+  assumes arch_post_modify_registers_reads_respects_f[wp]:
     "reads_respects_f aag l \<top> (arch_post_modify_registers cur t)"
-  and arch_get_sanitise_register_info_reads_respects_f[wp]:
+  assumes arch_get_sanitise_register_info_reads_respects_f[wp]:
     "reads_respects_f aag l (K (aag_can_read_or_affect aag l t)) (arch_get_sanitise_register_info t)"
 begin
 
@@ -286,7 +286,7 @@ locale Tcb_IF_2 = Tcb_IF_1 +
      \<Longrightarrow> \<lbrace>P and invs and tcb_inv_wf (ThreadControl t sl ep mcp prio croot vroot buf)\<rbrace>
          invoke_tcb (ThreadControl t sl ep mcp prio croot vroot buf)
          \<lbrace>\<lambda>rv s :: det_state. P s\<rbrace>"
-  and tc_reads_respects_f:
+  assumes tc_reads_respects_f:
     "\<lbrakk> pas_domains_distinct aag; ti = ThreadControl x41 x42 x43 x44 x45 x46 x47 x48 \<rbrakk>
      \<Longrightarrow> reads_respects_f aag l
            (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action
@@ -294,11 +294,11 @@ locale Tcb_IF_2 = Tcb_IF_1 +
                             and is_subject aag \<circ> cur_thread
                             and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
            (invoke_tcb ti)"
-  and arch_post_set_flags_globals_equiv[wp]:
+  assumes arch_post_set_flags_globals_equiv[wp]:
     "\<lbrace>globals_equiv st and invs\<rbrace>
      arch_post_set_flags t flags
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  and arch_post_set_flags_reads_respects_f:
+  assumes arch_post_set_flags_reads_respects_f:
     "pas_domains_distinct aag \<Longrightarrow>
      reads_respects_f aag l (silc_inv aag st and valid_cur_fpu and K (is_subject aag t)) (arch_post_set_flags t flags)"
 begin

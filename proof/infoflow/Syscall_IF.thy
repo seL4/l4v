@@ -46,53 +46,53 @@ locale Syscall_IF_1 =
     "\<And>f. globals_equiv st (s\<lparr>machine_state :=
                               machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>) =
           globals_equiv st s"
-  and thread_set_globals_equiv':
+  assumes thread_set_globals_equiv':
     "\<And>f. \<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
           thread_set f tptr
           \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  and sts_authorised_for_globals_inv:
+  assumes sts_authorised_for_globals_inv:
     "\<And>f. set_thread_state d f \<lbrace>\<lambda>s :: det_state. authorised_for_globals_inv oper s\<rbrace>"
-  and dmo_maskInterrupt_globals_equiv[wp]:
+  assumes dmo_maskInterrupt_globals_equiv[wp]:
     "do_machine_op (maskInterrupt b irq) \<lbrace>globals_equiv s\<rbrace>"
-  and dmo_ackInterrupt_globals_equiv[wp]:
+  assumes dmo_ackInterrupt_globals_equiv[wp]:
     "do_machine_op (ackInterrupt irq) \<lbrace>globals_equiv s\<rbrace>"
-  and dmo_resetTimer_globals_equiv[wp]:
+  assumes dmo_resetTimer_globals_equiv[wp]:
     "do_machine_op resetTimer \<lbrace>globals_equiv s\<rbrace>"
-  and arch_mask_irq_signal_globals_equiv[wp]:
+  assumes arch_mask_irq_signal_globals_equiv[wp]:
     "arch_mask_irq_signal irq \<lbrace>globals_equiv st\<rbrace>"
-  and handle_reserved_irq_globals_equiv[wp]:
+  assumes handle_reserved_irq_globals_equiv[wp]:
      "\<lbrace>globals_equiv st and invs\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  and handle_spurious_irq_globals_equiv[wp]:
+  assumes handle_spurious_irq_globals_equiv[wp]:
     "handle_spurious_irq \<lbrace>globals_equiv st\<rbrace>"
-  and arch_prepare_set_domain_globals_equiv[wp]:
+  assumes arch_prepare_set_domain_globals_equiv[wp]:
     "\<lbrace>globals_equiv st and invs\<rbrace> arch_prepare_set_domain t new_dom \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  and arch_prepare_set_domain_valid_arch_state[wp]:
+  assumes arch_prepare_set_domain_valid_arch_state[wp]:
     "arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s :: det_state. valid_arch_state s\<rbrace>"
-  and handle_vm_fault_reads_respects:
+  assumes handle_vm_fault_reads_respects:
     "reads_respects aag l (pas_refined aag and valid_cur_hyp
                            and schact_is_rct and ct_in_cur_domain
                            and is_subject aag \<circ> cur_thread and K (is_subject aag thread))
                     (handle_vm_fault thread vmfault_type)"
-  and handle_hypervisor_fault_reads_respects:
+  assumes handle_hypervisor_fault_reads_respects:
     "pas_domains_distinct aag \<Longrightarrow>
      reads_respects aag l (invs and pas_refined aag and pas_cur_domain aag
                            and is_subject aag \<circ> cur_thread and K (is_subject aag thread))
                     (handle_hypervisor_fault thread hypfault_type)"
-  and handle_vm_fault_globals_equiv:
+  assumes handle_vm_fault_globals_equiv:
     "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
      handle_vm_fault thread vmfault_type
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  and handle_hypervisor_fault_globals_equiv:
+  assumes handle_hypervisor_fault_globals_equiv:
     "\<lbrace>globals_equiv st and invs\<rbrace> handle_hypervisor_fault thread hypfault_type \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  and arch_activate_idle_thread_globals_equiv[wp]:
+  assumes arch_activate_idle_thread_globals_equiv[wp]:
     "arch_activate_idle_thread t \<lbrace>globals_equiv st\<rbrace>"
-  and select_f_setNextPC_reads_respects[wp]:
+  assumes select_f_setNextPC_reads_respects[wp]:
     "reads_respects aag l \<top> (select_f (setNextPC pc f))"
-  and select_f_getRestartPC_reads_respects[wp]:
+  assumes select_f_getRestartPC_reads_respects[wp]:
     "reads_respects aag l \<top> (select_f (getRestartPC f))"
-  and arch_activate_idle_thread_reads_respects[wp]:
+  assumes arch_activate_idle_thread_reads_respects[wp]:
     "reads_respects aag l \<top> (arch_activate_idle_thread t)"
-  and decode_arch_invocation_authorised_for_globals:
+  assumes decode_arch_invocation_authorised_for_globals:
     "\<lbrace>invs and cte_wp_at ((=) (ArchObjectCap acap)) slot
            and (\<lambda>s :: det_state. \<forall>(cap, slot) \<in> set excaps. cte_wp_at ((=) cap) slot s)\<rbrace>
      arch_decode_invocation label msg x_slot slot acap excaps

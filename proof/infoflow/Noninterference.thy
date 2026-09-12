@@ -606,53 +606,53 @@ locale Noninterference_1 =
     "\<lbrace>invs and integrity aag X st and is_subject aag \<circ> cur_thread and pas_refined aag\<rbrace>
      do_user_op_if uop tc
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and do_user_op_if_globals_equiv_scheduler:
+  assumes do_user_op_if_globals_equiv_scheduler:
     "\<lbrace>globals_equiv_scheduler st and invs\<rbrace>
      do_user_op_if uop tc
      \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
-  and do_user_op_if_silc_dom_equiv[wp]:
+  assumes do_user_op_if_silc_dom_equiv[wp]:
     "do_user_op_if uop tc \<lbrace>silc_dom_equiv (aag :: 'a subject_label PAS) st\<rbrace>"
-  and sameFor_scheduler_affects_equiv:
+  assumes sameFor_scheduler_affects_equiv:
     "\<And>s s'. \<lbrakk> (s,s') \<in> same_for aag PSched; (s,s') \<in> same_for aag (Partition l');
                invs (internal_state_if s); invs (internal_state_if s') \<rbrakk>
              \<Longrightarrow> scheduler_equiv aag (internal_state_if s) (internal_state_if s') \<and>
                  scheduler_affects_equiv aag (OrdinaryLabel l')
                                          (internal_state_if s) (internal_state_if s')"
-  and do_user_op_if_partitionIntegrity:
+  assumes do_user_op_if_partitionIntegrity:
     "\<And>aag :: 'a subject_label PAS.
      \<lbrace>partitionIntegrity aag st and pas_refined aag and invs and is_subject aag \<circ> cur_thread\<rbrace>
      do_user_op_if uop tc
      \<lbrace>\<lambda>_. partitionIntegrity aag st\<rbrace>"
-  and arch_activate_idle_thread_reads_respects_g[wp]:
+  assumes arch_activate_idle_thread_reads_respects_g[wp]:
     "reads_respects_g aag l \<top> (arch_activate_idle_thread t)"
-  and dmo_storeWord_reads_respects_g[wp]:
+  assumes dmo_storeWord_reads_respects_g[wp]:
     "reads_respects_g aag l \<top> (do_machine_op (storeWord ptr w))"
-  and integrity_asids_update_reference_state:
+  assumes integrity_asids_update_reference_state:
    "is_subject aag t
     \<Longrightarrow> integrity_asids aag {pasSubject aag} x asid s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
-  and integrity_hyp_update_reference_state:
+  assumes integrity_hyp_update_reference_state:
    "is_subject aag t
     \<Longrightarrow> integrity_hyp aag {pasSubject aag} x s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
-  and integrity_fpu_update_reference_state:
+  assumes integrity_fpu_update_reference_state:
    "is_subject aag t
     \<Longrightarrow> integrity_fpu aag {pasSubject aag} x s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
-  and partitionIntegrity_subjectAffects_asid:
+  assumes partitionIntegrity_subjectAffects_asid:
     "\<lbrakk> partitionIntegrity aag s s'; pas_refined aag s; valid_objs s; valid_arch_state s;
        valid_arch_state s'; pas_wellformed_noninterference aag; silc_inv aag st s'; invs s';
        \<not> equiv_asids (\<lambda>x. pasASIDAbs aag x = a) s s'\<rbrakk>
      \<Longrightarrow> a \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
-  and arch_switch_to_thread_reads_respects_g':
+  assumes arch_switch_to_thread_reads_respects_g':
     "equiv_valid (reads_equiv_g aag) (affects_equiv aag l)
                  (\<lambda>s s'. affects_equiv aag l s s' \<and>
                          arch_globals_equiv_strengthener (machine_state s) (machine_state s'))
                  (\<lambda>s. invs s \<and> is_subject aag t) (arch_switch_to_thread t)"
-  and arch_globals_equiv_strengthener_thread_independent:
+  assumes arch_globals_equiv_strengthener_thread_independent:
     "arch_globals_equiv_strengthener (machine_state s) (machine_state s')
      \<Longrightarrow> \<forall>ct ct' it it'. arch_globals_equiv ct it (kheap s) (kheap s')
                            (arch_state s) (arch_state s') (machine_state s) (machine_state s') =
                          arch_globals_equiv ct' it' (kheap s) (kheap s')
                            (arch_state s) (arch_state s') (machine_state s) (machine_state s')"
-  and ev2_invisible':
+  assumes ev2_invisible':
     "\<lbrakk> pas_domains_distinct aag; labels_are_invisible aag l L; labels_are_invisible aag l L';
        modifies_at_most aag L Q f; modifies_at_most aag L' Q' g;
        doesnt_touch_globals Q f; doesnt_touch_globals Q' g;
@@ -665,54 +665,54 @@ locale Noninterference_1 =
                        (\<lambda>s s'. affects_equiv aag l s s' \<and>
                                arch_globals_equiv_strengthener (machine_state s) (machine_state s'))
                        (W :: unit \<Rightarrow> unit \<Rightarrow> bool) (P and Q) (P' and Q') f g"
-  and arch_switch_to_idle_thread_reads_respects_g[wp]:
+  assumes arch_switch_to_idle_thread_reads_respects_g[wp]:
     "reads_respects_g aag l valid_arch_state (arch_switch_to_idle_thread)"
-  and arch_globals_equiv_threads_eq:
+  assumes arch_globals_equiv_threads_eq:
     "arch_globals_equiv t' t'' kh kh' as as' ms ms'
      \<Longrightarrow> arch_globals_equiv t t kh kh' as as' ms ms'"
-  and arch_globals_equiv_globals_equiv_scheduler[elim]:
+  assumes arch_globals_equiv_globals_equiv_scheduler[elim]:
     "arch_globals_equiv (cur_thread s') (idle_thread s) (kheap s) (kheap s')
                         (arch_state s) (arch_state s') (machine_state s) (machine_state s')
      \<Longrightarrow> arch_globals_equiv_scheduler (kheap s) (kheap s') (arch_state s) (arch_state s')"
-  and getActiveIRQ_ret_no_dmo[wp]:
+  assumes getActiveIRQ_ret_no_dmo[wp]:
     "\<lbrace>\<top>\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
-  and dmo_getActive_IRQ_reads_respect_scheduler:
+  assumes dmo_getActive_IRQ_reads_respect_scheduler:
     "reads_respects_scheduler aag l (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s)
                              (do_machine_op (getActiveIRQ in_kernel))"
-  and handle_spurious_irq_reads_respects_scheduler[wp]:
+  assumes handle_spurious_irq_reads_respects_scheduler[wp]:
     "reads_respects_scheduler aag l \<top> handle_spurious_irq"
-  and getActiveIRQ_ev2:
+  assumes getActiveIRQ_ev2:
     "equiv_valid_2 (scheduler_equiv aag)
                    (scheduler_affects_equiv aag l) (scheduler_affects_equiv aag l)
                    (\<lambda>irq irq'. irq = irq' \<or> irq = None \<and> irq' \<in> Some ` non_kernel_IRQs)
                    (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s)
                    (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s)
      (do_machine_op (getActiveIRQ True)) (do_machine_op (getActiveIRQ False))"
-  and arch_prepare_next_domain_reads_respects_g:
+  assumes arch_prepare_next_domain_reads_respects_g:
     "reads_equiv_valid_g_inv (affects_equiv aag l) aag invs
      arch_prepare_next_domain"
-  and partitionIntegrity_subjectAffects_aobj:
+  assumes partitionIntegrity_subjectAffects_aobj:
     "\<lbrakk> partitionIntegrity aag s s'; kheap s x = Some (ArchObj ao);
        kheap s x \<noteq> kheap s' x; silc_inv aag st s;
        pas_wellformed_noninterference aag; pas_refined aag s;
        pas_refined aag s'; pas_cur_domain aag s; pas_cur_domain aag s';
        cur_hyp_in_cur_domain s; cur_hyp_in_cur_domain s'; invs s; invs s' \<rbrakk>
      \<Longrightarrow> subject_can_affect_label_directly aag (pasObjectAbs aag x)"
-  and partitionIntegrity_subjectAffects_hyp:
+  assumes partitionIntegrity_subjectAffects_hyp:
     "\<lbrakk> partitionIntegrity aag s s'; invs s; invs s';
        cur_hyp_in_cur_domain s; cur_hyp_in_cur_domain s';
        pas_refined aag s; pas_refined aag s'; pas_cur_domain aag s;
        pas_cur_domain aag s'; pas_domains_distinct aag;
        \<not> equiv_hyp (\<lambda>x. pasObjectAbs aag x = a) s s'\<rbrakk>
      \<Longrightarrow> subject_can_affect_label_directly aag a"
-  and partitionIntegrity_subjectAffects_fpu:
+  assumes partitionIntegrity_subjectAffects_fpu:
     "\<lbrakk> partitionIntegrity aag s s'; invs s; invs s';
        cur_fpu_in_cur_domain s; cur_fpu_in_cur_domain s'; pas_refined aag s;
        pas_refined aag s'; pas_cur_domain aag s; pas_cur_domain aag s';
        pas_domains_distinct aag;
        \<not> equiv_fpu (\<lambda>x. pasObjectAbs aag x = a) s s' \<rbrakk>
      \<Longrightarrow> subject_can_affect_label_directly aag a"
-  and partitionIntegrity_subjectAffects_tcb_fpu:
+  assumes partitionIntegrity_subjectAffects_tcb_fpu:
     "\<lbrakk> partitionIntegrity aag s s'; kheap s x = Some (TCB tcb);
        kheap s' x = Some (TCB tcb'); tcb' = tcb\<lparr>tcb_arch := new_arch\<rparr>;
        arch_tcb_get_registers new_arch =
@@ -1796,8 +1796,8 @@ lemma user_small_Step_partitionIntegrity:
 lemma small_Step_partitionIntegrity:
   notes active_from_running[simp]
   assumes step: "(s, t) \<in> data_type.Step (ADT_A_if utf) ()"
-    and reachable: "system.reachable (ADT_A_if utf) s0 s"
-    and sched: "part s \<noteq> PSched"
+  assumes reachable: "system.reachable (ADT_A_if utf) s0 s"
+  assumes sched: "part s \<noteq> PSched"
   shows "partitionIntegrity (current_aag (internal_state_if s))
                             (internal_state_if s) (internal_state_if t)"
 proof (cases "sys_mode_of s")

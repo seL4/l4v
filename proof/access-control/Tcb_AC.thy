@@ -285,19 +285,19 @@ locale Tcb_AC_1 =
   fixes aag :: "'a PAS"
   assumes arch_post_modify_registers_invs[wp]:
     "arch_post_modify_registers cur t \<lbrace>pas_refined aag\<rbrace>"
-  and arch_post_modify_registers_respects:
+  assumes arch_post_modify_registers_respects:
     "\<lbrace>integrity aag X st and K (is_subject aag t)\<rbrace>
      arch_post_modify_registers cur t
      \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
-  and arch_post_set_flags_respects[wp]:
+  assumes arch_post_set_flags_respects[wp]:
     "\<lbrace>integrity aag X st and valid_cur_fpu\<rbrace>
      arch_post_set_flags t flags
      \<lbrace>\<lambda>_ s. integrity aag X st s\<rbrace>"
   assumes arch_post_set_flags_pas_refined[wp]:
     "arch_post_set_flags t flags \<lbrace>pas_refined aag\<rbrace>"
-  and arch_get_sanitise_register_info_inv[wp]:
+  assumes arch_get_sanitise_register_info_inv[wp]:
     "arch_get_sanitise_register_info t \<lbrace>\<lambda>s :: det_state. P s\<rbrace>"
-  and invoke_tcb_tc_respects_aag:
+  assumes invoke_tcb_tc_respects_aag:
     "\<lbrace>integrity aag X st and pas_refined aag and einvs and simple_sched_action
                          and tcb_inv_wf (ThreadControl t sl ep mcp priority croot vroot buf)
                          and K (authorised_tcb_inv aag (ThreadControl t sl ep mcp priority croot vroot buf))\<rbrace>

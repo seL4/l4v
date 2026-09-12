@@ -103,77 +103,77 @@ locale Scheduler_IF_1 =
        cur_thread s' \<noteq> idle_thread s \<longrightarrow> arch_scheduler_affects_equiv s s' \<rbrakk>
      \<Longrightarrow> arch_globals_equiv (cur_thread s') (idle_thread s) (kheap s) (kheap s')
                             (arch_state s) (arch_state s') (machine_state s) (machine_state s')"
-  and arch_globals_equiv_scheduler_refl:
+  assumes arch_globals_equiv_scheduler_refl:
     "arch_globals_equiv_scheduler (kheap s) (kheap s) (arch_state s) (arch_state s)"
-  and arch_globals_equiv_scheduler_sym:
+  assumes arch_globals_equiv_scheduler_sym:
     "arch_globals_equiv_scheduler (kheap s) (kheap s') (arch_state s) (arch_state s')
      \<Longrightarrow> arch_globals_equiv_scheduler (kheap s') (kheap s) (arch_state s') (arch_state s)"
-  and arch_globals_equiv_scheduler_trans:
+  assumes arch_globals_equiv_scheduler_trans:
     "\<lbrakk> arch_globals_equiv_scheduler (kheap s) (kheap s') (arch_state s) (arch_state s');
        arch_globals_equiv_scheduler (kheap s') (kheap s'') (arch_state s') (arch_state s'') \<rbrakk>
      \<Longrightarrow> arch_globals_equiv_scheduler (kheap s) (kheap s'') (arch_state s) (arch_state s'')"
-  and arch_scheduler_affects_equiv_trans[elim]:
+  assumes arch_scheduler_affects_equiv_trans[elim]:
     "\<lbrakk> arch_scheduler_affects_equiv s s'; arch_scheduler_affects_equiv s' s'' \<rbrakk>
      \<Longrightarrow> arch_scheduler_affects_equiv s (s'' :: det_state)"
-  and arch_scheduler_affects_equiv_sym[elim]:
+  assumes arch_scheduler_affects_equiv_sym[elim]:
     "arch_scheduler_affects_equiv s s' \<Longrightarrow> arch_scheduler_affects_equiv s' s"
-  and arch_scheduler_affects_equiv_update:
+  assumes arch_scheduler_affects_equiv_update:
     "arch_scheduler_affects_equiv st s
      \<Longrightarrow> arch_scheduler_affects_equiv st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
-  and arch_scheduler_affects_equiv_sa_update[simp]:
+  assumes arch_scheduler_affects_equiv_sa_update[simp]:
     "\<And>f. arch_scheduler_affects_equiv (scheduler_action_update f s) s' =
           arch_scheduler_affects_equiv s s'"
     "\<And>f. arch_scheduler_affects_equiv s (scheduler_action_update f s') =
           arch_scheduler_affects_equiv s s'"
-  and arch_scheduler_affects_equiv_ready_queues_update[simp]:
+  assumes arch_scheduler_affects_equiv_ready_queues_update[simp]:
     "\<And>f. arch_scheduler_affects_equiv (ready_queues_update f s) s' =
           arch_scheduler_affects_equiv s s'"
     "\<And>f. arch_scheduler_affects_equiv s (ready_queues_update f s') =
           arch_scheduler_affects_equiv s s'"
-  and arch_scheduler_affects_equiv_cur_thread_update[simp]:
+  assumes arch_scheduler_affects_equiv_cur_thread_update[simp]:
     "\<And>f. arch_scheduler_affects_equiv (cur_thread_update f s) s' =
           arch_scheduler_affects_equiv s s'"
     "\<And>f. arch_scheduler_affects_equiv s (cur_thread_update f s') =
           arch_scheduler_affects_equiv s s'"
-  and arch_scheduler_affects_equiv_domain_time_update[simp]:
+  assumes arch_scheduler_affects_equiv_domain_time_update[simp]:
     "\<And>f. arch_scheduler_affects_equiv (domain_time_update f s) s' =
           arch_scheduler_affects_equiv s s'"
     "\<And>f. arch_scheduler_affects_equiv s (domain_time_update f s') =
           arch_scheduler_affects_equiv s s'"
-  and arch_switch_to_thread_idle_thread[wp]:
+  assumes arch_switch_to_thread_idle_thread[wp]:
     "\<And>P t. arch_switch_to_thread t \<lbrace>\<lambda>s :: det_state. P (idle_thread s)\<rbrace>"
-  and arch_switch_to_idle_thread_idle_thread[wp]:
+  assumes arch_switch_to_idle_thread_idle_thread[wp]:
     "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_state. P (idle_thread s)\<rbrace>"
-  and arch_switch_to_idle_thread_cur_domain[wp]:
+  assumes arch_switch_to_idle_thread_cur_domain[wp]:
     "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_state. P (cur_domain s)\<rbrace>"
-  and arch_switch_to_idle_thread_globals_equiv[wp]:
+  assumes arch_switch_to_idle_thread_globals_equiv[wp]:
     "\<lbrace>valid_arch_state and globals_equiv st\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  and arch_switch_to_idle_thread_work_units_completed[wp]:
+  assumes arch_switch_to_idle_thread_work_units_completed[wp]:
     "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s. P (work_units_completed s)\<rbrace>"
-  and equiv_asid_equiv_update:
+  assumes equiv_asid_equiv_update:
     "\<lbrakk> get_tcb x s = Some y; equiv_asid asid st s \<rbrakk>
      \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
-  and equiv_asid_cur_thread_update[simp]:
+  assumes equiv_asid_cur_thread_update[simp]:
     "\<And>f. equiv_asid asid (cur_thread_update f s) s' = equiv_asid asid s s'"
     "\<And>f. equiv_asid asid s (cur_thread_update f s') = equiv_asid asid s s'"
-  and equiv_asid_domain_time_update[simp]:
+  assumes equiv_asid_domain_time_update[simp]:
     "\<And>f. equiv_asid asid (domain_time_update f s) s' = equiv_asid asid s s'"
     "\<And>f. equiv_asid asid s (domain_time_update f s') = equiv_asid asid s s'"
-  and ackInterrupt_irq_state[wp]:
+  assumes ackInterrupt_irq_state[wp]:
     "\<And>P. ackInterrupt irq \<lbrace>\<lambda>s. P (irq_state s)\<rbrace>"
-  and thread_set_context_globals_equiv:
+  assumes thread_set_context_globals_equiv:
     "\<lbrace>(\<lambda>s. t = idle_thread s \<longrightarrow> tc = idle_context s) and invs and globals_equiv st\<rbrace>
      thread_set (tcb_arch_update (arch_tcb_context_set tc)) t
      \<lbrace>\<lambda>rv. globals_equiv st\<rbrace>"
-  and arch_activate_idle_thread_cur_domain[wp]:
+  assumes arch_activate_idle_thread_cur_domain[wp]:
     "\<And>P. arch_activate_idle_thread t \<lbrace>\<lambda>s :: det_state. P (cur_domain s)\<rbrace>"
-  and arch_activate_idle_thread_idle_thread[wp]:
+  assumes arch_activate_idle_thread_idle_thread[wp]:
     "\<And>P. arch_activate_idle_thread t \<lbrace>\<lambda>s :: det_state. P (idle_thread s)\<rbrace>"
-  and arch_activate_idle_thread_irq_state_of_state[wp]:
+  assumes arch_activate_idle_thread_irq_state_of_state[wp]:
     "\<And>P. arch_activate_idle_thread t \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and arch_activate_idle_thread_domain_fields[wp]:
+  assumes arch_activate_idle_thread_domain_fields[wp]:
     "\<And>P. arch_activate_idle_thread t \<lbrace>domain_fields P\<rbrace>"
-  and arch_prepare_next_domain_idle_thread[wp]:
+  assumes arch_prepare_next_domain_idle_thread[wp]:
     "\<And>P. arch_prepare_next_domain \<lbrace>\<lambda>s :: det_state. P (idle_thread s)\<rbrace>"
 begin
 
@@ -537,7 +537,7 @@ lemma tcb_action_reads_respects_scheduler[wp]:
 
 lemma dmo_no_mem_globals_equiv_scheduler:
   assumes a: "\<And>P. f \<lbrace>\<lambda>ms. P (underlying_memory ms)\<rbrace>"
-      and b: "\<And>P. f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>"
+  assumes b: "\<And>P. f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>"
   shows "do_machine_op f \<lbrace>globals_equiv_scheduler s\<rbrace>"
   unfolding do_machine_op_def
   apply (rule hoare_pre)
@@ -1035,11 +1035,11 @@ locale Scheduler_IF_2 = Scheduler_IF_1 +
     "\<lbrace>invs and globals_equiv_scheduler sta\<rbrace>
      arch_switch_to_thread thread
      \<lbrace>\<lambda>_. globals_equiv_scheduler sta\<rbrace>"
-  and arch_switch_to_idle_thread_globals_equiv_scheduler[wp]:
+  assumes arch_switch_to_idle_thread_globals_equiv_scheduler[wp]:
     "\<lbrace>valid_arch_state and globals_equiv_scheduler sta\<rbrace>
      arch_switch_to_idle_thread
      \<lbrace>\<lambda>_. globals_equiv_scheduler sta\<rbrace>"
-  and arch_switch_to_thread_midstrength_reads_respects_scheduler[wp]:
+  assumes arch_switch_to_thread_midstrength_reads_respects_scheduler[wp]:
     "pas_wellformed_noninterference aag
      \<Longrightarrow> midstrength_reads_respects_scheduler aag l
            (invs and pas_refined aag and valid_silc_label aag
@@ -1049,17 +1049,17 @@ locale Scheduler_IF_2 = Scheduler_IF_1 +
                _ <- modify (cur_thread_update (\<lambda>_. t));
                modify (scheduler_action_update (\<lambda>_. resume_cur_thread))
             od)"
-  and globals_equiv_scheduler_inv':
+  assumes globals_equiv_scheduler_inv':
     "(\<And>st. \<lbrace>P and globals_equiv st\<rbrace> (f :: (det_state, unit) nondet_monad) \<lbrace>\<lambda>_. globals_equiv st\<rbrace>)
      \<Longrightarrow> \<lbrace>P and globals_equiv_scheduler s\<rbrace> f \<lbrace>\<lambda>_. globals_equiv_scheduler s\<rbrace>"
-  and arch_switch_to_idle_thread_unobservable:
+  assumes arch_switch_to_idle_thread_unobservable:
     "pas_wellformed_noninterference aag
      \<Longrightarrow> \<lbrace>(\<lambda>s. \<not> reads_scheduler_cur_domain aag l s) and
         scheduler_affects_equiv aag l st and (\<lambda>s. cur_domain st = cur_domain s) and
         invs and cur_hyp_in_cur_domain and valid_silc_label aag and pas_refined aag\<rbrace>
        arch_switch_to_idle_thread
        \<lbrace>\<lambda>_ s. scheduler_affects_equiv aag l st s\<rbrace>"
-  and arch_switch_to_thread_unobservable:
+  assumes arch_switch_to_thread_unobservable:
     "pas_wellformed_noninterference aag
      \<Longrightarrow> \<lbrace>(\<lambda>s. \<not> reads_scheduler_cur_domain aag l s) and
           (\<lambda>s. pasObjectAbs aag t \<notin> reads_scheduler aag l) and
@@ -1068,59 +1068,59 @@ locale Scheduler_IF_2 = Scheduler_IF_1 +
           valid_silc_label aag and pas_refined aag\<rbrace>
          arch_switch_to_thread t
          \<lbrace>\<lambda>_ s. scheduler_affects_equiv aag l st s\<rbrace>"
-  and next_domain_midstrength_equiv_scheduler:
+  assumes next_domain_midstrength_equiv_scheduler:
     "equiv_valid (scheduler_equiv aag) (weak_scheduler_affects_equiv aag l)
                  (midstrength_scheduler_affects_equiv aag l) \<top> next_domain"
-  and arch_prepare_next_domain_weak_scheduler_reads_respects:
+  assumes arch_prepare_next_domain_weak_scheduler_reads_respects:
     "weak_reads_respects_scheduler aag l (invs and valid_silc_label aag) arch_prepare_next_domain"
-  and dmo_resetTimer_reads_respects_scheduler:
+  assumes dmo_resetTimer_reads_respects_scheduler:
     "reads_respects_scheduler aag l \<top> (do_machine_op resetTimer)"
-  and ackInterrupt_reads_respects_scheduler:
+  assumes ackInterrupt_reads_respects_scheduler:
     "reads_respects_scheduler aag l \<top> (do_machine_op (ackInterrupt irq))"
-  and thread_set_scheduler_affects_equiv[wp]:
+  assumes thread_set_scheduler_affects_equiv[wp]:
     "\<lbrace>(\<lambda>s. x \<noteq> idle_thread s \<longrightarrow> pasObjectAbs aag x \<notin> reads_scheduler aag l) and
       (\<lambda>s. x = idle_thread s \<longrightarrow> tc = idle_context s) and scheduler_affects_equiv aag l st\<rbrace>
      thread_set (tcb_arch_update (arch_tcb_context_set tc)) x
      \<lbrace>\<lambda>_. scheduler_affects_equiv aag l st\<rbrace>"
-  and thread_set_reads_respects_scheduler:
+  assumes thread_set_reads_respects_scheduler:
     "\<And>f. reads_respects_scheduler aag l (valid_arch_state and K (valid_tcb_context_update f))
                                   (thread_set f t)"
-  and arch_activate_idle_thread_reads_respects_scheduler[wp]:
+  assumes arch_activate_idle_thread_reads_respects_scheduler[wp]:
     "reads_respects_scheduler aag l \<top> (arch_activate_idle_thread rv)"
-  and arch_activate_idle_thread_silc_dom_equiv[wp]:
+  assumes arch_activate_idle_thread_silc_dom_equiv[wp]:
     "arch_activate_idle_thread t \<lbrace>silc_dom_equiv aag st\<rbrace>"
-  and arch_activate_idle_thread_scheduler_affects_equiv[wp]:
+  assumes arch_activate_idle_thread_scheduler_affects_equiv[wp]:
     "arch_activate_idle_thread t \<lbrace>scheduler_affects_equiv aag l s\<rbrace>"
-  and arch_prepare_next_domain_globals_equiv_scheduler[wp]:
+  assumes arch_prepare_next_domain_globals_equiv_scheduler[wp]:
     "\<lbrace>invs and globals_equiv_scheduler st\<rbrace> arch_prepare_next_domain \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
-  and arch_switch_to_idle_thread_midstrength_reads_respects:
+  assumes arch_switch_to_idle_thread_midstrength_reads_respects:
     "equiv_valid_inv (scheduler_equiv aag) (midstrength_scheduler_affects_equiv aag l)
                      (valid_arch_state and valid_silc_label aag) arch_switch_to_idle_thread"
-  and arch_switch_to_thread_silc_dom_equiv[wp]:
+  assumes arch_switch_to_thread_silc_dom_equiv[wp]:
     "\<lbrace>silc_dom_equiv aag st and valid_silc_label aag\<rbrace>
      arch_switch_to_thread t
      \<lbrace>\<lambda>_. silc_dom_equiv aag (st :: det_state)\<rbrace>"
-  and arch_switch_to_idle_thread_silc_dom_equiv[wp]:
+  assumes arch_switch_to_idle_thread_silc_dom_equiv[wp]:
     "\<lbrace>silc_dom_equiv aag st and valid_silc_label aag\<rbrace>
      arch_switch_to_idle_thread
      \<lbrace>\<lambda>_. silc_dom_equiv aag st\<rbrace>"
-  and set_scheduler_action_cur_hyp_in_cur_domain[wp]:
+  assumes set_scheduler_action_cur_hyp_in_cur_domain[wp]:
     "set_scheduler_action act \<lbrace>cur_hyp_in_cur_domain\<rbrace>"
-  and set_scheduler_action_cur_fpu_in_cur_domain[wp]:
+  assumes set_scheduler_action_cur_fpu_in_cur_domain[wp]:
     "set_scheduler_action act \<lbrace>cur_fpu_in_cur_domain\<rbrace>"
-  and tcb_sched_action_cur_hyp_in_cur_domain[wp]:
+  assumes tcb_sched_action_cur_hyp_in_cur_domain[wp]:
     "tcb_sched_action a t \<lbrace>cur_hyp_in_cur_domain\<rbrace>"
-  and tcb_sched_action_cur_fpu_in_cur_domain[wp]:
+  assumes tcb_sched_action_cur_fpu_in_cur_domain[wp]:
     "tcb_sched_action a t \<lbrace>cur_fpu_in_cur_domain\<rbrace>"
-  and next_domain_snippet_cur_hyp_in_cur_domain:
+  assumes next_domain_snippet_cur_hyp_in_cur_domain:
     "\<lbrace>\<top>\<rbrace> do y <- arch_prepare_next_domain; next_domain od \<lbrace>\<lambda>_. cur_hyp_in_cur_domain\<rbrace>"
-  and next_domain_snippet_cur_fpu_in_cur_domain:
+  assumes next_domain_snippet_cur_fpu_in_cur_domain:
     "\<lbrace>\<top>\<rbrace> do y <- arch_prepare_next_domain; next_domain od \<lbrace>\<lambda>_. cur_fpu_in_cur_domain\<rbrace>"
-  and arch_prepare_next_domain_silc_dom_equiv[wp]:
+  assumes arch_prepare_next_domain_silc_dom_equiv[wp]:
     "\<lbrace>silc_dom_equiv aag st and valid_silc_label aag\<rbrace>
      arch_prepare_next_domain
      \<lbrace>\<lambda>_. silc_dom_equiv aag st\<rbrace>"
-  and arch_prepare_next_domain_typ_at[wp]:
+  assumes arch_prepare_next_domain_typ_at[wp]:
     "\<And>P. arch_prepare_next_domain \<lbrace>\<lambda>s :: det_state. P (typ_at T ptr s)\<rbrace>"
 begin
 

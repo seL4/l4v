@@ -325,39 +325,39 @@ locale FinalCaps_1 =
   (* FIXME IF: precludes X64 *)
   assumes FIXME_arch_gen_refs:
     "arch_gen_refs cap = {}"
-  and aobj_ref_same_aobject:
+  assumes aobj_ref_same_aobject:
     "same_aobject_as cp cp' \<Longrightarrow> aobj_ref cp = aobj_ref cp'"
-  and arch_invoke_irq_handler_silc_inv[wp]:
+  assumes arch_invoke_irq_handler_silc_inv[wp]:
     "arch_invoke_irq_handler hi \<lbrace>silc_inv aag st\<rbrace>"
-  and arch_post_cap_deletion_silc_inv[wp]:
+  assumes arch_post_cap_deletion_silc_inv[wp]:
     "arch_post_cap_deletion acap \<lbrace>silc_inv aag st\<rbrace>"
-  and arch_finalise_cap_silc_inv[wp]:
+  assumes arch_finalise_cap_silc_inv[wp]:
     "arch_finalise_cap c x \<lbrace>silc_inv aag st\<rbrace>"
-  and prepare_thread_delete_silc_inv[wp]:
+  assumes prepare_thread_delete_silc_inv[wp]:
     "prepare_thread_delete p \<lbrace>silc_inv aag st\<rbrace>"
-  and handle_vm_fault_silc_inv[wp]:
+  assumes handle_vm_fault_silc_inv[wp]:
     "handle_vm_fault t vmft \<lbrace>silc_inv aag st\<rbrace>"
-  and arch_mask_irq_signal_silc_inv[wp]:
+  assumes arch_mask_irq_signal_silc_inv[wp]:
     "arch_mask_irq_signal irq \<lbrace>silc_inv aag st\<rbrace>"
-  and handle_vm_fault_cur_thread[wp]:
+  assumes handle_vm_fault_cur_thread[wp]:
     "\<And>P. handle_vm_fault t vmft \<lbrace>\<lambda>s :: det_state. P (cur_thread s)\<rbrace>"
-  and arch_activate_idle_threadt_silc_inv[wp]:
+  assumes arch_activate_idle_threadt_silc_inv[wp]:
     "arch_activate_idle_thread t \<lbrace>silc_inv aag st\<rbrace>"
-  and arch_switch_to_idle_thread_silc_inv[wp]:
+  assumes arch_switch_to_idle_thread_silc_inv[wp]:
     "arch_switch_to_idle_thread \<lbrace>silc_inv aag st\<rbrace>"
-  and arch_switch_to_thread_silc_inv[wp]:
+  assumes arch_switch_to_thread_silc_inv[wp]:
     "arch_switch_to_thread t \<lbrace>silc_inv aag st\<rbrace>"
-  and init_arch_objects_silc_inv[wp]:
+  assumes init_arch_objects_silc_inv[wp]:
     "init_arch_objects typ dev ptr num sz refs \<lbrace>silc_inv aag st\<rbrace>"
-  and init_arch_objects_cte_wp_at[wp]:
+  assumes init_arch_objects_cte_wp_at[wp]:
     "\<And>P. init_arch_objects typ dev ptr num sz refs \<lbrace>\<lambda>s :: det_state. P (cte_wp_at P' slot s)\<rbrace>"
-  and finalise_cap_makes_halted:
+  assumes finalise_cap_makes_halted:
     "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s) and cte_wp_at ((=) cap) slot\<rbrace>
      finalise_cap cap ex
      \<lbrace>\<lambda>rv s :: det_state. \<forall>t \<in> obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
-  and arch_post_modify_registers_silc_inv[wp]:
+  assumes arch_post_modify_registers_silc_inv[wp]:
     "arch_post_modify_registers cur t \<lbrace>silc_inv aag st\<rbrace>"
-  and arch_derive_cap_silc:
+  assumes arch_derive_cap_silc:
     "\<lbrace>\<lambda>s :: det_state. cap = ArchObjectCap acap \<and>
                        (\<not> cap_points_to_label aag cap l \<longrightarrow> R (slots_holding_overlapping_caps cap s))\<rbrace>
      arch_derive_cap acap
@@ -2454,23 +2454,23 @@ locale FinalCaps_2 = FinalCaps_1 +
     "\<lbrace>silc_inv aag st and invs and valid_arch_inv ai and authorised_arch_inv aag ai\<rbrace>
      arch_perform_invocation ai
      \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  and handle_arch_fault_reply_silc_inv[wp]:
+  assumes handle_arch_fault_reply_silc_inv[wp]:
     "handle_arch_fault_reply vmf thread x y \<lbrace>silc_inv aag st\<rbrace>"
-  and arch_invoke_irq_control_silc_inv:
+  assumes arch_invoke_irq_control_silc_inv:
     "\<lbrace>silc_inv aag st and pas_refined aag and arch_irq_control_inv_valid arch_irq_cinv
                       and K (arch_authorised_irq_ctl_inv aag arch_irq_cinv)\<rbrace>
      arch_invoke_irq_control arch_irq_cinv
      \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  and invoke_tcb_silc_inv:
+  assumes invoke_tcb_silc_inv:
     "\<lbrace>silc_inv aag st and einvs and simple_sched_action and pas_refined aag and tcb_inv_wf tinv
                       and K (authorised_tcb_inv aag tinv)\<rbrace>
      invoke_tcb tinv
      \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  and arch_prepare_set_domain_silc_inv[wp]:
+  assumes arch_prepare_set_domain_silc_inv[wp]:
     "arch_prepare_set_domain t new_dom \<lbrace>silc_inv aag st\<rbrace>"
-  and arch_prepare_next_domain_silc_inv[wp]:
+  assumes arch_prepare_next_domain_silc_inv[wp]:
     "arch_prepare_next_domain \<lbrace>silc_inv aag st\<rbrace>"
-  and handle_spurious_irq_silc_inv[wp]:
+  assumes handle_spurious_irq_silc_inv[wp]:
     "handle_spurious_irq \<lbrace>silc_inv aag st\<rbrace>"
 begin
 
@@ -2889,11 +2889,11 @@ locale FinalCaps_3 = FinalCaps_2 +
     "\<lbrace>silc_inv aag st and invs and pas_refined aag and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>
      handle_reserved_irq irq
      \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  and handle_hypervisor_fault_silc_inv[wp]:
+  assumes handle_hypervisor_fault_silc_inv[wp]:
     "\<lbrace>silc_inv aag st and invs and pas_refined aag and is_subject aag o cur_thread and K (is_subject aag t)\<rbrace>
      handle_hypervisor_fault t hvft
      \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  and handle_reserved_irq_in_kernel_inv:
+  assumes handle_reserved_irq_in_kernel_inv:
     "\<lbrace>P and K (irq \<notin> non_kernel_IRQs)\<rbrace>
      handle_reserved_irq irq
      \<lbrace>\<lambda>_. P :: det_state \<Rightarrow> bool\<rbrace>"

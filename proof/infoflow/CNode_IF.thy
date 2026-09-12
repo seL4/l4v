@@ -324,7 +324,7 @@ locale CNode_IF_1 =
     "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
      set_cap cap p
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  and arch_globals_equiv_irq_state_update[simp]:
+  assumes arch_globals_equiv_irq_state_update[simp]:
     "arch_globals_equiv ct it kh kh' as as' ms (irq_state_update f ms') =
      arch_globals_equiv ct it kh kh' as as' ms ms'"
     "arch_globals_equiv ct it kh kh' as as' (irq_state_update f ms) ms' =
@@ -386,7 +386,7 @@ locale CNode_IF_2 = CNode_IF_1 state_ext_t
      \<Longrightarrow> \<lbrace>(\<lambda>s. P (is_irq_at s)) and Q\<rbrace>
          f
          \<lbrace>\<lambda>rv s. P (is_irq_at s)\<rbrace>"
-  and is_irq_at_not_masked:
+  assumes is_irq_at_not_masked:
     "is_irq_at (s :: det_state) irq pos \<Longrightarrow> \<not> irq_masks (machine_state s) irq"
 begin
 
@@ -518,7 +518,7 @@ lemma use_equiv_valid_inv:
 
 lemma equiv_valid_inv_conj_lift:
   assumes P: "equiv_valid_inv I (\<lambda>s s'. P s s') g f"
-      and P': "equiv_valid_inv I (\<lambda>s s'. P' s s') g f"
+  assumes P': "equiv_valid_inv I (\<lambda>s s'. P' s s') g f"
   shows "equiv_valid_inv I (\<lambda>s s'. P s s' \<and> P' s s') g f"
   apply (clarsimp simp add: equiv_valid_def spec_equiv_valid_def equiv_valid_2_def)
   apply (frule_tac st = t and s = st in use_equiv_valid_inv[OF _ _ _ _ _ _ P])
@@ -649,7 +649,7 @@ locale CNode_IF_3 = CNode_IF_2 +
   fixes aag :: "'a subject_label PAS"
   assumes dmo_getActiveIRQ_reads_respects:
     "reads_respects aag l (invs and only_timer_irq_inv irq st) (do_machine_op (getActiveIRQ in_kernel))"
-  and dmo_getActiveIRQ_globals_equiv:
+  assumes dmo_getActiveIRQ_globals_equiv:
     "do_machine_op (getActiveIRQ in_kernel) \<lbrace>globals_equiv st\<rbrace>"
 begin
 

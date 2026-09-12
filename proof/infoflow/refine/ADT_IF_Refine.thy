@@ -143,8 +143,8 @@ crunch device_memory_update
 
 lemma corres_gets_same:
   assumes equiv: "\<And>s s'. \<lbrakk>P s; Q s'; (s, s') \<in> sr\<rbrakk>\<Longrightarrow> f s = g s'"
-  and rimp: "\<And>s. P s \<Longrightarrow> R (f s) s"
-  and corres: "\<And>r. corres_underlying sr b c rr (P and (R r) and (\<lambda>s. r = f s)) Q (n r) (m r)"
+  assumes rimp: "\<And>s. P s \<Longrightarrow> R (f s) s"
+  assumes corres: "\<And>r. corres_underlying sr b c rr (P and (R r) and (\<lambda>s. r = f s)) Q (n r) (m r)"
   shows "corres_underlying sr b c rr P Q (do r \<leftarrow> gets f; n r od) (do r \<leftarrow> gets g; m r od)"
   apply (rule corres_guard_imp)
     apply (rule corres_split[where r' = "(=)"])

@@ -364,10 +364,10 @@ lemma vs_lookup_table_subseteq:
 
 lemma vs_refs_aux_subseteq:
   assumes "\<forall>asid vref. vspace_for_pool 0 asid (K (asid_pool_of ao')) = Some vref
-                   \<longrightarrow> vspace_for_pool 0 asid (K (asid_pool_of ao)) = Some vref"
-  and "\<forall>idx vref. option_map (swp pt_apply idx) (pt_of ao') = Some vref
-              \<longrightarrow> option_map (swp pt_apply idx) (pt_of ao) = Some vref"
-  and "aa_type ao' = aa_type ao"
+                       \<longrightarrow> vspace_for_pool 0 asid (K (asid_pool_of ao)) = Some vref"
+  assumes "\<forall>idx vref. option_map (swp pt_apply idx) (pt_of ao') = Some vref
+                      \<longrightarrow> option_map (swp pt_apply idx) (pt_of ao) = Some vref"
+  assumes "aa_type ao' = aa_type ao"
   shows "vs_refs_aux lvl ao' \<subseteq> vs_refs_aux lvl ao"
   apply (insert assms)
   apply (case_tac ao'; case_tac ao;
@@ -384,10 +384,10 @@ lemma vs_refs_aux_subseteq:
 
 lemma state_vrefs_subseteq:
   assumes "typs_of s' x = typs_of s x"
-    and "pts_of s' = pts_of s"
-    and "\<forall>pptr asid. pool_for_asid asid s' = Some pptr \<longrightarrow> pool_for_asid asid s = Some pptr"
-    and "\<forall>pptr asid vref. vspace_for_pool pptr asid (asid_pools_of s') = Some vref
-               \<longrightarrow> vspace_for_pool pptr asid (asid_pools_of s) = Some vref"
+  assumes "pts_of s' = pts_of s"
+  assumes "\<forall>pptr asid. pool_for_asid asid s' = Some pptr \<longrightarrow> pool_for_asid asid s = Some pptr"
+  assumes "\<forall>pptr asid vref. vspace_for_pool pptr asid (asid_pools_of s') = Some vref
+                            \<longrightarrow> vspace_for_pool pptr asid (asid_pools_of s) = Some vref"
   shows "state_vrefs s' x \<subseteq> state_vrefs s x"
   apply (subst state_vrefs_def)
   using assms(1) apply clarsimp
@@ -731,14 +731,14 @@ lemma vs_lookup_PageTablePTE':
 
 lemma state_vrefs_store_PageTablePTE:
   assumes "invs s"
-  and "is_aligned p pte_bits"
-  and "vs_lookup_slot level asid vref s = Some (level, p)"
-  and "vref \<in> user_region"
-  and "is_PageTablePTE pte"
-  and "invalid_pte_at (pt_type pt) p s"
-  and "pts_of s (the (pte_ref pte)) = Some (empty_pt NormalPT_T)"
-  and "the (pte_ref pte) \<noteq> table_base (pt_type pt) p"
-  and "(kheap s)(table_base (pt_type pt) p) = Some (ArchObj (PageTable pt))"
+  assumes "is_aligned p pte_bits"
+  assumes "vs_lookup_slot level asid vref s = Some (level, p)"
+  assumes "vref \<in> user_region"
+  assumes "is_PageTablePTE pte"
+  assumes "invalid_pte_at (pt_type pt) p s"
+  assumes "pts_of s (the (pte_ref pte)) = Some (empty_pt NormalPT_T)"
+  assumes "the (pte_ref pte) \<noteq> table_base (pt_type pt) p"
+  assumes "(kheap s)(table_base (pt_type pt) p) = Some (ArchObj (PageTable pt))"
   shows "state_vrefs (s\<lparr>kheap := (kheap s)(table_base (pt_type pt) p \<mapsto>
                                  ArchObj (PageTable (pt_upd pt (table_index (pt_type pt) p) pte)))\<rparr>) =
          (\<lambda>x. if x = table_base (pt_type pt) p

@@ -169,13 +169,13 @@ locale Decode_IF_1 =
   fixes aag :: "'a subject_label PAS"
   assumes data_to_obj_type_rev:
     "reads_equiv_valid_inv A aag \<top> (data_to_obj_type type)"
-  and check_valid_ipc_buffer_rev:
+  assumes check_valid_ipc_buffer_rev:
     "reads_equiv_valid_inv A aag \<top> (check_valid_ipc_buffer vptr cap)"
-  and arch_check_irq_rev[wp]:
+  assumes arch_check_irq_rev[wp]:
     "reads_equiv_valid_inv A aag \<top> (arch_check_irq irq)"
-  and vspace_cap_rights_to_auth_mono:
+  assumes vspace_cap_rights_to_auth_mono:
     "R \<subseteq> S \<Longrightarrow> vspace_cap_rights_to_auth R exec \<subseteq> vspace_cap_rights_to_auth S exec"
-  and arch_decode_irq_control_invocation_rev:
+  assumes arch_decode_irq_control_invocation_rev:
     "reads_equiv_valid_inv A aag
        (pas_refined aag and
         K (is_subject aag (fst slot) \<and>

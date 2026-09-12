@@ -12,52 +12,52 @@ locale Finalise_IF_1 =
   fixes aag :: "'a subject_label PAS"
   assumes dmo_maskInterrupt_reads_respects:
     "reads_respects aag l \<top> (do_machine_op (maskInterrupt m irq))"
-  and arch_post_cap_deletion_read_respects[wp]:
+  assumes arch_post_cap_deletion_read_respects[wp]:
     "reads_respects aag l \<top> (arch_post_cap_deletion acap)"
-  and equiv_asid_sa_update[simp]:
+  assumes equiv_asid_sa_update[simp]:
     "\<And>f. equiv_asid asid (scheduler_action_update f s) s' = equiv_asid asid s s'"
     "\<And>f. equiv_asid asid s (scheduler_action_update f s') = equiv_asid asid s s'"
-  and equiv_asid_ready_queues_update[simp]:
+  assumes equiv_asid_ready_queues_update[simp]:
     "\<And>f. equiv_asid asid (ready_queues_update f s) s' = equiv_asid asid s s'"
     "\<And>f. equiv_asid asid s (ready_queues_update f s') = equiv_asid asid s s'"
-  and set_thread_state_reads_respects:
+  assumes set_thread_state_reads_respects:
     "pas_domains_distinct aag
      \<Longrightarrow> reads_respects aag l (\<lambda>s. is_subject aag (cur_thread s)) (set_thread_state ref ts)"
-  and set_bound_notification_globals_equiv:
+  assumes set_bound_notification_globals_equiv:
     "\<lbrace>globals_equiv s and valid_arch_state\<rbrace> set_bound_notification ref nopt \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  and set_thread_state_runnable_reads_respects:
+  assumes set_thread_state_runnable_reads_respects:
     "\<lbrakk> pas_domains_distinct aag; runnable ts \<rbrakk> \<Longrightarrow> reads_respects aag l \<top> (set_thread_state ref ts)"
-  and set_bound_notification_none_reads_respects:
+  assumes set_bound_notification_none_reads_respects:
     "pas_domains_distinct aag \<Longrightarrow> reads_respects aag l \<top> (set_bound_notification ref None)"
-  and thread_set_reads_respects:
+  assumes thread_set_reads_respects:
     "reads_respects aag l \<top> (thread_set f thread)"
-  and set_tcb_queue_reads_respects[wp]:
+  assumes set_tcb_queue_reads_respects[wp]:
     "reads_respects aag l \<top> (set_tcb_queue d prio queue)"
-  and set_notification_equiv_but_for_labels:
+  assumes set_notification_equiv_but_for_labels:
     "\<lbrace>equiv_but_for_labels aag L st and K (pasObjectAbs aag ntfnptr \<in> L)\<rbrace>
      set_notification ntfnptr ntfn
      \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
-  and prepare_thread_delete_reads_respects_f:
+  assumes prepare_thread_delete_reads_respects_f:
     "pas_domains_distinct aag
      \<Longrightarrow> reads_respects_f aag l (silc_inv aag st and pas_refined aag and valid_arch_state
                                                  and valid_cur_fpu and K (is_subject aag thread))
                                 (prepare_thread_delete thread)"
-  and arch_finalise_cap_reads_respects:
+  assumes arch_finalise_cap_reads_respects:
     "pas_domains_distinct aag
      \<Longrightarrow> reads_respects aag l (pas_refined aag and invs and cte_wp_at ((=) (ArchObjectCap cap)) slot
                                            and K (pas_cap_cur_auth aag (ArchObjectCap cap)))
                           (arch_finalise_cap cap is_final)"
-  and arch_finalise_cap_makes_halted:
+  assumes arch_finalise_cap_makes_halted:
     "\<lbrace>invs and valid_cap (ArchObjectCap acap)
            and (\<lambda>s. ex = is_final_cap' (ArchObjectCap acap) s)
            and cte_wp_at ((=) (ArchObjectCap acap)) slot\<rbrace>
      arch_finalise_cap acap ex
      \<lbrace>\<lambda>rv s :: det_state. \<forall>t \<in> obj_refs_ac (fst rv). halted_if_tcb t s\<rbrace>"
-  and set_notification_globals_equiv:
+  assumes set_notification_globals_equiv:
     "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
      set_notification ntfnptr ntfn
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  and arch_post_cap_deletion_globals_equiv[wp]:
+  assumes arch_post_cap_deletion_globals_equiv[wp]:
     "arch_post_cap_deletion acap \<lbrace>globals_equiv st\<rbrace>"
   (* FIXME IF: precludes X64 *)
   and arch_post_cap_deletion_valid_arch_state[wp]:

@@ -150,7 +150,7 @@ lemma invoke_tcb_thread_preservation[Tcb_IF_assms]:
 
 lemma tc_reads_respects_f[Tcb_IF_assms]:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
-  and tc[simp]: "ti = ThreadControl x41 x42 x43 x44 x45 x46 x47 x48"
+  assumes tc[simp]: "ti = ThreadControl x41 x42 x43 x44 x45 x46 x47 x48"
   notes validE_valid[wp del] hoare_weak_lift_imp [wp]
   shows
     "reads_respects_f aag l

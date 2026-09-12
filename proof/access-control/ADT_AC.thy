@@ -18,7 +18,7 @@ locale ADT_AC_1 =
        ptable_lift tcb s x = Some ptr;
        auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) (ptable_exec tcb s x) \<rbrakk>
      \<Longrightarrow> abs_has_auth_to aag auth tcb (ptrFromPAddr ptr)"
-  and write_in_vspace_cap_rights:
+  assumes write_in_vspace_cap_rights:
     "AllowWrite \<in> ptable_rights (cur_thread s) s va
      \<Longrightarrow> Write \<in> vspace_cap_rights_to_auth (ptable_rights (cur_thread s) s va)
                                            (ptable_exec (cur_thread s) s va)"

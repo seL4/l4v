@@ -194,9 +194,9 @@ lemma cur_vcpu_of_Some:
 
 lemma partitionIntegrity_subjectAffects_vcpu:
   assumes par_inte: "partitionIntegrity aag s s'"
-  and "kheap s x = Some (ArchObj (VCPU vcpu))"
-  and kh_neq: "kheap s x \<noteq> kheap s' x"
-  and "silc_inv aag st s"
+  assumes "kheap s x = Some (ArchObj (VCPU vcpu))"
+  assumes kh_neq: "kheap s x \<noteq> kheap s' x"
+  assumes "silc_inv aag st s"
       "pas_wellformed_noninterference aag"
       "pas_refined aag s" "pas_refined aag s'"
       "pas_cur_domain aag s" "pas_cur_domain aag s'"
@@ -299,12 +299,12 @@ lemma partitionIntegrity_subjectAffects_asid_pool':
 
 lemma partitionIntegrity_subjectAffects_asid_pool:
   assumes par_inte: "partitionIntegrity aag s s'"
-  and "kheap s x = Some (ArchObj (ASIDPool pool))"
-      "kheap s x \<noteq> kheap s' x"
-      "silc_inv aag st s"
-      "pas_refined aag s"
-      "valid_arch_state s"
-      "pas_wellformed_noninterference aag"
+  assumes "kheap s x = Some (ArchObj (ASIDPool pool))"
+          "kheap s x \<noteq> kheap s' x"
+          "silc_inv aag st s"
+          "pas_refined aag s"
+          "valid_arch_state s"
+          "pas_wellformed_noninterference aag"
   notes inte_obj = par_inte[THEN partitionIntegrity_integrity, THEN integrity_subjects_obj,
                             THEN spec[where x=x], simplified integrity_obj_def, simplified]
   shows "subject_can_affect_label_directly aag (pasObjectAbs aag x)"
@@ -333,14 +333,14 @@ qed
 
 lemma partitionIntegrity_subjectAffects_aobj:
   assumes par_inte: "partitionIntegrity aag s s'"
-  and "kheap s x = Some (ArchObj ao)"
-      "kheap s x \<noteq> kheap s' x"
-      "silc_inv aag st s"
-      "pas_wellformed_noninterference aag"
-      "pas_refined aag s" "pas_refined aag s'"
-      "pas_cur_domain aag s" "pas_cur_domain aag s'"
-      "cur_vcpu_in_cur_domain s" "cur_vcpu_in_cur_domain s'"
-      "invs s" "invs s'"
+  assumes "kheap s x = Some (ArchObj ao)"
+          "kheap s x \<noteq> kheap s' x"
+          "silc_inv aag st s"
+          "pas_wellformed_noninterference aag"
+          "pas_refined aag s" "pas_refined aag s'"
+          "pas_cur_domain aag s" "pas_cur_domain aag s'"
+          "cur_vcpu_in_cur_domain s" "cur_vcpu_in_cur_domain s'"
+          "invs s" "invs s'"
   notes inte_obj = par_inte[THEN partitionIntegrity_integrity, THEN integrity_subjects_obj,
                             THEN spec[where x=x], simplified integrity_obj_def, simplified]
   shows "subject_can_affect_label_directly aag (pasObjectAbs aag x)"
@@ -495,18 +495,18 @@ lemma partitionIntegrity_subjectAffects_tcb_fpu':
 
 lemma partitionIntegrity_subjectAffects_tcb_fpu:
   assumes par_inte: "partitionIntegrity aag s s'"
-  and "kheap s x = Some (TCB tcb)"
-      "kheap s' x = Some (TCB tcb')"
-      "tcb' = tcb\<lparr>tcb_arch := new_arch\<rparr>"
-      "arch_tcb_get_registers new_arch = arch_tcb_get_registers (tcb_arch tcb)"
-      "tcb_hyp_refs new_arch = tcb_hyp_refs (tcb_arch tcb)"
-      "kheap s x \<noteq> kheap s' x"
-      "silc_inv aag st s"
-      "pas_wellformed_noninterference aag"
-      "pas_refined aag s" "pas_refined aag s'"
-      "pas_cur_domain aag s" "pas_cur_domain aag s'"
-      "cur_fpu_in_cur_domain s" "cur_fpu_in_cur_domain s'"
-      "invs s" "invs s'"
+  assumes "kheap s x = Some (TCB tcb)"
+          "kheap s' x = Some (TCB tcb')"
+          "tcb' = tcb\<lparr>tcb_arch := new_arch\<rparr>"
+          "arch_tcb_get_registers new_arch = arch_tcb_get_registers (tcb_arch tcb)"
+          "tcb_hyp_refs new_arch = tcb_hyp_refs (tcb_arch tcb)"
+          "kheap s x \<noteq> kheap s' x"
+          "silc_inv aag st s"
+          "pas_wellformed_noninterference aag"
+          "pas_refined aag s" "pas_refined aag s'"
+          "pas_cur_domain aag s" "pas_cur_domain aag s'"
+          "cur_fpu_in_cur_domain s" "cur_fpu_in_cur_domain s'"
+          "invs s" "invs s'"
   notes inte_obj = par_inte[THEN partitionIntegrity_integrity, THEN integrity_subjects_obj,
                             THEN spec[where x=x], simplified integrity_obj_def, simplified]
   shows "subject_can_affect_label_directly aag (pasObjectAbs aag x)"

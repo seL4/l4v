@@ -418,50 +418,50 @@ locale Arch_IF_1 =
   fixes aag :: "'a PAS"
   assumes arch_post_cap_deletion_valid_global_refs:
     "arch_post_cap_deletion acap \<lbrace>\<lambda>s :: det_state. valid_global_refs s\<rbrace>"
-  and arch_post_cap_deletion_irq_state_of_state[wp]:
+  assumes arch_post_cap_deletion_irq_state_of_state[wp]:
     "arch_post_cap_deletion acap \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and store_word_offs_irq_state_of_state[wp]:
+  assumes store_word_offs_irq_state_of_state[wp]:
     "store_word_offs ptr offs v \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and set_irq_state_irq_state_of_state[wp]:
+  assumes set_irq_state_irq_state_of_state[wp]:
     "set_irq_state state irq \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and handle_arch_fault_reply_irq_state_of_state[wp]:
+  assumes handle_arch_fault_reply_irq_state_of_state[wp]:
     "handle_arch_fault_reply vmf thread x y \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and arch_switch_to_idle_thread_irq_state_of_state[wp]:
+  assumes arch_switch_to_idle_thread_irq_state_of_state[wp]:
     "arch_switch_to_idle_thread \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and arch_switch_to_thread_irq_state_of_state[wp]:
+  assumes arch_switch_to_thread_irq_state_of_state[wp]:
     "arch_switch_to_thread t \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and arch_invoke_irq_handler_irq_state_of_state[wp]:
+  assumes arch_invoke_irq_handler_irq_state_of_state[wp]:
     "arch_invoke_irq_handler hi \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and arch_finalise_cap_irq_state_of_state[wp]:
+  assumes arch_finalise_cap_irq_state_of_state[wp]:
     "arch_finalise_cap acap b \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and prepare_thread_delete_irq_state_of_state[wp]:
+  assumes prepare_thread_delete_irq_state_of_state[wp]:
     "prepare_thread_delete t \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and equiv_asid_machine_state_update[simp]:
+  assumes equiv_asid_machine_state_update[simp]:
     "\<And>f. equiv_asid asid (machine_state_update f s) s' = equiv_asid asid s s'"
     "\<And>f. equiv_asid asid s (machine_state_update f s') = equiv_asid asid s s'"
-  and as_user_set_register_reads_respects':
+  assumes as_user_set_register_reads_respects':
     "pas_domains_distinct aag \<Longrightarrow> reads_respects aag l \<top> (as_user t (setRegister r v))"
-  and store_word_offs_reads_respects:
+  assumes store_word_offs_reads_respects:
     "reads_respects aag l \<top> (store_word_offs ptr offs v)"
-  and set_endpoint_globals_equiv:
+  assumes set_endpoint_globals_equiv:
     "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
      set_endpoint ptr ep
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  and set_thread_state_globals_equiv:
+  assumes set_thread_state_globals_equiv:
     "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
      set_thread_state ref ts
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  and thread_set_non_idle_globals_equiv:
+  assumes thread_set_non_idle_globals_equiv:
     "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
      thread_set f tptr
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  and arch_prepare_set_domain_irq_state_of_state[wp]:
+  assumes arch_prepare_set_domain_irq_state_of_state[wp]:
     "arch_prepare_set_domain t new_dom \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and arch_prepare_next_domain_irq_state_of_state[wp]:
+  assumes arch_prepare_next_domain_irq_state_of_state[wp]:
     "arch_prepare_next_domain \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
-  and equiv_hyp_machine_state_rest_update[simp]:
+  assumes equiv_hyp_machine_state_rest_update[simp]:
     "\<And>P. equiv_hyp P st (s\<lparr>machine_state := ms\<lparr>machine_state_rest := rest\<rparr>\<rparr>) = equiv_hyp P st (s\<lparr>machine_state := ms\<rparr>)"
-  and equiv_fpu_machine_state_rest_update[simp]:
+  assumes equiv_fpu_machine_state_rest_update[simp]:
     "\<And>P. equiv_fpu P st (s\<lparr>machine_state := ms\<lparr>machine_state_rest := rest\<rparr>\<rparr>) = equiv_fpu P st (s\<lparr>machine_state := ms\<rparr>)"
 begin
 

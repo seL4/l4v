@@ -1420,7 +1420,7 @@ lemma reads_respects_from_labels:
 
 lemma equiv_valid_guard_necessary:
   assumes hoare: "\<lbrace>not P'\<rbrace> f \<lbrace>\<bottom>\<bottom>\<rbrace>"
-  and ev: "equiv_valid I A B (P and P') f"
+  assumes ev: "equiv_valid I A B (P and P') f"
   shows "equiv_valid I A B P f"
   using ev
   apply (simp add: equiv_valid_def2 equiv_valid_2_def)
@@ -2698,9 +2698,9 @@ lemma ev_evrv:
 
 lemma ev2_case_option:
   assumes "\<lbrakk>x = None; y = None\<rbrakk> \<Longrightarrow> equiv_valid_2 I A B R P1 Q1 f g"
-  and "\<And>b. \<lbrakk>x = None; y = Some b\<rbrakk> \<Longrightarrow> equiv_valid_2 I A B R P2 (Q2 b) f (g' b)"
-  and "\<And>a. \<lbrakk>x = Some a; y = None\<rbrakk> \<Longrightarrow> equiv_valid_2 I A B R (P3 a) Q3 (f' a) g"
-  and "\<And>a b. \<lbrakk>x = Some a; y = Some b\<rbrakk> \<Longrightarrow> equiv_valid_2 I A B R (P4 a) (Q4 b) (f' a) (g' b)"
+  assumes "\<And>b. \<lbrakk>x = None; y = Some b\<rbrakk> \<Longrightarrow> equiv_valid_2 I A B R P2 (Q2 b) f (g' b)"
+  assumes "\<And>a. \<lbrakk>x = Some a; y = None\<rbrakk> \<Longrightarrow> equiv_valid_2 I A B R (P3 a) Q3 (f' a) g"
+  assumes "\<And>a b. \<lbrakk>x = Some a; y = Some b\<rbrakk> \<Longrightarrow> equiv_valid_2 I A B R (P4 a) (Q4 b) (f' a) (g' b)"
   shows "equiv_valid_2 I A B R (case_option (P1 and P2) (P3 and P4) x)
                                (case_option (Q1 and Q3) (Q2 and Q4) y)
                                (case_option f f' x) (case_option g g' y)"

@@ -170,93 +170,93 @@ locale Retype_AC_1 =
   fixes aag :: "'a PAS"
   assumes state_vrefs_detype[simp]:
     "x \<in> state_vrefs (detype R s) p \<Longrightarrow> x \<in> state_vrefs s p"
-  and state_hyp_refs_of_detype:
+  assumes state_hyp_refs_of_detype:
   "state_hyp_refs_of (detype S s) = (\<lambda>x. if x \<in> S then {} else state_hyp_refs_of s x)"
-  and sata_detype:
+  assumes sata_detype:
     "state_asids_to_policy aag (detype R s) \<subseteq> state_asids_to_policy aag s"
-  and word_size_bits_untyped_min_bits:
+  assumes word_size_bits_untyped_min_bits:
     "word_size_bits \<le> untyped_min_bits"
-  and word_size_bits_resetChunkBits:
+  assumes word_size_bits_resetChunkBits:
     "word_size_bits \<le> resetChunkBits"
-  and clas_default_cap:
+  assumes clas_default_cap:
     "\<And>tp. tp \<noteq> ArchObject ASIDPoolObj \<Longrightarrow> cap_links_asid_slot aag l (default_cap tp p sz dev)"
-  and cli_default_cap:
+  assumes cli_default_cap:
     "\<And>tp. tp \<noteq> ArchObject ASIDPoolObj \<Longrightarrow> cap_links_irq aag l (default_cap tp p sz dev)"
-  and aobj_refs'_default':
+  assumes aobj_refs'_default':
     "\<And>tp. is_aligned p (obj_bits_api (ArchObject tp) n)
            \<Longrightarrow> aobj_ref' (arch_default_cap tp p n dev) \<subseteq> ptr_range p (obj_bits_api (ArchObject tp) n)"
-  and init_arch_objects_pas_refined:
+  assumes init_arch_objects_pas_refined:
     "\<And>tp dev. \<lbrace>pas_refined aag and post_retype_invs tp refs
                             and (\<lambda>s. \<forall>x\<in>set refs. x \<notin> global_refs s)
                             and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api tp obj_sz))\<rbrace>
                init_arch_objects tp dev ptr bits obj_sz refs
                \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  and dmo_freeMemory_invs:
+  assumes dmo_freeMemory_invs:
     "do_machine_op (freeMemory ptr bits) \<lbrace>\<lambda>s :: det_state. invs s\<rbrace>"
-  and init_arch_objects_pas_cur_domain[wp]:
+  assumes init_arch_objects_pas_cur_domain[wp]:
     "\<And>tp dev. init_arch_objects tp dev ptr n us refs \<lbrace>\<lambda>s :: det_state. pas_cur_domain aag s\<rbrace>"
-  and retype_region_pas_cur_domain[wp]:
+  assumes retype_region_pas_cur_domain[wp]:
     "\<And>tp. retype_region ptr n us tp dev \<lbrace>\<lambda>s :: det_state. pas_cur_domain aag s\<rbrace>"
-  and reset_untyped_cap_pas_cur_domain[wp]:
+  assumes reset_untyped_cap_pas_cur_domain[wp]:
     "reset_untyped_cap src_slot \<lbrace>\<lambda>s :: det_state. pas_cur_domain aag s\<rbrace>"
-  and arch_data_to_obj_type_not_ASIDPoolObj[simp]:
+  assumes arch_data_to_obj_type_not_ASIDPoolObj[simp]:
     "arch_data_to_obj_type v \<noteq> Some ASIDPoolObj"
-  and data_to_nat_of_nat[simp]:
+  assumes data_to_nat_of_nat[simp]:
     "\<And>x. of_nat (data_to_nat x) = x"
-  and nonzero_data_to_nat_simp:
+  assumes nonzero_data_to_nat_simp:
     "\<And>x. 0 < data_to_nat x \<Longrightarrow> 0 < x"
-  and retype_region_proofs'_pas_refined:
+  assumes retype_region_proofs'_pas_refined:
     "\<lbrakk> retype_region_proofs' s ty us ptr sz n dev; invs s; pas_refined aag s;
        pas_cur_domain aag s; \<forall>x\<in> set (retype_addrs ptr ty n us). is_subject aag x \<rbrakk>
      \<Longrightarrow> pas_refined aag (s\<lparr>kheap := \<lambda>x. if x \<in> set (retype_addrs ptr ty n us)
                                          then Some (default_object ty dev us (cur_domain s))
                                          else kheap s x\<rparr>)"
-  and dmo_freeMemory_respects:
+  assumes dmo_freeMemory_respects:
     "\<lbrace>integrity aag X st and K (is_aligned ptr bits \<and> bits < word_bits \<and> word_size_bits \<le> bits
                                    \<and> (\<forall>p \<in> ptr_range ptr bits. is_subject aag p))\<rbrace>
      do_machine_op (freeMemory ptr bits)
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and dmo_clearMemory_respects':
+  assumes dmo_clearMemory_respects':
     "\<lbrace>integrity aag X st and
       K (is_aligned ptr bits \<and> bits < word_bits \<and> word_size_bits \<le> bits \<and>
          (\<forall>p \<in> ptr_range ptr bits. aag_has_auth_to aag Write p))\<rbrace>
      do_machine_op (clearMemory ptr (2 ^ bits))
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and init_arch_objects_integrity:
+  assumes init_arch_objects_integrity:
     "\<lbrace>integrity aag X st and K (\<forall>x\<in>set refs. is_subject aag x)
                          and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api new_type obj_sz))\<rbrace>
      init_arch_objects new_type dev ptr num_objects obj_sz refs
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  and integrity_asids_detype:
+  assumes integrity_asids_detype:
     "\<forall>r \<in> R. is_subject aag r
      \<Longrightarrow> integrity_asids aag {pasSubject aag} p a (detype R s) st = integrity_asids aag {pasSubject aag} p a s st"
     "\<forall>r \<in> R. is_subject aag r
      \<Longrightarrow> integrity_asids aag {pasSubject aag} p a s (detype R st) = integrity_asids aag {pasSubject aag} p a s st"
-  and integrity_hyp_detype:
+  assumes integrity_hyp_detype:
     "\<forall>r \<in> R. is_subject aag r
      \<Longrightarrow> integrity_hyp aag {pasSubject aag} p (detype R s) st = integrity_hyp aag {pasSubject aag} p s st"
     "\<forall>r \<in> R. is_subject aag r
      \<Longrightarrow> integrity_hyp aag {pasSubject aag} p s (detype R st) = integrity_hyp aag {pasSubject aag} p s st"
-  and integrity_fpu_detype:
+  assumes integrity_fpu_detype:
     "\<forall>r \<in> R. is_subject aag r
      \<Longrightarrow> integrity_fpu aag {pasSubject aag} p (detype R s) st = integrity_fpu aag {pasSubject aag} p s st"
     "\<forall>r \<in> R. is_subject aag r
      \<Longrightarrow> integrity_fpu aag {pasSubject aag} p s (detype R st) = integrity_fpu aag {pasSubject aag} p s st"
-  and retype_region_integrity_asids:
+  assumes retype_region_integrity_asids:
     "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped;
        \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_asids aag {pasSubject aag} p a s st \<rbrakk>
      \<Longrightarrow> integrity_asids aag {pasSubject aag} p a s
            (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
                             then Some (default_object typ dev o_bits d)
                             else kheap s a\<rparr>)"
-  and retype_region_integrity_hyp:
+  assumes retype_region_integrity_hyp:
     "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped; kheap s = kheap st;
        \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_hyp aag {pasSubject aag} p s st \<rbrakk>
      \<Longrightarrow> integrity_hyp aag {pasSubject aag} p s
            (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
                             then Some (default_object typ dev o_bits d)
                             else kheap s a\<rparr>)"
-  and retype_region_integrity_fpu:
+  assumes retype_region_integrity_fpu:
     "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped; kheap s = kheap st;
        \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_fpu aag {pasSubject aag} p s st \<rbrakk>
      \<Longrightarrow> integrity_fpu aag {pasSubject aag} p s
@@ -800,7 +800,7 @@ lemmas caps_pas_cap_cur_auth_UntypedCap_idx_dev =
 
 lemma retype_addrs_aligned_range_cover:
   assumes xin: "x \<in> set (retype_addrs ptr ty n us)"
-  and co: "range_cover ptr sz (obj_bits_api ty us) n"
+  assumes co: "range_cover ptr sz (obj_bits_api ty us) n"
   shows "is_aligned x (obj_bits_api ty us)"
   using co
   apply (clarsimp simp: range_cover_def)
