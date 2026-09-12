@@ -79,7 +79,6 @@ definition handleVMFaultEvent_C_body_if
           FI;;
             \<acute>ret__unsigned_long :== scast EXCEPTION_NONE))"
 
-
 context kernel_m begin
 
 definition
@@ -107,7 +106,6 @@ definition
   "handlePreemption_C_if tc \<equiv> do (exec_C \<Gamma> handleInterruptEntry_C_body_if); return tc od"
 
 end (* kernel_m *)
-
 
 locale ADT_IF_Refine = kernel_m +
   fixes doUserOp_C_if ::
@@ -582,7 +580,6 @@ definition kernel_exit_C_if where
 
 end (* ADT_IF_Refine *)
 
-
 lemma corres_underlying_nf_imp2:
   "corres_underlying rf_sr nf True a b c d e \<Longrightarrow> corres_underlying rf_sr nf nf' a b c d e"
   by (auto simp: corres_underlying_def)
@@ -599,7 +596,6 @@ lemma corres_select_f':
   "\<lbrakk> \<And>s s'. P s \<Longrightarrow> P' s' \<Longrightarrow> \<forall>s' \<in> fst S'. \<exists>s \<in> fst S. rvr s s'; nf' \<Longrightarrow> \<not> snd S' \<rbrakk>
    \<Longrightarrow> corres_underlying sr nf nf' rvr P P' (select_f S) (select_f S')"
   by (clarsimp simp: select_f_def corres_underlying_def)
-
 
 context kernel_m begin
 
@@ -622,7 +618,6 @@ lemma absKState_crelation:
               split: if_splits)
 
 end (* kernel_m *)
-
 
 context ADT_IF_Refine begin
 

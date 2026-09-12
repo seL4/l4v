@@ -134,7 +134,6 @@ declare arch_activate_idle_thread_domain_fields_invs[Scheduler_IF_assms]
 
 end (* Arch *)
 
-
 requalify_consts
   RISCV64.arch_globals_equiv_scheduler
   RISCV64.arch_scheduler_affects_equiv
@@ -146,7 +145,6 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact Scheduler_IF_assms | solves \<open>wp only: Scheduler_IF_assms; simp\<close>)?)
 qed
-
 
 context Arch begin global_naming RISCV64
 
@@ -471,7 +469,6 @@ proof goal_cases
   case 1 show ?case
     by (unfold_locales; (fact Scheduler_IF_assms | solves \<open>wp only: Scheduler_IF_assms; simp\<close>)?)
 qed
-
 
 hide_fact Scheduler_IF_2.globals_equiv_scheduler_inv'
 requalify_facts RISCV64.globals_equiv_scheduler_inv'

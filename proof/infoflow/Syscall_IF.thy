@@ -39,7 +39,6 @@ crunch cap_move
   for valid_global_objs[wp]: valid_global_objs
   (wp: cap_move_ext.valid_global_objs dxo_wp_weak)
 
-
 locale Syscall_IF =
   fixes aag :: "'a subject_label PAS"
   assumes globals_equiv_irq_state_update[simp]:
@@ -124,7 +123,6 @@ lemma invoke_cnode_globals_equiv:
   done
 
 end (* Syscall_IF *)
-
 
 (* The contents of the delete_confidentiality locale *)
 
@@ -425,7 +423,6 @@ qed
 
 end (* Syscall_IF *)
 
-
 crunch reply_from_kernel
   for valid_arch_state[wp]: valid_arch_state (simp: crunch_simps)
 
@@ -570,7 +567,6 @@ lemma ct_active_not_idle:
   "\<lbrakk> invs s; ct_active s \<rbrakk> \<Longrightarrow> cur_thread s \<noteq> idle_thread s"
   by (clarsimp simp: ct_active_cur_thread_not_idle_thread invs_valid_idle)
 
-
 context Syscall_IF begin
 
 lemma decode_invocation_authorised_globals_inv:
@@ -667,7 +663,6 @@ lemma handle_invocation_reads_respects_g:
   done
 
 end (* Syscall_IF *)
-
 
 lemma delete_caller_cap_reads_respects_f:
   assumes domains_distinct: "pas_domains_distinct aag"

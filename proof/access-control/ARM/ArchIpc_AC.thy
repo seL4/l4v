@@ -84,14 +84,12 @@ lemma arch_tcb_setRegister[Ipc_AC_assms]:
 
 end (* Arch *)
 
-
 global_interpretation Ipc_AC?: Ipc_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact Ipc_AC_assms)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -214,7 +212,6 @@ declare arch_get_sanitise_register_info_inv[Ipc_AC_assms]
 
 end (* Arch *)
 
-
 context is_extended begin interpretation Arch . (*FIXME: arch-split*)
 
 lemma list_integ_lift_in_ipc[Ipc_AC_assms]:
@@ -242,7 +239,6 @@ lemma cap_insert_ext_integrity_asids_in_ipc[Ipc_AC_assms, wp]:
   by wpsimp
 
 end (* is_extended *)
-
 
 global_interpretation Ipc_AC_2?: Ipc_AC_2
 proof goal_cases

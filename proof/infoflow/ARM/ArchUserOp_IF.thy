@@ -119,14 +119,12 @@ requalify_types user_transition_if
 
 end
 
-
 global_interpretation UserOp_IF?: UserOp_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact UserOp_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
 qed
-
 
 context Arch begin global_naming ARM
 

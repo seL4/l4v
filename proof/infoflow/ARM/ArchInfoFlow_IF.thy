@@ -137,14 +137,12 @@ arch_requalify_consts
   no_hyp
   no_fpu
 
-
 global_interpretation InfoFlow_IF?: InfoFlow_IF identical_hyp_state_updates identical_fpu_state_updates
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact InfoFlow_IF_assms | solves \<open>rule equiv_arch_taut\<close>)?)
 qed
-
 
 context Arch begin arch_global_naming
 
@@ -211,7 +209,6 @@ lemma do_machine_op_reads_respects'[InfoFlow_IF_assms]:
   done
 
 end (* Arch *)
-
 
 global_interpretation InfoFlow_IF?: InfoFlow_IF_2 identical_hyp_state_updates identical_fpu_state_updates no_hyp no_fpu
 proof goal_cases

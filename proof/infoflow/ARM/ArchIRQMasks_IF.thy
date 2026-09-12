@@ -113,14 +113,12 @@ crunch schedule
 
 end (* Arch *)
 
-
 global_interpretation IRQMasks_IF?: IRQMasks_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact IRQMasks_IF_assms)?)
 qed
-
 
 context Arch begin global_naming ARM
 
@@ -186,14 +184,12 @@ crunch arch_prepare_next_domain
 
 end (* Arch *)
 
-
 global_interpretation IRQMasks_IF_2?: IRQMasks_IF_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact IRQMasks_IF_assms | solves \<open>wp only: IRQMasks_IF_assms; simp\<close>)?)
 qed
-
 
 context begin interpretation Arch .
 

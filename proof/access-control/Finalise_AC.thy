@@ -201,7 +201,6 @@ lemma cancel_all_ipc_respects [wp]:
 
 end (* Finalise_AC *)
 
-
 crunch blocked_cancel_ipc, cancel_signal
   for pas_refined[wp]: "pas_refined aag"
 
@@ -235,7 +234,6 @@ crunch fast_finalise
 crunch fast_finalise
   for valid_objs[wp]: "valid_objs :: det_state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps)
-
 
 context Finalise_AC begin
 
@@ -286,7 +284,6 @@ crunch cap_delete_one
   (wp: crunch_wps simp: crunch_simps)
 
 end (* Finalise_AC *)
-
 
 (* FIXME MOVE next to thread_set_tcb_fault_set_invs in DetSchedSchedule *)
 lemma thread_set_tcb_fault_reset_invs:
@@ -430,7 +427,6 @@ lemma unbind_maybe_notification_respects:
   apply (auto simp: pred_tcb_at_def obj_at_def split: option.splits)
   done
 
-
 context Finalise_AC begin
 
 lemma fast_finalise_respects[wp]:
@@ -458,7 +454,6 @@ lemma cap_delete_one_respects[wp,wp_not_transferable]:
   done
 
 end (* Finalise_AC *)
-
 
 lemma fast_finalise_is_transferable[wp_transferable]:
   "\<lbrace>P and K (is_transferable (Some cap))\<rbrace>
@@ -540,7 +535,6 @@ lemma update_restart_pc_integrity_autarch[wp]:
   apply (wpsimp wp: as_user_integrity_autarch)
   done
 
-
 context Finalise_AC begin
 
 lemma suspend_respects[wp]:
@@ -555,7 +549,6 @@ lemma suspend_respects[wp]:
   done
 
 end (* Finalise_AC *)
-
 
 lemma finalise_is_fast_finalise:
   "can_fast_finalise cap
@@ -579,7 +572,6 @@ lemma pas_refined_Control_into_is_subject_asid:
   apply (drule (1) pas_refined_Control)
   apply (blast intro: sym)
   done
-
 
 context Finalise_AC begin
 
@@ -632,7 +624,6 @@ lemma finalise_cap_auth:
 
 end (* Finalise_AC *)
 
-
 lemma aag_cap_auth_recycle_EndpointCap:
   "\<lbrakk> pas_refined aag s; has_cancel_send_rights (EndpointCap word1 word2 f) \<rbrakk>
    \<Longrightarrow> pas_cap_cur_auth aag (EndpointCap word1 word2 f) = is_subject aag word1"
@@ -654,7 +645,6 @@ lemma aag_cap_auth_Thread:
   "pas_refined aag s \<Longrightarrow> pas_cap_cur_auth aag (ThreadCap word) = is_subject aag word"
   unfolding aag_cap_auth_def
   by (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def pas_refined_all_auth_is_owns)
-
 
 context Finalise_AC begin
 
@@ -680,7 +670,6 @@ lemma finalise_cap_obj_refs:
 
 end (* Finalise_AC *)
 
-
 lemma zombie_ptr_emptyable:
   "\<lbrakk> caps_of_state s cref = Some (Zombie ptr zbits n); invs s \<rbrakk>
    \<Longrightarrow> emptyable (ptr, cref_half) s"
@@ -694,7 +683,6 @@ lemma zombie_ptr_emptyable:
   apply (drule(2) zombies_final_helperE, clarsimp, simp+)
   apply (simp add: is_cap_simps)
   done
-
 
 context Finalise_AC begin
 
@@ -715,7 +703,6 @@ lemma finalise_cap_makes_halted:
   done
 
 end (* Finalise_AC *)
-
 
 lemma aag_Control_into_owns_irq:
   "\<lbrakk> (pasSubject aag, Control, pasIRQAbs aag irq) \<in> pasPolicy aag; pas_refined aag s \<rbrakk>
@@ -738,7 +725,6 @@ lemma replaceable_zombie_not_transferable:
   by (intro notI) (erule is_transferable.cases; simp add:replaceable_def)
 
 declare finalise_cap_valid_list[wp]
-
 
 context Finalise_AC begin
 
@@ -884,7 +870,6 @@ lemmas rec_del_respects =
 
 end (* Finalise_AC *)
 
-
 lemma finalise_cap_transferable:
   "\<lbrace>P and K (is_transferable_cap cap)\<rbrace>
    finalise_cap cap final
@@ -905,7 +890,6 @@ lemma rec_del_Finalise_transferable:
       apply (clarsimp; assumption)
      apply (wp finalise_cap_transferable without_preemption_wp get_cap_wp)+
   by (fastforce simp:cte_wp_at_caps_of_state)
-
 
 context Finalise_AC begin
 
@@ -935,12 +919,10 @@ lemmas rec_del_respects_CTEDelete_transferable =
 
 end (* Finalise_AC *)
 
-
 (* TODO section change *)
 
 (* FIXME: CLAG *)
 lemmas dmo_valid_cap[wp] = valid_cap_typ[OF do_machine_op_obj_at]
-
 
 context Finalise_AC begin
 
@@ -979,7 +961,6 @@ lemma cap_delete_pas_refined':
 
 end (* Finalise_AC *)
 
-
 (* MOVE *)
 lemma empty_slot_cte_wp_at:
   "\<lbrace>\<lambda>s. (p = slot \<longrightarrow> P NullCap) \<and> (p \<noteq> slot \<longrightarrow> cte_wp_at P p s)\<rbrace>
@@ -998,7 +979,6 @@ lemma deleting_irq_handler_caps_of_state_nullinv:
   apply (rule hoare_post_imp [OF _ get_irq_slot_inv])
   apply fastforce
   done
-
 
 locale Finalise_AC_2 = Finalise_AC +
   assumes cap_revoke_respects':
@@ -1190,7 +1170,6 @@ lemma is_derived_is_transferable:
   apply simp
   apply (simp add: is_derived_def is_cap_simps)
   done
-
 
 context Finalise_AC_2 begin
 

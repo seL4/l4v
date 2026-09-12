@@ -420,14 +420,12 @@ end (* Arch *)
 requalify_consts
   RISCV64.doUserOp_if
 
-
 global_interpretation ADT_IF_Refine?: ADT_IF_Refine doUserOp_if
 proof goal_cases
   interpret Arch .
   case 1 show ?case
     by (unfold_locales; (fact ADT_IF_Refine_assms)?)
 qed
-
 
 sublocale valid_initial_state_noenabled \<subseteq> valid_initial_state_noenabled?:
   ADT_valid_initial_state_noenabled doUserOp_if ..

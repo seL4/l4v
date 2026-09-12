@@ -87,7 +87,6 @@ lemma states_equiv_forI:
 definition for_each_byte_of_word :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> bool" where
   "for_each_byte_of_word P w \<equiv> \<forall>y\<in>{w..w + (word_size - 1)}. P y"
 
-
 locale InfoFlow_IF =
   fixes identical_hyp_state_updates :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> machine_state \<Rightarrow> machine_state \<Rightarrow> bool"
   and identical_fpu_state_updates :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> machine_state \<Rightarrow> machine_state \<Rightarrow> bool"
@@ -248,7 +247,6 @@ lemma states_equiv_for_identical_kheap_updates:
 
 end (* InfoFlow_IF *)
 
-
 lemma states_equiv_forE:
   assumes sef: "states_equiv_for P Q R S s s'"
   obtains "equiv_machine_state P (machine_state s) (machine_state s')"
@@ -325,7 +323,6 @@ lemma equiv_for_trans:
   "\<lbrakk> equiv_for P f s t; equiv_for P f t u \<rbrakk> \<Longrightarrow> equiv_for P f s u"
   by (auto simp: equiv_for_def)
 
-
 context InfoFlow_IF begin
 
 lemma states_equiv_for_refl:
@@ -344,7 +341,6 @@ lemma states_equiv_for_trans:
            elim: equiv_forE)
 
 end (* InfoFlow_IF *)
-
 
 (* FIXME MOVE *)
 lemma or_comp_dist:
@@ -368,7 +364,6 @@ lemma equiv_asids_aag_can_read_asid:
   "equiv_asids (aag_can_read_asid aag) s s' =
    (\<forall>d \<in> subjectReads (pasPolicy aag) (pasSubject aag). equiv_asids (\<lambda>x. d = pasASIDAbs aag x) s s')"
   by (auto simp: equiv_asids_def)
-
 
 context InfoFlow_IF begin
 
@@ -618,7 +613,6 @@ lemma affects_equiv_trans:
 
 end (* InfoFlow_IF *)
 
-
 lemma globals_equivI:
   "\<lbrakk> doesnt_touch_globals P f; P s; (rv, s') \<in> fst (f s) \<rbrakk>
    \<Longrightarrow> globals_equiv s s'"
@@ -639,7 +633,6 @@ lemma equiv_for_guard_imp:
 lemma reads_respects_when:
   "(P \<Longrightarrow> reads_respects aag l Q f) \<Longrightarrow> reads_respects aag l Q (when P f)"
   by (wpsimp simp: when_def)
-
 
 context InfoFlow_IF begin
 
@@ -923,7 +916,6 @@ lemma get_message_info_rev:
 
 end (* InfoFlow_IF *)
 
-
 lemma syscall_rev:
   assumes reads_res_m_fault:
     "reads_equiv_valid_inv A aag P m_fault"
@@ -969,7 +961,6 @@ lemma syscall_reads_respects_g:
       | rule hoare_strengthen_post[OF m_fault_hoare]
       | wpc
       | fastforce)+
-
 
 context InfoFlow_IF begin
 
@@ -1050,7 +1041,6 @@ lemma modifies_at_mostI:
 
 end (* InfoFlow_IF *)
 
-
 lemma spec_equiv_valid_hoist_guard:
   "((P st) \<Longrightarrow> spec_equiv_valid_inv st I A \<top> f) \<Longrightarrow> spec_equiv_valid_inv st I A P f"
   by (clarsimp simp: spec_equiv_valid_def equiv_valid_2_def)
@@ -1069,7 +1059,6 @@ lemma modifies_at_mostD:
 lemma invs_kernel_mappings:
   "invs s \<Longrightarrow> valid_kernel_mappings s"
   by (auto simp: invs_def valid_state_def)
-
 
 locale InfoFlow_IF_2 = InfoFlow_IF +
   fixes no_hyp :: "'m machine_monad \<Rightarrow> bool"

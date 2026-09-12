@@ -144,7 +144,6 @@ lemma is_subject_asid_into_loas:
   unfolding label_owns_asid_slot_def
   by (clarsimp simp: pas_refined_refl)
 
-
 locale Arch_AC =
   fixes aag :: "'a PAS"
   assumes set_mrs_state_vrefs[wp]:

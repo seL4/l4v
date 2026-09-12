@@ -12,7 +12,6 @@ crunch cap_delete_one
   for valid_global_objs[wp]: "valid_global_objs"
   (wp: dxo_wp_weak simp: unless_def ignore: empty_slot_ext)
 
-
 locale Interrupt_IF =
   fixes aag :: "'a subject_label PAS"
   assumes arch_invoke_irq_handler_reads_respects[wp]:

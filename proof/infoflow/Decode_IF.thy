@@ -164,7 +164,6 @@ lemma decode_set_sched_params_rev:
   apply (case_tac excs; clarsimp)
   done
 
-
 locale Decode_IF =
   fixes aag :: "'a subject_label PAS"
   assumes data_to_obj_type_rev:
@@ -282,7 +281,6 @@ lemma vspace_cap_rights_to_auth_mask_vm_rights:
   done
 
 end (* Decode_IF *)
-
 
 (* this one doesn't read from the state at all *)
 lemma decode_irq_handler_invocation_rev:
