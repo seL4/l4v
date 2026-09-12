@@ -599,7 +599,7 @@ lemma fun_noteqD:
   "f \<noteq> g \<Longrightarrow> \<exists>a. f a \<noteq> g a"
   by blast
 
-locale Noninterference_1 =
+locale Noninterference =
   fixes current_aag :: "det_state \<Rightarrow> 'a subject_label PAS"
   and arch_globals_equiv_strengthener :: "machine_state \<Rightarrow> machine_state \<Rightarrow> bool"
   assumes do_user_op_if_integrity:
@@ -1248,7 +1248,7 @@ lemma valid_sched_valid_blocked: "valid_sched s \<Longrightarrow> valid_blocked 
   by (simp add: valid_sched_def)
 
 
-context Noninterference_1 begin
+context Noninterference begin
 
 lemma partitionIntegrity_subjectAffects_etcbs:
   assumes par_inte: "partitionIntegrity (aag :: 'a subject_label PAS) s s'"
@@ -1409,7 +1409,7 @@ where
         cur_thread s \<noteq> idle_thread s \<longrightarrow> is_subject aag (cur_thread s)"
 
 
-context Noninterference_1 begin
+context Noninterference begin
 
 lemma partsSubjectAffects_bounds_subjects_affects:
   assumes domains_distinct: "pas_domains_distinct (aag :: 'a subject_label PAS)"
@@ -1733,7 +1733,7 @@ end
 
 
 locale Noninterference_valid_initial_state =
-  Noninterference_1 current_aag + valid_initial_state _ _ _ _ _ current_aag for current_aag
+  Noninterference current_aag + valid_initial_state _ _ _ _ _ current_aag for current_aag
 begin
 
 lemma kernel_call_A_if_partitionIntegrity:
@@ -2146,7 +2146,7 @@ lemma set_tcb_queue_globals_equiv[wp]:
   by (simp add: set_tcb_queue_def modify_def | wp)+
 
 
-context Noninterference_1 begin
+context Noninterference begin
 
 lemma activate_thread_reads_respects_g:
   assumes domains_distinct[wp]: "pas_domains_distinct pas"
@@ -2369,7 +2369,7 @@ lemma valid_sched_action_switch_is_subject:
                       domains_distinct[THEN pas_domains_distinct_inj])
 
 
-context Noninterference_1 begin
+context Noninterference begin
 
 lemma schedule_choose_new_thread_reads_respects_g:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -3529,7 +3529,7 @@ lemma handle_preemption_agnostic_tc:
   done
 
 
-context Noninterference_1 begin
+context Noninterference begin
 
 lemma handle_non_kernel_IRQ_ev2:
   "equiv_valid_2 I A A R P (domain_sep_inv False st and K (irq \<le> maxIRQ \<and> irq \<in> non_kernel_IRQs))

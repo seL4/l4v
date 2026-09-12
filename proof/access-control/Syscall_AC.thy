@@ -428,7 +428,7 @@ locale Syscall_AC_wps =
   assumes pas_refined[wp]: "f \<lbrace>pas_refined aag\<rbrace>"
 
 
-locale Syscall_AC_1 =
+locale Syscall_AC =
   fixes aag :: "'a PAS"
   assumes invs_irq_state_update[simp]:
     "invs ((s :: det_state)\<lparr>machine_state := irq_state_update f s'\<rparr>) =
@@ -582,33 +582,33 @@ locale Syscall_AC_1 =
   assumes arch_perform_invocation_in_cur_domainE[wp]:
     "\<And>t ai. \<lbrace>\<lambda>s. in_cur_domain t s\<rbrace> arch_perform_invocation ai -,\<lbrace>\<lambda>_ s :: det_state. in_cur_domain t s\<rbrace>"
 
-sublocale Syscall_AC_1 \<subseteq> cap_move: gpd_wps' "cap_move new_cap src_slot dest_slot"
+sublocale Syscall_AC \<subseteq> cap_move: gpd_wps' "cap_move new_cap src_slot dest_slot"
   by simp
-sublocale Syscall_AC_1 \<subseteq> cancel_badged_sends: gpd_wps' "cancel_badged_sends epptr badge"
+sublocale Syscall_AC \<subseteq> cancel_badged_sends: gpd_wps' "cancel_badged_sends epptr badge"
   by simp
-sublocale Syscall_AC_1 \<subseteq> arch_post_modify_registers: gpd_wps "arch_post_modify_registers cur t"
+sublocale Syscall_AC \<subseteq> arch_post_modify_registers: gpd_wps "arch_post_modify_registers cur t"
   by simp
-sublocale Syscall_AC_1 \<subseteq> arch_perform_invocation: gpd_wps "arch_perform_invocation ai"
+sublocale Syscall_AC \<subseteq> arch_perform_invocation: gpd_wps "arch_perform_invocation ai"
   by simp
-sublocale Syscall_AC_1 \<subseteq> arch_invoke_irq_control: gpd_wps "arch_invoke_irq_control ivk"
+sublocale Syscall_AC \<subseteq> arch_invoke_irq_control: gpd_wps "arch_invoke_irq_control ivk"
   by simp
-sublocale Syscall_AC_1 \<subseteq> arch_invoke_irq_handler: gpd_wps "arch_invoke_irq_handler ihi"
+sublocale Syscall_AC \<subseteq> arch_invoke_irq_handler: gpd_wps "arch_invoke_irq_handler ihi"
   by simp
-sublocale Syscall_AC_1 \<subseteq> arch_mask_irq_signal: gpd_wps "arch_mask_irq_signal irq"
+sublocale Syscall_AC \<subseteq> arch_mask_irq_signal: gpd_wps "arch_mask_irq_signal irq"
   by simp
-sublocale Syscall_AC_1 \<subseteq> handle_reserved_irq: gpd_wps "handle_reserved_irq irq"
+sublocale Syscall_AC \<subseteq> handle_reserved_irq: gpd_wps "handle_reserved_irq irq"
   by simp
-sublocale Syscall_AC_1 \<subseteq> handle_arch_fault_reply: gpd_wps "handle_arch_fault_reply vmf thread x y"
+sublocale Syscall_AC \<subseteq> handle_arch_fault_reply: gpd_wps "handle_arch_fault_reply vmf thread x y"
   by simp
-sublocale Syscall_AC_1 \<subseteq> handle_hypervisor_fault: gpd_wps "handle_hypervisor_fault t hf_t"
+sublocale Syscall_AC \<subseteq> handle_hypervisor_fault: gpd_wps "handle_hypervisor_fault t hf_t"
   by simp
-sublocale Syscall_AC_1 \<subseteq> handle_vm_fault: gpd_wps "handle_vm_fault t vmf_t"
+sublocale Syscall_AC \<subseteq> handle_vm_fault: gpd_wps "handle_vm_fault t vmf_t"
   by simp
-sublocale Syscall_AC_1 \<subseteq> arch_activate_idle_thread: Syscall_AC_wps "arch_activate_idle_thread t" aag
+sublocale Syscall_AC \<subseteq> arch_activate_idle_thread: Syscall_AC_wps "arch_activate_idle_thread t" aag
   by simp
-sublocale Syscall_AC_1 \<subseteq> arch_mask_irq_signal: Syscall_AC_wps "arch_mask_irq_signal irq" aag
+sublocale Syscall_AC \<subseteq> arch_mask_irq_signal: Syscall_AC_wps "arch_mask_irq_signal irq" aag
   by simp
-sublocale Syscall_AC_1 \<subseteq> handle_spurious_irq: gpd_wps "handle_spurious_irq"
+sublocale Syscall_AC \<subseteq> handle_spurious_irq: gpd_wps "handle_spurious_irq"
   by simp
 
 context gpd_wps begin
@@ -619,7 +619,7 @@ lemma guarded_pas_domain[wp]:
 
 end
 
-context Syscall_AC_1 begin
+context Syscall_AC begin
 
 lemma handle_interrupt_pas_refined:
   "\<lbrace>pas_refined aag and invs and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>

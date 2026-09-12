@@ -120,7 +120,7 @@ requalify_types user_transition_if
 end
 
 
-global_interpretation UserOp_IF_1?: UserOp_IF_1
+global_interpretation UserOp_IF?: UserOp_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case

@@ -388,7 +388,7 @@ declare state_hyp_refs_of_detype[Retype_AC_assms]
 end
 
 
-global_interpretation Retype_AC_1?: Retype_AC_1
+global_interpretation Retype_AC?: Retype_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case

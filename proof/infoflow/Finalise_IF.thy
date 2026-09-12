@@ -8,7 +8,7 @@ theory Finalise_IF
 imports ArchArch_IF ArchIRQMasks_IF
 begin
 
-locale Finalise_IF_1 =
+locale Finalise_IF =
   fixes aag :: "'a subject_label PAS"
   assumes dmo_maskInterrupt_reads_respects:
     "reads_respects aag l \<top> (do_machine_op (maskInterrupt m irq))"
@@ -541,7 +541,7 @@ lemma thread_get_reads_respects:
   done
 
 
-context Finalise_IF_1 begin
+context Finalise_IF begin
 
 lemma set_tcb_queue_modifies_at_most:
   "modifies_at_most aag L (\<lambda>s. pasDomainAbs aag d \<inter> L \<noteq> {}) (set_tcb_queue d prio queue)"
@@ -747,7 +747,7 @@ lemma unbind_notification_is_subj_reads_respects:
   done
 
 
-context Finalise_IF_1 begin
+context Finalise_IF begin
 
 lemma cancel_all_signals_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -970,7 +970,7 @@ lemma update_restart_pc_reads_respects[wp]:
   done
 
 
-context Finalise_IF_1 begin
+context Finalise_IF begin
 
 lemma reply_cancel_ipc_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -1156,7 +1156,7 @@ lemma finalise_cap_only_timer_irq_inv:
   done
 
 
-context Finalise_IF_1 begin
+context Finalise_IF begin
 
 lemma rec_del_spec_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -1226,7 +1226,7 @@ next
                                                        | _ \<Rightarrow> True)
                          \<and> (is_zombie (fst fin) \<or> fst fin = NullCap)
                          \<and> (is_zombie (fst fin) \<or> fst fin = NullCap)" in hoare_vcg_conj_lift)
-           apply (wp finalise_cap_replaceable Finalise_AC_1.finalise_cap_makes_halted
+           apply (wp finalise_cap_replaceable Finalise_AC.finalise_cap_makes_halted
                      finalise_cap_invs finalise_cap_auth' finalise_cap_ret_is_subject finalise_cap_ret'
                      finalise_cap_silc_inv finalise_cap_ret_is_silc finalise_cap_only_timer_irq_inv)[1]
           apply (rule finalise_cap_cases[where slot=slot])
@@ -1362,7 +1362,7 @@ lemma rec_del_Finalise_transferableE_R:
   by force+
 
 
-context Finalise_IF_1 begin
+context Finalise_IF begin
 
 lemma rec_del_CTEDeleteCall_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -1436,7 +1436,7 @@ lemma cancel_all_signals_globals_equiv:
   by (fastforce intro: hoare_strengthen_post[OF cancel_all_signals_globals_equiv'])
 
 
-context Finalise_IF_1 begin
+context Finalise_IF begin
 
 lemma unbind_notification_globals_equiv:
   "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>

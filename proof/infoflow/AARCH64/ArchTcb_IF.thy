@@ -84,7 +84,7 @@ lemma arch_get_sanitise_register_info_reads_respects_f[Tcb_IF_assms, wp]:
 end
 
 
-global_interpretation Tcb_IF_1?: Tcb_IF_1
+global_interpretation Tcb_IF?: Tcb_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case

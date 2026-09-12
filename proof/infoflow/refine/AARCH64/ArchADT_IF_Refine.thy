@@ -415,7 +415,7 @@ end
 arch_requalify_consts doUserOp_if
 
 
-global_interpretation ADT_IF_Refine_1?: ADT_IF_Refine_1 doUserOp_if
+global_interpretation ADT_IF_Refine?: ADT_IF_Refine doUserOp_if
 proof goal_cases
   interpret Arch .
   case 1 show ?case

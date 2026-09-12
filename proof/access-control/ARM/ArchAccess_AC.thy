@@ -67,7 +67,7 @@ lemma tcb_hyp_refs_arch_tcb_set_registers[Access_AC_assms]:
 end
 
 
-global_interpretation Access_AC_1?: Access_AC_1
+global_interpretation Access_AC?: Access_AC
 proof goal_cases
   interpret Arch .
   case 1 show ?case

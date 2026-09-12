@@ -883,7 +883,7 @@ definition irq_state_next where
                                                   (irq_masks (machine_state s))"
 
 
-locale ADT_IF_1 =
+locale ADT_IF =
   assumes dmo_getActiveIRQ_wp':
     "\<lbrace>(\<lambda>s. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)))
              (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>))
@@ -959,7 +959,7 @@ locale ADT_IF_1 =
     "do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. valid_cur_hyp s\<rbrace>"
 
 
-locale ADT_IF_2 = ADT_IF_1 +
+locale ADT_IF_2 = ADT_IF +
   fixes initial_aag :: "'a subject_label PAS"
   assumes do_user_op_if_invs[wp]:
     "do_user_op_if uop tc \<lbrace>invs and ct_running :: det_state \<Rightarrow> bool\<rbrace>"
@@ -2625,7 +2625,7 @@ lemma hoare_add_postE:
   done
 
 
-context ADT_IF_1 begin
+context ADT_IF begin
 
 lemma preemption_point_valid_irq_states[wp]:
   "preemption_point \<lbrace>\<lambda>s :: det_state. valid_irq_states s\<rbrace>"

@@ -138,7 +138,7 @@ lemma descendants_inc_cap_classD:
   by (fastforce dest:descendants_incD)
 
 
-locale Access_AC_1 =
+locale Access_AC =
   fixes aag :: "'a PAS"
   and user_monad_t :: "'b user_monad"
   assumes acap_class_reply:
@@ -422,7 +422,7 @@ lemma tro_tcb_reply':
   by (fastforce intro!: tro_orefl tcb.equality)
 
 
-context Access_AC_1 begin
+context Access_AC begin
 
 lemma troa_tro_alt[elim!]:
   "integrity_obj_atomic aag activate subjects l ko ko'
@@ -566,7 +566,7 @@ lemma tcb_bound_notification_reset_eq_or_none:
   by (auto simp: tcb_bound_notification_reset_integrity_def)
 
 
-context Access_AC_1 begin
+context Access_AC begin
 
 lemma tro_alt_trans_spec: (* this takes a long time to process *)
   "\<lbrakk> integrity_obj_alt aag activate es subjects ko ko';
@@ -785,7 +785,7 @@ lemma trrqs_trans:
   done
 
 
-context Access_AC_1 begin
+context Access_AC begin
 
 lemma cdt_direct_change_allowed_backward:
   "\<lbrakk> integrity_obj_state aag activate subjects s s';
@@ -875,7 +875,7 @@ lemma tsos_tro_running:
 end
 
 
-locale Access_AC_2 = Access_AC_1 +
+locale Access_AC_2 = Access_AC +
   assumes auth_ipc_buffers_tro:
     "\<lbrakk> integrity_obj_state aag activate subjects (s :: det_state) (s' :: det_state);
        x \<in> auth_ipc_buffers s' p; pasObjectAbs aag p \<notin> subjects \<rbrakk>

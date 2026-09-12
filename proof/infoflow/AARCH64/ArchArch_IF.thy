@@ -211,7 +211,7 @@ declare
   arch_perform_invocation_irq_state_of_state[wp]
 
 
-global_interpretation Arch_IF_1?: Arch_IF_1
+global_interpretation Arch_IF?: Arch_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case

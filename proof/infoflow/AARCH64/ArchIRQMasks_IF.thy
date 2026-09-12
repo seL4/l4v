@@ -90,7 +90,7 @@ crunch activate_thread, handle_spurious_irq, handle_vm_fault
 end
 
 
-global_interpretation IRQMasks_IF_1?: IRQMasks_IF_1
+global_interpretation IRQMasks_IF?: IRQMasks_IF
 proof goal_cases
   interpret Arch .
   case 1 show ?case

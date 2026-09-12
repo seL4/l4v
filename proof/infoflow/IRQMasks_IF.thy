@@ -44,7 +44,7 @@ crunch cap_swap_for_delete
   for irq_masks[wp]: "\<lambda>s. P (irq_masks_of_state s)"
 
 
-locale IRQMasks_IF_1 =
+locale IRQMasks_IF =
   fixes state_t :: "'s :: state_ext state"
   assumes resetTimer_irq_masks[wp]:
     "resetTimer \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>"
@@ -203,7 +203,7 @@ crunch cancel_badged_sends
    ignore: filterM)
 
 
-context IRQMasks_IF_1 begin
+context IRQMasks_IF begin
 
 lemma cap_revoke_irq_masks':
   notes drop_spec_valid[wp_split del] drop_spec_validE[wp_split del]
@@ -279,7 +279,7 @@ lemma handle_yield_irq_masks_of_state[wp]:
   by (wpsimp simp: handle_yield_def)
 
 
-locale IRQMasks_IF_2 = IRQMasks_IF_1 state_t
+locale IRQMasks_IF_2 = IRQMasks_IF state_t
   for state_t :: "'s :: state_ext state" +
   assumes do_reply_transfer_irq_masks[wp]:
     "do_reply_transfer sender receiver slot grant \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"

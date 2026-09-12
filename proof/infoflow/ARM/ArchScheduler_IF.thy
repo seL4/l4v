@@ -144,8 +144,8 @@ requalify_consts
 end
 
 
-global_interpretation Scheduler_IF_1?:
-  Scheduler_IF_1 arch_globals_equiv_scheduler arch_scheduler_affects_equiv
+global_interpretation Scheduler_IF?:
+  Scheduler_IF arch_globals_equiv_scheduler arch_scheduler_affects_equiv
 proof goal_cases
   interpret Arch .
   case 1 show ?case

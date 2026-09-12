@@ -64,7 +64,7 @@ crunch handle_vm_fault, handle_vm_fault, perform_pg_inv_unmap,
 end
 
 
-global_interpretation DomainSepInv_1?: DomainSepInv_1
+global_interpretation DomainSepInv?: DomainSepInv
 proof goal_cases
   interpret Arch .
   case 1 show ?case

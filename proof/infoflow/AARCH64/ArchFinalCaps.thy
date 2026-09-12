@@ -100,7 +100,7 @@ declare finalise_cap_makes_halted[FinalCaps_assms]
 end
 
 
-global_interpretation FinalCaps_1?: FinalCaps_1
+global_interpretation FinalCaps?: FinalCaps
 proof goal_cases
   interpret Arch .
   case 1 show ?case
