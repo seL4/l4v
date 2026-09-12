@@ -238,7 +238,7 @@ lemma update_waiting_ntfn_equiv_but_for_labels:
   apply (case_tac "tcb_state tcb", simp_all)
   done
 
-end
+end (* Ipc_IF *)
 
 
 lemma invisible_ntfn_invisible_receivers_and_ipcbuffers:
@@ -486,7 +486,7 @@ lemmas blocked_cancel_ipc_nosts_reads_respects_f =
                       blocked_cancel_ipc_nosts_silc_inv,
                       simplified]
 
-end
+end (* Ipc_IF *)
 
 
 lemma monadic_rewrite_reads_respects:
@@ -663,7 +663,7 @@ lemma send_signal_reads_respects:
   qed
   done
 
-end
+end (* Ipc_IF *)
 
 
 lemma receive_signal_reads_respects:
@@ -785,7 +785,7 @@ lemma get_mrs_rev:
 
 lemmas get_mrs_reads_respects_g = reads_respects_g_from_inv[OF get_mrs_rev get_mrs_inv]
 
-end
+end (* Ipc_IF *)
 
 
 lemma setup_caller_cap_reads_respects:
@@ -937,7 +937,7 @@ lemma transfer_caps_loop_reads_respects:
   apply (rule equiv_valid_guard_imp, rule transfer_caps_loop_reads_respects')
   by (fastforce elim: cte_wp_at_weakenE)
 
-end
+end (* Ipc_IF *)
 
 
 lemma empty_on_failure_ev:
@@ -1021,7 +1021,7 @@ lemma load_cap_transfer_rev:
   apply (erule aag_has_auth_to_read_captransfer[where x=2, simplified])
   done
 
-end
+end (* Ipc_IF *)
 
 
 lemma get_endpoint_rev:
@@ -1165,7 +1165,7 @@ lemma load_word_offs_reads_respects:
   apply (clarsimp)
   done
 
-end
+end (* Ipc_IF *)
 
 
 lemma get_mi_length':
@@ -1403,7 +1403,7 @@ lemma receive_ipc_reads_respects:
   by (fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def
                 dest: bound_tcb_at_implies_receive reads_ep)
 
-end
+end (* Ipc_IF_2 *)
 
 
 lemma receive_endpoint_threads_blocked:
@@ -1528,7 +1528,7 @@ lemma handle_fault_reads_respects:
   apply (fastforce intro: reads_affects_equiv_get_tcb_eq)
   done
 
-end
+end (* Ipc_IF_2 *)
 
 
 subsection "Replies"
@@ -1552,7 +1552,7 @@ lemma lookup_ipc_buffer_has_read_auth':
   apply (drule sym, simp)
   done
 
-end
+end (* Ipc_IF *)
 
 context Ipc_IF_2 begin
 
@@ -1639,7 +1639,7 @@ lemma reply_from_kernel_reads_respects:
          as_user_reads_respects lookup_ipc_buffer_reads_respects
       | simp add: split_def det_setRegister)+
 
-end
+end (* Ipc_IF_2 *)
 
 
 (* FIXME in whole section replace preconditions with 10 differents invariants by invs *)
@@ -1743,7 +1743,7 @@ lemma do_normal_transfer_globals_equiv:
   apply (clarsimp)
   done
 
-end
+end (* Ipc_IF *)
 
 lemma do_fault_transfer_globals_equiv:
   "\<lbrace>globals_equiv s and valid_arch_state and (\<lambda>sa. receiver \<noteq> idle_thread sa)\<rbrace>
@@ -1855,7 +1855,7 @@ lemma receive_ipc_globals_equiv:
               apply (rule fail_wp | rule return_wp)+
   by (auto intro: valid_ep_send_enqueue simp: neq_Nil_conv cong: case_list_cons_cong)
 
-end
+end (* Ipc_IF *)
 
 
 subsection "Notifications"
@@ -2031,7 +2031,7 @@ lemma handle_reply_globals_equiv:
      apply (wp | simp)+
   done
 
-end
+end (* Ipc_IF *)
 
 
 lemma reply_from_kernel_globals_equiv:
@@ -2064,7 +2064,7 @@ lemma send_signal_reads_respects_g:
    apply (wp send_signal_globals_equiv | simp)+
   done
 
-end
+end (* Ipc_IF *)
 
 
 lemma receive_signal_reads_respects_g:
@@ -2202,6 +2202,6 @@ lemma reply_from_kernel_reads_respects_g:
 lemmas lookup_ipc_buffer_reads_respects_g =
   reads_respects_g_from_inv[OF lookup_ipc_buffer_reads_respects lookup_ipc_buffer_inv]
 
-end
+end (* Ipc_IF_2 *)
 
 end

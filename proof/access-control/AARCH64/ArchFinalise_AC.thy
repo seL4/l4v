@@ -497,7 +497,7 @@ declare unbind_notification_valid_cur_fpu[Finalise_AC_assms]
 declare finalise_cap_valid_list[Finalise_AC_assms]
 declare finalise_cap_replaceable[Finalise_AC_assms]
 
-end
+end (* Arch *)
 
 
 global_interpretation Finalise_AC?: Finalise_AC
@@ -552,7 +552,7 @@ lemma finalise_cap_fst_ret[Finalise_AC_assms]:
   apply (wp | simp | (rule hoare_pre, wpc))+
   done
 
-end
+end (* Arch *)
 
 
 global_interpretation Finalise_AC_2?: Finalise_AC_2

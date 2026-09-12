@@ -106,7 +106,7 @@ definition
   handlePreemption_C_if :: "user_context \<Rightarrow> (cstate,user_context) nondet_monad" where
   "handlePreemption_C_if tc \<equiv> do (exec_C \<Gamma> handleInterruptEntry_C_body_if); return tc od"
 
-end
+end (* kernel_m *)
 
 
 locale ADT_IF_Refine = kernel_m +
@@ -580,7 +580,7 @@ definition kernel_exit_C_if where
      {(s, m, s'). s' \<in> fst (split kernelExit_C_if s) \<and>
                   m = (if ct_running_C (snd s') then InUserMode else InIdleMode)}"
 
-end
+end (* ADT_IF_Refine *)
 
 
 lemma corres_underlying_nf_imp2:
@@ -621,7 +621,7 @@ lemma absKState_crelation:
                      obj_at'_def typ_at'_def ps_clear_def
               split: if_splits)
 
-end
+end (* kernel_m *)
 
 
 context ADT_IF_Refine begin
@@ -766,6 +766,6 @@ theorem infoflow_refinement_A: "uop_nonempty uop \<Longrightarrow> ADT_C_if fp u
   apply (erule sim_imp_refines[OF infoflow_fw_sim_A])
   done
 
-end
+end (* ADT_IF_Refine *)
 
 end

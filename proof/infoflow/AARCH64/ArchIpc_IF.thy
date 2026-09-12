@@ -287,7 +287,7 @@ lemma transfer_caps_loop_valid_arch[Ipc_IF_assms]:
   "transfer_caps_loop ep buffer n caps slots mi \<lbrace>valid_arch_state :: det_ext state \<Rightarrow> _\<rbrace>"
   by (wp valid_arch_state_lift_aobj_at_no_caps transfer_caps_loop_aobj_at)
 
-end
+end (* Arch *)
 
 
 global_interpretation Ipc_IF?: Ipc_IF
@@ -466,7 +466,7 @@ lemma set_mrs_reads_respects'[Ipc_IF_assms]:
    apply (rule set_mrs_ret_eq)
   by simp
 
-end
+end (* Arch *)
 
 
 global_interpretation Ipc_IF_2?: Ipc_IF_2

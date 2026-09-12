@@ -91,7 +91,7 @@ crunch schedule
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp crunch_wps dxo_wp_weak simp: crunch_simps)
 
-end
+end (* Arch *)
 
 
 global_interpretation IRQMasks_IF?: IRQMasks_IF
@@ -161,7 +161,7 @@ crunch arch_prepare_set_domain
 crunch arch_prepare_next_domain
   for valid_irq_states[wp]: valid_irq_states
 
-end
+end (* Arch *)
 
 
 global_interpretation IRQMasks_IF_2?: IRQMasks_IF_2

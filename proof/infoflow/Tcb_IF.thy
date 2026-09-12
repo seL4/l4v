@@ -234,7 +234,7 @@ lemma no_cap_to_idle_thread:
   apply clarsimp
   done
 
-end
+end (* Tcb_IF *)
 
 
 crunch set_mcpriority
@@ -333,7 +333,7 @@ lemma invoke_tcb_globals_equiv:
          | fastforce)+
   done
 
-end
+end (* Tcb_IF_2 *)
 
 
 section "reads respects"
@@ -570,7 +570,7 @@ lemma invoke_tcb_reads_respects_f_g:
    apply (wp invoke_tcb_globals_equiv | clarsimp | assumption | force)+
   done
 
-end
+end (* Tcb_IF_2 *)
 
 
 lemma decode_tcb_invocation_authorised_extra:

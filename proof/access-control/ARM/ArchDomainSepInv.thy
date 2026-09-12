@@ -43,7 +43,7 @@ lemma arch_post_modify_registers_domain_sep_inv[DomainSepInv_assms, wp]:
   "arch_post_modify_registers cur x31 \<lbrace>domain_sep_inv irqs st\<rbrace>"
   unfolding arch_post_modify_registers_def by wpsimp
 
-end
+end (* Arch *)
 
 
 global_interpretation DomainSepInv?: DomainSepInv
@@ -128,7 +128,7 @@ lemma arch_invoke_irq_control_domain_sep_inv[DomainSepInv_assms]:
   apply (fastforce simp: domain_sep_inv_def domain_sep_inv_cap_def arch_irq_control_inv_valid_def)
   done
 
-end
+end (* Arch *)
 
 
 global_interpretation DomainSepInv_2?: DomainSepInv_2

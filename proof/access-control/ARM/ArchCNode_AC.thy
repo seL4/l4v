@@ -96,7 +96,7 @@ lemma arch_post_cap_deletion_integrity[CNode_AC_assms]:
   "arch_post_cap_deletion acap \<lbrace>integrity aag X st\<rbrace>"
   by wpsimp
 
-end
+end (* Arch *)
 
 
 context is_extended begin interpretation Arch .
@@ -123,7 +123,7 @@ lemma set_irq_state_respects[CNode_AC_assms,wp]:
   unfolding set_irq_state_def maskInterrupt_def
   by (wpsimp wp: dmo_no_mem_respects simp: integrity_subjects_def integrity_interrupts_def)
 
-end
+end (* is_extended *)
 
 
 global_interpretation CNode_AC?: CNode_AC
@@ -150,7 +150,7 @@ crunch set_cdt_list, update_cdt_list
   and state_asids_to_policy[CNode_AC_assms, wp]: "\<lambda>s. P (state_asids_to_policy aag s)"
   (simp: set_cdt_list_def)
 
-end
+end (* Arch *)
 
 
 global_interpretation CNode_AC_2?: CNode_AC_2
@@ -180,7 +180,7 @@ lemma thread_set_arch_trivT[CNode_AC_assms]:
   apply (simp add: arch state_hyp_refs_of_def get_tcb_def split: option.splits kernel_object.splits)
   done
 
-end
+end (* Arch *)
 
 
 context is_extended begin interpretation Arch .
@@ -194,7 +194,7 @@ lemma pas_refined_tcb_domain_map_wellformed[CNode_AC_assms, wp]:
    apply simp+
   done
 
-end
+end (* is_extended *)
 
 
 global_interpretation CNode_AC_3?: CNode_AC_3
@@ -302,7 +302,7 @@ lemma arch_update_cap_cap_auth_conferred_subset[CNode_AC_assms]:
   "y \<in> cap_auth_conferred (arch_update_cap_data b w acap) \<Longrightarrow> y \<in> arch_cap_auth_conferred acap"
   by (simp add: arch_update_cap_data_def cap_auth_conferred_def)
 
-end
+end (* Arch *)
 
 
 global_interpretation CNode_AC_4?: CNode_AC_4
@@ -539,6 +539,6 @@ crunch set_asid_pool
   for integrity_autarch: "integrity aag X st"
   (wp: crunch_wps)
 
-end
+end (* Arch *)
 
 end

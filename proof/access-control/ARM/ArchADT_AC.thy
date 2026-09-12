@@ -210,7 +210,7 @@ lemma write_in_vspace_cap_rights[ADT_AC_assms]:
                                          (ptable_exec (cur_thread s) s va)"
   by (clarsimp simp: vspace_cap_rights_to_auth_def)
 
-end
+end (* Arch *)
 
 
 global_interpretation ADT_AC?: ADT_AC

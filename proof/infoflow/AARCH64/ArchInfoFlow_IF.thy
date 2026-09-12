@@ -177,7 +177,7 @@ lemma equiv_fpuI[InfoFlow_IF_assms]:
   shows "equiv_fpu P s t"
   using assms by (fastforce simp: equiv_fpu_def equiv_for_def)
 
-end
+end (* Arch *)
 
 arch_requalify_consts
   identical_hyp_state_updates
@@ -542,7 +542,7 @@ lemma no_fpu_lift[wp]:
   shows "no_fpu f"
   using assms by (simp add: no_fpu_def)
 
-end
+end (* Arch *)
 
 arch_requalify_consts
   no_hyp no_fpu

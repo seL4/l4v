@@ -28,7 +28,7 @@ lemma vrefs_eq: "state_vrefs s' = state_vrefs s"
   apply (simp add: s'_def state_vrefs_def ps_def orthr split: option.split)
   done
 
-end
+end (* retype_region_proofs *)
 
 
 context retype_region_proofs' begin interpretation Arch .
@@ -63,7 +63,7 @@ lemma pas_refined:
   apply simp
   done
 
-end
+end (* retype_region_proofs *)
 
 
 context Arch begin arch_global_naming
@@ -435,7 +435,7 @@ lemma retype_region_integrity_asids[Retype_AC_assms]:
 
 declare state_hyp_refs_of_detype[Retype_AC_assms]
 
-end
+end (* Arch *)
 
 global_interpretation Retype_AC?: Retype_AC
 proof goal_cases

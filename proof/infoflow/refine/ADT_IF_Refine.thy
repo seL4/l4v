@@ -382,7 +382,7 @@ lemma handlePreemption_ex_abs[wp]:
   apply (auto simp: ex_abs_def domain_time_rel_eq valid_domain_list_from_invs')
   done
 
-end
+end (* ADT_IF_Refine *)
 
 lemmas handle_preemption_if_valid_domain_time = handle_preemption_if_domain_time_sched_action
 
@@ -631,7 +631,7 @@ lemma ADT_invs: "ADT \<Turnstile> invs"
   apply (rule preservesE[OF check_active_irq_idle_invs],assumption+)
   done
 
-end
+end (* global_automaton_invs *)
 
 
 lemma invariant_holds_inter:
@@ -895,7 +895,7 @@ lemma Fin_Init_ADT_H:
   apply clarsimp
   done
 
-end
+end (* ADT_IF_Refine *)
 
 
 lemma step_corres_exE:
@@ -1069,7 +1069,7 @@ lemma abs_serial:
   apply auto
   done
 
-end
+end (* global_automata_refine *)
 
 
 lemma step_corres_lift:
@@ -1303,7 +1303,7 @@ lemma ADT_A_if_enabled:
   apply simp
   done
 
-end
+end (* ADT_IF_Refine *)
 
 
 lemma (in valid_initial_state_noenabled) uop_nonempty:

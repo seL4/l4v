@@ -153,7 +153,7 @@ lemma thread_set_non_idle_globals_equiv[Arch_IF_assms]:
 declare arch_prepare_set_domain_inv[Arch_IF_assms]
 declare arch_prepare_next_domain_inv[Arch_IF_assms]
 
-end
+end (* Arch *)
 
 context begin interpretation Arch .
 

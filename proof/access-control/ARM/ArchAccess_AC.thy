@@ -64,7 +64,7 @@ lemma tcb_hyp_refs_arch_tcb_set_registers[Access_AC_assms]:
   "tcb_hyp_refs (arch_tcb_set_registers regs atcb) = tcb_hyp_refs atcb"
   by (simp add: arch_tcb_set_registers_def)
 
-end
+end (* Arch *)
 
 
 global_interpretation Access_AC?: Access_AC
@@ -133,7 +133,7 @@ lemmas integrity_arch_triv =
   integrity_hyp_eq_triv
   integrity_fpu_eq_triv
 
-end
+end (* Arch *)
 
 
 global_interpretation Access_AC_2?: Access_AC_2
@@ -200,7 +200,7 @@ lemma arch_integrity_obj_atomic_mono[Access_AC_assms]:
    \<Longrightarrow> arch_integrity_obj_atomic aag T l ao ao'"
   by (clarsimp simp: arch_integrity_obj_atomic.simps asid_pool_integrity_mono)
 
-end
+end (* Arch *)
 
 
 global_interpretation Access_AC_3?: Access_AC_3
@@ -217,7 +217,7 @@ lemma state_vrefs[Access_AC_assms, iff]:
   "state_vrefs (f s) = state_vrefs s"
   by (simp add: state_vrefs_def pspace)
 
-end
+end (* Arch_pspace_update_eq *)
 
 context Arch begin arch_global_naming
 
@@ -229,7 +229,7 @@ lemma integrity_asids_kh_upd_None[Access_AC_assms]:
   unfolding integrity_asids_def opt_map_def
   by (auto split: option.split_asm)
 
-end
+end (* Arch *)
 
 
 global_interpretation Access_AC_4?: Access_AC_4
@@ -261,7 +261,7 @@ lemmas [simp] =
   pas_refined_arch_upd[where h=id, simplified arch_state_update_id id_apply]
   pas_refined_arch_upd[where h=id and g="\<lambda>_. _", simplified arch_state_update_id id_apply]
 
-end
+end (* Arch_pas_refined_arch_update_eq *)
 
 sublocale Arch \<subseteq> hwasid_table_update: Arch_pas_refined_arch_update_eq arm_hwasid_table_update by unfold_locales auto
 sublocale Arch \<subseteq> next_asid_update: Arch_pas_refined_arch_update_eq arm_next_asid_update by unfold_locales auto
@@ -285,6 +285,6 @@ lemma dmo_no_mem_respects:
   unfolding integrity_def tcb_states_of_state_def get_tcb_def
   by (wpsimp wp: dmo_machine_state_lift | wps assms)+
 
-end
+end (* Arch *)
 
 end

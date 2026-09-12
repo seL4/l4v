@@ -68,7 +68,7 @@ lemma arch_get_sanitise_register_info_reads_respects_f[Tcb_IF_assms, wp]:
   "reads_respects_f aag l \<top> (arch_get_sanitise_register_info rv)"
   by wpsimp
 
-end
+end (* Arch *)
 
 
 global_interpretation Tcb_IF?: Tcb_IF
@@ -256,7 +256,7 @@ lemma arch_post_set_flags_reads_respects_f[Tcb_IF_assms]:
 
 declare arch_post_set_flags_inv[Tcb_IF_assms]
 
-end
+end (* Arch *)
 
 
 global_interpretation Tcb_IF_2?: Tcb_IF_2

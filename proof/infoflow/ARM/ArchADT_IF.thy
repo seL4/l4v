@@ -74,7 +74,7 @@ lemmas [ADT_IF_assms] =
   cur_fpu_in_cur_domain_wp
   valid_cur_hyp_triv
 
-end
+end (* Arch *)
 
 
 global_interpretation ADT_IF?: ADT_IF
@@ -485,7 +485,7 @@ lemma thread_set_context_pas_refined[ADT_IF_assms]:
   apply simp
   done
 
-end
+end (* Arch *)
 
 
 global_interpretation ADT_IF_2?: ADT_IF_2

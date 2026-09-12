@@ -112,7 +112,7 @@ lemma scheduler_action_states_equiv[simp]:
 crunch set_thread_state_act
   for states_equiv[wp]: "states_equiv_for P Q R S st"
 
-end
+end (* Finalise_IF *)
 
 
 lemma requiv_get_tcb_eq':
@@ -644,7 +644,7 @@ lemma cancel_all_ipc_reads_respects:
       | assumption
       | rule hoare_strengthen_post[where Q'="\<lambda>_. pas_refined aag", OF mapM_x_wp])+
 
-end
+end (* Finalise_IF *)
 
 
 fun ntfn_queue_invisible where
@@ -860,7 +860,7 @@ lemma cap_delete_one_reads_respects_f_transferable:
      apply (wp reads_respects_f[OF get_cap_rev] get_cap_wp | simp | elim conjE)+
   by (fastforce simp: cte_wp_at_caps_of_state silc_inv_def)
 
-end
+end (* Finalise_IF *)
 
 
 lemma get_blocking_object_reads_respects:
@@ -1082,7 +1082,7 @@ lemma finalise_cap_reads_respects:
   by (wp arch_finalise_cap_reads_respects reads_respects_f[where st=st] arch_finalise_cap_silc_inv
       | simp | elim conjE)+
 
-end
+end (* Finalise_IF *)
 
 
 lemma cap_swap_for_delete_reads_respects:
@@ -1325,7 +1325,7 @@ qed
 
 lemmas rec_del_reads_respects_f = use_spec_ev[OF rec_del_spec_reads_respects_f]
 
-end
+end (* Finalise_IF *)
 
 
 (* FIXME MOVE in lib *)
@@ -1398,7 +1398,7 @@ lemma cap_delete_reads_respects:
   unfolding cap_delete_def
   by (wp rec_del_spec_reads_respects_f | rule use_spec_ev | simp | elim conjE | force)+
 
-end
+end (* Finalise_IF *)
 
 
 lemma globals_equiv_interrupt_states_update:
@@ -1518,6 +1518,6 @@ lemma finalise_cap_globals_equiv:
          unbind_notification_invs unbind_notification_globals_equiv liftM_wp when_def
       | clarsimp simp: valid_cap_def | intro impI conjI)+
 
-end
+end (* Finalise_IF *)
 
 end

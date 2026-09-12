@@ -55,7 +55,7 @@ lemma tcb_hyp_refs_arch_tcb_set_registers[Access_AC_assms]:
   "tcb_hyp_refs (arch_tcb_set_registers regs atcb) = tcb_hyp_refs atcb"
   by (simp add: arch_tcb_set_registers_def)
 
-end
+end (* Arch *)
 
 
 global_interpretation Access_AC?: Access_AC
@@ -124,7 +124,7 @@ lemma integrity_fpu_update_autarch[Access_AC_assms]:
   unfolding integrity_fpu_def integrity_fpu_def fpu_of_state_def
   by (auto split: option.splits kernel_object.splits)
 
-end
+end (* Arch *)
 
 
 global_interpretation Access_AC_2?: Access_AC_2
@@ -201,7 +201,7 @@ lemma arch_integrity_obj_atomic_mono[Access_AC_assms]:
    \<Longrightarrow> arch_integrity_obj_atomic aag T l ao ao'"
   by (clarsimp simp: arch_integrity_obj_atomic.simps asid_pool_integrity_mono)
 
-end
+end (* Arch *)
 
 
 global_interpretation Access_AC_3?: Access_AC_3
@@ -230,7 +230,7 @@ lemmas [Access_AC_assms, simp] =
   integrity_hyp_machine_upd[where h=id, simplified machine_state_update_id id_apply]
   integrity_hyp_machine_upd[where h=id and g="\<lambda>_. _", simplified machine_state_update_id id_apply]
 
-end
+end (* Arch_hyp_machine_update_eq *)
 
 locale Arch_fpu_machine_update_eq = Arch +
   fixes f :: "('a \<Rightarrow> 'a) \<Rightarrow> machine_state \<Rightarrow> machine_state"
@@ -250,7 +250,7 @@ lemmas [Access_AC_assms, simp] =
   integrity_fpu_machine_upd[where h=id, simplified machine_state_update_id id_apply]
   integrity_fpu_machine_upd[where h=id and g="\<lambda>_. _", simplified machine_state_update_id id_apply]
 
-end
+end (* Arch_fpu_machine_update_eq *)
 
 locale Arch_integrity_machine_update_eq = Arch_fpu_machine_update_eq + Arch_hyp_machine_update_eq
 
@@ -270,7 +270,7 @@ lemma state_vrefs[Access_AC_assms, iff]:
   "state_vrefs (f s) = state_vrefs s"
   by (simp add: state_vrefs_def pspace)
 
-end
+end (* Arch_p_arch_update_eq *)
 
 
 context Arch begin arch_global_naming
@@ -336,7 +336,7 @@ lemma integrity_hyp_ao_upd:
   unfolding integrity_hyp_def vcpu_integrity_def vcpu_extra_lrs_def vcpu_of_state_def opt_map_def
   by (case_tac "x = p"; clarsimp; auto split: option.splits)+
 
-end
+end (* Arch *)
 
 
 global_interpretation Access_AC_4?: Access_AC_4
@@ -373,7 +373,7 @@ lemmas [simp] =
   pas_refined_arch_upd[where h=id, simplified arch_state_update_id id_apply]
   pas_refined_arch_upd[where h=id and g="\<lambda>_. _", simplified arch_state_update_id id_apply]
 
-end
+end (* Arch_pas_refined_arch_update_eq *)
 
 sublocale Arch \<subseteq> kernel_vspace_update: Arch_pas_refined_arch_update_eq arm_kernel_vspace_update by unfold_locales auto
 sublocale Arch \<subseteq> vmid_table_update: Arch_pas_refined_arch_update_eq arm_vmid_table_update by unfold_locales auto
@@ -492,6 +492,6 @@ lemma dmo_no_mem_respects:
             integrity_fpu_def tcb_states_of_state_def get_tcb_def
   by (wpsimp wp: dmo_machine_state_lift | wps assms)+
 
-end
+end (* Arch *)
 
 end

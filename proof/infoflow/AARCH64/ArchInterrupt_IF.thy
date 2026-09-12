@@ -49,7 +49,7 @@ lemma arch_invoke_irq_handler_globals_equiv[Interrupt_IF_assms, wp]:
   "arch_invoke_irq_handler irq \<lbrace>globals_equiv st\<rbrace>"
   by (cases irq; wpsimp wp: dmo_no_mem_globals_equiv simp: deactivateInterrupt_def)
 
-end
+end (* Arch *)
 
 
 global_interpretation Interrupt_IF?: Interrupt_IF

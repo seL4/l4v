@@ -223,7 +223,7 @@ lemma globals_equiv_scheduler_trans[elim]:
   unfolding globals_equiv_scheduler_def
   by (fastforce elim: arch_globals_equiv_scheduler_trans idle_equiv_trans)
 
-end
+end (* Scheduler_IF *)
 
 
 lemma scheduler_globals_frame_equiv_refl:
@@ -359,7 +359,7 @@ lemma reads_respects_scheduler_unobservable':
   shows "reads_respects_scheduler aag l P (f :: (unit,det_ext) s_monad)"
   by (rule reads_respects_scheduler_unobservable'') (wp f g | force)+
 
-end
+end (* Scheduler_IF *)
 
 
 lemma idle_equiv_machine_state_update[simp]:
@@ -550,7 +550,7 @@ lemma dmo_no_mem_globals_equiv_scheduler:
   apply (fastforce simp: valid_def globals_equiv_scheduler_def idle_equiv_def)
   done
 
-end
+end (* Scheduler_IF *)
 
 
 definition weak_scheduler_affects_equiv ::
@@ -663,7 +663,7 @@ crunch guarded_switch_to,schedule
   for idle_thread[wp]: "\<lambda>(s :: det_state). P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
-end
+end (* Scheduler_IF *)
 
 
 lemma silc_dom_lift:
@@ -938,7 +938,7 @@ lemma gets_ev_no_inv:
 lemmas reads_respects_scheduler_unobservable =
   reads_respects_scheduler_unobservable'[where P="\<top>",simplified]
 
-end
+end (* Scheduler_IF *)
 
 
 lemma weak_scheduler_affects_equiv_trans[elim]:
@@ -1018,7 +1018,7 @@ lemma globals_equiv_scheduler[wp]:
   "I (globals_equiv_scheduler st)"
   by (rule lift_inv, simp)
 
-end
+end (* Scheduler_IF_is_extended *)
 
 
 definition valid_tcb_context_update where
@@ -1199,7 +1199,7 @@ lemma switch_to_idle_thread_midstrength_reads_respects_scheduler[wp]:
   apply (clarsimp simp: scheduler_equiv_def)
   done
 
-end
+end (* Scheduler_IF_2 *)
 
 
 lemma gets_read_queue_ev_from_weak_sae:
@@ -1316,7 +1316,7 @@ lemma get_scheduler_action_reads_respects_scheduler[wp]:
   by (clarsimp simp: scheduler_equiv_def scheduler_affects_equiv_def domain_fields_equiv_def
                      gets_def get_def bind_def return_def equiv_valid_def2 equiv_valid_2_def)
 
-end
+end (* Scheduler_IF *)
 
 
 context Scheduler_IF_2 begin
@@ -1493,7 +1493,7 @@ lemma schedule_choose_new_thread_read_respects_scheduler:
   unfolding schedule_choose_new_thread_def K_bind_def fun_app_def
   by (rule next_domain_snippit[OF wellformed])
 
-end
+end (* Scheduler_IF_2 *)
 
 
 lemma switch_to_cur_domain:
@@ -1660,7 +1660,7 @@ lemma dec_domain_time_reads_respects_scheduler[wp]:
   apply simp
   done
 
-end
+end (* Scheduler_IF *)
 
 
 context Scheduler_IF_2 begin
@@ -1944,7 +1944,7 @@ lemma schedule_reads_respects_scheduler_cur_domain:
   apply simp
   by (metis Int_emptyI assms pas_domains_distinct_inj[OF domains_distinct])
 
-end
+end (* Scheduler_IF_2 *)
 
 lemma switch_to_cur_domain':
   "\<lbrakk> valid_sched_action s; scheduler_action s = switch_thread x; pas_refined aag s \<rbrakk>
@@ -2185,7 +2185,7 @@ lemma timer_tick_reads_respects_scheduler:
   apply simp
   done
 
-end
+end (* Scheduler_IF_2 *)
 
 
 lemma gets_ev':
@@ -2231,7 +2231,7 @@ lemma get_tcb_scheduler_equiv:
   by (clarsimp simp: get_tcb_def scheduler_affects_equiv_def states_equiv_for_def equiv_for_def
               split: option.splits kernel_object.splits)
 
-end
+end (* Scheduler_IF *)
 
 context Scheduler_IF_2 begin
 
@@ -2312,7 +2312,7 @@ lemma as_user_reads_respects_scheduler:
   apply (clarsimp simp: valid_tcb_context_update_def)
   done
 
-end
+end (* Scheduler_IF_2 *)
 
 
 lemma arch_tcb_update_aux:
@@ -2386,7 +2386,7 @@ lemma SilcLabel_affects_scheduler_equiv:
   by (simp add: scheduler_affects_equiv_def reads_scheduler_def states_equiv_for_def
                 equiv_for_def scheduler_equiv_def equiv_asids_def globals_equiv_scheduler_def)
 
-end
+end (* Scheduler_IF *)
 
 
 (*A function that is agnostic of its parameter with respect
@@ -2553,6 +2553,6 @@ lemma context_update_cur_thread_snippit:
   apply (clarsimp simp: scheduler_equiv_def domain_fields_equiv_def)
   done
 
-end
+end (* Scheduler_IF_2 *)
 
 end

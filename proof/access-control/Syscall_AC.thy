@@ -618,7 +618,7 @@ lemma guarded_pas_domain[wp]:
   "f \<lbrace>guarded_pas_domain aag\<rbrace>"
   by (wpsimp wp: guarded_pas_domain_lift)
 
-end
+end (* gpd_wps *)
 
 context Syscall_AC begin
 
@@ -1343,6 +1343,6 @@ lemma call_kernel_pas_refined:
     apply auto
   done
 
-end
+end (* Syscall_AC *)
 
 end

@@ -81,7 +81,7 @@ lemma arch_get_sanitise_register_info_reads_respects_f[Tcb_IF_assms, wp]:
   unfolding arch_get_sanitise_register_info_def
   by (wpsimp wp: reads_equiv_valid_inv_f)
 
-end
+end (* Arch *)
 
 
 global_interpretation Tcb_IF?: Tcb_IF
@@ -438,7 +438,7 @@ crunch arch_post_set_flags
   for globals_equiv[Tcb_IF_assms]: "globals_equiv st"
   (simp: crunch_simps)
 
-end
+end (* Arch *)
 
 
 global_interpretation Tcb_IF_2?: Tcb_IF_2

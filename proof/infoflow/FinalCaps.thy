@@ -106,7 +106,7 @@ lemma strengthen_cte_wp_at[strg]:
   "(\<And>x. st F (\<longrightarrow>) (P x) (Q x)) \<Longrightarrow> st F (\<longrightarrow>) (cte_wp_at P slot s) (cte_wp_at Q slot s)"
   by (cases F, auto elim:cte_wp_at_weakenE)
 
-end
+end (* strengthen_implementation *)
 
 
 lemma slots_holding_overlapping_caps_def':
@@ -471,7 +471,7 @@ lemma is_final_cap_reads_respects:
   by (clarsimp simp: equiv_valid_def2 equiv_valid_2_def in_monad
                      reads_equiv_f_def is_final_cap'_read_equiv_eq)
 
-end
+end (* FinalCaps *)
 
 
 definition ctes_wp_at
@@ -1018,7 +1018,7 @@ lemma cap_insert_silc_inv:
   apply (fastforce simp: all_children_def simp del: split_paired_All)+
   done
 
-end
+end (* FinalCaps *)
 
 
 lemma cte_wp_at_eq:
@@ -1244,7 +1244,7 @@ lemma cancel_ipc_silc_inv:
   apply auto
   done
 
-end
+end (* FinalCaps *)
 
 
 lemma cancel_ipc_indirect_silc_inv:
@@ -1426,7 +1426,7 @@ lemma finalise_cap_ret_is_silc:
                          use_valid[OF _ finalise_cap_ret_subset_obj_refs])
   done
 
-end
+end (* FinalCaps *)
 
 
 lemma arch_finalise_cap_ret:
@@ -1671,7 +1671,7 @@ schematic_goal rec_del_silc_inv_not_transferable:
   apply (rule rec_del_silc_inv')
   done
 
-end
+end (* FinalCaps *)
 
 
 lemma cdt_change_allowed_not_silc:
@@ -1839,7 +1839,7 @@ lemma invoke_cnode_silc_inv:
   apply (wp cancel_badged_sends_silc_inv | simp | wpc | rule hoare_pre)+
   done
 
-end
+end (* FinalCaps *)
 
 
 lemma set_cap_default_cap_silc_inv:
@@ -2180,7 +2180,7 @@ lemma cap_insert_silc_inv':
   apply (fastforce dest!: silc_inv_all_children simp: all_children_def simp del: split_paired_All)
   done
 
-end
+end (* FinalCaps *)
 
 
 lemma intra_label_cap_pres':
@@ -2347,7 +2347,7 @@ lemma invoke_irq_handler_silc_inv:
          | simp add: pas_refined_def irq_map_wellformed_aux_def authorised_irq_hdl_inv_def)+
   done
 
-end
+end (* FinalCaps *)
 
 
 lemma new_irq_handler_caps_are_intra_label:
@@ -2446,7 +2446,7 @@ lemma do_ipc_transfer_silc_inv:
   apply clarsimp
   done
 
-end
+end (* FinalCaps *)
 
 
 locale FinalCaps_2 = FinalCaps +
@@ -2640,7 +2640,7 @@ crunch do_reply_transfer
   for silc_inv[wp]: "silc_inv aag st"
   (wp: thread_set_tcb_fault_update_silc_inv crunch_wps ignore: set_object thread_set)
 
-end
+end (* FinalCaps_2 *)
 
 
 crunch reply_from_kernel
@@ -2706,7 +2706,7 @@ lemma checked_cap_insert_silc_inv:
   apply (fastforce dest: same_object_as_slots_holding_overlapping_caps)
   done
 
-end
+end (* FinalCaps *)
 
 
 lemma thread_set_tcb_ipc_buffer_update_silc_inv[wp]:
@@ -2881,7 +2881,7 @@ crunch timer_tick, handle_yield
   for silc_inv[wp]: "silc_inv aag st"
   (simp: tcb_cap_cases_def)
 
-end
+end (* FinalCaps_2 *)
 
 
 locale FinalCaps_3 = FinalCaps_2 +
@@ -2976,6 +2976,6 @@ lemma call_kernel_silc_inv:
   apply clarsimp
   done
 
-end
+end (* FinalCaps_3 *)
 
 end

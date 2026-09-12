@@ -286,7 +286,7 @@ lemma handleHypervisorFault_C_body_ccorres[ADT_IF_Refine_assms]:
     apply (auto simp: return_def)
   done
 
-end
+end (* kernel_m *)
 
 
 sublocale kernel_m \<subseteq> ADT_IF_Refine?: ADT_IF_Refine _ _ _ doUserOp_C_if handleHypervisorFault_C_body_if hyp_fault_type_from_H

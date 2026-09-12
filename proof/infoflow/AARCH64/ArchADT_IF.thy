@@ -101,7 +101,7 @@ lemmas [ADT_IF_assms] =
   activate_thread_cur_fpu_in_cur_domain
   activate_thread_valid_cur_vcpu
 
-end
+end (* Arch *)
 
 
 global_interpretation ADT_IF?: ADT_IF
@@ -449,7 +449,7 @@ crunch init_arch_objects
   for irq_states_of_state[ADT_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp)
 
-end
+end (* Arch *)
 
 
 global_interpretation ADT_IF_2?: ADT_IF_2

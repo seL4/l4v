@@ -132,7 +132,7 @@ lemma equiv_asid_equiv_update[Scheduler_IF_assms]:
 declare arch_prepare_next_domain_inv[Scheduler_IF_assms]
 declare arch_activate_idle_thread_domain_fields_invs[Scheduler_IF_assms]
 
-end
+end (* Arch *)
 
 
 requalify_consts
@@ -458,7 +458,7 @@ lemma cur_fpu_in_cur_domain_wp[Scheduler_IF_assms,wp]:
 
 declare pas_wellformed_noninterference_domains_distinct[Scheduler_IF_assms]
 
-end
+end (* Arch *)
 
 arch_requalify_consts
   cur_hyp_in_cur_domain

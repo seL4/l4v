@@ -194,7 +194,7 @@ lemma dmo_freeMemory_reads_respects_g:
   apply clarsimp
   done
 
-end
+end (* Retype_IF *)
 
 
 crunch set_cdt
@@ -406,7 +406,7 @@ crunch delete_objects
   for irq_masks[wp]: "\<lambda>s. P (irq_masks (machine_state s))"
   (ignore: do_machine_op wp: dmo_wp no_irq_freeMemory no_irq simp: detype_def)
 
-end
+end (* Retype_IF *)
 
 
 lemma untyped_caps_do_not_overlap_global_refs:
@@ -568,6 +568,6 @@ lemma invoke_untyped_reads_respects_g:
   apply (cases ui, clarsimp simp: valid_untyped_inv_wcap cte_wp_at_caps_of_state)
   done
 
-end
+end (* Retype_IF_2 *)
 
 end

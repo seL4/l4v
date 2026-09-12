@@ -136,7 +136,7 @@ lemma equiv_asid_equiv_update[Scheduler_IF_assms]:
 
 declare arch_activate_idle_thread_domain_fields_invs[Scheduler_IF_assms]
 
-end
+end (* Arch *)
 
 
 arch_requalify_consts
@@ -1536,7 +1536,7 @@ lemma arch_switch_to_thread_midstrength_reads_respects_scheduler[Scheduler_IF_as
 definition cur_hyp_in_cur_domain where
   "cur_hyp_in_cur_domain \<equiv> cur_vcpu_in_cur_domain"
 
-end
+end (* Arch *)
 
 arch_requalify_consts cur_hyp_in_cur_domain cur_fpu_in_cur_domain
 

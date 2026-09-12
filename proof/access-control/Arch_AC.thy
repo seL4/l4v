@@ -235,7 +235,7 @@ lemma set_mrs_integrity_autarch:
   apply simp
   done
 
-end
+end (* Arch_AC *)
 
 locale Arch_AC_2 = Arch_AC +
   fixes authorised_arch_inv :: "'a PAS \<Rightarrow> arch_invocation \<Rightarrow> det_state \<Rightarrow> bool"

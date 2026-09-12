@@ -63,7 +63,7 @@ lemma arch_decode_irq_control_invocation_rev[Decode_IF_assms]:
 
 requalify_facts check_valid_ipc_buffer_inv
 
-end
+end (* Arch *)
 
 
 global_interpretation Decode_IF?: Decode_IF
@@ -376,7 +376,7 @@ lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
   apply assumption
   done
 
-end
+end (* Arch *)
 
 
 global_interpretation Decode_IF_2?: Decode_IF_2

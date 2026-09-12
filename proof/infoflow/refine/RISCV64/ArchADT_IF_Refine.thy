@@ -415,7 +415,7 @@ lemma kernel_entry_if_corres[ADT_IF_Refine_assms]:
   apply force
   done
 
-end
+end (* Arch *)
 
 requalify_consts
   RISCV64.doUserOp_if

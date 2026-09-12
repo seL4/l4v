@@ -410,7 +410,7 @@ lemma kernel_entry_if_corres[ADT_IF_Refine_assms]:
   apply force
   done
 
-end
+end (* Arch *)
 
 arch_requalify_consts doUserOp_if
 

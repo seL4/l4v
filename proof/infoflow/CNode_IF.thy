@@ -373,7 +373,7 @@ text \<open>
 definition only_timer_irq :: "irq \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "only_timer_irq irq s \<equiv> (\<forall>x. interrupt_states s x = IRQTimer \<longrightarrow> x = irq) \<and> irq_is_recurring irq s"
 
-end
+end (* CNode_IF *)
 
 
 locale CNode_IF_2 = CNode_IF state_ext_t
@@ -477,7 +477,7 @@ crunch reset_work_units, work_units_limit_reached, update_work_units
   for only_timer_irq_inv[wp]: "only_timer_irq_inv irq st"
   (simp: only_timer_irq_inv_def only_timer_irq_def irq_is_recurring_def is_irq_at_def)
 
-end
+end (* CNode_IF_2 *)
 
 
 lemma gets_irq_masks_equiv_valid:
@@ -679,7 +679,7 @@ lemma preemption_point_reads_respects_f:
    apply (wp, force+)
   done
 
-end
+end (* CNode_IF_3 *)
 
 
 abbreviation

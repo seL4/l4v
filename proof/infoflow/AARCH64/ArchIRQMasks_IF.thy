@@ -87,7 +87,7 @@ crunch activate_thread, handle_spurious_irq, handle_vm_fault
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp no_irq)
 
-end
+end (* Arch *)
 
 
 global_interpretation IRQMasks_IF?: IRQMasks_IF
@@ -277,7 +277,7 @@ crunch arch_prepare_next_domain
   and valid_irq_states[IRQMasks_IF_assms,wp]: "valid_irq_states"
   (wp: crunch_wps)
 
-end
+end (* Arch *)
 
 
 global_interpretation IRQMasks_IF_2?: IRQMasks_IF_2

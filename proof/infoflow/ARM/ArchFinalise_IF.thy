@@ -368,7 +368,7 @@ lemma set_bound_notification_globals_equiv[Finalise_IF_assms]:
                dest: get_tcb_SomeD
               split: option.splits kernel_object.splits)+
 
-end
+end (* Arch *)
 
 
 global_interpretation Finalise_IF?: Finalise_IF

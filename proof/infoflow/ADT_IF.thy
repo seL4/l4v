@@ -223,7 +223,7 @@ lemma step_serial:
   apply (fastforce simp: steps_def)
   done
 
-end
+end (* serial_system_weak *)
 
 
 lemma sub_big_steps_I_holds:
@@ -371,7 +371,7 @@ lemma enabled:
   apply force
   done
 
-end
+end (* Init_Fin_serial_weak *)
 
 
 lemma invariant_holds_steps:
@@ -436,7 +436,7 @@ lemma fw_sim_serial:
   apply blast
   done
 
-end
+end (* serial_system *)
 
 
 locale Init_Fin_serial = serial_system +
@@ -476,7 +476,7 @@ lemma enabled:
   apply (rule I[simplified invariant_holds_def, THEN conjunct1,rule_format])
   done
 
-end
+end (* Init_Fin_serial *)
 
 
 sublocale Init_Fin_serial \<subseteq> enabled_system by (rule enabled)
@@ -1169,7 +1169,7 @@ lemma activate_thread_guarded_pas_domain[wp]:
   "activate_thread \<lbrace>guarded_pas_domain aag\<rbrace>"
   by (rule guarded_pas_domain_lift; wp activate_thread_cur_thread)
 
-end
+end (* ADT_IF_2 *)
 
 
 lemma kernel_entry_if_guarded_pas_domain:
@@ -1246,7 +1246,7 @@ lemma handle_preemption_if_valid_domain_list[wp]:
   unfolding handle_preemption_if_def
   by (wpsimp wp: valid_domain_list_lift)
 
-end
+end (* ADT_IF_2 *)
 
 
 lemma handle_preemption_if_silc_inv[wp]:
@@ -1413,7 +1413,7 @@ lemma kernel_entry_if_only_timer_irq_inv:
    by (wp only_timer_irq_inv_pres kernel_entry_if_irq_masks kernel_entry_if_domain_sep_inv
        | simp | blast)+
 
-end
+end (* ADT_IF_2 *)
 
 
 crunch schedule_if
@@ -1527,7 +1527,7 @@ lemma handle_preemption_if_only_timer_irq_inv[wp]:
   by (wp only_timer_irq_inv_pres handle_preemption_if_irq_masks handle_preemption_if_domain_sep_inv
       | simp | blast)+
 
-end
+end (* ADT_IF_2 *)
 
 
 lemma schedule_if_only_timer_irq_inv[wp]:
@@ -1634,6 +1634,10 @@ locale invariant_over_ADT_if =
            check_active_irq_if tc
            \<lbrace>\<lambda>rv. case (fst rv) of Some irq \<Rightarrow> det_inv (KernelEntry Interrupt) (snd rv)
                                 | None \<Rightarrow> det_inv InIdleMode (snd rv)\<rbrace>"
+
+(*
+^(context|locale) (?!begin)(\w+)(?:(?!\b(?:begin|end|context|locale)\b)[\s\S])*?\bbegin\b(?:(?!\b(?:begin|end|context|locale)\b)[\s\S])*?\bend\b
+*)
 
 
 locale valid_initial_state_noenabled = invariant_over_ADT_if + (* FIXME: arch-split *)
@@ -1804,7 +1808,7 @@ lemma kernel_entry_if_domain_time_sched_action:
        apply wpsimp+
   done
 
-end
+end (* ADT_IF_2 *)
 
 
 subsection \<open>to split generic preservation lemma\<close>
@@ -2339,7 +2343,7 @@ lemma execution_invs:
   apply (clarsimp simp: Fin_ADT_if ADT_A_if_def)
   done
 
-end
+end (* ADT_valid_initial_state *)
 
 
 lemma execution_restrict:
@@ -2365,7 +2369,7 @@ lemma invs_if_full_invs_if:
   "invs_if s \<Longrightarrow> s \<in> full_invs_if"
   by (clarsimp simp: full_invs_if_def invs_if_def Invs_def no_domain_caps_strg)
 
-end
+end (* valid_initial_state *)
 
 context ADT_valid_initial_state begin
 
@@ -2416,7 +2420,7 @@ lemma ADT_A_if_enabled_Step_system:
   "enabled_Step_system (ADT_A_if utf) s0"
   by (simp add: enabled_Step_system_def ADT_A_if_Step_system ADT_A_if_enabled_system)
 
-end
+end (* ADT_valid_initial_state *)
 
 
 section \<open>IRQs and big step automaton enabledness\<close>
@@ -2788,7 +2792,7 @@ lemma invoke_cnode_irq_state_inv:
   apply fastforce
   done
 
-end
+end (* ADT_IF *)
 
 
 lemma checked_insert_irq_state_of_state[wp]:
@@ -2926,7 +2930,7 @@ lemma handle_event_irq_state_inv:
            irq_state_inv_triv
            irq_state_inv_triv[OF handle_reply_irq_state_of_state])+
 
-end
+end (* ADT_IF_2 *)
 
 
 lemma schedule_if_irq_state_of_state[wp]:
@@ -3048,7 +3052,7 @@ lemma kernel_entry_if_irq_measure:
   apply (simp add: irq_measure_if_inv_def)
   done
 
-end
+end (* ADT_IF_2 *)
 
 
 lemma schedule_if_irq_measure_if:
@@ -3128,7 +3132,7 @@ lemma invs_if_invs[intro]:
   "invs_if ((a,s),b) \<Longrightarrow> invs s"
   by (simp add: invs_if_def Invs_def)
 
-end
+end (* valid_initial_state *)
 
 
 context ADT_valid_initial_state begin
@@ -3343,7 +3347,7 @@ lemma ADT_A_if_Step_irq_masks:
   apply simp
   done
 
-end
+end (* ADT_valid_initial_state *)
 
 
 lemma steps_preserves_equivalence:
@@ -3526,7 +3530,7 @@ lemma big_step_ADT_A_if_enabled_Step_system:
   apply simp
   done
 
-end
+end (* ADT_valid_initial_state *)
 
 
 section \<open>Generic big step refinement\<close>

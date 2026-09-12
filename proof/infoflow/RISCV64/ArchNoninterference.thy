@@ -451,7 +451,7 @@ lemma partitionIntegrity_subjectAffects_tcb_fpu[Noninterference_assms]:
   apply (rule user_context.expand; clarsimp)
   done
 
-end
+end (* Arch *)
 
 
 requalify_consts RISCV64.arch_globals_equiv_strengthener

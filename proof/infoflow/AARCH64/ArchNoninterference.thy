@@ -794,7 +794,7 @@ lemmas [Noninterference_assms] =
   partitionIntegrity_subjectAffects_fpu
   partitionIntegrity_subjectAffects_tcb_fpu
 
-end
+end (* Arch *)
 
 
 arch_requalify_consts arch_globals_equiv_strengthener

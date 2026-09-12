@@ -50,7 +50,7 @@ lemma state_vrefs_eq:
   apply (fastforce simp: opt_map_def vs_lookup_table'[symmetric])
   done
 
-end
+end (* retype_region_proofs *)
 
 
 context retype_region_proofs' begin interpretation Arch .
@@ -85,7 +85,7 @@ lemma pas_refined:
   apply simp
   done
 
-end
+end (* retype_region_proofs *)
 
 
 context Arch begin arch_global_naming
@@ -430,7 +430,7 @@ lemma retype_region_integrity_fpu[Retype_AC_assms]:
 
 declare state_hyp_refs_of_detype[Retype_AC_assms]
 
-end
+end (* Arch *)
 
 
 global_interpretation Retype_AC?: Retype_AC
