@@ -1510,14 +1510,16 @@ in
       val mvinfo = MungedVar {munge = munged_name,
                               owned_by = StmtDecl.get_owned_by attrs}
       val var_e = ewrap(Var (str, ref (SOME (vty, mvinfo))), left s, right s)
-      val (inits, proc_expr_opt, e) =
+      (* proc_exprs are the expressions of the initialiser that still need to be
+         processed, i.e. analysed for function calls, global reads, etc. *)
+      val (inits, proc_exprs, e) =
           case iopt of
             NONE => let
             in
               case fname of
-                NONE => ([], NONE, e)
+                NONE => ([], [], e)
               | SOME _ => ([swrap(LocalInit var_e, left s, right s)],
-                           NONE,
+                           [],
                            e)
             end
           | SOME (InitE exp) => let
@@ -1547,11 +1549,7 @@ in
                           | SOME _ => ()
                 in
                   ([w (AssignFnCall(SOME var_e, e_fn, args))],
-                   let
-                     fun foldthis (e,acc) = ebogwrap(BinOp(Plus,e,acc))
-                   in
-                     SOME (List.foldl foldthis e_fn args)
-                   end,
+                   e_fn :: args,
                    e)
                 end
               | _ => let
@@ -1559,7 +1557,7 @@ in
                             NONE => cse_fupdglobinits (MSymTab.update (munged_name, exp)) e
                           | _ => e
                 in
-                  ([w (Assign(var_e, exp))], SOME exp, e)
+                  ([w (Assign(var_e, exp))], [exp], e)
                 end
             end
           | SOME (InitList ilist) => let
@@ -1570,14 +1568,16 @@ in
                     NONE => cse_fupdglobinits (MSymTab.update (munged_name, exp)) e
                   | _ => e
             in
-              ([w (Assign(var_e, exp))], SOME exp, e)
+              (* Only process the initialiser expression list. The type of the
+                 overall compound literal has already been processed. *)
+              ([w (Assign(var_e, exp))], inits_to_elist I (InitList ilist) [], e)
             end
       val d' = wrap(VarDecl(ty,s,storage_specs,NONE,attrs), left d, right d)
       val e =
-          case proc_expr_opt of
-              NONE => e
-            | SOME exp => #1 (process_expr RV fname e exp)
-                          (* ignore global reads done by initialiser *)
+          case proc_exprs of
+              [] => e
+            | _ => #1 (process_exprs RV fname e (map E proc_exprs))
+                   (* ignore global reads done by initialiser *)
       val (globalinits, localinits) =
           case fname of
               NONE => (inits, [])
