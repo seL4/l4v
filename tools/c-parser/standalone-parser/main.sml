@@ -429,10 +429,12 @@ in app note_defn ast end
 
 fun unhandled_asm cse ast = let
   open Absyn
-  fun warn_asm asm = K () (ProgramAnalysis.split_asm_stmt asm)
-    handle Fail s => print s
+  fun warn_asm s = K () (ProgramAnalysis.split_asm_stmt (snode s))
+    handle Fail msg =>
+      print (Region.toString (Region.make {left = sleft s, right = sright s}) ^
+             ": " ^ msg ^ "\n")
   fun warn_stmt s = case snode s of
-      (AsmStmt asm) => warn_asm (AsmStmt asm)
+      AsmStmt _ => warn_asm s
     | _ => app warn_stmt (sub_stmts s)
   fun warn_bi (BI_Stmt s) = warn_stmt s
     | warn_bi _ = ()
