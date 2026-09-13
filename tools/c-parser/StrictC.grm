@@ -1449,6 +1449,10 @@ initializer
       (wrap(InitE rexpression, eleft rexpression, eright rexpression))
 | LCURLY initializer_list RCURLY
       (wrap(InitList initializer_list, LCURLYleft, RCURLYright))
+| LCURLY RCURLY
+      (errorStr'(LCURLYleft, RCURLYright,
+                 "Empty initializer lists are not supported");
+       wrap(InitList [], LCURLYleft, RCURLYright))
 
 
 assignop

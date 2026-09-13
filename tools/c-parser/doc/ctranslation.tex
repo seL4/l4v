@@ -547,6 +547,10 @@ will also be a \texttt{mem_type}, as long as the size of the array is
 not so large that the array would not fit into memory.  This condition
 is discharged as the \strictc{} program is translated.
 
+Arrays must have at least one element.  Zero-length arrays, including
+arrays declared with an empty initialiser list, are rejected with an
+error.
+
 For technical reasons due to the implementation of type classes in
 Isabelle, we need to fix separate limits, ahead of time, on the
 number of elements in an array and the size of each element.
