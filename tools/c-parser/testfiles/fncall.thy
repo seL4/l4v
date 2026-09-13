@@ -75,6 +75,38 @@ lemma (in fncall_global_addresses) f_impl_result:
   apply (rule f_impl)
   done
 
+(* Check that printed procedure call syntax does not contain internal _'proc
+   suffix, and that printed output is legal input and alpha-convertible to original.
+   Also check that this holds for procedure names that are Const from the C parser
+   as well as Free from Simpl locale parameters. *)
+context fncall_global_addresses
+begin
+
+ML \<open>
+local
+  val ctxt = @{context};
+  fun round_trip must_contain s =
+    let
+      val t = Syntax.read_term ctxt s;
+      val s' = Pretty.pure_string_of (Syntax.pretty_term ctxt t);
+      val _ = @{assert} (not (String.isSubstring "_'proc" s'));
+      val _ = @{assert} (String.isSubstring must_contain s');
+      val t' = Syntax.read_term ctxt s';
+    in @{assert} (t aconv t') end;
+in
+val _ = round_trip "CALL f(\<acute>n)"
+  "\<Gamma> \<turnstile> \<lbrace> True \<rbrace> \<acute>ret__int :== CALL f(\<acute>n) \<lbrace> \<acute>ret__int = 1 \<rbrace>";
+val _ = round_trip "CALL g()"
+  "\<Gamma> \<turnstile> \<lbrace> True \<rbrace> \<acute>ret__int :== CALL g() \<lbrace> \<acute>ret__int = 257 \<rbrace>";
+val _ = round_trip "PROC f(\<acute>n)"
+  "\<Gamma> \<turnstile> \<lbrace> True \<rbrace> \<acute>ret__int :== PROC f(\<acute>n) \<lbrace> \<acute>ret__int = 1 \<rbrace>";
+val _ = round_trip "PROC g()"
+  "\<Gamma> \<turnstile> \<lbrace> True \<rbrace> Call g_'proc \<lbrace> \<acute>ret__int = 257 \<rbrace>";
+end
+\<close>
+
+end
+
 lemma (in fncall_global_addresses) g_spec:
   shows
   "\<Gamma> \<turnstile> \<lbrace> True \<rbrace> \<acute>ret__int :== PROC g() \<lbrace> \<acute>ret__int = 257 \<rbrace>"
