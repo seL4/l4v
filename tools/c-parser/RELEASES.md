@@ -186,3 +186,16 @@
   the generation of modifies proofs. Default behaviour is unchanged.
 - Allow the character ' in Isabelle identifiers in FNSPEC, so that for instance
   the name StrictC'_f_spec can be used as a lemma identifier.
+
+
+## 1.23 (upcoming)
+
+- Explicitly check operand types of inline `asm` statements. Outputs must be
+  of type unsigned integer, must be lvalues, and must have exactly
+  machine-word size. Inputs types are more relaxed. They can be scalars of
+  at least machine-word width.
+- Inline `asm` statements outside the supported asm subset (e.g. multiple
+  outputs or unsupported constraint letters) are reported as warnings. The
+  translation replaces them as before with an `asm_semantics_ok_to_ignore`
+  guard. Use `--unhandled_asm` in the standalone parser to list these
+  statements.
