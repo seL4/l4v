@@ -1457,33 +1457,44 @@ fun gen_fcall_tr' ctxt init p return result c =
   end;
 
 
+local
+  fun pname_default_tr' ctxt p =
+    let
+      (* from HOL strings to ML strings *)
+      fun dest_nib c =    (* fixme authentic syntax *)
+        (case raw_explode c of
+          ["N", "i", "b", "b", "l", "e", h] =>
+            if "0" <= h andalso h <= "9" then ord h - ord "0"
+            else if "A" <= h andalso h <= "F" then ord h - ord "A" + 10
+            else raise Match
+        | _ => raise Match);
+
+      fun dest_chr (Const (@{const_syntax Char},_) $ Const (c1, _) $ Const (c2,_)) =
+            let val c = Char.chr (dest_nib c1 * 16 + dest_nib c2)
+            in if Char.isPrint c then c else raise Match end
+        | dest_chr _ = raise Match;
+
+      fun dest_string (Const (@{const_syntax Nil}, _)) = []
+        | dest_string (Const (@{const_syntax Cons}, _) $ c $ cs) = dest_chr c :: dest_string cs
+        | dest_string _ = raise Match;
+      in
+        (case try dest_string p of
+          SOME name => Syntax.const (String.implode name)
+        | NONE => antiquote_mult_tr' ctxt (K true) antiquoteCur antiquoteOld p)
+      end;
+in
+
 fun pname_tr' ctxt ((f as Const (@{syntax_const "_free"}, _)) $ Free (p, T)) =
       (*f$*) Const (unsuffix' Hoare.proc_deco p, T)
   | pname_tr' ctxt (Free (p, T)) = Const (unsuffix' Hoare.proc_deco p, T)
-  | pname_tr' ctxt p =
-      let
-        (* from HOL strings to ML strings *)
-        fun dest_nib c =    (* fixme authentic syntax *)
-          (case raw_explode c of
-            ["N", "i", "b", "b", "l", "e", h] =>
-              if "0" <= h andalso h <= "9" then ord h - ord "0"
-              else if "A" <= h andalso h <= "F" then ord h - ord "A" + 10
-              else raise Match
-          | _ => raise Match);
+  | pname_tr' ctxt (p as Const (c, T)) =
+      (* procedure names that are constants, e.g. from the C parser *)
+      (case try (unsuffix Hoare.proc_deco) (Hoare.extern ctxt c) of
+        SOME name => Const (name, T)
+      | NONE => pname_default_tr' ctxt p)
+  | pname_tr' ctxt p = pname_default_tr' ctxt p;
 
-        fun dest_chr (Const (@{const_syntax Char},_) $ Const (c1, _) $ Const (c2,_)) =
-              let val c = Char.chr (dest_nib c1 * 16 + dest_nib c2)
-              in if Char.isPrint c then c else raise Match end
-          | dest_chr _ = raise Match;
-
-        fun dest_string (Const (@{const_syntax Nil}, _)) = []
-          | dest_string (Const (@{const_syntax Cons}, _) $ c $ cs) = dest_chr c :: dest_string cs
-          | dest_string _ = raise Match;
-        in
-          (case try dest_string p of
-            SOME name => Syntax.const (String.implode name)
-          | NONE => antiquote_mult_tr' ctxt (K true) antiquoteCur antiquoteOld p)
-        end;
+end;
 
 fun call_tr' ctxt [init, p, return, result] =
       gen_call_tr' ctxt
@@ -1523,9 +1534,18 @@ fun proc_tr' ctxt [p] =
         val formals = the (Hoare.get_params pn ctxt) handle Option.Option => raise Match;
         val val_formals = map_filter (fn (Hoare.In, p, _) => SOME p | _ => NONE) formals;
         val res_formals = map_filter (fn (Hoare.Out, p, _) => SOME p | _ => NONE) formals;
+        (* print parameters the same way as variables, i.e. including
+           abbreviations like the C parser aliases for type-mangled names *)
+        fun par_name n =
+          (case try (Proof_Context.read_const {proper = true, strict = false} ctxt) n of
+            SOME c =>
+              (case Proof_Context.contract_abbrevs ctxt c of
+                Const (c', _) => Hoare.remdeco ctxt (Lexicon.mark_const c')
+              | _ => Hoare.remdeco ctxt n)
+          | NONE => Hoare.remdeco ctxt n);
         fun mkpar n =
           Syntax.const @{syntax_const "_par"} $
-            (Syntax.const antiquoteCur $ Syntax.const (Hoare.remdeco ctxt n));
+            (Syntax.const antiquoteCur $ Syntax.const (par_name n));
       in
         if not (print_mode_active "NoProc")
         then
