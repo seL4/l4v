@@ -288,8 +288,7 @@ lemma ccap_relation_ep_helpers:
 (* FIXME move *)
 lemma ccap_relation_reply_helpers:
   "\<lbrakk>ccap_relation cap cap'; cap_get_tag cap' = scast cap_reply_cap\<rbrakk>
-   \<Longrightarrow> capReplyCanGrant_CL (cap_reply_cap_lift cap') = from_bool (capReplyCanGrant cap)
-       \<and> capReplyPtr_CL (cap_reply_cap_lift cap') = capReplyPtr cap"
+   \<Longrightarrow> capReplyPtr_CL (cap_reply_cap_lift cap') = capReplyPtr cap"
   by (clarsimp simp: cap_lift_reply_cap cap_to_H_simps cap_reply_cap_lift_def word_size
               elim!: ccap_relationE)
 

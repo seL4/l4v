@@ -1062,7 +1062,8 @@ lemma receive_ipc_schact_is_rct_imp_ct_not_in_release_q:
   apply (wpsimp wp: complete_signal_schact_is_rct_imp_ct_not_in_release_q)
            apply ((wpsimp wp: hoare_vcg_imp_lift' thread_get_wp')+)[2]
          apply (wpsimp wp: thread_get_wp')
-                    apply (wpsimp wp: hoare_vcg_imp_lift')
+                     apply (wpsimp wp: hoare_vcg_imp_lift')
+                    apply wpsimp
                    apply wpsimp
                   apply (wpsimp wp: hoare_vcg_imp_lift')
                  apply (wpsimp wp: hoare_vcg_imp_lift')
@@ -1934,6 +1935,10 @@ lemma check_budget_schact_is_rct_imp_ct_activatable[wp]:
 lemma check_budget_restart_schact_is_rct_imp_ct_activatable[wp]:
   "check_budget_restart \<lbrace>\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
   by (wpsimp simp: check_budget_restart_def)
+
+lemma update_reply_schact_is_rct_imp_ct_activatable[wp]:
+  "update_reply ptr f \<lbrace>\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  by (wpsimp simp: update_reply_def set_object_def get_object_def obj_at_def pred_tcb_at_def ct_in_state_def)
 
 lemma receive_ipc_schact_is_rct_imp_ct_activatable[wp]:
   "receive_ipc thread cap is_blocking reply_cap

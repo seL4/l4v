@@ -699,7 +699,7 @@ definition final_matters' :: "capability \<Rightarrow> bool" where
  "final_matters' cap \<equiv> case cap of
     EndpointCap ref bdg s r g gr \<Rightarrow> True
   | NotificationCap ref bdg s r \<Rightarrow> True
-  | ReplyCap ref gr \<Rightarrow> True
+  | ReplyCap ref \<Rightarrow> True
   | ThreadCap ref \<Rightarrow> True
   | SchedContextCap ref sz \<Rightarrow> True
   | CNodeCap ref bits gd gs \<Rightarrow> True
@@ -2323,7 +2323,7 @@ crunch replyClear
   (wp: crunch_wps simp: crunch_simps ignore: threadSet cong: if_cong)
 
 lemma finaliseCapTrue_standin_bound_tcb_at':
-  "\<lbrace>\<lambda>s. bound_tcb_at' P t s \<and> (\<exists>tt r. cap = ReplyCap tt r) \<rbrace>
+  "\<lbrace>\<lambda>s. bound_tcb_at' P t s \<and> (\<exists>tt. cap = ReplyCap tt) \<rbrace>
      finaliseCapTrue_standin cap final
    \<lbrace>\<lambda>_. bound_tcb_at' P t\<rbrace>"
   apply (case_tac cap; simp add: finaliseCapTrue_standin_def gen_isCap_simps)
@@ -3339,7 +3339,7 @@ lemma fast_finaliseCap_corres:
    apply (clarsimp simp: valid_cap'_def)
   (* ReplyCap *)
   apply clarsimp
-  apply (rename_tac rptr rs)
+  apply (rename_tac rptr)
   apply (add_sym_refs, add_valid_replies rptr simp: valid_cap_def, add_sch_act_wf)
   apply (rule corres_stateAssert_assume; simp?)
   apply (rule corres_stateAssert_assume; simp?)

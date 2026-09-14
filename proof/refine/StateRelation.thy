@@ -67,8 +67,8 @@ primrec cap_relation :: "cap \<Rightarrow> capability \<Rightarrow> bool" where
      (c = Structures_H.CNodeCap ref n (of_bl L) (length L))"
 | "cap_relation (Structures_A.ThreadCap ref) c =
      (c = Structures_H.ThreadCap ref)"
-| "cap_relation (Structures_A.ReplyCap ref r) c           = (c =
-           Structures_H.ReplyCap ref (AllowGrant \<in> r))"
+| "cap_relation (Structures_A.ReplyCap ref) c             = (c =
+           Structures_H.ReplyCap ref)"
 | "cap_relation (Structures_A.SchedContextCap ref n) c    = (c =
            Structures_H.SchedContextCap ref (min_sched_context_bits + n))"
 | "cap_relation (Structures_A.SchedControlCap) c          = (c =
@@ -267,7 +267,7 @@ lemma maxReleaseTime_equiv:
 
 definition reply_relation :: "Structures_A.reply \<Rightarrow> Structures_H.reply \<Rightarrow> bool" where
   "reply_relation \<equiv> \<lambda>reply reply'.
-     reply_sc reply = replySC reply' \<and> reply_tcb reply = replyTCB reply'"
+     reply_sc reply = replySC reply' \<and> reply_tcb reply = replyTCB reply' \<and> reply_can_grant reply = replyCanGrant reply'"
 
 definition ep_relation_cut :: "Structures_A.kernel_object \<Rightarrow> kernel_object \<Rightarrow> bool" where
   "ep_relation_cut obj obj' \<equiv>
