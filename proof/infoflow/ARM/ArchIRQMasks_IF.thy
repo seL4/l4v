@@ -35,7 +35,8 @@ crunch finalise_cap
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps dmo_wp no_irq
    simp: crunch_simps no_irq_setHardwareASID  no_irq_invalidateLocalTLB_ASID
-         no_irq_set_current_pd no_irq_invalidateLocalTLB_VAASID no_irq_cleanByVA_PoU)
+         no_irq_set_current_pd no_irq_invalidateLocalTLB_VAASID no_irq_cleanByVA_PoU
+         no_irq_dsb no_irq_isb)
 
 crunch send_signal, timer_tick
   for irq_masks[IRQMasks_IF_assms, wp]: "\<lambda>s. P (irq_masks_of_state s)"

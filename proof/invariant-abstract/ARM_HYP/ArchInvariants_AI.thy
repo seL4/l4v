@@ -765,6 +765,14 @@ definition
 where
   "is_vcpu \<equiv> \<lambda>ko. \<exists>vcpu. ko = ArchObj (VCPU vcpu)"
 
+definition valid_next_asid_2 :: "hardware_asid \<Rightarrow> bool" where
+  "valid_next_asid_2 hw_asid \<equiv> hw_asid \<noteq> hw_asid_reserved"
+
+locale_abbrev valid_next_asid :: "'z::state_ext state \<Rightarrow> bool" where
+  "valid_next_asid s \<equiv> valid_next_asid_2 (arm_next_asid (arch_state s))"
+
+lemmas valid_next_asid_def = valid_next_asid_2_def
+
 definition
   valid_arch_state :: "'z::state_ext state \<Rightarrow> bool"
 where
@@ -773,6 +781,7 @@ where
   (case arm_current_vcpu (arch_state s) of
      Some (v, b) \<Rightarrow> obj_at (is_vcpu and hyp_live) v s
    | _ \<Rightarrow> True) \<and>
+  valid_next_asid s \<and>
   is_inv (arm_hwasid_table (arch_state s)) (option_map fst o arm_asid_map (arch_state s))"
 
 definition

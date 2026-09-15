@@ -45,6 +45,19 @@ The machine monad contains a platform-specific opaque pointer, used by the exter
 > newtype HardwareASID = HardwareASID { fromHWASID :: Word8 }
 >     deriving (Num, Enum, Bounded, Ord, Ix, Eq, Show)
 
+Hardware ASID 0 is reserved: "setVMRoot" installs the empty global page directory under hardware
+ASID 0 for threads without a valid page directory, without a TLB flush. That is only sound if no
+real page directory ever runs under hardware ASID 0, otherwise such a thread hits that page
+directory's TLB entries.
+
+> hwASIDReserved :: HardwareASID
+> hwASIDReserved = HardwareASID 0
+
+First hardware ASID usable for user page directories.
+
+> hwASIDMin :: HardwareASID
+> hwASIDMin = HardwareASID 1
+
 > toPAddr = Platform.PAddr
 
 \subsubsection{Virtual Memory}

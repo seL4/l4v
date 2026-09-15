@@ -706,6 +706,10 @@ lemma empty_fail_dsb: "empty_fail  dsb"
 lemma empty_fail_dmb: "empty_fail  dmb"
   by (simp add: dmb_def)
 
+lemma empty_fail_setHardwareASID[simp, intro!]:
+  "empty_fail (setHardwareASID hw_asid)"
+  by (simp add: setHardwareASID_def)
+
 lemma empty_fail_sendSGI:
   "empty_fail (sendSGI irq target)"
   by (simp add: sendSGI_def)
@@ -882,6 +886,27 @@ crunch handleSpuriousIRQ_mop
   (wp: no_fail_machine_state_rest_T ignore: handleSpuriousIRQ_impl)
 
 end
+
+text \<open>Lifting rules\<close>
+
+lemma dmo_machine_state_lift:
+  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P (machine_state s)\<rbrace> do_machine_op f \<lbrace>\<lambda>rv s. Q rv (machine_state s)\<rbrace>"
+  unfolding do_machine_op_def by wpsimp (erule use_valid; assumption)
+
+crunch do_machine_op
+  for user_frame[wp]: "\<lambda>s. P (in_user_frame p s)"
+
+lemma dmo_valid_machine_state:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (underlying_memory s)\<rbrace>"
+  shows "do_machine_op f \<lbrace>valid_machine_state\<rbrace>"
+  unfolding valid_machine_state_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift dmo_machine_state_lift assms)
+
+lemma dmo_valid_irq_states:
+  "(\<And>P. f \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>) \<Longrightarrow> do_machine_op f \<lbrace>valid_irq_states\<rbrace>"
+  unfolding valid_irq_states_def do_machine_op_def
+  by (wpsimp, erule use_valid; assumption)
+
 end
 
 end

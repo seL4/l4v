@@ -143,8 +143,35 @@ abbreviation (input) "pt_size_index \<equiv> 9"
 abbreviation (input) "pd_size_index \<equiv> 11"
 abbreviation (input) "pt_slot_vaddr_mask \<equiv> 0x1FF"
 
-(* Machine/Hardware/ARM.lhs - hardware_asid, vmfault_type and vmpage_size *)
-#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM_HYP ONLY HardwareASID VMFaultType HypFaultType VMPageSize pageBits pageBitsForSize pageForPageBits hcrCommon hcrTWE hcrTWI hcrVCPU hcrNative vgicHCREN sctlrDefault actlrDefault gicVCPUMaxNumLR
+(* Machine/Hardware/ARM.lhs - hardware_asid; manual translation of the HardwareASID newtype,
+   so that the hardware ASID length is available as a type. *)
+type_synonym hw_asid_len = 8
+type_synonym hardware_asid = "hw_asid_len word"
+
+definition
+  HardwareASID :: "hardware_asid \<Rightarrow> hardware_asid"
+where HardwareASID_def[simp]:
+ "HardwareASID \<equiv> id"
+
+definition
+  fromHWASID :: "hardware_asid \<Rightarrow> hardware_asid"
+where
+  fromHWASID_def[simp]:
+ "fromHWASID \<equiv> id"
+
+definition
+  fromHWASID_update :: "(hardware_asid \<Rightarrow> hardware_asid) \<Rightarrow> hardware_asid \<Rightarrow> hardware_asid"
+where
+  fromHWASID_update_def[simp]:
+ "fromHWASID_update f y \<equiv> f y"
+
+abbreviation (input)
+  HardwareASID_trans :: "(hardware_asid) \<Rightarrow> hardware_asid" ("HardwareASID'_ \<lparr> fromHWASID= _ \<rparr>")
+where
+  "HardwareASID_ \<lparr> fromHWASID= v0 \<rparr> == HardwareASID v0"
+
+(* Machine/Hardware/ARM.lhs - vmfault_type and vmpage_size *)
+#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM_HYP ONLY VMFaultType HypFaultType VMPageSize pageBits pageBitsForSize pageForPageBits hcrCommon hcrTWE hcrTWI hcrVCPU hcrNative vgicHCREN sctlrDefault actlrDefault gicVCPUMaxNumLR
 
 lemmas vmpage_size_simps = vmpage_size.simps
 end
@@ -153,7 +180,7 @@ arch_requalify_types vmpage_size
 
 context Arch begin arch_global_naming
 
-#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM_HYP instanceproofs ONLY HardwareASID VMFaultType HypFaultType VMPageSize
+#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM_HYP instanceproofs ONLY VMFaultType HypFaultType VMPageSize
 
 end
 end

@@ -347,6 +347,8 @@ lemma invs_A:
                           a_type_def)
    apply (rule conjI)
     apply (simp add: valid_global_pts_def state_defs)
+   apply (rule conjI)
+    apply (simp add: valid_next_asid_def state_defs hw_asid_min_def hw_asid_reserved_def)
    apply (simp add: state_defs is_inv_def)
   apply (rule conjI, clarsimp simp: valid_cur_fpu_def)
   apply (rule conjI)

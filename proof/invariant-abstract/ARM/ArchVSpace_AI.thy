@@ -145,27 +145,79 @@ lemma pd_at_asid_uniq:
   apply (simp add: mask_def)
   done
 
+crunch get_hw_asid, invalidate_asid_entry, invalidate_tlb_by_asid, find_free_hw_asid
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+  and caps[wp]: "\<lambda>s. P (caps_of_state s)"
+  and pred_tcb_at[wp]: "\<lambda>s. P (pred_tcb_at proj P t)"
+  and asid_table[wp]: "\<lambda>s. P (asid_table s)"
+  and aligned[wp]: pspace_aligned
+  and distinct[wp]: pspace_distinct
+  and cur[wp]: cur_tcb
+  and valid_objs[wp]: valid_objs
 
-lemma find_free_hw_asid_valid_arch [wp]:
-  "\<lbrace>valid_arch_state\<rbrace> find_free_hw_asid \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  apply (simp add: find_free_hw_asid_def invalidate_hw_asid_entry_def
-                   invalidate_asid_def do_machine_op_def split_def
+lemmas find_free_hw_asid_typ_ats[wp] = abs_typ_at_lifts [OF find_free_hw_asid_typ_at]
+lemmas invalidate_asid_typ_ats[wp] = abs_typ_at_lifts [OF invalidate_asid_typ_at]
+lemmas invalidate_hw_asid_entry_typ_ats[wp] = abs_typ_at_lifts [OF invalidate_hw_asid_entry_typ_at]
+lemmas invalidate_asid_entry_typ_ats[wp] = abs_typ_at_lifts [OF invalidate_asid_entry_typ_at]
+lemmas store_hw_asid_typ_ats[wp] = abs_typ_at_lifts [OF store_hw_asid_typ_at]
+lemmas get_hw_asid_typ_ats[wp] = abs_typ_at_lifts [OF get_hw_asid_typ_at]
+lemmas invalidate_tlb_by_asid_typ_ats[wp] = abs_typ_at_lifts [OF invalidate_tlb_by_asid_typ_at]
+
+lemma hw_asid_min_not_reserved[simp]:
+  "hw_asid_min \<noteq> hw_asid_reserved"
+  by (simp add: hw_asid_min_def hw_asid_reserved_def)
+
+lemma valid_next_asid_min[simp, intro!]:
+  "valid_next_asid_2 hw_asid_min"
+  by (simp add: valid_next_asid_2_def)
+
+lemma find_free_hw_asid_valid_next_asid[wp]:
+  "find_free_hw_asid \<lbrace>valid_next_asid\<rbrace>"
+  apply (simp add: find_free_hw_asid_def invalidate_hw_asid_entry_def invalidate_asid_def
               cong: option.case_cong)
-  apply (wp|wpc|simp)+
-  apply (clarsimp simp: valid_arch_state_def)
-  apply (frule is_inv_inj)
-  apply (drule findNoneD)
-  apply (drule_tac x="arm_next_asid (arch_state s)" in bspec)
-   apply (simp add: minBound_word)
-  apply (clarsimp simp: is_inv_def ran_upd dom_option_map
-                        dom_upd)
-  apply (drule_tac x="x" and y="arm_next_asid (arch_state s)" in inj_onD)
-     apply simp
-    apply blast
-   apply blast
-  apply simp
+  apply (wpsimp split_del: if_split)
+  apply (clarsimp simp: valid_next_asid_def hw_asid_reserved_def hw_asid_min_def maxBound_word
+                        max_word_wrap)
   done
 
+\<comment> \<open>Sanity check: @{const find_free_hw_asid} never hands out the reserved hardware ASID.
+    Not used in any proof, but a useful check on the definitions.\<close>
+lemma find_free_hw_asid_not_reserved:
+  "\<lbrace>valid_next_asid\<rbrace> find_free_hw_asid \<lbrace>\<lambda>hw_asid _. hw_asid \<noteq> hw_asid_reserved\<rbrace>"
+  apply (simp add: find_free_hw_asid_def invalidate_hw_asid_entry_def invalidate_asid_def
+              cong: option.case_cong)
+  apply wpsimp
+  apply (fastforce dest!: findSomeD in_set_butlastD
+                    simp: valid_next_asid_def hw_asid_reserved_def hw_asid_min_def)
+  done
+
+crunch get_hw_asid, invalidate_asid_entry, invalidate_tlb_by_asid, find_free_hw_asid
+  for valid_asid_table[wp]: "\<lambda>s. valid_asid_table (arm_asid_table (arch_state s)) s"
+  and global_pd[wp]: "\<lambda>s. P (arm_global_pd (arch_state s))"
+  and valid_global_pts[wp]: "valid_global_pts"
+
+lemma find_free_hw_asid_is_inv[wp]:
+  "find_free_hw_asid \<lbrace>\<lambda>s. is_inv (arm_hwasid_table (arch_state s))
+                                 (option_map fst o arm_asid_map (arch_state s))\<rbrace>"
+  unfolding find_free_hw_asid_def invalidate_hw_asid_entry_def invalidate_asid_def
+  supply fun_upd_apply[simp del]
+  apply wpsimp
+  apply (frule is_inv_inj)
+  apply (drule findNoneD)
+  apply (drule_tac x="arm_next_asid (arch_state s)" in bspec, simp)
+  apply (fastforce simp: is_inv_def ran_upd[folded fun_upd_apply] dom_upd
+                         fun_upd_apply
+                   split: if_split_asm
+                   dest: inj_on_domD)
+  done
+
+lemma valid_global_refs_asid_map_update[simp]:
+  "valid_global_refs (s \<lparr> arch_state := arm_asid_map_update f (arch_state s) \<rparr>) = valid_global_refs s"
+  by (simp add: valid_global_refs_def global_refs_def)
+
+lemma find_free_hw_asid_valid_arch [wp]:
+  "find_free_hw_asid \<lbrace>valid_arch_state\<rbrace>"
+  unfolding valid_arch_state_def by (wpsimp | wps)+
 
 lemma valid_vs_lookupE:
   "\<lbrakk> valid_vs_lookup s; \<And>ref p. (ref \<unrhd> p) s' \<Longrightarrow> (ref \<unrhd> p) s;
@@ -423,23 +475,6 @@ lemma flush_space_arch_objs[wp]:
   apply (simp add: flush_space_def)
   apply (wp load_hw_asid_wp | wpc | simp | rule_tac Q'="\<lambda>_. valid_vspace_objs" in hoare_strengthen_post)+
   done
-
-
-crunch invalidate_asid_entry
-  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
-
-
-lemmas invalidate_asid_entry_typ_ats [wp] =
-  abs_typ_at_lifts [OF invalidate_asid_entry_typ_at]
-
-
-crunch invalidate_asid_entry
-  for cur[wp]: cur_tcb
-
-
-crunch invalidate_asid_entry
-  for valid_objs[wp]: valid_objs
-
 
 lemma invalidate_asid_entry_asid_map [wp]:
   "\<lbrace>valid_asid_map\<rbrace> invalidate_asid_entry asid \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
@@ -1602,37 +1637,127 @@ lemma invalidateLocalTLB_ASID_valid_irq_states:
   apply(simp add: valid_irq_states_def | wp no_irq | simp add: no_irq_invalidateLocalTLB_ASID)+
   done
 
+lemma valid_global_refs_hwasid_table_update[simp]:
+  "valid_global_refs (s\<lparr>arch_state := arch_state s \<lparr>arm_hwasid_table := v\<rparr>\<rparr>)
+   = valid_global_refs s"
+  by (simp add: valid_global_refs_def global_refs_def)
+
+lemma valid_global_refs_next_asid_update[simp]:
+  "valid_global_refs (s\<lparr>arch_state := arch_state s \<lparr>arm_next_asid := v\<rparr>\<rparr>)
+   = valid_global_refs s"
+  by (simp add: valid_global_refs_def global_refs_def)
+
+lemma valid_global_refs_asid_map_and_table_update[simp]:
+  "valid_global_refs (s\<lparr>arch_state := arch_state s \<lparr>arm_asid_map := v', arm_hwasid_table := v\<rparr>\<rparr>)
+   = valid_global_refs s"
+  by (simp add: valid_global_refs_def global_refs_def)
+
+crunch find_free_hw_asid, store_hw_asid
+  for if_live[wp]: if_live_then_nonz_cap
+  and zombies_final[wp]: zombies_final
+  and state_refs[wp]: "\<lambda>s. P (state_refs_of s)"
+  and hyp_refs[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
+  and valid_mdb[wp]: valid_mdb
+  and valid_ioc[wp]: valid_ioc
+  and valid_idle[wp]: valid_idle
+  and only_idle[wp]: only_idle
+  and if_unsafe[wp]: if_unsafe_then_cap
+  and valid_reply_caps[wp]: valid_reply_caps
+  and valid_reply_masters[wp]: valid_reply_masters
+  and valid_global_refs[wp]: valid_global_refs
+  and irq_states[wp]: "\<lambda>s. P (interrupt_states s)"
+  and irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and kernel_vspace[wp]: "\<lambda>s. P (arm_kernel_vspace (arch_state s))"
+  and valid_global_objs[wp]: valid_global_objs
+  and cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
+  (simp: valid_global_objs_def)
+
+crunch invalidateLocalTLB_ASID
+  for underlying_memory_inv[wp]: "\<lambda>s. P (underlying_memory s)"
+  (ignore_del: invalidateLocalTLB_ASID)
+
+crunch invalidate_asid, find_free_hw_asid, store_hw_asid
+  for valid_machine_state[wp]: valid_machine_state
+  and pspace_respects_device_region[wp]: pspace_respects_device_region
+  and cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
+  and valid_irq_states[wp]: valid_irq_states
+  (ignore: do_machine_op
+   wp: pspace_respects_device_region_dmo cap_refs_respects_device_region_dmo
+       invalidateLocalTLB_ASID_irq_masks)
+
+crunch invalidate_asid
+  for machine_state[wp]: "\<lambda>s. P (machine_state s)"
+
+lemma vs_lookup_hwasid_table_and_asid_map_update[simp]:
+  "(rs \<rhd> p) (s\<lparr>arch_state := arch_state s \<lparr>arm_hwasid_table := v, arm_asid_map := v'\<rparr>\<rparr>) =
+   (rs \<rhd> p) s"
+  by (simp add: vs_lookup_def vs_lookup1_def)
+
+lemma valid_vspace_objs_hwasid_table_and_next_asid_update[simp]:
+  "valid_vspace_objs (s\<lparr>arch_state := arch_state s \<lparr>arm_hwasid_table := v, arm_next_asid := v'\<rparr>\<rparr>) =
+   valid_vspace_objs s"
+  by (simp add: valid_vspace_objs_def vs_lookup_def vs_lookup1_def)
+
+lemma valid_arch_caps_hwasid_table_and_next_asid_update[simp]:
+  "valid_arch_caps (s\<lparr>arch_state := arch_state s \<lparr>arm_hwasid_table := v, arm_next_asid := v'\<rparr>\<rparr>) =
+   valid_arch_caps s"
+  by (simp add: valid_arch_caps_def valid_vs_lookup_def vs_lookup_pages_def vs_lookup_pages1_def
+                valid_table_caps_def second_level_tables_def)
+
+lemma valid_global_objs_hwasid_table_and_next_asid_update[simp]:
+  "valid_global_objs (s\<lparr>arch_state := arch_state s \<lparr>arm_hwasid_table := v, arm_next_asid := v'\<rparr>\<rparr>) =
+   valid_global_objs s"
+  by (simp add: valid_global_objs_def second_level_tables_def)
+
+lemma valid_kernel_mappings_hwasid_table_and_next_asid_update[simp]:
+  "valid_kernel_mappings
+     (s\<lparr>arch_state := arch_state s \<lparr>arm_hwasid_table := v, arm_next_asid := v'\<rparr>\<rparr>) =
+   valid_kernel_mappings s"
+  by (simp add: valid_kernel_mappings_def)
+
+lemma valid_kernel_mappings_asid_map_update[simp]:
+  "valid_kernel_mappings (s\<lparr>arch_state := arch_state s \<lparr>arm_asid_map := v\<rparr>\<rparr>) =
+   valid_kernel_mappings s"
+  by (simp add: valid_kernel_mappings_def)
+
+lemma valid_asid_map_hwasid_table_update[simp]:
+  "valid_asid_map (s\<lparr>arch_state := arch_state s \<lparr>arm_hwasid_table := v\<rparr>\<rparr>) = valid_asid_map s"
+  by (simp add: valid_asid_map_def vspace_at_asid_def vs_lookup_def vs_lookup1_def)
+
+lemma valid_next_asid_2_update[simp]:
+  "valid_next_asid_2 (if next_asid = maxBound then hw_asid_min else next_asid + 1)"
+  by (clarsimp simp: valid_next_asid_2_def hw_asid_reserved_def maxBound_word hw_asid_min_def
+                     word_wrap_eq_max_word)
+
+crunch do_machine_op, invalidate_asid
+  for typ_at_global_pd[wp]: "\<lambda>s. typ_at T (arm_global_pd (arch_state s)) s"
+  and second_level_tables[wp]: "\<lambda>s. P (second_level_tables (arch_state s))"
+  and valid_kernel_mappings[wp]: valid_kernel_mappings
+  and valid_global_vspace_mappings[wp]: valid_global_vspace_mappings
+  (simp: second_level_tables_def)
+
+lemma invalidate_asid_asid_map_update:
+  "\<lbrace>\<lambda>s. P (arm_hwasid_table (arch_state s)) ((arm_asid_map (arch_state s)) (asid := None))\<rbrace>
+   invalidate_asid asid
+   \<lbrace>\<lambda>_ s. P (arm_hwasid_table (arch_state s)) (arm_asid_map (arch_state s))\<rbrace>"
+  unfolding invalidate_asid_def
+  by (wpsimp simp: fun_upd_def)
+
 lemma find_free_hw_asid_invs [wp]:
-  "\<lbrace>invs\<rbrace> find_free_hw_asid \<lbrace>\<lambda>asid. invs\<rbrace>"
-  apply (rule hoare_add_post)
-    apply (rule find_free_hw_asid_valid_arch)
-   apply fastforce
-  apply (simp add: find_free_hw_asid_def invalidate_hw_asid_entry_def invalidate_asid_def
-                   do_machine_op_def split_def
-              cong: option.case_cong)
-  apply (wp|wpc)+
-  apply (clarsimp simp: invs_def valid_state_def split del: if_split)
-  apply (simp add: valid_global_refs_def global_refs_def cur_tcb_def
-                   valid_irq_node_def valid_vspace_objs_arch_update
-                   valid_global_objs_def valid_arch_caps_def second_level_tables_def
-                   valid_table_caps_def valid_kernel_mappings_def
-                   valid_machine_state_def valid_vs_lookup_arch_update)
-  apply (elim conjE)
-  apply (rule conjI)
-   apply(erule use_valid[OF _ invalidateLocalTLB_ASID_valid_irq_states])
-   apply fastforce
-  apply(rule conjI)
-   apply clarsimp
-   apply (drule use_valid)
-     apply (rule_tac p=p in invalidateLocalTLB_ASID_underlying_memory, simp, fastforce)
-  apply (clarsimp simp: valid_asid_map_def fun_upd_def[symmetric]
-                        pd_at_asid_arch_up')
-  apply (rule conjI, blast)
-  apply (clarsimp simp: vspace_at_asid_def)
-  apply (drule_tac P1 = "(=) (device_state (machine_state s))" in
-    use_valid[OF _ invalidateLocalTLB_ASID_device_state_inv])
-   apply simp
-  apply clarsimp
+  "find_free_hw_asid \<lbrace>invs\<rbrace>"
+  unfolding find_free_hw_asid_def invs_def valid_state_def valid_pspace_def
+  supply if_split[split del] fun_upd_apply[simp del]
+  apply (wpsimp simp: valid_arch_state_def invalidate_hw_asid_entry_def
+                wp: dmo_valid_machine_state invalidateLocalTLB_ASID_irq_masks
+                    pspace_respects_device_region_dmo cap_refs_respects_device_region_dmo
+                    invalidate_asid_asid_map_update valid_irq_node_typ valid_irq_handlers_lift
+                    valid_arch_caps_lift)
+  apply (frule is_inv_inj)
+  apply (drule findNoneD)
+  apply (drule_tac x="arm_next_asid (arch_state s)" in bspec, simp)
+  apply (fastforce simp: is_inv_def map_option_fun_upd ran_upd[folded fun_upd_apply] fun_upd_apply
+                   split: if_splits
+                   dest: inj_on_domD)
   done
 
 lemma get_hw_asid_invs [wp]:
@@ -1669,6 +1794,21 @@ lemma dmo_set_current_pd_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op (set_cu
      apply ((clarsimp simp: set_current_pd_def writeTTBR0_def dsb_def isb_def machine_op_lift_def
                            machine_rest_lift_def split_def | wp)+)[3]
   apply(erule (1) use_valid[OF _ set_current_pd_irq_masks])
+  done
+
+lemma set_global_pd_invs[wp]:
+  "set_global_pd \<lbrace>invs\<rbrace>"
+  apply (simp add: set_global_pd_def)
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+          in use_valid)
+     apply ((clarsimp simp: setHardwareASID_def set_current_pd_def writeTTBR0_def
+                            isb_def dsb_def machine_op_lift_def
+                            machine_rest_lift_def split_def | wp)+)[3]
+  apply (erule use_valid)
+   apply (wp no_irq
+          | simp add: no_irq_setHardwareASID no_irq_set_current_pd no_irq_dsb no_irq_isb)+
   done
 
 crunch ackInterrupt

@@ -569,7 +569,8 @@ lemma arm_context_switch_states_equiv_for:
 
 lemma set_vm_root_states_equiv_for[wp]:
   "set_vm_root thread \<lbrace>states_equiv_for P Q R S st\<rbrace>"
-  unfolding set_vm_root_def catch_def fun_app_def set_current_pd_def isb_def dsb_def writeTTBR0_def
+  unfolding set_vm_root_def set_global_pd_def catch_def fun_app_def set_current_pd_def isb_def
+            dsb_def writeTTBR0_def setHardwareASID_def
   by (wpsimp wp: arm_context_switch_states_equiv_for do_machine_op_mol_states_equiv_for
                  hoare_vcg_all_lift whenE_wp hoare_drop_imps
            simp: dmo_bind_valid if_apply_def2)+
@@ -1143,8 +1144,8 @@ lemma arm_context_switch_globals_equiv[wp]:
 
 lemma set_vm_root_globals_equiv[wp]:
   "set_vm_root tcb \<lbrace>globals_equiv s\<rbrace>"
-  apply (clarsimp simp: set_vm_root_def set_current_pd_def dsb_def
-                        isb_def writeTTBR0_def dmo_bind_valid)
+  apply (clarsimp simp: set_vm_root_def set_global_pd_def set_current_pd_def dsb_def
+                        isb_def writeTTBR0_def setHardwareASID_def dmo_bind_valid)
   apply (wp dmo_mol_globals_equiv arm_context_switch_globals_equiv whenE_inv
          | wpc
          | clarsimp simp: dmo_bind_valid isb_def dsb_def writeTTBR0_def)+
