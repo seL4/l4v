@@ -467,6 +467,10 @@ lemma vmrights_map_empty[simp]:
   "vmrights_map {} = VMKernelOnly"
   by (simp add: vmrights_map_def)
 
+lemma read_eq_vmrights_map_not_VMKernelOnly:
+  "(AllowRead \<in> R) = (vmrights_map R \<noteq> VMKernelOnly)"
+  by (simp add: vmrights_map_def split: if_splits)
+
 lemma pte_relation_make_user[simp]:
   "pte_relation'
      (make_user_pte (addrFromPPtr p)
@@ -478,7 +482,8 @@ lemma pte_relation_make_user[simp]:
                   (attribsFromWord a)
                   sz)"
   by (auto simp: make_user_pte_def makeUserPTE_def attribs_from_word_def
-                 attribsFromWord_def mask_vmrights_corres)
+                 attribsFromWord_def mask_vmrights_corres
+                 read_eq_vmrights_map_not_VMKernelOnly)
 
 lemma below_user_vtop_in_user_region:
   "p \<le> user_vtop \<Longrightarrow> p \<in> user_region"

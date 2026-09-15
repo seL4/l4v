@@ -801,7 +801,7 @@ lemma create_mapping_entries_authorised_slots [wp]:
   "\<lbrace>\<exists>\<rhd> pd and invs and pas_refined aag and
     K (is_subject aag pd \<and> is_aligned pd pd_bits \<and>
        vmsz_aligned vptr vmpage_size \<and> vptr < kernel_base \<and>
-       (\<forall>a\<in>vspace_cap_rights_to_auth rights.
+       (\<forall>a\<in>vspace_cap_rights_to_auth rights False.
           \<forall>p\<in>ptr_range (ptrFromPAddr base) (pageBitsForSize vmpage_size). aag_has_auth_to aag a p))\<rbrace>
    create_mapping_entries base vptr vmpage_size rights attrib pd
    \<lbrace>\<lambda>rv _. authorised_slots aag rv\<rbrace>, -"

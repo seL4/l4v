@@ -50,7 +50,7 @@ where
     | cdl_cap.RestartCap \<Rightarrow> {}
     | cdl_cap.IrqControlCap \<Rightarrow> {Control}
     | cdl_cap.IrqHandlerCap irq \<Rightarrow> {Control}
-    | cdl_cap.FrameCap dev oref r sz is_real asid \<Rightarrow> vspace_cap_rights_to_auth r
+    | cdl_cap.FrameCap dev oref r sz is_real asid \<Rightarrow> vspace_cap_rights_to_auth r False
     | cdl_cap.PageTableCap l oref is_real asid \<Rightarrow> {Control}
     | cdl_cap.AsidControlCap \<Rightarrow> {Control}
     | cdl_cap.AsidPoolCap oref asid \<Rightarrow> {Control}

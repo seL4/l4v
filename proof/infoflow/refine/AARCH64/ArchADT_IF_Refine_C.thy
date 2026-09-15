@@ -51,9 +51,9 @@ definition doUserOp_C_if
   "doUserOp_C_if uop tc \<equiv>
    do
       pr \<leftarrow> gets ptable_rights_s'';
-      pxn \<leftarrow> gets (\<lambda>s x. pr x \<noteq> {} \<and> ptable_xn_s'' s x);
-      pl \<leftarrow> gets (\<lambda>s. restrict_map (ptable_lift_s'' s) {x. pr x \<noteq> {}});
-      allow_read \<leftarrow> return {y. \<exists>x. pl x = Some y \<and> AllowRead \<in> pr x};
+      pxn \<leftarrow> gets ptable_xn_s'';
+      pl \<leftarrow> gets (\<lambda>s. restrict_map (ptable_lift_s'' s) {x. pr x \<noteq> {} \<or> \<not> pxn x});
+      allow_read \<leftarrow> return {y. \<exists>x. pl x = Some y \<and> (AllowRead \<in> pr x \<or> \<not> pxn x)};
       allow_write \<leftarrow> return {y. \<exists>x. pl x = Some y \<and> AllowWrite \<in> pr x};
       t \<leftarrow> gets (\<lambda>s. cur_thread (cstate_to_A s));
       um \<leftarrow> gets (\<lambda>s. user_mem_C (globals s) \<circ> ptrFromPAddr);

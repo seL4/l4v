@@ -512,7 +512,7 @@ makeUserPTE baseAddr rights attrs vmSize =
         pteBaseAddress = baseAddr,
         pteSmallPage = vmSize == ARMSmallPage,
         pteGlobal = False,
-        pteExecuteNever = armExecuteNever attrs,
+        pteExecuteNever = armExecuteNever attrs || rights == VMKernelOnly,
         pteDevice = not (armPageCacheable attrs),
         pteRights = rights }
 
