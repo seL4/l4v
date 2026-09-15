@@ -104,12 +104,18 @@ fun wp_default_ss ctxt = ctxt
     |> Splitter.del_split @{thm if_split}
     |> simpset_of
 
+(* Like wp, wpsimp, etc., start with a wp_pre step so that a concrete precondition is turned
+   into a schematic one before the actual lifting is attempted. wp_pre is a no-op when the
+   precondition is already schematic, so the step is harmless in (wp | wps)+ style loops. *)
 fun wps_tac ctxt rules =
 let
+  val wp_pre_tac =
+    TRY o WP_Pre.pre_tac' ctxt (Named_Theorems.get ctxt \<^named_theorems>\<open>wp_pre\<close>)
   (* avoid duplicate simp rule etc warnings: *)
   val ctxt = Context_Position.set_visible false ctxt
 in
-  resolve_tac ctxt [@{thm valid_strengthen_with_mresults}]
+  wp_pre_tac
+  THEN' resolve_tac ctxt [@{thm valid_strengthen_with_mresults}]
   THEN' (safe_simp_tac (put_simpset (postcond_ss ctxt) ctxt))
   THEN' Subgoal.FOCUS (fn focus => let
       val ctxt = #context focus;
@@ -133,6 +139,21 @@ lemma "\<lbrace>P\<rbrace> do v \<leftarrow> return (Suc 0); return (Suc (Suc 0)
    apply (rule bind_wp)+
     apply (wps | rule hoare_vcg_prop)+
   oops
+
+end
+
+(* Regression test: wps performs wp_pre itself, so it can be applied directly to a goal with a
+   concrete precondition, in the same way wp and wpsimp can. *)
+experiment
+  fixes f :: "(nat, unit) nondet_monad"
+    and Q :: "bool \<Rightarrow> nat \<Rightarrow> bool"
+    and R :: "nat \<Rightarrow> bool"
+  assumes f_Q[wp]: "\<lbrace>Q x\<rbrace> f \<lbrace>\<lambda>_. Q x\<rbrace>"
+  assumes f_R: "\<lbrace>\<lambda>s. P (R s)\<rbrace> f \<lbrace>\<lambda>_ s. P (R s)\<rbrace>"
+begin
+
+lemma "\<lbrace>\<lambda>s. Q (R s) s\<rbrace> f \<lbrace>\<lambda>_ s. Q (R s) s\<rbrace>"
+  by (wps f_R, wp, simp)
 
 end
 

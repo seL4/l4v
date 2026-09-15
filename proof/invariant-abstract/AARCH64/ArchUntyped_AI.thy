@@ -195,14 +195,14 @@ lemma init_arch_objects_descendants_range[wp,Arch_assms]:
    init_arch_objects ty dev ptr n us y
    \<lbrace>\<lambda>rv s. descendants_range x cref s\<rbrace>"
   unfolding init_arch_objects_def descendants_range_def
-  by (wp mapM_x_wp' | wps)+ simp
+  by (wp mapM_x_wp' | wps | simp)+
 
 lemma init_arch_objects_caps_overlap_reserved[wp,Arch_assms]:
   "\<lbrace>\<lambda>(s::'state_ext::state_ext state). caps_overlap_reserved S s\<rbrace>
    init_arch_objects ty dev ptr n us y
    \<lbrace>\<lambda>rv s. caps_overlap_reserved S s\<rbrace>"
   unfolding init_arch_objects_def caps_overlap_reserved_def
-  by (wp mapM_x_wp' | wps)+ simp
+  by (wp mapM_x_wp' | wps | simp)+
 
 lemma set_untyped_cap_invs_simple[Arch_assms]:
   "\<lbrace>\<lambda>s. descendants_range_in {ptr .. ptr+2^sz - 1} cref s \<and> pspace_no_overlap_range_cover ptr sz s \<and> invs s
