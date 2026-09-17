@@ -216,12 +216,12 @@ lemma insert_cap_sibling_corres:
             apply (clarsimp simp: fun_upd_def[symmetric] cong:if_cong)
             apply (subgoal_tac "inj_on transform_cslot_ptr ({src, sibling} \<union> dom (cdt s') \<union> ran (cdt s'))")
              apply (subst map_lift_over_f_eq map_lift_over_upd,
-               erule subset_inj_on, fastforce)+
+               erule inj_on_subset, fastforce)+
              apply (simp add: map_option_is_None[THEN trans [OF eq_commute]]
                fun_eq_iff del: inj_on_insert)
              apply (subst eq_commute [where a=None])
              apply (subst map_lift_over_f_eq map_lift_over_upd,
-               erule subset_inj_on, fastforce)+
+               erule inj_on_subset, fastforce)+
              apply clarsimp
             apply (rule_tac s=s' in transform_cdt_slot_inj_on_cte_at[where P=\<top>])
             apply (auto simp: swp_def dest: mdb_cte_atD
@@ -305,7 +305,7 @@ lemma insert_cap_child_corres:
             apply (clarsimp simp: fun_upd_def[symmetric] cong:if_cong)
             apply (subgoal_tac "inj_on transform_cslot_ptr ({src, child} \<union> dom (cdt s') \<union> ran (cdt s'))")
              apply (subst map_lift_over_f_eq map_lift_over_upd,
-                 erule subset_inj_on, fastforce)+
+                 erule inj_on_subset, fastforce)+
              apply (simp add: fun_eq_iff)
             apply (rule_tac s=s' in transform_cdt_slot_inj_on_cte_at[where P=\<top>])
             apply (auto simp: swp_def dest: mdb_cte_atD
@@ -458,16 +458,16 @@ proof -
               ({p, p'} \<union> dom (cdt s') \<union> ran (cdt s')) \<and> cdt s' p \<noteq> Some p")
            apply (elim conjE)
            apply (subst map_lift_over_if_eq)
-            apply (erule subset_inj_on, auto elim!: ranE split: if_split_asm)[1]
+            apply (erule inj_on_subset, auto elim!: ranE split: if_split_asm)[1]
            apply (rule sym)
            apply (simp add: Fun.swap_def split del: if_split)
            apply (subst map_lift_over_upd[unfolded fun_upd_def],
-                    ((erule subset_inj_on, auto elim!: ranE split: if_split_asm)[1]))+
+                    ((erule inj_on_subset, auto elim!: ranE split: if_split_asm)[1]))+
            apply (rule ext)
            apply (cases p, cases p')
            apply (simp split del: if_split)
            apply simp
-           apply (subst subset_inj_on map_lift_over_f_eq[OF subset_inj_on],
+           apply (subst inj_on_subset map_lift_over_f_eq[OF inj_on_subset],
                   assumption, fastforce)+
            apply (simp add: inj_on_eq_iff[where f="transform_cslot_ptr"]
                             ranI domI map_option_eq_Some[THEN trans [OF eq_commute]])

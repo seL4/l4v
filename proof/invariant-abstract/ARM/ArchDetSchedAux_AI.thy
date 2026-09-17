@@ -10,7 +10,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems DetSchedAux_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for DetSchedAux_AI locale *)
 
 lemmas arch_machine_ops_valid_sched_pred[wp] =
   arch_machine_ops_last_machine_time[THEN dmo_valid_sched_pred]
@@ -110,7 +110,7 @@ lemma init_arch_objects_valid_sched_pred[wp, DetSchedAux_AI_assms]:
 crunch init_arch_objects
   for exst[wp]: "\<lambda>s. P (exst s)"
   and ct[wp]: "\<lambda>s. P (cur_thread s)"
-  and valid_idle[wp, DetSchedAux_AI_assms]: valid_idle
+  and valid_idle[wp, Arch_assms]: valid_idle
   (wp: crunch_wps unless_wp)
 
 lemma valid_machine_time_getCurrentTime[DetSchedAux_AI_assms]:
@@ -191,12 +191,13 @@ lemma update_time_stamp_valid_machine_time[wp, DetSchedAux_AI_assms]:
   apply (fastforce simp: getCurrentTime_def elim: valid_machine_time_getCurrentTime)
   done
 
+lemmas DetSchedAux_AI_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation DetSchedAux_AI?: DetSchedAux_AI
   proof goal_cases
-    interpret Arch .
-    case 1 show ?case by (unfold_locales; (fact DetSchedAux_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact ARM.DetSchedAux_AI_assms)?)
   qed
 
 context Arch begin arch_global_naming

@@ -1510,7 +1510,7 @@ sublocale cspace_op < tcb_cspace_op
 sublocale tcb_cspace_op < non_aobj_op
   by unfold_locales (intro tcb_cspace_agnostic_obj_at tcb_cspace_arch_obj_pred_imp)
 
-sublocale non_aobj_op < non_vspace_op
+sublocale non_aobj_op \<subseteq> non_vspace_op
   by unfold_locales (intro aobj_at vspace_pred_imp)
 
 sublocale tcb_cspace_op < non_reply_op
@@ -1693,7 +1693,6 @@ lemma (in non_vspace_non_astate_non_mem_op) valid_machine_state[wp]:
   unfolding valid_machine_state_def
   by (wp hoare_vcg_disj_lift hoare_vcg_all_lift vsobj_at memory)
 
-
 locale non_cap_op =
   fixes f
   assumes caps[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
@@ -1701,7 +1700,7 @@ locale non_cap_op =
 locale non_vspace_non_cap_op = non_vspace_non_astate_op f + non_cap_op f for f
 locale non_aobj_non_cap_op = non_aobj_non_astate_op f + non_cap_op f for f
 
-sublocale non_aobj_non_cap_op < non_vspace_non_cap_op ..
+sublocale non_aobj_non_cap_op \<subseteq> non_vspace_non_cap_op ..
 
 lemma (in non_aobj_non_cap_op) valid_arch_state[wp]:
   "\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
@@ -1715,7 +1714,7 @@ lemma (in non_vspace_non_cap_op) valid_arch_caps[wp]:
 locale non_vspace_non_cap_non_mem_op = non_vspace_non_astate_non_mem_op f + non_vspace_non_cap_op f for f
 locale non_aobj_non_cap_non_mem_op = non_aobj_non_astate_non_mem_op f + non_aobj_non_cap_op f for f
 
-sublocale non_aobj_non_cap_non_mem_op < non_vspace_non_cap_non_mem_op ..
+sublocale non_aobj_non_cap_non_mem_op \<subseteq> non_vspace_non_cap_non_mem_op ..
 
 lemma read_sched_context_get_sched_context:
   "gets_the (read_sched_context scPtr) = get_sched_context scPtr"

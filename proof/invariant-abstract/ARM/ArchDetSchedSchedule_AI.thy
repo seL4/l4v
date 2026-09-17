@@ -10,7 +10,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems DetSchedSchedule_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for DetSchedSchedule_AI locale *)
 
 (* trivial functions *)
 crunch arch_post_cap_deletion,
@@ -124,7 +124,7 @@ lemma switch_to_idle_thread_ct_not_queued [wp]:
   done
 
 crunch arch_switch_to_thread
- for exst[wp]: "\<lambda>s. P (exst s :: det_ext)"
+  for exst[wp]: "\<lambda>s. P (exst s :: det_ext)"
   (ignore: clearExMonitor)
 
 lemma astit_st_tcb_at[wp]:
@@ -164,7 +164,7 @@ lemma activate_thread_valid_sched:
   by (wpsimp wp: set_thread_state_cur_thread_runnable_valid_sched gts_wp hoare_vcg_all_lift
                  get_tcb_obj_ref_wp hoare_drop_imps)
 
-lemma arch_perform_invocation_valid_sched [wp, DetSchedSchedule_AI_assms]:
+lemma arch_perform_invocation_valid_sched [wp, Arch_assms]:
   "\<lbrace>invs and valid_sched and valid_machine_time and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and
     valid_arch_inv a\<rbrace>
      arch_perform_invocation a
@@ -347,12 +347,13 @@ crunch arch_prepare_set_domain, handle_spurious_irq
 crunch arch_prepare_next_domain
   for valid_list[wp]: "valid_list"
 
+lemmas DetSchedSchedule_AI_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact DetSchedSchedule_AI_assms)?; wpsimp)
+  case 1 show ?case by (unfold_locales; (fact ARM.DetSchedSchedule_AI_assms)?; wpsimp)
   qed
 
 global_interpretation DetSchedSchedule_AI_det_ext?: DetSchedSchedule_AI_det_ext
@@ -373,6 +374,10 @@ lemma handle_vm_fault_not_timeout_fault[wp]:
   apply (cases ft, simp_all)
    apply (wp no_irq_getDFSR no_irq_getIFSR | simp add: is_timeout_fault_def)+
   done
+
+lemmas [Arch_assms] = handle_hyp_fault_valid_sched handle_reserved_irq_valid_sched
+
+lemmas DetSchedSchedule_AI_handle_hypervisor_fault_assms = Arch_assms (* extract accumulated assumptions *)
 
 end
 

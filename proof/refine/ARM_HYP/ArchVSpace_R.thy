@@ -13,7 +13,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems VSpace_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for VSpace_R locale *)
 
 lemmas store_pte_typ_ats[wp] = store_pte_typ_ats abs_atyp_at_lifts[OF store_pte_typ_at]
 lemmas store_pde_typ_ats[wp] = store_pde_typ_ats abs_atyp_at_lifts[OF store_pde_typ_at]
@@ -646,7 +646,7 @@ lemma handleVMFault_corres':
   done
 
 (* interface lemma, superset of all architecture preconditions *)
-lemma handleVMFault_corres[VSpace_R_assms]:
+lemma handleVMFault_corres[Arch_assms]:
   "corres (fr \<oplus> dc) (tcb_at thread and pspace_aligned and pspace_distinct) (tcb_at' t)
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
   by (corres corres: handleVMFault_corres')
@@ -1317,7 +1317,7 @@ lemma invalidateASID_valid_arch_state [wp]:
   apply (rule conjI)
    apply (clarsimp simp: is_inv_None_upd fun_upd_def[symmetric] comp_upd_simp
                          inj_on_fun_upd_elsewhere valid_asid_map'_def)
-   apply (auto elim!: subset_inj_on dest!: ran_del_subset split: option.splits)
+   apply (auto elim!: inj_on_subset dest!: ran_del_subset split: option.splits)
   done
 
 crunch vcpuDisable, vcpuEnable, vcpuSave, vcpuRestore
@@ -1750,7 +1750,7 @@ lemma findFreeHWASID_valid_arch [wp]:
     apply blast
    apply simp
   apply (rule conjI)
-   apply (erule subset_inj_on, clarsimp)
+   apply (erule inj_on_subset, clarsimp)
   apply (erule order_trans[rotated])
   apply clarsimp
   done
@@ -5083,12 +5083,13 @@ lemma isPDCap_PD :
   "isPDCap (ArchObjectCap (PageDirectoryCap r m))"
   by (simp add: isPDCap_def)
 
+lemmas VSpace_R_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 interpretation VSpace_R?: VSpace_R
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact VSpace_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact ARM_HYP.VSpace_R_assms)?)?)
 qed
 
 end

@@ -174,7 +174,7 @@ crunch crunch_foo7
 
 locale test_sublocale
 
-sublocale test_sublocale < test_locale "return ()" .
+sublocale test_sublocale \<subseteq> test_locale "return ()" .
 
 context test_sublocale begin
 

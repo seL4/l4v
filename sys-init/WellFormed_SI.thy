@@ -1584,7 +1584,7 @@ lemma fake_cap_rewrite:
               (SIGMA obj_id:{obj_id. pd_at obj_id spec}.
                      dom (slots_of obj_id spec))
    = {cap_ref. fake_pt_cap_at cap_ref spec}"
-  apply (clarsimp simp: Set.filter_def cap_at_def opt_cap_def
+  apply (clarsimp simp: cap_at_def opt_cap_def
                  split: option.splits)
   apply (rule)
    apply clarsimp

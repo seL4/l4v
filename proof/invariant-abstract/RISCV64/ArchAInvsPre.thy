@@ -211,7 +211,7 @@ lemma device_frame_in_device_region:
   \<Longrightarrow> device_state (machine_state s) p \<noteq> None"
   by (auto simp add: pspace_respects_device_region_def dom_def device_mem_def)
 
-named_theorems AInvsPre_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for AInvsPre locale *)
 
 lemma get_vspace_of_thread_asid_or_global_pt:
   "(\<exists>asid. vspace_for_asid asid s = Some (get_vspace_of_thread (kheap s) (arch_state s) t))
@@ -219,7 +219,7 @@ lemma get_vspace_of_thread_asid_or_global_pt:
   by (auto simp: get_vspace_of_thread_def
            split: option.split kernel_object.split cap.split arch_cap.split)
 
-lemma ptable_rights_imp_frame[AInvsPre_assms]:
+lemma ptable_rights_imp_frame[Arch_assms]:
   assumes "valid_state s"
   shows "\<lbrakk> ptable_rights t s x \<noteq> {}; ptable_lift t s x = Some (addrFromPPtr y) \<rbrakk> \<Longrightarrow>
          in_user_frame y s \<or> in_device_frame y s"
@@ -256,12 +256,13 @@ lemma ptable_rights_imp_frame[AInvsPre_assms]:
   apply simp
   done
 
+lemmas AInvsPre_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 interpretation AInvsPre?: AInvsPre
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact AInvsPre_assms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact RISCV64.AInvsPre_assms)?)
   qed
 
 end

@@ -10,7 +10,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems TcbAcc_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for TcbAcc_AI locale *)
 
 lemmas cap_master_cap_simps =
   cap_master_cap_def[simplified cap_master_arch_cap_def, split_simps cap.split arch_cap.split]
@@ -60,7 +60,7 @@ lemma cap_master_cap_tcb_cap_valid_arch:
           split: option.splits cap.splits arch_cap.splits
                  Structures_A.thread_state.splits)
 
-lemma storeWord_invs[wp, TcbAcc_AI_assms]:
+lemma storeWord_invs[wp, Arch_assms]:
   "\<lbrace>in_user_frame p and invs\<rbrace> do_machine_op (storeWord p w) \<lbrace>\<lambda>rv. invs\<rbrace>"
 proof -
   have aligned_offset_ignore:
@@ -88,12 +88,12 @@ proof -
     done
 qed
 
-lemma valid_ipc_buffer_cap_0[simp, TcbAcc_AI_assms]:
+lemma valid_ipc_buffer_cap_0[simp, Arch_assms]:
   "valid_ipc_buffer_cap cap a \<Longrightarrow> valid_ipc_buffer_cap cap 0"
   by (auto simp: valid_ipc_buffer_cap_def case_bool_If
           split: cap.split arch_cap.split)
 
-lemma thread_set_hyp_refs_trivial [TcbAcc_AI_assms]:
+lemma thread_set_hyp_refs_trivial [Arch_assms]:
   assumes x: "\<And>tcb. tcb_state  (f tcb) = tcb_state  tcb"
   assumes y: "\<And>tcb. tcb_arch_ref (f tcb) = tcb_arch_ref tcb"
   shows      "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
@@ -114,7 +114,7 @@ lemma mab_wb [simp]:
   unfolding msg_align_bits word_bits_conv by simp
 
 
-lemma get_cap_valid_ipc [TcbAcc_AI_assms]:
+lemma get_cap_valid_ipc [Arch_assms]:
   "\<lbrace>valid_objs and obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_ipc_buffer tcb = v) t\<rbrace>
      get_cap (t, tcb_cnode_index 4)
    \<lbrace>\<lambda>rv s. valid_ipc_buffer_cap rv v\<rbrace>"
@@ -129,7 +129,7 @@ lemma get_cap_valid_ipc [TcbAcc_AI_assms]:
 
 
 
-lemma pred_tcb_cap_wp_at [TcbAcc_AI_assms]:
+lemma pred_tcb_cap_wp_at [Arch_assms]:
   "\<lbrakk>pred_tcb_at proj P t s; valid_objs s;
     ref \<in> dom tcb_cap_cases;
     \<forall>cap. (pred_tcb_at proj P t s \<and> tcb_cap_valid cap (t, ref) s) \<longrightarrow> Q cap\<rbrakk> \<Longrightarrow>
@@ -153,12 +153,12 @@ lemma as_user_hyp_refs_of[wp]:
 
 lemmas sts_typ_ats = sts_typ_ats abs_atyp_at_lifts [OF set_thread_state_typ_at]
 
-lemma arch_tcb_context_set_eq[TcbAcc_AI_assms]:
+lemma arch_tcb_context_set_eq[Arch_assms]:
   "arch_tcb_context_set (arch_tcb_context_get t) t = t"
   unfolding arch_tcb_context_get_def arch_tcb_context_set_def
   by simp
 
-lemma arch_tcb_context_get_eq[TcbAcc_AI_assms]:
+lemma arch_tcb_context_get_eq[Arch_assms]:
   "arch_tcb_context_get (arch_tcb_context_set uc t) = uc"
   unfolding arch_tcb_context_get_def arch_tcb_context_set_def
   by simp
@@ -178,19 +178,20 @@ lemma thread_set_ioports:
   "\<lbrace>valid_ioports\<rbrace> thread_set f t \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
   by (wpsimp wp: valid_ioports_lift thread_set_caps_of_state_trivial y)
 
-lemma thread_set_valid_arch_state[TcbAcc_AI_assms]:
+lemma thread_set_valid_arch_state[Arch_assms]:
   "(\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases. getF (f tcb) = getF tcb)
    \<Longrightarrow> thread_set f t \<lbrace> valid_arch_state \<rbrace>"
   by (wp valid_arch_state_lift_ioports_aobj_at thread_set_ioports thread_set.aobj_at
          thread_set_caps_of_state_trivial
       | simp add: valid_arch_state_def)+
 
+lemmas TcbAcc_AI_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation TcbAcc_AI?: TcbAcc_AI
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact TcbAcc_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact X64.TcbAcc_AI_assms)?)
   qed
 
 context Arch begin arch_global_naming

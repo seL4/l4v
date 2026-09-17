@@ -16,6 +16,10 @@ lemma invs_mdb_cte':
 
 context retype_region_proofs begin interpretation Arch .
 
+(* FIXME arch-split: clean up interfaces in Retype_AI so that vs_lookup_table'
+   is properly exported *)
+interpretation retype_region_proofs_arch ..
+
 lemma state_vrefs_eq:
   "\<lbrakk> valid_vspace_objs s; valid_arch_state s \<rbrakk>
      \<Longrightarrow> state_vrefs s' = state_vrefs s"

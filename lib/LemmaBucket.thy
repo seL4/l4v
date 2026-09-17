@@ -389,12 +389,8 @@ lemma none_some_map: "None \<notin> S \<Longrightarrow> Some x \<in> S = (x \<in
 
 lemma none_some_map2: "the ` Set.filter (\<lambda>s. \<not> Option.is_none s) (range f) = ran f"
   apply (rule subset_antisym)
-   apply clarsimp
-   apply (case_tac "f x", simp_all)
-   apply (simp add: ranI)
-  apply clarsimp
-  apply (subst none_some_map[symmetric])
-   apply clarsimp+
+   apply (clarsimp simp: Option.is_none_def ranI)
+  apply (clarsimp simp flip: none_some_map)
   apply (erule ranE)
   by (metis range_eqI)
 

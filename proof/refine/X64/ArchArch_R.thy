@@ -13,7 +13,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Arch_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Arch_R locale *)
 
 definition
   "asid_ci_map i \<equiv>
@@ -386,7 +386,7 @@ lemma asidHighBits [simp]:
 declare word_unat_power [symmetric, simp del]
 
 crunch Arch.decodeInvocation
-  for inv[Arch_R_assms, wp]: "P"
+  for inv[Arch_assms, wp]: "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp
    simp: crunch_simps)
 
@@ -985,7 +985,7 @@ lemma decodeX64PortInvocation_corres:
   apply (clarsimp simp: isCap_simps split: invocation_label.splits arch_invocation_label.splits)
   done
 
-lemma arch_decodeInvocation_corres[Arch_R_assms]:
+lemma arch_decodeInvocation_corres[Arch_assms]:
 notes check_vp_inv[wp del] check_vp_wpR[wp]
   (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
      check_vp_wpR should probably be generalised to replace check_vp_inv. *)
@@ -1044,8 +1044,8 @@ shows
               apply (simp add: bindE_assoc)
               apply (rule corres_splitEE)
                  apply (rule corres_whenE)
-                   apply (subst conj_assoc [symmetric])
-                   apply (subst assocs_empty_dom_comp [symmetric])
+                   apply (subst conj_assoc[symmetric])
+                   apply (subst assocs_empty_dom_comp[symmetric])
                    apply (rule dom_ucast_eq)
                   apply (rule corres_trivial)
                   apply simp
@@ -1097,7 +1097,7 @@ shows
           apply (clarsimp simp: state_relation_def arch_state_relation_def)
          apply (rule corres_splitEE)
             apply (rule corres_whenE)
-              apply (subst assocs_empty_dom_comp [symmetric])
+              apply (subst assocs_empty_dom_comp[symmetric])
               apply (simp add: o_def)
               apply (rule dom_ucast_eq_8)
              apply (rule corres_trivial, simp, simp)
@@ -1136,8 +1136,7 @@ shows
           apply (simp add: o_def validE_R_def)
       apply (fastforce simp: asid_high_bits_def)
      apply clarsimp
-     apply (simp add: null_def split_def asid_high_bits_def
-                      word_le_make_less)
+     apply (simp add: split_def asid_high_bits_def word_le_make_less)
      apply (subst hd_map, assumption)
                    (* need abstract guard to show list nonempty *)
      apply (simp add: word_le_make_less)
@@ -1313,7 +1312,7 @@ lemma arch_ioport_inv_case_simp:
   by (clarsimp simp: archinv_relation_def split: invocation.splits arch_invocation.splits)
 
 
-lemma arch_performInvocation_corres[Arch_R_assms]:
+lemma arch_performInvocation_corres[Arch_assms]:
   "archinv_relation ai ai' \<Longrightarrow>
    corres (dc \<oplus> (=))
      (einvs and ct_active and valid_arch_inv ai and schact_is_rct)
@@ -1426,7 +1425,7 @@ lemma performASIDControlInvocation_tcb_at':
 crunch performX64PortInvocation
   for tcb_at'[wp]: "tcb_at' t"
 
-lemma invokeArch_tcb_at'[Arch_R_assms]:
+lemma invokeArch_tcb_at'[Arch_assms]:
   "\<lbrace>invs' and valid_arch_inv' ai and ct_active' and st_tcb_at' active' p\<rbrace>
      Arch.performInvocation ai
    \<lbrace>\<lambda>rv. tcb_at' p\<rbrace>"
@@ -1444,7 +1443,7 @@ lemma valid_slots_lift':
    apply (rule hoare_pre, wp hoare_vcg_const_Ball_lift t, simp)+
   done
 
-lemma sts_valid_arch_inv'[Arch_R_assms]:
+lemma sts_valid_arch_inv'[Arch_assms]:
   "\<lbrace>valid_arch_inv' ai\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_arch_inv' ai\<rbrace>"
   apply (cases ai, simp_all add: valid_arch_inv'_def)
          apply (clarsimp simp: valid_pdpti'_def split: pdptinvocation.splits)
@@ -1684,7 +1683,7 @@ lemma arch_decodeInvocation_wf[wp]:
        apply (erule cte_wp_at_weakenE')
        apply (simp, drule_tac t="cteCap c" in sym, simp add: isPML4Cap'_def)
       apply (subst (asm) conj_assoc [symmetric])
-      apply (subst (asm) assocs_empty_dom_comp [symmetric])
+      apply (subst (asm) assocs_empty_dom_comp[symmetric])
       apply (drule dom_hd_assocsD)
       apply (simp add: capAligned_def asid_wf_def)
       apply (elim conjE)
@@ -1718,7 +1717,7 @@ lemma arch_decodeInvocation_wf[wp]:
          apply (wp ensureNoChildren_sp whenE_throwError_wp|wpc)+
      apply clarsimp
      apply (rule conjI)
-      apply (clarsimp simp: null_def neq_Nil_conv)
+      apply (clarsimp simp: neq_Nil_conv)
       apply (drule filter_eq_ConsD)
       apply clarsimp
       apply (rule shiftl_less_t2n)
@@ -1766,7 +1765,7 @@ lemma arch_decodeInvocation_wf[wp]:
                cong: if_cong split del: if_split)
   by (wpsimp)
 
-lemma arch_decodeInvocation_wf_interface[Arch_R_assms]:
+lemma arch_decodeInvocation_wf_interface[Arch_assms]:
   "\<lbrace>invs' and valid_cap' (ArchObjectCap arch_cap) and
     cte_wp_at' ((=) (ArchObjectCap arch_cap) o cteCap) slot and
     (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at' ((=) (fst x) o cteCap) (snd x) s) and
@@ -2035,7 +2034,7 @@ lemma setIOPortMask_cte_cap_to'[wp]:
   "\<lbrace>ex_cte_cap_to' p\<rbrace> setIOPortMask f l b \<lbrace>\<lambda>rv. ex_cte_cap_to' p\<rbrace>"
   by (wp ex_cte_cap_to'_pres)
 
-lemma arch_performInvocation_invs'[Arch_R_assms]:
+lemma arch_performInvocation_invs'[Arch_assms]:
   "\<lbrace>invs' and ct_active' and valid_arch_inv' invocation\<rbrace>
   Arch.performInvocation invocation
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -2059,7 +2058,7 @@ lemma arch_performInvocation_invs'[Arch_R_assms]:
   apply force
   done
 
-lemma setObject_TCB_valid_duplicates'[Arch_R_assms, wp]:
+lemma setObject_TCB_valid_duplicates'[Arch_assms, wp]:
   "setObject p (tcb::tcb) \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   by wpsimp
 
@@ -2074,6 +2073,8 @@ lemma hv_inv_ex':
   apply simp
   done
 
+lemmas Arch_R_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 arch_requalify_consts
@@ -2082,8 +2083,7 @@ arch_requalify_consts
 
 interpretation Arch_R?: Arch_R valid_arch_inv' archinv_relation
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Arch_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact X64.Arch_R_assms)?)?)
 qed
 
 end

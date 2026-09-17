@@ -62,60 +62,73 @@ by(simp add: msb_int_def)
 lemma msb_1 [simp]: "msb (1 :: int) = False"
 by(simp add: msb_int_def)
 
+lemma msb_minus_1_iff [simp]:
+  \<open>msb (- 1 :: int)\<close>
+  by (simp add: msb_int_def)
+
 lemma msb_numeral [simp]:
   "msb (numeral n :: int) = False"
   "msb (- numeral n :: int) = True"
 by(simp_all add: msb_int_def)
 
+lemma msb_signed_take_bit_int_iff:
+  \<open>msb (signed_take_bit n k) \<longleftrightarrow> bit k n\<close> for k :: int
+  by (simp add: msb_int_def)
+
 instantiation word :: (len) msb
 begin
 
-definition msb_word :: \<open>'a word \<Rightarrow> bool\<close>
-  where msb_word_iff_bit: \<open>msb w \<longleftrightarrow> bit w (LENGTH('a) - Suc 0)\<close> for w :: \<open>'a::len word\<close>
+lift_definition msb_word :: \<open>'a word \<Rightarrow> bool\<close>
+  is \<open>\<lambda>k. msb (signed_take_bit (LENGTH('a) - Suc 0) k)\<close>
+  by (simp flip: signed_take_bit_decr_length_iff)
 
 instance ..
 
 end
+
+lemma msb_word_iff_bit:
+  \<open>msb w \<longleftrightarrow> bit w (LENGTH('a) - Suc 0)\<close> for w :: \<open>'a::len word\<close>
+  by transfer (simp add: msb_signed_take_bit_int_iff)
 
 lemma msb_word_eq:
   \<open>msb w \<longleftrightarrow> bit w (LENGTH('a) - 1)\<close> for w :: \<open>'a::len word\<close>
   by (simp add: msb_word_iff_bit)
 
 lemma word_msb_sint: "msb w \<longleftrightarrow> sint w < 0"
-  by (simp add: msb_word_eq bit_last_iff)
+  by transfer (simp add: msb_int_def)
 
 lemma msb_word_iff_sless_0:
   \<open>msb w \<longleftrightarrow> w <s 0\<close>
-  by (simp add: word_msb_sint word_sless_alt)
+  by transfer (simp add: msb_signed_take_bit_int_iff)
 
 lemma msb_word_of_int:
   "msb (word_of_int x::'a::len word) = bit x (LENGTH('a) - 1)"
-  by (simp add: msb_word_iff_bit bit_simps)
+  by transfer (simp add: msb_signed_take_bit_int_iff)
 
 lemma word_msb_numeral [simp]:
   "msb (numeral w::'a::len word) = bit (numeral w :: int) (LENGTH('a) - 1)"
-  unfolding word_numeral_alt by (rule msb_word_of_int)
+  by transfer (simp add: msb_signed_take_bit_int_iff)
 
 lemma word_msb_neg_numeral [simp]:
   "msb (- numeral w::'a::len word) = bit (- numeral w :: int) (LENGTH('a) - 1)"
-  unfolding word_neg_numeral_alt by (rule msb_word_of_int)
+  by transfer (simp add: msb_signed_take_bit_int_iff)
 
 lemma word_msb_0 [simp]: "\<not> msb (0::'a::len word)"
-  by (simp add: msb_word_iff_bit)
+  by transfer simp
 
 lemma word_msb_1 [simp]: "msb (1::'a::len word) \<longleftrightarrow> LENGTH('a) = 1"
-  by (simp add: bit_last_iff msb_word_iff_bit)
+  by transfer (simp add: msb_signed_take_bit_int_iff bit_simps)
 
 lemma word_msb_nth: "msb w = bit (uint w) (LENGTH('a) - 1)"
   for w :: "'a::len word"
-  by (simp add: msb_word_iff_bit bit_simps)
+  by transfer (simp add: msb_signed_take_bit_int_iff bit_simps)
 
 lemma msb_nth: "msb w = bit w (LENGTH('a) - 1)"
   for w :: "'a::len word"
   by (fact msb_word_eq)
 
 lemma word_msb_n1 [simp]: "msb (-1::'a::len word)"
-  by (simp add: msb_word_eq not_le)
+  by transfer simp
 
 lemma msb_shift: "msb w \<longleftrightarrow> w >> LENGTH('a) - 1 \<noteq> 0"
   for w :: "'a::len word"
@@ -124,16 +137,10 @@ lemma msb_shift: "msb w \<longleftrightarrow> w >> LENGTH('a) - 1 \<noteq> 0"
 lemmas word_ops_msb = msb1 [unfolded msb_nth [symmetric, unfolded One_nat_def]]
 
 lemma word_sint_msb_eq: "sint x = uint x - (if msb x then 2 ^ size x else 0)"
-proof (cases \<open>LENGTH('a)\<close>)
-  case 0
-  then show ?thesis by auto
-next
-  case (Suc n)
-  then show ?thesis
-    apply (simp add: msb_word_iff_bit)
-    apply transfer
-    by (auto simp: signed_take_bit_eq_take_bit_minus)
-qed
+  apply transfer
+  apply (simp add: msb_signed_take_bit_int_iff)
+  apply (simp add: signed_take_bit_eq_take_bit_minus)
+  done
 
 lemma word_sle_msb_le: "x <=s y \<longleftrightarrow> (msb y \<longrightarrow> msb x) \<and> ((msb x \<and> \<not> msb y) \<or> x \<le> y)"
   by (smt (verit) word_less_eq_iff_unsigned word_msb_sint word_sint_msb_eq word_sle_eq wsst_TYs(3))

@@ -4609,14 +4609,14 @@ lemma setQueue_bitmapQ_no_L1_orphans[wp]:
   "\<lbrace> bitmapQ_no_L1_orphans \<rbrace>
        setQueue d p ts
    \<lbrace>\<lambda>rv. bitmapQ_no_L1_orphans \<rbrace>"
-  unfolding setQueue_def bitmapQ_no_L1_orphans_def null_def
+  unfolding setQueue_def bitmapQ_no_L1_orphans_def
   by (wp, auto)
 
 lemma setQueue_bitmapQ_no_L2_orphans[wp]:
   "\<lbrace> bitmapQ_no_L2_orphans \<rbrace>
        setQueue d p ts
    \<lbrace>\<lambda>rv. bitmapQ_no_L2_orphans \<rbrace>"
-  unfolding setQueue_def bitmapQ_no_L2_orphans_def null_def
+  unfolding setQueue_def bitmapQ_no_L2_orphans_def
   by (wp, auto)
 
 crunch orderedInsert, tcbQueueRemove, tcbSchedEnqueue, tcbSchedAppend, tcbSchedDequeue

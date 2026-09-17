@@ -11,14 +11,14 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Schedule_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Schedule_R locale *)
 
 crunch set_vm_root
   for pspace_distinct[wp]: pspace_distinct
   (simp: crunch_simps)
 
 crunch tcbSchedAppend, tcbSchedDequeue, tcbSchedEnqueue
-  for state_hyp_refs_of'[Schedule_R_assms, wp]: "\<lambda>s. P (state_hyp_refs_of' s)"
+  for state_hyp_refs_of'[Arch_assms, wp]: "\<lambda>s. P (state_hyp_refs_of' s)"
   (simp: unless_def crunch_simps obj_at'_def wp: getObject_tcb_wp)
 
 lemma arch_switch_thread_tcb_at'[wp]:
@@ -42,23 +42,23 @@ proof -
     by (rule lift_neg_pred_tcb_at' [OF ArchThreadDecls_H_RISCV64_H_switchToThread_typ_at' pos])
 qed
 
-lemmas Arch_switchToThread_st_tcb_at'[Schedule_R_assms] =
+lemmas Arch_switchToThread_st_tcb_at'[Arch_assms] =
   Arch_switchToThread_pred_tcb'[where proj=itcbState]
 
 crunch storeWordUser, setVMRoot, asUser, storeWordUser, Arch.switchToThread, Arch.switchToIdleThread
   for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
-  and ksIdleThread[Schedule_R_assms, wp]: "\<lambda>s. P (ksIdleThread s)"
+  and ksIdleThread[Arch_assms, wp]: "\<lambda>s. P (ksIdleThread s)"
   and tcbSchedNexts_of[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
   and tcbSchedPrevs_of[wp]: "\<lambda>s. P (tcbSchedPrevs_of s)"
-  and sym_heap_sched_pointers[Schedule_R_assms, wp]: sym_heap_sched_pointers
-  and valid_objs'[Schedule_R_assms, wp]: valid_objs'
+  and sym_heap_sched_pointers[Arch_assms, wp]: sym_heap_sched_pointers
+  and valid_objs'[Arch_assms, wp]: valid_objs'
   (wp: crunch_wps sym_heap_sched_pointers_lift threadSet_field_inv getObject_tcb_wp getASID_wp
    simp: crunch_simps
    ignore: threadSet)
 
 crunch arch_switch_to_thread, arch_switch_to_idle_thread
-  for pspace_aligned[Schedule_R_assms, wp]: pspace_aligned
-  and pspace_distinct[Schedule_R_assms, wp]: pspace_distinct
+  for pspace_aligned[Arch_assms, wp]: pspace_aligned
+  and pspace_distinct[Arch_assms, wp]: pspace_distinct
   and valid_idle[Schedule_R_assms, wp]: valid_idle
   and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
   (simp: crunch_simps)
@@ -86,7 +86,7 @@ lemma arch_switchToThread_corres:
   done
 
 (* use superset of arch_switchToThread_corres preconditions across the architectures as interface *)
-lemma arch_switchToThread_corres_interface[Schedule_R_assms]:
+lemma arch_switchToThread_corres_interface[Arch_assms]:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map and valid_arch_caps
               and pspace_aligned and pspace_distinct and valid_global_objs
               and valid_vspace_objs and pspace_in_kernel_window and valid_cur_fpu and tcb_at t)
@@ -109,7 +109,7 @@ lemma arch_switchToIdleThread_corres:
                      valid_arch_state_asid_table valid_arch_state_global_arch_objs)+
 
 (* use superset of arch_switchToIdleThread_corres preconditions across the architectures as interface *)
-lemma arch_switchToIdleThread_corres_interface[Schedule_R_assms]:
+lemma arch_switchToIdleThread_corres_interface[Arch_assms]:
   "corres dc
      (valid_arch_state and pspace_aligned and pspace_distinct and valid_asid_map and valid_idle
       and valid_arch_caps and valid_global_objs and valid_vspace_objs and valid_objs)
@@ -123,14 +123,14 @@ crunch Arch.switchToThread
   and pspace_bounded'[Schedule_R_assms, wp]: pspace_bounded'
   (simp: crunch_simps wp: crunch_wps)
 
-lemma Arch_switchToThread_invs[Schedule_R_assms, wp]:
+lemma Arch_switchToThread_invs[Arch_assms, wp]:
   "Arch.switchToThread t \<lbrace>invs'\<rbrace>"
   unfolding RISCV64_H.switchToThread_def by wpsimp
 
 crunch "Arch.switchToThread"
-  for ksCurDomain[Schedule_R_assms, wp]: "\<lambda>s. P (ksCurDomain s)"
-  and tcbDomain[Schedule_R_assms, wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'"
-  and tcbState[Schedule_R_assms, wp]: "obj_at' (\<lambda>tcb. P (tcbState tcb)) t'"
+  for ksCurDomain[Arch_assms, wp]: "\<lambda>s. P (ksCurDomain s)"
+  and tcbDomain[Arch_assms, wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'"
+  and tcbState[Arch_assms, wp]: "obj_at' (\<lambda>tcb. P (tcbState tcb)) t'"
   (simp: crunch_simps wp: crunch_wps getASID_wp)
 
 crunch "Arch.switchToThread"
@@ -141,7 +141,7 @@ crunch "ThreadDecls_H.switchToThread"
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
 
 (* neater unfold, actual unfold is really ugly *)
-lemma bitmapQ_lookupBitmapPriority_simp[Schedule_R_assms]:
+lemma bitmapQ_lookupBitmapPriority_simp[Arch_assms]:
   "\<lbrakk> ksReadyQueuesL1Bitmap s d \<noteq> 0 ; valid_bitmapQ s ; bitmapQ_no_L1_orphans s \<rbrakk> \<Longrightarrow>
    bitmapQ d (lookupBitmapPriority d s) s =
     (ksReadyQueuesL1Bitmap s d !! word_log2 (ksReadyQueuesL1Bitmap s d) \<and>
@@ -165,7 +165,7 @@ lemma bitmapQ_lookupBitmapPriority_simp[Schedule_R_assms]:
    apply (fastforce intro: word_of_nat_less simp: wordRadix_def' unat_of_nat word_size)+
   done
 
-lemma Arch_switchToIdleThread_invs'[Schedule_R_assms]:
+lemma Arch_switchToIdleThread_invs'[Arch_assms]:
   "Arch.switchToIdleThread \<lbrace>invs'\<rbrace>"
   unfolding switchToIdleThread_def
   by wpsimp
@@ -173,25 +173,26 @@ lemma Arch_switchToIdleThread_invs'[Schedule_R_assms]:
 crunch Arch.switchToIdleThread
   for obj_at'[wp]: "obj_at' P t"
 
-lemmas Arch_switchToIdleThread_not_queued'[Schedule_R_assms] =
+lemmas Arch_switchToIdleThread_not_queued'[Arch_assms] =
   ArchThreadDecls_H_RISCV64_H_switchToIdleThread_obj_at'[where P="Not \<circ> tcbQueued"]
 
-lemmas Arch_switchToIdleThread_tcbState[Schedule_R_assms] =
+lemmas Arch_switchToIdleThread_tcbState[Arch_assms] =
   ArchThreadDecls_H_RISCV64_H_switchToIdleThread_obj_at'[where P="P \<circ> tcbState" for P]
+
+lemmas Schedule_R_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 interpretation Schedule_R?: Schedule_R
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Schedule_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact RISCV64.Schedule_R_assms)?)?)
 qed
 
 context Arch begin arch_global_naming
 
-named_theorems Schedule_R_2_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Schedule_R_2 locale *)
 
-lemma bitmapL1_highest_lookup[Schedule_R_2_assms]:
+lemma bitmapL1_highest_lookup[Arch_assms]:
   "\<lbrakk> valid_bitmapQ s ; bitmapQ_no_L1_orphans s ; bitmapQ d p s \<rbrakk>
    \<Longrightarrow> p \<le> lookupBitmapPriority d s"
   apply (subgoal_tac "ksReadyQueuesL1Bitmap s d \<noteq> 0")
@@ -237,7 +238,7 @@ lemma bitmapL1_highest_lookup[Schedule_R_2_assms]:
   apply (erule word_log2_maximum)
   done
 
-lemma guarded_switch_to_chooseThread_fragment_corres[Schedule_R_2_assms]:
+lemma guarded_switch_to_chooseThread_fragment_corres[Arch_assms]:
   "corres dc
      (P and schedulable t and in_cur_domain t and invs and valid_ready_qs and ready_or_release)
      (P' and invs')
@@ -281,17 +282,18 @@ crunch prepareNextDomain
   for invs'[wp]: invs'
   and nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
 
+lemmas Schedule_R_2_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 interpretation Schedule_R_2?: Schedule_R_2
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Schedule_R_2_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact RISCV64.Schedule_R_2_assms)?)?)
 qed
 
 context Arch begin arch_global_naming
 
-named_theorems Schedule_R_3_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Schedule_R_3 locale *)
 
 lemma scheduleChooseNewThread_fragment_corres:
   "corres dc (invs and valid_domain_list and valid_ready_qs and ready_or_release
@@ -315,7 +317,7 @@ lemma scheduleChooseNewThread_fragment_corres:
    apply (auto simp: valid_sched_def invs'_def)
   done
 
-lemma scheduleChooseNewThread_corres[Schedule_R_3_assms]:
+lemma scheduleChooseNewThread_corres[Arch_assms]:
   "corres dc
      (\<lambda>s. invs s \<and> valid_domain_list s \<and> valid_ready_qs s \<and> ready_or_release s
           \<and> scheduler_action s = choose_new_thread)
@@ -331,7 +333,7 @@ lemma scheduleChooseNewThread_corres[Schedule_R_3_assms]:
         apply wpsimp+
   done
 
-lemma scheduleChooseNewThread_invs'[Schedule_R_3_assms]:
+lemma scheduleChooseNewThread_invs'[Arch_assms]:
   "scheduleChooseNewThread \<lbrace>invs'\<rbrace>"
   unfolding scheduleChooseNewThread_def prepareNextDomain_def
   apply (wpsimp wp: ssa_invs' chooseThread_invs'' chooseThread_invs'' nextDomain_invs')
@@ -358,12 +360,13 @@ lemma chooseThread_nosch:
   unfolding chooseThread_def
   by (wpsimp wp: stt_nosch simp: bitmap_fun_defs)
 
+lemmas Schedule_R_3_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 interpretation Schedule_R_3?: Schedule_R_3
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Schedule_R_3_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact RISCV64.Schedule_R_3_assms)?)?)
 qed
 
 end

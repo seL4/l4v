@@ -21,12 +21,6 @@ lemma magnitudeCheck_assert:
             split: option.split)
   apply fastforce
   done
-context begin interpretation Arch . (*FIXME: arch-split*)
-lemmas makeObject_simps =
-  makeObject_endpoint makeObject_notification makeObject_cte
-  makeObject_tcb makeObject_user_data makeObject_pde makeObject_pte
-  makeObject_asidpool makeObject_pdpte makeObject_pml4e
-end
 
 lemma projectKO_inv : "\<lbrace>P\<rbrace> projectKO ko \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: projectKO_def fail_def valid_def return_def
@@ -58,6 +52,11 @@ lemma updateObject_default_inv:
   by (simp, wp magnitudeCheck_inv alignCheck_inv projectKO_inv, simp)
 
 context Arch begin arch_global_naming
+
+lemmas makeObject_simps =
+  makeObject_endpoint makeObject_notification makeObject_cte
+  makeObject_tcb makeObject_user_data makeObject_pde makeObject_pte
+  makeObject_asidpool makeObject_pdpte makeObject_pml4e
 
 lemma to_from_apiType[simp]:
   "toAPIType (fromAPIType x) = Some x"

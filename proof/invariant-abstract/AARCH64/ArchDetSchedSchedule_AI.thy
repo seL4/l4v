@@ -11,7 +11,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems DetSchedSchedule_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for DetSchedSchedule_AI locale *)
 
 (* trivial functions *)
 crunch
@@ -231,12 +231,12 @@ lemma arch_thread_set_valid_sched_pred_strong[wp]:
   by (rule valid_sched_pred_strong_lift; wpsimp)
 
 crunch vcpu_disable, vcpu_restore, prepare_thread_delete
-  for valid_sched_pred_strong[wp, DetSchedSchedule_AI_assms]: "valid_sched_pred_strong P"
+  for valid_sched_pred_strong[wp, Arch_assms]: "valid_sched_pred_strong P"
   (wp: dmo_valid_sched_pred crunch_wps simp: crunch_simps)
 
 crunch
   arch_switch_to_thread, arch_switch_to_idle_thread, arch_finalise_cap, arch_invoke_irq_control
-  for valid_sched_pred_strong[wp, DetSchedSchedule_AI_assms]: "valid_sched_pred_strong P"
+  for valid_sched_pred_strong[wp, Arch_assms]: "valid_sched_pred_strong P"
   (wp: dmo_valid_sched_pred crunch_wps simp: crunch_simps)
 
 lemma handle_vm_fault_valid_sched_pred_strong[wp, DetSchedSchedule_AI_assms]:
@@ -281,7 +281,7 @@ lemma set_vm_root_valid_blocked_ct_in_q[wp]:
   "set_vm_root p \<lbrace>valid_blocked and ct_in_q\<rbrace>"
   by wpsimp
 
-lemma arch_switch_to_thread_valid_blocked [wp]:
+lemma arch_switch_to_thread_valid_blocked[wp]:
   "arch_switch_to_thread thread \<lbrace>valid_blocked and ct_in_q :: det_state \<Rightarrow> _\<rbrace>"
   unfolding arch_switch_to_thread_def
   by wpsimp
@@ -339,7 +339,7 @@ lemma activate_thread_valid_sched:
   by (wpsimp wp: set_thread_state_cur_thread_runnable_valid_sched gts_wp hoare_vcg_all_lift
                  get_tcb_obj_ref_wp hoare_drop_imps)
 
-lemma arch_perform_invocation_valid_sched [wp, DetSchedSchedule_AI_assms]:
+lemma arch_perform_invocation_valid_sched [wp, Arch_assms]:
   "\<lbrace>invs and valid_machine_time and valid_sched and ct_active
     and (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_arch_inv a\<rbrace>
    arch_perform_invocation a
@@ -559,12 +559,13 @@ crunch arch_prepare_set_domain, handle_spurious_irq
 crunch arch_prepare_next_domain
   for valid_list[wp]: valid_list
 
+lemmas DetSchedSchedule_AI_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact DetSchedSchedule_AI_assms)?; wpsimp?)
+  case 1 show ?case by (unfold_locales; (fact AARCH64.DetSchedSchedule_AI_assms)?; wpsimp?)
 qed
 
 context Arch begin arch_global_naming
@@ -870,6 +871,10 @@ crunch handle_reserved_irq
   for cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
   and is_active_sc[wp]: "\<lambda>s. P (is_active_sc sc_ptr s)"
   (wp: crunch_wps)
+
+lemmas [Arch_assms] = handle_hyp_fault_valid_sched handle_reserved_irq_valid_sched
+
+lemmas DetSchedSchedule_AI_handle_hypervisor_fault_assms = Arch_assms (* extract accumulated assumptions *)
 
 end
 

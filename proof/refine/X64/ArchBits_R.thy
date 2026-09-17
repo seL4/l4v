@@ -10,28 +10,28 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Bits_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Bits_R locale *)
 
-lemma atcbContext_get_eq[Bits_R_assms, simp]:
+lemma atcbContext_get_eq[Arch_assms, simp]:
   "atcbContextGet (atcbContextSet x atcb) = x"
   by (simp add: atcbContextGet_def atcbContextSet_def)
 
-lemma atcbContext_set_eq[Bits_R_assms, simp]:
+lemma atcbContext_set_eq[Arch_assms, simp]:
   "atcbContextSet (atcbContextGet t) t = t"
   by (cases t, simp add: atcbContextGet_def atcbContextSet_def)
 
-lemma atcbContext_set_set[Bits_R_assms, simp]:
+lemma atcbContext_set_set[Arch_assms, simp]:
   "atcbContextSet x (atcbContextSet y atcb) = atcbContextSet x atcb"
   by (cases atcb, simp add: atcbContextSet_def)
 
-lemma objBitsKO_less_word_bits[Bits_R_assms]:
+lemma objBitsKO_less_word_bits[Arch_assms]:
   "objBitsKO ko < word_bits"
   unfolding objBits_def
   by (case_tac ko;
       simp add: pageBits_def objBits_simps' word_bits_def
          split: arch_kernel_object.split)
 
-lemma objBitsKO_neq_0[Bits_R_assms]:
+lemma objBitsKO_neq_0[Arch_assms]:
   "objBitsKO ko \<noteq> 0"
   unfolding objBits_def
   by (case_tac ko;
@@ -55,7 +55,7 @@ lemma arch_isCap_simps:
 
 lemmas isCap_simps = gen_isCap_simps arch_isCap_simps
 
-lemma pageBits_le_maxUntypedSizeBits[Bits_R_assms, simp]:
+lemma pageBits_le_maxUntypedSizeBits[Arch_assms, simp]:
   "pageBits \<le> maxUntypedSizeBits"
   by (simp add: pageBits_def maxUntypedSizeBits_def)
 
@@ -100,7 +100,9 @@ lemmas arch_projectKOs =
   projectKO_ASID projectKO_PTE projectKO_PDE projectKO_PDPTE projectKO_PML4E
   projectKO_user_data projectKO_user_data_device
 
-end
+lemmas Bits_R_assms = Arch_assms (* extract accumulated assumptions *)
+
+end (* Arch *)
 
 (* for projectKO_opt, we want to export the arch-specific instantiation lemmas *)
 arch_requalify_facts arch_projectKOs
@@ -112,8 +114,7 @@ lemmas projectKOs = gen_projectKOs arch_projectKOs
 
 interpretation Bits_R?: Bits_R
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact Bits_R_assms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact X64.Bits_R_assms)?)
 qed
 
 end

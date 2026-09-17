@@ -31,6 +31,10 @@ end_qualify
 
 context Arch begin arch_global_naming
 
+(* used to accumulate theorems for satisfying Arch interface assumptions;
+   remember to clear before starting a new accumulation *)
+named_theorems Arch_assms
+
 definition
   arch_tcb_to_iarch_tcb :: "arch_tcb \<Rightarrow> iarch_tcb"
 where

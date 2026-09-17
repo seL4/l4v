@@ -12,20 +12,20 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems IpcCancel_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for IpcCancel_R locale *)
 
 crunch Arch.postCapDeletion
-  for pred_tcb_at'[IpcCancel_R_assms, wp]: "pred_tcb_at' proj P t"
-  and typ_at'[IpcCancel_R_assms, wp]: "\<lambda>s. P (typ_at' T p s)"
+  for pred_tcb_at'[Arch_assms, wp]: "pred_tcb_at' proj P t"
+  and typ_at'[Arch_assms, wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: setCTE_pred_tcb_at')
 
-lemma acapClass_not_ReplyClass[IpcCancel_R_assms]:
+lemma acapClass_not_ReplyClass[Arch_assms]:
   "acapClass acap \<noteq> ReplyClass t"
   by (cases acap; simp)
 
 crunch arch_post_cap_deletion
-  for pspace_aligned[IpcCancel_R_assms, wp]: "pspace_aligned :: det_state \<Rightarrow> _"
-  and pspace_distinct[IpcCancel_R_assms, wp]: "pspace_distinct :: det_state \<Rightarrow> _"
+  for pspace_aligned[Arch_assms, wp]: "pspace_aligned :: det_state \<Rightarrow> _"
+  and pspace_distinct[Arch_assms, wp]: "pspace_distinct :: det_state \<Rightarrow> _"
   (simp: crunch_simps wp: crunch_wps)
 
 crunch emptySlot
@@ -72,7 +72,7 @@ lemma fpuRelease_corres[corres]:
    corres dc (pspace_aligned and pspace_distinct and valid_cur_fpu) \<top> (fpu_release t) (fpuRelease t')"
   by (corres simp: fpu_release_def fpuRelease_def)
 
-lemma prepareThreadDelete_corres[IpcCancel_R_assms, corres]:
+lemma prepareThreadDelete_corres[Arch_assms, corres]:
   "t' = t \<Longrightarrow>
    corres dc (invs and tcb_at t) no_0_obj'
           (prepare_thread_delete t) (prepareThreadDelete t')"
@@ -154,12 +154,13 @@ lemma setThreadState_oa_queued:
       by (simp add: not_obj_at' comp_def, wp hoare_convert_imp pos)
   qed
 
+lemmas IpcCancel_R_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 interpretation IpcCancel_R?: IpcCancel_R
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact IpcCancel_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact X64.IpcCancel_R_assms)?)?)
 qed
 
 (* instantiate locales with assumptions depending on IpcCancel_R instantiation *)

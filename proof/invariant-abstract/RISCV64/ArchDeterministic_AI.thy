@@ -10,29 +10,30 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Deterministic_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Deterministic_AI locale *)
 
 crunch
   cap_swap_for_delete,set_cap,finalise_cap,
   arch_post_modify_registers, arch_post_set_flags
-  for valid_list[wp, Deterministic_AI_assms]: valid_list
+  for valid_list[wp, Arch_assms]: valid_list
   (wp: crunch_wps maybeM_inv simp: unless_def crunch_simps)
 
-declare get_cap_inv[Deterministic_AI_assms]
-        arch_get_sanitise_register_info_inv[Deterministic_AI_assms]
+declare get_cap_inv[Arch_assms]
+        arch_get_sanitise_register_info_inv[Arch_assms]
+
+lemmas Deterministic_AI_assms = Arch_assms (* extract accumulated assumptions *)
 
 end
 
 global_interpretation Deterministic_AI_1?: Deterministic_AI_1
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact Deterministic_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact RISCV64.Deterministic_AI_assms)?)
   qed
 
 context Arch begin arch_global_naming
 
 crunch arch_invoke_irq_handler
-  for valid_list[wp,Deterministic_AI_assms]: valid_list
+  for valid_list[wp,Arch_assms]: valid_list
 
 crunch invoke_untyped
   for valid_list[wp]: valid_list
@@ -72,7 +73,7 @@ crunch arch_perform_invocation, perform_invocation
   (wp: crunch_wps)
 
 crunch handle_invocation
-  for valid_list[wp, Deterministic_AI_assms]: valid_list
+  for valid_list[wp, Arch_assms]: valid_list
   (wp: crunch_wps syscall_valid simp: crunch_simps
    ignore: without_preemption syscall)
 
@@ -81,18 +82,18 @@ crunch receive_ipc
   (wp: hoare_drop_imps hoare_vcg_if_lift2)
 
 crunch handle_recv
- for valid_list[wp, Deterministic_AI_assms]: valid_list
+ for valid_list[wp, Arch_assms]: valid_list
   (wp: hoare_drop_imps hoare_vcg_if_lift2 simp: Let_def whenE_def)
 
 crunch handle_yield, handle_call
- for valid_list[wp, Deterministic_AI_assms]: valid_list
+ for valid_list[wp, Arch_assms]: valid_list
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps)
 
-lemma handle_vm_fault_valid_list[wp, Deterministic_AI_assms]:
+lemma handle_vm_fault_valid_list[wp, Arch_assms]:
   "handle_vm_fault thread fault \<lbrace>valid_list\<rbrace>"
   unfolding handle_vm_fault_def by (cases fault; wpsimp)
 
-lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
+lemma handle_interrupt_valid_list[wp, Arch_assms]:
   "\<lbrace>valid_list\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_.valid_list\<rbrace>"
   unfolding handle_interrupt_def ackInterrupt_def
   apply (rule hoare_pre)
@@ -101,7 +102,7 @@ lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
        | wp (once) hoare_drop_imps)+
 
 crunch handle_send, handle_spurious_irq, handle_hypervisor_fault
-  for valid_list[wp, Deterministic_AI_assms]: valid_list
+  for valid_list[wp, Arch_assms]: valid_list
 
 named_theorems machine_ops_last_machine_time'
 named_theorems arch_machine_ops_last_machine_time'
@@ -115,12 +116,13 @@ crunch storeWord, clearMemory, freeMemory, ackDeadlineIRQ, ackInterrupt, maskInt
 lemmas machine_ops_last_machine_time = machine_ops_last_machine_time'
 lemmas arch_machine_ops_last_machine_time = arch_machine_ops_last_machine_time'
 
+lemmas Deterministic_AI_2_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation Deterministic_AI_2?: Deterministic_AI_2
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact Deterministic_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact RISCV64.Deterministic_AI_2_assms)?)
   qed
 
 end

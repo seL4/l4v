@@ -1090,8 +1090,8 @@ proof -
       apply (cut_tac x=ptr in mask_lower_twice[where n=2 and m=pageBits])
        apply (simp add: pageBits_def)
       apply simp
-     apply (auto simp add: eval_nat_numeral horrible_helper2 take_bit_Suc simp del: unsigned_numeral
-                 elim!: less_SucE)[1]
+     apply (simp add: eval_nat_numeral)
+     apply (auto simp:  horrible_helper2 elim!: less_SucE)[1]
     apply (rule iffI)
      apply clarsimp
      apply (cut_tac p=ptr in unat_mask_2_less_4)

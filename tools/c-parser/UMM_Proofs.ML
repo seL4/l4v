@@ -589,7 +589,7 @@ in
       val thy = Axclass.add_arity instance_thm thy
       val st = add_szclass_done (tyname, szclass) st
     in
-      Output.state("Proved "^tyname^" :: "^szclass);
+      Output.state ["Proved "^tyname^" :: "^szclass];
       (st, thy)
     end
 end

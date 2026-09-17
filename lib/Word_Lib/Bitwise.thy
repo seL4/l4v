@@ -432,34 +432,37 @@ val no_split_ss =
     |> Splitter.del_split @{thm if_split});
 
 val expand_word_eq_sss =
-  (simpset_of (put_simpset HOL_basic_ss \<^context> addsimps
-       @{thms word_eq_rbl_eq word_le_rbl word_less_rbl word_sle_rbl word_sless_rbl}),
+  (simpset_of (put_simpset HOL_basic_ss \<^context>
+    |> Simplifier.add_simps @{thms word_eq_rbl_eq word_le_rbl word_less_rbl word_sle_rbl word_sless_rbl}),
   map simpset_of [
-   put_simpset no_split_ss \<^context> addsimps
-    @{thms rbl_word_plus rbl_word_and rbl_word_or rbl_word_not
+    put_simpset no_split_ss \<^context>
+      |> Simplifier.add_simps
+        @{thms rbl_word_plus rbl_word_and rbl_word_or rbl_word_not
                                 rbl_word_neg bl_word_sub rbl_word_xor
                                 rbl_word_cat rbl_word_slice rbl_word_scast
                                 rbl_word_ucast rbl_shiftl rbl_shiftr rbl_sshiftr
                                 rbl_word_if},
-   put_simpset no_split_ss \<^context> addsimps
-    @{thms to_bl_numeral to_bl_neg_numeral to_bl_0 rbl_word_1},
-   put_simpset no_split_ss \<^context> addsimps
-    @{thms rev_rev_ident rev_replicate rev_map to_bl_upt word_size}
-          addsimprocs [word_len_simproc],
-   put_simpset no_split_ss \<^context> addsimps
-    @{thms list.simps split_conv replicate.simps list.map
+    put_simpset no_split_ss \<^context>
+      |> Simplifier.add_simps @{thms to_bl_numeral to_bl_neg_numeral to_bl_0 rbl_word_1},
+    put_simpset no_split_ss \<^context>
+      |> Simplifier.add_simps @{thms rev_rev_ident rev_replicate rev_map to_bl_upt word_size}
+      |> Simplifier.add_proc word_len_simproc,
+    put_simpset no_split_ss \<^context>
+      |> Simplifier.add_simps
+        @{thms list.simps split_conv replicate.simps list.map
                                 zip_Cons_Cons zip_Nil drop_Suc_Cons drop_0 drop_Nil
                                 foldr.simps list.map zip.simps(1) zip_Nil zip_Cons_Cons takefill_Suc_Cons
                                 takefill_Suc_Nil takefill.Z rbl_succ2_simps
                                 rbl_plus_simps rev_bin_to_bl_simps append.simps
                                 takefill_last_simps drop_nonempty_simps
                                 rev_bl_order_simps}
-          addsimprocs [expand_upt_simproc,
-                       nat_get_Suc_simproc 4
-                         [\<^term>\<open>replicate\<close>, \<^term>\<open>takefill x\<close>,
-                          \<^term>\<open>drop\<close>, \<^term>\<open>bin_to_bl\<close>,
-                          \<^term>\<open>takefill_last x\<close>,
-                          \<^term>\<open>drop_nonempty x\<close>]],
+      |> fold Simplifier.add_proc
+          [expand_upt_simproc,
+           nat_get_Suc_simproc 4
+             [\<^term>\<open>replicate\<close>, \<^term>\<open>takefill x\<close>,
+              \<^term>\<open>drop\<close>, \<^term>\<open>bin_to_bl\<close>,
+              \<^term>\<open>takefill_last x\<close>,
+              \<^term>\<open>drop_nonempty x\<close>]],
     put_simpset no_split_ss \<^context> addsimps @{thms xor3_simps carry_simps if_bool_simps}
   ])
 

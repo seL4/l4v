@@ -12,7 +12,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Invariants_H_pspaceI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Invariants_H_pspaceI locale *)
 
 (* FIXME arch-split: word_size is available outside of Arch due to Word_Setup, but to provide
    more guard rails during arch-split we are hiding the Haskell constant definition outside of
@@ -36,7 +36,7 @@ lemma frame_at'_pspaceI:
   "frame_at' p sz d s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> frame_at' p sz d s'"
   by (simp add: frame_at'_def typ_at'_def ko_wp_at'_def ps_clear_def)
 
-lemma valid_cap'_pspaceI[Invariants_H_pspaceI_assms]:
+lemma valid_cap'_pspaceI[Arch_assms]:
   "s \<turnstile>' cap \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> s' \<turnstile>' cap"
   unfolding valid_cap'_def
   by (cases cap)
@@ -46,7 +46,7 @@ lemma valid_cap'_pspaceI[Invariants_H_pspaceI_assms]:
             simp: vspace_table_at'_defs valid_arch_cap'_def valid_arch_cap_ref'_def
            split: arch_capability.split zombie_type.split option.splits)
 
-lemma valid_obj'_pspaceI[Invariants_H_pspaceI_assms]:
+lemma valid_obj'_pspaceI[Arch_assms]:
   "valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
   unfolding valid_obj'_def
   by (cases obj)
@@ -57,7 +57,7 @@ lemma valid_obj'_pspaceI[Invariants_H_pspaceI_assms]:
                   Structures_H.thread_state.splits ntfn.splits option.splits
            intro: obj_at'_pspaceI valid_cap'_pspaceI typ_at'_pspaceI)
 
-lemma tcb_space_clear[Invariants_H_pspaceI_assms]:
+lemma tcb_space_clear[Arch_assms]:
   "\<lbrakk> tcb_cte_cases (y - x) = Some (getF, setF);
      is_aligned x tcbBlockSizeBits; ps_clear x tcbBlockSizeBits s;
      ksPSpace s x = Some (KOTCB tcb); ksPSpace s y = Some v;
@@ -80,12 +80,12 @@ lemma tcb_space_clear[Invariants_H_pspaceI_assms]:
   apply (simp add: tcb_cte_cases_def cteSizeBits_def split: if_split_asm)
   done
 
-lemma pspace_in_kernel_mappings'_pspaceI[Invariants_H_pspaceI_assms]:
+lemma pspace_in_kernel_mappings'_pspaceI[Arch_assms]:
   "pspace_in_kernel_mappings' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> pspace_in_kernel_mappings' s'"
   unfolding pspace_in_kernel_mappings'_def
   by simp
 
-lemma range_cover_canonical_address[Invariants_H_pspaceI_assms]:
+lemma range_cover_canonical_address[Arch_assms]:
   "\<lbrakk> range_cover ptr sz us n ; p < n ;
      canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
    \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
@@ -102,17 +102,18 @@ lemma range_cover_canonical_address[Invariants_H_pspaceI_assms]:
 (* not interesting on this architecture *)
 lemmas [simp] = pspace_in_kernel_mappings'_pspaceI
 
-end
+lemmas Invariants_H_pspaceI_assms = Arch_assms (* extract accumulated assumptions *)
+
+end (* Arch *)
 
 global_interpretation Invariants_H_pspaceI?: Invariants_H_pspaceI
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Invariants_H_pspaceI_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact RISCV64.Invariants_H_pspaceI_assms)?)?)
   qed
 
 context Arch begin arch_global_naming
 
-named_theorems Invariants_H_cte_ats_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Invariants_H_cte_ats locale *)
 
 (* FIXME arch-split: for proofs which require exact offsets lining up instead of cteSizeBits *)
 lemma raw_tcb_cte_cases_simps:
@@ -122,7 +123,7 @@ lemma raw_tcb_cte_cases_simps:
   "tcb_cte_cases 128 = Some (tcbTimeoutHandler, tcbTimeoutHandler_update)"
   by (simp add: tcb_cte_cases_def cteSizeBits_def)+
 
-lemma cte_wp_at_cases'[Invariants_H_cte_ats_assms]:
+lemma cte_wp_at_cases'[Arch_assms]:
   shows "cte_wp_at' P p s =
   ((\<exists>cte. ksPSpace s p = Some (KOCTE cte) \<and> is_aligned p cte_level_bits
              \<and> P cte \<and> ps_clear p cteSizeBits s) \<or>
@@ -214,7 +215,7 @@ lemma cte_wp_at_cteI':
   shows "cte_wp_at' P ptr s"
   using assms by (simp add: cte_wp_at_cases' cte_level_bits_def objBits_defs)
 
-lemma cte_at_typ'[Invariants_H_cte_ats_assms]:
+lemma cte_at_typ'[Arch_assms]:
   "cte_at' c = (\<lambda>s. typ_at' CTET c s \<or> (\<exists>n. typ_at' TCBT (c - n) s \<and> n \<in> dom tcb_cte_cases))"
 proof -
   have P: "\<And>ko. (koTypeOf ko = CTET) = (\<exists>cte. ko = KOCTE cte)"
@@ -238,12 +239,13 @@ lemma tcb_at_cte_at':
   apply (clarsimp simp add: return_def objBits_simps)
   done
 
-end
+lemmas Invariants_H_cte_ats_assms = Arch_assms (* extract accumulated assumptions *)
+
+end (* Arch *)
 
 global_interpretation Invariants_H_cte_ats?: Invariants_H_cte_ats
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact Invariants_H_cte_ats_assms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact RISCV64.Invariants_H_cte_ats_assms)?)
   qed
 
 
@@ -352,7 +354,7 @@ lemma hyp_refs_of_live':
   "hyp_refs_of' ko \<noteq> {} \<Longrightarrow> live' ko"
   by (cases ko, simp_all add: live'_def hyp_refs_of_hyp_live')
 
-named_theorems Invariants_H_typ_at_lifts_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Invariants_H_typ_at_lifts locale *)
 
 lemma page_table_at'_typ_at_lift_strong:
   "(\<And>p. f \<lbrace>\<lambda>s. P (typ_at' (ArchT PTET) p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (page_table_at' p s)\<rbrace>"
@@ -376,12 +378,12 @@ lemma asid_pool_at'_typ_at_lift_strong:
   "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (asid_pool_at' p s)\<rbrace>"
   by assumption
 
-lemma valid_arch_tcb'_typ_at_lift_strong[Invariants_H_typ_at_lifts_assms]:
+lemma valid_arch_tcb'_typ_at_lift_strong[Arch_assms]:
   assumes "\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (valid_arch_tcb' arch_tcb s)\<rbrace>"
   by (clarsimp simp: valid_arch_tcb'_def, wp)
 
-lemma valid_arch_cap'_typ_at_lift[Invariants_H_typ_at_lifts_assms]:
+lemma valid_arch_cap'_typ_at_lift[Arch_assms]:
   assumes P: "\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
   shows      "f \<lbrace>\<lambda>s. valid_arch_cap' cap s\<rbrace>"
   apply (case_tac cap,
@@ -391,12 +393,13 @@ lemma valid_arch_cap'_typ_at_lift[Invariants_H_typ_at_lifts_assms]:
               page_table_at'_typ_at_lift_strong frame_at'_typ_at_lift_strong)+
   done
 
+lemmas Invariants_H_typ_at_lifts_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 global_interpretation Invariants_H_typ_at_lifts?: Invariants_H_typ_at_lifts
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; unfold_locales; (fact Invariants_H_typ_at_lifts_assms)?)
+  case 1 show ?case by (intro_locales; unfold_locales; (fact RISCV64.Invariants_H_typ_at_lifts_assms)?)
 qed
 
 context Arch begin arch_global_naming

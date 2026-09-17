@@ -23,11 +23,13 @@ lemma magnitudeCheck_assert:
   "magnitudeCheck x y n = assert (case y of None \<Rightarrow> True | Some z \<Rightarrow> 1 << n \<le> z - x)"
   by (simp add: magnitudeCheck_def read_magnitudeCheck_assert)
 
-context begin interpretation Arch . (*FIXME: arch-split*)
+context Arch begin arch_global_naming
+
 lemmas makeObject_simps =
   makeObject_endpoint makeObject_notification makeObject_cte
   makeObject_tcb makeObject_user_data makeObject_pte
   makeObject_asidpool
+
 end
 
 lemma projectKO_inv : "\<lbrace>P\<rbrace> gets_the $ projectKO ko \<lbrace>\<lambda>rv. P\<rbrace>"

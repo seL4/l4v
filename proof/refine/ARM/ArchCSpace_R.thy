@@ -13,9 +13,9 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems CSpace_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for CSpace_R locale *)
 
-lemmas [CSpace_R_assms] =
+lemmas [Arch_assms] =
   arch_deriveCap_corres arch_deriveCap_inv arch_deriveCap_valid
 
 (* does not work well as simp rule *)
@@ -24,7 +24,7 @@ lemma capMasterCap_isArchSGISignalCap:
   by (auto simp: capMasterCap_def arch_capMasterCap_def isCap_simps
            split: capability.splits arch_capability.splits)
 
-lemma capAligned_master[CSpace_R_assms]:
+lemma capAligned_master[Arch_assms]:
   "\<lbrakk>capAligned cap; capMasterCap cap = capMasterCap ncap\<rbrakk> \<Longrightarrow> capAligned ncap"
   apply (case_tac cap)
    apply (clarsimp simp: capAligned_def)+
@@ -42,7 +42,7 @@ sublocale updateCap: typ_at_props' "updateCap slot newCap"
 sublocale cteInsert: typ_at_props' "cteInsert newCap srcSlot destSlot"
   by typ_at_props'
 
-lemma maskedAsFull_derived'[CSpace_R_assms]:
+lemma maskedAsFull_derived'[Arch_assms]:
   "\<lbrakk>m src = Some (CTE s_cap s_node); is_derived' m ptr b c\<rbrakk>
    \<Longrightarrow> is_derived' (m(src \<mapsto> CTE (maskedAsFull s_cap cap) s_node)) ptr b c"
   apply (subgoal_tac "m(src \<mapsto> CTE (maskedAsFull s_cap cap) s_node)
@@ -57,21 +57,21 @@ lemma maskedAsFull_derived'[CSpace_R_assms]:
    apply (clarsimp simp:modify_map_def)
    done
 
-lemma capMaster_capRange[CSpace_R_assms]:
+lemma capMaster_capRange[Arch_assms]:
   "capMasterCap c = capMasterCap c' \<Longrightarrow> capRange c = capRange c'"
   by (simp add: capMasterCap_def arch_capMasterCap_def capRange_def
            split: capability.splits arch_capability.splits)
 
-lemma capMaster_untypedRange[CSpace_R_assms]:
+lemma capMaster_untypedRange[Arch_assms]:
   "capMasterCap c = capMasterCap c' \<Longrightarrow> untypedRange c = untypedRange c'"
   by (simp add: capMasterCap_def capRange_def split: capability.splits arch_capability.splits)
 
-lemma capMaster_capClass[CSpace_R_assms]:
+lemma capMaster_capClass[Arch_assms]:
   "capMasterCap c = capMasterCap c' \<Longrightarrow> capClass c = capClass c'"
   by (simp add: capMasterCap_def arch_capMasterCap_def
            split: capability.splits arch_capability.splits)
 
-lemma valid_arch_badges_mdbPrev_update[simp, CSpace_R_assms]:
+lemma valid_arch_badges_mdbPrev_update[simp, Arch_assms]:
   "valid_arch_badges cap cap' (mdbPrev_update f node) = valid_arch_badges cap cap' node"
   by (simp add: valid_arch_badges_def)
 
@@ -80,19 +80,19 @@ lemma valid_arch_badges_master_eq:
    valid_arch_badges src_cap cap' node = valid_arch_badges cap cap' node"
   by (auto simp: valid_arch_badges_def isCap_simps)
 
-lemma valid_arch_badges_firstBadged[CSpace_R_assms]:
+lemma valid_arch_badges_firstBadged[Arch_assms]:
   "\<lbrakk> valid_arch_badges cap cap' node; mdbFirstBadged node = mdbFirstBadged node' \<rbrakk> \<Longrightarrow>
    valid_arch_badges cap cap' node'"
   by (simp add: valid_arch_badges_def)
 
-lemma valid_arch_badges_master[CSpace_R_assms]:
+lemma valid_arch_badges_master[Arch_assms]:
   "\<lbrakk>capMasterCap src_cap = capMasterCap cap;
     (capBadge src_cap, capBadge cap) \<in> capBadge_ordering False;
     valid_arch_badges src_cap cap' node\<rbrakk> \<Longrightarrow>
    valid_arch_badges cap cap' node"
   by (clarsimp simp: valid_arch_badges_def isCap_simps)
 
-lemma badge_derived'_capRange[CSpace_R_assms]:
+lemma badge_derived'_capRange[Arch_assms]:
   "badge_derived' cap src_cap \<Longrightarrow> capRange cap = capRange src_cap"
   apply (clarsimp simp: badge_derived'_def)
   apply (case_tac cap; clarsimp simp: gen_isCap_simps capRange_def)
@@ -100,11 +100,11 @@ lemma badge_derived'_capRange[CSpace_R_assms]:
       apply (case_tac arch_capability; clarsimp simp: isCap_simps capRange_def)
   done
 
-lemma valid_arch_badges_non_arch[CSpace_R_assms]:
+lemma valid_arch_badges_non_arch[Arch_assms]:
   "\<lbrakk> \<not>isArchObjectCap c; \<not>isArchObjectCap c' \<rbrakk> \<Longrightarrow> valid_arch_badges c c' node"
   by (clarsimp simp add: valid_arch_badges_def isCap_simps)
 
-lemma capMasterCap_valid_arch_badges_isCapRevocable[CSpace_R_assms]:
+lemma capMasterCap_valid_arch_badges_isCapRevocable[Arch_assms]:
   "capMasterCap src_cap = capMasterCap cap
    \<Longrightarrow> valid_arch_badges src_cap cap
         (MDB word1 src (Arch.isCapRevocable cap src_cap) (Arch.isCapRevocable cap src_cap))"
@@ -143,11 +143,11 @@ lemma setCTE_ko_at'_pde[wp]:
                         Structures_H.kernel_object.split_asm)
   done
 
-lemma setCTE_valid_arch[CSpace_R_assms, wp]:
+lemma setCTE_valid_arch[Arch_assms, wp]:
   "setCTE p c \<lbrace>valid_arch_state'\<rbrace>"
   by (wp valid_arch_state_lift' setCTE_typ_at')
 
-lemma setCTE_global_refs[CSpace_R_assms, wp]:
+lemma setCTE_global_refs[Arch_assms, wp]:
   "setCTE p c \<lbrace>\<lambda>s. P (global_refs' s)\<rbrace>"
   apply (simp add: setCTE_def setObject_def split_def updateObject_cte global_refs'_def)
   apply (wpsimp+; auto)
@@ -156,14 +156,14 @@ lemma setCTE_global_refs[CSpace_R_assms, wp]:
 crunch cteInsert
   for arch[wp]: "\<lambda>s. P (ksArchState s)"
   and ko_at'_pde[wp]: "\<lambda>s. P (ko_at' (pde::ARM_H.pde) p' s)"
-  and valid_arch_state'[CSpace_R_assms, wp]: valid_arch_state'
+  and valid_arch_state'[Arch_assms, wp]: valid_arch_state'
   (wp: crunch_wps simp: cte_wp_at_ctes_of)
 
-lemma acapClass_not_Reply[CSpace_R_assms]:
+lemma acapClass_not_Reply[Arch_assms]:
   "acapClass acap \<noteq> ReplyClass t"
   by (cases acap; simp)
 
-lemma isArchMDBParentOf_non_arch[CSpace_R_assms]:
+lemma isArchMDBParentOf_non_arch[Arch_assms]:
   "\<not>isArchObjectCap cap \<Longrightarrow> isArchMDBParentOf cap cap' b"
   "\<not>isArchObjectCap cap' \<Longrightarrow> isArchMDBParentOf cap cap' b"
   by (simp add: isArchMDBParentOf_def2 isCap_simps)+
@@ -332,29 +332,30 @@ context Arch begin arch_global_naming
 
 (* since these are not used after this theory, drop the Arch assumption directly
    instead of requalifying to improve processing time (unfold_locales for Arch is slow) *)
-lemmas [CSpace_R_assms] =
+lemmas [Arch_assms] =
   Arch_mdb_insert.chunked_n[simplified Arch_mdb_insert_def]
   Arch_mdb_insert_sib.untyped_inc_n[simplified Arch_mdb_insert_sib_def]
   Arch_mdb_move.parent_preserved[simplified Arch_mdb_move_def]
   Arch_mdb_move.children_preserved[simplified Arch_mdb_move_def]
 
-lemma cteInsert_pspace_in_kernel_mappings'[CSpace_R_assms]:
+lemma cteInsert_pspace_in_kernel_mappings'[Arch_assms]:
   "cteInsert cap src dest \<lbrace>pspace_in_kernel_mappings'\<rbrace>"
   by wp
 
-end
+lemmas CSpace_R_assms = Arch_assms (* extract accumulated assumptions *)
+
+end (* Arch *)
 
 interpretation CSpace_R?: CSpace_R
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact CSpace_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact ARM.CSpace_R_assms)?)?)
 qed
 
 context Arch begin arch_global_naming
 
-named_theorems CSpace_R_2_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for CSpace_R_2 locale *)
 
-lemma deriveCap_derived[CSpace_R_2_assms]:
+lemma deriveCap_derived[Arch_assms]:
   "\<lbrace>\<lambda>s. c'\<noteq> capability.NullCap \<longrightarrow> cte_wp_at' (\<lambda>cte. badge_derived' c' (cteCap cte)
         \<and> capASID c' = capASID (cteCap cte)
         \<and> cap_asid_base' c' = cap_asid_base' (cteCap cte)
@@ -384,7 +385,7 @@ lemma deriveCap_derived[CSpace_R_2_assms]:
                   | clarsimp split: option.split_asm)+)
   done
 
-lemma arch_deriveCap_untyped_derived[CSpace_R_2_assms, wp]:
+lemma arch_deriveCap_untyped_derived[Arch_assms, wp]:
   "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte. untyped_derived_eq c' (cteCap cte)) slot s\<rbrace>
    ARM_H.deriveCap slot (capCap c')
    \<lbrace>\<lambda>rv s. cte_wp_at' (untyped_derived_eq rv o cteCap) slot s\<rbrace>, -"
@@ -424,7 +425,7 @@ crunch setupReplyMaster
   for valid_arch'[wp]: "valid_arch_state'"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma ex_nonz_tcb_cte_caps'[CSpace_R_2_assms]:
+lemma ex_nonz_tcb_cte_caps'[Arch_assms]:
   "\<lbrakk>ex_nonz_cap_to' t s; tcb_at' t s; valid_objs' s; sl \<in> dom tcb_cte_cases\<rbrakk> \<Longrightarrow>
    ex_cte_cap_to' (t + sl) s"
   apply (clarsimp simp: ex_nonz_cap_to'_def ex_cte_cap_to'_def cte_wp_at_ctes_of)
@@ -451,7 +452,7 @@ lemma ex_nonz_cap_not_global':
   apply (clarsimp simp: ctes_of_valid_cap')
   done
 
-lemma setupReplyMaster_invs'[CSpace_R_2_assms, wp]:
+lemma setupReplyMaster_invs'[Arch_assms, wp]:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t\<rbrace>
    setupReplyMaster t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -466,7 +467,7 @@ lemma setupReplyMaster_invs'[CSpace_R_2_assms, wp]:
                         ex_nonz_cap_not_global' dom_def)
   done
 
-lemma arch_update_setCTE_mdb[CSpace_R_2_assms]:
+lemma arch_update_setCTE_mdb[Arch_assms]:
   "\<lbrace>cte_wp_at' (is_arch_update' cap) p and cte_wp_at' ((=) oldcte) p and valid_mdb'\<rbrace>
    setCTE p (cteCap_update (\<lambda>_. cap) oldcte)
    \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
@@ -590,17 +591,17 @@ lemma arch_update_setCTE_mdb[CSpace_R_2_assms]:
   apply (clarsimp simp add: is_arch_update'_def isCap_simps)
   done
 
-lemma capMaster_zobj_refs[CSpace_R_2_assms]:
+lemma capMaster_zobj_refs[Arch_assms]:
   "capMasterCap c = capMasterCap c' \<Longrightarrow> zobj_refs' c = zobj_refs' c'"
   by (simp add: capMasterCap_def arch_capMasterCap_def
            split: capability.splits arch_capability.splits)
 
-lemma zobj_refs_Master[CSpace_R_2_assms]:
+lemma zobj_refs_Master[Arch_assms]:
   "zobj_refs' (capMasterCap cap) = zobj_refs' cap"
   by (simp add: capMasterCap_def arch_capMasterCap_def
            split: capability.split arch_capability.split)
 
-lemma setCTE_pspace_in_kernel_mappings'[CSpace_R_2_assms]:
+lemma setCTE_pspace_in_kernel_mappings'[Arch_assms]:
   "setCTE ptr val \<lbrace>pspace_in_kernel_mappings'\<rbrace>"
   by wp
 
@@ -613,7 +614,7 @@ lemma valid_badges_IRQControlD:
   unfolding valid_badges_def
   by (fastforce simp: isCap_simps valid_arch_badges_def)
 
-lemma setUntypedCapAsFull_safe_parent_for'[CSpace_R_2_assms]:
+lemma setUntypedCapAsFull_safe_parent_for'[Arch_assms]:
   "\<lbrace>\<lambda>s. safe_parent_for' (ctes_of s) slot a \<and> cte_wp_at' ((=) srcCTE) slot s\<rbrace>
    setUntypedCapAsFull (cteCap srcCTE) c' slot
    \<lbrace>\<lambda>rv s. safe_parent_for' (ctes_of s) slot a\<rbrace>"
@@ -633,7 +634,7 @@ lemma setUntypedCapAsFull_safe_parent_for'[CSpace_R_2_assms]:
   apply simp
   done
 
-lemma maskedAsFull_revokable_safe_parent[CSpace_R_2_assms]:
+lemma maskedAsFull_revokable_safe_parent[Arch_assms]:
   "\<lbrakk>is_simple_cap' c'; safe_parent_for' m p c'; m p = Some cte;
     cteCap cte = (maskedAsFull src_cap' a)\<rbrakk>
    \<Longrightarrow> isCapRevocable c' (maskedAsFull src_cap' a) = isCapRevocable c' src_cap'"
@@ -642,12 +643,12 @@ lemma maskedAsFull_revokable_safe_parent[CSpace_R_2_assms]:
   apply (auto simp: isCap_simps is_simple_cap'_def)
   done
 
-lemma setUntypedCapAsFull_archMDBAssertions[CSpace_R_2_assms, wp]:
+lemma setUntypedCapAsFull_archMDBAssertions[Arch_assms, wp]:
   "setUntypedCapAsFull src_cap cap p \<lbrace>archMDBAssertions\<rbrace>"
   unfolding archMDBAssertions_def arch_mdb_assert_def
   by wp
 
-lemma sameRegion_capRange_sub[CSpace_R_2_assms]:
+lemma sameRegion_capRange_sub[Arch_assms]:
   "sameRegionAs cap cap' \<Longrightarrow> capRange cap' \<subseteq> capRange cap"
   apply (clarsimp simp: sameRegionAs_def2 gen_isCap_Master arch_isCap_Master capRange_Master
                   cong: conj_cong)
@@ -655,7 +656,7 @@ lemma sameRegion_capRange_sub[CSpace_R_2_assms]:
   apply (fastforce simp: isCap_simps capRange_def split: if_split_asm)
   done
 
-lemma capRange_sameRegionAs[CSpace_R_2_assms]:
+lemma capRange_sameRegionAs[Arch_assms]:
   "\<lbrakk> sameRegionAs x y; s \<turnstile>' y; capClass x = PhysicalClass \<or> capClass y = PhysicalClass \<rbrakk>
    \<Longrightarrow> capRange x \<inter> capRange y \<noteq> {}"
   apply (erule sameRegionAsE)
@@ -672,7 +673,7 @@ lemma capRange_sameRegionAs[CSpace_R_2_assms]:
    apply (clarsimp simp: isCap_simps)+
   done
 
-lemma safe_parent_for_capRange_capBits[CSpace_R_2_assms]:
+lemma safe_parent_for_capRange_capBits[Arch_assms]:
   "\<lbrakk> safe_parent_for' m p cap; m p = Some cte \<rbrakk> \<Longrightarrow> capRange cap \<subseteq> capRange (cteCap cte)
     \<and> capBits cap \<le> capBits (cteCap cte)"
   apply (clarsimp simp: safe_parent_for'_def safe_parent_for_arch'_def)
@@ -682,7 +683,7 @@ lemma safe_parent_for_capRange_capBits[CSpace_R_2_assms]:
                     capMasterCap_def capRange_Master objBits_simps
            split: capability.splits arch_capability.splits)
 
-lemma safe_parent_for_descendants'[CSpace_R_2_assms]:
+lemma safe_parent_for_descendants'[Arch_assms]:
   "\<lbrakk> safe_parent_for' m p cap; m p = Some (CTE pcap n); isUntypedCap pcap \<rbrakk> \<Longrightarrow> descendants_of' p m = {}"
   by (auto simp: safe_parent_for'_def safe_parent_for_arch'_def isCap_simps)
 
@@ -694,7 +695,7 @@ lemma safe_parent_not_ntfn':
   "\<lbrakk> safe_parent_for' m p cap; m p = Some (CTE src_cap n) \<rbrakk> \<Longrightarrow> \<not>isNotificationCap src_cap"
   by (auto simp: safe_parent_for'_def safe_parent_for_arch'_def isCap_simps)
 
-lemma safe_parent_for_untypedRange[CSpace_R_2_assms]:
+lemma safe_parent_for_untypedRange[Arch_assms]:
   "\<lbrakk> safe_parent_for' m p cap; m p = Some cte \<rbrakk> \<Longrightarrow> untypedRange cap \<subseteq> untypedRange (cteCap cte)"
   apply (clarsimp simp: safe_parent_for'_def safe_parent_for_arch'_def)
   apply (erule disjE)
@@ -712,7 +713,7 @@ lemma safe_parent_for_untypedRange[CSpace_R_2_assms]:
   apply (clarsimp simp: gen_isCap_Master isCap_simps)
   done
 
-lemma safe_parent_for_capUntypedRange[CSpace_R_2_assms]:
+lemma safe_parent_for_capUntypedRange[Arch_assms]:
   "\<lbrakk> safe_parent_for' m p cap; m p = Some cte \<rbrakk> \<Longrightarrow> capRange cap \<subseteq> untypedRange (cteCap cte)"
   apply (clarsimp simp: safe_parent_for'_def safe_parent_for_arch'_def)
   apply (erule disjE)
@@ -727,14 +728,14 @@ lemma safe_parent_for_capUntypedRange[CSpace_R_2_assms]:
   apply (clarsimp simp: gen_isCap_Master isCap_simps)
   done
 
-lemma safe_parent_capClass[CSpace_R_2_assms]:
+lemma safe_parent_capClass[Arch_assms]:
   "\<lbrakk> safe_parent_for' m p cap; m p = Some (CTE src_cap n) \<rbrakk> \<Longrightarrow> capClass cap = capClass src_cap"
   by (auto simp: safe_parent_for'_def safe_parent_for_arch'_def isCap_simps sameRegionAs_def2
                  capRange_Master capRange_def capMasterCap_def
            split: capability.splits arch_capability.splits)
 
 (* Generic-only parts of is_simple_cap'. isArchFrameCap appears on all architectures and so is safe. *)
-lemma is_simple_cap'_genD[CSpace_R_2_assms]:
+lemma is_simple_cap'_genD[Arch_assms]:
   "is_simple_cap' cap \<Longrightarrow>
    cap \<noteq> NullCap \<and> cap \<noteq> IRQControlCap \<and> \<not> isUntypedCap cap \<and> \<not> isReplyCap cap \<and>
    \<not> isEndpointCap cap \<and> \<not> isNotificationCap cap \<and> \<not> isThreadCap cap \<and> \<not> isCNodeCap cap \<and>
@@ -803,14 +804,15 @@ end
 
 context Arch begin arch_global_naming
 
-lemmas [CSpace_R_2_assms] = mdb_insert_simple.dest_no_parent_n mdb_insert_simple.new_child
+lemmas [Arch_assms] = mdb_insert_simple.dest_no_parent_n mdb_insert_simple.new_child
 
-end
+lemmas CSpace_R_2_assms = Arch_assms (* extract accumulated assumptions *)
+
+end (* Arch *)
 
 interpretation CSpace_R_2?: CSpace_R_2
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact CSpace_R_2_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact ARM.CSpace_R_2_assms)?)?)
 qed
 
 (* transfer facts from partial locales (with extra assumptions) into complete locales
@@ -1143,17 +1145,17 @@ end (* Arch_mdb_insert_simple' *)
 
 context Arch begin arch_global_naming
 
-named_theorems CSpace_R_3_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for CSpace_R_3 locale *)
 
 (* since mdb_insert_simple' is not used after this theory, drop the Arch assumption directly
    instead of requalifying *)
-lemmas [CSpace_R_3_assms] = Arch_mdb_insert_simple'.mdb[simplified Arch_mdb_insert_simple'_def]
+lemmas [Arch_assms] = Arch_mdb_insert_simple'.mdb[simplified Arch_mdb_insert_simple'_def]
 
-lemmas [CSpace_R_3_assms] =
+lemmas [Arch_assms] =
   updateCap_valid_arch_state'
   master_cap_relation
 
-lemma derived'_not_Null[CSpace_R_3_assms, simp]:
+lemma derived'_not_Null[Arch_assms, simp]:
   "\<not> is_derived' m p c capability.NullCap"
   "\<not> is_derived' m p capability.NullCap c"
   by (clarsimp simp: is_derived'_def badge_derived'_def)+
@@ -1166,7 +1168,7 @@ lemma cte_refs_maskCapRights[simp]:
          split del: if_split
              split: arch_capability.split)
 
-lemma ghost_relation_wrapper_set_cap_setCTE[CSpace_R_3_assms]:
+lemma ghost_relation_wrapper_set_cap_setCTE[Arch_assms]:
   "\<lbrakk> ghost_relation_wrapper a c;
      ((), c') \<in> fst (setCTE (cte_map slot) (cteCap_update (\<lambda>_. cap') rv) c);
      ((), a') \<in> fst (set_cap cap slot a)\<rbrakk>
@@ -1177,16 +1179,17 @@ lemma ghost_relation_wrapper_set_cap_setCTE[CSpace_R_3_assms]:
   apply (frule use_valid[OF _ setCTE_gsCNodes]; simp)
   done
 
-lemma updateMDB_pspace_in_kernel_mappings'[CSpace_R_3_assms]:
+lemma updateMDB_pspace_in_kernel_mappings'[Arch_assms]:
   "updateMDB x f \<lbrace>pspace_in_kernel_mappings'\<rbrace>"
   by wp
 
-end
+lemmas CSpace_R_3_assms = Arch_assms (* extract accumulated assumptions *)
+
+end (* Arch *)
 
 interpretation CSpace_R_3?: CSpace_R_3
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact CSpace_R_3_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact ARM.CSpace_R_3_assms)?)?)
 qed
 
 (* transfer facts from partial locales (with extra assumptions) into complete locales
