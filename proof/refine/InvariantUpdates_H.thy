@@ -24,7 +24,7 @@ arch_requalify_facts
 sublocale gen_typ_at_props' \<subseteq> gen_typ_at_props'_interface \<open>TYPE('f_rvt)\<close> f
   by unfold_locales (fact typ')
 
-sublocale gen_typ_at_all_props' < gen_typ_at_all_props'_interface \<open>TYPE('f_rvt)\<close> f
+sublocale gen_typ_at_all_props' \<subseteq> gen_typ_at_all_props'_interface \<open>TYPE('f_rvt)\<close> f
   by unfold_locales (fact typ' sc')+
 
 (* these depend on interpretations in ArchInvLemmas_H *)

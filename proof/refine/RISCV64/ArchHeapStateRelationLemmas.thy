@@ -574,11 +574,12 @@ lemma heap_ghost_relation_lift_rcorres:
        apply fastforce
       by (fastforce intro: hoare_weaken_pre)+
 
+lemmas HeapStateRelation_R_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation HeapStateRelation_R?: HeapStateRelation_R
 proof goal_cases
-  interpret Arch .
   case 1 show ?case by (intro_locales; (unfold_locales; fact RISCV64.HeapStateRelation_R_assms)?)
 qed
 

@@ -328,12 +328,14 @@ end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
 proof goal_cases
+  (* FIXME RT: add all interface lemmas to Arch_assms, remove Arch interpretation and wpsimp *)
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact RISCV64.DetSchedSchedule_AI_assms)?; wpsimp?)
 qed
 
 global_interpretation DetSchedSchedule_AI_det_ext?: DetSchedSchedule_AI_det_ext
 proof goal_cases
+  (* FIXME RT: add all interface lemmas to Arch_assms, remove Arch interpretation and wpsimp *)
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact RISCV64.DetSchedSchedule_AI_assms)?; wpsimp?)
 qed
@@ -349,20 +351,20 @@ lemma handle_vm_fault_not_timeout_fault[wp]:
   "\<lbrace>\<top>\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. \<not> is_timeout_fault rv\<rbrace>"
   unfolding handle_vm_fault_def by (wpsimp simp: is_timeout_fault_def)
 
-lemmas [Arch_assms] = handle_hyp_fault_valid_sched handle_reserved_irq_valid_sched
-
 lemmas DetSchedSchedule_AI_handle_hypervisor_fault_assms = Arch_assms (* extract accumulated assumptions *)
 
 end
 
 global_interpretation DetSchedSchedule_AI_handle_hypervisor_fault?: DetSchedSchedule_AI_handle_hypervisor_fault
 proof goal_cases
+  (* FIXME RT: add all interface lemmas to Arch_assms, remove Arch interpretation and wpsimp *)
   interpret Arch .
   case 1 show ?case by (unfold_locales; wpsimp)
 qed
 
 global_interpretation DetSchedSchedule_AI_handle_hypervisor_fault_det_ext?: DetSchedSchedule_AI_handle_hypervisor_fault_det_ext
 proof goal_cases
+  (* FIXME RT: add all interface lemmas to Arch_assms, remove Arch interpretation and wpsimp *)
   interpret Arch .
   case 1 show ?case by (unfold_locales; wpsimp)
 qed

@@ -581,13 +581,13 @@ lemma blocked_cancel_ipc_invs:
     apply (case_tac ep;
            clarsimp simp: removeAll_filter_not_eq state_refs_of_def ep_redux_simps2 get_refs_def2
                    split: if_splits list.splits;
-           metis filter_set insert_iff list.set(2) member_filter)
+           metis (no_types, lifting) cons_set_intro list.set_intros(2) mem_Collect_eq set_filter)
    apply (case_tac "filter ((\<noteq>) t) (ep_queue ep)"; clarsimp)
     apply (case_tac ep;
            fastforce simp: removeAll_filter_not_eq state_refs_of_def filter_empty_conv get_refs_def2
                     split: if_splits)
    apply (prop_tac "t \<notin> set (filter ((\<noteq>) t) (ep_queue ep))")
-    apply (metis (mono_tags, lifting) filter_set member_filter)
+    apply (smt (verit, best) filter_id_conv removeAll_filter_not removeAll_filter_not_eq)
    apply (prop_tac "y \<in> set (ep_queue ep) \<and> y \<noteq> t \<longrightarrow> y \<in> set (filter ((\<noteq>) t) (ep_queue ep))")
     apply (fastforce dest: in_filter_neq)
    subgoal for epptr ep s tcb x y tp head tail

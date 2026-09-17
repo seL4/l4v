@@ -1490,86 +1490,86 @@ lemma (in non_reply_op) reply_at_ppred:
   apply (rule reply_obj_at[where P=P and P'="P' \<circ> proj" and p=p])
   by (auto simp: reply_at_ppred_def)
 
-sublocale cnode_op < cspace_op
+sublocale cnode_op \<subseteq> cspace_op
   by unfold_locales (simp add: cnode_agnostic_obj_at)
 
-sublocale tcb_cnode_op < cspace_op
+sublocale tcb_cnode_op \<subseteq> cspace_op
   by unfold_locales (simp add: tcb_cnode_agnostic_obj_at)
 
-sublocale tcb_cnode_op < tcb_op
+sublocale tcb_cnode_op \<subseteq> tcb_op
   by unfold_locales (fastforce simp: tcb_agnostic_pred_def tcb_cnode_agnostic_pred_def
                                      tcb_cnode_agnostic_obj_at)
 
-sublocale tcb_op < tcb_cspace_op
+sublocale tcb_op \<subseteq> tcb_cspace_op
   by unfold_locales (simp add: tcb_agnostic_obj_at)
 
-sublocale cspace_op < tcb_cspace_op
+sublocale cspace_op \<subseteq> tcb_cspace_op
   by unfold_locales (fastforce simp: cspace_agnostic_obj_at tcb_agnostic_pred_def
                                      cnode_agnostic_pred_def tcb_cnode_agnostic_pred_def)
 
-sublocale tcb_cspace_op < non_aobj_op
+sublocale tcb_cspace_op \<subseteq> non_aobj_op
   by unfold_locales (intro tcb_cspace_agnostic_obj_at tcb_cspace_arch_obj_pred_imp)
 
 sublocale non_aobj_op \<subseteq> non_vspace_op
   by unfold_locales (intro aobj_at vspace_pred_imp)
 
-sublocale tcb_cspace_op < non_reply_op
+sublocale tcb_cspace_op \<subseteq> non_reply_op
   by unfold_locales (simp add: reply_at_ppred_def tcb_cspace_agnostic_obj_at
                                tcb_cspace_agnostic_pred_def)
 
-sublocale non_reply_op < non_reply_tcb_op
+sublocale non_reply_op \<subseteq> non_reply_tcb_op
   by unfold_locales (rule sk_obj_at_pred_id_lift[OF reply_obj_at])
 
-sublocale non_reply_op < non_reply_sc_op
+sublocale non_reply_op \<subseteq> non_reply_sc_op
   by unfold_locales (rule sk_obj_at_pred_id_lift[OF reply_obj_at])
 
-sublocale non_reply_sc_op < reply_at_pres
+sublocale non_reply_sc_op \<subseteq> reply_at_pres
   by unfold_locales (rule reply_at_ppred_lift[OF reply_sc_obj_at])
 
-sublocale non_reply_tcb_op < reply_at_pres
+sublocale non_reply_tcb_op \<subseteq> reply_at_pres
   by unfold_locales (rule reply_at_ppred_lift[OF reply_tcb_obj_at])
 
-sublocale tcb_cspace_op < non_sc_op
+sublocale tcb_cspace_op \<subseteq> non_sc_op
   by unfold_locales (simp add: sc_at_pred_n_def tcb_cspace_agnostic_obj_at
                                tcb_cspace_agnostic_pred_def)
 
-sublocale non_sc_op < non_sc_ntfn_op
+sublocale non_sc_op \<subseteq> non_sc_ntfn_op
   by unfold_locales (rule sc_at_pred_lift[OF sc_obj_at])
 
-sublocale non_sc_op < non_sc_tcb_op
+sublocale non_sc_op \<subseteq> non_sc_tcb_op
   by unfold_locales (rule sc_at_pred_lift[OF sc_obj_at])
 
-sublocale non_sc_op < non_sc_yield_from_op
+sublocale non_sc_op \<subseteq> non_sc_yield_from_op
   by unfold_locales (rule sc_at_pred_lift[OF sc_obj_at])
 
-sublocale non_sc_op < non_sc_replies_op
+sublocale non_sc_op \<subseteq> non_sc_replies_op
   by unfold_locales (rule sc_at_pred_lift[OF sc_obj_at])
 
-sublocale non_sc_op < non_sc_refills_op
+sublocale non_sc_op \<subseteq> non_sc_refills_op
   by unfold_locales (rule sc_at_pred_lift[OF sc_obj_at])
 
-sublocale non_sc_op < non_sc_refill_max_op
+sublocale non_sc_op \<subseteq> non_sc_refill_max_op
   by unfold_locales (rule sc_at_pred_lift[OF sc_obj_at])
 
-sublocale non_sc_ntfn_op < sc_obj_at_pres
+sublocale non_sc_ntfn_op \<subseteq> sc_obj_at_pres
   by unfold_locales (rule sc_obj_at_pred_v_lift[OF sc_ntfn_obj_at])
 
-sublocale non_sc_tcb_op < sc_obj_at_pres
+sublocale non_sc_tcb_op \<subseteq> sc_obj_at_pres
   by unfold_locales (rule sc_obj_at_pred_v_lift[OF sc_tcb_obj_at])
 
-sublocale non_sc_yield_from_op < sc_obj_at_pres
+sublocale non_sc_yield_from_op \<subseteq> sc_obj_at_pres
   by unfold_locales (rule sc_obj_at_pred_v_lift[OF sc_yf_obj_at])
 
-sublocale non_sc_replies_op < sc_obj_at_pres
+sublocale non_sc_replies_op \<subseteq> sc_obj_at_pres
   by unfold_locales (rule sc_obj_at_pred_v_lift[OF sc_replies_obj_at])
 
-sublocale non_sc_refills_op < sc_obj_at_pres
+sublocale non_sc_refills_op \<subseteq> sc_obj_at_pres
   by unfold_locales (rule sc_obj_at_pred_v_lift[OF sc_refills_obj_at])
 
-sublocale non_sc_refill_max_op < sc_obj_at_pres
+sublocale non_sc_refill_max_op \<subseteq> sc_obj_at_pres
   by unfold_locales (rule sc_obj_at_pred_v_lift[OF sc_refill_max_obj_at])
 
-sublocale sc_obj_at_pres < sc_at_pres
+sublocale sc_obj_at_pres \<subseteq> sc_at_pres
   apply unfold_locales
   apply (clarsimp simp: valid_def obj_at_def)
   apply (rule_tac f=P in bool_to_bool_cases; clarsimp)
@@ -1583,19 +1583,19 @@ sublocale sc_obj_at_pres < sc_at_pres
   apply (drule_tac x="(a,b)" in bspec; clarsimp simp: obj_at_def)
   done
 
-sublocale tcb_cspace_op < typ_at_pres
+sublocale tcb_cspace_op \<subseteq> typ_at_pres
   by unfold_locales (simp add: tcb_cspace_agnostic_obj_at tcb_cspace_agnostic_pred_def a_type_def)
 
-sublocale typ_at_pres < sc_obj_at_pres
+sublocale typ_at_pres \<subseteq> sc_obj_at_pres
   by unfold_locales (wpsimp simp: sc_obj_at_typ)
 
-sublocale typ_at_pres < reply_at_pres
+sublocale typ_at_pres \<subseteq> reply_at_pres
   by unfold_locales (wpsimp simp: reply_at_typ)
 
-sublocale non_heap_op < cnode_op
+sublocale non_heap_op \<subseteq> cnode_op
   by unfold_locales (rule any_obj_at)
 
-sublocale non_heap_op < tcb_cnode_op
+sublocale non_heap_op \<subseteq> tcb_cnode_op
   by unfold_locales (rule any_obj_at)
 
 lemma update_sk_obj_ref_sk_obj_at_pred:
@@ -1642,7 +1642,7 @@ locale non_astate_op =
 locale non_aobj_non_astate_op = non_aobj_op f + non_astate_op f for f
 locale non_vspace_non_astate_op = non_vspace_op f + non_astate_op f for f
 
-sublocale non_aobj_non_astate_op < non_vspace_non_astate_op ..
+sublocale non_aobj_non_astate_op \<subseteq> non_vspace_non_astate_op ..
 
 context non_vspace_non_astate_op begin
 
@@ -1684,8 +1684,8 @@ locale non_aobj_non_astate_non_mem_op = non_aobj_non_astate_op f + non_mem_op f 
 locale non_vspace_non_astate_non_mem_op = non_vspace_non_astate_op f + non_mem_op f for f
 locale cspace_non_astate_non_mem_op = cspace_op f + non_astate_op f + non_mem_op f for f
 
-sublocale non_aobj_non_astate_non_mem_op < non_vspace_non_astate_non_mem_op ..
-sublocale cspace_non_astate_non_mem_op < non_aobj_non_astate_non_mem_op ..
+sublocale non_aobj_non_astate_non_mem_op \<subseteq> non_vspace_non_astate_non_mem_op ..
+sublocale cspace_non_astate_non_mem_op \<subseteq> non_aobj_non_astate_non_mem_op ..
 
 
 lemma (in non_vspace_non_astate_non_mem_op) valid_machine_state[wp]:
