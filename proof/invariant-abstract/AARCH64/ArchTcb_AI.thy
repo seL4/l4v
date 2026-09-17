@@ -351,7 +351,7 @@ lemma tcc_invs[Arch_assms]:
        \<comment> \<open>non-exception case\<close>
        apply (wpsimp wp: install_tcb_frame_cap_invs)
       \<comment> \<open>pull invs out the front and simplify\<close>
-      apply ((simp add: conj_comms del: hoareE_R_TrueI, simp cong: conj_cong))
+      apply ((simp add: conj_comms, simp cong: conj_cong))
       \<comment> \<open>install_tcb_cap 1\<close>
       apply (rule hoare_vcg_conj_elimE, wp install_tcb_cap_invs)
       apply (wpsimp wp: hoare_vcg_const_imp_liftE_R hoare_vcg_all_liftE_R

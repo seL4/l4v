@@ -10,12 +10,14 @@ begin
 
 global_interpretation AInvs_AI?: AInvs_AI
 proof goal_cases
+  (* FIXME RT: add all interface lemmas to Arch_assms, remove Arch interpretation and wpsimp *)
   interpret Arch .
   case 1 show ?case by (unfold_locales; (solves wpsimp)?)
 qed
 
 global_interpretation AInvs_AI_det_ext?: AInvs_AI_det_ext
 proof goal_cases
+  (* FIXME RT: add all interface lemmas to Arch_assms, remove Arch interpretation and wpsimp *)
   interpret Arch .
   case 1 show ?case by (unfold_locales; wpsimp)
 qed

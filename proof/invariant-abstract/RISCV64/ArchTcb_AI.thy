@@ -197,7 +197,7 @@ end
 
 global_interpretation Tcb_AI_1?: Tcb_AI_1
   where state_ext_t = state_ext_t
-    and is_cnode_or_valid_arch = is_cnode_or_valid_arch
+    and is_cnode_or_valid_arch = RISCV64.is_cnode_or_valid_arch
 proof goal_cases
   case 1 show ?case by (unfold_locales; (fact RISCV64.Tcb_AI_assms)?)
 qed
@@ -344,7 +344,7 @@ lemma tcc_invs[Arch_assms]:
        \<comment> \<open>non-exception case\<close>
        apply (wpsimp wp: install_tcb_frame_cap_invs)
       \<comment> \<open>pull invs out the front and simplify\<close>
-      apply ((simp add: conj_comms del: hoareE_R_TrueI, simp cong: conj_cong))
+      apply ((simp add: conj_comms, simp cong: conj_cong))
       \<comment> \<open>install_tcb_cap 1\<close>
       apply (rule hoare_vcg_conj_elimE, wp install_tcb_cap_invs)
       apply (wpsimp wp: hoare_vcg_const_imp_liftE_R hoare_vcg_all_liftE_R
@@ -513,7 +513,7 @@ lemma no_cap_to_obj_with_diff_ref_update_cap_data[Arch_assms]:
   apply simp
   done
 
-lemma update_cap_valid[RISCV64]:
+lemma update_cap_valid[Arch_assms]:
   "valid_cap cap (s::'state_ext::state_ext state) \<Longrightarrow>
    valid_cap (case capdata of
               None \<Rightarrow> cap_rights_update rs cap
@@ -548,7 +548,7 @@ end
 global_interpretation Tcb_AI?: Tcb_AI
   where is_cnode_or_valid_arch = RISCV64.is_cnode_or_valid_arch
 proof goal_cases
-  case 1 show ?case by (unfold_locales; (fact RISCV64.Tcb_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact RISCV64.Tcb_AI_2_assms)?)
 qed
 
 end

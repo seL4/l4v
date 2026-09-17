@@ -910,7 +910,7 @@ lemma refillNew_corres:
               apply (clarsimp simp: sc_relation_def refills_map_def valid_refills_number'_def
                                     refillSize_def wrap_slice_start_0
                                     max_num_refills_eq_refillAbsoluteMax')
-              apply (case_tac "scRefills sc'"; simp add: updateAt_def null_def refill_map_def)
+              apply (case_tac "scRefills sc'"; simp add: updateAt_def refill_map_def)
              apply (clarsimp simp: sc_relation_def)
             apply simp
            apply (fastforce simp: obj_at_simps
@@ -998,7 +998,7 @@ lemma refillUpdate_corres:
              apply (rule setSchedContext_corres)
               apply (unfold sc_relation_def; elim conjE exE; intro conjI; fastforce?)
               apply (clarsimp simp: refills_map_def wrap_slice_start_0 hd_map neq_Nil_lengthI
-                                    refill_map_def updateAt_def null_def refillHd_def hd_wrap_slice
+                                    refill_map_def updateAt_def refillHd_def hd_wrap_slice
                                     valid_refills_number'_def max_num_refills_eq_refillAbsoluteMax'
                                     refillSize_def)
              apply (clarsimp simp: sc_relation_def)
