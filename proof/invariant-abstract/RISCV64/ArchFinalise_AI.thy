@@ -778,7 +778,7 @@ lemma (* deleting_irq_handler_cte_preserved *)[Arch_assms]:
 
 crunch prepare_thread_delete, arch_finalise_cap
   for cte_wp_at[wp, Arch_assms]: "\<lambda>s. P (cte_wp_at P' p s)"
-  and cur[wp, Finalise_AI_assms]: "\<lambda>s. P (cur_thread s)"
+  and cur[wp, Arch_assms]: "\<lambda>s. P (cur_thread s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at
    ignore: arch_thread_set)
 

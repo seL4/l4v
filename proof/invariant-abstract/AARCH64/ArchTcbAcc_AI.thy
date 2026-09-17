@@ -118,7 +118,7 @@ lemma get_cap_valid_ipc [Arch_assms]:
             split: cap.split_asm arch_cap.split_asm)
   done
 
-lemma pred_tcb_cap_wp_at [Tcb_AI_assms]:
+lemma pred_tcb_cap_wp_at [Arch_assms]:
   "\<lbrakk>pred_tcb_at proj P t s; valid_objs s;
     ref \<in> dom tcb_cap_cases;
     \<forall>cap. (pred_tcb_at proj P t s \<and> tcb_cap_valid cap (t, ref) s) \<longrightarrow> Q cap\<rbrakk> \<Longrightarrow>

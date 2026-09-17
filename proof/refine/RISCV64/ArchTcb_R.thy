@@ -179,20 +179,20 @@ lemma isValidVTableRoot_eq[Arch_assms]:
   done
 
 crunch Arch_finaliseCap, prepareThreadDelete
-  for ksCurThread[Tcb_R_assms, wp]: "\<lambda>s. P (ksCurThread s)"
+  for ksCurThread[Arch_assms, wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps getObject_inv
    rule: RISCV64_H.finaliseCap_def
    cong: if_cong)
 
 crunch Arch.postCapDeletion
-  for sc_tcb_sc_at'[Tcb_R_assms, wp]: "\<lambda>s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) p s)"
+  for sc_tcb_sc_at'[Arch_assms, wp]: "\<lambda>s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) p s)"
 
-lemmas [Tcb_R_assms] =
+lemmas [Arch_assms] =
   arch_post_modify_registers_inv
-  prepare_thread_delete_inv[Tcb_R_assms]
+  prepare_thread_delete_inv[Arch_assms]
 
 (* FIXME: rt arch-split, move interface to AInvs *)
-lemmas [Tcb_R_assms] = is_cnode_or_valid_arch_is_cap_simps
+lemmas [Arch_assms] = is_cnode_or_valid_arch_is_cap_simps
 
 lemmas Tcb_R_assms = Arch_assms (* extract accumulated assumptions *)
 

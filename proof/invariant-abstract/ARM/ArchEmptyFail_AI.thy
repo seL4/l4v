@@ -37,7 +37,7 @@ global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
 context Arch begin arch_global_naming
 
 crunch possible_switch_to,set_thread_state_act
-  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
+  for (empty_fail) empty_fail[wp, Arch_assms]
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
          Let_def wp: empty_fail_zipWithM_x)
@@ -124,7 +124,7 @@ global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
 
 context Arch begin arch_global_naming
 
-lemma preemption_point_empty_fail[wp, EmptyFail_AI_assms]:
+lemma preemption_point_empty_fail[wp, Arch_assms]:
   "empty_fail preemption_point"
   apply (wpsimp simp: mk_ef_def getActiveIRQ_def  preemption_point_def OR_choiceE_def andM_def
                       ifM_def update_time_stamp_def getCurrentTime_def get_sc_active_def)

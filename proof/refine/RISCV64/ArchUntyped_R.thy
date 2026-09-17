@@ -320,7 +320,7 @@ lemma dmo_freeMemory_clear_um[Arch_assms]:
 crunch createObject
   for nosch[Arch_assms, wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and ksInterruptState[Arch_assms, wp]: "\<lambda>s. P (ksInterruptState s)"
-  and ksCurThread[Untyped_R_assms, wp]: "\<lambda>s. P (ksCurThread s)"
+  and ksCurThread[Arch_assms, wp]: "\<lambda>s. P (ksCurThread s)"
 
 crunch resetUntypedCap
   for arch_inv[wp]: "\<lambda>s. P (ksArchState s)"

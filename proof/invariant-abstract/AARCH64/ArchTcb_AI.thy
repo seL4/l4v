@@ -58,7 +58,7 @@ crunch arch_get_sanitise_register_info, arch_post_modify_registers
   for tcb_at[wp, Arch_assms]: "tcb_at a"
   and invs[wp, Arch_assms]: "invs"
   and ex_nonz_cap_to[wp, Arch_assms]: "ex_nonz_cap_to a"
-  and inv[wp, Tcb_AI_assms]: P
+  and inv[wp, Arch_assms]: P
 
 lemma finalise_cap_not_cte_wp_at[Arch_assms]:
   assumes x: "P cap.NullCap"
@@ -73,8 +73,8 @@ lemma finalise_cap_not_cte_wp_at[Arch_assms]:
 
 crunch arch_post_set_flags, arch_prepare_set_domain
   for typ_at[wp, Arch_assms]: "\<lambda>s. P (typ_at T p s)"
-  and cur_thread[wp, Tcb_AI_assms]: "\<lambda>s. P (cur_thread s)"
-  and st_tcb_at[wp, Tcb_AI_assms]: "\<lambda>s. Q (st_tcb_at P t s)"
+  and cur_thread[wp, Arch_assms]: "\<lambda>s. P (cur_thread s)"
+  and st_tcb_at[wp, Arch_assms]: "\<lambda>s. Q (st_tcb_at P t s)"
   (simp: crunch_simps)
 
 crunch arch_prepare_set_domain
@@ -290,7 +290,7 @@ lemma install_tcb_cap_invs:
              elim!: cte_wp_at_weakenE)
   done
 
-lemma install_tcb_cap_no_cap_to_obj_dr_emp[wp, Tcb_AI_assms]:
+lemma install_tcb_cap_no_cap_to_obj_dr_emp[wp, Arch_assms]:
   "\<lbrace>no_cap_to_obj_dr_emp cap and
     (\<lambda>s. \<forall>new_cap src_slot. slot_opt = Some (new_cap, src_slot)
                           \<longrightarrow> no_cap_to_obj_dr_emp new_cap s)\<rbrace>
@@ -338,7 +338,7 @@ lemma install_tcb_frame_cap_invs:
   apply (clarsimp simp: is_cap_simps' valid_fault_handler_def is_cnode_or_valid_arch_def)
   done
 
-lemma tcc_invs[Tcb_AI_assms]:
+lemma tcc_invs[Arch_assms]:
   "\<lbrace>invs and tcb_inv_wf (ThreadControlCaps t sl fh th croot vroot buf)\<rbrace>
    invoke_tcb (ThreadControlCaps t sl fh th croot vroot buf)
    \<lbrace>\<lambda>_. invs\<rbrace>"
@@ -400,7 +400,7 @@ lemma install_tcb_cap_sc_tcb_sc_at[wp]:
   unfolding install_tcb_cap_def
   by (wpsimp wp: check_cap_inv cap_delete_fh_lift hoare_vcg_if_lift2 | simp)+
 
-lemma tcs_invs[Tcb_AI_assms]:
+lemma tcs_invs[Arch_assms]:
   "\<lbrace>invs and tcb_inv_wf (ThreadControlSched t sl fh mcp pr sc)\<rbrace>
    invoke_tcb (ThreadControlSched t sl fh  mcp pr sc)
    \<lbrace>\<lambda>_. invs\<rbrace>"

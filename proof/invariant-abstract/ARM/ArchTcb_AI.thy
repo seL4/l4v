@@ -163,10 +163,10 @@ crunch arch_post_modify_registers
   for tcb_at[wp, Arch_assms]: "tcb_at a"
   and invs[wp, Arch_assms]: invs
   and ex_nonz_cap_to[wp, Arch_assms]: "ex_nonz_cap_to a"
-  and fault_tcb_at[wp, Tcb_AI_assms]: "fault_tcb_at P a"
+  and fault_tcb_at[wp, Arch_assms]: "fault_tcb_at P a"
 
 crunch arch_get_sanitise_register_info
-  for inv[wp, Tcb_AI_assms]: "P"
+  for inv[wp, Arch_assms]: "P"
 
 lemma finalise_cap_not_cte_wp_at[Arch_assms]:
   assumes x: "P cap.NullCap"
@@ -188,8 +188,8 @@ lemma table_cap_ref_max_free_index_upd[simp,Arch_assms]:
 crunch arch_post_set_flags, arch_prepare_set_domain
   for typ_at[wp, Arch_assms]: "\<lambda>s. P (typ_at T p s)"
   and invs[wp, Arch_assms]: "invs"
-  and cur_thread[wp, Tcb_AI_assms]: "\<lambda>s. P (cur_thread s)"
-  and pred_tcb_at[wp, Tcb_AI_assms]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
+  and cur_thread[wp, Arch_assms]: "\<lambda>s. P (cur_thread s)"
+  and pred_tcb_at[wp, Arch_assms]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
 
 (* Interface asks for a weaker lemma due to other arches needing an extra precondition *)
 lemma arch_post_set_flags_invs'[Arch_assms]:
@@ -291,7 +291,7 @@ lemma install_tcb_cap_invs:
              elim!: cte_wp_at_weakenE)
   done
 
-lemma install_tcb_cap_no_cap_to_obj_dr_emp[wp, Tcb_AI_assms]:
+lemma install_tcb_cap_no_cap_to_obj_dr_emp[wp, Arch_assms]:
   "\<lbrace>no_cap_to_obj_dr_emp cap and
     (\<lambda>s. \<forall>new_cap src_slot. slot_opt = Some (new_cap, src_slot)
                           \<longrightarrow> no_cap_to_obj_dr_emp new_cap s)\<rbrace>
@@ -400,7 +400,7 @@ lemma install_tcb_cap_sc_tcb_sc_at[wp]:
   apply (wpsimp wp: check_cap_inv cap_delete_fh_lift hoare_vcg_if_lift2 | simp)+
   done
 
-lemma tcs_invs[Tcb_AI_assms]:
+lemma tcs_invs[Arch_assms]:
   "\<lbrace>invs and tcb_inv_wf (ThreadControlSched t sl fh mcp pr sc)\<rbrace>
    invoke_tcb (ThreadControlSched t sl fh  mcp pr sc)
    \<lbrace>\<lambda>_. invs\<rbrace>"

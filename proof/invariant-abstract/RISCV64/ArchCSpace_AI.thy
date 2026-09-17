@@ -49,7 +49,7 @@ lemma getActiveIRQ_wp [Arch_assms]:
   apply (clarsimp simp: irq_state_independent_A_def in_monad return_def split: if_splits)
   done
 
-lemma getCurrentTime_wp[CSpace_AI_assms]:
+lemma getCurrentTime_wp[Arch_assms]:
   "time_state_independent_A P \<Longrightarrow> getCurrentTime_independent_A P \<Longrightarrow>
    \<lbrace>P\<rbrace> do_machine_op getCurrentTime \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: getCurrentTime_def do_machine_op_def split_def
@@ -60,7 +60,7 @@ lemma getCurrentTime_wp[CSpace_AI_assms]:
                   split: if_splits)
   done
 
-lemma update_time_stamp_wp[CSpace_AI_assms]:
+lemma update_time_stamp_wp[Arch_assms]:
   "\<lbrakk>update_time_stamp_independent_A P; cur_time_independent_A P;
     time_state_independent_A P; getCurrentTime_independent_A P; domain_time_independent_A P\<rbrakk>
    \<Longrightarrow> update_time_stamp \<lbrace>P\<rbrace>"

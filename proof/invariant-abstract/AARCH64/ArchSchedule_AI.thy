@@ -166,15 +166,15 @@ lemma arch_stit_invs[wp, Arch_assms]:
   "arch_switch_to_idle_thread \<lbrace>invs\<rbrace>"
   by (wpsimp simp: arch_switch_to_idle_thread_def)
 
-lemma arch_stit_tcb_at[wp, Schedule_AI_assms]:
+lemma arch_stit_tcb_at[wp, Arch_assms]:
   "arch_switch_to_idle_thread \<lbrace>tcb_at t\<rbrace>"
   by (wpsimp simp: arch_switch_to_idle_thread_def wp: tcb_at_typ_at)
 
-lemma arch_stit_sc_at[wp, Schedule_AI_assms]:
+lemma arch_stit_sc_at[wp, Arch_assms]:
   "arch_switch_to_idle_thread \<lbrace>sc_at t\<rbrace>"
   by (wpsimp simp: arch_switch_to_idle_thread_def wp: sc_at_typ_at)
 
-lemma arch_stt_sc_at[wp, Schedule_AI_assms]:
+lemma arch_stt_sc_at[wp, Arch_assms]:
   "arch_switch_to_thread t' \<lbrace>sc_at sc_ptr\<rbrace>"
   unfolding arch_switch_to_thread_def
   by wpsimp
@@ -215,11 +215,11 @@ crunch arch_prepare_next_domain
   for ct[wp, Arch_assms]: "\<lambda>s. P (cur_thread s)"
   and activatable[wp, Arch_assms]: "ct_in_state activatable"
   and st_tcb_at[wp, Arch_assms]: "\<lambda>s. P (st_tcb_at Q t s)"
-  and tcb_at[wp, Schedule_AI_assms]: "tcb_at t"
-  and sc_at[wp, Schedule_AI_assms]: "sc_at sc_ptr"
+  and tcb_at[wp, Arch_assms]: "tcb_at t"
+  and sc_at[wp, Arch_assms]: "sc_at sc_ptr"
   and valid_idle[wp, Arch_assms]: valid_idle
   and invs[wp, Arch_assms]: invs
-  and scheduler_action[wp, Schedule_AI_assms]: "\<lambda>s. P (scheduler_action s)"
+  and scheduler_action[wp, Arch_assms]: "\<lambda>s. P (scheduler_action s)"
   (wp: crunch_wps ct_in_state_thread_state_lift)
 
 lemma arch_stit_scheduler_action [wp, Arch_assms]:

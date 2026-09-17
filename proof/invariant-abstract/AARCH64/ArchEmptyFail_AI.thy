@@ -207,7 +207,7 @@ crunch possible_switch_to, handle_event, activate_thread, maybe_handle_interrupt
          page_table_invocation.splits page_invocation.splits asid_control_invocation.splits
          asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits)
 
-declare getRestartPC_empty_fail[EmptyFail_AI_assms]
+declare getRestartPC_empty_fail[Arch_assms]
 
 lemmas EmptyFail_AI_call_kernel_assms = Arch_assms (* extract accumulated assumptions *)
 

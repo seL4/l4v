@@ -39,7 +39,7 @@ lemma APIType_map2_Untyped[Arch_assms, simp]:
          split: sum.split object_type.split kernel_object.split arch_kernel_object.splits
                 apiobject_type.split)
 
-lemma APIType_map2_SchedContext[Retype_R_assms, simp]:
+lemma APIType_map2_SchedContext[Arch_assms, simp]:
   "(APIType_map2 tp = Structures_A.SchedContextObject) = (tp = Inr (APIObjectType SchedContextObject))"
   by (simp add: APIType_map2_def
          split: sum.split object_type.split kernel_object.split arch_kernel_object.splits
@@ -51,13 +51,13 @@ lemma APIType_map2_TCBObject[Arch_assms, simp]:
          split: sum.split object_type.split kernel_object.split arch_kernel_object.splits
                 apiobject_type.split)
 
-lemma APIType_map2_EndpointObject[Retype_R_assms, simp]:
+lemma APIType_map2_EndpointObject[Arch_assms, simp]:
   "(APIType_map2 tp = Structures_A.EndpointObject) = (tp = Inr (APIObjectType ArchTypes_H.EndpointObject))"
   by (simp add: APIType_map2_def
          split: sum.split object_type.split kernel_object.split arch_kernel_object.splits
                 apiobject_type.split)
 
-lemma APIType_map2_NotificationObject[Retype_R_assms, simp]:
+lemma APIType_map2_NotificationObject[Arch_assms, simp]:
   "(APIType_map2 tp = Structures_A.NotificationObject) = (tp = Inr (APIObjectType ArchTypes_H.NotificationObject))"
   by (simp add: APIType_map2_def
          split: sum.split object_type.split kernel_object.split arch_kernel_object.splits
@@ -792,7 +792,7 @@ proof -
   qed
 qed
 
-lemma createNewCaps_list_refs_of_replies'[Retype_R_assms]:
+lemma createNewCaps_list_refs_of_replies'[Arch_assms]:
   assumes cover: "range_cover ptr sz (APIType_capBits ty us) n"
   and     not_0: "n \<noteq> 0"
   and     tysc : "ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject

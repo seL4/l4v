@@ -107,9 +107,9 @@ lemma hh_invs[wp, Arch_assms]:
   by (cases fault) (wpsimp simp: valid_fault_def isFpuEnable_def wp: dmo_invs_lift hoare_drop_imps)
 
 crunch make_fault_msg
-  for cur_sc[wp, Syscall_AI_assms]: "\<lambda>s. P (cur_sc s)"
-  and cur_thread[wp, Syscall_AI_assms]: "\<lambda>s. P (cur_thread s)"
-  and pred_tcb_at[wp, Syscall_AI_assms]: "pred_tcb_at proj P t"
+  for cur_sc[wp, Arch_assms]: "\<lambda>s. P (cur_sc s)"
+  and cur_thread[wp, Arch_assms]: "\<lambda>s. P (cur_thread s)"
+  and pred_tcb_at[wp, Arch_assms]: "pred_tcb_at proj P t"
 
 lemmas [Arch_assms] = arch_get_sanitise_register_info_inv
 

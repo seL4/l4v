@@ -382,7 +382,7 @@ lemma set_object_obj_at_other:
   apply (clarsimp simp: obj_at_def)
   done
 
-lemma init_arch_objects_obj_at_other[Untyped_AI_assms]:
+lemma init_arch_objects_obj_at_other[Arch_assms]:
   "\<lbrakk>\<forall>ptr\<in>set ptrs. is_aligned ptr (obj_bits_api ty us); p \<notin> set ptrs\<rbrakk>
    \<Longrightarrow> init_arch_objects ty dev ptr n us ptrs \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
   supply if_split[split del]
@@ -404,10 +404,10 @@ lemma live_non_pt:
   "\<forall>ko. P ko \<longrightarrow> live ko \<Longrightarrow> \<forall>ko. P ko \<longrightarrow> (\<forall>pd. ko \<noteq> ArchObj (PageTable pd))"
   by (auto simp: live_def hyp_live_def arch_live_def arch_tcb_live_def)
 
-lemmas init_arch_objects_obj_at_non_arch[Untyped_AI_assms] =
+lemmas init_arch_objects_obj_at_non_arch[Arch_assms] =
   init_arch_objects_obj_at_non_pt[OF non_arch_non_pt]
 
-lemmas init_arch_objects_obj_at_live[Untyped_AI_assms] =
+lemmas init_arch_objects_obj_at_live[Arch_assms] =
   init_arch_objects_obj_at_non_pt[OF live_non_pt]
 
 lemmas Untyped_AI_assms = Arch_assms (* extract accumulated assumptions *)

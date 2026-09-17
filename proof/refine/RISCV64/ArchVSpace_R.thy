@@ -840,7 +840,7 @@ lemma lookupIPCBuffer_valid_ipc_buffer[Arch_assms, wp]:
   apply (case_tac rghts; simp add: pageBits_def ptTranslationBits_def)
   done
 
-lemma badgeRegister_badge_register[VSpace_R_assms]:
+lemma badgeRegister_badge_register[Arch_assms]:
   "badgeRegister = badge_register"
   by (simp add: badge_register_def badgeRegister_def)
 
