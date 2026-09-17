@@ -25,7 +25,7 @@ crunch arch_finalise_cap
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
 
 crunch set_extra_badge
-  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
+  for domain_time_inv[wp, Arch_assms]: "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
 
 crunch
@@ -42,12 +42,12 @@ crunch
 crunch handle_spurious_irq
   for scheduler_action[wp, Arch_assms]: "\<lambda>s. P (scheduler_action s)"
 
-lemmas DetSchedDomainTime_AI_assms = Arch_assms (* extract accumulated assumptions *)
-
-lemmas [DetSchedDomainTime_AI_assms] =
+lemmas [Arch_assms] =
   init_arch_objects_exst
   arch_get_sanitise_register_info_inv
   arch_post_modify_registers_inv
+
+lemmas DetSchedDomainTime_AI_assms = Arch_assms (* extract accumulated assumptions *)
 
 end
 

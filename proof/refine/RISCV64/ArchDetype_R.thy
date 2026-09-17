@@ -410,7 +410,7 @@ lemma deleteObjects_null_filter[Arch_assms]:
   apply (unfold_locales, simp_all)
   done
 
-lemma deleteObjects_sym_refs'[Detype_R_assms]:
+lemma deleteObjects_sym_refs'[Arch_assms]:
   "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p
      and invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and ct_active' and sch_act_simple
      and (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s))\<rbrace>

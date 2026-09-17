@@ -279,7 +279,7 @@ lemma st_tcb_at_coerce_abstract[Arch_assms]:
                           RISCV64_A.arch_kernel_obj.split_asm)+
   done
 
-lemma st_tcb_at_coerce_concrete[KHeap_R_assms]:
+lemma st_tcb_at_coerce_concrete[Arch_assms]:
   assumes t: "st_tcb_at P t s"
   assumes sr: "(s, s') \<in> state_relation" "pspace_aligned s" "pspace_distinct s"
   shows "st_tcb_at' (\<lambda>st'. \<exists>st. thread_state_relation st st' \<and> P st) t s'"
@@ -310,27 +310,27 @@ lemma tcb_cases_related2:
   apply (simp_all add: tcb_cnode_index_def cte_level_bits_def cte_map_def field_simps to_bl_1)
   done
 
-lemma hyp_live_live[KHeap_R_assms]:
+lemma hyp_live_live[Arch_assms]:
   "hyp_live ko \<Longrightarrow> live ko"
   by (clarsimp simp: hyp_live_def)
 
-lemma hyp_live'_live'[KHeap_R_assms]:
+lemma hyp_live'_live'[Arch_assms]:
   "hyp_live' ko' \<Longrightarrow> live' ko'"
   by (clarsimp simp: hyp_live'_def)
 
-lemma hyp_live_hyp_live'[KHeap_R_assms]:
+lemma hyp_live_hyp_live'[Arch_assms]:
   "\<lbrakk>ksPSpace c t = Some ko'; hyp_live' ko'; tcbs_relation a c; aobjs_relation a c\<rbrakk>
    \<Longrightarrow> \<exists>ko. kheap a t = Some ko \<and> hyp_live ko"
   by (clarsimp simp: hyp_live'_def)
 
-lemma ex_nonz_cap_to_arch_obj_cross[KHeap_R_assms]:
+lemma ex_nonz_cap_to_arch_obj_cross[Arch_assms]:
   "\<lbrakk>ex_nonz_cap_to ptr s; pspace_relation (kheap s) (ksPSpace s');
     valid_objs s; pspace_aligned' s'; pspace_distinct' s';
     ksPSpace s' ptr = Some (KOArch ako); live' (KOArch ako)\<rbrakk>
    \<Longrightarrow> ex_nonz_cap_to' ptr s'"
   by (clarsimp simp: live'_def hyp_live'_def)
 
-lemma pspace_relation_cte_wp_atI'[KHeap_R_assms]:
+lemma pspace_relation_cte_wp_atI'[Arch_assms]:
   "\<lbrakk>pspace_relation (kheap s) (ksPSpace s'); cte_wp_at' ((=) cte) x s'; valid_objs s\<rbrakk>
    \<Longrightarrow> \<exists>c slot. cte_wp_at ((=) c) slot s \<and> cap_relation c (cteCap cte) \<and> x = cte_map slot"
   apply (simp add: cte_wp_at_cases')

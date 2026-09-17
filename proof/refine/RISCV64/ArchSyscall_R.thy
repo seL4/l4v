@@ -33,8 +33,8 @@ crunch prepareSetDomain
 
 crunch prepareSetDomain, postSetFlags, Arch.performIRQControl, Arch.invokeIRQHandler
   for typ_at'[Arch_assms, wp]: "\<lambda>s. P (typ_at' T p s)"
-  and sc_at'_n[Syscall_R_assms, wp]: "\<lambda>s. P (sc_at'_n n p s)"
-  and ksCurThread[Syscall_R_assms, wp]: "\<lambda>s. P (ksCurThread s)"
+  and sc_at'_n[Arch_assms, wp]: "\<lambda>s. P (sc_at'_n n p s)"
+  and ksCurThread[Arch_assms, wp]: "\<lambda>s. P (ksCurThread s)"
 
 lemma setThreadState_irq_control_inv_valid'[Arch_assms, wp]:
   "setThreadState st t \<lbrace>irq_control_inv_valid' irqcontrol_invocation\<rbrace>"

@@ -59,7 +59,7 @@ crunch storeWordUser, setVMRoot, asUser, storeWordUser, Arch.switchToThread, Arc
 crunch arch_switch_to_thread, arch_switch_to_idle_thread
   for pspace_aligned[Arch_assms, wp]: pspace_aligned
   and pspace_distinct[Arch_assms, wp]: pspace_distinct
-  and valid_idle[Schedule_R_assms, wp]: valid_idle
+  and valid_idle[Arch_assms, wp]: valid_idle
   and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
   (simp: crunch_simps)
 
@@ -118,9 +118,9 @@ lemma arch_switchToIdleThread_corres_interface[Arch_assms]:
   by (rule corres_guard_imp, rule arch_switchToIdleThread_corres; simp)
 
 crunch Arch.switchToThread
-  for pspace_aligned'[Schedule_R_assms, wp]: pspace_aligned'
-  and pspace_distinct'[Schedule_R_assms, wp]: pspace_distinct'
-  and pspace_bounded'[Schedule_R_assms, wp]: pspace_bounded'
+  for pspace_aligned'[Arch_assms, wp]: pspace_aligned'
+  and pspace_distinct'[Arch_assms, wp]: pspace_distinct'
+  and pspace_bounded'[Arch_assms, wp]: pspace_bounded'
   (simp: crunch_simps wp: crunch_wps)
 
 lemma Arch_switchToThread_invs[Arch_assms, wp]:

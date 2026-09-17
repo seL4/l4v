@@ -614,7 +614,7 @@ proof -
                      get_object_wp)
 qed
 
-lemma init_arch_objects_obj_at_other[Untyped_AI_assms]:
+lemma init_arch_objects_obj_at_other[Arch_assms]:
   "\<lbrakk>\<forall>ptr\<in>set ptrs. is_aligned ptr (obj_bits_api ty us); p \<notin> set ptrs\<rbrakk>
     \<Longrightarrow> init_arch_objects ty dev ptr n us ptrs \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
   unfolding init_arch_objects_def
@@ -647,10 +647,10 @@ lemma live_non_pd:
   "\<forall>ko. P ko \<longrightarrow> live ko \<Longrightarrow> \<forall>ko. P ko \<longrightarrow> (\<forall>pd. ko \<noteq> ArchObj (PageDirectory pd))"
   by (auto simp: live_def hyp_live_def)
 
-lemmas init_arch_objects_obj_at_non_arch[Untyped_AI_assms] =
+lemmas init_arch_objects_obj_at_non_arch[Arch_assms] =
   init_arch_objects_obj_at_non_pd[OF non_arch_non_pd]
 
-lemmas init_arch_objects_obj_at_live[Untyped_AI_assms] =
+lemmas init_arch_objects_obj_at_live[Arch_assms] =
   init_arch_objects_obj_at_non_pd[OF live_non_pd]
 
 lemmas Untyped_AI_assms = Arch_assms (* extract accumulated assumptions *)

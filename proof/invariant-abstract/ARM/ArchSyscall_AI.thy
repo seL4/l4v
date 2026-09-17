@@ -100,9 +100,9 @@ lemma hh_invs[wp, Arch_assms]:
   by (cases fault; wpsimp simp: valid_fault_def)
 
 crunch make_fault_msg
-  for cur_thread[wp, Syscall_AI_assms]: "\<lambda>s. P (cur_thread s)"
-  and cur_sc[wp, Syscall_AI_assms]: "\<lambda>s. P (cur_sc s)"
-  and pred_tcb_at[wp, Syscall_AI_assms]: "pred_tcb_at proj P t"
+  for cur_thread[wp, Arch_assms]: "\<lambda>s. P (cur_thread s)"
+  and cur_sc[wp, Arch_assms]: "\<lambda>s. P (cur_sc s)"
+  and pred_tcb_at[wp, Arch_assms]: "pred_tcb_at proj P t"
 
 lemma hv_inv_ex:
   "\<lbrace>P\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"

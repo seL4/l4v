@@ -172,8 +172,8 @@ lemma finalise_cap_not_cte_wp_at[Arch_assms]:
 crunch arch_post_set_flags, arch_prepare_set_domain
   for typ_at[wp, Arch_assms]: "\<lambda>s. P (typ_at T p s)"
   and invs[wp, Arch_assms]: "invs"
-  and cur_thread[wp, Tcb_AI_assms]: "\<lambda>s. P (cur_thread s)"
-  and pred_tcb_at[wp, Tcb_AI_assms]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
+  and cur_thread[wp, Arch_assms]: "\<lambda>s. P (cur_thread s)"
+  and pred_tcb_at[wp, Arch_assms]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
 
 (* Interface asks for a weaker lemma due to other arches needing an extra precondition *)
 lemma arch_post_set_flags_invs'[Arch_assms]:
@@ -283,7 +283,7 @@ lemma install_tcb_cap_invs:
              elim!: cte_wp_at_weakenE)
   done
 
-lemma install_tcb_cap_no_cap_to_obj_dr_emp[wp, Tcb_AI_assms]:
+lemma install_tcb_cap_no_cap_to_obj_dr_emp[wp, Arch_assms]:
   "\<lbrace>no_cap_to_obj_dr_emp cap and
     (\<lambda>s. \<forall>new_cap src_slot. slot_opt = Some (new_cap, src_slot)
                           \<longrightarrow> no_cap_to_obj_dr_emp new_cap s)\<rbrace>
@@ -331,7 +331,7 @@ lemma install_tcb_frame_cap_invs:
   apply (clarsimp simp: is_cap_simps' valid_fault_handler_def is_cnode_or_valid_arch_def)
   done
 
-lemma tcc_invs[Tcb_AI_assms]:
+lemma tcc_invs[Arch_assms]:
   "\<lbrace>invs and tcb_inv_wf (ThreadControlCaps t sl fh th croot vroot buf)\<rbrace>
       invoke_tcb (ThreadControlCaps t sl fh th croot vroot buf)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -394,7 +394,7 @@ lemma install_tcb_cap_sc_tcb_sc_at[wp]:
   apply (wpsimp wp: check_cap_inv cap_delete_fh_lift hoare_vcg_if_lift2 | simp)+
   done
 
-lemma tcs_invs[Tcb_AI_assms]:
+lemma tcs_invs[Arch_assms]:
   "\<lbrace>invs and tcb_inv_wf (ThreadControlSched t sl fh mcp pr sc)\<rbrace>
    invoke_tcb (ThreadControlSched t sl fh  mcp pr sc)
    \<lbrace>\<lambda>_. invs\<rbrace>"
