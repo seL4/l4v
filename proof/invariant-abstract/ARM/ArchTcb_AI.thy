@@ -10,17 +10,17 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Tcb_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Tcb_AI locale *)
 
 
-lemma activate_idle_invs[Tcb_AI_assms]:
+lemma activate_idle_invs[Arch_assms]:
   "\<lbrace>invs and ct_idle\<rbrace>
      arch_activate_idle_thread thread
    \<lbrace>\<lambda>rv. invs and ct_idle\<rbrace>"
   by (simp add: arch_activate_idle_thread_def)
 
 
-lemma empty_fail_getRegister [intro!, simp, Tcb_AI_assms]:
+lemma empty_fail_getRegister [intro!, simp, Arch_assms]:
   "empty_fail (getRegister r)"
   by (simp add: getRegister_def)
 
@@ -37,7 +37,7 @@ lemma same_object_also_valid:  (* arch specific *)
                    split: cap.split_asm arch_cap.split_asm option.splits)+)
   done
 
-lemma same_object_obj_refs[Tcb_AI_assms]:
+lemma same_object_obj_refs[Arch_assms]:
   "\<lbrakk> same_object_as cap cap' \<rbrakk>
      \<Longrightarrow> obj_refs cap = obj_refs cap'"
   apply (cases cap, simp_all add: same_object_as_def)
@@ -45,7 +45,7 @@ lemma same_object_obj_refs[Tcb_AI_assms]:
                       split: cap.split_asm )+)
   by (cases "the_arch_cap cap"; cases "the_arch_cap cap'"; simp)
 
-lemma arch_cap_badge_none_master[Tcb_AI_assms, simp]:
+lemma arch_cap_badge_none_master[Arch_assms, simp]:
   "(arch_cap_badge (cap_master_arch_cap acap) = None) = (arch_cap_badge acap = None)"
   by simp
 
@@ -160,15 +160,15 @@ lemma checked_insert_tcb_invs': (* arch specific *)
   by (auto simp: is_cap_simps is_cnode_or_valid_arch_def valid_fault_handler_def)
 
 crunch arch_post_modify_registers
-  for tcb_at[wp, Tcb_AI_assms]: "tcb_at a"
-  and invs[wp, Tcb_AI_assms]: invs
-  and ex_nonz_cap_to[wp, Tcb_AI_assms]: "ex_nonz_cap_to a"
-  and fault_tcb_at[wp, Tcb_AI_assms]: "fault_tcb_at P a"
+  for tcb_at[wp, Arch_assms]: "tcb_at a"
+  and invs[wp, Arch_assms]: invs
+  and ex_nonz_cap_to[wp, Arch_assms]: "ex_nonz_cap_to a"
+  and fault_tcb_at[wp, Arch_assms]: "fault_tcb_at P a"
 
 crunch arch_get_sanitise_register_info
-  for inv[wp, Tcb_AI_assms]: "P"
+  for inv[wp, Arch_assms]: "P"
 
-lemma finalise_cap_not_cte_wp_at[Tcb_AI_assms]:
+lemma finalise_cap_not_cte_wp_at[Arch_assms]:
   assumes x: "P cap.NullCap"
   shows      "\<lbrace>\<lambda>s. \<forall>cp \<in> ran (caps_of_state s). P cp\<rbrace>
                 finalise_cap cap fin
@@ -181,18 +181,18 @@ lemma finalise_cap_not_cte_wp_at[Tcb_AI_assms]:
               simp: deleting_irq_handler_def get_irq_slot_def ball_ran_eq x)
   done
 
-lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_assms]:
+lemma table_cap_ref_max_free_index_upd[simp,Arch_assms]:
   "table_cap_ref (max_free_index_update cap) = table_cap_ref cap"
   by (simp add: free_index_update_def table_cap_ref_def split: cap.splits)
 
 crunch arch_post_set_flags, arch_prepare_set_domain
-  for typ_at[wp, Tcb_AI_assms]: "\<lambda>s. P (typ_at T p s)"
-  and invs[wp, Tcb_AI_assms]: "invs"
-  and cur_thread[wp, Tcb_AI_assms]: "\<lambda>s. P (cur_thread s)"
-  and pred_tcb_at[wp, Tcb_AI_assms]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
+  for typ_at[wp, Arch_assms]: "\<lambda>s. P (typ_at T p s)"
+  and invs[wp, Arch_assms]: "invs"
+  and cur_thread[wp, Arch_assms]: "\<lambda>s. P (cur_thread s)"
+  and pred_tcb_at[wp, Arch_assms]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
 
 (* Interface asks for a weaker lemma due to other arches needing an extra precondition *)
-lemma arch_post_set_flags_invs'[Tcb_AI_assms]:
+lemma arch_post_set_flags_invs'[Arch_assms]:
   "\<lbrace>invs and ex_nonz_cap_to t\<rbrace> arch_post_set_flags t flags \<lbrace>\<lambda>_. invs\<rbrace>"
   by wpsimp
 
@@ -203,11 +203,9 @@ crunch arch_prepare_set_domain
   and pspace_distinct[wp]: pspace_distinct
   (wp: crunch_wps)
 
-
 interpretation Tcb_AI_1? : Tcb_AI_1
   where is_cnode_or_valid_arch = is_cnode_or_valid_arch
-  by (unfold_locales; fact Tcb_AI_assms)
-
+  by (unfold_locales; fact Arch_assms)
 
 lemma use_no_cap_to_obj_asid_strg: (* arch specific *)
   "(cte_at p s \<and> no_cap_to_obj_dr_emp cap s \<and> valid_cap cap s \<and> invs s)
@@ -223,7 +221,7 @@ lemma use_no_cap_to_obj_asid_strg: (* arch specific *)
   apply (fastforce simp: table_cap_ref_def valid_cap_simps elim!: asid_low_high_bits)+
   done
 
-lemma cap_delete_no_cap_to_obj_asid[wp, Tcb_AI_assms]:
+lemma cap_delete_no_cap_to_obj_asid[wp, Arch_assms]:
   "\<lbrace>no_cap_to_obj_dr_emp cap\<rbrace>
      cap_delete slot
    \<lbrace>\<lambda>rv. no_cap_to_obj_dr_emp cap\<rbrace>"
@@ -293,7 +291,7 @@ lemma install_tcb_cap_invs:
              elim!: cte_wp_at_weakenE)
   done
 
-lemma install_tcb_cap_no_cap_to_obj_dr_emp[wp, Tcb_AI_assms]:
+lemma install_tcb_cap_no_cap_to_obj_dr_emp[wp, Arch_assms]:
   "\<lbrace>no_cap_to_obj_dr_emp cap and
     (\<lambda>s. \<forall>new_cap src_slot. slot_opt = Some (new_cap, src_slot)
                           \<longrightarrow> no_cap_to_obj_dr_emp new_cap s)\<rbrace>
@@ -339,7 +337,7 @@ lemma install_tcb_frame_cap_invs:
            | wp cap_delete_ep)+)[1]
   by (clarsimp simp: is_cap_simps' valid_fault_handler_def)
 
-lemma tcc_invs[Tcb_AI_assms]:
+lemma tcc_invs[Arch_assms]:
   "\<lbrace>invs and tcb_inv_wf (ThreadControlCaps t sl fh th croot vroot buf)\<rbrace>
       invoke_tcb (ThreadControlCaps t sl fh th croot vroot buf)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -352,7 +350,7 @@ lemma tcc_invs[Tcb_AI_assms]:
        \<comment> \<open>non-exception case\<close>
        apply (wpsimp wp: install_tcb_frame_cap_invs)
       \<comment> \<open>pull invs out the front and simplify\<close>
-      apply ((simp add: conj_comms del: hoareE_R_TrueI, simp cong: conj_cong))
+      apply ((simp add: conj_comms, simp cong: conj_cong))
       \<comment> \<open>install_tcb_cap 1\<close>
       apply (rule hoare_vcg_conj_elimE, wp install_tcb_cap_invs)
       apply (wpsimp wp: hoare_vcg_const_imp_liftE_R hoare_vcg_all_liftE_R
@@ -402,7 +400,7 @@ lemma install_tcb_cap_sc_tcb_sc_at[wp]:
   apply (wpsimp wp: check_cap_inv cap_delete_fh_lift hoare_vcg_if_lift2 | simp)+
   done
 
-lemma tcs_invs[Tcb_AI_assms]:
+lemma tcs_invs[Arch_assms]:
   "\<lbrace>invs and tcb_inv_wf (ThreadControlSched t sl fh mcp pr sc)\<rbrace>
    invoke_tcb (ThreadControlSched t sl fh  mcp pr sc)
    \<lbrace>\<lambda>_. invs\<rbrace>"
@@ -466,7 +464,7 @@ lemma check_valid_ipc_buffer_inv:
    apply (wp | simp add: whenE_def if_apply_def2 | wpcw)+
   done
 
-lemma check_valid_ipc_buffer_wp[Tcb_AI_assms]:
+lemma check_valid_ipc_buffer_wp[Arch_assms]:
   "\<lbrace>\<lambda>(s::'state_ext::state_ext state). is_arch_cap cap \<and> is_cnode_or_valid_arch cap
           \<and> valid_ipc_buffer_cap cap vptr
           \<and> is_aligned vptr msg_align_bits
@@ -482,7 +480,7 @@ lemma check_valid_ipc_buffer_wp[Tcb_AI_assms]:
                         valid_ipc_buffer_cap_def)
   done
 
-lemma derive_no_cap_asid[wp,Tcb_AI_assms]:
+lemma derive_no_cap_asid[wp,Arch_assms]:
   "\<lbrace>(no_cap_to_obj_with_diff_ref cap S)::'state_ext::state_ext state\<Rightarrow>bool\<rbrace>
      derive_cap slot cap
    \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref rv S\<rbrace>,-"
@@ -496,7 +494,7 @@ lemma derive_no_cap_asid[wp,Tcb_AI_assms]:
   done
 
 
-lemma decode_set_ipc_inv[wp,Tcb_AI_assms]:
+lemma decode_set_ipc_inv[wp,Arch_assms]:
   "\<lbrace>P::'state_ext::state_ext state \<Rightarrow> bool\<rbrace> decode_set_ipc_buffer args cap slot excaps \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp   add: decode_set_ipc_buffer_def whenE_def
                      split_def
@@ -505,7 +503,7 @@ lemma decode_set_ipc_inv[wp,Tcb_AI_assms]:
   apply simp
   done
 
-lemma no_cap_to_obj_with_diff_ref_update_cap_data[Tcb_AI_assms]:
+lemma no_cap_to_obj_with_diff_ref_update_cap_data[Arch_assms]:
   "no_cap_to_obj_with_diff_ref c S s \<longrightarrow>
     no_cap_to_obj_with_diff_ref (update_cap_data P x c) S s"
   apply (case_tac "update_cap_data P x c = NullCap")
@@ -521,7 +519,7 @@ lemma no_cap_to_obj_with_diff_ref_update_cap_data[Tcb_AI_assms]:
   apply simp
   done
 
-lemma update_cap_valid[Tcb_AI_assms]:
+lemma update_cap_valid[Arch_assms]:
   "valid_cap cap (s::'state_ext::state_ext state) \<Longrightarrow>
    valid_cap (case capdata of
               None \<Rightarrow> cap_rights_update rs cap
@@ -549,13 +547,14 @@ crunch invoke_tcb
   (simp: crunch_simps
      wp: hoare_drop_imps mapM_x_wp' check_cap_inv)
 
+lemmas Tcb_AI_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation Tcb_AI?: Tcb_AI
   where is_cnode_or_valid_arch = ARM.is_cnode_or_valid_arch
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact Tcb_AI_assms)?)
+  case 1 show ?case by (unfold_locales; fact ARM.Tcb_AI_assms)
 qed
 
 end

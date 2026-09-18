@@ -1937,7 +1937,7 @@ lemma prefix_refinement_mapM[rule_format]:
         apply (rule prefix_refinement_triv_pre, rule prefix_refinement_return_imp, simp)
        apply wp
        apply fastforce
-     apply (simp | wp | blast dest: validI_prefix_closed)+
+     apply (simp | wp | blast del: validI_prefix_closed dest: validI_prefix_closed)+
   done
 
 lemma prefix_refinement_mapME[rule_format]:
@@ -1961,7 +1961,7 @@ lemma prefix_refinement_mapME[rule_format]:
         apply (case_tac rv)
          apply (clarsimp simp: prefix_refinement_throwError_imp)
         apply (clarsimp simp: prefix_refinement_returnOk_imp)
-       apply (simp | wp | blast dest: validI_prefix_closed)+
+       apply (simp | wp | blast del: validI_prefix_closed dest: validI_prefix_closed)+
   done
 
 
@@ -2313,7 +2313,6 @@ lemma matching_tr_symp:
   "symp sr \<Longrightarrow> symp (matching_tr sr)"
   apply (simp add: matching_tr_def rel_prod_conv[symmetric])
   apply (intro list.rel_symp prod.rel_symp; simp?)
-  apply (simp add: sympI)
   done
 
 lemma list_all2_is_me:

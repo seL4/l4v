@@ -10,7 +10,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems DetSchedAux_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for DetSchedAux_AI locale *)
 
 lemmas arch_machine_ops_valid_sched_pred[wp] =
   arch_machine_ops_last_machine_time[THEN dmo_valid_sched_pred]
@@ -102,7 +102,7 @@ lemma copy_global_mappings_valid_sched_pred[wp]:
   apply (wpsimp simp: copy_global_mappings_def store_pte_def store_pde_def wp: mapM_x_wp_inv)
   done
 
-lemma init_arch_objects_valid_sched_pred[wp, DetSchedAux_AI_assms]:
+lemma init_arch_objects_valid_sched_pred[wp, Arch_assms]:
   "init_arch_objects new_type dev ptr num_objects obj_sz refs \<lbrace>valid_sched_pred_strong P\<rbrace>"
   unfolding init_arch_objects_def
   by (wpsimp wp: dmo_valid_sched_pred mapM_x_wp_inv)
@@ -110,10 +110,10 @@ lemma init_arch_objects_valid_sched_pred[wp, DetSchedAux_AI_assms]:
 crunch init_arch_objects
   for exst[wp]: "\<lambda>s. P (exst s)"
   and ct[wp]: "\<lambda>s. P (cur_thread s)"
-  and valid_idle[wp, DetSchedAux_AI_assms]: valid_idle
+  and valid_idle[wp, Arch_assms]: valid_idle
   (wp: crunch_wps unless_wp)
 
-lemma valid_machine_time_getCurrentTime[DetSchedAux_AI_assms]:
+lemma valid_machine_time_getCurrentTime[Arch_assms]:
   "valid_machine_time s \<Longrightarrow> (x, s') \<in> fst (getCurrentTime (machine_state s))
    \<Longrightarrow> valid_machine_time_2 x (last_machine_time s')"
   apply (clarsimp simp: valid_machine_time_def getCurrentTime_def in_monad)
@@ -122,7 +122,7 @@ lemma valid_machine_time_getCurrentTime[DetSchedAux_AI_assms]:
   apply linarith
   done
 
-lemma dmo_getCurrentTime_vmt_sp[wp, DetSchedAux_AI_assms]:
+lemma dmo_getCurrentTime_vmt_sp[wp, Arch_assms]:
   "\<lbrace>valid_machine_time\<rbrace>
    do_machine_op getCurrentTime
    \<lbrace>\<lambda>rv s. (cur_time s \<le> rv) \<and> (rv \<le> - getCurrentTime_buffer - 1)\<rbrace>"
@@ -184,19 +184,20 @@ lemma dmo_getCurrentTime_vmt_sp[wp, DetSchedAux_AI_assms]:
     done
   done
 
-lemma update_time_stamp_valid_machine_time[wp, DetSchedAux_AI_assms]:
+lemma update_time_stamp_valid_machine_time[wp, Arch_assms]:
   "update_time_stamp \<lbrace>valid_machine_time\<rbrace>"
   unfolding update_time_stamp_def
   apply (wpsimp simp: do_machine_op_def)
   apply (fastforce simp: getCurrentTime_def elim: valid_machine_time_getCurrentTime)
   done
 
+lemmas DetSchedAux_AI_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation DetSchedAux_AI?: DetSchedAux_AI
   proof goal_cases
-    interpret Arch .
-    case 1 show ?case by (unfold_locales; (fact DetSchedAux_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact ARM.DetSchedAux_AI_assms)?)
   qed
 
 context Arch begin arch_global_naming

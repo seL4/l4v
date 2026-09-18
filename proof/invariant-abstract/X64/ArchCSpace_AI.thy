@@ -14,7 +14,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems CSpace_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for CSpace_AI locale *)
 
 lemma cte_at_length_limit:
   "\<lbrakk> cte_at p s; valid_objs s \<rbrakk> \<Longrightarrow> length (snd p) < word_bits - cte_level_bits"
@@ -30,7 +30,7 @@ lemma cte_at_length_limit:
   done
 
 (* FIXME: move? *)
-lemma getActiveIRQ_wp [CSpace_AI_assms]:
+lemma getActiveIRQ_wp [Arch_assms]:
   "irq_state_independent_A P \<Longrightarrow>
    valid P (do_machine_op (getActiveIRQ in_kernel)) (\<lambda>_. P)"
   apply (simp add: getActiveIRQ_def do_machine_op_def split_def exec_gets
@@ -40,7 +40,7 @@ lemma getActiveIRQ_wp [CSpace_AI_assms]:
   apply (clarsimp simp: irq_state_independent_A_def in_monad return_def split: if_splits)
   done
 
-lemma weak_derived_valid_cap [CSpace_AI_assms]:
+lemma weak_derived_valid_cap [Arch_assms]:
   "\<lbrakk> s \<turnstile> c; wellformed_cap c'; weak_derived c' c\<rbrakk> \<Longrightarrow> s \<turnstile> c'"
   apply (case_tac "c = c'", simp)
   apply (clarsimp simp: weak_derived_def)
@@ -51,7 +51,7 @@ lemma weak_derived_valid_cap [CSpace_AI_assms]:
              split: cap.splits arch_cap.splits option.splits)
   done
 
-lemma copy_obj_refs [CSpace_AI_assms]:
+lemma copy_obj_refs [Arch_assms]:
   "copy_of cap cap' \<Longrightarrow> obj_refs cap' = obj_refs cap"
   apply (cases cap)
   apply (auto simp: copy_of_def same_object_as_def is_cap_simps
@@ -59,14 +59,14 @@ lemma copy_obj_refs [CSpace_AI_assms]:
              split: if_split_asm cap.splits arch_cap.splits)
   done
 
-lemma weak_derived_cap_class[simp, CSpace_AI_assms]:
+lemma weak_derived_cap_class[simp, Arch_assms]:
   "weak_derived cap src_cap \<Longrightarrow> cap_class cap = cap_class src_cap"
   apply (simp add:weak_derived_def)
   apply (auto simp:copy_of_def same_object_as_def is_cap_simps cap_asid_base_def
     split:if_splits cap.splits arch_cap.splits)
   done
 
-lemma weak_derived_obj_refs [CSpace_AI_assms]:
+lemma weak_derived_obj_refs [Arch_assms]:
   "weak_derived dcap cap \<Longrightarrow> obj_refs dcap = obj_refs cap"
   apply (cases dcap)
   by (clarsimp simp: is_cap_simps weak_derived_def copy_of_def
@@ -74,7 +74,7 @@ lemma weak_derived_obj_refs [CSpace_AI_assms]:
                  split: if_split_asm cap.splits
       | auto split: arch_cap.splits)+
 
-lemma weak_derived_obj_ref_of [CSpace_AI_assms]:
+lemma weak_derived_obj_ref_of [Arch_assms]:
   "weak_derived dcap cap \<Longrightarrow> obj_ref_of dcap = obj_ref_of cap"
   apply (cases dcap)
   by (clarsimp simp: is_cap_simps weak_derived_def copy_of_def
@@ -82,7 +82,7 @@ lemma weak_derived_obj_ref_of [CSpace_AI_assms]:
                  split: if_split_asm cap.splits
       | auto split: arch_cap.splits)+
 
-lemma set_free_index_invs [CSpace_AI_assms]:
+lemma set_free_index_invs [Arch_assms]:
   "\<lbrace>\<lambda>s. (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and> idx \<le> 2^cap_bits cap) \<and>
         invs s \<and> cte_wp_at ((=) cap ) cref s\<rbrace>
    set_cap (free_index_update (\<lambda>_. idx) cap) cref
@@ -134,7 +134,7 @@ lemma unique_table_refs_upd_eqD:
   apply (rule all_cong[where Q=\<top>, simplified])
   by auto
 
-lemma set_untyped_cap_as_full_valid_arch_caps [CSpace_AI_assms]:
+lemma set_untyped_cap_as_full_valid_arch_caps [Arch_assms]:
   "\<lbrace>valid_arch_caps and cte_wp_at ((=) src_cap) src\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>ya. valid_arch_caps\<rbrace>"
@@ -152,7 +152,7 @@ lemma set_untyped_cap_as_full_valid_arch_caps [CSpace_AI_assms]:
   apply clarsimp
   done
 
-lemma set_untyped_cap_as_full[wp, CSpace_AI_assms]:
+lemma set_untyped_cap_as_full[wp, Arch_assms]:
   "\<lbrace>\<lambda>s. no_cap_to_obj_with_diff_ref a b s \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. no_cap_to_obj_with_diff_ref a b s\<rbrace>"
@@ -250,7 +250,7 @@ lemma is_derived_is_same_vspace_table_type:
                  split: cap.splits arch_cap.splits)+
   done
 
-lemma cap_insert_valid_arch_caps [CSpace_AI_assms]:
+lemma cap_insert_valid_arch_caps [Arch_assms]:
   "\<lbrace>valid_arch_caps and (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
      cap_insert cap src dest
    \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
@@ -433,7 +433,7 @@ lemma cap_insert_derived_ioport_control:
               simp: cte_wp_at_caps_of_state ioport_control_unique_def is_cap_simps)
   done
 
-lemma cap_insert_derived_valid_arch_state[CSpace_AI_assms]:
+lemma cap_insert_derived_valid_arch_state[Arch_assms]:
   "\<lbrace>valid_arch_state and (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
    cap_insert cap src dest
    \<lbrace>\<lambda>rv. valid_arch_state \<rbrace>"
@@ -477,7 +477,7 @@ global_interpretation cap_insert_crunches?: cap_insert_crunches .
 
 context Arch begin arch_global_naming
 
-lemma cap_insert_cap_refs_in_kernel_window[wp, CSpace_AI_assms]:
+lemma cap_insert_cap_refs_in_kernel_window[wp, Arch_assms]:
   "\<lbrace>cap_refs_in_kernel_window
           and cte_wp_at (\<lambda>c. cap_range cap \<subseteq> cap_range c) src\<rbrace>
      cap_insert cap src dest
@@ -490,7 +490,7 @@ lemma cap_insert_cap_refs_in_kernel_window[wp, CSpace_AI_assms]:
   done
 
 
-lemma mask_cap_valid[simp, CSpace_AI_assms]:
+lemma mask_cap_valid[simp, Arch_assms]:
   "s \<turnstile> c \<Longrightarrow> s \<turnstile> mask_cap R c"
   apply (cases c, simp_all add: valid_cap_def mask_cap_def
                              cap_rights_update_def
@@ -500,21 +500,21 @@ lemma mask_cap_valid[simp, CSpace_AI_assms]:
   apply (rename_tac arch_cap)
   by (case_tac arch_cap, simp_all)
 
-lemma mask_cap_objrefs[simp, CSpace_AI_assms]:
+lemma mask_cap_objrefs[simp, Arch_assms]:
   "obj_refs (mask_cap rs cap) = obj_refs cap"
   by (cases cap, simp_all add: mask_cap_def cap_rights_update_def
                                acap_rights_update_def
                         split: arch_cap.split bool.splits)
 
 
-lemma mask_cap_zobjrefs[simp, CSpace_AI_assms]:
+lemma mask_cap_zobjrefs[simp, Arch_assms]:
   "zobj_refs (mask_cap rs cap) = zobj_refs cap"
   by (cases cap, simp_all add: mask_cap_def cap_rights_update_def
                                acap_rights_update_def
                         split: arch_cap.split bool.splits)
 
 
-lemma derive_cap_valid_cap [CSpace_AI_assms]:
+lemma derive_cap_valid_cap [Arch_assms]:
   "\<lbrace>valid_cap cap\<rbrace> derive_cap slot cap \<lbrace>valid_cap\<rbrace>,-"
   apply (simp add: derive_cap_def)
   apply (rule hoare_pre)
@@ -523,7 +523,7 @@ lemma derive_cap_valid_cap [CSpace_AI_assms]:
   done
 
 
-lemma valid_cap_update_rights[simp, CSpace_AI_assms]:
+lemma valid_cap_update_rights[simp, Arch_assms]:
   "valid_cap cap s \<Longrightarrow> valid_cap (cap_rights_update cr cap) s"
   apply (case_tac cap,
          simp_all add: cap_rights_update_def valid_cap_def cap_aligned_def
@@ -534,7 +534,7 @@ lemma valid_cap_update_rights[simp, CSpace_AI_assms]:
   done
 
 
-lemma update_cap_data_validI [CSpace_AI_assms]:
+lemma update_cap_data_validI [Arch_assms]:
   "s \<turnstile> cap \<Longrightarrow> s \<turnstile> update_cap_data p d cap"
   apply (cases cap)
   apply (simp_all add: is_cap_defs update_cap_data_def Let_def split_def)
@@ -547,7 +547,7 @@ lemma update_cap_data_validI [CSpace_AI_assms]:
   done
 
 
-lemma tcb_cnode_index_def2 [CSpace_AI_assms]:
+lemma tcb_cnode_index_def2 [Arch_assms]:
   "tcb_cnode_index n = nat_to_cref 3 n"
   apply (simp add: tcb_cnode_index_def nat_to_cref_def)
   apply (rule nth_equalityI)
@@ -556,7 +556,7 @@ lemma tcb_cnode_index_def2 [CSpace_AI_assms]:
   done
 
 
-lemma ex_nonz_tcb_cte_caps [CSpace_AI_assms]:
+lemma ex_nonz_tcb_cte_caps [Arch_assms]:
   "\<lbrakk>ex_nonz_cap_to t s; tcb_at t s; valid_objs s; ref \<in> dom tcb_cap_cases\<rbrakk>
    \<Longrightarrow> ex_cte_cap_wp_to (appropriate_cte_cap cp) (t, ref) s"
   apply (clarsimp simp: ex_nonz_cap_to_def ex_cte_cap_wp_to_def
@@ -586,7 +586,7 @@ lemma no_cap_to_obj_with_diff_ref_triv:
   done
 
 
-lemma setup_reply_master_arch_caps[wp, CSpace_AI_assms]:
+lemma setup_reply_master_arch_caps[wp, Arch_assms]:
   "\<lbrace>valid_arch_caps and tcb_at t and valid_objs and pspace_aligned\<rbrace>
      setup_reply_master t
    \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
@@ -600,7 +600,7 @@ lemma setup_reply_master_arch_caps[wp, CSpace_AI_assms]:
   done
 
 
-lemma setup_reply_master_cap_refs_in_kernel_window[wp, CSpace_AI_assms]:
+lemma setup_reply_master_cap_refs_in_kernel_window[wp, Arch_assms]:
   "\<lbrace>cap_refs_in_kernel_window and tcb_at t and pspace_in_kernel_window\<rbrace>
       setup_reply_master t
    \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
@@ -612,13 +612,13 @@ lemma setup_reply_master_cap_refs_in_kernel_window[wp, CSpace_AI_assms]:
 
 
 (* FIXME: prove same_region_as_def2 instead or change def *)
-lemma same_region_as_Untyped2 [CSpace_AI_assms]:
+lemma same_region_as_Untyped2 [Arch_assms]:
   "\<lbrakk> is_untyped_cap pcap; same_region_as pcap cap \<rbrakk> \<Longrightarrow>
   (is_physical cap \<and> cap_range cap \<noteq> {} \<and> cap_range cap \<subseteq> cap_range pcap)"
   by (fastforce simp: is_cap_simps cap_range_def is_physical_def arch_is_physical_def
                split: cap.splits arch_cap.splits)
 
-lemma same_region_as_cap_class [CSpace_AI_assms]:
+lemma same_region_as_cap_class [Arch_assms]:
   shows "same_region_as a b \<Longrightarrow> cap_class a = cap_class b"
   apply (case_tac a)
              apply (fastforce simp: cap_range_def arch_is_physical_def is_cap_simps
@@ -656,18 +656,19 @@ lemma setup_reply_master_arch_ioport_control[wp]:
   unfolding setup_reply_master_def
   by (wpsimp wp: get_cap_wp simp: ioport_control_unique_def)
 
-lemma setup_reply_master_arch[CSpace_AI_assms]:
+lemma setup_reply_master_arch[Arch_assms]:
   "setup_reply_master t \<lbrace> valid_arch_state \<rbrace>"
   by (wp valid_arch_state_lift_ioports_typ_at setup_reply_master_ioports)+
      (auto simp: valid_arch_state_def)
+
+lemmas CSpace_AI_assms = Arch_assms (* extract accumulated assumptions *)
 
 end
 
 
 global_interpretation CSpace_AI?: CSpace_AI
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact CSpace_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact X64.CSpace_AI_assms)?)
   qed
 
 

@@ -11,7 +11,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems DetSchedDomainTime_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for DetSchedDomainTime_AI locale *)
 
 crunch
   vcpu_update, vcpu_save_reg, vgic_update, vcpu_enable, vcpu_disable, vcpu_restore,
@@ -21,11 +21,11 @@ crunch
   (wp: crunch_wps simp: crunch_simps)
 
 crunch arch_finalise_cap
-  for domain_fields_invs[wp, DetSchedDomainTime_AI_assms]: "domain_fields P"
+  for domain_fields_invs[wp, Arch_assms]: "domain_fields P"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
 
 crunch set_extra_badge
-  for domain_time_inv[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"
+  for domain_time_inv[wp, Arch_assms]: "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
 
 crunch
@@ -36,29 +36,30 @@ crunch
   arch_post_modify_registers, arch_post_cap_deletion, handle_vm_fault,
   arch_invoke_irq_handler, arch_prepare_next_domain, arch_prepare_set_domain,
   arch_post_set_flags, handle_spurious_irq, handle_reserved_irq, arch_mask_irq_signal
-  for domain_fields_invs[wp, DetSchedDomainTime_AI_assms]: "domain_fields P"
+  for domain_fields_invs[wp, Arch_assms]: "domain_fields P"
   (simp: crunch_simps isFpuEnable_def wp: mapM_wp' transfer_caps_loop_pres crunch_wps)
 
 crunch handle_spurious_irq
-  for scheduler_action[wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (scheduler_action s)"
+  for scheduler_action[wp, Arch_assms]: "\<lambda>s. P (scheduler_action s)"
 
-lemmas [DetSchedDomainTime_AI_assms] =
+lemmas [Arch_assms] =
   init_arch_objects_exst
   arch_get_sanitise_register_info_inv
   arch_post_modify_registers_inv
+
+lemmas DetSchedDomainTime_AI_assms = Arch_assms (* extract accumulated assumptions *)
 
 end
 
 global_interpretation DetSchedDomainTime_AI?: DetSchedDomainTime_AI
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact DetSchedDomainTime_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact AARCH64.DetSchedDomainTime_AI_assms)?)
 qed
 
 context Arch begin arch_global_naming
 
 crunch arch_perform_invocation
-  for domain_fields_invs[wp, DetSchedDomainTime_AI_assms]: "domain_fields P"
+  for domain_fields_invs[wp, Arch_assms]: "domain_fields P"
   (wp: crunch_wps check_cap_inv simp: if_apply_def2)
 
 lemma vgic_maintenance_valid_domain_time:
@@ -90,12 +91,13 @@ lemma handle_reserved_irq_valid_domain_time:
   unfolding handle_reserved_irq_def
   by (wpsimp wp: vppi_event_valid_domain_time vgic_maintenance_valid_domain_time)
 
+lemmas DetSchedDomainTime_AI_2_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation DetSchedDomainTime_AI_2?: DetSchedDomainTime_AI_2
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact DetSchedDomainTime_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact AARCH64.DetSchedDomainTime_AI_2_assms)?)
 qed
 
 end

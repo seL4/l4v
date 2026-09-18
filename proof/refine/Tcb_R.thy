@@ -3034,8 +3034,8 @@ lemma decodeCopyRegisters_corres:
      (decodeCopyRegisters args (ThreadCap t) extras')"
   apply (simp add: decode_copy_registers_def decodeCopyRegisters_def)
   apply (cases args, simp_all)
-  apply (cases extras, simp_all add: decodeTransfer_def' null_def)
-  apply (clarsimp simp: list_all2_Cons1 null_def)
+  apply (cases extras, simp_all add: decodeTransfer_def')
+  apply (clarsimp simp: list_all2_Cons1)
   apply (case_tac aa, simp_all)
    apply (simp add: returnOk_def)
   apply clarsimp
@@ -3072,8 +3072,7 @@ lemma decodeCopyReg_wf:
               cong: list.case_cong capability.case_cong
               split del: if_split)
   apply wpsimp
-  apply (clarsimp simp: null_def neq_Nil_conv
-                        valid_cap'_def[where c="ThreadCap t" for t])
+  apply (clarsimp simp: neq_Nil_conv valid_cap'_def[where c="ThreadCap t" for t])
   done
 
 end (* Tcb_R_2 *)
@@ -3773,7 +3772,7 @@ notes if_cong[cong] shows
      (decode_bind_notification (cap.ThreadCap t) extras)
      (decodeBindNotification (capability.ThreadCap t) extras')"
   apply (simp add: decode_bind_notification_def decodeBindNotification_def)
-  apply (simp add: null_def returnOk_def)
+  apply (simp add: returnOk_def)
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split_norE)
        apply (rule corres_trivial)
@@ -3947,7 +3946,7 @@ lemma decodeBindNotification_wf:
         | simp add: threadGet_getObject getBoundNotification_def stateAssertE_def)+
   apply (fastforce simp: valid_cap'_def[where c="capability.ThreadCap t"]
                          is_ntfn invs_def valid_pspace'_def
-                         null_def pred_tcb_at'_def obj_at'_def
+                         pred_tcb_at'_def obj_at'_def
                    dest!: global'_no_ex_cap hd_in_set)
   done
 

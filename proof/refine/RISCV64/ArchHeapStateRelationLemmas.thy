@@ -13,7 +13,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems HeapStateRelation_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for HeapStateRelation_R locale *)
 
 lemmas ko_relations =
   cte_relation_def pte_relation_def ep_relation_cut_def ntfn_relation_cut_def
@@ -250,7 +250,7 @@ lemma pspace_relation_asid_pools_relation:
                  split: kernel_object.splits arch_kernel_object.splits)
   done
 
-lemma pspace_relation_heap_pspace_relation[HeapStateRelation_R_assms]:
+lemma pspace_relation_heap_pspace_relation[Arch_assms]:
   "pspace_relation (kheap s) (ksPSpace s') \<longleftrightarrow> heap_pspace_relation s s'"
   apply (intro iffI)
    apply (clarsimp simp: heap_pspace_relation_def aobjs_relation_def)
@@ -504,7 +504,7 @@ lemma aobjs_relation_lift_rcorres:
    apply (rule asid_pools_relation_lift_rcorres)
       by (fastforce intro: det_wp_no_fail)+
 
-lemma ghost_relation_heap_ghost_relation[HeapStateRelation_R_assms]:
+lemma ghost_relation_heap_ghost_relation[Arch_assms]:
   "ghost_relation_wrapper s s' \<longleftrightarrow> heap_ghost_relation_wrapper s s'"
   apply (clarsimp simp: ghost_relation_def heap_ghost_relation_def)
   apply (rule cnf.conj_cong)
@@ -574,12 +574,13 @@ lemma heap_ghost_relation_lift_rcorres:
        apply fastforce
       by (fastforce intro: hoare_weaken_pre)+
 
+lemmas HeapStateRelation_R_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation HeapStateRelation_R?: HeapStateRelation_R
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact HeapStateRelation_R_assms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact RISCV64.HeapStateRelation_R_assms)?)
 qed
 
 end

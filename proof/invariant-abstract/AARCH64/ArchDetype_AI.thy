@@ -11,16 +11,16 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Detype_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Detype_AI locale *)
 
-lemma valid_globals_irq_node[Detype_AI_assms]:
+lemma valid_globals_irq_node[Arch_assms]:
     "\<lbrakk> valid_global_refs s; cte_wp_at ((=) cap) ptr s \<rbrakk>
           \<Longrightarrow> interrupt_irq_node s irq \<notin> cap_range cap"
     apply (erule(1) valid_global_refsD)
     apply (simp add: global_refs_def)
     done
 
-lemma caps_of_state_ko[Detype_AI_assms]:
+lemma caps_of_state_ko[Arch_assms]:
   "valid_cap cap s
    \<Longrightarrow> is_untyped_cap cap \<or>
        cap_range cap = {} \<or>
@@ -34,7 +34,7 @@ lemma caps_of_state_ko[Detype_AI_assms]:
                     split: option.splits if_splits)+
   done
 
-lemma mapM_x_storeWord[Detype_AI_assms]:
+lemma mapM_x_storeWord[Arch_assms]:
 (* FIXME: taken from Retype_C.thy and adapted wrt. the missing intvl syntax. *)
   assumes al: "is_aligned ptr word_size_bits"
   shows "mapM_x (\<lambda>x. storeWord (ptr + of_nat x * word_size) 0) [0..<n]
@@ -82,7 +82,7 @@ next
     done
 qed
 
-lemma empty_fail_freeMemory [Detype_AI_assms]: "empty_fail (freeMemory ptr bits)"
+lemma empty_fail_freeMemory [Arch_assms]: "empty_fail (freeMemory ptr bits)"
   by (fastforce simp: freeMemory_def mapM_x_mapM)
 
 
@@ -108,13 +108,14 @@ lemma state_hyp_refs_of_detype:
   "state_hyp_refs_of (detype S s) = (\<lambda>x. if x \<in> S then {} else state_hyp_refs_of s x)"
   by (rule ext, simp add: state_hyp_refs_of_def detype_def)
 
+lemmas Detype_AI_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 interpretation Detype_AI?: Detype_AI
   proof goal_cases
-  interpret Arch .
   case 1 show ?case
-  by (intro_locales; (unfold_locales; fact Detype_AI_assms)?)
+  by (intro_locales; (unfold_locales; fact AARCH64.Detype_AI_assms)?)
   qed
 
 context detype_locale_arch begin
@@ -436,7 +437,7 @@ lemma unique_table_caps:
 end
 
 
-sublocale detype_locale < detype_locale_gen_1
+sublocale detype_locale \<subseteq> detype_locale_gen_1
 proof goal_cases
   interpret detype_locale_arch ..
   case 1 show ?case by (unfold_locales; fact detype_invs_proofs)
@@ -610,7 +611,7 @@ lemma valid_machine_state_detype[detype_invs_proofs]:
 
 end
 
-sublocale detype_locale < detype_locale_gen_2
+sublocale detype_locale \<subseteq> detype_locale_gen_2
  proof goal_cases
   interpret detype_locale_arch ..
   case 1 show ?case

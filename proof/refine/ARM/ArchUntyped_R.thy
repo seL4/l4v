@@ -13,9 +13,9 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Untyped_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Untyped_R locale *)
 
-lemma APIType_map2_CapTable[Untyped_R_assms, simp]:
+lemma APIType_map2_CapTable[Arch_assms, simp]:
   "(APIType_map2 ty = Structures_A.CapTableObject)
    = (ty = Inr (APIObjectType ArchTypes_H.CapTableObject))"
   by (simp add: APIType_map2_def
@@ -25,13 +25,13 @@ lemma APIType_map2_CapTable[Untyped_R_assms, simp]:
 
 lemmas is_frame_type_defs = is_frame_type_def isFrameType_def arch_is_frame_type_def
 
-lemma is_frame_type_isFrameType_eq[Untyped_R_assms, simp]:
+lemma is_frame_type_isFrameType_eq[Arch_assms, simp]:
   "(is_frame_type (APIType_map2 (Inr (toEnum (unat arg0))))) =
    (isFrameType (toEnum (unat arg0)))"
   by (simp add: APIType_map2_def is_frame_type_defs split: apiobject_type.splits object_type.splits)+
 
 (* object_type enum (arch-specific) is extension of apiobject_type enum (generic) *)
-lemma nth_enum_object_type_gen_eq[Untyped_R_assms]:
+lemma nth_enum_object_type_gen_eq[Arch_assms]:
   assumes "n < length (enum :: apiobject_type list)"
   shows "((enum :: object_type list) ! n) = APIObjectType ((enum :: apiobject_type list) ! n)"
 proof -
@@ -45,36 +45,36 @@ proof -
        (simp flip: nth_map[where f=APIObjectType])
 qed
 
-lemma length_enum_apiobject_less_enum_object_type[Untyped_R_assms]:
+lemma length_enum_apiobject_less_enum_object_type[Arch_assms]:
   "length (enum :: apiobject_type list) < length (enum :: object_type list)"
   unfolding enum_apiobject_type enum_object_type
   by simp
 
 crunch freeMemory (* FIXME arch-split: clearMemory is already handled in ArchRetype_AI *)
-  for irq_masks_inv[wp, Untyped_R_assms]: "\<lambda>s. P (irq_masks s)"
+  for irq_masks_inv[wp, Arch_assms]: "\<lambda>s. P (irq_masks s)"
   (wp: crunch_wps)
 
 crunch updateFreeIndex, deleteGhost
-  for valid_irq_states'[Untyped_R_assms, wp]: "valid_irq_states'"
-  and ksInterruptState[Untyped_R_assms, wp]: "\<lambda>s. P (ksInterruptState s)"
-  and gsMaxObjectSize[Untyped_R_assms, wp]: "\<lambda>s. P (gsMaxObjectSize s)"
-  and ksIdleThread[Untyped_R_assms, wp]: "\<lambda>s. P (ksIdleThread s)"
-  and ksCurDomain[Untyped_R_assms, wp]: "\<lambda>s. P (ksCurDomain s)"
-  and ksCurThread[Untyped_R_assms, wp]: "\<lambda>s. P (ksCurThread s)"
+  for valid_irq_states'[Arch_assms, wp]: "valid_irq_states'"
+  and ksInterruptState[Arch_assms, wp]: "\<lambda>s. P (ksInterruptState s)"
+  and gsMaxObjectSize[Arch_assms, wp]: "\<lambda>s. P (gsMaxObjectSize s)"
+  and ksIdleThread[Arch_assms, wp]: "\<lambda>s. P (ksIdleThread s)"
+  and ksCurDomain[Arch_assms, wp]: "\<lambda>s. P (ksCurDomain s)"
+  and ksCurThread[Arch_assms, wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps)
 
-lemma arch_data_to_obj_type_invalid[Untyped_R_assms]:
+lemma arch_data_to_obj_type_invalid[Arch_assms]:
   "\<lbrakk> n \<ge> length (enum :: object_type list) \<rbrakk>
    \<Longrightarrow> arch_data_to_obj_type (n - length (enum :: apiobject_type list)) = None"
   by (auto simp: enum_apiobject_type_length enum_object_type arch_data_to_obj_type_def)
 
-lemma arch_data_to_obj_type_valid[Untyped_R_assms]:
+lemma arch_data_to_obj_type_valid[Arch_assms]:
   "\<lbrakk> n < length (enum :: object_type list); length (enum :: apiobject_type list) \<le> n \<rbrakk>
    \<Longrightarrow> arch_data_to_obj_type (n - length (enum :: apiobject_type list)) \<noteq> None"
   by (simp add: enum_apiobject_type_length enum_object_type arch_data_to_obj_type_def)
      arith
 
-lemma APIType_map2_arch_data_to_obj_type[Untyped_R_assms]:
+lemma APIType_map2_arch_data_to_obj_type[Arch_assms]:
   defines [simp]: "object_types \<equiv> enum :: object_type list"
   defines [simp]: "apiobject_types \<equiv> enum :: apiobject_type list"
   shows
@@ -89,7 +89,7 @@ lemma APIType_map2_arch_data_to_obj_type[Untyped_R_assms]:
   apply arith
   done
 
-lemma obj_bits_api_APIType_map2[Untyped_R_assms]:
+lemma obj_bits_api_APIType_map2[Arch_assms]:
   "obj_bits_api (APIType_map2 (Inr x)) y = getObjectSize x y"
   apply (clarsimp simp:obj_bits_api_def APIType_map2_def getObjectSize_def simp del: objSize_eq_capBits)
   apply (case_tac x)
@@ -99,11 +99,11 @@ lemma obj_bits_api_APIType_map2[Untyped_R_assms]:
         apply (simp_all add: apiGetObjectSize_def slot_bits_def objBits_simps' vspace_bits_defs)
   done
 
-lemma length_nat_to_cref[Untyped_R_assms]:
+lemma length_nat_to_cref[Arch_assms]:
   "bits < word_bits \<Longrightarrow> length (nat_to_cref bits x) = bits"
   by (simp add: nat_to_cref_def word_bits_conv)
 
-lemma ctes_of_ko_arch[Untyped_R_assms]:
+lemma ctes_of_ko_arch[Arch_assms]:
   "\<lbrakk> valid_cap' cap s; isArchObjectCap cap \<rbrakk> \<Longrightarrow>
    \<forall>ptr\<in>capRange cap. \<exists>optr ko. ksPSpace s optr = Some ko \<and> ptr \<in> obj_range' optr ko"
   apply (case_tac cap; simp add: gen_isCap_simps capRange_def)
@@ -167,11 +167,11 @@ lemma ctes_of_ko_arch[Untyped_R_assms]:
   apply clarsimp
   done
 
-lemma irq_nodes_global[Untyped_R_assms]:
+lemma irq_nodes_global[Arch_assms]:
   "irq_node' s + (ucast (irq :: irq) << cteSizeBits) \<in> global_refs' s"
   by (simp add: global_refs'_def)
 
-lemma untyped_inc_mdbD[Untyped_R_assms]:
+lemma untyped_inc_mdbD[Arch_assms]:
   "\<lbrakk> sameRegionAs cap cap'; isUntypedCap cap;
      ctes p = Some (CTE cap node); ctes p' = Some (CTE cap' node');
      untyped_inc' ctes; untyped_mdb' ctes; no_loops ctes \<rbrakk>
@@ -197,16 +197,16 @@ lemma untyped_inc_mdbD[Untyped_R_assms]:
   apply (clarsimp simp: gen_isCap_simps)
   done
 
-lemma mdb_chunked_arch_assms_non_arch[Untyped_R_assms]:
+lemma mdb_chunked_arch_assms_non_arch[Arch_assms]:
   "\<not> isArchObjectCap cap \<Longrightarrow> mdb_chunked_arch_assms cap"
   by (simp add: mdb_chunked_arch_assms_def isCap_simps)
 
-lemma sameRegionAs_def_untyped[Untyped_R_assms]:
+lemma sameRegionAs_def_untyped[Arch_assms]:
   "\<lbrakk> isUntypedCap cap \<rbrakk>
    \<Longrightarrow> sameRegionAs cap cap' = (capRange cap' \<noteq> {} \<and> capRange cap' \<subseteq> capRange cap)"
   by (clarsimp simp add: sameRegionAs_def3 isCap_simps)
 
-lemma createNewCaps_range_helper[Untyped_R_assms]:
+lemma createNewCaps_range_helper[Arch_assms]:
   "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits tp us) n \<and> 0 < n\<rbrace>
    createNewCaps tp ptr n us d
    \<lbrace>\<lambda>rv s. \<exists>capfn.
@@ -276,7 +276,7 @@ defs archOverlap_def:
   "archOverlap \<equiv> \<lambda>_ _. False"
 
 (* trivial on this architecture *)
-lemma archNoOverlap[Untyped_R_assms]:
+lemma archNoOverlap[Arch_assms]:
   notes Int_atLeastAtMost[simp del]
   shows
   "corres dc (\<lambda>s. \<exists>cref. cte_wp_at (\<lambda>cap. is_untyped_cap cap
@@ -286,34 +286,34 @@ lemma archNoOverlap[Untyped_R_assms]:
              (return ()) (stateAssert (\<lambda>s. \<not> archOverlap s R) [])"
   by (simp add: archOverlap_def)
 
-lemma word_size_bits_le_untyped_min_bits[Untyped_R_assms]:
+lemma word_size_bits_le_untyped_min_bits[Arch_assms]:
   "word_size_bits \<le> untyped_min_bits"
   by (simp add: word_size_bits_def untyped_min_bits_def)
 
-lemma minUntypedSizeBits_le_resetChunkBits[Untyped_R_assms]:
+lemma minUntypedSizeBits_le_resetChunkBits[Arch_assms]:
   "minUntypedSizeBits \<le> resetChunkBits"
   by (simp add: minUntypedSizeBits_def Kernel_Config.resetChunkBits_def)
 
-lemma maxUntypedSizeBits_less_word_bits[Untyped_R_assms]:
+lemma maxUntypedSizeBits_less_word_bits[Arch_assms]:
   "maxUntypedSizeBits < word_bits"
   by (simp add: maxUntypedSizeBits_def word_bits_def)
 
 (* FIXME arch-split: candidate for Kernel_Config lemmas *)
-lemma word_size_bits_le_resetChunkBits[Untyped_R_assms]:
+lemma word_size_bits_le_resetChunkBits[Arch_assms]:
   "word_size_bits \<le> resetChunkBits"
   by (simp add: word_size_bits_def Kernel_Config.resetChunkBits_def)
 
-lemma resetChunkBits_le_word_bits[Untyped_R_assms]:
+lemma resetChunkBits_le_word_bits[Arch_assms]:
   "resetChunkBits < word_bits"
   by (simp add: Kernel_Config.resetChunkBits_def word_bits_def)
 
-lemma APIType_capBits_lower_bound[Untyped_R_assms]:
+lemma APIType_capBits_lower_bound[Arch_assms]:
   "\<lbrakk>tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us\<rbrakk>
    \<Longrightarrow> minUntypedSizeBits \<le> APIType_capBits tp us"
   by (simp add: APIType_capBits_def objBits_simps' minUntypedSizeBits_def
            split: object_type.split apiobject_type.split)
 
-lemma dmo_freeMemory_clear_um[Untyped_R_assms]:
+lemma dmo_freeMemory_clear_um[Arch_assms]:
   "\<lbrakk>word_size_bits \<le> sz; sz \<le> word_bits; is_aligned ptr sz\<rbrakk>
    \<Longrightarrow> (do_machine_op (freeMemory ptr sz) :: (det_state, unit) nondet_monad)
       = modify (clear_um {ptr..ptr + 2 ^ sz - 1})"
@@ -324,15 +324,16 @@ lemma dmo_freeMemory_clear_um[Untyped_R_assms]:
   done
 
 crunch createObject
-  for nosch[Untyped_R_assms, wp]: "\<lambda>s. P (ksSchedulerAction s)"
-  and ksInterruptState[Untyped_R_assms, wp]: "\<lambda>s. P (ksInterruptState s)"
+  for nosch[Arch_assms, wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  and ksInterruptState[Arch_assms, wp]: "\<lambda>s. P (ksInterruptState s)"
+
+lemmas Untyped_R_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 interpretation Untyped_R?: Untyped_R
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Untyped_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact ARM.Untyped_R_assms)?)?)
 qed
 
 locale Arch_mdb_insert_again_all = mdb_insert_again_all + Arch
@@ -392,21 +393,22 @@ end (* invokeUntyped_proofs *)
 
 context Arch begin arch_global_naming
 
-named_theorems Untyped_R_2_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Untyped_R_2 locale *)
 
-lemmas [Untyped_R_2_assms] =
+lemmas [Arch_assms] =
   mdb_insert_again_all.valid_n'
   invokeUntyped_proofs.descendants_range
   invokeUntyped_proofs.ex_cte_no_overlap'
   invokeUntyped_proofs.cref_inv
   invokeUntyped_proofs.slots_invD
 
+lemmas Untyped_R_2_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 interpretation Untyped_R_2?: Untyped_R_2
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Untyped_R_2_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact ARM.Untyped_R_2_assms)?)?)
 qed
 
 end

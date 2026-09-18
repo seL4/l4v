@@ -2441,11 +2441,11 @@ lemma decodeCopyRegisters_ccorres:
    apply (simp add: if_1_0_0 interpret_excaps_test_null decodeTransfer_def
                del: Collect_const)
    apply (rule ccorres_Cond_rhs_Seq)
-    apply (simp add: excaps_map_def invocationCatch_def throwError_bind null_def
+    apply (simp add: excaps_map_def invocationCatch_def throwError_bind
                cong: StateSpace.state.fold_congs globals.fold_congs)
     apply (rule syscall_error_throwError_ccorres_n)
     apply (simp add: syscall_error_to_H_cases)
-   apply (simp add: excaps_map_def null_def del: Collect_const)
+   apply (simp add: excaps_map_def del: Collect_const)
    apply (rule ccorres_add_return,
           ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
      apply (rule ccorres_symb_exec_r)
@@ -3968,11 +3968,11 @@ lemma decodeBindNotification_ccorres:
    apply (simp add: bind_assoc whenE_def bind_bindE_assoc interpret_excaps_test_null
                del: Collect_const cong: call_ignore_cong)
    apply (rule ccorres_Cond_rhs_Seq)
-    apply (simp add: excaps_map_def invocationCatch_def throwError_bind null_def
+    apply (simp add: excaps_map_def invocationCatch_def throwError_bind
                cong: StateSpace.state.fold_congs globals.fold_congs)
     apply (rule syscall_error_throwError_ccorres_n)
     apply (simp add: syscall_error_to_H_cases)
-   apply (simp add: excaps_map_def null_def del: Collect_const cong: call_ignore_cong)
+   apply (simp add: excaps_map_def del: Collect_const cong: call_ignore_cong)
    apply csymbr
    apply csymbr
    apply (rule ccorres_Guard_Seq)
@@ -4403,7 +4403,7 @@ lemma decodeSetSpace_ccorres:
                   cong: if_cong
                 | vcg exspec=getSyscallArg_modifies
                 | wp)+
-  apply (clarsimp simp: word_less_nat_alt)
+  apply (clarsimp simp: word_less_nat_alt take_bit_Suc)
   apply (rule conjI)
    apply (clarsimp simp: ct_in_state'_def interpret_excaps_test_null
                          excaps_map_def neq_Nil_conv)

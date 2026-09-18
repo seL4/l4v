@@ -45,7 +45,7 @@ lemma flush_space_vspace_objs[wp]:
 
 (* FIXME: move, missing in Ipc_AI on this architecture *)
 crunch handle_arch_fault_reply, arch_get_sanitise_register_info
-  for inv[Ipc_AI_2_assms]: P
+  for inv[Arch_assms]: P
 
 (* FIXME arch-split: missing from ArchCSpaceInvPre_AI on this architecture *)
 lemma set_cap_aobjs_of[wp]:

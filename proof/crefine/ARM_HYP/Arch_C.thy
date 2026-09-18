@@ -3166,15 +3166,15 @@ lemma decodeARMFrameInvocation_ccorres:
    apply (clarsimp simp: word_less_nat_alt vm_attribs_relation_def attribsFromWord_def
                          framesize_from_H_eq_eqs of_bool_nth[simplified of_bool_from_bool]
                          vm_page_size_defs neq_Nil_conv excaps_in_mem_def hd_conv_nth
-                         length_ineq_not_Nil numeral_2_eq_2 does_not_throw_def
-                         ARM_HYP.pptrBase_def
-                   simp del: unsigned_numeral)
+                         length_ineq_not_Nil does_not_throw_def
+                         ARM_HYP.pptrBase_def)
    apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
    apply (frule(1) slotcap_in_mem_PageDirectory)
    apply (clarsimp simp: mask_def[where n=4] typ_heap_simps' isCap_simps)
    apply (frule slotcap_in_mem_valid, clarsimp+)
    apply (erule_tac c="ArchObjectCap (PageDirectoryCap a b)" for a b in ccap_relationE)
    supply from_bool_odd_eq_and[simp]
+   apply (simp add: numeral_2_eq_2)
    apply (case_tac mapdata
           ; (clarsimp simp: cap_lift_page_directory_cap to_bool_def cap_page_directory_cap_lift_def
                             cap_to_H_def[split_simps cap_CL.split] valid_cap'_def,
@@ -3824,7 +3824,7 @@ lemma decodeARMMMUInvocation_ccorres:
               apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws[rotated -1])
                  apply clarsimp
                  apply (rule conseqPre, vcg, rule subset_refl)
-                apply (clarsimp simp: asid_high_bits_word_bits asidHighBits_handy_convs null_def)
+                apply (clarsimp simp: asid_high_bits_word_bits asidHighBits_handy_convs)
                 apply (clarsimp split: list.split)
                 apply (clarsimp dest!: filter_eq_ConsD)
                apply (simp add: throwError_bind invocationCatch_def)
@@ -3927,7 +3927,7 @@ lemma decodeARMMMUInvocation_ccorres:
                          del: Collect_const)
               apply (simp add: if_1_0_0 from_bool_0 hd_conv_nth length_ineq_not_Nil
                           del: Collect_const)
-              apply (clarsimp simp: eq_Nil_null[symmetric] asid_high_bits_word_bits hd_conv_nth mask_def)
+              apply (clarsimp simp: asid_high_bits_word_bits hd_conv_nth mask_def)
               apply wp+
             apply (simp add: cap_get_tag_isCap)
             apply (rule HoarePartial.SeqSwap)
@@ -4158,8 +4158,7 @@ lemma decodeARMMMUInvocation_ccorres:
            apply (simp add: if_to_top_of_bind del: Collect_const)
            apply (rule ccorres_if_cond_throws[where Q=\<top> and Q'=\<top>, rotated -1])
               apply vcg
-             apply (clarsimp simp: null_def split: list.split
-                             dest!: filter_eq_ConsD)
+             apply (clarsimp split: list.split dest!: filter_eq_ConsD)
              apply (simp add: asid_low_bits_def)
             apply (simp add: throwError_bind invocationCatch_def)
             apply (rule syscall_error_throwError_ccorres_n)
@@ -4266,8 +4265,7 @@ lemma decodeARMMMUInvocation_ccorres:
                           maskCapRights_def[where ?x1.0="ArchObjectCap cp" for cp]
                           ARM_HYP_H.maskCapRights_def
                    split: arch_capability.split_asm)
-    apply (clarsimp simp: null_def neq_Nil_conv mask_def field_simps
-                          asid_low_bits_word_bits
+    apply (clarsimp simp: neq_Nil_conv mask_def field_simps asid_low_bits_word_bits
                    dest!: filter_eq_ConsD)
     apply (subst is_aligned_add_less_t2n[rotated], assumption+)
        apply (simp add: asid_low_bits_def asid_bits_def)
@@ -5037,7 +5035,7 @@ lemma decodeVCPUSetTCB_ccorres:
    apply (rule ccorres_Cond_rhs_Seq ; clarsimp)
     apply (rule ccorres_split_throws)
      apply (subgoal_tac "null extraCaps")
-      prefer 2 subgoal by (clarsimp simp: interpret_excaps_test_null excaps_map_def null_def)
+      prefer 2 subgoal by (clarsimp simp: interpret_excaps_test_null excaps_map_def)
      apply (simp add: throwError_bind invocationCatch_def)
      apply (rule syscall_error_throwError_ccorres_n)
      apply (simp add: syscall_error_to_H_cases)
@@ -5045,7 +5043,7 @@ lemma decodeVCPUSetTCB_ccorres:
    apply (subgoal_tac "extraCaps \<noteq> []")
      prefer 2 subgoal by (clarsimp simp: idButNot_def interpret_excaps_test_null
                                           excaps_map_def neq_Nil_conv)
-   apply (clarsimp simp: null_def bindE)
+   apply (clarsimp simp: bindE)
    (* lookup first slot in extracaps and its type *)
    apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
    apply (rule ccorres_move_c_guard_cte)

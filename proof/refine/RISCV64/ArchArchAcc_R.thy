@@ -29,7 +29,7 @@ end
 
 context Arch begin arch_global_naming
 
-named_theorems ArchAcc_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for ArchAcc_R locale *)
 
 lemma asid_pool_at_ko:
   "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (RISCV64_A.ASIDPool pool)) p s"
@@ -789,7 +789,7 @@ lemma copy_global_mappings_corres [@lift_corres_args, corres]:
                             simp: bit_simps word_le_nat_alt word_less_nat_alt)+
   done
 
-lemma arch_cap_rights_update[ArchAcc_R_assms]:
+lemma arch_cap_rights_update[Arch_assms]:
   "acap_relation c c' \<Longrightarrow>
    cap_relation (cap.ArchObjectCap (acap_rights_update (acap_rights c \<inter> msk) c))
                  (Arch.maskCapRights (rights_mask_map msk) c')"
@@ -816,7 +816,7 @@ lemma arch_deriveCap_valid:
   apply (simp add: RISCV64_H.deriveCap_def split del: if_split cong: if_cong)
   apply (wp undefined_validE_R)
   apply (cases arch_cap; simp add: isCap_defs)
-  apply (simp add: valid_cap'_def capAligned_def global.capUntypedPtr_def capUntypedPtr_def)
+  apply (simp add: valid_cap'_def capAligned_def global.capUntypedPtr_def RISCV64_H.capUntypedPtr_def)
   done
 
 lemma mdata_map_simps[simp]:
@@ -955,12 +955,13 @@ lemma setObject_arch:
   apply (wp X | simp)+
   done
 
-end
+lemmas ArchAcc_R_assms = Arch_assms (* extract accumulated assumptions *)
+
+end (* Arch *)
 
 interpretation ArchAcc_R?: ArchAcc_R
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact ArchAcc_R_assms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact RISCV64.ArchAcc_R_assms)?)
 qed
 
 end

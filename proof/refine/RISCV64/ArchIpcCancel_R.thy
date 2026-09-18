@@ -12,21 +12,21 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems IpcCancel_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for IpcCancel_R locale *)
 
 (* FIXME: move to Machine_AI *)
 crunch getRegister, setRegister
   for (no_fail) no_fail[intro!, wp, simp]
 
 crunch Arch.postCapDeletion
-  for pred_tcb_at'[IpcCancel_R_assms, wp]: "pred_tcb_at' proj P t"
-  and typ_at'[IpcCancel_R_assms, wp]: "\<lambda>s. P (typ_at' T p s)"
-  and sc_at'_n[IpcCancel_R_assms, wp]: "\<lambda>s. P (sc_at'_n n p s)"
+  for pred_tcb_at'[Arch_assms, wp]: "pred_tcb_at' proj P t"
+  and typ_at'[Arch_assms, wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[Arch_assms, wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: setCTE_pred_tcb_at')
 
 (* arch_post_cap_deletion is trivial for this architecture, no proofs are needed for additional
    properties in the interface *)
-declare arch_post_cap_deletion_inv[IpcCancel_R_assms]
+declare arch_post_cap_deletion_inv[Arch_assms]
 
 crunch emptySlot
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
@@ -67,7 +67,7 @@ proof -
               corres: getObject_TCB_corres setObject_update_TCB_corres')
 qed
 
-lemma prepareThreadDelete_corres[IpcCancel_R_assms, corres]:
+lemma prepareThreadDelete_corres[Arch_assms, corres]:
   "t' = t \<Longrightarrow>
    corres dc (invs and tcb_at t) no_0_obj'
           (prepare_thread_delete t) (prepareThreadDelete t')"
@@ -97,12 +97,13 @@ sublocale cancelAllIPC: typ_at_all_props' "cancelAllIPC epptr"
 sublocale cancelAllSignals: typ_at_all_props' "cancelAllSignals ntfnPtr"
   by typ_at_props'
 
+lemmas IpcCancel_R_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 interpretation IpcCancel_R?: IpcCancel_R
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact IpcCancel_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact RISCV64.IpcCancel_R_assms)?)?)
 qed
 
 (* instantiate locales with assumptions depending on IpcCancel_R instantiation *)

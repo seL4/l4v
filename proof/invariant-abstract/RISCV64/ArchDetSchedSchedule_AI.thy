@@ -10,7 +10,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems DetSchedSchedule_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for DetSchedSchedule_AI locale *)
 
 (* trivial functions *)
 crunch arch_post_cap_deletion,
@@ -42,22 +42,20 @@ lemma misc_dmo_valid_sched_pred_strong[wp]:
 
 crunch arch_switch_to_thread, arch_switch_to_idle_thread, arch_finalise_cap,
        arch_invoke_irq_control
-  for valid_sched_pred_strong[wp, DetSchedSchedule_AI_assms]: "valid_sched_pred_strong P"
+  for valid_sched_pred_strong[wp, Arch_assms]: "valid_sched_pred_strong P"
   (wp: dmo_valid_sched_pred crunch_wps simp: crunch_simps)
 
-lemma handle_vm_fault_valid_sched_pred_strong[wp, DetSchedSchedule_AI_assms]:
+lemma handle_vm_fault_valid_sched_pred_strong[wp, Arch_assms]:
   "handle_vm_fault thread fault_type \<lbrace>valid_sched_pred_strong P\<rbrace>"
   unfolding handle_vm_fault_def
   by (wp dmo_valid_sched_pred | simp add: Let_def | cases fault_type)+
 
-crunch
-  perform_page_table_invocation,
-  perform_page_invocation, perform_asid_pool_invocation
+crunch perform_page_table_invocation, perform_page_invocation, perform_asid_pool_invocation
   for valid_sched_misc[wp]: "valid_sched_pred_strong P"
   (wp: dmo_valid_sched_pred crunch_wps simp: crunch_simps detype_def ignore: do_machine_op)
 
 crunch arch_perform_invocation
-  for valid_sched_misc[wp, DetSchedSchedule_AI_assms]:
+  for valid_sched_misc[wp, Arch_assms]:
         "\<lambda>s. P (consumed_time s) (cur_time s) (cur_domain s) (cur_thread s)
                (cur_sc s) (idle_thread s) (ready_queues s) (release_queue s)
                (scheduler_action s) (last_machine_time_of s) (time_state_of s)"
@@ -87,7 +85,7 @@ lemma set_vm_root_valid_blocked_ct_in_q[wp]:
   "set_vm_root p \<lbrace>valid_blocked and ct_in_q\<rbrace>"
   by wpsimp
 
-lemma arch_switch_to_thread_valid_blocked [wp]:
+lemma arch_switch_to_thread_valid_blocked[wp]:
   "\<lbrace>valid_blocked and ct_in_q\<rbrace> arch_switch_to_thread thread \<lbrace>\<lambda>_. valid_blocked and ct_in_q::det_state \<Rightarrow> _\<rbrace>"
   unfolding arch_switch_to_thread_def by wpsimp
 
@@ -104,7 +102,7 @@ lemma switch_to_idle_thread_ct_not_queued[wp]:
   done
 
 crunch arch_switch_to_thread
- for exst[wp]: "\<lambda>s. P (exst s :: det_ext)"
+  for exst[wp]: "\<lambda>s. P (exst s :: det_ext)"
 
 lemma astit_st_tcb_at[wp]:
   "\<lbrace>st_tcb_at P t\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
@@ -143,7 +141,7 @@ lemma activate_thread_valid_sched:
   by (wpsimp wp: set_thread_state_cur_thread_runnable_valid_sched gts_wp hoare_vcg_all_lift
                  get_tcb_obj_ref_wp hoare_drop_imps)
 
-lemma arch_perform_invocation_valid_sched [wp, DetSchedSchedule_AI_assms]:
+lemma arch_perform_invocation_valid_sched [wp, Arch_assms]:
   "\<lbrace>invs and valid_machine_time and valid_sched and ct_active
     and (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_arch_inv a\<rbrace>
    arch_perform_invocation a
@@ -153,7 +151,7 @@ lemma arch_perform_invocation_valid_sched [wp, DetSchedSchedule_AI_assms]:
                       wp: perform_asid_control_invocation_valid_sched)+
   done
 
-lemma arch_perform_invocation_cur_sc_active[wp, DetSchedSchedule_AI_assms]:
+lemma arch_perform_invocation_cur_sc_active[wp, Arch_assms]:
   "\<lbrace>cur_sc_active and invs and ct_active and schact_is_rct and valid_arch_inv i\<rbrace>
    arch_perform_invocation i
    \<lbrace>\<lambda>_. cur_sc_active\<rbrace>"
@@ -215,11 +213,11 @@ crunch arch_perform_invocation
   (wp: crunch_wps cur_sc_tcb_only_sym_bound_lift ignore: retype_region delete_objects
    simp: crunch_simps)
 
-lemma arch_perform_invocation_cur_sc_tcb_only_sym_bound[DetSchedSchedule_AI_assms]:
+lemma arch_perform_invocation_cur_sc_tcb_only_sym_bound[Arch_assms]:
   "arch_perform_invocation i \<lbrace>cur_sc_tcb_only_sym_bound\<rbrace>"
   by (wpsimp wp: cur_sc_tcb_only_sym_bound_lift)
 
-lemma arch_perform_invocation_bound_sc_obj_tcb_at[DetSchedSchedule_AI_assms]:
+lemma arch_perform_invocation_bound_sc_obj_tcb_at[Arch_assms]:
   "\<lbrace>\<lambda>s. bound_sc_obj_tcb_at (P (cur_time s)) t s
         \<and> ex_nonz_cap_to t s \<and> invs s \<and> ct_active s \<and> valid_arch_inv i s
         \<and> scheduler_action s = resume_cur_thread\<rbrace>
@@ -282,7 +280,7 @@ lemma perform_asid_control_invocation_cur_sc_more_than_ready [wp]:
   unfolding perform_asid_control_invocation_def
   by (wpsimp wp: hoare_drop_imp)
 
-lemma arch_perform_invocation_cur_sc_more_than_ready [wp, DetSchedSchedule_AI_assms]:
+lemma arch_perform_invocation_cur_sc_more_than_ready [wp, Arch_assms]:
   "arch_perform_invocation iv \<lbrace>cur_sc_more_than_ready\<rbrace>"
   unfolding arch_perform_invocation_def
   by (cases iv; wpsimp)
@@ -292,7 +290,7 @@ lemma perform_asid_control_invocation_cur_sc_in_release_q_imp_zero_consumed [wp]
   unfolding perform_asid_control_invocation_def
   by (wpsimp wp: hoare_drop_imp)
 
-lemma arch_perform_invocation_cur_sc_in_release_q_imp_zero_consumed [wp, DetSchedSchedule_AI_assms]:
+lemma arch_perform_invocation_cur_sc_in_release_q_imp_zero_consumed [wp, Arch_assms]:
   "arch_perform_invocation iv \<lbrace>cur_sc_in_release_q_imp_zero_consumed\<rbrace>"
   unfolding arch_perform_invocation_def
   by (cases iv; wpsimp wp: hoare_drop_imps)
@@ -316,7 +314,7 @@ lemma handle_hyp_fault_trivial[wp]:
   by (cases fault; wpsimp)
 
 crunch arch_prepare_next_domain, arch_prepare_set_domain, arch_post_set_flags, handle_spurious_irq
-  for valid_sched_pred_strong[wp, DetSchedSchedule_AI_assms]: "valid_sched_pred_strong P"
+  for valid_sched_pred_strong[wp, Arch_assms]: "valid_sched_pred_strong P"
 
 crunch arch_prepare_set_domain, handle_spurious_irq
   for valid_idle[wp]: "valid_idle"
@@ -324,18 +322,22 @@ crunch arch_prepare_set_domain, handle_spurious_irq
 crunch arch_prepare_next_domain
   for valid_list[wp]: "valid_list"
 
+lemmas DetSchedSchedule_AI_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
 proof goal_cases
+  (* FIXME RT: add all interface lemmas to Arch_assms, remove Arch interpretation and wpsimp *)
   interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact DetSchedSchedule_AI_assms)?; wpsimp?)
+  case 1 show ?case by (unfold_locales; (fact RISCV64.DetSchedSchedule_AI_assms)?; wpsimp?)
 qed
 
 global_interpretation DetSchedSchedule_AI_det_ext?: DetSchedSchedule_AI_det_ext
 proof goal_cases
+  (* FIXME RT: add all interface lemmas to Arch_assms, remove Arch interpretation and wpsimp *)
   interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact DetSchedSchedule_AI_assms)?; wpsimp?)
+  case 1 show ?case by (unfold_locales; (fact RISCV64.DetSchedSchedule_AI_assms)?; wpsimp?)
 qed
 
 context Arch begin arch_global_naming
@@ -349,16 +351,20 @@ lemma handle_vm_fault_not_timeout_fault[wp]:
   "\<lbrace>\<top>\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. \<not> is_timeout_fault rv\<rbrace>"
   unfolding handle_vm_fault_def by (wpsimp simp: is_timeout_fault_def)
 
+lemmas DetSchedSchedule_AI_handle_hypervisor_fault_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation DetSchedSchedule_AI_handle_hypervisor_fault?: DetSchedSchedule_AI_handle_hypervisor_fault
 proof goal_cases
+  (* FIXME RT: add all interface lemmas to Arch_assms, remove Arch interpretation and wpsimp *)
   interpret Arch .
   case 1 show ?case by (unfold_locales; wpsimp)
 qed
 
 global_interpretation DetSchedSchedule_AI_handle_hypervisor_fault_det_ext?: DetSchedSchedule_AI_handle_hypervisor_fault_det_ext
 proof goal_cases
+  (* FIXME RT: add all interface lemmas to Arch_assms, remove Arch interpretation and wpsimp *)
   interpret Arch .
   case 1 show ?case by (unfold_locales; wpsimp)
 qed

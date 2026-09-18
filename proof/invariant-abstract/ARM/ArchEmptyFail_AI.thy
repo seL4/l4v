@@ -10,7 +10,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems EmptyFail_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for EmptyFail_AI locale *)
 
 crunch_ignore (empty_fail)
   (add: invalidateLocalTLB_ASID_impl invalidateLocalTLB_VAASID_impl cleanByVA_impl
@@ -23,26 +23,27 @@ crunch_ignore (empty_fail)
 
 crunch
   loadWord, load_word_offs, store_word_offs, storeWord, getRestartPC, get_mrs, setRegister
- for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
+  for (empty_fail) empty_fail[wp, Arch_assms]
+
+lemmas EmptyFail_AI_load_word_assms = Arch_assms (* extract accumulated assumptions *)
 
 end
 
 global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact ARM.EmptyFail_AI_load_word_assms)?)
   qed
 
 context Arch begin arch_global_naming
 
 crunch possible_switch_to,set_thread_state_act
- for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
+  for (empty_fail) empty_fail[wp, Arch_assms]
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
          Let_def wp: empty_fail_zipWithM_x)
 
 crunch handle_fault
- for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
+  for (empty_fail) empty_fail[wp, Arch_assms]
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
          Let_def)
@@ -112,17 +113,18 @@ lemma arch_decode_invocation_empty_fail[wp]:
   by ((simp add: arch_decode_invocation_def Let_def split: arch_cap.splits cap.splits option.splits
      | (wp+) | intro conjI impI allI)+)
 
+lemmas EmptyFail_AI_derive_cap_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact ARM.EmptyFail_AI_derive_cap_assms)?)
   qed
 
 context Arch begin arch_global_naming
 
-lemma preemption_point_empty_fail[wp, EmptyFail_AI_assms]:
+lemma preemption_point_empty_fail[wp, Arch_assms]:
   "empty_fail preemption_point"
   apply (wpsimp simp: mk_ef_def getActiveIRQ_def  preemption_point_def OR_choiceE_def andM_def
                       ifM_def update_time_stamp_def getCurrentTime_def get_sc_active_def)
@@ -131,33 +133,37 @@ lemma preemption_point_empty_fail[wp, EmptyFail_AI_assms]:
 crunch maskInterrupt, empty_slot,
     setHardwareASID, set_current_pd, finalise_cap, preemption_point, reset_work_units,
     update_work_units, cap_swap_for_delete, decode_invocation
- for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
+  for (empty_fail) empty_fail[wp, Arch_assms]
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def andM_def ifM_def
          option.splits endpoint.splits
          notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
          kernel_object.splits vmpage_size.splits pde.splits bool.splits list.splits)
 
 crunch setRegister, setNextPC
-  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
+  for (empty_fail) empty_fail[wp, Arch_assms]
+
+lemmas EmptyFail_AI_rec_del_assms = Arch_assms (* extract accumulated assumptions *)
 
 end
 
 global_interpretation EmptyFail_AI_rec_del?: EmptyFail_AI_rec_del
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact ARM.EmptyFail_AI_rec_del_assms)?)
   qed
 
 context Arch begin arch_global_naming
+
 crunch
   cap_delete, choose_thread, arch_prepare_next_domain
-  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
+  for (empty_fail) empty_fail[wp, Arch_assms]
+
+lemmas EmptyFail_AI_schedule_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact ARM.EmptyFail_AI_schedule_assms)?)
   qed
 
 context Arch begin arch_global_naming
@@ -168,7 +174,7 @@ lemma deactivateInterrupt_empty_fail[wp]:
   by wpsimp
 
 crunch handle_event, activate_thread, maybe_handle_interrupt, check_budget
-  for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
+  for (empty_fail) empty_fail[wp, Arch_assms]
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits
          bool.splits apiobject_type.splits aobject_type.splits notification.splits
@@ -177,12 +183,14 @@ crunch handle_event, activate_thread, maybe_handle_interrupt, check_budget
          asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits
          flush_type.splits page_directory_invocation.splits
    ignore: resetTimer_impl ackInterrupt_impl handleSpuriousIRQ_impl)
+
+lemmas EmptyFail_AI_call_kernel_assms = Arch_assms (* extract accumulated assumptions *)
+
 end
 
 global_interpretation EmptyFail_AI_call_kernel?: EmptyFail_AI_call_kernel
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact ARM.EmptyFail_AI_call_kernel_assms)?)
   qed
 
 end

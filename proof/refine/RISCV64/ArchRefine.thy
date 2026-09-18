@@ -13,7 +13,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Refine_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Refine locale *)
 
 text \<open>User memory content is the same on both levels\<close>
 lemma typ_at_AUserDataI:
@@ -137,7 +137,7 @@ lemma p_and_not_mask_pbfs_add_mask_pbfs_eq:
            add: shiftr_shiftl1 mask_out_add_aligned is_aligned_neg_mask pbfs_atleast_pageBits
                 word_plus_and_or_coroll2 add.commute)
 
-lemma pointerInUserData_relation[Refine_assms]:
+lemma pointerInUserData_relation[Arch_assms]:
   "\<lbrakk> (s,s') \<in> state_relation; invs' s'; valid_state s\<rbrakk>
    \<Longrightarrow> pointerInUserData p s' = in_user_frame p s"
   apply (simp add: pointerInUserData_def in_user_frame_def)
@@ -151,7 +151,7 @@ lemma pointerInUserData_relation[Refine_assms]:
   apply (simp add: p_and_not_mask_pbfs_add_mask_pbfs_eq)
   done
 
-lemma pointerInDeviceData_relation[Refine_assms]:
+lemma pointerInDeviceData_relation[Arch_assms]:
   "\<lbrakk> (s,s') \<in> state_relation; invs' s'; valid_state s\<rbrakk>
    \<Longrightarrow> pointerInDeviceData p s' = in_device_frame p s"
   apply (simp add: pointerInDeviceData_def in_device_frame_def)
@@ -165,31 +165,31 @@ lemma pointerInDeviceData_relation[Refine_assms]:
   apply (simp add: p_and_not_mask_pbfs_add_mask_pbfs_eq)
   done
 
-lemma user_mem_relation[Refine_assms]:
+lemma user_mem_relation[Arch_assms]:
   "\<lbrakk>(s,s') \<in> state_relation; invs' s'; valid_state s\<rbrakk>
    \<Longrightarrow> user_mem' s' = user_mem s"
   by (rule ext)
      (clarsimp simp: user_mem_def user_mem'_def pointerInUserData_relation pointerInDeviceData_relation
                      state_relation_def)
 
-lemma device_mem_relation[Refine_assms]:
+lemma device_mem_relation[Arch_assms]:
   "\<lbrakk>(s,s') \<in> state_relation; invs' s'; valid_state s\<rbrakk>
    \<Longrightarrow> device_mem' s' = device_mem s"
   by (rule ext)
      (clarsimp simp: device_mem_def device_mem'_def pointerInUserData_relation
                      pointerInDeviceData_relation)
 
-lemma arch_activate_thread_sched_act[Refine_assms]:
+lemma arch_activate_thread_sched_act[Arch_assms]:
   "\<lbrace>ct_in_state activatable and (\<lambda>s. P (scheduler_action s))\<rbrace>
    arch_activate_idle_thread t
    \<lbrace>\<lambda>rs s. P (scheduler_action (s::det_state))\<rbrace>"
   by (wpsimp simp: arch_activate_idle_thread_def)
 
-lemma valid_list_init[Refine_assms, simp]:
+lemma valid_list_init[Arch_assms, simp]:
   "valid_list init_A_st"
   by (simp add: valid_list_2_def init_A_st_def ext_init_def init_cdt_def)
 
-lemma valid_sched_init[Refine_assms, simp]:
+lemma valid_sched_init[Arch_assms, simp]:
   "valid_sched init_A_st"
   apply (simp add: valid_sched_def init_A_st_def ext_init_def)
   apply (insert getCurrentTime_buffer_bound MIN_BUDGET_le_MAX_PERIOD')
@@ -207,46 +207,46 @@ lemma valid_sched_init[Refine_assms, simp]:
                  default_sched_context_def MAX_PERIOD_def active_sc_def
           intro: order_trans[OF mult_left_mono, OF us_to_ticks_helper])
 
-lemma valid_domain_list_init[Refine_assms, simp]:
+lemma valid_domain_list_init[Arch_assms, simp]:
   "valid_domain_list init_A_st"
   apply (insert init_domain_time_pos init_domain_time_bound)
   by (simp add: init_A_st_def ext_init_def valid_domain_list_def)
 
-lemma cur_sc_active_init[Refine_assms, simp]:
+lemma cur_sc_active_init[Arch_assms, simp]:
   "cur_sc_active init_A_st"
   by (clarsimp simp: init_A_st_def init_kheap_def vs_all_heap_simps active_sc_def MIN_REFILLS_def
                      riscv_global_pt_ptr_def idle_sc_ptr_def)
 
-lemma ct_not_in_release_q_init[Refine_assms, simp]:
+lemma ct_not_in_release_q_init[Arch_assms, simp]:
   "ct_not_in_release_q init_A_st"
   by (clarsimp simp: init_A_st_def init_kheap_def not_in_release_q_def in_queue_2_def)
 
-lemma valid_machine_time_init[Refine_assms, simp]:
+lemma valid_machine_time_init[Arch_assms, simp]:
   "valid_machine_time init_A_st"
   by (clarsimp simp: init_A_st_def valid_machine_time_def init_machine_state_def)
 
-lemma current_time_bounded_init[Refine_assms, simp]:
+lemma current_time_bounded_init[Arch_assms, simp]:
   "current_time_bounded init_A_st"
   apply (insert getCurrentTime_buffer_no_overflow)
   by (clarsimp simp: current_time_bounded_def init_A_st_def)
 
-lemma consumed_time_bounded_init[Refine_assms, simp]:
+lemma consumed_time_bounded_init[Arch_assms, simp]:
   "consumed_time_bounded init_A_st"
   by (clarsimp simp: init_kheap_def init_A_st_def)
 
-lemma cur_sc_offset_ready[Refine_assms, simp]:
+lemma cur_sc_offset_ready[Arch_assms, simp]:
   "cur_sc_offset_ready (consumed_time init_A_st) init_A_st"
   by (clarsimp simp: init_A_st_def)
 
-lemma cur_sc_offset_sufficient[Refine_assms, simp]:
+lemma cur_sc_offset_sufficient[Arch_assms, simp]:
   "cur_sc_offset_sufficient (consumed_time init_A_st) init_A_st"
   by (clarsimp simp: init_A_st_def)
 
-lemma valid_domain_time_init[Refine_assms, simp]:
+lemma valid_domain_time_init[Arch_assms, simp]:
   "0 < domain_time init_A_st"
   by (simp add: init_A_st_def)
 
-lemma sched_act_init[Refine_assms, simp]:
+lemma sched_act_init[Arch_assms, simp]:
   "scheduler_action init_A_st = resume_cur_thread"
   by (simp add: init_A_st_def)
 
@@ -254,13 +254,13 @@ lemma sched_act_init[Refine_assms, simp]:
 defs fastpathKernelAssertions_def:
   "fastpathKernelAssertions \<equiv> \<lambda>s. True"
 
-lemma fastpathKernelAssertions_cross[Refine_assms]:
+lemma fastpathKernelAssertions_cross[Arch_assms]:
   "\<lbrakk> (s,s') \<in> state_relation; invs s; valid_arch_state' s'\<rbrakk> \<Longrightarrow> fastpathKernelAssertions s'"
   unfolding fastpathKernelAssertions_def
   by clarsimp
 
 (* interface lemma, no vs duplicates on this architecture *)
-lemma callKernel_valid_duplicates'[Refine_assms]:
+lemma callKernel_valid_duplicates'[Arch_assms]:
   "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
     (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
     (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s)\<rbrace>
@@ -269,42 +269,43 @@ lemma callKernel_valid_duplicates'[Refine_assms]:
   by wpsimp
 
 (* interface lemma, no vs duplicates on this architecture *)
-lemma doUserOp_valid_duplicates'[Refine_assms]:
+lemma doUserOp_valid_duplicates'[Arch_assms]:
   "doUserOp f tc \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   by wpsimp
 
 (* interface lemma, no vs duplicates on this architecture *)
-lemma checkActiveIRQ_valid_duplicates'[Refine_assms]:
+lemma checkActiveIRQ_valid_duplicates'[Arch_assms]:
   "checkActiveIRQ \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   by wpsimp
 
-lemma tcb_hyp_refs'_atcbContextSet[Refine_assms, simp]:
+lemma tcb_hyp_refs'_atcbContextSet[Arch_assms, simp]:
   "tcb_hyp_refs' (atcbContextSet tc atcb) = tcb_hyp_refs' atcb"
   by (simp add: atcbContextSet_def)
 
-lemma ptable_lift_abs_state[Refine_assms, simp]:
+lemma ptable_lift_abs_state[Arch_assms, simp]:
   "ptable_lift t (abs_state s) = ptable_lift t s"
   by (simp add: ptable_lift_def abs_state_def)
 
-lemma ptable_rights_abs_state[Refine_assms, simp]:
+lemma ptable_rights_abs_state[Arch_assms, simp]:
   "ptable_rights t (abs_state s) = ptable_rights t s"
   by (simp add: ptable_rights_def abs_state_def)
 
-lemma arch_tcb_relation_arch_context_set[Refine_assms]:
+lemma arch_tcb_relation_arch_context_set[Arch_assms]:
   "arch_tcb_relation atcb atcb'
    \<Longrightarrow> arch_tcb_relation (arch_tcb_context_set tc atcb) (atcbContextSet tc atcb')"
   by (simp add: arch_tcb_relation_def arch_tcb_context_set_def atcbContextSet_def)
 
-lemma arch_tcb_relation_arch_context_get[Refine_assms]:
+lemma arch_tcb_relation_arch_context_get[Arch_assms]:
   "arch_tcb_relation atcb atcb' \<Longrightarrow> arch_tcb_context_get atcb = atcbContextGet atcb'"
   by (simp add: arch_tcb_relation_def arch_tcb_context_get_def atcbContextGet_def)
+
+lemmas Refine_assms = Arch_assms (* extract accumulated assumptions *)
 
 end (* Arch *)
 
 interpretation Refine?: Refine
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Refine_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact RISCV64.Refine_assms)?)?)
 qed
 
 end

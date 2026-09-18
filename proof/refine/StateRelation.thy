@@ -931,8 +931,7 @@ lemmas replaceAt_def = updateAt_def
 
 lemma length_updateAt[simp]:
   "length (updateAt i xs f) = length xs"
-  apply (clarsimp simp: updateAt_def)
-  by (case_tac xs; simp)
+  by (clarsimp simp: updateAt_def)
 
 lemma wrap_slice_index:
   "\<lbrakk>count \<le> mx; start < mx; mx \<le> length xs; index < count\<rbrakk>
@@ -992,7 +991,7 @@ lemma wrap_slice_append:
 lemma updateAt_index:
   "\<lbrakk>xs \<noteq> []; i < length xs; j < length xs\<rbrakk>
    \<Longrightarrow> (updateAt i xs f) ! j = (if i = j then f (xs ! i) else (xs ! j))"
-  by (fastforce simp: updateAt_def null_def nth_append)
+  by (fastforce simp: updateAt_def nth_append)
 
 lemma wrap_slice_updateAt_eq:
   "\<lbrakk>if start + count \<le> mx

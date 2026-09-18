@@ -14,9 +14,9 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Machine_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Machine_R locale *)
 
-lemma dmo_getirq_inv[Machine_R_assms, wp]:
+lemma dmo_getirq_inv[Arch_assms, wp]:
   "irq_state_independent_H P \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: getActiveIRQ_def doMachineOp_def split_def exec_gets
                    select_f_select[simplified liftM_def]
@@ -33,7 +33,7 @@ lemma getActiveIRQ_masked:
   apply (clarsimp simp: valid_irq_masks'_def)
   done
 
-lemma dmo_maskInterrupt[Machine_R_assms]:
+lemma dmo_maskInterrupt[Arch_assms]:
   "\<lbrace>\<lambda>s. P (ksMachineState_update (irq_masks_update (\<lambda>t. t (irq := m))) s)\<rbrace>
   doMachineOp (maskInterrupt m irq) \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
@@ -51,7 +51,7 @@ lemma dmo_maskInterrupt_True:
                    ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
   done
 
-lemma setIRQState_irq_states'[Machine_R_assms, wp]:
+lemma setIRQState_irq_states'[Arch_assms, wp]:
   "setIRQState state irq \<lbrace>valid_irq_states'\<rbrace>"
   apply (simp add: setIRQState_def setInterruptState_def getInterruptState_def)
   apply (wp dmo_maskInterrupt)
@@ -72,20 +72,20 @@ lemma sendSGI_underlying_memory[wp]:
   unfolding sendSGI_def
   by wp
 
-lemma doMachineOp_getActiveIRQ_non_kernel[Machine_R_assms, wp]:
+lemma doMachineOp_getActiveIRQ_non_kernel[Arch_assms, wp]:
   "\<lbrace>\<top>\<rbrace> doMachineOp (getActiveIRQ True)
    \<lbrace>\<lambda>rv s. \<forall>irq. rv = Some irq \<longrightarrow> irq \<in> non_kernel_IRQs \<longrightarrow> P irq s\<rbrace>"
   by (wpsimp simp: non_kernel_IRQs_def)
 
-lemma frameRegisters_def'[Machine_R_assms]:
+lemma frameRegisters_def'[Arch_assms]:
   "frameRegisters = MachineExports.frameRegisters"
   by (simp add: frameRegisters_def)
 
-lemma gpRegisters_def'[Machine_R_assms]:
+lemma gpRegisters_def'[Arch_assms]:
   "gpRegisters = MachineExports.gpRegisters"
   by (simp add: gpRegisters_def)
 
-lemma tlsBaseRegister_def'[Machine_R_assms]:
+lemma tlsBaseRegister_def'[Arch_assms]:
   "tlsBaseRegister = MachineExports.tlsBaseRegister"
   by (simp add: tlsBaseRegister_def)
 
@@ -98,12 +98,13 @@ crunch setIRQTrigger
   for (no_fail) no_fail[intro!, wp, simp]
   (ignore: setIRQTrigger_impl)
 
-end
+lemmas Machine_R_assms = Arch_assms (* extract accumulated assumptions *)
+
+end (* Arch *)
 
 global_interpretation Machine_R?: Machine_R
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact Machine_R_assms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact ARM.Machine_R_assms)?)
 qed
 
 end

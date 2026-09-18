@@ -109,7 +109,7 @@ fun begin_proof ((name, attrs): Attrib.binding, ml_block: Input.source) ctxt =
             val ((res_name, res), ctxt') =
                 Local_Theory.note (binding, thms) ctxt;
             val _ =
-                Proof_Display.print_results { interactive = true, pos = start_pos, proof_state = true } ctxt'
+                Proof_Display.print_results { interactive = true, pos = start_pos } ctxt'
                   (("theorem", res_name), [("", res)])
           in ctxt' end
     in

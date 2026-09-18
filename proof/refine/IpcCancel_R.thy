@@ -198,7 +198,7 @@ lemma cancelSignal_st_tcb_at':
   apply (wpsimp wp: setThreadState_st_tcb_at'_cases)
   done
 
-sublocale delete_one_conc_pre < delete_one: gen_typ_at_all_props' "cteDeleteOne slot"
+sublocale delete_one_conc_pre \<subseteq> delete_one: gen_typ_at_all_props' "cteDeleteOne slot"
   by typ_at_props'
 
 declare delete_remove1[simp]

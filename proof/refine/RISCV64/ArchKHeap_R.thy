@@ -11,7 +11,7 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems KHeap_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for KHeap_R locale *)
 
 lemmas typ_at_to_obj_at_arches
   = typ_at_to_obj_at'[where 'a=pte, simplified]
@@ -22,13 +22,13 @@ lemmas typ_at_to_obj_at_arches
 lemmas page_table_at_obj_at'
   = page_table_at'_def[unfolded typ_at_to_obj_at_arches]
 
-lemma koType_objBitsKO[KHeap_R_assms]:
+lemma koType_objBitsKO[Arch_assms]:
   "\<lbrakk>koTypeOf k' = koTypeOf k; koTypeOf k = SchedContextT \<longrightarrow> objBitsKO k' = objBitsKO k\<rbrakk>
    \<Longrightarrow> objBitsKO k' = objBitsKO k"
   by (auto simp: objBitsKO_def archObjSize_def
           split: kernel_object.splits arch_kernel_object.splits)
 
-lemma pspace_dom_update[KHeap_R_assms]:
+lemma pspace_dom_update[Arch_assms]:
   "\<lbrakk> ps ptr = Some x; a_type x = a_type v \<rbrakk> \<Longrightarrow> pspace_dom (ps(ptr \<mapsto> v)) = pspace_dom ps"
   apply (simp add: pspace_dom_def dom_fun_upd2 del: dom_fun_upd)
   apply (rule SUP_cong [OF refl])
@@ -36,7 +36,7 @@ lemma pspace_dom_update[KHeap_R_assms]:
   apply (simp add: obj_relation_cuts_def3)
   done
 
-lemma cte_wp_at_ctes_of[KHeap_R_assms]:
+lemma cte_wp_at_ctes_of[Arch_assms]:
   "cte_wp_at' P p s = (\<exists>cte. ctes_of s p = Some cte \<and> P cte)"
   supply diff_neg_mask[simp del]
   apply (simp add: cte_wp_at_cases' map_to_ctes_def Let_def
@@ -69,7 +69,7 @@ lemma cte_wp_at_ctes_of[KHeap_R_assms]:
                         word_bw_assocs)
   done
 
-lemma ctes_of_canonical[KHeap_R_assms]:
+lemma ctes_of_canonical[Arch_assms]:
   assumes canonical: "pspace_canonical' s"
   assumes ctes_of: "ctes_of s p = Some cte"
   shows "canonical_address p"
@@ -77,14 +77,14 @@ proof -
   from ctes_of have "cte_wp_at' ((=) cte) p s"
     by (simp add: cte_wp_at_ctes_of)
   thus ?thesis using canonical canonical_bit_def
-    by (fastforce simp: pspace_canonical'_def tcb_cte_cases_def field_simps objBits_defs take_bit_Suc
+    by (fastforce simp: pspace_canonical'_def tcb_cte_cases_def field_simps objBits_defs
                  split: if_splits
-                  elim: cte_wp_atE' canonical_address_add)
+                 elim!: cte_wp_atE' canonical_address_add)
 qed
 
-lemma valid_updateCapDataI[KHeap_R_assms]:
+lemma valid_updateCapDataI[Arch_assms]:
   "s \<turnstile>' c \<Longrightarrow> s \<turnstile>' updateCapData b x c"
-  apply (unfold global.updateCapData_def Let_def updateCapData_def)
+  apply (unfold global.updateCapData_def Let_def RISCV64_H.updateCapData_def)
   apply (cases c)
   apply (simp_all add: gen_isCap_defs valid_cap'_def global.capUntypedPtr_def gen_isCap_simps
                        capAligned_def word_size word_bits_def word_bw_assocs
@@ -223,9 +223,9 @@ lemma setObject_pspace_in_kernel_mappings'[wp]:
 crunch setEndpoint, setNotification
   for pspace_in_kernel_mappings'[wp]: "pspace_in_kernel_mappings'"
 
-declare setEndpoint_pspace_in_kernel_mappings'[KHeap_R_assms]
+declare setEndpoint_pspace_in_kernel_mappings'[Arch_assms]
 
-declare setNotification_pspace_in_kernel_mappings'[KHeap_R_assms]
+declare setNotification_pspace_in_kernel_mappings'[Arch_assms]
 
 (* interface lemma, but can't be done via locale *)
 lemma valid_global_refs_lift':
@@ -253,7 +253,7 @@ lemma valid_arch_state_lift':
    apply (wp typs hoare_vcg_all_lift hoare_vcg_ball_lift arch)+
   done
 
-lemma idle_is_global[KHeap_R_assms, intro!]:
+lemma idle_is_global[Arch_assms, intro!]:
   "ksIdleThread s \<in> global_refs' s"
   by (simp add: global_refs'_def)
 
@@ -266,7 +266,7 @@ lemma typ_at'_ksPSpace_exI:
          (rename_tac arch, case_tac arch; clarsimp)?)+
   done
 
-lemma st_tcb_at_coerce_abstract[KHeap_R_assms]:
+lemma st_tcb_at_coerce_abstract[Arch_assms]:
   assumes t: "st_tcb_at' P t c"
   assumes sr: "(a, c) \<in> state_relation"
   shows "st_tcb_at (\<lambda>st. \<exists>st'. thread_state_relation st st' \<and> P st') t a"
@@ -279,7 +279,7 @@ lemma st_tcb_at_coerce_abstract[KHeap_R_assms]:
                           RISCV64_A.arch_kernel_obj.split_asm)+
   done
 
-lemma st_tcb_at_coerce_concrete[KHeap_R_assms]:
+lemma st_tcb_at_coerce_concrete[Arch_assms]:
   assumes t: "st_tcb_at P t s"
   assumes sr: "(s, s') \<in> state_relation" "pspace_aligned s" "pspace_distinct s"
   shows "st_tcb_at' (\<lambda>st'. \<exists>st. thread_state_relation st st' \<and> P st) t s'"
@@ -310,27 +310,27 @@ lemma tcb_cases_related2:
   apply (simp_all add: tcb_cnode_index_def cte_level_bits_def cte_map_def field_simps to_bl_1)
   done
 
-lemma hyp_live_live[KHeap_R_assms]:
+lemma hyp_live_live[Arch_assms]:
   "hyp_live ko \<Longrightarrow> live ko"
   by (clarsimp simp: hyp_live_def)
 
-lemma hyp_live'_live'[KHeap_R_assms]:
+lemma hyp_live'_live'[Arch_assms]:
   "hyp_live' ko' \<Longrightarrow> live' ko'"
   by (clarsimp simp: hyp_live'_def)
 
-lemma hyp_live_hyp_live'[KHeap_R_assms]:
+lemma hyp_live_hyp_live'[Arch_assms]:
   "\<lbrakk>ksPSpace c t = Some ko'; hyp_live' ko'; tcbs_relation a c; aobjs_relation a c\<rbrakk>
    \<Longrightarrow> \<exists>ko. kheap a t = Some ko \<and> hyp_live ko"
   by (clarsimp simp: hyp_live'_def)
 
-lemma ex_nonz_cap_to_arch_obj_cross[KHeap_R_assms]:
+lemma ex_nonz_cap_to_arch_obj_cross[Arch_assms]:
   "\<lbrakk>ex_nonz_cap_to ptr s; pspace_relation (kheap s) (ksPSpace s');
     valid_objs s; pspace_aligned' s'; pspace_distinct' s';
     ksPSpace s' ptr = Some (KOArch ako); live' (KOArch ako)\<rbrakk>
    \<Longrightarrow> ex_nonz_cap_to' ptr s'"
   by (clarsimp simp: live'_def hyp_live'_def)
 
-lemma pspace_relation_cte_wp_atI'[KHeap_R_assms]:
+lemma pspace_relation_cte_wp_atI'[Arch_assms]:
   "\<lbrakk>pspace_relation (kheap s) (ksPSpace s'); cte_wp_at' ((=) cte) x s'; valid_objs s\<rbrakk>
    \<Longrightarrow> \<exists>c slot. cte_wp_at ((=) c) slot s \<and> cap_relation c (cteCap cte) \<and> x = cte_map slot"
   apply (simp add: cte_wp_at_cases')
@@ -351,12 +351,13 @@ lemma pspace_relation_cte_wp_atI'[KHeap_R_assms]:
   apply clarsimp
   done
 
-end
+lemmas KHeap_R_assms = Arch_assms (* extract accumulated assumptions *)
+
+end (* Arch *)
 
 interpretation KHeap_R?: KHeap_R
 proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact KHeap_R_assms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact RISCV64.KHeap_R_assms)?)
 qed
 
 context Arch begin arch_global_naming
@@ -380,7 +381,7 @@ sublocale setObject: typ_at_all_props' "setObject p v"
 sublocale doMachineOp: typ_at_all_props' "doMachineOp mop"
   by typ_at_props'
 
-end
+end (* Arch *)
 
 (* requalify interface lemmas which can't be locale assumptions due to free type variable *)
 arch_requalify_facts

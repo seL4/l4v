@@ -134,7 +134,7 @@ experiment begin
 
   text \<open>Domain and range theorems\<close>
   lemma "dom simple_test_map_100 = {0 .. 99}"
-    apply (simp add: atLeastAtMost_upto upto_rec1)
+    apply (simp add: upto_rec1 flip: set_upto)
     by (simp only: simple_test_map_100_domain set_simps)
 
   lemma
@@ -160,7 +160,7 @@ experiment begin
     by (simp add: simple_test_map_1000_def)
 
   lemma "dom simple_test_map_1000 = {0 .. 999}"
-    apply (simp add: atLeastAtMost_upto upto_rec1)
+    apply (simp add: upto_rec1 flip: set_upto)
     by (simp only: simple_test_map_1000_domain set_simps)
 
   lemma
@@ -219,7 +219,7 @@ experiment begin
 
   lemma "dom slow_map = {0 .. 99}"
     supply upto_rec1[simp]
-    apply (simp add: atLeastAtMost_upto)
+    apply (simp flip: set_upto)
     (* Domain for slow_map gets generated in reverse order *)
     using set_rev[where xs="[0 .. 99] :: int list", simplified]
 

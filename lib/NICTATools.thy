@@ -22,6 +22,7 @@ imports
   Locale_Abbrev
   Value_Type
   Named_Eta
+  Clear_Named_Theorems
 begin
 
 section "Detect unused meta-forall"

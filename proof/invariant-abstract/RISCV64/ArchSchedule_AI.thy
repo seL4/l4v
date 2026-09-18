@@ -12,9 +12,9 @@ context Arch begin arch_global_naming
 
 declare opt_mapE[rule del]
 
-named_theorems Schedule_AI_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Schedule_AI locale *)
 
-lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_assms]:
+lemma dmo_mapM_storeWord_0_invs[wp,Arch_assms]:
   "do_machine_op (mapM (\<lambda>p. storeWord p 0) S) \<lbrace>invs\<rbrace>"
   apply (simp add: dmo_mapM ef_storeWord)
   apply (rule mapM_UNIV_wp)
@@ -30,31 +30,31 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_assms]:
   apply (simp add: upto.simps cur_sc_tcb_def word_bits_def)
   done
 
-lemma arch_stt_invs [wp,Schedule_AI_assms]:
+lemma arch_stt_invs [wp,Arch_assms]:
   "\<lbrace>invs and ex_nonz_cap_to t\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: arch_switch_to_thread_def)
   apply wpsimp
   done
 
 crunch arch_switch_to_thread, arch_prepare_next_domain
-  for tcb_at[wp, Schedule_AI_assms]: "tcb_at t"
-  and sc_at[wp, Schedule_AI_assms]: "sc_at sc_ptr"
+  for tcb_at[wp, Arch_assms]: "tcb_at t"
+  and sc_at[wp, Arch_assms]: "sc_at sc_ptr"
 
-lemma arch_stt_st_tcb_at[Schedule_AI_assms]:
+lemma arch_stt_st_tcb_at[Arch_assms]:
   "arch_switch_to_thread t \<lbrace>st_tcb_at Q t'\<rbrace>"
   by (wpsimp simp: arch_switch_to_thread_def)
 
-lemma arch_stit_invs[wp, Schedule_AI_assms]:
+lemma arch_stit_invs[wp, Arch_assms]:
   "\<lbrace>invs\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>r. invs\<rbrace>"
   by (wpsimp simp: arch_switch_to_idle_thread_def)
 
-lemma arch_stit_tcb_at[wp, Schedule_AI_assms]:
+lemma arch_stit_tcb_at[wp, Arch_assms]:
   "\<lbrace>tcb_at t\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>r. tcb_at t\<rbrace>"
   apply (simp add: arch_switch_to_idle_thread_def )
   apply (wp tcb_at_typ_at)
   done
 
-lemma arch_stit_sc_at[wp, Schedule_AI_assms]:
+lemma arch_stit_sc_at[wp, Arch_assms]:
   "arch_switch_to_idle_thread \<lbrace>sc_at sc_ptr\<rbrace>"
   apply (simp add: arch_switch_to_idle_thread_def)
   apply wp
@@ -66,13 +66,13 @@ crunch set_vm_root
   and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
   (simp: crunch_simps wp: hoare_drop_imps)
 
-lemma arch_stit_activatable[wp, Schedule_AI_assms]:
+lemma arch_stit_activatable[wp, Arch_assms]:
   "\<lbrace>ct_in_state activatable\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>rv . ct_in_state activatable\<rbrace>"
   apply (clarsimp simp: arch_switch_to_idle_thread_def)
   apply (wpsimp simp: ct_in_state_def wp: ct_in_state_thread_state_lift)
   done
 
-lemma stit_activatable[Schedule_AI_assms]:
+lemma stit_activatable[Arch_assms]:
   "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv . ct_in_state activatable\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def)
   apply (wp | simp add: ct_in_state_def)+
@@ -84,30 +84,31 @@ crunch set_vm_root
   for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
   (simp: crunch_simps)
 
-lemma arch_stt_scheduler_action [wp, Schedule_AI_assms]:
+lemma arch_stt_scheduler_action [wp, Arch_assms]:
   "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
   by (wpsimp simp: arch_switch_to_thread_def)
 
 crunch arch_prepare_next_domain
-  for ct[wp, Schedule_AI_assms]: "\<lambda>s. P (cur_thread s)"
-  and activatable[wp, Schedule_AI_assms]: "ct_in_state activatable"
-  and st_tcb_at[wp, Schedule_AI_assms]: "\<lambda>s. P (st_tcb_at Q t s)"
-  and valid_idle[wp, Schedule_AI_assms]: valid_idle
-  and invs[wp, Schedule_AI_assms]: invs
-  and scheduler_action[wp, Schedule_AI_assms]: "\<lambda>s. P (scheduler_action s)"
+  for ct[wp, Arch_assms]: "\<lambda>s. P (cur_thread s)"
+  and activatable[wp, Arch_assms]: "ct_in_state activatable"
+  and st_tcb_at[wp, Arch_assms]: "\<lambda>s. P (st_tcb_at Q t s)"
+  and valid_idle[wp, Arch_assms]: valid_idle
+  and invs[wp, Arch_assms]: invs
+  and scheduler_action[wp, Arch_assms]: "\<lambda>s. P (scheduler_action s)"
   (wp: crunch_wps ct_in_state_thread_state_lift)
 
-lemma arch_stit_scheduler_action [wp, Schedule_AI_assms]:
+lemma arch_stit_scheduler_action [wp, Arch_assms]:
   "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
   by (wpsimp simp: arch_switch_to_idle_thread_def)
+
+lemmas Schedule_AI_assms = Arch_assms (* extract accumulated assumptions *)
 
 end
 
 interpretation Schedule_AI?: Schedule_AI
-  proof goal_cases
-  interpret Arch .
+proof goal_cases
   case 1 show ?case
-  by (intro_locales; unfold_locales; (fact Schedule_AI_assms)?)
-  qed
+    by (intro_locales; unfold_locales; (fact RISCV64.Schedule_AI_assms)?)
+qed
 
 end

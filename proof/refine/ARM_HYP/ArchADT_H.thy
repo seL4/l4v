@@ -13,14 +13,14 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems ADT_H_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for ADT_H locale *)
 
 definition vm_rights_of :: "vmrights \<Rightarrow> rights set" where
   "vm_rights_of x \<equiv> case x of VMKernelOnly \<Rightarrow> vm_kernel_only
                     | VMReadOnly \<Rightarrow> vm_read_only
                     | VMReadWrite \<Rightarrow> vm_read_write"
 
-lemma vm_rights_of_vmrights_map_id[ADT_H_assms, simp]:
+lemma vm_rights_of_vmrights_map_id[Arch_assms, simp]:
   "rs \<in> valid_vm_rights \<Longrightarrow> vm_rights_of (vmrights_map rs) = rs"
   by (auto simp: vm_rights_of_def vmrights_map_def valid_vm_rights_def
                  vm_read_write_def vm_read_only_def vm_kernel_only_def)
@@ -104,7 +104,7 @@ fun ArchCapabilityMap :: "arch_capability \<Rightarrow> cap" where
 | "ArchCapabilityMap (arch_capability.SGISignalCap irq target) =
     cap.ArchObjectCap (arch_cap.SGISignalCap (ucast irq) (ucast target))"
 
-lemma acap_relation_imp_ArchCapabilityMap[ADT_H_assms]:
+lemma acap_relation_imp_ArchCapabilityMap[Arch_assms]:
   "\<lbrakk>wellformed_acap ac; acap_relation ac ac'\<rbrakk> \<Longrightarrow> ArchCapabilityMap ac' = cap.ArchObjectCap ac"
   by (case_tac ac; simp add: wellformed_acap_simps ucast_down_ucast_id is_down)
 
@@ -114,7 +114,7 @@ primrec ArchFaultMap :: "Fault_H.arch_fault \<Rightarrow> ExceptionTypes_A.arch_
 | "ArchFaultMap (ARM_HYP_H.VGICMaintenance m) = ARM_HYP_A.VGICMaintenance m"
 | "ArchFaultMap (ARM_HYP_H.VPPIEvent irq) = ARM_HYP_A.VPPIEvent irq"
 
-lemma ArchFaultMap_arch_fault_map[ADT_H_assms]:
+lemma ArchFaultMap_arch_fault_map[Arch_assms]:
   "ArchFaultMap (arch_fault_map f) = f"
   by (cases f; simp add: ArchFaultMap_def arch_fault_map_def)
 
@@ -138,7 +138,7 @@ definition absArchState ::
         arm_asid_map = am, arm_current_vcpu = curvcpu, arm_gicvcpu_numlistregs = vnumlistregs,
         arm_kernel_vspace = kvspace, arm_us_global_pd = globalpd\<rparr>"
 
-lemma absArchState_correct[ADT_H_assms]:
+lemma absArchState_correct[Arch_assms]:
   "(s,s') \<in> state_relation \<Longrightarrow> absArchState (ksArchState s') (aobjs_of' s') = arch_state s"
   apply (prop_tac "(arch_state s, ksArchState s') \<in> arch_state_relation (aobjs_of' s')")
    apply (simp add: state_relation_def)
@@ -146,19 +146,20 @@ lemma absArchState_correct[ADT_H_assms]:
                   split: ARM_HYP_H.kernel_state.splits)
   done
 
+lemmas ADT_H_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 arch_requalify_consts vm_rights_of ArchCapabilityMap ArchFaultMap ArchTcbMap absArchState
 
 interpretation ADT_H?: ADT_H vm_rights_of ArchCapabilityMap ArchFaultMap ArchTcbMap absArchState
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact ADT_H_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact ARM_HYP.ADT_H_assms)?)?)
 qed
 
 context Arch begin arch_global_naming
 
-named_theorems ADT_H_2_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for ADT_H_2 locale *)
 
 (* Due to DataPage, current FPU owner and gsPPTypes this can't be made generic. In order to
    unify the type across architectures, we use the arch kernel state. *)
@@ -197,7 +198,7 @@ lemma unaligned_page_offsets_helper:
     apply (frule_tac i=n and k="0x1000" in word_mult_less_mono1, simp+)+
   done
 
-lemma absHeap_correct[ADT_H_2_assms]:
+lemma absHeap_correct[Arch_assms]:
   fixes s' :: kernel_state
   assumes pspace_aligned:  "pspace_aligned s"
   assumes pspace_distinct: "pspace_distinct s"
@@ -534,6 +535,8 @@ proof -
     done
 qed
 
+lemmas ADT_H_2_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 arch_requalify_consts absHeap
@@ -541,8 +544,7 @@ arch_requalify_consts absHeap
 interpretation ADT_H_2?: ADT_H_2 vm_rights_of ArchCapabilityMap ArchFaultMap ArchTcbMap absArchState
                                   absHeap
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact ADT_H_2_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact ARM_HYP.ADT_H_2_assms)?)?)
 qed
 
 end

@@ -11,19 +11,19 @@ begin
 
 context Arch begin arch_global_naming
 
-named_theorems Tcb_R_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Tcb_R locale *)
 
-lemma activateIdleThread_corres[Tcb_R_assms]:
+lemma activateIdleThread_corres[Arch_assms]:
  "corres dc (st_tcb_at idle t) (st_tcb_at' idle' t)
     (arch_activate_idle_thread t) (activateIdleThread t)"
   by (simp add: arch_activate_idle_thread_def activateIdleThread_def)
 
 crunch arch_post_modify_registers
-  for pspace_aligned[Tcb_R_assms, wp]: pspace_aligned
-  and pspace_distinct[Tcb_R_assms, wp]: pspace_distinct
+  for pspace_aligned[Arch_assms, wp]: pspace_aligned
+  and pspace_distinct[Arch_assms, wp]: pspace_distinct
   (wp: crunch_wps simp: crunch_simps)
 
-lemma asUser_postModifyRegisters_corres[Tcb_R_assms]:
+lemma asUser_postModifyRegisters_corres[Arch_assms]:
   "corres dc (tcb_at t and pspace_aligned and pspace_distinct) (tcb_at' t and tcb_at' ct)
      (arch_post_modify_registers ct t)
      (asUser t $ postModifyRegisters ct t)"
@@ -37,7 +37,7 @@ lemma asUser_postModifyRegisters_corres[Tcb_R_assms]:
 
 (* formulation of threadSet_state_hyp_refs_of' varies based on whether VCPU is present;
    use this as interface, but keep original lemma name for use outside of Arch *)
-lemma threadSet_state_hyp_refs_of'_interface[Tcb_R_assms]:
+lemma threadSet_state_hyp_refs_of'_interface[Arch_assms]:
   "\<lbrakk> \<And>tcb. tcb_hyp_refs' (tcbArch (F tcb)) = tcb_hyp_refs' (tcbArch tcb) \<rbrakk>
    \<Longrightarrow> threadSet F t \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> "
   by (wpsimp simp: threadSet_state_hyp_refs_of')
@@ -48,7 +48,7 @@ sublocale setPriority: typ_at_props' "setPriority t prio"
 sublocale setMCPriority: typ_at_props' "setMCPriority t prio"
   by typ_at_props'
 
-lemma sameObject_corres2[Tcb_R_assms]:
+lemma sameObject_corres2[Arch_assms]:
   "\<lbrakk> cap_relation c c'; cap_relation d d' \<rbrakk>
    \<Longrightarrow> same_object_as c d = sameObjectAs c' d'"
   apply (frule(1) same_region_as_relation[symmetric, where c=c and c'=d])
@@ -64,7 +64,7 @@ lemma sameObject_corres2[Tcb_R_assms]:
                          split: arch_cap.splits)
   by (fastforce simp: global.sameRegionAs_def isCap_simps split: arch_cap.splits)
 
-lemma untyped_derived_eq_from_sameObjectAs[Tcb_R_assms]:
+lemma untyped_derived_eq_from_sameObjectAs[Arch_assms]:
   "sameObjectAs cap cap2 \<Longrightarrow> untyped_derived_eq cap cap2"
   by (clarsimp simp: untyped_derived_eq_def sameObjectAs_def2 gen_isCap_Master)
 
@@ -77,8 +77,8 @@ lemma isValidVTableRootD:
                 option.split_asm)
 
 crunch prepare_thread_delete, arch_finalise_cap
-  for pspace_aligned[Tcb_R_assms, wp]: "pspace_aligned :: det_ext state \<Rightarrow> _"
-  and pspace_distinct[Tcb_R_assms, wp]: "pspace_distinct :: det_ext state \<Rightarrow> _"
+  for pspace_aligned[Arch_assms, wp]: "pspace_aligned :: det_ext state \<Rightarrow> _"
+  and pspace_distinct[Arch_assms, wp]: "pspace_distinct :: det_ext state \<Rightarrow> _"
   (simp: crunch_simps preemption_point_def wp: crunch_wps OR_choiceE_weak_wp)
 
 lemma is_valid_vtable_root_simp:
@@ -88,7 +88,7 @@ lemma is_valid_vtable_root_simp:
            split: cap.splits arch_cap.splits option.splits)
 
 (* FIXME: move after checked_insert_tcb_invs in ArchTcb_AI, and consolidate redundancy there *)
-lemma checked_insert_tcb_invs_gen[Tcb_R_assms]:
+lemma checked_insert_tcb_invs_gen[Arch_assms]:
   "\<lbrace>invs and cte_wp_at (\<lambda>c. c = cap.NullCap) (target, ref)
     and K (is_cnode_or_valid_arch new_cap) and valid_cap new_cap
     and tcb_cap_valid new_cap (target, ref)
@@ -103,40 +103,40 @@ lemma checked_insert_tcb_invs_gen[Tcb_R_assms]:
   apply (clarsimp dest!: is_cnode_or_valid_arch_cap_asid)
   done
 
-lemma is_valid_vtable_root_is_cnode_or_valid_arch[Tcb_R_assms]:
+lemma is_valid_vtable_root_is_cnode_or_valid_arch[Arch_assms]:
   "is_valid_vtable_root cap \<Longrightarrow> is_cnode_or_valid_arch cap"
   by (clarsimp simp: is_cnode_or_valid_arch_def is_valid_vtable_root_simp is_cap_simps
                      arch_cap_fun_lift_simps)
 
-lemma is_cnode_cap_is_cnode_or_valid_arch[Tcb_R_assms]:
+lemma is_cnode_cap_is_cnode_or_valid_arch[Arch_assms]:
   "is_cnode_cap cap \<Longrightarrow> is_cnode_or_valid_arch cap"
   by (clarsimp simp: is_cnode_or_valid_arch_def)
 
-lemma valid_ipc_buffer_cap_is_nondevice_page_cap[Tcb_R_assms]:
+lemma valid_ipc_buffer_cap_is_nondevice_page_cap[Arch_assms]:
   "\<lbrakk>valid_ipc_buffer_cap cap buf; is_arch_cap cap\<rbrakk> \<Longrightarrow> is_nondevice_page_cap cap"
   by (clarsimp simp: is_cap_simps valid_ipc_buffer_cap_def
                      is_nondevice_page_cap_def is_nondevice_page_cap_arch_def arch_cap_fun_lift_simps
                split: arch_cap.splits bool.splits)
 
-lemma cte_at_tcb_at_2p_cteSizeBits[Tcb_R_assms]:
+lemma cte_at_tcb_at_2p_cteSizeBits[Arch_assms]:
   "tcb_at' t s \<Longrightarrow> cte_at' (t + 2 ^ cteSizeBits) s"
   by (simp add: cte_at'_obj_at' tcb_cte_cases_def cteSizeBits_def)
 
 (* arch_capBadge may involve SMC caps on some architectures, but not page tables *)
-lemma isValidVTableRootD_arch[Tcb_R_assms]:
+lemma isValidVTableRootD_arch[Arch_assms]:
   "isValidVTableRoot cap \<Longrightarrow> isArchObjectCap cap \<and> arch_capBadge (capCap cap) = None"
   by (drule isValidVTableRootD; clarsimp simp: arch_capBadge_def isCap_simps)
 
 (* FIXME FPU: when the FPU being enabled is properly configurable for the proofs then this shouldn't
               need to unfold config_HAVE_FPU. *)
-lemma postSetFlags_corres[Tcb_R_assms, corres]:
+lemma postSetFlags_corres[Arch_assms, corres]:
   "flags = word_to_tcb_flags flags' \<Longrightarrow>
    corres dc (cur_tcb and pspace_aligned and pspace_distinct and valid_cur_fpu) \<top>
      (arch_post_set_flags  t flags) (postSetFlags t flags')"
   unfolding arch_post_set_flags_def postSetFlags_def
   by (corres simp: Kernel_Config.config_HAVE_FPU_def cur_tcb_def)
 
-lemma postSetFlags_invs'[Tcb_R_assms, wp]:
+lemma postSetFlags_invs'[Arch_assms, wp]:
   "postSetFlags t flags \<lbrace>invs'\<rbrace>"
   unfolding postSetFlags_def
   by wpsimp
@@ -147,11 +147,11 @@ lemma copyregsets_map_only[simp]:
 
 (* there are no extra registers on any architecture so far, and while it is theoretically possible
    in the design spec, the abstract invariant proof assumes this *)
-lemma decodeTransfer_def'[Tcb_R_assms]:
+lemma decodeTransfer_def'[Arch_assms]:
   "decodeTransfer w = returnOk (copyregsets_map ArchDefaultExtraRegisters)"
   by (simp add: decodeTransfer_def)
 
-lemma checkValidIPCBuffer_corres[Tcb_R_assms]:
+lemma checkValidIPCBuffer_corres[Arch_assms]:
   "cap_relation cap cap' \<Longrightarrow>
    corres (ser \<oplus> dc) \<top> \<top>
      (check_valid_ipc_buffer vptr cap)
@@ -168,7 +168,7 @@ lemma checkValidIPCBuffer_corres[Tcb_R_assms]:
   apply (auto simp add: returnOk_def)
   done
 
-lemma checkValidIPCBuffer_ArchObject_wp[Tcb_R_assms]:
+lemma checkValidIPCBuffer_ArchObject_wp[Arch_assms]:
   "\<lbrace>\<lambda>s. isArchObjectCap cap \<and> capBadge cap = None \<and> is_aligned p msg_align_bits \<longrightarrow> P s\<rbrace>
    checkValidIPCBuffer p cap
    \<lbrace>\<lambda>rv s. P s\<rbrace>,-"
@@ -182,27 +182,28 @@ lemma checkValidIPCBuffer_ArchObject_wp[Tcb_R_assms]:
   done
 
 crunch checkValidIPCBuffer
-  for inv[Tcb_R_assms, wp]: "P"
+  for inv[Arch_assms, wp]: "P"
   (simp: crunch_simps)
 
-lemma isValidVTableRoot_eq[Tcb_R_assms]:
+lemma isValidVTableRoot_eq[Arch_assms]:
   "cap_relation cap cap' \<Longrightarrow> isValidVTableRoot cap' = is_valid_vtable_root cap"
   apply (cases cap; simp add: isValidVTableRoot_def is_valid_vtable_root_simp)
   apply (rename_tac acap, case_tac acap; simp)
   apply (auto split: option.split)
   done
 
+lemmas Tcb_R_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 interpretation Tcb_R?: Tcb_R
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Tcb_R_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact ARM.Tcb_R_assms)?)?)
 qed
 
 context Arch begin arch_global_naming
 
-named_theorems Tcb_R_2_assms
+clear_named_theorems Arch_assms (* accumulate assumptions for Tcb_R_2 locale *)
 
 lemma checkCapAt_cteInsert_corres':
   "cap_relation new_cap newCap \<Longrightarrow>
@@ -256,7 +257,7 @@ lemma checkCapAt_cteInsert_corres':
   apply fastforce
   done
 
-lemma checkCapAt_cteInsert_corres[Tcb_R_2_assms]:
+lemma checkCapAt_cteInsert_corres[Arch_assms]:
   "cap_relation new_cap newCap \<Longrightarrow>
    corres dc (einvs and cte_wp_at (\<lambda>c. c = cap.NullCap) (target, ref)
                and cte_at slot and K (is_cnode_or_valid_arch new_cap)
@@ -277,12 +278,13 @@ lemma checkCapAt_cteInsert_corres[Tcb_R_2_assms]:
   apply fastforce
   done
 
+lemmas Tcb_R_2_assms = Arch_assms (* extract accumulated assumptions *)
+
 end (* Arch *)
 
 interpretation Tcb_R_2?: Tcb_R_2
 proof goal_cases
-  interpret Arch  .
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact Tcb_R_2_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact ARM.Tcb_R_2_assms)?)?)
 qed
 
 end
