@@ -110,7 +110,7 @@ context Arch begin arch_global_naming
 clear_named_theorems Arch_assms (* accumulate assumptions for Invariants_H_cte_ats locale *)
 
 (* FIXME arch-split: for proofs which require exact offsets lining up instead of cteSizeBits *)
-(* 0 case already covered by tcb_cte_cases_simps *)
+(* 0 case already covered by tcb_cte_cases_simps' *)
 lemma raw_tcb_cte_cases_simps:
   "tcb_cte_cases 16 = Some (tcbVTable, tcbVTable_update)"
   "tcb_cte_cases 32 = Some (tcbReply, tcbReply_update)"

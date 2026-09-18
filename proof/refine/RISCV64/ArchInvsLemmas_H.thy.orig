@@ -83,45 +83,6 @@ lemma pspace_in_kernel_mappings'_pspaceI[Arch_assms]:
   unfolding pspace_in_kernel_mappings'_def
   by simp
 
-lemma canonical_address_mask_eq:
-  "canonical_address p = (p && mask (Suc canonical_bit) = p)"
-  by (simp add: canonical_address_def canonical_address_of_def ucast_ucast_mask canonical_bit_def)
-
-lemma canonical_address_and:
-  "canonical_address p \<Longrightarrow> canonical_address (p && b)"
-  by (simp add: canonical_address_range word_and_le)
-
-lemma canonical_address_add:
-  assumes "is_aligned p n"
-  assumes "f < 2 ^ n"
-  assumes "n \<le> canonical_bit"
-  assumes "canonical_address p"
-  shows "canonical_address (p + f)"
-proof -
-  from `f < 2 ^ n`
-  have "f \<le> mask n"
-    by (simp add: mask_plus_1 plus_one_helper)
-
-  from `canonical_address p`
-  have "p && mask (Suc canonical_bit) = p"
-    by (simp add: canonical_address_mask_eq)
-  moreover
-  from `f \<le> mask n` `is_aligned p n`
-  have "p + f = p || f"
-    by (simp add: word_and_or_mask_aligned)
-  moreover
-  from `f \<le> mask n` `n \<le> canonical_bit`
-  have "f \<le> mask (Suc canonical_bit)"
-    using le_smaller_mask by fastforce
-  hence "f && mask (Suc canonical_bit) = f"
-    by (simp add: le_mask_imp_and_mask)
-  ultimately
-  have "(p + f) && mask (Suc canonical_bit) = p + f"
-    by (simp add: word_ao_dist)
-  thus ?thesis
-    by (simp add: canonical_address_mask_eq)
-qed
-
 lemma range_cover_canonical_address[Arch_assms]:
   "\<lbrakk> range_cover ptr sz us n ; p < n ;
      canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
@@ -145,7 +106,7 @@ end (* Arch *)
 
 global_interpretation Invariants_H_pspaceI?: Invariants_H_pspaceI
   proof goal_cases
-  case 1 show ?case by (intro_locales; (unfold_locales; (fact AARCH64.Invariants_H_pspaceI_assms)?)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; (fact RISCV64.Invariants_H_pspaceI_assms)?)?)
   qed
 
 context Arch begin arch_global_naming
@@ -153,7 +114,7 @@ context Arch begin arch_global_naming
 clear_named_theorems Arch_assms (* accumulate assumptions for Invariants_H_cte_ats locale *)
 
 (* FIXME arch-split: for proofs which require exact offsets lining up instead of cteSizeBits *)
-(* 0 case already covered by tcb_cte_cases_simps' *)
+(* 0 case already covered by tcb_cte_cases_simps *)
 lemma raw_tcb_cte_cases_simps:
   "tcb_cte_cases 32 = Some (tcbVTable, tcbVTable_update)"
   "tcb_cte_cases 64 = Some (tcbReply, tcbReply_update)"
@@ -227,7 +188,7 @@ lemma cte_wp_at_cases'[Arch_assms]:
    apply (erule is_aligned_no_wrap')
     apply (simp add: word_bits_conv)
    apply (simp add: tcb_cte_cases_def cteSizeBits_def split: if_split_asm)
-  apply (subgoal_tac "(p - n) + n \<le> (p - n) + 0x7FF")
+  apply (subgoal_tac "(p - n) + n \<le> (p - n) + 0x3FF")
    apply (simp add: field_simps)
   apply (rule word_plus_mono_right)
    apply (simp add: tcb_cte_cases_def cteSizeBits_def split: if_split_asm)
@@ -284,7 +245,7 @@ end (* Arch *)
 
 global_interpretation Invariants_H_cte_ats?: Invariants_H_cte_ats
   proof goal_cases
-  case 1 show ?case by (intro_locales; (unfold_locales; fact AARCH64.Invariants_H_cte_ats_assms)?)
+  case 1 show ?case by (intro_locales; (unfold_locales; fact RISCV64.Invariants_H_cte_ats_assms)?)
   qed
 
 
@@ -294,7 +255,7 @@ context Arch_pspace_update_eq'
 begin
 
 lemma page_table_at_update' [iff]:
-  "page_table_at' pt_t p (f s) = page_table_at' pt_t p s"
+  "page_table_at' p (f s) = page_table_at' p s"
   by (simp add: page_table_at'_def)
 
 lemma frame_at_update' [iff]:
@@ -303,7 +264,11 @@ lemma frame_at_update' [iff]:
 
 lemma pspace_in_kernel_mappings_update' [iff]:
   "pspace_in_kernel_mappings' (f s) = pspace_in_kernel_mappings' s"
-  by simp
+  by (simp add: pspace pspace_in_kernel_mappings'_def)
+
+lemma valid_global_pts_update' [iff]:
+  "valid_global_pts' pts (f s) = valid_global_pts' pts s"
+  by (simp add: valid_global_pts'_def)
 
 lemma valid_arch_tcb_update'[iff]:
   "valid_arch_tcb' atcb (f s) = valid_arch_tcb' atcb s"
@@ -333,52 +298,60 @@ lemma priority_mask_wordRadix_size:
   "unat ((w::priority) && mask wordRadix) < wordBits"
   by (rule mask_wordRadix_less_wordBits, simp add: wordRadix_def word_size)
 
-lemma tcb_hyp_refs_of'_simps[simp]:
-  "tcb_hyp_refs' atcb = tcb_vcpu_refs' (atcbVCPUPtr atcb)"
-  by (auto simp: tcb_hyp_refs'_def)
+lemma canonical_address_neq_mask:
+  "\<lbrakk> canonical_address ptr ; sz \<le> maxUntypedSizeBits \<rbrakk>
+   \<Longrightarrow> canonical_address (ptr && ~~ mask sz)"
+  by (simp add: canonical_address_sign_extended untypedBits_defs sign_extended_neq_mask
+                canonical_bit_def)
 
-lemma tcb_vcpu_refs_of'_simps[simp]:
-  "tcb_vcpu_refs' (Some vc) = {(vc, TCBHypRef)}"
-  "tcb_vcpu_refs' None = {}"
-  by (auto simp: tcb_vcpu_refs'_def)
+lemma in_kernel_mappings_add:
+  assumes "is_aligned p n"
+  assumes "f < 2 ^ n"
+  assumes "p \<in> kernel_mappings"
+  shows "p + f \<in> kernel_mappings"
+  using assms
+  unfolding kernel_mappings_def pptr_base_def
+  using is_aligned_no_wrap' word_le_plus_either by blast
 
-lemma vcpu_tcb_refs_of'_simps[simp]:
-  "vcpu_tcb_refs' (Some tcb) = {(tcb, HypTCBRef)}"
-  "vcpu_tcb_refs' None = {}"
-  by (auto simp: vcpu_tcb_refs'_def)
-
-lemma refs_of_a'_simps[simp]:
-  "refs_of_a' (KOASIDPool p) = {}"
-  "refs_of_a' (KOPTE pt) = {}"
-  "refs_of_a' (KOVCPU v) = vcpu_tcb_refs' (vcpuTCBPtr v)"
- by (auto simp: refs_of_a'_def)
-
-lemma vcpu_at_is_vcpu':
-  "vcpu_at' v = ko_wp_at' is_vcpu' v"
-  apply (rule ext)
-  apply (clarsimp simp: typ_at'_def is_vcpu'_def ko_wp_at'_def)
-  apply (rule iffI; clarsimp?)
-  apply (case_tac ko; simp; rename_tac ako; case_tac ako; simp)
+lemma range_cover_in_kernel_mappings:
+  "\<lbrakk> range_cover ptr sz us n ; p < n ;
+     (ptr && ~~ mask sz) \<in> kernel_mappings ; sz \<le> maxUntypedSizeBits \<rbrakk>
+   \<Longrightarrow> (ptr + of_nat p * 2 ^ us) \<in> kernel_mappings"
+  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
+  apply (subst add.commute)
+  apply (subst add.assoc)
+  apply (rule in_kernel_mappings_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
+  apply (drule (1) range_cover.range_cover_compare)
+  apply (clarsimp simp: word_less_nat_alt)
+  apply unat_arith
   done
 
-lemma hyp_refs_of_rev':
- "(x, TCBHypRef) \<in> hyp_refs_of' ko =
-    (\<exists>tcb. ko = KOTCB tcb \<and> (atcbVCPUPtr (tcbArch tcb) = Some x))"
- "(x, HypTCBRef) \<in> hyp_refs_of' ko =
-    (\<exists>v. ko = KOArch (KOVCPU v) \<and> (vcpuTCBPtr v = Some x))"
-  by (auto simp: hyp_refs_of'_def tcb_hyp_refs'_def tcb_vcpu_refs'_def
-                    vcpu_tcb_refs'_def refs_of_a'_def
-              split: kernel_object.splits arch_kernel_object.splits option.split)
+lemma in_kernel_mappings_neq_mask:
+  "\<lbrakk> (ptr :: machine_word) \<in> kernel_mappings ; sz \<le> 38 \<rbrakk>
+   \<Longrightarrow> ptr && ~~ mask sz \<in> kernel_mappings"
+  apply (clarsimp simp: kernel_mappings_def untypedBits_defs pptr_base_def pptrBase_def
+                        canonical_bit_def)
+  by (word_bitwise, clarsimp simp: neg_mask_test_bit word_size)
+
+lemma invs_pspace_in_kernel_mappings'[elim!]:
+  "invs' s \<Longrightarrow> pspace_in_kernel_mappings' s"
+  by (fastforce del: invs_valid_pspace' dest!: invs_valid_pspace' simp: valid_pspace'_def)
+
+lemma valid_pspace_in_kernel_mappings'[elim!]:
+  "valid_pspace' s \<Longrightarrow> pspace_in_kernel_mappings' s"
+  by (clarsimp simp: valid_pspace'_def)
+
+lemma tcb_hyp_refs_of'_simps[simp]:
+  "tcb_hyp_refs' atcb = {}"
+  by (auto simp: tcb_hyp_refs'_def)
+
+lemma refs_of_a'_simps[simp]:
+  "refs_of_a' ako = {}"
+  by auto
 
 lemma hyp_refs_of_hyp_live':
   "hyp_refs_of' ko \<noteq> {} \<Longrightarrow> hyp_live' ko"
-  apply (cases ko, simp_all)
-   apply (rename_tac tcb_ext)
-   apply (simp add: tcb_hyp_refs'_def hyp_live'_def)
-   apply (case_tac "atcbVCPUPtr (tcbArch tcb_ext)"; clarsimp)
-  apply (clarsimp simp: hyp_live'_def arch_live'_def refs_of_a'_def vcpu_tcb_refs'_def
-                  split: arch_kernel_object.splits option.splits)
-  done
+  by (cases ko, simp_all)
 
 (* interface lemma *)
 lemma hyp_refs_of_live':
@@ -387,21 +360,19 @@ lemma hyp_refs_of_live':
 
 lemma is_physical_cases:
  "(capClass cap = PhysicalClass) =
-  (case cap of NullCap                          \<Rightarrow> False
-             | DomainCap                        \<Rightarrow> False
-             | IRQControlCap                    \<Rightarrow> False
-             | IRQHandlerCap irq                \<Rightarrow> False
-             | ReplyCap r m cr                  \<Rightarrow> False
-             | ArchObjectCap ASIDControlCap     \<Rightarrow> False
-             | ArchObjectCap (SGISignalCap _ _) \<Rightarrow> False
-             | ArchObjectCap (SMCCap _)         \<Rightarrow> False
-             | _                                \<Rightarrow> True)"
+  (case cap of NullCap                         \<Rightarrow> False
+             | DomainCap                       \<Rightarrow> False
+             | IRQControlCap                   \<Rightarrow> False
+             | IRQHandlerCap irq               \<Rightarrow> False
+             | ReplyCap r m cr                 \<Rightarrow> False
+             | ArchObjectCap ASIDControlCap    \<Rightarrow> False
+             | _                               \<Rightarrow> True)"
   by (simp split: capability.splits arch_capability.splits zombie_type.splits)
 
 clear_named_theorems Arch_assms (* accumulate assumptions for Invariants_H_typ_at_lifts locale *)
 
 lemma page_table_at'_typ_at_lift_strong:
-  "(\<And>p. f \<lbrace>\<lambda>s. P (typ_at' (ArchT PTET) p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (page_table_at' pt_t p s)\<rbrace>"
+  "(\<And>p. f \<lbrace>\<lambda>s. P (typ_at' (ArchT PTET) p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (page_table_at' p s)\<rbrace>"
   unfolding page_table_at'_def
   apply (rule bool_to_bool_cases[where f=P]; clarsimp)
   apply (wpsimp wp: hoare_vcg_const_Ball_lift hoare_vcg_imp_lift
@@ -422,17 +393,10 @@ lemma asid_pool_at'_typ_at_lift_strong:
   "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (asid_pool_at' p s)\<rbrace>"
   by assumption
 
-lemma vcpu_at'_typ_at_lift_strong:
-  "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (vcpu_at' p s)\<rbrace>"
-  by assumption
-
 lemma valid_arch_tcb'_typ_at_lift_strong[Arch_assms]:
-  "(\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (valid_arch_tcb' arch_tcb s)\<rbrace>"
-  unfolding valid_arch_tcb'_def
-  apply (rule bool_to_bool_cases[where f=P]; clarsimp)
-  apply (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_all_lift hoare_vcg_ex_lift
-         | assumption)+
-  done
+  assumes "\<And>T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (valid_arch_tcb' arch_tcb s)\<rbrace>"
+  by (clarsimp simp: valid_arch_tcb'_def, wp)
 
 lemma valid_arch_cap'_typ_at_lift[Arch_assms]:
   assumes P: "\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>"
@@ -450,7 +414,7 @@ end (* Arch *)
 
 global_interpretation Invariants_H_typ_at_lifts?: Invariants_H_typ_at_lifts
 proof goal_cases
-  case 1 show ?case by (intro_locales; unfold_locales; (fact AARCH64.Invariants_H_typ_at_lifts_assms)?)
+  case 1 show ?case by (intro_locales; unfold_locales; (fact RISCV64.Invariants_H_typ_at_lifts_assms)?)
 qed
 
 context Arch begin arch_global_naming
@@ -460,7 +424,6 @@ lemmas typ_at_lifts_strong =
   page_table_at'_typ_at_lift_strong
   frame_at'_typ_at_lift_strong
   asid_pool_at'_typ_at_lift_strong
-  vcpu_at'_typ_at_lift_strong
 
 context begin
 
@@ -503,13 +466,8 @@ end (* typ_at_props' *)
 
 context Arch begin arch_global_naming
 
-lemma valid_arch_state_armKSGlobalUserVSpace:
-  "valid_arch_state' s \<Longrightarrow> canonical_address (addrFromKPPtr (armKSGlobalUserVSpace (ksArchState s)))"
-  by (simp add: valid_arch_state'_def)
-
 lemma page_table_pte_atI':
-  "\<lbrakk> page_table_at' pt_t p s; i \<le> mask (ptTranslationBits pt_t) \<rbrakk> \<Longrightarrow>
-   pte_at' (p + (i << pte_bits)) s"
+  "page_table_at' p s \<Longrightarrow> pte_at' (p + (ucast (x::pt_index) << pte_bits)) s"
   by (simp add: page_table_at'_def)
 
 lemmas bit_simps' = pteBits_def asidHighBits_def asidPoolBits_def asid_low_bits_def
@@ -525,7 +483,6 @@ lemma objBitsT_simps:
   "objBitsT KernelDataT = pageBits"
   "objBitsT (ArchT PTET) = word_size_bits"
   "objBitsT (ArchT ASIDPoolT) = pageBits"
-  "objBitsT (ArchT VCPUT) = vcpuBits"
   unfolding objBitsT_def makeObjectT_def archMakeObjectT_def
   by (simp add: makeObject_simps objBits_simps bit_simps')+
 
@@ -540,47 +497,6 @@ lemma objBitsT_koTypeOf:
   apply (case_tac arch_kernel_object; simp add: archObjSize_def objBitsT_simps bit_simps')
   done
 
-lemma valid_arch_badges_implies_unordered:
-  "valid_arch_badges cap cap' node' \<Longrightarrow> unordered_valid_arch_badges cap cap' node'"
-  by (simp add: valid_arch_badges_def unordered_valid_arch_badges_def)
-
-end
-
-qualify AARCH64_H (in Arch)
-
-(*
-  Then idea with this class is to be able to generically constrain
-  predicates over pspace_storable values to are not of type VCPU,
-  this is useful for invariants such as obj_at' that are trivially
-  true (sort of) if the predicate and the function (in the Hoare triple)
-  manipulate different types of objects
-*)
-
-class no_vcpu = pspace_storable +
-  assumes not_vcpu: "koType TYPE('a) \<noteq> ArchT AARCH64_H.VCPUT"
-
-instance tcb              :: no_vcpu by intro_classes auto
-instance endpoint         :: no_vcpu by intro_classes auto
-instance notification     :: no_vcpu by intro_classes auto
-instance cte              :: no_vcpu by intro_classes auto
-instance user_data        :: no_vcpu by intro_classes auto
-instance user_data_device :: no_vcpu by intro_classes auto
-
-end_qualify
-
-(* FIXME arch-split: koType_asidpool and koType_pte are somehow [simp] even outside Arch on AARCH64
-   due to how pre_storable instantiation is done *)
-
-instantiation AARCH64_H.asidpool :: no_vcpu
-begin
-instance by intro_classes
-            (auto simp: AARCH64_H.arch_kernel_object_type.distinct)
-end
-
-instantiation AARCH64_H.pte :: no_vcpu
-begin
-instance by intro_classes
-            (auto simp: AARCH64_H.arch_kernel_object_type.distinct)
 end
 
 end
