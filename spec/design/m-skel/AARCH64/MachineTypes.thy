@@ -112,7 +112,7 @@ context Arch begin arch_global_naming
   PT_Type \
   VMFaultType HypFaultType vmFaultTypeFSR VMPageSize pageBits ptTranslationBits \
   pageBitsForSize \
-  hcrCommon hcrTWE hcrTWI \
+  hcrCommon hcrTWE hcrTWI hcrTERR \
   hcrVCPU hcrNative vgicHCREN sctlrDefault sctlrEL1VM actlrDefault gicVCPUMaxNumLR \
   vcpuBits
 

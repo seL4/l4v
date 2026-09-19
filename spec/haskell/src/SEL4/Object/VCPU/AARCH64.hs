@@ -405,7 +405,7 @@ vcpuDisable vcpuPtrOpt = do
 armvVCPUSave :: PPtr VCPU -> Bool -> Kernel ()
 armvVCPUSave vcpuPtr active = do
     when active $ vcpuSaveReg vcpuPtr VCPURegCPACR
-    vcpuSaveRegRange vcpuPtr VCPURegTTBR0 VCPURegSPSR_EL1
+    vcpuSaveRegRange vcpuPtr VCPURegTTBR0 VCPURegVDISR_EL2
 
 vcpuSave :: Maybe (PPtr VCPU, Bool) -> Kernel ()
 vcpuSave (Just (vcpuPtr, active)) = do
@@ -453,7 +453,7 @@ vcpuRestore vcpuPtr = do
         mapM_ (uncurry set_gic_vcpu_ctrl_lr) (map (\i -> (fromIntegral i, (vgicLR vgic) ! i)) gicIndices)
 
     -- restore banked VCPU registers except SCTLR (that's in VCPUEnable)
-    vcpuRestoreRegRange vcpuPtr VCPURegTTBR0 VCPURegSPSR_EL1
+    vcpuRestoreRegRange vcpuPtr VCPURegTTBR0 VCPURegVDISR_EL2
 
     vcpuEnable vcpuPtr
 
