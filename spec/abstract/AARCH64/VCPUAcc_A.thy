@@ -189,7 +189,7 @@ definition vcpu_save :: "(obj_ref \<times> bool) option \<Rightarrow> (unit,'z::
 
           \<comment> \<open>armvVCPUSave\<close>
           when active $ vcpu_save_reg vr VCPURegCPACR;
-          vcpu_save_reg_range vr VCPURegTTBR0 VCPURegSPSR_EL1
+          vcpu_save_reg_range vr VCPURegTTBR0 VCPURegVDISR_EL2
        od
      | _ \<Rightarrow> fail"
 
@@ -209,7 +209,7 @@ definition vcpu_restore :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" 
               (map (\<lambda>i. (i, (vgic_lr vgic) i)) gicIndices)
      od;
     \<comment> \<open>restore banked VCPU registers except those covered by VCPUEnable\<close>
-     vcpu_restore_reg_range vr VCPURegTTBR0 VCPURegSPSR_EL1;
+     vcpu_restore_reg_range vr VCPURegTTBR0 VCPURegVDISR_EL2;
      vcpu_enable vr
   od"
 

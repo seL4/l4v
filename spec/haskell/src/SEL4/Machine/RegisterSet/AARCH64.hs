@@ -90,6 +90,8 @@ data VCPUReg =
     | VCPURegSP_EL1
     | VCPURegELR_EL1
     | VCPURegSPSR_EL1
+    | VCPURegCSSELR_EL1
+    | VCPURegVDISR_EL2
     | VCPURegCNTV_CTL
     | VCPURegCNTV_CVAL
     | VCPURegCNTVOFF
