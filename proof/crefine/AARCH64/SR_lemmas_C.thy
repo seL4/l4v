@@ -2383,6 +2383,8 @@ lemmas seL4_VCPUReg_defs =
   seL4_VCPUReg_SP_EL1_def
   seL4_VCPUReg_ELR_EL1_def
   seL4_VCPUReg_SPSR_EL1_def
+  seL4_VCPUReg_CSSELR_EL1_def
+  seL4_VCPUReg_VDISR_EL2_def
   seL4_VCPURegSaveRange_end_def
   seL4_VCPUReg_CNTV_CTL_def
   seL4_VCPUReg_CNTV_CVAL_def

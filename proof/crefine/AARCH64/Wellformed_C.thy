@@ -631,13 +631,13 @@ lemma ptrFromPAddr_mask_cacheLineBits[simp]:
 
 text \<open>hcrVCPU interface\<close>
 
-arch_requalify_facts hcrCommon_def hcrTWE_def hcrTWI_def
+arch_requalify_facts hcrCommon_def hcrTWE_def hcrTWI_def hcrTERR_def
 
 (* hcrVCPU can have two values, based on configuration. We only need need the numerical value
    to match with C, no other computations depend on it *)
 schematic_goal hcrVCPU_val:
   "hcrVCPU = ?val"
-  by (simp add: hcrVCPU_def hcrCommon_def hcrTWE_def hcrTWI_def
+  by (simp add: hcrVCPU_def hcrCommon_def hcrTWE_def hcrTWI_def hcrTERR_def
                 Kernel_Config.config_DISABLE_WFI_WFE_TRAPS_def)
 
 

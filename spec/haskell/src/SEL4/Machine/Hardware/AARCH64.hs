@@ -461,10 +461,13 @@ hcrTWE = bit 14
 hcrTWI :: Word
 hcrTWI = bit 13
 
+hcrTERR :: Word
+hcrTERR = bit 36
+
 hcrVCPU :: Word -- HCR_VCPU
 hcrVCPU = if config_DISABLE_WFI_WFE_TRAPS
-          then hcrCommon
-          else hcrCommon .|. hcrTWE .|. hcrTWI
+          then hcrCommon .|. hcrTERR
+          else hcrCommon .|. hcrTERR .|. hcrTWE .|. hcrTWI
 
 hcrNative = (0x8E28103B :: Word) -- HCR_NATIVE
 sctlrEL1VM = (0x34d58820 :: Word) -- SCTLR_EL1_VM
