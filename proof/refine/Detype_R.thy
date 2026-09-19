@@ -2048,7 +2048,7 @@ lemma locateCTE_ko_wp_at':
   "\<lbrace>cte_at' src and pspace_distinct' \<rbrace>
    locateCTE src
    \<lbrace>\<lambda>rv. ko_wp_at' \<top> rv \<rbrace>"
-  apply (clarsimp simp:locateCTE_def split_def)
+  apply (clarsimp simp: locateCTE_def split_def)
   apply wp
   apply (clarsimp simp: cte_wp_at'_def getObject_def gets_def split_def get_def bind_def return_def
                         ko_wp_at'_def lookupAround2_char1 assert_opt_def)

@@ -118,7 +118,7 @@ lemma ctes_of_ko_arch[Arch_assms]:
        apply (rename_tac arch_kernel_object)
        apply (case_tac arch_kernel_object;
               simp add: archObjSize_def asid_low_bits_def mask_def add_ac pageBits_def
-                       word_size_bits_def)
+                        word_size_bits_def)
       apply simp
      \<comment> \<open>Page case\<close>
      apply (rename_tac word vmrights vmpage_size option)
@@ -130,13 +130,13 @@ lemma ctes_of_ko_arch[Arch_assms]:
      apply (intro exI conjI,assumption)
      apply (clarsimp simp: obj_range'_def)
      apply (case_tac ko, simp_all split: if_splits,
-             (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n mask_def)+)[1]
+            (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n mask_def)+)[1]
     \<comment> \<open>PT case\<close>
     apply (rename_tac word option)
     apply (clarsimp simp: valid_cap'_def obj_at'_def pageBits_def pteBits_def asid_bits_def
                           page_table_at'_def typ_at'_def ko_wp_at'_def)
-    apply (frule_tac ptr=ptr and sz=2 in
-                     nasty_range[where 'a=32 and bz="ptBits", folded word_bits_def,
+    apply (frule_tac ptr=ptr and sz=2
+                  in nasty_range[where 'a=32 and bz="ptBits", folded word_bits_def,
                                  simplified pageBits_def word_bits_def, simplified,rotated])
        apply (clarsimp simp add: ptBits_def pteBits_def)+
     apply (drule_tac x=idx in spec)
@@ -151,8 +151,8 @@ lemma ctes_of_ko_arch[Arch_assms]:
    \<comment> \<open>PD case\<close>
    apply (clarsimp simp: valid_cap'_def obj_at'_def pageBits_def pdBits_def
                          page_directory_at'_def typ_at'_def ko_wp_at'_def)
-   apply (frule_tac ptr=ptr and sz=2 in
-                    nasty_range[where 'a=32 and bz="pdBits", folded word_bits_def,rotated,
+   apply (frule_tac ptr=ptr and sz=2
+                 in nasty_range[where 'a=32 and bz="pdBits", folded word_bits_def,rotated,
                                 simplified pdBits_def pageBits_def word_bits_def, simplified])
       apply (clarsimp simp add: pdBits_def pdeBits_def)+
    apply (drule_tac x="idx" in spec)

@@ -406,8 +406,7 @@ crunch setCTE
   for pspace_in_kernel_mappings'[wp]: "pspace_in_kernel_mappings'"
 
 lemma cap_table_at_gsCNodes_eq[Arch_assms]:
-  "(s, s') \<in> state_relation
-   \<Longrightarrow> (gsCNodes s' ptr = Some bits) = cap_table_at bits ptr s"
+  "(s, s') \<in> state_relation \<Longrightarrow> (gsCNodes s' ptr = Some bits) = cap_table_at bits ptr s"
   by (fastforce simp: state_relation_def ghost_relation_def obj_at_def is_cap_table)
 
 lemmas CSpace_I_2_assms = Arch_assms (* extract accumulated assumptions *)

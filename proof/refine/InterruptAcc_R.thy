@@ -36,6 +36,12 @@ lemma getIRQSlot_corres:
                    ucast_nat_def shiftl_t2n)
   done
 
+crunch modifyWorkUnits
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+
+global_interpretation modifyWorkUnits: gen_typ_at_props' "modifyWorkUnits f"
+  by typ_at_props'
+
 lemma setIRQState_corres:
   "irq_state_relation state state' \<Longrightarrow>
    corres dc \<top> \<top> (set_irq_state state irq) (setIRQState state' irq)"
