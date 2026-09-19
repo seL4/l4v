@@ -31,8 +31,9 @@ lemma numDomains_machine_word_safe:
 definition domainBits :: nat where
   "domainBits \<equiv> 8"
 
+(* Domain values are 0..numDomains-1, so numDomains may be equal to 2^domainBits. *)
 lemma numDomains_fits_domainBits:
-  "numDomains < 2 ^ domainBits"
+  "numDomains \<le> 2 ^ domainBits"
   by (simp add: Kernel_Config.numDomains_def domainBits_def)
 
 end
