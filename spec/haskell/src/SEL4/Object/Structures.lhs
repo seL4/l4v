@@ -356,8 +356,7 @@ The basic structure is a double-linked list. The algorithm used to determine the
 
 A user thread may be in the following states:
 
-%FIXME: Mangled for datatype constructor order
-
+%Note: datatype constructor order below is determined by the proof, do not change for aesthetics
 
 > data ThreadState
 

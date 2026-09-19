@@ -90,9 +90,6 @@ type_synonym paddr = machine_word
 abbreviation (input) "toPAddr \<equiv> id"
 abbreviation (input) "fromPAddr \<equiv> id"
 
-definition pageColourBits :: nat where
-  "pageColourBits \<equiv> 2"
-
 definition cacheLineBits :: nat where
   "cacheLineBits = CONFIG_L1_CACHE_LINE_SIZE_BITS"
 
