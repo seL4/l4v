@@ -282,7 +282,13 @@ in
   | Spec _ => stmt
   | Break => stmt
   | Continue => stmt
-  | AsmStmt _ => stmt
+  | AsmStmt {volatilep, asmblock = {head, mod1, mod2, mod3}} => let
+      fun rnse (so, s, e) = (so, s, ret e)
+    in
+      w(AsmStmt {volatilep = volatilep,
+                 asmblock = {head = head, mod1 = map rnse mod1,
+                             mod2 = map rnse mod2, mod3 = mod3}})
+    end
   | _ => raise Fail ("remove_stmt_typedefs: unhandled type - "^stmt_type stmt)
 end
 and remove_body_typedefs env bilist =
