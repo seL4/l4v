@@ -137,14 +137,13 @@ lemma update_cap_data_closedform:
     | IRQHandlerCap irq \<Rightarrow> IRQHandlerCap irq
     | Zombie r b n \<Rightarrow> Zombie r b n
     | ArchObjectCap cap \<Rightarrow> arch_update_cap_data pres w cap)"
-  by (cases cap,
-         simp_all only: cap.simps update_cap_data_def is_ep_cap.simps if_False if_True
-                        is_ntfn_cap.simps is_cnode_cap.simps is_arch_cap_def word_size
-                        cap_ep_badge.simps badge_update_def o_def cap_rights_update_def
-                        simp_thms cap_rights.simps Let_def split_def
-                        the_cnode_cap_def fst_conv snd_conv fun_app_def the_arch_cap_def
-                  cong: if_cong)
-
+  by (cases cap;
+      simp only: cap.simps update_cap_data_def is_ep_cap.simps if_False if_True
+                 is_ntfn_cap.simps is_cnode_cap.simps is_arch_cap_def word_size
+                 cap_ep_badge.simps badge_update_def o_def cap_rights_update_def
+                 simp_thms cap_rights.simps Let_def split_def
+                 the_cnode_cap_def fst_conv snd_conv fun_app_def the_arch_cap_def
+           cong: if_cong)
 
 crunch get_extra_cptr
   for inv[wp]: P (wp: dmo_inv loadWord_inv)

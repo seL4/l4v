@@ -290,7 +290,7 @@ lemma valid_tcbs'_obj_at':
 
 context pspace_update_eq' begin
 
-lemma valid_tcb'_update'[iff]:
+lemma valid_tcbs'_update'[iff]:
   "valid_tcbs' (f s) = valid_tcbs' s"
   by (simp add: valid_tcbs'_def pspace)
 
@@ -577,13 +577,6 @@ lemma setObject_tcb_valid_objs:
   "\<lbrace>valid_objs' and (tcb_at' t and valid_obj' (injectKO v))\<rbrace> setObject t (v :: tcb) \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   apply (rule setObject_valid_objs')
   apply (clarsimp simp: updateObject_default_def in_monad)
-  done
-
-lemma setObject_tcb_at':
-  "\<lbrace>tcb_at' t'\<rbrace> setObject t (v :: tcb) \<lbrace>\<lambda>rv. tcb_at' t'\<rbrace>"
-  apply (rule obj_at_setObject1)
-   apply (clarsimp simp: updateObject_default_def return_def in_monad)
-  apply (simp add: gen_objBits_simps)
   done
 
 lemma setObject_sa_unchanged:
@@ -959,10 +952,9 @@ lemma threadSet_valid_bitmapQ_no_L2_orphans[wp]:
      (wp | simp add: updateObject_default_def)+
 
 lemma threadSet_cur:
-  "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. cur_tcb' s\<rbrace>"
-  apply (simp add: threadSet_def cur_tcb'_def)
-  apply (wp hoare_lift_Pf [OF setObject_tcb_at'] setObject_ct_inv)
-  done
+  "threadSet f t \<lbrace>cur_tcb' \<rbrace>"
+  unfolding threadSet_def cur_tcb'_def
+  by (wpsimp wp: setObject_ct_inv | wps)+
 
 lemma modifyReadyQueuesL1Bitmap_obj_at[wp]:
   "\<lbrace>obj_at' P t\<rbrace> modifyReadyQueuesL1Bitmap a b \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"

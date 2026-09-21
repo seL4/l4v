@@ -117,7 +117,7 @@ lemma ctes_of_ko_arch[Arch_assms]:
           apply (case_tac ko; simp)
           apply (rename_tac arch_kernel_object)
           apply (case_tac arch_kernel_object;
-              simp add: archObjSize_def asid_low_bits_def mask_def add_ac bit_simps)
+                 simp add: archObjSize_def asid_low_bits_def mask_def add_ac bit_simps)
          apply simp
         \<comment> \<open>IOPort case\<close>
         apply clarsimp
@@ -126,21 +126,22 @@ lemma ctes_of_ko_arch[Arch_assms]:
       \<comment> \<open>Page case\<close>
       apply (rename_tac word vmrights vmpage_size option)
       apply (clarsimp simp: valid_cap'_def typ_at'_def ko_wp_at'_def capAligned_def)
-      apply (frule_tac ptr = ptr and sz = "pageBits" in nasty_range [where 'a=machine_word_len, folded word_bits_def])
+      apply (frule_tac ptr = ptr and sz = "pageBits"
+                    in nasty_range [where 'a=machine_word_len, folded word_bits_def])
          apply assumption
         apply (simp add: pbfs_atleast_pageBits)+
       apply (clarsimp,drule_tac x = idx in spec,clarsimp)
       apply (intro exI conjI,assumption)
       apply (clarsimp simp: obj_range'_def)
       apply (case_tac ko, simp_all split: if_splits,
-            (simp add: objBitsKO_def archObjSize_def field_simps mask_def shiftl_t2n)+)[1]
+             (simp add: objBitsKO_def archObjSize_def field_simps mask_def shiftl_t2n)+)[1]
      \<comment> \<open>PT case\<close>
      apply (rename_tac word option)
      apply (clarsimp simp: valid_cap'_def obj_at'_def bit_simps
                            page_table_at'_def typ_at'_def ko_wp_at'_def ptBits_def)
-     apply (frule_tac ptr=ptr and sz=3 in
-                    nasty_range[where 'a=machine_word_len and bz="ptBits", folded word_bits_def,
-                                simplified ptBits_def word_bits_def bit_simps, simplified])
+     apply (frule_tac ptr=ptr and sz=3
+                   in nasty_range[where 'a=machine_word_len and bz="ptBits", folded word_bits_def,
+                                  simplified ptBits_def word_bits_def bit_simps, simplified])
        apply simp
       apply simp
      apply clarsimp
@@ -154,10 +155,10 @@ lemma ctes_of_ko_arch[Arch_assms]:
      apply (simp add: objBitsKO_def archObjSize_def field_simps mask_def shiftl_t2n)
     \<comment> \<open>PD case\<close>
     apply (clarsimp simp: valid_cap'_def obj_at'_def pdBits_def bit_simps
-                        page_directory_at'_def typ_at'_def ko_wp_at'_def)
-    apply (frule_tac ptr=ptr and sz=3 in
-                   nasty_range[where 'a=machine_word_len and bz="pdBits", folded word_bits_def,
-                               simplified pdBits_def word_bits_def bit_simps, simplified])
+                          page_directory_at'_def typ_at'_def ko_wp_at'_def)
+    apply (frule_tac ptr=ptr and sz=3
+                  in nasty_range[where 'a=machine_word_len and bz="pdBits", folded word_bits_def,
+                                 simplified pdBits_def word_bits_def bit_simps, simplified])
       apply simp
      apply simp
     apply clarsimp
@@ -171,10 +172,10 @@ lemma ctes_of_ko_arch[Arch_assms]:
     apply (simp add: field_simps archObjSize_def shiftl_t2n mask_def)
    \<comment> \<open>PDPT case\<close>
    apply (clarsimp simp: valid_cap'_def obj_at'_def pdptBits_def bit_simps
-                        pd_pointer_table_at'_def typ_at'_def ko_wp_at'_def)
-   apply (frule_tac ptr=ptr and sz=3 in
-                   nasty_range[where 'a=machine_word_len and bz="pdptBits", folded word_bits_def,
-                               simplified pdptBits_def word_bits_def bit_simps, simplified])
+                         pd_pointer_table_at'_def typ_at'_def ko_wp_at'_def)
+   apply (frule_tac ptr=ptr and sz=3
+                 in nasty_range[where 'a=machine_word_len and bz="pdptBits", folded word_bits_def,
+                                simplified pdptBits_def word_bits_def bit_simps, simplified])
      apply simp
     apply simp
    apply clarsimp
@@ -189,8 +190,8 @@ lemma ctes_of_ko_arch[Arch_assms]:
   \<comment> \<open>PML4 case\<close>
   apply (clarsimp simp: valid_cap'_def obj_at'_def pml4Bits_def bit_simps
                         page_map_l4_at'_def typ_at'_def ko_wp_at'_def)
-  apply (frule_tac ptr=ptr and sz=3 in
-                   nasty_range[where 'a=machine_word_len and bz="pml4Bits", folded word_bits_def,
+  apply (frule_tac ptr=ptr and sz=3
+                in nasty_range[where 'a=machine_word_len and bz="pml4Bits", folded word_bits_def,
                                simplified pml4Bits_def word_bits_def bit_simps, simplified])
     apply simp
    apply simp

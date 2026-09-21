@@ -479,7 +479,7 @@ lemma deleteASIDPool_corres:
 
 crunch unmapPageTable, unmapPage, unmapPDPT, setVMRoot, setMessageInfo, setMRs, performPageTableInvocation,
        performPageDirectoryInvocation, performASIDPoolInvocation, performPageInvocation, performPDPTInvocation
-  for typ_at' [wp]: "\<lambda>s. P (typ_at' T p s)"
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 sublocale unmapPageTable: typ_at_props' "unmapPageTable asid vaddr pt"
