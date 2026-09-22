@@ -35,9 +35,6 @@ physBase = PAddr 0x40000000
 pptrBase :: VPtr
 pptrBase = VPtr 0xe0000000
 
-pageColourBits :: Int
-pageColourBits = 0 -- qemu has no cache
-
 getMemoryRegions :: Ptr CallbackData -> IO [(PAddr, PAddr)]
 getMemoryRegions _ = return [(0x40000000, 0x40000000 + (0x8 `shiftL` 24))]
 
@@ -86,13 +83,6 @@ getActiveIRQ env = do
         gicDistBase = gicDistributorBase,
         gicIFBase = gicInterfaceBase }
 
-
--- FIXME: This is not accurate, need to check MCT Freq
-timerFreq :: Word
-timerFreq = 100
-
-timerLimit :: Word
-timerLimit = 1000000 `div` timerFreq
 
 configureTimer :: Ptr CallbackData -> IO IRQ
 configureTimer env = do
@@ -165,7 +155,7 @@ cacheCleanL2RangeCallback :: Ptr CallbackData -> PAddr -> PAddr -> IO ()
 cacheCleanL2RangeCallback _ _ _ = return ()
 
 cacheLine :: Int
-cacheLine = error "see Kernel_Config.thy"
+cacheLine = isabelleOp
 
 cacheLineBits :: Int
-cacheLineBits = error "see Kernel_Config.thy"
+cacheLineBits = isabelleOp

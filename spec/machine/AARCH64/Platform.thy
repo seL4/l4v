@@ -110,7 +110,7 @@ lemma "pptrUserTop = (if config_ARM_PA_SIZE_BITS_40 then 0xFFFFFFFFFF else 0xFFF
   by (simp add: pptrUserTop_def mask_def)
 
 definition pptrTop :: machine_word where
-  "pptrTop = 2^40 - 2^30" (* FIXME AARCH64: see also seL4/seL4#957 *)
+  "pptrTop = 2^40 - 2^30"
 
 definition paddrBase :: machine_word where
   "paddrBase \<equiv> 0"
@@ -138,9 +138,6 @@ definition irqVGICMaintenance :: irq where
 
 definition irqVTimerEvent :: irq where
   "irqVTimerEvent \<equiv> 27"
-
-definition pageColourBits :: nat where
-  "pageColourBits \<equiv> undefined" \<comment> \<open>not implemented on this platform\<close>
 
 
 section \<open>Page table sizes\<close>

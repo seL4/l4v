@@ -12,9 +12,7 @@ import SEL4.Machine
 import SEL4.Model
 import SEL4.Object.Structures
 import SEL4.Object.TCB(asUser)
-import SEL4.Machine.Hardware.AARCH64(addressTranslateS1)
 import SEL4.API.Failures.AARCH64
-import Data.Bits
 
 makeArchFaultMessage :: ArchFault -> PPtr TCB -> Kernel (Word, [Word])
 makeArchFaultMessage (VMFault vptr archData) thread = do

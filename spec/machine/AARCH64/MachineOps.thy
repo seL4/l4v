@@ -203,8 +203,6 @@ definition writeFpuState :: "fpu_state \<Rightarrow> unit machine_monad" where
      machine_op_lift $ writeFpuState_impl fpu
    od"
 
-\<comment> \<open>FIXME FPU: on AArch64 with hypervisor support this actually calls disableTrapFpu to enable the
-     FPU. Do we want to model that as well or are we happy to abstract it away?\<close>
 consts' enableFpu_impl :: "unit machine_rest_monad"
 definition enableFpu :: "unit machine_monad" where
   "enableFpu \<equiv> do

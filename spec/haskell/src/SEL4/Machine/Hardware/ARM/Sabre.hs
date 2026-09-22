@@ -39,9 +39,6 @@ physBase = PAddr 0x10000000
 pptrBase :: VPtr
 pptrBase = VPtr 0xe0000000
 
-pageColourBits :: Int
-pageColourBits = 0 -- qemu has no cache
-
 getMemoryRegions :: Ptr CallbackData -> IO [(PAddr, PAddr)]
 getMemoryRegions _ = return [(physBase, physBase + (0x8 `shiftL` 24))]
 
@@ -162,7 +159,7 @@ cacheCleanL2RangeCallback :: Ptr CallbackData -> PAddr -> PAddr -> IO ()
 cacheCleanL2RangeCallback _ _ _ = return ()
 
 cacheLine :: Int
-cacheLine = error "see Kernel_Config.thy"
+cacheLine = isabelleOp
 
 cacheLineBits :: Int
-cacheLineBits = error "see Kernel_Config.thy"
+cacheLineBits = isabelleOp
