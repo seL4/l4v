@@ -1703,14 +1703,15 @@ lemma bound_sc_obj_tcb_at_set_object_no_change_sc':
   assumes g: "\<And>P. update_sched_context scp f \<lbrace>\<lambda>s. P (g s)\<rbrace>"
   shows "\<lbrace>\<lambda>s. N (bound_sc_obj_tcb_at (P (g s)) t s) \<and> ko_at (SchedContext sc n) scp s\<rbrace>
          set_object scp (SchedContext (f sc) n)
-         \<lbrace>\<lambda>rv s. N (bound_sc_obj_tcb_at (P (g s)) t s)\<rbrace>"
+         \<lbrace>\<lambda>_ s. N (bound_sc_obj_tcb_at (P (g s)) t s)\<rbrace>"
   apply (simp add: vs_all_heap_simps)
   apply (rule hoare_vcg_ex_lift_N_pre_conj[of N], rename_tac scp')
-  apply (rule hoare_vcg_conj_lift_N_pre_conj[of N]
-         , wpsimp wp: set_object_wp simp: obj_at_def)
+  apply (rule hoare_vcg_conj_lift_N_pre_conj[of N],
+         wpsimp wp: set_object_wp simp: obj_at_def)
   apply (wpsimp wp: set_object_wp_strong simp: obj_at_def split_del: if_split simp_del: fun_upd_apply)
-  apply (drule use_valid[rotated, OF g]
-         , fastforce simp: update_sched_context_def get_object_def set_object_def in_monad)
+  apply (drule use_valid[rotated, OF g],
+         fastforce simp: update_sched_context_def get_sched_context_def
+                         get_object_def set_object_def in_monad)
   by (auto elim!: rsubst[of N] simp: f vs_all_heap_simps)
 
 lemmas bound_sc_obj_tcb_at_set_object_no_change_sc =
@@ -1721,9 +1722,10 @@ lemma update_sched_context_inv_set_object:
   assumes "\<And>sc n.
            \<lbrace>\<lambda>s. P s \<and> ko_at (SchedContext sc n) scp s\<rbrace>
            set_object scp (SchedContext (f sc) n)
-           \<lbrace>\<lambda>rv. P\<rbrace>"
+           \<lbrace>\<lambda>_. P\<rbrace>"
   shows "update_sched_context scp f \<lbrace>P\<rbrace>"
-  by (wpsimp simp: update_sched_context_def wp: assms get_object_wp)
+  unfolding update_sched_context_def
+  by (wpsimp wp: assms get_object_wp)
 
 lemma bound_sc_obj_tcb_at_update_sched_context_no_change':
   assumes "\<And>x sc. P x (sc_refill_cfg_of (f sc)) \<longleftrightarrow> P x (sc_refill_cfg_of sc)"
@@ -1815,8 +1817,9 @@ lemma update_sched_context_sc_at_pred_inv':
   assumes g: "\<And>P. update_sched_context p' f \<lbrace>\<lambda>s. P (g s)\<rbrace>"
   shows "update_sched_context p' f \<lbrace>\<lambda>s. N (sc_at_ppred proj (P (g s)) p s)\<rbrace>"
   apply (rule hoare_lift_Pf[where f=g, OF _ g])
-  apply (wpsimp simp: update_sched_context_def wp: get_object_wp set_object_wp)
-  by (clarsimp simp: sc_at_ppred_def obj_at_def assms elim: rsubst[of N])
+  apply (wpsimp wp: update_sched_context_wp set_object_wp)
+  apply (clarsimp simp: sc_at_ppred_def obj_at_def assms elim: rsubst[of N])
+  done
 
 lemmas update_sched_context_sc_at_pred_inv =
   update_sched_context_sc_at_pred_inv'

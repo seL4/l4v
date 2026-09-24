@@ -1816,12 +1816,10 @@ lemma copy_mrs_valid_idle [wp]:
   done
 
 lemma sched_context_update_consumed_valid_idle [wp]:
-  "\<lbrace>valid_idle\<rbrace> sched_context_update_consumed scp \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
-  apply (simp add: sched_context_update_consumed_def)
-  apply (rule bind_wp[OF _ get_sched_context_sp])
-  apply (wpsimp simp: sched_context_update_consumed_def update_sched_context_def set_object_def
-                      get_object_def valid_idle_def obj_at_def pred_tcb_at_def)
-  done
+  "sched_context_update_consumed scp \<lbrace>valid_idle\<rbrace>"
+  unfolding sched_context_update_consumed_def
+  apply (wpsimp wp: update_sched_context_wp)
+  by (fastforce simp: valid_idle_def obj_at_def pred_tcb_at_def)
 
 lemma make_fault_msg_valid_idle [wp]:
   "\<lbrace>valid_idle :: 'state_ext state \<Rightarrow> bool\<rbrace>
@@ -1864,12 +1862,10 @@ lemma set_mrs_cur_sc_tcb[wp]:
   by (wpsimp wp: set_mrs_thread_set_dmo thread_set_cur_sc_tcb)
 
 lemma sched_context_update_consumed_cur_sc_tcb [wp]:
-  "\<lbrace>cur_sc_tcb\<rbrace> sched_context_update_consumed scp \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
-  apply (simp add: sched_context_update_consumed_def)
-  apply (rule bind_wp[OF _ get_sched_context_sp])
-  apply (wpsimp simp: sched_context_update_consumed_def update_sched_context_def set_object_def
-                      get_object_def cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
-  done
+  "sched_context_update_consumed scp \<lbrace>cur_sc_tcb\<rbrace>"
+  unfolding sched_context_update_consumed_def
+  apply (wpsimp wp: update_sched_context_wp)
+  by (clarsimp simp: cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
 
 lemma make_fault_msg_cur_sc_tcb [wp]:
   "\<lbrace>cur_sc_tcb :: 'state_ext state \<Rightarrow> bool\<rbrace>
@@ -2813,11 +2809,10 @@ lemma maybe_donate_sc_pred_tcb_at:
    apply (rule bind_wp[OF _ gsct_sp])
    apply (rename_tac sc_tcb_opt)
    apply (case_tac sc_tcb_opt; simp)
-    apply (wpsimp simp: sched_context_donate_def thread_set_def set_object_def tcb_release_remove_def
-                        update_sched_context_def get_object_def get_tcb_def
-                        pred_tcb_at_def obj_at_def get_sc_obj_ref_def get_sched_context_def
-                        tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def
-                    wp: hoare_vcg_imp_lift hoare_vcg_all_lift)
+    apply (wpsimp simp: sched_context_donate_def tcb_release_remove_def
+                        get_tcb_def pred_tcb_at_def obj_at_def get_sc_obj_ref_def
+                        tcb_sched_action_def set_tcb_queue_def
+                    wp: update_sched_context_wp thread_set_wp)
     apply (fastforce simp: sc_tcb_sc_at_def obj_at_def)
    apply wpsimp
   apply wpsimp

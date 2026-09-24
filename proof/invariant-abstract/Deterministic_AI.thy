@@ -3836,12 +3836,8 @@ lemma update_sk_obj_ref_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> update_sk_obj_ref C f p v \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: update_sk_obj_ref_def)
 
-crunch set_thread_state
+crunch set_thread_state, update_sched_context
  for valid_list[wp]: valid_list
-
-lemma update_sched_context_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> update_sched_context ptr sc \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: update_sched_context_def wp: hoare_drop_imp)
 
 lemma reply_unlink_tcb_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -3919,8 +3915,8 @@ lemma update_sk_obj_ref_cdt_cdt_list[wp]:
        wp: set_object_wp get_object_wp get_simple_ko_wp)
 
 lemma update_sched_context_cdt_cdt_list[wp]:
-  "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> update_sched_context p v \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
-  by (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
+  "update_sched_context ptr f \<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace>"
+  by (wpsimp wp: update_sched_context_wp)
 
 lemma reply_unlink_tcb_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
