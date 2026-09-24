@@ -2463,12 +2463,6 @@ lemma get_object_det_wp[wp]:
   apply (clarsimp simp: obj_at_def)
   done
 
-(* FIXME RT: move to DetWPLib *)
-lemma put_det_wp[wp]:
-  "det_wp \<top> (put s)"
-  unfolding put_def
-  by (clarsimp simp: det_wp_def)
-
 lemma set_object_det_wp[wp]:
   "det_wp (obj_at (\<lambda>k. a_type obj = a_type k) ptr) (set_object ptr obj)"
   unfolding set_object_def
