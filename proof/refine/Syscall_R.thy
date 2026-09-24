@@ -1571,7 +1571,7 @@ lemma handleInvocation_corres:
                   apply (rule corres_stateAssert_r_cross[
                                 where P'="pspace_aligned and pspace_distinct
                                           and weak_valid_sched_action"
-                                  and Q'=\<top>])
+                                  and Q'="pspace_aligned' and pspace_distinct'"])
                    apply (fastforce intro: weak_sch_act_wf_cross)
                   apply (rule setThreadState_corres)
                   apply simp
@@ -1585,7 +1585,7 @@ lemma handleInvocation_corres:
              apply (wpsimp wp: perform_invocation_valid_sched hoare_drop_imp)
             apply (rule_tac Q'="tcb_at' thread and invs'" in hoare_post_impE_R_dc)
              apply wpsimp
-            apply (clarsimp simp: invs'_def)
+            apply (fastforce simp: invs'_def)
            apply simp
            apply (rule_tac Q'="\<lambda>_. einvs and valid_machine_time and schact_is_rct
                                    and valid_invocation rve
@@ -1836,6 +1836,7 @@ lemma lookupReply_valid [wp]:
 lemma getBoundNotification_corres:
   "corres (=) (ntfn_at nptr and pspace_aligned and pspace_distinct) \<top>
      (get_ntfn_obj_ref ntfn_bound_tcb nptr) (liftM ntfnBoundTCB (getNotification nptr))"
+  apply add_pspace_adb
   apply (simp add: get_sk_obj_ref_def)
   apply (rule corres_bind_return2)
   apply (rule corres_guard_imp)
@@ -2023,11 +2024,10 @@ lemma endTimeslice_corres: (* called when ct_schedulable *)
   (is "corres _ ?pre ?pre' _ _")
   apply (clarsimp simp: end_timeslice_def endTimeslice_def bind_assoc)
   apply (rule_tac Q'="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
-   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
-                  dest!: state_relationD)
-   apply (erule (2) sc_at_cross)
-   apply (fastforce simp: cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def is_sc_obj
-                    dest: valid_sched_context_size_objsI)
+   apply (force intro!: sc_at_cross
+                  simp: invs_def valid_state_def valid_pspace_def cur_sc_tcb_def sc_tcb_sc_at_def
+                        obj_at_def is_sc_obj
+                 dest!: state_relationD valid_sched_context_size_objsI)
   apply (rule_tac Q'="\<lambda>s. is_active_sc' (ksCurSc s) s" in corres_cross_add_guard)
    apply (prop_tac "cur_sc s = ksCurSc s'", clarsimp dest!: state_relationD)
    apply (fastforce intro: is_active_sc'_cross simp: is_active_sc_rewrite)
@@ -2223,11 +2223,12 @@ lemma chargeBudget_corres:
             apply (fastforce simp: sc_relation_def obj_at'_def obj_at_def is_sc_obj opt_map_red
                             dest!: state_relation_sc_replies_relation elim: sc_replies_relation_prevs_list)
            apply clarsimp
-          apply (wpsimp wp: is_round_robin_wp isRoundRobin_wp)+
+          apply (wpsimp wp: is_round_robin_wp isRoundRobin_wp | strengthen invs'_implies)+
       apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
       apply (drule (1) active_scs_validE, clarsimp)
       apply (clarsimp simp: round_robin_def vs_all_heap_simps obj_at_def)
-     apply (clarsimp simp: obj_at'_def invs'_def valid_pspace'_def elim!: valid_objs'_valid_refills')
+     apply (clarsimp simp: obj_at'_def invs'_def valid_pspace'_def active_sc_at'_rewrite
+                    elim!: valid_objs'_valid_refills')
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF setConsumedTime_corres], simp)
         apply (simp add: andM_def whenM_def ifM_def when_def[symmetric] bind_assoc)
@@ -2360,6 +2361,12 @@ crunch charge_budget
   and pspace_distinct[wp]: pspace_distinct
   (simp: crunch_simps)
 
+crunch chargeBudget
+  for pspace_aligned'[wp]: pspace_aligned'
+  and pspace_distinct'[wp]: pspace_distinct'
+  and pspace_bounded'[wp]: pspace_bounded'
+  (wp: crunch_wps simp: crunch_simps)
+
 lemma handleYield_corres:
   "corres dc
      (einvs and ct_active and cur_sc_active and schact_is_rct and scheduler_act_sane
@@ -2368,11 +2375,11 @@ lemma handleYield_corres:
      invs'
      handle_yield handleYield"
   apply (rule_tac Q'="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
-   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
-                  dest!: state_relationD schact_is_rct)
-   apply (erule (2) sc_at_cross)
-   apply (fastforce simp: cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def is_sc_obj
-                    dest: valid_sched_context_size_objsI)
+   subgoal
+     by (force intro!: sc_at_cross
+                 simp: invs_def valid_state_def valid_pspace_def cur_sc_tcb_def sc_tcb_sc_at_def
+                       obj_at_def is_sc_obj
+                dest!: state_relationD valid_sched_context_size_objsI)
   apply (clarsimp simp: handle_yield_def handleYield_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurSc_sp])
    apply (corres corres: getCurSc_corres)
@@ -2396,7 +2403,7 @@ lemma handleYield_corres:
      apply (fastforce intro: cur_sc_tcb_sc_at_cur_sc)
     apply (fastforce dest: active_scs_validE valid_refills_nonempty_refills)
    apply (fastforce dest: invs_cur_sc_chargeableE)
-  apply clarsimp
+  apply fastforce
   done
 
 lemma chargeBudget_invs'[wp]:

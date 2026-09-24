@@ -323,8 +323,6 @@ locale Untyped_R = mdb_insert_again_all_common +
     "word_size_bits \<le> untyped_min_bits"
   assumes resetChunkBits_le_word_bits:
     "resetChunkBits < word_bits"
-  assumes maxUntypedSizeBits_less_word_bits:
-    "maxUntypedSizeBits < word_bits"
   (* FIXME arch-split: candidate for Kernel_Config lemmas *)
   assumes word_size_bits_le_resetChunkBits:
     "word_size_bits \<le> resetChunkBits"
@@ -3534,7 +3532,7 @@ lemma retype_region_caps_overlap_reserved:
   apply (simp (no_asm) add:caps_overlap_reserved_def2)
   apply (rule hoare_pre)
   apply (wp retype_region_caps_of)
-    apply (simp add: sc_size_bounds_def maxUntyped_eq sc_const_eq(3))+
+    apply (simp add: sc_size_bounds_def maxUntypedSizeBits_untyped_max_bits sc_const_eq(3))+
   apply (simp add:caps_overlap_reserved_def2)
   apply (intro conjI,simp+)
   apply clarsimp

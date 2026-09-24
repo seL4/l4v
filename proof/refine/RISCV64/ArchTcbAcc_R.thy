@@ -299,6 +299,7 @@ proof -
   have L1: "corres (\<lambda>tcb con. (arch_tcb_context_get o tcb_arch) tcb = con)
               (tcb_at t and pspace_aligned and pspace_distinct) \<top>
               (gets_the (get_tcb t)) (threadGet (atcbContextGet o tcbArch) t)"
+    apply add_pspace_adb
     apply (rule corres_cross_over_guard[where Q="tcb_at' t"])
      apply (fastforce simp: tcb_at_cross state_relation_def)
     apply (rule corres_guard_imp)
@@ -325,6 +326,7 @@ proof -
     using y
     by (fastforce simp: corres_underlying_def select_f_def split_def Id_def)
   show ?thesis
+    apply add_pspace_adb
     apply (rule corres_cross_over_guard[where Q="tcb_at' t"])
      apply (fastforce simp: tcb_at_cross state_relation_def)
     apply (simp add: as_user_def asUser_def)

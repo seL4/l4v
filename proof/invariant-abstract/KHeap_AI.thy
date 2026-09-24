@@ -753,7 +753,7 @@ lemma valid_mdb_lift:
   apply simp
   done
 
-crunch set_simple_ko
+crunch set_simple_ko, update_sched_context
   for no_cdt[wp]: "\<lambda>s. P (cdt s)"
   (wp: crunch_wps)
 
@@ -774,19 +774,23 @@ lemma set_simple_ko_mdb [wp]:
   "set_simple_ko f p ep \<lbrace>valid_mdb\<rbrace>"
   by (wp valid_mdb_lift)
 
-lemma update_sched_context_caps_of_state [wp]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>r s. P (caps_of_state s)\<rbrace>"
-  apply (wpsimp simp: update_sched_context_def get_object_def set_object_def)
-  apply (subst cte_wp_caps_of_lift; auto simp: cte_wp_at_cases)
+lemma set_sched_context_caps_of_state[wp]:
+  "\<lbrace>\<lambda>s. P (caps_of_state s) \<and> sc_obj_at n ptr s\<rbrace>
+   set_sched_context ptr sc n
+   \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  apply (wpsimp wp: set_object_wp_strong)
+  apply (subst cte_wp_caps_of_lift; auto simp: cte_wp_at_cases obj_at_def is_sc_obj_def)
   done
 
-lemma update_sched_context_revokable [wp]:
-  "\<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>r s. P (is_original_cap s)\<rbrace>"
-  by (wpsimp simp: update_sched_context_def set_object_def get_object_def)
+lemma update_sched_context_caps_of_state[wp]:
+  "update_sched_context ptr val \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
+  apply (wpsimp wp: update_sched_context_wp)
+  by (subst cte_wp_caps_of_lift; auto simp: cte_wp_at_cases obj_at_def is_sc_obj_def)
 
-lemma update_sched_context_mdb [wp]:
-  "\<lbrace>valid_mdb\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>r. valid_mdb\<rbrace>"
-  by (wpsimp simp: update_sched_context_def get_object_def wp: valid_mdb_lift)
+crunch update_sched_context
+  for revokable[wp]: "\<lambda>s. P (is_original_cap s)"
+  and valid_mdb[wp]: valid_mdb
+  (rule: valid_mdb_lift)
 
 lemma cte_wp_at_after_update:
   "\<lbrakk> obj_at (same_caps val) p' s \<rbrakk>
@@ -2619,10 +2623,71 @@ lemma set_object_no_fail[wp]:
 
 lemma update_sched_context_no_fail[wp]:
   "no_fail (\<lambda>s. \<exists>sc n. kheap s sc_ptr = Some (SchedContext sc n)) (update_sched_context sc_ptr f)"
-  apply (clarsimp simp: update_sched_context_def)
+  unfolding update_sched_context_def
   apply (wpsimp wp: get_object_wp)
-  apply (clarsimp simp: obj_at_def a_type_def)
+  by (clarsimp simp: obj_at_def a_type_def)
+
+\<comment>\<open>Some rules for @{const det_wp}\<close>
+
+lemma get_object_det_wp[wp]:
+  "det_wp (obj_at \<top> ptr) (get_object ptr)"
+  unfolding get_object_def
+  apply wpsimp
+  apply (clarsimp simp: obj_at_def)
   done
+
+\<comment>\<open>
+  Not in the [wp] set because we will often prefer to use specialised forms of this rule with nicer
+  preconditions\<close>
+lemma set_object_det_wp:
+  "det_wp (obj_at (\<lambda>k. a_type obj = a_type k) ptr) (set_object ptr obj)"
+  unfolding set_object_def
+  by (wpsimp wp: get_object_wp)
+     (clarsimp simp: obj_at_def)
+
+lemma set_reply_det_wp[wp]:
+  "det_wp (reply_at ptr) (set_reply ptr reply)"
+  unfolding set_simple_ko_def
+  apply (wpsimp wp: set_object_det_wp get_object_wp)
+  apply (fastforce elim!: obj_at_weakenE
+                    simp: obj_at_def is_reply_def
+                   split: kernel_object.splits)
+  done
+
+lemmas set_reply_no_fail[wp] = set_reply_det_wp[THEN det_wp_no_fail]
+
+lemma set_sched_context_det_wp[wp]:
+  "det_wp (sc_obj_at n ptr) (set_sched_context ptr sc n)"
+  apply (wpsimp wp: set_object_det_wp)
+  apply (fastforce elim!: obj_at_weakenE
+                    simp: obj_at_def a_type_def is_sc_obj_def
+                   split: kernel_object.splits)
+  done
+
+lemmas set_sched_context_no_fail[wp] = set_sched_context_det_wp[THEN det_wp_no_fail]
+
+\<comment>\<open>
+  Some "in" lemmas, which should ultimately be replaced by a construct that states the result
+  of running a deterministic monad.\<close>
+
+lemma in_set_object:
+  "(rv, s') \<in> fst (set_object ptr obj s) \<Longrightarrow> s' = s \<lparr> kheap := (kheap s) (ptr \<mapsto> obj) \<rparr>"
+  by (clarsimp simp: set_object_def get_object_def in_monad)
+
+lemma in_set_notification:
+  "(rv, s') \<in> fst (set_notification ptr ntfn s)
+   \<Longrightarrow> s' = s\<lparr>kheap := (kheap s)(ptr \<mapsto> Notification ntfn)\<rparr>"
+  by (clarsimp simp: set_simple_ko_def set_object_def get_object_def in_monad)
+
+lemma in_set_endpoint:
+  "(rv, s') \<in> fst (set_endpoint ptr ep s)
+   \<Longrightarrow> s' = s\<lparr>kheap := (kheap s)(ptr \<mapsto> Endpoint ep)\<rparr>"
+  by (clarsimp simp: set_simple_ko_def set_object_def get_object_def in_monad)
+
+lemma in_set_reply:
+  "(rv, s') \<in> fst (set_reply ptr reply s)
+   \<Longrightarrow> s' = s\<lparr>kheap := (kheap s)(ptr \<mapsto> Reply reply)\<rparr>"
+  by (clarsimp simp: set_simple_ko_def set_object_def get_object_def in_monad)
 
 \<comment> \<open>Project endpoints from the kernel heap\<close>
 
@@ -2722,14 +2787,166 @@ lemma reply_of_None:
 abbreviation replies_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> Structures_A.reply" where
   "replies_of \<equiv> (\<lambda>s. kheap s |> reply_of)"
 
-text \<open>
-  A method which may be helpful in proving that a function which calls @{const set_object}
-  preserves all properties of a kernel heap projection.\<close>
+\<comment> \<open>
+  Showing that low-level functions which call @{const set_object} preserve projections of the
+  kernel heap\<close>
+
 method set_object_easy_cases uses def final
   = simp add: def set_object_def split_def,
     (wp get_object_wp zipWithM_x_inv' | wp (once) hoare_drop_imp | wpc)+,
-    (fastforce simp: final obj_at_def opt_map_def eps_of_kh_def tcbs_of_kh_def a_type_def
+    (fastforce simp: final obj_at_def is_sc_obj_def opt_map_def
+                     eps_of_kh_def tcbs_of_kh_def scs_of_kh_def aobj_of_def
+                     a_type_def
               intro: rsubst[where P=P]
-              split: kernel_object.splits)?
+              split: kernel_object.splits if_splits)?
+
+method set_simple_ko_heaps_inv =
+  wpsimp wp: set_simple_ko_wp,
+  erule rsubst[where P=P],
+  (fastforce simp: aobj_of_def ep_at_pred_def ntfn_at_pred_def reply_at_pred_def opt_map_def
+                   eps_of_kh_def tcbs_of_kh_def scs_of_kh_def
+            split: kernel_object.splits if_splits)?
+
+\<comment> \<open>set_sched_context/update_sched_context\<close>
+
+lemma set_sched_context_tcbs_of[wp]:
+  "set_sched_context ptr sc n \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
+  by set_object_easy_cases
+
+lemma set_sched_context_cnodes_of[wp]:
+  "\<lbrace>\<lambda>s. P (cnodes_of s) \<and> sc_at ptr s\<rbrace> set_sched_context ptr sc n \<lbrace>\<lambda>_ s. P (cnodes_of s)\<rbrace>"
+  by set_object_easy_cases
+
+lemma update_sched_context_cnodes_of[wp]:
+  "\<lbrace>\<lambda>s. P (cnodes_of s) \<and> sc_at ptr s\<rbrace> update_sched_context ptr f \<lbrace>\<lambda>_ s. P (cnodes_of s)\<rbrace>"
+  by (set_object_easy_cases def: update_sched_context_def)
+
+lemma set_sched_context_eps_of[wp]:
+  "set_sched_context ptr sc n \<lbrace>\<lambda>s. P (eps_of s)\<rbrace>"
+  by set_object_easy_cases
+
+lemma set_sched_context_ntfns_of[wp]:
+  "set_sched_context ptr sc n \<lbrace>\<lambda>s. P (ntfns_of s)\<rbrace>"
+  by set_object_easy_cases
+
+lemma set_sched_context_replies_of[wp]:
+  "set_sched_context ptr sc n \<lbrace>\<lambda>s. P (replies_of s)\<rbrace>"
+  by set_object_easy_cases
+
+lemma set_sched_context_aobjs_of[wp]:
+  "set_sched_context ptr sc n \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  by set_object_easy_cases
+
+crunch update_sched_context
+  for tcbs_of[wp]: "\<lambda>s. P (tcbs_of s)"
+  and eps_of[wp]: "\<lambda>s. P (eps_of s)"
+  and ntfns_of[wp]: "\<lambda>s. P (ntfns_of s)"
+  and replies_of[wp]: "\<lambda>s. P (replies_of s)"
+  and aobjs_of[wp]: "\<lambda>s. P (aobjs_of s)"
+  (wp: crunch_wps ignore: set_object)
+
+\<comment> \<open>thread_set\<close>
+
+lemma thread_set_scs_fields_of[wp]:
+  "thread_set f tptr \<lbrace>\<lambda>s. P (scs_fields_of s)\<rbrace>"
+  by (set_object_easy_cases def: thread_set_def)
+
+lemma thread_set_cnodes_of[wp]:
+  "thread_set f tptr \<lbrace>\<lambda>s. P (cnodes_of s)\<rbrace>"
+  by (set_object_easy_cases def: thread_set_def)
+
+lemma thread_set_eps_of[wp]:
+  "thread_set f tptr \<lbrace>\<lambda>s. P (eps_of s)\<rbrace>"
+  by (set_object_easy_cases def: thread_set_def)
+
+lemma thread_set_ntfns_of[wp]:
+  "thread_set f tptr \<lbrace>\<lambda>s. P (ntfns_of s)\<rbrace>"
+  by (set_object_easy_cases def: thread_set_def)
+
+lemma thread_set_replies_of[wp]:
+  "thread_set f tptr \<lbrace>\<lambda>s. P (replies_of s)\<rbrace>"
+  by (set_object_easy_cases def: thread_set_def)
+
+lemma thread_set_aobjs_of[wp]:
+  "thread_set f tptr \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  by (set_object_easy_cases def: thread_set_def)
+
+\<comment> \<open>set_endpoint\<close>
+
+lemma set_endpoint_tcbs_of[wp]:
+  "set_endpoint ptr ep \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
+
+lemma set_endpoint_scs_fields_of[wp]:
+  "set_endpoint ptr ep \<lbrace>\<lambda>s. P (scs_fields_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
+
+lemma set_endpoint_cnodes_of[wp]:
+  "set_endpoint ptr ep \<lbrace>\<lambda>s. P (cnodes_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
+
+lemma set_endpoint_ntfns_of[wp]:
+  "set_endpoint ptr ep \<lbrace>\<lambda>s. P (ntfns_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
+
+lemma set_endpoint_replies_of[wp]:
+  "set_endpoint ptr ep \<lbrace>\<lambda>s. P (replies_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
+
+lemma set_endpoint_aobjs_of[wp]:
+  "set_endpoint ptr ep \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
+
+\<comment> \<open>set_notification\<close>
+
+lemma set_notification_tcbs_of[wp]:
+  "set_notification ptr ntfn \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
+
+lemma set_notification_scs_fields_of[wp]:
+  "set_notification ptr ntfn \<lbrace>\<lambda>s. P (scs_fields_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
+
+lemma set_notification_cnodes_of[wp]:
+  "set_notification ptr ntfn \<lbrace>\<lambda>s. P (cnodes_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
+
+lemma set_notification_eps_of[wp]:
+  "set_notification ptr ntfn \<lbrace>\<lambda>s. P (eps_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
+
+lemma set_notification_replies_of[wp]:
+  "set_notification ptr ntfn \<lbrace>\<lambda>s. P (replies_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
+
+lemma set_notification_aobjs_of[wp]:
+  "set_notification ptr ntfn \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
+
+\<comment> \<open>set_reply\<close>
+
+lemma set_reply_tcbs_of[wp]:
+  "set_reply ptr reply \<lbrace>\<lambda>s. P (tcbs_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
+
+lemma set_reply_scs_fields_of[wp]:
+  "set_reply ptr reply \<lbrace>\<lambda>s. P (scs_fields_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
+
+lemma set_reply_cnodes_of[wp]:
+  "set_reply ptr reply \<lbrace>\<lambda>s. P (cnodes_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
+
+lemma set_reply_eps_of[wp]:
+  "set_reply ptr reply \<lbrace>\<lambda>s. P (eps_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
+
+lemma set_reply_ntfns_of[wp]:
+  "set_reply ptr reply \<lbrace>\<lambda>s. P (ntfns_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
+
+lemma set_reply_aobjs_of[wp]:
+  "set_reply ptr reply \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  by set_simple_ko_heaps_inv
 
 end

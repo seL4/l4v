@@ -2997,8 +2997,6 @@ lemma unbindNotification_corres:
      (unbind_notification t) (unbindNotification t)"
   supply option.case_cong_weak[cong]
   apply (simp add: unbind_notification_def unbindNotification_def doUnbindNotification_def)
-  apply (rule corres_cross[where Q' = "tcb_at' t", OF tcb_at'_cross_rel])
-   apply (simp add: invs_psp_aligned invs_distinct)
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split[OF getBoundNotification_corres])
       apply (simp add: maybeM_def)
@@ -3030,7 +3028,6 @@ lemma unbindMaybeNotification_corres:
                    maybeM_def get_sk_obj_ref_def)
   apply (rule corres_split_forwards'[OF _ get_simple_ko_sp get_ntfn_sp'])
    apply (corres corres: getNotification_corres)
-    apply fastforce
    apply fastforce
   apply (rename_tac ntfn ntfn')
   apply (simp add: case_option_If2)
@@ -3072,8 +3069,6 @@ lemma schedContextUnbindNtfn_corres:
      (sched_context_unbind_ntfn sc) (schedContextUnbindNtfn sc)"
   apply (simp add: sched_context_unbind_ntfn_def schedContextUnbindNtfn_def)
   apply (clarsimp simp: maybeM_def get_sk_obj_ref_def liftM_def)
-  apply (rule corres_cross[where Q' = "sc_at' sc", OF sc_at'_cross_rel])
-   apply (simp add: invs_psp_aligned invs_distinct)
   apply add_sym_refs
   apply (rule corres_stateAssert_ignore, simp)
   apply (simp add: get_sc_obj_ref_def)
@@ -3102,9 +3097,11 @@ lemma schedContextMaybeUnbindNtfn_corres:
      (sched_context_maybe_unbind_ntfn ntfn_ptr)
      (schedContextMaybeUnbindNtfn ntfn_ptr)"
   supply if_split[split del]
+  apply add_pspace_adb
   apply (clarsimp simp: sched_context_maybe_unbind_ntfn_def schedContextMaybeUnbindNtfn_def
                         maybeM_def get_sk_obj_ref_def liftM_def)
-  apply (rule corres_cross[where Q' = "ntfn_at' ntfn_ptr", OF ntfn_at'_cross_rel], fastforce)
+  apply (rule_tac Q'="ntfn_at' ntfn_ptr" in corres_cross_add_guard)
+   apply (fastforce intro: ntfn_at_cross)
   apply add_sym_refs
   apply (rule corres_split_forwards'[OF _ get_simple_ko_sp get_ntfn_sp'])
    apply (corres corres: getNotification_corres; fastforce)
@@ -3663,6 +3660,7 @@ lemma schedContextUnbindAllTCBs_corres:
   "corres dc
      (einvs and sc_at scPtr and K (scPtr \<noteq> idle_sc_ptr)) invs'
      (sched_context_unbind_all_tcbs scPtr) (schedContextUnbindAllTCBs scPtr)"
+  apply add_pspace_adb
   apply (clarsimp simp: sched_context_unbind_all_tcbs_def schedContextUnbindAllTCBs_def)
   apply (rule corres_gen_asm, clarsimp)
   apply (rule stronger_corres_guard_imp)
@@ -3690,7 +3688,7 @@ lemma replyNext_update_corres_empty:
 lemma reply_at'_scReply:
   "\<lbrakk>scReply sc' = Some replyPtr; ksPSpace s' scPtr = Some (KOSchedContext sc');
     sc_replies_relation s s'; pspace_relation (kheap s) (ksPSpace s');
-    valid_objs s; pspace_aligned s; pspace_distinct s\<rbrakk>
+    valid_objs s; pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
    \<Longrightarrow> reply_at' replyPtr s'"
   apply (rule reply_at_cross, fastforce+)
   apply (clarsimp simp: pspace_relation_heap_pspace_relation)
@@ -3765,7 +3763,7 @@ lemma schedContextUnbindYieldFrom_corres:
                         maybeM_when)
   apply add_sym_refs
   apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
-   apply (rule corres_guard_imp)
+   apply (rule stronger_corres_guard_imp)
      apply (rule corres_split[OF get_sc_corres])
        apply (rename_tac sc sc')
        apply (case_tac sc')
@@ -3775,8 +3773,7 @@ lemma schedContextUnbindYieldFrom_corres:
         apply (clarsimp simp: sc_relation_def)
        apply (rule schedContextCompleteYieldTo_corres)
       apply wpsimp+
-    apply (intro conjI impI allI;
-           fastforce dest!: invs_valid_objs valid_objs_ko_at
+    apply (fastforce dest!: invs_valid_objs valid_objs_ko_at
                       simp: valid_obj_def valid_sched_context_def)
    apply (fastforce dest!: sc_ko_at_valid_objs_valid_sc'
                      simp: valid_obj'_def valid_sched_context'_def)
@@ -3786,6 +3783,7 @@ lemma schedContextUnbindYieldFrom_corres:
 lemma schedContextSetInactive_corres:
   "corres dc (sc_at scPtr and pspace_aligned and pspace_distinct) \<top>
      (sched_context_set_inactive scPtr) (schedContextSetInactive scPtr)"
+  apply add_pspace_adb
   apply (clarsimp simp: sched_context_set_inactive_def schedContextSetInactive_def)
   apply (rule corres_guard_imp)
 
@@ -3933,7 +3931,9 @@ lemma finaliseCap_corres:
    apply simp
   (* ArchObjectCap *)
   apply (clarsimp split del: if_split simp: o_def)
-  apply (rule corres_guard_imp [OF arch_finaliseCap_corres], (fastforce simp: valid_sched_def)+)[1]
+  apply (corres corres: arch_finaliseCap_corres)
+   apply fastforce
+  apply fastforce
   done
 
 end (* Finalise_R_3 *)

@@ -173,6 +173,7 @@ lemma tcbSchedAppend_corres:
      (valid_sched_pointers and valid_tcbs')
      (tcb_sched_action tcb_sched_append tcb_ptr) (tcbSchedAppend tcbPtr)"
   supply if_split[split del] bind_return[simp del] return_bind[simp del]
+  apply add_pspace_adb
   apply (rule_tac Q'="st_tcb_at' runnable' tcbPtr" in corres_cross_add_guard)
    apply (fastforce intro!: st_tcb_at_runnable_cross simp: vs_all_heap_simps obj_at_def is_tcb_def)
   apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
@@ -554,6 +555,7 @@ lemma valid_idle_tcb_at:
 lemma setCurThread_corres:
   "corres dc (pspace_aligned and pspace_distinct and valid_idle and valid_ready_qs) \<top>
              (modify (cur_thread_update (\<lambda>_. t))) (setCurThread t)"
+  apply add_pspace_adb
   apply (clarsimp simp: setCurThread_def)
   apply (rule corres_stateAssert_add_assertion[rotated])
    apply (clarsimp simp: idleThreadNotQueued_def)
@@ -627,6 +629,7 @@ proof -
 
   show ?thesis
     apply -
+    apply add_pspace_adb
     apply (rule_tac Q'="st_tcb_at' runnable' t" in corres_cross_add_guard)
      apply (fastforce intro!: st_tcb_at_runnable_cross)
     apply (simp add: switch_to_thread_def Thread_H.switchToThread_def)
@@ -1065,20 +1068,6 @@ lemma (in Schedule_R) corres_gets_queues_getReadyQueuesL1Bitmap:
   apply (drule_tac x=d in spec)
   apply (fastforce simp: bitmapL1_zero_ksReadyQueues list_queue_relation_def tcbQueueEmpty_def)
   done
-
-lemma tcb_at'_cross_rel:
-  "cross_rel (pspace_aligned and pspace_distinct and tcb_at t) (tcb_at' t)"
-  unfolding cross_rel_def state_relation_def
-  apply clarsimp
-  by (erule (3) tcb_at_cross)
-
-lemma ntfn_at'_cross_rel:
-  "cross_rel (pspace_aligned and pspace_distinct and ntfn_at t) (ntfn_at' t)"
-  unfolding cross_rel_def state_relation_def
-  apply clarsimp
-  by (erule (3) ntfn_at_cross)
-
-lemmas tcb_at'_example = corres_cross[where Q' = "tcb_at' t" for t, OF tcb_at'_cross_rel]
 
 lemma schedulable_imp_tcb_at:
   "schedulable t s \<Longrightarrow> tcb_at t s"
@@ -2013,8 +2002,8 @@ lemma setSchedulerAction_ChooseNewThread_sch_act_sane[wp]:
 
 lemma weak_sch_act_wf_cross:
   assumes sr: "(s,s') \<in> state_relation"
-  assumes aligned: "pspace_aligned s"
-  assumes distinct: "pspace_distinct s"
+  assumes aligned: "pspace_aligned' s'"
+  assumes distinct: "pspace_distinct' s'"
   assumes t: "weak_valid_sched_action s"
   shows "weak_sch_act_wf (ksSchedulerAction s') s'"
   using assms
@@ -2134,7 +2123,7 @@ lemma possibleSwitchTo_corres:
   done
 
 lemma ct_active_cross:
-  "\<lbrakk> (s,s') \<in> state_relation; pspace_aligned s; pspace_distinct s; ct_active s \<rbrakk>
+  "\<lbrakk> (s,s') \<in> state_relation; pspace_aligned' s'; pspace_distinct' s'; ct_active s \<rbrakk>
      \<Longrightarrow> ct_active' s'"
   by (clarsimp simp: state_relation_def ct_in_state_def ct_in_state'_def
                      st_tcb_at_runnable_cross runnable_eq_active runnable_eq_active'[symmetric])
@@ -2193,6 +2182,7 @@ lemma gets_the_releaseQNonEmptyAndReady_corres:
      (valid_release_q and active_scs_valid and valid_objs and pspace_aligned and pspace_distinct)
      valid_objs'
      (gets_the (read_release_q_non_empty_and_ready)) (gets_the (releaseQNonEmptyAndReady))"
+  apply add_pspace_adb
   apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
    apply (fastforce dest: pspace_aligned_cross)
   apply (rule_tac Q'=pspace_distinct' in corres_cross_add_guard)
@@ -2243,7 +2233,7 @@ lemma gets_the_releaseQNonEmptyAndReady_corres:
                      simp: vs_all_heap_simps obj_at_def is_tcb_def is_sc_obj_def)
   apply (clarsimp split: if_splits)
   apply (rename_tac head)
-  apply (frule (4) release_queue_active_sc_tcb_at_cross)
+  apply (frule (5) release_queue_active_sc_tcb_at_cross)
   apply (frule state_relation_release_queue_relation)
   apply (drule_tac x=head in spec)
   apply (clarsimp simp: release_queue_relation_def)
@@ -2332,6 +2322,7 @@ lemma tcbReleaseRemove_corres:
      (sym_heap_sched_pointers and valid_objs')
      (tcb_release_remove tcb_ptr) (tcbReleaseRemove tcbPtr)"
   supply if_split[split del] bind_return[simp del] return_bind[simp del]
+  apply add_pspace_adb
   apply (rule_tac Q'="tcb_at' tcbPtr" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (clarsimp simp: tcb_release_remove_def tcbReleaseRemove_def)
@@ -2470,10 +2461,7 @@ lemma tcbReleaseDequeue_corres:
       and active_scs_valid and ready_or_release and valid_release_q and (\<lambda>s. release_queue s \<noteq> []))
      (valid_objs' and valid_sched_pointers and sym_heap_sched_pointers)
      tcb_release_dequeue tcbReleaseDequeue"
-  apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
-   apply (fastforce dest: pspace_aligned_cross)
-  apply (rule_tac Q'=pspace_distinct' in corres_cross_add_guard)
-   apply (fastforce dest: pspace_distinct_cross)
+  apply add_pspace_adb
   apply (clarsimp simp: tcb_release_dequeue_def tcbReleaseDequeue_def)
   apply (rule corres_stateAssert_add_assertion[rotated])
    apply (fastforce intro: ksReleaseQueue_asrt_cross)
@@ -2495,25 +2483,25 @@ lemma tcbReleaseDequeue_corres:
            apply (rule corres_split[OF possibleSwitchTo_corres])
               apply fastforce
              apply (rule corres_symb_exec_r_conj_ex_abs[
-                           where P'=\<top> and P="pspace_aligned and pspace_distinct"])
+                           where P'="pspace_aligned' and pspace_distinct' and pspace_bounded'"
+                             and P="pspace_aligned and pspace_distinct"])
                 apply (rule corres_symb_exec_r_conj_ex_abs
-                             [where P'=\<top>
-                                and P="valid_release_q and pspace_aligned and pspace_distinct
-                                       and valid_objs"])
+                             [where P'="pspace_aligned' and pspace_distinct' and pspace_bounded'"
+                                and P="valid_release_q and valid_objs"])
                    apply (rule corres_return_trivial)
                   apply wpsimp
                  apply wpsimp
                 apply (wpsimp wp: no_fail_stateAssert)
                 apply (clarsimp simp: ex_abs_def)
-                apply (frule (4) release_queue_active_sc_tcb_at_cross)
+                apply (frule (5) release_queue_active_sc_tcb_at_cross)
                 apply (fastforce dest!: state_relation_release_queue_relation
                                         tcbQueueHead_ksReleaseQueue
                                   simp: tcbQueueHead_ksReleaseQueue_active_sc_tcb_at'_asrt_def
                                         release_queue_relation_def tcbQueueEmpty_def)
                apply wpsimp+
              apply (wpsimp wp: no_fail_stateAssert)
-             apply (fastforce intro: ksReleaseQueue_asrt_cross simp: ex_abs_def)
-            apply wpsimp+
+             apply (fastforce intro: ksReleaseQueue_asrt_cross simp: ex_abs_underlying_def)
+            apply (wpsimp wp: hoare_drop_imps)+
    apply (fastforce dest!: hd_in_set
                      simp: valid_release_q_def vs_all_heap_simps pred_tcb_at_def obj_at_def is_tcb_def)
   apply clarsimp
@@ -2568,6 +2556,7 @@ lemma awaken_corres:
      (sym_heap_sched_pointers and valid_sched_pointers and valid_objs'
       and pspace_aligned' and pspace_distinct')
      Schedule_A.awaken awaken"
+  apply add_pspace_adb
   apply (clarsimp simp: awaken_def Schedule_A.awaken_def runReaderT_def)
   apply (rule corres_stateAssert_ignore)
    apply (fastforce intro: ksReleaseQueue_asrt_cross)
@@ -2637,6 +2626,7 @@ lemma setNextInterrupt_corres:
       and active_scs_valid and valid_objs and pspace_aligned and pspace_distinct)
      valid_objs'
      set_next_interrupt setNextInterrupt"
+  apply add_pspace_adb
   apply (clarsimp simp: setNextInterrupt_def set_next_interrupt_def)
   apply (rule corres_stateAssert_add_assertion[rotated])
    apply (fastforce dest: curthread_relation intro!: tcb_at_cross
@@ -2722,9 +2712,11 @@ lemma setNextInterrupt_corres:
 lemma isRoundRobin_corres:
   "corres (=) (sc_at sc_ptr and pspace_aligned and pspace_distinct) \<top>
      (is_round_robin sc_ptr) (isRoundRobin sc_ptr)"
+  apply add_pspace_adb
   apply (clarsimp simp: is_round_robin_def isRoundRobin_def)
-  by (corres corres: get_sc_corres
-               simp: sc_relation_def)
+  apply (corres corres: get_sc_corres
+                  simp: sc_relation_def)
+  done
 
 lemma refillPopHead_refillSize:
   "\<lbrakk>sc_valid_refills' sc'; 1 < refillSize sc'\<rbrakk>
@@ -2752,12 +2744,8 @@ lemma refillPopHead_corres:
           \<and> valid_objs s \<and> is_active_sc sc_ptr s)
      (valid_objs' and valid_refills' sc_ptr)
      (refill_pop_head sc_ptr) (refillPopHead scPtr)"
-  apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
-   apply (fastforce dest: pspace_aligned_cross)
-  apply (rule_tac Q'=pspace_distinct' in corres_cross_add_guard)
-   apply (fastforce dest: pspace_distinct_cross)
+  apply add_pspace_adb
   apply (add_active_sc_at' scPtr)
-  apply (rule corres_cross[where Q' = "sc_at' sc_ptr", OF sc_at'_cross_rel], fastforce)
   apply (clarsimp simp: refill_pop_head_def refillPopHead_def)
   apply (rule corres_stateAssert_ignore, simp)+
   apply (rule corres_split_forwards'[OF _ get_refill_head_sp getRefillHead_sp])
@@ -2783,9 +2771,12 @@ lemma refillPopHead_corres:
                 apply clarsimp
                apply (wpsimp | wpsimp wp: getRefillNext_wp)+
    apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
-  by (fastforce dest: length_sc_refills_cross
-                simp: valid_refills'_def obj_at'_def sc_at_pred_n_def obj_at_def opt_map_def
-                      opt_pred_def)
+   apply (fastforce dest: length_sc_refills_cross
+                    simp: valid_refills'_def obj_at'_def sc_at_pred_n_def obj_at_def opt_map_def
+                          opt_pred_def)
+  apply wpsimp
+  apply (fastforce simp: active_sc_at'_rewrite)
+  done
 
 lemma refillPopHead_valid_refills'[wp]:
   "\<lbrace>\<lambda>s. valid_refills' scPtr' s
@@ -2907,7 +2898,9 @@ lemma mergeOverlappingRefills_corres:
      (valid_objs' and valid_refills' sc_ptr)
      (merge_overlapping_refills sc_ptr) (mergeOverlappingRefills sc_ptr)"
   unfolding mergeOverlappingRefills_def merge_overlapping_refills_def merge_refill_def2
-  apply (rule corres_cross[where Q' = "sc_at' sc_ptr", OF sc_at'_cross_rel], fastforce)
+  apply add_pspace_adb
+  apply (rule_tac Q'="sc_at' sc_ptr" in corres_cross_add_guard)
+   apply (fastforce intro: sc_at_cross)
   apply (rule_tac Q'="\<lambda>s'. ((\<lambda>sc'. 1 < refillSize sc') |< scs_of' s') sc_ptr" in corres_cross_add_guard)
    apply clarsimp
    apply (drule (2) state_relation_sc_relation)
@@ -3009,10 +3002,7 @@ lemma refillHeadOverlappingLoop_corres:
      (sc_at sc_ptr and pspace_aligned and pspace_distinct and valid_objs and is_active_sc sc_ptr)
      (valid_objs' and valid_refills' sc_ptr)
      (refill_head_overlapping_loop sc_ptr) (refillHeadOverlappingLoop sc_ptr)"
-  apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
-   apply (fastforce dest: pspace_aligned_cross)
-  apply (rule_tac Q'=pspace_distinct' in corres_cross_add_guard)
-   apply (fastforce dest: pspace_distinct_cross)
+  apply add_pspace_adb
   unfolding refill_head_overlapping_loop_def refillHeadOverlappingLoop_def runReaderT_def
   apply (rule_tac Q'="active_sc_at' sc_ptr" in corres_cross_add_guard)
    apply (fastforce intro!: active_sc_at'_cross_valid_objs)
@@ -3055,10 +3045,7 @@ lemma refillUnblockCheck_corres:
       and valid_objs and is_active_sc scp)
      (valid_objs' and valid_refills' scp)
      (refill_unblock_check scp) (refillUnblockCheck scp)"
-  apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
-   apply (fastforce dest: pspace_aligned_cross)
-  apply (rule_tac Q'=pspace_distinct' in corres_cross_add_guard)
-   apply (fastforce dest: pspace_distinct_cross)
+  apply add_pspace_adb
   apply (clarsimp simp: refill_unblock_check_def refillUnblockCheck_def)
   apply (rule_tac Q'="active_sc_at' scp" in corres_cross_add_guard)
    apply (fastforce intro!: active_sc_at'_cross_valid_objs)
@@ -3112,7 +3099,9 @@ lemma ifCondRefillUnblockCheck_corres:
   unfolding if_cond_refill_unblock_check_def ifCondRefillUnblockCheck_def
   apply (cases scp_opt; simp add: maybeM_def)
   apply (rename_tac scp)
-  apply (rule corres_cross[OF sc_at'_cross_rel], fastforce)
+  apply add_pspace_adb
+  apply (rule_tac Q'="sc_at' scp" in corres_cross_add_guard)
+   apply (fastforce intro: sc_at_cross)
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split[OF get_sc_corres _ get_sched_context_wp getSchedContext_wp])
     apply (rule corres_split[OF getCurSc_corres])
@@ -3175,12 +3164,8 @@ lemma refillAddTail_corres:
      (\<lambda>s'. ((\<lambda>sc'. refillSize sc' < scRefillMax sc' \<and> sc_valid_refills' sc') |< scs_of' s') sc_ptr
            \<and> valid_objs' s')
      (refill_add_tail sc_ptr new) (refillAddTail scPtr new')"
-  apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
-   apply (fastforce dest: pspace_aligned_cross)
-  apply (rule_tac Q'=pspace_distinct' in corres_cross_add_guard)
-   apply (fastforce dest: pspace_distinct_cross)
+  apply add_pspace_adb
   apply (add_active_sc_at' sc_ptr)
-  apply (rule corres_cross[where Q' = "sc_at' sc_ptr", OF sc_at'_cross_rel], fastforce)
   apply (clarsimp simp: refill_add_tail_def refillAddTail_def)
   apply (rule corres_stateAssert_ignore, simp)
   apply (rule corres_symb_exec_r[OF _ getRefillSize_sp])
@@ -3216,7 +3201,7 @@ lemma refillAddTail_corres:
          apply (clarsimp simp: obj_at'_def in_omonad)
         apply wpsimp+
       apply (clarsimp simp: obj_at'_def in_omonad)
-     apply (wpsimp wp: getRefillSize_wp)+
+     apply (wpsimp wp: getRefillSize_wp simp: active_sc_at'_rewrite)+
   done
 
 lemma isRoundRobin_sp:
@@ -3325,8 +3310,10 @@ lemma mergeNonoverlappingHeadRefill_corres:
       and (\<lambda>s. sc_refills_sc_at (\<lambda>refills. Suc 0 < length refills) sc_ptr s))
      (valid_objs' and valid_refills' sc_ptr)
      (merge_nonoverlapping_head_refill sc_ptr) (mergeNonoverlappingHeadRefill scPtr)"
+  apply add_pspace_adb
+  apply (rule_tac Q'="sc_at' sc_ptr" in corres_cross_add_guard)
+   apply (fastforce intro: sc_at_cross)
   apply (clarsimp simp: merge_nonoverlapping_head_refill_def mergeNonoverlappingHeadRefill_def)
-  apply (rule corres_cross[OF sc_at'_cross_rel[where t=scPtr]], simp)
   apply (rule_tac Q'="is_active_sc' scPtr" in corres_cross_add_guard)
    apply (fastforce dest: is_active_sc'2_cross)
   apply (rule_tac Q'="obj_at' (\<lambda>sc'. Suc 0 < refillSize sc') scPtr"
@@ -3429,6 +3416,7 @@ lemma headInsufficientLoop_corres:
       and (\<lambda>s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s))
      (valid_objs' and valid_refills' sc_ptr)
      (head_insufficient_loop sc_ptr) (headInsufficientLoop scPtr)"
+  apply add_pspace_adb
   apply (clarsimp simp: head_insufficient_loop_def headInsufficientLoop_def runReaderT_def)
   apply (rule_tac Q'="active_sc_at' scPtr" in corres_cross_add_guard)
    apply (fastforce dest: active_sc_at'_cross)
@@ -3459,8 +3447,7 @@ lemma getRefillFull_corres:
   "sc_ptr = scPtr \<Longrightarrow>
    corres (=) (sc_at sc_ptr and pspace_aligned and pspace_distinct) (valid_refills' scPtr)
      (refill_full sc_ptr) (getRefillFull scPtr)"
-  apply (rule_tac Q'="sc_at' scPtr" in corres_cross_add_guard)
-   apply (fastforce intro: sc_at_cross)
+  apply add_pspace_adb
   apply (clarsimp simp: refill_full_def getRefillFull_def readRefillFull_def
                         readSchedContext_def getObject_def[symmetric] getSchedContext_def[symmetric]
                         getRefillSize_def[symmetric])
@@ -3496,10 +3483,7 @@ lemma getRefillTail_corres:
       and is_active_sc sc_ptr and sc_at sc_ptr and sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr)
      valid_objs'
      (get_refill_tail sc_ptr) (getRefillTail scPtr)"
-  apply (rule_tac Q'=pspace_aligned' in corres_cross_add_guard)
-   apply (fastforce dest: pspace_aligned_cross)
-  apply (rule_tac Q'=pspace_distinct' in corres_cross_add_guard)
-   apply (fastforce dest: pspace_distinct_cross)
+  apply add_pspace_adb
   apply (add_active_sc_at' scPtr)
   apply (clarsimp simp: get_refill_tail_def getRefillTail_def read_refill_tail_def
                         readRefillTail_def read_sched_context_get_sched_context readSchedContext_def
@@ -3526,6 +3510,7 @@ lemma scheduleUsed_corres:
        and pspace_aligned and pspace_distinct and valid_objs)
       valid_objs'
       (schedule_used sc_ptr new) (scheduleUsed scPtr new')"
+  apply add_pspace_adb
   apply (clarsimp simp: schedule_used_def scheduleUsed_def get_refills_def bind_assoc)
   apply (rule_tac Q'="sc_at' scPtr" in corres_cross_add_guard)
    apply (fastforce intro: sc_at_cross)
@@ -3592,6 +3577,7 @@ lemma chargeEntireHeadRefill_corres:
       and sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr)
      valid_objs'
      (charge_entire_head_refill sc_ptr r) (chargeEntireHeadRefill scPtr r')"
+  apply add_pspace_adb
   apply (rule_tac Q'="\<lambda>s'. sc_at' scPtr s'" in corres_cross_add_guard)
    apply (rule sc_at_cross, fastforce+)
   apply (rule_tac Q'="\<lambda>s'. is_active_sc' scPtr s'" in corres_cross_add_guard)
@@ -3760,6 +3746,7 @@ lemma handleOverrun_corres:
                         (sc_refill_cfgs_of s) sc_ptr))
      valid_objs'
      (handle_overrun sc_ptr usage) (handleOverrun scPtr usage')"
+  apply add_pspace_adb
   apply (rule_tac Q'="\<lambda>s'. sc_at' scPtr s'" in corres_cross_add_guard)
    apply (rule sc_at_cross, fastforce+)
   apply (rule_tac Q'="\<lambda>s'. is_active_sc' scPtr s'" in corres_cross_add_guard)
@@ -3806,6 +3793,7 @@ lemma refillBudgetCheck_corres:
      valid_objs'
      (refill_budget_check usage) (refillBudgetCheck usage')"
   (is "_ \<Longrightarrow> corres _ (?P and _) _ _ _")
+  apply add_pspace_adb
   apply (rule_tac Q'="\<lambda>s'. sc_at' (ksCurSc s') s'" in corres_cross_add_guard)
    apply (rule sc_at_cross, (fastforce simp: state_relation_def)+)
   apply (rule_tac Q'="\<lambda>s'. is_active_sc' (ksCurSc s') s'" in corres_cross_add_guard)
@@ -3911,6 +3899,7 @@ lemma refillBudgetCheck_corres:
   apply (simp add: when_def split del: if_split)
   apply (rule corres_if_split; (solves simp)?)
    apply (clarsimp simp: refill_map_def)
+  apply add_pspace_adb
   apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
    apply (corres corres: get_sc_corres)
   apply (clarsimp simp: bind_assoc)
@@ -3984,6 +3973,7 @@ lemma commitTime_corres:
              commit_time
              commitTime"
   supply if_split[split del]
+  apply add_pspace_adb
   apply (rule_tac Q'="\<lambda>s'. sc_at' (ksCurSc s') s'" in corres_cross_add_guard)
    apply (fastforce intro!: sc_at_cross dest: cursc_relation)
   apply (clarsimp simp: commit_time_def commitTime_def liftM_def)
@@ -4238,6 +4228,7 @@ lemma (in Schedule_R_3) schedule_corres:
                in corres_underlying_split)
      defer
      apply clarsimp
+     apply add_pspace_adb
      apply (rule corres_underlying_return_stateAssert)
      apply (fastforce intro!: st_tcb_at_activatable_cross
                         simp: ct_in_state_def ct_in_state'_def state_relation_def)
@@ -4627,6 +4618,7 @@ lemma schedContextDonate_corres:
      (valid_objs' and sym_heap_sched_pointers
       and valid_sched_pointers and pspace_aligned' and pspace_distinct')
      (sched_context_donate scp thread) (schedContextDonate scp thread)"
+  apply add_pspace_adb
   apply (simp add: test_reschedule_def get_sc_obj_ref_def
                    schedContextDonate_def sched_context_donate_def schedContextDonate_corres_helper)
   apply (rule corres_stateAssert_ignore, fastforce)

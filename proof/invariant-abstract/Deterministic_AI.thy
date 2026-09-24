@@ -1469,8 +1469,9 @@ lemma next_slot:
   done
 end
 
-crunch set_cap
-  for exst[wp]: "(\<lambda>s. P (exst s))" (wp: crunch_wps simp: crunch_simps)
+crunch set_cap, set_simple_ko
+  for exst[wp]: "\<lambda>s. P (exst s)"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma set_cap_caps_of_state3:
   "\<lbrace>\<lambda>s. P ((caps_of_state s) (p \<mapsto> cap)) (cdt s)  (exst s) (is_original_cap s)\<rbrace>
